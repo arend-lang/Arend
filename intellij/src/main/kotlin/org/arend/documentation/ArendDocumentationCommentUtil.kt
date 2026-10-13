@@ -1,13 +1,19 @@
 package org.arend.documentation
 
 import com.intellij.codeInsight.documentation.DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.util.elementType
 import org.arend.parser.ParserMixin.*
+import org.arend.psi.ArendElementTypes.BLOCK_COMMENT
+import org.arend.psi.ArendElementTypes.LINE_COMMENT
+import org.arend.psi.ArendPsiFactory
+import org.arend.psi.childOfType
 import org.arend.psi.childrenWithLeaves
 import org.arend.psi.doc.ArendDocCodeBlock
+import org.arend.psi.doc.ArendDocComment
 import org.arend.psi.doc.ArendDocLink
 import org.arend.psi.doc.ArendDocReference
 import org.arend.psi.doc.ArendDocReferenceText
@@ -18,11 +24,30 @@ import java.net.URL
 private const val CLOSING_TAG_HTML = "</li>"
 private const val OPENING_TAG_HTML = "<li class=\"row\">"
 
-internal data class ArendDocCommentInfo(var hasLatexCode: Boolean, var wasPrevRow: Boolean, var itemContextLastIndex: Int = -1, val suggestedFont: Float, val backgroundColor: Color? = null, val showNotification: Boolean = true)
+// offsetShift maps the offsets of the rendered doc comment to the offsets of the comment in the edited file (see readAsDocComment)
+internal data class ArendDocCommentInfo(var hasLatexCode: Boolean, var wasPrevRow: Boolean, var itemContextLastIndex: Int = -1, val suggestedFont: Float, val backgroundColor: Color? = null, val showNotification: Boolean = true, val offsetShift: Int = 0)
 
 internal fun hasLatexCode(doc: PsiElement) = doc.childrenWithLeaves.any { it.elementType == DOC_LATEX_CODE }
 
-internal fun StringBuilder.generateDocComments(ref: PsiReferable, doc: PsiElement, full: Boolean, docCommentInfo: ArendDocCommentInfo) {
+/**
+ * Returns the doc comment to render for [comment], together with the shift from its offsets to the offsets of [comment].
+ * An ordinary comment is read with the doc comment syntax: it is reparsed as a doc comment with the same contents.
+ */
+internal fun readAsDocComment(comment: PsiComment): Pair<ArendDocComment, Int>? {
+    if (comment is ArendDocComment) {
+        return Pair(comment, 0)
+    }
+    val text = comment.text
+    val (start, contentStart) = when (comment.tokenType) {
+        LINE_COMMENT -> "-- |" to text.indexOfFirst { it != '-' }.let { if (it == -1) text.length else it }
+        BLOCK_COMMENT -> "{- |" to 2
+        else -> return null
+    }
+    val docComment = ArendPsiFactory(comment.project).createFromText(start + text.substring(contentStart))?.childOfType<ArendDocComment>() ?: return null
+    return Pair(docComment, comment.textRange.startOffset + contentStart - start.length)
+}
+
+internal fun StringBuilder.generateDocComments(ref: PsiElement, doc: PsiElement, full: Boolean, docCommentInfo: ArendDocCommentInfo) {
     var curIndex = 0
     val docElements = doc.childrenWithLeaves.toList()
     val context = mutableListOf<Triple<IElementType, Int?, Int>>()
@@ -35,7 +60,7 @@ internal fun StringBuilder.generateDocComments(ref: PsiReferable, doc: PsiElemen
 private fun StringBuilder.processDocCommentElement(
     index: Int,
     docElements: List<PsiElement>,
-    ref: PsiReferable,
+    ref: PsiElement,
     full: Boolean,
     context: MutableList<Triple<IElementType, Int?, Int>>,
     docCommentInfo: ArendDocCommentInfo
@@ -77,7 +102,7 @@ private fun StringBuilder.processDocCommentElement(
             append(getHtmlLatexCode("image${counterLatexImages++}",
                 docElement.text.replace(REGEX_AREND_DOC_NEW_LINE, " "),
                 ref.project,
-                docElement.textOffset,
+                docElement.textOffset + docCommentInfo.offsetShift,
                 docElements.getOrNull(index - 1).elementType == DOC_NEWLINE_LATEX_CODE,
                 docCommentInfo.suggestedFont,
                 docCommentInfo.backgroundColor,
@@ -192,7 +217,7 @@ private fun getNumberOfTabs(docElements: List<PsiElement>, index: Int): Int {
 private fun StringBuilder.appendListItems(
     index: Int,
     docElements: List<PsiElement>,
-    ref: PsiReferable,
+    ref: PsiElement,
     full: Boolean,
     context: MutableList<Triple<IElementType, Int?, Int>>,
     docCommentInfo: ArendDocCommentInfo
@@ -223,7 +248,7 @@ private fun StringBuilder.appendListItems(
 private fun StringBuilder.appendBlockQuotes(
     index: Int,
     docElements: List<PsiElement>,
-    ref: PsiReferable,
+    ref: PsiElement,
     full: Boolean,
     context: MutableList<Triple<IElementType, Int?, Int>>,
     docCommentInfo: ArendDocCommentInfo
@@ -242,7 +267,7 @@ private fun StringBuilder.appendBlockQuotes(
 private fun StringBuilder.processBlock(
     index: Int,
     docElements: List<PsiElement>,
-    ref: PsiReferable,
+    ref: PsiElement,
     full: Boolean,
     context: MutableList<Triple<IElementType, Int?, Int>>,
     docCommentInfo: ArendDocCommentInfo

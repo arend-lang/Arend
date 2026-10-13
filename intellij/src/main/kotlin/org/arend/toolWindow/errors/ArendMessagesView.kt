@@ -9,6 +9,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.debug
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
@@ -38,6 +39,8 @@ import org.arend.ext.error.MissingClausesError
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.reference.ArendRef
 import org.arend.ext.reference.DataContainer
+import org.arend.psi.ArendElementTypes.BLOCK_COMMENT
+import org.arend.psi.ArendElementTypes.LINE_COMMENT
 import org.arend.psi.ArendFile
 import org.arend.psi.ancestor
 import org.arend.psi.doc.ArendDocComment
@@ -100,8 +103,8 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
     }
 
     private var isCursorOnError = false
-    private var isCursorOnDocComment = false
-    private var lastDocComment: ArendDocComment? = null
+    private var isCursorOnComment = false
+    private var lastComment: PsiComment? = null
     var lastDocCorrectness: Boolean = true
 
     private val secondTabs = SingleHeightTabs(project, toolWindow.disposable)
@@ -166,14 +169,31 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
         EditorFactory.getInstance().eventMulticaster.addCaretListener(object : CaretListener {
             override fun caretPositionChanged(event: CaretEvent) {
                 if (event.editor.project != project) return
+                val documentManager = PsiDocumentManager.getInstance(project)
+                val isUncommitted = documentManager.isUncommited(event.editor.document)
+                INFO_VIEW_LOG.debug {
+                    val isSelected = event.editor == FileEditorManager.getInstance(project).selectedTextEditor
+                    "caret: ${event.editor.virtualFile?.name} ${event.oldPosition} -> ${event.newPosition}, selected editor: $isSelected, uncommitted: $isUncommitted"
+                }
+                if (isUncommitted) {
+                    // The caret moves because of typing, and the PSI does not have the text at the caret yet.
+                    // When the caret is on a comment, the document listener updates the panel.
+                    if (!isCursorOnComment) {
+                        documentManager.performLaterWhenAllCommitted {
+                            updateEditors(canClear = false, changeText = true, showNotification = false)
+                        }
+                    }
+                    return
+                }
                 updateEditors(canClear = false, showNotification = false)
             }
         }, project)
 
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
-                if (isCursorOnDocComment) {
+                if (isCursorOnComment) {
                     val editor = FileEditorManager.getInstance(project).selectedTextEditor
+                    INFO_VIEW_LOG.debug { "document changed on a comment, in the selected editor: ${editor?.document == event.document}" }
                     if (editor != null && editor.document == event.document) {
                         PsiDocumentManager.getInstance(project).performLaterWhenAllCommitted {
                             updateEditors(canClear = false, changeText = true, showNotification = false)
@@ -185,6 +205,7 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
 
         project.messageBus.connect(project).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
             override fun selectionChanged(event: FileEditorManagerEvent) {
+                INFO_VIEW_LOG.debug { "editor selection: ${event.oldFile?.name} -> ${event.newFile?.name}" }
                 updateEditors(canClear = false)
             }
         })
@@ -234,33 +255,47 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
 
     override fun valueChanged(e: TreeSelectionEvent?) = updateEditors(updateCursor = false)
 
+    private fun enclosingComment(element: PsiElement): PsiComment? =
+        element.ancestor<ArendDocComment>() ?: (element as? PsiComment)?.takeIf { it.tokenType == LINE_COMMENT || it.tokenType == BLOCK_COMMENT }
+
     private fun updateCursor(canClear: Boolean, showNotification: Boolean, changeText: Boolean) {
-        val editor = FileEditorManager.getInstance(project).selectedTextEditor ?: return
+        val editor = FileEditorManager.getInstance(project).selectedTextEditor ?: run {
+            INFO_VIEW_LOG.debug("cursor: no selected text editor")
+            return
+        }
         val document = editor.document
         val offset = editor.caretModel.offset
         val file = PsiDocumentManager.getInstance(project).getPsiFile(document) as? ArendFile ?: run {
+            INFO_VIEW_LOG.debug { "cursor: ${editor.virtualFile?.name} is not an Arend file" }
             isCursorOnError = false
-            isCursorOnDocComment = false
+            isCursorOnComment = false
             return
         }
-        val element = file.findElementAt(offset) ?: run {
+        val element = file.findElementAt(offset)
+        val comment = element?.let { enclosingComment(it) }
+            // The caret right after a comment, where it is when the comment has just been typed, is on the comment too
+            ?: if (offset > 0 && (element == null || element is PsiWhiteSpace)) file.findElementAt(offset - 1)?.let { enclosingComment(it) } else null
+        INFO_VIEW_LOG.debug {
+            val owner = if (comment is ArendDocComment) ", documents ${comment.owner?.refName}" else ""
+            "cursor: offset $offset of ${file.name}, element ${element.traceText}, comment ${comment.traceText}$owner"
+        }
+        if (element == null && comment == null) {
             isCursorOnError = false
-            isCursorOnDocComment = false
+            isCursorOnComment = false
             return
         }
-        val docComment = element.ancestor<ArendDocComment>()
-        if (docComment != null) {
+        if (comment != null) {
             if (infoEditor == null) {
                 infoEditor = ArendInfoViewEditor(project)
             }
-            val showNotificationInfo = (!changeText || lastDocCorrectness) && (showNotification || lastDocComment != docComment)
-            infoEditor!!.updateHtml(Pair(docComment, null), showNotificationInfo)
-            lastDocComment = docComment
+            val showNotificationInfo = (!changeText || lastDocCorrectness) && (showNotification || lastComment != comment)
+            infoEditor!!.updateHtml(Pair(comment, null), showNotificationInfo)
+            lastComment = comment
 
             isCursorOnError = false
-            isCursorOnDocComment = true
+            isCursorOnComment = true
         } else {
-            isCursorOnDocComment = false
+            isCursorOnComment = false
             ApplicationManager.getApplication().executeOnPooledThread {
                 val moduleLocation = runReadAction { file.moduleLocation }
                 val error = project.service<ArendServerService>().server.errorMap[moduleLocation]
@@ -287,7 +322,8 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
             }
         }
         val treeElement = getSelectedMessage()
-        if (isShowErrorsOrInfoPanel() && isCursorOnDocComment) {
+        INFO_VIEW_LOG.debug { "editors: on a comment: $isCursorOnComment, on an error: $isCursorOnError, errors/info panel shown: ${isShowErrorsOrInfoPanel()}, canClear: $canClear" }
+        if (isShowErrorsOrInfoPanel() && isCursorOnComment) {
             if (infoEditor == null) {
                 infoEditor = ArendInfoViewEditor(project)
             }
@@ -333,9 +369,10 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
                             updatePanel(errorsPanel, errorEmptyPanel)
                         }
                     }
-                    val isValidDocComment = lastDocComment?.isValid
+                    val isValidDocComment = lastComment?.isValid
                     if (isShowErrorsOrInfoPanel() && (isValidDocComment == null || !isValidDocComment)) {
-                        lastDocComment = null
+                        INFO_VIEW_LOG.debug { "editors: clearing the info panel, the last comment is ${if (isValidDocComment == null) "not set" else "no longer valid"}" }
+                        lastComment = null
                         infoEditor?.clear()
                         updatePanel(infoPanel, infoEmptyPanel)
                     }

@@ -12,6 +12,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.openapi.util.Pair
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
@@ -63,8 +64,12 @@ object ArendDocumentationGenerator {
 
     fun generateDoc(element: PsiElement, originalElement: PsiElement?, withDocComments: Boolean = true, suggestedFont: Int? = null, withOpenInBrowserLink: Boolean = true, backgroundColor: Color? = null, textColor: Color? = null, showNotification: Boolean = true): String? {
         val ref = element as? PsiReferable ?: (element as? ArendDocComment)?.owner
-        ?: return if (element.isArendKeyword()) generateDocForKeywords(element) else null
-        val project = ref.project
+        // A comment that documents no definition (an ordinary comment, or a doc comment that is not followed by one) is rendered on its own
+        val comment = if (ref == null && withDocComments) (element as? PsiComment)?.let { readAsDocComment(it) } else null
+        if (ref == null && comment == null) {
+            return if (element.isArendKeyword()) generateDocForKeywords(element) else null
+        }
+        val project = element.project
 
         val font = suggestedFont ?:
             (UIManager.getDefaults().getFont("Label.font")
@@ -72,7 +77,8 @@ object ArendDocumentationGenerator {
         val docCommentInfo = ArendDocCommentInfo(hasLatexCode = false, wasPrevRow = false,
             suggestedFont = font?.times(COEFFICIENT_LATEX_FONT)?.toFloat() ?: DEFAULT_FONT,
             backgroundColor = backgroundColor,
-            showNotification = showNotification)
+            showNotification = showNotification,
+            offsetShift = comment?.second ?: 0)
         project.service<ArendMessagesService>().view?.lastDocCorrectness = true
         val latexImagesDir = getLatexImagesDir()
         if (latexImagesDir.exists()) latexImagesDir.deleteRecursively()
@@ -105,27 +111,29 @@ object ArendDocumentationGenerator {
                         "background-color:$htmlBackgroundColor;\">")
             }
             offsetStartText = this.length
-            wrap(DEFINITION_START, DEFINITION_END) {
-                generateDefinition(ref)
-            }
+            if (ref != null) {
+                wrap(DEFINITION_START, DEFINITION_END) {
+                    generateDefinition(ref)
+                }
 
-            wrap(CONTENT_START, CONTENT_END) {
-                generateContent(ref, originalElement)
+                wrap(CONTENT_START, CONTENT_END) {
+                    generateContent(ref, originalElement)
+                }
             }
 
             if (withDocComments) {
-                val doc = element as? ArendDocComment ?: ref.documentation
+                val doc = comment?.first ?: element as? ArendDocComment ?: ref?.documentation
                 if (doc != null) {
                     docCommentInfo.hasLatexCode = hasLatexCode(doc)
 
                     wrap(CONTENT_START, CONTENT_END) {
-                        generateDocComments(ref, doc, element is ArendDocComment, docCommentInfo)
+                        generateDocComments(ref ?: element, doc, element is ArendDocComment, docCommentInfo)
                     }
                 }
             }
             append("</body>")
         } }
-        if (docCommentInfo.hasLatexCode) {
+        if (docCommentInfo.hasLatexCode && ref != null) {
             val elementText = ref.refName
             popupCefBrowserHtml = htmlBuilder.toString()
             lastElement = element
