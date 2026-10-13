@@ -125,3 +125,8 @@
     | ret_f p => inv comp-assoc *> pmap (comp p) qr=id *> comp_idd-right
     | f_sec p => inv comp-assoc *> pmap (comp p) rq=id *> comp_idd-right
   }
+
+-- | Composites of isomorphisms are isomorphisms.
+\lemma comp-IsIso {C : \Cat} {a b c : C} {f : a ~> b} {g : b ~> c} (fi : IsIso f) (gi : IsIso g) : IsIso (comp f g)
+  => postcomp-equiv=>iso \lam x => transport IsEquiv (ext \lam h => inv comp-assoc)
+       (IsEquiv.trans (comp-iso-right-equiv fi) (comp-iso-right-equiv gi))

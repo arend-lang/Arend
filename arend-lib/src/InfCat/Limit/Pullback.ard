@@ -9,6 +9,9 @@
  -   and over a terminal corner pullbacks are products ({IsPullbackSquare.terminal-product}).
  -   Consequently, pullback squares with a fixed right side embed into the slice over its target via their bottom sides
  -   ({IsPullbackSquare.bottom-emb}), and this is an equivalence if pullbacks exist ({IsPullbackSquare.bottom-equiv}).
+ -
+ -   Equivalently, a square is a pullback square if arrows from every test object into its top left corner are cones over its
+ -   bottom and right sides ({IsPullbackSquare.pullback-char}), where the cones are read off sections of hom-types ({IsPullbackSquare.homSq}).
  -}
 
 \import Equiv
@@ -93,6 +96,67 @@
                     Contr.Contr_QEquiv (symQEquiv (comp-equiv {D} {_} {_} {_} {g} {dpath \lam i => psi i dright} {dpath \lam i => w i dright}))
                                        (isProp=>PathContr _ (isContr=>isProp (Tc r)) _ _))
                   `transQEquiv` IsEquiv.toQEquiv (const-ev0-equiv r (psi dright))
+      }
+
+    -- | A pullback square reparametrized along an endomorphism of {DI} is a pullback square.
+    \lemma pullback-reparam {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare phi) (k : DI ->⁺ DI) : IsPullbackSquare (\lam i => phi (k i))
+      => aux pb (dpath k)
+      \where
+        \private \lemma aux {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare phi) {a b : DI} (p : a ~> b) : IsPullbackSquare (\lam i => phi (p i)) \elim a
+          | dleft => \case \elim b, \elim p \with {
+            | dleft, p => transport (\lam q => IsPullbackSquare (\lam i => phi (q i))) (isContr=>isProp DI-hom-ll-contr idd p) (isPullback-idd (phi dleft))
+            | dright, p => transport (\lam q => IsPullbackSquare (\lam i => phi (q i))) (isContr=>isProp DI-hom-lr-contr (dpath \lam i => i) p) pb
+          }
+          | dright => \case \elim b, \elim p \with {
+            | dleft, p => absurd (DI-hom-rl-empty p)
+            | dright, p => transport (\lam q => IsPullbackSquare (\lam i => phi (q i))) (isContr=>isProp DI-hom-rr-contr idd p) (isPullback-idd (phi dright))
+          }
+
+    -- | The section `(i,j) ↦ r ~> phi i j` of hom-types given by an arrow {k} into the top left corner.
+    \func homSq {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} (k : r ~> phi dleft dleft) (i j :⁺ DI) : r ~> phi i j
+      => comp k (dpath \lam m => phi (dmin m i) (dmin m j))
+
+    -- | The values of a family over a square on the bottom and right sides.
+    \func Boundary (Phi :⁺ DI ->⁺ DI ->⁺ \Cat) : \Cat
+      => \Sigma⁺ (b : Phi dright dleft) (g : Phi dleft dright) (c : Phi dright dright) (DPath (\lam j => Phi dright j) b c) (DPath (\lam i => Phi i dright) g c)
+
+    -- | The restriction of a section {L} to the two sides into the bottom right corner.
+    \func boundary {Phi :⁺ DI ->⁺ DI ->⁺ \Cat} (L :⁺ \Pi (i j :⁺ DI) -> Phi i j) : Boundary Phi
+      => (L dright dleft, L dleft dright, L dright dright, dpath (L dright), dpath \lam i => L i dright)
+
+    {- | A square is a pullback square if and only if, for every test object `r`, arrows into the top left corner are
+     -   cones over the bottom and right sides: the restriction of {homSq} to these sides is an equivalence.
+     -}
+    \lemma pullback-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+      : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k)))
+      => \let | ctm (r : C) (w : constArr r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
+              | eqr (r : C) : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
+                              <-> IsEquiv (totalEquiv.total (ctm r))
+                => IsEquiv.parallelEquiv (sec-equiv phi r) (inP (cone-equiv phi r)) (\lam k => idp)
+         \in (\lam pb r => (eqr r).2 ((totalEquiv (ctm r)).1 (pb r)),
+             \lam ce r w => (totalEquiv (ctm r)).2 ((eqr r).1 (ce r)) w)
+      \where \private {
+        -- | The factorization of {homSq} through the square.
+        \func sec {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) (k : r ~> phi dleft dleft)
+          : \Sigma (w : constArr r ~> phi dright) (\Sigma (K : constArr r ~> phi dleft) (DPath (\lam i => K i ~> w i) idd (dpath phi)))
+          => (dpath \lam i => \lam j => homSq phi k dright j i,
+              (dpath \lam i => \lam j => homSq phi k dleft j i, dpath \lam i => dpath \lam l => \lam j => homSq phi k l j i))
+
+        \lemma sec-equiv {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsEquiv (sec phi r)
+          => IsEquiv.leftFactor (terminal-product.cotri-equiv r (dpath phi))
+               (transport IsEquiv (ext \lam (k : r ~> phi dleft dleft) => inv comp_idd-right) (inP idEquiv))
+
+        -- | Squares from a constant arrow with a factorization of their bottom side are cones, by transposition.
+        \func cone-equiv {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+          : QEquiv {Boundary (\lam i j => r ~> phi i j)}
+                   {\Sigma (w : constArr r ~> phi dright)
+                           (\Sigma (g : r ~> phi dleft dright)
+                                   (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => phi i dright)))} \cowith
+          | f s => (dpath \lam m => \lam j => s.4 j m, (s.2, dpath \lam i => dpath \lam l => s.5 l i))
+          | ret t => (dpath \lam m => t.1 m dleft, t.2.1, dpath \lam m => t.1 m dright, dpath \lam j => dpath \lam m => t.1 m j,
+                      dpath \lam l => dpath \lam i => t.2.2 i l)
+          | ret_f _ => idp
+          | f_sec _ => idp
       }
 
     -- | A square in {C} as a square in the slice over its bottom right corner.

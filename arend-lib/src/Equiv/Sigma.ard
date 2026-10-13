@@ -176,3 +176,7 @@
 -- | Pairs with propositional second components are equal if their first components are.
 \func sigma-prop-ext {A : \Cat} {B : A -> \Cat} (Bp : \Pi (a : A) -> isProp (B a)) {s s' : \Sigma (a : A) (B a)} (p : s.1 = s'.1) : s = s'
   => path \lam i => (p i, pathOver (Bp s'.1 _ _) i)
+
+-- | Inserting an element at a point of a contractible type is an equivalence onto the total space.
+\lemma contr-point-equiv {C : \Cat} (c : Contr C) {F : C -> \Cat} (c0 : C) : IsEquiv {F c0} {\Sigma (x : C) (F x)} (\lam z => (c0, z))
+  => IsEquiv.leftFactor (inP (contr-left c {F})) (transport-isEquiv F (inv (c.contraction c0)))

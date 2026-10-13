@@ -271,6 +271,15 @@
        (leftEmbedding (Embedding.sigma-prop-embedding \lam h => prop-isProp) (IsEmbedding.post SubCat.inc-emb DI))
        (\lam s => TruncP.map (SubCat.inc-sat s.2) \lam t => (t.1, sigma-prop-ext (\lam h => prop-isProp) (path \lam j i => t.2 i j)))
 
+-- | Functors into the subcategory are functors to {C} whose arrows satisfy {P}.
+\lemma subCat-fun-equiv.{u} {C : \Cat u} {P : (DI ->⁺ C) -> \Prop} (Pc : IsCompClosed P) {T : \Cat}
+  : IsEquiv {T ->⁺ SubCat P} {\Sigma (g : T ->⁺ C) (\Pi (k : DI ->⁺ T) -> P (\lam i => g (k i)))}
+            (\lam h => (\lam t => SubCat.inc (h t), \lam k => SubCat.inc-con {C} {P} Pc))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection \lam (g : T ->⁺ C) => \Pi (k : DI ->⁺ T) -> P (\lam i => g (k i)))
+                                        (IsEmbedding.post SubCat.inc-emb T))
+       \lam s => \have l => SubCat.isMax {C} {P} {T} {s.1} s.2
+                 \in inP (l.1, ext (ext l.2))
+
 -- | If {P} is a wide subset, then arrows into {x} in the subcategory are arrows into `inc x` satisfying {P}.
 \lemma subCat-into-equiv.{u} {C : \Cat u} {P : (DI ->⁺ C) -> \Prop} (Pc : IsWideSubset P) (x : SubCat P)
   : IsEquiv {\Sigma (y : SubCat P) (y ~> x)} {\Sigma (s : \Sigma (u : C) (u ~> SubCat.inc x)) (P s.2)}

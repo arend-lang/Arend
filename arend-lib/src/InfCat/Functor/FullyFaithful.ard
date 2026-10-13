@@ -129,7 +129,14 @@
 
 -- | Postcomposition with a fully faithful functor is fully faithful.
 \lemma postcomp-ff {A C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) : IsFFMap {A ->⁺ C} {A ->⁺ D} (\lam g x => f (g x))
-  => \lam g h => contrFibers=>IsEquiv \lam a => Contr.Contr_QEquiv (sections-equiv f g h a) (IsHEquiv.sections-contr (Fam-equiv ff g h a))
+  => \lam g h => postcomp-ff-at f g h \lam x y => ff (g x) (h y)
+
+{- | Postcomposition with {f} is fully faithful on arrows from {g} to {h} if {f} is fully faithful on arrows from
+ -   every value of {g} to every value of {h}.
+ -}
+\lemma postcomp-ff-at {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (e : \Pi (x y : A) -> IsEquiv {g x ~> h y} (dmap f))
+  : IsEquiv (dmap {A ->⁺ C} {A ->⁺ D} (\lam g x => f (g x)) {g} {h})
+  => contrFibers=>IsEquiv \lam a => Contr.Contr_QEquiv (sections-equiv f g h a) (IsHEquiv.sections-contr (Fam-equiv f g h e a))
   \where \private {
     -- | Lifts of the component of {a} at {x}.
     \func Fam {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x))) (x :⁺ A)
@@ -143,11 +150,12 @@
       | ret_f => idpe
       | f_sec => idpe
 
-    \lemma Fam-equiv {A C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (g h : A ->⁺ C) (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x)))
+    \lemma Fam-equiv {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (e : \Pi (x y : A) -> IsEquiv {g x ~> h y} (dmap f))
+                     (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x)))
       : IsHEquiv {\Sigma⁺ (x : A) (Fam f g h a x)} __.1
       => (ff-surj-equiv {\Sigma⁺ (x : A) (Fam f g h a x)} {A} {__.1}).1
-          (\lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => Fam f g h a x) $ contr-right \lam r => rel-contr ff r s.2 t.2,
-           \lam x => \let c => IsEquiv=>contrFibers (ff (g x) (h x)) (dpath \lam i => a i x)
+          (\lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => Fam f g h a x) $ contr-right \lam r => rel-contr f g h e r s.2 t.2,
+           \lam x => \let c => IsEquiv=>contrFibers (e x x) (dpath \lam i => a i x)
                      \in inP ((x, (c.center.1, c.center.2)), idp))
       \where {
         -- | The type of paths over {a} with fixed endpoints is contractible.
@@ -161,7 +169,8 @@
               | f_sec v => idp
             }) (rsigma a)
 
-        \lemma rel-contr {A C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) {g h : A ->⁺ C} {a : (\lam x => f (g x)) ~> {A ->⁺ D} (\lam x => f (h x))}
+        \lemma rel-contr {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (e : \Pi (x y : A) -> IsEquiv {g x ~> h y} (dmap f))
+                         {a : (\lam x => f (g x)) ~> {A ->⁺ D} (\lam x => f (h x))}
                          {x y : A} (r : x ~> y) (s : Fam f g h a x) (t : Fam f g h a y)
           : Contr (DPath (\lam i => Fam f g h a (r i)) s t)
           => Contr.Contr_QEquiv (symQEquiv $ later \new QEquiv {
@@ -169,7 +178,7 @@
                                    | ret v => dpath \lam i => (v.1 i, v.2 i)
                                    | ret_f u => idp
                                    | f_sec v => idp
-                                 } `transQEquiv` qsigma-left (IsEquiv.toQEquiv (IsFFMap.squares ff (dmap g r) t.1 s.1 (dmap h r))))
+                                 } `transQEquiv` qsigma-left (IsEquiv.toQEquiv (squares-at f (e x y) (dmap g r) t.1 s.1 (dmap h r))))
                                 (dpath-fiber-contr (dpath \lam i => dpath \lam j => a j (r i)) s.2 t.2)
       }
   }

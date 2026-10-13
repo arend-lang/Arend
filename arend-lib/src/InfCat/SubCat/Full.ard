@@ -93,3 +93,12 @@
   : IsEquiv {FullSubCat P} {\Sigma (x : C) (P x)} (\lam d => (FullSubCat.inc d, FullSubCat.inc-con {C} {P} {d}))
   => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection P) (IsFFMap.isObEmbedding FullSubCat.inc-ff))
       \lam s => TruncP.map (FullSubCat.inc-sat s.2) \lam d => (d.1, ext d.2)
+
+-- | Functors into a full subcategory are functors whose values satisfy the predicate.
+\lemma fullSub-fun-equiv {C : \Cat} {P : C -> \Prop} {T : \Cat}
+  : IsEquiv {T ->⁺ FullSubCat P} {\Sigma (g : T ->⁺ C) (\Pi (t : T) -> P (g t))}
+            (\lam h => (\lam t => FullSubCat.inc (h t), \lam t => FullSubCat.inc-con {C} {P}))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection \lam (g : T ->⁺ C) => \Pi (t : T) -> P (g t))
+                                        (IsFFMap.isObEmbedding (postcomp-ff FullSubCat.inc-ff)))
+       \lam s => \have l => FullSubCat.isMax {C} {P} {T} {s.1} s.2
+                 \in inP (l.1, ext (ext l.2))

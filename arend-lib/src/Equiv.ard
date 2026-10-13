@@ -322,6 +322,10 @@
   : QEquiv {Path (\lam k => B (e k)) b b'} {transport B e b = b'} \elim e
   | idp => idEquiv
 
+-- | Transport along a path is an equivalence.
+\lemma transport-isEquiv {A : \Cat} (F : A -> \Cat) {a a' : A} (p : a = a') : IsEquiv (transport F p) \elim p
+  | idp => inP idEquiv
+
 -- # Embeddings and surjections
 
 \record Embedding \extends TypeMap {

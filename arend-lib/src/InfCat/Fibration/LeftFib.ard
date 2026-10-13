@@ -46,6 +46,18 @@
       (\lam x y => cocartesian-ff B (leftFib-lift-cocartesian Bf x.2),
        \lam y => inP ((y, Contr.center {Bf y}), idp))
 
+-- | In the total category of a left fibration, arrows out of an object are determined by their images in the base.
+\lemma leftFib-coslice-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (e : \Sigma⁺ (a : A) (B a))
+  : IsEquiv {\Sigma (e' : \Sigma⁺ (a : A) (B a)) (e ~> e')} {\Sigma (a' : A) (e.1 ~> a')} (\lam w => (w.1.1, dpath \lam i => (w.2 i).1))
+  => IsEquiv.trans {_} {_} {_} {split-equiv e} (inP (split-equiv e)) {\lam d => d.1} (inP (contr-right \lam d => Bf (e.1, d.1, d.2, e.2)))
+  \where
+    \private \func split-equiv {A : \Cat} {B : A ->⁺ \Cat} (e : \Sigma⁺ (a : A) (B a))
+      : QEquiv {\Sigma (e' : \Sigma⁺ (a : A) (B a)) (e ~> e')} {\Sigma (d : \Sigma (a' : A) (e.1 ~> a')) (CovLift B (e.1, d.1, d.2, e.2))} \cowith
+      | f w => ((w.1.1, dpath \lam i => (w.2 i).1), (w.1.2, dpath \lam i => (w.2 i).2))
+      | ret d => ((d.1.1, d.2.1), dpath \lam i => (d.1.2 i, d.2.2 i))
+      | ret_f _ => idp
+      | f_sec _ => idp
+
 \sfunc leftFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (d :⁺ CovLiftData B) : CovLift B d
   => IsHEquiv.fib-sec (leftFib-equiv Bf) (later d)
 
