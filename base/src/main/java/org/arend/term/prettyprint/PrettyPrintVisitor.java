@@ -488,9 +488,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
           name = ref.textRepresentation();
         }
       }
-      if (!name.isEmpty() && name.charAt(0) == '-' && !myBuilder.isEmpty() && myBuilder.charAt(myBuilder.length() - 1) == '{') {
-        myBuilder.append(' ');
-      }
+      separateFromBrace(name);
       myBuilder.append(reference(ref, name));
     }
   }
@@ -1337,7 +1335,9 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
   @Override
   public Void visitNumericLiteral(Concrete.NumericLiteral expr, Precedence params) {
-    myBuilder.append(expr.getNumber());
+    String number = expr.getNumber().toString();
+    separateFromBrace(number);
+    myBuilder.append(number);
     return null;
   }
 
@@ -1691,7 +1691,11 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
           printExpr(namePattern.type, new Precedence(Expression.PREC));
         }
       }
-      case Concrete.NumberPattern numberPattern -> myBuilder.append(numberPattern.getNumber());
+      case Concrete.NumberPattern numberPattern -> {
+        String number = String.valueOf(numberPattern.getNumber());
+        separateFromBrace(number);
+        myBuilder.append(number);
+      }
       case Concrete.TuplePattern ignored -> {
         myBuilder.append('(');
         prettyPrintPatterns(pattern.getPatterns(), new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false), true);
@@ -1760,6 +1764,13 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
     if (!pattern.isExplicit()) {
       printClosingBrace();
+    }
+  }
+
+  // '{-' starts a comment
+  private void separateFromBrace(String text) {
+    if (!text.isEmpty() && text.charAt(0) == '-' && !myBuilder.isEmpty() && myBuilder.charAt(myBuilder.length() - 1) == '{') {
+      myBuilder.append(' ');
     }
   }
 

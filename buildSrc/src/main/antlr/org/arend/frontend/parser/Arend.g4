@@ -1,5 +1,34 @@
 grammar Arend;
 
+@lexer::members {
+  public static final String UNCLOSED_COMMENT_MESSAGE = "Unclosed comment ('{-' opens a comment even inside a comment; write '{ -' to start an implicit argument with '-')";
+
+  // Consumes the rest of a block comment after its '{-', as the IntelliJ lexer does: '{-' always opens a comment, also a nested one.
+  // A comment that is not closed extends to the end of the input.
+  private void blockComment() {
+    int depth = 0;
+    while (true) {
+      int c = _input.LA(1);
+      if (c == EOF) {
+        getErrorListenerDispatch().syntaxError(this, null, _tokenStartLine, _tokenStartCharPositionInLine, UNCLOSED_COMMENT_MESSAGE, null);
+        return;
+      }
+      int next = _input.LA(2);
+      if (c == '{' && next == '-' || c == '-' && next == '}') {
+        getInterpreter().consume(_input);
+        getInterpreter().consume(_input);
+        if (c == '{') {
+          depth++;
+        } else if (depth-- == 0) {
+          return;
+        }
+      } else {
+        getInterpreter().consume(_input);
+      }
+    }
+  }
+}
+
 statements : statement* EOF;
 
 statement : accessMod? USE? definition                                      # statDef
@@ -337,7 +366,7 @@ UNDERSCORE : '_';
 DOT : '.';
 WS : [ \t\r\n]+ -> channel(HIDDEN);
 LINE_COMMENT : '--' '-'* (~[~!@#$%^&*\-+=<>?/|:[\u005Da-zA-Z_0-9'\u2200-\u22FF\u2A00-\u2AFF\r\n] ~[\r\n]* | ) -> skip;
-COMMENT : '{-' (COMMENT|.)*? '-}' -> channel(HIDDEN);
+COMMENT : '{-' { blockComment(); } -> channel(HIDDEN);
 fragment START_CHAR : [~!@#$%^&*\-+=<>?/|:[\u005Da-zA-Z_\u2200-\u22FF\u2A00-\u2AFF];
 ID : START_CHAR (START_CHAR | [0-9'])*;
 INFIX : '`' ID '`';

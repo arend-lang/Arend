@@ -118,6 +118,20 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void prettyPrintingNegativeImplicitArgument() {
+    // '{-' starts a comment
+    assertEquals("f { -1} { -x}", parseExpr("f { -1} { -x}").toString());
+  }
+
+  @Test
+  public void prettyPrintingNegativeImplicitPattern() {
+    Concrete.Definition def = (Concrete.Definition) parseDef("\\func f {n : Int} : Nat \\elim n | { -1} => 0 | {_} => 1").definition();
+    StringBuilder builder = new StringBuilder();
+    def.accept(new PrettyPrintVisitor(builder, 0), null);
+    assertTrue(builder.toString(), builder.toString().contains("{ -1}"));
+  }
+
+  @Test
   public void prettyPrintingDataWithConditions() {
     Concrete.Definition def = (Concrete.Definition) parseDef("\\data Z | neg Nat | pos Nat { zero => neg zero }").definition();
     assertNotNull(def);

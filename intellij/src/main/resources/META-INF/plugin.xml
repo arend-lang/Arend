@@ -204,6 +204,8 @@
 
         <completion.confidence language="Arend" implementationClass="org.arend.codeInsight.completion.ArendCompletionConfidence" id="arendCompletion" />
 
+        <annotator language="Arend" implementationClass="org.arend.annotation.ArendUnclosedCommentAnnotator"/>
+
         <!-- Selection -->
 
         <extendWordSelectionHandler implementation="org.arend.actions.ArendExtendWordSelectionHandler"/>

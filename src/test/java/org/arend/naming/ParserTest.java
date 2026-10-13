@@ -1,6 +1,11 @@
 package org.arend.naming;
 
 import org.arend.ext.core.context.BindingVariance;
+import org.arend.ext.error.ListErrorReporter;
+import org.arend.frontend.parser.ArendLexer;
+import org.arend.frontend.parser.ParserError;
+import org.arend.frontend.parser.Position;
+import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
@@ -518,6 +523,56 @@ public class ParserTest extends NameResolverTestCase {
         \\z -}
         \\func g => 1
         """);
+  }
+
+  private void unclosedComment(String text, int line, int column) {
+    ListErrorReporter errorReporter = new ListErrorReporter();
+    CommonCliRepl.createParser(text, MODULE, errorReporter).statements();
+    assertEquals(1, errorReporter.getErrorList().size());
+    ParserError error = (ParserError) errorReporter.getErrorList().getFirst();
+    assertEquals(ArendLexer.UNCLOSED_COMMENT_MESSAGE, error.message);
+    assertEquals(line, error.position.line);
+    assertEquals(column, error.position.column);
+  }
+
+  @Test
+  public void implicitNegativeArgumentIsComment() {
+    unclosedComment("\\func g => f {-1}", 1, 14);
+  }
+
+  @Test
+  public void implicitNegativeArgumentBeforeComment() {
+    unclosedComment("\\func g => f {-1} {- lol -}", 1, 14);
+  }
+
+  @Test
+  public void implicitNegativeArgument() {
+    parseModule("\\func g => f { -1}");
+  }
+
+  @Test
+  public void unbalancedNestedComment() {
+    unclosedComment("\\func f => 0 {- a {- b -}\n\\func g => 1", 1, 14);
+  }
+
+  @Test
+  public void nestedCommentInLatex() {
+    unclosedComment("{- | $A^{-1}$ -}\n\\func f => 0", 1, 1);
+  }
+
+  @Test
+  public void unclosedCommentPosition() {
+    unclosedComment("\\func f => 0\n  {- a\n  b", 2, 3);
+  }
+
+  @Test
+  public void positionAfterComment() {
+    ListErrorReporter errorReporter = new ListErrorReporter();
+    CommonCliRepl.createParser("{- a\n  {- b -}\n -} \\func f => )", MODULE, errorReporter).statements();
+    assertFalse(errorReporter.getErrorList().isEmpty());
+    Position position = ((ParserError) errorReporter.getErrorList().getFirst()).position;
+    assertEquals(3, position.line);
+    assertEquals(16, position.column);
   }
 
   @Test
