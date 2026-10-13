@@ -56,7 +56,7 @@
 
 {- | Fulton--Harris Thm. 2.12, non-isomorphic case: characters of non-isomorphic irreducibles are orthogonal.
     Conditional on Exercise 1.2 through {invariant-intertwining}. -}
-\lemma orthogonality-noniso {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V W : FinLinRepres K G)
+\lemma orthogonality-noniso.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) (V W : FinLinRepres.{u} K G)
   (irrV : IsFinIrreducible V) (irrW : IsFinIrreducible W) (n : Not (∃ (f : IntertwiningMap V W) (IsEquiv f)))
   : pairing cardInv (character V) (character W) = 0
   => \let | (inP S) => invariants-split cardInv (HomFin V W)
@@ -76,7 +76,7 @@
 
 {- | Fulton--Harris Thm. 2.12, self-pairing: if every intertwiner of an irreducible {V} is a scalar, then $\langle \chi_V, \chi_V \rangle = 1$.
     Conditional on Exercise 1.2 through {invariant-intertwining}. -}
-\lemma orthogonality-self {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V : FinLinRepres K G)
+\lemma orthogonality-self.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) (V : FinLinRepres.{u} K G)
   (irrV : IsFinIrreducible V) (comm : \Pi (h : IntertwiningMap V V) -> ∃ (c : K) (\Pi (e : V) -> h e = c *c e))
   : pairing cardInv (character V) (character V) = 1
   => \let | (inP S) => invariants-split cardInv (HomFin V V)
@@ -127,7 +127,7 @@
          inv (character-coords (transportCS m C) g *> R.FinSum-ext (\lam j => pmap (C.coord j) (pmap m.finv (inv (f.func-** {C.vec j} {g})) *> m.finv_f _)))
 
 -- | Fulton--Harris Thm. 2.12, isomorphic case. Conditional on Exercise 1.2.
-\lemma orthogonality-iso {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (V W : FinLinRepres K G)
+\lemma orthogonality-iso.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) (V W : FinLinRepres.{u} K G)
   (irrV : IsFinIrreducible V) (comm : \Pi (h : IntertwiningMap V V) -> ∃ (c : K) (\Pi (e : V) -> h e = c *c e))
   (f : IntertwiningMap V W) (e : IsEquiv f)
   : pairing cardInv (character V) (character W) = 1

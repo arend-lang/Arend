@@ -16,11 +16,13 @@
 \import Algebra.Ring
 \import Algebra.Ring.Local
 \import Arith.Nat
+\import Category
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Order.StrictOrder
 \import Paths
+\import Paths.Meta
 
 -- | The average $\frac{1}{|G|} \sum_{g} g f g^{-1}$ of a linear map; it is an intertwiner.
 \func averageMap {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E W : LinRepres R G} (f : LinearMap E W) : IntertwiningMap E W
@@ -30,23 +32,35 @@
   : averageMap cardInv f e = cardInv.inv *c W.FinSum (\lam g => g ** f (inverse g ** e))
   => pmap (cardInv.inv *c) (SumOverGroup.FinSumRewrite (\lam g => SumOverGroup.adjust g f) e)
 
--- | Fulton--Harris Prop. 1.5, constructive variant: averaging the projection $incl \circ retr$ of a split subspace gives an equivariant projection onto it.
-\func splitProjector {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} (S : SplitSubLRepres E) : IntertwiningMap E E
-  => averageMap cardInv (LinearMap.compose {R} {E} {ArrayFinModule {R} S.dim} {E} S.incl S.retr)
+-- | Fulton--Harris Prop. 1.5, constructive variant: averaging the projection $incl \circ retr$ of a split subrepresentation gives an equivariant projection onto it.
+\func splitProjector.{u} {R : CRing.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) : IntertwiningMap E E
+  => averageMap cardInv (LinearMap.compose {R} {E} {S.sub} {E} S.incl (SplitSubLRepres.retr S))
   \where {
-    \lemma on-incl {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} (S : SplitSubLRepres E) (x : Array R S.dim)
+    \lemma on-incl.{u} {R : CRing.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (x : S.sub)
       : splitProjector cardInv S (S.incl x) = S.incl x
       => averageMap-char cardInv _ (S.incl x) *>
-         pmap (_ *c) (E.FinSum-ext (\lam g => pmap (g **) (S.incl-invariant (inverse g) x) *> inv E.**-assoc *> pmap (`** _) inverse-right *> E.**_ide) *>
+         pmap (_ *c) (E.FinSum-ext (\lam g => pmap (g **) (SplitSubLRepres.incl-invariant S (inverse g) x) *> inv E.**-assoc *> pmap (`** _) inverse-right *> E.**_ide) *>
                       SumOverGroup.FinSumEqual-multiply (S.incl x)) *>
          inv E.*c-assoc *> pmap (`*c _) (*-comm *> cardInv.inv-right) *> E.ide_*c
 
-    \lemma image {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} (S : SplitSubLRepres E) (e : E)
-      : S.incl (S.retr (splitProjector cardInv S e)) = splitProjector cardInv S e
-      => \have p : splitProjector cardInv S e = S.incl (cardInv.inv *c AbMonoid.FinSum {ArrayFinModule {R} S.dim} (\lam g => S.retr (g ** S.incl (S.retr (inverse g ** e)))))
-                => averageMap-char cardInv _ e *> pmap (_ *c) (E.FinSum-ext (\lam g => inv (S.incl-invariant g _)) *> inv (AddMonoidHom.func-FinSum S.incl)) *> inv S.incl.func-*c
-         \in pmap (\lam z => S.incl (S.retr z)) p *> pmap S.incl (S.retr_incl _) *> inv p
+    \lemma image.{u} {R : CRing.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (e : E)
+      : S.incl (SplitSubLRepres.retr S (splitProjector cardInv S e)) = splitProjector cardInv S e
+      => \let r => SplitSubLRepres.retr S
+         \in \have p : splitProjector cardInv S e = S.incl (cardInv.inv *c AbMonoid.FinSum {S.sub} (\lam g => r (g ** S.incl (r (inverse g ** e)))))
+                => averageMap-char cardInv _ e *> pmap (_ *c) (E.FinSum-ext (\lam g => inv (SplitSubLRepres.incl-invariant S g _)) *> inv (AddMonoidHom.func-FinSum S.incl)) *> inv S.incl.func-*c
+         \in pmap (\lam z => S.incl (r z)) p *> pmap S.incl (SplitSubLRepres.retr_incl S _) *> inv p
   }
+
+{- | Fulton--Harris Prop. 1.5, constructive variant: when $|G|$ is invertible, averaging the linear retraction of a split subrepresentation
+    makes {incl} a split monomorphism in the category of representations. -}
+\func maschke-split.{u} {R : CRing.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E)
+  : SplitMono {RepresentationCat.{u} R G} {S.sub} {E} S.incl \cowith
+  | hinv => averageMap cardInv (SplitSubLRepres.retr S)
+  | hinv_f => exts \lam x => averageMap-char cardInv _ (S.incl x) *>
+      pmap (_ *c) (S.sub.FinSum-ext (\lam g => pmap (\lam z => g ** SplitSubLRepres.retr S z) (inv S.incl.func-**) *> pmap (g **) (SplitSubLRepres.retr_incl S _) *>
+                                              inv S.sub.**-assoc *> pmap (`** _) inverse-right *> S.sub.**_ide) *>
+                   SumOverGroup.FinSumEqual-multiply x) *>
+      inv S.sub.*c-assoc *> pmap (`*c _) (*-comm *> cardInv.inv-right) *> S.sub.ide_*c
 
 \lemma dim=0-of-zero {R : NonZeroRing} {n : Nat} (p : \Pi (x : Array R n) -> x = AddPointed.zro {ArrayFinModule {R} n}) : n = 0 \elim n
   | 0 => idp
@@ -54,7 +68,7 @@
 
 {- | A finite free representation of positive rank whose intertwiners are all scalar is irreducible,
     over a commutative local ring in which $|G|$ is invertible. No zero test is used. -}
-\lemma irreducible-from-commutant {R : LocalCRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G}
+\lemma irreducible-from-commutant.{u} {R : LocalCRing.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres.{u} R G}
   {l : Array E} (l>0 : 0 < l.len) (lb : E.IsBasis l)
   (comm : \Pi (h : IntertwiningMap E E) -> ∃ (c : R) (\Pi (e : E) -> h e = c *c e))
   : IsFinIrreducible E
@@ -70,8 +84,8 @@
            | cc=c : c * c = c
                => inv ide-right *> inv (d.func-*c *> pmap (_ *) E.basis_split_=) *> pmap d eq *> d.func-*c *> pmap (c *) E.basis_split_= *> ide-right
       \in \case R.connected c cc=c \with {
-        | byLeft c=0 => byLeft $ dim=0-of-zero \lam x => inv (S.retr_incl x) *>
-            pmap S.retr (inv (splitProjector.on-incl cardInv S x) *> hc _ *> pmap (`*c _) c=0 *> E.*c_zro-left) *> S.retr.func-zro
-        | byRight c=1 => byRight \lam e => inP (S.retr (pi e), splitProjector.image cardInv S e *> hc e *> pmap (`*c e) c=1 *> E.ide_*c)
+        | byLeft c=0 => byLeft \lam x => inv (SplitSubLRepres.retr_incl S x) *>
+            pmap (SplitSubLRepres.retr S) (inv (splitProjector.on-incl cardInv S x) *> hc _ *> pmap (`*c _) c=0 *> E.*c_zro-left) *> (SplitSubLRepres.retr S).func-zro
+        | byRight c=1 => byRight \lam e => inP (SplitSubLRepres.retr S (pi e), splitProjector.image cardInv S e *> hc e *> pmap (`*c e) c=1 *> E.ide_*c)
       }
   })

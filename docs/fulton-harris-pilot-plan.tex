@@ -257,27 +257,38 @@ Rules:
 \end{itemize}
 
 \stage{D3}{Finite-dimensional irreducibility via split invariant subspaces (pilot notion)}
-A split subrepresentation is data: an inclusion of $R^k$ together with a linear
-retraction, whose image is invariant.
+A split subrepresentation is data: a representation \code{sub}, an intertwiner
+\code{incl} into $E$, and a \emph{linear} retraction of \code{incl}. The
+retraction makes \code{incl} a split monomorphism (\code{SplitMono},
+\src{Category.ard:61}) in the category of modules \code{LModuleCat}, not in the
+category of representations \code{RepresentationCat}.
 \begin{lstlisting}
--- sketch; Algebra/Group/Representation/SplitSubLRepres.ard
-\record SplitSubLRepres {R : Ring} {G : Group} (E : LinRepres R G)
-  | dim : Nat
-  | incl : LinearMap (ArrayFinModule {R} dim) E
-  | retr : LinearMap E (ArrayFinModule {R} dim)
-  | retr_incl (x : Array R dim) : retr (incl x) = x
-  | incl-invariant (g : G) (x : Array R dim) : incl (retr (g ** incl x)) = g ** incl x
+-- Algebra/Group/Representation/SplitSubLRepres.ard
+\record SplitSubLRepres.{u} {R : Ring.{u}} {G : Group.{u}} (E : LinRepres.{u} R G)
+  | sub : LinRepres.{u} R G
+  | incl : IntertwiningMap sub E
+  | split : SplitMono {LModuleCat.{u} R} {sub} {E} incl
 
--- the induced action on R^dim, g . x := retr (g ** incl x), makes incl an intertwiner
-\func SplitSubLRepres.toLinRepres (S : SplitSubLRepres E) : LinRepres R G
-\func SplitSubLRepres.inclIntertwining (S : SplitSubLRepres E) : IntertwiningMap S.toLinRepres E
+-- an invariant split submodule (R^k, incl, retr) gives sub = R^k with g . x := retr (g ** incl x)
+\func SplitSubLRepres.fromInvariant (S : SplitSubLModule E P) (P-inv : ...) : SplitSubLRepres E
 
 -- Algebra/Group/Representation/Irreducible.ard (pilot notion; no decidable equality)
-\func IsFinIrreducible {R : NonZeroRing} {G : Group} (E : LinRepres R G) : \Prop
+\func IsFinIrreducible.{u} {R : NonZeroRing.{u}} {G : Group.{u}} (E : LinRepres.{u} R G) : \Prop
   => \Sigma (∃ (l : Array E) (0 < l.len) (E.IsBasis l))              -- finite free, positive rank
-            (\Pi (S : SplitSubLRepres E) -> (S.dim = 0) || IsSurj S.incl)
+            (\Pi (S : SplitSubLRepres.{u} E) -> (\Pi (x : S.sub) -> x = 0) || IsSurj S.incl)
 \end{lstlisting}
 \begin{itemize}
+  \item \textbf{Linear, not equivariant, retraction.} A split monomorphism in
+  \code{RepresentationCat} is an invariant direct summand, and testing only
+  those defines indecomposability. Over $\mathbb F_2$, the swap action of
+  $C_2$ on $\mathbb F_2^2$ is indecomposable but not irreducible: the line
+  spanned by $(1,1)$ is invariant and linearly split, but has no invariant
+  complement. The equivariant split is what averaging produces
+  (\code{maschke-split}, P04a), when $|G|$ is invertible.
+  \item \textbf{Universe levels.} \code{LModuleCat} and
+  \code{RepresentationCat} take objects at a finite level \code{u}, so
+  \code{SplitSubLRepres}, \code{IsFinIrreducible} and the declarations that
+  quantify over them carry a level parameter \code{.\{u\}}.
   \item \textbf{No decidable equality in the definition.} The first component
   is the truncated existence of a basis of positive length; no basis is
   chosen, and no \code{dimension} or decision procedure is needed. (An earlier
@@ -295,8 +306,9 @@ retraction, whose image is invariant.
   produce split subspaces (L08b, P03).
   \item \textbf{Why this escapes the $W_P$ argument.} A split subspace comes
   with a retraction. For $W_P\subseteq\Q$ that would mean a linear
-  $r:\Q\to\Q^k$ with $r\circ j=\mathrm{id}$, so $k$ is a natural number
-  with $k=0$ or $k=1$ decidably. Building that data already settles $P$.
+  $r:\Q\to W_P$ with $r\circ j=\mathrm{id}$, so $j\circ r$ is multiplication
+  by an idempotent $c\in\Q$, and $c=0$ or $c=1$ decidably. Building that data
+  already settles $P$.
   \item \textbf{Invariance is a proposition.} It is an equation in a set, so no
   data has to be chosen to state it.
   \item \textbf{Recorded restrictions.}
@@ -310,12 +322,11 @@ retraction, whose image is invariant.
   \end{itemize}
   \item \textbf{Open questions for M1 review.}
   \begin{itemize}
-    \item Should the second component use \code{IsSurj S.incl} or
-    \code{S.dim = T.dim}? L09 shows the two are equivalent over a
-    \code{DiscreteField}.
     \item Should a nonzero-vector witness replace the positive-rank component?
-    \item Should \code{SplitSubLRepres} allow finite projective rather than
-    free summands? This bears on D3b.
+    \item \code{sub} is an arbitrary representation, so finite projective
+    summands are allowed. Rank-one irreducibility then needs a ring without
+    nontrivial idempotents: over $R\times R$, the summand $R\times 0$ is a
+    split subrepresentation. Is this the right generality for D3b?
   \end{itemize}
   \item \textbf{The old definition.} It is renamed
   \code{IsStronglyIrreducible} and kept together with its Schur proof, so that
@@ -1066,12 +1077,12 @@ Paths are relative to \src{arend-lib/src/Algebra/}.
 Item & Declarations (module) & Notes \\
 \midrule
 \endhead
-D3 & \code{SplitSubLRepres}, \code{IsFinIrreducible} (\src{Group/Representation/SplitSubLRepres}, \src{Irreducible}) & Old notion renamed \code{IsStronglyIrreducible}, Schur as \code{SchurLemma-strong}. The first component of \code{IsFinIrreducible} is stated as existence of a basis of positive length. \\
-P01 & \code{toUnitsHom}, \code{fromUnitsHom} and both round-trip laws (\src{Hom}); \code{PermRepr-not-FinIrreducible} (\src{PermutationRepresentation}); \code{rank-one-irreducible} (\src{Irreducible}) & Uses \code{InvGroup} from \src{Arith/Nat/EulerTotient}. Rank-one irreducibility holds over every \code{NonZeroCRing}, without averaging. \\
+D3 & \code{SplitSubLRepres}, \code{SplitSubLRepres.fromInvariant}, \code{IsFinIrreducible} (\src{Group/Representation/SplitSubLRepres}, \src{Irreducible}) & Old notion renamed \code{IsStronglyIrreducible}, Schur as \code{SchurLemma-strong}. The first component of \code{IsFinIrreducible} is stated as existence of a basis of positive length. \code{SplitSubLRepres} is an intertwiner that is a \code{SplitMono} in \code{LModuleCat}; it and its consumers are universe-polymorphic. \\
+P01 & \code{toUnitsHom}, \code{fromUnitsHom} and both round-trip laws (\src{Hom}); \code{PermRepr-not-FinIrreducible} (\src{PermutationRepresentation}); \code{rank-one-idempotent}, \code{rank-one-irreducible} (\src{Irreducible}) & Uses \code{InvGroup} from \src{Arith/Nat/EulerTotient}. Rank-one irreducibility holds over every \code{NonZeroCRing} without nontrivial idempotents (\code{IsConnected}), without averaging. \\
 P01b & \code{IsStronglyIrreducible.excludedMiddle} & Proved; no axiom. \\
 P02 & \code{HomLRepres}, \code{DualLRepres}, \code{invariantHom} & \code{invariantHom} is the hole \code{FH_L01_Ex1_2}. \\
 P03 & \code{SchurLemma} & Over \code{DiscreteField}; concludes \code{IsEquiv f}. \\
-P04 & \code{splitProjector} (P04a, \src{Averaging}); \code{maschke-complement} (P04b, \src{Complement}) & P04a over \code{CRing}; P04b weakened during cleanup from \code{DiscreteField} to \code{SmithDomain}. \\
+P04 & \code{splitProjector}, \code{maschke-split} (P04a, \src{Averaging}); \code{maschke-complement} (P04b, \src{Complement}) & P04a over \code{CRing}; \code{maschke-split} makes \code{incl} a \code{SplitMono} in \code{RepresentationCat}; P04b weakened during cleanup from \code{DiscreteField} to \code{SmithDomain}. \\
 P05 & \code{perm3-complete-reducibility} (\src{Symmetric3}) & Restricted to the presented $S_3$ input. \\
 P06 & \code{std-commutant} & Holds over every \code{CRing}: the equations need no division (the plan expected divisors of $6$). \\
 P07 & \code{multiplicities} (\src{Multiplicities}) & Character route; characteristic $0$ as a hypothesis; conditional on Ex.~1.2. \\
@@ -1083,12 +1094,12 @@ P12 & \code{orthogonality-noniso}, \code{orthogonality-self}, \code{orthogonalit
 L01--L05 & \code{toLinearMap_*}, \code{toMatrix-action_*}, \code{Trace-coords}, \code{Trace-basis-indep}, \code{endoTrace} (\src{Module/TraceCoords}) & L04 holds over any \code{CRing}, for bases of possibly different lengths, with no inverses. L03 is subsumed by \code{Trace-coords}. \\
 L06--L07, L11--L14 & \code{CoordSystem}, \code{productCS}, \code{homCS}, \code{tensorCS}, \code{deltaCS}, \code{arrayCS} (\src{Module/CoordSystem}, \src{Tensor}) & One mechanism (finite set-indexed coordinates and \code{Trace-coords}) replaces block and Kronecker matrices. \\
 L08--L09 & \code{kernel-split}, \code{image-split}, \code{split-full-surj} (\src{Linear/SplitSubLModule}) & As corrected: kernel over \code{SmithDomain}, image over \code{DiscreteField}. \\
-L10 & \code{split-dim-<=} (\src{Linear/SplitSubLModule}) & Used for rank-one irreducibility. \\
+L10 & \code{split-dim-<=} (\src{Linear/SplitSubLModule}) & No longer used downstream: rank-one irreducibility goes through \code{rank-one-idempotent}. \\
 L15 & \code{trace-split} & Cyclicity of the trace; no kernel basis. \\
 L16, L22 & \code{natCoef-Inv-Rat}, \code{ratToComplex}, \code{natCoef-Inv-Complex} (\src{../Arith/Complex/RatHom}) & \\
 L17--L20 & \code{SymFinGroup}, \code{SymAction} (\src{Group/Symmetric/Action}), \code{FixedPointsFin}, \code{right-translate} & L20's inversion reindexing was not needed and was removed. \\
 L21 & \code{irreducible-from-commutant} (\src{Averaging}) & Uses \code{LocalRing.connected}. \\
-R1--R7 & \src{Symmetric3}, \src{Symmetric3Characters} & R1 is an explicit enumeration $\mathrm{Fin}\,6 \simeq S_3$; class sizes are not stated separately, since the sums run over all six elements. R6 covers all nine pairings, the reversed ones via the general lemma \code{pairing-symm}. Trivial and sign are irreducible over any \code{NonZeroCRing} (tested over $\mathbb Z$, also for $C_2 = S_2$). \\
+R1--R7 & \src{Symmetric3}, \src{Symmetric3Characters} & R1 is an explicit enumeration $\mathrm{Fin}\,6 \simeq S_3$; class sizes are not stated separately, since the sums run over all six elements. R6 covers all nine pairings, the reversed ones via the general lemma \code{pairing-symm}. Trivial and sign are irreducible over any \code{NonZeroCRing} without nontrivial idempotents (tested over $\mathbb Z$, also for $C_2 = S_2$). \\
 R8a/b & \src{test/Algebra/Representation/S3Test.ard} & Irreducibility, decomposition, character values and pairings over \code{ComplexField}, with the only inverse being the image of $1/6$. \\
 \bottomrule
 \end{longtable}}

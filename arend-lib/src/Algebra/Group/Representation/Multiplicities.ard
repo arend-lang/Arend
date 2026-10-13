@@ -53,7 +53,7 @@
 \lemma natCoef1 {R : Semiring} : R.natCoef 1 = 1
   => R.natCoefSuc 0 *> pmap (`+ 1) R.natCoefZero *> R.zro-left
 
-\lemma delta-case.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
+\lemma delta-case.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
   (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
   (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
   (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
@@ -65,7 +65,7 @@
     | no n => orthogonality-noniso cardInv (V x) (V j) (irr x) (irr j) (noniso x j n) *> inv K.natCoefZero
   }
 
-\lemma count-pairing.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
+\lemma count-pairing.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
   (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
   (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
   (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
@@ -77,7 +77,7 @@
 
 {- | Fulton--Harris Prop. 1.8, constructive variant: multiplicities of pairwise non-isomorphic split irreducibles in a direct sum are determined by the isomorphism class.
     Restricted to characteristic $0$ (injectivity of {natCoef}) and conditional on Exercise 1.2. -}
-\lemma multiplicities.{u} {K : DiscreteField.{u}} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
+\lemma multiplicities.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
   (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
   (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
   (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))

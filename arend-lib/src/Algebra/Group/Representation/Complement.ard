@@ -24,35 +24,36 @@
 
 \lemma sub-distr {A : AbGroup} (a b c d : A) : (a + b) - (c + d) = (a - c) + (b - d) => equation.abGroup
 
-\lemma splitProjector-idem {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} (S : SplitSubLRepres E) (e : E)
+\lemma splitProjector-idem.{u} {R : CRing.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (e : E)
   : splitProjector cardInv S (splitProjector cardInv S e) = splitProjector cardInv S e
   => pmap (splitProjector cardInv S) (inv (splitProjector.image cardInv S e)) *> splitProjector.on-incl cardInv S _ *> splitProjector.image cardInv S e
 
-\lemma splitProjector-complement {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} (S : SplitSubLRepres E) (e : E)
+\lemma splitProjector-complement.{u} {R : CRing.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (e : E)
   : splitProjector cardInv S (e - splitProjector cardInv S e) = 0
   => (splitProjector cardInv S).func-minus *> pmap (_ - __) (splitProjector-idem cardInv S e) *> E.negative-right
 
-{- | Fulton--Harris Prop. 1.5, constructive variant: over a Smith domain, a split invariant subspace of a representation with a basis has an invariant complement $C$,
+{- | Fulton--Harris Prop. 1.5, constructive variant: over a Smith domain, a split subrepresentation of a representation with a basis has an invariant complement $C$,
     and $E \cong S \oplus C$ as representations. The complement is the kernel of the averaged projection. -}
-\lemma maschke-complement {K : SmithDomain} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) {E : LinRepres K G}
-  {lv : Array E} (bv : E.IsBasis lv) (S : SplitSubLRepres E)
-  : ∃ (C : SplitSubLRepres E)
-      (Phi : IntertwiningMap E (ProductLRepres (SplitSubLRepres.toLinRepres S) (SplitSubLRepres.toLinRepres C)))
-      (\Pi (e : E) -> ProductLRepres.coprod-map {K} {G} {SplitSubLRepres.toLinRepres S} {SplitSubLRepres.toLinRepres C} {E} (SplitSubLRepres.inclIntertwining S) (SplitSubLRepres.inclIntertwining C) (Phi e) = e)
-      (\Pi (x : Array K S.dim) (y : Array K C.dim) -> Phi (S.incl x + C.incl y) = (x, y))
+\lemma maschke-complement.{u} {K : SmithDomain.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {E : LinRepres.{u} K G}
+  {lv : Array E} (bv : E.IsBasis lv) (S : SplitSubLRepres.{u} E)
+  : ∃ (C : SplitSubLRepres.{u} E)
+      (Phi : IntertwiningMap E (ProductLRepres S.sub C.sub))
+      (\Pi (e : E) -> ProductLRepres.coprod-map {K} {G} {S.sub} {C.sub} {E} S.incl C.incl (Phi e) = e)
+      (\Pi (x : S.sub) (y : C.sub) -> Phi (S.incl x + C.incl y) = (x, y))
   => \let | pi => splitProjector cardInv S
+          | r => SplitSubLRepres.retr S
           | (inP Ker) => kernel-split bv bv pi
           | C => SplitSubLRepres.fromInvariant Ker (SchurLemma.kernel-invariant {K} {G} {E} {E} {pi})
      \in inP (C, \new IntertwiningMap {
-           | func e => (S.retr (pi e), C.retr (e - pi e))
-           | func-+ {e} {e'} => ext (pmap S.retr pi.func-+ *> S.retr.func-+,
-                                     pmap C.retr (pmap ((e + e') -) pi.func-+ *> sub-distr e e' (pi e) (pi e')) *> C.retr.func-+)
-           | func-*c {r} {e} => ext (pmap S.retr pi.func-*c *> S.retr.func-*c,
-                                     pmap C.retr (pmap ((r *c e) -) pi.func-*c *> inv E.*c-ldistr_-) *> C.retr.func-*c)
-           | func-** {e} {g} => ext (pmap S.retr (pi.func-** *> pmap (g **) (inv (splitProjector.image cardInv S e))),
-                                     pmap C.retr (pmap ((g ** e) -) pi.func-** *> inv (E.**-ldistr *> pmap (_ +) E.**_negative) *>
-                                                  pmap (g **) (inv (Ker.incl_retr (splitProjector-complement cardInv S e)))))
+           | func e => (r (pi e), Ker.retr (e - pi e))
+           | func-+ {e} {e'} => ext (pmap r pi.func-+ *> r.func-+,
+                                     pmap Ker.retr (pmap ((e + e') -) pi.func-+ *> sub-distr e e' (pi e) (pi e')) *> Ker.retr.func-+)
+           | func-*c {c} {e} => ext (pmap r pi.func-*c *> r.func-*c,
+                                     pmap Ker.retr (pmap ((c *c e) -) pi.func-*c *> inv E.*c-ldistr_-) *> Ker.retr.func-*c)
+           | func-** {e} {g} => ext (pmap r (pi.func-** *> pmap (g **) (inv (splitProjector.image cardInv S e)) *> inv S.incl.func-**) *> SplitSubLRepres.retr_incl S _,
+                                     pmap Ker.retr (pmap ((g ** e) -) pi.func-** *> inv (E.**-ldistr *> pmap (_ +) E.**_negative) *>
+                                                    pmap (g **) (inv (Ker.incl_retr (splitProjector-complement cardInv S e)))))
          }, \lam e => pmap2 (+) (splitProjector.image cardInv S e) (Ker.incl_retr (splitProjector-complement cardInv S e)) *> add-sub-cancel (pi e) e,
             \lam x y => \have p : pi (S.incl x + C.incl y) = S.incl x
                                  => pi.func-+ *> pmap2 (+) (splitProjector.on-incl cardInv S x) (Ker.incl-in y) *> zro-right
-                        \in ext (pmap S.retr p *> S.retr_incl x, pmap C.retr (pmap (_ -) p *> sub-add-cancel (S.incl x) (C.incl y)) *> C.retr_incl y))
+                        \in ext (pmap r p *> SplitSubLRepres.retr_incl S x, pmap Ker.retr (pmap (_ -) p *> sub-add-cancel (S.incl x) (C.incl y)) *> Ker.retr_incl y))

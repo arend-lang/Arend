@@ -55,11 +55,12 @@
   => pairing-triv-sign (natCoef-Inv-Complex 5)
 
 -- One-dimensional representations are irreducible without averaging: over $\mathbb{Z}$, where $|G|$ is not invertible.
+-- $\mathbb{Z}$ is a domain, so its only idempotents are $0$ and $1$.
 \lemma trivial-irreducible-Z-C2 : IsFinIrreducible (TrivialAction (RingLModule IntRing) (SymFinGroup 2))
-  => trivial-irreducible
+  => trivial-irreducible (\lam _ => IntRing.isImpotent)
 
 \lemma sign-irreducible-Z : IsFinIrreducible (SignLRepres IntRing 3)
-  => sign-irreducible
+  => sign-irreducible (\lam _ => IntRing.isImpotent)
 
 -- Negative control: the checker must reject an invalid proof.
 \func control-invalid-proof => fails {0 = {Nat} 1} idp
