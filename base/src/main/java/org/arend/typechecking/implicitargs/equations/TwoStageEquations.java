@@ -828,7 +828,7 @@ public class TwoStageEquations implements Equations {
     loop:
     for (Pair<InferenceVariable, List<ClassCallExpression>> pair : list) {
       if (pair.proj2.size() == 1) {
-        solve(pair.proj1, pair.proj2.getFirst(), true);
+        solve(pair.proj1, pair.proj2.getFirst(), cmp == CMP.LE);
         solved = true;
         continue;
       }
@@ -979,7 +979,7 @@ public class TwoStageEquations implements Equations {
         }
       }
 
-      solve(pair.proj1, solution, true);
+      solve(pair.proj1, solution, cmp == CMP.LE);
       solved = true;
     }
     return allOK && solved;
