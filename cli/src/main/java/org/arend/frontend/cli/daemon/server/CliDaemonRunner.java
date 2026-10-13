@@ -6,7 +6,7 @@ import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.Dispatch;
+import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 
 import java.util.List;
@@ -15,8 +15,8 @@ import java.util.Map;
 /**
  * How the CLI's daemon runs a request: against the warm {@link CommandContext} it was started
  * with, with the worker's {@code System.out} / {@code System.err} streaming to the client as frames.
- * A client's command goes through {@link CliDispatcher}; a {@code refresh} re-runs the daemon's own
- * bootstrap argv, so that source-timestamp checks pick up edits.
+ * A client's command goes through {@link CliDispatcher}; a {@code refresh} resolves the served
+ * libraries again, as the daemon did on starting, typechecking nothing.
  */
 public final class CliDaemonRunner {
   /** How a client's command is run. Visible so a test can substitute one it can hold open. */
@@ -47,12 +47,11 @@ public final class CliDaemonRunner {
     ctx.cancellation = request.cancel();
     StreamRedirector.attach(request.output());
     try {
-      // A refresh is the daemon's own bootstrap argv, so it skips the client-facing policy: those
-      // args are what the locked flags are locked *to*, and a warning that they are being ignored
-      // would be false and unactionable.
-      return request.args() == null
-          ? Dispatch.run(ctx, ctx.bootstrapArgs == null ? new String[0] : ctx.bootstrapArgs.clone(), request.cwd())
-          : commands.run(ctx, request.args().toArray(new String[0]), request.cwd());
+      if (request.args() != null) return commands.run(ctx, request.args().toArray(new String[0]), request.cwd());
+      // A refresh resolves the served libraries again, as the daemon did on starting.
+      ctx.beginCommand();
+      TypecheckPipeline.resolve(ctx, ctx.servedLibraries);
+      return ctx.exitWithError ? 1 : 0;
     } catch (Throwable t) {
       t.printStackTrace(); // goes to the client via the redirect
       return 1;

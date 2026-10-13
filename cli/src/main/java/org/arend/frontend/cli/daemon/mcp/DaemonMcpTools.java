@@ -26,8 +26,8 @@ final class DaemonMcpTools {
       new Control("daemon_ping", "ping", "Report whether the worker of the daemon serving `library` is IDLE or BUSY."),
       new Control("daemon_status", "status", "The state of the daemon serving `library`, as JSON: process id, worker"
           + " state, queue depth, uptime, current task, protocol version, the libraries it serves and locked flags."),
-      new Control("daemon_refresh", "refresh", "Re-run the bootstrap command of the daemon serving `library` on its"
-          + " warm context, so source edits made since it started are picked up."),
+      new Control("daemon_refresh", "refresh", "Resolve the libraries of the daemon serving `library` again, so source"
+          + " edits, new and deleted files are picked up; typechecks nothing."),
       new Control("daemon_stop", "shutdown", "Stop the daemon owning `library` once the commands already queued have"
           + " run; not for one under ~/.arend/libs."));
 

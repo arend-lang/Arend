@@ -27,7 +27,8 @@ import java.util.Optional;
  * ({@link #inspectLock}); claim the right to start ({@link #reserveStart}); spawn
  * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap <arend.yaml> [-L ...]
  * <arend.yaml>...} with stdio pointed at daemon.log; then poll for the lock the child writes when it
- * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s (a cold arend-lib bootstrap is ~2 minutes).
+ * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s. The child only loads and resolves its
+ * libraries, typechecking nothing; arend-lib takes some seconds.
  */
 public final class DaemonStart {
   /** Max time to wait for the child to write its lock file. */
@@ -171,7 +172,7 @@ public final class DaemonStart {
 
     System.out.println("Starting Arend daemon for " + String.join(", ", requested));
     System.out.println("  log: " + paths.logFile);
-    System.out.println("  waiting for initial typecheck to complete (up to "
+    System.out.println("  waiting for the libraries to be resolved (up to "
         + READY_TIMEOUT_SECONDS + "s)...");
 
     long deadline = System.currentTimeMillis() + READY_TIMEOUT_SECONDS * 1000L;

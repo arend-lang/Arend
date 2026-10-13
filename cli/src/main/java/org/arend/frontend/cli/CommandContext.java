@@ -51,9 +51,8 @@ public class CommandContext {
   public boolean serialize;
 
   /**
-   * The argv the daemon was started with, or null for a local run. The daemon's {@code refresh}
-   * op re-dispatches exactly these against the warm context, so that source-timestamp checks
-   * see the same scope the bootstrap did.
+   * The argv the daemon was started with, or null for a local run; the daemon's {@code status}
+   * op reports the locked flags read off it.
    */
   public String[] bootstrapArgs;
 

@@ -215,11 +215,11 @@ public class DaemonServerSocketTest {
   }
 
   /**
-   * {@code refresh} replays the daemon's own bootstrap argv -- the args the locked flags are
-   * locked <em>to</em> -- so reporting them as ignored is false, and unactionable from a refresh.
+   * {@code refresh} resolves the served libraries again and typechecks nothing; nor does it report
+   * the daemon's own bootstrap flags as ignored, which would be false and unactionable.
    */
   @Test
-  public void refreshDoesNotWarnAboutTheDaemonsOwnBootstrapFlags() throws Exception {
+  public void refreshResolvesWithoutTypecheckingOrWarning() throws Exception {
     DaemonServer refreshServer = serverFor("refresh", "-r");
     try {
       SocketAddress refreshAddress = SocketAddress.parse(boundAddress);
@@ -231,8 +231,8 @@ public class DaemonServerSocketTest {
         });
       }
       String output = String.join("", chunks);
-      assertTrue("refresh must actually re-run the pipeline: " + output,
-          output.contains("Typechecking"));
+      assertTrue("refresh must resolve the library again: " + output, output.contains("[INFO] Resolved lib"));
+      assertFalse("refresh must not typecheck: " + output, output.contains("Typechecking"));
       assertFalse("refresh must not report the bootstrap's own flags as ignored: " + output,
           output.contains("is ignored"));
     } finally {

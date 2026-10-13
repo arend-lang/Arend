@@ -70,8 +70,7 @@ public final class TypecheckPipeline {
   private static boolean runPipeline(CommandContext ctx, CommandLine cmdLine) {
     extendScopeForPrintTarget(ctx, cmdLine);
     // Each library's source modules, read off its directory once for the whole run.
-    Map<SourceLibrary, List<ModulePath>> sources = new HashMap<>();
-    for (SourceLibrary library : ctx.requestedLibraries) sources.put(library, library.findModules(false));
+    Map<SourceLibrary, List<ModulePath>> sources = sourcesOf(ctx.requestedLibraries);
     dropDeletedModules(ctx, sources);
 
     // Modules whose stored diagnostics have already been printed by this run.
@@ -90,9 +89,7 @@ public final class TypecheckPipeline {
       if (ctx.requestedModules.isEmpty()) {
         // Whole-library typechecking: resolve every module of each requested library.
         for (SourceLibrary library : ctx.requestedLibraries) {
-          List<ModuleLocation> allModules = sources.get(library).stream()
-              .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
-              .toList();
+          List<ModuleLocation> allModules = sourceLocations(library, sources.get(library));
           if (!allModules.isEmpty()) {
             ctx.server.getCheckerFor(allModules).resolveAll(ctx.cancellation, ProgressReporter.empty());
             resolvedRequestedScope = true;
@@ -392,6 +389,38 @@ public final class TypecheckPipeline {
   }
 
   /**
+   * What a daemon does on starting and on a {@code refresh}: the source modules of
+   * {@code libraries} are brought in line with their directories -- an edited file re-read, a new
+   * one added, a deleted one dropped -- and resolved, but nothing is typechecked. A command checks
+   * what it asks for when it runs, as IntelliJ checks the file it has open.
+   */
+  public static void resolve(CommandContext ctx, List<SourceLibrary> libraries) {
+    Map<SourceLibrary, List<ModulePath>> sources = sourcesOf(libraries);
+    dropDeletedModules(ctx, sources);
+    for (SourceLibrary library : libraries) {
+      long time = System.currentTimeMillis();
+      List<ModuleLocation> modules = sourceLocations(library, sources.get(library));
+      if (!modules.isEmpty()) ctx.server.getCheckerFor(modules).resolveAll(ctx.cancellation, ProgressReporter.empty());
+      System.out.println("[INFO] Resolved " + library.getLibraryName() + " ("
+          + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
+    }
+  }
+
+  /** The source modules of each of {@code libraries}, read off its directory. */
+  private static Map<SourceLibrary, List<ModulePath>> sourcesOf(List<SourceLibrary> libraries) {
+    Map<SourceLibrary, List<ModulePath>> sources = new HashMap<>();
+    for (SourceLibrary library : libraries) sources.put(library, library.findModules(false));
+    return sources;
+  }
+
+  /** {@code library}'s source modules {@code modulePaths}, as the server names them. */
+  private static List<ModuleLocation> sourceLocations(SourceLibrary library, List<ModulePath> modulePaths) {
+    return modulePaths.stream()
+        .map(modulePath -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath))
+        .toList();
+  }
+
+  /**
    * Removes modules of the requested libraries whose source file is gone.
    *
    * <p>A warm server keeps a module after its {@code .ard} is deleted, because nothing rescans
@@ -404,7 +433,7 @@ public final class TypecheckPipeline {
    */
   private static void dropDeletedModules(CommandContext ctx, Map<SourceLibrary, List<ModulePath>> sources) {
     List<ModuleLocation> gone = new ArrayList<>();
-    for (SourceLibrary library : ctx.requestedLibraries) {
+    for (SourceLibrary library : sources.keySet()) {
       Set<ModulePath> onDisk = new HashSet<>(sources.get(library));
       for (ModuleLocation module : ctx.server.getModules()) {
         if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
