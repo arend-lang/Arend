@@ -1163,6 +1163,76 @@ on either hole.
 \textbf{Not yet done.}
 \begin{itemize}
   \item The general-module design D3b.
+  \item The two items below, needed before Lecture~3.
 \end{itemize}
+
+\subsection*{Follow-up items for Lectures 3 onward}
+\textbf{Relation of the two irreducibility notions.} An earlier version of
+\code{SplitSubLRepres} tested only free summands $R^k$ with a linear
+retraction. The current notion tests every split subrepresentation
+(\code{SplitMono} in \code{LModuleCat}), and it is strictly stronger:
+\begin{itemize}
+  \item \textbf{New implies old} over every \code{NonZeroRing}, via
+  \code{fromInvariant}: a zero subrepresentation $R^k$ has $k=0$.
+  \item \textbf{Old does not imply new} in general. Over $R=\mathbb Z\times\mathbb Z$,
+  the trivial representation on $R$ is irreducible in the old sense, but
+  $R\times 0$ is a nonzero, non-surjective split subrepresentation. Hence
+  \code{rank-one-irreducible} needs \code{IsConnected}.
+  \item \textbf{They agree} over a \code{DiscreteField} (split the image of
+  the idempotent $\mathit{incl}\circ\mathit{retr}$ by \code{image-split}).
+  They also agree over a \code{LocalCRing} if finitely generated projective
+  modules over local rings are free. That theorem is constructive in the
+  literature (Lombardi--Quitt\'e; exact statement to be checked), but it is
+  not in arend-lib.
+  \item Neither equivalence is formalized.
+\end{itemize}
+Over $\C$ the new notion is the more usable one. \code{ComplexField} is not a
+\code{DiscreteField}, so a basis of the image of an idempotent is not
+available. Isotypic projections, the projection formula (\S2.4) and the
+decomposition of the regular representation all produce such images, and they
+are \code{SplitSubLRepres} values directly, with $\pi$ as retraction.
+
+\begin{item-spec}{F1}{Basis-free character of a split subrepresentation}
+\begin{itemize}
+  \item \textbf{Problem.} \code{character} is defined for
+  \code{FinLinRepres}, which needs a truncated basis. The summand
+  \code{S.sub} of a \code{SplitSubLRepres} has none. Cor.~2.15
+  ($\langle\chi,\chi\rangle=1$ implies irreducible), multiplicity counts and
+  dimension counts need the characters of summands.
+  \item \textbf{Proposal.} Define
+  $\chi_S(g)=\mathrm{tr}_E(\mathit{incl}\circ g\circ\mathit{retr})$ using
+  \code{endoTrace} on $E$. Prove that it agrees with \code{character} when
+  \code{S.sub} has a basis (trace cyclicity, as in L15). Prove additivity
+  $\chi_E=\chi_S+\chi_C$ for the decomposition of \code{maschke-complement}.
+  \item \textbf{Alternative.} Formalize ``finitely generated projective
+  modules over a \code{LocalCRing} are free''. This would also close the gap
+  between the two irreducibility notions, but it costs more.
+  \item \textbf{Base.} Any \code{CRing}; no division needed.
+\end{itemize}
+\end{item-spec}
+
+\begin{item-spec}{F2}{Schur's lemma over \texorpdfstring{$\C$}{C}}
+\begin{itemize}
+  \item \textbf{Problem.} \code{SchurLemma} is proved over
+  \code{DiscreteField}, using \code{kernel-split} and \code{image-split}.
+  Over \code{ComplexField}, the kernel and image of an intertwiner are not
+  known to be split, so the lemma does not apply. The pilot avoided this over
+  $\C$: it used the commutant route (L21) and explicit $S_3$ computations.
+  From Lecture~3 on, Schur over $\C$ is used throughout.
+  \item \textbf{This holds for both irreducibility notions.} It is not caused
+  by the redesign.
+  \item \textbf{Directions to evaluate.}
+  \begin{itemize}
+    \item A conclusion weaker than ``zero or isomorphism'' that suffices for
+    the character theory, for example a statement about the averaged
+    projections.
+    \item Hypotheses that make kernels and images split, such as an
+    apartness-based rank argument over a Heyting field.
+    \item Routing the needed consequences, such as orthogonality, through
+    \code{maschke-split} and the commutant instead of through kernels.
+  \end{itemize}
+  \item \textbf{Decision needed} before planning Lecture~3.
+\end{itemize}
+\end{item-spec}
 
 \end{document}
