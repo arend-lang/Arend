@@ -24,7 +24,7 @@ public class StreamRedirectorTest {
     ByteArrayOutputStream sink = new ByteArrayOutputStream();
     StreamRedirector.install();
     try {
-      StreamRedirector.attach(new DaemonServer.Output(new FrameChannel(Channels.newChannel(sink)), "req-1"));
+      StreamRedirector.attach(new DaemonServer.FrameOutput(new FrameChannel(Channels.newChannel(sink)), "req-1"));
       try {
         body.run();
       } finally {

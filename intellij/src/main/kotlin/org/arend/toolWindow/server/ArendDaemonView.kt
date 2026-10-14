@@ -37,6 +37,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
     private val noStartOnOpen = JBRadioButton("No")
     private val status = JBLabel()
     private val libraries = JBLabel()
+    private val agents = JBLabel()
     private val requests = JBLabel()
     private val startButton = JButton("Start")
     private val stopButton = JButton("Stop")
@@ -63,6 +64,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
             .addLabeledComponent("Daemon:", row(startButton, stopButton))
             .addComponent(status)
             .addComponent(libraries)
+            .addComponent(agents)
             .addComponent(requests)
             .addComponentFillVertically(JPanel(), 0)
             .panel
@@ -108,6 +110,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
             section("Left out", state.skipped.map { (name, why) -> "$name: $why" })
         }
         libraries.setIfChanged(if (html.isEmpty()) "" else XmlStringUtil.wrapInHtml(html))
+        agents.setIfChanged(if (state == null) "" else AGENTS)
 
         val recent = state?.activity?.recent.orEmpty()
         requests.setIfChanged(if (recent.isEmpty()) "" else XmlStringUtil.wrapInHtml("<p><b>Latest requests</b></p>" +
@@ -141,6 +144,8 @@ class ArendDaemonView(project: Project, parent: Disposable) {
     }
 
     private companion object {
+        val AGENTS: String = XmlStringUtil.wrapInHtml("Agents can use this daemon through the <code>arend-daemons</code> MCP server")
+
         /** One for every row: the tab redraws each second while the daemon runs. */
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
     }

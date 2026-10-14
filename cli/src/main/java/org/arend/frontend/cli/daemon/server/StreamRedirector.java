@@ -27,8 +27,8 @@ import java.nio.charset.StandardCharsets;
  * across writes still holds back.
  */
 public final class StreamRedirector {
-  private static final ThreadLocal<FrameOutputStream> outTl = new ThreadLocal<>();
-  private static final ThreadLocal<FrameOutputStream> errTl = new ThreadLocal<>();
+  private static final ThreadLocal<OutputStream> outTl = new ThreadLocal<>();
+  private static final ThreadLocal<OutputStream> errTl = new ThreadLocal<>();
 
   private static PrintStream defaultOut;
   /** Null while not installed. */
@@ -83,7 +83,7 @@ public final class StreamRedirector {
     }
   }
 
-  private static void flushQuietly(FrameOutputStream stream) {
+  private static void flushQuietly(OutputStream stream) {
     if (stream == null) return;
     try {
       stream.flush();

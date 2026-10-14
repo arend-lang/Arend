@@ -6,6 +6,7 @@ import org.arend.typechecking.computation.BooleanCancellationIndicator;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
@@ -31,22 +32,41 @@ import java.util.function.Supplier;
  * since a cancelled typecheck unwinds inside {@code base/} and comes back as an ordinary return.
  */
 public final class DaemonServer {
-  /** Where one request's output goes: the frames of the client that sent it. */
-  public record Output(FrameChannel channel, String requestId) {
+  /** Where one request's output goes. */
+  public interface Output {
+    /** Names the request to its client, and to a {@code cancel}. */
+    String requestId();
+
     /** The client's stdout, or with {@code stdout} unset its stderr, as a stream. */
+    OutputStream stream(boolean stdout);
+
+    void out(String text);
+
+    void err(String text);
+
+    /** The request has finished with {@code exitCode}; nothing is written after it. */
+    void done(int exitCode);
+  }
+
+  /** The output of a request a client sent over the socket: frames back to that client. */
+  public record FrameOutput(FrameChannel channel, String requestId) implements Output {
+    @Override
     public FrameOutputStream stream(boolean stdout) {
       return new FrameOutputStream(channel, requestId, stdout);
     }
 
+    @Override
     public void out(String text) {
       send(FrameChannel.stdoutFrame(requestId, text));
     }
 
+    @Override
     public void err(String text) {
       send(FrameChannel.stderrFrame(requestId, text));
     }
 
-    void done(int exitCode) {
+    @Override
+    public void done(int exitCode) {
       send(FrameChannel.doneFrame(requestId, exitCode));
     }
 
@@ -246,7 +266,7 @@ public final class DaemonServer {
   }
 
   private void queue(String id, @Nullable List<String> args, @Nullable String cwd, FrameChannel channel) {
-    Request request = new Request(args, cwd, new Output(channel, id), new BooleanCancellationIndicator());
+    Request request = new Request(args, cwd, new FrameOutput(channel, id), new BooleanCancellationIndicator());
     inFlight.put(id, request.cancel());
     workQueue.add(new WorkItem(request, describe.apply(args)));
     onActivity.run();
