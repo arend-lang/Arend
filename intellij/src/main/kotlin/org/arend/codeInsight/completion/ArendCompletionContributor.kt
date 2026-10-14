@@ -405,7 +405,7 @@ class ArendCompletionContributor : CompletionContributor() {
                withAncestors(ArendDefIdentifier::class.java, ArendConstructor::class.java, ArendDataBody::class.java),
                withAncestors(PsiErrorElement::class.java, ArendConstructor::class.java, ArendDataBody::class.java)))), COERCE_KW_LIST)
 
-        basic(and(LEVEL_CONTEXT, allowedInReturnPattern), LEVEL_KW_LIST)
+        basic(and(LEVEL_CONTEXT, allowedInReturnPattern), LEVEL_RETURN_KWS)
 
         basic(and(afterLeaf(ID), or(
                 withAncestors(PsiErrorElement::class.java, ArendDefModule::class.java),

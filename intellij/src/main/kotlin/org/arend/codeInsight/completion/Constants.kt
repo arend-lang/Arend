@@ -1,5 +1,6 @@
 package org.arend.codeInsight.completion
 
+import com.intellij.psi.tree.IElementType
 import org.arend.psi.ArendElementTypes.*
 
 
@@ -10,7 +11,9 @@ val ACCESS_MODIFIERS = listOf(PROTECTED_KW, PRIVATE_KW).map { it.toString() }
 val CLASS_MEMBER_KWS = listOf(FIELD_KW, PROPERTY_KW, OVERRIDE_KW, DEFAULT_KW).map { it.toString() }
 val SIGMA_TELE_START_KWS = listOf(PROPERTY_KW).map { it.toString() }
 val DATA_UNIVERSE_KW = listOf("\\Type", "\\Set", PROP_KW.toString(), SET_KW.toString(), "\\Cat")
-val BASIC_EXPRESSION_KW = listOf(PI_KW, SIGMA_KW, SIGMA_PLUS_KW, LAM_KW, HAVE_KW, HAVES_KW, LET_KW, LETS_KW, CASE_KW, SCASE_KW).map { it.toString() }
+fun plusKeyword(token: IElementType) = token.toString().dropLast(1) + '⁺'
+
+val BASIC_EXPRESSION_KW = listOf(PI_KW, SIGMA_KW, SIGMA_PLUS_KW, LAM_KW, HAVE_KW, HAVES_KW, LET_KW, LETS_KW, CASE_KW, SCASE_KW).map { if (it == SIGMA_PLUS_KW) plusKeyword(it) else it.toString() }
 val LEVEL_KWS = listOf(MAX_KW, SUC_KW).map { it.toString() }
 val ELIM_WITH_KW_LIST = listOf(ELIM_KW, WITH_KW).map { it.toString() }
 val COERCE_LEVEL_KWS = listOf(COERCE_KW, LEVEL_KW).map { it.toString() }
@@ -30,6 +33,7 @@ val IN_KW_LIST = listOf(IN_KW.toString())
 val WITH_KW_LIST = listOf(WITH_KW.toString())
 val WITH_KW_FULL = WITH_KW_LIST.map { "$it {}" }
 val LEVEL_KW_LIST = listOf(LEVEL_KW.toString())
+val LEVEL_RETURN_KWS = listOf(LEVEL_KW.toString(), plusKeyword(LEVEL_PLUS_KW))
 val COERCE_KW_LIST = listOf(COERCE_KW.toString())
 val USE_KW_LIST = listOf(USE_KW.toString())
 val RETURN_KW_LIST = listOf(RETURN_KW.toString())
