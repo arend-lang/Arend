@@ -39,7 +39,10 @@ public final class DaemonMcpServer {
   private final PrintStream out;
   private final List<Path> libDirs;
   private final Path workingDir;
-  private final List<Map<String, Object>> tools = DaemonMcpTools.definitions();
+  private final List<Map<String, Object>> tools = new ArrayList<>(DaemonMcpTools.definitions());
+  private final DaemonMcpSkills skills;
+  /** What the client calls itself in {@code initialize}: the agent whose skills the skill tools work on. */
+  private volatile String clientName;
   private final ConcurrentHashMap<String, Running> running = new ConcurrentHashMap<>();
   private final ExecutorService pool = Executors.newCachedThreadPool(Thread.ofPlatform().daemon().name("arend-mcp-call").factory());
 
@@ -84,10 +87,16 @@ public final class DaemonMcpServer {
   }
 
   DaemonMcpServer(InputStream in, PrintStream out, List<Path> libDirs, Path workingDir) {
+    this(in, out, libDirs, workingDir, new DaemonMcpSkills(Path.of(System.getProperty("user.home"))));
+  }
+
+  DaemonMcpServer(InputStream in, PrintStream out, List<Path> libDirs, Path workingDir, DaemonMcpSkills skills) {
     this.in = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
     this.out = out;
     this.libDirs = libDirs;
     this.workingDir = workingDir;
+    this.skills = skills;
+    tools.addAll(DaemonMcpSkills.definitions());
   }
 
   public static int run(List<Path> libDirs) {
@@ -188,7 +197,10 @@ public final class DaemonMcpServer {
     }
 
     return switch (method.asText()) {
-      case "initialize" -> result(id, initialize());
+      case "initialize" -> {
+        clientName = params.path("clientInfo").path("name").textValue();
+        yield result(id, initialize());
+      }
       case "ping" -> result(id, Map.of());
       case "tools/list" -> result(id, Map.of("tools", tools));
       case "tools/call" -> callTool(id, params);
@@ -204,12 +216,24 @@ public final class DaemonMcpServer {
     result.put("instructions", "Tools of the running Arend daemons: each mirrors an `arend` option and goes"
         + " to the daemon serving its `library`, limited to that library; daemon_list shows which daemon"
         + " serves what. A library named goes to the daemon owning a library of that name, else to the"
-        + " longest-running daemon that loaded a zip or a ~/.arend/libs library of that name.");
+        + " longest-running daemon that loaded a zip or a ~/.arend/libs library of that name. skills_list"
+        + " shows the skills for working in Arend the arend-skills repository offers; install them only when the user asks.");
     return result;
   }
 
   private Map<String, Object> callTool(JsonNode id, JsonNode params) {
     String name = params.path("name").asText("");
+    if (DaemonMcpSkills.handles(name)) {
+      JsonNode arguments = params.path("arguments");
+      try {
+        return result(id, toolResult(skills.call(name, arguments.isObject() ? arguments : MAPPER.createObjectNode(), clientName), false));
+      } catch (IllegalArgumentException | IOException e) {
+        return result(id, toolResult(e.getMessage(), true));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return result(id, toolResult("cancelled", true));
+      }
+    }
     DaemonMcpTools.Call call;
     try {
       call = DaemonMcpTools.resolve(name, params.get("arguments"));

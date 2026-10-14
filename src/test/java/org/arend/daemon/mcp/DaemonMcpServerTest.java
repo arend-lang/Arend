@@ -174,12 +174,13 @@ public class DaemonMcpServerTest {
     List<String> names = new ArrayList<>();
     for (JsonNode tool : rpc(2, "tools/list", "{}").get("result").get("tools")) {
       names.add(tool.get("name").asText());
-      if (!tool.get("name").asText().equals("daemon_list")) {
+      if (!tool.get("name").asText().equals("daemon_list") && !DaemonMcpSkills.handles(tool.get("name").asText())) {
         assertTrue(tool.get("name").asText(), tool.get("inputSchema").get("properties").has("library"));
       }
     }
     assertEquals(List.of("typecheck", "symbol_search", "proof_search", "find_usages", "class_hierarchy", "scope",
-        "daemon_list", "daemon_ping", "daemon_status", "daemon_refresh", "daemon_stop"), names);
+        "daemon_list", "daemon_ping", "daemon_status", "daemon_refresh", "daemon_stop", "skills_list", "skills_install",
+        "skills_remove"), names);
   }
 
   /** The call goes to the daemon owning the library, limited to it by a leading positional. */

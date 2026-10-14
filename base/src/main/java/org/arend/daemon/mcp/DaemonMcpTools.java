@@ -27,9 +27,11 @@ final class DaemonMcpTools {
       new Control("daemon_status", "status", "The state of the daemon serving `library`, as JSON: process id, worker"
           + " state, queue depth, uptime, current task, protocol version, the libraries it serves and locked flags."),
       new Control("daemon_refresh", "refresh", "Resolve the libraries of the daemon serving `library` again, so source"
-          + " edits, new and deleted files are picked up; typechecks nothing."),
+          + " edits, new and deleted files are picked up; typechecks nothing. Call it after creating, deleting or"
+          + " renaming a module file, before a query or a typecheck that should see the change."),
       new Control("daemon_stop", "shutdown", "Stop the daemon owning `library` once the commands already queued have"
-          + " run; not for one under ~/.arend/libs."));
+          + " run; not for one under ~/.arend/libs. Only when the user asks for it: the daemon serves other agents"
+          + " and the user's own `arend` commands too."));
 
   private static final Map<String, String> TYPECHECK_FLAGS = new LinkedHashMap<>();
   static {
@@ -161,7 +163,7 @@ final class DaemonMcpTools {
 
   // ───────── schema building ─────────
 
-  private static Map<String, Object> tool(String name, String description, Map<String, Object> inputSchema) {
+  static Map<String, Object> tool(String name, String description, Map<String, Object> inputSchema) {
     Map<String, Object> tool = new LinkedHashMap<>();
     tool.put("name", name);
     tool.put("description", description);
@@ -169,7 +171,7 @@ final class DaemonMcpTools {
     return tool;
   }
 
-  private static Map<String, Object> schema(Map<String, Object> properties, List<String> required) {
+  static Map<String, Object> schema(Map<String, Object> properties, List<String> required) {
     Map<String, Object> schema = new LinkedHashMap<>();
     schema.put("type", "object");
     schema.put("properties", properties);
@@ -178,7 +180,7 @@ final class DaemonMcpTools {
     return schema;
   }
 
-  private static Map<String, Object> stringArray(String description) {
+  static Map<String, Object> stringArray(String description) {
     return Map.of("type", "array", "items", Map.of("type", "string"), "description", description);
   }
 
