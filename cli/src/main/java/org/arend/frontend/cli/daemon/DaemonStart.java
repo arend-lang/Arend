@@ -3,6 +3,7 @@ package org.arend.frontend.cli.daemon;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.Platform;
+import org.arend.daemon.mcp.McpRegistration;
 
 import java.io.File;
 import java.io.IOException;
@@ -129,6 +130,7 @@ public final class DaemonStart {
     if (running != null) {
       System.out.println("Arend daemon already running for " + String.join(", ", requested)
           + " (PID " + running.pid() + ")");
+      registerMcp();
       return 0;
     }
 
@@ -144,10 +146,37 @@ public final class DaemonStart {
         }
         reserved.add(paths.startingMarker);
       }
-      return startChild(libraries, requested, libDirsForward, extraChildArgs);
+      int exitCode = startChild(libraries, requested, libDirsForward, extraChildArgs);
+      if (exitCode == 0) registerMcp();
+      return exitCode;
     } finally {
       reserved.forEach(LockFile::deleteQuietly);
     }
+  }
+
+  /** Registers this {@code arend --mcp} with the agents installed, saying what it did. */
+  private static void registerMcp() {
+    McpRegistration.Result result = McpRegistration.register(McpRegistration.command());
+    result.failures().forEach(failure -> System.err.println("[WARN]  -d: " + failure));
+    if (!result.registered().isEmpty()) {
+      System.out.println("  registered the " + McpRegistration.SERVER_NAME + " MCP server with "
+          + String.join(", ", result.registered()) + "; agents started from now on have it."
+          + " `arend --mcp-unregister` removes it from them");
+    }
+  }
+
+  /** {@code arend --mcp-unregister}: takes the server out of every agent that has it, saying what it did. */
+  public static int unregisterMcp() {
+    McpRegistration.Result result = McpRegistration.unregister();
+    result.failures().forEach(failure -> System.err.println("[WARN]  --mcp-unregister: " + failure));
+    if (result.registered().isEmpty()) {
+      if (result.failures().isEmpty()) System.out.println("No agent has the " + McpRegistration.SERVER_NAME + " MCP server.");
+    } else {
+      System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from " + String.join(", ", result.registered())
+          + "; agents started from now on do not have it. The next `arend -d`, or a start of the IntelliJ plugin's daemon,"
+          + " registers it again.");
+    }
+    return result.failures().isEmpty() ? 0 : 1;
   }
 
   private static int startChild(List<DaemonPaths> libraries, List<String> requested, List<Path> libDirsForward,

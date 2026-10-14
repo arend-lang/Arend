@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon.mcp;
+package org.arend.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;

@@ -5,7 +5,7 @@ import org.arend.daemon.server.SocketBinder;
 import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.daemon.client.DaemonClient;
+import org.arend.daemon.client.DaemonClient;
 import org.arend.daemon.server.DaemonServer;
 import org.arend.frontend.cli.daemon.server.CliDaemonRunner;
 import org.arend.frontend.cli.daemon.server.CliDispatcher;

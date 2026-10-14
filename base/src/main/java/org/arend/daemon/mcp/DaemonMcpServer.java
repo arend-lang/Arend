@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon.mcp;
+package org.arend.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -6,8 +6,8 @@ import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.wire.FrameChannel;
 import org.arend.daemon.wire.SocketAddress;
-import org.arend.frontend.cli.daemon.client.DaemonClient;
-import org.arend.frontend.cli.daemon.client.DaemonRpc;
+import org.arend.daemon.client.DaemonClient;
+import org.arend.daemon.client.DaemonRpc;
 import org.arend.prelude.Prelude;
 
 import java.io.BufferedReader;
@@ -95,6 +95,11 @@ public final class DaemonMcpServer {
     System.setOut(System.err);
     new DaemonMcpServer(System.in, protocol, libDirs, Path.of("").toAbsolutePath()).serve();
     return 0;
+  }
+
+  /** {@code arend --mcp} without the CLI, as the IntelliJ plugin registers it: from its own jars, with no {@code -L}. */
+  public static void main(String[] args) {
+    System.exit(run(List.of()));
   }
 
   void serve() {

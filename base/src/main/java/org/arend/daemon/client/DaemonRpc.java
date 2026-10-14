@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon.client;
+package org.arend.daemon.client;
 
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;

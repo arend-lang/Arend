@@ -7,8 +7,8 @@ import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.DaemonStop;
-import org.arend.frontend.cli.daemon.client.DaemonRpc;
-import org.arend.frontend.cli.daemon.mcp.DaemonMcpServer;
+import org.arend.daemon.client.DaemonRpc;
+import org.arend.daemon.mcp.DaemonMcpServer;
 import org.arend.frontend.cli.daemon.server.DaemonMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
@@ -155,6 +155,7 @@ public class ConsoleMain {
     CliSetup.readLibDirs(ctx, cmdLine);
 
     if (cmdLine.hasOption("mcp")) return DaemonMcpServer.run(ctx.libDirs);
+    if (cmdLine.hasOption("mcp-unregister")) return DaemonStart.unregisterMcp();
 
     // A recoverable error must not reach a daemon: -d would bake a bad -L into a server that
     // outlives the command, and routing would hand the work to one built from a context this

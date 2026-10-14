@@ -2,7 +2,7 @@ package org.arend.frontend.cli.daemon;
 
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
-import org.arend.frontend.cli.daemon.client.DaemonRpc;
+import org.arend.daemon.client.DaemonRpc;
 
 import java.nio.file.Path;
 import java.util.List;

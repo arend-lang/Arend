@@ -110,7 +110,8 @@ class ArendDaemonView(project: Project, parent: Disposable) {
             section("Left out", state.skipped.map { (name, why) -> "$name: $why" })
         }
         libraries.setIfChanged(if (html.isEmpty()) "" else XmlStringUtil.wrapInHtml(html))
-        agents.setIfChanged(if (state == null) "" else AGENTS)
+        // Said before a start too: it is the start that writes to the agents' configs.
+        agents.setIfChanged(AGENTS)
 
         val recent = state?.activity?.recent.orEmpty()
         requests.setIfChanged(if (recent.isEmpty()) "" else XmlStringUtil.wrapInHtml("<p><b>Latest requests</b></p>" +
@@ -144,7 +145,10 @@ class ArendDaemonView(project: Project, parent: Disposable) {
     }
 
     private companion object {
-        val AGENTS: String = XmlStringUtil.wrapInHtml("Agents can use this daemon through the <code>arend-daemons</code> MCP server")
+        /** In short lines: the tab scrolls sideways rather than wrap a long one. */
+        val AGENTS: String = XmlStringUtil.wrapInHtml("Starting the daemon adds the <code>arend-daemons</code> MCP server<br>" +
+            "to the user configs of the agents installed, so that they can use it.<br>" +
+            "<code>arend --mcp-unregister</code> removes it.")
 
         /** One for every row: the tab redraws each second while the daemon runs. */
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())

@@ -27,7 +27,7 @@ public final class ConsoleHelp {
             "test", "print", "recompile", "double-check", "serialize")),
         new Group("Daemon control (a long-lived JVM holding a warm ArendServer; an ordinary "
             + "call auto-routes to it unless --no-daemon is given)", List.of(
-            "daemon", "daemon-status", "daemon-ping", "daemon-refresh", "daemon-stop", "no-daemon", "mcp")),
+            "daemon", "daemon-status", "daemon-ping", "daemon-refresh", "daemon-stop", "no-daemon", "mcp", "mcp-unregister")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
             "symbol-search", "proof-search", "find-usages", "class-hierarchy", "scope")),

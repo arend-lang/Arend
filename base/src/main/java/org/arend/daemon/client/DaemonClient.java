@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon.client;
+package org.arend.daemon.client;
 
 import org.arend.daemon.wire.FrameChannel;
 import org.arend.daemon.wire.SocketAddress;
