@@ -254,6 +254,21 @@
       => IsEquiv.leftFactor (totalFun-slice.sum-fib-equiv G' z) (inP idEquiv)
   }
 
+-- | {sliceFiber} of a family of slices over {Y} is {sliceFiber} of the uncurried slice over `Y × X`.
+\sfunc sliceFiber-curry.{u} {Y X : \Cat u} {K : Y ->⁺ X ->⁺ \Type u} (S : \Pi (y :⁺ Y) -> Slice (K y))
+                            {z :⁺ \Sigma⁺ (w : \Sigma⁺ Y X) (K w.1 w.2)}
+  : sliceFiber (\lam (w : \Sigma⁺ Y X) => K w.1 w.2) (uncurrySlice S) z = sliceFiber (K z.1.1) (S z.1.1) (z.1.2, z.2)
+  => path \lam i => (fun-path {_} {\lam z => sliceFiber (\lam (w : \Sigma⁺ Y X) => K w.1 w.2) (uncurrySlice S) z}
+        {\lam (z : \Sigma⁺ (w : \Sigma⁺ Y X) (K w.1 w.2)) => sliceFiber (K z.1.1) (S z.1.1) (z.1.2, z.2)}
+        (\lam s => Straight.toStraight (Straight.fromStraight s.2))
+        (\lam z => IsEquiv.trans (inP Straight.equiv)
+          (inP (symQEquiv (Straight.equiv {_} {sliceFiber.FibCat} {_} {_} {K z.1.1, (S z.1.1, (z.1.2, z.2))}))))).1 i z
+  \where
+    -- | The slice over `Y × X` of a family of slices over `Y`.
+    \func uncurrySlice.{v} {Y X : \Cat v} {K : Y ->⁺ X ->⁺ \Type v} (S : \Pi (y :⁺ Y) -> Slice (K y))
+      : Slice (\lam (w : \Sigma⁺ Y X) => K w.1 w.2)
+      => (\lam w => (S w.1).1 w.2, dpath \lam i w => (S w.1).2 i w.2)
+
 {- | The pullback of {sig} along {alpha} is the sum of the functor of {sig} precomposed with {totalMap} {alpha}:
  -   {pullbackSlice} underlies a product of `(F', alpha)` and {sig} in the slice over `F`.
  -
