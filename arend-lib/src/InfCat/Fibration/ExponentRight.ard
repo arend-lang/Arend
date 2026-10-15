@@ -110,7 +110,7 @@
                    (\lam k => h.1 (expMap R beta k), \lam {a} w => h.2 {\lam i => expMap R beta (a i)} w)
 
 -- | The functor to {C} corresponding to an object of a fiber of {exp-proj}.
-\func exp-nu.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} (b : B)
+\func exp-nu.{u} {X B : \Cat u} {C : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {W : (DI ->⁺ X) -> \Prop} (b : B)
                  (z : Fibers (exp-proj C R W) b) : MapW (ExpW W) C
   => IsEquiv.ret yon-equiv (theta R b (rightFib-full-fibers (ExpPred C R W) b z))
   \where {
@@ -145,7 +145,7 @@
   }
 
 \lemma exp-nu-equiv.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} (b : B)
-  : IsEquiv (exp-nu b)
+  : IsEquiv (exp-nu R b)
   => \have base-equiv : IsEquiv {Fibers target (expFam C R b)}
                                 {\Sigma⁺ (x : X) (R b x) ->⁺ Op C ->⁺ \Type u}
                                 (\lam e => expCurry R (fibFam (target-fibers (expFam C R b) e).2))
@@ -162,9 +162,9 @@
 -- | Transport along {beta} is precomposition with {expMap} {beta}.
 \sfunc exp-nu-tr.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop} {b' b : B} (beta : b' ~> b)
                      (z : Fibers (exp-proj C R W) b) {k :⁺ \Sigma⁺ (x : X) (R b' x)}
-  : (exp-nu b' (rightFib-tr exp-rightFib beta z)).1 k = (exp-nu b z).1 (expMap R beta k)
+  : (exp-nu R b' (rightFib-tr exp-rightFib beta z)).1 k = (exp-nu R b z).1 (expMap R beta k)
   => \have | yon-path (d : B) (w : Fibers (exp-proj C R W) d)
-             : (\lam k x =>⁺ Op.Hom x ((exp-nu d w).1 k)) = (exp-nu.theta R d (rightFib-full-fibers (ExpPred C R W) d w)).1
+             : (\lam k x =>⁺ Op.Hom x ((exp-nu R d w).1 k)) = (exp-nu.theta R d (rightFib-full-fibers (ExpPred C R W) d w)).1
              => pmap __.1 (IsEquiv.f_ret exp-nu.yon-equiv)
            | tr-path : (exp-nu.theta R b' (rightFib-full-fibers (ExpPred C R W) b' (rightFib-tr exp-rightFib beta z))).1
                        = (\lam k =>⁺ (exp-nu.theta R b (rightFib-full-fibers (ExpPred C R W) b z)).1 (expMap R beta k))
@@ -174,8 +174,8 @@
                                           (\lam beta' e' h => exp-rightFib.pred-tr R beta' e' h) beta z
                          *> rightFib-pullback-tr (expFam C R) target-rightFib beta e)
                    *> pmap (expCurry R) (target-tr-totalMap (dmap (expFam C R) beta) e)
-     \in \let | t => rightFib-tr exp-rightFib beta z
-              | q => (IsFFMap.isObEmbedding (postcomp-ff yonedaEmbedding)).isEmb (exp-nu b' t).1 (\lam k' => (exp-nu b z).1 (expMap R beta k'))
+     \in \let | t => rightFib-tr (exp-rightFib {_} {_} {_} {R}) beta z
+              | q => (IsFFMap.isObEmbedding (postcomp-ff yonedaEmbedding)).isEmb (exp-nu R b' t).1 (\lam k' => (exp-nu R b z).1 (expMap R beta k'))
      \in path \lam i => q.sec (yon-path b' t *> tr-path *> pmap (\lam H => \lam k' =>⁺ H (expMap R beta k')) (inv (yon-path b z))) i k
 
 -- # Sections
@@ -311,7 +311,7 @@
                          (Wid : \Pi (x : X) -> W (\lam _ => x)) (pi : T ->⁺ B)
                          (F : MapW (ExpW {_} {secFam R pi} (secW W)) C) (t : T)
                          {k :⁺ \Sigma⁺ (x : X) (R (pi t) x)}
-  : (exp-nu (pi t) (exp-sec.map Wid pi F t)).1 k = F.1 ((t, k.1), k.2)
+  : (exp-nu R (pi t) (exp-sec.map Wid pi F t)).1 k = F.1 ((t, k.1), k.2)
   => \let | restrF : MapW (ExpW W) C
             => (\lam k => F.1 ((t, k.1), k.2), \lam {a} w => F.2 {\lam i => ((t, (a i).1), (a i).2)} w)
           | mOf => (exp-sec.split-equiv Wid pi (exp-nu.yon F)).1
@@ -322,6 +322,6 @@
           | theta-path : exp-nu.theta R (pi t) (rightFib-full-fibers (ExpPred C R W) (pi t) (exp-sec.map Wid pi F t)) = exp-nu.yon restrF
             => ext $ pmap (\lam e => expCurry R (fibFam (target-fibers (expFam C R (pi t)) e).2)) sec-path
                      *> pmap (expCurry R) (exp-sec.pred-equiv.fib-path pi mOf t)
-          | fun-path : exp-nu (pi t) (exp-sec.map Wid pi F t) = restrF
+          | fun-path : exp-nu R (pi t) (exp-sec.map {_} {_} {_} {_} {R} Wid pi F t) = restrF
             => pmap (IsEquiv.ret exp-nu.yon-equiv) theta-path *> IsEquiv.ret_f exp-nu.yon-equiv {restrF}
      \in path \lam i => (fun-path i).1 k

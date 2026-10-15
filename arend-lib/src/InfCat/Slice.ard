@@ -11,9 +11,9 @@
 \import Paths
 \import Paths.Meta
 
--- | The slice of {C} over {X}.
-\func SliceCat {C : \Cat} (X : C) : \Cat
-  => \Sigma⁺ (c : C) (c ~> X)
+-- | The slice of {C} over {b}.
+\func SliceCat {C : \Cat} (b :⁺ C) : \Cat
+  => \Sigma⁺ (c : C) (c ~> b)
   \where {
     {- | Arrows of the slice are arrows with a commutative triangle.
      -   The triangle is the naturality square of the family of structure maps.

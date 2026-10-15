@@ -254,7 +254,7 @@
 
 -- | The functor `[n] -> C` corresponding to an `n`-simplex of the nerve.
 \func snerve-nu.{u} {C : \Cat u} (n : Nat) (z : SNerveFib C (nerveOb n)) (t :⁺ Nerve (Simplex n)) : C
-  => (exp-nu {_} {_} {C} {SimplexR} (nerveOb n) z).1 (rK n t)
+  => (exp-nu SimplexR (nerveOb n) z).1 (rK n t)
 
 -- | `n`-simplices of the nerve are functors `[n] -> C`.
 \lemma snerve-nu-equiv.{u} {C : \Cat u} (n : Nat)
@@ -272,7 +272,7 @@
      *> pmap+ (\lam u => (nuG n' z).1 (elK n' (nsec n' u))) (spost-vert d t)
   \where \private {
     \func nuG.{u} {C : \Cat u} (n' : Nat) (z : SNerveFib C (nerveOb n')) : MapW (ExpW SimplexW) C
-      => exp-nu {_} {_} {C} {SimplexR} (nerveOb n') z
+      => exp-nu SimplexR (nerveOb n') z
 
     -- | The counit of `K_{n'}` at `K_d ∘ nsec` is inverted by {G}.
     \sfunc counit-path.{u} {C : \Cat u} {n n' : Nat} (d : SimplexCat.Hom n n') (G : MapW (ExpW {_} {SimplexR (nerveOb n')} SimplexW) C)

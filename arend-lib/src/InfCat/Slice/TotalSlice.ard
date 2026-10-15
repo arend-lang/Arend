@@ -1,5 +1,6 @@
 {- | The slice category of A ->⁺ \Type u over F is equivalent to
  -   the category of functors \Sigma⁺ (x : X) (F x) ->⁺ \Type u ({sumSlice-equiv}).
+ -   The inverse is {sliceFiber}, which is natural in F.
  -
  -   Pullbacks of slices of `X ->⁺ \Type u` are computed by precomposing with `totalMap` ({pullbackSlice-isProduct}).
  -}
@@ -29,19 +30,19 @@
 \open sumSlice-equiv
 
 -- | The slice category over {F}.
-\func Slice.{u} {X : \Cat u} (F : X ->⁺ \Type u) : \Cat (\suc u)
+\func Slice.{u} {X : \Cat u} (F :⁺ X ->⁺ \Type u) : \Cat
   => SliceCat {X ->⁺ \Type u} F
 
 -- | Functors on the total category of {F} as objects over {F}.
-\func sumSlice.{u} {X : \Cat u} (F : X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) : Slice F
+\func sumSlice.{u} {X : \Cat u} (F :⁺ X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) : Slice F
   => (sumFam F G', sumProj F G')
   \where {
     -- | The sum of a functor on the total category of {F} over the fibers of {F}.
-    \func sumFam.{u} {X : \Cat u} (F : X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) (x :⁺ X) : \Type u
+    \func sumFam.{u} {X : \Cat u} (F :⁺ X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) (x :⁺ X) : \Type u
       => \Sigma⁺ (t : F x) (G' (x,t))
 
     -- | The projection of {sumFam} to {F}.
-    \func sumProj.{u} {X : \Cat u} (F : X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) : sumFam F G' ~> F
+    \func sumProj.{u} {X : \Cat u} (F :⁺ X ->⁺ \Type u) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type u) : sumFam F G' ~> F
       => dpath \lam i x => dpath (iso+ {sumFam F G' x} {F x} \lam s => s.1) i
 
     -- | The action of {sumFam} on an arrow {h} fixes the first component and acts by {h} on the second one.
@@ -56,6 +57,38 @@
           | idp => path \lam i => (a, inv v i)
   }
 
+-- | The fiber of {s} over {y}; it is covariant in {F}, {s} and {y}, and it is the inverse of {sumSlice} ({sumSlice-equiv.totalFun-slice}).
+\func sliceFiber.{u} {X : \Cat u} (F :⁺ X ->⁺ \Type u) (s :⁺ Slice F) (y :⁺ \Sigma⁺ (x : X) (F x)) : \Type u
+  => Straight leftFib small (F, (s, y))
+  \where {
+    -- | The action of an arrow of functors to types on the total category.
+    \func covMap.{v} {X : \Cat v} {G F :⁺ X ->⁺ \Type v} (a :⁺ G ~> F) (s :⁺ \Sigma⁺ (x : X) (G x)) : F s.1
+      => ~>_-> (dpath \lam i => a i s.1) s.2
+
+    -- | Functors to types with an object over them and a point of the total category.
+    \func Base.{v} {X : \Cat v} : \Cat
+      => \Sigma⁺ (F : X ->⁺ \Type v) (\Sigma⁺ (s : Slice F) (\Sigma⁺ (x : X) (F x)))
+
+    -- | The fibers of objects of slices, as a family of categories.
+    \func FibCat.{v} {X : \Cat v} (w :⁺ Base {X}) : \Cat
+      => \Sigma⁺ (g : w.2.1.1 w.2.2.1) (covMap w.2.1.2 (w.2.2.1, g) = w.2.2.2)
+
+    \lemma leftFib.{v} {X : \Cat v} : IsLeftFib (FibCat {X})
+      => leftFib-sigma {Base {X}} {\lam w => w.2.1.1 w.2.2.1} (leftFib-pullback (\lam (w : Base {X}) => w.2.1.1 w.2.2.1) universe-leftFib)
+           {\lam z => covMap z.1.2.1.2 (z.1.2.2.1, z.2) = z.1.2.2.2}
+           (leftFib-path (leftFib-pullback (\lam (z : \Sigma⁺ (w : Base {X}) (w.2.1.1 w.2.2.1)) => z.1.1 z.1.2.2.1) universe-leftFib)
+                         (\lam z => covMap z.1.2.1.2 (z.1.2.2.1, z.2)) (\lam z => z.1.2.2.2))
+
+    \lemma small.{v} {X : \Cat v} (w : Base {X}) : IsSmall.{v} (FibCat w)
+      => IsSmall.fromGroupoid (leftFib-grpd leftFib w) {\Sigma (g : w.2.1.1 w.2.2.1) (covMap w.2.1.2 (w.2.2.1, g) = w.2.2.2)}
+           \new QEquiv {\Sigma (g : w.2.1.1 w.2.2.1) (covMap w.2.1.2 (w.2.2.1, g) = w.2.2.2)} {FibCat w} {
+        | f u => (u.1, u.2)
+        | ret u => (u.1, u.2)
+        | ret_f u => idp
+        | f_sec u => idp
+      }
+  }
+
 -- | The categories of functors on the total category of {F} and functors over {F} are equivalent.
 \lemma sumSlice-equiv.{u} {X : \Cat u} (F : X ->⁺ \Type u) : IsHEquiv (sumSlice F)
   => ff-surj-equiv.1 (sumSlice-ff F, \lam s => inP (fibFam s.2, (totalFun-slice F).f_sec s))
@@ -64,31 +97,7 @@
 
     -- | The fibers of a functor {G} over {F}.
     \func fibFam.{u} {X : \Cat u} {F G : X ->⁺ \Type u} (a : G ~> F) (s :⁺ \Sigma⁺ (x : X) (F x)) : \Type u
-      => Straight (leftFib a) (small a) s
-      \where {
-        -- | The action of an arrow of functors to types on the total category.
-        \func covMap.{u} {X : \Cat u} {G F : X ->⁺ \Type u} (a : G ~> F) (s :⁺ \Sigma⁺ (x : X) (G x)) : F s.1
-          => ~>_-> (dpath \lam i => a i s.1) s.2
-
-        -- | The fibers of a functor {G} over {F}, as a family of categories.
-        \func fibFamCat.{u} {X : \Cat u} {F G : X ->⁺ \Type u} (a : G ~> F) (s :⁺ \Sigma⁺ (x : X) (F x)) : \Cat
-          => \Sigma⁺ (g : G s.1) (covMap a (s.1, g) = s.2)
-
-        \lemma leftFib.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) : IsLeftFib (fibFamCat a)
-          => leftFib-sigma {\Sigma⁺ (x : X) (F x)} {\lam s => G s.1} (leftFib-pullback (\lam s => G s.1) universe-leftFib)
-               {\lam z => covMap a (z.1.1, z.2) = z.1.2}
-               (leftFib-path (leftFib-pullback (\lam (z : \Sigma⁺ (s : \Sigma⁺ (x : X) (F x)) (G s.1)) => F z.1.1) universe-leftFib)
-                             (\lam z => covMap a (z.1.1, z.2)) (\lam z => z.1.2))
-
-        \lemma small.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) (s : \Sigma⁺ (x : X) (F x)) : IsSmall.{v} (fibFamCat a s)
-          => IsSmall.fromGroupoid (leftFib-grpd (leftFib a) s) {\Sigma (g : G s.1) (covMap a (s.1, g) = s.2)}
-               \new QEquiv {\Sigma (g : G s.1) (covMap a (s.1, g) = s.2)} {fibFamCat a s} {
-            | f u => (u.1, u.2)
-            | ret u => (u.1, u.2)
-            | ret_f u => idp
-            | f_sec u => idp
-          }
-      }
+      => sliceFiber F (G, a) s
 
     -- | The equivalence on the level of objects.
     \sfunc totalFun-slice.{u} {X : \Cat u} (F : X ->⁺ \Type u) : QEquiv (sumSlice F) (\lam s => fibFam s.2) \cowith
@@ -114,19 +123,19 @@
           }
           \where
             \func aux.{w} {X : \Cat w} {F : X ->⁺ \Type w} {G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type w} {x : X} {t : F x} {u : sumFam F G' x} (e : u.1 = t)
-              : ((t, transport+ (\lam t' => G' (x, t')) e u.2), idp) = {fibFam.fibFamCat (sumProj F G') (x,t)} (u, e) \elim e
+              : ((t, transport+ (\lam t' => G' (x, t')) e u.2), idp) = {sliceFiber.FibCat (F, ((sumFam F G', sumProj F G'), (x,t)))} (u, e) \elim e
               | idp => idp
 
         \lemma fib-sum-equiv.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) (x : X)
           : IsEquiv {sumFam F (fibFam a) x} {G x} (\lam u => (Straight.fromStraight u.2).1)
           => inP \new QEquiv {
-            | ret g => (fibFam.covMap a (x, g), Straight.toStraight (g, idp))
+            | ret g => (sliceFiber.covMap a (x, g), Straight.toStraight (g, idp))
             | ret_f u => aux *> path \lam i => (u.1, Straight.toStraight_fromStraight u.2 i)
             | f_sec g => idp
           }
           \where {
-            \func aux.{w} {X : \Cat w} {F G : X ->⁺ \Type w} {a : G ~> F} {x : X} {t : F x} {g : G x} {e : fibFam.covMap a (x, g) = t}
-              : (fibFam.covMap a (x, g), Straight.toStraight (g, idp)) = {sumFam F (fibFam a) x} (t, Straight.toStraight (g, e)) \elim e
+            \func aux.{w} {X : \Cat w} {F G : X ->⁺ \Type w} {a : G ~> F} {x : X} {t : F x} {g : G x} {e : sliceFiber.covMap a (x, g) = t}
+              : (sliceFiber.covMap a (x, g), Straight.toStraight (g, idp)) = {sumFam F (fibFam a) x} (t, Straight.toStraight (g, e)) \elim e
               | idp => idp
           }
       }
@@ -242,7 +251,7 @@
   \where {
     -- | The functor between total categories induced by an arrow {a}.
     \func totalMap.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (a : F' ~> F) (s :⁺ \Sigma⁺ (x : X) (F' x)) : \Sigma⁺ (x : X) (F x)
-      => (s.1, fibFam.covMap a s)
+      => (s.1, sliceFiber.covMap a s)
 
     -- | The pullback of {sig} along {alpha}: the sum of the functor of {sig} precomposed with `totalMap alpha`.
     \func pullbackSlice.{u} {X : \Cat u} {F' F : X ->⁺ \Type u} (alpha : F' ~> F) (sig : Slice F) : Slice F'
@@ -289,7 +298,7 @@
       }
       \where
         \private \func aux {t t' : F x} {h : H (x,t)} (e : t = t')
-          : Straight.toStraight {_} {fibFam.fibFamCat (sumProj F H)} {fibFam.leftFib (sumProj F H)} {fibFam.small (sumProj F H)} {x,t'} ((t', transport (\lam t => H (x,t)) e h), idp)
+          : Straight.toStraight {_} {sliceFiber.FibCat} {sliceFiber.leftFib} {sliceFiber.small} {F, ((sumFam F H, sumProj F H), (x,t'))} ((t', transport (\lam t => H (x,t)) e h), idp)
             = Straight.toStraight ((t, h), e) \elim e
           | idp => idp
   }
