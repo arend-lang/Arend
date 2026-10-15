@@ -8,6 +8,7 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Objects
+\import InfCat.Rezk
 \import Logic
 \import Logic.Unique
 \import Meta
@@ -142,3 +143,13 @@
          | f_sec t => idp
        }) (squares-at (\lam F => F dleft) (const-ev0-equiv a b'd') (dpath \lam i k =>⁺ backFace i k)
                       (dpath \lam j => rightFace j) (dpath \lam j => leftFace j) (dpath \lam i => frontFace i))
+
+-- | An isomorphism is uniquely identified with a constant arrow.
+\lemma iso-const-contr {D : \Cat} {a : DI ->⁺ D} (ai : IsIso (dpath a)) : Contr (\Sigma⁺ (k : D) ((\lam i =>⁺ a i) = (\lam _ =>⁺ k)))
+  => \let | Fib => \Sigma (k : D) ((\lam _ =>⁺ k) = (\lam i =>⁺ a i))
+          | fp : isProp Fib => IsFFMap.fibProp diag-ff (\lam i => a i)
+          | T-prop : isProp (\Sigma⁺ (k : D) ((\lam i =>⁺ a i) = (\lam _ =>⁺ k)))
+              => isProp-retract {Fib} {\Sigma⁺ (k : D) ((\lam i =>⁺ a i) = (\lam _ =>⁺ k))} (\lam r => (r.1, inv r.2)) (\lam r => (r.1, inv r.2))
+                                (\lam r => path \lam k => (r.1, inv_inv k)) fp
+          | r => TruncP.remove fp (IsIso-diag-char.1 ai)
+     \in isProp=>isContr T-prop (r.1, inv r.2)

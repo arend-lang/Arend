@@ -1,0 +1,115 @@
+{- | The total space of a left fibration over a localization is the localization of the total space of its restriction
+ -   at the morphisms over {W} ({leftFib-localize}).
+ -
+ -   Proof: {Localize} is a pushout, so the total space is the pushout of the total spaces of the restrictions ({pushoutTot-precomp-equiv}).
+ -   Gluing data for a functor on the restriction to `C` is unique if it inverts the morphisms over {W} ({leftFib-localize.locGlue-contr}),
+ -   since over each morphism `m` in {W} the restriction is identified with a constant family along {cglue}.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.CatPushout
+\import InfCat.CatPushout.PushoutLeftFib
+\import InfCat.Functor.Equiv
+\import InfCat.Groupoid
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+\open leftFib-pushout-equiv
+
+-- | The total space of a left fibration over a localization is a localization of the total space of its restriction.
+\lemma leftFib-localize.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : Localize W ->⁺ \Type u}
+  : IsLocalization (LocTotW F) (map F)
+  => IsLocalization.fromUniv (localization-criterion locTot-inverts restrict-equiv restrict-equiv)
+                             (localization-criterion locTot-inverts restrict-equiv restrict-equiv)
+  \where {
+    -- | The total space of the restriction of {F} along {localize}.
+    \func LocTot.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} (F : Localize W ->⁺ \Type u) : \Cat u
+      => \Sigma⁺ (c : C) (F (localize W c))
+
+    -- | The morphisms of {LocTot} over morphisms in {W}.
+    \type LocTotW.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} (F : Localize W ->⁺ \Type u) (e : DI ->⁺ LocTot F) : \Prop
+      => W (\lam i => (e i).1)
+
+    -- | The inclusion of {LocTot} into the total space of {F}.
+    \protected \func map.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} (F : Localize W ->⁺ \Type u) (s :⁺ LocTot F) : \Sigma⁺ (p : Localize W) (F p)
+      => (localize W s.1, s.2)
+
+    -- | {map} inverts the morphisms over {W}, since the gluing paths of {Localize} lift to the total space.
+    \lemma locTot-inverts.{u} {C : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : Localize W ->⁺ \Type u} : InvertsW (LocTotW F) (map F)
+      => \lam {e} w => locGlue=>inverts {_} {_} {\lam p => F p} {_} {map F}
+            (\lam z => (cinr z.1, z.2), \lam x => path \lam i => (cglue x.1 i, coe (\lam j => F (cglue x.1 j)) x.2 i)) w
+
+    -- | Restriction along {map} is an equivalence onto functors inverting {LocTotW}.
+    \lemma restrict-equiv.{v} {C : \Cat v} {W : (DI ->⁺ C) -> \Prop} {F : Localize W ->⁺ \Type v} {Z : \Cat v}
+      : IsEquiv (restrictW locTot-inverts)
+      => \let F' (p :⁺ LP W) : \Type v => F p
+         \in transport IsEquiv (ext \lam G => ext idp) $
+              IsEquiv.trans (inP $ later \new QEquiv {
+                | f G x => G (x.1, x.2)
+                | ret G x => G (x.1, x.2)
+                | ret_f _ => idp
+                | f_sec _ => idp
+              }) $ IsEquiv.trans (pushoutTot-precomp-equiv F' Z) $
+                   IsEquiv.trans (inP CatPushout.elim-equiv) $
+                   inP \new QEquiv {_} {MapW (LocTotW F) Z} {
+                     | f s => (\lam y => s.1 y, \lam w => locGlue=>inverts {_} {_} {F'} {_} {s.1} (s.2, s.3) w)
+                     | ret t => \let c => locGlue-contr {_} {_} {F'} {_} {t.1} (\lam w => t.2 w)
+                                \in (t.1, c.center.1, c.center.2)
+                     | ret_f s => \let c => locGlue-contr (\lam {e} w => locGlue=>inverts (s.2, s.3) w)
+                                  \in path \lam k => (s.1, (c.contraction (s.2, s.3) k).1, (c.contraction (s.2, s.3) k).2)
+                     | f_sec t => ext idp
+                   }
+
+    -- | The body of {Localize}.
+    \private \func LP {C : \Cat} (W : (DI ->⁺ C) -> \Prop) : \Cat
+      => CatPushout {\Sigma⁺ (MorW W) DI} {C} {MorW W} (\lam a => a.1.1 a.2) (\lam a => a.1)
+
+    -- | Gluing data for a functor on the restriction to `C`.
+    \private \func LocGlue.{v} {C : \Cat v} {W : (DI ->⁺ C) -> \Prop} (F : LP W ->⁺ \Type v) {Z : \Cat v} (U : TotB F ->⁺ Z)
+      => \Sigma (V : TotC F ->⁺ Z) (\Pi (x :⁺ TotA F) -> U (totF F x) = V (totG F x))
+
+    -- | The morphisms over {W}.
+    \private \type TotW.{v} {C : \Cat v} {W : (DI ->⁺ C) -> \Prop} (F : LP W ->⁺ \Type v) (e : DI ->⁺ TotB F) : \Prop
+      => W (\lam i => (e i).1)
+
+    -- | A functor with gluing data inverts the morphisms over {W}: they are glued to morphisms in the discrete fibers over {MorW}.
+    \private \lemma locGlue=>inverts.{v} {C : \Cat v} {W : (DI ->⁺ C) -> \Prop} {F : LP W ->⁺ \Type v} {Z : \Cat v} {U : TotB F ->⁺ Z}
+                                         (g : LocGlue F U) : InvertsW (TotW F) U
+      => \lam {e} w => \let | m : MorW W => (\lam i => (e i).1, w)
+                            | t (i :⁺ DI) : F (cinr m) => (totG F ((m,i), (e i).2)).2
+                       \in transport (\lam q => IsIso (dpath q)) (path \lam j => \lam i =>⁺ inv (g.2 ((m,i), (e i).2)) j)
+                                     (dmap_IsIso (\lam y => g.1 (m,y)) (type-groupoid (dpath t)))
+
+    {- | Gluing data along a path {gamma} from a family of arrows {a} to constant arrows is unique
+     -   if the functor {U'} sends the arrows transported back from the constant ones to isomorphisms.
+     -}
+    \private \lemma path-glue-contr.{v}
+        {M : \Type} {L Z : \Cat} (G : L ->⁺ \Type v) {a : M ->⁺ DI ->⁺ L} {b : M ->⁺ L}
+        (gamma : a = {M ->⁺ DI ->⁺ L} (\lam m _ => b m))
+        (U' : \Sigma⁺ (q : \Sigma⁺ M DI) (G (a q.1 q.2)) ->⁺ Z)
+        (Ui : \Pi (z : \Sigma⁺ (m : M) (G (b m))) -> IsIso (dpath \lam i => U' ((z.1, i), transport+ G (inv (path \lam j => gamma j z.1 i)) z.2)))
+      : Contr (\Sigma (V : \Sigma⁺ (m : M) (G (b m)) ->⁺ Z)
+                      (\Pi (x :⁺ \Sigma⁺ (q : \Sigma⁺ M DI) (G (a q.1 q.2))) -> U' x = V (x.1.1, transport+ G (path \lam j => gamma j x.1.1 x.1.2) x.2))) \elim gamma
+      | idp => \let T (z :⁺ \Sigma⁺ (m : M) (G (b m))) => \Sigma⁺ (k : Z) ((\lam i =>⁺ U' ((z.1, i), z.2)) = (\lam _ =>⁺ k))
+               \in \case cov-pi-cat-equiv type-groupoid T \with {
+                 | inP e2 => Contr.Contr_QEquiv (symQEquiv (HQEquiv.toQEquiv e2) `transQEquiv` symQEquiv (later \new QEquiv {
+                   | f s z => (s.1 z, path \lam j => \lam i =>⁺ s.2 ((z.1, i), z.2) j)
+                   | ret t => (\lam z => (t z).1, \lam x => path \lam j => ((t (x.1.1, x.2)).2 j) x.1.2)
+                   | ret_f => idpe
+                   | f_sec => idpe
+                 })) $ pi-Contr (\lam z => T z) \lam z => iso-const-contr (Ui z)
+               }
+
+    -- | Gluing data for a functor inverting the morphisms over {W} is unique.
+    \private \lemma locGlue-contr.{v} {C : \Cat v} {W : (DI ->⁺ C) -> \Prop} {F : LP W ->⁺ \Type v} {Z : \Cat v}
+                                      {U : TotB F ->⁺ Z} (Uw : InvertsW (TotW F) U) : Contr (LocGlue F U)
+      => path-glue-contr F (path \lam j m i => cglue (m,i) j) (\lam x => U (totF F x)) \lam z => Uw z.1.2
+  }

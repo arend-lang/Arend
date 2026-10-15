@@ -16,7 +16,6 @@
 \import InfCat.Functor.Conservative
 \import InfCat.Functor.Embedding
 \import InfCat.Functor.Equiv
-\import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.Localization.Abstract
 \import InfCat.Paths
@@ -66,13 +65,6 @@
 -- | Gluing data for a functor inverting {W} is unique.
 \lemma GlueData-contr {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D} (Fw : InvertsW W F) : Contr (GlueData W F)
   => \let | T (u :⁺ MorW W) => \Sigma⁺ (k : D) ((\lam i =>⁺ F (u.1 i)) = (\lam _ =>⁺ k))
-          | Fib (u : MorW W) => \Sigma (k : D) ((\lam _ =>⁺ k) = (\lam i =>⁺ F (u.1 i)))
-          | T-prop (u : MorW W) : isProp (T u) => isProp-retract {Fib u} {T u} (\lam r => (r.1, inv r.2)) (\lam r => (r.1, inv r.2))
-                                               (\lam r => path \lam k => (r.1, inv_inv k))
-                                               (IsFFMap.fibProp diag-ff (\lam i => F (u.1 i)))
-          | T-inh (u : MorW W) : T u =>
-            \have r => TruncP.remove (IsFFMap.fibProp diag-ff (\lam i => F (u.1 i))) (IsIso-diag-char.1 (Fw u.2))
-            \in (r.1, inv r.2)
           | e1 : QEquiv {GlueData W F} {\Pi (u :⁺ MorW W) -> T u} => \new QEquiv {
               | f g u => (g.1 u, path \lam j i => g.2 (u,i) j)
               | ret s => (\lam u => (s u).1, \lam a => path \lam j => ((s a.1).2 @ j) a.2)
@@ -81,7 +73,7 @@
             }
      \in \case cov-pi-cat-equiv type-groupoid T \with {
        | inP e2 => Contr.Contr_QEquiv (symQEquiv (HQEquiv.toQEquiv e2) `transQEquiv` symQEquiv e1) $
-                    pi-Contr (\lam u => T u) \lam u => isProp=>isContr (T-prop u) (T-inh u)
+                    pi-Contr (\lam u => T u) \lam u => iso-const-contr (Fw u.2)
      }
 
 -- | For a functor inverting {W}, the gluing data is equivalent to the property of inverting {W}.
