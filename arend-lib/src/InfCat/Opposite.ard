@@ -64,6 +64,9 @@
       => Straight.toStraight idd
   }
 
+\func yoneda.{u} {C : \Cat u} (x :⁺ C) (y :⁺ Op C)
+  => Op.Hom y x
+
 \sfunc OpFunc.{u} {C D : \Cat u} (f : C ->⁺ D) (x :⁺ Op C) : Op D
   => pair.1 x
   \where {

@@ -107,6 +107,14 @@
         | f_finv K => funExt+ \lam a => pmap+ K (e.finv_f a)
       }
 
+    -- | Postcomposition with an equivalence is an equivalence.
+    \lemma postcomp {A B D : \Cat} {f : A ->⁺ B} (e : IsHEquiv f) : IsHEquiv {D ->⁺ A} {D ->⁺ B} (\lam G d => f (G d)) \elim e
+      | inP e => inP \new HQEquiv {
+        | finv K d => e.finv (K d)
+        | finv_f G => funExt+ \lam d => e.finv_f (G d)
+        | f_finv K => funExt+ \lam d => e.f_finv (K d)
+      }
+
     \lemma biEquiv {g : D ->⁺ C} (p : \Pi (x :⁺ C) -> g (f x) = x) {h : D ->⁺ C} (q : \Pi (y :⁺ D) -> f (h y) = y) : IsHEquiv f
       => inP \new HQEquiv {
         | finv => g

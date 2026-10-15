@@ -1,0 +1,91 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Slice.TotalSlice
+\import InfCat.SubCat.Full
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\open sumSlice-equiv
+\open ExpHelpers
+\open FullSubCat
+
+\module ExpHelpers \where {
+  -- | The exponent from {F} to `Op C ->⁺ \Type u` over {A}.
+  \func ExpPresheaf.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (a :⁺ A) : \Cat
+    => \Sigma⁺ (G : Op C ->⁺ \Type u) (G ~> const (F a))
+
+  -- | The total category of the exponent from {F} to {C} over {A}.
+  \func ExpTotal.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) : \Cat
+    => FullSubCat (ExpPred F C)
+
+  -- | All fibers of the presheaf over `F a` are representable.
+  \func ExpPred.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (s : \Sigma⁺ (a : A) (ExpPresheaf F C a)) : \Prop
+    => ∀ (v : F s.1) ∃ (c : C) (yoneda c = \lam y => fibFam s.2.2 (y,v))
+
+  -- | The projection from the total category to the base.
+  \func expProj.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (e :⁺ ExpTotal F C) : A
+    => (inc e).1
+
+  {- | Families of slices with representable fibers over {Y} are families of representable presheaves over `Y × F a`:
+   -   postcompose with {sliceFiber} ({sliceFiber-equiv}) and curry.
+   -}
+  \lemma presheaf-curry-equiv.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} (Y : \Cat) (a : A)
+    : IsEquiv {\Sigma (s : Y ->⁺ ExpPresheaf F C a) (\Pi (y : Y) -> ExpPred F C (a, s y))}
+              {\Sigma (k : \Sigma⁺ Y (F a) ->⁺ Op C ->⁺ \Type u) (\Pi (t : \Sigma⁺ Y (F a)) -> ∃ (c : C) (yoneda c = k t))}
+              (\lam s => (\lam t u => sliceFiber (const (F a)) (s.1 t.1) (u, t.2), \lam t => s.2 t.1 t.2))
+    => inP $ sigma-equiv (IsEquiv.toQEquiv (IsHEquiv.toIsEquiv (IsHEquiv.postcomp (sliceFiber-equiv (const (F a)))))) (\lam _ => idEquiv)
+       `transQEquiv` later \new QEquiv {\Sigma (g : Y ->⁺ \Sigma⁺ (Op C) (F a) ->⁺ \Type u)
+                                               (∀ y (v : F a) ∃ (c : C) (yoneda c = \lam u =>⁺ g y (u, v)))} {
+         | f g => (\lam t u => g.1 t.1 (u, t.2), \lam t => g.2 t.1 t.2)
+         | ret k => (\lam y w => k.1 (y, w.2) w.1, \lam y v => k.2 (y, v))
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }
+
+  -- | The evaluation map together with its characterization.
+  \sfunc evalPair.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} (e :⁺ ExpTotal F C) (v :⁺ F (expProj F C e))
+    : \Sigma⁺ (c : C) (yoneda c = \lam u => sliceFiber (const (F (inc e).1)) (inc e).2 (u,v))
+    => ffMap-lift-pair yonedaEmbedding {\Sigma⁺ (e : ExpTotal F C) (F (expProj F C e))}
+        (\lam s v => sliceFiber (const (F (inc s.1).1)) (inc s.1).2 (v, s.2))
+        (\lam s => inc-con {_} {_} {s.1} s.2) (e,v)
+}
+
+-- | The exponent from {F} to {C} over {A}.
+\type ExpLL.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (a :⁺ A) : \Cat
+  => Fibers (expProj F C) a
+  \where {
+    -- | The evaluation map.
+    \protected \sfunc eval {a :⁺ A} (e :⁺ ExpLL F C a) (v :⁺ F a) : C \elim e
+      | (e,idp) => (evalPair e v).1
+
+    {- | The universal property.
+     -
+     -   Under the Yoneda embedding ({postcomp-image-equiv}), {eval} becomes the composite of {subProj.sections-equiv}
+     -   and {presheaf-curry-equiv} ({eval-yoneda}).
+     -}
+    \protected \lemma eval-univ (G : A ->⁺ \Cat) (a : A)
+      : IsEquiv {G a ->⁺ ExpLL F C a} {\Sigma⁺ (G a) (F a) ->⁺ C} (\lam f s => eval (f s.1) s.2)
+      => IsEquiv.leftFactor (postcomp-image-equiv yonedaEmbedding) $
+         transport IsEquiv (ext \lam f => ext (funExt+ \lam s => eval-yoneda (f s.1) s.2)) $
+         IsEquiv.trans (inP $ later \new QEquiv {
+           | ret g y => g y
+           | ret_f _ => idp
+           | f_sec _ => idp
+         }) $ IsEquiv.trans (subProj.sections-equiv (ExpPred F C) (const a)) (presheaf-curry-equiv {A} {F} (G a) a)
+      \where {
+        -- | The value of {eval} under the Yoneda embedding is the fiber of the presheaf.
+        \private \sfunc eval-yoneda {a :⁺ A} (z :⁺ ExpLL F C a) (v :⁺ F a)
+          : (\lam u =>⁺ sliceFiber (const (F a)) (transport+ (ExpPresheaf F C) z.2 (inc z.1).2) (u, v)) = yoneda (eval z v) \elim z
+          | (e, idp) => funExt+ \lam x => path (\lam i => inv (evalPair e v).2 i x) *> pmap+ (yoneda __ x) (inv \peval eval (e,idp) v)
+      }
+  }

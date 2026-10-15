@@ -8,6 +8,9 @@
 
 \func id+ {C :⁺ \Cat} (x :⁺ C) => x
 
+\func const {C D : \Cat} (a :⁺ C) (b :⁺ D) : C
+  => a
+
 \func dmap {C D :⁺ \Cat} (f :⁺ C ->⁺ D) {a a' :⁺ C} (p :⁺ a ~> a') : f a ~> f a'
   => dpath \lam i => f (p i)
 

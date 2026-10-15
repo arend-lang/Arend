@@ -41,7 +41,7 @@
 
 -- | A square is a pullback square if it is cartesian for the target functor with respect to constant arrows.
 \type IsPullbackSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
-  => \Pi (r : C) -> IsCartesianArrowAt (\lam w => w dright) (dpath phi) (constArr r)
+  => \Pi (r : C) -> IsCartesianArrowAt (\lam w => w dright) (dpath phi) (const r)
   \where {
     -- | Identity squares are pullback squares.
     \lemma isPullback-idd {C : \Cat} (u : DI ->⁺ C) : IsPullbackSquare (idd {DI ->⁺ C} {u})
@@ -60,7 +60,7 @@
     -- | A square whose bottom right corner is terminal is a pullback square if and only if its left and top sides form a product.
     \lemma terminal-product {D : \Cat} (psi : DI ->⁺ DI ->⁺ D) (Tc : IsTerminal (psi dright dright))
       : IsPullbackSquare psi <-> IsProduct (dpath (psi dleft)) (dpath \lam l => psi l dleft)
-      => \let | ctm (r : D) (w : constArr r ~> psi dright) => cotriangle-map (\lam w => w dright) (dpath psi) w
+      => \let | ctm (r : D) (w : const r ~> psi dright) => cotriangle-map (\lam w => w dright) (dpath psi) w
               | eqr (r : D) : IsEquiv (totalEquiv.total (ctm r))
                               <-> IsEquiv (\lam k => (comp k (dpath (psi dleft)), comp k (dpath \lam l => psi l dleft)))
                 => IsEquiv.parallelEquiv (cotri-equiv r (dpath psi)) (cod-equiv {D} {psi} Tc r) \lam a =>
@@ -71,7 +71,7 @@
       \where {
         -- | Factorizations through {h} of arrows from a constant arrow are determined by the top side of the factor.
         \lemma cotri-equiv {D : \Cat} (x : D) {u v : DI ->⁺ D} (h : u ~> v)
-          : IsEquiv {\Sigma (w : constArr x ~> v) (\Sigma (k : constArr x ~> u) (DPath (\lam i => k i ~> w i) idd h))} {x ~> u dleft}
+          : IsEquiv {\Sigma (w : const x ~> v) (\Sigma (k : const x ~> u) (DPath (\lam i => k i ~> w i) idd h))} {x ~> u dleft}
                     (\lam a => dpath \lam i => a.2.1 i dleft)
           => IsEquiv.trans
                (inP $ later \new QEquiv {
@@ -84,7 +84,7 @@
 
         -- | If the bottom right corner is terminal, the codomain of {cotriangle-map} consists of pairs of arrows into the bottom left and top right corners.
         \lemma cod-equiv {D : \Cat} {psi : DI ->⁺ DI ->⁺ D} (Tc : \Pi (r : D) -> Contr (r ~> psi dright dright)) (r : D)
-          : IsEquiv {\Sigma (w : constArr r ~> psi dright) (\Sigma (g : r ~> psi dleft dright) (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => psi i dright)))}
+          : IsEquiv {\Sigma (w : const r ~> psi dright) (\Sigma (g : r ~> psi dleft dright) (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => psi i dright)))}
                     {\Sigma (r ~> psi dleft dright) (r ~> psi dright dleft)}
                     (\lam b => (b.2.1, dpath \lam i => b.1 i dleft))
           => inP $ later \new QEquiv {
@@ -92,7 +92,7 @@
                | ret b => (b.2.1, (b.1, b.2.2))
                | ret_f b => idp
                | f_sec b => idp
-             } `transQEquiv` sigma-right \lam g => contr-right (\lam (w : constArr r ~> psi dright) =>
+             } `transQEquiv` sigma-right \lam g => contr-right (\lam (w : const r ~> psi dright) =>
                     Contr.Contr_QEquiv (symQEquiv (comp-equiv {D} {_} {_} {_} {g} {dpath \lam i => psi i dright} {dpath \lam i => w i dright}))
                                        (isProp=>PathContr _ (isContr=>isProp (Tc r)) _ _))
                   `transQEquiv` IsEquiv.toQEquiv (const-ev0-equiv r (psi dright))
@@ -129,7 +129,7 @@
      -}
     \lemma pullback-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
       : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k)))
-      => \let | ctm (r : C) (w : constArr r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
+      => \let | ctm (r : C) (w : const r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
               | eqr (r : C) : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
                               <-> IsEquiv (totalEquiv.total (ctm r))
                 => IsEquiv.parallelEquiv (sec-equiv phi r) (inP (cone-equiv phi r)) (\lam k => idp)
@@ -138,7 +138,7 @@
       \where \private {
         -- | The factorization of {homSq} through the square.
         \func sec {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) (k : r ~> phi dleft dleft)
-          : \Sigma (w : constArr r ~> phi dright) (\Sigma (K : constArr r ~> phi dleft) (DPath (\lam i => K i ~> w i) idd (dpath phi)))
+          : \Sigma (w : const r ~> phi dright) (\Sigma (K : const r ~> phi dleft) (DPath (\lam i => K i ~> w i) idd (dpath phi)))
           => (dpath \lam i => \lam j => homSq phi k dright j i,
               (dpath \lam i => \lam j => homSq phi k dleft j i, dpath \lam i => dpath \lam l => \lam j => homSq phi k l j i))
 
@@ -149,7 +149,7 @@
         -- | Squares from a constant arrow with a factorization of their bottom side are cones, by transposition.
         \func cone-equiv {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
           : QEquiv {Boundary (\lam i j => r ~> phi i j)}
-                   {\Sigma (w : constArr r ~> phi dright)
+                   {\Sigma (w : const r ~> phi dright)
                            (\Sigma (g : r ~> phi dleft dright)
                                    (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => phi i dright)))} \cowith
           | f s => (dpath \lam m => \lam j => s.4 j m, (s.2, dpath \lam i => dpath \lam l => s.5 l i))
@@ -169,30 +169,30 @@
               | UE {X : C} (x :⁺ DI ->⁺ SliceCat X) : DI ->⁺ C
                 => \lam j => (x j).1
               -- cotriangle-map for the target functor of `DI ->⁺ C`.
-              | ctmC (r : C) (w : constArr r ~> phi dright)
+              | ctmC (r : C) (w : const r ~> phi dright)
                 => cotriangle-map (\lam w => w dright) (dpath phi) w
               -- cotriangle-map for the target functor of the arrow category of the slice, at a constant arrow over r.
-              | ctmD (r : C) (rho : r ~> phi dright dright) (w : constArr {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+              | ctmD (r : C) (rho : r ~> phi dright dright) (w : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
                 => cotriangle-map (\lam (w :⁺ DI ->⁺ SliceCat (phi dright dright)) => w dright) (dpath (sliceSquare phi)) w
               -- Factorizations in the slice as factorizations in C.
               | F1 (r : C) (a : \Sigma (rho : r ~> phi dright dright)
-                                       (\Sigma (w : constArr {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
-                                               (\Sigma (k : constArr {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dleft)
+                                       (\Sigma (w : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+                                               (\Sigma (k : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dleft)
                                                        (DPath (\lam i => k i ~> w i) idd (dpath (sliceSquare phi))))))
-                : \Sigma (w : constArr r ~> phi dright) (\Sigma (k : constArr r ~> phi dleft) (DPath (\lam i => k i ~> w i) idd (dpath phi)))
+                : \Sigma (w : const r ~> phi dright) (\Sigma (k : const r ~> phi dleft) (DPath (\lam i => k i ~> w i) idd (dpath phi)))
                 => (dmap UE a.2.1, (dmap UE a.2.2.1, dpath \lam i => dmap UE (a.2.2.2 i)))
               -- The base, the fibers and the domain of F2.
-              | F2Base (r : C) => \Sigma (rho : r ~> phi dright dright) (constArr {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+              | F2Base (r : C) => \Sigma (rho : r ~> phi dright dright) (const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
               | F2Fib (r : C) (x : F2Base r)
                 => \Sigma (g : (r,x.1) ~> {SliceCat (phi dright dright)} sliceSquare phi dleft dright)
                           (DPath (\lam i => g i ~> x.2 i dright) idd (dpath \lam i => sliceSquare phi i dright))
               -- Factorizations of the target functor in the slice as factorizations in C.
               | F2Dom (r : C)
                 => \Sigma (rho : r ~> phi dright dright)
-                          (\Sigma (w : constArr {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+                          (\Sigma (w : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
                                   (\Sigma (g : (r,rho) ~> {SliceCat (phi dright dright)} sliceSquare phi dleft dright)
                                           (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => sliceSquare phi i dright))))
-              | F2 (r : C) (a : F2Dom r) : \Sigma (w : constArr r ~> phi dright) (\Sigma (g : r ~> phi dleft dright) (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => phi i dright)))
+              | F2 (r : C) (a : F2Dom r) : \Sigma (w : const r ~> phi dright) (\Sigma (g : r ~> phi dleft dright) (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => phi i dright)))
                 => (dmap UE a.2.1, cotriangle-map SliceCat.forget (dpath \lam i => sliceSquare phi i dright) (dpath \lam i => a.2.1 i dright) a.2.2)
               | totD (r : C) => totalEquiv.total (\lam (rho : r ~> phi dright dright) => totalEquiv.total (ctmD r rho))
          \in \have
@@ -200,7 +200,7 @@
                 => IsEquiv.leftFactor (terminal-product.cotri-equiv r (dpath phi))
                      (IsEquiv.trans (IsSigma-right _ \lam rho => terminal-product.cotri-equiv {SliceCat (phi dright dright)} (r,rho) (dpath (sliceSquare phi)))
                                     (SliceCat.dom-equiv r (sliceSquare phi dleft dleft)))
-              | base-equiv (r : C) : IsEquiv {\Sigma (rho : r ~> phi dright dright) (constArr {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)} (\lam x => dmap UE x.2)
+              | base-equiv (r : C) : IsEquiv {\Sigma (rho : r ~> phi dright dright) (const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)} (\lam x => dmap UE x.2)
                 => IsEquiv.leftFactor (const-ev0-equiv r (phi dright))
                      (IsEquiv.trans (IsSigma-right _ \lam rho => const-ev0-equiv {SliceCat (phi dright dright)} (r,rho) (sliceSquare phi dright))
                                     (SliceCat.dom-equiv r (sliceSquare phi dright dleft)))
@@ -276,8 +276,8 @@
             \func lift-qequiv {C : \Cat} {sig : DI ->⁺ C}
               : QEquiv {\Sigma (v : DI ->⁺ SliceCat (sig dright)) (v ~> lift sig)}
                        {\Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig))
-                               (\Sigma (a : s.1 ~> constArr (sig dright))
-                                       (DPath (\lam i => s.2 i ~> constArr (sig dright)) a (dpath \lam m j => sig (dmax j m))))} \cowith
+                               (\Sigma (a : s.1 ~> const (sig dright))
+                                       (DPath (\lam i => s.2 i ~> const (sig dright)) a (dpath \lam m j => sig (dmax j m))))} \cowith
               | f s => ((\lam j => (s.1 j).1, dmap (\lam x j =>⁺ (x j).1) s.2), (dpath \lam m j => (s.1 j).2 m, dpath \lam i => dpath \lam m j => (s.2 i j).2 m))
               | ret t => (\lam j => (t.1.1 j, dpath \lam m => t.2.1 m j), dpath \lam i => \lam j => (t.1.2 i j, dpath \lam m => t.2.2 i m j))
               | ret_f s => idp

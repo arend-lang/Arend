@@ -110,13 +110,9 @@
       => (IsEquiv.parallelEquiv (inP DI-equiv) (inP DI-equiv) (\lam h => idp)).1 pe
   }
 
--- | The constant arrow on {a}.
-\func constArr {C : \Cat} (a : C) : DI ->⁺ C
-  => \lam _ => a
-
 -- | Arrows from a constant functor to {Y} are determined by their source component.
 \lemma const-ev0-equiv {C : \Cat} (a : C) (Y : DI ->⁺ C)
-  : IsEquiv {constArr a ~> Y} {a ~> Y dleft} (dmap \lam (F : DI ->⁺ C) => F dleft)
+  : IsEquiv {const a ~> Y} {a ~> Y dleft} (dmap \lam (F : DI ->⁺ C) => F dleft)
   => IsEquiv.trans (inP $ later \new QEquiv {
         | f N => (dpath \lam l => N l dleft, (dpath \lam l => N l dright, dpath \lam k => dpath \lam l => N l k))
         | ret t => dpath \lam l k => t.2.2 k l

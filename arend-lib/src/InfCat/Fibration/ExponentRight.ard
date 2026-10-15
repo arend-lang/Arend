@@ -95,7 +95,7 @@
 
 -- | The projection of the exponent to {B}.
 \func exp-proj.{u} {X B : \Cat u} (C : \Cat u) (R : B ->⁺ X ->⁺ \Type u) (W : (DI ->⁺ X) -> \Prop) (x :⁺ Exp C R W) : B
-  => rightFib-full.proj (ExpPred C R W) x
+  => subProj (ExpPred C R W) x
 
 \lemma exp-rightFib.{u} {X B : \Cat u} {C : \Cat u} {R : B ->⁺ X ->⁺ \Type u} {W : (DI ->⁺ X) -> \Prop}
   : IsRightFib (Fibers (exp-proj C R W))
@@ -112,7 +112,7 @@
 -- | The functor to {C} corresponding to an object of a fiber of {exp-proj}.
 \func exp-nu.{u} {X B : \Cat u} {C : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {W : (DI ->⁺ X) -> \Prop} (b : B)
                  (z : Fibers (exp-proj C R W) b) : MapW (ExpW W) C
-  => IsEquiv.ret yon-equiv (theta R b (rightFib-full-fibers (ExpPred C R W) b z))
+  => IsEquiv.ret yon-equiv (theta R b (subProj.fibers-equiv (ExpPred C R W) b z))
   \where {
     -- | The curried functor of an object of the pullback of {target}, with its property.
     \func theta.{u} {X B : \Cat u} {C : \Cat u} (R : B ->⁺ X ->⁺ \Type u) {W : (DI ->⁺ X) -> \Prop} (b : B)
@@ -156,7 +156,7 @@
                 | ret_f _ => idp
                 | f_sec _ => idp
               }
-     \in IsEquiv.trans (inP (rightFib-full-fibers (ExpPred C R W) b)) $
+     \in IsEquiv.trans (inP (subProj.fibers-equiv (ExpPred C R W) b)) $
          IsEquiv.trans (inP (qsigma-left (IsEquiv.toQEquiv base-equiv))) (IsEquiv.ret-equiv exp-nu.yon-equiv)
 
 -- | Transport along {beta} is precomposition with {expMap} {beta}.
@@ -164,11 +164,11 @@
                      (z : Fibers (exp-proj C R W) b) {k :⁺ \Sigma⁺ (x : X) (R b' x)}
   : (exp-nu R b' (rightFib-tr exp-rightFib beta z)).1 k = (exp-nu R b z).1 (expMap R beta k)
   => \have | yon-path (d : B) (w : Fibers (exp-proj C R W) d)
-             : (\lam k x =>⁺ Op.Hom x ((exp-nu R d w).1 k)) = (exp-nu.theta R d (rightFib-full-fibers (ExpPred C R W) d w)).1
+             : (\lam k x =>⁺ Op.Hom x ((exp-nu R d w).1 k)) = (exp-nu.theta R d (subProj.fibers-equiv (ExpPred C R W) d w)).1
              => pmap __.1 (IsEquiv.f_ret exp-nu.yon-equiv)
-           | tr-path : (exp-nu.theta R b' (rightFib-full-fibers (ExpPred C R W) b' (rightFib-tr exp-rightFib beta z))).1
-                       = (\lam k =>⁺ (exp-nu.theta R b (rightFib-full-fibers (ExpPred C R W) b z)).1 (expMap R beta k))
-             => \let e => (rightFib-full-fibers (ExpPred C R W) b z).1
+           | tr-path : (exp-nu.theta R b' (subProj.fibers-equiv (ExpPred C R W) b' (rightFib-tr exp-rightFib beta z))).1
+                       = (\lam k =>⁺ (exp-nu.theta R b (subProj.fibers-equiv (ExpPred C R W) b z)).1 (expMap R beta k))
+             => \let e => (subProj.fibers-equiv (ExpPred C R W) b z).1
                 \in pmap (\lam e' => expCurry R (fibFam (target-fibers (expFam C R b') e').2))
                         (rightFib-full-tr (rightFib-pullback (expFam C R) target-rightFib) (ExpPred C R W)
                                           (\lam beta' e' h => exp-rightFib.pred-tr R beta' e' h) beta z
@@ -198,16 +198,16 @@
      IsEquiv.trans exp-nu.yon-equiv $
      IsEquiv.trans (inP (split-equiv Wid pi)) $
      IsEquiv.trans (inP (sigma-equiv (IsEquiv.toQEquiv (target-sec (\lam t => expFam C R (pi t)))) (pred-equiv pi)))
-                   (IsEquiv.ret-equiv (rightFib-full-sections (ExpPred C R W) pi))
+                   (IsEquiv.ret-equiv (subProj.sections-equiv (ExpPred C R W) pi))
   \where {
     {- | The section of the fibers of {exp-proj} corresponding to a functor {F}:
      -   compose {F} with the Yoneda embedding ({exp-nu.yon}), uncurry it ({split-equiv}),
-     -   take the corresponding section of {target} ({target-sec.map}), and lift it to the full subcategory ({rightFib-full-sections}).
+     -   take the corresponding section of {target} ({target-sec.map}), and lift it to the full subcategory ({subProj.sections-equiv}).
      -}
     \protected \sfunc map.{v} {X B T : \Cat v} {C : \Cat v} {R : B ->⁺ X ->⁺ \Type v} {W : (DI ->⁺ X) -> \Prop}
                               (Wid : \Pi (x : X) -> W (\lam _ => x)) (pi : T ->⁺ B) (F : MapW (ExpW {_} {secFam R pi} (secW W)) C)
       : \Pi (t :⁺ T) -> Fibers (exp-proj C R W) (pi t)
-      => IsEquiv.ret (rightFib-full-sections (ExpPred C R W) pi)
+      => IsEquiv.ret (subProj.sections-equiv (ExpPred C R W) pi)
            (target-sec.map (split-equiv Wid pi (exp-nu.yon F)).1,
             pred-equiv pi (split-equiv {X} {B} {T} {C} {R} {W} Wid pi (exp-nu.yon F)).1
                        (split-equiv {X} {B} {T} {C} {R} Wid pi (exp-nu.yon F)).2)
@@ -316,10 +316,10 @@
             => (\lam k => F.1 ((t, k.1), k.2), \lam {a} w => F.2 {\lam i => ((t, (a i).1), (a i).2)} w)
           | mOf => (exp-sec.split-equiv Wid pi (exp-nu.yon F)).1
      \in \have
-          | sec-path : (rightFib-full-fibers (ExpPred C R W) (pi t) (exp-sec.map Wid pi F t)).1 = target-sec.map mOf t
-            => pmap (\lam s => (rightFib-full-fibers (ExpPred C R W) (pi t) (s t)).1) (\peval exp-sec.map Wid pi F)
-               *> path \lam i => (IsEquiv.f_ret (rightFib-full-sections (ExpPred C R W) pi) i).1 t
-          | theta-path : exp-nu.theta R (pi t) (rightFib-full-fibers (ExpPred C R W) (pi t) (exp-sec.map Wid pi F t)) = exp-nu.yon restrF
+          | sec-path : (subProj.fibers-equiv (ExpPred C R W) (pi t) (exp-sec.map Wid pi F t)).1 = target-sec.map mOf t
+            => pmap (\lam s => (subProj.fibers-equiv (ExpPred C R W) (pi t) (s t)).1) (\peval exp-sec.map Wid pi F)
+               *> path \lam i => (IsEquiv.f_ret (subProj.sections-equiv (ExpPred C R W) pi) i).1 t
+          | theta-path : exp-nu.theta R (pi t) (subProj.fibers-equiv (ExpPred C R W) (pi t) (exp-sec.map Wid pi F t)) = exp-nu.yon restrF
             => ext $ pmap (\lam e => expCurry R (fibFam (target-fibers (expFam C R (pi t)) e).2)) sec-path
                      *> pmap (expCurry R) (exp-sec.pred-equiv.fib-path pi mOf t)
           | fun-path : exp-nu R (pi t) (exp-sec.map {_} {_} {_} {_} {R} Wid pi F t) = restrF

@@ -194,6 +194,11 @@
                  })
      \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))
 
+\sfunc ffMap-lift-pair {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat} (g : D ->⁺ C)
+                       (gs : \Pi (y : D) -> ∃ (x : B) (f x = g y)) (d :⁺ D) : \Sigma⁺ (b : B) (f b = g d)
+  => \have r => ffMap-lift ff g gs
+     \in (r.1 d, r.2 d)
+
 -- | Postcomposition with a fully faithful functor is an equivalence onto the functors whose values lie in its image.
 \lemma postcomp-image-equiv {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat}
   : IsEquiv {D ->⁺ B} {\Sigma (g : D ->⁺ C) (\Pi (y : D) -> ∃ (x : B) (f x = g y))} (\lam h => (\lam y => f (h y), \lam y => inP (h y, idp)))

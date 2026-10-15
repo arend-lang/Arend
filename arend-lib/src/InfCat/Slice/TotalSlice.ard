@@ -13,6 +13,7 @@
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
+\import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Limit.Product
@@ -112,7 +113,8 @@
                          pmap {\Pi (u :⁺ \Sigma⁺ (x : X) (sumFam F (fibFam s.2) x)) -> F u.1} Q.ret
                               (ext \lam u => inv (Straight.fromStraight u.2.2).2 *> inv (~>_->_comp-fam (Q'.ret h) s.2 u.1 u.2))
                          *> Q.ret_f _ *> pmap (comp __ s.2) (inv r.2)
-      \where \private {
+      \where {
+        -- | The fibers of the sum of {G'} are the values of {G'}.
         \lemma sum-fib-equiv.{v} {X : \Cat v} {F : X ->⁺ \Type v} (G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) (x : \Sigma⁺ (x : X) (F x))
           : IsEquiv {fibFam (sumProj F G') x} {G' x}
                     (\lam r => transport+ (\lam t => G' (x.1, t)) (Straight.fromStraight r).2 (Straight.fromStraight r).1.2)
@@ -122,22 +124,21 @@
             | f_sec g => idp
           }
           \where
-            \func aux.{w} {X : \Cat w} {F : X ->⁺ \Type w} {G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type w} {x : X} {t : F x} {u : sumFam F G' x} (e : u.1 = t)
+            \private \func aux.{w} {X : \Cat w} {F : X ->⁺ \Type w} {G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type w} {x : X} {t : F x} {u : sumFam F G' x} (e : u.1 = t)
               : ((t, transport+ (\lam t' => G' (x, t')) e u.2), idp) = {sliceFiber.FibCat (F, ((sumFam F G', sumProj F G'), (x,t)))} (u, e) \elim e
               | idp => idp
 
-        \lemma fib-sum-equiv.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) (x : X)
+        \private \lemma fib-sum-equiv.{v} {X : \Cat v} {F G : X ->⁺ \Type v} (a : G ~> F) (x : X)
           : IsEquiv {sumFam F (fibFam a) x} {G x} (\lam u => (Straight.fromStraight u.2).1)
           => inP \new QEquiv {
             | ret g => (sliceFiber.covMap a (x, g), Straight.toStraight (g, idp))
             | ret_f u => aux *> path \lam i => (u.1, Straight.toStraight_fromStraight u.2 i)
             | f_sec g => idp
           }
-          \where {
+          \where
             \func aux.{w} {X : \Cat w} {F G : X ->⁺ \Type w} {a : G ~> F} {x : X} {t : F x} {g : G x} {e : sliceFiber.covMap a (x, g) = t}
               : (sliceFiber.covMap a (x, g), Straight.toStraight (g, idp)) = {sumFam F (fibFam a) x} (t, Straight.toStraight (g, e)) \elim e
               | idp => idp
-          }
       }
 
     \func value.{v} {X : \Cat v} (F : X ->⁺ \Type v) (P : \Sigma⁺ (x : X) (F x) ->⁺ \Type v)
@@ -236,6 +237,21 @@
                     (\lam h => (dmap (sumFam F) h, dpath \lam i => sumProj F (h i)))
           => IsEquiv.leftFactor (inP (section-equiv F P P')) $ transport IsEquiv (path \lam j h => value-yoneda F P h j) (inP depUnivalence)
       }
+  }
+
+-- | {sliceFiber} is an equivalence: it is a functorial inverse of {sumSlice}, since the unit {sliceFiber-equiv.unit} is a natural isomorphism.
+\lemma sliceFiber-equiv.{u} {X : \Cat u} (F : X ->⁺ \Type u) : IsHEquiv (sliceFiber F)
+  => IsHEquiv.rightFactor (sumSlice-equiv F) $ transport IsHEquiv
+       (natIso-path (unit F) \lam G' => objectwise-iso \lam z => ~>_->-equiv-iso (unit-equiv G' z)) idHEquiv
+  \where \private {
+    -- | The inclusion of a functor on the total category of {F} into the fibers of its sum.
+    \func unit.{v} {X : \Cat v} (F : X ->⁺ \Type v) (G' :⁺ \Sigma⁺ (x : X) (F x) ->⁺ \Type v) : G' ~> sliceFiber F (sumSlice F G')
+      => dpath \lam i y => dpath (iso+ {G' y} {sliceFiber F (sumSlice F G') y} \lam g => Straight.toStraight ((y.2, g), idp)) i
+
+    -- | {unit} is a pointwise equivalence, being a section of {totalFun-slice.sum-fib-equiv}.
+    \lemma unit-equiv.{v} {X : \Cat v} {F : X ->⁺ \Type v} (G' : \Sigma⁺ (x : X) (F x) ->⁺ \Type v) (z : \Sigma⁺ (x : X) (F x))
+      : IsEquiv {G' z} {sliceFiber F (sumSlice F G') z} (\lam g => Straight.toStraight ((z.2, g), idp))
+      => IsEquiv.leftFactor (totalFun-slice.sum-fib-equiv G' z) (inP idEquiv)
   }
 
 {- | The pullback of {sig} along {alpha} is the sum of the functor of {sig} precomposed with {totalMap} {alpha}:
