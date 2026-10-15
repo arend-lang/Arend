@@ -1,0 +1,101 @@
+{- | The total space of a left fibration over a pushout of categories is the pushout of the total spaces
+ -   of its restrictions to the summands ({leftFib-pushout-equiv}).
+ -
+ -   Proof: functors from the total space of `F` to a category `Z` are sections of the exponent {ExpLL} `F Z` ({expLL-sec}).
+ -   Sections over the pushout are glued from sections over the summands ({CatPushout.elim-equiv}),
+ -   and these are functors on the total spaces of the restrictions, glued along {totF} and {totG} ({expLL-path}).
+ -   Hence precomposition with {pushoutTot-map} is an equivalence for every `Z`, so it is an equivalence ({IsHEquiv.fromPrecomp}).
+ -}
+
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.CatPushout
+\import InfCat.Fibration.ExponentLeft
+\import InfCat.Functor.Equiv
+\import InfCat.Paths
+\import Logic
+\import Meta
+
+-- | The total space of a left fibration over a pushout is the pushout of the total spaces.
+\lemma leftFib-pushout-equiv.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} {F : CatPushout f g ->⁺ \Type u}
+  : IsHEquiv (map F)
+  => IsHEquiv.fromPrecomp (pushoutTot-precomp-equiv F (PushoutTot F)) (pushoutTot-precomp-equiv F (\Sigma⁺ (p : CatPushout f g) (F p)))
+  \where {
+    \func TotA.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) : \Cat u
+      => \Sigma⁺ (a : A) (F (cinl (f a)))
+
+    \func TotB.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) : \Cat u
+      => \Sigma⁺ (b : B) (F (cinl b))
+
+    \func TotC.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) : \Cat u
+      => \Sigma⁺ (c : C) (F (cinr c))
+
+    \func totF.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) (s :⁺ TotA F) : TotB F
+      => (f s.1, s.2)
+
+    \func totG.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) (s :⁺ TotA F) : TotC F
+      => (g s.1, transport+ F (path (cglue s.1)) s.2)
+
+    -- | The pushout of the total spaces.
+    \func PushoutTot.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) : \Cat u
+      => CatPushout (totF F) (totG F)
+
+    -- | The comparison map from the pushout of the total spaces to the total space of {F}.
+    \protected \func map.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) (x :⁺ PushoutTot F)
+      : \Sigma⁺ (p : CatPushout f g) (F p) \elim x
+      | cinl s => (cinl s.1, s.2)
+      | cinr s => (cinr s.1, s.2)
+      | cglue s i => (cglue s.1 i, coe (\lam j => F (cglue s.1 j)) s.2 i)
+
+    -- | Precomposition with {map} is an equivalence.
+    \lemma pushoutTot-precomp-equiv.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type u) (Z : \Cat u)
+      : IsEquiv {\Sigma⁺ (p : CatPushout f g) (F p) ->⁺ Z} {PushoutTot F ->⁺ Z} (\lam G x => G (map F x))
+      => IsEquiv.rightFactor (ExpLL.eval-univ \lam p => p) $
+         IsEquiv.leftFactor (inP CatPushout.elim-equiv) $
+         IsEquiv.trans (inP CatPushout.elim-equiv) (glue-equiv F Z)
+      \where {
+        -- | Glued sections of {ExpLL} over the pushout.
+        \func GlueExp.{v} {A B C : \Cat v} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type v) (Z : \Cat v)
+          => \Sigma (u : \Pi (y :⁺ B) -> ExpLL F Z (cinl y)) (v : \Pi (z :⁺ C) -> ExpLL F Z (cinr z))
+                    (\Pi (x :⁺ A) -> Path (\lam i => ExpLL F Z (cglue x i)) (u (f x)) (v (g x)))
+
+        -- | Glued functors on the total spaces of the restrictions.
+        \func GlueTot.{v} {A B C : \Cat v} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type v) (Z : \Cat v)
+          => \Sigma (U : \Pi (y :⁺ TotB F) -> Z) (V : \Pi (z :⁺ TotC F) -> Z) (\Pi (x :⁺ TotA F) -> U (totF F x) = V (totG F x))
+
+        {- | Paths of sections of {ExpLL} over a path {gamma} of functors to {A} are paths of the corresponding functors ({ExpLL.eval-univ}),
+         -   where the second functor is precomposed with the transport along {gamma}.
+         -}
+        \lemma eval-univ-path.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {T : \Cat u} {a0 a1 : T ->⁺ A} (gamma : a0 = a1)
+                                  (s0 : \Pi (t :⁺ T) -> ExpLL F C (a0 t)) (s1 : \Pi (t :⁺ T) -> ExpLL F C (a1 t))
+          : IsEquiv {\Pi (t :⁺ T) -> Path (\lam i => ExpLL F C (gamma i t)) (s0 t) (s1 t)}
+                    {\Pi (q :⁺ \Sigma⁺ (t : T) (F (a0 t))) -> ExpLL.eval (s0 q.1) q.2 = ExpLL.eval (s1 q.1) (transport+ F (path \lam i => gamma i q.1) q.2)}
+                    (\lam w q => path \lam i => ExpLL.eval (w q.1 i) (coe (\lam j => F (gamma j q.1)) q.2 i)) \elim gamma
+          | idp => IsEquiv.trans (inP (funExt+-equiv {T} {_} {s0} {s1})) $
+                     IsEquiv.trans (pmapIsEquiv (ExpLL.eval-univ a0)) (inP (symQEquiv funExt+-equiv))
+
+        -- | Glued sections are glued functors: {ExpLL.eval-univ} on the summands, {ExpLL.univ-path} on the gluing paths.
+        \lemma glue-equiv.{v} {A B C : \Cat v} {f : A ->⁺ B} {g : A ->⁺ C} (F : CatPushout f g ->⁺ \Type v) (Z : \Cat v)
+          : IsEquiv {GlueExp F Z} {GlueTot F Z}
+                    (\lam s => (\lam y => ExpLL.eval (s.1 y.1) y.2, \lam z => ExpLL.eval (s.2 z.1) z.2,
+                                \lam x => path \lam i => ExpLL.eval (s.3 x.1 i) (coe (\lam j => F (cglue x.1 j)) x.2 i)))
+          => IsEquiv.trans (inP $ later \new QEquiv {
+               | f s => ((s.1, s.2), s.3)
+               | ret s => (s.1.1, s.1.2, s.2)
+               | ret_f _ => idp
+               | f_sec _ => idp
+             }) $ IsEquiv.trans (inP $ sigma-equiv {_} {_} {_} {\lam UV => \Pi (x :⁺ TotA F) -> UV.1 (totF F x) = UV.2 (totG F x)}
+                                        (sigma-equiv {_} {_} {_} {\lam _ => TotC F ->⁺ Z} (IsEquiv.toQEquiv (ExpLL.eval-univ \lam y => cinl y))
+                                          (\lam _ => IsEquiv.toQEquiv (ExpLL.eval-univ {_} {F} {Z} (\lam z => cinr z))))
+                                        (\lam uv => IsEquiv.toQEquiv (eval-univ-path (path \lam i x => cglue x i)
+                                          (\lam x => uv.1 (f x)) (\lam x => uv.2 (g x))))) $
+               inP \new QEquiv {
+                 | f s => (s.1.1, s.1.2, s.2)
+                 | ret s => ((s.1, s.2), s.3)
+                 | ret_f _ => idp
+                 | f_sec _ => idp
+               }
+      }
+  }

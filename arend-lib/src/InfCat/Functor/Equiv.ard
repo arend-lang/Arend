@@ -107,6 +107,19 @@
         | f_finv K => funExt+ \lam a => pmap+ K (e.finv_f a)
       }
 
+    -- | A functor is an equivalence if precomposition with it is an equivalence on functors to its domain and to its codomain.
+    \lemma fromPrecomp {A B : \Cat} {f : A ->⁺ B}
+                       (eA : IsEquiv {B ->⁺ A} {A ->⁺ A} (\lam G a => G (f a))) (eB : IsEquiv {B ->⁺ B} {A ->⁺ B} (\lam G a => G (f a)))
+      : IsHEquiv f
+      => \let | g => IsEquiv.ret eA (\lam a => a)
+              | p : (\lam a => g (f a)) = {A ->⁺ A} (\lam a => a) => IsEquiv.f_ret eA
+              | q : (\lam b => f (g b)) = {B ->⁺ B} (\lam b => b) => IsEquiv.isInj eB (pmap (\lam (h : A ->⁺ A) => \lam a =>⁺ f (h a)) p)
+         \in inP \new HQEquiv {
+           | finv => g
+           | finv_f x => path (\lam i => p i x)
+           | f_finv y => path (\lam i => q i y)
+         }
+
     -- | Postcomposition with an equivalence is an equivalence.
     \lemma postcomp {A B D : \Cat} {f : A ->⁺ B} (e : IsHEquiv f) : IsHEquiv {D ->⁺ A} {D ->⁺ B} (\lam G d => f (G d)) \elim e
       | inP e => inP \new HQEquiv {
