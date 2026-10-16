@@ -3,9 +3,7 @@ package org.arend.module.starter
 import com.intellij.ide.starters.local.Dependency
 import com.intellij.ide.starters.local.DependencyConfig
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Version
-import com.intellij.openapi.vfs.VfsUtil
 import org.arend.library.LibraryDependency
 import org.arend.module.AREND_LIB
 import org.arend.util.*
@@ -15,11 +13,13 @@ import org.jetbrains.annotations.ApiStatus
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.zip.ZipFile
 
 @ApiStatus.Internal
 object ArendStarterUtils {
@@ -143,17 +143,20 @@ object ArendStarterUtils {
         val list = mutableListOf<LibraryDependency>()
         val arendLib = LibraryDependency(AREND_LIB)
 
-        // Access VFS off the EDT to avoid slow operations assertion
-        val depsFromLibRoot = ApplicationManager.getApplication().runReadAction<List<LibraryDependency>> {
-            val deps = mutableListOf<LibraryDependency>()
-            VfsUtil.findFile(Paths.get(librariesRoot), true)?.let { libRoot ->
-                libRoot.children.mapNotNull { file ->
-                    if (file.name != LIBRARY_CONFIG_FILE && file.configFile != null) {
-                        file.libraryName?.let { LibraryDependency(it) }
-                    } else null
-                }.forEach { deps.add(it) }
+        // The list is built on the EDT when the wizard and the module settings open, so it reads the file system
+        // directly: looking children up in the VFS persistent storage is a slow operation there.
+        val depsFromLibRoot = try {
+            Files.newDirectoryStream(Paths.get(librariesRoot)).use { files ->
+                files.sortedBy { it.fileName.toString() }.mapNotNull { file ->
+                    val name = file.fileName.toString()
+                    when {
+                        Files.isDirectory(file) -> name.takeIf { Files.isRegularFile(file.resolve(LIBRARY_CONFIG_FILE)) }
+                        else -> name.removeSuffixOrNull(FileUtils.ZIP_EXTENSION)?.takeIf { zipHasConfig(file) }
+                    }?.let { LibraryDependency(it) }
+                }
             }
-            deps
+        } catch (_: Exception) {
+            emptyList()
         }
         list.addAll(depsFromLibRoot)
 
@@ -165,5 +168,11 @@ object ArendStarterUtils {
             }
         }
         return if (list.contains(arendLib)) list else listOf(arendLib) + list
+    }
+
+    private fun zipHasConfig(file: Path): Boolean = try {
+        ZipFile(file.toFile()).use { it.getEntry(LIBRARY_CONFIG_FILE) != null }
+    } catch (_: IOException) {
+        false
     }
 }
