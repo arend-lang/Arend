@@ -1,24 +1,35 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.Platform;
+import org.arend.daemon.mcp.McpRegistration;
+
 import java.io.File;
-import java.lang.management.ManagementFactory;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Parent-side: start a detached daemon JVM for a single library, as {@code arend -d <libRef>}.
+ * Parent-side: start a detached daemon JVM for one or more libraries, as
+ * {@code arend -d <libRef>...}, loaded into one server in the order given -- the way IntelliJ
+ * holds every library of a project. Two daemons never share a library they own; libraries under
+ * {@link DaemonPaths#sharedLibrariesRoot}, and zips, are owned by none and any daemon may load them.
  *
- * <p>Resolve {@link DaemonPaths}; decide what an existing lock means ({@link #inspectLock});
- * claim the right to start ({@link #reserveStart}); spawn
+ * <p>Resolve {@link DaemonPaths} for each; decide what each existing lock means
+ * ({@link #inspectLock}); claim the right to start ({@link #reserveStart}); spawn
  * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap <arend.yaml> [-L ...]
- * <arend.yaml>} with stdio pointed at daemon.log; then poll for the lock the child writes when it
- * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s (a cold arend-lib bootstrap is ~2 minutes).
+ * <arend.yaml>...} with stdio pointed at daemon.log; then poll for the lock the child writes when it
+ * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s. The child only loads and resolves its
+ * libraries, typechecking nothing; arend-lib takes some seconds.
  */
 public final class DaemonStart {
   /** Max time to wait for the child to write its lock file. */
@@ -27,75 +38,151 @@ public final class DaemonStart {
   private DaemonStart() {}
 
   /**
-   * @param libRef         user-supplied library reference (directory, arend.yaml, or name)
+   * @param libRefs        user-supplied library references (directory, arend.yaml, or name), in
+   *                       load order; the first owned one's {@code .arend/} holds the socket and
+   *                       the log
    * @param libDirsForward extra {@code -L} dirs to forward to the child
    * @param extraChildArgs bootstrap-affecting flags appended after the {@code -L} forwards
    */
-  public static int run(String libRef, List<Path> libDirsForward, List<String> extraChildArgs) {
-    DaemonPaths paths = DaemonPaths.resolveByName(libRef, libDirsForward);
-    if (paths == null) {
-      System.err.println("[ERROR] -d: could not resolve library reference '" + libRef + "'");
-      return 1;
-    }
-
-    try {
-      paths.ensureArendDir();
-    } catch (IOException e) {
-      System.err.println("[ERROR] -d: cannot create " + paths.arendDir + ": " + e.getMessage());
-      return 1;
-    }
-
-    LockFile.Read existing = LockFile.read(paths.lockFile);
-    switch (inspectLock(existing, paths.libraryHash, DaemonStart::isAlive)) {
-      case UNREADABLE_LOCK -> {
-        // Something is there and we cannot tell whether it is live. Starting a second daemon on
-        // top of a running one is the one outcome worth refusing outright.
-        String reason = ((LockFile.Read.Unreadable) existing).reason();
-        System.err.println("[ERROR] -d: lock file at " + paths.lockFile + " cannot be read ("
-            + reason + "). Stop any running daemon and remove the file by hand.");
+  public static int run(List<String> libRefs, List<Path> libDirsForward, List<String> extraChildArgs) {
+    List<DaemonPaths> libraries = new ArrayList<>(libRefs.size());
+    for (String libRef : libRefs) {
+      DaemonPaths paths = DaemonPaths.resolveByName(libRef, libDirsForward);
+      if (paths == null) {
+        System.err.println("[ERROR] -d: could not resolve library reference '" + libRef + "'");
         return 1;
       }
-      case ALREADY_RUNNING -> {
-        System.out.println("Arend daemon already running for " + paths.libraryConfig
-            + " (PID " + lockOf(existing).pid() + ")");
-        return 0;
-      }
-      case STALE_LOCK -> {
-        System.err.println("[WARN]  -d: removing stale lock for dead PID " + lockOf(existing).pid());
-        LockFile.deleteQuietly(paths.lockFile);
-      }
-      case STALE_MISMATCH -> {
-        System.err.println("[WARN]  -d: lock file at " + paths.lockFile
-            + " is for a different library hash and its process is gone; removing");
-        LockFile.deleteQuietly(paths.lockFile);
-      }
-      case LIVE_MISMATCH -> {
-        LockFile lf = lockOf(existing);
-        System.err.println("[ERROR] -d: " + paths.lockFile + " belongs to a running daemon (PID "
-            + lf.pid() + ") serving " + lf.libraryPath() + ", which shares this directory."
-            + " Removing its lock would leave it running and unreachable. Stop it first"
-            + " (`arend --daemon-stop`), or start this one from a different directory.");
+      if (libraries.stream().anyMatch(other -> other.libraryConfig.equals(paths.libraryConfig))) {
+        System.err.println("[ERROR] -d: " + paths.libraryConfig + " is listed more than once");
         return 1;
       }
-      case NO_DAEMON -> { }
+      // A server holds one library per name, and a dependency names nothing else: the second one
+      // would be skipped as already loaded, while the lock went on claiming it.
+      DaemonPaths namesake = libraries.stream()
+          .filter(other -> other.libraryName().equals(paths.libraryName())).findFirst().orElse(null);
+      if (namesake != null) {
+        System.err.println("[ERROR] -d: " + namesake.libraryConfig + " and " + paths.libraryConfig + " are both"
+            + " named '" + paths.libraryName() + "'; a daemon can hold only one library of a name.");
+        return 1;
+      }
+      libraries.add(paths);
     }
-
-    if (!reserveStart(paths.startingMarker, READY_TIMEOUT_SECONDS * 1000L)) {
-      System.err.println("[ERROR] -d: another daemon start for " + paths.libraryConfig
-          + " is already in progress (" + paths.startingMarker + "). Wait for it to finish, or"
-          + " remove that file if no start is running.");
+    List<String> requested = libraries.stream().map(paths -> paths.libraryConfig.toString()).toList();
+    // Neither a shared library nor a zip takes part in the checks below, nor gets anything of this daemon's.
+    List<DaemonPaths> owned = libraries.stream().filter(DaemonPaths::canOwn).toList();
+    if (owned.isEmpty()) {
+      System.err.println("[ERROR] -d: list at least one library directory outside " + DaemonPaths.sharedLibrariesRoot()
+          + ": its .arend/ holds the daemon's socket and log, and no daemon owns a shared library or a zip.");
       return 1;
     }
+
+    for (DaemonPaths paths : owned) {
+      try {
+        paths.ensureArendDir();
+      } catch (IOException e) {
+        System.err.println("[ERROR] -d: cannot create " + paths.arendDir + ": " + e.getMessage());
+        return 1;
+      }
+    }
+
+    // Every lock is consulted before anything starts: two daemons must not answer for one library.
+    LockFile running = null;
+    for (DaemonPaths paths : owned) {
+      LockFile.Read existing = LockFile.read(paths.lockFile);
+      switch (inspectLock(existing, paths.libraryConfig, requested, LockFile::processAlive)) {
+        case UNREADABLE_LOCK -> {
+          // Something is there and we cannot tell whether it is live. Starting a second daemon on
+          // top of a running one is the one outcome worth refusing outright.
+          String reason = ((LockFile.Read.Unreadable) existing).reason();
+          System.err.println("[ERROR] -d: lock file at " + paths.lockFile + " cannot be read ("
+              + reason + "). Stop any running daemon and remove the file by hand.");
+          return 1;
+        }
+        case ALREADY_RUNNING -> running = lockOf(existing);
+        case OVERLAP -> {
+          LockFile lf = lockOf(existing);
+          System.err.println("[ERROR] -d: " + paths.libraryConfig + " is already served by the daemon (PID "
+              + lf.pid() + ") for " + String.join(", ", lf.libraries()) + "; stop it first (`arend --daemon-stop`).");
+          return 1;
+        }
+        case STALE_LOCK -> {
+          System.err.println("[WARN]  -d: removing stale lock for dead PID " + lockOf(existing).pid()
+              + " at " + paths.lockFile);
+          // Every copy: a daemon of several libraries left one in each, and one in the registry.
+          lockOf(existing).deleteAllCopies();
+        }
+        case STALE_MISMATCH -> {
+          System.err.println("[WARN]  -d: lock file at " + paths.lockFile
+              + " is for a different library and its process is gone; removing");
+          LockFile.deleteQuietly(paths.lockFile);
+        }
+        case LIVE_MISMATCH -> {
+          LockFile lf = lockOf(existing);
+          System.err.println("[ERROR] -d: " + paths.lockFile + " belongs to a running daemon (PID "
+              + lf.pid() + ") serving " + lf.libraryPath() + ", which shares this directory."
+              + " Removing its lock would leave it running and unreachable. Stop it first"
+              + " (`arend --daemon-stop`), or start this one from a different directory.");
+          return 1;
+        }
+        case NO_DAEMON -> { }
+      }
+    }
+    if (running != null) {
+      System.out.println("Arend daemon already running for " + String.join(", ", requested)
+          + " (PID " + running.pid() + ")");
+      registerMcp();
+      return 0;
+    }
+
+    // A marker in every library: two starts whose sets merely overlap race like two identical ones.
+    List<Path> reserved = new ArrayList<>(owned.size());
     try {
-      return startChild(paths, libDirsForward, extraChildArgs);
+      for (DaemonPaths paths : owned) {
+        if (!reserveStart(paths.startingMarker, READY_TIMEOUT_SECONDS * 1000L)) {
+          System.err.println("[ERROR] -d: another daemon start for " + paths.libraryConfig
+              + " is already in progress (" + paths.startingMarker + "). Wait for it to finish, or"
+              + " remove that file if no start is running.");
+          return 1;
+        }
+        reserved.add(paths.startingMarker);
+      }
+      int exitCode = startChild(libraries, requested, libDirsForward, extraChildArgs);
+      if (exitCode == 0) registerMcp();
+      return exitCode;
     } finally {
-      LockFile.deleteQuietly(paths.startingMarker);
+      reserved.forEach(LockFile::deleteQuietly);
     }
   }
 
-  private static int startChild(DaemonPaths paths, List<Path> libDirsForward,
+  /** Registers this {@code arend --mcp} with the agents installed, saying what it did. */
+  private static void registerMcp() {
+    McpRegistration.Result result = McpRegistration.register(McpRegistration.command());
+    result.failures().forEach(failure -> System.err.println("[WARN]  -d: " + failure));
+    if (!result.registered().isEmpty()) {
+      System.out.println("  registered the " + McpRegistration.SERVER_NAME + " MCP server with "
+          + String.join(", ", result.registered()) + "; agents started from now on have it."
+          + " `arend --mcp-unregister` removes it from them");
+    }
+  }
+
+  /** {@code arend --mcp-unregister}: takes the server out of every agent that has it, saying what it did. */
+  public static int unregisterMcp() {
+    McpRegistration.Result result = McpRegistration.unregister();
+    result.failures().forEach(failure -> System.err.println("[WARN]  --mcp-unregister: " + failure));
+    if (result.registered().isEmpty()) {
+      if (result.failures().isEmpty()) System.out.println("No agent has the " + McpRegistration.SERVER_NAME + " MCP server.");
+    } else {
+      System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from " + String.join(", ", result.registered())
+          + "; agents started from now on do not have it. The next `arend -d`, or a start of the IntelliJ plugin's daemon,"
+          + " registers it again.");
+    }
+    return result.failures().isEmpty() ? 0 : 1;
+  }
+
+  private static int startChild(List<DaemonPaths> libraries, List<String> requested, List<Path> libDirsForward,
                                 List<String> extraChildArgs) {
-    List<String> cmd = buildChildCommand(paths, libDirsForward, extraChildArgs);
+    DaemonPaths paths = home(libraries);
+    List<String> cmd = buildChildCommand(libraries, libDirsForward, extraChildArgs, privateClasspath(paths));
     rotateDaemonLog(paths.logFile);
 
     ProcessBuilder pb = new ProcessBuilder(cmd);
@@ -112,9 +199,9 @@ public final class DaemonStart {
       return 1;
     }
 
-    System.out.println("Starting Arend daemon for " + paths.libraryConfig);
+    System.out.println("Starting Arend daemon for " + String.join(", ", requested));
     System.out.println("  log: " + paths.logFile);
-    System.out.println("  waiting for initial typecheck to complete (up to "
+    System.out.println("  waiting for the libraries to be resolved (up to "
         + READY_TIMEOUT_SECONDS + "s)...");
 
     long deadline = System.currentTimeMillis() + READY_TIMEOUT_SECONDS * 1000L;
@@ -141,11 +228,13 @@ public final class DaemonStart {
 
     System.err.println("[ERROR] -d: daemon did not become ready within "
         + READY_TIMEOUT_SECONDS + "s; killing PID " + child.pid());
-    boolean gone = ProcessKill.terminateTree(List.of(child.toHandle()),
+    boolean gone = ProcessKill.terminateTree(child.toHandle(),
         () -> System.err.println("[WARN]  -d: PID " + child.pid() + " did not exit within "
             + ProcessKill.GRACEFUL_TIMEOUT_SECONDS + "s; escalating to SIGKILL"));
     if (gone) {
-      LockFile.deleteQuietly(paths.lockFile);
+      // The child writes its registry entry before any other copy of its lock, so a child that
+      // left a copy anywhere is found here.
+      LockFile.registered().stream().filter(lf -> lf.pid() == child.pid()).forEach(LockFile::deleteAllCopies);
     } else {
       // The lock stays: it is the only thing that can find this process again.
       System.err.println("[ERROR] -d: PID " + child.pid() + " is still alive; leaving "
@@ -155,11 +244,14 @@ public final class DaemonStart {
     return 1;
   }
 
-  /** Whether the child has published a usable lock; says so, and warns about a bare TCP port. */
+  /**
+   * Whether the child has published a usable lock; says so, and warns about a bare TCP port. The
+   * first library's lock is the child's last, so it is there only once all of them are.
+   */
   private static boolean reportIfReady(DaemonPaths paths) {
     Optional<LockFile> ready = LockFile.readIfValid(paths.lockFile);
-    if (ready.isEmpty() || !ready.get().libraryHash().equals(paths.libraryHash)
-        || ProcessHandle.of(ready.get().pid()).isEmpty()) {
+    if (ready.isEmpty() || !ready.get().serves(paths.libraryConfig)
+        || !ready.get().processAlive()) {
       return false;
     }
     LockFile lock = ready.get();
@@ -181,8 +273,13 @@ public final class DaemonStart {
     NO_DAEMON,
     /** A lock we cannot parse; we do not know what is running. */
     UNREADABLE_LOCK,
-    /** A healthy daemon already serves this library. */
+    /** A healthy daemon already serves exactly the libraries asked for. */
     ALREADY_RUNNING,
+    /**
+     * A healthy daemon serves this library among a different set. Two daemons must not answer for
+     * the same library, so the start is refused -- and the lock kept, since it is that daemon's.
+     */
+    OVERLAP,
     /** A lock for this library whose process is gone. */
     STALE_LOCK,
     /** A lock for a different library whose process is gone. */
@@ -198,30 +295,21 @@ public final class DaemonStart {
    * Separated from {@link #run} because {@code run} spawns a JVM and cannot be exercised: every
    * one of these branches decides whether a possibly-running daemon keeps its lock.
    */
-  static Verdict inspectLock(LockFile.Read existing, String expectedHash,
+  static Verdict inspectLock(LockFile.Read existing, Path libraryConfig, Collection<String> requested,
                              java.util.function.Predicate<LockFile> alive) {
     if (existing instanceof LockFile.Read.Unreadable) return Verdict.UNREADABLE_LOCK;
     if (!(existing instanceof LockFile.Read.Found found)) return Verdict.NO_DAEMON;
     LockFile lf = found.lock();
     boolean live = alive.test(lf);
-    if (!lf.libraryHash().equals(expectedHash)) {
+    if (!lf.serves(libraryConfig)) {
       return live ? Verdict.LIVE_MISMATCH : Verdict.STALE_MISMATCH;
     }
-    return live ? Verdict.ALREADY_RUNNING : Verdict.STALE_LOCK;
+    if (!live) return Verdict.STALE_LOCK;
+    return new HashSet<>(lf.libraries()).equals(new HashSet<>(requested)) ? Verdict.ALREADY_RUNNING : Verdict.OVERLAP;
   }
 
   private static LockFile lockOf(LockFile.Read read) {
     return ((LockFile.Read.Found) read).lock();
-  }
-
-  /**
-   * Liveness is the PID and nothing else. A socket probe would also catch a recycled PID, but it
-   * can fail for reasons that have nothing to do with the daemon being gone -- and every caller
-   * that concludes "dead" goes on to remove the lock. A false "still running" costs the user one
-   * {@code --daemon-stop}; a false "dead" costs them a process they can no longer reach.
-   */
-  private static boolean isAlive(LockFile lf) {
-    return ProcessHandle.of(lf.pid()).isPresent();
   }
 
   /**
@@ -276,8 +364,43 @@ public final class DaemonStart {
         && !option.startsWith("-XX:LogFile=");
   }
 
-  static List<String> buildChildCommand(DaemonPaths paths, List<Path> libDirsForward,
-                                        List<String> extraChildArgs) {
+  /** The library whose {@code .arend/} holds the daemon's socket and log: the first one it owns. */
+  static DaemonPaths home(List<DaemonPaths> libraries) {
+    return libraries.stream().filter(DaemonPaths::canOwn).findFirst().orElse(libraries.getFirst());
+  }
+
+  /**
+   * The classpath the child runs from: this process's own, except that a single jar is copied to
+   * {@code .arend/daemon.jar} first. The JVM loads classes lazily for as long as it runs, and a
+   * daemon runs for days; reading them out of a jar that a rebuild has replaced since fails the
+   * first time a class is needed that was not yet loaded, long after the daemon looked healthy.
+   */
+  static String privateClasspath(DaemonPaths home) {
+    String classpath = System.getProperty("java.class.path");
+    // A copy of one entry of several could not run alone.
+    if (classpath.contains(File.pathSeparator) || !classpath.endsWith(".jar")) return classpath;
+    Path jar = Path.of(classpath);
+    if (!Files.isRegularFile(jar)) return classpath;
+    Path copy = home.arendDir.resolve("daemon.jar");
+    try {
+      Path tmp = Files.createTempFile(home.arendDir, "daemon.jar.", ".tmp");
+      try {
+        Files.copy(jar, tmp, StandardCopyOption.REPLACE_EXISTING);
+        Files.move(tmp, copy, StandardCopyOption.REPLACE_EXISTING);
+      } finally {
+        Files.deleteIfExists(tmp);
+      }
+      return copy.toString();
+    } catch (IOException e) {
+      System.err.println("[WARN]  -d: could not copy " + jar + " to " + copy + " (" + e.getMessage()
+          + "); the daemon runs from the original, so rebuilding it while the daemon runs will break it");
+      return classpath;
+    }
+  }
+
+  static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,
+                                        List<String> extraChildArgs, String classpath) {
+    DaemonPaths paths = home(libraries);
     String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
     List<String> cmd = new ArrayList<>();
 
@@ -295,7 +418,7 @@ public final class DaemonStart {
       if (isForwardableJvmOption(option)) cmd.add(option);
     }
     cmd.add("-cp");
-    cmd.add(System.getProperty("java.class.path"));
+    cmd.add(classpath);
     cmd.add("org.arend.frontend.ConsoleMain");
     cmd.add("--daemon-bootstrap");
     cmd.add(paths.libraryConfig.toString());
@@ -311,7 +434,8 @@ public final class DaemonStart {
     // behind a lock advertising this one, and every command routed afterwards would be answered
     // from source the user is not looking at -- with findLibrary's own shadowing warning going to
     // daemon.log, where nobody reads it. An absolute arend.yaml is the one form both agree on.
-    cmd.add(paths.libraryConfig.toString());
+    // In load order: a library may depend on one listed before it.
+    for (DaemonPaths library : libraries) cmd.add(library.libraryConfig.toString());
     return cmd;
   }
 

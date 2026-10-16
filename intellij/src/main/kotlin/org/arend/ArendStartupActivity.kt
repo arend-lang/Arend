@@ -32,6 +32,8 @@ import org.arend.util.unregister
 import org.arend.yaml.YAMLFileListener
 import com.jetbrains.edu.learning.StudyTaskManager
 import org.arend.typechecking.BinaryFileSaver
+import org.arend.server.daemon.ArendDaemonService
+import com.intellij.openapi.components.serviceIfCreated
 
 
 class ArendStartupActivity : ProjectActivity {
@@ -83,6 +85,9 @@ class ArendStartupActivity : ProjectActivity {
                         if (runReadAction { StudyTaskManager.getInstance(project).course } != null) {
                             project.registerStudyLibrary()
                         }
+                        // Only now: the daemon claims the libraries the project has, and whether one
+                        // of them is someone else's decides whether it starts at all.
+                        project.service<ArendDaemonService>().startIfEnabled()
                     }
                 }
             })
@@ -127,6 +132,7 @@ class ArendStartupActivity : ProjectActivity {
             override fun projectClosing(closedProject: Project) {
                 if (closedProject == project) {
                     project.service<BinaryFileSaver>().saveAll()
+                    project.serviceIfCreated<ArendDaemonService>()?.stop()
                 }
             }
         })

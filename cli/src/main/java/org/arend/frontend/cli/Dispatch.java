@@ -1,10 +1,12 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.cli.ArendOptions;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
-import org.arend.frontend.query.ConsoleQueryTool;
+import org.arend.query.ConsoleQueryTool;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 /**
@@ -36,7 +38,14 @@ public final class Dispatch {
    *                  argv means the client's directory, never the daemon's. Null for a local run.
    */
   public static int run(CommandContext ctx, String[] args, String clientCwd) {
-    ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(args);
+    return run(ctx, ConsoleMain.parseArgs(args), clientCwd);
+  }
+
+  /**
+   * As {@link #run(CommandContext, String[], String)}, with the argv parsed already: parsing prints
+   * the help, the version or the error, so that it is done once.
+   */
+  public static int run(CommandContext ctx, ConsoleMain.ParsedArgs parsed, String clientCwd) {
     if (parsed.cmdLine() == null) {
       // parseArgs printed the help, the version, or the parse error. Only the first two are a
       // success: a command that did nothing because its arguments were rejected must not
@@ -48,7 +57,10 @@ public final class Dispatch {
     // A target that named nothing has been reported. Stop rather than dispatching with an
     // empty scope, which means "the whole library".
     if (ctx.exitWithError) return 1;
-    return execute(ctx, parsed.cmdLine());
+    // A relative --log-file means the client's directory too.
+    try (JsonOutputRedirect json = JsonOutputRedirect.open(parsed.cmdLine(), clientCwd)) {
+      return execute(ctx, parsed.cmdLine(), json);
+    }
   }
 
   /**
@@ -56,7 +68,7 @@ public final class Dispatch {
    * caller has nothing to run beforehand that could write to stdout.
    */
   public static int execute(CommandContext ctx, CommandLine cmdLine) {
-    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine)) {
+    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine, null)) {
       return execute(ctx, cmdLine, json);
     }
   }
@@ -71,10 +83,10 @@ public final class Dispatch {
     // rather than a block per flag. The same tools back the REPL's `:` commands, which is
     // what keeps CLI and REPL behaviour identical.
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
-        ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter,
+        new ArrayList<>(ctx.requestedLibraries), ctx.libraryManager, ctx.server,
         json.stdout(), json.active(), Set.of(), ctx.cancellation);
-    for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
-      if (!cmdLine.hasOption(tool.shortName())) continue;
+    ConsoleQueryTool tool = ArendOptions.queryTool(cmdLine);
+    if (tool != null) {
       ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(cmdLine.getOptionValues(tool.shortName()));
       // The tool has already printed its own diagnostic on a parse failure.
       if (parsed == null) return 1;

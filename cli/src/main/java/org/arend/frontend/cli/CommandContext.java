@@ -5,24 +5,19 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
-import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.util.Pair;
+import org.arend.server.TypecheckReports;
 import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
 import org.arend.naming.reference.LocatedReferable;
-import org.arend.naming.scope.EmptyScope;
 import org.arend.server.ArendServer;
-import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
-import org.arend.typechecking.error.local.GoalError;
-import org.arend.util.FileUtils;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +41,7 @@ public class CommandContext {
   public BinaryLoader binaryLoader;
   public ArendServer server;
   public final List<SourceLibrary> requestedLibraries = new ArrayList<>();
+  public final List<SourceLibrary> servedLibraries = new ArrayList<>();
   public final Set<Pair<ModulePath, LongName>> requestedModules = new LinkedHashSet<>();
   public final List<Path> libDirs = new ArrayList<>();
   public boolean doubleCheck;
@@ -55,9 +51,8 @@ public class CommandContext {
   public boolean serialize;
 
   /**
-   * The argv the daemon was started with, or null for a local run. The daemon's {@code refresh}
-   * op re-dispatches exactly these against the warm context, so that source-timestamp checks
-   * see the same scope the bootstrap did.
+   * The argv the daemon was started with, or null for a local run; the daemon's {@code status}
+   * op reports the locked flags read off it.
    */
   public String[] bootstrapArgs;
 
@@ -197,11 +192,7 @@ public class CommandContext {
   /** Render one diagnostic to stdout/stderr, goal-aware. */
   private void dispatchError(GeneralError error) {
     if (error.level == GeneralError.Level.ERROR) exitWithError = true;
-    PrettyPrinterConfigWithRenamer ppConfig = new PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE);
-    if (error instanceof GoalError) {
-      ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
-    }
-    String errorText = error.getDoc(ppConfig).toString();
+    String errorText = TypecheckReports.render(error);
     finishProgressLine();
     if (error.isSevere()) {
       System.err.println(errorText);
@@ -214,22 +205,6 @@ public class CommandContext {
 
   /** Parse a "{@code Module.Path[:Def.Long.Name]}" string. Reports illegality via {@link #systemErrErrorReporter}. */
   public Pair<ModulePath, LongName> parseFullName(String fullName) {
-    ModulePath modulePath;
-    LongName longName = null;
-    int index = fullName.indexOf(':');
-    if (index >= 0) {
-      longName = LongName.fromString(fullName.substring(index + 1));
-      if (!FileUtils.isCorrectDefinitionName(longName)) {
-        systemErrErrorReporter.report(FileUtils.illegalDefinitionName(longName.toString()));
-        return null;
-      }
-      fullName = fullName.substring(0, index);
-    }
-    modulePath = ModulePath.fromString(fullName);
-    if (!FileUtils.isCorrectModulePath(modulePath)) {
-      systemErrErrorReporter.report(FileUtils.illegalModuleName(modulePath.toString()));
-      return null;
-    }
-    return new Pair<>(modulePath, longName);
+    return TypecheckReports.parseFullName(fullName, systemErrErrorReporter);
   }
 }

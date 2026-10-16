@@ -20,7 +20,7 @@ public final class ProcessKill {
   private ProcessKill() {}
 
   /**
-   * Signals {@code roots} and their descendants, escalating to SIGKILL if they outlast
+   * Signals {@code root} and its descendants, escalating to SIGKILL if they outlast
    * {@link #GRACEFUL_TIMEOUT_SECONDS}.
    *
    * <p>Descendants are collected before the first signal, because destroying the parent is what
@@ -30,12 +30,9 @@ public final class ProcessKill {
    * @param onEscalate told the graceful timeout expired, so the caller can say so.
    * @return whether everything is actually gone.
    */
-  public static boolean terminateTree(List<ProcessHandle> roots, Runnable onEscalate) {
-    List<ProcessHandle> tree = new ArrayList<>();
-    for (ProcessHandle root : roots) {
-      tree.addAll(root.descendants().toList());
-      tree.add(root);
-    }
+  public static boolean terminateTree(ProcessHandle root, Runnable onEscalate) {
+    List<ProcessHandle> tree = new ArrayList<>(root.descendants().toList());
+    tree.add(root);
     tree.forEach(ProcessHandle::destroy);
     if (awaitExit(tree, GRACEFUL_TIMEOUT_SECONDS)) return true;
     onEscalate.run();

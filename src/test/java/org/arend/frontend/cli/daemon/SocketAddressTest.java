@@ -1,6 +1,6 @@
 package org.arend.frontend.cli.daemon;
 
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.wire.SocketAddress;
 import org.junit.Test;
 
 import java.nio.file.Path;

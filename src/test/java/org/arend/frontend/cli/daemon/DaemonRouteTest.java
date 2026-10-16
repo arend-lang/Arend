@@ -1,8 +1,10 @@
 package org.arend.frontend.cli.daemon;
 
-import org.arend.frontend.cli.daemon.client.DaemonRpc;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.FrameChannel;
+import org.arend.daemon.client.DaemonRpc;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -15,6 +17,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -36,6 +39,7 @@ public class DaemonRouteTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private Path libRoot;
+  private String address;
   private ServerSocketChannel listener;
   private Thread acceptor;
   private final CountDownLatch served = new CountDownLatch(1);
@@ -61,9 +65,8 @@ public class DaemonRouteTest {
 
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     listener = bound.channel();
-    new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
-        LockFile.PROTOCOL_VERSION, System.currentTimeMillis(),
-        bound.address()).writeAtomic(paths.lockFile);
+    address = bound.address();
+    new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash, List.of(paths.libraryConfig.toString()), List.of(), LockFile.PROTOCOL_VERSION, System.currentTimeMillis(), address, LockFile.HOST_CLI).writeAtomic(paths.lockFile);
 
     // Answers exactly one request and records it.
     acceptor = new Thread(() -> {
@@ -83,6 +86,7 @@ public class DaemonRouteTest {
 
   @After
   public void tearDown() throws IOException {
+    System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
     if (listener != null) listener.close();
     if (acceptor != null) acceptor.interrupt();
   }
@@ -131,5 +135,97 @@ public class DaemonRouteTest {
     OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
     assertTrue("a module name is not a path and must still route", rc.isPresent());
     assertTrue("the stand-in daemon must have been reached", served.await(10, TimeUnit.SECONDS));
+  }
+
+  private Path library(String name) throws IOException {
+    Path root = tempFolder.newFolder(name).toPath();
+    Files.createDirectories(root.resolve("src"));
+    Files.writeString(root.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    return root;
+  }
+
+  private void serveAlso(Path... others) throws IOException {
+    DaemonPaths home = DaemonPaths.resolve(libRoot);
+    List<DaemonPaths> all = new ArrayList<>(List.of(home));
+    for (Path other : others) all.add(DaemonPaths.resolve(other));
+    LockFile lock = new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
+        all.stream().map(d -> d.libraryConfig.toString()).toList(), List.of(), LockFile.PROTOCOL_VERSION,
+        System.currentTimeMillis(), address, LockFile.HOST_CLI);
+    for (DaemonPaths d : all) {
+      d.ensureArendDir();
+      lock.writeAtomic(d.lockFile);
+    }
+  }
+
+  @Test
+  public void aCommandNamingLibrariesOfOneDaemonIsRouted() throws Exception {
+    Path other = library("otherlib");
+    serveAlso(other);
+    List<String> positional = List.of(other.toString(), libRoot.toString());
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("both libraries are the daemon's, so the command must route", rc.isPresent());
+    assertTrue("the stand-in daemon must have been reached", served.await(10, TimeUnit.SECONDS));
+  }
+
+  @Test
+  public void aLibraryTheDaemonDoesNotServeIsNotRouted() throws Exception {
+    Path other = library("otherlib");
+    List<String> positional = List.of(libRoot.toString(), other.toString());
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("a library outside the daemon's set must keep the command local", rc.isEmpty());
+  }
+
+  private Path sharedLibrary(String name) throws IOException {
+    Path config = tempFolder.newFolder("config").toPath();
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
+    Path root = config.resolve("libs").resolve(name);
+    Files.createDirectories(root.resolve("src"));
+    Files.writeString(root.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    return root;
+  }
+
+  private Path register(long pid, String hash, long startedAt, String socket, Path... shared) throws IOException {
+    List<String> sharedConfigs = new ArrayList<>();
+    for (Path root : shared) sharedConfigs.add(DaemonPaths.resolve(root).libraryConfig.toString());
+    LockFile lock = new LockFile(pid, "/owner-" + hash + "/arend.yaml", hash, List.of("/owner-" + hash + "/arend.yaml"),
+        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI);
+    Files.createDirectories(DaemonPaths.registryDir());
+    lock.writeAtomic(lock.registryFile());
+    return lock.registryFile();
+  }
+
+  @Test
+  public void aCommandAboutASharedLibraryGoesToTheFirstDaemonThatLoadedIt() throws Exception {
+    Path shared = sharedLibrary("sharedlib");
+    long self = ProcessHandle.current().pid();
+    Path dead = register(Long.MAX_VALUE, "dead000000000000", 0, address, shared);
+    register(self, "first00000000000", 1, address, shared);
+    register(self, "second0000000000", 2, "uds:/nonexistent/daemon.sock", shared);
+    register(self, "unrelated0000000", 0, "uds:/nonexistent/daemon.sock");
+
+    List<String> positional = List.of(shared.toString(), "Data.Maybe");
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("the first live daemon that loaded the library must take the command", rc.isPresent());
+    assertTrue("the stand-in daemon must have been reached", served.await(10, TimeUnit.SECONDS));
+    assertTrue("a dead daemon's registration must be cleared", !Files.exists(dead));
+  }
+
+  /**
+   * Named together with an owned library, a shared one has to be loaded by that library's daemon:
+   * it is the only daemon the owned one can go to.
+   */
+  @Test
+  public void aSharedLibraryWithAnOwnedOneNeedsTheOwnersDaemonToHaveIt() throws Exception {
+    Path shared = sharedLibrary("sharedlib");
+    List<String> positional = List.of(libRoot.toString(), shared.toString());
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("the owner's daemon has not loaded the shared library, so the command stays local", rc.isEmpty());
+
+    DaemonPaths home = DaemonPaths.resolve(libRoot);
+    new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
+        List.of(home.libraryConfig.toString()), List.of(DaemonPaths.resolve(shared).libraryConfig.toString()),
+        LockFile.PROTOCOL_VERSION, 1L, address, LockFile.HOST_CLI).writeAtomic(home.lockFile);
+    rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("once the owner's daemon has it, the command must route", rc.isPresent());
   }
 }

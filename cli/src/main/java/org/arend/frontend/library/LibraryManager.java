@@ -1,13 +1,14 @@
 package org.arend.frontend.library;
 
 import org.arend.ext.error.ErrorReporter;
+import org.arend.query.QueryLibraries;
 import org.arend.server.ArendServer;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LibraryManager {
+public class LibraryManager implements QueryLibraries {
   private final ErrorReporter myErrorReporter;
   private final Map<String, SourceLibrary> myLibraries = new HashMap<>();
 
@@ -27,6 +28,7 @@ public class LibraryManager {
     myLibraries.remove(name);
   }
 
+  @Override
   public SourceLibrary getLibrary(String name) {
     return myLibraries.get(name);
   }
@@ -39,6 +41,7 @@ public class LibraryManager {
     return myErrorReporter;
   }
 
+  @Override
   public List<String> getLibraries() {
     return myLibraries.keySet().stream().toList();
   }

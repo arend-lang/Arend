@@ -1,10 +1,11 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.daemon.client.DaemonClient;
-import org.arend.frontend.cli.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.client.DaemonClient;
+import org.arend.daemon.server.DaemonServer;
+import org.arend.frontend.cli.daemon.server.CliDaemonRunner;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
 import org.junit.After;
 import org.junit.Before;
@@ -63,7 +64,7 @@ public class DaemonCancellationTest {
     // "watch" — spins until it observes cancellation, then returns 0 *without* throwing, which
     //           is what the real pipeline does: ComputationInterruptedException is swallowed
     //           inside base/ and never reaches the worker.
-    DaemonServer.CommandRunner runner = (context, args, cwd) -> {
+    CliDaemonRunner.CommandRunner runner = (context, args, cwd) -> {
       String name = args.length == 0 ? "" : args[0];
       try {
         if (name.startsWith("hold")) {
@@ -89,7 +90,7 @@ public class DaemonCancellationTest {
       return 0;
     };
 
-    server = new DaemonServer(bound, ctx, "test-library", runner);
+    server = CliDaemonRunner.server(bound, ctx, List.of("test-library"), runner, () -> {});
     server.start();
   }
 

@@ -1,12 +1,13 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.daemon.DaemonPaths;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
-import org.arend.frontend.TimedProgressReporter;
+import org.arend.server.TimedProgressReporter;
 import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;
@@ -36,9 +37,10 @@ import java.util.Set;
  * Two-phase setup for the CLI:
  *
  * <ol>
- *   <li>{@link #bootstrap}: read the flags that shape the run, build the {@link ArendServer},
- *       attach the prelude and the error reporters, and resolve {@code -L}. After this the
- *       server is usable — the REPL needs no more than this — but no user library is loaded.</li>
+ *   <li>{@link #bootstrap}: resolve {@code -L} ({@link #readLibDirs}), then read the flags that
+ *       shape the run, build the {@link ArendServer} and attach the prelude and the error
+ *       reporters ({@link #buildServer}). After this the server is usable — the REPL needs no
+ *       more than this — but no user library is loaded.</li>
  *   <li>{@link #loadRequestedLibraries}: work out from the positional arguments what was asked
  *       for, then load each library and its transitive dependencies into the server.</li>
  * </ol>
@@ -46,29 +48,19 @@ import java.util.Set;
 public final class CliSetup {
   private CliSetup() {}
 
+  /** {@link #readLibDirs}, then {@link #buildServer}. Loads nothing. */
+  public static void bootstrap(CommandContext ctx, CommandLine cmdLine) {
+    readLibDirs(ctx, cmdLine);
+    buildServer(ctx, cmdLine);
+  }
+
   /**
-   * Builds the server, the reporters and the library search path. Loads nothing.
-   *
-   * @return false only on a failure that makes the run pointless; a recoverable one (a {@code -L}
-   *         value that is not a directory) sets {@link CommandContext#exitWithError} instead, so
-   *         that every such argument is reported rather than just the first.
+   * Resolves the library search path, all a command answered elsewhere -- by a daemon, or by the
+   * MCP server -- needs. A {@code -L} value that is not a directory sets
+   * {@link CommandContext#exitWithError}, so that every such argument is reported rather than just
+   * the first.
    */
-  public static boolean bootstrap(CommandContext ctx, CommandLine cmdLine) {
-    ctx.doubleCheck = cmdLine.hasOption("c");
-    ctx.recompile = cmdLine.hasOption("r");
-    ctx.serialize = cmdLine.hasOption("serialize");
-
-    ctx.libraryManager = new LibraryManager(ctx.systemErrErrorReporter);
-    ctx.requester = new CliServerRequester(ctx.libraryManager);
-    ctx.binaryLoader = new BinaryLoader(ctx.libraryManager);
-    if (ctx.recompile) {
-      ctx.binaryLoader.setRecompile(true);
-    }
-    ctx.server = new ArendServerImpl(ctx.requester, false, false, !ctx.doubleCheck);
-    ctx.server.addReadOnlyModule(Prelude.MODULE_LOCATION,
-        () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
-    ctx.server.addErrorReporter(ctx.errorReporter);
-
+  public static void readLibDirs(CommandContext ctx, CommandLine cmdLine) {
     if (cmdLine.hasOption("L")) {
       for (String libDirString : cmdLine.getOptionValues("L")) {
         Path libDir = Paths.get(libDirString);
@@ -85,7 +77,24 @@ public final class CliSetup {
         ctx.libDirs.add(defaultLibrariesRoot);
       }
     }
-    return true;
+  }
+
+  /** Builds the server, with the prelude, and its reporters: what running a command here takes. */
+  public static void buildServer(CommandContext ctx, CommandLine cmdLine) {
+    ctx.doubleCheck = cmdLine.hasOption("c");
+    ctx.recompile = cmdLine.hasOption("r");
+    ctx.serialize = cmdLine.hasOption("serialize");
+
+    ctx.libraryManager = new LibraryManager(ctx.systemErrErrorReporter);
+    ctx.requester = new CliServerRequester(ctx.libraryManager);
+    ctx.binaryLoader = new BinaryLoader(ctx.libraryManager);
+    if (ctx.recompile) {
+      ctx.binaryLoader.setRecompile(true);
+    }
+    ctx.server = new ArendServerImpl(ctx.requester, false, false, !ctx.doubleCheck);
+    ctx.server.addReadOnlyModule(Prelude.MODULE_LOCATION,
+        () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
+    ctx.server.addErrorReporter(ctx.errorReporter);
   }
 
   /**
@@ -143,7 +152,9 @@ public final class CliSetup {
     for (String dependency : library.getLibraryDependencies()) {
       if (ctx.libraryManager.containsLibrary(dependency) || loading.contains(dependency)) continue;
       List<SourceLibrary> libDependency = new ArrayList<>(1);
-      findLibrary(ctx, dependency, libDependency);
+      ctx.requestedLibraries.stream().filter(requested -> requested.getLibraryName().equals(dependency))
+          .findFirst().ifPresent(libDependency::add);
+      if (libDependency.isEmpty()) findLibrary(ctx, dependency, libDependency);
       if (libDependency.isEmpty()) return false;
       if (!loadLibraryWithDependencies(ctx, libDependency.getFirst(), loading)) return false;
     }
@@ -214,8 +225,12 @@ public final class CliSetup {
   /**
    * Re-reads the positional arguments as typecheck targets against libraries that are
    * <em>already loaded</em>. The counterpart to {@link #classifyRequestedTargets}, for a context
-   * being reused: a positional naming a loaded library is nothing to do, and everything else is
+   * being reused: a positional naming a loaded library puts it in scope, and everything else is
    * a module, or a module and a definition inside it.
+   *
+   * <p>The command is scoped as a local run would be: to the served libraries its positionals
+   * name; failing that, the library of the directory it was issued from; failing that -- a client
+   * with no directory, such as the MCP server -- all of them.
    *
    * <p>An argument that is neither is reported and fails the run, exactly as
    * {@code classifyRequestedTargets} reports "File X not found" on a fresh context. The two have
@@ -233,13 +248,17 @@ public final class CliSetup {
    *                  from the one the client would have got.
    */
   public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine, String clientCwd) {
-    Set<String> loadedLibNames = new HashSet<>();
-    for (SourceLibrary library : ctx.requestedLibraries) loadedLibNames.add(library.getLibraryName());
+    List<SourceLibrary> scope = new ArrayList<>();
 
     for (String positional : cmdLine.getArgList()) {
       // A positional may name the library the way classifyRequestedTargets accepts one, which
       // includes a path: `arend .` is the library in the current directory.
-      if (loadedLibNames.contains(positional) || Files.exists(against(clientCwd, positional))) continue;
+      SourceLibrary named = servedLibraryNamed(ctx, positional, clientCwd);
+      if (named != null) {
+        if (!scope.contains(named)) scope.add(named);
+        continue;
+      }
+      if (Files.exists(DaemonPaths.against(clientCwd, positional))) continue;
       if (positional.indexOf(':') >= 0) {
         // parseFullName reports what is wrong with it and returns null.
         Pair<ModulePath, LongName> parsed = ctx.parseFullName(positional);
@@ -254,14 +273,25 @@ public final class CliSetup {
             "File " + positional + " not found"));
       }
     }
+
+    if (scope.isEmpty() && clientCwd != null) {
+      SourceLibrary here = servedLibraryNamed(ctx, ".", clientCwd);
+      if (here != null) scope.add(here);
+    }
+    ctx.requestedLibraries.clear();
+    ctx.requestedLibraries.addAll(scope.isEmpty() ? ctx.servedLibraries : scope);
   }
 
   // ───────── helpers ─────────
 
-  /** {@code path} as the client would have seen it: resolved against {@code clientCwd} if given. */
-  private static Path against(String clientCwd, String path) {
-    Path p = Paths.get(path);
-    return clientCwd == null || p.isAbsolute() ? p : Paths.get(clientCwd).resolve(p);
+  private static SourceLibrary servedLibraryNamed(CommandContext ctx, String reference, String clientCwd) {
+    DaemonPaths paths = DaemonPaths.resolve(clientCwd, reference);
+    String name = paths == null ? reference : paths.libraryName();
+    for (SourceLibrary library : ctx.servedLibraries) {
+      if (library.getLibraryName().equals(name)) return library;
+    }
+    // Loaded only as a dependency: a command about a shared library is routed to any daemon that loaded it.
+    return ctx.libraryManager == null ? null : ctx.libraryManager.getLibrary(name);
   }
 
   private static void loadLibrary(CommandContext ctx, SourceLibrary library) {

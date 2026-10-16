@@ -1,15 +1,14 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
-import org.arend.frontend.ConsoleMain;
-import org.arend.frontend.query.ConsoleQueryTool;
+import org.arend.cli.ArendOptions;
+import org.arend.query.ConsoleQueryTool;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * The {@code --json} output split for the query tools ({@code -ss}/{@code -ps}/{@code -fu}/
@@ -38,18 +37,18 @@ public final class JsonOutputRedirect implements AutoCloseable {
   /** The log file stream, or null when inactive or when the file could not be opened. */
   private final PrintStream myLog;
   private final Path myLogPath;
-  /** The query flag that triggered the split, e.g. {@code "-ss"}; null when inactive. */
-  private final String myFlag;
+  /** The query tool that triggered the split; null when inactive. */
+  private final ConsoleQueryTool myTool;
   private boolean myClosed;
 
   private JsonOutputRedirect(boolean active, PrintStream realStdout, PrintStream realStderr,
-                             PrintStream log, Path logPath, String flag) {
+                             PrintStream log, Path logPath, ConsoleQueryTool tool) {
     myActive = active;
     myRealStdout = realStdout;
     myRealStderr = realStderr;
     myLog = log;
     myLogPath = logPath;
-    myFlag = flag;
+    myTool = tool;
   }
 
   /**
@@ -57,32 +56,25 @@ public final class JsonOutputRedirect implements AutoCloseable {
    * instance. When the log file cannot be opened the split still happens -- JSON on the real
    * stdout -- but diagnostics fall back to stderr rather than being dropped.
    */
-  public static JsonOutputRedirect open(CommandLine cmdLine) {
-    String flag = null;
-    for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
-      if (cmdLine.hasOption(tool.shortName())) {
-        flag = "-" + tool.shortName();
-        break;
-      }
-    }
+  public static JsonOutputRedirect open(CommandLine cmdLine, String clientCwd) {
+    ConsoleQueryTool tool = ArendOptions.queryTool(cmdLine);
     // `--json` without a query flag is a no-op, and so is a query flag without `--json`.
-    if (flag == null || !cmdLine.hasOption("json")) {
+    if (tool == null || !cmdLine.hasOption("json")) {
       return new JsonOutputRedirect(false, System.out, System.err, null, null, null);
     }
 
     PrintStream realStdout = System.out;
     PrintStream realStderr = System.err;
-    Path logPath = resolveLogPath(cmdLine);
+    Path logPath = ArendOptions.jsonLogPath(cmdLine, clientCwd);
     try {
       PrintStream log = new PrintStream(Files.newOutputStream(logPath), true, StandardCharsets.UTF_8);
       System.setOut(log);
       System.setErr(log);
-      return new JsonOutputRedirect(true, realStdout, realStderr, log, logPath, flag);
+      return new JsonOutputRedirect(true, realStdout, realStderr, log, logPath, tool);
     } catch (IOException e) {
-      realStderr.println("[WARN] cannot open " + flag + " log file " + logPath + " ("
-          + e.getMessage() + "); routing diagnostics to stderr instead");
+      realStderr.println(ArendOptions.jsonLogFailed(tool, logPath, e.getMessage()));
       System.setOut(realStderr);
-      return new JsonOutputRedirect(true, realStdout, realStderr, null, null, flag);
+      return new JsonOutputRedirect(true, realStdout, realStderr, null, null, tool);
     }
   }
 
@@ -108,17 +100,8 @@ public final class JsonOutputRedirect implements AutoCloseable {
     System.setErr(myRealStderr);
     if (myLog != null) {
       myLog.close();
-      myRealStderr.println("[INFO] " + myFlag + " diagnostics written to " + myLogPath);
+      myRealStderr.println(ArendOptions.jsonLogWritten(myTool, myLogPath));
     }
   }
 
-  /**
-   * The file diagnostics are written to: an explicit {@code --log-file <path>} when given,
-   * else {@code <java.io.tmpdir>/arend-symbol-search.log}, overwritten each run.
-   */
-  private static Path resolveLogPath(CommandLine cmdLine) {
-    String custom = cmdLine.getOptionValue("log-file");
-    if (custom != null && !custom.isEmpty()) return Paths.get(custom);
-    return Paths.get(System.getProperty("java.io.tmpdir"), "arend-symbol-search.log");
-  }
 }

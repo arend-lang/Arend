@@ -1,12 +1,15 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.LockFile;
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.client.DaemonClient;
+import org.arend.daemon.server.DaemonServer;
+import org.arend.frontend.cli.daemon.server.CliDaemonRunner;
+import org.arend.frontend.cli.daemon.server.CliDispatcher;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
-import org.arend.frontend.cli.daemon.client.DaemonClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -20,6 +23,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -58,6 +62,8 @@ public class DaemonServerSocketTest {
   }
 
   private String boundAddress;
+  /** Counted down once a server has let its queue run out after a shutdown. */
+  private final CountDownLatch stopped = new CountDownLatch(1);
 
   /** A server on the fixture library, bootstrapped with {@code extraArgs}. */
   private DaemonServer serverFor(String stateDir, String... extraArgs) throws IOException {
@@ -70,7 +76,8 @@ public class DaemonServerSocketTest {
     Path sock = tempFolder.newFolder(stateDir).toPath().resolve("daemon.sock");
     SocketBinder.Bound bound = SocketBinder.bind(sock, "0123456789abcde" + stateDir.charAt(0));
     boundAddress = bound.address();
-    DaemonServer s = new DaemonServer(bound, ctx, libRoot.resolve("arend.yaml").toString());
+    DaemonServer s = CliDaemonRunner.server(bound, ctx, List.of(libRoot.resolve("arend.yaml").toString()),
+        CliDispatcher::run, stopped::countDown);
     s.start();
     return s;
   }
@@ -144,6 +151,7 @@ public class DaemonServerSocketTest {
     Map<String, Object> status = frames.stream()
         .filter(f -> "status".equals(f.get("kind"))).findFirst().orElseThrow();
     assertEquals(LockFile.PROTOCOL_VERSION, status.get("protocolVersion"));
+    assertEquals(ProcessHandle.current().pid(), ((Number) status.get("pid")).longValue());
     assertTrue(status.get("lockedFlags") instanceof Map);
   }
 
@@ -207,11 +215,11 @@ public class DaemonServerSocketTest {
   }
 
   /**
-   * {@code refresh} replays the daemon's own bootstrap argv -- the args the locked flags are
-   * locked <em>to</em> -- so reporting them as ignored is false, and unactionable from a refresh.
+   * {@code refresh} resolves the served libraries again and typechecks nothing; nor does it report
+   * the daemon's own bootstrap flags as ignored, which would be false and unactionable.
    */
   @Test
-  public void refreshDoesNotWarnAboutTheDaemonsOwnBootstrapFlags() throws Exception {
+  public void refreshResolvesWithoutTypecheckingOrWarning() throws Exception {
     DaemonServer refreshServer = serverFor("refresh", "-r");
     try {
       SocketAddress refreshAddress = SocketAddress.parse(boundAddress);
@@ -223,8 +231,8 @@ public class DaemonServerSocketTest {
         });
       }
       String output = String.join("", chunks);
-      assertTrue("refresh must actually re-run the pipeline: " + output,
-          output.contains("Typechecking"));
+      assertTrue("refresh must resolve the library again: " + output, output.contains("[INFO] Resolved lib"));
+      assertFalse("refresh must not typecheck: " + output, output.contains("Typechecking"));
       assertFalse("refresh must not report the bootstrap's own flags as ignored: " + output,
           output.contains("is ignored"));
     } finally {
@@ -237,7 +245,6 @@ public class DaemonServerSocketTest {
     try (DaemonClient client = DaemonClient.connect(address)) {
       assertEquals(0, client.invoke("shutdown", Map.of(), null));
     }
-    assertTrue("the worker must reach the shutdown latch",
-        server.shutdownLatch().await(30, TimeUnit.SECONDS));
+    assertTrue("the server must stop once its queue has run out", stopped.await(30, TimeUnit.SECONDS));
   }
 }

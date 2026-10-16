@@ -1,6 +1,8 @@
 package org.arend.frontend.cli.daemon;
 
-import org.arend.frontend.cli.daemon.client.DaemonRpc;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.client.DaemonRpc;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -37,13 +39,13 @@ public final class DaemonStop {
     SIGNAL
   }
 
-  static Verdict inspectLock(LockFile.Read existing, String expectedHash,
+  static Verdict inspectLock(LockFile.Read existing, Path libraryConfig,
                              java.util.function.Predicate<LockFile> alive) {
     if (existing instanceof LockFile.Read.Absent) return Verdict.NOTHING_TO_DO;
     if (existing instanceof LockFile.Read.Unreadable) return Verdict.UNREADABLE_LOCK;
     LockFile lf = ((LockFile.Read.Found) existing).lock();
     boolean live = alive.test(lf);
-    if (!lf.libraryHash().equals(expectedHash)) {
+    if (!lf.serves(libraryConfig)) {
       return live ? Verdict.REFUSE_LIVE_MISMATCH : Verdict.REMOVE_STALE_MISMATCH;
     }
     return live ? Verdict.SIGNAL : Verdict.REMOVE_STALE;
@@ -60,9 +62,17 @@ public final class DaemonStop {
       return 1;
     }
 
+    if (!paths.canOwn()) {
+      // Any number of daemons may have loaded it, and stopping whichever was found first would
+      // stop some other project's daemon. The one to stop is named by a library it owns.
+      System.err.println("[ERROR] --daemon-stop: " + paths.libraryConfig + (paths.isShared()
+          ? " is under " + DaemonPaths.sharedLibrariesRoot() + " and may be loaded by several daemons."
+          : " is a zip library, which no daemon owns.") + " Stop the one you mean from a library it owns.");
+      return 1;
+    }
+
     LockFile.Read existing = LockFile.read(paths.lockFile);
-    Verdict verdict = inspectLock(existing, paths.libraryHash,
-        candidate -> ProcessHandle.of(candidate.pid()).isPresent());
+    Verdict verdict = inspectLock(existing, paths.libraryConfig, LockFile::processAlive);
     switch (verdict) {
       case NOTHING_TO_DO -> {
         System.out.println("No Arend daemon running for " + paths.libraryConfig);
@@ -93,7 +103,8 @@ public final class DaemonStop {
       case REMOVE_STALE -> {
         System.err.println("[WARN]  -d stop: lock for PID " + lockOf(existing).pid()
             + " is stale (process dead); removing");
-        LockFile.deleteQuietly(paths.lockFile);
+        // Every copy: a daemon of several libraries left one in each, and one in the registry.
+        lockOf(existing).deleteAllCopies();
         return 0;
       }
       case SIGNAL -> { }
@@ -101,11 +112,12 @@ public final class DaemonStop {
     LockFile lf = lockOf(existing);
     Optional<ProcessHandle> ph = ProcessHandle.of(lf.pid());
     if (ph.isEmpty()) {
-      LockFile.deleteQuietly(paths.lockFile);
+      lf.deleteAllCopies();
       return 0;
     }
 
-    System.out.println("Stopping Arend daemon for " + paths.libraryConfig + " (PID " + lf.pid() + ")");
+    // The daemon as a whole, whichever of its libraries named it: they share one process.
+    System.out.println("Stopping Arend daemon for " + String.join(", ", lf.libraries()) + " (PID " + lf.pid() + ")");
 
     // The clean path: socket-side `shutdown`. The daemon replies done, the worker pulls the
     // sentinel, the JVM exits, the shutdown hook removes the lock. Sent to the library this
@@ -122,20 +134,26 @@ public final class DaemonStop {
       System.out.println("Daemon stopped (PID " + lf.pid() + ")");
       return 0;
     }
+    if (lf.isHostedByIde()) {
+      // The PID is the IDE's: a signal would stop the daemon by closing the user's IDE.
+      System.err.println("[ERROR] -d stop: the daemon runs inside " + lf.host() + " (PID " + lf.pid() + ") and did"
+          + " not stop through its socket (rc=" + rpcRc + "); stop it from the IDE instead.");
+      return 1;
+    }
     System.err.println(rpcRc == 0
         ? "[WARN]  -d stop: daemon ack'd shutdown but PID " + lf.pid() + " did not exit within "
             + ProcessKill.GRACEFUL_TIMEOUT_SECONDS + "s; falling back to SIGTERM"
         : "[WARN]  -d stop: socket-side shutdown did not go through (rc=" + rpcRc
             + "); falling back to SIGTERM");
 
-    boolean gone = ProcessKill.terminateTree(List.of(ph.get()),
+    boolean gone = ProcessKill.terminateTree(ph.get(),
         () -> System.err.println("[WARN]  -d stop: PID " + lf.pid() + " did not exit gracefully"
             + " within " + ProcessKill.GRACEFUL_TIMEOUT_SECONDS + "s; escalating to SIGKILL"));
     if (!gone) {
       System.err.println("[ERROR] -d stop: PID " + lf.pid() + " still alive after SIGKILL");
       return 1;
     }
-    LockFile.deleteQuietly(paths.lockFile);
+    lf.deleteAllCopies();
     System.out.println("Daemon stopped (PID " + lf.pid() + ")");
     return 0;
   }

@@ -1,5 +1,6 @@
 package org.arend.module.config
 
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
@@ -16,6 +17,7 @@ import org.arend.library.classLoader.FileClassLoaderDelegate
 import org.arend.library.classLoader.ZipClassLoaderDelegate
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.psi.ArendFile
+import org.arend.query.QueryLibrary
 import org.arend.server.ArendLibrary
 import org.arend.server.ArendServerService
 import org.arend.ui.impl.ArendGeneralUI
@@ -44,7 +46,7 @@ import java.nio.file.Paths
 internal fun parseLangVersion(text: String): Range<Version> =
     if (text.isEmpty()) Range.unbound() else VersionRange.parseVersionRange(text) ?: VersionRange.malformed(text)
 
-abstract class LibraryConfig(val project: Project) : ArendLibrary {
+abstract class LibraryConfig(val project: Project) : ArendLibrary, QueryLibrary {
     open val sourcesDir: String
         get() = ""
     open val binariesDir: String?
@@ -143,7 +145,7 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
 
     // Modules
 
-    fun findModules(inTests: Boolean): List<ModulePath> {
+    override fun findModules(inTests: Boolean): List<ModulePath> {
         val modules = modules
         if (modules != null) {
             return modules
@@ -151,14 +153,27 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
 
         val dir = (if (inTests) testsDirFile else sourcesDirFile) ?: return emptyList()
         val result = ArrayList<ModulePath>()
-        VfsUtil.iterateChildrenRecursively(dir, null) { file ->
-            if (file.name.endsWith(EXTENSION)) {
-                dir.getRelativePath(file, EXTENSION)?.let { result.add(ModulePath(it)) }
+        // In a read action for the query tools, which call this from a daemon's worker.
+        runReadAction {
+            VfsUtil.iterateChildrenRecursively(dir, null) { file ->
+                if (file.name.endsWith(EXTENSION)) {
+                    dir.getRelativePath(file, EXTENSION)?.let { result.add(ModulePath(it)) }
+                }
+                return@iterateChildrenRecursively true
             }
-            return@iterateChildrenRecursively true
         }
         return result
     }
+
+    // The query tools see a library through these: a zip's sources are no files of their own, and
+    // the text of a module is the editor's, unsaved changes included, which is also what the server parsed.
+
+    override fun getSourceBasePath(): Path? = sourcesDirFile?.takeIf { it.isInLocalFileSystem }?.let { Paths.get(it.path) }
+
+    override fun getBinaryBasePath(): Path? = binariesDirFile?.takeIf { it.isInLocalFileSystem }?.let { Paths.get(it.path) }
+
+    override fun readModuleText(modulePath: ModulePath, inTests: Boolean): String? =
+        runReadAction { findArendFile(modulePath, inTests)?.text }
 
     private fun findParentDirectory(modulePath: ModulePath, inTests: Boolean): VirtualFile? {
         var dir = (if (inTests) testsDirFile else sourcesDirFile) ?: return null
