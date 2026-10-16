@@ -1,5 +1,6 @@
 package org.arend.codeInsight.completion
 
+import com.intellij.codeInsight.CodeInsightSettings
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
@@ -34,7 +35,12 @@ abstract class ArendCompletionTestBase : ArendTestBase() {
     protected fun checkCompletionVariants(code: String, variants: List<String>, condition: CompletionCondition = CompletionCondition.SAME_ELEMENTS, withKeywords: Boolean = true) {
         InlineFile(code).withCaret()
 
-        val result : List<String> = (myFixture.getCompletionVariants("Main.ard") ?: error("Null completion variants")).let { list ->
+        // A single variant would be inserted instead of being listed
+        val settings = CodeInsightSettings.getInstance()
+        val autocomplete = settings.AUTOCOMPLETE_ON_CODE_COMPLETION
+        settings.AUTOCOMPLETE_ON_CODE_COMPLETION = false
+        val completions = try { myFixture.getCompletionVariants("Main.ard") } finally { settings.AUTOCOMPLETE_ON_CODE_COMPLETION = autocomplete }
+        val result : List<String> = (completions ?: error("Null completion variants")).let { list ->
             if (withKeywords) list else list.filter { !it.startsWith('\\') }
         }
 
@@ -78,9 +84,7 @@ abstract class ArendCompletionTestBase : ArendTestBase() {
                 try {
                     checkCompletionVariants(piece, variants, condition)
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    System.err.flush()
-                    failString += "$piece\n"
+                    failString += "$piece\n    ${e.message}\n"
                     failed = true
                     return
                 }
