@@ -226,4 +226,56 @@ public class ComparisonTest extends TypeCheckingTestCase {
     assertEquals(result2.expression, result1.expression);
     assertEquals(result1.expression, result2.expression);
   }
+
+  @Test
+  public void letVariable() {
+    typeCheckModule("""
+      \\func g (n : Nat) => n
+      \\func test (x : Nat) (p : g x = g x) => \\let y => g x \\in (p : y = y)
+      """);
+  }
+
+  @Test
+  public void letVariableError() {
+    typeCheckModule("""
+      \\func g (n : Nat) => n
+      \\func test (x : Nat) (p : g x = g x) => \\let y => g (suc x) \\in (p : y = y)
+      """, 1);
+  }
+
+  @Test
+  public void implementedField() {
+    typeCheckModule("""
+      \\record R (x y : Nat)
+      \\func f (r : R) (p : r.x = 0) => p
+      \\func test (n : Nat) (s : R n) (q : n = 0) => f s q
+      """);
+  }
+
+  @Test
+  public void implementedFieldError() {
+    typeCheckModule("""
+      \\record R (x y : Nat)
+      \\func f (r : R) (p : r.x = 0) => p
+      \\func test (n : Nat) (s : R n) (q : suc n = 0) => f s q
+      """, 1);
+  }
+
+  @Test
+  public void alias() {
+    typeCheckModule("""
+      \\func B (n : Nat) => suc n
+      \\func A (n : Nat) => B n
+      \\func test (n : Nat) (p : A n = A n) : B n = B n => p
+      """);
+  }
+
+  @Test
+  public void aliasError() {
+    typeCheckModule("""
+      \\func B (n : Nat) => suc n
+      \\func A (n : Nat) => B (suc n)
+      \\func test (n : Nat) (p : A n = A n) : B n = B n => p
+      """, 1);
+  }
 }

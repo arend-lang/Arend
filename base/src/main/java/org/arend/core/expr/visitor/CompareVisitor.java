@@ -3,6 +3,7 @@ package org.arend.core.expr.visitor;
 import org.arend.core.constructor.SingleConstructor;
 import org.arend.core.context.LinkList;
 import org.arend.core.context.binding.Binding;
+import org.arend.core.context.binding.EvaluatingBinding;
 import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.binding.inference.MetaInferenceVariable;
@@ -450,6 +451,28 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       return true;
     }
 
+    // Before both sides are normalized, take a single cheap reduction step that may let them match
+    // as they stand: a \let-bound variable to its value, a field of a variable to its implementation
+    // in the type of the variable, a function whose body is a call of the other side's head to that
+    // body. This is also done inside a non-normalizing comparison, where these mismatches otherwise
+    // fail the whole comparison, so that the enclosing terms are normalized and compared in full,
+    // class instances field by field. Each step is one NormalizeVisitor takes as well.
+    Expression unfolded1 = unfoldLetOrField(expr1);
+    Expression unfolded2 = unfoldLetOrField(expr2);
+    if (unfolded1 != null || unfolded2 != null) {
+      return compare(unfolded1 != null ? unfolded1 : expr1, unfolded2 != null ? unfolded2 : expr2, type, useType);
+    }
+    if (expr1 instanceof DefCallExpression defCall1 && expr2 instanceof DefCallExpression defCall2 && defCall1.getDefinition() != defCall2.getDefinition()) {
+      Expression alias1 = unfoldAlias(defCall1, defCall2.getDefinition());
+      if (alias1 != null) {
+        return compare(alias1, expr2, type, useType);
+      }
+      Expression alias2 = unfoldAlias(defCall2, defCall1.getDefinition());
+      if (alias2 != null) {
+        return compare(expr1, alias2, type, useType);
+      }
+    }
+
     if (myOnlySolveVars && (stuckVar1 != null || stuckVar2 != null)) {
       return true;
     }
@@ -468,6 +491,24 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     return normalizedCompare(expr1.normalize(NormalizationMode.WHNF), expr2.normalize(NormalizationMode.WHNF), type == null ? null : type.normalize(NormalizationMode.WHNF), useType);
+  }
+
+  private static Expression unfoldLetOrField(Expression expr) {
+    if (expr instanceof ReferenceExpression ref && ref.getBinding() instanceof EvaluatingBinding binding) {
+      return binding.getExpression();
+    }
+    if (expr instanceof FieldCallExpression fieldCall && !fieldCall.getDefinition().isProperty() && fieldCall.getArgument().getUnderlyingExpression() instanceof ReferenceExpression ref) {
+      ClassCallExpression classCall = ref.getBinding().getType() instanceof Expression type ? type.cast(ClassCallExpression.class) : null;
+      return classCall == null ? null : classCall.getImplementation(fieldCall.getDefinition(), ref);
+    }
+    return null;
+  }
+
+  private static Expression unfoldAlias(DefCallExpression defCall, Definition head) {
+    if (!(defCall instanceof FunCallExpression funCall) || funCall.getDefinition().hasStrictParameters() || !(funCall.getDefinition().getBody() instanceof Expression body) || !(body.getUnderlyingExpression() instanceof DefCallExpression bodyCall) || bodyCall.getDefinition() != head) {
+      return null;
+    }
+    return body.subst(new ExprSubstitution().add(funCall.getDefinition().getParameters(), funCall.getDefCallArguments()), funCall.getLevelSubstitution());
   }
 
   private Expression substitute(Expression expr) {
