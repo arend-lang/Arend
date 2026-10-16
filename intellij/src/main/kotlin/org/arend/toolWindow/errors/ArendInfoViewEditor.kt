@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.diagnostic.debug
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
 import com.intellij.ui.jcef.JBCefBrowser
@@ -62,6 +63,11 @@ class ArendInfoViewEditor(project: Project) : ArendMessagesViewEditor(project, n
 
     override fun addEditorComponent() {
         component?.add(browser.component, BorderLayout.CENTER)
+    }
+
+    override fun release() {
+        super.release()
+        Disposer.dispose(browser)
     }
 
     fun zoomIn() = changeFontSize(1.0)

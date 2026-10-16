@@ -42,6 +42,14 @@ public class ModuleDeserialization {
   }
 
   /**
+   * Whether the module was serialized in the format this version of the language reads. One that was not
+   * cannot be read at all, {@link #readDefinitions} included.
+   */
+  public boolean hasCurrentVersion() {
+    return myModuleProto.getVersion() == ModuleSerialization.VERSION;
+  }
+
+  /**
    * The modules whose definitions this one links against, as recorded in the serialized
    * call-target table. Exactly the set {@link #readModule} will ask
    * {@link SimpleCallTargetProvider#getCallTarget} to resolve, so a caller loading several
@@ -85,7 +93,7 @@ public class ModuleDeserialization {
   }
 
   private List<Pair<Definition, String>> readModule(ModuleScopeProvider moduleScopeProvider, DependencyListener dependencyListener, boolean dropMissing) throws DeserializationException {
-    if (myModuleProto.getVersion() != ModuleSerialization.VERSION) {
+    if (!hasCurrentVersion()) {
       throw new DeserializationException("Version mismatch:\nLanguage version: " + ModuleSerialization.VERSION + "\nLibrary binaries version: " + myModuleProto.getVersion());
     }
 

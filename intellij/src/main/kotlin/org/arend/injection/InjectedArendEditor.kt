@@ -135,7 +135,7 @@ abstract class InjectedArendEditor(
         }
     }
 
-    fun release() {
+    open fun release() {
         timer.stop()
         if (editor != null) {
             editor.putUserData(AREND_GOAL_EDITOR, null)
