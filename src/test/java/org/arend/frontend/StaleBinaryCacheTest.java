@@ -1,6 +1,8 @@
 package org.arend.frontend;
 
 import org.arend.core.definition.Definition;
+import org.arend.core.definition.FunctionDefinition;
+import org.arend.core.expr.FunCallExpression;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
@@ -463,6 +465,54 @@ public class StaleBinaryCacheTest {
     assertNull("User.Base calls into Two, whose .arc is stale", typechecked("User", "Base"));
     assertNull("User.Sub extends the dropped User.Base", typechecked("User", "Sub"));
     assertNotNull("User.independent holds nothing dropped", typechecked("User", "independent"));
+  }
+
+  /**
+   * A type whose coercion is dropped is dropped too. The type holds its coercions in its coerce data, outside any
+   * expression, and coercion lookup finds them there while typechecking a dependent from source, which may come
+   * first: an inserted coercion is not a dependency. Kept, the type handed out the dropped coercion: one defined by
+   * copatterns has no result type then, and the dependent failed with a NullPointerException in
+   * {@code CoerceData.coerceResult}; any other got called by the dependent, which then held a dead definition.
+   */
+  @Test
+  public void aTypeWhoseCoercionIsDroppedIsDropped() throws IOException {
+    writeLibrary();
+    writeModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 1\n");
+    writeModule("Coe", """
+        \\import Two
+        \\record Box (m : Nat)
+        \\record Wrap (n : Nat)
+          \\where {
+            \\use \\coerce toBox (w : Wrap) : Box \\cowith | m => w.n Nat.+ used
+            \\use \\coerce toNat (w : Wrap) : Nat => w.n Nat.+ used
+          }
+        \\func independent : Nat => 5
+        """);
+    writeModule("User", "\\import Coe\n\\func box (w : Wrap) : Box => w\n\\func nat (w : Wrap) : Nat => w\n");
+    newServer();
+    pass();
+    assertNoErrors("cold build");
+    editModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 2\n");
+    newServer();
+
+    loadOnly();
+    assertNoBinaryCacheErrors("load with a stale dependency");
+    assertNull("the coercions of Coe.Wrap call into Two, whose .arc is stale", typechecked("Coe", "Wrap"));
+    assertNotNull("Coe.independent holds nothing dropped", typechecked("Coe", "independent"));
+
+    // User first, as in an import cycle: it needs the coercions without depending on them
+    for (String module : List.of("User", "Coe", "Two")) {
+      server.getCheckerFor(Collections.singletonList(moduleLoc(module)))
+          .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    }
+    assertNoErrors("typechecking the rest");
+    for (String name : List.of("box", "nat")) {
+      FunctionDefinition user = (FunctionDefinition) typechecked("User", name);
+      assertNotNull(user);
+      FunCallExpression coercion = (FunCallExpression) user.getReallyActualBody();
+      assertSame("User." + name + " calls the coercion that was typechecked, not the dropped one",
+          coercion.getDefinition(), coercion.getDefinition().getRef().getTypechecked());
+    }
   }
 
   /**

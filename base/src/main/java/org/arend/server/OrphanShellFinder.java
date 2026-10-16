@@ -3,6 +3,7 @@ package org.arend.server;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.ClassField;
+import org.arend.core.definition.CoerceData;
 import org.arend.core.definition.Constructor;
 import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.Definition;
@@ -16,7 +17,9 @@ import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.expr.FunCallExpression;
 import org.arend.core.expr.visitor.VoidExpressionVisitor;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Walks a {@link Definition}'s parameters, result type, and body looking for any
@@ -71,6 +74,27 @@ final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
       for (Map.Entry<ClassField, AbsExpression> entry : cls.getImplemented()) {
         if (found) return;
         entry.getValue().getExpression().accept(this, null);
+      }
+    }
+    if (found) return;
+
+    // The coercions of a class or a data type are held outside any expression. A coercion function dropped while the
+    // definition it belongs to is kept is still found by coercion lookup in a dependent typechecked from source, which
+    // can be typechecked first: the coercion is only inserted during typechecking, so it is not a dependency. Dropping
+    // the owner too gets both typechecked again, together.
+    CoerceData coerceData = def.getCoerceData();
+    if (coerceData != null) {
+      for (Set<Map.Entry<CoerceData.Key, List<Definition>>> entries : List.of(coerceData.getMapFrom(), coerceData.getMapTo())) {
+        for (Map.Entry<CoerceData.Key, List<Definition>> entry : entries) {
+          if (found) return;
+          if (entry.getKey() instanceof CoerceData.DefinitionKey key) {
+            check(key.definition());
+          }
+          for (Definition coercing : entry.getValue()) {
+            if (found) return;
+            check(coercing instanceof ClassField field ? field.getParentClass() : coercing instanceof Constructor constructor ? constructor.getDataType() : coercing);
+          }
+        }
       }
     }
   }
