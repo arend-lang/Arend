@@ -4,6 +4,7 @@ import org.arend.core.constructor.SingleConstructor;
 import org.arend.core.context.LinkList;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.LevelVariable;
+import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.binding.inference.MetaInferenceVariable;
 import org.arend.core.context.binding.inference.TypeClassInferenceVariable;
@@ -42,6 +43,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   private final Concrete.SourceNode mySourceNode;
   private CMP myCMP;
   private boolean myNormalCompare = true;
+  private LevelEquationsBuffer myLevelBuffer;
   private boolean myOnlySolveVars = false;
   private boolean myAllowEquations = true;
   private boolean myNormalize = true;
@@ -200,7 +202,19 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       boolean normalCompare = myNormalCompare;
       myNormalCompare = false;
 
-      boolean ok = expr1.accept(this, expr2, type);
+      // Level equations are collected and added only if the comparison succeeds, so that
+      // `f.{?l} a` matches `f.{u} a` here rather than after normalizing both sides.
+      LevelEquationsBuffer buffer = normalCompare && myLevelBuffer == null && myEquations.supportsLevels() ? new LevelEquationsBuffer() : null;
+      if (buffer != null) myLevelBuffer = buffer;
+      boolean ok;
+      try {
+        ok = expr1.accept(this, expr2, type);
+      } finally {
+        if (buffer != null) myLevelBuffer = null;
+      }
+      if (ok && buffer != null) {
+        ok = buffer.addTo(myEquations);
+      }
 
       myNormalCompare = normalCompare;
       myCMP = origCMP;
@@ -576,12 +590,49 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     return true;
   }
 
+  private Equations levelEquations() {
+    return myNormalCompare ? myEquations : myLevelBuffer != null ? myLevelBuffer : DummyEquations.getInstance();
+  }
+
+  /**
+   * Level equations of a non-normalizing comparison.  It takes only those that TwoStageEquations adds
+   * without reporting an error: the right side is a single inference variable, or the left side is an
+   * inference variable alone and its constant is not above the right side's.
+   */
+  private static class LevelEquationsBuffer extends DummyEquations {
+    private record LevelEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode) {}
+
+    private final List<LevelEquation> myLevelEquations = new ArrayList<>();
+
+    @Override
+    public boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode) {
+      if (cmp != CMP.LE || level1.isInfinity() || level2.isInfinity() || !(isSingleInferenceVar(level2) || isSingleInferenceVar(level1) && level1.getVarPairs().iterator().next().getValue().signum() == 0 && level1.getConstant().compareTo(level2.getConstant()) <= 0)) {
+        return false;
+      }
+      myLevelEquations.add(new LevelEquation(level1, level2, cmp, sourceNode));
+      return true;
+    }
+
+    private static boolean isSingleInferenceVar(Level level) {
+      return level.getVarPairs().size() == 1 && level.getVarPairs().iterator().next().getKey() instanceof InferenceLevelVariable;
+    }
+
+    boolean addTo(Equations equations) {
+      for (LevelEquation equation : myLevelEquations) {
+        if (!equations.addEquation(equation.level1(), equation.level2(), equation.cmp(), equation.sourceNode())) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
   public boolean compareLevels(LeveledDefCallExpression expr1, LeveledDefCallExpression expr2) {
     if (expr1 instanceof ClassCallExpression classCall1 && expr2 instanceof ClassCallExpression classCall2) {
       return compareClassCallLevels(classCall1, classCall2);
     }
 
-    if (!expr1.getLevels().compare(expr2.getLevels(), CMP.EQ, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode)) {
+    if (!expr1.getLevels().compare(expr2.getLevels(), CMP.EQ, levelEquations(), mySourceNode)) {
       initResult(expr1, expr2, expr1.getLevels(), expr2.getLevels());
       return false;
     }
@@ -1349,7 +1400,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         subLevel = subClassCall.getFieldLevelOverride(field);
       }
 
-      if (subLevel == null || !Level.compare(subLevel, superLevel, CMP.LE, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode)) {
+      if (subLevel == null || !Level.compare(subLevel, superLevel, CMP.LE, levelEquations(), mySourceNode)) {
         return false;
       }
     }
@@ -1370,7 +1421,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     List<? extends Level> superLevels = superCall.getLevels().toList();
     List<? extends Level> subLevels = (myCMP == CMP.GE ? classCall2 : classCall1).getLevels(definition).toList();
     for (int i = 0; i < params.size(); i++) {
-      if (!Level.compare(subLevels.get(i), superLevels.get(i), CMP.EQ, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode)) {
+      if (!Level.compare(subLevels.get(i), superLevels.get(i), CMP.EQ, levelEquations(), mySourceNode)) {
         return false;
       }
     }

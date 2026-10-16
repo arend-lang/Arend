@@ -15,7 +15,7 @@ import org.arend.typechecking.TypecheckerState;
 public class DummyEquations implements Equations {
   private static final DummyEquations INSTANCE = new DummyEquations();
 
-  private DummyEquations() {}
+  protected DummyEquations() {}
 
   public static DummyEquations getInstance() {
     return INSTANCE;
