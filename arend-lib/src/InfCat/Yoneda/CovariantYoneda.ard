@@ -142,6 +142,28 @@
            (U G)
   }
 
+{- | A transformation {t} between functors with universal elements {p} and {q} is an isomorphism if and only if
+ -   the arrow {c} between their base points carrying {q} to the image of {p} is.
+ -}
+\lemma univElem-iso-char.{u} {C : \Cat u} {P Q : C ->⁺ \Type u} {t : P ~> Q} {a a' : C} {p : P a} {q : Q a'}
+                             (Up : IsUnivElem P a p) (Uq : IsUnivElem Q a' q) {c : a' ~> a} (h : ~>_-> (dmap Q c) q = ~>_-> (dmap (__ a) t) p)
+  : IsIso t <-> IsIso c
+  => \let | eP => IsEquiv.ret (yonedaCov a P) p
+          | eQ => IsEquiv.ret (yonedaCov a' Q) q
+          | s => IsEquiv.ret (yonedaEmbCov {C} {a'} {a}) c
+     \in \have
+          | sq : comp eP t = comp s eQ
+            => IsEquiv.isInj (yonedaCov a Q) $
+                 yonedaCov-natural *> pmap (~>_-> (dmap (__ a) t)) (IsEquiv.f_ret (yonedaCov a P)) *> inv h
+                 *> pmap (~>_-> (dmap Q c)) (inv (IsEquiv.f_ret (yonedaCov a' Q))) *> yonedaCov-component
+                 *> pmap (\lam r => ~>_-> (dmap (__ a) eQ) (Straight.toStraight r)) (inv (IsEquiv.f_ret yonedaEmbCov))
+                 *> pmap (~>_-> (dmap (__ a) eQ)) (ReprFunctor.equiv.ret_f _) *> inv yonedaCov-natural
+          | sc : IsIso s <-> IsIso c
+            => (\lam e => transport IsIso (IsEquiv.f_ret yonedaEmbCov) (yonedaEmbCov.isIso e),
+                \lam e => yonedaEmbCov.isConservative $ transportInv IsIso (IsEquiv.f_ret yonedaEmbCov) e)
+     \in (\lam e => sc.1 $ (comp-IsIso-left (univElem-equiv.univElem-iso Uq)).1 $ transport IsIso sq $ comp-IsIso (univElem-equiv.univElem-iso Up) e,
+         \lam e => (comp-IsIso-right (univElem-equiv.univElem-iso Up)).1 $ transportInv IsIso sq $ comp-IsIso (sc.2 e) (univElem-equiv.univElem-iso Uq))
+
 -- | A universal element {a} of `Hom(d, F -)` at {x}: transport of {a} in the left fibration `Hom(d, F -)` along arrows out of {x} is an equivalence.
 \lemma univElem-hom-equiv.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} {d : D} {a : d ~> F x}
                               (U : IsUnivElem (\lam y => ReprFunctor d (F y)) x (Straight.toStraight a)) (y : C)

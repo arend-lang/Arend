@@ -1,0 +1,70 @@
+{- | Transposition of functors along {Op}: functors `Op C ->⁺ D` are functors `C ->⁺ Op D`.
+ -
+ -   {opTranspose} sends `F : Op C ->⁺ D` to `OpFunc F ∘ toOpOp`. It is an equivalence ({opTranspose-equiv})
+ -   since {OpFunc} is an equivalence on functors ({OpFunc-equiv}): applying {OpFunc} twice is conjugation by {toOpOp}
+ -   ({toOpOp-natural}), so the claim follows by 2-out-of-6. Transposition is natural in {C} ({opTranspose-precomp}),
+ -   and `opTranspose F` inverts {b} if and only if {F} inverts the opposite arrow `opArr b` ({opTranspose-iso}).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Yoneda.CovariantYoneda
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | The transpose `C ->⁺ Op D` of a functor `Op C ->⁺ D`.
+\func opTranspose.{u} {C D : \Cat u} (F : Op C ->⁺ D) (x :⁺ C) : Op D
+  => OpFunc F (toOpOp x)
+
+-- | {OpFunc} is an equivalence on functors.
+\lemma OpFunc-equiv.{u} {A B : \Cat u} : IsEquiv {A ->⁺ B} {Op A ->⁺ Op B} OpFunc
+  => \case twice-equiv {A} {B}, twice-equiv {Op A} {Op B} \with {
+       | inP gf, inP hg => inP $ QEquiv.leftFactor (later \new Section {
+           | f H w => OpFunc H w
+           | ret K => hg.ret (\lam w => OpFunc K w)
+           | ret_f H => hg.ret_f H
+         }) gf
+     }
+  \where {
+    -- | Applying {OpFunc} twice is an equivalence, since it is conjugation by {toOpOp}.
+    \lemma twice-equiv.{u} {A B : \Cat u} : IsEquiv {A ->⁺ B} {Op (Op A) ->⁺ Op (Op B)} (\lam F => OpFunc (\lam z => OpFunc F z))
+      => IsEquiv.leftFactor (IsHEquiv.toIsEquiv (IsHEquiv.precomp toOpOp.isEquiv)) $
+           transport IsEquiv (ext \lam F a => inv toOpOp-natural)
+                     (IsHEquiv.toIsEquiv (IsHEquiv.postcomp toOpOp.isEquiv))
+  }
+
+-- | {opTranspose} is an equivalence.
+\lemma opTranspose-equiv.{u} {C D : \Cat u} : IsEquiv {Op C ->⁺ D} {C ->⁺ Op D} opTranspose
+  => IsEquiv.trans OpFunc-equiv (IsHEquiv.toIsEquiv (IsHEquiv.precomp toOpOp.isEquiv))
+
+-- | Transposition is natural.
+\sfunc opTranspose-precomp.{u} {C' C D : \Cat u} {g : C' ->⁺ C} {G : Op C ->⁺ D} {x :⁺ C'}
+  : opTranspose (\lam z => G (OpFunc g z)) x = opTranspose G (g x)
+  => OpFunc-comp *> pmap+ (OpFunc G) toOpOp-natural
+
+-- | The transpose of {F} inverts {b} if and only if {F} inverts the opposite arrow of {b}.
+\lemma opTranspose-iso.{u} {C D : \Cat u} (F : Op C ->⁺ D) {x y : C} (b : x ~> y)
+  : IsIso (dmap (opTranspose F) b) <-> IsIso (dmap F (opArr b))
+  => \let | K : ~>_-> (dmap (yoneda y) (opArr b)) (Op.Hom-idd y) = ~>_-> (dmap (ReprFunctor x) b) (Op.Hom-idd x)
+              => inv (ReprFunctor.equiv.ret_f _) *> pmap Straight.toStraight opArr.unop *> inv (ReprFunctor-transport-idd b)
+          | U => univElem-iso-char
+                   (leftKanExtType-univElem F (yonedaLemma x)) (leftKanExtType-univElem F (yonedaLemma y))
+                   (~>_->-natural (\lam w e => ~>_-> (dmap (__ w) (leftKanExtType-unit F (yoneda y))) e) (opArr b)
+                    *> pmap (~>_-> (dmap (__ (Op.toOp x)) (leftKanExtType-unit F (yoneda y)))) K
+                    *> inv (~>_->-natural (\lam z e => ~>_-> (dmap (__ (Op.toOp x)) (leftKanExtType-unit F (yoneda z))) e) b))
+          | e : (\lam z =>⁺ Op.Hom (opTranspose F z)) = (\lam z =>⁺ LeftKanExtType F (yoneda z))
+              => funExt+ \lam z => OpFunc.char *> pmap+ (LeftKanExtType F) (funExt+ \lam w => toOpOp.char)
+     \in (\lam i => U.1 $ transport (\lam G => IsIso (dmap G b)) e (dmap_IsIso Op.Hom i),
+          \lam i => IsFFMap.isConservative Op.Hom-ff $ transportInv (\lam G => IsIso (dmap G b)) e (U.2 i))

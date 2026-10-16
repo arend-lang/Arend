@@ -10,7 +10,8 @@
  -   For functors to types, {LeftKanExtType} is left adjoint to restriction along `f` ({leftKanAdjunction},
  -   {leftKanExtType-unit}, {leftKanExtType-univ}) and covariant in `P`; its values are the fibers of {LeftKanExt}
  -   ({leftKanExtType-equiv}). It sends universal elements to universal elements ({leftKanExtType-univElem}),
- -   so it preserves representable functors ({LeftKanExtType_ReprFunctor}).
+ -   so it preserves representable functors ({LeftKanExtType_ReprFunctor}), and it is compatible with composition
+ -   ({LeftKanExtType-comp}).
  -
  -   Construction ({leftKanRightAdjoint}). For small data (`A B : \Cat u`, `P : A ->⁺ \Type u`) the fibers of
  -   {LeftKanExt} are small ({leftKanRightAdjoint.ext-small}), so straightening ({Resize+}, see {InfCat.Fibration.Straightening})
@@ -29,9 +30,11 @@
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
 \import InfCat.Functor.Adjunction
+\import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.OFS.CatOFS
 \import InfCat.Paths
+\import InfCat.Rezk
 \import InfCat.Yoneda.CovariantYoneda
 \import Logic
 \import Paths
@@ -90,6 +93,32 @@
       | eta0x-univ {Q} => IsEquiv.leftFactor (yonedaCov x \lam a => Q (f a)) $ transport IsEquiv
           (ext \lam g => inv $ yonedaCov-natural *> pmap (~>_-> (dmap (\lam H => H (f x)) g)) (IsEquiv.f_ret (yonedaCov x (\lam a => ReprFunctor (f x) (f a)))))
           (yonedaCov (f x) Q)
+
+    -- | {LeftKanExtType_ReprFunctor} sends the unit at the identity to the identity.
+    \sfunc unit-idd.{u} {A B : \Cat u} {f : A ->⁺ B} {x : A}
+      : transport (\lam X => X) (LeftKanExtType_ReprFunctor {A} {B} {f} {x} {f x})
+                  (~>_-> (dmap (__ x) (leftKanExtType-unit f (ReprFunctor x))) (Straight.toStraight idd)) = Straight.toStraight idd
+      => pathOver.conv (path \lam i => ~>_-> (dmap (__ x) (UnivArrow.levelProp (leftKanExtType-univArrow f (ReprFunctor x)) (repr-univArrow f x) i).eta0x) (Straight.toStraight idd))
+         *> IsEquiv.f_ret (yonedaCov x \lam a => ReprFunctor (f x) (f a))
+  }
+
+-- | Left Kan extension along a composite is the composite of left Kan extensions.
+\sfunc LeftKanExtType-comp.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : B ->⁺ C} {P :⁺ A ->⁺ \Type u} {c :⁺ C}
+  : LeftKanExtType (\lam a => g (f a)) P c = LeftKanExtType g (LeftKanExtType f P) c
+  => path \lam i => natIso-path (comp-map f g) (comp-map-iso f g) i P c
+  \where {
+    -- | The comparison map, adjoint to the composite of the units.
+    \func comp-map.{u} {A B C : \Cat u} (f : A ->⁺ B) (g : B ->⁺ C) (P :⁺ A ->⁺ \Type u)
+      : LeftKanExtType (\lam a => g (f a)) P ~> LeftKanExtType g (LeftKanExtType f P)
+      => (leftKanAdjunction (\lam a => g (f a))).heta_heps-rl $
+          comp (leftKanExtType-unit f P) $ dmap (\lam G a =>⁺ G (f a)) (leftKanExtType-unit g (LeftKanExtType f P))
+
+    \lemma comp-map-iso.{u} {A B C : \Cat u} (f : A ->⁺ B) (g : B ->⁺ C) (P : A ->⁺ \Type u) : IsIso (comp-map f g P)
+      => precomp-equiv=>iso \lam Q => IsEquiv.leftFactor (leftKanExtType-univ (\lam a => g (f a)) P Q) $ transport IsEquiv
+           (ext \lam k => pmap (comp _) (dmap_comp (\lam (G : B ->⁺ \Type u) a =>⁺ G (f a))) *> comp-assoc
+                          *> pmap (comp __ _) (inv (leftKanAdjunction \lam a => g (f a)).heta_heps-rlr)
+                          *> inv comp-assoc *> pmap (comp _) (inv (dmap_comp \lam (G : C ->⁺ \Type u) a =>⁺ G (g (f a)))))
+           (IsEquiv.trans (leftKanExtType-univ g (LeftKanExtType f P) Q) (leftKanExtType-univ f P \lam b => Q (g b)))
   }
 
 -- | {Small} is pointwise left adjoint to restriction along {f}.

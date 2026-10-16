@@ -1,11 +1,13 @@
 \import Equiv
 \import Function.Meta
+\import InfCat.Basics
 \import InfCat.Kan.LeftKanExtType
 \import InfCat.Fibration.Straightening
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
 \import InfCat.Resizing
+\import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import InfCat.Yoneda.CovariantYoneda
 \import Logic
@@ -78,4 +80,34 @@
 
     \protected \sfunc char : Op.Hom (OpFunc f x) = LeftKanExtType f (Op.Hom x)
       => pmap+ Op.Hom (\peval OpFunc f x) *> pair.2 x
+  }
+
+-- | {OpFunc} sends `toOp x` to `toOp (f x)`.
+\sfunc OpFunc_toOp.{u} {C D : \Cat u} {f : C ->⁺ D} {x : C} : OpFunc f (Op.toOp x) = Op.toOp (f x)
+  => ((IsFFMap.isObEmbedding Op.Hom-ff).isEmb _ _).sec toOp-hom
+  \where {
+    \sfunc toOp-hom.{u} {C D : \Cat u} {f : C ->⁺ D} {x : C} : Op.Hom (OpFunc f (Op.toOp x)) = ReprFunctor (f x)
+      => OpFunc.char *> funExt+ \lam b => LeftKanExtType_ReprFunctor
+
+    \sfunc toOp-pmap.{u} {C D : \Cat u} {f : C ->⁺ D} {x : C} : pmap Op.Hom (OpFunc_toOp {C} {D} {f} {x}) = toOp-hom
+      => pmap (pmap Op.Hom) (\peval OpFunc_toOp {C} {D} {f} {x}) *> ((IsFFMap.isObEmbedding Op.Hom-ff).isEmb _ _).f_sec toOp-hom
+  }
+
+-- | {OpFunc} preserves composition.
+\sfunc OpFunc-comp.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : B ->⁺ C} {z :⁺ Op A} : OpFunc (\lam a => g (f a)) z = OpFunc g (OpFunc f z)
+  => path \lam i => ((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (\lam z => OpFunc (\lam a => g (f a)) z) (\lam z => OpFunc g (OpFunc f z))).sec
+                     (funExt+ \lam z => OpFunc.char *> funExt+ (\lam c => LeftKanExtType-comp) *> inv (OpFunc.char *> pmap+ (LeftKanExtType g) OpFunc.char)) i z
+
+-- | The arrow of `Op C` opposite to {b}.
+\func opArr.{u} {C : \Cat u} {x y : C} (b : x ~> y) : Op.toOp y ~> Op.toOp x
+  => IsEquiv.ret (Op.Hom-ff (Op.toOp y) (Op.toOp x)) (IsEquiv.ret yonedaEmbCov b)
+  \where {
+    -- | The natural transformation of representable functors induced by {opArr} corresponds to {b}.
+    \sfunc unop.{u} {C : \Cat u} {x y : C} {b : x ~> y} : yonedaEmbCov.fun (dmap Op.Hom (opArr b)) = b
+      => pmap yonedaEmbCov.fun (IsEquiv.f_ret (Op.Hom-ff _ _)) *> IsEquiv.f_ret yonedaEmbCov
+
+    -- | {opArr} preserves and reflects isomorphisms.
+    \lemma isIso.{u} {C : \Cat u} {x y : C} {b : x ~> y} : IsIso (opArr b) <-> IsIso b
+      => (\lam e => transport IsIso unop $ yonedaEmbCov.isIso $ dmap_IsIso Op.Hom e,
+          \lam e => IsFFMap.isConservative Op.Hom-ff $ yonedaEmbCov.isConservative $ transportInv IsIso unop e)
   }

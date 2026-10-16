@@ -33,6 +33,10 @@
 \sfunc ~>_->_idd.{u} {A :⁺ \Type u} {a :⁺ A} : ~>_-> idd a = a
   => coe+-dpath idd
 
+\func ~>_->_=_~>.{u} {C : \Cat} {F : C ->⁺ \Type u} {a b : C} (e : a = b) (y : F a)
+  : ~>_-> (dmap F (=_~> e)) y = transport (\lam z => F z) e y \elim e
+  | idp => ~>_->_idd
+
 -- | {~>_->} commutes with composition.
 \sfunc ~>_->_comp.{u} {A B D :⁺ \Type u} (p :⁺ A ~> B) (q :⁺ B ~> D) {a :⁺ A} : ~>_-> (comp p q) a = ~>_-> q (~>_-> p a)
   => pmap+ (\lam x => ~>_-> (comp p q) x) (inv ~>_->_idd)

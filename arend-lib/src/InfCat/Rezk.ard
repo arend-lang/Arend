@@ -130,3 +130,15 @@
 \lemma comp-IsIso {C : \Cat} {a b c : C} {f : a ~> b} {g : b ~> c} (fi : IsIso f) (gi : IsIso g) : IsIso (comp f g)
   => postcomp-equiv=>iso \lam x => transport IsEquiv (ext \lam h => inv comp-assoc)
        (IsEquiv.trans (comp-iso-right-equiv fi) (comp-iso-right-equiv gi))
+
+-- | If {f} is an isomorphism, then `comp f g` is an isomorphism if and only if {g} is.
+\lemma comp-IsIso-right {C : \Cat} {a b c : C} {f : a ~> b} {g : b ~> c} (fi : IsIso f) : IsIso (comp f g) <-> IsIso g
+  => (\lam e => postcomp-equiv=>iso \lam x => IsEquiv.rightFactor (comp-iso-right-equiv fi) $
+                  transport IsEquiv (ext \lam h => comp-assoc) (comp-iso-right-equiv e),
+      comp-IsIso fi)
+
+-- | If {g} is an isomorphism, then `comp f g` is an isomorphism if and only if {f} is.
+\lemma comp-IsIso-left {C : \Cat} {a b c : C} {f : a ~> b} {g : b ~> c} (gi : IsIso g) : IsIso (comp f g) <-> IsIso f
+  => (\lam e => precomp-equiv=>iso \lam y => IsEquiv.rightFactor (comp-iso-left-equiv gi) $
+                  transport IsEquiv (ext \lam k => inv comp-assoc) (comp-iso-left-equiv e),
+      comp-IsIso __ gi)
