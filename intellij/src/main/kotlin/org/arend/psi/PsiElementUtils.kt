@@ -9,6 +9,9 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleUtilCore.KEY_MODULE
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.TextRange
+import com.intellij.patterns.ElementPattern
+import com.intellij.patterns.PlatformPatterns
+import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.tree.IElementType
@@ -43,6 +46,9 @@ inline fun <reified T : PsiElement> PsiElement.ancestor(): T? {
     }
     return element as? T
 }
+
+fun <T : PsiElement> withAncestors(vararg et: Class<out T>): ElementPattern<PsiElement> =
+        StandardPatterns.and(*et.mapIndexed { i, it -> PlatformPatterns.psiElement().withSuperParent(i + 1, PlatformPatterns.psiElement(it)) }.toTypedArray())
 
 inline fun <reified T : PsiElement> PsiElement.topmostAncestor(): T? {
   var element: PsiElement? = this

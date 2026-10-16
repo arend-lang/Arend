@@ -6,11 +6,11 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.usageView.UsageInfo
 import com.intellij.util.CommonProcessors
-import org.arend.codeInsight.completion.withAncestors
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.psi.listener.ArendDefinitionChangeListener
 import org.arend.psi.parentOfType
+import org.arend.psi.withAncestors
 import java.util.concurrent.ConcurrentHashMap
 
 @Service(Service.Level.PROJECT)

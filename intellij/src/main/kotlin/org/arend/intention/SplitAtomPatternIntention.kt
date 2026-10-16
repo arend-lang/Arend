@@ -9,7 +9,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.startOffset
-import org.arend.codeInsight.completion.withAncestors
 import org.arend.core.context.param.DependentLink
 import org.arend.core.definition.Definition
 import org.arend.core.definition.FunctionDefinition

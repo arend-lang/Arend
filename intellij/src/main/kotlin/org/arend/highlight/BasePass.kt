@@ -14,14 +14,13 @@ import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.tree.TokenSet
 import com.intellij.psi.util.startOffset
 import com.intellij.psi.util.validOrNull
 import com.intellij.util.containers.mapSmartNotNull
 import com.intellij.xml.util.XmlStringUtil
 import org.arend.IArendFile
 import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getAllParametersForReferable
-import org.arend.codeInsight.completion.STATEMENT_WT_KWS_TOKENS
-import org.arend.codeInsight.completion.withAncestors
 import org.arend.core.context.param.DependentLink
 import org.arend.core.context.param.EmptyDependentLink
 import org.arend.core.expr.ReferenceExpression
@@ -597,6 +596,8 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
 
         fun getImprovedTextRange(error: GeneralError) = getCauseElement(error.cause)?.let { getImprovedTextRange(error, it) }
 
+        private val STATEMENT_KEYWORDS = TokenSet.create(FUNC_KW, SFUNC_KW, LEMMA_KW, TYPE_KW, CONS_KW, DATA_KW, CLASS_KW, RECORD_KW, INSTANCE_KW, OPEN_KW, MODULE_KW, META_KW, AXIOM_KW)
+
         fun getImprovedTextRange(error: GeneralError?, element: PsiElement): TextRange {
             val improvedElement = getImprovedErrorElement(error, element) ?: element
 
@@ -679,7 +680,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                 }
             }
 
-            if (improvedElement is LeafPsiElement && STATEMENT_WT_KWS_TOKENS.contains(improvedElement.elementType)) {
+            if (improvedElement is LeafPsiElement && STATEMENT_KEYWORDS.contains(improvedElement.elementType)) {
                 val stat = improvedElement.ancestor<ArendDefinition<*>>()?.parent
                 if (stat != null) {
                     return TextRange(stat.startOffset, improvedElement.endOffset)
