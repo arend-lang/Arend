@@ -16,6 +16,7 @@
 \import InfCat.Functor.Conservative
 \import InfCat.Functor.Embedding
 \import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.Localization.Abstract
 \import InfCat.Paths
@@ -139,6 +140,21 @@
               (Lz : IsLocalization W l) (l'S : InvertsW S' l') (f : C ->⁺ C') (fw : SendsW W S' f)
       : \Sigma (m : L ->⁺ L') (\Pi (x :⁺ C) -> m (l x) = l' (f x))
       => loc-map (univ Lz) l'S f fw
+
+    -- | The extension along a localization of a functor inverting {W}.
+    \func lift {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+               {F : C ->⁺ D} (Fw : InvertsW W F) (y :⁺ L) : D
+      => loc-lift (univ Lz) Fw y
+      \where
+        \func restrict {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} {Lz : IsLocalization W l}
+                       {F : C ->⁺ D} {Fw : InvertsW W F} {x :⁺ C} : lift Lz Fw (l x) = F x
+          => loc-lift.restrict
+
+    -- | A localization is surjective on objects.
+    \lemma isSurj {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) : IsSurjMap l
+      => \lam y => \case localize-surj (IsHEquiv.ret Lz.2 y) \with {
+        | inP (c, p) => inP (c, pmap (localize-lift Lz.1) p *> IsHEquiv.f_ret Lz.2)
+      }
   }
 
 -- | {Localize} is a localization.
