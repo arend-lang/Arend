@@ -1,0 +1,148 @@
+{- | Comma categories over an object along a functor.
+ -
+ -   For `p : L ->⁺ S` and `s : S`, {LeftComma} `p s` is the comma category `p ↓ s` of objects `e` of `L` with an arrow `p e ~> s`.
+ -   The fiber of {p} over {s} embeds fully faithfully into it ({fibLeftComma-ff}); this is dual to {fibComma-ff} and comes from
+ -   {fibLeftComma-ff.over-arr-equiv}: paths from an arrow to `f` are arrows from `f` to the identity in `S ↓ s`.
+ -
+ -   If the fibers of {p} form a cocartesian family, the embedding is a right adjoint ({fibLeftComma-rightAdjoint}): the left adjoint
+ -   transports `(e, f)` along `f`. The proof (in the `\where` block of {fibLeftComma-rightAdjoint}):
+ -   1. `p ↓ s` is equivalent ({commaTot}) to the total category {Tot} of the fibers of {p} pulled back to the slice `S ↓ s`,
+ -      which is a cocartesian family over a category with a terminal object `(s, idd)`.
+ -   2. A cocartesian lift `eta` of the unique arrow into `(s, idd)` is a cocartesian arrow of the total category, so precomposition
+ -      with it is an equivalence on arrows into the fiber over the terminal object ({precomp-equiv}). Hence it is a universal arrow
+ -      to the fiber inclusion {incl}.
+ -   3. Universal arrows are reflected by the fully faithful functor {commaTot} ({univArrow-ff-reflect}).
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Functor.Adjunction
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Limit.Terminal
+\import InfCat.Paths
+\import InfCat.Slice
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | The comma category `f ↓ b`.
+\func LeftComma.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) : \Cat u
+  => \Sigma⁺ (a : A) (f a ~> b)
+
+-- | The arrow {k} transported along a path {q} into its source.
+\func over-arr {S : \Cat} {s t t' :⁺ S} (k :⁺ t ~> s) (q :⁺ t' = t) : t' ~> s \elim q
+  | idp => k
+
+-- | The inclusion of the fiber of {p} over {s} into `p ↓ s`.
+\func fibLeftComma.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (t :⁺ Fibers p s) : LeftComma p s
+  => (t.1, over-arr idd t.2)
+
+-- | {fibLeftComma} is fully faithful.
+\lemma fibLeftComma-ff.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : IsFFMap (fibLeftComma p s)
+  => \lam t t' =>
+    \let | D1 => dpath-sigma-equiv (\lam _ (e : L) => p e = s) {t.1, t.2} {t'.1, t'.2}
+         | D2 => dpath-sigma-equiv (\lam _ (e : L) => p e ~> s) {fibLeftComma p s t} {fibLeftComma p s t'}
+         | f (r : t.1 ~> t'.1) (d : DPath (\lam i => p (r i) = s) t.2 t'.2)
+             : DPath (\lam i => p (r i) ~> s) (fibLeftComma p s t).2 (fibLeftComma p s t').2
+             => dpath \lam i => over-arr idd (d i)
+         | e2 : IsEquiv (totalEquiv.total f) => (totalEquiv f).1 (\lam r => dpath-equiv t.2 t'.2 (dmap p r))
+    \in IsEquiv.trans {_} {_} {_} {\lam m => totalEquiv.total f (D1 m)} (IsEquiv.trans {_} {_} {_} {D1} (inP D1) {totalEquiv.total f} e2) {D2.ret} (inP (symQEquiv D2))
+  \where {
+    \lemma dpath-equiv {S : \Cat} {s a b : S} (q : a = s) (q' : b = s) (g : a ~> b)
+      : IsEquiv {DPath (\lam i => g i = s) q q'} {DPath (\lam i => g i ~> s) (over-arr idd q) (over-arr idd q')}
+                (\lam d => dpath \lam i => over-arr idd (d i)) \elim q'
+      | idp => over-arr-equiv {S} {s} {s} {a} {idd} (dpath \lam _ => idd) g q
+
+    {- | Paths from an arrow {h} to {f} starting in {r} are the same as arrows from `over-arr f r` to the identity over {h}.
+     -   The map uses an arbitrary path {adj} from {f} to the identity over {f}; both sides summed over {h} are contractible.
+     -}
+    \lemma over-arr-equiv {S : \Cat} {s t t' : S} {f : t ~> s} (adj : DPath (\lam i => f i ~> s) f idd) (h : t' ~> s) (r : t' = t)
+      : IsEquiv {DPath (\lam i => h i = f i) r idp} {DPath (\lam i => h i ~> s) (over-arr f r) idd}
+                (\lam om => dpath \lam i => over-arr (adj i) (om i)) \elim r
+      | idp => (totalEquiv \lam (h' : t ~> s) (om : DPath (\lam i => h' i = f i) idp idp) => dpath \lam i => over-arr (adj i) (om i)).2
+               (contr-equiv (Contr.Contr_QEquiv paths-equiv (rsigma f))
+                            (Contr.Contr_QEquiv (dpath-sigma-equiv (\lam _ c => c ~> s)) (SliceCat.terminal-contr (t, f)))) h
+      \where
+        \func paths-equiv : QEquiv {\Sigma (h' : t ~> s) (h' = f)} {\Sigma (h' : t ~> s) (DPath (\lam i => h' i = f i) idp idp)} \cowith
+          | f e => (e.1, dpath \lam i => path \lam m => (e.2 m) i)
+          | ret e => (e.1, path \lam m => dpath \lam i => e.2 i m)
+          | ret_f e => idp
+          | f_sec e => idp
+  }
+
+-- | If the fibers of {p} form a cocartesian family, then {fibLeftComma} is a right adjoint.
+\lemma fibLeftComma-rightAdjoint.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianMap p) (s : S)
+  : RightAdjoint (fibLeftComma p s)
+  => RightAdjoint.fromUnivArrow \lam x => univArrow-ff-reflect (commaTot-ff p s) {fibLeftComma p s} $
+       transportInv (UnivArrow __ (commaTot p s x)) (funExt+ (incl-path p s)) $ univArrow-tot (cocartesianMap-char.1 Ff) s (commaTot p s x)
+  \where {
+    -- | The total category of the fibers of {p} pulled back to the slice over {s}.
+    \func Tot.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : \Cat
+      => \Sigma⁺ (c : SliceCat s) (Fibers p (SliceCat.forget c))
+
+    -- | The inclusion of the fiber over the terminal object `(s, idd)`.
+    \func incl.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (y :⁺ Fibers p s) : Tot p s
+      => (((s, idd) : SliceCat s), y)
+
+    -- | `p ↓ s` as the total category {Tot}.
+    \func commaTot.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (x :⁺ LeftComma p s) : Tot p s
+      => (((p x.1, x.2) : SliceCat s), (x.1, idp))
+
+    \func commaTot-ret.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (y :⁺ Tot p s) : LeftComma p s
+      => (y.2.1, over-arr y.1.2 y.2.2)
+
+    \sfunc commaTot-sec.{u} {L S : \Cat u} {p : L ->⁺ S} {s : S} {e :⁺ L} {a :⁺ S} {k :⁺ a ~> s} (r :⁺ p e = a)
+      : commaTot p s (e, over-arr k r) = ((a, k), (e, r)) \elim r
+      | idp => idp
+
+    \lemma commaTot-equiv.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : IsHEquiv (commaTot p s)
+      => IsHEquiv.biEquiv {_} {_} {commaTot p s} {commaTot-ret p s} (\lam x => idp) {commaTot-ret p s} (\lam y => commaTot-sec y.2.2)
+
+    \lemma commaTot-ff.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : IsFFMap (commaTot p s)
+      => ((ff-surj-equiv {_} {_} {commaTot p s}).2 (commaTot-equiv p s)).1
+
+    \sfunc incl-path.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (y :⁺ Fibers p s) : commaTot p s (fibLeftComma p s y) = incl p s y
+      => commaTot-sec y.2
+
+    \lemma incl-ff.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : IsFFMap (incl p s)
+      => transport {Fibers p s ->⁺ Tot p s} (\lam R => IsFFMap R) (funExt+ (incl-path p s))
+           (\lam y y' => IsEquiv.trans {_} {_} {_} {dmap (fibLeftComma p s)} (fibLeftComma-ff p s y y') {dmap (commaTot p s)} (commaTot-ff p s _ _))
+
+    -- | Precomposition with a cocartesian arrow is an equivalence on arrows into objects over a terminal object.
+    \lemma precomp-equiv {E A : \Cat} {q : E ->⁺ A} {e e' z : E} {u : e ~> e'} (uc : IsCocartesianArrow q u) (zt : IsTerminal (q z))
+      : IsEquiv {e' ~> z} {e ~> z} (\lam v => comp u v)
+      => contrFibers=>IsEquiv \lam w => Contr.Contr_QEquiv (sigma-right \lam v => comp-equiv {_} {_} {_} {_} {u} {v} {w}) $
+           Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (uc w))) $
+             Contr.Contr_QEquiv (symQEquiv (sigma-right \lam g => comp-equiv {_} {_} {_} {_} {dmap q u} {g} {dmap q w})) $
+               IsEquiv=>contrFibers (contr-equiv (zt (q e')) (zt (q e)) {\lam g => comp (dmap q u) g}) (dmap q w)
+
+    -- | A cocartesian lift of the arrow into the terminal object is a universal arrow to {incl}.
+    \func univArrow-tot.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) (s : S) (X : Tot p s) : UnivArrow (incl p s) X
+      => \let | Fc => cocartesianFib-pullback Ff (SliceCat.forget {S} {s})
+              | d : CovLiftData (\lam (c : SliceCat s) => Fibers p (SliceCat.forget c)) => (X.1, (s, idd), (SliceCat.terminal-contr X.1).center, X.2)
+              | l => cocartesianFib-lift Fc d
+         \in \new UnivArrow {
+           | L0x => l.1
+           | eta0x => dpath \lam i => ((d.3 i, l.2 i) : Tot p s)
+           | eta0x-univ {y'} => IsEquiv.trans (incl-ff p s l.1 y')
+               (precomp-equiv ((cocartesianLift<->totalArrow l).1 (cocartesianFib-lift.isCocartesian {_} {_} {Fc} d)) SliceCat.terminal-contr)
+         }
+
+    -- | Universal arrows are reflected by fully faithful functors.
+    \func univArrow-ff-reflect {C C' D : \Cat} {Phi : C ->⁺ C'} (ff : IsFFMap Phi) {R : D ->⁺ C} {x : C}
+                               (u : UnivArrow (\lam y => Phi (R y)) (Phi x)) : UnivArrow R x \cowith
+      | L0x => u.L0x
+      | eta0x => IsEquiv.ret (ff x (R u.L0x)) u.eta0x
+      | eta0x-univ {y'} => IsEquiv.leftFactor (ff x (R y')) $ transportInv IsEquiv
+          (ext \lam g => dmap_comp Phi *> pmap (comp __ _) (IsEquiv.f_ret (ff x (R u.L0x))))
+          u.eta0x-univ
+  }
