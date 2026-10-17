@@ -91,23 +91,21 @@
 
     -- | The unit at the identity of `toOp x` goes to the identity of `toOp (f x)`.
     \sfunc tau-unit.{u} {A B : \Cat u} {f : A ->⁺ B} {x : A}
-      : ~>_-> (dmap (yoneda (f x)) (=_~> (inv OpFunc_toOp))) (Op.Hom-idd (f x))
+      : ~>_-> (dmap (yoneda (f x)) (=_~> (inv (OpFunc_toOp _ _)))) (Op.Hom-idd (f x))
         = ~>_-> (dmap (__ (OpFunc f (Op.toOp x))) (tau f x)) (~>_-> (dmap (__ (Op.toOp x)) (leftKanExtType-unit (OpFunc f) (yoneda x))) (Op.Hom-idd x))
       => \let | evB (G : B ->⁺ \Type u) => G (f x)
               | evA (G :⁺ Op A ->⁺ \Type u) => G (Op.toOp x)
               | evB' (G :⁺ Op B ->⁺ \Type u) => G (OpFunc f (Op.toOp x))
-              | R' => pmap evB (funExt+ \lam b => LeftKanExtType_ReprFunctor {_} {_} {f} {x} {b})
               | u0 => ~>_-> (dmap (__ x) (leftKanExtType-unit f (ReprFunctor x))) (Straight.toStraight idd)
               | c => pmap evB (OpFunc.char {_} {_} {f} {Op.toOp x})
               | E => funExt+ \lam (u :⁺ Op A) => inv (pmap+ (__ (f x)) (OpFunc.char {_} {_} {f} {u}))
               | X0 => transport (\lam X => X) (inv c) u0
-         \in \have | t : transport (yoneda (f x)) OpFunc_toOp X0 = Op.Hom-idd (f x)
-                     => pmap (\lam e => transport (\lam X => X) (pmap evB e) X0)
-                             (OpFunc_toOp.toOp-pmap *> \peval OpFunc_toOp.toOp-hom {A} {B} {f} {x})
-                        *> pmap (\lam e => transport (\lam X => X) e X0) (pmap_*>-comm evB (OpFunc.char {_} {_} {f} {Op.toOp x}) (funExt+ \lam b => LeftKanExtType_ReprFunctor {_} {_} {f} {x} {b}))
-                        *> transport_*> (\lam X => X) c R' X0
-                        *> pmap (transport (\lam X => X) R') (transport_id_inv (\lam X => X) c u0)
-                        *> LeftKanExtType_ReprFunctor.unit-idd
+         \in \have | t : transport (yoneda (f x)) (OpFunc_toOp _ _) X0 = Op.Hom-idd (f x)
+                     => inv (~>_->_=_~> {_} {yoneda (f x)} (OpFunc_toOp _ _) X0)
+                        *> pmap (\lam h => ~>_-> (dmap (\lam (G : B ->⁺ \Type u) => G (f x)) h) X0) (OpFunc_toOp.toOp-arr {A} {B} {f} {x})
+                        *> ~>_->_comp-fam _ _ (f x) X0
+                        *> pmap (~>_-> (dmap (\lam (G : B ->⁺ \Type u) => G (f x)) (LeftKanExtType-repr f x))) (~>_->_=_~> {_} {\lam (G : B ->⁺ \Type u) => G (f x)} (OpFunc.char {_} {_} {f} {Op.toOp x}) X0 *> transport_id_inv (\lam X => X) c u0)
+                        *> LeftKanExtType-repr-unit {A} {B} {f} idd
                  | r : ~>_-> (dmap evB' (tau f x)) (~>_-> (dmap evA (leftKanExtType-unit (OpFunc f) (yoneda x))) (Op.Hom-idd x)) = X0
                      => inv (~>_->_comp _ _)
                         *> pmap (~>_-> __ (Op.Hom-idd x)) (inv (dmap_comp evA {_} {_} {_} {leftKanExtType-unit (OpFunc f) (yoneda x)} {dmap (\lam G a =>⁺ G (OpFunc f a)) (tau f x)}))
@@ -115,5 +113,5 @@
                         *> pmap (~>_-> __ (Op.Hom-idd x)) (dmap_comp evA)
                         *> ~>_->_comp _ _
                         *> ~>_->_=_~> {_} {evA} E u0
-         \in ~>_->_=_~> {_} {yoneda (f x)} (inv OpFunc_toOp) _ *> inv (transport-rotate (yoneda (f x)) OpFunc_toOp t) *> inv r
+         \in ~>_->_=_~> {_} {yoneda (f x)} (inv (OpFunc_toOp _ _)) _ *> inv (transport-rotate (yoneda (f x)) (OpFunc_toOp _ _) t) *> inv r
   }

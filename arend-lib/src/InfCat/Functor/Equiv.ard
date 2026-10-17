@@ -173,3 +173,12 @@
 -- | An equivalence of ∞-categories is a path in `\Cat`.
 \func HEquiv_=.{u} {C D : \Cat u} {f : C ->⁺ D} (e : IsHEquiv f) : C = D
   => path (isoCat f (IsHEquiv.ret e) (\lam x => IsHEquiv.ret_f e) (\lam y => IsHEquiv.f_ret e))
+
+-- | Base change of a family along an equivalence is an equivalence of total categories.
+\lemma sigma-base-equiv.{u} {A A' : \Cat u} {e : A ->⁺ A'} (ee : IsHEquiv e) {F : A' ->⁺ \Cat}
+  : IsHEquiv {\Sigma⁺ (a : A) (F (e a))} {\Sigma⁺ (a' : A') (F a')} (\lam s => (e s.1, s.2))
+  => aux (HEquiv_= ee)
+  \where
+    \private \lemma aux.{u} {A A' : \Cat u} (p : A = A') {F : A' ->⁺ \Cat}
+      : IsHEquiv {\Sigma⁺ (a : A) (F (transport+ (\lam Y => Y) p a))} {\Sigma⁺ (a' : A') (F a')} (\lam s => (transport+ (\lam Y => Y) p s.1, s.2)) \elim p
+      | idp => idHEquiv

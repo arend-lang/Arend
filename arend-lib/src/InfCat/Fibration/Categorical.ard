@@ -56,6 +56,18 @@
   => IsHEquiv.biEquiv {Q b} {Fibers (totalProj Q) b} {\lam q => ((b, q), idp)} {fibers-total-equiv.fibers-total-ret} (\lam _ => idp)
                       {fibers-total-equiv.fibers-total-ret} fibers-total-equiv.fibers-total-ret-sec
 
+-- | A category is the total category of the fibers of a functor out of it.
+\lemma fibers-sigma-hequiv {E A : \Cat} (p : E ->⁺ A) : IsHEquiv {E} {\Sigma⁺ (a : A) (Fibers p a)} (\lam e => (p e, (e, idp)))
+  => inP \new HQEquiv {
+    | finv s => s.2.1
+    | finv_f _ => idp
+    | f_finv s => aux p s.2.2
+  }
+  \where
+    \private \func aux {E A : \Cat} (p : E ->⁺ A) {a :⁺ A} {e :⁺ E} (q :⁺ p e = a)
+      : ((p e, (e, idp)) : \Sigma⁺ (a : A) (Fibers p a)) = (a, (e, q)) \elim q
+      | idp => idp
+
 -- | An arrow of a fiber whose image in the total category is an isomorphism is an isomorphism.
 \lemma fibers-conservative {E A : \Cat} {p : E ->⁺ A} {a : A} {m : DI ->⁺ Fibers p a} (mi : IsIso (dpath \lam i => (m i).1))
   : IsIso (dpath \lam i => m i)

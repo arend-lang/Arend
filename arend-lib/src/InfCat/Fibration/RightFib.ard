@@ -5,8 +5,10 @@
  -}
 
 \import Equiv
+\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
+\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Paths
@@ -117,11 +119,24 @@
 -- | Sections of a right fibration over an arrow are determined by their endpoint.
 \lemma rightFib-sections-ev {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) (v : DI ->⁺ A)
   : IsEquiv {\Pi (i :⁺ DI) -> B (v i)} {B (v dright)} (\lam s => s dright)
-  => IsEquiv.trans
-       (inP \new QEquiv {\Pi (i :⁺ DI) -> B (v i)} {\Sigma (b : B (v dright)) (ContLift B (_, _, dpath v, b))} {
-         | f s => (s dright, (s dleft, dpath s))
-         | ret t i => t.2.2 i
-         | ret_f _ => idp
-         | f_sec _ => idp
-       })
-       (inP (contr-right \lam b => Bf (_, _, dpath v, b)))
+  => IsEquiv.trans (inP (DI-sections-equiv B v)) (inP (contr-right \lam b => Bf (_, _, dpath v, b)))
+  \where
+    -- | Sections over {DI} are the endpoint together with a lift.
+    \func DI-sections-equiv {A : \Cat} (B : A ->⁺ \Cat) (v : DI ->⁺ A)
+      : QEquiv {\Pi (i :⁺ DI) -> B (v i)} {\Sigma (b : B (v dright)) (ContLift B (_, _, dpath v, b))} \cowith
+      | f s => (s dright, (s dleft, dpath s))
+      | ret t i => t.2.2 i
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+-- | {B} is a right fibration if and only if sections over every arrow are determined by their endpoint.
+\lemma rightFib-sections {A : \Cat} {B : A ->⁺ \Cat}
+  : IsRightFib B <-> (\Pi (v : DI ->⁺ A) -> IsEquiv (\lam (s : \Pi (i :⁺ DI) -> B (v i)) => s dright))
+  => (rightFib-sections-ev,
+      \lam e d => Contr.Contr_QEquiv (proj-fib _ d.4) $
+        IsEquiv=>contrFibers (IsEquiv.rightFactor (inP (rightFib-sections-ev.DI-sections-equiv B (\lam i => d.3 i))) (e (\lam i => d.3 i))) d.4)
+
+-- | The fibers of the total projection of a right fibration form a right fibration.
+\lemma rightFib-total {B : \Cat} {Q : B ->⁺ \Cat} (Qr : IsRightFib Q) : IsRightFib (Fibers (totalProj Q))
+  => rightFib-sections.2 \lam v => IsEquiv.rightFactor (inP (fibers-total-equiv.sections v))
+      (IsEquiv.trans (rightFib-sections.1 Qr v) (inP (fibers-total-equiv (v dright))))

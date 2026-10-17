@@ -199,6 +199,40 @@
 
   }
 
+{- | Localizations can be transferred along equivalences {e} of the sources and {f} of the targets:
+ -   if `l ∘ e = f ∘ k` and {W} pulls back to {W'} along {e}, then {l} is a localization at {W} whenever {k} is one at {W'}.
+ -}
+\lemma isLocalization-transfer.{u} {C' C L' L : \Cat u} {W' : (DI ->⁺ C') -> \Prop} {W : (DI ->⁺ C) -> \Prop} {k : C' ->⁺ L'}
+                                   (Kz : IsLocalization W' k) {e : C' ->⁺ C} (ee : IsHEquiv e) {f : L' ->⁺ L} (fe : IsHEquiv f)
+                                   {l : C ->⁺ L} (le : \Pi (x :⁺ C') -> l (e x) = f (k x))
+                                   (We : \Pi (a : DI ->⁺ C') -> W (\lam i => e (a i)) <-> W' a)
+  : IsLocalization W l
+  => aux Kz (HEquiv_= ee) (HEquiv_= fe) le We
+  \where
+    \private \lemma aux.{u} {C' L' : \Cat u} {W' : (DI ->⁺ C') -> \Prop} {k : C' ->⁺ L'} (Kz : IsLocalization W' k)
+                          {C L : \Cat u} (p : C' = C) (q : L' = L) {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L}
+                          (le : \Pi (x :⁺ C') -> l (transport+ (\lam Y => Y) p x) = transport+ (\lam Y => Y) q (k x))
+                          (We : \Pi (a : DI ->⁺ C') -> W (\lam i => transport+ (\lam Y => Y) p (a i)) <-> W' a)
+      : IsLocalization W l \elim p, q
+      | idp, idp => transportInv (IsLocalization __ l) (ext \lam a => ext (We a)) $ transportInv (IsLocalization W') (funExt+ le) Kz
+
+{- | A version of {isLocalization-transfer} for equivalences {e} and {f} in the other direction:
+ -   if `f ∘ l = k ∘ e` and {W'} pulls back to {W} along {e}, then {l} is a localization at {W} whenever {k} is one at {W'}.
+ -}
+\lemma isLocalization-transfer'.{u} {C C' L L' : \Cat u} {W' : (DI ->⁺ C') -> \Prop} {W : (DI ->⁺ C) -> \Prop} {k : C' ->⁺ L'}
+                                    (Kz : IsLocalization W' k) {e : C ->⁺ C'} (ee : IsHEquiv e) {f : L ->⁺ L'} (fe : IsHEquiv f)
+                                    {l : C ->⁺ L} (le : \Pi (x :⁺ C) -> f (l x) = k (e x))
+                                    (We : \Pi (a : DI ->⁺ C) -> W' (\lam i => e (a i)) <-> W a)
+  : IsLocalization W l
+  => aux (HEquiv_= ee) (HEquiv_= fe) Kz le We
+  \where
+    \private \lemma aux.{u} {C L C' L' : \Cat u} (p : C = C') (q : L = L') {W' : (DI ->⁺ C') -> \Prop} {k : C' ->⁺ L'}
+                          (Kz : IsLocalization W' k) {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L}
+                          (le : \Pi (x :⁺ C) -> transport+ (\lam Y => Y) q (l x) = k (transport+ (\lam Y => Y) p x))
+                          (We : \Pi (a : DI ->⁺ C) -> W' (\lam i => transport+ (\lam Y => Y) p (a i)) <-> W a)
+      : IsLocalization W l \elim p, q
+      | idp, idp => transport (IsLocalization __ l) (ext \lam a => ext (We a)) $ transportInv (IsLocalization W') (funExt+ le) Kz
+
 -- | Precomposition with an equivalence identifies functors inverting {W} with functors inverting its pullback.
 \lemma mapW-precomp-equiv {C' C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {e : C' ->⁺ C} (ee : IsHEquiv e)
   : IsEquiv {MapW W D} {MapW (\lam a => W (\lam i => e (a i))) D} (\lam s => (\lam x => s.1 (e x), \lam w => s.2 w))

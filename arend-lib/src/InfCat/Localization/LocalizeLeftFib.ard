@@ -1,5 +1,6 @@
 {- | The total space of a left fibration over a localization is the localization of the total space of its restriction
- -   at the morphisms over {W} ({leftFib-localize}).
+ -   at the morphisms over {W} ({leftFib-localize} for {Localize} and families of types,
+ -   {leftFib-isLocalization} for arbitrary localizations and left fibrations).
  -
  -   Proof: {Localize} is a pushout, so the total space is the pushout of the total spaces of the restrictions ({pushoutTot-precomp-equiv}).
  -   Gluing data for a functor on the restriction to `C` is unique if it inverts the morphisms over {W} ({leftFib-localize.locGlue-contr}),
@@ -9,8 +10,11 @@
 \import Equiv
 \import Function.Meta
 \import InfCat.Arrows
+\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Straightening
 \import InfCat.CatPushout
 \import InfCat.CatPushout.PushoutLeftFib
+\import InfCat.Fibration.Categorical
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Localization.Abstract
@@ -112,4 +116,56 @@
     \private \lemma locGlue-contr.{v} {C : \Cat v} {W : (DI ->⁺ C) -> \Prop} {F : LP W ->⁺ \Type v} {Z : \Cat v}
                                       {U : TotB F ->⁺ Z} (Uw : InvertsW (TotW F) U) : Contr (LocGlue F U)
       => path-glue-contr F (path \lam j m i => cglue (m,i) j) (\lam x => U (totF F x)) \lam z => Uw z.1.2
+  }
+
+{- | Pullbacks of localizations along left fibrations: in a square
+ -
+ -     n
+ -   Y -> X
+ -  p|    |q
+ -   C -> L
+ -     l
+ -
+ -   commuting via {kappa}, where `Fibers p` and `Fibers q` are left fibrations and {n} induces equivalences of fibers,
+ -   {n} is a localization at the morphisms over {W} if {l} is a localization at {W}.
+ -
+ -   Proof: straightening `Fibers q` gives a family of types `G` over {L}, and {Y} and {X} are the total categories of `G ∘ l`
+ -   and `G` ({leftFib-fiberwise-equiv}). For families of types, the claim follows from {leftFib-localize},
+ -   since a general localization is equivalent to {Localize} under {C} ({type-case}).
+ -}
+\lemma leftFib-isLocalization.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+                                  {Y X : \Cat u} {p : Y ->⁺ C} {q : X ->⁺ L} (pf : IsLeftFib (Fibers p)) (qf : IsLeftFib (Fibers q))
+                                  {n : Y ->⁺ X} (kappa : \Pi (y :⁺ Y) -> q (n y) = l (p y))
+                                  (fe : \Pi (c : C) -> IsEquiv {Fibers p c} {Fibers q (l c)} (\lam s => (n s.1, kappa s.1 *> pmap+ l s.2)))
+  : IsLocalization (\lam a => W (\lam i => p (a i))) n
+  => \let | sm (x : L) : IsSmall.{u} (Fibers q x)
+              => IsSmall.fromGroupoid (leftFib-grpd qf x) {\Sigma (e : X) (q e = x)} \new QEquiv {\Sigma (e : X) (q e = x)} {Fibers q x} {
+                   | f s => ((s.1, s.2) : Fibers q x)
+                   | ret t => (t.1, t.2)
+                   | ret_f _ => idp
+                   | f_sec _ => idp
+                 }
+          | G => Straight qf sm
+     \in isLocalization-transfer' (type-case Lz G)
+           (IsHEquiv.trans (fibers-sigma-hequiv p)
+              (leftFib-fiberwise-equiv pf (leftFib-pullback l straighten-leftFib)
+                                       (\lam s => Straight.toStraight ((n s.2.1, kappa s.2.1 *> pmap+ l s.2.2) : Fibers q (l s.1)))
+                                       (\lam c => IsEquiv.trans (fe c) (inP (symQEquiv Straight.equiv)))))
+           (IsHEquiv.trans (fibers-sigma-hequiv q)
+              (leftFib-fiberwise-equiv qf straighten-leftFib (\lam s => Straight.toStraight s.2) (\lam _ => inP (symQEquiv Straight.equiv))))
+           (\lam y => fiber-path qf sm (kappa y)) (\lam _ => (\lam w => w, \lam w => w))
+  \where \private {
+    -- | The case of a family of types over {L}.
+    \lemma type-case.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) (G : L ->⁺ \Type u)
+      : IsLocalization (\lam e => W (\lam i => (e i).1))
+                       (\lam (s :⁺ \Sigma⁺ (c : C) (G (l c))) => ((l s.1, s.2) : \Sigma⁺ (x : L) (G x)))
+      => \case IsLocalization.unique localize-isLocalization Lz \with {
+           | (v, vl, ve) => rewriteI (funExt+ vl) $ isLocalization-transfer leftFib-localize idHEquiv (sigma-base-equiv ve) (\lam _ => idp) (\lam _ => (\lam w => w, \lam w => w))
+         }
+
+    -- | The path in the total category of the straightening induced by a path in the base.
+    \func fiber-path.{u} {X L : \Cat u} {q : X ->⁺ L} (qf : IsLeftFib (Fibers q)) (sm : \Pi (x : L) -> IsSmall.{u} (Fibers q x))
+                         {a :⁺ L} {e :⁺ X} (r :⁺ q e = a)
+      : (q e, Straight.toStraight (e, idp)) = {\Sigma⁺ (x : L) (Straight qf sm x)} (a, Straight.toStraight (e, r)) \elim r
+      | idp => idp
   }

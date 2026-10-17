@@ -1,4 +1,4 @@
-{- | Opposite categories preserve localizations ({OpFunc-isLocalization}):
+{- | Opposite categories preserve and reflect localizations ({OpFunc-isLocalization}, {OpFunc-reflects-localization}):
  -   if `l : E ->⁺ L` is a localization at {W}, then `OpFunc l : Op E ->⁺ Op L` is a localization at `OpW W`,
  -   the class of arrows opposite to arrows in {W}.
  -
@@ -56,3 +56,38 @@
            (\lam G => ext (funExt+ \lam x => opTranspose-precomp))).2
          (restrictW-equiv (IsLocalization.univ Lz))
   }
+
+-- | `OpFunc F` inverts `OpW W` if and only if {F} inverts {W}.
+\lemma OpFunc-invertsW.{u} {C D : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D}
+  : InvertsW (OpW W) (OpFunc F) <-> InvertsW W F
+  => (\lam Fw {b} w => (OpFunc-iso F (dpath b)).1 $ Fw {\lam i => opArr (dpath b) i} (inP (b, w, idp)),
+      \lam Tw {a} aw => \case aw \with {
+        | inP (b, w, p) => transport (\lam a => IsIso (dpath \lam i => OpFunc F (a i))) p $ (OpFunc-iso F (dpath b)).2 (Tw w)
+      })
+
+{- | {OpFunc} reflects localizations: if `OpFunc l` is a localization at `OpW W`, then {l} is a localization at {W}.
+ -
+ -   Proof. {OpFunc} identifies functors `L ->⁺ D` with functors `Op L ->⁺ Op D` ({OpFunc-equiv}), commutes with restriction
+ -   ({OpFunc-comp}), and identifies functors inverting {W} with functors inverting `OpW W` ({OpFunc-invertsW}).
+ -}
+\lemma OpFunc-reflects-localization.{u} {E L : \Cat u} {W : (DI ->⁺ E) -> \Prop} {l : E ->⁺ L} (Lz : IsLocalization (OpW W) (OpFunc l))
+  : IsLocalization W l
+  => IsLocalization.fromUniv (localization-criterion (OpFunc-invertsW.1 Lz.1) (restrict-equiv Lz) (restrict-equiv Lz))
+                             (localization-criterion (OpFunc-invertsW.1 Lz.1) (restrict-equiv Lz) (restrict-equiv Lz))
+  \where
+    -- | Restriction along {l} is an equivalence on functors inverting {W}.
+    \private \lemma restrict-equiv.{u} {E L : \Cat u} {W : (DI ->⁺ E) -> \Prop} {l : E ->⁺ L} (Lz : IsLocalization (OpW W) (OpFunc l)) {D : \Cat u}
+      : IsEquiv (restrictW (OpFunc-invertsW.1 Lz.1))
+      => (IsEquiv.parallelEquiv OpFunc-equiv (subtype-equiv {E ->⁺ D} OpFunc-equiv {InvertsW W} (\lam Fw => OpFunc-invertsW.2 Fw) (\lam Tw => OpFunc-invertsW.1 Tw)) (\lam G => ext (funExt+ \lam z => OpFunc-comp))).2 (restrictW-equiv (IsLocalization.univ Lz))
+
+-- | The opposite of the pullback of {W} along {f} is the pullback of `OpW W` along `OpFunc f`.
+\lemma OpW-pullback.{u} {P C : \Cat u} {W : (DI ->⁺ C) -> \Prop} (f : P ->⁺ C) (a : DI ->⁺ Op P)
+  : OpW (\lam b => W (\lam i => f (b i))) a <-> OpW W (\lam i => OpFunc f (a i))
+  => (\case \elim __ \with {
+        | inP (b, w, p) => inP (\lam i => f (b i), w, inv (opArrow-OpFunc f b) *> pmap (\lam a' => \lam i =>⁺ OpFunc f (a' i)) p)
+      }, \case \elim __ \with {
+        | inP (d, w, p) =>
+          \let | b => IsEquiv.ret opArrow-equiv a
+               | q : (\lam i => opArr (dpath b) i) = {DI ->⁺ Op P} a => IsEquiv.f_ret opArrow-equiv
+          \in inP (b, transport W (IsEquiv.isInj opArrow-equiv $ p *> inv (pmap (\lam a' => \lam i =>⁺ OpFunc f (a' i)) q) *> opArrow-OpFunc f b) w, q)
+      })
