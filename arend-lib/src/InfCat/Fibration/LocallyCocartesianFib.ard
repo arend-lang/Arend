@@ -1,6 +1,7 @@
 \import Equiv
 \import Equiv.Fiber
 \import Equiv.Sigma
+\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CovariantLift
@@ -54,14 +55,14 @@
               | _, _, (idp,idp) => move-tri (deg-tri d.3) (fill-tri d.3) (\lam l'' => Contr.Contr_QEquiv (symQEquiv (degFact-equiv l'')) (li l''))
             })
 
--- | A lift {l} is locally cocartesian if transport of `l.2` in the left fibration of lifts of {d} identifies the arrows out of `l.1` with lifts.
+-- | A lift {l} is locally cocartesian if and only if transport of `l.2` in the left fibration of lifts of {d} identifies the arrows out of `l.1` with lifts.
 \lemma locCocartesianLift-transport {A : \Cat} {B : A ->⁺ \Cat} {d : CovLiftData B} (l : CovLift B d)
-                                    (U : \Pi (b' : B d.2) -> IsEquiv {l.1 ~> b'} {DPath (\lam i => B (d.3 i)) d.4 b'} (leftFib-tr (dpath-leftFib B d.3 d.4) __ l.2))
-  : IsLocallyCocartesianLift l
-  => locCocartesianLift<->initial.2 \lam l' => Contr.Contr_QEquiv
-      (sigma-right (\lam p => symQEquiv (IsEquiv.toQEquiv (leftFib-dpath-equiv (dpath-leftFib B d.3 d.4) (leftFib-lift (dpath-leftFib B d.3 d.4) (l.1, l'.1, p, l.2)))))
-        `transQEquiv` symQEquiv (covLift-dpath-equiv idd))
-      (IsEquiv=>contrFibers (U l'.1) l'.2)
+  : IsLocallyCocartesianLift l <-> (\Pi (b' : B d.2) -> IsEquiv {l.1 ~> b'} {DPath (\lam i => B (d.3 i)) d.4 b'} (leftFib-tr (dpath-leftFib B d.3 d.4) __ l.2))
+  => \let fib-equiv (l' : CovLift B d) : QEquiv {Fib (leftFib-tr (dpath-leftFib B d.3 d.4) __ l.2) l'.2} {l ~> l'}
+             => sigma-right (\lam p => symQEquiv (IsEquiv.toQEquiv (leftFib-dpath-equiv (dpath-leftFib B d.3 d.4) (leftFib-lift (dpath-leftFib B d.3 d.4) (l.1, l'.1, p, l.2)))))
+                  `transQEquiv` symQEquiv (covLift-dpath-equiv idd)
+     \in (\lam lc b' => contrFibers=>IsEquiv \lam t => Contr.Contr_QEquiv (symQEquiv (fib-equiv (b', t))) (locCocartesianLift<->initial.1 lc (b', t)),
+         \lam U => locCocartesianLift<->initial.2 \lam l' => Contr.Contr_QEquiv (fib-equiv l') (IsEquiv=>contrFibers (U l'.1) l'.2))
 
 -- | In a cocartesian family, locally cocartesian lifts are cocartesian.
 \lemma locCocartesianLift=>cocartesian {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {d : CovLiftData B} {l : CovLift B d}

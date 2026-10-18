@@ -159,10 +159,10 @@
                         {\lam (y :⁺ ExtFam f (Fibers q) (f a)) => (((f a, y), idp) : Fibers (totalProj (ExtFam f (Fibers q))) (f a))}
                         (fibers-total-hequiv {B} {ExtFam f (Fibers q)} (f a))
 
-    -- | The slice is a localization of the fiber of {KanExt} over `f a` by {fibLoc-fibre}.
+    -- | The slice is a localization of the fiber of {KanExt} over `f a` by {fibLoc-fiber}.
     \lemma incl-isLocalization.{v} {A B Q : \Cat v} {f : A ->⁺ B} (ff : IsFFMap f) (q : Q ->⁺ A) (a : A)
       : IsLocalization (SliceW f (Fibers q) a) (\lam s => fibLoc-fibIncl (extProj f q) (ExtWTot f q) (f a) (sliceMapTot f q a s))
-      => isLocalization-precomp (fibLoc-fibre {B} {ExtTot f q} {extProj f q} (freeProj-cocartesian (\lam t => f t.1))
+      => isLocalization-precomp (fibLoc-fiber {B} {ExtTot f q} {extProj f q} (freeProj-cocartesian (\lam t => f t.1))
                                               (transportStable-total (extW-stable f (Fibers q))) (f a))
                                 (sliceMapTot-equiv ff q a)
   }

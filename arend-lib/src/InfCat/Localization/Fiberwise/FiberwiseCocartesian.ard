@@ -3,11 +3,10 @@
  -   Let `p : E ->⁺ S` be a functor between small categories whose fibers form a cocartesian family, {W} a transport stable
  -   family of classes of morphisms in its fibers, and `l : E ->⁺ FibLoc p W` the localization at {TotW}.
  -   1. `l` sends {p}-cocartesian arrows to locally {fibLocProj}-cocartesian arrows ({fibLoc-locCocartesianArrow}).
- -      For `u : z ~> z'` over `f`, lifts of `f` from `l z` to the fiber of {fibLocProj} over `p z'` are arrows of `p z ↓ fibLocProj`
- -      ({liftComma-equiv}). Restricted to the fiber of {p}, these have the local universal element given by `u` ({fibLift-univElemW}).
- -      Since the fiber of {fibLocProj} is the localization of the fiber of {p} ({fibLoc-fibre}), it is a universal element there
- -      ({univElem-extend}). Transferring this along {liftComma} ({leftFib-tr-equiv<->}), transport of `l u` identifies lifts with
- -      arrows out of `l z'`, which means that `l u` is locally cocartesian ({locCocartesianLift-transport}).
+ -      An arrow `u : z ~> z'` over `f` is locally cocartesian if and only if it is a universal arrow from `(z, f)` to the fiber inclusion
+ -      into the comma category over `p z'` ({locCocartesianArrow<->univ}). For cocartesian `u` this holds for {p}, so it holds for
+ -      the functor induced by the fiber inclusion on the localizations ({radj-lift-univ}), which is the fiber inclusion of
+ -      {fibLocProj} composed with the equivalence of {fibLoc-fibre}.
  -   2. `l` sends {p}-cocartesian arrows to {fibLocProj}-cocartesian arrows ({fibLoc-cocartesianArrow}): every arrow out of `p z'`
  -      has a {p}-cocartesian lift `v`, and both `l v` and `l (u ; v)` are locally cocartesian by 1 ({locCocartesian-comp=>cocartesian}).
  -   3. Since every object of {FibLoc} comes from {E}, this gives {fibLoc-cocartesian}.
@@ -15,25 +14,22 @@
  -   [1] Denis-Charles Cisinski, Bastiaan Cnossen, Kim Nguyen, Tashi Walde, Synthetic Category Theory, 2026
  -}
 
+\import Equiv
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.LeftFib
-\import InfCat.Fibration.LocallyCocartesianFib
 \import InfCat.Fibration.LocallyCocartesianMap
-\import InfCat.Fibration.Straightening
-\import InfCat.Functor.RightComma
+\import InfCat.Functor.LeftComma
+\import InfCat.Localization.Adjunction
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseFiber
-\import InfCat.Localization.Fiberwise.FiberwiseLift
-\import InfCat.Localization.LocalUnivElem
-\import InfCat.Yoneda.CovariantYoneda
 \import Logic
 \import Logic.Meta
 \import Paths
+\import Paths.Meta
 
 -- | The localization functor sends {p}-cocartesian arrows to {fibLocProj}-cocartesian arrows.
 \lemma fibLoc-cocartesianArrow.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
@@ -48,21 +44,14 @@
     \lemma fibLoc-locCocartesianArrow.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
                                           (Ws : IsTransportStable (Fibers p) W) {z z' : E} (u : z ~> z') (uc : IsCocartesianArrow p u)
       : IsLocallyCocartesianArrow (fibLocProj p W) (dmap (localize (TotW p W)) u)
-      => arrowLift-locCocartesian.1 $
-           locCocartesianLift-transport (arrowLift (fibLocProj p W) (dmap (localize (TotW p W)) u)) \lam y =>
-             (leftFib-tr-equiv<-> (dpath-leftFib _ _ _) (leftFib-pullback (commaObj W u) (hom-leftFib {RightComma (fibLocProj p W) (p z)} (localize (TotW p W) z, idd)))
-                                  (\lam t => liftComma (fibLocProj p W) t.2)
-                                  (\lam y => liftComma-equiv (fibLocProj p W) y) _ y).2 $
-               univElem-hom-equiv (commaObj W u)
-                 (univElem-extend {Fiber p (p z')} {Fiber (fibLocProj p W) (p z')} {W (p z')} {fibLoc-fibIncl p W (p z')}
-                                  (IsLocalization.univ (fibLoc-fibre Ff Ws (p z')))
-                                  {\lam y => ReprFunctor {RightComma (fibLocProj p W) (p z)} (localize (TotW p W) z, idd) (commaObj W u y)} {z', idp}
-                                  (fibLift-univElemW Ff Ws u uc (conn-right (dmap p u)))) y
-
-    -- | Objects of the fiber over `p z'` as objects of `p z ↓ fibLocProj` via `dmap p u`.
-    \func commaObj.{v} {S E : \Cat v} {p : E ->⁺ S} (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) {z z' : E} (u : z ~> z')
-                        (y :⁺ Fibers (fibLocProj p W) (p z')) : RightComma (fibLocProj p W) (p z)
-      => (y.1, under-arr (dmap p u) y.2)
+      => (locCocartesianArrow<->univ (dmap (localize (TotW p W)) u)).2 \lam y => \case \elim y, fibLoc-fiber.KFunc-surj p W (p z') y \with {
+           | _, inP (y', idp) => IsEquiv.rightFactor (fibLoc-fiber.KFunc-ff Ff Ws (p z') (localize {Fiber p (p z')} (W (p z')) (z', idp)) y') $
+               transport IsEquiv (ext \lam g => pmap (comp __ _) comp_idd-right) $
+                 radj-lift-univ (fibLocComma-isLocalization p W (p z')) localize-isLocalization (fibLeftComma-univUnit Ff (p z')).toAdjunction
+                                {fibLoc-fiber.ladjL Ff Ws (p z')} (\lam x => IsLocalization.lift.restrict)
+                                {\lam a => fibLeftComma (fibLocProj p W) (p z') (fibLoc-fiber.KFunc p W (p z') a)} (\lam y => idp)
+                                ((locCocartesianArrow<->univ u).1 (cocartesianArrow=>locally uc)) y'
+         }
   }
 
 -- | {FibLocFam} is a cocartesian fibration [1, Proposition 7.6.16 (1)].

@@ -12,6 +12,7 @@
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Paths
+\import InfCat.Slice
 \import InfCat.SubCat.Full
 \import Logic
 \import Logic.Unique
@@ -35,6 +36,15 @@
            | c => Bf fd
       \in Contr.make {ContLift (\lam a =>⁺ B (f a)) d} (c.center.1, c.center.2)
             \lam u => pmap {ContLift B fd} {ContLift (\lam a =>⁺ B (f a)) d} (\lam v => (v.1, v.2)) (c.contraction (u.1, u.2))
+
+-- | The slice over {x} is a right fibration.
+\lemma hom-rightFib {C : \Cat} (x : C) : IsRightFib (\lam y => y ~> x)
+  => \lam d => Contr.Contr_QEquiv (later \new QEquiv {
+    | f t => (t.1, t.2)
+    | ret t => (t.1, t.2)
+    | ret_f t => idp
+    | f_sec t => idp
+  }) (SliceCat.triangle-contr d.3 d.4)
 
 -- | Transport along an arrow in a right fibration.
 \func rightFib-tr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} (p : a' ~> a) (b : B a) : B a'
