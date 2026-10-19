@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -49,6 +50,21 @@ public class DaemonPathsTest {
     String viaDetour = DaemonPaths.resolve(root.resolve("src").resolve("..")).libraryHash;
     assertEquals(viaDir, viaConfig);
     assertEquals(viaDir, viaDetour);
+  }
+
+  /**
+   * The IDE's daemon finds its home library among the ones it resolves again on every library
+   * update; told apart by identity, it took its own home for gone and restarted itself.
+   */
+  @Test
+  public void twoResolutionsOfOneLibraryAreEqual() throws IOException {
+    Path root = library("mylib");
+    DaemonPaths first = DaemonPaths.resolve(root);
+    DaemonPaths again = DaemonPaths.resolve(root.resolve("arend.yaml"));
+    assertEquals(first, again);
+    assertEquals(first.hashCode(), again.hashCode());
+    assertTrue(java.util.Set.of(first).contains(again));
+    assertNotEquals(first, DaemonPaths.resolve(library("other")));
   }
 
   @Test

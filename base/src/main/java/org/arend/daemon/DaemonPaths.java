@@ -58,6 +58,20 @@ public final class DaemonPaths {
     this.startingMarker = arendDir.resolve("daemon.starting");
   }
 
+  /**
+   * Two resolutions of one library are equal: callers key maps and sets on them, and compare a
+   * library they hold with the ones they find on the disk again.
+   */
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof DaemonPaths other && libraryConfig.equals(other.libraryConfig);
+  }
+
+  @Override
+  public int hashCode() {
+    return libraryConfig.hashCode();
+  }
+
   public static Path lockFileIn(Path libRoot) {
     return libRoot.resolve(".arend").resolve("daemon.lock");
   }
