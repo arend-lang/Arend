@@ -159,7 +159,12 @@ public final class DaemonMcpServer {
       // Registered here, on the reader thread, so that a cancel on a later line always finds it.
       String key = message.get("id").toString();
       Running call = new Running();
-      running.put(key, call);
+      // An id names one request while it is in flight. A second one under it would find the first's
+      // entry, share its daemon request and take its cancel, so it is refused instead.
+      if (running.putIfAbsent(key, call) != null) {
+        write(error(message.get("id"), -32600, "Invalid Request: the request " + key + " is still in progress"));
+        return;
+      }
       pool.submit(() -> {
         try {
           write(safeDispatch(message));

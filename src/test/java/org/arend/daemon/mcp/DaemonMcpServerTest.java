@@ -339,6 +339,24 @@ public class DaemonMcpServerTest {
     assertTrue("the call must have been cancelled, not waited out", System.currentTimeMillis() - closed < 15_000);
   }
 
+  /** An id in use by a call still running names that call: a second request under it is refused, and the first is untouched. */
+  @Test
+  public void anIdStillInUseIsRefused() throws Exception {
+    serve(tempFolder.getRoot().toPath());
+    toServer.println("{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"typecheck\","
+        + "\"arguments\":{\"library\":" + json(libA) + ",\"targets\":[\"Hold\"]}}}");
+    assertTrue(holdStarted.await(10, TimeUnit.SECONDS));
+    toServer.println("{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"daemon_list\",\"arguments\":{}}}");
+    JsonNode refusal = reply(5);
+    assertEquals(String.valueOf(refusal), -32600, refusal.path("error").path("code").asInt());
+
+    // The held call is still the one its id names: a cancel by it lands on it.
+    toServer.println("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":5}}");
+    JsonNode held = reply(5).get("result");
+    assertTrue(text(held), text(held).contains("cancelled"));
+    assertEquals(List.of("A " + config(libA) + " Hold"), received);
+  }
+
   /** A cancel right behind its call -- ahead of the call's daemon connection, or of its request -- still lands. */
   @Test
   public void aCancelRightBehindItsCallIsNotLost() throws Exception {
