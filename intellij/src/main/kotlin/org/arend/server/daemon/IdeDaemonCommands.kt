@@ -137,13 +137,18 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
 
         // Before anything is looked up: a module the agent has just written is not one the server knows yet.
         if (!sync(scope, cancel) { err.println(it) }) return 1
-        // As the CLI's stderr reporter: prints each diagnostic, and an error proper fails the request.
+        // As the CLI's two reporters, and an error proper through either fails the request: what is
+        // wrong with the command line itself to stderr as it is, and what the typecheck finds rendered
+        // as `arend` renders it, to stderr only when severe.
         val reporter = CountingErrorReporter(GeneralError.Level.ERROR) { err.println(it) }
+        val diagnostics = CountingErrorReporter(GeneralError.Level.ERROR) {
+            (if (it.isSevere) err else out).println(TypecheckReports.render(it))
+        }
         val exitCode = if (tool != null) SourcePositionUtils.withResolver(::position) {
                 query(tool, cmdLine, cwd, scope, out, err, cancel)
             }
-            else typecheck(cmdLine, scope, targets, out, err, reporter, cancel)
-        return if (exitCode == 0 && reporter.errorsNumber == 0) 0 else 1
+            else typecheck(cmdLine, scope, targets, out, err, reporter, diagnostics, cancel)
+        return if (exitCode == 0 && reporter.errorsNumber == 0 && diagnostics.errorsNumber == 0) 0 else 1
     }
 
     /** Why the daemon will not run [cmdLine] at all, or null when it will; as the CLI's daemon says it. */
@@ -193,7 +198,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
      * whole library, `-p`, the tests of `-t` and `--show-times`, in that order.
      */
     private fun typecheck(cmdLine: CommandLine, scope: Collection<String>, targets: List<String>, out: PrintStream, err: PrintStream,
-                          reporter: ErrorReporter, cancel: CancellationIndicator): Int {
+                          reporter: ErrorReporter, diagnostics: ErrorReporter, cancel: CancellationIndicator): Int {
         // Each module to the definitions of it asked for; null for the whole module.
         val modules = LinkedHashMap<ModuleLocation, MutableSet<LongName>?>()
         for (target in targets) {
@@ -222,7 +227,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         }
 
         val timed = if (cmdLine.hasOption(ArendOptions.SHOW_TIMES)) TimedProgressReporter() else null
-        if (!check(scope, modules, false, reporter, timed, err, cancel)) return 1
+        if (!check(scope, modules, false, diagnostics, timed, err, cancel)) return 1
 
         val failed = printErrors(out, err) {
             it.locationKind == ModuleLocation.LocationKind.SOURCE && if (modules.isEmpty()) it.libraryName in scope else it in modules
@@ -238,7 +243,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
             for (library in scope) {
                 val time = TypecheckReports.testsStarted(library, out)
                 // As the CLI reports tests: by their count alone, and a failed one does not fail the run.
-                if (!check(listOf(library), emptyMap(), true, reporter, timed, err, cancel)) return 1
+                if (!check(listOf(library), emptyMap(), true, diagnostics, timed, err, cancel)) return 1
                 TypecheckReports.testsFinished(server, library, time, out)
             }
         }

@@ -94,4 +94,19 @@ class IdeDaemonCommandsTest : ArendTestBase() {
         assertTrue(answer.text, answer.text.contains("[ERROR]"))
         assertEquals(1, daemon("Main:bad", "Main:ok").exitCode)
     }
+
+    /**
+     * What a typecheck finds goes where `arend` puts it: rendered by the same code, and to stderr only
+     * when severe -- which a diagnostic located in the source, a goal or an error, is not.
+     */
+    fun testDiagnosticsGoWhereTheClisDo() {
+        myFixture.configureByText("Main.ard", """
+            \func f (n : Nat) : n = n => {?}
+            \func bad : Nat => \Sigma
+        """.trimIndent())
+        val answer = daemon("Main")
+        assertTrue(answer.out, answer.out.contains("[GOAL] Main.ard:1:30: Goal"))
+        assertTrue(answer.out, answer.out.contains("[ERROR] Main.ard:2:20: Type mismatch"))
+        assertEquals(answer.err, "", answer.err.trim())
+    }
 }
