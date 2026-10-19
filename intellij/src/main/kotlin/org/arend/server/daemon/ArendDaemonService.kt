@@ -260,7 +260,8 @@ class ArendDaemonService(private val project: Project) : Disposable {
         }
         if (lock.pid() == ProcessHandle.current().pid() && lock.libraryHash() == running?.home?.libraryHash) return null
         if (!lock.processAlive()) {
-            LockFile.deleteQuietly(paths.lockFile)
+            // Every copy, as `arend -d` removes them: a daemon of several libraries left one in each, and one in the registry.
+            lock.deleteAllCopies()
             return null
         }
         return "the daemon (PID ${lock.pid()})" + if (lock.isHostedByIde) " inside ${lock.host()}" else ""
