@@ -321,6 +321,24 @@ public class DaemonMcpServerTest {
     assertTrue(text(result), text(result).contains("cancelled"));
   }
 
+  /**
+   * An agent closing stdin is a client shutting its server down: a call it left running is cancelled
+   * on its daemon -- whose worker it would hold against everyone else -- and the server exits.
+   */
+  @Test
+  public void closingStdinCancelsWhatIsRunningAndEndsTheServer() throws Exception {
+    serve(tempFolder.getRoot().toPath());
+    toServer.println("{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"typecheck\","
+        + "\"arguments\":{\"library\":" + json(libA) + ",\"targets\":[\"Hold\"]}}}");
+    assertTrue(holdStarted.await(10, TimeUnit.SECONDS));
+    long closed = System.currentTimeMillis();
+    toServer.close();
+    serving.join(15_000);
+    assertFalse("the server must exit once stdin is closed", serving.isAlive());
+    // The runner holds for 30 s unless cancelled.
+    assertTrue("the call must have been cancelled, not waited out", System.currentTimeMillis() - closed < 15_000);
+  }
+
   /** A cancel right behind its call -- ahead of the call's daemon connection, or of its request -- still lands. */
   @Test
   public void aCancelRightBehindItsCallIsNotLost() throws Exception {

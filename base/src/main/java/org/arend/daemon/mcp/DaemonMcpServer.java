@@ -117,6 +117,15 @@ public final class DaemonMcpServer {
     System.exit(run(List.of()));
   }
 
+  /** How long the calls still running may take to wind down once the agent has closed stdin. */
+  private static final int EXIT_GRACE_SECONDS = 10;
+
+  /**
+   * Serves until the agent closes stdin, which is how a stdio client shuts its server down. Nobody
+   * reads what a call still running would answer then, and a typecheck it left running holds its
+   * daemon's worker against every other client: each is cancelled on its daemon, and the server
+   * exits once they have wound down, or after {@value #EXIT_GRACE_SECONDS}s.
+   */
   void serve() {
     try {
       String line;
@@ -124,11 +133,12 @@ public final class DaemonMcpServer {
         if (!line.isBlank()) handleLine(line);
       }
     } catch (IOException e) {
-      // The agent is gone; what it asked for is still answered, in case it is only its stdin.
+      // The agent is gone, as when it closes stdin.
     } finally {
+      running.values().forEach(Running::cancel);
       pool.shutdown();
       try {
-        pool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+        if (!pool.awaitTermination(EXIT_GRACE_SECONDS, TimeUnit.SECONDS)) pool.shutdownNow();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
