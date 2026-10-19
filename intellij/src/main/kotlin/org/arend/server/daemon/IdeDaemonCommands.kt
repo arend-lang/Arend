@@ -188,7 +188,8 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
      */
     private fun typecheck(cmdLine: CommandLine, scope: Collection<String>, targets: List<String>, out: PrintStream, err: PrintStream,
                           reporter: ErrorReporter, cancel: CancellationIndicator): Int {
-        val modules = LinkedHashMap<ModuleLocation, LongName?>()
+        // Each module to the definitions of it asked for; null for the whole module.
+        val modules = LinkedHashMap<ModuleLocation, MutableSet<LongName>?>()
         for (target in targets) {
             val (modulePath, definition) = TypecheckReports.parseFullName(target, reporter)?.let { it.proj1 to it.proj2 } ?: return 1
             val module = server.modules.firstOrNull {
@@ -199,8 +200,12 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
                 return 1
             }
             if (definition != null && !TypecheckReports.checkDefinitionExists(server, module, definition, reporter)) return 1
-            // A whole module asked for once covers a definition of it asked for again.
-            if (module !in modules || definition == null) modules[module] = definition
+            // A whole module asked for covers every definition of it asked for, before or after.
+            when {
+                definition == null -> modules[module] = null
+                module !in modules -> modules[module] = linkedSetOf(definition)
+                else -> modules[module]?.add(definition)
+            }
         }
         // As the CLI does: the module -p prints is checked too, or there would be nothing to print.
         val print = cmdLine.getOptionValue("p")
@@ -296,13 +301,13 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
     }
 
     /**
-     * Typechecks [modules] -- each whole, or the definition it maps to -- or, with none, every module
+     * Typechecks [modules] -- each whole, or the definitions it maps to -- or, with none, every module
      * of [libraries], their tests too with [tests]. On the daemon's thread, with [cancel] the checker's
      * own indicator, the way [RunnerService] checks from the editor: the binary caches loaded first,
      * the progress shown in the IDE, which can cancel it there, and the editor updated after.
      * Whether it ran to its end; why not, unless the client cancelled it, goes to [err].
      */
-    private fun check(libraries: Collection<String>, modules: Map<ModuleLocation, LongName?>, tests: Boolean, reporter: ErrorReporter,
+    private fun check(libraries: Collection<String>, modules: Map<ModuleLocation, Set<LongName>?>, tests: Boolean, reporter: ErrorReporter,
                       listener: ProgressReporter<List<Concrete.ResolvableDefinition>>?, err: PrintStream, cancel: CancellationIndicator): Boolean {
         val runner = project.service<RunnerService>()
         val title = if (modules.isEmpty()) libraries.joinToString(", ") else modules.keys.joinToString(", ")
@@ -327,7 +332,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
                     server.getCheckerFor(checked).resolveAll(indicator, ProgressReporter.empty())
                     // A module asked for whole, and the definitions of the others: one checker each, since one checks all its modules or the definitions named.
                     val whole = checked.filter { modules[it] == null }
-                    val definitions = modules.mapNotNull { (module, definition) -> definition?.let { FullName(module, it) } }
+                    val definitions = modules.flatMap { (module, names) -> names.orEmpty().map { FullName(module, it) } }
                     if (whole.isNotEmpty()) server.getCheckerFor(whole).typecheck(null, reporter, indicator, progress)
                     if (definitions.isNotEmpty()) server.getCheckerFor(checked - whole.toSet()).typecheck(definitions, reporter, indicator, progress)
                     !indicator.isCanceled

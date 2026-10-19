@@ -82,4 +82,16 @@ class IdeDaemonCommandsTest : ArendTestBase() {
         val answer = daemon("Main:nope")
         assertEquals(answer.text, 1, answer.exitCode)
     }
+
+    /** Two definitions of one module are both checked: the second used to replace the first. */
+    fun testTwoDefinitionsOfOneModuleAreBothChecked() {
+        myFixture.configureByText("Main.ard", """
+            \func ok : Nat => 0
+            \func bad : Nat => \Sigma
+        """.trimIndent())
+        val answer = daemon("Main:ok", "Main:bad")
+        assertEquals(answer.text, 1, answer.exitCode)
+        assertTrue(answer.text, answer.text.contains("[ERROR]"))
+        assertEquals(1, daemon("Main:bad", "Main:ok").exitCode)
+    }
 }
