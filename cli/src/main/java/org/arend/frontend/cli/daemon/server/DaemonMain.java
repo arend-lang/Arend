@@ -47,6 +47,18 @@ public final class DaemonMain {
     return shared;
   }
 
+  /** Which of {@code owned} a live daemon has claimed, said for a person; null when none has. */
+  public static String claimedMeanwhile(List<DaemonPaths> owned) {
+    for (DaemonPaths member : owned) {
+      if (LockFile.lookup(member) instanceof LockFile.Read.Found found && found.lock().processAlive()) {
+        LockFile other = found.lock();
+        return member.libraryConfig + " has been claimed by the daemon (PID " + other.pid() + ")"
+            + (other.isHostedByIde() ? " inside " + other.host() : "") + " in the meantime";
+      }
+    }
+    return null;
+  }
+
   /**
    * Runs the daemon until it is told to stop, then exits the JVM. A socket-side {@code shutdown}
    * returns here without going through the JVM-exit path, so the exit, and with it the shutdown
@@ -139,6 +151,14 @@ public final class DaemonMain {
       lock.removeTraces();
     }, "arend-daemon-shutdown"));
 
+    // The locks were checked when `-d` was run, and the libraries have taken their seconds to load
+    // since: another daemon -- the IDE's, which a start under way does not stop -- may have claimed one.
+    String claimed = claimedMeanwhile(owned);
+    if (claimed != null) {
+      System.err.println("[DAEMON] " + claimed + "; this daemon will not start");
+      // The shutdown hook closes the server and removes the socket; the lock it removes is only ever this daemon's.
+      return 1;
+    }
     try {
       lock.writeEverywhere();
     } catch (IOException e) {

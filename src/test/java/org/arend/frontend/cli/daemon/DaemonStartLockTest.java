@@ -18,6 +18,8 @@ import java.util.function.Predicate;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -230,5 +232,42 @@ public class DaemonStartLockTest {
     Files.setLastModifiedTime(marker, FileTime.fromMillis(System.currentTimeMillis() - 120_000));
     assertTrue("a marker older than any possible start must be reclaimed",
         DaemonStart.reserveStart(marker, 60_000));
+  }
+
+  /**
+   * The locks are checked when `-d` runs, and the child claims its libraries only once they are
+   * loaded, seconds later: whatever claimed one of them meanwhile -- the IDE's daemon, which a start
+   * in progress does not stop -- keeps it, and this start gives up.
+   */
+  @Test
+  public void aLibraryClaimedWhileTheChildLoadedStopsTheStart() throws IOException {
+    java.nio.file.Path config = tempFolder.newFolder("config").toPath();
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
+    try {
+      DaemonPaths paths = DaemonPaths.resolve(library());
+      paths.ensureArendDir();
+      assertNull(org.arend.frontend.cli.daemon.server.DaemonMain.claimedMeanwhile(List.of(paths)));
+
+      LockFile.ofThisProcess(paths, List.of(paths.libraryConfig.toString()), List.of(), 1L, "uds:/s",
+          LockFile.HOST_INTELLIJ, LockFile.newToken()).writeEverywhere();
+      String claimed = org.arend.frontend.cli.daemon.server.DaemonMain.claimedMeanwhile(List.of(paths));
+      assertNotNull(claimed);
+      assertTrue(claimed, claimed.contains("intellij"));
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
+  }
+
+  /** What the IDE's daemon reads to leave a library alone that `arend -d` is starting a daemon for. */
+  @Test
+  public void aStartInProgressIsSeenUntilItsMarkerGoesStale() throws IOException {
+    DaemonPaths paths = DaemonPaths.resolve(library());
+    paths.ensureArendDir();
+    assertFalse(paths.startInProgress());
+    assertTrue(DaemonStart.reserveStart(paths.startingMarker, DaemonPaths.START_TIMEOUT_MILLIS));
+    assertTrue(paths.startInProgress());
+    java.nio.file.Files.setLastModifiedTime(paths.startingMarker, java.nio.file.attribute.FileTime.fromMillis(
+        System.currentTimeMillis() - DaemonPaths.START_TIMEOUT_MILLIS - 1000));
+    assertFalse("a marker older than any start is debris", paths.startInProgress());
   }
 }

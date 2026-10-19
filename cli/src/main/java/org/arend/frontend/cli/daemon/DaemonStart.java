@@ -33,7 +33,7 @@ import java.util.Optional;
  */
 public final class DaemonStart {
   /** Max time to wait for the child to write its lock file. */
-  public static final int READY_TIMEOUT_SECONDS = 600;
+  public static final int READY_TIMEOUT_SECONDS = (int) (DaemonPaths.START_TIMEOUT_MILLIS / 1000);
 
   private DaemonStart() {}
 

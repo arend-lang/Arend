@@ -39,6 +39,12 @@ public final class DaemonPaths {
    * see no lock and both spawn, and only one of them can bind the socket.
    */
   public final Path startingMarker;
+  /**
+   * How long a {@link #startingMarker} stands for a start in progress: as long as a start may take
+   * to become ready. An older one is debris from a start that was killed.
+   */
+  public static final long START_TIMEOUT_MILLIS = 600_000;
+
   /** Hex-encoded SHA-256 of {@link #libraryConfig}'s string form, first 16 chars. */
   public final String libraryHash;
   /** Decided on the first ask, which canonicalises paths: routing asks it of every library of every daemon. */
@@ -70,6 +76,15 @@ public final class DaemonPaths {
   @Override
   public int hashCode() {
     return libraryConfig.hashCode();
+  }
+
+  /** Whether {@code arend -d} is starting a daemon for this library right now: its marker is there, and recent. */
+  public boolean startInProgress() {
+    try {
+      return System.currentTimeMillis() - Files.getLastModifiedTime(startingMarker).toMillis() < START_TIMEOUT_MILLIS;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   public static Path lockFileIn(Path libRoot) {

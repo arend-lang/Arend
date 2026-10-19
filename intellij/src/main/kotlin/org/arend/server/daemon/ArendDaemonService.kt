@@ -241,6 +241,8 @@ class ArendDaemonService(private val project: Project) : Disposable {
      * is removed on the way.
      */
     private fun owner(paths: DaemonPaths): String? {
+        // `arend -d` claims a library only once its daemon is ready, seconds later; until then its marker says so.
+        if (paths.startInProgress()) return "a daemon `arend -d` is starting (${paths.startingMarker})"
         val lock = when (val read = LockFile.lookup(paths)) {
             is LockFile.Read.Unreadable -> return "a lock that cannot be read (${read.reason()}) at ${paths.lockFile}"
             is LockFile.Read.Found -> read.lock()
