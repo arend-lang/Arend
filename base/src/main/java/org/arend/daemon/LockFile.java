@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,8 @@ import java.util.Properties;
  *   socketPath       the address clients connect to, as {@code uds:<path>} or {@code tcp:host:port}
  *   host             what runs the daemon: {@code cli}, a JVM of its own, or {@code intellij}, an IDE
  *                    that answers as a daemon from its own server; absent means {@code cli}
+ *   processStart     when the process {@code pid} names started, in epoch milliseconds, as the
+ *                    process itself reads it; absent when the platform does not say
  * </pre>
  *
  * @param pid             see above
@@ -46,13 +49,24 @@ import java.util.Properties;
  * @param startedAt       see above
  * @param socketPath      see above
  * @param host            see above
+ * @param processStart    see above; {@link #UNKNOWN_START} when absent
  */
 public record LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
-                       List<String> shared, int protocolVersion, long startedAt, String socketPath, String host) {
+                       List<String> shared, int protocolVersion, long startedAt, String socketPath, String host,
+                       long processStart) {
   /** A daemon that is a JVM of its own, started by {@code arend -d}. */
   public static final String HOST_CLI = "cli";
   /** A daemon answered by the IntelliJ plugin from the IDE's own server, in the IDE's process. */
   public static final String HOST_INTELLIJ = "intellij";
+
+  /** The {@code processStart} of a lock that does not say when its process started. */
+  public static final long UNKNOWN_START = -1;
+
+  /**
+   * How far apart two readings of one process's start may be. They are the same number read twice,
+   * but a platform may derive it from a clock with coarser steps than a millisecond.
+   */
+  private static final long START_TOLERANCE_MILLIS = 1000;
 
   public LockFile {
     libraries = List.copyOf(libraries);
@@ -60,11 +74,23 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     if (host == null || host.isEmpty()) host = HOST_CLI;
   }
 
+  /** A lock that does not say when its process started, as one written before {@code processStart} did. */
+  public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries, List<String> shared,
+                  int protocolVersion, long startedAt, String socketPath, String host) {
+    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, UNKNOWN_START);
+  }
+
   /** The lock of a daemon this process runs, whose first library is {@code home}. */
   public static LockFile ofThisProcess(DaemonPaths home, List<String> libraries, List<String> shared, long startedAt,
                                        String socketPath, String host) {
-    return new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash, libraries,
-        shared, PROTOCOL_VERSION, startedAt, socketPath, host);
+    ProcessHandle self = ProcessHandle.current();
+    return new LockFile(self.pid(), home.libraryConfig.toString(), home.libraryHash, libraries,
+        shared, PROTOCOL_VERSION, startedAt, socketPath, host, startOf(self));
+  }
+
+  /** When {@code process} started, in epoch milliseconds, or {@link #UNKNOWN_START}. */
+  static long startOf(ProcessHandle process) {
+    return process.info().startInstant().map(Instant::toEpochMilli).orElse(UNKNOWN_START);
   }
 
   /**
@@ -127,14 +153,30 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
   }
 
   /**
-   * Whether the daemon's process is alive, judged by its PID alone. A socket probe would also catch
-   * a recycled PID, but it can fail for reasons that have nothing to do with the daemon being gone,
-   * and every caller that concludes "dead" goes on to remove the lock. A false "still running"
-   * costs the user one {@code --daemon-stop}; a false "dead" costs them a process they can no
-   * longer reach.
+   * The daemon's process, while it runs: the process its PID names, provided that one started when
+   * the daemon's did. A PID is reused once its process is gone -- after a crash or a reboot the lock
+   * outlives it -- and the one it names then is somebody else's, which {@code --daemon-stop} would
+   * otherwise signal, process tree and all. A lock that does not say when its process started is
+   * judged by its PID alone.
+   *
+   * <p>No socket probe: one can fail for reasons that have nothing to do with the daemon being gone,
+   * and every caller that concludes "dead" goes on to remove the lock.
    */
+  public Optional<ProcessHandle> process() {
+    return ProcessHandle.of(pid).filter(this::startedAsRecorded);
+  }
+
+  private boolean startedAsRecorded(ProcessHandle process) {
+    if (processStart == UNKNOWN_START) return true;
+    long start = startOf(process);
+    // A process that will not say when it started is not one this lock can vouch for: the daemon
+    // that wrote it could say it of itself.
+    return start != UNKNOWN_START && Math.abs(start - processStart) <= START_TOLERANCE_MILLIS;
+  }
+
+  /** Whether the daemon's process is alive, as {@link #process} judges it. */
   public boolean processAlive() {
-    return ProcessHandle.of(pid).isPresent();
+    return process().isPresent();
   }
 
   /**
@@ -174,6 +216,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     props.setProperty("startedAt", Long.toString(startedAt));
     props.setProperty("socketPath", socketPath == null ? "" : socketPath);
     props.setProperty("host", host);
+    if (processStart != UNKNOWN_START) props.setProperty("processStart", Long.toString(processStart));
 
     Path directory = lockPath.getParent();
     Path tmp = Files.createTempFile(directory, lockPath.getFileName() + ".", ".tmp");
@@ -213,6 +256,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       long startedAt = Long.parseLong(props.getProperty("startedAt", "0").trim());
       String socketPath = props.getProperty("socketPath", "");
       String host = props.getProperty("host", HOST_CLI);
+      long processStart = Long.parseLong(props.getProperty("processStart", Long.toString(UNKNOWN_START)).trim());
       List<String> libraries = new ArrayList<>();
       for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
       // A lock from before library.N named only the one library its daemon served.
@@ -222,7 +266,8 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       if (libraryPath.isEmpty() || libraryHash.isEmpty()) {
         return new Read.Unreadable("lock file is missing libraryPath or libraryHash");
       }
-      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host));
+      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt,
+          socketPath, host, processStart));
     } catch (NumberFormatException e) {
       return new Read.Unreadable("lock file has a malformed numeric field: " + e.getMessage());
     }

@@ -186,4 +186,37 @@ public class LockFileTest {
     }
     assertEquals("uds:/tmp/b.sock", LockFile.readIfValid(path).orElseThrow().socketPath());
   }
+
+  private static LockFile ofProcess(long pid, long processStart) {
+    return new LockFile(pid, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, processStart);
+  }
+
+  /**
+   * A PID outlives its process in a lock, and is reused: the process it names then is somebody
+   * else's, which --daemon-stop would signal. A lock names the process that started when it says.
+   */
+  @Test
+  public void aReusedPidIsNotTheDaemon() {
+    ProcessHandle self = ProcessHandle.current();
+    long started = self.info().startInstant().orElseThrow().toEpochMilli();
+    assertTrue(ofProcess(self.pid(), started).processAlive());
+    assertTrue(ofProcess(self.pid(), started).process().isPresent());
+    assertFalse("a process that started an hour later is another one",
+        ofProcess(self.pid(), started + 3_600_000L).processAlive());
+    assertTrue(ofProcess(self.pid(), started + 3_600_000L).process().isEmpty());
+    // A lock from before processStart is judged by its PID alone, as it always was.
+    assertTrue(ofProcess(self.pid(), LockFile.UNKNOWN_START).processAlive());
+  }
+
+  @Test
+  public void theProcessStartSurvivesTheRoundTrip() throws IOException {
+    Path path = lockPath();
+    LockFile written = ofProcess(4242, 1_700_000_000_123L);
+    written.writeAtomic(path);
+    assertEquals(written, LockFile.readIfValid(path).orElseThrow());
+
+    Files.writeString(path, Files.readString(path).replaceAll("(?m)^processStart=.*\\R", ""));
+    assertEquals(LockFile.UNKNOWN_START, LockFile.readIfValid(path).orElseThrow().processStart());
+  }
 }

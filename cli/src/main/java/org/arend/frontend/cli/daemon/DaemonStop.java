@@ -110,7 +110,8 @@ public final class DaemonStop {
       case SIGNAL -> { }
     }
     LockFile lf = lockOf(existing);
-    Optional<ProcessHandle> ph = ProcessHandle.of(lf.pid());
+    // The process the lock names, not merely one with its PID: that would be signalled below.
+    Optional<ProcessHandle> ph = lf.process();
     if (ph.isEmpty()) {
       lf.deleteAllCopies();
       return 0;
