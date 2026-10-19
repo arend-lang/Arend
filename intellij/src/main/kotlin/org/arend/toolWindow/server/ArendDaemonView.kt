@@ -106,7 +106,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
         }
         if (state != null) {
             section("Serves", state.libraries)
-            section("Also loaded from ~/.arend/libs or a zip", state.shared)
+            section("Also loaded, owned by none or by another daemon", state.loaded)
             section("Left out", state.skipped.map { (name, why) -> "$name: $why" })
         }
         libraries.setIfChanged(if (html.isEmpty()) "" else XmlStringUtil.wrapInHtml(html))

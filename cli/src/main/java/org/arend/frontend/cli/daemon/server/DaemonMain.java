@@ -32,19 +32,25 @@ import java.util.concurrent.CountDownLatch;
 public final class DaemonMain {
   private DaemonMain() {}
 
-  private static List<String> sharedLibraries(CommandContext ctx) {
-    List<String> shared = new ArrayList<>();
+  /**
+   * Every library {@code ctx} loaded that the daemon does not own: one under ~/.arend/libs or a zip,
+   * listed or not, and a dependency it was not given. A command about one of them can then come to
+   * the daemon, which holds it, though nothing stops another daemon from owning it.
+   */
+  private static List<String> loadedNotOwned(CommandContext ctx, List<DaemonPaths> owned) {
+    List<String> loaded = new ArrayList<>();
     for (String name : ctx.libraryManager.getLibraries()) {
       SourceLibrary library = ctx.libraryManager.getLibrary(name);
       Path file = library == null ? null : library.getLibraryFile();
-      if (file == null || !DaemonPaths.isShared(file)) continue;
+      if (file == null) continue;
       try {
-        shared.add(file.toRealPath().toString());
+        String real = file.toRealPath().toString();
+        if (owned.stream().noneMatch(member -> member.libraryConfig.toString().equals(real))) loaded.add(real);
       } catch (IOException ignored) {
         // Gone since it was loaded; nothing to route to it either way.
       }
     }
-    return shared;
+    return loaded;
   }
 
   /** Which of {@code owned} a live daemon has claimed, said for a person; null when none has. */
@@ -140,7 +146,7 @@ public final class DaemonMain {
     }
     server.start();
 
-    LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, sharedLibraries(warmCtx), server.startedAt(),
+    LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, loadedNotOwned(warmCtx, owned), server.startedAt(),
         bound.address(), LockFile.HOST_CLI, token);
 
     // Registered before the lock is written, not after: a SIGTERM in between would otherwise

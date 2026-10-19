@@ -61,7 +61,10 @@ public final class DaemonRpc {
    * a second resolution re-walks the libDirs, warns again, and can land somewhere else.
    */
   public static int run(DaemonPaths paths, String op) {
-    LockFile lf = paths.canOwn() ? reachableDaemon(paths, true) : firstLoading(List.of(paths), true);
+    LockFile lf = paths.canOwn() ? reachableDaemon(paths, true) : null;
+    // A library no daemon owns is answered for by the one that loaded it -- but stopping it through
+    // that library would stop some other project's daemon.
+    if (lf == null && !"shutdown".equals(op) && !hasOwner(paths)) lf = firstLoading(List.of(paths), true);
     if (lf == null) return NO_DAEMON;
 
     SocketAddress addr;
@@ -268,17 +271,44 @@ public final class DaemonRpc {
 
   /**
    * The daemon that has every one of {@code libraries} loaded, or null: locally the run would load
-   * them all, and a daemon lacking one would answer about the others only. An owned library's
-   * daemon is found through its lock; shared libraries alone go to {@link #firstLoading}.
+   * them all, and a daemon lacking one would answer about the others only. The daemon owning one of
+   * them, found through its lock, if one does; else -- when they are shared libraries, zips, or
+   * dependencies a daemon was not given -- the longest-running one that loaded them all
+   * ({@link #firstLoading}).
    */
   public static LockFile daemonFor(List<DaemonPaths> libraries) {
-    DaemonPaths owner = libraries.stream().filter(DaemonPaths::canOwn).findFirst().orElse(null);
-    LockFile lf = owner != null ? reachableDaemon(owner, false) : firstLoading(libraries, false);
+    LockFile lf = null;
+    boolean owned = false;
+    for (DaemonPaths paths : libraries) {
+      if (!paths.canOwn()) continue;
+      lf = reachableDaemon(paths, false);
+      // A daemon of its own that is no daemon to route to -- of another protocol, say -- is not
+      // stood in for by one that merely loaded it.
+      if (lf != null || hasOwner(paths)) {
+        owned = true;
+        break;
+      }
+    }
+    if (!owned) lf = firstLoading(libraries, false);
     if (lf == null) return null;
     for (DaemonPaths paths : libraries) {
-      if (paths.canOwn() ? !lf.serves(paths.libraryConfig) : !lf.hasLoaded(paths.libraryConfig)) return null;
+      if (!lf.hasLoaded(paths.libraryConfig)) return null;
     }
     return lf;
+  }
+
+  /**
+   * Whether a daemon of its own holds {@code paths}, reachable or not: its lock is there and the
+   * registry confirms it -- or it cannot be read, and then nobody can tell. A dead daemon's has been
+   * removed by the time this is asked.
+   */
+  private static boolean hasOwner(DaemonPaths paths) {
+    return switch (LockFile.lookup(paths)) {
+      case LockFile.Read.Absent ignored -> false;
+      case LockFile.Read.Unregistered ignored -> false;
+      case LockFile.Read.Found ignored -> true;
+      case LockFile.Read.Unreadable ignored -> true;
+    };
   }
 
   /** Every live daemon in {@link DaemonPaths#registryDir}, oldest first; a dead one's entry is removed. */

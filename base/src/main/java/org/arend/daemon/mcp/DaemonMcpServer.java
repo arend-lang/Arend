@@ -10,6 +10,7 @@ import org.arend.daemon.wire.FrameChannel;
 import org.arend.daemon.client.DaemonClient;
 import org.arend.daemon.client.DaemonRpc;
 import org.arend.prelude.Prelude;
+import org.arend.util.FileUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,9 +22,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -322,14 +325,16 @@ public final class DaemonMcpServer {
     List<DaemonPaths> owned = new ArrayList<>();
     List<DaemonPaths> loaded = new ArrayList<>();
     for (LockFile daemon : DaemonRpc.liveDaemons()) {
+      Set<String> own = new HashSet<>();
+      for (Path lockFile : daemon.lockFiles()) own.add(lockFile.getParent().getParent().resolve(FileUtils.LIBRARY_CONFIG_FILE).toString());
       List<String> libraries = new ArrayList<>(daemon.libraries());
-      libraries.addAll(daemon.shared());
+      libraries.addAll(daemon.loaded());
       for (String library : libraries) {
         // The lock's paths are canonical already: compare the name before touching the file system.
         if (!DaemonPaths.nameOf(Paths.get(library)).equals(name)) continue;
         DaemonPaths paths = DaemonPaths.resolve(Paths.get(library));
         if (paths == null) continue;
-        List<DaemonPaths> kind = paths.canOwn() ? owned : loaded;
+        List<DaemonPaths> kind = own.contains(library) ? owned : loaded;
         if (kind.stream().noneMatch(other -> other.libraryConfig.equals(paths.libraryConfig))) kind.add(paths);
       }
     }
@@ -360,9 +365,9 @@ public final class DaemonMcpServer {
       if (daemon.isHostedByIde()) out.append(", inside ").append(daemon.host());
       out.append("\n  libraries:");
       for (String library : daemon.libraries()) out.append("\n    ").append(library);
-      List<String> loaded = daemon.shared().stream().filter(shared -> !daemon.libraries().contains(shared)).toList();
+      List<String> loaded = daemon.loaded().stream().filter(library -> !daemon.libraries().contains(library)).toList();
       if (!loaded.isEmpty()) {
-        out.append("\n  also loaded from ~/.arend/libs:");
+        out.append("\n  also loaded, not its own:");
         for (String library : loaded) out.append("\n    ").append(library);
       }
     }

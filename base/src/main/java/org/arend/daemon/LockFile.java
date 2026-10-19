@@ -24,8 +24,9 @@ import java.util.regex.Pattern;
  * {@code <library>/.arend/daemon.lock} in every library the daemon owns, so that a command
  * issued from any of them finds it and a second daemon asked to serve one sees it is taken; and
  * another copy in {@link DaemonPaths#registryDir}, which is how the MCP server finds every daemon
- * and a command about a shared library (one under {@link DaemonPaths#sharedLibrariesRoot}, which
- * no daemon owns) finds the daemons that loaded it.
+ * and a command about a library no daemon owns -- a shared one under
+ * {@link DaemonPaths#sharedLibrariesRoot}, a zip, or a dependency a daemon was not given -- finds
+ * the daemons that loaded it.
  *
  * <p>Only the registry's copy is trusted. A library's directory may be anybody's -- a clone, a
  * shared checkout -- and a lock in it may have been put there by anybody, naming any address and any
@@ -39,7 +40,8 @@ import java.util.regex.Pattern;
  *                    {@code .arend/} holds its socket and log
  *   libraryHash      digest of that path; the daemon's identity
  *   library.N        canonical arend.yaml of every library served, N = 1, 2, ... in load order
- *   shared.N         canonical arend.yaml or zip of every shared library loaded, listed or a dependency
+ *   loaded.N         canonical arend.yaml or zip of every library loaded that the daemon does not own,
+ *                    listed or a dependency: a shared one, a zip, or a dependency it was not given
  *   protocolVersion  wire-protocol version the daemon speaks
  *   startedAt        System.currentTimeMillis() at READY
  *   socketPath       the address clients connect to, as {@code uds:<path>} or {@code tcp:host:port}
@@ -56,7 +58,7 @@ import java.util.regex.Pattern;
  * @param libraryPath     see above
  * @param libraryHash     see above
  * @param libraries       see {@code library.N} above
- * @param shared          see {@code shared.N} above
+ * @param loaded          see {@code loaded.N} above
  * @param protocolVersion see above
  * @param startedAt       see above
  * @param socketPath      see above
@@ -66,7 +68,7 @@ import java.util.regex.Pattern;
  * @param build           see above; null when absent
  */
 public record LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
-                       List<String> shared, int protocolVersion, long startedAt, String socketPath, String host,
+                       List<String> loaded, int protocolVersion, long startedAt, String socketPath, String host,
                        long processStart, String token, BuildIdentity build) {
   /** A daemon that is a JVM of its own, started by {@code arend -d}. */
   public static final String HOST_CLI = "cli";
@@ -87,23 +89,23 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
 
   public LockFile {
     libraries = List.copyOf(libraries);
-    shared = List.copyOf(shared);
+    loaded = List.copyOf(loaded);
     if (host == null || host.isEmpty()) host = HOST_CLI;
     if (token == null) token = "";
   }
 
   /** A lock that does not say when its process started, as one written before {@code processStart} did, with no token. */
-  public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries, List<String> shared,
+  public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries, List<String> loaded,
                   int protocolVersion, long startedAt, String socketPath, String host) {
-    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, UNKNOWN_START, "", null);
+    this(pid, libraryPath, libraryHash, libraries, loaded, protocolVersion, startedAt, socketPath, host, UNKNOWN_START, "", null);
   }
 
   /** The lock of a daemon this process runs, whose first library is {@code home} and whose requests present {@code token}. */
-  public static LockFile ofThisProcess(DaemonPaths home, List<String> libraries, List<String> shared, long startedAt,
+  public static LockFile ofThisProcess(DaemonPaths home, List<String> libraries, List<String> loaded, long startedAt,
                                        String socketPath, String host, String token) {
     ProcessHandle self = ProcessHandle.current();
     return new LockFile(self.pid(), home.libraryConfig.toString(), home.libraryHash, libraries,
-        shared, PROTOCOL_VERSION, startedAt, socketPath, host, startOf(self), token,
+        loaded, PROTOCOL_VERSION, startedAt, socketPath, host, startOf(self), token,
         HOST_CLI.equals(host) ? BuildIdentity.ofThisProcess() : null);
   }
 
@@ -116,7 +118,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
 
   /** This lock as a library's copy has it: without the token, which only the registry's copy holds. */
   public LockFile withoutToken() {
-    return new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, processStart, "", build);
+    return new LockFile(pid, libraryPath, libraryHash, libraries, loaded, protocolVersion, startedAt, socketPath, host, processStart, "", build);
   }
 
   /** When {@code process} started, in epoch milliseconds, or {@link #UNKNOWN_START}. */
@@ -137,14 +139,17 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     return libraries.contains(libraryConfig.toString());
   }
 
-  /** Whether the daemon has the library read from {@code libraryFile} loaded: listed, or a shared dependency. */
+  /**
+   * Whether the daemon has the library read from {@code libraryFile} loaded: listed, or a dependency
+   * of one -- whether it owns it or not.
+   */
   public boolean hasLoaded(Path libraryFile) {
-    return serves(libraryFile) || shared.contains(libraryFile.toString());
+    return serves(libraryFile) || loaded.contains(libraryFile.toString());
   }
 
-  /** Where each owned library's copy of this lock lives, in load order: a shared one or a zip gets none. */
+  /** Where each owned library's copy of this lock lives, in load order: one it only loaded, or a zip, gets none. */
   public List<Path> lockFiles() {
-    return libraries.stream().filter(library -> !shared.contains(library) && !library.endsWith(FileUtils.ZIP_EXTENSION))
+    return libraries.stream().filter(library -> !loaded.contains(library) && !library.endsWith(FileUtils.ZIP_EXTENSION))
         .map(library -> DaemonPaths.lockFileIn(Paths.get(library).getParent())).toList();
   }
 
@@ -277,7 +282,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     props.setProperty("libraryPath", libraryPath);
     props.setProperty("libraryHash", libraryHash);
     for (int i = 0; i < libraries.size(); i++) props.setProperty("library." + (i + 1), libraries.get(i));
-    for (int i = 0; i < shared.size(); i++) props.setProperty("shared." + (i + 1), shared.get(i));
+    for (int i = 0; i < loaded.size(); i++) props.setProperty("loaded." + (i + 1), loaded.get(i));
     props.setProperty("protocolVersion", Integer.toString(protocolVersion));
     props.setProperty("startedAt", Long.toString(startedAt));
     props.setProperty("socketPath", socketPath == null ? "" : socketPath);
@@ -339,12 +344,12 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
       // A lock from before library.N named only the one library its daemon served.
       if (libraries.isEmpty() && !libraryPath.isEmpty()) libraries.add(libraryPath);
-      List<String> shared = new ArrayList<>();
-      for (int i = 1; props.getProperty("shared." + i) != null; i++) shared.add(props.getProperty("shared." + i));
+      List<String> loaded = new ArrayList<>();
+      for (int i = 1; props.getProperty("loaded." + i) != null; i++) loaded.add(props.getProperty("loaded." + i));
       if (libraryPath.isEmpty() || libraryHash.isEmpty()) {
         return new Read.Unreadable("lock file is missing libraryPath or libraryHash");
       }
-      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt,
+      return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, loaded, protocolVersion, startedAt,
           socketPath, host, processStart, token, build));
     } catch (NumberFormatException e) {
       return new Read.Unreadable("lock file has a malformed numeric field: " + e.getMessage());

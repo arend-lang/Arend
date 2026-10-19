@@ -260,4 +260,28 @@ public class DaemonRouteTest {
     rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
     assertTrue("once the owner's daemon has it, the command must route", rc.isPresent());
   }
+
+  /**
+   * A dependency the daemon was not given is loaded all the same: a command about it goes to that
+   * daemon while it has no daemon of its own, and to its own once it has one.
+   */
+  @Test
+  public void aDependencyTheDaemonLoadedWithoutOwningItIsRoutedToIt() throws Exception {
+    Path dependency = library("deplib");
+    DaemonPaths home = DaemonPaths.resolve(libRoot);
+    DaemonPaths dep = DaemonPaths.resolve(dependency);
+    lockOf(home, List.of(home), List.of(dep.libraryConfig.toString())).writeEverywhere();
+    assertTrue(LockFile.lookup(dep) instanceof LockFile.Read.Absent);
+
+    List<String> positional = List.of(dependency.toString(), "Data.Maybe");
+    OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
+    assertTrue("the daemon holds the dependency, so the command must route to it", rc.isPresent());
+    assertTrue("the stand-in daemon must have been reached", served.await(10, TimeUnit.SECONDS));
+
+    // Its own daemon -- here one that cannot be reached -- takes it from then on.
+    dep.ensureArendDir();
+    LockFile.ofThisProcess(dep, List.of(dep.libraryConfig.toString()), List.of(), System.currentTimeMillis(),
+        "uds:/nonexistent/daemon.sock", LockFile.HOST_CLI, TOKEN).writeEverywhere();
+    assertEquals(dep.libraryConfig.toString(), DaemonRpc.daemonFor(List.of(dep)).libraryPath());
+  }
 }

@@ -297,7 +297,7 @@ public class DaemonMcpServerTest {
     serve(tempFolder.getRoot().toPath());
     String list = text(call(1, "daemon_list", "{}"));
     assertTrue(list, list.indexOf(config(libA)) < list.indexOf(config(libB)));
-    assertTrue(list, list.contains("also loaded from ~/.arend/libs:\n    " + config(shared)));
+    assertTrue(list, list.contains("also loaded, not its own:\n    " + config(shared)));
 
     String status = text(call(2, "daemon_status", "{\"library\":" + json(libB) + "}"));
     assertTrue(status, status.contains("\"state\" : \"IDLE\""));

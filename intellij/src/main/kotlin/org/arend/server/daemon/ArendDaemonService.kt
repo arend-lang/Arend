@@ -44,7 +44,8 @@ class ArendDaemonService(private val project: Project) : Disposable {
     data class State(
         val socket: String,
         val libraries: List<String>,
-        val shared: List<String>,
+        /** Libraries loaded and not owned: shared ones, zips, and those another daemon holds. */
+        val loaded: List<String>,
         /** Libraries of the project left out, to why. */
         val skipped: Map<String, String>,
         val startedAt: Long,
@@ -199,10 +200,11 @@ class ArendDaemonService(private val project: Project) : Disposable {
     private fun update(daemon: Running, libraries: Map<DaemonPaths, String>) {
         val skipped = LinkedHashMap<String, String>()
         val owned = ArrayList<DaemonPaths>()
-        val shared = ArrayList<DaemonPaths>()
+        // The server holds them all the same, so a command about one can come here when nobody owns it.
+        val loaded = ArrayList<DaemonPaths>()
         for (paths in libraries.keys) {
             if (!paths.canOwn()) {
-                shared.add(paths)
+                loaded.add(paths)
                 continue
             }
             val owner = owner(paths)
@@ -210,6 +212,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
                 owned.add(paths)
                 continue
             }
+            loaded.add(paths)
             val name = libraries.getValue(paths)
             skipped[name] = "held by $owner"
             if (warnedAbout.add(paths.libraryConfig.toString())) {
@@ -219,9 +222,9 @@ class ArendDaemonService(private val project: Project) : Disposable {
         owned.sortBy { if (it == daemon.home) 0 else 1 }
 
         val lock = LockFile.ofThisProcess(daemon.home, owned.map { it.libraryConfig.toString() },
-            shared.map { it.libraryConfig.toString() }, daemon.server.startedAt(), daemon.socket, LockFile.HOST_INTELLIJ, daemon.token)
+            loaded.map { it.libraryConfig.toString() }, daemon.server.startedAt(), daemon.socket, LockFile.HOST_INTELLIJ, daemon.token)
         val previous = daemon.lock
-        daemon.served = (owned + shared).associate { it.libraryConfig.toString() to libraries.getValue(it) }
+        daemon.served = (owned + loaded).associate { it.libraryConfig.toString() to libraries.getValue(it) }
         daemon.lock = lock
         try {
             owned.forEach { it.ensureArendDir() }
@@ -232,7 +235,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
         if (previous != null) {
             (previous.lockFiles() - lock.lockFiles().toSet()).forEach(lock::deleteIfOurs)
         }
-        setState(State(daemon.socket, lock.libraries(), lock.shared(), skipped, daemon.server.startedAt(), daemon.server.activity()))
+        setState(State(daemon.socket, lock.libraries(), lock.loaded(), skipped, daemon.server.startedAt(), daemon.server.activity()))
     }
 
     /**
