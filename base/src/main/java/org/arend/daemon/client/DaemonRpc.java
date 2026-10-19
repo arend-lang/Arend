@@ -1,5 +1,6 @@
 package org.arend.daemon.client;
 
+import org.arend.daemon.BuildIdentity;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.wire.SocketAddress;
@@ -159,6 +160,12 @@ public final class DaemonRpc {
 
     LockFile lf = daemonFor(libraries);
     if (lf == null) return OptionalInt.empty();
+    String otherBuild = otherBuild(lf, BuildIdentity.ofThisProcess());
+    if (otherBuild != null) {
+      System.err.println("[WARN] the daemon (PID " + lf.pid() + ") runs " + otherBuild + "; running this command here."
+          + " Restart the daemon to have it run this build: `arend --daemon-stop`, then `arend -d`.");
+      return OptionalInt.empty();
+    }
 
     SocketAddress addr;
     try {
@@ -181,6 +188,19 @@ public final class DaemonRpc {
           + "); running locally");
       return OptionalInt.empty();
     }
+  }
+
+  /**
+   * How the build the daemon of {@code lock} runs differs from {@code ours}, for a person; null when
+   * it is the same, or when either is not known -- a daemon in the IDE, a client run from class
+   * directories. A daemon of another build answers as a version the user no longer has.
+   */
+  public static String otherBuild(LockFile lock, BuildIdentity ours) {
+    BuildIdentity theirs = lock.build();
+    if (theirs == null || ours == null || theirs.equals(ours)) return null;
+    return theirs.path().equals(ours.path())
+        ? "an earlier build of " + theirs.path() + ", which has changed since it started"
+        : "arend from " + theirs.path() + ", and this command from " + ours.path();
   }
 
   /**

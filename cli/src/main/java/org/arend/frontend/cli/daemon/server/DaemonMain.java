@@ -1,5 +1,6 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.daemon.BuildIdentity;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.server.DaemonServer;
@@ -57,6 +58,8 @@ public final class DaemonMain {
 
   /** @return the exit code: 1 when the daemon could not start, else 0 once it has stopped. */
   private static int serve(String[] args) {
+    // The jar as it is now, before the libraries take their seconds to load: a rebuild meanwhile counts.
+    BuildIdentity build = BuildIdentity.ofThisProcess();
     if (args.length < 2) {
       System.err.println("[DAEMON] --daemon-bootstrap requires a library reference");
       return 1;
@@ -118,6 +121,11 @@ public final class DaemonMain {
     CountDownLatch stopped = new CountDownLatch(1);
     String token = LockFile.newToken();
     DaemonServer server = CliDaemonRunner.server(bound, token, warmCtx, libraryConfigs, CliDispatcher::run, stopped::countDown);
+    if (build != null) {
+      server.retireWhen(() -> !build.isCurrent(), "the arend jar this daemon runs from, " + build.path() + ", has changed"
+          + " since it started, so the daemon is stopping. Run the command again: it runs without the daemon, or start"
+          + " a new one with `arend -d`.");
+    }
     server.start();
 
     LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, sharedLibraries(warmCtx), server.startedAt(),
@@ -136,6 +144,13 @@ public final class DaemonMain {
     } catch (IOException e) {
       System.err.println("[DAEMON] could not write the lock: " + e.getMessage());
       return 1;
+    }
+
+    // Our own lock has to check out as any client will check it. Looking it up also reads what
+    // removing it on the way out takes, while the jar it comes from is still the one we started from.
+    if (!(LockFile.lookup(paths) instanceof LockFile.Read.Found)) {
+      System.err.println("[DAEMON] the lock just written at " + paths.lockFile + " does not check out against the registry"
+          + " in " + DaemonPaths.registryDir() + "; no client will route to this daemon");
     }
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");

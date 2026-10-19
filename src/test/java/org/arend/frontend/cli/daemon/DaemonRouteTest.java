@@ -220,7 +220,7 @@ public class DaemonRouteTest {
     List<String> sharedConfigs = new ArrayList<>();
     for (Path root : shared) sharedConfigs.add(DaemonPaths.resolve(root).libraryConfig.toString());
     LockFile lock = new LockFile(pid, "/owner-" + hash + "/arend.yaml", hash, List.of("/owner-" + hash + "/arend.yaml"),
-        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI, LockFile.UNKNOWN_START, TOKEN);
+        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI, LockFile.UNKNOWN_START, TOKEN, null);
     PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
     lock.writeAtomic(lock.registryFile());
     return lock.registryFile();

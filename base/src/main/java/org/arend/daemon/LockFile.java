@@ -48,6 +48,8 @@ import java.util.regex.Pattern;
  *   processStart     when the process {@code pid} names started, in epoch milliseconds, as the
  *                    process itself reads it; absent when the platform does not say
  *   token            the secret a client presents with every request; in the registry's copy only
+ *   build.*          the jar the daemon runs from, as it was when it started ({@link BuildIdentity}):
+ *                    build.path, build.size, build.modified, build.key; absent when it is not one jar
  * </pre>
  *
  * @param pid             see above
@@ -61,10 +63,11 @@ import java.util.regex.Pattern;
  * @param host            see above
  * @param processStart    see above; {@link #UNKNOWN_START} when absent
  * @param token           see above; empty in a library's copy
+ * @param build           see above; null when absent
  */
 public record LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
                        List<String> shared, int protocolVersion, long startedAt, String socketPath, String host,
-                       long processStart, String token) {
+                       long processStart, String token, BuildIdentity build) {
   /** A daemon that is a JVM of its own, started by {@code arend -d}. */
   public static final String HOST_CLI = "cli";
   /** A daemon answered by the IntelliJ plugin from the IDE's own server, in the IDE's process. */
@@ -92,7 +95,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
   /** A lock that does not say when its process started, as one written before {@code processStart} did, with no token. */
   public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries, List<String> shared,
                   int protocolVersion, long startedAt, String socketPath, String host) {
-    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, UNKNOWN_START, "");
+    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, UNKNOWN_START, "", null);
   }
 
   /** The lock of a daemon this process runs, whose first library is {@code home} and whose requests present {@code token}. */
@@ -100,7 +103,8 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
                                        String socketPath, String host, String token) {
     ProcessHandle self = ProcessHandle.current();
     return new LockFile(self.pid(), home.libraryConfig.toString(), home.libraryHash, libraries,
-        shared, PROTOCOL_VERSION, startedAt, socketPath, host, startOf(self), token);
+        shared, PROTOCOL_VERSION, startedAt, socketPath, host, startOf(self), token,
+        HOST_CLI.equals(host) ? BuildIdentity.ofThisProcess() : null);
   }
 
   /** A fresh secret for a daemon to demand of its clients: 256 random bits, in hex. */
@@ -112,7 +116,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
 
   /** This lock as a library's copy has it: without the token, which only the registry's copy holds. */
   public LockFile withoutToken() {
-    return new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, processStart, "");
+    return new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, processStart, "", build);
   }
 
   /** When {@code process} started, in epoch milliseconds, or {@link #UNKNOWN_START}. */
@@ -280,6 +284,12 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     props.setProperty("host", host);
     if (processStart != UNKNOWN_START) props.setProperty("processStart", Long.toString(processStart));
     if (!token.isEmpty()) props.setProperty("token", token);
+    if (build != null) {
+      props.setProperty("build.path", build.path());
+      props.setProperty("build.size", Long.toString(build.size()));
+      props.setProperty("build.modified", Long.toString(build.modified()));
+      props.setProperty("build.key", build.key());
+    }
 
     Path directory = lockPath.getParent();
     Path tmp = Files.createTempFile(directory, lockPath.getFileName() + ".", ".tmp");
@@ -321,6 +331,10 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       String host = props.getProperty("host", HOST_CLI);
       long processStart = Long.parseLong(props.getProperty("processStart", Long.toString(UNKNOWN_START)).trim());
       String token = props.getProperty("token", "");
+      String buildPath = props.getProperty("build.path");
+      BuildIdentity build = buildPath == null ? null : new BuildIdentity(buildPath,
+          Long.parseLong(props.getProperty("build.size", "-1").trim()), Long.parseLong(props.getProperty("build.modified", "-1").trim()),
+          props.getProperty("build.key", ""));
       List<String> libraries = new ArrayList<>();
       for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
       // A lock from before library.N named only the one library its daemon served.
@@ -331,7 +345,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
         return new Read.Unreadable("lock file is missing libraryPath or libraryHash");
       }
       return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt,
-          socketPath, host, processStart, token));
+          socketPath, host, processStart, token, build));
     } catch (NumberFormatException e) {
       return new Read.Unreadable("lock file has a malformed numeric field: " + e.getMessage());
     }

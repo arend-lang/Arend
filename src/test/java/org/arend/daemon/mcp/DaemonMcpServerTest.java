@@ -115,7 +115,7 @@ public class DaemonMcpServerTest {
     for (Path library : sharedLoaded) sharedConfigs.add(config(library));
     LockFile lock = new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
         List.of(paths.libraryConfig.toString()), sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, bound.address(), LockFile.HOST_CLI,
-        LockFile.UNKNOWN_START, token);
+        LockFile.UNKNOWN_START, token, null);
     lock.writeEverywhere();
   }
 

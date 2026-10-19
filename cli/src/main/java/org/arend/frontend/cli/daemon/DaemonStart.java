@@ -187,7 +187,8 @@ public final class DaemonStart {
   private static int startChild(List<DaemonPaths> libraries, List<String> requested, List<Path> libDirsForward,
                                 List<String> extraChildArgs) {
     DaemonPaths paths = home(libraries);
-    List<String> cmd = buildChildCommand(libraries, libDirsForward, extraChildArgs, privateClasspath(paths));
+    // This process's own classpath: a daemon whose jar is rebuilt or replaced under it retires (BuildIdentity).
+    List<String> cmd = buildChildCommand(libraries, libDirsForward, extraChildArgs, System.getProperty("java.class.path"));
     rotateDaemonLog(paths.logFile);
 
     ProcessBuilder pb = new ProcessBuilder(cmd);
@@ -374,35 +375,6 @@ public final class DaemonStart {
   /** The library whose {@code .arend/} holds the daemon's socket and log: the first one it owns. */
   static DaemonPaths home(List<DaemonPaths> libraries) {
     return libraries.stream().filter(DaemonPaths::canOwn).findFirst().orElse(libraries.getFirst());
-  }
-
-  /**
-   * The classpath the child runs from: this process's own, except that a single jar is copied to
-   * {@code .arend/daemon.jar} first. The JVM loads classes lazily for as long as it runs, and a
-   * daemon runs for days; reading them out of a jar that a rebuild has replaced since fails the
-   * first time a class is needed that was not yet loaded, long after the daemon looked healthy.
-   */
-  static String privateClasspath(DaemonPaths home) {
-    String classpath = System.getProperty("java.class.path");
-    // A copy of one entry of several could not run alone.
-    if (classpath.contains(File.pathSeparator) || !classpath.endsWith(".jar")) return classpath;
-    Path jar = Path.of(classpath);
-    if (!Files.isRegularFile(jar)) return classpath;
-    Path copy = home.arendDir.resolve("daemon.jar");
-    try {
-      Path tmp = Files.createTempFile(home.arendDir, "daemon.jar.", ".tmp");
-      try {
-        Files.copy(jar, tmp, StandardCopyOption.REPLACE_EXISTING);
-        Files.move(tmp, copy, StandardCopyOption.REPLACE_EXISTING);
-      } finally {
-        Files.deleteIfExists(tmp);
-      }
-      return copy.toString();
-    } catch (IOException e) {
-      System.err.println("[WARN]  -d: could not copy " + jar + " to " + copy + " (" + e.getMessage()
-          + "); the daemon runs from the original, so rebuilding it while the daemon runs will break it");
-      return classpath;
-    }
   }
 
   static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,

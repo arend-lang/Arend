@@ -12,12 +12,14 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -132,6 +134,9 @@ public final class DaemonServer {
   private final long startedAt = System.currentTimeMillis();
 
   private final LinkedBlockingQueue<WorkItem> workQueue = new LinkedBlockingQueue<>();
+  /** Whether the daemon should stop rather than run another request, and what to tell a client it turns away; see {@link #retireWhen}. */
+  private volatile BooleanSupplier retire = () -> false;
+  private volatile String retireReason = "";
   /**
    * Every request accepted and not yet answered, by id -- queued and running alike, mapped to the
    * indicator that abandons it. Registered before the item is queued, so a cancel finds it whether or
@@ -171,7 +176,23 @@ public final class DaemonServer {
     this.onActivity = onActivity;
   }
 
+  /**
+   * Makes the daemon stop, rather than run the next request, once {@code retire} says so: the jar it
+   * runs from has been rebuilt or replaced, and what it would answer next is a build the user no
+   * longer has, if the classes it still needs can be read at all. The request is answered with
+   * {@code reason} instead, and so is every one queued behind it.
+   */
+  public DaemonServer retireWhen(BooleanSupplier retire, String reason) {
+    this.retire = retire;
+    this.retireReason = reason;
+    return this;
+  }
+
   public void start() {
+    // Read now what turning a request away takes, while the classes can still be: retiring is for
+    // when the jar they come from has changed.
+    FrameChannel.stderrFrame("", "");
+    FrameChannel.doneFrame("", 0);
     acceptThread.start();
     workerThread.start();
   }
@@ -333,6 +354,10 @@ public final class DaemonServer {
         Thread.ofPlatform().daemon().name("arend-daemon-shutdown").start(onShutdown);
         return;
       }
+      if (retire.getAsBoolean()) {
+        turnAwayAll(item);
+        return;
+      }
       Request request = item.request();
       long itemStartedAt = System.currentTimeMillis();
       current = new Running(item, itemStartedAt);
@@ -354,6 +379,21 @@ public final class DaemonServer {
         onActivity.run();
       }
     }
+  }
+
+  /** Answers {@code first} and everything queued behind it with the reason to retire, then shuts down. */
+  private void turnAwayAll(WorkItem first) {
+    draining = true;
+    List<WorkItem> items = new ArrayList<>();
+    items.add(first);
+    workQueue.drainTo(items);
+    for (WorkItem item : items) {
+      if (item == SHUTDOWN) continue;
+      item.request().output().err("[ERROR] " + retireReason + "\n");
+      complete(item, System.currentTimeMillis(), 1);
+    }
+    onActivity.run();
+    Thread.ofPlatform().daemon().name("arend-daemon-shutdown").start(onShutdown);
   }
 
   /** Records {@code item} as finished and only then tells its client, so that a client hearing {@code done} finds the daemon past it. */

@@ -269,6 +269,23 @@ public class DaemonServerSocketTest {
     }
   }
 
+  /**
+   * Once the jar a daemon runs from has been rebuilt or replaced, its answers are a build the user no
+   * longer has, if it can still read the classes it needs at all: it turns the request away, and stops.
+   */
+  @Test
+  public void aDaemonWhoseJarChangedTurnsRequestsAwayAndStops() throws Exception {
+    java.util.concurrent.atomic.AtomicBoolean replaced = new java.util.concurrent.atomic.AtomicBoolean();
+    server.retireWhen(replaced::get, "the jar has changed");
+    assertEquals(0, cli(libRoot.toString(), "-ss", "good").exitCode());
+
+    replaced.set(true);
+    Result turnedAway = cli(libRoot.toString(), "-ss", "good");
+    assertEquals(1, turnedAway.exitCode());
+    assertTrue(turnedAway.output(), turnedAway.output().contains("the jar has changed"));
+    assertTrue("the daemon must stop", stopped.await(30, TimeUnit.SECONDS));
+  }
+
   @Test
   public void shutdownStopsTheServer() throws Exception {
     try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {

@@ -2,6 +2,7 @@ package org.arend.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.arend.daemon.BuildIdentity;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.wire.FrameChannel;
@@ -100,6 +101,8 @@ public final class DaemonMcpServer {
   }
 
   public static int run(List<Path> libDirs) {
+    // The jar as it is at the start, for warnIfReplaced to compare with.
+    BuildIdentity.ofThisProcess();
     PrintStream protocol = System.out;
     System.setOut(System.err);
     new DaemonMcpServer(System.in, protocol, libDirs, Path.of("").toAbsolutePath()).serve();
@@ -203,7 +206,7 @@ public final class DaemonMcpServer {
       }
       case "ping" -> result(id, Map.of());
       case "tools/list" -> result(id, Map.of("tools", tools));
-      case "tools/call" -> callTool(id, params);
+      case "tools/call" -> warnIfReplaced(callTool(id, params));
       default -> error(id, -32601, "Method not found: " + method.asText());
     };
   }
@@ -397,6 +400,24 @@ public final class DaemonMcpServer {
     response.put("id", id);
     response.put(kind, body);
     return response;
+  }
+
+  /**
+   * {@code response} with a word that this server's own jar has changed since it started, when it
+   * has: it still answers, through daemons of their own build, but it is the old build that does,
+   * and it may fail on the next class it reads. Reconnecting the server runs the new one.
+   */
+  private static Map<String, Object> warnIfReplaced(Map<String, Object> response) {
+    BuildIdentity build = BuildIdentity.ofThisProcess();
+    if (build == null || build.isCurrent() || response == null || !(response.get("result") instanceof Map<?, ?> result)
+        || !(result.get("content") instanceof List<?>)) {
+      return response;
+    }
+    @SuppressWarnings("unchecked") Map<String, Object> typed = (Map<String, Object>) result;
+    Map<String, Object> out = new LinkedHashMap<>(response);
+    out.put("result", warned("[WARN] the arend jar this MCP server runs from, " + build.path() + ", has changed since it"
+        + " started; reconnect the arend-daemons server to run the new build.", typed));
+    return out;
   }
 
   /** {@code result} with {@code warning}, unless null, as its first text. */
