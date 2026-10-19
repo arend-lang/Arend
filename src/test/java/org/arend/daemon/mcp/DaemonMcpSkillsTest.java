@@ -97,11 +97,13 @@ public class DaemonMcpSkillsTest {
     try (Stream<Path> paths = Files.walk(root)) {
       for (Path path : (Iterable<Path>) paths.sorted()::iterator) {
         if (path.equals(root)) continue;
-        entries.addObject().put("path", root.relativize(path).toString().replace('\\', '/'))
+        ObjectNode entry = entries.addObject().put("path", root.relativize(path).toString().replace('\\', '/'))
             .put("type", Files.isDirectory(path) ? "tree" : "blob");
+        if (!Files.isDirectory(path)) entry.put("sha", DaemonMcpSkills.gitBlobHash(Files.readAllBytes(path)));
       }
     }
     ObjectNode listing = MAPPER.createObjectNode();
+    listing.put("sha", "tree-of-" + root.getFileName() + "-" + entries.toString().hashCode());
     listing.set("tree", entries);
     return listing.put("truncated", false).toString();
   }
@@ -131,10 +133,12 @@ public class DaemonMcpSkillsTest {
     assertFalse(list, list.contains("docs") || list.contains("README"));
 
     String installed = call(DaemonMcpSkills.INSTALL, "{}", "claude-code");
-    assertTrue(installed, installed.contains("one, two"));
+    assertTrue(installed, installed.contains("one (SKILL.md); two (SKILL.md, scripts/run.sh)"));
+    assertTrue("with no tag of this version, the answer says it took main: " + installed, installed.contains("no tag " + DaemonMcpSkills.versionTag()));
     assertEquals("echo\n", Files.readString(claudeSkills().resolve("two").resolve("scripts").resolve("run.sh")));
     JsonNode marker = MAPPER.readTree(claudeSkills().resolve("one").resolve(DaemonMcpSkills.MARKER).toFile());
     assertEquals("main", marker.get("ref").asText());
+    assertTrue(marker.get("tree").asText().startsWith("tree-of-main"));
     assertTrue(call(DaemonMcpSkills.LIST, "{\"ref\":\"main\"}", "claude-code").contains("one -- installed"));
 
     // A second install replaces the copy, with what the repository has now.
@@ -207,5 +211,39 @@ public class DaemonMcpSkillsTest {
     IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
         () -> call(DaemonMcpSkills.INSTALL, "{\"ref\":\"main\",\"names\":[\"nope\"]}", "claude-code"));
     assertTrue(e.getMessage(), e.getMessage().contains("no skill 'nope'"));
+  }
+
+  /** The skills that go with this version of Arend are its tag's, which a push to main does not change. */
+  @Test
+  public void theTagOfThisVersionIsTakenWhenThereIsOne() throws Exception {
+    Path tagged = repo.resolve(DaemonMcpSkills.versionTag()).resolve("one");
+    Files.createDirectories(tagged);
+    Files.writeString(tagged.resolve("SKILL.md"), "---\nname: one\ndescription: As released.\n---\nBody\n");
+    String installed = call(DaemonMcpSkills.INSTALL, "{}", "claude-code");
+    assertFalse(installed, installed.contains("no tag"));
+    assertTrue(Files.readString(claudeSkills().resolve("one").resolve("SKILL.md")).contains("As released."));
+    assertFalse("main's other skill is not the tag's", Files.exists(claudeSkills().resolve("two")));
+    assertEquals(DaemonMcpSkills.versionTag(), MAPPER.readTree(claudeSkills().resolve("one").resolve(DaemonMcpSkills.MARKER).toFile())
+        .get("ref").asText());
+  }
+
+  /**
+   * A file is installed only as the listing says it is: one that differs -- a push between the
+   * listing and the download, or anything else answering for it -- installs nothing of its skill.
+   */
+  @Test
+  public void aFileThatIsNotWhatTheListingSaysIsRefused() throws Exception {
+    tree = "{\"sha\":\"t\",\"truncated\":false,\"tree\":[{\"path\":\"one/SKILL.md\",\"type\":\"blob\",\"sha\":\""
+        + DaemonMcpSkills.gitBlobHash("something else".getBytes(StandardCharsets.UTF_8)) + "\"}]}";
+    IOException e = assertThrows(IOException.class, () -> call(DaemonMcpSkills.INSTALL, "{\"ref\":\"main\"}", "claude-code"));
+    assertTrue(e.getMessage(), e.getMessage().contains("is not what the listing"));
+    assertFalse(Files.exists(claudeSkills().resolve("one")));
+  }
+
+  /** git's own hash of a blob, as GitHub's listings give it. */
+  @Test
+  public void theBlobHashIsGits() {
+    // `printf 'hello\n' | git hash-object --stdin`
+    assertEquals("ce013625030ba8dba906f756967f9e9ca394464a", DaemonMcpSkills.gitBlobHash("hello\n".getBytes(StandardCharsets.UTF_8)));
   }
 }
