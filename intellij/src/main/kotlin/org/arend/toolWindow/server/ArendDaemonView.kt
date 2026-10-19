@@ -15,6 +15,7 @@ import com.intellij.xml.util.XmlStringUtil
 import org.arend.daemon.server.DaemonServer
 import org.arend.daemon.wire.FrameChannel
 import org.arend.server.daemon.ArendDaemonService
+import org.arend.server.daemon.mcp.ArendMcpRegistration
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.time.Instant
@@ -31,7 +32,7 @@ import javax.swing.Timer
  * daemon when the project opens; whether it does now, and what it is doing; which libraries it
  * serves; and the requests it answered last.
  */
-class ArendDaemonView(project: Project, parent: Disposable) {
+class ArendDaemonView(private val project: Project, parent: Disposable) {
     private val service = project.service<ArendDaemonService>()
     private val startOnOpen = JBRadioButton("Yes")
     private val noStartOnOpen = JBRadioButton("No")
@@ -41,6 +42,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
     private val requests = JBLabel()
     private val startButton = JButton("Start")
     private val stopButton = JButton("Stop")
+    private val agentsButton = JButton("Register for Agents of This Project")
     /** Keeps the "for how long" figures current while the daemon runs. */
     private val ticker = Timer(1000) { show(service.state) }
 
@@ -57,6 +59,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
 
         startButton.addActionListener { inBackground { service.start(true) } }
         stopButton.addActionListener { inBackground { service.stop() } }
+        agentsButton.addActionListener { ArendMcpRegistration.registerForProject(project) }
 
         val form = FormBuilder.createFormBuilder()
             .addLabeledComponent("Start the daemon when the project opens:", row(startOnOpen, noStartOnOpen))
@@ -65,6 +68,7 @@ class ArendDaemonView(project: Project, parent: Disposable) {
             .addComponent(status)
             .addComponent(libraries)
             .addComponent(agents)
+            .addComponent(row(agentsButton))
             .addComponent(requests)
             .addComponentFillVertically(JPanel(), 0)
             .panel
@@ -110,7 +114,6 @@ class ArendDaemonView(project: Project, parent: Disposable) {
             section("Left out", state.skipped.map { (name, why) -> "$name: $why" })
         }
         libraries.setIfChanged(if (html.isEmpty()) "" else XmlStringUtil.wrapInHtml(html))
-        // Said before a start too: it is the start that writes to the agents' configs.
         agents.setIfChanged(AGENTS)
 
         val recent = state?.activity?.recent.orEmpty()
@@ -146,9 +149,10 @@ class ArendDaemonView(project: Project, parent: Disposable) {
 
     private companion object {
         /** In short lines: the tab scrolls sideways rather than wrap a long one. */
-        val AGENTS: String = XmlStringUtil.wrapInHtml("Starting the daemon adds the <code>arend-daemons</code> MCP server<br>" +
-            "to the user configs of the agents installed, so that they can use it.<br>" +
-            "<code>arend --mcp-unregister</code> removes it.")
+        val AGENTS: String = XmlStringUtil.wrapInHtml("Agents reach the daemon through the <code>arend-daemons</code> MCP server.<br>" +
+            "The button below registers it in this project's own config of each agent installed<br>" +
+            "(<code>.mcp.json</code>, <code>.cursor/</code>, <code>.vscode/</code>, <code>.gemini/</code>, <code>.junie/</code>), " +
+            "as <code>arend --mcp-init</code> does;<br><code>arend --mcp-unregister</code> removes it.")
 
         /** One for every row: the tab redraws each second while the daemon runs. */
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())

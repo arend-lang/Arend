@@ -14,12 +14,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Registers the `arend-daemons` MCP server with the agents installed when the IDE's daemon starts, as
- * `arend -d` does, so that an agent started anywhere has the running daemons with no CLI installed.
- * The server runs from the plugin's own jars on the IDE's JVM, with Jackson, which the plugin takes
- * from the IDE, from the IDE's jars. A start after an update of the IDE or the plugin registers the
- * new paths; one that finds the agents running the same command leaves them alone. What it wrote
- * is said in a balloon, with how to take it back out.
+ * Registers the `arend-daemons` MCP server for the project, in the project's own config of every agent
+ * installed, as `arend --mcp-init` does -- when the user asks for it on the Daemon tab, and at no other
+ * time. The command is `arend --mcp` when `arend` is on the PATH; else the server runs from the plugin's
+ * own jars on the IDE's JVM, with Jackson from the IDE's jars, which only this machine has. What it
+ * wrote is said in a balloon, with how to take it back out.
  */
 object ArendMcpRegistration {
     private val LOG = logger<ArendMcpRegistration>()
@@ -31,53 +30,59 @@ object ArendMcpRegistration {
         "com/fasterxml/jackson/annotation/JsonAutoDetect.class"
     )
 
-    /** Registers the server off the caller's thread: an agent's CLI may take seconds to answer. */
-    fun register(project: Project) {
-        // A test must not rewrite the agents' configs of whoever runs it.
-        if (ApplicationManager.getApplication().isUnitTestMode) return
-        ApplicationManager.getApplication().executeOnPooledThread { registerNow(project) }
+    /** Registers the server for [project], off the caller's thread; nothing happens for a project with no directory. */
+    fun registerForProject(project: Project) {
+        val dir = project.basePath?.let { Path.of(it) } ?: return
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val command = McpRegistration.portableCommand() ?: pluginCommand()
+            if (command == null) {
+                warn(project, "Cannot register the ${McpRegistration.SERVER_NAME} MCP server: arend is not on the PATH, and the plugin is not installed from jars.")
+                return@executeOnPooledThread
+            }
+            val result = McpRegistration.initProject(dir, command)
+            if (project.isDisposed) return@executeOnPooledThread
+            val text = StringBuilder()
+            if (result.done.isEmpty()) {
+                if (result.failures.isEmpty()) text.append("No agent that reads a project's own MCP config is installed.")
+            } else {
+                text.append("Registered the ${McpRegistration.SERVER_NAME} MCP server for agents started in this project, in: ")
+                    .append(result.done.joinToString(", ")).append(". <code>arend --mcp-unregister</code> takes it back out.")
+            }
+            for (note in result.notes) text.append("<br>").append(note)
+            if (text.isNotEmpty()) {
+                NotificationGroupManager.getInstance().getNotificationGroup("Arend Daemon")
+                    .createNotification("Arend daemon", text.toString(), NotificationType.INFORMATION)
+                    .notify(project)
+            }
+            for (failure in result.failures) warn(project, failure.replaceFirstChar { it.uppercase() } + ".")
+        }
     }
 
-    /** One at a time: a second project's start then finds the agents registered already. */
-    @Synchronized
-    private fun registerNow(project: Project) {
-        val command = command() ?: return
-        val result = McpRegistration.register(command)
-        if (project.isDisposed) return
-        if (result.registered.isNotEmpty()) {
-            // A balloon, not the event log alone: the IDE has just written to other programs' configs.
-            NotificationGroupManager.getInstance().getNotificationGroup("Arend Daemon")
-                .createNotification("Arend daemon", "Registered the ${McpRegistration.SERVER_NAME} MCP server in the user configs of " +
-                    result.registered.joinToString(", ") + ", so that agents started from now on can use the Arend daemons. " +
-                    "<code>arend --mcp-unregister</code> removes it from them.", NotificationType.INFORMATION)
-                .notify(project)
-        }
-        for (failure in result.failures) {
-            NotificationGroupManager.getInstance().getNotificationGroup("Arend Warning Messages")
-                .createNotification("Arend daemon", failure.replaceFirstChar { it.uppercase() } + ".", NotificationType.WARNING)
-                .notify(project)
-        }
+    private fun warn(project: Project, message: String) {
+        NotificationGroupManager.getInstance().getNotificationGroup("Arend Warning Messages")
+            .createNotification("Arend daemon", message, NotificationType.WARNING)
+            .notify(project)
     }
 
     /**
-     * [DaemonMcpServer] on the IDE's JVM, from every jar of the plugin -- the directory's `*`, so
-     * that a jar renamed by an update is still on it -- and Jackson's; null when the plugin is not
-     * installed from jars, as when it runs from its classes.
+     * [DaemonMcpServer] on the IDE's JVM, from every jar of the plugin -- the directory's `*`, so that a
+     * jar renamed by an update is still on it -- and Jackson's; null when the plugin is not installed
+     * from jars, as when it runs from its classes.
      */
-    private fun command(): List<String>? {
+    private fun pluginCommand(): McpRegistration.Command? {
         val lib = PluginManager.getPluginByClass(ArendMcpRegistration::class.java)?.pluginPath?.resolve("lib")
         if (lib == null || !Files.isDirectory(lib)) {
-            LOG.info("Not registering the ${McpRegistration.SERVER_NAME} MCP server: the plugin has no lib directory")
+            LOG.info("No command for the ${McpRegistration.SERVER_NAME} MCP server: the plugin has no lib directory")
             return null
         }
         // The IDE's own, from its boot classpath: the plugin's class loader finds the copy of a
         // plugin it depends on first, which goes when that plugin is updated or removed.
         val jackson = JACKSON.map { PathManager.getResourceRoot(PathManager::class.java, "/$it") }
         if (jackson.any { it == null }) {
-            LOG.warn("Not registering the ${McpRegistration.SERVER_NAME} MCP server: Jackson is not found")
+            LOG.warn("No command for the ${McpRegistration.SERVER_NAME} MCP server: Jackson is not found")
             return null
         }
         val classpath = listOf(lib.toString() + File.separator + "*") + jackson.filterNotNull().distinct()
-        return McpRegistration.command(Path.of(System.getProperty("java.home")), classpath, DaemonMcpServer::class.java.name)
+        return McpRegistration.Command(McpRegistration.command(Path.of(System.getProperty("java.home")), classpath, DaemonMcpServer::class.java.name), false)
     }
 }

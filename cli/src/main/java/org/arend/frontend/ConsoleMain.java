@@ -20,6 +20,8 @@ import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.prelude.Prelude;
 
 import java.util.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.function.BiConsumer;
 
 
@@ -144,6 +146,12 @@ public class ConsoleMain {
         && !cmdLine.hasOption("s");
   }
 
+  /** The project directory {@code --mcp-init} and {@code --mcp-unregister} are about: their one positional, else this one. */
+  private static Path projectDir(CommandLine cmdLine) {
+    List<String> positional = cmdLine.getArgList();
+    return Paths.get(positional.isEmpty() ? "." : positional.getFirst()).toAbsolutePath().normalize();
+  }
+
   /** @return the process exit code. */
   private int run(String[] args) {
     ParsedArgs parsed = parseArgs(args);
@@ -155,7 +163,8 @@ public class ConsoleMain {
     CliSetup.readLibDirs(ctx, cmdLine);
 
     if (cmdLine.hasOption("mcp")) return DaemonMcpServer.run(ctx.libDirs);
-    if (cmdLine.hasOption("mcp-unregister")) return DaemonStart.unregisterMcp();
+    if (cmdLine.hasOption("mcp-init")) return DaemonStart.initMcp(projectDir(cmdLine));
+    if (cmdLine.hasOption("mcp-unregister")) return DaemonStart.unregisterMcp(projectDir(cmdLine));
 
     // A recoverable error must not reach a daemon: -d would bake a bad -L into a server that
     // outlives the command, and routing would hand the work to one built from a context this

@@ -17,7 +17,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-/** What {@code arend -d} registers as the {@code arend-daemons} server, and how it tells an agent has it. */
+/** How {@code arend --mcp-init} registers the {@code arend-daemons} server for a project, and how it is taken back out. */
 public class McpRegistrationTest {
   @Rule
   public TemporaryFolder tmp = new TemporaryFolder();
@@ -97,40 +97,6 @@ public class McpRegistrationTest {
     assertEquals(text, Files.readString(file));
   }
 
-  /** The CLI's server, or the plugin's from a directory's *, left alone while its files are there. */
-  @Test
-  public void anotherArendServerThatStartsServesTheDaemons() throws IOException {
-    Path java = tmp.newFolder("jdk", "bin").toPath().resolve("java");
-    Files.createFile(java);
-    assertTrue(java.toFile().setExecutable(true));
-    Path jar = tmp.newFile("cli-full.jar").toPath();
-    Path lib = tmp.newFolder("plugin", "lib").toPath();
-
-    assertTrue(McpRegistration.servesDaemons(McpRegistration.server(
-        List.of(java.toString(), "-cp", jar.toString(), "org.arend.frontend.ConsoleMain", "--mcp")), COMMAND));
-    assertTrue(McpRegistration.servesDaemons(McpRegistration.server(
-        List.of(java.toString(), "-cp", lib + File.separator + "*" + File.pathSeparator + jar, DaemonMcpServer.class.getName())), COMMAND));
-  }
-
-  @Test
-  public void anArendServerWithFilesGoneOrAnotherServerIsReplaced() throws IOException {
-    Path java = tmp.newFolder("jdk", "bin").toPath().resolve("java");
-    Files.createFile(java);
-    assertTrue(java.toFile().setExecutable(true));
-    Path jar = tmp.newFile("cli-full.jar").toPath();
-    String gone = tmp.getRoot().toPath().resolve("gone.jar").toString();
-
-    assertFalse(McpRegistration.servesDaemons(McpRegistration.server(
-        List.of(java.toString(), "-cp", jar + File.pathSeparator + gone, "org.arend.frontend.ConsoleMain", "--mcp")), COMMAND));
-    assertFalse(McpRegistration.servesDaemons(McpRegistration.server(
-        List.of(tmp.getRoot().toPath().resolve("no-java").toString(), "-cp", jar.toString(), "org.arend.frontend.ConsoleMain", "--mcp")), COMMAND));
-    assertFalse(McpRegistration.servesDaemons(McpRegistration.server(
-        List.of(java.toString(), "-cp", tmp.getRoot() + File.separator + "nowhere" + File.separator + "*", DaemonMcpServer.class.getName())), COMMAND));
-    assertFalse(McpRegistration.servesDaemons(McpRegistration.server(
-        List.of(java.toString(), "-cp", jar.toString(), "org.example.Other")), COMMAND));
-    assertFalse(McpRegistration.servesDaemons(MAPPER.readTree("{\"command\":\"arend\",\"args\":[\"--mcp\"]}"), COMMAND));
-  }
-
   /** As Cursor's mcp.json is edited: its other servers and settings stay. */
   @Test
   public void aConfigKeepsItsOtherServers() throws IOException {
@@ -158,11 +124,69 @@ public class McpRegistrationTest {
     assertEquals("not json", Files.readString(file));
   }
 
+  /** A home with Claude Code's and Cursor's directories, so that they count as installed, for the length of {@code body}. */
+  private void withAgentsInstalled(IORunnable body) throws IOException {
+    Path home = tmp.newFolder("home").toPath();
+    Files.createDirectories(home.resolve(".claude"));
+    Files.createDirectories(home.resolve(".cursor"));
+    String realHome = System.getProperty("user.home");
+    System.setProperty("user.home", home.toString());
+    try {
+      body.run();
+    } finally {
+      System.setProperty("user.home", realHome);
+    }
+  }
+
+  private interface IORunnable {
+    void run() throws IOException;
+  }
+
+  /**
+   * The project's own configs, and nothing else: an agent started elsewhere does not see the server,
+   * and the command written is the one given, which `arend --mcp` is when arend is on the PATH.
+   */
   @Test
-  public void theCommandRunsThisArendFromAnywhere() {
-    List<String> command = McpRegistration.command();
-    assertTrue(command.getFirst(), Path.of(command.getFirst()).isAbsolute());
-    for (String entry : command.get(2).split(File.pathSeparator)) assertTrue(entry, Path.of(entry).isAbsolute());
-    assertEquals(List.of("org.arend.frontend.ConsoleMain", "--mcp"), command.subList(3, command.size()));
+  public void aProjectIsRegisteredInItsOwnConfigs() throws IOException {
+    withAgentsInstalled(() -> {
+      Path project = tmp.newFolder("project").toPath();
+      McpRegistration.Command portable = new McpRegistration.Command(List.of("arend", "--mcp"), true);
+      McpRegistration.Result result = McpRegistration.initProject(project, portable);
+      assertTrue(result.failures().toString(), result.failures().isEmpty());
+      JsonNode claude = MAPPER.readTree(project.resolve(".mcp.json").toFile());
+      assertTrue(McpRegistration.runs(claude.get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
+      JsonNode cursor = MAPPER.readTree(project.resolve(".cursor").resolve("mcp.json").toFile());
+      assertTrue(McpRegistration.runs(cursor.get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
+      assertFalse("nothing of the user's own is written", Files.exists(Path.of(System.getProperty("user.home")).resolve(".claude.json")));
+      assertTrue(result.notes().stream().noneMatch(note -> note.contains("version control")));
+
+      McpRegistration.Result removed = McpRegistration.unregisterProject(project);
+      assertTrue(removed.done().toString(), removed.done().size() >= 2);
+      assertFalse(MAPPER.readTree(project.resolve(".mcp.json").toFile()).get("mcpServers").has(McpRegistration.SERVER_NAME));
+    });
+  }
+
+  /** A command naming this machine's java and jar is said not to belong in version control. */
+  @Test
+  public void aCommandOfThisMachineIsSaidToBeSo() throws IOException {
+    withAgentsInstalled(() -> {
+      Path project = tmp.newFolder("project").toPath();
+      McpRegistration.Result result = McpRegistration.initProject(project, new McpRegistration.Command(COMMAND, false));
+      assertTrue(result.notes().toString(), result.notes().stream().anyMatch(note -> note.contains("version control")));
+    });
+  }
+
+  /** Without an arend on the PATH the command is this one's own, every path absolute so that it runs from anywhere. */
+  @Test
+  public void theCommandIsArendOrThisOneFromAnywhere() {
+    McpRegistration.Command command = McpRegistration.command();
+    if (command.portable()) {
+      assertEquals(List.of("arend", "--mcp"), command.argv());
+      return;
+    }
+    List<String> argv = command.argv();
+    assertTrue(argv.getFirst(), Path.of(argv.getFirst()).isAbsolute());
+    for (String entry : argv.get(2).split(File.pathSeparator)) assertTrue(entry, Path.of(entry).isAbsolute());
+    assertEquals(List.of("org.arend.frontend.ConsoleMain", "--mcp"), argv.subList(3, argv.size()));
   }
 }

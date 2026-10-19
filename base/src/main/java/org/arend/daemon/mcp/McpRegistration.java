@@ -10,26 +10,28 @@ import org.arend.daemon.Platform;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
- * Registers the {@code arend-daemons} MCP server for the user with every agent found on the
- * machine -- Claude Code, Codex, Gemini CLI, Cursor, Junie and VS Code -- so that an agent started
- * in any directory has every running daemon at hand. The server's command runs this very {@code arend},
- * or the IntelliJ plugin's jars, whether or not {@code arend} is on the agent's PATH, and finds the
- * daemons through the registry, so one registration serves them all, the IDE's among them.
+ * Registers the {@code arend-daemons} MCP server for one Arend project, with the agents installed
+ * that read a project's own config: Claude Code ({@code .mcp.json}), Cursor ({@code .cursor/mcp.json}),
+ * VS Code ({@code .vscode/mcp.json}), Gemini CLI ({@code .gemini/settings.json}) and Junie
+ * ({@code .junie/mcp/mcp.json}). An agent started in another directory does not see it, and nothing
+ * outside the project is written. Only when the user asks for it -- {@code arend --mcp-init}, or the
+ * IDE's Daemon tab -- never as the side effect of starting a daemon.
  *
- * <p>An agent with a CLI of its own is registered through it, since it owns its config; its config
- * is only read, to leave it alone when it already runs an Arend server that starts. Cursor and Junie have
- * none, and get their JSON config edited, its other servers kept. An agent not installed is
- * skipped, and nothing here fails a daemon start: a failure is a warning. {@link #unregister} takes
- * the server back out of every agent that has it.
+ * <p>The command is {@code arend --mcp} when {@code arend} is on the PATH: the same on every machine,
+ * so that the files can be committed, and it stays right when the jar behind it is rebuilt or moved.
+ * Without one it is this machine's JVM and jar, which the caller has to say is not to be committed.
+ *
+ * <p>Earlier builds registered the server in the user's own config of every agent, as {@code arend -d}
+ * started; {@link #unregisterUser} takes such a registration back out.
  */
 public final class McpRegistration {
   public static final String SERVER_NAME = "arend-daemons";
@@ -42,87 +44,35 @@ public final class McpRegistration {
 
   private McpRegistration() {}
 
-  /** An agent the server can be registered with. */
-  private interface Agent {
-    String name();
+  /**
+   * What a registration or a removal did: the files it wrote, or the agents it removed the server
+   * from; for each it could not, why and what the user can do instead; and what else they should know.
+   */
+  public record Result(List<String> done, List<String> failures, List<String> notes) {}
 
-    /** Whether the agent is installed here. */
-    boolean installed();
+  /** The command line the server is registered with, and whether it is the same on every machine. */
+  public record Command(List<String> argv, boolean portable) {}
 
-    /** Whether it already runs {@code command}, or another Arend server that starts, as the user's {@link #SERVER_NAME}. */
-    boolean registered(List<String> command);
-
-    /** Registers {@code command}; null when that worked, else what went wrong. */
-    String register(List<String> command);
-
-    /** What the user can do instead, when registering failed. */
-    String byHand(List<String> command);
-
-    /** Whether it has a {@link #SERVER_NAME} of the user's, whatever that runs. */
-    boolean hasServer();
-
-    /** Removes the user's {@link #SERVER_NAME}; null when that worked, else what went wrong. */
-    String unregister();
-
-    /** What the user can do instead, when removing it failed. */
-    String removeByHand();
-  }
+  // ───────── the command ─────────
 
   /**
-   * What a registration did: the agents it registered the server with, and, for each it could not,
-   * why and what the user can do instead.
+   * {@code arend --mcp}, when {@code arend} is on the PATH; else this process's own JVM and classpath,
+   * every path absolute, which only this machine has. No {@code -L}: one server serves the daemons
+   * of every start, whatever each was given.
    */
-  public record Result(List<String> registered, List<String> failures) {}
-
-  /**
-   * Registers {@code command}, the server's command line, with every agent installed that does not
-   * run it already.
-   */
-  public static Result register(List<String> command) {
-    List<String> registered = new ArrayList<>();
-    List<String> failures = new ArrayList<>();
-    for (Agent agent : List.of(new Claude(), new Codex(), new Gemini(), cursor(), junie(), new VsCode())) {
-      if (!agent.installed() || agent.registered(command)) continue;
-      String failure = agent.register(command);
-      if (failure == null) {
-        registered.add(agent.name());
-      } else {
-        failures.add("could not register the " + SERVER_NAME + " MCP server with " + agent.name()
-            + " (" + failure + "); " + agent.byHand(command));
-      }
-    }
-    return new Result(registered, failures);
-  }
-
-  /** Removes {@link #SERVER_NAME} from every agent installed that has it, whatever it runs: the name is the CLI's and the plugin's. */
-  public static Result unregister() {
-    List<String> removed = new ArrayList<>();
-    List<String> failures = new ArrayList<>();
-    for (Agent agent : List.of(new Claude(), new Codex(), new Gemini(), cursor(), junie(), new VsCode())) {
-      if (!agent.installed() || !agent.hasServer()) continue;
-      String failure = agent.unregister();
-      if (failure == null) {
-        removed.add(agent.name());
-      } else {
-        failures.add("could not remove the " + SERVER_NAME + " MCP server from " + agent.name()
-            + " (" + failure + "); " + agent.removeByHand());
-      }
-    }
-    return new Result(removed, failures);
-  }
-
-  /**
-   * {@code arend --mcp} as this process runs {@code arend}: its JVM and its classpath -- the
-   * original, not the copy a daemon runs from, which the next start of a daemon replaces -- every
-   * path absolute, since the agent runs it from wherever it was started. No {@code -L}: one server
-   * serves the daemons of every start, whatever each was given.
-   */
-  public static List<String> command() {
+  public static Command command() {
+    Command portable = portableCommand();
+    if (portable != null) return portable;
     List<String> classpath = new ArrayList<>();
     for (String entry : System.getProperty("java.class.path").split(File.pathSeparator)) {
       if (!entry.isEmpty()) classpath.add(Path.of(entry).toAbsolutePath().normalize().toString());
     }
-    return command(Path.of(System.getProperty("java.home")), classpath, CLI_MAIN, "--mcp");
+    return new Command(command(Path.of(System.getProperty("java.home")), classpath, CLI_MAIN, "--mcp"), false);
+  }
+
+  /** {@code arend --mcp}, if there is an {@code arend} on the PATH; else null. */
+  public static Command portableCommand() {
+    return findExecutable("arend") == null ? null : new Command(List.of("arend", "--mcp"), true);
   }
 
   /**
@@ -139,7 +89,7 @@ public final class McpRegistration {
     return command;
   }
 
-  /** The stdio server running {@code command}, as the {@code mcpServers} of Claude Code and Cursor have it. */
+  /** The stdio server running {@code command}, as the {@code mcpServers} of Claude Code and Cursor, and VS Code's {@code servers}, have it. */
   static ObjectNode server(List<String> command) {
     ObjectNode server = MAPPER.createObjectNode();
     server.put("type", "stdio");
@@ -148,64 +98,135 @@ public final class McpRegistration {
     return server;
   }
 
-  /** The server running {@code command} with nothing but its command and arguments. */
+  /** The server running {@code command} with nothing but its command and arguments, as Gemini CLI and Junie take it. */
   static ObjectNode plainServer(List<String> command) {
     ObjectNode server = server(command);
     server.remove("type");
     return server;
   }
 
-  /**
-   * Whether {@code server}, an agent's entry, runs {@code command}. Agents add fields of their own,
-   * an empty env among them: the command is what matters.
-   */
+  /** Whether {@code server}, an agent's entry, runs {@code command}. Agents add fields of their own, an empty env among them. */
   static boolean runs(JsonNode server, List<String> command) {
-    List<String> registered = commandOf(server);
-    return registered != null && registered.equals(command);
-  }
-
-  /**
-   * Whether {@code server}, an agent's entry, runs {@code command} or another Arend server that
-   * starts: another {@code arend}'s {@code --mcp}, or the IntelliJ plugin's, with its JVM and every
-   * entry of its classpath there. Either finds every daemon through the registry, so the CLI and
-   * the plugin leave each other's registration alone rather than take it back in turn; one whose
-   * files are gone, as after a {@code gradle clean} or an update, is replaced.
-   */
-  static boolean servesDaemons(JsonNode server, List<String> command) {
-    List<String> registered = commandOf(server);
-    if (registered == null) return false;
-    if (registered.equals(command)) return true;
-    if (registered.size() < 4 || !registered.get(1).equals("-cp")) return false;
-    List<String> main = registered.subList(3, registered.size());
-    if (!main.equals(List.of(CLI_MAIN, "--mcp")) && !main.equals(List.of(DaemonMcpServer.class.getName()))) return false;
-    if (!Files.isExecutable(Path.of(registered.getFirst()))) return false;
-    for (String entry : registered.get(2).split(File.pathSeparator)) {
-      // A directory's * is every jar in it: the directory is what has to be there.
-      boolean wildcard = entry.endsWith("*");
-      String file = wildcard ? entry.substring(0, entry.length() - 1) : entry;
-      try {
-        Path path = Path.of(file);
-        if (wildcard ? !Files.isDirectory(path) : !Files.exists(path)) return false;
-      } catch (InvalidPathException e) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /** The command line of {@code server}, an agent's entry; null when it is not an entry. */
-  private static List<String> commandOf(JsonNode server) {
-    if (server == null || !server.isObject()) return null;
+    if (server == null || !server.isObject()) return false;
     List<String> registered = new ArrayList<>();
     registered.add(server.path("command").asText());
     server.path("args").forEach(arg -> registered.add(arg.asText()));
-    return registered;
+    return registered.equals(command);
   }
 
-  // ───────── agents ─────────
+  // ───────── a project's own configs ─────────
 
-  /** An agent with a CLI of its own, installed when that is found. */
-  private abstract static class CliAgent implements Agent {
+  /**
+   * An agent's config of a project: the file under the project's directory, the key of its servers,
+   * the entry it takes, and whether the agent is installed on this machine.
+   */
+  record ProjectConfig(String agent, String file, String key, Function<List<String>, ObjectNode> entry, BooleanSupplier installed) {}
+
+  static List<ProjectConfig> projectConfigs() {
+    return List.of(
+        new ProjectConfig("Claude Code", ".mcp.json", "mcpServers", McpRegistration::server,
+            () -> findExecutable("claude", home().resolve(".claude").resolve("local")) != null || Files.isDirectory(home().resolve(".claude"))),
+        new ProjectConfig("Cursor", ".cursor/mcp.json", "mcpServers", McpRegistration::server,
+            () -> Files.isDirectory(home().resolve(".cursor"))),
+        new ProjectConfig("VS Code", ".vscode/mcp.json", "servers", McpRegistration::server,
+            () -> findExecutable("code") != null),
+        new ProjectConfig("Gemini CLI", ".gemini/settings.json", "mcpServers", McpRegistration::plainServer,
+            () -> findExecutable("gemini") != null || Files.isDirectory(home().resolve(".gemini"))),
+        // Junie's IDE plugin does not show a server with a field it does not know, a type among them.
+        new ProjectConfig("Junie", ".junie/mcp/mcp.json", "mcpServers", McpRegistration::plainServer,
+            () -> Files.isDirectory(home().resolve(".junie"))));
+  }
+
+  /**
+   * Registers {@code command} as {@link #SERVER_NAME} in the configs of the project in {@code projectDir}
+   * of every agent installed, keeping their other servers and settings; a registration of the name
+   * there is replaced. Codex, which has no config of a project's own, is told of in a note.
+   */
+  public static Result initProject(Path projectDir, Command command) {
+    List<String> written = new ArrayList<>();
+    List<String> failures = new ArrayList<>();
+    List<String> notes = new ArrayList<>();
+    for (ProjectConfig config : projectConfigs()) {
+      if (!config.installed().getAsBoolean()) continue;
+      Path file = projectDir.resolve(config.file());
+      try {
+        setServer(file, config.key(), config.entry().apply(command.argv()));
+        written.add(config.agent() + ": " + file);
+      } catch (IOException e) {
+        failures.add("could not register the " + SERVER_NAME + " MCP server in " + file + " (" + e.getMessage() + "); add to its "
+            + config.key() + ": \"" + SERVER_NAME + "\": " + config.entry().apply(command.argv()));
+      }
+    }
+    if (findExecutable("codex") != null) {
+      notes.add("Codex reads MCP servers from ~/.codex/config.toml alone, for every directory; to have the server there: codex mcp add "
+          + SERVER_NAME + " -- " + String.join(" ", command.argv()));
+    }
+    if (!command.portable()) {
+      notes.add("arend is not on the PATH, so the server is registered as " + String.join(" ", command.argv())
+          + ", which only this machine has: keep these files out of version control, or put arend on the PATH and register again.");
+    }
+    return new Result(written, failures, notes);
+  }
+
+  /** Removes {@link #SERVER_NAME} from every agent's config of the project in {@code projectDir}, keeping the rest. */
+  public static Result unregisterProject(Path projectDir) {
+    List<String> removed = new ArrayList<>();
+    List<String> failures = new ArrayList<>();
+    for (ProjectConfig config : projectConfigs()) {
+      Path file = projectDir.resolve(config.file());
+      if (!hasServerIn(file, LENIENT, config.key())) continue;
+      try {
+        removeServer(file, config.key());
+        removed.add(config.agent() + ": " + file);
+      } catch (IOException e) {
+        failures.add("could not remove the " + SERVER_NAME + " MCP server from " + file + " (" + e.getMessage() + "); remove \""
+            + SERVER_NAME + "\" from its " + config.key() + " by hand");
+      }
+    }
+    return new Result(removed, failures, List.of());
+  }
+
+  // ───────── the user's own configs, as earlier builds wrote them ─────────
+
+  /** An agent's own config of the user's, from which a registration an earlier build made can be removed. */
+  private interface UserConfig {
+    String name();
+
+    boolean installed();
+
+    /** Whether it has a {@link #SERVER_NAME} of the user's, whatever that runs. */
+    boolean hasServer();
+
+    /** Removes the user's {@link #SERVER_NAME}; null when that worked, else what went wrong. */
+    String unregister();
+
+    /** What the user can do instead, when removing it failed. */
+    String removeByHand();
+  }
+
+  /**
+   * Removes {@link #SERVER_NAME} from the user's own config of every agent installed that has it,
+   * whatever it runs: the registration that {@code arend -d} and the IDE's daemon made before
+   * registering became a project's business.
+   */
+  public static Result unregisterUser() {
+    List<String> removed = new ArrayList<>();
+    List<String> failures = new ArrayList<>();
+    for (UserConfig agent : List.of(new Claude(), new Codex(), new Gemini(), cursor(), junie(), new VsCode())) {
+      if (!agent.installed() || !agent.hasServer()) continue;
+      String failure = agent.unregister();
+      if (failure == null) {
+        removed.add(agent.name());
+      } else {
+        failures.add("could not remove the " + SERVER_NAME + " MCP server from " + agent.name()
+            + " (" + failure + "); " + agent.removeByHand());
+      }
+    }
+    return new Result(removed, failures, List.of());
+  }
+
+  /** An agent with a CLI of its own, which owns its config: the server is removed through it. */
+  private abstract static class CliAgent implements UserConfig {
     private final String name;
     final Path cli;
 
@@ -236,30 +257,6 @@ public final class McpRegistration {
     }
 
     @Override
-    public boolean registered(List<String> command) {
-      return registeredIn(config(), MAPPER, "mcpServers", command);
-    }
-
-    @Override
-    public String register(List<String> command) {
-      // add refuses a name it has; a registration that is not this one is replaced.
-      run(cli, List.of("mcp", "remove", "--scope", "user", SERVER_NAME));
-      return run(cli, addArgs(command));
-    }
-
-    /** The command as arguments, not as JSON: on Windows Java leaves the quotes inside an argument unescaped. */
-    private static List<String> addArgs(List<String> command) {
-      List<String> args = new ArrayList<>(List.of("mcp", "add", "--scope", "user", SERVER_NAME, "--"));
-      args.addAll(command);
-      return args;
-    }
-
-    @Override
-    public String byHand(List<String> command) {
-      return "run: claude " + String.join(" ", addArgs(command));
-    }
-
-    @Override
     public boolean hasServer() {
       return hasServerIn(config(), MAPPER, "mcpServers");
     }
@@ -281,37 +278,8 @@ public final class McpRegistration {
     }
 
     @Override
-    public boolean registered(List<String> command) {
-      // Codex's config is TOML: Codex reads it back for us.
-      Output get = runForOutput(cli, List.of("mcp", "get", SERVER_NAME, "--json"));
-      if (get.failure() != null) return false;
-      try {
-        return servesDaemons(MAPPER.readTree(get.text()).get("transport"), command);
-      } catch (IOException e) {
-        return false;
-      }
-    }
-
-    @Override
-    public String register(List<String> command) {
-      // add replaces a server of the name.
-      return run(cli, addArgs(command));
-    }
-
-    private static List<String> addArgs(List<String> command) {
-      List<String> args = new ArrayList<>(List.of("mcp", "add", SERVER_NAME, "--"));
-      args.addAll(command);
-      return args;
-    }
-
-    @Override
-    public String byHand(List<String> command) {
-      return "run: codex " + String.join(" ", addArgs(command));
-    }
-
-    @Override
     public boolean hasServer() {
-      return runForOutput(cli, List.of("mcp", "get", SERVER_NAME, "--json")).failure() == null;
+      return run(cli, List.of("mcp", "get", SERVER_NAME, "--json")) == null;
     }
 
     @Override
@@ -330,35 +298,9 @@ public final class McpRegistration {
       super("Gemini CLI", findExecutable("gemini"));
     }
 
-    private static Path config() {
-      return home().resolve(".gemini").resolve("settings.json");
-    }
-
-    @Override
-    public boolean registered(List<String> command) {
-      return registeredIn(config(), LENIENT, "mcpServers", command);
-    }
-
-    @Override
-    public String register(List<String> command) {
-      // add replaces a server of the name; the arguments go after --, since they start with a dash.
-      return run(cli, addArgs(command));
-    }
-
-    private static List<String> addArgs(List<String> command) {
-      List<String> args = new ArrayList<>(List.of("mcp", "add", "--scope", "user", SERVER_NAME, command.getFirst(), "--"));
-      args.addAll(command.subList(1, command.size()));
-      return args;
-    }
-
-    @Override
-    public String byHand(List<String> command) {
-      return "run: gemini " + String.join(" ", addArgs(command));
-    }
-
     @Override
     public boolean hasServer() {
-      return hasServerIn(config(), LENIENT, "mcpServers");
+      return hasServerIn(home().resolve(".gemini").resolve("settings.json"), LENIENT, "mcpServers");
     }
 
     @Override
@@ -372,34 +314,11 @@ public final class McpRegistration {
     }
   }
 
-  /**
-   * An agent with no CLI to register a server through, whose {@code mcpServers} live in a JSON file
-   * of the user's: Cursor's and Junie's. Installed when its directory under the home is there.
-   */
-  private record ConfigFile(String name, Path dir, Path config, Function<List<String>, ObjectNode> entry) implements Agent {
+  /** An agent with no CLI to remove a server through, whose {@code mcpServers} live in a JSON file of the user's: Cursor's and Junie's. */
+  private record ConfigFile(String name, Path dir, Path config) implements UserConfig {
     @Override
     public boolean installed() {
       return Files.isDirectory(dir);
-    }
-
-    @Override
-    public boolean registered(List<String> command) {
-      return registeredIn(config, MAPPER, "mcpServers", command);
-    }
-
-    @Override
-    public String register(List<String> command) {
-      try {
-        setServer(config, "mcpServers", entry.apply(command));
-        return null;
-      } catch (IOException e) {
-        return e.getMessage();
-      }
-    }
-
-    @Override
-    public String byHand(List<String> command) {
-      return "add to the mcpServers of " + config + ": \"" + SERVER_NAME + "\": " + entry.apply(command);
     }
 
     @Override
@@ -425,16 +344,12 @@ public final class McpRegistration {
 
   private static ConfigFile cursor() {
     Path dir = home().resolve(".cursor");
-    return new ConfigFile("Cursor", dir, dir.resolve("mcp.json"), McpRegistration::server);
+    return new ConfigFile("Cursor", dir, dir.resolve("mcp.json"));
   }
 
-  /**
-   * Junie's, the IDE plugin's and the CLI's alike. The plugin does not show a server with a field it
-   * does not know, a type among them.
-   */
   private static ConfigFile junie() {
     Path dir = home().resolve(".junie");
-    return new ConfigFile("Junie", dir, dir.resolve("mcp").resolve("mcp.json"), McpRegistration::plainServer);
+    return new ConfigFile("Junie", dir, dir.resolve("mcp").resolve("mcp.json"));
   }
 
   private static final class VsCode extends CliAgent {
@@ -455,32 +370,6 @@ public final class McpRegistration {
         user = (configHome != null && !configHome.isEmpty() ? Path.of(configHome) : home().resolve(".config")).resolve("Code").resolve("User");
       }
       return user.resolve("mcp.json");
-    }
-
-    @Override
-    public boolean registered(List<String> command) {
-      return registeredIn(config(), LENIENT, "servers", command);
-    }
-
-    @Override
-    public String register(List<String> command) {
-      // Java leaves the quotes inside an argument unescaped on Windows, and the CLI would see them stripped.
-      String json = Platform.isWindows() ? json(command).replace("\"", "\\\"") : json(command);
-      String failure = run(cli, List.of("--add-mcp", json));
-      if (failure != null) return failure;
-      // Whether --add-mcp replaces a server of the name is VS Code's to say: see that it did.
-      return registered(command) ? null : config() + " still has another " + SERVER_NAME;
-    }
-
-    private static String json(List<String> command) {
-      ObjectNode server = MAPPER.createObjectNode().put("name", SERVER_NAME);
-      server.setAll(server(command));
-      return server.toString();
-    }
-
-    @Override
-    public String byHand(List<String> command) {
-      return "run: code --add-mcp '" + json(command) + "'";
     }
 
     @Override
@@ -511,15 +400,6 @@ public final class McpRegistration {
     return Path.of(System.getProperty("user.home"));
   }
 
-  /** Whether the {@code key} object of {@code file} serves the daemons as {@link #SERVER_NAME} (see {@link #servesDaemons}); false when it cannot be read. */
-  private static boolean registeredIn(Path file, ObjectMapper mapper, String key, List<String> command) {
-    try {
-      return Files.isRegularFile(file) && servesDaemons(mapper.readTree(file.toFile()).path(key).get(SERVER_NAME), command);
-    } catch (IOException e) {
-      return false;
-    }
-  }
-
   /** Whether the {@code key} object of {@code file} has a {@link #SERVER_NAME}; false when it cannot be read. */
   private static boolean hasServerIn(Path file, ObjectMapper mapper, String key) {
     try {
@@ -541,7 +421,10 @@ public final class McpRegistration {
     write(file, root);
   }
 
-  /** Sets {@code server} as {@link #SERVER_NAME} in the {@code key} object of {@code file}, keeping the rest. */
+  /**
+   * Sets {@code server} as {@link #SERVER_NAME} in the {@code key} object of {@code file}, keeping the
+   * rest. Read strictly too: a file with comments, which VS Code's and Gemini's may have, is refused.
+   */
   static void setServer(Path file, String key, ObjectNode server) throws IOException {
     // A config kept elsewhere and linked here is written where it is kept, the link left as it is.
     if (Files.isSymbolicLink(file)) file = file.toRealPath();
@@ -581,7 +464,7 @@ public final class McpRegistration {
    * installers put theirs.
    */
   private static Path findExecutable(String name, Path... fallbacks) {
-    List<String> names = Platform.isWindows() ? List.of(name + ".exe", name + ".cmd") : List.of(name);
+    List<String> names = Platform.isWindows() ? List.of(name + ".exe", name + ".cmd", name + ".bat") : List.of(name);
     List<Path> dirs = new ArrayList<>();
     String path = System.getenv("PATH");
     if (path != null) {
@@ -598,18 +481,11 @@ public final class McpRegistration {
     return null;
   }
 
-  private record Output(String text, String failure) {}
-
-  /** Runs {@code cli} with {@code args}; null when it succeeded, else what went wrong. */
-  private static String run(Path cli, List<String> args) {
-    return runForOutput(cli, args).failure();
-  }
-
   /**
-   * Runs {@code cli} with {@code args} in the home directory, where no project's settings apply:
-   * what it printed, and null for a failure when it succeeded, else what went wrong.
+   * Runs {@code cli} with {@code args} in the home directory, where no project's settings apply;
+   * null when it succeeded, else what went wrong.
    */
-  private static Output runForOutput(Path cli, List<String> args) {
+  private static String run(Path cli, List<String> args) {
     List<String> command = new ArrayList<>();
     command.add(cli.toString());
     command.addAll(args);
@@ -622,16 +498,16 @@ public final class McpRegistration {
       process.getOutputStream().close();
       if (!process.waitFor(CLI_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         process.destroyForcibly();
-        return new Output("", cli.getFileName() + " did not answer within " + CLI_TIMEOUT_SECONDS + "s");
+        return cli.getFileName() + " did not answer within " + CLI_TIMEOUT_SECONDS + "s";
       }
       String output = Files.readString(log).strip();
-      if (process.exitValue() == 0) return new Output(output, null);
-      return new Output(output, output.isEmpty() ? "exit code " + process.exitValue() : output);
+      if (process.exitValue() == 0) return null;
+      return output.isEmpty() ? "exit code " + process.exitValue() : output;
     } catch (IOException e) {
-      return new Output("", e.getMessage());
+      return e.getMessage();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return new Output("", "interrupted");
+      return "interrupted";
     } finally {
       if (log != null) {
         try {

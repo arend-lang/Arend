@@ -17,7 +17,6 @@ import org.arend.daemon.server.DaemonServer
 import org.arend.daemon.server.SocketBinder
 import org.arend.server.ArendServerListener
 import org.arend.server.ArendServerService
-import org.arend.server.daemon.mcp.ArendMcpRegistration
 import org.arend.settings.ArendProjectSettings
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
@@ -139,7 +138,6 @@ class ArendDaemonService(private val project: Project) : Disposable {
             return false
         }
         update(daemon, libraries)
-        ArendMcpRegistration.register(project)
         return true
     }
 

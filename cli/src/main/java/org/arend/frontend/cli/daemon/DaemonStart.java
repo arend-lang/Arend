@@ -135,7 +135,6 @@ public final class DaemonStart {
     if (running != null) {
       System.out.println("Arend daemon already running for " + String.join(", ", requested)
           + " (PID " + running.pid() + ")");
-      registerMcp();
       return 0;
     }
 
@@ -151,37 +150,50 @@ public final class DaemonStart {
         }
         reserved.add(paths.startingMarker);
       }
-      int exitCode = startChild(libraries, requested, libDirsForward, extraChildArgs);
-      if (exitCode == 0) registerMcp();
-      return exitCode;
+      return startChild(libraries, requested, libDirsForward, extraChildArgs);
     } finally {
       reserved.forEach(LockFile::deleteQuietly);
     }
   }
 
-  /** Registers this {@code arend --mcp} with the agents installed, saying what it did. */
-  private static void registerMcp() {
-    McpRegistration.Result result = McpRegistration.register(McpRegistration.command());
-    result.failures().forEach(failure -> System.err.println("[WARN]  -d: " + failure));
-    if (!result.registered().isEmpty()) {
-      System.out.println("  registered the " + McpRegistration.SERVER_NAME + " MCP server with "
-          + String.join(", ", result.registered()) + "; agents started from now on have it."
-          + " `arend --mcp-unregister` removes it from them");
+  /**
+   * {@code arend --mcp-init [DIR]}: registers the {@code arend-daemons} MCP server in the configs of the
+   * project in {@code projectDir} of every agent installed, saying which files it wrote.
+   */
+  public static int initMcp(Path projectDir) {
+    McpRegistration.Result result = McpRegistration.initProject(projectDir, McpRegistration.command());
+    result.failures().forEach(failure -> System.err.println("[WARN]  --mcp-init: " + failure));
+    if (result.done().isEmpty()) {
+      if (result.failures().isEmpty()) System.out.println("No agent that reads a project's own MCP config is installed.");
+    } else {
+      System.out.println("Registered the " + McpRegistration.SERVER_NAME + " MCP server for the project in " + projectDir
+          + ", for agents started there from now on:");
+      result.done().forEach(file -> System.out.println("  " + file));
+      System.out.println("`arend --mcp-unregister` takes it back out.");
     }
+    result.notes().forEach(note -> System.out.println("[INFO] " + note));
+    return result.failures().isEmpty() ? 0 : 1;
   }
 
-  /** {@code arend --mcp-unregister}: takes the server out of every agent that has it, saying what it did. */
-  public static int unregisterMcp() {
-    McpRegistration.Result result = McpRegistration.unregister();
-    result.failures().forEach(failure -> System.err.println("[WARN]  --mcp-unregister: " + failure));
-    if (result.registered().isEmpty()) {
-      if (result.failures().isEmpty()) System.out.println("No agent has the " + McpRegistration.SERVER_NAME + " MCP server.");
+  /**
+   * {@code arend --mcp-unregister [DIR]}: takes the server out of the configs of the project in
+   * {@code projectDir}, and out of the user's own configs, where earlier builds put it.
+   */
+  public static int unregisterMcp(Path projectDir) {
+    McpRegistration.Result project = McpRegistration.unregisterProject(projectDir);
+    McpRegistration.Result user = McpRegistration.unregisterUser();
+    List<String> failures = new ArrayList<>(project.failures());
+    failures.addAll(user.failures());
+    failures.forEach(failure -> System.err.println("[WARN]  --mcp-unregister: " + failure));
+    if (project.done().isEmpty() && user.done().isEmpty()) {
+      if (failures.isEmpty()) System.out.println("Neither the project in " + projectDir + " nor any agent of the user's has the "
+          + McpRegistration.SERVER_NAME + " MCP server.");
     } else {
-      System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from " + String.join(", ", result.registered())
-          + "; agents started from now on do not have it. The next `arend -d`, or a start of the IntelliJ plugin's daemon,"
-          + " registers it again.");
+      project.done().forEach(file -> System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from " + file));
+      user.done().forEach(agent -> System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from "
+          + agent + "'s own config"));
     }
-    return result.failures().isEmpty() ? 0 : 1;
+    return failures.isEmpty() ? 0 : 1;
   }
 
   private static int startChild(List<DaemonPaths> libraries, List<String> requested, List<Path> libDirsForward,
