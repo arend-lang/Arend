@@ -35,7 +35,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public final class DaemonMcpServer {
-  static final String PROTOCOL_VERSION = "2025-06-18";
+  /**
+   * The revisions served statelessly, each request carrying its version, capabilities and client in
+   * {@code _meta}, as 2026-07-28 and later have it.
+   */
+  static final List<String> MODERN_VERSIONS = List.of("2026-07-28");
+  /** The revisions served after an {@code initialize} handshake, latest first: what this server needs of them is the same in all. */
+  static final List<String> LEGACY_VERSIONS = List.of("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05");
+
+  private static final String META_VERSION = "io.modelcontextprotocol/protocolVersion";
+  private static final String META_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
+  private static final String META_CLIENT = "io.modelcontextprotocol/clientInfo";
+  private static final String META_SERVER = "io.modelcontextprotocol/serverInfo";
+  private static final int UNSUPPORTED_PROTOCOL_VERSION = -32022;
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -217,32 +229,86 @@ public final class DaemonMcpServer {
       return null;
     }
 
+    // A request of a stateless revision says which in its _meta; one of an earlier revision, which
+    // the initialize handshake set up, does not. Both are served, as the specification allows.
+    JsonNode meta = params.path("_meta");
+    if (meta.has(META_VERSION)) return modern(id, method.asText(), params, meta);
+
     return switch (method.asText()) {
       case "initialize" -> {
         clientName = params.path("clientInfo").path("name").textValue();
-        yield result(id, initialize());
+        yield result(id, initialize(params.path("protocolVersion").asText("")));
       }
       case "ping" -> result(id, Map.of());
       case "tools/list" -> result(id, Map.of("tools", tools));
-      case "tools/call" -> warnIfReplaced(callTool(id, params));
+      case "tools/call" -> warnIfReplaced(callTool(id, params, clientName));
       default -> error(id, -32601, "Method not found: " + method.asText());
     };
   }
 
-  private static Map<String, Object> initialize() {
+  /**
+   * A request of a stateless revision: everything the server needs to know of the client is in
+   * {@code meta}, nothing is kept from an earlier request, and every result says what it is and who
+   * answers it.
+   */
+  private Map<String, Object> modern(JsonNode id, String method, JsonNode params, JsonNode meta) {
+    String version = meta.path(META_VERSION).asText("");
+    if (!MODERN_VERSIONS.contains(version)) {
+      List<String> supported = new ArrayList<>(MODERN_VERSIONS);
+      supported.addAll(LEGACY_VERSIONS);
+      Map<String, Object> error = new LinkedHashMap<>();
+      error.put("code", UNSUPPORTED_PROTOCOL_VERSION);
+      error.put("message", "Unsupported protocol version");
+      error.put("data", Map.of("supported", supported, "requested", version));
+      return response(id, "error", error);
+    }
+    if (!meta.path(META_CAPABILITIES).isObject()) {
+      return error(id, -32602, "Invalid params: _meta must carry " + META_CAPABILITIES);
+    }
+    Map<String, Object> answer = switch (method) {
+      case "server/discover" -> result(id, discover());
+      case "ping" -> result(id, Map.of());
+      case "tools/list" -> result(id, Map.of("tools", tools));
+      case "tools/call" -> warnIfReplaced(callTool(id, params, meta.path(META_CLIENT).path("name").textValue()));
+      default -> error(id, -32601, "Method not found: " + method);
+    };
+    if (!(answer.get("result") instanceof Map<?, ?> result)) return answer;
+    Map<String, Object> complete = new LinkedHashMap<>();
+    complete.put("resultType", "complete");
+    for (Map.Entry<?, ?> entry : result.entrySet()) complete.put(String.valueOf(entry.getKey()), entry.getValue());
+    complete.put("_meta", Map.of(META_SERVER, SERVER_INFO));
+    return result(id, complete);
+  }
+
+  private static final Map<String, Object> SERVER_INFO = Map.of("name", "arend-daemons", "version", String.valueOf(Prelude.VERSION));
+  private static final Map<String, Object> CAPABILITIES = Map.of("tools", Map.of("listChanged", false));
+  private static final String INSTRUCTIONS = "Tools of the running Arend daemons: each mirrors an `arend` option and goes"
+      + " to the daemon serving its `library`, limited to that library; daemon_list shows which daemon"
+      + " serves what. A library named goes to the daemon owning a library of that name, else to the"
+      + " longest-running daemon that loaded a zip or a ~/.arend/libs library of that name. skills_list"
+      + " shows the skills for working in Arend the arend-skills repository offers; install them only when the user asks.";
+
+  /** The answer to an earlier revision's handshake: the revision the client asked for if it is one served here, else the latest. */
+  private static Map<String, Object> initialize(String requested) {
     Map<String, Object> result = new LinkedHashMap<>();
-    result.put("protocolVersion", PROTOCOL_VERSION);
-    result.put("capabilities", Map.of("tools", Map.of("listChanged", false)));
-    result.put("serverInfo", Map.of("name", "arend-daemons", "version", String.valueOf(Prelude.VERSION)));
-    result.put("instructions", "Tools of the running Arend daemons: each mirrors an `arend` option and goes"
-        + " to the daemon serving its `library`, limited to that library; daemon_list shows which daemon"
-        + " serves what. A library named goes to the daemon owning a library of that name, else to the"
-        + " longest-running daemon that loaded a zip or a ~/.arend/libs library of that name. skills_list"
-        + " shows the skills for working in Arend the arend-skills repository offers; install them only when the user asks.");
+    result.put("protocolVersion", LEGACY_VERSIONS.contains(requested) ? requested : LEGACY_VERSIONS.getFirst());
+    result.put("capabilities", CAPABILITIES);
+    result.put("serverInfo", SERVER_INFO);
+    result.put("instructions", INSTRUCTIONS);
     return result;
   }
 
-  private Map<String, Object> callTool(JsonNode id, JsonNode params) {
+  /** What {@code server/discover} answers: the stateless revisions served here, and what the handshake would have said. */
+  private static Map<String, Object> discover() {
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("supportedVersions", MODERN_VERSIONS);
+    result.put("capabilities", CAPABILITIES);
+    result.put("instructions", INSTRUCTIONS);
+    return result;
+  }
+
+  /** A tool call; {@code clientName} is what the client calls itself, which tells the skill tools whose skills they work on. */
+  private Map<String, Object> callTool(JsonNode id, JsonNode params, String clientName) {
     String name = params.path("name").asText("");
     if (DaemonMcpSkills.handles(name)) {
       JsonNode arguments = params.path("arguments");

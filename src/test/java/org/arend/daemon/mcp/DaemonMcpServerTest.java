@@ -196,6 +196,54 @@ public class DaemonMcpServerTest {
         "skills_remove"), names);
   }
 
+  private static final String MODERN_META = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+      + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"claude-code\",\"version\":\"9\"},"
+      + "\"io.modelcontextprotocol/clientCapabilities\":{}}";
+
+  /** A client of the stateless revision probes with server/discover, and needs no handshake for anything. */
+  @Test
+  public void aStatelessClientIsServedWithoutAHandshake() throws IOException {
+    serve(tempFolder.getRoot().toPath());
+    JsonNode discovered = rpc(1, "server/discover", "{" + MODERN_META + "}").get("result");
+    assertEquals("complete", discovered.get("resultType").asText());
+    assertEquals("2026-07-28", discovered.get("supportedVersions").get(0).asText());
+    assertTrue(discovered.get("capabilities").has("tools"));
+    assertEquals("arend-daemons", discovered.get("_meta").get("io.modelcontextprotocol/serverInfo").get("name").asText());
+
+    JsonNode listed = rpc(2, "tools/list", "{" + MODERN_META + "}").get("result");
+    assertEquals("complete", listed.get("resultType").asText());
+    assertTrue(listed.get("tools").size() > 0);
+
+    JsonNode called = rpc(3, "tools/call", "{\"name\":\"typecheck\",\"arguments\":{\"library\":" + json(libB)
+        + ",\"targets\":[\"Foo\"]}," + MODERN_META + "}").get("result");
+    assertEquals("complete", called.get("resultType").asText());
+    assertEquals("ran on B", text(called).trim());
+  }
+
+  /** A version this server does not serve is refused with the ones it does, for the client to retry with. */
+  @Test
+  public void anUnsupportedVersionIsRefusedWithTheSupportedOnes() throws IOException {
+    serve(tempFolder.getRoot().toPath());
+    JsonNode error = rpc(1, "server/discover", "{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"1900-01-01\","
+        + "\"io.modelcontextprotocol/clientCapabilities\":{}}}").get("error");
+    assertEquals(-32022, error.get("code").asInt());
+    assertEquals("1900-01-01", error.get("data").get("requested").asText());
+    assertEquals("2026-07-28", error.get("data").get("supported").get(0).asText());
+
+    JsonNode malformed = rpc(2, "tools/list", "{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}").get("error");
+    assertEquals("a request without its client capabilities is malformed", -32602, malformed.get("code").asInt());
+  }
+
+  /** A client of an earlier revision gets the revision it asked for, when it is one this server serves. */
+  @Test
+  public void theHandshakeAnswersTheRevisionAskedFor() throws IOException {
+    serve(tempFolder.getRoot().toPath());
+    assertEquals("2025-03-26", rpc(1, "initialize", "{\"protocolVersion\":\"2025-03-26\",\"capabilities\":{}}")
+        .get("result").get("protocolVersion").asText());
+    assertEquals("2025-11-25", rpc(2, "initialize", "{\"protocolVersion\":\"2099-01-01\",\"capabilities\":{}}")
+        .get("result").get("protocolVersion").asText());
+  }
+
   /** The call goes to the daemon owning the library, limited to it by a leading positional. */
   @Test
   public void aCallGoesToTheDaemonHoldingItsLibrary() throws IOException {
