@@ -104,6 +104,7 @@ dependencies {
     testImplementation(project(":base"))
     testImplementation(project(":parser"))
     testImplementation(project(":cli"))
+    testImplementation(project(":mcp"))
 
     testImplementation("junit:junit:4.13.1")
     testImplementation("org.hamcrest:hamcrest-library:1.3")
