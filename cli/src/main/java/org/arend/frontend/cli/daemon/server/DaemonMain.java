@@ -147,7 +147,7 @@ public final class DaemonMain {
     server.start();
 
     LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, loadedNotOwned(warmCtx, owned), server.startedAt(),
-        bound.address(), LockFile.HOST_CLI, token);
+        bound.address(), LockFile.HOST_CLI, token).withProjectDir(DaemonPaths.projectDirOf(owned));
 
     // Registered before the lock is written, not after: a SIGTERM in between would otherwise
     // leave the lock behind, pointing every later client at a daemon that no longer exists.

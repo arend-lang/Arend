@@ -84,6 +84,6 @@ public class BuildIdentityTest {
 
   private static LockFile lockWith(BuildIdentity build) {
     return new LockFile(1, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
-        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", build);
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", build, "");
   }
 }

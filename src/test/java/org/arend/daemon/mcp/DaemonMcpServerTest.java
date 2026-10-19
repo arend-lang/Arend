@@ -115,7 +115,7 @@ public class DaemonMcpServerTest {
     for (Path library : sharedLoaded) sharedConfigs.add(config(library));
     LockFile lock = new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
         List.of(paths.libraryConfig.toString()), sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, bound.address(), LockFile.HOST_CLI,
-        LockFile.UNKNOWN_START, token, null);
+        LockFile.UNKNOWN_START, token, null, "");
     lock.writeEverywhere();
   }
 
@@ -338,5 +338,20 @@ public class DaemonMcpServerTest {
     // Lost, the cancel would leave Hold running out its 30 seconds.
     JsonNode result = pending.get(10, TimeUnit.SECONDS);
     assertTrue(text(result), text(result).contains("cancelled"));
+  }
+
+  /**
+   * An agent registered for a project starts in the project's directory, which is no library of its
+   * own: the daemon holding that project answers, for all of its libraries.
+   */
+  @Test
+  public void withoutALibraryTheProjectOfTheWorkingDirectoryDecides() throws IOException {
+    Path project = tempFolder.newFolder("project").toPath().toRealPath();
+    LockFile b = ((LockFile.Read.Found) LockFile.lookup(DaemonPaths.resolve(libB))).lock();
+    b.withProjectDir(project).writeEverywhere();
+    serve(project);
+    JsonNode result = call(1, "typecheck", "{}");
+    assertFalse(text(result), result.get("isError").asBoolean());
+    assertEquals(List.of("B "), received);
   }
 }

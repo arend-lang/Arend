@@ -22,6 +22,7 @@ import org.arend.settings.ArendProjectSettings
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
 import java.io.IOException
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -223,6 +224,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
 
         val lock = LockFile.ofThisProcess(daemon.home, owned.map { it.libraryConfig.toString() },
             loaded.map { it.libraryConfig.toString() }, daemon.server.startedAt(), daemon.socket, LockFile.HOST_INTELLIJ, daemon.token)
+            .withProjectDir(projectDir())
         val previous = daemon.lock
         daemon.served = (owned + loaded).associate { it.libraryConfig.toString() to libraries.getValue(it) }
         daemon.lock = lock
@@ -262,6 +264,13 @@ class ArendDaemonService(private val project: Project) : Disposable {
             return null
         }
         return "the daemon (PID ${lock.pid()})" + if (lock.isHostedByIde) " inside ${lock.host()}" else ""
+    }
+
+    /** The project's directory, canonical, for a command issued from it to come here; null when it has none. */
+    private fun projectDir(): Path? = try {
+        project.basePath?.let { Paths.get(it).toRealPath() }
+    } catch (_: IOException) {
+        null
     }
 
     /** Every library the project's server holds that lives in a file, to its name. */

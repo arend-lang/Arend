@@ -300,6 +300,10 @@ public final class DaemonMcpServer {
     if (here != null) {
       LockFile daemon = DaemonRpc.daemonFor(List.of(here));
       if (daemon != null) return new Target(daemon, here, null);
+    } else {
+      // An agent started in a project's directory, as one registered for the project is.
+      LockFile daemon = DaemonRpc.projectDaemon(workingDir, false);
+      if (daemon != null) return new Target(daemon, null, null);
     }
     List<LockFile> live = DaemonRpc.liveDaemons();
     if (live.size() == 1) return new Target(live.getFirst(), null, null);

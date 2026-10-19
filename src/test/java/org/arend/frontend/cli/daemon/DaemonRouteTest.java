@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
@@ -220,7 +221,7 @@ public class DaemonRouteTest {
     List<String> sharedConfigs = new ArrayList<>();
     for (Path root : shared) sharedConfigs.add(DaemonPaths.resolve(root).libraryConfig.toString());
     LockFile lock = new LockFile(pid, "/owner-" + hash + "/arend.yaml", hash, List.of("/owner-" + hash + "/arend.yaml"),
-        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI, LockFile.UNKNOWN_START, TOKEN, null);
+        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI, LockFile.UNKNOWN_START, TOKEN, null, "");
     PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
     lock.writeAtomic(lock.registryFile());
     return lock.registryFile();
@@ -283,5 +284,26 @@ public class DaemonRouteTest {
     LockFile.ofThisProcess(dep, List.of(dep.libraryConfig.toString()), List.of(), System.currentTimeMillis(),
         "uds:/nonexistent/daemon.sock", LockFile.HOST_CLI, TOKEN).writeEverywhere();
     assertEquals(dep.libraryConfig.toString(), DaemonRpc.daemonFor(List.of(dep)).libraryPath());
+  }
+
+  /**
+   * A command naming no library, issued from a directory that is none, goes to the daemon holding
+   * the project there -- and to none when two do, rather than to either.
+   */
+  @Test
+  public void theDaemonHoldingTheProjectOfADirectoryIsFoundThere() throws Exception {
+    Path project = tempFolder.newFolder("project").toPath().toRealPath();
+    assertNull(DaemonRpc.projectDaemon(project, false));
+    DaemonPaths home = DaemonPaths.resolve(libRoot);
+    LockFile lock = lockOf(home, List.of(home), List.of()).withProjectDir(project);
+    lock.writeEverywhere();
+    assertEquals(lock, DaemonRpc.projectDaemon(project, false));
+    assertNull("a directory below the project is not the project", DaemonRpc.projectDaemon(
+        Files.createDirectory(project.resolve("sub")), false));
+
+    DaemonPaths other = DaemonPaths.resolve(library("otherlib"));
+    other.ensureArendDir();
+    lockOf(other, List.of(other), List.of()).withProjectDir(project).writeEverywhere();
+    assertNull("two daemons of one project: neither", DaemonRpc.projectDaemon(project, false));
   }
 }

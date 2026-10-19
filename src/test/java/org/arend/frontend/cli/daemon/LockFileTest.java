@@ -210,7 +210,7 @@ public class LockFileTest {
 
   private static LockFile ofProcess(long pid, long processStart) {
     return new LockFile(pid, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
-        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, processStart, "", null);
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, processStart, "", null, "");
   }
 
   /**

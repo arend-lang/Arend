@@ -54,7 +54,8 @@ final class DaemonMcpTools {
             + " not a zip, with a warning when a daemon also loaded a zip of that name, and nothing runs when"
             + " daemons own several; else the longest-running daemon that loaded a zip or a ~/.arend/libs library of"
             + " that name. A path to one under ~/.arend/libs, or to a zip, goes to the longest-running daemon that"
-            + " loaded it. Omitted: the working directory's library, else the only running daemon.");
+            + " loaded it. Omitted: the working directory's library, else the daemon holding the project in the"
+            + " working directory, else the only running daemon.");
 
     Map<String, Object> tcProps = new LinkedHashMap<>();
     tcProps.put("library", library);

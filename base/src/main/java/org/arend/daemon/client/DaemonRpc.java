@@ -161,7 +161,8 @@ public final class DaemonRpc {
     List<DaemonPaths> libraries = routeTarget(positional, libDirs);
     if (libraries == null) return OptionalInt.empty();
 
-    LockFile lf = daemonFor(libraries);
+    // Naming no library, from a directory that is none: the daemon of the project there, if one has it.
+    LockFile lf = libraries.isEmpty() ? projectDaemon(Paths.get("."), true) : daemonFor(libraries);
     if (lf == null) return OptionalInt.empty();
     String otherBuild = otherBuild(lf, BuildIdentity.ofThisProcess());
     if (otherBuild != null) {
@@ -347,7 +348,8 @@ public final class DaemonRpc {
 
   /**
    * The libraries a routed command is about: every positional that names one, or, with no such
-   * positional, the library of the current directory. Null to run it locally.
+   * positional, the library of the current directory -- or none, when it is not one, and then the
+   * project there decides ({@link #projectDaemon}). Null to run it locally.
    *
    * <p>Every positional then has to be something a daemon can actually be given, and it is not
    * enough that one of them found it. Two cases decline:
@@ -379,7 +381,29 @@ public final class DaemonRpc {
     }
     if (!named.isEmpty()) return named;
     DaemonPaths here = DaemonPaths.resolve(Paths.get("."));
-    return here == null ? null : List.of(here);
+    return here == null ? List.of() : List.of(here);
+  }
+
+  /**
+   * The live daemon holding the project in {@code dir} -- an IntelliJ project's directory, or the
+   * deepest one holding the libraries {@code arend -d} was given -- or null when none does, or when
+   * several do, which {@code explain} says. Only {@code dir} itself counts: nothing is searched for
+   * above it.
+   */
+  public static LockFile projectDaemon(Path dir, boolean explain) {
+    String canonical;
+    try {
+      canonical = dir.toRealPath().toString();
+    } catch (IOException e) {
+      return null;
+    }
+    List<LockFile> holding = liveDaemons().stream().filter(lf -> lf.projectDir().equals(canonical)
+        && lf.socketPath() != null && !lf.socketPath().isEmpty() && lf.protocolVersion() == LockFile.PROTOCOL_VERSION).toList();
+    if (holding.size() > 1 && explain) {
+      System.err.println("[WARN] the daemons " + holding.stream().map(lf -> "PID " + lf.pid()).toList() + " all hold the project in "
+          + canonical + "; name a library to say which one this command is for.");
+    }
+    return holding.size() == 1 ? holding.getFirst() : null;
   }
 
   /** Wait for the lock file to vanish (signals daemon JVM exited and hook ran). */

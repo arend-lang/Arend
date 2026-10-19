@@ -87,6 +87,29 @@ public final class DaemonPaths {
     }
   }
 
+  /**
+   * The project a daemon owning {@code owned} holds, for a command issued from it to find the daemon:
+   * the deepest directory holding every one of them. None when that is the file system's root or the
+   * user's home -- a directory nobody means by "the project" -- or when nothing is owned.
+   */
+  public static Path projectDirOf(List<DaemonPaths> owned) {
+    Path common = null;
+    for (DaemonPaths paths : owned) {
+      Path root = paths.libraryConfig.getParent();
+      if (common == null) {
+        common = root;
+        continue;
+      }
+      while (common != null && !root.startsWith(common)) common = common.getParent();
+    }
+    if (common == null || common.getParent() == null) return null;
+    try {
+      if (common.equals(Paths.get(System.getProperty("user.home")).toRealPath())) return null;
+    } catch (IOException ignored) {
+    }
+    return common;
+  }
+
   public static Path lockFileIn(Path libRoot) {
     return libRoot.resolve(".arend").resolve("daemon.lock");
   }
