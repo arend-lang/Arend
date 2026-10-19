@@ -49,7 +49,6 @@ import org.arend.error.CountingErrorReporter
 import java.io.IOException
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
 
 /**
  * Runs daemon requests on the IDE's own server, read as `arend` reads its command line. A typecheck
@@ -156,7 +155,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
 
         val logPath = ArendOptions.jsonLogPath(cmdLine, cwd)
         val log = try {
-            PrintStream(Files.newOutputStream(logPath), true, StandardCharsets.UTF_8)
+            PrintStream(ArendOptions.openJsonLog(logPath), true, StandardCharsets.UTF_8)
         } catch (e: IOException) {
             err.println(ArendOptions.jsonLogFailed(tool, logPath, e.message))
             return QueryConsole.with(err, err) { runner.run(context) }

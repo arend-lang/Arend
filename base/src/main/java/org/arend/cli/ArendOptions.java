@@ -4,6 +4,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.PrivateFiles;
 import org.arend.query.ConsoleQueryTool;
 import org.arend.query.classhierarchy.ClassHierarchyTool;
 import org.arend.query.findusages.FindUsagesTool;
@@ -11,8 +12,10 @@ import org.arend.query.proofsearch.ProofSearchTool;
 import org.arend.query.scopeinfo.ScopeInfoTool;
 import org.arend.query.symbolsearch.SymbolSearchTool;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -58,12 +61,27 @@ public final class ArendOptions {
   /**
    * Where a query with {@code --json} writes its diagnostics, to keep stdout the document alone:
    * {@code --log-file} when given, as a client in {@code cwd} meant it, else
-   * {@code <java.io.tmpdir>/arend-symbol-search.log}.
+   * {@link #defaultJsonLog}.
    */
   public static Path jsonLogPath(CommandLine cmdLine, String cwd) {
     String custom = cmdLine.getOptionValue("log-file");
     if (custom != null && !custom.isEmpty()) return DaemonPaths.against(cwd, custom);
-    return Paths.get(System.getProperty("java.io.tmpdir"), "arend-symbol-search.log");
+    return defaultJsonLog();
+  }
+
+  /**
+   * {@code ~/.arend/log/arend-symbol-search.log}: in a directory of the user's own, not the shared
+   * temp directory, where anybody could have put a link of that name to a file of the user's for
+   * the next run to overwrite.
+   */
+  public static Path defaultJsonLog() {
+    return DaemonPaths.configDir().resolve("log").resolve("arend-symbol-search.log");
+  }
+
+  /** Opens {@code logPath} for a query's diagnostics, making the default log's directory first, the user's alone. */
+  public static OutputStream openJsonLog(Path logPath) throws IOException {
+    if (logPath.equals(defaultJsonLog())) PrivateFiles.ensurePrivateDirectory(logPath.getParent());
+    return Files.newOutputStream(logPath);
   }
 
   /** What a query with {@code --json} says when its log cannot be opened, and it writes diagnostics to stderr. */
@@ -102,7 +120,7 @@ public final class ArendOptions {
     cmdOptions.addOption(Option.builder().longOpt("mcp").desc("run an MCP server on stdin/stdout for an agent, exposing the running daemons' commands as tools; each call goes to the daemon holding the library it names, found the way a routed command finds it; its skills_install and skills_remove tools add and remove, at the user's request, the agent's skills for working in Arend, downloaded from the arend-lang/arend-skills repository on GitHub. -d registers it for the user with each agent installed -- Claude Code, Codex, Gemini CLI, Cursor, Junie and VS Code --, as the IntelliJ plugin does when its daemon starts, so that an agent started anywhere has it; another agent needs it registered by hand, e.g. `claude mcp add --scope user arend-daemons -- arend --mcp`.").build());
     cmdOptions.addOption(Option.builder().longOpt("mcp-unregister").desc("remove the arend-daemons MCP server that -d, or a daemon of the IntelliJ plugin, registered with the agents installed -- Claude Code, Codex, Gemini CLI, Cursor, Junie and VS Code -- from each that has it. The next -d, or a start of the plugin's daemon, registers it again.").build());
     cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
-    cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
+    cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default ~/.arend/log/arend-symbol-search.log").build());
     cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
     cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
     cmdOptions.addOption("t", "test", false, "run tests");

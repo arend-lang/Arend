@@ -7,7 +7,6 @@ import org.arend.query.ConsoleQueryTool;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -67,7 +66,7 @@ public final class JsonOutputRedirect implements AutoCloseable {
     PrintStream realStderr = System.err;
     Path logPath = ArendOptions.jsonLogPath(cmdLine, clientCwd);
     try {
-      PrintStream log = new PrintStream(Files.newOutputStream(logPath), true, StandardCharsets.UTF_8);
+      PrintStream log = new PrintStream(ArendOptions.openJsonLog(logPath), true, StandardCharsets.UTF_8);
       System.setOut(log);
       System.setErr(log);
       return new JsonOutputRedirect(true, realStdout, realStderr, log, logPath, tool);
