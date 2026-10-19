@@ -38,6 +38,9 @@ public class DaemonStopLockTest {
     assertEquals(DaemonStop.Verdict.SIGNAL, DaemonStop.inspectLock(found(A), A, ALIVE));
     assertEquals(DaemonStop.Verdict.REMOVE_STALE, DaemonStop.inspectLock(found(A), A, DEAD));
     assertEquals(DaemonStop.Verdict.REMOVE_STALE_MISMATCH, DaemonStop.inspectLock(found(B), A, DEAD));
+    // Alive or not, a copy the registry does not confirm is never signalled on its word.
+    LockFile planted = ((LockFile.Read.Found) found(A)).lock();
+    assertEquals(DaemonStop.Verdict.REMOVE_UNREGISTERED, DaemonStop.inspectLock(new LockFile.Read.Unregistered(planted), A, ALIVE));
     assertEquals("a live daemon for another library must not be silently delisted",
         DaemonStop.Verdict.REFUSE_LIVE_MISMATCH, DaemonStop.inspectLock(found(B), A, ALIVE));
     assertEquals("any library a daemon serves stops it",

@@ -10,11 +10,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 /**
  * The record a running daemon leaves on disk so a client can find it: a properties file at
@@ -23,6 +26,12 @@ import java.util.Properties;
  * another copy in {@link DaemonPaths#registryDir}, which is how the MCP server finds every daemon
  * and a command about a shared library (one under {@link DaemonPaths#sharedLibrariesRoot}, which
  * no daemon owns) finds the daemons that loaded it.
+ *
+ * <p>Only the registry's copy is trusted. A library's directory may be anybody's -- a clone, a
+ * shared checkout -- and a lock in it may have been put there by anybody, naming any address and any
+ * process; so a library's copy only points at the registry entry it names ({@link #lookup}), which
+ * lives in a directory of the user's own and is the only copy that carries the daemon's
+ * {@code token}, the secret every request has to present.
  *
  * <pre>
  *   pid              process id of the daemon JVM
@@ -38,6 +47,7 @@ import java.util.Properties;
  *                    that answers as a daemon from its own server; absent means {@code cli}
  *   processStart     when the process {@code pid} names started, in epoch milliseconds, as the
  *                    process itself reads it; absent when the platform does not say
+ *   token            the secret a client presents with every request; in the registry's copy only
  * </pre>
  *
  * @param pid             see above
@@ -50,10 +60,11 @@ import java.util.Properties;
  * @param socketPath      see above
  * @param host            see above
  * @param processStart    see above; {@link #UNKNOWN_START} when absent
+ * @param token           see above; empty in a library's copy
  */
 public record LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries,
                        List<String> shared, int protocolVersion, long startedAt, String socketPath, String host,
-                       long processStart) {
+                       long processStart, String token) {
   /** A daemon that is a JVM of its own, started by {@code arend -d}. */
   public static final String HOST_CLI = "cli";
   /** A daemon answered by the IntelliJ plugin from the IDE's own server, in the IDE's process. */
@@ -68,24 +79,40 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
    */
   private static final long START_TOLERANCE_MILLIS = 1000;
 
+  private static final Pattern HASH = Pattern.compile("[0-9a-f]{16}");
+  private static final SecureRandom RANDOM = new SecureRandom();
+
   public LockFile {
     libraries = List.copyOf(libraries);
     shared = List.copyOf(shared);
     if (host == null || host.isEmpty()) host = HOST_CLI;
+    if (token == null) token = "";
   }
 
-  /** A lock that does not say when its process started, as one written before {@code processStart} did. */
+  /** A lock that does not say when its process started, as one written before {@code processStart} did, with no token. */
   public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries, List<String> shared,
                   int protocolVersion, long startedAt, String socketPath, String host) {
-    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, UNKNOWN_START);
+    this(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, UNKNOWN_START, "");
   }
 
-  /** The lock of a daemon this process runs, whose first library is {@code home}. */
+  /** The lock of a daemon this process runs, whose first library is {@code home} and whose requests present {@code token}. */
   public static LockFile ofThisProcess(DaemonPaths home, List<String> libraries, List<String> shared, long startedAt,
-                                       String socketPath, String host) {
+                                       String socketPath, String host, String token) {
     ProcessHandle self = ProcessHandle.current();
     return new LockFile(self.pid(), home.libraryConfig.toString(), home.libraryHash, libraries,
-        shared, PROTOCOL_VERSION, startedAt, socketPath, host, startOf(self));
+        shared, PROTOCOL_VERSION, startedAt, socketPath, host, startOf(self), token);
+  }
+
+  /** A fresh secret for a daemon to demand of its clients: 256 random bits, in hex. */
+  public static String newToken() {
+    byte[] bytes = new byte[32];
+    RANDOM.nextBytes(bytes);
+    return HexFormat.of().formatHex(bytes);
+  }
+
+  /** This lock as a library's copy has it: without the token, which only the registry's copy holds. */
+  public LockFile withoutToken() {
+    return new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt, socketPath, host, processStart, "");
   }
 
   /** When {@code process} started, in epoch milliseconds, or {@link #UNKNOWN_START}. */
@@ -119,12 +146,14 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
 
   /**
    * Writes every copy of this lock: the registry's first, the first library's last, so that a client
-   * finding that one can count on all the others. The libraries' {@code .arend/} must exist.
+   * finding that one can count on all the others. The libraries' {@code .arend/} must exist. The
+   * registry's directory is made the user's alone, and only its copy carries the token.
    */
   public void writeEverywhere() throws IOException {
-    Files.createDirectories(DaemonPaths.registryDir());
+    PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
     writeAtomic(registryFile());
-    for (Path copy : lockFiles().reversed()) writeAtomic(copy);
+    LockFile copy = withoutToken();
+    for (Path library : lockFiles().reversed()) copy.writeAtomic(library);
   }
 
   /**
@@ -134,7 +163,8 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
    */
   public void deleteAllCopies() {
     List<Path> copies = new ArrayList<>(lockFiles());
-    copies.add(registryFile());
+    // A hash that is not one names no entry, and must not name a path outside the registry either.
+    if (HASH.matcher(libraryHash).matches()) copies.add(registryFile());
     copies.forEach(this::deleteIfOurs);
   }
 
@@ -184,7 +214,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
    * peer could not interpret; a client that finds a different value refuses to talk to that
    * daemon rather than exchanging frames neither side understands.
    */
-  public static final int PROTOCOL_VERSION = 1;
+  public static final int PROTOCOL_VERSION = 2;
 
   /**
    * What {@link #read} found. A lock file that is absent and one that cannot be read are
@@ -196,8 +226,40 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     record Absent() implements Read {}
     /** A lock file that cannot be parsed, or could not be read. Its {@code reason} is for the user. */
     record Unreadable(String reason) implements Read {}
-    /** A well-formed lock file. */
+    /** A well-formed lock file. Through {@link #lookup}, the registry's copy it points at. */
     record Found(LockFile lock) implements Read {}
+    /**
+     * A library's copy that no registry entry of the user's confirms: left by a daemon whose entry
+     * is gone, or put there by somebody else. Nothing it says is to be acted on -- not its address,
+     * and not its process, which must never be signalled on its word.
+     */
+    record Unregistered(LockFile copy) implements Read {}
+  }
+
+  /**
+   * The lock of the daemon that owns the library of {@code paths}, as the registry has it: the
+   * library's own copy names the entry, and the entry -- private to the user, and the only copy with
+   * the token -- has to agree that it is the same daemon and that it serves the library.
+   */
+  public static Read lookup(DaemonPaths paths) {
+    Read read = read(paths.lockFile);
+    if (!(read instanceof Read.Found found)) return read;
+    LockFile copy = found.lock();
+    Optional<LockFile> entry = registryEntry(copy.libraryHash)
+        .filter(registered -> registered.pid == copy.pid && registered.processStart == copy.processStart
+            && registered.serves(paths.libraryConfig));
+    return entry.<Read>map(Read.Found::new).orElseGet(() -> new Read.Unregistered(copy));
+  }
+
+  /** The registry's entry for {@code libraryHash}, if it is there and is the user's alone. */
+  static Optional<LockFile> registryEntry(String libraryHash) {
+    if (!HASH.matcher(libraryHash).matches()) return Optional.empty();
+    Path registry = DaemonPaths.registryDir();
+    Path entry = registry.resolve(libraryHash + ".lock");
+    if (!Files.isRegularFile(entry) || !PrivateFiles.isPrivate(registry, true) || !PrivateFiles.isPrivate(entry, false)) {
+      return Optional.empty();
+    }
+    return readIfValid(entry).filter(lock -> lock.libraryHash.equals(libraryHash));
   }
 
   /**
@@ -217,6 +279,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     props.setProperty("socketPath", socketPath == null ? "" : socketPath);
     props.setProperty("host", host);
     if (processStart != UNKNOWN_START) props.setProperty("processStart", Long.toString(processStart));
+    if (!token.isEmpty()) props.setProperty("token", token);
 
     Path directory = lockPath.getParent();
     Path tmp = Files.createTempFile(directory, lockPath.getFileName() + ".", ".tmp");
@@ -257,6 +320,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       String socketPath = props.getProperty("socketPath", "");
       String host = props.getProperty("host", HOST_CLI);
       long processStart = Long.parseLong(props.getProperty("processStart", Long.toString(UNKNOWN_START)).trim());
+      String token = props.getProperty("token", "");
       List<String> libraries = new ArrayList<>();
       for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
       // A lock from before library.N named only the one library its daemon served.
@@ -267,7 +331,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
         return new Read.Unreadable("lock file is missing libraryPath or libraryHash");
       }
       return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, shared, protocolVersion, startedAt,
-          socketPath, host, processStart));
+          socketPath, host, processStart, token));
     } catch (NumberFormatException e) {
       return new Read.Unreadable("lock file has a malformed numeric field: " + e.getMessage());
     }
@@ -283,11 +347,18 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     return DaemonPaths.registryDir().resolve(libraryHash + ".lock");
   }
 
-  /** Every well-formed entry in {@link DaemonPaths#registryDir}, live or not, oldest daemon first. */
+  /**
+   * Every well-formed entry in {@link DaemonPaths#registryDir}, live or not, oldest daemon first; none
+   * when the registry is not the user's alone, and no entry that is not.
+   */
   public static List<LockFile> registered() {
     List<LockFile> out = new ArrayList<>();
-    try (var entries = Files.newDirectoryStream(DaemonPaths.registryDir(), "*.lock")) {
-      for (Path entry : entries) readIfValid(entry).ifPresent(out::add);
+    Path registry = DaemonPaths.registryDir();
+    if (!Files.isDirectory(registry) || !PrivateFiles.isPrivate(registry, true)) return out;
+    try (var entries = Files.newDirectoryStream(registry, "*.lock")) {
+      for (Path entry : entries) {
+        if (PrivateFiles.isPrivate(entry, false)) readIfValid(entry).ifPresent(out::add);
+      }
     } catch (IOException e) {
       // No registry yet: no daemon has ever registered.
     }

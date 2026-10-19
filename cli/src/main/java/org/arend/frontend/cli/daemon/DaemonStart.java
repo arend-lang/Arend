@@ -88,7 +88,7 @@ public final class DaemonStart {
     // Every lock is consulted before anything starts: two daemons must not answer for one library.
     LockFile running = null;
     for (DaemonPaths paths : owned) {
-      LockFile.Read existing = LockFile.read(paths.lockFile);
+      LockFile.Read existing = LockFile.lookup(paths);
       switch (inspectLock(existing, paths.libraryConfig, requested, LockFile::processAlive)) {
         case UNREADABLE_LOCK -> {
           // Something is there and we cannot tell whether it is live. Starting a second daemon on
@@ -110,6 +110,11 @@ public final class DaemonStart {
               + " at " + paths.lockFile);
           // Every copy: a daemon of several libraries left one in each, and one in the registry.
           lockOf(existing).deleteAllCopies();
+        }
+        case UNREGISTERED_LOCK -> {
+          System.err.println("[WARN]  -d: lock file at " + paths.lockFile + " is not confirmed by the registry in "
+              + DaemonPaths.registryDir() + "; removing it");
+          LockFile.deleteQuietly(paths.lockFile);
         }
         case STALE_MISMATCH -> {
           System.err.println("[WARN]  -d: lock file at " + paths.lockFile
@@ -249,12 +254,8 @@ public final class DaemonStart {
    * first library's lock is the child's last, so it is there only once all of them are.
    */
   private static boolean reportIfReady(DaemonPaths paths) {
-    Optional<LockFile> ready = LockFile.readIfValid(paths.lockFile);
-    if (ready.isEmpty() || !ready.get().serves(paths.libraryConfig)
-        || !ready.get().processAlive()) {
-      return false;
-    }
-    LockFile lock = ready.get();
+    if (!(LockFile.lookup(paths) instanceof LockFile.Read.Found ready) || !ready.lock().processAlive()) return false;
+    LockFile lock = ready.lock();
     System.out.println("Daemon ready (PID " + lock.pid() + ")");
     // SocketBinder already warns, but it warns in the child, whose output is pointed at
     // daemon.log before it runs -- so the one person who could act on it cannot see it.
@@ -273,6 +274,11 @@ public final class DaemonStart {
     NO_DAEMON,
     /** A lock we cannot parse; we do not know what is running. */
     UNREADABLE_LOCK,
+    /**
+     * A library's copy no registry entry confirms. It names no daemon a client could reach -- only
+     * the registry's entry has the token -- so it stops nothing, and it may be anybody's plant.
+     */
+    UNREGISTERED_LOCK,
     /** A healthy daemon already serves exactly the libraries asked for. */
     ALREADY_RUNNING,
     /**
@@ -298,6 +304,7 @@ public final class DaemonStart {
   static Verdict inspectLock(LockFile.Read existing, Path libraryConfig, Collection<String> requested,
                              java.util.function.Predicate<LockFile> alive) {
     if (existing instanceof LockFile.Read.Unreadable) return Verdict.UNREADABLE_LOCK;
+    if (existing instanceof LockFile.Read.Unregistered) return Verdict.UNREGISTERED_LOCK;
     if (!(existing instanceof LockFile.Read.Found found)) return Verdict.NO_DAEMON;
     LockFile lf = found.lock();
     boolean live = alive.test(lf);

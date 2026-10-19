@@ -116,11 +116,12 @@ public final class DaemonMain {
     System.out.println("[DAEMON] bound socket: " + bound.address());
 
     CountDownLatch stopped = new CountDownLatch(1);
-    DaemonServer server = CliDaemonRunner.server(bound, warmCtx, libraryConfigs, CliDispatcher::run, stopped::countDown);
+    String token = LockFile.newToken();
+    DaemonServer server = CliDaemonRunner.server(bound, token, warmCtx, libraryConfigs, CliDispatcher::run, stopped::countDown);
     server.start();
 
     LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, sharedLibraries(warmCtx), server.startedAt(),
-        bound.address(), LockFile.HOST_CLI);
+        bound.address(), LockFile.HOST_CLI, token);
 
     // Registered before the lock is written, not after: a SIGTERM in between would otherwise
     // leave the lock behind, pointing every later client at a daemon that no longer exists.

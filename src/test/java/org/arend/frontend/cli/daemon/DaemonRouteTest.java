@@ -2,6 +2,7 @@ package org.arend.frontend.cli.daemon;
 
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
+import org.arend.daemon.PrivateFiles;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.daemon.wire.FrameChannel;
 import org.arend.daemon.client.DaemonRpc;
@@ -38,6 +39,9 @@ import static org.junit.Assume.assumeTrue;
 public class DaemonRouteTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private static final String TOKEN = LockFile.newToken();
+
+  private Path config;
   private Path libRoot;
   private String address;
   private ServerSocketChannel listener;
@@ -56,6 +60,9 @@ public class DaemonRouteTest {
     assumeTrue("Unix domain sockets required",
         !System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
 
+    // The registry is the user's own; a test must not write to the real one.
+    config = tempFolder.newFolder("config").toPath();
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
     libRoot = tempFolder.newFolder("mylib").toPath();
     Files.createDirectories(libRoot.resolve("src"));
     Files.writeString(libRoot.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
@@ -66,7 +73,7 @@ public class DaemonRouteTest {
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     listener = bound.channel();
     address = bound.address();
-    new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash, List.of(paths.libraryConfig.toString()), List.of(), LockFile.PROTOCOL_VERSION, System.currentTimeMillis(), address, LockFile.HOST_CLI).writeAtomic(paths.lockFile);
+    lockOf(paths, List.of(paths), List.of()).writeEverywhere();
 
     // Answers exactly one request and records it.
     acceptor = new Thread(() -> {
@@ -82,6 +89,12 @@ public class DaemonRouteTest {
     }, "stand-in-daemon");
     acceptor.setDaemon(true);
     acceptor.start();
+  }
+
+  /** The lock this process would write as a daemon owning {@code owned} and having loaded {@code shared}. */
+  private LockFile lockOf(DaemonPaths home, List<DaemonPaths> owned, List<String> shared) {
+    return LockFile.ofThisProcess(home, owned.stream().map(d -> d.libraryConfig.toString()).toList(), shared,
+        System.currentTimeMillis(), address, LockFile.HOST_CLI, TOKEN);
   }
 
   @After
@@ -110,6 +123,32 @@ public class DaemonRouteTest {
     assertEquals(List.of(argv), req.get("args"));
     assertEquals("the request must say where the client was",
         Path.of(".").toAbsolutePath().normalize().toString(), req.get("cwd"));
+    assertEquals("the request must present the daemon's token", TOKEN, req.get("token"));
+  }
+
+  /**
+   * A library's directory may be anybody's, and so may a lock in it: one the registry does not
+   * confirm points the client nowhere, whatever address and process it names.
+   */
+  @Test
+  public void aLockTheRegistryDoesNotConfirmIsNotRouted() throws Exception {
+    DaemonPaths paths = DaemonPaths.resolve(libRoot);
+    Files.delete(lockOf(paths, List.of(paths), List.of()).registryFile());
+    List<String> positional = List.of(libRoot.toString(), "Data.Maybe");
+    assertTrue("a lock with no registry entry behind it must keep the command local",
+        DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of()).isEmpty());
+    assertTrue(LockFile.lookup(paths) instanceof LockFile.Read.Unregistered);
+  }
+
+  /** The registry's entries carry tokens: one that others may read or replace is not trusted. */
+  @Test
+  public void aRegistryEntryOthersCanReadIsNotTrusted() throws Exception {
+    DaemonPaths paths = DaemonPaths.resolve(libRoot);
+    Path entry = lockOf(paths, List.of(paths), List.of()).registryFile();
+    Files.setPosixFilePermissions(entry, java.nio.file.attribute.PosixFilePermissions.fromString("rw-r--r--"));
+    List<String> positional = List.of(libRoot.toString(), "Data.Maybe");
+    assertTrue(DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of()).isEmpty());
+    assertTrue(LockFile.registered().isEmpty());
   }
 
   /**
@@ -148,13 +187,8 @@ public class DaemonRouteTest {
     DaemonPaths home = DaemonPaths.resolve(libRoot);
     List<DaemonPaths> all = new ArrayList<>(List.of(home));
     for (Path other : others) all.add(DaemonPaths.resolve(other));
-    LockFile lock = new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
-        all.stream().map(d -> d.libraryConfig.toString()).toList(), List.of(), LockFile.PROTOCOL_VERSION,
-        System.currentTimeMillis(), address, LockFile.HOST_CLI);
-    for (DaemonPaths d : all) {
-      d.ensureArendDir();
-      lock.writeAtomic(d.lockFile);
-    }
+    for (DaemonPaths d : all) d.ensureArendDir();
+    lockOf(home, all, List.of()).writeEverywhere();
   }
 
   @Test
@@ -176,8 +210,6 @@ public class DaemonRouteTest {
   }
 
   private Path sharedLibrary(String name) throws IOException {
-    Path config = tempFolder.newFolder("config").toPath();
-    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
     Path root = config.resolve("libs").resolve(name);
     Files.createDirectories(root.resolve("src"));
     Files.writeString(root.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
@@ -188,8 +220,8 @@ public class DaemonRouteTest {
     List<String> sharedConfigs = new ArrayList<>();
     for (Path root : shared) sharedConfigs.add(DaemonPaths.resolve(root).libraryConfig.toString());
     LockFile lock = new LockFile(pid, "/owner-" + hash + "/arend.yaml", hash, List.of("/owner-" + hash + "/arend.yaml"),
-        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI);
-    Files.createDirectories(DaemonPaths.registryDir());
+        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI, LockFile.UNKNOWN_START, TOKEN);
+    PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
     lock.writeAtomic(lock.registryFile());
     return lock.registryFile();
   }
@@ -198,10 +230,12 @@ public class DaemonRouteTest {
   public void aCommandAboutASharedLibraryGoesToTheFirstDaemonThatLoadedIt() throws Exception {
     Path shared = sharedLibrary("sharedlib");
     long self = ProcessHandle.current().pid();
+    // setUp registered this process as the daemon of libRoot, started now: these are older.
+    Files.delete(lockOf(DaemonPaths.resolve(libRoot), List.of(), List.of()).registryFile());
     Path dead = register(Long.MAX_VALUE, "dead000000000000", 0, address, shared);
-    register(self, "first00000000000", 1, address, shared);
-    register(self, "second0000000000", 2, "uds:/nonexistent/daemon.sock", shared);
-    register(self, "unrelated0000000", 0, "uds:/nonexistent/daemon.sock");
+    register(self, "f1000000000000aa", 1, address, shared);
+    register(self, "f2000000000000aa", 2, "uds:/nonexistent/daemon.sock", shared);
+    register(self, "f3000000000000aa", 0, "uds:/nonexistent/daemon.sock");
 
     List<String> positional = List.of(shared.toString(), "Data.Maybe");
     OptionalInt rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
@@ -222,9 +256,7 @@ public class DaemonRouteTest {
     assertTrue("the owner's daemon has not loaded the shared library, so the command stays local", rc.isEmpty());
 
     DaemonPaths home = DaemonPaths.resolve(libRoot);
-    new LockFile(ProcessHandle.current().pid(), home.libraryConfig.toString(), home.libraryHash,
-        List.of(home.libraryConfig.toString()), List.of(DaemonPaths.resolve(shared).libraryConfig.toString()),
-        LockFile.PROTOCOL_VERSION, 1L, address, LockFile.HOST_CLI).writeAtomic(home.lockFile);
+    lockOf(home, List.of(home), List.of(DaemonPaths.resolve(shared).libraryConfig.toString())).writeEverywhere();
     rc = DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of());
     assertTrue("once the owner's daemon has it, the command must route", rc.isPresent());
   }

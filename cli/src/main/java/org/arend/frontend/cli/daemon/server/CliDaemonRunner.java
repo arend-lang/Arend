@@ -28,10 +28,11 @@ public final class CliDaemonRunner {
   private CliDaemonRunner() {}
 
   /**
-   * The daemon serving {@code ctx}, which holds {@code libraries}; {@code onShutdown} is called
-   * once a client's {@code shutdown} has let the queue run out.
+   * The daemon serving {@code ctx}, which holds {@code libraries}, to clients presenting
+   * {@code token}; {@code onShutdown} is called once a client's {@code shutdown} has let the queue
+   * run out.
    */
-  public static DaemonServer server(SocketBinder.Bound bound, CommandContext ctx, List<String> libraries,
+  public static DaemonServer server(SocketBinder.Bound bound, String token, CommandContext ctx, List<String> libraries,
                                     CommandRunner commands, Runnable onShutdown) {
     // Without this the worker's println calls go to the daemon's own stdout and the client sees
     // nothing. Idempotent, and installing it here is what keeps "started but mute" unreachable.
@@ -39,7 +40,7 @@ public final class CliDaemonRunner {
     Map<String, Object> lockedFlags = ctx.bootstrapArgs == null ? Map.of()
         : LockedFlags.extract(ConsoleMain.parseArgs(ctx.bootstrapArgs).cmdLine());
     // Nobody watches the CLI daemon's activity, so its requests need no description.
-    return new DaemonServer(bound, () -> libraries, lockedFlags, LockFile.HOST_CLI,
+    return new DaemonServer(bound, token, () -> libraries, lockedFlags, LockFile.HOST_CLI,
         request -> run(ctx, commands, request), onShutdown, args -> "", () -> {});
   }
 

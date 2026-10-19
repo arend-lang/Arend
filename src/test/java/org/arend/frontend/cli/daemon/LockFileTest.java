@@ -2,6 +2,7 @@ package org.arend.frontend.cli.daemon;
 
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
+import org.arend.daemon.PrivateFiles;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -115,7 +116,7 @@ public class LockFileTest {
       assertEquals(List.of(DaemonPaths.lockFileIn(owned)), lock.lockFiles());
       assertTrue(lock.hasLoaded(Path.of(sharedConfig)));
 
-      Files.createDirectories(DaemonPaths.registryDir());
+      PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
       lock.writeAtomic(lock.registryFile());
       assertEquals(List.of(lock), LockFile.registered());
       lock.deleteAllCopies();
@@ -134,7 +135,7 @@ public class LockFileTest {
       Path library = tempFolder.newFolder("lib").toPath();
       Files.createDirectories(library.resolve(".arend"));
       LockFile lock = new LockFile(4242, library.resolve("arend.yaml").toString(), "0123456789abcdef", List.of(library.resolve("arend.yaml").toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI);
-      Files.createDirectories(DaemonPaths.registryDir());
+      PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
       lock.writeAtomic(lock.registryFile());
       lock.writeAtomic(DaemonPaths.lockFileIn(library));
       assertEquals(List.of(lock), LockFile.registered());
@@ -142,6 +143,26 @@ public class LockFileTest {
       lock.deleteAllCopies();
       assertEquals(List.of(), LockFile.registered());
       assertFalse(Files.exists(DaemonPaths.lockFileIn(library)));
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
+  }
+
+  /** A registry others may write is no registry: anything in it may be their plant. */
+  @Test
+  public void aRegistryOthersCanWriteIsIgnored() throws IOException {
+    Path config = tempFolder.newFolder("config").toPath();
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
+    try {
+      LockFile lock = ofProcess(4242, 1L);
+      PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
+      lock.writeAtomic(lock.registryFile());
+      assertEquals(List.of(lock), LockFile.registered());
+      Files.setPosixFilePermissions(DaemonPaths.registryDir(), java.nio.file.attribute.PosixFilePermissions.fromString("rwxrwxr-x"));
+      assertEquals(List.of(), LockFile.registered());
+      // A daemon writing its lock takes the directory back.
+      PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
+      assertEquals(List.of(lock), LockFile.registered());
     } finally {
       System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
     }
@@ -189,7 +210,7 @@ public class LockFileTest {
 
   private static LockFile ofProcess(long pid, long processStart) {
     return new LockFile(pid, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
-        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, processStart);
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, processStart, "");
   }
 
   /**
@@ -207,6 +228,37 @@ public class LockFileTest {
     assertTrue(ofProcess(self.pid(), started + 3_600_000L).process().isEmpty());
     // A lock from before processStart is judged by its PID alone, as it always was.
     assertTrue(ofProcess(self.pid(), LockFile.UNKNOWN_START).processAlive());
+  }
+
+  /**
+   * The token lets whoever has it drive the daemon, so it goes to the registry -- the user's own
+   * directory -- and to no library's copy, which may sit anywhere.
+   */
+  @Test
+  public void onlyTheRegistrysCopyCarriesTheToken() throws IOException {
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, tempFolder.newFolder("config").toString());
+    try {
+      Path root = tempFolder.newFolder("lib").toPath();
+      Files.writeString(root.resolve("arend.yaml"), "", StandardCharsets.UTF_8);
+      DaemonPaths paths = DaemonPaths.resolve(root);
+      paths.ensureArendDir();
+      String token = LockFile.newToken();
+      LockFile lock = LockFile.ofThisProcess(paths, List.of(paths.libraryConfig.toString()), List.of(), 1L, "uds:/s",
+          LockFile.HOST_CLI, token);
+      lock.writeEverywhere();
+
+      assertEquals("", LockFile.readIfValid(paths.lockFile).orElseThrow().token());
+      assertFalse(Files.readString(paths.lockFile).contains(token));
+      assertEquals(token, LockFile.readIfValid(lock.registryFile()).orElseThrow().token());
+      assertEquals(java.util.Set.of(java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+          java.nio.file.attribute.PosixFilePermission.OWNER_WRITE), Files.getPosixFilePermissions(lock.registryFile()));
+      assertEquals("rwx------", java.nio.file.attribute.PosixFilePermissions.toString(
+          Files.getPosixFilePermissions(DaemonPaths.registryDir())));
+      // Looked up through the library, the lock is the registry's, token and all.
+      assertEquals(lock, ((LockFile.Read.Found) LockFile.lookup(paths)).lock());
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
   }
 
   @Test

@@ -21,6 +21,10 @@ import java.util.concurrent.TimeUnit
 
 /** The daemon protocol as the IDE serves it, spoken to over a real socket, with a runner that only records. */
 class DaemonServerTest {
+    private companion object {
+        const val TOKEN = "test-token"
+    }
+
     @get:Rule
     val timeout: Timeout = Timeout.seconds(30)
 
@@ -36,7 +40,7 @@ class DaemonServerTest {
         assumeTrue("Unix domain sockets required", !System.getProperty("os.name", "").lowercase().startsWith("windows"))
         dir = Files.createTempDirectory("ide-daemon")
         val bound = SocketBinder.bind(dir.resolve("daemon.sock"), "0123456789abcdef")
-        server = DaemonServer(bound, { listOf("/lib/arend.yaml") }, emptyMap(), LockFile.HOST_INTELLIJ, { request ->
+        server = DaemonServer(bound, TOKEN, { listOf("/lib/arend.yaml") }, emptyMap(), LockFile.HOST_INTELLIJ, { request ->
             val args = request.args
             if (args == null) {
                 request.output.out("refreshed\n")
@@ -63,7 +67,7 @@ class DaemonServerTest {
         if (::dir.isInitialized) dir.toFile().deleteRecursively()
     }
 
-    private fun send(request: Map<String, Any>) = FrameChannel(socket).write(request)
+    private fun send(request: Map<String, Any>) = FrameChannel(socket).write(request + ("token" to TOKEN))
 
     /** Frames read while waiting for another request's answer, by request id. */
     private val pending = HashMap<Any?, ArrayList<Map<String, Any?>>>()

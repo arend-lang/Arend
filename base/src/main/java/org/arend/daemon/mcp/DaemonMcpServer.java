@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.wire.FrameChannel;
-import org.arend.daemon.wire.SocketAddress;
+
 import org.arend.daemon.client.DaemonClient;
 import org.arend.daemon.client.DaemonRpc;
 import org.arend.prelude.Prelude;
@@ -370,7 +370,7 @@ public final class DaemonMcpServer {
     // Registered when its line was read: a tools/call without an id is a notification, never run.
     Running call = running.get(mcpId.toString());
     Collector collector = new Collector();
-    try (DaemonClient client = DaemonClient.connect(SocketAddress.parse(daemon.socketPath()))) {
+    try (DaemonClient client = DaemonClient.connect(daemon)) {
       if (!call.attach(client)) return collector.toolResult(FrameChannel.CANCELLED_EXIT_CODE);
       int exitCode = client.invoke(call.requestId, op, extra, collector::accept,
           accepted -> { if (!accepted) call.refused(); });

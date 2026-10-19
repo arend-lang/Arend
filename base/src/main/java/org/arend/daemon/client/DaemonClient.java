@@ -1,5 +1,6 @@
 package org.arend.daemon.client;
 
+import org.arend.daemon.LockFile;
 import org.arend.daemon.wire.FrameChannel;
 import org.arend.daemon.wire.SocketAddress;
 
@@ -16,7 +17,7 @@ import java.util.function.Consumer;
  * Client-side RPC: open a socket to a running daemon and exchange framed JSON.
  *
  * <pre>
- *   try (DaemonClient c = DaemonClient.connect(SocketAddress.parse(addr))) {
+ *   try (DaemonClient c = DaemonClient.connect(lock)) {
  *     int rc = c.invoke("ping", Map.of(), frame -&gt; ...);   // returns the daemon's exit code
  *   }
  * </pre>
@@ -29,22 +30,37 @@ import java.util.function.Consumer;
  * is blocked reading, and the daemon answers it on the same socket. Both directions therefore go
  * through one {@link FrameChannel}, and every frame is matched against the id of the request that
  * is waiting for it.
+ *
+ * <p>Every request presents the daemon's token, which only the registry's copy of its lock holds:
+ * a daemon answers nothing else.
  */
 public final class DaemonClient implements AutoCloseable {
   private final SocketChannel socket;
   private final FrameChannel channel;
+  private final String token;
 
-  private DaemonClient(SocketChannel socket) {
+  private DaemonClient(SocketChannel socket, String token) {
     this.socket = socket;
     this.channel = new FrameChannel(socket);
+    this.token = token;
   }
 
-  public static DaemonClient connect(SocketAddress addr) throws IOException {
+  /**
+   * Connects to the daemon of {@code lock}, presenting its token.
+   *
+   * @throws IllegalArgumentException when the lock's address is not one a daemon could have bound
+   */
+  public static DaemonClient connect(LockFile lock) throws IOException {
+    return connect(SocketAddress.parse(lock.socketPath()), lock.token());
+  }
+
+  /** Connects to {@code addr}, presenting {@code token} with every request. */
+  public static DaemonClient connect(SocketAddress addr, String token) throws IOException {
     SocketChannel ch = switch (addr) {
       case SocketAddress.Uds uds -> SocketChannel.open(UnixDomainSocketAddress.of(uds.path()));
       case SocketAddress.Tcp tcp -> SocketChannel.open(new InetSocketAddress(tcp.host(), tcp.port()));
     };
-    return new DaemonClient(ch);
+    return new DaemonClient(ch, token);
   }
 
   /** Told whether the daemon accepted a {@code cancel} this client sent for its own request. */
@@ -73,6 +89,7 @@ public final class DaemonClient implements AutoCloseable {
     Map<String, Object> req = new HashMap<>(extra);
     req.put("id", id);
     req.put("op", op);
+    req.put("token", token);
     channel.write(req);
 
     while (true) {
@@ -111,6 +128,7 @@ public final class DaemonClient implements AutoCloseable {
     req.put("id", UUID.randomUUID().toString());
     req.put("op", "cancel");
     req.put("targetId", targetId);
+    req.put("token", token);
     channel.write(req);
   }
 

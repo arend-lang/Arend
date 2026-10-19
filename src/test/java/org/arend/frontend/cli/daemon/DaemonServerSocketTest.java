@@ -30,6 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -39,6 +40,9 @@ import static org.junit.Assume.assumeTrue;
  * command on the same warm context not being contaminated by the first.
  */
 public class DaemonServerSocketTest {
+  /** What the daemon demands of every request, as the registry's copy of its lock would say. */
+  private static final String TOKEN = "test-token";
+
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private DaemonServer server;
@@ -76,7 +80,7 @@ public class DaemonServerSocketTest {
     Path sock = tempFolder.newFolder(stateDir).toPath().resolve("daemon.sock");
     SocketBinder.Bound bound = SocketBinder.bind(sock, "0123456789abcde" + stateDir.charAt(0));
     boundAddress = bound.address();
-    DaemonServer s = CliDaemonRunner.server(bound, ctx, List.of(libRoot.resolve("arend.yaml").toString()),
+    DaemonServer s = CliDaemonRunner.server(bound, TOKEN, ctx, List.of(libRoot.resolve("arend.yaml").toString()),
         CliDispatcher::run, stopped::countDown);
     s.start();
     return s;
@@ -99,7 +103,7 @@ public class DaemonServerSocketTest {
 
   private Result invoke(String op, Map<String, Object> extra) throws IOException {
     List<String> chunks = new ArrayList<>();
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       int code = client.invoke(op, extra, frame -> {
         Object data = frame.get("data");
         if (data != null) chunks.add(String.valueOf(data));
@@ -133,7 +137,7 @@ public class DaemonServerSocketTest {
   @Test
   public void pingAnswersWithTheWorkerState() throws IOException {
     List<String> states = new ArrayList<>();
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       int code = client.invoke("ping", Map.of(), frame -> {
         if ("state".equals(frame.get("kind"))) states.add(String.valueOf(frame.get("state")));
       });
@@ -145,7 +149,7 @@ public class DaemonServerSocketTest {
   @Test
   public void statusReportsTheProtocolVersionAndLockedFlags() throws IOException {
     List<Map<String, Object>> frames = new ArrayList<>();
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       assertEquals(0, client.invoke("status", Map.of(), frames::add));
     }
     Map<String, Object> status = frames.stream()
@@ -155,9 +159,34 @@ public class DaemonServerSocketTest {
     assertTrue(status.get("lockedFlags") instanceof Map);
   }
 
+  /**
+   * A TCP port is anybody's to connect to, and so is a socket in somebody else's directory: the
+   * token is what tells the user's own clients apart. Without it nothing runs, not even a ping.
+   */
+  @Test
+  public void aRequestWithoutTheTokenIsRefusedAndItsConnectionClosed() throws IOException {
+    for (String token : new String[] { null, "", "not-" + TOKEN }) {
+      try (DaemonClient client = DaemonClient.connect(address, token)) {
+        List<String> messages = new ArrayList<>();
+        assertEquals(1, client.invoke("shutdown", Map.of(),
+            f -> { if (f.get("message") != null) messages.add(String.valueOf(f.get("message"))); }));
+        assertTrue(messages.toString(), messages.getFirst().contains("token"));
+        try {
+          client.invoke("ping", Map.of(), null);
+          fail("the daemon must close a connection that did not present its token");
+        } catch (IOException expected) {
+        }
+      }
+    }
+    // Still running: the refused shutdowns did nothing.
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
+      assertEquals(0, client.invoke("ping", Map.of(), null));
+    }
+  }
+
   @Test
   public void anUnknownOpIsRefusedWithoutKillingTheConnection() throws IOException {
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       List<String> messages = new ArrayList<>();
       assertEquals(1, client.invoke("no-such-op", Map.of(),
           f -> { if (f.get("message") != null) messages.add(String.valueOf(f.get("message"))); }));
@@ -224,7 +253,7 @@ public class DaemonServerSocketTest {
     try {
       SocketAddress refreshAddress = SocketAddress.parse(boundAddress);
       List<String> chunks = new ArrayList<>();
-      try (DaemonClient client = DaemonClient.connect(refreshAddress)) {
+      try (DaemonClient client = DaemonClient.connect(refreshAddress, TOKEN)) {
         client.invoke("refresh", Map.of(), frame -> {
           Object data = frame.get("data");
           if (data != null) chunks.add(String.valueOf(data));
@@ -242,7 +271,7 @@ public class DaemonServerSocketTest {
 
   @Test
   public void shutdownStopsTheServer() throws Exception {
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       assertEquals(0, client.invoke("shutdown", Map.of(), null));
     }
     assertTrue("the server must stop once its queue has run out", stopped.await(30, TimeUnit.SECONDS));

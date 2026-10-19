@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,12 @@ import java.util.function.Supplier;
  * {@link Runner}. {@code ping}, {@code status} and {@code cancel} are answered at once;
  * {@code shutdown} lets what is queued run first, then calls {@code onShutdown}. Nothing here exits
  * the process.
+ *
+ * <p>Every request has to present the daemon's token, which only the registry's copy of its lock
+ * holds -- a file of the user's alone. A socket's permissions keep other users out where there is a
+ * Unix socket to set them on; the token keeps them out of a TCP port, which any local process can
+ * reach, and of a socket somebody else's directory holds. A request without it is answered with an
+ * error, and its connection closed.
  *
  * <p>Cancellation: each accepted request gets an indicator that a {@code cancel} trips. The runner
  * hands it to the typechecker; whether it was tripped is re-read once the run returns,
@@ -113,6 +121,7 @@ public final class DaemonServer {
   private static final WorkItem SHUTDOWN = new WorkItem(null, "shutdown");
 
   private final SocketBinder.Bound bound;
+  private final byte[] token;
   private final Supplier<List<String>> libraries;
   private final Map<String, Object> lockedFlags;
   private final String host;
@@ -140,16 +149,19 @@ public final class DaemonServer {
   private final Thread workerThread = Thread.ofPlatform().daemon().name("arend-daemon-worker").unstarted(this::workerLoop);
 
   /**
+   * @param token       what every request has to present, as the registry's copy of the lock says
    * @param libraries   the canonical arend.yaml or zip of every library served, as {@code status} reports them
    * @param lockedFlags the flags fixed at the daemon's start, as {@code status} reports them
    * @param host        what runs the daemon, as its lock says
    * @param describe    what a request asks for, for a person; given null for a {@code refresh}
    * @param onActivity  called whenever {@link #activity} has changed
    */
-  public DaemonServer(SocketBinder.Bound bound, Supplier<List<String>> libraries, Map<String, Object> lockedFlags,
+  public DaemonServer(SocketBinder.Bound bound, String token, Supplier<List<String>> libraries, Map<String, Object> lockedFlags,
                       String host, Runner runner, Runnable onShutdown,
                       Function<List<String>, String> describe, Runnable onActivity) {
+    if (token == null || token.isEmpty()) throw new IllegalArgumentException("a daemon needs a token");
     this.bound = bound;
+    this.token = token.getBytes(StandardCharsets.UTF_8);
     this.libraries = libraries;
     this.lockedFlags = lockedFlags;
     this.host = host;
@@ -224,11 +236,23 @@ public final class DaemonServer {
       while (true) {
         Map<String, Object> request = FrameChannel.read(channel);
         if (request == null) return;
+        if (!authorized(request)) {
+          String id = String.valueOf(request.getOrDefault("id", ""));
+          client.write(FrameChannel.errorFrame(id, "the request does not present this daemon's token"));
+          client.write(FrameChannel.doneFrame(id, 1));
+          return;
+        }
         handleRequest(client, request);
       }
     } catch (IOException e) {
       // The peer went away or sent garbage; nothing to answer.
     }
+  }
+
+  /** Whether {@code request} presents the token, compared in time that does not depend on how much of it matches. */
+  private boolean authorized(Map<String, Object> request) {
+    return request.get("token") instanceof String presented
+        && MessageDigest.isEqual(token, presented.getBytes(StandardCharsets.UTF_8));
   }
 
   private void handleRequest(FrameChannel channel, Map<String, Object> request) throws IOException {

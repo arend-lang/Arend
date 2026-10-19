@@ -31,6 +31,9 @@ import static org.junit.Assert.assertTrue;
  * examination -- including ones a correct server would not send.
  */
 public class DaemonClientTest {
+  /** What the daemon demands of every request, as the registry's copy of its lock would say. */
+  private static final String TOKEN = "test-token";
+
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private ServerSocketChannel listener;
@@ -96,7 +99,7 @@ public class DaemonClientTest {
       }
     });
 
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       int rc = client.invoke("req-1", "cli", Map.of(), null, accepted -> {
         verdicts.add(accepted);
         acked.countDown();
@@ -128,7 +131,7 @@ public class DaemonClientTest {
       }
     });
     List<String> seen = new ArrayList<>();
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       assertEquals(0, client.invoke("cli", Map.of(), f -> seen.add(f.get("kind") + ":" + f.get("data"))));
     }
     assertEquals(List.of("stdout:one", "stderr:two"), seen);
@@ -152,7 +155,7 @@ public class DaemonClientTest {
       }
     });
     List<String> seen = new ArrayList<>();
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       assertEquals("the foreign done must not be taken as this request's result",
           0, client.invoke("cli", Map.of(), f -> seen.add((String) f.get("data"))));
     }
@@ -185,7 +188,7 @@ public class DaemonClientTest {
     });
     peer.start();
 
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       String id = "the-request";
       Thread canceller = new Thread(() -> {
         try {
@@ -207,7 +210,7 @@ public class DaemonClientTest {
   @Test
   public void aPeerThatHangsUpBeforeDoneIsAnError() throws IOException {
     servePeer(s -> { /* close without answering */ });
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       IOException e = assertThrows(IOException.class, () -> client.invoke("ping", Map.of(), null));
       assertTrue(e.getMessage(), e.getMessage().contains("before sending done"));
     }

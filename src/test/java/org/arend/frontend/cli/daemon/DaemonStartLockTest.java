@@ -69,6 +69,14 @@ public class DaemonStartLockTest {
    * not the set asked for refuses the start, whichever of the two is larger. The same set in
    * another order is the same daemon.
    */
+  /** A copy no registry entry confirms names no daemon a client could reach, live PID or not. */
+  @Test
+  public void anUnregisteredLockStopsNoStart() {
+    LockFile planted = ((LockFile.Read.Found) found(A)).lock();
+    assertEquals(DaemonStart.Verdict.UNREGISTERED_LOCK,
+        DaemonStart.inspectLock(new LockFile.Read.Unregistered(planted), A, List.of(A.toString()), ALIVE));
+  }
+
   @Test
   public void aLiveDaemonWithAnOverlappingSetRefusesTheStart() {
     List<String> ab = List.of(A.toString(), B.toString());

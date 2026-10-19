@@ -93,7 +93,8 @@ public class DaemonMcpServerTest {
     DaemonPaths paths = DaemonPaths.resolve(root);
     paths.ensureArendDir();
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
-    DaemonServer daemon = CliDaemonRunner.server(bound, new CommandContext(), List.of(paths.libraryConfig.toString()),
+    String token = LockFile.newToken();
+    DaemonServer daemon = CliDaemonRunner.server(bound, token, new CommandContext(), List.of(paths.libraryConfig.toString()),
         (context, args, cwd) -> {
           received.add(name + " " + String.join(" ", args));
           if (List.of(args).contains("Hold")) {
@@ -113,10 +114,9 @@ public class DaemonMcpServerTest {
     List<String> sharedConfigs = new ArrayList<>();
     for (Path library : sharedLoaded) sharedConfigs.add(config(library));
     LockFile lock = new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
-        List.of(paths.libraryConfig.toString()), sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, bound.address(), LockFile.HOST_CLI);
-    lock.writeAtomic(paths.lockFile);
-    Files.createDirectories(DaemonPaths.registryDir());
-    lock.writeAtomic(lock.registryFile());
+        List.of(paths.libraryConfig.toString()), sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, bound.address(), LockFile.HOST_CLI,
+        LockFile.UNKNOWN_START, token);
+    lock.writeEverywhere();
   }
 
   /** Starts the MCP server as an agent would, from {@code workingDir}. */

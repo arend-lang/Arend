@@ -26,6 +26,12 @@ public final class DaemonStop {
     NOTHING_TO_DO,
     /** A lock we cannot parse; we can neither signal it nor safely remove it. */
     UNREADABLE_LOCK,
+    /**
+     * A library's copy no registry entry confirms: whatever process it names is only its word, and
+     * is never signalled on it. The copy is removed; a daemon still running behind it is the user's
+     * to stop by hand.
+     */
+    REMOVE_UNREGISTERED,
     /** A lock for this library whose process is gone. */
     REMOVE_STALE,
     /** A lock for another library whose process is gone. */
@@ -43,6 +49,7 @@ public final class DaemonStop {
                              java.util.function.Predicate<LockFile> alive) {
     if (existing instanceof LockFile.Read.Absent) return Verdict.NOTHING_TO_DO;
     if (existing instanceof LockFile.Read.Unreadable) return Verdict.UNREADABLE_LOCK;
+    if (existing instanceof LockFile.Read.Unregistered) return Verdict.REMOVE_UNREGISTERED;
     LockFile lf = ((LockFile.Read.Found) existing).lock();
     boolean live = alive.test(lf);
     if (!lf.serves(libraryConfig)) {
@@ -71,7 +78,7 @@ public final class DaemonStop {
       return 1;
     }
 
-    LockFile.Read existing = LockFile.read(paths.lockFile);
+    LockFile.Read existing = LockFile.lookup(paths);
     Verdict verdict = inspectLock(existing, paths.libraryConfig, LockFile::processAlive);
     switch (verdict) {
       case NOTHING_TO_DO -> {
@@ -85,6 +92,14 @@ public final class DaemonStop {
         System.err.println("[ERROR] lock file at " + paths.lockFile + " cannot be read ("
             + reason + "); cannot tell whether a daemon is running.");
         return 1;
+      }
+      case REMOVE_UNREGISTERED -> {
+        long pid = ((LockFile.Read.Unregistered) existing).copy().pid();
+        System.err.println("[WARN]  -d stop: lock file at " + paths.lockFile + " is not confirmed by the registry in "
+            + DaemonPaths.registryDir() + "; removing it. Its PID " + pid + " is not signalled on its word: if a"
+            + " daemon still runs there, stop that process yourself.");
+        LockFile.deleteQuietly(paths.lockFile);
+        return 0;
       }
       case REMOVE_STALE_MISMATCH -> {
         System.err.println("[WARN]  -d stop: lock file at " + paths.lockFile

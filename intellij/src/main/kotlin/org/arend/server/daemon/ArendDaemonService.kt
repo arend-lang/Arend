@@ -51,7 +51,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
         val activity: DaemonServer.Activity
     )
 
-    private class Running(val server: DaemonServer, val home: DaemonPaths, val socket: String) {
+    private class Running(val server: DaemonServer, val home: DaemonPaths, val socket: String, val token: String) {
         /** The canonical arend.yaml or zip of every library served, to its name. */
         @Volatile var served: Map<String, String> = emptyMap()
         @Volatile var lock: LockFile? = null
@@ -124,9 +124,10 @@ class ArendDaemonService(private val project: Project) : Disposable {
             // The socket's: the other libraries get theirs with the lock, in update.
             home.ensureArendDir()
             val bound = SocketBinder.bind(home.socketFile, home.libraryHash)
-            val server = DaemonServer(bound, { running?.lock?.libraries() ?: emptyList() }, emptyMap(), LockFile.HOST_INTELLIJ,
+            val token = LockFile.newToken()
+            val server = DaemonServer(bound, token, { running?.lock?.libraries() ?: emptyList() }, emptyMap(), LockFile.HOST_INTELLIJ,
                 IdeDaemonCommands(project) { running?.served ?: emptyMap() }, ::stop, ::describe, ::activityChanged)
-            daemon = Running(server, home, bound.address())
+            daemon = Running(server, home, bound.address(), token)
             running = daemon
             server.start()
             Runtime.getRuntime().addShutdownHook(daemon.shutdownHook)
@@ -218,7 +219,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
         owned.sortBy { if (it == daemon.home) 0 else 1 }
 
         val lock = LockFile.ofThisProcess(daemon.home, owned.map { it.libraryConfig.toString() },
-            shared.map { it.libraryConfig.toString() }, daemon.server.startedAt(), daemon.socket, LockFile.HOST_INTELLIJ)
+            shared.map { it.libraryConfig.toString() }, daemon.server.startedAt(), daemon.socket, LockFile.HOST_INTELLIJ, daemon.token)
         val previous = daemon.lock
         daemon.served = (owned + shared).associate { it.libraryConfig.toString() to libraries.getValue(it) }
         daemon.lock = lock
@@ -240,9 +241,14 @@ class ArendDaemonService(private val project: Project) : Disposable {
      * is removed on the way.
      */
     private fun owner(paths: DaemonPaths): String? {
-        val lock = when (val read = LockFile.read(paths.lockFile)) {
+        val lock = when (val read = LockFile.lookup(paths)) {
             is LockFile.Read.Unreadable -> return "a lock that cannot be read (${read.reason()}) at ${paths.lockFile}"
             is LockFile.Read.Found -> read.lock()
+            // Nobody's that a client could reach: only the registry's entry has the token. Its own word is all it has.
+            is LockFile.Read.Unregistered -> {
+                LockFile.deleteQuietly(paths.lockFile)
+                return null
+            }
             else -> return null
         }
         if (lock.pid() == ProcessHandle.current().pid() && lock.libraryHash() == running?.home?.libraryHash) return null

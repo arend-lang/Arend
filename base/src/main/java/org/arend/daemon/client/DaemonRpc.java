@@ -71,7 +71,7 @@ public final class DaemonRpc {
       return 1;
     }
 
-    try (DaemonClient client = DaemonClient.connect(addr)) {
+    try (DaemonClient client = DaemonClient.connect(addr, lf.token())) {
       return invokeWithCancelHook(client, op, Map.of(), DaemonRpc::printFrame);
     } catch (IOException e) {
       System.err.println("[ERROR] " + op + ": cannot reach daemon at " + lf.socketPath() + ": " + e.getMessage());
@@ -167,7 +167,7 @@ public final class DaemonRpc {
       return OptionalInt.empty();
     }
 
-    try (DaemonClient client = DaemonClient.connect(addr)) {
+    try (DaemonClient client = DaemonClient.connect(addr, lf.token())) {
       // The cwd travels with the argv: a relative path belongs to the directory the user typed
       // the command in, while the daemon's own is whatever shell started it, fixed for its
       // lifetime.
@@ -191,8 +191,16 @@ public final class DaemonRpc {
    * mismatch, which is actionable whichever way we got here.
    */
   private static LockFile reachableDaemon(DaemonPaths paths, boolean explain) {
-    switch (LockFile.read(paths.lockFile)) {
+    switch (LockFile.lookup(paths)) {
       case LockFile.Read.Absent ignored -> {
+        return null;
+      }
+      case LockFile.Read.Unregistered unregistered -> {
+        // Its address and its process are only its own word, and anybody may have written it.
+        if (explain) {
+          System.err.println("[WARN] lock file " + paths.lockFile + " is not confirmed by the registry in "
+              + DaemonPaths.registryDir() + "; not routing to it.");
+        }
         return null;
       }
       case LockFile.Read.Unreadable unreadable -> {

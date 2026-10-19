@@ -37,8 +37,24 @@ public sealed interface SocketAddress {
       if (port < 1 || port > 65535) {
         throw new IllegalArgumentException("socket address has an out-of-range port: " + encoded);
       }
-      return new Tcp(hostPort.substring(0, colon), port);
+      String host = hostPort.substring(0, colon);
+      // A daemon only ever binds the loopback interface; a lock naming anything else did not come from one.
+      if (!isLoopback(host)) {
+        throw new IllegalArgumentException("socket address is not on this machine: " + encoded);
+      }
+      return new Tcp(host, port);
     }
     throw new IllegalArgumentException("unrecognised socket address: " + encoded);
+  }
+
+  /** Whether {@code host} is a loopback address written out: {@code 127.x.x.x}, {@code ::1} or {@code localhost}. No lookup. */
+  static boolean isLoopback(String host) {
+    if (host.equals("localhost") || host.equals("::1") || host.equals("[::1]")) return true;
+    String[] parts = host.split("\\.", -1);
+    if (parts.length != 4 || !parts[0].equals("127")) return false;
+    for (String part : parts) {
+      if (part.isEmpty() || part.length() > 3 || !part.chars().allMatch(Character::isDigit) || Integer.parseInt(part) > 255) return false;
+    }
+    return true;
   }
 }

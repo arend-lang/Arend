@@ -35,6 +35,9 @@ import static org.junit.Assume.assumeTrue;
  * which is the only way to observe a request arriving while another is still running.
  */
 public class DaemonCancellationTest {
+  /** What the daemon demands of every request, as the registry's copy of its lock would say. */
+  private static final String TOKEN = "test-token";
+
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private DaemonServer server;
@@ -90,7 +93,7 @@ public class DaemonCancellationTest {
       return 0;
     };
 
-    server = CliDaemonRunner.server(bound, ctx, List.of("test-library"), runner, () -> {});
+    server = CliDaemonRunner.server(bound, TOKEN, ctx, List.of("test-library"), runner, () -> {});
     server.start();
   }
 
@@ -111,7 +114,7 @@ public class DaemonCancellationTest {
 
     Call(String... args) {
       thread = new Thread(() -> {
-        try (DaemonClient client = DaemonClient.connect(address)) {
+        try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
           int rc = client.invoke(id, "cli", Map.of("args", List.of(args)), frame -> {
             Object data = frame.get("data");
             if (data != null) synchronized (output) { output.append(data); }
@@ -136,14 +139,14 @@ public class DaemonCancellationTest {
   }
 
   private void cancel(String targetId) throws IOException {
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       client.invoke("cancel", Map.of("targetId", targetId), null);
     }
   }
 
   private int queueDepth() throws IOException {
     AtomicInteger depth = new AtomicInteger(-1);
-    try (DaemonClient client = DaemonClient.connect(address)) {
+    try (DaemonClient client = DaemonClient.connect(address, TOKEN)) {
       client.invoke("status", Map.of(), frame -> {
         Object d = frame.get("queueDepth");
         if (d instanceof Number n) depth.set(n.intValue());
