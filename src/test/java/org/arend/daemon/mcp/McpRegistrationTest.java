@@ -2,6 +2,8 @@ package org.arend.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.arend.daemon.Platform;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -14,6 +16,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -173,6 +176,25 @@ public class McpRegistrationTest {
       Path project = tmp.newFolder("project").toPath();
       McpRegistration.Result result = McpRegistration.initProject(project, new McpRegistration.Command(COMMAND, false));
       assertTrue(result.notes().toString(), result.notes().stream().anyMatch(note -> note.contains("version control")));
+    });
+  }
+
+  /**
+   * An agent's CLI works on the configs of the home this process was given, not on the user's: run
+   * with the user's HOME, --mcp-unregister under a test's home removed the server from the user's real
+   * Codex config.
+   */
+  @Test
+  public void anAgentsCliRunsOnTheHomeGiven() throws IOException {
+    Assume.assumeFalse(Platform.isWindows());
+    Path cli = tmp.getRoot().toPath().resolve("agent");
+    Files.writeString(cli, "#!/bin/sh\nprintf '%s\\n%s\\n' \"$HOME\" \"$CODEX_HOME\" > \"$1\"\n");
+    assertTrue(cli.toFile().setExecutable(true));
+    Path seen = tmp.getRoot().toPath().resolve("seen");
+    withAgentsInstalled(() -> {
+      Path home = Path.of(System.getProperty("user.home"));
+      assertNull(McpRegistration.run(cli, List.of(seen.toString())));
+      assertEquals(List.of(home.toString(), home.resolve(".codex").toString()), Files.readAllLines(seen));
     });
   }
 

@@ -93,7 +93,7 @@ final class DaemonMcpSkills {
 
   /** Each agent's own directory, as its documentation gives it for the user's skills. */
   List<Agent> agents() {
-    String claudeDir = System.getenv("CLAUDE_CONFIG_DIR");
+    String claudeDir = AgentHome.variable(home, "CLAUDE_CONFIG_DIR");
     Path claude = claudeDir != null && !claudeDir.isEmpty() ? Path.of(claudeDir) : home.resolve(".claude");
     return List.of(
         new Agent("claude", "Claude Code", claude.resolve("skills")),

@@ -252,7 +252,7 @@ public final class McpRegistration {
     }
 
     private static Path config() {
-      String configDir = System.getenv("CLAUDE_CONFIG_DIR");
+      String configDir = AgentHome.variable(home(), "CLAUDE_CONFIG_DIR");
       return configDir != null && !configDir.isEmpty() ? Path.of(configDir, ".claude.json") : home().resolve(".claude.json");
     }
 
@@ -361,12 +361,12 @@ public final class McpRegistration {
     private static Path config() {
       Path user;
       if (Platform.isWindows()) {
-        String appData = System.getenv("APPDATA");
+        String appData = AgentHome.variable(home(), "APPDATA");
         user = Path.of(appData != null ? appData : home().resolve("AppData").resolve("Roaming").toString(), "Code", "User");
       } else if (Platform.isMac()) {
         user = home().resolve("Library").resolve("Application Support").resolve("Code").resolve("User");
       } else {
-        String configHome = System.getenv("XDG_CONFIG_HOME");
+        String configHome = AgentHome.variable(home(), "XDG_CONFIG_HOME");
         user = (configHome != null && !configHome.isEmpty() ? Path.of(configHome) : home().resolve(".config")).resolve("Code").resolve("User");
       }
       return user.resolve("mcp.json");
@@ -396,6 +396,7 @@ public final class McpRegistration {
 
   // ───────── files ─────────
 
+  /** Java's home, whose agents' configs these are; see {@link AgentHome}. */
   private static Path home() {
     return Path.of(System.getProperty("user.home"));
   }
@@ -482,10 +483,10 @@ public final class McpRegistration {
   }
 
   /**
-   * Runs {@code cli} with {@code args} in the home directory, where no project's settings apply;
-   * null when it succeeded, else what went wrong.
+   * Runs {@code cli} with {@code args} in the home directory, where no project's settings apply, and
+   * on that home's configs ({@link AgentHome#pointAt}); null when it succeeded, else what went wrong.
    */
-  private static String run(Path cli, List<String> args) {
+  static String run(Path cli, List<String> args) {
     List<String> command = new ArrayList<>();
     command.add(cli.toString());
     command.addAll(args);
@@ -493,8 +494,10 @@ public final class McpRegistration {
     try {
       // To a file, not a pipe: a process blocked on a full pipe would outlive the timeout.
       log = Files.createTempFile("arend-mcp-register.", ".log");
-      Process process = new ProcessBuilder(command).directory(home().toFile()).redirectErrorStream(true)
-          .redirectOutput(log.toFile()).start();
+      ProcessBuilder builder = new ProcessBuilder(command).directory(home().toFile()).redirectErrorStream(true)
+          .redirectOutput(log.toFile());
+      AgentHome.pointAt(home(), builder.environment());
+      Process process = builder.start();
       process.getOutputStream().close();
       if (!process.waitFor(CLI_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         process.destroyForcibly();
