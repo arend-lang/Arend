@@ -8,6 +8,7 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.newvfs.RefreshQueue
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPsiElementPointer
@@ -50,6 +51,9 @@ import org.arend.error.CountingErrorReporter
 import java.io.IOException
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * Runs daemon requests on the IDE's own server, read as `arend` reads its command line. A typecheck
@@ -64,6 +68,8 @@ import java.nio.charset.StandardCharsets
 class IdeDaemonCommands(private val project: Project, private val served: () -> Map<String, String>) : DaemonServer.Runner {
     private companion object {
         val LOG = logger<IdeDaemonCommands>()
+        /** How long a sync may take before the client is told what it waits for. */
+        const val WAIT_NOTE_MILLIS = 2000L
     }
 
     private val server
@@ -130,7 +136,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         if (scope.isEmpty()) scope.addAll(libraries.values)
 
         // Before anything is looked up: a module the agent has just written is not one the server knows yet.
-        if (!sync(scope, cancel)) return 1
+        if (!sync(scope, cancel) { err.println(it) }) return 1
         // As the CLI's stderr reporter: prints each diagnostic, and an error proper fails the request.
         val reporter = CountingErrorReporter(GeneralError.Level.ERROR) { err.println(it) }
         val exitCode = if (tool != null) SourcePositionUtils.withResolver(::position) {
@@ -257,7 +263,7 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
     /** Brings the server up to date with the files on disk. */
     private fun refresh(output: DaemonServer.Output, cancel: CancellationIndicator): Int {
         val libraries = served().values
-        if (!sync(libraries, cancel)) return 1
+        if (!sync(libraries, cancel) { output.err(it + "\n") }) return 1
         output.out("Refreshed ${libraries.joinToString(", ")}\n")
         return 0
     }
@@ -266,21 +272,35 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
      * Makes the server see what an agent wrote to disk, the editor's unsaved changes still winning.
      * Refreshing the files is not enough: the server learns of a change from the PSI only later, and
      * a typecheck started before then checks what the files said before. A module that has not
-     * changed keeps its timestamp, which the server skips. Whether [cancel] was left unset.
+     * changed keeps its timestamp, which the server skips. Whether [cancel] was left unset; [note]
+     * tells the client what it is waiting for, when that takes a while.
      */
-    private fun sync(libraries: Collection<String>, cancel: CancellationIndicator): Boolean {
+    private fun sync(libraries: Collection<String>, cancel: CancellationIndicator, note: (String) -> Unit): Boolean {
         // The project's own libraries: the server never re-reads a library from outside the project.
         val configs = libraries.mapNotNull { project.findInternalLibrary(it) }
         val files = runReadAction {
             configs.flatMap { listOfNotNull(it.sourcesDirFile, it.testsDirFile, it.root?.findChild(FileUtils.LIBRARY_CONFIG_FILE)) }
         }
-        if (files.isNotEmpty()) VfsUtil.markDirtyAndRefresh(false, true, true, *files.toTypedArray<VirtualFile>())
         // The PSI of a file with a document follows the document, which the refresh reloads only
         // later, on the EDT: wait for that, then make the PSI match it. Not under a modal dialog:
-        // committing changes the PSI, which only a write-safe modality allows.
-        ApplicationManager.getApplication().invokeAndWait({
-            if (!project.isDisposed) PsiDocumentManager.getInstance(project).commitAllDocuments()
-        }, ModalityState.nonModal())
+        // committing changes the PSI, which only a write-safe modality allows -- so the refresh and
+        // the commit wait for a dialog to close, and this waits for them in a way a cancel can end.
+        val synced = CompletableFuture<Unit>()
+        val commit = Runnable {
+            try {
+                if (!project.isDisposed) PsiDocumentManager.getInstance(project).commitAllDocuments()
+            } finally {
+                synced.complete(Unit)
+            }
+        }
+        val commitLater = Runnable { ApplicationManager.getApplication().invokeLater(commit, ModalityState.nonModal()) }
+        if (files.isEmpty()) {
+            commitLater.run()
+        } else {
+            VfsUtil.markDirty(true, true, *files.toTypedArray<VirtualFile>())
+            RefreshQueue.getInstance().refresh(true, true, commitLater, *files.toTypedArray<VirtualFile>())
+        }
+        if (!await(synced, cancel, note)) return false
         val requester = ArendServerRequesterImpl(project)
         for (config in configs) {
             if (cancel.isCanceled) return false
@@ -298,6 +318,27 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
             }
         }
         return true
+    }
+
+    /**
+     * Waits for [future] until it is done, or [cancel] is set; says once through [note] what it waits
+     * for, should it take more than a moment. Whether it is done.
+     */
+    private fun await(future: CompletableFuture<Unit>, cancel: CancellationIndicator, note: (String) -> Unit): Boolean {
+        val started = System.currentTimeMillis()
+        var told = false
+        while (true) {
+            if (cancel.isCanceled || project.isDisposed) return false
+            try {
+                future.get(100, TimeUnit.MILLISECONDS)
+                return true
+            } catch (_: TimeoutException) {
+                if (!told && System.currentTimeMillis() - started > WAIT_NOTE_MILLIS) {
+                    told = true
+                    note("[INFO] waiting for the IDE to take in the files on disk: it does so once no modal dialog is open there")
+                }
+            }
+        }
     }
 
     /**
