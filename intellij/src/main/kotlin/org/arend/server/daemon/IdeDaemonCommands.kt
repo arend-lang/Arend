@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -61,10 +62,22 @@ import java.nio.charset.StandardCharsets
  * @param served the canonical arend.yaml or zip of every library the daemon serves, to its name
  */
 class IdeDaemonCommands(private val project: Project, private val served: () -> Map<String, String>) : DaemonServer.Runner {
+    private companion object {
+        val LOG = logger<IdeDaemonCommands>()
+    }
+
     private val server
         get() = project.service<ArendServerService>().server
 
-    override fun run(request: DaemonServer.Request): Int {
+    override fun run(request: DaemonServer.Request): Int = try {
+        runRequest(request)
+    } catch (e: Throwable) {
+        // The client gets the trace as well; the log keeps it for a bug report.
+        if (e !is InterruptedException && e !is CancellationException) LOG.warn("An Arend daemon request failed: ${request.args}", e)
+        throw e
+    }
+
+    private fun runRequest(request: DaemonServer.Request): Int {
         val args = request.args ?: return refresh(request.output, request.cancel)
         val out = PrintStream(request.output.stream(true), true, StandardCharsets.UTF_8)
         val err = PrintStream(request.output.stream(false), true, StandardCharsets.UTF_8)

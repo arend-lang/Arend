@@ -7,6 +7,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
@@ -368,7 +370,10 @@ public final class DaemonServer {
         if (!request.cancel().isCanceled()) exitCode = runner.run(request);
       } catch (Throwable e) {
         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-        request.output().err("[ERROR] " + e.getClass().getSimpleName() + ": " + e.getMessage() + "\n");
+        // The whole trace: this is the one place it goes, and "NullPointerException: null" says nothing of where.
+        StringWriter trace = new StringWriter();
+        e.printStackTrace(new PrintWriter(trace));
+        request.output().err("[ERROR] " + trace);
       } finally {
         if (request.cancel().isCanceled()) {
           request.output().err("[CANCELLED]\n");
