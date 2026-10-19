@@ -495,8 +495,8 @@ public final class DaemonMcpServer {
 
     synchronized Map<String, Object> toolResult(int exitCode) {
       List<String> texts = new ArrayList<>();
-      String out = collapseCarriageReturns(stdout);
-      String err = collapseCarriageReturns(stderr);
+      String out = shorten(collapseCarriageReturns(stdout));
+      String err = shorten(collapseCarriageReturns(stderr));
       if (!out.isBlank()) texts.add(out);
       if (!err.isBlank()) texts.add("stderr:\n" + err);
       if (exitCode == FrameChannel.CANCELLED_EXIT_CODE) texts.add("cancelled");
@@ -504,6 +504,23 @@ public final class DaemonMcpServer {
       if (texts.isEmpty()) texts.add("(no output)");
       return DaemonMcpServer.toolResult(texts, exitCode != 0);
     }
+  }
+
+  /** The most of one stream a tool result carries: some ten thousand tokens of an agent's context. */
+  static final int MAX_TEXT = 40_000;
+
+  /**
+   * {@code text} cut to {@link #MAX_TEXT}, if it is longer: its beginning, where the first errors
+   * are, and its end, where the summary is, with what was left out said between them, at a line break.
+   */
+  static String shorten(String text) {
+    if (text.length() <= MAX_TEXT) return text;
+    int headEnd = text.lastIndexOf('\n', MAX_TEXT * 3 / 4);
+    if (headEnd <= 0) headEnd = MAX_TEXT * 3 / 4;
+    int tailStart = text.indexOf('\n', text.length() - MAX_TEXT / 4);
+    if (tailStart < 0 || tailStart <= headEnd) tailStart = text.length() - MAX_TEXT / 4;
+    return text.substring(0, headEnd) + "\n[... " + (tailStart - headEnd) + " characters left out: name fewer targets,"
+        + " or run the command with `arend` to see all of it ...]" + text.substring(tailStart);
   }
 
   /**

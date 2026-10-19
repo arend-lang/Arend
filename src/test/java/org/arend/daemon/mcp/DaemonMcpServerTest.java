@@ -159,6 +159,19 @@ public class DaemonMcpServerTest {
     return "\"" + path.toString().replace("\\", "\\\\") + "\"";
   }
 
+  /** A whole library's output would fill an agent's context: its beginning and its end are what it gets. */
+  @Test
+  public void aLongOutputIsCutToItsBeginningAndEnd() {
+    StringBuilder text = new StringBuilder();
+    for (int i = 0; text.length() < 3 * DaemonMcpServer.MAX_TEXT; i++) text.append("[ERROR] line ").append(i).append('\n');
+    String shortened = DaemonMcpServer.shorten(text.toString());
+    assertTrue(shortened.length() < DaemonMcpServer.MAX_TEXT + 200);
+    assertTrue(shortened.startsWith("[ERROR] line 0\n"));
+    assertTrue(shortened.endsWith(text.substring(text.lastIndexOf("[ERROR]"))));
+    assertTrue(shortened.contains("characters left out"));
+    assertEquals("short", DaemonMcpServer.shorten("short"));
+  }
+
   /** A line rewritten with `\r` keeps its last state; every line break stays, a leading one too. */
   @Test
   public void carriageReturnsCollapseToTheLastStateOfEachLine() {
