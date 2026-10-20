@@ -147,10 +147,12 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     }
 
     private fun createHighlightInfoBuilder(error: GeneralError, range: TextRange, type: HighlightInfoType? = null): HighlightInfo.Builder {
-        val tooltip = errorTooltips[error] ?: run {
+        val tooltip = errorTooltips[error] ?: try {
             val ppConfig = PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE)
             ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE)
             XmlStringUtil.escapeString(DocStringBuilder.build(vHang(error.getShortHeaderDoc(ppConfig), error.getBodyDoc(ppConfig)))).replace("\n", "<br>")
+        } catch (_: ComputationInterruptedException) {
+            XmlStringUtil.escapeString(error.shortMessage ?: "")
         }
         return HighlightInfo.newHighlightInfo(type ?: levelToHighlightInfoType(error.level))
             .range(range)
