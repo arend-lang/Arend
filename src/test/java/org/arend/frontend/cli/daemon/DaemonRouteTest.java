@@ -59,7 +59,7 @@ public class DaemonRouteTest {
   @Before
   public void setUp() throws IOException {
     assumeTrue("Unix domain sockets required",
-        !System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
+        org.arend.daemon.Platform.supportsUnixSockets());
 
     // The registry is the user's own; a test must not write to the real one.
     config = tempFolder.newFolder("config").toPath();
@@ -146,7 +146,23 @@ public class DaemonRouteTest {
   public void aRegistryEntryOthersCanReadIsNotTrusted() throws Exception {
     DaemonPaths paths = DaemonPaths.resolve(libRoot);
     Path entry = lockOf(paths, List.of(paths), List.of()).registryFile();
-    Files.setPosixFilePermissions(entry, java.nio.file.attribute.PosixFilePermissions.fromString("rw-r--r--"));
+    if (Files.getFileAttributeView(entry, java.nio.file.attribute.PosixFileAttributeView.class) != null) {
+      Files.setPosixFilePermissions(entry, java.nio.file.attribute.PosixFilePermissions.fromString("rw-r--r--"));
+    } else {
+      // Windows: an ACL that lets Everyone read it too. The name is a localized one; skip where it is not this.
+      java.nio.file.attribute.UserPrincipal everyone;
+      try {
+        everyone = entry.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("Everyone");
+      } catch (java.nio.file.attribute.UserPrincipalNotFoundException e) {
+        org.junit.Assume.assumeNoException(e);
+        return;
+      }
+      java.nio.file.attribute.AclFileAttributeView view = Files.getFileAttributeView(entry, java.nio.file.attribute.AclFileAttributeView.class);
+      List<java.nio.file.attribute.AclEntry> acl = new java.util.ArrayList<>(view.getAcl());
+      acl.add(java.nio.file.attribute.AclEntry.newBuilder().setType(java.nio.file.attribute.AclEntryType.ALLOW).setPrincipal(everyone)
+          .setPermissions(java.nio.file.attribute.AclEntryPermission.READ_DATA).build());
+      view.setAcl(acl);
+    }
     List<String> positional = List.of(libRoot.toString(), "Data.Maybe");
     assertTrue(DaemonRpc.tryRouteCli(positional.toArray(new String[0]), positional, List.of()).isEmpty());
     assertTrue(LockFile.registered().isEmpty());

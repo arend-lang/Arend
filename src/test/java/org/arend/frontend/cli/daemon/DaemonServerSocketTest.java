@@ -52,7 +52,7 @@ public class DaemonServerSocketTest {
   @Before
   public void setUp() throws IOException {
     assumeTrue("Unix domain sockets required",
-        !System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
+        org.arend.daemon.Platform.supportsUnixSockets());
 
     libRoot = tempFolder.newFolder("lib").toPath();
     Files.createDirectories(libRoot.resolve("src"));

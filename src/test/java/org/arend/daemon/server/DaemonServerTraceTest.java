@@ -28,7 +28,7 @@ public class DaemonServerTraceTest {
 
   @Test
   public void aRunnerThatThrowsSendsItsWholeTrace() throws IOException {
-    assumeTrue(!System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
+    assumeTrue(org.arend.daemon.Platform.supportsUnixSockets());
     SocketBinder.Bound bound = SocketBinder.bind(tempFolder.newFolder("d").toPath().resolve("daemon.sock"), "0123456789abcdef");
     server = new DaemonServer(bound, "t", List::of, Map.of(), "cli", request -> {
       throw new NullPointerException();

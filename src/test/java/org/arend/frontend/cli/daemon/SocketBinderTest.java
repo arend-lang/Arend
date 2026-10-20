@@ -26,7 +26,7 @@ public class SocketBinderTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private static boolean udsSupported() {
-    return !System.getProperty("os.name", "").toLowerCase().startsWith("windows");
+    return org.arend.daemon.Platform.supportsUnixSockets();
   }
 
   private Path socketPath() throws IOException {

@@ -275,8 +275,9 @@ public final class DaemonStart {
     String address = lock.socketPath();
     if (address != null && address.startsWith("tcp:")) {
       System.err.println("[WARN] this daemon is listening on " + address.substring(4)
-          + " with no access control: any local process can run commands against the warm library"
-          + " or shut it down. See " + paths.logFile + " for why no Unix socket could be bound.");
+          + ", which any local process can connect to; only the daemon's token keeps it from running"
+          + " commands against the warm library or shutting it down. See " + paths.logFile
+          + " for why no Unix socket could be bound.");
     }
     return true;
   }

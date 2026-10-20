@@ -58,7 +58,7 @@ public class DaemonMcpServerTest {
   @Before
   public void setUp() throws IOException {
     assumeTrue("Unix domain sockets required",
-        !System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
+        org.arend.daemon.Platform.supportsUnixSockets());
     Path config = tempFolder.newFolder("config").toPath();
     System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, config.toString());
     libA = library(tempFolder.getRoot().toPath().resolve("liba"));
@@ -362,7 +362,8 @@ public class DaemonMcpServerTest {
 
     String status = text(call(2, "daemon_status", "{\"library\":" + json(libB) + "}"));
     assertTrue(status, status.contains("\"state\" : \"IDLE\""));
-    assertTrue(status, status.contains(config(libB)));
+    // As JSON writes it: a Windows path's backslashes escaped.
+    assertTrue(status, status.contains(config(libB).replace("\\", "\\\\")));
   }
 
   @Test
