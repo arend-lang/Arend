@@ -311,6 +311,12 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     Path directory = lockPath.getParent();
     Path tmp = Files.createTempFile(directory, lockPath.getFileName() + ".", ".tmp");
     try {
+      // The registry's copy carries the token, and is read only while it is private: the user's
+      // alone before the token is in it. A library's copy stays readable, so that another user's
+      // client sees it is not theirs.
+      if (!token.isEmpty() || directory.toAbsolutePath().normalize().equals(DaemonPaths.registryDir().toAbsolutePath().normalize())) {
+        PrivateFiles.restrictToOwner(tmp, false);
+      }
       try (OutputStream out = Files.newOutputStream(tmp)) {
         props.store(out, "Arend daemon lock; do not edit by hand");
       }

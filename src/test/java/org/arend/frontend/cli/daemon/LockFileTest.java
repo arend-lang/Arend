@@ -261,6 +261,28 @@ public class LockFileTest {
     }
   }
 
+  /** Where there are no POSIX permissions, the registry's copy gets an ACL that grants its owner alone. */
+  @Test
+  public void theRegistrysCopyGrantsOnlyItsOwner() throws IOException {
+    java.nio.file.attribute.AclFileAttributeView acl = Files.getFileAttributeView(tempFolder.getRoot().toPath(),
+        java.nio.file.attribute.AclFileAttributeView.class);
+    org.junit.Assume.assumeTrue("needs ACLs rather than POSIX permissions", acl != null
+        && Files.getFileAttributeView(tempFolder.getRoot().toPath(), java.nio.file.attribute.PosixFileAttributeView.class) == null);
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, tempFolder.newFolder("config").toString());
+    try {
+      LockFile lock = new LockFile(4242, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
+          LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, 1L, LockFile.newToken(), null, "");
+      PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
+      lock.writeAtomic(lock.registryFile());
+      java.nio.file.attribute.AclFileAttributeView entry = Files.getFileAttributeView(lock.registryFile(),
+          java.nio.file.attribute.AclFileAttributeView.class);
+      for (java.nio.file.attribute.AclEntry ace : entry.getAcl()) assertEquals(entry.getOwner(), ace.principal());
+      assertTrue(PrivateFiles.isPrivate(lock.registryFile(), false));
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
+  }
+
   @Test
   public void theProcessStartSurvivesTheRoundTrip() throws IOException {
     Path path = lockPath();
