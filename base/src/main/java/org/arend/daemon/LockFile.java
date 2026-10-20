@@ -249,8 +249,9 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     /** A well-formed lock file. Through {@link #lookup}, the registry's copy it points at. */
     record Found(LockFile lock) implements Read {}
     /**
-     * A library's copy that no registry entry of the user's confirms: left by a daemon whose entry
-     * is gone, or put there by somebody else. Nothing it says is to be acted on -- not its address,
+     * A library's copy that no registry entry of the user's confirms, of a library no live daemon of
+     * the registry's serves: left by a daemon whose entry is gone, or put there by somebody else.
+     * Nothing it says is to be acted on -- not its address,
      * and not its process, which must never be signalled on its word.
      */
     record Unregistered(LockFile copy) implements Read {}
@@ -260,15 +261,26 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
    * The lock of the daemon that owns the library of {@code paths}, as the registry has it: the
    * library's own copy names the entry, and the entry -- private to the user, and the only copy with
    * the token -- has to agree that it is the same daemon and that it serves the library.
+   *
+   * <p>Failing that, a live daemon of the registry's that serves the library: its copy is gone -- a
+   * {@code git clean} -- or was replaced by one the registry does not confirm, another user's daemon
+   * or a plant. The copy is only a pointer; a live daemon it no longer points at still holds the
+   * library, and starting another beside it would strand it where no stop could find it.
    */
   public static Read lookup(DaemonPaths paths) {
     Read read = read(paths.lockFile);
-    if (!(read instanceof Read.Found found)) return read;
-    LockFile copy = found.lock();
-    Optional<LockFile> entry = registryEntry(copy.libraryHash)
-        .filter(registered -> registered.pid == copy.pid && registered.processStart == copy.processStart
-            && registered.serves(paths.libraryConfig));
-    return entry.<Read>map(Read.Found::new).orElseGet(() -> new Read.Unregistered(copy));
+    if (read instanceof Read.Found found) {
+      LockFile copy = found.lock();
+      Optional<LockFile> entry = registryEntry(copy.libraryHash)
+          .filter(registered -> registered.pid == copy.pid && registered.processStart == copy.processStart
+              && registered.serves(paths.libraryConfig));
+      if (entry.isPresent()) return new Read.Found(entry.get());
+      read = new Read.Unregistered(copy);
+    }
+    if (read instanceof Read.Unreadable) return read;
+    Read unconfirmed = read;
+    return registered().stream().filter(lock -> lock.serves(paths.libraryConfig) && lock.processAlive())
+        .findFirst().<Read>map(Read.Found::new).orElse(unconfirmed);
   }
 
   /** The registry's entry for {@code libraryHash}, if it is there and is the user's alone. */

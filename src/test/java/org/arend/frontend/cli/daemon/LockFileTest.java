@@ -261,6 +261,41 @@ public class LockFileTest {
     }
   }
 
+  /**
+   * The library's copy only points at the registry. A live daemon it no longer points at -- its copy
+   * deleted, or replaced by one the registry does not confirm -- still holds the library: a start
+   * that did not find it would run a second daemon and strand the first.
+   */
+  @Test
+  public void aLiveRegisteredDaemonIsFoundWithoutItsLibrarysCopy() throws IOException {
+    System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, tempFolder.newFolder("config").toString());
+    try {
+      Path root = tempFolder.newFolder("lib").toPath();
+      Files.writeString(root.resolve("arend.yaml"), "", StandardCharsets.UTF_8);
+      DaemonPaths paths = DaemonPaths.resolve(root);
+      paths.ensureArendDir();
+      LockFile lock = LockFile.ofThisProcess(paths, List.of(paths.libraryConfig.toString()), List.of(), 1L, "uds:/s",
+          LockFile.HOST_CLI, LockFile.newToken());
+      lock.writeEverywhere();
+
+      Files.delete(paths.lockFile);
+      assertEquals(lock, ((LockFile.Read.Found) LockFile.lookup(paths)).lock());
+
+      LockFile foreign = new LockFile(4242, paths.libraryConfig.toString(), lock.libraryHash(),
+          List.of(paths.libraryConfig.toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "tcp:127.0.0.1:1", LockFile.HOST_CLI);
+      foreign.writeAtomic(paths.lockFile);
+      assertEquals(lock, ((LockFile.Read.Found) LockFile.lookup(paths)).lock());
+
+      // Once the registry's daemon is gone -- its entry names a process that started at another time -- the
+      // foreign copy is only its own word again.
+      new LockFile(4242, lock.libraryPath(), lock.libraryHash(), lock.libraries(), List.of(), LockFile.PROTOCOL_VERSION,
+          1L, "uds:/s", LockFile.HOST_CLI, 1L, LockFile.newToken(), null, "").writeAtomic(lock.registryFile());
+      assertTrue(LockFile.lookup(paths) instanceof LockFile.Read.Unregistered);
+    } finally {
+      System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
+    }
+  }
+
   /** Where there are no POSIX permissions, the registry's copy gets an ACL that grants its owner alone. */
   @Test
   public void theRegistrysCopyGrantsOnlyItsOwner() throws IOException {
