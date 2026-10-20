@@ -8,6 +8,10 @@
  -   a functor `q : Q ->⁺ A` between small categories, and {ExtFam} is replaced by the fibers of the projection {extProj}
  -   from its total category {ExtTot}.
  -   Its fiber over `b` is the colimit of {P} over the comma category `f ↓ b` [1, Theorem 9.8.1].
+ -   It is the localization of the fiber of {ExtFam} ({kanExt-fiber-isLocalization}).
+ -
+ -   {B} may be large: take {KanExt} at level `\suc u` for small {A} and {Q}. If the hom-types `f a ~> b` are small,
+ -   the fibers are still small ({kanExt-small}): the fiber of {ExtFam} is resized before localizing.
  -
  -   Over the image of {f}, the localization is computed by a reflection: the fiber over `f a` is equivalent to
  -   the slice `\Sigma⁺ (t : \Sigma⁺ (a' : A) (P a')) (t.1 ~> a)`, and cocartesian transport to `P a` is a reflection
@@ -19,12 +23,16 @@
  -}
 
 \import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CocartesianMap
 \import InfCat.Fibration.CovariantLift
 \import InfCat.Fibration.FreeCocartesian
+\import InfCat.Fibration.Straightening
 \import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
@@ -33,9 +41,11 @@
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseCocartesian
 \import InfCat.Localization.Fiberwise.FiberwiseFiber
+\import InfCat.Resizing
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -74,6 +84,55 @@
 -- | {KanExt} is a cocartesian fibration.
 \lemma kanExt-cocartesian.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) : IsCocartesianFib (KanExt f q)
   => fibLoc-cocartesian {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1)) (transportStable-total (extW-stable f (Fibers q)))
+
+-- | The fiber of {KanExt} over `b` is the localization of the fiber of {ExtFam} at {ExtW}.
+\lemma kanExt-fiber-isLocalization.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (b : B)
+  : IsLocalization (ExtW f (Fibers q) b) (\lam (y :⁺ ExtFam f (Fibers q) b) => (fibLoc-fibIncl (extProj f q) (ExtWTot f q) b ((b, y), idp) : KanExt f q b))
+  => isLocalization-precomp (fibLoc-fiber {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1))
+                                          (transportStable-total (extW-stable f (Fibers q))) b)
+                            (fibers-total-hequiv {B} {ExtFam f (Fibers q)} b)
+
+{- | If the hom-types `f a ~> b` are small, then the fibers of {KanExt} are small, even if {B} is large.
+ -   The fiber of {ExtFam} over `b` is equivalent to a small category built from small models of the hom-types,
+ -   so its localization is small by {kanExt-fiber-isLocalization}.
+ -}
+\lemma kanExt-small.{u} {A Q : \Cat u} {B : \Cat (\suc u)} (f : A ->⁺ B) (q : Q ->⁺ A)
+                        (fs : \Pi (a : A) (b : B) -> IsSmall.{u} (f a ~> b)) (b : B)
+  : IsSmallCat.{u} (KanExt f q b)
+  => localization-small (kanExt-fiber-isLocalization f q b) $ IsSmallCat.fromObjects (smallOb-equiv f q fs b) (smallHom-equiv f q fs b)
+  \where \private {
+    -- | The small model of `f a ~> b`.
+    \sfunc homModel-equiv.{v} {A B : \Cat} (f : A ->⁺ B) (b : B) (fs : \Pi (a : A) -> IsSmall.{v} (f a ~> b)) (a : A)
+      : QEquiv {(IsSmall.extract (fs a)).1} {f a ~> b}
+      => Equiv.toQEquiv (IsSmall.extract (fs a)).2
+
+    -- | Objects of the fiber of {ExtFam} with small models of the structure maps.
+    \type SmallOb.{v} {A Q : \Cat v} {B : \Cat} (f : A ->⁺ B) (q : Q ->⁺ A) (fs : \Pi (a : A) (b : B) -> IsSmall.{v} (f a ~> b)) (b : B) : \Type v
+      => \Sigma (a : A) (e : Q) (q e = a) ((IsSmall.extract (fs a b)).1)
+
+    \func smallOb.{v} {A Q : \Cat v} {B : \Cat} (f : A ->⁺ B) (q : Q ->⁺ A) (fs : \Pi (a : A) (b : B) -> IsSmall.{v} (f a ~> b)) (b : B)
+                      (s : SmallOb f q fs b) : ExtFam f (Fibers q) b
+      => ((s.1, (s.2, s.3)), homModel-equiv f b (fs __ b) s.1 s.4)
+
+    \sfunc smallOb-equiv.{v} {A Q : \Cat v} {B : \Cat} (f : A ->⁺ B) (q : Q ->⁺ A) (fs : \Pi (a : A) (b : B) -> IsSmall.{v} (f a ~> b)) (b : B)
+      : QEquiv (smallOb f q fs b) \cowith
+      | ret y => (y.1.1, y.1.2.1, y.1.2.2, (homModel-equiv f b (fs __ b) y.1.1).ret y.2)
+      | ret_f s => path \lam i => (s.1, s.2, s.3, (homModel-equiv f b (fs __ b) s.1).ret_f s.4 i)
+      | f_sec y => path \lam i => (y.1, (homModel-equiv f b (fs __ b) y.1.1).f_sec y.2 i)
+
+    -- | Arrows of the fiber of {ExtFam} with the commutative triangle in the small model.
+    \func SmallHom.{v} {A Q : \Cat v} {B : \Cat} (f : A ->⁺ B) (q : Q ->⁺ A) (fs : \Pi (a : A) (b : B) -> IsSmall.{v} (f a ~> b)) (b : B)
+                       (s s' : SmallOb f q fs b) : \Type v
+      => \Sigma (k : (s.1, (s.2, s.3)) ~> {BaseChange (\lam a => a) q} (s'.1, (s'.2, s'.3)))
+                (s.4 = (homModel-equiv f b (fs __ b) s.1).ret (comp (dpath \lam i => f (k i).1) (homModel-equiv f b (fs __ b) s'.1 s'.4)))
+
+    \sfunc smallHom-equiv.{v} {A Q : \Cat v} {B : \Cat} (f : A ->⁺ B) (q : Q ->⁺ A) (fs : \Pi (a : A) (b : B) -> IsSmall.{v} (f a ~> b)) (b : B)
+                             (s s' : SmallOb f q fs b) : QEquiv {SmallHom f q fs b s s'} {smallOb f q fs b s ~> smallOb f q fs b s'}
+      => \let e => homModel-equiv f b (fs __ b) s.1
+         \in symQEquiv $ IsEquiv.toQEquiv FreeCocart.hom-equiv `transQEquiv` sigma-right \lam k => later $
+              inv-equiv `transQEquiv` pathEquiv-right comp_idd-right `transQEquiv`
+              IsEquiv.toQEquiv (pmapIsEquiv (inP (symQEquiv e))) `transQEquiv` pathEquiv-right (e.ret_f s.4)
+  }
 
 -- | The comparison map from `Fibers q` to the pullback of {KanExt} along {f}.
 \func kanExt-unit.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (a :⁺ A) (x :⁺ Fibers q a) : KanExt f q (f a)

@@ -20,6 +20,7 @@
 \import InfCat.Groupoid
 \import InfCat.Localization.Abstract
 \import InfCat.Paths
+\import InfCat.Resizing
 \import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import Logic
@@ -298,4 +299,13 @@
       : IsLocalizationFor W r D
       => localization-criterion lw (radj-restrict-equiv lw l eps eta eta-iso eps-inv)
                                    (radj-restrict-equiv lw l eps eta eta-iso eps-inv')
+  }
+
+{- | A localization of a category equivalent to a small category is small.
+ -   Hom-types of localizations cannot be computed, so smallness has to be established before localizing.
+ -}
+\lemma localization-small.{u} {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+                              (Cs : IsSmallCat.{u} C) : IsSmallCat.{u} L \elim Cs
+  | inP (E,ee) => \case (IsLocalization.unique localize-isLocalization (isLocalization-precomp Lz (inP ee))).3 \with {
+    | inP h => inP (Localize \lam a => W \lam i => ee (a i), h)
   }

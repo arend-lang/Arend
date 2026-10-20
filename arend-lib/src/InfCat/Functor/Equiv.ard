@@ -158,6 +158,12 @@
   | finv_f x => idp
   | f_finv x => idp
 
+\func symHQEquiv {C D : \Cat} (e : HQEquiv {C} {D}) : HQEquiv {D} {C} \cowith
+  | f => e.finv
+  | finv => e.f
+  | finv_f => e.f_finv
+  | f_finv => e.finv_f
+
 \lemma idHEquiv {C : \Cat} : IsHEquiv {C} (\lam x => x)
   => inP idHQEquiv
 

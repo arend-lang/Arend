@@ -3,6 +3,7 @@
  -}
 
 \import Equiv
+\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Arrows
 \import InfCat.Basics
@@ -10,6 +11,8 @@
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CocartesianMap
 \import InfCat.Fibration.CovariantLift
+\import InfCat.Slice
+\import InfCat.Square
 \import Logic
 \import Logic.Unique
 \import Meta
@@ -18,6 +21,13 @@
 -- | The free cocartesian fibration on {q}.
 \func FreeCocart {X B : \Cat} (q : X ->⁺ B) (b :⁺ B) : \Cat
   => \Sigma⁺ (x : X) (q x ~> b)
+  \where
+    -- | Arrows of {FreeCocart} are arrows of {X} with a commutative triangle in {B}.
+    \lemma hom-equiv {X B : \Cat} {q : X ->⁺ B} {b : B} {x y : X} {a : q x ~> b} {c : q y ~> b}
+      : IsEquiv {(x,a) ~> {FreeCocart q b} (y,c)} {\Sigma (k : x ~> y) (comp (dmap q k) c = comp a idd)}
+        (\lam p => (dpath \lam i => (p i).1, ~>-natural {SliceCat b} __.2 {q x, a} {q y, c} {dpath \lam i => (q (p i).1, (p i).2)}))
+      => inP $ transQEquiv (dpath-sigma-equiv (\lam _ x => q x ~> b))
+                           (sigma-right \lam k => IsEquiv.toQEquiv (SliceCat.triangle-equiv a c (dmap q k)))
 
 -- | The canonical lift of {d}: it keeps the object of {X} and postcomposes with `d.3`.
 \func freeLift {X B : \Cat} (q : X ->⁺ B) (d : CovLiftData (FreeCocart q)) : CovLift (FreeCocart q) d

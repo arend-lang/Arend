@@ -16,7 +16,7 @@
   => ∃ (S : \Type u) (HQEquiv {S} {X})
   \where {
     -- | A type has at most one small model up to identity.
-    \private \lemma levelProp.{u} {X : \Cat} : isProp (\Sigma (S : \Type u) (Equiv S X))
+    \protected \lemma levelProp.{u} {X : \Cat} : isProp (\Sigma (S : \Type u) (Equiv S X))
       => isContr'=>isProp \lam p => Contr.Contr_QEquiv
           (transQEquiv (sigma-right \lam (S : \Type u) => typeUnivalence {S} {p.1})
                        (sigma-right \lam (S : \Type u) => postcomp {S} (Equiv.toQEquiv p.2)))
@@ -28,7 +28,7 @@
           | ret_f e => Equiv.equals (ext \lam s => e0.ret_f (e s))
           | f_sec e => Equiv.equals (ext \lam s => e0.f_sec (e s))
 
-    \private \lemma extract.{u} {X : \Cat} (s : IsSmall.{u} X) : \Sigma (S : \Type u) (Equiv S X) \level levelProp \elim s
+    \protected \lemma extract.{u} {X : \Cat} (s : IsSmall.{u} X) : \Sigma (S : \Type u) (Equiv S X) \level levelProp \elim s
       | inP (S, e) => (S, mkEquiv (inP (HQEquiv.toQEquiv e)))
 
     -- | A groupoid is small if its objects are equivalent to a small type.
