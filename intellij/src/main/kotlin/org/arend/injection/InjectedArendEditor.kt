@@ -41,10 +41,13 @@ import org.arend.naming.reference.Reference
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.naming.scope.CachingScope
 import org.arend.naming.scope.EmptyScope
+import org.arend.naming.scope.ImportedScope
+import org.arend.naming.scope.MergeScope
 import org.arend.naming.scope.Scope
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ancestor
 import org.arend.psi.ext.ArendCompositeElement
+import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
 import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
@@ -63,6 +66,7 @@ import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.util.function.Predicate
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.Timer
@@ -75,8 +79,6 @@ abstract class InjectedArendEditor(
     protected val editor: Editor?
     private val panel: JPanel?
     protected val actionGroup: DefaultActionGroup = DefaultActionGroup()
-
-    fun isEmptyActionGroup() = actionGroup.childrenCount == 0
 
     protected abstract val printOptionKind: PrintOptionKind
 
@@ -194,7 +196,7 @@ abstract class InjectedArendEditor(
                         val errorDef = (error as? LocalError)?.definition as? LocatedReferable
                         val scope = if (errorDef == null) null else project.service<ArendServerService>().server.getReferableScope(errorDef)
                         if (scope != null) {
-                            fileScope = scope
+                            fileScope = withModulesScope(scope, project.service<ArendServerService>().server, errorDef?.location?.libraryName)
                         }
                         val doc = getDoc(treeElement, error, scope)
                         currentDoc = doc
@@ -450,3 +452,18 @@ abstract class InjectedArendEditor(
                     (cause as? Concrete.ReferenceExpression)?.referent != resolve
     }
 }
+
+fun withModulesScope(scope: Scope, server: ArendServer, libraryName: String?): Scope =
+    MergeScope(true, scope, object : Scope {
+        private fun modulesScope(name: String): Scope? {
+            val modules = server.modules.map { it.modulePath }.filter { it.firstName == name }
+            return if (modules.isEmpty()) null else ImportedScope(modules, server.getModuleScopeProvider(libraryName, true))
+        }
+
+        override fun find(pred: Predicate<Referable>, context: Scope.ScopeContext?): Referable? = null
+
+        override fun resolveName(name: String, context: Scope.ScopeContext?): Referable? =
+            modulesScope(name)?.resolveName(name, context)
+
+        override fun resolveNamespace(name: String): Scope? = modulesScope(name)?.resolveNamespace(name)
+    })
