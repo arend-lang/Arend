@@ -140,7 +140,7 @@ public final class DaemonMain {
     String token = LockFile.newToken();
     DaemonServer server = CliDaemonRunner.server(bound, token, warmCtx, libraryConfigs, CliDispatcher::run, stopped::countDown);
     if (build != null) {
-      server.retireWhen(() -> !build.isCurrent(), "the arend jar this daemon runs from, " + build.path() + ", has changed"
+      server.retireWhen(() -> !build.isCurrent(), "the arend jar this daemon was started from, " + build.path() + ", has changed"
           + " since it started, so the daemon is stopping. Run the command again: it runs without the daemon, or start"
           + " a new one with `arend -d`.");
     }

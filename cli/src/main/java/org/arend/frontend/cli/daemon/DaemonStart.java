@@ -1,5 +1,6 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.BuildIdentity;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.Platform;
@@ -8,13 +9,18 @@ import org.arend.daemon.mcp.McpRegistration;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
@@ -200,7 +206,22 @@ public final class DaemonStart {
                                 List<String> extraChildArgs) {
     DaemonPaths paths = home(libraries);
     // This process's own classpath: a daemon whose jar is rebuilt or replaced under it retires (BuildIdentity).
-    List<String> cmd = buildChildCommand(libraries, libDirsForward, extraChildArgs, System.getProperty("java.class.path"));
+    // A single jar is run from a copy, which the rebuild does not touch, so that the daemon can still
+    // read its classes to say it is retiring -- and, on Windows, so that its open jar does not keep
+    // the jar itself from being replaced or deleted.
+    String classpath = System.getProperty("java.class.path");
+    List<String> jvmProperties = new ArrayList<>();
+    BuildIdentity build = BuildIdentity.ofThisProcess();
+    if (build != null) {
+      try {
+        classpath = runnableCopy(build, jarCopiesDir()).toString();
+        jvmProperties.add("-D" + BuildIdentity.ORIGINAL_JAR_PROPERTY + "=" + build.path());
+      } catch (IOException e) {
+        System.err.println("[WARN]  -d: could not copy " + build.path() + " for the daemon to run from (" + e.getMessage()
+            + "); it runs from the jar itself, and a rebuild of it breaks the daemon");
+      }
+    }
+    List<String> cmd = buildChildCommand(libraries, libDirsForward, extraChildArgs, classpath, jvmProperties);
     rotateDaemonLog(paths.logFile);
 
     ProcessBuilder pb = new ProcessBuilder(cmd);
@@ -392,6 +413,12 @@ public final class DaemonStart {
 
   static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,
                                         List<String> extraChildArgs, String classpath) {
+    return buildChildCommand(libraries, libDirsForward, extraChildArgs, classpath, List.of());
+  }
+
+  /** As above, with {@code jvmProperties} -- {@code -Dname=value} -- set in the child after the ones forwarded. */
+  static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,
+                                        List<String> extraChildArgs, String classpath, List<String> jvmProperties) {
     DaemonPaths paths = home(libraries);
     String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
     List<String> cmd = new ArrayList<>();
@@ -409,6 +436,7 @@ public final class DaemonStart {
     for (String option : ManagementFactory.getRuntimeMXBean().getInputArguments()) {
       if (isForwardableJvmOption(option)) cmd.add(option);
     }
+    cmd.addAll(jvmProperties);
     cmd.add("-cp");
     cmd.add(classpath);
     cmd.add("org.arend.frontend.ConsoleMain");
@@ -429,6 +457,68 @@ public final class DaemonStart {
     // In load order: a library may depend on one listed before it.
     for (DaemonPaths library : libraries) cmd.add(library.libraryConfig.toString());
     return cmd;
+  }
+
+  /** Where daemons' copies of the arend jar are kept, one per build: see {@link #runnableCopy}. */
+  static Path jarCopiesDir() {
+    return DaemonPaths.configDir().resolve("daemon-jars");
+  }
+
+  /**
+   * How long a copy no daemon may be running from is kept anyway: one just made, or just picked
+   * again, may belong to a daemon whose JVM has not opened it yet.
+   */
+  private static final long COPY_GRACE_MILLIS = 10 * 60 * 1000;
+
+  /**
+   * A copy of the jar of {@code build} in {@code dir} for a daemon to run from: the one there is, if
+   * this build has one, else a new one. The others are removed on the way, but for one a daemon still
+   * runs from -- Windows refuses to delete it, and a Unix JVM keeps the file it has open -- or one that
+   * is younger than {@link #COPY_GRACE_MILLIS}.
+   */
+  static Path runnableCopy(BuildIdentity build, Path dir) throws IOException {
+    Files.createDirectories(dir);
+    Path copy = dir.resolve(copyName(build));
+    try (var copies = Files.newDirectoryStream(dir, "*.jar")) {
+      long cutoff = System.currentTimeMillis() - COPY_GRACE_MILLIS;
+      for (Path other : copies) {
+        try {
+          if (!other.equals(copy) && Files.getLastModifiedTime(other).toMillis() < cutoff) Files.delete(other);
+        } catch (IOException ignored) {
+          // In use, most likely: left for a later start.
+        }
+      }
+    }
+    if (Files.isRegularFile(copy) && Files.size(copy) == build.size()) {
+      // Picked again: young again, so that no other start removes it before this daemon has it open.
+      Files.setLastModifiedTime(copy, FileTime.fromMillis(System.currentTimeMillis()));
+      return copy;
+    }
+    Path tmp = Files.createTempFile(dir, copy.getFileName() + ".", ".tmp");
+    try {
+      Files.copy(Path.of(build.path()), tmp, StandardCopyOption.REPLACE_EXISTING);
+      // A rebuild between this process starting and the copy is a copy of another build.
+      if (!build.isCurrent()) throw new IOException(build.path() + " has changed since this process started");
+      try {
+        Files.move(tmp, copy, StandardCopyOption.ATOMIC_MOVE);
+      } catch (IOException e) {
+        // Another start of this build made it first; on Windows, one a daemon runs from cannot be replaced.
+        if (!Files.isRegularFile(copy) || Files.size(copy) != build.size()) throw e;
+      }
+    } finally {
+      Files.deleteIfExists(tmp);
+    }
+    return copy;
+  }
+
+  /** The name of the copy of {@code build}'s jar: one for every jar as it was, so that two builds never share one. */
+  private static String copyName(BuildIdentity build) {
+    try {
+      byte[] digest = MessageDigest.getInstance("SHA-256").digest(build.toString().getBytes(StandardCharsets.UTF_8));
+      return "arend-" + HexFormat.of().formatHex(digest, 0, 8) + ".jar";
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   private static File nullDevice() {

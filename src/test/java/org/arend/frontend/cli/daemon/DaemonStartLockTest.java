@@ -270,4 +270,47 @@ public class DaemonStartLockTest {
         System.currentTimeMillis() - DaemonPaths.START_TIMEOUT_MILLIS - 1000));
     assertFalse("a marker older than any start is debris", paths.startInProgress());
   }
+
+  /**
+   * A daemon runs from a copy of the jar, which a rebuild does not touch: one per build, the same one
+   * picked again, and another made once the jar has changed. A copy left by a build nobody runs goes;
+   * a young one might be one a daemon's JVM has not opened yet, and stays.
+   */
+  @Test
+  public void aDaemonRunsFromACopyOfItsBuildsJar() throws IOException {
+    Path jar = tempFolder.newFile("arend.jar").toPath();
+    Files.write(jar, new byte[] { 1, 2, 3 });
+    Path dir = tempFolder.getRoot().toPath().resolve("copies");
+    org.arend.daemon.BuildIdentity build = org.arend.daemon.BuildIdentity.of(jar);
+
+    Path copy = DaemonStart.runnableCopy(build, dir);
+    assertTrue(Arrays.equals(new byte[] { 1, 2, 3 }, Files.readAllBytes(copy)));
+    assertEquals("the same build, the same copy", copy, DaemonStart.runnableCopy(build, dir));
+
+    Path old = dir.resolve("arend-0000000000000000.jar");
+    Files.write(old, new byte[] { 9 });
+    Files.setLastModifiedTime(old, FileTime.fromMillis(System.currentTimeMillis() - 3_600_000L));
+    Path young = dir.resolve("arend-1111111111111111.jar");
+    Files.write(young, new byte[] { 9 });
+
+    Files.write(jar, new byte[] { 4, 5, 6, 7 });
+    org.arend.daemon.BuildIdentity rebuilt = org.arend.daemon.BuildIdentity.of(jar);
+    Path next = DaemonStart.runnableCopy(rebuilt, dir);
+    assertFalse("another build, another copy", next.equals(copy));
+    assertTrue(Arrays.equals(new byte[] { 4, 5, 6, 7 }, Files.readAllBytes(next)));
+    assertTrue("the first build's copy is still there for the daemon running it", Files.exists(copy));
+    assertFalse("a copy of a build nobody runs is removed", Files.exists(old));
+    assertTrue("a young copy is left for the daemon about to open it", Files.exists(young));
+  }
+
+  /** The child runs the copy, and is told which jar it is a copy of: that one's changing is what retires it. */
+  @Test
+  public void theChildIsToldWhichJarItRunsACopyOf() throws IOException {
+    String property = "-D" + org.arend.daemon.BuildIdentity.ORIGINAL_JAR_PROPERTY + "=/the/arend.jar";
+    List<String> cmd = DaemonStart.buildChildCommand(List.of(DaemonPaths.resolve(library())), List.of(), List.of(),
+        "/copies/arend-0123456789abcdef.jar", List.of(property));
+    assertTrue(cmd.toString(), cmd.contains(property));
+    assertEquals("/copies/arend-0123456789abcdef.jar", cmd.get(cmd.indexOf("-cp") + 1));
+    assertTrue("JVM properties must precede the main class", cmd.indexOf(property) < cmd.indexOf("org.arend.frontend.ConsoleMain"));
+  }
 }

@@ -14,7 +14,10 @@ import java.nio.file.attribute.BasicFileAttributes;
  * it had not loaded; a jar replaced by a new file instead leaves it running the old build, answering
  * as a version the user no longer has. Either way the jar is not what it was, which is what this
  * tells: the daemon records it in its lock, a client from another build runs its command itself,
- * and a daemon whose jar has changed under it stops (see {@code DaemonServer#retireWhen}).
+ * and a daemon whose jar has changed under it stops (see {@code DaemonServer#retireWhen}). A daemon
+ * {@code arend -d} starts runs from a copy of the jar, which nothing rebuilds: it can still read its
+ * classes, to say it is stopping, and on Windows its open jar does not keep the original from being
+ * replaced or deleted.
  *
  * <p>Known only for a process started from a single jar -- {@code arend}, a daemon, the MCP server --
  * and not for one run from class directories, as a test is, or from the IDE's plugin.
@@ -29,6 +32,12 @@ public record BuildIdentity(String path, long size, long modified, String key) {
   private static volatile boolean computed;
 
   /**
+   * The jar a daemon was started from, when it runs from a copy of it ({@code DaemonStart}): the
+   * build it runs is that jar's, as it was, and it is that jar's changing that retires it.
+   */
+  public static final String ORIGINAL_JAR_PROPERTY = "arend.daemon.originalJar";
+
+  /**
    * The build this process runs, read the first time it is asked -- which a daemon does as it starts
    * -- or null when it runs from something else than a single jar.
    */
@@ -36,7 +45,8 @@ public record BuildIdentity(String path, long size, long modified, String key) {
     if (!computed) {
       synchronized (BuildIdentity.class) {
         if (!computed) {
-          String classpath = System.getProperty("java.class.path", "");
+          String original = System.getProperty(ORIGINAL_JAR_PROPERTY);
+          String classpath = original != null ? original : System.getProperty("java.class.path", "");
           ofThisProcess = classpath.contains(File.pathSeparator) || !classpath.endsWith(".jar") ? null : of(Path.of(classpath));
           computed = true;
         }
