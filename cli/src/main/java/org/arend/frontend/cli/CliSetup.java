@@ -233,8 +233,9 @@ public final class CliSetup {
    * with no directory, such as the MCP server -- all of them.
    *
    * <p>An argument that is neither is reported and fails the run, exactly as
-   * {@code classifyRequestedTargets} reports "File X not found" on a fresh context. The two have
-   * to agree: the same argv reaching the same libraries must not get two verdicts depending on
+   * {@code classifyRequestedTargets} reports "File X not found" on a fresh context, and so is a path
+   * that is no library, or one that is not loaded here -- which a fresh context would load. The two
+   * have to agree: the same argv reaching the same libraries must not get two verdicts depending on
    * which path read it.
    */
   public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine) {
@@ -258,7 +259,12 @@ public final class CliSetup {
         if (!scope.contains(named)) scope.add(named);
         continue;
       }
-      if (Files.exists(DaemonPaths.against(clientCwd, positional))) continue;
+      if (Files.exists(DaemonPaths.against(clientCwd, positional))) {
+        DaemonPaths library = DaemonPaths.resolve(clientCwd, positional);
+        ctx.systemErrErrorReporter.report(library == null ? new LibraryIOError(positional, "not a library")
+            : new GeneralError(GeneralError.Level.ERROR, "The daemon does not serve " + library.libraryConfig));
+        continue;
+      }
       if (positional.indexOf(':') >= 0) {
         // parseFullName reports what is wrong with it and returns null.
         Pair<ModulePath, LongName> parsed = ctx.parseFullName(positional);

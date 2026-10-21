@@ -169,11 +169,9 @@ public class DaemonRouteTest {
   }
 
   /**
-   * A positional that exists on disk and is not this daemon's library must run locally.
-   * {@code CliSetup.populateRequestedTargets} skips a positional that exists as a path, taking it
-   * for the library already loaded, so a routed {@code arend ../other.zip} would check the
-   * daemon's own library, find nothing wrong and exit 0, while the same command with --no-daemon
-   * loads and checks the zip.
+   * A positional that exists on disk and is not this daemon's library must run locally: the daemon
+   * holds no such library and would fail {@code arend ../other.zip}, while the same command with
+   * --no-daemon loads and checks the zip.
    */
   @Test
   public void aPositionalTheDaemonWouldDropIsNotRouted() throws Exception {
