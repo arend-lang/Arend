@@ -15,35 +15,24 @@ public class DaemonStopLockTest {
   private static final Predicate<LockFile> DEAD = lf -> false;
 
   private static final Path A = Path.of("/a/arend.yaml");
-  private static final Path B = Path.of("/b/arend.yaml");
 
-  private static LockFile.Read found(Path... libraries) {
-    List<String> configs = java.util.Arrays.stream(libraries).map(Path::toString).toList();
-    return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs, List.of(),
+  private static LockFile.Read found(Path library) {
+    return new LockFile.Read.Found(new LockFile(4242, library.toString(), "h", List.of(library.toString()), List.of(),
         LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.HOST_CLI));
   }
 
-  /**
-   * REFUSE_LIVE_MISMATCH is the case that matters: a running daemon for a different identity in
-   * the same directory is not ours to stop, and its lock is the only record of where it listens,
-   * so removing it and reporting success leaves a process nobody can reach.
-   */
+  /** A lock {@link LockFile#lookup} found serves the library: whether it is stopped turns on its process alone. */
   @Test
-  public void anExistingLockIsClassifiedByLibraryAndLiveness() {
+  public void anExistingLockIsClassifiedByLiveness() {
     assertEquals(DaemonStop.Verdict.NOTHING_TO_DO,
-        DaemonStop.inspectLock(new LockFile.Read.Absent(), A, DEAD));
+        DaemonStop.inspectLock(new LockFile.Read.Absent(), DEAD));
     assertEquals("an unparseable lock must be reported, not removed",
         DaemonStop.Verdict.UNREADABLE_LOCK,
-        DaemonStop.inspectLock(new LockFile.Read.Unreadable("boom"), A, DEAD));
-    assertEquals(DaemonStop.Verdict.SIGNAL, DaemonStop.inspectLock(found(A), A, ALIVE));
-    assertEquals(DaemonStop.Verdict.REMOVE_STALE, DaemonStop.inspectLock(found(A), A, DEAD));
-    assertEquals(DaemonStop.Verdict.REMOVE_STALE_MISMATCH, DaemonStop.inspectLock(found(B), A, DEAD));
+        DaemonStop.inspectLock(new LockFile.Read.Unreadable("boom"), DEAD));
+    assertEquals(DaemonStop.Verdict.SIGNAL, DaemonStop.inspectLock(found(A), ALIVE));
+    assertEquals(DaemonStop.Verdict.REMOVE_STALE, DaemonStop.inspectLock(found(A), DEAD));
     // Alive or not, a copy the registry does not confirm is never signalled on its word.
     LockFile planted = ((LockFile.Read.Found) found(A)).lock();
-    assertEquals(DaemonStop.Verdict.REMOVE_UNREGISTERED, DaemonStop.inspectLock(new LockFile.Read.Unregistered(planted), A, ALIVE));
-    assertEquals("a live daemon for another library must not be silently delisted",
-        DaemonStop.Verdict.REFUSE_LIVE_MISMATCH, DaemonStop.inspectLock(found(B), A, ALIVE));
-    assertEquals("any library a daemon serves stops it",
-        DaemonStop.Verdict.SIGNAL, DaemonStop.inspectLock(found(B, A), A, ALIVE));
+    assertEquals(DaemonStop.Verdict.REMOVE_UNREGISTERED, DaemonStop.inspectLock(new LockFile.Read.Unregistered(planted), ALIVE));
   }
 }

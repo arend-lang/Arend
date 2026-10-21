@@ -240,13 +240,8 @@ public final class DaemonRpc {
         return null;
       }
       case LockFile.Read.Found found -> {
+        // The registry's entry for a daemon that serves the library: lookup checked that.
         LockFile lf = found.lock();
-        if (!lf.serves(paths.libraryConfig)) {
-          if (explain) {
-            System.err.println("[WARN]  lock at " + paths.lockFile + " is for a different library; ignoring");
-          }
-          return null;
-        }
         if (!lf.processAlive()) {
           lf.deleteAllCopies();
           return null;

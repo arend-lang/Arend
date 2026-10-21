@@ -94,7 +94,7 @@ public final class DaemonStart {
     LockFile running = null;
     for (DaemonPaths paths : owned) {
       LockFile.Read existing = LockFile.lookup(paths);
-      switch (inspectLock(existing, paths.libraryConfig, requested, LockFile::processAlive)) {
+      switch (inspectLock(existing, requested, LockFile::processAlive)) {
         case UNREADABLE_LOCK -> {
           // Something is there and we cannot tell whether it is live. Starting a second daemon on
           // top of a running one is the one outcome worth refusing outright.
@@ -120,19 +120,6 @@ public final class DaemonStart {
           System.err.println("[WARN]  -d: lock file at " + paths.lockFile + " is not confirmed by the registry in "
               + DaemonPaths.registryDir() + "; removing it");
           LockFile.deleteQuietly(paths.lockFile);
-        }
-        case STALE_MISMATCH -> {
-          System.err.println("[WARN]  -d: lock file at " + paths.lockFile
-              + " is for a different library and its process is gone; removing");
-          LockFile.deleteQuietly(paths.lockFile);
-        }
-        case LIVE_MISMATCH -> {
-          LockFile lf = lockOf(existing);
-          System.err.println("[ERROR] -d: " + paths.lockFile + " belongs to a running daemon (PID "
-              + lf.pid() + ") serving " + lf.libraryPath() + ", which shares this directory."
-              + " Removing its lock would leave it running and unreachable. Stop it first"
-              + " (`arend --daemon-stop`), or start this one from a different directory.");
-          return 1;
         }
         case NO_DAEMON -> { }
       }
@@ -327,31 +314,22 @@ public final class DaemonStart {
      */
     OVERLAP,
     /** A lock for this library whose process is gone. */
-    STALE_LOCK,
-    /** A lock for a different library whose process is gone. */
-    STALE_MISMATCH,
-    /**
-     * A lock for a different library whose process is <em>running</em>. Its lock is the only
-     * record of where it listens, so removing it does not stop the daemon -- it strands it.
-     */
-    LIVE_MISMATCH
+    STALE_LOCK
   }
 
   /**
    * Separated from {@link #run} because {@code run} spawns a JVM and cannot be exercised: every
    * one of these branches decides whether a possibly-running daemon keeps its lock.
+   *
+   * @param existing what {@link LockFile#lookup} found for one of the libraries: a lock it found serves that library
    */
-  static Verdict inspectLock(LockFile.Read existing, Path libraryConfig, Collection<String> requested,
+  static Verdict inspectLock(LockFile.Read existing, Collection<String> requested,
                              java.util.function.Predicate<LockFile> alive) {
     if (existing instanceof LockFile.Read.Unreadable) return Verdict.UNREADABLE_LOCK;
     if (existing instanceof LockFile.Read.Unregistered) return Verdict.UNREGISTERED_LOCK;
     if (!(existing instanceof LockFile.Read.Found found)) return Verdict.NO_DAEMON;
     LockFile lf = found.lock();
-    boolean live = alive.test(lf);
-    if (!lf.serves(libraryConfig)) {
-      return live ? Verdict.LIVE_MISMATCH : Verdict.STALE_MISMATCH;
-    }
-    if (!live) return Verdict.STALE_LOCK;
+    if (!alive.test(lf)) return Verdict.STALE_LOCK;
     return new HashSet<>(lf.libraries()).equals(new HashSet<>(requested)) ? Verdict.ALREADY_RUNNING : Verdict.OVERLAP;
   }
 

@@ -47,24 +47,25 @@ public class DaemonStartLockTest {
         LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.HOST_CLI));
   }
 
-  /**
-   * The whole verdict table. LIVE_MISMATCH is the case that matters: a moved or re-pointed
-   * {@code arend.yaml} leaves a lock behind that does not list this library and can perfectly well
-   * belong to a process running right now, and removing it orphans that process.
-   */
+  /** The verdict table, for a lock {@link LockFile#lookup} found: one that serves the library. */
   @Test
-  public void anExistingLockIsClassifiedByLibraryAndLiveness() {
+  public void anExistingLockIsClassifiedByLiveness() {
     List<String> justA = List.of(A.toString());
     assertEquals(DaemonStart.Verdict.NO_DAEMON,
-        DaemonStart.inspectLock(new LockFile.Read.Absent(), A, justA, DEAD));
+        DaemonStart.inspectLock(new LockFile.Read.Absent(), justA, DEAD));
     assertEquals("an unparseable lock must be refused, not guessed at",
         DaemonStart.Verdict.UNREADABLE_LOCK,
-        DaemonStart.inspectLock(new LockFile.Read.Unreadable("boom"), A, justA, DEAD));
-    assertEquals(DaemonStart.Verdict.ALREADY_RUNNING, DaemonStart.inspectLock(found(A), A, justA, ALIVE));
-    assertEquals(DaemonStart.Verdict.STALE_LOCK, DaemonStart.inspectLock(found(A), A, justA, DEAD));
-    assertEquals(DaemonStart.Verdict.STALE_MISMATCH, DaemonStart.inspectLock(found(B), A, justA, DEAD));
-    assertEquals("a live daemon for another library must keep its lock",
-        DaemonStart.Verdict.LIVE_MISMATCH, DaemonStart.inspectLock(found(B), A, justA, ALIVE));
+        DaemonStart.inspectLock(new LockFile.Read.Unreadable("boom"), justA, DEAD));
+    assertEquals(DaemonStart.Verdict.ALREADY_RUNNING, DaemonStart.inspectLock(found(A), justA, ALIVE));
+    assertEquals(DaemonStart.Verdict.STALE_LOCK, DaemonStart.inspectLock(found(A), justA, DEAD));
+  }
+
+  /** A copy no registry entry confirms names no daemon a client could reach, live PID or not. */
+  @Test
+  public void anUnregisteredLockStopsNoStart() {
+    LockFile planted = ((LockFile.Read.Found) found(A)).lock();
+    assertEquals(DaemonStart.Verdict.UNREGISTERED_LOCK,
+        DaemonStart.inspectLock(new LockFile.Read.Unregistered(planted), List.of(A.toString()), ALIVE));
   }
 
   /**
@@ -72,26 +73,18 @@ public class DaemonStartLockTest {
    * not the set asked for refuses the start, whichever of the two is larger. The same set in
    * another order is the same daemon.
    */
-  /** A copy no registry entry confirms names no daemon a client could reach, live PID or not. */
-  @Test
-  public void anUnregisteredLockStopsNoStart() {
-    LockFile planted = ((LockFile.Read.Found) found(A)).lock();
-    assertEquals(DaemonStart.Verdict.UNREGISTERED_LOCK,
-        DaemonStart.inspectLock(new LockFile.Read.Unregistered(planted), A, List.of(A.toString()), ALIVE));
-  }
-
   @Test
   public void aLiveDaemonWithAnOverlappingSetRefusesTheStart() {
     List<String> ab = List.of(A.toString(), B.toString());
-    assertEquals(DaemonStart.Verdict.OVERLAP, DaemonStart.inspectLock(found(A), A, ab, ALIVE));
+    assertEquals(DaemonStart.Verdict.OVERLAP, DaemonStart.inspectLock(found(A), ab, ALIVE));
     assertEquals(DaemonStart.Verdict.OVERLAP,
-        DaemonStart.inspectLock(found(A, B), A, List.of(A.toString()), ALIVE));
+        DaemonStart.inspectLock(found(A, B), List.of(A.toString()), ALIVE));
     assertEquals(DaemonStart.Verdict.OVERLAP,
-        DaemonStart.inspectLock(found(A, B), B, List.of(B.toString()), ALIVE));
+        DaemonStart.inspectLock(found(A, B), List.of(B.toString()), ALIVE));
     assertEquals(DaemonStart.Verdict.ALREADY_RUNNING,
-        DaemonStart.inspectLock(found(B, A), A, ab, ALIVE));
+        DaemonStart.inspectLock(found(B, A), ab, ALIVE));
     assertEquals("a dead daemon's set is no obstacle",
-        DaemonStart.Verdict.STALE_LOCK, DaemonStart.inspectLock(found(A), A, ab, DEAD));
+        DaemonStart.Verdict.STALE_LOCK, DaemonStart.inspectLock(found(A), ab, DEAD));
   }
 
   private Path library() throws IOException {
