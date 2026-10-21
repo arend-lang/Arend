@@ -234,7 +234,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
    * peer could not interpret; a client that finds a different value refuses to talk to that
    * daemon rather than exchanging frames neither side understands.
    */
-  public static final int PROTOCOL_VERSION = 2;
+  public static final int PROTOCOL_VERSION = 1;
 
   /**
    * What {@link #read} found. A lock file that is absent and one that cannot be read are
