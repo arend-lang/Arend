@@ -55,6 +55,7 @@ object ArendMcpRegistration {
                     .notify(project)
             }
             for (failure in result.failures) warn(project, failure.replaceFirstChar { it.uppercase() } + ".")
+            for (warning in result.warnings) warn(project, warning)
         }
     }
 

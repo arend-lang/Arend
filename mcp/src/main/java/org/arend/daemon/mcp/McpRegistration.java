@@ -17,14 +17,19 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Registers the {@code arend-daemons} MCP server for one Arend project, with the agents installed
  * that read a project's own config: Claude Code ({@code .mcp.json}), Cursor ({@code .cursor/mcp.json}),
- * VS Code ({@code .vscode/mcp.json}), Gemini CLI ({@code .gemini/settings.json}) and Junie
- * ({@code .junie/mcp/mcp.json}). An agent started in another directory does not see it, and nothing
- * outside the project is written. Only when the user asks for it -- {@code arend --mcp-init}, or the
- * IDE's Daemon tab -- never as the side effect of starting a daemon.
+ * VS Code ({@code .vscode/mcp.json}), Gemini CLI ({@code .gemini/settings.json}), Junie
+ * ({@code .junie/mcp/mcp.json}) and Codex ({@code .codex/config.toml}). An agent started in another
+ * directory does not see it, and nothing outside the project is written. Only when the user asks for
+ * it -- {@code arend --mcp-init}, or the IDE's Daemon tab -- never as the side effect of starting a daemon.
+ *
+ * <p>For some agents the project's file, in the home directory, is the agent's own config of the
+ * user's, which it reads in every directory. Writing it is the user's call; the result warns that
+ * every session of that agent will then start the server.
  *
  * <p>The command is {@code arend --mcp} when {@code arend} is on the PATH: the same on every machine,
  * so that the files can be committed, and it stays right when the jar behind it is rebuilt or moved.
@@ -46,9 +51,10 @@ public final class McpRegistration {
 
   /**
    * What a registration or a removal did: the files it wrote, or the agents it removed the server
-   * from; for each it could not, why and what the user can do instead; and what else they should know.
+   * from; for each it could not, why and what the user can do instead; what it did that reaches
+   * further than the user may think; and what else they should know.
    */
-  public record Result(List<String> done, List<String> failures, List<String> notes) {}
+  public record Result(List<String> done, List<String> failures, List<String> warnings, List<String> notes) {}
 
   /** The command line the server is registered with, and whether it is the same on every machine. */
   public record Command(List<String> argv, boolean portable) {}
@@ -118,33 +124,52 @@ public final class McpRegistration {
 
   /**
    * An agent's config of a project: the file under the project's directory, the key of its servers,
-   * the entry it takes, and whether the agent is installed on this machine.
+   * the entry it takes, whether the agent is installed on this machine, and the agent's own config of
+   * the user's, which the project's file is when the project is the home directory.
    */
-  record ProjectConfig(String agent, String file, String key, Function<List<String>, ObjectNode> entry, BooleanSupplier installed) {}
+  record ProjectConfig(String agent, String file, String key, Function<List<String>, ObjectNode> entry, BooleanSupplier installed,
+                       Supplier<Path> userConfig) {}
 
   static List<ProjectConfig> projectConfigs() {
     return List.of(
         new ProjectConfig("Claude Code", ".mcp.json", "mcpServers", McpRegistration::server,
-            () -> findExecutable("claude", home().resolve(".claude").resolve("local")) != null || Files.isDirectory(home().resolve(".claude"))),
+            () -> findExecutable("claude", home().resolve(".claude").resolve("local")) != null || Files.isDirectory(home().resolve(".claude")),
+            Claude::config),
         new ProjectConfig("Cursor", ".cursor/mcp.json", "mcpServers", McpRegistration::server,
-            () -> Files.isDirectory(home().resolve(".cursor"))),
+            () -> Files.isDirectory(home().resolve(".cursor")), () -> cursor().config()),
         new ProjectConfig("VS Code", ".vscode/mcp.json", "servers", McpRegistration::server,
-            () -> findExecutable("code") != null),
+            () -> findExecutable("code") != null, VsCode::config),
         new ProjectConfig("Gemini CLI", ".gemini/settings.json", "mcpServers", McpRegistration::plainServer,
-            () -> findExecutable("gemini") != null || Files.isDirectory(home().resolve(".gemini"))),
+            () -> findExecutable("gemini") != null || Files.isDirectory(home().resolve(".gemini")),
+            () -> home().resolve(".gemini").resolve("settings.json")),
         // Junie's IDE plugin does not show a server with a field it does not know, a type among them.
         new ProjectConfig("Junie", ".junie/mcp/mcp.json", "mcpServers", McpRegistration::plainServer,
-            () -> Files.isDirectory(home().resolve(".junie"))));
+            () -> Files.isDirectory(home().resolve(".junie")), () -> junie().config()));
+  }
+
+  /** Codex's config of a project, TOML rather than JSON: read for a project Codex trusts only. */
+  static final String CODEX_PROJECT_CONFIG = ".codex/config.toml";
+
+  /** Where Codex keeps the user's own config: {@code CODEX_HOME}, else {@code ~/.codex}. */
+  static Path codexHome() {
+    String dir = AgentHome.variable(home(), "CODEX_HOME");
+    return dir != null && !dir.isEmpty() ? Path.of(dir) : home().resolve(".codex");
+  }
+
+  private static boolean codexInstalled() {
+    return findExecutable("codex") != null || Files.isDirectory(codexHome());
   }
 
   /**
    * Registers {@code command} as {@link #SERVER_NAME} in the configs of the project in {@code projectDir}
    * of every agent installed, keeping their other servers and settings; a registration of the name
-   * there is replaced. Codex, which has no config of a project's own, is told of in a note.
+   * there is replaced. A file that is an agent's own config of the user's is written too, with a
+   * warning of what that does.
    */
   public static Result initProject(Path projectDir, Command command) {
     List<String> written = new ArrayList<>();
     List<String> failures = new ArrayList<>();
+    List<String> warnings = new ArrayList<>();
     List<String> notes = new ArrayList<>();
     for (ProjectConfig config : projectConfigs()) {
       if (!config.installed().getAsBoolean()) continue;
@@ -152,20 +177,42 @@ public final class McpRegistration {
       try {
         setServer(file, config.key(), config.entry().apply(command.argv()));
         written.add(config.agent() + ": " + file);
+        if (canonical(file).equals(canonical(config.userConfig().get()))) warnings.add(userWide(config.agent(), file, projectDir));
       } catch (IOException e) {
         failures.add("could not register the " + SERVER_NAME + " MCP server in " + file + " (" + e.getMessage() + "); add to its "
             + config.key() + ": \"" + SERVER_NAME + "\": " + config.entry().apply(command.argv()));
       }
     }
-    if (findExecutable("codex") != null) {
-      notes.add("Codex reads MCP servers from ~/.codex/config.toml alone, for every directory; to have the server there: codex mcp add "
-          + SERVER_NAME + " -- " + String.join(" ", command.argv()));
+    if (codexInstalled()) {
+      Path file = projectDir.resolve(CODEX_PROJECT_CONFIG);
+      Path userConfig = codexHome().resolve("config.toml");
+      try {
+        CodexConfig.setServer(file, command.argv());
+        written.add("Codex: " + file);
+        if (canonical(file).equals(canonical(userConfig))) {
+          warnings.add(userWide("Codex", file, projectDir));
+        } else if (!CodexConfig.trusts(userConfig, projectDir)) {
+          notes.add("Codex reads " + file + " only once it trusts the project: set trust_level = \"trusted\" under [projects.\""
+              + projectDir.toAbsolutePath().normalize() + "\"] in " + userConfig + ".");
+        }
+      } catch (IOException e) {
+        failures.add("could not register the " + SERVER_NAME + " MCP server in " + file + " (" + e.getMessage() + "); add to it:\n  "
+            + String.join("\n  ", CodexConfig.table(command.argv())));
+      }
     }
     if (!command.portable()) {
       notes.add("arend is not on the PATH, so the server is registered as " + String.join(" ", command.argv())
           + ", which only this machine has: keep these files out of version control, or put arend on the PATH and register again.");
     }
-    return new Result(written, failures, notes);
+    return new Result(written, failures, warnings, notes);
+  }
+
+  /** The warning that {@code file}, written as the config of the project in {@code projectDir}, is {@code agent}'s own config of the user's. */
+  private static String userWide(String agent, Path file, Path projectDir) {
+    return file + " is " + agent + "'s own config of the user's, read in every directory: every " + agent
+        + " session, in any project, now starts the " + SERVER_NAME + " MCP server (a JVM of its own) and carries the"
+        + " descriptions of its tools. To have it in this project only, register a project's directory instead;"
+        + " `arend --mcp-unregister " + projectDir.toAbsolutePath().normalize() + "` takes this registration back out.";
   }
 
   /** Removes {@link #SERVER_NAME} from every agent's config of the project in {@code projectDir}, keeping the rest. */
@@ -183,7 +230,34 @@ public final class McpRegistration {
             + SERVER_NAME + "\" from its " + config.key() + " by hand");
       }
     }
-    return new Result(removed, failures, List.of());
+    Path codex = projectDir.resolve(CODEX_PROJECT_CONFIG);
+    if (CodexConfig.hasServer(codex)) {
+      try {
+        CodexConfig.removeServer(codex);
+        removed.add("Codex: " + codex);
+      } catch (IOException e) {
+        failures.add("could not remove the " + SERVER_NAME + " MCP server from " + codex + " (" + e.getMessage() + "); remove its [mcp_servers."
+            + SERVER_NAME + "] by hand");
+      }
+    }
+    return new Result(removed, failures, List.of(), List.of());
+  }
+
+  /**
+   * {@code path} with every link resolved, as far as it exists, so that two spellings of one file --
+   * a home reached through a link, a relative directory -- compare equal; the part that does not
+   * exist yet is taken as it is.
+   */
+  static Path canonical(Path path) {
+    Path absolute = path.toAbsolutePath().normalize();
+    Path existing = absolute;
+    while (existing != null && !Files.exists(existing)) existing = existing.getParent();
+    if (existing == null) return absolute;
+    try {
+      return existing.toRealPath().resolve(existing.relativize(absolute));
+    } catch (IOException e) {
+      return absolute;
+    }
   }
 
   // ───────── the user's own configs, as earlier builds wrote them ─────────
@@ -222,7 +296,7 @@ public final class McpRegistration {
             + " (" + failure + "); " + agent.removeByHand());
       }
     }
-    return new Result(removed, failures, List.of());
+    return new Result(removed, failures, List.of(), List.of());
   }
 
   /** An agent with a CLI of its own, which owns its config: the server is removed through it. */

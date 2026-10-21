@@ -177,6 +177,8 @@ public final class DaemonStart {
       result.done().forEach(file -> System.out.println("  " + file));
       System.out.println("`arend --mcp-unregister` takes it back out.");
     }
+    // After the files: what they say would be lost above them, and it is what the user has to decide on.
+    result.warnings().forEach(warning -> System.err.println("[WARN]  --mcp-init: " + warning));
     result.notes().forEach(note -> System.out.println("[INFO] " + note));
     return result.failures().isEmpty() ? 0 : 1;
   }

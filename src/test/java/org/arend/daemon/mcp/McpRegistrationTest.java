@@ -198,6 +198,104 @@ public class McpRegistrationTest {
     });
   }
 
+  /** Codex's table is written, replaced and removed by itself: its subtables go with it, every other line stays. */
+  @Test
+  public void codexsTableIsTheOnlyPartTouched() throws IOException {
+    Path file = tmp.getRoot().toPath().resolve("codex").resolve("config.toml");
+    Files.createDirectories(file.getParent());
+    String others = """
+        model = "o3"   # kept as it is
+
+        [mcp_servers.other]
+        command = "x"
+        """;
+    String projects = """
+        [projects."/p"]
+        trust_level = "trusted"
+        """;
+    Files.writeString(file, others + "\n[mcp_servers.arend-daemons]\ncommand = \"old\"\nargs = []\n\n[mcp_servers.arend-daemons.env]\nA = \"1\"\n\n" + projects);
+    assertTrue(CodexConfig.hasServer(file));
+
+    CodexConfig.setServer(file, List.of("arend", "--mcp"));
+    String written = Files.readString(file);
+    assertEquals(others + "\n" + projects + "\n[mcp_servers.arend-daemons]\ncommand = \"arend\"\nargs = [\"--mcp\"]\n", written);
+
+    CodexConfig.removeServer(file);
+    assertEquals(others + "\n" + projects, Files.readString(file));
+    assertFalse(CodexConfig.hasServer(file));
+  }
+
+  /** A server defined inline, or a file a line-wise edit cannot read safely, is refused and left as it is. */
+  @Test
+  public void aCodexConfigThatCannotBeEditedByLinesIsLeftAlone() throws IOException {
+    Path file = tmp.getRoot().toPath().resolve("config.toml");
+    for (String text : List.of("[mcp_servers]\narend-daemons = { command = \"x\" }\n",
+                               "mcp_servers.arend-daemons.command = \"x\"\n",
+                               "instructions = \"\"\"\n[mcp_servers.arend-daemons]\n\"\"\"\n")) {
+      Files.writeString(file, text);
+      assertThrows(text, IOException.class, () -> CodexConfig.setServer(file, List.of("arend", "--mcp")));
+      assertEquals(text, Files.readString(file));
+    }
+    Files.writeString(file, "[mcp_servers]\narend-daemons = { command = \"x\" }\n");
+    assertTrue("an inline definition still counts as registered", CodexConfig.hasServer(file));
+  }
+
+  /** A string with a backslash or a quote, as a Windows path is, is escaped. */
+  @Test
+  public void codexsCommandIsEscaped() {
+    assertEquals(List.of("[mcp_servers.arend-daemons]", "command = \"C:\\\\jdk\\\\bin\\\\java\"", "args = [\"-Da=\\\"b\\\"\"]"),
+        CodexConfig.table(List.of("C:\\jdk\\bin\\java", "-Da=\"b\"")));
+  }
+
+  /** Codex gets a project's own config, and is told to trust the project unless it does already. */
+  @Test
+  public void codexIsRegisteredForAProjectItMustTrust() throws IOException {
+    withAgentsInstalled(() -> {
+      Path home = Path.of(System.getProperty("user.home"));
+      Files.createDirectories(home.resolve(".codex"));
+      Path project = tmp.newFolder("project").toPath();
+      McpRegistration.Command portable = new McpRegistration.Command(List.of("arend", "--mcp"), true);
+      McpRegistration.Result result = McpRegistration.initProject(project, portable);
+      assertTrue(result.done().toString(), result.done().contains("Codex: " + project.resolve(".codex/config.toml")));
+      assertTrue(CodexConfig.hasServer(project.resolve(".codex/config.toml")));
+      assertTrue(result.notes().toString(), result.notes().stream().anyMatch(note -> note.contains("trust_level")));
+      assertTrue("a project's directory is no agent's own config", result.warnings().isEmpty());
+
+      Files.writeString(home.resolve(".codex").resolve("config.toml"), "[projects.\"" + project + "\"]\ntrust_level = \"trusted\"\n");
+      assertTrue(McpRegistration.initProject(project, portable).notes().stream().noneMatch(note -> note.contains("trust_level")));
+
+      assertTrue(McpRegistration.unregisterProject(project).done().contains("Codex: " + project.resolve(".codex/config.toml")));
+      assertFalse(CodexConfig.hasServer(project.resolve(".codex/config.toml")));
+    });
+  }
+
+  /**
+   * Registered for the home directory, the server lands in the agents' own configs, read in every
+   * directory: that is written, and said, even when the home is reached through a link.
+   */
+  @Test
+  public void registeringTheHomeWarnsOfEveryDirectory() throws IOException {
+    withAgentsInstalled(() -> {
+      Path home = Path.of(System.getProperty("user.home"));
+      Files.createDirectories(home.resolve(".codex"));
+      McpRegistration.Command portable = new McpRegistration.Command(List.of("arend", "--mcp"), true);
+      List<Path> spellings = new java.util.ArrayList<>(List.of(home));
+      if (!Platform.isWindows()) spellings.add(Files.createSymbolicLink(tmp.getRoot().toPath().resolve("home-link"), home));
+      for (Path dir : spellings) {
+        McpRegistration.Result result = McpRegistration.initProject(dir, portable);
+        assertTrue(result.failures().toString(), result.failures().isEmpty());
+        assertTrue(McpRegistration.runs(MAPPER.readTree(home.resolve(".cursor").resolve("mcp.json").toFile())
+            .get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
+        // Cursor and Codex were made installed here; Gemini CLI and Junie may be on this machine too.
+        assertTrue(dir + ": " + result.warnings(), result.warnings().stream().anyMatch(warning -> warning.contains("every Cursor session")));
+        assertTrue(result.warnings().stream().anyMatch(warning -> warning.contains("every Codex session")));
+        assertTrue("Claude Code's own config is ~/.claude.json, not ~/.mcp.json, and VS Code's is in its profile",
+            result.warnings().stream().noneMatch(warning -> warning.contains("Claude") || warning.contains("VS Code")));
+        assertTrue("no trust is needed for the user's own config", result.notes().stream().noneMatch(note -> note.contains("trust_level")));
+      }
+    });
+  }
+
   /** Without an arend on the PATH the command is this one's own, every path absolute so that it runs from anywhere. */
   @Test
   public void theCommandIsArendOrThisOneFromAnywhere() {
