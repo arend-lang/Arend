@@ -152,10 +152,19 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     return serves(libraryFile) || loaded.contains(libraryFile.toString());
   }
 
-  /** Where each owned library's copy of this lock lives, in load order: one it only loaded, or a zip, gets none. */
+  /** The canonical arend.yaml of every library the daemon owns, in load order: not one it only loaded, nor a zip. */
+  public List<String> ownedLibraries() {
+    return libraries.stream().filter(library -> !loaded.contains(library) && !library.endsWith(FileUtils.ZIP_EXTENSION)).toList();
+  }
+
+  /** Where each owned library's copy of this lock lives, in load order. */
   public List<Path> lockFiles() {
-    return libraries.stream().filter(library -> !loaded.contains(library) && !library.endsWith(FileUtils.ZIP_EXTENSION))
-        .map(library -> DaemonPaths.lockFileIn(Paths.get(library).getParent())).toList();
+    return ownedLibraries().stream().map(library -> DaemonPaths.lockFileIn(Paths.get(library).getParent())).toList();
+  }
+
+  /** The daemon, said for a person: {@code the daemon (PID n)}, and where it runs when that is an IDE. */
+  public String describe() {
+    return "the daemon (PID " + pid + ")" + (isHostedByIde() ? " inside " + host : "");
   }
 
   /**

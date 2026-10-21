@@ -262,7 +262,7 @@ class ArendDaemonService(private val project: Project) : Disposable {
             lock.deleteAllCopies()
             return null
         }
-        return "the daemon (PID ${lock.pid()})" + if (lock.isHostedByIde) " inside ${lock.host()}" else ""
+        return lock.describe()
     }
 
     /** The project's directory, canonical, for a command issued from it to come here; null when it has none. */

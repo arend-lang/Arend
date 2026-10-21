@@ -106,8 +106,8 @@ public final class DaemonStart {
         case ALREADY_RUNNING -> running = lockOf(existing);
         case OVERLAP -> {
           LockFile lf = lockOf(existing);
-          System.err.println("[ERROR] -d: " + paths.libraryConfig + " is already served by the daemon (PID "
-              + lf.pid() + ") for " + String.join(", ", lf.libraries()) + "; stop it first (`arend --daemon-stop`).");
+          System.err.println("[ERROR] -d: " + paths.libraryConfig + " is already served by " + lf.describe()
+              + " for " + String.join(", ", lf.libraries()) + "; stop it first (`arend --daemon-stop`).");
           return 1;
         }
         case STALE_LOCK -> {

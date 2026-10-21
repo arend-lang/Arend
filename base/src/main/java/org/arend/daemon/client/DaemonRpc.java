@@ -166,7 +166,7 @@ public final class DaemonRpc {
     if (lf == null) return OptionalInt.empty();
     String otherBuild = otherBuild(lf, BuildIdentity.ofThisProcess());
     if (otherBuild != null) {
-      System.err.println("[WARN] the daemon (PID " + lf.pid() + ") runs " + otherBuild + "; running this command here."
+      System.err.println("[WARN] " + lf.describe() + " runs " + otherBuild + "; running this command here."
           + " Restart the daemon to have it run this build: `arend --daemon-stop`, then `arend -d`.");
       return OptionalInt.empty();
     }

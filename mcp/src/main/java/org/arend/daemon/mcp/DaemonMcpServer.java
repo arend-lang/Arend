@@ -10,7 +10,6 @@ import org.arend.daemon.wire.FrameChannel;
 import org.arend.daemon.client.DaemonClient;
 import org.arend.daemon.client.DaemonRpc;
 import org.arend.prelude.Prelude;
-import org.arend.util.FileUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -365,7 +364,7 @@ public final class DaemonMcpServer {
     Target target = find(library);
     String otherBuild = DaemonRpc.otherBuild(target.daemon(), BuildIdentity.ofThisProcess());
     if (otherBuild == null) return target;
-    String warning = "[WARN] the daemon (PID " + target.daemon().pid() + ") runs " + otherBuild + ", and answers as that"
+    String warning = "[WARN] " + target.daemon().describe() + " runs " + otherBuild + ", and answers as that"
         + " build. Restart it to have it run this one: `arend --daemon-stop`, then `arend -d`.";
     return new Target(target.daemon(), target.library(), target.warning() == null ? warning : target.warning() + "\n" + warning);
   }
@@ -428,8 +427,7 @@ public final class DaemonMcpServer {
     for (LockFile daemon : DaemonRpc.liveDaemons()) {
       // One no request can reach is no candidate: it would make a name ambiguous that one daemon answers for.
       if (!DaemonRpc.compatible(daemon)) continue;
-      Set<String> own = new HashSet<>();
-      for (Path lockFile : daemon.lockFiles()) own.add(lockFile.getParent().getParent().resolve(FileUtils.LIBRARY_CONFIG_FILE).toString());
+      Set<String> own = new HashSet<>(daemon.ownedLibraries());
       List<String> libraries = new ArrayList<>(daemon.libraries());
       libraries.addAll(daemon.loaded());
       for (String library : libraries) {
@@ -487,7 +485,7 @@ public final class DaemonMcpServer {
           accepted -> { if (!accepted) call.refused(); });
       return collector.toolResult(exitCode);
     } catch (IOException | IllegalArgumentException e) {
-      return toolResult("cannot reach the daemon (PID " + daemon.pid() + ") at " + daemon.socketPath() + ": "
+      return toolResult("cannot reach " + daemon.describe() + " at " + daemon.socketPath() + ": "
           + e.getMessage(), true);
     }
   }

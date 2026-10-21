@@ -59,8 +59,7 @@ public final class DaemonMain {
     for (DaemonPaths member : owned) {
       if (LockFile.lookup(member) instanceof LockFile.Read.Found found && found.lock().processAlive()) {
         LockFile other = found.lock();
-        return member.libraryConfig + " has been claimed by the daemon (PID " + other.pid() + ")"
-            + (other.isHostedByIde() ? " inside " + other.host() : "") + " in the meantime";
+        return member.libraryConfig + " has been claimed by " + other.describe() + " in the meantime";
       }
     }
     return null;
