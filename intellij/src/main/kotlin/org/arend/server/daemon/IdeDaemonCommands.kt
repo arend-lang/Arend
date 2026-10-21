@@ -222,9 +222,9 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         if (targets.isNotEmpty() && modules.isEmpty()) return 1
         // As the CLI does: the module -p prints is checked too, or there would be nothing to print.
         val print = cmdLine.getOptionValue("p")
-        if (print != null && modules.isNotEmpty()) {
-            TypecheckReports.parseFullName(print, reporter)?.let { target ->
-                server.findModule(target.proj1, null, false, false)?.takeIf { it !in modules }?.let { modules[it] = null }
+        if (print != null) {
+            TypecheckReports.printTargetOutside(print, modules.keys.map { it.modulePath }, reporter, out)?.let { module ->
+                server.findModule(module, null, false, false)?.let { modules[it] = null }
             }
         }
 

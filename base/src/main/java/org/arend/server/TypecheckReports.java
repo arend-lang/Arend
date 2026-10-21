@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -55,6 +56,20 @@ public final class TypecheckReports {
       config.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
     }
     return error.getDoc(config).toString();
+  }
+
+  /**
+   * The module of the {@code -p} target {@code print} when a typecheck narrowed to the modules
+   * {@code requested} leaves it out -- and with it all {@code -p} would print -- else null; said on
+   * {@code out}, since the module is to be checked too. Nothing is narrowed when none is requested.
+   */
+  public static @Nullable ModulePath printTargetOutside(@NotNull String print, @NotNull Collection<ModulePath> requested,
+                                                        @NotNull ErrorReporter errorReporter, @NotNull PrintStream out) {
+    if (requested.isEmpty()) return null;
+    Pair<ModulePath, LongName> parsed = parseFullName(print, errorReporter);
+    if (parsed == null || requested.contains(parsed.proj1)) return null;
+    out.println("[INFO] -p target " + print + " is outside the typecheck scope; adding " + parsed.proj1 + " to it");
+    return parsed.proj1;
   }
 
   /** {@code MODULE[:DEF]} as a module and, if given, a definition in it; null, reported, when malformed. */

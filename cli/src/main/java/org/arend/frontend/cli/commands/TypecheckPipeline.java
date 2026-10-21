@@ -308,15 +308,10 @@ public final class TypecheckPipeline {
    * {@code --show-*} output and {@code --double-check} pass -- with one module.
    */
   private static void extendScopeForPrintTarget(CommandContext ctx, CommandLine cmdLine) {
-    if (!cmdLine.hasOption("p") || ctx.requestedModules.isEmpty()) return;
-    Pair<ModulePath, LongName> parsed = ctx.parseFullName(cmdLine.getOptionValue("p"));
-    if (parsed == null) return;
-    for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
-      if (requested.proj1.equals(parsed.proj1)) return;
-    }
-    System.out.println("[INFO] -p target " + cmdLine.getOptionValue("p")
-        + " is outside the typecheck scope; adding " + parsed.proj1 + " to it");
-    ctx.requestedModules.add(new Pair<>(parsed.proj1, null));
+    if (!cmdLine.hasOption("p")) return;
+    ModulePath module = TypecheckReports.printTargetOutside(cmdLine.getOptionValue("p"),
+        ctx.requestedModules.stream().map(requested -> requested.proj1).toList(), ctx.systemErrErrorReporter, System.out);
+    if (module != null) ctx.requestedModules.add(new Pair<>(module, null));
   }
 
   private static Set<String> requestedLibraryNames(List<SourceLibrary> requestedLibraries) {
