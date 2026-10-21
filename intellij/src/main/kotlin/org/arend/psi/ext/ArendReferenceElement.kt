@@ -18,11 +18,11 @@ interface ArendReferenceElement : ArendReferenceContainer, AbstractReference {
     private object ArendReferenceKey : Key<Referable>("AREND_REFERENCE_KEY")
 
     val cachedReferable: Referable?
-        get() = getUserData(ArendReferenceKey)
+        get() = getUserData(ArendReferenceKey)?.takeUnless { (it.abstractReferable as? PsiElement)?.isValid == false }
 
     val cachedOrNull: Referable?
         get() {
-            val cached = getUserData(ArendReferenceKey)
+            val cached = cachedReferable
             return if (cached == TCDefReferable.NULL_REFERABLE) null else cached
         }
 
