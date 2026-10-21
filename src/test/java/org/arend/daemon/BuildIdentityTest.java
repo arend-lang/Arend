@@ -12,6 +12,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -30,6 +31,26 @@ public class BuildIdentityTest {
     Files.write(jar, new byte[] { 1, 2, 3 });
     Files.setLastModifiedTime(jar, FileTime.fromMillis(1_000_000L));
     return jar;
+  }
+
+  /**
+   * A daemon runs from a copy of the jar, and is told which build that is: the jar as it was when it
+   * was copied, not as it is by the time the daemon asks, which a rebuild in between has changed.
+   */
+  @Test
+  public void aDaemonIsToldTheBuildItsCopyIs() throws IOException {
+    Path jar = jar();
+    BuildIdentity copied = BuildIdentity.of(jar);
+    java.util.Map<String, String> properties = new java.util.HashMap<>();
+    for (String option : copied.jvmProperties()) {
+      int equals = option.indexOf('=');
+      properties.put(option.substring("-D".length(), equals), option.substring(equals + 1));
+    }
+    Files.write(jar, new byte[] { 1, 2, 3, 4 });
+    BuildIdentity told = BuildIdentity.fromProperties(properties::get);
+    assertEquals(copied, told);
+    assertFalse("the daemon retires: its jar has changed since the copy", told.isCurrent());
+    assertNull(BuildIdentity.fromProperties(name -> null));
   }
 
   @Test

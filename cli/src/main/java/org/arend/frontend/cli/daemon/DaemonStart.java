@@ -206,7 +206,7 @@ public final class DaemonStart {
     if (build != null) {
       try {
         classpath = runnableCopy(build, jarCopiesDir()).toString();
-        jvmProperties.add("-D" + BuildIdentity.ORIGINAL_JAR_PROPERTY + "=" + build.path());
+        jvmProperties.addAll(build.jvmProperties());
       } catch (IOException e) {
         System.err.println("[WARN]  -d: could not copy " + build.path() + " for the daemon to run from (" + e.getMessage()
             + "); it runs from the jar itself, and a rebuild of it breaks the daemon");

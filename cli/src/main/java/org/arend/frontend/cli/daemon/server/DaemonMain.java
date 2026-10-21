@@ -77,7 +77,7 @@ public final class DaemonMain {
 
   /** @return the exit code: 1 when the daemon could not start, else 0 once it has stopped. */
   private static int serve(String[] args) {
-    // The jar as it is now, before the libraries take their seconds to load: a rebuild meanwhile counts.
+    // Before the libraries take their seconds to load: a rebuild meanwhile counts.
     BuildIdentity build = BuildIdentity.ofThisProcess();
     String[] forwarded = Arrays.copyOfRange(args, 1, args.length);
 
