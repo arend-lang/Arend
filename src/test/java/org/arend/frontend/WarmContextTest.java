@@ -96,6 +96,15 @@ public class WarmContextTest {
     assertTrue(good.output(), good.output().contains("--- Typechecking Good ---"));
   }
 
+  /** The module -p prints is checked too when the command names others, and the run says so. */
+  @Test
+  public void aPrintTargetOutsideTheScopeIsCheckedToo() {
+    Run run = run("Good", "-p", "Other:other");
+    assertEquals(run.output(), 0, run.exitCode());
+    assertTrue(run.output(), run.output().contains("[INFO] -p target Other:other is outside the typecheck scope; adding Other to it"));
+    assertTrue(run.output(), run.output().contains("--- Typechecking Other ---"));
+  }
+
   /** A path to no library loaded here fails, as a local run fails on one that is no library. */
   @Test
   public void aPathToNoLibraryLoadedFails() throws IOException {
