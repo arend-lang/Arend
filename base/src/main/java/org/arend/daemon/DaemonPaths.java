@@ -36,12 +36,13 @@ public final class DaemonPaths {
   /**
    * {@code daemon.starting} — created by the parent before it spawns a child, removed once
    * the child is ready or has failed. Two {@code arend -d} calls racing would otherwise both
-   * see no lock and both spawn, and only one of them can bind the socket.
+   * see no lock and both spawn, and only one of them can bind the socket. It names the processes
+   * of the start ({@link StartMarker}).
    */
   public final Path startingMarker;
   /**
-   * How long a {@link #startingMarker} stands for a start in progress: as long as a start may take
-   * to become ready. An older one is debris from a start that was killed.
+   * How long a start may take to become ready, and so how long a {@link #startingMarker} that names
+   * no process stands for a start in progress. An older one is debris from a start that was killed.
    */
   public static final long START_TIMEOUT_MILLIS = 600_000;
 
@@ -78,13 +79,9 @@ public final class DaemonPaths {
     return libraryConfig.hashCode();
   }
 
-  /** Whether {@code arend -d} is starting a daemon for this library right now: its marker is there, and recent. */
+  /** Whether {@code arend -d} is starting a daemon for this library right now: its marker is there, and a process it names runs. */
   public boolean startInProgress() {
-    try {
-      return System.currentTimeMillis() - Files.getLastModifiedTime(startingMarker).toMillis() < START_TIMEOUT_MILLIS;
-    } catch (IOException e) {
-      return false;
-    }
+    return StartMarker.inProgress(startingMarker);
   }
 
   /**

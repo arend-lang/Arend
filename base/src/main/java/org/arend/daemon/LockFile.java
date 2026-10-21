@@ -213,10 +213,15 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
    * and every caller that concludes "dead" goes on to remove the lock.
    */
   public Optional<ProcessHandle> process() {
-    return ProcessHandle.of(pid).filter(this::startedAsRecorded);
+    return process(pid, processStart);
   }
 
-  private boolean startedAsRecorded(ProcessHandle process) {
+  /** The process {@code pid} names, provided that it started at {@code processStart}, as {@link #process()} judges it. */
+  static Optional<ProcessHandle> process(long pid, long processStart) {
+    return ProcessHandle.of(pid).filter(process -> startedAsRecorded(process, processStart));
+  }
+
+  private static boolean startedAsRecorded(ProcessHandle process, long processStart) {
     if (processStart == UNKNOWN_START) return true;
     long start = startOf(process);
     // A process that will not say when it started is not one this lock can vouch for: the daemon

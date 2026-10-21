@@ -3,6 +3,7 @@ package org.arend.frontend.cli.daemon.server;
 import org.arend.daemon.BuildIdentity;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
+import org.arend.daemon.StartMarker;
 import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
@@ -178,6 +179,8 @@ public final class DaemonMain {
       System.err.println("[DAEMON] the lock just written at " + paths.lockFile + " does not check out against the registry"
           + " in " + DaemonPaths.registryDir() + "; no client will route to this daemon");
     }
+    // The locks claim the libraries now. A start whose `arend -d` was killed leaves nobody else to remove the markers.
+    owned.forEach(member -> StartMarker.release(member.startingMarker, ProcessHandle.current()));
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
     System.out.flush();

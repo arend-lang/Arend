@@ -4,13 +4,13 @@ import org.arend.daemon.BuildIdentity;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.Platform;
+import org.arend.daemon.StartMarker;
 import org.arend.daemon.mcp.McpRegistration;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -31,7 +31,7 @@ import java.util.Optional;
  * {@link DaemonPaths#sharedLibrariesRoot}, and zips, are owned by none and any daemon may load them.
  *
  * <p>Resolve {@link DaemonPaths} for each; decide what each existing lock means
- * ({@link #inspectLock}); claim the right to start ({@link #reserveStart}); spawn
+ * ({@link #inspectLock}); claim the right to start ({@link StartMarker#reserve}); spawn
  * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap <arend.yaml> [-L ...]
  * <arend.yaml>...} with stdio pointed at daemon.log; then poll for the lock the child writes when it
  * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s. The child only loads and resolves its
@@ -148,7 +148,7 @@ public final class DaemonStart {
     List<Path> reserved = new ArrayList<>(owned.size());
     try {
       for (DaemonPaths paths : owned) {
-        if (!reserveStart(paths.startingMarker, READY_TIMEOUT_SECONDS * 1000L)) {
+        if (!StartMarker.reserve(paths.startingMarker)) {
           System.err.println("[ERROR] -d: another daemon start for " + paths.libraryConfig
               + " is already in progress (" + paths.startingMarker + "). Wait for it to finish, or"
               + " remove that file if no start is running.");
@@ -156,9 +156,9 @@ public final class DaemonStart {
         }
         reserved.add(paths.startingMarker);
       }
-      return startChild(libraries, requested, libDirsForward, extraChildArgs);
+      return startChild(libraries, requested, libDirsForward, extraChildArgs, reserved);
     } finally {
-      reserved.forEach(LockFile::deleteQuietly);
+      reserved.forEach(marker -> StartMarker.release(marker, ProcessHandle.current()));
     }
   }
 
@@ -208,7 +208,7 @@ public final class DaemonStart {
   }
 
   private static int startChild(List<DaemonPaths> libraries, List<String> requested, List<Path> libDirsForward,
-                                List<String> extraChildArgs) {
+                                List<String> extraChildArgs, List<Path> markers) {
     DaemonPaths paths = home(libraries);
     // This process's own classpath: a daemon whose jar is rebuilt or replaced under it retires (BuildIdentity).
     // A single jar is run from a copy, which the rebuild does not touch, so that the daemon can still
@@ -242,6 +242,8 @@ public final class DaemonStart {
       System.err.println("        command: " + String.join(" ", cmd));
       return 1;
     }
+    // The child is detached: killed, this process leaves it loading, and the start under way with it.
+    markers.forEach(marker -> StartMarker.add(marker, child.toHandle()));
 
     System.out.println("Starting Arend daemon for " + String.join(", ", requested));
     System.out.println("  log: " + paths.logFile);
@@ -356,38 +358,6 @@ public final class DaemonStart {
 
   private static LockFile lockOf(LockFile.Read read) {
     return ((LockFile.Read.Found) read).lock();
-  }
-
-  /**
-   * Claims the right to start a daemon for this library, atomically.
-   *
-   * <p>{@code CREATE_NEW} is the whole mechanism: between reading the lock and the child writing
-   * one there is a window of however long a cold typecheck takes, and two calls in that window
-   * both see no daemon and both spawn. The loser cannot bind the socket and quietly becomes an
-   * unreachable JVM holding a second copy of the library. A marker older than a start could
-   * possibly take is treated as debris from a killed parent and reclaimed.
-   *
-   * @return true if the caller may proceed.
-   */
-  static boolean reserveStart(Path marker, long staleAfterMillis) {
-    try {
-      Files.createFile(marker);
-      return true;
-    } catch (FileAlreadyExistsException e) {
-      try {
-        long age = System.currentTimeMillis() - Files.getLastModifiedTime(marker).toMillis();
-        if (age < staleAfterMillis) return false;
-        Files.deleteIfExists(marker);
-        Files.createFile(marker);
-        return true;
-      } catch (IOException retry) {
-        return false;
-      }
-    } catch (IOException e) {
-      // The directory will not take the marker; it will not take the lock either, and the spawn
-      // reports that properly. Refusing here would hide it behind a worse message.
-      return true;
-    }
   }
 
   /**
