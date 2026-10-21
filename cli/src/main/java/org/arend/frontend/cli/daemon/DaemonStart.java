@@ -31,7 +31,7 @@ import java.util.List;
  *
  * <p>Resolve {@link DaemonPaths} for each; decide what each existing lock means
  * ({@link #inspectLock}); claim the right to start ({@link StartMarker#reserve}); spawn
- * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap <arend.yaml> [-L ...]
+ * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap [-L ...]
  * <arend.yaml>...} with stdio pointed at daemon.log; then poll for the lock the child writes when it
  * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s. The child only loads and resolves its
  * libraries, typechecking nothing; arend-lib takes some seconds.
@@ -370,7 +370,6 @@ public final class DaemonStart {
   /** As above, with {@code jvmProperties} -- {@code -Dname=value} -- set in the child after the ones forwarded. */
   static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,
                                         List<String> extraChildArgs, String classpath, List<String> jvmProperties) {
-    DaemonPaths paths = home(libraries);
     String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
     List<String> cmd = new ArrayList<>();
 
@@ -392,7 +391,6 @@ public final class DaemonStart {
     cmd.add(classpath);
     cmd.add("org.arend.frontend.ConsoleMain");
     cmd.add("--daemon-bootstrap");
-    cmd.add(paths.libraryConfig.toString());
     for (Path libDir : libDirsForward) {
       cmd.add("-L");
       cmd.add(libDir.toString());

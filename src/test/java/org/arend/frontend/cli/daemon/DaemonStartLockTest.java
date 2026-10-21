@@ -135,9 +135,8 @@ public class DaemonStartLockTest {
     assertTrue("the main class must be on the command line", main >= 0);
     List<String> appArgs = cmd.subList(main + 1, cmd.size());
 
-    assertEquals("the bootstrap flag must name the library by config path",
-        List.of("--daemon-bootstrap", config), appArgs.subList(0, 2));
-    assertEquals("the inner pipeline's positional must be the config path too",
+    assertEquals("--daemon-bootstrap", appArgs.getFirst());
+    assertEquals("the inner pipeline's positional must be the config path",
         config, appArgs.get(appArgs.size() - 1));
     assertFalse("the reference the user typed must not reach the child",
         appArgs.contains(root.getFileName().toString()));
@@ -145,7 +144,7 @@ public class DaemonStartLockTest {
 
   /**
    * Several libraries reach the child in the order given, all by config path, after everything
-   * else: the first is named after the bootstrap flag, since its directory holds the socket.
+   * else.
    */
   @Test
   public void theChildIsToldEveryLibraryInOrder() throws IOException {
@@ -156,14 +155,13 @@ public class DaemonStartLockTest {
     List<String> cmd = DaemonStart.buildChildCommand(List.of(a, b), List.of(), List.of("-c"), "cp");
 
     List<String> appArgs = cmd.subList(cmd.indexOf("org.arend.frontend.ConsoleMain") + 1, cmd.size());
-    assertEquals(List.of("--daemon-bootstrap", a.libraryConfig.toString()), appArgs.subList(0, 2));
     assertEquals(List.of("-c", a.libraryConfig.toString(), b.libraryConfig.toString()),
         appArgs.subList(appArgs.size() - 3, appArgs.size()));
   }
 
   /**
    * A shared library may come first in load order, but its directory is no daemon's: the socket
-   * and the log go to the first library the daemon owns, and the bootstrap flag names that one.
+   * and the log go to the first library the daemon owns.
    */
   @Test
   public void theHomeIsTheFirstOwnedLibrary() throws IOException {
@@ -181,7 +179,6 @@ public class DaemonStartLockTest {
 
       List<String> cmd = DaemonStart.buildChildCommand(libraries, List.of(), List.of(), "cp");
       List<String> appArgs = cmd.subList(cmd.indexOf("org.arend.frontend.ConsoleMain") + 1, cmd.size());
-      assertEquals(List.of("--daemon-bootstrap", owned.libraryConfig.toString()), appArgs.subList(0, 2));
       assertEquals("load order is kept as given",
           List.of(sharedPaths.libraryConfig.toString(), owned.libraryConfig.toString()),
           appArgs.subList(appArgs.size() - 2, appArgs.size()));

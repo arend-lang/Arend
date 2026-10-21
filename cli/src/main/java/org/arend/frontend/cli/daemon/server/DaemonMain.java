@@ -25,7 +25,7 @@ import java.util.concurrent.CountDownLatch;
  * process's stdout and stderr at {@code daemon.log} and stdin at the null device, so everything
  * the pipeline prints lands in the log without any setOut/setErr of our own.
  *
- * <p>Strip the flag and its library reference; bootstrap the warm context from the remaining args;
+ * <p>Strip the flag; bootstrap the warm context from the remaining args;
  * bind the socket; start the {@link DaemonServer}; install the shutdown hook; then publish the
  * lock -- after the hook, so a signal in between cannot leave the lock behind -- and block until
  * the server says to stop.
@@ -79,18 +79,7 @@ public final class DaemonMain {
   private static int serve(String[] args) {
     // The jar as it is now, before the libraries take their seconds to load: a rebuild meanwhile counts.
     BuildIdentity build = BuildIdentity.ofThisProcess();
-    if (args.length < 2) {
-      System.err.println("[DAEMON] --daemon-bootstrap requires a library reference");
-      return 1;
-    }
-    String libRef = args[1];
-    String[] forwarded = Arrays.copyOfRange(args, 2, args.length);
-
-    DaemonPaths paths = DaemonPaths.resolve(Paths.get(libRef));
-    if (paths == null) {
-      System.err.println("[DAEMON] could not resolve library reference: " + libRef);
-      return 1;
-    }
+    String[] forwarded = Arrays.copyOfRange(args, 1, args.length);
 
     List<DaemonPaths> libraries = new ArrayList<>();
     ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(forwarded);
@@ -103,10 +92,12 @@ public final class DaemonMain {
       libraries.add(member);
     }
     List<DaemonPaths> owned = libraries.stream().filter(DaemonPaths::canOwn).toList();
-    if (owned.isEmpty() || !owned.getFirst().libraryConfig.equals(paths.libraryConfig)) {
-      System.err.println("[DAEMON] the bootstrap argv must list " + paths.libraryConfig + " as its first owned library");
+    if (owned.isEmpty()) {
+      System.err.println("[DAEMON] the bootstrap argv lists no library a daemon can own");
       return 1;
     }
+    // Its .arend/ holds the socket and the log, as DaemonStart.home has it.
+    DaemonPaths paths = owned.getFirst();
 
     for (DaemonPaths member : owned) {
       try {
