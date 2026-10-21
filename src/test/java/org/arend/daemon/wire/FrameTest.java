@@ -1,6 +1,5 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon.wire;
 
-import org.arend.daemon.wire.FrameChannel;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;

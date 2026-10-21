@@ -1,6 +1,5 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon;
 
-import org.arend.daemon.DaemonPaths;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
