@@ -41,12 +41,12 @@ public class ConsoleMain {
   }
 
   public static ParsedArgs parseArgs(String[] args) {
-    if (hasRawFlag(args, "h", "help")) {
-      for (ConsoleQueryTool tool : ArendOptions.QUERY_TOOLS) {
-        if (hasRawFlag(args, tool.shortName(), tool.longName())) { ConsoleHelpRenderer.printTopicHelp(tool.cliHelp()); return ParsedArgs.served(); }
-      }
-      // else fall through: the general -h handler below prints the grouped help.
+    ConsoleQueryTool helpTool = ArendOptions.helpTool(args);
+    if (helpTool != null) {
+      ConsoleHelpRenderer.printTopicHelp(helpTool.cliHelp());
+      return ParsedArgs.served();
     }
+    // Any other -h: the general handler below prints the grouped help.
     try {
       Options cmdOptions = ArendOptions.create();
       CommandLine cmdLine = new DefaultParser().parse(cmdOptions, args);
@@ -69,16 +69,6 @@ public class ConsoleMain {
       System.err.println(e.getMessage());
       return ParsedArgs.rejected();
     }
-  }
-
-  /** True if {@code -<shortOpt>} or {@code --<longOpt>} appears as a raw arg token (stopping at a bare {@code --}). */
-  private static boolean hasRawFlag(String[] args, String shortOpt, String longOpt) {
-    String shortFlag = "-" + shortOpt, longFlag = "--" + longOpt;
-    for (String arg : args) {
-      if (arg.equals("--")) break;
-      if (arg.equals(shortFlag) || arg.equals(longFlag)) return true;
-    }
-    return false;
   }
 
   /**

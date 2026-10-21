@@ -66,6 +66,15 @@ class IdeDaemonCommandsTest : ArendTestBase() {
         assertTrue(answer.text, answer.text.contains("[GOAL]"))
     }
 
+    /** As the CLI's daemon has it: `arend` answers -h and -v itself, and a daemon a query tool's help alone. */
+    fun testHelpIsAToolsAlone() {
+        assertEquals(1, daemon("--help").exitCode)
+        assertEquals(1, daemon("-v").exitCode)
+        val help = daemon("-h", "-ss")
+        assertEquals(help.text, 0, help.exitCode)
+        assertTrue(help.text, help.text.contains("-ss <pattern>"))
+    }
+
     fun testTheLibraryIsCheckedWithNoTarget() {
         myFixture.configureByText("Main.ard", """
             \func bad : Nat => \Sigma

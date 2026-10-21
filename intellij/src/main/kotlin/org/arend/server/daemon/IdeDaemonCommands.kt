@@ -96,6 +96,15 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
     }
 
     private fun execute(args: List<String>, cwd: String?, out: PrintStream, err: PrintStream, cancel: CancellationIndicator): Int {
+        // Before parsing, as the CLI's daemon reads them: `-h -ss` leaves -ss without its value.
+        ArendOptions.helpRefusal(args.toTypedArray())?.let {
+            err.println(it)
+            return 1
+        }
+        ArendOptions.helpTool(args.toTypedArray())?.let {
+            out.println(it.cliHelp())
+            return 0
+        }
         val cmdLine = try {
             DefaultParser().parse(ArendOptions.create(), args.toTypedArray())
         } catch (e: ParseException) {
@@ -103,13 +112,9 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
             return 1
         }
         val tool = ArendOptions.queryTool(cmdLine)
-        refusal(cmdLine, tool)?.let {
+        ArendOptions.daemonRefusal(cmdLine)?.let {
             err.println(it)
             return 1
-        }
-        if (cmdLine.hasOption("h") && tool != null) {
-            out.println(tool.cliHelp())
-            return 0
         }
         // As the CLI's daemon does: they shaped the daemon when it started, which here is the project.
         LockedFlags.warnIgnored(cmdLine, "the IDE's project", err)
@@ -149,13 +154,6 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
             }
             else typecheck(cmdLine, scope, targets, out, err, reporter, diagnostics, cancel)
         return if (exitCode == 0 && reporter.errorsNumber == 0 && diagnostics.errorsNumber == 0) 0 else 1
-    }
-
-    /** Why the daemon will not run [cmdLine] at all, or null when it will; as the CLI's daemon says it. */
-    private fun refusal(cmdLine: CommandLine, tool: ConsoleQueryTool?): String? = ArendOptions.daemonRefusal(cmdLine) ?: when {
-        cmdLine.hasOption("h") && tool == null -> "[ERROR] --help is answered by `arend --help` itself, not by a daemon"
-        cmdLine.hasOption("v") -> "[ERROR] -v is answered by `arend -v` itself, not by a daemon"
-        else -> null
     }
 
     /**

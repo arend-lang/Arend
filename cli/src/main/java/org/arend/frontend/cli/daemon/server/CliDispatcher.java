@@ -21,6 +21,11 @@ public final class CliDispatcher {
 
   /** @return the exit code the client should report. */
   public static int run(CommandContext ctx, String[] args, String clientCwd) {
+    String helpRefusal = ArendOptions.helpRefusal(args);
+    if (helpRefusal != null) {
+      System.err.println(helpRefusal);
+      return 1;
+    }
     // Parsed once, here: parsing prints the help, the version or the error, which the client should see once.
     ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(args);
     CommandLine cmdLine = parsed.cmdLine();

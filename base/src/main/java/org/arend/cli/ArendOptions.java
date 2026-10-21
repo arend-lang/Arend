@@ -53,6 +53,38 @@ public final class ArendOptions {
     return null;
   }
 
+  /**
+   * Why a daemon answers none of {@code args}, read before they are parsed, as {@code arend} reads
+   * them: {@code -v}, and {@code -h} but for a query tool's ({@link #helpTool}), which {@code arend}
+   * answers itself before it looks for a daemon. Null when a daemon answers them.
+   */
+  public static String helpRefusal(String[] args) {
+    if (hasRawFlag(args, "v", "version")) return "[ERROR] -v is answered by `arend -v` itself, not by a daemon";
+    if (hasRawFlag(args, "h", "help") && helpTool(args) == null) {
+      return "[ERROR] --help is answered by `arend --help` itself, not by a daemon";
+    }
+    return null;
+  }
+
+  /**
+   * The query tool whose help {@code -h} asks for, as in {@code -h -ss}; null for none. Read off the raw
+   * arguments: the tool's option has no value there, which a parser would refuse.
+   */
+  public static ConsoleQueryTool helpTool(String[] args) {
+    if (!hasRawFlag(args, "h", "help")) return null;
+    return QUERY_TOOLS.stream().filter(tool -> hasRawFlag(args, tool.shortName(), tool.longName())).findFirst().orElse(null);
+  }
+
+  /** True if {@code -<shortOpt>} or {@code --<longOpt>} appears as a raw arg token (stopping at a bare {@code --}). */
+  private static boolean hasRawFlag(String[] args, String shortOpt, String longOpt) {
+    String shortFlag = "-" + shortOpt, longFlag = "--" + longOpt;
+    for (String arg : args) {
+      if (arg.equals("--")) break;
+      if (arg.equals(shortFlag) || arg.equals(longFlag)) return true;
+    }
+    return false;
+  }
+
   /** The query tool {@code cmdLine} asks for, or null for a typecheck. */
   public static ConsoleQueryTool queryTool(CommandLine cmdLine) {
     return QUERY_TOOLS.stream().filter(tool -> cmdLine.hasOption(tool.shortName())).findFirst().orElse(null);
