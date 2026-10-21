@@ -8,12 +8,5 @@ dependencies {
     compileOnly("com.fasterxml.jackson.core:jackson-databind:2.11.2")
 
     testImplementation("com.fasterxml.jackson.core:jackson-databind:2.11.2")
-    // DaemonMcpServerTest routes calls to daemons as the CLI runs them.
-    testImplementation(project(":cli"))
     testImplementation("junit:junit:4.13.1")
-}
-
-// The CLI copies the prelude into its classes directory, which these tests compile against.
-tasks.compileTestJava {
-    dependsOn(":cli:copyPrelude")
 }

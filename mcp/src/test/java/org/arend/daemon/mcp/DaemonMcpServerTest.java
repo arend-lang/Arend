@@ -4,11 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.LockFile;
-import org.arend.daemon.server.SocketBinder;
-import org.arend.frontend.cli.CommandContext;
 import org.arend.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.server.CliDaemonRunner;
-import org.arend.frontend.cli.daemon.server.StreamRedirector;
+import org.arend.daemon.server.SocketBinder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -26,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -74,7 +72,6 @@ public class DaemonMcpServerTest {
     if (toServer != null) toServer.close();
     if (serving != null) serving.join(5000);
     daemons.forEach(DaemonServer::close);
-    StreamRedirector.uninstall();
     System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
   }
 
@@ -94,20 +91,23 @@ public class DaemonMcpServerTest {
     paths.ensureArendDir();
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     String token = LockFile.newToken();
-    DaemonServer daemon = CliDaemonRunner.server(bound, token, new CommandContext(), List.of(paths.libraryConfig.toString()),
-        (context, args, cwd) -> {
+    // A daemon as the CLI's answers, without the CLI: a runner that records what it is asked.
+    DaemonServer daemon = new DaemonServer(bound, token, () -> List.of(paths.libraryConfig.toString()), Map.of(), LockFile.HOST_CLI,
+        request -> {
+          List<String> args = request.args();
+          if (args == null) return 0;
           received.add(name + " " + String.join(" ", args));
-          if (List.of(args).contains("Hold")) {
+          if (args.contains("Hold")) {
             holdStarted.countDown();
             long deadline = System.currentTimeMillis() + 30_000;
-            while (!context.cancellation.isCanceled() && System.currentTimeMillis() < deadline) {
+            while (!request.cancel().isCanceled() && System.currentTimeMillis() < deadline) {
               try { Thread.sleep(5); } catch (InterruptedException e) { return 1; }
             }
             return 0;
           }
-          System.out.println("ran on " + name);
+          request.output().out("ran on " + name + "\n");
           return 0;
-        }, () -> {});
+        }, () -> {}, args -> "", () -> {});
     daemon.start();
     daemons.add(daemon);
 
