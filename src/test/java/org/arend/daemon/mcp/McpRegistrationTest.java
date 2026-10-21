@@ -2,7 +2,9 @@ package org.arend.daemon.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.arend.daemon.LockFile;
 import org.arend.daemon.Platform;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -15,6 +17,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -327,17 +330,31 @@ public class McpRegistrationTest {
     });
   }
 
-  /** Without an arend on the PATH the command is this one's own, every path absolute so that it runs from anywhere. */
+  /** The arend on the PATH agents see is asked which daemons it serves: this build's, another protocol's, or none at all. */
   @Test
-  public void theCommandIsArendOrThisOneFromAnywhere() {
-    McpRegistration.Command command = McpRegistration.command();
-    if (command.portable()) {
-      assertEquals(List.of("arend", "--mcp"), command.argv());
-      return;
+  public void theArendOnThePathIsAskedForItsProtocol() throws IOException {
+    Assume.assumeFalse(Platform.isWindows());
+    Path bin = tmp.newFolder("bin").toPath();
+    McpRegistration.ArendCheck none = McpRegistration.checkArend(bin.toString());
+    assertNull(none.arend());
+    assertTrue(none.problem(), none.problem().contains("no arend on the PATH"));
+
+    Path arend = bin.resolve("arend");
+    List<List<String>> answers = List.of(
+        List.of("Arend 1.12", McpRegistration.PROTOCOL_LINE + LockFile.PROTOCOL_VERSION),
+        List.of("Arend 1.12"),
+        List.of("Arend 1.12", McpRegistration.PROTOCOL_LINE + (LockFile.PROTOCOL_VERSION + 1)));
+    List<String> problems = new java.util.ArrayList<>();
+    for (List<String> answer : answers) {
+      Files.writeString(arend, "#!/bin/sh\n[ \"$1\" = --version ] || exit 2\nprintf '" + String.join("\\n", answer) + "\\n'\n");
+      assertTrue(arend.toFile().setExecutable(true));
+      McpRegistration.ArendCheck check = McpRegistration.checkArend(bin.toString());
+      assertEquals(arend, check.arend());
+      problems.add(check.problem());
     }
-    List<String> argv = command.argv();
-    assertTrue(argv.getFirst(), Path.of(argv.getFirst()).isAbsolute());
-    for (String entry : argv.get(2).split(File.pathSeparator)) assertTrue(entry, Path.of(entry).isAbsolute());
-    assertEquals(List.of("org.arend.frontend.ConsoleMain", "--mcp"), argv.subList(3, argv.size()));
+    assertNull("this build's protocol", problems.get(0));
+    assertTrue(problems.get(1), problems.get(1).contains("too old") && problems.get(1).contains("\"Arend 1.12\""));
+    assertTrue(problems.get(2), problems.get(2).contains("speaks daemon protocol " + (LockFile.PROTOCOL_VERSION + 1)));
+    assertTrue(McpRegistration.arendAdvice(McpRegistration.checkArend(tmp.getRoot().toString())).contains("put `arend` on the PATH the agents see"));
   }
 }

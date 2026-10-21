@@ -7,8 +7,10 @@ import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.DaemonStop;
+import org.arend.daemon.LockFile;
 import org.arend.daemon.client.DaemonRpc;
 import org.arend.daemon.mcp.DaemonMcpServer;
+import org.arend.daemon.mcp.McpRegistration;
 import org.arend.frontend.cli.daemon.server.DaemonMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
@@ -57,6 +59,8 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
+        // Read by McpRegistration.checkArend: whether this build serves the daemons of the one asking.
+        System.out.println(McpRegistration.PROTOCOL_LINE + LockFile.PROTOCOL_VERSION);
         return ParsedArgs.served();
       }
 

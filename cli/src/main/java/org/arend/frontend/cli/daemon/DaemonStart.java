@@ -164,10 +164,17 @@ public final class DaemonStart {
 
   /**
    * {@code arend --mcp-init [DIR]}: registers the {@code arend-daemons} MCP server in the configs of the
-   * project in {@code projectDir} of every agent installed, saying which files it wrote.
+   * project in {@code projectDir} of every agent installed, saying which files it wrote -- as
+   * {@code arend --mcp}, so only when the {@code arend} on this PATH, which agents and daemons started
+   * from this shell see too, serves this build's daemons.
    */
   public static int initMcp(Path projectDir) {
-    McpRegistration.Result result = McpRegistration.initProject(projectDir, McpRegistration.command());
+    McpRegistration.ArendCheck arend = McpRegistration.checkArend(System.getenv("PATH"));
+    if (!arend.usable()) {
+      System.err.println("[ERROR] --mcp-init: " + McpRegistration.arendAdvice(arend) + " Nothing was registered.");
+      return 1;
+    }
+    McpRegistration.Result result = McpRegistration.initProject(projectDir, McpRegistration.PORTABLE);
     result.failures().forEach(failure -> System.err.println("[WARN]  --mcp-init: " + failure));
     if (result.done().isEmpty()) {
       if (result.failures().isEmpty()) System.out.println("No agent that reads a project's own MCP config is installed.");

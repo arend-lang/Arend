@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.arend.daemon.LockFile;
 import org.arend.daemon.Platform;
 
 import java.io.File;
@@ -14,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -30,9 +32,10 @@ import java.util.function.Supplier;
  * user's, which it reads in every directory. Writing it is the user's call; the result warns that
  * every session of that agent will then start the server.
  *
- * <p>The command is {@code arend --mcp} when {@code arend} is on the PATH: the same on every machine,
- * so that the files can be committed, and it stays right when the jar behind it is rebuilt or moved.
- * Without one it is this machine's JVM and jar, which the caller has to say is not to be committed.
+ * <p>The command is {@code arend --mcp}: the same on every machine, so that the files can be
+ * committed, and it stays right when the jar behind it is rebuilt or moved. Registering it takes a
+ * current {@code arend} on the PATH the agents see ({@link #checkArend}). The IDE can register its own
+ * copy instead, when the user chooses to, which only this machine has.
  *
  * <p>Only a project's files are touched, by a registration and by its removal alike. A registration
  * in an agent's own config elsewhere -- as earlier builds made one whenever {@code arend -d} started --
@@ -44,7 +47,6 @@ public final class McpRegistration {
   private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
   /** VS Code's and Gemini's settings may hold comments; they are read, never written back. */
   private static final ObjectMapper LENIENT = new ObjectMapper().enable(JsonParser.Feature.ALLOW_COMMENTS);
-  private static final String CLI_MAIN = "org.arend.frontend.ConsoleMain";
 
   private McpRegistration() {}
 
@@ -61,23 +63,77 @@ public final class McpRegistration {
   // ───────── the command ─────────
 
   /**
-   * {@code arend --mcp}, when {@code arend} is on the PATH; else this process's own JVM and classpath,
-   * every path absolute, which only this machine has. No {@code -L}: one server serves the daemons
-   * of every start, whatever each was given.
+   * {@code arend --mcp}: the same on every machine. No {@code -L}: one server serves the daemons of
+   * every start, whatever each was given.
    */
-  public static Command command() {
-    Command portable = portableCommand();
-    if (portable != null) return portable;
-    List<String> classpath = new ArrayList<>();
-    for (String entry : System.getProperty("java.class.path").split(File.pathSeparator)) {
-      if (!entry.isEmpty()) classpath.add(Path.of(entry).toAbsolutePath().normalize().toString());
+  public static final Command PORTABLE = new Command(List.of("arend", "--mcp"), true);
+
+  /** What {@code arend --version} says of the daemons a build serves, on its second line. */
+  public static final String PROTOCOL_LINE = "daemon protocol ";
+
+  private static final long VERSION_TIMEOUT_SECONDS = 15;
+
+  /**
+   * The {@code arend} an agent would start the server as, on the {@code path} it sees, and what is in
+   * the way of registering {@link #PORTABLE}: null when nothing is.
+   */
+  public record ArendCheck(Path arend, String problem) {
+    public boolean usable() {
+      return problem == null;
     }
-    return new Command(command(Path.of(System.getProperty("java.home")), classpath, CLI_MAIN, "--mcp"), false);
   }
 
-  /** {@code arend --mcp}, if there is an {@code arend} on the PATH; else null. */
-  public static Command portableCommand() {
-    return findExecutable("arend") == null ? null : new Command(List.of("arend", "--mcp"), true);
+  /**
+   * Checks the {@code arend} on {@code path} -- the PATH agents and daemons are started with, which an
+   * IDE started from the desktop need not have -- by asking it for its version: a build that does not
+   * speak this one's daemon protocol, or says none, has no server for this build's daemons.
+   */
+  public static ArendCheck checkArend(String path) {
+    Path arend = findOnPath(path, "arend");
+    if (arend == null) return new ArendCheck(null, "there is no arend on the PATH the agents see");
+    Path log = null;
+    try {
+      // To a file, not a pipe: a process blocked on a full pipe would outlive the timeout.
+      log = Files.createTempFile("arend-version.", ".log");
+      ProcessBuilder builder = new ProcessBuilder(arend.toString(), "--version").redirectErrorStream(true).redirectOutput(log.toFile());
+      // The PATH the agents see, which the arend launcher may need to find its java on.
+      if (path != null) builder.environment().put("PATH", path);
+      Process process = builder.start();
+      process.getOutputStream().close();
+      if (!process.waitFor(VERSION_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        process.destroyForcibly();
+        return new ArendCheck(arend, arend + " --version did not answer within " + VERSION_TIMEOUT_SECONDS + "s");
+      }
+      List<String> lines = Files.readAllLines(log);
+      String protocol = lines.stream().filter(line -> line.startsWith(PROTOCOL_LINE)).findFirst().orElse(null);
+      if (protocol == null) {
+        String said = lines.isEmpty() ? "nothing" : lines.getFirst().strip();
+        return new ArendCheck(arend, arend + " is too old to serve this build's daemons: its --version says only \"" + said + "\", with no daemon protocol");
+      }
+      String speaks = protocol.substring(PROTOCOL_LINE.length()).strip();
+      if (!speaks.equals(String.valueOf(LockFile.PROTOCOL_VERSION))) {
+        return new ArendCheck(arend, arend + " speaks daemon protocol " + speaks + ", and this build's daemons speak " + LockFile.PROTOCOL_VERSION);
+      }
+      return new ArendCheck(arend, null);
+    } catch (IOException e) {
+      return new ArendCheck(arend, arend + " --version could not be run (" + e.getMessage() + ")");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new ArendCheck(arend, "interrupted");
+    } finally {
+      if (log != null) {
+        try {
+          Files.deleteIfExists(log);
+        } catch (IOException ignored) {
+        }
+      }
+    }
+  }
+
+  /** What to do about {@code check}'s problem, said the same way by the CLI and the IDE. */
+  public static String arendAdvice(ArendCheck check) {
+    return "Agents start the " + SERVER_NAME + " MCP server as `arend --mcp`, but " + check.problem()
+        + ". Install a current Arend CLI and put `arend` on the PATH the agents see, then register again.";
   }
 
   /**
@@ -369,14 +425,27 @@ public final class McpRegistration {
    * installers put theirs.
    */
   private static Path findExecutable(String name, Path... fallbacks) {
-    List<String> names = Platform.isWindows() ? List.of(name + ".exe", name + ".cmd", name + ".bat") : List.of(name);
+    List<Path> dirs = new ArrayList<>(dirsOf(System.getenv("PATH")));
+    dirs.add(home().resolve(".local").resolve("bin"));
+    dirs.addAll(List.of(fallbacks));
+    return findIn(dirs, name);
+  }
+
+  /** {@code name} on {@code path}, a PATH variable's value, and nowhere else. */
+  static Path findOnPath(String path, String name) {
+    return findIn(dirsOf(path), name);
+  }
+
+  private static List<Path> dirsOf(String path) {
     List<Path> dirs = new ArrayList<>();
-    String path = System.getenv("PATH");
     if (path != null) {
       for (String dir : path.split(File.pathSeparator)) if (!dir.isEmpty()) dirs.add(Path.of(dir));
     }
-    dirs.add(home().resolve(".local").resolve("bin"));
-    dirs.addAll(List.of(fallbacks));
+    return dirs;
+  }
+
+  private static Path findIn(List<Path> dirs, String name) {
+    List<String> names = Platform.isWindows() ? List.of(name + ".exe", name + ".cmd", name + ".bat") : List.of(name);
     for (Path dir : dirs) {
       for (String candidate : names) {
         Path file = dir.resolve(candidate);

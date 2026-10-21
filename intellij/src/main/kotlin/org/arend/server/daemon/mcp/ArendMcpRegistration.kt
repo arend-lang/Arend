@@ -7,6 +7,8 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
+import com.intellij.util.EnvironmentUtil
 import org.arend.daemon.mcp.DaemonMcpServer
 import org.arend.daemon.mcp.McpRegistration
 import java.io.File
@@ -16,8 +18,9 @@ import java.nio.file.Path
 /**
  * Registers the `arend-daemons` MCP server for the project, in the project's own config of every agent
  * installed, as `arend --mcp-init` does -- when the user asks for it on the Daemon tab, and at no other
- * time. The command is `arend --mcp` when `arend` is on the PATH; else the server runs from the plugin's
- * own jars on the IDE's JVM, with Jackson from the IDE's jars, which only this machine has. What it
+ * time. The command is `arend --mcp`, when the `arend` on the PATH agents see serves this build's
+ * daemons. Otherwise the user is told why, and may choose to register the server from the plugin's own
+ * jars on the IDE's JVM instead, with Jackson from the IDE's jars, which only this machine has. What it
  * wrote is said in a balloon, with how to take it back out.
  */
 object ArendMcpRegistration {
@@ -34,29 +37,50 @@ object ArendMcpRegistration {
     fun registerForProject(project: Project) {
         val dir = project.basePath?.let { Path.of(it) } ?: return
         ApplicationManager.getApplication().executeOnPooledThread {
-            val command = McpRegistration.portableCommand() ?: pluginCommand()
-            if (command == null) {
-                warn(project, "Cannot register the ${McpRegistration.SERVER_NAME} MCP server: arend is not on the PATH, and the plugin is not installed from jars.")
+            // The PATH of the user's shell, which agents and daemons are started with: an IDE started
+            // from the desktop has a shorter one of its own.
+            val arend = McpRegistration.checkArend(EnvironmentUtil.getValue("PATH"))
+            if (arend.usable()) {
+                register(project, dir, McpRegistration.PORTABLE)
                 return@executeOnPooledThread
             }
-            val result = McpRegistration.initProject(dir, command)
-            if (project.isDisposed) return@executeOnPooledThread
-            val text = StringBuilder()
-            if (result.done.isEmpty()) {
-                if (result.failures.isEmpty()) text.append("No agent that reads a project's own MCP config is installed.")
-            } else {
-                text.append("Registered the ${McpRegistration.SERVER_NAME} MCP server for agents started in this project, in: ")
-                    .append(result.done.joinToString(", ")).append(". <code>arend --mcp-unregister</code> takes it back out.")
-            }
-            for (note in result.notes) text.append("<br>").append(note)
-            if (text.isNotEmpty()) {
-                NotificationGroupManager.getInstance().getNotificationGroup("Arend Daemon")
-                    .createNotification("Arend daemon", text.toString(), NotificationType.INFORMATION)
-                    .notify(project)
-            }
-            for (failure in result.failures) warn(project, failure.replaceFirstChar { it.uppercase() } + ".")
-            for (warning in result.warnings) warn(project, warning)
+            val own = pluginCommand()
+            ApplicationManager.getApplication().invokeLater({
+                if (own == null) {
+                    warn(project, McpRegistration.arendAdvice(arend))
+                    return@invokeLater
+                }
+                val choice = Messages.showOkCancelDialog(project,
+                    McpRegistration.arendAdvice(arend) + "\n\nOr register this IDE's own copy of the server instead: it runs on " +
+                        "this machine only, and stops working when the IDE or the Arend plugin is updated, until it is registered again.",
+                    "Register the ${McpRegistration.SERVER_NAME} MCP Server", "Use This IDE's Copy", Messages.getCancelButton(),
+                    Messages.getWarningIcon())
+                if (choice == Messages.OK) {
+                    ApplicationManager.getApplication().executeOnPooledThread { register(project, dir, own) }
+                }
+            }, project.disposed)
         }
+    }
+
+    /** Registers [command] for the project in [dir], and says in a balloon what that did. */
+    private fun register(project: Project, dir: Path, command: McpRegistration.Command) {
+        val result = McpRegistration.initProject(dir, command)
+        if (project.isDisposed) return
+        val text = StringBuilder()
+        if (result.done.isEmpty()) {
+            if (result.failures.isEmpty()) text.append("No agent that reads a project's own MCP config is installed.")
+        } else {
+            text.append("Registered the ${McpRegistration.SERVER_NAME} MCP server for agents started in this project, in: ")
+                .append(result.done.joinToString(", ")).append(". <code>arend --mcp-unregister</code> takes it back out.")
+        }
+        for (note in result.notes) text.append("<br>").append(note)
+        if (text.isNotEmpty()) {
+            NotificationGroupManager.getInstance().getNotificationGroup("Arend Daemon")
+                .createNotification("Arend daemon", text.toString(), NotificationType.INFORMATION)
+                .notify(project)
+        }
+        for (failure in result.failures) warn(project, failure.replaceFirstChar { it.uppercase() } + ".")
+        for (warning in result.warnings) warn(project, warning)
     }
 
     private fun warn(project: Project, message: String) {
