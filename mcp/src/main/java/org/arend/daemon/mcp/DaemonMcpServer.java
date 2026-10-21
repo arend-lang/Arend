@@ -356,8 +356,22 @@ public final class DaemonMcpServer {
    */
   private record Target(LockFile daemon, DaemonPaths library, String warning) {}
 
-  /** The daemon a call about {@code library} goes to: with none named, the working directory's, else the only one. */
+  /**
+   * The daemon a call about {@code library} goes to, as {@link #find} has it, with a word when it runs
+   * another build than this server's: it answers, but as that build. A command line would run the
+   * command itself instead ({@link DaemonRpc#tryRouteCli}); this server has only the daemons.
+   */
   private Target target(String library) {
+    Target target = find(library);
+    String otherBuild = DaemonRpc.otherBuild(target.daemon(), BuildIdentity.ofThisProcess());
+    if (otherBuild == null) return target;
+    String warning = "[WARN] the daemon (PID " + target.daemon().pid() + ") runs " + otherBuild + ", and answers as that"
+        + " build. Restart it to have it run this one: `arend --daemon-stop`, then `arend -d`.";
+    return new Target(target.daemon(), target.library(), target.warning() == null ? warning : target.warning() + "\n" + warning);
+  }
+
+  /** The daemon a call about {@code library} goes to: with none named, the working directory's, else the only one there is to talk to. */
+  private Target find(String library) {
     if (library != null) {
       String reference = library.startsWith("~/") ? System.getProperty("user.home") + library.substring(1) : library;
       Named named = runningLibrariesNamed(reference);
@@ -387,9 +401,11 @@ public final class DaemonMcpServer {
       if (daemon != null) return new Target(daemon, null, null);
     }
     List<LockFile> live = DaemonRpc.liveDaemons();
-    if (live.size() == 1) return new Target(live.getFirst(), null, null);
-    throw new IllegalArgumentException(live.isEmpty()
-        ? "no daemon is running; start one with `arend -d LIBRARY...`."
+    List<LockFile> usable = live.stream().filter(DaemonRpc::compatible).toList();
+    if (usable.size() == 1) return new Target(usable.getFirst(), null, null);
+    throw new IllegalArgumentException(live.isEmpty() ? "no daemon is running; start one with `arend -d LIBRARY...`."
+        : usable.isEmpty() ? "no running daemon speaks this build's protocol; restart one with `arend --daemon-stop`,"
+            + " then `arend -d`.\n\n" + listDaemons()
         : "several daemons are running; say which library with `library`.\n\n" + listDaemons());
   }
 
@@ -410,6 +426,8 @@ public final class DaemonMcpServer {
     List<DaemonPaths> owned = new ArrayList<>();
     List<DaemonPaths> loaded = new ArrayList<>();
     for (LockFile daemon : DaemonRpc.liveDaemons()) {
+      // One no request can reach is no candidate: it would make a name ambiguous that one daemon answers for.
+      if (!DaemonRpc.compatible(daemon)) continue;
       Set<String> own = new HashSet<>();
       for (Path lockFile : daemon.lockFiles()) own.add(lockFile.getParent().getParent().resolve(FileUtils.LIBRARY_CONFIG_FILE).toString());
       List<String> libraries = new ArrayList<>(daemon.libraries());

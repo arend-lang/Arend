@@ -340,6 +340,23 @@ public class DaemonMcpServerTest {
     assertTrue(text(ambiguous), text(ambiguous).contains("several daemons are running"));
   }
 
+  /** A daemon no request can reach -- of another protocol -- is no candidate, and leaves the other the only one. */
+  @Test
+  public void aDaemonOfAnotherProtocolIsNotTalkedTo() throws IOException {
+    LockFile b = LockFile.readIfValid(LockFile.lookup(DaemonPaths.resolve(libB)) instanceof LockFile.Read.Found found
+        ? found.lock().registryFile() : null).orElseThrow();
+    new LockFile(b.pid(), b.libraryPath(), b.libraryHash(), b.libraries(), b.loaded(), LockFile.PROTOCOL_VERSION + 1,
+        b.startedAt(), b.socketPath(), b.host(), b.processStart(), b.token(), b.build(), b.projectDir()).writeAtomic(b.registryFile());
+    serve(tempFolder.getRoot().toPath());
+    call(1, "typecheck", "{}");
+    assertEquals(1, received.size());
+    assertTrue(received.toString(), received.getFirst().startsWith("A"));
+
+    JsonNode named = call(2, "typecheck", "{\"library\":\"libb\"}");
+    assertTrue(text(named), named.get("isError").asBoolean());
+    assertEquals(1, received.size());
+  }
+
   @Test
   public void aLibraryNoDaemonHoldsIsReported() throws IOException {
     serve(tempFolder.getRoot().toPath());

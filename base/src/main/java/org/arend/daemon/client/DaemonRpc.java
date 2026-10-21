@@ -307,6 +307,11 @@ public final class DaemonRpc {
     };
   }
 
+  /** Whether a client of this build can talk to the daemon of {@code lock}: it has bound a socket, and speaks this build's protocol. */
+  public static boolean compatible(LockFile lock) {
+    return lock.socketPath() != null && !lock.socketPath().isEmpty() && lock.protocolVersion() == LockFile.PROTOCOL_VERSION;
+  }
+
   /** Every live daemon in {@link DaemonPaths#registryDir}, oldest first; a dead one's entry is removed. */
   public static List<LockFile> liveDaemons() {
     List<LockFile> live = new ArrayList<>();
@@ -328,9 +333,8 @@ public final class DaemonRpc {
   private static LockFile firstLoading(List<DaemonPaths> libraries, boolean explain) {
     for (LockFile lf : liveDaemons()) {
       if (!libraries.stream().allMatch(paths -> lf.hasLoaded(paths.libraryConfig))) continue;
-      if (lf.socketPath() == null || lf.socketPath().isEmpty()) continue;
-      if (lf.protocolVersion() != LockFile.PROTOCOL_VERSION) {
-        if (explain) {
+      if (!compatible(lf)) {
+        if (explain && lf.protocolVersion() != LockFile.PROTOCOL_VERSION) {
           System.err.println("[WARN] the daemon PID " + lf.pid() + " speaks protocol version "
               + lf.protocolVersion() + ", this build speaks " + LockFile.PROTOCOL_VERSION + "; skipping it");
         }
@@ -392,8 +396,7 @@ public final class DaemonRpc {
     } catch (IOException e) {
       return null;
     }
-    List<LockFile> holding = liveDaemons().stream().filter(lf -> lf.projectDir().equals(canonical)
-        && lf.socketPath() != null && !lf.socketPath().isEmpty() && lf.protocolVersion() == LockFile.PROTOCOL_VERSION).toList();
+    List<LockFile> holding = liveDaemons().stream().filter(lf -> lf.projectDir().equals(canonical) && compatible(lf)).toList();
     if (holding.size() > 1 && explain) {
       System.err.println("[WARN] the daemons " + holding.stream().map(lf -> "PID " + lf.pid()).toList() + " all hold the project in "
           + canonical + "; name a library to say which one this command is for.");
