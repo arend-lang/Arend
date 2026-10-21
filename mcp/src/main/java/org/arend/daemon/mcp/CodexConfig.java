@@ -1,9 +1,10 @@
 package org.arend.daemon.mcp;
 
+import org.arend.util.FileUtils;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -162,12 +163,6 @@ final class CodexConfig {
   /** Writes {@code text} to {@code file} whole or not at all. */
   private static void write(Path file, String text) throws IOException {
     Files.createDirectories(file.getParent());
-    Path tmp = Files.createTempFile(file.getParent(), file.getFileName() + ".", ".tmp");
-    try {
-      Files.writeString(tmp, text);
-      Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-    } finally {
-      Files.deleteIfExists(tmp);
-    }
+    FileUtils.writeAtomically(file, scratch -> Files.writeString(scratch, text));
   }
 }

@@ -5,11 +5,9 @@ import org.arend.util.FileUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -302,11 +300,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     return readIfValid(entry).filter(lock -> lock.libraryHash.equals(libraryHash));
   }
 
-  /**
-   * Writes the lock atomically: build a scratch file beside the destination, then rename over it,
-   * so a reader never sees a half-written lock. The scratch name is unique per attempt, since two
-   * processes racing to start a daemon for the same library would otherwise share it.
-   */
+  /** Writes the lock whole or not at all ({@link FileUtils#writeAtomically}): a reader never sees half of one. */
   public void writeAtomic(Path lockPath) throws IOException {
     Properties props = new Properties();
     props.setProperty("pid", Long.toString(pid));
@@ -328,31 +322,17 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
     }
     if (!projectDir.isEmpty()) props.setProperty("projectDir", projectDir);
 
-    Path directory = lockPath.getParent();
-    Path tmp = Files.createTempFile(directory, lockPath.getFileName() + ".", ".tmp");
-    try {
-      // The registry's copy carries the token, and is read only while it is private: the user's
-      // alone before the token is in it. A library's copy stays readable, so that another user's
-      // client sees it is not theirs.
-      if (!token.isEmpty() || directory.toAbsolutePath().normalize().equals(DaemonPaths.registryDir().toAbsolutePath().normalize())) {
-        PrivateFiles.restrictToOwner(tmp, false);
-      }
-      try (OutputStream out = Files.newOutputStream(tmp)) {
+    // The registry's copy carries the token, and is read only while it is private: the user's
+    // alone before the token is in it. A library's copy stays readable, so that another user's
+    // client sees it is not theirs.
+    boolean restricted = !token.isEmpty()
+        || lockPath.toAbsolutePath().getParent().normalize().equals(DaemonPaths.registryDir().toAbsolutePath().normalize());
+    FileUtils.writeAtomically(lockPath, scratch -> {
+      if (restricted) PrivateFiles.restrictToOwner(scratch, false);
+      try (OutputStream out = Files.newOutputStream(scratch)) {
         props.store(out, "Arend daemon lock; do not edit by hand");
       }
-      try {
-        Files.move(tmp, lockPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-      } catch (AtomicMoveNotSupportedException e) {
-        // Some network mounts cannot rename atomically, and refusing to start there is worse
-        // than a window. FileBinarySource.commitOutput does the same.
-        Files.move(tmp, lockPath, StandardCopyOption.REPLACE_EXISTING);
-      }
-    } finally {
-      try {
-        Files.deleteIfExists(tmp);
-      } catch (IOException ignored) {
-      }
-    }
+    });
   }
 
   /** Parses the lock file at {@code lockPath}, distinguishing absent from unreadable. */

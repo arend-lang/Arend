@@ -1,6 +1,7 @@
 package org.arend.query;
 
 import org.arend.ext.module.ModulePath;
+import org.arend.util.FileUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
@@ -9,7 +10,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -72,18 +72,13 @@ final class SymbolIndexStore {
                     Map<ModulePath, List<SymbolIndex.Entry>> entries) {
     if (cacheFile == null) return;
     try {
-      Path parent = cacheFile.toAbsolutePath().getParent();
-      Files.createDirectories(parent);
-      Path tmp = Files.createTempFile(parent, cacheFile.getFileName().toString(), ".tmp");
-      try {
-        try (BufferedWriter w = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8)) {
+      Files.createDirectories(cacheFile.toAbsolutePath().getParent());
+      // A reader sees the old index or the new one, never half of one: another daemon may share this library.
+      FileUtils.writeAtomically(cacheFile, scratch -> {
+        try (BufferedWriter w = Files.newBufferedWriter(scratch, StandardCharsets.UTF_8)) {
           writeTo(w, libraryName, timestamps, entries);
         }
-        // A reader sees the old index or the new one, never half of one: another daemon may share this library.
-        Files.move(tmp, cacheFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-      } finally {
-        Files.deleteIfExists(tmp);
-      }
+      });
     } catch (IOException e) {
       // index is best-effort; don't fail the whole CLI
     }

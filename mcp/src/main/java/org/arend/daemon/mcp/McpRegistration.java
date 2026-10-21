@@ -7,12 +7,12 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.arend.daemon.LockFile;
 import org.arend.daemon.Platform;
+import org.arend.util.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -399,13 +399,7 @@ public final class McpRegistration {
   /** Writes {@code root} to {@code file} whole or not at all. */
   private static void write(Path file, JsonNode root) throws IOException {
     Files.createDirectories(file.getParent());
-    Path tmp = Files.createTempFile(file.getParent(), file.getFileName() + ".", ".tmp");
-    try {
-      MAPPER.writeValue(tmp.toFile(), root);
-      Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-    } finally {
-      Files.deleteIfExists(tmp);
-    }
+    FileUtils.writeAtomically(file, scratch -> MAPPER.writeValue(scratch.toFile(), root));
   }
 
   // ───────── installed agents ─────────
