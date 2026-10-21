@@ -268,7 +268,7 @@ public final class QueryHelp {
 
 
   private static final String CLASS_HIERARCHY_HELP = """
-      arend -ch <CLASS> [option ...]
+      arend [LIBRARY ...] -ch <CLASS> [option ...]
 
       Print the inheritance lattice around a class plus every \\instance and \\new construction site.
       Resolves <CLASS> in two ways:
@@ -323,7 +323,7 @@ public final class QueryHelp {
       """;
  
   private static final String SCOPE_HELP = """
-      arend -sc <REFERABLE> [<PATTERN>] [option ...]
+      arend [LIBRARY ...] -sc <REFERABLE> [<PATTERN>] [option ...]
 
       Dump the ambient name scope visible at a given referable's position.
       Mainly intended for debugging reference-resolution issues: which names are in scope here, and what do they actually resolve to?

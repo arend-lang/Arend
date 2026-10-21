@@ -16,20 +16,22 @@ public final class ConsoleHelp {
   static void printGrouped(Options cmdOptions, List<String> diagnosticOptions) {
     record Group(String title, List<String> longOpts) {}
     List<Group> groups = List.of(
-        new Group("Library and source paths. -L adds a search root for resolving named "
-            + "LIBRARY positionals; it does not itself load a library. -s loads a bare source "
-            + "directory as a synthetic library named `\\default` -- no arend.yaml needed, and "
-            + "can substitute for the LIBRARY positional. -e / -m attach extensions to that "
-            + "synthetic library.", List.of(
+        new Group("Library and source paths. LIBRARY names are looked up in the -L directories, "
+            + "which replace ~/.arend/libs when given and load nothing themselves. -s loads a source "
+            + "directory as a library named `\\default` that needs no arend.yaml and depends on the "
+            + "LIBRARY positionals; with -s, ./arend.yaml is not loaded. -e / -m give that library its "
+            + "extensions.", List.of(
             "libdir", "sources", "extensions", "extension-main")),
-        new Group("Typecheck workflows (load the library and verify it; default workflow when "
-            + "no retrieval / REPL flag is given)", List.of(
+        new Group("Typecheck (the workflow when no other workflow's flag is given)", List.of(
             "test", "print", "recompile", "double-check", "serialize")),
-        new Group("Daemon control (a long-lived JVM holding a warm ArendServer; an ordinary "
-            + "call auto-routes to it unless --no-daemon is given)", List.of(
-            "daemon", "daemon-status", "daemon-ping", "daemon-refresh", "daemon-stop", "no-daemon", "mcp", "mcp-unregister")),
+        new Group("Daemon control (a long-lived JVM holding the given libraries; a typecheck or "
+            + "search about one of them goes to it, unless --no-daemon, -s or -i is given)", List.of(
+            "daemon", "daemon-status", "daemon-ping", "daemon-refresh", "daemon-stop", "no-daemon")),
+        new Group("MCP for AI agents (an agent reaches the running daemons through `arend --mcp`)", List.of(
+            "mcp-init", "mcp", "mcp-unregister")),
         new Group("REPL", List.of("interactive")),
-        new Group("Information retrieval (queries against the loaded library)", List.of(
+        new Group("Information retrieval (queries against the loaded libraries, no typecheck; "
+            + "of several of these flags, the first in this list runs)", List.of(
             "symbol-search", "proof-search", "find-usages", "class-hierarchy", "scope")),
         new Group("Diagnostics / verbosity", diagnosticOptions),
         new Group("Meta", List.of("help", "version"))
@@ -38,17 +40,26 @@ public final class ConsoleHelp {
     int width = ConsoleHelpRenderer.detectTerminalWidth();
     int indent = ConsoleHelpRenderer.computeIndent(cmdOptions, width);
 
-    System.out.println("Workflows (mutually exclusive; first matching flag wins):");
-    System.out.println("  arend [LIBRARY] [MODULE[:DEF]]                     Typecheck workflows");
-    System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
-    System.out.println("  arend [LIBRARY...] -d                              Start a daemon");
-    System.out.println("  arend [LIBRARY] --daemon-{stop,status,refresh}     Daemon control");
-    System.out.println("  arend [LIBRARY] {-ss|-ps|-fu|-ch|-sc} ...          Information retrieval (no typecheck)");
+    // In the order ConsoleMain tries them, so that "the first one given runs" is the truth.
+    List<String[]> workflows = List.of(
+        new String[] {"arend --mcp-{init,unregister} [DIR]", "MCP server control"},
+        new String[] {"arend [LIBRARY...] -d", "Start a daemon"},
+        new String[] {"arend [LIBRARY] --daemon-{stop,status,refresh,ping}", "Daemon control"},
+        new String[] {"arend [TARGET...] -i [plain|jline]", "REPL"},
+        new String[] {"arend [LIBRARY...] {-ss|-ps|-fu|-ch|-sc} ARG...", "Information retrieval (no typecheck)"},
+        new String[] {"arend [TARGET...]", "Typecheck"});
+    int column = workflows.stream().mapToInt(workflow -> workflow[0].length()).max().orElse(0) + 4;
+    System.out.println("Workflows, by precedence: after -h, -v and --mcp, the first one whose flag is given runs.");
+    for (String[] workflow : workflows) {
+      System.out.println("  " + workflow[0] + " ".repeat(column - workflow[0].length()) + workflow[1]);
+    }
     System.out.println();
-    ConsoleHelpRenderer.printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
-        + "itself, a .zip library, or a library name resolved via -L / the default library root "
-        + "(~/.arend/libs). Omitted means ./arend.yaml is loaded when present. MODULE / MODULE:DEF "
-        + "positionals narrow the typecheck scope.", 0, width);
+    ConsoleHelpRenderer.printWrapped("TARGET is a LIBRARY or a MODULE[:DEF]; a module narrows the typecheck to "
+        + "it (or to one definition in it), and the REPL loads it. LIBRARY is a directory containing "
+        + "arend.yaml, an arend.yaml file, a .zip library, or a library name, found as <name>/arend.yaml or "
+        + "<name>.zip in a library directory (-L). Without a LIBRARY, ./arend.yaml is loaded when present. "
+        + "Positionals go before a search flag, which takes the tokens after it up to the next option, and "
+        + "before -i unless its kind is given. At most one of -d and the --daemon-* flags may be given.", 0, width);
     System.out.println();
 
     Set<String> placed = new HashSet<>();
@@ -68,10 +79,9 @@ public final class ConsoleHelp {
 
     // Read off LockedFlags: a second copy of the list in prose goes stale the first time the set
     // changes.
-    ConsoleHelpRenderer.printWrapped("Daemon-served commands lock these to the daemon's bootstrap "
-        + "values; a per-request value is warned about and ignored (use --no-daemon to override): "
+    ConsoleHelpRenderer.printWrapped("On a command a daemon serves, these keep the values given to -d; a value "
+        + "given with the command is warned about and ignored (--no-daemon runs it here instead): "
         + LockedFlags.ALL.stream().map(LockedFlags.Flag::display).collect(Collectors.joining(", "))
-        + ". Inside a served command -i and the --daemon-* flags are rejected outright, and "
-        + "neither -i nor -s is routed to a daemon in the first place.", 0, width);
+        + ". A daemon rejects -i and the --daemon-* flags outright.", 0, width);
   }
 }
