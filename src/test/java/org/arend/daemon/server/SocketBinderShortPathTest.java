@@ -21,13 +21,17 @@ import static org.junit.Assume.assumeTrue;
 public class SocketBinderShortPathTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private boolean posix() {
+    return Files.getFileAttributeView(tempFolder.getRoot().toPath(), java.nio.file.attribute.PosixFileAttributeView.class) != null;
+  }
+
   private static String user() {
     return System.getProperty("user.name", "user").replaceAll("[^A-Za-z0-9._-]", "_");
   }
 
   @Test
   public void aDirectoryOfOurOwnIsMadePrivate() throws IOException {
-    assumeTrue(!System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
+    assumeTrue("needs POSIX permissions", posix());
     Path tmp = tempFolder.newFolder("tmp").toPath();
     Path dir = Files.createDirectory(tmp.resolve("arend-" + user()));
     Files.setPosixFilePermissions(dir, PosixFilePermissions.fromString("rwxrwxrwx"));
@@ -42,7 +46,7 @@ public class SocketBinderShortPathTest {
    */
   @Test
   public void aDirectoryAnotherUserOwnsIsNotUsed() throws IOException {
-    assumeTrue(!System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
+    assumeTrue("needs POSIX permissions", posix());
     assumeFalse("root owns everything", "root".equals(System.getProperty("user.name")));
     Path tmp = tempFolder.newFolder("tmp").toPath();
     Files.createSymbolicLink(tmp.resolve("arend-" + user()), Path.of("/"));
