@@ -66,6 +66,17 @@ class IdeDaemonCommandsTest : ArendTestBase() {
         assertTrue(answer.text, answer.text.contains("[GOAL]"))
     }
 
+    /** As the CLI's daemon has it: a module that is not there fails the request, and the others are checked. */
+    fun testAMissingModuleFailsAndTheOthersAreChecked() {
+        myFixture.configureByText("Main.ard", """
+            \func f (n : Nat) : n = n => {?}
+        """.trimIndent())
+        val answer = daemon("Nope", "Main")
+        assertEquals(answer.text, 1, answer.exitCode)
+        assertTrue(answer.text, answer.text.contains("Nope"))
+        assertTrue(answer.text, answer.text.contains("[GOAL]"))
+    }
+
     /** As the CLI's daemon has it: `arend` answers -h and -v itself, and a daemon a query tool's help alone. */
     fun testHelpIsAToolsAlone() {
         assertEquals(1, daemon("--help").exitCode)

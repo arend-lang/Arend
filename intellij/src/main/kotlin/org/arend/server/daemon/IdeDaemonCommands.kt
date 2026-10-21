@@ -197,18 +197,19 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
      */
     private fun typecheck(cmdLine: CommandLine, scope: Collection<String>, targets: List<String>, out: PrintStream, err: PrintStream,
                           reporter: ErrorReporter, diagnostics: ErrorReporter, cancel: CancellationIndicator): Int {
-        // Each module to the definitions of it asked for; null for the whole module.
+        // Each module to the definitions of it asked for; null for the whole module. A target that names
+        // nothing is reported, which fails the request, and the others are checked: as the CLI does.
         val modules = LinkedHashMap<ModuleLocation, MutableSet<LongName>?>()
         for (target in targets) {
-            val (modulePath, definition) = TypecheckReports.parseFullName(target, reporter)?.let { it.proj1 to it.proj2 } ?: return 1
+            val (modulePath, definition) = TypecheckReports.parseFullName(target, reporter)?.let { it.proj1 to it.proj2 } ?: continue
             val module = server.modules.firstOrNull {
                 it.libraryName in scope && it.locationKind == ModuleLocation.LocationKind.SOURCE && it.modulePath == modulePath
             }
             if (module == null) {
                 reporter.report(ModuleNotFoundError(modulePath))
-                return 1
+                continue
             }
-            if (definition != null && !TypecheckReports.checkDefinitionExists(server, module, definition, reporter)) return 1
+            if (definition != null && !TypecheckReports.checkDefinitionExists(server, module, definition, reporter)) continue
             // A whole module asked for covers every definition of it asked for, before or after.
             when {
                 definition == null -> modules[module] = null
@@ -216,6 +217,8 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
                 else -> modules[module]?.add(definition)
             }
         }
+        // Not the whole library instead: what was asked for is not there, and that has been said.
+        if (targets.isNotEmpty() && modules.isEmpty()) return 1
         // As the CLI does: the module -p prints is checked too, or there would be nothing to print.
         val print = cmdLine.getOptionValue("p")
         if (print != null && modules.isNotEmpty()) {
