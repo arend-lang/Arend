@@ -140,13 +140,12 @@ public final class McpRegistration {
    * The server as {@code mainClass} of {@code classpath} runs it on the JVM of {@code javaHome}. The
    * entries are taken as they are, so that one may be a directory's {@code *}.
    */
-  public static List<String> command(Path javaHome, List<String> classpath, String mainClass, String... args) {
+  public static List<String> command(Path javaHome, List<String> classpath, String mainClass) {
     List<String> command = new ArrayList<>();
     command.add(javaHome.resolve("bin").resolve("java").toString());
     command.add("-cp");
     command.add(String.join(File.pathSeparator, classpath));
     command.add(mainClass);
-    command.addAll(List.of(args));
     return command;
   }
 
@@ -164,15 +163,6 @@ public final class McpRegistration {
     ObjectNode server = server(command);
     server.remove("type");
     return server;
-  }
-
-  /** Whether {@code server}, an agent's entry, runs {@code command}. Agents add fields of their own, an empty env among them. */
-  static boolean runs(JsonNode server, List<String> command) {
-    if (server == null || !server.isObject()) return false;
-    List<String> registered = new ArrayList<>();
-    registered.add(server.path("command").asText());
-    server.path("args").forEach(arg -> registered.add(arg.asText()));
-    return registered.equals(command);
   }
 
   // ───────── a project's own configs ─────────

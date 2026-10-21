@@ -12,6 +12,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -26,20 +27,28 @@ public class McpRegistrationTest {
   public TemporaryFolder tmp = new TemporaryFolder();
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
-  private static final List<String> COMMAND = List.of("/jdk/bin/java", "-cp", "/arend.jar", "org.arend.frontend.ConsoleMain", "--mcp");
+  private static final List<String> COMMAND = List.of("/jdk/bin/java", "-cp", "/arend.jar", "org.arend.daemon.mcp.DaemonMcpServer");
+
+  /** Whether {@code server}, an agent's entry, runs {@code command}. */
+  private static boolean runs(JsonNode server, List<String> command) {
+    if (server == null || !server.isObject()) return false;
+    List<String> registered = new ArrayList<>();
+    registered.add(server.path("command").asText());
+    server.path("args").forEach(arg -> registered.add(arg.asText()));
+    return registered.equals(command);
+  }
 
   @Test
   public void theServerIsAStdioCommand() {
-    assertEquals("{\"type\":\"stdio\",\"command\":\"/jdk/bin/java\",\"args\":[\"-cp\",\"/arend.jar\",\"org.arend.frontend.ConsoleMain\",\"--mcp\"]}",
+    assertEquals("{\"type\":\"stdio\",\"command\":\"/jdk/bin/java\",\"args\":[\"-cp\",\"/arend.jar\",\"org.arend.daemon.mcp.DaemonMcpServer\"]}",
         McpRegistration.server(COMMAND).toString());
   }
 
   /** As Junie's IDE plugin takes it: a type, which its CLI writes, hides the server from the plugin. */
   @Test
   public void junieGetsTheCommandAlone() {
-    assertEquals("{\"command\":\"/jdk/bin/java\",\"args\":[\"-cp\",\"/arend.jar\",\"org.arend.frontend.ConsoleMain\",\"--mcp\"]}",
+    assertEquals("{\"command\":\"/jdk/bin/java\",\"args\":[\"-cp\",\"/arend.jar\",\"org.arend.daemon.mcp.DaemonMcpServer\"]}",
         McpRegistration.plainServer(COMMAND).toString());
-    assertTrue(McpRegistration.runs(McpRegistration.plainServer(COMMAND), COMMAND));
   }
 
   /** As Junie's mcp.json is, before the first server: its directory may not be there yet. */
@@ -47,21 +56,7 @@ public class McpRegistrationTest {
   public void aConfigDirectoryIsCreated() throws IOException {
     Path file = tmp.getRoot().toPath().resolve("mcp").resolve("mcp.json");
     McpRegistration.setServer(file, "mcpServers", McpRegistration.plainServer(COMMAND));
-    assertTrue(McpRegistration.runs(MAPPER.readTree(file.toFile()).get("mcpServers").get(McpRegistration.SERVER_NAME), COMMAND));
-  }
-
-  /** As agents write it back, with fields of their own: the same command is the same registration. */
-  @Test
-  public void theSameCommandIsRegisteredAlready() throws IOException {
-    assertTrue(McpRegistration.runs(MAPPER.readTree("{\"type\":\"stdio\",\"command\":\"/jdk/bin/java\","
-        + "\"args\":[\"-cp\",\"/arend.jar\",\"org.arend.frontend.ConsoleMain\",\"--mcp\"],\"env\":{},\"cwd\":null}"), COMMAND));
-  }
-
-  @Test
-  public void anotherCommandOrNoneIsNot() throws IOException {
-    assertFalse(McpRegistration.runs(null, COMMAND));
-    assertFalse(McpRegistration.runs(MAPPER.readTree("\"arend --mcp\""), COMMAND));
-    assertFalse(McpRegistration.runs(MAPPER.readTree("{\"command\":\"arend\",\"args\":[\"--mcp\"]}"), COMMAND));
+    assertTrue(runs(MAPPER.readTree(file.toFile()).get("mcpServers").get(McpRegistration.SERVER_NAME), COMMAND));
   }
 
   /** As --mcp-unregister edits Cursor's mcp.json: only the server goes. */
@@ -109,14 +104,14 @@ public class McpRegistrationTest {
     JsonNode root = MAPPER.readTree(file.toFile());
     assertEquals(1, root.get("setting").asInt());
     assertEquals("x", root.get("mcpServers").get("other").get("command").asText());
-    assertTrue(McpRegistration.runs(root.get("mcpServers").get(McpRegistration.SERVER_NAME), COMMAND));
+    assertTrue(runs(root.get("mcpServers").get(McpRegistration.SERVER_NAME), COMMAND));
   }
 
   @Test
   public void aMissingConfigIsCreated() throws IOException {
     Path file = tmp.getRoot().toPath().resolve("mcp.json");
     McpRegistration.setServer(file, "mcpServers", McpRegistration.server(COMMAND));
-    assertTrue(McpRegistration.runs(MAPPER.readTree(file.toFile()).get("mcpServers").get(McpRegistration.SERVER_NAME), COMMAND));
+    assertTrue(runs(MAPPER.readTree(file.toFile()).get("mcpServers").get(McpRegistration.SERVER_NAME), COMMAND));
   }
 
   @Test
@@ -157,9 +152,9 @@ public class McpRegistrationTest {
       McpRegistration.Result result = McpRegistration.initProject(project, portable);
       assertTrue(result.failures().toString(), result.failures().isEmpty());
       JsonNode claude = MAPPER.readTree(project.resolve(".mcp.json").toFile());
-      assertTrue(McpRegistration.runs(claude.get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
+      assertTrue(runs(claude.get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
       JsonNode cursor = MAPPER.readTree(project.resolve(".cursor").resolve("mcp.json").toFile());
-      assertTrue(McpRegistration.runs(cursor.get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
+      assertTrue(runs(cursor.get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
       assertFalse("nothing of the user's own is written", Files.exists(Path.of(System.getProperty("user.home")).resolve(".claude.json")));
       assertTrue(result.notes().stream().noneMatch(note -> note.contains("version control")));
 
@@ -270,7 +265,7 @@ public class McpRegistrationTest {
       for (Path dir : spellings) {
         McpRegistration.Result result = McpRegistration.initProject(dir, portable);
         assertTrue(result.failures().toString(), result.failures().isEmpty());
-        assertTrue(McpRegistration.runs(MAPPER.readTree(home.resolve(".cursor").resolve("mcp.json").toFile())
+        assertTrue(runs(MAPPER.readTree(home.resolve(".cursor").resolve("mcp.json").toFile())
             .get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
         // Cursor and Codex were made installed here; Gemini CLI and Junie may be on this machine too.
         assertTrue(dir + ": " + result.warnings(), result.warnings().stream().anyMatch(warning -> warning.contains("every Cursor session")));
@@ -309,7 +304,7 @@ public class McpRegistrationTest {
       Path project = tmp.newFolder("project").toPath();
       McpRegistration.initProject(project, portable);
       McpRegistration.unregisterProject(project);
-      assertTrue(McpRegistration.runs(MAPPER.readTree(home.resolve(".cursor").resolve("mcp.json").toFile())
+      assertTrue(runs(MAPPER.readTree(home.resolve(".cursor").resolve("mcp.json").toFile())
           .get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
     });
   }
