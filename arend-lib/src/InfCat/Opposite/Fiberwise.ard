@@ -9,10 +9,23 @@
  -   * {swap-pairing}, {swap-perfect}: perfect pairings are symmetric. The fiberwise part follows from {perfect-swap}.
  -     Preservation of universal elements ({swap-perfect.swap-cocartesian}) follows from {perfect-univElem-swap}:
  -     a universal element of the swapped pairing over `p x` is, by J, one over `q e'`, where it is universal for {P} in the other variable.
- -   * {fibOp-exists}, {fibOp-unique}: a fiberwise opposite exists and is unique (left as goals).
- -   * {FibOp}, {fibOp-fiber}: the fiberwise opposite and its fibers `Op (Fiber p b)`.
- -   * {fibOp-invol}: the fiberwise opposite is involutive. Proof. {p} with the swapped pairing of `FibOp p` is a fiberwise opposite
- -     of `FibOp p` by {swap-perfect}, so it is `FibOp (FibOp p)` by {fibOp-unique}.
+ -   * {fibOpData-ext}: rigidity. A functor over {B} between fiberwise opposites that is compatible with the pairings gives a path
+ -     in {FibOpData}. It is an equivalence on fibers by {perfect-char}, it preserves cocartesian arrows since these are the arrows
+ -     transporting universal elements to universal elements ({fibOpData-ext.cocartesian-char}), and a functor between cocartesian
+ -     fibrations with these two properties is an equivalence.
+ -   * {FibOpPres}, {fibOp-exists}: the fiberwise opposite is the fiberwise localization of the pre-opposite {PreOp} (`fiberwise-opposite.tex`).
+ -     {FibOpPres} records the parts of this construction used below: the localization {FibOp.inc}, the restriction of the pairing
+ -     along it ({FibOp.pairing-inc}), and the base changes of {FibOp.inc}, which are localizations ({FibOp.inc-baseChange}).
+ -   * {FibOp}, {fibOp-cocartesian}, {fibOp-fiber}: the fiberwise opposite and its fibers `Op (Fiber p b)`.
+ -   * {fibOp-repr-lift}: if a pairing of `pi : Z ->⁺ B` with {FibOp} has representable restrictions to the fibers, then it is
+ -     the swapped pairing of {FibOp} along a functor `Z ->⁺ E` over {B}. A fiberwise Yoneda embedding of {p} would need the exponential
+ -     of {p}; we use the exponential of {PreOp.proj} to types instead ({fibOp-repr-lift.Exp}), which consists of slices of presheaves
+ -     on `Op E`. The functor {fibOp-repr-lift.yon} from {E} to it is fully faithful, and the pairing is sent to it by restriction along
+ -     {FibOp.inc}. This is the only place where the construction of {FibOp} is used.
+ -   * {fibOp-dual-unique}: every fiberwise opposite of `FibOp p` is {p}, by {fibOp-repr-lift} and {fibOpData-ext}.
+ -   * {fibOp-invol}: `FibOp (FibOp p)` is {p}; this is a special case of {fibOp-dual-unique}.
+ -   * {fibOp-unique}: fiberwise opposites are unique. By {fibOp-invol}, {p} is `FibOp (FibOp p)`, whose fiberwise opposites
+ -     are unique by {fibOp-dual-unique}.
  -}
 
 \import InfCat.Basics
@@ -20,14 +33,19 @@
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.CocartesianMap
 \import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Localization.Concrete
 \import InfCat.Opposite
 \import InfCat.Opposite.Pairing
 \import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Slice.TotalSlice
 \import InfCat.Yoneda.CovariantYoneda
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Paths
+\import Paths.Meta
 
 -- | A fiberwise pairing of {q} and {p}.
 \func FibPairing.{u} {B E' E : \Cat u} (q : E' ->⁺ B) (p : E ->⁺ B)
@@ -94,42 +112,171 @@
            (Pp.2 (inv s) (inv s') (dmap (\lam w => ((w.2.1, (w.1, inv w.2.2)) : BaseChange q p)) c) c2 c1 h ((swap-univElem-gen Pp idp s h).1 U))
   }
 
--- | A fiberwise opposite of a cocartesian map exists.
-\sfunc fibOp-exists.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibOpData p
+-- | Rigidity: a functor {F} over {B} between fiberwise opposites of {p} that is compatible with the pairings gives a path `d = d'`.
+\sfunc fibOpData-ext.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {d d' : FibOpData p}
+                         (F : d.1 ->⁺ d'.1) (Fp : \Pi (z :⁺ d.1) -> d'.2 (F z) = d.2 z)
+                         (FP : \Pi (w :⁺ BaseChange d.2 p) -> d'.4 (F w.1, (w.2.1, w.2.2 *> inv (Fp w.1))) = d.4 w)
+  : (d.1,d.2) = {\Sigma (E' : \Cat u) (q : E' ->⁺ B)} (d'.1,d'.2)
+  => ext (HEquiv_= (rigid pc Fp FP), {?})
+  \where {
+    {- | {F} is an equivalence. On fibers, `Op.Hom (F'' z) = Op.Hom (F' (F z))` for the equivalences `F''`, `F'` of {perfect-char},
+     -   so `F'' = F' ∘ F`. {F} preserves cocartesian arrows by {cocartesian-char}, {PreservesUnivElem} for {d} and {FP}.
+     -   A functor between cocartesian maps over {B} that preserves cocartesian arrows and is an equivalence on fibers is an equivalence
+     -   (the dual of `cartesianFib-fiberwise-equiv`).
+     -}
+    \lemma rigid.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {d d' : FibOpData p}
+                     {F : d.1 ->⁺ d'.1} (Fp : \Pi (z :⁺ d.1) -> d'.2 (F z) = d.2 z)
+                     (FP : \Pi (w :⁺ BaseChange d.2 p) -> d'.4 (F w.1, (w.2.1, w.2.2 *> inv (Fp w.1))) = d.4 w)
+      : IsHEquiv F
+      => {?}
+
+    {- | An arrow of a fiberwise opposite is cocartesian if and only if transport along it and a cocartesian arrow of {E}
+     -   sends a universal element to a universal element. The forward direction is {PreservesUnivElem}. Conversely,
+     -   factor the arrow as a cocartesian arrow followed by a vertical arrow `v`; transport along `v` sends a universal element
+     -   to a universal element only if `v` is invertible, since the restrictions are perfect.
+     -}
+    \lemma cocartesian-char.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (d : FibOpData p)
+                                {z z' : d.1} {x y : E} (s : p x = d.2 z) (s' : p y = d.2 z') (c : (z, (x, s)) ~> {BaseChange d.2 p} (z', (y, s')))
+                                (cy : IsCocartesianArrow p (dmap (\lam w => w.2.1) c)) (h : d.4 (z, (x, s)))
+                                (U : IsUnivElem {Fiber p (d.2 z)} (FibPairing.restrict d.4 (d.2 z) (z, idp)) (x, s) h)
+      : IsCocartesianArrow d.2 (dmap (\lam w => w.1) c)
+        <-> IsUnivElem {Fiber p (d.2 z')} (FibPairing.restrict d.4 (d.2 z') (z', idp)) (y, s') (~>_-> (dmap d.4 c) h)
+      => {?}
+  }
+
+-- | The pre-opposite of {p}.
+\func PreFiberOp.{u} {B E : \Cat u} (p : E ->⁺ B) : \Cat u
+  => \Sigma⁺ (x : Op E) (b : B) (Op.Hom (OpFunc p x) b)
+  \where {
+    -- | The projection of the pre-opposite to the base.
+    \func proj.{u} {B E : \Cat u} (p : E ->⁺ B) (k :⁺ PreFiberOp p) : B
+      => k.2
+  }
+
+-- | The projection of the pre-opposite is a cocartesian map.
+\lemma preFiberOp-cocartesian.{u} {B E : \Cat u} (p : E ->⁺ B) : IsCocartesianMap (PreFiberOp.proj p)
   => {?}
 
--- | The fiberwise opposite of a cocartesian map is unique.
-\lemma fibOp-unique.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : isProp (FibOpData p)
+-- | The pairing of the pre-opposite with {p}: arrows from the first component to `e` lying over the arrow of the base.
+\func PreOpPairing.{u} {B E : \Cat u} (p : E ->⁺ B) (w :⁺ BaseChange (PreFiberOp.proj p) p) : \Type u
+  => sliceFiber (\lam v => Op.Hom (OpFunc p v.1) (p v.2)) (\lam v => Op.Hom v.1 v.2, act p)
+                ((w.1.1, w.2.1), transport+ (Op.Hom (OpFunc p w.1.1)) (inv w.2.2) w.1.3)
+  \where {
+    -- | The action of {f} on `Op.Hom`, given by the unit of the left Kan extension along {f}.
+    \func act.{u} {C D : \Cat u} (f : C ->⁺ D)
+      : (\lam (v :⁺ \Sigma⁺ (Op C) C) => Op.Hom v.1 v.2) ~> (\lam (v :⁺ \Sigma⁺ (Op C) C) => Op.Hom (OpFunc f v.1) (f v.2))
+      => comp (dpath \lam i v => dmap (__ v.2) (leftKanExtType-unit f (Op.Hom v.1)) i)
+              (=_~> (funExt+ \lam v => inv (pmap+ (__ (f v.2)) OpFunc.char)))
+  }
+
+-- | A fiberwise opposite of {p} with the parts of its construction from the pre-opposite that are used by {fibOp-repr-lift}.
+\func FibOpPres.{u} {B E : \Cat u} (p : E ->⁺ B)
+  => \Sigma (d : FibOpData p) (l : PreFiberOp p ->⁺ d.1) (lp : \Pi (k :⁺ PreFiberOp p) -> d.2 (l k) = PreFiberOp.proj p k)
+            (\Pi (w :⁺ BaseChange (PreFiberOp.proj p) p) -> d.4 (l w.1, (w.2.1, w.2.2 *> inv (lp w.1))) = PreOpPairing p w)
+            (\Pi {Z : \Cat u} (pi : Z ->⁺ B) -> IsLocalization (\lam a => IsIso (dpath \lam i => baseChange-map pi d.2 l lp (a i)))
+                                                               (\lam w => baseChange-map pi d.2 l lp w))
+  \where {
+    -- | The base change along {pi} of a functor {l} over {S}.
+    \func baseChange-map.{u} {S X Y Z : \Cat u} (pi : Z ->⁺ S) {k : X ->⁺ S} (q : Y ->⁺ S) (l : X ->⁺ Y) (lp : \Pi (x :⁺ X) -> q (l x) = k x)
+                             (w :⁺ BaseChange pi k) : BaseChange pi q
+      => (w.1, (l w.2.1, lp w.2.1 *> w.2.2))
+  }
+
+-- | A fiberwise opposite of a cocartesian map exists: the fiberwise localization of {PreFiberOp.proj} (`fiberwise-opposite.tex`).
+\sfunc fibOp-exists.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibOpPres p
   => {?}
 
 -- | The fiberwise opposite of {p}.
 \func FibOp.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : \Cat u
-  => (fibOp-exists pc).1
+  => (fibOp-exists pc).1.1
   \where {
     -- | The projection of the fiberwise opposite.
     \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibOp pc ->⁺ B
-      => (fibOp-exists pc).2
+      => (fibOp-exists pc).1.2
 
     -- | The pairing of the fiberwise opposite with {p}.
     \func pairing.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibPairing (proj pc) p
-      => (fibOp-exists pc).4
+      => (fibOp-exists pc).1.4
 
     \lemma pairing-perfect.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsPerfectPairing (pairing pc)
-      => (fibOp-exists pc).5
+      => (fibOp-exists pc).1.5
+
+    -- | The localization of the pre-opposite onto the fiberwise opposite.
+    \protected \func inc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (k :⁺ PreFiberOp p) : FibOp pc
+      => (fibOp-exists pc).2 k
+
+    -- | {inc} lies over {B}.
+    \func inc-proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (k :⁺ PreFiberOp p) : proj pc (inc pc k) = PreFiberOp.proj p k
+      => (fibOp-exists pc).3 k
+
+    -- | The restriction of {pairing} along {inc} is {PreOpPairing}.
+    \func pairing-inc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (w :⁺ BaseChange (PreFiberOp.proj p) p)
+      : pairing pc (inc pc w.1, (w.2.1, w.2.2 *> inv (inc-proj pc w.1))) = PreOpPairing p w
+      => (fibOp-exists pc).4 w
+
+    -- | The base changes of {inc} are localizations.
+    \lemma inc-baseChange.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {Z : \Cat u} (pi : Z ->⁺ B)
+      : IsLocalization (\lam a => IsIso (dpath \lam i => FibOpPres.baseChange-map pi (proj pc) (inc pc) (inc-proj pc) (a i)))
+                       (\lam w => FibOpPres.baseChange-map pi (proj pc) (inc pc) (inc-proj pc) w)
+      => (fibOp-exists pc).5 pi
   }
 
 -- | The fiberwise opposite is a cocartesian map.
 \lemma fibOp-cocartesian.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsCocartesianMap (FibOp.proj pc)
-  => (fibOp-exists pc).3
+  => (fibOp-exists pc).1.3
 
 -- | The fibers of the fiberwise opposite of {p} are the opposites of the fibers of {p}.
 \lemma fibOp-fiber.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (b : B)
   : ∃ (F : Fiber (FibOp.proj pc) b ->⁺ Op (Fiber p b)) (IsHEquiv F)
   => TruncP.map (perfect-char.1 ((FibOp.pairing-perfect pc).1 b)) \lam t => (t.1, t.2)
 
+-- | A pairing of {pi} with the fiberwise opposite whose restrictions to the fibers are representable is the swapped pairing along a functor over {B}.
+\sfunc fibOp-repr-lift.{u} {B E Z : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {pi : Z ->⁺ B} (Q : FibPairing pi (FibOp.proj pc))
+                            (Qr : \Pi (z : Z) -> IsRepresentable (\lam (t :⁺ Fiber (FibOp.proj pc) (pi z)) => Q (z, t)))
+  : \Sigma (F : Z ->⁺ E) (Fp : \Pi (z :⁺ Z) -> p (F z) = pi z)
+           (\Pi (w :⁺ BaseChange pi (FibOp.proj pc)) -> swap-pairing (FibOp.pairing pc) (F w.1, (w.2.1, w.2.2 *> inv (Fp w.1))) = Q w)
+  => \have l => ffMap-lift (yon-ff p) (curry pc Q) (curry-image pc Q Qr)
+     \in (l.1, \lam z => pmap+ (\lam (s :⁺ Exp p) => s.1) (l.2 z),
+         -- The restrictions of both sides along {FibOp.inc} agree by the second component of `l.2` and {FibOp.pairing-inc};
+         -- they are equal since the base change of {FibOp.inc} along {pi} is a localization ({FibOp.inc-baseChange}).
+         {?})
+  \where {
+    -- | Slices of presheaves on `Op E` over `Op.Hom (OpFunc p -) b`: the exponential of {PreFiberOp.proj} to types.
+    \func Exp.{u} {B E : \Cat u} (p : E ->⁺ B) : \Cat
+      => \Sigma⁺ (b : B) (Slice (\lam (x :⁺ Op E) => Op.Hom (OpFunc p x) b))
+
+    -- | The fiberwise Yoneda embedding of {p}: {e} goes to {PreOpPairing} restricted to the fiber of {PreFiberOp.proj} over `p e`.
+    \func yon.{u} {B E : \Cat u} (p : E ->⁺ B) (e :⁺ E) : Exp p
+      => (p e, sumSlice (\lam (x :⁺ Op E) => Op.Hom (OpFunc p x) (p e)) (\lam k => PreOpPairing p ((k.1, p e, k.2), (e, idp))))
+
+    {- | {yon} is fully faithful. The slice `yon e` is `yoneda e` with the action of {p} on `Op.Hom`.
+     -   So an arrow `yon e ~> yon e'` over `g : p e ~> p e'` is an arrow `u : e ~> e'` by {yonedaEmbedding}, with `dmap p u = g`.
+     -}
+    \lemma yon-ff.{u} {B E : \Cat u} (p : E ->⁺ B) : IsFFMap (yon p)
+      => {?}
+
+    -- | {Q} as a functor to {Exp}, restricted along {FibOp.inc}.
+    \func curry.{u} {B E Z : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {pi : Z ->⁺ B} (Q : FibPairing pi (FibOp.proj pc)) (z :⁺ Z) : Exp p
+      => (pi z, sumSlice (\lam (x :⁺ Op E) => Op.Hom (OpFunc p x) (pi z))
+                         (\lam k => Q (z, (FibOp.inc pc (k.1, pi z, k.2), FibOp.inc-proj pc (k.1, pi z, k.2)))))
+
+    {- | The values of {curry} lie in the image of {yon}. If `Q z` is represented by `t`, then by {perfect-swap} `t` represents
+     -   the pairing of {FibOp} with some `e` over `pi z`. So `Q z` is this pairing, and its restriction along {FibOp.inc}
+     -   is {PreOpPairing} by {FibOp.pairing-inc}.
+     -}
+    \lemma curry-image.{u} {B E Z : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {pi : Z ->⁺ B} (Q : FibPairing pi (FibOp.proj pc))
+                           (Qr : \Pi (z : Z) -> IsRepresentable (\lam (t :⁺ Fiber (FibOp.proj pc) (pi z)) => Q (z, t))) (z : Z)
+      : ∃ (e : E) (yon p e = curry pc Q z)
+      => {?}
+  }
+
+-- | A fiberwise opposite of `FibOp p` is {p} with the swapped pairing.
+\sfunc fibOp-dual-unique.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (d : FibOpData (FibOp.proj pc))
+  : (d.1,d.2) = {\Sigma (E' : \Cat u) (q : E' ->⁺ B)} (E,p)
+  => \have l => fibOp-repr-lift pc d.4 (\lam z => (d.5.1 (d.2 z)).2 (z, idp))
+     \in fibOpData-ext (fibOp-cocartesian pc) {d} {E, p, pc, swap-pairing (FibOp.pairing pc), swap-perfect (FibOp.pairing-perfect pc)} l.1 l.2 l.3
+
 -- | The fiberwise opposite is involutive.
 \sfunc fibOp-invol.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p)
   : (FibOp (fibOp-cocartesian pc), FibOp.proj (fibOp-cocartesian pc)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} (E, p)
-  => pmap (\lam d => ((d.1, d.2) : \Sigma (E' : \Cat u) (E' ->⁺ B)))
-          (fibOp-unique (fibOp-cocartesian pc) (fibOp-exists (fibOp-cocartesian pc))
-                        (E, p, pc, swap-pairing (FibOp.pairing pc), swap-perfect (FibOp.pairing-perfect pc)))
+  => fibOp-dual-unique pc (fibOp-exists (fibOp-cocartesian pc)).1
