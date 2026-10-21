@@ -11,6 +11,8 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.util.EnvironmentUtil
 import org.arend.daemon.mcp.DaemonMcpServer
 import org.arend.daemon.mcp.McpRegistration
+import org.arend.ext.error.GeneralError
+import org.arend.typechecking.error.NotificationErrorReporter
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -85,11 +87,8 @@ object ArendMcpRegistration {
         for (warning in result.warnings) warn(project, warning)
     }
 
-    private fun warn(project: Project, message: String) {
-        NotificationGroupManager.getInstance().getNotificationGroup("Arend Warning Messages")
-            .createNotification("Arend daemon", message, NotificationType.WARNING)
-            .notify(project)
-    }
+    private fun warn(project: Project, message: String) =
+        NotificationErrorReporter.notify(GeneralError.Level.WARNING, "Arend daemon", message, project)
 
     /**
      * [DaemonMcpServer] on the IDE's JVM, from every jar of the plugin -- the directory's `*`, so that a

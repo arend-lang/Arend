@@ -1,7 +1,5 @@
 package org.arend.server.daemon
 
-import com.intellij.notification.NotificationGroupManager
-import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
@@ -15,9 +13,11 @@ import org.arend.daemon.DaemonPaths
 import org.arend.daemon.LockFile
 import org.arend.daemon.server.DaemonServer
 import org.arend.daemon.server.SocketBinder
+import org.arend.ext.error.GeneralError
 import org.arend.server.ArendServerListener
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
+import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
 import java.io.IOException
@@ -295,9 +295,5 @@ class ArendDaemonService(private val project: Project) : Disposable {
         ApplicationManager.getApplication().invokeLater({ stateListeners.forEach { it(newState) } }, project.disposed)
     }
 
-    private fun warn(message: String) {
-        NotificationGroupManager.getInstance().getNotificationGroup("Arend Warning Messages")
-            .createNotification("Arend daemon", message, NotificationType.WARNING)
-            .notify(project)
-    }
+    private fun warn(message: String) = NotificationErrorReporter.notify(GeneralError.Level.WARNING, "Arend daemon", message, project)
 }
