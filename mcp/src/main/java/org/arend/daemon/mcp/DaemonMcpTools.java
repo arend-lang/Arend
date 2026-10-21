@@ -30,7 +30,7 @@ final class DaemonMcpTools {
           + " edits, new and deleted files are picked up; typechecks nothing. Call it after creating, deleting or"
           + " renaming a module file, before a query or a typecheck that should see the change."),
       new Control("daemon_stop", "shutdown", "Stop the daemon owning `library` once the commands already queued have"
-          + " run; not for one under ~/.arend/libs. Only when the user asks for it: the daemon serves other agents"
+          + " run; not for a library no daemon owns, under ~/.arend/libs or a zip. Only when the user asks for it: the daemon serves other agents"
           + " and the user's own `arend` commands too."));
 
   private static final Map<String, String> TYPECHECK_FLAGS = new LinkedHashMap<>();
@@ -88,7 +88,7 @@ final class DaemonMcpTools {
 
     Map<String, Object> libraryOnly = Map.of("library", library);
     tools.add(tool(LIST, "The running daemons, oldest first: process id, when it started, the libraries it serves,"
-        + " and those under ~/.arend/libs it loaded. Start one with `arend -d LIBRARY...`.",
+        + " and those it loaded without owning them -- under ~/.arend/libs, zips and dependencies. Start one with `arend -d LIBRARY...`.",
         schema(Map.of(), List.of())));
     for (Control control : CONTROLS) tools.add(tool(control.name(), control.description(), schema(libraryOnly, List.of())));
     return tools;

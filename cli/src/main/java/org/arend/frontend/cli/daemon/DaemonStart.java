@@ -162,7 +162,7 @@ public final class DaemonStart {
     McpRegistration.Result result = McpRegistration.initProject(projectDir, McpRegistration.PORTABLE);
     result.failures().forEach(failure -> System.err.println("[WARN]  --mcp-init: " + failure));
     if (result.done().isEmpty()) {
-      if (result.failures().isEmpty()) System.out.println("No agent that reads a project's own MCP config is installed.");
+      if (result.failures().isEmpty()) System.out.println(McpRegistration.NO_AGENT);
     } else {
       System.out.println("Registered the " + McpRegistration.SERVER_NAME + " MCP server for the project in " + projectDir
           + ", for agents started there from now on:");

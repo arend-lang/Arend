@@ -367,12 +367,6 @@ final class DaemonMcpSkills {
   // ───────── the repository ─────────
 
   /**
-   * The skills the repository has on {@code ref}, by what GitHub lists of it: every directory at its
-   * top with a {@code SKILL.md}, its files, and the description in its frontmatter. Every path is
-   * checked, since it becomes one on the user's disk; a directory without a {@code SKILL.md}, or not
-   * named as a skill is, is no skill.
-   */
-  /**
    * The repository on {@code ref}, as GitHub lists it: every directory at its top with a
    * {@code SKILL.md}, its files with their hashes, and the description in its frontmatter. Throws
    * {@link NotFound} when there is no such ref; {@code note} goes with the snapshot.
@@ -392,7 +386,7 @@ final class DaemonMcpSkills {
       files.computeIfAbsent(path.substring(0, slash), name -> new ArrayList<>())
           .add(new SkillFile(path.substring(slash + 1), entry.path("sha").asText("")));
     }
-    // Every path is checked before anything else is: those are what reach the disk.
+    // Every file comes with its hash, which what is downloaded is checked against.
     for (List<SkillFile> skill : files.values()) {
       for (SkillFile file : skill) {
         if (file.hash().isEmpty()) throw new IOException("the repository lists '" + file.path() + "' with no hash");

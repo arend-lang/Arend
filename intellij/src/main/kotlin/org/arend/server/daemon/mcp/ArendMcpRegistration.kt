@@ -68,10 +68,12 @@ object ArendMcpRegistration {
         if (project.isDisposed) return
         val text = StringBuilder()
         if (result.done.isEmpty()) {
-            if (result.failures.isEmpty()) text.append("No agent that reads a project's own MCP config is installed.")
+            if (result.failures.isEmpty()) text.append(McpRegistration.NO_AGENT)
         } else {
             text.append("Registered the ${McpRegistration.SERVER_NAME} MCP server for agents started in this project, in: ")
-                .append(result.done.joinToString(", ")).append(". <code>arend --mcp-unregister</code> takes it back out.")
+                .append(result.done.joinToString(", ")).append(".")
+            // Not without a current arend, which this copy stands in for.
+            if (command.portable()) text.append(" <code>arend --mcp-unregister</code> takes it back out.")
         }
         for (note in result.notes) text.append("<br>").append(note)
         if (text.isNotEmpty()) {

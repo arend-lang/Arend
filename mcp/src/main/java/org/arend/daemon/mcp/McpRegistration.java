@@ -38,11 +38,13 @@ import java.util.function.Supplier;
  * copy instead, when the user chooses to, which only this machine has.
  *
  * <p>Only a project's files are touched, by a registration and by its removal alike. A registration
- * in an agent's own config elsewhere -- as earlier builds made one whenever {@code arend -d} started --
- * is the user's to remove, through the agent.
+ * in an agent's own config elsewhere is the user's to remove, through the agent.
  */
 public final class McpRegistration {
   public static final String SERVER_NAME = "arend-daemons";
+
+  /** What a registration that wrote nothing, and failed at nothing, says. */
+  public static final String NO_AGENT = "No agent that reads a project's own MCP config is installed.";
 
   private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
   /** VS Code's and Gemini's settings may hold comments; they are read, never written back. */
@@ -247,8 +249,8 @@ public final class McpRegistration {
       }
     }
     if (!command.portable()) {
-      notes.add("arend is not on the PATH, so the server is registered as " + String.join(" ", command.argv())
-          + ", which only this machine has: keep these files out of version control, or put arend on the PATH and register again.");
+      notes.add("The server is registered as " + String.join(" ", command.argv()) + ", which only this machine has: keep"
+          + " these files out of version control, or put a current arend on the PATH and register again.");
     }
     return new Result(written, failures, warnings, notes);
   }
