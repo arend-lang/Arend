@@ -69,7 +69,8 @@ public final class StreamRedirector {
   }
 
   /**
-   * Flushes the partial-line buffers and clears the current thread's redirect. Each stream is
+   * Flushes what the frame streams hold back -- a character split across writes -- and clears the
+   * current thread's redirect. Each stream is
    * flushed separately: one try around both would skip the second whenever the first throws --
    * which is what a half-closed client does -- and stderr is the one that comes second.
    */

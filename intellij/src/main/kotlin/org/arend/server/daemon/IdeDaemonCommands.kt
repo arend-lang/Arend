@@ -60,8 +60,8 @@ import java.util.concurrent.TimeoutException
  * runs on the daemon's thread as [RunnerService] runs one from the editor -- the binary caches loaded
  * first, the progress shown in the IDE -- and its results land in the editor too; the client gets
  * the errors it left, rendered as the CLI renders them, and the reports
- * `-p`, `-t` and `--show-*` ask for. A query (`-ss`, `-ps`, `-fu`, `-ch`, `-sc`) runs the CLI's own
- * tool on the IDE's libraries, so that its answer is the CLI's.
+ * `-p`, `-t` and `--show-*` ask for. A query (`-ss`, `-ps`, `-fu`, `-ch`, `-sc`) runs the tool the
+ * CLI runs on the IDE's libraries, so that its answer is the CLI's.
  *
  * @param served the canonical arend.yaml or zip of every library the daemon serves, to its name
  */
@@ -143,8 +143,9 @@ class IdeDaemonCommands(private val project: Project, private val served: () -> 
         // Before anything is looked up: a module the agent has just written is not one the server knows yet.
         if (!sync(scope, cancel) { err.println(it) }) return 1
         // As the CLI's two reporters, and an error proper through either fails the request: what is
-        // wrong with the command line itself to stderr as it is, and what the typecheck finds rendered
-        // as `arend` renders it, to stderr only when severe.
+        // wrong with the command line itself to stderr as it is, and what the checker reports of the
+        // targets -- a module or a definition it cannot find -- rendered as `arend` renders it, to
+        // stderr only when severe. The errors the typecheck finds come from the server ([printErrors]).
         val reporter = CountingErrorReporter(GeneralError.Level.ERROR) { err.println(it) }
         val diagnostics = CountingErrorReporter(GeneralError.Level.ERROR) {
             (if (it.isSevere) err else out).println(TypecheckReports.render(it))
