@@ -53,9 +53,6 @@ public final class CliDaemonRunner {
       ctx.beginCommand();
       TypecheckPipeline.resolve(ctx, ctx.servedLibraries);
       return ctx.exitWithError ? 1 : 0;
-    } catch (Throwable t) {
-      t.printStackTrace(); // goes to the client via the redirect
-      return 1;
     } finally {
       // The progress counter leaves "\r[37/412] Typechecking Algebra.Ring" open with no newline;
       // without closing it the server's [CANCELLED] would reach the client welded to it.
