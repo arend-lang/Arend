@@ -245,8 +245,7 @@ public final class DaemonStart {
 
     System.out.println("Starting Arend daemon for " + String.join(", ", requested));
     System.out.println("  log: " + paths.logFile);
-    System.out.println("  waiting for the libraries to be resolved (up to "
-        + READY_TIMEOUT_SECONDS + "s)...");
+    System.out.println("  waiting for the libraries to be resolved...");
 
     long deadline = System.currentTimeMillis() + READY_TIMEOUT_SECONDS * 1000L;
     while (System.currentTimeMillis() < deadline) {
