@@ -44,7 +44,10 @@ public final class SocketBinder {
   /** A bound listening socket and the address string recorded in the lock file. */
   public record Bound(ServerSocketChannel channel, String address) {}
 
-  /** Opt-in for the unauthenticated loopback fallback where a Unix socket was possible. */
+  /**
+   * Opt-in for the loopback fallback where a Unix socket was possible: any local process can connect
+   * to it, and only the daemon's token keeps it from being served.
+   */
   public static final String ALLOW_TCP_PROPERTY = "arend.daemon.allowTcp";
 
   /**
@@ -75,8 +78,9 @@ public final class SocketBinder {
     if (primary.bound() != null) return primary.bound();
     String failure = primary.failure();
 
-    // Where the checkout lives is not a reason to give up the permissions that are this daemon's
-    // only access control, so try a short path that is still a Unix socket.
+    // Where the checkout lives is not a reason to give up the permissions that keep other users from
+    // even connecting -- the token is the rest of the access control -- so try a short path that is
+    // still a Unix socket.
     Path shortPath = shortSocketPath(libraryTag);
     if (shortPath != null && !shortPath.equals(abs)) {
       Attempt relocated = tryBindUds(shortPath);

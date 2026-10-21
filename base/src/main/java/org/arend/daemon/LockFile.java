@@ -39,7 +39,8 @@ import java.util.regex.Pattern;
  *   libraryPath      canonical path to the arend.yaml of the daemon's first library, whose
  *                    {@code .arend/} holds its socket and log
  *   libraryHash      digest of that path; the daemon's identity
- *   library.N        canonical arend.yaml of every library served, N = 1, 2, ... in load order
+ *   library.N        canonical arend.yaml or zip of every library the daemon was given -- its own,
+ *                    and the shared ones and zips among them -- N = 1, 2, ... in load order
  *   loaded.N         canonical arend.yaml or zip of every library loaded that the daemon does not own,
  *                    listed or a dependency: a shared one, a zip, or a dependency it was not given
  *   protocolVersion  wire-protocol version the daemon speaks

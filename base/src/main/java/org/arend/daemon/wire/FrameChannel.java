@@ -20,7 +20,8 @@ import java.util.Map;
  * flight, and the client may send a {@code cancel} on the same connection meanwhile -- so a frame
  * carries the {@code id} of the request it belongs to and a reader must ignore the rest:
  * <pre>
- *   Request:  {"id":"uuid","op":"cli|refresh|ping|status|shutdown|cancel", "targetId":"uuid"?}
+ *   Request:  {"id":"uuid","op":"cli|refresh|ping|status|shutdown|cancel","token":"hex",
+ *              "args":[...]?, "cwd":"dir"?, "targetId":"uuid"?}
  *   Response: {"id":"uuid","kind":"stdout|stderr|state|status|cancel-ack|done|error", ...}
  * </pre>
  *

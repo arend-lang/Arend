@@ -136,8 +136,7 @@ public final class DaemonStart {
       for (DaemonPaths paths : owned) {
         if (!StartMarker.reserve(paths.startingMarker)) {
           System.err.println("[ERROR] -d: another daemon start for " + paths.libraryConfig
-              + " is already in progress (" + paths.startingMarker + "). Wait for it to finish, or"
-              + " remove that file if no start is running.");
+              + " is already in progress (" + paths.startingMarker + "). Wait for it to finish.");
           return 1;
         }
         reserved.add(paths.startingMarker);

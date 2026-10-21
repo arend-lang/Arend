@@ -15,12 +15,14 @@ import java.util.HexFormat;
 import java.util.List;
 
 /**
- * Filesystem layout for one daemon instance, plus the library identity it serves.
+ * Filesystem layout of one library for the daemons, plus its identity.
  *
- * <p>A daemon is keyed by the canonical absolute path of its {@code arend.yaml}, and every
- * per-daemon file lives under {@code <library>/.arend/}: {@code daemon.lock} (where the daemon
- * is; absent means none), {@code daemon.log} (its captured output) and {@code daemon.sock} (the
- * socket clients connect to).
+ * <p>A library is keyed by the canonical absolute path of its {@code arend.yaml} (or its zip), and its
+ * daemon files live under {@code <library>/.arend/}: {@code daemon.lock} (a copy of the lock of the
+ * daemon that owns it; absent means none), {@code daemon.starting} (a start in progress), and, for
+ * the first library a daemon owns, its home, {@code daemon.log} (its captured output) and
+ * {@code daemon.sock} (the socket clients connect to). A daemon's own record is its entry in
+ * {@link #registryDir}; a shared library or a zip, owned by none, has only that.
  *
  * <p>Resolved once at startup and threaded through; the only mutating operation here is
  * {@link #ensureArendDir()}, which is idempotent.
@@ -249,11 +251,11 @@ public final class DaemonPaths {
   /**
    * Creates {@code <library>/.arend/} if it is not there, restricted to the owner.
    *
-   * <p>The permissions are the access control: the directory holds the socket clients connect to
-   * and the lock saying where it is, and anything that can reach the socket can run arbitrary CLI
-   * commands against a warm library or shut the daemon down. An existing directory is left as it
-   * is -- tightening one the user made is not this method's call -- and {@code SocketBinder} sets
-   * the socket's own mode, so the socket is covered either way.
+   * <p>The directory holds the socket clients connect to, and the permissions keep other users from
+   * connecting at all; what they could reach is served only to a request with the daemon's token,
+   * which the registry alone holds. An existing directory is left as it is -- tightening one the user
+   * made is not this method's call -- and {@code SocketBinder} sets the socket's own mode, so the
+   * socket is covered either way.
    */
   public void ensureArendDir() throws IOException {
     if (Files.isDirectory(arendDir)) return;

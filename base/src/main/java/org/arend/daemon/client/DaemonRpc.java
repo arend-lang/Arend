@@ -25,8 +25,8 @@ import java.util.function.Consumer;
  * ({@code --daemon-ping}, {@code --daemon-status}, {@code --daemon-refresh},
  * {@code --daemon-stop}).
  *
- * <p>Resolves the library and reads its lock file; if the lock serves that library, its PID is
- * alive and it speaks this build's protocol, opens a {@link DaemonClient}, fires the op, prints
+ * <p>Resolves the library and looks its daemon up ({@link LockFile#lookup}); if that daemon's
+ * process is alive and it speaks this build's protocol, opens a {@link DaemonClient}, fires the op, prints
  * any non-{@code done} frames, returns the daemon's exit code. Returns {@link #NO_DAEMON} when
  * there is no such daemon; the caller decides how to react ({@code ping} reports "no daemon to
  * talk to", {@code stop} does not take it for success and goes on to the process).
