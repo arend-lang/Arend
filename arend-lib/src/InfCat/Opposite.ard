@@ -23,7 +23,7 @@
   => ResizeFromObjects {OpLarge C} OpLargeOb-equiv OpLarge-hom
   \where {
     \private \func OpLarge.{u} (C : \Cat u)
-      => FullSubCat {C ->⁺ \Type u} \lam F => ∃ (x : C) (F = ReprFunctor x)
+      => FullSubCat {C ->⁺ \Type u} IsRepresentable
 
     \private \func OpLargeOb.{u} {C : \Cat u} (x : C) : OpLarge C
       => FullSubCat.make (ReprFunctor x) $ inP (x,idp)
@@ -57,6 +57,10 @@
         | finv_f (resizeCat x) => idp
         | f_finv => idpe
       }).1 FullSubCat.inc-ff
+
+    -- | The values of {Hom} are representable.
+    \lemma Hom-repr.{u} {C : \Cat u} (x : Op C) : IsRepresentable (Hom x) \elim x
+      | resizeCat x => FullSubCat.inc-con {C ->⁺ \Type u} {IsRepresentable} {x}
 
     \func toOp.{u} {C : \Cat u} (x : C) : Op C
       => resizeCat (OpLargeOb x)

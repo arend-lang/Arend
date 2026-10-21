@@ -9,6 +9,7 @@
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
+\import Logic.Meta
 \import Logic.Unique
 \import Paths
 \import Paths.Meta
@@ -201,3 +202,22 @@
                           *> pmap (~>_-> (dmap (__ G) (ev-al b))) (Straight.toStraight_fromStraight r))
            (IsEquiv.trans (inP ReprFunctor.equiv) (yonedaCov b G))
   }
+
+-- | {F} is representable: it is `ReprFunctor x` for some `x`.
+\type IsRepresentable.{u} {C : \Cat u} (F : C ->⁺ \Type u) : \Prop
+  => ∃ (x : C) (F = ReprFunctor x)
+
+\lemma representable-char.{u} {C : \Cat u} {F : C ->⁺ \Type u} : IsRepresentable F <-> ∃ (x : C) (a : F x) (IsUnivElem F x a)
+  => (\lam (inP (x, p)) =>
+        \have s => transportInv (\lam G => \Sigma (a : G x) (IsUnivElem G x a)) p (Straight.toStraight idd, yonedaCov x)
+        \in inP (x, s.1, s.2),
+      \lam (inP (x, a, U)) => inP (x, inv (IsIso_= (univElem-equiv.univElem-iso U)).1))
+
+-- | Universal elements of {F} are unique.
+\sfunc univElem-unique.{u} {C : \Cat u} {F : C ->⁺ \Type u} {a b : C} {p : F a} {q : F b}
+                          (Up : IsUnivElem F a p) (Uq : IsUnivElem F b q)
+  : (a, p) = {\Sigma (c : C) (F c)} (b, q)
+  => \let | c => IsEquiv.ret (univElem-equiv Up b) q
+          | cq : ~>_-> (dmap F c) p = q => IsEquiv.f_ret (univElem-equiv Up b)
+          | e => IsIso_= ((univElem-iso-char Uq Up {c} (cq *> inv ~>_->_idd)).1 idd-iso)
+     \in ext (e.1, inv (~>_->_=_~> {C} {F} e.1 p) *> pmap (\lam f => ~>_-> (dmap F f) p) e.2 *> cq)

@@ -1,0 +1,135 @@
+{- | The fiberwise opposite of a cocartesian fibration.
+ -
+ -   Since {Op} is not covariant in its argument, the fiberwise opposite cannot be defined as `\lam b => Op (Fiber p b)`.
+ -   Instead, we characterize it by a universal property: a fiberwise opposite of `p : E ->⁺ B` is a cocartesian map
+ -   `q : E' ->⁺ B` together with a perfect fiberwise pairing `P : E' ×_B E -> \Type u` ({FibOpData}).
+ -   * {FibPairing}: a pairing `E' ×_B E -> \Type u`; {FibPairing.restrict} is its restriction to the fibers over {b}.
+ -   * {IsPerfectPairing}: the restrictions are perfect ({IsPerfect}) and universal elements are preserved by transport
+ -     along pairs of cocartesian arrows. The second condition says that the transport of `Op (Fiber p b)` is `OpFunc` of the transport of {p}.
+ -   * {swap-pairing}, {swap-perfect}: perfect pairings are symmetric. The fiberwise part follows from {perfect-swap}.
+ -     Preservation of universal elements ({swap-perfect.swap-cocartesian}) follows from {perfect-univElem-swap}:
+ -     a universal element of the swapped pairing over `p x` is, by J, one over `q e'`, where it is universal for {P} in the other variable.
+ -   * {fibOp-exists}, {fibOp-unique}: a fiberwise opposite exists and is unique (left as goals).
+ -   * {FibOp}, {fibOp-fiber}: the fiberwise opposite and its fibers `Op (Fiber p b)`.
+ -   * {fibOp-invol}: the fiberwise opposite is involutive. Proof. {p} with the swapped pairing of `FibOp p` is a fiberwise opposite
+ -     of `FibOp p` by {swap-perfect}, so it is `FibOp (FibOp p)` by {fibOp-unique}.
+ -}
+
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Functor.Equiv
+\import InfCat.Opposite
+\import InfCat.Opposite.Pairing
+\import InfCat.Paths
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+
+-- | A fiberwise pairing of {q} and {p}.
+\func FibPairing.{u} {B E' E : \Cat u} (q : E' ->⁺ B) (p : E ->⁺ B)
+  => BaseChange q p ->⁺ \Type u
+  \where {
+    -- | The restriction of {P} to the fibers over {b}.
+    \func restrict.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} (P : FibPairing q p) (b : B)
+                       (e' :⁺ Fiber q b) (e :⁺ Fiber p b) : \Type u
+      => P (e'.1, (e.1, e.2 *> inv e'.2))
+  }
+
+-- | {P} is perfect: its restrictions to the fibers are perfect and it preserves universal elements.
+\type IsPerfectPairing.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} (P : FibPairing q p) : \Prop
+  => \Sigma (\Pi (b : B) -> IsPerfect (FibPairing.restrict P b)) (PreservesUnivElem P)
+
+-- | Transport along a pair of cocartesian arrows sends universal elements (in the second variable) of {P} to universal elements.
+\type PreservesUnivElem.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} (P : FibPairing q p) : \Prop
+  => \Pi {e' d' : E'} {x y : E} (s : p x = q e') (s' : p y = q d') (c : (e', (x, s)) ~> {BaseChange q p} (d', (y, s')))
+               -> IsCocartesianArrow q (dmap (\lam w => w.1) c) -> IsCocartesianArrow p (dmap (\lam w => w.2.1) c)
+               -> \Pi (h : P (e', (x, s))) -> IsUnivElem {Fiber p (q e')} (FibPairing.restrict P (q e') (e', idp)) (x, s) h
+               -> IsUnivElem {Fiber p (q d')} (FibPairing.restrict P (q d') (d', idp)) (y, s') (~>_-> (dmap P c) h)
+
+-- | A fiberwise opposite of {p}.
+\func FibOpData.{u} {B E : \Cat u} (p : E ->⁺ B)
+  => \Sigma (E' : \Cat u) (q : E' ->⁺ B) (IsCocartesianMap q) (P : FibPairing q p) (IsPerfectPairing P)
+
+-- | The pairing with the factors swapped.
+\func swap-pairing.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} (P : FibPairing q p) : FibPairing p q
+  => \lam w => P (w.2.1, (w.1, inv w.2.2))
+
+-- | Perfect pairings are symmetric.
+\lemma swap-perfect.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} {P : FibPairing q p} (Pp : IsPerfectPairing P)
+  : IsPerfectPairing (swap-pairing P)
+  => (swap-fiber Pp, swap-cocartesian Pp)
+  \where {
+    \private \sfunc inv-concat {A :⁺ \Cat} {a a' b :⁺ A} (r :⁺ a = b) (t :⁺ a' = b) : t *> inv r = inv (r *> inv t) \elim r, t
+      | idp, idp => idp
+
+    \private \sfunc idp-inv-inv {A :⁺ \Cat} {a b :⁺ A} (r :⁺ a = b) : inv (idp *> inv r) = r \elim r
+      | idp => idp
+
+    -- | The restrictions of the swapped pairing are perfect.
+    \private \lemma swap-fiber.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} {P : FibPairing q p} (Pp : IsPerfectPairing P) (b : B)
+      : IsPerfect (FibPairing.restrict (swap-pairing P) b)
+      => perfect-ext (\lam e x' => pmap+ (\lam s => P (x'.1, (e.1, s))) (inv-concat x'.2 e.2)) (perfect-swap (Pp.1 b))
+
+    -- | Universal elements are invariant under precomposition with a map equal to the identity.
+    \private \lemma univElem-precomp-id.{u} {C : \Cat u} {G : C ->⁺ \Type u} {f : C ->⁺ C} (H : f = {C ->⁺ C} (\lam c => c)) {a : C} {h : G (f a)}
+      : IsUnivElem (\lam c => G (f c)) a h <-> IsUnivElem G (f a) h \elim H
+      | idp => <->refl
+
+    -- | Universality in the first variable of the swapped pairing is universality in the second variable of {P} over `q e'`.
+    \private \lemma swap-univElem-gen.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} {P : FibPairing q p} (Pp : IsPerfectPairing P)
+                                        {e' : E'} {x : E} {b : B} (t : p x = b) (s : q e' = b) (h : P (e', (x, inv (s *> inv t))))
+      : IsUnivElem {Fiber q b} (FibPairing.restrict (swap-pairing P) b (x, t)) (e', s) h
+        <-> IsUnivElem {Fiber p (q e')} (FibPairing.restrict P (q e') (e', idp)) (x, inv (s *> inv t)) h \elim b, s
+      | _, idp => <->trans (perfect-univElem-swap (swap-fiber Pp (q e')) {x, t} h)
+                           (univElem-precomp-id (funExt+ \lam x' => pmap+ (\lam r => ((x'.1, r) : Fiber p (q e'))) (idp-inv-inv x'.2)))
+
+    -- | Universal elements of the swapped pairing are preserved by transport along cocartesian arrows.
+    \lemma swap-cocartesian.{u} {B E' E : \Cat u} {q : E' ->⁺ B} {p : E ->⁺ B} {P : FibPairing q p} (Pp : IsPerfectPairing P)
+      : PreservesUnivElem (swap-pairing P)
+      => \lam s s' c c1 c2 h U => (swap-univElem-gen Pp idp s' _).2
+           (Pp.2 (inv s) (inv s') (dmap (\lam w => ((w.2.1, (w.1, inv w.2.2)) : BaseChange q p)) c) c2 c1 h ((swap-univElem-gen Pp idp s h).1 U))
+  }
+
+-- | A fiberwise opposite of a cocartesian map exists.
+\sfunc fibOp-exists.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibOpData p
+  => {?}
+
+-- | The fiberwise opposite of a cocartesian map is unique.
+\lemma fibOp-unique.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : isProp (FibOpData p)
+  => {?}
+
+-- | The fiberwise opposite of {p}.
+\func FibOp.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : \Cat u
+  => (fibOp-exists pc).1
+  \where {
+    -- | The projection of the fiberwise opposite.
+    \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibOp pc ->⁺ B
+      => (fibOp-exists pc).2
+
+    -- | The pairing of the fiberwise opposite with {p}.
+    \func pairing.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibPairing (proj pc) p
+      => (fibOp-exists pc).4
+
+    \lemma pairing-perfect.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsPerfectPairing (pairing pc)
+      => (fibOp-exists pc).5
+  }
+
+-- | The fiberwise opposite is a cocartesian map.
+\lemma fibOp-cocartesian.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsCocartesianMap (FibOp.proj pc)
+  => (fibOp-exists pc).3
+
+-- | The fibers of the fiberwise opposite of {p} are the opposites of the fibers of {p}.
+\lemma fibOp-fiber.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (b : B)
+  : ∃ (F : Fiber (FibOp.proj pc) b ->⁺ Op (Fiber p b)) (IsHEquiv F)
+  => TruncP.map (perfect-char.1 ((FibOp.pairing-perfect pc).1 b)) \lam t => (t.1, t.2)
+
+-- | The fiberwise opposite is involutive.
+\sfunc fibOp-invol.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p)
+  : (FibOp (fibOp-cocartesian pc), FibOp.proj (fibOp-cocartesian pc)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} (E, p)
+  => pmap (\lam d => ((d.1, d.2) : \Sigma (E' : \Cat u) (E' ->⁺ B)))
+          (fibOp-unique (fibOp-cocartesian pc) (fibOp-exists (fibOp-cocartesian pc))
+                        (E, p, pc, swap-pairing (FibOp.pairing pc), swap-perfect (FibOp.pairing-perfect pc)))
