@@ -38,7 +38,7 @@ class ArendDaemonView(private val project: Project, parent: Disposable) {
     private val noStartOnOpen = JBRadioButton("No")
     private val status = JBLabel()
     private val libraries = JBLabel()
-    private val agents = JBLabel()
+    private val agents = JBLabel(AGENTS)
     private val requests = JBLabel()
     private val startButton = JButton("Start")
     private val stopButton = JButton("Stop")
@@ -114,7 +114,6 @@ class ArendDaemonView(private val project: Project, parent: Disposable) {
             section("Left out", state.skipped.map { (name, why) -> "$name: $why" })
         }
         libraries.setIfChanged(if (html.isEmpty()) "" else XmlStringUtil.wrapInHtml(html))
-        agents.setIfChanged(AGENTS)
 
         val recent = state?.activity?.recent.orEmpty()
         requests.setIfChanged(if (recent.isEmpty()) "" else XmlStringUtil.wrapInHtml("<p><b>Latest requests</b></p>" +
@@ -151,7 +150,7 @@ class ArendDaemonView(private val project: Project, parent: Disposable) {
         /** In short lines: the tab scrolls sideways rather than wrap a long one. */
         val AGENTS: String = XmlStringUtil.wrapInHtml("Agents reach the daemon through the <code>arend-daemons</code> MCP server.<br>" +
             "The button below registers it in this project's own config of each agent installed<br>" +
-            "(<code>.mcp.json</code>, <code>.cursor/</code>, <code>.vscode/</code>, <code>.gemini/</code>, <code>.junie/</code>), " +
+            "(<code>.mcp.json</code>, <code>.cursor/</code>, <code>.vscode/</code>, <code>.gemini/</code>, <code>.junie/</code>,<br><code>.codex/</code>), " +
             "as <code>arend --mcp-init</code> does;<br><code>arend --mcp-unregister</code> removes it.")
 
         /** One for every row: the tab redraws each second while the daemon runs. */
