@@ -127,7 +127,7 @@ public final class DaemonPaths {
     return configDir().resolve("daemons");
   }
 
-  public static boolean isShared(Path libraryFile) {
+  private static boolean isShared(Path libraryFile) {
     try {
       Path root = sharedLibrariesRoot();
       if (!Files.isDirectory(root)) return false;

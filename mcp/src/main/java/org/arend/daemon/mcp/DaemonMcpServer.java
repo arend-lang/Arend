@@ -39,9 +39,9 @@ public final class DaemonMcpServer {
    * The revisions served statelessly, each request carrying its version, capabilities and client in
    * {@code _meta}, as 2026-07-28 and later have it.
    */
-  static final List<String> MODERN_VERSIONS = List.of("2026-07-28");
+  private static final List<String> MODERN_VERSIONS = List.of("2026-07-28");
   /** The revisions served after an {@code initialize} handshake, latest first: what this server needs of them is the same in all. */
-  static final List<String> LEGACY_VERSIONS = List.of("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05");
+  private static final List<String> LEGACY_VERSIONS = List.of("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05");
 
   private static final String META_VERSION = "io.modelcontextprotocol/protocolVersion";
   private static final String META_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";

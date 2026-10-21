@@ -121,7 +121,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
   }
 
   /** This lock as a library's copy has it: without the token, which only the registry's copy holds. */
-  public LockFile withoutToken() {
+  private LockFile withoutToken() {
     return new LockFile(pid, libraryPath, libraryHash, libraries, loaded, protocolVersion, startedAt, socketPath, host, processStart, "", build, projectDir);
   }
 

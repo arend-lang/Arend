@@ -102,7 +102,7 @@ public class DaemonStartLockTest {
    */
   @Test
   public void theChildJvmInheritsThisOnesJvmOptions() throws IOException {
-    List<String> cmd = DaemonStart.buildChildCommand(List.of(DaemonPaths.resolve(library())), List.of(), List.of(), "cp");
+    List<String> cmd = DaemonStart.buildChildCommand(List.of(DaemonPaths.resolve(library())), List.of(), List.of(), "cp", List.of());
 
     List<String> forwardable = ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
         .filter(DaemonStart::isForwardableJvmOption)
@@ -128,7 +128,7 @@ public class DaemonStartLockTest {
   public void theChildIsToldTheLibraryByItsConfigPath() throws IOException {
     Path root = library();
     DaemonPaths paths = DaemonPaths.resolve(root);
-    List<String> cmd = DaemonStart.buildChildCommand(List.of(paths), List.of(), List.of(), "cp");
+    List<String> cmd = DaemonStart.buildChildCommand(List.of(paths), List.of(), List.of(), "cp", List.of());
 
     String config = paths.libraryConfig.toString();
     int main = cmd.indexOf("org.arend.frontend.ConsoleMain");
@@ -152,7 +152,7 @@ public class DaemonStartLockTest {
     Path second = tempFolder.newFolder("other").toPath();
     Files.writeString(second.resolve("arend.yaml"), "dependencies: [mylib]\n", StandardCharsets.UTF_8);
     DaemonPaths a = DaemonPaths.resolve(first), b = DaemonPaths.resolve(second);
-    List<String> cmd = DaemonStart.buildChildCommand(List.of(a, b), List.of(), List.of("-c"), "cp");
+    List<String> cmd = DaemonStart.buildChildCommand(List.of(a, b), List.of(), List.of("-c"), "cp", List.of());
 
     List<String> appArgs = cmd.subList(cmd.indexOf("org.arend.frontend.ConsoleMain") + 1, cmd.size());
     assertEquals(List.of("-c", a.libraryConfig.toString(), b.libraryConfig.toString()),
@@ -177,7 +177,7 @@ public class DaemonStartLockTest {
       List<DaemonPaths> libraries = List.of(sharedPaths, owned);
       assertEquals(owned.libraryConfig, DaemonStart.home(libraries).libraryConfig);
 
-      List<String> cmd = DaemonStart.buildChildCommand(libraries, List.of(), List.of(), "cp");
+      List<String> cmd = DaemonStart.buildChildCommand(libraries, List.of(), List.of(), "cp", List.of());
       List<String> appArgs = cmd.subList(cmd.indexOf("org.arend.frontend.ConsoleMain") + 1, cmd.size());
       assertEquals("load order is kept as given",
           List.of(sharedPaths.libraryConfig.toString(), owned.libraryConfig.toString()),

@@ -272,7 +272,7 @@ public final class McpRegistration {
     List<String> warnings = new ArrayList<>();
     for (ProjectConfig config : projectConfigs()) {
       Path file = projectDir.resolve(config.file());
-      if (!hasServerIn(file, LENIENT, config.key())) continue;
+      if (!hasServerIn(file, config.key())) continue;
       try {
         JsonNode entry = removeServer(file, config.key());
         removed.add(config.agent() + ": " + file + "\n  the entry was, in " + config.key() + ": \"" + SERVER_NAME + "\": " + entry);
@@ -349,10 +349,10 @@ public final class McpRegistration {
     return Path.of(System.getProperty("user.home"));
   }
 
-  /** Whether the {@code key} object of {@code file} has a {@link #SERVER_NAME}; false when it cannot be read. */
-  private static boolean hasServerIn(Path file, ObjectMapper mapper, String key) {
+  /** Whether the {@code key} object of {@code file}, read leniently, has a {@link #SERVER_NAME}; false when it cannot be read. */
+  private static boolean hasServerIn(Path file, String key) {
     try {
-      return Files.isRegularFile(file) && mapper.readTree(file.toFile()).path(key).has(SERVER_NAME);
+      return Files.isRegularFile(file) && LENIENT.readTree(file.toFile()).path(key).has(SERVER_NAME);
     } catch (IOException e) {
       return false;
     }

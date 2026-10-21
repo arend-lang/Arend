@@ -362,12 +362,7 @@ public final class DaemonStart {
     return libraries.stream().filter(DaemonPaths::canOwn).findFirst().orElse(libraries.getFirst());
   }
 
-  static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,
-                                        List<String> extraChildArgs, String classpath) {
-    return buildChildCommand(libraries, libDirsForward, extraChildArgs, classpath, List.of());
-  }
-
-  /** As above, with {@code jvmProperties} -- {@code -Dname=value} -- set in the child after the ones forwarded. */
+  /** The child's command line; {@code jvmProperties} -- {@code -Dname=value} -- are set after the ones forwarded. */
   static List<String> buildChildCommand(List<DaemonPaths> libraries, List<Path> libDirsForward,
                                         List<String> extraChildArgs, String classpath, List<String> jvmProperties) {
     String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
