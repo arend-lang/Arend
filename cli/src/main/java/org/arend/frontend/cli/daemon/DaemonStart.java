@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Parent-side: start a detached daemon JVM for one or more libraries, as

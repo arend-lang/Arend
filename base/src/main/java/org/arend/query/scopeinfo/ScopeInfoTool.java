@@ -1,8 +1,5 @@
 package org.arend.query.scopeinfo;
 
-import org.arend.query.QueryConsole;
-import org.arend.query.QueryLibrary;
-import org.arend.query.QueryHelp;
 import org.arend.query.*;
 import org.arend.repl.Repl;
 import org.arend.naming.reference.LocatedReferable;

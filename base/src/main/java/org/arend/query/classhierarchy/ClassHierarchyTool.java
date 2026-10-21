@@ -1,11 +1,7 @@
 package org.arend.query.classhierarchy;
 
-import org.arend.query.QueryConsole;
-import org.arend.query.QueryLibraries;
-import org.arend.query.QueryLibrary;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
-import org.arend.query.QueryHelp;
 import org.arend.query.*;
 import org.arend.query.classhierarchy.ClassHierarchy.ClassNode;
 import org.arend.repl.Repl;

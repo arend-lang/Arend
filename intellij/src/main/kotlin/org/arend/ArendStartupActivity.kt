@@ -33,7 +33,6 @@ import org.arend.yaml.YAMLFileListener
 import com.jetbrains.edu.learning.StudyTaskManager
 import org.arend.typechecking.BinaryFileSaver
 import org.arend.server.daemon.ArendDaemonService
-import com.intellij.openapi.components.serviceIfCreated
 
 
 class ArendStartupActivity : ProjectActivity {

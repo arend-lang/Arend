@@ -1,10 +1,6 @@
 package org.arend.query.findusages;
 
-import org.arend.query.QueryConsole;
-import org.arend.query.QueryLibraries;
-import org.arend.query.QueryLibrary;
 import org.arend.ext.module.ModuleLocation;
-import org.arend.query.QueryHelp;
 import org.arend.query.*;
 import org.arend.query.findusages.UsageFinder.UsageHit;
 import org.arend.repl.Repl;
