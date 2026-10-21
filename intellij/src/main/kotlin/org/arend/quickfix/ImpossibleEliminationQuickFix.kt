@@ -154,6 +154,9 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
 
                 definitionParametersToEliminate.removeAll(elimParams.toSet())
 
+                if (constructorPsi == null) doMakeExternalParametersExplicit(psiFactory, definitionPsi,
+                    definitionParameters.take(definition.typechecked.parametersOriginalDefinitions.size).filter { definitionParametersToEliminate.contains(it) })
+
                 val paramsMap = HashMap<DependentLink, ArendRefIdentifier>()
                 for (e in elimParams.zip(elimPsi.refIdentifierList)) paramsMap[e.first] = e.second
 
@@ -289,6 +292,24 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
                     enclosingDefinition.accept(collector, null)
                     sink.addAll(collector.names)
                 }
+            }
+        }
+
+        fun doMakeExternalParametersExplicit(psiFactory: ArendPsiFactory, definitionPsi: Any?, externalParameters: List<DependentLink>) {
+            if (externalParameters.isEmpty() || definitionPsi !is PsiLocatedReferable) return
+            val ppConfig = object : PrettyPrinterConfig {
+              override fun getDefinitionRenamer(): DefinitionRenamer = PsiLocatedRenamer(definitionPsi)
+            }
+            var anchor = definitionPsi.nameIdentifier ?: return
+            for (param in externalParameters) {
+                val typeExpr = ToAbstractVisitor.convert(param.type, ppConfig).toString()
+                val tele = when (definitionPsi) {
+                    is ArendFunctionDefinition<*> -> psiFactory.createNameTele(param.name, typeExpr, false)
+                    is ArendDefData -> psiFactory.createTypeTele(param.name, typeExpr, false)
+                    else -> return
+                }
+                anchor = definitionPsi.addAfter(tele, anchor)
+                definitionPsi.addBefore(psiFactory.createWhitespace(" "), anchor)
             }
         }
 

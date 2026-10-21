@@ -176,4 +176,31 @@ class ImpossibleEliminationQuickFixTest: QuickFixTestBase() {
           | suc n, suc m, con2 => 4
           | n, m, con4 => 4          
     """) */
+
+    fun test85() = doTest("""
+      \func foo {n : Nat} (m : Fin n) : m = m => idp
+        \where {
+          \func bar{-caret-} (m2 : Fin n) : n = 42 \elim m2
+        }
+    """, """
+      \func foo {n : Nat} (m : Fin n) : m = m => idp
+        \where {
+          \func bar {n : Nat} (m2 : Fin n) : n = 42 \elim n, m2
+        }
+    """)
+
+    fun test85_2() = doTest("""
+      \func foo {n : Nat} (m : Fin n) : m = m => idp
+        \where {
+          \func bar (m2 : Fin n) : Nat \elim m2
+            | (){-caret-}
+            | fzero => 0
+        }
+    """, """
+      \func foo {n : Nat} (m : Fin n) : m = m => idp
+        \where {
+          \func bar {n : Nat} (m2 : Fin n) : Nat \elim n, m2
+            | n, fzero => 0
+        }
+    """)
 }
