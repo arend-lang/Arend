@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
  *   startedAt        System.currentTimeMillis() at READY
  *   socketPath       the address clients connect to, as {@code uds:<path>} or {@code tcp:host:port}
  *   host             what runs the daemon: {@code cli}, a JVM of its own, or {@code intellij}, an IDE
- *                    that answers as a daemon from its own server; absent means {@code cli}
+ *                    that answers as a daemon from its own server
  *   processStart     when the process {@code pid} names started, in epoch milliseconds, as the
  *                    process itself reads it; absent when the platform does not say
  *   token            the secret a client presents with every request; in the registry's copy only
@@ -94,15 +94,8 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
   public LockFile {
     libraries = List.copyOf(libraries);
     loaded = List.copyOf(loaded);
-    if (host == null || host.isEmpty()) host = HOST_CLI;
     if (token == null) token = "";
     if (projectDir == null) projectDir = "";
-  }
-
-  /** A lock that does not say when its process started, as one written before {@code processStart} did, with no token. */
-  public LockFile(long pid, String libraryPath, String libraryHash, List<String> libraries, List<String> loaded,
-                  int protocolVersion, long startedAt, String socketPath, String host) {
-    this(pid, libraryPath, libraryHash, libraries, loaded, protocolVersion, startedAt, socketPath, host, UNKNOWN_START, "", null, "");
   }
 
   /** The lock of a daemon this process runs, whose first library is {@code home} and whose requests present {@code token}. */
@@ -368,7 +361,7 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
       int protocolVersion = Integer.parseInt(props.getProperty("protocolVersion", "0").trim());
       long startedAt = Long.parseLong(props.getProperty("startedAt", "0").trim());
       String socketPath = props.getProperty("socketPath", "");
-      String host = props.getProperty("host", HOST_CLI);
+      String host = props.getProperty("host", "");
       long processStart = Long.parseLong(props.getProperty("processStart", Long.toString(UNKNOWN_START)).trim());
       String token = props.getProperty("token", "");
       String buildPath = props.getProperty("build.path");
@@ -377,12 +370,10 @@ public record LockFile(long pid, String libraryPath, String libraryHash, List<St
           props.getProperty("build.key", ""));
       List<String> libraries = new ArrayList<>();
       for (int i = 1; props.getProperty("library." + i) != null; i++) libraries.add(props.getProperty("library." + i));
-      // A lock from before library.N named only the one library its daemon served.
-      if (libraries.isEmpty() && !libraryPath.isEmpty()) libraries.add(libraryPath);
       List<String> loaded = new ArrayList<>();
       for (int i = 1; props.getProperty("loaded." + i) != null; i++) loaded.add(props.getProperty("loaded." + i));
-      if (libraryPath.isEmpty() || libraryHash.isEmpty()) {
-        return new Read.Unreadable("lock file is missing libraryPath or libraryHash");
+      if (libraryPath.isEmpty() || libraryHash.isEmpty() || libraries.isEmpty() || host.isEmpty()) {
+        return new Read.Unreadable("lock file is missing libraryPath, libraryHash, library.1 or host");
       }
       return new Read.Found(new LockFile(pid, libraryPath, libraryHash, libraries, loaded, protocolVersion, startedAt,
           socketPath, host, processStart, token, build, props.getProperty("projectDir", "")));

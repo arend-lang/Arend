@@ -44,7 +44,7 @@ public class DaemonStartLockTest {
   private static LockFile.Read found(Path... libraries) {
     List<String> configs = Arrays.stream(libraries).map(Path::toString).toList();
     return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs, List.of(),
-        LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.HOST_CLI));
+        LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, ""));
   }
 
   /** The verdict table, for a lock {@link LockFile#lookup} found: one that serves the library. */

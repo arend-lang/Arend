@@ -18,7 +18,7 @@ public class DaemonStopLockTest {
 
   private static LockFile.Read found(Path library) {
     return new LockFile.Read.Found(new LockFile(4242, library.toString(), "h", List.of(library.toString()), List.of(),
-        LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.HOST_CLI));
+        LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, ""));
   }
 
   /** A lock {@link LockFile#lookup} found serves the library: whether it is stopped turns on its process alone. */
