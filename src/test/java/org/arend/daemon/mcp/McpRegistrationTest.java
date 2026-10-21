@@ -3,7 +3,6 @@ package org.arend.daemon.mcp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.arend.daemon.Platform;
-import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -16,7 +15,6 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -179,25 +177,6 @@ public class McpRegistrationTest {
     });
   }
 
-  /**
-   * An agent's CLI works on the configs of the home this process was given, not on the user's: run
-   * with the user's HOME, --mcp-unregister under a test's home removed the server from the user's real
-   * Codex config.
-   */
-  @Test
-  public void anAgentsCliRunsOnTheHomeGiven() throws IOException {
-    Assume.assumeFalse(Platform.isWindows());
-    Path cli = tmp.getRoot().toPath().resolve("agent");
-    Files.writeString(cli, "#!/bin/sh\nprintf '%s\\n%s\\n' \"$HOME\" \"$CODEX_HOME\" > \"$1\"\n");
-    assertTrue(cli.toFile().setExecutable(true));
-    Path seen = tmp.getRoot().toPath().resolve("seen");
-    withAgentsInstalled(() -> {
-      Path home = Path.of(System.getProperty("user.home"));
-      assertNull(McpRegistration.run(cli, List.of(seen.toString())));
-      assertEquals(List.of(home.toString(), home.resolve(".codex").toString()), Files.readAllLines(seen));
-    });
-  }
-
   /** Codex's table is written, replaced and removed by itself: its subtables go with it, every other line stays. */
   @Test
   public void codexsTableIsTheOnlyPartTouched() throws IOException {
@@ -261,10 +240,15 @@ public class McpRegistrationTest {
       assertTrue(result.notes().toString(), result.notes().stream().anyMatch(note -> note.contains("trust_level")));
       assertTrue("a project's directory is no agent's own config", result.warnings().isEmpty());
 
-      Files.writeString(home.resolve(".codex").resolve("config.toml"), "[projects.\"" + project + "\"]\ntrust_level = \"trusted\"\n");
-      assertTrue(McpRegistration.initProject(project, portable).notes().stream().noneMatch(note -> note.contains("trust_level")));
+      // As Codex writes it, in literal strings, and in basic ones.
+      for (String trust : List.of("[projects.'" + project + "']\ntrust_level = 'trusted'\n",
+                                  "[projects.\"" + project + "\"]\ntrust_level = \"trusted\"\n")) {
+        Files.writeString(home.resolve(".codex").resolve("config.toml"), trust);
+        assertTrue(trust, McpRegistration.initProject(project, portable).notes().stream().noneMatch(note -> note.contains("trust_level")));
+      }
 
-      assertTrue(McpRegistration.unregisterProject(project).done().contains("Codex: " + project.resolve(".codex/config.toml")));
+      assertTrue(McpRegistration.unregisterProject(project).done().stream()
+          .anyMatch(done -> done.startsWith("Codex: " + project.resolve(".codex/config.toml") + "\n")));
       assertFalse(CodexConfig.hasServer(project.resolve(".codex/config.toml")));
     });
   }
@@ -293,6 +277,53 @@ public class McpRegistrationTest {
             result.warnings().stream().noneMatch(warning -> warning.contains("Claude") || warning.contains("VS Code")));
         assertTrue("no trust is needed for the user's own config", result.notes().stream().noneMatch(note -> note.contains("trust_level")));
       }
+    });
+  }
+
+  /** A removal says what each entry was, as it can be put back: JSON where the agent's config is JSON, the table for Codex. */
+  @Test
+  public void aRemovalSaysWhatItRemoved() throws IOException {
+    withAgentsInstalled(() -> {
+      Files.createDirectories(Path.of(System.getProperty("user.home")).resolve(".codex"));
+      Path project = tmp.newFolder("project").toPath();
+      McpRegistration.initProject(project, new McpRegistration.Command(List.of("arend", "--mcp"), true));
+      McpRegistration.Result removed = McpRegistration.unregisterProject(project);
+      assertTrue(removed.failures().toString(), removed.failures().isEmpty());
+      assertTrue(removed.done().toString(), removed.done().contains("Claude Code: " + project.resolve(".mcp.json")
+          + "\n  the entry was, in mcpServers: \"arend-daemons\": {\"type\":\"stdio\",\"command\":\"arend\",\"args\":[\"--mcp\"]}"));
+      assertTrue(removed.done().toString(), removed.done().contains("Codex: " + project.resolve(".codex/config.toml")
+          + "\n  the table was:\n    [mcp_servers.arend-daemons]\n    command = \"arend\"\n    args = [\"--mcp\"]"));
+      assertTrue("a project's directory is no agent's own config", removed.warnings().isEmpty());
+    });
+  }
+
+  /** Unregistering a project leaves the user's own configs alone, a registration for every directory among them. */
+  @Test
+  public void unregisteringAProjectTouchesNothingElse() throws IOException {
+    withAgentsInstalled(() -> {
+      Path home = Path.of(System.getProperty("user.home"));
+      McpRegistration.Command portable = new McpRegistration.Command(List.of("arend", "--mcp"), true);
+      McpRegistration.initProject(home, portable);
+      Path project = tmp.newFolder("project").toPath();
+      McpRegistration.initProject(project, portable);
+      McpRegistration.unregisterProject(project);
+      assertTrue(McpRegistration.runs(MAPPER.readTree(home.resolve(".cursor").resolve("mcp.json").toFile())
+          .get("mcpServers").get(McpRegistration.SERVER_NAME), portable.argv()));
+    });
+  }
+
+  /** Unregistering the home directory edits the agents' own configs, and says that this reaches every directory. */
+  @Test
+  public void unregisteringTheHomeWarnsOfEveryDirectory() throws IOException {
+    withAgentsInstalled(() -> {
+      Path home = Path.of(System.getProperty("user.home"));
+      Files.createDirectories(home.resolve(".codex"));
+      McpRegistration.initProject(home, new McpRegistration.Command(List.of("arend", "--mcp"), true));
+      McpRegistration.Result removed = McpRegistration.unregisterProject(home);
+      assertTrue(removed.warnings().toString(), removed.warnings().stream().anyMatch(warning -> warning.contains("every Cursor session")));
+      assertTrue(removed.warnings().toString(), removed.warnings().stream().anyMatch(warning -> warning.contains("every Codex session")));
+      assertTrue(removed.warnings().stream().noneMatch(warning -> warning.contains("Claude") || warning.contains("VS Code")));
+      assertFalse(MAPPER.readTree(home.resolve(".cursor").resolve("mcp.json").toFile()).get("mcpServers").has(McpRegistration.SERVER_NAME));
     });
   }
 

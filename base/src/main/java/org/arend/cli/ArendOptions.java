@@ -119,7 +119,7 @@ public final class ArendOptions {
     cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("resolve the daemon's libraries again, so source edits, new and deleted files are picked up; typechecks nothing.").build());
     cmdOptions.addOption(Option.builder().longOpt("mcp").desc("the MCP server an agent starts: it runs arend commands on the daemons and installs Arend skills. Register it with --mcp-init rather than running it by hand.").build());
     cmdOptions.addOption(Option.builder().longOpt("mcp-init").desc("let the AI agents of the project in DIR (default: current directory) use the daemons, by registering `arend --mcp` in their project configs.").build());
-    cmdOptions.addOption(Option.builder().longOpt("mcp-unregister").desc("undo --mcp-init for DIR (default: current directory), also removing registrations earlier versions left in the agents' user configs.").build());
+    cmdOptions.addOption(Option.builder().longOpt("mcp-unregister").desc("undo --mcp-init for DIR (default: current directory), printing each entry it removes.").build());
     cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
     cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default ~/.arend/log/arend-symbol-search.log").build());
     cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");

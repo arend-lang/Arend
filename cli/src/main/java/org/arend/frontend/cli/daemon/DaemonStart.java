@@ -185,23 +185,19 @@ public final class DaemonStart {
 
   /**
    * {@code arend --mcp-unregister [DIR]}: takes the server out of the configs of the project in
-   * {@code projectDir}, and out of the user's own configs, where earlier builds put it.
+   * {@code projectDir}, and nowhere else, printing each entry it removed so that it can be put back.
    */
   public static int unregisterMcp(Path projectDir) {
-    McpRegistration.Result project = McpRegistration.unregisterProject(projectDir);
-    McpRegistration.Result user = McpRegistration.unregisterUser();
-    List<String> failures = new ArrayList<>(project.failures());
-    failures.addAll(user.failures());
-    failures.forEach(failure -> System.err.println("[WARN]  --mcp-unregister: " + failure));
-    if (project.done().isEmpty() && user.done().isEmpty()) {
-      if (failures.isEmpty()) System.out.println("Neither the project in " + projectDir + " nor any agent of the user's has the "
+    McpRegistration.Result result = McpRegistration.unregisterProject(projectDir);
+    result.failures().forEach(failure -> System.err.println("[WARN]  --mcp-unregister: " + failure));
+    if (result.done().isEmpty()) {
+      if (result.failures().isEmpty()) System.out.println("No agent's config of the project in " + projectDir + " has the "
           + McpRegistration.SERVER_NAME + " MCP server.");
     } else {
-      project.done().forEach(file -> System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from " + file));
-      user.done().forEach(agent -> System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from "
-          + agent + "'s own config"));
+      result.done().forEach(file -> System.out.println("Removed the " + McpRegistration.SERVER_NAME + " MCP server from " + file));
     }
-    return failures.isEmpty() ? 0 : 1;
+    result.warnings().forEach(warning -> System.err.println("[WARN]  --mcp-unregister: " + warning));
+    return result.failures().isEmpty() ? 0 : 1;
   }
 
   private static int startChild(List<DaemonPaths> libraries, List<String> requested, List<Path> libDirsForward,

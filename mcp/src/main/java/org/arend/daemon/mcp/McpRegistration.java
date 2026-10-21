@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -35,8 +34,9 @@ import java.util.function.Supplier;
  * so that the files can be committed, and it stays right when the jar behind it is rebuilt or moved.
  * Without one it is this machine's JVM and jar, which the caller has to say is not to be committed.
  *
- * <p>Earlier builds registered the server in the user's own config of every agent, as {@code arend -d}
- * started; {@link #unregisterUser} takes such a registration back out.
+ * <p>Only a project's files are touched, by a registration and by its removal alike. A registration
+ * in an agent's own config elsewhere -- as earlier builds made one whenever {@code arend -d} started --
+ * is the user's to remove, through the agent.
  */
 public final class McpRegistration {
   public static final String SERVER_NAME = "arend-daemons";
@@ -44,7 +44,6 @@ public final class McpRegistration {
   private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
   /** VS Code's and Gemini's settings may hold comments; they are read, never written back. */
   private static final ObjectMapper LENIENT = new ObjectMapper().enable(JsonParser.Feature.ALLOW_COMMENTS);
-  private static final long CLI_TIMEOUT_SECONDS = 30;
   private static final String CLI_MAIN = "org.arend.frontend.ConsoleMain";
 
   private McpRegistration() {}
@@ -134,17 +133,17 @@ public final class McpRegistration {
     return List.of(
         new ProjectConfig("Claude Code", ".mcp.json", "mcpServers", McpRegistration::server,
             () -> findExecutable("claude", home().resolve(".claude").resolve("local")) != null || Files.isDirectory(home().resolve(".claude")),
-            Claude::config),
+            McpRegistration::claudeUserConfig),
         new ProjectConfig("Cursor", ".cursor/mcp.json", "mcpServers", McpRegistration::server,
-            () -> Files.isDirectory(home().resolve(".cursor")), () -> cursor().config()),
+            () -> Files.isDirectory(home().resolve(".cursor")), () -> home().resolve(".cursor").resolve("mcp.json")),
         new ProjectConfig("VS Code", ".vscode/mcp.json", "servers", McpRegistration::server,
-            () -> findExecutable("code") != null, VsCode::config),
+            () -> findExecutable("code") != null, McpRegistration::vsCodeUserConfig),
         new ProjectConfig("Gemini CLI", ".gemini/settings.json", "mcpServers", McpRegistration::plainServer,
             () -> findExecutable("gemini") != null || Files.isDirectory(home().resolve(".gemini")),
             () -> home().resolve(".gemini").resolve("settings.json")),
         // Junie's IDE plugin does not show a server with a field it does not know, a type among them.
         new ProjectConfig("Junie", ".junie/mcp/mcp.json", "mcpServers", McpRegistration::plainServer,
-            () -> Files.isDirectory(home().resolve(".junie")), () -> junie().config()));
+            () -> Files.isDirectory(home().resolve(".junie")), () -> home().resolve(".junie").resolve("mcp").resolve("mcp.json")));
   }
 
   /** Codex's config of a project, TOML rather than JSON: read for a project Codex trusts only. */
@@ -192,8 +191,9 @@ public final class McpRegistration {
         if (canonical(file).equals(canonical(userConfig))) {
           warnings.add(userWide("Codex", file, projectDir));
         } else if (!CodexConfig.trusts(userConfig, projectDir)) {
-          notes.add("Codex reads " + file + " only once it trusts the project: set trust_level = \"trusted\" under [projects.\""
-              + projectDir.toAbsolutePath().normalize() + "\"] in " + userConfig + ".");
+          notes.add("Codex reads " + file + " only for a project it trusts: trust " + projectDir.toAbsolutePath().normalize()
+              + " when Codex asks, started there, which it records in " + userConfig + " as trust_level = 'trusted' under [projects.'"
+              + projectDir.toAbsolutePath().normalize() + "'].");
         }
       } catch (IOException e) {
         failures.add("could not register the " + SERVER_NAME + " MCP server in " + file + " (" + e.getMessage() + "); add to it:\n  "
@@ -215,16 +215,22 @@ public final class McpRegistration {
         + " `arend --mcp-unregister " + projectDir.toAbsolutePath().normalize() + "` takes this registration back out.";
   }
 
-  /** Removes {@link #SERVER_NAME} from every agent's config of the project in {@code projectDir}, keeping the rest. */
+  /**
+   * Removes {@link #SERVER_NAME} from every agent's config of the project in {@code projectDir}, keeping
+   * the rest, and from nothing else. Each removal says what the entry was, so that it can be put back;
+   * a file that is an agent's own config of the user's is edited too, with a warning of what that does.
+   */
   public static Result unregisterProject(Path projectDir) {
     List<String> removed = new ArrayList<>();
     List<String> failures = new ArrayList<>();
+    List<String> warnings = new ArrayList<>();
     for (ProjectConfig config : projectConfigs()) {
       Path file = projectDir.resolve(config.file());
       if (!hasServerIn(file, LENIENT, config.key())) continue;
       try {
-        removeServer(file, config.key());
-        removed.add(config.agent() + ": " + file);
+        JsonNode entry = removeServer(file, config.key());
+        removed.add(config.agent() + ": " + file + "\n  the entry was, in " + config.key() + ": \"" + SERVER_NAME + "\": " + entry);
+        if (canonical(file).equals(canonical(config.userConfig().get()))) warnings.add(userWideRemoval(config.agent(), file));
       } catch (IOException e) {
         failures.add("could not remove the " + SERVER_NAME + " MCP server from " + file + " (" + e.getMessage() + "); remove \""
             + SERVER_NAME + "\" from its " + config.key() + " by hand");
@@ -233,14 +239,21 @@ public final class McpRegistration {
     Path codex = projectDir.resolve(CODEX_PROJECT_CONFIG);
     if (CodexConfig.hasServer(codex)) {
       try {
-        CodexConfig.removeServer(codex);
-        removed.add("Codex: " + codex);
+        List<String> table = CodexConfig.removeServer(codex);
+        removed.add("Codex: " + codex + "\n  the table was:\n    " + String.join("\n    ", table));
+        if (canonical(codex).equals(canonical(codexHome().resolve("config.toml")))) warnings.add(userWideRemoval("Codex", codex));
       } catch (IOException e) {
         failures.add("could not remove the " + SERVER_NAME + " MCP server from " + codex + " (" + e.getMessage() + "); remove its [mcp_servers."
             + SERVER_NAME + "] by hand");
       }
     }
-    return new Result(removed, failures, List.of(), List.of());
+    return new Result(removed, failures, warnings, List.of());
+  }
+
+  /** The warning that {@code file}, a project's config the server was removed from, is {@code agent}'s own config of the user's. */
+  private static String userWideRemoval(String agent, Path file) {
+    return file + " is " + agent + "'s own config of the user's, read in every directory: the " + SERVER_NAME
+        + " MCP server is gone from every " + agent + " session, in any project, not only from this directory's.";
   }
 
   /**
@@ -260,212 +273,27 @@ public final class McpRegistration {
     }
   }
 
-  // ───────── the user's own configs, as earlier builds wrote them ─────────
+  // ───────── the user's own configs, which a project's file may be ─────────
 
-  /** An agent's own config of the user's, from which a registration an earlier build made can be removed. */
-  private interface UserConfig {
-    String name();
-
-    boolean installed();
-
-    /** Whether it has a {@link #SERVER_NAME} of the user's, whatever that runs. */
-    boolean hasServer();
-
-    /** Removes the user's {@link #SERVER_NAME}; null when that worked, else what went wrong. */
-    String unregister();
-
-    /** What the user can do instead, when removing it failed. */
-    String removeByHand();
+  /** Claude Code's own config of the user's: never a project's {@code .mcp.json}, but said for every agent alike. */
+  private static Path claudeUserConfig() {
+    String configDir = AgentHome.variable(home(), "CLAUDE_CONFIG_DIR");
+    return configDir != null && !configDir.isEmpty() ? Path.of(configDir, ".claude.json") : home().resolve(".claude.json");
   }
 
-  /**
-   * Removes {@link #SERVER_NAME} from the user's own config of every agent installed that has it,
-   * whatever it runs: the registration that {@code arend -d} and the IDE's daemon made before
-   * registering became a project's business.
-   */
-  public static Result unregisterUser() {
-    List<String> removed = new ArrayList<>();
-    List<String> failures = new ArrayList<>();
-    for (UserConfig agent : List.of(new Claude(), new Codex(), new Gemini(), cursor(), junie(), new VsCode())) {
-      if (!agent.installed() || !agent.hasServer()) continue;
-      String failure = agent.unregister();
-      if (failure == null) {
-        removed.add(agent.name());
-      } else {
-        failures.add("could not remove the " + SERVER_NAME + " MCP server from " + agent.name()
-            + " (" + failure + "); " + agent.removeByHand());
-      }
+  /** VS Code's default profile's mcp.json, where `code --add-mcp` puts a server. */
+  private static Path vsCodeUserConfig() {
+    Path user;
+    if (Platform.isWindows()) {
+      String appData = AgentHome.variable(home(), "APPDATA");
+      user = Path.of(appData != null ? appData : home().resolve("AppData").resolve("Roaming").toString(), "Code", "User");
+    } else if (Platform.isMac()) {
+      user = home().resolve("Library").resolve("Application Support").resolve("Code").resolve("User");
+    } else {
+      String configHome = AgentHome.variable(home(), "XDG_CONFIG_HOME");
+      user = (configHome != null && !configHome.isEmpty() ? Path.of(configHome) : home().resolve(".config")).resolve("Code").resolve("User");
     }
-    return new Result(removed, failures, List.of(), List.of());
-  }
-
-  /** An agent with a CLI of its own, which owns its config: the server is removed through it. */
-  private abstract static class CliAgent implements UserConfig {
-    private final String name;
-    final Path cli;
-
-    CliAgent(String name, Path cli) {
-      this.name = name;
-      this.cli = cli;
-    }
-
-    @Override
-    public String name() {
-      return name;
-    }
-
-    @Override
-    public boolean installed() {
-      return cli != null;
-    }
-  }
-
-  private static final class Claude extends CliAgent {
-    Claude() {
-      super("Claude Code", findExecutable("claude", home().resolve(".claude").resolve("local")));
-    }
-
-    private static Path config() {
-      String configDir = AgentHome.variable(home(), "CLAUDE_CONFIG_DIR");
-      return configDir != null && !configDir.isEmpty() ? Path.of(configDir, ".claude.json") : home().resolve(".claude.json");
-    }
-
-    @Override
-    public boolean hasServer() {
-      return hasServerIn(config(), MAPPER, "mcpServers");
-    }
-
-    @Override
-    public String unregister() {
-      return run(cli, List.of("mcp", "remove", "--scope", "user", SERVER_NAME));
-    }
-
-    @Override
-    public String removeByHand() {
-      return "run: claude mcp remove --scope user " + SERVER_NAME;
-    }
-  }
-
-  private static final class Codex extends CliAgent {
-    Codex() {
-      super("Codex", findExecutable("codex"));
-    }
-
-    @Override
-    public boolean hasServer() {
-      return run(cli, List.of("mcp", "get", SERVER_NAME, "--json")) == null;
-    }
-
-    @Override
-    public String unregister() {
-      return run(cli, List.of("mcp", "remove", SERVER_NAME));
-    }
-
-    @Override
-    public String removeByHand() {
-      return "run: codex mcp remove " + SERVER_NAME;
-    }
-  }
-
-  private static final class Gemini extends CliAgent {
-    Gemini() {
-      super("Gemini CLI", findExecutable("gemini"));
-    }
-
-    @Override
-    public boolean hasServer() {
-      return hasServerIn(home().resolve(".gemini").resolve("settings.json"), LENIENT, "mcpServers");
-    }
-
-    @Override
-    public String unregister() {
-      return run(cli, List.of("mcp", "remove", "--scope", "user", SERVER_NAME));
-    }
-
-    @Override
-    public String removeByHand() {
-      return "run: gemini mcp remove --scope user " + SERVER_NAME;
-    }
-  }
-
-  /** An agent with no CLI to remove a server through, whose {@code mcpServers} live in a JSON file of the user's: Cursor's and Junie's. */
-  private record ConfigFile(String name, Path dir, Path config) implements UserConfig {
-    @Override
-    public boolean installed() {
-      return Files.isDirectory(dir);
-    }
-
-    @Override
-    public boolean hasServer() {
-      return hasServerIn(config, MAPPER, "mcpServers");
-    }
-
-    @Override
-    public String unregister() {
-      try {
-        removeServer(config, "mcpServers");
-        return null;
-      } catch (IOException e) {
-        return e.getMessage();
-      }
-    }
-
-    @Override
-    public String removeByHand() {
-      return "remove \"" + SERVER_NAME + "\" from the mcpServers of " + config;
-    }
-  }
-
-  private static ConfigFile cursor() {
-    Path dir = home().resolve(".cursor");
-    return new ConfigFile("Cursor", dir, dir.resolve("mcp.json"));
-  }
-
-  private static ConfigFile junie() {
-    Path dir = home().resolve(".junie");
-    return new ConfigFile("Junie", dir, dir.resolve("mcp").resolve("mcp.json"));
-  }
-
-  private static final class VsCode extends CliAgent {
-    VsCode() {
-      super("VS Code", findExecutable("code"));
-    }
-
-    /** The default profile's mcp.json, where `code --add-mcp` puts a server. */
-    private static Path config() {
-      Path user;
-      if (Platform.isWindows()) {
-        String appData = AgentHome.variable(home(), "APPDATA");
-        user = Path.of(appData != null ? appData : home().resolve("AppData").resolve("Roaming").toString(), "Code", "User");
-      } else if (Platform.isMac()) {
-        user = home().resolve("Library").resolve("Application Support").resolve("Code").resolve("User");
-      } else {
-        String configHome = AgentHome.variable(home(), "XDG_CONFIG_HOME");
-        user = (configHome != null && !configHome.isEmpty() ? Path.of(configHome) : home().resolve(".config")).resolve("Code").resolve("User");
-      }
-      return user.resolve("mcp.json");
-    }
-
-    @Override
-    public boolean hasServer() {
-      return hasServerIn(config(), LENIENT, "servers");
-    }
-
-    /** By editing its mcp.json, which VS Code has no command for; one with comments is not rewritten, which would drop them. */
-    @Override
-    public String unregister() {
-      try {
-        removeServer(config(), "servers");
-        return null;
-      } catch (IOException e) {
-        return e.getMessage();
-      }
-    }
-
-    @Override
-    public String removeByHand() {
-      return "remove \"" + SERVER_NAME + "\" from the servers of " + config();
-    }
+    return user.resolve("mcp.json");
   }
 
   // ───────── files ─────────
@@ -485,15 +313,17 @@ public final class McpRegistration {
   }
 
   /**
-   * Removes {@link #SERVER_NAME} from the {@code key} object of {@code file}, keeping the rest. Read
-   * strictly: a file with comments would lose them, and is refused.
+   * Removes {@link #SERVER_NAME} from the {@code key} object of {@code file}, keeping the rest; the entry
+   * removed, or null when there was none. Read strictly: a file with comments would lose them, and is refused.
    */
-  static void removeServer(Path file, String key) throws IOException {
+  static JsonNode removeServer(Path file, String key) throws IOException {
     if (Files.isSymbolicLink(file)) file = file.toRealPath();
-    if (!Files.exists(file)) return;
+    if (!Files.exists(file)) return null;
     JsonNode root = MAPPER.readTree(file.toFile());
-    if (!(root.get(key) instanceof ObjectNode servers) || servers.remove(SERVER_NAME) == null) return;
-    write(file, root);
+    if (!(root.get(key) instanceof ObjectNode servers)) return null;
+    JsonNode entry = servers.remove(SERVER_NAME);
+    if (entry != null) write(file, root);
+    return entry;
   }
 
   /**
@@ -530,7 +360,7 @@ public final class McpRegistration {
     }
   }
 
-  // ───────── processes ─────────
+  // ───────── installed agents ─────────
 
   /**
    * {@code name} on the PATH, else in {@code ~/.local/bin} or one of {@code fallbacks}, where
@@ -554,44 +384,5 @@ public final class McpRegistration {
       }
     }
     return null;
-  }
-
-  /**
-   * Runs {@code cli} with {@code args} in the home directory, where no project's settings apply, and
-   * on that home's configs ({@link AgentHome#pointAt}); null when it succeeded, else what went wrong.
-   */
-  static String run(Path cli, List<String> args) {
-    List<String> command = new ArrayList<>();
-    command.add(cli.toString());
-    command.addAll(args);
-    Path log = null;
-    try {
-      // To a file, not a pipe: a process blocked on a full pipe would outlive the timeout.
-      log = Files.createTempFile("arend-mcp-register.", ".log");
-      ProcessBuilder builder = new ProcessBuilder(command).directory(home().toFile()).redirectErrorStream(true)
-          .redirectOutput(log.toFile());
-      AgentHome.pointAt(home(), builder.environment());
-      Process process = builder.start();
-      process.getOutputStream().close();
-      if (!process.waitFor(CLI_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-        process.destroyForcibly();
-        return cli.getFileName() + " did not answer within " + CLI_TIMEOUT_SECONDS + "s";
-      }
-      String output = Files.readString(log).strip();
-      if (process.exitValue() == 0) return null;
-      return output.isEmpty() ? "exit code " + process.exitValue() : output;
-    } catch (IOException e) {
-      return e.getMessage();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return "interrupted";
-    } finally {
-      if (log != null) {
-        try {
-          Files.deleteIfExists(log);
-        } catch (IOException ignored) {
-        }
-      }
-    }
   }
 }

@@ -31,8 +31,9 @@ final class CodexConfig {
   /** The server defined inline: a key of {@code [mcp_servers]}, or a dotted key at the top. */
   private static final Pattern INLINE_IN_SERVERS = Pattern.compile("\\s*" + NAME + "\\s*[.=].*");
   private static final Pattern INLINE_AT_TOP = Pattern.compile("\\s*mcp_servers\\s*\\.\\s*" + NAME + "\\s*[.=].*");
-  private static final Pattern PROJECT_TABLE = Pattern.compile("\\s*\\[\\s*projects\\s*\\.\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*]\\s*(?:#.*)?");
-  private static final Pattern TRUSTED = Pattern.compile("\\s*trust_level\\s*=\\s*\"trusted\"\\s*(?:#.*)?");
+  /** A project's table, its key a basic string or, as Codex writes it, a literal one. */
+  private static final Pattern PROJECT_TABLE = Pattern.compile("\\s*\\[\\s*projects\\s*\\.\\s*(?:\"((?:[^\"\\\\]|\\\\.)*)\"|'([^']*)')\\s*]\\s*(?:#.*)?");
+  private static final Pattern TRUSTED = Pattern.compile("\\s*trust_level\\s*=\\s*(?:\"trusted\"|'trusted')\\s*(?:#.*)?");
 
   /** The server's table, as it is written and as a user can add it by hand. */
   static List<String> table(List<String> command) {
@@ -63,25 +64,30 @@ final class CodexConfig {
     if (Files.isSymbolicLink(file)) file = file.toRealPath();
     String text = Files.exists(file) ? Files.readString(file) : "";
     String separator = text.contains("\r\n") ? "\r\n" : "\n";
-    List<String> kept = withoutServer(file, text);
+    List<String> kept = withoutServer(file, text, new ArrayList<>());
     if (!kept.isEmpty()) kept.add("");
     kept.addAll(table(command));
     write(file, String.join(separator, kept) + separator);
   }
 
-  /** Removes the server's table from {@code file}, keeping the rest; nothing happens when it has none. */
-  static void removeServer(Path file) throws IOException {
+  /** Removes the server's table from {@code file}, keeping the rest; the lines removed, none when it had no table. */
+  static List<String> removeServer(Path file) throws IOException {
     if (Files.isSymbolicLink(file)) file = file.toRealPath();
-    if (!Files.exists(file)) return;
+    if (!Files.exists(file)) return List.of();
     String text = Files.readString(file);
-    List<String> kept = withoutServer(file, text);
+    List<String> removed = new ArrayList<>();
+    List<String> kept = withoutServer(file, text, removed);
+    if (removed.isEmpty()) return removed;
     String separator = text.contains("\r\n") ? "\r\n" : "\n";
     write(file, kept.isEmpty() ? "" : String.join(separator, kept) + separator);
+    while (!removed.isEmpty() && removed.getLast().isBlank()) removed.removeLast();
+    return removed;
   }
 
   /**
    * Whether the user's {@code config} trusts {@code projectDir}, which Codex requires before it reads
-   * the project's own config: {@code trust_level = "trusted"} under {@code [projects."<dir>"]}.
+   * the project's own config: {@code trust_level = 'trusted'} under {@code [projects.'<dir>']}, as Codex
+   * writes it, or the same in basic strings.
    */
   static boolean trusts(Path config, Path projectDir) {
     try {
@@ -91,7 +97,8 @@ final class CodexConfig {
       for (String line : lines(Files.readString(config))) {
         Matcher project = PROJECT_TABLE.matcher(line);
         if (project.matches()) {
-          inProject = names.contains(project.group(1).replace("\\\"", "\"").replace("\\\\", "\\"));
+          String key = project.group(1) != null ? project.group(1).replace("\\\"", "\"").replace("\\\\", "\\") : project.group(2);
+          inProject = names.contains(key);
         } else if (ANY_TABLE.matcher(line).matches()) {
           inProject = false;
         } else if (inProject && TRUSTED.matcher(line).matches()) {
@@ -104,8 +111,11 @@ final class CodexConfig {
     }
   }
 
-  /** The lines of {@code text} without the server's table and its subtables, nor the blank lines that led up to it. */
-  private static List<String> withoutServer(Path file, String text) throws IOException {
+  /**
+   * The lines of {@code text} without the server's table and its subtables, nor the blank lines that led
+   * up to it; the lines of the tables go to {@code removed}.
+   */
+  private static List<String> withoutServer(Path file, String text, List<String> removed) throws IOException {
     if (text.contains("\"\"\"") || text.contains("'''")) {
       throw new IOException(file + " has multi-line strings, which this edit does not parse");
     }
@@ -122,7 +132,7 @@ final class CodexConfig {
         if (inOwn && !kept.isEmpty() && !kept.getLast().isBlank()) kept.add("");
         inOwn = false;
       }
-      if (!inOwn) kept.add(line);
+      (inOwn ? removed : kept).add(line);
     }
     while (!kept.isEmpty() && kept.getLast().isBlank()) kept.removeLast();
     return kept;
