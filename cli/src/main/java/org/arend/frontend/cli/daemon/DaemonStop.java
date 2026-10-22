@@ -128,7 +128,7 @@ public final class DaemonStop {
         : "[WARN]  -d stop: socket-side shutdown did not go through (rc=" + rpcRc
             + "); falling back to SIGTERM");
 
-    boolean gone = ProcessKill.terminateTree(List.of(ph.get()),
+    boolean gone = ProcessKill.terminateTree(ph.get(),
         () -> System.err.println("[WARN]  -d stop: PID " + lf.pid() + " did not exit gracefully"
             + " within " + ProcessKill.GRACEFUL_TIMEOUT_SECONDS + "s; escalating to SIGKILL"));
     if (!gone) {
