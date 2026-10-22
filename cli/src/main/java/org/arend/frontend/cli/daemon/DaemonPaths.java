@@ -150,6 +150,12 @@ public final class DaemonPaths {
    * is -- tightening one the user made is not this method's call -- and {@code SocketBinder} sets
    * the socket's own mode, so the socket is covered either way.
    */
+  /** The name of the library: its directory's. */
+  public String libraryName() {
+    Path directory = libraryConfig.getParent();
+    return directory.getFileName() == null ? "" : directory.getFileName().toString();
+  }
+
   public void ensureArendDir() throws IOException {
     if (Files.isDirectory(arendDir)) return;
     try {
