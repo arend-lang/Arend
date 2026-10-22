@@ -36,7 +36,14 @@ public final class Dispatch {
    *                  argv means the client's directory, never the daemon's. Null for a local run.
    */
   public static int run(CommandContext ctx, String[] args, String clientCwd) {
-    ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(args);
+    return run(ctx, ConsoleMain.parseArgs(args), clientCwd);
+  }
+
+  /**
+   * As {@link #run(CommandContext, String[], String)}, with the argv parsed already: parsing prints
+   * the help, the version or the error, so that it is done once.
+   */
+  public static int run(CommandContext ctx, ConsoleMain.ParsedArgs parsed, String clientCwd) {
     if (parsed.cmdLine() == null) {
       // parseArgs printed the help, the version, or the parse error. Only the first two are a
       // success: a command that did nothing because its arguments were rejected must not
