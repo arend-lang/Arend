@@ -89,7 +89,9 @@ public final class TypecheckPipeline {
     CliSetup.expandModulePatterns(ctx);
     if (ctx.exitWithError) return false;
     extendScopeForPrintTarget(ctx, cmdLine);
-    dropDeletedModules(ctx);
+    // Each library's source modules, read off its directory once for the whole run.
+    Map<SourceLibrary, List<ModulePath>> sources = sourcesOf(ctx.requestedLibraries);
+    dropDeletedModules(ctx, sources);
 
     // Modules whose stored diagnostics have already been printed by this run.
     Set<ModuleLocation> reported = new HashSet<>();
@@ -107,9 +109,7 @@ public final class TypecheckPipeline {
       if (ctx.requestedModules.isEmpty()) {
         // Whole-library typechecking: resolve every module of each requested library.
         for (SourceLibrary library : ctx.requestedLibraries) {
-          List<ModuleLocation> allModules = library.findModules(false).stream()
-              .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
-              .toList();
+          List<ModuleLocation> allModules = sourceLocations(library, sources.get(library));
           if (!allModules.isEmpty()) {
             ctx.server.getCheckerFor(allModules).resolveAll(ctx.cancellation, ProgressReporter.empty());
             resolvedRequestedScope = true;
@@ -147,7 +147,7 @@ public final class TypecheckPipeline {
         System.out.println("--- Typechecking " + library.getLibraryName() + " ---");
         long time = System.currentTimeMillis();
 
-        List<ModulePath> modulesToTypecheck = library.findModules(false);
+        List<ModulePath> modulesToTypecheck = sources.get(library);
         int totalModules = modulesToTypecheck.size();
         int checkedModules = 0;
         for (ModulePath modulePath : modulesToTypecheck) {
@@ -211,31 +211,7 @@ public final class TypecheckPipeline {
         }
 
         if (ctx.doubleCheck && numWithErrors == 0) {
-          System.out.println();
-          System.out.println("--- Checking " + library.getLibraryName() + " ---");
-          time = System.currentTimeMillis();
-
-          try {
-            List<ModuleLocation> modulesToCheck = new ArrayList<>();
-            for (ModuleLocation module : ctx.server.getModules()) {
-              if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-                modulesToCheck.add(module);
-              }
-            }
-            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
-            for (int i = 0; i < modulesToCheck.size(); i++) {
-              ModuleLocation module = modulesToCheck.get(i);
-              ctx.reportModuleProgress("Checking", i, modulesToCheck.size(), module.getModulePath());
-              ConcreteGroup group = ctx.server.getRawGroup(module);
-              if (group != null) {
-                checker.checkGroup(group);
-              }
-            }
-          } finally {
-            ctx.finishProgressLine();
-            time = System.currentTimeMillis() - time;
-            System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-          }
+          doubleCheck(ctx, library.getLibraryName(), modulesOf(ctx, library, ModuleLocation.LocationKind.SOURCE));
         }
 
         // Not after a cancellation: the modules that were skipped did not fail, they were never
@@ -309,25 +285,7 @@ public final class TypecheckPipeline {
       }
 
       if (ctx.doubleCheck && numWithErrors == 0 && !modulesToDoubleCheck.isEmpty()) {
-        System.out.println();
-        System.out.println("--- Checking ---");
-        time = System.currentTimeMillis();
-
-        try {
-          CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
-          for (int i = 0; i < modulesToDoubleCheck.size(); i++) {
-            ModuleLocation module = modulesToDoubleCheck.get(i);
-            ctx.reportModuleProgress("Checking", i, modulesToDoubleCheck.size(), module.getModulePath());
-            ConcreteGroup group = ctx.server.getRawGroup(module);
-            if (group != null) {
-              checker.checkGroup(group);
-            }
-          }
-        } finally {
-          ctx.finishProgressLine();
-          time = System.currentTimeMillis() - time;
-          System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-        }
+        doubleCheck(ctx, null, modulesToDoubleCheck);
       }
       if (cmdLine.hasOption(LINT)) {
         System.out.println();
@@ -386,36 +344,41 @@ public final class TypecheckPipeline {
         printTimes(timedProgressReporter);
 
         if (ctx.doubleCheck) {
-          System.out.println();
-          System.out.println("--- Checking tests in " + library.getLibraryName() + " ---");
-          time = System.currentTimeMillis();
-
-          try {
-            List<ModuleLocation> modulesToCheck = new ArrayList<>();
-            for (ModuleLocation module : ctx.server.getModules()) {
-              if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
-                modulesToCheck.add(module);
-              }
-            }
-            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
-            for (int i = 0; i < modulesToCheck.size(); i++) {
-              ModuleLocation module = modulesToCheck.get(i);
-              ctx.reportModuleProgress("Checking", i, modulesToCheck.size(), module.getModulePath());
-              ConcreteGroup group = ctx.server.getRawGroup(module);
-              if (group != null) {
-                checker.checkGroup(group);
-              }
-            }
-          } finally {
-            ctx.finishProgressLine();
-            time = System.currentTimeMillis() - time;
-            System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
-          }
+          doubleCheck(ctx, "tests in " + library.getLibraryName(), modulesOf(ctx, library, ModuleLocation.LocationKind.TEST));
         }
       }
     }
 
     return true;
+  }
+
+  /**
+   * {@code -c}: checks the core of {@code modules} again, under the banner
+   * {@code --- Checking what ---}, or {@code --- Checking ---} when {@code what} is null.
+   */
+  private static void doubleCheck(CommandContext ctx, String what, List<? extends ModuleLocation> modules) {
+    System.out.println();
+    System.out.println(what == null ? "--- Checking ---" : "--- Checking " + what + " ---");
+    long time = System.currentTimeMillis();
+    try {
+      CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+      for (int i = 0; i < modules.size(); i++) {
+        ModuleLocation module = modules.get(i);
+        ctx.reportModuleProgress("Checking", i, modules.size(), module.getModulePath());
+        ConcreteGroup group = ctx.server.getRawGroup(module);
+        if (group != null) checker.checkGroup(group);
+      }
+    } finally {
+      ctx.finishProgressLine();
+      System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+    }
+  }
+
+  /** The modules of {@code library} of {@code kind} the server holds. */
+  private static List<? extends ModuleLocation> modulesOf(CommandContext ctx, SourceLibrary library, ModuleLocation.LocationKind kind) {
+    return ctx.server.getModules().stream()
+        .filter(module -> module.getLocationKind() == kind && module.getLibraryName().equals(library.getLibraryName()))
+        .toList();
   }
 
   /**
@@ -701,6 +664,20 @@ public final class TypecheckPipeline {
     }
   }
 
+  /** The source modules of each of {@code libraries}, read off its directory. */
+  private static Map<SourceLibrary, List<ModulePath>> sourcesOf(List<SourceLibrary> libraries) {
+    Map<SourceLibrary, List<ModulePath>> sources = new HashMap<>();
+    for (SourceLibrary library : libraries) sources.put(library, library.findModules(false));
+    return sources;
+  }
+
+  /** {@code library}'s source modules {@code modulePaths}, as the server names them. */
+  private static List<ModuleLocation> sourceLocations(SourceLibrary library, List<ModulePath> modulePaths) {
+    return modulePaths.stream()
+        .map(modulePath -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath))
+        .toList();
+  }
+
   /**
    * Removes modules of the requested libraries whose source file is gone.
    *
@@ -712,10 +689,10 @@ public final class TypecheckPipeline {
    *
    * <p>Inert on a cold run, where the server was told about exactly the modules on disk.
    */
-  private static void dropDeletedModules(CommandContext ctx) {
+  private static void dropDeletedModules(CommandContext ctx, Map<SourceLibrary, List<ModulePath>> sources) {
     List<ModuleLocation> gone = new ArrayList<>();
-    for (SourceLibrary library : ctx.requestedLibraries) {
-      Set<ModulePath> onDisk = new HashSet<>(library.findModules(false));
+    for (SourceLibrary library : sources.keySet()) {
+      Set<ModulePath> onDisk = new HashSet<>(sources.get(library));
       for (ModuleLocation module : ctx.server.getModules()) {
         if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
             && module.getLibraryName().equals(library.getLibraryName())
