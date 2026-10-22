@@ -117,7 +117,9 @@ public final class SymbolIndex {
   public static @NotNull SymbolIndex refreshLibrary(
       @NotNull SourceLibrary library, @NotNull ArendServer server, boolean withTests) {
     SymbolIndex idx = loadOrCreate(library);
-    for (ModulePath mp : library.findModules(false)) {
+    // Listed once: finding the modules walks the library's directory.
+    List<ModulePath> sources = library.findModules(false);
+    for (ModulePath mp : sources) {
       if (idx.isStale(library, mp)) {
         server.findModule(mp, library.getLibraryName(), false, false);
       }
@@ -127,27 +129,27 @@ public final class SymbolIndex {
         server.findModule(mp, library.getLibraryName(), true, false);
       }
     }
-    idx.refresh(library, server, false);
+    idx.refresh(library, sources, server);
     idx.save();
     return idx;
   }
 
   /**
-   * Rebuilds entries for every module of {@code library} that has changed
-   * (or that isn't yet in the cache) using groups already loaded by {@code server}.
-   * Generated modules are always re-collected.
+   * Rebuilds entries for every module of {@code sources}, the source modules of {@code library},
+   * that has changed (or that isn't yet in the cache) using groups already loaded by
+   * {@code server}. Generated modules are always re-collected.
    */
-  public void refresh(@NotNull SourceLibrary library, @NotNull ArendServer server, boolean force) {
+  public void refresh(@NotNull SourceLibrary library, @NotNull List<ModulePath> sources, @NotNull ArendServer server) {
     String libName = library.getLibraryName();
     Set<ModulePath> seen = new HashSet<>();
 
     // 1) Source modules. Drive iteration from the library's on-disk module list
     // so we keep cached entries for modules the server hasn't (re-)loaded.
-    for (ModulePath mp : library.findModules(false)) {
+    for (ModulePath mp : sources) {
       seen.add(mp);
       FileStamp now = SymbolIndexStore.sourceStamp(library, mp);
       FileStamp prev = myTimestamps.get(mp);
-      if (!force && prev != null && prev.equals(now) && myEntries.containsKey(mp)) continue;
+      if (prev != null && prev.equals(now) && myEntries.containsKey(mp)) continue;
 
       ModuleLocation moduleLoc = new ModuleLocation(libName, ModuleLocation.LocationKind.SOURCE, mp);
       ConcreteGroup group = server.getRawGroup(moduleLoc);
