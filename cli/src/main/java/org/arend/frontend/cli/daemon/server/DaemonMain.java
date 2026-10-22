@@ -89,14 +89,7 @@ public final class DaemonMain {
       LockFile.deleteQuietly(socketPath);
     }, "arend-daemon-shutdown"));
 
-    LockFile lock = new LockFile(
-        ProcessHandle.current().pid(),
-        paths.libraryConfig.toString(),
-        paths.libraryHash,
-        LockFile.PROTOCOL_VERSION,
-        System.currentTimeMillis(),
-        bound.address()
-    );
+    LockFile lock = LockFile.ofThisProcess(paths, System.currentTimeMillis(), bound.address());
     try {
       lock.writeAtomic(paths.lockFile);
     } catch (IOException e) {

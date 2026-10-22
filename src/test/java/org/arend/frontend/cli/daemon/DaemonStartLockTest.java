@@ -33,7 +33,7 @@ public class DaemonStartLockTest {
 
   private static LockFile.Read found(String hash) {
     return new LockFile.Read.Found(
-        new LockFile(4242, "/lib/arend.yaml", hash, LockFile.PROTOCOL_VERSION, 0L, "uds:/s"));
+        new LockFile(4242, "/lib/arend.yaml", hash, LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.UNKNOWN_START));
   }
 
   /**

@@ -210,7 +210,7 @@ public final class DaemonRpc {
           }
           return null;
         }
-        if (ProcessHandle.of(lf.pid()).isEmpty()) {
+        if (!lf.processAlive()) {
           LockFile.deleteQuietly(paths.lockFile);
           return null;
         }

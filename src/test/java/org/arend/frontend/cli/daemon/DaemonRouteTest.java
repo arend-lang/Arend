@@ -61,9 +61,7 @@ public class DaemonRouteTest {
 
     SocketBinder.Bound bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     listener = bound.channel();
-    new LockFile(ProcessHandle.current().pid(), paths.libraryConfig.toString(), paths.libraryHash,
-        LockFile.PROTOCOL_VERSION, System.currentTimeMillis(),
-        bound.address()).writeAtomic(paths.lockFile);
+    LockFile.ofThisProcess(paths, System.currentTimeMillis(), bound.address()).writeAtomic(paths.lockFile);
 
     // Answers exactly one request and records it.
     acceptor = new Thread(() -> {

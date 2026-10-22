@@ -46,7 +46,7 @@ public final class DaemonStart {
     }
 
     LockFile.Read existing = LockFile.read(paths.lockFile);
-    switch (inspectLock(existing, paths.libraryHash, DaemonStart::isAlive)) {
+    switch (inspectLock(existing, paths.libraryHash, LockFile::processAlive)) {
       case UNREADABLE_LOCK -> {
         // Something is there and we cannot tell whether it is live. Starting a second daemon on
         // top of a running one is the one outcome worth refusing outright.
@@ -159,7 +159,7 @@ public final class DaemonStart {
   private static boolean reportIfReady(DaemonPaths paths) {
     Optional<LockFile> ready = LockFile.readIfValid(paths.lockFile);
     if (ready.isEmpty() || !ready.get().libraryHash().equals(paths.libraryHash)
-        || ProcessHandle.of(ready.get().pid()).isEmpty()) {
+        || !ready.get().processAlive()) {
       return false;
     }
     LockFile lock = ready.get();
@@ -212,16 +212,6 @@ public final class DaemonStart {
 
   private static LockFile lockOf(LockFile.Read read) {
     return ((LockFile.Read.Found) read).lock();
-  }
-
-  /**
-   * Liveness is the PID and nothing else. A socket probe would also catch a recycled PID, but it
-   * can fail for reasons that have nothing to do with the daemon being gone -- and every caller
-   * that concludes "dead" goes on to remove the lock. A false "still running" costs the user one
-   * {@code --daemon-stop}; a false "dead" costs them a process they can no longer reach.
-   */
-  private static boolean isAlive(LockFile lf) {
-    return ProcessHandle.of(lf.pid()).isPresent();
   }
 
   /**
