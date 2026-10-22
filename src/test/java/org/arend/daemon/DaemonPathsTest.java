@@ -51,7 +51,10 @@ public class DaemonPathsTest {
     assertEquals(viaDir, viaDetour);
   }
 
-  /** A library's resolutions are keys of maps and sets: two of one library count as one. */
+  /**
+   * The IDE's daemon finds its home library among the ones it resolves again on every library
+   * update; told apart by identity, it took its own home for gone and restarted itself.
+   */
   @Test
   public void twoResolutionsOfOneLibraryAreEqual() throws IOException {
     Path root = library("mylib");

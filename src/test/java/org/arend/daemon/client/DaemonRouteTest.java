@@ -94,7 +94,7 @@ public class DaemonRouteTest {
   /** The lock this process would write as a daemon owning {@code owned} and having loaded {@code shared}. */
   private LockFile lockOf(DaemonPaths home, List<DaemonPaths> owned, List<String> shared) {
     return LockFile.ofThisProcess(home, owned.stream().map(d -> d.libraryConfig.toString()).toList(), shared,
-        System.currentTimeMillis(), address, TOKEN);
+        System.currentTimeMillis(), address, LockFile.HOST_CLI, TOKEN);
   }
 
   @After
@@ -234,7 +234,7 @@ public class DaemonRouteTest {
     List<String> sharedConfigs = new ArrayList<>();
     for (Path root : shared) sharedConfigs.add(DaemonPaths.resolve(root).libraryConfig.toString());
     LockFile lock = new LockFile(pid, "/owner-" + hash + "/arend.yaml", hash, List.of("/owner-" + hash + "/arend.yaml"),
-        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.UNKNOWN_START, TOKEN, null, "");
+        sharedConfigs, LockFile.PROTOCOL_VERSION, startedAt, socket, LockFile.HOST_CLI, LockFile.UNKNOWN_START, TOKEN, null, "");
     PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
     lock.writeAtomic(lock.registryFile());
     return lock.registryFile();
@@ -295,7 +295,7 @@ public class DaemonRouteTest {
     // Its own daemon -- here one that cannot be reached -- takes it from then on.
     dep.ensureArendDir();
     LockFile.ofThisProcess(dep, List.of(dep.libraryConfig.toString()), List.of(), System.currentTimeMillis(),
-        "uds:/nonexistent/daemon.sock", TOKEN).writeEverywhere();
+        "uds:/nonexistent/daemon.sock", LockFile.HOST_CLI, TOKEN).writeEverywhere();
     assertEquals(dep.libraryConfig.toString(), DaemonRpc.daemonFor(List.of(dep)).libraryPath());
   }
 

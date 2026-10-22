@@ -99,12 +99,12 @@ public class BuildIdentityTest {
     assertNull(DaemonRpc.otherBuild(lockWith(same), ours));
     assertTrue(DaemonRpc.otherBuild(lockWith(older), ours).contains("changed"));
     assertTrue(DaemonRpc.otherBuild(lockWith(elsewhere), ours).contains("/opt/arend-1.11.jar"));
-    assertNull("a daemon that does not say its build", DaemonRpc.otherBuild(lockWith(null), ours));
+    assertNull("an IDE's daemon says nothing of its build", DaemonRpc.otherBuild(lockWith(null), ours));
     assertNull("a client run from class directories cannot tell", DaemonRpc.otherBuild(lockWith(older), null));
   }
 
   private static LockFile lockWith(BuildIdentity build) {
     return new LockFile(1, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
-        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.UNKNOWN_START, "", build, "");
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", build, "");
   }
 }

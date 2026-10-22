@@ -382,6 +382,7 @@
         <notificationGroup id="Arend Error Messages" displayType="STICKY_BALLOON" />
         <notificationGroup id="Arend Warning Messages" displayType="BALLOON" />
         <notificationGroup id="Arend Info Messages" displayType="NONE" />
+        <notificationGroup id="Arend Daemon" displayType="BALLOON" />
         <notificationGroup id="Arend Reload" displayType="STICKY_BALLOON" />
         <notificationGroup id="Arend Library Update" displayType="STICKY_BALLOON" />
 

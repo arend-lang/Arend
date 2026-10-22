@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/** Every library a query may look into, by name: the CLI's library manager. */
+/** Every library a query may look into, by name: the CLI's library manager, or the IDE's project. */
 public interface QueryLibraries {
   List<String> getLibraries();
 

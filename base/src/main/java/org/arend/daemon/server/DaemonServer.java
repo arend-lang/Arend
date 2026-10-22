@@ -13,6 +13,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,14 +22,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * The daemon wire protocol: the socket is accepted on one thread, each client read on a pool
- * thread, and the requests that need the server -- {@code cli} and {@code refresh} -- run one at a
- * time on a worker, through a {@link Runner}. {@code ping}, {@code status} and {@code cancel} are
- * answered at once; {@code shutdown} lets what is queued run first, then calls {@code onShutdown}.
- * Nothing here exits the process.
+ * The daemon wire protocol, for the CLI's daemon and the IntelliJ plugin's alike: the socket is
+ * accepted on one thread, each client read on a pool thread, and the requests that need the
+ * server -- {@code cli} and {@code refresh} -- run one at a time on a worker, through a
+ * {@link Runner}. {@code ping}, {@code status} and {@code cancel} are answered at once;
+ * {@code shutdown} lets what is queued run first, then calls {@code onShutdown}. Nothing here exits
+ * the process.
  *
  * <p>Every request has to present the daemon's token, which only the registry's copy of its lock
  * holds -- a file of the user's alone. A socket's permissions keep other users out where there is a
@@ -100,17 +103,36 @@ public final class DaemonServer {
     int run(Request request) throws Exception;
   }
 
-  private record WorkItem(Request request) {}
+  /** A request the worker has finished, cancelled ones included. */
+  public record Finished(String command, long startedAt, long durationMs, int exitCode) {}
+
+  /**
+   * What the daemon is doing, for the IDE to show: the request running, with when it started (null
+   * when idle), those queued, how many it has answered, and the latest finished, newest first.
+   */
+  public record Activity(String state, @Nullable String current, @Nullable Long currentSince,
+                         List<String> queued, int served, List<Finished> recent) {}
+
+  /** How many finished requests {@link #activity} remembers. */
+  private static final int RECENT_LIMIT = 20;
+
+  private record WorkItem(Request request, String command) {}
+
+  /** The request the worker runs, with when it started. */
+  private record Running(WorkItem item, long since) {}
 
   /** Makes the worker stop once what was queued before it has run; recognised by identity. */
-  private static final WorkItem SHUTDOWN = new WorkItem(null);
+  private static final WorkItem SHUTDOWN = new WorkItem(null, "shutdown");
 
   private final SocketBinder.Bound bound;
   private final byte[] token;
   private final Supplier<List<String>> libraries;
   private final Map<String, Object> lockedFlags;
+  private final String host;
   private final Runner runner;
   private final Runnable onShutdown;
+  private final Function<List<String>, String> describe;
+  private final Runnable onActivity;
   private final long startedAt = System.currentTimeMillis();
 
   private final LinkedBlockingQueue<WorkItem> workQueue = new LinkedBlockingQueue<>();
@@ -123,9 +145,11 @@ public final class DaemonServer {
    * not the worker has reached it.
    */
   private final ConcurrentHashMap<String, BooleanCancellationIndicator> inFlight = new ConcurrentHashMap<>();
-  /** Null when the worker is idle. */
-  private volatile @Nullable WorkItem current;
+  /** Null when the worker is idle; one write, so that a reader never pairs a request with another's start. */
+  private volatile @Nullable Running current;
   private volatile boolean draining;
+  private final ArrayDeque<Finished> recent = new ArrayDeque<>();
+  private int served;
 
   private final ExecutorService clientPool = Executors.newCachedThreadPool(Thread.ofPlatform().daemon().name("arend-daemon-client").factory());
   private final Thread acceptThread = Thread.ofPlatform().daemon().name("arend-daemon-accept").unstarted(this::acceptLoop);
@@ -135,16 +159,23 @@ public final class DaemonServer {
    * @param token       what every request has to present, as the registry's copy of the lock says
    * @param libraries   the canonical arend.yaml or zip of every library served, as {@code status} reports them
    * @param lockedFlags the flags fixed at the daemon's start, as {@code status} reports them
+   * @param host        what runs the daemon, as its lock says
+   * @param describe    what a request asks for, for a person; given null for a {@code refresh}
+   * @param onActivity  called whenever {@link #activity} has changed
    */
   public DaemonServer(SocketBinder.Bound bound, String token, Supplier<List<String>> libraries, Map<String, Object> lockedFlags,
-                      Runner runner, Runnable onShutdown) {
+                      String host, Runner runner, Runnable onShutdown,
+                      Function<List<String>, String> describe, Runnable onActivity) {
     if (token == null || token.isEmpty()) throw new IllegalArgumentException("a daemon needs a token");
     this.bound = bound;
     this.token = token.getBytes(StandardCharsets.UTF_8);
     this.libraries = libraries;
     this.lockedFlags = lockedFlags;
+    this.host = host;
     this.runner = runner;
     this.onShutdown = onShutdown;
+    this.describe = describe;
+    this.onActivity = onActivity;
   }
 
   /**
@@ -184,8 +215,16 @@ public final class DaemonServer {
     workerThread.interrupt();
   }
 
-  private String state(@Nullable WorkItem running) {
+  private String state(@Nullable Running running) {
     return draining ? "DRAINING" : running == null ? "IDLE" : "BUSY";
+  }
+
+  public Activity activity() {
+    synchronized (recent) {
+      Running running = current;
+      return new Activity(state(running), running == null ? null : running.item().command(), running == null ? null : running.since(),
+          workQueue.stream().filter(item -> item != SHUTDOWN).map(WorkItem::command).toList(), served, List.copyOf(recent));
+    }
   }
 
   // ───────── accept and client threads ─────────
@@ -249,9 +288,9 @@ public final class DaemonServer {
         channel.write(FrameChannel.doneFrame(id, 0));
       }
       case "status" -> {
-        WorkItem running = current;
+        Running running = current;
         channel.write(FrameChannel.statusFrame(id, state(running), workQueue.size(), System.currentTimeMillis() - startedAt,
-            running == null ? "" : running.request().output().requestId(), libraries.get(), lockedFlags));
+            running == null ? "" : running.item().request().output().requestId(), libraries.get(), lockedFlags, host));
         channel.write(FrameChannel.doneFrame(id, 0));
       }
       case "cancel" -> {
@@ -276,7 +315,8 @@ public final class DaemonServer {
   private void queue(String id, @Nullable List<String> args, @Nullable String cwd, FrameChannel channel) {
     Request request = new Request(args, cwd, new FrameOutput(channel, id), new BooleanCancellationIndicator());
     inFlight.put(id, request.cancel());
-    workQueue.add(new WorkItem(request));
+    workQueue.add(new WorkItem(request, describe.apply(args)));
+    onActivity.run();
   }
 
   /**
@@ -294,7 +334,8 @@ public final class DaemonServer {
     WorkItem queued = workQueue.stream().filter(item -> item != SHUTDOWN && item.request().output().requestId().equals(target)).findFirst().orElse(null);
     if (queued != null && workQueue.remove(queued)) {
       queued.request().output().err("[CANCELLED]\n");
-      complete(queued, FrameChannel.CANCELLED_EXIT_CODE);
+      complete(queued, System.currentTimeMillis(), FrameChannel.CANCELLED_EXIT_CODE);
+      onActivity.run();
     }
     return true;
   }
@@ -320,7 +361,9 @@ public final class DaemonServer {
         return;
       }
       Request request = item.request();
-      current = item;
+      long itemStartedAt = System.currentTimeMillis();
+      current = new Running(item, itemStartedAt);
+      onActivity.run();
       int exitCode = 1;
       try {
         // Already cancelled: starting the run anyway would hold the worker for a whole typecheck.
@@ -337,7 +380,8 @@ public final class DaemonServer {
           exitCode = FrameChannel.CANCELLED_EXIT_CODE;
         }
         current = null;
-        complete(item, exitCode);
+        complete(item, itemStartedAt, exitCode);
+        onActivity.run();
       }
     }
   }
@@ -351,13 +395,19 @@ public final class DaemonServer {
     for (WorkItem item : items) {
       if (item == SHUTDOWN) continue;
       item.request().output().err("[ERROR] " + retireReason + "\n");
-      complete(item, 1);
+      complete(item, System.currentTimeMillis(), 1);
     }
+    onActivity.run();
     Thread.ofPlatform().daemon().name("arend-daemon-shutdown").start(onShutdown);
   }
 
-  /** Forgets {@code item} and only then tells its client, so that a client hearing {@code done} finds the daemon past it. */
-  private void complete(WorkItem item, int exitCode) {
+  /** Records {@code item} as finished and only then tells its client, so that a client hearing {@code done} finds the daemon past it. */
+  private void complete(WorkItem item, long itemStartedAt, int exitCode) {
+    synchronized (recent) {
+      served++;
+      recent.addFirst(new Finished(item.command(), itemStartedAt, System.currentTimeMillis() - itemStartedAt, exitCode));
+      while (recent.size() > RECENT_LIMIT) recent.removeLast();
+    }
     inFlight.remove(item.request().output().requestId());
     item.request().output().done(exitCode);
   }

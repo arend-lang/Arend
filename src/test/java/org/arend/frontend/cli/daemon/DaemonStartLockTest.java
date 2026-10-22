@@ -44,7 +44,7 @@ public class DaemonStartLockTest {
   private static LockFile.Read found(Path... libraries) {
     List<String> configs = Arrays.stream(libraries).map(Path::toString).toList();
     return new LockFile.Read.Found(new LockFile(4242, configs.getFirst(), "h", configs, List.of(),
-        LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.UNKNOWN_START, "", null, ""));
+        LockFile.PROTOCOL_VERSION, 0L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, ""));
   }
 
   /** The verdict table, for a lock {@link LockFile#lookup} found: one that serves the library. */
@@ -251,7 +251,8 @@ public class DaemonStartLockTest {
 
   /**
    * The locks are checked when `-d` runs, and the child claims its libraries only once they are
-   * loaded, seconds later: whatever claimed one of them meanwhile keeps it, and this start gives up.
+   * loaded, seconds later: whatever claimed one of them meanwhile -- the IDE's daemon, which a start
+   * in progress does not stop -- keeps it, and this start gives up.
    */
   @Test
   public void aLibraryClaimedWhileTheChildLoadedStopsTheStart() throws IOException {
@@ -263,13 +264,36 @@ public class DaemonStartLockTest {
       assertNull(org.arend.frontend.cli.daemon.server.DaemonMain.claimedMeanwhile(List.of(paths)));
 
       LockFile.ofThisProcess(paths, List.of(paths.libraryConfig.toString()), List.of(), 1L, "uds:/s",
-          LockFile.newToken()).writeEverywhere();
+          LockFile.HOST_INTELLIJ, LockFile.newToken()).writeEverywhere();
       String claimed = org.arend.frontend.cli.daemon.server.DaemonMain.claimedMeanwhile(List.of(paths));
       assertNotNull(claimed);
-      assertTrue(claimed, claimed.contains("PID " + ProcessHandle.current().pid()));
+      assertTrue(claimed, claimed.contains("intellij"));
     } finally {
       System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
     }
+  }
+
+  /**
+   * What the IDE's daemon reads to leave a library alone that `arend -d` is starting a daemon for:
+   * a start is under way while its `arend -d` runs, or the daemon it spawned -- which a killed
+   * `arend -d` leaves loading, detached.
+   */
+  @Test
+  public void aStartInProgressIsSeenWhileOneOfItsProcessesRuns() throws IOException {
+    DaemonPaths paths = DaemonPaths.resolve(library());
+    paths.ensureArendDir();
+    assertFalse(paths.startInProgress());
+    assertTrue(StartMarker.reserve(paths.startingMarker));
+    assertTrue(paths.startInProgress());
+
+    Files.writeString(paths.startingMarker, killedStart());
+    assertFalse("a start whose processes are gone is debris", paths.startInProgress());
+    // The daemon a killed `arend -d` spawned, this process standing in for it.
+    StartMarker.add(paths.startingMarker, ProcessHandle.current());
+    assertTrue("the daemon of a killed `arend -d` is still loading", paths.startInProgress());
+    // Ready, it removes the marker itself: its `arend -d` is not there to.
+    StartMarker.release(paths.startingMarker, ProcessHandle.current());
+    assertFalse(Files.exists(paths.startingMarker));
   }
 
   /**

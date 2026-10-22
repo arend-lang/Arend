@@ -81,6 +81,11 @@ public final class DaemonPaths {
     return libraryConfig.hashCode();
   }
 
+  /** Whether {@code arend -d} is starting a daemon for this library right now: its marker is there, and a process it names runs. */
+  public boolean startInProgress() {
+    return StartMarker.inProgress(startingMarker);
+  }
+
   /**
    * The project a daemon owning {@code owned} holds, for a command issued from it to find the daemon:
    * the deepest directory holding every one of them. None when that is the file system's root or the

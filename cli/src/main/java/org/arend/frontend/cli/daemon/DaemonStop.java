@@ -124,6 +124,12 @@ public final class DaemonStop {
       System.out.println("Daemon stopped (PID " + lf.pid() + ")");
       return 0;
     }
+    if (lf.isHostedByIde()) {
+      // The PID is the IDE's: a signal would stop the daemon by closing the user's IDE.
+      System.err.println("[ERROR] -d stop: the daemon runs inside " + lf.host() + " (PID " + lf.pid() + ") and did"
+          + " not stop through its socket (rc=" + rpcRc + "); stop it from the IDE instead.");
+      return 1;
+    }
     System.err.println(rpcRc == 0
         ? "[WARN]  -d stop: daemon ack'd shutdown but PID " + lf.pid() + " did not exit within "
             + ProcessKill.GRACEFUL_TIMEOUT_SECONDS + "s; falling back to SIGTERM"

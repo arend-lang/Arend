@@ -55,6 +55,9 @@ class ArendProjectSettingsState {
     var includeTestLocations : Boolean = false
     var includeNonProjectLocations : Boolean = true
     var truncateSearchResults : Boolean = true
+
+    // Daemon: whether opening the project also lets agents and the CLI reach its server as a daemon
+    var startDaemon : Boolean = false
 }
 
 class ArendPrintingOptions {

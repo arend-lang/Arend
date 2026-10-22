@@ -8,7 +8,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * A library as the query tools see it: its name, its modules and where they live.
+ * A library as the query tools see it: its name, its modules and where they live. The CLI's
+ * libraries and the IntelliJ plugin's each provide one, so the tools answer the same either way.
  */
 public interface QueryLibrary {
   @NotNull String getLibraryName();
