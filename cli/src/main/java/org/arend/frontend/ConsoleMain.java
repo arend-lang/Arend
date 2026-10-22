@@ -125,25 +125,6 @@ public class ConsoleMain {
   }
 
   /**
-   * Parses {@code args} with {@code tool} and runs the resulting {@link ConsoleQueryTool.ConsoleToolRunner}
-   * against {@code ctx}; returns {@code null} on parse failure (the tool has already printed the
-   * diagnostic), else the tool's exit code.
-   */
-  private static Integer runQueryTool(ConsoleQueryTool tool, String[] args, ConsoleQueryTool.QueryContext ctx) {
-    ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(args);
-    return parsed == null ? null : parsed.run(ctx);
-  }
-
-
-
-
-
-
-
-
-
-
-  /**
    * Builds a context with its libraries loaded and the requested command run once, and hands it
    * back so that further commands can be run against it with
    * {@link Dispatch#run(CommandContext, String[])}.
