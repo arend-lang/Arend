@@ -1,6 +1,6 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon.server;
 
-import org.arend.frontend.cli.daemon.server.SocketBinder;
+import org.arend.daemon.server.SocketBinder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -26,7 +26,7 @@ public class SocketBinderTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private static boolean udsSupported() {
-    return org.arend.frontend.cli.daemon.Platform.supportsUnixSockets();
+    return org.arend.daemon.Platform.supportsUnixSockets();
   }
 
   private Path socketPath() throws IOException {

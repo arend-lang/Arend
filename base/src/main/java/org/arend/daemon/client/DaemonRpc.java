@@ -1,8 +1,8 @@
-package org.arend.frontend.cli.daemon.client;
+package org.arend.daemon.client;
 
-import org.arend.frontend.cli.daemon.DaemonPaths;
-import org.arend.frontend.cli.daemon.LockFile;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.wire.SocketAddress;
 
 import java.io.IOException;
 import java.nio.file.Files;

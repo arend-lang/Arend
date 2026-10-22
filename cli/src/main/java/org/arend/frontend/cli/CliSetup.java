@@ -8,7 +8,7 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.server.TimedProgressReporter;
-import org.arend.frontend.cli.daemon.DaemonPaths;
+import org.arend.daemon.DaemonPaths;
 import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;

@@ -1,10 +1,10 @@
 package org.arend.frontend.cli.daemon;
 
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.daemon.client.DaemonClient;
+import org.arend.daemon.client.DaemonClient;
 import org.arend.frontend.cli.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
 import org.junit.After;
 import org.junit.Before;
@@ -52,7 +52,7 @@ public class DaemonCancellationTest {
   @Before
   public void setUp() throws IOException {
     assumeTrue("Unix domain sockets required",
-        org.arend.frontend.cli.daemon.Platform.supportsUnixSockets());
+        org.arend.daemon.Platform.supportsUnixSockets());
 
     Path sock = tempFolder.newFolder("state").toPath().resolve("daemon.sock");
     SocketBinder.Bound bound = SocketBinder.bind(sock, "0123456789abcdef");

@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon;
 
 import org.junit.Test;
 

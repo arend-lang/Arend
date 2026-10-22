@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon;
 
 import java.io.IOException;
 import java.io.InputStream;

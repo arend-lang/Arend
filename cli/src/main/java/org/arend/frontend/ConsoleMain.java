@@ -6,7 +6,7 @@ import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.DaemonStop;
 import org.arend.frontend.cli.daemon.LockedFlags;
-import org.arend.frontend.cli.daemon.client.DaemonRpc;
+import org.arend.daemon.client.DaemonRpc;
 import org.arend.frontend.cli.daemon.server.DaemonMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
