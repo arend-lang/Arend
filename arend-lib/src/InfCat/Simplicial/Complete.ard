@@ -1,0 +1,96 @@
+{- | Complete and complete Segal right fibrations over the simplex category.
+
+     For `p : E ->⁺ DeltaCat` whose fibers form a right fibration, the `n`-simplices are {simp} `p n` and a monotone map
+     acts on them by transport in the right fibration ({act}).
+     {p} is complete ({IsComplete}) if the vertices are equivalent to the edges which are isomorphisms ({IsIsoS}) via the
+     degenerate edges. An edge is an isomorphism if it has a left and a right inverse, witnessed by 2-simplices.
+ -}
+
+\import Category
+\import Category.Simplex
+\import Equiv
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Nerve.Nerve
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Logic.Meta
+\import Paths
+\open simplex
+
+-- # Simplices
+
+-- | The `n`-simplices of {p}.
+\func simplex {E : \Cat} (p : E ->⁺ DeltaCat) (n : Nat) : \Cat
+  => Fibers p (nerveOb {SimplexCat} n)
+  \where {
+    -- | The action of a monotone map on simplices.
+    \func act {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {m n : Nat} (d : Hom {SimplexCat} m n) (s : simplex p n) : simplex p m
+      => rightFib-tr pf (nerveHom d) s
+
+    \sfunc act-id {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {n : Nat} (s : simplex p n) : act pf (id {SimplexCat} {n}) s = s
+      => pmap (rightFib-tr pf __ s) nerveHom-id *> rightFib-tr_idd pf
+
+    \sfunc act-comp {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {l m n : Nat} (d : Hom {SimplexCat} l m) (d' : Hom {SimplexCat} m n)
+                    (s : simplex p n) : act pf (d' ∘ d) s = act pf d (act pf d' s)
+      => pmap (rightFib-tr pf __ s) (inv nerveHom-comp) *> rightFib-tr_comp pf (nerveHom d) (nerveHom d')
+
+    -- | The source of an edge.
+    \func src {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (e : simplex p 1) : simplex p 0
+      => act pf (vert 0) e
+
+    -- | The target of an edge.
+    \func tgt {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (e : simplex p 1) : simplex p 0
+      => act pf (vert 1) e
+
+    -- | The degenerate edge at a vertex.
+    \func degen {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (x : simplex p 0) : simplex p 1
+      => act pf (constHom 0) x
+  }
+
+-- # Completeness
+
+-- | {e} has a left inverse: a 2-simplex with first edge {e} whose long edge is degenerate.
+\type HasLeftInv {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (e : simplex p 1) : \Prop
+  => ∃ (sigma : simplex p 2) (act pf (segRes 1) sigma = e) (act pf face1 sigma = degen pf (src pf e))
+
+-- | {e} has a right inverse: a 2-simplex with second edge {e} whose long edge is degenerate.
+\type HasRightInv {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (e : simplex p 1) : \Prop
+  => ∃ (sigma : simplex p 2) (act pf (lastEdge 1) sigma = e) (act pf face1 sigma = degen pf (tgt pf e))
+
+-- | Isomorphisms of a simplicial type.
+\type IsIsoS {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (e : simplex p 1) : \Prop
+  => \Sigma (HasLeftInv pf e) (HasRightInv pf e)
+
+-- | Degenerate edges are isomorphisms.
+\lemma degen-iso {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (x : simplex p 0) : IsIsoS pf (degen pf x)
+  => (inP (degen2, degen2-face (segRes 1), degen2-face face1 *> inv (pmap (degen pf) src-degen)),
+      inP (degen2, degen2-face (lastEdge 1), degen2-face face1 *> inv (pmap (degen pf) tgt-degen)))
+  \where {
+    -- | The degenerate 2-simplex at {x}.
+    \func degen2 : simplex p 2
+      => act pf (constHom {2} {0} 0) x
+
+    \sfunc degen2-face (d : Hom {SimplexCat} 1 2) : act pf d degen2 = degen pf x
+      => inv (act-comp pf d (constHom {2} {0} 0) x) *> pmap (act pf __ x) (simplexHom-ext \lam _ => idp)
+
+    \sfunc src-degen : src pf (degen pf x) = x
+      => inv (act-comp pf (vert 0) (constHom {1} {0} 0) x)
+         *> pmap (act pf __ x) (simplexHom-ext {0} {0} {_} {id {SimplexCat} {0}} \lam (t : Fin 1) => \case \elim t \with { | 0 => idp })
+         *> act-id pf x
+
+    \sfunc tgt-degen : tgt pf (degen pf x) = x
+      => inv (act-comp pf (vert 1) (constHom {1} {0} 0) x)
+         *> pmap (act pf __ x) (simplexHom-ext {0} {0} {_} {id {SimplexCat} {0}} \lam (t : Fin 1) => \case \elim t \with { | 0 => idp })
+         *> act-id pf x
+  }
+
+-- | Completeness: vertices are equivalent to isomorphisms via degenerate edges.
+\type IsComplete {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) : \Prop
+  => IsEquiv {simplex p 0} {\Sigma (e : simplex p 1) (IsIsoS pf e)} (\lam x => (degen pf x, degen-iso pf x))
+
+-- | Complete Segal right fibrations.
+\type IsCompleteSegal {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) : \Prop
+  => \Sigma (IsSegal p) (IsComplete pf)

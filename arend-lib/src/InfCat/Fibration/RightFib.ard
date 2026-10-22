@@ -55,6 +55,21 @@
   (t : DPath (\lam i => B (p i)) b' b) : rightFib-tr Bf p b = b'
   => path \lam k => (isContr=>isProp (Bf (a', a, p, b)) (Bf (a', a, p, b)).center (b', t) k).1
 
+-- | {rightFib-tr} commutes with identity.
+\sfunc rightFib-tr_idd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a : A} {b : B a} : rightFib-tr Bf idd b = b
+  => rightFib-tr-dpath Bf idd
+
+-- | {rightFib-tr} commutes with composition.
+\sfunc rightFib-tr_comp {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a a' a'' : A} (p : a ~> a') (q : a' ~> a'') {b : B a''}
+  : rightFib-tr Bf (comp p q) b = rightFib-tr Bf p (rightFib-tr Bf q b)
+  => \let | lq => (Bf (a', a'', q, b)).center
+          | lp => (Bf (a, a', p, lq.1)).center
+          | U : (a, lp.1) ~> {\Sigma⁺ (x : A) (B x)} (a', lq.1) => dpath \lam i => (p i, lp.2 i)
+          | V : (a', lq.1) ~> {\Sigma⁺ (x : A) (B x)} (a'', b) => dpath \lam i => (q i, lq.2 i)
+          | u => comp U V
+     \in pmap (rightFib-tr Bf __ b) (inv (dmap_comp {_} {A} (\lam s =>⁺ s.1) {_} {_} {_} {U} {V}))
+         *> rightFib-tr-dpath Bf {_} {_} {dmap (\lam (s :⁺ \Sigma⁺ (x : A) (B x)) =>⁺ s.1) u} (dpath \lam i => (u i).2)
+
 -- | Transport in the pullback of {B} along {f} is transport in {B} along the image of the arrow.
 \sfunc rightFib-pullback-tr {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A'} (p : a' ~> a) (b : B (f a))
   : rightFib-tr (rightFib-pullback f Bf) p b = rightFib-tr Bf (dmap f p) b
