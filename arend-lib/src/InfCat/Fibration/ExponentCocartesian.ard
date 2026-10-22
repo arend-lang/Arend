@@ -2,11 +2,8 @@
 
  -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The exponent {ExpCoc} is a family over {B}
  -   whose families of objects along `pi : T ->⁺ B` are functors `BaseChange pi p ->⁺ C`:
- -   * {ExpCoc.sec}: the functor corresponding to a family of objects; it is an equivalence ({ExpCoc.sec-equiv}).
- -   * {ExpCoc.eval}: an object over `b` evaluated as a functor `Fiber p b ->⁺ C`; {ExpCoc.sec-point}: at each `t`,
- -     {ExpCoc.sec} is {ExpCoc.eval} of the object at `t`.
- -     The evaluation is not covariant in the object: it is defined by localizing a fiber, and the total category of {ExpSl}
- -     is too large to localize its base change, so {ExpCoc.sec} is defined along {pi} instead.
+ -   * {ExpCoc.eval}: an object over `b` evaluated as a functor `Fibers p b ->⁺ C`.
+ -   * {ExpCoc.eval-univ}: the universal property.
 
  -   Construction (route B of exponent-cocart.tex): the slice construction {ExpSl} exponentiates fiberwise opposites.
  -   * For a cocartesian map `q : E' ->⁺ B`, let `R b x = Op.Hom (OpFunc q x) b` on `Op E'` ({ExpCocHelpers.preR}) and let `W`
@@ -15,12 +12,17 @@
  -     and the classes {SecW} and `TotalFibW` correspond ({ExpCocHelpers.class-equiv}).
  -     Since fiberwise localization commutes with base change ({fibLoc-baseChange}), {SecTot} localizes to the base change of
  -     `FibOp q` ({ExpCocHelpers.loc}). So {ExpSl.eval-univ} gives the universal property for `FibOp q` ({ExpCocHelpers.secPre-equiv}),
- -     where {ExpCocHelpers.secPre} is the extension of {ExpSl.eval} along this localization;
- -     it restricts to the extension {ExpCocHelpers.evalPre} along the localization of each fiber ({ExpCocHelpers.secPre-point}).
+ -     where {ExpCocHelpers.secPre} is the extension of {ExpSl.eval} along this localization; it is natural in {pi}
+ -     ({ExpCocHelpers.secPre-natural}).
  -   * Apply this to `q = FibOp p` and transport along the involution `FibOp (FibOp p) = p` ({fibOp-invol}).
+ -   * The total category {ExpCocHelpers.ExpCocTot} of the exponent is too large to localize its base change, but it is equivalent
+ -     to the small category {ExpCocHelpers.ExpCocU}, since its arrows are families of objects along `DI` ({ExpCocHelpers.expCocTot-arrows}).
+ -     {ExpCoc.eval} is the functor corresponding to the universal family over {ExpCocHelpers.ExpCocU},
+ -     and {ExpCoc.eval-univ} follows from the naturality of this correspondence ({ExpCocHelpers.secGen-natural}).
  -}
 
 \import Equiv
+\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianMap
@@ -29,11 +31,11 @@
 \import InfCat.Localization.Abstract
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
-\import InfCat.Localization.Fiberwise.FiberwiseFiber
 \import InfCat.Localization.Fiberwise.FiberwiseTotal
 \import InfCat.Opposite
 \import InfCat.Opposite.Fiberwise
 \import InfCat.Paths
+\import InfCat.Resizing
 \import Logic
 \import Logic.Meta
 \import Paths
@@ -41,39 +43,32 @@
 \open FibOpConstruction (PreFiberOp, preFiberOp-cocartesian, W, W-stable)
 \open ExpCocHelpers
 
--- | The exponent from the cocartesian map {p} to {C}: its fiber over {b} consists of functors `Fiber p b ->⁺ C`.
-\func ExpCoc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (b :⁺ B) : \Cat
+-- | The exponent from the cocartesian map {p} to {C}: its fiber over {b} consists of functors `Fibers p b ->⁺ C`.
+\type ExpCoc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (b :⁺ B) : \Cat
   => ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) b
   \where {
-    -- | The evaluation of an object over {b} on the fiber of {p} over {b}.
-    \protected \func eval.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} {b : B}
-                              (e : ExpCoc pc C b) (x :⁺ Fiber p b) : C
-      => evalGen (fibOp-cocartesian pc) (fibOp-invol pc) e x
-
-    -- | The functor on the base change of {p} along {pi} corresponding to a family of objects.
-    \protected \func sec.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
-                          (s : \Pi (t :⁺ T) -> ExpCoc pc C (pi t)) : BaseChange pi p ->⁺ C
-      => secGen (fibOp-cocartesian pc) (fibOp-invol pc) pi s
+    -- | The evaluation map.
+    \protected \sfunc eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {b :⁺ B}
+                               (e :⁺ ExpCoc pc C b) (x :⁺ Fibers p b) : C
+      => secGen (fibOp-cocartesian pc) (fibOp-invol pc) (\lam y => (unresize y).1) (\lam y => (unresize y).2) (resizeCat (b, e), x)
 
     -- | The universal property: families of objects along {pi} are functors on the base change of {p} along {pi}.
-    \protected \lemma sec-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
-      : IsEquiv (sec {B} {E} {p} pc {C} pi)
-      => secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) pi
-
-    -- | At each {t}, {sec} is the evaluation of the object at {t}.
-    \protected \sfunc sec-point.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
-                                 (s : \Pi (t :⁺ T) -> ExpCoc pc C (pi t)) (t : T) {x :⁺ Fiber p (pi t)}
-      : sec pc pi s (t, x) = eval (s t) x
-      => secGen-point (fibOp-cocartesian pc) (fibOp-invol pc) pi s t
+    \protected \lemma eval-univ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
+      : IsEquiv {\Pi (t :⁺ T) -> ExpCoc pc C (pi t)} {BaseChange pi p ->⁺ C} (\lam s q => eval pc (s q.1) q.2)
+      => transport IsEquiv (path \lam j (s : \Pi (t :⁺ T) -> ExpCoc pc C (pi t)) => funExt+ (\lam q =>
+           secGen-natural (fibOp-cocartesian pc) (fibOp-invol pc) (\lam y => (unresize y).1) (\lam y => (unresize y).2)
+                          (\lam t => resizeCat (pi t, s t)) {q}
+           *> inv (\peval eval pc (s q.1) q.2)) j)
+         (inP (expCoc-sl pc C pi `transQEquiv` IsEquiv.toQEquiv (secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) pi)))
   }
 
 \module ExpCocHelpers \where {
   -- | The presheaves `Op.Hom (OpFunc q -) b` on `Op E`; their categories of elements are the fibers of the pre-opposite.
-  \func preR.{u} {B E : \Cat u} (q : E ->⁺ B) (b :⁺ B) (x :⁺ Op E) : \Type u
+  \type preR.{u} {B E : \Cat u} (q : E ->⁺ B) (b :⁺ B) (x :⁺ Op E) : \Type u
     => Op.Hom (OpFunc q x) b
 
   -- | The opposites of {q}-cocartesian arrows.
-  \func CocartOpW.{u} {B E : \Cat u} (q : E ->⁺ B) (a : DI ->⁺ Op E) : \Prop
+  \type CocartOpW.{u} {B E : \Cat u} (q : E ->⁺ B) (a : DI ->⁺ Op E) : \Prop
     => ∃ (v : DI ->⁺ E) (IsCocartesianArrow q (dpath v)) ((\lam i =>⁺ a i) = opArr (dpath v))
 
   -- | {SecTot} as the base change of the pre-opposite.
@@ -130,37 +125,16 @@
     => IsEquiv.leftFactor (restrictW-equiv (IsLocalization.univ (loc qc pi))) $
        transport IsEquiv (ext \lam s => ext (funExt+ \lam w => inv IsLocalization.lift.restrict *> inv (\peval secPre qc pi s (locMap pi w)))) (ExpSl.eval-univ pi)
 
-  -- | The evaluation on the fibers of the pre-opposite.
-  \func fibEval.{u} {B E : \Cat u} {q : E ->⁺ B} {C : \Cat u} {b : B} (e : ExpSl (preR q) C (CocartOpW q) b)
-                    (y :⁺ Fiber (PreFiberOp.proj q) b) : C
-    => ExpSl.eval e (y.1.1, PreFiberOp.fiberHom y)
-
-  \lemma fibEval-inverts.{u} {B E : \Cat u} {q : E ->⁺ B} {C : \Cat u} {b : B} (e : ExpSl (preR q) C (CocartOpW q) b)
-    : InvertsW (W q b) (fibEval e)
-    => \lam {c} w => ExpSl.eval-inverts e {\lam i => ((c i).1.1, PreFiberOp.fiberHom (c i))} w
-
-  -- | The evaluation on the fibers of the fiberwise opposite: the extension of {fibEval} along the localization of the fibers.
-  \func evalPre.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {C : \Cat u} {b : B} (e : ExpSl (preR q) C (CocartOpW q) b)
-                    (y :⁺ Fiber (fibLocProj (PreFiberOp.proj q) (W q)) b) : C
-    => IsLocalization.lift (fibLoc-fiber (cocartesianMap-char.1 (preFiberOp-cocartesian q)) (W-stable qc) b) (fibEval-inverts e) y
-
-  -- | {secPre} at {t} is {evalPre}: both restrict to {fibEval} along the localization of the fiber.
-  \sfunc secPre-point.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
-                          (s : \Pi (t :⁺ T) -> ExpSl (preR q) C (CocartOpW q) (pi t)) (t : T)
-                          {y :⁺ Fiber (fibLocProj (PreFiberOp.proj q) (W q)) (pi t)}
-    : secPre qc pi s (t, y) = evalPre qc (s t) y
-    => loc-ext-eq (IsLocalization.univ (fibLoc-fiber (cocartesianMap-char.1 (preFiberOp-cocartesian q)) (W-stable qc) (pi t)))
-         {\lam y => secPre qc pi s (t, y)}
-         (\lam c => pmap+ (\lam z => secPre qc pi s (t, (localize (TotW (PreFiberOp.proj q) (W q)) z.1, z.2))) (inv (PreFiberOp.fiber-path c))
-                    *> (\peval secPre qc pi s (locMap pi (jInv pi (t, c))))
-                    *> IsLocalization.lift.restrict {_} {_} {_} {_} {_} {loc qc pi} {_} {_} {jInv pi (t, c)}
-                    *> inv IsLocalization.lift.restrict)
-
-  -- | The evaluation for any {d} equal to the fiberwise opposite of {q}.
-  \func evalGen.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {d : \Sigma (E' : \Cat u) (E' ->⁺ B)}
-                    (r : (FibLoc (PreFiberOp.proj q) (W q), fibLocProj (PreFiberOp.proj q) (W q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
-                    {C : \Cat u} {b : B} (e : ExpSl (preR q) C (CocartOpW q) b) (x :⁺ Fiber d.2 b) : C \elim r
-    | idp => evalPre qc e x
+  -- | {secPre} is natural in `pi`: along `pi' ∘ g`, it is the restriction of {secPre} along {pi'}.
+  \sfunc secPre-natural.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {C : \Cat u} {T T' : \Cat u} (pi' : T' ->⁺ B)
+                            (s' : \Pi (t :⁺ T') -> ExpSl (preR q) C (CocartOpW q) (pi' t)) (g : T ->⁺ T')
+                            {w :⁺ BaseChange (\lam (t :⁺ T) => pi' (g t)) (fibLocProj (PreFiberOp.proj q) (W q))}
+    : secPre qc (\lam t => pi' (g t)) (\lam t => s' (g t)) w = secPre qc pi' s' (g w.1, w.2)
+    => loc-ext-eq (IsLocalization.univ (loc qc \lam t => pi' (g t))) {\lam w => secPre qc (\lam t => pi' (g t)) (\lam t => s' (g t)) w}
+         \lam x => (\peval secPre qc (\lam t => pi' (g t)) (\lam t => s' (g t)) (locMap (\lam t => pi' (g t)) x))
+                    *> IsLocalization.lift.restrict
+                    *> inv (IsLocalization.lift.restrict {_} {_} {_} {_} {_} {loc qc pi'} {_} {_} {g x.1, x.2})
+                    *> inv (\peval secPre qc pi' s' (locMap pi' (g x.1, x.2)))
 
   -- | {secPre} for any {d} equal to the fiberwise opposite of {q}.
   \func secGen.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {d : \Sigma (E' : \Cat u) (E' ->⁺ B)}
@@ -174,10 +148,40 @@
     : IsEquiv (secGen qc r {C} pi) \elim r
     | idp => secPre-equiv qc pi
 
-  \sfunc secGen-point.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {d : \Sigma (E' : \Cat u) (E' ->⁺ B)}
-                          (r : (FibLoc (PreFiberOp.proj q) (W q), fibLocProj (PreFiberOp.proj q) (W q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
-                          {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B) (s : \Pi (t :⁺ T) -> ExpSl (preR q) C (CocartOpW q) (pi t)) (t : T)
-                          {x :⁺ Fiber d.2 (pi t)}
-    : secGen qc r pi s (t, x) = evalGen qc r (s t) x \elim r
-    | idp => secPre-point qc pi s t
+  \sfunc secGen-natural.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {d : \Sigma (E' : \Cat u) (E' ->⁺ B)}
+                            (r : (FibLoc (PreFiberOp.proj q) (W q), fibLocProj (PreFiberOp.proj q) (W q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
+                            {C : \Cat u} {T T' : \Cat u} (pi' : T' ->⁺ B) (s' : \Pi (t :⁺ T') -> ExpSl (preR q) C (CocartOpW q) (pi' t)) (g : T ->⁺ T')
+                            {w :⁺ BaseChange (\lam (t :⁺ T) => pi' (g t)) d.2}
+    : secGen qc r (\lam t => pi' (g t)) (\lam t => s' (g t)) w = secGen qc r pi' s' (g w.1, w.2) \elim r
+    | idp => secPre-natural qc pi' s' g
+
+  -- | Families of objects of {ExpCoc} are families of objects of its defining {ExpSl}.
+  \func expCoc-sl.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (pi : T ->⁺ B)
+    : QEquiv {\Pi (t :⁺ T) -> ExpCoc pc C (pi t)} {\Pi (t :⁺ T) -> ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) (pi t)} \cowith
+    | f s t => s t
+    | ret s t => s t
+    | ret_f _ => idp
+    | f_sec _ => idp
+
+  -- | The total category of the exponent.
+  \type ExpCocTot.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat
+    => \Sigma⁺ (b : B) (ExpCoc pc C b)
+
+  -- | Arrows of {ExpCocTot} are functors on the base changes of {p} along arrows of {B}.
+  \sfunc expCocTot-arrows.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u)
+    : QEquiv {DI ->⁺ ExpCocTot pc C} {\Sigma (beta : DI ->⁺ B) (BaseChange beta p ->⁺ C)}
+    => \new QEquiv {DI ->⁺ ExpCocTot pc C} {\Sigma (beta : DI ->⁺ B) (\Pi (i :⁺ DI) -> ExpCoc pc C (beta i))} {
+         | f h => (\lam i => (h i).1, \lam i => (h i).2)
+         | ret s i => (s.1 i, s.2 i)
+         | ret_f _ => idp
+         | f_sec _ => idp
+       } `transQEquiv` sigma-right \lam beta => expCoc-sl pc C beta `transQEquiv` IsEquiv.toQEquiv (secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) {C} beta)
+
+  -- | {ExpCocTot} resized to `\Cat u`.
+  \type ExpCocU.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat u
+    => ResizeFromArrows (expCocTot-arrows pc C)
+
+  -- | The inverse of `resizeCat`.
+  \func unresize.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCocU pc C) : ExpCocTot pc C \elim y
+    | resizeCat z => z
 }
