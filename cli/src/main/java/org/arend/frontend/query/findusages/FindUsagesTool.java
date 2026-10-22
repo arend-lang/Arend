@@ -36,7 +36,7 @@ public final class FindUsagesTool extends ConsoleQueryTool {
   @Override public String cliDescription() {
     return "find every usage of a definition. Pass `-fu --help` for full grammar.";
   }
-  @Override public void printHelp() { ConsoleHelp.printFindUsages(); }
+  @Override public String cliHelp() { return ConsoleHelp.findUsagesHelp(); }
 
   // ---- REPL command (:fu / :find-usages) ----------------------------------
 

@@ -39,7 +39,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
   @Override public String cliDescription() {
     return "print super/sub-class trees plus \\new and \\instance sites. Pass `-ch --help` for full grammar.";
   }
-  @Override public void printHelp() { ConsoleHelp.printClassHierarchy(); }
+  @Override public String cliHelp() { return ConsoleHelp.classHierarchyHelp(); }
 
   // ---- REPL command (:ch / :class-hierarchy) ------------------------------
 
