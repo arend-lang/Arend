@@ -15,12 +15,14 @@ import java.util.HexFormat;
 import java.util.List;
 
 /**
- * Filesystem layout for one daemon instance, plus the library identity it serves.
+ * Filesystem layout of one library for the daemons, plus its identity.
  *
- * <p>A daemon is keyed by the canonical absolute path of its {@code arend.yaml}, and every
- * per-daemon file lives under {@code <library>/.arend/}: {@code daemon.lock} (where the daemon
- * is; absent means none), {@code daemon.log} (its captured output) and {@code daemon.sock} (the
- * socket clients connect to).
+ * <p>A library is keyed by the canonical absolute path of its {@code arend.yaml} (or its zip), and its
+ * daemon files live under {@code <library>/.arend/}: {@code daemon.lock} (a copy of the lock of the
+ * daemon that owns it; absent means none), {@code daemon.starting} (a start in progress), and, for
+ * the first library a daemon owns, its home, {@code daemon.log} (its captured output) and
+ * {@code daemon.sock} (the socket clients connect to). A daemon's own record is its entry in
+ * {@link #registryDir}; a shared library or a zip, owned by none, has only that.
  *
  * <p>Resolved once at startup and threaded through; the only mutating operation here is
  * {@link #ensureArendDir()}, which is idempotent.
@@ -45,8 +47,11 @@ public final class DaemonPaths {
    * no process stands for a start in progress. An older one is debris from a start that was killed.
    */
   public static final long START_TIMEOUT_MILLIS = 600_000;
+
   /** Hex-encoded SHA-256 of {@link #libraryConfig}'s string form, first 16 chars. */
   public final String libraryHash;
+  /** Decided on the first ask, which canonicalises paths: routing asks it of every library of every daemon. */
+  private Boolean canOwn;
 
   private DaemonPaths(Path libraryConfig, String libraryHash) {
     this.libraryConfig = libraryConfig;
@@ -56,7 +61,7 @@ public final class DaemonPaths {
       throw new IllegalArgumentException("library config has no parent directory: " + libraryConfig);
     }
     this.arendDir = libRoot.resolve(".arend");
-    this.lockFile = arendDir.resolve("daemon.lock");
+    this.lockFile = lockFileIn(libRoot);
     this.logFile = arendDir.resolve("daemon.log");
     this.socketFile = arendDir.resolve("daemon.sock");
     this.startingMarker = arendDir.resolve("daemon.starting");
@@ -76,15 +81,95 @@ public final class DaemonPaths {
     return libraryConfig.hashCode();
   }
 
+  /**
+   * The project a daemon owning {@code owned} holds, for a command issued from it to find the daemon:
+   * the deepest directory holding every one of them. None when that is the file system's root or the
+   * user's home -- a directory nobody means by "the project" -- or when nothing is owned.
+   */
+  public static Path projectDirOf(List<DaemonPaths> owned) {
+    Path common = null;
+    for (DaemonPaths paths : owned) {
+      Path root = paths.libraryConfig.getParent();
+      if (common == null) {
+        common = root;
+        continue;
+      }
+      while (common != null && !root.startsWith(common)) common = common.getParent();
+    }
+    if (common == null || common.getParent() == null) return null;
+    try {
+      if (common.equals(Paths.get(System.getProperty("user.home")).toRealPath())) return null;
+    } catch (IOException ignored) {
+    }
+    return common;
+  }
+
+  public static Path lockFileIn(Path libRoot) {
+    return libRoot.resolve(".arend").resolve("daemon.lock");
+  }
+
+  public static final String CONFIG_DIR_PROPERTY = "arend.daemon.configDir";
+
+  /** {@code ~/.arend}, unless {@value #CONFIG_DIR_PROPERTY} says otherwise, as a test does. */
+  public static Path configDir() {
+    String override = System.getProperty(CONFIG_DIR_PROPERTY);
+    return override != null ? Paths.get(override) : FileUtils.configDir();
+  }
+
+  public static Path sharedLibrariesRoot() {
+    return configDir().resolve("libs");
+  }
+
+  public static Path registryDir() {
+    return configDir().resolve("daemons");
+  }
+
+  private static boolean isShared(Path libraryFile) {
+    try {
+      Path root = sharedLibrariesRoot();
+      if (!Files.isDirectory(root)) return false;
+      return libraryFile.toRealPath().startsWith(root.toRealPath());
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  public boolean isShared() {
+    return isShared(libraryConfig);
+  }
+
+  public String libraryName() {
+    return nameOf(libraryConfig);
+  }
+
+  /** The name of the library {@code libraryFile} -- its arend.yaml or its zip -- is: the directory's, or the zip's. */
+  public static String nameOf(Path libraryFile) {
+    String file = libraryFile.getFileName().toString();
+    if (file.endsWith(FileUtils.ZIP_EXTENSION)) return file.substring(0, file.length() - FileUtils.ZIP_EXTENSION.length());
+    Path directory = libraryFile.getParent();
+    return directory == null || directory.getFileName() == null ? "" : directory.getFileName().toString();
+  }
+
+  /** Whether a daemon may own the library: not a zip, and not shared from ~/.arend/libs. */
+  public boolean canOwn() {
+    if (canOwn == null) canOwn = !libraryConfig.getFileName().toString().endsWith(FileUtils.ZIP_EXTENSION) && !isShared(libraryConfig);
+    return canOwn;
+  }
+
   /** {@code path} as a client in {@code cwd} meant it: against {@code cwd} when one is given and the path is relative. */
   public static Path against(String cwd, String path) {
     return cwd == null ? Paths.get(path) : Paths.get(cwd).resolve(path);
   }
 
+  /** As {@link #resolve(Path)}, for a reference a client in {@code cwd} gave; null for this process's own directory. */
+  public static DaemonPaths resolve(String cwd, String reference) {
+    return resolve(against(cwd, reference));
+  }
+
   /**
    * Build a {@code DaemonPaths} from a user-supplied library reference: a directory containing
-   * {@code arend.yaml}, the {@code arend.yaml} itself, or any path that resolves to one of those
-   * after canonicalisation. Returns null if it resolves to neither (caller reports it).
+   * {@code arend.yaml}, the {@code arend.yaml} itself, a zip library, or any path that resolves to
+   * one of those after canonicalisation. Returns null if it resolves to none (caller reports it).
    */
   public static DaemonPaths resolve(Path libraryRef) {
     try {
@@ -93,7 +178,8 @@ public final class DaemonPaths {
       if (Files.isDirectory(probe)) {
         config = probe.resolve(FileUtils.LIBRARY_CONFIG_FILE);
       } else if (probe.getFileName() != null
-          && probe.getFileName().toString().equals(FileUtils.LIBRARY_CONFIG_FILE)) {
+          && (probe.getFileName().toString().equals(FileUtils.LIBRARY_CONFIG_FILE)
+              || probe.getFileName().toString().endsWith(FileUtils.ZIP_EXTENSION))) {
         config = probe;
       } else {
         return null;
@@ -104,14 +190,6 @@ public final class DaemonPaths {
     } catch (IOException e) {
       return null;
     }
-  }
-
-  public static final String CONFIG_DIR_PROPERTY = "arend.daemon.configDir";
-
-  /** {@code ~/.arend}, unless {@value #CONFIG_DIR_PROPERTY} says otherwise, as a test does. */
-  public static Path configDir() {
-    String override = System.getProperty(CONFIG_DIR_PROPERTY);
-    return override != null ? Paths.get(override) : FileUtils.configDir();
   }
 
   /**
@@ -137,7 +215,7 @@ public final class DaemonPaths {
   public static DaemonPaths resolveByName(String libName, List<Path> libDirs,
                                           boolean warnOnShadow) {
     DaemonPaths cwd = resolve(Paths.get("."));
-    if (cwd != null && libName.equals(cwdLibName(cwd.libraryConfig))) {
+    if (cwd != null && libName.equals(cwd.libraryName())) {
       if (warnOnShadow) warnIfShadowed(libName, cwd.libraryConfig, libDirs);
       return cwd;
     }
@@ -145,19 +223,10 @@ public final class DaemonPaths {
     if (direct != null) return direct;
     for (Path libDir : libDirs) {
       DaemonPaths d = resolve(libDir.resolve(libName));
+      if (d == null) d = resolve(libDir.resolve(libName + FileUtils.ZIP_EXTENSION));
       if (d != null) return d;
     }
     return null;
-  }
-
-  /**
-   * Library name as derived by {@link org.arend.frontend.library.FileSourceLibrary#fromConfigFile}:
-   * the name of the directory containing {@code arend.yaml}.
-   */
-  private static String cwdLibName(Path libraryConfig) {
-    Path parent = libraryConfig.getParent();
-    Path dirName = parent == null ? null : parent.getFileName();
-    return dirName == null ? null : dirName.toString();
   }
 
   private static void warnIfShadowed(String libName, Path chosen, List<Path> libDirs) {
@@ -177,18 +246,12 @@ public final class DaemonPaths {
   /**
    * Creates {@code <library>/.arend/} if it is not there, restricted to the owner.
    *
-   * <p>The permissions are the access control: the directory holds the socket clients connect to
-   * and the lock saying where it is, and anything that can reach the socket can run arbitrary CLI
-   * commands against a warm library or shut the daemon down. An existing directory is left as it
-   * is -- tightening one the user made is not this method's call -- and {@code SocketBinder} sets
-   * the socket's own mode, so the socket is covered either way.
+   * <p>The directory holds the socket clients connect to, and the permissions keep other users from
+   * connecting at all; what they could reach is served only to a request with the daemon's token,
+   * which the registry alone holds. An existing directory is left as it is -- tightening one the user
+   * made is not this method's call -- and {@code SocketBinder} sets the socket's own mode, so the
+   * socket is covered either way.
    */
-  /** The name of the library: its directory's. */
-  public String libraryName() {
-    Path directory = libraryConfig.getParent();
-    return directory.getFileName() == null ? "" : directory.getFileName().toString();
-  }
-
   public void ensureArendDir() throws IOException {
     if (Files.isDirectory(arendDir)) return;
     try {

@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
 
 public abstract class SourceLibrary implements ArendLibrary, QueryLibrary {
@@ -75,6 +76,14 @@ public abstract class SourceLibrary implements ArendLibrary, QueryLibrary {
   @Override
   public @Nullable Range<Version> getLanguageVersion() {
     return myLangVersion;
+  }
+
+  /**
+   * The file this library was read from: its {@code arend.yaml}, or its zip. Null for one that has
+   * neither, such as the synthetic {@code \\default} library {@code -s} builds.
+   */
+  public @Nullable Path getLibraryFile() {
+    return null;
   }
 
   public abstract @Nullable Source getSource(@NotNull ModulePath modulePath, boolean inTests);

@@ -16,6 +16,8 @@ import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.file.Path;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,6 +39,11 @@ public class ZipSourceLibrary extends SourceLibrary {
     mySourcesDir = sourceDir;
     myClassLoaderDelegate = extDir == null ? null : new ZipClassLoaderDelegate(zipFile, extDir);
     myModules = modules;
+  }
+
+  @Override
+  public @Nullable Path getLibraryFile() {
+    return myFile.toPath();
   }
 
   public static ZipSourceLibrary fromFile(File file, ErrorReporter errorReporter) {

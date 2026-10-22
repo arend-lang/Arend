@@ -1,6 +1,7 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.daemon.DaemonPaths;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.LongName;
@@ -8,7 +9,6 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.server.TimedProgressReporter;
-import org.arend.daemon.DaemonPaths;
 import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;
@@ -229,8 +229,12 @@ public final class CliSetup {
   /**
    * Re-reads the positional arguments as typecheck targets against libraries that are
    * <em>already loaded</em>. The counterpart to {@link #classifyRequestedTargets}, for a context
-   * being reused: a positional naming a loaded library is nothing to do, and everything else is
+   * being reused: a positional naming a loaded library puts it in scope, and everything else is
    * a module, or a module and a definition inside it.
+   *
+   * <p>The command is scoped as a local run would be: to the served libraries its positionals
+   * name; failing that, the library of the directory it was issued from; failing that -- a client
+   * with no directory -- all of them.
    *
    * <p>An argument that is neither is reported and fails the run, exactly as
    * {@code classifyRequestedTargets} reports "File X not found" on a fresh context, and so is a path
@@ -249,20 +253,20 @@ public final class CliSetup {
    *                  from the one the client would have got.
    */
   public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine, String clientCwd) {
-    Set<String> loadedLibNames = new HashSet<>();
-    for (SourceLibrary library : ctx.requestedLibraries) loadedLibNames.add(library.getLibraryName());
+    List<SourceLibrary> scope = new ArrayList<>();
 
     for (String positional : cmdLine.getArgList()) {
       // A positional may name the library the way classifyRequestedTargets accepts one, which
       // includes a path: `arend .` is the library in the current directory.
-      if (loadedLibNames.contains(positional)) continue;
+      SourceLibrary named = servedLibraryNamed(ctx, positional, clientCwd);
+      if (named != null) {
+        if (!scope.contains(named)) scope.add(named);
+        continue;
+      }
       if (Files.exists(DaemonPaths.against(clientCwd, positional))) {
-        DaemonPaths library = DaemonPaths.resolve(DaemonPaths.against(clientCwd, positional));
-        if (library == null) {
-          ctx.systemErrErrorReporter.report(new LibraryIOError(positional, "not a library"));
-        } else if (!loadedLibNames.contains(library.libraryName())) {
-          ctx.systemErrErrorReporter.report(new GeneralError(GeneralError.Level.ERROR, "The daemon does not serve " + library.libraryConfig));
-        }
+        DaemonPaths library = DaemonPaths.resolve(clientCwd, positional);
+        ctx.systemErrErrorReporter.report(library == null ? new LibraryIOError(positional, "not a library")
+            : new GeneralError(GeneralError.Level.ERROR, "The daemon does not serve " + library.libraryConfig));
         continue;
       }
       if (positional.indexOf(':') >= 0) {
@@ -283,6 +287,13 @@ public final class CliSetup {
             "File " + positional + " not found"));
       }
     }
+
+    if (scope.isEmpty() && clientCwd != null) {
+      SourceLibrary here = servedLibraryNamed(ctx, ".", clientCwd);
+      if (here != null) scope.add(here);
+    }
+    ctx.requestedLibraries.clear();
+    ctx.requestedLibraries.addAll(scope.isEmpty() ? ctx.servedLibraries : scope);
   }
 
   /**
@@ -319,8 +330,8 @@ public final class CliSetup {
   }
 
   /**
-   * The source modules of the requested libraries that the server already holds and whose file
-   * still exists, as dotted module names in sorted order. These are what a daemon's
+   * The source modules of the libraries the daemon serves that the server already holds and whose
+   * file still exists, as dotted module names in sorted order. These are what a daemon's
    * {@code refresh} re-checks: the cones earlier commands asked for, and nothing beyond them.
    *
    * <p>A module whose file is gone is left out rather than passed on, since naming it would be
@@ -328,7 +339,7 @@ public final class CliSetup {
    */
   public static List<String> loadedModuleTargets(CommandContext ctx) {
     List<ModulePath> result = new ArrayList<>();
-    for (SourceLibrary library : ctx.requestedLibraries) {
+    for (SourceLibrary library : ctx.servedLibraries) {
       Set<ModulePath> onDisk = new HashSet<>(library.findModules(false));
       for (ModuleLocation module : ctx.server.getModules()) {
         if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
@@ -345,6 +356,16 @@ public final class CliSetup {
   }
 
   // ───────── helpers ─────────
+
+  private static SourceLibrary servedLibraryNamed(CommandContext ctx, String reference, String clientCwd) {
+    DaemonPaths paths = DaemonPaths.resolve(clientCwd, reference);
+    String name = paths == null ? reference : paths.libraryName();
+    for (SourceLibrary library : ctx.servedLibraries) {
+      if (library.getLibraryName().equals(name)) return library;
+    }
+    // Loaded only as a dependency: a command about a shared library is routed to any daemon that loaded it.
+    return ctx.libraryManager == null ? null : ctx.libraryManager.getLibrary(name);
+  }
 
   private static void loadLibrary(CommandContext ctx, SourceLibrary library) {
     System.out.println("[INFO] Loading " + library.getLibraryName());

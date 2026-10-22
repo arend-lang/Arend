@@ -30,13 +30,13 @@ public class DaemonServerTraceTest {
   public void aRunnerThatThrowsSendsItsWholeTrace() throws IOException {
     assumeTrue(org.arend.daemon.Platform.supportsUnixSockets());
     SocketBinder.Bound bound = SocketBinder.bind(tempFolder.newFolder("d").toPath().resolve("daemon.sock"), "0123456789abcdef");
-    server = new DaemonServer(bound, "/lib/arend.yaml", Map.of(), request -> {
+    server = new DaemonServer(bound, "t", List::of, Map.of(), request -> {
       throw new NullPointerException();
     }, () -> {});
     server.start();
 
     StringBuilder err = new StringBuilder();
-    try (DaemonClient client = DaemonClient.connect(SocketAddress.parse(bound.address()))) {
+    try (DaemonClient client = DaemonClient.connect(SocketAddress.parse(bound.address()), "t")) {
       assertEquals(1, client.invoke("cli", Map.of("args", List.of("x")), frame -> {
         if ("stderr".equals(frame.get("kind"))) err.append(frame.get("data"));
       }));

@@ -26,29 +26,24 @@ public final class DaemonStop {
     NOTHING_TO_DO,
     /** A lock we cannot parse; we can neither signal it nor safely remove it. */
     UNREADABLE_LOCK,
+    /**
+     * A library's copy no registry entry confirms: whatever process it names is only its word, and
+     * is never signalled on it. The copy is removed; a daemon still running behind it is the user's
+     * to stop by hand.
+     */
+    REMOVE_UNREGISTERED,
     /** A lock for this library whose process is gone. */
     REMOVE_STALE,
-    /** A lock for another library whose process is gone. */
-    REMOVE_STALE_MISMATCH,
-    /**
-     * A lock for another library whose process is <em>running</em>. It is not ours to stop, and
-     * removing its lock would strand it: the lock is the only record of where it listens.
-     */
-    REFUSE_LIVE_MISMATCH,
     /** Our daemon, running: ask it to shut down, then escalate. */
     SIGNAL
   }
 
-  static Verdict inspectLock(LockFile.Read existing, String expectedHash,
-                             java.util.function.Predicate<LockFile> alive) {
+  /** @param existing what {@link LockFile#lookup} found: a lock it found serves the library. */
+  static Verdict inspectLock(LockFile.Read existing, java.util.function.Predicate<LockFile> alive) {
     if (existing instanceof LockFile.Read.Absent) return Verdict.NOTHING_TO_DO;
     if (existing instanceof LockFile.Read.Unreadable) return Verdict.UNREADABLE_LOCK;
-    LockFile lf = ((LockFile.Read.Found) existing).lock();
-    boolean live = alive.test(lf);
-    if (!lf.libraryHash().equals(expectedHash)) {
-      return live ? Verdict.REFUSE_LIVE_MISMATCH : Verdict.REMOVE_STALE_MISMATCH;
-    }
-    return live ? Verdict.SIGNAL : Verdict.REMOVE_STALE;
+    if (existing instanceof LockFile.Read.Unregistered) return Verdict.REMOVE_UNREGISTERED;
+    return alive.test(((LockFile.Read.Found) existing).lock()) ? Verdict.SIGNAL : Verdict.REMOVE_STALE;
   }
 
   private static LockFile lockOf(LockFile.Read read) {
@@ -62,9 +57,17 @@ public final class DaemonStop {
       return 1;
     }
 
-    LockFile.Read existing = LockFile.read(paths.lockFile);
-    Verdict verdict = inspectLock(existing, paths.libraryHash,
-        LockFile::processAlive);
+    if (!paths.canOwn()) {
+      // Any number of daemons may have loaded it, and stopping whichever was found first would
+      // stop some other project's daemon. The one to stop is named by a library it owns.
+      System.err.println("[ERROR] --daemon-stop: " + paths.libraryConfig + (paths.isShared()
+          ? " is under " + DaemonPaths.sharedLibrariesRoot() + " and may be loaded by several daemons."
+          : " is a zip library, which no daemon owns.") + " Stop the one you mean from a library it owns.");
+      return 1;
+    }
+
+    LockFile.Read existing = LockFile.lookup(paths);
+    Verdict verdict = inspectLock(existing, LockFile::processAlive);
     switch (verdict) {
       case NOTHING_TO_DO -> {
         System.out.println("No Arend daemon running for " + paths.libraryConfig);
@@ -78,24 +81,19 @@ public final class DaemonStop {
             + reason + "); cannot tell whether a daemon is running.");
         return 1;
       }
-      case REMOVE_STALE_MISMATCH -> {
-        System.err.println("[WARN]  -d stop: lock file at " + paths.lockFile
-            + " is for a different library and its process is gone; removing");
+      case REMOVE_UNREGISTERED -> {
+        long pid = ((LockFile.Read.Unregistered) existing).copy().pid();
+        System.err.println("[WARN]  -d stop: lock file at " + paths.lockFile + " is not confirmed by the registry in "
+            + DaemonPaths.registryDir() + "; removing it. Its PID " + pid + " is not signalled on its word: if a"
+            + " daemon still runs there, stop that process yourself.");
         LockFile.deleteQuietly(paths.lockFile);
         return 0;
-      }
-      case REFUSE_LIVE_MISMATCH -> {
-        LockFile other = lockOf(existing);
-        System.err.println("[ERROR] -d stop: " + paths.lockFile + " belongs to a running daemon"
-            + " (PID " + other.pid() + ") serving " + other.libraryPath() + ", not this library."
-            + " Removing its lock would leave it running and unreachable; stop it from its own"
-            + " directory instead.");
-        return 1;
       }
       case REMOVE_STALE -> {
         System.err.println("[WARN]  -d stop: lock for PID " + lockOf(existing).pid()
             + " is stale (process dead); removing");
-        LockFile.deleteQuietly(paths.lockFile);
+        // Every copy: a daemon of several libraries left one in each, and one in the registry.
+        lockOf(existing).deleteAllCopies();
         return 0;
       }
       case SIGNAL -> { }
@@ -104,11 +102,12 @@ public final class DaemonStop {
     // The process the lock names, not merely one with its PID: that would be signalled below.
     Optional<ProcessHandle> ph = lf.process();
     if (ph.isEmpty()) {
-      LockFile.deleteQuietly(paths.lockFile);
+      lf.deleteAllCopies();
       return 0;
     }
 
-    System.out.println("Stopping Arend daemon for " + paths.libraryConfig + " (PID " + lf.pid() + ")");
+    // The daemon as a whole, whichever of its libraries named it: they share one process.
+    System.out.println("Stopping Arend daemon for " + String.join(", ", lf.libraries()) + " (PID " + lf.pid() + ")");
 
     // The clean path: socket-side `shutdown`. The daemon replies done, the worker pulls the
     // sentinel, the JVM exits, the shutdown hook removes the lock. Sent to the library this
@@ -138,7 +137,7 @@ public final class DaemonStop {
       System.err.println("[ERROR] -d stop: PID " + lf.pid() + " still alive after SIGKILL");
       return 1;
     }
-    LockFile.deleteQuietly(paths.lockFile);
+    lf.deleteAllCopies();
     System.out.println("Daemon stopped (PID " + lf.pid() + ")");
     return 0;
   }

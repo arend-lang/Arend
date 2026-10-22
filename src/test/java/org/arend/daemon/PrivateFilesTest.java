@@ -15,8 +15,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Where there are no POSIX permissions -- Windows -- a file is private only if its ACL grants nobody
- * but its owner.
+ * Where there are no POSIX permissions -- Windows -- a registry entry is private only if its ACL
+ * grants nobody but its owner: a token anybody else may read is anybody's.
  */
 public class PrivateFilesTest {
   private static final UserPrincipal OWNER = () -> "owner";
