@@ -62,9 +62,8 @@ public class StreamRedirectorTest {
   }
 
   /**
-   * A trailing line with no newline -- a progress fragment, an interrupted stack trace -- is held
-   * in the buffer, so it has to be flushed on detach or the last thing a cancelled run said is
-   * dropped.
+   * A trailing line with no newline -- a progress fragment, an interrupted stack trace -- still
+   * reaches the client: it is the last thing a cancelled run said.
    */
   @Test
   public void detachFlushesAnUnterminatedLine() throws IOException {
