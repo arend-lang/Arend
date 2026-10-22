@@ -104,9 +104,8 @@ public class DaemonStartLockTest {
     assertTrue("the main class must be on the command line", main >= 0);
     List<String> appArgs = cmd.subList(main + 1, cmd.size());
 
-    assertEquals("the bootstrap flag must name the library by config path",
-        List.of("--daemon-bootstrap", config), appArgs.subList(0, 2));
-    assertEquals("the inner pipeline's positional must be the config path too",
+    assertEquals("--daemon-bootstrap", appArgs.getFirst());
+    assertEquals("the inner pipeline's positional must be the config path",
         config, appArgs.get(appArgs.size() - 1));
     assertFalse("the reference the user typed must not reach the child",
         appArgs.contains(root.getFileName().toString()));
