@@ -39,6 +39,36 @@ public class FileUtils {
     return configDir().resolve(LOG_FILE);
   }
 
+  /** What {@link #writeAtomically} has write the file's new contents: to {@code scratch}, which exists, empty. */
+  public interface ScratchWriter {
+    void writeTo(Path scratch) throws IOException;
+  }
+
+  /**
+   * Writes {@code file} whole or not at all, so that a reader never sees half of it: {@code writer}
+   * fills a scratch file beside it, which is then renamed over it. The scratch file's name is unique
+   * per call, since two processes may write one file at once. Where the file system cannot rename
+   * atomically -- some network mounts -- a plain replace still beats writing the file in place, as
+   * {@code FileBinarySource} has it too. The directory has to exist.
+   */
+  public static void writeAtomically(Path file, ScratchWriter writer) throws IOException {
+    Path scratch = Files.createTempFile(file.toAbsolutePath().getParent(), file.getFileName() + ".", ".tmp");
+    try {
+      writer.writeTo(scratch);
+      try {
+        Files.move(scratch, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+      } catch (AtomicMoveNotSupportedException e) {
+        Files.move(scratch, file, StandardCopyOption.REPLACE_EXISTING);
+      }
+    } finally {
+      try {
+        Files.deleteIfExists(scratch);
+      } catch (IOException ignored) {
+        // Renamed already, or not ours to clean up any more.
+      }
+    }
+  }
+
   private static Path baseFile(Path root, ModulePath modulePath) {
     return root.resolve(Paths.get("", modulePath.toArray()));
   }

@@ -3,6 +3,7 @@ package org.arend.frontend.query;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.util.FileUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
@@ -74,11 +75,13 @@ final class SymbolIndexStore {
                     Map<ModulePath, List<SymbolIndex.Entry>> entries) {
     if (cacheFile == null) return;
     try {
-      Path parent = cacheFile.getParent();
-      if (parent != null) Files.createDirectories(parent);
-      try (BufferedWriter w = Files.newBufferedWriter(cacheFile, StandardCharsets.UTF_8)) {
-        writeTo(w, libraryName, timestamps, entries);
-      }
+      Files.createDirectories(cacheFile.toAbsolutePath().getParent());
+      // A reader sees the old index or the new one, never half of one: another daemon may share this library.
+      FileUtils.writeAtomically(cacheFile, scratch -> {
+        try (BufferedWriter w = Files.newBufferedWriter(scratch, StandardCharsets.UTF_8)) {
+          writeTo(w, libraryName, timestamps, entries);
+        }
+      });
     } catch (IOException e) {
       // index is best-effort; don't fail the whole CLI
     }

@@ -82,8 +82,8 @@ public final class SymbolIndex {
     if (cacheFile != null && Files.isRegularFile(cacheFile)) {
       try {
         SymbolIndexStore.load(cacheFile, idx.myTimestamps, idx.myEntries);
-      } catch (IOException e) {
-        // corrupt cache: start clean
+      } catch (IOException | RuntimeException e) {
+        // corrupt cache, a number cut short among them: start clean
         idx.myTimestamps.clear();
         idx.myEntries.clear();
       }
