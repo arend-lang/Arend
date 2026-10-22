@@ -40,6 +40,7 @@ import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -333,14 +334,11 @@ public final class TypecheckPipeline {
     }
 
     System.out.println();
-    List<Pair<Definition,Integer>> list = new ArrayList<>(sizes.size());
-    for (Map.Entry<Definition, Integer> entry : sizes.entrySet()) {
-      list.add(new Pair<>(entry.getKey(), entry.getValue()));
-    }
-    list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
-    for (Pair<Definition, Integer> pair : list) {
-      System.out.println(pair.proj1.getReferable().getRefLongName() + ": " + pair.proj2);
-    }
+    // Largest first; a tie by name, or the order would be the hash map's.
+    sizes.entrySet().stream()
+        .sorted(Comparator.comparing((Map.Entry<Definition, Integer> entry) -> -entry.getValue())
+            .thenComparing(entry -> entry.getKey().getReferable().getRefLongName().toString()))
+        .forEach(entry -> System.out.println(entry.getKey().getReferable().getRefLongName() + ": " + entry.getValue()));
   }
 
   /**
