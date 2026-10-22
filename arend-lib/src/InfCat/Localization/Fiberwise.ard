@@ -88,6 +88,12 @@
   => \lam {a} (inP (x, b, w)) => transport {DI ->⁺ \Sigma⁺ (x : X) (Q x)} (\lam a' => IsIso (dpath \lam i => T (a' i)))
       (path \lam j i => (fibers-total-equiv.fibers-total-ret-sec {X} {Q} {x} (a i, b i) j).1) (Tw x w)
 
+-- | Conversely, a functor inverting {TotalFibW} inverts {W} on every value of {Q}.
+\lemma totalFibW-restrict {X D : \Cat} {Q : X ->⁺ \Cat} {W : \Pi (x : X) -> (DI ->⁺ Q x) -> \Prop} {T : \Sigma⁺ (x : X) (Q x) ->⁺ D}
+                          (Ti : InvertsW (TotW (totalProj Q) (TotalFibW {X} {Q} W)) T) (x : X)
+  : InvertsW (W x) (\lam (q :⁺ Q x) => T (x, q))
+  => \lam {a} w => Ti {\lam i => (x, a i)} (inP (x, \lam i => idp, w))
+
 -- | The localization of the total category of {p} at the morphisms of `TotW F W`.
 \func FibLoc {S E : \Cat} (p : E ->⁺ S) (W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop) : \Cat
   => Localize (TotW p W)

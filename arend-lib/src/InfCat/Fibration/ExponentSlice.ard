@@ -1,0 +1,175 @@
+{- | Exponents of families of categories of elements, presented by slices of presheaves.
+
+ -   Let `R : B ->⁺ Q ->⁺ \Type u` be a family of presheaves on {Q} and let `W` be a class of arrows of {Q}.
+ -   For `b : B`, let `K_b = \Sigma⁺ (k : Q) (R b k)` be the category of elements of `R b`.
+ -   We construct a family {ExpSl} over {B} whose sections along `pi : T ->⁺ B` are functors to {C}
+ -   on the total category {SecTot} of `t ↦ K_{pi t}` that invert the vertical arrows whose `Q`-component is in `W` ({SecW}).
+ -   This generalizes `ExpLL` (`Fibration.ExponentLeft`), which is the case `Q = 1` without `W`.
+
+ -   Construction: the fiber over `b` is the full subcategory of the slice of `\Sigma⁺ Q (Op C) ->⁺ \Type u` over `R b` ({ExpSliceFam})
+ -   of objects whose curried functor `K_b ->⁺ Op C ->⁺ \Type u` ({ExpSliceHelpers.expSliceCurry}) has representable values and inverts `ExpW W`.
+ -   * {ExpSl.eval}: the evaluation `K_b ->⁺ C`, by the Yoneda embedding; {ExpSl.eval-inverts}: it inverts `ExpW W`.
+ -   * {ExpSl.eval-univ}: the universal property. Sections are slices over `T × Q × Op C` ({ExpSliceHelpers.curry-equiv}),
+ -     which are functors on {SecTot} to presheaves on {C} ({sliceFiber-equiv}); the conditions on the fibers
+ -     are representability and inverting {SecW} ({totalFibW-inverts}, {totalFibW-restrict}), and such functors
+ -     factor through the Yoneda embedding ({ExpSliceHelpers.yon-mapW-equiv}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.ExponentRight (ExpW)
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Fiberwise
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Slice.TotalSlice
+\import InfCat.SubCat.Full
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\open ExpSliceHelpers
+\open FullSubCat
+
+-- | The category of elements of `R (pi t)`.
+\func secFib.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) (t :⁺ T) : \Cat u
+  => \Sigma⁺ (k : Q) (R (pi t) k)
+
+-- | The total category of {secFib}.
+\func SecTot.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) : \Cat u
+  => \Sigma⁺ (t : T) (secFib R pi t)
+
+-- | The vertical arrows of {SecTot} whose `Q`-component is in {W}.
+\func SecW.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) (W : (DI ->⁺ Q) -> \Prop) : (DI ->⁺ SecTot R pi) -> \Prop
+  => TotW (totalProj (secFib R pi)) (TotalFibW {T} {secFib R pi} (\lam t => ExpW W))
+
+\module ExpSliceHelpers \where {
+  -- | The presheaf `(k, c) ↦ R b k` on `Q × Op C`.
+  \func expSliceBase.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (C : \Cat u) (b :⁺ B) (q :⁺ \Sigma⁺ Q (Op C)) : \Type u
+    => R b q.1
+
+  -- | The slice over {expSliceBase}.
+  \func ExpSliceFam.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (C : \Cat u) (b :⁺ B) : \Cat
+    => Slice (expSliceBase R C b)
+
+  -- | The functor on the category of elements of `R b` to presheaves on {C} corresponding to an object of the slice.
+  \func expSliceCurry.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (C : \Cat u) {b :⁺ B} (s :⁺ ExpSliceFam R C b)
+                          (k :⁺ \Sigma⁺ (x : Q) (R b x)) (c :⁺ Op C) : \Type u
+    => sliceFiber (expSliceBase R C b) s ((k.1, c), k.2)
+
+  -- | A functor to presheaves on {C} with representable values inverting {W}.
+  \type IsReprInv.{u} {D : \Cat u} (C : \Cat u) (W : (DI ->⁺ D) -> \Prop) (G : D ->⁺ Op C ->⁺ \Type u) : \Prop
+    => \Sigma (\Pi (d : D) -> ∃ (c : C) (yoneda c = G d)) (InvertsW W G)
+
+  -- | The predicate defining the exponent.
+  \func ExpSlicePred.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (C : \Cat u) (W : (DI ->⁺ Q) -> \Prop)
+                         (s : \Sigma⁺ (b : B) (ExpSliceFam R C b)) : \Prop
+    => IsReprInv C (ExpW W) (expSliceCurry R C s.2)
+
+  -- | The total category of the exponent.
+  \func ExpSliceTotal.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (C : \Cat u) (W : (DI ->⁺ Q) -> \Prop) : \Cat
+    => FullSubCat (ExpSlicePred R C W)
+
+  -- | The projection of the exponent to the base.
+  \func expSliceProj.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (C : \Cat u) (W : (DI ->⁺ Q) -> \Prop) (e :⁺ ExpSliceTotal R C W) : B
+    => (inc e).1
+
+  -- | Functors to {C} inverting {W} are functors to presheaves on {C} with representable values inverting {W}.
+  \lemma yon-mapW-equiv.{u} {D : \Cat u} {C : \Cat u} {W : (DI ->⁺ D) -> \Prop}
+    : IsEquiv {MapW W C} {\Sigma (G : D ->⁺ Op C ->⁺ \Type u) (IsReprInv C W G)}
+              (\lam F => (\lam d => yoneda (F.1 d), (\lam d => inP (F.1 d, idp), invertsW-postcomp (\lam y x =>⁺ Op.Hom x y) F.2)))
+    => IsEquiv.trans (inP $ sigma-equiv {_} {_} {_} {\lam s => InvertsW W s.1}
+                              (IsEquiv.toQEquiv (postcomp-image-equiv yonedaEmbedding))
+                              \lam h => \new QEquiv {
+                                | f => invertsW-postcomp (\lam y x =>⁺ Op.Hom x y)
+                                | ret => invertsW-postcomp-ff (yonedaEmbedding {C})
+                                | ret_f _ => prop-pi
+                                | f_sec _ => prop-pi
+                              }) $
+       inP \new QEquiv {
+         | f s => (s.1.1, (s.1.2, s.2))
+         | ret t => ((t.1, t.2.1), t.2.2)
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }
+
+  -- | Families of slices over {T} along {pi} are functors on {SecTot} to presheaves on {C}.
+  \lemma curry-equiv.{u} {Q B : \Cat u} {R : B ->⁺ Q ->⁺ \Type u} {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
+    : IsEquiv {\Pi (t :⁺ T) -> ExpSliceFam R C (pi t)} {SecTot R pi ->⁺ Op C ->⁺ \Type u}
+              (\lam s w c => sliceFiber (expSliceBase R C (pi w.1)) (s w.1) ((w.2.1, c), w.2.2))
+    => transport IsEquiv (path \lam j s (w :⁺ SecTot R pi) (c :⁺ Op C) => sliceFiber-curry s {(w.1, (w.2.1, c) : \Sigma⁺ Q (Op C)), w.2.2} j) $
+       IsEquiv.trans (inP \new QEquiv {
+         | f s => sliceFiber-curry.uncurrySlice {T} {\Sigma⁺ Q (Op C)} {\lam t => expSliceBase R C (pi t)} s
+         | ret g t => (\lam q => g.1 (t, q), dpath \lam i q => g.2 i (t, q))
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }) $ IsEquiv.trans (IsHEquiv.toIsEquiv (sliceFiber-equiv (\lam v => expSliceBase R C (pi v.1) v.2))) $
+       inP \new QEquiv {
+         | f g w c => g ((w.1, ((w.2.1, c) : \Sigma⁺ Q (Op C))), w.2.2)
+         | ret k z => k (z.1.1, (z.1.2.1, z.2)) z.1.2.2
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }
+
+  -- | Families of objects of the exponent along {pi} are functors on {SecTot} to presheaves with representable values inverting {SecW}.
+  \lemma sections-curry-equiv.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) {C : \Cat u} (W : (DI ->⁺ Q) -> \Prop) {T : \Cat u} (pi : T ->⁺ B)
+    : IsEquiv {\Sigma (s : \Pi (t :⁺ T) -> ExpSliceFam R C (pi t)) (\Pi (t : T) -> ExpSlicePred R C W (pi t, s t))}
+              {\Sigma (G : SecTot R pi ->⁺ Op C ->⁺ \Type u) (IsReprInv C (SecW R pi W) G)}
+              (\lam s => (\lam w c => sliceFiber (expSliceBase R C (pi w.1)) (s.1 w.1) ((w.2.1, c), w.2.2),
+                          (\lam w => (s.2 w.1).1 w.2, totalFibW-inverts {T} {_} {secFib R pi} {\lam t => ExpW W} (\lam t => (s.2 t).2))))
+    => inP $ sigma-equiv (IsEquiv.toQEquiv (curry-equiv pi)) \lam s => later \new QEquiv {
+         | f p => (\lam w => (p w.1).1 w.2, totalFibW-inverts (\lam t => (p t).2))
+         | ret p t => (\lam k => p.1 (t, k), totalFibW-restrict {T} {_} {secFib R pi} p.2 t)
+         | ret_f _ => prop-pi
+         | f_sec _ => prop-pi
+       }
+
+  -- | The evaluation map together with its characterization.
+  \sfunc evalPair.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) {C : \Cat u} (W : (DI ->⁺ Q) -> \Prop)
+                      (e :⁺ ExpSliceTotal R C W) (k :⁺ \Sigma⁺ (x : Q) (R (expSliceProj R C W e) x))
+    : \Sigma⁺ (c : C) (yoneda c = expSliceCurry R C (inc e).2 k)
+    => ffMap-lift-pair yonedaEmbedding {\Sigma⁺ (e : ExpSliceTotal R C W) (\Sigma⁺ (x : Q) (R (expSliceProj R C W e) x))}
+        (\lam s => expSliceCurry R C (inc s.1).2 s.2)
+        (\lam s => (inc-con {_} {_} {s.1}).1 s.2) (e, k)
+}
+
+-- | The exponent: objects over {b} are functors `\Sigma⁺ (k : Q) (R b k) ->⁺ C` inverting `ExpW W` ({ExpSl.eval-univ}).
+\type ExpSl.{u} {Q B : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (C : \Cat u) (W : (DI ->⁺ Q) -> \Prop) (b :⁺ B) : \Cat
+  => Fibers (expSliceProj R C W) b
+  \where {
+    -- | The evaluation map.
+    \protected \sfunc eval.{u} {Q B : \Cat u} {R : B ->⁺ Q ->⁺ \Type u} {C : \Cat u} {W : (DI ->⁺ Q) -> \Prop} {b :⁺ B}
+                               (e :⁺ ExpSl R C W b) (k :⁺ \Sigma⁺ (x : Q) (R b x)) : C \elim e
+      | (e, idp) => (evalPair R W e k).1
+
+    -- | The value of {eval} under the Yoneda embedding is the curried functor of the slice.
+    \sfunc eval-yoneda.{u} {Q B : \Cat u} {R : B ->⁺ Q ->⁺ \Type u} {C : \Cat u} {W : (DI ->⁺ Q) -> \Prop} {b :⁺ B}
+                           (z :⁺ ExpSl R C W b) (k :⁺ \Sigma⁺ (x : Q) (R b x))
+      : expSliceCurry R C (transport+ (ExpSliceFam R C) z.2 (inc z.1).2) k = yoneda (eval z k) \elim z
+      | (e, idp) => inv (evalPair R W e k).2 *> pmap+ yoneda (inv \peval eval (e, idp) k)
+
+    -- | The evaluation inverts `ExpW W`.
+    \lemma eval-inverts.{u} {Q B : \Cat u} {R : B ->⁺ Q ->⁺ \Type u} {C : \Cat u} {W : (DI ->⁺ Q) -> \Prop} {b : B}
+                            (z : ExpSl R C W b) : InvertsW (ExpW W) (\lam k => eval {Q} {B} {R} {C} {W} z k) \elim z
+      | (e, idp) => invertsW-postcomp-ff (yonedaEmbedding {C}) $
+          transport (InvertsW (ExpW W)) (funExt+ \lam k => eval-yoneda (e, idp) k) (inc-con {_} {_} {e}).2
+
+    -- | The universal property: families of objects along {pi} are functors on {SecTot} inverting {SecW}.
+    \protected \lemma eval-univ.{u} {Q B : \Cat u} {R : B ->⁺ Q ->⁺ \Type u} {C : \Cat u} {W : (DI ->⁺ Q) -> \Prop} {T : \Cat u} (pi : T ->⁺ B)
+      : IsEquiv {\Pi (t :⁺ T) -> ExpSl R C W (pi t)} {MapW (SecW R pi W) C}
+                (\lam s => (\lam w => eval (s w.1) w.2, totalFibW-inverts \lam t => eval-inverts (s t)))
+      => IsEquiv.leftFactor yon-mapW-equiv $
+         transport IsEquiv (ext \lam s => ext (funExt+ \lam w => eval-yoneda (s w.1) w.2)) $
+         IsEquiv.trans (inP $ later \new QEquiv {
+           | f s t => s t
+           | ret s t => s t
+           | ret_f _ => idp
+           | f_sec _ => idp
+         }) $ IsEquiv.trans (subProj.sections-equiv (ExpSlicePred R C W) pi) (sections-curry-equiv R W pi)
+  }
