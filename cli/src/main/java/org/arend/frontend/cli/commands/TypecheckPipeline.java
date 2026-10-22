@@ -14,11 +14,13 @@ import org.arend.frontend.TimedProgressReporter;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.frontend.query.TargetResolver;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
+import org.arend.server.ArendServer;
 import org.arend.server.BinaryCacheFilter;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
@@ -222,6 +224,7 @@ public final class TypecheckPipeline {
         if (module == null) {
           ctx.systemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
         } else if (definitionName != null) {
+          if (!checkDefinitionExists(ctx.server, module, definitionName, ctx.systemErrErrorReporter)) continue;
           System.out.println();
           FullName fullName = new FullName(module, definitionName);
           System.out.println("--- Typechecking " + fullName + " ---");
@@ -361,6 +364,19 @@ public final class TypecheckPipeline {
     for (Pair<Definition, Integer> pair : list) {
       System.out.println(pair.proj1.getReferable().getRefLongName() + ": " + pair.proj2);
     }
+  }
+
+  /**
+   * Whether {@code module} declares {@code name}, a definition or a field or constructor of one;
+   * when it does not, says so to {@code errorReporter}. Typechecking a name the module does not
+   * declare checks nothing, and so would succeed.
+   */
+  private static boolean checkDefinitionExists(ArendServer server, ModuleLocation module,
+                                               LongName name, ErrorReporter errorReporter) {
+    ConcreteGroup group = server.getRawGroup(module);
+    if (group != null && TargetResolver.walkLongName(group, name) != null) return true;
+    errorReporter.report(new DefinitionNotFoundError(new FullName(module, name)));
+    return false;
   }
 
   private static void printDefinitions(CommandContext ctx, String printString) {
