@@ -62,7 +62,7 @@ public final class DaemonStop {
 
     LockFile.Read existing = LockFile.read(paths.lockFile);
     Verdict verdict = inspectLock(existing, paths.libraryHash,
-        candidate -> ProcessHandle.of(candidate.pid()).isPresent());
+        LockFile::processAlive);
     switch (verdict) {
       case NOTHING_TO_DO -> {
         System.out.println("No Arend daemon running for " + paths.libraryConfig);
@@ -99,7 +99,8 @@ public final class DaemonStop {
       case SIGNAL -> { }
     }
     LockFile lf = lockOf(existing);
-    Optional<ProcessHandle> ph = ProcessHandle.of(lf.pid());
+    // The process the lock names, not merely one with its PID: that would be signalled below.
+    Optional<ProcessHandle> ph = lf.process();
     if (ph.isEmpty()) {
       LockFile.deleteQuietly(paths.lockFile);
       return 0;
