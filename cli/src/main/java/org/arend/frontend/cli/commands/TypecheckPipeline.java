@@ -3,6 +3,7 @@ package org.arend.frontend.cli.commands;
 import org.apache.commons.cli.CommandLine;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.visitor.SizeExpressionVisitor;
+import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
@@ -15,12 +16,14 @@ import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.QualifiedName;
+import org.arend.frontend.query.TargetResolver;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
 import org.arend.error.SourcePosition;
+import org.arend.server.ArendServer;
 import org.arend.server.BinaryCacheFilter;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
@@ -265,6 +268,7 @@ public final class TypecheckPipeline {
         if (module == null) {
           ctx.systemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
         } else if (definitionName != null) {
+          if (!checkDefinitionExists(ctx.server, module, definitionName, ctx.systemErrErrorReporter)) continue;
           FullName fullName = new FullName(module, definitionName);
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), ctx.errorReporter, ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
@@ -450,6 +454,19 @@ public final class TypecheckPipeline {
       TCDefReferable referable = pair.proj1.getReferable();
       System.out.println((qualify ? referable.getRefFullName() : referable.getRefLongName()) + ": " + pair.proj2);
     }
+  }
+
+  /**
+   * Whether {@code module} declares {@code name}, a definition or a field or constructor of one;
+   * when it does not, says so to {@code errorReporter}. Typechecking a name the module does not
+   * declare checks nothing, and so would succeed.
+   */
+  private static boolean checkDefinitionExists(ArendServer server, ModuleLocation module,
+                                               LongName name, ErrorReporter errorReporter) {
+    ConcreteGroup group = server.getRawGroup(module);
+    if (group != null && TargetResolver.walkLongName(group, name) != null) return true;
+    errorReporter.report(new DefinitionNotFoundError(new FullName(module, name)));
+    return false;
   }
 
   private static void printDefinitions(CommandContext ctx, String printString) {
