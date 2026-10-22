@@ -1,6 +1,7 @@
 package org.arend.frontend.query;
 
 import org.arend.ext.module.ModuleLocation;
+import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
@@ -59,13 +60,13 @@ public final class PathDisplayUtils {
     return null;
   }
 
-  /** The absolute, normalized source-file path backing {@code moduleLoc} in {@code lib}, or {@code null} if unavailable. */
-  public static @Nullable Path sourcePath(@Nullable SourceLibrary lib, @NotNull ModuleLocation moduleLoc) {
-    if (!(lib instanceof FileSourceLibrary fl)) return null;
-    Path base = fl.getSourceBasePath();
-    if (base == null) return null;
+  /** The absolute, normalized source file backing module {@code mp} in {@code library}, or {@code null}. */
+  public static @Nullable Path sourcePath(@Nullable SourceLibrary library, @NotNull ModulePath mp) {
+    if (!(library instanceof FileSourceLibrary fl)) return null;
+    Path src = fl.getSourceBasePath();
+    if (src == null) return null;
     try {
-      return FileUtils.sourceFile(base, moduleLoc.getModulePath()).toAbsolutePath().normalize();
+      return FileUtils.sourceFile(src, mp).toAbsolutePath().normalize();
     } catch (RuntimeException e) {
       return null;
     }
@@ -73,7 +74,7 @@ public final class PathDisplayUtils {
 
   /** A display label for {@code moduleLoc}: its shortened source path, or the synthetic {@code <library:module>} form. Never empty. */
   public static @NotNull String label(@NotNull ModuleLocation moduleLoc, @NotNull LibraryManager manager) {
-    Path src = sourcePath(manager.getLibrary(moduleLoc.getLibraryName()), moduleLoc);
+    Path src = sourcePath(manager.getLibrary(moduleLoc.getLibraryName()), moduleLoc.getModulePath());
     return src != null ? shorten(src, manager)
         : "<" + moduleLoc.getLibraryName() + ":" + moduleLoc.getModulePath() + ">";
   }
@@ -82,7 +83,7 @@ public final class PathDisplayUtils {
   public static @Nullable String shortenedSourcePath(@NotNull ModuleLocation moduleLoc,
                                                      @NotNull LibraryManager manager) {
     if (moduleLoc.getLocationKind() != ModuleLocation.LocationKind.SOURCE) return null;
-    Path abs = sourcePath(manager.getLibrary(moduleLoc.getLibraryName()), moduleLoc);
+    Path abs = sourcePath(manager.getLibrary(moduleLoc.getLibraryName()), moduleLoc.getModulePath());
     return abs == null ? null : shorten(abs, manager);
   }
 }
