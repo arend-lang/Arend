@@ -150,7 +150,9 @@ public final class CliSetup {
     for (String dependency : library.getLibraryDependencies()) {
       if (ctx.libraryManager.containsLibrary(dependency) || loading.contains(dependency)) continue;
       List<SourceLibrary> libDependency = new ArrayList<>(1);
-      findLibrary(ctx, dependency, libDependency);
+      ctx.requestedLibraries.stream().filter(requested -> requested.getLibraryName().equals(dependency))
+          .findFirst().ifPresent(libDependency::add);
+      if (libDependency.isEmpty()) findLibrary(ctx, dependency, libDependency);
       if (libDependency.isEmpty()) return false;
       if (!loadLibraryWithDependencies(ctx, libDependency.getFirst(), loading)) return false;
     }
