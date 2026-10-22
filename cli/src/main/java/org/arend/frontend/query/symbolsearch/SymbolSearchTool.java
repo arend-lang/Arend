@@ -1,8 +1,6 @@
 package org.arend.frontend.query.symbolsearch;
 
 import org.arend.frontend.ConsoleHelp;
-import org.arend.frontend.library.LibraryManager;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.*;
 import org.arend.repl.Repl;
 import org.jetbrains.annotations.Nls;
@@ -190,7 +188,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
     @Override public int run(QueryContext ctx) {
       ctx.applyTo(options);
       try {
-        LibraryManager libraryManager = ctx.libraryManager();
+        QueryLibraries libraryManager = ctx.libraryManager();
         PrintStream out = ctx.out();
         List<SymbolPattern> compiled = new ArrayList<>(patterns.size());
         for (String p : patterns) {
@@ -210,7 +208,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
         // In JSON mode the query echo is diagnostic, not a result -- keep it off stdout.
         (options.json ? System.err : System.out).println(formatQueryEcho(compiled, options));
 
-        List<SourceLibrary> libsInScope = ctx.searchLibraries(options.self);
+        List<QueryLibrary> libsInScope = ctx.searchLibraries(options.self);
         if (libsInScope.isEmpty()) {
           if (options.json) ResultJson.write(out, List.of(), 0);
           else System.err.println("[ERROR] No libraries to search.");
@@ -239,7 +237,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
   /** Renders a completed {@code -ss} search; implemented by {@link TextSymbolSearchPrinter} and {@link JsonSymbolSearchPrinter}. */
   interface SymbolSearchPrinter {
     void print(PrintStream out, SymbolSearchEngine.Result result, Options options,
-               boolean showLibrary, LibraryManager libraryManager);
+               boolean showLibrary, QueryLibraries libraryManager);
   }
 
   private static @Nullable SymbolIndex.Kind parseKind(String s) {

@@ -2,9 +2,6 @@ package org.arend.frontend.query;
 
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
-import org.arend.frontend.library.FileSourceLibrary;
-import org.arend.frontend.library.LibraryManager;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,19 +13,19 @@ public final class PathDisplayUtils {
   private PathDisplayUtils() {}
 
   /** The library-relative form of {@code path}; the absolute string if no library matches, empty if {@code null}. */
-  public static @NotNull String shorten(@Nullable Path path, @Nullable LibraryManager manager) {
+  public static @NotNull String shorten(@Nullable Path path, @Nullable QueryLibraries manager) {
     if (path == null) return "";
     return shorten(path.toString(), manager);
   }
 
-  /** String-input variant of {@link #shorten(Path, LibraryManager)}, matched against library base dirs by string prefix. */
-  public static @NotNull String shorten(@Nullable String pathString, @Nullable LibraryManager manager) {
+  /** String-input variant of {@link #shorten(Path, QueryLibraries)}, matched against library base dirs by string prefix. */
+  public static @NotNull String shorten(@Nullable String pathString, @Nullable QueryLibraries manager) {
     if (pathString == null || pathString.isEmpty()) return "";
     if (manager == null) return pathString;
     for (String libName : manager.getLibraries()) {
-      SourceLibrary lib = manager.getLibrary(libName);
-      if (!(lib instanceof FileSourceLibrary fl)) continue;
-      Path base = libraryRoot(fl);
+      QueryLibrary lib = manager.getLibrary(libName);
+      if (lib == null) continue;
+      Path base = libraryRoot(lib);
       if (base == null) continue;
       String baseStr = base.toAbsolutePath().normalize().toString();
       if (pathString.startsWith(baseStr)) {
@@ -42,17 +39,17 @@ public final class PathDisplayUtils {
         if (!tail.isEmpty()) {
           tail = tail.substring(1);
         }
-        return tail.isEmpty() ? fl.getLibraryName() : fl.getLibraryName() + "/" + tail;
+        return tail.isEmpty() ? lib.getLibraryName() : lib.getLibraryName() + "/" + tail;
       }
     }
     return pathString;
   }
 
   /** The library's root directory (the one holding {@code arend.yaml}), or {@code null} if it can't be determined. */
-  private static @Nullable Path libraryRoot(@NotNull FileSourceLibrary fl) {
-    Path src = fl.getSourceBasePath();
+  private static @Nullable Path libraryRoot(@NotNull QueryLibrary library) {
+    Path src = library.getSourceBasePath();
     if (src == null) return null;
-    String libName = fl.getLibraryName();
+    String libName = library.getLibraryName();
     for (Path p = src.toAbsolutePath().normalize(); p != null; p = p.getParent()) {
       Path name = p.getFileName();
       if (name != null && name.toString().equals(libName)) return p;
@@ -61,9 +58,9 @@ public final class PathDisplayUtils {
   }
 
   /** The absolute, normalized source file backing module {@code mp} in {@code library}, or {@code null}. */
-  public static @Nullable Path sourcePath(@Nullable SourceLibrary library, @NotNull ModulePath mp) {
-    if (!(library instanceof FileSourceLibrary fl)) return null;
-    Path src = fl.getSourceBasePath();
+  public static @Nullable Path sourcePath(@Nullable QueryLibrary library, @NotNull ModulePath mp) {
+    if (library == null) return null;
+    Path src = library.getSourceBasePath();
     if (src == null) return null;
     try {
       return FileUtils.sourceFile(src, mp).toAbsolutePath().normalize();
@@ -73,7 +70,7 @@ public final class PathDisplayUtils {
   }
 
   /** A display label for {@code moduleLoc}: its shortened source path, or the synthetic {@code <library:module>} form. Never empty. */
-  public static @NotNull String label(@NotNull ModuleLocation moduleLoc, @NotNull LibraryManager manager) {
+  public static @NotNull String label(@NotNull ModuleLocation moduleLoc, @NotNull QueryLibraries manager) {
     Path src = sourcePath(manager.getLibrary(moduleLoc.getLibraryName()), moduleLoc.getModulePath());
     return src != null ? shorten(src, manager)
         : "<" + moduleLoc.getLibraryName() + ":" + moduleLoc.getModulePath() + ">";
@@ -81,7 +78,7 @@ public final class PathDisplayUtils {
 
   /** The shortened library-relative path of a SOURCE {@code moduleLoc}, or {@code null} for non-source modules or when unresolved. */
   public static @Nullable String shortenedSourcePath(@NotNull ModuleLocation moduleLoc,
-                                                     @NotNull LibraryManager manager) {
+                                                     @NotNull QueryLibraries manager) {
     if (moduleLoc.getLocationKind() != ModuleLocation.LocationKind.SOURCE) return null;
     Path abs = sourcePath(manager.getLibrary(moduleLoc.getLibraryName()), moduleLoc.getModulePath());
     return abs == null ? null : shorten(abs, manager);

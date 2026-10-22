@@ -1,8 +1,8 @@
 package org.arend.frontend.query.proofsearch;
 
+import org.arend.frontend.query.QueryLibrary;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.server.TimedProgressReporter;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
@@ -43,12 +43,12 @@ final class ProofSearchEngine {
    * {@code limit} caps the returned list but not the reported total. {@code cancellation} aborts
    * the resolve pass, which is the long half of the search.
    */
-  static Result find(ProofSearchQuery query, List<SourceLibrary> searchLibs, ArendServer server,
+  static Result find(ProofSearchQuery query, List<QueryLibrary> searchLibs, ArendServer server,
                      Set<String> excludeLibraries, boolean self, int limit,
                      CancellationIndicator cancellation) {
     ArendExpressionMatcher matcher = new ArendExpressionMatcher(query);
     Set<String> scopeNames = new HashSet<>();
-    for (SourceLibrary library : searchLibs) scopeNames.add(library.getLibraryName());
+    for (QueryLibrary library : searchLibs) scopeNames.add(library.getLibraryName());
 
     resolveLibraries(searchLibs, server, cancellation);
 
@@ -79,10 +79,10 @@ final class ProofSearchEngine {
     return new Result(matches, total);
   }
 
-  private static void resolveLibraries(List<SourceLibrary> searchLibs, ArendServer server,
+  private static void resolveLibraries(List<QueryLibrary> searchLibs, ArendServer server,
                                        CancellationIndicator cancellation) {
     // searchLibs is already exclude-free, so no exclusion check is needed here.
-    for (SourceLibrary library : searchLibs) {
+    for (QueryLibrary library : searchLibs) {
       System.out.println("[INFO] Resolving " + library.getLibraryName());
       long time = System.currentTimeMillis();
       server.getCheckerFor(library.findModules(false).stream()

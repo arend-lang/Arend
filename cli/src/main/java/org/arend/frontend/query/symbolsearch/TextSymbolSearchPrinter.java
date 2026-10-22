@@ -1,6 +1,6 @@
 package org.arend.frontend.query.symbolsearch;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.SymbolPattern;
 import org.arend.frontend.query.symbolsearch.SymbolSearchEngine.Hit;
 import org.arend.frontend.query.symbolsearch.SymbolSearchEngine.Result;
@@ -21,7 +21,7 @@ final class TextSymbolSearchPrinter implements SymbolSearchPrinter {
   }
 
   @Override
-  public void print(PrintStream out, Result result, Options options, boolean showLibrary, LibraryManager lm) {
+  public void print(PrintStream out, Result result, Options options, boolean showLibrary, QueryLibraries lm) {
     List<Hit> hits = result.hits();
     int total = hits.size();
     int printed = 0;

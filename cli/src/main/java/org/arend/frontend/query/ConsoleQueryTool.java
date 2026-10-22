@@ -1,8 +1,5 @@
 package org.arend.frontend.query;
 
-import org.arend.frontend.library.LibraryManager;
-import org.arend.frontend.library.SourceLibrary;
-import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.Repl;
 import org.arend.repl.action.AliasableCommand;
 import org.arend.server.ArendServer;
@@ -101,17 +98,17 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
 
   /**
    * Shared REPL entry point for every tool ({@code :ss}/{@code :ps}/…): run the shared
-   * {@link CommonCliRepl#runSearchCommand search scaffolding}, parse the line into a
+   * {@link QueryRepl#runQueryCommand search scaffolding}, parse the line into a
    * {@link ConsoleToolRunner}, and run it against the REPL's query context. Tools vary only
    * in {@link #replLabel} and {@link #parseReplLine}.
    */
   @Override
   public final void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
-    if (!(api instanceof CommonCliRepl repl)) return;
-    repl.runSearchCommand("[ERROR] " + replLabel() + " is unavailable (no library manager on this server).",
-        (manager, libs, capture) -> {
-          ConsoleToolRunner parsed = parseReplLine(tokenizeArgs(line), repl);
-          if (parsed != null) parsed.run(repl.replQueryContext(manager, libs, capture));
+    if (!(api instanceof QueryRepl repl)) return;
+    repl.runQueryCommand("[ERROR] " + replLabel() + " is unavailable (no library manager on this server).",
+        ctx -> {
+          ConsoleToolRunner parsed = parseReplLine(tokenizeArgs(line), api);
+          if (parsed != null) parsed.run(ctx);
         });
   }
 
@@ -124,7 +121,7 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
    * run. The default parses the tokens exactly as the CLI does; tools whose REPL line
    * needs pre-processing (a rejoined pattern, an empty-input shortcut) override this.
    */
-  protected @Nullable ConsoleQueryTool.ConsoleToolRunner parseReplLine(@NotNull List<String> tokens, @NotNull CommonCliRepl repl) {
+  protected @Nullable ConsoleQueryTool.ConsoleToolRunner parseReplLine(@NotNull List<String> tokens, @NotNull Repl repl) {
     return parseArgs(tokens.toArray(new String[0]));
   }
 
@@ -146,8 +143,8 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
    *                           client {@code cancel} is honoured, the REPL and local CLI pass
    *                           the unstoppable default
    */
-  public record QueryContext(List<SourceLibrary> requestedLibraries,
-                             LibraryManager libraryManager,
+  public record QueryContext(List<QueryLibrary> requestedLibraries,
+                             QueryLibraries libraryManager,
                              ArendServer server,
                              PrintStream out,
                              boolean json,
@@ -168,11 +165,11 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
      * Computed fresh from the manager, so it is authoritative regardless of what the
      * caller passed as {@code requestedLibraries}.
      */
-    public List<SourceLibrary> librariesInScope() {
-      List<SourceLibrary> all = new ArrayList<>();
+    public List<QueryLibrary> librariesInScope() {
+      List<QueryLibrary> all = new ArrayList<>();
       for (String name : libraryManager.getLibraries()) {
         if (excludeLibraries.contains(name)) continue;
-        SourceLibrary lib = libraryManager.getLibrary(name);
+        QueryLibrary lib = libraryManager.getLibrary(name);
         if (lib != null) all.add(lib);
       }
       return all;
@@ -183,7 +180,7 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
      * normally, or just the top-level {@link #requestedLibraries()} when {@code self} drops
      * dependencies. In the REPL the two coincide, so {@code self} is a no-op there.
      */
-    public List<SourceLibrary> searchLibraries(boolean self) {
+    public List<QueryLibrary> searchLibraries(boolean self) {
       return self ? requestedLibraries : librariesInScope();
     }
   }

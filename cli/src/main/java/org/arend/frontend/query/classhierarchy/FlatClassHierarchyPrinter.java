@@ -1,6 +1,6 @@
 package org.arend.frontend.query.classhierarchy;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.*;
 import org.arend.frontend.query.classhierarchy.ClassHierarchy.ClassNode;
 import org.arend.frontend.query.classhierarchy.ClassHierarchy.InstanceSite;
@@ -16,7 +16,7 @@ import static org.arend.frontend.query.classhierarchy.ClassHierarchyTool.*;
 /** Renders the class hierarchy as one tagged, tab-separated relation per line ({@code format=flat}), for grep / agentic loops. */
 final class FlatClassHierarchyPrinter implements ClassHierarchyPrinter {
   @Override
-  public void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, LibraryManager libraryManager) {
+  public void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, QueryLibraries libraryManager) {
     ClassNode root = hierarchy.node(target.referable());
     String tgtLocFull = positionLabel(target.referable(), target.module(), libraryManager);
     out.println("TARGET\t" + target.fullLabel() + "\t" + target.kind() + "\t" + tgtLocFull);

@@ -1,7 +1,7 @@
 package org.arend.frontend.query.classhierarchy;
 
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.ext.module.ModuleLocation;
-import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.query.*;
 import org.arend.frontend.query.classhierarchy.ClassHierarchy.ClassNode;
 import org.arend.frontend.query.classhierarchy.ClassHierarchy.InstanceSite;
@@ -27,7 +27,7 @@ final class JsonClassHierarchyPrinter implements ClassHierarchyPrinter {
    * repeat carries {@code "repeat":true} and no children.
    */
   @Override
-  public void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, LibraryManager lm) {
+  public void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, QueryLibraries lm) {
     boolean showLibrary = target.showLibrary();
     ClassNode root = hierarchy.node(target.referable());
     List<String> parts = new ArrayList<>();
@@ -105,7 +105,7 @@ final class JsonClassHierarchyPrinter implements ClassHierarchyPrinter {
   }
 
   private static String buildTree(LocatedReferable ref, boolean superDir, ClassHierarchy hierarchy,
-      Set<LocatedReferable> seen, Options options, LibraryManager lm, boolean showLibrary) {
+      Set<LocatedReferable> seen, Options options, QueryLibraries lm, boolean showLibrary) {
     ClassNode node = hierarchy.node(ref);
     boolean repeat = !seen.add(ref);
     StringBuilder sb = new StringBuilder("{");
@@ -134,7 +134,7 @@ final class JsonClassHierarchyPrinter implements ClassHierarchyPrinter {
     return sb.append("]}").toString();
   }
 
-  private static String jsonLocation(@Nullable ModuleLocation moduleLoc, int line, int col, LibraryManager lm) {
+  private static String jsonLocation(@Nullable ModuleLocation moduleLoc, int line, int col, QueryLibraries lm) {
     return JsonUtils.location(moduleLoc == null ? null : PathDisplayUtils.label(moduleLoc, lm), line, col);
   }
 

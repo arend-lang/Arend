@@ -6,6 +6,8 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.query.ConsoleQueryTool;
+import org.arend.frontend.query.QueryLibrary;
+import org.arend.frontend.query.QueryRepl;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -48,11 +50,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.arend.repl.action.LoadLibraryCommand.CUR_DIR;
 
-public abstract class CommonCliRepl extends Repl {
+public abstract class CommonCliRepl extends Repl implements QueryRepl {
   public static final @NotNull String APP_NAME = "Arend REPL";
   private final @NotNull EnumSet<@NotNull PrettyPrinterFlag> myPrettyPrinterFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
   private @Nullable NormalizationMode myNormalizationMode = NormalizationMode.ENF;
@@ -362,25 +365,16 @@ public abstract class CommonCliRepl extends Repl {
   }
 
   /**
-   * Body of a REPL search command: receives the resolved library manager, the
-   * search scope (every registered library except the synthetic {@code Repl}
-   * mirror), and the capture stream the tool should write to.
-   */
-  @FunctionalInterface
-  public interface SearchInvocation {
-    void run(@NotNull LibraryManager manager, @NotNull List<SourceLibrary> libs, @NotNull PrintStream capture);
-  }
-
-  /**
-   * Shared scaffolding for the {@code :ss}/{@code :ps}/{@code :fu}/{@code :ch}/{@code :sc}
-   * handlers. Resolves the library manager (printing {@code unavailableMsg} and bailing
-   * if absent), builds the search scope (dropping the synthetic {@code Repl} mirror,
+   * Runs a {@code :ss}/{@code :ps}/{@code :fu}/{@code :ch}/{@code :sc} handler against the REPL's
+   * hot {@code myServer}. Resolves the library manager (printing {@code unavailableMsg} and
+   * bailing if absent), builds the search scope (dropping the synthetic {@code Repl} mirror,
    * whose duplicate source files would otherwise double hits / make bare-name resolution
    * ambiguous), then captures everything the tool writes to {@code System.out}/{@code
    * System.err} and forwards it through the REPL's own stream — so it works for both the
    * plain and jline REPL. No {@code --json} in the REPL.
    */
-  public void runSearchCommand(@NotNull String unavailableMsg, @NotNull SearchInvocation body) {
+  @Override
+  public void runQueryCommand(@NotNull String unavailableMsg, @NotNull Consumer<ConsoleQueryTool.QueryContext> body) {
     @Nullable LibraryManager manager = null;
     if (myServer instanceof ArendServerImpl arendServer
         && arendServer.getRequester() instanceof DelegateServerRequester delegate
@@ -391,7 +385,7 @@ public abstract class CommonCliRepl extends Repl {
       eprintln(unavailableMsg);
       return;
     }
-    List<SourceLibrary> libs = new ArrayList<>();
+    List<QueryLibrary> libs = new ArrayList<>();
     for (String name : manager.getLibraries()) {
       if (name.equals(REPL_NAME)) continue;
       SourceLibrary lib = manager.getLibrary(name);
@@ -403,22 +397,13 @@ public abstract class CommonCliRepl extends Repl {
     System.setOut(capture);
     System.setErr(capture);
     try {
-      body.run(manager, libs, capture);
+      body.accept(new ConsoleQueryTool.QueryContext(libs, manager, myServer, capture, false,
+          Set.of(REPL_NAME), UnstoppableCancellationIndicator.INSTANCE));
     } finally {
       System.setOut(realOut);
       System.setErr(realErr);
     }
     print(buffer.toString(StandardCharsets.UTF_8));
-  }
-
-  /**
-   * The {@link ConsoleQueryTool.QueryContext} for a REPL query command: the REPL's hot
-   * {@code myServer}, output captured into the command buffer, never JSON, and the
-   * synthetic {@code Repl} library excluded from the search scope.
-   */
-  public ConsoleQueryTool.QueryContext replQueryContext(LibraryManager manager, List<SourceLibrary> libs, PrintStream capture) {
-    return new ConsoleQueryTool.QueryContext(libs, manager, myServer, capture, false,
-        Set.of(REPL_NAME), UnstoppableCancellationIndicator.INSTANCE);
   }
 
   private final class ChangePromptCommand implements ReplCommand {

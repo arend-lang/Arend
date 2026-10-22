@@ -1,8 +1,6 @@
 package org.arend.frontend.query;
 
 import org.arend.ext.module.ModulePath;
-import org.arend.frontend.library.FileSourceLibrary;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,11 +41,10 @@ final class SymbolIndexStore {
   // ---- file location ------------------------------------------------------
 
   /** The cache file backing {@code library}'s index, or {@code null} for a non-file library. */
-  static @Nullable Path cacheFileFor(SourceLibrary library) {
-    if (!(library instanceof FileSourceLibrary fl)) return null;
-    Path bin = fl.getBinaryBasePath();
+  static @Nullable Path cacheFileFor(QueryLibrary library) {
+    Path bin = library.getBinaryBasePath();
     if (bin != null) return bin.resolve(".arend-symbol-index");
-    Path src = fl.getSourceBasePath();
+    Path src = library.getSourceBasePath();
     if (src == null) return null;
     Path parent = src.getParent();
     if (parent == null) parent = src;
@@ -55,7 +52,7 @@ final class SymbolIndexStore {
   }
 
   /** An mtime+size stamp of module {@code mp}'s source file (zeros when it can't be read). */
-  static SymbolIndex.FileStamp sourceStamp(SourceLibrary library, ModulePath mp) {
+  static SymbolIndex.FileStamp sourceStamp(QueryLibrary library, ModulePath mp) {
     Path file = PathDisplayUtils.sourcePath(library, mp);
     if (file == null) return new SymbolIndex.FileStamp(0L, 0L);
     try {

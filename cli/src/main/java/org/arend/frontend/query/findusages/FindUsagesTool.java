@@ -2,8 +2,6 @@ package org.arend.frontend.query.findusages;
 
 import org.arend.ext.module.ModuleLocation;
 import org.arend.frontend.ConsoleHelp;
-import org.arend.frontend.library.LibraryManager;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.*;
 import org.arend.frontend.query.findusages.UsageFinder.UsageHit;
 import org.arend.repl.Repl;
@@ -65,25 +63,25 @@ public final class FindUsagesTool extends ConsoleQueryTool {
     @Override public int run(QueryContext ctx) {
       ctx.applyTo(options);
       try {
-        LibraryManager libraryManager = ctx.libraryManager();
+        QueryLibraries libraryManager = ctx.libraryManager();
         ArendServer server = ctx.server();
         PrintStream out = ctx.out();
         // Two scopes: the target is resolved against the full scope (so a usage query can
         // name any loaded definition, including one in a dependency), while usages are
         // hunted only in the search scope — narrowed to the requested libraries by `self`.
-        List<SourceLibrary> fullScope = ctx.librariesInScope();
+        List<QueryLibrary> fullScope = ctx.librariesInScope();
         if (fullScope.isEmpty()) {
           System.err.println("[ERROR] No libraries in scope.");
           if (options.json) ResultJson.write(out, List.of(), 0);
           return 1;
         }
-        List<SourceLibrary> searchScope = ctx.searchLibraries(options.self);
+        List<QueryLibrary> searchScope = ctx.searchLibraries(options.self);
         boolean showLibrary = QualifiedName.containsMultipleNonPreludeLibraries(fullScope);
 
         // 1) Refresh symbol indexes for in-scope libraries. This backs bare-name
         //    lookup and gets the server to register every source module, so
         //    getRawGroup works during resolution and the text scan below.
-        Map<SourceLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(fullScope, server, options.withTests);
+        Map<QueryLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(fullScope, server, options.withTests);
 
         // 2) Resolve the spec (qualified `MODULE:DEF` or bare long-name) to a single
         //    target referable through the shared resolver.
@@ -166,7 +164,7 @@ public final class FindUsagesTool extends ConsoleQueryTool {
   record Target(LocatedReferable referable, ModuleLocation module, String kind, boolean showLibrary) {}
 
   interface FindUsagesPrinter {
-    void print(PrintStream out, Target target, List<UsageHit> hits, Options options, LibraryManager lm);
+    void print(PrintStream out, Target target, List<UsageHit> hits, Options options, QueryLibraries lm);
   }
 
 }

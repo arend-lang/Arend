@@ -2,7 +2,6 @@ package org.arend.frontend.query;
 
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.MetaReferable;
@@ -68,7 +67,7 @@ public final class SymbolIndex {
   }
 
   /** True, when this module isn't cached yet, or its cached mtime/size doesn't match the source. */
-  public boolean isStale(SourceLibrary library, ModulePath mp) {
+  public boolean isStale(QueryLibrary library, ModulePath mp) {
     FileStamp cached = myTimestamps.get(mp);
     if (cached == null) return true;
     FileStamp now = SymbolIndexStore.sourceStamp(library, mp);
@@ -76,7 +75,7 @@ public final class SymbolIndex {
   }
 
   /** Loads the index for the given library or returns an empty one. */
-  public static SymbolIndex loadOrCreate(SourceLibrary library) {
+  public static SymbolIndex loadOrCreate(QueryLibrary library) {
     Path cacheFile = SymbolIndexStore.cacheFileFor(library);
     SymbolIndex idx = new SymbolIndex(library.getLibraryName(), cacheFile);
     if (cacheFile != null && Files.isRegularFile(cacheFile)) {
@@ -97,10 +96,10 @@ public final class SymbolIndex {
    * module on {@code server} (and, when {@code withTests} is set, each test
    * module) so callers can query raw/resolved groups afterward.
    */
-  public static Map<SourceLibrary, SymbolIndex> refreshAll(
-      @NotNull List<SourceLibrary> libsInScope, @NotNull ArendServer server, boolean withTests) {
-    Map<SourceLibrary, SymbolIndex> indexes = new LinkedHashMap<>();
-    for (SourceLibrary lib : libsInScope) {
+  public static Map<QueryLibrary, SymbolIndex> refreshAll(
+      @NotNull List<QueryLibrary> libsInScope, @NotNull ArendServer server, boolean withTests) {
+    Map<QueryLibrary, SymbolIndex> indexes = new LinkedHashMap<>();
+    for (QueryLibrary lib : libsInScope) {
       indexes.put(lib, refreshLibrary(lib, server, withTests));
     }
     return indexes;
@@ -115,7 +114,7 @@ public final class SymbolIndex {
    * reparses only what actually changed since the previous run.
    */
   public static @NotNull SymbolIndex refreshLibrary(
-      @NotNull SourceLibrary library, @NotNull ArendServer server, boolean withTests) {
+      @NotNull QueryLibrary library, @NotNull ArendServer server, boolean withTests) {
     SymbolIndex idx = loadOrCreate(library);
     // Listed once: finding the modules walks the library's directory.
     List<ModulePath> sources = library.findModules(false);
@@ -139,7 +138,7 @@ public final class SymbolIndex {
    * that has changed (or that isn't yet in the cache) using groups already loaded by
    * {@code server}. Generated modules are always re-collected.
    */
-  public void refresh(@NotNull SourceLibrary library, @NotNull List<ModulePath> sources, @NotNull ArendServer server) {
+  public void refresh(@NotNull QueryLibrary library, @NotNull List<ModulePath> sources, @NotNull ArendServer server) {
     String libName = library.getLibraryName();
     Set<ModulePath> seen = new HashSet<>();
 

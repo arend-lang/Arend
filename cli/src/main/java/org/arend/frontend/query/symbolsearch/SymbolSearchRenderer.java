@@ -1,6 +1,6 @@
 package org.arend.frontend.query.symbolsearch;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.*;
 
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ final class SymbolSearchRenderer {
 
   /** Appends the full multi-line text entry for one hit (location header, name line, signature). */
   static void appendEntry(StringBuilder out, boolean showLibrary, String libName, SymbolIndex.Entry e,
-                          LibraryManager libraryManager, List<SymbolPattern> patterns) {
+                          QueryLibraries libraryManager, List<SymbolPattern> patterns) {
     String header;
     if (e.absoluteFile() == null || e.absoluteFile().isEmpty()) {
       header = "<" + libName + ":" + e.modulePath() + ">";

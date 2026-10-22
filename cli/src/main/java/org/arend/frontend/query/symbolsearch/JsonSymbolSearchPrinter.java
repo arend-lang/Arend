@@ -1,6 +1,6 @@
 package org.arend.frontend.query.symbolsearch;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.PathDisplayUtils;
 import org.arend.frontend.query.ResultJson;
 import org.arend.frontend.query.SymbolIndex;
@@ -22,7 +22,7 @@ final class JsonSymbolSearchPrinter implements SymbolSearchPrinter {
    * {@code location}. {@code results} honours {@code limit}; {@code count} is the pre-truncation total.
    */
   @Override
-  public void print(PrintStream out, Result result, Options options, boolean showLibrary, LibraryManager lm) {
+  public void print(PrintStream out, Result result, Options options, boolean showLibrary, QueryLibraries lm) {
     List<Hit> hits = result.hits();
     int shown = (options.limit > 0) ? Math.min(hits.size(), options.limit) : hits.size();
     List<ResultJson.Row> rows = new ArrayList<>(shown);

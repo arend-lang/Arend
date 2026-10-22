@@ -1,6 +1,6 @@
 package org.arend.frontend.query.symbolsearch;
 
-import org.arend.frontend.library.SourceLibrary;
+import org.arend.frontend.query.QueryLibrary;
 import org.arend.frontend.query.SymbolIndex;
 import org.arend.frontend.query.SymbolPattern;
 import org.arend.server.ArendServer;
@@ -36,13 +36,13 @@ final class SymbolSearchEngine {
       .thenComparing(Hit::libName);
 
   static Result find(List<SymbolPattern> patterns, EnumSet<SymbolIndex.Kind> kinds,
-                     List<SourceLibrary> libsInScope, ArendServer server) {
+                     List<QueryLibrary> libsInScope, ArendServer server) {
     LinkedHashSet<String> suggestParts = collectWordParts(patterns);
     List<SymbolPattern> suggestPatterns = compileSuggestPatterns(suggestParts);
 
     List<Hit> hits = new ArrayList<>();
     List<Hit> suggestions = new ArrayList<>();
-    for (SourceLibrary lib : libsInScope) {
+    for (QueryLibrary lib : libsInScope) {
       SymbolIndex idx = SymbolIndex.refreshLibrary(lib, server, false);
       for (SymbolIndex.Entry e : idx.allEntries()) {
         if (!kinds.contains(e.kind())) continue;

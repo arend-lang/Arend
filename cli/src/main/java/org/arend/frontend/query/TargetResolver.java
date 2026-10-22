@@ -3,7 +3,6 @@ package org.arend.frontend.query;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.server.ArendServer;
 import org.arend.term.group.ConcreteGroup;
@@ -66,7 +65,7 @@ public final class TargetResolver {
    * not-found message.
    */
   public static @Nullable Target resolve(String spec, String toolTag, ArendServer server,
-                                  List<SourceLibrary> libsInScope, Map<SourceLibrary, SymbolIndex> indexes,
+                                  List<QueryLibrary> libsInScope, Map<QueryLibrary, SymbolIndex> indexes,
                                   boolean showLibrary, @Nullable Set<SymbolIndex.Kind> kindFilter, String kindNoun) {
     // Accept an optional `library::` prefix (see QualifiedName.splitLibrary); the
     // library scopes module resolution below. Only a real in-scope library name is
@@ -116,8 +115,8 @@ public final class TargetResolver {
     List<String> userSegments = userLongName.toList();
     String shortName = userSegments.getLast();
     List<SymbolIndex.Entry> matches = new ArrayList<>();
-    Map<SymbolIndex.Entry, SourceLibrary> libOf = new HashMap<>();
-    for (Map.Entry<SourceLibrary, SymbolIndex> e : indexes.entrySet()) {
+    Map<SymbolIndex.Entry, QueryLibrary> libOf = new HashMap<>();
+    for (Map.Entry<QueryLibrary, SymbolIndex> e : indexes.entrySet()) {
       for (SymbolIndex.Entry entry : e.getValue().allEntries()) {
         if (kindFilter != null && !kindFilter.contains(entry.kind())) continue;
         if (!entry.shortName().equals(shortName)) continue;
@@ -143,7 +142,7 @@ public final class TargetResolver {
       return null;
     }
     SymbolIndex.Entry only = matches.getFirst();
-    SourceLibrary lib = libOf.get(only);
+    QueryLibrary lib = libOf.get(only);
     ModulePath mp = only.modulePath();
     ModuleLocation moduleLoc = server.findModule(mp, lib.getLibraryName(), true, true);
     if (moduleLoc == null) {

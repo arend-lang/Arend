@@ -1,11 +1,8 @@
 package org.arend.frontend.query.proofsearch;
 
 import org.arend.frontend.ConsoleHelp;
-import org.arend.frontend.library.LibraryManager;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.*;
 import org.arend.frontend.query.symbolsearch.SymbolSearchTool;
-import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.Repl;
 import org.arend.proof.ProofSearchQuery;
 import org.jetbrains.annotations.Nls;
@@ -62,7 +59,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
    * pattern before parsing.
    */
   @Override
-  protected @Nullable ConsoleQueryTool.ConsoleToolRunner parseReplLine(@NotNull List<String> tokens, @NotNull CommonCliRepl repl) {
+  protected @Nullable ConsoleQueryTool.ConsoleToolRunner parseReplLine(@NotNull List<String> tokens, @NotNull Repl repl) {
     List<String> optionTokens = new ArrayList<>();
     List<String> patternTokens = new ArrayList<>();
     for (String t : tokens) {
@@ -95,7 +92,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
         }
         ProofSearchQuery query = ((ProofSearchQuery.ParsingResult.OK<ProofSearchQuery>) queryResult).value;
 
-        List<SourceLibrary> searchLibs = ctx.searchLibraries(options.self);
+        List<QueryLibrary> searchLibs = ctx.searchLibraries(options.self);
         // Mirror -ss: the library field is redundant (and so omitted) whenever only a
         // single non-prelude library is loaded, and shown when a match could come from any
         // of several (QualifiedName.containsMultipleNonPreludeLibraries is the shared rule).
@@ -118,7 +115,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
 
   /** Renders a completed proof search; implemented by {@link TextProofSearchPrinter} and {@link JsonProofSearchPrinter}. */
   interface ProofSearchPrinter {
-    void print(PrintStream out, ProofSearchEngine.Result found, Options options, LibraryManager lm, boolean omitLibrary);
+    void print(PrintStream out, ProofSearchEngine.Result found, Options options, QueryLibraries lm, boolean omitLibrary);
   }
 
   /**
