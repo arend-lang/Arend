@@ -25,8 +25,8 @@ import java.util.Set;
  * raw group; a bare name (optionally dotted) is looked up through the per-library
  * symbol indexes by trailing short name and long-name suffix.
  *
- * <p>Diagnostics go to {@code System.err} (and an {@code [INFO]} resolution line to
- * {@code System.out} for the bare-name path), matching the tools' other output.
+ * <p>Diagnostics go to {@link QueryConsole#err} (and an {@code [INFO]} resolution line to
+ * {@link QueryConsole#out} for the bare-name path), matching the tools' other output.
  */
 public final class TargetResolver {
   private TargetResolver() {}
@@ -46,12 +46,12 @@ public final class TargetResolver {
   static @Nullable ModuleDef parseModuleDef(String modStr, String defStr) {
     ModulePath mp = ModulePath.fromString(modStr);
     if (!FileUtils.isCorrectModulePath(mp)) {
-      System.err.println("[ERROR] invalid module path '" + modStr + "'");
+      QueryConsole.err().println("[ERROR] invalid module path '" + modStr + "'");
       return null;
     }
     LongName ln = LongName.fromString(defStr);
     if (!FileUtils.isCorrectDefinitionName(ln)) {
-      System.err.println("[ERROR] invalid definition name '" + defStr + "'");
+      QueryConsole.err().println("[ERROR] invalid definition name '" + defStr + "'");
       return null;
     }
     return new ModuleDef(mp, ln);
@@ -76,7 +76,7 @@ public final class TargetResolver {
       String modStr = split.module();
       String defStr = split.longName();
       if (modStr.isEmpty() || defStr.isEmpty()) {
-        System.err.println("[ERROR] empty module or definition path in " + toolTag + " spec '" + spec + "'");
+        QueryConsole.err().println("[ERROR] empty module or definition path in " + toolTag + " spec '" + spec + "'");
         return null;
       }
       ModuleDef md = parseModuleDef(modStr, defStr);
@@ -85,18 +85,18 @@ public final class TargetResolver {
       LongName ln = md.definition();
       ModuleLocation found = server.findModule(mp, fromLibrary, true, true);
       if (found == null) {
-        System.err.println("[ERROR] Module not found: " + modStr);
+        QueryConsole.err().println("[ERROR] Module not found: " + modStr);
         return null;
       }
       if (fromLibrary == null) QualifiedName.warnAmbiguousModule(mp, found.getLibraryName(), libsInScope);
       ConcreteGroup group = server.getRawGroup(found);
       if (group == null) {
-        System.err.println("[ERROR] Module not loaded: " + modStr);
+        QueryConsole.err().println("[ERROR] Module not loaded: " + modStr);
         return null;
       }
       LocatedReferable ref = walkLongName(group, ln);
       if (ref == null) {
-        System.err.println("[ERROR] Definition not found: " + spec);
+        QueryConsole.err().println("[ERROR] Definition not found: " + spec);
         return null;
       }
       return new Target(ref, found, found.getLibraryName());
@@ -109,7 +109,7 @@ public final class TargetResolver {
     String bareName = split.longName();
     LongName userLongName = LongName.fromString(bareName);
     if (!FileUtils.isCorrectDefinitionName(userLongName)) {
-      System.err.println("[ERROR] invalid definition name '" + bareName + "'");
+      QueryConsole.err().println("[ERROR] invalid definition name '" + bareName + "'");
       return null;
     }
     List<String> userSegments = userLongName.toList();
@@ -127,18 +127,18 @@ public final class TargetResolver {
       }
     }
     if (matches.isEmpty()) {
-      System.err.println("[ERROR] No " + kindNoun + " named '" + spec + "' in scope. Use -ss to find candidates.");
+      QueryConsole.err().println("[ERROR] No " + kindNoun + " named '" + spec + "' in scope. Use -ss to find candidates.");
       return null;
     }
     if (matches.size() > 1) {
-      System.err.println("[ERROR] '" + spec + "' is ambiguous. Use one of:");
+      QueryConsole.err().println("[ERROR] '" + spec + "' is ambiguous. Use one of:");
       List<String> labels = new ArrayList<>();
       for (SymbolIndex.Entry e : matches) {
         labels.add("  " + QualifiedName.format(showLibrary, libOf.get(e).getLibraryName(),
             e.modulePath().toString(), e.longName()));
       }
       Collections.sort(labels);
-      for (String l : labels) System.err.println(l);
+      for (String l : labels) QueryConsole.err().println(l);
       return null;
     }
     SymbolIndex.Entry only = matches.getFirst();
@@ -146,21 +146,21 @@ public final class TargetResolver {
     ModulePath mp = only.modulePath();
     ModuleLocation moduleLoc = server.findModule(mp, lib.getLibraryName(), true, true);
     if (moduleLoc == null) {
-      System.err.println("[ERROR] Could not load module " + mp);
+      QueryConsole.err().println("[ERROR] Could not load module " + mp);
       return null;
     }
     LongName ln = LongName.fromString(only.longName());
     ConcreteGroup group = server.getRawGroup(moduleLoc);
     if (group == null) {
-      System.err.println("[ERROR] Module not loaded: " + mp);
+      QueryConsole.err().println("[ERROR] Module not loaded: " + mp);
       return null;
     }
     LocatedReferable ref = walkLongName(group, ln);
     if (ref == null) {
-      System.err.println("[ERROR] Definition not found via index: " + only.longName());
+      QueryConsole.err().println("[ERROR] Definition not found via index: " + only.longName());
       return null;
     }
-    System.out.println("[INFO] Resolved '" + spec + "' -> "
+    QueryConsole.out().println("[INFO] Resolved '" + spec + "' -> "
         + QualifiedName.format(showLibrary, lib.getLibraryName(), mp.toString(), only.longName()));
     return new Target(ref, moduleLoc, lib.getLibraryName());
   }

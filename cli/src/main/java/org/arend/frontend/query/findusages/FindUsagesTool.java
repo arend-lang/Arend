@@ -71,7 +71,7 @@ public final class FindUsagesTool extends ConsoleQueryTool {
         // hunted only in the search scope — narrowed to the requested libraries by `self`.
         List<QueryLibrary> fullScope = ctx.librariesInScope();
         if (fullScope.isEmpty()) {
-          System.err.println("[ERROR] No libraries in scope.");
+          QueryConsole.err().println("[ERROR] No libraries in scope.");
           if (options.json) ResultJson.write(out, List.of(), 0);
           return 1;
         }
@@ -102,7 +102,7 @@ public final class FindUsagesTool extends ConsoleQueryTool {
         // 4) This search resolves but never typechecks, so a field usage whose receiver type is
         //    only inferred stays an unresolved field reference and is invisible here — warn for fields.
         if (isField(targetReferable)) {
-          System.err.println("[WARN] '" + targetReferable.getRefLongName()
+          QueryConsole.err().println("[WARN] '" + targetReferable.getRefLongName()
               + "' is a field; usages whose receiver type is only inferred during typechecking"
               + " are NOT found (this search performs name-resolving but not typechecking).");
         }
@@ -113,7 +113,7 @@ public final class FindUsagesTool extends ConsoleQueryTool {
         printer.print(out, target, sorted, options, libraryManager);
         return 0;
       } catch (RuntimeException e) {
-        System.err.println("[ERROR] -fu internal error: " + e);
+        QueryConsole.err().println("[ERROR] -fu internal error: " + e);
         if (options.json) ResultJson.write(ctx.out(), List.of(), 0);
         return 1;
       }
@@ -142,7 +142,7 @@ public final class FindUsagesTool extends ConsoleQueryTool {
         .parse("-fu", args);
     if (!ok) return null;
     if (spec[0] == null) {
-      System.err.println("[ERROR] -fu requires a <MODULE_PATH>:<GROUP_PATH> spec");
+      QueryConsole.err().println("[ERROR] -fu requires a <MODULE_PATH>:<GROUP_PATH> spec");
       return null;
     }
     return new ToolRunner(spec[0], opts);
