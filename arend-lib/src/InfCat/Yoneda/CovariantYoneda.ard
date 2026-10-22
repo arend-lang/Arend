@@ -6,6 +6,7 @@
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
 \import InfCat.Functor.Conservative
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
@@ -143,6 +144,24 @@
            (U G)
   }
 
+-- | Conversely, {p} is a universal element if its transport identifies arrows out of {x} with {F}.
+\lemma equiv-univElem.{u} {C : \Cat u} {F : C ->⁺ \Type u} {x : C} {p : F x}
+                          (e : \Pi (y : C) -> IsEquiv {x ~> y} {F y} (\lam h => ~>_-> (dmap F h) p))
+  : IsUnivElem F x p
+  => \let a => IsEquiv.ret (yonedaCov x F) p
+     \in \lam G => transport IsEquiv (ext \lam g => yonedaCov-natural *> pmap (~>_-> (dmap (__ x) g)) (IsEquiv.f_ret (yonedaCov x F))) $
+           IsEquiv.trans (comp-iso-left-equiv (objectwise-iso \lam y => ~>_->-equiv-iso $ transport IsEquiv
+                             (ext \lam r => pmap (~>_-> (dmap F (Straight.fromStraight r))) (inv (IsEquiv.f_ret (yonedaCov x F)))
+                                           *> yonedaCov-component *> pmap (~>_-> (dmap (__ y) a)) (ReprFunctor.equiv.ret_f r))
+                             (IsEquiv.trans (inP ReprFunctor.equiv) (e y)) : IsIso a))
+                         (yonedaCov x G)
+
+-- | Universal elements descend along functors {l} such that precomposition with {l} is fully faithful (e.g. localizations).
+\lemma univElem-precomp.{u} {C D : \Cat u} {l : C ->⁺ D} (lff : IsFFMap {D ->⁺ \Type u} {C ->⁺ \Type u} (\lam G x => G (l x)))
+                            {G : D ->⁺ \Type u} {c : C} {a : G (l c)} (U : IsUnivElem (\lam x => G (l x)) c a)
+  : IsUnivElem G (l c) a
+  => \lam H => IsEquiv.trans (lff G H) (U (\lam x => H (l x)))
+
 {- | A transformation {t} between functors with universal elements {p} and {q} is an isomorphism if and only if
  -   the arrow {c} between their base points carrying {q} to the image of {p} is.
  -}
@@ -221,3 +240,17 @@
           | cq : ~>_-> (dmap F c) p = q => IsEquiv.f_ret (univElem-equiv Up b)
           | e => IsIso_= ((univElem-iso-char Uq Up {c} (cq *> inv ~>_->_idd)).1 idd-iso)
      \in ext (e.1, inv (~>_->_=_~> {C} {F} e.1 p) *> pmap (\lam f => ~>_-> (dmap F f) p) e.2 *> cq)
+
+-- | Universal elements are transported along paths of functors.
+\lemma univElem-path.{u} {C : \Cat u} {F G : C ->⁺ \Type u} (q : G = F) {a : C} {x : F a} (U : IsUnivElem F a x)
+  : IsUnivElem G a (~>_-> (=_~> (inv (pmap+ (__ a) q))) x) \elim q
+  | idp => transportInv (IsUnivElem F a) ~>_->_idd U
+
+-- | Universal elements are transported along pointwise paths of functors.
+\lemma univElem-pointwise.{u} {C : \Cat u} {F G : C ->⁺ \Type u} (K : \Pi (c :⁺ C) -> G c = F c) {a : C} {x : F a} (U : IsUnivElem F a x)
+  : IsUnivElem G a (transport (\lam X => X) (inv (K a)) x)
+  => aux (funExt+ K) U
+  \where
+    \private \lemma aux.{u} {C : \Cat u} {F G : C ->⁺ \Type u} (N : G = F) {a : C} {x : F a} (U : IsUnivElem F a x)
+      : IsUnivElem G a (transport (\lam X => X) (inv (path \lam i => N i a)) x) \elim N
+      | idp => U

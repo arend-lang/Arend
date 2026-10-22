@@ -41,6 +41,9 @@
                            (h :⁺ q *> pmap+ g p = pmap+ f p *> s) : transport+ (\lam x => f x = g x) p q = s \elim p
   | idp => h *> idp_*>
 
+\func transport+_inv_*> {A :⁺ \Cat} (C :⁺ A ->⁺ \Cat) {a a' :⁺ A} (r :⁺ a = a') {x :⁺ C a} : transport+ C (inv r) (transport+ C r x) = x \elim r
+  | idp => idp
+
 \func homotopy-isNatural+ {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) (h :⁺ \Pi (a :⁺ A) -> f a = g a) {a a' :⁺ A} (p :⁺ a = a')
   : pmap+ f p *> h a' = h a *> pmap+ g p \elim p
   | idp => idp_*>

@@ -1,4 +1,5 @@
 \import Equiv
+\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
@@ -95,3 +96,20 @@
              }) `transQEquiv` contr-right (\lam (s : \Sigma (rho : r.1 ~> X) ((r.1,rho) ~> {SliceCat X} y)) => segal-contr {SliceCat X} {r.1,s.1} s.2 b)
       }
   }
+
+{- | Arrows in the total category of the slices over the values of {R}, out of an object whose structure arrow {s}
+ -   is a universal arrow from {c} to {R}, are the arrows between the underlying objects.
+ -   An arrow over `g : b ~> b'` is an arrow `a : c ~> c'` with a square `comp a s' = comp s (dmap R g)`,
+ -   and for a fixed `a` such `g` form a fiber of the equivalence {su}.
+ -}
+\lemma sliceFam-hom-equiv {B C : \Cat} (R : B ->⁺ C) {b b' : B} {c c' : C} {s : c ~> R b} {s' : c' ~> R b'}
+                          (su : IsEquiv {b ~> b'} {c ~> R b'} (\lam g => comp s (dmap R g)))
+  : IsEquiv {(b, (c, s)) ~> {\Sigma⁺ (x : B) (SliceCat (R x))} (b', (c', s'))} {c ~> c'} (\lam h => dpath \lam i => (h i).2.1)
+  => inP $ dpath-sigma-equiv (\lam _ x => SliceCat (R x)) {b, (c, s)} {b', (c', s')}
+     `transQEquiv` sigma-right (\lam (g : b ~> b') => dpath-sigma-equiv (\lam i y => y ~> R (g i)) `transQEquiv` sigma-right (square-equiv __ (dmap R g)))
+     `transQEquiv` later \new QEquiv {
+       | f t => (t.2.1, (t.1, t.2.2))
+       | ret t => (t.2.1, (t.1, t.2.2))
+       | ret_f t => idp
+       | f_sec t => idp
+     } `transQEquiv` contr-right (\lam a => Contr.Contr_QEquiv (sigma-right \lam g => inv-equiv {_} {comp s (dmap R g)}) (IsEquiv=>contrFibers su (comp a s')))

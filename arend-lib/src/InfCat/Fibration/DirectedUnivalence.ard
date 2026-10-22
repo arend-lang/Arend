@@ -78,3 +78,12 @@
                     (e : \Pi (x : X) -> IsEquiv (\lam a => h (x,a)))
   : \Sigma (p : G = G') (=_~> p = depUnivalence.ret h)
   => IsIso_= (objectwise-iso {X} {_} {G} {G'} {depUnivalence.ret h} \lam x => ~>_->-equiv-iso (e x))
+
+-- | Transport along an arrow commutes with pointwise paths of functors.
+\sfunc ~>_->-pointwise.{u} {C : \Cat} {F G : C ->⁺ \Type u} (K : \Pi (c :⁺ C) -> G c = F c) {a b : C} (r : a ~> b) (y : F a)
+  : ~>_-> (dmap G r) (transport (\lam X => X) (inv (K a)) y) = transport (\lam X => X) (inv (K b)) (~>_-> (dmap F r) y)
+  => aux (funExt+ K) r y
+  \where
+    \private \sfunc aux.{u} {C : \Cat} {F G : C ->⁺ \Type u} (N : G = F) {a b : C} (r : a ~> b) (y : F a)
+      : ~>_-> (dmap G r) (transport (\lam X => X) (inv (path \lam i => N i a)) y) = transport (\lam X => X) (inv (path \lam i => N i b)) (~>_-> (dmap F r) y) \elim N
+      | idp => idp

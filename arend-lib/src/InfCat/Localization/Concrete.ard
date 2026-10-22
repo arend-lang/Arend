@@ -309,3 +309,32 @@
   | inP (E,ee) => \case (IsLocalization.unique localize-isLocalization (isLocalization-precomp Lz (inP ee))).3 \with {
     | inP h => inP (Localize \lam a => W \lam i => ee (a i), h)
   }
+
+{- | A localization at {W} is a localization at the class of all arrows it inverts.
+ -   A functor inverts {W} if and only if it inverts the arrows inverted by {l}, since it factors through {l}.
+ -}
+\lemma isLocalization-saturate {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+  : IsLocalization (\lam a => IsIso (dpath \lam i => l (a i))) l
+  => IsLocalization.fromUniv (sat (IsLocalization.univ Lz)) (sat (IsLocalization.univ Lz))
+  \where {
+    \lemma sat {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (U : IsLocalizationFor W l D)
+      : IsLocalizationFor (\lam a => IsIso (dpath \lam i => l (a i))) l D
+      => (\lam s => s, res-sub-transport {C} {L} {D} {l} {InvertsW W} {InvertsW (\lam a => IsIso (dpath \lam i => l (a i)))}
+           (ext \lam (F : C ->⁺ D) => ext (\lam Fw {a} s =>
+                                              transport (\lam G => IsIso (dpath \lam i => G (a i)))
+                                                        (funExt+ \lam x => loc-lift.restrict {_} {_} {_} {_} {_} {U} {F} {Fw} {x})
+                                                        (dmap_IsIso (loc-lift U Fw) s),
+                                            \lam Fw s => Fw (U.1 s)))
+           U.2)
+
+    \private \lemma res-sub-transport {C L D : \Cat} {l : C ->⁺ L} {P P' : (C ->⁺ D) -> \Prop} (q : P = P')
+                                      {lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x))} {lP' : \Pi (G : L ->⁺ D) -> P' (\lam x => G (l x))}
+                                      (e : IsHEquiv (res-sub l P lP)) : IsHEquiv (res-sub l P' lP') \elim q
+      | idp => transport (\lam lp => IsHEquiv (res-sub l P lp)) prop-pi e
+  }
+
+-- | A functor between localizations at the same class compatible with the localization functors is an equivalence.
+\lemma IsLocalization-unique {C L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} {l' : C ->⁺ L'} (Lz : IsLocalization W l) (Lz' : IsLocalization W l')
+                             {c : L ->⁺ L'} (h : \Pi (x :⁺ C) -> c (l x) = l' x) : IsHEquiv c
+  => \have u => IsLocalization.unique Lz Lz'
+     \in transport IsHEquiv (funExt+ \lam y => loc-ext-eq (IsLocalization.univ Lz) {u.1} {c} (\lam x => u.2 x *> inv (h x)) {y}) u.3

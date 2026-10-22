@@ -3,6 +3,7 @@
 \import Function.Meta
 \import InfCat.Arrows
 \import InfCat.Basics
+\import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Kan.LeftKanExtType
 \import InfCat.Fibration.Straightening
 \import InfCat.Functor.Conservative
@@ -15,7 +16,6 @@
 \import InfCat.SubCat.Full
 \import InfCat.Yoneda.CovariantYoneda
 \import Logic
-\import Logic.Meta
 \import Meta
 \import Paths
 
@@ -150,6 +150,15 @@
       => (\lam e => transport IsIso unop $ yonedaEmbCov.isIso $ dmap_IsIso Op.Hom e,
           \lam e => IsFFMap.isConservative Op.Hom-ff $ yonedaEmbCov.isConservative $ transportInv IsIso unop e)
   }
+
+-- | Transport along `opArr v` in the first variable of {Op.Hom} is precomposition with {v}.
+\sfunc opArr-transport.{u} {C : \Cat u} {x x' y : C} (v : x' ~> x) (w : x ~> y)
+  : ~>_-> (dmap (Op.Hom __ y) (opArr v)) (Straight.toStraight w) = Straight.toStraight (comp v w)
+  => pmap (~>_-> (dmap (Op.Hom __ y) (opArr v))) (inv (ReprFunctor-transport-idd w))
+     *> ~>_->-natural (\lam z a => ~>_-> (dmap (Op.Hom z) w) a) (opArr v)
+     *> pmap (~>_-> (dmap (Op.Hom (Op.toOp x')) w))
+             (inv (Straight.toStraight_fromStraight _) *> pmap Straight.toStraight opArr.unop)
+     *> ReprFunctor-transport
 
 -- | {opArr} is an equivalence.
 \lemma opArr-equiv.{u} {X : \Cat u} {x y : X} : IsEquiv (opArr {X} {x} {y})

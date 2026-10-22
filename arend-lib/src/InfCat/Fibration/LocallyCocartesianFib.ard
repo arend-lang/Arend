@@ -71,3 +71,16 @@
   => transport IsCocartesianLift (initial-unique (locCocartesianLift<->initial.1 (cocartesianLift=>locally (cocartesianFib-lift.isCocartesian d)))
                                                  (locCocartesianLift<->initial.1 lc))
                (cocartesianFib-lift.isCocartesian {A} {B} {Bf} d)
+
+{- | For a cocartesian family {F}, a lift cocartesian in the pullback of {F} along {p} is cocartesian in {F}:
+ -   it coincides with the pullback of a cocartesian lift in {F}, since cocartesian lifts are unique.
+ -}
+\lemma cocartesianLift-pullback-reflect {X S : \Cat} {F : S ->⁺ \Cat} (Ff : IsCocartesianFib F) (p : X ->⁺ S)
+                                        {d : CovLiftData (\lam x => F (p x))} {l : CovLift (\lam x => F (p x)) d} (lc : IsCocartesianLift l)
+  : IsCocartesianLift {S} {F} {p d.1, p d.2, dmap p d.3, d.4} (l.1, l.2)
+  => \case Ff (p d.1, p d.2, dmap p d.3, d.4) \with {
+    | inP (l0, l0c) => transport (\lam L => IsCocartesianLift {S} {F} {p d.1, p d.2, dmap p d.3, d.4} (L.1, L.2))
+                         (pmap __.1 (isContr=>isProp (transports-contr.cocLift-contr (cocartesianFib-pullback Ff p) d)
+                                                     ((l0.1, l0.2), cocartesianLift-pullback p l0c) (l, lc)))
+                         l0c
+  }

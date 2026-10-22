@@ -1,0 +1,136 @@
+{- | Fiberwise localizations of cocartesian maps are localizations of the total categories.
+ -
+ -   * {fiberwise-isLocalization}: a functor {mu} over {X} out of a cocartesian map {pi} that preserves cocartesian arrows
+ -     and restricts to localizations of the fibers is a localization at {TotW}.
+ -     The functor induced on {FibLoc} is an equivalence: it is a fiberwise equivalence ({fibLoc-fiber}) that preserves
+ -     cocartesian arrows ({fibLoc-cocartesianArrow}), so {cocartesianMap-fiberwise-equiv} applies.
+ -   * {fibLoc-baseChange}: the base change of the localization functor of {FibLoc} along any functor is a localization.
+ -}
+
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Fiberwise.FiberwiseCocartesian
+\import InfCat.Localization.Fiberwise.FiberwiseFiber
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.LocallyCocartesianFib
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Fiberwise
+\import Logic
+\import Logic.Unique
+\import Paths
+
+-- | A fiberwise localization of a cocartesian map is a localization.
+\lemma fiberwise-isLocalization.{u} {X K M : \Cat u} {pi : K ->⁺ X} (pc : IsCocartesianMap pi)
+                                    {W : \Pi (x : X) -> (DI ->⁺ Fibers pi x) -> \Prop} (Ws : IsTransportStable (Fibers pi) W)
+                                    {nu : M ->⁺ X} {mu : K ->⁺ M} (mup : \Pi (k :⁺ K) -> nu (mu k) = pi k)
+                                    (muc : \Pi {k k' : K} {u : k ~> k'} -> IsCocartesianArrow pi u -> IsCocartesianArrow nu (dmap mu u))
+                                    (mul : \Pi (x : X) -> IsLocalization {Fiber pi x} (W x) (\lam t => ((mu t.1, mup t.1 *> t.2) : Fiber nu x)))
+  : IsLocalization (TotW pi W) mu
+  => aux (funExt+ mup) pc Ws muc mul
+  \where {
+    \private \lemma aux.{u} {X K M : \Cat u} {nu : M ->⁺ X} {mu : K ->⁺ M} {pi : K ->⁺ X} (N : (\lam (k :⁺ K) => nu (mu k)) = {K ->⁺ X} pi) (pc : IsCocartesianMap pi)
+                            {W : \Pi (x : X) -> (DI ->⁺ Fibers pi x) -> \Prop} (Ws : IsTransportStable (Fibers pi) W)
+                            (muc : \Pi {k k' : K} {u : k ~> k'} -> IsCocartesianArrow pi u -> IsCocartesianArrow nu (dmap mu u))
+                            (mul : \Pi (x : X) -> IsLocalization {Fiber pi x} (W x) (\lam t => ((mu t.1, path (\lam i => N i t.1) *> t.2) : Fiber nu x)))
+      : IsLocalization (TotW pi W) mu \elim N
+      | idp => main pc Ws muc mul
+
+    -- | The case `pi = nu ∘ mu`.
+    \lemma main.{u} {X K M : \Cat u} {nu : M ->⁺ X} {mu : K ->⁺ M} (pc : IsCocartesianMap (\lam k => nu (mu k)))
+                    {W : \Pi (x : X) -> (DI ->⁺ Fibers (\lam k => nu (mu k)) x) -> \Prop} (Ws : IsTransportStable (Fibers (\lam k => nu (mu k))) W)
+                    (muc : \Pi {k k' : K} {u : k ~> k'} -> IsCocartesianArrow (\lam k => nu (mu k)) u -> IsCocartesianArrow nu (dmap mu u))
+                    (mul : \Pi (x : X) -> IsLocalization {Fiber (\lam k => nu (mu k)) x} (W x) (\lam t => ((mu t.1, idp *> t.2) : Fiber nu x)))
+      : IsLocalization (TotW (\lam k => nu (mu k)) W) mu
+      => \let | lw : InvertsW (TotW (\lam k => nu (mu k)) W) mu => totW-inverts \lam x w => dmap_IsIso (\lam (t :⁺ Fiber nu x) => t.1) ((mul x).1 w)
+              | c => localize-lift lw
+              | Qd => epi-path (localization-epi (IsLocalization.univ (localize-isLocalization {_} {TotW (\lam k => nu (mu k)) W}) {X}))
+                               {fibLocProj (\lam k => nu (mu k)) W} {\lam y => nu (c y)} (\lam k => idp)
+              | incl-loc (x : X) : IsLocalization {Fiber (\lam k => nu (mu k)) x} (W x)
+                                     (\lam t => ((localize (TotW (\lam k => nu (mu k)) W) t.1, t.2) : Fiber (\lam y => nu (c y)) x))
+                  => transport (IsLocalization (W x))
+                       (funExt+ \lam t => pmap+ (\lam r => ((localize (TotW (\lam k => nu (mu k)) W) t.1, r) : Fiber (\lam y => nu (c y)) x))
+                                               (pmap+ (\lam z => inv z *> t.2) (Qd.2 t.1) *> idp_*>))
+                       (incl-transport (cocartesianMap-char.1 pc) Ws Qd.1 x)
+         \in isLocalization-transfer {K} {K} {FibLoc (\lam k => nu (mu k)) W} {M} localize-isLocalization {\lam k => k} idHEquiv {c}
+               (cocartesianMap-fiberwise-equiv (transport IsCocartesianMap Qd.1 (cocartesianMap-char.2 (fibLoc-cocartesian (cocartesianMap-char.1 pc) Ws)))
+                                               (\lam y => idp) (pres pc Ws muc lw Qd.1)
+                                               (\lam x => IsLocalization-unique (incl-loc x) (mul x) (\lam t => idp)))
+               (\lam k => idp) (\lam a => <->refl)
+
+    {- | The functor induced by {mu} on {FibLoc} preserves cocartesian arrows.
+     -   A cocartesian arrow out of `localize k` and the image of a cocartesian lift at `k` are cocartesian lifts of the same arrow,
+     -   so they coincide ({transports-contr.cocLift-contr}), and the image of the latter under {mu} is cocartesian.
+     -}
+    \lemma pres.{u} {X K M : \Cat u} {nu : M ->⁺ X} {mu : K ->⁺ M} (pc : IsCocartesianMap (\lam k => nu (mu k)))
+                    {W : \Pi (x : X) -> (DI ->⁺ Fibers (\lam k => nu (mu k)) x) -> \Prop} (Ws : IsTransportStable (Fibers (\lam k => nu (mu k))) W)
+                    (muc : \Pi {k k' : K} {u : k ~> k'} -> IsCocartesianArrow (\lam k => nu (mu k)) u -> IsCocartesianArrow nu (dmap mu u))
+                    (lw : InvertsW (TotW (\lam k => nu (mu k)) W) mu) (Q : fibLocProj (\lam k => nu (mu k)) W = (\lam y => nu (localize-lift lw y)))
+                    {e e' : FibLoc (\lam k => nu (mu k)) W} {u : e ~> e'} (uc : IsCocartesianArrow (\lam y => nu (localize-lift lw y)) u)
+      : IsCocartesianArrow nu (dmap (localize-lift lw) u)
+      => \case localize-surj e \with {
+        | inP (k, r) => aux pc Ws muc lw k r u (transportInv (\lam (q : FibLoc (\lam k => nu (mu k)) W ->⁺ X) => IsCocartesianArrow q u) Q uc)
+      }
+      \where
+        \lemma aux.{u} {X K M : \Cat u} {nu : M ->⁺ X} {mu : K ->⁺ M} (pc : IsCocartesianMap (\lam k => nu (mu k)))
+                       {W : \Pi (x : X) -> (DI ->⁺ Fibers (\lam k => nu (mu k)) x) -> \Prop} (Ws : IsTransportStable (Fibers (\lam k => nu (mu k))) W)
+                       (muc : \Pi {k k' : K} {u : k ~> k'} -> IsCocartesianArrow (\lam k => nu (mu k)) u -> IsCocartesianArrow nu (dmap mu u))
+                       (lw : InvertsW (TotW (\lam k => nu (mu k)) W) mu)
+                       (k : K) {e : FibLoc (\lam k => nu (mu k)) W} (r : localize (TotW (\lam k => nu (mu k)) W) k = e)
+                       {e' : FibLoc (\lam k => nu (mu k)) W} (u : e ~> e') (uc : IsCocartesianArrow (fibLocProj (\lam k => nu (mu k)) W) u)
+          : IsCocartesianArrow nu (dmap (localize-lift lw) u) \elim r
+          | idp => \case cocartesianMap-char.1 pc (_, _, dmap (fibLocProj (\lam k => nu (mu k)) W) u, (k, idp)) \with {
+            | inP (l, lc) =>
+              \let | Ff0 => fibLoc-cocartesian (cocartesianMap-char.1 pc) Ws
+                   | l2 : CovLift (Fibers (fibLocProj (\lam k => nu (mu k)) W)) (_, _, dmap (fibLocProj (\lam k => nu (mu k)) W) u, (localize (TotW (\lam k => nu (mu k)) W) k, idp))
+                     => ((localize (TotW (\lam k => nu (mu k)) W) l.1.1, l.1.2), dpath \lam i => (localize (TotW (\lam k => nu (mu k)) W) (l.2 i).1, (l.2 i).2))
+                   | vc => (cocartesianLift<->arrow-at idp l).1 lc
+                   | l2c : IsCocartesianLift l2
+                     => (cocartesianLift<->arrow-at idp l2).2 (fibLoc-cocartesianArrow (cocartesianMap-char.1 pc) Ws (dpath \lam i => (l.2 i).1) vc)
+                   | L1c : IsCocartesianLift (arrowLift (fibLocProj (\lam k => nu (mu k)) W) u) => (arrowLift-cocartesian u).2 uc
+              \in transportInv (\lam (L : CovLift (Fibers (fibLocProj (\lam k => nu (mu k)) W)) (_, _, dmap (fibLocProj (\lam k => nu (mu k)) W) u, (localize (TotW (\lam k => nu (mu k)) W) k, idp)))
+                                     => IsCocartesianArrow nu (dpath \lam i => localize-lift lw (L.2 i).1))
+                              (pmap __.1 (isContr=>isProp (transports-contr.cocLift-contr Ff0 _) (arrowLift (fibLocProj (\lam k => nu (mu k)) W) u, L1c) (l2, l2c)))
+                              (muc vc)
+          }
+
+    -- | The fiber inclusion of {FibLoc} transported along a path of projections.
+    \lemma incl-transport.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> (DI ->⁺ Fibers p s) -> \Prop}
+                              (Ws : IsTransportStable (Fibers p) W) {q : FibLoc p W ->⁺ S} (Q : fibLocProj p W = q) (x : S)
+      : IsLocalization {Fiber p x} (W x) (\lam t => ((localize (TotW p W) t.1, inv (pmap+ (\lam (G :⁺ FibLoc p W ->⁺ S) => G (localize (TotW p W) t.1)) Q) *> t.2) : Fiber q x)) \elim Q
+      | idp => transport (IsLocalization (W x)) (funExt+ \lam t => pmap+ (\lam r => ((localize (TotW p W) t.1, r) : Fiber (fibLocProj p W) x)) (inv idp_*>))
+                         (fibLoc-fiber Ff Ws x)
+  }
+
+-- | The base change of the localization functor of {FibLoc} along {rho} is a localization at the fiberwise class.
+\lemma fibLoc-baseChange.{u} {S K Z : \Cat u} {pi : K ->⁺ S} (pc : IsCocartesianMap pi)
+                             {W : \Pi (s : S) -> (DI ->⁺ Fibers pi s) -> \Prop} (Ws : IsTransportStable (Fibers pi) W) (rho : Z ->⁺ S)
+  : IsLocalization (TotW (totalProj (\lam z => Fibers pi (rho z))) (TotalFibW {Z} {\lam z => Fibers pi (rho z)} (\lam z => W (rho z))))
+                   (\lam (w :⁺ BaseChange rho pi) => ((w.1, (localize (TotW pi W) w.2.1, w.2.2)) : BaseChange rho (fibLocProj pi W)))
+  => fiberwise-isLocalization {Z} {BaseChange rho pi} {BaseChange rho (fibLocProj pi W)} {totalProj (\lam z => Fibers pi (rho z))}
+       (cocartesianMap-char.2 $ cocartesianFib-total $ cocartesianFib-pullback (cocartesianMap-char.1 pc) rho)
+       (transportStable-total (transportStable-pullback Ws rho)) {\lam w => w.1} (\lam w => idp)
+       (\lam {k} {k'} {u} uc =>
+         \let | lF => cocartesianLift-pullback-reflect (cocartesianMap-char.1 pc) rho
+                        ((cocartesianLift<->totalArrow {Z} {\lam z => Fibers pi (rho z)} {k.1, k'.1, dpath \lam i => (u i).1, k.2} (k'.2, dpath \lam i => (u i).2)).2 uc)
+              | lZ : CovLift (\lam z => Fibers (fibLocProj pi W) (rho z)) (k.1, k'.1, dpath (\lam i => (u i).1), (localize (TotW pi W) k.2.1, k.2.2))
+                => ((localize (TotW pi W) k'.2.1, k'.2.2), dpath \lam i => (localize (TotW pi W) (u i).2.1, (u i).2.2))
+         \in (cocartesianLift<->totalArrow lZ).1
+               (cocartesianLift-pullback rho {_} {lZ} ((cocartesianLift<->arrow-at {_} {_} {fibLocProj pi W} k.2.2 (lZ.1, lZ.2)).2
+                  (fibLoc-cocartesianArrow (cocartesianMap-char.1 pc) Ws _ ((cocartesianLift<->arrow-at k.2.2 (k'.2, dpath \lam i => (u i).2)).1 lF)))))
+       (\lam x => isLocalization-transfer' (fibLoc-fiber (cocartesianMap-char.1 pc) Ws (rho x))
+                     (IsHEquiv.biEquiv {_} {_} {fibers-total-equiv.fibers-total-ret} {\lam q => ((x, q), idp)} fibers-total-equiv.fibers-total-ret-sec {\lam q => ((x, q), idp)} (\lam q => idp))
+                     (IsHEquiv.biEquiv {_} {_} {fibers-total-equiv.fibers-total-ret} {\lam q => ((x, q), idp)} fibers-total-equiv.fibers-total-ret-sec {\lam q => ((x, q), idp)} (\lam q => idp))
+                     (\lam t => tr-incl {S} {K} {Z} {pi} {W} {rho} t.2 t.1.2) (\lam a => <->refl))
+  \where
+    \private \sfunc tr-incl.{u} {S K Z : \Cat u} {pi : K ->⁺ S} {W : \Pi (s : S) -> (DI ->⁺ Fibers pi s) -> \Prop} {rho : Z ->⁺ S}
+                               {z x :⁺ Z} (r :⁺ z = x) (q :⁺ Fibers pi (rho z))
+      : transport+ (\lam z => Fibers (fibLocProj pi W) (rho z)) (idp *> r) (localize (TotW pi W) q.1, q.2)
+        = (localize (TotW pi W) (transport+ (\lam z => Fibers pi (rho z)) r q).1, (transport+ (\lam z => Fibers pi (rho z)) r q).2) \elim r
+      | idp => idp

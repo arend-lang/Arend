@@ -10,6 +10,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Fibration.CovariantLift
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.LeftFib
 \import InfCat.Fibration.Straightening
@@ -254,11 +255,48 @@
       => IsEquiv.leftFactor (totalFun-slice.sum-fib-equiv G' z) (inP idEquiv)
   }
 
+{- | If {g0} is a universal element of `s.1 ∘ phi`, then {sliceFiber} of {s} along {phi} has a universal element over the image of {g0}.
+ -   Summed over the second coordinate, arrows out of the base point are arrows of {Y} and elements of {sliceFiber} are elements of `s.1`;
+ -   under these identifications, transport of the base point is transport of {g0}.
+ -}
+\lemma sliceFiber-univElem.{u} {Y X : \Cat u} (phi : Y ->⁺ X) (F : X ->⁺ \Type u) (s : Slice F) {y0 : Y} {g0 : s.1 (phi y0)}
+                               (U : IsUnivElem (\lam y => s.1 (phi y)) y0 g0)
+  : IsUnivElem {\Sigma⁺ (y : Y) (F (phi y))} (\lam w => sliceFiber F s (phi w.1, w.2)) (y0, sliceFiber.covMap s.2 (phi y0, g0)) (Straight.toStraight (g0, idp))
+  => equiv-univElem \lam w => (totalEquiv \lam f (k : (y0, sliceFiber.covMap s.2 (phi y0, g0)) ~> {\Sigma⁺ (y : Y) (F (phi y))} (w.1, f)) =>
+                                   ~>_-> (dpath \lam i => sliceFiber F s (phi (k i).1, (k i).2)) (Straight.toStraight (g0, idp))).2
+       ((IsEquiv.parallelEquiv {_} {_} {_} {_}
+          {totalEquiv.total \lam f (k : (y0, sliceFiber.covMap s.2 (phi y0, g0)) ~> {\Sigma⁺ (y : Y) (F (phi y))} (w.1, f)) =>
+                                   ~>_-> (dpath \lam i => sliceFiber F s (phi (k i).1, (k i).2)) (Straight.toStraight (g0, idp))}
+          (arrows-equiv phi F s w.1) (elems-equiv phi F s w.1)
+          (\lam t => inv (~>_->-natural {_} {\lam w => sliceFiber F s (phi w.1, w.2)} (\lam w a => (Straight.fromStraight a).1) t.2))).2
+         (univElem-equiv U w.1)) w.2
+  \where {
+    \lemma arrows-equiv.{v} {Y X : \Cat v} (phi : Y ->⁺ X) (F : X ->⁺ \Type v) (s : Slice F) {y0 : Y} {f0 : F (phi y0)} (y : Y)
+      : IsEquiv {\Sigma (f : F (phi y)) ((y0, f0) ~> {\Sigma⁺ (y : Y) (F (phi y))} (y, f))} {y0 ~> y} (\lam t => dpath \lam i => (t.2 i).1)
+      => inP (sigma-right (\lam f => dpath-sigma-equiv (\lam _ y' => F (phi y')) {y0, f0} {y, f})
+               `transQEquiv` later \new QEquiv {
+                  | f t => (t.2.1, (t.1, t.2.2))
+                  | ret t => (t.2.1, (t.1, t.2.2))
+                  | ret_f t => idp
+                  | f_sec t => idp
+                } `transQEquiv` contr-right (\lam k => universe-leftFib (F (phi y0), F (phi y), dmap (\lam y' => F (phi y')) k, f0)))
+
+    \lemma elems-equiv.{v} {Y X : \Cat v} (phi : Y ->⁺ X) (F : X ->⁺ \Type v) (s : Slice F) (y : Y)
+      : IsEquiv {\Sigma (f : F (phi y)) (sliceFiber F s (phi y, f))} {s.1 (phi y)} (\lam t => (Straight.fromStraight t.2).1)
+      => inP (sigma-right {_} {\lam f => sliceFiber F s (phi y, f)} (\lam f => Straight.equiv)
+               `transQEquiv` later \new QEquiv {
+                  | f t => (t.2.1, (t.1, t.2.2))
+                  | ret t => (t.2.1, (t.1, t.2.2))
+                  | ret_f t => idp
+                  | f_sec t => idp
+                } `transQEquiv` contr-right \lam g => lsigma (sliceFiber.covMap s.2 (phi y, g)))
+  }
+
 -- | {sliceFiber} of a family of slices over {Y} is {sliceFiber} of the uncurried slice over `Y × X`.
 \sfunc sliceFiber-curry.{u} {Y X : \Cat u} {K : Y ->⁺ X ->⁺ \Type u} (S : \Pi (y :⁺ Y) -> Slice (K y))
                             {z :⁺ \Sigma⁺ (w : \Sigma⁺ Y X) (K w.1 w.2)}
   : sliceFiber (\lam (w : \Sigma⁺ Y X) => K w.1 w.2) (uncurrySlice S) z = sliceFiber (K z.1.1) (S z.1.1) (z.1.2, z.2)
-  => path \lam i => (fun-path {_} {\lam z => sliceFiber (\lam (w : \Sigma⁺ Y X) => K w.1 w.2) (uncurrySlice S) z}
+  => path \lam i => (fun-path {_} {sliceFiber (\lam (w : \Sigma⁺ Y X) => K w.1 w.2) (uncurrySlice S)}
         {\lam (z : \Sigma⁺ (w : \Sigma⁺ Y X) (K w.1 w.2)) => sliceFiber (K z.1.1) (S z.1.1) (z.1.2, z.2)}
         (\lam s => Straight.toStraight (Straight.fromStraight s.2))
         (\lam z => IsEquiv.trans (inP Straight.equiv)
@@ -268,6 +306,14 @@
     \func uncurrySlice.{v} {Y X : \Cat v} {K : Y ->⁺ X ->⁺ \Type v} (S : \Pi (y :⁺ Y) -> Slice (K y))
       : Slice (\lam (w : \Sigma⁺ Y X) => K w.1 w.2)
       => (\lam w => (S w.1).1 w.2, dpath \lam i w => (S w.1).2 i w.2)
+
+-- | {sliceFiber} of {sumSlice} is the original functor, covariantly in a parameter `z`.
+\sfunc sliceFiber-sumSlice.{u} {Z X : \Cat u} {F : Z ->⁺ X ->⁺ \Type u} (G' : \Pi (z :⁺ Z) -> \Sigma⁺ (x : X) (F z x) ->⁺ \Type u)
+                               {w :⁺ \Sigma⁺ (z : Z) (\Sigma⁺ (x : X) (F z x))}
+  : sliceFiber (F w.1) (sumSlice (F w.1) (G' w.1)) w.2 = G' w.1 w.2
+  => path \lam i => (fun-path {\Sigma⁺ (z : Z) (\Sigma⁺ (x : X) (F z x))} {\lam w => sliceFiber (F w.1) (sumSlice (F w.1) (G' w.1)) w.2} {\lam w => G' w.1 w.2}
+        (\lam s => transport+ (\lam t => G' s.1.1 (s.1.2.1, t)) (Straight.fromStraight s.2).2 (Straight.fromStraight s.2).1.2)
+        (\lam w => sumSlice-equiv.totalFun-slice.sum-fib-equiv (G' w.1) w.2)).1 i w
 
 {- | The pullback of {sig} along {alpha} is the sum of the functor of {sig} precomposed with {totalMap} {alpha}:
  -   {pullbackSlice} underlies a product of `(F', alpha)` and {sig} in the slice over `F`.

@@ -46,11 +46,11 @@
 
     -- | The unit as a transformation of endofunctors of {LC}, extended from {eta0} along {lC}.
     \sfunc etaNat : (\lam y => y) ~> {LC ->⁺ LC} (\lam y => G' (F' y))
-      => IsEquiv.ret (localization-ff (IsLocalization.univ LzC) (\lam y => y) (\lam y => G' (F' y))) (dpath \lam i x => eta0 x i)
+      => IsEquiv.ret (localization-epi (IsLocalization.univ LzC) (\lam y => y) (\lam y => G' (F' y))) (dpath \lam i x => eta0 x i)
 
     -- | The counit as a transformation of endofunctors of {LD}, extended from {eps0} along {lD}.
     \sfunc epsNat : (\lam y => F' (G' y)) ~> {LD ->⁺ LD} (\lam y => y)
-      => IsEquiv.ret (localization-ff (IsLocalization.univ LzD) (\lam y => F' (G' y)) (\lam y => y)) (dpath \lam i x => eps0 x i)
+      => IsEquiv.ret (localization-epi (IsLocalization.univ LzD) (\lam y => F' (G' y)) (\lam y => y)) (dpath \lam i x => eps0 x i)
 
     -- | The unit of {loc-adj-descent}.
     \func etaL (y :⁺ LC) : y ~> G' (F' y)
@@ -64,13 +64,13 @@
     \sfunc etaL-restrict {x : C} : etaL (lC x) = eta0 x
       => pmap (\lam N => dmap (\lam u => u (lC x)) N) (\peval etaNat)
          *> pmap (dmap (\lam (u : C ->⁺ LC) => u x))
-              (IsEquiv.f_ret (localization-ff (IsLocalization.univ LzC) (\lam y => y) (\lam y => G' (F' y))) {dpath \lam i x => eta0 x i})
+              (IsEquiv.f_ret (localization-epi (IsLocalization.univ LzC) (\lam y => y) (\lam y => G' (F' y))) {dpath \lam i x => eta0 x i})
 
     -- | The counit on the image of {lD}.
     \sfunc epsL-restrict {y : D} : epsL (lD y) = eps0 y
       => pmap (\lam N => dmap (\lam u => u (lD y)) N) (\peval epsNat)
          *> pmap (dmap (\lam (u : D ->⁺ LD) => u y))
-              (IsEquiv.f_ret (localization-ff (IsLocalization.univ LzD) (\lam y => F' (G' y)) (\lam y => y)) {dpath \lam i x => eps0 x i})
+              (IsEquiv.f_ret (localization-epi (IsLocalization.univ LzD) (\lam y => F' (G' y)) (\lam y => y)) {dpath \lam i x => eps0 x i})
 
     -- | Cancelling the image of a path against the image of its inverse.
     \private \sfunc cancel-inv {X Y : \Cat} (f : X ->⁺ Y) {x x' : X} (p : x = x') {y : Y} {r : f x' ~> y}
