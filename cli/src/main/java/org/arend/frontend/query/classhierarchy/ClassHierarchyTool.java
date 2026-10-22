@@ -252,7 +252,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
    * otherwise a synthetic {@code <lib:module>} label.
    */
   private static String sortKeyPath(ModuleLocation moduleLoc, LibraryManager libraryManager) {
-    Path p = PathDisplayUtils.sourcePath(libraryManager.getLibrary(moduleLoc.getLibraryName()), moduleLoc);
+    Path p = PathDisplayUtils.sourcePath(libraryManager.getLibrary(moduleLoc.getLibraryName()), moduleLoc.getModulePath());
     return p != null ? p.toString()
         : "<" + moduleLoc.getLibraryName() + ":" + moduleLoc.getModulePath() + ">";
   }

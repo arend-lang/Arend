@@ -3,7 +3,6 @@ package org.arend.frontend.query;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.SourceLibrary;
-import org.arend.util.FileUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
@@ -47,32 +46,16 @@ final class SymbolIndexStore {
     if (!(library instanceof FileSourceLibrary fl)) return null;
     Path bin = fl.getBinaryBasePath();
     if (bin != null) return bin.resolve(".arend-symbol-index");
-    Path src = libSourcePath(fl);
+    Path src = fl.getSourceBasePath();
     if (src == null) return null;
     Path parent = src.getParent();
     if (parent == null) parent = src;
     return parent.resolve(".arend-symbol-index").resolve(library.getLibraryName() + ".idx");
   }
 
-  /** The absolute, normalized source file backing module {@code mp} in {@code library}, or {@code null}. */
-  static @Nullable Path sourcePath(SourceLibrary library, ModulePath mp) {
-    if (!(library instanceof FileSourceLibrary fl)) return null;
-    Path src = libSourcePath(fl);
-    if (src == null) return null;
-    try {
-      return FileUtils.sourceFile(src, mp).toAbsolutePath().normalize();
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  private static @Nullable Path libSourcePath(FileSourceLibrary lib) {
-    return lib.getSourceBasePath();
-  }
-
   /** An mtime+size stamp of module {@code mp}'s source file (zeros when it can't be read). */
   static SymbolIndex.FileStamp sourceStamp(SourceLibrary library, ModulePath mp) {
-    Path file = sourcePath(library, mp);
+    Path file = PathDisplayUtils.sourcePath(library, mp);
     if (file == null) return new SymbolIndex.FileStamp(0L, 0L);
     try {
       long mtime = Files.getLastModifiedTime(file).toMillis();

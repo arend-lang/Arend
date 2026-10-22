@@ -154,7 +154,7 @@ public final class SymbolIndex {
       if (group == null) continue;
 
       List<Entry> entries = new ArrayList<>();
-      Path absolute = SymbolIndexStore.sourcePath(library, mp);
+      Path absolute = PathDisplayUtils.sourcePath(library, mp);
       String absStr = absolute == null ? "" : absolute.toString();
       collectGroup(group, mp, absStr, entries, new HashSet<>());
       myEntries.put(mp, entries);
