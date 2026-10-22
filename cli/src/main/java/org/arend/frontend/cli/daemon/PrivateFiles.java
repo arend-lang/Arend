@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryFlag;
 import java.nio.file.attribute.AclEntryPermission;
 import java.nio.file.attribute.AclEntryType;
 import java.nio.file.attribute.AclFileAttributeView;
@@ -22,7 +23,7 @@ import java.util.Set;
  * what keep another local user from planting a file a client then trusts.
  *
  * <p>POSIX permissions where the file system has them; elsewhere -- Windows -- the owner, and an ACL
- * granting only the owner, best effort.
+ * granting only the owner: set best effort, and checked when read.
  */
 public final class PrivateFiles {
   private PrivateFiles() {}
@@ -74,6 +75,16 @@ public final class PrivateFiles {
     restrictToOwner(dir, true);
   }
 
+  /** What nobody but its owner may do to a private file: read it, or change or replace it. */
+  private static final Set<AclEntryPermission> FILE_ACCESS = EnumSet.of(
+      AclEntryPermission.READ_DATA, AclEntryPermission.WRITE_DATA, AclEntryPermission.APPEND_DATA,
+      AclEntryPermission.DELETE, AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER);
+
+  /** What nobody but its owner may do to a private directory: put, replace or remove what is in it. */
+  private static final Set<AclEntryPermission> DIRECTORY_ACCESS = EnumSet.of(
+      AclEntryPermission.ADD_FILE, AclEntryPermission.ADD_SUBDIRECTORY, AclEntryPermission.DELETE_CHILD,
+      AclEntryPermission.DELETE, AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER);
+
   /**
    * Whether {@code path} is the owner's alone: it is the current user's, and nobody else may write
    * it -- or, unless {@code directory}, read it.
@@ -82,14 +93,36 @@ public final class PrivateFiles {
     try {
       if (!ownedByCurrentUser(path)) return false;
       PosixFileAttributeView posix = Files.getFileAttributeView(path, PosixFileAttributeView.class);
-      if (posix == null) return true;
+      if (posix == null) {
+        AclFileAttributeView acl = Files.getFileAttributeView(path, AclFileAttributeView.class);
+        return acl == null || aclIsPrivate(acl.getAcl(), acl.getOwner(), directory);
+      }
       Set<PosixFilePermission> permissions = posix.readAttributes().permissions();
       return directory
           ? !permissions.contains(PosixFilePermission.GROUP_WRITE) && !permissions.contains(PosixFilePermission.OTHERS_WRITE)
           : permissions.stream().noneMatch(GROUP_OR_OTHER::contains);
-    } catch (IOException e) {
+    } catch (IOException | UnsupportedOperationException e) {
       return false;
     }
+  }
+
+  /**
+   * Whether {@code acl} grants nobody but {@code owner} what {@link #isPrivate} keeps to the owner;
+   * for a directory, that includes reading the files it passes its entries on to. SYSTEM and
+   * Administrators count as anybody: their names are localized and Java will not look up a SID,
+   * and the ACL {@link #restrictToOwner} sets has neither.
+   */
+  static boolean aclIsPrivate(List<AclEntry> acl, UserPrincipal owner, boolean directory) {
+    for (AclEntry entry : acl) {
+      if (entry.type() != AclEntryType.ALLOW || entry.principal().equals(owner)) continue;
+      Set<AclEntryPermission> granted = entry.permissions();
+      Set<AclEntryPermission> kept = directory ? DIRECTORY_ACCESS : FILE_ACCESS;
+      if (granted.stream().anyMatch(kept::contains)) return false;
+      if (directory && entry.flags().contains(AclEntryFlag.FILE_INHERIT) && granted.contains(AclEntryPermission.READ_DATA)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Makes {@code path} the owner's alone, best effort: a file system that has neither permissions nor ACLs keeps its own. */

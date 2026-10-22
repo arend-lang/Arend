@@ -13,14 +13,14 @@ import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.attribute.PosixFilePermissions;
 
 /**
  * Binds the daemon's listening socket.
  *
- * <p>A Unix domain socket at {@code <lib>/.arend/daemon.sock}, created {@code rw-------}: whoever
- * can connect can run arbitrary CLI commands against a warm library and can shut the daemon down,
- * so the filesystem permissions are the access control and have to actually be set.
+ * <p>A Unix domain socket at {@code <lib>/.arend/daemon.sock}, made the owner's alone -- {@code
+ * rw-------}, or on Windows an ACL granting only the owner, which Windows checks on connect as Unix
+ * checks the permissions: whoever can connect can run arbitrary CLI commands against a warm library
+ * and can shut the daemon down, so the file's access control has to actually be set.
  * {@link org.arend.frontend.cli.daemon.DaemonPaths#ensureArendDir} restricts the directory to match.
  *
  * <p>A socket path has a hard length limit the rest of the filesystem does not -- about 104 bytes
@@ -34,7 +34,8 @@ import java.nio.file.attribute.PosixFilePermissions;
  * <p>TCP on an ephemeral loopback port is what is left, and it has no authentication at all: any
  * local process that finds the port can drive this daemon. Where a Unix socket was possible in
  * principle it needs {@code -Darend.daemon.allowTcp=true} -- an explicit choice rather than the
- * silent consequence of a long path. Windows makes no Unix socket attempt and gets TCP directly.
+ * silent consequence of a long path. A platform that cannot open a Unix socket at all -- Windows
+ * before 10 1803 -- makes no attempt and gets TCP directly.
  */
 public final class SocketBinder {
   private SocketBinder() {}
@@ -133,8 +134,7 @@ public final class SocketBinder {
     ch.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
     int port = ((InetSocketAddress) ch.getLocalAddress()).getPort();
     System.err.println("[WARN] daemon is listening on TCP 127.0.0.1:" + port
-        + " because " + udsPath + " could not be bound"
-        + (failure == null ? "" : " (" + failure + ")")
+        + (failure == null ? " because Unix domain sockets cannot be opened here" : " because " + udsPath + " could not be bound (" + failure + ")")
         + ". Unlike the socket file, this port has"
         + " no access control: any local process can drive this daemon.");
     return new Bound(ch, "tcp:127.0.0.1:" + port);
@@ -184,14 +184,8 @@ public final class SocketBinder {
     }
   }
 
-  /**
-   * Sets the socket file to {@code rw-------}. Best-effort: a filesystem with no POSIX
-   * permissions cannot express it, and there the platform's own ACLs apply.
-   */
+  /** Makes the socket file the owner's alone: {@code rw-------}, or an ACL granting only the owner. Best effort. */
   private static void restrictToOwner(Path udsPath) {
-    try {
-      Files.setPosixFilePermissions(udsPath, PosixFilePermissions.fromString("rw-------"));
-    } catch (IOException | UnsupportedOperationException ignored) {
-    }
+    PrivateFiles.restrictToOwner(udsPath, false);
   }
 }
