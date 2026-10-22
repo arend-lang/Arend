@@ -1,18 +1,19 @@
-package org.arend.frontend;
+package org.arend.server;
 
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.server.ProgressReporter;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TimedProgressReporter implements ProgressReporter<List<? extends Concrete.ResolvableDefinition>> {
-  private final Map<TCDefReferable, Pair<Long,Long>> myTimes = new HashMap<>();
+  // Concurrent: the checks of several libraries may be timed side by side.
+  private final Map<TCDefReferable, Pair<Long,Long>> myTimes = new ConcurrentHashMap<>();
 
   public static @NotNull String timeToString(long time) {
     if (time < 10000) {
@@ -43,27 +44,27 @@ public class TimedProgressReporter implements ProgressReporter<List<? extends Co
     }
   }
 
-  /** Prints the times collected since the previous call, and forgets them. */
-  public void print() {
-    print(false);
+  /** {@code --show-times}: how long each definition checked since the previous call took, longest first; then forgets them. */
+  public void print(PrintStream out) {
+    print(out, false);
   }
 
   /**
-   * Prints the times collected since the previous call, and forgets them.
+   * {@code --show-times}: how long each definition checked since the previous call took, longest first; then forgets them.
    *
    * @param qualify whether to prefix each name with its module, for lists that span several modules.
    */
-  public void print(boolean qualify) {
+  public void print(PrintStream out, boolean qualify) {
     if (myTimes.isEmpty()) return;
 
-    System.out.println();
+    out.println();
     List<Pair<TCDefReferable,Long>> list = new ArrayList<>(myTimes.size());
     for (Map.Entry<TCDefReferable, Pair<Long, Long>> entry : myTimes.entrySet()) {
       list.add(new Pair<>(entry.getKey(), entry.getValue().proj2));
     }
     list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
     for (Pair<TCDefReferable, Long> pair : list) {
-      System.out.println((qualify ? pair.proj1.getRefFullName() : pair.proj1.getRefLongName()) + ": " + timeToString(pair.proj2));
+      out.println((qualify ? pair.proj1.getRefFullName() : pair.proj1.getRefLongName()) + ": " + timeToString(pair.proj2));
     }
     myTimes.clear();
   }

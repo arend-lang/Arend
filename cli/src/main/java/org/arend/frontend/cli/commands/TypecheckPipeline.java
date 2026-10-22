@@ -10,7 +10,7 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
-import org.arend.frontend.TimedProgressReporter;
+import org.arend.server.TimedProgressReporter;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.LibraryManager;
@@ -393,7 +393,7 @@ public final class TypecheckPipeline {
 
   private static void printTimes(TimedProgressReporter timedProgressReporter, boolean qualify) {
     if (timedProgressReporter != null) {
-      timedProgressReporter.print(qualify);
+      timedProgressReporter.print(System.out, qualify);
     }
   }
 
