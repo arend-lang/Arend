@@ -417,7 +417,7 @@ public abstract class CommonCliRepl extends Repl {
    * synthetic {@code Repl} library excluded from the search scope.
    */
   public ConsoleQueryTool.QueryContext replQueryContext(LibraryManager manager, List<SourceLibrary> libs, PrintStream capture) {
-    return new ConsoleQueryTool.QueryContext(libs, manager, myServer, errorReporter, capture, false,
+    return new ConsoleQueryTool.QueryContext(libs, manager, myServer, capture, false,
         Set.of(REPL_NAME), UnstoppableCancellationIndicator.INSTANCE);
   }
 

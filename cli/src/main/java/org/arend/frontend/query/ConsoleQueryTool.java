@@ -1,6 +1,5 @@
 package org.arend.frontend.query;
 
-import org.arend.ext.error.ErrorReporter;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.repl.CommonCliRepl;
@@ -150,7 +149,6 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
   public record QueryContext(List<SourceLibrary> requestedLibraries,
                              LibraryManager libraryManager,
                              ArendServer server,
-                             ErrorReporter errorReporter,
                              PrintStream out,
                              boolean json,
                              Set<String> excludeLibraries,

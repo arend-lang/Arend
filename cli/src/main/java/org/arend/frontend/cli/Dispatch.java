@@ -71,7 +71,7 @@ public final class Dispatch {
     // rather than a block per flag. The same tools back the REPL's `:` commands, which is
     // what keeps CLI and REPL behaviour identical.
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
-        ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter,
+        ctx.requestedLibraries, ctx.libraryManager, ctx.server,
         json.stdout(), json.active(), Set.of(), ctx.cancellation);
     for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
       if (!cmdLine.hasOption(tool.shortName())) continue;
