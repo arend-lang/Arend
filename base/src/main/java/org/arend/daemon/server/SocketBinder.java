@@ -20,8 +20,9 @@ import java.nio.charset.StandardCharsets;
  * <p>A Unix domain socket at {@code <lib>/.arend/daemon.sock}, made the owner's alone -- {@code
  * rw-------}, or on Windows an ACL granting only the owner, which Windows checks on connect as Unix
  * checks the permissions: whoever can connect can run arbitrary CLI commands against a warm library
- * and can shut the daemon down, so the file's access control has to actually be set.
- * {@link org.arend.daemon.DaemonPaths#ensureArendDir} restricts the directory to match.
+ * and can shut the daemon down, so besides the token every request presents, the file's own access
+ * control has to actually be set. {@link org.arend.daemon.DaemonPaths#ensureArendDir} restricts the
+ * directory to match.
  *
  * <p>A socket path has a hard length limit the rest of the filesystem does not -- about 104 bytes
  * for the whole {@code sockaddr_un} -- and {@code <lib>/.arend/daemon.sock} passes it for an
@@ -31,8 +32,8 @@ import java.nio.charset.StandardCharsets;
  * created 700 under the temp dir) named for the library's hash. The lock file records whichever
  * address was bound, so a client follows either way.
  *
- * <p>TCP on an ephemeral loopback port is what is left, and it has no authentication at all: any
- * local process that finds the port can drive this daemon. Where a Unix socket was possible in
+ * <p>TCP on an ephemeral loopback port is what is left. Any local process can connect to it, and
+ * only the token keeps it out: one secret instead of two locks. Where a Unix socket was possible in
  * principle it needs {@code -Darend.daemon.allowTcp=true} -- an explicit choice rather than the
  * silent consequence of a long path. A platform that cannot open a Unix socket at all -- Windows
  * before 10 1803 -- makes no attempt and gets TCP directly.
@@ -43,7 +44,10 @@ public final class SocketBinder {
   /** A bound listening socket and the address string recorded in the lock file. */
   public record Bound(ServerSocketChannel channel, String address) {}
 
-  /** Opt-in for the unauthenticated loopback fallback where a Unix socket was possible. */
+  /**
+   * Opt-in for the loopback fallback where a Unix socket was possible: any local process can connect
+   * to it, and only the daemon's token keeps it from being served.
+   */
   public static final String ALLOW_TCP_PROPERTY = "arend.daemon.allowTcp";
 
   /**
@@ -74,8 +78,9 @@ public final class SocketBinder {
     if (primary.bound() != null) return primary.bound();
     String failure = primary.failure();
 
-    // Where the checkout lives is not a reason to give up the permissions that are this daemon's
-    // only access control, so try a short path that is still a Unix socket.
+    // Where the checkout lives is not a reason to give up the permissions that keep other users from
+    // even connecting -- the token is the rest of the access control -- so try a short path that is
+    // still a Unix socket.
     Path shortPath = shortSocketPath(libraryTag);
     if (shortPath != null && !shortPath.equals(abs)) {
       Attempt relocated = tryBindUds(shortPath);
@@ -89,9 +94,10 @@ public final class SocketBinder {
 
     if (!Boolean.getBoolean(ALLOW_TCP_PROPERTY)) {
       throw new IOException("no Unix domain socket could be bound for this daemon (" + failure
-          + "). A TCP fallback would listen on loopback with no access control at all -- any"
-          + " local process could run commands against the warm library or shut it down -- so it"
-          + " is not taken on its own. Move the library somewhere with a shorter path, or pass"
+          + "). A TCP fallback would listen on loopback, where any local process can connect and"
+          + " only the daemon's token keeps it from running commands against the warm library or"
+          + " shutting it down, so it is not taken on its own. Move the library somewhere with a"
+          + " shorter path, or pass"
           + " -D" + ALLOW_TCP_PROPERTY + "=true to accept that.");
     }
     return bindLoopback(udsPath, failure);
@@ -135,8 +141,8 @@ public final class SocketBinder {
     int port = ((InetSocketAddress) ch.getLocalAddress()).getPort();
     System.err.println("[WARN] daemon is listening on TCP 127.0.0.1:" + port
         + (failure == null ? " because Unix domain sockets cannot be opened here" : " because " + udsPath + " could not be bound (" + failure + ")")
-        + ". Unlike the socket file, this port has"
-        + " no access control: any local process can drive this daemon.");
+        + ". Unlike the socket file, this port any local process can connect to; only the daemon's"
+        + " token keeps it out.");
     return new Bound(ch, "tcp:127.0.0.1:" + port);
   }
 

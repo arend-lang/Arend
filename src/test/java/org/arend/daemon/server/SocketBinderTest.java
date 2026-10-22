@@ -1,6 +1,5 @@
 package org.arend.daemon.server;
 
-import org.arend.daemon.server.SocketBinder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;

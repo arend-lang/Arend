@@ -1,7 +1,7 @@
 package org.arend.frontend;
 
-import org.apache.commons.cli.Option;
 import org.arend.cli.LockedFlags;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
 import java.util.ArrayList;
@@ -24,8 +24,8 @@ public final class ConsoleHelp {
             "libdir", "sources", "extensions", "extension-main")),
         new Group("Typecheck (the workflow when no other workflow's flag is given)", List.of(
             "test", "print", "recompile", "double-check", "serialize")),
-        new Group("Daemon control (a long-lived JVM holding a library; a typecheck or search "
-            + "about it goes to it, unless --no-daemon, -s or -i is given)", List.of(
+        new Group("Daemon control (a long-lived JVM holding the given libraries; a typecheck or "
+            + "search about one of them goes to it, unless --no-daemon, -s or -i is given)", List.of(
             "daemon", "daemon-status", "daemon-ping", "daemon-refresh", "daemon-stop", "no-daemon")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded libraries, no typecheck; "
@@ -40,7 +40,7 @@ public final class ConsoleHelp {
 
     // In the order ConsoleMain tries them, so that "the first one given runs" is the truth.
     List<String[]> workflows = List.of(
-        new String[] {"arend [LIBRARY] -d", "Start a daemon"},
+        new String[] {"arend [LIBRARY...] -d", "Start a daemon"},
         new String[] {"arend [LIBRARY] --daemon-{stop,status,refresh,ping}", "Daemon control"},
         new String[] {"arend [TARGET...] -i [plain|jline]", "REPL"},
         new String[] {"arend [LIBRARY...] {-ss|-ps|-fu|-ch|-sc} ARG...", "Information retrieval (no typecheck)"},
@@ -81,5 +81,4 @@ public final class ConsoleHelp {
         + LockedFlags.ALL.stream().map(LockedFlags.Flag::display).collect(Collectors.joining(", "))
         + ". A daemon rejects -i and the --daemon-* flags outright.", 0, width);
   }
-
 }

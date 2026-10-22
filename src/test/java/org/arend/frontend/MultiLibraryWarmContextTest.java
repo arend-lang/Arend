@@ -16,9 +16,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-/** A context holding several libraries, listed together on one command line: what gets loaded. */
+/**
+ * A context holding several libraries, as a daemon started with {@code arend -d A B} does: what
+ * gets loaded, and which of them a later command is about.
+ */
 public class MultiLibraryWarmContextTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
@@ -95,5 +100,38 @@ public class MultiLibraryWarmContextTest {
     library(libDir.resolve("base"), "", "Decoy", "\\func decoy : Nat => 0\n");
     Run run = run(warm(app, base), null, "App");
     assertEquals("App imports Base, which only the listed copy has:\n" + run.output(), 0, run.exitCode());
+  }
+
+  /**
+   * Naming libraries picks them; failing that, the directory the command came from does; with no
+   * directory to go by, a command covers every library.
+   */
+  @Test
+  public void aCommandCoversTheLibrariesItNamesOrItsDirectorysOrAll() {
+    CommandContext ctx = warm(base, app);
+    Run here = run(ctx, app.toString());
+    assertEquals(here.output(), 0, here.exitCode());
+    assertTrue(here.output(), here.output().contains("--- Typechecking app ---"));
+    assertFalse(here.output(), here.output().contains("--- Typechecking base ---"));
+
+    Run named = run(ctx, app.toString(), "base");
+    assertTrue(named.output(), named.output().contains("--- Typechecking base ---"));
+    assertFalse(named.output(), named.output().contains("--- Typechecking app ---"));
+
+    Run all = run(ctx, null);
+    assertTrue(all.output(), all.output().contains("--- Typechecking base ---"));
+    assertTrue(all.output(), all.output().contains("--- Typechecking app ---"));
+  }
+
+  /** A library loaded only as a dependency can be the subject of a command, as one about a shared library is. */
+  @Test
+  public void aCommandMayBeAboutALibraryLoadedAsADependency() throws IOException {
+    Path dependency = library(libDir.resolve("base"), "", "Base", "\\func one : Nat => 1\n");
+    CommandContext ctx = warm(app);
+    for (Run run : new Run[] { run(ctx, null, "base"), run(ctx, dependency.toString()) }) {
+      assertEquals(run.output(), 0, run.exitCode());
+      assertTrue(run.output(), run.output().contains("--- Typechecking base ---"));
+      assertFalse(run.output(), run.output().contains("--- Typechecking app ---"));
+    }
   }
 }

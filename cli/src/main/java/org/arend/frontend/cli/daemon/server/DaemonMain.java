@@ -1,17 +1,20 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.daemon.BuildIdentity;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.StartMarker;
 import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.daemon.DaemonPaths;
 import org.arend.frontend.cli.daemon.DaemonStart;
-import org.arend.daemon.LockFile;
-import org.arend.daemon.StartMarker;
+import org.arend.frontend.library.SourceLibrary;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -31,6 +34,38 @@ public final class DaemonMain {
   private DaemonMain() {}
 
   /**
+   * Every library {@code ctx} loaded that the daemon does not own: one under ~/.arend/libs or a zip,
+   * listed or not, and a dependency it was not given. A command about one of them can then come to
+   * the daemon, which holds it, though nothing stops another daemon from owning it.
+   */
+  private static List<String> loadedNotOwned(CommandContext ctx, List<DaemonPaths> owned) {
+    List<String> loaded = new ArrayList<>();
+    for (String name : ctx.libraryManager.getLibraries()) {
+      SourceLibrary library = ctx.libraryManager.getLibrary(name);
+      Path file = library == null ? null : library.getLibraryFile();
+      if (file == null) continue;
+      try {
+        String real = file.toRealPath().toString();
+        if (owned.stream().noneMatch(member -> member.libraryConfig.toString().equals(real))) loaded.add(real);
+      } catch (IOException ignored) {
+        // Gone since it was loaded; nothing to route to it either way.
+      }
+    }
+    return loaded;
+  }
+
+  /** Which of {@code owned} a live daemon has claimed, said for a person; null when none has. */
+  public static String claimedMeanwhile(List<DaemonPaths> owned) {
+    for (DaemonPaths member : owned) {
+      if (LockFile.lookup(member) instanceof LockFile.Read.Found found && found.lock().processAlive()) {
+        LockFile other = found.lock();
+        return member.libraryConfig + " has been claimed by " + other.describe() + " in the meantime";
+      }
+    }
+    return null;
+  }
+
+  /**
    * Runs the daemon until it is told to stop, then exits the JVM. A socket-side {@code shutdown}
    * returns here without going through the JVM-exit path, so the exit, and with it the shutdown
    * hook, has to be triggered explicitly.
@@ -41,24 +76,39 @@ public final class DaemonMain {
 
   /** @return the exit code: 1 when the daemon could not start, else 0 once it has stopped. */
   private static int serve(String[] args) {
+    // Before the libraries take their seconds to load: a rebuild meanwhile counts.
+    BuildIdentity build = BuildIdentity.ofThisProcess();
     String[] forwarded = Arrays.copyOfRange(args, 1, args.length);
 
+    List<DaemonPaths> libraries = new ArrayList<>();
     ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(forwarded);
-    List<String> positional = parsed.cmdLine() == null ? List.of() : parsed.cmdLine().getArgList();
-    DaemonPaths paths = positional.size() == 1 ? DaemonPaths.resolve(Paths.get(positional.getFirst())) : null;
-    if (paths == null) {
+    for (String library : parsed.cmdLine() == null ? List.<String>of() : parsed.cmdLine().getArgList()) {
+      DaemonPaths member = DaemonPaths.resolve(Paths.get(library));
+      if (member == null) {
+        System.err.println("[DAEMON] could not resolve library: " + library);
+        return 1;
+      }
+      libraries.add(member);
+    }
+    List<DaemonPaths> owned = libraries.stream().filter(DaemonPaths::canOwn).toList();
+    if (owned.isEmpty()) {
       System.err.println("[DAEMON] the bootstrap argv lists no library a daemon can own");
       return 1;
     }
+    // Its .arend/ holds the socket and the log, as DaemonStart.home has it.
+    DaemonPaths paths = owned.getFirst();
 
-    try {
-      paths.ensureArendDir();
-    } catch (IOException e) {
-      System.err.println("[DAEMON] could not create " + paths.arendDir + ": " + e.getMessage());
-      return 1;
+    for (DaemonPaths member : owned) {
+      try {
+        member.ensureArendDir();
+      } catch (IOException e) {
+        System.err.println("[DAEMON] could not create " + member.arendDir + ": " + e.getMessage());
+        return 1;
+      }
     }
+    List<String> libraryConfigs = libraries.stream().map(member -> member.libraryConfig.toString()).toList();
 
-    System.out.println("[DAEMON] Initialising daemon for " + paths.libraryConfig);
+    System.out.println("[DAEMON] Initialising daemon for " + String.join(", ", libraryConfigs));
     System.out.println("[DAEMON] PID = " + ProcessHandle.current().pid());
     System.out.println("[DAEMON] forwarded args: " + String.join(" ", forwarded));
 
@@ -78,29 +128,49 @@ public final class DaemonMain {
     System.out.println("[DAEMON] bound socket: " + bound.address());
 
     CountDownLatch stopped = new CountDownLatch(1);
-    DaemonServer server = CliDaemonRunner.server(bound, warmCtx, paths.libraryConfig.toString(), CliDispatcher::run, stopped::countDown);
+    String token = LockFile.newToken();
+    DaemonServer server = CliDaemonRunner.server(bound, token, warmCtx, libraryConfigs, CliDispatcher::run, stopped::countDown);
+    if (build != null) {
+      server.retireWhen(() -> !build.isCurrent(), "the arend jar this daemon was started from, " + build.path() + ", has changed"
+          + " since it started, so the daemon is stopping. Run the command again: it runs without the daemon, or start"
+          + " a new one with `arend -d`.");
+    }
     server.start();
+
+    LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, loadedNotOwned(warmCtx, owned), server.startedAt(),
+        bound.address(), token).withProjectDir(DaemonPaths.projectDirOf(owned));
 
     // Registered before the lock is written, not after: a SIGTERM in between would otherwise
     // leave the lock behind, pointing every later client at a daemon that no longer exists.
     // Deleting a file that was never created is a no-op, so the early window costs nothing.
-    Path lockPath = paths.lockFile;
-    Path socketPath = paths.socketFile;
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       server.close();
-      LockFile.deleteQuietly(lockPath);
-      LockFile.deleteQuietly(socketPath);
+      lock.removeTraces();
     }, "arend-daemon-shutdown"));
 
-    LockFile lock = LockFile.ofThisProcess(paths, System.currentTimeMillis(), bound.address());
-    try {
-      lock.writeAtomic(paths.lockFile);
-    } catch (IOException e) {
-      System.err.println("[DAEMON] could not write lock file " + paths.lockFile + ": " + e.getMessage());
+    // The locks were checked when `-d` was run, and the libraries have taken their seconds to load
+    // since: another daemon may have claimed one.
+    String claimed = claimedMeanwhile(owned);
+    if (claimed != null) {
+      System.err.println("[DAEMON] " + claimed + "; this daemon will not start");
+      // The shutdown hook closes the server and removes the socket; the lock it removes is only ever this daemon's.
       return 1;
     }
-    // The lock claims the library now. A start whose `arend -d` was killed leaves nobody else to remove the marker.
-    StartMarker.release(paths.startingMarker, ProcessHandle.current());
+    try {
+      lock.writeEverywhere();
+    } catch (IOException e) {
+      System.err.println("[DAEMON] could not write the lock: " + e.getMessage());
+      return 1;
+    }
+
+    // Our own lock has to check out as any client will check it. Looking it up also reads what
+    // removing it on the way out takes, while the jar it comes from is still the one we started from.
+    if (!(LockFile.lookup(paths) instanceof LockFile.Read.Found)) {
+      System.err.println("[DAEMON] the lock just written at " + paths.lockFile + " does not check out against the registry"
+          + " in " + DaemonPaths.registryDir() + "; no client will route to this daemon");
+    }
+    // The locks claim the libraries now. A start whose `arend -d` was killed leaves nobody else to remove the markers.
+    owned.forEach(member -> StartMarker.release(member.startingMarker, ProcessHandle.current()));
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
     System.out.flush();

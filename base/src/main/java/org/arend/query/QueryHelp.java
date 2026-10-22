@@ -67,8 +67,9 @@ public final class QueryHelp {
         self               restrict to the requested (top-level) libraries; skip
                            dependencies (a no-op in the REPL)
 
-      SCOPE is every loaded library (the LIBRARY positionals + their dependencies +
-      prelude); to search less, load less or pass `self`. Matches are ordered
+      SCOPE is every loaded library: the LIBRARY positionals, their dependencies and
+      prelude -- and, run by a daemon, every other library it holds; to search less, pass
+      `self`, or load less with --no-daemon. Matches are ordered
       shortest-name-first (exact-length names lead), then alphabetically. A query that
       misses is split at operators into word-parts to suggest near names ("Did you mean?").
 

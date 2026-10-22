@@ -41,6 +41,7 @@ public class CommandContext {
   public BinaryLoader binaryLoader;
   public ArendServer server;
   public final List<SourceLibrary> requestedLibraries = new ArrayList<>();
+  public final List<SourceLibrary> servedLibraries = new ArrayList<>();
   public final Set<Pair<ModulePath, LongName>> requestedModules = new LinkedHashSet<>();
   public final List<Path> libDirs = new ArrayList<>();
   public boolean doubleCheck;

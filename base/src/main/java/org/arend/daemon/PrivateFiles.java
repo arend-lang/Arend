@@ -19,8 +19,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Files only their owner may touch: the short directory a socket falls back to. The checks here are
- * what keep another local user from planting a file a client then trusts.
+ * Files only their owner may touch: the registry of daemons, whose entries carry the token that lets
+ * a client drive a daemon, and the short directory a socket falls back to. The checks here are what
+ * keeps another local user from reading a token, or from planting a file a client then trusts.
  *
  * <p>POSIX permissions where the file system has them; elsewhere -- Windows -- the owner, and an ACL
  * granting only the owner: set best effort, and checked when read.

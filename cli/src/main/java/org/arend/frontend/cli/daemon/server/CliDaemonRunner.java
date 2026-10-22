@@ -8,6 +8,7 @@ import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,17 +27,19 @@ public final class CliDaemonRunner {
   private CliDaemonRunner() {}
 
   /**
-   * The daemon serving {@code ctx}, which holds the library {@code libraryConfig}; {@code onShutdown}
-   * is called once a client's {@code shutdown} has let the queue run out.
+   * The daemon serving {@code ctx}, which holds {@code libraries}, to clients presenting
+   * {@code token}; {@code onShutdown} is called once a client's {@code shutdown} has let the queue
+   * run out.
    */
-  public static DaemonServer server(SocketBinder.Bound bound, CommandContext ctx, String libraryConfig,
+  public static DaemonServer server(SocketBinder.Bound bound, String token, CommandContext ctx, List<String> libraries,
                                     CommandRunner commands, Runnable onShutdown) {
     // Without this the worker's println calls go to the daemon's own stdout and the client sees
     // nothing. Idempotent, and installing it here is what keeps "started but mute" unreachable.
     StreamRedirector.install();
     Map<String, Object> lockedFlags = ctx.bootstrapArgs == null ? Map.of()
         : LockedFlags.extract(ConsoleMain.parseArgs(ctx.bootstrapArgs).cmdLine());
-    return new DaemonServer(bound, libraryConfig, lockedFlags, request -> run(ctx, commands, request), onShutdown);
+    return new DaemonServer(bound, token, () -> libraries, lockedFlags,
+        request -> run(ctx, commands, request), onShutdown);
   }
 
   private static int run(CommandContext ctx, CommandRunner commands, DaemonServer.Request request) {
@@ -46,7 +49,7 @@ public final class CliDaemonRunner {
       if (request.args() != null) return commands.run(ctx, request.args().toArray(new String[0]), request.cwd());
       // A refresh resolves the served libraries again, as the daemon did on starting.
       ctx.beginCommand();
-      TypecheckPipeline.resolve(ctx, ctx.requestedLibraries);
+      TypecheckPipeline.resolve(ctx, ctx.servedLibraries);
       return ctx.exitWithError ? 1 : 0;
     } finally {
       // The progress counter leaves "\r[37/412] Typechecking Algebra.Ring" open with no newline;

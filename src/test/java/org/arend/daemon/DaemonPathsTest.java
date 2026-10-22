@@ -80,4 +80,21 @@ public class DaemonPathsTest {
       assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(paths.arendDir)));
     }
   }
+
+  /** The project of a CLI daemon: the deepest directory holding all its libraries. */
+  @Test
+  public void theProjectIsTheDeepestDirectoryHoldingEveryLibrary() throws IOException {
+    Path project = tempFolder.newFolder("project").toPath();
+    DaemonPaths core = DaemonPaths.resolve(libraryIn(project.resolve("core")));
+    DaemonPaths app = DaemonPaths.resolve(libraryIn(project.resolve("apps").resolve("app")));
+    assertEquals(project.toRealPath(), DaemonPaths.projectDirOf(java.util.List.of(core, app)));
+    assertEquals(core.libraryConfig.getParent(), DaemonPaths.projectDirOf(java.util.List.of(core)));
+    assertNull(DaemonPaths.projectDirOf(java.util.List.of()));
+  }
+
+  private static Path libraryIn(Path root) throws IOException {
+    Files.createDirectories(root.resolve("src"));
+    Files.writeString(root.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    return root;
+  }
 }

@@ -2,27 +2,25 @@ package org.arend.frontend;
 
 import org.arend.cli.ArendOptions;
 import org.apache.commons.cli.*;
+import org.arend.cli.LockedFlags;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.DaemonStop;
-import org.arend.cli.LockedFlags;
 import org.arend.daemon.client.DaemonRpc;
 import org.arend.frontend.cli.daemon.server.DaemonMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
-import org.arend.frontend.cli.JsonOutputRedirect;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
-import org.arend.frontend.library.*;
+import org.arend.frontend.cli.JsonOutputRedirect;
 import org.arend.query.*;
 import org.arend.frontend.repl.PlainCliRepl;
 import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.prelude.Prelude;
 
-
+import java.util.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
 import java.util.function.BiConsumer;
 
 
@@ -117,6 +115,7 @@ public class ConsoleMain {
     }
     // This command's verdict is not the next one's.
     ctx.beginCommand();
+    ctx.servedLibraries.addAll(ctx.requestedLibraries);
     return ctx;
   }
 
@@ -190,23 +189,18 @@ public class ConsoleMain {
    * @return the exit code, or null when no control flag was given and the run should continue.
    */
   private Integer runDaemonControl(CommandContext ctx, CommandLine cmdLine) {
-    boolean daemonStart = cmdLine.hasOption("d");
-    boolean daemonStop = cmdLine.hasOption("daemon-stop");
-    boolean daemonPing = cmdLine.hasOption("daemon-ping");
-    boolean daemonStatus = cmdLine.hasOption("daemon-status");
-    boolean daemonRefresh = cmdLine.hasOption("daemon-refresh");
-    if (!ArendOptions.hasDaemonControlFlag(cmdLine)) return null;
-
-    int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonPing ? 1 : 0)
-        + (daemonStatus ? 1 : 0) + (daemonRefresh ? 1 : 0);
-    if (chosen > 1) {
+    List<String> given = ArendOptions.DAEMON_CONTROL_FLAGS.stream().filter(cmdLine::hasOption).toList();
+    if (given.isEmpty()) return null;
+    if (given.size() > 1) {
       System.err.println("[ERROR] only one of -d / --daemon-stop / --daemon-ping /"
           + " --daemon-status / --daemon-refresh may be given");
       return 1;
     }
+    String flag = given.getFirst();
+    boolean daemonStart = flag.equals("d");
     List<String> positional = cmdLine.getArgList();
-    if (positional.size() > 1) {
-      System.err.println("[ERROR] daemon mode requires at most one positional library reference");
+    if (!daemonStart && positional.size() > 1) {
+      System.err.println("[ERROR] daemon control requires at most one positional library reference");
       return 1;
     }
 
@@ -214,12 +208,14 @@ public class ConsoleMain {
     String libRef = positional.isEmpty() ? "." : positional.getFirst();
 
     if (daemonStart) {
-      return DaemonStart.run(libRef, ctx.libDirs, bootstrapFlagsToForward(cmdLine));
+      List<String> childArgs = bootstrapFlagsToForward(cmdLine);
+      return DaemonStart.run(positional.isEmpty() ? List.of(libRef) : positional, ctx.libDirs, childArgs);
     }
-    if (daemonStop) {
+    if (flag.equals("daemon-stop")) {
       return DaemonStop.run(libRef, ctx.libDirs);
     }
-    String op = daemonPing ? "ping" : daemonStatus ? "status" : "refresh";
+    // --daemon-ping, --daemon-status and --daemon-refresh: the op is the flag's own name.
+    String op = flag.substring("daemon-".length());
     int rc = DaemonRpc.run(libRef, ctx.libDirs, op);
     if (rc == DaemonRpc.NO_DAEMON) {
       System.err.println("[ERROR] " + op + ": no daemon running for the given library");
