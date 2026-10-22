@@ -150,3 +150,16 @@
 \lemma rightFib-total {B : \Cat} {Q : B ->⁺ \Cat} (Qr : IsRightFib Q) : IsRightFib (Fibers (totalProj Q))
   => rightFib-sections.2 \lam v => IsEquiv.rightFactor (inP (fibers-total-equiv.sections v))
       (IsEquiv.trans (rightFib-sections.1 Qr v) (inP (fibers-total-equiv (v dright))))
+
+-- | The map of slices induced by {q}.
+\func sliceMap {E A : \Cat} (q : E ->⁺ A) (x : E) (w : \Sigma (y : E) (y ~> x)) : \Sigma (a : A) (a ~> q x)
+  => (q w.1, dmap q w.2)
+
+-- | `Fibers q` is a right fibration if and only if the maps of slices induced by {q} are equivalences.
+\lemma rightFib-slice-char {E A : \Cat} {q : E ->⁺ A} : IsRightFib (Fibers q) <-> (\Pi (x : E) -> IsEquiv (sliceMap q x))
+  => (\lam qf x => contrFibers=>IsEquiv \lam z => Contr.Contr_QEquiv (fibers-lift-equiv q x z.2) (qf (z.1, q x, z.2, (x, idp))),
+      \lam e d => aux q e d.4.1 d.3 d.4.2)
+  \where
+    \private \lemma aux {E A : \Cat} (q : E ->⁺ A) (e : \Pi (x : E) -> IsEquiv (sliceMap q x)) {a' a : A} (x : E) (p : a' ~> a) (r : q x = a)
+      : Contr (ContLift (Fibers q) (a', a, p, (x, r))) \elim r
+      | idp => Contr.Contr_QEquiv (symQEquiv (fibers-lift-equiv q x p)) (IsEquiv=>contrFibers (e x) (a', p))

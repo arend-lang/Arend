@@ -1,9 +1,10 @@
 {- | The exponent of a cocartesian fibration into a fixed category.
 
- -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The exponent {ExpCoc} is a family over {B}
- -   whose families of objects along `pi : T ->⁺ B` are functors `BaseChange pi p ->⁺ C`:
- -   * {ExpCoc.eval}: an object over `b` evaluated as a functor `Fibers p b ->⁺ C`.
- -   * {ExpCoc.eval-univ}: the universal property.
+ -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The exponent is the small category {ExpCoc}
+ -   with the projection {ExpCoc.proj} to {B}; its objects over `b` are functors `Fibers p b ->⁺ C`:
+ -   * {ExpCoc.eval}: an object `y` evaluated as a functor `Fibers p (proj y) ->⁺ C`.
+ -   * {ExpCoc.eval-univ}: the universal property; functors `T ->⁺ ExpCoc` are functors `pi : T ->⁺ B`
+ -     together with functors `BaseChange pi p ->⁺ C`.
 
  -   Construction (route B of exponent-cocart.tex): the slice construction {ExpSl} exponentiates fiberwise opposites.
  -   * For a cocartesian map `q : E' ->⁺ B`, let `R b x = Op.Hom (OpFunc q x) b` on `Op E'` ({ExpCocHelpers.preR}) and let `W`
@@ -15,10 +16,10 @@
  -     where {ExpCocHelpers.secPre} is the extension of {ExpSl.eval} along this localization; it is natural in {pi}
  -     ({ExpCocHelpers.secPre-natural}).
  -   * Apply this to `q = FibOp p` and transport along the involution `FibOp (FibOp p) = p` ({fibOp-invol}).
- -   * The total category {ExpCocHelpers.ExpCocTot} of the exponent is too large to localize its base change, but it is equivalent
- -     to the small category {ExpCocHelpers.ExpCocU}, since its arrows are families of objects along `DI` ({ExpCocHelpers.expCocTot-arrows}).
- -     {ExpCoc.eval} is the functor corresponding to the universal family over {ExpCocHelpers.ExpCocU},
- -     and {ExpCoc.eval-univ} follows from the naturality of this correspondence ({ExpCocHelpers.secGen-natural}).
+ -   * The total category {ExpCocHelpers.ExpCocTot} of these exponents ({ExpCocHelpers.ExpCocL}) is too large, but its arrows are
+ -     families of objects along `DI` ({ExpCocHelpers.expCocTot-arrows}), so it can be resized; {ExpCoc} is the resized category.
+ -     {ExpCocHelpers.evalL} is the functor corresponding to the universal family over {ExpCoc},
+ -     and {ExpCocHelpers.evalL-univ} follows from the naturality of this correspondence ({ExpCocHelpers.secGen-natural}).
  -}
 
 \import Equiv
@@ -43,23 +44,26 @@
 \open FibOpConstruction (PreFiberOp, preFiberOp-cocartesian, W, W-stable)
 \open ExpCocHelpers
 
--- | The exponent from the cocartesian map {p} to {C}: its fiber over {b} consists of functors `Fibers p b ->⁺ C`.
-\type ExpCoc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (b :⁺ B) : \Cat
-  => ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) b
+-- | The total category of the exponent from the cocartesian map {p} to {C}; its objects over `b` are functors `Fibers p b ->⁺ C`.
+\type ExpCoc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat u
+  => ResizeFromArrows (expCocTot-arrows pc C)
   \where {
-    -- | The evaluation map.
-    \protected \sfunc eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {b :⁺ B}
-                               (e :⁺ ExpCoc pc C b) (x :⁺ Fibers p b) : C
-      => secGen (fibOp-cocartesian pc) (fibOp-invol pc) (\lam y => (unresize y).1) (\lam y => (unresize y).2) (resizeCat (b, e), x)
+    -- | The projection of the exponent to the base.
+    \protected \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (y :⁺ ExpCoc pc C) : B
+      => (unresize y).1
 
-    -- | The universal property: families of objects along {pi} are functors on the base change of {p} along {pi}.
-    \protected \lemma eval-univ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
-      : IsEquiv {\Pi (t :⁺ T) -> ExpCoc pc C (pi t)} {BaseChange pi p ->⁺ C} (\lam s q => eval pc (s q.1) q.2)
-      => transport IsEquiv (path \lam j (s : \Pi (t :⁺ T) -> ExpCoc pc C (pi t)) => funExt+ (\lam q =>
-           secGen-natural (fibOp-cocartesian pc) (fibOp-invol pc) (\lam y => (unresize y).1) (\lam y => (unresize y).2)
-                          (\lam t => resizeCat (pi t, s t)) {q}
-           *> inv (\peval eval pc (s q.1) q.2)) j)
-         (inP (expCoc-sl pc C pi `transQEquiv` IsEquiv.toQEquiv (secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) pi)))
+    -- | The evaluation map.
+    \protected \sfunc eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u}
+                               (y :⁺ ExpCoc pc C) (x :⁺ Fibers p (proj pc C y)) : C
+      => evalL pc (unresize y).2 x
+
+    -- | The universal property: functors into the exponent are functors to {B} together with functors on the base change of {p}.
+    \protected \lemma eval-univ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} (T : \Cat u)
+      : IsEquiv {T ->⁺ ExpCoc pc C} {\Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)}
+                (\lam s => (\lam t => proj pc C (s t), \lam q => eval pc (s q.1) q.2))
+      => transport IsEquiv (path \lam j (s : T ->⁺ ExpCoc pc C) =>
+           ((\lam t => proj pc C (s t), funExt+ (\lam q => inv (\peval eval pc (s q.1) q.2)) j) : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)))
+           (inP (unresize-equiv pc C T `transQEquiv` tot-split pc C T `transQEquiv` sigma-right \lam pi => IsEquiv.toQEquiv (evalL-univ pc {C} pi)))
   }
 
 \module ExpCocHelpers \where {
@@ -155,9 +159,13 @@
     : secGen qc r (\lam t => pi' (g t)) (\lam t => s' (g t)) w = secGen qc r pi' s' (g w.1, w.2) \elim r
     | idp => secPre-natural qc pi' s' g
 
-  -- | Families of objects of {ExpCoc} are families of objects of its defining {ExpSl}.
+  -- | The exponent before resizing.
+  \type ExpCocL.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (b :⁺ B) : \Cat
+    => ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) b
+
+  -- | Families of objects of {ExpCocL} are families of objects of its defining {ExpSl}.
   \func expCoc-sl.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (pi : T ->⁺ B)
-    : QEquiv {\Pi (t :⁺ T) -> ExpCoc pc C (pi t)} {\Pi (t :⁺ T) -> ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) (pi t)} \cowith
+    : QEquiv {\Pi (t :⁺ T) -> ExpCocL pc C (pi t)} {\Pi (t :⁺ T) -> ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) (pi t)} \cowith
     | f s t => s t
     | ret s t => s t
     | ret_f _ => idp
@@ -165,23 +173,53 @@
 
   -- | The total category of the exponent.
   \type ExpCocTot.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat
-    => \Sigma⁺ (b : B) (ExpCoc pc C b)
+    => \Sigma⁺ (b : B) (ExpCocL pc C b)
 
   -- | Arrows of {ExpCocTot} are functors on the base changes of {p} along arrows of {B}.
   \sfunc expCocTot-arrows.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u)
     : QEquiv {DI ->⁺ ExpCocTot pc C} {\Sigma (beta : DI ->⁺ B) (BaseChange beta p ->⁺ C)}
-    => \new QEquiv {DI ->⁺ ExpCocTot pc C} {\Sigma (beta : DI ->⁺ B) (\Pi (i :⁺ DI) -> ExpCoc pc C (beta i))} {
+    => \new QEquiv {DI ->⁺ ExpCocTot pc C} {\Sigma (beta : DI ->⁺ B) (\Pi (i :⁺ DI) -> ExpCocL pc C (beta i))} {
          | f h => (\lam i => (h i).1, \lam i => (h i).2)
          | ret s i => (s.1 i, s.2 i)
          | ret_f _ => idp
          | f_sec _ => idp
        } `transQEquiv` sigma-right \lam beta => expCoc-sl pc C beta `transQEquiv` IsEquiv.toQEquiv (secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) {C} beta)
 
-  -- | {ExpCocTot} resized to `\Cat u`.
-  \type ExpCocU.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat u
-    => ResizeFromArrows (expCocTot-arrows pc C)
-
   -- | The inverse of `resizeCat`.
-  \func unresize.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCocU pc C) : ExpCocTot pc C \elim y
+  \func unresize.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCoc pc C) : ExpCocTot pc C \elim y
     | resizeCat z => z
+
+  -- | The evaluation map of {ExpCocL}.
+  \sfunc evalL.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {b :⁺ B}
+                   (e :⁺ ExpCocL pc C b) (x :⁺ Fibers p b) : C
+    => secGen (fibOp-cocartesian pc) (fibOp-invol pc) (\lam y => (unresize y).1) (\lam y => (unresize y).2) (resizeCat (b, e), x)
+
+  \lemma evalL-univ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
+    : IsEquiv {\Pi (t :⁺ T) -> ExpCocL pc C (pi t)} {BaseChange pi p ->⁺ C} (\lam s q => evalL pc (s q.1) q.2)
+    => transport IsEquiv (path \lam j (s : \Pi (t :⁺ T) -> ExpCocL pc C (pi t)) => funExt+ (\lam q =>
+         secGen-natural (fibOp-cocartesian pc) (fibOp-invol pc) (\lam y => (unresize y).1) (\lam y => (unresize y).2)
+                        (\lam t => resizeCat (pi t, s t)) {q}
+         *> inv (\peval evalL pc (s q.1) q.2)) j)
+       (inP (expCoc-sl pc C pi `transQEquiv` IsEquiv.toQEquiv (secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) pi)))
+
+  -- | The inverse of {unresize}.
+  \sfunc resize-eta.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCoc pc C)
+    : resizeCat (unresize y) = {ExpCoc pc C} y \elim y
+    | resizeCat z => idp
+
+  -- | Functors into {ExpCoc} are functors into {ExpCocTot}.
+  \func unresize-equiv.{u} {S E : \Cat u} {p : E ->⁺ S} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u)
+    : QEquiv {T ->⁺ ExpCoc pc C} {T ->⁺ ExpCocTot pc C} \cowith
+    | f s t => unresize (s t)
+    | ret h t => resizeCat (h t)
+    | ret_f s => funExt+ \lam t => resize-eta (s t)
+    | f_sec _ => idp
+
+  -- | Functors into {ExpCocTot} are functors to {S} with families of objects of {ExpCocL}.
+  \func tot-split.{u} {S E : \Cat u} {p : E ->⁺ S} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u)
+    : QEquiv {T ->⁺ ExpCocTot pc C} {\Sigma (pi : T ->⁺ S) (\Pi (t :⁺ T) -> ExpCocL pc C (pi t))} \cowith
+    | f h => (\lam t => (h t).1, \lam t => (h t).2)
+    | ret s t => (s.1 t, s.2 t)
+    | ret_f _ => idp
+    | f_sec _ => idp
 }

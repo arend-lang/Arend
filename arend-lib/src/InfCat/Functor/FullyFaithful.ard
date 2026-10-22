@@ -158,17 +158,6 @@
            \lam x => \let c => IsEquiv=>contrFibers (e x x) (dpath \lam i => a i x)
                      \in inP ((x, (c.center.1, c.center.2)), idp))
       \where {
-        -- | The type of paths over {a} with fixed endpoints is contractible.
-        \lemma dpath-fiber-contr {K : DI ->⁺ \Cat} {a0 : K dleft} {a1 : K dright} (a : DPath (\lam i => K i) a0 a1)
-                                 {b0 : K dleft} {b1 : K dright} (q0 : b0 = a0) (q1 : b1 = a1)
-          : Contr (\Sigma (w : DPath (\lam i => K i) b0 b1) (DPath (\lam i => w i = a i) q0 q1)) \elim q0, q1
-          | idp, idp => Contr.Contr_QEquiv (later \new QEquiv {
-              | f u => (u.1, dpath \lam i => path \lam j => u.2 j i)
-              | ret v => (v.1, path \lam j => dpath \lam i => v.2 i j)
-              | ret_f u => idp
-              | f_sec v => idp
-            }) (rsigma a)
-
         \lemma rel-contr {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (e : \Pi (x y : A) -> IsEquiv {g x ~> h y} (dmap f))
                          {a : (\lam x => f (g x)) ~> {A ->⁺ D} (\lam x => f (h x))}
                          {x y : A} (r : x ~> y) (s : Fam f g h a x) (t : Fam f g h a y)

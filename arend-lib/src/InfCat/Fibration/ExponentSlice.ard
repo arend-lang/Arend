@@ -19,7 +19,6 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.ExponentRight (ExpW)
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Localization.Abstract
@@ -36,6 +35,10 @@
 \import Paths.Meta
 \open ExpSliceHelpers
 \open FullSubCat
+
+-- | The arrows of the category of elements of {F} whose image in {X} satisfies {W}.
+\func ExpW {X : \Cat} {F : X ->⁺ \Type} (W : (DI ->⁺ X) -> \Prop) (a : DI ->⁺ \Sigma⁺ (x : X) (F x)) : \Prop
+  => W (\lam i => (a i).1)
 
 -- | The category of elements of `R (pi t)`.
 \func secFib.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) (t :⁺ T) : \Cat u
