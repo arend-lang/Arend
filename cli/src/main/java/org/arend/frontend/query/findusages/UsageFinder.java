@@ -8,6 +8,7 @@ import org.arend.frontend.query.ArendNameCharSet;
 import org.arend.frontend.query.SourcePositionUtils;
 import org.arend.frontend.query.SymbolIndex;
 import org.arend.frontend.source.StreamRawSource;
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.source.Source;
@@ -301,8 +302,30 @@ public final class UsageFinder {
       if (pos == null) return;
       List<String> lines = context.lines;
       String sourceLine = (pos.line >= 1 && pos.line <= lines.size()) ? lines.get(pos.line - 1) : null;
-      collected.add(new UsageHit(context.module, pos.line, pos.column,
+      collected.add(new UsageHit(context.module, pos.line, nameColumn(sourceLine, pos.column),
           context.ambientName, context.ambientKind, sourceLine));
+    }
+
+    /**
+     * The column of the target's name nearest to {@code column} on {@code line}, {@code column}
+     * itself when it is at the name or the name is not on the line. A node's position is not
+     * always its name's: the IDE places an implementation {@code | f => ...} at its bar, and the
+     * parser a reference {@code f.{u}} at its levels.
+     */
+    private int nameColumn(@Nullable String line, int column) {
+      if (line == null) return column;
+      int best = -1;
+      for (String name : new String[] { target.getRefName(), target instanceof GlobalReferable global ? global.getAliasName() : null }) {
+        if (name == null || name.isEmpty()) continue;
+        for (int i = line.indexOf(name); i >= 0; i = line.indexOf(name, i + 1)) {
+          int end = i + name.length();
+          if (i > 0 && ArendNameCharSet.isIdChar(line.charAt(i - 1))) continue;
+          if (end < line.length() && ArendNameCharSet.isIdChar(line.charAt(end))) continue;
+          if (i + 1 == column) return column;
+          if (best < 0 || Math.abs(i + 1 - column) < Math.abs(best - column)) best = i + 1;
+        }
+      }
+      return best < 0 ? column : best;
     }
 
     @Override
