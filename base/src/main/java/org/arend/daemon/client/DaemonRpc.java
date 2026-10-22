@@ -31,7 +31,8 @@ import java.util.function.Consumer;
  * there is no such daemon; the caller decides how to react ({@code ping} reports "no daemon to
  * talk to", {@code stop} does not take it for success and goes on to the process).
  *
- * <p>It is also where an ordinary command finds the daemon to route to ({@link #tryRouteCli}).
+ * <p>It is also where an ordinary command finds the daemon to route to ({@link #tryRouteCli}), and
+ * where the MCP server finds the daemons it calls ({@link #daemonFor}, {@link #liveDaemons}).
  */
 public final class DaemonRpc {
   public static final int NO_DAEMON = -1;

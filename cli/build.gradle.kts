@@ -15,6 +15,7 @@ dependencies {
     implementation("org.antlr:antlr4-runtime:$antlrVersion")
     implementation(project(":base"))
     implementation(project(":parser"))
+    implementation(project(":mcp"))
 }
 
 // Prelude stuff

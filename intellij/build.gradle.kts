@@ -35,6 +35,7 @@ repositories {
 
 dependencies {
     implementation(project(":base"))
+    implementation(project(":mcp"))
     implementation(kotlin("reflect"))
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.scilab.forge:jlatexmath:1.0.7")
