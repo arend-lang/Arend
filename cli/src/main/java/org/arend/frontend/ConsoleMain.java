@@ -142,7 +142,8 @@ public class ConsoleMain {
     CommandLine cmdLine = parsed.cmdLine();
 
     CommandContext ctx = new CommandContext();
-    if (!CliSetup.bootstrap(ctx, cmdLine) || ctx.exitWithError) return null;
+    CliSetup.bootstrap(ctx, cmdLine);
+    if (ctx.exitWithError) return null;
     CliSetup.classifyRequestedTargets(ctx, cmdLine);
     if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return null;
 
@@ -192,12 +193,13 @@ public class ConsoleMain {
     CommandLine cmdLine = parsed.cmdLine();
 
     CommandContext ctx = new CommandContext();
-    if (!CliSetup.bootstrap(ctx, cmdLine)) return 1;
+    // Only the library search path yet: a command a daemon answers needs no server of its own.
+    CliSetup.readLibDirs(ctx, cmdLine);
 
     // A recoverable error must not reach a daemon: -d would bake a bad -L into a server that
     // outlives the command, and routing would hand the work to one built from a context this
     // process already knows is wrong. The REPL is exempt -- it loads its own startup targets, and
-    // CliSetup.bootstrap documents such an error as recoverable.
+    // CliSetup.readLibDirs documents such an error as recoverable.
     boolean replRun = cmdLine.hasOption("i") && !hasDaemonControlFlag(cmdLine);
     if (ctx.exitWithError && !replRun) return 1;
 
@@ -216,6 +218,7 @@ public class ConsoleMain {
       if (routed.isPresent()) return routed.getAsInt();
     }
 
+    CliSetup.buildServer(ctx, cmdLine);
     CliSetup.classifyRequestedTargets(ctx, cmdLine);
     if (ctx.exitWithError && !replRun) return 1;
 

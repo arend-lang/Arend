@@ -36,9 +36,10 @@ import java.util.Set;
  * Two-phase setup for the CLI:
  *
  * <ol>
- *   <li>{@link #bootstrap}: read the flags that shape the run, build the {@link ArendServer},
- *       attach the prelude and the error reporters, and resolve {@code -L}. After this the
- *       server is usable — the REPL needs no more than this — but no user library is loaded.</li>
+ *   <li>{@link #bootstrap}: resolve {@code -L} ({@link #readLibDirs}), then read the flags that
+ *       shape the run, build the {@link ArendServer} and attach the prelude and the error
+ *       reporters ({@link #buildServer}). After this the server is usable — the REPL needs no
+ *       more than this — but no user library is loaded.</li>
  *   <li>{@link #loadRequestedLibraries}: work out from the positional arguments what was asked
  *       for, then load each library and its transitive dependencies into the server.</li>
  * </ol>
@@ -46,29 +47,18 @@ import java.util.Set;
 public final class CliSetup {
   private CliSetup() {}
 
+  /** {@link #readLibDirs}, then {@link #buildServer}. Loads nothing. */
+  public static void bootstrap(CommandContext ctx, CommandLine cmdLine) {
+    readLibDirs(ctx, cmdLine);
+    buildServer(ctx, cmdLine);
+  }
+
   /**
-   * Builds the server, the reporters and the library search path. Loads nothing.
-   *
-   * @return false only on a failure that makes the run pointless; a recoverable one (a {@code -L}
-   *         value that is not a directory) sets {@link CommandContext#exitWithError} instead, so
-   *         that every such argument is reported rather than just the first.
+   * Resolves the library search path, all a command a daemon answers needs. A {@code -L} value
+   * that is not a directory sets {@link CommandContext#exitWithError}, so that every such argument
+   * is reported rather than just the first.
    */
-  public static boolean bootstrap(CommandContext ctx, CommandLine cmdLine) {
-    ctx.doubleCheck = cmdLine.hasOption("c");
-    ctx.recompile = cmdLine.hasOption("r");
-    ctx.serialize = cmdLine.hasOption("serialize");
-
-    ctx.libraryManager = new LibraryManager(ctx.systemErrErrorReporter);
-    ctx.requester = new CliServerRequester(ctx.libraryManager);
-    ctx.binaryLoader = new BinaryLoader(ctx.libraryManager);
-    if (ctx.recompile) {
-      ctx.binaryLoader.setRecompile(true);
-    }
-    ctx.server = new ArendServerImpl(ctx.requester, false, false, !ctx.doubleCheck);
-    ctx.server.addReadOnlyModule(Prelude.MODULE_LOCATION,
-        () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
-    ctx.server.addErrorReporter(ctx.errorReporter);
-
+  public static void readLibDirs(CommandContext ctx, CommandLine cmdLine) {
     if (cmdLine.hasOption("L")) {
       for (String libDirString : cmdLine.getOptionValues("L")) {
         Path libDir = Paths.get(libDirString);
@@ -85,7 +75,24 @@ public final class CliSetup {
         ctx.libDirs.add(defaultLibrariesRoot);
       }
     }
-    return true;
+  }
+
+  /** Builds the server, with the prelude, and its reporters: what running a command here takes. */
+  public static void buildServer(CommandContext ctx, CommandLine cmdLine) {
+    ctx.doubleCheck = cmdLine.hasOption("c");
+    ctx.recompile = cmdLine.hasOption("r");
+    ctx.serialize = cmdLine.hasOption("serialize");
+
+    ctx.libraryManager = new LibraryManager(ctx.systemErrErrorReporter);
+    ctx.requester = new CliServerRequester(ctx.libraryManager);
+    ctx.binaryLoader = new BinaryLoader(ctx.libraryManager);
+    if (ctx.recompile) {
+      ctx.binaryLoader.setRecompile(true);
+    }
+    ctx.server = new ArendServerImpl(ctx.requester, false, false, !ctx.doubleCheck);
+    ctx.server.addReadOnlyModule(Prelude.MODULE_LOCATION,
+        () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
+    ctx.server.addErrorReporter(ctx.errorReporter);
   }
 
   /**
