@@ -1,7 +1,6 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.cli;
 
 import org.apache.commons.cli.CommandLine;
-import org.arend.frontend.ConsoleMain;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,12 +38,10 @@ public final class LockedFlags {
   private LockedFlags() {}
 
   /**
-   * Decodes the daemon's bootstrap argv into {flag → value}, omitting absent flags. Empty when
-   * {@code bootstrapArgs} is null or unparseable.
+   * Decodes the daemon's parsed bootstrap command line into {flag → value}, omitting absent flags.
+   * Empty when there is none.
    */
-  public static Map<String, Object> extract(String[] bootstrapArgs) {
-    if (bootstrapArgs == null || bootstrapArgs.length == 0) return Map.of();
-    CommandLine cmd = ConsoleMain.parseArgs(bootstrapArgs).cmdLine();
+  public static Map<String, Object> extract(CommandLine cmd) {
     if (cmd == null) return Map.of();
     Map<String, Object> out = new LinkedHashMap<>();
     for (Flag flag : ALL) {

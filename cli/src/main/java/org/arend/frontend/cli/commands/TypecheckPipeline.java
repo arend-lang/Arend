@@ -1,6 +1,7 @@
 package org.arend.frontend.cli.commands;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.cli.ArendOptions;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.visitor.SizeExpressionVisitor;
 import org.arend.ext.error.ErrorReporter;
@@ -57,11 +58,6 @@ import java.util.Set;
  * those modules (or single definitions inside them) are, and there is no table.
  */
 public final class TypecheckPipeline {
-  public static final String SHOW_TIMES = "show-times";
-  public static final String SHOW_SIZES = "show-sizes";
-  public static final String SHOW_MODULES = "show-modules";
-  public static final String SHOW_MODULES_WITH_INSTANCES = "show-modules-with-instances";
-
   private TypecheckPipeline() {}
 
   /** @return false if the run should be reported as failed, independently of {@code ctx.exitWithError}. */
@@ -88,7 +84,7 @@ public final class TypecheckPipeline {
     // Modules whose stored diagnostics have already been printed by this run.
     Set<ModuleLocation> reported = new HashSet<>();
 
-    TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
+    TimedProgressReporter timedProgressReporter = cmdLine.hasOption(ArendOptions.SHOW_TIMES) ? new TimedProgressReporter() : null;
     ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter = timedProgressReporter != null ? timedProgressReporter : ProgressReporter.empty();
 
     // Pre-load binary caches (unless --recompile is set)
@@ -174,17 +170,17 @@ public final class TypecheckPipeline {
         }
         System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
 
-        if (cmdLine.hasOption(SHOW_SIZES)) {
+        if (cmdLine.hasOption(ArendOptions.SHOW_SIZES)) {
           showSizes(ctx, library);
         }
 
-        if (cmdLine.hasOption(SHOW_MODULES)) {
+        if (cmdLine.hasOption(ArendOptions.SHOW_MODULES)) {
           System.out.println();
           System.out.println("Modules cycles:");
           showModules(ctx, library, true);
         }
 
-        if (cmdLine.hasOption(SHOW_MODULES_WITH_INSTANCES)) {
+        if (cmdLine.hasOption(ArendOptions.SHOW_MODULES_WITH_INSTANCES)) {
           System.out.println();
           System.out.println("Modules with instances cycles:");
           showModules(ctx, library, false);

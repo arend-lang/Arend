@@ -4,7 +4,8 @@ import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
 import org.arend.daemon.LockFile;
-import org.arend.frontend.cli.daemon.LockedFlags;
+import org.arend.cli.LockedFlags;
+import org.arend.frontend.ConsoleMain;
 import org.arend.daemon.wire.FrameChannel;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
@@ -92,7 +93,7 @@ public final class DaemonServer {
     this.ctx = ctx;
     this.libraryConfig = libraryConfig;
     this.runner = runner;
-    this.lockedFlags = LockedFlags.extract(ctx.bootstrapArgs);
+    this.lockedFlags = LockedFlags.extract(ctx.bootstrapArgs == null ? null : ConsoleMain.parseArgs(ctx.bootstrapArgs).cmdLine());
     ThreadFactory tf = r -> {
       Thread t = new Thread(r, "arend-daemon-client");
       t.setDaemon(false);

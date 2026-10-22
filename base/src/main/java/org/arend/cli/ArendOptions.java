@@ -1,0 +1,104 @@
+package org.arend.cli;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.arend.query.ConsoleQueryTool;
+import org.arend.query.classhierarchy.ClassHierarchyTool;
+import org.arend.query.findusages.FindUsagesTool;
+import org.arend.query.proofsearch.ProofSearchTool;
+import org.arend.query.scopeinfo.ScopeInfoTool;
+import org.arend.query.symbolsearch.SymbolSearchTool;
+
+import java.util.List;
+
+/** The options of the {@code arend} command line. */
+public final class ArendOptions {
+  private ArendOptions() {}
+
+  public static final String SHOW_TIMES = "show-times";
+  public static final String SHOW_SIZES = "show-sizes";
+  public static final String SHOW_MODULES = "show-modules";
+  public static final String SHOW_MODULES_WITH_INSTANCES = "show-modules-with-instances";
+
+  /** The daemon control flags, each a command of its own: at most one is given, and none to a daemon. */
+  public static final List<String> DAEMON_CONTROL_FLAGS =
+      List.of("d", "daemon-stop", "daemon-ping", "daemon-status", "daemon-refresh");
+
+  /** The query tools, in help/dispatch order; iterated for registration, {@code --help} and dispatch. */
+  public static final List<ConsoleQueryTool> QUERY_TOOLS = List.of(
+          SymbolSearchTool.INSTANCE, ProofSearchTool.INSTANCE, FindUsagesTool.INSTANCE,
+          ClassHierarchyTool.INSTANCE, ScopeInfoTool.INSTANCE);
+
+  /** Whether {@code cmdLine} gives one of {@link #DAEMON_CONTROL_FLAGS}. */
+  public static boolean hasDaemonControlFlag(CommandLine cmdLine) {
+    return DAEMON_CONTROL_FLAGS.stream().anyMatch(cmdLine::hasOption);
+  }
+
+  /**
+   * Why a daemon answers none of {@code args}, read before they are parsed, as {@code arend} reads
+   * them: {@code -v}, and {@code -h} but for a query tool's ({@link #helpTool}), which {@code arend}
+   * answers itself before it looks for a daemon. Null when a daemon answers them.
+   */
+  public static String helpRefusal(String[] args) {
+    if (hasRawFlag(args, "v", "version")) return "[ERROR] -v is answered by `arend -v` itself, not by a daemon";
+    if (hasRawFlag(args, "h", "help") && helpTool(args) == null) {
+      return "[ERROR] --help is answered by `arend --help` itself, not by a daemon";
+    }
+    return null;
+  }
+
+  /**
+   * The query tool whose help {@code -h} asks for, as in {@code -h -ss}; null for none. Read off the raw
+   * arguments: the tool's option has no value there, which a parser would refuse.
+   */
+  public static ConsoleQueryTool helpTool(String[] args) {
+    if (!hasRawFlag(args, "h", "help")) return null;
+    return QUERY_TOOLS.stream().filter(tool -> hasRawFlag(args, tool.shortName(), tool.longName())).findFirst().orElse(null);
+  }
+
+  /** True if {@code -<shortOpt>} or {@code --<longOpt>} appears as a raw arg token (stopping at a bare {@code --}). */
+  private static boolean hasRawFlag(String[] args, String shortOpt, String longOpt) {
+    String shortFlag = "-" + shortOpt, longFlag = "--" + longOpt;
+    for (String arg : args) {
+      if (arg.equals("--")) break;
+      if (arg.equals(shortFlag) || arg.equals(longFlag)) return true;
+    }
+    return false;
+  }
+
+  /** Every option {@code arend} accepts. */
+  public static Options create() {
+    Options cmdOptions = new Options();
+    cmdOptions.addOption("h", "help", false, "print this message; with a search flag (-ss, -ps, -fu, -ch, -sc), that flag's grammar");
+    cmdOptions.addOption(Option.builder("L").longOpt("libdir").hasArg().argName("dir").desc("directory to look LIBRARY names up in; repeatable").build());
+    cmdOptions.addOption(Option.builder("s").longOpt("sources").hasArg().argName("dir").desc("source directory of the `\\default` library").build());
+    cmdOptions.addOption(Option.builder("e").longOpt("extensions").hasArg().argName("dir").desc("language extensions directory").build());
+    cmdOptions.addOption(Option.builder("m").longOpt("extension-main").hasArg().argName("class").desc("main extension class").build());
+    cmdOptions.addOption(Option.builder("c").longOpt("double-check").desc("double check correctness of the result").build());
+    cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("plain|jline").desc("start an interactive REPL; jline when the kind is omitted").build());
+    cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("MODULE[:DEF]").desc("after the typecheck, print the elaborated/typechecked form of MODULE (or a single DEF inside it): implicits filled in, eliminators desugared.").build());
+    // The query tools (-ss/-ps/-fu/-ch/-sc): registered from the shared registry so each flag's option identity lives on its ConsoleQueryTool.
+    for (ConsoleQueryTool tool : QUERY_TOOLS) {
+      cmdOptions.addOption(Option.builder(tool.shortName()).longOpt(tool.longName())
+          .hasArgs().argName(tool.argName()).desc(tool.cliDescription()).build());
+    }
+    cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results: [...], count: N}; -sc uses {target, entries: [...], count: N}; -ch uses {target, superclasses: [...], subclasses: [...], instances: [...], newSites: [...], counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
+    cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library: a LIBRARY positional anchored to an arend.yaml, or a name resolved via -L, defaulting to ./arend.yaml when omitted. The daemon does the normal load+typecheck+persist once, then idles serving future client requests.").build());
+    cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
+    cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
+    cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump the daemon's state: queue depth, uptime, current task, protocol version and locked flags.").build());
+    cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-run the bootstrap pipeline on the daemon's warm context so source edits are picked up.").build());
+    cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
+    cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default ~/.arend/log/arend-symbol-search.log").build());
+    cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
+    cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
+    cmdOptions.addOption("t", "test", false, "run tests");
+    cmdOptions.addOption("v", "version", false, "print language version");
+    cmdOptions.addOption(Option.builder().longOpt(SHOW_TIMES).desc("after typechecking, print every definition's typecheck duration, sorted descending").build());
+    cmdOptions.addOption(Option.builder().longOpt(SHOW_SIZES).desc("after typechecking, print every definition's typechecked core-term size (number of subterms), sorted descending").build());
+    cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES).desc("after typechecking, print the module import-DAG in topological order via Tarjan SCC. Single modules: `[Module]`; import cycles: `[M1, M2, ...]`.").build());
+    cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES_WITH_INSTANCES).desc("like --show-modules, but restricted to modules that define at least one \\instance -- useful for spotting cycles among instance-providing modules").build());
+    return cmdOptions;
+  }
+}

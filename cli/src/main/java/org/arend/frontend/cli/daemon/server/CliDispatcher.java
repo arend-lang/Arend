@@ -1,10 +1,11 @@
 package org.arend.frontend.cli.daemon.server;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.cli.ArendOptions;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
-import org.arend.frontend.cli.daemon.LockedFlags;
+import org.arend.cli.LockedFlags;
 
 /**
  * The daemon's policy on top of {@link Dispatch#run(CommandContext, String[])}: what a client is
@@ -20,7 +21,7 @@ public final class CliDispatcher {
 
   /** @return the exit code the client should report. */
   public static int run(CommandContext ctx, String[] args, String clientCwd) {
-    String helpRefusal = ConsoleMain.helpRefusal(args);
+    String helpRefusal = ArendOptions.helpRefusal(args);
     if (helpRefusal != null) {
       System.err.println(helpRefusal);
       return 1;
@@ -35,7 +36,7 @@ public final class CliDispatcher {
         System.err.println("[ERROR] -i (REPL) is not supported in daemon mode");
         return 1;
       }
-      if (ConsoleMain.hasDaemonControlFlag(cmdLine)) {
+      if (ArendOptions.hasDaemonControlFlag(cmdLine)) {
         System.err.println("[ERROR] daemon control flags are not valid inside a daemon-served command");
         return 1;
       }

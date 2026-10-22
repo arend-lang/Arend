@@ -1,7 +1,7 @@
 package org.arend.frontend;
 
 import org.apache.commons.cli.Option;
-import org.arend.frontend.cli.daemon.LockedFlags;
+import org.arend.cli.LockedFlags;
 import org.apache.commons.cli.Options;
 
 import java.util.ArrayList;

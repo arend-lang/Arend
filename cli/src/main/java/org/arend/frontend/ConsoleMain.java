@@ -1,11 +1,12 @@
 package org.arend.frontend;
 
+import org.arend.cli.ArendOptions;
 import org.apache.commons.cli.*;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.DaemonStop;
-import org.arend.frontend.cli.daemon.LockedFlags;
+import org.arend.cli.LockedFlags;
 import org.arend.daemon.client.DaemonRpc;
 import org.arend.frontend.cli.daemon.server.DaemonMain;
 import org.arend.frontend.cli.CommandContext;
@@ -14,11 +15,6 @@ import org.arend.frontend.cli.JsonOutputRedirect;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.frontend.library.*;
 import org.arend.query.*;
-import org.arend.query.classhierarchy.ClassHierarchyTool;
-import org.arend.query.findusages.FindUsagesTool;
-import org.arend.query.proofsearch.ProofSearchTool;
-import org.arend.query.scopeinfo.ScopeInfoTool;
-import org.arend.query.symbolsearch.SymbolSearchTool;
 import org.arend.frontend.repl.PlainCliRepl;
 import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.prelude.Prelude;
@@ -30,21 +26,6 @@ import java.util.*;
 
 
 public class ConsoleMain {
-
-
-  // Owned by TypecheckPipeline, which reads them back off the parsed CommandLine; re-declaring
-  // them here would let the two drift apart silently.
-  private final static String SHOW_TIMES = TypecheckPipeline.SHOW_TIMES;
-  private final static String SHOW_SIZES = TypecheckPipeline.SHOW_SIZES;
-  private final static String SHOW_MODULES = TypecheckPipeline.SHOW_MODULES;
-  private final static String SHOW_MODULES_WITH_INSTANCES = TypecheckPipeline.SHOW_MODULES_WITH_INSTANCES;
-
-  /** The query tools, in help/dispatch order; iterated for registration, {@code --help} and dispatch. */
-  public static final List<ConsoleQueryTool> QUERY_TOOLS = List.of(
-          SymbolSearchTool.INSTANCE, ProofSearchTool.INSTANCE, FindUsagesTool.INSTANCE,
-          ClassHierarchyTool.INSTANCE, ScopeInfoTool.INSTANCE);
-
-
   /**
    * What parsing argv came to. A null {@code cmdLine} means there is nothing left to run, and
    * {@code failed} says which of the two reasons applies: the request was served in full
@@ -58,47 +39,19 @@ public class ConsoleMain {
   }
 
   public static ParsedArgs parseArgs(String[] args) {
-    ConsoleQueryTool helpTool = helpTool(args);
+    ConsoleQueryTool helpTool = ArendOptions.helpTool(args);
     if (helpTool != null) {
       ConsoleHelpRenderer.printTopicHelp(helpTool.cliHelp());
       return ParsedArgs.served();
     }
     // Any other -h: the general handler below prints the grouped help.
     try {
-      Options cmdOptions = new Options();
-      cmdOptions.addOption("h", "help", false, "print this message; with a search flag (-ss, -ps, -fu, -ch, -sc), that flag's grammar");
-      cmdOptions.addOption(Option.builder("L").longOpt("libdir").hasArg().argName("dir").desc("directory to look LIBRARY names up in; repeatable").build());
-      cmdOptions.addOption(Option.builder("s").longOpt("sources").hasArg().argName("dir").desc("source directory of the `\\default` library").build());
-      cmdOptions.addOption(Option.builder("e").longOpt("extensions").hasArg().argName("dir").desc("language extensions directory").build());
-      cmdOptions.addOption(Option.builder("m").longOpt("extension-main").hasArg().argName("class").desc("main extension class").build());
-      cmdOptions.addOption(Option.builder("c").longOpt("double-check").desc("double check correctness of the result").build());
-      cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("plain|jline").desc("start an interactive REPL; jline when the kind is omitted").build());
-      cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("MODULE[:DEF]").desc("after the typecheck, print the elaborated/typechecked form of MODULE (or a single DEF inside it): implicits filled in, eliminators desugared.").build());
-      // The query tools (-ss/-ps/-fu/-ch/-sc): registered from the shared registry so each flag's option identity lives on its ConsoleQueryTool.
-      for (ConsoleQueryTool tool : QUERY_TOOLS) {
-        cmdOptions.addOption(Option.builder(tool.shortName()).longOpt(tool.longName())
-            .hasArgs().argName(tool.argName()).desc(tool.cliDescription()).build());
-      }
-      cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results: [...], count: N}; -sc uses {target, entries: [...], count: N}; -ch uses {target, superclasses: [...], subclasses: [...], instances: [...], newSites: [...], counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
-      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library: a LIBRARY positional anchored to an arend.yaml, or a name resolved via -L, defaulting to ./arend.yaml when omitted. The daemon does the normal load+typecheck+persist once, then idles serving future client requests.").build());
-      cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
-      cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
-      cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump the daemon's state: queue depth, uptime, current task, protocol version and locked flags.").build());
-      cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-run the bootstrap pipeline on the daemon's warm context so source edits are picked up.").build());
-      cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
-      cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default ~/.arend/log/arend-symbol-search.log").build());
-      cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
-      cmdOptions.addOption(null, "serialize", false, "after typechecking, persist typechecked modules as .arc binary caches; without this flag, no .arc files are written");
-      cmdOptions.addOption("t", "test", false, "run tests");
-      cmdOptions.addOption("v", "version", false, "print language version");
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_TIMES).desc("after typechecking, print every definition's typecheck duration, sorted descending").build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_SIZES).desc("after typechecking, print every definition's typechecked core-term size (number of subterms), sorted descending").build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES).desc("after typechecking, print the module import-DAG in topological order via Tarjan SCC. Single modules: `[Module]`; import cycles: `[M1, M2, ...]`.").build());
-      cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES_WITH_INSTANCES).desc("like --show-modules, but restricted to modules that define at least one \\instance -- useful for spotting cycles among instance-providing modules").build());
+      Options cmdOptions = ArendOptions.create();
       CommandLine cmdLine = new DefaultParser().parse(cmdOptions, args);
 
       if (cmdLine.hasOption("h")) {
-        ConsoleHelp.printGrouped(cmdOptions, List.of(SHOW_TIMES, SHOW_SIZES, SHOW_MODULES, SHOW_MODULES_WITH_INSTANCES));
+        ConsoleHelp.printGrouped(cmdOptions, List.of(ArendOptions.SHOW_TIMES, ArendOptions.SHOW_SIZES,
+            ArendOptions.SHOW_MODULES, ArendOptions.SHOW_MODULES_WITH_INSTANCES));
         return ParsedArgs.served();
       }
 
@@ -112,38 +65,6 @@ public class ConsoleMain {
       System.err.println(e.getMessage());
       return ParsedArgs.rejected();
     }
-  }
-
-  /**
-   * Why a daemon answers none of {@code args}, read before they are parsed, as {@code arend} reads
-   * them: {@code -v}, and {@code -h} but for a query tool's ({@link #helpTool}), which {@code arend}
-   * answers itself before it looks for a daemon. Null when a daemon answers them.
-   */
-  public static String helpRefusal(String[] args) {
-    if (hasRawFlag(args, "v", "version")) return "[ERROR] -v is answered by `arend -v` itself, not by a daemon";
-    if (hasRawFlag(args, "h", "help") && helpTool(args) == null) {
-      return "[ERROR] --help is answered by `arend --help` itself, not by a daemon";
-    }
-    return null;
-  }
-
-  /**
-   * The query tool whose help {@code -h} asks for, as in {@code -h -ss}; null for none. Read off the raw
-   * arguments: the tool's option has no value there, which a parser would refuse.
-   */
-  public static ConsoleQueryTool helpTool(String[] args) {
-    if (!hasRawFlag(args, "h", "help")) return null;
-    return QUERY_TOOLS.stream().filter(tool -> hasRawFlag(args, tool.shortName(), tool.longName())).findFirst().orElse(null);
-  }
-
-  /** True if {@code -<shortOpt>} or {@code --<longOpt>} appears as a raw arg token (stopping at a bare {@code --}). */
-  private static boolean hasRawFlag(String[] args, String shortOpt, String longOpt) {
-    String shortFlag = "-" + shortOpt, longFlag = "--" + longOpt;
-    for (String arg : args) {
-      if (arg.equals("--")) break;
-      if (arg.equals(shortFlag) || arg.equals(longFlag)) return true;
-    }
-    return false;
   }
 
   /**
@@ -222,7 +143,7 @@ public class ConsoleMain {
     // outlives the command, and routing would hand the work to one built from a context this
     // process already knows is wrong. The REPL is exempt -- it loads its own startup targets, and
     // CliSetup.readLibDirs documents such an error as recoverable.
-    boolean replRun = cmdLine.hasOption("i") && !hasDaemonControlFlag(cmdLine);
+    boolean replRun = cmdLine.hasOption("i") && !ArendOptions.hasDaemonControlFlag(cmdLine);
     if (ctx.exitWithError && !replRun) return 1;
 
     // Before the positionals are classified: a daemon flag takes a library *reference*, which is
@@ -255,15 +176,6 @@ public class ConsoleMain {
     }
   }
 
-  /** Whether argv asks for one of the daemon control flags {@link #runDaemonControl} handles. */
-  public static boolean hasDaemonControlFlag(CommandLine cmdLine) {
-    return cmdLine.hasOption("d")
-        || cmdLine.hasOption("daemon-stop")
-        || cmdLine.hasOption("daemon-ping")
-        || cmdLine.hasOption("daemon-status")
-        || cmdLine.hasOption("daemon-refresh");
-  }
-
   /**
    * Handles {@code -d} and the {@code --daemon-*} control flags. None of them loads a library in
    * this process -- the child JVM does that.
@@ -276,7 +188,7 @@ public class ConsoleMain {
     boolean daemonPing = cmdLine.hasOption("daemon-ping");
     boolean daemonStatus = cmdLine.hasOption("daemon-status");
     boolean daemonRefresh = cmdLine.hasOption("daemon-refresh");
-    if (!hasDaemonControlFlag(cmdLine)) return null;
+    if (!ArendOptions.hasDaemonControlFlag(cmdLine)) return null;
 
     int chosen = (daemonStart ? 1 : 0) + (daemonStop ? 1 : 0) + (daemonPing ? 1 : 0)
         + (daemonStatus ? 1 : 0) + (daemonRefresh ? 1 : 0);

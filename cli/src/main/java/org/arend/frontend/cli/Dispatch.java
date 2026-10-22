@@ -1,6 +1,7 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
+import org.arend.cli.ArendOptions;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.query.ConsoleQueryTool;
@@ -84,7 +85,7 @@ public final class Dispatch {
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
         new ArrayList<>(ctx.requestedLibraries), ctx.libraryManager, ctx.server,
         json.stdout(), json.active(), Set.of(), ctx.cancellation);
-    for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
+    for (ConsoleQueryTool tool : ArendOptions.QUERY_TOOLS) {
       if (!cmdLine.hasOption(tool.shortName())) continue;
       ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(cmdLine.getOptionValues(tool.shortName()));
       // The tool has already printed its own diagnostic on a parse failure.
