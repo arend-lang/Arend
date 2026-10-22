@@ -1,8 +1,10 @@
-package org.arend.frontend.cli.daemon;
+package org.arend.daemon.client;
 
-import org.arend.frontend.cli.daemon.client.DaemonRpc;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.client.DaemonRpc;
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.FrameChannel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,7 +52,7 @@ public class DaemonRouteTest {
   @Before
   public void setUp() throws IOException {
     assumeTrue("Unix domain sockets required",
-        org.arend.frontend.cli.daemon.Platform.supportsUnixSockets());
+        org.arend.daemon.Platform.supportsUnixSockets());
 
     libRoot = tempFolder.newFolder("mylib").toPath();
     Files.createDirectories(libRoot.resolve("src"));

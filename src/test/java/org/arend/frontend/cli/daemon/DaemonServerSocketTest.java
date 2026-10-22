@@ -1,12 +1,13 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.LockFile;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.daemon.server.DaemonServer;
-import org.arend.frontend.cli.daemon.server.SocketBinder;
-import org.arend.frontend.cli.daemon.wire.SocketAddress;
+import org.arend.daemon.server.SocketBinder;
+import org.arend.daemon.wire.SocketAddress;
 import org.arend.frontend.cli.daemon.server.StreamRedirector;
-import org.arend.frontend.cli.daemon.client.DaemonClient;
+import org.arend.daemon.client.DaemonClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -44,7 +45,7 @@ public class DaemonServerSocketTest {
   @Before
   public void setUp() throws IOException {
     assumeTrue("Unix domain sockets required",
-        org.arend.frontend.cli.daemon.Platform.supportsUnixSockets());
+        org.arend.daemon.Platform.supportsUnixSockets());
 
     libRoot = tempFolder.newFolder("lib").toPath();
     Files.createDirectories(libRoot.resolve("src"));

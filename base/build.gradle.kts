@@ -6,6 +6,8 @@ dependencies {
     // The query tools read the characters of a name off the grammar's lexer.
     implementation(project(":parser"))
     implementation("org.antlr:antlr4-runtime:$antlrVersion")
+    // The daemon's frames are JSON; the CLI bundles Jackson, and IntelliJ ships its own.
+    compileOnly("com.fasterxml.jackson.core:jackson-databind:2.11.2")
 
     api(project(":api"))
 }

@@ -2,8 +2,8 @@ package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.arend.frontend.ConsoleMain;
-import org.arend.frontend.cli.daemon.DaemonPaths;
-import org.arend.frontend.cli.daemon.PrivateFiles;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.PrivateFiles;
 import org.arend.query.ConsoleQueryTool;
 
 import java.io.IOException;

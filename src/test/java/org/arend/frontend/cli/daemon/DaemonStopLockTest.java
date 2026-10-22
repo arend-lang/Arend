@@ -1,5 +1,6 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.LockFile;
 import org.junit.Test;
 
 import java.util.function.Predicate;

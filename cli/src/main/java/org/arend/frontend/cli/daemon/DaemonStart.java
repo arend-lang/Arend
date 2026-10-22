@@ -1,5 +1,9 @@
 package org.arend.frontend.cli.daemon;
 
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.LockFile;
+import org.arend.daemon.Platform;
+import org.arend.daemon.StartMarker;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.io.IOException;

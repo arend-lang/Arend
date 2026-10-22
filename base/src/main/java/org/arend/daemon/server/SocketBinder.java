@@ -1,7 +1,7 @@
-package org.arend.frontend.cli.daemon.server;
+package org.arend.daemon.server;
 
-import org.arend.frontend.cli.daemon.Platform;
-import org.arend.frontend.cli.daemon.PrivateFiles;
+import org.arend.daemon.Platform;
+import org.arend.daemon.PrivateFiles;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  * rw-------}, or on Windows an ACL granting only the owner, which Windows checks on connect as Unix
  * checks the permissions: whoever can connect can run arbitrary CLI commands against a warm library
  * and can shut the daemon down, so the file's access control has to actually be set.
- * {@link org.arend.frontend.cli.daemon.DaemonPaths#ensureArendDir} restricts the directory to match.
+ * {@link org.arend.daemon.DaemonPaths#ensureArendDir} restricts the directory to match.
  *
  * <p>A socket path has a hard length limit the rest of the filesystem does not -- about 104 bytes
  * for the whole {@code sockaddr_un} -- and {@code <lib>/.arend/daemon.sock} passes it for an

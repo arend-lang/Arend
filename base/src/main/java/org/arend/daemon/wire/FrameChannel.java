@@ -1,4 +1,4 @@
-package org.arend.frontend.cli.daemon.wire;
+package org.arend.daemon.wire;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

@@ -1,10 +1,11 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
-import org.arend.frontend.cli.daemon.LockFile;
+import org.arend.daemon.LockFile;
 import org.arend.frontend.cli.daemon.LockedFlags;
-import org.arend.frontend.cli.daemon.wire.FrameChannel;
+import org.arend.daemon.wire.FrameChannel;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 
