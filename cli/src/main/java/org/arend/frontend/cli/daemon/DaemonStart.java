@@ -15,7 +15,7 @@ import java.util.Optional;
  *
  * <p>Resolve {@link DaemonPaths}; decide what an existing lock means ({@link #inspectLock});
  * claim the right to start ({@link StartMarker#reserve}); spawn
- * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap <arend.yaml> [-L ...]
+ * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap [-L ...]
  * <arend.yaml>} with stdio pointed at daemon.log; then poll for the lock the child writes when it
  * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s (a cold arend-lib bootstrap is ~2 minutes).
  */
@@ -256,7 +256,6 @@ public final class DaemonStart {
     cmd.add(System.getProperty("java.class.path"));
     cmd.add("org.arend.frontend.ConsoleMain");
     cmd.add("--daemon-bootstrap");
-    cmd.add(paths.libraryConfig.toString());
     for (Path libDir : libDirsForward) {
       cmd.add("-L");
       cmd.add(libDir.toString());

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Child-side daemon entry point, reached through the internal {@code --daemon-bootstrap} flag
@@ -18,7 +19,7 @@ import java.util.Arrays;
  * process's stdout and stderr at {@code daemon.log} and stdin at the null device, so everything
  * the pipeline prints lands in the log without any setOut/setErr of our own.
  *
- * <p>Strip the flag and its library reference; bootstrap the warm context from the remaining args;
+ * <p>Strip the flag; bootstrap the warm context from the remaining args;
  * bind the socket; start the {@link DaemonServer}; install the shutdown hook; then publish the
  * lock -- after the hook, so a signal in between cannot leave the lock behind -- and block until
  * the server says to stop.
@@ -37,16 +38,13 @@ public final class DaemonMain {
 
   /** @return the exit code: 1 when the daemon could not start, else 0 once it has stopped. */
   private static int serve(String[] args) {
-    if (args.length < 2) {
-      System.err.println("[DAEMON] --daemon-bootstrap requires a library reference");
-      return 1;
-    }
-    String libRef = args[1];
-    String[] forwarded = Arrays.copyOfRange(args, 2, args.length);
+    String[] forwarded = Arrays.copyOfRange(args, 1, args.length);
 
-    DaemonPaths paths = DaemonPaths.resolve(Paths.get(libRef));
+    ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(forwarded);
+    List<String> positional = parsed.cmdLine() == null ? List.of() : parsed.cmdLine().getArgList();
+    DaemonPaths paths = positional.size() == 1 ? DaemonPaths.resolve(Paths.get(positional.getFirst())) : null;
     if (paths == null) {
-      System.err.println("[DAEMON] could not resolve library reference: " + libRef);
+      System.err.println("[DAEMON] the bootstrap argv lists no library a daemon can own");
       return 1;
     }
 
