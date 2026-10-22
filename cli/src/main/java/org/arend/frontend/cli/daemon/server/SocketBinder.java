@@ -1,6 +1,7 @@
 package org.arend.frontend.cli.daemon.server;
 
 import org.arend.frontend.cli.daemon.Platform;
+import org.arend.frontend.cli.daemon.PrivateFiles;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -142,26 +143,33 @@ public final class SocketBinder {
   /**
    * A short socket path named for {@code libraryTag}, or null if no private directory could be
    * prepared. {@code $XDG_RUNTIME_DIR} is per-user and 0700 by specification; a temp directory is
-   * shared, so the socket goes in an {@code arend-<user>} subdirectory created 0700 -- directory
-   * permissions are what stands in for authentication here.
+   * shared, so the socket goes in an {@code arend-<user>} subdirectory of the user's own, 0700.
+   *
+   * <p>That name is anybody's to take first. A directory there that another user made is not used:
+   * its owner could replace the socket in it with one of their own, and answer the clients that
+   * come to it.
    */
   static Path shortSocketPath(String libraryTag) {
-    String runtimeDir = System.getenv("XDG_RUNTIME_DIR");
+    return shortSocketPath(libraryTag, System.getenv("XDG_RUNTIME_DIR"), System.getProperty("java.io.tmpdir", "/tmp"));
+  }
+
+  /** As {@link #shortSocketPath(String)}, with the runtime and the temp directory given: a test cannot unset the one it runs with. */
+  static Path shortSocketPath(String libraryTag, String runtimeDir, String tmpDir) {
     Path dir;
     if (runtimeDir != null && !runtimeDir.isEmpty() && Files.isDirectory(Path.of(runtimeDir))) {
       dir = Path.of(runtimeDir);
     } else {
       String user = System.getProperty("user.name", "user").replaceAll("[^A-Za-z0-9._-]", "_");
-      dir = Path.of(System.getProperty("java.io.tmpdir", "/tmp")).resolve("arend-" + user);
+      dir = Path.of(tmpDir).resolve("arend-" + user);
       try {
-        if (!Files.isDirectory(dir)) {
-          Files.createDirectories(dir);
-        }
-        Files.setPosixFilePermissions(dir, PosixFilePermissions.fromString("rwx------"));
-      } catch (IOException | UnsupportedOperationException e) {
-        if (!Files.isDirectory(dir)) return null;
-        // An existing directory whose permissions cannot be set is still usable; the socket's own
-        // rw------- remains.
+        PrivateFiles.ensurePrivateDirectory(dir);
+      } catch (IOException e) {
+        System.err.println("[WARN] not putting the daemon's socket in " + dir + ": " + e.getMessage());
+        return null;
+      }
+      if (!PrivateFiles.isPrivate(dir, true)) {
+        System.err.println("[WARN] not putting the daemon's socket in " + dir + ": others can write to it");
+        return null;
       }
     }
     return dir.resolve(libraryTag + ".sock");
