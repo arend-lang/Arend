@@ -92,10 +92,12 @@ public class FileSourceLibrary extends SourceLibrary {
     return new GZIPStreamBinarySource(new FileBinarySource(binaryBasePath, new ModuleLocation(getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)));
   }
 
+  @Override
   public @Nullable Path getBinaryBasePath() {
     return binaryBasePath;
   }
 
+  @Override
   public @Nullable Path getSourceBasePath() {
     return sourceBasePath;
   }

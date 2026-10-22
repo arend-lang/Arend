@@ -2,7 +2,6 @@ package org.arend.frontend.query;
 
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.prelude.Prelude;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
@@ -32,9 +31,9 @@ import java.util.Set;
  */
 public record QualifiedName(@Nullable String library, @Nullable String module, @NotNull String longName) {
 
-  public static boolean containsMultipleNonPreludeLibraries(@NotNull Collection<? extends SourceLibrary> libsInScope) {
+  public static boolean containsMultipleNonPreludeLibraries(@NotNull Collection<? extends QueryLibrary> libsInScope) {
     int n = 0;
-    for (SourceLibrary lib : libsInScope) {
+    for (QueryLibrary lib : libsInScope) {
       if (!Prelude.LIBRARY_NAME.equals(lib.getLibraryName()) && ++n > 1) return true;
     }
     return false;
@@ -50,9 +49,9 @@ public record QualifiedName(@Nullable String library, @Nullable String module, @
 
   /** The set of library names in {@code libs}, for the {@code libraryNames} argument of
    *  {@link #splitLibrary} (which peels a {@code LIB::} prefix only for a real library). */
-  public static @NotNull Set<String> libraryNames(@NotNull Collection<? extends SourceLibrary> libs) {
+  public static @NotNull Set<String> libraryNames(@NotNull Collection<? extends QueryLibrary> libs) {
     Set<String> names = new HashSet<>();
-    for (SourceLibrary lib : libs) names.add(lib.getLibraryName());
+    for (QueryLibrary lib : libs) names.add(lib.getLibraryName());
     return names;
   }
 
@@ -99,9 +98,9 @@ public record QualifiedName(@Nullable String library, @Nullable String module, @
    */
   public static void warnAmbiguousModule(@NotNull ModulePath modulePath,
                                          @NotNull String chosenLibrary,
-                                         @NotNull Collection<? extends SourceLibrary> libsInScope) {
+                                         @NotNull Collection<? extends QueryLibrary> libsInScope) {
     List<String> owners = new ArrayList<>();
-    for (SourceLibrary lib : libsInScope) {
+    for (QueryLibrary lib : libsInScope) {
       if (lib.findModules(false).contains(modulePath) || lib.findModules(true).contains(modulePath)) {
         owners.add(lib.getLibraryName());
       }

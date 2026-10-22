@@ -8,6 +8,7 @@ import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.frontend.query.QueryLibrary;
 import org.arend.frontend.query.SymbolIndex;
 import org.arend.frontend.query.SymbolPattern;
 import org.arend.frontend.query.TargetResolver;
@@ -162,7 +163,7 @@ public class SymbolSearchAliasTest {
   }
 
   private String resolve(String spec) {
-    Map<SourceLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(List.of(library), server, false);
+    Map<QueryLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(List.of(library), server, false);
     TargetResolver.Target target = TargetResolver.resolve(spec, "-fu", server, List.of(library), indexes,
         false, null, "definition");
     return target == null ? null : target.referable().getRefLongName().toString();

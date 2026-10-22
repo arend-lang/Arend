@@ -1,6 +1,6 @@
 package org.arend.frontend.query.proofsearch;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.PathDisplayUtils;
 import org.arend.frontend.query.QualifiedName;
 import org.arend.frontend.query.SignaturePrintVisitor;
@@ -13,7 +13,7 @@ import java.io.PrintStream;
 final class TextProofSearchPrinter implements ProofSearchTool.ProofSearchPrinter {
   @Override
   public void print(PrintStream out, ProofSearchEngine.Result found, ProofSearchTool.Options options,
-                    LibraryManager lm, boolean omitLibrary) {
+                    QueryLibraries lm, boolean omitLibrary) {
     for (ProofSearchEngine.ProofMatch m : found.matches()) {
       int[] lc = SourcePositionUtils.lineColumn(m.referable());
       String path = PathDisplayUtils.shortenedSourcePath(m.module(), lm);

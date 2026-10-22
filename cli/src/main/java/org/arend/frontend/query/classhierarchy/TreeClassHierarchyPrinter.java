@@ -1,6 +1,6 @@
 package org.arend.frontend.query.classhierarchy;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.*;
 import org.arend.frontend.query.classhierarchy.ClassHierarchy.ClassNode;
 import org.arend.frontend.query.classhierarchy.ClassHierarchy.InstanceSite;
@@ -18,7 +18,7 @@ final class TreeClassHierarchyPrinter implements ClassHierarchyPrinter {
   private PrintStream out;
 
   @Override
-  public void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, LibraryManager libraryManager) {
+  public void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, QueryLibraries libraryManager) {
     this.out = out;
     ClassNode root = hierarchy.node(target.referable());
     out.println("Class " + target.fullLabel() + "  [" + target.kind() + "]");
@@ -54,7 +54,7 @@ final class TreeClassHierarchyPrinter implements ClassHierarchyPrinter {
   /** Prints one subtree; {@code nextOf} chooses the traversal direction (parents vs. children). */
   private void printTree(ClassNode node, String prefix, boolean isRoot, boolean isTail,
                          ClassHierarchy hierarchy,
-                         LibraryManager libraryManager,
+                         QueryLibraries libraryManager,
                          Set<LocatedReferable> seen,
                          Options options,
                          Function<ClassNode, List<LocatedReferable>> nextOf) {
@@ -77,7 +77,7 @@ final class TreeClassHierarchyPrinter implements ClassHierarchyPrinter {
   }
 
   private void printInstances(ResolvedTarget target, ClassHierarchy hierarchy,
-                              Options options, LibraryManager libraryManager) {
+                              Options options, QueryLibraries libraryManager) {
     List<InstanceSite> filtered = sortedSites(hierarchy, hierarchy.instanceSites, target.referable(), options.direction, libraryManager);
     out.println();
     out.println("Instances (" + filtered.size() + "):");
@@ -92,7 +92,7 @@ final class TreeClassHierarchyPrinter implements ClassHierarchyPrinter {
   }
 
   private void printNewSites(ResolvedTarget target, ClassHierarchy hierarchy,
-                             Options options, LibraryManager libraryManager) {
+                             Options options, QueryLibraries libraryManager) {
     List<NewSite> filtered = sortedSites(hierarchy, hierarchy.newSites, target.referable(), options.direction, libraryManager);
     out.println();
     out.println("\\new sites (" + filtered.size() + "):");

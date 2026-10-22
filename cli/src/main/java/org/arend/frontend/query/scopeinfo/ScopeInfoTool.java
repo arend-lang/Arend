@@ -1,9 +1,7 @@
 package org.arend.frontend.query.scopeinfo;
 
 import org.arend.frontend.ConsoleHelp;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.*;
-import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.Repl;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.scope.Scope;
@@ -62,7 +60,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
    * target resolution; anything else parses as usual.
    */
   @Override
-  protected @Nullable ConsoleQueryTool.ConsoleToolRunner parseReplLine(@NotNull List<String> tokens, @NotNull CommonCliRepl repl) {
+  protected @Nullable ConsoleQueryTool.ConsoleToolRunner parseReplLine(@NotNull List<String> tokens, @NotNull Repl repl) {
     if (!tokens.isEmpty()) return parseArgs(tokens.toArray(new String[0]));
     Scope scope = repl.getServerScope();
     if (scope == null) {
@@ -71,7 +69,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
     }
     return ctx -> {
       @NotNull Options options = new Options();
-      @NotNull List<SourceLibrary> libsInScope = ctx.librariesInScope();
+      @NotNull List<QueryLibrary> libsInScope = ctx.librariesInScope();
       return dumpScope(scope, "current REPL scope", null, options,
           QualifiedName.containsMultipleNonPreludeLibraries(libsInScope), ctx.out());
     };
@@ -92,7 +90,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
       try {
         ArendServer server = ctx.server();
         PrintStream out = ctx.out();
-        List<SourceLibrary> libsInScope = ctx.librariesInScope();
+        List<QueryLibrary> libsInScope = ctx.librariesInScope();
         if (libsInScope.isEmpty()) {
           System.err.println("[ERROR] No libraries in scope.");
           if (options.json) JsonScopePrinter.writeEmpty(out, null);
@@ -103,7 +101,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
         // Refresh symbol indexes so bare-name lookup works AND every source module
         // is registered on the server (the server needs the raw group of the
         // target's module for getReferableScope to walk into).
-        Map<SourceLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(libsInScope, server, false);
+        Map<QueryLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(libsInScope, server, false);
 
         TargetResolver.Target resolved = TargetResolver.resolve(this.spec(), "-sc", server, libsInScope, indexes,
             showLibrary, null, "definition");

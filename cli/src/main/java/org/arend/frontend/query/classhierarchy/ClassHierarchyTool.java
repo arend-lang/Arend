@@ -3,8 +3,6 @@ package org.arend.frontend.query.classhierarchy;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.ConsoleHelp;
-import org.arend.frontend.library.LibraryManager;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.*;
 import org.arend.frontend.query.classhierarchy.ClassHierarchy.ClassNode;
 import org.arend.repl.Repl;
@@ -73,26 +71,26 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
     @Override public int run(QueryContext ctx) {
       ctx.applyTo(options);
       try {
-        LibraryManager libraryManager = ctx.libraryManager();
+        QueryLibraries libraryManager = ctx.libraryManager();
         ArendServer server = ctx.server();
         PrintStream out = ctx.out();
         // Two scopes: the target class is resolved against the full scope (so a class in
         // a dependency can be named), while the hierarchy graph is built by walking only
         // the search scope — narrowed to the requested libraries by `self`, which yields a
         // "my slice" view (subclasses / instances / \new sites in your own libraries).
-        List<SourceLibrary> fullScope = ctx.librariesInScope();
+        List<QueryLibrary> fullScope = ctx.librariesInScope();
         if (fullScope.isEmpty()) {
           System.err.println("[ERROR] No libraries in scope.");
           if (options.json) writeEmptyJson(out);
           return 1;
         }
-        List<SourceLibrary> searchScope = ctx.searchLibraries(options.self);
+        List<QueryLibrary> searchScope = ctx.searchLibraries(options.self);
         boolean showLibrary = QualifiedName.containsMultipleNonPreludeLibraries(fullScope);
 
         // 1) Refresh per-library symbol indexes (needed for bare-name lookup and
         //    cheaply registers every source module on the server so we can query
         //    raw groups below).
-        Map<SourceLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(fullScope, server, options.withTests);
+        Map<QueryLibrary, SymbolIndex> indexes = SymbolIndex.refreshAll(fullScope, server, options.withTests);
 
         // 2) Resolve target spec: qualified, or bare-name via index (bare names are
         //    restricted to classes/records; a qualified spec may resolve anything and is
@@ -114,7 +112,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
 
         // 3) Build the inheritance graph + \new / \instance sites over the search scope.
         List<ModuleLocation> allSources = new ArrayList<>();
-        for (SourceLibrary lib : searchScope) {
+        for (QueryLibrary lib : searchScope) {
           for (ModulePath mp : lib.findModules(false)) {
             allSources.add(new ModuleLocation(lib.getLibraryName(),
                 ModuleLocation.LocationKind.SOURCE, mp));
@@ -189,7 +187,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
 
   /** How one {@code -ch} run is rendered; implemented by {@link TreeClassHierarchyPrinter}, {@link FlatClassHierarchyPrinter}, {@link JsonClassHierarchyPrinter}. */
   interface ClassHierarchyPrinter {
-    void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, LibraryManager libraryManager);
+    void print(PrintStream out, ResolvedTarget target, ClassHierarchy hierarchy, Options options, QueryLibraries libraryManager);
   }
 
   // ---- shared render helpers (used by the printers) ----------------------
@@ -206,7 +204,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
 
   /** The site records in the target's closure, ordered by (module path, line, column). */
   static <T extends ClassHierarchy.Site> List<T> sortedSites(ClassHierarchy hierarchy, List<T> sites,
-      LocatedReferable target, Direction direction, LibraryManager lm) {
+      LocatedReferable target, Direction direction, QueryLibraries lm) {
     List<T> out = hierarchy.sitesInClosure(sites, ClassHierarchy.Site::targetClass, target, direction);
     out.sort(Comparator.comparing((T s) -> sortKeyPath(s.module(), lm))
         .thenComparingInt(ClassHierarchy.Site::line)
@@ -215,7 +213,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
   }
 
   /** The site's location as {@code path:line:column}. */
-  static String siteLocation(ClassHierarchy.Site s, LibraryManager lm) {
+  static String siteLocation(ClassHierarchy.Site s, QueryLibraries lm) {
     return PathDisplayUtils.label(s.module(), lm) + ":" + s.line() + ":" + s.column();
   }
 
@@ -227,7 +225,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
   }
 
   static String nodeLabel(ClassNode node, ClassHierarchy hierarchy,
-      LibraryManager libraryManager, Options options) {
+      QueryLibraries libraryManager, Options options) {
     StringBuilder sb = new StringBuilder();
     sb.append(node.referable.getRefLongName());
     String pos = positionLabel(node.referable, hierarchy.moduleOf(node.referable), libraryManager);
@@ -239,7 +237,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
   }
 
   static String positionLabel(LocatedReferable ref, @Nullable ModuleLocation moduleLoc,
-      LibraryManager libraryManager) {
+      QueryLibraries libraryManager) {
     if (moduleLoc == null) return "";
     String pathLabel = PathDisplayUtils.label(moduleLoc, libraryManager);
     int[] pos = SourcePositionUtils.lineColumn(ref);
@@ -251,7 +249,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
    * Sort key for a module location: the absolute source path string when available,
    * otherwise a synthetic {@code <lib:module>} label.
    */
-  private static String sortKeyPath(ModuleLocation moduleLoc, LibraryManager libraryManager) {
+  private static String sortKeyPath(ModuleLocation moduleLoc, QueryLibraries libraryManager) {
     Path p = PathDisplayUtils.sourcePath(libraryManager.getLibrary(moduleLoc.getLibraryName()), moduleLoc.getModulePath());
     return p != null ? p.toString()
         : "<" + moduleLoc.getLibraryName() + ":" + moduleLoc.getModulePath() + ">";

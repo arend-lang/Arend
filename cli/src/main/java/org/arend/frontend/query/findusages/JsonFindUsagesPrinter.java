@@ -1,6 +1,6 @@
 package org.arend.frontend.query.findusages;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.PathDisplayUtils;
 import org.arend.frontend.query.ResultJson;
 
@@ -13,7 +13,7 @@ import java.util.List;
  */
 final class JsonFindUsagesPrinter implements FindUsagesTool.FindUsagesPrinter {
     @Override
-    public void print(PrintStream out, FindUsagesTool.Target target, List<UsageFinder.UsageHit> hits, FindUsagesTool.Options options, LibraryManager lm) {
+    public void print(PrintStream out, FindUsagesTool.Target target, List<UsageFinder.UsageHit> hits, FindUsagesTool.Options options, QueryLibraries lm) {
         int shown = options.capped(hits.size());
         List<ResultJson.Row> rows = new ArrayList<>(shown);
         for (int i = 0; i < shown; i++) {

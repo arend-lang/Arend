@@ -1,6 +1,6 @@
 package org.arend.frontend.query.proofsearch;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.PathDisplayUtils;
 import org.arend.frontend.query.ResultJson;
 import org.arend.frontend.query.SignaturePrintVisitor;
@@ -15,7 +15,7 @@ import java.util.List;
 final class JsonProofSearchPrinter implements ProofSearchTool.ProofSearchPrinter {
   @Override
   public void print(PrintStream out, ProofSearchEngine.Result found, ProofSearchTool.Options options,
-                    LibraryManager lm, boolean omitLibrary) {
+                    QueryLibraries lm, boolean omitLibrary) {
     List<ResultJson.Row> rows = new ArrayList<>(found.matches().size());
     for (ProofSearchEngine.ProofMatch m : found.matches()) {
       int[] lc = SourcePositionUtils.lineColumn(m.referable());

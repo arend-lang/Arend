@@ -1,6 +1,6 @@
 package org.arend.frontend.query.findusages;
 
-import org.arend.frontend.library.LibraryManager;
+import org.arend.frontend.query.QueryLibraries;
 import org.arend.frontend.query.MatchHighlighter;
 import org.arend.frontend.query.PathDisplayUtils;
 import org.arend.frontend.query.QualifiedName;
@@ -14,7 +14,7 @@ import java.util.List;
  */
 final class TextFindUsagesPrinter implements FindUsagesTool.FindUsagesPrinter {
     @Override
-    public void print(PrintStream out, FindUsagesTool.Target target, List<UsageFinder.UsageHit> hits, FindUsagesTool.Options options, LibraryManager lm) {
+    public void print(PrintStream out, FindUsagesTool.Target target, List<UsageFinder.UsageHit> hits, FindUsagesTool.Options options, QueryLibraries lm) {
         out.println("Usages of " + QualifiedName.format(target.showLibrary(),
                 target.module().getLibraryName(), target.module().getModulePath().toString(),
                 target.referable().getRefLongName().toString())

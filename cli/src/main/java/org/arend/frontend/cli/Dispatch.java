@@ -5,6 +5,7 @@ import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.frontend.query.ConsoleQueryTool;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 /**
@@ -81,7 +82,7 @@ public final class Dispatch {
     // rather than a block per flag. The same tools back the REPL's `:` commands, which is
     // what keeps CLI and REPL behaviour identical.
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
-        ctx.requestedLibraries, ctx.libraryManager, ctx.server,
+        new ArrayList<>(ctx.requestedLibraries), ctx.libraryManager, ctx.server,
         json.stdout(), json.active(), Set.of(), ctx.cancellation);
     for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
       if (!cmdLine.hasOption(tool.shortName())) continue;

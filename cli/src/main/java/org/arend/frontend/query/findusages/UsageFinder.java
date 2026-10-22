@@ -1,17 +1,15 @@
 package org.arend.frontend.query.findusages;
 
+import org.arend.frontend.query.QueryLibrary;
 import org.arend.error.SourcePosition;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
-import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.ArendNameCharSet;
 import org.arend.frontend.query.SourcePositionUtils;
 import org.arend.frontend.query.SymbolIndex;
-import org.arend.frontend.source.StreamRawSource;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
-import org.arend.source.Source;
 import org.arend.server.ArendServer;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.DefinitionData;
@@ -23,9 +21,6 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -60,7 +55,7 @@ public final class UsageFinder {
    * long half of the search and the reason a daemon worker can otherwise be pinned by one.
    */
   public static List<UsageHit> find(LocatedReferable target, ModuleLocation targetModule,
-      List<SourceLibrary> searchScope, ArendServer server,
+      List<QueryLibrary> searchScope, ArendServer server,
       boolean withTests, boolean useAliases, CancellationIndicator cancellation) {
     String aliasName = target.getAliasName();
     Set<String> primaryNames = new LinkedHashSet<>();
@@ -71,11 +66,11 @@ public final class UsageFinder {
     Map<ModuleLocation, Set<String>> perModuleNames = collectLocalAliases(server, searchScope, withTests, primaryNames);
 
     // Text-scan to identify candidate modules. Read each module's source through the
-    // library's Source abstraction (StreamRawSource.getInputStream), NOT the filesystem,
+    // library (QueryLibrary.readModuleText), NOT the filesystem,
     // so this works for zip-backed libraries too; cache the text for the line render below.
     Map<ModuleLocation, List<TextHit>> textHits = new LinkedHashMap<>();
     Map<ModuleLocation, String> moduleText = new LinkedHashMap<>();
-    for (SourceLibrary lib : searchScope) {
+    for (QueryLibrary lib : searchScope) {
       List<ModulePath> modules = new ArrayList<>(lib.findModules(false));
       if (withTests) modules.addAll(lib.findModules(true));
       for (ModulePath mp : modules) {
@@ -88,7 +83,7 @@ public final class UsageFinder {
           if (inTests && !withTests) continue;
           Set<String> names = unionNames(primaryNames, perModuleNames.get(moduleLoc));
           if (names.isEmpty()) continue;
-          String text = readModuleText(lib, moduleLoc.getModulePath(), inTests);
+          String text = lib.readModuleText(moduleLoc.getModulePath(), inTests);
           if (text == null) continue;
           List<TextHit> hits = scanText(text, names);
           if (!hits.isEmpty()) {
@@ -149,7 +144,7 @@ public final class UsageFinder {
   // ---- alias collection --------------------------------------------------
 
   private static Map<ModuleLocation, Set<String>> collectLocalAliases(
-      ArendServer server, List<SourceLibrary> libs, boolean withTests, Set<String> primary) {
+      ArendServer server, List<QueryLibrary> libs, boolean withTests, Set<String> primary) {
     Map<ModuleLocation, Set<String>> perModule = new HashMap<>();
     boolean changed = true;
     int iterations = 0;
@@ -158,7 +153,7 @@ public final class UsageFinder {
     while (changed && iterations < 8) {
       changed = false;
       iterations++;
-      for (SourceLibrary lib : libs) {
+      for (QueryLibrary lib : libs) {
         List<ModulePath> mps = new ArrayList<>(lib.findModules(false));
         if (withTests) mps.addAll(lib.findModules(true));
         for (ModulePath mp : mps) {
@@ -221,22 +216,6 @@ public final class UsageFinder {
       hits.add(new TextHit(line, col));
     }
     return hits;
-  }
-
-  /**
-   * Reads {@code modulePath}'s raw source through the library's {@link Source} abstraction
-   * (works for file and zip), decoded as UTF-8 to match the parser so byte offsets stay
-   * line/col-aligned. {@code null} if the library exposes no such source (e.g. a zip's test
-   * sources) or the read fails.
-   */
-  private static @Nullable String readModuleText(SourceLibrary lib, ModulePath modulePath, boolean inTests) {
-    Source src = lib.getSource(modulePath, inTests);
-    if (!(src instanceof StreamRawSource s)) return null;
-    try (InputStream is = s.getInputStream()) {
-      return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-    } catch (IOException e) {
-      return null;
-    }
   }
 
   /** Splits source text into lines (terminator excluded), indexable by {@code get(line - 1)}. */
