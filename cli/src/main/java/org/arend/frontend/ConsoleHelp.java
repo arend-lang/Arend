@@ -92,7 +92,7 @@ public final class ConsoleHelp {
       With --json output is `{"results":[...],"count":N}` where count is the total match
       count and results is truncated to `limit`; a result carries `alias` when the
       definition has one. Diagnostics go to a log file (default
-      <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
+      ~/.arend/log/arend-symbol-search.log) so stdout stays pure JSON.
 
       EXAMPLES
         arend arend-lib -ss Monoid                    substring
