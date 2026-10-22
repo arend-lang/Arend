@@ -1,0 +1,300 @@
+package org.arend.daemon.server;
+
+import org.arend.daemon.wire.FrameChannel;
+import org.arend.daemon.wire.FrameOutputStream;
+import org.arend.typechecking.computation.BooleanCancellationIndicator;
+import org.jetbrains.annotations.Nullable;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SocketChannel;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/**
+ * The daemon wire protocol: the socket is accepted on one thread, each client read on a pool
+ * thread, and the requests that need the server -- {@code cli} and {@code refresh} -- run one at a
+ * time on a worker, through a {@link Runner}. {@code ping}, {@code status} and {@code cancel} are
+ * answered at once; {@code shutdown} lets what is queued run first, then calls {@code onShutdown}.
+ * Nothing here exits the process.
+ *
+ * <p>Cancellation: each accepted request gets an indicator that a {@code cancel} trips. The runner
+ * hands it to the typechecker; whether it was tripped is re-read once the run returns,
+ * since a cancelled typecheck unwinds inside {@code base/} and comes back as an ordinary return.
+ */
+public final class DaemonServer {
+  /** Where one request's output goes. */
+  public interface Output {
+    /** Names the request to its client, and to a {@code cancel}. */
+    String requestId();
+
+    /** The client's stdout, or with {@code stdout} unset its stderr, as a stream. */
+    OutputStream stream(boolean stdout);
+
+    void out(String text);
+
+    void err(String text);
+
+    /** The request has finished with {@code exitCode}; nothing is written after it. */
+    void done(int exitCode);
+  }
+
+  /** The output of a request a client sent over the socket: frames back to that client. */
+  public record FrameOutput(FrameChannel channel, String requestId) implements Output {
+    @Override
+    public FrameOutputStream stream(boolean stdout) {
+      return new FrameOutputStream(channel, requestId, stdout);
+    }
+
+    @Override
+    public void out(String text) {
+      send(FrameChannel.stdoutFrame(requestId, text));
+    }
+
+    @Override
+    public void err(String text) {
+      send(FrameChannel.stderrFrame(requestId, text));
+    }
+
+    @Override
+    public void done(int exitCode) {
+      send(FrameChannel.doneFrame(requestId, exitCode));
+    }
+
+    private void send(Map<String, Object> frame) {
+      try {
+        channel.write(frame);
+      } catch (IOException ignored) {
+        // The client has gone; the request runs to its end regardless.
+      }
+    }
+  }
+
+  /**
+   * A request for the worker: {@code arend} with {@code args} as issued from the client's
+   * {@code cwd} (null when it did not say), or a {@code refresh} when {@code args} is null.
+   */
+  public record Request(@Nullable List<String> args, @Nullable String cwd, Output output, BooleanCancellationIndicator cancel) {}
+
+  /** How the worker runs a request; returns its exit code. A tripped {@link Request#cancel} abandons it. */
+  @FunctionalInterface
+  public interface Runner {
+    int run(Request request) throws Exception;
+  }
+
+  private record WorkItem(Request request) {}
+
+  /** Makes the worker stop once what was queued before it has run; recognised by identity. */
+  private static final WorkItem SHUTDOWN = new WorkItem(null);
+
+  private final SocketBinder.Bound bound;
+  private final String libraryConfig;
+  private final Map<String, Object> lockedFlags;
+  private final Runner runner;
+  private final Runnable onShutdown;
+  private final long startedAt = System.currentTimeMillis();
+
+  private final LinkedBlockingQueue<WorkItem> workQueue = new LinkedBlockingQueue<>();
+  /**
+   * Every request accepted and not yet answered, by id -- queued and running alike, mapped to the
+   * indicator that abandons it. Registered before the item is queued, so a cancel finds it whether or
+   * not the worker has reached it.
+   */
+  private final ConcurrentHashMap<String, BooleanCancellationIndicator> inFlight = new ConcurrentHashMap<>();
+  /** Null when the worker is idle. */
+  private volatile @Nullable WorkItem current;
+  private volatile boolean draining;
+
+  private final ExecutorService clientPool = Executors.newCachedThreadPool(Thread.ofPlatform().daemon().name("arend-daemon-client").factory());
+  private final Thread acceptThread = Thread.ofPlatform().daemon().name("arend-daemon-accept").unstarted(this::acceptLoop);
+  private final Thread workerThread = Thread.ofPlatform().daemon().name("arend-daemon-worker").unstarted(this::workerLoop);
+
+  /**
+   * @param libraryConfig the canonical arend.yaml of the library served, as {@code status} reports it
+   * @param lockedFlags   the flags fixed at the daemon's start, as {@code status} reports them
+   */
+  public DaemonServer(SocketBinder.Bound bound, String libraryConfig, Map<String, Object> lockedFlags,
+                      Runner runner, Runnable onShutdown) {
+    this.bound = bound;
+    this.libraryConfig = libraryConfig;
+    this.lockedFlags = lockedFlags;
+    this.runner = runner;
+    this.onShutdown = onShutdown;
+  }
+
+  public void start() {
+    acceptThread.start();
+    workerThread.start();
+  }
+
+  public long startedAt() {
+    return startedAt;
+  }
+
+  /** Stops accepting and abandons what is running; the caller removes the lock and the socket. */
+  public void close() {
+    try {
+      bound.channel().close();
+    } catch (IOException ignored) {
+    }
+    inFlight.values().forEach(BooleanCancellationIndicator::cancel);
+    clientPool.shutdownNow();
+    acceptThread.interrupt();
+    workerThread.interrupt();
+  }
+
+  private String state(@Nullable WorkItem running) {
+    return draining ? "DRAINING" : running == null ? "IDLE" : "BUSY";
+  }
+
+  // ───────── accept and client threads ─────────
+
+  private void acceptLoop() {
+    while (!Thread.currentThread().isInterrupted()) {
+      SocketChannel channel;
+      try {
+        channel = bound.channel().accept();
+      } catch (ClosedChannelException e) {
+        return;
+      } catch (IOException e) {
+        if (Thread.currentThread().isInterrupted()) return;
+        System.err.println("[DAEMON] accept failed: " + e.getMessage());
+        continue;
+      }
+      try {
+        clientPool.submit(() -> serveClient(channel));
+      } catch (RuntimeException e) {
+        try {
+          channel.close();
+        } catch (IOException ignored) {
+        }
+        return;
+      }
+    }
+  }
+
+  private void serveClient(SocketChannel channel) {
+    try (channel) {
+      FrameChannel client = new FrameChannel(channel);
+      while (true) {
+        Map<String, Object> request = FrameChannel.read(channel);
+        if (request == null) return;
+        handleRequest(client, request);
+      }
+    } catch (IOException e) {
+      // The peer went away or sent garbage; nothing to answer.
+    }
+  }
+
+  private void handleRequest(FrameChannel channel, Map<String, Object> request) throws IOException {
+    String id = String.valueOf(request.getOrDefault("id", ""));
+    String op = String.valueOf(request.getOrDefault("op", ""));
+    String cwd = request.get("cwd") instanceof String s && !s.isEmpty() ? s : null;
+    switch (op) {
+      case "ping" -> {
+        channel.write(FrameChannel.stateFrame(id, state(current)));
+        channel.write(FrameChannel.doneFrame(id, 0));
+      }
+      case "status" -> {
+        WorkItem running = current;
+        channel.write(FrameChannel.statusFrame(id, state(running), workQueue.size(), System.currentTimeMillis() - startedAt,
+            running == null ? "" : running.request().output().requestId(), libraryConfig, lockedFlags));
+        channel.write(FrameChannel.doneFrame(id, 0));
+      }
+      case "cancel" -> {
+        String target = String.valueOf(request.getOrDefault("targetId", ""));
+        boolean accepted = !target.isEmpty() && cancelTask(target);
+        channel.write(FrameChannel.cancelAckFrame(id, target, accepted));
+        channel.write(FrameChannel.doneFrame(id, accepted ? 0 : 1));
+      }
+      case "shutdown" -> {
+        channel.write(FrameChannel.doneFrame(id, 0));
+        workQueue.add(SHUTDOWN);
+      }
+      case "cli" -> queue(id, request.get("args") instanceof List<?> list ? list.stream().map(String::valueOf).toList() : List.of(), cwd, channel);
+      case "refresh" -> queue(id, null, cwd, channel);
+      default -> {
+        channel.write(FrameChannel.errorFrame(id, "unknown op: " + op));
+        channel.write(FrameChannel.doneFrame(id, 1));
+      }
+    }
+  }
+
+  private void queue(String id, @Nullable List<String> args, @Nullable String cwd, FrameChannel channel) {
+    Request request = new Request(args, cwd, new FrameOutput(channel, id), new BooleanCancellationIndicator());
+    inFlight.put(id, request.cancel());
+    workQueue.add(new WorkItem(request));
+  }
+
+  /**
+   * Abandons {@code target}, running or queued. The flag is tripped first: it belongs to that one
+   * request, and the worker checks it before running an item it has taken. A request still queued
+   * is answered here, since the worker never sees it.
+   *
+   * @return whether the request was one the daemon still holds.
+   */
+  private boolean cancelTask(String target) {
+    BooleanCancellationIndicator cancel = inFlight.get(target);
+    if (cancel == null) return false;
+    cancel.cancel();
+    // A request id names one request, so at most one is queued under it.
+    WorkItem queued = workQueue.stream().filter(item -> item != SHUTDOWN && item.request().output().requestId().equals(target)).findFirst().orElse(null);
+    if (queued != null && workQueue.remove(queued)) {
+      queued.request().output().err("[CANCELLED]\n");
+      complete(queued, FrameChannel.CANCELLED_EXIT_CODE);
+    }
+    return true;
+  }
+
+  // ───────── worker thread ─────────
+
+  private void workerLoop() {
+    while (!Thread.currentThread().isInterrupted()) {
+      WorkItem item;
+      try {
+        item = workQueue.take();
+      } catch (InterruptedException e) {
+        return;
+      }
+      if (item == SHUTDOWN) {
+        draining = true;
+        // Off this thread: stopping the daemon closes it.
+        Thread.ofPlatform().daemon().name("arend-daemon-shutdown").start(onShutdown);
+        return;
+      }
+      Request request = item.request();
+      current = item;
+      int exitCode = 1;
+      try {
+        // Already cancelled: starting the run anyway would hold the worker for a whole typecheck.
+        if (!request.cancel().isCanceled()) exitCode = runner.run(request);
+      } catch (Throwable e) {
+        if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+        // The whole trace: this is the one place it goes, and "NullPointerException: null" says nothing of where.
+        StringWriter trace = new StringWriter();
+        e.printStackTrace(new PrintWriter(trace));
+        request.output().err("[ERROR] " + trace);
+      } finally {
+        if (request.cancel().isCanceled()) {
+          request.output().err("[CANCELLED]\n");
+          exitCode = FrameChannel.CANCELLED_EXIT_CODE;
+        }
+        current = null;
+        complete(item, exitCode);
+      }
+    }
+  }
+
+  /** Forgets {@code item} and only then tells its client, so that a client hearing {@code done} finds the daemon past it. */
+  private void complete(WorkItem item, int exitCode) {
+    inFlight.remove(item.request().output().requestId());
+    item.request().output().done(exitCode);
+  }
+}

@@ -1,6 +1,6 @@
 package org.arend.frontend.cli.daemon.server;
 
-import org.arend.daemon.wire.FrameChannel;
+import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.wire.FrameOutputStream;
 
 import java.io.IOException;
@@ -31,43 +31,41 @@ public final class StreamRedirector {
   private static final ThreadLocal<OutputStream> errTl = new ThreadLocal<>();
 
   private static PrintStream defaultOut;
+  /** Null while not installed. */
   private static PrintStream defaultErr;
-  private static boolean installed = false;
 
   private StreamRedirector() {}
 
   /**
-   * Undoes {@link #install()}. The install is process-wide with no natural end, which is fine in
-   * a daemon JVM and wrong anywhere else: without this, anything that saves and restores
-   * {@code System.out} around its own work -- {@code JsonOutputRedirect} does -- restores the
-   * shim instead of the real stream.
+   * Undoes {@link #install()}, for tests. The install is process-wide with no natural end, which
+   * is fine in a daemon JVM and wrong in a test JVM that runs more than a daemon: without this,
+   * anything that saves and restores {@code System.out} around its own work --
+   * {@code JsonOutputRedirect} does -- restores the shim instead of the real stream.
    */
   public static synchronized void uninstall() {
-    if (!installed) return;
+    if (defaultOut == null) return;
     System.setOut(defaultOut);
     System.setErr(defaultErr);
     defaultOut = null;
     defaultErr = null;
-    installed = false;
   }
 
   /** One-shot global install at daemon startup. */
   public static synchronized void install() {
-    if (installed) return;
+    if (defaultOut != null) return;
     defaultOut = System.out;
     defaultErr = System.err;
     System.setOut(new PrintStream(new DelegatingOutputStream(outTl, defaultOut), true, StandardCharsets.UTF_8));
     System.setErr(new PrintStream(new DelegatingOutputStream(errTl, defaultErr), true, StandardCharsets.UTF_8));
-    installed = true;
   }
 
   /**
    * Binds the current thread's stdout/stderr to a frame stream emitting to {@code client}. The
    * thread-locals are removed by {@link #detach()}.
    */
-  public static void attach(FrameChannel client, String requestId) {
-    outTl.set(new FrameOutputStream(client, requestId, true));
-    errTl.set(new FrameOutputStream(client, requestId, false));
+  public static void attach(DaemonServer.Output client) {
+    outTl.set(client.stream(true));
+    errTl.set(client.stream(false));
   }
 
   /**
@@ -98,10 +96,10 @@ public final class StreamRedirector {
   // ───────── delegating wrapper used by the global PrintStream ─────────
 
   private static final class DelegatingOutputStream extends OutputStream {
-    private final ThreadLocal<OutputStream> tl;
+    private final ThreadLocal<? extends OutputStream> tl;
     private final OutputStream fallback;
 
-    DelegatingOutputStream(ThreadLocal<OutputStream> tl, OutputStream fallback) {
+    DelegatingOutputStream(ThreadLocal<? extends OutputStream> tl, OutputStream fallback) {
       this.tl = tl;
       this.fallback = fallback;
     }

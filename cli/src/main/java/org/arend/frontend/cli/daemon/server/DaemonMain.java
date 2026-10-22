@@ -1,5 +1,6 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
@@ -13,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Child-side daemon entry point, reached through the internal {@code --daemon-bootstrap} flag
@@ -75,7 +77,8 @@ public final class DaemonMain {
     }
     System.out.println("[DAEMON] bound socket: " + bound.address());
 
-    DaemonServer server = new DaemonServer(bound, warmCtx, paths.libraryConfig.toString());
+    CountDownLatch stopped = new CountDownLatch(1);
+    DaemonServer server = CliDaemonRunner.server(bound, warmCtx, paths.libraryConfig.toString(), CliDispatcher::run, stopped::countDown);
     server.start();
 
     // Registered before the lock is written, not after: a SIGTERM in between would otherwise
@@ -102,10 +105,10 @@ public final class DaemonMain {
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
     System.out.flush();
 
-    // Until the worker pulls a shutdown sentinel or a SIGTERM trips the JVM shutdown hook, which
-    // closes the server and interrupts the worker.
+    // Until a client's shutdown has let the queue run out; a SIGTERM goes through the JVM
+    // shutdown hook instead, which closes the server.
     try {
-      server.shutdownLatch().await();
+      stopped.await();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }

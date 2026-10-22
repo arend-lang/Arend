@@ -103,7 +103,7 @@ public class ConsoleMain {
   }
 
   /**
-   * The context a {@link org.arend.frontend.cli.daemon.server.DaemonServer} serves: a
+   * The context a {@link org.arend.daemon.server.DaemonServer} serves: a
    * {@link #warmContext} that also remembers the argv it was built from, which the daemon's
    * {@code status} and {@code refresh} ops need.
    */
