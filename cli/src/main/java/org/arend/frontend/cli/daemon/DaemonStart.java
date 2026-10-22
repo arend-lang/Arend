@@ -141,7 +141,7 @@ public final class DaemonStart {
 
     System.err.println("[ERROR] -d: daemon did not become ready within "
         + READY_TIMEOUT_SECONDS + "s; killing PID " + child.pid());
-    boolean gone = ProcessKill.terminateTree(List.of(child.toHandle()),
+    boolean gone = ProcessKill.terminateTree(child.toHandle(),
         () -> System.err.println("[WARN]  -d: PID " + child.pid() + " did not exit within "
             + ProcessKill.GRACEFUL_TIMEOUT_SECONDS + "s; escalating to SIGKILL"));
     if (gone) {
