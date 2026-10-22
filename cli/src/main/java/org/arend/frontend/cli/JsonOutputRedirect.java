@@ -57,7 +57,7 @@ public final class JsonOutputRedirect implements AutoCloseable {
    * instance. When the log file cannot be opened the split still happens -- JSON on the real
    * stdout -- but diagnostics fall back to stderr rather than being dropped.
    */
-  public static JsonOutputRedirect open(CommandLine cmdLine) {
+  public static JsonOutputRedirect open(CommandLine cmdLine, String clientCwd) {
     String flag = null;
     for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
       if (cmdLine.hasOption(tool.shortName())) {
@@ -72,7 +72,7 @@ public final class JsonOutputRedirect implements AutoCloseable {
 
     PrintStream realStdout = System.out;
     PrintStream realStderr = System.err;
-    Path logPath = resolveLogPath(cmdLine);
+    Path logPath = resolveLogPath(cmdLine, clientCwd);
     try {
       PrintStream log = new PrintStream(Files.newOutputStream(logPath), true, StandardCharsets.UTF_8);
       System.setOut(log);
@@ -113,12 +113,13 @@ public final class JsonOutputRedirect implements AutoCloseable {
   }
 
   /**
-   * The file diagnostics are written to: an explicit {@code --log-file <path>} when given,
-   * else {@code <java.io.tmpdir>/arend-symbol-search.log}, overwritten each run.
+   * The file diagnostics are written to: an explicit {@code --log-file <path>} when given, as a
+   * client in {@code clientCwd} meant it, else {@code <java.io.tmpdir>/arend-symbol-search.log},
+   * overwritten each run.
    */
-  private static Path resolveLogPath(CommandLine cmdLine) {
+  private static Path resolveLogPath(CommandLine cmdLine, String clientCwd) {
     String custom = cmdLine.getOptionValue("log-file");
-    if (custom != null && !custom.isEmpty()) return Paths.get(custom);
+    if (custom != null && !custom.isEmpty()) return CliSetup.against(clientCwd, custom);
     return Paths.get(System.getProperty("java.io.tmpdir"), "arend-symbol-search.log");
   }
 }
