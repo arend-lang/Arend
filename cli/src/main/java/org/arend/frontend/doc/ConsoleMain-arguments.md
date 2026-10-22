@@ -17,7 +17,13 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | `-c`     | `--double-check`                | No | Double-check correctness of the typechecking result                                  |
 | `-i`     | `--interactive`                 | Optional (`type`) | Start an interactive REPL; `type` can be `plain` or `jline` (default is `jline`)     |
 | `-p`     | `--print`                       | Yes (`target`) | Print a definition or a module; format: `Module.Path` or `Module.Path:DefinitionName` |
-| `-ps`    | `--proof-search`                | Yes (`pattern`) | Run proof searcher                                                                   |
+| `-ss`    | `--symbol-search`               | Yes (`pattern`) | Find definitions by name                                                             |
+| `-ps`    | `--proof-search`                | Yes (`pattern`) | Find definitions by signature                                                        |
+| `-fu`    | `--find-usages`                 | Yes (`target`) | Find the usages of a definition                                                      |
+| `-ch`    | `--class-hierarchy`             | Yes (`target`) | Print the super- and subclasses and the instances of a class                         |
+| `-sc`    | `--scope`                       | Yes (`target`) | Print the names in scope at a definition                                             |
+| *(none)* | `--json`                        | No | With a query flag: print the result as one JSON document; diagnostics go to a log    |
+| *(none)* | `--log-file`                    | Yes (`path`) | With `--json`: the log, instead of `~/.arend/log/arend-symbol-search.log`            |
 | `-r`     | `--recompile`                   | No | Recompile all modules from source, ignoring binary caches (`.arc` files)             |
 | *(none)* | `--serialize`                   | No | After typechecking, persist typechecked modules as `.arc` binary caches              |
 | `-t`     | `--test`                        | No | Run tests                                                                            |
