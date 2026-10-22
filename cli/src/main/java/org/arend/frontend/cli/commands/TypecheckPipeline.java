@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * The typecheck command: load what caches are usable, typecheck what is left, report, and
@@ -408,15 +409,15 @@ public final class TypecheckPipeline {
     }
 
     System.out.println();
-    List<Pair<Definition,Integer>> list = new ArrayList<>(sizes.size());
-    for (Map.Entry<Definition, Integer> entry : sizes.entrySet()) {
-      list.add(new Pair<>(entry.getKey(), entry.getValue()));
-    }
-    list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
-    for (Pair<Definition, Integer> pair : list) {
-      TCDefReferable referable = pair.proj1.getReferable();
-      System.out.println((qualify ? referable.getRefFullName() : referable.getRefLongName()) + ": " + pair.proj2);
-    }
+    // Largest first; a tie by name, or the order would be the hash map's.
+    Function<Definition, String> name = definition -> {
+      TCDefReferable referable = definition.getReferable();
+      return String.valueOf(qualify ? referable.getRefFullName() : referable.getRefLongName());
+    };
+    sizes.entrySet().stream()
+        .sorted(Comparator.comparing((Map.Entry<Definition, Integer> entry) -> -entry.getValue())
+            .thenComparing(entry -> name.apply(entry.getKey())))
+        .forEach(entry -> System.out.println(name.apply(entry.getKey()) + ": " + entry.getValue()));
   }
 
   /**
