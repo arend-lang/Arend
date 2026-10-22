@@ -245,11 +245,9 @@ public final class DaemonRpc {
    *   <li>A positional naming a <em>different</em> library. Locally the run would load both; a
    *       daemon holds one.</li>
    *   <li>A positional that exists on disk and is not this library --
-   *       {@code arend ../pkgs/foo.zip} from inside a library with a daemon.
-   *       {@code CliSetup.populateRequestedTargets} skips a positional that exists as a path,
-   *       taking it for the library already loaded, so the daemon would check <em>its own</em>
-   *       library, find nothing wrong and exit 0, while the same command run locally loads the
-   *       zip and checks it. Answering a different question is worse than answering slowly.</li>
+   *       {@code arend ../pkgs/foo.zip} from inside a library with a daemon. The daemon holds no
+   *       such library, and would fail the command, while the same command run locally loads the
+   *       zip and checks it.</li>
    * </ul>
    *
    * <p>A module name routes fine: it does not exist as a path, and the daemon resolves it against

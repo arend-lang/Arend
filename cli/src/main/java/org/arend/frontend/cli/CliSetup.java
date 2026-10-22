@@ -7,6 +7,7 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.frontend.TimedProgressReporter;
+import org.arend.frontend.cli.daemon.DaemonPaths;
 import org.arend.frontend.library.BinaryLoader;
 import org.arend.frontend.library.CliServerRequester;
 import org.arend.frontend.library.FileSourceLibrary;
@@ -227,8 +228,9 @@ public final class CliSetup {
    * a module, or a module and a definition inside it.
    *
    * <p>An argument that is neither is reported and fails the run, exactly as
-   * {@code classifyRequestedTargets} reports "File X not found" on a fresh context. The two have
-   * to agree: the same argv reaching the same libraries must not get two verdicts depending on
+   * {@code classifyRequestedTargets} reports "File X not found" on a fresh context, and so is a path
+   * that is no library, or one that is not loaded here -- which a fresh context would load. The two
+   * have to agree: the same argv reaching the same libraries must not get two verdicts depending on
    * which path read it.
    */
   public static void populateRequestedTargets(CommandContext ctx, CommandLine cmdLine) {
@@ -248,7 +250,16 @@ public final class CliSetup {
     for (String positional : cmdLine.getArgList()) {
       // A positional may name the library the way classifyRequestedTargets accepts one, which
       // includes a path: `arend .` is the library in the current directory.
-      if (loadedLibNames.contains(positional) || Files.exists(against(clientCwd, positional))) continue;
+      if (loadedLibNames.contains(positional)) continue;
+      if (Files.exists(against(clientCwd, positional))) {
+        DaemonPaths library = DaemonPaths.resolve(against(clientCwd, positional));
+        if (library == null) {
+          ctx.systemErrErrorReporter.report(new LibraryIOError(positional, "not a library"));
+        } else if (!loadedLibNames.contains(library.libraryName())) {
+          ctx.systemErrErrorReporter.report(new GeneralError(GeneralError.Level.ERROR, "The daemon does not serve " + library.libraryConfig));
+        }
+        continue;
+      }
       if (positional.indexOf(':') >= 0) {
         // parseFullName reports what is wrong with it and returns null.
         Pair<ModulePath, LongName> parsed = ctx.parseFullName(positional);

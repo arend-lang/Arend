@@ -96,6 +96,21 @@ public class WarmContextTest {
     assertTrue(good.output(), good.output().contains("--- Typechecking Good ---"));
   }
 
+  /** A path to no library loaded here fails, as a local run fails on one that is no library. */
+  @Test
+  public void aPathToNoLibraryLoadedFails() throws IOException {
+    Path file = tempFolder.newFile("notes.txt").toPath();
+    Run notALibrary = run(file.toString());
+    assertEquals(notALibrary.output(), 1, notALibrary.exitCode());
+    assertTrue(notALibrary.output(), notALibrary.output().contains("not a library"));
+
+    Path other = tempFolder.newFolder("other").toPath();
+    Files.writeString(other.resolve("arend.yaml"), "sourcesDir: src\n", StandardCharsets.UTF_8);
+    Run notLoaded = run(other.toString());
+    assertEquals(notLoaded.output(), 1, notLoaded.exitCode());
+    assertTrue(notLoaded.output(), notLoaded.output().contains("does not serve"));
+  }
+
   /** A definition the module does not declare is an error, not a typecheck of nothing that succeeds. */
   @Test
   public void aMissingDefinitionFails() {
