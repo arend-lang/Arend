@@ -107,7 +107,7 @@ public record QualifiedName(@Nullable String library, @Nullable String module, @
     }
     if (owners.size() <= 1) return;
     Collections.sort(owners);
-    System.err.println("[WARN] module '" + modulePath + "' is defined in " + owners
+    QueryConsole.err().println("[WARN] module '" + modulePath + "' is defined in " + owners
         + "; using '" + chosenLibrary + "'. Prefix the spec with '<library>::' to choose another.");
   }
 }

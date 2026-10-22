@@ -59,11 +59,11 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
   private static void warnAboutLeadingApostrophe(List<SymbolPattern> patterns) {
     for (SymbolPattern p : patterns) {
       if (p.mode() == SymbolPattern.Mode.LITERAL && p.source().startsWith("'")) {
-        System.err.println("[WARN] pattern '" + p.source()
+        QueryConsole.err().println("[WARN] pattern '" + p.source()
             + "' starts with `'` — valid as a substring (matches inside foo'X),");
-        System.err.println("       but no Arend short name can start with `'`. Likely shell-quoting"
+        QueryConsole.err().println("       but no Arend short name can start with `'`. Likely shell-quoting"
             + " bleed-through;");
-        System.err.println("       check the query echo line and re-quote if needed.");
+        QueryConsole.err().println("       check the query echo line and re-quote if needed.");
       }
     }
   }
@@ -76,8 +76,8 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
   private static void warnAboutPipes(List<SymbolPattern> patterns) {
     for (SymbolPattern p : patterns) {
       if (p.mode() == SymbolPattern.Mode.LITERAL && p.source().indexOf('|') >= 0) {
-        System.err.println("[WARN] '|' in pattern '" + p.source() + "' is matched literally, not as OR.");
-        System.err.println("       For OR, use whitespace or multiple -ss flags: -ss \"A B C\" or -ss A -ss B -ss C.");
+        QueryConsole.err().println("[WARN] '|' in pattern '" + p.source() + "' is matched literally, not as OR.");
+        QueryConsole.err().println("       For OR, use whitespace or multiple -ss flags: -ss \"A B C\" or -ss A -ss B -ss C.");
         return;
       }
     }
@@ -141,7 +141,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
     boolean ok = new QueryArgs.Tokens()
         // Intercept the unsupported `case-sensitive` token: matching is smart-case,
         // so warn rather than silently treat it as a literal search pattern.
-        .flag("case-sensitive", () -> System.err.println(
+        .flag("case-sensitive", () -> QueryConsole.err().println(
             "[WARN] 'case-sensitive' is no longer a -ss option — matching is smart-case"
                 + " (lowercase matches either case, an uppercase letter is exact); use re: for full case control. Ignoring."))
         .limit(opts)
@@ -178,7 +178,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
         .parse("-ss", args);
     if (!ok) return null;
     if (patterns.isEmpty()) {
-      System.err.println("[ERROR] -ss requires at least one pattern");
+      QueryConsole.err().println("[ERROR] -ss requires at least one pattern");
       return null;
     }
     return new ToolRunner(patterns, opts);
@@ -197,7 +197,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
             // query (matched by part), not an error -- see SymbolPattern.matchesLongName.
             compiled.add(SymbolPattern.compile(p, true));
           } catch (IllegalArgumentException e) {
-            System.err.println("[ERROR] Bad -ss pattern '" + p + "': " + e.getMessage());
+            QueryConsole.err().println("[ERROR] Bad -ss pattern '" + p + "': " + e.getMessage());
             if (options.json) ResultJson.write(out, List.of(), 0);
             return 1;
           }
@@ -206,12 +206,12 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
         warnAboutPipes(compiled);
         warnAboutLeadingApostrophe(compiled);
         // In JSON mode the query echo is diagnostic, not a result -- keep it off stdout.
-        (options.json ? System.err : System.out).println(formatQueryEcho(compiled, options));
+        (options.json ? QueryConsole.err() : QueryConsole.out()).println(formatQueryEcho(compiled, options));
 
         List<QueryLibrary> libsInScope = ctx.searchLibraries(options.self);
         if (libsInScope.isEmpty()) {
           if (options.json) ResultJson.write(out, List.of(), 0);
-          else System.err.println("[ERROR] No libraries to search.");
+          else QueryConsole.err().println("[ERROR] No libraries to search.");
           return 1;
         }
 
@@ -227,7 +227,7 @@ public final class SymbolSearchTool extends ConsoleQueryTool {
         printer.print(out, result, options, showLibrary, libraryManager);
         return 0;
       } catch (RuntimeException e) {
-        System.err.println("[ERROR] -ss internal error: " + e);
+        QueryConsole.err().println("[ERROR] -ss internal error: " + e);
         if (options.json) ResultJson.write(ctx.out(), List.of(), 0);
         return 1;
       }

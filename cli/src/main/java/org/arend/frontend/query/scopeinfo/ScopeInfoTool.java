@@ -92,7 +92,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
         PrintStream out = ctx.out();
         List<QueryLibrary> libsInScope = ctx.librariesInScope();
         if (libsInScope.isEmpty()) {
-          System.err.println("[ERROR] No libraries in scope.");
+          QueryConsole.err().println("[ERROR] No libraries in scope.");
           if (options.json) JsonScopePrinter.writeEmpty(out, null);
           return 1;
         }
@@ -115,7 +115,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
         server.getCheckerFor(List.of(resolved.module())).resolveModules(ctx.cancellation(), ProgressReporter.empty());
         Scope scope = server.getReferableScope(resolved.referable());
         if (scope == null) {
-          System.err.println("[ERROR] No scope available at " + targetLabel(resolved, showLibrary));
+          QueryConsole.err().println("[ERROR] No scope available at " + targetLabel(resolved, showLibrary));
           if (options.json) JsonScopePrinter.writeEmpty(out, targetLabel(resolved, showLibrary));
           return 1;
         }
@@ -123,7 +123,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
         dumpScope(scope, targetLabel(resolved, showLibrary), this.pattern(), options, showLibrary, out);
         return 0;
       } catch (RuntimeException e) {
-        System.err.println("[ERROR] -sc internal error: " + e);
+        QueryConsole.err().println("[ERROR] -sc internal error: " + e);
         if (options.json) JsonScopePrinter.writeEmpty(ctx.out(), null);
         return 1;
       }
@@ -156,7 +156,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
         .parse("-sc", args);
     if (!ok) return null;
     if (spec[0] == null) {
-      System.err.println("[ERROR] -sc requires a <MODULE_PATH>:<GROUP_PATH> (or bare-name) spec");
+      QueryConsole.err().println("[ERROR] -sc requires a <MODULE_PATH>:<GROUP_PATH> (or bare-name) spec");
       return null;
     }
     SymbolPattern pattern = null;
@@ -164,7 +164,7 @@ public final class ScopeInfoTool extends ConsoleQueryTool {
       try {
         pattern = SymbolPattern.compile(patternSrc[0]);
       } catch (IllegalArgumentException e) {
-        System.err.println("[ERROR] Bad -sc pattern: " + e.getMessage());
+        QueryConsole.err().println("[ERROR] Bad -sc pattern: " + e.getMessage());
         return null;
       }
     }

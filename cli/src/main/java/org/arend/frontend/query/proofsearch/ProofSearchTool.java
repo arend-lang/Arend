@@ -87,7 +87,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
         ProofSearchQuery.ParsingResult<ProofSearchQuery> queryResult = ProofSearchQuery.fromString(pattern);
         if (queryResult == null) return 1;
         if (queryResult instanceof ProofSearchQuery.ParsingResult.Error<ProofSearchQuery> error) {
-          System.err.println("Search pattern error at " + error.range + ": " + error.message);
+          QueryConsole.err().println("Search pattern error at " + error.range + ": " + error.message);
           return 1;
         }
         ProofSearchQuery query = ((ProofSearchQuery.ParsingResult.OK<ProofSearchQuery>) queryResult).value;
@@ -106,7 +106,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
         printer.print(out, found, options, ctx.libraryManager(), omitLibrary);
         return 0;
       } catch (RuntimeException e) {
-        System.err.println("[ERROR] -ps internal error: " + e);
+        QueryConsole.err().println("[ERROR] -ps internal error: " + e);
         if (options.json) ResultJson.write(ctx.out(), List.of(), 0);
         return 1;
       }
@@ -136,11 +136,11 @@ public final class ProofSearchTool extends ConsoleQueryTool {
         .parse("-ps", args);
     if (!ok) return null;
     if (patterns.isEmpty()) {
-      System.err.println("[ERROR] Missing proof search pattern");
+      QueryConsole.err().println("[ERROR] Missing proof search pattern");
       return null;
     }
     if (patterns.size() > 1) {
-      System.err.println("[ERROR] Only one proof search pattern is allowed. Use quotes if the pattern contains spaces.");
+      QueryConsole.err().println("[ERROR] Only one proof search pattern is allowed. Use quotes if the pattern contains spaces.");
       return null;
     }
     return new ToolRunner(patterns.getFirst(), opts);

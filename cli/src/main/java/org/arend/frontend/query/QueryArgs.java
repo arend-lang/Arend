@@ -78,7 +78,7 @@ public final class QueryArgs {
     /**
      * Runs the dispatch loop over {@code args}. Returns {@code true} on success;
      * on a {@link ArgError} from any action, prints {@code [ERROR] <tag> <message>}
-     * to {@code System.err} and returns {@code false}.
+     * to {@link QueryConsole#err} and returns {@code false}.
      */
     public boolean parse(String tag, String[] args) {
       try {
@@ -100,7 +100,7 @@ public final class QueryArgs {
         }
         return true;
       } catch (ArgError e) {
-        System.err.println("[ERROR] " + tag + " " + e.getMessage());
+        QueryConsole.err().println("[ERROR] " + tag + " " + e.getMessage());
         return false;
       }
     }

@@ -1,5 +1,6 @@
 package org.arend.frontend.query.proofsearch;
 
+import org.arend.frontend.query.QueryConsole;
 import org.arend.frontend.query.QueryLibrary;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.server.TimedProgressReporter;
@@ -83,12 +84,12 @@ final class ProofSearchEngine {
                                        CancellationIndicator cancellation) {
     // searchLibs is already exclude-free, so no exclusion check is needed here.
     for (QueryLibrary library : searchLibs) {
-      System.out.println("[INFO] Resolving " + library.getLibraryName());
+      QueryConsole.out().println("[INFO] Resolving " + library.getLibraryName());
       long time = System.currentTimeMillis();
       server.getCheckerFor(library.findModules(false).stream()
               .map(modulePath -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)).toList())
           .resolveAll(cancellation, ProgressReporter.empty());
-      System.out.println("[INFO] Resolved " + library.getLibraryName() + " ("
+      QueryConsole.out().println("[INFO] Resolved " + library.getLibraryName() + " ("
           + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
     }
   }

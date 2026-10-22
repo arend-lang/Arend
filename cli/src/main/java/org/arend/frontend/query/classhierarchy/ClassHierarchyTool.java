@@ -80,7 +80,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
         // "my slice" view (subclasses / instances / \new sites in your own libraries).
         List<QueryLibrary> fullScope = ctx.librariesInScope();
         if (fullScope.isEmpty()) {
-          System.err.println("[ERROR] No libraries in scope.");
+          QueryConsole.err().println("[ERROR] No libraries in scope.");
           if (options.json) writeEmptyJson(out);
           return 1;
         }
@@ -105,7 +105,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
             SymbolIndex.kindOf(resolved.referable(), null), resolved.library(), showLibrary);
         SymbolIndex.Kind targetKind = target.kind();
         if (targetKind != SymbolIndex.Kind.CLASS && targetKind != SymbolIndex.Kind.RECORD) {
-          System.err.println("[ERROR] " + target.fullLabel() + " is " + targetKind + ", not a class/record.");
+          QueryConsole.err().println("[ERROR] " + target.fullLabel() + " is " + targetKind + ", not a class/record.");
           if (options.json) writeEmptyJson(out);
           return 1;
         }
@@ -132,7 +132,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
         classHierarchyPrinter.print(out, target, hierarchy, options, libraryManager);
         return 0;
       } catch (RuntimeException e) {
-        System.err.println("[ERROR] -ch internal error: " + e);
+        QueryConsole.err().println("[ERROR] -ch internal error: " + e);
         if (options.json) writeEmptyJson(ctx.out());
         return 1;
       }
@@ -166,7 +166,7 @@ public final class ClassHierarchyTool extends ConsoleQueryTool {
         .parse("-ch", args);
     if (!ok) return null;
     if (spec[0] == null) {
-      System.err.println("[ERROR] -ch requires a class spec");
+      QueryConsole.err().println("[ERROR] -ch requires a class spec");
       return null;
     }
     return new ToolRunner(spec[0], opts);
