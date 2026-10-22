@@ -7,6 +7,8 @@
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CovariantLift
+\import InfCat.Functor.Equiv
+\import InfCat.Paths
 \import InfCat.Square
 \import Logic
 \import Logic.Meta
@@ -102,6 +104,11 @@
       : IsCocartesianLift {A} {Fibers p} {p e, p e', f, (e, idp)} ((e', idp), dpath \lam i => (u i, path \lam m => pi m i)) <-> IsCocartesianArrow p u \elim pi
       | idp => arrowLift-cocartesian u
   }
+
+-- | {cocartesianLift<->arrow} for a lift starting at an arbitrary point of the fiber.
+\lemma cocartesianLift<->arrow-at {E A : \Cat} {p : E ->⁺ A} {e : E} {a a' : A} {f : a ~> a'} (r : p e = a) (l : CovLift (Fibers p) (a, a', f, (e, r)))
+  : IsCocartesianLift l <-> IsCocartesianArrow p (dpath \lam i => (l.2 i).1) \elim a, r
+  | _, idp => cocartesianLift<->arrow p (dpath \lam i => (l.2 i).1) l.1.2 (dpath \lam i => (l.2 i).2)
 
 -- | {p} is a cocartesian fibration if and only if the family of its fibers is.
 \lemma cocartesianMap-char {E A : \Cat} {p : E ->⁺ A} : IsCocartesianMap p <-> IsCocartesianFib (Fibers p)
@@ -275,3 +282,74 @@
       => Contr.Contr_QEquiv (proj-fib (\lam gt => TotBody l {_} {_} {dpath \lam i => (w i).1} gt.2 (y.2, dpath \lam i => (w i).2)) gt)
           (IsEquiv=>contrFibers (IsEquiv.rightFactor (inP (split l w)) (ac w)) gt)
   }
+
+-- | An arrow that is cocartesian for {p} and whose image is cocartesian for {q} is cocartesian for the composite.
+\lemma cocartesianArrow-comp-map {E A S : \Cat} {p : E ->⁺ A} {q : A ->⁺ S} {e e' : E} {u : e ~> e'}
+                                 (uc : IsCocartesianArrow p u) (quc : IsCocartesianArrow q (dmap p u))
+  : IsCocartesianArrow (\lam x => q (p x)) u
+  => \lam w => IsEquiv.trans (uc w) (quc (dmap p w))
+
+-- | A composite of cocartesian maps is cocartesian.
+\lemma cocartesianMap-comp {E A S : \Cat} {p : E ->⁺ A} {q : A ->⁺ S} (pc : IsCocartesianMap p) (qc : IsCocartesianMap q)
+  : IsCocartesianMap (\lam x => q (p x))
+  => \lam {e} f => \case qc f \with {
+    | inP (a', v, s, r, vc) => \case pc v \with {
+      | inP (e', u, s', r', uc) => aux u uc s' r' s r vc
+    }
+  }
+  \where
+    \private \lemma aux {E A S : \Cat} {p : E ->⁺ A} {q : A ->⁺ S} {e e' : E} (u : e ~> e') (uc : IsCocartesianArrow p u)
+                        {a' : A} (s' : p e' = a') {v : p e ~> a'} (r' : comp (dmap p u) (=_~> s') = v)
+                        {a'' : S} (s : q a' = a'') {f : q (p e) ~> a''} (r : comp (dmap q v) (=_~> s) = f) (vc : IsCocartesianArrow q v)
+      : ∃ (e'' : E) (u : e ~> e'') (s : q (p e'') = a'') (comp (dmap (\lam x => q (p x)) u) (=_~> s) = f) (IsCocartesianArrow (\lam x => q (p x)) u)
+      \elim s', r'
+      | idp, idp => inP (e', u, s, transport (\lam x => comp (dmap q x) (=_~> s) = f) comp_idd-right r,
+                         cocartesianArrow-comp-map uc (transport (IsCocartesianArrow q) comp_idd-right vc))
+
+-- | The projection of a product onto its second factor is cocartesian; the lifts are constant in the first factor.
+\lemma proj2-cocartesian {X B : \Cat} : IsCocartesianMap (\lam (v :⁺ \Sigma⁺ X B) => v.2)
+  => \lam {v} f => inP ((v.1, _), dpath \lam i => (v.1, f i), idp, comp_idd-right, proj2-cocartesianArrow f)
+
+-- | Arrows of a product that are constant in the first factor are cocartesian for the second projection.
+\lemma proj2-cocartesianArrow {X B : \Cat} {x : X} {b b' : B} (f : b ~> b')
+  : IsCocartesianArrow (\lam (v :⁺ \Sigma⁺ X B) => v.2) (dpath \lam i => ((x, f i) : \Sigma⁺ X B))
+  => \lam w => inP $ later (\new QEquiv {
+       | f t => ((dpath \lam j => (t.1 j).2, dpath \lam i => dpath \lam j => (t.2 i j).2), (dpath \lam j => (t.1 j).1, dpath \lam i => dpath \lam j => (t.2 i j).1))
+       | ret t => (dpath \lam j => (t.2.1 j, t.1.1 j), dpath \lam i => dpath \lam j => (t.2.2 i j, t.1.2 i j))
+       | ret_f t => idp
+       | f_sec t => idp
+     }) `transQEquiv` contr-right (\lam _ => segal-contr.flipped idd (dpath \lam i => (w i).1))
+
+-- | Cocartesian maps are invariant under equivalences over the base.
+\lemma cocartesianMap-equiv.{u} {A C D : \Cat u} {f : C ->⁺ D} (fe : IsHEquiv f) {p : C ->⁺ A} {p' : D ->⁺ A}
+                                (h : \Pi (z :⁺ C) -> p' (f z) = p z) (c : IsCocartesianMap p') : IsCocartesianMap p
+  => aux (HEquiv_= fe) h c
+  \where
+    \private \lemma aux.{u} {A C D : \Cat u} (r : C = D) {p : C ->⁺ A} {p' : D ->⁺ A}
+                            (h : \Pi (z :⁺ C) -> p' (transport+ (\lam Y => Y) r z) = p z) (c : IsCocartesianMap p') : IsCocartesianMap p \elim r
+      | idp => transport IsCocartesianMap (funExt+ h) c
+
+-- | Cocartesian arrows are invariant under equivalences.
+\lemma cocartesianArrow-equiv.{u} {A C D : \Cat u} {f : C ->⁺ D} (fe : IsHEquiv f) {q : D ->⁺ A} {c c' : C} {u : c ~> c'}
+                                  (uc : IsCocartesianArrow q (dmap f u)) : IsCocartesianArrow (\lam z => q (f z)) u
+  => aux (HEquiv_= fe) uc
+  \where
+    \private \lemma aux.{u} {A C D : \Cat u} (r : C = D) {q : D ->⁺ A} {c c' : C} {u : c ~> c'}
+                            (uc : IsCocartesianArrow q (dmap (\lam z => transport+ (\lam Y => Y) r z) u))
+      : IsCocartesianArrow (\lam z => q (transport+ (\lam Y => Y) r z)) u \elim r
+      | idp => uc
+
+-- | A functor over the base between cocartesian maps that preserves cocartesian arrows and is an equivalence on every fiber is an equivalence.
+\lemma cocartesianMap-fiberwise-equiv.{u} {A E E' : \Cat u} {p : E ->⁺ A} {p' : E' ->⁺ A} (pc : IsCocartesianMap p)
+                                          {F : E ->⁺ E'} (Fp : \Pi (x :⁺ E) -> p' (F x) = p x)
+                                          (Fc : \Pi {e e' : E} {u : e ~> e'} -> IsCocartesianArrow p u -> IsCocartesianArrow p' (dmap F u))
+                                          (Fe : \Pi (a : A) -> IsHEquiv {Fibers p a} {Fibers p' a} (\lam t => (F t.1, Fp t.1 *> t.2)))
+  : IsHEquiv F
+  => \have T => cocartesianFib-fiberwise-equiv (cocartesianMap-char.1 pc) (\lam s => ((F s.2.1, Fp s.2.1 *> s.2.2) : Fibers p' s.1))
+                  (\lam l lc => (cocartesianLift<->arrow-at _ (covLiftImage (\lam s => ((F s.2.1, Fp s.2.1 *> s.2.2) : Fibers p' s.1)) l)).2
+                                   (Fc ((cocartesianLift<->arrow-at _ l).1 lc))) Fe
+     \in IsHEquiv.leftFactor (fibers-sigma-hequiv p') $ transport IsHEquiv (funExt+ \lam e => fiber-path (Fp e)) (IsHEquiv.trans (fibers-sigma-hequiv p) T)
+  \where
+    \private \sfunc fiber-path {E A : \Cat} {p : E ->⁺ A} {a :⁺ A} {e :⁺ E} (q :⁺ p e = a)
+      : ((a, (e, q)) : \Sigma⁺ (a : A) (Fibers p a)) = (p e, (e, idp)) \elim q
+      | idp => idp

@@ -95,3 +95,12 @@
            | dr => inv (square-equiv idd r.1 r.2) *> comp_idd-left
            | sq2 => (square-equiv idd (comp r.1 c.2)).ret (inv (comp-assoc *> pmap (comp __ c.2) dr))
      \in inP (r.1, pmap __.1 (isContr=>isProp (cs c) (comp r.1 c.2, sq2) (idd, dpath \lam i => c.2)), dr)
+
+-- | The image of a lift {l} under a map {g} over the base.
+\func covLiftImage {A : \Cat} {B B' : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> B' s.1) {d : CovLiftData B} (l : CovLift B d)
+  : CovLift B' (d.1, d.2, d.3, g (d.1, d.4))
+  => (g (d.2, l.1), dpath \lam i => g (d.3 i, l.2 i))
+
+-- | {g} sends cocartesian lifts of {B} to cocartesian lifts of {C}.
+\type PreservesCocartLift {A : \Cat} {B C : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) : \Prop
+  => \Pi {d : CovLiftData B} (l : CovLift B d) -> IsCocartesianLift l -> IsCocartesianLift (covLiftImage {A} {B} {C} g l)

@@ -122,3 +122,45 @@
 
 \lemma leftFib=>cocartesian {C : \Cat} {F : C ->⁺ \Cat} (Ff : IsLeftFib F) : IsCocartesianFib F
   => \lam d => inP (leftFib-lift Ff d, leftFib-lift-cocartesian Ff _)
+
+{- | A map of total categories over the base of a cocartesian fibration {B} is an equivalence
+ -   if it preserves cocartesian lifts and is an equivalence on every fiber.
+ -}
+\lemma cocartesianFib-fiberwise-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsCocartesianFib B)
+                                      (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (gc : PreservesCocartLift {A} {B} {C} g)
+                                      (ge : \Pi (a : A) -> IsHEquiv {B a} {C a} (\lam b => g (a, b)))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} (\lam s => (s.1, g s))
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} {\lam s => (s.1, g s)}).1
+      (\lam x y => IsEquiv.trans (inP (dpath-sigma-equiv \lam _ => B))
+                     {\lam s => dpath \lam i => ((s.1 i, lift-map {A} {B} {C} g s.1 s.2 i) : \Sigma⁺ (a : A) (C a))}
+                     (IsEquiv.trans ((totalEquiv (lift-map {A} {B} {C} g)).1 (lift-map-equiv Bf g gc ge))
+                                    (inP (symQEquiv (dpath-sigma-equiv (\lam _ => C) {x.1, g x} {y.1, g y})))),
+       \lam y => TruncP.map ((ff-surj-equiv.2 (ge y.1)).2 y.2) \lam s => ((y.1, s.1), path \lam i => (y.1, s.2 i)))
+  \where \private {
+    -- | The action of {g} on lifts of an arrow of the base.
+    \func lift-map {A : \Cat} {B B' : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> B' s.1)
+                   {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) (t : DPath (\lam i => B (r i)) x.2 y.2)
+      : DPath (\lam i => B' (r i)) (g x) (g y)
+      => dpath \lam i => g (r i, t i)
+
+    -- | {lift-map} corresponds to the action of {g} on arrows out of the target of a cocartesian lift.
+    \lemma lift-map-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsCocartesianFib B)
+                          (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (gc : PreservesCocartLift {A} {B} {C} g)
+                          (ge : \Pi (a : A) -> IsHEquiv {B a} {C a} (\lam b => g (a, b)))
+                          {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) : IsEquiv (lift-map {A} {B} {C} g {x} {y} r)
+      => \let | d : CovLiftData B => (x.1, y.1, r, x.2)
+              | c => cocartesianFib-lift Bf d
+              | cc => cocartesianFib-lift.isCocartesian {_} {_} {Bf} d
+         \in (IsEquiv.parallelEquiv (cocartesian-lift-equiv c cc y.2) (cocartesian-lift-equiv (covLiftImage g c) (gc c cc) (g y)) (lift-map-comm g c cc (gc c cc))).2 ((ff-surj-equiv.2 (ge y.1)).1 c.1 y.2)
+
+    -- | The image under {g} of the factorization through a cocartesian lift {c} is the factorization through the image of {c}.
+    \sfunc lift-map-comm {A : \Cat} {B C : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1)
+                         {x y : \Sigma⁺ (a : A) (B a)} {r : x.1 ~> y.1} (c : CovLift B (x.1, y.1, r, x.2)) (cc : IsCocartesianLift c)
+                         (gcc : IsCocartesianLift (covLiftImage {A} {B} {C} g c))
+                         (t : DPath (\lam i => B (r i)) x.2 y.2)
+      : (cocartesian-square C {_} {x.1, y.1, r, g x} idd idd (dpath \lam _ => r) idd (covLiftImage g c) gcc (g y, lift-map {A} {B} {C} g r t)).center.1
+        = dmap (\lam b => g (y.1, b)) (cocartesian-square B {_} {x.1, y.1, r, x.2} idd idd (dpath \lam _ => r) idd c cc (y.2, t)).center.1
+      => \let h => (cocartesian-square B {_} {x.1, y.1, r, x.2} idd idd (dpath \lam _ => r) idd c cc (y.2, t)).center
+         \in pmap __.1 $ isContr=>isProp (cocartesian-square C {_} {x.1, y.1, r, g x} idd idd (dpath \lam _ => r) idd (covLiftImage g c) gcc (g y, lift-map {A} {B} {C} g r t)) _
+                           (dmap (\lam b => g (y.1, b)) h.1, dpath \lam i => dpath \lam j => g (r j, h.2 i j))
+  }
