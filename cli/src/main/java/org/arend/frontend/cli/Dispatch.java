@@ -55,7 +55,10 @@ public final class Dispatch {
     // A target that named nothing has been reported. Stop rather than dispatching with an
     // empty scope, which means "the whole library".
     if (ctx.exitWithError) return 1;
-    return execute(ctx, parsed.cmdLine());
+    // A relative --log-file means the client's directory too.
+    try (JsonOutputRedirect json = JsonOutputRedirect.open(parsed.cmdLine(), clientCwd)) {
+      return execute(ctx, parsed.cmdLine(), json);
+    }
   }
 
   /**
@@ -63,7 +66,7 @@ public final class Dispatch {
    * caller has nothing to run beforehand that could write to stdout.
    */
   public static int execute(CommandContext ctx, CommandLine cmdLine) {
-    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine)) {
+    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine, null)) {
       return execute(ctx, cmdLine, json);
     }
   }

@@ -266,7 +266,7 @@ public final class CliSetup {
   // ───────── helpers ─────────
 
   /** {@code path} as the client would have seen it: resolved against {@code clientCwd} if given. */
-  private static Path against(String clientCwd, String path) {
+  public static Path against(String clientCwd, String path) {
     Path p = Paths.get(path);
     return clientCwd == null || p.isAbsolute() ? p : Paths.get(clientCwd).resolve(p);
   }

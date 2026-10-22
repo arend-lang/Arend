@@ -227,7 +227,7 @@ public class ConsoleMain {
     // In JSON mode stdout has to carry the document and nothing else, so the redirect covers
     // library loading as well as dispatch -- loader chatter would otherwise land in it. It is
     // also what restores the streams on every exit below, including the early ones.
-    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine)) {
+    try (JsonOutputRedirect json = JsonOutputRedirect.open(cmdLine, null)) {
       if (!CliSetup.loadRequestedLibraries(ctx, cmdLine) || ctx.exitWithError) return 1;
       return Dispatch.execute(ctx, cmdLine, json);
     }
