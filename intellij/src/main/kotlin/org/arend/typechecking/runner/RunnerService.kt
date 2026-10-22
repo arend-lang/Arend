@@ -51,15 +51,7 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                 var cacheLoaded = false
                 reporter.nextStep(1, "Loading binary cache") { reportRawProgress {
                     val cacheLibrary = module?.libraryName ?: library
-                    try {
-                        cacheLoaded = cacheLibrary != null && project.service<ArendBinaryCacheService>().loadCache(cacheLibrary)
-                    } catch (e: ProcessCanceledException) {
-                        throw e
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        LOG.warn("Failed to load binary cache for $cacheLibrary", e)
-                    }
+                    cacheLoaded = cacheLibrary != null && loadCache(cacheLibrary)
                 } }
 
                 val checker = reporter.nextStep(if (onlyResolve) 100 else 5, "Resolving $message") { reportRawProgress { reporter ->
@@ -135,6 +127,19 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
         job.invokeOnCompletion { backgroundJobs.remove(module, job) }
         return job
     }
+
+    /** Loads the binary cache of [library] and of its dependencies, unless it has been; whether it loaded any. A failure is logged. */
+    suspend fun loadCache(library: String): Boolean =
+        try {
+            project.service<ArendBinaryCacheService>().loadCache(library)
+        } catch (e: ProcessCanceledException) {
+            throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Failed to load binary cache for $library", e)
+            false
+        }
 
     companion object {
         private val LOG = logger<RunnerService>()
