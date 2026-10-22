@@ -3,6 +3,8 @@ package org.arend.cli;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.arend.daemon.DaemonPaths;
+import org.arend.daemon.PrivateFiles;
 import org.arend.query.ConsoleQueryTool;
 import org.arend.query.classhierarchy.ClassHierarchyTool;
 import org.arend.query.findusages.FindUsagesTool;
@@ -10,6 +12,10 @@ import org.arend.query.proofsearch.ProofSearchTool;
 import org.arend.query.scopeinfo.ScopeInfoTool;
 import org.arend.query.symbolsearch.SymbolSearchTool;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 /** The options of the {@code arend} command line. */
@@ -33,6 +39,15 @@ public final class ArendOptions {
   /** Whether {@code cmdLine} gives one of {@link #DAEMON_CONTROL_FLAGS}. */
   public static boolean hasDaemonControlFlag(CommandLine cmdLine) {
     return DAEMON_CONTROL_FLAGS.stream().anyMatch(cmdLine::hasOption);
+  }
+
+  /** Why a daemon refuses {@code cmdLine} outright, as every daemon says it; null when it does not. */
+  public static String daemonRefusal(CommandLine cmdLine) {
+    if (cmdLine.hasOption("i")) return "[ERROR] -i (REPL) is not supported in daemon mode";
+    if (hasDaemonControlFlag(cmdLine)) {
+      return "[ERROR] daemon control flags are not valid inside a daemon-served command";
+    }
+    return null;
   }
 
   /**
@@ -65,6 +80,48 @@ public final class ArendOptions {
       if (arg.equals(shortFlag) || arg.equals(longFlag)) return true;
     }
     return false;
+  }
+
+  /** The query tool {@code cmdLine} asks for, or null for a typecheck. */
+  public static ConsoleQueryTool queryTool(CommandLine cmdLine) {
+    return QUERY_TOOLS.stream().filter(tool -> cmdLine.hasOption(tool.shortName())).findFirst().orElse(null);
+  }
+
+  /**
+   * Where a query with {@code --json} writes its diagnostics, to keep stdout the document alone:
+   * {@code --log-file} when given, as a client in {@code cwd} meant it, else
+   * {@link #defaultJsonLog}.
+   */
+  public static Path jsonLogPath(CommandLine cmdLine, String cwd) {
+    String custom = cmdLine.getOptionValue("log-file");
+    if (custom != null && !custom.isEmpty()) return DaemonPaths.against(cwd, custom);
+    return defaultJsonLog();
+  }
+
+  /**
+   * {@code ~/.arend/log/arend-symbol-search.log}: in a directory of the user's own, not the shared
+   * temp directory, where anybody could have put a link of that name to a file of the user's for
+   * the next run to overwrite.
+   */
+  public static Path defaultJsonLog() {
+    return DaemonPaths.configDir().resolve("log").resolve("arend-symbol-search.log");
+  }
+
+  /** Opens {@code logPath} for a query's diagnostics, making the default log's directory first, the user's alone. */
+  public static OutputStream openJsonLog(Path logPath) throws IOException {
+    if (logPath.equals(defaultJsonLog())) PrivateFiles.ensurePrivateDirectory(logPath.getParent());
+    return Files.newOutputStream(logPath);
+  }
+
+  /** What a query with {@code --json} says when its log cannot be opened, and it writes diagnostics to stderr. */
+  public static String jsonLogFailed(ConsoleQueryTool tool, Path logPath, String reason) {
+    return "[WARN] cannot open -" + tool.shortName() + " log file " + logPath + " (" + reason
+        + "); routing diagnostics to stderr instead";
+  }
+
+  /** What a query with {@code --json} says once done, on stderr, of where its diagnostics went. */
+  public static String jsonLogWritten(ConsoleQueryTool tool, Path logPath) {
+    return "[INFO] -" + tool.shortName() + " diagnostics written to " + logPath;
   }
 
   /** Every option {@code arend} accepts. */

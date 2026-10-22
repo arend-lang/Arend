@@ -76,6 +76,11 @@ public final class DaemonPaths {
     return libraryConfig.hashCode();
   }
 
+  /** {@code path} as a client in {@code cwd} meant it: against {@code cwd} when one is given and the path is relative. */
+  public static Path against(String cwd, String path) {
+    return cwd == null ? Paths.get(path) : Paths.get(cwd).resolve(path);
+  }
+
   /**
    * Build a {@code DaemonPaths} from a user-supplied library reference: a directory containing
    * {@code arend.yaml}, the {@code arend.yaml} itself, or any path that resolves to one of those

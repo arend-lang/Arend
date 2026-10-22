@@ -251,8 +251,8 @@ public final class CliSetup {
       // A positional may name the library the way classifyRequestedTargets accepts one, which
       // includes a path: `arend .` is the library in the current directory.
       if (loadedLibNames.contains(positional)) continue;
-      if (Files.exists(against(clientCwd, positional))) {
-        DaemonPaths library = DaemonPaths.resolve(against(clientCwd, positional));
+      if (Files.exists(DaemonPaths.against(clientCwd, positional))) {
+        DaemonPaths library = DaemonPaths.resolve(DaemonPaths.against(clientCwd, positional));
         if (library == null) {
           ctx.systemErrErrorReporter.report(new LibraryIOError(positional, "not a library"));
         } else if (!loadedLibNames.contains(library.libraryName())) {
@@ -277,12 +277,6 @@ public final class CliSetup {
   }
 
   // ───────── helpers ─────────
-
-  /** {@code path} as the client would have seen it: resolved against {@code clientCwd} if given. */
-  public static Path against(String clientCwd, String path) {
-    Path p = Paths.get(path);
-    return clientCwd == null || p.isAbsolute() ? p : Paths.get(clientCwd).resolve(p);
-  }
 
   private static void loadLibrary(CommandContext ctx, SourceLibrary library) {
     System.out.println("[INFO] Loading " + library.getLibraryName());

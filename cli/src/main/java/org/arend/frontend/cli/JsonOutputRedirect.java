@@ -2,15 +2,11 @@ package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.arend.cli.ArendOptions;
-import org.arend.daemon.DaemonPaths;
-import org.arend.daemon.PrivateFiles;
 import org.arend.query.ConsoleQueryTool;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -40,18 +36,18 @@ public final class JsonOutputRedirect implements AutoCloseable {
   /** The log file stream, or null when inactive or when the file could not be opened. */
   private final PrintStream myLog;
   private final Path myLogPath;
-  /** The query flag that triggered the split, e.g. {@code "-ss"}; null when inactive. */
-  private final String myFlag;
+  /** The query tool that triggered the split; null when inactive. */
+  private final ConsoleQueryTool myTool;
   private boolean myClosed;
 
   private JsonOutputRedirect(boolean active, PrintStream realStdout, PrintStream realStderr,
-                             PrintStream log, Path logPath, String flag) {
+                             PrintStream log, Path logPath, ConsoleQueryTool tool) {
     myActive = active;
     myRealStdout = realStdout;
     myRealStderr = realStderr;
     myLog = log;
     myLogPath = logPath;
-    myFlag = flag;
+    myTool = tool;
   }
 
   /**
@@ -60,31 +56,24 @@ public final class JsonOutputRedirect implements AutoCloseable {
    * stdout -- but diagnostics fall back to stderr rather than being dropped.
    */
   public static JsonOutputRedirect open(CommandLine cmdLine, String clientCwd) {
-    String flag = null;
-    for (ConsoleQueryTool tool : ArendOptions.QUERY_TOOLS) {
-      if (cmdLine.hasOption(tool.shortName())) {
-        flag = "-" + tool.shortName();
-        break;
-      }
-    }
+    ConsoleQueryTool tool = ArendOptions.queryTool(cmdLine);
     // `--json` without a query flag is a no-op, and so is a query flag without `--json`.
-    if (flag == null || !cmdLine.hasOption("json")) {
+    if (tool == null || !cmdLine.hasOption("json")) {
       return new JsonOutputRedirect(false, System.out, System.err, null, null, null);
     }
 
     PrintStream realStdout = System.out;
     PrintStream realStderr = System.err;
-    Path logPath = jsonLogPath(cmdLine, clientCwd);
+    Path logPath = ArendOptions.jsonLogPath(cmdLine, clientCwd);
     try {
-      PrintStream log = new PrintStream(openJsonLog(logPath), true, StandardCharsets.UTF_8);
+      PrintStream log = new PrintStream(ArendOptions.openJsonLog(logPath), true, StandardCharsets.UTF_8);
       System.setOut(log);
       System.setErr(log);
-      return new JsonOutputRedirect(true, realStdout, realStderr, log, logPath, flag);
+      return new JsonOutputRedirect(true, realStdout, realStderr, log, logPath, tool);
     } catch (IOException e) {
-      realStderr.println("[WARN] cannot open " + flag + " log file " + logPath + " ("
-          + e.getMessage() + "); routing diagnostics to stderr instead");
+      realStderr.println(ArendOptions.jsonLogFailed(tool, logPath, e.getMessage()));
       System.setOut(realStderr);
-      return new JsonOutputRedirect(true, realStdout, realStderr, null, null, flag);
+      return new JsonOutputRedirect(true, realStdout, realStderr, null, null, tool);
     }
   }
 
@@ -110,33 +99,8 @@ public final class JsonOutputRedirect implements AutoCloseable {
     System.setErr(myRealStderr);
     if (myLog != null) {
       myLog.close();
-      myRealStderr.println("[INFO] " + myFlag + " diagnostics written to " + myLogPath);
+      myRealStderr.println(ArendOptions.jsonLogWritten(myTool, myLogPath));
     }
   }
 
-  /**
-   * Where a query with {@code --json} writes its diagnostics, to keep stdout the document alone:
-   * {@code --log-file} when given, as a client in {@code cwd} meant it, else
-   * {@link #defaultJsonLog}.
-   */
-  static Path jsonLogPath(CommandLine cmdLine, String cwd) {
-    String custom = cmdLine.getOptionValue("log-file");
-    if (custom != null && !custom.isEmpty()) return CliSetup.against(cwd, custom);
-    return defaultJsonLog();
-  }
-
-  /**
-   * {@code ~/.arend/log/arend-symbol-search.log}: in a directory of the user's own, not the shared
-   * temp directory, where anybody could have put a link of that name to a file of the user's for
-   * the next run to overwrite.
-   */
-  static Path defaultJsonLog() {
-    return DaemonPaths.configDir().resolve("log").resolve("arend-symbol-search.log");
-  }
-
-  /** Opens {@code logPath} for a query's diagnostics, making the default log's directory first, the user's alone. */
-  static OutputStream openJsonLog(Path logPath) throws IOException {
-    if (logPath.equals(defaultJsonLog())) PrivateFiles.ensurePrivateDirectory(logPath.getParent());
-    return Files.newOutputStream(logPath);
-  }
 }
