@@ -2,14 +2,16 @@ package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.arend.frontend.ConsoleMain;
+import org.arend.frontend.cli.daemon.DaemonPaths;
+import org.arend.frontend.cli.daemon.PrivateFiles;
 import org.arend.frontend.query.ConsoleQueryTool;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * The {@code --json} output split for the query tools ({@code -ss}/{@code -ps}/{@code -fu}/
@@ -72,9 +74,9 @@ public final class JsonOutputRedirect implements AutoCloseable {
 
     PrintStream realStdout = System.out;
     PrintStream realStderr = System.err;
-    Path logPath = resolveLogPath(cmdLine, clientCwd);
+    Path logPath = jsonLogPath(cmdLine, clientCwd);
     try {
-      PrintStream log = new PrintStream(Files.newOutputStream(logPath), true, StandardCharsets.UTF_8);
+      PrintStream log = new PrintStream(openJsonLog(logPath), true, StandardCharsets.UTF_8);
       System.setOut(log);
       System.setErr(log);
       return new JsonOutputRedirect(true, realStdout, realStderr, log, logPath, flag);
@@ -113,13 +115,28 @@ public final class JsonOutputRedirect implements AutoCloseable {
   }
 
   /**
-   * The file diagnostics are written to: an explicit {@code --log-file <path>} when given, as a
-   * client in {@code clientCwd} meant it, else {@code <java.io.tmpdir>/arend-symbol-search.log},
-   * overwritten each run.
+   * Where a query with {@code --json} writes its diagnostics, to keep stdout the document alone:
+   * {@code --log-file} when given, as a client in {@code cwd} meant it, else
+   * {@link #defaultJsonLog}.
    */
-  private static Path resolveLogPath(CommandLine cmdLine, String clientCwd) {
+  static Path jsonLogPath(CommandLine cmdLine, String cwd) {
     String custom = cmdLine.getOptionValue("log-file");
-    if (custom != null && !custom.isEmpty()) return CliSetup.against(clientCwd, custom);
-    return Paths.get(System.getProperty("java.io.tmpdir"), "arend-symbol-search.log");
+    if (custom != null && !custom.isEmpty()) return CliSetup.against(cwd, custom);
+    return defaultJsonLog();
+  }
+
+  /**
+   * {@code ~/.arend/log/arend-symbol-search.log}: in a directory of the user's own, not the shared
+   * temp directory, where anybody could have put a link of that name to a file of the user's for
+   * the next run to overwrite.
+   */
+  static Path defaultJsonLog() {
+    return DaemonPaths.configDir().resolve("log").resolve("arend-symbol-search.log");
+  }
+
+  /** Opens {@code logPath} for a query's diagnostics, making the default log's directory first, the user's alone. */
+  static OutputStream openJsonLog(Path logPath) throws IOException {
+    if (logPath.equals(defaultJsonLog())) PrivateFiles.ensurePrivateDirectory(logPath.getParent());
+    return Files.newOutputStream(logPath);
   }
 }

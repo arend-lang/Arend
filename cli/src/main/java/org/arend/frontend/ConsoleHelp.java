@@ -86,7 +86,7 @@ public final class ConsoleHelp {
       `library::` prefix appears only when more than one library is in scope), then the
       one-line signature. With --json output is `{"results":[...],"count":N}` where
       count is the total match count and results is truncated to `limit`; diagnostics
-      go to a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
+      go to a log file (default ~/.arend/log/arend-symbol-search.log) so stdout stays pure JSON.
 
       EXAMPLES
         arend arend-lib -ss Monoid                    substring

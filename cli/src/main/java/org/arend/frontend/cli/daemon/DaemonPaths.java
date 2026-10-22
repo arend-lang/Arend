@@ -101,6 +101,14 @@ public final class DaemonPaths {
     }
   }
 
+  public static final String CONFIG_DIR_PROPERTY = "arend.daemon.configDir";
+
+  /** {@code ~/.arend}, unless {@value #CONFIG_DIR_PROPERTY} says otherwise, as a test does. */
+  public static Path configDir() {
+    String override = System.getProperty(CONFIG_DIR_PROPERTY);
+    return override != null ? Paths.get(override) : FileUtils.configDir();
+  }
+
   /**
    * Resolve a library reference by name, preferring the current directory.
    *
