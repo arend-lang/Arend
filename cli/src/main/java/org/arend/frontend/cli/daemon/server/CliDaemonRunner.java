@@ -1,6 +1,7 @@
 package org.arend.frontend.cli.daemon.server;
 
 import org.arend.cli.LockedFlags;
+import org.arend.daemon.LockFile;
 import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
@@ -38,8 +39,9 @@ public final class CliDaemonRunner {
     StreamRedirector.install();
     Map<String, Object> lockedFlags = ctx.bootstrapArgs == null ? Map.of()
         : LockedFlags.extract(ConsoleMain.parseArgs(ctx.bootstrapArgs).cmdLine());
-    return new DaemonServer(bound, token, () -> libraries, lockedFlags,
-        request -> run(ctx, commands, request), onShutdown);
+    // Nobody watches the CLI daemon's activity, so its requests need no description.
+    return new DaemonServer(bound, token, () -> libraries, lockedFlags, LockFile.HOST_CLI,
+        request -> run(ctx, commands, request), onShutdown, args -> "", () -> {});
   }
 
   private static int run(CommandContext ctx, CommandRunner commands, DaemonServer.Request request) {

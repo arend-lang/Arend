@@ -138,7 +138,7 @@ public final class DaemonMain {
     server.start();
 
     LockFile lock = LockFile.ofThisProcess(paths, libraryConfigs, loadedNotOwned(warmCtx, owned), server.startedAt(),
-        bound.address(), token).withProjectDir(DaemonPaths.projectDirOf(owned));
+        bound.address(), LockFile.HOST_CLI, token).withProjectDir(DaemonPaths.projectDirOf(owned));
 
     // Registered before the lock is written, not after: a SIGTERM in between would otherwise
     // leave the lock behind, pointing every later client at a daemon that no longer exists.
@@ -149,7 +149,7 @@ public final class DaemonMain {
     }, "arend-daemon-shutdown"));
 
     // The locks were checked when `-d` was run, and the libraries have taken their seconds to load
-    // since: another daemon may have claimed one.
+    // since: another daemon -- the IDE's, which a start under way does not stop -- may have claimed one.
     String claimed = claimedMeanwhile(owned);
     if (claimed != null) {
       System.err.println("[DAEMON] " + claimed + "; this daemon will not start");

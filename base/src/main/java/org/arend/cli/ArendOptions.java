@@ -18,7 +18,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/** The options of the {@code arend} command line. */
+/**
+ * The options of the {@code arend} command line. Here rather than in the CLI because a daemon
+ * answered from inside IntelliJ reads the same command lines, and must read them the same way.
+ */
 public final class ArendOptions {
   private ArendOptions() {}
 

@@ -44,7 +44,7 @@ import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 /**
  * What {@code arend} prints about a typechecked library on request: {@code -p}, {@code --show-sizes},
  * {@code --show-modules[-with-instances]} and the test count of {@code -t}. Read off the server
- * alone.
+ * alone, so that the CLI and the IntelliJ plugin's daemon print the same.
  */
 public final class TypecheckReports {
   private TypecheckReports() {}

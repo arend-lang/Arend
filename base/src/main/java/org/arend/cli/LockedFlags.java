@@ -11,9 +11,10 @@ import java.util.Map;
  * The CLI flags the daemon captures at bootstrap and applies to every client invocation,
  * overriding any per-call value.
  *
- * <p>One table, because three places read it: {@code CliDispatcher} warns when a client passes
- * one, {@code DaemonServer} reports them in the {@code status} frame, and {@code --help} lists
- * them.
+ * <p>One table, because every daemon and the CLI read it: a daemon warns when a command it serves
+ * passes one, the CLI's daemon reports them in its {@code status} frame, {@code -d} forwards them
+ * to the daemon it starts, and {@code --help} lists them. Here rather than in the CLI because the
+ * IntelliJ plugin's daemon warns about the same flags.
  */
 public final class LockedFlags {
   /** How a locked flag carries its value on the command line. */

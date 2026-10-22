@@ -130,8 +130,9 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
   }
 
   /**
-   * The shared dependencies a tool runs against; built by both the CLI (fresh server) and
-   * the REPL (hot {@link ArendServer}), so the tool need not know which it queries. The two
+   * The shared dependencies a tool runs against; built by the CLI (fresh server), the REPL
+   * and the IntelliJ plugin's daemon (hot {@link ArendServer}s), so the tool need not know
+   * which it queries. The two
    * library sets it exposes — the full {@link #librariesInScope()} vs the top-level
    * {@link #requestedLibraries()} — are chosen between by {@link #searchLibraries(boolean)}.
    *

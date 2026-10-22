@@ -28,7 +28,7 @@ public class LockFileTest {
   }
 
   private static LockFile sample(Path socket) {
-    return new LockFile(4242, "/libs/mylib/arend.yaml", "0123456789abcdef", List.of("/libs/mylib/arend.yaml"), List.of(), LockFile.PROTOCOL_VERSION, 1_700_000_000_000L, "uds:" + socket, LockFile.UNKNOWN_START, "", null, "");
+    return new LockFile(4242, "/libs/mylib/arend.yaml", "0123456789abcdef", List.of("/libs/mylib/arend.yaml"), List.of(), LockFile.PROTOCOL_VERSION, 1_700_000_000_000L, "uds:" + socket, LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, "");
   }
 
   @Test
@@ -44,12 +44,24 @@ public class LockFileTest {
     assertEquals(written, found.lock());
   }
 
+  /** An IDE's lock says so, since its PID must never be signalled. */
+  @Test
+  public void theHostSurvivesTheRoundTrip() throws IOException {
+    Path path = lockPath();
+    LockFile ide = new LockFile(4242, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_INTELLIJ, LockFile.UNKNOWN_START, "", null, "");
+    ide.writeAtomic(path);
+    LockFile read = LockFile.readIfValid(path).orElseThrow();
+    assertEquals(ide, read);
+    assertTrue(read.isHostedByIde());
+  }
+
   /** Every library survives, in order. */
   @Test
   public void theServedLibrariesSurviveTheRoundTrip() throws IOException {
     Path path = lockPath();
     LockFile written = new LockFile(4242, "/a/arend.yaml", "0123456789abcdef",
-        List.of("/a/arend.yaml", "/b/arend.yaml"), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.UNKNOWN_START, "", null, "");
+        List.of("/a/arend.yaml", "/b/arend.yaml"), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, "");
     written.writeAtomic(path);
     LockFile read = LockFile.readIfValid(path).orElseThrow();
     assertEquals(written, read);
@@ -69,8 +81,8 @@ public class LockFileTest {
     Files.createDirectories(b.resolve(".arend"));
     LockFile ours = new LockFile(4242, a.resolve("arend.yaml").toString(), "0123456789abcdef",
         List.of(a.resolve("arend.yaml").toString(), b.resolve("arend.yaml").toString()), List.of(),
-        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.UNKNOWN_START, "", null, "");
-    LockFile theirs = new LockFile(777, b.resolve("arend.yaml").toString(), "fedcba9876543210", List.of(b.resolve("arend.yaml").toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/t", LockFile.UNKNOWN_START, "", null, "");
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, "");
+    LockFile theirs = new LockFile(777, b.resolve("arend.yaml").toString(), "fedcba9876543210", List.of(b.resolve("arend.yaml").toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/t", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, "");
     ours.writeAtomic(DaemonPaths.lockFileIn(a));
     theirs.writeAtomic(DaemonPaths.lockFileIn(b));
 
@@ -92,7 +104,7 @@ public class LockFileTest {
       String sharedConfig = config.resolve("libs/sharedlib/arend.yaml").toString();
       LockFile lock = new LockFile(4242, owned.resolve("arend.yaml").toString(), "0123456789abcdef",
           List.of(sharedConfig, owned.resolve("arend.yaml").toString()), List.of(sharedConfig),
-          LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.UNKNOWN_START, "", null, "");
+          LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, "");
       assertEquals(List.of(DaemonPaths.lockFileIn(owned)), lock.lockFiles());
       assertTrue(lock.hasLoaded(Path.of(sharedConfig)));
 
@@ -114,7 +126,7 @@ public class LockFileTest {
     try {
       Path library = tempFolder.newFolder("lib").toPath();
       Files.createDirectories(library.resolve(".arend"));
-      LockFile lock = new LockFile(4242, library.resolve("arend.yaml").toString(), "0123456789abcdef", List.of(library.resolve("arend.yaml").toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.UNKNOWN_START, "", null, "");
+      LockFile lock = new LockFile(4242, library.resolve("arend.yaml").toString(), "0123456789abcdef", List.of(library.resolve("arend.yaml").toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, "");
       PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
       lock.writeAtomic(lock.registryFile());
       lock.writeAtomic(DaemonPaths.lockFileIn(library));
@@ -164,8 +176,9 @@ public class LockFileTest {
         "pid=notanumber\nlibraryPath=/x\nlibraryHash=ab\n",   // pid is not a number
         "pid=1\nlibraryHash=ab\n",                            // no libraryPath
         "pid=1\nlibraryPath=/x\n",                            // no libraryHash
-        "pid=1\nlibraryPath=/x\nlibraryHash=ab\nlibrary.1=/x\nprotocolVersion=x\n",
-        "pid=1\nlibraryPath=/x\nlibraryHash=ab\n");              // no library.1
+        "pid=1\nlibraryPath=/x\nlibraryHash=ab\nlibrary.1=/x\nhost=cli\nprotocolVersion=x\n",
+        "pid=1\nlibraryPath=/x\nlibraryHash=ab\nhost=cli\n",              // no library.1
+        "pid=1\nlibraryPath=/x\nlibraryHash=ab\nlibrary.1=/x\n");       // no host
     for (String content : damaged) {
       Path path = tempFolder.newFile().toPath();
       Files.writeString(path, content, StandardCharsets.UTF_8);
@@ -191,7 +204,7 @@ public class LockFileTest {
 
   private static LockFile ofProcess(long pid, long processStart) {
     return new LockFile(pid, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
-        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", processStart, "", null, "");
+        LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, processStart, "", null, "");
   }
 
   /**
@@ -225,7 +238,7 @@ public class LockFileTest {
       paths.ensureArendDir();
       String token = LockFile.newToken();
       LockFile lock = LockFile.ofThisProcess(paths, List.of(paths.libraryConfig.toString()), List.of(), 1L, "uds:/s",
-          token);
+          LockFile.HOST_CLI, token);
       lock.writeEverywhere();
 
       assertEquals("", LockFile.readIfValid(paths.lockFile).orElseThrow().token());
@@ -256,21 +269,21 @@ public class LockFileTest {
       DaemonPaths paths = DaemonPaths.resolve(root);
       paths.ensureArendDir();
       LockFile lock = LockFile.ofThisProcess(paths, List.of(paths.libraryConfig.toString()), List.of(), 1L, "uds:/s",
-          LockFile.newToken());
+          LockFile.HOST_CLI, LockFile.newToken());
       lock.writeEverywhere();
 
       Files.delete(paths.lockFile);
       assertEquals(lock, ((LockFile.Read.Found) LockFile.lookup(paths)).lock());
 
       LockFile foreign = new LockFile(4242, paths.libraryConfig.toString(), lock.libraryHash(),
-          List.of(paths.libraryConfig.toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "tcp:127.0.0.1:1", LockFile.UNKNOWN_START, "", null, "");
+          List.of(paths.libraryConfig.toString()), List.of(), LockFile.PROTOCOL_VERSION, 1L, "tcp:127.0.0.1:1", LockFile.HOST_CLI, LockFile.UNKNOWN_START, "", null, "");
       foreign.writeAtomic(paths.lockFile);
       assertEquals(lock, ((LockFile.Read.Found) LockFile.lookup(paths)).lock());
 
       // Once the registry's daemon is gone -- its entry names a process that started at another time -- the
       // foreign copy is only its own word again.
       new LockFile(4242, lock.libraryPath(), lock.libraryHash(), lock.libraries(), List.of(), LockFile.PROTOCOL_VERSION,
-          1L, "uds:/s", 1L, LockFile.newToken(), null, "").writeAtomic(lock.registryFile());
+          1L, "uds:/s", LockFile.HOST_CLI, 1L, LockFile.newToken(), null, "").writeAtomic(lock.registryFile());
       assertTrue(LockFile.lookup(paths) instanceof LockFile.Read.Unregistered);
     } finally {
       System.clearProperty(DaemonPaths.CONFIG_DIR_PROPERTY);
@@ -287,7 +300,7 @@ public class LockFileTest {
     System.setProperty(DaemonPaths.CONFIG_DIR_PROPERTY, tempFolder.newFolder("config").toString());
     try {
       LockFile lock = new LockFile(4242, "/a/arend.yaml", "0123456789abcdef", List.of("/a/arend.yaml"), List.of(),
-          LockFile.PROTOCOL_VERSION, 1L, "uds:/s", 1L, LockFile.newToken(), null, "");
+          LockFile.PROTOCOL_VERSION, 1L, "uds:/s", LockFile.HOST_CLI, 1L, LockFile.newToken(), null, "");
       PrivateFiles.ensurePrivateDirectory(DaemonPaths.registryDir());
       lock.writeAtomic(lock.registryFile());
       java.nio.file.attribute.AclFileAttributeView entry = Files.getFileAttributeView(lock.registryFile(),

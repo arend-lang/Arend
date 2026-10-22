@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TimedProgressReporter implements ProgressReporter<List<? extends Concrete.ResolvableDefinition>> {
-  // Concurrent: the checks of several libraries may be timed side by side.
+  // Concurrent: the IntelliJ plugin's daemon times the checks of several libraries side by side.
   private final Map<TCDefReferable, Pair<Long,Long>> myTimes = new ConcurrentHashMap<>();
 
   public static @NotNull String timeToString(long time) {

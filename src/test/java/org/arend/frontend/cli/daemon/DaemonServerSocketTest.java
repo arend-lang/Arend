@@ -231,7 +231,7 @@ public class DaemonServerSocketTest {
 
   /**
    * {@code arend} answers -h and -v itself, before it looks for a daemon; a daemon answers a query
-   * tool's help alone. A tool's help is served in full; that is not a failure.
+   * tool's help alone, as the IDE's does. A tool's help is served in full; that is not a failure.
    */
   @Test
   public void aToolsHelpSucceedsAndOtherHelpOrABadFlagDoesNot() throws IOException {

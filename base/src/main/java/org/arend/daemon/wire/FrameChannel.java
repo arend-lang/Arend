@@ -133,10 +133,13 @@ public final class FrameChannel {
     return Map.of("id", requestId, "kind", "error", "message", message);
   }
 
-  /** The answer to {@code status}. */
+  /**
+   * The answer to {@code status}. {@code host} is what runs the daemon, as its lock says
+   * ({@code LockFile.HOST_CLI} or {@code LockFile.HOST_INTELLIJ}).
+   */
   public static Map<String, Object> statusFrame(String requestId, String state, int queueDepth, long uptimeMs,
                                                 String currentTaskId, List<String> libraries,
-                                                Map<String, Object> lockedFlags) {
+                                                Map<String, Object> lockedFlags, String host) {
     Map<String, Object> frame = new HashMap<>();
     frame.put("id", requestId);
     frame.put("kind", "status");
@@ -148,6 +151,7 @@ public final class FrameChannel {
     frame.put("protocolVersion", LockFile.PROTOCOL_VERSION);
     frame.put("libraries", libraries);
     frame.put("lockedFlags", lockedFlags);
+    frame.put("host", host);
     return frame;
   }
 

@@ -195,7 +195,7 @@ public final class DaemonRpc {
 
   /**
    * How the build the daemon of {@code lock} runs differs from {@code ours}, for a person; null when
-   * it is the same, or when either is not known -- a daemon or a client run from class
+   * it is the same, or when either is not known -- a daemon in the IDE, a client run from class
    * directories. A daemon of another build answers as a version the user no longer has.
    */
   public static String otherBuild(LockFile lock, BuildIdentity ours) {
@@ -381,8 +381,8 @@ public final class DaemonRpc {
   }
 
   /**
-   * The live daemon holding the project in {@code dir} -- the deepest directory holding the
-   * libraries {@code arend -d} was given -- or null when none does, or when
+   * The live daemon holding the project in {@code dir} -- an IntelliJ project's directory, or the
+   * deepest one holding the libraries {@code arend -d} was given -- or null when none does, or when
    * several do, which {@code explain} says. Only {@code dir} itself counts: nothing is searched for
    * above it.
    */
@@ -429,6 +429,7 @@ public final class DaemonRpc {
       System.out.println("state: " + frame.get("state"));
     } else if ("status".equals(kind)) {
       System.out.println("pid:             " + frame.get("pid"));
+      if (frame.get("host") != null) System.out.println("host:            " + frame.get("host"));
       System.out.println("state:           " + frame.get("state"));
       System.out.println("queueDepth:      " + frame.get("queueDepth"));
       System.out.println("uptimeMs:        " + frame.get("uptimeMs"));

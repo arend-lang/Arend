@@ -127,6 +127,16 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
             false
         }
 
+    /**
+     * Has the IDE show what a typecheck that did not go through [runChecker] changed, as one that did
+     * shows it: the editor's highlighting, the Messages tool window and the views of .arc files.
+     */
+    fun typecheckedElsewhere() {
+        if (!ApplicationManager.getApplication().isUnitTestMode) DaemonCodeAnalyzer.getInstance(project).restart()
+        ApplicationManager.getApplication().invokeLater({ project.service<ArendMessagesService>().update() }, project.disposed)
+        project.serviceIfCreated<ArcViewService>()?.serverChanged()
+    }
+
     companion object {
         private val LOG = logger<RunnerService>()
     }

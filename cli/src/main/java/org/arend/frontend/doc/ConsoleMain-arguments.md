@@ -78,7 +78,7 @@ not repeat the load and the resolve it already did, nor check again what is chec
   output and exit code are the same as running in this process, and a relative path in the
   command means the directory you typed it in, not the daemon's. `--no-daemon` opts out. Naming
   no library, from a directory that is none, a command goes to the daemon of the project there:
-  the deepest directory holding every library `arend -d` was given.
+  an IntelliJ project's, or the deepest directory holding every library `arend -d` was given.
 - Two commands are never routed, because a daemon cannot serve them: `-i` (the REPL is
   interactive) and `-s <dir>` (it names the sources to check, which a served command would
   ignore and then typecheck the daemon's own library instead). Both run in this process.
@@ -99,6 +99,8 @@ not repeat the load and the resolve it already did, nor check again what is chec
   `[CANCELLED]`. A cancelled run writes no `.arc` caches: the modules it never reached were
   not checked, and caching that would leave the gap on disk for later runs to load as if
   they were.
+- The IntelliJ plugin answers as a daemon too, when its project settings say so: for every library
+  of the open project, from the IDE's own server, whose editor then shows what a command checked.
 
 The flags that shape the server itself are fixed when the daemon starts, so a daemon-served
 command cannot change them: `-L`, `-s`, `-e`, `-m`, `-c`, `-r`, `--serialize`.
