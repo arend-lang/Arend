@@ -16,8 +16,8 @@ import java.util.function.Supplier;
 /**
  * One console query tool ({@code -ss}/{@code -ps}/{@code -fu}/{@code -sc}/{@code -ch}):
  * its CLI option identity, argument parsing, help text, and execution. Bundling these
- * lets {@code ConsoleMain} register, help-print, and dispatch every tool by iterating a
- * single registry instead of repeating a near-identical block per tool.
+ * lets the CLI register, help-print, and dispatch every tool by iterating a single registry,
+ * {@code ArendOptions.QUERY_TOOLS}, instead of repeating a near-identical block per tool.
  *
  * <p>Parsing yields an {@link ConsoleToolRunner} -- a parsed, self-runnable query -- so the
  * dispatcher can execute any tool's result through one interface, with no per-tool
@@ -26,7 +26,7 @@ import java.util.function.Supplier;
  * <p>Extends {@link AliasableCommand} because every query tool is also a REPL command
  * (it supplies its own {@code invoke}/{@code description}/{@code help}). The shared
  * parameterless constructor seeds the empty, mutable alias list the REPL clears on each
- * (re)registration, so {@code ConsoleMain} can hold the tools as {@code ConsoleQueryTool}
+ * (re)registration, so the registry can hold the tools as {@code ConsoleQueryTool}
  * and the REPL can register them as {@link AliasableCommand}s with no downcast.
  */
 public abstract class ConsoleQueryTool extends AliasableCommand {

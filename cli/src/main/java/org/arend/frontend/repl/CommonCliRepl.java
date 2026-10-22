@@ -4,7 +4,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.arend.frontend.ConsoleMain;
+import org.arend.cli.ArendOptions;
 import org.arend.query.ConsoleQueryTool;
 import org.arend.query.QueryLibrary;
 import org.arend.query.QueryRepl;
@@ -203,7 +203,7 @@ public abstract class CommonCliRepl extends Repl implements QueryRepl {
     // Each query tool is its own REPL command: ConsoleQueryTool extends AliasableCommand
     // and each tool supplies its own invoke/description/help, so registration is a single
     // loop over the shared registry -- the names live on the tools, not restated here.
-    for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
+    for (ConsoleQueryTool tool : ArendOptions.QUERY_TOOLS) {
       // Idempotent across REPL instances: aliases is display-only, and the command map is
       // a static singleton, so without this the same names would accumulate on re-load.
       tool.aliases.clear();

@@ -1,7 +1,7 @@
 package org.arend.frontend.cli;
 
 import org.apache.commons.cli.CommandLine;
-import org.arend.frontend.ConsoleMain;
+import org.arend.cli.ArendOptions;
 import org.arend.daemon.DaemonPaths;
 import org.arend.daemon.PrivateFiles;
 import org.arend.query.ConsoleQueryTool;
@@ -61,7 +61,7 @@ public final class JsonOutputRedirect implements AutoCloseable {
    */
   public static JsonOutputRedirect open(CommandLine cmdLine, String clientCwd) {
     String flag = null;
-    for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
+    for (ConsoleQueryTool tool : ArendOptions.QUERY_TOOLS) {
       if (cmdLine.hasOption(tool.shortName())) {
         flag = "-" + tool.shortName();
         break;
