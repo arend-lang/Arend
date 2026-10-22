@@ -8,6 +8,7 @@ include(
     "api",
     "base",
     "cli",
+    "mcp",
     "proto",
     "parser",
     "intellij",

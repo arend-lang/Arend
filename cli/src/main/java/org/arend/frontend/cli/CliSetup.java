@@ -55,9 +55,10 @@ public final class CliSetup {
   }
 
   /**
-   * Resolves the library search path, all a command a daemon answers needs. A {@code -L} value
-   * that is not a directory sets {@link CommandContext#exitWithError}, so that every such argument
-   * is reported rather than just the first.
+   * Resolves the library search path, all a command answered elsewhere -- by a daemon, or by the
+   * MCP server -- needs. A {@code -L} value that is not a directory sets
+   * {@link CommandContext#exitWithError}, so that every such argument is reported rather than just
+   * the first.
    */
   public static void readLibDirs(CommandContext ctx, CommandLine cmdLine) {
     if (cmdLine.hasOption("L")) {
@@ -229,7 +230,7 @@ public final class CliSetup {
    *
    * <p>The command is scoped as a local run would be: to the served libraries its positionals
    * name; failing that, the library of the directory it was issued from; failing that -- a client
-   * with no directory -- all of them.
+   * with no directory, such as the MCP server -- all of them.
    *
    * <p>An argument that is neither is reported and fails the run, exactly as
    * {@code classifyRequestedTargets} reports "File X not found" on a fresh context, and so is a path

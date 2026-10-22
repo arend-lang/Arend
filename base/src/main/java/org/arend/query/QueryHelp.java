@@ -1,8 +1,8 @@
 package org.arend.query;
 
 /**
- * The help of every query tool, for the CLI's {@code <flag> --help} and the REPL's {@code :help}
- * alike.
+ * The help of every query tool, for the CLI's {@code <flag> --help}, the REPL's {@code :help} and
+ * the daemon's MCP tool descriptions alike.
  */
 public final class QueryHelp {
   private QueryHelp() {}

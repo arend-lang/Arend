@@ -27,6 +27,8 @@ public final class ConsoleHelp {
         new Group("Daemon control (a long-lived JVM holding the given libraries; a typecheck or "
             + "search about one of them goes to it, unless --no-daemon, -s or -i is given)", List.of(
             "daemon", "daemon-status", "daemon-ping", "daemon-refresh", "daemon-stop", "no-daemon")),
+        new Group("MCP for AI agents (an agent reaches the running daemons through `arend --mcp`)", List.of(
+            "mcp-init", "mcp", "mcp-unregister")),
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded libraries, no typecheck; "
             + "of several of these flags, the first in this list runs)", List.of(
@@ -40,13 +42,14 @@ public final class ConsoleHelp {
 
     // In the order ConsoleMain tries them, so that "the first one given runs" is the truth.
     List<String[]> workflows = List.of(
+        new String[] {"arend --mcp-{init,unregister} [DIR]", "MCP server control"},
         new String[] {"arend [LIBRARY...] -d", "Start a daemon"},
         new String[] {"arend [LIBRARY] --daemon-{stop,status,refresh,ping}", "Daemon control"},
         new String[] {"arend [TARGET...] -i [plain|jline]", "REPL"},
         new String[] {"arend [LIBRARY...] {-ss|-ps|-fu|-ch|-sc} ARG...", "Information retrieval (no typecheck)"},
         new String[] {"arend [TARGET...]", "Typecheck"});
     int column = workflows.stream().mapToInt(workflow -> workflow[0].length()).max().orElse(0) + 4;
-    System.out.println("Workflows, by precedence: after -h and -v, the first one whose flag is given runs.");
+    System.out.println("Workflows, by precedence: after -h, -v and --mcp, the first one whose flag is given runs.");
     for (String[] workflow : workflows) {
       System.out.println("  " + workflow[0] + " ".repeat(column - workflow[0].length()) + workflow[1]);
     }

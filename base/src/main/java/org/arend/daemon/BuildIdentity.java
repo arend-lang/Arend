@@ -21,7 +21,8 @@ import java.util.function.Function;
  * classes, to say it is stopping, and on Windows its open jar does not keep the original from being
  * replaced or deleted.
  *
- * <p>Known only for a process started from a single jar -- {@code arend} or a daemon -- and not for one run from class directories, as a test is, or from the IDE's plugin.
+ * <p>Known only for a process started from a single jar -- {@code arend}, a daemon, the MCP server --
+ * and not for one run from class directories, as a test is, or from the IDE's plugin.
  *
  * @param path     the jar's absolute path
  * @param size     its size in bytes

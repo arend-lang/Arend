@@ -84,7 +84,7 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
    */
   public abstract String cliDescription();
 
-  /** The tool's full grammar (the {@code <flag> --help} text), unwrapped. */
+  /** The tool's full grammar (the {@code <flag> --help} text), unwrapped; the daemon's MCP tool descriptions carry it. */
   public abstract String cliHelp();
 
   /**

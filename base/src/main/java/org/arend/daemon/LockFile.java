@@ -21,8 +21,8 @@ import java.util.regex.Pattern;
  * The record a running daemon leaves on disk so a client can find it: a properties file at
  * {@code <library>/.arend/daemon.lock} in every library the daemon owns, so that a command
  * issued from any of them finds it and a second daemon asked to serve one sees it is taken; and
- * another copy in {@link DaemonPaths#registryDir}, which is how a command about a library no daemon
- * owns -- a shared one under
+ * another copy in {@link DaemonPaths#registryDir}, which is how the MCP server finds every daemon
+ * and a command about a library no daemon owns -- a shared one under
  * {@link DaemonPaths#sharedLibrariesRoot}, a zip, or a dependency a daemon was not given -- finds
  * the daemons that loaded it.
  *

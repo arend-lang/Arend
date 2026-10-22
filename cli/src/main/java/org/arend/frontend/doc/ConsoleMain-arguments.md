@@ -9,7 +9,7 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | Short    | Long                            | Has Arg | Description                                                                          |
 |----------|---------------------------------|---------|--------------------------------------------------------------------------------------|
 | `-h`     | `--help`                        | No | Print help message and exit                                                          |
-| `-v`     | `--version`                     | No | Print language version and exit                                                      |
+| `-v`     | `--version`                     | No | Print the language version and the daemon protocol, and exit                         |
 | `-L`     | `--libdir`                      | Yes (`dir`) | Directory containing libraries (can be specified multiple times)                     |
 | `-s`     | `--sources`                     | Yes (`dir`) | Project source directory                                                             |
 | `-e`     | `--extensions`                  | Yes (`dir`) | Language extensions directory                                                        |
@@ -33,6 +33,9 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | *(none)* | `--daemon-status`               | No | Dump the daemon's queue depth, uptime, current task, protocol version, libraries, locked flags |
 | *(none)* | `--daemon-refresh`              | No | Resolve the daemon's libraries again, to pick up edited, new and deleted files       |
 | *(none)* | `--no-daemon`                   | No | Run in this process even if a daemon serves the library                              |
+| *(none)* | `--mcp`                         | No | Run the MCP server an agent starts; register it with `--mcp-init` instead            |
+| *(none)* | `--mcp-init`                    | Optional (`DIR`) | Register `arend --mcp` in the project configs of the agents installed                |
+| *(none)* | `--mcp-unregister`              | Optional (`DIR`) | Remove what `--mcp-init` registered, printing each entry                             |
 | *(none)* | `--show-times`                  | No | Show typechecking times per definition                                               |
 | *(none)* | `--show-sizes`                  | No | Show sizes (expression node counts) of typechecked definitions, sorted descending    |
 | *(none)* | `--show-modules`                | No | Show module dependency cycles                                                        |
@@ -107,3 +110,17 @@ command cannot change them: `-L`, `-s`, `-e`, `-m`, `-c`, `-r`, `--serialize`.
 Passing one is warned about and ignored; use `--no-daemon` to get a process
 that honours it. `-i` and the `--daemon-*` flags are rejected outright inside a served command.
 
+## Agents
+
+`arend --mcp-init [DIR]` lets the AI agents of the project in `DIR` (the current directory by
+default) use the daemons: it registers the `arend-daemons` MCP server, as `arend --mcp`, in the
+project's own config of each agent installed -- Claude Code (`.mcp.json`), Cursor
+(`.cursor/mcp.json`), VS Code (`.vscode/mcp.json`), Gemini CLI (`.gemini/settings.json`), Junie
+(`.junie/mcp/mcp.json`) and Codex (`.codex/config.toml`) -- and nothing outside the project. It
+needs a current `arend` on the PATH the agents see. `arend --mcp-unregister [DIR]` removes those
+entries again, printing each.
+
+`arend --mcp` is the server an agent starts: a JSON-RPC process on stdin and stdout that holds no
+Arend state of its own. Its tools run commands on the running daemons -- `typecheck`, one per
+query flag, and `daemon_list`, `daemon_ping`, `daemon_status`, `daemon_refresh` and `daemon_stop`
+-- and install the Arend skills for the agent (`skills_list`, `skills_install`, `skills_remove`).

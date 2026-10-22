@@ -7,12 +7,16 @@ import org.arend.ext.module.ModulePath;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.DaemonStop;
+import org.arend.daemon.LockFile;
 import org.arend.daemon.client.DaemonRpc;
+import org.arend.daemon.mcp.DaemonMcpServer;
+import org.arend.daemon.mcp.McpRegistration;
 import org.arend.frontend.cli.daemon.server.DaemonMain;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
 import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.frontend.cli.JsonOutputRedirect;
+import org.arend.frontend.cli.McpCommands;
 import org.arend.query.*;
 import org.arend.frontend.repl.PlainCliRepl;
 import org.arend.frontend.repl.jline.JLineCliRepl;
@@ -56,6 +60,8 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
+        // Read by McpRegistration.checkArend: whether this build serves the daemons of the one asking.
+        System.out.println(McpRegistration.PROTOCOL_LINE + LockFile.PROTOCOL_VERSION);
         return ParsedArgs.served();
       }
 
@@ -135,6 +141,12 @@ public class ConsoleMain {
         && !cmdLine.hasOption("s");
   }
 
+  /** The project directory {@code --mcp-init} and {@code --mcp-unregister} are about: their one positional, else this one. */
+  private static Path projectDir(CommandLine cmdLine) {
+    List<String> positional = cmdLine.getArgList();
+    return Paths.get(positional.isEmpty() ? "." : positional.getFirst()).toAbsolutePath().normalize();
+  }
+
   /** @return the process exit code. */
   private int run(String[] args) {
     ParsedArgs parsed = parseArgs(args);
@@ -144,6 +156,10 @@ public class ConsoleMain {
     CommandContext ctx = new CommandContext();
     // Only the library search path yet: a command a daemon answers needs no server of its own.
     CliSetup.readLibDirs(ctx, cmdLine);
+
+    if (cmdLine.hasOption("mcp")) return DaemonMcpServer.run(ctx.libDirs);
+    if (cmdLine.hasOption("mcp-init")) return McpCommands.initMcp(projectDir(cmdLine));
+    if (cmdLine.hasOption("mcp-unregister")) return McpCommands.unregisterMcp(projectDir(cmdLine));
 
     // A recoverable error must not reach a daemon: -d would bake a bad -L into a server that
     // outlives the command, and routing would hand the work to one built from a context this
