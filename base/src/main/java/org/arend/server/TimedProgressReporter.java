@@ -1,18 +1,19 @@
-package org.arend.frontend;
+package org.arend.server;
 
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.server.ProgressReporter;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TimedProgressReporter implements ProgressReporter<List<? extends Concrete.ResolvableDefinition>> {
-  private final Map<TCDefReferable, Pair<Long,Long>> myTimes = new HashMap<>();
+  // Concurrent: the checks of several libraries may be timed side by side.
+  private final Map<TCDefReferable, Pair<Long,Long>> myTimes = new ConcurrentHashMap<>();
 
   public static @NotNull String timeToString(long time) {
     if (time < 10000) {
@@ -43,17 +44,18 @@ public class TimedProgressReporter implements ProgressReporter<List<? extends Co
     }
   }
 
-  public void print() {
+  /** {@code --show-times}: how long each definition checked took, longest first. */
+  public void print(PrintStream out) {
     if (myTimes.isEmpty()) return;
 
-    System.out.println();
+    out.println();
     List<Pair<TCDefReferable,Long>> list = new ArrayList<>(myTimes.size());
     for (Map.Entry<TCDefReferable, Pair<Long, Long>> entry : myTimes.entrySet()) {
       list.add(new Pair<>(entry.getKey(), entry.getValue().proj2));
     }
     list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
     for (Pair<TCDefReferable, Long> pair : list) {
-      System.out.println(pair.proj1.getRefLongName() + ": " + timeToString(pair.proj2));
+      out.println(pair.proj1.getRefLongName() + ": " + timeToString(pair.proj2));
     }
   }
 }

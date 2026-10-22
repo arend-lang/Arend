@@ -1,7 +1,7 @@
 package org.arend.frontend.query.proofsearch;
 
 import org.arend.ext.module.ModuleLocation;
-import org.arend.frontend.TimedProgressReporter;
+import org.arend.server.TimedProgressReporter;
 import org.arend.frontend.library.SourceLibrary;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.EmptyScope;
