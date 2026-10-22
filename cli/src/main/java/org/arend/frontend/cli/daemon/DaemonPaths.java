@@ -57,6 +57,20 @@ public final class DaemonPaths {
   }
 
   /**
+   * Two resolutions of one library are equal: callers key maps and sets on them, and compare a
+   * library they hold with the ones they find on the disk again.
+   */
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof DaemonPaths other && libraryConfig.equals(other.libraryConfig);
+  }
+
+  @Override
+  public int hashCode() {
+    return libraryConfig.hashCode();
+  }
+
+  /**
    * Build a {@code DaemonPaths} from a user-supplied library reference: a directory containing
    * {@code arend.yaml}, the {@code arend.yaml} itself, or any path that resolves to one of those
    * after canonicalisation. Returns null if it resolves to neither (caller reports it).
