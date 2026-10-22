@@ -14,7 +14,7 @@ import org.arend.server.TimedProgressReporter;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
-import org.arend.frontend.query.TargetResolver;
+import org.arend.query.TargetResolver;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
