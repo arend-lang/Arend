@@ -23,6 +23,7 @@ import org.arend.prelude.Prelude;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 
 public class ConsoleMain {
@@ -80,6 +81,23 @@ public class ConsoleMain {
    * @return the loaded context, or null if there is nothing to hold.
    */
   public CommandContext warmContext(String[] args) {
+    return loadedContext(args, (ctx, cmdLine) -> Dispatch.execute(ctx, cmdLine));
+  }
+
+  /**
+   * The context a {@link org.arend.daemon.server.DaemonServer} serves: its libraries loaded and
+   * resolved, but not typechecked -- a command checks what it asks for when it runs, as IntelliJ
+   * checks the file it has open -- and the argv it was built from remembered, which the daemon's
+   * {@code status} op reports.
+   */
+  public CommandContext runDaemonBootstrap(String[] args) {
+    CommandContext ctx = loadedContext(args, (loaded, cmdLine) -> TypecheckPipeline.resolve(loaded, loaded.requestedLibraries));
+    if (ctx != null) ctx.bootstrapArgs = args.clone();
+    return ctx;
+  }
+
+  /** {@code args}' libraries loaded into a fresh context, then {@code first} run on it; null if there is nothing to hold. */
+  private static CommandContext loadedContext(String[] args, BiConsumer<CommandContext, CommandLine> first) {
     ParsedArgs parsed = parseArgs(args);
     if (parsed.cmdLine() == null) return null;
     CommandLine cmdLine = parsed.cmdLine();
@@ -91,7 +109,7 @@ public class ConsoleMain {
     if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return null;
 
     try {
-      Dispatch.execute(ctx, cmdLine);
+      first.accept(ctx, cmdLine);
     } catch (Throwable t) {
       System.err.println("[ERROR] unhandled exception while loading the context:");
       t.printStackTrace();
@@ -99,17 +117,6 @@ public class ConsoleMain {
     }
     // This command's verdict is not the next one's.
     ctx.beginCommand();
-    return ctx;
-  }
-
-  /**
-   * The context a {@link org.arend.daemon.server.DaemonServer} serves: a
-   * {@link #warmContext} that also remembers the argv it was built from, which the daemon's
-   * {@code status} and {@code refresh} ops need.
-   */
-  public CommandContext runDaemonBootstrap(String[] args) {
-    CommandContext ctx = warmContext(args);
-    if (ctx != null) ctx.bootstrapArgs = args.clone();
     return ctx;
   }
 

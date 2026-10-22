@@ -375,6 +375,24 @@ public final class TypecheckPipeline {
     }
   }
 
+  /**
+   * What a daemon does on starting and on a {@code refresh}: the source modules of
+   * {@code libraries} are brought in line with their directories -- an edited file re-read, a new
+   * one added, a deleted one dropped -- and resolved, but nothing is typechecked. A command checks
+   * what it asks for when it runs, as IntelliJ checks the file it has open.
+   */
+  public static void resolve(CommandContext ctx, List<SourceLibrary> libraries) {
+    Map<SourceLibrary, List<ModulePath>> sources = sourcesOf(libraries);
+    dropDeletedModules(ctx, sources);
+    for (SourceLibrary library : libraries) {
+      long time = System.currentTimeMillis();
+      List<ModuleLocation> modules = sourceLocations(library, sources.get(library));
+      if (!modules.isEmpty()) ctx.server.getCheckerFor(modules).resolveAll(ctx.cancellation, ProgressReporter.empty());
+      System.out.println("[INFO] Resolved " + library.getLibraryName() + " ("
+          + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
+    }
+  }
+
   /** The source modules of each of {@code libraries}, read off its directory. */
   private static Map<SourceLibrary, List<ModulePath>> sourcesOf(List<SourceLibrary> libraries) {
     Map<SourceLibrary, List<ModulePath>> sources = new HashMap<>();

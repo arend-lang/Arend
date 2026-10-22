@@ -52,7 +52,7 @@ public class CancelledRunTest {
   public void aCancelledRunWritesNoBinaryCaches() throws IOException {
     Path root = library();
     CommandContext ctx = new ConsoleMain()
-        .runDaemonBootstrap(new String[] { root.toString(), "--serialize" });
+        .warmContext(new String[] { root.toString(), "--serialize" });
     assertNotNull("bootstrap failed", ctx);
 
     // Baseline: the fixture really does write caches when a run completes.

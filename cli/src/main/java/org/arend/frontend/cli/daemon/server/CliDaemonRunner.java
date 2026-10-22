@@ -5,7 +5,7 @@ import org.arend.daemon.server.DaemonServer;
 import org.arend.daemon.server.SocketBinder;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.CommandContext;
-import org.arend.frontend.cli.Dispatch;
+import org.arend.frontend.cli.commands.TypecheckPipeline;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 
 import java.util.Map;
@@ -13,8 +13,8 @@ import java.util.Map;
 /**
  * How the CLI's daemon runs a request: against the warm {@link CommandContext} it was started
  * with, with the worker's {@code System.out} / {@code System.err} streaming to the client as frames.
- * A client's command goes through {@link CliDispatcher}; a {@code refresh} re-runs the daemon's own
- * bootstrap argv.
+ * A client's command goes through {@link CliDispatcher}; a {@code refresh} resolves the served
+ * libraries again, as the daemon did on starting, typechecking nothing.
  */
 public final class CliDaemonRunner {
   /** How a client's command is run. Visible so a test can substitute one it can hold open. */
@@ -44,10 +44,10 @@ public final class CliDaemonRunner {
     StreamRedirector.attach(request.output());
     try {
       if (request.args() != null) return commands.run(ctx, request.args().toArray(new String[0]), request.cwd());
-      // A refresh re-dispatches the daemon's own bootstrap argv against the warm context, so that
-      // source-timestamp checks pick up edits. Not through CliDispatcher: these args are what the
-      // locked flags are locked to, and it would warn that they are being ignored.
-      return Dispatch.run(ctx, ctx.bootstrapArgs == null ? new String[0] : ctx.bootstrapArgs.clone(), request.cwd());
+      // A refresh resolves the served libraries again, as the daemon did on starting.
+      ctx.beginCommand();
+      TypecheckPipeline.resolve(ctx, ctx.requestedLibraries);
+      return ctx.exitWithError ? 1 : 0;
     } finally {
       // The progress counter leaves "\r[37/412] Typechecking Algebra.Ring" open with no newline;
       // without closing it the server's [CANCELLED] would reach the client welded to it.

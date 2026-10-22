@@ -31,7 +31,7 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | *(none)* | `--daemon-stop`                 | No | Stop the daemon serving the library                                                  |
 | *(none)* | `--daemon-ping`                 | No | Report whether the daemon is IDLE or BUSY                                            |
 | *(none)* | `--daemon-status`               | No | Dump the daemon's queue depth, uptime, current task, protocol version, locked flags  |
-| *(none)* | `--daemon-refresh`              | No | Re-run the bootstrap pipeline on the daemon's warm context to pick up source edits   |
+| *(none)* | `--daemon-refresh`              | No | Resolve the daemon's libraries again, to pick up edited, new and deleted files       |
 | *(none)* | `--no-daemon`                   | No | Run in this process even if a daemon serves the library                              |
 | *(none)* | `--show-times`                  | No | Show typechecking times per definition                                               |
 | *(none)* | `--show-sizes`                  | No | Show sizes (expression node counts) of typechecked definitions, sorted descending    |
@@ -64,11 +64,12 @@ Each positional argument is interpreted as one of the following:
 
 ## The daemon
 
-A daemon is a long-lived JVM holding a warm `ArendServer` for one library, so that a
-second `arend` call over the same sources does not repeat the load, the resolve and the
-typecheck it already did.
+A daemon is a long-lived JVM holding a warm `ArendServer` for one library, so that a second
+`arend` call over the same sources does not repeat the load and the resolve it already did, nor
+check again what is checked already.
 
-- `arend LIBRARY -d` starts one: the normal load + typecheck + persist once, then it idles.
+- `arend LIBRARY -d` starts one (`./arend.yaml` when no library is given). It loads the library and
+  resolves it, typechecking nothing: a command checks what it asks for when it runs.
 - After that an ordinary `arend LIBRARY ...` is **routed to the daemon automatically**; the
   output and exit code are the same as running in this process, and a relative path in the
   command means the directory you typed it in, not the daemon's. `--no-daemon` opts out.
