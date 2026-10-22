@@ -38,4 +38,19 @@ public class SocketAddressTest {
           IllegalArgumentException.class, () -> SocketAddress.parse(address));
     }
   }
+
+  /**
+   * A daemon binds the loopback interface and nothing else, so a lock naming another host was not
+   * written by one: following it would send the user's command line to wherever it points.
+   */
+  @Test
+  public void anAddressOffThisMachineIsRejected() {
+    for (String address : List.of("tcp:example.com:443", "tcp:10.0.0.1:4242", "tcp:0.0.0.0:4242",
+        "tcp:127.0.0.1.example.com:4242", "tcp:1270.0.0.1:1", "tcp:127.0.0.256:1", "tcp:::2:1")) {
+      assertThrows("must be rejected: <" + address + ">",
+          IllegalArgumentException.class, () -> SocketAddress.parse(address));
+    }
+    assertEquals(new SocketAddress.Tcp("localhost", 7), SocketAddress.parse("tcp:localhost:7"));
+    assertEquals(new SocketAddress.Tcp("127.1.2.3", 7), SocketAddress.parse("tcp:127.1.2.3:7"));
+  }
 }
