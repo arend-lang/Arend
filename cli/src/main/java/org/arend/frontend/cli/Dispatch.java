@@ -85,8 +85,8 @@ public final class Dispatch {
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
         new ArrayList<>(ctx.requestedLibraries), ctx.libraryManager, ctx.server,
         json.stdout(), json.active(), Set.of(), ctx.cancellation);
-    for (ConsoleQueryTool tool : ArendOptions.QUERY_TOOLS) {
-      if (!cmdLine.hasOption(tool.shortName())) continue;
+    ConsoleQueryTool tool = ArendOptions.queryTool(cmdLine);
+    if (tool != null) {
       ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(cmdLine.getOptionValues(tool.shortName()));
       // The tool has already printed its own diagnostic on a parse failure.
       if (parsed == null) return 1;
