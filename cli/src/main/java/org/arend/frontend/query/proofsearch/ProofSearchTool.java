@@ -104,8 +104,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
         ProofSearchEngine.Result found = ProofSearchEngine.find(query, searchLibs, ctx.server(),
             ctx.excludeLibraries(), options.self, options.limit, ctx.cancellation());
 
-        // Text output goes to System.out (unchanged in the REPL); JSON to the context stream.
-        PrintStream out = options.json ? ctx.out() : System.out;
+        PrintStream out = ctx.out();
         ProofSearchPrinter printer = options.json ? new JsonProofSearchPrinter() : new TextProofSearchPrinter();
         printer.print(out, found, options, ctx.libraryManager(), omitLibrary);
         return 0;
