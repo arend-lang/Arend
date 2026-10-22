@@ -23,7 +23,9 @@ public final class CliDispatcher {
 
   /** @return the exit code the client should report. */
   public static int run(CommandContext ctx, String[] args, String clientCwd) {
-    CommandLine cmdLine = ConsoleMain.parseArgs(args).cmdLine();
+    // Parsed once, here: parsing prints the help, the version or the error, which the client should see once.
+    ConsoleMain.ParsedArgs parsed = ConsoleMain.parseArgs(rebasePathOptions(args, clientCwd));
+    CommandLine cmdLine = parsed.cmdLine();
     // A command line Dispatch will reject anyway is left to it, so that the verdict on argv is
     // reached in exactly one place.
     if (cmdLine != null) {
@@ -44,7 +46,7 @@ public final class CliDispatcher {
       }
     }
 
-    return Dispatch.run(ctx, rebasePathOptions(args, clientCwd), clientCwd);
+    return Dispatch.run(ctx, parsed, clientCwd);
   }
 
   /**
