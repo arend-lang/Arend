@@ -60,7 +60,7 @@ public class ConsoleMain {
   public static ParsedArgs parseArgs(String[] args) {
     if (hasRawFlag(args, "h", "help")) {
       for (ConsoleQueryTool tool : QUERY_TOOLS) {
-        if (hasRawFlag(args, tool.shortName(), tool.longName())) { tool.printHelp(); return ParsedArgs.served(); }
+        if (hasRawFlag(args, tool.shortName(), tool.longName())) { ConsoleHelpRenderer.printTopicHelp(tool.cliHelp()); return ParsedArgs.served(); }
       }
       // else fall through: the general -h handler below prints the grouped help.
     }

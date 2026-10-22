@@ -373,14 +373,6 @@ public final class ConsoleHelp {
         :sc                                    (REPL) dump the current session scope
       """;
 
-  public static void printSymbolSearch() {
-    ConsoleHelpRenderer.printTopicHelp(symbolSearchHelp());
-  }
-
-  public static void printProofSearch() {
-    ConsoleHelpRenderer.printTopicHelp(proofSearchHelp());
-  }
-
   /** The {@code -fu} CLI help: synopsis + shared body + CLI tail (--json note, examples). */
   public static String findUsagesHelp() {
     return FU_HEAD_CLI + FU_BODY + FU_TAIL_CLI;
@@ -391,21 +383,9 @@ public final class ConsoleHelp {
     return FU_BODY + FU_TAIL_REPL;
   }
 
-  public static void printFindUsages() {
-    ConsoleHelpRenderer.printTopicHelp(findUsagesHelp());
-  }
-
-  public static void printClassHierarchy() {
-    ConsoleHelpRenderer.printTopicHelp(CLASS_HIERARCHY_HELP);
-  }
-
   /** The {@code -ch} / {@code :class-hierarchy} help text (shared by the CLI and the REPL). */
   public static String classHierarchyHelp() {
     return CLASS_HIERARCHY_HELP;
-  }
-
-  public static void printScope() {
-    ConsoleHelpRenderer.printTopicHelp(SCOPE_HELP);
   }
 
   /** The {@code -sc} / {@code :scope} help text (shared by the CLI and the REPL). */

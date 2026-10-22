@@ -87,8 +87,8 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
    */
   public abstract String cliDescription();
 
-  /** Prints this tool's full grammar (the {@code <flag> --help} text). */
-  public abstract void printHelp();
+  /** The tool's full grammar (the {@code <flag> --help} text), unwrapped. */
+  public abstract String cliHelp();
 
   /**
    * Parses the tool's sub-arguments into a runnable {@link ConsoleToolRunner}; returns

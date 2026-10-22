@@ -39,8 +39,7 @@ public final class ProofSearchTool extends ConsoleQueryTool {
   @Override public String cliDescription() {
     return "search by signature shape (parameters/codomain). Pass `-ps --help` for the full grammar.";
   }
-
-  @Override public void printHelp() { ConsoleHelp.printProofSearch(); }
+  @Override public String cliHelp() { return ConsoleHelp.proofSearchHelp(); }
 
   // ---- REPL command (:ps / :proof-search) ---------------------------------
 
