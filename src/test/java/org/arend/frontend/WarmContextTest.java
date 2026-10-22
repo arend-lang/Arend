@@ -102,6 +102,15 @@ public class WarmContextTest {
     assertTrue(good.output(), reportsModule(good.output(), "Good"));
   }
 
+  /** The module -p prints is checked too when the command names others, and the run says so. */
+  @Test
+  public void aPrintTargetOutsideTheScopeIsCheckedToo() {
+    Run run = run("Good", "-p", "Other:other");
+    assertEquals(run.output(), 0, run.exitCode());
+    assertTrue(run.output(), run.output().contains("[INFO] -p target Other:other is outside the typecheck scope; adding Other to it"));
+    assertTrue(run.output(), run.output().contains("[ ] Other"));
+  }
+
   /** A path to no library loaded here fails, as a local run fails on one that is no library. */
   @Test
   public void aPathToNoLibraryLoadedFails() throws IOException {
@@ -165,5 +174,15 @@ public class WarmContextTest {
     Run all = run(libRoot.toString());
     assertEquals(all.output(), 0, all.exitCode());
     assertTrue(all.output(), all.output().contains("--- Typechecking lib ---"));
+  }
+
+  /** {@code --lint} reports an import the module does without. */
+  @Test
+  public void lintReportsAnUnusedImport() throws IOException {
+    writeModule("Other", "\\import Good\n\\func other : Nat => 1\n");
+    Run run = run("Other", "--lint");
+    assertEquals(run.output(), 0, run.exitCode());
+    assertTrue(run.output(), Pattern.compile("(?m)^Other:1:\\d+: unused import of 'Good'$").matcher(run.output()).find());
+    assertTrue(run.output(), run.output().contains("Unused imports: 1"));
   }
 }

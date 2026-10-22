@@ -2,9 +2,6 @@ package org.arend.frontend.cli.commands;
 
 import org.apache.commons.cli.CommandLine;
 import org.arend.cli.ArendOptions;
-import org.arend.core.definition.Definition;
-import org.arend.core.expr.visitor.SizeExpressionVisitor;
-import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
@@ -12,48 +9,31 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.server.TimedProgressReporter;
+import org.arend.server.TypecheckReports;
 import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
 import org.arend.query.QualifiedName;
-import org.arend.query.TargetResolver;
-import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
-import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
-import org.arend.error.SourcePosition;
-import org.arend.server.ArendServer;
 import org.arend.server.BinaryCacheFilter;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
-import org.arend.server.impl.DefinitionData;
 import org.arend.server.impl.ErrorService;
-import org.arend.server.imports.ImportUsageData;
 import org.arend.source.PersistableBinarySource;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.ConcreteNamespaceCommand;
-import org.arend.term.group.ConcreteStatement;
-import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
-import org.arend.typechecking.order.MapTarjanSCC;
-
-import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * The typecheck command: load what caches are usable, typecheck what is left, report, and
@@ -179,31 +159,11 @@ public final class TypecheckPipeline {
         System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
         printTimes(timedProgressReporter);
 
-        if (cmdLine.hasOption(ArendOptions.SHOW_SIZES)) {
-          List<ModuleLocation> modules = new ArrayList<>();
-          for (ModuleLocation module : ctx.server.getModules()) {
-            if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-              modules.add(module);
-            }
-          }
-          showSizes(ctx, modules, false);
-        }
-
-        if (cmdLine.hasOption(ArendOptions.SHOW_MODULES)) {
-          System.out.println();
-          System.out.println("Modules cycles:");
-          showModules(ctx, library, true);
-        }
-
-        if (cmdLine.hasOption(ArendOptions.SHOW_MODULES_WITH_INSTANCES)) {
-          System.out.println();
-          System.out.println("Modules with instances cycles:");
-          showModules(ctx, library, false);
-        }
+        TypecheckReports.showRequested(ctx.server, library.getLibraryName(), cmdLine, System.out);
 
         if (cmdLine.hasOption(ArendOptions.LINT)) {
           System.out.println();
-          lint(ctx, library);
+          TypecheckReports.lint(ctx.server, modulesOf(ctx, library, ModuleLocation.LocationKind.SOURCE), ctx.exitWithError, System.out);
         }
 
         if (ctx.doubleCheck && numWithErrors == 0) {
@@ -240,7 +200,7 @@ public final class TypecheckPipeline {
         if (module == null) {
           ctx.systemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
         } else if (definitionName != null) {
-          if (!checkDefinitionExists(ctx.server, module, definitionName, ctx.systemErrErrorReporter)) continue;
+          if (!TypecheckReports.checkDefinitionExists(ctx.server, module, definitionName, ctx.systemErrErrorReporter)) continue;
           FullName fullName = new FullName(module, definitionName);
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), ctx.errorReporter, ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
@@ -277,7 +237,7 @@ public final class TypecheckPipeline {
       boolean qualify = checkedModules.size() > 1;
       printTimes(timedProgressReporter, qualify);
       if (cmdLine.hasOption(ArendOptions.SHOW_SIZES)) {
-        showSizes(ctx, checkedModules, qualify);
+        TypecheckReports.showSizes(ctx.server, checkedModules, qualify, System.out);
       }
 
       if (ctx.doubleCheck && numWithErrors == 0 && !modulesToDoubleCheck.isEmpty()) {
@@ -285,7 +245,7 @@ public final class TypecheckPipeline {
       }
       if (cmdLine.hasOption(ArendOptions.LINT)) {
         System.out.println();
-        lint(ctx, requestedLocations);
+        TypecheckReports.lint(ctx.server, requestedLocations, ctx.exitWithError, System.out);
       }
 
       // See above: a cancelled run has nothing worth caching.
@@ -297,13 +257,13 @@ public final class TypecheckPipeline {
       }
     }
 
-    printDefinitions(ctx, cmdLine.getOptionValue("p"));
+    if (cmdLine.hasOption("p")) {
+      TypecheckReports.printDefinitions(ctx.server, cmdLine.getOptionValue("p"), ctx.systemErrErrorReporter, System.out);
+    }
 
     if (cmdLine.hasOption("t")) {
       for (SourceLibrary library : ctx.requestedLibraries) {
-        System.out.println();
-        System.out.println("--- Running tests in " + library.getLibraryName() + " ---");
-        long time = System.currentTimeMillis();
+        long time = TypecheckReports.testsStarted(library.getLibraryName(), System.out);
 
         List<ModulePath> testModulesToTypecheck = library.findModules(true);
         int totalTestModules = testModulesToTypecheck.size();
@@ -315,28 +275,7 @@ public final class TypecheckPipeline {
         }
         ctx.finishProgressLine();
 
-        time = System.currentTimeMillis() - time;
-
-        int[] total = new int[1];
-        int[] failed = new int[1];
-        for (ModuleLocation module : ctx.server.getModules()) {
-          if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
-            for (ConcreteStatement statement : Objects.requireNonNull(ctx.server.getRawGroup(module)).statements()) {
-              if (statement.group() != null && statement.group().referable() instanceof TCDefReferable referable) {
-                Definition definition = referable.getTypechecked();
-                if (definition != null || referable.getKind().isTypecheckable()) {
-                  total[0]++;
-                  if (definition == null || definition.status() != Definition.TypeCheckingStatus.NO_ERRORS) {
-                    failed[0]++;
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        System.out.println("Tests completed: " + total[0] + ", Failed: " + failed[0]);
-        System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+        TypecheckReports.testsFinished(ctx.server, library.getLibraryName(), time, System.out);
         printTimes(timedProgressReporter);
 
         if (ctx.doubleCheck) {
@@ -392,167 +331,6 @@ public final class TypecheckPipeline {
     }
   }
 
-  private static void showSizes(CommandContext ctx, Collection<ModuleLocation> modules, boolean qualify) {
-    Map<Definition, Integer> sizes = new HashMap<>();
-    for (ModuleLocation module : modules) {
-      for (DefinitionData definitionData : ctx.server.getResolvedDefinitions(module)) {
-        Definition definition = definitionData.definition().getData().getTypechecked();
-        if (definition != null) {
-          sizes.put(definition, SizeExpressionVisitor.getSize(definition));
-        }
-      }
-    }
-
-    System.out.println();
-    // Largest first; a tie by name, or the order would be the hash map's.
-    Function<Definition, String> name = definition -> {
-      TCDefReferable referable = definition.getReferable();
-      return String.valueOf(qualify ? referable.getRefFullName() : referable.getRefLongName());
-    };
-    sizes.entrySet().stream()
-        .sorted(Comparator.comparing((Map.Entry<Definition, Integer> entry) -> -entry.getValue())
-            .thenComparing(entry -> name.apply(entry.getKey())))
-        .forEach(entry -> System.out.println(name.apply(entry.getKey()) + ": " + entry.getValue()));
-  }
-
-  /**
-   * Whether {@code module} declares {@code name}, a definition or a field or constructor of one;
-   * when it does not, says so to {@code errorReporter}. Typechecking a name the module does not
-   * declare checks nothing, and so would succeed.
-   */
-  private static boolean checkDefinitionExists(ArendServer server, ModuleLocation module,
-                                               LongName name, ErrorReporter errorReporter) {
-    ConcreteGroup group = server.getRawGroup(module);
-    if (group != null && TargetResolver.walkLongName(group, name) != null) return true;
-    errorReporter.report(new DefinitionNotFoundError(new FullName(module, name)));
-    return false;
-  }
-
-  private static void printDefinitions(CommandContext ctx, String printString) {
-    if (printString == null) return;
-
-    Pair<ModulePath, LongName> pair = ctx.parseFullName(printString);
-    if (pair != null) {
-      ModuleLocation module = ctx.server.findModule(pair.proj1, null, false, false);
-      if (module == null) {
-        ctx.systemErrErrorReporter.report(new ModuleNotFoundError(pair.proj1));
-      } else {
-        boolean found = pair.proj2 == null;
-        for (DefinitionData definitionData : ctx.server.getResolvedDefinitions(module)) {
-          if (pair.proj2 == null || definitionData.definition().getData().getRefLongName().equals(pair.proj2)) {
-            Definition definition = definitionData.definition().getData().getTypechecked();
-            if (definition != null) {
-              System.out.println();
-              StringBuilder builder = new StringBuilder();
-              ToAbstractVisitor.convert(definition, DEFAULT).prettyPrint(builder, DEFAULT);
-              System.out.println(builder);
-            }
-
-            if (pair.proj2 != null) {
-              found = true;
-              break;
-            }
-          }
-        }
-        if (!found) {
-          ctx.systemErrErrorReporter.report(new DefinitionNotFoundError(new FullName(module, pair.proj2)));
-        }
-      }
-    }
-  }
-
-  private static void lint(CommandContext ctx, SourceLibrary library) {
-    List<ModuleLocation> modules = new ArrayList<>();
-    for (ModuleLocation module : ctx.server.getModules()) {
-      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-        modules.add(module);
-      }
-    }
-    lint(ctx, modules);
-  }
-
-  private static void lint(CommandContext ctx, List<ModuleLocation> modules) {
-    if (ctx.exitWithError) {
-      System.out.println("Unused imports are not reported because the run has errors");
-      return;
-    }
-
-    List<ModuleLocation> sorted = new ArrayList<>(modules);
-    sorted.sort(Comparator.comparing(module -> module.getModulePath().toString()));
-
-    int total = 0;
-    List<ModuleLocation> notAnalysed = new ArrayList<>();
-    for (ModuleLocation module : sorted) {
-      ImportUsageData usage = ctx.server.getNamespaceCommandUsage(module);
-      if (usage == null) {
-        // not fully typechecked, e.g. only one of its definitions was requested: silence here is not "clean"
-        notAnalysed.add(module);
-        continue;
-      }
-      for (ImportUsageData.Part part : usage.getUnusedParts()) {
-        Object data = part.data();
-        System.out.println((data instanceof SourcePosition ? data : module) + ": " + lintMessage(part));
-        total++;
-      }
-    }
-    System.out.println(total == 0 ? "No unused imports" : "Unused imports: " + total);
-    if (!notAnalysed.isEmpty()) {
-      System.out.println("Not analysed (not fully typechecked): " + notAnalysed.size() + " module(s)");
-      for (ModuleLocation module : notAnalysed) {
-        System.out.println("  " + module);
-      }
-    }
-  }
-
-  private static String lintMessage(ImportUsageData.Part part) {
-    String name = "'" + part.name() + "'";
-    return switch (part.kind()) {
-      case IMPORT -> "unused import of " + name;
-      case OPEN -> "unused open of " + name;
-      case NAME -> "unused imported name " + name;
-      case ALIAS -> "unused alias " + name;
-    };
-  }
-
-  private static void showModules(CommandContext ctx, SourceLibrary library, boolean allModules) {
-    Map<ModulePath, List<ModulePath>> map = new HashMap<>();
-    for (ModuleLocation module : ctx.server.getModules()) {
-      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-        ConcreteGroup group = ctx.server.getRawGroup(module);
-        if (group == null) continue;
-        boolean withInstances = allModules;
-        List<ModulePath> dependencies = new ArrayList<>();
-        for (ConcreteStatement statement : group.statements()) {
-          ConcreteNamespaceCommand cmd = statement.command();
-          if (cmd != null && cmd.isImport()) {
-            dependencies.add(new ModulePath(cmd.module().getPath()));
-          }
-          if (!withInstances && !dependencies.isEmpty()) {
-            ConcreteGroup subgroup = statement.group();
-            if (subgroup != null && subgroup.referable().getKind() == GlobalReferable.Kind.INSTANCE) {
-              withInstances = true;
-            }
-          }
-        }
-        if (withInstances) {
-          map.put(module.getModulePath(), dependencies);
-        }
-      }
-    }
-
-    new MapTarjanSCC<>(map) {
-      @Override
-      protected void unitFound(ModulePath unit, boolean withLoops) {
-        System.out.println("[" + unit + "]");
-      }
-
-      @Override
-      protected void sccFound(List<ModulePath> scc) {
-        System.out.println(scc);
-      }
-    }.order();
-  }
-
   private static void reportTypeCheckResult(CommandContext ctx, ModulePath modulePath, GeneralError.Level result) {
     System.out.println("[" + resultChar(result) + "]" + " " + modulePath);
   }
@@ -596,15 +374,10 @@ public final class TypecheckPipeline {
    * {@code --show-*} output and {@code --double-check} pass -- with one module.
    */
   private static void extendScopeForPrintTarget(CommandContext ctx, CommandLine cmdLine) {
-    if (!cmdLine.hasOption("p") || ctx.requestedModules.isEmpty()) return;
-    Pair<ModulePath, LongName> parsed = ctx.parseFullName(cmdLine.getOptionValue("p"));
-    if (parsed == null) return;
-    for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
-      if (requested.proj1.equals(parsed.proj1)) return;
-    }
-    System.out.println("[INFO] -p target " + cmdLine.getOptionValue("p")
-        + " is outside the typecheck scope; adding " + parsed.proj1 + " to it");
-    ctx.requestedModules.add(new Pair<>(parsed.proj1, null));
+    if (!cmdLine.hasOption("p")) return;
+    ModulePath module = TypecheckReports.printTargetOutside(cmdLine.getOptionValue("p"),
+        ctx.requestedModules.stream().map(requested -> requested.proj1).toList(), ctx.systemErrErrorReporter, System.out);
+    if (module != null) ctx.requestedModules.add(new Pair<>(module, null));
   }
 
   private static List<SourceLibrary> dependencyFirstLibraries(CommandContext ctx) {
