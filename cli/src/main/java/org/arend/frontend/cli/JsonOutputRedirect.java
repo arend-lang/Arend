@@ -4,7 +4,7 @@ import org.apache.commons.cli.CommandLine;
 import org.arend.frontend.ConsoleMain;
 import org.arend.frontend.cli.daemon.DaemonPaths;
 import org.arend.frontend.cli.daemon.PrivateFiles;
-import org.arend.frontend.query.ConsoleQueryTool;
+import org.arend.query.ConsoleQueryTool;
 
 import java.io.IOException;
 import java.io.OutputStream;

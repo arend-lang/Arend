@@ -3,7 +3,7 @@ package org.arend.frontend.library;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.ui.ArendUI;
 import org.arend.frontend.source.StreamRawSource;
-import org.arend.frontend.query.QueryLibrary;
+import org.arend.query.QueryLibrary;
 import org.arend.frontend.ui.ArendCliUI;
 import org.arend.server.ArendLibrary;
 import org.arend.source.PersistableBinarySource;

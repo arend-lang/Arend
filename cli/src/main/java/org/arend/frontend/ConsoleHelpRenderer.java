@@ -12,8 +12,8 @@ import java.util.Set;
 /**
  * The terminal-aware help-rendering engine: detects the terminal width and word-wraps
  * help text and the grouped option listing to it. Pure formatting — it holds no help
- * <em>content</em> (that lives in {@link ConsoleHelp} and, per tool, in each tool's help
- * text), so the two concerns can change independently.
+ * <em>content</em> (that lives in {@link ConsoleHelp} and, per tool, in
+ * {@link org.arend.query.QueryHelp}), so the two concerns can change independently.
  */
 final class ConsoleHelpRenderer {
   private ConsoleHelpRenderer() {}

@@ -1,7 +1,11 @@
 dependencies {
     val protobufVersion: String by rootProject.ext
+    val antlrVersion: String by rootProject.ext
     implementation("com.google.protobuf:protobuf-java:$protobufVersion")
     implementation(project(":proto"))
+    // The query tools read the characters of a name off the grammar's lexer.
+    implementation(project(":parser"))
+    implementation("org.antlr:antlr4-runtime:$antlrVersion")
 
     api(project(":api"))
 }

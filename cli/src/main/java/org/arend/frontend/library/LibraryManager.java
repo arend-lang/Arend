@@ -1,7 +1,7 @@
 package org.arend.frontend.library;
 
 import org.arend.ext.error.ErrorReporter;
-import org.arend.frontend.query.QueryLibraries;
+import org.arend.query.QueryLibraries;
 import org.arend.server.ArendServer;
 
 import java.util.HashMap;
