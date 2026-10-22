@@ -25,11 +25,20 @@ import java.util.Arrays;
 public final class DaemonMain {
   private DaemonMain() {}
 
+  /**
+   * Runs the daemon until it is told to stop, then exits the JVM. A socket-side {@code shutdown}
+   * returns here without going through the JVM-exit path, so the exit, and with it the shutdown
+   * hook, has to be triggered explicitly.
+   */
   public static void run(String[] args) {
+    System.exit(serve(args));
+  }
+
+  /** @return the exit code: 1 when the daemon could not start, else 0 once it has stopped. */
+  private static int serve(String[] args) {
     if (args.length < 2) {
       System.err.println("[DAEMON] --daemon-bootstrap requires a library reference");
-      System.exit(1);
-      return;
+      return 1;
     }
     String libRef = args[1];
     String[] forwarded = Arrays.copyOfRange(args, 2, args.length);
@@ -37,16 +46,14 @@ public final class DaemonMain {
     DaemonPaths paths = DaemonPaths.resolve(Paths.get(libRef));
     if (paths == null) {
       System.err.println("[DAEMON] could not resolve library reference: " + libRef);
-      System.exit(1);
-      return;
+      return 1;
     }
 
     try {
       paths.ensureArendDir();
     } catch (IOException e) {
       System.err.println("[DAEMON] could not create " + paths.arendDir + ": " + e.getMessage());
-      System.exit(1);
-      return;
+      return 1;
     }
 
     System.out.println("[DAEMON] Initialising daemon for " + paths.libraryConfig);
@@ -56,8 +63,7 @@ public final class DaemonMain {
     CommandContext warmCtx = new ConsoleMain().runDaemonBootstrap(forwarded);
     if (warmCtx == null) {
       System.err.println("[DAEMON] bootstrap aborted (library load failed or unhandled exception); daemon will not start");
-      System.exit(1);
-      return;
+      return 1;
     }
 
     SocketBinder.Bound bound;
@@ -65,8 +71,7 @@ public final class DaemonMain {
       bound = SocketBinder.bind(paths.socketFile, paths.libraryHash);
     } catch (IOException e) {
       System.err.println("[DAEMON] could not bind daemon socket: " + e.getMessage());
-      System.exit(1);
-      return;
+      return 1;
     }
     System.out.println("[DAEMON] bound socket: " + bound.address());
 
@@ -96,9 +101,7 @@ public final class DaemonMain {
       lock.writeAtomic(paths.lockFile);
     } catch (IOException e) {
       System.err.println("[DAEMON] could not write lock file " + paths.lockFile + ": " + e.getMessage());
-      server.close();
-      System.exit(1);
-      return;
+      return 1;
     }
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
@@ -111,8 +114,6 @@ public final class DaemonMain {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
-    // A socket-side `shutdown` returns control here without going through the JVM-exit path, so
-    // the hook has to be triggered explicitly.
-    System.exit(0);
+    return 0;
   }
 }
