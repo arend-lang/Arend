@@ -52,7 +52,7 @@ public class DaemonCancellationTest {
   @Before
   public void setUp() throws IOException {
     assumeTrue("Unix domain sockets required",
-        !System.getProperty("os.name", "").toLowerCase().startsWith("windows"));
+        org.arend.frontend.cli.daemon.Platform.supportsUnixSockets());
 
     Path sock = tempFolder.newFolder("state").toPath().resolve("daemon.sock");
     SocketBinder.Bound bound = SocketBinder.bind(sock, "0123456789abcdef");

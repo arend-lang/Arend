@@ -162,8 +162,9 @@ public final class DaemonPaths {
       Files.createDirectory(arendDir, PosixFilePermissions.asFileAttribute(
           PosixFilePermissions.fromString("rwx------")));
     } catch (UnsupportedOperationException e) {
-      // Not a POSIX filesystem (Windows); the platform's own ACLs apply instead.
+      // Not a POSIX filesystem (Windows): an ACL granting only the owner instead.
       Files.createDirectories(arendDir);
+      PrivateFiles.restrictToOwner(arendDir, true);
     } catch (FileAlreadyExistsException e) {
       if (!Files.isDirectory(arendDir)) throw e;
     }

@@ -1,5 +1,8 @@
 package org.arend.frontend.cli.daemon;
 
+import java.io.IOException;
+import java.net.StandardProtocolFamily;
+import java.nio.channels.ServerSocketChannel;
 import java.util.Locale;
 
 /**
@@ -22,8 +25,23 @@ public final class Platform {
     return OS.contains("mac");
   }
 
-  /** Whether Unix domain sockets are worth attempting here. */
+  private static volatile Boolean unixSockets;
+
+  /**
+   * Whether Unix domain sockets are worth attempting here: whether one can be opened at all. Windows
+   * has them since Windows 10 1803, and enforces the socket file's ACL on connect as Unix does its
+   * permissions; one without them, or a JVM that cannot open one, gets TCP.
+   */
   public static boolean supportsUnixSockets() {
-    return !isWindows();
+    Boolean supported = unixSockets;
+    if (supported == null) {
+      try (ServerSocketChannel ignored = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
+        supported = true;
+      } catch (IOException | UnsupportedOperationException e) {
+        supported = false;
+      }
+      unixSockets = supported;
+    }
+    return supported;
   }
 }
