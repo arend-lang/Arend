@@ -82,7 +82,7 @@ public class ConsoleMain {
   }
 
   /**
-   * The context a {@link org.arend.frontend.cli.daemon.server.DaemonServer} serves: the requested
+   * The context a {@link org.arend.daemon.server.DaemonServer} serves: the requested
    * libraries registered with the server, and nothing parsed or typechecked yet. Each served
    * command then loads and checks only the import cone it asks for, so the daemon holds the
    * union of the cones actually requested rather than the whole library. Also remembers the argv

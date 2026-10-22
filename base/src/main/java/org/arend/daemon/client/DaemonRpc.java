@@ -302,6 +302,7 @@ public final class DaemonRpc {
     } else if ("state".equals(kind)) {
       System.out.println("state: " + frame.get("state"));
     } else if ("status".equals(kind)) {
+      System.out.println("pid:             " + frame.get("pid"));
       System.out.println("state:           " + frame.get("state"));
       System.out.println("queueDepth:      " + frame.get("queueDepth"));
       System.out.println("uptimeMs:        " + frame.get("uptimeMs"));
