@@ -192,10 +192,19 @@ public class DaemonServerSocketTest {
     assertTrue(result.output(), result.output().contains("not supported in daemon mode"));
   }
 
-  /** parseArgs served the request in full; that is not a failure. */
+  /**
+   * {@code arend} answers -h and -v itself, before it looks for a daemon; a daemon answers a query
+   * tool's help alone. A tool's help is served in full; that is not a failure.
+   */
   @Test
-  public void helpSucceedsAndABadFlagDoesNot() throws IOException {
-    assertEquals(0, cli("--help").exitCode());
+  public void aToolsHelpSucceedsAndOtherHelpOrABadFlagDoesNot() throws IOException {
+    Result help = cli("--help");
+    assertEquals(1, help.exitCode());
+    assertTrue(help.output(), help.output().contains("answered by `arend --help` itself"));
+    assertEquals(1, cli("-v").exitCode());
+    Result toolHelp = cli("-h", "-ss");
+    assertEquals(toolHelp.output(), 0, toolHelp.exitCode());
+    assertTrue(toolHelp.output(), toolHelp.output().contains("-ss <pattern>"));
     assertEquals(1, cli("--no-such-flag").exitCode());
   }
 

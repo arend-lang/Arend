@@ -58,12 +58,12 @@ public class ConsoleMain {
   }
 
   public static ParsedArgs parseArgs(String[] args) {
-    if (hasRawFlag(args, "h", "help")) {
-      for (ConsoleQueryTool tool : QUERY_TOOLS) {
-        if (hasRawFlag(args, tool.shortName(), tool.longName())) { ConsoleHelpRenderer.printTopicHelp(tool.cliHelp()); return ParsedArgs.served(); }
-      }
-      // else fall through: the general -h handler below prints the grouped help.
+    ConsoleQueryTool helpTool = helpTool(args);
+    if (helpTool != null) {
+      ConsoleHelpRenderer.printTopicHelp(helpTool.cliHelp());
+      return ParsedArgs.served();
     }
+    // Any other -h: the general handler below prints the grouped help.
     try {
       Options cmdOptions = new Options();
       cmdOptions.addOption("h", "help", false, "print this message; with a search flag (-ss, -ps, -fu, -ch, -sc), that flag's grammar");
@@ -112,6 +112,28 @@ public class ConsoleMain {
       System.err.println(e.getMessage());
       return ParsedArgs.rejected();
     }
+  }
+
+  /**
+   * Why a daemon answers none of {@code args}, read before they are parsed, as {@code arend} reads
+   * them: {@code -v}, and {@code -h} but for a query tool's ({@link #helpTool}), which {@code arend}
+   * answers itself before it looks for a daemon. Null when a daemon answers them.
+   */
+  public static String helpRefusal(String[] args) {
+    if (hasRawFlag(args, "v", "version")) return "[ERROR] -v is answered by `arend -v` itself, not by a daemon";
+    if (hasRawFlag(args, "h", "help") && helpTool(args) == null) {
+      return "[ERROR] --help is answered by `arend --help` itself, not by a daemon";
+    }
+    return null;
+  }
+
+  /**
+   * The query tool whose help {@code -h} asks for, as in {@code -h -ss}; null for none. Read off the raw
+   * arguments: the tool's option has no value there, which a parser would refuse.
+   */
+  public static ConsoleQueryTool helpTool(String[] args) {
+    if (!hasRawFlag(args, "h", "help")) return null;
+    return QUERY_TOOLS.stream().filter(tool -> hasRawFlag(args, tool.shortName(), tool.longName())).findFirst().orElse(null);
   }
 
   /** True if {@code -<shortOpt>} or {@code --<longOpt>} appears as a raw arg token (stopping at a bare {@code --}). */
