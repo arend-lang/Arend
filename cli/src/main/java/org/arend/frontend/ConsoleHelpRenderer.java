@@ -69,25 +69,40 @@ final class ConsoleHelpRenderer {
 
   /** The description column indent: the widest option label (capped), so descriptions line up. */
   static int computeIndent(Options cmdOptions, int width) {
+    int shortWidth = shortColumnWidth(cmdOptions);
     int max = 0;
     for (Option opt : cmdOptions.getOptions()) {
-      max = Math.max(max, renderLabel(opt).length());
+      max = Math.max(max, renderLabel(opt, shortWidth).length());
     }
     int gap = 2;
     int cap = Math.min(width / 2, 50);
     return Math.max(30, Math.min(max + gap, cap));
   }
 
-  /** The left-hand label for an option, e.g. {@code "  -L, --libdir <dir>"}. */
-  static String renderLabel(Option opt) {
+  /** The width of the widest short option, {@code -ss} for instance: the short column is padded to it. */
+  static int shortColumnWidth(Options cmdOptions) {
+    int max = 0;
+    for (Option opt : cmdOptions.getOptions()) {
+      if (opt.getOpt() != null) max = Math.max(max, 1 + opt.getOpt().length());
+    }
+    return max;
+  }
+
+  /**
+   * The left-hand label for an option, e.g. {@code "  -L,  --libdir <dir>"}: the short option padded to
+   * {@code shortWidth}, so that every long option starts in the same column, with or without a short one.
+   */
+  static String renderLabel(Option opt, int shortWidth) {
     StringBuilder builder = new StringBuilder("  ");
-    if (opt.getOpt() != null) builder.append("-").append(opt.getOpt()).append(", ");
-    else builder.append("    ");
+    String shortOpt = opt.getOpt() == null ? "" : "-" + opt.getOpt() + ",";
+    builder.append(shortOpt).append(" ".repeat(shortWidth + 2 - shortOpt.length()));
     builder.append("--").append(opt.getLongOpt());
     if (opt.hasArg()) {
       String argName = opt.getArgName() == null ? "arg" : opt.getArgName();
       if (opt.hasOptionalArg()) builder.append(" [").append(argName).append("]");
       else builder.append(" <").append(argName).append(">");
+      // A flag taking every token after it, as the search flags do.
+      if (opt.hasArgs()) builder.append("...");
     }
     return builder.toString();
   }
@@ -105,7 +120,7 @@ final class ConsoleHelpRenderer {
       if (opt == null) continue;
       placed.add(longOpt);
 
-      StringBuilder label = new StringBuilder(renderLabel(opt));
+      StringBuilder label = new StringBuilder(renderLabel(opt, shortColumnWidth(cmdOptions)));
       String desc = opt.getDescription();
       if (desc == null || desc.isEmpty()) {
         System.out.println(label);
