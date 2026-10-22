@@ -34,11 +34,17 @@ public final class DaemonPaths {
   public final Path logFile;
   public final Path socketFile;
   /**
-   * {@code <basename>.starting} — created by the parent before it spawns a child, removed once
+   * {@code daemon.starting} — created by the parent before it spawns a child, removed once
    * the child is ready or has failed. Two {@code arend -d} calls racing would otherwise both
-   * see no lock and both spawn, and only one of them can bind the socket.
+   * see no lock and both spawn, and only one of them can bind the socket. It names the processes
+   * of the start ({@link StartMarker}).
    */
   public final Path startingMarker;
+  /**
+   * How long a start may take to become ready, and so how long a {@link #startingMarker} that names
+   * no process stands for a start in progress. An older one is debris from a start that was killed.
+   */
+  public static final long START_TIMEOUT_MILLIS = 600_000;
   /** Hex-encoded SHA-256 of {@link #libraryConfig}'s string form, first 16 chars. */
   public final String libraryHash;
 

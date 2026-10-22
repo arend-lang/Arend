@@ -113,19 +113,51 @@ public class DaemonStartLockTest {
   }
 
   /**
-   * Two starts racing must not both spawn. The window is as long as a cold typecheck, and the
-   * loser cannot bind the socket: it becomes an unreachable JVM holding a second copy of the
-   * library. Debris from a killed parent must not block starts forever either.
+   * Two starts racing must not both spawn. The window is as long as the child takes to load its
+   * libraries, and the loser cannot bind the socket: it becomes an unreachable JVM holding a second
+   * copy of the library. A start that was killed must not block the next one, which takes its
+   * marker over at once.
    */
   @Test
-  public void onlyOneStartAtATimeMayProceedAndAStaleMarkerIsReclaimed() throws IOException {
+  public void onlyOneStartAtATimeMayProceedAndAKilledOnesMarkerIsReclaimed() throws IOException {
     Path marker = tempFolder.newFolder("state").toPath().resolve("daemon.starting");
-    assertTrue("the first start must be allowed", DaemonStart.reserveStart(marker, 60_000));
-    assertFalse("a second start while one is in flight must be refused",
-        DaemonStart.reserveStart(marker, 60_000));
+    assertTrue("the first start must be allowed", StartMarker.reserve(marker));
+    assertFalse("a second start while one is in flight must be refused", StartMarker.reserve(marker));
 
-    Files.setLastModifiedTime(marker, FileTime.fromMillis(System.currentTimeMillis() - 120_000));
-    assertTrue("a marker older than any possible start must be reclaimed",
-        DaemonStart.reserveStart(marker, 60_000));
+    Files.writeString(marker, killedStart());
+    assertTrue("the marker of a start whose processes are gone must be reclaimed", StartMarker.reserve(marker));
+    assertTrue("and then stand for the start that took it over", StartMarker.inProgress(marker));
+  }
+
+  /** A marker that names no process is one between being made and being written: only its age tells. */
+  @Test
+  public void aMarkerNamingNoProcessIsJudgedByItsAge() throws IOException {
+    Path marker = tempFolder.newFolder("state").toPath().resolve("daemon.starting");
+    Files.writeString(marker, "");
+    assertFalse("a marker being written must be respected", StartMarker.reserve(marker));
+    Files.setLastModifiedTime(marker, FileTime.fromMillis(System.currentTimeMillis() - DaemonPaths.START_TIMEOUT_MILLIS - 1000));
+    assertTrue("a marker older than any start is debris", StartMarker.reserve(marker));
+  }
+
+  /** A start removes its own marker, and never one another start has made since. */
+  @Test
+  public void aStartRemovesOnlyAMarkerThatNamesIt() throws IOException {
+    Path marker = tempFolder.newFolder("state").toPath().resolve("daemon.starting");
+    Files.writeString(marker, killedStart());
+    StartMarker.release(marker, ProcessHandle.current());
+    assertTrue("a marker naming this PID for a process that started at another time is not this one's",
+        Files.exists(marker));
+
+    assertTrue(StartMarker.reserve(marker));
+    StartMarker.release(marker, ProcessHandle.current());
+    assertFalse(Files.exists(marker));
+  }
+
+  /**
+   * A marker of a start none of whose processes runs: one of a PID nothing has, and one of this
+   * process's PID as a process that started at another time had it.
+   */
+  private static String killedStart() {
+    return Long.MAX_VALUE + " 0\n" + ProcessHandle.current().pid() + " 1\n";
   }
 }

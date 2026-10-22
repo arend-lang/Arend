@@ -3,7 +3,6 @@ package org.arend.frontend.cli.daemon;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -15,14 +14,14 @@ import java.util.Optional;
  * Parent-side: start a detached daemon JVM for a single library, as {@code arend -d <libRef>}.
  *
  * <p>Resolve {@link DaemonPaths}; decide what an existing lock means ({@link #inspectLock});
- * claim the right to start ({@link #reserveStart}); spawn
+ * claim the right to start ({@link StartMarker#reserve}); spawn
  * {@code [setsid|nohup] java <opts> -cp <cp> ConsoleMain --daemon-bootstrap <arend.yaml> [-L ...]
  * <arend.yaml>} with stdio pointed at daemon.log; then poll for the lock the child writes when it
  * is ready, for up to {@value #READY_TIMEOUT_SECONDS}s (a cold arend-lib bootstrap is ~2 minutes).
  */
 public final class DaemonStart {
   /** Max time to wait for the child to write its lock file. */
-  public static final int READY_TIMEOUT_SECONDS = 600;
+  public static final int READY_TIMEOUT_SECONDS = (int) (DaemonPaths.START_TIMEOUT_MILLIS / 1000);
 
   private DaemonStart() {}
 
@@ -80,16 +79,15 @@ public final class DaemonStart {
       case NO_DAEMON -> { }
     }
 
-    if (!reserveStart(paths.startingMarker, READY_TIMEOUT_SECONDS * 1000L)) {
+    if (!StartMarker.reserve(paths.startingMarker)) {
       System.err.println("[ERROR] -d: another daemon start for " + paths.libraryConfig
-          + " is already in progress (" + paths.startingMarker + "). Wait for it to finish, or"
-          + " remove that file if no start is running.");
+          + " is already in progress (" + paths.startingMarker + "). Wait for it to finish.");
       return 1;
     }
     try {
       return startChild(paths, libDirsForward, extraChildArgs);
     } finally {
-      LockFile.deleteQuietly(paths.startingMarker);
+      StartMarker.release(paths.startingMarker, ProcessHandle.current());
     }
   }
 
@@ -111,6 +109,8 @@ public final class DaemonStart {
       System.err.println("        command: " + String.join(" ", cmd));
       return 1;
     }
+    // The child is detached: killed, this process leaves it loading, and the start under way with it.
+    StartMarker.add(paths.startingMarker, child.toHandle());
 
     System.out.println("Starting Arend daemon for " + paths.libraryConfig);
     System.out.println("  log: " + paths.logFile);
@@ -212,38 +212,6 @@ public final class DaemonStart {
 
   private static LockFile lockOf(LockFile.Read read) {
     return ((LockFile.Read.Found) read).lock();
-  }
-
-  /**
-   * Claims the right to start a daemon for this library, atomically.
-   *
-   * <p>{@code CREATE_NEW} is the whole mechanism: between reading the lock and the child writing
-   * one there is a window of however long a cold typecheck takes, and two calls in that window
-   * both see no daemon and both spawn. The loser cannot bind the socket and quietly becomes an
-   * unreachable JVM holding a second copy of the library. A marker older than a start could
-   * possibly take is treated as debris from a killed parent and reclaimed.
-   *
-   * @return true if the caller may proceed.
-   */
-  static boolean reserveStart(Path marker, long staleAfterMillis) {
-    try {
-      Files.createFile(marker);
-      return true;
-    } catch (FileAlreadyExistsException e) {
-      try {
-        long age = System.currentTimeMillis() - Files.getLastModifiedTime(marker).toMillis();
-        if (age < staleAfterMillis) return false;
-        Files.deleteIfExists(marker);
-        Files.createFile(marker);
-        return true;
-      } catch (IOException retry) {
-        return false;
-      }
-    } catch (IOException e) {
-      // The directory will not take the marker; it will not take the lock either, and the spawn
-      // reports that properly. Refusing here would hide it behind a worse message.
-      return true;
-    }
   }
 
   /**

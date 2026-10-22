@@ -5,6 +5,7 @@ import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.daemon.DaemonPaths;
 import org.arend.frontend.cli.daemon.DaemonStart;
 import org.arend.frontend.cli.daemon.LockFile;
+import org.arend.frontend.cli.daemon.StartMarker;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -96,6 +97,8 @@ public final class DaemonMain {
       System.err.println("[DAEMON] could not write lock file " + paths.lockFile + ": " + e.getMessage());
       return 1;
     }
+    // The lock claims the library now. A start whose `arend -d` was killed leaves nobody else to remove the marker.
+    StartMarker.release(paths.startingMarker, ProcessHandle.current());
 
     System.out.println("[DAEMON] READY (PID " + ProcessHandle.current().pid() + ")");
     System.out.flush();
