@@ -14,8 +14,8 @@
  -   the fibers are still small ({kanExt-small}): the fiber of {ExtFam} is resized before localizing.
  -
  -   Over the image of {f}, the localization is computed by a reflection: the fiber over `f a` is equivalent to
- -   the slice `\Sigma⁺ (t : \Sigma⁺ (a' : A) (P a')) (t.1 ~> a)`, and cocartesian transport to `P a` is a reflection
- -   whose unit consists of cocartesian lifts.
+ -   the comma category `\Sigma⁺ (t : \Sigma⁺ (a' : A) (P a')) (t.1 ~> a)`, and cocartesian transport to `P a` is its localization
+ -   at {ExtW} ({InfCat.Localization.LeftComma}).
  -
  -   For left fibrations, {InfCat.Kan.LeftKanExtType} gives a construction without fiberwise localization.
  -
@@ -30,20 +30,18 @@
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.CovariantLift
 \import InfCat.Fibration.FreeCocartesian
 \import InfCat.Fibration.Straightening
-\import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
-\import InfCat.Localization.Abstract
+\import InfCat.Functor.LeftComma
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseCocartesian
 \import InfCat.Localization.Fiberwise.FiberwiseFiber
+\import InfCat.Localization.LeftComma
+\import InfCat.Paths
 \import InfCat.Resizing
-\import InfCat.Rezk
-\import InfCat.Square
 \import Logic
 \import Meta
 \import Paths
@@ -53,12 +51,11 @@
 \func ExtFam {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) (b :⁺ B) : \Cat
   => FreeCocart {\Sigma⁺ (a : A) (P a)} {B} (\lam t => f t.1) b
 
--- | The morphisms of a fiber of {ExtFam} whose `P`-component is cocartesian.
+-- | The morphisms of a fiber of {ExtFam} whose `\Sigma⁺ (a : A) (P a)`-component is cocartesian.
 \func ExtW {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) (b : B) (k : DI ->⁺ ExtFam f P b) : \Prop
-  => IsCocartesianLift {A} {P} {_, _, dpath \lam i => (k i).1.1, (k dleft).1.2}
-                       ((k dright).1.2, dpath \lam i => (k i).1.2)
+  => IsCocartesianArrow (totalProj P) (dpath \lam i => (k i).1)
 
--- | {ExtW} is stable under cocartesian transport: transport keeps the `P`-component.
+-- | {ExtW} is stable under cocartesian transport: transport keeps the `\Sigma⁺ (a : A) (P a)`-component.
 \lemma extW-stable {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) : IsTransportStable (ExtFam f P) (ExtW f P)
   => \lam g {k} w => inP (\lam j => ((k j).1, comp (k j).2 g), w,
                           dpath \lam i j => ((k j).1, dpath \lam l => fill2 (k j).2 g l i),
@@ -141,87 +138,34 @@
 -- | `Fibers q` is the pullback of {KanExt} along {f}.
 \lemma kanExt-unit-equiv.{u} {A B Q : \Cat u} {f : A ->⁺ B} (ff : IsFFMap f) {q : Q ->⁺ A} (qc : IsCocartesianMap q) (a : A)
   : IsHEquiv (kanExt-unit f q a)
-  => \have | Pc => cocartesianMap-char.1 qc
-           | u => IsLocalization.unique (refl-isLocalization f Pc a) (incl-isLocalization ff q a)
-     \in transport IsHEquiv (ext \lam x => path (\lam j => u.1 (natIso-path (eps Pc) (eps-iso Pc) j x)) *> u.2 (sect (Fibers q) a x)) u.3
+  => \have | Ff => cocartesianFib-total (cocartesianMap-char.1 qc)
+           | u => IsLocalization.unique (leftComma-isLocalization {BaseChange (\lam s => s) q} Ff a) (incl-isLocalization ff q a)
+     \in transport IsHEquiv (ext \lam x => pmap+ u.1 (fibLeftComma-ladj-fib {BaseChange (\lam s => s) q} Ff a {((a, x), idp)}) *> u.2 ((a, x), idd))
+                   (IsHEquiv.trans (fibers-total-hequiv {A} {Fibers q} a) u.3)
   \where \private {
-    -- | The slice of the total category of {P} over `a`.
-    \func Slice {A : \Cat} (P : A ->⁺ \Cat) (a :⁺ A) : \Cat
-      => FreeCocart {\Sigma⁺ (a : A) (P a)} {A} (\lam t => t.1) a
-
-    -- | The slice over `a` is the fiber of {ExtFam} over `f a`.
-    \func sliceMap {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) (a :⁺ A) (s :⁺ Slice P a) : ExtFam f P (f a)
+    -- | The comma category `totalProj (Fibers q) ↓ a` is the fiber of {ExtFam} over `f a`.
+    \func commaMap.{v} {A B Q : \Cat v} (f : A ->⁺ B) (q : Q ->⁺ A) (a : A) (s :⁺ LeftComma {BaseChange (\lam s => s) q} (totalProj (Fibers q)) a) : ExtFam f (Fibers q) (f a)
       => (s.1, dmap f s.2)
 
-    \lemma sliceMap-equiv {A B : \Cat} {f : A ->⁺ B} (ff : IsFFMap f) (P : A ->⁺ \Cat) (a : A) : IsHEquiv (sliceMap f P a)
+    \lemma commaMap-equiv.{v} {A B Q : \Cat v} {f : A ->⁺ B} (ff : IsFFMap f) (q : Q ->⁺ A) (a : A) : IsHEquiv (commaMap f q a)
       => ff-surj-equiv.1
-          (relative-ff.conv {\Sigma⁺ (a' : A) (P a')} {\lam t => t.1 ~> a} {\lam t => f t.1 ~> f a} (\lam k => dmap f k.2)
+          (relative-ff.conv {BaseChange (\lam s => s) q} {\lam t => t.1 ~> a} {\lam t => f t.1 ~> f a} (\lam k => dmap f k.2)
                             \lam r u v => IsFFMap.squares ff (dpath \lam i => (r i).1) v u idd,
            \lam s => TruncP.map (IsEquiv.isSurj (ff s.1.1 a) s.2) \lam w => ((s.1, w.1), path \lam i => (s.1, w.2 i)))
 
-    -- | The pullback of {ExtW} to the slice.
-    \func SliceW {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) (a : A) (k : DI ->⁺ Slice P a) : \Prop
-      => ExtW f P (f a) (\lam i => sliceMap f P a (k i))
+    -- | {commaMap} into the fibers of {extProj}.
+    \func commaMapTot.{v} {A B Q : \Cat v} (f : A ->⁺ B) (q : Q ->⁺ A) (a : A) (s :⁺ LeftComma {BaseChange (\lam s => s) q} (totalProj (Fibers q)) a) : Fiber (extProj f q) (f a)
+      => ((f a, commaMap f q a s), idp)
 
-    -- | The cocartesian lift defining {refl}.
-    \func reflLift {A : \Cat} {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) {a :⁺ A} (s :⁺ Slice P a) : CovLift P (s.1.1, a, s.2, s.1.2)
-      => cocartesianFib-lift Pc (s.1.1, a, s.2, s.1.2)
-
-    -- | Cocartesian transport to the fiber over `a`.
-    \func refl {A : \Cat} {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) (a :⁺ A) (s :⁺ Slice P a) : P a
-      => (reflLift Pc s).1
-
-    \func sect {A : \Cat} (P : A ->⁺ \Cat) (a :⁺ A) (x :⁺ P a) : Slice P a
-      => ((a, x), idd)
-
-    \func eta {A : \Cat} {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) {a :⁺ A} (s :⁺ Slice P a) : s ~> sect P a (refl Pc a s)
-      => dpath \lam i => ((s.2 i, (reflLift Pc s).2 i), conn-left s.2 i)
-
-    \func eps {A : \Cat} {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) {a :⁺ A} (x :⁺ P a) : x ~> refl Pc a (sect P a x)
-      => (reflLift Pc (sect P a x)).2
-
-    \lemma eps-iso {A : \Cat} {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) {a : A} (x : P a) : IsIso (eps Pc x)
-      => cocartesianLift-idd-iso (reflLift Pc (sect P a x)) (cocartesianFib-lift.isCocartesian {A} {P} {Pc} (a, a, idd, x))
-
-    {- | {refl} inverts arrows whose `P`-component `m` is cocartesian: in the total category, the image of such an arrow
-     -   and the lifts defining {refl} form a square whose other three sides are cocartesian, so the image is cocartesian over `idd`.
-     -}
-    \lemma refl-inverts {A B : \Cat} (f : A ->⁺ B) {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) (a : A)
-      : InvertsW (SliceW f P a) (refl Pc a)
-      => \lam {k} mc =>
-          \let | E => \Sigma⁺ (x : A) (P x)
-               | p => totalProj P
-               | lam (s : Slice P a) : (s.1 : E) ~> ((a, (reflLift Pc s).1) : E) => dpath \lam j => ((s.2 j, (reflLift Pc s).2 j) : E)
-               | lamc (s : Slice P a) : IsCocartesianArrow p (lam s)
-                   => (cocartesianLift<->totalArrow (reflLift Pc s)).1 (cocartesianFib-lift.isCocartesian {A} {P} {Pc} (s.1.1, a, s.2, s.1.2))
-               | mu : ((k dleft).1 : E) ~> (k dright).1 => dpath \lam i => (k i).1
-               | eta : ((a, (reflLift Pc (k dleft)).1) : E) ~> ((a, (reflLift Pc (k dright)).1) : E) => dpath \lam i => ((a, (reflLift Pc (k i)).1) : E)
-               | sq : DPath (\lam i => mu i ~> eta i) (lam (k dleft)) (lam (k dright)) => dpath \lam i => dpath \lam j => (((k i).2 j, (reflLift Pc (k i)).2 j) : E)
-               | muc : IsCocartesianArrow p mu => (cocartesianLift<->totalArrow ((k dright).1.2, dpath \lam i => (k i).1.2)).1 mc
-               | gc : IsCocartesianArrow p (comp (lam (k dleft)) eta)
-                   => transport (IsCocartesianArrow p) (square-equiv mu eta sq) ((cocartesianArrow-comp muc).1 (lamc (k dright)))
-               | etac => (cocartesianArrow-comp (lamc (k dleft))).2 gc
-               | c : CovLift P (a, a, idd, refl Pc a (k dleft)) => ((reflLift Pc (k dright)).1, dpath \lam i => (reflLift Pc (k i)).1)
-          \in cocartesianLift-idd-iso c ((cocartesianLift<->totalArrow c).2 etac)
-
-    \lemma refl-isLocalization {A B : \Cat} (f : A ->⁺ B) {P : A ->⁺ \Cat} (Pc : IsCocartesianFib P) (a : A)
-      : IsLocalization (SliceW f P a) (refl Pc a)
-      => ladj-isLocalization (refl-inverts f Pc a) (sect P a) (eta Pc) (eps Pc) (eps-iso Pc)
-           \lam s => cocartesianFib-lift.isCocartesian {A} {P} {Pc} (s.1.1, a, s.2, s.1.2)
-
-    -- | {sliceMap} into the fibers of {extProj}.
-    \func sliceMapTot.{v} {A B Q : \Cat v} (f : A ->⁺ B) (q : Q ->⁺ A) (a : A) (s :⁺ Slice (Fibers q) a) : Fiber (extProj f q) (f a)
-      => ((f a, sliceMap f (Fibers q) a s), idp)
-
-    \lemma sliceMapTot-equiv.{v} {A B Q : \Cat v} {f : A ->⁺ B} (ff : IsFFMap f) (q : Q ->⁺ A) (a : A) : IsHEquiv (sliceMapTot f q a)
-      => IsHEquiv.trans {_} {_} {_} {sliceMap f (Fibers q) a} (sliceMap-equiv ff (Fibers q) a)
+    \lemma commaMapTot-equiv.{v} {A B Q : \Cat v} {f : A ->⁺ B} (ff : IsFFMap f) (q : Q ->⁺ A) (a : A) : IsHEquiv (commaMapTot f q a)
+      => IsHEquiv.trans {_} {_} {_} {commaMap f q a} (commaMap-equiv ff q a)
                         {\lam (y :⁺ ExtFam f (Fibers q) (f a)) => (((f a, y), idp) : Fibers (totalProj (ExtFam f (Fibers q))) (f a))}
                         (fibers-total-hequiv {B} {ExtFam f (Fibers q)} (f a))
 
-    -- | The slice is a localization of the fiber of {KanExt} over `f a` by {fibLoc-fiber}.
+    -- | The comma category is a localization of the fiber of {KanExt} over `f a` by {fibLoc-fiber}.
     \lemma incl-isLocalization.{v} {A B Q : \Cat v} {f : A ->⁺ B} (ff : IsFFMap f) (q : Q ->⁺ A) (a : A)
-      : IsLocalization (SliceW f (Fibers q) a) (\lam s => fibLoc-fibIncl (extProj f q) (ExtWTot f q) (f a) (sliceMapTot f q a s))
+      : IsLocalization (LeftCommaW {BaseChange (\lam s => s) q} (totalProj (Fibers q)) a) (\lam s => fibLoc-fibIncl (extProj f q) (ExtWTot f q) (f a) (commaMapTot f q a s))
       => isLocalization-precomp (fibLoc-fiber {B} {ExtTot f q} {extProj f q} (freeProj-cocartesian (\lam t => f t.1))
                                               (transportStable-total (extW-stable f (Fibers q))) (f a))
-                                (sliceMapTot-equiv ff q a)
+                                (commaMapTot-equiv ff q a)
   }

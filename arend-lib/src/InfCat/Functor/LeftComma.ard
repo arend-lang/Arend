@@ -9,7 +9,8 @@
  -   Hence a lift of `f` is locally cocartesian if and only if it is a universal arrow from `(e, f)` to the fiber inclusion
  -   ({locCocartesianLift<->univ}, {locCocartesianArrow<->univ}). In particular, if the fibers of {p} form a cocartesian family,
  -   the fiber inclusion is a right adjoint ({fibLeftComma-rightAdjoint}): the left adjoint {fibLeftComma-ladj} transports `(e, f)`
- -   along `f` and the unit is the cocartesian lift ({fibLeftComma-univUnit}).
+ -   along `f` and the unit is the cocartesian lift ({fibLeftComma-univUnit}). This reflection is the localization at the arrows
+ -   whose underlying arrow is cocartesian ({InfCat.Localization.LeftComma}).
  -}
 
 \import Equiv

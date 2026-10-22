@@ -1,0 +1,72 @@
+{- | The fibers of a cocartesian fibration are localizations of the comma categories.
+ -
+ -   Let `p : L ->⁺ S` be a functor whose fibers form a cocartesian family. Cocartesian transport {fibLeftComma-ladj}
+ -   from the comma category `p ↓ s` to the fiber over {s} is left adjoint to the fully faithful fiber inclusion {fibLeftComma},
+ -   and the unit consists of cocartesian lifts. Hence it is the localization at the arrows whose underlying arrow is
+ -   cocartesian ({leftComma-isLocalization}).
+ -   * {leftComma-ladj-inverts}: the image of such an arrow and the lifts at its ends form a square whose other three sides
+ -     are cocartesian, so the image is a cocartesian arrow over the identity, hence an isomorphism.
+ -   * {fibLeftComma-ladj-fib}: transport of an object of the fiber along the identity is the object itself.
+ -}
+
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.CovariantLift
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.LeftComma
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Rezk
+\import InfCat.Square
+\import Paths
+
+-- | The arrows of `p ↓ s` whose underlying arrow is cocartesian.
+\func LeftCommaW.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (a : DI ->⁺ LeftComma p s) : \Prop
+  => IsCocartesianArrow p (dpath \lam i => (a i).1)
+
+-- | Cocartesian transport inverts {LeftCommaW}.
+\lemma leftComma-ladj-inverts.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) (s : S)
+  : InvertsW (LeftCommaW p s) (fibLeftComma-ladj Ff s)
+  => \lam {a} mc =>
+      \let | l (x : LeftComma p s) => cocartesianFib-lift Ff (fibLeftComma-ladj.liftData x)
+           | lam (x : LeftComma p s) : x.1 ~> (l x).1.1 => dpath \lam j => ((l x).2 j).1
+           | mu : (a dleft).1 ~> (a dright).1 => dpath \lam i => (a i).1
+           | eta : (l (a dleft)).1.1 ~> (l (a dright)).1.1 => dpath \lam i => (fibLeftComma-ladj Ff s (a i)).1
+           | sq : DPath (\lam i => mu i ~> eta i) (lam (a dleft)) (lam (a dright))
+               => dpath \lam i => dpath \lam j => ((cocartesianFib-lift Ff (fibLeftComma-ladj.liftData (a i))).2 j).1
+           | gc : IsCocartesianArrow p (comp (lam (a dleft)) eta)
+               => transport (IsCocartesianArrow p) (square-equiv mu eta sq) ((cocartesianArrow-comp mc).1 (lam-cocartesian Ff (a dright)))
+           | etac => (cocartesianArrow-comp (lam-cocartesian Ff (a dleft))).2 gc
+           | c : CovLift (Fibers p) (s, s, idd, fibLeftComma-ladj Ff s (a dleft))
+               => (fibLeftComma-ladj Ff s (a dright), dpath \lam i => fibLeftComma-ladj Ff s (a i))
+      \in cocartesianLift-idd-iso c ((cocartesianLift<->arrow-at (fibLeftComma-ladj Ff s (a dleft)).2 c).2 etac)
+  \where
+    -- | The underlying arrow of the lift defining {fibLeftComma-ladj} is cocartesian.
+    \lemma lam-cocartesian.{v} {L S : \Cat v} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {s : S} (x : LeftComma p s)
+      : IsCocartesianArrow p (dpath \lam j => ((cocartesianFib-lift Ff (fibLeftComma-ladj.liftData x)).2 j).1)
+      => (cocartesianLift<->arrow-at idp (cocartesianFib-lift Ff (fibLeftComma-ladj.liftData x))).1
+           (cocartesianFib-lift.isCocartesian (fibLeftComma-ladj.liftData x))
+
+-- | Cocartesian transport `p ↓ s ->⁺ Fibers p s` is the localization at the arrows whose underlying arrow is cocartesian.
+\lemma leftComma-isLocalization.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) (s : S)
+  : IsLocalization (LeftCommaW p s) (fibLeftComma-ladj Ff s)
+  => ladj-isLocalization (leftComma-ladj-inverts Ff s) (fibLeftComma p s) (fibLeftComma-univUnit Ff s).ueta
+       (\lam y => eps Ff y.2) (\lam y => eps-iso Ff y.2) (leftComma-ladj-inverts.lam-cocartesian Ff)
+  \where {
+    -- | The lift of the identity at {e}, an arrow of the fiber over {s} from `(e, r)` to its transport.
+    \func eps.{v} {L S : \Cat v} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {s :⁺ S} {e :⁺ L} (r :⁺ p e = s)
+      : ((e, r) : Fibers p s) ~> (cocartesianFib-lift Ff (p e, s, over-arr idd r, ((e, idp) : Fibers p (p e)))).1 \elim r
+      | idp => (cocartesianFib-lift Ff (p e, p e, over-arr idd idp, ((e, idp) : Fibers p (p e)))).2
+
+    \lemma eps-iso.{v} {L S : \Cat v} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {s : S} {e : L} (r : p e = s) : IsIso (eps Ff r) \elim r
+      | idp => \let d : CovLiftData (Fibers p) => (p e, p e, idd, ((e, idp) : Fibers p (p e)))
+               \in cocartesianLift-idd-iso (cocartesianFib-lift Ff d) (cocartesianFib-lift.isCocartesian d)
+  }
+
+-- | Cocartesian transport is the identity on the fiber.
+\sfunc fibLeftComma-ladj-fib.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) (s : S) {y :⁺ Fibers p s}
+  : y = fibLeftComma-ladj Ff s (fibLeftComma p s y)
+  => path \lam j => natIso-path {Fibers p s} {Fibers p s} {\lam y => y} {\lam y => fibLeftComma-ladj Ff s (fibLeftComma p s y)}
+                                (\lam y => leftComma-isLocalization.eps Ff y.2) (\lam y => leftComma-isLocalization.eps-iso Ff y.2) j y
