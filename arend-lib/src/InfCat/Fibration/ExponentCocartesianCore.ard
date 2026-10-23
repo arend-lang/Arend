@@ -1,6 +1,6 @@
 {- | The fiberwise core of the exponent of a cocartesian fibration.
 
- -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The fiberwise core of the exponent {ExpCoc} is the small
+ -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The fiberwise core of the exponent {ExpCocConst} is the small
  -   category {ExpCocCore} with the projection {ExpCocCore.proj} to {B}; its objects over `b` are functors `Fibers p b ->⁺ C`,
  -   and its arrows over `beta : b' ~> b` are those functors on `BaseChange beta p` that invert the cocartesian arrows:
  -   * {ExpCocCore.eval}: an object `y` evaluated as a functor `Fibers p (proj y) ->⁺ C`; along every functor into {ExpCocCore}
@@ -14,10 +14,10 @@
  -   * {ExpCocCore.fiber-eval}, {ExpCocCore.fiber-equiv}: objects of the fiber over `b` are functors `Fibers p b ->⁺ C`;
  -     transport along `beta` is precomposition with cocartesian transport along `beta` ({ExpCocCore.fiber-eval-tr}).
 
- -   Construction: {ExpCocCore} is the subcategory of {ExpCoc} on the arrows whose functor inverts the cocartesian lifts ({CoreHelpers.CoreP});
+ -   Construction: {ExpCocCore} is the subcategory of {ExpCocConst} on the arrows whose functor inverts the cocartesian lifts ({CoreHelpers.CoreP});
  -   they are closed under composition ({CoreHelpers.coreP-closed}, from {invertsAlong-comp}).
  -   * {ExpCocCore.eval-univ}: functors into the subcategory are functors whose arrows satisfy {CoreHelpers.CoreP} ({subCat-fun-equiv}),
- -     which is to say that their functors invert {CocartW} ({invertsW-along}); conclude by {ExpCoc.eval-univ}.
+ -     which is to say that their functors invert {CocartW} ({invertsW-along}); conclude by {ExpCocConst.eval-univ}.
  -   * {ExpCocCore.rightFib}: by {rightFib-slice-char}, it suffices that arrows of {ExpCocCore} are arrows of {B} into the projection
  -     of the target. By {ExpCocCore.eval-univ} for `T = DI`, arrows are functors on `BaseChange w p` inverting {CocartW},
  -     which are functors on the fiber over `w dright` ({restrict-end-equiv}). By {ExpCocCore.eval-univ} for the unit category
@@ -52,18 +52,18 @@
   \where {
     -- | The projection of the core to the base.
     \protected \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (y :⁺ ExpCocCore pc C) : B
-      => ExpCoc.proj pc C (SubCat.inc y)
+      => ExpCocConst.proj pc C (SubCat.inc y)
 
     -- | The evaluation map.
     \protected \func eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u}
                               (y :⁺ ExpCocCore pc C) (x :⁺ Fibers p (proj pc C y)) : C
-      => ExpCoc.eval pc (SubCat.inc y) x
+      => ExpCocConst.eval pc (SubCat.inc y) x
 
     -- | The evaluation along a functor into the core inverts the cocartesian arrows.
     \protected \lemma eval-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (s : T ->⁺ ExpCocCore pc C)
       : InvertsW (CocartW p (\lam t => proj pc C (s t))) (\lam q => eval pc (s q.1) q.2)
       => (invertsW-along C \lam t => proj pc C (s t)).2 \lam k x l lc =>
-           SubCat.inc-con {ExpCoc pc C} {CoreP pc C} (coreP-closed pc C) {\lam i => s (k i)} x (l.1, l.2) lc
+           SubCat.inc-con {ExpCocConst pc C} {CoreP pc C} (coreP-closed pc C) {\lam i => s (k i)} x (l.1, l.2) lc
 
     -- | The universal property: functors into the core are functors to {B} together with functors on the base change of {p} inverting {CocartW}.
     \protected \lemma eval-univ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} (T : \Cat u)
@@ -131,34 +131,34 @@
   }
 
 \module CoreHelpers \where {
-  -- | The universal functor on the base change of {p} along the projection of {ExpCoc}.
-  \func univFun.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (q :⁺ BaseChange (ExpCoc.proj pc C) p) : C
-    => ExpCoc.eval pc q.1 q.2
+  -- | The universal functor on the base change of {p} along the projection of {ExpCocConst}.
+  \func univFun.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (q :⁺ BaseChange (ExpCocConst.proj pc C) p) : C
+    => ExpCocConst.eval pc q.1 q.2
 
-  -- | The arrows of {ExpCoc} whose functor inverts the cocartesian lifts.
-  \type CoreP.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (a : DI ->⁺ ExpCoc pc C) : \Prop
+  -- | The arrows of {ExpCocConst} whose functor inverts the cocartesian lifts.
+  \type CoreP.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (a : DI ->⁺ ExpCocConst pc C) : \Prop
     => InvertsAlong (univFun pc C) {a dleft} {a dright} (dpath \lam i => a i)
 
   \lemma coreP-closed.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : IsCompClosed (CoreP pc C)
     => (\lam {h} _ => (invertsAlong-idd (univFun pc C) (h dleft), invertsAlong-idd (univFun pc C) (h dright)),
         \lam Pf Pg => invertsAlong-comp {_} {_} {_} {C} pc {_} {univFun pc C} Pf Pg)
 
-  -- | The arrows of a functor into {ExpCoc} satisfy {CoreP} if and only if its functor inverts {CocartW}.
-  \func allP-iff.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (g : T ->⁺ ExpCoc pc C)
+  -- | The arrows of a functor into {ExpCocConst} satisfy {CoreP} if and only if its functor inverts {CocartW}.
+  \func allP-iff.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (g : T ->⁺ ExpCocConst pc C)
     : QEquiv {\Pi (k : DI ->⁺ T) -> CoreP pc C (\lam i => g (k i))}
-             {InvertsW (CocartW p (\lam t => ExpCoc.proj pc C (g t))) (\lam q => ExpCoc.eval pc (g q.1) q.2)} \cowith
-    | f a => (invertsW-along C \lam t => ExpCoc.proj pc C (g t)).2 \lam k x l lc => a (\lam i => k i) x (l.1, l.2) lc
+             {InvertsW (CocartW p (\lam t => ExpCocConst.proj pc C (g t))) (\lam q => ExpCocConst.eval pc (g q.1) q.2)} \cowith
+    | f a => (invertsW-along C \lam t => ExpCocConst.proj pc C (g t)).2 \lam k x l lc => a (\lam i => k i) x (l.1, l.2) lc
     | ret I k x l lc => (invertsW-along C _).1 I (dpath \lam i => k i) x (l.1, l.2) lc
     | ret_f _ => prop-pi
     | f_sec _ => prop-pi
 
-  -- | Functors into {ExpCoc} whose arrows satisfy {CoreP} are functors to {B} together with functors inverting {CocartW}.
+  -- | Functors into {ExpCocConst} whose arrows satisfy {CoreP} are functors to {B} together with functors inverting {CocartW}.
   \lemma allP-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u)
-    : IsEquiv {\Sigma (g : T ->⁺ ExpCoc pc C) (\Pi (k : DI ->⁺ T) -> CoreP pc C (\lam i => g (k i)))}
+    : IsEquiv {\Sigma (g : T ->⁺ ExpCocConst pc C) (\Pi (k : DI ->⁺ T) -> CoreP pc C (\lam i => g (k i)))}
               {\Sigma (pi : T ->⁺ B) (MapW (CocartW p pi) C)}
-              (\lam s => (\lam t => ExpCoc.proj pc C (s.1 t), (\lam q => ExpCoc.eval pc (s.1 q.1) q.2, allP-iff pc C s.1 s.2)))
+              (\lam s => (\lam t => ExpCocConst.proj pc C (s.1 t), (\lam q => ExpCocConst.eval pc (s.1 q.1) q.2, allP-iff pc C s.1 s.2)))
     => inP $ sigma-right (allP-iff pc C) `transQEquiv`
-       qsigma-left (IsEquiv.toQEquiv (ExpCoc.eval-univ pc T)) `transQEquiv`
+       qsigma-left (IsEquiv.toQEquiv (ExpCocConst.eval-univ pc T)) `transQEquiv`
        later \new QEquiv {\Sigma (s : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)) (InvertsW (CocartW p s.1) s.2)} {
          | f s => (s.1.1, (s.1.2, s.2))
          | ret s => ((s.1, s.2.1), s.2.2)

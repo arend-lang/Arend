@@ -1,9 +1,9 @@
 {- | The exponent of a cocartesian fibration into a fixed category.
 
- -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The exponent is the small category {ExpCoc}
- -   with the projection {ExpCoc.proj} to {B}; its objects over `b` are functors `Fibers p b ->⁺ C`:
- -   * {ExpCoc.eval}: an object `y` evaluated as a functor `Fibers p (proj y) ->⁺ C`.
- -   * {ExpCoc.eval-univ}: the universal property; functors `T ->⁺ ExpCoc` are functors `pi : T ->⁺ B`
+ -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The exponent is the small category {ExpCocConst}
+ -   with the projection {ExpCocConst.proj} to {B}; its objects over `b` are functors `Fibers p b ->⁺ C`:
+ -   * {ExpCocConst.eval}: an object `y` evaluated as a functor `Fibers p (proj y) ->⁺ C`.
+ -   * {ExpCocConst.eval-univ}: the universal property; functors `T ->⁺ ExpCocConst` are functors `pi : T ->⁺ B`
  -     together with functors `BaseChange pi p ->⁺ C`.
 
  -   Construction (route B of exponent-cocart.tex): the slice construction {ExpSl} exponentiates fiberwise opposites.
@@ -17,12 +17,22 @@
  -     ({ExpCocHelpers.secPre-natural}).
  -   * Apply this to `q = FibOp p` and transport along the involution `FibOp (FibOp p) = p` ({fibOp-invol}).
  -   * The total category {ExpCocHelpers.ExpCocTot} of these exponents ({ExpCocHelpers.ExpCocL}) is too large, but its arrows are
- -     families of objects along `DI` ({ExpCocHelpers.expCocTot-arrows}), so it can be resized; {ExpCoc} is the resized category.
- -     {ExpCocHelpers.evalL} is the functor corresponding to the universal family over {ExpCoc},
+ -     families of objects along `DI` ({ExpCocHelpers.expCocTot-arrows}), so it can be resized; {ExpCocConst} is the resized category.
+ -     {ExpCocHelpers.evalL} is the functor corresponding to the universal family over {ExpCocConst},
  -     and {ExpCocHelpers.evalL-univ} follows from the naturality of this correspondence ({ExpCocHelpers.secGen-natural}).
+
+ -   For an arbitrary functor `q : Y ->⁺ B`, the exponent {ExpCoc} (thm:main of exponent-cocart.tex) has objects over `b`
+ -   the functors `Fibers p b ->⁺ Fibers q b`:
+ -   * {ExpCoc.eval-univ}: functors `T ->⁺ ExpCoc` are functors `pi : T ->⁺ B` together with functors over {B}
+ -     from `BaseChange pi p` to {q}.
+ -   * Construction (Lemma const of exponent-cocart.tex): {ExpCoc} is the pullback of the postcomposition with {q}
+ -     ({ExpCocHelpers.expPost}) along the section {ExpCocHelpers.expSec} of `ExpCocConst pc B` that corresponds to the
+ -     projections of the fibers. The universal property is the chain {ExpCocHelpers.expChain} of equivalences; it is natural in `T`
+ -     ({ExpCocHelpers.evalPathF-natural}), so it is given by the evaluation along the identity of {ExpCoc}.
  -}
 
 \import Equiv
+\import Equiv.Path
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Fibration.Categorical
@@ -45,25 +55,50 @@
 \open ExpCocHelpers
 
 -- | The total category of the exponent from the cocartesian map {p} to {C}; its objects over `b` are functors `Fibers p b ->⁺ C`.
-\type ExpCoc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat u
+\type ExpCocConst.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat u
   => ResizeFromArrows (expCocTot-arrows pc C)
   \where {
     -- | The projection of the exponent to the base.
-    \protected \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (y :⁺ ExpCoc pc C) : B
+    \protected \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (y :⁺ ExpCocConst pc C) : B
       => (unresize y).1
 
     -- | The evaluation map.
     \protected \sfunc eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u}
-                               (y :⁺ ExpCoc pc C) (x :⁺ Fibers p (proj pc C y)) : C
+                               (y :⁺ ExpCocConst pc C) (x :⁺ Fibers p (proj pc C y)) : C
       => evalL pc (unresize y).2 x
 
     -- | The universal property: functors into the exponent are functors to {B} together with functors on the base change of {p}.
     \protected \lemma eval-univ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} (T : \Cat u)
-      : IsEquiv {T ->⁺ ExpCoc pc C} {\Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)}
+      : IsEquiv {T ->⁺ ExpCocConst pc C} {\Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)}
                 (\lam s => (\lam t => proj pc C (s t), \lam q => eval pc (s q.1) q.2))
-      => transport IsEquiv (path \lam j (s : T ->⁺ ExpCoc pc C) =>
+      => transport IsEquiv (path \lam j (s : T ->⁺ ExpCocConst pc C) =>
            ((\lam t => proj pc C (s t), funExt+ (\lam q => inv (\peval eval pc (s q.1) q.2)) j) : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)))
            (inP (unresize-equiv pc C T `transQEquiv` tot-split pc C T `transQEquiv` sigma-right \lam pi => IsEquiv.toQEquiv (evalL-univ pc {C} pi)))
+  }
+
+-- | The exponent from the cocartesian map {p} to {q}; its objects over `b` are functors `Fibers p b ->⁺ Fibers q b`.
+\type ExpCoc.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) : \Cat u
+  => BaseChange (expSec pc) (expPost pc q)
+  \where {
+    -- | The projection of the exponent to the base.
+    \protected \func proj.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) (y :⁺ ExpCoc pc q) : B
+      => ExpCocConst.proj pc Y y.2.1
+
+    -- | The evaluation map.
+    \protected \func eval.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {q : Y ->⁺ B}
+                              (y :⁺ ExpCoc pc q) (x :⁺ Fibers p (proj pc q y)) : Fibers q (proj pc q y)
+      => (ExpCocConst.eval pc y.2.1 x, path \lam i => evalPathF pc q (\lam y => y) i (y, x))
+
+    {- | The universal property: functors into the exponent are functors `pi` to {B} together with functors over {B}
+     -   from the base change of {p} along `pi` to {q}.
+     -}
+    \protected \lemma eval-univ.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) (T : \Cat u)
+      : IsEquiv {T ->⁺ ExpCoc pc q} {\Sigma (pi : T ->⁺ B) (\Pi (w :⁺ BaseChange pi p) -> Fibers q (pi w.1))}
+                (\lam s => (\lam t => proj pc q (s t), \lam w => eval pc (s w.1) w.2))
+      => transport IsEquiv (path \lam j (s : T ->⁺ ExpCoc pc q) =>
+           ((\lam t => proj pc q (s t), \lam w => (ExpCocConst.eval pc (s w.1).2.1 w.2, path \lam i => evalPathF-natural pc q s j i w))
+             : \Sigma (pi : T ->⁺ B) (\Pi (w :⁺ BaseChange pi p) -> Fibers q (pi w.1))))
+           (expChain pc q T)
   }
 
 \module ExpCocHelpers \where {
@@ -186,7 +221,7 @@
        } `transQEquiv` sigma-right \lam beta => expCoc-sl pc C beta `transQEquiv` IsEquiv.toQEquiv (secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) {C} beta)
 
   -- | The inverse of `resizeCat`.
-  \func unresize.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCoc pc C) : ExpCocTot pc C \elim y
+  \func unresize.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCocConst pc C) : ExpCocTot pc C \elim y
     | resizeCat z => z
 
   -- | The evaluation map of {ExpCocL}.
@@ -203,13 +238,13 @@
        (inP (expCoc-sl pc C pi `transQEquiv` IsEquiv.toQEquiv (secGen-equiv (fibOp-cocartesian pc) (fibOp-invol pc) pi)))
 
   -- | The inverse of {unresize}.
-  \sfunc resize-eta.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCoc pc C)
-    : resizeCat (unresize y) = {ExpCoc pc C} y \elim y
+  \sfunc resize-eta.{u} {B E : \Cat u} {p : E ->⁺ B} {pc : IsCocartesianMap p} {C : \Cat u} (y :⁺ ExpCocConst pc C)
+    : resizeCat (unresize y) = {ExpCocConst pc C} y \elim y
     | resizeCat z => idp
 
-  -- | Functors into {ExpCoc} are functors into {ExpCocTot}.
+  -- | Functors into {ExpCocConst} are functors into {ExpCocTot}.
   \func unresize-equiv.{u} {S E : \Cat u} {p : E ->⁺ S} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u)
-    : QEquiv {T ->⁺ ExpCoc pc C} {T ->⁺ ExpCocTot pc C} \cowith
+    : QEquiv {T ->⁺ ExpCocConst pc C} {T ->⁺ ExpCocTot pc C} \cowith
     | f s t => unresize (s t)
     | ret h t => resizeCat (h t)
     | ret_f s => funExt+ \lam t => resize-eta (s t)
@@ -222,4 +257,145 @@
     | ret s t => (s.1 t, s.2 t)
     | ret_f _ => idp
     | f_sec _ => idp
+
+  -- | The map of {ExpCocConst.eval-univ}.
+  \func evalPair.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (s : T ->⁺ ExpCocConst pc C)
+    : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)
+    => (\lam t => ExpCocConst.proj pc C (s t), \lam w => ExpCocConst.eval pc (s w.1) w.2)
+
+  \func evalPairQ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u) : QEquiv (evalPair pc C {T})
+    => IsEquiv.toQEquiv (ExpCocConst.eval-univ pc T)
+
+  -- | Precomposition with {g}.
+  \func preComp.{u} {B E T T' C : \Cat u} {p : E ->⁺ B} (g : T ->⁺ T') (x : \Sigma (pi : T' ->⁺ B) (BaseChange pi p ->⁺ C))
+    : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)
+    => (\lam t => x.1 (g t), \lam w => x.2 (g w.1, w.2))
+
+  -- | Precomposition with the base change of {g}.
+  \func preFun.{u} {B E T T' C : \Cat u} {p : E ->⁺ B} (g : T ->⁺ T') {pi : T' ->⁺ B} (G : BaseChange pi p ->⁺ C)
+    : BaseChange (\lam t => pi (g t)) p ->⁺ C
+    => \lam w => G (g w.1, w.2)
+
+  -- | The functor {pi} together with the projection of the base change along {pi}.
+  \func projPair.{u} {B E T : \Cat u} {p : E ->⁺ B} (pi : T ->⁺ B) : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ B)
+    => (pi, \lam w => pi w.1)
+
+  -- | The projection and the evaluation postcomposed with {q} on the base change along the projection of {ExpCocConst}.
+  \func postPair.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B)
+    : \Sigma (pi : ExpCocConst pc Y ->⁺ B) (BaseChange pi p ->⁺ B)
+    => (\lam y => ExpCocConst.proj pc Y y, \lam w => q (ExpCocConst.eval pc w.1 w.2))
+
+  -- | Postcomposition with {q}.
+  \func expPost.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) : ExpCocConst pc Y ->⁺ ExpCocConst pc B
+    => (evalPairQ pc B (ExpCocConst pc Y)).ret (postPair pc q)
+
+  \sfunc expPost-eval.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) : evalPair pc B (expPost pc q) = postPair pc q
+    => (evalPairQ pc B (ExpCocConst pc Y)).f_sec (postPair pc q)
+
+  -- | The section of the projection of {ExpCocConst} corresponding to the projections of the fibers.
+  \func expSec.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : B ->⁺ ExpCocConst pc B
+    => (evalPairQ pc B B).ret (projPair (\lam b => b))
+
+  \sfunc expSec-eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : evalPair pc B (expSec pc) = projPair (\lam b => b)
+    => (evalPairQ pc B B).f_sec (projPair (\lam b => b))
+
+  -- | Conjugation of paths is an equivalence.
+  \lemma conj-equiv {A : \Cat} {a a' b b' : A} (u : a = a') (v : b = b') : IsEquiv {a = b} {a' = b'} (\lam r => inv u *> r *> v) \elim u, v
+    | idp, idp => transport IsEquiv (path \lam j (r : a = b) => inv (idp_*> {A} {a} {b} {r}) j) (inP idEquiv)
+
+  -- | The map from the fiber of the pairing with a section {d} over {x} to the paths from `x.2` to `d x.1`.
+  \func secFib-map {A : \Cat} {P : A -> \Cat} (d : \Pi (a : A) -> P a) (x : \Sigma (a : A) (P a)) (s : \Sigma (a : A) (x = (a, d a))) : x.2 = d x.1
+    => transport (\lam (z : \Sigma (a : A) (P a)) => z.2 = d z.1) (inv s.2) idp
+
+  \func secFib-equiv {A : \Cat} {P : A -> \Cat} (d : \Pi (a : A) -> P a) (x : \Sigma (a : A) (P a))
+    : QEquiv {\Sigma (a : A) (x = (a, d a))} {x.2 = d x.1} \cowith
+    | f => secFib-map d x
+    | ret c => (x.1, path \lam i => (x.1, c i))
+    | ret_f s => ret_f-aux d s.2
+    | f_sec c => f_sec-aux d c
+    \where {
+      \sfunc ret_f-aux {A : \Cat} {P : A -> \Cat} (d : \Pi (a : A) -> P a) {x : \Sigma (a : A) (P a)} {a : A} (r : x = (a, d a))
+        : ((x.1, path \lam i => (x.1, secFib-map d x (a, r) i)) : \Sigma (a' : A) (x = (a', d a'))) = (a, r) \elim r
+        | idp => idp
+
+      \sfunc f_sec-aux {A : \Cat} {P : A -> \Cat} (d : \Pi (a : A) -> P a) {a : A} {y : P a} (c : y = d a)
+        : transport (\lam (z : \Sigma (a : A) (P a)) => z.2 = d z.1) (inv (path \lam i => ((a, c i) : \Sigma (a : A) (P a)))) idp = c \elim c
+        | idp => idp
+    }
+
+  -- | {secFib-map} commutes with precomposition.
+  \sfunc secFib-natural.{u} {B E T T' : \Cat u} {p : E ->⁺ B} (h : T ->⁺ T') {x z : \Sigma (pi : T' ->⁺ B) (BaseChange pi p ->⁺ B)}
+                            (r : x = z) (c : z.2 = (\lam w => z.1 w.1))
+    : transport (\lam (z' : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ B)) => z'.2 = (\lam w => z'.1 w.1)) (inv (pmap (preComp h) r)) (pmap (preFun h) c)
+      = pmap (preFun h) (transport (\lam (z' : \Sigma (pi : T' ->⁺ B) (BaseChange pi p ->⁺ B)) => z'.2 = (\lam w => z'.1 w.1)) (inv r) c) \elim r
+    | idp => idp
+
+  -- | Functors into {ExpCoc} are functors to {B} and to {ExpCocConst} with a path between their images in `ExpCocConst pc B`.
+  \func expSplit.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) (T : \Cat u)
+    : QEquiv {T ->⁺ ExpCoc pc q} {\Sigma (pi : T ->⁺ B) (\Sigma (s : T ->⁺ ExpCocConst pc Y) (\Pi (t :⁺ T) -> expPost pc q (s t) = expSec pc (pi t)))} \cowith
+    | f h => (\lam t => (h t).1, (\lam t => (h t).2.1, \lam t => (h t).2.2))
+    | ret x t => (x.1 t, (x.2.1 t, x.2.2 t))
+    | ret_f _ => idp
+    | f_sec _ => idp
+
+  -- | The path in {ExpCocConst.eval-univ} corresponding to a functor into {ExpCoc}.
+  \func expPath.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) {T : \Cat u} (h : T ->⁺ ExpCoc pc q)
+    : preComp (\lam t => (h t).2.1) (postPair pc q) = projPair (\lam t => (h t).1)
+    => inv (pmap (preComp (\lam t => (h t).2.1)) (expPost-eval pc q))
+       *> pmap (evalPair pc B {T}) (funExt+ {T} {\lam _ => ExpCocConst pc B} {\lam t => expPost pc q (h t).2.1} {\lam t => expSec pc (h t).1} \lam t => (h t).2.2)
+       *> pmap (preComp (\lam t => (h t).1)) (expSec-eval pc)
+
+  \sfunc expPath-natural.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) {T : \Cat u} (h : T ->⁺ ExpCoc pc q)
+    : expPath pc q h = pmap (preComp h) (expPath pc q (\lam y => y))
+    => \let | u => pmap (preComp (\lam (y :⁺ ExpCoc pc q) => y.2.1)) (expPost-eval pc q)
+             | m => pmap (evalPair pc B {ExpCoc pc q}) (funExt+ {ExpCoc pc q} {\lam _ => ExpCocConst pc B} {\lam y => expPost pc q y.2.1} {\lam y => expSec pc y.1} \lam y => y.2.2)
+             | v => pmap (preComp (\lam (y :⁺ ExpCoc pc q) => y.1)) (expSec-eval pc)
+       \in inv (pmap_*>-comm (preComp h) (inv u) (m *> v)
+               *> pmap (`*> pmap (preComp h) (m *> v)) (pmap_inv-comm (preComp h) u)
+               *> pmap (inv (pmap (preComp h) u) *>) (pmap_*>-comm (preComp h) m v))
+
+  -- | The paths from `q ∘ eval` to the projection along a functor into {ExpCoc}.
+  \func evalPathF.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) {T : \Cat u} (h : T ->⁺ ExpCoc pc q)
+    : (\lam w => q (ExpCocConst.eval pc (h w.1).2.1 w.2)) = {BaseChange (\lam t => ExpCocConst.proj pc Y (h t).2.1) p ->⁺ B}
+      (\lam w => ExpCocConst.proj pc Y (h w.1).2.1)
+    => secFib-map {T ->⁺ B} {\lam pi => BaseChange pi p ->⁺ B} (\lam pi w => pi w.1) (preComp (\lam t => (h t).2.1) (postPair pc q))
+                  (\lam t => (h t).1, expPath pc q h)
+
+  \sfunc evalPathF-natural.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) {T : \Cat u} (h : T ->⁺ ExpCoc pc q)
+    : evalPathF pc q h = pmap (preFun h) (evalPathF pc q (\lam y => y))
+    => pmap (\lam R => secFib-map {T ->⁺ B} {\lam pi => BaseChange pi p ->⁺ B} (\lam pi w => pi w.1)
+                                  (preComp (\lam t => (h t).2.1) (postPair pc q)) (\lam t => (h t).1, R)) (expPath-natural pc q h)
+       *> secFib-natural h (expPath pc q (\lam y => y)) idp
+
+  -- | The equivalence of {ExpCoc.eval-univ}, before the naturality of {evalPathF}.
+  \lemma expChain.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) (T : \Cat u)
+    : IsEquiv {T ->⁺ ExpCoc pc q} {\Sigma (pi : T ->⁺ B) (\Pi (w :⁺ BaseChange pi p) -> Fibers q (pi w.1))}
+              (\lam s => (\lam t => ExpCoc.proj pc q (s t), \lam w => (ExpCocConst.eval pc (s w.1).2.1 w.2, path \lam i => evalPathF pc q s i w)))
+    => inP (expSplit pc q T
+       `transQEquiv` sigma-right (\lam (pi : T ->⁺ B) => sigma-right \lam (s : T ->⁺ ExpCocConst pc Y) =>
+            funExt+-equiv {T} {\lam _ => ExpCocConst pc B} {\lam t => expPost pc q (s t)} {\lam t => expSec pc (pi t)}
+            `transQEquiv` IsEquiv.toQEquiv (pmapIsEquiv (ExpCocConst.eval-univ pc {B} T))
+            `transQEquiv` IsEquiv.toQEquiv (conj-equiv (pmap (preComp s) (expPost-eval pc q)) (pmap (preComp pi) (expSec-eval pc))))
+       `transQEquiv` swap
+       `transQEquiv` sigma-right (\lam (s : T ->⁺ ExpCocConst pc Y) =>
+            secFib-equiv {T ->⁺ B} {\lam pi => BaseChange pi p ->⁺ B} (\lam pi w => pi w.1) (preComp s (postPair pc q))
+            `transQEquiv` symQEquiv funExt+-equiv)
+       `transQEquiv` qsigma-left {_} {_} {\lam (x : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ Y)) => \Pi (w :⁺ BaseChange x.1 p) -> q (x.2 w) = x.1 w.1}
+                                 (evalPairQ pc Y T)
+       `transQEquiv` join)
+    \where {
+      \func swap : QEquiv {\Sigma (pi : T ->⁺ B) (\Sigma (s : T ->⁺ ExpCocConst pc Y) (preComp s (postPair pc q) = projPair pi))}
+                          {\Sigma (s : T ->⁺ ExpCocConst pc Y) (\Sigma (pi : T ->⁺ B) (preComp s (postPair pc q) = projPair pi))} \cowith
+        | f x => (x.2.1, (x.1, x.2.2))
+        | ret x => (x.2.1, (x.1, x.2.2))
+        | ret_f _ => idp
+        | f_sec _ => idp
+
+      \func join : QEquiv {\Sigma (x : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ Y)) (\Pi (w :⁺ BaseChange x.1 p) -> q (x.2 w) = x.1 w.1)}
+                          {\Sigma (pi : T ->⁺ B) (\Pi (w :⁺ BaseChange pi p) -> Fibers q (pi w.1))} \cowith
+        | f y => (y.1.1, \lam w => (y.1.2 w, y.2 w))
+        | ret z => ((z.1, \lam w => (z.2 w).1), \lam w => (z.2 w).2)
+        | ret_f _ => idp
+        | f_sec _ => idp
+    }
 }
