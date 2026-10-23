@@ -1,0 +1,97 @@
+{- | Quillen's Theorem A for initial functors ({theoremA}): if every comma category `f ↓ d` is weakly contractible,
+ -   then {f} is initial.
+ -
+ -   Proof. Factor {f} through the free cocartesian fibration {FreeTot} of {f}, whose fibers are the commas `f ↓ d`,
+ -   and its fiberwise localization at all vertical arrows:
+ -   `C --incl--> FreeTot f --localize--> FibLoc --fibLocProj--> D`.
+ -   * `incl c = (f c, c, idd)` is left adjoint to the projection to {C} ({inclAdj}), so it is initial.
+ -   * The localization functor is initial ({localization-initialFunctor}).
+ -   * {fibLocProj} is cocartesian and its fibers are the geometric realizations of `f ↓ d` ({fibLoc-fiber}),
+ -     which are contractible groupoids by assumption. So it is a left fibration with contractible fibers, hence an equivalence.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.FreeCocartesian
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Functor.Adjunction
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Functor.Initial
+\import InfCat.Functor.LeftComma
+\import InfCat.Groupoid
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Fiberwise
+\import InfCat.Localization.Fiberwise.FiberwiseCocartesian
+\import InfCat.Localization.Fiberwise.FiberwiseFiber
+\import InfCat.Localization.WeaklyContractible
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | Quillen's Theorem A: a functor whose comma categories `f ↓ d` are weakly contractible is initial.
+\lemma theoremA.{u} {C D : \Cat u} (f : C ->⁺ D) (w : \Pi (d : D) -> IsWeaklyContractible (LeftComma f d)) : IsInitialFunctor f
+  => initialFunctor-comp (initialFunctor-comp (ladj-initialFunctor (inclAdj f)) (localization-initialFunctor localize-isLocalization))
+                         (hequiv-initialFunctor (fibLocProj-equiv f w))
+  \where {
+    -- | All vertical arrows of {FreeTot}.
+    \func AllW.{u} {C D : \Cat u} (f : C ->⁺ D) (d : D) (b : DI ->⁺ Fibers (freeProj f) d) : \Prop
+      => \Sigma
+
+    -- | The inclusion of {C} into {FreeTot}.
+    \func incl.{u} {C D : \Cat u} (f : C ->⁺ D) (c :⁺ C) : FreeTot f
+      => (f c, (c, idd))
+
+    -- | {incl} is left adjoint to the projection to {C}.
+    \func inclAdj.{u} {C D : \Cat u} (f : C ->⁺ D) : QAdjunction C (FreeTot f)
+      => UnivCounit.toAdjunction {inclCounit f}
+
+    -- | The counit `(f c, c, idd) ~> (d, c, a)` is given by `a`; it is universal since arrows out of `incl x` are determined by their projection to {C}.
+    \func inclCounit.{u} {C D : \Cat u} (f : C ->⁺ D) : UnivCounit (incl f) (\lam (t :⁺ FreeTot f) => t.2.1) \cowith
+      | ueps t => dpath \lam i => (t.2.2 i, (t.2.1, conn-right t.2.2 i))
+      | ueps-univ y x => IsEquiv.leftFactor (proj-equiv f x y)
+          (transportInv IsEquiv (ext \lam k => dmap_comp (\lam (t :⁺ FreeTot f) => t.2.1) *> comp_idd-right) (inP idEquiv))
+      \where
+        \lemma proj-equiv.{u} {C D : \Cat u} (f : C ->⁺ D) (x : C) (y : FreeTot f)
+          : IsEquiv {incl f x ~> y} {x ~> y.2.1} (\lam p => dpath \lam i => (p i).2.1)
+          => IsEquiv.trans (inP split) (inP (contr-right \lam k => segal-contr (dmap f k) y.2.2))
+          \where
+            \func split : QEquiv {incl f x ~> y} {\Sigma (k : x ~> y.2.1) (\Sigma (g : f x ~> y.1) (DPath (\lam i => f (k i) ~> g i) idd y.2.2))} \cowith
+              | f p => (dpath \lam i => (p i).2.1, (dpath \lam i => (p i).1, dpath \lam i => (p i).2.2))
+              | ret s => dpath \lam i => (s.2.1 i, (s.1 i, s.2.2 i))
+              | ret_f _ => idp
+              | f_sec _ => idp
+
+    -- | Vertical arrows are transport stable, since all of them are inverted.
+    \lemma allW-stable.{u} {C D : \Cat u} (f : C ->⁺ D) : IsTransportStable (Fibers (freeProj f)) (AllW f)
+      => \lam {s} {s'} g {b} _ => \let Ff => freeProj-cocartesian f \in
+          inP (\lam i => (cocartesianFib-lift {_} {Fibers (freeProj f)} Ff (s, s', g, b i)).1, (), dpath \lam j i => (cocartesianFib-lift {_} {Fibers (freeProj f)} Ff (s, s', g, b i)).2 j,
+               cocartesianFib-lift.isCocartesian {_} {Fibers (freeProj f)} (s, s', g, b dleft),
+               cocartesianFib-lift.isCocartesian {_} {Fibers (freeProj f)} (s, s', g, b dright))
+
+    -- | A category equivalent to the point is a contractible groupoid.
+    \lemma point-equiv {X : \Cat} (e : IsHEquiv {X} {\Sigma} (\lam _ => ())) : \Sigma (Contr X) (IsGroupoid X)
+      => (Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (IsHEquiv.toIsEquiv e))) (Contr.make () \lam _ => idp),
+          \lam h => IsFFMap.isConservative (ff-surj-equiv.2 e).1 idd-iso)
+
+    -- | The fibers of {fibLocProj} are contractible groupoids.
+    \lemma fiber-point.{v} {C D : \Cat v} (f : C ->⁺ D) (w : \Pi (d : D) -> IsWeaklyContractible (LeftComma f d)) (d : D)
+      : \Sigma (Contr (Fiber (fibLocProj (freeProj f) (AllW f)) d)) (IsGroupoid (Fiber (fibLocProj (freeProj f) (AllW f)) d))
+      => \let | Fw : IsWeaklyContractible (Fiber (freeProj f) d)
+                  => weaklyContractible-hequiv {LeftComma f d} {Fiber (freeProj f) d} (fibers-total-hequiv {D} {FreeCocart f} d) (w d)
+              | u => IsLocalization.unique (localize-isLocalization {Fiber (freeProj f) d} {\lam _ => \Sigma})
+                                           (fibLoc-fiber (freeProj-cocartesian f) (allW-stable f) d)
+         \in point-equiv (IsHEquiv.rightFactor u.3 Fw)
+
+    -- | {fibLocProj} is an equivalence.
+    \lemma fibLocProj-equiv.{v} {C D : \Cat v} (f : C ->⁺ D) (w : \Pi (d : D) -> IsWeaklyContractible (LeftComma f d))
+      : IsHEquiv (fibLocProj (freeProj f) (AllW f))
+      => \let | Ff => fibLoc-cocartesian (freeProj-cocartesian f) (allW-stable f)
+              | Fl : IsLeftFib (FibLocFam (freeProj f) (AllW f)) => lift-IsLeftFib (\lam d => (fiber-point f w d).2) (\lam d => cocartesianFib-lift {D} {FibLocFam (freeProj f) (AllW f)} Ff d)
+         \in IsHEquiv.trans (fibers-sigma-hequiv (fibLocProj (freeProj f) (AllW f))) (leftFib-contr-equiv Fl \lam d => (fiber-point f w d).1)
+  }

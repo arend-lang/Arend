@@ -19,6 +19,7 @@
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.Localization.Abstract
+\import InfCat.OFS.CatOFS
 \import InfCat.Paths
 \import InfCat.Resizing
 \import InfCat.Rezk
@@ -366,3 +367,46 @@
                              {c : L ->⁺ L'} (h : \Pi (x :⁺ C) -> c (l x) = l' x) : IsHEquiv c
   => \have u => IsLocalization.unique Lz Lz'
      \in transport IsHEquiv (funExt+ \lam y => loc-ext-eq (IsLocalization.univ Lz) {u.1} {c} (\lam x => u.2 x *> inv (h x)) {y}) u.3
+
+{- | A localization is left orthogonal to every conservative functor.
+ -   In a commutative square `v ∘ l = h ∘ u`, the functor `u` inverts {W}, since `h ∘ u = v ∘ l` does and {h} is conservative.
+ -   So squares are pairs of a functor inverting {W} and a lift of `h ∘ u` along {l}, which is unique ({lower-prop}),
+ -   and the claim follows from the universal property of {l}.
+ -}
+\lemma localization-orthogonal {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+                               {h : E ->⁺ D} (hc : IsConservative h)
+  : IsOrthogonal l h
+  => IsEquiv.leftFactor (inP (square-equiv Lz hc))
+       (transport IsEquiv (ext \lam g => ext idp) (restrictW-equiv (IsLocalization.univ Lz {E})))
+  \where \private {
+    \func Square {C L E D : \Cat} (l : C ->⁺ L) (h : E ->⁺ D) : \Type
+      => \Sigma (uv : \Sigma (C ->⁺ E) (L ->⁺ D)) (\Pi (x :⁺ C) -> uv.2 (l x) = h (uv.1 x))
+
+    \lemma square-inverts {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+                                   {h : E ->⁺ D} (hc : IsConservative h) (b : Square l h) : InvertsW W b.1.1
+      => \lam {a} w => hc (transport (\lam (F : C ->⁺ D) => IsIso (dpath \lam i => F (a i))) (funExt+ b.2) (dmap_IsIso b.1.2 (Lz.1 w)))
+
+    -- | A functor out of {L} is determined by its restriction along {l}.
+    \lemma lower-prop {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) (F : C ->⁺ D)
+      : isProp (\Sigma (v : L ->⁺ D) (\Pi (x :⁺ C) -> v (l x) = F x))
+      => isProp-retract {\Sigma (v : L ->⁺ D) ((\lam x => v (l x)) = {C ->⁺ D} F)} {\Sigma (v : L ->⁺ D) (\Pi (x :⁺ C) -> v (l x) = F x)}
+                        (\lam s => (s.1, funExt+ s.2))
+                        (\lam s => (s.1, (funExt+-equiv {C} {\lam _ => D} {\lam x => s.1 (l x)} {F}).ret s.2)) (\lam s => idp)
+                        (IsFFMap.fibProp {L ->⁺ D} {C ->⁺ D} {\lam G x => G (l x)} (localization-epi (IsLocalization.univ Lz {D})) F)
+
+    -- | The square given by a functor inverting {W} and its extension along {l}.
+    \func lift-square {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+                               (h : E ->⁺ D) (u : MapW W E) : Square l h
+      => \let | Uw => IsLocalization.univ Lz {D}
+              | hw : InvertsW W (\lam x => h (u.1 x)) => invertsW-postcomp h u.2
+         \in ((u.1, loc-lift Uw hw), \lam x => loc-lift.restrict {_} {_} {_} {_} {_} {Uw} {_} {hw} {x})
+
+    \func square-equiv {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+                                {h : E ->⁺ D} (hc : IsConservative h) : QEquiv {Square l h} {MapW W E} \cowith
+      | f b => (b.1.1, square-inverts Lz hc b)
+      | ret => lift-square Lz h
+      | ret_f b => \let | c => lift-square Lz h (b.1.1, square-inverts Lz hc b)
+                        | q => lower-prop Lz (\lam x => h (b.1.1 x)) (c.1.2, c.2) (b.1.2, b.2)
+                   \in path \lam i => ((b.1.1, (q i).1), (q i).2)
+      | f_sec u => ext idp
+  }

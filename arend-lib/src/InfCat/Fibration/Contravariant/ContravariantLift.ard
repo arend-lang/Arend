@@ -13,7 +13,9 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Interval
@@ -156,3 +158,8 @@
       : IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (f i, c.2 i)) \elim P, Q
       | idp, idp => transport (\lam (c : ContLift B (a, a, idd, b)) => IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (idd {A} {a} i, c.2 i)))
                               (isContr=>isProp (Bf (a, a, idd, b)) (b, idd) c) idd-iso
+
+-- | A functor whose fibers form a right fibration is conservative.
+\lemma rightFib-conservative {E A : \Cat} {p : E ->⁺ A} (pf : IsRightFib (Fibers p)) : IsConservative p
+  => \lam {x} {y} {r} ri => dmap_IsIso (\lam (s :⁺ \Sigma⁺ (a : A) (Fibers p a)) => s.2.1)
+       (rightFib-lift-iso pf ri ((x, idp), dpath \lam i => (r i, idp)))

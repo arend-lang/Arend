@@ -48,3 +48,7 @@
 -- | A category with an initial object is weakly contractible.
 \lemma initial-weaklyContractible {C : \Cat} {i : C} (ii : IsInitial i) : IsWeaklyContractible C
   => decalage-weaklyContractible (\lam x => x) i (\lam _ => idd) (IsInitial.adjunction ii).heps
+
+-- | Weak contractibility is invariant under equivalences.
+\lemma weaklyContractible-hequiv.{u} {C C' : \Cat u} {e : C ->⁺ C'} (ee : IsHEquiv e) (Cw : IsWeaklyContractible C) : IsWeaklyContractible C'
+  => transport (\lam (X : \Cat u) => IsWeaklyContractible X) (HEquiv_= ee) Cw

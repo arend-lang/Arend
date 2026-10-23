@@ -6,6 +6,7 @@
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
@@ -65,6 +66,38 @@
 -- | Lifts along a left fibration are unique, naturally in all the data.
 \sfunc leftFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d :⁺ CovLiftData B} {c c' :⁺ CovLift B d} : c = c'
   => IsHEquiv.fib-sec-unique (leftFib-equiv Bf) {d}
+
+-- | The lift of an isomorphism along a left fibration is an isomorphism in the total category.
+\lemma leftFib-lift-iso {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' : A} {f : a ~> a'} (fi : IsIso f) {b : B a}
+                        (c : CovLift B (a, a', f, b)) : IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (f i, c.2 i))
+  => \case IsIso-char.1 fi \with {
+       | inP (P, Q) => aux P Q c
+     }
+  \where
+    \private \lemma aux {a a' : A} (P : a = a') {f : a ~> a'} (Q : =_~> P = f) {b : B a} (c : CovLift B (a, a', f, b))
+      : IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (f i, c.2 i)) \elim P, Q
+      | idp, idp => transport (\lam (c : CovLift B (a, a, idd, b)) => IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (idd {A} {a} i, c.2 i)))
+                              (isContr=>isProp (Bf (a, a, idd, b)) (b, idd) c) idd-iso
+
+-- | A functor whose fibers form a left fibration is conservative.
+\lemma leftFib-conservative {E A : \Cat} {p : E ->⁺ A} (pf : IsLeftFib (Fibers p)) : IsConservative p
+  => \lam {x} {y} {r} ri => dmap_IsIso (\lam (s :⁺ \Sigma⁺ (a : A) (Fibers p a)) => s.2.1)
+       (leftFib-lift-iso pf ri {x, idp} ((y, idp), dpath \lam i => (r i, idp)))
+
+-- | The total projection of a left fibration with contractible fibers is an equivalence.
+\lemma leftFib-contr-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (Bc : \Pi (a : A) -> Contr (B a))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {A} {\lam s => s.1}).1
+       (\lam s t => IsEquiv.trans (inP (dpath-sigma-equiv (\lam _ => B))) (inP (contr-right \lam r => dpath-contr r)),
+        \lam a => inP ((a, (Bc a).center), idp))
+  \where
+    -- | Paths over an arrow {r} between points of contractible fibers form a contractible type.
+    \lemma dpath-contr {s t : \Sigma⁺ (a : A) (B a)} (r : s.1 ~> t.1) : Contr (DPath (\lam i => B (r i)) s.2 t.2)
+      => \let c : Contr (\Sigma (b' : B t.1) (DPath (\lam i => B (r i)) s.2 b'))
+               => Contr.Contr_QEquiv (later \new QEquiv { | f u => (u.1, u.2) | ret u => (u.1, u.2) | ret_f _ => idp | f_sec _ => idp })
+                                     (Bf (s.1, t.1, r, s.2))
+         \in Contr.Contr_QEquiv (proj-fib (\lam b' => DPath (\lam i => B (r i)) s.2 b') t.2)
+                                (IsEquiv=>contrFibers (contr-equiv c (Bc t.1) {__.1}) t.2)
 
 {- | A functor to `\Cat` with groupoid fibers equipped with a natural choice of lifts is a left fibration.
  -
@@ -145,6 +178,10 @@
           | idp => idp
       }
   }
+
+-- | A constant family at a groupoid is a left fibration.
+\lemma const-leftFib {A G : \Cat} (Gg : IsGroupoid G) : IsLeftFib {A} (\lam _ => G)
+  => lift-IsLeftFib (\lam _ => Gg) (\lam d => (d.4, idd))
 
 \lemma lift_type-IsLeftFib {A : \Cat} {B : A ->⁺ \Type} (lift : \Pi (d :⁺ CovLiftData B) -> CovLift B d) : IsLeftFib B
   => lift-IsLeftFib (\lam a => type-groupoid) lift
