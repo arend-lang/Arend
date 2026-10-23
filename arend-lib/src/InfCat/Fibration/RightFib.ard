@@ -11,6 +11,8 @@
 \import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
 \import InfCat.Slice
 \import InfCat.SubCat.Full
@@ -165,6 +167,21 @@
 \lemma rightFib-total {B : \Cat} {Q : B ->⁺ \Cat} (Qr : IsRightFib Q) : IsRightFib (Fibers (totalProj Q))
   => rightFib-sections.2 \lam v => IsEquiv.rightFactor (inP (fibers-total-equiv.sections v))
       (IsEquiv.trans (rightFib-sections.1 Qr v) (inP (fibers-total-equiv (v dright))))
+
+-- | The total projection of a right fibration with contractible fibers is an equivalence.
+\lemma rightFib-contr-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) (Bc : \Pi (a : A) -> Contr (B a))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {A} {\lam s => s.1}).1
+       (\lam s t => IsEquiv.trans (inP (dpath-sigma-equiv (\lam _ => B))) (inP (contr-right \lam r => dpath-contr r)),
+        \lam a => inP ((a, (Bc a).center), idp))
+  \where
+    -- | Paths over an arrow {r} between points of contractible fibers form a contractible type.
+    \lemma dpath-contr {s t : \Sigma⁺ (a : A) (B a)} (r : s.1 ~> t.1) : Contr (DPath (\lam i => B (r i)) s.2 t.2)
+      => \let c : Contr (\Sigma (b' : B s.1) (DPath (\lam i => B (r i)) b' t.2))
+               => Contr.Contr_QEquiv (later \new QEquiv { | f u => (u.1, u.2) | ret u => (u.1, u.2) | ret_f _ => idp | f_sec _ => idp })
+                                     (Bf (s.1, t.1, r, t.2))
+         \in Contr.Contr_QEquiv (proj-fib (\lam b' => DPath (\lam i => B (r i)) b' t.2) s.2)
+                                (IsEquiv=>contrFibers (contr-equiv c (Bc s.1) {__.1}) s.2)
 
 -- | The map of slices induced by {q}.
 \func sliceMap {E A : \Cat} (q : E ->⁺ A) (x : E) (w : \Sigma (y : E) (y ~> x)) : \Sigma (a : A) (a ~> q x)

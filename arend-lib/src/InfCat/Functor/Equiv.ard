@@ -188,3 +188,12 @@
     \private \lemma aux.{u} {A A' : \Cat u} (p : A = A') {F : A' ->⁺ \Cat}
       : IsHEquiv {\Sigma⁺ (a : A) (F (transport+ (\lam Y => Y) p a))} {\Sigma⁺ (a' : A') (F a')} (\lam s => (transport+ (\lam Y => Y) p s.1, s.2)) \elim p
       | idp => idHEquiv
+
+-- | Restriction of sections of a family along an equivalence is an equivalence.
+\lemma sections-precomp-equiv.{u} {Y' Y : \Cat u} {e : Y' ->⁺ Y} (ee : IsHEquiv e) {D : Y ->⁺ \Cat}
+  : IsEquiv {\Pi (y :⁺ Y) -> D y} {\Pi (y' :⁺ Y') -> D (e y')} (\lam s y' => s (e y'))
+  => aux (HEquiv_= ee)
+  \where
+    \private \lemma aux.{u} {Y' Y : \Cat u} (p : Y' = Y) {D : Y ->⁺ \Cat}
+      : IsEquiv {\Pi (y :⁺ Y) -> D y} {\Pi (y' :⁺ Y') -> D (transport+ (\lam Z => Z) p y')} (\lam s y' => s (transport+ (\lam Z => Z) p y')) \elim p
+      | idp => inP idEquiv

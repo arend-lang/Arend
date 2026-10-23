@@ -44,6 +44,9 @@
 \func transport+_inv_*> {A :⁺ \Cat} (C :⁺ A ->⁺ \Cat) {a a' :⁺ A} (r :⁺ a = a') {x :⁺ C a} : transport+ C (inv r) (transport+ C r x) = x \elim r
   | idp => idp
 
+\func transport+_*>_inv {A :⁺ \Cat} (C :⁺ A ->⁺ \Cat) {a a' :⁺ A} (r :⁺ a = a') {y :⁺ C a'} : transport+ C r (transport+ C (inv r) y) = y \elim r
+  | idp => idp
+
 \func homotopy-isNatural+ {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) (h :⁺ \Pi (a :⁺ A) -> f a = g a) {a a' :⁺ A} (p :⁺ a = a')
   : pmap+ f p *> h a' = h a *> pmap+ g p \elim p
   | idp => idp_*>

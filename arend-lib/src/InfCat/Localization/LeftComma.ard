@@ -7,20 +7,31 @@
  -   * {leftComma-ladj-inverts}: the image of such an arrow and the lifts at its ends form a square whose other three sides
  -     are cocartesian, so the image is a cocartesian arrow over the identity, hence an isomorphism.
  -   * {fibLeftComma-ladj-fib}: transport of an object of the fiber along the identity is the object itself.
+ -
+ -   Over a terminal object {top} of {S}, the projection `p ↓ top ->⁺ L` is an equivalence ({terminalComma-equiv}), so cocartesian
+ -   transport to the fiber over {top} ({toTerminal}) is the localization of {L} at the cocartesian arrows ({toTerminal-isLocalization}),
+ -   and functors inverting them are determined by the fiber over {top} ({restrict-terminal-equiv}).
  -}
 
+\import Equiv
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CocartesianMap
 \import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.RightFib
 \import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
 \import InfCat.Functor.LeftComma
 \import InfCat.Localization.Abstract
 \import InfCat.Localization.Concrete
+\import InfCat.Paths
+\import InfCat.Limit.Terminal
 \import InfCat.Rezk
 \import InfCat.Square
+\import Logic
 \import Paths
+\import Paths.Meta
 
 -- | The arrows of `p ↓ s` whose underlying arrow is cocartesian.
 \func LeftCommaW.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (a : DI ->⁺ LeftComma p s) : \Prop
@@ -70,3 +81,37 @@
   : y = fibLeftComma-ladj Ff s (fibLeftComma p s y)
   => path \lam j => natIso-path {Fibers p s} {Fibers p s} {\lam y => y} {\lam y => fibLeftComma-ladj Ff s (fibLeftComma p s y)}
                                 (\lam y => leftComma-isLocalization.eps Ff y.2) (\lam y => leftComma-isLocalization.eps-iso Ff y.2) j y
+
+-- # Localization over a terminal object
+
+-- | If {top} is terminal, the projection `p ↓ top ->⁺ L` is an equivalence.
+\lemma terminalComma-equiv.{u} {L S : \Cat u} {p : L ->⁺ S} {top : S} (Pt : IsTerminal top)
+  : IsHEquiv {LeftComma p top} {L} (\lam x => x.1)
+  => rightFib-contr-equiv (rightFib-pullback p (hom-rightFib top)) (\lam a => Pt (p a))
+
+-- | The arrow from the image of {x} to the terminal object, covariant in {x}.
+\sfunc terminalArr.{u} {L S : \Cat u} {p : L ->⁺ S} {top : S} (Pt : IsTerminal top) (x :⁺ L) : p x ~> top
+  => IsHEquiv.fib-sec (terminalComma-equiv Pt) x
+
+-- | Cocartesian transport to the fiber over the terminal object.
+\func toTerminal.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {top : S} (Pt : IsTerminal top) (x :⁺ L) : Fibers p top
+  => fibLeftComma-ladj Ff top (x, terminalArr Pt x)
+
+-- | Cocartesian transport to the fiber over a terminal object is the localization at the cocartesian arrows.
+\lemma toTerminal-isLocalization.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {top : S} (Pt : IsTerminal top)
+  : IsLocalization (\lam a => IsCocartesianArrow p (dpath \lam i => a i)) (toTerminal Ff Pt)
+  => isLocalization-precomp (leftComma-isLocalization Ff top)
+       (IsHEquiv.leftFactor {L} {LeftComma p top} {L} {\lam x => (x, terminalArr Pt x)} (terminalComma-equiv Pt) idHEquiv)
+
+-- | On the fiber over the terminal object, {toTerminal} is the identity.
+\sfunc toTerminal-fib.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {top : S} (Pt : IsTerminal top) {y :⁺ Fibers p top}
+  : toTerminal Ff Pt y.1 = y
+  => path (\lam j => fibLeftComma-ladj Ff top (y.1, IsHEquiv.fib-sec-unique (terminalComma-equiv {L} {S} {p} Pt) {y.1} {terminalArr Pt y.1} {over-arr idd y.2} j))
+     *> inv (fibLeftComma-ladj-fib Ff top)
+
+-- | Functors inverting the cocartesian arrows are determined by their restriction to the fiber over a terminal object.
+\lemma restrict-terminal-equiv.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {top : S} (Pt : IsTerminal top) {D : \Cat}
+  : IsEquiv {MapW (\lam a => IsCocartesianArrow p (dpath \lam i => a i)) D} {Fibers p top ->⁺ D} (\lam F y => F.1 y.1)
+  => \let Lz => toTerminal-isLocalization Ff Pt
+     \in IsEquiv.rightFactor (restrictW-equiv (IsLocalization.univ Lz {D}))
+          (transportInv IsEquiv (ext \lam G y => pmap+ G (toTerminal-fib Ff Pt)) (inP idEquiv))

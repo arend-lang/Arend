@@ -69,6 +69,11 @@
         (inP $ DI-hom-equiv {C} `transQEquiv` contr-right \lam p => Contr.Contr_QEquiv (sigma-right \lam q => =_~>-equiv {_} {p} {q}) (lsigma p))
         (inP idEquiv)
 
+-- | Objects are the isomorphisms, via identities.
+\lemma rezk-equiv {C : \Cat} : IsEquiv {C} {\Sigma (h : DI ->⁺ C) (IsIso (dpath \lam i => h i))} (\lam c => (\lam _ => c, idd-iso))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection \lam (h : DI ->⁺ C) => IsIso (dpath \lam i => h i)) (IsFFMap.isObEmbedding diag-ff))
+       \lam t => \case IsIso-diag-char.1 t.2 \with { | inP (c, p) => inP (c, ext p) }
+
 -- | The diagonal map into the fiberwise arrow category of a family is fully faithful.
 \lemma diag-rel-ff {C : \Cat} {G : C ->⁺ \Cat} : IsFFMap {\Sigma⁺ (x : C) (G x)} {\Sigma⁺ (x : C) (DI ->⁺ G x)} (\lam s => (s.1, \lam _ => s.2))
   => \lam s t => IsEquiv.leftFactor

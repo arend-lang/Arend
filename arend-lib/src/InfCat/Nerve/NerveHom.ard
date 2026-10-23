@@ -1,4 +1,5 @@
 \import Category
+\import Category.Functor
 \import Equiv
 \import Function.Meta
 \import Homotopy.Fibration
@@ -6,11 +7,14 @@
 \import InfCat.Basics
 \import InfCat.Fibration.DirectedUnivalence
 \import InfCat.Fibration.Straightening
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Limit.Terminal
 \import InfCat.Nerve.Nerve
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Square
 \import InfCat.SubCat.Full
+\import InfCat.Trunc.ArrowFam
 \import InfCat.Trunc.IsCatTrunc
 \import InfCat.Trunc.TruncUniverse
 \import InfCat.Yoneda.CovariantYoneda
@@ -174,3 +178,26 @@
     | inP (x, p), inP (y, q) => transport2 (\lam a b => isProp (a ~> b)) p q
         (isProp.equiv (IsEquiv.ret-equiv nerveHom-equiv) \lam f g => prop-pi)
   }
+
+-- | The nerve of a functor which is bijective on morphisms is fully faithful.
+\lemma nerveMap-ff.{u} {C D : Precat.{u,u}} (F : Functor C D) (Fe : \Pi {x y : C} -> IsEquiv (F.Func {x} {y})) : IsFFMap (nerveMap F)
+  => \lam a b => \case nerveOb-surj a, nerveOb-surj b \with {
+       | inP (x, p), inP (y, q) => transport2 (\lam a b => IsEquiv (\lam (r : a ~> b) => dmap (nerveMap F) r)) p q $
+           IsEquiv.rightFactor nerveHom-equiv (IsEquiv.trans Fe nerveHom-equiv)
+     }
+
+-- | A terminal object of a precategory is terminal in its nerve.
+\lemma nerve-isTerminal.{u} {Q : Precat.{u,u}} {t : Q} (tt : \Pi (x : Q) -> Contr (Hom x t)) : IsTerminal (nerveOb t)
+  => \lam y => \case nerveOb-surj y \with {
+    | inP (x, p) => transport (\lam y => Contr (y ~> nerveOb t)) p (Contr.Contr_QEquiv (IsEquiv.toQEquiv nerveHom-equiv) (tt x))
+  }
+
+-- | Paths between functors into the nerve of a preorder are unique.
+\lemma thin-fun-path-prop.{u} {A : \Cat} {P : Preorder.{u}} (f g : A ->⁺ Nerve P) : isProp (f = g)
+  => \lam p q => IsEquiv.ret (inP (Embedding.pmap-isEquiv {=_~>-embedding f g} {p} {q})) (arr-prop _ _)
+  \where
+    \sfunc arr-prop (u v : f ~> g) : u = v
+      => \let | su (a :⁺ A) : f a ~> g a => dpath \lam i => u i a
+              | sv (a :⁺ A) : f a ~> g a => dpath \lam i => v i a
+              | e => funExt+ (arrow-fam-ext nerve-isTruncCat su sv (\lam a => nerve-preorder-prop _ _ _ _))
+         \in path \lam j => dpath \lam i a => (e @ j) a i

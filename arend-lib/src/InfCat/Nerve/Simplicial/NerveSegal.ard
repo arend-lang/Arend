@@ -1,0 +1,325 @@
+{- | The simplicial nerve is a complete Segal right fibration ({snerve-completeSegal}).
+
+ -   Segal condition ({snerve-segal}). The nerve is a right adjoint: sections of the nerve along `pi : T ->⁺ DeltaCat` are the
+ -   functors on the base change `T ×_Δ [-]` of the universal cocartesian fibration inverting {CocartW} ({ExpCocCore.sec-equiv}).
+ -   So restriction of sections along a functor of bases is an equivalence as soon as it induces an equivalence of localizations
+ -   of the base changes at {CocartW}, the realizations ({ExpCocCore.sec-restrict-equiv}).
+ -   * Over a base with a terminal object over `[n]`, the realization is `[n]`, via cocartesian transport to the terminal fiber
+ -     ({SegalHelpers.ellN}, {SegalHelpers.ellN-isLocalization}). It is natural in the base ({SegalHelpers.ellN-natural}).
+ -   * The span is the pushout `[1] ⊔_[0] [1]` ({span-pushout}), and realizations glue along pushouts ({pushout-bc-localization}).
+ -     So the realization of the span is `[k] ⊔_[0] [1]`.
+ -   * The map induced by the inclusion of the span into `Δ/[k+1]` is the spine map `[k] ⊔_[0] [1] -> [k+1]`, an equivalence
+ -     ({spine-pushout}). Since `[k+1]` is the nerve of a poset, this is checked on the two summands ({pushout-mapW-thin-ext}).
+
+ -   Completeness ({snerve-complete}). Edges of the nerve are arrows of {C} ({snerve-nu-equiv}). An edge which is an isomorphism
+ -   in the sense of {IsIsoS} is an isomorphism of {C}, since 2-simplices are commutative triangles ({snerve-complete.isoS-iso}).
+ -   This gives an embedding of the isomorphisms of the nerve into the isomorphisms of {C} ({snerve-complete.isoArr}).
+ -   On degenerate edges it is {rezk-equiv} for {C}, so it is also surjective, hence an equivalence.
+ -}
+
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Category
+\import Category.Functor
+\import Category.Simplex
+\import Category.Slice
+\import Equiv
+\import Function.Meta
+\import InfCat.Interval
+\import InfCat.Trunc.IsCatTrunc
+\import Logic.Meta
+\import InfCat.CatPushout.BaseChangePushout
+\import InfCat.Simplicial.Complete
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianBaseChange
+\import InfCat.Fibration.ExponentCocartesianCore
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Limit.Terminal
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.NervePushout
+\import InfCat.Nerve.Simplicial.NerveSpine
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\open SegalHelpers
+\open NerveLow
+
+-- | The simplicial nerve satisfies the Segal condition: restriction to the span is induced by the spine map of realizations.
+\lemma snerve-segal.{u} {C : \Cat u} : IsSegal (SNerve.proj C)
+  => \lam k => IsEquiv.leftFactor {_} {_} {_} {_} {\lam s => \lam (w :⁺ SpanPO) => s (spanPhi w)} (sections-precomp-equiv span-pushout) $
+       ExpCocCore.sec-restrict-equiv univSimplex-cocartesianMap (sliceProj (suc k)) (spanH k)
+         (ellN-isLocalization (sliceProj (suc k)) (slice-terminal (suc k)) idp) (ellS-isLocalization k)
+
+-- | The simplicial nerve is complete: its isomorphisms are the isomorphisms of {C}, and those are its objects.
+\lemma snerve-complete.{u} {C : \Cat u} : IsComplete {SNerve C} {SNerve.proj C} SNerveFib.isRightFib
+  => \have e => transport IsEquiv (ext \lam x => inv (complete-square x)) $
+                 IsEquiv.trans (IsEquiv.trans (snerve-nu-equiv 0) nerve0-ev-equiv) rezk-equiv
+     \in IsEquiv.leftFactor {_} {_} {_} {\lam x => ((degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x)
+                                                    : \Sigma (e : S.{u} C 1) (IsIsoS SNerveFib.isRightFib e))} (isoArr-equiv e) e
+  \where \private {
+    \open simplex
+
+    -- | Simplices of the nerve.
+    \func S.{v} (C : \Cat v) (n : Nat) => simplex (SNerve.proj C) n
+
+    -- | Transport along {d} is precomposition with {d}.
+    \sfunc fun-path.{v} {C : \Cat v} {m n : Nat} (d : SimplexCat.Hom m n) (s : S C n)
+      : (\lam t =>⁺ snerve-nu m (act SNerveFib.isRightFib d s) t) = {Nerve (Simplex m) ->⁺ C} (\lam t =>⁺ snerve-nu n s (nerveMap d t))
+      => funExt+ \lam t => snerve-nu-tr d s
+
+    -- | The long edge of a functor from `[2]` is the composite of the short edges.
+    \sfunc tri {C : \Cat} (G : Nerve (Simplex 2) ->⁺ C)
+      : n1edge (\lam t =>⁺ G (nerveMap face1 t))
+        = comp (n1edge (\lam t =>⁺ G (nerveMap (segRes 1) t))) (n1edge (\lam t =>⁺ G (nerveMap (lastEdge 1) t)))
+      => pmap (dmap G) (pmap (nerveHom {Simplex 2} {0} {2}) prop-pi *> inv nerveHom-comp) *> dmap_comp G
+
+    -- | The edges of degenerate 1-simplices are isomorphisms.
+    \lemma degen-edge-iso.{v} {C : \Cat v} (y : S C 0) : IsIso (n1edge (\lam t =>⁺ snerve-nu 1 (degen SNerveFib.isRightFib y) t))
+      => transportInv (\lam (F : Nerve (Simplex 1) ->⁺ C) => IsIso (n1edge F)) (fun-path (constHom 0) y)
+           (dmap_IsIso (\lam t =>⁺ snerve-nu 0 y t) (transportInv IsIso (pmap (nerveHom {Simplex 0} {0} {0}) prop-pi *> nerveHom-id) idd-iso))
+
+    -- | The edge of {F} has a postcomposite which is an isomorphism.
+    \func SplitMono {C : \Cat} (F : Nerve (Simplex 1) ->⁺ C) : \Prop
+      => ∃ (z : C) (g : F (nerveOb 1) ~> z) (IsIso (comp (n1edge F) g))
+
+    -- | The edge of {F} has a precomposite which is an isomorphism.
+    \func SplitEpi {C : \Cat} (F : Nerve (Simplex 1) ->⁺ C) : \Prop
+      => ∃ (z : C) (g : z ~> F (nerveOb 0)) (IsIso (comp g (n1edge F)))
+
+    -- | The long edge of a 2-simplex whose long edge is degenerate is an isomorphism.
+    \lemma face1-iso.{v} {C : \Cat v} (sigma : S C 2) {y : S C 0} (p : act SNerveFib.isRightFib face1 sigma = degen SNerveFib.isRightFib y)
+      : IsIso (n1edge (\lam t =>⁺ snerve-nu 2 sigma (nerveMap face1 t)))
+      => transport (\lam (F : Nerve (Simplex 1) ->⁺ C) => IsIso (n1edge F)) (fun-path face1 sigma)
+           (transportInv (\lam s => IsIso (n1edge (\lam t =>⁺ snerve-nu 1 s t))) p (degen-edge-iso y))
+
+    \lemma leftInv-splitMono.{v} {C : \Cat v} {e : S C 1} (h : HasLeftInv SNerveFib.isRightFib e) : SplitMono (\lam t =>⁺ snerve-nu 1 e t) \elim h
+      | inP (sigma, p1, p2) => transport SplitMono (inv (fun-path (segRes 1) sigma) *> pmap (\lam s => \lam t =>⁺ snerve-nu 1 s t) p1)
+          (inP (_, n1edge (\lam t =>⁺ snerve-nu 2 sigma (nerveMap (lastEdge 1) t)), transport IsIso (tri (\lam t =>⁺ snerve-nu 2 sigma t)) (face1-iso sigma p2)))
+
+    \lemma rightInv-splitEpi.{v} {C : \Cat v} {e : S C 1} (h : HasRightInv SNerveFib.isRightFib e) : SplitEpi (\lam t =>⁺ snerve-nu 1 e t) \elim h
+      | inP (sigma, p1, p2) => transport SplitEpi (inv (fun-path (lastEdge 1) sigma) *> pmap (\lam s => \lam t =>⁺ snerve-nu 1 s t) p1)
+          (inP (_, n1edge (\lam t =>⁺ snerve-nu 2 sigma (nerveMap (segRes 1) t)), transport IsIso (tri (\lam t =>⁺ snerve-nu 2 sigma t)) (face1-iso sigma p2)))
+
+    -- | Isomorphisms of the nerve are isomorphisms of {C}.
+    \lemma isoS-iso.{v} {C : \Cat v} {e : S C 1} (i : IsIsoS SNerveFib.isRightFib e) : IsIso (n1edge (\lam t =>⁺ snerve-nu 1 e t))
+      => biinv-iso (leftInv-splitMono i.1) (rightInv-splitEpi i.2)
+
+    -- | An isomorphism of the nerve as an isomorphism of {C}, as an arrow.
+    \func isoArr.{v} {C : \Cat v} (t : \Sigma (e : S C 1) (IsIsoS SNerveFib.isRightFib e)) : \Sigma (h : DI ->⁺ C) (IsIso (dpath \lam i => h i))
+      => (\lam i => snerve-nu 1 t.1 (n1arr i), isoS-iso t.2)
+
+    -- | {isoArr} is an embedding, since its underlying map of edges is an equivalence.
+    \lemma isoArr-emb.{v} {C : \Cat v} : Embedding (isoArr {C})
+      => leftEmbedding (Embedding.projection \lam (h : DI ->⁺ C) => IsIso (dpath \lam i => h i))
+           (transEmbedding (Embedding.projection (IsIsoS SNerveFib.isRightFib))
+                           (Embedding.fromIsEquiv (IsEquiv.trans (snerve-nu-equiv {C} 1) (inP nerve1-DI-equiv))))
+
+    -- | {isoArr} is an equivalence: it is an embedding, and it is surjective since its composite with the degenerate edges is.
+    \lemma isoArr-equiv.{v} {C : \Cat v} (e : IsEquiv (\lam (x : S C 0) => isoArr (degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x)))
+      : IsEquiv (isoArr {C})
+      => IsEquiv.fromEmbSurj isoArr-emb \lam y => \case IsEquiv.isSurj e y \with {
+           | inP (x, p) => inP ((degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x), p)
+         }
+
+    -- | On degenerate edges, {isoArr} is the identity arrow.
+    \sfunc complete-square.{v} {C : \Cat v} (x : S C 0)
+      : isoArr (degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x) = (\lam _ => snerve-nu 0 x pt0, idd-iso)
+      => ext (path (\lam j => \lam i =>⁺ fun-path (constHom 0) x j (n1arr i))
+              *> path (\lam j => \lam i =>⁺ snerve-nu 0 x ((inv nerve0-contr j) (nerveMap (constHom 0) (n1arr i)))))
+  }
+
+-- | The simplicial nerve is a complete Segal right fibration.
+\lemma snerve-completeSegal.{u} {C : \Cat u} : IsCompleteSegal {SNerve C} {SNerve.proj C} SNerveFib.isRightFib
+  => (snerve-segal, snerve-complete)
+
+\module SegalHelpers \where {
+  -- | The inverse of the identification of `[n]` with the fiber of {UnivSimplexFib}.
+  \func ret-n (n : Nat) (y :⁺ UnivSimplexFib (nerveOb n)) : Nerve (Simplex n)
+    => IsHEquiv.ret (univSimplexFib-fiber n) y
+
+  -- | Cocartesian transport to the fiber over a terminal object identified with `[n]`.
+  \func ellN {T : \Cat 0} (pi : T ->⁺ DeltaCat) {top : T} (Pt : IsTerminal top) {n : Nat} (pt : pi top = nerveOb n)
+              (q :⁺ BaseChange pi (nerveMap simplexProj)) : Nerve (Simplex n)
+    => ret-n n (transport+ UnivSimplexFib pt (toTerminalBC univSimplex-cocartesianMap pi Pt q))
+
+  -- | Over a base with a terminal object over `[n]`, {ellN} is the localization at {CocartW}: the realization is `[n]`.
+  \lemma ellN-isLocalization {T : \Cat 0} (pi : T ->⁺ DeltaCat) {top : T} (Pt : IsTerminal top) {n : Nat} (pt : pi top = nerveOb n)
+    : IsLocalization (CocartW (nerveMap simplexProj) pi) (ellN pi Pt pt)
+    => isLocalization-transfer (toTerminalBC-isLocalization univSimplex-cocartesianMap pi Pt) idHEquiv (tr-ret-equiv pt)
+         {ellN pi Pt pt} (\lam x => idp) (\lam a => (\lam w => w, \lam w => w))
+    \where
+      \lemma tr-ret-equiv {b : DeltaCat} {n : Nat} (pt : b = nerveOb n)
+        : IsHEquiv (\lam (y : UnivSimplexFib b) => ret-n n (transport+ UnivSimplexFib pt y)) \elim pt
+        | idp => IsHEquiv.ret-equiv (univSimplexFib-fiber n)
+
+  {- | Naturality of {ellN} along a functor {h} of bases: if the image of an arrow {a} from `h top'` to {top} is {d},
+   -   then {ellN} for {T} restricted along {h} is {ellN} for {T'} followed by {d}.
+   -}
+  \sfunc ellN-natural {T T' : \Cat 0} (pi : T ->⁺ DeltaCat) {top : T} (Pt : IsTerminal top) {n : Nat} (pt : pi top = nerveOb n)
+                      (h : T' ->⁺ T) {top' : T'} (Pt' : IsTerminal top') {m : Nat} (pt' : pi (h top') = nerveOb m)
+                      (d : SimplexCat.Hom m n) (a : h top' ~> top)
+                      (da : (\lam i => pi (a i)) = {DI ->⁺ DeltaCat} (\lam i => nerveHom {SimplexCat} d i))
+    : (\lam q => ellN pi Pt pt (h q.1, q.2))
+      = {BaseChange (\lam t => pi (h t)) (nerveMap simplexProj) ->⁺ Nerve (Simplex n)} (\lam q => nerveMap d (ellN (\lam t => pi (h t)) Pt' pt' q))
+    => pmap (\lam (H : BaseChange (\lam t => pi (h t)) (nerveMap simplexProj) ->⁺ UnivSimplexFib (pi top))
+                   (q :⁺ BaseChange (\lam t => pi (h t)) (nerveMap simplexProj)) => ret-n n (transport+ UnivSimplexFib pt (H q)))
+            (toTerminalBC-natural univSimplex-cocartesianMap pi Pt h Pt' a)
+       *> pmap (\lam (H : UnivSimplexFib (pi (h top')) ->⁺ Nerve (Simplex n)) (q :⁺ BaseChange (\lam t => pi (h t)) (nerveMap simplexProj)) =>
+                  H (toTerminalBC univSimplex-cocartesianMap (\lam t => pi (h t)) Pt' q))
+               (toEnd-ret d da pt pt')
+    \where {
+      -- | Cocartesian transport along {d}, under the identifications of the fibers with simplices, is {d}.
+      \sfunc toEnd-ret {m n : Nat} (d : SimplexCat.Hom m n) {beta : DI ->⁺ DeltaCat}
+                       (db : beta = {DI ->⁺ DeltaCat} (\lam i => nerveHom {SimplexCat} d i))
+                       (pt : beta dright = nerveOb n) (pt' : beta dleft = nerveOb m)
+        : (\lam (y :⁺ UnivSimplexFib (beta dleft)) => ret-n n (transport+ UnivSimplexFib pt (toEnd univSimplex-cocartesianMap beta (dleft, y))))
+          = {UnivSimplexFib (beta dleft) ->⁺ Nerve (Simplex n)} (\lam y => nerveMap d (ret-n m (transport+ UnivSimplexFib pt' y))) \elim db
+        | idp => \let Mot (pt : nerveOb n = nerveOb n) (pt' : nerveOb m = nerveOb m) =>
+                      (\lam (y :⁺ UnivSimplexFib (nerveOb m)) => ret-n n (transport+ UnivSimplexFib pt (toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, y))))
+                        = {UnivSimplexFib (nerveOb m) ->⁺ Nerve (Simplex n)} (\lam y => nerveMap d (ret-n m (transport+ UnivSimplexFib pt' y)))
+                 \in transport2 Mot (deltaCat-path-isProp _ _ idp pt) (deltaCat-path-isProp _ _ idp pt') (toEnd-ret-idp d)
+
+      \sfunc toEnd-ret-idp {m n : Nat} (d : SimplexCat.Hom m n)
+        : (\lam (y :⁺ UnivSimplexFib (nerveOb m)) => ret-n n (toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, y)))
+          = {UnivSimplexFib (nerveOb m) ->⁺ Nerve (Simplex n)} (\lam y => nerveMap d (ret-n m y))
+        => inv (pmap (\lam (H : UnivSimplexFib (nerveOb m) ->⁺ UnivSimplexFib (nerveOb m)) (y :⁺ UnivSimplexFib (nerveOb m)) =>
+                        ret-n n (toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, H y)))
+                     (funExt+ \lam y => IsHEquiv.f_ret (univSimplexFib-fiber m) {y}))
+           *> pmap (\lam (H : Nerve (Simplex m) ->⁺ UnivSimplexFib (nerveOb n)) (y :⁺ UnivSimplexFib (nerveOb m)) => ret-n n (H (ret-n m y)))
+                   (snerve-nu-tr.toEnd-incl d)
+           *> pmap (\lam (H : Nerve (Simplex n) ->⁺ Nerve (Simplex n)) (y :⁺ UnivSimplexFib (nerveOb m)) => H (nerveMap d (ret-n m y)))
+                   (funExt+ \lam z => IsHEquiv.ret_f (univSimplexFib-fiber n) {z})
+    }
+
+  -- | {ellN} commutes with transport along a path of functors of bases.
+  \sfunc ellN-tr {T T' : \Cat 0} (pi : T ->⁺ DeltaCat) {h1 h2 : T' ->⁺ T} (q : h1 = h2) {top : T'} (Pt : IsTerminal top) {n : Nat}
+                 (pt1 : pi (h1 top) = nerveOb n) (pt2 : pi (h2 top) = nerveOb n)
+    : transport (\lam (k : T' ->⁺ T) => BaseChange (\lam t => pi (k t)) (nerveMap simplexProj) ->⁺ Nerve (Simplex n)) q (ellN (\lam t => pi (h1 t)) Pt pt1)
+      = ellN (\lam t => pi (h2 t)) Pt pt2 \elim q
+    | idp => pmap {pi (h1 top) = nerveOb n} {BaseChange (\lam t => pi (h1 t)) (nerveMap simplexProj) ->⁺ Nerve (Simplex n)}
+                  (\lam pt => ellN (\lam t => pi (h1 t)) Pt pt) (deltaCat-path-isProp _ _ pt1 pt2)
+
+  -- | The identity is a terminal object of `Δ/[n]`.
+  \lemma slice-terminal (n : Nat) : IsTerminal (nerveOb {SliceS n} (n, SimplexCat.id {n}))
+    => nerve-isTerminal {SliceS n} {n, SimplexCat.id {n}} \lam x =>
+         isProp=>isContr (\lam a b => ext (inv SimplexCat.id-left *> a.2 *> inv b.2 *> SimplexCat.id-left)) (x.2, SimplexCat.id-left)
+
+  -- | The top vertex is a terminal object of `[n]`.
+  \lemma simplex-terminal (n : Nat) : IsTerminal (nerveOb {Simplex n} (topV n))
+    => nerve-isTerminal {Simplex n} {topV n} \lam x => isProp=>isContr (\lam _ _ => prop-pi) (le-top x)
+
+  -- | The pushout of two copies of `[1]` along the vertex `0`.
+  \func SpanPO : \Cat
+    => CatPushout {Nerve (Simplex 0)} {Nerve (Simplex 1)} {Nerve (Simplex 1)} (\lam a => nerveMap (vert {1} 0) a) (\lam a => nerveMap (vert {1} 0) a)
+
+  -- | The equivalence of {SpanPO} with the span ({span-pushout}).
+  \func spanPhi (w :⁺ SpanPO) : Nerve SpanP
+    => nerve-pushout-map (vert {1} 0) (vert {1} 0) spanB spanC span-sq w
+
+  -- | The span in `Δ/[k+1]`, presented as {SpanPO}.
+  \func spanH (k : Nat) (w :⁺ SpanPO) : Nerve (SliceS (suc k))
+    => nerveMap (spanInc k) (spanPhi w)
+
+  -- | The base of the span.
+  \func piS (k : Nat) (w :⁺ SpanPO) : DeltaCat
+    => sliceProj (suc k) (spanH k w)
+
+  -- | The realization of `Δ/[k+1]` restricted to the span.
+  \func ellS (k : Nat) : MapW (CocartW (nerveMap simplexProj) (piS k)) (Nerve (Simplex (suc k)))
+    => mapW-res (spanH k) (ellN (sliceProj (suc k)) (slice-terminal (suc k)) idp,
+                           (ellN-isLocalization (sliceProj (suc k)) (slice-terminal (suc k)) idp).1)
+
+  {- | The realization of `Δ/[k+1]` restricted to the span is a localization: realizations glue along {SpanPO}
+   -   to a localization with values in the spine `[k] ⊔_[0] [1]`, and its composite with the spine map is {ellS}.
+   -}
+  \lemma ellS-isLocalization (k : Nat) : IsLocalization (CocartW (nerveMap simplexProj) (piS k)) (ellS k).1
+    => \let | K => pushout-bc-localization univSimplex-cocartesianMap (piS k)
+                     (ellN-isLocalization (\lam x => piS k (cinl x)) (simplex-terminal 1) idp)
+                     (ellN-isLocalization (\lam y => piS k (cinr y)) (simplex-terminal 1) idp)
+                     (ellN-isLocalization (\lam z => piS k (cinl (nerveMap (vert {1} 0) z))) (simplex-terminal 0) idp)
+                     {nerveMap (vert (topV k))} {nerveMap (vert {1} 0)}
+                     (inv (ellN-natural (\lam x => piS k (cinl x)) (simplex-terminal 1) idp (nerveMap (vert {1} 0)) (simplex-terminal 0) idp
+                                        (vert (topV k)) (nerveHom {Simplex 1} {0} {topV 1} (le-top 0)) idp))
+                     (pmap (\lam F => \lam x =>⁺ nerveMap (vert {1} 0) (F x)) (ellN-tr (piS k) glueQ (simplex-terminal 0) idp idp)
+                      *> inv (ellN-natural (\lam y => piS k (cinr y)) (simplex-terminal 1) idp (nerveMap (vert {1} 0)) (simplex-terminal 0) idp
+                                           (vert {1} 0) (nerveHom {Simplex 1} {0} {topV 1} (le-top 0)) idp))
+            | sp => nerve-pushout-map (vert (topV k)) (vert {1} 0) (segRes k) (lastEdge k) (spine-sq k)
+            | e : ellS k = restrictW K.2.1 sp => pushout-mapW-thin-ext univSimplex-cocartesianMap (piS k)
+                (ellN-natural (sliceProj (suc k)) (slice-terminal (suc k)) idp (\lam y => nerveMap (spanInc k) (nerveMap spanB y)) (simplex-terminal 1) idp
+                              (segRes k) (nerveHom {SliceS (suc k)} {k, segRes k} {suc k, SimplexCat.id {suc k}} (segRes k, SimplexCat.id-left)) idp
+                 *> inv (pmap (\lam F => \lam x =>⁺ sp (F x)) K.3))
+                (ellN-natural (sliceProj (suc k)) (slice-terminal (suc k)) idp (\lam z => nerveMap (spanInc k) (nerveMap spanC z)) (simplex-terminal 1) idp
+                              (lastEdge k) (nerveHom {SliceS (suc k)} {1, lastEdge k} {suc k, SimplexCat.id {suc k}} (lastEdge k, SimplexCat.id-left)) idp
+                 *> inv (pmap (\lam F => \lam x =>⁺ sp (F x)) K.4))
+       \in isLocalization-transfer K.2 idHEquiv (spine-pushout k) {(ellS k).1} (\lam x => path \lam i => (e i).1 x) (\lam a => (\lam w => w, \lam w => w))
+}
+
+\module NerveLow \where {
+  -- # The nerve of `[0]`
+
+  -- | The vertex of the nerve of `[0]`.
+  \func pt0 : Nerve (Simplex 0)
+    => nerveOb 0
+
+  \sfunc nerve0-contr : (\lam (_ :⁺ Nerve (Simplex 0)) => pt0) = {Nerve (Simplex 0) ->⁺ Nerve (Simplex 0)} (\lam y => y)
+    => nerve-maps-ext' nerve-isTruncCat (\lam x => \case \elim x \with { | 0 => idp }) (\lam f => nerve-preorder-prop _ _ _ _)
+
+  -- | Functors from the nerve of `[0]` are objects.
+  \lemma nerve0-ev-equiv {C : \Cat} : IsEquiv {Nerve (Simplex 0) ->⁺ C} {C} (\lam F => F pt0)
+    => inP \new QEquiv {
+      | ret c _ => c
+      | ret_f F => path \lam i => \lam y =>⁺ F ((nerve0-contr @ i) y)
+      | f_sec c => idp
+    }
+
+  -- # The nerve of `[1]`
+
+  -- | The arrow `0 <= 1` of `[1]`.
+  \func h01 : Hom {Simplex 1} 0 1
+    => \lam r => \case r
+
+  -- | The walking arrow in the nerve of `[1]`.
+  \func n1arr (i :⁺ DI) : Nerve (Simplex 1)
+    => nerveHom {Simplex 1} {0} {1} h01 i
+
+  \lemma DI-isTruncCat : IsTruncCat 1 DI
+    => \lam x y a a' => toProp (isProp.=>isSet DI-hom-prop a a')
+
+  -- | The image of an arrow of `[1]` in {DI}.
+  \func DI-arr (x y : Fin 2) (f : Hom {Simplex 1} x y) : (\case x \with { | 0 => dleft | 1 => dright }) ~> (\case y \with { | 0 => dleft | 1 => dright }) \elim x, y
+    | 0, 0 => idd
+    | 0, 1 => dpath \lam i => i
+    | 1, 0 => absurd (f NatOrder.zero<suc)
+    | 1, 1 => idd
+
+  -- | The inverse of {n1arr}.
+  \func n1toDI (z :⁺ Nerve (Simplex 1)) : DI
+    => nerve-rec' DI-isTruncCat (\lam x => \case x \with { | 0 => dleft | 1 => dright }, \lam {x} {y} f => DI-arr x y f)
+                  (\lam f g => DI-hom-prop _ _) (\lam x => DI-hom-prop _ _) z
+
+  \sfunc n1-round : (\lam (z :⁺ Nerve (Simplex 1)) => n1arr (n1toDI z)) = {Nerve (Simplex 1) ->⁺ Nerve (Simplex 1)} (\lam z => z)
+    => nerve-maps-ext' nerve-isTruncCat (\lam x => \case \elim x \with { | 0 => idp | 1 => idp }) (\lam f => nerve-preorder-prop _ _ _ _)
+
+  -- | Functors from the nerve of `[1]` are functors from {DI}.
+  \func nerve1-DI-equiv {C : \Cat} : QEquiv {Nerve (Simplex 1) ->⁺ C} {DI ->⁺ C} (\lam F i => F (n1arr i)) \cowith
+    | ret h z => h (n1toDI z)
+    | ret_f F => path \lam j => \lam z =>⁺ F ((n1-round @ j) z)
+    | f_sec h => idp
+
+  -- | The arrow of a functor from the nerve of `[1]`.
+  \func n1edge {C : \Cat} (F : Nerve (Simplex 1) ->⁺ C) : F (nerveOb 0) ~> F (nerveOb 1)
+    => dmap F (nerveHom {Simplex 1} {0} {1} h01)
+}

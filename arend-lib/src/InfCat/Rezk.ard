@@ -142,3 +142,12 @@
   => (\lam e => precomp-equiv=>iso \lam y => IsEquiv.rightFactor (comp-iso-left-equiv gi) $
                   transport IsEquiv (ext \lam k => inv comp-assoc) (comp-iso-left-equiv e),
       comp-IsIso __ gi)
+
+-- | An arrow {f} is an isomorphism if a composite `comp f g` and a composite `comp g' f` are isomorphisms.
+\lemma biinv-iso {C : \Cat} {a b : C} {f : a ~> b}
+  (r : ∃ (z : C) (g : b ~> z) (IsIso (comp f g))) (l : ∃ (z : C) (g : z ~> a) (IsIso (comp g f))) : IsIso f \elim r, l
+  | inP (_, g, inP (k, _, fgk)), inP (_, g', inP (k', k'g'f, _)) =>
+    \have | fR : comp f (comp g k) = idd => comp-assoc *> fgk
+          | Lf : comp (comp k' g') f = idd => inv comp-assoc *> k'g'f
+          | LR : comp k' g' = comp g k => inv comp_idd-right *> pmap (comp (comp k' g')) (inv fR) *> comp-assoc *> pmap (comp __ (comp g k)) Lf *> comp_idd-left
+    \in inP (comp k' g', Lf, transportInv (\lam X => comp f X = idd) LR fR)

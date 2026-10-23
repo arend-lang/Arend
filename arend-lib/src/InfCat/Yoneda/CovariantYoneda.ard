@@ -184,6 +184,18 @@
      \in (\lam e => sc.1 $ (comp-IsIso-left (univElem-equiv.univElem-iso Uq)).1 $ transport IsIso sq $ comp-IsIso (univElem-equiv.univElem-iso Up) e,
          \lam e => (comp-IsIso-right (univElem-equiv.univElem-iso Up)).1 $ transportInv IsIso sq $ comp-IsIso (sc.2 e) (univElem-equiv.univElem-iso Uq))
 
+-- | If {F} is fully faithful at {x}, then the identity is a universal element of `Hom(F x, F -)`.
+\lemma ff-univElem.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} (ff : \Pi (y : C) -> IsEquiv {x ~> y} {F x ~> F y} (dmap F))
+  : IsUnivElem (\lam w => ReprFunctor (F x) (F w)) x (Straight.toStraight idd)
+  => equiv-univElem \lam y => transport IsEquiv (ext \lam h => inv (ReprFunctor-transport-idd (dmap F h)))
+                                (IsEquiv.trans (ff y) (inP (symQEquiv ReprFunctor.equiv)))
+
+-- | If the identity is a universal element of `Hom(F x, F -)`, then {F} is fully faithful at {x}.
+\lemma univElem-ff.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} (U : IsUnivElem (\lam w => ReprFunctor (F x) (F w)) x (Straight.toStraight idd)) (y : C)
+  : IsEquiv {x ~> y} {F x ~> F y} (dmap F)
+  => IsEquiv.leftFactor (inP (symQEquiv ReprFunctor.equiv))
+       (transport IsEquiv (ext \lam h => ReprFunctor-transport-idd (dmap F h)) (univElem-equiv U y))
+
 -- | A universal element {a} of `Hom(d, F -)` at {x}: transport of {a} in the left fibration `Hom(d, F -)` along arrows out of {x} is an equivalence.
 \lemma univElem-hom-equiv.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} {d : D} {a : d ~> F x}
                               (U : IsUnivElem (\lam y => ReprFunctor d (F y)) x (Straight.toStraight a)) (y : C)

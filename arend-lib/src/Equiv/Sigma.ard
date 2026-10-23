@@ -180,3 +180,54 @@
 -- | Inserting an element at a point of a contractible type is an equivalence onto the total space.
 \lemma contr-point-equiv {C : \Cat} (c : Contr C) {F : C -> \Cat} (c0 : C) : IsEquiv {F c0} {\Sigma (x : C) (F x)} (\lam z => (c0, z))
   => IsEquiv.leftFactor (inP (contr-left c {F})) (transport-isEquiv F (inv (c.contraction c0)))
+
+-- | The projection of a pullback to the first factor is an equivalence if the second leg is.
+\lemma pullback-proj-left {A B C : \Cat} {f : A -> C} {g : B -> C} (e : IsEquiv g)
+  : IsEquiv {\Sigma (a : A) (\Sigma (b : B) (f a = g b))} {A} (\lam t => t.1)
+  => inP $ contr-right \lam a => Contr.Contr_QEquiv (sigma-right {B} {\lam b => g b = f a} {\lam b => f a = g b} \lam b => \new QEquiv {
+       | f p => inv p
+       | ret p => inv p
+       | ret_f _ => inv_inv
+       | f_sec _ => inv_inv
+     }) (IsEquiv=>contrFibers e (f a))
+
+-- | The projection of a pullback to the second factor is an equivalence if the first leg is.
+\lemma pullback-proj-right {A B C : \Cat} {f : A -> C} {g : B -> C} (e : IsEquiv f)
+  : IsEquiv {\Sigma (a : A) (\Sigma (b : B) (f a = g b))} {B} (\lam t => t.2.1)
+  => IsEquiv.trans (inP \new QEquiv {\Sigma (a : A) (\Sigma (b : B) (f a = g b))} {\Sigma (b : B) (\Sigma (a : A) (f a = g b))} {
+       | f t => (t.2.1, (t.1, t.2.2))
+       | ret t => (t.2.1, (t.1, t.2.2))
+       | ret_f _ => idp
+       | f_sec _ => idp
+     }) (inP $ contr-right \lam b => IsEquiv=>contrFibers e (g b))
+
+-- | Pullbacks of cospans related by equivalences of the legs and an embedding of the corners are equivalent.
+\lemma pullback-equiv {A B C A' B' C' : \Cat} {f : A -> C} {g : B -> C} {f' : A' -> C'} {g' : B' -> C'}
+                      {eA : A -> A'} {eB : B -> B'} {eC : C -> C'} (eAe : IsEquiv eA) (eBe : IsEquiv eB)
+                      (eCe : \Pi {c c' : C} -> IsEquiv (pmap eC {c} {c'}))
+                      (sf : \Pi (a : A) -> f' (eA a) = eC (f a)) (sg : \Pi (b : B) -> g' (eB b) = eC (g b))
+  : IsEquiv {\Sigma (a : A) (b : B) (f a = g b)} {\Sigma (a' : A') (b' : B') (f' a' = g' b')}
+            (\lam t => (eA t.1, eB t.2, (sf t.1 *> pmap eC t.3) *> inv (sg t.2)))
+  => inP $ assoc-equiv
+       `transQEquiv` sigma-equiv (IsEquiv.toQEquiv eAe) (\lam a => sigma-equiv (IsEquiv.toQEquiv eBe) (\lam b =>
+            IsEquiv.toQEquiv eCe `transQEquiv` concat-left (sf a) `transQEquiv` concat-right (inv (sg b))))
+       `transQEquiv` symQEquiv (assoc-equiv {A'} {B'} {\lam a' b' => f' a' = g' b'})
+  \where {
+    \func assoc-equiv {A B : \Cat} {P : A -> B -> \Cat} : QEquiv {\Sigma (a : A) (b : B) (P a b)} {\Sigma (a : A) (\Sigma (b : B) (P a b))} \cowith
+      | f t => (t.1, (t.2, t.3))
+      | ret t => (t.1, t.2.1, t.2.2)
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+    \func concat-left {Z : \Cat} {x y z : Z} (r : x = y) : QEquiv {y = z} {x = z} \cowith
+      | f t => r *> t
+      | ret t => inv r *> t
+      | ret_f t => inv *>-assoc *> pmap (__ *> t) inv_*> *> idp_*>
+      | f_sec t => inv *>-assoc *> pmap (__ *> t) *>_inv *> idp_*>
+
+    \func concat-right {Z : \Cat} {x y z : Z} (r : y = z) : QEquiv {x = y} {x = z} \cowith
+      | f t => t *> r
+      | ret t => t *> inv r
+      | ret_f t => *>-assoc *> pmap (t *>) *>_inv
+      | f_sec t => *>-assoc *> pmap (t *>) inv_*>
+  }

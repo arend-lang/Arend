@@ -5,11 +5,18 @@
  -   * A functor inverts {CocartW} if and only if it inverts the cocartesian lifts of every arrow of `T` ({invertsW-along}).
  -     The arrows along which it does so contain identities ({invertsAlong-idd}) and are closed under composition ({invertsAlong-comp}),
  -     since a cocartesian lift of a composite factors through a cocartesian lift of its first component.
+ -   * The projection of `BaseChange pi p` to `T` is a cocartesian map ({baseChange-cocartesian}) whose cocartesian arrows
+ -     are exactly {CocartW} ({cocartW<->cocartesian}).
+ -   * If `T` has a terminal object `top`, cocartesian transport to the fiber over `top` ({toTerminalBC}) is the localization
+ -     at {CocartW} ({toTerminalBC-isLocalization}, from {toTerminal-isLocalization}), so functors inverting {CocartW} are
+ -     functors on this fiber ({restrict-terminal-bc}). On the fiber over `t` it is cocartesian transport along an arrow to `top`
+ -     ({toTerminalBC-toEnd}), so it is natural in the base ({toTerminalBC-natural}).
  -   * For an arrow `w` of {B}, functors on `BaseChange w p` inverting {CocartW} are functors on the fiber over `w dright`
- -     ({restrict-end-equiv}): cocartesian transport to the end is left adjoint to the inclusion of this fiber.
+ -     ({restrict-end-equiv}), since `dright` is terminal in {DI}; {toEnd} is the corresponding cocartesian transport.
  -}
 
 \import Equiv
+\import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
@@ -17,10 +24,16 @@
 \import InfCat.Fibration.CovariantLift
 \import InfCat.Functor.Conservative
 \import InfCat.Interval
+\import InfCat.Paths
+\import InfCat.Functor.Equiv
+\import InfCat.Limit.Terminal
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.LeftComma
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic
+\import Logic.Unique
 \import Paths
 \import Paths.Meta
 \open CocartBCHelpers
@@ -28,6 +41,91 @@
 -- | The arrows of the base change of {p} along {pi} whose component in `E` is {p}-cocartesian.
 \func CocartW.{u} {T B E : \Cat u} (p : E ->⁺ B) (pi : T ->⁺ B) (a : DI ->⁺ BaseChange pi p) : \Prop
   => IsCocartesianArrow p (dpath \lam i => (a i).2.1)
+
+-- | Restriction of a functor inverting {CocartW} along the base change of {h}.
+\func mapW-res.{u} {T T' B E : \Cat u} {p : E ->⁺ B} {pi : T ->⁺ B} (h : T' ->⁺ T) {D : \Cat} (F : MapW (CocartW p pi) D)
+  : MapW (CocartW p (\lam t => pi (h t))) D
+  => (\lam q => F.1 (h q.1, q.2), \lam {a} w => F.2 {\lam i => (h (a i).1, (a i).2)} w)
+
+-- | The fibers of the projection of the base change of a cocartesian map form a cocartesian family.
+\lemma baseChange-cocartesian.{u} {T B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B)
+  : IsCocartesianFib (Fibers (\lam (q :⁺ BaseChange pi p) => q.1))
+  => cocartesianFib-total {T} {\lam t => Fibers p (pi t)} (cocartesianFib-pullback (cocartesianMap-char.1 pc) pi)
+
+-- | An arrow of the base change is in {CocartW} if and only if it is cocartesian over {T}.
+\lemma cocartW<->cocartesian.{u} {T B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B) {a : DI ->⁺ BaseChange pi p}
+  : CocartW p pi a <-> IsCocartesianArrow (\lam (q :⁺ BaseChange pi p) => q.1) (dpath \lam i => a i)
+  => \let | d : CovLiftData (\lam t => Fibers p (pi t)) => ((a dleft).1, (a dright).1, dpath \lam i => (a i).1, (a dleft).2)
+          | d' : CovLiftData (Fibers p) => (pi d.1, pi d.2, dmap pi d.3, d.4)
+          | l : CovLift (\lam t => Fibers p (pi t)) d => ((a dright).2, dpath \lam i => (a i).2)
+          | l' : CovLift (Fibers p) d' => (l.1, l.2)
+          | Ff => cocartesianMap-char.1 pc
+     \in (\lam ac => (cocartesianLift<->totalArrow l).1 (cocartesianLift-pullback pi ((cocartesianLift<->arrow-at (a dleft).2.2 l').2 ac)),
+         \lam tc => \let | c => cocartesianFib-lift Ff d'
+                         | cc : IsCocartesianLift c => cocartesianFib-lift.isCocartesian d'
+                         | e => isContr=>isProp (transports-contr.cocLift-contr (cocartesianFib-pullback Ff pi) d)
+                                  (l, (cocartesianLift<->totalArrow l).2 tc) ((c.1, c.2), cocartesianLift-pullback {_} {_} {Fibers p} pi {d} {(c.1, c.2)} cc)
+                    \in (cocartesianLift<->arrow-at (a dleft).2.2 l').1
+                          (transportInv (\lam (v : \Sigma (l : CovLift (\lam t => Fibers p (pi t)) d) (IsCocartesianLift l)) =>
+                                           IsCocartesianLift {B} {Fibers p} {d'} (v.1.1, v.1.2)) e cc))
+
+-- | Cocartesian transport to the fiber over a terminal object {top} of {T}.
+\sfunc toTerminalBC.{u} {T B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B) {top : T} (Pt : IsTerminal top)
+                       (q :⁺ BaseChange pi p) : Fibers p (pi top)
+  => fibers-total-equiv.fibers-total-ret (toTerminal (baseChange-cocartesian pc pi) Pt q)
+
+-- | {toTerminalBC} is the localization at {CocartW}.
+\lemma toTerminalBC-isLocalization.{u} {T B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B) {top : T} (Pt : IsTerminal top)
+  : IsLocalization (CocartW p pi) (toTerminalBC pc pi Pt)
+  => isLocalization-transfer' (toTerminal-isLocalization (baseChange-cocartesian pc pi) Pt) idHEquiv
+       (fibers-total-hequiv {T} {\lam t => Fibers p (pi t)} top)
+       (\lam x => pmap+ {Fibers p (pi top)} {Fibers (totalProj {T} (\lam t => Fibers p (pi t))) top} (\lam y => ((top, y), idp)) (\peval toTerminalBC pc pi Pt x) *> fibers-total-equiv.fibers-total-ret-sec _)
+       (\lam a => ((cocartW<->cocartesian pc pi).2, (cocartW<->cocartesian pc pi).1))
+
+-- | On the fiber over {top}, {toTerminalBC} is the identity.
+\sfunc toTerminalBC-fib.{u} {T B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B) {top : T} (Pt : IsTerminal top)
+                          {y :⁺ Fibers p (pi top)} : toTerminalBC pc pi Pt (top, y) = y
+  => (\peval toTerminalBC pc pi Pt (top, y)) *> pmap+ (fibers-total-equiv.fibers-total-ret {T} {\lam t => Fibers p (pi t)} {top}) (toTerminal-fib (baseChange-cocartesian pc pi) Pt {((top, y), idp)})
+
+{- | On the fiber over {t}, {toTerminalBC} is cocartesian transport along the image of an arrow {a} from {t} to {top}:
+ -   along the base change over {a} it inverts {CocartW}, so it factors through the transport to the end ({invertsW-toEnd}).
+ -}
+\sfunc toTerminalBC-toEnd.{u} {T B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B) {top : T} (Pt : IsTerminal top)
+                             {t : T} (a : t ~> top)
+  : (\lam (y :⁺ Fibers p (pi t)) => toTerminalBC pc pi Pt (t, y))
+    = {Fibers p (pi t) ->⁺ Fibers p (pi top)} (\lam y => toEnd pc (\lam i => pi (a i)) (dleft, y))
+  => pmap (\lam (G : BaseChange (\lam i => pi (a i)) p ->⁺ Fibers p (pi top)) (y :⁺ Fibers p (pi t)) => G (dleft, y)) $
+       invertsW-toEnd pc (\lam i => pi (a i)) {_} {\lam q => toTerminalBC pc pi Pt (a q.1, q.2)}
+                      (\lam {c} w => (toTerminalBC-isLocalization pc pi Pt).1 {\lam i => (a (c i).1, (c i).2)} w)
+       *> pmap (\lam (H : Fibers p (pi top) ->⁺ Fibers p (pi top)) (q :⁺ BaseChange (\lam i => pi (a i)) p) => H (toEnd pc (\lam i => pi (a i)) q))
+               (funExt+ \lam y => toTerminalBC-fib pc pi Pt {y})
+
+{- | Naturality of {toTerminalBC} along a functor {h} of bases: if {a} is an arrow from the image of the terminal object of {T'}
+ -   to the terminal object of {T}, then {toTerminalBC} for {T} restricted along {h} is {toTerminalBC} for {T'}
+ -   followed by cocartesian transport along the image of {a}.
+ -   Both sides invert {CocartW}, so they are compared on the fiber over {top'} ({restrict-terminal-bc}).
+ -}
+\sfunc toTerminalBC-natural.{u} {T T' B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B) {top : T} (Pt : IsTerminal top)
+                               (h : T' ->⁺ T) {top' : T'} (Pt' : IsTerminal top') (a : h top' ~> top)
+  : (\lam (q :⁺ BaseChange (\lam t => pi (h t)) p) => toTerminalBC pc pi Pt (h q.1, q.2))
+    = {BaseChange (\lam t => pi (h t)) p ->⁺ Fibers p (pi top)}
+      (\lam q => toEnd pc (\lam i => pi (a i)) (dleft, toTerminalBC pc (\lam t => pi (h t)) Pt' q))
+  => pmap (\lam (M : MapW (CocartW p (\lam t => pi (h t))) (Fibers p (pi top))) => M.1) $
+       IsEquiv.isInj (restrict-terminal-bc pc (\lam t => pi (h t)) Pt')
+         {((\lam q => toTerminalBC pc pi Pt (h q.1, q.2), \lam {c} w => (toTerminalBC-isLocalization pc pi Pt).1 {\lam i => (h (c i).1, (c i).2)} w)
+             : MapW (CocartW p (\lam t => pi (h t))) (Fibers p (pi top)))}
+         {((\lam q => toEnd pc (\lam i => pi (a i)) (dleft, toTerminalBC pc (\lam t => pi (h t)) Pt' q),
+           invertsW-postcomp (\lam y => toEnd pc (\lam i => pi (a i)) (dleft, y)) (toTerminalBC-isLocalization pc (\lam t => pi (h t)) Pt').1)
+             : MapW (CocartW p (\lam t => pi (h t))) (Fibers p (pi top)))}
+         (toTerminalBC-toEnd pc pi Pt a
+          *> inv (pmap (\lam (H : Fibers p (pi (h top')) ->⁺ Fibers p (pi (h top'))) (y :⁺ Fibers p (pi (h top'))) => toEnd pc (\lam i => pi (a i)) (dleft, H y))
+                       (funExt+ \lam y => toTerminalBC-fib pc (\lam t => pi (h t)) Pt' {y})))
+
+-- | Functors on the base change inverting {CocartW} are functors on the fiber over a terminal object.
+\lemma restrict-terminal-bc.{u} {T B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (pi : T ->⁺ B) {top : T} (Pt : IsTerminal top) {D : \Cat}
+  : IsEquiv {MapW (CocartW p pi) D} {Fibers p (pi top) ->⁺ D} (\lam F y => F.1 (top, y))
+  => IsEquiv.rightFactor (restrictW-equiv (IsLocalization.univ (toTerminalBC-isLocalization pc pi Pt) {D}))
+       (transportInv IsEquiv (ext \lam G y => pmap+ G (toTerminalBC-fib pc pi Pt)) (inP idEquiv))
 
 -- | {G} sends the lifts of {k} whose component in `E` is cocartesian to isomorphisms.
 \type InvertsAlong.{u} {T B E : \Cat u} {C : \Cat} {p : E ->⁺ B} {pi : T ->⁺ B} (G : BaseChange pi p ->⁺ C) {t t' : T} (k : t ~> t') : \Prop
@@ -92,11 +190,13 @@
 -- | Functors on the base change of {p} along {w} inverting {CocartW} are functors on the fiber over the end of {w}.
 \lemma restrict-end-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (w : DI ->⁺ B) {D : \Cat}
   : IsEquiv {MapW (CocartW p w) D} {Fibers p (w dright) ->⁺ D} (\lam F y => F.1 (dright, y))
-  => inP \new QEquiv {
-    | ret G => (\lam q => G (toEnd pc w q), \lam c => dmap_IsIso G (toEnd-inverts pc w c))
-    | ret_f F => ext (inv (natIso-path (\lam q => dmap F.1 (endArr pc w q)) (\lam q => F.2 (endLift-cocartesian pc w q))))
-    | f_sec G => path \lam j y => G ((inv (natIso-path (\lam y => (endLift pc w (dright, y)).2) (endFib-iso pc w))) j y)
-  }
+  => restrict-terminal-bc pc w DI-terminal
+  \where
+    \lemma DI-terminal : IsTerminal dright
+      => \lam y => \case \elim y \with {
+        | dleft => DI-hom-lr-contr
+        | dright => DI-hom-rr-contr
+      }
 
 \module CocartBCHelpers \where {
   -- | The data of the cocartesian lift of the arrow from `q.1` to the end of {w}.
@@ -114,9 +214,4 @@
   \func endArr.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (w : DI ->⁺ B) (q :⁺ BaseChange w p)
     : q ~> {BaseChange w p} (dright, toEnd pc w q)
     => dpath \lam j => (dmax q.1 j, (endLift pc w q).2 j)
-
-  -- | Over the end of {w}, the lift is an isomorphism.
-  \lemma endFib-iso.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (w : DI ->⁺ B) (y : Fibers p (w dright))
-    : IsIso (endLift pc w (dright, y)).2
-    => cocartesianLift-idd-iso (endLift pc w (dright, y)) (cocartesianFib-lift.isCocartesian (endData w (dright, y)))
 }

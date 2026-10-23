@@ -1,0 +1,165 @@
+{- | The nerve of a pushout of precategories.
+ -
+ -   Given a commutative square of precategories `A -> B`, `A -> C`, `B -> E`, `C -> E`, the induced functor
+ -   from the pushout of nerves {CatPushout} to `Nerve E` is an equivalence ({nerve-pushout-equiv}) provided that
+ -   - `B -> E` and `C -> E` are fully faithful,
+ -   - the objects of `C` are either in the image of `A`, or have no arrows into the image of `B`,
+ -   - for every object `b` of `B`, the functor `Hom(b, -)` on `C` is left Kan extended from `A`,
+ -     in the sense that restriction along `A -> C` of natural transformations out of it is an equivalence,
+ -   - every object of `E` comes from `B` or `C`.
+ -   The proof computes the representable functors of the pushout by the criterion {pushout-univElem}.
+ -}
+
+\import Category
+\import Category.Functor
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.CatPushoutHom
+\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.Straightening
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Logic.Meta
+\import InfCat.Functor.Equiv
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | Every object of a pushout comes from one of the summands.
+\lemma pushout-ob-surj {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (w : CatPushout f g)
+  : Given (y : B) (cinl y = w) || Given (z : C) (cinr z = w) \elim w
+  | cinl y => byLeft (y, idp)
+  | cinr z => byRight (z, idp)
+
+-- | Sections over a category without objects are unique.
+\lemma empty-sections.{u} {C : \Cat} (e : C -> Empty) (G : C ->⁺ \Type u) : Contr (\Pi (c :⁺ C) -> G c)
+  => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (IsHEquiv.toIsEquiv (cov-pi-cat-equiv (\lam {x} _ => absurd (e x)) (\lam c => G c)))))
+       (Contr.make {\Pi (x : C) -> G x} (\lam x => absurd (e x)) (\lam s => ext \lam x => absurd (e x)))
+
+-- | Natural transformations out of a family without elements are unique.
+\lemma empty-family-nat-contr.{u} {X : \Cat} {F G : X ->⁺ \Type u} (e : \Pi (x : X) -> F x -> Empty) : Contr (F ~> G)
+  => Contr.Contr_QEquiv (symQEquiv depUnivalence) (empty-sections (\lam s => e s.1 s.2) _)
+
+\func nerve-pushout-map.{u} {A B C E : Precat.{u,u}} (f : Functor A B) (g : Functor A C) (jB : Functor B E) (jC : Functor C E)
+                            (sq : \Pi (a :⁺ Nerve A) -> nerveMap jB (nerveMap f a) = nerveMap jC (nerveMap g a))
+                            (w :⁺ CatPushout (nerveMap f) (nerveMap g)) : Nerve E
+  => CatPushout.rec (nerveMap jB) (nerveMap jC) sq w
+
+-- | The nerve of a pushout of precategories along a functor satisfying the hypotheses above is the pushout of nerves.
+\lemma nerve-pushout-equiv.{u} {A B C E : Precat.{u,u}} (f : Functor A B) (g : Functor A C) (jB : Functor B E) (jC : Functor C E)
+  (sq : \Pi (a :⁺ Nerve A) -> nerveMap jB (nerveMap f a) = nerveMap jC (nerveMap g a))
+  (jBff : \Pi {x y : B} -> IsEquiv (jB.Func {x} {y}))
+  (sieve : \Pi (c : C) -> Given (a : A) (g a = c) || Given (\Pi (b : B) -> Hom (jC c) (jB b) -> Empty) (\Pi {c' : C} -> IsEquiv (jC.Func {c} {c'})))
+  (lan : \Pi (b : B) (H : Nerve C ->⁺ \Type u)
+           -> IsEquiv {(\lam z =>⁺ ReprFunctor (nerveOb (jB b)) (nerveMap jC z)) ~> H}
+                      {(\lam a =>⁺ ReprFunctor (nerveOb (jB b)) (nerveMap jC (nerveMap g a))) ~> (\lam a =>⁺ H (nerveMap g a))}
+                      (\lam p => dmap (\lam (K : Nerve C ->⁺ \Type u) a =>⁺ K (nerveMap g a)) p))
+  (cover : \Pi (e : E) -> Given (b : B) (jB b = e) || Given (c : C) (jC c = e))
+  : IsHEquiv (nerve-pushout-map f g jB jC sq)
+  => \let | Phi => nerve-pushout-map f g jB jC sq
+          | U (x : CatPushout (nerveMap f) (nerveMap g)) : \Prop => IsUnivElem (\lam w => ReprFunctor (Phi x) (Phi w)) x (Straight.toStraight idd)
+          | Ul (b : B) : U (cinl (nerveOb b)) => pushout-univElem (\lam w => ReprFunctor (Phi (cinl (nerveOb b))) (Phi w))
+              (ff-univElem (nerveMap jB) (nerveMap-ff jB jBff (nerveOb b))) (lan b)
+          | Ur (c : C) : U (cinr (nerveOb c)) => \case sieve c \with {
+              | byLeft (a, p) => transport (\lam c' => U (cinr (nerveOb c'))) p
+                  (transport U (path (cglue (nerveOb a))) (Ul (f a)))
+              | byRight (emp, cff) => pushout-univElem' (\lam w => ReprFunctor (Phi (cinr (nerveOb c))) (Phi w))
+                  (ff-univElem (nerveMap jC) (nerveMap-ff-at cff))
+                  (\lam H => contr-equiv (empty-family-nat-contr {_} {\lam y =>⁺ ReprFunctor (nerveOb (jC c)) (nerveMap jB y)} {H} (noElem emp))
+                                         (empty-family-nat-contr {_} {\lam a =>⁺ ReprFunctor (nerveOb (jC c)) (nerveMap jB (nerveMap f a))}
+                                                                 {\lam a =>⁺ H (nerveMap f a)} (\lam a => noElem emp (nerveMap f a))))
+            }
+          | Uall (x : CatPushout (nerveMap f) (nerveMap g)) : U x => \case pushout-ob-surj x \with {
+              | byLeft (y, p) => \case nerveOb-surj y \with {
+                | inP (b, q) => transport U (pmap cinl q *> p) (Ul b)
+              }
+              | byRight (z, p) => \case nerveOb-surj z \with {
+                | inP (c, q) => transport U (pmap cinr q *> p) (Ur c)
+              }
+            }
+     \in (ff-surj-equiv {_} {_} {Phi}).1 (\lam x y => univElem-ff Phi (Uall x) y, \lam e => \case nerveOb-surj e \with {
+          | inP (e', q) => \case cover e' \with {
+            | byLeft (b, p) => inP (cinl (nerveOb b), pmap nerveOb p *> q)
+            | byRight (c, p) => inP (cinr (nerveOb c), pmap nerveOb p *> q)
+          }
+        })
+  \where {
+    -- | The nerve of a functor bijective on morphisms out of {c} is fully faithful at `nerveOb c`.
+    \lemma nerveMap-ff-at {c : C} (cff : \Pi {c' : C} -> IsEquiv (jC.Func {c} {c'})) (z : Nerve C)
+      : IsEquiv {nerveOb c ~> z} {nerveOb (jC c) ~> nerveMap jC z} (dmap (nerveMap jC))
+      => \case nerveOb-surj z \with {
+        | inP (c', q) => transport (\lam z => IsEquiv {nerveOb c ~> z} {nerveOb (jC c) ~> nerveMap jC z} (dmap (nerveMap jC))) q
+            (IsEquiv.rightFactor nerveHom-equiv (IsEquiv.trans cff nerveHom-equiv))
+      }
+
+    -- | If there are no arrows from `jC c` to the image of {jB}, then the representable functor of `jC c` restricted to `B` has no elements.
+    \lemma noElem {c : C} (emp : \Pi (b : B) -> Hom (jC c) (jB b) -> Empty) (y : Nerve B) (r : ReprFunctor (nerveOb (jC c)) (nerveMap jB y)) : Empty
+      => \case nerveOb-surj y \with {
+        | inP (b, q) => \case \elim y, \elim r, q \with {
+          | _, r, idp => emp b (IsEquiv.ret nerveHom-equiv (Straight.fromStraight r))
+        }
+      }
+  }
+
+-- | If {e0} is a universal element of {L} at `g a0` and of `L ∘ g` at {a0}, then restriction along {g} of natural transformations out of {L} is an equivalence.
+\lemma lan-univElem.{u} {A' C' : \Cat u} (g : A' ->⁺ C') (L : C' ->⁺ \Type u) {a0 : A'} {e0 : L (g a0)}
+  (U : IsUnivElem L (g a0) e0) (U' : IsUnivElem (\lam w => L (g w)) a0 e0) (H : C' ->⁺ \Type u)
+  : IsEquiv {L ~> H} {(\lam w =>⁺ L (g w)) ~> (\lam w =>⁺ H (g w))} (\lam p => dmap (\lam (K : C' ->⁺ \Type u) w =>⁺ K (g w)) p)
+  => IsEquiv.leftFactor {_} {_} {_} {\lam p => dmap (\lam (K : C' ->⁺ \Type u) w =>⁺ K (g w)) p}
+       {\lam q => ~>_-> (dmap (\lam K => K a0) q) e0} (U' (\lam w => H (g w))) (U H)
+
+{- | The hypothesis of {nerve-pushout-equiv} for the restriction of the representable functor of {e0} to {C}:
+ -   either it is represented by an object `g a`, or it is empty.
+ -}
+\lemma nerve-lan.{u} {A C E : Precat.{u,u}} (g : Functor A C) (gff : \Pi {x y : A} -> IsEquiv (g.Func {x} {y})) (jC : Functor C E) (e0 : E)
+  (rep : Given (a : A) (u : Hom e0 (jC (g a))) (\Pi (c : C) -> IsEquiv (\lam (h : Hom (g a) c) => jC.Func h ∘ u))
+         || ∀ c (Hom e0 (jC c) -> Empty))
+  (H : Nerve C ->⁺ \Type u)
+  : IsEquiv {(\lam z =>⁺ ReprFunctor (nerveOb e0) (nerveMap jC z)) ~> H}
+            {(\lam a =>⁺ ReprFunctor (nerveOb e0) (nerveMap jC (nerveMap g a))) ~> (\lam a =>⁺ H (nerveMap g a))}
+            (\lam p => dmap (\lam (K : Nerve C ->⁺ \Type u) a =>⁺ K (nerveMap g a)) p)
+  => \case rep \with {
+    | byLeft (a, u, ub) =>
+      \let | L => \lam (z :⁺ Nerve C) => ReprFunctor (nerveOb e0) (nerveMap jC z)
+           | e => Straight.toStraight (nerveHom u)
+           | Ueq (z : Nerve C) : IsEquiv {nerveOb (g a) ~> z} {L z} (\lam h => ~>_-> (dmap L h) e) => \case nerveOb-surj z \with {
+               | inP (c, q) => transport (\lam z => IsEquiv {nerveOb (g a) ~> z} {L z} (\lam h => ~>_-> (dmap L h) e)) q
+                   (IsEquiv.rightFactor nerveHom-equiv $
+                     transport IsEquiv (ext \lam h => inv (ReprFunctor-transport *> pmap Straight.toStraight nerveHom-comp))
+                       (IsEquiv.trans (ub c) (IsEquiv.trans nerveHom-equiv (inP (symQEquiv ReprFunctor.equiv)))))
+             }
+      \in lan-univElem (nerveMap g) L (equiv-univElem Ueq)
+            (equiv-univElem \lam w => IsEquiv.trans (nerveMap-ff g gff (nerveOb a) w) (Ueq (nerveMap g w))) H
+    | byRight emp => contr-equiv
+        (empty-family-nat-contr {_} {\lam z =>⁺ ReprFunctor (nerveOb e0) (nerveMap jC z)} {H} (noElem emp))
+        (empty-family-nat-contr {_} {\lam a =>⁺ ReprFunctor (nerveOb e0) (nerveMap jC (nerveMap g a))} {\lam a =>⁺ H (nerveMap g a)}
+                                (\lam a => noElem emp (nerveMap g a)))
+  }
+  \where
+    \lemma noElem {e0 : E} (emp : \Pi (c : C) -> Hom e0 (jC c) -> Empty) (z : Nerve C) (r : ReprFunctor (nerveOb e0) (nerveMap jC z)) : Empty
+      => \case nerveOb-surj z \with {
+        | inP (c, q) => \case \elim z, \elim r, q \with {
+          | _, r, idp => emp c (IsEquiv.ret nerveHom-equiv (Straight.fromStraight r))
+        }
+      }
+
+{- | {nerve-pushout-equiv} with the Kan extension hypothesis replaced by a condition on the precategories:
+ -   {g} is fully faithful and, for every object `b` of `B`, the morphisms from `jB b` to the image of `C` are either
+ -   represented by an object in the image of {g}, or there are none.
+ -}
+\lemma nerve-pushout-equiv-rep.{u} {A B C E : Precat.{u,u}} (f : Functor A B) (g : Functor A C) (jB : Functor B E) (jC : Functor C E)
+  (sq : \Pi (a :⁺ Nerve A) -> nerveMap jB (nerveMap f a) = nerveMap jC (nerveMap g a))
+  (jBff : \Pi {x y : B} -> IsEquiv (jB.Func {x} {y}))
+  (gff : \Pi {x y : A} -> IsEquiv (g.Func {x} {y}))
+  (sieve : \Pi (c : C) -> Given (a : A) (g a = c) || Given (\Pi (b : B) -> Hom (jC c) (jB b) -> Empty) (\Pi {c' : C} -> IsEquiv (jC.Func {c} {c'})))
+  (rep : \Pi (b : B) -> Given (a : A) (u : Hom (jB b) (jC (g a))) ∀ c (IsEquiv (\lam (h : Hom (g a) c) => jC.Func h ∘ u))
+                          || ∀ c (Hom (jB b) (jC c) -> Empty))
+  (cover : \Pi (e : E) -> Given (b : B) (jB b = e) || Given (c : C) (jC c = e))
+  : IsHEquiv (nerve-pushout-map f g jB jC sq)
+  => nerve-pushout-equiv f g jB jC sq jBff sieve (\lam b => nerve-lan g gff jC (jB b) (rep b)) cover

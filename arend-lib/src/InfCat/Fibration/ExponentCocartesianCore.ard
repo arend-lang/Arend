@@ -7,6 +7,9 @@
  -     it inverts the cocartesian arrows ({ExpCocCore.eval-inverts}).
  -   * {ExpCocCore.eval-univ}: the universal property; functors `T ->⁺ ExpCocCore` are functors `pi : T ->⁺ B`
  -     together with functors `BaseChange pi p ->⁺ C` inverting the arrows {CocartW} whose component in `E` is cocartesian.
+ -   * {ExpCocCore.sec-eval}, {ExpCocCore.sec-equiv}: the same for sections of the fibers of the projection along a fixed `pi`;
+ -     restriction of sections is precomposition. Hence restriction along a functor of bases is an equivalence if it induces
+ -     an equivalence of localizations of the base changes at {CocartW} ({ExpCocCore.sec-restrict-equiv}).
  -   * {ExpCocCore.rightFib}: the fibers of the projection form a right fibration.
  -   * {ExpCocCore.fiber-eval}, {ExpCocCore.fiber-equiv}: objects of the fiber over `b` are functors `Fibers p b ->⁺ C`;
  -     transport along `beta` is precomposition with cocartesian transport along `beta` ({ExpCocCore.fiber-eval-tr}).
@@ -19,6 +22,8 @@
  -     of the target. By {ExpCocCore.eval-univ} for `T = DI`, arrows are functors on `BaseChange w p` inverting {CocartW},
  -     which are functors on the fiber over `w dright` ({restrict-end-equiv}). By {ExpCocCore.eval-univ} for the unit category
  -     ({CoreHelpers.unit-equiv}), these are objects over `w dright`.
+ -   * {ExpCocCore.sec-equiv}: sections along varying `pi` are functors into the core ({CoreHelpers.secTot-equiv}), and over these
+ -     {ExpCocCore.sec-eval} is the map of {ExpCocCore.eval-univ} ({CoreHelpers.secTot-path}); take fibers over `pi` ({fiberwiseEquiv}).
  -   * {ExpCocCore.fiber-eval-tr}: a section of the fibers over an arrow inverts {CocartW} ({CoreHelpers.fibSec-inverts}),
  -     so it is determined by its value at the end ({invertsW-toEnd}).
  -}
@@ -32,10 +37,13 @@
 \import InfCat.Fibration.ExponentCocartesian
 \import InfCat.Fibration.RightFib
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
 \import InfCat.Paths
 \import InfCat.SubCat.Sub
 \import Logic
 \import Meta
+\import Paths
+\import Paths.Meta
 \open CoreHelpers
 
 -- | The fiberwise core of the exponent from the cocartesian map {p} to {C}.
@@ -85,6 +93,36 @@
       : fiber-eval pc (rightFib-tr (rightFib pc) beta z) x = fiber-eval pc z (toEnd pc beta (dleft, x))
       => \let l => (rightFib pc {C} (b', b, beta, z)).center
          \in path \lam j => invertsW-toEnd pc beta (fibSec-inverts pc C (\lam i => beta i) (\lam i => l.2 i)) j (dleft, x)
+
+    -- | The evaluation along a section of the fibers of the projection over {pi}.
+    \protected \func sec-eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
+                                 (s : \Pi (t :⁺ T) -> Fibers (proj pc C) (pi t)) : MapW (CocartW p pi) C
+      => (\lam q => fiber-eval pc (s q.1) q.2, fibSec-inverts pc C pi s)
+
+    {- | The universal property for sections: sections of the fibers of the projection over {pi}
+     -   are functors on the base change of {p} along {pi} inverting {CocartW}.
+     -}
+    \protected \lemma sec-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
+      : IsEquiv (sec-eval pc {C} pi)
+      => fiberwiseEquiv {T ->⁺ B} {T ->⁺ B} {\lam pi => pi} (inP idEquiv) {\lam pi => \Pi (t :⁺ T) -> Fibers (proj pc C) (pi t)} {\lam pi => MapW (CocartW p pi) C}
+           (\lam pi s => sec-eval pc pi s)
+           (transport IsEquiv (ext \lam (t : \Sigma (pi : T ->⁺ B) (\Pi (x :⁺ T) -> Fibers (proj pc C) (pi x))) => secTot-path pc C (\lam x => (t.2 x).1) (funExt+ \lam x => (t.2 x).2))
+                      (IsEquiv.trans (inP (secTot-equiv pc C T)) (eval-univ pc T)))
+           pi
+
+    {- | Restriction of sections along {h} is an equivalence if {h} induces an equivalence of localizations:
+     -   if {lam} is a localization at {CocartW} and so is its restriction along the base change of {h}.
+     -   This is the naturality of {sec-equiv} in the base.
+     -}
+    \protected \lemma sec-restrict-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {K K' L : \Cat u}
+      (pi : K ->⁺ B) (h : K' ->⁺ K) {lam : BaseChange pi p ->⁺ L} (Lz : IsLocalization (CocartW p pi) lam)
+      (Lz' : IsLocalization (CocartW p (\lam t => pi (h t))) (\lam q => lam (h q.1, q.2)))
+      : IsEquiv {\Pi (t :⁺ K) -> Fibers (proj pc C) (pi t)} {\Pi (t :⁺ K') -> Fibers (proj pc C) (pi (h t))} (\lam s t => s (h t))
+      => IsEquiv.leftFactor (sec-equiv pc (\lam t => pi (h t))) $
+           transport IsEquiv {\lam s => mapW-res h (sec-eval pc pi s)} {\lam s => sec-eval pc (\lam t => pi (h t)) (\lam t => s (h t))} (ext \lam s => ext idp) $
+           IsEquiv.trans (sec-equiv pc pi) {mapW-res h} $
+           IsEquiv.rightFactor {_} {_} {_} {restrictW Lz.1} (restrictW-equiv (IsLocalization.univ Lz {C})) {mapW-res h} $
+           transport IsEquiv {restrictW Lz'.1} {\lam G => mapW-res h (restrictW Lz.1 G)} (ext \lam G => ext idp) (restrictW-equiv (IsLocalization.univ Lz' {C}))
 
     -- | The fibers of the projection of the core form a right fibration.
     \protected \lemma rightFib.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u}
@@ -158,6 +196,27 @@
                      {pi : T ->⁺ B} (R : (\lam (t :⁺ T) => ExpCocCore.proj pc C (h t)) = {T ->⁺ B} pi)
         : InvertsW (CocartW p pi) (\lam q => ExpCocCore.fiber-eval pc ((h q.1, path (\lam j => R j q.1)) : Fibers (ExpCocCore.proj pc C) (pi q.1)) q.2) \elim R
         | idp => ExpCocCore.eval-inverts pc h
+
+  -- | Sections over varying `pi` are functors into the core.
+  \func secTot-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u)
+    : QEquiv {\Sigma (pi : T ->⁺ B) (\Pi (t :⁺ T) -> Fibers (ExpCocCore.proj pc C) (pi t))} {T ->⁺ ExpCocCore pc C} (\lam t x => (t.2 x).1) \cowith
+    | ret h => (\lam t => ExpCocCore.proj pc C (h t), \lam t => (h t, idp))
+    | ret_f t => sec-path pc C (\lam x => (t.2 x).1) (funExt+ \lam x => (t.2 x).2)
+    | f_sec _ => idp
+    \where
+      \sfunc sec-path.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat v) {T : \Cat v} (h : T ->⁺ ExpCocCore pc C)
+                         {pi : T ->⁺ B} (R : (\lam (t :⁺ T) => ExpCocCore.proj pc C (h t)) = {T ->⁺ B} pi)
+        : ((\lam t => ExpCocCore.proj pc C (h t), \lam t => (h t, idp)) : \Sigma (pi : T ->⁺ B) (\Pi (t :⁺ T) -> Fibers (ExpCocCore.proj pc C) (pi t)))
+          = (pi, \lam t => (h t, path (\lam j => R j t))) \elim R
+        | idp => idp
+
+  -- | {ExpCocCore.sec-eval} over varying {pi} is the map of {ExpCocCore.eval-univ}.
+  \sfunc secTot-path.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat v) {T : \Cat v} (h : T ->⁺ ExpCocCore pc C)
+                        {pi : T ->⁺ B} (R : (\lam (t :⁺ T) => ExpCocCore.proj pc C (h t)) = {T ->⁺ B} pi)
+    : ((\lam t => ExpCocCore.proj pc C (h t), (\lam q => ExpCocCore.eval pc (h q.1) q.2, ExpCocCore.eval-inverts pc h))
+         : \Sigma (pi : T ->⁺ B) (MapW (CocartW p pi) C))
+      = (pi, ExpCocCore.sec-eval pc pi (\lam t => (h t, path (\lam j => R j t)))) \elim R
+    | idp => ext (idp, ext idp)
 
   -- | The core is the total category of the fibers of its projection.
   \func fibers-total.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u)

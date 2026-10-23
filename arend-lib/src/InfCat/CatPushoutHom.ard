@@ -1,0 +1,157 @@
+{- | Sections and natural transformations over a pushout of categories.
+ -
+ -   For `P = CatPushout f g`, restricting sections of a family over {P} to the first summand is an equivalence
+ -   as soon as restricting sections over the second summand along {g} is ({pushout-sections-restrict}).
+ -   The same holds for natural transformations between functors out of {P} ({pushout-nat-restrict}), which gives a criterion
+ -   for universal elements of functors out of {P} ({pushout-univElem}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.Paths
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | A path over a path in the base is a path from the transport.
+\func pathOver+ {P : \Cat} (D : P ->⁺ \Cat) {w w' :⁺ P} {p :⁺ w = w'} {x :⁺ D w} {y :⁺ D w'} (t :⁺ transport+ D p x = y)
+  : Path (\lam i => D (p i)) x y \elim p
+  | idp => t
+  \where {
+    \func conv {P : \Cat} {D : P ->⁺ \Cat} {w w' :⁺ P} {p :⁺ w = w'} {x :⁺ D w} {y :⁺ D w'} (t :⁺ Path (\lam i => D (p i)) x y)
+      : transport+ D p x = y \elim p
+      | idp => t
+
+    \func conv_dir {P : \Cat} {D : P ->⁺ \Cat} {w w' :⁺ P} {p :⁺ w = w'} {x :⁺ D w} {y :⁺ D w'} {t :⁺ transport+ D p x = y}
+      : conv {P} {D} {w} {w'} {p} (pathOver+ D t) = t \elim p
+      | idp => idp
+
+    \func dir_conv {P : \Cat} {D : P ->⁺ \Cat} {w w' :⁺ P} {p :⁺ w = w'} {x :⁺ D w} {y :⁺ D w'} {t :⁺ Path (\lam i => D (p i)) x y}
+      : pathOver+ D (conv {P} {D} {w} {w'} {p} t) = t \elim p
+      | idp => idp
+  }
+
+-- | A section of a family over a pushout as sections over the summands which agree on {A} up to transport along the gluing paths.
+\func pushout-sections {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (D : CatPushout f g ->⁺ \Cat) (s : \Pi (w :⁺ CatPushout f g) -> D w)
+  : \Sigma (u : \Pi (y :⁺ B) -> D (cinl y))
+           (\Sigma (v : \Pi (z :⁺ C) -> D (cinr z)) (\Pi (a :⁺ A) -> transport+ D (path (cglue a)) (u (f a)) = v (g a)))
+  => (\lam y => s (cinl y), (\lam z => s (cinr z), \lam a => pathOver+.conv {_} {D} {_} {_} {path (cglue a)} (path \lam i => s (cglue a i))))
+
+-- | Sections of a family over a pushout are determined by their restrictions to the summands and the gluing paths.
+\lemma pushout-sections-equiv {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (D : CatPushout f g ->⁺ \Cat) : IsEquiv (pushout-sections D)
+  => inP $ CatPushout.elim-equiv {A} {B} {C} {f} {g} {D} `transQEquiv` \new QEquiv
+       {\Sigma (u : \Pi (y :⁺ B) -> D (cinl y)) (v : \Pi (z :⁺ C) -> D (cinr z))
+               (\Pi (x :⁺ A) -> Path (\lam i => D (cglue x i)) (u (f x)) (v (g x)))}
+       {\Sigma (u : \Pi (y :⁺ B) -> D (cinl y))
+               (\Sigma (v : \Pi (z :⁺ C) -> D (cinr z)) (\Pi (a :⁺ A) -> transport+ D (path (cglue a)) (u (f a)) = v (g a)))} {
+       | f s => (s.1, (s.2, \lam a => pathOver+.conv {_} {D} {_} {_} {path (cglue a)} (s.3 a)))
+       | ret s => (s.1, s.2.1, \lam a => pathOver+ D {_} {_} {path (cglue a)} (s.2.2 a))
+       | ret_f s => path \lam i => (s.1, s.2, \lam a => pathOver+.dir_conv {_} {D} {_} {_} {path (cglue a)} {_} {_} {s.3 a} i)
+       | f_sec s => path \lam i => (s.1, (s.2.1, \lam a => pathOver+.conv_dir {_} {D} {_} {_} {path (cglue a)} {_} {_} {s.2.2 a} i))
+     }
+
+-- | Restriction of sections over a pushout to the first summand is an equivalence if restriction along {g} is.
+\lemma pushout-sections-restrict {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (D : CatPushout f g ->⁺ \Cat)
+  (e : IsEquiv {\Pi (z :⁺ C) -> D (cinr z)} {\Pi (a :⁺ A) -> D (cinr (g a))} (\lam s a => s (g a)))
+  : IsEquiv {\Pi (w :⁺ CatPushout f g) -> D w} {\Pi (y :⁺ B) -> D (cinl y)} (\lam s y => s (cinl y))
+  => IsEquiv.trans (pullback-form D) (pullback-proj-left e)
+  \where {
+    -- | The restriction to the first summand transported along the gluing paths.
+    \func glue-tr {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (D : CatPushout f g ->⁺ \Cat) (u : \Pi (y :⁺ B) -> D (cinl y)) (a :⁺ A) : D (cinr (g a))
+      => transport+ D (path (cglue a)) (u (f a))
+
+    -- | Sections over a pushout as a pullback of the sections over the summands.
+    \lemma pullback-form {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (D : CatPushout f g ->⁺ \Cat)
+      : IsEquiv {\Pi (w :⁺ CatPushout f g) -> D w}
+                {\Sigma (u : \Pi (y :⁺ B) -> D (cinl y)) (\Sigma (v : \Pi (z :⁺ C) -> D (cinr z)) ((\lam a =>⁺ glue-tr D u a) = (\lam a =>⁺ v (g a))))}
+                (\lam s => (\lam y => s (cinl y), (\lam z => s (cinr z), path \lam i => \lam a =>⁺ (pushout-sections D s).2.2 a i)))
+      => \let | U => \Pi (y :⁺ B) -> D (cinl y)
+              | V => \Pi (z :⁺ C) -> D (cinr z)
+              | q : QEquiv {\Sigma (u : U) (\Sigma (v : V) (\Pi (a :⁺ A) -> glue-tr D u a = v (g a)))}
+                           {\Sigma (u : U) (\Sigma (v : V) ((\lam a =>⁺ glue-tr D u a) = (\lam a =>⁺ v (g a))))}
+                  => sigma-right \lam (u : U) => sigma-right \lam (v : V) => \new QEquiv
+                       {\Pi (a :⁺ A) -> glue-tr D u a = v (g a)} {(\lam a =>⁺ glue-tr D u a) = (\lam a =>⁺ v (g a))} {
+                       | f h => path \lam i => \lam a =>⁺ h a i
+                       | ret h a => path \lam i => h i a
+                       | ret_f h => idp
+                       | f_sec h => idp
+                     }
+         \in IsEquiv.trans {_} {_} {_} {pushout-sections D} (pushout-sections-equiv D) {q} (inP q)
+  }
+
+-- | Restriction of sections over a pushout to the second summand is an equivalence if restriction along {f} is.
+\lemma pushout-sections-restrict' {A B C : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (D : CatPushout f g ->⁺ \Cat)
+  (e : IsEquiv {\Pi (y :⁺ B) -> D (cinl y)} {\Pi (a :⁺ A) -> D (cinl (f a))} (\lam s a => s (f a)))
+  : IsEquiv {\Pi (w :⁺ CatPushout f g) -> D w} {\Pi (z :⁺ C) -> D (cinr z)} (\lam s z => s (cinr z))
+  => IsEquiv.trans (pushout-sections-restrict.pullback-form D) $ pullback-proj-right $ IsEquiv.trans e $ inP \new QEquiv
+       {\Pi (a :⁺ A) -> D (cinl (f a))} {\Pi (a :⁺ A) -> D (cinr (g a))} {
+       | f w a => transport+ D (path (cglue a)) (w a)
+       | ret w a => transport+ D (inv (path (cglue a))) (w a)
+       | ret_f w => ext \lam a => transport+_inv_*> D (path (cglue a))
+       | f_sec w => ext \lam a => transport+_*>_inv D (path (cglue a))
+     }
+
+-- | The arrows from `L y` to `G y`, as functors from {DI} with identified endpoints.
+\func ArrFib {Y X : \Cat} (L G : Y ->⁺ X) (y :⁺ Y) : \Cat
+  => \Sigma⁺ (h : DI ->⁺ X) (h dleft = L y) (h dright = G y)
+
+-- | Natural transformations are sections of {ArrFib}.
+\func nat-sections {Y X : \Cat} (L G : Y ->⁺ X) : QEquiv {L ~> G} {\Pi (y :⁺ Y) -> ArrFib L G y} \cowith
+  | f p y => (\lam i => p i y, idp, idp)
+  | ret s => (hom-endpoints {Y ->⁺ X} {L} {G}).ret (\lam i => \lam y =>⁺ (s y).1 i, path (\lam j => \lam y =>⁺ (s y).2 j), path (\lam j => \lam y =>⁺ (s y).3 j))
+  | ret_f p => (hom-endpoints {Y ->⁺ X} {L} {G}).ret_f p
+  | f_sec s => pmap {\Sigma (h : DI ->⁺ Y ->⁺ X) (h dleft = L) (h dright = G)} {\Pi (y :⁺ Y) -> ArrFib L G y}
+                    (\lam t y => (\lam i => t.1 i y, path \lam j => t.2 j y, path \lam j => t.3 j y))
+                    ((hom-endpoints {Y ->⁺ X} {L} {G}).f_sec (\lam i => \lam y =>⁺ (s y).1 i, path (\lam j => \lam y =>⁺ (s y).2 j), path (\lam j => \lam y =>⁺ (s y).3 j)))
+
+-- | Restriction of natural transformations along {j} is an equivalence if and only if restriction of sections of {ArrFib} is.
+\lemma nat-sections-restrict {Z Y X : \Cat} (j : Z ->⁺ Y) (L G : Y ->⁺ X)
+  : IsEquiv {L ~> G} {(\lam z =>⁺ L (j z)) ~> (\lam z =>⁺ G (j z))} (\lam p => dmap (\lam (H : Y ->⁺ X) z =>⁺ H (j z)) p)
+    <-> IsEquiv {\Pi (y :⁺ Y) -> ArrFib L G y} {\Pi (z :⁺ Z) -> ArrFib L G (j z)} (\lam s z => s (j z))
+  => \let | NY => nat-sections L G
+          | NZ => nat-sections (\lam z =>⁺ L (j z)) (\lam z =>⁺ G (j z))
+     \in (\lam e => IsEquiv.rightFactor {_} {_} {_} {NY} (inP NY) {\lam s => \lam (z :⁺ Z) => s (j z)}
+                      (transport IsEquiv {\lam p => NZ (dmap (\lam (H : Y ->⁺ X) z =>⁺ H (j z)) p)} {\lam p => \lam (z :⁺ Z) => NY p (j z)} idp
+                        (IsEquiv.trans {_} {_} {_} {\lam p => dmap (\lam (H : Y ->⁺ X) z =>⁺ H (j z)) p} e {NZ} (inP NZ))),
+          \lam e => IsEquiv.leftFactor {_} {_} {_} {\lam p => dmap (\lam (H : Y ->⁺ X) z =>⁺ H (j z)) p} {NZ} (inP NZ)
+                      (IsEquiv.trans {_} {_} {_} {NY} (inP NY) {\lam s => \lam (z :⁺ Z) => s (j z)} e))
+
+-- | Restriction of natural transformations out of a pushout to the first summand is an equivalence if restriction along {g} is.
+\lemma pushout-nat-restrict {A B C X : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (L G : CatPushout f g ->⁺ X)
+  (e : IsEquiv {(\lam z =>⁺ L (cinr z)) ~> (\lam z =>⁺ G (cinr z))} {(\lam a =>⁺ L (cinr (g a))) ~> (\lam a =>⁺ G (cinr (g a)))}
+               (\lam p => dmap (\lam (H : C ->⁺ X) a =>⁺ H (g a)) p))
+  : IsEquiv {L ~> G} {(\lam y =>⁺ L (cinl y)) ~> (\lam y =>⁺ G (cinl y))} (\lam p => dmap (\lam (H : CatPushout f g ->⁺ X) y =>⁺ H (cinl y)) p)
+  => (nat-sections-restrict (\lam y => cinl y) L G).2 $ pushout-sections-restrict (ArrFib L G) $
+       (nat-sections-restrict g (\lam z =>⁺ L (cinr z)) (\lam z =>⁺ G (cinr z))).1 e
+
+-- | Restriction of natural transformations out of a pushout to the second summand is an equivalence if restriction along {f} is.
+\lemma pushout-nat-restrict' {A B C X : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (L G : CatPushout f g ->⁺ X)
+  (e : IsEquiv {(\lam y =>⁺ L (cinl y)) ~> (\lam y =>⁺ G (cinl y))} {(\lam a =>⁺ L (cinl (f a))) ~> (\lam a =>⁺ G (cinl (f a)))}
+               (\lam p => dmap (\lam (H : B ->⁺ X) a =>⁺ H (f a)) p))
+  : IsEquiv {L ~> G} {(\lam z =>⁺ L (cinr z)) ~> (\lam z =>⁺ G (cinr z))} (\lam p => dmap (\lam (H : CatPushout f g ->⁺ X) z =>⁺ H (cinr z)) p)
+  => (nat-sections-restrict (\lam z => cinr z) L G).2 $ pushout-sections-restrict' (ArrFib L G) $
+       (nat-sections-restrict f (\lam y =>⁺ L (cinl y)) (\lam y =>⁺ G (cinl y))).1 e
+
+{- | A criterion for universal elements of a functor {L} out of a pushout: an element over the first summand is universal
+ -   if it is universal for the restriction of {L} to the first summand, and the restriction of {L} to the second summand
+ -   is left Kan extended from {A} along {g}, in the sense that restriction along {g} of natural transformations out of it is an equivalence.
+ -}
+\lemma pushout-univElem.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (L : CatPushout f g ->⁺ \Type u) {b0 : B} {e : L (cinl b0)}
+  (U : IsUnivElem (\lam y => L (cinl y)) b0 e)
+  (R : \Pi (H : C ->⁺ \Type u) -> IsEquiv {(\lam z =>⁺ L (cinr z)) ~> H} {(\lam a =>⁺ L (cinr (g a))) ~> (\lam a =>⁺ H (g a))}
+                                          (\lam p => dmap (\lam (K : C ->⁺ \Type u) a =>⁺ K (g a)) p))
+  : IsUnivElem L (cinl b0) e
+  => \lam G => IsEquiv.trans (pushout-nat-restrict L G (R (\lam z => G (cinr z)))) (U (\lam y => G (cinl y)))
+
+-- | The criterion {pushout-univElem} for elements over the second summand.
+\lemma pushout-univElem'.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : A ->⁺ C} (L : CatPushout f g ->⁺ \Type u) {c0 : C} {e : L (cinr c0)}
+  (U : IsUnivElem (\lam z => L (cinr z)) c0 e)
+  (R : \Pi (H : B ->⁺ \Type u) -> IsEquiv {(\lam y =>⁺ L (cinl y)) ~> H} {(\lam a =>⁺ L (cinl (f a))) ~> (\lam a =>⁺ H (f a))}
+                                          (\lam p => dmap (\lam (K : B ->⁺ \Type u) a =>⁺ K (f a)) p))
+  : IsUnivElem L (cinr c0) e
+  => \lam G => IsEquiv.trans (pushout-nat-restrict' L G (R (\lam y => G (cinl y)))) (U (\lam z => G (cinr z)))

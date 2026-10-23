@@ -1,0 +1,149 @@
+{- | Spines of simplices.
+
+     The nerve of `[k+1]` is the pushout of the nerves of `[k]` and `[1]` along the vertices `k` and `0` ({spine-pushout}).
+     Hence functors from `[k+1]` to {C} are pairs of functors from `[k]` and `[1]` agreeing on the common vertex ({spine-equiv}).
+     Similarly, the nerve of the span {SpanP} is the pushout of two copies of `[1]` along the vertex `0` ({span-pushout}).
+ -}
+
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Category.Functor
+\import Category.Simplex
+\import Equiv
+\import Function.Meta
+\import InfCat.CatPushout
+\import InfCat.Functor.Equiv
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.NervePushout
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+-- # Vertices
+
+\lemma topV-val (n : Nat) : topV n = {Nat} n \elim n
+  | 0 => idp
+  | suc n => pmap suc (topV-val n)
+
+-- | Every vertex of `[n]` is below the top vertex.
+\lemma le-top {n : Nat} (b : Fin (suc n)) : b <= {Simplex n} topV n
+  => \lam r => <_suc_<= (fin_< b) (transport (__ NatSemiring.< b) (topV-val n) r)
+
+-- | A map between propositions with a map back is an equivalence.
+\lemma prop-equiv {P Q : \Prop} {f : P -> Q} (g : Q -> P) : IsEquiv f
+  => inP \new QEquiv {
+    | ret => g
+    | ret_f _ => prop-pi
+    | f_sec _ => prop-pi
+  }
+
+-- # The spine pushout
+
+\sfunc spine-sq (k : Nat) (a :⁺ Nerve (Simplex 0))
+  : nerveMap (segRes k) (nerveMap (vert (topV k)) a) = nerveMap (lastEdge k) (nerveMap (vert {1} 0) a)
+  => path \lam i => nerve-maps-ext' {Simplex 0} {Nerve (Simplex (suc k))} nerve-isTruncCat
+       {\lam a => nerveMap (segRes k) (nerveMap (vert (topV k)) a)} {\lam a => nerveMap (lastEdge k) (nerveMap (vert {1} 0) a)}
+       (\lam _ => idp) (\lam f => nerve-preorder-prop _ _ _ _) i a
+
+-- | The nerve of `[k+1]` is the pushout of the nerves of `[k]` and `[1]`.
+\lemma spine-pushout (k : Nat)
+  : IsHEquiv (nerve-pushout-map (vert (topV k)) (vert {1} 0) (segRes k) (lastEdge k) (spine-sq k))
+  => nerve-pushout-equiv-rep (vert (topV k)) (vert {1} 0) (segRes k) (lastEdge k) (spine-sq k)
+       (\lam {_} {_} => prop-equiv \lam q r => q r)
+       (\lam {x} {y} => prop-equiv \lam _ => \case \elim x, \elim y \with { | 0, 0 => \lam r => NatSemiring.<-irreflexive r })
+       (\lam c => \case \elim c \with {
+         | 0 => byLeft (0, idp)
+         | 1 => byRight (\lam b h => h (transportInv (b NatSemiring.<) (pmap suc (topV-val k)) (fin_< b)),
+                         \lam {c'} => prop-equiv \lam h => \case \elim c', h \with {
+                           | 0, h => absurd (h id<suc)
+                           | 1, _ => \lam r => NatSemiring.<-irreflexive r
+                         })
+       })
+       (\lam b => byLeft (0, \lam r => le-top b r, \lam c => prop-equiv \lam _ => \lam r => \case r))
+       (\lam e => \case NatSemiring.trichotomy e (suc k) \with {
+         | less p => byLeft (toFin e p, fin_nat-inj toFin=id)
+         | equals p => byRight (1, fin_nat-inj (pmap suc (topV-val k) *> inv p))
+         | greater p => absurd (<_suc_<= (fin_< e) p)
+       })
+
+-- # Functors out of a spine
+
+-- | Functors from `[k+1]` are pairs of functors from `[k]` and `[1]` agreeing on the common vertex.
+\func spine-map.{u} {C : \Cat u} (k : Nat) (F : Nerve (Simplex (suc k)) ->⁺ C)
+  : \Sigma (G : Nerve (Simplex k) ->⁺ C) (H : Nerve (Simplex 1) ->⁺ C) (\Pi (a :⁺ Nerve (Simplex 0)) -> G (nerveMap (vert (topV k)) a) = H (nerveMap (vert {1} 0) a))
+  => (\lam y => F (nerveMap (segRes k) y), \lam z => F (nerveMap (lastEdge k) z), \lam a => path \lam i => F (spine-sq k a i))
+
+\lemma spine-equiv.{u} {C : \Cat u} (k : Nat) : IsEquiv (spine-map {C} k)
+  => transport IsEquiv (ext \lam F => idp) $ IsEquiv.trans (IsHEquiv.toIsEquiv (IsHEquiv.precomp {_} {_} {C} (spine-pushout k)))
+                   (inP (CatPushout.elim-equiv {_} {_} {_} {_} {_} {\lam _ => C}))
+
+-- # The span pushout
+
+-- | The edge `0 → 1` of the span.
+\func spanB : PreorderHom (Simplex 1) SpanP \cowith
+  | func t => \case t \with {
+    | 0 => 0
+    | 1 => 1
+  }
+  | func-<= {x} {y} p => \case \elim x, \elim y, p \with {
+    | 0, _, _ => ()
+    | 1, 0, p => absurd (p NatOrder.zero<suc)
+    | 1, 1, _ => ()
+  }
+
+-- | The edge `0 → 2` of the span.
+\func spanC : PreorderHom (Simplex 1) SpanP \cowith
+  | func t => \case t \with {
+    | 0 => 0
+    | 1 => 2
+  }
+  | func-<= {x} {y} p => \case \elim x, \elim y, p \with {
+    | 0, _, _ => ()
+    | 1, 0, p => absurd (p NatOrder.zero<suc)
+    | 1, 1, _ => ()
+  }
+
+\sfunc span-sq (a :⁺ Nerve (Simplex 0))
+  : nerveMap spanB (nerveMap (vert {1} 0) a) = nerveMap spanC (nerveMap (vert {1} 0) a)
+  => path \lam i => nerve-maps-ext' {Simplex 0} {Nerve SpanP} nerve-isTruncCat
+       {\lam a => nerveMap spanB (nerveMap (vert {1} 0) a)} {\lam a => nerveMap spanC (nerveMap (vert {1} 0) a)}
+       (\lam _ => idp) (\lam f => nerve-preorder-prop _ _ _ _) i a
+
+-- | The nerve of the span is the pushout of the nerves of its two edges.
+\lemma span-pushout : IsHEquiv (nerve-pushout-map (vert {1} 0) (vert {1} 0) spanB spanC span-sq)
+  => nerve-pushout-equiv-rep (vert {1} 0) (vert {1} 0) spanB spanC span-sq
+       (\lam {x} {y} => prop-equiv \lam q => \case \elim x, \elim y, q \with {
+         | 0, y, _ => \lam r => \case r
+         | 1, 0, q => absurd q
+         | 1, 1, _ => \lam r => NatSemiring.<-irreflexive r
+       })
+       (\lam {x} {y} => prop-equiv \lam _ => \case \elim x, \elim y \with { | 0, 0 => \lam r => NatSemiring.<-irreflexive r })
+       (\lam c => \case \elim c \with {
+         | 0 => byLeft (0, idp)
+         | 1 => byRight (\lam b h => \case \elim b, h \with {
+                           | 0, h => absurd h
+                           | 1, h => absurd h
+                         },
+                         \lam {c'} => prop-equiv \lam h => \case \elim c', h \with {
+                           | 0, h => absurd h
+                           | 1, _ => \lam r => NatSemiring.<-irreflexive r
+                         })
+       })
+       (\lam b => \case \elim b \with {
+         | 0 => byLeft (0, (), \lam c => prop-equiv \lam _ => \lam r => \case r)
+         | 1 => byRight (\lam c h => \case \elim c, h \with {
+                  | 0, h => absurd h
+                  | 1, h => absurd h
+                })
+       })
+       (\lam e => \case \elim e \with {
+         | 0 => byLeft (0, idp)
+         | 1 => byLeft (1, idp)
+         | 2 => byRight (1, idp)
+       })

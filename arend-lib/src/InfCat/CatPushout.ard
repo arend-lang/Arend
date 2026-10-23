@@ -1,6 +1,7 @@
 \import Equiv
 \import Function.Meta
 \import Logic
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -54,3 +55,16 @@
     | cglue () i
   }
   | f_sec s => idp
+
+-- | Functors out of a pushout as pairs of functors whose restrictions to {A} are equal.
+\func pushout-fun {A B C D : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} (G : CatPushout f g ->⁺ D)
+  : \Sigma (G1 : B ->⁺ D) (G2 : C ->⁺ D) ((\lam a =>⁺ G1 (f a)) = {A ->⁺ D} (\lam a =>⁺ G2 (g a)))
+  => (\lam y => G (cinl y), \lam z => G (cinr z), path \lam i => \lam (a :⁺ A) => G (cglue a i))
+
+\lemma pushout-fun-equiv {A B C D : \Cat} {f : A ->⁺ B} {g : A ->⁺ C} : IsEquiv (pushout-fun {A} {B} {C} {D} {f} {g})
+  => transport IsEquiv (ext \lam G => idp) $ IsEquiv.trans (inP CatPushout.elim-equiv) $ inP $ later \new QEquiv {
+       | f t => (t.1, t.2, path \lam i => \lam (a :⁺ A) => t.3 a @ i)
+       | ret t => (t.1, t.2, \lam a => path \lam i => (t.3 @ i) a)
+       | ret_f _ => idp
+       | f_sec _ => idp
+     }
