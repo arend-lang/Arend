@@ -1,0 +1,50 @@
+{- | Weakly contractible categories, that is, categories whose geometric realization is contractible.
+ -}
+
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Functor.Adjunction
+\import InfCat.Functor.Equiv
+\import InfCat.Groupoid
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Terminal
+\import InfCat.Localization.Realization
+\import Logic
+\import Paths
+
+-- | {C} is weakly contractible if its geometric realization is contractible.
+\func IsWeaklyContractible (C : \Cat) : \Prop
+  => IsHEquiv {Realization C} {\Sigma} (\lam _ => ())
+
+-- | Functors from a weakly contractible category to a groupoid are the constant ones.
+\lemma weaklyContractible-const {C G : \Cat} (Cw : IsWeaklyContractible C) (Gg : IsGroupoid G)
+  : IsHEquiv {G} {C ->⁺ G} (\lam g _ => g)
+  => IsHEquiv.trans unit-fun-equiv (IsHEquiv.trans (IsHEquiv.precomp Cw) (realization-univ Gg))
+  \where
+    \lemma unit-fun-equiv {G : \Cat} : IsHEquiv {G} {\Sigma ->⁺ G} (\lam g _ => g)
+      => inP \new HQEquiv {
+        | finv h => h ()
+        | finv_f _ => idp
+        | f_finv _ => idp
+      }
+
+-- | If {realize} is equal to a constant functor, then {C} is weakly contractible.
+\lemma realize-const-weaklyContractible {C : \Cat} (c : C) (p : \Pi (x :⁺ C) -> realize x = realize c) : IsWeaklyContractible C
+  => inP \new HQEquiv {
+    | finv _ => realize c
+    | finv_f y => inv (realization-ext {C} {Realization C} {\lam y => y} {\lam _ => realize c} p {y})
+    | f_finv _ => idp
+  }
+
+-- | Décalage: a zigzag `id ⇒ F ⇐ const c` of natural transformations implies that {C} is weakly contractible.
+\lemma decalage-weaklyContractible {C : \Cat} (F : C ->⁺ C) (c : C) (a : \Pi (x :⁺ C) -> x ~> F x) (b : \Pi (x :⁺ C) -> c ~> F x)
+  : IsWeaklyContractible C
+  => realize-const-weaklyContractible c \lam x =>
+      realize-natTrans {C} {C} {\lam x => x} {F} a x *> inv (realize-natTrans {C} {C} {\lam _ => c} {F} b x)
+
+-- | A category with a terminal object is weakly contractible.
+\lemma terminal-weaklyContractible {C : \Cat} {t : C} (tt : IsTerminal t) : IsWeaklyContractible C
+  => decalage-weaklyContractible (\lam _ => t) t (IsHEquiv.fib-sec (rightFib-contr-equiv (hom-rightFib t) tt)) (\lam _ => idd)
+
+-- | A category with an initial object is weakly contractible.
+\lemma initial-weaklyContractible {C : \Cat} {i : C} (ii : IsInitial i) : IsWeaklyContractible C
+  => decalage-weaklyContractible (\lam x => x) i (\lam _ => idd) (IsInitial.adjunction ii).heps
