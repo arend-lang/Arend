@@ -3,8 +3,8 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.CovariantLift
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Paths

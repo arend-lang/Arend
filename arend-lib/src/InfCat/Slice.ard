@@ -3,7 +3,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.CartesianMap
+\import InfCat.Fibration.Contravariant.CartesianMap
 \import InfCat.Limit.Terminal
 \import InfCat.Square
 \import Logic

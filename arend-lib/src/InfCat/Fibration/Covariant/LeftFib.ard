@@ -5,7 +5,7 @@
 \import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid

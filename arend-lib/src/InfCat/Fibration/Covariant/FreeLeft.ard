@@ -11,8 +11,8 @@
 \import Function.Meta
 \import Homotopy.Fibration
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CovariantLift
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.OFS.CatAccessibleOFS
 \import InfCat.OFS.CatOFS
 \import Logic

@@ -1,7 +1,7 @@
 \import Equiv
 \import Equiv.Sigma
 \import Equiv.Univalence
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Objects

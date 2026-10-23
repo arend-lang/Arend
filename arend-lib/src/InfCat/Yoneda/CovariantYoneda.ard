@@ -2,9 +2,9 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.LeftFib
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Conservative
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Paths

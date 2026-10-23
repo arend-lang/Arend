@@ -2,7 +2,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Adjunction
 \import InfCat.Rezk
 \import Logic.Unique

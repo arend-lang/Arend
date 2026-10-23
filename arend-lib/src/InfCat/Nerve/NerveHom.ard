@@ -5,8 +5,8 @@
 \import Homotopy.Fibration
 \import Homotopy.HLevel
 \import InfCat.Basics
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Limit.Terminal
 \import InfCat.Nerve.Nerve

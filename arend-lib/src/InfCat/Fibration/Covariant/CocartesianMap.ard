@@ -5,8 +5,8 @@
 \import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
 \import InfCat.Square

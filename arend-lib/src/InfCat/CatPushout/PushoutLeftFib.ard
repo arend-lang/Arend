@@ -12,7 +12,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.CatPushout
-\import InfCat.Fibration.ExponentLeft
+\import InfCat.Fibration.Exponent.ExponentLeft
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
 \import Logic

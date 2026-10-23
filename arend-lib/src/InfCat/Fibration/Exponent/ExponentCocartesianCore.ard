@@ -32,10 +32,10 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianBaseChange
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.ExponentCocartesian
-\import InfCat.Fibration.RightFib
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Exponent.ExponentCocartesian
+\import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Localization.Abstract
 \import InfCat.Localization.Concrete
 \import InfCat.Paths

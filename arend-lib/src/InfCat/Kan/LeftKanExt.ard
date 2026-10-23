@@ -28,10 +28,10 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.FreeCocartesian
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.FreeCocartesian
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Functor.LeftComma

@@ -1,6 +1,6 @@
 \import Equiv
 \import InfCat.Basics
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Conservative
 \import InfCat.Groupoid
 \import InfCat.Paths

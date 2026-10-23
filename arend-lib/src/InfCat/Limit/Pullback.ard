@@ -19,7 +19,7 @@
 \import Function.Meta
 \import InfCat.Arrows
 \import InfCat.Basics
-\import InfCat.Fibration.CartesianMap
+\import InfCat.Fibration.Contravariant.CartesianMap
 \import InfCat.Interval
 \import InfCat.Limit.BaseHCat
 \import InfCat.Limit.Product

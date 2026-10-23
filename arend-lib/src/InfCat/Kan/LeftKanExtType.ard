@@ -26,10 +26,10 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.FreeLeft
-\import InfCat.Fibration.LeftFib
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Covariant.FreeLeft
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Adjunction
 \import InfCat.Functor.Equiv
 \import InfCat.OFS.CatOFS

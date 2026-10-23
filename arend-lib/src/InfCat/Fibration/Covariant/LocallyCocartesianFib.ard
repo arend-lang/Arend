@@ -3,9 +3,9 @@
 \import Equiv.Sigma
 \import Homotopy.Fibration
 \import InfCat.Basics
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CovariantLift
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Limit.Initial
 \import InfCat.Rezk
 \import Logic

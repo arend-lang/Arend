@@ -5,8 +5,8 @@
 \import InfCat.Fibration.Categorical
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
 \import InfCat.Nerve.Nerve
 \import InfCat.Nerve.NerveHom
 \import Logic

@@ -14,9 +14,9 @@
 \import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.CatPushout
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.FreeLeft
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Covariant.FreeLeft
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Limit.Pullback
 \import Logic

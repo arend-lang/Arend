@@ -17,8 +17,8 @@
 \import InfCat.Basics
 \import InfCat.CatPushout
 \import InfCat.CatPushoutHom
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.Nerve.Nerve

@@ -10,7 +10,7 @@
 \import Category.Simplex
 \import Equiv
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.RightFib
+\import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Nerve.Nerve
 \import InfCat.Simplicial.Segal

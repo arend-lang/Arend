@@ -19,10 +19,10 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianBaseChange
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.ExponentCocartesian
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Exponent.ExponentCocartesian
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
 \import InfCat.Square

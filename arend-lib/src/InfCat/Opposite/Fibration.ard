@@ -19,8 +19,8 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.LeftFib
-\import InfCat.Fibration.RightFib
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Opposite
 \import InfCat.Paths
 \import InfCat.Rezk

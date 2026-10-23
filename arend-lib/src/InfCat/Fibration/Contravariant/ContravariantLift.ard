@@ -13,7 +13,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.RightFib
+\import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Interval

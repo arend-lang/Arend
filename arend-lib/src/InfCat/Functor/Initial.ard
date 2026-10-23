@@ -11,8 +11,8 @@
 
 \import Equiv
 \import InfCat.Basics
-\import InfCat.Fibration.FreeLeft
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.FreeLeft
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Adjunction
 \import InfCat.Limit.Initial
 \import InfCat.OFS.CatAccessibleOFS

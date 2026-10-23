@@ -2,8 +2,8 @@
 \import Function
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Conservative
 \import InfCat.Functor.Adjunction
 \import InfCat.Functor.Equiv

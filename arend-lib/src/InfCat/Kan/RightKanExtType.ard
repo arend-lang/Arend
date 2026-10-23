@@ -18,11 +18,11 @@
 \import Equiv
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.RightComma
 \import InfCat.Kan.LeftKanExtType
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Adjunction
 \import InfCat.Functor.Conservative
 \import InfCat.Groupoid

@@ -3,7 +3,7 @@
 \import Homotopy.HLevel
 \import Homotopy.Truncation
 \import InfCat.Basics
-\import InfCat.Fibration.DirectedUnivalence
+\import InfCat.Fibration.Univalence.DirectedUnivalence
 \import InfCat.Functor.Adjunction
 \import InfCat.Groupoid
 \import InfCat.Paths

@@ -4,8 +4,8 @@
 \import Function.Meta
 \import Homotopy.Fibration
 \import InfCat.Basics
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.LocallyCocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.LocallyCocartesianFib
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic

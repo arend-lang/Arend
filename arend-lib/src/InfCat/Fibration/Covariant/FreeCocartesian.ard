@@ -8,9 +8,9 @@
 \import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.CovariantLift
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Slice
 \import InfCat.Square
 \import Logic

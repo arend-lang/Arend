@@ -26,8 +26,8 @@
 \import Logic.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianBaseChange
-\import InfCat.Fibration.ExponentCocartesianCore
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Exponent.ExponentCocartesianCore
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Functor.Equiv
 \import InfCat.Limit.Terminal
@@ -45,12 +45,12 @@
 \import Logic.Unique
 \import Paths
 \import Paths.Meta
-\import InfCat.Fibration.ContravariantLift
-\import InfCat.Fibration.RightFib
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Nerve.NerveTrans
 \import Order.PartialOrder
 \import InfCat.Functor.Conservative
-\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.Covariant.CocartesianMap
 \open RealizationHelpers
 
 -- | The arrows of the base change of the universal cocartesian fibration along {pi} with cocartesian vertex component.

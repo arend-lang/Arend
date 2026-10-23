@@ -10,8 +10,8 @@
 \import Equiv
 \import Function.Meta
 \import InfCat.Arrows
-\import InfCat.Fibration.LeftFib
-\import InfCat.Fibration.Straightening
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.Straightening
 \import InfCat.CatPushout
 \import InfCat.CatPushout.PushoutLeftFib
 \import InfCat.Fibration.Categorical

@@ -18,9 +18,9 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.LocallyCocartesianMap
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.LocallyCocartesianMap
 \import InfCat.Functor.LeftComma
 \import InfCat.Localization.Adjunction
 \import InfCat.Localization.Concrete

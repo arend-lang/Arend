@@ -13,7 +13,7 @@
 \import Equiv
 \import Function.Meta
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.RightFib
+\import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.LocalizeLeftFib
 \import InfCat.Localization.Opposite

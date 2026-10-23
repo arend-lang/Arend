@@ -17,7 +17,7 @@
 
 \import Function.Meta
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianFib
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Functor.LeftComma

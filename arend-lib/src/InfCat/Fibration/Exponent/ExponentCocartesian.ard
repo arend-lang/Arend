@@ -36,8 +36,8 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.ExponentSlice
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Exponent.ExponentSlice
 \import InfCat.Functor.Equiv
 \import InfCat.Localization.Abstract
 \import InfCat.Localization.Concrete

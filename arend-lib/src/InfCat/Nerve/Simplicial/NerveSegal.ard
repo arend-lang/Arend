@@ -34,8 +34,8 @@
 \import InfCat.Basics
 \import InfCat.CatPushout
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianBaseChange
-\import InfCat.Fibration.ExponentCocartesianCore
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Exponent.ExponentCocartesianCore
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Functor.Equiv
 \import InfCat.Limit.Terminal

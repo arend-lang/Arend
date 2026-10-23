@@ -7,7 +7,7 @@
  -   * {twArr-swap}: `Tw (Op C)` is `Tw C` with the factors swapped (SCT 9.3.11), via {toOpOp} and {toOpOp.char}.
  -}
 
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Equiv
 \import InfCat.Opposite
 \import InfCat.Paths

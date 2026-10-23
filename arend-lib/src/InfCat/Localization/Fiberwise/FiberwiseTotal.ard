@@ -16,10 +16,10 @@
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Fibration.Categorical
-\import InfCat.Fibration.CocartesianFib
-\import InfCat.Fibration.CocartesianMap
-\import InfCat.Fibration.CovariantLift
-\import InfCat.Fibration.LocallyCocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.LocallyCocartesianFib
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import Logic
