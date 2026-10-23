@@ -4,6 +4,7 @@
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
+\import Paths
 \import Paths.Meta
 
 -- | The family of fibers of {p}.
@@ -78,3 +79,14 @@
     \private \lemma aux {c : E} {m1 : DI ->⁺ E} (e : (\lam _ => c) = {DI ->⁺ E} m1) (m2 : \Pi (i :⁺ DI) -> p (m1 i) = a)
       : IsIso (dpath \lam i => ((m1 i, m2 i) : Fibers p a)) \elim e
       | idp => dmap_IsIso (\lam (q : p c = a) => ((c, q) : Fibers p a)) {_} {_} {dpath m2} (IsIso-char.2 (inP (~>_= (dpath m2), ~>_=_~>)))
+
+-- | The base change of {p} along {pi} is the base change of {pi} along {p}.
+\func baseChange-swap.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) (c :⁺ BaseChange p pi) : BaseChange pi p
+  => (c.2.1, (c.1, inv c.2.2))
+
+\lemma baseChange-swap-equiv.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) : IsHEquiv (baseChange-swap pi p)
+  => inP \new HQEquiv {
+    | finv => baseChange-swap p pi
+    | finv_f c => path \lam j => (c.1, (c.2.1, inv_inv j))
+    | f_finv c => path \lam j => (c.1, (c.2.1, inv_inv j))
+  }

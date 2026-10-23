@@ -1,0 +1,369 @@
+{- | The realization of a simplicial type, given as a functor `pi : K ->⁺ DeltaCat` (a right fibration, for most statements).
+
+ -   The realization {Realization} of {pi} is the localization of the base change `K ×_Δ [-]` of the universal cocartesian
+ -   fibration {UnivSimplexFib} at the arrows {RealW} whose vertex component is cocartesian, that is, vertex-preserving.
+ -   Objects of the base change are pairs of a simplex `e` over `[n]` and a vertex `j` of `[n]`.
+ -   * {realization-adj}: the realization is left adjoint to the simplicial nerve on hom-types: sections of the nerve of {D}
+ -     along {pi} are functors `Realization pi ->⁺ D` ({ExpCocCore.sec-equiv} and the universal property of {Localize}).
+ -     The equivalence {realize-map} is natural in the base ({realize-map-natural}).
+ -   * Over a base with a terminal object over `[n]`, the realization is `[n]` ({ellN-isLocalization}, by {toTerminalBC-isLocalization}),
+ -     naturally in the base ({ellN-natural}). In particular, the realization of `Δ/[n]` is `[n]` ({realization-slice}).
+ -   * {realization-ob-surj}: for a right fibration, every object of the realization is the image of a vertex `(e, 0)`
+ -     with `e` over `[0]`, since `(e_j, 0) -> (e, j)` is inverted, where `e_j` is the transport of `e` along `j : [0] -> [n]`.
+ -   * {realization-lastVertex}: for a right fibration {p}, the realization is the localization of {E} at the arrows {LastW}
+ -     over maps preserving the last vertex ({lastW-char}). The objects `(e, n)` with `e` over `[n]` form a coreflective
+ -     subcategory {lastVertex}: the coreflection {lastRestr} restricts `e` to `[0..j]` by a covariant choice of lifts
+ -     ({rightFib-lift}), and the counit lies in {RealW} ({coreflection-isLocalization}).
+ -}
+
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Category
+\import Category.Functor
+\import Category.Simplex
+\import Category.Slice
+\import Equiv
+\import Logic.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianBaseChange
+\import InfCat.Fibration.ExponentCocartesianCore
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Limit.Terminal
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.Concrete
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.Simplicial.NerveSpine
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import InfCat.Fibration.ContravariantLift
+\import InfCat.Fibration.RightFib
+\import InfCat.Nerve.NerveTrans
+\import Order.PartialOrder
+\import InfCat.Functor.Conservative
+\import InfCat.Fibration.CocartesianMap
+\open RealizationHelpers
+
+-- | The arrows of the base change of the universal cocartesian fibration along {pi} with cocartesian vertex component.
+\func RealW.{u} {K : \Cat u} (pi : K ->⁺ DeltaCat) (a : DI ->⁺ BaseChange pi (nerveMap simplexProj)) : \Prop
+  => CocartW (nerveMap simplexProj) pi a
+
+-- | The realization of {pi}.
+\func Realization.{u} {K : \Cat u} (pi : K ->⁺ DeltaCat) : \Cat
+  => Localize (RealW pi)
+
+-- | The localization functor of the realization.
+\func real.{u} {K : \Cat u} (pi : K ->⁺ DeltaCat) (q :⁺ BaseChange pi (nerveMap simplexProj)) : Realization pi
+  => localize (RealW pi) q
+
+-- # The adjunction
+
+-- | The functor out of the realization corresponding to a section of the nerve of {D} along {pi}.
+\func realize-map.{u} {K D : \Cat u} (pi : K ->⁺ DeltaCat) (s : \Pi (t :⁺ K) -> SNerveFib D (pi t)) (y :⁺ Realization pi) : D
+  => localize-lift (ExpCocCore.sec-eval univSimplex-cocartesianMap pi s).2 y
+
+-- | Sections of the nerve of {D} along {pi} are functors out of the realization of {pi}.
+\lemma realization-adj.{u} {K D : \Cat u} (pi : K ->⁺ DeltaCat)
+  : IsEquiv {\Pi (t :⁺ K) -> SNerveFib D (pi t)} {Realization pi ->⁺ D} (realize-map pi)
+  => IsEquiv.trans (ExpCocCore.sec-equiv univSimplex-cocartesianMap pi) lift-equiv
+  \where
+    -- | The extension along {localize} of a functor inverting {RealW}.
+    \lemma lift-equiv : IsEquiv {MapW (RealW pi) D} {Realization pi ->⁺ D} (\lam F y => localize-lift F.2 y)
+      => IsEquiv.leftFactor localize-ob-equiv (transportInv IsEquiv (ext \lam F => ext idp) (inP idEquiv))
+
+-- | The functor of realizations induced by a functor {h} of bases.
+\func realization-map.{u} {K K' : \Cat u} (pi : K ->⁺ DeltaCat) (h : K' ->⁺ K) (y :⁺ Realization (\lam t => pi (h t))) : Realization pi
+  => localize-map {_} {_} {RealW (\lam t => pi (h t))} {RealW pi}
+       (\lam (q :⁺ BaseChange (\lam t => pi (h t)) (nerveMap simplexProj)) => ((h q.1, q.2) : BaseChange pi (nerveMap simplexProj))) (\lam w => w) y
+
+-- | {realize-map} is natural in the base: restriction of sections is precomposition with {realization-map}.
+\sfunc realize-map-natural.{u} {K K' D : \Cat u} (pi : K ->⁺ DeltaCat) (h : K' ->⁺ K) (s : \Pi (t :⁺ K) -> SNerveFib D (pi t))
+  : realize-map (\lam t => pi (h t)) (\lam t => s (h t)) = {Realization (\lam t => pi (h t)) ->⁺ D} (\lam y => realize-map pi s (realization-map pi h y))
+  => IsEquiv.isInj (localize-ob-equiv {_} {D} {RealW (\lam t => pi (h t))}) (ext idp)
+
+-- # Bases with a terminal object
+
+-- | The inverse of the identification of `[n]` with the fiber of {UnivSimplexFib}.
+\func ret-n (n : Nat) (y :⁺ UnivSimplexFib (nerveOb n)) : Nerve (Simplex n)
+  => IsHEquiv.ret (univSimplexFib-fiber n) y
+
+-- | Cocartesian transport to the fiber over a terminal object identified with `[n]`.
+\func ellN {T : \Cat 0} (pi : T ->⁺ DeltaCat) {top : T} (Pt : IsTerminal top) {n : Nat} (pt : pi top = nerveOb n)
+            (q :⁺ BaseChange pi (nerveMap simplexProj)) : Nerve (Simplex n)
+  => ret-n n (transport+ UnivSimplexFib pt (toTerminalBC univSimplex-cocartesianMap pi Pt q))
+
+-- | Over a base with a terminal object over `[n]`, {ellN} is the localization at {CocartW}: the realization is `[n]`.
+\lemma ellN-isLocalization {T : \Cat 0} (pi : T ->⁺ DeltaCat) {top : T} (Pt : IsTerminal top) {n : Nat} (pt : pi top = nerveOb n)
+  : IsLocalization (CocartW (nerveMap simplexProj) pi) (ellN pi Pt pt)
+  => isLocalization-transfer (toTerminalBC-isLocalization univSimplex-cocartesianMap pi Pt) idHEquiv (tr-ret-equiv pt)
+       {ellN pi Pt pt} (\lam x => idp) (\lam a => (\lam w => w, \lam w => w))
+  \where
+    \lemma tr-ret-equiv {b : DeltaCat} {n : Nat} (pt : b = nerveOb n)
+      : IsHEquiv (\lam (y : UnivSimplexFib b) => ret-n n (transport+ UnivSimplexFib pt y)) \elim pt
+      | idp => IsHEquiv.ret-equiv (univSimplexFib-fiber n)
+
+{- | Naturality of {ellN} along a functor {h} of bases: if the image of an arrow {a} from `h top'` to {top} is {d},
+ -   then {ellN} for {T} restricted along {h} is {ellN} for {T'} followed by {d}.
+ -}
+\sfunc ellN-natural {T T' : \Cat 0} (pi : T ->⁺ DeltaCat) {top : T} (Pt : IsTerminal top) {n : Nat} (pt : pi top = nerveOb n)
+                    (h : T' ->⁺ T) {top' : T'} (Pt' : IsTerminal top') {m : Nat} (pt' : pi (h top') = nerveOb m)
+                    (d : SimplexCat.Hom m n) (a : h top' ~> top)
+                    (da : (\lam i => pi (a i)) = {DI ->⁺ DeltaCat} (\lam i => nerveHom {SimplexCat} d i))
+  : (\lam q => ellN pi Pt pt (h q.1, q.2))
+    = {BaseChange (\lam t => pi (h t)) (nerveMap simplexProj) ->⁺ Nerve (Simplex n)} (\lam q => nerveMap d (ellN (\lam t => pi (h t)) Pt' pt' q))
+  => pmap (\lam (H : BaseChange (\lam t => pi (h t)) (nerveMap simplexProj) ->⁺ UnivSimplexFib (pi top))
+                 (q :⁺ BaseChange (\lam t => pi (h t)) (nerveMap simplexProj)) => ret-n n (transport+ UnivSimplexFib pt (H q)))
+          (toTerminalBC-natural univSimplex-cocartesianMap pi Pt h Pt' a)
+     *> pmap (\lam (H : UnivSimplexFib (pi (h top')) ->⁺ Nerve (Simplex n)) (q :⁺ BaseChange (\lam t => pi (h t)) (nerveMap simplexProj)) =>
+                H (toTerminalBC univSimplex-cocartesianMap (\lam t => pi (h t)) Pt' q))
+             (toEnd-ret d da pt pt')
+  \where {
+    -- | Cocartesian transport along {d}, under the identifications of the fibers with simplices, is {d}.
+    \sfunc toEnd-ret {m n : Nat} (d : SimplexCat.Hom m n) {beta : DI ->⁺ DeltaCat}
+                     (db : beta = {DI ->⁺ DeltaCat} (\lam i => nerveHom {SimplexCat} d i))
+                     (pt : beta dright = nerveOb n) (pt' : beta dleft = nerveOb m)
+      : (\lam (y :⁺ UnivSimplexFib (beta dleft)) => ret-n n (transport+ UnivSimplexFib pt (toEnd univSimplex-cocartesianMap beta (dleft, y))))
+        = {UnivSimplexFib (beta dleft) ->⁺ Nerve (Simplex n)} (\lam y => nerveMap d (ret-n m (transport+ UnivSimplexFib pt' y))) \elim db
+      | idp => \let Mot (pt : nerveOb n = nerveOb n) (pt' : nerveOb m = nerveOb m) =>
+                    (\lam (y :⁺ UnivSimplexFib (nerveOb m)) => ret-n n (transport+ UnivSimplexFib pt (toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, y))))
+                      = {UnivSimplexFib (nerveOb m) ->⁺ Nerve (Simplex n)} (\lam y => nerveMap d (ret-n m (transport+ UnivSimplexFib pt' y)))
+               \in transport2 Mot (deltaCat-path-isProp _ _ idp pt) (deltaCat-path-isProp _ _ idp pt') (toEnd-ret-idp d)
+
+    \sfunc toEnd-ret-idp {m n : Nat} (d : SimplexCat.Hom m n)
+      : (\lam (y :⁺ UnivSimplexFib (nerveOb m)) => ret-n n (toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, y)))
+        = {UnivSimplexFib (nerveOb m) ->⁺ Nerve (Simplex n)} (\lam y => nerveMap d (ret-n m y))
+      => inv (pmap (\lam (H : UnivSimplexFib (nerveOb m) ->⁺ UnivSimplexFib (nerveOb m)) (y :⁺ UnivSimplexFib (nerveOb m)) =>
+                      ret-n n (toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, H y)))
+                   (funExt+ \lam y => IsHEquiv.f_ret (univSimplexFib-fiber m) {y}))
+         *> pmap (\lam (H : Nerve (Simplex m) ->⁺ UnivSimplexFib (nerveOb n)) (y :⁺ UnivSimplexFib (nerveOb m)) => ret-n n (H (ret-n m y)))
+                 (snerve-nu-tr.toEnd-incl d)
+         *> pmap (\lam (H : Nerve (Simplex n) ->⁺ Nerve (Simplex n)) (y :⁺ UnivSimplexFib (nerveOb m)) => H (nerveMap d (ret-n m y)))
+                 (funExt+ \lam z => IsHEquiv.ret_f (univSimplexFib-fiber n) {z})
+  }
+
+-- | {ellN} commutes with transport along a path of functors of bases.
+\sfunc ellN-tr {T T' : \Cat 0} (pi : T ->⁺ DeltaCat) {h1 h2 : T' ->⁺ T} (q : h1 = h2) {top : T'} (Pt : IsTerminal top) {n : Nat}
+               (pt1 : pi (h1 top) = nerveOb n) (pt2 : pi (h2 top) = nerveOb n)
+  : transport (\lam (k : T' ->⁺ T) => BaseChange (\lam t => pi (k t)) (nerveMap simplexProj) ->⁺ Nerve (Simplex n)) q (ellN (\lam t => pi (h1 t)) Pt pt1)
+    = ellN (\lam t => pi (h2 t)) Pt pt2 \elim q
+  | idp => pmap {pi (h1 top) = nerveOb n} {BaseChange (\lam t => pi (h1 t)) (nerveMap simplexProj) ->⁺ Nerve (Simplex n)}
+                (\lam pt => ellN (\lam t => pi (h1 t)) Pt pt) (deltaCat-path-isProp _ _ pt1 pt2)
+
+-- | The identity is a terminal object of `Δ/[n]`.
+\lemma slice-terminal (n : Nat) : IsTerminal (nerveOb {SliceS n} (n, SimplexCat.id {n}))
+  => nerve-isTerminal {SliceS n} {n, SimplexCat.id {n}} \lam x =>
+       isProp=>isContr (\lam a b => ext (inv SimplexCat.id-left *> a.2 *> inv b.2 *> SimplexCat.id-left)) (x.2, SimplexCat.id-left)
+
+-- | The realization of `Δ/[n]` is `[n]`.
+\lemma realization-slice (n : Nat)
+  : IsHEquiv (localize-lift (ellN-isLocalization (sliceProj n) (slice-terminal n) idp).1)
+  => (ellN-isLocalization (sliceProj n) (slice-terminal n) idp).2
+
+-- # Objects
+
+-- | Every object of the realization of a right fibration is the image of a vertex of a 0-simplex.
+\lemma realization-ob-surj.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : Realization p)
+  : ∃ (e : E) (q : p e = nerveOb 0) (real p (e, (nerveOb {SimplexTotal} (0, 0), inv q)) = y)
+  => \case localize-surj y \with {
+       | inP (c, r) => TruncP.map (from-object c.1 c.2.1 c.2.2) (\lam t => (t.1, t.2, t.3 *> r))
+     }
+  \where {
+    \lemma from-object (e : E) (w : Nerve SimplexTotal) (q : nerveMap simplexProj w = p e)
+      : ∃ (e0 : E) (q0 : p e0 = nerveOb 0) (real p (e0, (nerveOb {SimplexTotal} (0, 0), inv q0)) = real p (e, (w, q)))
+      => \case \elim w, nerveOb-surj w, \elim q \with {
+           | _, inP (x, idp), q => inP (from-vertex e x q)
+         }
+
+    -- | The arrow `(e_j, 0) -> (e, j)` lies in {RealW}.
+    \sfunc from-vertex (e : E) (x : SimplexTotal) (q : nerveOb {SimplexCat} x.1 = p e)
+      : \Sigma (e0 : E) (q0 : p e0 = nerveOb 0) (real p (e0, (nerveOb {SimplexTotal} (0, 0), inv q0)) = real p (e, (nerveOb x, q)))
+      => \let | L => (pf (nerveOb 0, nerveOb x.1, nerveHom {SimplexCat} (vert x.2), (e, inv q))).center
+              | a : DI ->⁺ BaseChange p (nerveMap simplexProj)
+                  => \lam i => ((L.2 i).1, (nerveHom {SimplexTotal} {0, 0} {x.1, x.2} (vert x.2, <=-refl) i, inv (L.2 i).2))
+         \in (L.1.1, L.1.2, (IsIso_= (localize-inverts {_} {RealW p} {a} (univSimplex-lift-cocartesian (vert x.2) 0))).1
+                            *> pmap (\lam q' => real p (e, (nerveOb x, q'))) inv_inv)
+  }
+
+-- # The last-vertex presentation
+
+-- | The object `(e, n)` of the base change, where `e` lies over `[n]` and `n` is the last vertex.
+\func lastVertex.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (e :⁺ E) : BaseChange p (nerveMap simplexProj)
+  => (e, (lastN (p e), path \lam j => lastN-sec j (p e)))
+
+-- | The arrows of {E} over maps preserving the last vertex ({lastW-char}).
+\func LastW.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (b : DI ->⁺ E) : \Prop
+  => RealW p (\lam j => lastVertex p (b j))
+
+-- | A map `d : [n] -> [m]` lies in {LastW} if and only if it preserves the last vertex.
+\lemma lastW-char {n m : Nat} (d : SimplexCat.Hom n m)
+  : IsCocartesianArrow (nerveMap simplexProj) (dmap lastN (nerveHom {SimplexCat} {n} {m} d)) <-> d (topV n) = topV m
+  => (univSimplex-cocartesian-vertex (lastF.Func d), univSimplex-vertex-cocartesian (lastF.Func d))
+
+-- | The coreflection onto the last-vertex objects: `(e, j)` goes to the restriction of `e` to `[0..j]`.
+\func lastRestr.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (c :⁺ BaseChange p (nerveMap simplexProj)) : E
+  => restrC pf (baseChange-swap (nerveMap simplexProj) p c)
+
+{- | The realization of a right fibration {p} is the localization of {E} at {LastW}:
+ -   the last-vertex objects form a coreflective subcategory, with coreflection {lastRestr} and counit in {RealW}.
+ -}
+\lemma realization-lastVertex.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+  : IsLocalization (LastW p) (\lam e => real p (lastVertex p e))
+  => transport (IsLocalization (LastW p)) (path \lam j => \lam e =>⁺ real p (e, (lastN (p e), inv_inv {_} {_} {_} {path \lam j => (lastN-sec j) (p e)} j)))
+       (coreflection-isLocalization
+          (isLocalization-precomp (localize-isLocalization {_} {RealW p}) (baseChange-swap-equiv p (nerveMap simplexProj)))
+          (\lam e => baseChange-swap (nerveMap simplexProj) p (lastVertex p e)) (restrC pf) (\lam w => w) (restrC-sends pf)
+          (counitC pf) (\lam c => segE-cocartesian c.1) (restrC-counit pf) (restrC-last pf))
+
+\module RealizationHelpers \where {
+  -- ## Strict functors
+
+  -- | The inclusion `[j] -> [n]` of an initial segment.
+  \func segInc (n : Nat) (j : Fin (suc n)) : Hom {SimplexCat} j n
+    => \new PosetHom {
+      | func k => toFin k (<_suc_<= (fin_< k) NatSemiring.<∘r fin_< j)
+      | func-<= q => \lam r => q (transport2 (NatSemiring.<) toFin=id toFin=id r)
+    }
+
+  \lemma segInc-le {n : Nat} {j : Fin (suc n)} (k : Fin (suc j)) : segInc n j k <= {Simplex n} j
+    => \lam r => <_suc_<= (fin_< k) (transport (j NatSemiring.< __) toFin=id r)
+
+  -- | The restriction of an arrow of {SimplexTotal} to the initial segments.
+  \func segMap {x y : SimplexTotal} (f : Hom {SimplexTotal} x y) : Hom {SimplexCat} x.2 y.2
+    => \new PosetHom {
+      | func k => toFin (f.1 (segInc x.1 x.2 k)) (<=_<_suc \lam r => (f.1.func-<= (segInc-le k) <=∘ f.2) r)
+      | func-<= q => \lam r => f.1.func-<= ((segInc x.1 x.2).func-<= q) (transport2 (NatSemiring.<) toFin=id toFin=id r)
+    }
+
+  \lemma segInc-val {n : Nat} {j : Fin (suc n)} (k : Fin (suc j)) : segInc n j k = {Nat} k
+    => toFin=id
+
+  \lemma segMap-val {x y : SimplexTotal} (f : Hom {SimplexTotal} x y) (k : Fin (suc x.2)) : segMap f k = {Nat} f.1 (segInc x.1 x.2 k)
+    => toFin=id
+
+  -- | `(n, j) ↦ (j, j)`: the initial segment `[0..j]` with its last vertex.
+  \func segF : Functor SimplexTotal SimplexTotal \cowith
+    | F x => (x.2, topV x.2)
+    | Func f => (segMap f, le-top _)
+    | Func-id {x} => ext (simplexHom-ext \lam t => fin_nat-inj (segMap-val (id {SimplexTotal} {x}) t *> segInc-val t))
+    | Func-o {x} {y} {z} {g} {f} => ext (simplexHom-ext \lam t => fin_nat-inj (segMap-val (g ∘ f) t
+                                       *> pmap {Fin (suc z.1)} {Nat} (\lam v => v) (pmap g.1 (fin_nat-inj (inv (segInc-val (segMap f t) *> segMap-val f t))))
+                                       *> inv (segMap-val g (segMap f t))))
+
+  -- | The inclusions of the initial segments.
+  \func segIncl : NatTrans segF Id \cowith
+    | trans x => (segInc x.1 x.2, \lam r => NatSemiring.<-irreflexive (transport (x.2 NatSemiring.< __) (segInc-val (topV x.2) *> topV-val x.2) r))
+    | natural {x} {y} f => ext (simplexHom-ext \lam t => fin_nat-inj (segInc-val (segMap f t) *> segMap-val f t))
+
+  -- | `[n] ↦ (n, n)`.
+  \func lastF : Functor SimplexCat SimplexTotal \cowith
+    | F n => (n, topV n)
+    | Func d => (d, le-top _)
+    | Func-id => ext idp
+    | Func-o => ext idp
+
+  -- ## Nerves
+
+  \func segN (w :⁺ Nerve SimplexTotal) : Nerve SimplexTotal => nerveMap segF w
+
+  \func lastN (x :⁺ DeltaCat) : Nerve SimplexTotal => nerveMap lastF x
+
+  \sfunc id-path : nerveMap (Id {SimplexTotal}) = {Nerve SimplexTotal ->⁺ Nerve SimplexTotal} (\lam w => w)
+    => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> inv comp_idd-left
+
+  \sfunc lastN-sec : (\lam x => nerveMap simplexProj (lastN x)) = {DeltaCat ->⁺ DeltaCat} (\lam x => x)
+    => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> inv comp_idd-left
+
+  \sfunc segN-last : (\lam w => lastN (nerveMap simplexProj (segN w))) = {Nerve SimplexTotal ->⁺ Nerve SimplexTotal} segN
+    => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> inv comp_idd-left
+
+  -- | The inclusion of the initial segment of {w}.
+  \func segE (w :⁺ Nerve SimplexTotal) : segN w ~> w
+    => trArr {_} {_} {nerveMap segF} {nerveMap (Id {SimplexTotal})} {nerveMap segF} {\lam w => w} idp id-path (nerveTrans {SimplexTotal} {SimplexTotal} {segF} {Id {SimplexTotal}} segIncl) w
+
+  -- | A property of arrows of the nerve of {SimplexTotal} that holds for arrows between vertices holds for all arrows.
+  \lemma arrow-vertices (P : \Pi {a b : Nerve SimplexTotal} (a ~> b) -> \Prop) (Pv : \Pi {x y : SimplexTotal} (f : Hom {SimplexTotal} x y) -> P (nerveHom f))
+                        {a b : Nerve SimplexTotal} (u : a ~> b) : P u
+    => \case \elim a, \elim b, nerveOb-surj a, nerveOb-surj b, \elim u \with {
+         | _, _, inP (x, idp), inP (y, idp), u => transport (\lam v => P v) (IsEquiv.f_ret nerveHom-equiv) (Pv _)
+       }
+
+  \lemma segE-cocartesian (w : Nerve SimplexTotal) : IsCocartesianArrow (nerveMap simplexProj) (segE w)
+    => trArr-prop {_} {_} {nerveMap segF} {nerveMap (Id {SimplexTotal})} {nerveMap segF} {\lam w => w} idp id-path (nerveTrans {SimplexTotal} {SimplexTotal} {segF} {Id {SimplexTotal}} segIncl) (\lam u => IsCocartesianArrow (nerveMap simplexProj) u) (all w)
+    \where
+      \lemma all (w : Nerve SimplexTotal) : IsCocartesianArrow (nerveMap simplexProj) (nerveTrans {SimplexTotal} {SimplexTotal} {segF} {Id {SimplexTotal}} segIncl w)
+        => \case \elim w, nerveOb-surj w \with {
+             | _, inP (x, idp) => nerveTrans-vertex-prop {SimplexTotal} {SimplexTotal} {segF} {Id {SimplexTotal}} segIncl (\lam u => IsCocartesianArrow (nerveMap simplexProj) u) x
+                                    (univSimplex-vertex-cocartesian (segIncl x) (fin_nat-inj (segInc-val (topV x.2) *> topV-val x.2)))
+           }
+
+  -- | {segN} preserves cocartesian arrows.
+  \lemma segN-cocartesian {w w' : Nerve SimplexTotal} (u : w ~> w') (uc : IsCocartesianArrow (nerveMap simplexProj) u)
+    : IsCocartesianArrow (nerveMap simplexProj) (dmap segN u)
+    => arrow-vertices (\lam u => IsCocartesianArrow (nerveMap simplexProj) u -> IsCocartesianArrow (nerveMap simplexProj) (dmap segN u))
+         (\lam {x} {y} f fc => univSimplex-vertex-cocartesian (segF.Func f) (vertex-eq f (univSimplex-cocartesian-vertex f fc))) u uc
+    \where
+      \lemma vertex-eq {x y : SimplexTotal} (f : Hom {SimplexTotal} x y) (e : f.1 x.2 = y.2) : segMap f (topV x.2) = topV y.2
+        => fin_nat-inj (segMap-val f (topV x.2) *> pmap {Fin (suc y.1)} {Nat} (\lam v => v) (pmap f.1 (fin_nat-inj (segInc-val (topV x.2) *> topV-val x.2)) *> e) *> inv (topV-val y.2))
+
+  -- | At a last-vertex object, the inclusion of the initial segment is an isomorphism over {DeltaCat}.
+  \lemma last-iso (x : DeltaCat) : IsIso (dmap (nerveMap simplexProj) (segE (lastN x)))
+    => \case \elim x, nerveOb-surj x \with {
+         | _, inP (n, idp) => trArr-prop {_} {_} {nerveMap segF} {nerveMap (Id {SimplexTotal})} {nerveMap segF} {\lam w => w} idp id-path (nerveTrans {SimplexTotal} {SimplexTotal} {segF} {Id {SimplexTotal}} segIncl) (\lam u => IsIso (dmap (nerveMap simplexProj) u))
+                                (nerveTrans-vertex-prop {SimplexTotal} {SimplexTotal} {segF} {Id {SimplexTotal}} segIncl (\lam u => IsIso (dmap (nerveMap simplexProj) u)) (n, topV n) (segInc-top-iso n))
+       }
+
+  \lemma segInc-top-iso (n : Nat) : IsIso (nerveHom {SimplexCat} (segInc n (topV n)))
+    => aux (topV-val n) (segInc n (topV n)) segInc-val
+    \where
+      \lemma aux {m n : Nat} (e : m = n) (f : Hom {SimplexCat} m n) (fe : \Pi (t : Fin (suc m)) -> f t = {Nat} t) : IsIso (nerveHom {SimplexCat} {m} {n} f) \elim e
+        | idp => transportInv (\lam g => IsIso (nerveHom {SimplexCat} {m} {m} g)) (simplexHom-ext \lam t => fin_nat-inj (fe t)) (transportInv IsIso nerveHom-id idd-iso)
+
+  -- ## The coreflection, on the swapped base change
+
+  \func segDat.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (c :⁺ BaseChange (nerveMap simplexProj) p) : ContLiftData (Fibers p)
+    => (nerveMap simplexProj (segN c.1), nerveMap simplexProj c.1, dmap (nerveMap simplexProj) (segE c.1), c.2)
+
+  \func liftC.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (c :⁺ BaseChange (nerveMap simplexProj) p) : ContLift (Fibers p) (segDat c)
+    => rightFib-lift pf (segDat c)
+
+  \func restrC.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (c :⁺ BaseChange (nerveMap simplexProj) p) : E
+    => (liftC pf c).1.1
+
+  \func kC.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (c :⁺ BaseChange (nerveMap simplexProj) p) : BaseChange (nerveMap simplexProj) p
+    => (segN c.1, (liftC pf c).1)
+
+  \func counitC.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (c :⁺ BaseChange (nerveMap simplexProj) p) : kC pf c ~> c
+    => dpath \lam j => (segE c.1 j, (liftC pf c).2 j)
+
+  -- | The last vertex of the restriction is the last vertex of the initial segment.
+  \sfunc restrC-path.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+    : (\lam c => segN c.1) = {BaseChange (nerveMap simplexProj) p ->⁺ Nerve SimplexTotal} (\lam c => lastN (p (restrC pf c)))
+    => inv (pmap (\lam (H : Nerve SimplexTotal ->⁺ Nerve SimplexTotal) (c :⁺ BaseChange (nerveMap simplexProj) p) => H c.1) segN-last)
+       *> pmap (\lam (G : BaseChange (nerveMap simplexProj) p ->⁺ DeltaCat) (c :⁺ BaseChange (nerveMap simplexProj) p) => lastN (G c))
+               (funExt+ \lam c => inv (liftC pf c).1.2)
+
+  \lemma restrC-sends.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+    : SendsW (\lam a => RealW p (\lam i => baseChange-swap p (nerveMap simplexProj) (a i))) (LastW p) (restrC pf)
+    => \lam {a} w => transport (\lam (F : BaseChange (nerveMap simplexProj) p ->⁺ Nerve SimplexTotal) => IsCocartesianArrow (nerveMap simplexProj) (dpath \lam j => F (a j)))
+                               (restrC-path pf) (segN-cocartesian (dpath \lam i => (a i).1) w)
+
+  \sfunc restrC-counit.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+    : kC pf = {BaseChange (nerveMap simplexProj) p ->⁺ BaseChange (nerveMap simplexProj) p}
+              (\lam c => baseChange-swap (nerveMap simplexProj) p (lastVertex p (restrC pf c)))
+    => baseChange-fun-ext (restrC-path pf) idp
+
+  \sfunc restrC-last.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+    : (\lam e => restrC pf (baseChange-swap (nerveMap simplexProj) p (lastVertex p e))) = {E ->⁺ E} (\lam e => e)
+    => natIso-path (\lam e => dpath \lam j => ((liftC pf (baseChange-swap (nerveMap simplexProj) p (lastVertex p e))).2 j).1)
+                   (\lam e => dmap_IsIso (\lam (s :⁺ \Sigma⁺ (x : DeltaCat) (Fibers p x)) => s.2.1)
+                                         (rightFib-lift-iso pf (last-iso (p e)) (liftC pf (baseChange-swap (nerveMap simplexProj) p (lastVertex p e)))))
+}

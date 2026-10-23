@@ -1,0 +1,158 @@
+{- | Cartesian lifts in families of categories, and covariant lifts along right fibrations.
+
+ -   * {IsCartesianLift}: a lift of an arrow into a point is cartesian if lifts of composites factor uniquely through it;
+ -     {cartesian-square} extends this to squares in the base, so the projection from lifts to their data is fully faithful
+ -     at cartesian lifts ({cartesian-ff}).
+ -   * In a right fibration every lift is cartesian ({rightFib-lift-cartesian}). Hence the projection from lifts to their data is
+ -     an equivalence ({rightFib-equiv}), and lifts can be chosen covariantly in the data ({rightFib-lift}, {rightFib-lift-unique}).
+ -     This is the dual of {leftFib-lift}.
+ -}
+
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.RightFib
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Interval
+\import InfCat.Rezk
+\import InfCat.Square
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+
+-- | A lift {l} of {d} is cartesian if every lift of a composite `comp g f` factors uniquely through it.
+\type IsCartesianLift {A : \Cat} {B : A ->⁺ \Cat} {d : ContLiftData B} (l : ContLift B d) : \Prop
+  => \Pi {a'' : A} (g : a'' ~> d.1) (l' : ContLift B (a'', d.2, comp g d.3, d.4))
+       -> Contr (\Sigma (k : DPath (\lam j => B (g j)) l'.1 l.1)
+                        (DPath (\lam i => DPath (\lam j => B (fill2 g d.3 i j)) (k i) (l'.2 i)) idd l.2))
+
+-- | The cartesian property for an arbitrary 2-simplex in the base, not just the canonical one.
+\lemma cartesian-triangle {A : \Cat} {B : A ->⁺ \Cat} {d : ContLiftData B} (c : ContLift B d) (cc : IsCartesianLift c)
+                          {a'' : A} {g : a'' ~> d.1} {h : a'' ~> d.2} (tri : DPath (\lam i => g i ~> h i) idd d.3)
+                          {b'' : B a''} (r : DPath (\lam i => B (h i)) b'' d.4)
+  : Contr (\Sigma (k : DPath (\lam j => B (g j)) b'' c.1) (DPath (\lam i => DPath (\lam j => B (tri i j)) (k i) (r i)) idd c.2))
+  => \let P (t : \Sigma (h : a'' ~> d.2) (DPath (\lam i => g i ~> h i) idd d.3))
+            => \Pi (r : DPath (\lam i => B (t.1 i)) b'' d.4)
+                 -> Contr (\Sigma (k : DPath (\lam j => B (g j)) b'' c.1) (DPath (\lam i => DPath (\lam j => B (t.2 i j)) (k i) (r i)) idd c.2))
+     \in transport P (isContr=>isProp (segal-contr g d.3) (comp g d.3, dpath \lam i => dpath (fill2 g d.3 i)) (h, tri)) (\lam r => cc g (b'', r)) r
+
+{- | The type of maps from a lift over a square to a cartesian lift is contractible.
+ - This is the property of being a cartesian lift, but for arbitrary squares in the base instead of just 2-simplices.
+ -}
+\lemma cartesian-square {A : \Cat} (B : A ->⁺ \Cat)
+  {d1 d2 : ContLiftData B} (p : d1.1 ~> d2.1) (p' : d1.2 ~> d2.2) (sqA : DPath (\lam i => p i ~> p' i) d1.3 d2.3)
+  (q : DPath (\lam i => B (p' i)) d1.4 d2.4) (l' : ContLift B d1) (c : ContLift B d2) (cc : IsCartesianLift c)
+  : Contr (\Sigma (k : DPath (\lam i => B (p i)) l'.1 c.1) (DPath (\lam i => DPath (\lam j => B (sqA i j)) (k i) (q i)) l'.2 c.2))
+  => \let | Tot => \Sigma⁺ (a : A) (B a)
+          | qq => dpath \lam i => ((p' i, q i) : Tot)
+          | m1 => dpath \lam j => ((d1.3 j, l'.2 j) : Tot)
+          | m2 => dpath \lam j => ((d2.3 j, c.2 j) : Tot)
+          | kk (k : DPath (\lam i => B (p i)) l'.1 c.1) => dpath \lam i => ((p i, k i) : Tot)
+          | triA => dpath \lam i => dpath (fill2 d1.3 p' i)
+          -- the composite of `l'.2` and `q` together with its filler over the canonical 2-simplex
+          | hm => horn-Contr B {_} {_} {_} {_} {_} {comp d1.3 p'} triA l'.2 q
+          | ad => dpath \lam i => ((comp d1.3 p' i, hm.center.1 i) : Tot)
+          | ff => dpath \lam i => dpath \lam j => ((fill2 d1.3 p' i j, hm.center.2 i j) : Tot)
+          -- connections built from {dmin}, so that their projections do not depend on `k`
+          | bf (k : DPath (\lam i => B (p i)) l'.1 c.1) => dpath \lam i => dpath \lam j => kk k (dmin i j)
+          | tf => dpath \lam i => dpath \lam j => m1 (dmin i j)
+          | bfA => dpath \lam i => dpath \lam j => p (dmin i j)
+          | tfA => dpath \lam i => dpath \lam j => d1.3 (dmin i j)
+          -- the triangle corresponding to the square {sqA}
+          | base => square-char.forward-gen bfA tfA triA sqA
+          | E (k : DPath (\lam i => B (p i)) l'.1 c.1)
+              => rel-square-equiv B {_} {_} {_} {_} {kk k} {qq} {m1} {m2} sqA
+                 `transQEquiv` sigma-right (\lam sqT => IsEquiv.toQEquiv (pmapIsEquiv (inP (square-char.gen-equiv bfA tfA triA)))
+                                                    `transQEquiv` pathEquiv-right (inv (square-char.forward-gen.natural __.1 {_} {_} {_} {_} {kk k} {m2} {m1} (bf k) tf ff sqT)))
+                 `transQEquiv` qsigma-left (square-char.gen-equiv (bf k) tf ff)
+                 `transQEquiv` symQEquiv (rel-square-equiv B {_} {_} {_} {_} {idd} {m2} {kk k} {ad} base)
+                 `transQEquiv` transpose base
+     \in Contr.Contr_QEquiv (symQEquiv (sigma-right E)) (cartesian-triangle c cc {_} {p} {comp d1.3 p'} (dpath \lam i => dpath \lam j => base j i) hm.center.1)
+  \where {
+    \private \func transpose {A : \Cat} {B : A ->⁺ \Cat} {a : A} {a' a'' : A} {f : a ~> a'} {g : a' ~> a''} {h : a ~> a''}
+                             (tri : DPath (\lam i => a ~> g i) f h) {b : B a} {b' : B a'} {b'' : B a''}
+                             {x : DPath (\lam i => B (f i)) b b'} {k : DPath (\lam j => B (g j)) b' b''} {r : DPath (\lam i => B (h i)) b b''}
+      : QEquiv {DPath (\lam i => DPath (\lam j => B (tri i j)) b (k i)) x r}
+               {DPath (\lam i => DPath (\lam j => B (tri j i)) (x i) (r i)) idd k} \cowith
+      | f s => dpath \lam i => dpath \lam j => s j i
+      | ret s => dpath \lam i => dpath \lam j => s j i
+      | ret_f s => idp
+      | f_sec s => idp
+  }
+
+-- | Lifts of {d} are arrows in the fiber into the source of a cartesian lift {c}.
+\lemma cartesian-lift-equiv {A : \Cat} {B : A ->⁺ \Cat} {d : ContLiftData B}
+                            (c : ContLift B d) (cc : IsCartesianLift c) (b' : B d.1)
+  : IsEquiv {DPath (\lam i => B (d.3 i)) b' d.4} {b' ~> c.1}
+            (\lam t => (cartesian-triangle c cc {_} {idd} {d.3} (dpath \lam i => dpath \lam j => d.3 (dmin i j)) t).center.1)
+  => \let tri => dpath \lam i => dpath \lam j => d.3 (dmin i j)
+     \in contr-relation-equiv {DPath (\lam i => B (d.3 i)) b' d.4} {b' ~> c.1} (\lam t k => DPath (\lam i => DPath (\lam j => B (tri i j)) (k i) (t i)) idd c.2)
+          (\lam t => cartesian-triangle c cc {_} {idd} {d.3} tri t)
+          (\lam k => horn-Contr B {_} {_} {_} {idd} {d.3} {d.3} tri k c.2)
+
+-- | A path in the family of categories of lifts over a morphism {r} of the base is a lift of {r} together with a square over it.
+\func contLift-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} {d e : ContLiftData B} (r : d ~> e) {c : ContLift B d} {l : ContLift B e}
+  : QEquiv {DPath (\lam i => ContLift B (r i)) c l}
+           {\Sigma (k : DPath (\lam i => B (r i).1) c.1 l.1) (DPath (\lam i => DPath (\lam j => B ((r i).3 j)) (k i) (r i).4) c.2 l.2)}
+  \cowith
+  | f u => (dpath \lam i => (u i).1, dpath \lam i => (u i).2)
+  | ret v => dpath \lam i => (v.1 i, v.2 i)
+  | ret_f u => idp
+  | f_sec v => idp
+
+-- | The projection from the category of lifts to the base data is fully faithful at cartesian lifts.
+\lemma cartesian-ff {A : \Cat} (B : A ->⁺ \Cat) {x y : \Sigma⁺ (d : ContLiftData B) (ContLift B d)} (yc : IsCartesianLift y.2)
+  : IsEquiv {x ~> y} (dmap __.1)
+  => inP $ transQEquiv (dpath-sigma-equiv \lam _ => ContLift B) $ contr-right \lam r => Contr.Contr_QEquiv (symQEquiv (contLift-dpath-equiv r)) $
+      cartesian-square B (dpath \lam i => (r i).1) (dpath \lam i => (r i).2) (dpath \lam i => (r i).3) (dpath \lam i => (r i).4) x.2 y.2 yc
+
+-- | A cartesian lift of an identity morphism is an isomorphism.
+\lemma cartesianLift-idd-iso {A : \Cat} {B : A ->⁺ \Cat} {a : A} {b : B a} (c : ContLift B (a, a, idd, b)) (cc : IsCartesianLift c) : IsIso c.2
+  => \have | cs (l' : ContLift B (a, a, idd, b)) => cartesian-square B idd idd (dpath \lam i => idd) idd l' c cc
+           | r => (cs (b, idd)).center
+           | dr => square-equiv r.1 idd r.2 *> comp_idd-right
+           | sq2 => (square-equiv (comp c.2 r.1) idd).ret (inv comp-assoc *> pmap (comp c.2) dr)
+     \in inP (r.1, dr, pmap __.1 (isContr=>isProp (cs c) (comp c.2 r.1, sq2) (idd, dpath \lam i => c.2)))
+
+-- | In a right fibration, every lift is cartesian.
+\lemma rightFib-lift-cartesian {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {d : ContLiftData B} (c : ContLift B d) : IsCartesianLift c
+  => \lam {a''} g l' =>
+      \let | cg : ContLiftData B => (_, _, g, c.1)
+           | dg : ContLiftData B => (_, _, comp g d.3, d.4)
+           | S (t : ContLift B cg) => \Sigma (q : DPath (\lam i => B (comp g d.3 i)) t.1 d.4) (DPath (\lam i => DPath (\lam j => B (fill2 g d.3 i j)) (t.2 i) (q i)) idd c.2)
+           | G (l : ContLift B dg) => \Sigma (k : DPath (\lam j => B (g j)) l.1 c.1) (DPath (\lam i => DPath (\lam j => B (fill2 g d.3 i j)) (k i) (l.2 i)) idd c.2)
+           | swap (u : \Sigma (t : ContLift B cg) (S t)) : \Sigma (l : ContLift B dg) (G l) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
+           | swap' (u : \Sigma (l : ContLift B dg) (G l)) : \Sigma (t : ContLift B cg) (S t) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
+           | cS : Contr (\Sigma (t : ContLift B cg) (S t)) => sigma-Contr (Bf cg) \lam t => horn-Contr B {_} {_} {_} {_} {_} {comp g d.3} (dpath \lam i => dpath (fill2 g d.3 i)) t.2 c.2
+      \in fiber-Contr G (Bf dg) (isProp=>isContr (\lam u v => pmap swap (isContr=>isProp cS (swap' u) (swap' v))) (swap cS.center)) l'
+
+-- | The projection from the category of lifts of a right fibration to their data is an equivalence.
+\lemma rightFib-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B)
+  : IsHEquiv {\Sigma⁺ (d : ContLiftData B) (ContLift B d)} {ContLiftData B} __.1
+  => (ff-surj-equiv {\Sigma⁺ (d : ContLiftData B) (ContLift B d)} {ContLiftData B} {__.1}).1
+      (\lam x y => cartesian-ff B (rightFib-lift-cartesian Bf y.2),
+       \lam y => inP ((y, Contr.center {Bf y}), idp))
+
+-- | Lifts along a right fibration, chosen covariantly in the data.
+\sfunc rightFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) (d :⁺ ContLiftData B) : ContLift B d
+  => IsHEquiv.fib-sec (rightFib-equiv Bf) (later d)
+
+-- | Lifts along a right fibration are unique, naturally in all the data.
+\sfunc rightFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {d :⁺ ContLiftData B} {c c' :⁺ ContLift B d} : c = c'
+  => IsHEquiv.fib-sec-unique (rightFib-equiv Bf) {d}
+
+-- | The lift of an isomorphism along a right fibration is an isomorphism in the total category.
+\lemma rightFib-lift-iso {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {f : a' ~> a} (fi : IsIso f) {b : B a}
+                         (c : ContLift B (a', a, f, b)) : IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (f i, c.2 i))
+  => \case IsIso-char.1 fi \with {
+       | inP (P, Q) => aux P Q c
+     }
+  \where
+    \private \lemma aux {a' a : A} (P : a' = a) {f : a' ~> a} (Q : =_~> P = f) {b : B a} (c : ContLift B (a', a, f, b))
+      : IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (f i, c.2 i)) \elim P, Q
+      | idp, idp => transport (\lam (c : ContLift B (a, a, idd, b)) => IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (idd {A} {a} i, c.2 i)))
+                              (isContr=>isProp (Bf (a, a, idd, b)) (b, idd) c) idd-iso

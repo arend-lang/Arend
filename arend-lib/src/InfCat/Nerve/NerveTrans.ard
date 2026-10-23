@@ -1,0 +1,79 @@
+{- | The nerve of a natural transformation of strict functors.
+
+ -   For `alpha : NatTrans F G`, {nerveTrans} is the covariant family of arrows `nerveMap F w ~> nerveMap G w`.
+ -   It is built by {nerve-rec'} into the arrow category `DI ->⁺ Nerve D` ({NerveTransHelpers.arr}), which has hom-sets;
+ -   edges are the naturality squares, and the relations hold since squares in a category with hom-sets are determined
+ -   by their edges ({arr-hom-ext}). The endpoints are {nerveMap} up to paths of functors, so the value at a vertex is
+ -   `nerveHom (alpha x)` only up to transport ({trArr}); prop-valued facts transfer along it ({trArr-prop}, {nerveTrans-vertex-prop}).
+ -}
+
+\import Category
+\import Category.Functor
+\import Equiv
+\import Equiv.Sigma
+\import InfCat.Basics
+\import InfCat.Nerve.Nerve
+\import InfCat.Square
+\import InfCat.Trunc.ArrowFam
+\import InfCat.Trunc.IsCatTrunc
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\open NerveTransHelpers
+
+-- | Arrows in the arrow category of a category with hom-sets are determined by their two edges.
+\sfunc arr-hom-ext {Z : \Cat} (Zt : IsTruncCat 1 Z) {X Y : DI ->⁺ Z} {u v : X ~> Y}
+                   (e0 : dpath (\lam j => u j dleft) = dpath (\lam j => v j dleft))
+                   (e1 : dpath (\lam j => u j dright) = dpath (\lam j => v j dright)) : u = v
+  => \let | S (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) => DPath (\lam i => dpath X i ~> dpath Y i) t.1 t.2
+          | Sp (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) : isProp (S t)
+              => isProp.equiv (inP (square-equiv (dpath X) (dpath Y))) (hom-isSet Zt _ _ _ _)
+          | sq (w : X ~> Y) : \Sigma (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) (S t)
+              => ((dpath \lam j => w j dleft, dpath \lam j => w j dright), dpath \lam i => dpath \lam j => w j i)
+          | back (s : \Sigma (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) (S t)) : X ~> Y
+              => dpath \lam j => \lam i =>⁺ s.2 i j
+     \in pmap back (sigma-prop-ext Sp {sq u} {sq v} (ext (e0, e1)))
+
+-- | The nerve of a natural transformation: a covariant family of arrows between the nerves of the functors.
+\func nerveTrans {C D : Precat} {F G : Functor C D} (alpha : NatTrans F G) (w :⁺ Nerve C) : nerveMap F w ~> nerveMap G w
+  => trArr (arr-src alpha) (arr-tgt alpha) (\lam w => dpath (arr alpha w)) w
+
+-- | A property of arrows that holds for `nerveHom (alpha x)` holds for {nerveTrans} at the vertex {x}.
+\lemma nerveTrans-vertex-prop {C D : Precat} {F G : Functor C D} (alpha : NatTrans F G)
+                              (Q : \Pi {a b : Nerve D} (a ~> b) -> \Prop) (x : C) (Qx : Q (nerveHom (alpha x)))
+  : Q (nerveTrans alpha (nerveOb x))
+  => trArr-prop (arr-src alpha) (arr-tgt alpha) (\lam w => dpath (arr alpha w)) Q Qx
+
+-- | Transport of a family of arrows along paths of functors.
+\func trArr {X Y : \Cat} {F0 G0 F G : X ->⁺ Y} (P0 : F0 = F) (P1 : G0 = G) (s : \Pi (w :⁺ X) -> F0 w ~> G0 w) (w :⁺ X) : F w ~> G w \elim P0, P1
+  | idp, idp => s w
+
+-- | A property of arrows that holds for a family of arrows at {w} holds for its transport at {w}.
+\lemma trArr-prop {X Y : \Cat} {F0 G0 F G : X ->⁺ Y} (P0 : F0 = F) (P1 : G0 = G) (s : \Pi (w :⁺ X) -> F0 w ~> G0 w)
+                  (Q : \Pi {a b : Y} (a ~> b) -> \Prop) {w : X} (Qs : Q (s w)) : Q (trArr P0 P1 s w) \elim P0, P1
+  | idp, idp => Qs
+
+\module NerveTransHelpers \where {
+  -- | The naturality square of {alpha} at {f}, as an arrow of the arrow category.
+  \func sq {C D : Precat} {F G : Functor C D} (alpha : NatTrans F G) {x y : C} (f : Hom x y)
+    : DPath (\lam i => nerveHom (alpha x) i ~> nerveHom (alpha y) i) (nerveHom (F.Func f)) (nerveHom (G.Func f))
+    => (square-equiv (nerveHom (alpha x)) (nerveHom (alpha y))).ret
+         (nerveHom-comp *> pmap nerveHom (inv (alpha.natural f)) *> inv nerveHom-comp)
+
+  -- | The arrows of {alpha} as a functor into the arrow category.
+  \func arr {C D : Precat} {F G : Functor C D} (alpha : NatTrans F G) (w :⁺ Nerve C) : DI ->⁺ Nerve D
+    => nerve-rec' (fun-IsTruncCat nerve-isTruncCat) (\lam x i => nerveHom (alpha x) i, \lam f => dpath \lam j => \lam i =>⁺ sq alpha f i j)
+                  (\lam f g => arr-hom-ext nerve-isTruncCat
+                                 (dmap_comp (\lam (h :⁺ DI ->⁺ Nerve D) => h dleft) *> nerveHom-comp *> pmap nerveHom (inv F.Func-o))
+                                 (dmap_comp (\lam (h :⁺ DI ->⁺ Nerve D) => h dright) *> nerveHom-comp *> pmap nerveHom (inv G.Func-o)))
+                  (\lam x => arr-hom-ext nerve-isTruncCat (pmap nerveHom F.Func-id *> nerveHom-id) (pmap nerveHom G.Func-id *> nerveHom-id)) w
+
+  \sfunc arr-src {C D : Precat} {F G : Functor C D} (alpha : NatTrans F G)
+    : (\lam w => arr alpha w dleft) = {Nerve C ->⁺ Nerve D} nerveMap F
+    => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> inv comp_idd-left
+
+  \sfunc arr-tgt {C D : Precat} {F G : Functor C D} (alpha : NatTrans F G)
+    : (\lam w => arr alpha w dright) = {Nerve C ->⁺ Nerve D} nerveMap G
+    => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> inv comp_idd-left
+}

@@ -301,6 +301,34 @@
                                    (radj-restrict-equiv lw l eps eta eta-iso eps-inv')
   }
 
+{- | Localizations restrict to coreflective subcategories: let {r} be a retraction of {i} (`r ∘ i = id`) with a counit
+ -   `eps : i ∘ r -> id` in {W}, and suppose that {i} sends {W'} to {W} and {r} sends {W} to {W'}.
+ -   Then the restriction of a localization {l} at {W} along {i} is a localization at {W'}.
+ -   The counit is given as a family over a functor {k} equal to `i ∘ r`.
+ -}
+\lemma coreflection-isLocalization {C L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {W' : (DI ->⁺ L) -> \Prop} {l : C ->⁺ L'} (Lz : IsLocalization W l)
+                                   (i : L ->⁺ C) (r : C ->⁺ L) (iW : SendsW W' W i) (rW : SendsW W W' r)
+                                   {k : C ->⁺ C} (eps : \Pi (x :⁺ C) -> k x ~> x) (eps-W : \Pi (x : C) -> W (\lam j => eps x j))
+                                   (kP : k = {C ->⁺ C} (\lam x => i (r x))) (rP : (\lam y => r (i y)) = {L ->⁺ L} (\lam y => y))
+  : IsLocalization W' (\lam y => l (i y))
+  => IsLocalization.fromUniv aux aux
+  \where {
+    \private \lemma aux {D : \Cat} : IsLocalizationFor W' (\lam y => l (i y)) D
+      => localization-criterion (\lam w => Lz.1 (iW w)) equiv equiv
+
+    \lemma equiv {D : \Cat} : IsEquiv (restrictW {L} {L'} {D} {W'} {\lam y => l (i y)} (\lam w => Lz.1 (iW w)))
+      => transport IsEquiv (ext \lam G => ext idp)
+           (IsEquiv.trans (restrictW-equiv (IsLocalization.univ Lz {D})) (inP (res-qequiv D)))
+
+    -- | Restriction along {i}, with inverse the restriction along {r}.
+    \func res-qequiv (D : \Cat)
+      : QEquiv {MapW W D} {MapW W' D} (\lam H => (\lam y => H.1 (i y), \lam w => H.2 (iW w))) \cowith
+      | ret H => (\lam x => H.1 (r x), \lam w => H.2 (rW w))
+      | ret_f H => ext (inv (pmap (\lam (F : C ->⁺ C) (x :⁺ C) => H.1 (F x)) kP)
+                        *> natIso-path (\lam x => dmap H.1 (eps x)) (\lam x => H.2 (eps-W x)))
+      | f_sec H => ext (pmap (\lam (F : L ->⁺ L) (y :⁺ L) => H.1 (F y)) rP)
+  }
+
 {- | A localization of a category equivalent to a small category is small.
  -   Hom-types of localizations cannot be computed, so smallness has to be established before localizing.
  -}

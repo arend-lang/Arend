@@ -1,4 +1,5 @@
 \import Arith.Fin.Order
+\import Category
 \import Category.Displayed
 \import Category.Fibration.PosetElements
 \import Category.Functor
@@ -10,11 +11,15 @@
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.CocartesianFib
 \import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.CovariantLift
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Nerve.Nerve
 \import InfCat.Nerve.NerveFib
 \import InfCat.Nerve.NerveHom
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Trunc.ArrowFam
 \import InfCat.Trunc.IsCatTrunc
 \import Logic
 \import Logic.Meta
@@ -142,3 +147,63 @@
 -- | A vertex of `[n]` in the fiber of {UnivSimplexFib} over `[n]`.
 \sfunc univSimplexFib-vertex (n : Nat) (j : Fin (suc n)) : univSimplexFib-incl n (nerveOb j) = ((nerveOb {SimplexTotal} (n, j), idp) : UnivSimplexFib (nerveOb n))
   => fibers-deltaCat-ext idp
+
+-- | The lift `(d, refl) : (n, j) -> (m, d j)` is cocartesian over {DeltaCat}.
+\lemma univSimplex-lift-cocartesian {n m : Nat} (d : SimplexCat.Hom n m) (j : Fin (suc n))
+  : IsCocartesianArrow (nerveMap simplexProj) (nerveHom {SimplexTotal} {n, j} {m, d j} (d, <=-refl))
+  => nerveHom-cocartesian simplexProj (PosetElements.lift-cocartesian simplexPoset d j)
+
+-- | Cocartesian arrows over {DeltaCat} preserve the vertex: a cocartesian arrow `(n, j) -> (m, l)` over `d` has `d j = l`.
+\lemma univSimplex-cocartesian-vertex {n m : Nat} {j : Fin (suc n)} {l : Fin (suc m)} (f : Hom {SimplexTotal} (n, j) (m, l))
+                                      (fc : IsCocartesianArrow (nerveMap simplexProj) (nerveHom {SimplexTotal} {n, j} {m, l} f)) : f.1 j = l
+  => \let | Ff => cocartesianMap-char.1 univSimplex-cocartesianMap
+          | D : CovLiftData (Fibers (nerveMap simplexProj)) => (nerveOb {SimplexCat} n, nerveOb {SimplexCat} m, nerveHom {SimplexCat} f.1, (nerveOb {SimplexTotal} (n, j), idp))
+          | L1 : CovLift (Fibers (nerveMap simplexProj)) D => ((nerveOb (m, l), idp), dpath \lam i => (nerveHom {SimplexTotal} {n, j} {m, l} f i, idp))
+          | L0 : CovLift (Fibers (nerveMap simplexProj)) D => ((nerveOb (m, f.1 j), idp), dpath \lam i => (nerveHom {SimplexTotal} {n, j} {m, f.1 j} (f.1, <=-refl) i, idp))
+          | e => pmap (\lam s => s.1.1) (isContr=>isProp (transports-contr.cocLift-contr Ff D)
+                   (L0, (cocartesianLift<->arrow-at idp L0).2 (univSimplex-lift-cocartesian f.1 j)) (L1, (cocartesianLift<->arrow-at idp L1).2 fc))
+          | v : nerveOb {FinOrder (suc m)} (f.1 j) = nerveOb l
+              => inv (IsHEquiv.ret_f (univSimplexFib-fiber m))
+                 *> pmap+ (IsHEquiv.ret (univSimplexFib-fiber m)) (univSimplexFib-vertex m (f.1 j) *> e *> inv (univSimplexFib-vertex m l))
+                 *> IsHEquiv.ret_f (univSimplexFib-fiber m)
+     \in <=-antisymmetric (IsEquiv.ret nerveHom-equiv (=_~> v)) (IsEquiv.ret nerveHom-equiv (=_~> (inv v)))
+
+-- | An arrow `(n, j) -> (m, l)` over `d` with `d j = l` is cocartesian over {DeltaCat}.
+\lemma univSimplex-vertex-cocartesian {n m : Nat} {j : Fin (suc n)} {l : Fin (suc m)} (f : Hom {SimplexTotal} (n, j) (m, l)) (e : f.1 j = l)
+  : IsCocartesianArrow (nerveMap simplexProj) (nerveHom {SimplexTotal} {n, j} {m, l} f)
+  => aux f.1 f.2 e
+  \where
+    \private \lemma aux {l : Fin (suc m)} (d : SimplexCat.Hom n m) (h : d j <= l) (e : d j = l)
+      : IsCocartesianArrow (nerveMap simplexProj) (nerveHom {SimplexTotal} {n, j} {m, l} (d, h)) \elim e
+      | idp => transport (\lam (h : d j <= d j) => IsCocartesianArrow (nerveMap simplexProj) (nerveHom {SimplexTotal} {n, j} {m, d j} (d, h)))
+                         prop-pi (univSimplex-lift-cocartesian d j)
+
+-- | Paths between functors into {DeltaCat} are unique.
+\lemma deltaCat-fun-path-isProp {A : \Cat} (f g : A ->⁺ DeltaCat) : isProp (f = g)
+  => \lam P P' => IsEquiv.ret (inP (Embedding.pmap-isEquiv {=_~>-embedding f g} {P} {P'})) (arr-eq P P')
+  \where {
+    \sfunc arr-eq (P P' : f = g) : =_~> P = =_~> P'
+      => \let | su (a :⁺ A) : f a ~> g a => dpath \lam i => (=_~> P) i a
+              | sv (a :⁺ A) : f a ~> g a => dpath \lam i => (=_~> P') i a
+              | e => funExt+ (arrow-fam-ext nerve-isTruncCat su sv \lam a => app P a *> pmap =_~> (deltaCat-path-isProp _ _ _ _) *> inv (app P' a))
+         \in path \lam j => dpath \lam i a => (e @ j) a i
+
+    \sfunc app (P : f = g) (a : A) : dpath (\lam i => (=_~> P) i a) = =_~> (path \lam j => (P @ j) a) \elim P
+      | idp => idp
+  }
+
+-- | Families of paths between functors into {DeltaCat} are unique.
+\lemma deltaCat-paths-isProp {A : \Cat} (f g : A ->⁺ DeltaCat) : isProp (\Pi (x :⁺ A) -> f x = g x)
+  => isProp-retract funExt+ funExt+-equiv.ret funExt+-equiv.ret_f (deltaCat-fun-path-isProp f g)
+
+-- | Functors into a base change over {DeltaCat} are equal if their two components are.
+\sfunc baseChange-fun-ext.{u} {X Z E : \Cat u} {pi : Z ->⁺ DeltaCat} {p : E ->⁺ DeltaCat} {G1 G2 : X ->⁺ BaseChange pi p}
+                          (U : (\lam x => (G1 x).1) = {X ->⁺ Z} (\lam x => (G2 x).1)) (V : (\lam x => (G1 x).2.1) = {X ->⁺ E} (\lam x => (G2 x).2.1))
+  : G1 = G2
+  => aux U V (\lam x => (G1 x).2.2) (\lam x => (G2 x).2.2)
+  \where
+    \private \sfunc aux {u u' : X ->⁺ Z} {v v' : X ->⁺ E} (U : u = u') (V : v = v')
+                        (P : \Pi (x :⁺ X) -> p (v x) = pi (u x)) (P' : \Pi (x :⁺ X) -> p (v' x) = pi (u' x))
+      : (\lam x => (u x, (v x, P x))) = {X ->⁺ BaseChange pi p} (\lam x => (u' x, (v' x, P' x))) \elim U, V
+      | idp, idp => pmap (\lam R (x :⁺ X) => ((u x, (v x, R x)) : BaseChange pi p))
+                         (deltaCat-paths-isProp (\lam x => p (v x)) (\lam x => pi (u x)) P P')
