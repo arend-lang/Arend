@@ -1,0 +1,147 @@
+{- | Directed univalent cocartesian maps (SCT, Section 7.3).
+
+ -   Let `p : E ->⁺ U` be a cocartesian map; `U` classifies the base changes of {p} (the {U}-small cocartesian maps).
+ -   * {PreservesCocart}: a functor over {T} between the base changes of cocartesian maps is cocartesian if it preserves cocartesian arrows.
+ -   * {ExpCocCart}: the subcategory of the exponent {ExpCoc} on the arrows whose functor is cocartesian; it classifies cocartesian
+ -     functors between base changes (`CoCart_B(E, Y)` of SCT, Definition 7.1.10).
+ -   * {univFst}, {univSnd}: the universal pair of {U}-small cocartesian maps over `U × U` (SCT, Observation 7.3.3).
+ -   * {UnivCoCart}: the category `CoCart_{U×U}(U•×U, U×U•)` classifying cocartesian functors between {U}-small cocartesian maps.
+ -   * {UnivSt}: the universal straightening `Fun([1], U) -> UnivCoCart` over `U × U` (SCT, Construction 7.3.9).
+ -   * {IsDirUnivalent}: {p} is directed univalent if {UnivSt} is an equivalence (SCT, Definition 7.3.10).
+
+ -   Construction of {UnivSt}: an arrow `g` of {U} transports the fiber of {p} over `g dleft` to the fiber over `g dright`
+ -   along the chosen cocartesian lifts ({CatUnivHelpers.stTr}); this is covariant in `g`. By {ExpCoc.eval-univ}, it defines
+ -   a functor into {ExpCoc} ({CatUnivHelpers.St0}). Cocartesian lifts of cocartesian arrows are cocartesian, so transport preserves
+ -   cocartesian arrows ({CatUnivHelpers.stTr-cocart}), and the functor factors through the subcategory ({SubCat.isMax}).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.CocartesianBaseChange
+\import InfCat.Fibration.CocartesianFib
+\import InfCat.Fibration.CocartesianMap
+\import InfCat.Fibration.ExponentCocartesian
+\import InfCat.Functor.Equiv
+\import InfCat.Paths
+\import InfCat.Square
+\import InfCat.SubCat.Sub
+\import Paths
+\open CatUnivHelpers
+
+-- | A functor {G} over {T} from the base change of {p} to {q} is cocartesian if it sends {CocartW} to {q}-cocartesian arrows.
+\type PreservesCocart.{u} {T B E Y : \Cat u} {p : E ->⁺ B} {q : Y ->⁺ B} (pi : T ->⁺ B) (G : \Pi (w :⁺ BaseChange pi p) -> Fibers q (pi w.1)) : \Prop
+  => \Pi (a : DI ->⁺ BaseChange pi p) -> CocartW p pi a -> IsCocartesianArrow q (dpath \lam i => (G (a i)).1)
+
+-- | Restriction of a cocartesian functor along the base change of {h} is cocartesian.
+\lemma preservesCocart-res.{u} {T T' B E Y : \Cat u} {p : E ->⁺ B} {q : Y ->⁺ B} {pi : T ->⁺ B} (h : T' ->⁺ T)
+                               {G : \Pi (w :⁺ BaseChange pi p) -> Fibers q (pi w.1)} (Gc : PreservesCocart pi G)
+  : PreservesCocart (\lam t => pi (h t)) (\lam w => G (h w.1, w.2))
+  => \lam a ac => Gc (\lam i => (h (a i).1, (a i).2)) ac
+
+-- | The exponent of cocartesian functors from the cocartesian map {p} to {q}; its objects over `b` are functors `Fibers p b ->⁺ Fibers q b`.
+\type ExpCocCart.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) : \Cat u
+  => SubCat (CocartP pc q)
+  \where {
+    -- | The projection to the base.
+    \protected \func proj.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) (y :⁺ ExpCocCart pc q) : B
+      => ExpCoc.proj pc q (SubCat.inc y)
+
+    -- | The evaluation map.
+    \protected \func eval.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {q : Y ->⁺ B}
+                              (y :⁺ ExpCocCart pc q) (x :⁺ Fibers p (proj pc q y)) : Fibers q (proj pc q y)
+      => ExpCoc.eval pc (SubCat.inc y) x
+  }
+
+-- | The first projection of the universal pair: the base change of {p} along the first projection of `U × U`.
+\func univFst.{u} {U E : \Cat u} (p : E ->⁺ U) (w :⁺ BaseChange (\lam (s :⁺ \Sigma⁺ U U) => s.1) p) : \Sigma⁺ U U
+  => w.1
+
+-- | The second projection of the universal pair: the base change of {p} along the second projection of `U × U`.
+\func univSnd.{u} {U E : \Cat u} (p : E ->⁺ U) (w :⁺ BaseChange (\lam (s :⁺ \Sigma⁺ U U) => s.2) p) : \Sigma⁺ U U
+  => w.1
+
+\lemma univFst-cocartesian.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : IsCocartesianMap (univFst p)
+  => cocartesianMap-char.2 (baseChange-cocartesian pc _)
+
+\lemma univSnd-cocartesian.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : IsCocartesianMap (univSnd p)
+  => cocartesianMap-char.2 (baseChange-cocartesian pc _)
+
+-- | The category classifying cocartesian functors between {U}-small cocartesian maps.
+\type UnivCoCart.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : \Cat u
+  => ExpCocCart (univFst-cocartesian pc) (univSnd p)
+
+-- | The universal straightening; it lies over `U × U` ({UnivSt.proj}).
+\func UnivSt.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (g :⁺ DI ->⁺ U) : UnivCoCart pc
+  => (SubCat.isMax {ExpCoc (univFst-cocartesian pc) (univSnd p)} {CocartP (univFst-cocartesian pc) (univSnd p)} {DI ->⁺ U} {St0 pc}
+                   (St0-cocart pc)).1 g
+  \where {
+    -- | {UnivSt} is a functor over `U × U`.
+    \sfunc proj.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (g : DI ->⁺ U)
+      : ExpCocCart.proj (univFst-cocartesian pc) (univSnd p) (UnivSt pc g) = (g dleft, g dright)
+      => pmap (ExpCoc.proj (univFst-cocartesian pc) (univSnd p))
+              ((SubCat.isMax {ExpCoc (univFst-cocartesian pc) (univSnd p)} {CocartP (univFst-cocartesian pc) (univSnd p)} {DI ->⁺ U} {St0 pc}
+                             (St0-cocart pc)).2 g)
+         *> path (\lam j => (St0-eval pc j).1 g)
+  }
+
+-- | {p} is directed univalent if the universal straightening is an equivalence.
+\func IsDirUnivalent.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : \Prop
+  => IsHEquiv (UnivSt pc)
+
+\module CatUnivHelpers \where {
+  -- | The arrows of {ExpCoc} whose functor is cocartesian.
+  \type CocartP.{u} {B E Y : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (q : Y ->⁺ B) (a : DI ->⁺ ExpCoc pc q) : \Prop
+    => PreservesCocart (\lam i => ExpCoc.proj pc q (a i)) (\lam w => ExpCoc.eval pc (a w.1) w.2)
+
+  -- | Cocartesian transport along {g} from the fiber over `g dleft` to the fiber over `g dright`.
+  \func stTr.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (g :⁺ DI ->⁺ U) (x :⁺ Fibers p (g dleft)) : Fibers p (g dright)
+    => (cocartesianFib-lift (cocartesianMap-char.1 pc) (g dleft, g dright, dpath \lam i => g i, x)).1
+
+  -- | Transport along a family of arrows sends a cocartesian arrow to a cocartesian arrow.
+  \lemma stTr-cocart.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (k : DI ->⁺ (DI ->⁺ U))
+                         (x : \Pi (i :⁺ DI) -> Fibers p (k i dleft)) (xc : IsCocartesianArrow p (dpath \lam i => (x i).1))
+    : IsCocartesianArrow p (dpath \lam i => (stTr pc (k i) (x i)).1)
+    => \let | l (i :⁺ DI) => cocartesianFib-lift (cocartesianMap-char.1 pc) (k i dleft, k i dright, dpath \lam j => k i j, x i)
+            | lc (i : DI) : IsCocartesianArrow p (dpath \lam j => ((l i).2 j).1)
+              => (cocartesianLift<->arrow-at (x i).2 (l i)).1 (cocartesianFib-lift.isCocartesian _)
+            | mu : (x dleft).1 ~> (x dright).1 => dpath \lam i => (x i).1
+            | eta : (stTr pc (k dleft) (x dleft)).1 ~> (stTr pc (k dright) (x dright)).1 => dpath \lam i => (stTr pc (k i) (x i)).1
+            | sq : DPath (\lam i => mu i ~> eta i) (dpath \lam j => ((l dleft).2 j).1) (dpath \lam j => ((l dright).2 j).1)
+              => dpath \lam i => dpath \lam j => ((l i).2 j).1
+            | gc : IsCocartesianArrow p (comp (dpath \lam j => ((l dleft).2 j).1) eta)
+              => transport (IsCocartesianArrow p) (square-equiv mu eta sq) ((cocartesianArrow-comp xc).1 (lc dright))
+       \in (cocartesianArrow-comp (lc dleft)).2 gc
+
+  -- | The endpoints of an arrow of {U}.
+  \func ev01.{u} {U : \Cat u} (g :⁺ DI ->⁺ U) : \Sigma⁺ U U
+    => (g dleft, g dright)
+
+  -- | The straightening of the universal {U}-small cocartesian map over `[1] × Fun([1], U)`.
+  \func stFun.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (w :⁺ BaseChange ev01 (univFst p)) : Fibers (univSnd p) (ev01 w.1)
+    => ((ev01 w.1, stTr pc w.1 (w.2.1.2.1, w.2.1.2.2 *> pmap+ (\lam (s :⁺ \Sigma⁺ U U) => s.1) w.2.2)), idp)
+
+  \lemma stFun-cocart.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : PreservesCocart _ (stFun pc)
+    => \lam a ac => (cocartW<->cocartesian pc _).1 $
+         stTr-cocart pc (\lam i => (a i).1) (\lam i => ((a i).2.1.2.1, (a i).2.1.2.2 *> pmap+ (\lam (s :⁺ \Sigma⁺ U U) => s.1) (a i).2.2))
+                     ((cocartW<->cocartesian pc _).2 ac)
+
+  -- | The universal straightening as a functor into {ExpCoc}.
+  \func St0.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : (DI ->⁺ U) ->⁺ ExpCoc (univFst-cocartesian pc) (univSnd p)
+    => (IsEquiv.toQEquiv (ExpCoc.eval-univ (univFst-cocartesian pc) (univSnd p) (DI ->⁺ U))).ret (ev01, stFun pc)
+
+  \sfunc St0-eval.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p)
+    : ((\lam g => ExpCoc.proj (univFst-cocartesian pc) (univSnd p) (St0 pc g),
+        \lam w => ExpCoc.eval (univFst-cocartesian pc) (St0 pc w.1) w.2)
+         : \Sigma (pi : (DI ->⁺ U) ->⁺ \Sigma⁺ U U) (\Pi (w :⁺ BaseChange pi (univFst p)) -> Fibers (univSnd p) (pi w.1)))
+      = (ev01, stFun pc)
+    => (IsEquiv.toQEquiv (ExpCoc.eval-univ (univFst-cocartesian pc) (univSnd p) (DI ->⁺ U))).f_sec (ev01, stFun pc)
+
+  -- | The arrows of {St0} are cocartesian.
+  \lemma St0-cocart.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (k : DI ->⁺ (DI ->⁺ U))
+    : CocartP (univFst-cocartesian pc) (univSnd p) (\lam i => St0 pc (k i))
+    => transport (\lam (x : \Sigma (pi : (DI ->⁺ U) ->⁺ \Sigma⁺ U U) (\Pi (w :⁺ BaseChange pi (univFst p)) -> Fibers (univSnd p) (pi w.1))) =>
+                    PreservesCocart (\lam i => x.1 (k i)) (\lam w => x.2 (k w.1, w.2)))
+                 (inv (St0-eval pc)) (preservesCocart-res k (stFun-cocart pc))
+}
