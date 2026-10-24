@@ -8,6 +8,11 @@
  -   * The localization functor is initial ({localization-initialFunctor}).
  -   * {fibLocProj} is cocartesian and its fibers are the geometric realizations of `f ↓ d` ({fibLoc-fiber}),
  -     which are contractible groupoids by assumption. So it is a left fibration with contractible fibers, hence an equivalence.
+ -
+ -   Quillen's Theorem A for final functors ({theoremA-final}): if every comma category `d ↓ f` is weakly contractible,
+ -   then {f} is final. This is {theoremA} for `OpFunc f`: the comma `OpFunc f ↓ toOp d` is the opposite of `d ↓ f`
+ -   ({op-total-equiv}, {opComma-equiv}, {rightComma-total-equiv}), and opposites of weakly contractible categories
+ -   are weakly contractible ({op-weaklyContractible}).
  -}
 
 \import Equiv
@@ -19,15 +24,19 @@
 \import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Adjunction
 \import InfCat.Functor.Equiv
+\import InfCat.Functor.Final
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Functor.Initial
 \import InfCat.Functor.LeftComma
+\import InfCat.Functor.RightComma
 \import InfCat.Groupoid
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseCocartesian
 \import InfCat.Localization.Fiberwise.FiberwiseFiber
 \import InfCat.Localization.WeaklyContractible
+\import InfCat.Opposite
+\import InfCat.Opposite.Total
 \import InfCat.Rezk
 \import Logic
 \import Logic.Unique
@@ -94,4 +103,30 @@
       => \let | Ff => fibLoc-cocartesian (freeProj-cocartesian f) (allW-stable f)
               | Fl : IsLeftFib (FibLocFam (freeProj f) (AllW f)) => lift-IsLeftFib (\lam d => (fiber-point f w d).2) (\lam d => cocartesianFib-lift {D} {FibLocFam (freeProj f) (AllW f)} Ff d)
          \in IsHEquiv.trans (fibers-sigma-hequiv (fibLocProj (freeProj f) (AllW f))) (leftFib-contr-equiv Fl \lam d => (fiber-point f w d).1)
+  }
+
+-- | Quillen's Theorem A for final functors: a functor whose comma categories `d ↓ f` are weakly contractible is final.
+\lemma theoremA-final.{u} {C D : \Cat u} (f : C ->⁺ D) (w : \Pi (d : D) -> IsWeaklyContractible (RightComma f d)) : IsFinalFunctor f
+  => theoremA (OpFunc f) (opComma-wc f w)
+  \where {
+    -- | The commas `OpFunc f ↓ z` are weakly contractible; it suffices to check this for `z = toOp d`.
+    \lemma opComma-wc.{v} {C D : \Cat v} (f : C ->⁺ D) (w : \Pi (d : D) -> IsWeaklyContractible (RightComma f d)) (z : Op D)
+      : IsWeaklyContractible (LeftComma (OpFunc f) z)
+      => \case IsEquiv.isSurj Op.toOp-equiv z \with {
+           | inP (d, p) => transport (\lam z => IsWeaklyContractible (LeftComma (OpFunc f) z)) p (opComma-toOp-wc f d (w d))
+         }
+
+    {- | `OpFunc f ↓ toOp d` is weakly contractible if `d ↓ f` is.
+     -   The comma `d ↓ f` is the total category of {dualHom} ({rightComma-total-equiv}), whose opposite is `Op.Hom ↓ dualHom f d`
+     -   ({op-total-equiv}), and this is `OpFunc f ↓ toOp d` ({opComma-equiv}).
+     -}
+    \lemma opComma-toOp-wc.{v} {C D : \Cat v} (f : C ->⁺ D) (d : D) (w : IsWeaklyContractible (RightComma f d))
+      : IsWeaklyContractible (LeftComma (OpFunc f) (Op.toOp d))
+      => \case op-total-equiv (dualHom f d) \with {
+           | inP (F, Fe, _) =>
+             \let | wT => weaklyContractible-hequiv (rightComma-total-equiv f d) w
+                  | wO => op-weaklyContractible.{\suc v} wT
+                  | wY => transportInv (\lam (X : \Cat (\suc v)) => IsWeaklyContractible X) (HEquiv_= Fe) wO
+             \in transportInv (\lam (X : \Cat (\suc v)) => IsWeaklyContractible X) (HEquiv_= (opComma-equiv f d)) wY
+         }
   }

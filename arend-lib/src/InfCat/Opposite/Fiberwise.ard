@@ -18,7 +18,7 @@
  -     - {PreFiberOp}, {PreOpPairing}: the pre-opposite of points `(x, b, h)` with `h : Op.Hom (OpFunc p x) b`, paired with {E}
  -       by the arrows `x ~> e` over `h`. A cocartesian lift of `f` gives a universal element of the pairing in the second variable
  -       ({PreOpPairing.lift-univElem}, {PreOpPairing.elem-univElem}): lifts of `f` are elements of the pairing.
- -       The point `(toOp y, p y, iota y)` gives a universal element in the first variable ({PreOpPairing.kappa-univElem}, {sliceFiber-univElem}).
+ -       The point `(toOp y, p y, opHom-iota p y)` gives a universal element in the first variable ({PreOpPairing.kappa-univElem}, {sliceFiber-univElem}).
  -     - {FibOp} is the fiberwise localization of {PreFiberOp} at the arrows whose `Op E`-component is
  -       the opposite of a cocartesian arrow ({W}). {PreOpPairing} inverts them ({FibOpConstruction.W-inverted}), so it descends
  -       to the localization ({FibOpConstruction.pairing}); the descended pairing is perfect on the fibers
@@ -50,7 +50,6 @@
 \import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
-\import InfCat.Kan.LeftKanExtType
 \import InfCat.Localization.Abstract
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
@@ -59,6 +58,7 @@
 \import InfCat.Localization.Fiberwise.FiberwiseTotal
 \import InfCat.Opposite
 \import InfCat.Opposite.Pairing
+\import InfCat.Opposite.Total
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Slice
@@ -343,11 +343,11 @@
         \func Exp.{u} {B E : \Cat u} (p : E ->⁺ B) : \Cat
           => \Sigma⁺ (b : B) (Slice (\lam (x :⁺ Op E) => Op.Hom (OpFunc p x) b))
 
-        {- | The fiberwise Yoneda embedding of {p}: {e} goes to `yoneda e` over `Op.Hom (OpFunc p -) (p e)` via {PreOpPairing.act}.
+        {- | The fiberwise Yoneda embedding of {p}: {e} goes to `yoneda e` over `Op.Hom (OpFunc p -) (p e)` via {opHom-act}.
          -   Its {sliceFiber} is {PreOpPairing} restricted to the fiber of {PreFiberOp.proj} over `p e`.
          -}
         \func yon.{u} {B E : \Cat u} (p : E ->⁺ B) (e :⁺ E) : Exp p
-          => (p e, (\lam x => Op.Hom x e, dpath \lam i x => PreOpPairing.act p i (e, x)))
+          => (p e, (\lam x => Op.Hom x e, dpath \lam i x => opHom-act p i (e, x)))
 
         {- | {yon} is fully faithful. The slice `yon e` is `yoneda e` with the action of {p} on `Op.Hom`.
          -   So an arrow `yon e ~> yon e'` over `g : p e ~> p e'` is an arrow `u : e ~> e'` by {yonedaEmbedding}, with `dmap p u = g`.
@@ -355,13 +355,13 @@
         \lemma yon-ff.{u} {B E : \Cat u} (p : E ->⁺ B) : IsFFMap (yon p)
           => \lam e e' => IsEquiv.leftFactor (sliceFam-hom-equiv (\lam b x =>⁺ Op.Hom (OpFunc p x) b) (yon-univ p e (p e'))) (yonedaEmbedding e e')
           \where {
-            -- | The structure arrow of `yon e` is a universal arrow from `yoneda e`, by the Yoneda lemma and {PreOpPairing.iota-univElem}.
+            -- | The structure arrow of `yon e` is a universal arrow from `yoneda e`, by the Yoneda lemma and {opHom-iota-univElem}.
             \lemma yon-univ.{u} {B E : \Cat u} (p : E ->⁺ B) (e : E) (b : B)
               : IsEquiv {p e ~> b} {yoneda e ~> (\lam x => Op.Hom (OpFunc p x) b)}
                         (\lam g => comp (yon p e).2.2 (dmap (\lam b x =>⁺ Op.Hom (OpFunc p x) b) g))
               => IsEquiv.leftFactor (yonedaLemma e _) $ transport IsEquiv
                    (ext \lam g => inv (~>_->_comp-fam (yon p e).2.2 (dmap (\lam b x =>⁺ Op.Hom (OpFunc p x) b) g) (Op.toOp e) (Op.Hom-idd e)))
-                   (univElem-equiv (PreOpPairing.iota-univElem p e) b)
+                   (univElem-equiv (opHom-iota-univElem p e) b)
           }
 
         -- | {Q} as a functor to {Exp}, restricted along the localization.
@@ -450,46 +450,20 @@
 
   -- | The pairing of the pre-opposite with {p}: arrows from the first component to `e` lying over the arrow of the base.
   \func PreOpPairing.{u} {B E : \Cat u} (p : E ->⁺ B) (w :⁺ BaseChange (PreFiberOp.proj p) p) : \Type u
-    => sliceFiber (\lam v => Op.Hom (OpFunc p v.2) (p v.1)) (\lam v => Op.Hom v.2 v.1, act p)
+    => sliceFiber (\lam v => Op.Hom (OpFunc p v.2) (p v.1)) (\lam v => Op.Hom v.2 v.1, opHom-act p)
                   ((w.2.1, w.1.1), transport+ (Op.Hom (OpFunc p w.1.1)) (inv w.2.2) w.1.3)
     \where {
-      -- | The action of {f} on `Op.Hom`, given by the unit of the left Kan extension along {f}.
-      \func act.{u} {C D : \Cat u} (f : C ->⁺ D)
-        : (\lam (v :⁺ \Sigma⁺ C (Op C)) => Op.Hom v.2 v.1) ~> (\lam v => Op.Hom (OpFunc f v.2) (f v.1))
-        => comp (dpath \lam i v => dmap (__ v.1) (leftKanExtType-unit f (Op.Hom v.2)) i)
-                (=_~> (funExt+ \lam v => inv (pmap+ (__ (f v.1)) OpFunc.char)))
-
-      -- | The image of the identity of {e} under {act}; it is a universal element of `Op.Hom (OpFunc p (toOp e))` at `p e` ({iota-univElem}).
-      \func iota.{u} {B E : \Cat u} (p : E ->⁺ B) (e : E) : Op.Hom (OpFunc p (Op.toOp e)) (p e)
-        => sliceFiber.covMap (act p) ((e, Op.toOp e), Op.Hom-idd e)
-
-      -- | {=_~>} of a path of functors evaluated at {x}.
-      \func =_~>-at {X D : \Cat} {F G : X ->⁺ D} (N : F = G) (x : X) : dpath (\lam i => (=_~> N) i x) = =_~> (path \lam i => N i x) \elim N
-        | idp => idp
-
-      -- | {iota} is the universal element of the left Kan extension of `Op.Hom (toOp e)` along {p}.
-      \lemma iota-univElem.{u} {B E : \Cat u} (p : E ->⁺ B) (e : E)
-        : IsUnivElem (Op.Hom (OpFunc p (Op.toOp e))) (p e) (iota p e)
-        => \let | c : \Sigma⁺ E (Op E) => (e, Op.toOp e)
-                | eta => ~>_-> (dmap (\lam H => H e) (leftKanExtType-unit p (Op.Hom (Op.toOp e)))) (Op.Hom-idd e)
-           \in \have | s1 : iota p e = ~>_-> (dpath \lam i => (=_~> (funExt+ \lam v => inv (pmap+ (__ (p v.1)) (OpFunc.char {E} {B} {p} {v.2})))) i c) eta
-                          => ~>_->_comp-fam (dpath \lam i v => dmap (__ v.1) (leftKanExtType-unit p (Op.Hom v.2)) i) (=_~> (funExt+ \lam v => inv (pmap+ (__ (p v.1)) OpFunc.char))) c (Op.Hom-idd e)
-                     | s2 : dpath (\lam i => (=_~> (funExt+ \lam v => inv (pmap+ (__ (p v.1)) (OpFunc.char {E} {B} {p} {v.2})))) i c) = =_~> (inv (pmap+ (__ (p e)) OpFunc.char))
-                          => =_~>-at (funExt+ \lam v => inv (pmap+ (__ (p v.1)) (OpFunc.char {E} {B} {p} {v.2}))) c
-           \in transportInv (IsUnivElem _ (p e)) (s1 *> pmap (~>_-> __ eta) s2)
-                (univElem-path OpFunc.char (leftKanExtType-univElem p (twArr-source-univElem e)))
-
-      -- | Twisted arrows of {E} as points of the base change of the pre-opposite: `(x, y, g)` goes to `((x, p y, act g), y)`.
+      -- | Twisted arrows of {E} as points of the base change of the pre-opposite: `(x, y, g)` goes to `((x, p y, opHom-act p g), y)`.
       \func tau.{u} {B E : \Cat u} (p : E ->⁺ B) (w :⁺ TwArr E) : BaseChange (PreFiberOp.proj p) p
-        => ((w.1, p w.2, sliceFiber.covMap (act p) ((w.2, w.1), w.3)), (w.2, idp))
+        => ((w.1, p w.2, sliceFiber.covMap (opHom-act p) ((w.2, w.1), w.3)), (w.2, idp))
 
       -- | The canonical element of {PreOpPairing} at `tau w`.
       \func sigma.{u} {B E : \Cat u} (p : E ->⁺ B) (w :⁺ TwArr E) : PreOpPairing p (tau p w)
         => Straight.toStraight (w.3, idp)
 
-      -- | The transport of {iota} along {f}.
+      -- | The transport of {opHom-iota} along {f}.
       \func iotaTr.{u} {B E : \Cat u} (p : E ->⁺ B) (e : E) {t : B} (f : p e ~> t) : Op.Hom (OpFunc p (Op.toOp e)) t
-        => ~>_-> (dmap (Op.Hom (OpFunc p (Op.toOp e))) f) (iota p e)
+        => ~>_-> (dmap (Op.Hom (OpFunc p (Op.toOp e))) f) (opHom-iota p e)
 
       {- | A locally cocartesian lift {l} of {f} gives a universal element of {PreOpPairing} at `(toOp e, t, iotaTr f)` in the second variable.
        -   {lift-elem} sends lifts of {f} to elements of the pairing. It is a fiberwise equivalence ({lift-elem-equiv}),
@@ -510,7 +484,7 @@
             | idp => idp
 
           {- | A lift {d} of {f} gives the canonical element at the twisted arrow `(toOp e, s.1, s_* idd)`.
-           -   Its base point is identified with `((toOp e, t, iotaTr f), s.1)` by transporting {iota} along the lifts of {f}.
+           -   Its base point is identified with `((toOp e, t, iotaTr f), s.1)` by transporting {opHom-iota} along the lifts of {f}.
            -}
           \sfunc lift-elem.{v} {B E : \Cat v} (p : E ->⁺ B) {e : E} {t : B} (f : p e ~> t)
                                (y :⁺ Fibers p t) (d :⁺ DPath (\lam i => Fibers p (f i)) (e, idp) y)
@@ -520,7 +494,7 @@
                         (inv (transport+_inv_*> (Op.Hom (OpFunc p (Op.toOp e))) y.2)
                           *> pmap+ (transport+ (Op.Hom (OpFunc p (Op.toOp e))) (inv y.2))
                                    (inv (coe+-dpath (dpath \lam i => transport+ (Op.Hom (OpFunc p (Op.toOp e))) (d i).2
-                                          (sliceFiber.covMap (act p) (((d i).1, Op.toOp e), coe+ (\lam j => Op.Hom (Op.toOp e) (d j).1) (Op.Hom-idd e) i))))))
+                                          (sliceFiber.covMap (opHom-act p) (((d i).1, Op.toOp e), coe+ (\lam j => Op.Hom (Op.toOp e) (d j).1) (Op.Hom-idd e) i))))))
                   *> bc-path y.2 (iotaTr p e f))
                  (sigma p (Op.toOp e, y.1, ~>_-> (dmap (Op.Hom (Op.toOp e)) (dpath \lam i => (d i).1)) (Op.Hom-idd e)))
 
@@ -559,8 +533,8 @@
                             | ret s => (s.2.1, (s.1, s.2.2))
                             | ret_f s => idp
                             | f_sec s => idp
-                          } `transQEquiv` contr-right \lam g => Contr.Contr_QEquiv (sigma-right \lam (f : p e ~> p x) => inv-equiv {_} {iotaTr p e f} {sliceFiber.covMap (act p) ((x, Op.toOp e), g)})
-                                                                 (IsEquiv=>contrFibers (univElem-equiv (iota-univElem p e) (p x)) _)
+                          } `transQEquiv` contr-right \lam g => Contr.Contr_QEquiv (sigma-right \lam (f : p e ~> p x) => inv-equiv {_} {iotaTr p e f} {sliceFiber.covMap (opHom-act p) ((x, Op.toOp e), g)})
+                                                                 (IsEquiv=>contrFibers (univElem-equiv (opHom-iota-univElem p e) (p x)) _)
             }
 
           -- | The first component of {lift-elem} is the transport of the identity along the underlying arrow of the lift.
@@ -570,14 +544,14 @@
             \where {
               -- | Transport of the canonical element in the Hom-component of the base point does not change its first component.
               \sfunc fst-tr.{w} {B E : \Cat w} {p : E ->⁺ B} (x' : Op E) (x : E) {g : Op.Hom x' x} {h : Op.Hom (OpFunc p x') (p x)}
-                                (q : sliceFiber.covMap (act p) ((x, x'), g) = h)
+                                (q : sliceFiber.covMap (opHom-act p) ((x, x'), g) = h)
                 : (Straight.fromStraight (transport+ (\lam hh => PreOpPairing p ((x', p x, hh), (x, idp))) q (Straight.toStraight (g, idp)))).1 = g \elim q
                 | idp => idp
             }
         }
 
       {- | An element of {PreOpPairing} at `(toOp e, t, h)` whose first component is the transport of the identity along a cocartesian arrow {w}
-       -   is a universal element in the second variable. Since {iota} is universal, `h = iotaTr f` for some `f`.
+       -   is a universal element in the second variable. Since {opHom-iota} is universal, `h = iotaTr f` for some `f`.
        -   By {lift-univElem.lift-elem-equiv}, the element is {lift-univElem.lift-elem} of a lift of `f` whose underlying arrow is {w}
        -   ({lift-univElem.lift-elem-fst}), so this lift is cocartesian and {lift-univElem} applies.
        -}
@@ -585,7 +559,7 @@
                                {w : e ~> y.1} (wc : IsCocartesianArrow p w) {eps : FibPairing.restrict (PreOpPairing p) t ((Op.toOp e, t, h), idp) y}
                                (q : (Straight.fromStraight eps).1 = ~>_-> (dmap (Op.Hom (Op.toOp e)) w) (Op.Hom-idd e))
         : IsUnivElem (FibPairing.restrict (PreOpPairing p) t ((Op.toOp e, t, h), idp)) y eps
-        => aux (IsEquiv.f_ret (univElem-equiv (iota-univElem p e) t)) wc q
+        => aux (IsEquiv.f_ret (univElem-equiv (opHom-iota-univElem p e) t)) wc q
         \where {
           \private \lemma aux.{v}
               {B E : \Cat v} {p : E ->⁺ B} {e : E} {t : B} {f : p e ~> t} {h : Op.Hom (OpFunc p (Op.toOp e)) t} (r : iotaTr p e f = h)
@@ -608,22 +582,22 @@
         : (Straight.fromStraight (~>_-> (dpath \lam i => PreOpPairing p (c i)) eps)).1 = ~>_-> (dpath \lam i => Op.Hom (c i).1.1 (c i).2.1) (Straight.fromStraight eps).1
         => inv (~>_->-natural {BaseChange (PreFiberOp.proj p) p} {PreOpPairing p} (\lam w a => (Straight.fromStraight a).1) (dpath c))
 
-      {- | The point `(toOp x, p x, iota x)` with the canonical element is universal for {PreOpPairing} in the first variable,
+      {- | The point `(toOp x, p x, opHom-iota p x)` with the canonical element is universal for {PreOpPairing} in the first variable,
        -   restricted to the fiber over `p x` ({sliceFiber-univElem}); the fiber is `\Sigma⁺ (x'Paths : Op E) (Op.Hom (OpFunc p x') (p x))`.
        -}
       \lemma kappa-univElem-at.{u} {B E : \Cat u} (p : E ->⁺ B) (x : E)
         : IsUnivElem {Fiber (PreFiberOp.proj p) (p x)} (\lam c => FibPairing.restrict (PreOpPairing p) (p x) c (x, idp))
-                     ((Op.toOp x, p x, iota p x), idp) (sigma p (Op.toOp x, x, Op.Hom-idd x))
+                     ((Op.toOp x, p x, opHom-iota p x), idp) (sigma p (Op.toOp x, x, Op.Hom-idd x))
         => \let | j (w :⁺ \Sigma⁺ (x' : Op E) (Op.Hom (OpFunc p x') (p x))) : Fiber (PreFiberOp.proj p) (p x) => ((w.1, p x, w.2), idp)
                 | k (c :⁺ Fiber (PreFiberOp.proj p) (p x)) : \Sigma⁺ (x' : Op E) (Op.Hom (OpFunc p x') (p x)) => (c.1.1, PreFiberOp.fiberHom c)
            \in univElem-precomp {_} {_} {j} (ff-surj-equiv.2 (IsHEquiv.precomp (IsHEquiv.biEquiv {_} {_} {j} {k} (\lam w => idp) {k} PreFiberOp.fiber-path))).1
                 (sliceFiber-univElem (\lam x' => ((x, x') : \Sigma⁺ E (Op E))) (\lam v => Op.Hom (OpFunc p v.2) (p v.1))
-                                     (\lam v => Op.Hom v.2 v.1, act p) (twArr-target-univElem x))
+                                     (\lam v => Op.Hom v.2 v.1, opHom-act p) (twArr-target-univElem x))
 
       -- | {kappa-univElem-at} over an arbitrary base point; the first component of the universal element is the identity.
       \lemma kappa-univElem.{u} {B E : \Cat u} {p : E ->⁺ B} {b : B} (y : Fiber p b)
-        : ∃ (a : FibPairing.restrict (PreOpPairing p) b ((Op.toOp y.1, p y.1, iota p y.1), y.2) y)
-            (IsUnivElem {Fiber (PreFiberOp.proj p) b} (\lam c => FibPairing.restrict (PreOpPairing p) b c y) ((Op.toOp y.1, p y.1, iota p y.1), y.2) a)
+        : ∃ (a : FibPairing.restrict (PreOpPairing p) b ((Op.toOp y.1, p y.1, opHom-iota p y.1), y.2) y)
+            (IsUnivElem {Fiber (PreFiberOp.proj p) b} (\lam c => FibPairing.restrict (PreOpPairing p) b c y) ((Op.toOp y.1, p y.1, opHom-iota p y.1), y.2) a)
             ((Straight.fromStraight a).1 = Op.Hom-idd y.1) \elim y
         | (x, idp) => inP (sigma p (Op.toOp x, x, Op.Hom-idd x), kappa-univElem-at p x, idp)
 
@@ -638,7 +612,7 @@
       \lemma exists-univElem.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} {e : E} {k : Fiber (PreFiberOp.proj p) b} (q : Op.toOp e = k.1.1)
         : ∃ (y : Fiber p b) (w : e ~> y.1) (IsCocartesianArrow p w) (eps : FibPairing.restrict (PreOpPairing p) b k y)
             ((Straight.fromStraight eps).1 = transport (\lam z => Op.Hom z y.1) q (~>_-> (dmap (Op.Hom (Op.toOp e)) w) (Op.Hom-idd e))) \elim k, q
-        | ((x,b',h),idp), idp => at-iota pc $ IsEquiv.f_ret $ univElem-equiv (iota-univElem p e) b
+        | ((x,b',h),idp), idp => at-iota pc $ IsEquiv.f_ret $ univElem-equiv (opHom-iota-univElem p e) b
         \where {
           \lemma at-iota.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} {e : E} {f : p e ~> b} {h : Op.Hom (OpFunc p (Op.toOp e)) b} (r : iotaTr p e f = h)
             : ∃ (y : Fiber p b) (w : e ~> y.1) (IsCocartesianArrow p w) (eps : FibPairing.restrict (PreOpPairing p) b ((Op.toOp e, b, h), idp) y)
@@ -793,7 +767,7 @@
 
       -- | The point of the pre-opposite corresponding to {y}.
       \func kap.{v} {B E : \Cat v} {p : E ->⁺ B} {b : B} (y : Fiber p b) : Fiber (PreFiberOp.proj p) b
-        => ((Op.toOp y.1, p y.1, PreOpPairing.iota p y.1), y.2)
+        => ((Op.toOp y.1, p y.1, opHom-iota p y.1), y.2)
 
       -- | The restriction of {pairing} to the fiber over {b} along the localization.
       \sfunc restrict-path.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} (c :⁺ Fiber (PreFiberOp.proj p) b) (y :⁺ Fiber p b)

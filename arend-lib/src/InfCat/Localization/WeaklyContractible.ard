@@ -1,13 +1,21 @@
 {- | Weakly contractible categories, that is, categories whose geometric realization is contractible.
  -}
 
+\import Equiv
+\import Function.Meta
 \import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Functor.Adjunction
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Limit.Initial
 \import InfCat.Limit.Terminal
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Opposite
 \import InfCat.Localization.Realization
+\import InfCat.Opposite
+\import InfCat.Rezk
+\import Logic.Unique
 \import Logic
 \import Paths
 
@@ -52,3 +60,26 @@
 -- | Weak contractibility is invariant under equivalences.
 \lemma weaklyContractible-hequiv.{u} {C C' : \Cat u} {e : C ->⁺ C'} (ee : IsHEquiv e) (Cw : IsWeaklyContractible C) : IsWeaklyContractible C'
   => transport (\lam (X : \Cat u) => IsWeaklyContractible X) (HEquiv_= ee) Cw
+
+-- | {C} is weakly contractible if and only if its functor to the point is a localization at all arrows.
+\lemma weaklyContractible<->localization {C : \Cat} : IsWeaklyContractible C <-> IsLocalization {C} {\Sigma} (\lam _ => \Sigma) (\lam _ => ())
+  => (\lam w => (\lam _ => idd-iso, w), \lam Lz => Lz.2)
+
+-- | The opposite of the point is the point.
+\lemma op-unit-equiv.{u} : IsHEquiv {Op.{u} (\Sigma)} {\Sigma} (\lam _ => ())
+  => ff-surj-equiv.1 (\lam a b => \case IsEquiv.isSurj Op.toOp-equiv a, IsEquiv.isSurj Op.toOp-equiv b \with {
+       | inP (_, p), inP (_, q) => aux p q
+     }, \lam _ => inP (Op.toOp (), idp))
+  \where
+    \private \lemma aux.{v} {a b : Op.{v} (\Sigma)} (p : Op.toOp () = a) (q : Op.toOp () = b)
+      : IsEquiv {a ~> b} {() ~> {\Sigma} ()} (\lam h => dpath \lam i => ()) \elim p, q
+      | idp, idp => contr-equiv (Contr.Contr_QEquiv (IsEquiv.toQEquiv (opArr-equiv {\Sigma} {()} {()})) unit-hom-contr) unit-hom-contr
+
+    \private \func unit-hom-contr : Contr (() ~> {\Sigma} ())
+      => Contr.make idd \lam _ => idp
+
+-- | The opposite of a weakly contractible category is weakly contractible.
+\lemma op-weaklyContractible.{u} {C : \Cat u} (w : IsWeaklyContractible C) : IsWeaklyContractible (Op C)
+  => weaklyContractible<->localization.2 $
+       isLocalization-transfer.{u} (OpFunc-isLocalization.{u} {C} {\Sigma} (weaklyContractible<->localization.1 w)) idHEquiv op-unit-equiv
+                                   (\lam _ => idp) \lam a => (\lam _ => TruncP.map (IsEquiv.isSurj opArrow-equiv a) (\lam s => (s.1, (), s.2)), \lam _ => ())

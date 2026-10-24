@@ -183,6 +183,42 @@
          \in Contr.Contr_QEquiv (proj-fib (\lam b' => DPath (\lam i => B (r i)) b' t.2) s.2)
                                 (IsEquiv=>contrFibers (contr-equiv c (Bc s.1) {__.1}) s.2)
 
+{- | A map of total categories over the base between right fibrations is an equivalence if it is an equivalence on objects of fibers.
+ -
+ -   Proof: dual to `leftFib-fiberwise-equiv`. On hom-types, the map of lifts of an arrow `r` with a fixed target is a map over
+ -   the fiberwise equivalence between contractible types of all lifts, so it is an equivalence by {fiberwiseEquiv}.
+ -}
+\lemma rightFib-fiberwise-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsRightFib B) (Cf : IsRightFib C)
+                                (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (ge : \Pi (a : A) -> IsEquiv {B a} {C a} (\lam b => g (a, b)))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} (\lam s => (s.1, g s))
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} {\lam s => (s.1, g s)}).1
+      (\lam x y => IsEquiv.trans (inP (dpath-sigma-equiv \lam _ => B))
+                     {\lam s => dpath \lam i => ((s.1 i, lift-map {A} {B} {C} g s.1 s.2 i) : \Sigma⁺ (a : A) (C a))}
+                     (IsEquiv.trans ((totalEquiv (lift-map {A} {B} {C} g)).1 \lam r => lift-map-equiv Bf Cf g ge r)
+                                    (inP (symQEquiv (dpath-sigma-equiv (\lam _ => C) {x.1, g x} {y.1, g y})))),
+       \lam y => TruncP.map (IsEquiv.isSurj (ge y.1) y.2) \lam s => ((y.1, s.1), path \lam i => (y.1, s.2 i)))
+  \where \private {
+    -- | The action of {g} on lifts of an arrow of the base.
+    \func lift-map {A : \Cat} {B C : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1)
+                   {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) (t : DPath (\lam i => B (r i)) x.2 y.2)
+      : DPath (\lam i => C (r i)) (g x) (g y)
+      => dpath \lam i => g (r i, t i)
+
+    \lemma lift-map-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsRightFib B) (Cf : IsRightFib C)
+                          (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (ge : \Pi (a : A) -> IsEquiv {B a} {C a} (\lam b => g (a, b)))
+                          {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) : IsEquiv (lift-map {A} {B} {C} g {x} {y} r)
+      => fiberwiseEquiv (ge x.1) (\lam b t => lift-map {A} {B} {C} g {x.1, b} {y} r t)
+           (contr-equiv (Contr.Contr_QEquiv (lift-sigma B) (Bf (x.1, y.1, r, y.2)))
+                        (Contr.Contr_QEquiv (lift-sigma C) (Cf (x.1, y.1, r, g y)))) x.2
+
+    \func lift-sigma {A : \Cat} (B : A ->⁺ \Cat) {d : ContLiftData B}
+      : QEquiv {ContLift B d} {\Sigma (b : B d.1) (DPath (\lam i => B (d.3 i)) b d.4)} \cowith
+      | f l => (l.1, l.2)
+      | ret l => (l.1, l.2)
+      | ret_f _ => idp
+      | f_sec _ => idp
+  }
+
 -- | The map of slices induced by {q}.
 \func sliceMap {E A : \Cat} (q : E ->⁺ A) (x : E) (w : \Sigma (y : E) (y ~> x)) : \Sigma (a : A) (a ~> q x)
   => (q w.1, dmap q w.2)

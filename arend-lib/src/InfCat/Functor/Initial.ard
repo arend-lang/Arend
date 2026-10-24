@@ -16,7 +16,6 @@
 \import InfCat.Basics
 \import InfCat.Fibration.Covariant.FreeLeft
 \import InfCat.Fibration.Covariant.LeftFib
-\import InfCat.Fibration.Categorical
 \import InfCat.Functor.Adjunction
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
@@ -59,8 +58,8 @@
   => IsOrthogonal-family-sections (initialFunctor-orthogonal fi (leftFam-right-char.2 (leftFib-total Ql))) id+
 
 {- | Initial functors induce equivalences of geometric realizations.
- -   For a groupoid {G}, functors out of the realizations are functors into {G} ({realization-univ}), that is,
- -   sections of the constant left fibration at {G}, so restriction along `realization-map f` is an equivalence ({precomp-equiv}).
+ -   For a groupoid `G`, functors out of the realizations are functors into `G` ({realization-univ}), that is,
+ -   sections of the constant left fibration at `G`, so restriction along `realization-map f` is an equivalence ({precomp-equiv}).
  -   The claim follows by the Yoneda argument, since realizations are groupoids.
  -}
 \lemma initialFunctor-realization {C D : \Cat} {f : C ->⁺ D} (fi : IsInitialFunctor f) : IsHEquiv (realization-map f)
