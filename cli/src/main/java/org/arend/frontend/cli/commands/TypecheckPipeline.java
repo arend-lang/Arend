@@ -3,7 +3,6 @@ package org.arend.frontend.cli.commands;
 import org.apache.commons.cli.CommandLine;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.visitor.SizeExpressionVisitor;
-import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
@@ -11,13 +10,14 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.frontend.TimedProgressReporter;
+import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.frontend.query.QualifiedName;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
 import org.arend.server.ProgressReporter;
@@ -32,7 +32,6 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.order.MapTarjanSCC;
-import org.arend.typechecking.error.local.GoalError;
 
 import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 
@@ -78,6 +77,8 @@ public final class TypecheckPipeline {
   }
 
   private static boolean runPipeline(CommandContext ctx, CommandLine cmdLine) {
+    CliSetup.expandModulePatterns(ctx);
+    if (ctx.exitWithError) return false;
     extendScopeForPrintTarget(ctx, cmdLine);
     dropDeletedModules(ctx);
 
@@ -92,7 +93,7 @@ public final class TypecheckPipeline {
       // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
       ctx.server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
           .typecheck(ctx.cancellation, ProgressReporter.empty());
-      Set<String> libraryNames = requestedLibraryNames(ctx.requestedLibraries);
+      Set<String> libraryNames = QualifiedName.libraryNames(ctx.requestedLibraries);
       boolean resolvedRequestedScope = false;
       if (ctx.requestedModules.isEmpty()) {
         // Whole-library typechecking: resolve every module of each requested library.
@@ -524,14 +525,6 @@ public final class TypecheckPipeline {
     System.out.println("[INFO] -p target " + cmdLine.getOptionValue("p")
         + " is outside the typecheck scope; adding " + parsed.proj1 + " to it");
     ctx.requestedModules.add(new Pair<>(parsed.proj1, null));
-  }
-
-  private static Set<String> requestedLibraryNames(List<SourceLibrary> requestedLibraries) {
-    Set<String> result = new HashSet<>();
-    for (SourceLibrary library : requestedLibraries) {
-      result.add(library.getLibraryName());
-    }
-    return result;
   }
 
   private static List<SourceLibrary> dependencyFirstLibraries(CommandContext ctx) {

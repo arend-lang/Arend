@@ -47,6 +47,8 @@ public class CommandContext {
   public ArendServer server;
   public final List<SourceLibrary> requestedLibraries = new ArrayList<>();
   public final Set<Pair<ModulePath, LongName>> requestedModules = new LinkedHashSet<>();
+  /** Module positionals containing {@code *}; expanded into {@link #requestedModules} by {@code CliSetup.expandModulePatterns}. */
+  public final List<String> requestedModulePatterns = new ArrayList<>();
   public final List<Path> libDirs = new ArrayList<>();
   public boolean doubleCheck;
   public boolean recompile;
@@ -140,12 +142,9 @@ public class CommandContext {
    * prints as the diagnostic arrives unless {@link #streamDiagnostics} is off. The level is
    * recorded either way — it is a floor under the verdict, never the whole of it.
    */
-  public final ErrorReporter errorReporter = new ErrorReporter() {
-    @Override
-    public void report(GeneralError error) {
-      recordLevels(error);
-      if (streamDiagnostics) dispatchError(error);
-    }
+  public final ErrorReporter errorReporter = error -> {
+    recordLevels(error);
+    if (streamDiagnostics) dispatchError(error);
   };
 
   /**
@@ -161,6 +160,7 @@ public class CommandContext {
     moduleResults.clear();
     streamDiagnostics = true;
     requestedModules.clear();
+    requestedModulePatterns.clear();
     // A command that ended without finishProgressLine() -- cancelled, or unwound by a throw --
     // leaves a partial line open. Carried into the next command it costs a blank line before its
     // first diagnostic, and a padding width measured against somebody else's module name.

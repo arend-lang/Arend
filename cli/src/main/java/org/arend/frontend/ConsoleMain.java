@@ -24,8 +24,6 @@ import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.prelude.Prelude;
 
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 
@@ -324,6 +322,7 @@ public class ConsoleMain {
    */
   private boolean runRepl(CommandContext ctx, CommandLine cmdLine) {
     warnUnsupportedReplOptions(cmdLine);
+    CliSetup.expandModulePatterns(ctx);
     List<ModulePath> autoloadModules = ctx.requestedModules.stream().map(pair -> pair.proj1).distinct().toList();
     String replKind = cmdLine.getOptionValue("i", "jline");
     switch (replKind.toLowerCase()) {
