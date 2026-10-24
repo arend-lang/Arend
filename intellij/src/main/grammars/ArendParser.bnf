@@ -123,7 +123,7 @@ private statement_recover ::= !(WHERE_KW | RBRACE) & topStatement_recover
 
 accessMod ::= PRIVATE_KW | PROTECTED_KW
 
-stat ::= statCmd | accessMod? USE_KW? definition | defModule | statAccessMod | stat_recovery
+stat ::= statCmd | accessMod? USE_KW? definition | accessMod? defModule | statAccessMod | stat_recovery
 
 statAccessMod ::= accessMod statAccessModInternal { pin = 1 }
 
@@ -178,7 +178,7 @@ private classStats ::= LBRACE classStatRecovery classStat* RBRACE | classFieldOr
     recoverWhile = statement_recover
 }
 
-classStat ::= classFieldOrImplement | accessMod? USE_KW? definition | classFieldStat | overriddenField | defaultField | defModule { recoverWhile = classStat_recover }
+classStat ::= classFieldOrImplement | accessMod? USE_KW? definition | classFieldStat | overriddenField | defaultField | accessMod? defModule { recoverWhile = classStat_recover }
 
 private classStatRecovery ::= {
   recoverWhile = classStat_recover
