@@ -100,7 +100,12 @@ public class CommandContext {
    * first or land in the middle of it. Both error reporters here do; so must every banner.
    */
   public void reportModuleProgress(String action, int checked, int total, ModulePath modulePath) {
-    String line = "[" + (checked + 1) + "/" + total + "] " + action + " " + modulePath;
+    reportModuleProgress(action, checked, total, modulePath.toString());
+  }
+
+  /** Same as {@link #reportModuleProgress(String, int, int, ModulePath)}, for an arbitrary target such as {@code Module:def}. */
+  public void reportModuleProgress(String action, int checked, int total, String target) {
+    String line = "[" + (checked + 1) + "/" + total + "] " + action + " " + target;
     StringBuilder sb = new StringBuilder().append('\r').append(line);
     int pad = myLastProgressLength - line.length();
     if (pad > 0) {

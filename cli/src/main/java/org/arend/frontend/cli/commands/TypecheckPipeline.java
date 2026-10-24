@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -181,7 +182,7 @@ public final class TypecheckPipeline {
               modules.add(module);
             }
           }
-          showSizes(ctx, modules);
+          showSizes(ctx, modules, false);
         }
 
         if (cmdLine.hasOption(SHOW_MODULES)) {
@@ -232,56 +233,84 @@ public final class TypecheckPipeline {
         }
       }
     } else {
+      // Times and sizes are reported once for all requested modules, in one list each, so
+      // everything is typechecked first and double-checked only after they are printed.
+      // Reported like a whole-library run: one banner, a progress line, the result table and
+      // the total time, rather than a banner and a time per requested module.
+      System.out.println();
+      System.out.println("--- Typechecking ---");
+      long time = System.currentTimeMillis();
+
+      Set<ModuleLocation> checkedModules = new LinkedHashSet<>();
+      List<ModuleLocation> modulesToDoubleCheck = new ArrayList<>();
+      int totalTargets = ctx.requestedModules.size();
+      int checkedTargets = 0;
       for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
         ModulePath modulePath = requested.proj1;
         LongName definitionName = requested.proj2;
+        ctx.reportModuleProgress("Typechecking", checkedTargets++, totalTargets, definitionName == null ? modulePath.toString() : modulePath + ":" + definitionName);
         ModuleLocation module = ctx.server.findModule(modulePath, null, true, false);
         if (module == null) {
           ctx.systemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
         } else if (definitionName != null) {
-          System.out.println();
           FullName fullName = new FullName(module, definitionName);
-          System.out.println("--- Typechecking " + fullName + " ---");
-          long time = System.currentTimeMillis();
-
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), ctx.errorReporter, ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
-
-          System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
-          printTimes(timedProgressReporter);
-          if (cmdLine.hasOption(SHOW_SIZES)) {
-            showSizes(ctx, Collections.singletonList(module));
-          }
+          checkedModules.add(module);
         } else {
-          System.out.println();
-          System.out.println("--- Typechecking " + module + " ---");
-          long time = System.currentTimeMillis();
-
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
+          checkedModules.add(module);
+          modulesToDoubleCheck.add(module);
+        }
+      }
+      ctx.finishProgressLine();
 
-          System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
-          printTimes(timedProgressReporter);
-          if (cmdLine.hasOption(SHOW_SIZES)) {
-            showSizes(ctx, Collections.singletonList(module));
-          }
+      time = System.currentTimeMillis() - time;
 
-          if (ctx.doubleCheck) {
-            System.out.println();
-            System.out.println("--- Checking " + module + " ---");
-            time = System.currentTimeMillis();
+      int numWithErrors = 0;
+      int numWithGoals = 0;
+      for (ModuleLocation module : checkedModules) {
+        GeneralError.Level result = ctx.moduleResults.get(module);
+        reportTypeCheckResult(ctx, module.getModulePath(), result);
+        if (result == GeneralError.Level.ERROR) numWithErrors++;
+        if (result == GeneralError.Level.GOAL) numWithGoals++;
+      }
 
-            try {
-              CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
-              ConcreteGroup group = ctx.server.getRawGroup(module);
-              if (group != null) {
-                checker.checkGroup(group);
-              }
-            } finally {
-              time = System.currentTimeMillis() - time;
-              System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+      if (numWithErrors > 0) {
+        ctx.exitWithError = true;
+        System.out.println("Number of modules with errors: " + numWithErrors);
+      }
+      if (numWithGoals > 0) {
+        System.out.println("Number of modules with goals: " + numWithGoals);
+      }
+      System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+
+      boolean qualify = checkedModules.size() > 1;
+      printTimes(timedProgressReporter, qualify);
+      if (cmdLine.hasOption(SHOW_SIZES)) {
+        showSizes(ctx, checkedModules, qualify);
+      }
+
+      if (ctx.doubleCheck && numWithErrors == 0 && !modulesToDoubleCheck.isEmpty()) {
+        System.out.println();
+        System.out.println("--- Checking ---");
+        time = System.currentTimeMillis();
+
+        try {
+          CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+          for (int i = 0; i < modulesToDoubleCheck.size(); i++) {
+            ModuleLocation module = modulesToDoubleCheck.get(i);
+            ctx.reportModuleProgress("Checking", i, modulesToDoubleCheck.size(), module.getModulePath());
+            ConcreteGroup group = ctx.server.getRawGroup(module);
+            if (group != null) {
+              checker.checkGroup(group);
             }
           }
+        } finally {
+          ctx.finishProgressLine();
+          time = System.currentTimeMillis() - time;
+          System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
         }
       }
       // See above: a cancelled run has nothing worth caching.
@@ -374,12 +403,16 @@ public final class TypecheckPipeline {
    * the times with it.
    */
   private static void printTimes(TimedProgressReporter timedProgressReporter) {
+    printTimes(timedProgressReporter, false);
+  }
+
+  private static void printTimes(TimedProgressReporter timedProgressReporter, boolean qualify) {
     if (timedProgressReporter != null) {
-      timedProgressReporter.print();
+      timedProgressReporter.print(qualify);
     }
   }
 
-  private static void showSizes(CommandContext ctx, Collection<ModuleLocation> modules) {
+  private static void showSizes(CommandContext ctx, Collection<ModuleLocation> modules, boolean qualify) {
     Map<Definition, Integer> sizes = new HashMap<>();
     for (ModuleLocation module : modules) {
       for (DefinitionData definitionData : ctx.server.getResolvedDefinitions(module)) {
@@ -397,7 +430,8 @@ public final class TypecheckPipeline {
     }
     list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
     for (Pair<Definition, Integer> pair : list) {
-      System.out.println(pair.proj1.getReferable().getRefLongName() + ": " + pair.proj2);
+      TCDefReferable referable = pair.proj1.getReferable();
+      System.out.println((qualify ? referable.getRefFullName() : referable.getRefLongName()) + ": " + pair.proj2);
     }
   }
 
