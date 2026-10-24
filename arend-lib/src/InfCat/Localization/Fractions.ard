@@ -1,0 +1,153 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.Covariant.FreeLeft
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.Initial
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Terminal
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.LocalizeLeftFib
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Paths
+
+{- | Hom-types of a localization computed by fractions (SCT Remark 10.3.8, in covariant form).
+ -
+ -   Let `l : C ->⁺ L` be a localization at `W`, and let `D : J ->⁺ C/x` be a diagram of denominators `w_j : e_j ~> x`
+ -   inverted by `l`, where `J` has a terminal object `j0`. `FracCat D` is the category of fractions `x <-w_j- e_j -g-> d`.
+ -   Let `F` be a functor `L ->⁺ \Type` and `kappa` a section of `F ∘ l` over `FracCat D` whose total functor
+ -   `(j, d, g) ↦ (d, kappa (j, d, g))` is a localization. Then {fractions-hom-equiv}: transport of `u = kappa (j0, x, w_j0)`
+ -   identifies `l x ~> l d` with `F (l d)`, and {fractions-univElem}: `u` is a universal element of `F` at `l x`.
+ -
+ -   Proof. The inverse is a section `mu` of `l x ~> l -` over the total category of `F ∘ l`. It extends
+ -   `mu0 (j, d, g) = l g ∘ (l w_j)⁻¹` along the localization {initialFunctor-sections}; `mu0` is the transport of
+ -   `l g` along the path of functors given by the natural isomorphism `l w`.
+ -   1. `F (mu t) u = t.2`: both sides are sections over the total category, and they agree on fractions, since
+ -      `kappa` transports along the arrows `(j, e_j, idd) -> (j, d, g)` and `(j, x, w_j) -> (j0, x, w_j0)` ({frac-compat}).
+ -   2. `mu (d, F h u) = h`: both sides are sections over the comma `l x ↓ l`, which is a localization of the coslice
+ -      under `l x` ({fractions-hom-equiv.hom-isLocalization}), so they are determined by their value at `(l x, idd)`.
+ -
+ -   Applied to `Op E`, this computes the hom-types of the realization of a Segal right fibration `E` (Step E3 of
+ -   complete-segal-comma.tex), where the fractions are the cospans `d -> e <- y` with a last-vertex arrow.
+ -}
+
+-- | Fractions `g ∘ w⁻¹` with denominators `w` from {D}: triples `(j, d, g)` with `g : (D j).1 ~> d`.
+\func FracCat {C J : \Cat} {x : C} (D : J ->⁺ \Sigma⁺ (e : C) (e ~> x)) : \Cat
+  => \Sigma⁺ (j : J) (d : C) ((D j).1 ~> d)
+
+-- | Transport of the fraction `(j0, x, (D j0).2)` identifies `l x ~> l d` with `F (l d)`.
+\lemma fractions-hom-equiv.{u} {C L J : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+  {x : C} {D : J ->⁺ \Sigma⁺ (e : C) (e ~> x)} (Di : \Pi (j : J) -> IsIso (dmap l (D j).2)) {j0 : J} (j0t : IsTerminal j0)
+  {F : L ->⁺ \Type u} (kappa : \Pi (s :⁺ FracCat D) -> F (l s.2))
+  {V : (DI ->⁺ FracCat D) -> \Prop} (Kz : IsLocalization V (\lam s => ((s.2, kappa s) : \Sigma⁺ (c : C) (F (l c)))))
+  (d : C) : IsEquiv {l x ~> l d} {F (l d)} (\lam h => ~>_-> (dmap F h) (kappa (j0, x, (D j0).2)))
+  => \let | u => kappa (j0, x, (D j0).2)
+          | P => natIso-path {FracCat D} {L} {\lam s => l (D s.1).1} {\lam _ => l x} (\lam s => dmap l (D s.1).2) (\lam s => Di s.1)
+          | PA => natIso-path-arrow {FracCat D} {L} {\lam s => l (D s.1).1} {\lam _ => l x} (\lam s => dmap l (D s.1).2) (\lam s => Di s.1)
+          | mu0 : \Pi (s :⁺ FracCat D) -> l x ~> l s.2
+              => transport+ (\lam (H : FracCat D ->⁺ L) => \Pi (s :⁺ FracCat D) -> H s ~> l s.2) P (\lam s => dmap l s.3)
+          | secR => initialFunctor-sections (localization-initialFunctor Kz)
+                      (leftFib-pullback (\lam (t :⁺ \Sigma⁺ (c : C) (F (l c))) => l t.1) (hom-leftFib (l x)))
+          | mu => IsEquiv.ret secR mu0
+          | to0 : \Pi (j :⁺ J) -> j ~> j0 => IsHEquiv.fib-sec (rightFib-contr-equiv (hom-rightFib j0) j0t)
+     \in \have | P-arrow (s :⁺ FracCat D) : =_~> (path \lam i => P i s) = dmap l (D s.1).2
+                 => eval-arrow P s *> path (\lam k => dpath \lam i => PA k i s)
+               | mu0-pt (s :⁺ FracCat D) : mu0 s = transport+ (__ ~> l s.2) (path \lam i => P i s) (dmap l s.3)
+                 => tr-pi P (\lam s => dmap l s.3) s
+               | kappaA (s :⁺ FracCat D) : ~>_-> (dmap F (dmap l s.3)) (kappa (s.1, (D s.1).1, idd)) = kappa s
+                 => coe+-dpath (dpath \lam i => kappa (s.1, s.3 i, conn-right s.3 i))
+               | kappaT (j :⁺ J) : kappa (j, x, (D j).2) = u
+                 => inv ~>_->_idd *> coe+-dpath (dpath \lam i => kappa (to0 j i, x, (D (to0 j i)).2))
+               | compat (s :⁺ FracCat D) : ~>_-> (dmap F (mu0 s)) u = kappa s
+                 => path (\lam i => ~>_-> (dmap F (mu0-pt s i)) u)
+                    *> frac-compat {L} {F} (path \lam i => P i s) (P-arrow s) (dmap l s.3) (kappaA (s.1, x, (D s.1).2) *> kappaT s.1)
+                    *> kappaA s
+               | mu-restrict (s :⁺ FracCat D) : mu (s.2, kappa s) = mu0 s => path \lam i => IsEquiv.f_ret secR {mu0} i s
+               | nu-mu (t : \Sigma⁺ (c : C) (F (l c))) : ~>_-> (dmap F (mu t)) u = t.2
+                 => \have e => IsEquiv.isInj (initialFunctor-sections (localization-initialFunctor Kz)
+                                 (leftFib-pullback (\lam (t :⁺ \Sigma⁺ (c : C) (F (l c))) => F (l t.1)) universe-leftFib))
+                                 {\lam (t :⁺ \Sigma⁺ (c : C) (F (l c))) => ~>_-> (dmap F (mu t)) u} {\lam t => t.2}
+                                 (funExt+ \lam s => path (\lam i => ~>_-> (dmap F (mu-restrict s i)) u) *> compat s)
+                    \in path \lam i => e i t
+               | mu-nu (h : l x ~> l d) : mu (d, ~>_-> (dmap F h) u) = h
+                 => \let | nLz => hom-isLocalization Lz x
+                         | Ql' => leftFib-pullback (\lam (k :⁺ \Sigma⁺ (y : L) (l x ~> y)) => k.1) (hom-leftFib (l x))
+                         | secY => initialFunctor-sections (localization-initialFunctor nLz) Ql'
+                         | secCo => ladj-sections (IsInitial.adjunction (coslice-initial (l x))) Ql'
+                         | S1 (t :⁺ \Sigma⁺ (c : C) (l x ~> l c)) : l x ~> l t.1 => mu (t.1, ~>_-> (dmap F t.2) u)
+                         | T1 => IsEquiv.ret secY S1
+                         | T2 => IsEquiv.ret secY (\lam t => t.2)
+                    \in \have | base : T1 (l x, idd) = T2 (l x, idd)
+                                => path (\lam i => IsEquiv.f_ret secY {S1} i (x, idd)) *> pmap (\lam p => mu (x, p)) ~>_->_idd
+                                   *> mu-restrict (j0, x, (D j0).2)
+                                   *> mu0-pt (j0, x, (D j0).2) *> tr-idd (path \lam i => P i (j0, x, (D j0).2)) (P-arrow (j0, x, (D j0).2))
+                                   *> inv (path \lam i => IsEquiv.f_ret secY {\lam t => t.2} i (x, idd))
+                              | T12 : T1 = T2 => IsEquiv.isInj secCo (path \lam i _ => base i)
+                    \in path \lam i => (inv (IsEquiv.f_ret secY {S1})
+                                         *> pmap (\lam (T : \Pi (k :⁺ \Sigma⁺ (y : L) (l x ~> y)) -> l x ~> k.1) (t :⁺ \Sigma⁺ (c : C) (l x ~> l c)) => T (l t.1, t.2)) T12
+                                         *> IsEquiv.f_ret secY {\lam t => t.2}) i (d, h)
+     \in inP \new QEquiv {
+       | ret p => mu (d, p)
+       | ret_f => mu-nu
+       | f_sec p => nu-mu (d, p)
+     }
+  \where {
+    -- | Restriction of the localization {l} to the comma `l x ↓ l` is a localization.
+    \lemma hom-isLocalization.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) (x : C)
+      : IsLocalization (\lam (a : DI ->⁺ \Sigma⁺ (c : C) (l x ~> l c)) => W (\lam i => (a i).1))
+                       (\lam (t :⁺ \Sigma⁺ (c : C) (l x ~> l c)) => ((l t.1, t.2) : \Sigma⁺ (y : L) (l x ~> y)))
+      => leftFib-isLocalization.{u} Lz {_} {_} {\lam (t :⁺ \Sigma⁺ (c : C) (l x ~> l c)) => t.1} {\lam (k :⁺ \Sigma⁺ (y : L) (l x ~> y)) => k.1}
+           (leftFib-total (leftFib-pullback l (hom-leftFib (l x)))) (leftFib-total (hom-leftFib (l x)))
+           {\lam (t :⁺ \Sigma⁺ (c : C) (l x ~> l c)) => ((l t.1, t.2) : \Sigma⁺ (y : L) (l x ~> y))} (\lam _ => idp) \lam c => inP \new QEquiv {
+             | ret t => ((c, transport (l x ~> __) t.2 t.1.2), idp)
+             | ret_f => fiber-ret
+             | f_sec => fiber-sec {C} {L} {l} {x} {c}
+           }
+      \where {
+        -- | The round trips of the identification of fibers.
+        \func fiber-ret {C L : \Cat} {l : C ->⁺ L} {x c : C} (s : Fibers {\Sigma⁺ (c : C) (l x ~> l c)} __.1 c)
+          : (((c, transport (l x ~> __) (idp *> pmap+ l s.2) s.1.2), idp) : Fibers {\Sigma⁺ (c : C) (l x ~> l c)} __.1 c) = s \elim s
+          | ((c', h), idp) => idp
+
+        \func fiber-sec {C L : \Cat} {l : C ->⁺ L} {x c : C} (t : Fibers {\Sigma⁺ (y : L) (l x ~> y)} __.1 (l c))
+          : (((l c, transport (l x ~> __) t.2 t.1.2), idp *> idp) : Fibers {\Sigma⁺ (y : L) (l x ~> y)} __.1 (l c)) = t \elim t
+          | ((y, h), idp) => idp
+      }
+
+    -- | The arrow underlying a pointwise path of functors.
+    \sfunc eval-arrow {A B : \Cat} {H K :⁺ A ->⁺ B} (P :⁺ H = K) (a :⁺ A) : =_~> (path \lam i => P i a) = dpath (\lam i => (=_~> P) i a) \elim P
+      | idp => idp
+
+    -- | Transport of a family of arrows along a path of functors is pointwise.
+    \sfunc tr-pi {A B : \Cat} {H K :⁺ A ->⁺ B} (P :⁺ H = K) {G :⁺ A ->⁺ B} (sg :⁺ \Pi (a :⁺ A) -> H a ~> G a) (a :⁺ A)
+      : transport+ (\lam (H' : A ->⁺ B) => \Pi (a :⁺ A) -> H' a ~> G a) P sg a = transport+ (__ ~> G a) (path \lam i => P i a) (sg a) \elim P
+      | idp => idp
+
+    -- | Transporting {w} along a path {p} with `=_~> p = w` gives the identity.
+    \sfunc tr-idd {B :⁺ \Cat} {a b :⁺ B} (p :⁺ a = b) {w :⁺ a ~> b} (pw :⁺ =_~> p = w) : transport+ (__ ~> b) p w = idd \elim p, pw
+      | idp, idp => idp
+
+    -- | `F (g ∘ w⁻¹) u = F g k0` when `F w k0 = u`, for {w} given by a path {p}.
+    \sfunc frac-compat.{u} {L :⁺ \Cat} {F :⁺ L ->⁺ \Type u} {a z b :⁺ L} (p :⁺ a = z) {w :⁺ a ~> z} (pw :⁺ =_~> p = w) (g :⁺ a ~> b)
+                           {k0 :⁺ F a} {u' :⁺ F z} (h :⁺ ~>_-> (dmap F w) k0 = u')
+      : ~>_-> (dmap F (transport+ (__ ~> b) p g)) u' = ~>_-> (dmap F g) k0 \elim p, pw, h
+      | idp, idp, idp => path \lam i => ~>_-> (dmap F g) (~>_->_idd {F a} {k0} i)
+  }
+
+-- | The fraction `(j0, x, (D j0).2)` is a universal element of {F} at `l x`, so {F} is corepresented by `l x`.
+\lemma fractions-univElem.{u} {C L J : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+  {x : C} {D : J ->⁺ \Sigma⁺ (e : C) (e ~> x)} (Di : \Pi (j : J) -> IsIso (dmap l (D j).2)) {j0 : J} (j0t : IsTerminal j0)
+  {F : L ->⁺ \Type u} (kappa : \Pi (s :⁺ FracCat D) -> F (l s.2))
+  {V : (DI ->⁺ FracCat D) -> \Prop} (Kz : IsLocalization V (\lam s => ((s.2, kappa s) : \Sigma⁺ (c : C) (F (l c)))))
+  : IsUnivElem F (l x) (kappa (j0, x, (D j0).2))
+  => equiv-univElem \lam y => \case IsLocalization.isSurj Lz y \with {
+       | inP (d, p) => transport (\lam y' => IsEquiv {l x ~> y'} {F y'} (\lam h => ~>_-> (dmap F h) (kappa (j0, x, (D j0).2)))) p
+                                 (fractions-hom-equiv {C} {L} {J} {W} {l} Lz {x} {D} Di {j0} j0t {F} kappa {V} Kz d)
+     }

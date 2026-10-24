@@ -1,0 +1,75 @@
+{- | The unit `E → N(RE)` of the realization–nerve adjunction (Step E of complete-segal-comma.tex).
+ -
+ -   For a right fibration `p : E ->⁺ DeltaCat`, the unit {realization-unit} is the section of the nerve of `RE = Realization p`
+ -   corresponding to the identity of `RE` under {realization-adj}. Its fiberwise form is {unitFib}.
+ -   * {unit-eval}: the unit evaluates an `n`-simplex `e` at a vertex `w` to `real p (e, w)`.
+ -   * {unit-surj}: the unit is surjective on vertices ({realization-ob-surj}).
+ -   * {unit-ff}, {unit-iso}: the unit is fully faithful on edges and reflects isomorphisms. These are the hom computation
+ -     (Steps E3 and E4). They are open.
+ -   * {realization-unit-equiv}: for complete Segal {p}, the unit is an equivalence of total categories, by {segal-map-hequiv}.
+ -}
+
+\import Equiv
+\import Function
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.Exponent.ExponentCocartesianCore
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.Simplicial.NerveSegal
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Paths
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SegalEquiv
+\import Logic
+\import Paths
+\open NerveLow
+
+-- | The unit: the section of the nerve of the realization corresponding to the identity.
+\func realization-unit.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) : \Pi (e :⁺ E) -> SNerveFib (Realization.{u} p) (p e)
+  => IsEquiv.ret (realization-adj.{u} {E} {Realization.{u} p} p) (\lam y => y)
+
+-- | The unit on the fibers of {p}.
+\func unitFib.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) : SNerveFib (Realization.{u} p) s.1
+  => transport+ (SNerveFib (Realization.{u} p)) s.2.2 (realization-unit p s.2.1)
+
+-- | The unit evaluates {e} at {w} to `real p (e, w)`.
+\sfunc unit-eval.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (e : E) (w : UnivSimplexFib (p e))
+  : ExpCocCore.fiber-eval univSimplex-cocartesianMap (realization-unit p e) w = real p (e, w)
+  => path \lam i => (IsEquiv.f_ret (realization-adj.{u} {E} {Realization.{u} p} p) {\lam y => y} @ i) (real p (e, w))
+
+-- | The unit is surjective on vertices.
+\lemma unit-surj.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+  : IsSurj (\lam (x : simplex p 0) => unitFib p (nerveOb 0, x))
+  => \lam y => \case realization-ob-surj.{u} pf (snerve-nu.{u} 0 y pt0) \with {
+       | inP (e, q, r) => inP ((e, q), IsEquiv.isInj (snerve-nu-equiv.{u} {Realization.{u} p} 0) (IsEquiv.isInj nerve0-ev-equiv
+           (eval-tr q (realization-unit p e) _ *> unit-eval p e _ *> pmap (\lam z => real p (e, z)) (tr-fib (inv q) _ _) *> pmap (\lam P => real p (e, (nerveOb (0, 0), P))) (deltaCat-path-isProp _ _ _ _) *> r)))
+     }
+  \where {
+    \sfunc eval-tr.{v} {C : \Cat v} {b b' : DeltaCat} (q : b = b') (z : SNerveFib C b) (x : UnivSimplexFib b')
+      : ExpCocCore.fiber-eval univSimplex-cocartesianMap (transport+ (SNerveFib C) q z) x
+        = ExpCocCore.fiber-eval univSimplex-cocartesianMap z (transport+ UnivSimplexFib (inv q) x) \elim q
+      | idp => idp
+
+    \sfunc tr-fib {b b' : DeltaCat} (q : b = b') (w : Nerve SimplexTotal) (P : nerveMap simplexProj w = b)
+      : transport+ UnivSimplexFib q (w, P) = {UnivSimplexFib b'} (w, P *> q) \elim q
+      | idp => idp
+  }
+
+-- | E3/E4 (open): the unit is fully faithful on edges.
+\lemma unit-ff.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (x y : simplex p 0)
+  : IsEquiv (edgeSec-map (unitFib p) x y)
+  => {?}
+
+-- | E3/E4 (open): the unit reflects isomorphisms.
+\lemma unit-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (e : simplex p 1)
+  (i : IsIsoS (SNerveFib.isRightFib.{u} {Realization.{u} p}) (unitFib p (nerveOb 1, e))) : IsIsoS pf e
+  => {?}
+
+-- | For a complete Segal right fibration {p}, the unit `E → N(RE)` is an equivalence of total categories.
+\lemma realization-unit-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} (cs : IsCompleteSegal pf)
+  : IsHEquiv {\Sigma⁺ (b : DeltaCat) (Fibers p b)} {\Sigma⁺ (b : DeltaCat) (SNerveFib (Realization.{u} p) b)} (\lam s => (s.1, unitFib p s))
+  => segal-map-hequiv cs (snerve-completeSegal.{u} {Realization.{u} p}) (unitFib p) (unit-surj pf) (unit-ff pf cs.1) (unit-iso pf cs.1)

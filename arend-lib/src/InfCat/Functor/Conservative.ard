@@ -4,6 +4,7 @@
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Rezk
 \import Logic
+\import Paths
 
 \type IsConservative {C D : \Cat} (f : C ->⁺ D) : \Prop
   => \Pi {x y : C} {p : x ~> y} -> IsIso (dmap f p) -> IsIso p
@@ -16,6 +17,11 @@
 -- | A natural transformation whose components are isomorphisms gives a path of functors.
 \sfunc natIso-path {C D : \Cat} {F G : C ->⁺ D} (t : \Pi (x :⁺ C) -> F x ~> G x) (ti : \Pi (x : C) -> IsIso (t x)) : F = G
   => (IsIso_= (objectwise-iso {C} {D} {F} {G} {dpath \lam i x => t x i} ti)).1
+
+-- | The arrow of functors underlying {natIso-path} is the given natural transformation.
+\sfunc natIso-path-arrow {C D : \Cat} {F G : C ->⁺ D} (t : \Pi (x :⁺ C) -> F x ~> G x) (ti : \Pi (x : C) -> IsIso (t x))
+  : =_~> (natIso-path t ti) = dpath \lam i x => t x i
+  => path (\lam i => =_~> ((\peval natIso-path t ti) i)) *> (IsIso_= (objectwise-iso {C} {D} {F} {G} ti)).2
 
 \lemma cov-func-conservative {C D : \Cat} : IsConservative {C ->⁺ D} {C -> D} (\lam f x => f x)
   => \lam e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e

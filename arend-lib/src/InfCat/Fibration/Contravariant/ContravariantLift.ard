@@ -19,6 +19,8 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Interval
+\import InfCat.Limit.Terminal
+\import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic
@@ -163,3 +165,15 @@
 \lemma rightFib-conservative {E A : \Cat} {p : E ->⁺ A} (pf : IsRightFib (Fibers p)) : IsConservative p
   => \lam {x} {y} {r} ri => dmap_IsIso (\lam (s :⁺ \Sigma⁺ (a : A) (Fibers p a)) => s.2.1)
        (rightFib-lift-iso pf ri ((x, idp), dpath \lam i => (r i, idp)))
+
+-- | Sections of a right fibration over a category with a terminal object are determined by their value there.
+\lemma rightFib-terminal-sections {K : \Cat} {B : K ->⁺ \Cat} (Bf : IsRightFib B) {top : K} (Pt : IsTerminal top)
+  : IsEquiv {\Pi (k :⁺ K) -> B k} {B top} (\lam s => s top)
+  => \let to-top : \Pi (k :⁺ K) -> k ~> top => IsHEquiv.fib-sec (rightFib-contr-equiv (hom-rightFib top) Pt)
+     \in inP \new QEquiv {
+       | ret b => \lam (k :⁺ K) => (rightFib-lift {K} {B} Bf (k, top, to-top k, b)).1
+       | ret_f s => funExt+ \lam k => path \lam i => (rightFib-lift-unique {K} {B} Bf {k, top, to-top k, s top}
+                                                         {rightFib-lift {K} {B} Bf (k, top, to-top k, s top)} {s k, dpath \lam j => s (to-top k j)} i).1
+       | f_sec b => pmap (\lam f => (rightFib-lift {K} {B} Bf (top, top, f, b)).1) (isContr=>isProp (Pt top) _ idd)
+                    *> pmap (\lam (c : ContLift B (top, top, idd, b)) => c.1) (rightFib-lift-unique {K} {B} Bf {_} {_} {b, idd})
+     }

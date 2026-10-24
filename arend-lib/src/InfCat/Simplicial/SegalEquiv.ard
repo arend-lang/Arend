@@ -1,0 +1,354 @@
+{- | Maps of complete Segal right fibrations over the simplex category that are fully faithful and essentially surjective
+ -   are equivalences ({segal-map-equiv}, {segal-map-hequiv}).
+ -
+ -   A map is `g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1`. Write `g0` for its action on vertices.
+ -   It is fully faithful if it is an equivalence on the edges between two given vertices ({EdgeSec}, {edgeSec-map}),
+ -   and it reflects isomorphisms in the sense of {IsIsoS}.
+ -
+ -   We work in the section model: an `n`-simplex is a section over `Δ/[n]` ({rightFib-terminal-sections}), and {g} acts on
+ -   sections by postcomposition ({gpost}). Restriction of sections and evaluation at objects commute with {gpost} definitionally,
+ -   so no coherence of the simplicial action is needed.
+ -   1. Vertices ({segal-map-equiv.vertex-equiv}): `pmap g0` is an equivalence. By completeness, paths `x = x'` are the
+ -      isomorphisms from `x` to `x'` (the fundamental theorem, {segal-map-equiv.iso-path-equiv}). {g} maps these to isomorphisms
+ -      from `g0 x` to `g0 x'` by an equivalence. Any fibrewise map out of `x = x'` is `pmap g0` up to a constant loop.
+ -   2. Edges ({segal-map-equiv.edge-equiv}): edges are vertices together with {EdgeSec}.
+ -   3. Higher simplices ({segal-map-equiv.segal-step}): by {IsSegal}, sections over `Δ/[k+1]` are sections over the span,
+ -      which is the pushout {SegalHelpers.SpanPO} of two copies of `[1]` along `[0]`.
+ -}
+
+\import Category
+\import Category.Simplex
+\import Category.Slice
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Path
+\import Equiv.Sigma
+\import Function (IsSurj)
+\import Homotopy.Fibration
+\import InfCat.CatPushout
+\import InfCat.CatPushoutHom
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Limit.Terminal
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.Simplicial.NerveSegal
+\import InfCat.Nerve.Simplicial.NerveSpine
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Paths
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\open SegalHelpers
+\open NerveLow
+\open simplex
+
+-- | The vertex `j` of `Δ/[1]`.
+\func edgeV (j : Fin 2) : Nerve (SliceS 1)
+  => nerveOb (0, vert j)
+
+-- | The edges of {p} from {x} to {y}, as sections over `Δ/[1]`.
+\func EdgeSec {E : \Cat} (p : E ->⁺ DeltaCat) (x y : simplex p 0)
+  => \Sigma (t : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)) (t (edgeV 0) = x) (t (edgeV 1) = y)
+
+-- | Postcomposition of sections with {g}.
+\func gpost {E N K : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+            (pi : K ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> Fibers p (pi k)) (k :⁺ K) : Fibers q (pi k)
+  => g (pi k, t k)
+
+-- | The action of {g} on edges from {x} to {y}.
+\func edgeSec-map {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+                  (x y : simplex p 0) (w : EdgeSec p x y) : EdgeSec q (g (nerveOb 0, x)) (g (nerveOb 0, y))
+  => (gpost g (sliceProj 1) w.1, pmap (\lam z => g (nerveOb 0, z)) w.2, pmap (\lam z => g (nerveOb 0, z)) w.3)
+
+{- | A map of complete Segal right fibrations over the simplex category is an equivalence on every fiber if it is surjective
+ -   on vertices, fully faithful on edges, and reflects isomorphisms.
+ -}
+\lemma segal-map-equiv {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat}
+  {pf : IsRightFib (Fibers p)} {qf : IsRightFib (Fibers q)} (ps : IsCompleteSegal pf) (qs : IsCompleteSegal qf)
+  (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+  (g-surj : IsSurj (\lam (x : simplex p 0) => g (nerveOb 0, x)))
+  (g-ff : \Pi (x y : simplex p 0) -> IsEquiv (edgeSec-map g x y))
+  (g-iso : \Pi (e : simplex p 1) -> IsIsoS qf (g (nerveOb 1, e)) -> IsIsoS pf e)
+  (b : DeltaCat) : IsEquiv {Fibers p b} {Fibers q b} (\lam x => g (b, x))
+  => \case \elim b, nerveOb-surj b \with {
+       | _, inP (n, idp) => fiber-equiv n
+     }
+  \where {
+    -- | {g} is an equivalence on `n`-simplices, by induction on `n`.
+    \lemma fiber-equiv (n : Nat) : IsEquiv (\lam x => g (nerveOb n, x)) \elim n
+      | 0 => vertex-equiv
+      | suc k => higher-equiv k
+      \where {
+        \lemma edge1 : IsEquiv (\lam x => g (nerveOb 1, x))
+          => post-equiv-inv (sliceProj 1) (slice-terminal 1) (edge-equiv vertex-equiv)
+
+        \lemma higher-equiv (k : Nat) : IsEquiv (\lam x => g (nerveOb (suc k), x)) \elim k
+          | 0 => edge1
+          | suc k => post-equiv-inv (sliceProj (suc (suc k))) (slice-terminal (suc (suc k)))
+                       (segal-step (suc k) (higher-equiv k) edge1 vertex-equiv)
+      }
+
+    -- | Over a base with a terminal object, {gpost} is an equivalence if {g} is one on the fiber over the terminal object.
+    \lemma post-equiv {K : \Cat} (pi : K ->⁺ DeltaCat) {top : K} (Pt : IsTerminal top)
+                      (e : IsEquiv (\lam x => g (pi top, x))) : IsEquiv (gpost g pi)
+      => IsEquiv.leftFactor (rightFib-terminal-sections (rightFib-pullback pi qf) Pt)
+           (IsEquiv.trans (rightFib-terminal-sections (rightFib-pullback pi pf) Pt) e)
+
+    -- | Over a base with a terminal object, {g} is an equivalence on the fiber over the terminal object if {gpost} is one.
+    \lemma post-equiv-inv {K : \Cat} (pi : K ->⁺ DeltaCat) {top : K} (Pt : IsTerminal top)
+                          (e : IsEquiv (gpost g pi)) : IsEquiv (\lam x => g (pi top, x))
+      => IsEquiv.rightFactor (rightFib-terminal-sections (rightFib-pullback pi pf) Pt)
+           (IsEquiv.trans e (rightFib-terminal-sections (rightFib-pullback pi qf) Pt))
+
+    -- # Edges
+
+    -- | Sections over `Δ/[1]` are pairs of vertices with an edge between them.
+    \lemma edge-split {E' : \Cat} {p' : E' ->⁺ DeltaCat}
+      : IsEquiv {\Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p' (sliceProj 1 s)} {\Sigma (x : simplex p' 0) (\Sigma (y : simplex p' 0) (EdgeSec p' x y))}
+                (\lam t => (t (edgeV 0), (t (edgeV 1), (t, idp, idp))))
+      => inP \new QEquiv {
+        | ret w => w.2.2.1
+        | ret_f _ => idp
+        | f_sec w => \case \elim w \with {
+          | (_, (_, (t, idp, idp))) => idp
+        }
+      }
+
+    -- | {gpost} over `Δ/[1]` is an equivalence if {g} is one on vertices.
+    \lemma edge-equiv (e0 : IsEquiv (\lam x => g (nerveOb 0, x))) : IsEquiv (gpost g (sliceProj 1))
+      => \have tot : IsEquiv {\Sigma (x : simplex p 0) (\Sigma (y : simplex p 0) (EdgeSec p x y))}
+                             {\Sigma (x : simplex q 0) (\Sigma (y : simplex q 0) (EdgeSec q x y))}
+                             (\lam w => (g (nerveOb 0, w.1), (g (nerveOb 0, w.2.1), edgeSec-map g w.1 w.2.1 w.2.2)))
+                   => sigma-map-equiv e0 \lam x => sigma-map-equiv e0 \lam y => g-ff x y
+         \in \let res => IsEquiv.leftFactor edge-split (IsEquiv.trans edge-split tot) \in res
+
+    -- # Vertices
+
+    -- | `[0]` is a terminal object of {DeltaCat}.
+    \lemma delta0-terminal : IsTerminal (nerveOb {SimplexCat} 0)
+      => nerve-isTerminal {SimplexCat} {0} \lam m => isProp=>isContr (\lam a b => simplexHom-ext \lam t => fin1-prop (a t) (b t)) (constHom 0)
+      \where
+        \lemma fin1-prop (a b : Fin 1) : a = b \elim a, b
+          | 0, 0 => idp
+
+    -- | The arrows to `[0]`, chosen covariantly.
+    \func to0 (b :⁺ DeltaCat) : b ~> nerveOb 0
+      => IsHEquiv.fib-sec (rightFib-contr-equiv (hom-rightFib (nerveOb {SimplexCat} 0)) delta0-terminal) b
+
+    -- | The degenerate edge at {x}, as a section over `Δ/[1]`.
+    \func constSec {E' : \Cat} {p' : E' ->⁺ DeltaCat} (pf' : IsRightFib (Fibers p')) (x : simplex p' 0)
+                   (s :⁺ Nerve (SliceS 1)) : Fibers p' (sliceProj 1 s)
+      => (rightFib-lift {DeltaCat} {Fibers p'} pf' (sliceProj 1 s, nerveOb 0, to0 (sliceProj 1 s), x)).1
+
+    -- | Lifts along endomorphisms of `[0]` are trivial.
+    \sfunc lift-vertex {E' : \Cat} {p' : E' ->⁺ DeltaCat} (pf' : IsRightFib (Fibers p')) {f : nerveOb {SimplexCat} 0 ~> nerveOb 0} {x : simplex p' 0}
+      : (rightFib-lift {DeltaCat} {Fibers p'} pf' (nerveOb 0, nerveOb 0, f, x)).1 = x
+      => pmap (\lam f' => (rightFib-lift {DeltaCat} {Fibers p'} pf' (nerveOb 0, nerveOb 0, f', x)).1) (isContr=>isProp (delta0-terminal (nerveOb 0)) _ idd)
+         *> pmap (\lam (c : ContLift (Fibers p') (nerveOb 0, nerveOb 0, idd, x)) => c.1) (rightFib-lift-unique {DeltaCat} {Fibers p'} pf' {_} {_} {x, idd})
+
+    -- | The value of {constSec} at the top is the degenerate edge.
+    \sfunc constSec-top {E' : \Cat} {p' : E' ->⁺ DeltaCat} (pf' : IsRightFib (Fibers p')) (x : simplex p' 0)
+      : constSec pf' x (nerveOb (1, SimplexCat.id {1})) = degen pf' x
+      => pmap (\lam f' => (rightFib-lift {DeltaCat} {Fibers p'} pf' (nerveOb 1, nerveOb 0, f', x)).1) (isContr=>isProp (delta0-terminal (nerveOb 1)) _ _)
+         *> pmap (\lam (c : ContLift (Fibers p') (nerveOb 1, nerveOb 0, nerveHom (constHom 0), x)) => c.1)
+                 (rightFib-lift-unique {DeltaCat} {Fibers p'} pf' {_} {_} {Contr.center {pf' (nerveOb 1, nerveOb 0, nerveHom (constHom 0), x)}})
+
+    -- | Isomorphisms from {x} to {x'}, as sections over `Δ/[1]`.
+    \func IsoSec {E' : \Cat} {p' : E' ->⁺ DeltaCat} (pf' : IsRightFib (Fibers p')) (x x' : simplex p' 0)
+      => \Sigma (w : EdgeSec p' x x') (IsIsoS pf' (w.1 (nerveOb (1, SimplexCat.id {1}))))
+
+    -- | The degenerate edge at {x} as an element of {IsoSec}.
+    \func isoSec-idp {E' : \Cat} {p' : E' ->⁺ DeltaCat} (pf' : IsRightFib (Fibers p')) (x : simplex p' 0) : IsoSec pf' x x
+      => ((constSec pf' x, lift-vertex pf', lift-vertex pf'), transportInv (IsIsoS pf') (constSec-top pf' x) (degen-iso pf' x))
+
+    -- | Paths from {x} are isomorphisms from {x}: their total spaces are contractible, by completeness.
+    \lemma iso-path-equiv {E' : \Cat} {p' : E' ->⁺ DeltaCat} {pf' : IsRightFib (Fibers p')} (pc : IsComplete pf') (x x' : simplex p' 0)
+      : IsEquiv (\lam (r : x = x') => transport (IsoSec pf' x) r (isoSec-idp pf' x))
+      => \let | top1 => nerveOb {SliceS 1} (1, SimplexCat.id {1})
+              | Tot => \Sigma (t : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p' (sliceProj 1 s)) (IsIsoS pf' (t top1))
+              | C (y : simplex p' 0) : Tot => (constSec pf' y, (isoSec-idp pf' y).2)
+              | src (z : Tot) : simplex p' 0 => z.1 (edgeV 0)
+         \in \have | ev-equiv : IsEquiv {Tot} {\Sigma (e : simplex p' 1) (IsIsoS pf' e)} (\lam z => (z.1 top1, z.2))
+                       => sigma-map-equiv (rightFib-terminal-sections (rightFib-pullback (sliceProj 1) pf') (slice-terminal 1)) {\lam _ i => i} \lam _ => inP idEquiv
+                   | C-equiv : IsEquiv C
+                       => IsEquiv.leftFactor ev-equiv (transport IsEquiv (ext \lam y => ext (inv (constSec-top pf' y))) pc)
+                   | src-equiv : IsEquiv src
+                       => IsEquiv.rightFactor C-equiv (transport IsEquiv (ext \lam y => inv (lift-vertex pf')) (inP idEquiv))
+                   | path-contr : Contr (\Sigma (x' : simplex p' 0) (x = x'))
+                       => Contr.make {\Sigma (x' : simplex p' 0) (x = x')} (x, idp) \lam s => \case \elim s \with { | (_, idp) => idp }
+                   | iso-contr : Contr (\Sigma (x' : simplex p' 0) (IsoSec pf' x x'))
+                       => Contr.Contr_QEquiv (\new QEquiv {Fib src x} {\Sigma (x' : simplex p' 0) (IsoSec pf' x x')} {
+                            | f z => (z.1.1 (edgeV 1), ((z.1.1, z.2, idp), z.1.2))
+                            | ret w => ((w.2.1.1, w.2.2), w.2.1.2)
+                            | ret_f _ => idp
+                            | f_sec w => \case \elim w \with { | (_, ((t, r0, idp), i)) => idp }
+                          }) (IsEquiv=>contrFibers src-equiv x)
+         \in (totalEquiv (\lam x' (r : x = x') => transport (IsoSec pf' x) r (isoSec-idp pf' x))).2 (contr-equiv path-contr iso-contr) x'
+
+    -- | {g} commutes with simplicial operators.
+    \sfunc g-act {m n : Nat} (d : Hom {SimplexCat} m n) (s : simplex p n)
+      : act qf d (g (nerveOb {SimplexCat} n, s)) = g (nerveOb {SimplexCat} m, act pf d s)
+      => rightFib-tr-dpath qf (dpath \lam i => g (nerveHom {SimplexCat} {m} {n} d i,
+                                                (Contr.center {pf (nerveOb {SimplexCat} m, nerveOb {SimplexCat} n, nerveHom {SimplexCat} {m} {n} d, s)}).2 i))
+
+    -- | {g} preserves isomorphisms.
+    \lemma g-pres {e : simplex p 1} (i : IsIsoS pf e) : IsIsoS qf (g (nerveOb 1, e))
+      => \let g1 (z : simplex p 1) => g (nerveOb 1, z)
+         \in \have | li : HasLeftInv qf (g1 e) => \case i.1 \with { | inP t => inP
+                       (g (nerveOb 2, t.1), g-act (segRes 1) t.1 *> pmap g1 t.2,
+                        g-act face1 t.1 *> pmap g1 t.3 *> inv (g-act (constHom 0) _) *> pmap (degen qf) (inv (g-act (vert 0) e))) }
+                   | ri : HasRightInv qf (g1 e) => \case i.2 \with { | inP t => inP
+                       (g (nerveOb 2, t.1), g-act (lastEdge 1) t.1 *> pmap g1 t.2,
+                        g-act face1 t.1 *> pmap g1 t.3 *> inv (g-act (constHom 0) _) *> pmap (degen qf) (inv (g-act (vert 1) e))) }
+         \in (li, ri)
+
+    -- | Any fibrewise map out of the paths from {x} is `pmap h` up to a loop, so `pmap h` is an equivalence if it is.
+    \lemma pmap-from-fiberwise {A B : \Cat} {h : A -> B} {x : A} (Th : \Pi (x' : A) -> x = x' -> h x = h x')
+                               (Te : \Pi (x' : A) -> IsEquiv (Th x')) (x' : A) : IsEquiv (pmap h {x} {x'})
+      => \let | w => Th x idp
+         \in \have | shift (r : x = x') : Th x' r = w *> pmap h r => shift-loop Th r
+                   | cancel : IsEquiv {h x = h x'} {h x = h x'} (\lam t => inv w *> t)
+                       => inP \new QEquiv {
+                            | ret t => w *> t
+                            | ret_f t => inv *>-assoc *> pmap (__ *> t) (*>_inv {_} {_} {_} {w}) *> idp_*>
+                            | f_sec t => inv *>-assoc *> pmap (__ *> t) inv_*> *> idp_*>
+                          }
+         \in transport IsEquiv (ext \lam r => pmap (\lam t => inv w *> t) (shift r) *> inv *>-assoc *> pmap (__ *> pmap h r) inv_*> *> idp_*>)
+                       (IsEquiv.trans (Te x') cancel)
+
+    -- | A fibrewise map out of the paths from {x} is determined by its value at `idp`.
+    \sfunc shift-loop {A B : \Cat} {h : A -> B} {x : A} (Th : \Pi (x' : A) -> x = x' -> h x = h x') {x' : A} (r : x = x')
+      : Th x' r = Th x idp *> pmap h r \elim r
+      | idp => idp
+
+    -- | The action of {g} on isomorphisms from {x} to {x'}.
+    \func isoG (x x' : simplex p 0) (z : IsoSec pf x x') : IsoSec qf (g (nerveOb 0, x)) (g (nerveOb 0, x'))
+      => (edgeSec-map g x x' z.1, g-pres z.2)
+
+    -- | Paths, through isomorphisms and {isoG}.
+    \func pathG (x x' : simplex p 0) (r : x = x') : g (nerveOb 0, x) = g (nerveOb 0, x')
+      => IsEquiv.ret (iso-path-equiv qs.2 (g (nerveOb 0, x)) (g (nerveOb 0, x'))) (isoG x x' (transport (IsoSec pf x) r (isoSec-idp pf x)))
+
+    -- | {g} is an equivalence on vertices.
+    \lemma vertex-equiv : IsEquiv (\lam x => g (nerveOb 0, x))
+      => \have | G-equiv (x x' : simplex p 0) : IsEquiv (isoG x x')
+                   => sigma-map-equiv {_} {_} {\lam w => IsIsoS pf (w.1 (nerveOb (1, SimplexCat.id {1})))}
+                                      {\lam w' => IsIsoS qf (w'.1 (nerveOb (1, SimplexCat.id {1})))}
+                                      (g-ff x x') {\lam w i => g-pres i} \lam w => prop-equiv (g-iso _)
+               | Th-equiv (x x' : simplex p 0) : IsEquiv (pathG x x')
+                   => \let res => IsEquiv.trans (iso-path-equiv ps.2 x x')
+                                    (IsEquiv.trans (G-equiv x x') (IsEquiv.ret-equiv (iso-path-equiv qs.2 (g (nerveOb 0, x)) (g (nerveOb 0, x')))))
+                      \in res
+         \in IsEquiv.fromEmbSurj (\new Embedding {
+               | isEmb x x' => IsEquiv.toQEquiv (pmap-from-fiberwise {_} {_} {\lam y => g (nerveOb 0, y)} (pathG x) (Th-equiv x) x')
+             }) g-surj
+
+    -- | Sections over the nerve of `[0]` are their values at its vertex.
+    \lemma nerve0-sections {D : Nerve (Simplex 0) ->⁺ \Cat} : IsEquiv {\Pi (x :⁺ Nerve (Simplex 0)) -> D x} {D pt0} (\lam s => s pt0)
+      => \let | P (x :⁺ Nerve (Simplex 0)) : pt0 = x => path \lam i => (nerve0-contr @ i) x
+              | C : Contr (Nerve (Simplex 0)) => Contr.make pt0 \lam x => P x
+         \in inP \new QEquiv {
+           | ret d => \lam (x :⁺ Nerve (Simplex 0)) => transport+ D (P x) d
+           | ret_f s => funExt+ \lam x => pathOver+.conv {_} {D} {_} {_} {P x} (path \lam i => s (P x i))
+           | f_sec d => pmap (transport+ D __ d) (isProp.=>isSet (isContr=>isProp C) _ _ (P pt0) idp)
+         }
+
+    -- | {g} acts on paths over a path of the base by an equivalence if it is an embedding on the endpoint fiber.
+    \lemma dpath-map-equiv {b0 b1 : DeltaCat} (beta : b0 = b1) {a : Fibers p b0} {c : Fibers p b1}
+                           (e : IsEquiv (\lam x => g (b1, x)))
+      : IsEquiv {Path (\lam i => Fibers p (beta i)) a c} {Path (\lam i => Fibers q (beta i)) (g (b0, a)) (g (b1, c))}
+                (\lam h => path \lam i => g (beta i, h i)) \elim beta
+      | idp => pmapIsEquiv e
+
+    -- | A map of Σ-types over an equivalence that is an equivalence on fibers is an equivalence.
+    \lemma sigma-map-equiv {A A' : \Cat} {B : A -> \Cat} {B' : A' -> \Cat} {f : A -> A'} (fe : IsEquiv f)
+                           {h : \Pi (a : A) -> B a -> B' (f a)} (he : \Pi (a : A) -> IsEquiv (h a))
+      : IsEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A') (B' a)} (\lam s => (f s.1, h s.1 s.2))
+      => inP (sigma-equiv (IsEquiv.toQEquiv fe) \lam a => IsEquiv.toQEquiv (he a))
+
+    {- | Sections over `Δ/[k+1]`: {gpost} is an equivalence if {g} is one over `[k]`, `[1]` and `[0]`.
+     -   By {IsSegal}, {span-pushout} and {CatPushout.elim-equiv}, sections over `Δ/[k+1]` are triples of sections over the two edges
+     -   of {SpanPO} and a path over its apex, and {gpost} acts on them componentwise.
+     -}
+    \lemma segal-step (k : Nat) (ek : IsEquiv (\lam x => g (nerveOb k, x))) (e1 : IsEquiv (\lam x => g (nerveOb 1, x)))
+                      (e0 : IsEquiv (\lam x => g (nerveOb 0, x)))
+      : IsEquiv (gpost g (sliceProj (suc k)))
+      => \let | Mp => restrict-equiv ps.1 | Mq => restrict-equiv qs.1
+         \in \let res => IsEquiv.leftFactor Mq (IsEquiv.trans Mp (triple-equiv ek e1 e0)) \in res
+      \where {
+        -- | Sections over `Δ/[k+1]` as triples over {SpanPO}.
+        \lemma restrict-equiv {E' : \Cat} {p' : E' ->⁺ DeltaCat} (ps' : IsSegal p')
+          : IsEquiv {\Pi (s :⁺ Nerve (SliceS (suc k))) -> Fibers p' (sliceProj (suc k) s)}
+                    {\Sigma (u : \Pi (y :⁺ Nerve (Simplex 1)) -> Fibers p' (piS k (cinl y)))
+                            (v : \Pi (z :⁺ Nerve (Simplex 1)) -> Fibers p' (piS k (cinr z)))
+                            (\Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => Fibers p' (piS k (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x)))}
+                    (\lam t => (\lam y => t (spanH k (cinl y)), \lam z => t (spanH k (cinr z)), \lam x => path \lam i => t (spanH k (cglue x i))))
+          => \let | T3 => \Pi (w :⁺ SpanPO) -> Fibers p' (piS k w)
+                  | T4 => \Sigma (u : \Pi (y :⁺ Nerve (Simplex 1)) -> Fibers p' (piS k (cinl y)))
+                                 (v : \Pi (z :⁺ Nerve (Simplex 1)) -> Fibers p' (piS k (cinr z)))
+                                 (\Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => Fibers p' (piS k (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x)))
+                  | psi (h : T3) : T4
+                      => (\lam (y :⁺ Nerve (Simplex 1)) => h (cinl y), \lam (z :⁺ Nerve (Simplex 1)) => h (cinr z),
+                          \lam (x :⁺ Nerve (Simplex 0)) => path \lam i => h (cglue x i))
+             \in \have | e2 : IsEquiv {\Pi (s :⁺ Nerve SpanP) -> Fibers p' (sliceProj (suc k) (nerveMap (spanInc k) s))} {T3}
+                                      (\lam u w => u (spanPhi w))
+                           => sections-precomp-equiv {_} {_} {spanPhi} span-pushout
+                       | e3 : IsEquiv psi => inP CatPushout.elim-equiv
+                \in \let res => IsEquiv.trans (ps' k) (IsEquiv.trans e2 e3) \in res
+
+        -- | {gpost} on triples.
+        \lemma triple-equiv (ek : IsEquiv (\lam x => g (nerveOb k, x))) (e1 : IsEquiv (\lam x => g (nerveOb 1, x)))
+                            (e0 : IsEquiv (\lam x => g (nerveOb 0, x)))
+          : IsEquiv {\Sigma (u : \Pi (y :⁺ Nerve (Simplex 1)) -> Fibers p (piS k (cinl y)))
+                            (v : \Pi (z :⁺ Nerve (Simplex 1)) -> Fibers p (piS k (cinr z)))
+                            (\Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => Fibers p (piS k (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x)))}
+                    {\Sigma (u : \Pi (y :⁺ Nerve (Simplex 1)) -> Fibers q (piS k (cinl y)))
+                            (v : \Pi (z :⁺ Nerve (Simplex 1)) -> Fibers q (piS k (cinr z)))
+                            (\Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => Fibers q (piS k (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x)))}
+                    (\lam T => (gpost g (\lam y => piS k (cinl y)) T.1, gpost g (\lam z => piS k (cinr z)) T.2,
+                                \lam x => path \lam i => g (piS k (cglue x i), T.3 x i)))
+          => \let | Up => \Pi (y :⁺ Nerve (Simplex 1)) -> Fibers p (piS k (cinl y))
+                  | Vp => \Pi (z :⁺ Nerve (Simplex 1)) -> Fibers p (piS k (cinr z))
+                  | Uq => \Pi (y :⁺ Nerve (Simplex 1)) -> Fibers q (piS k (cinl y))
+                  | Vq => \Pi (z :⁺ Nerve (Simplex 1)) -> Fibers q (piS k (cinr z))
+                  | Hp (u : Up) (v : Vp) => \Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => Fibers p (piS k (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x))
+                  | Hq (u : Uq) (v : Vq) => \Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => Fibers q (piS k (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x))
+                  | eU : IsEquiv (gpost g (\lam y => piS k (cinl y))) => post-equiv (\lam y => piS k (cinl y)) (simplex-terminal 1) ek
+                  | eV : IsEquiv (gpost g (\lam z => piS k (cinr z))) => post-equiv (\lam z => piS k (cinr z)) (simplex-terminal 1) e1
+             \in \have | eH (u : Up) (v : Vp)
+                         : IsEquiv {Hp u v} {Hq (gpost g (\lam y => piS k (cinl y)) u) (gpost g (\lam z => piS k (cinr z)) v)}
+                                   (\lam h x => path \lam i => g (piS k (cglue x i), h x i))
+                         => \let res => IsEquiv.leftFactor (nerve0-sections {\lam x => Path (\lam i => Fibers q (piS k (cglue x i))) (g (piS k (cinl (nerveMap (vert {1} 0) x)), u (nerveMap (vert {1} 0) x))) (g (piS k (cinr (nerveMap (vert {1} 0) x)), v (nerveMap (vert {1} 0) x)))})
+                                         (IsEquiv.trans (nerve0-sections {\lam x => Path (\lam i => Fibers p (piS k (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x))})
+                                                        (dpath-map-equiv (path \lam i => piS k (cglue pt0 i)) e0))
+                            \in res
+                       | nested : IsEquiv {\Sigma (u : Up) (\Sigma (v : Vp) (Hp u v))} {\Sigma (u : Uq) (\Sigma (v : Vq) (Hq u v))}
+                                          (\lam S => (gpost g (\lam y => piS k (cinl y)) S.1, (gpost g (\lam z => piS k (cinr z)) S.2.1,
+                                                      \lam x => path \lam i => g (piS k (cglue x i), S.2.2 x i))))
+                           => sigma-map-equiv eU \lam u => sigma-map-equiv eV \lam v => eH u v
+                       | assoc-p : IsEquiv {\Sigma (u : Up) (v : Vp) (Hp u v)} {\Sigma (u : Up) (\Sigma (v : Vp) (Hp u v))} (\lam T => (T.1, (T.2, T.3)))
+                           => inP \new QEquiv { | ret S => (S.1, S.2.1, S.2.2) | ret_f _ => idp | f_sec _ => idp }
+                       | assoc-q : IsEquiv {\Sigma (u : Uq) (\Sigma (v : Vq) (Hq u v))} {\Sigma (u : Uq) (v : Vq) (Hq u v)} (\lam S => (S.1, S.2.1, S.2.2))
+                           => inP \new QEquiv { | ret T => (T.1, (T.2, T.3)) | ret_f _ => idp | f_sec _ => idp }
+                \in \let res => IsEquiv.trans assoc-p (IsEquiv.trans nested assoc-q) \in res
+      }
+  }
+
+-- | A map of complete Segal right fibrations that is fully faithful and essentially surjective is an equivalence of total categories.
+\lemma segal-map-hequiv {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat}
+  {pf : IsRightFib (Fibers p)} {qf : IsRightFib (Fibers q)} (ps : IsCompleteSegal pf) (qs : IsCompleteSegal qf)
+  (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+  (g-surj : IsSurj (\lam (x : simplex p 0) => g (nerveOb 0, x)))
+  (g-ff : \Pi (x y : simplex p 0) -> IsEquiv (edgeSec-map g x y))
+  (g-iso : \Pi (e : simplex p 1) -> IsIsoS qf (g (nerveOb 1, e)) -> IsIsoS pf e)
+  : IsHEquiv {\Sigma⁺ (b : DeltaCat) (Fibers p b)} {\Sigma⁺ (b : DeltaCat) (Fibers q b)} (\lam s => (s.1, g s))
+  => rightFib-fiberwise-equiv pf qf g (segal-map-equiv ps qs g g-surj g-ff g-iso)
