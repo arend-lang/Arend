@@ -1,0 +1,107 @@
+{- | Cospans `x -> m <- y` whose second arrow is an isomorphism.
+ -}
+
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Limit.Terminal
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Paths
+
+-- | The arrow {u} followed by the inverse of {v}.
+\func comp_iso {D : \Cat} {x y m : D} (u : x ~> m) (v : y ~> m) (vi : IsIso v) : x ~> y
+  => comp u (IsIso.ret vi)
+
+\sfunc comp_iso-eq {D : \Cat} {x y m : D} (u : x ~> m) (v : y ~> m) (vi : IsIso v) : comp (comp_iso u v vi) v = u
+  => inv comp-assoc *> pmap (comp u) (IsIso.ret_f vi) *> comp_idd-right
+
+-- | {comp_iso} is the unique arrow satisfying {comp_iso-eq}.
+\sfunc comp_iso-unique {D : \Cat} {x y m : D} (u : x ~> m) (v : y ~> m) (vi : IsIso v) {h : x ~> y} (e : comp h v = u) : h = comp_iso u v vi
+  => IsEquiv.isInj (comp-iso-right-equiv {D} {x} vi) (e *> inv (comp_iso-eq u v vi))
+
+-- | {comp_iso} does not depend on the proof that its second arrow is an isomorphism.
+\sfunc comp_iso-irrel {D : \Cat} {x y m : D} (u : x ~> m) (v : y ~> m) (vi vi' : IsIso v) : comp_iso u v vi = comp_iso u v vi'
+  => pmap (comp_iso u v) prop-pi
+
+-- | {comp_iso} is an isomorphism if and only if its first arrow is.
+\lemma comp_iso-iso {D : \Cat} {x y m : D} (u : x ~> m) (v : y ~> m) (vi : IsIso v) : IsIso (comp_iso u v vi) <-> IsIso u
+  => (\lam i => transport IsIso (comp_iso-eq u v vi) (comp-IsIso i vi), \lam i => (comp-IsIso-left vi).1 (transportInv IsIso (comp_iso-eq u v vi) i))
+
+-- | {comp_iso} commutes with transport of the endpoints.
+\sfunc comp_iso-transport {D : \Cat} {x y m x' y' m' : D} (al : x = x') (be : y = y') (ta : m = m') (u : x ~> m) (v : y ~> m) (vi : IsIso v)
+                          (vi' : IsIso (transport2 (\lam a b => a ~> b) be ta v))
+  : comp_iso (transport2 (\lam a b => a ~> b) al ta u) (transport2 (\lam a b => a ~> b) be ta v) vi' = transport2 (\lam a b => a ~> b) al be (comp_iso u v vi)
+  \elim al, be, ta
+  | idp, idp, idp => comp_iso-irrel u v vi' vi
+
+-- | Composites of arrows commute with transport of the endpoints.
+\func comp-transport {D : \Cat} {x y z x' y' z' : D} (al : x = x') (be : y = y') (ga : z = z') (u : x ~> y) (v : y ~> z)
+  : comp (transport2 (\lam a b => a ~> b) al be u) (transport2 (\lam a b => a ~> b) be ga v) = transport2 (\lam a b => a ~> b) al ga (comp u v)
+  \elim al, be, ga
+  | idp, idp, idp => idp
+
+-- | Transport of the endpoints of arrows is an equivalence.
+\lemma transport2-equiv {D : \Cat} {a a' b b' : D} (P : a = a') (Q : b = b') : IsEquiv (transport2 (\lam x y => x ~> y) P Q) \elim P, Q
+  | idp, idp => inP idEquiv
+
+\func tr2-trans {D : \Cat} {a a' a'' b b' b'' : D} (P : a = a') (P' : a' = a'') (Q : b = b') (Q' : b' = b'') (h : a ~> b)
+  : transport2 (\lam x y => x ~> y) (P *> P') (Q *> Q') h = transport2 (\lam x y => x ~> y) P' Q' (transport2 (\lam x y => x ~> y) P Q h)
+  \elim P', Q'
+  | idp, idp => idp
+
+\func dpath-tr {D : \Cat} {U U' : DI ->⁺ D} (Q : U = U')
+  : dpath (\lam i => U' i) = transport2 (\lam a b => a ~> b) (path \lam k => Q k dleft) (path \lam k => Q k dright) (dpath \lam i => U i) \elim Q
+  | idp => idp
+
+\func tr2-inv {D : \Cat} {a a' b b' : D} (P : a = a') (Q : b = b') (h : a ~> b)
+  : transport2 (\lam x y => x ~> y) (inv P) (inv Q) (transport2 (\lam x y => x ~> y) P Q h) = h \elim P, Q
+  | idp, idp => idp
+
+\func tr2-inv' {D : \Cat} {a a' b b' : D} (P : a = a') (Q : b = b') (h : a' ~> b')
+  : transport2 (\lam x y => x ~> y) P Q (transport2 (\lam x y => x ~> y) (inv P) (inv Q) h) = h \elim P, Q
+  | idp, idp => idp
+
+-- | {comp_iso} of the images of {a0} and {a1}.
+\func comp_iso_dmap {K D : \Cat} (F : K ->⁺ D) {o0 o1 m : K} (a0 : o0 ~> m) (a1 : o1 ~> m) (i1 : IsIso (dmap F a1)) : F o0 ~> F o1
+  => comp_iso (dmap F a0) (dmap F a1) i1
+
+\sfunc comp_iso_dmap-eq {K D : \Cat} (F : K ->⁺ D) {o0 o1 m : K} (a0 : o0 ~> m) (a1 : o1 ~> m) (i1 : IsIso (dmap F a1))
+  : comp (comp_iso_dmap F a0 a1 i1) (dmap F a1) = dmap F a0
+  => comp_iso-eq (dmap F a0) (dmap F a1) i1
+
+-- | {comp_iso_dmap} is the unique arrow satisfying {comp_iso_dmap-eq}.
+\sfunc comp_iso_dmap-unique {K D : \Cat} (F : K ->⁺ D) {o0 o1 m : K} (a0 : o0 ~> m) (a1 : o1 ~> m) (i1 : IsIso (dmap F a1))
+                            {h : F o0 ~> F o1} (e : comp h (dmap F a1) = dmap F a0) : h = comp_iso_dmap F a0 a1 i1
+  => comp_iso-unique (dmap F a0) (dmap F a1) i1 e
+
+-- | {comp_iso_dmap} followed by the image of the arrow to the terminal object.
+\sfunc comp_iso_dmap-terminal {K D : \Cat} (F : K ->⁺ D) {top : K} (Pt : IsTerminal top) {o0 o1 m : K} (a0 : o0 ~> m) (a1 : o1 ~> m) (i1 : IsIso (dmap F a1))
+  : comp (comp_iso_dmap F a0 a1 i1) (dmap F (Pt o1).center) = dmap F (Pt o0).center
+  => pmap (\lam g => comp (comp_iso_dmap F a0 a1 i1) (dmap F g)) (isContr=>isProp (Pt o1) _ (comp a1 (Pt m).center))
+     *> pmap (comp (comp_iso_dmap F a0 a1 i1)) (dmap_comp F)
+     *> comp-assoc
+     *> pmap (comp __ (dmap F (Pt m).center)) (comp_iso_dmap-eq F a0 a1 i1)
+     *> inv (dmap_comp F)
+     *> pmap (dmap F) (isContr=>isProp (Pt o0) (comp a0 (Pt m).center) (Pt o0).center)
+
+{- | Arrows {h01}, {h12} and {h02} compatible with the arrows to the terminal object compose, if the image of the arrow from `o2`
+ -   is an isomorphism.
+ -}
+\sfunc terminal-compat-comp {K D : \Cat} (F : K ->⁺ D) {top : K} (Pt : IsTerminal top) {o0 o1 o2 : K}
+                            {h01 : F o0 ~> F o1} {h12 : F o1 ~> F o2} {h02 : F o0 ~> F o2}
+                            (e01 : comp h01 (dmap F (Pt o1).center) = dmap F (Pt o0).center)
+                            (e12 : comp h12 (dmap F (Pt o2).center) = dmap F (Pt o1).center)
+                            (e02 : comp h02 (dmap F (Pt o2).center) = dmap F (Pt o0).center)
+                            (i2 : IsIso (dmap F (Pt o2).center))
+  : comp h01 h12 = h02
+  => IsEquiv.isInj (comp-iso-right-equiv {D} {F o0} i2) (inv comp-assoc *> pmap (comp h01) e12 *> e01 *> inv e02)
+
+-- | {comp_iso_dmap} compose if the image of the arrow from the last object to the terminal object is an isomorphism.
+\sfunc comp_iso_dmap-comp {K D : \Cat} (F : K ->⁺ D) {top : K} (Pt : IsTerminal top) {o0 o1 o2 m01 m12 m02 : K}
+                          (a0 : o0 ~> m01) (a1 : o1 ~> m01) (i1 : IsIso (dmap F a1))
+                          (b1 : o1 ~> m12) (b2 : o2 ~> m12) (i2 : IsIso (dmap F b2))
+                          (c0 : o0 ~> m02) (c2 : o2 ~> m02) (j2 : IsIso (dmap F c2))
+                          (t2 : IsIso (dmap F (Pt o2).center))
+  : comp (comp_iso_dmap F a0 a1 i1) (comp_iso_dmap F b1 b2 i2) = comp_iso_dmap F c0 c2 j2
+  => terminal-compat-comp F Pt (comp_iso_dmap-terminal F Pt a0 a1 i1) (comp_iso_dmap-terminal F Pt b1 b2 i2) (comp_iso_dmap-terminal F Pt c0 c2 j2) t2

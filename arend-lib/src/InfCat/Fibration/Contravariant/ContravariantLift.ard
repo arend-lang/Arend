@@ -177,3 +177,75 @@
        | f_sec b => pmap (\lam f => (rightFib-lift {K} {B} Bf (top, top, f, b)).1) (isContr=>isProp (Pt top) _ idd)
                     *> pmap (\lam (c : ContLift B (top, top, idd, b)) => c.1) (rightFib-lift-unique {K} {B} Bf {_} {_} {b, idd})
      }
+
+-- | An object {t} with a natural transformation `s : id -> const t` whose component at {t} is an isomorphism is terminal.
+\lemma section-terminal {M : \Cat} {t : M} (s : \Pi (z :⁺ M) -> z ~> t) (si : IsIso (s t)) : IsTerminal t
+  => \lam z => \let e => comp-iso-right-equiv {M} {z} {t} {t} si
+               \in Contr.make (IsEquiv.ret e (s z)) \lam f => pmap (IsEquiv.ret e) (inv (triangle f)) *> IsEquiv.ret_f e {f}
+  \where
+    -- | The naturality square of {s} at {f}.
+    \sfunc triangle {z : M} (f : z ~> t) : comp f (s t) = s z
+      => ~>-natural {M} {M} {\lam z => z} {\lam _ => t} s {z} {t} {f} *> comp_idd-right
+
+{- | If the total category of a right fibration {q} has a terminal object {t}, then the fiber over {z} is the type of arrows
+ -   from {z} to `q t`: an object `m` over {z} goes to the image of the arrow from `m` to {t}.
+ -}
+\lemma rightFib-terminal-repr {M L : \Cat} {q : M ->⁺ L} (qf : IsRightFib (Fibers q)) {t : M} (tt : IsTerminal t) (z : L)
+  : IsEquiv {\Sigma (m : M) (q m = z)} {z ~> q t} (\lam s => transport (__ ~> q t) s.2 (dmap q (tt s.1).center))
+  => \let | e1 : IsEquiv {\Sigma (m : M) (q m = z)} {\Sigma (w : \Sigma (y : M) (y ~> t)) (q w.1 = z)} (\lam s => ((s.1, (tt s.1).center), s.2))
+              => inP \new QEquiv {
+                   | ret s => (s.1.1, s.2)
+                   | ret_f _ => idp
+                   | f_sec s => \case \elim s \with {
+                     | ((y, a), P) => pmap (\lam a' => ((((y, a') : \Sigma (y : M) (y ~> t)), P) : \Sigma (w : \Sigma (y : M) (y ~> t)) (q w.1 = z))) ((tt y).contraction a)
+                   }
+                 }
+          | e2 : IsEquiv {\Sigma (w : \Sigma (y : M) (y ~> t)) (q w.1 = z)} {\Sigma (v : \Sigma (a : L) (a ~> q t)) (v.1 = z)} (\lam s => (sliceMap q t s.1, s.2))
+              => inP (sigma-equiv (IsEquiv.toQEquiv ((rightFib-slice-char {M} {L} {q}).1 qf t)) \lam w => idEquiv)
+          | e3 : IsEquiv {\Sigma (v : \Sigma (a : L) (a ~> q t)) (v.1 = z)} {z ~> q t} (\lam s => transport (__ ~> q t) s.2 s.1.2)
+              => inP \new QEquiv {
+                   | ret h => ((z, h), idp)
+                   | ret_f s => repr-ret s.1.2 s.2
+                   | f_sec _ => idp
+                 }
+     \in IsEquiv.trans e1 (IsEquiv.trans e2 e3)
+  \where
+    \func repr-ret {a : L} (h : a ~> q t) (P : a = z)
+      : (((z, transport (__ ~> q t) P h) : \Sigma (a : L) (a ~> q t)), idp) = {\Sigma (v : \Sigma (a : L) (a ~> q t)) (v.1 = z)} ((a, h), P) \elim P
+      | idp => idp
+
+-- | The source of the chosen lift is the source of any lift.
+\sfunc rightFib-lift-source {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {d :⁺ ContLiftData B} (c :⁺ ContLift B d)
+  : (rightFib-lift Bf d).1 = c.1
+  => pmap+ __.1 (rightFib-lift-unique Bf {d} {rightFib-lift Bf d} {c})
+
+-- | The source of the lift of an identity arrow.
+\sfunc rightFib-lift-idd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a :⁺ A} {b :⁺ B a}
+  : (rightFib-lift Bf (a, a, idd, b)).1 = b
+  => rightFib-lift-source Bf {a, a, idd, b} (b, dpath \lam _ => b)
+
+-- | The source of the lift of a composite is the source of lifts along the factors.
+\sfunc rightFib-lift-comp {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a'' a' a :⁺ A} {f :⁺ a'' ~> a'} {g :⁺ a' ~> a} {b :⁺ B a}
+  : (rightFib-lift Bf (a'', a, comp f g, b)).1 = (rightFib-lift Bf (a'', a', f, (rightFib-lift Bf (a', a, g, b)).1)).1
+  => pmap+ (\lam x => (rightFib-lift Bf (a'', a, x, b)).1)
+           (inv (dmap_comp {_} {A} __.1 {_} {_} {_} {comp-U Bf f g b} {comp-V Bf g b}))
+     *> rightFib-lift-source Bf (comp-lift Bf f g b)
+  \where \private {
+    \func comp-V {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a :⁺ A} (g :⁺ a' ~> a) (b :⁺ B a)
+      : (a', (rightFib-lift Bf (a', a, g, b)).1) ~> {\Sigma⁺ (x : A) (B x)} (a, b)
+      => dpath \lam i => (g i, (rightFib-lift Bf (a', a, g, b)).2 i)
+
+    \func comp-U {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a'' a' a :⁺ A} (f :⁺ a'' ~> a') (g :⁺ a' ~> a) (b :⁺ B a)
+      : (a'', (rightFib-lift Bf (a'', a', f, (rightFib-lift Bf (a', a, g, b)).1)).1) ~> {\Sigma⁺ (x : A) (B x)} (a', (rightFib-lift Bf (a', a, g, b)).1)
+      => dpath \lam i => (f i, (rightFib-lift Bf (a'', a', f, (rightFib-lift Bf (a', a, g, b)).1)).2 i)
+
+    \func comp-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a'' a' a :⁺ A} (f :⁺ a'' ~> a') (g :⁺ a' ~> a) (b :⁺ B a)
+      : ContLift B (a'', a, dmap __.1 (comp (comp-U Bf f g b) (comp-V Bf g b)), b)
+      => ((rightFib-lift Bf (a'', a', f, (rightFib-lift Bf (a', a, g, b)).1)).1, dpath \lam i => (comp (comp-U Bf f g b) (comp-V Bf g b) i).2)
+  }
+
+-- | Lifts in the slice family over {x} are given by composition.
+\sfunc hom-lift-comp {C : \Cat} {x : C} {a' a :⁺ C} (f :⁺ a' ~> a) (h :⁺ a ~> x)
+  : (rightFib-lift (hom-rightFib x) (a', a, f, h)).1 = comp f h
+  => pmap+ (\lam h' => (rightFib-lift (hom-rightFib x) (a', a, f, h')).1) (inv comp_idd-left)
+     *> rightFib-lift-source (hom-rightFib x) {a', a, f, comp idd h} (comp f h, dpath \lam i => comp (conn-left f i) h)

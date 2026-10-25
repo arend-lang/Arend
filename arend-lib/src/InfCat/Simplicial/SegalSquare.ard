@@ -1,0 +1,219 @@
+{- | The Segal condition in terms of squares.
+
+ -   For a square `S : DI ->⁺ DI ->⁺ B` and a family {D} over {B}, a section over the horn of {S} is a pair of sections over its top
+ -   and left sides which agree at the corner ({HornSec}); {hornRes} restricts sections over the square to its horn.
+ -   * {span-sections}: sections over the nerve of the span {SpanP} are sections over its horn.
+ -   * {segal-square}: for a Segal right fibration over {DeltaCat}, sections over the naturality square of the initial segment
+ -     {joinIncln} at the top vertex `[0] -> [n]` are determined by their restrictions to the horn.
+ -     The square is the image of the square {sliceSq} in `Δ/[n+1]`, whose horn is the span ({spanInc}) and whose last corner is
+ -     terminal. So this is {IsSegal} together with {span-sections}.
+ -}
+
+\import Category
+\import Category.Simplex
+\import Category.Slice
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.CatPushoutHom
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Interval
+\import InfCat.Limit.Terminal
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.Simplicial.NerveSegal
+\import InfCat.Nerve.Simplicial.NerveSpine
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Paths
+\import InfCat.Simplicial.Join
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import InfCat.Rezk
+\import InfCat.Square
+\import InfCat.Trunc.IsCatTrunc
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\open SegalHelpers
+\open NerveLow
+
+-- # Horns of squares
+
+-- | Sections over the top and left sides of a square that agree at the corner.
+\func HornSec {B : \Cat} (D : B ->⁺ \Cat) (S : DI ->⁺ DI ->⁺ B) : \Cat
+  => \Sigma (a : \Pi (i :⁺ DI) -> D (S i dleft)) (b : \Pi (j :⁺ DI) -> D (S dleft j)) (a dleft = b dleft)
+
+-- | The restriction of a section over a square to its horn.
+\func hornRes {B : \Cat} {D : B ->⁺ \Cat} {S : DI ->⁺ DI ->⁺ B} (s : \Pi (i j :⁺ DI) -> D (S i j)) : HornSec D S
+  => (\lam i => s i dleft, \lam j => s dleft j, idp)
+
+-- # Sections over the span
+
+-- | The edge `0 -> 1` of the span.
+\func spanEdgeA (i :⁺ DI) : Nerve SpanP
+  => nerveMap spanB (n1arr i)
+
+-- | The edge `0 -> 2` of the span.
+\func spanEdgeB (j :⁺ DI) : Nerve SpanP
+  => nerveMap spanC (n1arr j)
+
+-- | The walking arrow {DI} is the nerve of `[1]`.
+\lemma n1arr-hequiv : IsHEquiv n1arr
+  => inP \new HQEquiv n1arr {
+    | finv => n1toDI
+    | finv_f _ => idp
+    | f_finv y => path \lam k => (n1-round @ k) y
+  }
+
+-- | Sections over the nerve of the span are sections over its two edges that agree at the vertex `0`.
+\lemma span-sections {D : Nerve SpanP ->⁺ \Cat}
+  : IsEquiv {\Pi (w :⁺ Nerve SpanP) -> D w}
+            {\Sigma (a : \Pi (i :⁺ DI) -> D (spanEdgeA i)) (b : \Pi (j :⁺ DI) -> D (spanEdgeB j)) (a dleft = b dleft)}
+            (\lam t => (\lam i => t (spanEdgeA i), \lam j => t (spanEdgeB j), idp))
+  => \let | e1 : IsEquiv {\Pi (w :⁺ Nerve SpanP) -> D w} {\Pi (w :⁺ SpanPO) -> D (spanPhi w)} (\lam t w => t (spanPhi w))
+              => sections-precomp-equiv span-pushout
+          | res => IsEquiv.trans e1 (IsEquiv.trans (inP CatPushout.elim-equiv) glue-equiv)
+     \in transport IsEquiv (ext \lam t => ext (idp, idp, glue-path t)) res
+  \where {
+    -- | The image of the glue of {SpanPO} at its vertex is trivial.
+    \sfunc loop-idp : path (\lam i => spanPhi (cglue pt0 i)) = idp
+      => IsEquiv.ret (inP (Embedding.pmap-isEquiv {=_~>-embedding (nerveOb {SpanP} 0) (nerveOb 0)})) (nerve-preorder-prop _ _ _ _)
+
+    \func fixL {w : Nerve SpanP} {L : w = w} (Q : L = idp) {x y : D w} (g : Path (\lam i => D (L i)) x y) : x = y
+      => transport (\lam L' => Path (\lam i => D (L' i)) x y) Q g
+
+    \lemma fixL-equiv {w : Nerve SpanP} {L : w = w} (Q : L = idp) {x y : D w} : IsEquiv (fixL Q {x} {y})
+      => transport-isEquiv (\lam L' => Path (\lam i => D (L' i)) x y) Q
+
+    \sfunc fixL-sec {w : Nerve SpanP} {L : w = w} (Q : L = idp) (t : \Pi (w' :⁺ Nerve SpanP) -> D w')
+      : fixL Q (path \lam i => t (L i)) = idp \elim Q
+      | idp => idp
+
+    \sfunc glue-path (t : \Pi (w :⁺ Nerve SpanP) -> D w)
+      : fixL loop-idp (path \lam i => t (spanPhi (cglue pt0 i))) = idp
+      => fixL-sec loop-idp t
+
+    \lemma glue-equiv
+      : IsEquiv {\Sigma (u : \Pi (y :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinl y)))
+                        (v : \Pi (z :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinr z)))
+                        (\Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => D (spanPhi (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x)))}
+                {\Sigma (a : \Pi (i :⁺ DI) -> D (spanEdgeA i)) (b : \Pi (j :⁺ DI) -> D (spanEdgeB j)) (a dleft = b dleft)}
+                (\lam T => (\lam i => T.1 (n1arr i), \lam j => T.2 (n1arr j), fixL loop-idp (T.3 pt0)))
+      => \let | eU : IsEquiv {\Pi (y :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinl y))} {\Pi (i :⁺ DI) -> D (spanEdgeA i)} (\lam u i => u (n1arr i))
+                  => sections-precomp-equiv n1arr-hequiv
+              | eV : IsEquiv {\Pi (z :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinr z))} {\Pi (j :⁺ DI) -> D (spanEdgeB j)} (\lam v j => v (n1arr j))
+                  => sections-precomp-equiv n1arr-hequiv
+              | eG (u : \Pi (y :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinl y))) (v : \Pi (z :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinr z)))
+                : IsEquiv {\Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => D (spanPhi (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x))}
+                          {u (nerveOb 0) = v (nerveOb 0)} (\lam g => fixL loop-idp (g pt0))
+                  => IsEquiv.trans (nerve0-sections {\lam x => Path (\lam i => D (spanPhi (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x))})
+                                   (fixL-equiv loop-idp)
+         \in \have nested : IsEquiv {\Sigma (u : \Pi (y :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinl y)))
+                                          (\Sigma (v : \Pi (z :⁺ Nerve (Simplex 1)) -> D (spanPhi (cinr z)))
+                                                  (\Pi (x :⁺ Nerve (Simplex 0)) -> Path (\lam i => D (spanPhi (cglue x i))) (u (nerveMap (vert {1} 0) x)) (v (nerveMap (vert {1} 0) x))))}
+                                  {\Sigma (a : \Pi (i :⁺ DI) -> D (spanEdgeA i)) (\Sigma (b : \Pi (j :⁺ DI) -> D (spanEdgeB j)) (a dleft = b dleft))}
+                                  (\lam S => (\lam i => S.1 (n1arr i), (\lam j => S.2.1 (n1arr j), fixL loop-idp (S.2.2 pt0))))
+                 => sigma-map-equiv eU \lam u => sigma-map-equiv eV \lam v => eG u v
+            \in \let res => IsEquiv.trans assoc-l (IsEquiv.trans nested assoc-r) \in res
+
+    \lemma sigma-map-equiv {A A' : \Cat} {B : A -> \Cat} {B' : A' -> \Cat} {f : A -> A'} (fe : IsEquiv f)
+                           {h : \Pi (a : A) -> B a -> B' (f a)} (he : \Pi (a : A) -> IsEquiv (h a))
+      : IsEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A') (B' a)} (\lam s => (f s.1, h s.1 s.2))
+      => inP (sigma-equiv (IsEquiv.toQEquiv fe) \lam a => IsEquiv.toQEquiv (he a))
+
+    \lemma assoc-l {A : \Cat} {B : A -> \Cat} {C : \Pi (a : A) -> B a -> \Cat}
+      : IsEquiv {\Sigma (a : A) (b : B a) (C a b)} {\Sigma (a : A) (\Sigma (b : B a) (C a b))} (\lam T => (T.1, (T.2, T.3)))
+      => inP \new QEquiv { | ret S => (S.1, S.2.1, S.2.2) | ret_f _ => idp | f_sec _ => idp }
+
+    \lemma assoc-r {A : \Cat} {B : A -> \Cat} {C : \Pi (a : A) -> B a -> \Cat}
+      : IsEquiv {\Sigma (a : A) (\Sigma (b : B a) (C a b))} {\Sigma (a : A) (b : B a) (C a b)} (\lam S => (S.1, S.2.1, S.2.2))
+      => inP \new QEquiv { | ret T => (T.1, (T.2, T.3)) | ret_f _ => idp | f_sec _ => idp }
+
+    -- | Sections over the nerve of `[0]` are their values at its vertex.
+    \lemma nerve0-sections {D' : Nerve (Simplex 0) ->⁺ \Cat} : IsEquiv {\Pi (x :⁺ Nerve (Simplex 0)) -> D' x} {D' pt0} (\lam s => s pt0)
+      => \let | P (x :⁺ Nerve (Simplex 0)) : pt0 = x => path \lam i => (nerve0-contr @ i) x
+              | C : Contr (Nerve (Simplex 0)) => Contr.make pt0 \lam x => P x
+         \in inP \new QEquiv {
+           | ret d => \lam (x :⁺ Nerve (Simplex 0)) => transport+ D' (P x) d
+           | ret_f s => funExt+ \lam x => pathOver+.conv {_} {D'} {_} {_} {P x} (path \lam i => s (P x i))
+           | f_sec d => pmap (transport+ D' __ d) (isProp.=>isSet (isContr=>isProp C) _ _ (P pt0) idp)
+         }
+  }
+
+-- # Sections over squares
+
+-- | The last corner of the square is terminal.
+\lemma square-terminal : IsTerminal {\Sigma⁺ (i : DI) DI} (dright, dright)
+  => \lam y => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv (\lam _ _ => DI) {y} {dright, dright})) $
+       Contr.Contr_QEquiv (symQEquiv (contr-left (DI-terminal y.1) {\lam _ => y.2 ~> dright})) (DI-terminal y.2)
+  \where
+    \lemma DI-terminal (x : DI) : Contr (x ~> dright) \elim x
+      | dleft => DI-hom-lr-contr
+      | dright => DI-hom-rr-contr
+
+-- | Sections of a right fibration over a square are determined by their value at the last corner.
+\lemma rightFib-square-sections {B : \Cat} {D : B ->⁺ \Cat} (Df : IsRightFib D) (S : DI ->⁺ DI ->⁺ B)
+  : IsEquiv {\Pi (i j :⁺ DI) -> D (S i j)} {D (S dright dright)} (\lam s => s dright dright)
+  => \let curry : IsEquiv {\Pi (i j :⁺ DI) -> D (S i j)} {\Pi (k :⁺ \Sigma⁺ (i : DI) DI) -> D (S k.1 k.2)} (\lam s k => s k.1 k.2)
+                => inP \new QEquiv { | ret t i j => t (i, j) | ret_f _ => idp | f_sec _ => idp }
+     \in IsEquiv.trans curry (rightFib-terminal-sections (rightFib-pullback (\lam (k :⁺ \Sigma⁺ (i : DI) DI) => S k.1 k.2) Df) square-terminal)
+
+-- | Squares in a category with hom-sets are determined by their sides.
+\sfunc square-path {Z : \Cat} (Zt : IsTruncCat 1 Z) {a b c d : Z} {ab ab' : a ~> b} {cd cd' : c ~> d} {ac ac' : a ~> c} {bd bd' : b ~> d}
+                   (s : DPath (\lam i => ab i ~> cd i) ac bd) (s' : DPath (\lam i => ab' i ~> cd' i) ac' bd')
+                   (e1 : ab = ab') (e2 : cd = cd') (e3 : ac = ac') (e4 : bd = bd')
+  : (\lam i => \lam j =>⁺ s i j) = {DI ->⁺ DI ->⁺ Z} (\lam i => \lam j =>⁺ s' i j) \elim e1, e2, e3, e4
+  | idp, idp, idp, idp => path \lam k i j => isProp.equiv (inP (square-equiv ab cd)) (hom-isSet Zt _ _ _ _) s s' k i j
+
+-- # The Segal condition for squares
+
+-- | The square in `Δ/[n+1]` with the span as its horn and the terminal object as its last corner.
+\sfunc sliceSq (n : Nat)
+  : DPath (\lam i => nerveHom {SliceS (suc n)} {spanOb n 0} {spanOb n 1} (spanHom n {0} {1} ()) i
+                     ~> nerveHom {SliceS (suc n)} {1, lastEdge n} {suc n, SimplexCat.id {suc n}} (lastEdge n, SimplexCat.id-left) i)
+          (nerveHom {SliceS (suc n)} {spanOb n 0} {spanOb n 2} (spanHom n {0} {2} ()))
+          (nerveHom {SliceS (suc n)} {n, segRes n} {suc n, SimplexCat.id {suc n}} (segRes n, SimplexCat.id-left))
+  => (square-equiv _ _).ret (nerveHom-comp *> pmap nerveHom (ext (segRes-lastEdge n)) *> inv nerveHom-comp)
+
+-- | Sections over the image of {sliceSq} are determined by their restrictions to the horn: this is {IsSegal}.
+\lemma segal-sliceSq {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (n : Nat)
+  : IsEquiv (hornRes {_} {Fibers p} {\lam i => \lam j =>⁺ sliceProj (suc n) (sliceSq n i j)})
+  => \let | Df => rightFib-pullback (sliceProj (suc n)) pf
+          | restr : IsEquiv {\Pi (s :⁺ Nerve (SliceS (suc n))) -> Fibers p (sliceProj (suc n) s)}
+                            {\Pi (i j :⁺ DI) -> Fibers p (sliceProj (suc n) (sliceSq n i j))} (\lam t i j => t (sliceSq n i j))
+              => IsEquiv.leftFactor (rightFib-square-sections Df (\lam i => \lam j =>⁺ sliceSq n i j)) (rightFib-terminal-sections Df (slice-terminal (suc n)))
+          | seg => IsEquiv.trans (ps n) (span-sections {\lam w => Fibers p (sliceProj (suc n) (nerveMap (spanInc n) w))})
+     \in IsEquiv.rightFactor restr seg
+
+-- | The naturality square of the initial segment {joinIncln} along the top vertex `[0] -> [n]`.
+\func joinSq (n : Nat) : DI ->⁺ DI ->⁺ DeltaCat
+  => \lam i => \lam j =>⁺ joinIncln (nerveHom {SimplexCat} {0} {n} (vert (topV n)) i) j
+
+{- | Sections of a Segal right fibration over {joinSq} are determined by their restrictions to the horn.
+ -   The square {joinSq} is the image of {sliceSq} since both have the same sides ({square-path}).
+ -}
+\lemma segal-square {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (n : Nat)
+  : IsEquiv (hornRes {_} {Fibers p} {joinSq n})
+  => transport (\lam S => IsEquiv (hornRes {_} {Fibers p} {S})) (inv sq-eq) (segal-sliceSq pf ps n)
+  \where {
+    \lemma joinHom-vtop (n : Nat) : joinHom (vert (topV n)) = lastEdge n
+      => simplexHom-ext \lam t => \case \elim t \with {
+           | 0 => joinHom-low (vert (topV n)) 0
+           | 1 => joinHom-top (vert (topV n))
+         }
+
+    \lemma segRes0 : segRes 0 = vert 0
+      => simplexHom-ext \lam t => \case \elim t \with { | 0 => idp }
+
+    \sfunc sq-eq : joinSq n = {DI ->⁺ DI ->⁺ DeltaCat} (\lam i => \lam j =>⁺ sliceProj (suc n) (sliceSq n i j))
+      => square-path nerve-isTruncCat {_} {_} {_} {_} {nerveHom {SimplexCat} {0} {n} (vert (topV n))} {nerveHom {SimplexCat} {0} {n} (vert (topV n))} (dpath \lam i => joinIncln (nerveHom {SimplexCat} {0} {n} (vert (topV n)) i)) (dpath \lam i => dmap (sliceProj (suc n)) (sliceSq n i))
+           idp (pmap (nerveHom {SimplexCat} {1} {suc n}) (joinHom-vtop n)) (joinIncln-vertex 0 *> pmap (nerveHom {SimplexCat} {0} {1}) segRes0) (joinIncln-vertex n)
+  }

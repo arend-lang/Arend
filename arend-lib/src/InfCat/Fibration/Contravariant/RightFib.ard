@@ -11,15 +11,19 @@
 \import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
 \import InfCat.Paths
+\import InfCat.Rezk
 \import InfCat.Slice
 \import InfCat.SubCat.Full
 \import Logic
 \import Logic.Unique
 \import Meta
 \import Paths
+\import Paths.Meta
 
 -- | The base data of a contravariant lift: a source, a target, an arrow between them, and a point over the target.
 \func ContLiftData {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) : \Cat
@@ -56,6 +60,35 @@
 \func rightFib-tr-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {p : a' ~> a} {b : B a} {b' : B a'}
   (t : DPath (\lam i => B (p i)) b' b) : rightFib-tr Bf p b = b'
   => path \lam k => (isContr=>isProp (Bf (a', a, p, b)) (Bf (a', a, p, b)).center (b', t) k).1
+
+-- | Paths over {p} ending at {b} are paths from the transport of {b}.
+\lemma rightFib-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} (p : a' ~> a) (b : B a) {b' : B a'}
+  : IsEquiv {DPath (\lam i => B (p i)) b' b} {rightFib-tr Bf p b = b'} (rightFib-tr-dpath Bf)
+  => \let L => Bf (a', a, p, b)
+     \in (totalEquiv (\lam b' => rightFib-tr-dpath Bf {a'} {a} {p} {b} {b'})).2 (inP \new QEquiv {
+       | ret _ => (L.center.1, L.center.2)
+       | ret_f t => path \lam i => \let c => L.contraction (t.1, t.2) i \in (c.1, c.2)
+       | f_sec s => isContr=>isProp (lsigma (rightFib-tr Bf p b)) _ s
+     }) b'
+
+-- | If transport along {f} is an equivalence, then lifts of {f} starting at a given point are unique.
+\lemma rightFib-colift-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {f : a' ~> a}
+                             (fe : IsEquiv (rightFib-tr Bf f)) (r : B a') : Contr (CovLift B (a', a, f, r))
+  => Contr.Contr_QEquiv (symQEquiv (transQEquiv (\new QEquiv {CovLift B (a', a, f, r)} {\Sigma (s : B a) (DPath (\lam i => B (f i)) r s)} {
+       | f l => (l.1, l.2)
+       | ret l => (l.1, l.2)
+       | ret_f _ => idp
+       | f_sec _ => idp
+     }) (sigma-right \lam s => IsEquiv.toQEquiv (rightFib-dpath-equiv Bf f s {r})))) (IsEquiv=>contrFibers fe r)
+
+-- | Transport along an isomorphism is an equivalence.
+\lemma rightFib-tr-iso {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {f : a' ~> a} (fi : IsIso f) : IsEquiv (rightFib-tr Bf f)
+  => \case IsIso-char.1 fi \with {
+       | inP (P, Q) => aux P Q
+     }
+  \where
+    \private \lemma aux {a' a : A} (P : a' = a) {f : a' ~> a} (Q : =_~> P = f) : IsEquiv (rightFib-tr Bf f) \elim P, Q
+      | idp, idp => transport IsEquiv (ext \lam b => inv (rightFib-tr_idd Bf)) (inP idEquiv)
 
 -- | {rightFib-tr} commutes with identity.
 \sfunc rightFib-tr_idd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a : A} {b : B a} : rightFib-tr Bf idd b = b
@@ -231,3 +264,19 @@
     \private \lemma aux {E A : \Cat} (q : E ->⁺ A) (e : \Pi (x : E) -> IsEquiv (sliceMap q x)) {a' a : A} (x : E) (p : a' ~> a) (r : q x = a)
       : Contr (ContLift (Fibers q) (a', a, p, (x, r))) \elim r
       | idp => Contr.Contr_QEquiv (symQEquiv (fibers-lift-equiv q x p)) (IsEquiv=>contrFibers (e x) (a', p))
+
+-- | A composite of functors whose fibers form right fibrations has fibers forming a right fibration.
+\lemma rightFib-comp {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (ff : IsRightFib (Fibers f)) (gf : IsRightFib (Fibers g))
+  : IsRightFib (Fibers (\lam a => g (f a)))
+  => (rightFib-slice-char {A} {C} {\lam a => g (f a)}).2 \lam a =>
+       IsEquiv.trans ((rightFib-slice-char {A} {B} {f}).1 ff a) ((rightFib-slice-char {B} {C} {g}).1 gf (f a))
+
+-- | Cancellation: if the fibers of {g} and of `g ∘ f` form right fibrations, then so do the fibers of {f}.
+\lemma rightFib-cancel {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (gf : IsRightFib (Fibers g)) (gff : IsRightFib (Fibers (\lam a => g (f a))))
+  : IsRightFib (Fibers f)
+  => (rightFib-slice-char {A} {B} {f}).2 \lam a =>
+       IsEquiv.leftFactor ((rightFib-slice-char {B} {C} {g}).1 gf (f a)) ((rightFib-slice-char {A} {C} {\lam a => g (f a)}).1 gff a)
+
+-- | The fibers of a right fibration are groupoids.
+\lemma rightFib-grpd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) (a : A) : IsGroupoid (B a)
+  => \lam {t} {t'} f => IsIso-diag-char.2 $ inP (t', path \lam k i => (isContr=>isProp (Bf (a,a,idd,t')) (t', idd) (t, f) k).2 i)

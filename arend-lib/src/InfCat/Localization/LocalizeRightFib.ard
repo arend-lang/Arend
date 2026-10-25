@@ -12,11 +12,14 @@
 
 \import Equiv
 \import Function.Meta
+\import InfCat.Basics
 \import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
 \import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.LocalizeLeftFib
 \import InfCat.Localization.Opposite
+\import InfCat.OFS.CatOFS
 \import InfCat.Opposite
 \import InfCat.Opposite.Fibration
 \import InfCat.Paths
@@ -87,3 +90,9 @@
              *> op-fiber-forget {BaseChange l q} {R} {L} {_} {q} (s.2.2 *> pmap+ l p) _
       }
   }
+
+-- | Restriction of sections of a right fibration along a localization is an equivalence.
+\lemma localization-rightFib-sections {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+                                      {B : L ->⁺ \Cat} (Bf : IsRightFib B)
+  : IsEquiv {\Pi (y :⁺ L) -> B y} {\Pi (x :⁺ C) -> B (l x)} (\lam s x => s (l x))
+  => IsOrthogonal-family-sections (localization-orthogonal Lz (rightFib-conservative (rightFib-total Bf))) id+

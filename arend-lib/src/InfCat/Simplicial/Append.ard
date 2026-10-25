@@ -1,0 +1,284 @@
+{- | Appending a vertex to the simplices of a right fibration `p : E ->⁺ DeltaCat`.
+
+ -   {AppT} is the category of simplices over `joinN b = b ⋆ [0]` ({joinN}), that is, simplices with a new top vertex.
+ -   It maps to {E} by restriction to the initial segment ({appRestr}) and to the vertices by the new top vertex ({appLast}).
+ -   {AppY} is the category of such simplices together with an arrow from the new top vertex to a fixed vertex {y};
+ -   its fibers over `σ` are the ways to append {y} to `σ`, and {appY-rightFib} says that they form a right fibration over {E}.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Conservative
+\import InfCat.Groupoid
+\import Equiv.Sigma
+\import Logic.Unique
+\import InfCat.Nerve.Nerve
+\import InfCat.Paths
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Join
+\import Logic
+\import Paths
+
+-- | Simplices over `joinN b`.
+\func AppT.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) : \Cat u
+  => BaseChange joinN p
+
+-- | The restriction to the initial segment.
+\func appRestr.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : E
+  => (rightFib-lift pf (t.1, joinN t.1, joinIncln t.1, t.2)).1.1
+
+\func appRestr-p.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : p (appRestr pf t) = t.1
+  => (rightFib-lift pf (t.1, joinN t.1, joinIncln t.1, t.2)).1.2
+
+-- | The new top vertex.
+\func appLast.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : simplex p 0
+  => (rightFib-lift pf (nerveOb 0, joinN t.1, joinVertn t.1, t.2)).1
+
+\lemma appT-rightFib.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+  : IsRightFib (Fibers (\lam (t :⁺ AppT p) => t.1))
+  => rightFib-total (rightFib-pullback joinN pf)
+
+-- | The restriction to the initial segment is a right fibration.
+\lemma appRestr-rightFib.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) : IsRightFib (Fibers (appRestr pf))
+  => rightFib-cancel pf $ transport (\lam (h : AppT p ->⁺ DeltaCat) => IsRightFib (Fibers h)) (inv (funExt+ (appRestr-p pf))) (appT-rightFib pf)
+
+-- | Simplices with a new top vertex and an arrow from it to {y}.
+\func AppY.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : \Cat u
+  => \Sigma⁺ (t : AppT p) (appLast pf t ~> y)
+
+-- | The projection to {E}: the simplex to which {y} is appended.
+\func appY.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) (c :⁺ AppY pf y) : E
+  => appRestr pf c.1
+
+-- | The ways to append {y} form a right fibration over {E}.
+\lemma appY-rightFib.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+  : IsRightFib (Fibers (appY pf y))
+  => rightFib-comp {AppY pf y} {AppT p} {E} {\lam c => c.1} {appRestr pf}
+       (rightFib-total (rightFib-pullback (appLast pf) (hom-rightFib y))) (appRestr-rightFib pf)
+
+-- # The cone structure
+
+-- | Transport of the source of an arrow along a path.
+\func src-tr {C : \Cat} {x x' z :⁺ C} (e :⁺ x = x') (f :⁺ x ~> z) : x' ~> z \elim e
+  | idp => f
+
+-- | `(b, ρ) ↦ (joinN b, σ* ρ)`: the simplex `ρ` with its top vertex doubled, as a simplex with a new top vertex.
+\func appF.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : AppT p
+  => (joinN t.1, (rightFib-lift pf (joinN (joinN t.1), joinN t.1, joinDegn t.1, t.2)).1)
+
+-- | The degenerate edge at {y}, as a simplex over `joinN [0]`.
+\func appDeg.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y :⁺ simplex p 0) : AppT p
+  => (nerveOb 0, (rightFib-lift pf (nerveOb 1, nerveOb 0, bang, y)).1)
+
+\sfunc appEta-src.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p)
+  : (rightFib-lift (rightFib-pullback joinN pf) (t.1, joinN t.1, joinIncln t.1, (appF pf t).2)).1 = t.2
+  => inv (rightFib-lift-source pf {joinN t.1, joinN (joinN t.1), dmap joinN (joinIncln t.1), (appF pf t).2}
+            ((rightFib-lift (rightFib-pullback joinN pf) (t.1, joinN t.1, joinIncln t.1, (appF pf t).2)).1,
+             (rightFib-lift (rightFib-pullback joinN pf) (t.1, joinN t.1, joinIncln t.1, (appF pf t).2)).2))
+     *> inv (rightFib-lift-comp pf {joinN t.1} {joinN (joinN t.1)} {joinN t.1} {dmap joinN (joinIncln t.1)} {joinDegn t.1} {t.2})
+     *> pmap+ (\lam x => (rightFib-lift pf (joinN t.1, joinN t.1, x, t.2)).1) (joinDegn-incl t.1)
+     *> rightFib-lift-idd pf
+
+-- | The arrow from `(b, ρ)` to {appF} along the initial segment.
+\func appEta.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : t ~> appF pf t
+  => src-tr (path \lam k => (t.1, appEta-src pf t k))
+            (dpath \lam i => (joinIncln t.1 i, (rightFib-lift (rightFib-pullback joinN pf) (t.1, joinN t.1, joinIncln t.1, (appF pf t).2)).2 i))
+
+\sfunc appV-src.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p)
+  : (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 0, joinN t.1, joinVertn t.1, (appF pf t).2)).1 = (appDeg pf (appLast pf t)).2
+  => inv (rightFib-lift-source pf {nerveOb 1, joinN (joinN t.1), dmap joinN (joinVertn t.1), (appF pf t).2}
+            ((rightFib-lift (rightFib-pullback joinN pf) (nerveOb 0, joinN t.1, joinVertn t.1, (appF pf t).2)).1,
+             (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 0, joinN t.1, joinVertn t.1, (appF pf t).2)).2))
+     *> inv (rightFib-lift-comp pf {nerveOb 1} {joinN (joinN t.1)} {joinN t.1} {dmap joinN (joinVertn t.1)} {joinDegn t.1} {t.2})
+     *> pmap+ (\lam x => (rightFib-lift pf (nerveOb 1, joinN t.1, x, t.2)).1) (joinDegn-vert t.1)
+     *> rightFib-lift-comp pf {nerveOb 1} {nerveOb 0} {joinN t.1} {bang} {joinVertn t.1} {t.2}
+
+-- | The arrow from the degenerate edge at the new top vertex to {appF} along the new top vertex.
+\func appV.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : appDeg pf (appLast pf t) ~> appF pf t
+  => src-tr (path \lam k => (nerveOb 0, appV-src pf t k))
+            (dpath \lam i => (joinVertn t.1 i, (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 0, joinN t.1, joinVertn t.1, (appF pf t).2)).2 i))
+
+-- | The new top vertex of the degenerate edge at {y} is {y}.
+\sfunc appDeg-last.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y :⁺ simplex p 0) : appLast pf (appDeg pf y) = y
+  => inv (rightFib-lift-comp pf {nerveOb 0} {nerveOb 1} {nerveOb 0} {joinVertn (nerveOb 0)} {bang} {y})
+     *> pmap+ (\lam x => (rightFib-lift pf (nerveOb 0, nerveOb 0, x, y)).1) (to0-path _ idd)
+     *> rightFib-lift-idd pf
+
+\sfunc appDelta-src.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+  : (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 1, nerveOb 0, bang, (appDeg pf y).2)).1 = (appF pf (appDeg pf y)).2
+  => inv (rightFib-lift-source pf {nerveOb 2, nerveOb 1, dmap joinN bang, (appDeg pf y).2}
+            ((rightFib-lift (rightFib-pullback joinN pf) (nerveOb 1, nerveOb 0, bang, (appDeg pf y).2)).1,
+             (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 1, nerveOb 0, bang, (appDeg pf y).2)).2))
+     *> inv (rightFib-lift-comp pf {nerveOb 2} {nerveOb 1} {nerveOb 0} {dmap joinN bang} {bang} {y})
+     *> pmap+ (\lam x => (rightFib-lift pf (nerveOb 2, nerveOb 0, x, y)).1) (to0-path _ _)
+     *> rightFib-lift-comp pf {nerveOb 2} {nerveOb 1} {nerveOb 0} {joinDegn (nerveOb 0)} {bang} {y}
+
+-- | The degeneracy from {appF} of the degenerate edge at {y} back to it.
+\func appDelta.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : appF pf (appDeg pf y) ~> appDeg pf y
+  => src-tr (path \lam k => (nerveOb 1, appDelta-src pf y k))
+            (dpath \lam i => (bang i, (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 1, nerveOb 0, bang, (appDeg pf y).2)).2 i))
+
+-- ## The cone structure on {AppY}
+
+-- | Evaluation of the arrow underlying a path of functors.
+\func eval-arrow' {A B : \Cat} {H K :⁺ A ->⁺ B} (P :⁺ H = K) (a :⁺ A) : =_~> (path \lam i => P i a) = dpath (\lam i => (=_~> P) i a) \elim P
+  | idp => idp
+
+-- | Transport along a path of functors in the source of arrows into a fixed object.
+\func tr-src-fun {A B : \Cat} {H K :⁺ A ->⁺ B} (P :⁺ H = K) (a :⁺ A) {y : B} (h :⁺ H a ~> y)
+  : transport+ (\lam (H' : A ->⁺ B) => H' a ~> y) P h = transport+ (__ ~> y) (path \lam i => P i a) h \elim P
+  | idp => idp
+
+\func comp-tr-src {B : \Cat} {a b y :⁺ B} (P :⁺ a = b) (h :⁺ a ~> y) : comp (=_~> P) (transport+ (__ ~> y) P h) = h \elim P
+  | idp => comp_idd-left
+
+-- | Congruences of composition and {=_~>} along covariant paths.
+\func comp-path-left {B : \Cat} {a b c :⁺ B} {x x' :⁺ a ~> b} (e :⁺ x = x') (h :⁺ b ~> c) : comp x h = comp x' h \elim e
+  | idp => idp
+
+\func comp-path-right {B : \Cat} {a b c :⁺ B} (x :⁺ a ~> b) {h h' :⁺ b ~> c} (e :⁺ h = h') : comp x h = comp x h' \elim e
+  | idp => idp
+
+\func =_~>-path {B : \Cat} {a b :⁺ B} {P Q :⁺ a = b} (e :⁺ P = Q) : =_~> P = =_~> Q \elim e
+  | idp => idp
+
+-- | The path of functors given by the isomorphisms {appEta} of new top vertices.
+\func appLast-path.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
+  : appLast pf = {AppT p ->⁺ simplex p 0} (\lam t => appLast pf (appF pf t))
+  => natIso-path {AppT p} {simplex p 0} {appLast pf} {\lam t => appLast pf (appF pf t)} (\lam t => dmap (appLast pf) (appEta pf t)) (\lam t => rightFib-grpd pf (nerveOb 0) _)
+
+-- | {appF} on {AppY}.
+\func appYF.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y) : AppY pf y
+  => (appF pf c.1, transport+ (\lam (H : AppT p ->⁺ simplex p 0) => H c.1 ~> y) (appLast-path pf) c.2)
+
+\sfunc appYEta-src.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y)
+  : (rightFib-lift (rightFib-pullback (appLast pf) (hom-rightFib y)) (c.1, appF pf c.1, appEta pf c.1, (appYF c).2)).1 = c.2
+  => inv (rightFib-lift-source (hom-rightFib y) {appLast pf c.1, appLast pf (appF pf c.1), dmap (appLast pf) (appEta pf c.1), (appYF c).2}
+            ((rightFib-lift (rightFib-pullback (appLast pf) (hom-rightFib y)) (c.1, appF pf c.1, appEta pf c.1, (appYF c).2)).1,
+             (rightFib-lift (rightFib-pullback (appLast pf) (hom-rightFib y)) (c.1, appF pf c.1, appEta pf c.1, (appYF c).2)).2))
+     *> hom-lift-comp (dmap (appLast pf) (appEta pf c.1)) (appYF c).2
+     *> comp-path-left
+              (inv (eval-arrow' (appLast-path pf) c.1 *> path (\lam k => dpath \lam i => natIso-path-arrow {AppT p} {simplex p 0} {appLast pf} {\lam t => appLast pf (appF pf t)} (\lam t => dmap (appLast pf) (appEta pf t)) (\lam t => rightFib-grpd pf (nerveOb 0) _) k i c.1))) (appYF c).2
+     *> comp-path-right (=_~> (path \lam i => appLast-path pf i c.1)) (tr-src-fun (appLast-path pf) c.1 c.2)
+     *> comp-tr-src (path \lam i => appLast-path pf i c.1) c.2
+
+-- | {appEta} on {AppY}.
+\func appYEta.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y) : c ~> appYF c
+  => src-tr (path \lam k => (c.1, appYEta-src c k))
+            (dpath \lam i => (appEta pf c.1 i, (rightFib-lift (rightFib-pullback (appLast pf) (hom-rightFib y)) (c.1, appF pf c.1, appEta pf c.1, (appYF c).2)).2 i))
+
+-- | The base object: the degenerate edge at {y}.
+\func appY0.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : AppY pf y
+  => (appDeg pf y, =_~> (appDeg-last pf y))
+
+-- | The arrow into {appYF} along {appV}.
+\sfunc appYV-lift.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y)
+  : ContLift (\lam t => appLast pf t ~> y) (appDeg pf (appLast pf c.1), appF pf c.1, appV pf c.1, (appYF c).2)
+  => rightFib-lift (rightFib-pullback (appLast pf) (hom-rightFib y)) (appDeg pf (appLast pf c.1), appF pf c.1, appV pf c.1, (appYF c).2)
+
+\func appYV-arrow.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y)
+  : ((appDeg pf (appLast pf c.1), (appYV-lift c).1) : AppY pf y) ~> appYF c
+  => dpath \lam i => (appV pf c.1 i, (appYV-lift c).2 i)
+
+-- | The arrow from the new top vertex to {y}, through the degenerate edge.
+\func appYV-psi.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y) : appLast pf c.1 ~> y
+  => comp (=_~> (inv (appDeg-last pf (appLast pf c.1)))) (appYV-lift c).1
+
+\func appYV-path.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+  : (\lam (c : AppY pf y) => appLast pf c.1) = {AppY pf y ->⁺ simplex p 0} (\lam _ => y)
+  => natIso-path {AppY pf y} {simplex p 0} {\lam c => appLast pf c.1} {\lam _ => y} (\lam c => appYV-psi c) (\lam c => rightFib-grpd pf (nerveOb 0) _)
+
+\sfunc cancel-arrow {B : \Cat} {a b :⁺ B} (e :⁺ a = b) {R :⁺ a ~> b} (h :⁺ idd = comp (=_~> (inv e)) R) : R = =_~> e \elim e
+  | idp => inv comp_idd-left *> inv h
+
+\sfunc appYV-omega.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y' : simplex p 0} {z :⁺ simplex p 0} (P :⁺ y' = z)
+                   {R :⁺ appLast pf (appDeg pf z) ~> y'} (h :⁺ =_~> (inv P) = comp (=_~> (inv (appDeg-last pf z))) R)
+  : ((appDeg pf z, R) : AppY pf y') = appY0 pf y' \elim P
+  | idp => path \lam k => (appDeg pf y', cancel-arrow (appDeg-last pf y') h k)
+
+-- | The arrow from the base object to {appYF}.
+\func appYV.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y) : appY0 pf y ~> appYF c
+  => comp (=_~> (inv (appYV-omega {_} {_} {pf} (inv (path \lam i => appYV-path pf y i c)) (=_~>-path inv_inv *> appYV-h c)))) (appYV-arrow c)
+  \where
+    \sfunc appYV-h (c :⁺ AppY pf y)
+      : =_~> (path \lam i => appYV-path pf y i c) = comp (=_~> (inv (appDeg-last pf (appLast pf c.1)))) (appYV-lift c).1
+      => eval-arrow' (appYV-path pf y) c *> path (\lam k => dpath \lam i => natIso-path-arrow {AppY pf y} {simplex p 0} {\lam c => appLast pf c.1} {\lam _ => y} (\lam c => appYV-psi c) (\lam c => rightFib-grpd pf (nerveOb 0) _) k i c)
+
+-- ## Images in the base
+
+-- | {dmap} commutes with {src-tr}.
+\sfunc dmap-src-tr {C D : \Cat} (F : C ->⁺ D) {x x' z :⁺ C} (e :⁺ x = x') (f :⁺ x ~> z) : dmap F (src-tr e f) = src-tr (pmap+ F e) (dmap F f) \elim e
+  | idp => idp
+
+\sfunc appEta-fst.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t : AppT p)
+  : dmap (\lam (s :⁺ AppT.{u} p) => s.1) (appEta pf t) = joinIncln t.1
+  => dmap-src-tr {AppT.{u} p} {DeltaCat} (\lam (s :⁺ AppT.{u} p) => s.1) {_} {_} {appF pf t} (path \lam k => (t.1, appEta-src pf t k))
+       (dpath \lam i => (joinIncln t.1 i, (rightFib-lift (rightFib-pullback joinN pf) (t.1, joinN t.1, joinIncln t.1, (appF pf t).2)).2 i))
+
+\sfunc appV-fst.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t : AppT p)
+  : dmap (\lam (s :⁺ AppT.{u} p) => s.1) (appV pf t) = joinVertn t.1
+  => dmap-src-tr {AppT.{u} p} {DeltaCat} (\lam (s :⁺ AppT.{u} p) => s.1) {_} {_} {appF pf t} (path \lam k => (nerveOb 0, appV-src pf t k))
+       (dpath \lam i => (joinVertn t.1 i, (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 0, joinN t.1, joinVertn t.1, (appF pf t).2)).2 i))
+
+\sfunc appDelta-fst.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+  : dmap (\lam (s :⁺ AppT.{u} p) => s.1) (appDelta pf y) = bang
+  => dmap-src-tr {AppT.{u} p} {DeltaCat} (\lam (s :⁺ AppT.{u} p) => s.1) {_} {_} {appDeg pf y} (path \lam k => (nerveOb 1, appDelta-src pf y k))
+       (dpath \lam i => (bang i, (rightFib-lift (rightFib-pullback joinN pf) (nerveOb 1, nerveOb 0, bang, (appDeg pf y).2)).2 i))
+
+\sfunc appYEta-fst.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c : AppY pf y)
+  : dmap (\lam (s :⁺ AppY.{u} pf y) => s.1) (appYEta c) = appEta pf c.1
+  => dmap-src-tr {AppY.{u} pf y} {AppT.{u} p} (\lam (s :⁺ AppY.{u} pf y) => s.1) {_} {_} {appYF c} (path \lam k => (c.1, appYEta-src c k))
+       (dpath \lam i => (appEta pf c.1 i, (rightFib-lift (rightFib-pullback (appLast pf) (hom-rightFib y)) (c.1, appF pf c.1, appEta pf c.1, (appYF c).2)).2 i))
+
+-- # Edges as appends
+
+-- | In a groupoid, the arrows out of an object form a contractible type.
+\lemma groupoid-coslice-contr {C : \Cat} (Cg : IsGroupoid C) (v : C) : Contr (\Sigma (y : C) (v ~> y))
+  => Contr.Contr_QEquiv (sigma-right \lam y => IsEquiv.toQEquiv (groupoid-char.1 Cg v y)) (lsigma v)
+
+-- | An edge as the way to append its target to its source.
+\func edgeApp.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (z : simplex p 1)
+  : \Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (Fibers (appY pf y) x.1))
+  => (appLast pf (nerveOb 0, z), ((appRestr pf (nerveOb 0, z), appRestr-p pf (nerveOb 0, z)), ((((nerveOb 0, z) : AppT p), idd), idp)))
+
+-- | Edges are the ways to append a vertex to a vertex.
+\lemma edgeApp-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) : IsEquiv (edgeApp pf)
+  => \let | e1 : QEquiv {simplex p 1} {\Sigma (t : AppT p) (t.1 = nerveOb 0)} => \new QEquiv {
+              | f z => (((nerveOb 0, z) : AppT p), idp)
+              | ret s => transport (\lam b => Fibers p (joinN b)) s.2 s.1.2
+              | ret_f _ => idp
+              | f_sec s => sec1 s.1.2 s.2
+            }
+          | e2 : QEquiv {\Sigma (t : AppT p) (t.1 = nerveOb 0)} {\Sigma (t : AppT p) (\Sigma (x : simplex p 0) (appRestr pf t = x.1))} => \new QEquiv {
+              | f s => (s.1, ((appRestr pf s.1, appRestr-p pf s.1 *> s.2), idp))
+              | ret s => (s.1, inv (appRestr-p pf s.1) *> pmap (\lam e => p e) s.2.2 *> s.2.1.2)
+              | ret_f s => pmap (\lam B => ((s.1, B) : \Sigma (t : AppT p) (t.1 = nerveOb 0))) (deltaCat-path-isProp _ _ _ _)
+              | f_sec s => sec2 s.1 s.2.1.2 s.2.2
+            }
+          | e3 : QEquiv {\Sigma (t : AppT p) (\Sigma (x : simplex p 0) (appRestr pf t = x.1))}
+                        {\Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (Fibers (appY pf y) x.1))} => \new QEquiv {
+              | f s => (appLast pf s.1, (s.2.1, ((s.1, idd), s.2.2)))
+              | ret s => (s.2.2.1.1, (s.2.1, s.2.2.2))
+              | ret_f _ => idp
+              | f_sec s => pmap (\lam (r : \Sigma (y : simplex p 0) (appLast pf s.2.2.1.1 ~> y)) =>
+                                  ((r.1, (s.2.1, ((s.2.2.1.1, r.2), s.2.2.2))) : \Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (Fibers (appY pf y) x.1))))
+                                (isContr=>isProp (groupoid-coslice-contr (rightFib-grpd pf (nerveOb 0)) (appLast pf s.2.2.1.1))
+                                  ((appLast pf s.2.2.1.1, idd) : \Sigma (y : simplex p 0) (appLast pf s.2.2.1.1 ~> y)) (s.1, s.2.2.1.2))
+            }
+          | res : IsEquiv (\lam z => e3 (e2 (e1 z))) => inP (transQEquiv e1 (transQEquiv e2 e3))
+     \in res
+  \where {
+    \sfunc sec1 {b : DeltaCat} (w : Fibers p (joinN b)) (B : b = nerveOb 0)
+      : ((((nerveOb 0, transport (\lam b => Fibers p (joinN b)) B w) : AppT p), idp) : \Sigma (t : AppT p) (t.1 = nerveOb 0)) = (((b, w) : AppT p), B) \elim B
+      | idp => idp
+
+    \sfunc sec2 (t : AppT p) {e : E} (Q : p e = nerveOb 0) (P : appRestr pf t = e)
+      : ((t, ((appRestr pf t, appRestr-p pf t *> (inv (appRestr-p pf t) *> pmap (\lam e => p e) P *> Q)), idp))
+          : \Sigma (t : AppT p) (\Sigma (x : simplex p 0) (appRestr pf t = x.1))) = (t, ((e, Q), P)) \elim P
+      | idp => pmap (\lam Q' => ((t, ((appRestr pf t, Q'), idp)) : \Sigma (t : AppT p) (\Sigma (x : simplex p 0) (appRestr pf t = x.1)))) (deltaCat-path-isProp _ _ _ _)
+  }

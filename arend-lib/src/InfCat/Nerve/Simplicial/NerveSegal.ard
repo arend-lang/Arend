@@ -33,7 +33,6 @@
 \import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.CatPushout
-\import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Covariant.CocartesianBaseChange
 \import InfCat.Fibration.Exponent.ExponentCocartesianCore
 \import InfCat.Fibration.SimplexFib
@@ -69,15 +68,13 @@
   => \have e => transport IsEquiv (ext \lam x => inv (complete-square x)) $
                  IsEquiv.trans (IsEquiv.trans (snerve-nu-equiv 0) nerve0-ev-equiv) rezk-equiv
      \in IsEquiv.leftFactor {_} {_} {_} {\lam x => ((degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x)
-                                                    : \Sigma (e : S.{u} C 1) (IsIsoS SNerveFib.isRightFib e))} (isoArr-equiv e) e
-  \where \private {
+                                                    : \Sigma (e : simplex (proj C) 1) (IsIsoS SNerveFib.isRightFib e))} (isoArr-equiv e) e
+  \where \protected {
     \open simplex
-
-    -- | Simplices of the nerve.
-    \func S.{v} (C : \Cat v) (n : Nat) => simplex (SNerve.proj C) n
+    \open SNerve (proj)
 
     -- | Transport along {d} is precomposition with {d}.
-    \sfunc fun-path.{v} {C : \Cat v} {m n : Nat} (d : SimplexCat.Hom m n) (s : S C n)
+    \sfunc fun-path.{v} {C : \Cat v} {m n : Nat} (d : SimplexCat.Hom m n) (s : simplex (proj C) n)
       : (\lam t =>⁺ snerve-nu m (act SNerveFib.isRightFib d s) t) = {Nerve (Simplex m) ->⁺ C} (\lam t =>⁺ snerve-nu n s (nerveMap d t))
       => funExt+ \lam t => snerve-nu-tr d s
 
@@ -88,7 +85,7 @@
       => pmap (dmap G) (pmap (nerveHom {Simplex 2} {0} {2}) prop-pi *> inv nerveHom-comp) *> dmap_comp G
 
     -- | The edges of degenerate 1-simplices are isomorphisms.
-    \lemma degen-edge-iso.{v} {C : \Cat v} (y : S C 0) : IsIso (n1edge (\lam t =>⁺ snerve-nu 1 (degen SNerveFib.isRightFib y) t))
+    \lemma degen-edge-iso.{v} {C : \Cat v} (y : simplex (proj C) 0) : IsIso (n1edge (\lam t =>⁺ snerve-nu 1 (degen SNerveFib.isRightFib y) t))
       => transportInv (\lam (F : Nerve (Simplex 1) ->⁺ C) => IsIso (n1edge F)) (fun-path (constHom 0) y)
            (dmap_IsIso (\lam t =>⁺ snerve-nu 0 y t) (transportInv IsIso (pmap (nerveHom {Simplex 0} {0} {0}) prop-pi *> nerveHom-id) idd-iso))
 
@@ -101,25 +98,25 @@
       => ∃ (z : C) (g : z ~> F (nerveOb 0)) (IsIso (comp g (n1edge F)))
 
     -- | The long edge of a 2-simplex whose long edge is degenerate is an isomorphism.
-    \lemma face1-iso.{v} {C : \Cat v} (sigma : S C 2) {y : S C 0} (p : act SNerveFib.isRightFib face1 sigma = degen SNerveFib.isRightFib y)
+    \lemma face1-iso.{v} {C : \Cat v} (sigma : simplex (proj C) 2) {y : simplex (proj C) 0} (p : act SNerveFib.isRightFib face1 sigma = degen SNerveFib.isRightFib y)
       : IsIso (n1edge (\lam t =>⁺ snerve-nu 2 sigma (nerveMap face1 t)))
       => transport (\lam (F : Nerve (Simplex 1) ->⁺ C) => IsIso (n1edge F)) (fun-path face1 sigma)
            (transportInv (\lam s => IsIso (n1edge (\lam t =>⁺ snerve-nu 1 s t))) p (degen-edge-iso y))
 
-    \lemma leftInv-splitMono.{v} {C : \Cat v} {e : S C 1} (h : HasLeftInv SNerveFib.isRightFib e) : SplitMono (\lam t =>⁺ snerve-nu 1 e t) \elim h
+    \lemma leftInv-splitMono.{v} {C : \Cat v} {e : simplex (proj C) 1} (h : HasLeftInv SNerveFib.isRightFib e) : SplitMono (\lam t =>⁺ snerve-nu 1 e t) \elim h
       | inP (sigma, p1, p2) => transport SplitMono (inv (fun-path (segRes 1) sigma) *> pmap (\lam s => \lam t =>⁺ snerve-nu 1 s t) p1)
           (inP (_, n1edge (\lam t =>⁺ snerve-nu 2 sigma (nerveMap (lastEdge 1) t)), transport IsIso (tri (\lam t =>⁺ snerve-nu 2 sigma t)) (face1-iso sigma p2)))
 
-    \lemma rightInv-splitEpi.{v} {C : \Cat v} {e : S C 1} (h : HasRightInv SNerveFib.isRightFib e) : SplitEpi (\lam t =>⁺ snerve-nu 1 e t) \elim h
+    \lemma rightInv-splitEpi.{v} {C : \Cat v} {e : simplex (proj C) 1} (h : HasRightInv SNerveFib.isRightFib e) : SplitEpi (\lam t =>⁺ snerve-nu 1 e t) \elim h
       | inP (sigma, p1, p2) => transport SplitEpi (inv (fun-path (lastEdge 1) sigma) *> pmap (\lam s => \lam t =>⁺ snerve-nu 1 s t) p1)
           (inP (_, n1edge (\lam t =>⁺ snerve-nu 2 sigma (nerveMap (segRes 1) t)), transport IsIso (tri (\lam t =>⁺ snerve-nu 2 sigma t)) (face1-iso sigma p2)))
 
     -- | Isomorphisms of the nerve are isomorphisms of {C}.
-    \lemma isoS-iso.{v} {C : \Cat v} {e : S C 1} (i : IsIsoS SNerveFib.isRightFib e) : IsIso (n1edge (\lam t =>⁺ snerve-nu 1 e t))
+    \lemma isoS-iso.{v} {C : \Cat v} {e : simplex (proj C) 1} (i : IsIsoS SNerveFib.isRightFib e) : IsIso (n1edge (\lam t =>⁺ snerve-nu 1 e t))
       => biinv-iso (leftInv-splitMono i.1) (rightInv-splitEpi i.2)
 
     -- | An isomorphism of the nerve as an isomorphism of {C}, as an arrow.
-    \func isoArr.{v} {C : \Cat v} (t : \Sigma (e : S C 1) (IsIsoS SNerveFib.isRightFib e)) : \Sigma (h : DI ->⁺ C) (IsIso (dpath \lam i => h i))
+    \func isoArr.{v} {C : \Cat v} (t : \Sigma (e : simplex (proj C) 1) (IsIsoS SNerveFib.isRightFib e)) : \Sigma (h : DI ->⁺ C) (IsIso (dpath \lam i => h i))
       => (\lam i => snerve-nu 1 t.1 (n1arr i), isoS-iso t.2)
 
     -- | {isoArr} is an embedding, since its underlying map of edges is an equivalence.
@@ -129,14 +126,14 @@
                            (Embedding.fromIsEquiv (IsEquiv.trans (snerve-nu-equiv {C} 1) (inP nerve1-DI-equiv))))
 
     -- | {isoArr} is an equivalence: it is an embedding, and it is surjective since its composite with the degenerate edges is.
-    \lemma isoArr-equiv.{v} {C : \Cat v} (e : IsEquiv (\lam (x : S C 0) => isoArr (degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x)))
+    \lemma isoArr-equiv.{v} {C : \Cat v} (e : IsEquiv (\lam (x : simplex (proj C) 0) => isoArr (degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x)))
       : IsEquiv (isoArr {C})
       => IsEquiv.fromEmbSurj isoArr-emb \lam y => \case IsEquiv.isSurj e y \with {
            | inP (x, p) => inP ((degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x), p)
          }
 
     -- | On degenerate edges, {isoArr} is the identity arrow.
-    \sfunc complete-square.{v} {C : \Cat v} (x : S C 0)
+    \sfunc complete-square.{v} {C : \Cat v} (x : simplex (proj C) 0)
       : isoArr (degen SNerveFib.isRightFib x, degen-iso SNerveFib.isRightFib x) = (\lam _ => snerve-nu 0 x pt0, idd-iso)
       => ext (path (\lam j => \lam i =>⁺ fun-path (constHom 0) x j (n1arr i))
               *> path (\lam j => \lam i =>⁺ snerve-nu 0 x ((inv nerve0-contr j) (nerveMap (constHom 0) (n1arr i)))))

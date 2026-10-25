@@ -1,15 +1,31 @@
-{- | The unit `E → N(RE)` of the realization–nerve adjunction (Step E of complete-segal-comma.tex).
- -
+{- | The unit `E → N(RE)` of the realization–nerve adjunction.
+
  -   For a right fibration `p : E ->⁺ DeltaCat`, the unit {realization-unit} is the section of the nerve of `RE = Realization p`
  -   corresponding to the identity of `RE` under {realization-adj}. Its fiberwise form is {unitFib}.
- -   * {unit-eval}: the unit evaluates an `n`-simplex `e` at a vertex `w` to `real p (e, w)`.
+ -   * {unit-eval}: the unit evaluates an `n`-simplex `e` at a vertex `w` to `real p (e, w)`; at last vertices this is the
+ -     localization functor `ℓ` of the last-vertex presentation ({unit-ell}).
  -   * {unit-surj}: the unit is surjective on vertices ({realization-ob-surj}).
- -   * {unit-ff}, {unit-iso}: the unit is fully faithful on edges and reflects isomorphisms. These are the hom computation
- -     (Steps E3 and E4). They are open.
- -   * {realization-unit-equiv}: for complete Segal {p}, the unit is an equivalence of total categories, by {segal-map-hequiv}.
+ -   * {unit-ff}: for Segal {p}, the unit is fully faithful on edges. The zigzag of an edge `x -> y` under the unit is, through `ℓ`,
+ -     the natural map {UnitPhi.Phi} at the edge seen as the way to append `y` to `x` ({edgeApp}); this map is the hom computation
+ -     {appY-hom-equiv} followed by an isomorphism ({UnitPhi.Phi-equiv}), and edges are appends on total spaces ({edgeApp-equiv}).
+ -     Endpoint identifications are compared on total spaces, so they may differ by loops.
+ -   * {unit-iso}: the unit reflects isomorphisms, by {nerve-ff-reflects-iso}.
+ -   * {realization-unit-equiv}: for complete Segal {p}, the unit is an equivalence of total categories ({segal-nerve-map-hequiv}).
  -}
 
 \import Equiv
+\import Function.Meta
+\import InfCat.Rezk
+\import InfCat.Basics
+\import Paths.Meta
+\import Logic.Unique
+\import Category.Simplex
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Nerve.Simplicial.CospanIso
+\import InfCat.Simplicial.SimplexOperators
+\import InfCat.Simplicial.Join
+\import InfCat.Simplicial.Append
+\import InfCat.Simplicial.AppendLocal
 \import Function
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Contravariant.RightFib
@@ -17,6 +33,10 @@
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Functor.Equiv
 \import InfCat.Nerve.Nerve
+\import InfCat.Nerve.Simplicial.NerveIso
+\import InfCat.Nerve.Simplicial.RealizationEdge
+\import InfCat.Nerve.Simplicial.UnitHom
+\import InfCat.Localization.Concrete
 \import InfCat.Nerve.Simplicial.NerveSegal
 \import InfCat.Nerve.Simplicial.Realization
 \import InfCat.Nerve.Simplicial.SimplicialNerve
@@ -27,25 +47,37 @@
 \import Logic
 \import Paths
 \open NerveLow
+\open RealizationHelpers (lastN, lastN-sec)
+\open NerveIsoHelpers (edgeVal-path)
+\open UnitFFHelpers (unit-edgeVal-equiv)
 
--- | The unit: the section of the nerve of the realization corresponding to the identity.
-\func realization-unit.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) : \Pi (e :⁺ E) -> SNerveFib (Realization.{u} p) (p e)
-  => IsEquiv.ret (realization-adj.{u} {E} {Realization.{u} p} p) (\lam y => y)
+-- | The unit: the section of the nerve of the realization corresponding to the identity ({realization-unit.char}).
+\sfunc realization-unit.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (e :⁺ E) : SNerveFib (Realization p) (p e)
+  => (pair p).1 e
+  \where {
+    \protected \sfunc pair.{u} {E : \Cat u} (p : E ->⁺ DeltaCat)
+      : \Sigma (t : \Pi (e :⁺ E) -> SNerveFib (Realization p) (p e)) (realize-map p t = {Realization p ->⁺ Realization p} (\lam y => y))
+      => (IsEquiv.ret (realization-adj {E} {Realization p} p) (\lam y => y), IsEquiv.f_ret (realization-adj {E} {Realization p} p))
+
+    -- | The unit corresponds to the identity of the realization.
+    \protected \sfunc char.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (r :⁺ Realization p) : realize-map p (realization-unit p) r = r
+      => path (\lam i => realize-map p (\lam e => (\peval realization-unit p e) i) r) *> path \lam i => (pair p).2 i r
+  }
 
 -- | The unit on the fibers of {p}.
-\func unitFib.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) : SNerveFib (Realization.{u} p) s.1
-  => transport+ (SNerveFib (Realization.{u} p)) s.2.2 (realization-unit p s.2.1)
+\func unitFib.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) : SNerveFib (Realization p) s.1
+  => transport+ (SNerveFib (Realization p)) s.2.2 (realization-unit p s.2.1)
 
 -- | The unit evaluates {e} at {w} to `real p (e, w)`.
 \sfunc unit-eval.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (e : E) (w : UnivSimplexFib (p e))
   : ExpCocCore.fiber-eval univSimplex-cocartesianMap (realization-unit p e) w = real p (e, w)
-  => path \lam i => (IsEquiv.f_ret (realization-adj.{u} {E} {Realization.{u} p} p) {\lam y => y} @ i) (real p (e, w))
+  => realization-unit.char p (real p (e, w))
 
 -- | The unit is surjective on vertices.
 \lemma unit-surj.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p))
   : IsSurj (\lam (x : simplex p 0) => unitFib p (nerveOb 0, x))
-  => \lam y => \case realization-ob-surj.{u} pf (snerve-nu.{u} 0 y pt0) \with {
-       | inP (e, q, r) => inP ((e, q), IsEquiv.isInj (snerve-nu-equiv.{u} {Realization.{u} p} 0) (IsEquiv.isInj nerve0-ev-equiv
+  => \lam y => \case realization-ob-surj pf (snerve-nu 0 y pt0) \with {
+       | inP (e, q, r) => inP ((e, q), IsEquiv.isInj (snerve-nu-equiv {Realization p} 0) (IsEquiv.isInj nerve0-ev-equiv
            (eval-tr q (realization-unit p e) _ *> unit-eval p e _ *> pmap (\lam z => real p (e, z)) (tr-fib (inv q) _ _) *> pmap (\lam P => real p (e, (nerveOb (0, 0), P))) (deltaCat-path-isProp _ _ _ _) *> r)))
      }
   \where {
@@ -59,17 +91,145 @@
       | idp => idp
   }
 
--- | E3/E4 (open): the unit is fully faithful on edges.
+-- # The unit at last vertices
+
+-- | The unit evaluated at the last vertex of a simplex is its image under the localization functor `ℓ` of the last-vertex presentation.
+\sfunc unit-ell.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) : vEval (unitFib p) s = UnitHomHelpers.ell p s.2.1
+  => realize-map-fib.eval-tr s.2.2 (realization-unit p s.2.1) (lastN s.1, path \lam j => lastN-sec j s.1)
+     *> path (\lam m => ExpCocCore.fiber-eval univSimplex-cocartesianMap (realization-unit p s.2.1)
+                          ((realize-map-fib.tr-fib (inv s.2.2) (lastN s.1) (path \lam j => lastN-sec j s.1) *> fibSec-lastVertex.helper s.2.2) m))
+     *> realization-unit.char p (real p (lastVertex p s.2.1))
+
+-- # The unit is fully faithful
+
+-- | The unit is fully faithful on edges.
 \lemma unit-ff.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (x y : simplex p 0)
   : IsEquiv (edgeSec-map (unitFib p) x y)
-  => {?}
+  => edgeVal-ff (unitFib p) (unit-edgeVal-equiv pf ps) x y
 
--- | E3/E4 (open): the unit reflects isomorphisms.
+-- | The unit reflects isomorphisms, since it is fully faithful ({nerve-ff-reflects-iso}).
 \lemma unit-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (e : simplex p 1)
-  (i : IsIsoS (SNerveFib.isRightFib.{u} {Realization.{u} p}) (unitFib p (nerveOb 1, e))) : IsIsoS pf e
-  => {?}
+  (i : IsIsoS (SNerveFib.isRightFib {Realization p}) (unitFib p (nerveOb 1, e))) : IsIsoS pf e
+  => nerve-ff-reflects-iso ps (unitFib p) (unit-ff pf ps) e i
 
 -- | For a complete Segal right fibration {p}, the unit `E → N(RE)` is an equivalence of total categories.
 \lemma realization-unit-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} (cs : IsCompleteSegal pf)
-  : IsHEquiv {\Sigma⁺ (b : DeltaCat) (Fibers p b)} {\Sigma⁺ (b : DeltaCat) (SNerveFib (Realization.{u} p) b)} (\lam s => (s.1, unitFib p s))
-  => segal-map-hequiv cs (snerve-completeSegal.{u} {Realization.{u} p}) (unitFib p) (unit-surj pf) (unit-ff pf cs.1) (unit-iso pf cs.1)
+  : IsHEquiv {\Sigma⁺ (b : DeltaCat) (Fibers p b)} {\Sigma⁺ (b : DeltaCat) (SNerveFib (Realization p) b)} (\lam s => (s.1, unitFib p s))
+  => segal-nerve-map-hequiv cs (unitFib p) (unit-surj pf) (unit-ff pf cs.1)
+
+-- | Helpers for {unit-ff}.
+\private \module UnitFFHelpers \where {
+  -- | The arrow of {E} underlying a lift.
+  \func earr {E : \Cat} {p : E ->⁺ DeltaCat} {f : nerveOb {SimplexCat} 0 ~> nerveOb {SimplexCat} 1} {z : simplex p 1}
+             (c : ContLift (Fibers p) (nerveOb 0, nerveOb 1, f, z)) : c.1.1 ~> z.1
+    => dpath \lam i => (c.2 i).1
+
+  -- | The arrow underlying a lift of the vertex `1` lies over a map preserving last vertices.
+  \lemma earr-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {z : simplex p 1} (c : VLift p 1 z) : IsIso (dmap (UnitHomHelpers.ell p) (earr c))
+    => localize-inverts {_} {RealW p} {\lam i => lastVertex p (c.2 i).1}
+         (transportInv (\lam (h : DI ->⁺ DeltaCat) => LastArr (dpath \lam i => h i)) (path \lam k => \lam i =>⁺ (c.2 i).2 k) ve1-last)
+
+  -- | The image of a lift under the unit, at last vertices, is the image of its underlying arrow under `ℓ`.
+  \sfunc carr-ell.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {j : Fin 2} {z : simplex p 1} (c : VLift p j z)
+    : dmap (UnitHomHelpers.ell p) (earr c) = transport2 (\lam a b => a ~> b) (unit-ell p (nerveOb 0, c.1)) (unit-ell p (nerveOb 1, z)) (carr (unitFib p) c)
+    => dpath-tr (funExt+ \lam i => unit-ell p (ve j i, c.2 i))
+
+  -- | The zigzag of two lifts, through `ℓ`.
+  \sfunc liftZ-ell.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {z : simplex p 1} (c0 : VLift p 0 z) (c1 : VLift p 1 z)
+    : comp_iso (dmap (UnitHomHelpers.ell p) (earr c0)) (dmap (UnitHomHelpers.ell p) (earr c1)) (earr-iso c1)
+      = transport2 (\lam a b => a ~> b) (unit-ell p (nerveOb 0, c0.1)) (unit-ell p (nerveOb 0, c1.1)) (liftZ (unitFib p) c0 c1)
+    => inv $ comp_iso-unique _ _ _ $
+         pmap (comp _) (carr-ell c1)
+         *> comp-transport (unit-ell p (nerveOb 0, c0.1)) (unit-ell p (nerveOb 0, c1.1)) (unit-ell p (nerveOb 1, z)) (liftZ (unitFib p) c0 c1) (carr (unitFib p) c1)
+         *> pmap (transport2 (\lam a b => a ~> b) (unit-ell p (nerveOb 0, c0.1)) (unit-ell p (nerveOb 1, z))) (comp_iso-eq _ _ _)
+         *> inv (carr-ell c0)
+
+  -- | Lifts of the same edge along equal arrows are equal.
+  \sfunc lift-path' {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {f f' : nerveOb {SimplexCat} 0 ~> nerveOb {SimplexCat} 1}
+                     (Kf : f = f') {z : simplex p 1} (c : ContLift (Fibers p) (nerveOb 0, nerveOb 1, f, z)) (c' : ContLift (Fibers p) (nerveOb 0, nerveOb 1, f', z))
+    : Path (\lam k => ContLift (Fibers p) (nerveOb 0, nerveOb 1, Kf k, z)) c c' \elim Kf
+    | idp => isContr=>isProp (pf (nerveOb 0, nerveOb 1, f, z)) c c'
+
+  \sfunc earr-path.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {f f' : nerveOb {SimplexCat} 0 ~> nerveOb {SimplexCat} 1} {Kf : f = f'} {z : simplex p 1}
+                       {c : ContLift (Fibers p) (nerveOb 0, nerveOb 1, f, z)} {c' : ContLift (Fibers p) (nerveOb 0, nerveOb 1, f', z)}
+                       (lp : Path (\lam k => ContLift (Fibers p) (nerveOb 0, nerveOb 1, Kf k, z)) c c')
+    : dmap (UnitHomHelpers.ell p) (earr c') = transport2 (\lam a b => a ~> b) (path \lam k => UnitHomHelpers.ell p (lp k).1.1) (idp {_} {UnitHomHelpers.ell p z.1}) (dmap (UnitHomHelpers.ell p) (earr c)) \elim Kf, lp
+    | idp, idp => idp
+
+  -- | The comparison of the unit with `ℓ` on vertices is natural.
+  \sfunc unit-ell-nat.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {v v' w w' : simplex p 0} (P : v = v') (Q : w = w')
+                          (h : UnitHomHelpers.ell p v.1 ~> UnitHomHelpers.ell p w.1)
+    : transport2 (\lam a b => a ~> b) (pmap (vob (unitFib p)) P) (pmap (vob (unitFib p)) Q)
+        (transport2 (\lam a b => a ~> b) (inv (unit-ell p (nerveOb 0, v))) (inv (unit-ell p (nerveOb 0, w))) h)
+      = transport2 (\lam a b => a ~> b) (inv (unit-ell p (nerveOb 0, v'))) (inv (unit-ell p (nerveOb 0, w')))
+          (transport2 (\lam a b => a ~> b) (pmap (\lam u => UnitHomHelpers.ell p u.1) P) (pmap (\lam u => UnitHomHelpers.ell p u.1) Q) h) \elim P, Q
+    | idp, idp => idp
+
+  \lemma segRes0 : segRes 0 = vert {1} 0
+    => simplexHom-ext \lam t => \case \elim t \with { | 0 => idp }
+
+  {- | The edge value of an edge under the unit is its hom computation: its endpoints are the restriction and the new top vertex,
+   -   and its zigzag is {UnitPhi.Phi} of the edge as a way to append its target, up to `ℓ`.
+   -}
+  \sfunc unit-edgeVal-path.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s))
+    : edgeVal (unitFib p) t
+      = ((appRestr pf (nerveOb 0, t (nerveOb (1, SimplexCat.id))), appRestr-p pf (nerveOb 0, t (nerveOb (1, SimplexCat.id)))),
+         (appLast pf (nerveOb 0, t (nerveOb (1, SimplexCat.id))),
+          transport2 (\lam a b => a ~> b) (inv (unit-ell p (nerveOb 0, (appRestr pf (nerveOb 0, t (nerveOb (1, SimplexCat.id))), appRestr-p pf (nerveOb 0, t (nerveOb (1, SimplexCat.id {1})))))))
+                                          (inv (unit-ell p (nerveOb 0, appLast pf (nerveOb 0, t (nerveOb (1, SimplexCat.id))))))
+            (UnitPhi.Phi pf (appLast pf (nerveOb 0, t (nerveOb (1, SimplexCat.id {1})))) ((nerveOb 0, t (nerveOb (1, SimplexCat.id))) , idd))))
+    => \let | z => t (nerveOb (1, SimplexCat.id))
+            | tz : AppT p => (nerveOb 0, z)
+            | L0 => rightFib-lift pf (nerveOb 0, joinN (nerveOb 0), joinIncln (nerveOb 0), z)
+            | L1 => rightFib-lift pf (nerveOb 0, joinN (nerveOb 0), joinVertn (nerveOb 0), z)
+            | lp0 => lift-path' pf (inv (joinIncln-vertex 0 *> pmap (nerveHom {SimplexCat} {0} {1}) segRes0)) (secLift t 0) L0
+            | lp1 => lift-path' pf (inv (joinVertn-vertex 0)) (secLift t 1) L1
+            | P0 : t (edgeV 0) = L0.1 => path \lam k => (lp0 k).1
+            | P1 : t (edgeV 1) = L1.1 => path \lam k => (lp1 k).1
+            | Z => comp_iso (dmap (UnitHomHelpers.ell p) (earr (secLift t 0))) (dmap (UnitHomHelpers.ell p) (earr (secLift t 1))) (earr-iso (secLift t 1))
+            | S1 : liftZ (unitFib p) (secLift t 0) (secLift t 1)
+                   = transport2 (\lam a b => a ~> b) (inv (unit-ell p (nerveOb 0, t (edgeV 0)))) (inv (unit-ell p (nerveOb 0, t (edgeV 1)))) Z
+                => inv (pmap (transport2 (\lam a b => a ~> b) (inv (unit-ell p (nerveOb 0, t (edgeV 0)))) (inv (unit-ell p (nerveOb 0, t (edgeV 1)))))
+                             (liftZ-ell (secLift t 0) (secLift t 1))
+                        *> tr2-inv _ _ _)
+            | E0 => earr-path lp0
+            | E1 => earr-path lp1
+            | S3 : transport2 (\lam a b => a ~> b) (pmap (\lam u => UnitHomHelpers.ell p u.1) P0) (pmap (\lam u => UnitHomHelpers.ell p u.1) P1) Z
+                   = comp_iso (dmap (UnitHomHelpers.ell p) (UnitPhi.iota pf tz)) (dmap (UnitHomHelpers.ell p) (UnitPhi.vtop pf tz)) (UnitPhi.vtop-iso pf tz)
+                => comp_iso-unique _ _ _ $
+                     pmap (comp _) E1
+                     *> comp-transport (pmap (\lam u => UnitHomHelpers.ell p u.1) P0) (pmap (\lam u => UnitHomHelpers.ell p u.1) P1) idp Z _
+                     *> pmap (transport2 (\lam a b => a ~> b) (pmap (\lam u => UnitHomHelpers.ell p u.1) P0) idp) (comp_iso-eq _ _ _)
+                     *> inv E0
+            | S4 : comp_iso (dmap (UnitHomHelpers.ell p) (UnitPhi.iota pf tz)) (dmap (UnitHomHelpers.ell p) (UnitPhi.vtop pf tz)) (UnitPhi.vtop-iso pf tz)
+                   = UnitPhi.Phi pf (appLast pf tz) (tz, idd)
+                => inv (UnitPhi.Phi-zz pf (appLast pf tz) (tz, idd) *> comp_idd-right)
+       \in edgeVal-path (unitFib p) P0 P1 $
+            pmap (transport2 (\lam a b => a ~> b) (pmap (vob (unitFib p)) P0) (pmap (vob (unitFib p)) P1)) S1
+            *> unit-ell-nat P0 P1 Z
+            *> pmap (transport2 (\lam a b => a ~> b) (inv (unit-ell p (nerveOb 0, L0.1))) (inv (unit-ell p (nerveOb 0, L1.1)))) (S3 *> S4)
+
+  -- | For a Segal right fibration, edges under the unit are their endpoints together with the arrows of the realization between them.
+  \lemma unit-edgeVal-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) : IsEquiv (edgeVal (unitFib p))
+    => \let | e1 : IsEquiv {\Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)} {simplex p 1} (\lam t => t (nerveOb (1, SimplexCat.id {1})))
+                => rightFib-terminal-sections (rightFib-pullback (sliceProj 1) pf) (slice-terminal 1)
+            | Phix (y x : simplex p 0) (s : Fibers (appY pf y) x.1) : UnitHomHelpers.ell p x.1 ~> UnitHomHelpers.ell p y.1
+                => transport (__ ~> UnitHomHelpers.ell p y.1) (pmap+ (UnitHomHelpers.ell p) s.2) (UnitPhi.Phi pf y s.1)
+            | e3 : IsEquiv {\Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (Fibers (appY pf y) x.1))}
+                           {\Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (UnitHomHelpers.ell p x.1 ~> UnitHomHelpers.ell p y.1))}
+                           (\lam s => (s.1, (s.2.1, Phix s.1 s.2.1 s.2.2)))
+                => segal-map-equiv.sigma-map-equiv (inP idEquiv) \lam y => segal-map-equiv.sigma-map-equiv (inP idEquiv) \lam x => UnitPhi.Phi-equiv pf ps y x.1
+            | Dv (v : simplex p 0) : vob (unitFib p) v = UnitHomHelpers.ell p v.1 => unit-ell p (nerveOb 0, v)
+            | e4 : IsEquiv {\Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (UnitHomHelpers.ell p x.1 ~> UnitHomHelpers.ell p y.1))}
+                           {\Sigma (a : simplex p 0) (\Sigma (b : simplex p 0) (vob (unitFib p) a ~> vob (unitFib p) b))}
+                           (\lam s => (s.2.1, (s.1, transport2 (\lam a b => a ~> b) (inv (Dv s.2.1)) (inv (Dv s.1)) s.2.2)))
+                => inP \new QEquiv {
+                     | ret s => (s.2.1, (s.1, transport2 (\lam a b => a ~> b) (Dv s.1) (Dv s.2.1) s.2.2))
+                     | ret_f s => pmap (\lam h => ((s.1, (s.2.1, h)) : \Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (UnitHomHelpers.ell p x.1 ~> UnitHomHelpers.ell p y.1))))
+                                       (tr2-inv' (Dv s.2.1) (Dv s.1) s.2.2)
+                     | f_sec s => pmap (\lam h => ((s.1, (s.2.1, h)) : \Sigma (a : simplex p 0) (\Sigma (b : simplex p 0) (vob (unitFib p) a ~> vob (unitFib p) b))))
+                                       (tr2-inv (Dv s.1) (Dv s.2.1) s.2.2)
+                   }
+            | res => IsEquiv.trans e1 (IsEquiv.trans (edgeApp-equiv pf) (IsEquiv.trans e3 e4))
+       \in transport IsEquiv (ext \lam t => inv (unit-edgeVal-path pf t)) res
+}
