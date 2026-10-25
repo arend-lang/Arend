@@ -252,6 +252,15 @@
       | f_sec _ => idp
   }
 
+-- | Right fibrations are invariant under equivalences over the base.
+\lemma rightFib-hequiv.{u} {A C D : \Cat u} {f : C ->⁺ D} (fe : IsHEquiv f) {p : C ->⁺ A} {p' : D ->⁺ A}
+                           (h : \Pi (z :⁺ C) -> p' (f z) = p z) (c : IsRightFib (Fibers p')) : IsRightFib (Fibers p)
+  => aux (HEquiv_= fe) h c
+  \where
+    \private \lemma aux.{u} {A C D : \Cat u} (r : C = D) {p : C ->⁺ A} {p' : D ->⁺ A}
+                            (h : \Pi (z :⁺ C) -> p' (transport+ (\lam Y => Y) r z) = p z) (c : IsRightFib (Fibers p')) : IsRightFib (Fibers p) \elim r
+      | idp => transport (\lam q => IsRightFib (Fibers q)) (funExt+ h) c
+
 -- | The map of slices induced by {q}.
 \func sliceMap {E A : \Cat} (q : E ->⁺ A) (x : E) (w : \Sigma (y : E) (y ~> x)) : \Sigma (a : A) (a ~> q x)
   => (q w.1, dmap q w.2)

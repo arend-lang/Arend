@@ -1,0 +1,105 @@
+{- | Simplicial types are small right fibrations over the simplex category.
+
+ -   {RFibU} is the type of small right fibrations over {DeltaCat}. The small category of simplices is a map {elUObj} from
+ -   simplicial types to {RFibU}. Its inverse {stU} straightens the opposite left fibration ({opFunc-leftFib}, {Straight}).
+ -   * {rfibU-path}: an equivalence of total categories over {DeltaCat} is a path in {RFibU}.
+ -   * {st-el-path}: a covariant fibrewise equivalence from the straightening of `SimpType.El S` to {S} is a path of simplicial types
+ -     ({depUnivalence}, {objectwise-iso}, {IsIso_=}).
+ -   * {elUObj-equiv}: {elUObj} is an equivalence of types.
+ -   The two comparisons themselves, {st-el-core} and {el-st-core}, are left open. Both reduce to the identification of
+ -   `Op (SimpType.El S)` with the total category of {S} over `Op DeltaCat`, which mixes the variance of {SimpType.El} with that of {Op}.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Opposite
+\import InfCat.Opposite.Fibration
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.SimplicialType
+\import Logic
+\import Paths
+\import Paths.Meta
+\open SimpType
+
+-- | Small right fibrations over the simplex category.
+\func RFibU.{u} => \Sigma (E : \Cat u) (p : E ->⁺ DeltaCat) (IsRightFib (Fibers p))
+
+-- | The small category of simplices as a map of types.
+\func elUObj.{u} (S : SimpType.{u}) : RFibU.{u}
+  => (ElU S, elUProj S, elU-rightFib S)
+
+-- | The straightening of the opposite of a small right fibration.
+\func stU.{u} (X : RFibU.{u}) : SimpType.{u}
+  => \lam y => Straight (opFunc-leftFib X.3) (op-small X.3) y
+  \where
+    \lemma op-small.{v} {C R : \Cat v} {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (z : Op C) : IsSmall.{v} (Fibers (OpFunc q) z)
+      => IsSmall.fromGroupoid (leftFib-grpd (opFunc-leftFib qf) z) {\Sigma (e : Op R) (OpFunc q e = z)} \new QEquiv {
+           | f s => ((s.1, s.2) : Fibers (OpFunc q) z)
+           | ret t => (t.1, t.2)
+           | ret_f _ => idp
+           | f_sec _ => idp
+         }
+
+-- | An equivalence of total categories over {DeltaCat} is a path in {RFibU}.
+\sfunc rfibU-path.{u} {X Y : RFibU.{u}} {F : X.1 ->⁺ Y.1} (Fe : IsHEquiv F) (Fp : \Pi (x :⁺ X.1) -> Y.2 (F x) = X.2 x) : X = Y
+  => aux {X.1} {Y.1} (HEquiv_= Fe) {X.2} {Y.2} {X.3} {Y.3} Fp
+  \where
+    \private \sfunc aux.{v} {E' E : \Cat v} (r : E' = E) {p' : E' ->⁺ DeltaCat} {p : E ->⁺ DeltaCat}
+                            {pf' : IsRightFib (Fibers p')} {pf : IsRightFib (Fibers p)}
+                            (h : \Pi (z :⁺ E') -> p (transport+ (\lam Y => Y) r z) = p' z)
+      : ((E', p', pf') : RFibU.{v}) = (E, p, pf) \elim r
+      | idp => ext (idp, inv (funExt+ h))
+
+{- | The comparison of the straightening of `SimpType.El S` with {S} on total categories, and that it is a fibrewise equivalence.
+ -   An element of the straightening at `y` is an object of `Op (SimpType.El S)` over `y`; it should go to the simplex of {S} that it
+ -   corresponds to by the Yoneda lemma. This needs `Op (SimpType.El S) ≃ \Sigma⁺ (y : Op DeltaCat) (S y)` over `Op DeltaCat`
+ -   (G2(c) of complete-segal-comma.tex: `op-total-equiv` composed with `toOpOp`, with the compatibility with the projections).
+ -   Open.
+ -}
+\sfunc st-el-core.{u} (S : SimpType.{u})
+  : \Sigma (sec : \Pi (s :⁺ \Sigma⁺ (y : Op.{u} DeltaCat) (stU.{u} (elUObj.{u} S) y)) -> S s.1)
+           (\Pi (y : Op.{u} DeltaCat) -> IsEquiv {stU.{u} (elUObj.{u} S) y} {S y} (\lam a => sec (y, a)))
+  => {?}
+
+-- | The straightening of the category of simplices of {S} is {S}.
+\sfunc st-el-path.{u} (S : SimpType.{u}) : stU.{u} (elUObj.{u} S) = S
+  => \let | c => st-el-core.{u} S
+          | D => depUnivalence.{u} {Op.{u} DeltaCat} {stU.{u} (elUObj.{u} S)} {S}
+     \in (IsIso_= {Op.{u} DeltaCat ->⁺ \Type u} {stU.{u} (elUObj.{u} S)} {S} {D.ret c.1} (objectwise-iso \lam y => ~>_->-equiv-iso.{u} $
+           transportInv IsEquiv (ext \lam a => path (\lam i => D.f_ret c.1 i (y, a))) (c.2 y))).1
+
+{- | The comparison of the category of simplices of the straightening of `X` with `X` over {DeltaCat}.
+ -   A simplex of the straightening over `[n]` is an object of `Op X.1` over `toOp [n]`, that is, an object of `X.1` over `[n]`.
+ -   This is again G2(c), for the straightening of `X`, followed by {fibers-sigma-hequiv} for `OpFunc X.2` and `toOpOp`. Open.
+ -}
+\sfunc el-st-core.{u} (X : RFibU.{u})
+  : \Sigma (F : ElU (stU X) ->⁺ X.1) (\Pi (x :⁺ ElU (stU X)) -> X.2 (F x) = elUProj (stU X) x) (IsHEquiv F)
+  => {?}
+
+-- | The category of simplices of the straightening of `X` is `X`.
+\sfunc el-st-path.{u} (X : RFibU.{u}) : elUObj (stU X) = X
+  => rfibU-path {elUObj (stU X)} {X} (el-st-core X).3 (el-st-core X).2
+
+-- | Simplicial types are small right fibrations over {DeltaCat}.
+\lemma elUObj-equiv.{u} : IsEquiv elUObj.{u}
+  => inP \new QEquiv {
+    | ret => stU
+    | ret_f => st-el-path
+    | f_sec => el-st-path
+  }
+
+-- | {elUObj} restricts to an equivalence between complete Segal simplicial types and complete Segal right fibrations.
+\lemma elUObj-cs-equiv.{u}
+  : IsEquiv {\Sigma (S : SimpType.{u}) (IsCompleteSegalSimpType S)} {\Sigma (X : RFibU.{u}) (IsCompleteSegal {X.1} {X.2} X.3)} (\lam s => (elUObj s.1, s.2))
+  => inP (sigma-equiv (IsEquiv.toQEquiv elUObj-equiv) \lam _ => idEquiv)

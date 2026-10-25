@@ -1,0 +1,92 @@
+{- | Simplicial types as presheaves on the simplex category and their categories of simplices.
+
+ -   A simplicial type is a functor {SSet} `Op DeltaCat ->⁺ \Type u`. Its category of simplices {SimpType.El} is the comma category
+ -   `yoneda ↓ S`, a right fibration over {DeltaCat} ({el-rightFib}) whose fibre over `[n]` is `S [n]` ({el-fiber-equiv}).
+ -   It lives one universe level up, but its arrows are small ({el-arrows-equiv}), so it has a small model {ElU} with a definitional
+ -   inverse of the comparison. Complete Segal simplicial types are those whose small category of simplices is complete Segal
+ -   ({IsCompleteSegalS}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import InfCat.Arrows
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.LeftComma
+\import InfCat.Opposite
+\import InfCat.Resizing
+\import InfCat.Simplicial.Complete
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+
+-- | Simplicial types.
+\func SimpType.{u} => Op.{u} DeltaCat ->⁺ \Type u
+  \where {
+    -- | The category of simplices of {S}: the comma category `yoneda ↓ S`.
+    \protected \func El.{u} (S : SimpType.{u}) : \Cat (\suc u)
+      => LeftComma yoneda S
+
+    \func elProj.{u} (S : SimpType.{u}) (x :⁺ El S) : DeltaCat
+      => x.1
+
+    -- | The projection from {SimpType.El} is a right fibration.
+    \lemma el-rightFib.{u} (S : SimpType.{u}) : IsRightFib (Fibers (elProj S))
+      => leftComma-rightFib yoneda S
+
+    -- | The fibre of {SimpType.El} over `[n]` is `S [n]` by the Yoneda lemma.
+    \lemma el-fiber-equiv.{u} (S : SimpType.{u}) (n : DeltaCat)
+      : IsEquiv {S (Op.toOp n)} {Fibers (elProj S) n} (\lam a => ((n, (IsEquiv.toQEquiv (yonedaLemma n S)).ret a), idp))
+      => IsEquiv.trans (inP (symQEquiv (IsEquiv.toQEquiv (yonedaLemma n S))))
+        (IsHEquiv.toIsEquiv (fibers-total-hequiv {DeltaCat} {\lam m => yoneda m ~> S} n))
+
+    -- | The structure maps `yoneda n ~> S` form a right fibration over {DeltaCat}.
+    \lemma elHom-rightFib.{u} (S : SimpType.{u}) : IsRightFib (\lam (n :⁺ DeltaCat) => yoneda n ~> S)
+      => rightFib-pullback yoneda (hom-rightFib S)
+
+    -- | The small type of arrows of {SimpType.El}: an arrow of {DeltaCat} and a simplex over its target.
+    \func ElArr.{u} (S : SimpType.{u}) : \Type u
+      => \Sigma (j : \Sigma (j : \Sigma DeltaCat DeltaCat) (j.1 ~> j.2)) (S (Op.toOp j.1.2))
+
+    {- | Arrows of {SimpType.El} are small: an arrow of {SimpType.El} is an arrow of {DeltaCat} with a lift of its target, which is unique since
+     -   {SimpType.El} is a right fibration ({rightFib-sections-ev}), and the target is a simplex by the Yoneda lemma.
+     -}
+    \sfunc el-arrows-equiv.{u} (S : SimpType.{u}) : QEquiv {DI ->⁺ SimpType.El S} {ElArr S}
+      => split S `transQEquiv`
+      sigma-right (\lam (k : DI ->⁺ DeltaCat) => IsEquiv.toQEquiv (rightFib-sections-ev (elHom-rightFib S) k)) `transQEquiv`
+      sigma-right (\lam (k : DI ->⁺ DeltaCat) => IsEquiv.toQEquiv (yonedaLemma (k dright) S)) `transQEquiv`
+      sigma-equiv DI-equiv (\lam _ => idEquiv)
+      \where
+        \func split.{v} (S : SimpType.{v}) : QEquiv {DI ->⁺ SimpType.El S} {\Sigma (k : DI ->⁺ DeltaCat) (\Pi (i :⁺ DI) -> yoneda (k i) ~> S)} \cowith
+          | f a => (\lam i => (a i).1, \lam i => (a i).2)
+          | ret s i => (s.1 i, s.2 i)
+          | ret_f _ => idp
+          | f_sec _ => idp
+
+    -- | The small model of {SimpType.El}.
+    \func ElU.{u} (S : SimpType.{u}) : \Cat u
+      => ResizeFromArrows (el-arrows-equiv S)
+
+    -- | The comparison from the small model, with the definitional inverse `resizeCat`.
+    \func unresizeEl.{u} {S : SimpType.{u}} (x :⁺ ElU S) : SimpType.El S \elim x
+      | resizeCat z => z
+
+    \lemma unresizeEl-equiv.{u} {S : SimpType.{u}} : IsHEquiv (unresizeEl {S})
+      => inP \new HQEquiv {
+        | finv z => resizeCat z
+        | finv_f (resizeCat z) => idp
+        | f_finv _ => idp
+      }
+
+    -- | The projection from {ElU}.
+    \func elUProj.{u} (S : SimpType.{u}) (x :⁺ ElU S) : DeltaCat
+      => (unresizeEl x).1
+
+    \lemma elU-rightFib.{u} (S : SimpType.{u}) : IsRightFib (Fibers (elUProj S))
+      => rightFib-hequiv unresizeEl-equiv (\lam _ => idp) (el-rightFib S)
+  }
+
+-- | A simplicial type is complete Segal if its category of simplices is.
+\func IsCompleteSegalSimpType.{u} (S : SimpType.{u}) : \Prop
+  => IsCompleteSegal (SimpType.elU-rightFib S)

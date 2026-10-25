@@ -339,6 +339,32 @@
       : IsCocartesianArrow (\lam z => q (transport+ (\lam Y => Y) r z)) u \elim r
       | idp => uc
 
+-- | The converse of {cocartesianArrow-equiv}.
+\lemma cocartesianArrow-equiv-conv.{u} {A C D : \Cat u} {f : C ->⁺ D} (fe : IsHEquiv f) {q : D ->⁺ A} {c c' : C} {u : c ~> c'}
+                                       (uc : IsCocartesianArrow (\lam z => q (f z)) u) : IsCocartesianArrow q (dmap f u)
+  => aux (HEquiv_= fe) uc
+  \where
+    \private \lemma aux.{u} {A C D : \Cat u} (r : C = D) {q : D ->⁺ A} {c c' : C} {u : c ~> c'}
+                            (uc : IsCocartesianArrow (\lam z => q (transport+ (\lam Y => Y) r z)) u)
+      : IsCocartesianArrow q (dmap (\lam z => transport+ (\lam Y => Y) r z) u) \elim r
+      | idp => uc
+
+{- | An arrow of the total category of `Fibers p` is cocartesian for the projection if and only if its underlying arrow of {E}
+ -   is {p}-cocartesian. The total category is written inline, so that it is small.
+ -}
+\lemma cocartesianArrow-fibers.{u} {E A : \Cat u} {p : E ->⁺ A} {k : DI ->⁺ \Sigma⁺ (a : A) (\Sigma⁺ (e : E) (p e = a))}
+  : IsCocartesianArrow p (dpath \lam i => (k i).2.1) <-> IsCocartesianArrow (\lam (s :⁺ \Sigma⁺ (a : A) (\Sigma⁺ (e : E) (p e = a))) => s.1) (dpath k)
+  => (\lam c => transport (IsCocartesianArrow __ (dpath k)) proj-path (cocartesianArrow-equiv proj-equiv c),
+      \lam c => cocartesianArrow-equiv-conv proj-equiv (transportInv (IsCocartesianArrow __ (dpath k)) proj-path c))
+  \where {
+    \lemma proj-equiv.{v} {E A : \Cat v} {p : E ->⁺ A} : IsHEquiv {\Sigma⁺ (a : A) (\Sigma⁺ (e : E) (p e = a))} {E} (\lam s => s.2.1)
+      => IsHEquiv.rightFactor (fibers-sigma-hequiv p) idHEquiv
+
+    \sfunc proj-path.{v} {E A : \Cat v} {p : E ->⁺ A}
+      : (\lam (s :⁺ \Sigma⁺ (a : A) (\Sigma⁺ (e : E) (p e = a))) => p s.2.1) = (\lam (s :⁺ \Sigma⁺ (a : A) (\Sigma⁺ (e : E) (p e = a))) => s.1)
+      => funExt+ \lam s => s.2.2
+  }
+
 -- | A functor over the base between cocartesian maps that preserves cocartesian arrows and is an equivalence on every fiber is an equivalence.
 \lemma cocartesianMap-fiberwise-equiv.{u} {A E E' : \Cat u} {p : E ->⁺ A} {p' : E' ->⁺ A} (pc : IsCocartesianMap p)
                                           {F : E ->⁺ E'} (Fp : \Pi (x :⁺ E) -> p' (F x) = p x)
