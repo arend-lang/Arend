@@ -45,6 +45,35 @@
       | idp => lc
   }
 
+-- | A family of cocartesian lifts is the chosen one, naturally in the data.
+\sfunc cocartesianFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {K : \Cat} (d : K ->⁺ CovLiftData B)
+                                  (l : \Pi (k :⁺ K) -> CovLift B (d k)) (lc : \Pi (k : K) -> IsCocartesianLift (l k)) {k :⁺ K}
+  : cocartesianFib-lift Bf (d k) = l k
+  => (\peval cocartesianFib-lift Bf (d k))
+     *> path (\lam m => lift-of {A} {B} {d k} (equiv-fibers (\lam x => (FullSubCat.inc x).1) (IsHEquiv.ret (cocartesianFib-char.1 Bf))
+                                                             (\lam _ => IsHEquiv.ret_f (cocartesianFib-char.1 Bf))
+                                                             (\lam _ => IsHEquiv.f_ret (cocartesianFib-char.1 Bf))
+                                                             {d k} {_, IsHEquiv.f_ret (cocartesianFib-char.1 Bf)}
+                                                             {(lifts Bf d l lc).1 k, pmap+ __.1 ((lifts Bf d l lc).2 k)} @ m))
+     *> lift-of-path ((lifts Bf d l lc).2 k)
+  \where {
+    -- | The cocartesian lifts as a functor into the full subcategory of cocartesian lifts.
+    \sfunc lifts {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {K : \Cat} (d : K ->⁺ CovLiftData B)
+                 (l : \Pi (k :⁺ K) -> CovLift B (d k)) (lc : \Pi (k : K) -> IsCocartesianLift (l k))
+      => ffMap-lift (FullSubCat.inc-ff {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} {\lam t => IsCocartesianLift t.2})
+                    (\lam k => ((d k, l k) : \Sigma⁺ (d : CovLiftData B) (CovLift B d))) (\lam k => FullSubCat.inc-sat (lc k))
+
+    -- | The lift carried by an element of the fiber over {d} of the full subcategory of cocartesian lifts.
+    \func lift-of {A : \Cat} {B : A ->⁺ \Cat} {d :⁺ CovLiftData B}
+                  (s :⁺ \Sigma⁺ (x : FullSubCat {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} (\lam t => IsCocartesianLift t.2)) ((FullSubCat.inc x).1 = d))
+      : CovLift B d
+      => transport+ (CovLift B) s.2 (FullSubCat.inc s.1).2
+
+    \sfunc lift-of-path {A : \Cat} {B : A ->⁺ \Cat} {t t' :⁺ \Sigma⁺ (d : CovLiftData B) (CovLift B d)} (r :⁺ t = t')
+      : transport+ (CovLift B) (pmap+ __.1 r) t.2 = t'.2 \elim r
+      | idp => idp
+  }
+
 {- | Given a family {F} and a map {p}, if a lift {l} in the pullback of {F} along {p} is cocartesian over {S},
  -   then it is cocartesian over {X}.
  -}

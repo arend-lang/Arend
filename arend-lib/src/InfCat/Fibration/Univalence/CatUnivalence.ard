@@ -8,6 +8,8 @@
  -   * {UnivCoCart}: the category `CoCart_{U×U}(U•×U, U×U•)` classifying cocartesian functors between {U}-small cocartesian maps.
  -   * {UnivSt}: the universal straightening `Fun([1], U) -> UnivCoCart` over `U × U` (SCT, Construction 7.3.9).
  -   * {IsDirUnivalent}: {p} is directed univalent if {UnivSt} is an equivalence (SCT, Definition 7.3.10).
+ -   * {dirUnivalent-hom}: the hom-level criterion, directed univalence from transport being an equivalence on homs (open).
+ -   * {stTr-baseChange}: transport in a base change of {p} is transport in {p}.
 
  -   Construction of {UnivSt}: an arrow `g` of {U} transports the fiber of {p} over `g dleft` to the fiber over `g dright`
  -   along the chosen cocartesian lifts ({CatUnivHelpers.stTr}); this is covariant in `g`. By {ExpCoc.eval-univ}, it defines
@@ -22,6 +24,7 @@
 \import InfCat.Fibration.Covariant.CocartesianBaseChange
 \import InfCat.Fibration.Covariant.CocartesianFib
 \import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Fibration.Exponent.ExponentCocartesian
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
@@ -89,6 +92,33 @@
 -- | {p} is directed univalent if the universal straightening is an equivalence.
 \func IsDirUnivalent.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : \Prop
   => IsHEquiv (UnivSt pc)
+
+{- | The hom-level criterion (converse of SCT Corollary 7.3.11): {p} is directed univalent if transport along arrows of {U}
+ -   identifies arrows `c ~> d` with functors between the fibers.
+ -   Open: it needs the arrows of {UnivCoCart} over an arrow of `U × U` (functors out of the base change of {p} over {DI},
+ -   the cylinder of the transport) and their comparison with the image of {UnivSt}.
+ -}
+\lemma dirUnivalent-hom.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p)
+                            (h : \Pi (c d : U) -> IsEquiv {c ~> d} {Fibers p c ->⁺ Fibers p d} (\lam g x => stTr pc (\lam i => g i) x))
+  : IsDirUnivalent pc
+  => {?}
+
+-- | Transport in a base change of {p} is transport in {p} along the image of the arrow.
+\sfunc stTr-baseChange.{u} {X S E : \Cat u} {p : E ->⁺ S} (pc : IsCocartesianMap p) (pi : X ->⁺ S) (g : DI ->⁺ X)
+                           {t :⁺ Fibers (\lam (w :⁺ BaseChange pi p) => w.1) (g dleft)}
+  : baseChange-fib pi p (stTr (cocartesianMap-char.2 (baseChange-cocartesian pc pi)) g t)
+    = stTr pc (\lam i => pi (g i)) (baseChange-fib pi p t)
+  => inv $ pmap+ __.1 $ cocartesianFib-lift-unique {S} {Fibers p} (cocartesianMap-char.1 pc)
+       (\lam t => (pi (g dleft), pi (g dright), dpath \lam i => pi (g i), baseChange-fib pi p t))
+       (\lam t => (baseChange-fib pi p (stTr (cocartesianMap-char.2 (baseChange-cocartesian pc pi)) g t),
+                   dpath \lam i => baseChange-fib pi p ((cocartesianFib-lift (cocartesianMap-char.1 (cocartesianMap-char.2 (baseChange-cocartesian pc pi)))
+                                                                             (g dleft, g dright, dpath \lam i => g i, t)).2 i)))
+       (\lam t => \let | Bf => cocartesianMap-char.1 (cocartesianMap-char.2 (baseChange-cocartesian pc pi))
+                        | d : CovLiftData (Fibers (\lam (w :⁺ BaseChange pi p) => w.1)) => (g dleft, g dright, dpath \lam i => g i, t)
+                   \in (cocartesianLift<->arrow-at {E} {S} {p} {t.1.2.1} {pi (g dleft)} {pi (g dright)} {dpath \lam i => pi (g i)} (baseChange-fib pi p t).2
+                          (baseChange-fib pi p (stTr (cocartesianMap-char.2 (baseChange-cocartesian pc pi)) g t),
+                           dpath \lam i => baseChange-fib pi p ((cocartesianFib-lift Bf d).2 i))).2 $
+                         (cocartW<->cocartesian pc pi).2 $ (cocartesianLift<->arrow-at t.2 (cocartesianFib-lift Bf d)).1 (cocartesianFib-lift.isCocartesian d))
 
 \module CatUnivHelpers \where {
   -- | The arrows of {ExpCoc} whose functor is cocartesian.

@@ -10,7 +10,6 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Fibration.Univalence.DirectedUnivalence
 \import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Fibration.Univalence.Straightening
@@ -254,6 +253,12 @@
       : IsEquiv {G' z} {sliceFiber F (sumSlice F G') z} (\lam g => Straight.toStraight ((z.2, g), idp))
       => IsEquiv.leftFactor (totalFun-slice.sum-fib-equiv G' z) (inP idEquiv)
   }
+
+-- | Postcomposition with {a} maps the fiber of {s} over {y} to the fiber of `s ; a` over the image of {y}.
+\func sliceFiber-postcomp.{u} {X : \Cat u} {F G : X ->⁺ \Type u} (a : F ~> G) {s :⁺ Slice F} (y :⁺ \Sigma⁺ (x : X) (F x)) (e :⁺ sliceFiber F s y)
+  : sliceFiber G (s.1, comp s.2 a) (pullbackSlice-isProduct.totalMap a y)
+  => Straight.toStraight ((Straight.fromStraight e).1,
+                          ~>_->_comp-fam s.2 a y.1 (Straight.fromStraight e).1 *> pmap+ (\lam z => sliceFiber.covMap a (y.1, z)) (Straight.fromStraight e).2)
 
 {- | If {g0} is a universal element of `s.1 ∘ phi`, then {sliceFiber} of {s} along {phi} has a universal element over the image of {g0}.
  -   Summed over the second coordinate, arrows out of the base point are arrows of {Y} and elements of {sliceFiber} are elements of `s.1`;

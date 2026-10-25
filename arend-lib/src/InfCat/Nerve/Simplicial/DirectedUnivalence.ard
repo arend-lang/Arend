@@ -1,0 +1,113 @@
+{- | The universal family over complete Segal simplicial types: maps of simplicial types are functors of fibres.
+
+ -   Cocartesian transport in {UFam} along `phi : X ~> Y` ({uFamTr}) is, under {uFam-realization-equiv}, the functor of
+ -   realizations induced by postcomposition with {phi} on categories of simplices ({uFamTr-realization}): on generators,
+ -   transport in {KanExt} postcomposes the structure map with {phi} ({kanExt-transport}).
+ -   For complete Segal {Y}, {elSec-equiv} and {realizeOver-equiv} give {uFamTr-equiv}: maps `X ~> Y` are functors `UFam X ->⁺ UFam Y`
+ -   (SCT Corollary 7.3.11 for {UFam}).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Fibration.Univalence.CatUnivalence
+\import InfCat.Functor.Equiv
+\import InfCat.Kan.LeftKanExt
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Fiberwise
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Nerve.Simplicial.RealizationEdge
+\import InfCat.Nerve.Simplicial.Unit
+\import InfCat.Nerve.Simplicial.UniversalFamily
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.SimplicialType
+\import InfCat.Simplicial.SimplicialTypeHom
+\import InfCat.SubCat.Full
+\import Paths
+\import Paths.Meta
+\open SimpType
+\open CatUnivHelpers (stTr)
+
+-- | The functor of realizations induced by a map {t} over {DeltaCat}.
+\func realizeOver.{u} {K E' : \Cat u} (pi : K ->⁺ DeltaCat) (p' : E' ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> Fibers p' (pi k))
+                      (y :⁺ Realization pi) : Realization p'
+  => localize-map {_} {_} {RealW pi} {RealW p'} (fibSec-map t) (\lam w => w) y
+
+-- | {realizeOver} is the functor out of the realization corresponding to {t} followed by the unit of {p'}.
+\sfunc realizeOver-adj.{u} {K E' : \Cat u} (pi : K ->⁺ DeltaCat) (p' : E' ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> Fibers p' (pi k))
+                           {y :⁺ Realization pi}
+  : realize-map pi (\lam k => unitFib p' (pi k, t k)) y = realizeOver pi p' t y
+  => path (\lam i => realize-map-fib pi t (realization-unit p') i y) *> realization-unit.char p' (realizeOver pi p' t y)
+
+-- | For complete Segal {p'}, maps over {DeltaCat} into {p'} are functors of realizations.
+\lemma realizeOver-equiv.{u} {K E' : \Cat u} (pi : K ->⁺ DeltaCat) {p' : E' ->⁺ DeltaCat} {pf' : IsRightFib (Fibers p')}
+                             (cs : IsCompleteSegal pf')
+  : IsEquiv (realizeOver pi p')
+  => transport IsEquiv (path \lam j t => funExt+ (\lam y => realizeOver-adj pi p' t {y}) j)
+    (IsEquiv.trans (sections-postcomp-equiv (unitFib p') (realization-unit-equiv cs) pi) (realization-adj pi))
+
+-- | Cocartesian transport in {UFam} along {phi}.
+\func uFamTr.{u} {X Y : SimpType.{u}} (phi : X ~> Y) (z :⁺ UFam X) : UFam Y
+  => (cocartesianFib-lift {SimpType} {UFam} uFam-cocartesian (X, Y, phi, z)).1
+
+-- | The comparison of the realization of the small category of simplices with {UFam}.
+\func uFamEll.{u} (S : SimpType.{u}) (r :⁺ Realization (elUProj S)) : UFam S
+  => localize-lift (uFamU-realization S).1 r
+
+-- | Transport in {UFam} along {phi} is the functor of realizations induced by postcomposition with {phi}.
+\sfunc uFamTr-realization.{u} {X Y : SimpType.{u}} (phi : X ~> Y) {r :⁺ Realization (elUProj X)}
+  : uFamTr phi (uFamEll X r) = uFamEll Y (realizeOver (elUProj X) (elUProj Y) (elSec phi) r)
+  => path \lam i => fun phi i r
+  \where
+    \sfunc fun.{v} {X Y : SimpType.{v}} (phi : X ~> Y)
+      : (\lam r => uFamTr phi (uFamEll X r)) = {Realization (elUProj X) ->⁺ UFam Y} (\lam r => uFamEll Y (realizeOver (elUProj X) (elUProj Y) (elSec phi) r))
+      => IsEquiv.isInj (localize-ob-equiv {_} {UFam Y} {RealW (elUProj X)})
+           (ext (funExt+ \lam q => kanExt-transport yoneda (nerveMap simplexProj) phi))
+
+-- | For complete Segal {Y}, maps of simplicial types `X ~> Y` are functors of the fibres of {UFam}.
+\lemma uFamTr-equiv.{u} {X Y : SimpType.{u}} (Yc : IsCompleteSegalSimpType Y)
+  : IsEquiv {X ~> Y} {UFam X ->⁺ UFam Y} (\lam phi z => uFamTr phi z)
+  => IsEquiv.leftFactor {X ~> Y} {UFam X ->⁺ UFam Y} {Realization (elUProj X) ->⁺ UFam Y} {\lam phi z => uFamTr phi z} {\lam F r => F (uFamEll X r)}
+       (IsHEquiv.toIsEquiv (IsHEquiv.precomp {Realization (elUProj X)} {UFam X} {UFam Y} {uFamEll X} (uFam-realization-equiv X)))
+       (transport IsEquiv (path \lam j phi => funExt+ (\lam r => inv (uFamTr-realization phi {r})) j)
+         (IsEquiv.trans elSec-equiv $ IsEquiv.trans (realizeOver-equiv (elUProj X) Yc)
+                                                    (IsHEquiv.toIsEquiv (IsHEquiv.postcomp {Realization (elUProj Y)} {UFam Y} {Realization (elUProj X)} {uFamEll Y} (uFam-realization-equiv Y)))))
+
+-- # Directed univalence
+
+-- | The projection of the total category of {UFam}.
+\func uFamProj.{u} => fibLocProj (extProj {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} yoneda (nerveMap simplexProj))
+                                   (ExtWTot {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} yoneda (nerveMap simplexProj))
+
+-- | Complete Segal simplicial types.
+\func CSS.{u} : \Cat (\suc u)
+  => FullSubCat {SimpType.{u}} IsCompleteSegalSimpType
+
+-- | The total category of {UFam} restricted to complete Segal simplicial types.
+\func UTot.{u} : \Cat (\suc u)
+  => BaseChange {CSS} {SimpType.{u}} (\lam c => FullSubCat.inc c) uFamProj.{u}
+
+-- | The projection of {UTot} to {CSS}.
+\func uTotProj.{u} (w :⁺ UTot.{u}) : CSS.{u}
+  => w.1
+
+\lemma uTot-cocartesian.{u} : IsCocartesianMap uTotProj.{u}
+  => cocartesianMap-char.2 (baseChange-cocartesian (cocartesianMap-char.2 uFam-cocartesian) \lam c => FullSubCat.inc c)
+
+-- | {UFam} restricted to complete Segal simplicial types is directed univalent, assuming the open criterion {dirUnivalent-hom}.
+\lemma uTot-dirUnivalent.{u} : IsDirUnivalent uTot-cocartesian.{u}
+  => dirUnivalent-hom {CSS.{u}} {UTot.{u}} {uTotProj.{u}} uTot-cocartesian.{u} \lam c d =>
+       IsEquiv.leftFactor {c ~> d} {Fibers uTotProj.{u} c ->⁺ Fibers uTotProj.{u} d} {Fibers uTotProj.{u} c ->⁺ UFam (FullSubCat.inc d)}
+         {\lam g x => stTr uTot-cocartesian.{u} (\lam i => g i) x} {\lam F x => baseChange-fib (\lam c => FullSubCat.inc c) uFamProj.{u} (F x)}
+         (IsHEquiv.toIsEquiv (IsHEquiv.postcomp (baseChange-fib-equiv (\lam c => FullSubCat.inc c) uFamProj.{u} d)))
+         (transport IsEquiv (path \lam j (g : c ~> d) => funExt+ (\lam x => inv (stTr-baseChange (cocartesianMap-char.2 uFam-cocartesian.{u}) (\lam c => FullSubCat.inc c) (\lam i => g i) {x})) j)
+           (IsEquiv.trans (FullSubCat.inc-ff c d) $ IsEquiv.trans (uFamTr-equiv (FullSubCat.inc-con {SimpType.{u}} {IsCompleteSegalSimpType} {d}))
+                                                                   (IsHEquiv.toIsEquiv (IsHEquiv.precomp (baseChange-fib-equiv (\lam c => FullSubCat.inc c) uFamProj.{u} c)))))

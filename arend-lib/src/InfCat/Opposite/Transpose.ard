@@ -7,8 +7,11 @@
  -}
 
 \import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
+\import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Univalence.DirectedUnivalence
 \import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Equiv
@@ -20,6 +23,7 @@
 \import InfCat.Yoneda.CovariantYoneda
 \import InfCat.Yoneda.YonedaLemma
 \import Logic
+\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -78,3 +82,24 @@
               => funExt+ \lam z => OpFunc.char *> pmap+ (LeftKanExtType F) (funExt+ \lam w => toOpOp.char)
      \in (\lam i => U.1 $ transport (\lam G => IsIso (dmap G b)) e (dmap_IsIso Op.Hom i),
           \lam i => IsFFMap.isConservative Op.Hom-ff $ transportInv (\lam G => IsIso (dmap G b)) e (U.2 i))
+
+-- | Sections of the fibers of {q} along {h} are sections of the fibers of `OpFunc q` along `OpFunc h`.
+\sfunc op-sections.{u} {T E A : \Cat u} (q : E ->⁺ A) (h : T ->⁺ A)
+  : QEquiv {\Pi (t :⁺ T) -> Fibers q (h t)} {\Pi (w :⁺ Op T) -> Fibers (\lam e =>⁺ OpFunc q e) (OpFunc h w)}
+  => symQEquiv (sections-fib q h)
+     `transQEquiv` fib-parallel-equiv {T ->⁺ E} {T ->⁺ A} {Op T ->⁺ Op E} {Op T ->⁺ Op A}
+                     {\lam k t => q (k t)} {\lam K w => OpFunc q (K w)} {\lam f w => OpFunc f w} {\lam f w => OpFunc f w}
+                     OpFunc-equiv OpFunc-equiv (\lam k => funExt+ \lam w => OpFunc-comp {_} {_} {_} {k} {q}) h
+     `transQEquiv` sections-fib (\lam e =>⁺ OpFunc q e) (\lam w => OpFunc h w)
+
+-- | The first component of {op-sections} is {OpFunc} of the first components.
+\sfunc op-sections-fst.{u} {T E A : \Cat u} {q : E ->⁺ A} {h : T ->⁺ A} {s : \Pi (t :⁺ T) -> Fibers q (h t)} {w :⁺ Op T}
+  : ((op-sections q h).f s w).1 = OpFunc (\lam t => (s t).1) w
+  => path \lam i => (((\peval op-sections q h) @ i).f s w).1
+
+-- | If paths of functors into {D} are propositions, then so are paths of functors into `Op D`.
+\lemma op-fun-path-isProp.{u} {D : \Cat u} (Dp : \Pi {A : \Cat u} (f g : A ->⁺ D) -> isProp (f = g)) {A : \Cat u} (f g : A ->⁺ Op D)
+  : isProp (f = g)
+  => \let e : IsEquiv {A ->⁺ Op D} {Op A ->⁺ D} (\lam f z => IsHEquiv.ret toOpOp.isEquiv (OpFunc f z))
+            => IsEquiv.trans OpFunc-equiv (IsHEquiv.toIsEquiv (IsHEquiv.postcomp (IsHEquiv.ret-equiv toOpOp.isEquiv)))
+     \in \lam p q => IsEquiv.isInj (pmapIsEquiv e) (Dp _ _ _ _)

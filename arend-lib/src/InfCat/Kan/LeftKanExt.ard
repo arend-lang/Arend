@@ -30,6 +30,7 @@
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Covariant.CocartesianFib
 \import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Fibration.Covariant.FreeCocartesian
 \import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Equiv
@@ -88,6 +89,30 @@
   => isLocalization-precomp (fibLoc-fiber {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1))
                                           (transportStable-total (extW-stable f (Fibers q))) b)
                             (fibers-total-hequiv {B} {ExtFam f (Fibers q)} b)
+
+-- | The localization functor from the fiber of {ExtFam} over {b} to the fiber of {KanExt}.
+\func kanExtIncl.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (b :⁺ B) (y :⁺ ExtFam f (Fibers q) b) : KanExt f q b
+  => (localize (TotW (extProj f q) (ExtWTot f q)) ((b, y) : ExtTot f q), idp)
+
+-- | Cocartesian transport in {KanExt} along {beta} postcomposes the structure map with {beta}.
+\sfunc kanExt-transport.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) {b b' : B} (beta : b ~> b') {y :⁺ ExtFam f (Fibers q) b}
+  : (cocartesianFib-lift {B} {KanExt f q} (kanExt-cocartesian f q) (b, b', beta, kanExtIncl f q b y)).1 = kanExtIncl f q b' (y.1, comp y.2 beta)
+  => pmap+ __.1 (cocartesianFib-lift-unique {B} {KanExt f q} (kanExt-cocartesian f q) (\lam y => (b, b', beta, kanExtIncl f q b y))
+                                            (lift f q beta) (lift-cocartesian f q beta) {y})
+  \where {
+    -- | The image of the canonical lift in {ExtFam}.
+    \protected \func lift.{v} {A B Q : \Cat v} (f : A ->⁺ B) (q : Q ->⁺ A) {b b' : B} (beta : b ~> b') (y :⁺ ExtFam f (Fibers q) b)
+      : CovLift (KanExt f q) (b, b', beta, kanExtIncl f q b y)
+      => (kanExtIncl f q b' (y.1, comp y.2 beta),
+          dpath \lam j => (localize (TotW (extProj f q) (ExtWTot f q)) ((beta j, (y.1, dpath \lam i => fill2 y.2 beta i j)) : ExtTot f q), idp))
+
+    \lemma lift-cocartesian.{v} {A B Q : \Cat v} (f : A ->⁺ B) (q : Q ->⁺ A) {b b' : B} (beta : b ~> b') (y : ExtFam f (Fibers q) b)
+      : IsCocartesianLift (lift f q beta y)
+      => (cocartesianLift<->arrow-at idp (lift f q beta y)).2 $
+           fibLoc-cocartesianArrow {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1)) (transportStable-total (extW-stable f (Fibers q)))
+             {_} {_} (dpath \lam j => ((beta j, (freeLift (\lam t => f t.1) (b, b', beta, y)).2 j) : ExtTot f q))
+             ((cocartesianLift<->totalArrow (freeLift (\lam t => f t.1) (b, b', beta, y))).1 (freeLift-cocartesian (\lam t => f t.1) (b, b', beta, y)))
+  }
 
 {- | If the hom-types `f a ~> b` are small, then the fibers of {KanExt} are small, even if {B} is large.
  -   The fiber of {ExtFam} over `b` is equivalent to a small category built from small models of the hom-types,
