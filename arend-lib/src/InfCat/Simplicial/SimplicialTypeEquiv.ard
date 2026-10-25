@@ -170,8 +170,8 @@
 \sfunc st-el-path.{u} (S : SimpType.{u}) : stU.{u} (elUObj.{u} S) = S
   => \let | c => st-el-core.{u} S
           | D => depUnivalence.{u} {Op.{u} DeltaCat} {stU.{u} (elUObj.{u} S)} {S}
-     \in (IsIso_= {Op.{u} DeltaCat ->⁺ \Type u} {stU.{u} (elUObj.{u} S)} {S} {D.ret c.1} (objectwise-iso \lam y => ~>_->-equiv-iso.{u} $
-           transportInv IsEquiv (ext \lam a => path (\lam i => D.f_ret c.1 i (y, a))) (c.2 y))).1
+     \in path \lam j => (IsIso_= {Op.{u} DeltaCat ->⁺ \Type u} {stU.{u} (elUObj.{u} S)} {S} {D.ret c.1} (objectwise-iso \lam y => ~>_->-equiv-iso.{u} $
+           transportInv IsEquiv (ext \lam a => path (\lam i => D.f_ret c.1 i (y, a))) (c.2 y))).1 j
 
 {- | The comparison of the category of simplices of the straightening of `X` with `X` over {DeltaCat}.
  -   On opposite categories it is {elTot} followed by the fibers of the straightening and {fibers-sigma-hequiv} for `OpFunc X.2`.

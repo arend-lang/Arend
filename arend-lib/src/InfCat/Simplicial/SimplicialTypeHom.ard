@@ -34,11 +34,11 @@
 
 -- | The action of a map of simplicial types on the small categories of simplices.
 \func elMap.{u} {X Y : SimpType.{u}} (phi : X ~> Y) (x :⁺ ElU X) : ElU Y
-  => resizeCat ((unresizeEl x).1, comp (unresizeEl x).2 phi)
+  => resizeCat ((unresizeEl x).1, comp (unresizeEl x).2 (toPSh phi))
 
 -- | The action of a map of simplicial types on total categories.
 \func totMap.{u} {X Y : SimpType.{u}} (phi : X ~> Y) (s :⁺ \Sigma⁺ (y : Op DeltaCat) (X y)) : \Sigma⁺ (y : Op DeltaCat) (Y y)
-  => pullbackSlice-isProduct.totalMap phi s
+  => pullbackSlice-isProduct.totalMap (toPSh phi) s
 
 -- | The left Kan extension of {elPair} along {totMap} is {elPair} of the postcomposite, covariantly in the simplex.
 \sfunc elPair-lan.{u} {X Y : SimpType.{u}} (phi : X ~> Y) {x :⁺ ElU X}
@@ -47,7 +47,7 @@
   \where \private {
     -- | Postcomposition with {phi} on fibers, as a natural transformation.
     \func theta.{v} {X Y : SimpType.{v}} (phi : X ~> Y) (x :⁺ ElU X) : elPair X x ~> (\lam t => elPair Y (elMap phi x) (totMap phi t))
-      => dpath \lam i t => dpath (iso+ \lam e => sliceFiber-postcomp phi {yoneda (unresizeEl x).1, (unresizeEl x).2} t e) i
+      => dpath \lam i t => dpath (iso+ \lam e => sliceFiber-postcomp (toPSh phi) {yoneda (unresizeEl x).1, (unresizeEl x).2} t e) i
 
     -- | The comparison map adjoint to {theta}.
     \sfunc lanMap.{v} {X Y : SimpType.{v}} (phi : X ~> Y) (x :⁺ ElU X) : LeftKanExtType (totMap phi) (elPair X x) ~> elPair Y (elMap phi x)
@@ -65,12 +65,12 @@
     \lemma lanMap-iso.{v} {X Y : SimpType.{v}} (phi : X ~> Y) (x : ElU X) : IsIso (lanMap phi x)
       => \let | n => (unresizeEl x).1
               | a => (unresizeEl x).2
-              | K => ~>_->_comp-fam a phi (Op.toOp n) (Op.Hom-idd n)
-         \in (univElem-iso-char (leftKanExtType-univElem (totMap phi) (elPair.univElem X n a)) (elPair.univElem Y n (comp a phi))
+              | K => ~>_->_comp-fam a (toPSh phi) (Op.toOp n) (Op.Hom-idd n)
+         \in (univElem-iso-char (leftKanExtType-univElem (totMap phi) (elPair.univElem X n a)) (elPair.univElem Y n (comp a (toPSh phi)))
                                 {=_~> (path \lam i => ((Op.toOp n, K i) : \Sigma⁺ (y : Op DeltaCat) (Y y)))}
                                 (~>_->_=_~> {_} {elPair Y (elMap phi x)} (path \lam i => ((Op.toOp n, K i) : \Sigma⁺ (y : Op DeltaCat) (Y y)))
                                              (Straight.toStraight (Op.Hom-idd n, idp))
-                                 *> tr-fib {Y} {yoneda n, comp a phi} K
+                                 *> tr-fib {Y} {yoneda n, comp a (toPSh phi)} K
                                  *> inv (unit-lanMap phi x))).2 (=_~>-iso _)
 
     -- | {lanMap} maps the image of the universal element under the unit to its image under {theta}.
@@ -145,7 +145,7 @@
       => transport+ (Fibers (tproj {Y})) (elTot-proj X) (totMap phi (elTot X w), idp)
 
     \lemma lam-equiv.{u} {X Y : SimpType.{u}} : IsEquiv (lam {X} {Y})
-      => IsEquiv.trans (inP depUnivalence) $ IsEquiv.trans (inP (fibers-total-equiv.sections {_} {_} {Y} (tproj {X}))) $
+      => IsEquiv.trans (inP toPSh-equiv) $ IsEquiv.trans (inP depUnivalence) $ IsEquiv.trans (inP (fibers-total-equiv.sections {_} {_} {Y} (tproj {X}))) $
          IsEquiv.trans (sections-precomp-equiv (elTot-equiv X) {\lam s => Fibers (tproj {Y}) s.1}) $ inP \new QEquiv {
            | f s w => transport+ (Fibers (tproj {Y})) (elTot-proj X) (s w)
            | ret s w => transport+ (Fibers (tproj {Y})) (inv (elTot-proj X)) (s w)

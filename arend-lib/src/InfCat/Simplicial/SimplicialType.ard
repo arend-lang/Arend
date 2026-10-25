@@ -10,6 +10,7 @@
 \import Equiv
 \import Equiv.Sigma
 \import InfCat.Arrows
+\import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Fibration.SimplexFib
@@ -22,28 +23,51 @@
 \import Logic
 
 -- | Simplicial types.
-\func SimpType.{u} => Op.{u} DeltaCat ->⁺ \Type u
+\type SimpType.{u} => Op.{u} DeltaCat ->⁺ \Type u
   \where {
+    -- | The standard simplices: the Yoneda embedding into simplicial types.
+    \func stdSimplex.{u} (n :⁺ DeltaCat) : SimpType.{u}
+      => yoneda n
+
+    -- | A map of simplicial types as a map of presheaves.
+    \func toPSh.{u} {X Y :⁺ SimpType.{u}} (phi :⁺ X ~> Y) : X ~> {Op.{u} DeltaCat ->⁺ \Type u} Y
+      => dpath \lam i => phi i
+
+    -- | A map of presheaves as a map of simplicial types.
+    \func fromPSh.{u} {X Y :⁺ SimpType.{u}} (phi :⁺ X ~> {Op.{u} DeltaCat ->⁺ \Type u} Y) : X ~> Y
+      => dpath \lam i => phi i
+
+    -- | {toPSh} and {fromPSh} are mutually inverse definitionally.
+    \func toPSh-equiv.{u} {X Y : SimpType.{u}} : QEquiv (toPSh {X} {Y}) \cowith
+      | ret => fromPSh
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+    -- | {fromPSh} turns composition of presheaves into composition of simplicial types.
+    \sfunc fromPSh-comp.{u} {Z X Y :⁺ SimpType.{u}} (a :⁺ Z ~> {Op.{u} DeltaCat ->⁺ \Type u} X) (phi :⁺ X ~> Y)
+      : fromPSh (comp a (toPSh phi)) = comp (fromPSh a) phi
+      => dmap_comp {Op.{u} DeltaCat ->⁺ \Type u} {SimpType.{u}} (\lam (x :⁺ Op.{u} DeltaCat ->⁺ \Type u) => (x : SimpType.{u})) {Z} {X} {Y} {a} {toPSh phi}
+
     -- | The category of simplices of {S}: the comma category `yoneda ↓ S`.
     \protected \func El.{u} (S : SimpType.{u}) : \Cat (\suc u)
-      => LeftComma yoneda S
+      => LeftComma {DeltaCat} {Op.{u} DeltaCat ->⁺ \Type u} yoneda S
 
     \func elProj.{u} (S : SimpType.{u}) (x :⁺ El S) : DeltaCat
       => x.1
 
     -- | The projection from {SimpType.El} is a right fibration.
     \lemma el-rightFib.{u} (S : SimpType.{u}) : IsRightFib (Fibers (elProj S))
-      => leftComma-rightFib yoneda S
+      => leftComma-rightFib {DeltaCat} {Op.{u} DeltaCat ->⁺ \Type u} yoneda S
 
     -- | The fibre of {SimpType.El} over `[n]` is `S [n]` by the Yoneda lemma.
     \lemma el-fiber-equiv.{u} (S : SimpType.{u}) (n : DeltaCat)
-      : IsEquiv {S (Op.toOp n)} {Fibers (elProj S) n} (\lam a => ((n, (IsEquiv.toQEquiv (yonedaLemma n S)).ret a), idp))
-      => IsEquiv.trans (inP (symQEquiv (IsEquiv.toQEquiv (yonedaLemma n S))))
-        (IsHEquiv.toIsEquiv (fibers-total-hequiv {DeltaCat} {\lam m => yoneda m ~> S} n))
+      : IsEquiv {S (Op.toOp n)} {Fibers (elProj S) n} (\lam a => ((n, (IsEquiv.toQEquiv (yonedaLemma.{u} n S)).ret a), idp))
+      => IsEquiv.trans (inP (symQEquiv (IsEquiv.toQEquiv (yonedaLemma.{u} n S))))
+        (IsHEquiv.toIsEquiv (fibers-total-hequiv {DeltaCat} {\lam m => yoneda m ~> {Op.{u} DeltaCat ->⁺ \Type u} S} n))
 
     -- | The structure maps `yoneda n ~> S` form a right fibration over {DeltaCat}.
-    \lemma elHom-rightFib.{u} (S : SimpType.{u}) : IsRightFib (\lam (n :⁺ DeltaCat) => yoneda n ~> S)
-      => rightFib-pullback yoneda (hom-rightFib S)
+    \lemma elHom-rightFib.{u} (S : SimpType.{u}) : IsRightFib (\lam (n :⁺ DeltaCat) => yoneda n ~> {Op.{u} DeltaCat ->⁺ \Type u} S)
+      => rightFib-pullback yoneda (hom-rightFib {Op.{u} DeltaCat ->⁺ \Type u} S)
 
     -- | The small type of arrows of {SimpType.El}: an arrow of {DeltaCat} and a simplex over its target.
     \func ElArr.{u} (S : SimpType.{u}) : \Type u
@@ -58,7 +82,7 @@
       sigma-right (\lam (k : DI ->⁺ DeltaCat) => IsEquiv.toQEquiv (yonedaLemma (k dright) S)) `transQEquiv`
       sigma-equiv DI-equiv (\lam _ => idEquiv)
       \where
-        \func split.{v} (S : SimpType.{v}) : QEquiv {DI ->⁺ SimpType.El S} {\Sigma (k : DI ->⁺ DeltaCat) (\Pi (i :⁺ DI) -> yoneda (k i) ~> S)} \cowith
+        \func split.{v} (S : SimpType.{v}) : QEquiv {DI ->⁺ SimpType.El S} {\Sigma (k : DI ->⁺ DeltaCat) (\Pi (i :⁺ DI) -> yoneda (k i) ~> {Op.{v} DeltaCat ->⁺ \Type v} S)} \cowith
           | f a => (\lam i => (a i).1, \lam i => (a i).2)
           | ret s i => (s.1 i, s.2 i)
           | ret_f _ => idp

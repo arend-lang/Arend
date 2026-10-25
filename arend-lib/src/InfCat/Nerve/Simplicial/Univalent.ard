@@ -9,6 +9,7 @@
 
 \import Equiv
 \import Function.Meta
+\import Logic
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Fibration.Covariant.CocartesianBaseChange
@@ -17,6 +18,7 @@
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Fibration.Univalence.CatUnivalence
 \import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Kan.LeftKanExt
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
@@ -25,7 +27,6 @@
 \import InfCat.Nerve.Simplicial.RealizationEdge
 \import InfCat.Nerve.Simplicial.Unit
 \import InfCat.Nerve.Simplicial.UniversalFamily
-\import InfCat.Opposite
 \import InfCat.Paths
 \import InfCat.Simplicial.Complete
 \import InfCat.Simplicial.SimplicialType
@@ -70,7 +71,9 @@
     \sfunc fun.{v} {X Y : SimpType.{v}} (phi : X ~> Y)
       : (\lam r => uFamTr phi (uFamEll X r)) = {Realization (elUProj X) ->⁺ UFam Y} (\lam r => uFamEll Y (realizeOver (elUProj X) (elUProj Y) (elSec phi) r))
       => IsEquiv.isInj (localize-ob-equiv {_} {UFam Y} {RealW (elUProj X)})
-           (ext (funExt+ \lam q => kanExt-transport yoneda (nerveMap simplexProj) phi))
+           (ext (funExt+ \lam q => kanExt-transport stdSimplex (nerveMap simplexProj) phi
+             *> path \lam i => kanExtIncl stdSimplex (nerveMap simplexProj) Y (((unresizeEl q.1).1, q.2),
+                                 inv (fromPSh-comp.{v} {stdSimplex (unresizeEl.{v} q.1).1} (unresizeEl.{v} q.1).2 phi) i)))
 
 -- | For complete Segal {Y}, maps of simplicial types `X ~> Y` are functors of the fibres of {UFam}.
 \lemma uFamTr-equiv.{u} {X Y : SimpType.{u}} (Yc : IsCompleteSegalSimpType Y)
@@ -84,30 +87,42 @@
 -- # Directed univalence
 
 -- | The projection of the total category of {UFam}.
-\func uFamProj.{u} => fibLocProj (extProj {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} yoneda (nerveMap simplexProj))
-                                   (ExtWTot {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} yoneda (nerveMap simplexProj))
+\func uFamProj.{u} => fibLocProj (extProj {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} stdSimplex (nerveMap simplexProj))
+                                   (ExtWTot {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} stdSimplex (nerveMap simplexProj))
 
 -- | Complete Segal simplicial types.
-\func CSS.{u} : \Cat (\suc u)
+\type CSSTypeCat.{u} : \Cat (\suc u)
   => FullSubCat {SimpType.{u}} IsCompleteSegalSimpType
+  \where {
+    -- | The inclusion of complete Segal simplicial types.
+    \protected \func inc.{v} (c :⁺ CSSTypeCat.{v}) : SimpType.{v}
+      => FullSubCat.inc c
+
+    \lemma inc-ff.{v} : IsFFMap inc.{v}
+      => ffMap-comp {CSSTypeCat.{v}} {FullSubCat {SimpType.{v}} IsCompleteSegalSimpType.{v}} {SimpType.{v}} {\lam c => c} {\lam c => FullSubCat.inc c}
+           (ff-surj-equiv.2 (inP \new HQEquiv { | C => CSSTypeCat.{v} | D => FullSubCat {SimpType.{v}} IsCompleteSegalSimpType.{v} | f d => d | finv d => d | finv_f d => idp | f_finv d => idp })).1 FullSubCat.inc-ff
+
+    \lemma inc-con.{v} {c : CSSTypeCat.{v}} : IsCompleteSegalSimpType.{v} (inc c)
+      => FullSubCat.inc-con {SimpType.{v}} {IsCompleteSegalSimpType.{v}} {c}
+  }
 
 -- | The total category of {UFam} restricted to complete Segal simplicial types.
 \func UTot.{u} : \Cat (\suc u)
-  => BaseChange {CSS} {SimpType.{u}} (\lam c => FullSubCat.inc c) uFamProj.{u}
+  => BaseChange {CSSTypeCat} {SimpType.{u}} (\lam c => CSSTypeCat.inc.{u} c) uFamProj.{u}
 
--- | The projection of {UTot} to {CSS}.
-\func uTotProj.{u} (w :⁺ UTot.{u}) : CSS.{u}
+-- | The projection of {UTot} to {CSSTypeCat}.
+\func uTotProj.{u} (w :⁺ UTot.{u}) : CSSTypeCat.{u}
   => w.1
 
 \lemma uTot-cocartesian.{u} : IsCocartesianMap uTotProj.{u}
-  => cocartesianMap-char.2 (baseChange-cocartesian (cocartesianMap-char.2 uFam-cocartesian) \lam c => FullSubCat.inc c)
+  => cocartesianMap-char.2 (baseChange-cocartesian (cocartesianMap-char.2 uFam-cocartesian) \lam c => CSSTypeCat.inc.{u} c)
 
 -- | {UFam} restricted to complete Segal simplicial types is directed univalent, assuming the open criterion {dirUnivalent-hom}.
 \lemma uTot-dirUnivalent.{u} : IsDirUnivalent uTot-cocartesian.{u}
-  => dirUnivalent-hom {CSS.{u}} {UTot.{u}} {uTotProj.{u}} uTot-cocartesian.{u} \lam c d =>
-       IsEquiv.leftFactor {c ~> d} {Fibers uTotProj.{u} c ->⁺ Fibers uTotProj.{u} d} {Fibers uTotProj.{u} c ->⁺ UFam (FullSubCat.inc d)}
-         {\lam g x => stTr uTot-cocartesian.{u} (\lam i => g i) x} {\lam F x => baseChange-fib (\lam c => FullSubCat.inc c) uFamProj.{u} (F x)}
-         (IsHEquiv.toIsEquiv (IsHEquiv.postcomp (baseChange-fib-equiv (\lam c => FullSubCat.inc c) uFamProj.{u} d)))
-         (transport IsEquiv (path \lam j (g : c ~> d) => funExt+ (\lam x => inv (stTr-baseChange (cocartesianMap-char.2 uFam-cocartesian.{u}) (\lam c => FullSubCat.inc c) (\lam i => g i) {x})) j)
-           (IsEquiv.trans (FullSubCat.inc-ff c d) $ IsEquiv.trans (uFamTr-equiv (FullSubCat.inc-con {SimpType.{u}} {IsCompleteSegalSimpType} {d}))
-                                                                   (IsHEquiv.toIsEquiv (IsHEquiv.precomp (baseChange-fib-equiv (\lam c => FullSubCat.inc c) uFamProj.{u} c)))))
+  => dirUnivalent-hom {CSSTypeCat} {UTot.{u}} {uTotProj.{u}} uTot-cocartesian.{u} \lam c d =>
+       IsEquiv.leftFactor {c ~> d} {Fibers uTotProj.{u} c ->⁺ Fibers uTotProj.{u} d} {Fibers uTotProj.{u} c ->⁺ UFam (CSSTypeCat.inc.{u} d)}
+         {\lam g x => stTr uTot-cocartesian.{u} (\lam i => g i) x} {\lam F x => baseChange-fib (\lam c => CSSTypeCat.inc.{u} c) uFamProj.{u} (F x)}
+         (IsHEquiv.toIsEquiv (IsHEquiv.postcomp (baseChange-fib-equiv (\lam c => CSSTypeCat.inc.{u} c) uFamProj.{u} d)))
+         (transport IsEquiv (path \lam j (g : c ~> d) => funExt+ (\lam x => inv (stTr-baseChange (cocartesianMap-char.2 uFam-cocartesian.{u}) (\lam c => CSSTypeCat.inc.{u} c) (\lam i => g i) {x})) j)
+           (IsEquiv.trans (CSSTypeCat.inc-ff c d) $ IsEquiv.trans (uFamTr-equiv (CSSTypeCat.inc-con {d}))
+                                                                   (IsHEquiv.toIsEquiv (IsHEquiv.precomp (baseChange-fib-equiv (\lam c => CSSTypeCat.inc.{u} c) uFamProj.{u} c)))))
