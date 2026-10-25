@@ -139,7 +139,7 @@
               *> path (\lam j => \lam i =>⁺ snerve-nu 0 x ((inv nerve0-contr j) (nerveMap (constHom 0) (n1arr i)))))
   }
 
--- | The simplicial nerve is a complete Segal right fibration.
+-- | The simplicial nerve is a complete Segal right fibration (SCT Example 11.8.20).
 \lemma snerve-completeSegal.{u} {C : \Cat u} : IsCompleteSegal {SNerve C} {SNerve.proj C} SNerveFib.isRightFib
   => (snerve-segal, snerve-complete)
 

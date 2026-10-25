@@ -5,12 +5,13 @@
  -   * {unit-eval}: the unit evaluates an `n`-simplex `e` at a vertex `w` to `real p (e, w)`; at last vertices this is the
  -     localization functor `ℓ` of the last-vertex presentation ({unit-ell}).
  -   * {unit-surj}: the unit is surjective on vertices ({realization-ob-surj}).
- -   * {unit-ff}: for Segal {p}, the unit is fully faithful on edges. The zigzag of an edge `x -> y` under the unit is, through `ℓ`,
+ -   * {unit-ff}: for Segal {p}, the unit is fully faithful on edges (with {unit-surj}, SCT Theorem 11.8.31). The zigzag of an edge `x -> y` under the unit is, through `ℓ`,
  -     the natural map {UnitPhi.Phi} at the edge seen as the way to append `y` to `x` ({edgeApp}); this map is the hom computation
  -     {appY-hom-equiv} followed by an isomorphism ({UnitPhi.Phi-equiv}), and edges are appends on total spaces ({edgeApp-equiv}).
  -     Endpoint identifications are compared on total spaces, so they may differ by loops.
- -   * {unit-iso}: the unit reflects isomorphisms, by {nerve-ff-reflects-iso}.
- -   * {realization-unit-equiv}: for complete Segal {p}, the unit is an equivalence of total categories ({segal-nerve-map-hequiv}).
+ -   * {unit-iso}: the unit reflects isomorphisms, by SCT Lemma 11.8.23 ({segal-ff-reflects-iso}).
+ -   * {realization-unit-equiv}: for complete Segal {p}, the unit is an equivalence of total categories (SCT Corollary 11.8.35, from
+ -     Theorem 11.8.31 and Corollary 11.8.25, {segal-map-hequiv}).
  -}
 
 \import Equiv
@@ -33,7 +34,7 @@
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Functor.Equiv
 \import InfCat.Nerve.Nerve
-\import InfCat.Nerve.Simplicial.NerveIso
+\import InfCat.Nerve.Simplicial.NerveEdges
 \import InfCat.Nerve.Simplicial.RealizationEdge
 \import InfCat.Nerve.Simplicial.UnitHom
 \import InfCat.Localization.Concrete
@@ -44,11 +45,13 @@
 \import InfCat.Simplicial.Complete
 \import InfCat.Simplicial.Segal
 \import InfCat.Simplicial.SegalEquiv
+\import InfCat.Simplicial.SegalIso
+\import InfCat.Simplicial.SimplexSections
 \import Logic
 \import Paths
 \open NerveLow
 \open RealizationHelpers (lastN, lastN-sec)
-\open NerveIsoHelpers (edgeVal-path)
+\open NerveEdgesHelpers (edgeVal-path)
 \open UnitFFHelpers (unit-edgeVal-equiv)
 
 -- | The unit: the section of the nerve of the realization corresponding to the identity ({realization-unit.char}).
@@ -102,20 +105,20 @@
 
 -- # The unit is fully faithful
 
--- | The unit is fully faithful on edges.
+-- | The unit is fully faithful on edges (SCT Theorem 11.8.31).
 \lemma unit-ff.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (x y : simplex p 0)
   : IsEquiv (edgeSec-map (unitFib p) x y)
   => edgeVal-ff (unitFib p) (unit-edgeVal-equiv pf ps) x y
 
--- | The unit reflects isomorphisms, since it is fully faithful ({nerve-ff-reflects-iso}).
+-- | The unit reflects isomorphisms, since it is fully faithful (SCT Lemma 11.8.23, {segal-ff-reflects-iso}).
 \lemma unit-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (e : simplex p 1)
   (i : IsIsoS (SNerveFib.isRightFib {Realization p}) (unitFib p (nerveOb 1, e))) : IsIsoS pf e
-  => nerve-ff-reflects-iso ps (unitFib p) (unit-ff pf ps) e i
+  => segal-ff-reflects-iso ps (snerve-completeSegal {Realization p}).1 (unitFib p) (unit-ff pf ps) e i
 
--- | For a complete Segal right fibration {p}, the unit `E → N(RE)` is an equivalence of total categories.
+-- | SCT Corollary 11.8.35: for a complete Segal right fibration {p}, the unit `E → N(RE)` is an equivalence of total categories.
 \lemma realization-unit-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} (cs : IsCompleteSegal pf)
   : IsHEquiv {\Sigma⁺ (b : DeltaCat) (Fibers p b)} {\Sigma⁺ (b : DeltaCat) (SNerveFib (Realization p) b)} (\lam s => (s.1, unitFib p s))
-  => segal-nerve-map-hequiv cs (unitFib p) (unit-surj pf) (unit-ff pf cs.1)
+  => segal-map-hequiv cs (snerve-completeSegal {Realization p}) (unitFib p) (unit-surj pf) (unit-ff pf cs.1)
 
 -- | Helpers for {unit-ff}.
 \private \module UnitFFHelpers \where {
@@ -132,7 +135,7 @@
   -- | The image of a lift under the unit, at last vertices, is the image of its underlying arrow under `ℓ`.
   \sfunc carr-ell.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {j : Fin 2} {z : simplex p 1} (c : VLift p j z)
     : dmap (UnitHomHelpers.ell p) (earr c) = transport2 (\lam a b => a ~> b) (unit-ell p (nerveOb 0, c.1)) (unit-ell p (nerveOb 1, z)) (carr (unitFib p) c)
-    => dpath-tr (funExt+ \lam i => unit-ell p (ve j i, c.2 i))
+    => dpath-tr (funExt+ \lam i => unit-ell p (simplex-ve j i, c.2 i))
 
   -- | The zigzag of two lifts, through `ℓ`.
   \sfunc liftZ-ell.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {z : simplex p 1} (c0 : VLift p 0 z) (c1 : VLift p 1 z)
@@ -218,7 +221,7 @@
             | e3 : IsEquiv {\Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (Fibers (appY pf y) x.1))}
                            {\Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (UnitHomHelpers.ell p x.1 ~> UnitHomHelpers.ell p y.1))}
                            (\lam s => (s.1, (s.2.1, Phix s.1 s.2.1 s.2.2)))
-                => segal-map-equiv.sigma-map-equiv (inP idEquiv) \lam y => segal-map-equiv.sigma-map-equiv (inP idEquiv) \lam x => UnitPhi.Phi-equiv pf ps y x.1
+                => segal-ff-equiv.sigma-map-equiv (inP idEquiv) \lam y => segal-ff-equiv.sigma-map-equiv (inP idEquiv) \lam x => UnitPhi.Phi-equiv pf ps y x.1
             | Dv (v : simplex p 0) : vob (unitFib p) v = UnitHomHelpers.ell p v.1 => unit-ell p (nerveOb 0, v)
             | e4 : IsEquiv {\Sigma (y : simplex p 0) (\Sigma (x : simplex p 0) (UnitHomHelpers.ell p x.1 ~> UnitHomHelpers.ell p y.1))}
                            {\Sigma (a : simplex p 0) (\Sigma (b : simplex p 0) (vob (unitFib p) a ~> vob (unitFib p) b))}

@@ -3,7 +3,8 @@
  -   {AppT} is the category of simplices over `joinN b = b ⋆ [0]` ({joinN}), that is, simplices with a new top vertex.
  -   It maps to {E} by restriction to the initial segment ({appRestr}) and to the vertices by the new top vertex ({appLast}).
  -   {AppY} is the category of such simplices together with an arrow from the new top vertex to a fixed vertex {y};
- -   its fibers over `σ` are the ways to append {y} to `σ`, and {appY-rightFib} says that they form a right fibration over {E}.
+ -   its fibers over `σ` are the ways to append {y} to `σ` (`P_X(σ, y)` of SCT Construction 11.8.32), and {appY-rightFib} says that
+ -   they form a right fibration over {E}.
  -}
 
 \import Equiv

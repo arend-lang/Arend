@@ -33,7 +33,7 @@
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Simplicial.Segal
-\import InfCat.Simplicial.SegalEquiv
+\import InfCat.Simplicial.SimplexSections
 \import InfCat.Simplicial.SegalSquare
 \import InfCat.Simplicial.SimplexOperators
 \import Logic
@@ -53,10 +53,6 @@
 -- | The last vertex of the terminal object of `Δ/[1]`.
 \func topOb : BaseChange (sliceProj 1) (nerveMap simplexProj)
   => lastVertex (sliceProj 1) (nerveOb {SliceS 1} (1, SimplexCat.id {1}))
-
--- | The arrow of `Δ/[1]` from the vertex {j} to the terminal object.
-\func sliceArr (j : Fin 2) : edgeV j ~> nerveOb {SliceS 1} (1, SimplexCat.id {1})
-  => nerveHom {SliceS 1} {0, vert j} {1, SimplexCat.id {1}} (vert j, SimplexCat.id-left)
 
 -- | The arrow from the vertex {j} to the last vertex of the terminal object.
 \func edgeArr (j : Fin 2) : edgeOb j ~> topOb

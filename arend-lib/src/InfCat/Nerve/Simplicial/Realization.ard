@@ -11,7 +11,7 @@
  -   * {realization-ob-surj}: for a right fibration, every object of the realization is the image of a vertex `(e, 0)`
  -     with `e` over `[0]`, since `(e_j, 0) -> (e, j)` is inverted, where `e_j` is the transport of `e` along `j : [0] -> [n]`.
  -   * {realization-lastVertex}: for a right fibration {p}, the realization is the localization of {E} at the arrows {LastW}
- -     over maps preserving the last vertex ({lastW-char}). The objects `(e, n)` with `e` over `[n]` form a coreflective
+ -     over maps preserving the last vertex ({lastW-char}), as in SCT Construction 11.8.32. The objects `(e, n)` with `e` over `[n]` form a coreflective
  -     subcategory {lastVertex}: the coreflection {lastRestr} restricts `e` to `[0..j]` by a covariant choice of lifts
  -     ({rightFib-lift}), and the counit lies in {RealW} ({coreflection-isLocalization}).
  -}

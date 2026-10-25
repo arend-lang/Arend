@@ -60,7 +60,7 @@
 \type HasRightInv {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (e : simplex p 1) : \Prop
   => ∃ (sigma : simplex p 2) (act pf (lastEdge 1) sigma = e) (act pf face1 sigma = degen pf (tgt pf e))
 
--- | Isomorphisms of a simplicial type.
+-- | Isomorphisms of a simplicial type (`Iso(C)` of SCT Construction 11.8.18).
 \type IsIsoS {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (e : simplex p 1) : \Prop
   => \Sigma (HasLeftInv pf e) (HasRightInv pf e)
 
@@ -87,7 +87,7 @@
          *> act-id pf x
   }
 
--- | Completeness: vertices are equivalent to isomorphisms via degenerate edges.
+-- | Completeness: vertices are equivalent to isomorphisms via degenerate edges (SCT Definition 11.8.19).
 \type IsComplete {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) : \Prop
   => IsEquiv {simplex p 0} {\Sigma (e : simplex p 1) (IsIsoS pf e)} (\lam x => (degen pf x, degen-iso pf x))
 

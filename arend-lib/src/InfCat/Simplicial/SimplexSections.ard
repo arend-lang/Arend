@@ -1,0 +1,343 @@
+{- | Simplices of a right fibration over the simplex category as sections, and edges and 2-simplices with their vertices.
+
+ -   For a right fibration `p : E ->⁺ DeltaCat`, an `n`-simplex is a section over `Δ/[n]` ({simplexSec}), since `Δ/[n]` has a
+ -   terminal object. Maps of right fibrations act on sections by postcomposition ({gpost}). Restriction of sections and
+ -   evaluation at objects commute with {gpost} definitionally.
+ -   * {EdgeSec}: the edges between two vertices, as sections over `Δ/[1]`: the morphisms `C(x, y)` of SCT Remark 11.8.22.
+ -   * {LEdge}: an edge together with lifts of the vertex inclusions `[0] -> [1]` into it ({VLift}) and paths from their sources to the
+ -     given vertices. Lifts are unique, so {LEdge} is equivalent to {EdgeSec} ({secLEdge-equiv}). Unlike sections, lifts are
+ -     compared without restricting sections along `Δ/[1] -> Δ/[2]`, which does not compute.
+ -   * {degLEdge}: the degenerate edge, natural in the vertex ({degLEdge-tr}).
+ -   * {TriSec}: the 2-simplices with given vertices, with their faces {TriSec.d0}, {TriSec.d1}, {TriSec.d2}. For a Segal {p}, a
+ -     2-simplex is its two short edges ({tri-faces-equiv}); this is the equivalence `C₂ ≃ C₁ ×_{C₀} C₁` of SCT Construction 11.8.18.
+ -}
+
+\import Category
+\import Category.Simplex
+\import Equiv
+\import Equiv.Sigma
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Limit.Terminal
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SegalSquare
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Logic.Unique
+\import Paths
+\open simplex
+
+-- # Sections over `Δ/[n]`
+
+-- | The vertex `j` of `Δ/[1]`.
+\func edgeV (j : Fin 2) : Nerve (SliceS 1)
+  => nerveOb (0, vert j)
+
+-- | The arrow of `Δ/[1]` from the vertex {j} to the terminal object.
+\func sliceArr (j : Fin 2) : edgeV j ~> nerveOb {SliceS 1} (1, SimplexCat.id {1})
+  => nerveHom {SliceS 1} {0, vert j} {1, SimplexCat.id {1}} (vert j, SimplexCat.id-left)
+
+-- | The section over `Δ/[n]` of an `n`-simplex, characterized by its value at the top ({simplexSec.char}).
+\sfunc simplexSec {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {n : Nat} (z : simplex p n) (s :⁺ Nerve (SliceS n))
+  : Fibers p (sliceProj n s)
+  => (pair pf z).1 s
+  \where {
+    \protected \sfunc pair {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {n : Nat} (z : simplex p n)
+      : \Sigma (t : \Pi (s :⁺ Nerve (SliceS n)) -> Fibers p (sliceProj n s)) (t (nerveOb (n, SimplexCat.id {n})) = z)
+      => (IsEquiv.ret (rightFib-terminal-sections (rightFib-pullback (sliceProj n) pf) (slice-terminal n)) z,
+          IsEquiv.f_ret (rightFib-terminal-sections (rightFib-pullback (sliceProj n) pf) (slice-terminal n)))
+
+    -- | The value of {simplexSec} at the top is the simplex.
+    \protected \sfunc char {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {n : Nat} (z : simplex p n)
+      : simplexSec pf z (nerveOb (n, SimplexCat.id {n})) = z
+      => (\peval simplexSec pf z (nerveOb (n, SimplexCat.id))) *> (pair pf z).2
+  }
+
+-- | The value of a section over `Δ/[n]` at `(m, d)` is the transport of its top value along {d}.
+\sfunc section-act {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {n m : Nat}
+                   (t : \Pi (s :⁺ Nerve (SliceS n)) -> Fibers p (sliceProj n s)) (d : Hom {SimplexCat} m n)
+  : act pf d (t (nerveOb (n, SimplexCat.id {n}))) = t (nerveOb (m, d))
+  => rightFib-tr-dpath pf (dpath \lam i => t (nerveHom {SliceS n} {m, d} {n, SimplexCat.id {n}} (d, SimplexCat.id-left) i))
+
+-- | The postcomposition of sections with a map {g} of right fibrations.
+\func gpost {E N K : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+            (pi : K ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> Fibers p (pi k)) (k :⁺ K) : Fibers q (pi k)
+  => g (pi k, t k)
+
+-- # Edges as sections
+
+-- | The edges of {p} from {x} to {y}, as sections over `Δ/[1]`: the morphisms `C(x, y)` of SCT Remark 11.8.22.
+\func EdgeSec {E : \Cat} (p : E ->⁺ DeltaCat) (x y : simplex p 0)
+  => \Sigma (t : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)) (t (edgeV 0) = x) (t (edgeV 1) = y)
+
+-- | The action of {g} on edges from {x} to {y}. {g} is fully faithful (SCT Definition 11.8.21) if this is an equivalence.
+\func edgeSec-map {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+                  (x y : simplex p 0) (w : EdgeSec p x y) : EdgeSec q (g (nerveOb 0, x)) (g (nerveOb 0, y))
+  => (gpost g (sliceProj 1) w.1, pmap (\lam z => g (nerveOb 0, z)) w.2, pmap (\lam z => g (nerveOb 0, z)) w.3)
+
+-- | Sections over `Δ/[1]` are pairs of vertices with an edge between them.
+\lemma edge-split {E : \Cat} {p : E ->⁺ DeltaCat}
+  : IsEquiv {\Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)} {\Sigma (x : simplex p 0) (\Sigma (y : simplex p 0) (EdgeSec p x y))}
+            (\lam t => (t (edgeV 0), (t (edgeV 1), (t, idp, idp))))
+  => inP \new QEquiv {
+    | ret w => w.2.2.1
+    | ret_f _ => idp
+    | f_sec w => \case \elim w \with {
+      | (_, (_, (t, idp, idp))) => idp
+    }
+  }
+
+-- | `[0]` is a terminal object of {DeltaCat}.
+\lemma delta0-terminal : IsTerminal (nerveOb {SimplexCat} 0)
+  => nerve-isTerminal {SimplexCat} {0} \lam m => isProp=>isContr (\lam a b => simplexHom-ext \lam t => fin1-prop (a t) (b t)) (constHom 0)
+  \where
+    \lemma fin1-prop (a b : Fin 1) : a = b \elim a, b
+      | 0, 0 => idp
+
+-- | The arrows to `[0]`, chosen covariantly.
+\func to0 (b :⁺ DeltaCat) : b ~> nerveOb 0
+  => IsHEquiv.fib-sec (rightFib-contr-equiv (hom-rightFib (nerveOb {SimplexCat} 0)) delta0-terminal) b
+
+-- | The degenerate edge at {x}, as a section over `Δ/[1]`.
+\func constSec {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (x : simplex p 0)
+               (s :⁺ Nerve (SliceS 1)) : Fibers p (sliceProj 1 s)
+  => (rightFib-lift {DeltaCat} {Fibers p} pf (sliceProj 1 s, nerveOb 0, to0 (sliceProj 1 s), x)).1
+
+-- | Lifts along endomorphisms of `[0]` are trivial.
+\sfunc lift-vertex {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {f : nerveOb {SimplexCat} 0 ~> nerveOb 0} {x : simplex p 0}
+  : (rightFib-lift {DeltaCat} {Fibers p} pf (nerveOb 0, nerveOb 0, f, x)).1 = x
+  => pmap (\lam (w : V0Lift p x) => w.2.1) (isContr=>isProp (V0Lift.contr pf x) (f, rightFib-lift {DeltaCat} {Fibers p} pf (nerveOb 0, nerveOb 0, f, x)) (idd, (x, idd)))
+  \where {
+    -- | Lifts into {x} along endomorphisms of `[0]`.
+    \func V0Lift {E : \Cat} (p : E ->⁺ DeltaCat) (x : simplex p 0)
+      => \Sigma (f : nerveOb {SimplexCat} 0 ~> nerveOb 0) (ContLift (Fibers p) (nerveOb 0, nerveOb 0, f, x))
+      \where
+        \lemma contr {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (x : simplex p 0) : Contr (V0Lift p x)
+          => sigma-Contr (delta0-terminal (nerveOb 0)) \lam f => pf (nerveOb 0, nerveOb 0, f, x)
+  }
+
+-- | The value of {constSec} at the top is the degenerate edge.
+\sfunc constSec-top {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (x : simplex p 0)
+  : constSec pf x (nerveOb (1, SimplexCat.id {1})) = degen pf x
+  => pmap (\lam f' => (rightFib-lift {DeltaCat} {Fibers p} pf (nerveOb 1, nerveOb 0, f', x)).1) (isContr=>isProp (delta0-terminal (nerveOb 1)) _ _)
+     *> pmap (\lam (c : ContLift (Fibers p) (nerveOb 1, nerveOb 0, nerveHom (constHom 0), x)) => c.1)
+             (rightFib-lift-unique {DeltaCat} {Fibers p} pf {_} {_} {Contr.center {pf (nerveOb 1, nerveOb 0, nerveHom (constHom 0), x)}})
+
+-- # Lifts of the vertex inclusions
+
+-- | The vertex inclusion {j} of `[1]`.
+\func simplex-ve (j : Fin 2) : nerveOb {SimplexCat} 0 ~> nerveOb {SimplexCat} 1
+  => nerveHom {SimplexCat} {0} {1} (vert j)
+
+-- | Lifts of the vertex inclusion {j} into an edge {z}.
+\func VLift {E : \Cat} (p : E ->⁺ DeltaCat) (j : Fin 2) (z : simplex p 1) : \Cat
+  => ContLift (Fibers p) (nerveOb 0, nerveOb 1, simplex-ve j, z)
+
+-- | The canonical lift of the vertex inclusion {j}; its source is the vertex {j} of {z}.
+\func vertLift {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (j : Fin 2) (z : simplex p 1) : VLift p j z
+  => Contr.center {pf (nerveOb 0, nerveOb 1, simplex-ve j, z)}
+
+-- | The lift given by a path over the vertex inclusion.
+\func darrLift {E : \Cat} {p : E ->⁺ DeltaCat} {j : Fin 2} (D : \Pi (i :⁺ DI) -> Fibers p (simplex-ve j i)) : VLift p j (D dright)
+  => (D dleft, dpath \lam i => D i)
+
+-- | The lifts of a section over `Δ/[1]`.
+\func secLift {E : \Cat} {p : E ->⁺ DeltaCat} (t : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)) (j : Fin 2)
+  : VLift p j (t (nerveOb (1, SimplexCat.id {1})))
+  => darrLift (\lam i => t (sliceArr j i))
+
+-- | Lifts into the same edge are unique, along a path of edges.
+\sfunc lift-path {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {j : Fin 2} {z z' : simplex p 1} (T : z = z')
+                 (c : VLift p j z) (c' : VLift p j z') : Path (\lam k => VLift p j (T k)) c c' \elim T
+  | idp => isContr=>isProp (pf (nerveOb 0, nerveOb 1, simplex-ve j, z)) c c'
+
+-- | The image of a lift under {g}.
+\func liftG {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+            {a' a :⁺ DeltaCat} {f :⁺ a' ~> a} {x :⁺ Fibers p a} (c :⁺ ContLift (Fibers p) (a', a, f, x)) : ContLift (Fibers q) (a', a, f, g (a, x))
+  => (g (a', c.1), dpath \lam i => g (f i, c.2 i))
+
+-- # Edges with lifts
+
+-- | An edge from {a} to {b}: an edge, lifts of the vertex inclusions into it, and paths from their sources to {a} and {b}.
+\func LEdge {E : \Cat} (p : E ->⁺ DeltaCat) (a b : simplex p 0)
+  => \Sigma (z : simplex p 1) (c0 : VLift p 0 z) (c1 : VLift p 1 z) (c0.1 = a) (c1.1 = b)
+
+-- | An edge with its canonical lifts.
+\func ledge {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (z : simplex p 1) : LEdge p (src pf z) (tgt pf z)
+  => (z, vertLift pf 0 z, vertLift pf 1 z, idp, idp)
+
+-- | Moving the endpoints of an edge along paths.
+\func ledge-tr {E : \Cat} {p : E ->⁺ DeltaCat} {a a' b b' : simplex p 0} (P : a = a') (Q : b = b') (w : LEdge p a b) : LEdge p a' b'
+  => (w.1, w.2, w.3, w.4 *> P, w.5 *> Q)
+
+-- | Paths of edges along paths of lifts.
+\sfunc ledge-path {E : \Cat} {p : E ->⁺ DeltaCat} {z z' : simplex p 1} (T : z = z')
+                  {c0 : VLift p 0 z} {c0' : VLift p 0 z'} (K0 : Path (\lam k => VLift p 0 (T k)) c0 c0')
+                  {c1 : VLift p 1 z} {c1' : VLift p 1 z'} (K1 : Path (\lam k => VLift p 1 (T k)) c1 c1')
+                  {a b : simplex p 0} (P0 : c0'.1 = a) (P1 : c1'.1 = b)
+  : ((z, c0, c1, path (\lam k => (K0 k).1) *> P0, path (\lam k => (K1 k).1) *> P1) : LEdge p a b) = (z', c0', c1', P0, P1) \elim T, K0, K1
+  | idp, idp, idp => pmap2 (\lam P0' P1' => ((z, c0, c1, P0', P1') : LEdge p a b)) idp_*> idp_*>
+
+-- | An edge as a section, with lifts given by the section.
+\func secLEdge {E : \Cat} {p : E ->⁺ DeltaCat} {a b : simplex p 0} (w : EdgeSec p a b) : LEdge p a b
+  => (w.1 (nerveOb (1, SimplexCat.id {1})), secLift w.1 0, secLift w.1 1, w.2, w.3)
+
+-- | Edges as sections are edges with lifts.
+\lemma secLEdge-equiv {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {a b : simplex p 0} : IsEquiv (secLEdge {E} {p} {a} {b})
+  => \let | J => \Sigma (simplex p 0) (simplex p 0)
+          | L1 => \Sigma (z : simplex p 1) (\Sigma (VLift p 0 z) (VLift p 1 z))
+          | k1 : IsEquiv {\Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)} {\Sigma (j : J) (EdgeSec p j.1 j.2)}
+                         (\lam t => ((t (edgeV 0), t (edgeV 1)), (t, idp, idp)))
+              => inP \new QEquiv {
+                | ret w => w.2.1
+                | ret_f _ => idp
+                | f_sec w => \case \elim w \with {
+                  | ((_, _), (t, idp, idp)) => idp
+                }
+              }
+          | k2 : IsEquiv {\Sigma (j : J) (LEdge p j.1 j.2)} {L1} (\lam w => (w.2.1, (w.2.2, w.2.3)))
+              => inP \new QEquiv {
+                | ret l => ((l.2.1.1, l.2.2.1), (l.1, l.2.1, l.2.2, idp, idp))
+                | ret_f w => \case \elim w \with {
+                  | ((_, _), (z, c0, c1, idp, idp)) => idp
+                }
+                | f_sec _ => idp
+              }
+          | pr : IsEquiv {L1} {simplex p 1} __.1
+              => inP \new QEquiv {
+                | ret z => (z, (vertLift pf 0 z, vertLift pf 1 z))
+                | ret_f l => path \lam k => (l.1, (isContr=>isProp (pf (nerveOb 0, nerveOb 1, simplex-ve 0, l.1)) _ l.2.1 k,
+                                                    isContr=>isProp (pf (nerveOb 0, nerveOb 1, simplex-ve 1, l.1)) _ l.2.2 k))
+                | f_sec _ => idp
+              }
+          | M : IsEquiv {\Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)} {L1}
+                        (\lam t => (t (nerveOb (1, SimplexCat.id {1})), (secLift t 0, secLift t 1)))
+              => IsEquiv.leftFactor pr (rightFib-terminal-sections (rightFib-pullback (sliceProj 1) pf) (slice-terminal 1))
+          | tot : IsEquiv (totalEquiv.total {J} {\lam j => EdgeSec p j.1 j.2} {\lam j => LEdge p j.1 j.2} \lam j => secLEdge)
+              => IsEquiv.leftFactor k2 (IsEquiv.rightFactor {_} {_} {_} {_} k1 {\lam (w : \Sigma (j : J) (EdgeSec p j.1 j.2)) => (((secLEdge w.2).1, ((secLEdge w.2).2, (secLEdge w.2).3)) : L1)} M)
+     \in (totalEquiv {J} {\lam j => EdgeSec p j.1 j.2} {\lam j => LEdge p j.1 j.2} \lam j => secLEdge).2 tot (a, b)
+
+-- | The degenerate edge at {u}.
+\func degLEdge {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (u : simplex p 0) : LEdge p u u
+  => secLEdge (constSec pf u, lift-vertex pf, lift-vertex pf)
+
+-- | The degenerate edge is natural in the vertex.
+\sfunc degLEdge-tr {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {u u' : simplex p 0} (G : u = u')
+  : ledge-tr G G (degLEdge pf u) = degLEdge pf u' \elim G
+  | idp => idp
+
+-- # 2-simplices
+
+-- | The objects and arrows of `Δ/[2]` used for the faces: vertices, the two short edges, the long edge and the terminal object.
+\module SimplexTri \where {
+  \func v0 : Nerve (SliceS 2) => nerveOb {SliceS 2} (0, vert {2} 0)
+  \func v1 : Nerve (SliceS 2) => nerveOb {SliceS 2} (spanOb 1 0)
+  \func v2 : Nerve (SliceS 2) => nerveOb {SliceS 2} (0, vert {2} 2)
+  \func eS : Nerve (SliceS 2) => nerveOb {SliceS 2} (spanOb 1 1)
+  \func eL : Nerve (SliceS 2) => nerveOb {SliceS 2} (spanOb 1 2)
+  \func eF : Nerve (SliceS 2) => nerveOb {SliceS 2} (1, face1)
+  \func top2 : Nerve (SliceS 2) => nerveOb {SliceS 2} (2, SimplexCat.id {2})
+
+  \func aS0 : v0 ~> eS => nerveHom {SliceS 2} {0, vert 0} {1, segRes 1} (vert {1} 0, simplexHom-ext \lam t => \case \elim t \with { | 0 => idp })
+  \func aS1 : v1 ~> eS => dpath \lam i => nerveMap (spanInc 1) (spanEdgeA i)
+  \func aL0 : v1 ~> eL => dpath \lam j => nerveMap (spanInc 1) (spanEdgeB j)
+  \func aL1 : v2 ~> eL => nerveHom {SliceS 2} {0, vert 2} {1, lastEdge 1} (vert {1} 1, simplexHom-ext \lam t => \case \elim t \with { | 0 => idp })
+  \func aF0 : v0 ~> eF => nerveHom {SliceS 2} {0, vert 0} {1, face1} (vert {1} 0, simplexHom-ext \lam t => \case \elim t \with { | 0 => idp })
+  \func aF2 : v2 ~> eF => nerveHom {SliceS 2} {0, vert 2} {1, face1} (vert {1} 1, simplexHom-ext \lam t => \case \elim t \with { | 0 => idp })
+}
+\open SimplexTri
+
+-- | The lifts of a section over `Δ/[2]` along the faces.
+\module FaceLifts \where {
+  \func cS0 {E : \Cat} {p : E ->⁺ DeltaCat} (sg : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) : VLift p 0 (sg eS)
+    => darrLift (\lam i => sg (aS0 i))
+  \func cS1 {E : \Cat} {p : E ->⁺ DeltaCat} (sg : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) : VLift p 1 (sg eS)
+    => darrLift (\lam i => sg (aS1 i))
+  \func cL0 {E : \Cat} {p : E ->⁺ DeltaCat} (sg : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) : VLift p 0 (sg eL)
+    => darrLift (\lam i => sg (aL0 i))
+  \func cL1 {E : \Cat} {p : E ->⁺ DeltaCat} (sg : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) : VLift p 1 (sg eL)
+    => darrLift (\lam i => sg (aL1 i))
+  \func cF0 {E : \Cat} {p : E ->⁺ DeltaCat} (sg : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) : VLift p 0 (sg eF)
+    => darrLift (\lam i => sg (aF0 i))
+  \func cF2 {E : \Cat} {p : E ->⁺ DeltaCat} (sg : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) : VLift p 1 (sg eF)
+    => darrLift (\lam i => sg (aF2 i))
+}
+\open FaceLifts
+
+-- | The 2-simplices with vertices {a}, {b}, {c}, as sections over `Δ/[2]`.
+\func TriSec {E : \Cat} (p : E ->⁺ DeltaCat) (a b c : simplex p 0)
+  => \Sigma (sg : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) (sg v0 = a) (sg v1 = b) (sg v2 = c)
+  \where \protected {
+    -- | The face `d₀`, the edge from the vertex `1` to the vertex `2`.
+    \func d0 {E : \Cat} {p : E ->⁺ DeltaCat} {a b c : simplex p 0} (T : TriSec p a b c) : LEdge p b c
+      => (T.1 eL, cL0 T.1, cL1 T.1, T.3, T.4)
+
+    -- | The face `d₁`, the edge from the vertex `0` to the vertex `2`.
+    \func d1 {E : \Cat} {p : E ->⁺ DeltaCat} {a b c : simplex p 0} (T : TriSec p a b c) : LEdge p a c
+      => (T.1 eF, cF0 T.1, cF2 T.1, T.2, T.4)
+
+    -- | The face `d₂`, the edge from the vertex `0` to the vertex `1`.
+    \func d2 {E : \Cat} {p : E ->⁺ DeltaCat} {a b c : simplex p 0} (T : TriSec p a b c) : LEdge p a b
+      => (T.1 eS, cS0 T.1, cS1 T.1, T.2, T.3)
+  }
+
+-- | A 2-simplex of a Segal right fibration is its two short edges (the equivalence `C₂ ≃ C₁ ×_{C₀} C₁` of SCT Construction 11.8.18).
+\lemma tri-faces-equiv {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) {a b c : simplex p 0}
+  : IsEquiv {TriSec p a b c} {\Sigma (LEdge p a b) (LEdge p b c)} (\lam T => (TriSec.d2 T, TriSec.d0 T))
+  => \let | J => \Sigma (simplex p 0) (simplex p 0) (simplex p 0)
+          | Sec2 => \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)
+          | Hz => \Sigma (z1 : simplex p 1) (c1 : VLift p 1 z1) (z2 : simplex p 1) (c0' : VLift p 0 z2) (c1.1 = c0'.1)
+                         (\Sigma (VLift p 0 z1) (VLift p 1 z2))
+          | k1 : IsEquiv {Sec2} {\Sigma (j : J) (TriSec p j.1 j.2 j.3)} (\lam sg => ((sg v0, sg v1, sg v2), (sg, idp, idp, idp)))
+              => inP \new QEquiv {
+                | ret w => w.2.1
+                | ret_f _ => idp
+                | f_sec w => \case \elim w \with {
+                  | ((_, _, _), (sg, idp, idp, idp)) => idp
+                }
+              }
+          | k2 : IsEquiv {\Sigma (j : J) (\Sigma (LEdge p j.1 j.2) (LEdge p j.2 j.3))} {Hz}
+                         (\lam w => (w.2.1.1, w.2.1.3, w.2.2.1, w.2.2.2, w.2.1.5 *> inv w.2.2.4, (w.2.1.2, w.2.2.3)))
+              => inP \new QEquiv {
+                | ret h => ((h.6.1.1, h.2.1, h.6.2.1), ((h.1, h.6.1, h.2, idp, idp), (h.3, h.4, h.6.2, inv h.5, idp)))
+                | ret_f w => \case \elim w \with {
+                  | ((_, _, _), ((z1, c0, c1, idp, idp), (z2, c0', c1', P, idp))) =>
+                    pmap (\lam P' => (((c0.1, c1.1, c1'.1), ((z1, c0, c1, idp, idp), (z2, c0', c1', P', idp)))
+                                       : \Sigma (j : J) (\Sigma (LEdge p j.1 j.2) (LEdge p j.2 j.3))))
+                         (pmap inv idp_*> *> inv_inv)
+                }
+                | f_sec h => pmap (\lam P' => ((h.1, h.2, h.3, h.4, P', h.6) : Hz)) (idp_*> *> inv_inv)
+              }
+          | pr : IsEquiv {Hz} {Horn p} (\lam h => (\lam i => h.2.2 i, \lam j => h.4.2 j, h.5))
+              => inP \new QEquiv {
+                | ret H => (H.1 dright, darrLift H.1, H.2 dright, darrLift H.2, H.3, (vertLift pf 0 (H.1 dright), vertLift pf 1 (H.2 dright)))
+                | ret_f h => path \lam k => (h.1, h.2, h.3, h.4, h.5, (isContr=>isProp (pf (nerveOb 0, nerveOb 1, simplex-ve 0, h.1)) _ h.6.1 k,
+                                                                     isContr=>isProp (pf (nerveOb 0, nerveOb 1, simplex-ve 1, h.3)) _ h.6.2 k))
+                | f_sec _ => idp
+              }
+          | M : IsEquiv {Sec2} {Hz} (\lam sg => (sg eS, cS1 sg, sg eL, cL0 sg, idp, (cS0 sg, cL1 sg)))
+              => IsEquiv.leftFactor pr (horn-equiv ps)
+          | tot : IsEquiv (totalEquiv.total {J} {\lam j => TriSec p j.1 j.2 j.3} {\lam j => \Sigma (LEdge p j.1 j.2) (LEdge p j.2 j.3)}
+                                            \lam j T => (TriSec.d2 T, TriSec.d0 T))
+              => IsEquiv.leftFactor k2 (IsEquiv.rightFactor k1 M)
+     \in (totalEquiv {J} {\lam j => TriSec p j.1 j.2 j.3} {\lam j => \Sigma (LEdge p j.1 j.2) (LEdge p j.2 j.3)}
+                     \lam j T => (TriSec.d2 T, TriSec.d0 T)).2 tot (a, b, c)
+  \where {
+    -- | The horn of the span: lifts of the vertex `1` and of the vertex `0` that agree at the common vertex.
+    \func Horn {E : \Cat} (p : E ->⁺ DeltaCat) : \Cat
+      => \Sigma (a : \Pi (i :⁺ DI) -> Fibers p (simplex-ve 1 i)) (b : \Pi (j :⁺ DI) -> Fibers p (simplex-ve 0 j)) (a dleft = b dleft)
+
+    -- | Sections over `Δ/[2]` of a Segal right fibration are determined by their restrictions to the horn.
+    \lemma horn-equiv {E : \Cat} {p : E ->⁺ DeltaCat} (ps : IsSegal p)
+      : IsEquiv {\Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)} {Horn p} (\lam sg => (\lam i => sg (aS1 i), \lam j => sg (aL0 j), idp))
+      => \let res => IsEquiv.trans {_} {_} {_} {\lam (t : \Pi (s :⁺ Nerve (SliceS 2)) -> Fibers p (sliceProj 2 s)) (s :⁺ Nerve SpanP) => t (nerveMap (spanInc 1) s)} (ps 1)
+                        (span-sections {\lam w => Fibers p (sliceProj 2 (nerveMap (spanInc 1) w))})
+         \in res
+  }

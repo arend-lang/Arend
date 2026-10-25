@@ -135,7 +135,8 @@
 
 -- # The hom computation
 
-{- | For a Segal right fibration, the ways to append {y} to {x} are the arrows of the realization from `ℓ x` to `ℓ y`:
+{- | For a Segal right fibration, the ways to append {y} to {x} are the arrows of the realization from `ℓ x` to `ℓ y`
+ -   (SCT Lemma 11.8.33, Hebestreit–Steinebrunner, with the calculus of fractions it provides):
  -   the fibers of the extension of {appY} ({rightFib-extend-fiber}) are the arrows into its terminal object
  -   ({UnitHomHelpers.base-terminal}, {rightFib-terminal-repr}).
  -}

@@ -4,7 +4,8 @@
      Sections of `Fibers p` over `Nerve (Δ/[n])` are its `n`-simplices: the slice has a terminal object.
      The span {SpanP}, `[k] ← [0] → [1]`, maps to `Δ/[k+1]` by {spanInc} (the first `k + 1` vertices, the last vertex,
      and the last edge), and sections over it are pairs of a `k`-simplex and an edge glued along a vertex.
-     {p} is Segal if restriction of sections along {spanInc} is an equivalence ({IsSegal}).
+     {p} is Segal if restriction of sections along {spanInc} is an equivalence ({IsSegal}). This is SCT Definition 11.8.15 in the
+     inductive form of SCT Lemma 11.8.16: the spine of `[k+1]` is the union of the spine of `[k]` and the last edge.
  -}
 
 \import Category
@@ -98,7 +99,7 @@
 
 -- # The Segal condition
 
--- | {p} is Segal if its sections over `Δ/[k+1]` are determined by their restrictions to the span.
+-- | {p} is Segal if its sections over `Δ/[k+1]` are determined by their restrictions to the span (SCT Definition 11.8.15).
 \type IsSegal {E : \Cat} (p : E ->⁺ DeltaCat) : \Prop
   => \Pi (k : Nat) -> IsEquiv {\Pi (s :⁺ Nerve (SliceS (suc k))) -> Fibers p (sliceProj (suc k) s)}
                               {\Pi (s :⁺ Nerve SpanP) -> Fibers p (sliceProj (suc k) (nerveMap (spanInc k) s))}

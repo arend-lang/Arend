@@ -1,6 +1,6 @@
 {- | The simplicial nerve of a category.
 
-     For a category {C}, the nerve is the category {SNerve} with the projection {snerve-proj} to the simplex category {DeltaCat}.
+     For a category {C}, the nerve (the Rezk nerve of SCT Definition 11.8.1) is the category {SNerve} with the projection {snerve-proj} to the simplex category {DeltaCat}.
      Its fibers {SNerveFib} form a right fibration ({snerve-rightFib}), that is, a simplicial type: the `n`-simplices are functors
      from `[n]` to {C} ({snerve-nu-equiv}), and transport along `d : [n] -> [n']` is precomposition with `d` ({snerve-nu-tr}).
 
