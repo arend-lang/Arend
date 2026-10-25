@@ -26,6 +26,7 @@
 \import InfCat.Fibration.Covariant.LocallyCocartesianMap
 \import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Functor.Adjunction
+\import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Slice
 \import Logic
@@ -81,6 +82,25 @@
 -- | The projection from `f ↓ b` is a right fibration.
 \lemma leftComma-rightFib.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) : IsRightFib (Fibers (\lam (x :⁺ LeftComma f b) => x.1))
   => rightFib-total (rightFib-pullback f (hom-rightFib b))
+
+-- | If {f} is fully faithful, then `f ↓ b` is a full subcategory of the slice over {b}: it is the pullback of {f} along the slice projection.
+\lemma leftComma-slice-ff.{u} {A B : \Cat u} {f : A ->⁺ B} (ff : IsFFMap f) (b : B)
+  : IsFFMap {LeftComma f b} {SliceCat b} (\lam s => (f s.1, s.2))
+  => ffMap-comp {LeftComma f b} {Pb f b} {SliceCat b} {toPb f b} {\lam x => x.1}
+       (ff-surj-equiv.2 (IsHEquiv.biEquiv {LeftComma f b} {Pb f b} {toPb f b} {\lam (t : Pb f b) => (t.2.1, over-arr t.1.2 t.2.2)} (\lam _ => idp)
+                                         {\lam (t : Pb f b) => (t.2.1, over-arr t.1.2 t.2.2)} (\lam t => aux t.1.2 t.2.2))).1
+       (ffMap-pullback {SliceCat b} {A} {B} (\lam x => x.1) ff)
+  \where \private {
+    \func Pb {A B : \Cat} (f : A ->⁺ B) (b :⁺ B) : \Cat
+      => \Sigma⁺ (x : SliceCat b) (\Sigma⁺ (y : A) (f y = x.1))
+
+    \func toPb.{v} {A B : \Cat v} (f : A ->⁺ B) (b : B) (s :⁺ LeftComma f b) : Pb f b
+      => ((f s.1, s.2), (s.1, idp))
+
+    \func aux {A B : \Cat} {f : A ->⁺ B} {b :⁺ B} {y :⁺ A} {c :⁺ B} (k :⁺ c ~> b) (q :⁺ f y = c)
+      : ((f y, over-arr k q), (y, idp)) = {Pb f b} ((c, k), (y, q)) \elim q
+      | idp => idp
+  }
 
 -- | A lift of {f} to the fibers of {q} as an arrow of `q ↓ t`.
 \func liftLeftComma.{u} {L S : \Cat u} (q : L ->⁺ S) {e :⁺ L} {t : S} {f :⁺ q e ~> t}

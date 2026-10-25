@@ -31,6 +31,7 @@
 \import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Fibration.Univalence.Straightening
 \import InfCat.Functor.Adjunction
+\import InfCat.Functor.Conservative
 \import InfCat.Functor.Equiv
 \import InfCat.OFS.CatOFS
 \import InfCat.Paths
@@ -143,6 +144,10 @@
                                                  *> (leftKanAdjunction \lam a => g (f a)).heta_heps-rlr))
                       *> inv comp-assoc *> pmap (comp _) (inv (dmap_comp \lam (G : C ->⁺ \Type u) a =>⁺ G (g (f a)))))
        (IsEquiv.trans (leftKanExtType-univ g (LeftKanExtType f P) Q) (leftKanExtType-univ f P \lam b => Q (g b)))
+
+-- | Left Kan extension along the identity is the identity: the unit is universal among arrows out of {P}.
+\sfunc LeftKanExtType-id.{u} {A : \Cat u} {P :⁺ A ->⁺ \Type u} : LeftKanExtType (\lam a => a) P = P
+  => inv $ path \lam i => natIso-path (leftKanExtType-unit \lam a => a) (\lam P => precomp-equiv=>iso (leftKanExtType-univ (\lam a => a) P)) i P
 
 -- | {LeftKanExtType-comp} is compatible with {LeftKanExtType-repr}.
 \sfunc LeftKanExtType-comp-repr.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : B ->⁺ C} {x : A}

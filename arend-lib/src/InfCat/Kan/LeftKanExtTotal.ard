@@ -1,0 +1,78 @@
+{- | Left Kan extension along the projection `π : \Sigma⁺ (c : C) (Q c) -> C` of the total category of `Q : C ->⁺ \Type u`.
+ -
+ -   * {leftKanExtType-total}: `LeftKanExtType π G` is the sum {sumSlice.sumFam} of {G} over the fibers of {Q}.
+ -     Proof. {sumFam} is left adjoint to restriction along `π` ({sumUnivUnit}): under {depUnivalence}, both sides of the
+ -     adjunction are sections over the same total category up to a reassociation. Left adjoints are unique ({UnitTransport}).
+ -   * {leftKanExtType-sliceFiber}: `LeftKanExtType π (sliceFiber Q s) = s.1`, since the fibers of `s.2` sum up to `s.1`.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Adjunction
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Slice.TotalSlice
+\import Logic
+\import Paths
+\import Paths.Meta
+\open sumSlice
+
+-- | {sumFam} is left adjoint to restriction along the projection of the total category of {Q}.
+\func sumUnivUnit.{u} {C : \Cat u} (Q : C ->⁺ \Type u)
+  : UnivUnit {\Sigma⁺ (c : C) (Q c) ->⁺ \Type u} {C ->⁺ \Type u} (\lam G => sumFam Q G) (\lam R t => R t.1) \cowith
+  | ueta G => sumUnit Q G
+  | ueta-univ G R => IsEquiv.leftFactor (inP depUnivalence) $ transport IsEquiv
+      (path \lam i g => comp-unit Q G R g i)
+      (IsEquiv.trans (inP depUnivalence) (reassoc-equiv Q G R))
+  \where {
+    -- | The inclusion of {G} into the restriction of its sum.
+    \func sumUnit.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (G :⁺ \Sigma⁺ (c : C) (Q c) ->⁺ \Type v) : G ~> (\lam t => sumFam Q G t.1)
+      => dpath \lam i t => dpath (iso+ {G t} {sumFam Q G t.1} \lam g => (t.2, g)) i
+
+    -- | Sections over the total category of the sum are sections over the total category of {G}.
+    \lemma reassoc-equiv.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (G : \Sigma⁺ (c : C) (Q c) ->⁺ \Type v) (R : C ->⁺ \Type v)
+      : IsEquiv {\Pi (s :⁺ \Sigma⁺ (c : C) (sumFam Q G c)) -> R s.1} {\Pi (t :⁺ \Sigma⁺ (z : \Sigma⁺ (c : C) (Q c)) (G z)) -> R t.1.1}
+                (\lam g t => g (t.1.1, (t.1.2, t.2)))
+      => inP \new QEquiv {
+        | ret h s => h ((s.1, s.2.1), s.2.2)
+        | ret_f _ => idp
+        | f_sec _ => idp
+      }
+
+    -- | Under {depUnivalence}, postcomposing {sumUnit} with a restricted arrow is restriction of sections.
+    \sfunc comp-unit.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (G : \Sigma⁺ (c : C) (Q c) ->⁺ \Type v) (R : C ->⁺ \Type v) (g : sumFam Q G ~> R)
+      : (\lam (t :⁺ \Sigma⁺ (z : \Sigma⁺ (c : C) (Q c)) (G z)) => depUnivalence g (t.1.1, (t.1.2, t.2)))
+        = depUnivalence (comp (sumUnit Q G) (dmap (\lam R' t =>⁺ R' t.1) g))
+      => \let rg => dmap (\lam R' (t : \Sigma⁺ (c : C) (Q c)) =>⁺ R' t.1) g
+         \in ext \lam t => inv (~>_->_comp (dmap (\lam H => H t.1) (sumUnit Q G)) (dmap (\lam H => H t.1) rg))
+                           *> pmap+ (~>_-> __ t.2) (inv (dmap_comp (\lam (H : \Sigma⁺ (c : C) (Q c) ->⁺ \Type v) => H t.1) {_} {_} {_} {sumUnit Q G} {rg}))
+  }
+
+-- | Left Kan extension along the projection of the total category of {Q} is the sum over the fibers of {Q}.
+\sfunc leftKanExtType-total.{u} {C : \Cat u} {Q : C ->⁺ \Type u} {G :⁺ \Sigma⁺ (c : C) (Q c) ->⁺ \Type u}
+  : LeftKanExtType (\lam t => t.1) G = sumFam Q G
+  => path \lam i => (IsIso_= (InfCat.Functor.Adjunction.UnitTransport.rhoNat-iso {sumTransport Q})).1 i G
+  \where
+    \func sumTransport.{v} {C : \Cat v} (Q : C ->⁺ \Type v) : InfCat.Functor.Adjunction.UnitTransport {\Sigma⁺ (c : C) (Q c) ->⁺ \Type v} {C ->⁺ \Type v}
+                                                             (LeftKanExtType (\lam t => t.1)) (\lam R t => R t.1) \cowith
+      | ueps => (leftKanAdjunction (\lam (t : \Sigma⁺ (c : C) (Q c)) => t.1)).heps
+      | ueps-univ y x => inP (symQEquiv (leftKanAdjunction (\lam (t : \Sigma⁺ (c : C) (Q c)) => t.1)).heta_heps-equiv)
+      | F' => \lam G => sumFam Q G
+      | unit => sumUnivUnit Q
+
+-- | Left Kan extension of the fibers of {s} along the projection of the total category of {Q} is `s.1`.
+\sfunc leftKanExtType-sliceFiber.{u} {C : \Cat u} {Q : C ->⁺ \Type u} {s :⁺ Slice Q}
+  : LeftKanExtType (\lam t => t.1) (sliceFiber Q s) = s.1
+  => leftKanExtType-total *> path (\lam i c => (sum-path Q).1 i (s, c))
+  \where
+    -- | The sum of the fibers of `s.2` is `s.1`, covariantly in {s}.
+    \sfunc sum-path.{v} {C : \Cat v} (Q : C ->⁺ \Type v)
+      => fun-path {\Sigma⁺ (s : Slice Q) C} {\lam w => sumFam Q (sliceFiber Q w.1) w.2} {\lam w => w.1.1 w.2}
+                  (\lam z => (Straight.fromStraight z.2.2).1)
+                  (\lam w => IsEquiv.trans {sumFam Q (sliceFiber Q w.1) w.2} {\Sigma (f : Q w.2) (sliceFiber Q w.1 (w.2, f))}
+                               (inP \new QEquiv { | f a => (a.1, a.2) | ret a => (a.1, a.2) | ret_f _ => idp | f_sec _ => idp })
+                               (sliceFiber-univElem.elems-equiv (\lam c => c) Q w.1 w.2))

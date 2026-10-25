@@ -105,6 +105,11 @@
       => dmap_=_~> Op.Hom *> pmap =_~> (toOp-pmap *> \peval toOp-hom {C} {D} {f} {x}) *> inv =_~>_comp *> pmap (comp _) (IsIso_= LeftKanExtType-repr-iso).2
   }
 
+-- | {OpFunc} preserves identities.
+\sfunc OpFunc-id.{u} {C : \Cat u} {z :⁺ Op C} : OpFunc (\lam x => x) z = z
+  => path \lam i => ((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (OpFunc \lam x => x) (\lam z => z)).sec
+                     (funExt+ \lam z => OpFunc.char *> LeftKanExtType-id) i z
+
 -- | {OpFunc} preserves composition.
 \sfunc OpFunc-comp.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : B ->⁺ C} {z :⁺ Op A} : OpFunc (\lam a => g (f a)) z = OpFunc g (OpFunc f z)
   => path \lam i => ((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (OpFunc \lam a => g (f a)) (\lam z => OpFunc g (OpFunc f z))).sec

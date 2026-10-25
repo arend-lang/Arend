@@ -45,6 +45,16 @@
                      (IsHEquiv.toIsEquiv (IsHEquiv.postcomp toOpOp.isEquiv))
   }
 
+-- | {OpFunc} preserves and reflects equivalences.
+\lemma OpFunc-hequiv.{u} {A B : \Cat u} {f : A ->⁺ B} : IsHEquiv f <-> IsHEquiv (OpFunc f)
+  => (preserve, \lam e => IsHEquiv.leftFactor toOpOp.isEquiv $ transport IsHEquiv (funExt+ \lam x => toOpOp-natural)
+                             (IsHEquiv.trans toOpOp.isEquiv (preserve e)))
+  \where
+    \lemma preserve.{v} {A B : \Cat v} {f : A ->⁺ B} (e : IsHEquiv f) : IsHEquiv (OpFunc f)
+      => IsHEquiv.biEquiv {_} {_} {OpFunc f} {OpFunc (IsHEquiv.ret e)}
+           (\lam z => inv OpFunc-comp *> path (\lam i => OpFunc (funExt+ (\lam x => IsHEquiv.ret_f e) i) z) *> OpFunc-id)
+           (\lam z => inv OpFunc-comp *> path (\lam i => OpFunc (funExt+ (\lam y => IsHEquiv.f_ret e) i) z) *> OpFunc-id)
+
 -- | {opTranspose} is an equivalence.
 \lemma opTranspose-equiv.{u} {C D : \Cat u} : IsEquiv {Op C ->⁺ D} {C ->⁺ Op D} opTranspose
   => IsEquiv.trans OpFunc-equiv (IsHEquiv.toIsEquiv (IsHEquiv.precomp toOpOp.isEquiv))

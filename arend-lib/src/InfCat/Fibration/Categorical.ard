@@ -69,6 +69,22 @@
       : ((p e, (e, idp)) : \Sigma⁺ (a : A) (Fibers p a)) = (a, (e, q)) \elim q
       | idp => idp
 
+-- | An equivalence over the base is an equivalence on fibers.
+\lemma fibers-hequiv.{u} {E E' A : \Cat u} {p : E ->⁺ A} {p' : E' ->⁺ A} {F : E ->⁺ E'} (Fe : IsHEquiv F)
+                         (Fp : \Pi (x :⁺ E) -> p' (F x) = p x) (a : A)
+  : IsHEquiv {Fibers p a} {Fibers p' a} (\lam t => (F t.1, Fp t.1 *> t.2))
+  => aux (HEquiv_= Fe) Fp a
+  \where {
+    \private \lemma aux.{v} {E E' A : \Cat v} (r : E = E') {p : E ->⁺ A} {p' : E' ->⁺ A}
+                            (h : \Pi (x :⁺ E) -> p' (transport+ (\lam Y => Y) r x) = p x) (a : A)
+      : IsHEquiv {Fibers p a} {Fibers p' a} (\lam t => (transport+ (\lam Y => Y) r t.1, h t.1 *> t.2)) \elim r
+      | idp => aux2 (funExt+ h) a
+
+    \private \lemma aux2 {E A : \Cat} {p' p : E ->⁺ A} (q : p' = p) (a : A)
+      : IsHEquiv {Fibers p a} {Fibers p' a} (\lam t => (t.1, path (\lam i => q i t.1) *> t.2)) \elim q
+      | idp => transport IsHEquiv (funExt+ \lam t => path \lam j => ((t.1, inv (idp_*> {_} {_} {_} {t.2}) j) : Fibers p a)) idHEquiv
+  }
+
 -- | An arrow of a fiber whose image in the total category is an isomorphism is an isomorphism.
 \lemma fibers-conservative {E A : \Cat} {p : E ->⁺ A} {a : A} {m : DI ->⁺ Fibers p a} (mi : IsIso (dpath \lam i => (m i).1))
   : IsIso (dpath \lam i => m i)
