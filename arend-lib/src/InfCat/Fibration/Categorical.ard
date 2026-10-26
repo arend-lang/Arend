@@ -17,7 +17,7 @@
 {- | The fiber of {p} over a fixed {a}.
  -   It is the same category as `Fibers p a`, but it lives in `\Cat u` since the path type is released by the binder of `e`.
  -}
-\func Fiber.{u} {E A : \Cat u} (p : E ->⁺ A) (a : A) : \Cat u
+\func Fiber {E A : \Cat} (p : E ->⁺ A) (a : A) : \Cat
   => \Sigma⁺ (e : E) (p e = a)
 
 -- | The base change of {p} along {pi}.

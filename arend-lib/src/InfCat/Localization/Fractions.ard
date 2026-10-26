@@ -10,6 +10,7 @@
 \import InfCat.Functor.Initial
 \import InfCat.Limit.Initial
 \import InfCat.Limit.Terminal
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.LocalizeLeftFib
 \import InfCat.Paths
@@ -20,7 +21,7 @@
 
 {- | Hom-types of a localization computed by fractions (SCT Remark 10.3.8, in covariant form).
  -
- -   Let `l : C ->⁺ L` be a localization at `W`, and let `D : J ->⁺ C/x` be a diagram of denominators `w_j : e_j ~> x`
+ -   Let `l : C ->⁺ L` be a localization of `W : CatWeakEq C`, and let `D : J ->⁺ C/x` be a diagram of denominators `w_j : e_j ~> x`
  -   inverted by `l`, where `J` has a terminal object `j0`. `FracCat D` is the category of fractions `x <-w_j- e_j -g-> d`.
  -   Let `F` be a functor `L ->⁺ \Type` and `kappa` a section of `F ∘ l` over `FracCat D` whose total functor
  -   `(j, d, g) ↦ (d, kappa (j, d, g))` is a localization. Then {fractions-hom-equiv}: transport of `u = kappa (j0, x, w_j0)`
@@ -43,10 +44,10 @@
   => \Sigma⁺ (j : J) (d : C) ((D j).1 ~> d)
 
 -- | Transport of the fraction `(j0, x, (D j0).2)` identifies `l x ~> l d` with `F (l d)`.
-\lemma fractions-hom-equiv.{u} {C L J : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma fractions-hom-equiv.{u} {C L J : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
   {x : C} {D : J ->⁺ \Sigma⁺ (e : C) (e ~> x)} (Di : \Pi (j : J) -> IsIso (dmap l (D j).2)) {j0 : J} (j0t : IsTerminal j0)
   {F : L ->⁺ \Type u} (kappa : \Pi (s :⁺ FracCat D) -> F (l s.2))
-  {V : (DI ->⁺ FracCat D) -> \Prop} (Kz : IsLocalization V (\lam s => ((s.2, kappa s) : \Sigma⁺ (c : C) (F (l c)))))
+  {V : CatWeakEq (FracCat D)} (Kz : IsLocalization {V} (\lam s => ((s.2, kappa s) : \Sigma⁺ (c : C) (F (l c)))))
   (d : C) : IsEquiv {l x ~> l d} {F (l d)} (\lam h => ~>_-> (dmap F h) (kappa (j0, x, (D j0).2)))
   => \let | u => kappa (j0, x, (D j0).2)
           | P => natIso-path {FracCat D} {L} {\lam s => l (D s.1).1} {\lam _ => l x} (\lam s => dmap l (D s.1).2) (\lam s => Di s.1)
@@ -100,8 +101,8 @@
      }
   \where {
     -- | Restriction of the localization {l} to the comma `l x ↓ l` is a localization.
-    \lemma hom-isLocalization.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) (x : C)
-      : IsLocalization (\lam (a : DI ->⁺ \Sigma⁺ (c : C) (l x ~> l c)) => W (\lam i => (a i).1))
+    \lemma hom-isLocalization.{u} {C L : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l) (x : C)
+      : IsLocalization {PullbackWeakEq {\Sigma⁺ (c : C) (l x ~> l c)} {W} __.1}
                        (\lam (t :⁺ \Sigma⁺ (c : C) (l x ~> l c)) => ((l t.1, t.2) : \Sigma⁺ (y : L) (l x ~> y)))
       => leftFib-isLocalization.{u} Lz {_} {_} {\lam (t :⁺ \Sigma⁺ (c : C) (l x ~> l c)) => t.1} {\lam (k :⁺ \Sigma⁺ (y : L) (l x ~> y)) => k.1}
            (leftFib-total (leftFib-pullback l (hom-leftFib (l x)))) (leftFib-total (hom-leftFib (l x)))
@@ -142,10 +143,10 @@
   }
 
 -- | The fraction `(j0, x, (D j0).2)` is a universal element of {F} at `l x`, so {F} is corepresented by `l x`.
-\lemma fractions-univElem.{u} {C L J : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma fractions-univElem.{u} {C L J : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
   {x : C} {D : J ->⁺ \Sigma⁺ (e : C) (e ~> x)} (Di : \Pi (j : J) -> IsIso (dmap l (D j).2)) {j0 : J} (j0t : IsTerminal j0)
   {F : L ->⁺ \Type u} (kappa : \Pi (s :⁺ FracCat D) -> F (l s.2))
-  {V : (DI ->⁺ FracCat D) -> \Prop} (Kz : IsLocalization V (\lam s => ((s.2, kappa s) : \Sigma⁺ (c : C) (F (l c)))))
+  {V : CatWeakEq (FracCat D)} (Kz : IsLocalization {V} (\lam s => ((s.2, kappa s) : \Sigma⁺ (c : C) (F (l c)))))
   : IsUnivElem F (l x) (kappa (j0, x, (D j0).2))
   => equiv-univElem \lam y => \case IsLocalization.isSurj Lz y \with {
        | inP (d, p) => transport (\lam y' => IsEquiv {l x ~> y'} {F y'} (\lam h => ~>_-> (dmap F h) (kappa (j0, x, (D j0).2)))) p

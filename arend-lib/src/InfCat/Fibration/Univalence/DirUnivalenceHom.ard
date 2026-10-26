@@ -30,7 +30,7 @@
 \import InfCat.Functor.Embedding
 \import InfCat.Functor.Equiv
 \import InfCat.Interval
-\import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Paths
 \import InfCat.Rezk
 \import InfCat.Square
@@ -103,7 +103,7 @@
   \sfunc arrY-ext.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) {T : \Cat u} {z z' : ArrY pc T}
                     (q : ((z.1, z.2.1) : FunPair p T) = (z'.1, z'.2.1)) : z = z'
     => pmap (\lam (s : \Sigma (x : FunPair p T) (PreservesCocart x.1 x.2)) => ((s.1.1, (s.1.2, s.2)) : ArrY pc T))
-            (sigma-prop-ext {FunPair p T} {\lam x => PreservesCocart x.1 x.2} (\lam _ => prop-isProp) {((z.1, z.2.1), z.2.2)} {((z'.1, z'.2.1), z'.2.2)} q)
+            (sigma-prop-ext {FunPair p T} {\lam x => PreservesCocart x.1 x.2} (\lam _ => prop-isProp) {(z.1, z.2.1), z.2.2} {(z'.1, z'.2.1), z'.2.2} q)
 
   -- | The universal straightening as an element of {ArrY}.
   \func stU.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : ArrY pc (DI ->⁺ U)
@@ -150,7 +150,7 @@
                                             (dpath \lam i => \lam r => s.8.2.2 i r)) i
 
   \sfunc kappaX-sigmaX {U : \Cat} (k : DI ->⁺ DI ->⁺ U) : kappaX (sigmaX k) = k
-    => pmap (\lam (q : (\lam s => k dleft s) ~> {DI ->⁺ U} (\lam s => k dright s)) => ((\lam i => q i) : DI ->⁺ DI ->⁺ U))
+    => pmap (\lam (q : (\lam s => k dleft s) ~> {DI ->⁺ U} (\lam s => k dright s)) => (q : DI ->⁺ DI ->⁺ U))
             (comp-char {DI ->⁺ U} {_} {_} {_} {dpath \lam j => \lam s => k (dmin s j) s} {dpath \lam i => \lam s => k (dmax i s) s} {dpath \lam i => k i}
                        (dpath \lam i => dpath \lam m => \lam s => k (dmin (dmax m s) i) s))
 
@@ -179,12 +179,12 @@
                | y (i :⁺ DI) => inc1 {_} {_} {_} {z.1 (m i)} (bcf1 (a i).2)
                | x (i :⁺ DI) => bcf2 (z.2.1 (m i, y i))
                | k (i :⁺ DI) (t :⁺ DI) => (z.1 (dmin (dmax (a i).1.1 t) (a i).1.2)).2
-          \in (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (inc2 {_} {_} {_} {sqS z.1 (a i).1} (stTr pc (k i) (x i))).1}).1 $
+          \in (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (inc2 {_} {_} {_} {sqS z.1 (a i).1} (stTr pc (k i) (x i))).1}).1 $
                 stTr-cocart pc (\lam i => k i) (\lam i => x i) $
-                  (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (z.2.1 (m i, y i)).1}).2 $
+                  (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (z.2.1 (m i, y i)).1}).2 $
                     z.2.2 (\lam i => (m i, y i)) $
-                      (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (y i).1}).1 $
-                        (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (a i).2.1}).2 ac)
+                      (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (y i).1}).1 $
+                        (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (a i).2.1}).2 ac)
 
   -- | Spines of {UnivCoCart}: a cocartesian functor over `(id, b)` and one over `(a, id)` that agree on the common object.
   \func SpineY.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : \Type
@@ -279,7 +279,7 @@
 
   \func stOb.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) {c d : U} (z : c ~> d)
     : \Pi (y :⁺ Fibers (univFst p) ((c, d) : \Sigma⁺ U U)) -> Fibers (univSnd p) ((c, d) : \Sigma⁺ U U)
-    => \lam y => stFun pc ((\lam r => z r), y)
+    => \lam y => stFun pc (z, y)
 
   \func stS.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (s : SpineX {U}) : SpineY pc
     => (s.1, s.2, s.3, s.4, s.5, s.6, stL pc s.7, stT pc s.8, pmap (stOb pc) s.9)
@@ -336,7 +336,7 @@
   -- | Composition with an arrow that is constant up to a path.
   \sfunc comp-const {Y : \Cat} {B : DI ->⁺ Y} {o : Y} (bq : B = (\lam _ => o)) {y : Y} (R : B dright ~> y)
     : (\lam i => comp (dpath B) R i) = {DI ->⁺ Y} (\lam i => R i) \elim bq
-    | idp => pmap (\lam (q : o ~> y) => ((\lam i => q i) : DI ->⁺ Y)) comp_idd-left
+    | idp => pmap {o ~> y} {DI ->⁺ Y} (\lam q => q) comp_idd-left
 
   -- | The factorization commutes with {UnivSt}.
   \sfunc sigmaY-st.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (k : DI ->⁺ DI ->⁺ U) : sigmaY pc (stA pc k) = stS pc (sigmaX k)
@@ -414,7 +414,7 @@
   -- | Cocartesian functors over {pi} as functors on the base change of {p} along the first component of {pi}.
   \func PC2.{u} {U E : \Cat u} {p : E ->⁺ U} {T : \Cat u} {pi : T ->⁺ \Sigma⁺ U U}
                (H : \Pi (v :⁺ BaseChange (\lam t => (pi t).1) p) -> Fibers p (pi v.1).2) : \Prop
-    => \Pi (a : DI ->⁺ BaseChange (\lam t => (pi t).1) p) -> CocartW p (\lam t => (pi t).1) a
+    => \Pi (a : DI ->⁺ BaseChange (\lam t => (pi t).1) p) -> isWeakEq {CocartWeakEq p (\lam t => (pi t).1)} a
          -> IsCocartesianArrow p (dpath \lam i => (H (a i)).1)
 
   \func toCF2.{u} {U E : \Cat u} {p : E ->⁺ U} {pc : IsCocartesianMap p} {T : \Cat u} {pi : T ->⁺ \Sigma⁺ U U}
@@ -439,16 +439,16 @@
       \lemma cf2-fwd.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) {T : \Cat u} {pi : T ->⁺ \Sigma⁺ U U}
                         {G : \Pi (w :⁺ BaseChange pi (univFst p)) -> Fibers (univSnd p) (pi w.1)} (P : PreservesCocart pi G)
         : PC2 (toCF2 {_} {_} {_} {pc} G)
-        => \lam a ac => (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (G (theta pi (a i))).1}).2 $
-                           P (\lam i => theta pi (a i)) $ (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (theta pi (a i)).2.1}).1 ac
+        => \lam a ac => (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (G (theta pi (a i))).1}).2 $
+                           P (\lam i => theta pi (a i)) $ (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (theta pi (a i)).2.1}).1 ac
 
       \lemma cf2-bwd.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) {T : \Cat u} {pi : T ->⁺ \Sigma⁺ U U}
                         {G : \Pi (w :⁺ BaseChange pi (univFst p)) -> Fibers (univSnd p) (pi w.1)} (Q : PC2 (toCF2 {_} {_} {_} {pc} G))
         : PreservesCocart pi G
         => \lam a ac => transport (\lam (a' : DI ->⁺ BaseChange pi (univFst p)) => IsCocartesianArrow (univSnd p) (dpath \lam i => (G (a' i)).1))
                                      (funExt+ \lam i => path \lam m => (((a i).1, baseChange-fib-sec (a i).2 @ m) : BaseChange pi (univFst p))) $
-             (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (G (theta pi ((a i).1, bcf1 (a i).2))).1}).1 $
-               Q (\lam i => ((a i).1, bcf1 (a i).2)) $ (cocartW<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (a i).2.1}).2 ac
+             (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.2) {\lam i => (G (theta pi ((a i).1, bcf1 (a i).2))).1}).1 $
+               Q (\lam i => ((a i).1, bcf1 (a i).2)) $ (cocartWeakEq<->cocartesian pc (\lam (s :⁺ \Sigma⁺ U U) => s.1) {\lam i => (a i).2.1}).2 ac
     }
 
   -- | The functor on the end of a cocartesian functor over `(a, id)`.
@@ -462,11 +462,11 @@
     : IsEquiv (endT pc {c} {c'} {d'} {a})
     => \have e => IsEquiv.trans (cf2-equiv pc (\lam i => ((a i, d') : \Sigma⁺ U U))) $
          IsEquiv.trans (sigma-prop-equiv {BaseChange (\lam i => a i) p ->⁺ Fibers p d'} {_} {\lam H => H} (inP idEquiv)
-                                          {\lam H => PC2 {_} {_} {_} {_} {\lam i => ((a i, d') : \Sigma⁺ U U)} H} {InvertsW (CocartW p (\lam i => a i))}
-                                          (\lam {H} P {a'} w => fiberArrow-iso (\lam i => H (a' i)) (P a' w))
-                                          (\lam {H} I a' w => iso-cocartesian (dmap_IsIso (\lam (y :⁺ Fibers p d') => y.1) (I w))))
-                       (restrict-end-equiv pc (\lam i => a i) {Fibers p d'})
-       \in IsEquiv.leftFactor {_} {_} {_} {endT pc {c} {c'} {d'} {a}} {conv {U} {E} {p} {(c', d')}} (inP (conv-equiv ((c', d') : \Sigma⁺ U U)))
+                                          {\lam H => PC2 {_} {_} {_} {_} {\lam i => ((a i, d') : \Sigma⁺ U U)} H} {InvertingWeakEq (CocartWeakEq p (\lam i => a i)) (Fibers p d')}
+                                          (\lam {H} P => \new FuncWeakEq { | hfunc-we {a'} w => fiberArrow-iso (\lam i => H (a' i)) (P a' w) })
+                                          (\lam {H} I a' w => iso-cocartesian (dmap_IsIso (\lam (y :⁺ Fibers p d') => y.1) (I.hfunc-we w)))) $
+         IsEquiv.trans (inP (symQEquiv FuncWeakEq.sigma-equiv)) (restrict-end-equiv pc (\lam i => a i) {Fibers p d'})
+       \in IsEquiv.leftFactor {_} {_} {_} {endT pc {c} {c'} {d'} {a}} {conv {U} {E} {p} {c', d'}} (inP (conv-equiv ((c', d') : \Sigma⁺ U U)))
                              e
 
   -- | The functor on the start of a cocartesian functor over `(id, b)`.
@@ -502,7 +502,7 @@
                                             (\lam {H} R => startL-pc2 {_} {_} {_} {c} {d} {d'} {b} {H}
                                                               (\lam x => (cocartesianLift<->arrow-at (H (dleft, x)).2 (H (dright, x), dpath \lam j => H (j, x))).1 (R x)))) $
                    IsEquiv.trans (inP e3) (inP (contr-right \lam (F0 : K ->⁺ Fibers p d) => cocartesianFib-lifts-contr (cocartesianMap-char.1 pc) (\lam x => (d, d', b, F0 x))))
-       \in IsEquiv.leftFactor {_} {_} {_} {startL pc {c} {d} {d'} {b}} {conv {U} {E} {p} {(c, d)}} (inP (conv-equiv ((c, d) : \Sigma⁺ U U)))
+       \in IsEquiv.leftFactor {_} {_} {_} {startL pc {c} {d} {d'} {b}} {conv {U} {E} {p} {c, d}} (inP (conv-equiv ((c, d) : \Sigma⁺ U U)))
                              e
     \where {
       -- | A functor on `DI × Fibers p c` preserving cocartesian arrows along `DI` preserves all cocartesian arrows.

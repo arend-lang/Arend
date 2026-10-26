@@ -1,15 +1,15 @@
 {- | The simplicial nerve is a complete Segal right fibration ({snerve-completeSegal}).
 
  -   Segal condition ({snerve-segal}). The nerve is a right adjoint: sections of the nerve along `pi : T ->⁺ DeltaCat` are the
- -   functors on the base change `T ×_Δ [-]` of the universal cocartesian fibration inverting {CocartW} ({ExpCocCore.sec-equiv}).
+ -   functors on the base change `T ×_Δ [-]` of the universal cocartesian fibration inverting {CocartWeakEq} ({ExpCocCore.sec-equiv}).
  -   So restriction of sections along a functor of bases is an equivalence as soon as it induces an equivalence of localizations
- -   of the base changes at {CocartW}, the realizations ({ExpCocCore.sec-restrict-equiv}).
+ -   of the base changes at {CocartWeakEq}, the realizations ({ExpCocCore.sec-restrict-equiv}).
  -   * Over a base with a terminal object over `[n]`, the realization is `[n]`, via cocartesian transport to the terminal fiber
  -     ({ellN}, {ellN-isLocalization}). It is natural in the base ({ellN-natural}).
  -   * The span is the pushout `[1] ⊔_[0] [1]` ({span-pushout}), and realizations glue along pushouts ({pushout-bc-localization}).
  -     So the realization of the span is `[k] ⊔_[0] [1]`.
  -   * The map induced by the inclusion of the span into `Δ/[k+1]` is the spine map `[k] ⊔_[0] [1] -> [k+1]`, an equivalence
- -     ({spine-pushout}). Since `[k+1]` is the nerve of a poset, this is checked on the two summands ({pushout-mapW-thin-ext}).
+ -     ({spine-pushout}). Since `[k+1]` is the nerve of a poset, this is checked on the two summands ({pushout-invertsWeakEq-thin-ext}).
 
  -   Completeness ({snerve-complete}). Edges of the nerve are arrows of {C} ({snerve-nu-equiv}). An edge which is an isomorphism
  -   in the sense of {IsIsoS} is an isomorphism of {C}, since 2-simplices are commutative triangles ({snerve-complete.isoS-iso}).
@@ -38,7 +38,7 @@
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Functor.Equiv
 \import InfCat.Limit.Terminal
-\import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Nerve.Nerve
 \import InfCat.Nerve.NerveHom
@@ -165,14 +165,15 @@
     => sliceProj (suc k) (spanH k w)
 
   -- | The realization of `Δ/[k+1]` restricted to the span.
-  \func ellS (k : Nat) : MapW (CocartW (nerveMap simplexProj) (piS k)) (Nerve (Simplex (suc k)))
-    => mapW-res (spanH k) (ellN (sliceProj (suc k)) (slice-terminal (suc k)) idp,
-                           (ellN-isLocalization (sliceProj (suc k)) (slice-terminal (suc k)) idp).1)
+  \func ellS (k : Nat) : InvertingWeakEq (CocartWeakEq (nerveMap simplexProj) (piS k)) (Nerve (Simplex (suc k)))
+    => FuncWeakEq.compose (\new InvertsWeakEq {CocartWeakEq (nerveMap simplexProj) (sliceProj (suc k))} (ellN (sliceProj (suc k)) (slice-terminal (suc k)) idp) {
+                             | hfunc-we => (ellN-isLocalization (sliceProj (suc k)) (slice-terminal (suc k)) idp).1.hfunc-we
+                           }) (cocartWeakEq-map (spanH k))
 
   {- | The realization of `Δ/[k+1]` restricted to the span is a localization: realizations glue along {SpanPO}
    -   to a localization with values in the spine `[k] ⊔_[0] [1]`, and its composite with the spine map is {ellS}.
    -}
-  \lemma ellS-isLocalization (k : Nat) : IsLocalization (CocartW (nerveMap simplexProj) (piS k)) (ellS k).1
+  \lemma ellS-isLocalization (k : Nat) : IsLocalization {CocartWeakEq (nerveMap simplexProj) (piS k)} (ellS k).hfunc
     => \let | K => pushout-bc-localization univSimplex-cocartesianMap (piS k)
                      (ellN-isLocalization (\lam x => piS k (cinl x)) (simplex-terminal 1) idp)
                      (ellN-isLocalization (\lam y => piS k (cinr y)) (simplex-terminal 1) idp)
@@ -184,14 +185,14 @@
                       *> inv (ellN-natural (\lam y => piS k (cinr y)) (simplex-terminal 1) idp (nerveMap (vert {1} 0)) (simplex-terminal 0) idp
                                            (vert {1} 0) (nerveHom {Simplex 1} {0} {topV 1} (le-top 0)) idp))
             | sp => nerve-pushout-map (vert (topV k)) (vert {1} 0) (segRes k) (lastEdge k) (spine-sq k)
-            | e : ellS k = restrictW K.2.1 sp => pushout-mapW-thin-ext univSimplex-cocartesianMap (piS k)
+            | e : ellS k = FuncWeakEq.compose-left K.2.1 sp => pushout-invertsWeakEq-thin-ext univSimplex-cocartesianMap (piS k)
                 (ellN-natural (sliceProj (suc k)) (slice-terminal (suc k)) idp (\lam y => nerveMap (spanInc k) (nerveMap spanB y)) (simplex-terminal 1) idp
                               (segRes k) (nerveHom {SliceS (suc k)} {k, segRes k} {suc k, SimplexCat.id {suc k}} (segRes k, SimplexCat.id-left)) idp
                  *> inv (pmap (\lam F => \lam x =>⁺ sp (F x)) K.3))
                 (ellN-natural (sliceProj (suc k)) (slice-terminal (suc k)) idp (\lam z => nerveMap (spanInc k) (nerveMap spanC z)) (simplex-terminal 1) idp
                               (lastEdge k) (nerveHom {SliceS (suc k)} {1, lastEdge k} {suc k, SimplexCat.id {suc k}} (lastEdge k, SimplexCat.id-left)) idp
                  *> inv (pmap (\lam F => \lam x =>⁺ sp (F x)) K.4))
-       \in isLocalization-transfer K.2 idHEquiv (spine-pushout k) {(ellS k).1} (\lam x => path \lam i => (e i).1 x) (\lam a => (\lam w => w, \lam w => w))
+       \in isLocalization-transfer K.2 idHEquiv (spine-pushout k) {(ellS k).hfunc} (\lam x => path \lam i => (e i).hfunc x) (\lam a => (\lam w => w, \lam w => w))
 }
 
 \module NerveLow \where {

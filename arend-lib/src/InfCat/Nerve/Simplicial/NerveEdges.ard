@@ -39,7 +39,7 @@
 
 -- | The vertex inclusion `1` preserves last vertices.
 \lemma ve1-last : IsCocartesianArrow (nerveMap simplexProj) (dmap lastN (simplex-ve 1))
-  => (lastW-char (vert {1} 1)).2 idp
+  => (lastWeakEq-char (vert {1} 1)).2 idp
 
 
 -- # Images at last vertices

@@ -23,6 +23,7 @@
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Nerve.Nerve
 \import InfCat.Nerve.NerveHom
@@ -59,12 +60,12 @@
   => dpath \lam i => lastVertex (sliceProj 1) (sliceArr j i)
 
 -- | The arrow from the vertex `1` lies over the last vertex.
-\lemma edgeArr1-realW : RealW (sliceProj 1) (\lam i => edgeArr 1 i)
-  => (lastW-char (vert 1)).2 idp
+\lemma edgeArr1-realWeakEq : isWeakEq {RealWeakEq (sliceProj 1)} (\lam i => edgeArr 1 i)
+  => (lastWeakEq-char (vert 1)).2 idp
 
 -- | The zigzag from the vertex `0` to the vertex `1` in the realization of `Δ/[1]`.
 \func edgeZ : real (sliceProj 1) (edgeOb 0) ~> real (sliceProj 1) (edgeOb 1)
-  => comp (dmap (real (sliceProj 1)) (edgeArr 0)) (=_~> (inv (IsIso_= (localize-inverts {_} {RealW (sliceProj 1)} {\lam i => edgeArr 1 i} edgeArr1-realW)).1))
+  => comp (dmap (real (sliceProj 1)) (edgeArr 0)) (=_~> (inv (IsIso_= ((localize-inverts {RealWeakEq (sliceProj 1)}).hfunc-we {\lam i => edgeArr 1 i} edgeArr1-realWeakEq)).1))
 
 -- | The identification of the realization of `Δ/[1]` with `[1]`.
 \func sliceR (y :⁺ Realization (sliceProj 1)) : Nerve (Simplex 1)
@@ -96,21 +97,21 @@
 \func evLast.{u} {K D : \Cat u} (pi : K ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> SNerveFib D (pi k)) (k :⁺ K) : D
   => realize-map pi t (real pi (lastVertex pi k))
 
--- | {evLast} inverts {LastW}.
-\lemma evLast-inverts.{u} {K D : \Cat u} (pi : K ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> SNerveFib D (pi k)) {a : DI ->⁺ K} (w : LastW pi a)
+-- | {evLast} inverts {LastWeakEq}.
+\lemma evLast-inverts.{u} {K D : \Cat u} (pi : K ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> SNerveFib D (pi k)) {a : DI ->⁺ K} (w : isWeakEq {LastWeakEq pi} a)
   : IsIso (dmap (evLast pi t) (dpath a))
-  => dmap_IsIso (realize-map pi t) (localize-inverts {_} {RealW pi} {\lam i => lastVertex pi (a i)} w)
+  => dmap_IsIso (realize-map pi t) ((localize-inverts {RealWeakEq pi}).hfunc-we {\lam i => lastVertex pi (a i)} w)
 
 -- | {edgeZ} followed by the arrow from the vertex `1` is the arrow from the vertex `0`.
 \sfunc edgeZ-eq : comp edgeZ (dmap (real (sliceProj 1)) (edgeArr 1)) = dmap (real (sliceProj 1)) (edgeArr 0)
-  => \let P => IsIso_= (localize-inverts {_} {RealW (sliceProj 1)} {\lam i => edgeArr 1 i} edgeArr1-realW)
+  => \let P => IsIso_= ((localize-inverts {RealWeakEq (sliceProj 1)}).hfunc-we {\lam i => edgeArr 1 i} edgeArr1-realWeakEq)
      \in pmap (comp edgeZ) (inv P.2) *> inv comp-assoc *> pmap (comp (dmap (real (sliceProj 1)) (edgeArr 0))) (=_~>_comp *> pmap+ =_~> inv_*>)
           *> comp_idd-right
 
 -- | The image of {edgeZ} under the functor of a section is the zigzag of its last vertices.
 \sfunc edge-zigzag.{u} {C : \Cat u} (t : \Pi (s :⁺ Nerve (SliceS 1)) -> SNerveFib C (sliceProj 1 s))
-  : dmap (realize-map (sliceProj 1) t) edgeZ = comp_iso_dmap (evLast (sliceProj 1) t) (sliceArr 0) (sliceArr 1) (evLast-inverts (sliceProj 1) t edgeArr1-realW)
-  => comp_iso_dmap-unique (evLast (sliceProj 1) t) (sliceArr 0) (sliceArr 1) (evLast-inverts (sliceProj 1) t edgeArr1-realW)
+  : dmap (realize-map (sliceProj 1) t) edgeZ = comp_iso_dmap (evLast (sliceProj 1) t) (sliceArr 0) (sliceArr 1) (evLast-inverts (sliceProj 1) t edgeArr1-realWeakEq)
+  => comp_iso_dmap-unique (evLast (sliceProj 1) t) (sliceArr 0) (sliceArr 1) (evLast-inverts (sliceProj 1) t edgeArr1-realWeakEq)
        (inv (dmap_comp (realize-map (sliceProj 1) t)) *> pmap (dmap (realize-map (sliceProj 1) t)) edgeZ-eq)
 
 -- | The realization of `Δ/[n]` has propositional hom-types, since it is `[n]`.
@@ -129,7 +130,7 @@
           | al : ((edgeV 0, (nerveOb {SimplexTotal} (0, 0), idp)) : BaseChange (sliceProj 1) (nerveMap simplexProj))
                  ~> ((top1, (nerveOb {SimplexTotal} (1, 0), idp)) : BaseChange (sliceProj 1) (nerveMap simplexProj))
               => dpath \lam i => (sliceArr 0 i, (nerveHom {SimplexTotal} {0, 0} {1, 0} (vert 0, <=-refl) i, idp))
-          | al-iso : IsIso (dmap r al) => localize-inverts {_} {RealW (sliceProj 1)} {\lam i => al i}
+          | al-iso : IsIso (dmap r al) => (localize-inverts {RealWeakEq (sliceProj 1)}).hfunc-we {\lam i => al i}
                                            (univSimplex-vertex-cocartesian {0} {1} {0} {0} (vert 0, <=-refl) idp)
           | be : ((top1, univSimplexFib-incl 1 (nerveOb 0)) : BaseChange (sliceProj 1) (nerveMap simplexProj))
                  ~> ((top1, univSimplexFib-incl 1 (nerveOb 1)) : BaseChange (sliceProj 1) (nerveMap simplexProj))
@@ -219,6 +220,11 @@
                      (q :⁺ BaseChange pi (nerveMap simplexProj)) : BaseChange p (nerveMap simplexProj)
   => ((t q.1).1, (q.2.1, q.2.2 *> inv (t q.1).2))
 
+-- | {fibSec-map} preserves {RealWeakEq}.
+\func fibSec-weakEq.{u} {K E : \Cat u} {pi : K ->⁺ DeltaCat} {p : E ->⁺ DeltaCat} (t : \Pi (k :⁺ K) -> Fibers p (pi k))
+  : FuncWeakEq (RealWeakEq pi) (RealWeakEq p) (fibSec-map t) \cowith
+  | hfunc-we w => w
+
 -- | {fibSec-map} preserves last vertices.
 \sfunc fibSec-lastVertex.{u} {K E : \Cat u} {pi : K ->⁺ DeltaCat} {p : E ->⁺ DeltaCat} (t : \Pi (k :⁺ K) -> Fibers p (pi k)) (k :⁺ K)
   : fibSec-map t (lastVertex pi k) = lastVertex p (t k).1
@@ -234,8 +240,9 @@
 \sfunc realize-map-fib.{u} {K E D : \Cat u} (pi : K ->⁺ DeltaCat) {p : E ->⁺ DeltaCat}
                            (t : \Pi (k :⁺ K) -> Fibers p (pi k)) (s : \Pi (e :⁺ E) -> SNerveFib D (p e))
   : realize-map pi (\lam k => transport+ (SNerveFib D) (t k).2 (s (t k).1))
-    = {Realization pi ->⁺ D} (\lam y => realize-map p s (localize-map {_} {_} {RealW pi} {RealW p} (fibSec-map t) (\lam w => w) y))
-  => IsEquiv.isInj (localize-ob-equiv {_} {D} {RealW pi}) (ext (funExt+ \lam q =>
+    = {Realization pi ->⁺ D} (\lam y => realize-map p s (localize-map (fibSec-weakEq t) y))
+  => IsEquiv.isInj (localize-ob-equiv {RealWeakEq pi} {D}) {realize-map pi (\lam k => transport+ (SNerveFib D) (t k).2 (s (t k).1))}
+                   {\lam y => realize-map p s (localize-map (fibSec-weakEq t) y)} (ext (ext \lam q =>
        eval-tr (t q.1).2 (s (t q.1).1) q.2
        *> path (\lam m => ExpCocCore.fiber-eval univSimplex-cocartesianMap (s (t q.1).1) (tr-fib (inv (t q.1).2) q.2.1 q.2.2 m))))
   \where {

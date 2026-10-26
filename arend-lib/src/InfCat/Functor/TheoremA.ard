@@ -30,6 +30,7 @@
 \import InfCat.Functor.LeftComma
 \import InfCat.Functor.RightComma
 \import InfCat.Groupoid
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseCocartesian
@@ -49,8 +50,8 @@
                          (hequiv-initialFunctor (fibLocProj-equiv f w))
   \where {
     -- | All vertical arrows of {FreeTot}.
-    \func AllW.{u} {C D : \Cat u} (f : C ->⁺ D) (d : D) (b : DI ->⁺ Fibers (freeProj f) d) : \Prop
-      => \Sigma
+    \func AllWeakEq.{u} {C D : \Cat u} (f : C ->⁺ D) (d : D) : CatWeakEq (Fiber (freeProj f) d)
+      => MaxCatWeakEq (Fiber (freeProj f) d)
 
     -- | The inclusion of {C} into {FreeTot}.
     \func incl.{u} {C D : \Cat u} (f : C ->⁺ D) (c :⁺ C) : FreeTot f
@@ -77,7 +78,7 @@
               | f_sec _ => idp
 
     -- | Vertical arrows are transport stable, since all of them are inverted.
-    \lemma allW-stable.{u} {C D : \Cat u} (f : C ->⁺ D) : IsTransportStable (Fibers (freeProj f)) (AllW f)
+    \lemma allWeakEq-stable.{u} {C D : \Cat u} (f : C ->⁺ D) : IsTransportStable (Fibers (freeProj f)) (AllWeakEq f)
       => \lam {s} {s'} g {b} _ => \let Ff => freeProj-cocartesian f \in
           inP (\lam i => (cocartesianFib-lift {_} {Fibers (freeProj f)} Ff (s, s', g, b i)).1, (), dpath \lam j i => (cocartesianFib-lift {_} {Fibers (freeProj f)} Ff (s, s', g, b i)).2 j,
                cocartesianFib-lift.isCocartesian {_} {Fibers (freeProj f)} (s, s', g, b dleft),
@@ -90,19 +91,19 @@
 
     -- | The fibers of {fibLocProj} are contractible groupoids.
     \lemma fiber-point.{v} {C D : \Cat v} (f : C ->⁺ D) (w : \Pi (d : D) -> IsWeaklyContractible (LeftComma f d)) (d : D)
-      : \Sigma (Contr (Fiber (fibLocProj (freeProj f) (AllW f)) d)) (IsGroupoid (Fiber (fibLocProj (freeProj f) (AllW f)) d))
+      : \Sigma (Contr (Fiber (fibLocProj (freeProj f) (AllWeakEq f)) d)) (IsGroupoid (Fiber (fibLocProj (freeProj f) (AllWeakEq f)) d))
       => \let | Fw : IsWeaklyContractible (Fiber (freeProj f) d)
                   => weaklyContractible-hequiv {LeftComma f d} {Fiber (freeProj f) d} (fibers-total-hequiv {D} {FreeCocart f} d) (w d)
-              | u => IsLocalization.unique (localize-isLocalization {Fiber (freeProj f) d} {\lam _ => \Sigma})
-                                           (fibLoc-fiber (freeProj-cocartesian f) (allW-stable f) d)
+              | u => IsLocalization.unique (localize-isLocalization {MaxCatWeakEq (Fiber (freeProj f) d)})
+                                           (fibLoc-fiber (freeProj-cocartesian f) (allWeakEq-stable f) d)
          \in point-equiv (IsHEquiv.rightFactor u.3 Fw)
 
     -- | {fibLocProj} is an equivalence.
     \lemma fibLocProj-equiv.{v} {C D : \Cat v} (f : C ->⁺ D) (w : \Pi (d : D) -> IsWeaklyContractible (LeftComma f d))
-      : IsHEquiv (fibLocProj (freeProj f) (AllW f))
-      => \let | Ff => fibLoc-cocartesian (freeProj-cocartesian f) (allW-stable f)
-              | Fl : IsLeftFib (FibLocFam (freeProj f) (AllW f)) => lift-IsLeftFib (\lam d => (fiber-point f w d).2) (\lam d => cocartesianFib-lift {D} {FibLocFam (freeProj f) (AllW f)} Ff d)
-         \in IsHEquiv.trans (fibers-sigma-hequiv (fibLocProj (freeProj f) (AllW f))) (leftFib-contr-equiv Fl \lam d => (fiber-point f w d).1)
+      : IsHEquiv (fibLocProj (freeProj f) (AllWeakEq f))
+      => \let | Ff => fibLoc-cocartesian (freeProj-cocartesian f) (allWeakEq-stable f)
+              | Fl : IsLeftFib (FibLocFam (freeProj f) (AllWeakEq f)) => lift-IsLeftFib (\lam d => (fiber-point f w d).2) (\lam d => cocartesianFib-lift {D} {FibLocFam (freeProj f) (AllWeakEq f)} Ff d)
+         \in IsHEquiv.trans (fibers-sigma-hequiv (fibLocProj (freeProj f) (AllWeakEq f))) (leftFib-contr-equiv Fl \lam d => (fiber-point f w d).1)
   }
 
 -- | Quillen's Theorem A for final functors: a functor whose comma categories `d ↓ f` are weakly contractible is final.

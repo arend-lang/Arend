@@ -37,6 +37,7 @@
 \import InfCat.Nerve.Simplicial.NerveEdges
 \import InfCat.Nerve.Simplicial.RealizationEdge
 \import InfCat.Nerve.Simplicial.UnitHom
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Nerve.Simplicial.NerveSegal
 \import InfCat.Nerve.Simplicial.Realization
@@ -129,7 +130,7 @@
 
   -- | The arrow underlying a lift of the vertex `1` lies over a map preserving last vertices.
   \lemma earr-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {z : simplex p 1} (c : VLift p 1 z) : IsIso (dmap (UnitHomHelpers.ell p) (earr c))
-    => localize-inverts {_} {RealW p} {\lam i => lastVertex p (c.2 i).1}
+    => (localize-inverts {RealWeakEq p}).hfunc-we {\lam i => lastVertex p (c.2 i).1}
          (transportInv (\lam (h : DI ->⁺ DeltaCat) => LastArr (dpath \lam i => h i)) (path \lam k => \lam i =>⁺ (c.2 i).2 k) ve1-last)
 
   -- | The image of a lift under the unit, at last vertices, is the image of its underlying arrow under `ℓ`.

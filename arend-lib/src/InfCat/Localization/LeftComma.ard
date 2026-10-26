@@ -24,6 +24,7 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.LeftComma
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Paths
 \import InfCat.Limit.Terminal
@@ -33,14 +34,18 @@
 \import Paths
 \import Paths.Meta
 
--- | The arrows of `p ↓ s` whose underlying arrow is cocartesian.
-\func LeftCommaW.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) (a : DI ->⁺ LeftComma p s) : \Prop
-  => IsCocartesianArrow p (dpath \lam i => (a i).1)
+-- | The cocartesian arrows of {p} as weak equivalences.
+\func CocartArrWeakEq.{u} {L S : \Cat u} (p : L ->⁺ S) : CatWeakEq L \cowith
+  | isWeakEq a => IsCocartesianArrow p (dpath \lam i => a i)
 
--- | Cocartesian transport inverts {LeftCommaW}.
+-- | The arrows of `p ↓ s` whose underlying arrow is cocartesian.
+\func LeftCommaWeakEq.{u} {L S : \Cat u} (p : L ->⁺ S) (s : S) : CatWeakEq (LeftComma p s) \cowith
+  | isWeakEq a => IsCocartesianArrow p (dpath \lam i => (a i).1)
+
+-- | Cocartesian transport inverts {LeftCommaWeakEq}.
 \lemma leftComma-ladj-inverts.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) (s : S)
-  : InvertsW (LeftCommaW p s) (fibLeftComma-ladj Ff s)
-  => \lam {a} mc =>
+  : InvertsWeakEq {LeftCommaWeakEq p s} (fibLeftComma-ladj Ff s) \cowith
+  | hfunc-we {a} mc =>
       \let | l (x : LeftComma p s) => cocartesianFib-lift Ff (fibLeftComma-ladj.liftData x)
            | lam (x : LeftComma p s) : x.1 ~> (l x).1.1 => dpath \lam j => ((l x).2 j).1
            | mu : (a dleft).1 ~> (a dright).1 => dpath \lam i => (a i).1
@@ -62,7 +67,7 @@
 
 -- | Cocartesian transport `p ↓ s ->⁺ Fibers p s` is the localization at the arrows whose underlying arrow is cocartesian.
 \lemma leftComma-isLocalization.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) (s : S)
-  : IsLocalization (LeftCommaW p s) (fibLeftComma-ladj Ff s)
+  : IsLocalization {LeftCommaWeakEq p s} (fibLeftComma-ladj Ff s)
   => ladj-isLocalization (leftComma-ladj-inverts Ff s) (fibLeftComma p s) (fibLeftComma-univUnit Ff s).ueta
        (\lam y => eps Ff y.2) (\lam y => eps-iso Ff y.2) (leftComma-ladj-inverts.lam-cocartesian Ff)
   \where {
@@ -99,7 +104,7 @@
 
 -- | Cocartesian transport to the fiber over a terminal object is the localization at the cocartesian arrows.
 \lemma toTerminal-isLocalization.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {top : S} (Pt : IsTerminal top)
-  : IsLocalization (\lam a => IsCocartesianArrow p (dpath \lam i => a i)) (toTerminal Ff Pt)
+  : IsLocalization {CocartArrWeakEq p} (toTerminal Ff Pt)
   => isLocalization-precomp (leftComma-isLocalization Ff top)
        (IsHEquiv.leftFactor {L} {LeftComma p top} {L} {\lam x => (x, terminalArr Pt x)} (terminalComma-equiv Pt) idHEquiv)
 
@@ -111,7 +116,7 @@
 
 -- | Functors inverting the cocartesian arrows are determined by their restriction to the fiber over a terminal object.
 \lemma restrict-terminal-equiv.{u} {L S : \Cat u} {p : L ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {top : S} (Pt : IsTerminal top) {D : \Cat}
-  : IsEquiv {MapW (\lam a => IsCocartesianArrow p (dpath \lam i => a i)) D} {Fibers p top ->⁺ D} (\lam F y => F.1 y.1)
+  : IsEquiv {InvertingWeakEq (CocartArrWeakEq p) D} {Fibers p top ->⁺ D} (\lam F y => F y.1)
   => \let Lz => toTerminal-isLocalization Ff Pt
-     \in IsEquiv.rightFactor (restrictW-equiv (IsLocalization.univ Lz {D}))
+     \in IsEquiv.rightFactor (loc-restrict-equiv (IsLocalization.univ Lz {D}))
           (transportInv IsEquiv (ext \lam G y => pmap+ G (toTerminal-fib Ff Pt)) (inP idEquiv))

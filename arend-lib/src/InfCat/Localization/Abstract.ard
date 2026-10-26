@@ -1,6 +1,5 @@
-{- | Localizations of categories at a collection of morphisms given as a predicate `W : (DI ->⁺ C) -> \Prop`
- -   on the arrows of {C} [1, Section 3.3].
- -   The concrete construction and the definition of {IsLocalization} are in {InfCat.Localization.PredicatePushout}.
+{- | Localizations of categories with weak equivalences [1, Section 3.3].
+ -   The concrete construction and the definition of {IsLocalization} are in {InfCat.Localization.Concrete}.
  -
  -   [1] Denis-Charles Cisinski, Bastiaan Cnossen, Kim Nguyen, Tashi Walde, Synthetic Category Theory, 2026
  -}
@@ -14,100 +13,58 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Paths
-\import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import Logic
 \import Paths
 \import Paths.Meta
 
--- | {F} sends the morphisms satisfying {W} to isomorphisms.
-\type InvertsW {C D : \Cat} (W : (DI ->⁺ C) -> \Prop) (F : C ->⁺ D) : \Prop
-  => \Pi {a : DI ->⁺ C} -> W a -> IsIso (dpath \lam i => F (a i))
+-- | If the composite of {h} with a fully faithful functor {f} inverts weak equivalences, then {h} does as well.
+\lemma invertsWeakEq-postcomp-ff {C : CatWeakEq} {B D : \Cat} {f : B ->⁺ D} (fc : IsFFMap f) {h : C ->⁺ B} (hw : InvertsWeakEq (\lam y => f (h y)))
+  : InvertsWeakEq h \cowith
+  | hfunc-we w => IsFFMap.isConservative fc (hw.hfunc-we w)
 
--- | The groupoid `Map_W(C,D)` of functors inverting {W}.
-\func MapW {C : \Cat} (W : (DI ->⁺ C) -> \Prop) (D : \Cat) : \Type
-  => \Sigma (F : C ->⁺ D) (InvertsW W F)
-
--- | The category `Fun_W(C,D)` of functors inverting {W} [1, Construction 3.3.1].
-\func FunW {C : \Cat} (W : (DI ->⁺ C) -> \Prop) (D : \Cat) : \Cat
-  => FullSubCat {C ->⁺ D} (InvertsW W)
-
--- | If {h} inverts {W}, its postcomposition with {f} does as well.
-\lemma invertsW-postcomp {C B D : \Cat} {W : (DI ->⁺ C) -> \Prop} (f : B ->⁺ D) {h : C ->⁺ B} (hw : InvertsW W h)
-  : InvertsW W (\lam y => f (h y))
-  => \lam w => dmap_IsIso f (hw w)
-
--- | If the composite of {h} with a fully faithful functor {f} inverts {W}, then {h} does as well.
-\lemma invertsW-postcomp-ff {C B D : \Cat} {W : (DI ->⁺ C) -> \Prop}
-                            {f : B ->⁺ D} (fc : IsFFMap f) {h : C ->⁺ B} (hw : InvertsW W (\lam y => f (h y)))
-  : InvertsW W h
-  => \lam w => IsFFMap.isConservative fc (hw w)
-
--- | {f} sends morphisms satisfying {W} to morphisms satisfying {W'}.
-\type SendsW {C C' : \Cat} (W : (DI ->⁺ C) -> \Prop) (W' : (DI ->⁺ C') -> \Prop) (f : C ->⁺ C') : \Prop
-  => \Pi {a : DI ->⁺ C} -> W a -> W' (\lam i => f (a i))
-
--- | Functoriality of `Fun_W(C,D)` in `(C,S)` [1, Remark 3.3.2].
-\sfunc FunW-precomp {C C' D : \Cat} {W : (DI ->⁺ C) -> \Prop} {W' : (DI ->⁺ C') -> \Prop} (f : C ->⁺ C')
-                   (fw : SendsW W W' f) (F :⁺ FunW W' D) : FunW W D
-  => (FullSubCat.isMax {C ->⁺ D} {InvertsW W} {FunW W' D} {\lam F x => FullSubCat.inc F (f x)}
-        \lam F s => FullSubCat.inc-con {C' ->⁺ D} {InvertsW W'} (fw s)).1 F
-  \where {
-    \sfunc inc_precomp {F :⁺ FunW W' D} {x :⁺ C} : FullSubCat.inc (FunW-precomp f fw F) x = FullSubCat.inc F (f x)
-      => pmap+ (FullSubCat.inc __ x) (\peval FunW-precomp f fw F)
-         *> path \lam i => (FullSubCat.isMax {C ->⁺ D} {InvertsW W} \lam F s => FullSubCat.inc-con {C' ->⁺ D} {InvertsW W'} {F} (fw s)).2 F i x
-  }
-
--- | If {D} is a groupoid, then every functor inverts {W} [1, Lemma 3.3.3].
-\lemma FunW-groupoid {C D : \Cat} (W : (DI ->⁺ C) -> \Prop) (Dg : IsGroupoid D)
-  : IsHEquiv (\lam (F :⁺ FunW W D) => FullSubCat.inc F)
-  => ff-surj-equiv.1 (FullSubCat.inc-ff, \lam (F : C ->⁺ D) => FullSubCat.inc-sat {C ->⁺ D} {InvertsW W} {F} \lam {a : DI ->⁺ C} _ => Dg (dpath \lam i => F (a i)))
-
--- | Every functor inverts isomorphisms.
-\lemma isos-inverted {C D : \Cat} (F : C ->⁺ D) : InvertsW (IsIso __) F
-  => \lam ai => dmap_IsIso F ai
+-- | If {D} is a groupoid, then every functor inverts weak equivalences [1, Lemma 3.3.3].
+\lemma invertsWeakEqCat-groupoid {C : CatWeakEq} {D : \Cat} (Dg : IsGroupoid D)
+  : IsHEquiv (\lam F => FullSubCat.inc F)
+  => ff-surj-equiv.1 (FullSubCat.inc-ff, \lam F => FullSubCat.inc-sat {C ->⁺ D} {InvertingWeakEq C D} {F}
+                                                    (\new FuncWeakEq { | hfunc-we {a} _ => Dg (dpath \lam i => F (a i)) }))
 
 -- | Every functor sends isomorphisms to isomorphisms [1, Proposition 3.3.4].
-\lemma FunW-iso {C D : \Cat} : IsHEquiv {FunW (IsIso {C} __) D} FullSubCat.inc
-  => ff-surj-equiv.1 (FullSubCat.inc-ff, \lam F => FullSubCat.inc-sat (isos-inverted F))
+\lemma invertsWeakEqCat-iso {C D : \Cat} : IsHEquiv {FuncWeakEqCat (MinCatWeakEq C) (MinCatWeakEq D)} {C ->⁺ D} FullSubCat.inc
+  => ff-surj-equiv.1 (FullSubCat.inc-ff, \lam F => FullSubCat.inc-sat (FuncWeakEq.min F))
 
--- | Restriction along {l} of a functor out of {L}.
-\func restrictW {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (G : L ->⁺ D) : MapW W D
-  => (\lam x => G (l x), \lam s => dmap_IsIso G (lw s))
-
-{- | Restriction along {l} as a functor into the full subcategory of `C ->⁺ D` spanned by {P},
- -   where {lP} says that restrictions satisfy {P}.
- -   On objects this is `FullSubCat.make (\lam x => G (l x)) (lP G)`, but {FullSubCat.make} is invariant in its arguments,
- -   while this functor must be covariant in {G}, so it is obtained from {FullSubCat.isMax} instead.
- -}
-\func res-sub {C L D : \Cat} (l : C ->⁺ L) (P : (C ->⁺ D) -> \Prop) (lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x)))
-  (G :⁺ L ->⁺ D) : FullSubCat P
-  => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).1 G
+-- | Restriction along a functor inverting weak equivalences lands in `Fun_W(C,D)` [1, Construction 3.3.5].
+\func loc-precomp {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (lw : InvertsWeakEq l) (G :⁺ L ->⁺ D) : FuncWeakEqCat C (MinCatWeakEq D)
+  => res-sub l InvertsWeakEq (FuncWeakEq.compose-left lw) G
   \where {
-    \sfunc inc_res {G :⁺ L ->⁺ D} : FullSubCat.inc (res-sub l P lP G) = (\lam x => G (l x))
-      => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).2 G
-  }
-
--- | Restriction along a functor inverting {W} lands in `Fun_W(C,D)` [1, Construction 3.3.5].
-\func loc-precomp {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (G :⁺ L ->⁺ D) : FunW W D
-  => res-sub l (InvertsW W) (\lam G s => dmap_IsIso G (lw s)) G
-  \where {
-    \sfunc inc_precomp (lw : InvertsW W l) {G :⁺ L ->⁺ D} {x :⁺ C} : FullSubCat.inc (loc-precomp lw G) x = G (l x)
+    \sfunc inc_precomp (lw : InvertsWeakEq l) {G :⁺ L ->⁺ D} {x :⁺ C} : FullSubCat.inc (loc-precomp lw G) x = G (l x)
       => path \lam i => res-sub.inc_res i x
+
+    {- | Restriction along {l} as a functor into the full subcategory of `C ->⁺ D` spanned by {P},
+     -   where {lP} says that restrictions satisfy {P}.
+     -   On objects this is `FullSubCat.make (\lam x => G (l x)) (lP G)`, but {FullSubCat.make} is invariant in its arguments,
+     -   while this functor must be covariant in {G}, so it is obtained from {FullSubCat.isMax} instead.
+     -}
+    \func res-sub {C L D : \Cat} (l : C ->⁺ L) (P : (C ->⁺ D) -> \Prop) (lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x))) (G :⁺ L ->⁺ D) : FullSubCat P
+      => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).1 G
+      \where {
+        \sfunc inc_res {G :⁺ L ->⁺ D} : FullSubCat.inc (res-sub l P lP G) = (\lam x => G (l x))
+          => (FullSubCat.isMax {_} {P} {L ->⁺ D} {\lam G x => G (l x)} lP).2 G
+      }
   }
 
--- | {l} is a localization of {C} at {W} with respect to functors into {D} [1, Definition 3.3.6].
-\type IsLocalizationFor {C L : \Cat} (W : (DI ->⁺ C) -> \Prop) (l : C ->⁺ L) (D : \Cat) : \Prop
-  => \Sigma (lw : InvertsW W l) (IsHEquiv (loc-precomp {C} {L} {D} lw))
+-- | {l} is a localization of {C} with respect to functors into {D} [1, Definition 3.3.6].
+\type IsLocalizationFor {C : CatWeakEq} {L : \Cat} (l : C ->⁺ L) (D : \Cat) : \Prop
+  => \Sigma (lw : InvertsWeakEq l) (IsHEquiv (loc-precomp {C} {L} {D} lw))
 
 -- | {l} is an epimorphism with respect to {D}: restriction `(L ->⁺ D) ->⁺ (C ->⁺ D)` along {l} is fully faithful.
 \type IsEpiFor {C L : \Cat} (l : C ->⁺ L) (D : \Cat) : \Prop
   => IsFFMap {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
 
 -- | Restriction along a localization is fully faithful.
-\lemma localization-epi {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
-  : IsEpiFor l D
+\lemma localization-epi {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (loc : IsLocalizationFor l D) : IsEpiFor l D
   => transport IsFFMap (funExt+ \lam G => funExt+ \lam x => loc-precomp.inc_precomp loc.1)
        \lam G G' => IsEquiv.trans ((ff-surj-equiv.2 loc.2).1 G G') (FullSubCat.inc-ff _ _)
 
@@ -121,12 +78,15 @@
      \in (e.sec (funExt+ p), \lam x => path \lam j => path \lam i => e.f_sec (funExt+ p) j i x)
 
 -- | To check the universal property, it is enough to do this on objects for {D} and for `DI ->⁺ D` [1, Proposition 3.3.7].
-\lemma localization-criterion {C L D : \Cat} {S : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW S l)
-                              (e : IsEquiv (restrictW {C} {L} {D} lw)) (e' : IsEquiv (restrictW {C} {L} {DI ->⁺ D} lw))
-  : IsLocalizationFor S l D
-  => (lw, res-sub-equiv l (InvertsW S) (\lam G s => dmap_IsIso G (lw s)) (InvertsW S) (\lam G s => dmap_IsIso G (lw s))
-                          (\lam H => (\lam Hw => (\lam s => (DI-iso-char.1 (Hw s)).1, \lam s => (DI-iso-char.1 (Hw s)).2),
-                                      \lam t s => DI-iso-char.2 (t.1 s, t.2 s))) e e')
+\lemma localization-criterion {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (lw : InvertsWeakEq l)
+                              (e : IsEquiv (FuncWeakEq.compose-left {C} {L} {D} lw)) (e' : IsEquiv (FuncWeakEq.compose-left {C} {L} {DI ->⁺ D} lw))
+  : IsLocalizationFor l D
+  => (lw, res-sub-equiv l (InvertingWeakEq C D) (FuncWeakEq.compose-left lw) (InvertingWeakEq C (DI ->⁺ D)) (FuncWeakEq.compose-left lw)
+                          (\lam H => (\lam Hw => (\new FuncWeakEq { | hfunc-we s => (DI-iso-char.1 (Hw.hfunc-we s)).1 },
+                                                  \new FuncWeakEq { | hfunc-we s => (DI-iso-char.1 (Hw.hfunc-we s)).2 }),
+                                      \lam t => \new FuncWeakEq { | hfunc-we s => DI-iso-char.2 (t.1.hfunc-we s, t.2.hfunc-we s) }))
+                          (IsEquiv.trans {_} {_} {_} {FuncWeakEq.compose-left lw} e {FuncWeakEq.sigma-equiv} (inP FuncWeakEq.sigma-equiv))
+                          (IsEquiv.trans {_} {_} {_} {FuncWeakEq.compose-left lw} e' {FuncWeakEq.sigma-equiv} (inP FuncWeakEq.sigma-equiv)))
   \where {
     {- | Restriction along {l} is an equivalence onto the full subcategory spanned by {P} if it is an equivalence
      -   on objects onto {P} for {D} and onto {P'} for the arrow category `DI ->⁺ D`,
@@ -137,10 +97,10 @@
       (Pe : \Pi (H : C ->⁺ DI ->⁺ D) -> P' H <-> (\Sigma (P (\lam x => H x dleft)) (P (\lam x => H x dright))))
       (e : IsEquiv {L ->⁺ D} {\Sigma (F : C ->⁺ D) (P F)} (\lam G => (\lam x => G (l x), lP G)))
       (e' : IsEquiv {L ->⁺ DI ->⁺ D} {\Sigma (H : C ->⁺ DI ->⁺ D) (P' H)} (\lam G => (\lam x => G (l x), lP' G)))
-      : IsHEquiv (res-sub l P lP)
-      => ff-surj-equiv.1 (ffMap-leftFactor FullSubCat.inc-ff $ transportInv IsFFMap (funExt+ \lam G => res-sub.inc_res) res-ff,
+      : IsHEquiv (loc-precomp.res-sub l P lP)
+      => ff-surj-equiv.1 (ffMap-leftFactor FullSubCat.inc-ff $ transportInv IsFFMap (funExt+ \lam G => loc-precomp.res-sub.inc_res) res-ff,
                           \lam d => \case IsEquiv.isSurj e (FullSubCat.inc d, FullSubCat.inc-con {_} {P} {d}) \with {
-                            | inP (G,q) => inP (G, ((IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb _ _).sec $ res-sub.inc_res *> pmap __.1 q)
+                            | inP (G,q) => inP (G, ((IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb _ _).sec $ loc-precomp.res-sub.inc_res *> pmap __.1 q)
                           })
       \where {
         \lemma res-ff : IsFFMap {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
@@ -165,14 +125,14 @@
   }
 
 -- | Functors that coincide after restriction along a localization are equal.
-\sfunc loc-ext-eq {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
+\sfunc loc-ext-eq {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (loc : IsLocalizationFor l D)
                   {G1 G2 : L ->⁺ D} (p : \Pi (x :⁺ C) -> G1 (l x) = G2 (l x)) {y :⁺ L} : G1 y = G2 y
   => path \lam i => (IsEquiv.isInj (IsHEquiv.toIsEquiv loc.2) $ ((IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb _ _).sec $
       ext \lam x => loc-precomp.inc_precomp loc.1 *> p x *> inv (loc-precomp.inc_precomp loc.1)) i y
 
--- | The extension along a localization of a functor inverting {W}.
-\func loc-lift {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
-               {F : C ->⁺ D} (Fw : InvertsW W F) (y :⁺ L) : D
+-- | The extension along a localization of a functor inverting weak equivalences.
+\func loc-lift {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (loc : IsLocalizationFor l D)
+               {F : C ->⁺ D} (Fw : InvertsWeakEq F) (y :⁺ L) : D
   => IsHEquiv.ret loc.2 (FullSubCat.make F Fw) y
   \where {
     \func restrict {x :⁺ C} : loc-lift loc Fw (l x) = F x
@@ -180,9 +140,9 @@
   }
 
 -- | A localization is unique up to a unique equivalence (Exercise 3.8.5).
-\sfunc localization-unique {C L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} {l' : C ->⁺ L'}
-                           (lL : IsLocalizationFor W l L) (lL' : IsLocalizationFor W l L')
-                           (l'L : IsLocalizationFor W l' L) (l'L' : IsLocalizationFor W l' L')
+\sfunc localization-unique {C : CatWeakEq} {L L' : \Cat} {l : C ->⁺ L} {l' : C ->⁺ L'}
+                           (lL : IsLocalizationFor l L) (lL' : IsLocalizationFor l L')
+                           (l'L : IsLocalizationFor l' L) (l'L' : IsLocalizationFor l' L')
   : \Sigma (u : L ->⁺ L') (\Pi (x :⁺ C) -> u (l x) = l' x) (IsHEquiv u)
   => \let | u => loc-lift lL' l'L'.1
           | v => loc-lift l'L lL.1
@@ -193,23 +153,24 @@
           })
 
 -- | Functoriality of localizations [1, Construction 3.3.9].
-\sfunc loc-map {C C' L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {W' : (DI ->⁺ C') -> \Prop} {l : C ->⁺ L} {l' : C' ->⁺ L'}
-              (loc : IsLocalizationFor W l L') (l'S : InvertsW W' l') (f : C ->⁺ C') (fw : SendsW W W' f)
+\sfunc loc-map {C C' : CatWeakEq} {L L' : \Cat} {l : C ->⁺ L} {l' : C' ->⁺ L'}
+               (loc : IsLocalizationFor l L') (l'S : InvertsWeakEq l') (f : FuncWeakEq C C')
   : \Sigma (m : L ->⁺ L') (\Pi (x :⁺ C) -> m (l x) = l' (f x))
-  => (loc-lift loc \lam s => l'S (fw s), \lam x => loc-lift.restrict)
+  => (loc-lift loc (l'S FuncWeakEq.∘ f),
+      \lam x => loc-lift.restrict {_} {_} {_} {_} {loc} {\lam x => l' (f x)})
 
 -- | Restriction along a localization is an equivalence on functors into a groupoid (cf. Lemma 3.4.3).
-\lemma loc-groupoid {C L D : \Cat} {S : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor S l D) (Dg : IsGroupoid D)
+\lemma loc-groupoid {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (loc : IsLocalizationFor l D) (Dg : IsGroupoid D)
   : IsHEquiv {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
-  => transport IsHEquiv (funExt+ \lam G => funExt+ \lam x => loc-precomp.inc_precomp loc.1) $ IsHEquiv.trans loc.2 (FunW-groupoid S Dg)
+  => transport IsHEquiv (funExt+ \lam G => funExt+ \lam x => loc-precomp.inc_precomp loc.1) $ IsHEquiv.trans loc.2 (invertsWeakEqCat-groupoid Dg)
 
 -- | The identity functor is the localization at the isomorphisms.
-\lemma id-isLocalizationFor-iso {C D : \Cat} : IsLocalizationFor (IsIso {C} __) (\lam x => x) D
-  => \have lw => isos-inverted (\lam x => x)
-     \in (lw, IsHEquiv.leftFactor FunW-iso $ transportInv IsHEquiv (funExt+ \lam G => funExt+ \lam x => loc-precomp.inc_precomp lw) idHEquiv)
+\lemma id-isLocalizationFor-iso {C D : \Cat} : IsLocalizationFor {MinCatWeakEq C} (\lam x => x) D
+  => \have lw => FuncWeakEq.min (\lam (x :⁺ C) => x)
+     \in (lw, IsHEquiv.leftFactor invertsWeakEqCat-iso $ transportInv IsHEquiv (funExt+ \lam G => funExt+ \lam x => loc-precomp.inc_precomp lw) idHEquiv)
 
 -- | For a localization, restriction is an equivalence on objects.
-\lemma restrictW-equiv {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (loc : IsLocalizationFor W l D)
-  : IsEquiv (restrictW loc.1)
+\lemma loc-restrict-equiv {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (loc : IsLocalizationFor l D)
+  : IsEquiv {L ->⁺ D} {InvertingWeakEq C D} (FuncWeakEq.compose-left loc.1)
   => transport IsEquiv (ext \lam G => ext (ext \lam x => loc-precomp.inc_precomp loc.1))
-                       (IsEquiv.trans (IsHEquiv.toIsEquiv loc.2) fullSub-ob-equiv)
+                       (IsEquiv.trans (IsEquiv.trans (IsHEquiv.toIsEquiv loc.2) fullSub-ob-equiv) (inP (symQEquiv FuncWeakEq.sigma-equiv)))

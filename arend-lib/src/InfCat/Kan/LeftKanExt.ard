@@ -15,7 +15,7 @@
  -
  -   Over the image of {f}, the localization is computed by a reflection: the fiber over `f a` is equivalent to
  -   the comma category `\Sigma⁺ (t : \Sigma⁺ (a' : A) (P a')) (t.1 ~> a)`, and cocartesian transport to `P a` is its localization
- -   at {ExtW} ({InfCat.Localization.LeftComma}).
+ -   at {ExtWeakEq} ({InfCat.Localization.LeftComma}).
  -
  -   For left fibrations, {InfCat.Kan.LeftKanExtType} gives a construction without fiberwise localization.
  -
@@ -36,6 +36,7 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Functor.LeftComma
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseCocartesian
@@ -53,11 +54,11 @@
   => FreeCocart {\Sigma⁺ (a : A) (P a)} {B} (\lam t => f t.1) b
 
 -- | The morphisms of a fiber of {ExtFam} whose `\Sigma⁺ (a : A) (P a)`-component is cocartesian.
-\func ExtW {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) (b : B) (k : DI ->⁺ ExtFam f P b) : \Prop
-  => IsCocartesianArrow (totalProj P) (dpath \lam i => (k i).1)
+\func ExtWeakEq {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) (b : B) : CatWeakEq (ExtFam f P b) \cowith
+  | isWeakEq k => IsCocartesianArrow (totalProj P) (dpath \lam i => (k i).1)
 
--- | {ExtW} is stable under cocartesian transport: transport keeps the `\Sigma⁺ (a : A) (P a)`-component.
-\lemma extW-stable {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) : IsTransportStable (ExtFam f P) (ExtW f P)
+-- | {ExtWeakEq} is stable under cocartesian transport: transport keeps the `\Sigma⁺ (a : A) (P a)`-component.
+\lemma extWeakEq-stable {A B : \Cat} (f : A ->⁺ B) (P : A ->⁺ \Cat) : IsTransportStable (ExtFam f P) (ExtWeakEq f P)
   => \lam g {k} w => inP (\lam j => ((k j).1, comp (k j).2 g), w,
                           dpath \lam i j => ((k j).1, dpath \lam l => fill2 (k j).2 g l i),
                           freeLift-cocartesian (\lam t => f t.1) (_, _, g, k dleft),
@@ -71,28 +72,28 @@
 \func extProj.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (s :⁺ ExtTot f q) : B
   => s.1
 
--- | {ExtW} on the fibers of {extProj}.
-\func ExtWTot.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (b : B) (k : DI ->⁺ Fibers (extProj f q) b) : \Prop
-  => TotalFibW {B} {ExtFam f (Fibers q)} (ExtW f (Fibers q)) b k
+-- | {ExtWeakEq} on the fibers of {extProj}.
+\func ExtWeakEqTot.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (b : B) : CatWeakEq (Fiber (extProj f q) b) \cowith
+  | isWeakEq k => isWeakEq {TotalFibWeakEq {B} {ExtFam f (Fibers q)} (ExtWeakEq f (Fibers q)) b} k
 
 -- | The extension of `Fibers q` along {f}.
 \func KanExt.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (b :⁺ B) : \Cat
-  => FibLocFam (extProj f q) (ExtWTot f q) b
+  => FibLocFam (extProj f q) (ExtWeakEqTot f q) b
 
 -- | {KanExt} is a cocartesian fibration.
 \lemma kanExt-cocartesian.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) : IsCocartesianFib (KanExt f q)
-  => fibLoc-cocartesian {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1)) (transportStable-total (extW-stable f (Fibers q)))
+  => fibLoc-cocartesian {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1)) (transportStable-total (extWeakEq-stable f (Fibers q)))
 
--- | The fiber of {KanExt} over `b` is the localization of the fiber of {ExtFam} at {ExtW}.
+-- | The fiber of {KanExt} over `b` is the localization of the fiber of {ExtFam} at {ExtWeakEq}.
 \lemma kanExt-fiber-isLocalization.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (b : B)
-  : IsLocalization (ExtW f (Fibers q) b) (\lam (y :⁺ ExtFam f (Fibers q) b) => (fibLoc-fibIncl (extProj f q) (ExtWTot f q) b ((b, y), idp) : KanExt f q b))
+  : IsLocalization {ExtWeakEq f (Fibers q) b} (\lam (y :⁺ ExtFam f (Fibers q) b) => (fibLoc-fibIncl (extProj f q) (ExtWeakEqTot f q) b ((b, y), idp) : KanExt f q b))
   => isLocalization-precomp (fibLoc-fiber {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1))
-                                          (transportStable-total (extW-stable f (Fibers q))) b)
+                                          (transportStable-total (extWeakEq-stable f (Fibers q))) b)
                             (fibers-total-hequiv {B} {ExtFam f (Fibers q)} b)
 
 -- | The localization functor from the fiber of {ExtFam} over {b} to the fiber of {KanExt}.
 \func kanExtIncl.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (b :⁺ B) (y :⁺ ExtFam f (Fibers q) b) : KanExt f q b
-  => (localize (TotW (extProj f q) (ExtWTot f q)) ((b, y) : ExtTot f q), idp)
+  => (localize (TotWeakEq (extProj f q) (ExtWeakEqTot f q)) ((b, y) : ExtTot f q), idp)
 
 -- | Cocartesian transport in {KanExt} along {beta} postcomposes the structure map with {beta}.
 \sfunc kanExt-transport.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) {b b' : B} (beta : b ~> b') {y :⁺ ExtFam f (Fibers q) b}
@@ -104,12 +105,12 @@
     \protected \func lift.{v} {A B Q : \Cat v} (f : A ->⁺ B) (q : Q ->⁺ A) {b b' : B} (beta : b ~> b') (y :⁺ ExtFam f (Fibers q) b)
       : CovLift (KanExt f q) (b, b', beta, kanExtIncl f q b y)
       => (kanExtIncl f q b' (y.1, comp y.2 beta),
-          dpath \lam j => (localize (TotW (extProj f q) (ExtWTot f q)) ((beta j, (y.1, dpath \lam i => fill2 y.2 beta i j)) : ExtTot f q), idp))
+          dpath \lam j => (localize (TotWeakEq (extProj f q) (ExtWeakEqTot f q)) ((beta j, (y.1, dpath \lam i => fill2 y.2 beta i j)) : ExtTot f q), idp))
 
     \lemma lift-cocartesian.{v} {A B Q : \Cat v} (f : A ->⁺ B) (q : Q ->⁺ A) {b b' : B} (beta : b ~> b') (y : ExtFam f (Fibers q) b)
       : IsCocartesianLift (lift f q beta y)
       => (cocartesianLift<->arrow-at idp (lift f q beta y)).2 $
-           fibLoc-cocartesianArrow {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1)) (transportStable-total (extW-stable f (Fibers q)))
+           fibLoc-cocartesianArrow {B} {ExtTot f q} (freeProj-cocartesian (\lam t => f t.1)) (transportStable-total (extWeakEq-stable f (Fibers q)))
              {_} {_} (dpath \lam j => ((beta j, (freeLift (\lam t => f t.1) (b, b', beta, y)).2 j) : ExtTot f q))
              ((cocartesianLift<->totalArrow (freeLift (\lam t => f t.1) (b, b', beta, y))).1 (freeLift-cocartesian (\lam t => f t.1) (b, b', beta, y)))
   }
@@ -158,14 +159,14 @@
 
 -- | The comparison map from `Fibers q` to the pullback of {KanExt} along {f}.
 \func kanExt-unit.{u} {A B Q : \Cat u} (f : A ->⁺ B) (q : Q ->⁺ A) (a :⁺ A) (x :⁺ Fibers q a) : KanExt f q (f a)
-  => fibLoc-incl (extProj f q) (ExtWTot f q) ((f a, ((a, x), idd)) : ExtTot f q)
+  => fibLoc-incl (extProj f q) (ExtWeakEqTot f q) ((f a, ((a, x), idd)) : ExtTot f q)
 
 -- | `Fibers q` is the pullback of {KanExt} along {f}.
 \lemma kanExt-unit-equiv.{u} {A B Q : \Cat u} {f : A ->⁺ B} (ff : IsFFMap f) {q : Q ->⁺ A} (qc : IsCocartesianMap q) (a : A)
   : IsHEquiv (kanExt-unit f q a)
   => \have | Ff => cocartesianFib-total (cocartesianMap-char.1 qc)
            | u => IsLocalization.unique (leftComma-isLocalization {BaseChange (\lam s => s) q} Ff a) (incl-isLocalization ff q a)
-     \in transport IsHEquiv (ext \lam x => pmap+ u.1 (fibLeftComma-ladj-fib {BaseChange (\lam s => s) q} Ff a {((a, x), idp)}) *> u.2 ((a, x), idd))
+     \in transport IsHEquiv (ext \lam x => pmap+ u.1 (fibLeftComma-ladj-fib {BaseChange (\lam s => s) q} Ff a {(a, x), idp}) *> u.2 ((a, x), idd))
                    (IsHEquiv.trans (fibers-total-hequiv {A} {Fibers q} a) u.3)
   \where \private {
     -- | The comma category `totalProj (Fibers q) ↓ a` is the fiber of {ExtFam} over `f a`.
@@ -189,8 +190,8 @@
 
     -- | The comma category is a localization of the fiber of {KanExt} over `f a` by {fibLoc-fiber}.
     \lemma incl-isLocalization.{v} {A B Q : \Cat v} {f : A ->⁺ B} (ff : IsFFMap f) (q : Q ->⁺ A) (a : A)
-      : IsLocalization (LeftCommaW {BaseChange (\lam s => s) q} (totalProj (Fibers q)) a) (\lam s => fibLoc-fibIncl (extProj f q) (ExtWTot f q) (f a) (commaMapTot f q a s))
+      : IsLocalization {LeftCommaWeakEq {BaseChange (\lam s => s) q} (totalProj (Fibers q)) a} (\lam s => fibLoc-fibIncl (extProj f q) (ExtWeakEqTot f q) (f a) (commaMapTot f q a s))
       => isLocalization-precomp (fibLoc-fiber {B} {ExtTot f q} {extProj f q} (freeProj-cocartesian (\lam t => f t.1))
-                                              (transportStable-total (extW-stable f (Fibers q))) (f a))
+                                              (transportStable-total (extWeakEq-stable f (Fibers q))) (f a))
                                 (commaMapTot-equiv ff q a)
   }

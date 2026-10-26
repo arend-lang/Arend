@@ -20,6 +20,7 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Limit.Initial
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Realization
 \import InfCat.OFS.CatAccessibleOFS
@@ -48,7 +49,7 @@
   => orthogonal-IsLeft {leftFam} (IsOrthogonal_IsHEquiv-left fe)
 
 -- | Localizations are initial.
-\lemma localization-initialFunctor {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma localization-initialFunctor {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
   : IsInitialFunctor l
   => orthogonal-IsLeft {leftFam} (localization-orthogonal Lz (leftFib-conservative (leftFam-right-char.1 (catFactorRight.isRight {leftFam} {C} {L} {l}))))
 

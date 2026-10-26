@@ -1,18 +1,18 @@
 {- | Opposite categories preserve and reflect localizations ({OpFunc-isLocalization}, {OpFunc-reflects-localization}):
- -   if `l : E ->⁺ L` is a localization at {W}, then `OpFunc l : Op E ->⁺ Op L` is a localization at `OpW W`,
- -   the class of arrows opposite to arrows in {W}.
+ -   if `l : E ->⁺ L` is a localization, then `OpFunc l : Op E ->⁺ Op L` is a localization of `OpWeakEq E`,
+ -   whose weak equivalences are the arrows opposite to weak equivalences of {E}.
  -
  -   Proof. By {localization-criterion} it is enough to show that restriction along `OpFunc l` is an equivalence
- -   on functors inverting {W} into every category `D : \Cat u`. Transposition ({opTranspose}) identifies functors
+ -   on functors inverting weak equivalences into every category `D : \Cat u`. Transposition ({opTranspose}) identifies functors
  -   `Op L ->⁺ D` with functors `L ->⁺ Op D`, commutes with restriction ({opTranspose-precomp}),
- -   and identifies functors inverting `OpW W` with functors inverting {W} ({opTranspose-invertsW}).
+ -   and identifies functors inverting `OpWeakEq E` with functors inverting the weak equivalences of {E} ({opTranspose-invertsWeakEq}).
  -   So the claim follows from the universal property of {l} with respect to `Op D`.
  -}
 
 \import Equiv
-\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Opposite
 \import InfCat.Opposite.Transpose
@@ -24,70 +24,81 @@
 \import Paths
 \import Paths.Meta
 
--- | The arrows of `Op C` opposite to arrows satisfying {W}.
-\func OpW.{u} {C : \Cat u} (W : (DI ->⁺ C) -> \Prop) (a : DI ->⁺ Op C) : \Prop
-  => ∃ (b : DI ->⁺ C) (W b) ((\lam i => opArr (dpath b) i) = {DI ->⁺ Op C} a)
+-- | The arrows of `Op C` opposite to weak equivalences of {C}.
+\func OpWeakEq.{u} (C : CatWeakEq.{u}) : CatWeakEq (Op C) \cowith
+  | isWeakEq a => ∃ (b : DI ->⁺ C) (isWeakEq b) ((\lam i => opArr (dpath b) i) = {DI ->⁺ Op C} a)
 
--- | A functor `Op C ->⁺ D` inverts `OpW W` if and only if its transpose inverts {W}.
-\lemma opTranspose-invertsW.{u} {C D : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : Op C ->⁺ D}
-  : InvertsW (OpW W) F <-> InvertsW W (opTranspose F)
-  => (\lam Fw {b} w => (opTranspose-iso F (dpath b)).2 $ Fw {\lam i => opArr (dpath b) i} (inP (b, w, idp)),
-      \lam Tw {a} aw => \case aw \with {
-        | inP (b, w, p) => transport (\lam a => IsIso (dpath \lam i => F (a i))) p $ (opTranspose-iso F (dpath b)).1 (Tw w)
+-- | A functor `Op C ->⁺ D` inverts `OpWeakEq C` if and only if its transpose inverts the weak equivalences of {C}.
+\lemma opTranspose-invertsWeakEq.{u} {C : CatWeakEq.{u}} {D : \Cat u} {F : Op C ->⁺ D}
+  : InvertsWeakEq {OpWeakEq C} F <-> InvertsWeakEq (opTranspose F)
+  => (\lam Fw => \new FuncWeakEq {
+        | hfunc-we {b} w => (opTranspose-iso F (dpath b)).2 $ Fw.hfunc-we {\lam i => opArr (dpath b) i} (inP (b, w, idp))
+      },
+      \lam Tw => \new FuncWeakEq {
+        | hfunc-we {a} aw => \case aw \with {
+          | inP (b, w, p) => transport (\lam a => IsIso (dpath \lam i => F (a i))) p $ (opTranspose-iso F (dpath b)).1 (Tw.hfunc-we w)
+        }
       })
 
 -- | {OpFunc} preserves localizations.
-\lemma OpFunc-isLocalization.{u} {E L : \Cat u} {W : (DI ->⁺ E) -> \Prop} {l : E ->⁺ L} (Lz : IsLocalization W l)
-  : IsLocalization (OpW W) (OpFunc l)
+\lemma OpFunc-isLocalization.{u} {E : CatWeakEq.{u}} {L : \Cat u} {l : E ->⁺ L} (Lz : IsLocalization l)
+  : IsLocalization {OpWeakEq E} (OpFunc l)
   => IsLocalization.fromUniv (localization-criterion (OpFunc-inverts Lz) (restrict-equiv Lz) (restrict-equiv Lz))
                              (localization-criterion (OpFunc-inverts Lz) (restrict-equiv Lz) (restrict-equiv Lz))
   \where {
-    \lemma OpFunc-inverts.{u} {E L : \Cat u} {W : (DI ->⁺ E) -> \Prop} {l : E ->⁺ L} (Lz : IsLocalization W l)
-      : InvertsW (OpW W) (OpFunc l)
-      => opTranspose-invertsW.2 $ transport (InvertsW W) (funExt+ \lam x => inv toOpOp-natural) (invertsW-postcomp toOpOp Lz.1)
+    \lemma OpFunc-inverts.{u} {E : CatWeakEq.{u}} {L : \Cat u} {l : E ->⁺ L} (Lz : IsLocalization l) : InvertsWeakEq (OpFunc l)
+      => opTranspose-invertsWeakEq.2 $ transport (InvertingWeakEq E (Op (Op L))) (funExt+ \lam x => inv toOpOp-natural) (FuncWeakEq.min toOpOp FuncWeakEq.∘ Lz.1)
 
-    -- | Restriction along `OpFunc l` is an equivalence on functors inverting `OpW W`.
-    \lemma restrict-equiv.{u} {E L : \Cat u} {W : (DI ->⁺ E) -> \Prop} {l : E ->⁺ L} (Lz : IsLocalization W l) {D : \Cat u}
-      : IsEquiv (restrictW {Op E} {Op L} {D} (OpFunc-inverts Lz))
-      => (IsEquiv.parallelEquiv {Op L ->⁺ D} {MapW (OpW W) D} {L ->⁺ Op D} {MapW W (Op D)} {restrictW (OpFunc-inverts Lz)} {restrictW Lz.1} {\lam G x => opTranspose G x}
-                                {\lam s => (\lam x => opTranspose s.1 x, opTranspose-invertsW.1 s.2)}
-           opTranspose-equiv (subtype-equiv {Op E ->⁺ D} {E ->⁺ Op D} opTranspose-equiv {InvertsW (OpW W)} {InvertsW W}
-                                         (\lam Fw => opTranspose-invertsW.1 Fw) (\lam {F} Tw => opTranspose-invertsW.2 Tw))
+    -- | Restriction along `OpFunc l` is an equivalence on functors inverting `OpWeakEq E`.
+    \lemma restrict-equiv.{u} {E : CatWeakEq.{u}} {L : \Cat u} {l : E ->⁺ L} (Lz : IsLocalization l) {D : \Cat u}
+      : IsEquiv (FuncWeakEq.compose-left {OpWeakEq E} {Op L} {D} (OpFunc-inverts Lz))
+      => (IsEquiv.parallelEquiv {Op L ->⁺ D} {InvertingWeakEq (OpWeakEq E) D} {L ->⁺ Op D} {InvertingWeakEq E (Op D)}
+                                {FuncWeakEq.compose-left (OpFunc-inverts Lz)} {FuncWeakEq.compose-left Lz.1} {\lam G x => opTranspose G x}
+                                {\lam s => opTranspose-invertsWeakEq.1 s}
+           opTranspose-equiv (FuncWeakEq.restrict-equiv {OpWeakEq E} {E} {MinCatWeakEq D} {MinCatWeakEq (Op D)} opTranspose-equiv
+                                                          (\lam Fw => opTranspose-invertsWeakEq.1 Fw) (\lam {F} Tw => opTranspose-invertsWeakEq.2 Tw))
            (\lam G => ext (funExt+ \lam x => opTranspose-precomp))).2
-         (restrictW-equiv (IsLocalization.univ Lz))
+         (loc-restrict-equiv (IsLocalization.univ Lz))
   }
 
--- | `OpFunc F` inverts `OpW W` if and only if {F} inverts {W}.
-\lemma OpFunc-invertsW.{u} {C D : \Cat u} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D}
-  : InvertsW (OpW W) (OpFunc F) <-> InvertsW W F
-  => (\lam Fw {b} w => (OpFunc-iso F (dpath b)).1 $ Fw {\lam i => opArr (dpath b) i} (inP (b, w, idp)),
-      \lam Tw {a} aw => \case aw \with {
-        | inP (b, w, p) => transport (\lam a => IsIso (dpath \lam i => OpFunc F (a i))) p $ (OpFunc-iso F (dpath b)).2 (Tw w)
+-- | `OpFunc F` inverts `OpWeakEq C` if and only if {F} inverts the weak equivalences of {C}.
+\lemma OpFunc-invertsWeakEq.{u} {C : CatWeakEq.{u}} {D : \Cat u} {F : C ->⁺ D}
+  : InvertsWeakEq {OpWeakEq C} (OpFunc F) <-> InvertsWeakEq F
+  => (\lam Fw => \new FuncWeakEq {
+        | hfunc-we {b} w => (OpFunc-iso F (dpath b)).1 $ Fw.hfunc-we {\lam i => opArr (dpath b) i} (inP (b, w, idp))
+      },
+      \lam Tw => \new FuncWeakEq {
+        | hfunc-we {a} aw => \case aw \with {
+          | inP (b, w, p) => transport (\lam a => IsIso (dpath \lam i => OpFunc F (a i))) p $ (OpFunc-iso F (dpath b)).2 (Tw.hfunc-we w)
+        }
       })
 
-{- | {OpFunc} reflects localizations: if `OpFunc l` is a localization at `OpW W`, then {l} is a localization at {W}.
+{- | {OpFunc} reflects localizations: if `OpFunc l` is a localization of `OpWeakEq E`, then {l} is a localization of {E}.
  -
  -   Proof. {OpFunc} identifies functors `L ->⁺ D` with functors `Op L ->⁺ Op D` ({OpFunc-equiv}), commutes with restriction
- -   ({OpFunc-comp}), and identifies functors inverting {W} with functors inverting `OpW W` ({OpFunc-invertsW}).
+ -   ({OpFunc-comp}), and identifies functors inverting weak equivalences with functors inverting `OpWeakEq E` ({OpFunc-invertsWeakEq}).
  -}
-\lemma OpFunc-reflects-localization.{u} {E L : \Cat u} {W : (DI ->⁺ E) -> \Prop} {l : E ->⁺ L} (Lz : IsLocalization (OpW W) (OpFunc l))
-  : IsLocalization W l
-  => IsLocalization.fromUniv (localization-criterion (OpFunc-invertsW.1 Lz.1) (restrict-equiv Lz) (restrict-equiv Lz))
-                             (localization-criterion (OpFunc-invertsW.1 Lz.1) (restrict-equiv Lz) (restrict-equiv Lz))
+\lemma OpFunc-reflects-localization.{u} {E : CatWeakEq.{u}} {L : \Cat u} {l : E ->⁺ L} (Lz : IsLocalization {OpWeakEq E} (OpFunc l))
+  : IsLocalization l
+  => IsLocalization.fromUniv (localization-criterion (OpFunc-invertsWeakEq.1 Lz.1) (restrict-equiv Lz) (restrict-equiv Lz))
+                             (localization-criterion (OpFunc-invertsWeakEq.1 Lz.1) (restrict-equiv Lz) (restrict-equiv Lz))
   \where
-    -- | Restriction along {l} is an equivalence on functors inverting {W}.
-    \private \lemma restrict-equiv.{u} {E L : \Cat u} {W : (DI ->⁺ E) -> \Prop} {l : E ->⁺ L} (Lz : IsLocalization (OpW W) (OpFunc l)) {D : \Cat u}
-      : IsEquiv (restrictW (OpFunc-invertsW.1 Lz.1))
-      => (IsEquiv.parallelEquiv OpFunc-equiv (subtype-equiv {E ->⁺ D} OpFunc-equiv {InvertsW W} (\lam Fw => OpFunc-invertsW.2 Fw) (\lam Tw => OpFunc-invertsW.1 Tw)) (\lam G => ext (funExt+ \lam z => OpFunc-comp))).2 (restrictW-equiv (IsLocalization.univ Lz))
+    -- | Restriction along {l} is an equivalence on functors inverting weak equivalences.
+    \private \lemma restrict-equiv.{u} {E : CatWeakEq.{u}} {L : \Cat u} {l : E ->⁺ L} (Lz : IsLocalization {OpWeakEq E} (OpFunc l)) {D : \Cat u}
+      : IsEquiv (FuncWeakEq.compose-left (OpFunc-invertsWeakEq.1 Lz.1))
+      => (IsEquiv.parallelEquiv {L ->⁺ D} {InvertingWeakEq E D} {Op L ->⁺ Op D} {InvertingWeakEq (OpWeakEq E) (Op D)}
+                                {FuncWeakEq.compose-left (OpFunc-invertsWeakEq.1 Lz.1)} {FuncWeakEq.compose-left Lz.1} {OpFunc} {\lam s => OpFunc-invertsWeakEq.2 s}
+           OpFunc-equiv (FuncWeakEq.restrict-equiv {E} {OpWeakEq E} {MinCatWeakEq D} {MinCatWeakEq (Op D)} OpFunc-equiv (\lam Fw => OpFunc-invertsWeakEq.2 Fw) (\lam Tw => OpFunc-invertsWeakEq.1 Tw))
+           (\lam G => ext (funExt+ \lam z => OpFunc-comp))).2 (loc-restrict-equiv (IsLocalization.univ Lz))
 
--- | The opposite of the pullback of {W} along {f} is the pullback of `OpW W` along `OpFunc f`.
-\lemma OpW-pullback.{u} {P C : \Cat u} {W : (DI ->⁺ C) -> \Prop} (f : P ->⁺ C) (a : DI ->⁺ Op P)
-  : OpW (\lam b => W (\lam i => f (b i))) a <-> OpW W (\lam i => OpFunc f (a i))
+-- | The opposite of the pullback of weak equivalences along {f} is the pullback of `OpWeakEq C` along `OpFunc f`.
+\lemma OpWeakEq-pullback.{u} {P : \Cat u} {C : CatWeakEq.{u}} (f : P ->⁺ C) (a : DI ->⁺ Op P)
+  : isWeakEq {OpWeakEq (PullbackWeakEq f)} a <-> isWeakEq {OpWeakEq C} (\lam i => OpFunc f (a i))
   => (\case \elim __ \with {
         | inP (b, w, p) => inP (\lam i => f (b i), w, inv (opArrow-OpFunc f b) *> pmap (\lam a' => \lam i =>⁺ OpFunc f (a' i)) p)
       }, \case \elim __ \with {
         | inP (d, w, p) =>
           \let | b => IsEquiv.ret opArrow-equiv a
                | q : (\lam i => opArr (dpath b) i) = {DI ->⁺ Op P} a => IsEquiv.f_ret opArrow-equiv
-          \in inP (b, transport W (IsEquiv.isInj opArrow-equiv $ p *> inv (pmap (\lam a' => \lam i =>⁺ OpFunc f (a' i)) q) *> opArrow-OpFunc f b) w, q)
+          \in inP (b, transport (isWeakEq {C}) (IsEquiv.isInj opArrow-equiv $ p *> inv (pmap (\lam a' => \lam i =>⁺ OpFunc f (a' i)) q) *> opArrow-OpFunc f b) w, q)
       })

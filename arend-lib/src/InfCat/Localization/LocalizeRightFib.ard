@@ -1,7 +1,7 @@
-{- | Beck–Chevalley along right fibrations ({rightFib-localize}): the pullback of a localization `l : C ->⁺ L` at {W}
- -   along a functor `q : R ->⁺ L` such that `Fibers q` is a right fibration is a localization at the morphisms over {W}.
+{- | Beck–Chevalley along right fibrations ({rightFib-localize}): the pullback of a localization `l : C ->⁺ L`
+ -   along a functor `q : R ->⁺ L` such that `Fibers q` is a right fibration is a localization at the morphisms over weak equivalences.
  -
- -   Proof: pass to opposite categories. `OpFunc l` is a localization at `OpW W` ({OpFunc-isLocalization}), and `Fibers (OpFunc q)`
+ -   Proof: pass to opposite categories. `OpFunc l` is a localization of `OpWeakEq C` ({OpFunc-isLocalization}), and `Fibers (OpFunc q)`
  -   and the fibers of the opposite of the projection of the pullback are left fibrations ({opFunc-leftFib}, {rightFib-total}).
  -   The opposite of the pullback square is a pullback square in the sense of {leftFib-isLocalization}:
  -   on fibers over `toOp c` it is the identification of the fibers of the pullback with the fibers of {q}
@@ -16,6 +16,7 @@
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Contravariant.ContravariantLift
 \import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.LocalizeLeftFib
 \import InfCat.Localization.Opposite
@@ -28,12 +29,12 @@
 \import Paths.Meta
 
 -- | The pullback of a localization along a right fibration is a localization.
-\lemma rightFib-localize.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma rightFib-localize.{u} {C : CatWeakEq.{u}} {L : \Cat u} {l : C ->⁺ L} (Lz : IsLocalization l)
                              {R : \Cat u} {q : R ->⁺ L} (qf : IsRightFib (Fibers q))
-  : IsLocalization (\lam a => W (\lam i => (a i).1)) (\lam (s :⁺ BaseChange l q) => s.2.1)
+  : IsLocalization {PullbackWeakEq {BaseChange l q} {C} __.1} (\lam (s :⁺ BaseChange l q) => s.2.1)
   => OpFunc-reflects-localization $
-       transportInv (IsLocalization __ (OpFunc \lam (s :⁺ BaseChange l q) => s.2.1))
-                    (ext \lam a => ext (OpW-pullback __.1 a)) $
+       transportInv (\lam (V : CatWeakEq (Op (BaseChange l q))) => IsLocalization {V} (OpFunc \lam (s :⁺ BaseChange l q) => s.2.1))
+                    (ext (ext \lam a => ext (OpWeakEq-pullback __.1 a))) $
        leftFib-isLocalization (OpFunc-isLocalization Lz)
          (opFunc-leftFib {BaseChange l q} (rightFib-total (rightFib-pullback l qf))) (opFunc-leftFib qf)
          (kappa l q) (fiber-equiv l q)
@@ -92,7 +93,7 @@
   }
 
 -- | Restriction of sections of a right fibration along a localization is an equivalence.
-\lemma localization-rightFib-sections {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma localization-rightFib-sections {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
                                       {B : L ->⁺ \Cat} (Bf : IsRightFib B)
   : IsEquiv {\Pi (y :⁺ L) -> B y} {\Pi (x :⁺ C) -> B (l x)} (\lam s x => s (l x))
   => IsOrthogonal-family-sections (localization-orthogonal Lz (rightFib-conservative (rightFib-total Bf))) id+

@@ -8,9 +8,9 @@
 
  -   Construction (route B of exponent-cocart.tex): the slice construction {ExpSl} exponentiates fiberwise opposites.
  -   * For a cocartesian map `q : E' ->⁺ B`, let `R b x = Op.Hom (OpFunc q x) b` on `Op E'` ({ExpCocHelpers.preR}) and let `W`
- -     consist of the opposites of `q`-cocartesian arrows ({ExpCocHelpers.CocartOpW}). The total category {SecTot} of the categories
+ -     consist of the opposites of `q`-cocartesian arrows ({ExpCocHelpers.CocartOpWeakEq}). The total category {SecTot} of the categories
  -     of elements along {pi} is the base change of the pre-opposite `PreFiberOp q` ({ExpCocHelpers.jT}, {ExpCocHelpers.jT-equiv}),
- -     and the classes {SecW} and `TotalFibW` correspond ({ExpCocHelpers.class-equiv}).
+ -     and the classes {SecWeakEq} and `TotalFibWeakEq` correspond ({ExpCocHelpers.class-equiv}).
  -     Since fiberwise localization commutes with base change ({fibLoc-baseChange}), {SecTot} localizes to the base change of
  -     `FibOp q` ({ExpCocHelpers.loc}). So {ExpSl.eval-univ} gives the universal property for `FibOp q` ({ExpCocHelpers.secPre-equiv}),
  -     where {ExpCocHelpers.secPre} is the extension of {ExpSl.eval} along this localization; it is natural in {pi}
@@ -40,6 +40,7 @@
 \import InfCat.Fibration.Exponent.ExponentSlice
 \import InfCat.Functor.Equiv
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseTotal
@@ -51,7 +52,7 @@
 \import Logic.Meta
 \import Paths
 \import Paths.Meta
-\open FibOpConstruction (PreFiberOp, preFiberOp-cocartesian, W, W-stable)
+\open FibOpConstruction (PreFiberOp, preFiberOp-cocartesian, WeakEq, WeakEq-stable)
 \open ExpCocHelpers
 
 -- | The total category of the exponent from the cocartesian map {p} to {C}; its objects over `b` are functors `Fibers p b ->⁺ C`.
@@ -107,8 +108,8 @@
     => Op.Hom (OpFunc q x) b
 
   -- | The opposites of {q}-cocartesian arrows.
-  \type CocartOpW.{u} {B E : \Cat u} (q : E ->⁺ B) (a : DI ->⁺ Op E) : \Prop
-    => ∃ (v : DI ->⁺ E) (IsCocartesianArrow q (dpath v)) ((\lam i =>⁺ a i) = opArr (dpath v))
+  \func CocartOpWeakEq.{u} {B E : \Cat u} (q : E ->⁺ B) : CatWeakEq (Op E) \cowith
+    | isWeakEq a => ∃ (v : DI ->⁺ E) (IsCocartesianArrow q (dpath v)) ((\lam i =>⁺ a i) = opArr (dpath v))
 
   -- | {SecTot} as the base change of the pre-opposite.
   \func jT.{u} {B E T : \Cat u} {q : E ->⁺ B} (pi : T ->⁺ B) (w :⁺ SecTot (preR q) pi) : BaseChange pi (PreFiberOp.proj q)
@@ -134,73 +135,71 @@
     : (transport+ (\lam z => Fibers (PreFiberOp.proj q) (pi z)) r y).1.1 = y.1.1 \elim r
     | idp => idp
 
-  -- | {jT} identifies {SecW} with the class of {fibLoc-baseChange}.
+  -- | {jT} identifies {SecWeakEq} with the weak equivalences of {fibLoc-baseChange}.
   \lemma class-equiv.{u} {B E T : \Cat u} {q : E ->⁺ B} (pi : T ->⁺ B) (a : DI ->⁺ SecTot (preR q) pi)
-    : TotW (totalProj (\lam z => Fibers (PreFiberOp.proj q) (pi z)))
-           (TotalFibW {T} {\lam z => Fibers (PreFiberOp.proj q) (pi z)} (\lam z => W q (pi z))) (\lam i => jT pi (a i))
-      <-> SecW (preR q) pi (CocartOpW q) a
-    => (\lam (inP (s, b, w)) => inP (s, b, transport {DI ->⁺ Op E} (CocartOpW q)
+    : isWeakEq {TotWeakEq {T} {BaseChange pi (PreFiberOp.proj q)} (\lam w => w.1) (BaseChangeWeakEq (WeakEq q) pi)} (\lam i => jT pi (a i))
+      <-> isWeakEq {SecWeakEq (preR q) pi (CocartOpWeakEq q)} a
+    => (\lam (inP (s, b, w)) => inP (s, b, transport {DI ->⁺ Op E} (isWeakEq {CocartOpWeakEq q})
           (path \lam j i => (transport+_PreFiberOp pi (b i) (jT pi (a i)).2 *> inv (transport+_secFib pi (b i) (a i).2)) j) w),
-        \lam (inP (s, b, w)) => inP (s, b, transport {DI ->⁺ Op E} (CocartOpW q)
+        \lam (inP (s, b, w)) => inP (s, b, transport {DI ->⁺ Op E} (isWeakEq {CocartOpWeakEq q})
           (path \lam j i => (transport+_secFib pi (b i) (a i).2 *> inv (transport+_PreFiberOp pi (b i) (jT pi (a i)).2)) j) w))
 
   -- | The localization of {SecTot} to the base change of the fiberwise localization of the pre-opposite.
   \func locMap.{u} {B E T : \Cat u} {q : E ->⁺ B} (pi : T ->⁺ B) (w :⁺ SecTot (preR q) pi)
-    : BaseChange pi (fibLocProj (PreFiberOp.proj q) (W q))
-    => (w.1, (localize (TotW (PreFiberOp.proj q) (W q)) (w.2.1, pi w.1, w.2.2), idp))
+    : BaseChange pi (fibLocProj (PreFiberOp.proj q) (WeakEq q))
+    => (w.1, (localize (TotWeakEq (PreFiberOp.proj q) (WeakEq q)) (w.2.1, pi w.1, w.2.2), idp))
 
   \lemma loc.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {T : \Cat u} (pi : T ->⁺ B)
-    : IsLocalization (SecW (preR q) pi (CocartOpW q)) (locMap pi)
-    => isLocalization-transfer' {SecTot (preR q) pi} {BaseChange pi (PreFiberOp.proj q)}
-        (fibLoc-baseChange (preFiberOp-cocartesian q) (W-stable qc) pi) (jT-equiv pi) idHEquiv (\lam w => idp) (class-equiv pi)
+    : IsLocalization {SecWeakEq (preR q) pi (CocartOpWeakEq q)} (locMap pi)
+    => isLocalization-transfer' (fibLoc-baseChange (preFiberOp-cocartesian q) (WeakEq-stable qc) pi) (jT-equiv pi) idHEquiv (\lam w => idp) (class-equiv pi)
 
   -- | The functor corresponding to a family of objects: the extension of {ExpSl.eval} along {loc}.
   \sfunc secPre.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
-                   (s : \Pi (t :⁺ T) -> ExpSl (preR q) C (CocartOpW q) (pi t)) (w :⁺ BaseChange pi (fibLocProj (PreFiberOp.proj q) (W q))) : C
-    => IsLocalization.lift (loc qc pi) (totalFibW-inverts {T} {_} {_} {_} {\lam w => ExpSl.eval (s w.1) w.2} (\lam t => ExpSl.eval-inverts (s t))) w
+                   (s : \Pi (t :⁺ T) -> ExpSl (preR q) C (CocartOpWeakEq q) (pi t)) (w :⁺ BaseChange pi (fibLocProj (PreFiberOp.proj q) (WeakEq q))) : C
+    => IsLocalization.lift (loc qc pi) (totalFibWeakEq-inverts {T} {C} {secFib (preR q) pi} {\lam t => ExpWeakEq (CocartOpWeakEq q)} {\lam w => ExpSl.eval (s w.1) w.2} (\lam t => ExpSl.eval-inverts (s t))) w
 
   \lemma secPre-equiv.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
     : IsEquiv (secPre qc {C} pi)
-    => IsEquiv.leftFactor (restrictW-equiv (IsLocalization.univ (loc qc pi))) $
+    => IsEquiv.leftFactor (loc-restrict-equiv (IsLocalization.univ (loc qc pi))) $
        transport IsEquiv (ext \lam s => ext (funExt+ \lam w => inv IsLocalization.lift.restrict *> inv (\peval secPre qc pi s (locMap pi w)))) (ExpSl.eval-univ pi)
 
   -- | {secPre} is natural in `pi`: along `pi' ∘ g`, it is the restriction of {secPre} along {pi'}.
   \sfunc secPre-natural.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {C : \Cat u} {T T' : \Cat u} (pi' : T' ->⁺ B)
-                            (s' : \Pi (t :⁺ T') -> ExpSl (preR q) C (CocartOpW q) (pi' t)) (g : T ->⁺ T')
-                            {w :⁺ BaseChange (\lam (t :⁺ T) => pi' (g t)) (fibLocProj (PreFiberOp.proj q) (W q))}
+                            (s' : \Pi (t :⁺ T') -> ExpSl (preR q) C (CocartOpWeakEq q) (pi' t)) (g : T ->⁺ T')
+                            {w :⁺ BaseChange (\lam (t :⁺ T) => pi' (g t)) (fibLocProj (PreFiberOp.proj q) (WeakEq q))}
     : secPre qc (\lam t => pi' (g t)) (\lam t => s' (g t)) w = secPre qc pi' s' (g w.1, w.2)
     => loc-ext-eq (IsLocalization.univ (loc qc \lam t => pi' (g t))) {\lam w => secPre qc (\lam t => pi' (g t)) (\lam t => s' (g t)) w}
          \lam x => (\peval secPre qc (\lam t => pi' (g t)) (\lam t => s' (g t)) (locMap (\lam t => pi' (g t)) x))
                     *> IsLocalization.lift.restrict
-                    *> inv (IsLocalization.lift.restrict {_} {_} {_} {_} {_} {loc qc pi'} {_} {_} {g x.1, x.2})
+                    *> inv (IsLocalization.lift.restrict {_} {_} {_} {_} {loc qc pi'} {_} {_} {g x.1, x.2})
                     *> inv (\peval secPre qc pi' s' (locMap pi' (g x.1, x.2)))
 
   -- | {secPre} for any {d} equal to the fiberwise opposite of {q}.
   \func secGen.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {d : \Sigma (E' : \Cat u) (E' ->⁺ B)}
-                   (r : (FibLoc (PreFiberOp.proj q) (W q), fibLocProj (PreFiberOp.proj q) (W q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
-                   {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B) (s : \Pi (t :⁺ T) -> ExpSl (preR q) C (CocartOpW q) (pi t)) : BaseChange pi d.2 ->⁺ C \elim r
+                   (r : (FibLoc (PreFiberOp.proj q) (WeakEq q), fibLocProj (PreFiberOp.proj q) (WeakEq q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
+                   {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B) (s : \Pi (t :⁺ T) -> ExpSl (preR q) C (CocartOpWeakEq q) (pi t)) : BaseChange pi d.2 ->⁺ C \elim r
     | idp => secPre qc pi s
 
   \lemma secGen-equiv.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {d : \Sigma (E' : \Cat u) (E' ->⁺ B)}
-                          (r : (FibLoc (PreFiberOp.proj q) (W q), fibLocProj (PreFiberOp.proj q) (W q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
+                          (r : (FibLoc (PreFiberOp.proj q) (WeakEq q), fibLocProj (PreFiberOp.proj q) (WeakEq q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
                           {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
     : IsEquiv (secGen qc r {C} pi) \elim r
     | idp => secPre-equiv qc pi
 
   \sfunc secGen-natural.{u} {B E : \Cat u} {q : E ->⁺ B} (qc : IsCocartesianMap q) {d : \Sigma (E' : \Cat u) (E' ->⁺ B)}
-                            (r : (FibLoc (PreFiberOp.proj q) (W q), fibLocProj (PreFiberOp.proj q) (W q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
-                            {C : \Cat u} {T T' : \Cat u} (pi' : T' ->⁺ B) (s' : \Pi (t :⁺ T') -> ExpSl (preR q) C (CocartOpW q) (pi' t)) (g : T ->⁺ T')
+                            (r : (FibLoc (PreFiberOp.proj q) (WeakEq q), fibLocProj (PreFiberOp.proj q) (WeakEq q)) = {\Sigma (E' : \Cat u) (E' ->⁺ B)} d)
+                            {C : \Cat u} {T T' : \Cat u} (pi' : T' ->⁺ B) (s' : \Pi (t :⁺ T') -> ExpSl (preR q) C (CocartOpWeakEq q) (pi' t)) (g : T ->⁺ T')
                             {w :⁺ BaseChange (\lam (t :⁺ T) => pi' (g t)) d.2}
     : secGen qc r (\lam t => pi' (g t)) (\lam t => s' (g t)) w = secGen qc r pi' s' (g w.1, w.2) \elim r
     | idp => secPre-natural qc pi' s' g
 
   -- | The exponent before resizing.
   \type ExpCocL.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (b :⁺ B) : \Cat
-    => ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) b
+    => ExpSl (preR (FibOp.proj pc)) C (CocartOpWeakEq (FibOp.proj pc)) b
 
   -- | Families of objects of {ExpCocL} are families of objects of its defining {ExpSl}.
   \func expCoc-sl.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (pi : T ->⁺ B)
-    : QEquiv {\Pi (t :⁺ T) -> ExpCocL pc C (pi t)} {\Pi (t :⁺ T) -> ExpSl (preR (FibOp.proj pc)) C (CocartOpW (FibOp.proj pc)) (pi t)} \cowith
+    : QEquiv {\Pi (t :⁺ T) -> ExpCocL pc C (pi t)} {\Pi (t :⁺ T) -> ExpSl (preR (FibOp.proj pc)) C (CocartOpWeakEq (FibOp.proj pc)) (pi t)} \cowith
     | f s t => s t
     | ret s t => s t
     | ret_f _ => idp

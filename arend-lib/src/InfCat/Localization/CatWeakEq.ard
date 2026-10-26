@@ -1,0 +1,109 @@
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import InfCat.Limit.BaseHCat
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.SubCat.Full
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\class CatWeakEq \extends BaseHCat
+  | isWeakEq : (DI ->⁺ C) -> \Prop
+
+-- | The isomorphisms as weak equivalences.
+\func MinCatWeakEq (C : \Cat) : CatWeakEq C \cowith
+  | isWeakEq a => IsIso a
+
+-- | All arrows as weak equivalences.
+\func MaxCatWeakEq (C : \Cat) : CatWeakEq C \cowith
+  | isWeakEq _ => \Sigma
+
+-- | The pullback of the weak equivalences of {C} along {e}.
+\func PullbackWeakEq {C' : \Cat} {C : CatWeakEq} (e : C' ->⁺ C) : CatWeakEq C' \cowith
+  | isWeakEq a => isWeakEq (\lam i => e (a i))
+  \where {
+    -- | The functor {e} preserves the pulled back weak equivalences.
+    \protected \func func {C' : \Cat} {C : CatWeakEq} (e : C' ->⁺ C) : FuncWeakEq (PullbackWeakEq e) C \cowith
+      | hfunc x => e x
+      | hfunc-we aw => aw
+  }
+
+\record FuncWeakEq \extends BaseHFunctor {
+  \override Dom : CatWeakEq
+  \override Cod : CatWeakEq
+
+  | hfunc-we {a : DI ->⁺ Dom} : isWeakEq a -> isWeakEq (dpath \lam i => hfunc (a i))
+} \where {
+  \protected \func id {C : CatWeakEq} : FuncWeakEq C C \cowith
+    | hfunc x => x
+    | hfunc-we aw => aw
+
+  \protected \func \fixl 8 compose \alias \infixl 8 ∘ {C D E : CatWeakEq} (g : FuncWeakEq D E) (f : FuncWeakEq C D) : FuncWeakEq C E \cowith
+    | hfunc x => g (f x)
+    | hfunc-we aw => g.hfunc-we (f.hfunc-we aw)
+
+  -- | A functor as a functor preserving weak equivalences between categories with the isomorphisms as weak equivalences.
+  \protected \func min {C D : \Cat} (F : C ->⁺ D) : FuncWeakEq (MinCatWeakEq C) (MinCatWeakEq D) \cowith
+    | hfunc x => F x
+    | hfunc-we ai => dmap_IsIso F ai
+
+  \func compose-left {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (lw : InvertsWeakEq l) (G : L ->⁺ D) : InvertsWeakEq (\lam x => G (l x))
+    => min G ∘ lw
+
+  -- | A functor preserving weak equivalences is a functor with a proof that it preserves weak equivalences.
+  \func sigma-equiv {C D : CatWeakEq} : QEquiv {FuncWeakEq C D} {\Sigma (F : C ->⁺ D) (FuncWeakEq C D F)} \cowith
+    | f F => (F, F)
+    | ret s => s.2
+    | ret_f F => idp
+    | f_sec s => idp
+
+  {- | Functors preserving weak equivalences are equal if they are pointwise equal.
+   -   It is a \func, so that the underlying functors along the path compute.
+   -}
+  \protected \sfunc ext {C D : CatWeakEq} {F G : FuncWeakEq C D} (p : \Pi (x :⁺ C) -> F x = G x) : F = G
+    => Paths.Meta.ext (Paths.Meta.ext p)
+
+  -- | The underlying functor of a functor preserving weak equivalences determines it.
+  \lemma hfunc-pmap-equiv {C D : CatWeakEq} {F G : FuncWeakEq C D} : IsEquiv (pmap {FuncWeakEq C D} (\lam H => H.hfunc) {F} {G})
+    => IsEquiv.trans {_} {_} {_} {pmap {FuncWeakEq C D} {\Sigma (H : C ->⁺ D) (FuncWeakEq C D H)} (\lam H => (H.hfunc, H)) {F} {G}} (pmapIsEquiv (inP sigma-equiv))
+         {pmap (\lam (s : \Sigma (H : C ->⁺ D) (FuncWeakEq C D H)) => s.1)}
+         (inP (Embedding.pmap-isEquiv {Embedding.projection (\lam (H : C ->⁺ D) => FuncWeakEq C D H)}))
+
+  {- | Proofs that a functor preserves weak equivalences are equal.
+   -   It is a \func, so that the underlying functor along the path computes.
+   -}
+  \protected \func levelProp {C D : CatWeakEq} {F : C ->⁺ D} (a b : FuncWeakEq C D F) : a = b
+    => path \lam i => \new FuncWeakEq C D F { | hfunc-we => prop-pi {_} {a.hfunc-we} {b.hfunc-we} i }
+
+  -- | An equivalence of functor categories that preserves and reflects preservation of weak equivalences restricts to an equivalence.
+  \lemma restrict-equiv {C C' D D' : CatWeakEq} {g : (C ->⁺ D) -> C' ->⁺ D'} (ge : IsEquiv g)
+                        (h : \Pi {F : C ->⁺ D} -> FuncWeakEq C D F -> FuncWeakEq C' D' (g F))
+                        (r : \Pi {F : C ->⁺ D} -> FuncWeakEq C' D' (g F) -> FuncWeakEq C D F)
+    : IsEquiv {FuncWeakEq C D} {FuncWeakEq C' D'} (\lam s => h s)
+    => IsEquiv.trans (IsEquiv.trans (inP sigma-equiv) (subtype-equiv ge h r)) (inP (symQEquiv sigma-equiv))
+}
+
+-- | Functors inverting weak equivalences, that is, functors preserving weak equivalences into {MinCatWeakEq}.
+\meta InvertingWeakEq C D => FuncWeakEq C (MinCatWeakEq D)
+
+-- | Functors inverting weak equivalences, that is, functors preserving weak equivalences into {MinCatWeakEq}.
+\func InvertsWeakEq {C : CatWeakEq} {D : \Cat} (f : C ->⁺ D) : \Prop
+  => FuncWeakEq C (MinCatWeakEq D) f
+
+-- | The category of functors preserving weak equivalences.
+\func FuncWeakEqCat (C D : CatWeakEq) : \Cat
+  => FullSubCat (FuncWeakEq C D)
+  \where {
+    \protected \sfunc \infixl 8 >> {C D E : CatWeakEq} (f : FuncWeakEq C D) (g :⁺ FuncWeakEqCat D E) : FuncWeakEqCat C E
+      => (FullSubCat.isMax {C ->⁺ E} {FuncWeakEq C E} {FuncWeakEqCat D E} {\lam F x => FullSubCat.inc F (f x)} \lam F => \new FuncWeakEq {
+           | hfunc-we aw => (FullSubCat.inc-con {D ->⁺ E} {FuncWeakEq D E}).hfunc-we (f.hfunc-we aw)
+         }).1 g
+
+    \sfunc inc_>> {C D E : CatWeakEq} {f : FuncWeakEq C D} {g :⁺ FuncWeakEqCat D E} {x :⁺ C} : FullSubCat.inc (f >> g) x = FullSubCat.inc g (f x)
+      => pmap+ (FullSubCat.inc __ x) (\peval f >> g) *> path \lam i =>
+        (FullSubCat.isMax {C ->⁺ E} {FuncWeakEq C E} {FuncWeakEqCat D E} {\lam F x => FullSubCat.inc F (f x)} \lam F => \new FuncWeakEq {
+          | hfunc-we aw => (FullSubCat.inc-con {D ->⁺ E} {FuncWeakEq D E}).hfunc-we (f.hfunc-we aw)
+        }).2 g i x
+  }

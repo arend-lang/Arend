@@ -18,6 +18,7 @@
 \import InfCat.Functor.Adjunction
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Rezk
 \import InfCat.Square
@@ -26,8 +27,8 @@
 \import Paths.Meta
 
 -- | A functor between localizations compatible with a right adjoint is a right adjoint.
-\func loc-adj-descent {C D LC LD : \Cat} {WC : (DI ->⁺ C) -> \Prop} {WD : (DI ->⁺ D) -> \Prop}
-                      {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization WC lC) (LzD : IsLocalization WD lD)
+\func loc-adj-descent {C D : CatWeakEq} {LC LD : \Cat}
+                      {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization lC) (LzD : IsLocalization lD)
                       (A : QAdjunction C D) {F' : LC ->⁺ LD} (Fl : \Pi (x :⁺ C) -> F' (lC x) = lD (A.ladj x))
                       {G' : LD ->⁺ LC} (Gl : \Pi (y :⁺ D) -> G' (lD y) = lC (A.radj y))
   : QAdjunction LC LD F' G' etaL
@@ -134,17 +135,17 @@
   }
 
 -- | If the right adjoint is fully faithful, then so is {G'}.
-\lemma radj-lift-ff {C D LC LD : \Cat} {WC : (DI ->⁺ C) -> \Prop} {WD : (DI ->⁺ D) -> \Prop}
-                    {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization WC lC) (LzD : IsLocalization WD lD)
+\lemma radj-lift-ff {C D : CatWeakEq} {LC LD : \Cat}
+                    {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization lC) (LzD : IsLocalization lD)
                     (A : QAdjunction C D) {F' : LC ->⁺ LD} (Fl : \Pi (x :⁺ C) -> F' (lC x) = lD (A.ladj x))
                     {G' : LD ->⁺ LC} (Gl : \Pi (y :⁺ D) -> G' (lD y) = lC (A.radj y)) (ff : IsFFMap A.radj)
   : IsFFMap G'
   => (loc-adj-descent LzC LzD A Fl {G'} Gl).radj-ff-char.2
-      (loc-adj-descent.heps-iso {C} {D} {LC} {LD} {WC} {WD} {lC} {lD} {LzC} {LzD} {A} {F'} {Fl} {G'} {Gl} ff)
+      (loc-adj-descent.heps-iso {C} {D} {LC} {LD} {lC} {lD} {LzC} {LzD} {A} {F'} {Fl} {G'} {Gl} ff)
 
 -- | {G'} sends universal arrows to `A.radj` to universal arrows.
-\lemma radj-lift-univ {C D LC LD : \Cat} {WC : (DI ->⁺ C) -> \Prop} {WD : (DI ->⁺ D) -> \Prop}
-                      {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization WC lC) (LzD : IsLocalization WD lD)
+\lemma radj-lift-univ {C D : CatWeakEq} {LC LD : \Cat}
+                      {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization lC) (LzD : IsLocalization lD)
                       (A : QAdjunction C D) {F' : LC ->⁺ LD} (Fl : \Pi (x :⁺ C) -> F' (lC x) = lD (A.ladj x))
                       {G' : LD ->⁺ LC} (Gl : \Pi (y :⁺ D) -> G' (lD y) = lC (A.radj y))
                       {x : C} {y : D} {eta : x ~> A.radj y} (U : \Pi (y' : D) -> IsEquiv {y ~> y'} {x ~> A.radj y'} (\lam g => comp eta (dmap A.radj g)))
@@ -156,6 +157,6 @@
      \in transportInv {UnivArrow A.radj x}
           (\lam t => \Pi (y' : LD) -> IsEquiv {lD t.L0x ~> y'} {lC x ~> G' y'} (\lam g => comp (comp (dmap lC t.eta0x) (=_~> (inv (Gl t.L0x)))) (dmap G' g)))
           (UnivArrow.levelProp ua ub) (\lam y'' => IsEquiv.rightFactor (comp-iso-left-equiv (=_~>-iso (inv (Fl x)))) $
-           transport IsEquiv (ext \lam g' => pmap (comp __ _) (loc-adj-descent.etaL-restrict {C} {D} {LC} {LD} {WC} {lC} {lD} {LzC} {A} {F'} {Fl} {G'} {Gl})
+           transport IsEquiv (ext \lam g' => pmap (comp __ _) (loc-adj-descent.etaL-restrict {C} {D} {LC} {LD} {lC} {lD} {LzC} {A} {F'} {Fl} {G'} {Gl})
                                              *> pmap (comp __ _) comp-assoc *> inv comp-assoc *> pmap (comp _ __) (inv (dmap_comp G')))
-             (loc-adj-descent.etaL-univ {C} {D} {LC} {LD} {WC} {WD} {lC} {lD} {LzC} {LzD} {A} {F'} {Fl} {G'} {Gl} {lC x} {y''})) y'
+             (loc-adj-descent.etaL-univ {C} {D} {LC} {LD} {lC} {lD} {LzC} {LzD} {A} {F'} {Fl} {G'} {Gl} {lC x} {y''})) y'

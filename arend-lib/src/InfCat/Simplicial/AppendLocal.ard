@@ -22,6 +22,7 @@
 \import InfCat.Fibration.Contravariant.ContravariantLift
 \import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Fibration.SimplexFib
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Nerve.Nerve
 \import InfCat.Simplicial.Append
 \import InfCat.Simplicial.Join
@@ -164,17 +165,17 @@
 
 -- # Arrows preserving last vertices
 
--- | An arrow of {DeltaCat} preserving last vertices; {LastW} is this property of the image in {DeltaCat}.
+-- | An arrow of {DeltaCat} preserving last vertices; {LastWeakEq} is this property of the image in {DeltaCat}.
 \func LastArr {b b' : DeltaCat} (f : b ~> b') : \Prop
   => IsCocartesianArrow (nerveMap simplexProj) (dmap lastN f)
 
 \lemma lastArr-joinVertn (b : DeltaCat) : LastArr (joinVertn b)
   => TruncP.rec prop-isProp (nerveOb-surj b) \lam s =>
        transport (\lam b' => LastArr (joinVertn b')) s.2 $
-         transportInv (\lam f => LastArr f) (joinVertn-vertex s.1) ((lastW-char (vert (topV (suc s.1)))).2 idp)
+         transportInv (\lam f => LastArr f) (joinVertn-vertex s.1) ((lastWeakEq-char (vert (topV (suc s.1)))).2 idp)
 
 \lemma lastArr-bang : LastArr bang
-  => (lastW-char (constHom {1} {0} 0)).2 idp
+  => (lastWeakEq-char (constHom {1} {0} 0)).2 idp
 
 -- | Arrows preserving last vertices are closed under composition.
 \lemma lastArr-comp {a b c : DeltaCat} {f : a ~> b} {g : b ~> c} (fl : LastArr f) (gl : LastArr g) : LastArr (comp f g)
@@ -184,7 +185,7 @@
 \sfunc lastArr-vertex {m : Nat} (f : nerveOb 0 ~> nerveOb m) (fl : LastArr f) : f = nerveHom {SimplexCat} {0} {m} (vert (topV m))
   => \let | g => IsEquiv.ret (nerveHom-equiv {SimplexCat} {0} {m}) f
           | fg : nerveHom {SimplexCat} {0} {m} g = f => IsEquiv.f_ret (nerveHom-equiv {SimplexCat} {0} {m})
-          | gt : g 0 = topV m => (lastW-char g).1 (transportInv LastArr fg fl)
+          | gt : g 0 = topV m => (lastWeakEq-char g).1 (transportInv LastArr fg fl)
      \in inv fg *> pmap (nerveHom {SimplexCat} {0} {m}) (simplexHom-ext \lam t => \case \elim t \with { | 0 => gt })
 
 -- # Locality
@@ -211,22 +212,22 @@
  -   of `e`, which are covered by {appRestr-tr-vertex}.
  -}
 \lemma appRestr-local.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p)
-  (b : DI ->⁺ E) (bl : LastW p b) : IsEquiv (rightFib-tr (appRestr-rightFib pf) (dpath b))
+  (b : DI ->⁺ E) (bl : isWeakEq {LastWeakEq p} b) : IsEquiv (rightFib-tr (appRestr-rightFib pf) (dpath b))
   => TruncP.rec prop-isProp (nerveOb-surj (p (b dleft))) \lam s =>
        \let | l => rightFib-lift pf (nerveOb 0, nerveOb s.1, nerveHom {SimplexCat} {0} {s.1} (vert (topV s.1)), ((b dleft, inv s.2) : Fibers p (nerveOb s.1)))
             | c : DI ->⁺ E => \lam i => (l.2 i).1
             | cl : LastArr (dpath \lam i => p (c i))
                 => transportInv (\lam (h : DI ->⁺ DeltaCat) => LastArr (dpath \lam i => h i)) (path \lam k => \lam i =>⁺ (l.2 i).2 k)
-                                ((lastW-char (vert (topV s.1))).2 idp)
+                                ((lastWeakEq-char (vert (topV s.1))).2 idp)
             | e1 => appRestr-tr-vertex pf ps c cl l.1.2
             | e2 => appRestr-tr-vertex pf ps (\lam i => comp (dpath c) (dpath b) i)
                       (transportInv LastArr (dmap_comp p) (lastArr-comp cl bl)) l.1.2
        \in IsEquiv.leftFactor e1 (transport IsEquiv (ext \lam w => rightFib-tr_comp (appRestr-rightFib pf) (dpath c) (dpath b)) e2)
 
--- | For a Segal right fibration, the ways to append a vertex form a right fibration local with respect to {LastW}.
+-- | For a Segal right fibration, the ways to append a vertex form a right fibration local with respect to {LastWeakEq}.
 \lemma appY-local.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (y : simplex p 0)
-  : IsLocalRightFib (LastW p) (appY pf y)
-  => localRightFib-comp {_} {_} {_} {LastW p} {appRestr pf} {totalProj (\lam t => appLast pf t ~> y)}
+  : IsLocalRightFib (LastWeakEq p) (appY pf y)
+  => localRightFib-comp {_} {_} {_} {LastWeakEq p} {appRestr pf} {totalProj (\lam t => appLast pf t ~> y)}
        (localRightFib-tr (appRestr-rightFib pf) (appRestr-local pf ps))
        (localRightFib-total (rightFib-pullback (appLast pf) (hom-rightFib y)) \lam k _ =>
           transportInv IsEquiv (ext \lam h => rightFib-pullback-tr (appLast pf) (hom-rightFib y) (dpath k) h)

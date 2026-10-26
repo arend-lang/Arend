@@ -20,7 +20,7 @@
  -       ({PreOpPairing.lift-univElem}, {PreOpPairing.elem-univElem}): lifts of `f` are elements of the pairing.
  -       The point `(toOp y, p y, opHom-iota p y)` gives a universal element in the first variable ({PreOpPairing.kappa-univElem}, {sliceFiber-univElem}).
  -     - {FibOp} is the fiberwise localization of {PreFiberOp} at the arrows whose `Op E`-component is
- -       the opposite of a cocartesian arrow ({W}). {PreOpPairing} inverts them ({FibOpConstruction.W-inverted}), so it descends
+ -       the opposite of a cocartesian arrow ({FibOpConstruction.WeakEq}). {PreOpPairing} inverts them ({FibOpConstruction.WeakEq-inverted}), so it descends
  -       to the localization ({FibOpConstruction.pairing}); the descended pairing is perfect on the fibers
  -       ({FibOpConstruction.fiber-perfect}) and preserves universal elements ({FibOpConstruction.pairing-univElem}).
  -   * {fibOp-repr-lift}: if a pairing of `pi : Z ->⁺ B` with {FibOp} has representable restrictions to the fibers, then it is
@@ -51,6 +51,7 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import InfCat.Localization.Fiberwise.FiberwiseCocartesian
@@ -72,7 +73,7 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\open FibOpConstruction (PreFiberOp, preFiberOp-cocartesian, PreOpPairing, W, W-stable)
+\open FibOpConstruction (PreFiberOp, preFiberOp-cocartesian, PreOpPairing, WeakEq, WeakEq-stable)
 
 -- | A fiberwise pairing of {q} and {p}.
 \func FibPairing.{u} {B E' E : \Cat u} (q : E' ->⁺ B) (p : E ->⁺ B)
@@ -269,13 +270,13 @@
       }
   }
 
--- | The fiberwise opposite of {p}: the fiberwise localization of the pre-opposite at {W} ({FibOpConstruction}).
+-- | The fiberwise opposite of {p}: the fiberwise localization of the pre-opposite at {FibOpConstruction.WeakEq}.
 \func FibOp.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : \Cat u
-  => FibLoc (PreFiberOp.proj p) (W p)
+  => FibLoc (PreFiberOp.proj p) (WeakEq p)
   \where {
     -- | The projection of the fiberwise opposite.
     \protected \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibOp pc ->⁺ B
-      => fibLocProj (PreFiberOp.proj p) (W p)
+      => fibLocProj (PreFiberOp.proj p) (WeakEq p)
 
     -- | The pairing of the fiberwise opposite with {p}.
     \func pairing.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibPairing (proj pc) p
@@ -291,7 +292,7 @@
 
 -- | The fiberwise opposite is a cocartesian map.
 \lemma fibOp-cocartesian.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsCocartesianMap (FibOp.proj pc)
-  => cocartesianMap-char.2 (fibLoc-cocartesian (cocartesianMap-char.1 (preFiberOp-cocartesian p)) (W-stable pc))
+  => cocartesianMap-char.2 (fibLoc-cocartesian (cocartesianMap-char.1 (preFiberOp-cocartesian p)) (WeakEq-stable pc))
 
 -- | The fibers of the fiberwise opposite of {p} are the opposites of the fibers of {p}.
 \lemma fibOp-fiber.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (b : B)
@@ -313,13 +314,13 @@
              -- The restrictions of both sides along the localization agree by the second component of `l.2` and {FibOpConstruction.pairing-restrict};
              -- they are equal since the base change of the localization along {pi} is a localization ({FibOpConstruction.inc-baseChange}).
              \lam w => loc-ext-eq (IsLocalization.univ (FibOpConstruction.inc-baseChange pc pi))
-               (\lam v => pmap+ (\lam t => FibOp.pairing pc (localize (TotW (PreFiberOp.proj p) (W p)) v.2.1, (l.1 v.1, t)))
+               (\lam v => pmap+ (\lam t => FibOp.pairing pc (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) v.2.1, (l.1 v.1, t)))
                                 (inv-concat v.2.2 (pmap+ __.1 (l.2 v.1)))
                  *> FibOpConstruction.pairing-restrict pc (v.2.1, (l.1 v.1, pmap+ __.1 (l.2 v.1) *> inv v.2.2))
                  *> sliceFiber-curry (\lam y => (yon p y).2)
                  *> exp-transport (l.2 v.1) v.2.2
                  *> sliceFiber-sumSlice {Z} {Op E} {\lam z x => Op.Hom (OpFunc p x) (pi z)}
-                      (\lam z k => Q (z, (localize (TotW (PreFiberOp.proj p) (W p)) (k.1, pi z, k.2), idp))) {v.1, _}
+                      (\lam z k => Q (z, (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (k.1, pi z, k.2), idp))) {v.1, _}
                  *> inc-transport pc Q v.2.2) {w})
       \where \private {
         \sfunc inv-concat {A :⁺ \Cat} {b c d :⁺ A} (s :⁺ b = c) (t :⁺ d = c) : inv (s *> inv t) = t *> inv s \elim s, t
@@ -335,8 +336,8 @@
         -- | Transport along {s} in the first component of the arguments of {Q} given by the localization.
         \sfunc inc-transport.{u} {B E Z : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {pi : Z ->⁺ B} (Q : FibPairing pi (FibOp.proj pc))
                                           {z :⁺ Z} {x :⁺ Op E} {b :⁺ B} {h :⁺ Op.Hom (OpFunc p x) b} (s :⁺ b = pi z)
-          : Q (z, (localize (TotW (PreFiberOp.proj p) (W p)) (x, pi z, transport+ (Op.Hom (OpFunc p x)) s h), idp))
-            = Q (z, (localize (TotW (PreFiberOp.proj p) (W p)) (x, b, h), s)) \elim s
+          : Q (z, (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (x, pi z, transport+ (Op.Hom (OpFunc p x)) s h), idp))
+            = Q (z, (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (x, b, h), s)) \elim s
           | idp => idp
 
         -- | Slices of presheaves on `Op E` over `Op.Hom (OpFunc p -) b`: the exponential of {PreFiberOp.proj} to types.
@@ -367,7 +368,7 @@
         -- | {Q} as a functor to {Exp}, restricted along the localization.
         \func curry.{u} {B E Z : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {pi : Z ->⁺ B} (Q : FibPairing pi (FibOp.proj pc)) (z :⁺ Z) : Exp p
           => (pi z, sumSlice (\lam x => Op.Hom (OpFunc p x) (pi z))
-                             (\lam k => Q (z, (localize (TotW (PreFiberOp.proj p) (W p)) (k.1, pi z, k.2), idp))))
+                             (\lam k => Q (z, (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (k.1, pi z, k.2), idp))))
 
         {- | The values of {curry} lie in the image of {yon}. If `Q z` is represented by `t`, then by {perfect-swap} `t` represents
          -   the pairing of {FibOp} with some `e` over `pi z`. So `Q z` is this pairing, and its restriction along the localization
@@ -380,7 +381,7 @@
             | inP (t0, q) => \case (perfect-swap ((FibOp.pairing-perfect pc).1 (pi z))).3 t0 \with {
               | inP (x0, r) => inP (x0.1, yon-path p x0.1 x0.2 *> pmap (\lam G => ((pi z, sumSlice (\lam x => Op.Hom (OpFunc p x) (pi z)) G) : Exp p))
                   (funExt+ \lam k => inv (FibOpConstruction.pairing-restrict pc ((k.1, pi z, k.2), (x0.1, x0.2)))
-                                     *> path (\lam i => (r *> inv q) i (localize (TotW (PreFiberOp.proj p) (W p)) (k.1, pi z, k.2), idp))))
+                                     *> path (\lam i => (r *> inv q) i (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (k.1, pi z, k.2), idp))))
             }
           }
 
@@ -625,16 +626,16 @@
         }
     }
 
-  -- | The localizing class: arrows of the fibers of the pre-opposite whose `Op E`-component is the opposite of a {p}-cocartesian arrow.
-  \protected \func W.{u} {B E : \Cat u} (p : E ->⁺ B) (b : B) (a : DI ->⁺ Fibers (PreFiberOp.proj p) b) : \Prop
-    => ∃ (v : DI ->⁺ E) (IsCocartesianArrow p (dpath v)) ((\lam i =>⁺ (a i).1.1) = opArr (dpath v))
+  -- | The weak equivalences: arrows of the fibers of the pre-opposite whose `Op E`-component is the opposite of a {p}-cocartesian arrow.
+  \protected \func WeakEq.{u} {B E : \Cat u} (p : E ->⁺ B) (b : B) : CatWeakEq (Fiber (PreFiberOp.proj p) b) \cowith
+    | isWeakEq a => ∃ (v : DI ->⁺ E) (IsCocartesianArrow p (dpath v)) ((\lam i =>⁺ (a i).1.1) = opArr (dpath v))
 
-  {- | {W} is stable under transport along arrows of the base: up to the identification of the fibers of {PreFiberOp.proj}
+  {- | {WeakEq} is stable under transport along arrows of the base: up to the identification of the fibers of {PreFiberOp.proj}
    -   with `\Sigma⁺ (x : Op E) (Op.Hom (OpFunc p x) b)`, transport is constant in `Op E` ({preFiberOp-cocartesian.lift-cocartesian}).
    -}
-  \lemma W-stable.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsTransportStable (Fibers (PreFiberOp.proj p)) (W p)
+  \lemma WeakEq-stable.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsTransportStable (Fibers (PreFiberOp.proj p)) (WeakEq p)
     => \lam {s} {s'} g {a} wa => transport {DI ->⁺ Fibers (PreFiberOp.proj p) s} (\lam a' =>
-          ∃ (k : DI ->⁺ Fibers (PreFiberOp.proj p) s') (W p s' k) (H : DPath (\lam i => DI ->⁺ Fibers (PreFiberOp.proj p) (g i)) a' k)
+          ∃ (k : DI ->⁺ Fibers (PreFiberOp.proj p) s') (isWeakEq {WeakEq p s'} k) (H : DPath (\lam i => DI ->⁺ Fibers (PreFiberOp.proj p) (g i)) a' k)
             (IsCocartesianLift {B} {Fibers (PreFiberOp.proj p)} {s, s', g, a' dleft} (k dleft, dpath \lam i => H i dleft))
             (IsCocartesianLift {B} {Fibers (PreFiberOp.proj p)} {s, s', g, a' dright} (k dright, dpath \lam i => H i dright)))
         (path \lam j i => PreFiberOp.fiber-path (a i) j)
@@ -663,22 +664,20 @@
         : ((x, (e, inv (inv r))) : BaseChange pi q) = (x, (e, r))
         => pmap+ (\lam t => ((x, (e, t)) : BaseChange pi q)) inv_inv
 
-  -- | The localizing class of the base change of the localization of the pre-opposite along {p}, with the factors swapped.
-  \protected \func PW.{u} {B E : \Cat u} (p : E ->⁺ B) (a : DI ->⁺ BaseChange (PreFiberOp.proj p) p) : \Prop
-    => TotW (totalProj (\lam x => Fibers (PreFiberOp.proj p) (p x))) (TotalFibW {E} {\lam x => Fibers (PreFiberOp.proj p) (p x)} (\lam x => W p (p x)))
-            (\lam i => swapBC (a i))
+  -- | The weak equivalences of the base change of the localization of the pre-opposite along {p}, with the factors swapped.
+  \protected \func PWeakEq.{u} {B E : \Cat u} (p : E ->⁺ B) : CatWeakEq (BaseChange (PreFiberOp.proj p) p) \cowith
+    | isWeakEq a => isWeakEq {TotWeakEq {E} {BaseChange p (PreFiberOp.proj p)} (\lam w => w.1) (BaseChangeWeakEq (WeakEq p) p)} (\lam i => swapBC (a i))
 
   -- | The base change of the localization along {p} is a localization.
   \lemma pairing-loc.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p)
-    : IsLocalization (PW p) (\lam w => ((localize (TotW (PreFiberOp.proj p) (W p)) w.1, w.2) : BaseChange (fibLocProj (PreFiberOp.proj p) (W p)) p))
-    => isLocalization-transfer' {BaseChange (PreFiberOp.proj p) p} {BaseChange p (PreFiberOp.proj p)}
-         (fibLoc-baseChange (preFiberOp-cocartesian p) (W-stable pc) p) swapBC-equiv swapBC-equiv (\lam w => idp) (\lam a => <->refl)
+    : IsLocalization {PWeakEq p} (\lam w => ((localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) w.1, w.2) : BaseChange (fibLocProj (PreFiberOp.proj p) (WeakEq p)) p))
+    => isLocalization-transfer' (fibLoc-baseChange (preFiberOp-cocartesian p) (WeakEq-stable pc) p) swapBC-equiv swapBC-equiv (\lam w => idp) (\lam a => <->refl)
 
-  {- | {PreOpPairing} inverts {W} in the first variable. Let `c` be an arrow of {W} whose `Op E`-component is `opArr v`.
+  {- | {PreOpPairing} inverts {WeakEq} in the first variable. Let `c` be an arrow of {WeakEq} whose `Op E`-component is `opArr v`.
    -   Transport along `c` sends a universal element given by a cocartesian arrow `w` ({PreOpPairing.exists-univElem})
    -   to an element given by `comp v w` ({opArr-transport}), which is universal by {PreOpPairing.elem-univElem'}.
    -}
-  \lemma W-inverted.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} {c : DI ->⁺ Fibers (PreFiberOp.proj p) b} (wc : W p b c)
+  \lemma WeakEq-inverted.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} {c : DI ->⁺ Fibers (PreFiberOp.proj p) b} (wc : isWeakEq {WeakEq p b} c)
     : IsIso {Fiber p b ->⁺ \Type u} (dpath \lam i => FibPairing.restrict (PreOpPairing p) b (c i)) \elim wc
     | inP (v, vc, P) => \case PreOpPairing.exists-univElem pc (inv (pmap (__ dleft) P)) \with {
       | inP (y, w, w-c, eps, cond) => (univElem-iso-char (PreOpPairing.elem-univElem' (inv (pmap (__ dleft) P)) w-c cond)
@@ -706,24 +705,25 @@
         | idp => idp
     }
 
-  -- | {PreOpPairing} inverts {PW}: on the fiber over `x : E`, this is {W-inverted} evaluated at `(x, idp)`.
-  \lemma pairing-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : InvertsW (PW p) (PreOpPairing p)
-    => \lam {a} wa => transport {DI ->⁺ \Type u} (\lam F => IsIso (dpath \lam i => F i))
+  -- | {PreOpPairing} inverts {PWeakEq}: on the fiber over `x : E`, this is {WeakEq-inverted} evaluated at `(x, idp)`.
+  \lemma pairing-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : InvertsWeakEq {PWeakEq p} (PreOpPairing p) \cowith
+    | hfunc-we {a} wa => transport {DI ->⁺ \Type u} (\lam F => IsIso (dpath \lam i => F i))
                                 (path \lam j i => PreOpPairing p ((a i).1, ((a i).2.1, inv_inv {_} {_} {_} {(a i).2.2} j)))
-        (totalFibW-inverts {E} {_} {\lam x => Fibers (PreFiberOp.proj p) (p x)} {\lam x => W p (p x)} {\lam w => PreOpPairing p (swapBC w)}
-           (\lam x {c} wc => transport {DI ->⁺ \Type u} (\lam F => IsIso (dpath \lam i => F i))
-                                       (path \lam j i => PreOpPairing p ((c i).1, (x, idp_*> {_} {_} {_} {inv (c i).2} j)))
-                                       (dmap_IsIso (\lam G => G (x, idp)) (W-inverted pc wc)))
-           wa)
+        ((totalFibWeakEq-inverts {E} {_} {\lam x => Fibers (PreFiberOp.proj p) (p x)} {\lam x => WeakEq p (p x)} {\lam w => PreOpPairing p (swapBC w)}
+           (\lam x => \new FuncWeakEq {
+             | hfunc-we {c} wc => transport {DI ->⁺ \Type u} (\lam F => IsIso (dpath \lam i => F i))
+                                             (path \lam j i => PreOpPairing p ((c i).1, (x, idp_*> {_} {_} {_} {inv (c i).2} j)))
+                                             (dmap_IsIso (\lam G => G (x, idp)) (WeakEq-inverted pc wc))
+           })).hfunc-we {\lam i => swapBC (a i)} wa)
 
   -- | The pairing of the fiberwise opposite: the extension of {PreOpPairing} along {pairing-loc}.
-  \sfunc pairing.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibPairing (fibLocProj (PreFiberOp.proj p) (W p)) p
+  \sfunc pairing.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : FibPairing (fibLocProj (PreFiberOp.proj p) (WeakEq p)) p
     => IsLocalization.lift (pairing-loc pc) (pairing-inverts pc)
 
   -- | The restriction of {pairing} along the localization is {PreOpPairing}.
   \sfunc pairing-restrict.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (w :⁺ BaseChange (PreFiberOp.proj p) p)
-    : pairing pc (localize (TotW (PreFiberOp.proj p) (W p)) w.1, w.2) = PreOpPairing p w
-    => path (\lam i => (\peval pairing pc) i (localize (TotW (PreFiberOp.proj p) (W p)) w.1, w.2)) *> IsLocalization.lift.restrict
+    : pairing pc (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) w.1, w.2) = PreOpPairing p w
+    => path (\lam i => (\peval pairing pc) i (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) w.1, w.2)) *> IsLocalization.lift.restrict
 
   -- | {pairing} is perfect.
   \lemma pairing-perfect.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : IsPerfectPairing (pairing pc)
@@ -737,7 +737,7 @@
    -     element in the second variable, which is universal by {PreOpPairing.elem-univElem'} for the identity of `y`.
    -   * Every object `t` is `kap y` for some `y`: if `t` is the localization of `c`, take a universal element of {PreOpPairing} at `c`
    -     given by a cocartesian arrow `w` ({PreOpPairing.exists-univElem}); the arrow `kap y ~> c` corresponding to it has `Op E`-component `opArr w`,
-   -     so it is in {W} and becomes invertible.
+   -     so it is in {WeakEq} and becomes invertible.
    -}
   \lemma fiber-perfect.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (b : B) : IsPerfect (FibPairing.restrict (pairing pc) b)
     => perfect-swap {_} {_} {\lam y t => FibPairing.restrict (pairing pc) b t y}
@@ -753,17 +753,17 @@
                  | ue => univElem-equiv Ua c
                  | psi => IsEquiv.ret ue eps
             \in inP (y, inv (IsIso_= (univElem-equiv.univElem-iso (univ-K pc y Ua))).1
-                        *> pmap ReprFunctor ((IsIso_= ((loc pc b).1 $ inP (\lam i => w i, wc, opArr-char qe (dpath \lam i => (psi i).1.1) w
+                        *> pmap ReprFunctor ((IsIso_= ((loc pc b).1.hfunc-we {\lam i => psi i} $ inP (\lam i => w i, wc, opArr-char qe (dpath \lam i => (psi i).1.1) w
                             (pmap (~>_-> (dpath \lam i => Op.Hom (psi i).1.1 y.1)) (inv fa)
-                             *> inv (W-inverted.fst-transport (\lam i => psi i) y a)
+                             *> inv (WeakEq-inverted.fst-transport (\lam i => psi i) y a)
                              *> pmap (\lam z => (Straight.fromStraight z).1) (IsEquiv.f_ret ue)
                              *> cond)))).1 *> ct))
           )
     \where \private {
       -- | The fibers of the fiberwise opposite are localizations of the fibers of the pre-opposite.
       \lemma loc.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) (b : B)
-        : IsLocalization (W p b) (fibLoc-fibIncl (PreFiberOp.proj p) (W p) b)
-        => fibLoc-fiber (cocartesianMap-char.1 (preFiberOp-cocartesian p)) (W-stable pc) b
+        : IsLocalization {WeakEq p b} (fibLoc-fibIncl (PreFiberOp.proj p) (WeakEq p) b)
+        => fibLoc-fiber (cocartesianMap-char.1 (preFiberOp-cocartesian p)) (WeakEq-stable pc) b
 
       -- | The point of the pre-opposite corresponding to {y}.
       \func kap.{v} {B E : \Cat v} {p : E ->⁺ B} {b : B} (y : Fiber p b) : Fiber (PreFiberOp.proj p) b
@@ -771,20 +771,20 @@
 
       -- | The restriction of {pairing} to the fiber over {b} along the localization.
       \sfunc restrict-path.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} (c :⁺ Fiber (PreFiberOp.proj p) b) (y :⁺ Fiber p b)
-        : FibPairing.restrict (pairing pc) b (fibLoc-fibIncl (PreFiberOp.proj p) (W p) b c) y = FibPairing.restrict (PreOpPairing p) b c y
+        : FibPairing.restrict (pairing pc) b (fibLoc-fibIncl (PreFiberOp.proj p) (WeakEq p) b c) y = FibPairing.restrict (PreOpPairing p) b c y
         => pairing-restrict pc (c.1, (y.1, y.2 *> inv c.2))
 
       -- | The universal element in the first variable.
       \lemma univ-K.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} (y : Fiber p b) {a : FibPairing.restrict (PreOpPairing p) b (kap y) y}
                         (Ua : IsUnivElem {Fiber (PreFiberOp.proj p) b} (\lam c => FibPairing.restrict (PreOpPairing p) b c y) (kap y) a)
-        : IsUnivElem (\lam t => FibPairing.restrict (pairing pc) b t y) (fibLoc-fibIncl (PreFiberOp.proj p) (W p) b (kap y))
+        : IsUnivElem (\lam t => FibPairing.restrict (pairing pc) b t y) (fibLoc-fibIncl (PreFiberOp.proj p) (WeakEq p) b (kap y))
                      (transport (\lam X => X) (inv (restrict-path pc (kap y) y)) a)
-        => univElem-precomp {_} {_} {fibLoc-fibIncl (PreFiberOp.proj p) (W p) b} (localization-epi (IsLocalization.univ (loc pc b))) {_} {kap y} (univElem-pointwise (restrict-path pc __ y) Ua)
+        => univElem-precomp {_} {_} {fibLoc-fibIncl (PreFiberOp.proj p) (WeakEq p) b} (localization-epi (IsLocalization.univ (loc pc b))) {_} {kap y} (univElem-pointwise (restrict-path pc __ y) Ua)
 
       -- | The same element is universal in the second variable.
       \lemma univ-E.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) {b : B} (y : Fiber p b) {a : FibPairing.restrict (PreOpPairing p) b (kap y) y}
                         (fa : (Straight.fromStraight a).1 = Op.Hom-idd y.1)
-        : IsUnivElem (FibPairing.restrict (pairing pc) b (fibLoc-fibIncl (PreFiberOp.proj p) (W p) b (kap y))) y (transport (\lam X => X) (inv (restrict-path pc (kap y) y)) a)
+        : IsUnivElem (FibPairing.restrict (pairing pc) b (fibLoc-fibIncl (PreFiberOp.proj p) (WeakEq p) b (kap y))) y (transport (\lam X => X) (inv (restrict-path pc (kap y) y)) a)
         => univElem-pointwise (restrict-path pc (kap y)) (PreOpPairing.elem-univElem' {_} {_} {_} {_} {_} {kap y} idp idd-cocartesian (fa *> inv ~>_->_idd))
 
       -- | An arrow of `Op E` carrying the identity of {y} to the transport of the identity along {w} is `opArr w`.
@@ -806,28 +806,28 @@
   \lemma pairing-univElem.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) : PreservesUnivElem (pairing pc)
     => \lam {e'} => \case \elim e', localize-surj e' \with {
          | _, inP (z, idp) => \lam {d'} {x} {y} s s' c c1 c2 h U =>
-          \let | L : CovLift (Fibers (fibLocProj (PreFiberOp.proj p) (W p))) (PreFiberOp.proj p z, _, dpath \lam i => fibLocProj (PreFiberOp.proj p) (W p) (c i).1,
-                                       (localize (TotW (PreFiberOp.proj p) (W p)) z, idp))
+          \let | L : CovLift (Fibers (fibLocProj (PreFiberOp.proj p) (WeakEq p))) (PreFiberOp.proj p z, _, dpath \lam i => fibLocProj (PreFiberOp.proj p) (WeakEq p) (c i).1,
+                                       (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) z, idp))
                    => ((d', idp), dpath \lam i => ((c i).1, idp))
-               | M : CovLift (Fibers p) (PreFiberOp.proj p z, _, dpath \lam i => fibLocProj (PreFiberOp.proj p) (W p) (c i).1, (x, s))
+               | M : CovLift (Fibers p) (PreFiberOp.proj p z, _, dpath \lam i => fibLocProj (PreFiberOp.proj p) (WeakEq p) (c i).1, (x, s))
                    => ((y, s'), dpath \lam i => ((c i).2.1, (c i).2.2))
           \in lift-version pc _ L ((cocartesianLift<->arrow-at idp L).2 c1) M ((cocartesianLift<->arrow-at s M).2 c2) h U
        }
     \where {
       -- | The statement for a cocartesian lift {L} of {g} at the localization of {z} and a cocartesian lift {M} of {g}.
       \lemma lift-version.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) {z : PreFiberOp p} {b' : B} (g : PreFiberOp.proj p z ~> b')
-                              (L : CovLift (Fibers (fibLocProj (PreFiberOp.proj p) (W p))) (PreFiberOp.proj p z, b', g, (localize (TotW (PreFiberOp.proj p) (W p)) z, idp)))
+                              (L : CovLift (Fibers (fibLocProj (PreFiberOp.proj p) (WeakEq p))) (PreFiberOp.proj p z, b', g, (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) z, idp)))
                               (Lc : IsCocartesianLift L) {xs : Fiber p (PreFiberOp.proj p z)} (M : CovLift (Fibers p) (PreFiberOp.proj p z, b', g, xs))
-                              (Mc : IsCocartesianLift M) (h : pairing pc (localize (TotW (PreFiberOp.proj p) (W p)) z, xs))
-                              (U : IsUnivElem (FibPairing.restrict (pairing pc) (PreFiberOp.proj p z) (localize (TotW (PreFiberOp.proj p) (W p)) z, idp)) xs h)
+                              (Mc : IsCocartesianLift M) (h : pairing pc (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) z, xs))
+                              (U : IsUnivElem (FibPairing.restrict (pairing pc) (PreFiberOp.proj p z) (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) z, idp)) xs h)
         : IsUnivElem (FibPairing.restrict (pairing pc) b' L.1) M.1 (~>_-> (dpath \lam i => pairing pc ((L.2 i).1, ((M.2 i).1, (M.2 i).2 *> inv (L.2 i).2))) h)
         => \let | Ff => cocartesianMap-char.1 (preFiberOp-cocartesian p)
-                | L0 : CovLift (Fibers (fibLocProj (PreFiberOp.proj p) (W p))) (PreFiberOp.proj p z, b', g, (localize (TotW (PreFiberOp.proj p) (W p)) z, idp))
-                  => ((localize (TotW (PreFiberOp.proj p) (W p)) (ghat g dright), idp), dpath \lam i => (localize (TotW (PreFiberOp.proj p) (W p)) (ghat g i), idp))
+                | L0 : CovLift (Fibers (fibLocProj (PreFiberOp.proj p) (WeakEq p))) (PreFiberOp.proj p z, b', g, (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) z, idp))
+                  => ((localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (ghat g dright), idp), dpath \lam i => (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (ghat g i), idp))
                 | L0c : IsCocartesianLift L0 => (cocartesianLift<->arrow-at idp L0).2
-                    (fibLoc-cocartesianArrow Ff (W-stable pc) (dpath (ghat g)) (preFiberOp-cocartesian.lift-cocartesian p z.1 g z.3))
+                    (fibLoc-cocartesianArrow Ff (WeakEq-stable pc) (dpath (ghat g)) (preFiberOp-cocartesian.lift-cocartesian p z.1 g z.3))
            \in transport (\lam LL => IsUnivElem (FibPairing.restrict (pairing pc) b' LL.1.1) M.1 (~>_-> (dpath \lam i => pairing pc ((LL.1.2 i).1, ((M.2 i).1, (M.2 i).2 *> inv (LL.1.2 i).2))) h))
-                (isContr=>isProp (transports-contr.cocLift-contr (fibLoc-cocartesian Ff (W-stable pc)) _) (L0, L0c) (L, Lc))
+                (isContr=>isProp (transports-contr.cocLift-contr (fibLoc-cocartesian Ff (WeakEq-stable pc)) _) (L0, L0c) (L, Lc))
                 (canonical pc g M Mc h U)
 
       -- | The transport of {z} along {g}, constant in `Op E`.
@@ -837,14 +837,14 @@
       -- | The statement for the canonical cocartesian lift, reduced to {PreOpPairing} by {pairing-restrict}.
       \lemma canonical.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) {z : PreFiberOp p} {b' : B} (g : PreFiberOp.proj p z ~> b')
                            {xs : Fiber p (PreFiberOp.proj p z)} (M : CovLift (Fibers p) (PreFiberOp.proj p z, b', g, xs)) (Mc : IsCocartesianLift M)
-                           (h : pairing pc (localize (TotW (PreFiberOp.proj p) (W p)) z, xs))
-                           (U : IsUnivElem (FibPairing.restrict (pairing pc) (PreFiberOp.proj p z) (localize (TotW (PreFiberOp.proj p) (W p)) z, idp)) xs h)
-        : IsUnivElem (FibPairing.restrict (pairing pc) b' (localize (TotW (PreFiberOp.proj p) (W p)) (ghat g dright), idp)) M.1
-                     (~>_-> (dpath \lam i => pairing pc (localize (TotW (PreFiberOp.proj p) (W p)) (ghat g i), ((M.2 i).1, (M.2 i).2 *> inv idp))) h)
+                           (h : pairing pc (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) z, xs))
+                           (U : IsUnivElem (FibPairing.restrict (pairing pc) (PreFiberOp.proj p z) (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) z, idp)) xs h)
+        : IsUnivElem (FibPairing.restrict (pairing pc) b' (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (ghat g dright), idp)) M.1
+                     (~>_-> (dpath \lam i => pairing pc (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (ghat g i), ((M.2 i).1, (M.2 i).2 *> inv idp))) h)
         => \let h0 => transport (\lam X => X) (inv (inv (pairing-restrict pc (z, xs)))) h
-           \in transport (IsUnivElem (FibPairing.restrict (pairing pc) b' (localize (TotW (PreFiberOp.proj p) (W p)) (ghat g dright), idp)) M.1)
+           \in transport (IsUnivElem (FibPairing.restrict (pairing pc) b' (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (ghat g dright), idp)) M.1)
                 (inv (~>_->-pointwise (pairing-restrict pc) (dpath \lam i => ((ghat g i, M.2 i) : BaseChange (PreFiberOp.proj p) p)) h0)
-                 *> pmap (~>_-> (dpath \lam i => pairing pc (localize (TotW (PreFiberOp.proj p) (W p)) (ghat g i), M.2 i)))
+                 *> pmap (~>_-> (dpath \lam i => pairing pc (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) (ghat g i), M.2 i)))
                          (inv (transport_*> (\lam X => X) _ _ _) *> pmap (transport (\lam X => X) __ _) inv_*>))
                 (univElem-pointwise (\lam y' => pairing-restrict pc (ghat g dright, (y'.1, y'.2 *> inv idp)))
                    (canonical-pk pc g M Mc h0 (univElem-pointwise (\lam y' => inv (pairing-restrict pc (z, (y'.1, y'.2 *> inv idp)))) U)))
@@ -877,10 +877,11 @@
 
   -- | The base changes of the localization functor are localizations at the arrows they invert.
   \lemma inc-baseChange.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {Z : \Cat u} (pi : Z ->⁺ B)
-    : IsLocalization (\lam (a : DI ->⁺ BaseChange pi (PreFiberOp.proj p)) => IsIso (dpath \lam i => inc-bc pi (a i))) (\lam w => inc-bc pi w)
-    => isLocalization-saturate (fibLoc-baseChange (preFiberOp-cocartesian p) (W-stable pc) pi)
+    : IsLocalization {PullbackWeakEq {BaseChange pi (PreFiberOp.proj p)} {MinCatWeakEq (BaseChange pi (fibLocProj (PreFiberOp.proj p) (WeakEq p)))} (\lam w => inc-bc pi w)}
+                     (\lam w => inc-bc pi w)
+    => isLocalization-saturate (fibLoc-baseChange (preFiberOp-cocartesian p) (WeakEq-stable pc) pi)
     \where
       -- | The base change of the localization along {pi}.
-      \func inc-bc.{v} {B E Z : \Cat v} {p : E ->⁺ B} (pi : Z ->⁺ B) (w :⁺ BaseChange pi (PreFiberOp.proj p)) : BaseChange pi (fibLocProj (PreFiberOp.proj p) (W p))
-        => (w.1, (localize (TotW (PreFiberOp.proj p) (W p)) w.2.1, w.2.2))
+      \func inc-bc.{v} {B E Z : \Cat v} {p : E ->⁺ B} (pi : Z ->⁺ B) (w :⁺ BaseChange pi (PreFiberOp.proj p)) : BaseChange pi (fibLocProj (PreFiberOp.proj p) (WeakEq p))
+        => (w.1, (localize (TotWeakEq (PreFiberOp.proj p) (WeakEq p)) w.2.1, w.2.2))
 }

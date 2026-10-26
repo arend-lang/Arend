@@ -10,6 +10,7 @@
 \import InfCat.Limit.Initial
 \import InfCat.Limit.Terminal
 \import InfCat.Functor.FullyFaithful
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Opposite
 \import InfCat.Localization.Realization
@@ -62,8 +63,8 @@
   => transport (\lam (X : \Cat u) => IsWeaklyContractible X) (HEquiv_= ee) Cw
 
 -- | {C} is weakly contractible if and only if its functor to the point is a localization at all arrows.
-\lemma weaklyContractible<->localization {C : \Cat} : IsWeaklyContractible C <-> IsLocalization {C} {\Sigma} (\lam _ => \Sigma) (\lam _ => ())
-  => (\lam w => (\lam _ => idd-iso, w), \lam Lz => Lz.2)
+\lemma weaklyContractible<->localization {C : \Cat} : IsWeaklyContractible C <-> IsLocalization {MaxCatWeakEq C} {\Sigma} (\lam _ => ())
+  => (\lam w => (\new FuncWeakEq { | hfunc-we _ => idd-iso }, w), \lam Lz => Lz.2)
 
 -- | The opposite of the point is the point.
 \lemma op-unit-equiv.{u} : IsHEquiv {Op.{u} (\Sigma)} {\Sigma} (\lam _ => ())
@@ -81,5 +82,5 @@
 -- | The opposite of a weakly contractible category is weakly contractible.
 \lemma op-weaklyContractible.{u} {C : \Cat u} (w : IsWeaklyContractible C) : IsWeaklyContractible (Op C)
   => weaklyContractible<->localization.2 $
-       isLocalization-transfer.{u} (OpFunc-isLocalization.{u} {C} {\Sigma} (weaklyContractible<->localization.1 w)) idHEquiv op-unit-equiv
-                                   (\lam _ => idp) \lam a => (\lam _ => TruncP.map (IsEquiv.isSurj opArrow-equiv a) (\lam s => (s.1, (), s.2)), \lam _ => ())
+       isLocalization-transfer (OpFunc-isLocalization {MaxCatWeakEq C} {\Sigma} (weaklyContractible<->localization.1 w)) idHEquiv op-unit-equiv
+          (\lam _ => idp) \lam a => (\lam _ => TruncP.map (IsEquiv.isSurj opArrow-equiv a) (\lam s => (s.1, (), s.2)), \lam _ => ())

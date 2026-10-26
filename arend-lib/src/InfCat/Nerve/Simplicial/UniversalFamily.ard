@@ -4,7 +4,7 @@
  -   {stdSimplex}. It is a cocartesian family ({uFam-cocartesian}) with small fibres ({uFam-small}).
  -   Its fibre over a simplicial type {S} is the realization of the category of simplices {SimpType.El} of {S}:
  -   the base change of {UnivSimplexFib} along {elProj} is the fibre of {ExtFam} over {S} up to reassociation ({elExt}),
- -   which identifies {RealW} with {ExtW} ({elExt-W}). So {kanExt-fiber-isLocalization} gives {uFam-realization},
+ -   which identifies {RealWeakEq} with {ExtWeakEq} ({elExt-weakEq}). So {kanExt-fiber-isLocalization} gives {uFam-realization},
  -   and {uFam-realization-equiv} compares {UFam} with the {Realization} of the small model {ElU}.
  -}
 
@@ -17,6 +17,7 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Kan.LeftKanExt
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise.FiberwiseFiber
 \import InfCat.Nerve.Nerve
@@ -43,7 +44,7 @@
 
 -- | The localization functor from the fibre of {ExtFam} to {UFam}.
 \func uFamIncl.{u} (S : SimpType.{u}) (y :⁺ ExtFam stdSimplex (Fibers (nerveMap simplexProj)) S) : UFam S
-  => fibLoc-fibIncl (extProj stdSimplex (nerveMap simplexProj)) (ExtWTot stdSimplex (nerveMap simplexProj)) S ((S, y), idp)
+  => fibLoc-fibIncl (extProj stdSimplex (nerveMap simplexProj)) (ExtWeakEqTot stdSimplex (nerveMap simplexProj)) S ((S, y), idp)
 
 -- | The base change of {UnivSimplexFib} along {elProj} is the fibre of {ExtFam} over {S}: `((n, a), (j, r)) ↦ ((n, (j, r)), a)`.
 \func elExt.{u} (S : SimpType.{u}) (x :⁺ BaseChange (elProj S) (nerveMap simplexProj)) : ExtFam stdSimplex (Fibers (nerveMap simplexProj)) S
@@ -56,20 +57,21 @@
     | f_finv _ => idp
   }
 
--- | {elExt} identifies {RealW} with {ExtW}: both say that the vertex component is cocartesian.
-\lemma elExt-W.{u} (S : SimpType.{u}) {a : DI ->⁺ BaseChange (elProj S) (nerveMap simplexProj)}
-  : RealW (elProj S) a <-> ExtW stdSimplex (Fibers (nerveMap simplexProj)) S (\lam i => elExt S (a i))
+-- | {elExt} identifies {RealWeakEq} with {ExtWeakEq}: both say that the vertex component is cocartesian.
+\lemma elExt-weakEq.{u} (S : SimpType.{u}) {a : DI ->⁺ BaseChange (elProj S) (nerveMap simplexProj)}
+  : isWeakEq {RealWeakEq (elProj S)} a <-> isWeakEq {ExtWeakEq stdSimplex (Fibers (nerveMap simplexProj)) S} (\lam i => elExt S (a i))
   => cocartesianArrow-fibers {_} {_} {nerveMap simplexProj} {\lam i => ((a i).1.1, (a i).2)}
 
 -- | The fibre of {UFam} over {S} is the realization of the category of simplices of {S}.
 \lemma uFam-realization.{u} (S : SimpType.{u})
-  : IsLocalization (RealW (elProj S)) (\lam x => uFamIncl S (elExt S x))
-  => transportInv (IsLocalization __ (\lam x => uFamIncl S (elExt S x))) (ext \lam a => ext ((elExt-W S).1, (elExt-W S).2))
+  : IsLocalization {RealWeakEq (elProj S)} (\lam x => uFamIncl S (elExt S x))
+  => transportInv (\lam (V : CatWeakEq (BaseChange (elProj S) (nerveMap simplexProj))) => IsLocalization {V} (\lam x => uFamIncl S (elExt S x)))
+                  (ext (ext \lam a => ext ((elExt-weakEq S).1, (elExt-weakEq S).2)))
        (isLocalization-precomp (kanExt-fiber-isLocalization stdSimplex (nerveMap simplexProj) S) (elExt-equiv S))
 
 -- | The same for the small model {ElU}.
 \lemma uFamU-realization.{u} (S : SimpType.{u})
-  : IsLocalization (RealW (elUProj S)) (\lam x => uFamIncl S (elExt S (unresizeEl x.1, x.2)))
+  : IsLocalization {RealWeakEq (elUProj S)} (\lam x => uFamIncl S (elExt S (unresizeEl x.1, x.2)))
   => isLocalization-precomp (uFam-realization S)
        (sigma-base-equiv {_} {_} {unresizeEl} unresizeEl-equiv {\lam (x :⁺ SimpType.El S) => \Sigma⁺ (e : Nerve SimplexTotal) (nerveMap simplexProj e = x.1)})
 

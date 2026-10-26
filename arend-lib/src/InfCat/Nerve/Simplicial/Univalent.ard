@@ -41,7 +41,7 @@
 -- | The functor of realizations induced by a map {t} over {DeltaCat}.
 \func realizeOver.{u} {K E' : \Cat u} (pi : K ->⁺ DeltaCat) (p' : E' ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> Fibers p' (pi k))
                       (y :⁺ Realization pi) : Realization p'
-  => localize-map {_} {_} {RealW pi} {RealW p'} (fibSec-map t) (\lam w => w) y
+  => localize-map (fibSec-weakEq t) y
 
 -- | {realizeOver} is the functor out of the realization corresponding to {t} followed by the unit of {p'}.
 \sfunc realizeOver-adj.{u} {K E' : \Cat u} (pi : K ->⁺ DeltaCat) (p' : E' ->⁺ DeltaCat) (t : \Pi (k :⁺ K) -> Fibers p' (pi k))
@@ -71,8 +71,8 @@
   \where
     \sfunc fun.{v} {X Y : SimpType.{v}} (phi : X ~> Y)
       : (\lam r => uFamTr phi (uFamEll X r)) = {Realization (elUProj X) ->⁺ UFam Y} (\lam r => uFamEll Y (realizeOver (elUProj X) (elUProj Y) (elSec phi) r))
-      => IsEquiv.isInj (localize-ob-equiv {_} {UFam Y} {RealW (elUProj X)})
-           (ext (funExt+ \lam q => kanExt-transport stdSimplex (nerveMap simplexProj) phi
+      => IsEquiv.isInj (localize-ob-equiv {RealWeakEq (elUProj X)} {UFam Y})
+           (ext (ext \lam q => kanExt-transport stdSimplex (nerveMap simplexProj) phi
              *> path \lam i => kanExtIncl stdSimplex (nerveMap simplexProj) Y (((unresizeEl q.1).1, q.2),
                                  inv (fromPSh-comp.{v} {stdSimplex (unresizeEl.{v} q.1).1} (unresizeEl.{v} q.1).2 phi) i)))
 
@@ -89,7 +89,7 @@
 
 -- | The projection of the total category of {UFam}.
 \func uFamProj.{u} => fibLocProj (extProj {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} stdSimplex (nerveMap simplexProj))
-                                   (ExtWTot {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} stdSimplex (nerveMap simplexProj))
+                                   (ExtWeakEqTot {DeltaCat} {SimpType.{u}} {Nerve SimplexTotal} stdSimplex (nerveMap simplexProj))
 
 -- | Complete Segal simplicial types.
 \type CSSTypeCat.{u} : \Cat (\suc u)

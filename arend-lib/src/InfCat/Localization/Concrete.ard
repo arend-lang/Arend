@@ -1,6 +1,6 @@
-{- | The localization of a category at the class of morphisms satisfying a predicate `S : (DI ->⁺ C) -> \Prop`,
+{- | The localization of a category with weak equivalences {C},
  -   constructed as the pushout of `DI × W -> C` along the projection `DI × W -> W`,
- -   where {W} is the type of morphisms satisfying {S} [1, Remark 3.3.8].
+ -   where {W} is the type of weak equivalences of {C} [1, Remark 3.3.8].
  -   A functor is a localization if the canonical functor from this pushout is an equivalence;
  -   this is equivalent to the universal property of [1, Definition 3.3.6].
  -
@@ -19,6 +19,7 @@
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Groupoid
 \import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
 \import InfCat.OFS.CatOFS
 \import InfCat.Paths
 \import InfCat.Resizing
@@ -30,30 +31,30 @@
 \import Paths
 \import Paths.Meta
 
--- | The type of morphisms of {C} satisfying {W}.
-\func MorW {C : \Cat} (W : (DI ->⁺ C) -> \Prop) : \Type
-  => \Sigma (a : DI ->⁺ C) (W a)
+-- | The type of weak equivalences of {C}.
+\func MorW (C : CatWeakEq) : \Type
+  => \Sigma (a : DI ->⁺ C) (isWeakEq a)
 
--- | The localization of {C} at {W}.
-\type Localize {C : \Cat} (W : (DI ->⁺ C) -> \Prop) : \Cat
-  => CatPushout {\Sigma⁺ (MorW W) DI} {C} {MorW W} (\lam a => a.1.1 a.2) (\lam a => a.1)
+-- | The localization of {C} at its weak equivalences.
+\type Localize (C : CatWeakEq) : \Cat
+  => CatPushout {\Sigma⁺ (MorW C) DI} {C} {MorW C} (\lam a => a.1.1 a.2) (\lam a => a.1)
 
 -- | The localization functor.
-\func localize {C : \Cat} (W : (DI ->⁺ C) -> \Prop) (x :⁺ C) : Localize W
+\func localize (C : CatWeakEq) (x :⁺ C) : Localize C
   => cinl x
 
-\lemma localize-inverts {C : \Cat} {W : (DI ->⁺ C) -> \Prop} : InvertsW W (localize W)
-  => \lam {a} s => (IsIso-diag-char {Localize W}).2 $ inP (cinr (a, s), inv $ path \lam j i => cglue ((a, s), i) j)
+\lemma localize-inverts {C : CatWeakEq} : InvertsWeakEq (localize C) \cowith
+  | hfunc-we {a} s => (IsIso-diag-char {Localize C}).2 $ inP (cinr (a, s), inv $ path \lam j i => cglue ((a, s), i) j)
 
 -- | The data of a functor out of {Localize} besides its restriction {F} to {C}.
-\func GlueData {C D : \Cat} (W : (DI ->⁺ C) -> \Prop) (F : C ->⁺ D)
-  => \Sigma (v : MorW W ->⁺ D) (\Pi (a :⁺ \Sigma⁺ (MorW W) DI) -> F (a.1.1 a.2) = v a.1)
+\func GlueData (C : CatWeakEq) {D : \Cat} (F : C ->⁺ D)
+  => \Sigma (v : MorW C ->⁺ D) (\Pi (a :⁺ \Sigma⁺ (MorW C) DI) -> F (a.1.1 a.2) = v a.1)
 
 -- | Functors out of {Localize} are functors out of {C} with gluing data.
-\func localize-rec-equiv {C D : \Cat} {W : (DI ->⁺ C) -> \Prop}
-  : QEquiv {Localize W ->⁺ D} {\Sigma (F : C ->⁺ D) (GlueData W F)}
+\func localize-rec-equiv {C : CatWeakEq} {D : \Cat}
+  : QEquiv {Localize C ->⁺ D} {\Sigma (F : C ->⁺ D) (GlueData C F)}
   \cowith
-  | f h => (\lam y => h (localize W y), (\lam z => h (cinr z), \lam a => path \lam i => h (cglue a i)))
+  | f h => (\lam y => h (localize C y), (\lam z => h (cinr z), \lam a => path \lam i => h (cglue a i)))
   | ret s x => CatPushout.rec s.1 s.2.1 s.2.2 x
   | ret_f h => ext \case \elim __ \with {
     | cinl y => idp
@@ -62,13 +63,13 @@
   }
   | f_sec s => idp
 
-\lemma GlueData=>inverts {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D} (g : GlueData W F) : InvertsW W F
-  => \lam {a} s => IsIso-diag-char.2 $ inP (g.1 (a, s), inv $ path \lam j i => g.2 ((a, s), i) j)
+\lemma GlueData=>inverts {C : CatWeakEq} {D : \Cat} {F : C ->⁺ D} (g : GlueData C F) : InvertsWeakEq F \cowith
+  | hfunc-we {a} s => IsIso-diag-char.2 $ inP (g.1 (a, s), inv $ path \lam j i => g.2 ((a, s), i) j)
 
--- | Gluing data for a functor inverting {W} is unique.
-\lemma GlueData-contr {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {F : C ->⁺ D} (Fw : InvertsW W F) : Contr (GlueData W F)
-  => \let | T (u :⁺ MorW W) => \Sigma⁺ (k : D) ((\lam i =>⁺ F (u.1 i)) = (\lam _ =>⁺ k))
-          | e1 : QEquiv {GlueData W F} {\Pi (u :⁺ MorW W) -> T u} => \new QEquiv {
+-- | Gluing data for a functor inverting weak equivalences is unique.
+\lemma GlueData-contr {C : CatWeakEq} {D : \Cat} {F : C ->⁺ D} (Fw : InvertsWeakEq F) : Contr (GlueData C F)
+  => \let | T (u :⁺ MorW C) => \Sigma⁺ (k : D) ((\lam i =>⁺ F (u.1 i)) = (\lam _ =>⁺ k))
+          | e1 : QEquiv {GlueData C F} {\Pi (u :⁺ MorW C) -> T u} => \new QEquiv {
               | f g u => (g.1 u, path \lam j i => g.2 (u,i) j)
               | ret s => (\lam u => (s u).1, \lam a => path \lam j => ((s a.1).2 @ j) a.2)
               | ret_f => idpe
@@ -76,336 +77,347 @@
             }
      \in \case cov-pi-cat-equiv type-groupoid T \with {
        | inP e2 => Contr.Contr_QEquiv (symQEquiv (HQEquiv.toQEquiv e2) `transQEquiv` symQEquiv e1) $
-                    pi-Contr (\lam u => T u) \lam u => iso-const-contr (Fw u.2)
+                    pi-Contr (\lam u => T u) \lam u => iso-const-contr (Fw.hfunc-we u.2)
      }
 
--- | For a functor inverting {W}, the gluing data is equivalent to the property of inverting {W}.
-\func GlueData-equiv {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} (F : C ->⁺ D) : QEquiv {GlueData W F} {InvertsW W F} \cowith
+-- | The gluing data for a functor is equivalent to the property of inverting weak equivalences.
+\func GlueData-equiv {C : CatWeakEq} {D : \Cat} (F : C ->⁺ D) : QEquiv {GlueData C F} {InvertsWeakEq F} \cowith
   | f => GlueData=>inverts
   | ret Fw => (GlueData-contr Fw).center
   | ret_f g => (GlueData-contr (GlueData=>inverts g)).contraction g
   | f_sec Fw => prop-pi
 
--- | On objects, functors out of {Localize} are exactly the functors out of {C} inverting {W}.
-\lemma localize-ob-equiv {C D : \Cat} {W : (DI ->⁺ C) -> \Prop}
-  : IsEquiv (restrictW {C} {Localize W} {D} (localize-inverts {C} {W}))
+-- | On objects, functors out of {Localize} are exactly the functors out of {C} inverting weak equivalences.
+\lemma localize-ob-equiv {C : CatWeakEq} {D : \Cat}
+  : IsEquiv (FuncWeakEq.compose-left {C} {Localize C} {D} (localize-inverts {C}))
   => transport IsEquiv (ext \lam G => ext idp) $
-       IsEquiv.trans (inP localize-rec-equiv) (inP (sigma-right GlueData-equiv))
+       IsEquiv.trans (IsEquiv.trans (inP localize-rec-equiv) (inP (sigma-right GlueData-equiv))) (inP (symQEquiv FuncWeakEq.sigma-equiv))
 
 -- | {Localize} is a localization with respect to functors into any category.
-\lemma localize-isLocalizationFor {C D : \Cat} {W : (DI ->⁺ C) -> \Prop} : IsLocalizationFor W (localize W) D
-  => localization-criterion localize-inverts (localize-ob-equiv {C} {D} {W}) (localize-ob-equiv {C} {DI ->⁺ D} {W})
+\lemma localize-isLocalizationFor {C : CatWeakEq} {D : \Cat} : IsLocalizationFor (localize C) D
+  => localization-criterion localize-inverts (localize-ob-equiv {C} {D}) (localize-ob-equiv {C} {DI ->⁺ D})
 
 -- | Every object of {Localize} is merely the image of an object of {C}.
-\lemma localize-surj {C : \Cat} {W : (DI ->⁺ C) -> \Prop} (e : Localize W) : ∃ (c : C) (localize W c = e) \elim e
+\lemma localize-surj {C : CatWeakEq} (e : Localize C) : ∃ (c : C) (localize C c = e) \elim e
   | cinl b => inP (b, idp)
   | cinr m => inP (m.1 dleft, path \lam i => cglue (m, dleft) i)
 
--- | The canonical functor out of {Localize} induced by a functor inverting {W}; it computes on {localize}.
-\func localize-lift {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (y :⁺ Localize W) : L \elim y
+-- | The canonical functor out of {Localize} induced by a functor inverting weak equivalences; it computes on {localize}.
+\func localize-lift {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (lw : InvertsWeakEq l) (y :⁺ Localize C) : L \elim y
   | cinl x => l x
   | cinr w => (GlueData-contr lw).center.1 w
   | cglue s => (GlueData-contr lw).center.2 s
 
--- | {l} is a localization of {C} at {W} if the canonical functor from {Localize} is an equivalence.
-\type IsLocalization {C L : \Cat} (W : (DI ->⁺ C) -> \Prop) (l : C ->⁺ L) : \Prop
-  => \Sigma (lw : InvertsW W l) (IsHEquiv (localize-lift lw))
-  \where {
+-- | {l} is a localization of {C} if the canonical functor from {Localize} is an equivalence.
+\type IsLocalization {C : CatWeakEq} {L : \Cat} (l : C ->⁺ L) : \Prop
+  => \Sigma (lw : InvertsWeakEq l) (IsHEquiv (localize-lift lw))
+  \where \protected {
     -- | A localization satisfies the universal property of [1, Definition 3.3.6] with respect to every category.
-    \lemma univ {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) {D : \Cat} : IsLocalizationFor W l D
+    \lemma univ {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l) {D : \Cat} : IsLocalizationFor l D
       => (Lz.1, transportInv IsHEquiv (ext \lam G => IsEmbedding.isMono
                     (ffMap-embedding FullSubCat.inc-ff)
                     (loc-precomp Lz.1)
                     (\lam G => loc-precomp localize-inverts \lam y => G (localize-lift Lz.1 y))
                     (\lam G => ext \lam x => loc-precomp.inc_precomp Lz.1 *> inv (loc-precomp.inc_precomp localize-inverts)))
-                  (IsHEquiv.trans (IsHEquiv.precomp Lz.2) (localize-isLocalizationFor {C} {D} {W}).2))
+                  (IsHEquiv.trans (IsHEquiv.precomp Lz.2) (localize-isLocalizationFor {C} {D}).2))
 
     -- | The universal property with respect to {L} and {Localize} implies that {l} is a localization.
-    \lemma fromUniv {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L}
-                    (loc1 : IsLocalizationFor W l L) (loc2 : IsLocalizationFor W l (Localize W)) : IsLocalization W l
+    \lemma fromUniv {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L}
+                    (loc1 : IsLocalizationFor l L) (loc2 : IsLocalizationFor l (Localize C)) : IsLocalization l
       => \have lu => localization-unique localize-isLocalizationFor localize-isLocalizationFor loc2 loc1
          \in (loc1.1, transportInv IsHEquiv (ext \lam y => loc-ext-eq localize-isLocalizationFor (\lam x => inv (lu.2 x)) {y}) lu.3)
 
-    -- | Localizations of {C} at {W} are equivalent under {C}.
-    \sfunc unique {C L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} {l' : C ->⁺ L'}
-                  (Lz : IsLocalization W l) (Lz' : IsLocalization W l')
+    -- | Localizations of {C} are equivalent under {C}.
+    \sfunc unique {C : CatWeakEq} {L L' : \Cat} {l : C ->⁺ L} {l' : C ->⁺ L'}
+                  (Lz : IsLocalization l) (Lz' : IsLocalization l')
       : \Sigma (u : L ->⁺ L') (\Pi (x :⁺ C) -> u (l x) = l' x) (IsHEquiv u)
       => localization-unique (univ Lz) (univ Lz) (univ Lz') (univ Lz')
 
     -- | Functors into a groupoid factor uniquely through a localization.
-    \lemma groupoid {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) (Dg : IsGroupoid D)
+    \lemma groupoid {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l) (Dg : IsGroupoid D)
       : IsHEquiv {L ->⁺ D} {C ->⁺ D} (\lam G x => G (l x))
       => loc-groupoid (univ Lz) Dg
 
     -- | Functoriality of localizations [1, Construction 3.3.9].
-    \sfunc map {C C' L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {S' : (DI ->⁺ C') -> \Prop} {l : C ->⁺ L} {l' : C' ->⁺ L'}
-              (Lz : IsLocalization W l) (l'S : InvertsW S' l') (f : C ->⁺ C') (fw : SendsW W S' f)
+    \sfunc map {C C' : CatWeakEq} {L L' : \Cat} {l : C ->⁺ L} {l' : C' ->⁺ L'}
+               (Lz : IsLocalization l) (l'S : InvertsWeakEq l') (f : FuncWeakEq C C')
       : \Sigma (m : L ->⁺ L') (\Pi (x :⁺ C) -> m (l x) = l' (f x))
-      => loc-map (univ Lz) l'S f fw
+      => loc-map (univ Lz) l'S f
 
-    -- | The extension along a localization of a functor inverting {W}.
-    \func lift {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
-               {F : C ->⁺ D} (Fw : InvertsW W F) (y :⁺ L) : D
+    -- | The extension along a localization of a functor inverting weak equivalences.
+    \func lift {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
+               {F : C ->⁺ D} (Fw : InvertsWeakEq F) (y :⁺ L) : D
       => loc-lift (univ Lz) Fw y
       \where
-        \func restrict {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} {Lz : IsLocalization W l}
-                       {F : C ->⁺ D} {Fw : InvertsW W F} {x :⁺ C} : lift Lz Fw (l x) = F x
+        \func restrict {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} {Lz : IsLocalization l}
+                       {F : C ->⁺ D} {Fw : InvertsWeakEq F} {x :⁺ C} : lift Lz Fw (l x) = F x
           => loc-lift.restrict
 
     -- | A localization is surjective on objects.
-    \lemma isSurj {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) : IsSurjMap l
+    \lemma isSurj {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l) : IsSurjMap l
       => \lam y => \case localize-surj (IsHEquiv.ret Lz.2 y) \with {
         | inP (c, p) => inP (c, pmap (localize-lift Lz.1) p *> IsHEquiv.f_ret Lz.2)
       }
   }
 
 -- | {Localize} is a localization.
-\lemma localize-isLocalization {C : \Cat} {W : (DI ->⁺ C) -> \Prop} : IsLocalization W (localize W)
+\lemma localize-isLocalization {C : CatWeakEq} : IsLocalization (localize C)
   => (localize-inverts, transportInv IsHEquiv (ext \lam y => loc-ext-eq localize-isLocalizationFor (\lam _ => idp) {y}) idHEquiv)
 
--- | The functor between localizations induced by a functor sending {W} to {W'}; it computes on {localize}.
-\func localize-map {C C' : \Cat} {W : (DI ->⁺ C) -> \Prop} {W' : (DI ->⁺ C') -> \Prop} (f : C ->⁺ C') (fw : SendsW W W' f) (y :⁺ Localize W) : Localize W'
-  => localize-lift {_} {_} {_} {\lam x => localize W' (f x)} (\lam s => localize-inverts (fw s)) y
+-- | The functor between localizations induced by a functor preserving weak equivalences; it computes on {localize}.
+\func localize-map {C C' : CatWeakEq} (f : FuncWeakEq C C') (y :⁺ Localize C) : Localize C'
+  => localize-lift {_} {_} {\lam x => localize C' (f x)} (localize-inverts FuncWeakEq.∘ f) y
 
 -- | The identity functor is the localization at the isomorphisms.
-\lemma id-isLocalization-iso {C : \Cat} : IsLocalization (IsIso {C} __) (\lam x => x)
+\lemma id-isLocalization-iso {C : \Cat} : IsLocalization {MinCatWeakEq C} (\lam x => x)
   => IsLocalization.fromUniv id-isLocalizationFor-iso id-isLocalizationFor-iso
 
--- | A reflection whose unit lies in {W} is a localization at {W}.
-\lemma ladj-isLocalization {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (r : L ->⁺ C)
+-- | A reflection whose unit consists of weak equivalences is a localization.
+\lemma ladj-isLocalization {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (lw : InvertsWeakEq l) (r : L ->⁺ C)
                            (eta : \Pi (x :⁺ C) -> x ~> r (l x)) (eps : \Pi (y :⁺ L) -> y ~> l (r y)) (eps-iso : \Pi (y : L) -> IsIso (eps y))
-                           (eta-W : \Pi (x : C) -> W (\lam i => eta x i))
-  : IsLocalization W l
+                           (eta-W : \Pi (x : C) -> isWeakEq (\lam i => eta x i))
+  : IsLocalization l
   => IsLocalization.fromUniv
-      (ladj-isLocalizationFor lw r eta eps eps-iso (\lam F Fw x => Fw (eta-W x)) (\lam F Fw x => Fw (eta-W x)))
-      (ladj-isLocalizationFor lw r eta eps eps-iso (\lam F Fw x => Fw (eta-W x)) (\lam F Fw x => Fw (eta-W x)))
+      (ladj-isLocalizationFor lw r eta eps eps-iso (\lam F Fw x => Fw.hfunc-we (eta-W x)) (\lam F Fw x => Fw.hfunc-we (eta-W x)))
+      (ladj-isLocalizationFor lw r eta eps eps-iso (\lam F Fw x => Fw.hfunc-we (eta-W x)) (\lam F Fw x => Fw.hfunc-we (eta-W x)))
   \where {
     -- | Restriction along {l} is an equivalence on objects for functors into {D}.
-    \lemma ladj-restrict-equiv {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (r : L ->⁺ C)
+    \lemma ladj-restrict-equiv {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (lw : InvertsWeakEq l) (r : L ->⁺ C)
                                (eta : \Pi (x :⁺ C) -> x ~> r (l x)) (eps : \Pi (y :⁺ L) -> y ~> l (r y)) (eps-iso : \Pi (y : L) -> IsIso (eps y))
-                               (eta-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
-      : IsEquiv (restrictW {C} {L} {D} lw)
-      => inP \new QEquiv {
-        | ret s y => s.1 (r y)
+                               (eta-inv : \Pi (F : C ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
+      : IsEquiv (FuncWeakEq.compose-left {C} {L} {D} lw)
+      => inP \new QEquiv {L ->⁺ D} {InvertingWeakEq C D} (FuncWeakEq.compose-left lw) {
+        | ret s y => s (r y)
         | ret_f G => path \lam j y => G ((inv (natIso-path eps eps-iso) j) y)
-        | f_sec s => ext (inv (natIso-path (\lam x => dmap s.1 (eta x)) (eta-inv s.1 s.2)))
+        | f_sec s => ext (inv (natIso-path (\lam x => dmap s (eta x)) (eta-inv s s)))
       }
 
     -- | A reflection is a localization with respect to functors into {D}.
-    \lemma ladj-isLocalizationFor {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (lw : InvertsW W l) (r : L ->⁺ C)
+    \lemma ladj-isLocalizationFor {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (lw : InvertsWeakEq l) (r : L ->⁺ C)
                                   (eta : \Pi (x :⁺ C) -> x ~> r (l x)) (eps : \Pi (y :⁺ L) -> y ~> l (r y)) (eps-iso : \Pi (y : L) -> IsIso (eps y))
-                                  (eta-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
-                                  (eta-inv' : \Pi (F : C ->⁺ DI ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
-      : IsLocalizationFor W l D
+                                  (eta-inv : \Pi (F : C ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
+                                  (eta-inv' : \Pi (F : C ->⁺ DI ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eta x)))
+      : IsLocalizationFor l D
       => localization-criterion lw (ladj-restrict-equiv lw r eta eps eps-iso eta-inv)
                                    (ladj-restrict-equiv lw r eta eps eps-iso eta-inv')
   }
 
 -- | Localizations can be precomposed with equivalences.
-\lemma isLocalization-precomp {C' C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) {e : C' ->⁺ C} (ee : IsHEquiv e)
-  : IsLocalization (\lam a => W (\lam i => e (a i))) (\lam x => l (e x))
+\lemma isLocalization-precomp {C' : \Cat} {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l) {e : C' ->⁺ C} (ee : IsHEquiv e)
+  : IsLocalization {PullbackWeakEq e} (\lam x => l (e x))
   => IsLocalization.fromUniv aux aux
   \where \private {
     \lemma aux {D : \Cat}
-      : IsLocalizationFor (\lam a => W (\lam i => e (a i))) (\lam x => l (e x)) D
-      => localization-criterion (\lam w => Lz.1 w) equiv equiv
+      : IsLocalizationFor {PullbackWeakEq e} (\lam x => l (e x)) D
+      => localization-criterion lw equiv equiv
+
+    \lemma lw : InvertsWeakEq (\lam x => l (e x))
+      => Lz.1 FuncWeakEq.∘ PullbackWeakEq.func e
 
     \lemma equiv {D : \Cat}
-      : IsEquiv (restrictW {C'} {L} {D} {\lam a => W (\lam i => e (a i))} {\lam x => l (e x)} (\lam w => Lz.1 w))
-      => transport IsEquiv (ext \lam G => ext idp)
-           (IsEquiv.trans (restrictW-equiv (IsLocalization.univ Lz {D})) (mapW-precomp-equiv ee))
-
+      : IsEquiv (FuncWeakEq.compose-left {PullbackWeakEq e} {L} {D} {\lam x => l (e x)} lw)
+      => IsEquiv.trans (loc-restrict-equiv (IsLocalization.univ Lz {D})) (invertsWeakEq-precomp-equiv ee)
   }
 
 {- | Localizations can be transferred along equivalences {e} of the sources and {f} of the targets:
- -   if `l ∘ e = f ∘ k` and {W} pulls back to {W'} along {e}, then {l} is a localization at {W} whenever {k} is one at {W'}.
+ -   if `l ∘ e = f ∘ k` and the weak equivalences of {C} pull back to those of {C'} along {e},
+ -   then {l} is a localization whenever {k} is one.
  -}
-\lemma isLocalization-transfer.{u} {C' C L' L : \Cat u} {W' : (DI ->⁺ C') -> \Prop} {W : (DI ->⁺ C) -> \Prop} {k : C' ->⁺ L'}
-                                   (Kz : IsLocalization W' k) {e : C' ->⁺ C} (ee : IsHEquiv e) {f : L' ->⁺ L} (fe : IsHEquiv f)
+\lemma isLocalization-transfer.{u} {C' C : CatWeakEq.{u}} {L' L : \Cat u} {k : C' ->⁺ L'}
+                                   (Kz : IsLocalization k) {e : C' ->⁺ C} (ee : IsHEquiv e) {f : L' ->⁺ L} (fe : IsHEquiv f)
                                    {l : C ->⁺ L} (le : \Pi (x :⁺ C') -> l (e x) = f (k x))
-                                   (We : \Pi (a : DI ->⁺ C') -> W (\lam i => e (a i)) <-> W' a)
-  : IsLocalization W l
+                                   (We : \Pi (a : DI ->⁺ C') -> isWeakEq (\lam i => e (a i)) <-> isWeakEq a)
+  : IsLocalization l
   => aux Kz (HEquiv_= ee) (HEquiv_= fe) le We
   \where
-    \private \lemma aux.{u} {C' L' : \Cat u} {W' : (DI ->⁺ C') -> \Prop} {k : C' ->⁺ L'} (Kz : IsLocalization W' k)
-                          {C L : \Cat u} (p : C' = C) (q : L' = L) {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L}
+    \private \lemma aux.{u} {C' : CatWeakEq.{u}} {L' : \Cat u} {k : C' ->⁺ L'} (Kz : IsLocalization k)
+                          {X L : \Cat u} (p : C'.C = X) (q : L' = L) {C : CatWeakEq X} {l : C ->⁺ L}
                           (le : \Pi (x :⁺ C') -> l (transport+ (\lam Y => Y) p x) = transport+ (\lam Y => Y) q (k x))
-                          (We : \Pi (a : DI ->⁺ C') -> W (\lam i => transport+ (\lam Y => Y) p (a i)) <-> W' a)
-      : IsLocalization W l \elim p, q
-      | idp, idp => transportInv (IsLocalization __ l) (ext \lam a => ext (We a)) $ transportInv (IsLocalization W') (funExt+ le) Kz
+                          (We : \Pi (a : DI ->⁺ C') -> isWeakEq {C} (\lam i => transport+ (\lam Y => Y) p (a i)) <-> isWeakEq a)
+      : IsLocalization l \elim p, q
+      | idp, idp => transportInv (\lam (V : CatWeakEq C') => IsLocalization {V} l) (ext (ext \lam a => ext (We a))) $
+                      transportInv (IsLocalization {C'}) (funExt+ le) Kz
 
 {- | A version of {isLocalization-transfer} for equivalences {e} and {f} in the other direction:
- -   if `f ∘ l = k ∘ e` and {W'} pulls back to {W} along {e}, then {l} is a localization at {W} whenever {k} is one at {W'}.
+ -   if `f ∘ l = k ∘ e` and the weak equivalences of {C'} pull back to those of {C} along {e},
+ -   then {l} is a localization whenever {k} is one.
  -}
-\lemma isLocalization-transfer'.{u} {C C' L L' : \Cat u} {W' : (DI ->⁺ C') -> \Prop} {W : (DI ->⁺ C) -> \Prop} {k : C' ->⁺ L'}
-                                    (Kz : IsLocalization W' k) {e : C ->⁺ C'} (ee : IsHEquiv e) {f : L ->⁺ L'} (fe : IsHEquiv f)
+\lemma isLocalization-transfer'.{u} {C C' : CatWeakEq.{u}} {L L' : \Cat u} {k : C' ->⁺ L'}
+                                    (Kz : IsLocalization k) {e : C ->⁺ C'} (ee : IsHEquiv e) {f : L ->⁺ L'} (fe : IsHEquiv f)
                                     {l : C ->⁺ L} (le : \Pi (x :⁺ C) -> f (l x) = k (e x))
-                                    (We : \Pi (a : DI ->⁺ C) -> W' (\lam i => e (a i)) <-> W a)
-  : IsLocalization W l
+                                    (We : \Pi (a : DI ->⁺ C) -> isWeakEq (\lam i => e (a i)) <-> isWeakEq a)
+  : IsLocalization l
   => aux (HEquiv_= ee) (HEquiv_= fe) Kz le We
   \where
-    \private \lemma aux.{u} {C L C' L' : \Cat u} (p : C = C') (q : L = L') {W' : (DI ->⁺ C') -> \Prop} {k : C' ->⁺ L'}
-                          (Kz : IsLocalization W' k) {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L}
-                          (le : \Pi (x :⁺ C) -> transport+ (\lam Y => Y) q (l x) = k (transport+ (\lam Y => Y) p x))
-                          (We : \Pi (a : DI ->⁺ C) -> W' (\lam i => transport+ (\lam Y => Y) p (a i)) <-> W a)
-      : IsLocalization W l \elim p, q
-      | idp, idp => transport (IsLocalization __ l) (ext \lam a => ext (We a)) $ transportInv (IsLocalization W') (funExt+ le) Kz
+    \private \lemma aux.{u} {C : CatWeakEq.{u}} {L X' L' : \Cat u} (p : C.C = X') (q : L = L') {C' : CatWeakEq X'} {k : C' ->⁺ L'}
+                            (Kz : IsLocalization k) {l : C ->⁺ L}
+                            (le : \Pi (x :⁺ C) -> transport+ (\lam Y => Y) q (l x) = k (transport+ (\lam Y => Y) p x))
+                            (We : \Pi (a : DI ->⁺ C) -> isWeakEq {C'} (\lam i => transport+ (\lam Y => Y) p (a i)) <-> isWeakEq a)
+      : IsLocalization l \elim p, q
+      | idp, idp => transport (\lam (V : CatWeakEq C) => IsLocalization {V} l) (ext (ext \lam a => ext (We a))) $
+                      transportInv (IsLocalization {C'}) (funExt+ le) Kz
 
--- | Precomposition with an equivalence identifies functors inverting {W} with functors inverting its pullback.
-\lemma mapW-precomp-equiv {C' C D : \Cat} {W : (DI ->⁺ C) -> \Prop} {e : C' ->⁺ C} (ee : IsHEquiv e)
-  : IsEquiv {MapW W D} {MapW (\lam a => W (\lam i => e (a i))) D} (\lam s => (\lam x => s.1 (e x), \lam w => s.2 w))
+-- | Precomposition with an equivalence identifies functors inverting weak equivalences with functors inverting their pullback.
+\lemma invertsWeakEq-precomp-equiv {C' : \Cat} {C : CatWeakEq} {D : \Cat} {e : C' ->⁺ C} (ee : IsHEquiv e)
+  : IsEquiv {InvertingWeakEq C D} {InvertingWeakEq (PullbackWeakEq e) D} (\lam s => \new FuncWeakEq { | hfunc x => s (e x) | hfunc-we w => s.hfunc-we w })
   => inP \new QEquiv {
-    | ret t => (\lam y => t.1 (IsHEquiv.ret ee y),
-                \lam {a} w => t.2 (transport {DI ->⁺ C} W (path \lam j i => inv (IsHEquiv.f_ret ee {a i}) j) w))
-    | ret_f s => ext (ext \lam y => pmap+ s.1 (IsHEquiv.f_ret ee))
-    | f_sec t => ext (ext \lam x => pmap+ t.1 (IsHEquiv.ret_f ee))
+    | ret t => \new FuncWeakEq {
+      | hfunc y => t (IsHEquiv.ret ee y)
+      | hfunc-we {a} w => t.hfunc-we (transport {DI ->⁺ C} isWeakEq (path \lam j i => inv (IsHEquiv.f_ret ee {a i}) j) w)
+    }
+    | ret_f s => ext (ext \lam y => pmap+ s (IsHEquiv.f_ret ee))
+    | f_sec t => ext (ext \lam x => pmap+ t (IsHEquiv.ret_f ee))
   }
 
--- | A functor with a left adjoint section whose counit lies in {W} is a localization at {W}.
-\lemma radj-isLocalization {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {r : C ->⁺ L} (lw : InvertsW W r) (l : L ->⁺ C)
+-- | A functor with a left adjoint section whose counit consists of weak equivalences is a localization.
+\lemma radj-isLocalization {C : CatWeakEq} {L : \Cat} {r : C ->⁺ L} (lw : InvertsWeakEq r) (l : L ->⁺ C)
                            (eps : \Pi (x :⁺ C) -> l (r x) ~> x) (eta : \Pi (y :⁺ L) -> r (l y) ~> y) (eta-iso : \Pi (y : L) -> IsIso (eta y))
-                           (eps-W : \Pi (x : C) -> W (\lam i => eps x i))
-  : IsLocalization W r
+                           (eps-W : \Pi (x : C) -> isWeakEq (\lam i => eps x i))
+  : IsLocalization r
   => IsLocalization.fromUniv
-      (radj-isLocalizationFor lw l eps eta eta-iso (\lam F Fw x => Fw (eps-W x)) (\lam F Fw x => Fw (eps-W x)))
-      (radj-isLocalizationFor lw l eps eta eta-iso (\lam F Fw x => Fw (eps-W x)) (\lam F Fw x => Fw (eps-W x)))
+      (radj-isLocalizationFor lw l eps eta eta-iso (\lam F Fw x => Fw.hfunc-we (eps-W x)) (\lam F Fw x => Fw.hfunc-we (eps-W x)))
+      (radj-isLocalizationFor lw l eps eta eta-iso (\lam F Fw x => Fw.hfunc-we (eps-W x)) (\lam F Fw x => Fw.hfunc-we (eps-W x)))
   \where {
     -- | Restriction along {r} is an equivalence on objects for functors into {D}, with inverse the restriction along {l}.
-    \func radj-restrict-qequiv {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {r : C ->⁺ L} (lw : InvertsW W r) (l : L ->⁺ C)
+    \func radj-restrict-qequiv {C : CatWeakEq} {L D : \Cat} {r : C ->⁺ L} (lw : InvertsWeakEq r) (l : L ->⁺ C)
                                (eps : \Pi (x :⁺ C) -> l (r x) ~> x) (eta : \Pi (y :⁺ L) -> r (l y) ~> y) (eta-iso : \Pi (y : L) -> IsIso (eta y))
-                               (eps-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
-      : QEquiv (restrictW {C} {L} {D} lw) \cowith
-      | ret s y => s.1 (l y)
+                               (eps-inv : \Pi (F : C ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
+      : QEquiv {L ->⁺ D} {InvertingWeakEq C D} (FuncWeakEq.compose-left {C} {L} {D} lw) \cowith
+      | ret s y => s (l y)
       | ret_f G => path \lam j y => G (natIso-path eta eta-iso j y)
-      | f_sec s => ext (natIso-path (\lam x => dmap s.1 (eps x)) (eps-inv s.1 s.2))
+      | f_sec s => ext (natIso-path (\lam x => dmap s (eps x)) (eps-inv s s))
 
-    \lemma radj-restrict-equiv {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {r : C ->⁺ L} (lw : InvertsW W r) (l : L ->⁺ C)
+    \lemma radj-restrict-equiv {C : CatWeakEq} {L D : \Cat} {r : C ->⁺ L} (lw : InvertsWeakEq r) (l : L ->⁺ C)
                                (eps : \Pi (x :⁺ C) -> l (r x) ~> x) (eta : \Pi (y :⁺ L) -> r (l y) ~> y) (eta-iso : \Pi (y : L) -> IsIso (eta y))
-                               (eps-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
-      : IsEquiv (restrictW lw)
+                               (eps-inv : \Pi (F : C ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
+      : IsEquiv (FuncWeakEq.compose-left lw)
       => inP (radj-restrict-qequiv lw l eps eta eta-iso eps-inv)
 
-    -- | Functors inverting {W} are functors out of {L}, via restriction along {l}.
-    \lemma radj-section-equiv {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {r : C ->⁺ L} (lw : InvertsW W r) (l : L ->⁺ C)
+    -- | Functors inverting weak equivalences are functors out of {L}, via restriction along {l}.
+    \lemma radj-section-equiv {C : CatWeakEq} {L D : \Cat} {r : C ->⁺ L} (lw : InvertsWeakEq r) (l : L ->⁺ C)
                               (eps : \Pi (x :⁺ C) -> l (r x) ~> x) (eta : \Pi (y :⁺ L) -> r (l y) ~> y) (eta-iso : \Pi (y : L) -> IsIso (eta y))
-                              (eps-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
-      : IsEquiv {MapW W D} {L ->⁺ D} (\lam s y => s.1 (l y))
+                              (eps-inv : \Pi (F : C ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
+      : IsEquiv {InvertingWeakEq C D} {L ->⁺ D} (\lam s y => s (l y))
       => inP (symQEquiv (radj-restrict-qequiv lw l eps eta eta-iso eps-inv))
 
     -- | The universal property with respect to functors into {D}.
-    \lemma radj-isLocalizationFor {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {r : C ->⁺ L} (lw : InvertsW W r) (l : L ->⁺ C)
+    \lemma radj-isLocalizationFor {C : CatWeakEq} {L D : \Cat} {r : C ->⁺ L} (lw : InvertsWeakEq r) (l : L ->⁺ C)
                                   (eps : \Pi (x :⁺ C) -> l (r x) ~> x) (eta : \Pi (y :⁺ L) -> r (l y) ~> y) (eta-iso : \Pi (y : L) -> IsIso (eta y))
-                                  (eps-inv : \Pi (F : C ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
-                                  (eps-inv' : \Pi (F : C ->⁺ DI ->⁺ D) -> InvertsW W F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
-      : IsLocalizationFor W r D
+                                  (eps-inv : \Pi (F : C ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
+                                  (eps-inv' : \Pi (F : C ->⁺ DI ->⁺ D) -> InvertsWeakEq F -> \Pi (x : C) -> IsIso (dmap F (eps x)))
+      : IsLocalizationFor r D
       => localization-criterion lw (radj-restrict-equiv lw l eps eta eta-iso eps-inv)
                                    (radj-restrict-equiv lw l eps eta eta-iso eps-inv')
   }
 
 {- | Localizations restrict to coreflective subcategories: let {r} be a retraction of {i} (`r ∘ i = id`) with a counit
- -   `eps : i ∘ r -> id` in {W}, and suppose that {i} sends {W'} to {W} and {r} sends {W} to {W'}.
- -   Then the restriction of a localization {l} at {W} along {i} is a localization at {W'}.
+ -   `eps : i ∘ r -> id` consisting of weak equivalences, and suppose that {i} and {r} preserve weak equivalences.
+ -   Then the restriction of a localization {l} of {C} along {i} is a localization of {L}.
  -   The counit is given as a family over a functor {k} equal to `i ∘ r`.
  -}
-\lemma coreflection-isLocalization {C L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {W' : (DI ->⁺ L) -> \Prop} {l : C ->⁺ L'} (Lz : IsLocalization W l)
-                                   (i : L ->⁺ C) (r : C ->⁺ L) (iW : SendsW W' W i) (rW : SendsW W W' r)
-                                   {k : C ->⁺ C} (eps : \Pi (x :⁺ C) -> k x ~> x) (eps-W : \Pi (x : C) -> W (\lam j => eps x j))
+\lemma coreflection-isLocalization {C L : CatWeakEq} {L' : \Cat} {l : C ->⁺ L'} (Lz : IsLocalization l)
+                                   (i : FuncWeakEq L C) (r : FuncWeakEq C L)
+                                   {k : C ->⁺ C} (eps : \Pi (x :⁺ C) -> k x ~> x) (eps-W : \Pi (x : C) -> isWeakEq (\lam j => eps x j))
                                    (kP : k = {C ->⁺ C} (\lam x => i (r x))) (rP : (\lam y => r (i y)) = {L ->⁺ L} (\lam y => y))
-  : IsLocalization W' (\lam y => l (i y))
+  : IsLocalization (\lam y => l (i y))
   => IsLocalization.fromUniv aux aux
   \where {
-    \private \lemma aux {D : \Cat} : IsLocalizationFor W' (\lam y => l (i y)) D
-      => localization-criterion (\lam w => Lz.1 (iW w)) equiv equiv
+    \private \lemma aux {D : \Cat} : IsLocalizationFor (\lam y => l (i y)) D
+      => localization-criterion lw equiv equiv
 
-    \lemma equiv {D : \Cat} : IsEquiv (restrictW {L} {L'} {D} {W'} {\lam y => l (i y)} (\lam w => Lz.1 (iW w)))
-      => transport IsEquiv (ext \lam G => ext idp)
-           (IsEquiv.trans (restrictW-equiv (IsLocalization.univ Lz {D})) (inP (res-qequiv D)))
+    \lemma lw : InvertsWeakEq (\lam y => l (i y))
+      => Lz.1 FuncWeakEq.∘ i
+
+    \lemma equiv {D : \Cat} : IsEquiv (FuncWeakEq.compose-left {L} {L'} {D} {\lam y => l (i y)} lw)
+      => IsEquiv.trans (loc-restrict-equiv (IsLocalization.univ Lz {D})) (inP (res-qequiv D))
 
     -- | Restriction along {i}, with inverse the restriction along {r}.
     \func res-qequiv (D : \Cat)
-      : QEquiv {MapW W D} {MapW W' D} (\lam H => (\lam y => H.1 (i y), \lam w => H.2 (iW w))) \cowith
-      | ret H => (\lam x => H.1 (r x), \lam w => H.2 (rW w))
-      | ret_f H => ext (inv (pmap (\lam (F : C ->⁺ C) (x :⁺ C) => H.1 (F x)) kP)
-                        *> natIso-path (\lam x => dmap H.1 (eps x)) (\lam x => H.2 (eps-W x)))
-      | f_sec H => ext (pmap (\lam (F : L ->⁺ L) (y :⁺ L) => H.1 (F y)) rP)
+      : QEquiv {InvertingWeakEq C D} {InvertingWeakEq L D} (\lam H => H FuncWeakEq.∘ i) \cowith
+      | ret H => H FuncWeakEq.∘ r
+      | ret_f H => ext (inv (pmap (\lam (F : C ->⁺ C) (x :⁺ C) => H (F x)) kP)
+                        *> natIso-path (\lam x => dmap H (eps x)) (\lam x => H.hfunc-we (eps-W x)))
+      | f_sec H => ext (pmap (\lam (F : L ->⁺ L) (y :⁺ L) => H (F y)) rP)
   }
 
 {- | A localization of a category equivalent to a small category is small.
  -   Hom-types of localizations cannot be computed, so smallness has to be established before localizing.
  -}
-\lemma localization-small.{u} {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma localization-small.{u} {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
                               (Cs : IsSmallCat.{u} C) : IsSmallCat.{u} L \elim Cs
   | inP (E,ee) => \case (IsLocalization.unique localize-isLocalization (isLocalization-precomp Lz (inP ee))).3 \with {
-    | inP h => inP (Localize \lam a => W \lam i => ee (a i), h)
+    | inP h => inP (Localize (PullbackWeakEq ee), h)
   }
 
-{- | A localization at {W} is a localization at the class of all arrows it inverts.
- -   A functor inverts {W} if and only if it inverts the arrows inverted by {l}, since it factors through {l}.
+{- | A localization of {C} is a localization at the class of all arrows it inverts.
+ -   A functor inverts the weak equivalences if and only if it inverts the arrows inverted by {l}, since it factors through {l}.
  -}
-\lemma isLocalization-saturate {C L : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
-  : IsLocalization (\lam a => IsIso (dpath \lam i => l (a i))) l
+\lemma isLocalization-saturate {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
+  : IsLocalization {PullbackWeakEq {C} {MinCatWeakEq L} l} l
   => IsLocalization.fromUniv (sat (IsLocalization.univ Lz)) (sat (IsLocalization.univ Lz))
   \where {
-    \lemma sat {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (U : IsLocalizationFor W l D)
-      : IsLocalizationFor (\lam a => IsIso (dpath \lam i => l (a i))) l D
-      => (\lam s => s, res-sub-transport {C} {L} {D} {l} {InvertsW W} {InvertsW (\lam a => IsIso (dpath \lam i => l (a i)))}
-           (ext \lam (F : C ->⁺ D) => ext (\lam Fw {a} s =>
-                                              transport (\lam G => IsIso (dpath \lam i => G (a i)))
-                                                        (funExt+ \lam x => loc-lift.restrict {_} {_} {_} {_} {_} {U} {F} {Fw} {x})
-                                                        (dmap_IsIso (loc-lift U Fw) s),
-                                            \lam Fw s => Fw (U.1 s)))
+    \lemma sat {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (U : IsLocalizationFor l D)
+      : IsLocalizationFor {PullbackWeakEq {C} {MinCatWeakEq L} l} l D
+      => (PullbackWeakEq.func l,
+          res-sub-transport {C} {L} {D} {l} {InvertingWeakEq C D} {InvertingWeakEq (PullbackWeakEq {C} {MinCatWeakEq L} l) D}
+           (ext \lam (F : C ->⁺ D) => ext (\lam Fw => \new FuncWeakEq {
+                                              | hfunc-we {a} s => transport (\lam G => IsIso (dpath \lam i => G (a i)))
+                                                                           (funExt+ \lam x => loc-lift.restrict {_} {_} {_} {_} {U} {F} {Fw} {x})
+                                                                           (dmap_IsIso (loc-lift U Fw) s)
+                                            },
+                                            \lam Fw => \new FuncWeakEq { | hfunc-we s => Fw.hfunc-we (U.1.hfunc-we s) }))
            U.2)
 
     \private \lemma res-sub-transport {C L D : \Cat} {l : C ->⁺ L} {P P' : (C ->⁺ D) -> \Prop} (q : P = P')
                                       {lP : \Pi (G : L ->⁺ D) -> P (\lam x => G (l x))} {lP' : \Pi (G : L ->⁺ D) -> P' (\lam x => G (l x))}
-                                      (e : IsHEquiv (res-sub l P lP)) : IsHEquiv (res-sub l P' lP') \elim q
-      | idp => transport (\lam lp => IsHEquiv (res-sub l P lp)) prop-pi e
+                                      (e : IsHEquiv (loc-precomp.res-sub l P lP)) : IsHEquiv (loc-precomp.res-sub l P' lP') \elim q
+      | idp => transport (\lam lp => IsHEquiv (loc-precomp.res-sub l P lp)) prop-pi e
   }
 
--- | A functor between localizations at the same class compatible with the localization functors is an equivalence.
-\lemma IsLocalization-unique {C L L' : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} {l' : C ->⁺ L'} (Lz : IsLocalization W l) (Lz' : IsLocalization W l')
+-- | A functor between localizations of the same category compatible with the localization functors is an equivalence.
+\lemma IsLocalization-unique {C : CatWeakEq} {L L' : \Cat} {l : C ->⁺ L} {l' : C ->⁺ L'} (Lz : IsLocalization l) (Lz' : IsLocalization l')
                              {c : L ->⁺ L'} (h : \Pi (x :⁺ C) -> c (l x) = l' x) : IsHEquiv c
   => \have u => IsLocalization.unique Lz Lz'
      \in transport IsHEquiv (funExt+ \lam y => loc-ext-eq (IsLocalization.univ Lz) {u.1} {c} (\lam x => u.2 x *> inv (h x)) {y}) u.3
 
 {- | A localization is left orthogonal to every conservative functor.
- -   In a commutative square `v ∘ l = h ∘ u`, the functor `u` inverts {W}, since `h ∘ u = v ∘ l` does and {h} is conservative.
- -   So squares are pairs of a functor inverting {W} and a lift of `h ∘ u` along {l}, which is unique ({lower-prop}),
+ -   In a commutative square `v ∘ l = h ∘ u`, the functor `u` inverts weak equivalences, since `h ∘ u = v ∘ l` does and {h} is conservative.
+ -   So squares are pairs of a functor inverting weak equivalences and a lift of `h ∘ u` along {l}, which is unique ({lower-prop}),
  -   and the claim follows from the universal property of {l}.
  -}
-\lemma localization-orthogonal {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma localization-orthogonal {C : CatWeakEq} {L E D : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
                                {h : E ->⁺ D} (hc : IsConservative h)
   : IsOrthogonal l h
-  => IsEquiv.leftFactor (inP (square-equiv Lz hc))
-       (transport IsEquiv (ext \lam g => ext idp) (restrictW-equiv (IsLocalization.univ Lz {E})))
+  => IsEquiv.leftFactor {L ->⁺ E} {Square l h} {InvertingWeakEq C E} {\lam (g : L ->⁺ E) => ((\lam x => g (l x), \lam y => h (g y)), \lam x => idp)} {square-equiv Lz hc}
+       (inP (square-equiv Lz hc)) (loc-restrict-equiv (IsLocalization.univ Lz {E}))
   \where \private {
     \func Square {C L E D : \Cat} (l : C ->⁺ L) (h : E ->⁺ D) : \Type
       => \Sigma (uv : \Sigma (C ->⁺ E) (L ->⁺ D)) (\Pi (x :⁺ C) -> uv.2 (l x) = h (uv.1 x))
 
-    \lemma square-inverts {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
-                                   {h : E ->⁺ D} (hc : IsConservative h) (b : Square l h) : InvertsW W b.1.1
-      => \lam {a} w => hc (transport (\lam (F : C ->⁺ D) => IsIso (dpath \lam i => F (a i))) (funExt+ b.2) (dmap_IsIso b.1.2 (Lz.1 w)))
+    \lemma square-inverts {C : CatWeakEq} {L E D : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
+                                   {h : E ->⁺ D} (hc : IsConservative h) (b : Square l h) : InvertsWeakEq b.1.1 \cowith
+      | hfunc-we {a} w => hc (transport (\lam (F : C ->⁺ D) => IsIso (dpath \lam i => F (a i))) (funExt+ b.2) (dmap_IsIso b.1.2 (Lz.1.hfunc-we w)))
 
     -- | A functor out of {L} is determined by its restriction along {l}.
-    \lemma lower-prop {C L D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l) (F : C ->⁺ D)
+    \lemma lower-prop {C : CatWeakEq} {L D : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l) (F : C ->⁺ D)
       : isProp (\Sigma (v : L ->⁺ D) (\Pi (x :⁺ C) -> v (l x) = F x))
       => isProp-retract {\Sigma (v : L ->⁺ D) ((\lam x => v (l x)) = {C ->⁺ D} F)} {\Sigma (v : L ->⁺ D) (\Pi (x :⁺ C) -> v (l x) = F x)}
                         (\lam s => (s.1, funExt+ s.2))
                         (\lam s => (s.1, (funExt+-equiv {C} {\lam _ => D} {\lam x => s.1 (l x)} {F}).ret s.2)) (\lam s => idp)
                         (IsFFMap.fibProp {L ->⁺ D} {C ->⁺ D} {\lam G x => G (l x)} (localization-epi (IsLocalization.univ Lz {D})) F)
 
-    -- | The square given by a functor inverting {W} and its extension along {l}.
-    \func lift-square {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
-                               (h : E ->⁺ D) (u : MapW W E) : Square l h
+    -- | The square given by a functor inverting weak equivalences and its extension along {l}.
+    \func lift-square {C : CatWeakEq} {L E D : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
+                               (h : E ->⁺ D) (u : InvertingWeakEq C E) : Square l h
       => \let | Uw => IsLocalization.univ Lz {D}
-              | hw : InvertsW W (\lam x => h (u.1 x)) => invertsW-postcomp h u.2
-         \in ((u.1, loc-lift Uw hw), \lam x => loc-lift.restrict {_} {_} {_} {_} {_} {Uw} {_} {hw} {x})
+              | hw : InvertsWeakEq (\lam x => h (u x)) => FuncWeakEq.compose-left u h
+         \in ((u, loc-lift Uw hw), \lam x => loc-lift.restrict {_} {_} {_} {_} {Uw} {_} {hw} {x})
 
-    \func square-equiv {C L E D : \Cat} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
-                                {h : E ->⁺ D} (hc : IsConservative h) : QEquiv {Square l h} {MapW W E} \cowith
-      | f b => (b.1.1, square-inverts Lz hc b)
+    \func square-equiv {C : CatWeakEq} {L E D : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
+                                {h : E ->⁺ D} (hc : IsConservative h) : QEquiv {Square l h} {InvertingWeakEq C E} \cowith
+      | f b => square-inverts Lz hc b
       | ret => lift-square Lz h
-      | ret_f b => \let | c => lift-square Lz h (b.1.1, square-inverts Lz hc b)
+      | ret_f b => \let | c => lift-square Lz h (square-inverts Lz hc b)
                         | q => lower-prop Lz (\lam x => h (b.1.1 x)) (c.1.2, c.2) (b.1.2, b.2)
                    \in path \lam i => ((b.1.1, (q i).1), (q i).2)
       | f_sec u => ext idp

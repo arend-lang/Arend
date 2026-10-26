@@ -6,6 +6,7 @@
  -}
 
 \import InfCat.Functor.Initial
+\import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Opposite
 \import InfCat.Opposite
@@ -15,6 +16,6 @@
   => IsInitialFunctor (OpFunc f)
 
 -- | Localizations are final.
-\lemma localization-finalFunctor.{u} {C L : \Cat u} {W : (DI ->⁺ C) -> \Prop} {l : C ->⁺ L} (Lz : IsLocalization W l)
+\lemma localization-finalFunctor.{u} {C : CatWeakEq.{u}} {L : \Cat u} {l : C ->⁺ L} (Lz : IsLocalization l)
   : IsFinalFunctor l
   => localization-initialFunctor (OpFunc-isLocalization Lz)
