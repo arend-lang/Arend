@@ -265,7 +265,7 @@
         pmap (\lam F => ((((s.1, s.4) : \Sigma⁺ U U), F) : ObY p)) s.9))
 
   -- | The composite of a spine.
-  \func kappaY.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (s : SpineY pc) : ArrY pc DI
+  \sfunc kappaY.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (s : SpineY pc) : ArrY pc DI
     => ucEval pc (compY (IsEquiv.ret (cpMap-equiv pc) (inclY pc s)))
 
   -- | {UnivSt} on spines.
@@ -286,51 +286,53 @@
 
   -- | {UnivSt} commutes with the composition of spines.
   \sfunc st-kappaX.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (s : SpineX {U}) : stA pc (kappaX s) = kappaY pc (stS pc s)
-    => aux s.7 s.8.2.2 s.9
+    => aux pc s.7 s.8.2.2 s.9
     \where
-      \func aux {c c' d d' : U} {a : c ~> c'} {b : d ~> d'} (lx : LX {U} {c} b) {g' : c' ~> d'} {z' : c ~> d'} (t : DPath (\lam i => a i ~> d') z' g')
-                 (e : lx.2.1 = z')
-        : stA pc (kappaX (c, c', d, d', a, b, lx, (g', (z', t)), e)) = kappaY pc (stS pc (c, c', d, d', a, b, lx, (g', (z', t)), e)) \elim e
+      \sfunc aux.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) {c c' d d' : U} {a : c ~> c'} {b : d ~> d'} (lx : LX {U} {c} b)
+                     {g' : c' ~> d'} {z' : c ~> d'} (t : DPath (\lam i => a i ~> d') z' g') (e : lx.2.1 = z')
+        : stA pc (kappaX (c, c', d, d', a, b, lx, (g', (z', t)), e)) = kappaY pc (stS.{u} pc (c, c', d, d', a, b, lx, (g', (z', t)), e)) \elim e
         | idp =>
           \let | L : DI ->⁺ DI ->⁺ U => \lam j r => lx.2.2 j r
                | T : DI ->⁺ DI ->⁺ U => \lam i r => t i r
-               | cp0 : CPY pc => (\lam j => UnivSt pc (L j), (\lam i => UnivSt pc (T i), idp))
-               | F (w : ArrY pc (DI ->⁺ U)) : CPA pc => (resY pc L w, (resY pc T w, idp))
-               | r : IsEquiv.ret (cpMap-equiv pc) (inclY pc (stS pc (c, c', d, d', a, b, lx, (g', (lx.2.1, t)), idp))) = cp0
-                 => pmap (IsEquiv.ret (cpMap-equiv pc)) (inv (pmap F (ucEval-univSt pc))) *> IsEquiv.ret_f (cpMap-equiv pc)
-          \in inv (ucEval-st pc (kappaX (c, c', d, d', a, b, lx, (g', (lx.2.1, t)), idp)))
-               *> pmap (\lam (q : UnivSt pc (L dleft) ~> UnivSt pc (T dright)) => ucEval pc (\lam i => q i)) (dmap_comp (UnivSt pc))
-               *> inv (pmap (\lam c => ucEval pc (compY c)) r)
+               | cp0 : CPY.{u} pc => (\lam j => UnivSt.{u} pc (L j), (\lam i => UnivSt.{u} pc (T i), idp))
+               | F (w : ArrY.{u} pc (DI ->⁺ U)) : CPA.{u} pc => (resY.{u} pc L w, (resY.{u} pc T w, idp))
+               | r : IsEquiv.ret (cpMap-equiv.{u} pc) (inclY.{u} pc (stS.{u} pc (c, c', d, d', a, b, lx, (g', (lx.2.1, t)), idp))) = cp0
+                 => pmap (IsEquiv.ret (cpMap-equiv.{u} pc)) (inv (pmap F (ucEval-univSt.{u} pc))) *> IsEquiv.ret_f (cpMap-equiv.{u} pc)
+          \in inv (ucEval-st.{u} pc (kappaX (c, c', d, d', a, b, lx, (g', (lx.2.1, t)), idp)))
+               *> pmap (\lam (q : UnivSt.{u} pc (L dleft) ~> UnivSt.{u} pc (T dright)) => ucEval.{u} pc (\lam i => q i)) (dmap_comp (UnivSt.{u} pc))
+               *> inv (pmap (\lam (c : CPY.{u} pc) => ucEval.{u} pc (compY c)) r)
+               *> inv (\peval kappaY.{u} pc (stS.{u} pc (c, c', d, d', a, b, lx, (g', (lx.2.1, t)), idp)))
 
   -- | Composing the factorization of an arrow gives the arrow back.
-  \sfunc kappaY-sigmaY.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (z : ArrY pc DI) : kappaY pc (sigmaY pc z) = z
-    => \let | Q => IsEquiv.ret (ucEval-equiv pc (\Sigma⁺ DI DI)) (sqS z.1, gammaY pc z)
-            | fq : ucEval pc Q = (sqS z.1, gammaY pc z) => IsEquiv.f_ret (ucEval-equiv pc (\Sigma⁺ DI DI))
+  \sfunc kappaY-sigmaY.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) (z : ArrY.{u} pc DI) : kappaY.{u} pc (sigmaY.{u} pc z) = z
+    => \let | Q => IsEquiv.ret (ucEval-equiv.{u} pc (\Sigma⁺ DI DI)) (sqS.{u} z.1, gammaY.{u} pc z)
+            | fq : ucEval.{u} pc Q = (sqS.{u} z.1, gammaY.{u} pc z) => IsEquiv.f_ret (ucEval-equiv.{u} pc (\Sigma⁺ DI DI))
             | eL (j :⁺ DI) : \Sigma⁺ DI DI => (dleft, j)
             | eT (i :⁺ DI) : \Sigma⁺ DI DI => (i, dright)
             | eB (i :⁺ DI) : \Sigma⁺ DI DI => (i, dleft)
             | eR (i :⁺ DI) : \Sigma⁺ DI DI => (dright, i)
-            | cpQ : CPY pc => (\lam j => Q (eL j), (\lam i => Q (eT i), idp))
-            | FQ (w : ArrY pc (\Sigma⁺ DI DI)) : CPA pc => (resY pc eL w, (resY pc eT w, idp))
-            | r : IsEquiv.ret (cpMap-equiv pc) (inclY pc (sigmaY pc z)) = cpQ
-              => pmap (IsEquiv.ret (cpMap-equiv pc)) (inv (pmap FQ fq)) *> IsEquiv.ret_f (cpMap-equiv pc) {cpQ}
-            | bq : (\lam i => Q (eB i)) = {DI ->⁺ UnivCoCart pc} (\lam _ => Q (dleft, dleft))
+            | cpQ : CPY.{u} pc => (\lam j => Q (eL j), (\lam i => Q (eT i), idp))
+            | FQ (w : ArrY.{u} pc (\Sigma⁺ DI DI)) : CPA.{u} pc => (resY.{u} pc eL w, (resY.{u} pc eT w, idp))
+            | r : IsEquiv.ret (cpMap-equiv.{u} pc) (inclY.{u} pc (sigmaY.{u} pc z)) = cpQ
+              => pmap (IsEquiv.ret (cpMap-equiv.{u} pc)) (inv (pmap FQ fq)) *> IsEquiv.ret_f (cpMap-equiv.{u} pc) {cpQ}
+            | bq : (\lam i => Q (eB i)) = {DI ->⁺ UnivCoCart.{u} pc} (\lam _ => Q (dleft, dleft))
               => \let e0 (_ :⁺ DI) : \Sigma⁺ DI DI => (dleft, dleft)
-                 \in IsEquiv.isInj (ucEval-equiv pc DI) $
-                      pmap (resY pc eB) fq *> arrY-ext pc {DI} {resY pc eB (sqS z.1, gammaY pc z)} {resY pc e0 (sqS z.1, gammaY pc z)} idp
-                      *> inv (pmap (resY pc e0) fq)
+                 \in IsEquiv.isInj (ucEval-equiv.{u} pc DI) $
+                      pmap (resY.{u} pc eB) fq *> arrY-ext.{u} pc {DI} {resY.{u} pc eB (sqS.{u} z.1, gammaY.{u} pc z)} {resY.{u} pc e0 (sqS.{u} z.1, gammaY.{u} pc z)} idp
+                      *> inv (pmap (resY.{u} pc e0) fq)
             | sq : comp (dpath \lam i => Q (eB i)) (dpath \lam i => Q (eR i)) = comp (dpath \lam j => Q (eL j)) (dpath \lam i => Q (eT i))
               => (square-equiv (dpath \lam i => Q (eB i)) (dpath \lam i => Q (eT i))).f (dpath \lam i => dpath \lam j => Q (i, j))
-            | x (w :⁺ BaseChange z.1 (univFst p)) => bcf2 (z.2.1 (w.1, inc1 (bcf1 w.2)))
-       \in pmap (\lam c => ucEval pc (compY c)) r
-            *> pmap (\lam (q : Q (dleft, dleft) ~> Q (dright, dright)) => ucEval pc (\lam i => q i)) (inv sq)
-            *> pmap (ucEval pc) (comp-const bq (dpath \lam i => Q (eR i)))
-            *> pmap (resY pc eR) fq
-            *> arrY-ext pc (pmap (\lam G => ((z.1, G) : FunPair p DI)) $ funExt+ \lam w =>
-                 path (\lam m => inc2 {_} {_} {_} {z.1 w.1}
-                                      (stTr-unique pc (\lam w => ((z.1 w.1).2, (z.1 w.1).2, idd, x w)) (\lam w => (x w, dpath \lam _ => x w))
+            | x (w :⁺ BaseChange z.1 (univFst p)) => bcf2.{u} (z.2.1 (w.1, inc1.{u} (bcf1.{u} w.2)))
+       \in (\peval kappaY.{u} pc (sigmaY.{u} pc z))
+            *> pmap (\lam (c : CPY.{u} pc) => ucEval.{u} pc (compY c)) r
+            *> pmap (\lam (q : Q (dleft, dleft) ~> Q (dright, dright)) => ucEval.{u} pc (\lam i => q i)) (inv sq)
+            *> pmap (ucEval.{u} pc) (comp-const bq (dpath \lam i => Q (eR i)))
+            *> pmap (resY.{u} pc eR) fq
+            *> arrY-ext.{u} pc (pmap (\lam G => ((z.1, G) : FunPair.{u} p DI)) $ funExt+ \lam w =>
+                 path (\lam m => inc2.{u} {U} {E} {p} {z.1 w.1}
+                                      (stTr-unique.{u} pc (\lam w => ((z.1 w.1).2, (z.1 w.1).2, idd, x w)) (\lam w => (x w, dpath \lam _ => x w))
                                                    (\lam w => (cocartesianLift<->arrow-at (x w).2 (x w, dpath \lam _ => x w)).2 idd-cocartesian) {w} @ m))
-                 *> baseChange-fib-sec (z.2.1 (w.1, inc1 (bcf1 w.2)))
+                 *> baseChange-fib-sec (z.2.1 (w.1, inc1.{u} (bcf1.{u} w.2)))
                  *> path (\lam m => z.2.1 (w.1, baseChange-fib-sec w.2 @ m)))
 
   -- | Composition with an arrow that is constant up to a path.
