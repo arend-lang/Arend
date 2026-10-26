@@ -231,3 +231,23 @@
       | ret_f t => *>-assoc *> pmap (t *>) *>_inv
       | f_sec t => *>-assoc *> pmap (t *>) inv_*>
   }
+
+-- | Equivalences of pullbacks of types along commuting squares.
+\lemma pullback-sigma-equiv {A A' B B' C C' : \Cat} {fa : A -> A'} (ea : IsEquiv fa) {fb : B -> B'} (eb : IsEquiv fb) {fc : C -> C'} (ec : IsEquiv fc)
+                            {u : A -> C} {v : B -> C} {u' : A' -> C'} {v' : B' -> C'}
+                            (su : \Pi (a : A) -> u' (fa a) = fc (u a)) (sv : \Pi (b : B) -> v' (fb b) = fc (v b))
+  : IsEquiv {\Sigma (a : A) (\Sigma (b : B) (u a = v b))} {\Sigma (a' : A') (\Sigma (b' : B') (u' a' = v' b'))}
+            (\lam s => (fa s.1, (fb s.2.1, su s.1 *> pmap fc s.2.2 *> inv (sv s.2.1))))
+  => inP $ sigma-right (\lam a => sigma-right \lam b => IsEquiv.toQEquiv (IsEquiv.trans (pmapIsEquiv ec {u a} {v b}) (conj (su a) (sv b))))
+       `transQEquiv` qsigma-left {_} {_} {\lam a' => \Sigma (b : B) (u' a' = v' (fb b))} (IsEquiv.toQEquiv ea)
+       `transQEquiv` sigma-right (\lam a' => qsigma-left {_} {_} {\lam b' => u' a' = v' b'} (IsEquiv.toQEquiv eb))
+  \where
+    \lemma conj {X : \Cat} {x x' y y' : X} (q : x' = x) (r : y' = y) : IsEquiv {x = y} {x' = y'} (\lam m => q *> m *> inv r) \elim q, r
+      | idp, idp => transport IsEquiv (ext \lam m => inv idp_*>) (inP idEquiv)
+
+-- | Equivalences of Σ-types over propositions.
+\lemma sigma-prop-equiv {A A' : \Cat} {f : A -> A'} (fe : IsEquiv f) {Q : A -> \Prop} {R : A' -> \Prop}
+                        (fq : \Pi {a : A} -> Q a -> R (f a)) (rq : \Pi {a : A} -> R (f a) -> Q a)
+  : IsEquiv {\Sigma (a : A) (Q a)} {\Sigma (a' : A') (R a')} (\lam s => (f s.1, fq s.2))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection R) (transEmbedding (Embedding.projection Q) (Embedding.fromIsEquiv fe)))
+       \lam s => inP ((IsEquiv.ret fe s.1, rq (transportInv R (IsEquiv.f_ret fe) s.2)), ext (IsEquiv.f_ret fe))

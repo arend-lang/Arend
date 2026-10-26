@@ -9,6 +9,7 @@
 \import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
+\import InfCat.Rezk
 \import InfCat.Square
 \import Logic
 \import Logic.Meta
@@ -247,6 +248,18 @@
 -- | Identity arrows are cocartesian: both sides of {triangle-map} are contractible.
 \lemma idd-cocartesian {E A : \Cat} {p : E ->⁺ A} {e : E} : IsCocartesianArrow p (idd {E} {e})
   => \lam w => contr-equiv (segal-contr.flipped idd w) (segal-contr.flipped idd (dmap p w))
+
+-- | Isomorphisms are cocartesian.
+\lemma iso-cocartesian {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'} (ui : IsIso u) : IsCocartesianArrow p u
+  => transport (IsCocartesianArrow p) (IsIso_= ui).2 (path-cocartesian (IsIso_= ui).1)
+  \where
+    \lemma path-cocartesian {E A : \Cat} {p : E ->⁺ A} {e e' : E} (r : e = e') : IsCocartesianArrow p (=_~> r) \elim r
+      | idp => idd-cocartesian
+
+-- | An arrow of a fiber whose underlying arrow is cocartesian is an isomorphism.
+\lemma fiberArrow-iso {E A : \Cat} {p : E ->⁺ A} {a : A} (m : DI ->⁺ Fibers p a) (mc : IsCocartesianArrow p (dpath \lam i => (m i).1))
+  : IsIso (dpath m)
+  => cocartesianLift-idd-iso {A} {Fibers p} (m dright, dpath m) ((cocartesianLift<->arrow-at (m dleft).2 (m dright, dpath m)).2 mc)
 
 -- | A lift is cocartesian if and only if the corresponding arrow of the total category is cocartesian over the base.
 \lemma cocartesianLift<->totalArrow {A : \Cat} {B : A ->⁺ \Cat} {d : CovLiftData B} (l : CovLift B d)

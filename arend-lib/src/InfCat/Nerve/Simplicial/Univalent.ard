@@ -17,6 +17,7 @@
 \import InfCat.Fibration.Covariant.CocartesianMap
 \import InfCat.Fibration.SimplexFib
 \import InfCat.Fibration.Univalence.CatUnivalence
+\import InfCat.Fibration.Univalence.DirUnivalenceHom
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Kan.LeftKanExt
@@ -108,7 +109,7 @@
 
 -- | The total category of {UFam} restricted to complete Segal simplicial types.
 \func UTot.{u} : \Cat (\suc u)
-  => BaseChange {CSSTypeCat} {SimpType.{u}} (\lam c => CSSTypeCat.inc.{u} c) uFamProj.{u}
+  => BaseChange {CSSTypeCat} {SimpType.{u}} CSSTypeCat.inc uFamProj
 
 -- | The projection of {UTot} to {CSSTypeCat}.
 \func uTotProj.{u} (w :⁺ UTot.{u}) : CSSTypeCat.{u}
@@ -117,7 +118,7 @@
 \lemma uTot-cocartesian.{u} : IsCocartesianMap uTotProj.{u}
   => cocartesianMap-char.2 (baseChange-cocartesian (cocartesianMap-char.2 uFam-cocartesian) \lam c => CSSTypeCat.inc.{u} c)
 
--- | {UFam} restricted to complete Segal simplicial types is directed univalent, assuming the open criterion {dirUnivalent-hom}.
+-- | {UFam} restricted to complete Segal simplicial types is directed univalent ({dirUnivalent-hom}).
 \lemma uTot-dirUnivalent.{u} : IsDirUnivalent uTot-cocartesian.{u}
   => dirUnivalent-hom {CSSTypeCat} {UTot.{u}} {uTotProj.{u}} uTot-cocartesian.{u} \lam c d =>
        IsEquiv.leftFactor {c ~> d} {Fibers uTotProj.{u} c ->⁺ Fibers uTotProj.{u} d} {Fibers uTotProj.{u} c ->⁺ UFam (CSSTypeCat.inc.{u} d)}

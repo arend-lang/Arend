@@ -116,9 +116,14 @@
 \lemma baseChange-fib-equiv.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) (x : X) : IsHEquiv (baseChange-fib pi p {x})
   => inP \new HQEquiv {
        | finv t => ((x, t), idp)
-       | finv_f t => aux t.2
+       | finv_f t => baseChange-fib-sec t
        | f_finv t => idp
      }
+
+-- | The inclusion of `Fibers p (pi x)` into the fiber of the base change is a left inverse of {baseChange-fib}.
+\sfunc baseChange-fib-sec.{u} {X S E : \Cat u} {pi : X ->⁺ S} {p : E ->⁺ S} {x :⁺ X} (t :⁺ Fibers (\lam (w :⁺ BaseChange pi p) => w.1) x)
+  : (((x, baseChange-fib pi p t), idp) : Fibers (\lam (w :⁺ BaseChange pi p) => w.1) x) = t
+  => aux t.2
   \where
     \private \sfunc aux.{v} {X S E : \Cat v} {pi : X ->⁺ S} {p : E ->⁺ S} {x x' :⁺ X} {e :⁺ E} {r :⁺ p e = pi x'} (s :⁺ x' = x)
       : (((x, (e, r *> pmap+ pi s)), idp) : Fibers (\lam (w :⁺ BaseChange pi p) => w.1) x) = ((x', (e, r)), s) \elim s

@@ -14,6 +14,7 @@
 \import Logic.Unique
 \import Meta
 \import Paths
+\import Paths.Meta
 
 -- | {B} is a cocartesian fibration if every arrow in the base has a cocartesian lift from every point of the fiber.
 \type IsCocartesianFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
@@ -73,6 +74,12 @@
       : transport+ (CovLift B) (pmap+ __.1 r) t.2 = t'.2 \elim r
       | idp => idp
   }
+
+-- | Families of cocartesian lifts of a family of base data are unique.
+\lemma cocartesianFib-lifts-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {K : \Cat} (d : K ->⁺ CovLiftData B)
+  : Contr (\Sigma (l : \Pi (k :⁺ K) -> CovLift B (d k)) (\Pi (k : K) -> IsCocartesianLift (l k))) \cowith
+  | center => (\lam k => cocartesianFib-lift Bf (d k), \lam k => cocartesianFib-lift.isCocartesian (d k))
+  | contraction s => ext (funExt+ \lam k => cocartesianFib-lift-unique Bf d s.1 s.2 {k})
 
 {- | Given a family {F} and a map {p}, if a lift {l} in the pullback of {F} along {p} is cocartesian over {S},
  -   then it is cocartesian over {X}.
