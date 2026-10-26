@@ -1,0 +1,125 @@
+{- | The counit `R(NC) → C` of the realization–nerve adjunction and its equivalence (Step D, after SCT Theorem 11.8.9).
+
+ -   * {realization-counit}: the functor out of the realization of the nerve `NC = SNerve C` corresponding to the identity section
+ -     of the nerve under {realization-adj}.
+ -   * {counit-ff}: the counit {realization-counit} is fully faithful. Every object of the realization is the image `ℓ x` of a vertex
+ -     ({realization-ob-surj}, {unit-ell}), so it suffices to consider vertices. Edges of the nerve are their endpoints together with
+ -     an arrow of the realization between their images ({edgeVal-equiv} for the unit, which is fully faithful by {unit-ff}),
+ -     and also their endpoints together with an arrow of {C} ({edgeVal-equiv} for the identity). The counit sends the first
+ -     zigzag to the second ({CounitHelpers.liftZ-counit}), so it is an equivalence on hom-types by 2-out-of-3.
+ -   * {counit-surj}: every object of {C} is the image of a vertex ({snerve-ob-equiv}).
+ -   * {realization-counit-equiv}: hence the counit is an equivalence, and the realization of the nerve of {C} is {C}
+ -     ({realization-nerve}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Exponent.ExponentCocartesianCore
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.Simplicial.CospanIso
+\import InfCat.Nerve.Simplicial.NerveEdges
+\import InfCat.Nerve.Simplicial.NerveSegal
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Nerve.Simplicial.RealizationEdge
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Nerve.Simplicial.Unit
+\import InfCat.Paths
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexSections
+\import Logic
+\import Paths
+\import Paths.Meta
+\open RealizationHelpers (lastN, lastN-sec)
+\open CounitHelpers
+
+-- | The counit: the functor out of the realization of the nerve of {C} corresponding to the identity section.
+\func realization-counit.{u} (C : \Cat u) (y :⁺ Realization (SNerve.proj C)) : C
+  => realize-map (SNerve.proj C) (\lam z => (z, idp)) y
+
+-- | The counit is fully faithful.
+\lemma counit-ff.{u} {C : \Cat u} : IsFFMap (realization-counit C)
+  => \lam x y => \case realization-ob-surj SNerveFib.isRightFib x, realization-ob-surj SNerveFib.isRightFib y \with {
+       | inP (e, q, r), inP (e', q', r') => transport2 (\lam a b => IsEquiv {a ~> b} (\lam h => dmap (realization-counit C) h))
+                                                      (vob-real e q *> r) (vob-real e' q' *> r') (vertex-ff (e, q) (e', q'))
+     }
+
+-- | The counit is surjective on objects.
+\lemma counit-surj.{u} {C : \Cat u} : IsSurjMap (realization-counit C)
+  => \lam c => \let a => IsEquiv.ret snerve-ob-equiv c
+               \in inP (vob (unitFib (SNerve.proj C)) a,
+                       counit-vEval (nerveOb 0, a) *> NerveEdgesHelpers.vob_snerve-ob nerveId a *> IsEquiv.f_ret snerve-ob-equiv)
+
+-- | The counit is an equivalence.
+\lemma realization-counit-equiv.{u} {C : \Cat u} : IsHEquiv (realization-counit C)
+  => ff-surj-equiv.1 (counit-ff, counit-surj)
+
+-- | The realization of the nerve of {C} is {C}.
+\func realization-nerve.{u} (C : \Cat u) : Realization (SNerve.proj C) = C
+  => HEquiv_= realization-counit-equiv
+
+\module CounitHelpers \where {
+  -- | The identity of the nerve, as a map of right fibrations.
+  \func nerveId.{u} {C : \Cat u} (s :⁺ \Sigma⁺ (b : DeltaCat) (SNerveFib C b)) : SNerveFib C s.1
+    => s.2
+
+  -- | The counit sends the image of a simplex under the unit, at its last vertex, to the simplex at its last vertex.
+  \sfunc counit-vEval.{u} {C : \Cat u} (s :⁺ \Sigma⁺ (b : DeltaCat) (SNerveFib C b))
+    : realization-counit C (vEval (unitFib (SNerve.proj C)) s) = vEval nerveId s
+    => pmap+ (realization-counit C) (unit-ell (SNerve.proj C) s) *> inv (aux s.2.2)
+    \where
+      \sfunc aux {b :⁺ DeltaCat} {y :⁺ SNerve C} (q :⁺ SNerve.proj C y = b)
+        : ExpCocCore.fiber-eval univSimplex-cocartesianMap ((y, q) : SNerveFib C b) (lastN b, path \lam j => lastN-sec j b) = realization-counit C (real (SNerve.proj C) (lastVertex (SNerve.proj C) y)) \elim q
+        | idp => idp
+
+  -- | The image of a vertex under the unit is the vertex `0` of its realization.
+  \sfunc vob-real.{u} {C : \Cat u} (e : SNerve C) (q : SNerve.proj C e = nerveOb 0)
+    : vob (unitFib (SNerve.proj C)) (e, q) = real (SNerve.proj C) (e, (nerveOb {SimplexTotal} (0, 0), inv q))
+    => unit-ell (SNerve.proj C) (nerveOb 0, (e, q)) *> pmap (\lam w => real (SNerve.proj C) (e, w)) (fibers-deltaCat-ext (pmap lastN q))
+
+  -- | The image of an arrow between images of vertices under the counit, as an arrow between their values.
+  \func counitTr.{u} {C : \Cat u} {a b : simplex (SNerve.proj C) 0} (h : vob (unitFib (SNerve.proj C)) a ~> vob (unitFib (SNerve.proj C)) b)
+    : vob nerveId a ~> vob nerveId b
+    => transport2 (\lam x y => x ~> y) (counit-vEval (nerveOb 0, a)) (counit-vEval (nerveOb 0, b)) (dmap (realization-counit C) h)
+
+  -- | The counit on edge values: endpoints are kept and zigzags are sent by {counitTr}.
+  \func counitVal.{u} {C : \Cat u}
+    : \Sigma (a : simplex (SNerve.proj C) 0) (\Sigma (b : simplex (SNerve.proj C) 0) (vob (unitFib (SNerve.proj C)) a ~> vob (unitFib (SNerve.proj C)) b))
+      -> \Sigma (a : simplex (SNerve.proj C) 0) (\Sigma (b : simplex (SNerve.proj C) 0) (vob nerveId a ~> vob nerveId b))
+    => totalEquiv.total (\lam a => totalEquiv.total (\lam b h => counitTr h))
+
+  -- | The counit sends edge values under the unit to edge values.
+  \sfunc edgeVal-counit.{u} {C : \Cat u} (t : \Pi (s :⁺ Nerve (SliceS 1)) -> SNerveFib C (sliceProj 1 s))
+    : counitVal (edgeVal (unitFib (SNerve.proj C)) t) = edgeVal nerveId t
+    => pmap (\lam h => ((t (edgeV 0), (t (edgeV 1), h)) : \Sigma (a : simplex (SNerve.proj C) 0) (\Sigma (b : simplex (SNerve.proj C) 0) (vob nerveId a ~> vob nerveId b))))
+            (inv (liftZ-counit {C} (secLift t 0) (secLift t 1)))
+
+  -- | The counit is an equivalence on the arrows between the images of vertices under the unit.
+  \lemma vertex-ff.{u} {C : \Cat u} (a b : simplex (SNerve.proj C) 0)
+    : IsEquiv {vob (unitFib (SNerve.proj C)) a ~> vob (unitFib (SNerve.proj C)) b} (\lam h => dmap (realization-counit C) h)
+    => \let | eU => edgeVal-equiv (unitFib (SNerve.proj C)) (unit-ff SNerveFib.isRightFib (snerve-completeSegal {C}).1)
+            | eI : IsEquiv (edgeVal (nerveId {C})) => edgeVal-equiv nerveId (\lam x y => inP idEquiv)
+            | De : IsEquiv (counitVal {C}) => IsEquiv.rightFactor eU $ transport IsEquiv (ext \lam t => inv (edgeVal-counit t)) eI
+            | Da => (totalEquiv (\lam a' => totalEquiv.total (\lam b' (h : vob (unitFib (SNerve.proj C)) a' ~> vob (unitFib (SNerve.proj C)) b') => counitTr h))).2 De a
+       \in IsEquiv.leftFactor (transport2-equiv (counit-vEval (nerveOb 0, a)) (counit-vEval (nerveOb 0, b))) ((totalEquiv (\lam b' (h : vob (unitFib (SNerve.proj C)) a ~> vob (unitFib (SNerve.proj C)) b') => counitTr h)).2 Da b)
+
+  -- | The counit sends the zigzag of the lifts of an edge in the realization to their zigzag in {C}.
+  \sfunc liftZ-counit.{u} {C : \Cat u} {z : simplex (SNerve.proj C) 1} (c0 : VLift (SNerve.proj C) 0 z) (c1 : VLift (SNerve.proj C) 1 z)
+    : liftZ nerveId c0 c1 = transport2 (\lam a b => a ~> b) (counit-vEval (nerveOb 0, c0.1)) (counit-vEval (nerveOb 0, c1.1))
+                                       (dmap (realization-counit C) (liftZ (unitFib (SNerve.proj C)) c0 c1))
+    => \let Cr {j : Fin 2} (c : VLift (SNerve.proj C) j z)
+              : carr nerveId c = transport2 (\lam a b => a ~> b) (counit-vEval (nerveOb 0, c.1)) (counit-vEval (nerveOb 1, z))
+                                            (dmap (realization-counit C) (carr (unitFib (SNerve.proj C)) c))
+              => dpath-tr (funExt+ \lam i => counit-vEval (simplex-ve j i, c.2 i))
+       \in inv $ comp_iso-unique _ _ _ $
+             pmap (comp _) (Cr c1)
+             *> comp-transport (counit-vEval (nerveOb 0, c0.1)) (counit-vEval (nerveOb 0, c1.1)) (counit-vEval (nerveOb 1, z)) _ _
+             *> pmap (transport2 (\lam a b => a ~> b) (counit-vEval (nerveOb 0, c0.1)) (counit-vEval (nerveOb 1, z)))
+                     (inv (dmap_comp (realization-counit C)) *> pmap (dmap (realization-counit C)) (comp_iso-eq _ _ _))
+             *> inv (Cr c0)
+}
