@@ -14,6 +14,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -77,6 +78,11 @@ public class WarmContextTest {
 
   private record Run(int exitCode, String output) {}
 
+  /** Whether the result table lists {@code module}; the progress line does not count. */
+  private static boolean reportsModule(String output, String module) {
+    return Pattern.compile("(?m)^\\[.\\] " + Pattern.quote(module) + "$").matcher(output).find();
+  }
+
   private Run run(String... args) {
     captured.reset();
     redirect();
@@ -93,7 +99,7 @@ public class WarmContextTest {
   public void aCommandRunsAgainstTheLoadedContext() {
     Run good = run("Good");
     assertEquals(good.output(), 0, good.exitCode());
-    assertTrue(good.output(), good.output().contains("--- Typechecking Good ---"));
+    assertTrue(good.output(), reportsModule(good.output(), "Good"));
   }
 
   /** The scope of one command must not widen the next: `Good` then `Other` targets only Other. */
@@ -101,9 +107,9 @@ public class WarmContextTest {
   public void targetsDoNotAccumulateAcrossCommands() {
     run("Good");
     Run other = run("Other");
-    assertTrue(other.output(), other.output().contains("--- Typechecking Other ---"));
+    assertTrue(other.output(), reportsModule(other.output(), "Other"));
     assertTrue("the previous command's target must not still be in scope:\n" + other.output(),
-        !other.output().contains("--- Typechecking Good ---"));
+        !reportsModule(other.output(), "Good"));
   }
 
   /** A failed command must not make the next one fail. */

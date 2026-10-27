@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -89,6 +90,11 @@ public class DaemonServerSocketTest {
 
   /** One request, with its streamed output collected in arrival order. */
   private record Result(int exitCode, String output) {}
+
+  /** Whether the result table lists {@code module}; the progress line does not count. */
+  private static boolean reportsModule(String output, String module) {
+    return Pattern.compile("(?m)^\\[.\\] " + Pattern.quote(module) + "$").matcher(output).find();
+  }
 
   private Result invoke(String op, Map<String, Object> extra) throws IOException {
     List<String> chunks = new ArrayList<>();
@@ -164,7 +170,7 @@ public class DaemonServerSocketTest {
   public void aCommandStreamsItsOutputAndReportsItsExitCode() throws IOException {
     Result good = cli("Good");
     assertEquals(0, good.exitCode());
-    assertTrue(good.output(), good.output().contains("--- Typechecking Good ---"));
+    assertTrue(good.output(), reportsModule(good.output(), "Good"));
     assertTrue(good.output(), good.output().contains("--- Done ("));
   }
 
