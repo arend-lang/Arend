@@ -28,9 +28,8 @@
 \import Paths.Meta
 \import Topology.TopSpace
 \open Monoid (pow)
-\open PosetSemiring (<=_*_positive-left, <=_*_positive-right, <=_*_positive_positive,
-                     pow>=0, pow<=1, pow_<=-degree)
-\open OrderedSemiring (pow>0, <_*_positive-right)
+\open PosetSemiring (<=_*_positive_positive, pow>=0, pow<=1, pow_<=-degree)
+\open OrderedSemiring (pow>0)
 
 {- | **A quantitative Newton method over the complex numbers.**
 

@@ -1,17 +1,13 @@
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
-\import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.IVT
-\import Arith.Real.LowerReal
-\import Data.Or
 \import Equiv
 \import Function.Meta
 \import Logic
@@ -86,7 +82,7 @@
   => (\peval sqrt _) *> pmap (\lam y => root 2 (y * x)) (inv ide-left) *> root_pow suc/=0 x>=0
 
 \lemma sqrt_pow_abs {x : Real} : sqrt (x * x) = RealAbGroup.abs x
-  => pmap sqrt (inv (RealAbGroup.abs-ofPos RealField.square_>=0) *> RealField.abs_*) *> sqrt_pow abs>=0
+  => pmap sqrt (inv (RealAbGroup.abs-ofPos RealField.square_>=0) *> RealField.abs_*) *> sqrt_pow LatticeAbGroup.abs>=0
 
 \lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x
   => pmap2 (*) (\peval sqrt x) (\peval sqrt x) *> pmap (* _) (inv ide-left) *> pow_root suc/=0 x>=0

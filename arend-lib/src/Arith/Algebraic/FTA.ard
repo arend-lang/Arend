@@ -35,7 +35,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\open PosetSemiring (<=_*_positive-left, <=_*_positive-right, <=_*_positive_positive)
+\open PosetSemiring (<=_*_positive_positive)
 \open OrderedSemiring (<_*_positive_positive)
 \open LinearlyOrderedSemiring (<=_*-cancel-right)
 

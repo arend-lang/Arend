@@ -4,7 +4,6 @@
 \import Algebra.Pointed
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.Derivative
-\import Algebra.Semiring
 \import Analysis.Poly (lnorm_polyEval-boundD, deflate-coefBound)
 \import Arith.Complex
 \import Arith.Complex.Norm
@@ -12,7 +11,7 @@
 \import Arith.Real.Field
 \import Order.PartialOrder
 \import Paths
-\open PosetSemiring (<=_*_positive-left, <=_*_positive-right, <=_*_positive_positive)
+\open PosetSemiring (<=_*_positive_positive)
 
 {- | **First- and second-order Taylor estimates for a complex polynomial, uniform on a disc.**
 

@@ -1,9 +1,7 @@
-\import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.Ring
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.Derivative
 \import Algebra.Ring.Poly.Separable
@@ -18,12 +16,10 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
-\import Paths.Meta
-\open PosetSemiring (<=_*_positive-left, <=_*_positive-right, <=_*_positive_positive)
+\open PosetSemiring (<=_*_positive_positive)
 
 {- | **A separable complex polynomial has its derivative bounded below wherever it is small.**
 

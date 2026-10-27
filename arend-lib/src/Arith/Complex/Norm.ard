@@ -195,7 +195,7 @@
 {- | Real part dominated by modulus: $|\Re c| \leq |c|$. Proved by squaring:
      $(|\Re c|)^2 = (\Re c)^2 \leq (\Re c)^2 + (\Im c)^2 = |c|^2$, then `RealField.square_<=-cancel`. -}
 \lemma cabs_re_<= {c : Complex} : RealField.abs c.re <= cabs c
-  => RealField.square_<=-cancel abs>=0 cabs>=0 $ transport2 (<=)
+  => RealField.square_<=-cancel LatticeAbGroup.abs>=0 cabs>=0 $ transport2 (<=)
       (zro-right *> inv (RealField.abs-ofPos RealField.square_>=0) *> RealField.abs_*)
       (inv cabs-square)
       (<=_+ <=-refl RealField.square_>=0)

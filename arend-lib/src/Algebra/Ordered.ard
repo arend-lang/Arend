@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
@@ -39,6 +40,10 @@
   \lemma *n_>=0 {n : Nat} {a : E} (a>=0 : 0 <= a) : 0 <= n *n a \elim n
     | 0 => <=-refl
     | suc n => <=_+-positive (*n_>=0 a>=0) a>=0
+
+  \lemma *n>=id {n : Nat} (n/=0 : n /= 0) {a : E} (a>=0 : 0 <= a) : a <= n *n a \elim n
+    | 0 => absurd (n/=0 idp)
+    | suc n => transport (<= _) zro-left (<=_+ (*n_>=0 a>=0) <=-refl)
 }
 
 \class PosetAbMonoid \extends PosetAddMonoid, AbMonoid {
@@ -69,9 +74,18 @@
   | join_+-left {a b c : E} : a + (b ∨ c) = (a + b) ∨ (a + c)
   | join_+-right {a b c : E} : (a ∨ b) + c = (a + c) ∨ (b + c)
 
-\class MeetSemilatticeAddMonoid \extends PosetAddMonoid, MeetSemilattice
+\class MeetSemilatticeAddMonoid \extends PosetAddMonoid, MeetSemilattice {
   | meet_+-left {a b c : E} : a + b ∧ c = (a + b) ∧ (a + c)
   | meet_+-right {a b c : E} : a ∧ b + c = (a + c) ∧ (b + c)
+
+  \lemma meet_+-subadditive {a b c : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (c>=0 : 0 <= c) : a ∧ (b + c) <= a ∧ b + a ∧ c
+    => meet-univ (meet-univ (meet-left <=∘ =_<= (inv zro-left) <=∘ <=_+ a>=0 <=-refl) (meet-left <=∘ =_<= (inv zro-left) <=∘ <=_+ b>=0 <=-refl) <=∘ =_<= (inv meet_+-right))
+                 (meet-univ (meet-left <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl c>=0) meet-right <=∘ =_<= (inv meet_+-right)) <=∘ =_<= (inv meet_+-left)
+
+  \lemma meet_*n-zro {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (d : a ∧ b = 0) {n : Nat} : a ∧ (n *n b) = 0 \elim n
+    | 0 => <=-antisymmetric meet-right (meet-univ a>=0 <=-refl)
+    | suc n => <=-antisymmetric (meet_+-subadditive a>=0 (*n_>=0 b>=0) b>=0 <=∘ =_<= (pmap2 (+) (meet_*n-zro a>=0 b>=0 d) d *> zro-left)) (meet-univ a>=0 (*n_>=0 {_} {suc n} b>=0))
+}
 
 \class JoinSemilatticeAbMonoid \extends JoinSemilatticeAddMonoid, PosetAbMonoid
   | join_+-right => +-comm *> join_+-left *> pmap2 (∨) +-comm +-comm
@@ -119,10 +133,26 @@
 
 \class PosetAbGroup \extends PosetAddGroup, PosetAbMonoid, AbGroup
 
-\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, DistributiveLattice {
+\class PosetDivAbGroup \extends PosetAbGroup, TorsionFreeGroup {
+  | <=_*n-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
+  | noTorsion n/=0 na=0 => <=-antisymmetric (negative-to<=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n_negative $ negative>=0 $ =_<= na=0) (<=_*n-div n/=0 $ =_<= $ inv na=0)
+
+  \lemma <=_*n-cancel-left {n : Nat} (n/=0 : n /= 0) {a b : E} (na<=nb : n *n a <= n *n b) : a <= b
+    => from>=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n-ldistr_- (to>=0 na<=nb)
+}
+
+-- | {LatticeAbGroup} is a {PosetAbGroup} which has meets and joins.
+\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, DistributiveLattice, PosetDivAbGroup {
   | meet_+-left {a} {b} {c} => <=-antisymmetric (meet-univ (<=_+ <=-refl meet-left) (<=_+ <=-refl meet-right)) $ <=_+-cancel-left (negative a) $ meet-univ (<=_+ <=-refl meet-left <=∘ =_<= (inv +-assoc *> pmap (+ b) negative-left *> zro-left)) (<=_+ <=-refl meet-right <=∘ =_<= (inv +-assoc *> pmap (+ c) negative-left *> zro-left)) <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-left) *> +-assoc)
   | join_+-left {a} {b} {c} => <=-antisymmetric (<=_+-cancel-left (negative a) $ (inv +-assoc *> pmap (+ _) negative-left *> zro-left) =<= join-univ (<=_+-cancel-left a $ join-left <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-right) *> +-assoc)) (<=_+-cancel-left a $ join-right <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-right) *> +-assoc))) $ join-univ (<=_+ <=-refl join-left) (<=_+ <=-refl join-right)
   | ldistr>= {x} {y} {z} => (inv $ meet_+-right *> pmap2 (∧) (+-assoc *> pmap (x +) (negative-left {_} {y ∨ z}) *> zro-right) zro-left) =<= <=_+-cancel-left _ ((inv +-assoc *> pmap (+ _) negative-left *> zro-left) =<= join-univ (<=_+-cancel-left _ $ meet_+-right =<= meet-monotone (+-assoc =<= <=_+ <=-refl (<=_+ <=-refl join-left <=∘ =_<= negative-left) <=∘ =_<= zro-right) (=_<= zro-left) <=∘ join-left <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc)) (<=_+-cancel-left _ $ meet_+-right =<= meet-monotone (+-assoc =<= <=_+ <=-refl (<=_+ <=-refl join-right <=∘ =_<= negative-left) <=∘ =_<= zro-right) (=_<= zro-left) <=∘ join-right <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc)))
+  | <=_*n-div {n} n/=0 {a} na>=0 =>
+    \have | q>=0 : 0 <= negative (a ∧ 0) => negative>=0 meet-right
+          | p>=0 : 0 <= a - a ∧ 0 => to>=0 meet-left
+          | pq : (a - a ∧ 0) ∧ negative (a ∧ 0) = 0 => pmap (_ ∧) (inv zro-left) *> inv meet_+-right *> negative-right
+          | nq<=np : n *n negative (a ∧ 0) <= n *n (a - a ∧ 0) => transport (<= _) zro-left (<=_+ na>=0 <=-refl) <=∘ =_<= (inv *n-ldistr)
+          | nq=0 : n *n negative (a ∧ 0) = 0 => <=-antisymmetric (meet-univ nq<=np <=-refl <=∘ =_<= (meet_*n-zro (*n_>=0 p>=0) q>=0 $ meet-comm *> meet_*n-zro q>=0 p>=0 (meet-comm *> pq))) (*n_>=0 q>=0)
+    \in negative-to>=0 (*n>=id n/=0 q>=0 <=∘ =_<= nq=0) <=∘ meet-left
 
   \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y
     => <=-antisymmetric (negative_<= (meet-univ (negative_<= join-left <=∘ =_<= negative-isInv) (negative_<= join-right <=∘ =_<= negative-isInv)) <=∘ =_<= negative-isInv) $ join-univ (negative_<= meet-left) (negative_<= meet-right)
@@ -177,24 +207,10 @@
   \lemma abs-univ {x y z : E} (p : x - y <= z) (q : y - x <= z) : abs (x - y) <= z
     => join-univ p (negative_- =<= q)
 
-  \type IsSolid (U : Set E) => ∀ {y} {x : U} (abs y <= abs x -> U y)
-} \where {
-    -- TODO: Make constructor classes
-    \protected \class FromMeet \extends LatticeAbGroup
-      | join a b => negative (negative a ∧ negative b)
-      | join-left => inv negative-isInv =<= negative_<= meet-left
-      | join-right => inv negative-isInv =<= negative_<= meet-right
-      | join-univ x<=z y<=z => negative_<= (meet-univ (negative_<= x<=z) (negative_<= y<=z)) <=∘ =_<= negative-isInv
-
-    \protected \class FromJoin \extends LatticeAbGroup
-      | meet a b => negative (negative a ∨ negative b)
-      | meet-left => negative_<= join-left <=∘ =_<= negative-isInv
-      | meet-right => negative_<= join-right <=∘ =_<= negative-isInv
-      | meet-univ z<=x z<=y => inv negative-isInv =<= negative_<= (join-univ (negative_<= z<=x) (negative_<= z<=y))
-  }
-
-\class AbsAbGroup \extends LatticeAbGroup {
-  | abs>=0 {x : E} : 0 <= abs x
+  \lemma abs>=0 {x : E} : 0 <= abs x
+    => \have | aa>=0 : 0 <= abs x + abs x => transport (<= _) negative-right $ <=_+ abs>=id abs>=neg
+             | ma>=m : abs x ∧ 0 <= (abs x ∧ 0) + abs x => meet-univ (meet-right <=∘ aa>=0) (meet-left <=∘ =_<= (inv zro-left)) <=∘ =_<= (inv meet_+-right)
+       \in <=_+-cancel-left _ $ transportInv (<= _) zro-right ma>=m
 
   \func part+ (x : E) => x ∨ 0
 
@@ -231,7 +247,42 @@
 
   \lemma meet_*n {n : Nat} {x y : E} : n *n (x ∧ y) = (n *n x) ∧ (n *n y)
     => inv negative-isInv *> pmap negative (inv *n_negative *> pmap (n *n) meet_negative *> join_*n *> pmap2 (∨) *n_negative *n_negative *> inv meet_negative) *> negative-isInv
-}
+
+  \type AreDisjoint (x y : E) : \Prop
+    => abs x ∧ abs y = 0
+
+  \lemma disjoint_join>=0 {x y : E} (d : AreDisjoint x y) : 0 <= x ∨ y
+    => negative-to>=0 $ =_<= join_negative <=∘ meet-monotone abs>=neg abs>=neg <=∘ =_<= d
+
+  \lemma disjoint_+_join {x y : E} (d : AreDisjoint x y) : x + y <= x ∨ y
+    => =_<= modularity <=∘ <=_+ <=-refl (meet-monotone abs>=id abs>=id <=∘ =_<= d) <=∘ =_<= zro-right
+
+  \lemma disjoint_abs_+-left {x y : E} (d : AreDisjoint x y) : abs x <= abs (x + y)
+    => \have | rev : abs x - abs y <= abs (x + y) => transport2 (\lam a b => abs x - a <= abs b) abs_negative (pmap (x +) negative-isInv) abs_-left
+             | eq : abs x = (abs x - abs y) ∨ 0 => inv zro-right *> pmap (abs x +) (inv negative_zro *> pmap negative (inv d *> meet-comm) *> meet_negative) *> join_+-left *> pmap (_ ∨) negative-right
+       \in =_<= eq <=∘ join-univ rev abs>=0
+
+  \lemma disjoint_abs_+-right {x y : E} (d : AreDisjoint x y) : abs y <= abs (x + y)
+    => transport (_ <=) (pmap abs +-comm) $ disjoint_abs_+-left (meet-comm *> d)
+
+  \lemma disjoint_abs_+ {x y : E} (d : AreDisjoint x y) : abs (x + y) = abs x + abs y
+    => <=-antisymmetric abs_+ $ =_<= (modularity *> pmap (_ +) d *> zro-right) <=∘ join-univ (disjoint_abs_+-left d) (disjoint_abs_+-right d)
+
+  \type IsSolid (U : Set E) => ∀ {y} {x : U} (abs y <= abs x -> U y)
+} \where {
+    -- TODO: Make constructor classes
+    \protected \class FromMeet \extends LatticeAbGroup
+      | join a b => negative (negative a ∧ negative b)
+      | join-left => inv negative-isInv =<= negative_<= meet-left
+      | join-right => inv negative-isInv =<= negative_<= meet-right
+      | join-univ x<=z y<=z => negative_<= (meet-univ (negative_<= x<=z) (negative_<= y<=z)) <=∘ =_<= negative-isInv
+
+    \protected \class FromJoin \extends LatticeAbGroup
+      | meet a b => negative (negative a ∨ negative b)
+      | meet-left => negative_<= join-left <=∘ =_<= negative-isInv
+      | meet-right => negative_<= join-right <=∘ =_<= negative-isInv
+      | meet-univ z<=x z<=y => inv negative-isInv =<= negative_<= (join-univ (negative_<= z<=x) (negative_<= z<=y))
+  }
 
 \class PosetSemiring \extends Semiring, PosetAbMonoid {
   | zro<=ide : 0 <= 1

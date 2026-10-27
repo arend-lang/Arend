@@ -19,7 +19,7 @@
 \class BanachLattice \extends ExPseudoNormedRieszSpace, RealBanachSpace
 
 \class RieszLSpace \extends BanachLattice
-  | norm_+_>= {x y : E} : norm x ExUpperReal.+ norm y ExUpperReal.<= norm (x + y)
+  | norm_+_>= {x y : E} : 0 <= x -> 0 <= y -> norm x ExUpperReal.+ norm y ExUpperReal.<= norm (x + y)
 
 \class RieszMSpace \extends BanachLattice
-  | norm_join {x y : E} : norm (x ∨ y) ExUpperReal.<= norm x ExUpperRealLattice.∨ norm y
+  | norm_join {x y : E} : 0 <= x -> 0 <= y -> norm (x ∨ y) ExUpperReal.<= norm x ExUpperRealLattice.∨ norm y

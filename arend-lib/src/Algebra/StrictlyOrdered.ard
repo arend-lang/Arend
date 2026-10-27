@@ -169,7 +169,7 @@
     => (simplify, rewrite +-comm) in <_+-right (negative z) (<-diff-mid p)
 }
 
-\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, AbsAbGroup {
+\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, LatticeAbGroup {
   | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
   | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
 
@@ -183,7 +183,6 @@
     | byRight p => byLeft p
   }
   | <-connectedness x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) \lam p => x/<y (fromNeg p)
-  | abs>=0 => \lam p => <-irreflexive $ negative_positive (join-left <∘r p) <∘ join-right <∘r p
 
   \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z
     => <_join-univ p (simplify q)
