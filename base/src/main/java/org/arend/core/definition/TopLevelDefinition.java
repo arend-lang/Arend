@@ -4,6 +4,7 @@ import org.arend.core.context.binding.LevelVariable;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.TCDefReferable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -12,6 +13,7 @@ public abstract class TopLevelDefinition extends CallableDefinition {
   private List<Pair<TCDefReferable,Integer>> myParametersOriginalDefinitions = Collections.emptyList();
   private Set<? extends FunctionDefinition> myAxioms = Collections.emptySet();
   private Set<? extends Definition> myGoals = Collections.emptySet();
+  private Set<TCDefReferable> myUsedInstances;
 
   public TopLevelDefinition(TCDefReferable referable, TypeCheckingStatus status) {
     super(referable, status);
@@ -60,5 +62,14 @@ public abstract class TopLevelDefinition extends CallableDefinition {
 
   public void setGoals(Set<? extends Definition> goals) {
     myGoals = goals;
+  }
+
+  @Override
+  public @Nullable Set<TCDefReferable> getUsedInstances() {
+    return myUsedInstances;
+  }
+
+  public void setUsedInstances(@NotNull Set<TCDefReferable> usedInstances) {
+    myUsedInstances = usedInstances;
   }
 }
