@@ -138,3 +138,45 @@
       | ret_f => idpe
       | f_sec => toCatType_fromCatType
   }
+
+-- | The unit category.
+\data UnitCat : \Cat0
+  | unitCat
+
+-- | A functor out of the unit category is constant.
+\func UnitCat-fun-ext {C : \Cat} (h :⁺ UnitCat ->⁺ C) : (\lam _ => h unitCat) = {UnitCat ->⁺ C} h
+  => funExt+ \lam (x :⁺ UnitCat) => \case \elim x \return h unitCat = h x \with {
+    | unitCat => idp
+  }
+
+-- | Functors out of the unit category are objects.
+\func UnitCat-fun-equiv {C : \Cat} : QEquiv {C} {UnitCat ->⁺ C} (\lam c _ => c) \cowith
+  | ret h => h unitCat
+  | ret_f _ => idp
+  | f_sec => UnitCat-fun-ext
+
+-- | The unit category is equivalent to the point.
+\lemma UnitCat-equiv : IsHEquiv {UnitCat} {\Sigma} (\lam _ => ())
+  => inP \new HQEquiv {UnitCat} {\Sigma} (\lam _ => ()) {
+    | finv _ => unitCat
+    | finv_f x => \case \elim x \return unitCat = x \with {
+      | unitCat => idp
+    }
+    | f_finv _ => idp
+  }
+
+-- | A type regarded as a category; it is invariant in {A}.
+\data ToCat.{u} (A : \Type u) : \Cat u
+  | toCat A
+
+\func fromCat.{u} {A : \Type u} (x :⁺ ToCat A) : A \elim x
+  | toCat a => a
+
+\func toCat_fromCat.{u} {A : \Type u} {x : ToCat A} : toCat (fromCat x) = x \elim x
+  | toCat a => idp
+
+\func ToCat-equiv.{u} {A : \Type u} : QEquiv {A} {ToCat A} \cowith
+  | f => toCat
+  | ret => fromCat
+  | ret_f => idpe
+  | f_sec x => toCat_fromCat

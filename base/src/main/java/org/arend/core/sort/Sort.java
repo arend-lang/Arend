@@ -57,7 +57,10 @@ public class Sort implements CoreSort {
   }
 
   public Sort succ() {
-    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().succ());
+    if (isProp()) return SET0;
+    // \Cat u is a type when u is finite
+    ConstLevel hLevel = myHLevel.isCat() && !myPLevel.isInfinity() ? ConstLevel.INFINITY : myHLevel.succ();
+    return new Sort(getPLevel().add(BigInteger.ONE), hLevel);
   }
 
   public Sort max(Sort sort) {
@@ -82,9 +85,27 @@ public class Sort implements CoreSort {
     return !myHLevel.isInfinity() && myHLevel.value().equals(BigInteger.ZERO);
   }
 
+  /**
+   * A sort which is not \Cat is not a subtype of \Cat u for finite u.
+   */
+  private static boolean isTypeBelowFiniteCat(Sort sort1, Sort sort2) {
+    return !sort1.myHLevel.isCat() && sort2.myHLevel.isCat() && !sort2.myPLevel.isInfinity();
+  }
+
   public static boolean compare(Sort sort1, Sort sort2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
+    return compare(sort1, sort2, cmp, true, equations, sourceNode);
+  }
+
+  /**
+   * @param strictCat if false, a sort which is not \Cat is a subtype of \Cat u for every u.
+   *                  This is used to check invariant fields of data types.
+   */
+  public static boolean compare(Sort sort1, Sort sort2, CMP cmp, boolean strictCat, Equations equations, Concrete.SourceNode sourceNode) {
     if (sort2.isOmega() && cmp == CMP.LE || sort1.isOmega() && cmp == CMP.GE) {
       return true;
+    }
+    if (strictCat && (cmp != CMP.GE && isTypeBelowFiniteCat(sort1, sort2) || cmp != CMP.LE && isTypeBelowFiniteCat(sort2, sort1))) {
+      return false;
     }
     if (sort1.isProp() && !sort2.getPLevel().hasInferenceVariables()) {
       return cmp == CMP.LE || sort2.isProp();
@@ -97,6 +118,10 @@ public class Sort implements CoreSort {
 
   public boolean isLessOrEquals(Sort other) {
     return compare(this, other, CMP.LE, DummyEquations.getInstance(), null);
+  }
+
+  public boolean isLessOrEqualsNonStrictCat(Sort other) {
+    return compare(this, other, CMP.LE, false, DummyEquations.getInstance(), null);
   }
 
   public Sort subst(LevelSubstitution subst) {

@@ -50,7 +50,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   }
 
   static boolean compare(SortExpression sortExpr1, SortExpression sortExpr2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
-    if (sortExpr1 instanceof Const(Sort sort1) && (cmp == CMP.LE && sort1.isProp() && !(sortExpr2 instanceof Const(Sort sort2) && sort2.getPLevel().hasInferenceVariables()) || cmp == CMP.GE && sort1.isOmega()) || sortExpr2 instanceof Const(Sort sort2) && (cmp == CMP.LE && sort2.isOmega() && !(sortExpr1 instanceof Const(Sort sort1) && sort1.getPLevel().hasInferenceVariables()) || cmp == CMP.GE && sort2.isProp()) || sortExpr1 instanceof Var && cmp == CMP.GE || sortExpr2 instanceof Var && cmp == CMP.LE) {
+    if (sortExpr1 instanceof Const(Sort sort1) && (cmp == CMP.LE && sort1.isProp() && !(sortExpr2 instanceof Const(Sort sort2) && (sort2.getPLevel().hasInferenceVariables() || isFiniteCat(sort2))) || cmp == CMP.GE && sort1.isOmega()) || sortExpr2 instanceof Const(Sort sort2) && (cmp == CMP.LE && sort2.isOmega() && !(sortExpr1 instanceof Const(Sort sort1) && sort1.getPLevel().hasInferenceVariables()) || cmp == CMP.GE && sort2.isProp() && !(sortExpr1 instanceof Const(Sort sort1) && isFiniteCat(sort1))) || sortExpr1 instanceof Var && cmp == CMP.GE || sortExpr2 instanceof Var && cmp == CMP.LE) {
       return true;
     }
 
@@ -81,6 +81,10 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return equations.addEquation(sortExpr1, sortExpr2, cmp, sourceNode);
   }
 
+
+  private static boolean isFiniteCat(Sort sort) {
+    return sort.getHLevel().isCat() && !sort.getPLevel().isInfinity();
+  }
 
   /**
    * @return true if {@code sort} contains a {@link Var} and otherwise consists only of constants, maxima, \Pi-sorts, predecessors and successors.

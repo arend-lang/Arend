@@ -29,6 +29,7 @@
 \import InfCat.Fibration.Univalence.CatUnivalence
 \import InfCat.Functor.Embedding
 \import InfCat.Functor.Equiv
+\import InfCat.Groupoid
 \import InfCat.Interval
 \import InfCat.Localization.CatWeakEq
 \import InfCat.Paths
@@ -217,22 +218,27 @@
                 | f_sec _ => idp
               }
             | e1 : IsEquiv (\lam (y : SubCat P) => SubCat.inc y) => IsEquiv.fromEmbSurj (IsEmbedding.char.1 SubCat.inc-emb).1 (SubCat.inc-surj Pid)
-            | e2 : QEquiv {ExpCoc (univFst-cocartesian pc) (univSnd p)} {(\Sigma) ->⁺ ExpCoc (univFst-cocartesian pc) (univSnd p)} => \new QEquiv {
-                | f y _ => y
-                | ret k => k ()
-                | ret_f _ => idp
-                | f_sec _ => idp
-              }
-            | e3 => ExpCoc.eval-univ (univFst-cocartesian pc) (univSnd p) (\Sigma)
-            | e4 : QEquiv {\Sigma (pi : (\Sigma) ->⁺ \Sigma⁺ U U) (\Pi (w :⁺ BaseChange pi (univFst p)) -> Fibers (univSnd p) (pi w.1))} {ObY p}
+            | e2 : QEquiv {ExpCoc (univFst-cocartesian pc) (univSnd p)} {UnitCat ->⁺ ExpCoc (univFst-cocartesian pc) (univSnd p)} => UnitCat-fun-equiv
+            | e3 => ExpCoc.eval-univ (univFst-cocartesian pc) (univSnd p) UnitCat
+            | e4 : QEquiv {\Sigma (pi : UnitCat ->⁺ \Sigma⁺ U U) (\Pi (w :⁺ BaseChange pi (univFst p)) -> Fibers (univSnd p) (pi w.1))} {ObY p}
               => \new QEquiv {
-                | f t => (t.1 (), \lam y => t.2 ((), y))
+                | f t => (t.1 unitCat, \lam y => t.2 (unitCat, y))
                 | ret t => (\lam _ => t.1, \lam w => t.2 w.2)
-                | ret_f _ => idp
+                | ret_f t => unit-ret (funExt+ \lam (s :⁺ UnitCat) => \case \elim s \return t.1 unitCat = t.1 s \with {
+                  | unitCat => idp
+                }) t.2
                 | f_sec _ => idp
               }
             | c => IsEquiv.trans (inP e0) (IsEquiv.trans e1 (IsEquiv.trans (inP e2) (IsEquiv.trans e3 (inP e4))))
        \in transport IsEquiv (ext \lam y => idp) c
+    \where
+      \private \sfunc unit-ret.{u} {U E : \Cat u} {p : E ->⁺ U} {b : \Sigma⁺ U U} {pi : UnitCat ->⁺ \Sigma⁺ U U} (h : (\lam _ => b) = {UnitCat ->⁺ \Sigma⁺ U U} pi)
+                                    (G : \Pi (w :⁺ BaseChange pi (univFst p)) -> Fibers (univSnd p) (pi w.1))
+        : ((\lam _ => pi unitCat, \lam w => G (unitCat, w.2)) : \Sigma (pi' : UnitCat ->⁺ \Sigma⁺ U U) (\Pi (w :⁺ BaseChange pi' (univFst p)) -> Fibers (univSnd p) (pi' w.1)))
+            = (pi, G) \elim h
+        | idp => ext (idp, funExt+ \lam w => \case \elim w \with {
+          | (unitCat, y) => idp
+        })
 
   -- | Composable pairs of arrows of {UnivCoCart}.
   \func CPY.{u} {U E : \Cat u} {p : E ->⁺ U} (pc : IsCocartesianMap p) : \Type

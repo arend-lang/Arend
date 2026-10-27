@@ -84,7 +84,7 @@ public class CatForcedPathTest extends TypeCheckingTestCase {
       \\data L {F : Fam}
         | l (j : F.J) (a b : F.X j ->+ F.X j) (\\Pi (y :+ F.X j) -> a y = b y)
       \\type T {F : Fam} => L {hat {F}}
-      \\func test.{u} {F : Fam.{u,u}} : \\Cat u => T {F}
+      \\func test.{u} {F : Fam.{u,u}} : \\Type u => T {F}
       """);
   }
 
@@ -157,7 +157,7 @@ public class CatForcedPathTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\data W {C D : \\Cat} (a b : C ->+ D)
         | w (\\Sigma+ (x : C) (a x = b x))
-      \\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : \\Cat u => W a b
+      \\func test.{u} {C D : \\Cat u} (a b : C ->+ D) : \\Type u => W a b
       """);
   }
 
@@ -173,12 +173,12 @@ public class CatForcedPathTest extends TypeCheckingTestCase {
 
   @Test
   public void sigmaReleasedComponentTest() {
-    typeCheckDef("\\func test.{u} {C : \\Cat u} : C ->+ \\Cat u => \\lam (y :+ C) => \\Sigma+ (x : \\Sigma+ Nat Nat) (x.2 = x.2)");
+    typeCheckDef("\\func test.{u} {C : \\Cat u} : C ->+ \\Type u => \\lam (y :+ C) => \\Sigma+ (x : \\Sigma+ Nat Nat) (x.2 = x.2)");
   }
 
   // The type of the first component depends on the categorical context, so it cannot be released
   @Test
   public void sigmaCategoricalComponentTest() {
-    typeCheckDef("\\func test.{u} {C : \\Cat u} (B : C ->+ \\Type u) : C ->+ \\Cat u => \\lam (y :+ C) => \\Sigma+ (x : \\Sigma+ (B y) Nat) (x.2 = x.2)", 1);
+    typeCheckDef("\\func test.{u} {C : \\Cat u} (B : C ->+ \\Type u) : C ->+ \\Type u => \\lam (y :+ C) => \\Sigma+ (x : \\Sigma+ (B y) Nat) (x.2 = x.2)", 1);
   }
 }

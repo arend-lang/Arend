@@ -34,12 +34,15 @@
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Covariant.CocartesianBaseChange
 \import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Fibration.Exponent.ExponentCocartesian
 \import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Groupoid
 \import InfCat.Localization.Abstract
 \import InfCat.Localization.CatWeakEq
 \import InfCat.Localization.Concrete
 \import InfCat.Paths
+\import InfCat.Rezk
 \import InfCat.SubCat.Sub
 \import Logic
 \import Meta
@@ -174,23 +177,31 @@
 
   -- | Over the unit category, every functor on the base change inverts {CocartWeakEq}.
   \lemma unit-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} {C : \Cat} {b : B} (G : Fibers p b ->⁺ C)
-    : InvertsWeakEq {CocartWeakEq {\Sigma} p \lam _ => b} (\lam q => G q.2) \cowith
-    | hfunc-we => ((invertsWeakEq-along C (\lam _ => b) {\lam q => G q.2}).2 \lam k => invertsAlong-idd (\lam q => G q.2) ()).hfunc-we
+    : InvertsWeakEq {CocartWeakEq {UnitCat} p \lam _ => b} (\lam q => G q.2) \cowith
+    | hfunc-we => ((invertsWeakEq-along C (\lam _ => b) {\lam q => G q.2}).2 \lam k => along k).hfunc-we
+    \where
+      -- | Since the base is constant, lifts of every arrow of {UnitCat} are lifts of an identity.
+      \private \lemma along {t t' : UnitCat} (k : t ~> t') : InvertsAlong {UnitCat} {B} {E} {C} {p} {\lam _ => b} (\lam q => G q.2) k
+        => \lam x l lc => \let l' : CovLift (Fibers p) (b, b, idd, x) => (l.1, l.2)
+                         \in dmap_IsIso G (cocartesianLift-idd-iso l' ((cocartesianLift<->arrow-at x.2 l').2 lc))
 
   -- | Objects of the core are objects of {B} together with functors on their fibers.
   \lemma unit-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u)
     : IsEquiv {ExpCocCore pc C} {\Sigma (b : B) (Fibers p b ->⁺ C)} (\lam y => (ExpCocCore.proj pc C y, \lam x => ExpCocCore.eval pc y x))
-    => inP $ \new QEquiv {ExpCocCore pc C} {\Sigma ->⁺ ExpCocCore pc C} {
-         | f y _ => y
-         | ret h => h ()
-         | ret_f _ => idp
-         | f_sec _ => idp
-       } `transQEquiv` IsEquiv.toQEquiv (ExpCocCore.eval-univ pc (\Sigma)) `transQEquiv` later \new QEquiv {
-         | f s => (s.1 (), \lam x => s.2 ((), x))
+    => inP $ UnitCat-fun-equiv {ExpCocCore pc C} `transQEquiv` IsEquiv.toQEquiv (ExpCocCore.eval-univ pc UnitCat) `transQEquiv` later \new QEquiv {
+         | f s => (s.1 unitCat, \lam x => s.2 (unitCat, x))
          | ret t => (\lam _ => t.1, unit-inverts t.2)
-         | ret_f _ => idp
+         | ret_f s => unit-ret (funExt+ \lam (t :⁺ UnitCat) => \case \elim t \return s.1 unitCat = s.1 t \with {
+           | unitCat => idp
+         }) s.2
          | f_sec _ => idp
        }
+    \where
+      \private \sfunc unit-ret {b : B} {pi : UnitCat ->⁺ B} (h : (\lam _ => b) = {UnitCat ->⁺ B} pi) (G : InvertingWeakEq (CocartWeakEq p pi) C)
+        : ((\lam _ => pi unitCat, unit-inverts (\lam x => G (unitCat, x))) : \Sigma (pi' : UnitCat ->⁺ B) (InvertingWeakEq (CocartWeakEq p pi') C)) = (pi, G) \elim h
+        | idp => ext (idp, FuncWeakEq.ext \lam q => \case \elim q \with {
+          | (unitCat, y) => idp
+        })
 
   -- | The evaluation along a section of the fibers of the projection inverts {CocartWeakEq}.
   \lemma fibSec-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (pi : T ->⁺ B)

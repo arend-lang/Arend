@@ -4,6 +4,7 @@
 \import InfCat.Basics
 \import InfCat.CartesianClosed
 \import InfCat.Functor.Equiv
+\import InfCat.Groupoid
 \import InfCat.Limit.Product
 \import InfCat.Paths
 \import InfCat.Kan.RightKanExtType
@@ -148,10 +149,10 @@
               inv ->_~>_-> *> inv (~>_->_comp _ _) *> pmap (~>_-> __ x) (IsProduct.pair-beta2 pp))
 
     -- | Functors out of the point are their values.
-    \lemma point-equiv.{v} : IsHEquiv {\Sigma ->⁺ \Type v} {\Type v} (\lam G => G ())
-      => inP \new HQEquiv {\Sigma ->⁺ \Type v} {\Type v} (\lam G => G ()) {
+    \lemma point-equiv.{v} : IsHEquiv {UnitCat ->⁺ \Type v} {\Type v} (\lam G => G unitCat)
+      => inP \new HQEquiv {UnitCat ->⁺ \Type v} {\Type v} (\lam G => G unitCat) {
         | finv A _ => A
-        | finv_f G => idp
+        | finv_f => UnitCat-fun-ext
         | f_finv A => idp
       }
   }

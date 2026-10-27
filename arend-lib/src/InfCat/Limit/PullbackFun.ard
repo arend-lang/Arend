@@ -114,10 +114,23 @@
   => \let p => fun-path {S} {A} {B} h e
      \in transport (\lam (q : A ~> B) => IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => q i s) (f s)))
                    p.2 (path-equiv p.1)
-  \where
+  \where {
     \private \lemma path-equiv.{w} {S : \Cat w} {A B : S ->⁺ \Type w} (p : A = B)
       : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => (=_~> p) i s) (f s)) \elim p
       | idp => transport IsEquiv (ext \lam f s => inv ~>_->_idd) (inP idEquiv)
+
+    -- | A version of {pi-equiv+} for a type {S}.
+    \protected \lemma type.{u} {S : \Type u} {A B : S ->⁺ \Type u} (h : \Pi (z :⁺ \Sigma⁺ (s : S) (A s)) -> B z.1)
+                              (e : \Pi (s : S) -> IsEquiv (\lam a => h (s,a)))
+      : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => h (s, f s))
+      => \let p => fun-path {S} {A} {B} h e
+         \in transport (\lam (q : A ~> B) => IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => q i s) (f s)))
+                       p.2 (path-equiv-type p.1)
+
+    \private \lemma path-equiv-type.{w} {S : \Type w} {A B : S ->⁺ \Type w} (p : A = B)
+      : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => (=_~> p) i s) (f s)) \elim p
+      | idp => transport IsEquiv (ext \lam f s => inv ~>_->_idd) (inP idEquiv)
+  }
 
 -- | A square of types whose sections are determined by their values on the bottom and right sides is a pullback square.
 \lemma type-pullback.{u} (Phi : DI ->⁺ DI ->⁺ \Type u) (e : IsEquiv (boundary {Phi})) : IsPullbackSquare Phi
@@ -137,7 +150,7 @@
                      | ret M w => M w.2 w.1.1 w.1.2
                      | ret_f _ => idp
                      | f_sec _ => idp
-                   }) $ IsEquiv.trans (pi-equiv+ {r} {\lam _ => \Pi (i j :⁺ DI) -> Phi i j} {\lam _ => \Pi (y :⁺ Cospan) -> cospan Phi y}
+                   }) $ IsEquiv.trans (pi-equiv+.type {r} {\lam _ => \Pi (i j :⁺ DI) -> Phi i j} {\lam _ => \Pi (y :⁺ Cospan) -> cospan Phi y}
                                                  (\lam z y => z.2 (cospanInc y).1 (cospanInc y).2)
                                                  (\lam _ => IsEquiv.leftFactor {_} {_} {_} {\lam (L : \Pi (i j :⁺ DI) -> Phi i j) (y :⁺ Cospan) => L (cospanInc y).1 (cospanInc y).2} (cospanBd-equiv {Phi}) e)) $
                       inP \new QEquiv {\Pi (x :⁺ r) (y :⁺ Cospan) -> cospan Phi y} {\Pi (s :⁺ \Sigma⁺ Cospan r) -> cospan Phi s.1} {

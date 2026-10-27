@@ -507,6 +507,13 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   private Pair<SortExpression,Expression> typecheckParameters(Concrete.GeneralDefinition def, Definition typedDef, LinkList list, LocalInstancePool localInstancePool, ClassField implementedField, List<Boolean> typedParameters) {
+    return typecheckParameters(def, typedDef, list, localInstancePool, implementedField, typedParameters, null);
+  }
+
+  /**
+   * @param covariantSorts if not null, the sorts of covariant parameters are added to it
+   */
+  private Pair<SortExpression,Expression> typecheckParameters(Concrete.GeneralDefinition def, Definition typedDef, LinkList list, LocalInstancePool localInstancePool, ClassField implementedField, List<Boolean> typedParameters, List<SortExpression> covariantSorts) {
     List<SortExpression> sorts = new ArrayList<>();
     PiExpression fieldType = implementedField == null ? null : implementedField.getType();
     boolean isClassCoclause = def instanceof Concrete.CoClauseFunctionDefinition && ((Concrete.CoClauseFunctionDefinition) def).getKind() == FunctionKind.CLASS_COCLAUSE;
@@ -531,6 +538,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             if (paramType != null) {
               paramResults.add(paramType.expression());
               sorts.add(variance == BindingVariance.INVARIANT ? paramType.sort().withoutCat() : paramType.sort());
+              if (covariantSorts != null && variance != BindingVariance.INVARIANT) {
+                covariantSorts.add(paramType.sort());
+              }
             }
           } else {
             Expression expected = def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA;
@@ -1710,6 +1720,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Sort userSort = dataDefinition.getSort();
     if (userSort != null && userSort.getPLevel().isInfinity() && userSort.getHLevel().isInfinity()) userSort = null;
     List<SortExpression> inferredSortList = new ArrayList<>();
+    // Sorts of covariant parameters of constructors; only they are checked strictly against \Cat u
+    List<SortExpression> covariantSortList = new ArrayList<>();
 
     boolean dataOk = true;
     List<DependentLink> elimParams = Collections.emptyList();
@@ -1820,7 +1832,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
           // Typecheck constructors
           List<ExpressionPattern> patterns = result == null ? null : result.getPatterns();
-          SortExpression constructorSort = typecheckConstructor(constructor, patterns, dataDefinition, dataDefinitions);
+          SortExpression constructorSort = typecheckConstructor(constructor, patterns, dataDefinition, dataDefinitions, covariantSortList);
           if (constructorSort == null) {
             dataOk = false;
           } else {
@@ -1874,6 +1886,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       }
       if (!substVisitor.isEmpty()) {
         inferredSortList.replaceAll(sortExpression -> sortExpression.subst(substVisitor.getLevelSubstitution()));
+        covariantSortList.replaceAll(sortExpression -> sortExpression.subst(substVisitor.getLevelSubstitution()));
       }
     }
     if (!dataOk) {
@@ -1945,8 +1958,18 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           }
         }
       }
-    } else if (countingErrorReporter.getErrorsNumber() == 0 && userSort != null && !inferredSort.withInfLevel().isLessOrEquals(userSort)) {
-      countingErrorReporter.report(new DataUniverseError(inferredSort.withInfLevel(), userSort, def.getUniverse() == null ? def : def.getUniverse()));
+    } else if (countingErrorReporter.getErrorsNumber() == 0 && userSort != null) {
+      // Invariant parameters of constructors may belong to \Type u even if the data type is in \Cat u
+      if (!inferredSort.withInfLevel().isLessOrEqualsNonStrictCat(userSort)) {
+        countingErrorReporter.report(new DataUniverseError(inferredSort.withInfLevel(), userSort, def.getUniverse() == null ? def : def.getUniverse()));
+      } else {
+        for (SortExpression covariantSort : covariantSortList) {
+          if (!covariantSort.withInfLevel().isLessOrEquals(userSort)) {
+            countingErrorReporter.report(new DataUniverseError(covariantSort.withInfLevel(), userSort, def.getUniverse() == null ? def : def.getUniverse()));
+            break;
+          }
+        }
+      }
     }
 
     // A data type truncated to level n+1 can be matched only in a data type of level <= n
@@ -2052,7 +2075,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
   }
 
-  private SortExpression typecheckConstructor(Concrete.Constructor def, List<ExpressionPattern> patterns, DataDefinition dataDefinition, Set<DataDefinition> dataDefinitions) {
+  private SortExpression typecheckConstructor(Concrete.Constructor def, List<ExpressionPattern> patterns, DataDefinition dataDefinition, Set<DataDefinition> dataDefinitions, List<SortExpression> covariantSorts) {
     Constructor constructor = new Constructor(def.getData(), dataDefinition);
     constructor.setPatterns(patterns);
 
@@ -2065,7 +2088,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       def.getData().setTypechecked(constructor);
       dataDefinition.addConstructor(constructor);
 
-      pair = typecheckParameters(def, constructor, list, null, null, null);
+      pair = typecheckParameters(def, constructor, list, null, null, null, covariantSorts);
       constructor.setStrictParameters(getStrictParameters(def.getParameters()));
 
       int i = 0;

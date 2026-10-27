@@ -2,6 +2,7 @@
 \import Equiv.Sigma
 \import InfCat.Arrows
 \import InfCat.Functor.Equiv
+\import InfCat.Groupoid
 \import Logic
 \import Logic.Meta
 
@@ -15,11 +16,17 @@
       }
 
     \protected \lemma fromObjects.{u} {C : \Cat} {S : \Cat u} (Se : QEquiv {S} {C})
-                                      {T : S -> S -> \Cat u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y})
+                                      {T : S -> S -> \Type u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y})
       : IsSmallCat.{u} C
       => \case ResizeFromObjects-equiv Se Te \with {
         | inP r => inP (ResizeFromObjects Se Te, symHQEquiv r)
       }
+
+    -- | A version of {fromObjects} for a type of objects.
+    \protected \lemma fromTypeObjects.{u} {C : \Cat} {S : \Type u} (Se : QEquiv {S} {C})
+                                          {T : S -> S -> \Type u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y})
+      : IsSmallCat.{u} C
+      => fromObjects (symQEquiv ToCat-equiv `transQEquiv` Se) {\lam x y => T (fromCat x) (fromCat y)} (\lam x y => Te (fromCat x) (fromCat y))
   }
 
 \type ResizeFromArrows.{u} {C : \Cat} {S : \Type u} (e : QEquiv {DI ->⁺ C} {S}) : \Cat u
@@ -33,14 +40,14 @@
     | f_finv (resizeCat x) => idp
   }
 
-\type ResizeFromObjects.{u} {C : \Cat} {S : \Cat u} (Se : QEquiv {S} {C}) {T : S -> S -> \Cat u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y}) : \Cat u
+\type ResizeFromObjects.{u} {C : \Cat} {S : \Cat u} (Se : QEquiv {S} {C}) {T : S -> S -> \Type u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y}) : \Cat u
   => ResizeFromArrows homEquiv
   \where {
     \sfunc homEquiv : QEquiv {DI ->⁺ C} {\Sigma (s : \Sigma S S) (T s.1 s.2)}
       => DI-equiv `transQEquiv` symQEquiv (sigma-equiv (sigma-equiv Se \lam _ => Se) \lam s => Te s.1 s.2)
   }
 
-\lemma ResizeFromObjects-equiv.{u} {C : \Cat} {S : \Cat u} (Se : QEquiv {S} {C}) {T : S -> S -> \Cat u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y})
+\lemma ResizeFromObjects-equiv.{u} {C : \Cat} {S : \Cat u} (Se : QEquiv {S} {C}) {T : S -> S -> \Type u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y})
   : IsHEquiv {C} {ResizeFromObjects Se Te} (\lam x => resizeCat x)
   => inP \new HQEquiv {
     | finv (resizeCat x) => x

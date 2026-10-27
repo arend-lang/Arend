@@ -63,24 +63,28 @@
   => transport (\lam (X : \Cat u) => IsWeaklyContractible X) (HEquiv_= ee) Cw
 
 -- | {C} is weakly contractible if and only if its functor to the point is a localization at all arrows.
-\lemma weaklyContractible<->localization {C : \Cat} : IsWeaklyContractible C <-> IsLocalization {MaxCatWeakEq C} {\Sigma} (\lam _ => ())
-  => (\lam w => (\new FuncWeakEq { | hfunc-we _ => idd-iso }, w), \lam Lz => Lz.2)
+\lemma weaklyContractible<->localization {C : \Cat} : IsWeaklyContractible C <-> IsLocalization {MaxCatWeakEq C} {UnitCat} (\lam _ => unitCat)
+  => (\lam w => (\new FuncWeakEq { | hfunc-we _ => idd-iso }, IsHEquiv.leftFactor UnitCat-equiv w), \lam Lz => IsHEquiv.trans Lz.2 UnitCat-equiv)
 
 -- | The opposite of the point is the point.
-\lemma op-unit-equiv.{u} : IsHEquiv {Op.{u} (\Sigma)} {\Sigma} (\lam _ => ())
-  => ff-surj-equiv.1 (\lam a b => \case IsEquiv.isSurj Op.toOp-equiv a, IsEquiv.isSurj Op.toOp-equiv b \with {
-       | inP (_, p), inP (_, q) => aux p q
-     }, \lam _ => inP (Op.toOp (), idp))
-  \where
-    \private \lemma aux.{v} {a b : Op.{v} (\Sigma)} (p : Op.toOp () = a) (q : Op.toOp () = b)
+\lemma op-unit-equiv.{u} : IsHEquiv {Op.{u} UnitCat} {UnitCat} (\lam _ => unitCat)
+  => IsHEquiv.leftFactor UnitCat-equiv $ ff-surj-equiv.1 (\lam a b => \case IsEquiv.isSurj (Op.toOp-equiv {UnitCat}) a, IsEquiv.isSurj (Op.toOp-equiv {UnitCat}) b \with {
+       | inP (unitCat, p), inP (unitCat, q) => aux p q
+     }, \lam _ => inP (Op.toOp unitCat, idp))
+  \where {
+    \private \lemma aux.{v} {a b : Op.{v} UnitCat} (p : Op.toOp unitCat = a) (q : Op.toOp unitCat = b)
       : IsEquiv {a ~> b} {() ~> {\Sigma} ()} (\lam h => dpath \lam i => ()) \elim p, q
-      | idp, idp => contr-equiv (Contr.Contr_QEquiv (IsEquiv.toQEquiv (opArr-equiv {\Sigma} {()} {()})) unit-hom-contr) unit-hom-contr
+      | idp, idp => contr-equiv (Contr.Contr_QEquiv (IsEquiv.toQEquiv (opArr-equiv {UnitCat} {unitCat} {unitCat})) unitCat-hom-contr) unit-hom-contr
 
     \private \func unit-hom-contr : Contr (() ~> {\Sigma} ())
       => Contr.make idd \lam _ => idp
 
+    \private \func unitCat-hom-contr : Contr (unitCat ~> {UnitCat} unitCat)
+      => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv ((ff-surj-equiv.2 UnitCat-equiv).1 unitCat unitCat))) unit-hom-contr
+  }
+
 -- | The opposite of a weakly contractible category is weakly contractible.
 \lemma op-weaklyContractible.{u} {C : \Cat u} (w : IsWeaklyContractible C) : IsWeaklyContractible (Op C)
   => weaklyContractible<->localization.2 $
-       isLocalization-transfer (OpFunc-isLocalization {MaxCatWeakEq C} {\Sigma} (weaklyContractible<->localization.1 w)) idHEquiv op-unit-equiv
+       isLocalization-transfer (OpFunc-isLocalization {MaxCatWeakEq C} {UnitCat} (weaklyContractible<->localization.1 w)) idHEquiv op-unit-equiv
           (\lam _ => idp) \lam a => (\lam _ => TruncP.map (IsEquiv.isSurj opArrow-equiv a) (\lam s => (s.1, (), s.2)), \lam _ => ())
