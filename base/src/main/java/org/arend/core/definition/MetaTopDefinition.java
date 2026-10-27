@@ -8,7 +8,9 @@ import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.naming.reference.MetaReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +20,7 @@ public class MetaTopDefinition extends Definition {
   private List<? extends LevelVariable> myLevelParameters = Collections.emptyList();
   private DependentLink myParameters = EmptyDependentLink.getInstance();
   private List<? extends Boolean> myTypedParameters = Collections.emptyList();
+  private Set<TCDefReferable> myUsedInstances;
 
   public MetaTopDefinition(MetaReferable referable) {
     super(referable, TypeCheckingStatus.NEEDS_TYPE_CHECKING);
@@ -31,6 +34,15 @@ public class MetaTopDefinition extends Definition {
   @Override
   public TopLevelDefinition getTopLevelDefinition() {
     return null;
+  }
+
+  @Override
+  public @Nullable Set<TCDefReferable> getUsedInstances() {
+    return myUsedInstances;
+  }
+
+  public void setUsedInstances(@NotNull Set<TCDefReferable> usedInstances) {
+    myUsedInstances = usedInstances;
   }
 
   @Override

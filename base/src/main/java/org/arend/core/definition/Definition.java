@@ -62,6 +62,16 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
     return getTopLevelDefinition().getAxioms();
   }
 
+  /**
+   * The instances the typechecker picked while checking this definition, recorded as it picked them.
+   *
+   * @return {@code null} for a definition that was never typechecked in this session and never
+   *         read from a binary that carried the set -- which is not the same as having used none.
+   */
+  public abstract @Nullable Set<TCDefReferable> getUsedInstances();
+
+  public abstract void setUsedInstances(@NotNull Set<TCDefReferable> usedInstances);
+
   public Set<? extends Definition> getGoals() {
     return getTopLevelDefinition().getGoals();
   }

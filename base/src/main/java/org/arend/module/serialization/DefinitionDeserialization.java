@@ -53,6 +53,14 @@ public class DefinitionDeserialization implements ArendDeserializer {
       default -> throw new DeserializationException("Unknown Definition kind: " + defProto.getDefinitionDataCase());
     }
 
+    if (defProto.getInstancesKnown()) {
+      Set<TCDefReferable> usedInstances = new HashSet<>(defProto.getUsedInstanceCount());
+      for (Integer index : defProto.getUsedInstanceList()) {
+        usedInstances.add(myCallTargetProvider.getTCRef(index));
+      }
+      def.setUsedInstances(usedInstances);
+    }
+
     def.setStatus(defProto.getNoErrors() ? Definition.TypeCheckingStatus.NO_ERRORS :
                   defProto.getHasErrors() ? Definition.TypeCheckingStatus.HAS_ERRORS :
                   Definition.TypeCheckingStatus.HAS_WARNINGS);
