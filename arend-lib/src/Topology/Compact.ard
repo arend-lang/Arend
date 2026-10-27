@@ -53,17 +53,19 @@
           | (inP h) => FinSet.finiteAC g
     \in inP (\lam i => (h i).1, Xp $ uniform-refine (X.uniform-inter-big (\lam j W => (W = Compl (V j)) || (W = (h j).1)) (\lam j => (h j).3))
               \lam {W} c => \case rewrite CoverInterBig-char in c \with {
-                | inP (Ws,We,W=Ws) => \case FinSet.searchFin (\lam j => \Sigma (p : Ws j = (h j).1) (We j = byRight p)) (\lam j => cases (We j) \with {
-                  | byLeft _ => no \lam q => \case q.2
-                  | byRight p => yes (p,idp)
-                }) \with {
-                  | inl (j,(p,_),_) => inP (_, byRight $ inP (j,idp), rewrite (W=Ws, inv p) $ TopMeetSemilattice.BigMeet-cond {_} {Ws} j)
-                  | inr f => inP (_, byLeft idp, \lam {x} Wx => \case Vc x \with {
-                    | inP (_, inP (j,idp), Vjx) => \case f j (cases (We j) \with {
-                      | byLeft q => \case (rewrite q in TopMeetSemilattice.BigMeet-cond {_} {Ws} j (rewrite W=Ws in Wx)) Vjx
-                      | byRight p => (p,idp)
+                | inP (Ws,We,W=Ws) => \case FinSet.finiteAC (\lam j => ||.toOr (We j)) \with {
+                  | inP o => \case FinSet.searchFin (\lam j => \Sigma (p : Ws j = (h j).1) (o j = inr p)) (\lam j => cases (o j) \with {
+                    | inl _ => no \lam q => \case q.2
+                    | inr p => yes (p,idp)
+                  }) \with {
+                    | inl (j,(p,_),_) => inP (_, byRight $ inP (j,idp), rewrite (W=Ws, inv p) $ TopMeetSemilattice.BigMeet-cond {_} {Ws} j)
+                    | inr f => inP (_, byLeft idp, \lam {x} Wx => \case Vc x \with {
+                      | inP (_, inP (j,idp), Vjx) => \case f j (cases (o j) \with {
+                        | inl q => \case (rewrite q in TopMeetSemilattice.BigMeet-cond {_} {Ws} j (rewrite W=Ws in Wx)) Vjx
+                        | inr p => (p,idp)
+                      })
                     })
-                  })
+                  }
                 }
               }, \lam i => (h i).2)
 

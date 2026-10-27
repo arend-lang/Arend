@@ -635,4 +635,138 @@ public class DataTest extends TypeCheckingTestCase {
         => \\case \\elim p \\with {}
       """, 1);
   }
+
+  private static final String QUOT = """
+    \\data Bool | true | false
+    \\data Empty
+    \\data Quot | mk Bool | eq (i : I) \\elim i { | left => mk true | right => mk false }
+    """;
+
+  @Test
+  public void disjointConstructorsThroughHITTest() {
+    typeCheckModule(QUOT + """
+      \\data D | c1 | c2 | c3 Quot \\with { | mk true => c1 | mk false => c2 }
+      \\func test (p : c1 = c2) : Empty => \\case \\elim p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void disjointConstructorsThroughHITTest2() {
+    typeCheckModule(QUOT + """
+      \\data E | e1 | e2 Quot \\with { | mk true => e1 }
+      \\func test (p : e2 (mk false) = e1) : Empty => \\case \\elim p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void disjointConstructorsThroughHITTest3() {
+    typeCheckModule(QUOT + """
+      \\data E | e1 | e2 Quot \\with { | mk true => e1 }
+      \\data F | f1 | f2 E \\with { | e1 => f1 }
+      \\func test (p : f2 (e2 (mk false)) = f1) : Empty => \\case \\elim p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void disjointHITArgumentTest() {
+    typeCheckModule(QUOT + """
+      \\data E | e1 | e2 Quot \\with { | mk true => e1 }
+      \\func test (j : I) (p : e2 (eq j) = e1) : Empty => \\case \\elim p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void disjointConstructorsWithoutPathsTest() {
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\data Empty
+      \\data D | c1 | c2 | c3 Bool \\with { | true => c1 | false => c2 }
+      \\func test (p : c1 = c2) : Empty => \\case \\elim p \\with {}
+      """);
+  }
+
+  @Test
+  public void disjointTruncatedPropTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\truncated \\data T : \\Prop | t1 | t2
+      \\func test (p : t1 = t2) : Empty => \\case \\elim p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void disjointTruncatedSetTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\truncated \\data T : \\Set | t1 | t2 \\Set0
+      \\func test (p : t1 = t2 Nat) : Empty => \\case \\elim p \\with {}
+      """);
+  }
+
+  @Test
+  public void disjointEvalIntConstructorsTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data E | e1 | e2 Int \\with { | pos 0 => e1 }
+      \\func test (n : Nat) (p : e2 (neg n) = e1) : Empty \\elim p | ()
+      """, 1);
+  }
+
+  @Test
+  public void disjointEvalIntConstructorsTest2() {
+    typeCheckModule("""
+      \\data Empty
+      \\data E | e1 | e2 Int \\with { | pos 0 => e1 }
+      \\func test (n : Nat) (p : e2 (neg (suc n)) = e1) : Empty => \\case \\elim p \\with {}
+      """);
+  }
+
+  @Test
+  public void disjointEvalConstructorsTest2() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D | con1 | con2 (n : Nat) \\with { | 0 => con1 }
+      \\data E | con3 | con4 D \\with { | con1 => con3 }
+      \\func test (n : Nat) (p : con4 (con2 (suc n)) = con3) : Empty => \\case \\elim p \\with {}
+      """);
+  }
+
+  @Test
+  public void disjointEvalNestedConstructorsTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D | con1 | con2 (n : Nat) \\with { | 0 => con1 }
+      \\data E | con3 | con4 D \\with { | con1 => con3 }
+      \\data F | con5 | con6 E \\with { | con3 => con5 }
+      \\func test (n : Nat) (p : con6 (con4 (con2 n)) = con5) : Empty => \\case \\elim p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void disjointEvalSigmaConstructorsTest() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D | con1 | con2 (n : Nat) \\with { | 0 => con1 }
+      \\data E | con3 | con4 (\\Sigma D Nat) \\with { | (con1, 0) => con3 }
+      \\func test (n : Nat) (p : con4 (con2 n, 0) = con3) : Empty => \\case \\elim p \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void evalConstructorInDataTest2() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D (i : Int) \\with | pos n => con
+      \\func test (m : Nat) (d : D (neg m)) : Empty => \\case d \\with {}
+      """, 1);
+  }
+
+  @Test
+  public void evalConstructorInDataTest3() {
+    typeCheckModule("""
+      \\data Empty
+      \\data D (i : Int) \\with | pos n => con
+      \\func test (m : Nat) (d : D (neg (suc m))) : Empty \\elim d
+      """);
+  }
 }

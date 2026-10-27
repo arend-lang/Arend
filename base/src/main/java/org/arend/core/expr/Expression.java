@@ -443,7 +443,12 @@ public abstract class Expression implements Body, CoreExpression {
       return false;
     }
 
-    if (con1.getDataType().isHIT()) {
+    BigInteger truncatedLevel = con1.getDataType().getTruncatedLevel();
+    if (truncatedLevel != null && truncatedLevel.signum() < 0) {
+      return false;
+    }
+
+    if (con1.getDataType().mayConnectConstructors()) {
       GraphClosure<Constructor> closure = new GraphClosure<>();
       for (Constructor constructor : con1.getDataType().getConstructors()) {
         Body body = constructor.getBody();
@@ -461,8 +466,8 @@ public abstract class Expression implements Body, CoreExpression {
               return false;
             }
           }
-        } else if (body != null) {
-          throw new IllegalStateException();
+        } else if (body != null && !(body instanceof Expression && addConstructor(((Expression) body).normalize(NormalizationMode.WHNF), constructor, closure))) {
+          return false;
         }
       }
 

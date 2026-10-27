@@ -3,9 +3,12 @@ package org.arend.core.definition;
 import org.arend.core.context.param.DependentLink;
 import org.arend.ext.core.context.BindingVariance;
 import org.arend.core.context.param.EmptyDependentLink;
+import org.arend.core.elimtree.ElimBody;
+import org.arend.core.elimtree.ElimClause;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.pattern.ExpressionPattern;
+import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
@@ -18,6 +21,7 @@ import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
+import org.arend.prelude.Prelude;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -76,6 +80,46 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   public boolean isHIT() {
     for (Constructor constructor : myConstructors) {
       if (constructor.getBody() instanceof IntervalElim) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @return false only if paths between different constructors of this data type can arise only from conditions on these constructors.
+   *         This is not the case if it is a HIT, a truncated proposition, or if some condition matches on a data type with such paths.
+   */
+  public boolean mayConnectConstructors() {
+    return mayConnectConstructors(new HashSet<>());
+  }
+
+  private boolean mayConnectConstructors(Set<DataDefinition> visited) {
+    if (!visited.add(this)) {
+      return false;
+    }
+    if (this == Prelude.INTERVAL || this == Prelude.DI || isHIT() || myTruncatedLevel != null && myTruncatedLevel.signum() < 0) {
+      return true;
+    }
+    for (Constructor constructor : myConstructors) {
+      if (constructor.getBody() instanceof ElimBody elimBody) {
+        for (ElimClause<Pattern> clause : elimBody.getClauses()) {
+          if (mayConnectConstructors(clause.getPatterns(), visited)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean mayConnectConstructors(List<? extends Pattern> patterns, Set<DataDefinition> visited) {
+    for (Pattern pattern : patterns) {
+      Definition definition = pattern.getDefinition();
+      if (definition instanceof Constructor constructor ? constructor.getDataType().mayConnectConstructors(visited) : definition != null && definition != Prelude.EMPTY_ARRAY && definition != Prelude.ARRAY_CONS) {
+        return true;
+      }
+      if (mayConnectConstructors(pattern.getSubPatterns(), visited)) {
         return true;
       }
     }
