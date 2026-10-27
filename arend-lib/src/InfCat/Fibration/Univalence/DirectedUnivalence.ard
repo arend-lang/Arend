@@ -1,0 +1,89 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Functor.Conservative
+\import InfCat.Groupoid
+\import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\func ~>_->.{u} {A B :⁺ \Type u} (p :⁺ A ~> B) (a :⁺ A) : B
+  => coe+ (\lam i => p i) a dright
+
+\sfunc ->_~>.{u} {A B : \Type u} (f : A -> B) : A ~> B
+  => dpath (iso+ (cov-fun-type-equiv.toCov f))
+
+\sfunc ~>_->_~>.{u} {A B : \Type u} {p : A ~> B} : ->_~> (~>_-> p) = p
+  => (\peval ->_~> _)
+  *> path (\lam i => dpath (iso+ (IsEquiv.ret_f cov-fun-type-equiv {\lam x => coe+ (p __) x dright} i)))
+  *> path (\lam j => dpath \lam i => iso+_coe+ p i j)
+
+\sfunc ->_~>_->.{u} {A B : \Type u} {f : A -> B} {a : A} : ~>_-> (->_~> f) a = f a
+  => pmap (~>_-> __ a) (\peval ->_~> f) *> cov-fun-type-equiv.ofInv
+
+\func dirUnivalence.{u} {A B : \Type u} : QEquiv {A ~> B} {A -> B} \cowith
+  | f => ~>_->
+  | ret => ->_~>
+  | ret_f p => ~>_->_~>
+  | f_sec f => ext \lam a => ->_~>_->
+
+-- | {~>_->} commutes with identity.
+\sfunc ~>_->_idd.{u} {A :⁺ \Type u} {a :⁺ A} : ~>_-> idd a = a
+  => coe+-dpath idd
+
+\func ~>_->_=_~>.{u} {C : \Cat} {F : C ->⁺ \Type u} {a b : C} (e : a = b) (y : F a)
+  : ~>_-> (dmap F (=_~> e)) y = transport (\lam z => F z) e y \elim e
+  | idp => ~>_->_idd
+
+-- | {~>_->} commutes with composition.
+\sfunc ~>_->_comp.{u} {A B D :⁺ \Type u} (p :⁺ A ~> B) (q :⁺ B ~> D) {a :⁺ A} : ~>_-> (comp p q) a = ~>_-> q (~>_-> p a)
+  => pmap+ (\lam x => ~>_-> (comp p q) x) (inv ~>_->_idd)
+     *> coe+-dpath (dpath \lam i => coe+ (\lam j => fill2 p q i j) (coe+ (\lam k => p k) a i) dright)
+
+-- | A version of {~>_->_comp} for families.
+\sfunc ~>_->_comp-fam.{u} {C : \Cat} {F G H :⁺ C ->⁺ \Type u} (g :⁺ F ~> G) (h :⁺ G ~> H) (c :⁺ C) (a :⁺ F c)
+  : ~>_-> (dpath \lam i => comp g h i c) a = ~>_-> (dpath \lam i => h i c) (~>_-> (dpath \lam i => g i c) a)
+  => pmap+ (~>_-> __ a) (dmap_comp \lam (K : C ->⁺ \Type u) => K c) *> ~>_->_comp _ _
+
+-- | Covariant maps commute with {~>_->}.
+\sfunc ~>_->-natural.{u} {C : \Cat} {F G : C ->⁺ \Type u} (h : \Pi (x :⁺ C) -> F x ->⁺ G x) {x y : C} (p : x ~> y) {a : F x}
+  : ~>_-> (dmap G p) (h x a) = h y (~>_-> (dmap F p) a)
+  => coe+-dpath (dpath \lam i => h (p i) (coe+ (\lam j => F (p j)) a i))
+
+-- | Transport along an isomorphism of types is an equivalence.
+\lemma ~>_->-iso-equiv.{u} {A B : \Type u} {p : A ~> B} (e : IsIso p) : IsEquiv (~>_-> p)
+  => inP \new QEquiv {A} {B} {
+    | f => ~>_-> p
+    | ret => ~>_-> (IsIso.ret e)
+    | ret_f a => inv (~>_->_comp p (IsIso.ret e)) *> pmap (~>_-> __ a) (IsIso.f_ret e) *> ~>_->_idd
+    | f_sec b => inv (~>_->_comp (IsIso.ret e) p) *> pmap (~>_-> __ b) (IsIso.ret_f e) *> ~>_->_idd
+  }
+
+-- | A morphism of types is an isomorphism if transport along it is an equivalence.
+\lemma ~>_->-equiv-iso.{u} {A B : \Type u} {p : A ~> B} (e : IsEquiv (~>_-> p)) : IsIso p
+  => inP (->_~> (IsEquiv.ret e),
+          inv ~>_->_~> *> pmap ->_~> (ext \lam b => ~>_->_comp _ _ *> pmap (~>_-> p) ->_~>_-> *> IsEquiv.f_ret e *> inv ~>_->_idd) *> ~>_->_~>,
+          inv ~>_->_~> *> pmap ->_~> (ext \lam a => ~>_->_comp _ _ *> ->_~>_-> *> IsEquiv.ret_f e *> inv ~>_->_idd) *> ~>_->_~>)
+
+\func depUnivalence.{u} {C : \Cat} {F G : C ->⁺ \Type u} : QEquiv {F ~> G} {\Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1} \cowith
+  | f p s => ~>_-> (dpath \lam i => p i s.1) s.2
+  | ret h => dpath \lam i x => dpath (iso+ \lam y => h (x,y)) i
+  | ret_f p => path \lam j => dpath \lam i x => iso+_coe+ (dpath \lam i => p i x) i j
+  | f_sec => idpe
+
+-- | A covariant fiberwise equivalence gives a path of functors; its arrow is the given transformation.
+\sfunc fun-path.{u} {X : \Cat} {G G' : X ->⁺ \Type u} (h : \Pi (s :⁺ \Sigma⁺ (x : X) (G x)) -> G' s.1)
+                    (e : \Pi (x : X) -> IsEquiv (\lam a => h (x,a)))
+  : \Sigma (p : G = G') (=_~> p = depUnivalence.ret h)
+  => IsIso_= (objectwise-iso {X} {_} {G} {G'} {depUnivalence.ret h} \lam x => ~>_->-equiv-iso (e x))
+
+-- | Transport along an arrow commutes with pointwise paths of functors.
+\sfunc ~>_->-pointwise.{u} {C : \Cat} {F G : C ->⁺ \Type u} (K : \Pi (c :⁺ C) -> G c = F c) {a b : C} (r : a ~> b) (y : F a)
+  : ~>_-> (dmap G r) (transport (\lam X => X) (inv (K a)) y) = transport (\lam X => X) (inv (K b)) (~>_-> (dmap F r) y)
+  => aux (funExt+ K) r y
+  \where
+    \private \sfunc aux.{u} {C : \Cat} {F G : C ->⁺ \Type u} (N : G = F) {a b : C} (r : a ~> b) (y : F a)
+      : ~>_-> (dmap G r) (transport (\lam X => X) (inv (path \lam i => N i a)) y) = transport (\lam X => X) (inv (path \lam i => N i b)) (~>_-> (dmap F r) y) \elim N
+      | idp => idp

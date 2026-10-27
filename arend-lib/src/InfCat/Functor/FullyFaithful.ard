@@ -2,6 +2,7 @@
 \import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
+\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Paths
@@ -32,28 +33,52 @@
                       IsEquiv.isInj (ff x x) $ dmap_comp f *> pmap (comp _ __) (IsEquiv.f_ret (ff y x)) *> r.3)
 
     \lemma isObEmbedding (ff : IsFFMap f) : Embedding {C} {D} (\lam x => f x) \cowith
-      | isEmb x y => IsEquiv.toQEquiv {_} {_} {pmap (f __)} $ propExt.conv (IsEquiv.parallelEquiv {_} {_} {_} {_} {_}
-          {\lam s => later (dmap f s.1, dmap_IsIso f s.2)}
-          (=-char x y)
-          (=-char (f x) (f y))
-          (\lam p => ext $ inv $ dmap_=_~> f))
-        (IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection _) $ transEmbedding (Embedding.projection _ ) $ Embedding.fromIsEquiv (ff x y))
-          \lam s => \case IsEquiv.isSurj (ff x y) s.1 \with {
-            | inP (p,fp=s) => inP ((p, isConservative ff $ transportInv IsIso fp=s s.2), ext fp=s)
-          })
+      | isEmb x y => IsEquiv.toQEquiv $ (IsEquiv.parallelEquiv =-char =-char (\lam p => ext $ inv $ dmap_=_~> f)).2
+          (subtype-equiv (ff x y) (dmap_IsIso f) (isConservative ff))
 
     \lemma fibProp (ff : IsFFMap f) (y : D) : isProp (\Sigma (x : C) (f x = y))
       => Embedding.embeddingFiber-isProp (isObEmbedding ff) y
+
+    -- | A fully faithful functor induces equivalences on squares with a fixed boundary.
+    \lemma squares (ff : IsFFMap f) {a b c d : C} (ab : a ~> b) (bd : b ~> d) (ac : a ~> c) (cd : c ~> d)
+      : IsEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {DPath (\lam i => f (ab i) ~> f (cd i)) (dmap f ac) (dmap f bd)} (\lam s => dpath \lam i => dmap f (s i))
+      => squares-at f (ff a d) ab bd ac cd
+  }
+
+-- | A functor that is fully faithful on arrows from {a} to {d} induces equivalences on squares from {a} to {d} with a fixed boundary.
+\lemma squares-at {C D : \Cat} (f : C ->⁺ D) {a b c d : C} (e : IsEquiv {a ~> d} (dmap f)) (ab : a ~> b) (bd : b ~> d) (ac : a ~> c) (cd : c ~> d)
+  : IsEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {DPath (\lam i => f (ab i) ~> f (cd i)) (dmap f ac) (dmap f bd)} (\lam s => dpath \lam i => dmap f (s i))
+  => \let | bf => conn-right ab
+          | tf => conn-right ac
+          | cf => dpath \lam i => dpath \lam j => fill2 ac cd i j
+     \in (IsEquiv.parallelEquiv (inP (square-char.gen-equiv bf tf cf))
+            (inP (square-char.gen-equiv (dpath \lam i => dmap f (bf i)) (dpath \lam i => dmap f (tf i)) (dpath \lam i => dmap f (cf i))))
+            (\lam s => inv (square-char.forward-gen.natural f {a} {b} {c} {d} {ab} {bd} {ac} bf tf {comp ac cd} cf s))).2
+          (triangles-at f e)
+  \where {
+    -- | A functor that is fully faithful on arrows from {a} to {d} induces equivalences on triangles from {a} to {d} with a fixed boundary.
+    \private \lemma triangles-at {C D : \Cat} (f : C ->⁺ D) {a b d : C} (e : IsEquiv {a ~> d} (dmap f)) {ab : a ~> b} {bd : b ~> d} {ad : a ~> d}
+      : IsEquiv {DPath (\lam i => a ~> bd i) ab ad} {DPath (\lam i => f a ~> dmap f bd i) (dmap f ab) (dmap f ad)} (\lam t => dpath \lam i => dmap f (t i))
+      => fiberwiseEquiv e {DPath (\lam i => a ~> bd i) ab} (\lam ad t => dpath \lam i => dmap f (t i))
+          (contr-equiv (segal-contr.flipped ab bd) (segal-contr.flipped (dmap f ab) (dmap f bd))) ad
   }
 
 \lemma ffMap-char {C D : \Cat} {f : C ->⁺ D}
   : IsFFMap f <-> IsEquiv {\Sigma (j : \Sigma C C) (j.1 ~> j.2)} {\Sigma (j : \Sigma C C) (f j.1 ~> f j.2)} (\lam s => (s.1, dmap f s.2))
-  => <->trans (later (\lam ff j => ff j.1 j.2, \lam e x y => e (x,y))) $ <->_=.2 $ totalEquiv {\Sigma C C} {\lam j => j.1 ~> j.2} \lam j => dmap f
+  => <->trans (later (\lam ff j => ff j.1 j.2, \lam e x y => e (x,y))) $ totalEquiv {\Sigma C C} {\lam j => j.1 ~> j.2} \lam j => dmap f
 
 \lemma ffMap-pullback {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (ff : IsFFMap f)
   : IsFFMap {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1
   => \lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => \Sigma⁺ (y : C) (f y = g x)) $
         contr-right {s.1 ~> t.1} \lam r => ff-surj-equiv.contr ff (\lam i =>⁺ g (r i))
+
+-- | A composite of fully faithful maps is fully faithful.
+\lemma ffMap-comp {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (ff : IsFFMap f) (gf : IsFFMap g) : IsFFMap (\lam a => g (f a))
+  => \lam x y => IsEquiv.trans (ff x y) (gf (f x) (f y))
+
+-- | If {g} and `g ∘ f` are fully faithful, then so is {f}.
+\lemma ffMap-leftFactor {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (gf : IsFFMap g) (gff : IsFFMap (\lam a => g (f a))) : IsFFMap f
+  => \lam x y => IsEquiv.leftFactor (gf (f x) (f y)) (gff x y)
 
 \type IsSurjMap {C D : \Cat} (f : C ->⁺ D) : \Prop
   => \Pi (y : D) -> ∃ (x : C) (f x = y)
@@ -78,11 +103,18 @@
     \protected \lemma contr {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) (h : DI ->⁺ D)
                             {tl : \Sigma⁺ (x : C) (f x = h dleft)} {tr : \Sigma⁺ (x : C) (f x = h dright)}
       : Contr (DPath (\lam i => \Sigma⁺ (x : C) (f x = h i)) tl tr)
-      => Contr.Contr_QEquiv (symQEquiv $ transQEquiv (dpath-sigma-equiv {C} (\lam i x => f x = h i)) $ sigma-right \lam r =>
-            path-square-equiv (dmap f r) (dpath h) `transQEquiv`
-            square-equiv (dmap f r) _ `transQEquiv` equiv2) $
+      => Contr.Contr_QEquiv (symQEquiv (fib-equiv f h)) $
           IsEquiv=>contrFibers (ff tl.1 tr.1) $ comp (comp (=_~> tl.2) (dpath h)) (=_~> (inv tr.2))
       \where {
+        -- | Lifts of {h} to the pullback of {f} along {h} are the fibers of {f} on homs.
+        \func fib-equiv {C D : \Cat} (f : C ->⁺ D) (h : DI ->⁺ D)
+                        {tl : \Sigma⁺ (x : C) (f x = h dleft)} {tr : \Sigma⁺ (x : C) (f x = h dright)}
+          : QEquiv {DPath (\lam i => \Sigma⁺ (x : C) (f x = h i)) tl tr}
+                   {Fib (dmap f) (comp (comp (=_~> tl.2) (dpath h)) (=_~> (inv tr.2)))}
+          => transQEquiv (dpath-sigma-equiv \lam i x => f x = h i) $ sigma-right \lam r =>
+               path-square-equiv (dmap f r) (dpath h) `transQEquiv`
+               square-equiv (dmap f r) _ `transQEquiv` equiv2
+
         \private \func equiv2 {C : \Cat} {a b c : C} {f : a ~> b} {p : c = b} {g : a ~> c}
           : QEquiv {comp g (=_~> p) = f} {g = comp f (=_~> (inv p))} \elim p
           | idp => Paths.transport2 (\lam x y => QEquiv {x = f} {g = y}) (inv comp_idd-right) (inv comp_idd-right) idEquiv
@@ -95,6 +127,52 @@
       }
   }
 
+-- | Postcomposition with a fully faithful functor is fully faithful.
+\lemma postcomp-ff {A C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) : IsFFMap {A ->⁺ C} {A ->⁺ D} (\lam g x => f (g x))
+  => \lam g h => postcomp-ff-at f g h \lam x y => ff (g x) (h y)
+
+{- | Postcomposition with {f} is fully faithful on arrows from {g} to {h} if {f} is fully faithful on arrows from
+ -   every value of {g} to every value of {h}.
+ -}
+\lemma postcomp-ff-at {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (e : \Pi (x y : A) -> IsEquiv {g x ~> h y} (dmap f))
+  : IsEquiv (dmap {A ->⁺ C} {A ->⁺ D} (\lam g x => f (g x)) {g} {h})
+  => contrFibers=>IsEquiv \lam a => Contr.Contr_QEquiv (sections-equiv f g h a) (IsHEquiv.sections-contr (Fam-equiv f g h e a))
+  \where \private {
+    -- | Lifts of the component of {a} at {x}.
+    \func Fam {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x))) (x :⁺ A)
+      => \Sigma⁺ (e : g x ~> h x) (dmap f e = dpath (\lam i => a i x))
+
+    -- | Natural lifts of {a} are sections of {Fam}.
+    \func sections-equiv {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x)))
+      : QEquiv {\Pi (x :⁺ A) -> Fam f g h a x} {Fib (dmap (\lam g => \lam x =>⁺ f (g x)) {g} {h}) a} \cowith
+      | f s => (dpath \lam i x => (s x).1 i, path \lam j => dpath \lam i x => ((s x).2 j) i)
+      | ret u x => (dpath \lam i => u.1 i x, path \lam j => dpath \lam i => (u.2 j) i x)
+      | ret_f => idpe
+      | f_sec => idpe
+
+    \lemma Fam-equiv {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (e : \Pi (x y : A) -> IsEquiv {g x ~> h y} (dmap f))
+                     (a : (\lam x =>⁺ f (g x)) ~> (\lam x =>⁺ f (h x)))
+      : IsHEquiv {\Sigma⁺ (x : A) (Fam f g h a x)} __.1
+      => (ff-surj-equiv {\Sigma⁺ (x : A) (Fam f g h a x)} {A} {__.1}).1
+          (\lam s t => inP $ transQEquiv (dpath-sigma-equiv \lam _ x => Fam f g h a x) $ contr-right \lam r => rel-contr f g h e r s.2 t.2,
+           \lam x => \let c => IsEquiv=>contrFibers (e x x) (dpath \lam i => a i x)
+                     \in inP ((x, (c.center.1, c.center.2)), idp))
+      \where {
+        \lemma rel-contr {A C D : \Cat} (f : C ->⁺ D) (g h : A ->⁺ C) (e : \Pi (x y : A) -> IsEquiv {g x ~> h y} (dmap f))
+                         {a : (\lam x => f (g x)) ~> {A ->⁺ D} (\lam x => f (h x))}
+                         {x y : A} (r : x ~> y) (s : Fam f g h a x) (t : Fam f g h a y)
+          : Contr (DPath (\lam i => Fam f g h a (r i)) s t)
+          => Contr.Contr_QEquiv (symQEquiv $ later \new QEquiv {
+                                   | f u => (dpath \lam i => (u i).1, dpath \lam i => (u i).2)
+                                   | ret v => dpath \lam i => (v.1 i, v.2 i)
+                                   | ret_f u => idp
+                                   | f_sec v => idp
+                                 } `transQEquiv` qsigma-left (IsEquiv.toQEquiv (squares-at f (e x y) (dmap g r) t.1 s.1 (dmap h r))))
+                                (dpath-fiber-contr (dpath \lam i => dpath \lam j => a j (r i)) s.2 t.2)
+      }
+  }
+
+
 -- | A fully faithful map admits a lift of any map whose values lie in its image.
 \sfunc ffMap-lift {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat} (g : D ->⁺ C)
                   (gs : \Pi (y : D) -> ∃ (x : B) (f x = g y))
@@ -104,3 +182,32 @@
                    | inP (x,fx=gy) => inP ((y, (x,fx=gy)), idp)
                  })
      \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))
+
+\sfunc ffMap-lift-pair {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat} (g : D ->⁺ C)
+                       (gs : \Pi (y : D) -> ∃ (x : B) (f x = g y)) (d :⁺ D) : \Sigma⁺ (b : B) (f b = g d)
+  => \have r => ffMap-lift ff g gs
+     \in (r.1 d, r.2 d)
+
+-- | Postcomposition with a fully faithful functor is an equivalence onto the functors whose values lie in its image.
+\lemma postcomp-image-equiv {B C : \Cat} {f : B ->⁺ C} (ff : IsFFMap f) {D : \Cat}
+  : IsEquiv {D ->⁺ B} {\Sigma (g : D ->⁺ C) (\Pi (y : D) -> ∃ (x : B) (f x = g y))} (\lam h => (\lam y => f (h y), \lam y => inP (h y, idp)))
+  => IsEquiv.fromEmbSurj (leftEmbedding {_} {_} {_} {\lam (h : D ->⁺ B) => (\lam y => f (h y), \lam y => inP (h y, idp))} (Embedding.projection \lam (g : D ->⁺ C) => \Pi (y : D) -> ∃ (x : B) (f x = g y))
+                                        (IsFFMap.isObEmbedding (postcomp-ff ff)))
+       \lam s => \have l => ffMap-lift ff s.1 s.2 \in inP (l.1, ext (funExt+ l.2))
+
+-- | A functor over {A} that is fully faithful on total categories induces equivalences on paths over arrows of {A}.
+\lemma relative-ff {A : \Cat} {F G : A ->⁺ \Cat} (H : \Pi (k :⁺ \Sigma⁺ (x : A) (F x)) -> G k.1)
+                   (ff : IsFFMap {\Sigma⁺ (x : A) (F x)} {\Sigma⁺ (x : A) (G x)} (\lam k => (k.1, H k)))
+                   {x y : A} (r : x ~> y) (u : F x) (v : F y)
+  : IsEquiv {DPath (\lam i => F (r i)) u v} {DPath (\lam i => G (r i)) (H (x,u)) (H (y,v))} (\lam w => dpath \lam i => H (r i, w i))
+  => fiberwiseEquiv {x ~> y} (inP idEquiv) {\lam r => DPath (\lam i => F (r i)) u v} (\lam r w => dpath \lam i => H (r i, w i))
+      ((IsEquiv.parallelEquiv (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp)).1 (ff (x,u) (y,v))) r
+  \where
+    -- | Conversely, equivalences on paths over arrows of {A} give a fully faithful functor on total categories.
+    \lemma conv {A : \Cat} {F G : A ->⁺ \Cat} (H : \Pi (k :⁺ \Sigma⁺ (x : A) (F x)) -> G k.1)
+                (rel : \Pi {x y : A} (r : x ~> y) (u : F x) (v : F y) ->
+                  IsEquiv {DPath (\lam i => F (r i)) u v} {DPath (\lam i => G (r i)) (H (x,u)) (H (y,v))} (\lam w => dpath \lam i => H (r i, w i)))
+      : IsFFMap {\Sigma⁺ (x : A) (F x)} {\Sigma⁺ (x : A) (G x)} (\lam k => (k.1, H k))
+      => \lam s t => (IsEquiv.parallelEquiv {_} {_} {_} {_} {dmap \lam k => later (k.1, H k)}
+                        (inP (dpath-sigma-equiv \lam _ => F)) (inP (dpath-sigma-equiv \lam _ => G)) (\lam _ => idp)).2
+           ((totalEquiv {s.1 ~> t.1} {\lam r => DPath (\lam i => F (r i)) s.2 t.2} (\lam r w => dpath \lam i => H (r i, w i))).1 (rel __ s.2 t.2))

@@ -68,6 +68,8 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition ISO_PLUS, ISO_COE_PLUS;
   public static DataDefinition RESIZE_PLUS;
   public static Constructor RESIZE_PLUS_CON;
+  public static DataDefinition RESIZE_CAT;
+  public static Constructor RESIZE_CAT_CON;
   public static DataDefinition GROUPOID_TYPE;
   public static Constructor GROUPOID_TYPE_CON;
   public static FunctionDefinition REZK;
@@ -95,6 +97,7 @@ public class Prelude implements ArendPrelude {
   public static DConstructor IDD;
   public static FunctionDefinition AT;
   public static FunctionDefinition ISO;
+  public static FunctionDefinition ISO_CAT;
 
   public static FunctionDefinition DIV_MOD;
   public static FunctionDefinition DIV;
@@ -279,6 +282,11 @@ public class Prelude implements ArendPrelude {
         RESIZE_PLUS.setSort(new Sort(new Level(RESIZE_PLUS.getLevelParameters().getFirst()), ConstLevel.INFINITY));
         RESIZE_PLUS_CON = RESIZE_PLUS.getConstructor("resize+");
       }
+      case "ResizeCat" -> {
+        RESIZE_CAT = (DataDefinition) definition;
+        RESIZE_CAT.setSort(new Sort(new Level(RESIZE_CAT.getLevelParameters().getFirst()), ConstLevel.CAT_INFINITY));
+        RESIZE_CAT_CON = RESIZE_CAT.getConstructor("resizeCat");
+      }
       case "GroupoidType" -> {
         GROUPOID_TYPE = (DataDefinition) definition;
         // A groupoid is a type, but not a small one, even if its carrier is small
@@ -326,6 +334,11 @@ public class Prelude implements ArendPrelude {
         ISO = (FunctionDefinition) definition;
         ISO.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.INFINITY), new SortExpression.Var(1, Collections.emptyList(), ConstLevel.INFINITY)))));
         ISO.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
+      }
+      case "isoCat" -> {
+        ISO_CAT = (FunctionDefinition) definition;
+        ISO_CAT.setResultType(new UniverseExpression(SortExpression.makeMax(Arrays.asList(new SortExpression.Var(0, Collections.emptyList(), ConstLevel.CAT_INFINITY), new SortExpression.Var(1, Collections.emptyList(), ConstLevel.CAT_INFINITY)))));
+        ISO_CAT.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "divMod" -> {
         DIV_MOD = (FunctionDefinition) definition;
@@ -378,7 +391,7 @@ public class Prelude implements ArendPrelude {
     PathExpression pathExpr = (PathExpression) definition.getBody();
     assert pathExpr != null;
     TypedSingleDependentLink param = definition == IDD ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE;
-    definition.setBody(new PathExpression(new LamExpression(param, args.getFirst()), new LamExpression(param, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD, true));
+    definition.setBody(new PathExpression(new LamExpression(param, args.getFirst()), new LamExpression(param, ((LamExpression) pathExpr.getArgument()).getBody()), definition == IDD));
   }
 
   public static void forEach(Consumer<Definition> consumer) {
@@ -413,6 +426,8 @@ public class Prelude implements ArendPrelude {
     consumer.accept(REZK);
     consumer.accept(RESIZE_PLUS);
     consumer.accept(RESIZE_PLUS_CON);
+    consumer.accept(RESIZE_CAT);
+    consumer.accept(RESIZE_CAT_CON);
     consumer.accept(GROUPOID_TYPE);
     consumer.accept(GROUPOID_TYPE_CON);
     consumer.accept(PATH);
@@ -424,6 +439,7 @@ public class Prelude implements ArendPrelude {
     consumer.accept(COERCE);
     consumer.accept(COERCE2);
     consumer.accept(ISO);
+    consumer.accept(ISO_CAT);
     consumer.accept(DIV_MOD);
     consumer.accept(DIV);
     consumer.accept(MOD);
@@ -541,6 +557,16 @@ public class Prelude implements ArendPrelude {
   @Override
   public Constructor getResizeCon() {
     return RESIZE_PLUS_CON;
+  }
+
+  @Override
+  public DataDefinition getResizeCat() {
+    return RESIZE_CAT;
+  }
+
+  @Override
+  public Constructor getResizeCatCon() {
+    return RESIZE_CAT_CON;
   }
 
   @Override
@@ -671,6 +697,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public FunctionDefinition getIso() {
     return ISO;
+  }
+
+  @Override
+  public FunctionDefinition getIsoCat() {
+    return ISO_CAT;
   }
 
   @Override
@@ -814,6 +845,16 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
+  public ArendRef getResizeCatRef() {
+    return RESIZE_CAT == null ? null : RESIZE_CAT.getRef();
+  }
+
+  @Override
+  public ArendRef getResizeCatConRef() {
+    return RESIZE_CAT_CON == null ? null : RESIZE_CAT_CON.getRef();
+  }
+
+  @Override
   public ArendRef getGroupoidTypeRef() {
     return GROUPOID_TYPE == null ? null : GROUPOID_TYPE.getRef();
   }
@@ -941,6 +982,11 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getIsoRef() {
     return ISO == null ? null : ISO.getRef();
+  }
+
+  @Override
+  public ArendRef getIsoCatRef() {
+    return ISO_CAT == null ? null : ISO_CAT.getRef();
   }
 
   @Override

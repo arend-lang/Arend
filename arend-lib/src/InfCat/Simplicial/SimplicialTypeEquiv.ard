@@ -1,0 +1,218 @@
+{- | Simplicial types are small right fibrations over the simplex category.
+
+ -   {RFibU} is the type of small right fibrations over {DeltaCat}. The small category of simplices is a map {elUObj} from
+ -   simplicial types to {RFibU}. Its inverse {stU} straightens the opposite left fibration ({opFunc-leftFib}, {Straight}).
+ -   * {rfibU-path}: an equivalence of total categories over {DeltaCat} is a path in {RFibU}.
+ -   * {st-el-path}: a covariant fibrewise equivalence from the straightening of `SimpType.El S` to {S} is a path of simplicial types
+ -     ({depUnivalence}, {objectwise-iso}, {IsIso_=}).
+ -   * {elUObj-equiv}: {elUObj} is an equivalence of types.
+ -   Both comparisons {st-el-core} and {el-st-core} come from the identification {elTot} of `Op (ElU S)` with the total category
+ -   of {S} over `Op DeltaCat`. Its transpose {elOp} is the lift along `Op.Hom` of the pairing {elPair}: an object `(n, a)` of `ElU S`
+ -   and a simplex `(y, b)` are paired by the fiber of `a : yoneda n ~> S` over `b`.
+ -   * {elOp-equiv}: {elPair} is fully faithful ({yonedaEmbedding}, {leftComma-slice-ff}, {sliceFiber-equiv}) and every
+ -     representable functor is a value of it (the identity of `[n]` is universal, {sliceFiber-univElem}).
+ -   * {elOp-proj}: {elOp} lies over `toOpOp`, since the left Kan extension of {elPair} along the projection is {yoneda}
+ -     ({OpFunc.char}, {leftKanExtType-sliceFiber}).
+ -   * {elTot-equiv}, {elTot-proj}: {elTot} is an equivalence over `Op DeltaCat` ({OpFunc-hequiv}, {opTranspose-equiv}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Functor.LeftComma
+\import InfCat.Kan.LeftKanExtTotal
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Opposite
+\import InfCat.Opposite.Fibration
+\import InfCat.Opposite.Transpose
+\import InfCat.Opposite.TwistedArrow
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Slice.TotalSlice
+\import InfCat.Yoneda.CovariantYoneda
+\import InfCat.Yoneda.YonedaLemma
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.SimplicialType
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\open SimpType
+
+-- | Small right fibrations over the simplex category.
+\func RFibU.{u} => \Sigma (E : \Cat u) (p : E ->⁺ DeltaCat) (IsRightFib (Fibers p))
+
+-- | The small category of simplices as a map of types.
+\func elUObj.{u} (S : SimpType.{u}) : RFibU.{u}
+  => (ElU S, elUProj S, elU-rightFib S)
+
+-- | The straightening of the opposite of a small right fibration.
+\func stU.{u} (X : RFibU.{u}) : SimpType.{u}
+  => \lam y => Straight (opFunc-leftFib X.3) (op-small X.3) y
+  \where
+    \lemma op-small.{v} {C R : \Cat v} {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (z : Op C) : IsSmall.{v} (Fibers (OpFunc q) z)
+      => IsSmall.fromGroupoid (leftFib-grpd (opFunc-leftFib qf) z) {\Sigma (e : Op R) (OpFunc q e = z)} \new QEquiv {
+           | f s => ((s.1, s.2) : Fibers (OpFunc q) z)
+           | ret t => (t.1, t.2)
+           | ret_f _ => idp
+           | f_sec _ => idp
+         }
+
+-- | An equivalence of total categories over {DeltaCat} is a path in {RFibU}.
+\sfunc rfibU-path.{u} {X Y : RFibU.{u}} {F : X.1 ->⁺ Y.1} (Fe : IsHEquiv F) (Fp : \Pi (x :⁺ X.1) -> Y.2 (F x) = X.2 x) : X = Y
+  => aux {X.1} {Y.1} (HEquiv_= Fe) {X.2} {Y.2} {X.3} {Y.3} Fp
+  \where
+    \private \sfunc aux.{v} {E' E : \Cat v} (r : E' = E) {p' : E' ->⁺ DeltaCat} {p : E ->⁺ DeltaCat}
+                            {pf' : IsRightFib (Fibers p')} {pf : IsRightFib (Fibers p)}
+                            (h : \Pi (z :⁺ E') -> p (transport+ (\lam Y => Y) r z) = p' z)
+      : ((E', p', pf') : RFibU.{v}) = (E, p, pf) \elim r
+      | idp => ext (idp, inv (funExt+ h))
+
+-- | The pairing of the small category of simplices of {S} with the total category of {S}: the fiber of the structure map.
+\func elPair.{u} (S : SimpType.{u}) (x :⁺ ElU S) (t :⁺ \Sigma⁺ (y : Op.{u} DeltaCat) (S y)) : \Type u
+  => sliceFiber S ((yoneda (unresizeEl x).1, (unresizeEl x).2) : Slice S) t
+  \where {
+    -- | The identity of `[n]` gives a universal element of {elPair}.
+    \lemma univElem.{v} (S : SimpType.{v}) (n : DeltaCat) (a : yoneda n ~> S)
+      : IsUnivElem {\Sigma⁺ (y : Op.{v} DeltaCat) (S y)} (\lam t => sliceFiber S ((yoneda n, a) : Slice S) t)
+                   (Op.toOp n, yonedaLemma.fun a) (Straight.toStraight (Op.Hom-idd n, idp))
+      => sliceFiber-univElem (\lam c => c) S (yoneda n, a) (twArr-target-univElem n)
+
+    -- | {elPair} is fully faithful: {yoneda} is fully faithful and {sliceFiber} is an equivalence.
+    \lemma ff.{v} (S : SimpType.{v}) : IsFFMap (elPair S)
+      => ffMap-comp {ElU S} {SimpType.El S} {_} {unresizeEl} {\lam z => sliceFiber S ((yoneda z.1, z.2) : Slice S)}
+           (ff-surj-equiv.2 unresizeEl-equiv).1
+           (ffMap-comp {SimpType.El S} {Slice S} {_} {\lam z => (yoneda z.1, z.2)} {sliceFiber S}
+             (leftComma-slice-ff yonedaEmbedding S) (ff-surj-equiv.2 (sliceFiber-equiv S)).1)
+  }
+
+{- | The small category of simplices of {S} is the opposite of the total category of {S} ({elOp-equiv}), over `toOpOp` ({elOp-proj}).
+ -   It is the lift of {elPair} along `Op.Hom`.
+ -}
+\func elOp.{u} (S : SimpType.{u}) (x :⁺ ElU S) : Op (\Sigma⁺ (y : Op DeltaCat) (S y))
+  => (pair S).1 x
+  \where {
+    \protected \sfunc pair.{v} (S : SimpType.{v}) : \Sigma (h : ElU S ->⁺ Op (\Sigma⁺ (y : Op DeltaCat) (S y))) (\Pi (x :⁺ ElU S) -> Op.Hom (h x) = elPair S x)
+      => ffMap-lift Op.Hom-ff (elPair S) \lam x => \case (representable-char {_} {elPair S x}).2 (inP (_, _, elPair.univElem S (unresizeEl x).1 (unresizeEl x).2)) \with {
+           | inP s => inP (Op.toOp s.1, inv s.2)
+         }
+
+    \protected \sfunc hom.{v} {S : SimpType.{v}} {x :⁺ ElU S} : Op.Hom (elOp S x) = elPair S x
+      => (pair S).2 x
+  }
+
+-- | {elOp} is an equivalence.
+\lemma elOp-equiv.{u} (S : SimpType.{u}) : IsHEquiv (elOp S)
+  => ff-surj-equiv.1 (ffMap-leftFactor Op.Hom-ff (transportInv IsFFMap (funExt+ \lam x => elOp.hom) (elPair.ff S)),
+                      \lam z => \case IsEquiv.isSurj Op.toOp-equiv z \with {
+                        | inP (t, q) => \case IsEquiv.isSurj Op.toOp-equiv t.1 \with {
+                          | inP (n, r) => TruncP.map (aux S r t.2) \lam s => (s.1, s.2 *> q)
+                        }
+                      })
+  \where {
+    \private \lemma aux.{v} (S : SimpType.{v}) {n : DeltaCat} {y : Op.{v} DeltaCat} (r : Op.toOp n = y) (a : S y)
+      : ∃ (x : ElU S) (elOp S x = Op.toOp ((y, a) : \Sigma⁺ (y : Op.{v} DeltaCat) (S y))) \elim r
+      | idp => \let | e => IsEquiv.toQEquiv (yonedaLemma n S)
+                     | x : ElU S => resizeCat ((n, e.ret a) : SimpType.El S)
+               \in inP (x, ((IsFFMap.isObEmbedding Op.Hom-ff).isEmb _ _).sec $
+                      elOp.hom *> inv (IsIso_= (univElem-equiv.univElem-iso (elPair.univElem S n (e.ret a)))).1
+                      *> pmap ReprFunctor (path \lam i => ((Op.toOp n, e.f_sec a i) : \Sigma⁺ (y : Op.{v} DeltaCat) (S y))))
+  }
+
+-- | {elOp} lies over `toOpOp`: the left Kan extension of {elPair} along the projection is {yoneda} ({leftKanExtType-sliceFiber}).
+\sfunc elOp-proj.{u} (S : SimpType.{u}) {x :⁺ ElU S}
+  : OpFunc (\lam (t : \Sigma⁺ (y : Op.{u} DeltaCat) (S y)) => t.1) (elOp S x) = toOpOp (elUProj S x)
+  => path \lam i => ((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (\lam x => OpFunc (\lam (t : \Sigma⁺ (y : Op.{u} DeltaCat) (S y)) => t.1) (elOp S x))
+                                                                            (\lam x => toOpOp (elUProj S x))).sec
+       (funExt+ \lam x => OpFunc.char *> pmap+ (LeftKanExtType (\lam (t : \Sigma⁺ (y : Op.{u} DeltaCat) (S y)) => t.1)) elOp.hom
+                          *> leftKanExtType-sliceFiber *> inv (funExt+ \lam w => toOpOp.char)) i x
+
+{- | The opposite of the small category of simplices of {S} is the total category of {S} ({elTot-equiv}), over `Op DeltaCat` ({elTot-proj}).
+ -   It is the transpose of {elOp}.
+ -}
+\func elTot.{u} (S : SimpType.{u}) (e :⁺ Op.{u} (ElU S)) : \Sigma⁺ (y : Op DeltaCat) (S y)
+  => (IsEquiv.toQEquiv opTranspose-equiv).ret (elOp S) e
+  \where
+    \sfunc transpose.{v} {S : SimpType.{v}} {x :⁺ ElU S} : opTranspose (elTot S) x = elOp S x
+      => path \lam i => (IsEquiv.toQEquiv opTranspose-equiv).f_sec (elOp S) i x
+
+-- | {elTot} is an equivalence.
+\lemma elTot-equiv.{u} (S : SimpType.{u}) : IsHEquiv (elTot S)
+  => OpFunc-hequiv.2 $ IsHEquiv.rightFactor toOpOp.isEquiv $ transportInv IsHEquiv (funExt+ \lam x => elTot.transpose) (elOp-equiv S)
+
+-- | {elTot} lies over `Op DeltaCat`.
+\sfunc elTot-proj.{u} (S : SimpType.{u}) {e :⁺ Op.{u} (ElU S)} : (elTot S e).1 = OpFunc (elUProj S) e
+  => path \lam i => IsEquiv.isInj opTranspose-equiv {\lam (e :⁺ Op.{u} (ElU S)) => (elTot S e).1} {OpFunc (elUProj S)}
+       (funExt+ \lam x => OpFunc-comp {_} {_} {_} {elTot S} {\lam (t : \Sigma⁺ (y : Op.{u} DeltaCat) (S y)) => t.1} *> pmap+ (OpFunc __.1) elTot.transpose
+                          *> elOp-proj S *> inv toOpOp-natural) i e
+
+-- | The comparison of the straightening of `SimpType.El S` with {S}: {elTot} on fibers.
+\sfunc st-el-core.{u} (S : SimpType.{u})
+  : \Sigma (sec : \Pi (s :⁺ \Sigma⁺ (y : Op.{u} DeltaCat) (stU.{u} (elUObj.{u} S) y)) -> S s.1)
+           (\Pi (y : Op.{u} DeltaCat) -> IsEquiv {stU.{u} (elUObj.{u} S) y} {S y} (\lam a => sec (y, a)))
+  => (\lam s => fibers-total-equiv.fibers-total-ret {_} {S} (fib S (Straight.fromStraight s.2)),
+      \lam y => IsEquiv.trans (IsEquiv.trans (inP Straight.equiv) (IsHEquiv.toIsEquiv (fibers-hequiv (elTot-equiv S) (\lam e => elTot-proj S {e}) y)))
+                              (inP (symQEquiv (fibers-total-equiv y))))
+  \where
+    \func fib.{v} (S : SimpType.{v}) {y :⁺ Op.{v} DeltaCat} (t :⁺ Fibers (OpFunc (elUProj S)) y) : Fibers (totalProj S) y
+      => (elTot S t.1, elTot-proj S *> t.2)
+
+-- | The straightening of the category of simplices of {S} is {S}.
+\sfunc st-el-path.{u} (S : SimpType.{u}) : stU.{u} (elUObj.{u} S) = S
+  => \let | c => st-el-core.{u} S
+          | D => depUnivalence.{u} {Op.{u} DeltaCat} {stU.{u} (elUObj.{u} S)} {S}
+     \in path \lam j => (IsIso_= {Op.{u} DeltaCat ->⁺ \Type u} {stU.{u} (elUObj.{u} S)} {S} {D.ret c.1} (objectwise-iso \lam y => ~>_->-equiv-iso.{u} $
+           transportInv IsEquiv (ext \lam a => path (\lam i => D.f_ret c.1 i (y, a))) (c.2 y))).1 j
+
+{- | The comparison of the category of simplices of the straightening of `X` with `X` over {DeltaCat}.
+ -   On opposite categories it is {elTot} followed by the fibers of the straightening and {fibers-sigma-hequiv} for `OpFunc X.2`.
+ -}
+\sfunc el-st-core.{u} (X : RFibU.{u})
+  : \Sigma (F : ElU (stU X) ->⁺ X.1) (\Pi (x :⁺ ElU (stU X)) -> X.2 (F x) = elUProj (stU X) x) (IsHEquiv F)
+  => \let | e => IsEquiv.toQEquiv (OpFunc-equiv {ElU (stU X)} {X.1})
+          | F => e.ret (opMap X)
+     \in (F, \lam x => path \lam i => IsEquiv.isInj (OpFunc-equiv {ElU (stU X)} {DeltaCat}) {\lam (x :⁺ ElU (stU X)) => X.2 (F x)} {elUProj (stU X)}
+                         (funExt+ \lam z => OpFunc-comp *> pmap+ (OpFunc X.2) (path \lam i => e.f_sec (opMap X) i z) *> opMap-proj {X}) i x,
+          OpFunc-hequiv.2 $ transportInv IsHEquiv (e.f_sec (opMap X)) (opMap-equiv X))
+  \where {
+    -- | The comparison on opposite categories.
+    \func opMap.{v} (X : RFibU.{v}) (z :⁺ Op.{v} (ElU (stU X))) : Op.{v} X.1
+      => (Straight.fromStraight (elTot (stU X) z).2).1
+
+    \sfunc opMap-proj.{v} {X : RFibU.{v}} {z :⁺ Op.{v} (ElU (stU X))} : OpFunc X.2 (opMap X z) = OpFunc (elUProj (stU X)) z
+      => (Straight.fromStraight (elTot (stU X) z).2).2 *> elTot-proj (stU X)
+
+    \lemma opMap-equiv.{v} (X : RFibU.{v}) : IsHEquiv (opMap X)
+      => IsHEquiv.trans (IsHEquiv.trans (elTot-equiv (stU X))
+           {\lam (s :⁺ \Sigma⁺ (y : Op.{v} DeltaCat) (stU X y)) => ((s.1, Straight.fromStraight s.2) : \Sigma⁺ (y : Op.{v} DeltaCat) (Fibers (OpFunc X.2) y))}
+           (leftFib-fiberwise-equiv (leftFib-pullback (stU X) universe-leftFib) (opFunc-leftFib X.3)
+                                    (\lam s => Straight.fromStraight s.2) (\lam y => inP Straight.equiv)))
+           {\lam (w : \Sigma⁺ (y : Op.{v} DeltaCat) (Fibers (OpFunc X.2) y)) => w.2.1}
+           (IsHEquiv.rightFactor (fibers-sigma-hequiv (OpFunc X.2)) {\lam w => w.2.1} idHEquiv)
+  }
+
+-- | The category of simplices of the straightening of `X` is `X`.
+\sfunc el-st-path.{u} (X : RFibU.{u}) : elUObj (stU X) = X
+  => rfibU-path {elUObj (stU X)} {X} (el-st-core X).3 (el-st-core X).2
+
+-- | Simplicial types are small right fibrations over {DeltaCat}.
+\lemma elUObj-equiv.{u} : IsEquiv elUObj.{u}
+  => inP \new QEquiv {
+    | ret => stU
+    | ret_f => st-el-path
+    | f_sec => el-st-path
+  }
+
+-- | {elUObj} restricts to an equivalence between complete Segal simplicial types and complete Segal right fibrations.
+\lemma elUObj-cs-equiv.{u}
+  : IsEquiv {\Sigma (S : SimpType.{u}) (IsCompleteSegalSimpType S)} {\Sigma (X : RFibU.{u}) (IsCompleteSegal {X.1} {X.2} X.3)} (\lam s => (elUObj s.1, s.2))
+  => inP (sigma-equiv (IsEquiv.toQEquiv elUObj-equiv) \lam _ => idEquiv)

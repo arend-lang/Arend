@@ -5,6 +5,7 @@ import org.arend.core.definition.DataDefinition;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.ext.error.MissingClausesError;
+import org.arend.typechecking.error.local.CovariantDependentPatternError;
 import org.arend.typechecking.error.local.PropOnlyPatternError;
 import org.junit.Test;
 
@@ -293,5 +294,237 @@ public class CatHITsTest extends TypeCheckingTestCase {
         | tr {a} {b'} {p} {q} e e' => Bs (rec Bs b l a) (rec Bs b l b') (dpath (\\lam k => rec Bs b l (p k))) (dpath (\\lam k => rec Bs b l (q k)))
                                          (path (\\lam j => dpath (\\lam k => rec Bs b l (e j k)))) (path (\\lam j => dpath (\\lam k => rec Bs b l (e' j k))))
       """);
+  }
+
+  private static final String DEP_HIT = DI_HIT + """
+      \\data W | w (d :+ D)
+      """;
+
+  private void assertDependentError() {
+    assertThatErrorsAre(Matchers.typecheckingError(CovariantDependentPatternError.class));
+  }
+
+  @Test
+  public void independentParameterTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (d :+ D) (n :+ Nat) : Nat \\elim d
+        | con1 => n
+        | con2 _ => n
+      """);
+  }
+
+  @Test
+  public void dependentResultTypeTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (Q : D ->+ \\Cat) (q : \\Pi (d :+ D) -> Q d) (d :+ D) : Q d \\elim d
+        | con1 => q con1
+        | con2 i => q (con2 i)
+      """);
+  }
+
+  @Test
+  public void dependentElimError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (d :+ D) (p :+ P d) : Nat \\elim d
+        | con1 => 0
+        | con2 _ => 0
+      """, 1);
+    assertDependentError();
+  }
+
+  @Test
+  public void dependentMatchBothError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (d :+ D) (p :+ P d) : Nat
+        | _, con1, _ => 0
+        | _, con2 _, _ => 0
+      """, 1);
+    assertDependentError();
+  }
+
+  @Test
+  public void dependentPropError() {
+    typeCheckModule(DEP_HIT + """
+      \\lemma test (P : D ->+ \\Cat) (d :+ D) (p :+ P d) : TrP Nat \\elim d
+        | con1 => inP 0
+      """, 1);
+    assertDependentError();
+  }
+
+  @Test
+  public void dependentCasePropError() {
+    typeCheckModule(DEP_HIT + """
+      \\lemma test (P : D ->+ \\Cat) (d :+ D) (p :+ P d) : TrP Nat => \\case \\elim d, \\elim p \\return TrP Nat \\with {
+        | con1, _ => inP 0
+      }
+      """, 1);
+    assertDependentError();
+  }
+
+  @Test
+  public void dependentCaseElimError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (d :+ D) (p :+ P d) : Nat => \\case \\elim d, \\elim p \\with {
+        | con1, _ => 0
+        | con2 _, _ => 0
+      }
+      """, 1);
+    assertDependentError();
+  }
+
+  @Test
+  public void dependentCaseAsError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (p :+ P con1) : Nat => \\case con1 \\as x :+ _, p :+ P x \\with {
+        | con1, _ => 0
+        | con2 _, _ => 0
+      }
+      """, 1);
+    assertDependentError();
+  }
+
+  @Test
+  public void caseExpressionTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (p :+ P con1) : Nat => \\case con1 :+ _ \\with {
+        | con1 => 0
+        | con2 _ => 0
+      }
+      """);
+  }
+
+  @Test
+  public void dependentCaseContextElimTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (d :+ D) (p :+ P d) : Nat => \\case \\elim d \\with {
+        | con1 => 0
+        | con2 _ => 0
+      }
+      """);
+  }
+
+  @Test
+  public void dependentCaseContextTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (d :+ D) (p :+ P d) : Nat => \\case d :+ _ \\with {
+        | con1 => 0
+        | con2 _ => 0
+      }
+      """);
+  }
+
+  @Test
+  public void dependentCaseContextIndirectTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (R : \\Pi {d :+ D} -> P d ->+ \\Cat) (d :+ D) (p :+ P d) (r :+ R p) : Nat => \\case \\elim d \\with {
+        | con1 => 0
+        | con2 _ => 0
+      }
+      """);
+  }
+
+  @Test
+  public void independentCaseContextTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (d :+ D) (n :+ Nat) : Nat => \\case \\elim d \\with {
+        | con1 => n
+        | con2 _ => n
+      }
+      """);
+  }
+
+  @Test
+  public void nestedTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (v :+ W) (n :+ Nat) : Nat \\elim v
+        | w con1 => n
+        | w (con2 _) => n
+      """);
+  }
+
+  @Test
+  public void nestedDependentError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : W ->+ \\Cat) (v :+ W) (p :+ P v) : Nat \\elim v
+        | w con1 => 0
+        | w (con2 _) => 0
+      """, -1);
+  }
+
+  @Test
+  public void nestedDependentCaseError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : W ->+ \\Cat) (v :+ W) (p :+ P v) : Nat => \\case \\elim v, \\elim p \\with {
+        | w con1, _ => 0
+        | w (con2 _), _ => 0
+      }
+      """, -1);
+  }
+
+  @Test
+  public void nestedDependentCaseContextTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : W ->+ \\Cat) (v :+ W) (p :+ P v) : Nat => \\case \\elim v \\with {
+        | w con1 => 0
+        | w (con2 _) => 0
+      }
+      """);
+  }
+
+  @Test
+  public void nestedDependentPropError() {
+    typeCheckModule(DEP_HIT + """
+      \\lemma test (P : W ->+ \\Cat) (v :+ W) (p :+ P v) : TrP Nat \\elim v
+        | w con1 => inP 0
+      """, 1);
+    assertDependentError();
+  }
+
+  @Test
+  public void nestedSigmaTest() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (s :+ \\Sigma+ (d : D) Nat) : Nat \\elim s
+        | (con1, n) => n
+        | (con2 _, n) => n
+      """);
+  }
+
+  @Test
+  public void nestedSigmaDependentError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (s :+ \\Sigma+ (d : D) (P d)) : Nat \\elim s
+        | (con1, _) => 0
+        | (con2 _, _) => 0
+      """, -1);
+  }
+
+  @Test
+  public void nestedSigmaDependentCaseError() {
+    typeCheckModule(DEP_HIT + """
+      \\func test (P : D ->+ \\Cat) (s :+ \\Sigma+ (d : D) (P d)) : Nat => \\case \\elim s \\with {
+        | (con1, _) => 0
+        | (con2 _, _) => 0
+      }
+      """, -1);
+  }
+
+  @Test
+  public void nestedConstructorDependentError() {
+    typeCheckModule(DEP_HIT + """
+      \\data V (P : D ->+ \\Cat) | v (d :+ D) (p :+ P d)
+      \\func test (P : D ->+ \\Cat) (x :+ V P) : Nat \\elim x
+        | v con1 _ => 0
+        | v (con2 _) _ => 0
+      """, -1);
+  }
+
+  @Test
+  public void nestedDeepDependentError() {
+    typeCheckModule(DEP_HIT + """
+      \\data U | u (v :+ W)
+      \\func test (P : U ->+ \\Cat) (x :+ U) (p :+ P x) : Nat \\elim x
+        | u (w con1) => 0
+        | u (w (con2 _)) => 0
+      """, -1);
   }
 }

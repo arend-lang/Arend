@@ -47,6 +47,8 @@ public class CommandContext {
   public ArendServer server;
   public final List<SourceLibrary> requestedLibraries = new ArrayList<>();
   public final Set<Pair<ModulePath, LongName>> requestedModules = new LinkedHashSet<>();
+  /** Module positionals containing {@code *}; expanded into {@link #requestedModules} by {@code CliSetup.expandModulePatterns}. */
+  public final List<String> requestedModulePatterns = new ArrayList<>();
   public final List<Path> libDirs = new ArrayList<>();
   public boolean doubleCheck;
   public boolean recompile;
@@ -89,15 +91,21 @@ public class CommandContext {
   private int myLastProgressLength;
 
   /**
-   * Overwrites the single stderr line that says which module is being typechecked. A cold run
+   * Overwrites the single stderr line that says which module is being typechecked (or
+   * double-checked; {@code action} names the phase). A cold run
    * over a library the size of arend-lib is two minutes of silence without it, with no way to
    * tell a slow module from a hang.
    *
    * <p>It is a partial line, so anything else that writes has to call {@link #finishProgressLine}
    * first or land in the middle of it. Both error reporters here do; so must every banner.
    */
-  public void reportModuleProgress(int checked, int total, ModulePath modulePath) {
-    String line = "[" + (checked + 1) + "/" + total + "] Typechecking " + modulePath;
+  public void reportModuleProgress(String action, int checked, int total, ModulePath modulePath) {
+    reportModuleProgress(action, checked, total, modulePath.toString());
+  }
+
+  /** Same as {@link #reportModuleProgress(String, int, int, ModulePath)}, for an arbitrary target such as {@code Module:def}. */
+  public void reportModuleProgress(String action, int checked, int total, String target) {
+    String line = "[" + (checked + 1) + "/" + total + "] " + action + " " + target;
     StringBuilder sb = new StringBuilder().append('\r').append(line);
     int pad = myLastProgressLength - line.length();
     if (pad > 0) {
@@ -139,12 +147,9 @@ public class CommandContext {
    * prints as the diagnostic arrives unless {@link #streamDiagnostics} is off. The level is
    * recorded either way — it is a floor under the verdict, never the whole of it.
    */
-  public final ErrorReporter errorReporter = new ErrorReporter() {
-    @Override
-    public void report(GeneralError error) {
-      recordLevels(error);
-      if (streamDiagnostics) dispatchError(error);
-    }
+  public final ErrorReporter errorReporter = error -> {
+    recordLevels(error);
+    if (streamDiagnostics) dispatchError(error);
   };
 
   /**
@@ -160,6 +165,7 @@ public class CommandContext {
     moduleResults.clear();
     streamDiagnostics = true;
     requestedModules.clear();
+    requestedModulePatterns.clear();
     // A command that ended without finishProgressLine() -- cancelled, or unwound by a throw --
     // leaves a partial line open. Carried into the next command it costs a blank line before its
     // first diagnostic, and a padding width measured against somebody else's module name.

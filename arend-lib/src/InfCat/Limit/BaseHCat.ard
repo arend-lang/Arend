@@ -1,0 +1,3 @@
+\class BaseHCat (C : \Cat)
+
+\record BaseHFunctor (Dom Cod : BaseHCat) (\coerce hfunc : Dom ->⁺ Cod)

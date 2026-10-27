@@ -1,0 +1,139 @@
+{- | The fibers of a fiberwise localization are localizations of the fibers [1, Proposition 7.6.16 (3), Theorem 7.6.20]
+ -   (see also V. Hinich, Dwyer-Kan localization revisited, Proposition 2.1.4).
+ -
+ -   Let `p : E ->⁺ S` be a functor between small categories whose fibers form a cocartesian family, {W} a transport stable
+ -   family of weak equivalences on its fibers, and `l : E ->⁺ FibLoc p W` the localization of {TotWeakEq}.
+ -   1. The functor `p ↓ s ->⁺ fibLocProj ↓ s` induced by `l` ({fibLocComma}) is the localization at the arrows over {TotWeakEq}
+ -      ({fibLocComma-isLocalization}): it is the pullback of `l` along the right fibration `fibLocProj ↓ s ->⁺ FibLoc p W`.
+ -   2. The fiber inclusion `Fibers p s ->⁺ p ↓ s` is right adjoint to cocartesian transport ({fibLeftComma-univUnit}),
+ -      which sends the arrows over {TotWeakEq} to `W s` ({fibLeftComma-ladj-W}). Hence the adjunction descends to the localizations
+ -      ({radj-lift}), and the right adjoint `Localize (W s) ->⁺ fibLocProj ↓ s` is fully faithful ({radj-lift-ff}).
+ -   3. This right adjoint is the comparison functor `Localize (W s) ->⁺ Fiber (fibLocProj p W) s` followed by the fiber inclusion
+ -      of {fibLocProj}, which is fully faithful ({fibLeftComma-ff}). So the comparison functor is fully faithful;
+ -      it is surjective, since localizations are.
+ -
+ -   [1] Denis-Charles Cisinski, Bastiaan Cnossen, Kim Nguyen, Tashi Walde, Synthetic Category Theory, 2026
+ -}
+
+\import Function.Meta
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Functor.LeftComma
+\import InfCat.Groupoid
+\import InfCat.Localization.Adjunction
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Fiberwise
+\import InfCat.Localization.LocalizeRightFib
+\import InfCat.Rezk
+\import Logic
+\import Logic.Meta
+\import Paths
+
+-- | The inclusion of the fiber of {p} over {s} into the fiber of {fibLocProj}.
+\func fibLoc-fibIncl.{u} {S E : \Cat u} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (s : S) (c :⁺ Fiber p s)
+  : Fiber (fibLocProj p W) s
+  => (localize (TotWeakEq p W) c.1, c.2)
+
+-- | The localization functor on the comma categories over {s}.
+\func fibLocComma.{u} {S E : \Cat u} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (s : S) (x :⁺ LeftComma p s)
+  : LeftComma (fibLocProj p W) s
+  => (localize (TotWeakEq p W) x.1, x.2)
+
+-- | {fibLocComma} is the localization at the arrows whose underlying arrows are in {TotWeakEq}.
+\lemma fibLocComma-isLocalization.{u} {S E : \Cat u} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (s : S)
+  : IsLocalization {PullbackWeakEq {LeftComma p s} {TotWeakEq p W} __.1} (fibLocComma p W s)
+  => isLocalization-precomp {LeftComma p s} {PullbackWeakEq {BaseChange (localize (TotWeakEq p W)) (\lam (y :⁺ LeftComma (fibLocProj p W) s) => y.1)} {TotWeakEq p W} __.1}
+       {LeftComma (fibLocProj p W) s} {\lam b => b.2.1} (rightFib-localize (localize-isLocalization {TotWeakEq p W}) (leftComma-rightFib (fibLocProj p W) s))
+       (IsHEquiv.biEquiv {_} {_} {toBC} {fromBC} (\lam x => idp) {fromBC} (\lam b => toBC-sec b.2.1.2 b.2.2))
+  \where \private {
+    -- | `p ↓ s` as the pullback of `fibLocProj ↓ s` along the localization functor.
+    \func toBC (x :⁺ LeftComma p s) : BaseChange (localize (TotWeakEq p W)) (\lam (y :⁺ LeftComma (fibLocProj p W) s) => y.1)
+      => (x.1, (fibLocComma p W s x, idp))
+
+    \func fromBC (b :⁺ BaseChange (localize (TotWeakEq p W)) (\lam (y :⁺ LeftComma (fibLocProj p W) s) => y.1)) : LeftComma p s
+      => (b.1, fromBC-arr b.2.1.2 b.2.2)
+
+    \func fromBC-arr {x :⁺ E} {y :⁺ FibLoc p W} (g :⁺ fibLocProj p W y ~> s) (h :⁺ y = localize (TotWeakEq p W) x) : p x ~> s \elim h
+      | idp => g
+
+    \sfunc toBC-sec {x :⁺ E} {y :⁺ FibLoc p W} (g :⁺ fibLocProj p W y ~> s) (h :⁺ y = localize (TotWeakEq p W) x)
+      : toBC (x, fromBC-arr g h) = {BaseChange (localize (TotWeakEq p W)) (\lam (y :⁺ LeftComma (fibLocProj p W) s) => y.1)} (x, ((y, g), h)) \elim h
+      | idp => idp
+  }
+
+{- | The left adjoint of the fiber inclusion sends arrows over {TotWeakEq} to `W s`.
+ -
+ -   Such an arrow lies in the fiber over some `s0` and its arrows to {s} form a family in the groupoid `s0 ~> s`,
+ -   which is constant. So its image is the transport of an arrow of `W s0` along a single arrow `s0 ~> s` ({transportStable-lift}).
+ -}
+\lemma fibLeftComma-ladj-W.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> CatWeakEq (Fiber p s)}
+                               (Ws : IsTransportStable (Fibers p) W) (s : S) {a : DI ->⁺ LeftComma p s} (w : isWeakEq {TotWeakEq p W} (\lam i => (a i).1))
+  : isWeakEq {W s} (\lam i => fibLeftComma-ladj Ff s (a i)) \elim w
+  | inP (s0, b, wb) => \case IsIso-diag-char.1 (type-groupoid {s0 ~> s} (dpath \lam i => under (a i).2 (b i))) \with {
+    | inP (h0, e) => transportInv {DI ->⁺ Fibers p s} (isWeakEq {W s}) (path \lam j i => tr (data-path (a i).2 (b i) @ j)) (const-transport e wb)
+  }
+  \where \private {
+    -- | The arrow {g} transported along {q}.
+    \func under {e :⁺ E} {s0 :⁺ S} (g :⁺ p e ~> s) (q :⁺ p e = s0) : s0 ~> s \elim q
+      | idp => g
+
+    -- | Transport of an object of a fiber along an arrow to {s}.
+    \func tr (d :⁺ \Sigma⁺ (t : S) (t ~> s) (Fibers p t)) : Fibers p s
+      => (cocartesianFib-lift {_} {Fibers p} Ff (d.1, s, d.2, d.3)).1
+
+    \sfunc data-path {e :⁺ E} {s0 :⁺ S} (g :⁺ p e ~> s) (q :⁺ p e = s0)
+      : ((p e, g, (e, idp)) : \Sigma⁺ (t : S) (t ~> s) (Fibers p t)) = (s0, under g q, (e, q)) \elim q
+      | idp => idp
+
+    \lemma const-transport {s0 : S} {c : DI ->⁺ Fibers p s0} {h0 : s0 ~> s} {h : DI ->⁺ s0 ~> s} (e : (\lam _ => h0) = {DI ->⁺ s0 ~> s} h) (wc : isWeakEq {W s0} c)
+      : isWeakEq {W s} (\lam i => tr (s0, h i, c i)) \elim e
+      | idp => transportStable-lift Ff Ws h0 wc
+  }
+
+-- | The fibers of {fibLocProj} are the localizations of the fibers of {p} [1, Proposition 7.6.16 (3), Theorem 7.6.20].
+\lemma fibLoc-fiber.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> CatWeakEq (Fiber p s)}
+                        (Ws : IsTransportStable (Fibers p) W) (s : S)
+  : IsLocalization {W s} (fibLoc-fibIncl p W s)
+  => (incl-inverts p W s, (ff-surj-equiv {_} {_} {KFunc p W s}).1 (KFunc-ff Ff Ws s, KFunc-surj p W s))
+  \where {
+    \lemma incl-inverts.{u} {S E : \Cat u} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (s : S)
+      : InvertsWeakEq {W s} (fibLoc-fibIncl p W s) \cowith
+      | hfunc-we {b} w => fibers-conservative {_} {_} {fibLocProj p W} {s} {\lam i => fibLoc-fibIncl p W s (b i)}
+                            ((localize-inverts {TotWeakEq p W}).hfunc-we {\lam i => (b i).1} (inP (s, \lam i => (b i).2, w)))
+
+    -- | The comparison functor.
+    \func KFunc.{u} {S E : \Cat u} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (s : S) (a :⁺ Localize (W s))
+      : Fiber (fibLocProj p W) s
+      => localize-lift (incl-inverts p W s) a
+
+    \lemma KFunc-surj.{u} {S E : \Cat u} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (s : S) : IsSurjMap (KFunc p W s)
+      => \lam y => \case localize-surj y.1 \with {
+        | inP (c, r) => aux c r y.2
+      }
+      \where
+        \private \lemma aux (c : E) {y1 : FibLoc p W} (r : localize (TotWeakEq p W) c = y1) (q : fibLocProj p W y1 = s)
+          : ∃ (a : Localize (W s)) (KFunc p W s a = (y1, q)) \elim r
+          | idp => inP (localize (W s) (c, q), idp)
+
+    \lemma ladj-inverts.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> CatWeakEq (Fiber p s)}
+                         (Ws : IsTransportStable (Fibers p) W) (s : S)
+      : InvertsWeakEq {PullbackWeakEq {LeftComma p s} {TotWeakEq p W} __.1} (\lam x => localize (W s) (fibLeftComma-ladj Ff s x)) \cowith
+      | hfunc-we {a} w => (localize-inverts {W s}).hfunc-we (fibLeftComma-ladj-W Ff Ws s w)
+
+    -- | The functor induced by the left adjoint of the fiber inclusion.
+    \func ladjL.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> CatWeakEq (Fiber p s)}
+                   (Ws : IsTransportStable (Fibers p) W) (s : S) (y :⁺ LeftComma (fibLocProj p W) s) : Localize (W s)
+      => IsLocalization.lift (fibLocComma-isLocalization p W s) (ladj-inverts Ff Ws s) y
+
+    -- | {KFunc} followed by the fiber inclusion is the functor induced by the fiber inclusion of {p}, so {KFunc} is fully faithful.
+    \lemma KFunc-ff.{u} {S E : \Cat u} {p : E ->⁺ S} (Ff : IsCocartesianFib (Fibers p)) {W : \Pi (s : S) -> CatWeakEq (Fiber p s)}
+                         (Ws : IsTransportStable (Fibers p) W) (s : S)
+      : IsFFMap (KFunc p W s)
+      => ffMap-leftFactor (fibLeftComma-ff (fibLocProj p W) s) $
+           radj-lift-ff (fibLocComma-isLocalization p W s) localize-isLocalization (fibLeftComma-univUnit Ff s).toAdjunction
+                        {ladjL Ff Ws s} (\lam x => IsLocalization.lift.restrict) {\lam a => fibLeftComma (fibLocProj p W) s (KFunc p W s a)} (\lam y => idp)
+                        (fibLeftComma-ff p s)
+  }

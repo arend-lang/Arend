@@ -1,0 +1,21 @@
+{- | Final functors.
+ -
+ -   A functor is final if its opposite is initial ({IsFinalFunctor}). Localizations are final ({localization-finalFunctor}),
+ -   since their opposites are localizations ({OpFunc-isLocalization}). Quillen's Theorem A for final functors is
+ -   {theoremA-final} (InfCat.Functor.TheoremA).
+ -}
+
+\import InfCat.Functor.Initial
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Opposite
+\import InfCat.Opposite
+
+-- | {f} is final if `OpFunc f` is initial.
+\type IsFinalFunctor.{u} {C D : \Cat u} (f : C ->⁺ D) : \Prop
+  => IsInitialFunctor (OpFunc f)
+
+-- | Localizations are final.
+\lemma localization-finalFunctor.{u} {C : CatWeakEq.{u}} {L : \Cat u} {l : C ->⁺ L} (Lz : IsLocalization l)
+  : IsFinalFunctor l
+  => localization-initialFunctor (OpFunc-isLocalization Lz)

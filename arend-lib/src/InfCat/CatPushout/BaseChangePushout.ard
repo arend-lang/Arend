@@ -1,0 +1,311 @@
+{- | Base changes over a pushout of bases.
+
+ -   Let `p : E ->⁺ B` be a cocartesian map, `P = CatPushout f g` with `f : Z ->⁺ X` and `g : Z ->⁺ Y`, and `pi : P ->⁺ B`.
+ -   Write `E_P` for `BaseChange pi p`, and `E_X`, `E_Y` for the base changes along the restrictions of {pi} to the summands.
+ -   * {pushout-invertsWeakEq-equiv}: functors on `E_P` inverting {CocartWeakEq} are pairs of such functors on `E_X` and `E_Y` whose restrictions
+ -     to `Z` agree after transport along the gluing path {glueQ} ({PushoutInvertsWeakEq}). Indeed, sections of {ExpCocCore} over `P`
+ -     are glued from sections over `X` and `Y` ({CatPushout.elim-equiv}), and {ExpCocCore.sec-equiv} identifies sections with functors.
+ -   * {pushout-invertsWeakEq-thin-ext}: into the nerve of a preorder, such functors are determined by their restrictions to `E_X` and `E_Y`.
+ -   * {pushout-bc-localization}: localizations of `E_X`, `E_Y` and of the base change over `Z`, related by functors between them,
+ -     glue to a localization of `E_P` with values in the pushout of the localizations. That is, realizations preserve pushouts.
+ -     The localization corresponds under {pushout-invertsWeakEq-equiv} to the identity of the pushout ({pushout-bc-localization.kappa}).
+ -     Precomposition with it corresponds to the equivalence {pushout-bc-localization.Lam} of functors out of the pushout with glued
+ -     functors, since both commute with postcomposition ({pushout-bc-localization.Xi-post}, {pushout-bc-localization.Lam-post})
+ -     and agree at the identity.
+ -}
+
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.CatPushout
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Exponent.ExponentCocartesianCore
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import Logic
+\import Logic.Unique
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\open BCPushoutHelpers
+
+-- | The gluing path of {CatPushout} as a path of functors from `Z`.
+\func glueQ {Z X Y : \Cat} {f : Z ->⁺ X} {g : Z ->⁺ Y} : (\lam z => cinl (f z)) = {Z ->⁺ CatPushout f g} (\lam z => cinr (g z))
+  => path \lam i => \lam (z :⁺ Z) => cglue z i
+
+-- | Functors on the base changes over the summands inverting {CocartWeakEq} whose restrictions to `Z` agree along {glueQ}.
+\func PushoutInvertsWeakEq.{u} {B E : \Cat u} (p : E ->⁺ B) {Z X Y : \Cat u} {f : Z ->⁺ X} {g : Z ->⁺ Y} (pi : CatPushout f g ->⁺ B) (C : \Cat)
+  => \Sigma (F1 : InvertingWeakEq (CocartWeakEq p (\lam x => pi (cinl x))) C) (F2 : InvertingWeakEq (CocartWeakEq p (\lam y => pi (cinr y))) C)
+            (trF pi glueQ (resF (\lam x => pi (cinl x)) f F1.hfunc) = resF (\lam y => pi (cinr y)) g F2.hfunc)
+
+-- | Restriction of a functor on the base change over the pushout to the summands.
+\func pushout-invertsWeakEq.{u} {B E : \Cat u} {p : E ->⁺ B} {Z X Y : \Cat u} {f : Z ->⁺ X} {g : Z ->⁺ Y} (pi : CatPushout f g ->⁺ B) {C : \Cat}
+                       (F : InvertingWeakEq (CocartWeakEq p pi) C) : PushoutInvertsWeakEq p pi C
+  => (F FuncWeakEq.∘ cocartWeakEq-map (\lam x => cinl x), F FuncWeakEq.∘ cocartWeakEq-map (\lam y => cinr y), tr-resF pi F.hfunc glueQ)
+
+-- | Functors on the base change over a pushout inverting {CocartWeakEq} are glued from functors over the summands.
+\lemma pushout-invertsWeakEq-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {Z X Y : \Cat u} {f : Z ->⁺ X} {g : Z ->⁺ Y}
+                             (pi : CatPushout f g ->⁺ B) {C : \Cat u}
+  : IsEquiv (pushout-invertsWeakEq {B} {E} {p} pi {C})
+  => IsEquiv.rightFactor (ExpCocCore.sec-equiv pc pi) $
+       transport IsEquiv {\lam s => PsiPB (secPB s)} {\lam s => pushout-invertsWeakEq pi (ExpCocCore.sec-eval pc pi s)} (ext \lam s => square s) $
+       IsEquiv.trans {_} {_} {_} {secPB} secPB-equiv {PsiPB} PsiPB-equiv
+  \where {
+    -- | Sections over the summands whose restrictions to `Z` agree along {glueQ}.
+    \func SecPB => \Sigma (u : Sec pc C (\lam x => pi (cinl x))) (v : Sec pc C (\lam y => pi (cinr y)))
+                          (trS pc C pi glueQ (\lam z => u (f z)) = (\lam z => v (g z)))
+
+    -- | Restriction of sections to the summands.
+    \func secPB (s : Sec pc C pi) : SecPB
+      => (\lam x => s (cinl x), \lam y => s (cinr y), tr-res pc C pi s glueQ)
+
+    -- | The gluing paths of {CatPushout.elim-equiv} as a path of sections over `Z` along {glueQ}.
+    \func conv : QEquiv {\Sigma (u : Sec pc C (\lam x => pi (cinl x))) (v : Sec pc C (\lam y => pi (cinr y)))
+                                (\Pi (z :⁺ Z) -> Path (\lam i => Fibers (ExpCocCore.proj pc C) (pi (cglue z i))) (u (f z)) (v (g z)))}
+                        {SecPB} \cowith
+      | f t => (t.1, t.2, swapTr t.1 t.2 (path \lam i => \lam (z :⁺ Z) => t.3 z i))
+      | ret t => (t.1, t.2, \lam z => path \lam i => ((swapTr t.1 t.2).ret t.3 i) z)
+      | ret_f t => path \lam j => (t.1, t.2, \lam z => path \lam i => (swapTr t.1 t.2).ret_f (path \lam i => \lam (z :⁺ Z) => t.3 z i) j i z)
+      | f_sec t => path \lam j => (t.1, t.2, (swapTr t.1 t.2).f_sec t.3 j)
+      \where
+        \func swapTr (u : Sec pc C (\lam x => pi (cinl x))) (v : Sec pc C (\lam y => pi (cinr y)))
+          => pathOver-transport-equiv (\lam (k : Z ->⁺ CatPushout f g) => Sec pc C (\lam z => pi (k z))) glueQ
+                                      {\lam z => u (f z)} {\lam z => v (g z)}
+
+    \lemma secPB-equiv : IsEquiv secPB
+      => \let | D (w :⁺ CatPushout f g) => Fibers (ExpCocCore.proj pc C) (pi w)
+              | el => CatPushout.elim-equiv {Z} {X} {Y} {f} {g} {D}
+         \in transport IsEquiv {\lam s => conv (el s)} {secPB} (ext \lam s => path \lam i =>
+                (\lam x => s (cinl x), \lam y => s (cinr y), tr-res-pathOver pc C pi s glueQ i)) $
+              IsEquiv.trans {_} {_} {_} {el} (inP el) {conv} (inP conv)
+
+    -- | {ExpCocCore.sec-eval} on glued sections.
+    \func PsiPB (t : SecPB) : PushoutInvertsWeakEq p pi C
+      => (ExpCocCore.sec-eval pc (\lam x => pi (cinl x)) t.1, ExpCocCore.sec-eval pc (\lam y => pi (cinr y)) t.2,
+          (inv (PsiS-tr pc C pi glueQ (\lam z => t.1 (f z))) *> pmap (\lam x => (ExpCocCore.sec-eval pc (\lam z => pi (cinr (g z))) x).hfunc) t.3) *> inv idp)
+
+    \lemma PsiPB-equiv : IsEquiv PsiPB
+      => pullback-equiv {_} {_} {_} {_} {_} {_}
+           {\lam u => trS pc C pi glueQ (\lam z => u (f z))} {\lam v z => v (g z)}
+           {\lam F1 => trF pi glueQ (resF (\lam x => pi (cinl x)) f F1.hfunc)} {\lam F2 => resF (\lam y => pi (cinr y)) g F2.hfunc}
+           {ExpCocCore.sec-eval pc (\lam x => pi (cinl x))} {ExpCocCore.sec-eval pc (\lam y => pi (cinr y))}
+           {\lam x => (ExpCocCore.sec-eval pc (\lam z => pi (cinr (g z))) x).hfunc}
+           (ExpCocCore.sec-equiv pc (\lam x => pi (cinl x))) (ExpCocCore.sec-equiv pc (\lam y => pi (cinr y)))
+           (secEval-fst-emb pc (\lam z => pi (cinr (g z))))
+           (\lam u => inv (PsiS-tr pc C pi glueQ (\lam z => u (f z)))) (\lam v => idp)
+
+    -- | {PsiPB} turns restriction of sections into {pushout-invertsWeakEq}.
+    \sfunc square (s : Sec pc C pi) : PsiPB (secPB s) = pushout-invertsWeakEq pi (ExpCocCore.sec-eval pc pi s)
+      => path \lam i => ((FuncWeakEq.levelProp {CocartWeakEq p (\lam x => pi (cinl x))} {MinCatWeakEq C} {\lam q => ExpCocCore.fiber-eval pc (s (cinl q.1)) q.2} _ _ : ExpCocCore.sec-eval pc (\lam x => pi (cinl x)) (\lam x => s (cinl x))
+                                     = ExpCocCore.sec-eval pc pi s FuncWeakEq.∘ cocartWeakEq-map (\lam x => cinl x)) i,
+                         (FuncWeakEq.levelProp {CocartWeakEq p (\lam y => pi (cinr y))} {MinCatWeakEq C} {\lam q => ExpCocCore.fiber-eval pc (s (cinr q.1)) q.2} _ _ : ExpCocCore.sec-eval pc (\lam y => pi (cinr y)) (\lam y => s (cinr y))
+                                     = ExpCocCore.sec-eval pc pi s FuncWeakEq.∘ cocartWeakEq-map (\lam y => cinr y)) i,
+                         PsiS-tr-res pc C pi glueQ s i)
+  }
+
+-- | Into the nerve of a preorder, functors on the base change over a pushout are determined by their restrictions to the summands.
+\sfunc pushout-invertsWeakEq-thin-ext.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {Z X Y : \Cat u} {f : Z ->⁺ X} {g : Z ->⁺ Y}
+                                (pi : CatPushout f g ->⁺ B) {P : Preorder.{u}} {F G : InvertingWeakEq (CocartWeakEq p pi) (Nerve P)}
+                                (eX : (\lam q => F (cinl q.1, q.2)) = {BaseChange (\lam x => pi (cinl x)) p ->⁺ Nerve P} (\lam q => G (cinl q.1, q.2)))
+                                (eY : (\lam q => F (cinr q.1, q.2)) = {BaseChange (\lam y => pi (cinr y)) p ->⁺ Nerve P} (\lam q => G (cinr q.1, q.2)))
+  : F = G
+  => IsEquiv.isInj (pushout-invertsWeakEq-equiv pc pi) (pb-ext (\lam x y => thin-fun-path-prop x y)
+       (FuncWeakEq.ext \lam q => path \lam i => eX i q) (FuncWeakEq.ext \lam q => path \lam i => eY i q))
+
+{- | Localizations of the base changes over the summands of a pushout of bases glue to a localization of the base change over the pushout:
+ -   given localizations {lamX}, {lamY}, {lamZ} at {CocartWeakEq} over `X`, `Y` and `Z`, and functors {phiF}, {phiG} compatible with them,
+ -   there is a localization {kappa} at {CocartWeakEq} over `CatPushout f g` with values in `CatPushout phiF phiG`
+ -   whose restrictions to the summands are {lamX} and {lamY} followed by the inclusions.
+ -   Over the second leg, {lamZ} is transported along the gluing path {glueQ}.
+ -}
+\sfunc pushout-bc-localization.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {Z X Y : \Cat u} {f : Z ->⁺ X} {g : Z ->⁺ Y}
+  (pi : CatPushout f g ->⁺ B) {LX LY LZ : \Cat u}
+  {lamX : BaseChange (\lam x => pi (cinl x)) p ->⁺ LX} (LzX : IsLocalization {CocartWeakEq p (\lam x => pi (cinl x))} lamX)
+  {lamY : BaseChange (\lam y => pi (cinr y)) p ->⁺ LY} (LzY : IsLocalization {CocartWeakEq p (\lam y => pi (cinr y))} lamY)
+  {lamZ : BaseChange (\lam z => pi (cinl (f z))) p ->⁺ LZ} (LzZ : IsLocalization {CocartWeakEq p (\lam z => pi (cinl (f z)))} lamZ)
+  {phiF : LZ ->⁺ LX} {phiG : LZ ->⁺ LY}
+  (sqF : (\lam q => phiF (lamZ q)) = {BaseChange (\lam z => pi (cinl (f z))) p ->⁺ LX} (\lam q => lamX (f q.1, q.2)))
+  (sqG : (\lam q => phiG (transport (\lam (k : Z ->⁺ CatPushout f g) => BaseChange (\lam z => pi (k z)) p ->⁺ LZ) glueQ lamZ q))
+           = {BaseChange (\lam z => pi (cinr (g z))) p ->⁺ LY} (\lam q => lamY (g q.1, q.2)))
+  : \Sigma (kappa : BaseChange pi p ->⁺ CatPushout phiF phiG) (IsLocalization {CocartWeakEq p pi} kappa)
+           ((\lam q => kappa (cinl q.1, q.2)) = {BaseChange (\lam x => pi (cinl x)) p ->⁺ CatPushout phiF phiG} (\lam q => cinl (lamX q)))
+           ((\lam q => kappa (cinr q.1, q.2)) = {BaseChange (\lam y => pi (cinr y)) p ->⁺ CatPushout phiF phiG} (\lam q => cinr (lamY q)))
+  => \let restrict-equiv (C : \Cat u) : IsEquiv (FuncWeakEq.compose-left kappa)
+          => IsEquiv.leftFactor (pushout-invertsWeakEq-equiv pc pi {C}) $
+               transport IsEquiv {\lam G => Lam C (pushout-fun G)} {\lam G => pushout-invertsWeakEq pi (FuncWeakEq.compose-left kappa G)}
+                 (ext \lam G => inv (Xi-post G kappa *> pmap (Gam G) kappa-res *> inv (Lam-post G (pushout-fun (\lam w => w))))) $
+               IsEquiv.trans {_} {_} {_} {pushout-fun} pushout-fun-equiv {Lam C} Lam-equiv
+     \in (kappa.hfunc, IsLocalization.fromUniv (localization-criterion kappa (restrict-equiv _) (restrict-equiv _))
+                                              (localization-criterion kappa (restrict-equiv _) (restrict-equiv _)),
+         pmap (\lam t => t.1.hfunc) kappa-res, pmap (\lam t => t.2.hfunc) kappa-res)
+  \where \private {
+    \func Lpo => CatPushout phiF phiG
+
+    -- | {lamZ} transported along the gluing path.
+    \func lamZ' : Fn p (\lam z => pi (cinr (g z))) LZ
+      => trF pi glueQ lamZ
+
+    \lemma LzZ' : IsLocalization {CocartWeakEq p (\lam z => pi (cinr (g z)))} lamZ'
+      => tr-isLocalization pi glueQ LzZ
+
+    -- | Pairs of functors on {LX} and {LY} agreeing on {LZ}, that is, functors on {Lpo} ({pushout-fun}).
+    \func PairL (C : \Cat) => \Sigma (G1 : LX ->⁺ C) (G2 : LY ->⁺ C) ((\lam a =>⁺ G1 (phiF a)) = {LZ ->⁺ C} (\lam a =>⁺ G2 (phiG a)))
+
+    \func eC {C : \Cat} (H : LZ ->⁺ C) : Fn p (\lam z => pi (cinr (g z))) C
+      => postFun H lamZ'
+
+    \lemma eC-emb {C : \Cat} {H H' : LZ ->⁺ C} : IsEquiv (pmap (\lam (K : LZ ->⁺ C) => eC K) {H} {H'})
+      => IsEquiv.trans {_} {_} {_} {pmap (FuncWeakEq.compose-left LzZ'.1) {H} {H'}} (pmapIsEquiv (loc-restrict-equiv (IsLocalization.univ LzZ' {C})))
+        {pmap (\lam (F : InvertingWeakEq (CocartWeakEq p (\lam z => pi (cinr (g z)))) C) => F.hfunc)} (FuncWeakEq.hfunc-pmap-equiv {_} {_} {FuncWeakEq.compose-left LzZ'.1 H} {FuncWeakEq.compose-left LzZ'.1 H'})
+
+    \func r0 : trF pi glueQ (resF (\lam x => pi (cinl x)) f lamX) = postFun phiF lamZ'
+      => pmap (trF pi glueQ) (inv sqF) *> inv (postF-tr pi phiF glueQ lamZ)
+
+    \func sf {C : \Cat} (G1 : LX ->⁺ C)
+      : trF pi glueQ (resF (\lam x => pi (cinl x)) f (FuncWeakEq.compose-left LzX.1 G1).hfunc) = eC (\lam z => G1 (phiF z))
+      => trPost pi G1 glueQ r0
+
+    \func sg {C : \Cat} (G2 : LY ->⁺ C) : resF (\lam y => pi (cinr y)) g (FuncWeakEq.compose-left LzY.1 G2).hfunc = eC (\lam z => G2 (phiG z))
+      => pmap (postFun G2) (inv sqG)
+
+    -- | Precomposition with the localizations on pairs of functors.
+    \func Lam (C : \Cat) (t : PairL C) : PushoutInvertsWeakEq p pi C
+      => (FuncWeakEq.compose-left LzX.1 t.1, FuncWeakEq.compose-left LzY.1 t.2, (sf t.1 *> pmap eC t.3) *> inv (sg t.2))
+
+    \lemma Lam-equiv {C : \Cat} : IsEquiv (Lam C)
+      => pullback-equiv {_} {_} {_} {_} {_} {_} {\lam (G1 : LX ->⁺ C) => \lam (a :⁺ LZ) => G1 (phiF a)} {\lam (G2 : LY ->⁺ C) => \lam (a :⁺ LZ) => G2 (phiG a)}
+           {\lam F1 => trF pi glueQ (resF (\lam x => pi (cinl x)) f F1.hfunc)} {\lam F2 => resF (\lam y => pi (cinr y)) g F2.hfunc}
+           {FuncWeakEq.compose-left LzX.1} {FuncWeakEq.compose-left LzY.1} {\lam (K : LZ ->⁺ C) => eC K}
+        (loc-restrict-equiv (IsLocalization.univ LzX {C})) (loc-restrict-equiv (IsLocalization.univ LzY {C})) eC-emb sf sg
+
+    -- | Postcomposition on {PushoutInvertsWeakEq}.
+    \func Gam {C C' : \Cat} (G : C ->⁺ C') (t : PushoutInvertsWeakEq p pi C) : PushoutInvertsWeakEq p pi C'
+      => (FuncWeakEq.compose-left t.1 G, FuncWeakEq.compose-left t.2 G, trPost pi G glueQ t.3)
+
+    -- | Postcomposition on {PairL}.
+    \func postPair {C C' : \Cat} (G : C ->⁺ C') (t : PairL C) : PairL C'
+      => (\lam x => G (t.1 x), \lam y => G (t.2 y), pmap (\lam (H : LZ ->⁺ C) => \lam (a :⁺ LZ) => G (H a)) t.3)
+
+    \sfunc Xi-post {C C' : \Cat} (G : C ->⁺ C') (F : InvertingWeakEq (CocartWeakEq p pi) C) : pushout-invertsWeakEq pi (FuncWeakEq.compose-left F G) = Gam G (pushout-invertsWeakEq pi F)
+      => path \lam i => (FuncWeakEq.compose-left F G FuncWeakEq.∘ cocartWeakEq-map (\lam x => cinl x), FuncWeakEq.compose-left F G FuncWeakEq.∘ cocartWeakEq-map (\lam y => cinr y), tr-resF-post pi G F.hfunc glueQ i)
+
+    \sfunc Lam-post {C C' : \Cat} (G : C ->⁺ C') (t : PairL C) : Lam C' (postPair G t) = Gam G (Lam C t)
+      => path \lam i => (FuncWeakEq.levelProp (FuncWeakEq.compose-left LzX.1 (\lam x => G (t.1 x))) (FuncWeakEq.compose-left (FuncWeakEq.compose-left LzX.1 t.1) G) i,
+                         FuncWeakEq.levelProp (FuncWeakEq.compose-left LzY.1 (\lam y => G (t.2 y))) (FuncWeakEq.compose-left (FuncWeakEq.compose-left LzY.1 t.2) G) i,
+                         (pmap (\lam z => (z *> pmap (postFun G) (pmap eC t.3)) *> inv (pmap (postFun G) (sg t.2)))
+                               (inv (trPost-comp pi t.1 G glueQ r0))
+                          *> pmap-alg (postFun G) (inv (postF-tr pi G glueQ (postFun t.1 (resF (\lam x => pi (cinl x)) f lamX))))
+                                      (sf t.1) (pmap eC t.3) (sg t.2)) i)
+
+    -- | The functor corresponding to the identity of {Lpo}.
+    \func kappa : InvertingWeakEq (CocartWeakEq p pi) Lpo
+      => (IsEquiv.toQEquiv (pushout-invertsWeakEq-equiv pc pi {Lpo})).ret (Lam Lpo (pushout-fun (\lam w => w)))
+
+    \sfunc kappa-res : pushout-invertsWeakEq pi kappa = Lam Lpo (pushout-fun (\lam w => w))
+      => (IsEquiv.toQEquiv (pushout-invertsWeakEq-equiv pc pi {Lpo})).f_sec _
+
+  }
+
+\module BCPushoutHelpers \where {
+  -- | Functors on the base change of {p} along {pi}.
+  \func Fn.{u} {B E : \Cat u} (p : E ->⁺ B) {T : \Cat u} (pi : T ->⁺ B) (C : \Cat) : \Cat
+    => BaseChange pi p ->⁺ C
+
+  -- | Precomposition with the base change of {h}.
+  \func resF.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) (h : T' ->⁺ T) {C : \Cat} (F : Fn p pi C)
+    : Fn p (\lam t => pi (h t)) C
+    => \lam q => F (h q.1, q.2)
+
+  -- | Postcomposition with {G}.
+  \func postFun.{u} {B E : \Cat u} {p : E ->⁺ B} {T : \Cat u} {pi : T ->⁺ B} {C C' : \Cat} (G : C ->⁺ C') (F : Fn p pi C) : Fn p pi C'
+    => \lam q => G (F q)
+
+  -- | Transport of functors along a path of functors of bases.
+  \func trF.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) {C : \Cat} {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+                (F : Fn p (\lam t => pi (h1 t)) C) : Fn p (\lam t => pi (h2 t)) C
+    => transport (\lam (k : T' ->⁺ T) => Fn p (\lam t => pi (k t)) C) q F
+
+  \func tr-resF.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) {C : \Cat} (F : Fn p pi C) {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+    : trF pi q (resF pi h1 F) = resF pi h2 F \elim q
+    | idp => idp
+
+  \func postF-tr.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) {C C' : \Cat} (G : C ->⁺ C') {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+                     (F : Fn p (\lam t => pi (h1 t)) C)
+    : postFun G (trF pi q F) = trF pi q (postFun G F) \elim q
+    | idp => idp
+
+  -- | A path from a transport, postcomposed with {G}.
+  \func trPost.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) {C C' : \Cat} (G : C ->⁺ C') {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+                   {F : Fn p (\lam t => pi (h1 t)) C} {F' : Fn p (\lam t => pi (h2 t)) C} (r : trF pi q F = F')
+    : trF pi q (postFun G F) = postFun G F'
+    => inv (postF-tr pi G q F) *> pmap (postFun G) r
+
+  \sfunc trPost-comp.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) {C C' C'' : \Cat} (G : C ->⁺ C') (G' : C' ->⁺ C'')
+                         {h1 h2 : T' ->⁺ T} (q : h1 = h2) {F : Fn p (\lam t => pi (h1 t)) C} {F' : Fn p (\lam t => pi (h2 t)) C} (r : trF pi q F = F')
+    : trPost pi G' q (trPost pi G q r) = trPost pi (\lam x => G' (G x)) q r \elim q, r
+    | idp, idp => idp
+
+  \sfunc tr-resF-post.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) {C C' : \Cat} (G : C ->⁺ C') (F : Fn p pi C)
+                          {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+    : tr-resF pi (postFun G F) q = trPost pi G q (tr-resF pi F q) \elim q
+    | idp => idp
+
+  -- | A localization transported along a path of functors of bases.
+  \lemma tr-isLocalization.{u} {B E : \Cat u} {p : E ->⁺ B} {T T' : \Cat u} (pi : T ->⁺ B) {L : \Cat} {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+                                {l : Fn p (\lam t => pi (h1 t)) L} (Lz : IsLocalization {CocartWeakEq p (\lam t => pi (h1 t))} l)
+    : IsLocalization {CocartWeakEq p (\lam t => pi (h2 t))} (trF pi q l) \elim q
+    | idp => Lz
+
+  -- | Sections of the fibers of {ExpCocCore} along {pi}.
+  \func Sec.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (pi : T ->⁺ B)
+    => \Pi (t :⁺ T) -> Fibers (ExpCocCore.proj pc C) (pi t)
+
+  -- | Transport of sections along a path of functors of bases.
+  \func trS.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T T' : \Cat u} (pi : T ->⁺ B) {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+                (x : Sec pc C (\lam t => pi (h1 t))) : Sec pc C (\lam t => pi (h2 t))
+    => transport (\lam (k : T' ->⁺ T) => Sec pc C (\lam t => pi (k t))) q x
+
+  \func tr-res.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T T' : \Cat u} (pi : T ->⁺ B) (s : Sec pc C pi)
+                   {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+    : trS pc C pi q (\lam t => s (h1 t)) = (\lam t => s (h2 t)) \elim q
+    | idp => idp
+
+  -- | {tr-res} is the path over {q} given by the section.
+  \func tr-res-pathOver.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T T' : \Cat u} (pi : T ->⁺ B) (s : Sec pc C pi)
+                             {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+    : pathOver-transport-equiv (\lam k => Sec pc C (\lam t => pi (k t))) q (path \lam i t => s (q i t)) = tr-res pc C pi s q \elim q
+    | idp => idp
+
+  -- | {ExpCocCore.sec-eval} commutes with transport along a path of functors of bases.
+  \func PsiS-tr.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T T' : \Cat u} (pi : T ->⁺ B) {h1 h2 : T' ->⁺ T} (q : h1 = h2)
+                    (x : Sec pc C (\lam t => pi (h1 t)))
+    : (ExpCocCore.sec-eval pc (\lam t => pi (h2 t)) (trS pc C pi q x)).hfunc = trF pi q (ExpCocCore.sec-eval pc (\lam t => pi (h1 t)) x).hfunc \elim q
+    | idp => idp
+
+  \func PsiS-tr-res.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T T' : \Cat u} (pi : T ->⁺ B)
+                         {h1 h2 : T' ->⁺ T} (q : h1 = h2) (s : Sec pc C pi)
+    : inv (PsiS-tr pc C pi q (\lam t => s (h1 t))) *> pmap (\lam x => (ExpCocCore.sec-eval pc (\lam t => pi (h2 t)) x).hfunc) (tr-res pc C pi s q)
+      = tr-resF pi (ExpCocCore.sec-eval pc pi s).hfunc q \elim q
+    | idp => idp
+
+  -- | The underlying functor of {ExpCocCore.sec-eval} is an embedding.
+  \lemma secEval-fst-emb.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B) {x y : Sec pc C pi}
+    : IsEquiv (pmap (\lam s => (ExpCocCore.sec-eval pc pi s).hfunc) {x} {y})
+    => IsEquiv.trans (pmapIsEquiv (ExpCocCore.sec-equiv pc pi)) (FuncWeakEq.hfunc-pmap-equiv {_} {_} {ExpCocCore.sec-eval pc pi x} {ExpCocCore.sec-eval pc pi y})
+
+  -- | Path algebra for {pmap}.
+  \sfunc pmap-alg {M1 M2 : \Cat} (F : M1 -> M2) {w x1 x2 x3 : M1} {w' : M2} (T : w' = F w) (b : w = x1) (c : x1 = x2) (d : x3 = x2)
+    : ((T *> pmap F b) *> pmap F c) *> inv (pmap F d) = T *> pmap F ((b *> c) *> inv d) \elim b, c, d
+    | idp, idp, idp => idp
+
+  -- | Elements of a pullback whose base has propositional path types are determined by their first two components.
+  \sfunc pb-ext {A B Z : \Cat} {f : A -> Z} {g : B -> Z} (Zp : \Pi (x y : Z) -> isProp (x = y)) {s t : \Sigma (a : A) (b : B) (f a = g b)}
+                (pa : s.1 = t.1) (pb : s.2 = t.2) : s = t
+    => path \lam i => (pa i, pb i, pathOver {\lam i => f (pa i) = g (pb i)} (Zp _ _ _ _) i)
+}

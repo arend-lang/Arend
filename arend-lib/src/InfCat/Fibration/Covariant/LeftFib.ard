@@ -1,0 +1,332 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Square
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+
+\type IsLeftFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
+  => \Pi (d : CovLiftData B) -> Contr (CovLift B d)
+
+\lemma leftFib-pullback {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsLeftFib B) : IsLeftFib (\lam a => B (f a))
+  => \lam d =>
+      \let | fd : CovLiftData B => (f d.1, f d.2, dmap f d.3, d.4)
+           | c => Bf fd
+      \in Contr.make {CovLift (\lam a =>⁺ B (f a)) d} (c.center.1, c.center.2)
+            \lam u => pmap {CovLift B fd} {CovLift (\lam a =>⁺ B (f a)) d} (\lam v => (v.1, v.2)) (c.contraction (u.1, u.2))
+
+\lemma leftFib-grpd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (a : A) : IsGroupoid (B a)
+  => \lam {t} {t'} f => IsIso-diag-char.2 $ inP (t, path \lam k i => (isContr=>isProp (Bf (a,a,idd,t)) (t, idd) (t', f) k).2 i)
+
+\lemma leftFib-lift-cocartesian {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d : CovLiftData B} (c : CovLift B d) : IsCocartesianLift c
+  => \lam {a''} g l' =>
+      \let | cg : CovLiftData B => (_, _, g, c.1)
+           | dg : CovLiftData B => (_, _, comp d.3 g, d.4)
+           | S (t : CovLift B cg) => \Sigma (q : DPath (\lam i => B (comp d.3 g i)) d.4 t.1) (DPath (\lam i => DPath (\lam j => B (fill2 d.3 g i j)) (c.2 i) (q i)) idd t.2)
+           | G (l : CovLift B dg) => \Sigma (k : DPath (\lam j => B (g j)) c.1 l.1) (DPath (\lam i => DPath (\lam j => B (fill2 d.3 g i j)) (c.2 i) (l.2 i)) idd k)
+           | swap (u : \Sigma (t : CovLift B cg) (S t)) : \Sigma (l : CovLift B dg) (G l) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
+           | swap' (u : \Sigma (l : CovLift B dg) (G l)) : \Sigma (t : CovLift B cg) (S t) => ((u.1.1, u.2.1), (u.1.2, u.2.2))
+           | cS : Contr (\Sigma (t : CovLift B cg) (S t)) => sigma-Contr (Bf cg) \lam t => horn-Contr B {_} {_} {_} {_} {_} {comp d.3 g} (dpath \lam i => dpath (fill2 d.3 g i)) c.2 t.2
+      \in fiber-Contr G (Bf dg) (isProp=>isContr (\lam u v => pmap swap (isContr=>isProp cS (swap' u) (swap' v))) (swap cS.center)) l'
+
+\lemma leftFib-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B)
+  : IsHEquiv {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} {CovLiftData B} __.1
+  => (ff-surj-equiv {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} {CovLiftData B} {__.1}).1
+      (\lam x y => cocartesian-ff B (leftFib-lift-cocartesian Bf x.2),
+       \lam y => inP ((y, Contr.center {Bf y}), idp))
+
+-- | In the total category of a left fibration, arrows out of an object are determined by their images in the base.
+\lemma leftFib-coslice-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (e : \Sigma⁺ (a : A) (B a))
+  : IsEquiv {\Sigma (e' : \Sigma⁺ (a : A) (B a)) (e ~> e')} {\Sigma (a' : A) (e.1 ~> a')} (\lam w => (w.1.1, dpath \lam i => (w.2 i).1))
+  => IsEquiv.trans {_} {_} {_} {split-equiv e} (inP (split-equiv e)) {\lam d => d.1} (inP (contr-right \lam d => Bf (e.1, d.1, d.2, e.2)))
+  \where
+    \private \func split-equiv {A : \Cat} {B : A ->⁺ \Cat} (e : \Sigma⁺ (a : A) (B a))
+      : QEquiv {\Sigma (e' : \Sigma⁺ (a : A) (B a)) (e ~> e')} {\Sigma (d : \Sigma (a' : A) (e.1 ~> a')) (CovLift B (e.1, d.1, d.2, e.2))} \cowith
+      | f w => ((w.1.1, dpath \lam i => (w.2 i).1), (w.1.2, dpath \lam i => (w.2 i).2))
+      | ret d => ((d.1.1, d.2.1), dpath \lam i => (d.1.2 i, d.2.2 i))
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+\sfunc leftFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (d :⁺ CovLiftData B) : CovLift B d
+  => IsHEquiv.fib-sec (leftFib-equiv Bf) (later d)
+
+-- | Lifts along a left fibration are unique, naturally in all the data.
+\sfunc leftFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d :⁺ CovLiftData B} {c c' :⁺ CovLift B d} : c = c'
+  => IsHEquiv.fib-sec-unique (leftFib-equiv Bf) {d}
+
+-- | The lift of an isomorphism along a left fibration is an isomorphism in the total category.
+\lemma leftFib-lift-iso {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' : A} {f : a ~> a'} (fi : IsIso f) {b : B a}
+                        (c : CovLift B (a, a', f, b)) : IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (f i, c.2 i))
+  => \case IsIso-char.1 fi \with {
+       | inP (P, Q) => aux P Q c
+     }
+  \where
+    \private \lemma aux {a a' : A} (P : a = a') {f : a ~> a'} (Q : =_~> P = f) {b : B a} (c : CovLift B (a, a', f, b))
+      : IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (f i, c.2 i)) \elim P, Q
+      | idp, idp => transport (\lam (c : CovLift B (a, a, idd, b)) => IsIso {\Sigma⁺ (x : A) (B x)} (dpath \lam i => (idd {A} {a} i, c.2 i)))
+                              (isContr=>isProp (Bf (a, a, idd, b)) (b, idd) c) idd-iso
+
+-- | A functor whose fibers form a left fibration is conservative.
+\lemma leftFib-conservative {E A : \Cat} {p : E ->⁺ A} (pf : IsLeftFib (Fibers p)) : IsConservative p
+  => \lam {x} {y} {r} ri => dmap_IsIso (\lam (s :⁺ \Sigma⁺ (a : A) (Fibers p a)) => s.2.1)
+       (leftFib-lift-iso pf ri {x, idp} ((y, idp), dpath \lam i => (r i, idp)))
+
+-- | The total projection of a left fibration with contractible fibers is an equivalence.
+\lemma leftFib-contr-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) (Bc : \Pi (a : A) -> Contr (B a))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {A} {\lam s => s.1}).1
+       (\lam s t => IsEquiv.trans (inP (dpath-sigma-equiv (\lam _ => B))) (inP (contr-right \lam r => dpath-contr r)),
+        \lam a => inP ((a, (Bc a).center), idp))
+  \where
+    -- | Paths over an arrow {r} between points of contractible fibers form a contractible type.
+    \lemma dpath-contr {s t : \Sigma⁺ (a : A) (B a)} (r : s.1 ~> t.1) : Contr (DPath (\lam i => B (r i)) s.2 t.2)
+      => \let c : Contr (\Sigma (b' : B t.1) (DPath (\lam i => B (r i)) s.2 b'))
+               => Contr.Contr_QEquiv (later \new QEquiv { | f u => (u.1, u.2) | ret u => (u.1, u.2) | ret_f _ => idp | f_sec _ => idp })
+                                     (Bf (s.1, t.1, r, s.2))
+         \in Contr.Contr_QEquiv (proj-fib (\lam b' => DPath (\lam i => B (r i)) s.2 b') t.2)
+                                (IsEquiv=>contrFibers (contr-equiv c (Bc t.1) {__.1}) t.2)
+
+{- | A functor to `\Cat` with groupoid fibers equipped with a natural choice of lifts is a left fibration.
+ -
+ - The groupoid assumption is necessary: for a constant family `\lam _ => C` with `C : \Cat`,
+ - `\lam f ta => (ta, idd)` is a natural lift, so without it every `\Cat` would be a groupoid.
+ -}
+\lemma lift-IsLeftFib {A : \Cat} {B : A ->⁺ \Cat} (Bg : \Pi (a : A) -> IsGroupoid (B a))
+  (lift : \Pi (d :⁺ CovLiftData B) -> CovLift B d)
+  : IsLeftFib B
+  => \lam d =>
+       \let c => ob-sigma-Contr (DPath (\lam i => B (d.3 i)) d.4) $
+              Contr.Contr_QEquiv (symQEquiv (lift-fiber-equiv B d.3 d.4)) (IsEquiv=>contrFibers (inP (coslice-equiv B Bg lift {d.1} {d.2} d.4)) d.3)
+       \in Contr.make {CovLift B d} c.center (\lam u => path (\lam i => c.contraction u i))
+  \where {
+    -- | The total category of {T}.
+    \func Total {B : \Cat} (T : B ->⁺ \Cat) : \Cat
+      => \Sigma⁺ (x : B) (T x)
+
+    -- | The coslice of the total category under `(a,ta)` restricted to objects over {b}.
+    \func Coslice {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (ta : T a) : \Cat
+      => \Sigma⁺ (tb : T b) ((a,ta) ~> {Total T} (b,tb))
+
+    -- | The type of objects of {Coslice}.
+    \func ObCoslice {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (ta : T a) : \Type
+      => \Sigma (tb : T b) ((a,ta) ~> {Total T} (b, tb))
+
+    -- | The projection of the coslice to the hom-type of the base.
+    \func coslice-proj {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (ta : T a) (s : ObCoslice T {a} {b} ta) : a ~> b
+      => dpath \lam i => (s.2 i).1
+
+    -- | In the comma category `\Sigma⁺ (y : D) (c ~> F y)`, an arrow whose component in {D} is an iso is a path.
+    \sfunc comma-iso-path {C D : \Cat} (F : D ->⁺ C) {c : C} {s t : \Sigma⁺ (y : D) (c ~> F y)} (m : s ~> t) (gi : IsIso (dmap __.1 m)) : s = t
+      => \have r => IsIso_= gi
+         \in sigma-ext r.1 $ transport_~>_dmap-right F *> pmap (comp s.2) (pmap (dmap F) r.2)
+              *> comp-equiv.flipped {_} {_} {_} {_} {_} {dmap F (dmap __.1 m)} (dpath \lam k => (m k).2)
+
+    -- | A contractible type of objects gives a contractible category.
+    \lemma ob-sigma-Contr {C : \Cat} (P : C ->⁺ \Type) (c : Contr (\Sigma (x : C) (P x))) : Contr (\Sigma⁺ (x : C) (P x)) \cowith
+      | center => (c.center.1, c.center.2)
+      | contraction u => path \lam i => ((c.contraction (u.1, u.2) i).1, (c.contraction (u.1, u.2) i).2)
+
+    {- | Every lift of {f} is equal to the canonical one in the coslice.
+     - {L} is the family of lifts along the square {conn-left}; it is obtained by applying a natural lift to `conn-left f k` and `p k`.
+     -}
+    \sfunc coslice-path {B : \Cat} (T : B ->⁺ \Cat) (Tg : \Pi (x : B) -> IsGroupoid (T x)) {a b : B} (f : a ~> b) {ta : T a} {x : T b} (p : DPath (\lam i => T (f i)) ta x)
+                        (L : \Pi (k :⁺ DI) -> \Sigma⁺ (tb : T b) (DPath (\lam i => T (conn-left f k i)) (p k) tb))
+      : ((L dleft).1, dpath \lam i => ((f i, (L dleft).2 i) : Total T)) = {Coslice T ta} (x, dpath \lam i => ((f i, p i) : Total T))
+      => \let | liftE => dpath \lam k => ((f k, (L dleft).2 k) : Total T)
+              | epsE => dpath \lam k => ((b, (L dright).2 k) : Total T)
+              | pE => dpath \lam i => ((f i, p i) : Total T)
+              | rE => dpath \lam i => ((b, (L i).1) : Total T)
+              | sq : DPath (\lam k => liftE k ~> epsE k) pE rE => dpath \lam k => dpath \lam i => (conn-left f i k, (L i).2 k)
+         \in comma-iso-path (\lam tb => ((b,tb) : Total T)) (dpath \lam k => (((L k).1, square-char.forward {Total T} {_} {_} {_} {_} {liftE} {rE} {pE} {epsE} sq k) : Coslice T ta)) (Tg b _)
+          *> inv (comma-iso-path (\lam tb => ((b,tb) : Total T)) (dpath \lam k => (((L dright).2 k, dpath \lam i => fill2 pE epsE i k) : Coslice T ta)) (Tg b _))
+
+    -- | The projection of the coslice to the hom-type of the base is an equivalence; its inverse is given by {lift}.
+    \func coslice-equiv {B : \Cat} (T : B ->⁺ \Cat) (Tg : \Pi (x : B) -> IsGroupoid (T x))
+                        (lift : \Pi (d :⁺ CovLiftData T) -> CovLift T d)
+                        {a b : B} (ta : T a) : QEquiv {ObCoslice T ta} {a ~> b} \cowith
+      | f => coslice-proj T ta
+      | ret r => ((lift (a,b,r,ta)).1, dpath \lam i => ((r i, (lift (a,b,r,ta)).2 i) : Total T))
+      | ret_f (x, p) =>
+        \let q => coslice-path T Tg (dpath \lam i => (p i).1) (dpath \lam i => (p i).2) (\lam k => lift (_, _, conn-left (dpath \lam i => (p i).1) k, (p k).2))
+        \in path \lam k => ((q k).1, (q k).2)
+      | f_sec r => idp
+
+    -- | The type of lifts of {f} is the fiber of {coslice-proj} over {f}.
+    \func lift-fiber-equiv {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (f : a ~> b) (ta : T a)
+      : QEquiv {\Sigma (x : T b) (DPath (\lam i => T (f i)) ta x)} {Fib (coslice-proj T ta) f} \cowith
+      | f s => ((s.1, dpath \lam i => ((f i, s.2 i) : Total T)), idp)
+      | ret t => (t.1.1, transport (\lam r => DPath (\lam i => T (r i)) ta t.1.1) t.2 (dpath \lam i => (t.1.2 i).2))
+      | ret_f s => idp
+      | f_sec t => aux T f t.2 t.1.1 (dpath \lam i => (t.1.2 i).2)
+      \where {
+        \private \func aux {B : \Cat} (T : B ->⁺ \Cat) {a b : B} (f : a ~> b) {ta : T a} {r : a ~> b} (e : r = f) (x : T b) (P : DPath (\lam i => T (r i)) ta x)
+          : ((x, dpath \lam i => ((f i, transport (\lam r => DPath (\lam i => T (r i)) ta x) e P i) : Total T)), idp)
+            = {Fib (coslice-proj T ta) f} ((x, dpath \lam i => ((r i, P i) : Total T)), e) \elim e
+          | idp => idp
+      }
+  }
+
+-- | A constant family at a groupoid is a left fibration.
+\lemma const-leftFib {A G : \Cat} (Gg : IsGroupoid G) : IsLeftFib {A} (\lam _ => G)
+  => lift-IsLeftFib (\lam _ => Gg) (\lam d => (d.4, idd))
+
+\lemma lift_type-IsLeftFib {A : \Cat} {B : A ->⁺ \Type} (lift : \Pi (d :⁺ CovLiftData B) -> CovLift B d) : IsLeftFib B
+  => lift-IsLeftFib (\lam a => type-groupoid) lift
+
+-- | The family of types associated to a left fibration is a left fibration.
+\lemma catType-leftFib {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {Bg : \Pi (a : A) -> IsGroupoid (B a)}
+  : IsLeftFib (CatTypeFamily B Bg)
+  => lift_type-IsLeftFib \lam d => transport+ (\lam t => CovLift _ (_, _, d.3, t)) (CatTypeFamily.toCatType_fromCatType d.4)
+      \let l =>⁺ leftFib-lift Bf (_, _, d.3, CatTypeFamily.fromCatType d.4)
+      \in (CatTypeFamily.toCatType l.1, dpath \lam i => CatTypeFamily.toCatType {_} {_} {_} {d.3 i} (l.2 i))
+
+\lemma universe-leftFib.{u} : IsLeftFib {\Type u} (\lam A => A)
+  => lift_type-IsLeftFib \lam d => (coe+ (\lam i => d.3 i) d.4 dright, dpath \lam i => coe+ (\lam j => d.3 j) d.4 i)
+
+\sfunc leftFib-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d :⁺ CovLiftData B} (c :⁺ CovLift B d) {b' :⁺ B d.2}
+  (t :⁺ DPath (\lam i => B (d.3 i)) d.4 b') : c.1 = b'
+  => pmap+ (\lam l => l.1) $ leftFib-lift-unique {A} {B} Bf {d} {c} {b',t}
+
+-- | Lifts of {d} are paths from the endpoint of a fixed lift {c}.
+\lemma leftFib-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {d : CovLiftData B} (c : CovLift B d) {b' : B d.2}
+  : IsEquiv {DPath (\lam i => B (d.3 i)) d.4 b'} {c.1 = b'} (leftFib-dpath Bf c)
+  => \let L => Bf d
+     \in (totalEquiv (\lam b' => leftFib-dpath Bf c {b'})).2 (inP \new QEquiv {
+       | ret _ => (L.center.1, L.center.2)
+       | ret_f t => path \lam i => \let c => L.contraction (t.1,t.2) i
+                                   \in (c.1,c.2)
+       | f_sec s => isContr=>isProp (lsigma c.1) _ s
+     }) b'
+
+-- | Transport along an arrow in a left fibration.
+\func leftFib-tr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} (p :⁺ a ~> a') (b :⁺ B a) : B a'
+  => (leftFib-lift Bf (a, a', p, b)).1
+
+-- | A path over {p} starting at {b} ends at the transport of {b}.
+\sfunc leftFib-tr-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' :⁺ A} {p :⁺ a ~> a'} {b :⁺ B a} {b' :⁺ B a'}
+  (t :⁺ DPath (\lam i => B (p i)) b b') : leftFib-tr Bf p b = b'
+  => leftFib-dpath Bf (leftFib-lift Bf (a, a', p, b)) t
+
+-- | {leftFib-tr} commutes with identity.
+\sfunc leftFib-tr_idd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a :⁺ A} {b :⁺ B a} : leftFib-tr Bf idd b = b
+  => leftFib-tr-dpath Bf idd
+
+-- | {leftFib-tr} commutes with composition.
+\sfunc leftFib-tr_comp {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' a'' :⁺ A} (p :⁺ a ~> a') (q :⁺ a' ~> a'') {b :⁺ B a}
+  : leftFib-tr Bf (comp p q) b = leftFib-tr Bf q (leftFib-tr Bf p b)
+  => pmap+ (\lam x => leftFib-tr Bf (comp p q) x) (inv (leftFib-tr_idd Bf))
+     *> leftFib-tr-dpath Bf (dpath \lam i => leftFib-tr Bf (dpath (fill2 p q i)) ((leftFib-lift Bf (a, a', p, b)).2 i))
+
+-- | Maps of left fibrations commute with {leftFib-tr}.
+\sfunc leftFib-tr-natural {C : \Cat} {F G : C ->⁺ \Cat} (Ff : IsLeftFib F) (Gf : IsLeftFib G)
+                          (alpha : \Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1) {x y :⁺ C} (h :⁺ x ~> y) (a :⁺ F x)
+  : alpha (y, leftFib-tr Ff h a) = leftFib-tr Gf h (alpha (x, a))
+  => inv (leftFib-tr-dpath Gf (dpath \lam i => alpha (h i, (leftFib-lift Ff (x, y, h, a)).2 i)))
+
+-- | Along a fiberwise equivalence {alpha} of left fibrations, transport of {a} is an equivalence if and only if transport of `alpha a` is.
+\lemma leftFib-tr-equiv<-> {C : \Cat} {F G : C ->⁺ \Cat} (Ff : IsLeftFib F) (Gf : IsLeftFib G)
+                          (alpha : \Pi (s :⁺ \Sigma⁺ (x : C) (F x)) -> G s.1) (eq : \Pi (x : C) -> IsEquiv {F x} {G x} (\lam a => alpha (x,a)))
+                          {x : C} (a : F x) (y : C)
+  : IsEquiv {x ~> y} {F y} (leftFib-tr Ff __ a) <-> IsEquiv {x ~> y} {G y} (leftFib-tr Gf __ (alpha (x, a)))
+  => IsEquiv.parallelEquiv (inP idEquiv) (eq y) (\lam h => leftFib-tr-natural Ff Gf alpha h a)
+
+\func coe+-dpath.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} {a' :⁺ A dright} (t :⁺ DPath A a a') : coe+ A a dright = a'
+  => leftFib-dpath universe-leftFib {_, _, dpath A, a} (coe+ A a dright, dpath (coe+ A a)) t
+
+-- | Transport in a family of types does not depend on the universe level.
+\sfunc coe+-level.{u} {A :⁺ DI ->⁺ \Type u} {a :⁺ A dleft} : coe+.{\suc u} A a dright = coe+.{u} A a dright
+  => coe+-dpath (dpath (coe+ A a))
+
+-- | Paths over a family of types {A} starting at {a} are paths from the transport of {a} along {A}.
+\lemma coe+-dpath-equiv.{u} (A : DI ->⁺ \Type u) (a : A dleft) (a' : A dright)
+  : IsEquiv {DPath A a a'} {coe+ A a dright = a'} coe+-dpath
+  => leftFib-dpath-equiv universe-leftFib _
+
+-- | The coslice under {x} is a left fibration.
+\lemma hom-leftFib {C : \Cat} (x : C) : IsLeftFib (\lam y => x ~> y)
+  => lift_type-IsLeftFib \lam d => (comp d.4 d.3, dpath \lam j => dpath \lam i => fill2 d.4 d.3 i j)
+
+-- | Paths over a fixed arrow {f} starting at {b} form a left fibration over the fiber of the target.
+\lemma dpath-leftFib {A : \Cat} (B : A ->⁺ \Cat) {a a' : A} (f : a ~> a') (b : B a)
+  : IsLeftFib (DPath (\lam i => B (f i)) b)
+  => \lam e => \let c => horn-Contr B (dpath \lam i => idd) e.4 e.3
+               \in Contr.make {CovLift _ e} (c.center.1, dpath \lam j => dpath \lam i => c.center.2 i j)
+                    \lam u => path \lam k => \let v => c.contraction (u.1, dpath \lam i => dpath \lam j => u.2 j i) k
+                                             \in (v.1, dpath \lam j => dpath \lam i => v.2 i j)
+
+-- | A dependent sum of left fibrations is a left fibration.
+\lemma leftFib-sigma {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsLeftFib Q) {R : \Sigma⁺ (a : A) (Q a) ->⁺ \Cat} (Rf : IsLeftFib R)
+  : IsLeftFib (\lam a => \Sigma⁺ (q : Q a) (R (a, q)))
+  => \lam d => Contr.Contr_QEquiv (later \new QEquiv {
+       | f s => ((s.1.1, s.2.1), dpath \lam i => (s.1.2 i, s.2.2 i))
+       | ret t => ((t.1.1, dpath \lam i => (t.2 i).1), (t.1.2, dpath \lam i => (t.2 i).2))
+       | ret_f s => idp
+       | f_sec t => idp
+     }) (sigma-Contr (Qf (d.1, d.2, d.3, d.4.1)) \lam l => Rf ((d.1, d.4.1), (d.2, l.1), dpath \lam i => (d.3 i, l.2 i), d.4.2))
+
+-- | Paths between two sections of a left fibration form a left fibration.
+\lemma leftFib-path {Z : \Cat} {R : Z ->⁺ \Cat} (Rf : IsLeftFib R) (a b : \Pi (z :⁺ Z) -> R z) : IsLeftFib (\lam z => a z = b z)
+  => \lam d => Contr.Contr_QEquiv (later \new QEquiv {
+       | f P => (path \lam j => (P j).1, dpath \lam i => path \lam j => (P j).2 i)
+       | ret t => path \lam j => (t.1 j, dpath \lam i => t.2 i j)
+       | ret_f P => idp
+       | f_sec t => idp
+     }) (contr-pathOver (\lam t => CovLift R (d.1, d.2, d.3, t)) (\lam t => Rf (d.1, d.2, d.3, t)) d.4 _ _)
+
+{- | A map of total categories over the base between left fibrations is an equivalence if it is an equivalence on fibers.
+ -
+ -   Proof: on hom-types, the map of lifts of an arrow `r` with a fixed source is a map over the fiberwise equivalence
+ -   between contractible types of all lifts, so it is an equivalence by {fiberwiseEquiv}.
+ -}
+\lemma leftFib-fiberwise-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsLeftFib B) (Cf : IsLeftFib C)
+                               (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (ge : \Pi (a : A) -> IsEquiv {B a} {C a} (\lam b => g (a, b)))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} (\lam s => (s.1, g s))
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} {\lam s => (s.1, g s)}).1
+      (\lam x y => IsEquiv.trans (inP (dpath-sigma-equiv \lam _ => B))
+                     {\lam s => dpath \lam i => ((s.1 i, lift-map {A} {B} {C} g s.1 s.2 i) : \Sigma⁺ (a : A) (C a))}
+                     (IsEquiv.trans ((totalEquiv (lift-map {A} {B} {C} g)).1 \lam r => lift-map-equiv Bf Cf g ge r)
+                                    (inP (symQEquiv (dpath-sigma-equiv (\lam _ => C) {x.1, g x} {y.1, g y})))),
+       \lam y => TruncP.map (IsEquiv.isSurj (ge y.1) y.2) \lam s => ((y.1, s.1), path \lam i => (y.1, s.2 i)))
+  \where \private {
+    -- | The action of {g} on lifts of an arrow of the base.
+    \func lift-map {A : \Cat} {B C : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1)
+                   {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) (t : DPath (\lam i => B (r i)) x.2 y.2)
+      : DPath (\lam i => C (r i)) (g x) (g y)
+      => dpath \lam i => g (r i, t i)
+
+    \lemma lift-map-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsLeftFib B) (Cf : IsLeftFib C)
+                          (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (ge : \Pi (a : A) -> IsEquiv {B a} {C a} (\lam b => g (a, b)))
+                          {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) : IsEquiv (lift-map {A} {B} {C} g {x} {y} r)
+      => fiberwiseEquiv (ge y.1) (\lam b t => lift-map {A} {B} {C} g {x} {y.1, b} r t)
+           (contr-equiv (Contr.Contr_QEquiv (lift-sigma B) (Bf (x.1, y.1, r, x.2)))
+                        (Contr.Contr_QEquiv (lift-sigma C) (Cf (x.1, y.1, r, g x)))) y.2
+
+    \func lift-sigma {A : \Cat} (B : A ->⁺ \Cat) {d : CovLiftData B}
+      : QEquiv {CovLift B d} {\Sigma (b : B d.2) (DPath (\lam i => B (d.3 i)) d.4 b)} \cowith
+      | f l => (l.1, l.2)
+      | ret l => (l.1, l.2)
+      | ret_f _ => idp
+      | f_sec _ => idp
+  }
+
+-- | Lifts in `Fibers q` starting at a point with the trivial path are arrows out of it whose image is the given arrow.
+\func fibers-colift-equiv {E A : \Cat} (q : E ->⁺ A) (x : E) {a' : A} (p : q x ~> a')
+  : QEquiv {CovLift (Fibers q) (q x, a', p, (x, idp))}
+           {\Sigma (w : \Sigma (y : E) (x ~> y)) ((q w.1, dpath \lam i => q (w.2 i)) = {\Sigma (y : A) (q x ~> y)} (a', p))} \cowith
+  | f u => ((u.1.1, dpath \lam i => (u.2 i).1), path \lam m => (u.1.2 m, dpath \lam i => (u.2 i).2 m))
+  | ret v => ((v.1.1, path \lam m => (v.2 m).1), dpath \lam i => (v.1.2 i, path \lam m => (v.2 m).2 i))
+  | ret_f u => idp
+  | f_sec v => idp

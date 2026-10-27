@@ -1,11 +1,16 @@
 \import Equiv
+\import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
-\import InfCat.Fibration.DirectedUnivalence
-\import InfCat.Fibration.LeftFib
-\import InfCat.Fibration.Straightening
-\import InfCat.Functor.Equiv
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
+\import Logic.Meta
 \import Logic.Unique
 \import Paths
 \import Paths.Meta
@@ -25,48 +30,239 @@
   : QEquiv {\Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> G k} {G (x, idd)} \cowith
   | f M => M (x, idd)
   | ret b k => coe+ (\lam i => G (coslice-arrow k i)) b dright
-  | ret_f M => ext \lam k => pmap+ (\lam l => l.1) $
-      IsHEquiv.fib-sec-unique (leftFib-equiv (leftFib-pullback G universe-leftFib))
-        {(x, idd), k, coslice-arrow k, M (x, idd)}
-        {coe+ (\lam i => G (coslice-arrow k i)) (M (x, idd)) dright, dpath \lam i => coe+ (\lam j => G (coslice-arrow k j)) (M (x, idd)) i}
-        {M k, dpath \lam i => M (coslice-arrow k i)}
+  | ret_f M => ext \lam k => coe+-dpath (dpath \lam i => M (coslice-arrow k i))
   | f_sec b => pmap (\lam p => ~>_-> (dmap G p) b) coslice-arrow.idd-path *> ~>_->_idd
 
 -- | The Yoneda lemma: natural transformations from the representable functor of {x} to {F} are elements of `F x`.
-\func yonedaCov.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {(\lam y =>⁺ ReprFunctor x y) ~> F} {F x} \cowith
-  | f e => ~>_-> (dpath \lam i => e i x) (Straight.toStraight idd)
-  | ret b => toArr (ext-sec x F b)
-  | ret_f e => pmap toArr (ext-sec-unique x F \lam k => coe+ (\lam i => e i k.1) k.2 dright)
-            *> path (\lam j => dpath (\lam i y => iso+_coe+ (dpath \lam i' => e i' y) i j))
-  | f_sec b => ~>_->_idd
+\lemma yonedaCov.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : IsEquiv {ReprFunctor x ~> F} {F x} fun
+  => inP (depUnivalence `transQEquiv` Sec-equiv x F)
   \where {
+    \protected \func fun (p : ReprFunctor x ~> F) : F x
+      => ~>_-> (dmap (\lam H => H x) p) (Straight.toStraight idd)
+
     -- | Sections over the total category of the representable functor.
-    \func Sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u)
+    \protected \func Sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u)
       => \Pi (k :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F k.1
 
-    -- | The natural transformation corresponding to a section.
-    \func toArr.{u} {C : \Cat u} {x : C} {F : C ->⁺ \Type u} (H : \Pi (k :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F k.1)
-      : (\lam y =>⁺ ReprFunctor x y) ~> F
-      => dpath \lam i y => iso+ (\lam r => H (y,r)) i
+    -- | Sections over the total category of the representable functor are sections over the coslice.
+    \func Sec-reindex.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u)
+      : QEquiv {Sec x F} {\Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1} \cowith
+      | f S k => S (k.1, Straight.toStraight k.2)
+      | ret T k => T (k.1, Straight.fromStraight k.2)
+      | ret_f S => path \lam j k => S (k.1, Straight.toStraight_fromStraight k.2 j)
+      | f_sec T => idp
 
-    -- | The section obtained by transporting {b} along arrows out of {x}.
-    \func ext-sec.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) (b : F x) : Sec x F
-      => \lam k => ~>_-> (dmap F (Straight.fromStraight k.2)) b
-
-    -- | A section is determined by its value at the identity.
-    \func ext-sec-unique.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) (H : Sec x F)
-      : ext-sec x F (H (x, Straight.toStraight idd)) = H
-      => \let | Q => coslice-yoneda x (\lam k => F k.1)
-              | hh (S : Sec x F) : \Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1 => \lam k => S (k.1, Straight.toStraight k.2)
-              | back (T : \Pi (k :⁺ \Sigma⁺ (y : C) (x ~> y)) -> F k.1) : Sec x F => \lam k => T (k.1, Straight.fromStraight k.2)
-              | back-hh (S : Sec x F) : back (hh S) = S => path \lam j k => S (k.1, Straight.toStraight_fromStraight k.2 j)
-              | q : hh (ext-sec x F (H (x, Straight.toStraight idd))) = hh H => inv (Q.ret_f _) *> pmap Q.ret ~>_->_idd *> Q.ret_f _
-         \in inv (back-hh _) *> pmap back q *> back-hh H
+    \func Sec-equiv.{u} {C : \Cat u} (x : C) (F : C ->⁺ \Type u) : QEquiv {Sec x F} {F x}
+      => Sec-reindex x F `transQEquiv` coslice-yoneda x (\lam k => F k.1)
   }
 
+-- | Transporting the identity in the representable functor along {r} gives {r}.
+\sfunc ReprFunctor-transport-idd.{u} {C : \Cat u} {x w : C} (r : x ~> w)
+  : ~>_-> (dmap (ReprFunctor x) r) (Straight.toStraight idd) = Straight.toStraight r
+  => pmap (\lam S => S (w, Straight.toStraight r)) ((yonedaCov.Sec-equiv x (ReprFunctor x)).ret_f (\lam k => k.2))
+
 -- | Transport in the representable functor is postcomposition.
-\sfunc ReprFunctor-transport.{u} {C : \Cat u} {x y z : C} (q : x ~> y) (p : y ~> z)
+\sfunc ReprFunctor-transport.{u} {C : \Cat u} {x y z : C} {q : x ~> y} {p : y ~> z}
   : ~>_-> (dmap (ReprFunctor x) p) (Straight.toStraight q) = Straight.toStraight (comp q p)
-  => \have tr {w : C} (r : x ~> w) : ~>_-> (dmap (ReprFunctor x) r) (Straight.toStraight idd) = Straight.toStraight r
-           => pmap (\lam S => S (w, Straight.toStraight r)) (yonedaCov.ext-sec-unique x (\lam y => ReprFunctor x y) (\lam k => k.2))
-     \in pmap (~>_-> (dmap (ReprFunctor x) p)) (inv (tr q)) *> inv (~>_->_comp _ _) *> pmap (~>_-> __ _) (inv (dmap_comp (ReprFunctor x))) *> tr (comp q p)
+  => pmap (~>_-> (dmap (ReprFunctor x) p)) (inv (ReprFunctor-transport-idd q)) *> inv (~>_->_comp _ _)
+      *> pmap (~>_-> __ _) (inv (dmap_comp (ReprFunctor x))) *> ReprFunctor-transport-idd (comp q p)
+
+-- | Components of a natural transformation out of a representable functor are determined by its value at the identity.
+\sfunc yonedaCov-component.{u} {C : \Cat u} {x w : C} {G : C ->⁺ \Type u} {q : ReprFunctor x ~> G} {r : x ~> w}
+  : ~>_-> (dmap G r) (yonedaCov.fun q) = ~>_-> (dmap (\lam H => H w) q) (Straight.toStraight r)
+  => ~>_->-natural (\lam z b => ~>_-> (dmap (\lam H => H z) q) b) r
+     *> pmap (~>_-> (dmap (\lam H => H w) q)) (ReprFunctor-transport-idd r)
+
+-- | The Yoneda equivalence is natural in the functor.
+\sfunc yonedaCov-natural.{u} {C : \Cat u} {x : C} {F G : C ->⁺ \Type u} {a : ReprFunctor x ~> F} {g : F ~> G}
+  : yonedaCov.fun (comp a g) = ~>_-> (dmap (\lam H => H x) g) (yonedaCov.fun a)
+  => pmap+ (~>_-> __ _) (dmap_comp (\lam (H : C ->⁺ \Type u) => H x) {_} {_} {_} {a} {g}) *> ~>_->_comp _ _
+
+\lemma yonedaEmbCov.{u} {C : \Cat u} {x y : C} : IsEquiv {ReprFunctor y ~> ReprFunctor x} {x ~> y} fun
+  => IsEquiv.trans (yonedaCov y (ReprFunctor x)) (inP ReprFunctor.equiv)
+  \where {
+    \protected \func fun {x y : C} (p : ReprFunctor y ~> ReprFunctor x) : x ~> y
+      => Straight.fromStraight (yonedaCov.fun p)
+
+    \sfunc fun_idd {x : C} : fun {C} {x} idd = idd
+      => pmap Straight.fromStraight ~>_->_idd
+      \where {
+        \protected \sfunc conv {x : C} {p : ReprFunctor x ~> ReprFunctor x} (q : fun p = idd) : p = idd
+          => IsEquiv.isInj yonedaEmbCov (q *> inv fun_idd)
+      }
+
+    \sfunc fun_comp {x y z : C} {p : ReprFunctor z ~> ReprFunctor y} {q : ReprFunctor y ~> ReprFunctor x}
+      : fun (comp p q) = comp (fun q) (fun p)
+      => pmap Straight.fromStraight $ yonedaCov-natural
+          *> pmap (~>_-> (dmap (\lam H => H z) q)) (inv (ReprFunctor.equiv.ret_f _))
+          *> inv yonedaCov-component
+          *> pmap (~>_-> (dmap (ReprFunctor x) (yonedaEmbCov.fun p))) (inv (ReprFunctor.equiv.ret_f _))
+          *> ReprFunctor-transport
+
+    \lemma isIso {x y : C} {p : ReprFunctor y ~> ReprFunctor x} (e : IsIso p) : IsIso (fun p)
+      \elim e
+      | inP (q,qp=id,pq=id) => inP (fun q, inv fun_comp *> pmap fun pq=id *> fun_idd, inv fun_comp *> pmap fun qp=id *> fun_idd)
+
+    \lemma isConservative {p : ReprFunctor y ~> ReprFunctor x} (e : IsIso (fun p)) : IsIso p
+      => \case IsIso-char.1 e \with {
+        | inP (r,q) => \case \elim y, \elim r, \elim p, \elim q \with {
+          | _, idp, p, q => transportInv IsIso (fun_idd.conv (inv q)) idd-iso
+        }
+      }
+  }
+
+\lemma ReprFunctor-embedding.{u} {C : \Cat u} : Embedding (ReprFunctor {C}) \cowith
+  | isEmb x y =>
+    \let | g {y : C} (q : ReprFunctor x = ReprFunctor y) => IsEquiv.ret =-char (yonedaEmbCov.fun (=_~> (inv q)), yonedaEmbCov.isIso (=_~>-iso (inv q)))
+         | ge : IsEquiv g => IsEquiv.trans
+                  (IsEquiv.trans (IsEquiv.trans (inP inv-equiv) =-char)
+                                 (subtype-equiv yonedaEmbCov yonedaEmbCov.isIso yonedaEmbCov.isConservative))
+                  (IsEquiv.ret-equiv =-char)
+         | gp {y : C} {p : x = y} : g (pmap ReprFunctor p) = p => \case \elim y, \elim p \with {
+           | _, idp => pmap (IsEquiv.ret =-char) (ext yonedaEmbCov.fun_idd) *> IsEquiv.ret_f =-char
+         }
+    \in \new Retraction {
+      | sec => g
+      | f_sec q => IsEquiv.isInj ge gp
+    }
+
+-- | {p} is a universal element of {F} at {x}: natural transformations out of {F} are determined by their value at {p}.
+\type IsUnivElem.{u} {C : \Cat u} (F : C ->⁺ \Type u) (x : C) (p : F x) : \Prop
+  => \Pi (G : C ->⁺ \Type u) -> IsEquiv {F ~> G} {G x} (\lam g => ~>_-> (dmap (\lam H => H x) g) p)
+
+-- | A universal element {p} of {F} at {x} corepresents {F}: transport of {p} identifies arrows out of {x} with {F}.
+\lemma univElem-equiv.{u} {C : \Cat u} {F : C ->⁺ \Type u} {x : C} {p : F x} (U : IsUnivElem F x p) (y : C)
+  : IsEquiv {x ~> y} {F y} (\lam h => ~>_-> (dmap F h) p)
+  => transport IsEquiv (ext \lam h => inv yonedaCov-component *> pmap (~>_-> (dmap F h)) (IsEquiv.f_ret (yonedaCov x F)))
+      (IsEquiv.trans (inP (symQEquiv ReprFunctor.equiv)) (~>_->-iso-equiv (dmap_IsIso (__ y) (univElem-iso U))))
+  \where {
+    -- | The Yoneda transformation of a universal element is an isomorphism.
+    \lemma univElem-iso.{u} {C : \Cat u} {F : C ->⁺ \Type u} {x : C} {p : F x} (U : IsUnivElem F x p) : IsIso (IsEquiv.ret (yonedaCov x F) p)
+      => precomp-equiv=>iso \lam G => IsEquiv.leftFactor (yonedaCov x G) $ transport IsEquiv
+           (ext \lam g => inv $ pmap (~>_-> __ _) (dmap_comp (\lam (H : C ->⁺ \Type u) => H x) {_} {_} {G})
+                                *> ~>_->_comp _ _ *> pmap (~>_-> (dmap (__ x) g)) (IsEquiv.f_ret (yonedaCov x F)))
+           (U G)
+  }
+
+-- | Conversely, {p} is a universal element if its transport identifies arrows out of {x} with {F}.
+\lemma equiv-univElem.{u} {C : \Cat u} {F : C ->⁺ \Type u} {x : C} {p : F x}
+                          (e : \Pi (y : C) -> IsEquiv {x ~> y} {F y} (\lam h => ~>_-> (dmap F h) p))
+  : IsUnivElem F x p
+  => \let a => IsEquiv.ret (yonedaCov x F) p
+     \in \lam G => transport IsEquiv (ext \lam g => yonedaCov-natural *> pmap (~>_-> (dmap (__ x) g)) (IsEquiv.f_ret (yonedaCov x F))) $
+           IsEquiv.trans (comp-iso-left-equiv (objectwise-iso \lam y => ~>_->-equiv-iso $ transport IsEquiv
+                             (ext \lam r => pmap (~>_-> (dmap F (Straight.fromStraight r))) (inv (IsEquiv.f_ret (yonedaCov x F)))
+                                           *> yonedaCov-component *> pmap (~>_-> (dmap (__ y) a)) (ReprFunctor.equiv.ret_f r))
+                             (IsEquiv.trans (inP ReprFunctor.equiv) (e y)) : IsIso a))
+                         (yonedaCov x G)
+
+-- | Universal elements descend along functors {l} such that precomposition with {l} is fully faithful (e.g. localizations).
+\lemma univElem-precomp.{u} {C D : \Cat u} {l : C ->⁺ D} (lff : IsFFMap {D ->⁺ \Type u} {C ->⁺ \Type u} (\lam G x => G (l x)))
+                            {G : D ->⁺ \Type u} {c : C} {a : G (l c)} (U : IsUnivElem (\lam x => G (l x)) c a)
+  : IsUnivElem G (l c) a
+  => \lam H => IsEquiv.trans (lff G H) (U (\lam x => H (l x)))
+
+{- | A transformation {t} between functors with universal elements {p} and {q} is an isomorphism if and only if
+ -   the arrow {c} between their base points carrying {q} to the image of {p} is.
+ -}
+\lemma univElem-iso-char.{u} {C : \Cat u} {P Q : C ->⁺ \Type u} {t : P ~> Q} {a a' : C} {p : P a} {q : Q a'}
+                             (Up : IsUnivElem P a p) (Uq : IsUnivElem Q a' q) {c : a' ~> a} (h : ~>_-> (dmap Q c) q = ~>_-> (dmap (__ a) t) p)
+  : IsIso t <-> IsIso c
+  => \let | eP => IsEquiv.ret (yonedaCov a P) p
+          | eQ => IsEquiv.ret (yonedaCov a' Q) q
+          | s => IsEquiv.ret (yonedaEmbCov {C} {a'} {a}) c
+     \in \have
+          | sq : comp eP t = comp s eQ
+            => IsEquiv.isInj (yonedaCov a Q) $
+                 yonedaCov-natural *> pmap (~>_-> (dmap (__ a) t)) (IsEquiv.f_ret (yonedaCov a P)) *> inv h
+                 *> pmap (~>_-> (dmap Q c)) (inv (IsEquiv.f_ret (yonedaCov a' Q))) *> yonedaCov-component
+                 *> pmap (\lam r => ~>_-> (dmap (__ a) eQ) (Straight.toStraight r)) (inv (IsEquiv.f_ret yonedaEmbCov))
+                 *> pmap (~>_-> (dmap (__ a) eQ)) (ReprFunctor.equiv.ret_f _) *> inv yonedaCov-natural
+          | sc : IsIso s <-> IsIso c
+            => (\lam e => transport IsIso (IsEquiv.f_ret yonedaEmbCov) (yonedaEmbCov.isIso e),
+                \lam e => yonedaEmbCov.isConservative $ transportInv IsIso (IsEquiv.f_ret yonedaEmbCov) e)
+     \in (\lam e => sc.1 $ (comp-IsIso-left (univElem-equiv.univElem-iso Uq)).1 $ transport IsIso sq $ comp-IsIso (univElem-equiv.univElem-iso Up) e,
+         \lam e => (comp-IsIso-right (univElem-equiv.univElem-iso Up)).1 $ transportInv IsIso sq $ comp-IsIso (sc.2 e) (univElem-equiv.univElem-iso Uq))
+
+-- | If {F} is fully faithful at {x}, then the identity is a universal element of `Hom(F x, F -)`.
+\lemma ff-univElem.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} (ff : \Pi (y : C) -> IsEquiv {x ~> y} {F x ~> F y} (dmap F))
+  : IsUnivElem (\lam w => ReprFunctor (F x) (F w)) x (Straight.toStraight idd)
+  => equiv-univElem \lam y => transport IsEquiv (ext \lam h => inv (ReprFunctor-transport-idd (dmap F h)))
+                                (IsEquiv.trans (ff y) (inP (symQEquiv ReprFunctor.equiv)))
+
+-- | If the identity is a universal element of `Hom(F x, F -)`, then {F} is fully faithful at {x}.
+\lemma univElem-ff.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} (U : IsUnivElem (\lam w => ReprFunctor (F x) (F w)) x (Straight.toStraight idd)) (y : C)
+  : IsEquiv {x ~> y} {F x ~> F y} (dmap F)
+  => IsEquiv.leftFactor (inP (symQEquiv ReprFunctor.equiv))
+       (transport IsEquiv (ext \lam h => ReprFunctor-transport-idd (dmap F h)) (univElem-equiv U y))
+
+-- | A universal element {a} of `Hom(d, F -)` at {x}: transport of {a} in the left fibration `Hom(d, F -)` along arrows out of {x} is an equivalence.
+\lemma univElem-hom-equiv.{u} {C D : \Cat u} (F : C ->⁺ D) {x : C} {d : D} {a : d ~> F x}
+                              (U : IsUnivElem (\lam y => ReprFunctor d (F y)) x (Straight.toStraight a)) (y : C)
+  : IsEquiv {x ~> y} {d ~> F y} (leftFib-tr (leftFib-pullback F (hom-leftFib d)) __ a)
+  => transport IsEquiv (ext \lam h => pmap Straight.fromStraight ReprFunctor-transport
+                                     *> inv (leftFib-tr-dpath (leftFib-pullback F (hom-leftFib d)) (dpath \lam j => dpath \lam i => fill2 a (dmap F h) i j)))
+      (IsEquiv.trans (univElem-equiv U y) (inP ReprFunctor.equiv))
+
+-- | A section over the total category of `Hom(x, -)` whose value at the identity is a universal element is an equivalence on every component.
+\lemma univElem-sec-equiv.{u} {C : \Cat u} {x : C} {F : C ->⁺ \Type u} (s : \Pi (sg :⁺ \Sigma⁺ (y : C) (ReprFunctor x y)) -> F sg.1)
+                              (U : IsUnivElem F x (s (x, Straight.toStraight idd))) (y : C)
+  : IsEquiv {ReprFunctor x y} {F y} (\lam r => s (y, r))
+  => transport IsEquiv (ext \lam r => pmap (\lam S => S (y, r)) ((yonedaCov.Sec-equiv x F).ret_f s))
+       (IsEquiv.trans (inP ReprFunctor.equiv) (univElem-equiv U y))
+
+-- | The identity of {b} is a universal element of evaluation at {b}.
+\lemma ev-univElem.{u} {B : \Cat u} (b : B) : IsUnivElem {B ->⁺ \Type u} (\lam G => G b) (ReprFunctor b) (Straight.toStraight idd)
+  => \lam Q => transport IsEquiv
+       (ext \lam g => pmap (~>_-> __ _) (dmap_comp (\lam (H : (B ->⁺ \Type u) ->⁺ \Type (\suc u)) => H (ReprFunctor b)))
+                      *> ~>_->_comp _ _
+                      *> pmap (~>_-> (dmap (__ (ReprFunctor b)) g)) (IsEquiv.f_ret (yonedaCov (ReprFunctor b) (\lam G => G b))))
+       (IsEquiv.trans (comp-iso-left-equiv (objectwise-iso ev-al-component : IsIso (ev-al b))) (yonedaCov (ReprFunctor b) Q))
+  \where {
+    -- | The Yoneda transformation from the representable functor of `ReprFunctor b` to evaluation at {b}.
+    \func ev-al.{u} {B : \Cat u} (b : B) : ReprFunctor (ReprFunctor b) ~> (\lam G => G b)
+      => IsEquiv.ret (yonedaCov (ReprFunctor b) (\lam G => G b)) (Straight.toStraight idd)
+
+    -- | The components of {ev-al} are the Yoneda equivalences.
+    \lemma ev-al-component.{u} {B : \Cat u} {b : B} (G : B ->⁺ \Type u) : IsIso (dmap (__ G) (ev-al b))
+      => ~>_->-equiv-iso $ transport IsEquiv
+           (ext \lam r => inv coe+-level
+                          *> pmap (~>_-> (dmap (__ b) (Straight.fromStraight r)))
+                                  (inv (IsEquiv.f_ret (yonedaCov (ReprFunctor b) (__ b))))
+                          *> yonedaCov-component {_} {_} {G} {__ b}
+                          *> pmap (~>_-> (dmap (__ G) (ev-al b))) (Straight.toStraight_fromStraight r))
+           (IsEquiv.trans (inP ReprFunctor.equiv) (yonedaCov b G))
+  }
+
+-- | {F} is representable: it is `ReprFunctor x` for some `x`.
+\type IsRepresentable.{u} {C : \Cat u} (F : C ->⁺ \Type u) : \Prop
+  => ∃ (x : C) (F = ReprFunctor x)
+
+\lemma representable-char.{u} {C : \Cat u} {F : C ->⁺ \Type u} : IsRepresentable F <-> ∃ (x : C) (a : F x) (IsUnivElem F x a)
+  => (\lam (inP (x, p)) =>
+        \have s => transportInv (\lam G => \Sigma (a : G x) (IsUnivElem G x a)) p (Straight.toStraight idd, yonedaCov x)
+        \in inP (x, s.1, s.2),
+      \lam (inP (x, a, U)) => inP (x, inv (IsIso_= (univElem-equiv.univElem-iso U)).1))
+
+-- | Universal elements of {F} are unique.
+\sfunc univElem-unique.{u} {C : \Cat u} {F : C ->⁺ \Type u} {a b : C} {p : F a} {q : F b}
+                          (Up : IsUnivElem F a p) (Uq : IsUnivElem F b q)
+  : (a, p) = {\Sigma (c : C) (F c)} (b, q)
+  => \let | c => IsEquiv.ret (univElem-equiv Up b) q
+          | cq : ~>_-> (dmap F c) p = q => IsEquiv.f_ret (univElem-equiv Up b)
+          | e => IsIso_= ((univElem-iso-char Uq Up {c} (cq *> inv ~>_->_idd)).1 idd-iso)
+     \in ext (e.1, inv (~>_->_=_~> {C} {F} e.1 p) *> pmap (\lam f => ~>_-> (dmap F f) p) e.2 *> cq)
+
+-- | Universal elements are transported along paths of functors.
+\lemma univElem-path.{u} {C : \Cat u} {F G : C ->⁺ \Type u} (q : G = F) {a : C} {x : F a} (U : IsUnivElem F a x)
+  : IsUnivElem G a (~>_-> (=_~> (inv (pmap+ (__ a) q))) x) \elim q
+  | idp => transportInv (IsUnivElem F a) ~>_->_idd U
+
+-- | Universal elements are transported along pointwise paths of functors.
+\lemma univElem-pointwise.{u} {C : \Cat u} {F G : C ->⁺ \Type u} (K : \Pi (c :⁺ C) -> G c = F c) {a : C} {x : F a} (U : IsUnivElem F a x)
+  : IsUnivElem G a (transport (\lam X => X) (inv (K a)) x)
+  => aux (funExt+ K) U
+  \where
+    \private \lemma aux.{u} {C : \Cat u} {F G : C ->⁺ \Type u} (N : G = F) {a : C} {x : F a} (U : IsUnivElem F a x)
+      : IsUnivElem G a (transport (\lam X => X) (inv (path \lam i => N i a)) x) \elim N
+      | idp => U

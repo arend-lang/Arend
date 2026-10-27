@@ -334,7 +334,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private Utils.CompleteSetContextSaver<Binding> clearCategoricalContext() {
     Set<Binding> context = myContext != null ? myContext : new HashSet<>();
     Utils.CompleteSetContextSaver<Binding> saver = new Utils.CompleteSetContextSaver<>(context);
-    context.removeIf(binding -> binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT);
+    context.removeIf(binding -> binding.getVariance() != BindingVariance.INVARIANT);
     return saver;
   }
 
@@ -348,12 +348,15 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   private List<SortExpression> checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr, boolean isSigma, boolean allowCatDomain) {
     List<SortExpression> result = new ArrayList<>();
+    DependentLink first = link;
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType;
         boolean invariant = isSigma && link.getVariance() == BindingVariance.INVARIANT;
-        Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : type;
+        // The type of a parameter of a covariant \Sigma-type may be released by previous parameters, so its sort is checked against the expected type later
+        boolean released = isSigma && !invariant && link != first;
+        Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : released && type != UniverseExpression.INF_OMEGA ? null : type;
         if (isSigma && !invariant || allowCatDomain) {
           paramType = link.getType().accept(this, checkAgainst);
         } else {
@@ -364,6 +367,12 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         SortExpression sort = toSort(paramType);
         if (invariant) {
           sort = sort.withoutCat();
+        } else if (released && sort.isInfinite()) {
+          Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(link.getType(), first, link);
+          SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
+          if (releasedSort != null) {
+            sort = releasedSort;
+          }
         }
         result.add(sort);
         if (link.isProperty()) {
@@ -604,7 +613,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitLet(LetExpression expr, Expression expectedType) {
     for (HaveClause clause : expr.getClauses()) {
-      clause.getExpression().accept(this, null);
+      if (clause.getVariance() == BindingVariance.INVARIANT) {
+        try (var ignored = clearCategoricalContext()) {
+          clause.getExpression().accept(this, null);
+        }
+      } else {
+        clause.getExpression().accept(this, null);
+      }
       addBinding(clause, expr);
     }
     Expression type = expr.getExpression().accept(this, expectedType);
@@ -751,15 +766,20 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       List<Expression> subExprs = new ArrayList<>();
       boolean noEmpty;
       ConstructorExpressionPattern exprPattern;
+      DependentLink subParams;
       if (type instanceof SigmaExpression sigma) {
-        noEmpty = checkElimPatterns(sigma.getParameters(), pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, subPatterns, subExprs);
-        exprPattern = new ConstructorExpressionPattern(sigma, subPatterns);
+        subParams = sigma.getParameters();
       } else if (type instanceof ClassCallExpression classCall) {
-        noEmpty = checkElimPatterns(classCall.getClassFieldParameters(), pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, subPatterns, subExprs);
-        exprPattern = new ConstructorExpressionPattern(classCall, subPatterns);
+        subParams = classCall.getClassFieldParameters();
       } else {
         throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.text("a sigma type or a class call"), type, mySourceNode), errorExpr));
       }
+      if (variance == BindingVariance.COVARIANT && subParams.hasNext() && subParams.getVariance() == BindingVariance.INVARIANT) {
+        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Pattern matching on an invariant " + (type instanceof SigmaExpression ? "\\Sigma type" : "record") + " is not allowed for covariant parameters", mySourceNode), errorExpr));
+      }
+      // Components of a matched invariant parameter are invariant as in PatternTypechecking
+      noEmpty = checkElimPatterns(subParams, variance == BindingVariance.INVARIANT, pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, subPatterns, subExprs);
+      exprPattern = type instanceof SigmaExpression sigma ? new ConstructorExpressionPattern(sigma, subPatterns) : new ConstructorExpressionPattern((ClassCallExpression) type, subPatterns);
       return makeResult(noEmpty, exprPattern, subExprs);
     }
 
@@ -781,7 +801,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       }
       List<ExpressionPattern> subPatterns = new ArrayList<>();
       List<Expression> subExprs = new ArrayList<>();
-      boolean noEmpty = checkElimPatterns(constructor.getArrayParameters(classCall), pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, subPatterns, subExprs);
+      boolean noEmpty = checkElimPatterns(constructor.getArrayParameters(classCall), variance == BindingVariance.INVARIANT, pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, subPatterns, subExprs);
       Expression length1 = length == null || constructor == Prelude.EMPTY_ARRAY ? null : length.pred();
       return makeResult(noEmpty, new ConstructorExpressionPattern(new FunCallExpression(constructor, classCall.getLevels(), length1, classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE)), classCall.getThisBinding(), origLength, subPatterns), subExprs);
     }
@@ -818,7 +838,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     ConCallExpression conCall = conCalls.getFirst();
     List<ExpressionPattern> subPatterns = new ArrayList<>();
     List<Expression> subExprs = new ArrayList<>();
-    boolean noEmpty = checkElimPatterns(DependentLink.Helper.subst(conCall.getDefinition().getParameters(), new ExprSubstitution().add(conCall.getDefinition().getDataTypeParameters(), conCall.getDataTypeArguments())), pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, subPatterns, subExprs);
+    boolean noEmpty = checkElimPatterns(DependentLink.Helper.subst(conCall.getDefinition().getParameters(), new ExprSubstitution().add(conCall.getDefinition().getDataTypeParameters(), conCall.getDataTypeArguments())), variance == BindingVariance.INVARIANT, pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, subPatterns, subExprs);
     return makeResult(noEmpty, new ConstructorExpressionPattern(new ConCallExpression(conCall.getDefinition(), conCall.getLevels(), conCall.getDataTypeArguments(), Collections.emptyList()), subPatterns), subExprs);
   }
 
@@ -827,7 +847,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return expr instanceof ReferenceExpression refExpr && refExpr.getBinding() instanceof DependentLink link ? link.getVariance() : BindingVariance.INVARIANT;
   }
 
-  private boolean checkElimPatterns(DependentLink parameters, List<? extends Pattern> patterns, ExprSubstitution substitution, List<Binding> newBindings, ExprSubstitution idpSubst, ExprSubstitution patternSubst, ExprSubstitution reversePatternSubst, Expression errorExpr, List<ExpressionPattern> exprPatterns, List<Expression> exprs) {
+  private boolean checkElimPatterns(DependentLink parameters, boolean forceInvariant, List<? extends Pattern> patterns, ExprSubstitution substitution, List<Binding> newBindings, ExprSubstitution idpSubst, ExprSubstitution patternSubst, ExprSubstitution reversePatternSubst, Expression errorExpr, List<ExpressionPattern> exprPatterns, List<Expression> exprs) {
     boolean noEmpty = true;
     for (Pattern pattern : patterns) {
       if (!parameters.hasNext()) {
@@ -844,7 +864,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       ExpressionPattern exprPattern = null;
       Expression expression = null;
       if (noEmpty) {
-        PatternResult result = checkElimPattern(type, pattern, parameters.getVariance(), newBindings, varSubst, patternSubst, reversePatternSubst, errorExpr);
+        PatternResult result = checkElimPattern(type, pattern, forceInvariant ? BindingVariance.INVARIANT : parameters.getVariance(), newBindings, varSubst, patternSubst, reversePatternSubst, errorExpr);
         exprPattern = result.pattern();
         expression = result.expression();
         if (!result.noEmpty()) {
@@ -910,7 +930,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       ExprSubstitution patternSubst = new ExprSubstitution();
       List<ExpressionPattern> exprPatterns = new ArrayList<>();
       exprClauses.add(new ExtElimClause(exprPatterns, clause.getExpression(), idpSubst));
-      boolean noEmpty = checkElimPatterns(parameters, clause.getPatterns(), substitution, new ArrayList<>(), idpSubst, patternSubst, new ExprSubstitution(), errorExpr, exprPatterns, null);
+      boolean noEmpty = checkElimPatterns(parameters, false, clause.getPatterns(), substitution, new ArrayList<>(), idpSubst, patternSubst, new ExprSubstitution(), errorExpr, exprPatterns, null);
       for (Map.Entry<Binding, Expression> entry : patternSubst.getEntries()) {
         Expression actualType = entry.getKey().getType();
         Expression expectedType = entry.getValue().getType().subst(idpSubst);
@@ -1063,21 +1083,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return check(expectedType, expr.getType(), expr);
   }
 
-  /**
-   * Checks that a path (type) that depends on the categorical context is forced to the infinite level.
-   */
-  private void checkForcedInfinite(Expression expr, boolean isForcedInfinite) {
-    if (isForcedInfinite || myContext == null) return;
-    for (Binding binding : FreeVariablesCollector.getFreeVariables(expr)) {
-      if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT && myContext.contains(binding)) {
-        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("A path type that depends on the categorical context must be forced to the infinite level", mySourceNode), expr));
-      }
-    }
-  }
-
   @Override
   public Expression visitPath(PathExpression expr, Expression expectedType) {
-    checkForcedInfinite(expr, expr.isForcedInfinite());
     boolean isDirected = expr.isDirected();
     expr.getArgumentType().accept(this, new PiExpression(isDirected ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, UniverseExpression.OMEGA));
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", isDirected ? ExpressionFactory.DI() : ExpressionFactory.Interval(), false, isDirected ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
@@ -1087,7 +1094,6 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitPathType(PathTypeExpression expr, Expression expectedType) {
-    checkForcedInfinite(expr, expr.isForcedInfinite());
     DataDefinition definition = expr.getDefinition();
     checkList(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), definition.getParameters(), new ExprSubstitution(), Levels.EMPTY.makeSubstitution(definition));
     return check(expectedType, GetTypeVisitor.INSTANCE.visitPathType(expr, null), expr);

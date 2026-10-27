@@ -772,7 +772,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!((type == null || type instanceof Concrete.Expression) && term instanceof Concrete.Expression)) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.LetClause(makeLocalRef(ref), parameters(parameters), (Concrete.Expression) type, (Concrete.Expression) term);
+    return new Concrete.LetClause(makeLocalRef(ref), parameters(parameters), (Concrete.Expression) type, (Concrete.Expression) term, false);
   }
 
   @NotNull
@@ -781,7 +781,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(pattern instanceof Concrete.Pattern && (type == null || type instanceof Concrete.Expression) && term instanceof Concrete.Expression)) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.LetClause((Concrete.Pattern) pattern, (Concrete.Expression) type, (Concrete.Expression) term);
+    return new Concrete.LetClause((Concrete.Pattern) pattern, (Concrete.Expression) type, (Concrete.Expression) term, false);
   }
 
   @NotNull

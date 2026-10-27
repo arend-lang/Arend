@@ -1,0 +1,108 @@
+{- | Perfect pairings of categories.
+ -
+ -   A pairing `P : X -> Y -> \Type u` is perfect ({IsPerfect}) if `P : X -> (Y -> \Type u)` is fully faithful,
+ -   its values are representable, and every representable functor is a value of {P}.
+ -   * {perfect-char}: {P} is perfect if and only if it is the Hom-functor of `Op Y` along an equivalence `X ≃ Op Y`.
+ -     Proof. Since `Op.Hom` is fully faithful with representable functors as its image, {P} lifts along it to `F : X -> Op Y`,
+ -     which is fully faithful and surjective.
+ -   * {hom-perfect}: the Hom-functor `Op.Hom : Op C -> C -> \Type u` is perfect.
+ -   * {perfect-swap}: perfectness is symmetric (SCT 9.3.10, 9.3.11).
+ -     Proof. By {perfect-char} and {HEquiv_=}, we may assume that `X = Op Y` and that the equivalence is the identity;
+ -     then `P x y = Op.Hom x y = Op.Hom (toOpOp y) x` by {toOpOp.char}, and {toOpOp} is an equivalence.
+ -   * {perfect-univElem-swap}: for a perfect pairing, an element of `P x y` is universal in {y} if and only if it is universal in {x}.
+ -     By the same reduction, this follows from {hom-univElem-swap}.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Opposite
+\import InfCat.Opposite.TwistedArrow
+\import InfCat.Paths
+\import InfCat.Yoneda.CovariantYoneda
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+-- | {P} is fully faithful, its values are representable, and every representable functor is a value of {P}.
+\type IsPerfect.{u} {X Y : \Cat u} (P : X ->⁺ Y ->⁺ \Type u) : \Prop
+  => \Sigma (IsFFMap P) (\Pi (x : X) -> IsRepresentable (P x)) (∀ y ∃ (x : X) (P x = ReprFunctor y))
+
+-- | {P} is perfect if and only if it is the Hom-functor of `Op Y` along an equivalence `X ≃ Op Y`.
+\lemma perfect-char.{u} {X Y : \Cat u} {P : X ->⁺ Y ->⁺ \Type u}
+  : IsPerfect P <-> ∃ (F : X ->⁺ Op Y) (IsHEquiv F) (\Pi (x :⁺ X) (y :⁺ Y) -> Op.Hom (F x) y = P x y)
+  => (\lam Pp => inP ((lift Pp).1, lift-equiv Pp, (lift Pp).2),
+      \lam (inP (F, Fe, Fp)) =>
+        \let | p : (\lam x => Op.Hom (F x)) = {X ->⁺ Y ->⁺ \Type u} P => ext \lam x y => Fp x y
+             | Fs => ff-surj-equiv.2 Fe
+        \in (transport IsFFMap p (ffMap-comp Fs.1 Op.Hom-ff),
+            \lam x => transport (\lam (Q : X ->⁺ Y ->⁺ \Type u) => IsRepresentable (Q x)) p (Op.Hom-repr (F x)),
+            \lam y => TruncP.map (Fs.2 (Op.toOp y)) \lam s => (s.1, inv (pmap (__ s.1) p) *> pmap Op.Hom s.2)))
+  \where {
+    -- | The lift of {P} along `Op.Hom`.
+    \sfunc lift (Pp : IsPerfect P) : \Sigma (F : X ->⁺ Op Y) (\Pi (x :⁺ X) (y :⁺ Y) -> Op.Hom (F x) y = P x y)
+      => \have l => ffMap-lift Op.Hom-ff P \lam x => \case Pp.2 x \with {
+                     | inP s => inP (Op.toOp s.1, inv s.2)
+                   }
+         \in (l.1, \lam x y => path \lam i => l.2 x i y)
+
+    \lemma lift-equiv (Pp : IsPerfect P) : IsHEquiv (lift Pp).1
+      => ff-surj-equiv.1 (ffMap-leftFactor Op.Hom-ff $ transportInv IsFFMap (ext (lift Pp).2) Pp.1,
+          \lam z => \case IsEquiv.isSurj Op.toOp-equiv z, Pp.3 \with {
+            | inP (y, q), Ps => TruncP.map (Ps y) \lam s =>
+                (s.1, ((IsFFMap.isObEmbedding Op.Hom-ff).isEmb _ _).sec (ext ((lift Pp).2 s.1) *> s.2) *> q)
+          })
+  }
+
+-- | The Hom-functor is perfect.
+\lemma hom-perfect.{u} {C : \Cat u} : IsPerfect (Op.Hom {C})
+  => (Op.Hom-ff, Op.Hom-repr, \lam y => inP (Op.toOp y, idp))
+
+-- | Perfectness is invariant under pointwise paths of pairings.
+\lemma perfect-ext.{u} {X Y : \Cat u} {P P' : X ->⁺ Y ->⁺ \Type u} (h : \Pi (x :⁺ X) (y :⁺ Y) -> P x y = P' x y) (Pp : IsPerfect P) : IsPerfect P'
+  => transport IsPerfect (ext h) Pp
+
+-- | Perfectness is symmetric.
+\lemma perfect-swap.{u} {X Y : \Cat u} {P : X ->⁺ Y ->⁺ \Type u} (Pp : IsPerfect P) : IsPerfect (\lam y x => P x y)
+  => \case perfect-char.1 Pp \with {
+    | inP (F, Fe, Fp) => aux (HEquiv_= Fe) Fp
+  }
+  \where
+    \private \lemma aux.{u} {X Y : \Cat u} (p : X = Op Y) {P : X ->⁺ Y ->⁺ \Type u}
+                            (h : \Pi (x :⁺ X) (y :⁺ Y) -> Op.Hom (transport+ (\lam Z => Z) p x) y = P x y)
+      : IsPerfect (\lam y x => P x y) \elim p
+      | idp => perfect-char.2 $ inP (toOpOp, toOpOp.isEquiv, \lam y x => toOpOp.char *> h x y)
+
+-- | An element of `Op.Hom x y` is universal in {y} if and only if it is universal in {x}.
+\lemma hom-univElem-swap.{u} {C : \Cat u} {x : Op C} {y : C} (h : Op.Hom x y)
+  : IsUnivElem (Op.Hom x) y h <-> IsUnivElem (yoneda y) x h
+  => (\lam U => \case IsEquiv.isSurj Op.toOp-equiv x \with {
+        | inP (c, q) => aux q h U
+      }, \lam U => transportInv (\lam s => IsUnivElem (Op.Hom s.1) y s.2)
+                                (univElem-unique U (twArr-target-univElem y)) (twArr-source-univElem y))
+  \where
+    \private \lemma aux.{u} {C : \Cat u} {c : C} {x : Op C} (q : Op.toOp c = x) {y : C} (h : Op.Hom x y)
+                            (U : IsUnivElem (Op.Hom x) y h) : IsUnivElem (yoneda y) x h \elim q
+      | idp => transportInv (\lam s => IsUnivElem (yoneda s.1) (Op.toOp c) s.2)
+                            (univElem-unique U (twArr-source-univElem c)) (twArr-target-univElem c)
+
+-- | For a perfect pairing, an element of `P x y` is universal in {y} if and only if it is universal in {x}.
+\lemma perfect-univElem-swap.{u} {X Y : \Cat u} {P : X ->⁺ Y ->⁺ \Type u} (Pp : IsPerfect P) {x : X} {y : Y} (h : P x y)
+  : IsUnivElem (P x) y h <-> IsUnivElem (\lam x' => P x' y) x h
+  => \case perfect-char.1 Pp \with {
+    | inP (F, Fe, Fp) => aux (HEquiv_= Fe) Fp h
+  }
+  \where {
+    \private \lemma aux.{u} {X Y : \Cat u} (p : X = Op Y) {P : X ->⁺ Y ->⁺ \Type u}
+                            (e : \Pi (x :⁺ X) (y :⁺ Y) -> Op.Hom (transport+ (\lam Z => Z) p x) y = P x y) {x : X} {y : Y} (h : P x y)
+      : IsUnivElem (P x) y h <-> IsUnivElem (\lam x' => P x' y) x h \elim p
+      | idp => aux' (path \lam i x y => e x y i) h
+
+    \private \lemma aux'.{u} {Y : \Cat u} {P : Op Y ->⁺ Y ->⁺ \Type u} (H : Op.Hom {Y} = P) {x : Op Y} {y : Y} (h : P x y)
+      : IsUnivElem (P x) y h <-> IsUnivElem (\lam x' => P x' y) x h \elim H
+      | idp => hom-univElem-swap h
+  }

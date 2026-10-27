@@ -1,0 +1,262 @@
+{- | The hom-types of the realization of a Segal right fibratio.
+
+ -   Fix a vertex {y} of a right fibration `p : E ->⁺ DeltaCat`. The ways to append {y} ({AppY}) form a right fibration over {E}
+ -   which, for Segal {p}, is local with respect to the arrows {LastWeakEq} preserving last vertices. So it extends to a right fibration
+ -   over the realization ({rightFib-extend}), whose total category is the localization `ExtR` of {AppY}.
+ -   * {appY0-terminal}: the degenerate edge at {y} ({appY0}) is a terminal object of `ExtR`. The natural transformation to it
+ -     ({unitHom-alpha}) is extended along the localization from the zigzag `c -> appYF c <- appY0` ({appYEta}, {appYV}),
+ -     whose second arrow lies over {LastWeakEq}; at the base object it is invertible since {appYEta} is split by a degeneracy ({appDelta}).
+ -   * Hence the fibers of the extension are the arrows into `ℓ y` ({rightFib-terminal-repr}).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Conservative
+\import InfCat.Limit.Terminal
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.ExtendRightFib
+\import InfCat.Localization.LocalizeRightFib
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.Simplicial.CospanIso
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Simplicial.Append
+\import InfCat.Square
+\import InfCat.Simplicial.AppendLocal
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Join
+\import InfCat.Simplicial.Segal
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- # Arrows preserving last vertices
+
+-- | Arrows of {AppT} preserving last vertices are sent to {LastWeakEq} by {appRestr}.
+\lemma lastWeakEq-appRestr.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {a : DI ->⁺ AppT p}
+                          (h : LastArr (dpath \lam i => (a i).1)) : isWeakEq {LastWeakEq p} (\lam i => appRestr pf (a i))
+  => transport (\lam (G : AppT p ->⁺ DeltaCat) => LastArr (dpath \lam i => G (a i))) (inv (funExt+ (appRestr-p pf))) h
+
+-- | An arrow of {AppT} whose image in {DeltaCat} is an isomorphism is sent to an isomorphism by {appRestr}.
+\lemma iso-appRestr.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {t t' : AppT p} {f : t ~> t'}
+                        (h : IsIso (dmap (\lam (s :⁺ AppT p) => s.1) f)) : IsIso (dmap (appRestr pf) f)
+  => rightFib-conservative pf $
+       transport (\lam (G : AppT p ->⁺ DeltaCat) => IsIso (dmap G f)) (inv (funExt+ (appRestr-p pf))) h
+
+\lemma appV-lastWeakEq.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t : AppT p)
+  : isWeakEq {LastWeakEq p} (\lam i => appRestr pf (appV pf t i))
+  => lastWeakEq-appRestr pf (transportInv (\lam f => LastArr f) (appV-fst pf t) (lastArr-joinVertn t.1))
+
+\lemma appDelta-lastWeakEq.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+  : isWeakEq {LastWeakEq p} (\lam i => appRestr pf (appDelta pf y i))
+  => lastWeakEq-appRestr pf (transportInv (\lam f => LastArr f) (appDelta-fst pf y) lastArr-bang)
+
+-- # The terminal object
+
+\private \module UnitHomHelpers \where {
+  -- | The localization functor of the realization in the last-vertex presentation.
+  \func ell.{u} {E : \Cat u} (p : E ->⁺ DeltaCat) (e :⁺ E) : Realization p
+    => real p (lastVertex p e)
+
+  -- | The extension of the ways to append {y}.
+  \func Ext.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : \Cat u
+    => ExtR (LastWeakEq p) (appY pf y)
+
+  \func lam.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y) : Ext pf y
+    => extMap (LastWeakEq p) (appY pf y) c
+
+  \func ext-proj.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) (z :⁺ Ext pf y) : Realization p
+    => extProj (realization-lastVertex pf) (appY pf y) z
+
+  -- | The base object.
+  \func base.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : Ext pf y
+    => lam (appY0 pf y)
+
+  \lemma appYV-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c : AppY pf y)
+    : IsIso (dmap lam (appYV c))
+    => transportInv IsIso (dmap_comp lam) $ comp-IsIso (transportInv IsIso (dmap_=_~> lam) (=_~>-iso _))
+         ((localize-inverts {PullbackWeakEq {_} {LastWeakEq p} (appY pf y)}).hfunc-we {\lam i => appYV-arrow c i} (appV-lastWeakEq pf c.1))
+
+  \sfunc Xi.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+    : (\lam (_ : AppY pf y) => base pf y) = {AppY pf y ->⁺ Ext pf y} (\lam c => lam (appYF c))
+    => natIso-path (\lam c => dmap lam (appYV c)) (\lam c => appYV-iso c)
+
+  -- | The natural transformation to the base object on {AppY}.
+  \func alpha0.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (c :⁺ AppY pf y) : lam c ~> base pf y
+    => transport+ (\lam (H : AppY pf y ->⁺ Ext pf y) => \Pi (c :⁺ AppY pf y) -> lam c ~> H c) (inv (Xi pf y)) (\lam c => dmap lam (appYEta c)) c
+
+  \func tr-tgt-fun {A B : \Cat} {H K :⁺ A ->⁺ B} {G :⁺ A ->⁺ B} (P :⁺ H = K) (f :⁺ \Pi (a :⁺ A) -> G a ~> H a) (a :⁺ A)
+    : transport+ (\lam (H' : A ->⁺ B) => \Pi (a :⁺ A) -> G a ~> H' a) P f a = transport+ (G a ~> __) (path \lam i => P i a) (f a) \elim P
+    | idp => idp
+
+  -- | The natural transformation to the base object, extended from {alpha0} ({alpha.char}).
+  \sfunc alpha.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0} (z :⁺ Ext pf y) : z ~> base pf y
+    => (pair {E} {p} {pf} {y}).1 z
+    \where {
+      \protected \sfunc pair.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0}
+        : \Sigma (t : \Pi (z :⁺ Ext pf y) -> z ~> base pf y) ((\lam c => t (lam c)) = {\Pi (c :⁺ AppY pf y) -> lam c ~> base pf y} (\lam c => alpha0 c))
+        => (IsEquiv.ret (localization-rightFib-sections (localize-isLocalization {PullbackWeakEq (appY pf y)}) (hom-rightFib (base pf y))) alpha0,
+            IsEquiv.f_ret (localization-rightFib-sections (localize-isLocalization {PullbackWeakEq (appY pf y)}) (hom-rightFib (base pf y))))
+
+      -- | The restriction of {alpha} to {AppY} is {alpha0}.
+      \protected \sfunc char.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {y : simplex p 0}
+        : (\lam c => alpha (lam c)) = {\Pi (c :⁺ AppY pf y) -> lam c ~> base pf y} alpha0
+        => ext (\lam c => \peval alpha (lam c)) *> pair.2
+    }
+
+  -- | {appYEta} at the base object is sent to an isomorphism of the realization, since it is split by {appDelta}.
+  \lemma eta-base-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+    : IsIso (dmap (ell p) (dmap (appRestr pf) (appEta pf (appDeg pf y))))
+    => \let | d => (realization-lastVertex pf).1.hfunc-we (appDelta-lastWeakEq pf y)
+            | c : IsIso (dmap (appRestr pf) (comp (appEta pf (appDeg pf y)) (appDelta pf y)))
+                => iso-appRestr pf {appDeg pf y} {appDeg pf y} {comp (appEta pf (appDeg pf y)) (appDelta pf y)} $
+                     transportInv IsIso (dmap_comp (\lam (s :⁺ AppT p) => s.1) {_} {_} {_} {appEta pf (appDeg pf y)} {appDelta pf y})
+                       (transportInv IsIso (to0-path _ idd) idd-iso)
+       \in (comp-IsIso-left d).1 $ transport IsIso (dmap_comp (ell p)) $ dmap_IsIso (ell p) $ transport IsIso (dmap_comp (appRestr pf)) c
+
+  \lemma alpha0-base-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+    (wl : IsLocalRightFib (LastWeakEq p) (appY pf y)) : IsIso (alpha0 (appY0 pf y))
+    => \have ei : IsIso (dmap (ext-proj pf y) (dmap lam (appYEta (appY0 pf y))))
+                => transportInv (\lam f => IsIso (dmap (ell p) (dmap (appRestr pf) f))) (appYEta-fst (appY0 pf y)) (eta-base-iso pf y)
+       \in transportInv IsIso (tr-tgt-fun (inv (Xi pf y)) (\lam c => dmap lam (appYEta c)) (appY0 pf y) *> transport_~>-right {_} {_} {_} {_} {path \lam i => inv (Xi pf y) i (appY0 pf y)}) $
+             comp-IsIso (rightFib-conservative (rightFib-extend (realization-lastVertex pf) (appY-rightFib pf y) wl) ei) (=_~>-iso (path \lam i => inv (Xi pf y) i (appY0 pf y)))
+
+  -- | The base object is terminal.
+  \lemma base-terminal.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+    (wl : IsLocalRightFib (LastWeakEq p) (appY pf y)) : IsTerminal (base pf y)
+    => section-terminal alpha $ transportInv IsIso (path \lam k => alpha.char k (appY0 pf y)) (alpha0-base-iso pf y wl)
+}
+
+-- # The hom computation
+
+{- | For a Segal right fibration, the ways to append {y} to {x} are the arrows of the realization from `ℓ x` to `ℓ y`
+ -   (SCT Lemma 11.8.33, Hebestreit–Steinebrunner, with the calculus of fractions it provides):
+ -   the fibers of the extension of {appY} ({rightFib-extend-fiber}) are the arrows into its terminal object
+ -   ({UnitHomHelpers.base-terminal}, {rightFib-terminal-repr}).
+ -}
+\lemma appY-hom-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (y : simplex p 0) (x : E)
+  : IsEquiv {Fibers (appY pf y) x} {UnitHomHelpers.ell p x ~> UnitHomHelpers.ext-proj pf y (UnitHomHelpers.base pf y)}
+            (\lam s => transport (__ ~> UnitHomHelpers.ext-proj pf y (UnitHomHelpers.base pf y)) (pmap+ (UnitHomHelpers.ell p) s.2)
+                         (dmap (UnitHomHelpers.ext-proj pf y) (UnitHomHelpers.base-terminal pf y (appY-local pf ps y) (UnitHomHelpers.lam s.1)).center))
+  => IsEquiv.trans (rightFib-extend-fiber (realization-lastVertex pf) (appY-rightFib pf y) (appY-local pf ps y) x)
+                   (IsEquiv.trans (inP (rightFib-extend-fiber.fib-sigma (UnitHomHelpers.ext-proj pf y) (UnitHomHelpers.ell p x)))
+                   (rightFib-terminal-repr (rightFib-extend (realization-lastVertex pf) (appY-rightFib pf y) (appY-local pf ps y))
+                     (UnitHomHelpers.base-terminal pf y (appY-local pf ps y)) (UnitHomHelpers.ell p x)))
+
+-- # The natural map given by the canonical lifts
+
+\module UnitPhi \where {
+  \open UnitHomHelpers
+
+  -- | The lift along the initial segment, as an arrow of {E}.
+  \func iota.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : appRestr pf t ~> t.2.1
+    => dpath \lam i => ((rightFib-lift pf (t.1, joinN t.1, joinIncln t.1, t.2)).2 i).1
+
+  -- | The lift along the new top vertex, as an arrow of {E}.
+  \func vtop.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t :⁺ AppT p) : (appLast pf t).1 ~> t.2.1
+    => dpath \lam i => ((rightFib-lift pf (nerveOb 0, joinN t.1, joinVertn t.1, t.2)).2 i).1
+
+  -- | The lift along the new top vertex lies over a map preserving last vertices.
+  \lemma vtop-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (t : AppT p) : IsIso (dmap (ell p) (vtop pf t))
+    => \let L => rightFib-lift pf (nerveOb 0, joinN t.1, joinVertn t.1, t.2)
+       \in (localize-inverts {RealWeakEq p}).hfunc-we {\lam i => lastVertex p (L.2 i).1}
+             (transportInv (\lam (h : DI ->⁺ DeltaCat) => LastArr (dpath \lam i => h i)) (path \lam k => \lam i =>⁺ (L.2 i).2 k) (lastArr-joinVertn t.1))
+
+  -- | The image of an arrow of vertices.
+  \func ellv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} {v v' :⁺ simplex p 0} (a :⁺ v ~> v') : ell p v.1 ~> ell p v'.1
+    => dmap (\lam (w :⁺ simplex p 0) => ell p w.1) a
+
+  \lemma ellv-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {v v' : simplex p 0} (a : v ~> v') : IsIso (ellv a)
+    => dmap_IsIso (\lam (w :⁺ simplex p 0) => ell p w.1) (rightFib-grpd pf (nerveOb 0) a)
+
+  \sfunc N1.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+    : (\lam (c : AppY pf y) => ell p (appLast pf c.1).1) = {AppY pf y ->⁺ Realization p} (\lam c => ell p c.1.2.1)
+    => natIso-path (\lam c => dmap (ell p) (vtop pf c.1)) (\lam c => vtop-iso pf c.1)
+
+  \sfunc N2.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+    : (\lam (c : AppY pf y) => ell p (appLast pf c.1).1) = {AppY pf y ->⁺ Realization p} (\lam c => ell p y.1)
+    => natIso-path (\lam c => ellv c.2) (\lam c => ellv-iso pf c.2)
+
+  {- | The natural map from the ways to append {y} to the arrows into `ℓ y`: the lift along the initial segment, followed by the
+   -   inverse of the lift along the new top vertex and the arrow to {y}.
+   -}
+  \func Phi.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) (c :⁺ AppY pf y) : ell p (appRestr pf c.1) ~> ell p y.1
+    => transport+ (\lam (H : AppY pf y ->⁺ Realization p) => \Pi (c :⁺ AppY pf y) -> ell p (appRestr pf c.1) ~> H c) (inv (N1 pf y) *> N2 pf y)
+                  (\lam c => dmap (ell p) (iota pf c.1)) c
+
+  -- | {Phi} as a zigzag.
+  \sfunc Phi-zz.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) (c : AppY pf y)
+    : Phi pf y c = comp (comp_iso (dmap (ell p) (iota pf c.1)) (dmap (ell p) (vtop pf c.1)) (vtop-iso pf c.1)) (ellv c.2)
+    => \let | P1 => path \lam i => N1 pf y i c
+            | P2 => path \lam i => N2 pf y i c
+            | A1 : =_~> P1 = dmap (ell p) (vtop pf c.1)
+                => eval-arrow' (N1 pf y) c *> path (\lam k => dpath \lam i => (=_~> ((\peval N1 pf y) k)) i c) *> path (\lam k => dpath \lam i => natIso-path-arrow {AppY pf y} {Realization p}
+                     {\lam c => ell p (appLast pf c.1).1} {\lam c => ell p c.1.2.1} (\lam c => dmap (ell p) (vtop pf c.1)) (\lam c => vtop-iso pf c.1) k i c)
+            | A2 : =_~> P2 = ellv c.2
+                => eval-arrow' (N2 pf y) c *> path (\lam k => dpath \lam i => (=_~> ((\peval N2 pf y) k)) i c) *> path (\lam k => dpath \lam i => natIso-path-arrow {AppY pf y} {Realization p}
+                     {\lam c => ell p (appLast pf c.1).1} {\lam c => ell p y.1} (\lam c => ellv c.2) (\lam c => ellv-iso pf c.2) k i c)
+            | Z : comp (dmap (ell p) (iota pf c.1)) (=_~> (inv P1)) = comp_iso (dmap (ell p) (iota pf c.1)) (dmap (ell p) (vtop pf c.1)) (vtop-iso pf c.1)
+                => comp_iso-unique _ _ _ (pmap (comp _) (inv A1) *> inv comp-assoc *> pmap (comp _) (=_~>_comp *> pmap+ =_~> inv_*>) *> comp_idd-right)
+       \in tr-tgt-fun (inv (N1 pf y) *> N2 pf y) (\lam c => dmap (ell p) (iota pf c.1)) c
+           *> transport_~>-right {_} {_} {_} {_} {path \lam i => (inv (N1 pf y) *> N2 pf y) i c}
+           *> pmap (\lam Q => comp (dmap (ell p) (iota pf c.1)) (=_~> Q))
+                   (pmap_*>-comm (\lam (H : AppY pf y ->⁺ Realization p) => H c) (inv (N1 pf y)) (N2 pf y)
+                    *> pmap (__ *> P2) (pmap_inv-comm (\lam (H : AppY pf y ->⁺ Realization p) => H c) (N1 pf y)))
+           *> pmap (comp _) (inv =_~>_comp)
+           *> comp-assoc
+           *> pmap2 comp Z A2
+
+  -- | An arrow between objects equal to `[0]` is an isomorphism.
+  \lemma deltaCat-iso0 {a b : DeltaCat} (P : a = nerveOb 0) (Q : b = nerveOb 0) (f : a ~> b) : IsIso f \elim P, Q
+    | idp, idp => transportInv IsIso (to0-path f idd) idd-iso
+
+  -- | The degeneracy from the degenerate edge at {y} to {y}, as an arrow of {E}.
+  \func delta.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : (appDeg pf y).2.1 ~> y.1
+    => dpath \lam i => ((rightFib-lift pf (nerveOb 1, nerveOb 0, bang, y)).2 i).1
+
+  \lemma delta-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : IsIso (dmap (ell p) (delta pf y))
+    => \let L => rightFib-lift pf (nerveOb 1, nerveOb 0, bang, y)
+       \in (localize-inverts {RealWeakEq p}).hfunc-we {\lam i => lastVertex p (L.2 i).1}
+             (transportInv (\lam (h : DI ->⁺ DeltaCat) => LastArr (dpath \lam i => h i)) (path \lam k => \lam i =>⁺ (L.2 i).2 k) lastArr-bang)
+
+  -- | At the degenerate edge, the lift along the initial segment is sent to an isomorphism: followed by {delta} it lies over `[0]`.
+  \lemma iota-base-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+    : IsIso (dmap (ell p) (iota pf (appDeg pf y)))
+    => \let | f => comp (iota pf (appDeg pf y)) (delta pf y)
+            | fi : IsIso f => rightFib-conservative pf {_} {_} {f} (deltaCat-iso0 (appRestr-p pf (appDeg pf y)) y.2 (dmap p f))
+            | gi : IsIso (dmap (ell p) f) => dmap_IsIso (ell p) fi
+       \in (comp-IsIso-left (delta-iso pf y)).1 (transport IsIso (dmap_comp (ell p) {_} {_} {_} {iota pf (appDeg pf y)} {delta pf y}) gi)
+
+  \lemma Phi-base-iso.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0) : IsIso (Phi pf y (appY0 pf y))
+    => transportInv IsIso (Phi-zz pf y (appY0 pf y)) (comp-IsIso ((comp_iso-iso _ _ _).2 (iota-base-iso pf y)) (ellv-iso pf _))
+
+  -- | Yoneda: {Phi} is determined by its value at the base object, which is terminal in the extension.
+  \sfunc Phi-yoneda.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (y : simplex p 0)
+                        (wl : IsLocalRightFib (LastWeakEq p) (appY pf y)) (c : AppY pf y)
+    : Phi pf y c = comp (dmap (ext-proj pf y) (base-terminal pf y wl (lam c)).center) (Phi pf y (appY0 pf y))
+    => \let | Bf : IsRightFib (\lam (z :⁺ Ext pf y) => ext-proj pf y z ~> ell p y.1) => rightFib-pullback (ext-proj pf y) (hom-rightFib (ell p y.1))
+            | Se => localization-rightFib-sections (localize-isLocalization {PullbackWeakEq (appY pf y)}) Bf
+            | sg : \Pi (z :⁺ Ext pf y) -> ext-proj pf y z ~> ell p y.1 => IsEquiv.ret Se (\lam c => Phi pf y c)
+            | sP : (\lam c => sg (lam c)) = {\Pi (c :⁺ AppY pf y) -> ell p (appRestr pf c.1) ~> ell p y.1} (\lam c => Phi pf y c) => IsEquiv.f_ret Se
+       \in inv (path \lam k => sP k c) *> inv comp_idd-right
+           *> inv (~>-natural {Ext pf y} {Realization p} {ext-proj pf y} {\lam _ => ell p y.1} sg {lam c} {base pf y} {(base-terminal pf y wl (lam c)).center})
+           *> pmap (comp _) (path \lam k => sP k (appY0 pf y))
+
+  \func tr-src-comp {C : \Cat} {a a' b d : C} (P : a = a') (g : a ~> b) (h : b ~> d)
+    : comp (transport (__ ~> b) P g) h = transport (__ ~> d) P (comp g h) \elim P
+    | idp => idp
+
+  -- | For a Segal right fibration, {Phi} is an equivalence on the fibers: it is the hom computation followed by an isomorphism.
+  \lemma Phi-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (y : simplex p 0) (x : E)
+    : IsEquiv {Fibers (appY pf y) x} {ell p x ~> ell p y.1} (\lam s => transport (__ ~> ell p y.1) (pmap+ (ell p) s.2) (Phi pf y s.1))
+    => transport IsEquiv (ext \lam s => tr-src-comp (pmap+ (ell p) s.2) _ _ *> pmap (transport (__ ~> ell p y.1) (pmap+ (ell p) s.2))
+                                           (inv (Phi-yoneda pf y (appY-local pf ps y) s.1)))
+         (IsEquiv.trans (appY-hom-equiv pf ps y x) (comp-iso-right-equiv (Phi-base-iso pf y)))
+}

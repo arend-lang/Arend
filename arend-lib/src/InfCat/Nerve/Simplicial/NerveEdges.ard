@@ -1,0 +1,155 @@
+{- | Edges of the simplicial nerve as morphisms of the category (SCT Remark 11.8.22 for nerves).
+
+ -   Let `p : E ->⁺ DeltaCat` be a right fibration and `g` a map from {p} to the simplicial nerve of {C}.
+ -   An edge of {p} with top value `z` has two lifts of the vertex inclusions `[0] -> [1]` into `z` ({VLift}, {secLift}).
+ -   Their images, evaluated at last vertices ({carr}), form a zigzag in {C} ({liftZ}), which is the image of the edge under
+ -   {nerve-edge-map}. Lifts are unique, so the zigzag only depends on `z`, up to transport of the endpoints along paths in {E}.
+ -   * {edgeVal}: an edge as its endpoints together with its zigzag, a morphism of {C}. It is an equivalence if and only if {g} is
+ -     fully faithful on edges ({edgeVal-equiv}, {edgeVal-ff}): the morphisms `N(C)(g x, g y)` of SCT Remark 11.8.22 are the morphisms
+ -     of {C} between the images of {x} and {y}.
+ -}
+
+\import Category.Simplex
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Exponent.ExponentCocartesianCore
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.Simplicial.CospanIso
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Nerve.Simplicial.RealizationEdge
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Rezk
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SegalEquiv
+\import InfCat.Simplicial.SimplexOperators
+\import InfCat.Simplicial.SimplexSections
+\import Logic
+\import Paths
+\import Paths.Meta
+\open RealizationHelpers (lastN, lastN-sec)
+\open NerveEdgesHelpers
+
+-- # Lifts of the vertex inclusions
+
+-- | The vertex inclusion `1` preserves last vertices.
+\lemma ve1-last : IsCocartesianArrow (nerveMap simplexProj) (dmap lastN (simplex-ve 1))
+  => (lastWeakEq-char (vert {1} 1)).2 idp
+
+
+-- # Images at last vertices
+
+-- | The image of a simplex under {g}, evaluated at its last vertex.
+\func vEval.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) : C
+  => ExpCocCore.fiber-eval univSimplex-cocartesianMap (g s) (lastN s.1, path \lam j => lastN-sec j s.1)
+
+-- | The image of a vertex.
+\func vob.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+              (x : simplex p 0) : C
+  => vEval g (nerveOb 0, x)
+
+-- | The image of a lift.
+\func carr.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+               {j : Fin 2} {z : simplex p 1} (c : VLift p j z) : vob g c.1 ~> vEval g (nerveOb 1, z)
+  => dpath \lam i => vEval g (simplex-ve j i, c.2 i)
+
+-- | The image of a lift of the vertex `1`, which preserves last vertices, is an isomorphism.
+\lemma carr-iso.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                    {z : simplex p 1} (c : VLift p 1 z) : IsIso (carr g c)
+  => evLast-inverts {DI} {C} (\lam i => simplex-ve 1 i) (\lam i => g (simplex-ve 1 i, c.2 i)) {\lam i => i} ve1-last
+
+-- | The zigzag of two lifts into the same edge.
+\func liftZ.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                {z : simplex p 1} (c0 : VLift p 0 z) (c1 : VLift p 1 z) : vob g c0.1 ~> vob g c1.1
+  => comp_iso (carr g c0) (carr g c1) (carr-iso g c1)
+
+-- # Edges as zigzags
+
+-- | An edge as its endpoints and its zigzag.
+\func edgeVal.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                  (t : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s))
+  : \Sigma (a : simplex p 0) (\Sigma (b : simplex p 0) (vob g a ~> vob g b))
+  => (t (edgeV 0), (t (edgeV 1), liftZ g (secLift t 0) (secLift t 1)))
+
+-- | If {g} is fully faithful on edges, then edges are their endpoints and zigzags.
+\lemma edgeVal-equiv.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                         (g-ff : \Pi (x y : simplex p 0) -> IsEquiv (edgeSec-map g x y))
+  : IsEquiv (edgeVal g)
+  => \let | ue (x y : simplex p 0) : IsEquiv (edgeU g x y)
+              => IsEquiv.leftFactor (transport2-equiv (vob_snerve-ob g x) (vob_snerve-ob g y)) $
+                   transport IsEquiv (ext \lam w => nerve-edge-edgeU g x y w) (IsEquiv.trans (g-ff x y) (nerve-edge-equiv _ _))
+          | tot : IsEquiv {\Sigma (x : simplex p 0) (\Sigma (y : simplex p 0) (EdgeSec p x y))}
+                          {\Sigma (a : simplex p 0) (\Sigma (b : simplex p 0) (vob g a ~> vob g b))}
+                          (\lam w => (w.1, (w.2.1, edgeU g w.1 w.2.1 w.2.2)))
+              => segal-ff-equiv.sigma-map-equiv (inP idEquiv) \lam x => segal-ff-equiv.sigma-map-equiv (inP idEquiv) \lam y => ue x y
+          | res => IsEquiv.trans edge-split tot
+     \in res
+
+-- | Conversely, if edges are their endpoints and zigzags, then {g} is fully faithful on edges.
+\lemma edgeVal-ff.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                      (Ve : IsEquiv (edgeVal g)) (x y : simplex p 0) : IsEquiv (edgeSec-map g x y)
+  => \let | tot : IsEquiv {\Sigma (x : simplex p 0) (\Sigma (y : simplex p 0) (EdgeSec p x y))}
+                          {\Sigma (a : simplex p 0) (\Sigma (b : simplex p 0) (vob g a ~> vob g b))}
+                          (\lam w => (w.1, (w.2.1, edgeU g w.1 w.2.1 w.2.2)))
+              => IsEquiv.rightFactor edge-split Ve
+          | ex : IsEquiv {\Sigma (y : simplex p 0) (EdgeSec p x y)} {\Sigma (b : simplex p 0) (vob g x ~> vob g b)} (\lam w => (w.1, edgeU g x w.1 w.2))
+              => (totalEquiv {simplex p 0} {\lam x' => \Sigma (y : simplex p 0) (EdgeSec p x' y)} {\lam a => \Sigma (b : simplex p 0) (vob g a ~> vob g b)}
+                    (\lam x' w => (w.1, edgeU g x' w.1 w.2))).2 tot x
+          | ue : IsEquiv (edgeU g x y)
+              => (totalEquiv {simplex p 0} {\lam y' => EdgeSec p x y'} {\lam b => vob g x ~> vob g b} (\lam y' w => edgeU g x y' w)).2 ex y
+     \in IsEquiv.leftFactor (nerve-edge-equiv _ _)
+          (transport IsEquiv (ext \lam w => inv (nerve-edge-edgeU g x y w)) (IsEquiv.trans ue (transport2-equiv (vob_snerve-ob g x) (vob_snerve-ob g y))))
+
+
+-- | Helpers for {edgeVal-equiv} and {edgeVal-ff}.
+\module NerveEdgesHelpers \where {
+  -- | The image of an edge under {nerve-edge-map} is the zigzag of its lifts.
+  \sfunc edge-liftZ.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                        (t : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s))
+    : dmap (realize-map (sliceProj 1) (gpost g (sliceProj 1) t)) edgeZ = liftZ g (secLift t 0) (secLift t 1)
+    => edge-zigzag (gpost g (sliceProj 1) t) *> comp_iso-irrel _ _ _ _
+
+  -- | The image of a vertex, compared with {snerve-ob}.
+  \func vob_snerve-ob.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                          (x : simplex p 0) : vob g x = snerve-ob (g (nerveOb 0, x))
+    => pmap (ExpCocCore.fiber-eval univSimplex-cocartesianMap (g (nerveOb 0, x))) (fibers-deltaCat-ext idp *> inv (univSimplexFib-vertex 0 0))
+
+  -- | The zigzag of an edge with given endpoints.
+  \func edgeU.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                  (x y : simplex p 0) (w : EdgeSec p x y) : vob g x ~> vob g y
+    => transport2 (~>) (pmap (vob g) w.2) (pmap (vob g) w.3) (liftZ g (secLift w.1 0) (secLift w.1 1))
+
+  -- | {nerve-edge-map} of the image of an edge is its zigzag, up to {vob_snerve-ob}.
+  \sfunc nerve-edge-edgeU.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                              (x y : simplex p 0) (w : EdgeSec p x y)
+    : nerve-edge-map (g (nerveOb 0, x)) (g (nerveOb 0, y)) (edgeSec-map g x y w) = transport2 (\lam a b => a ~> b) (vob_snerve-ob g x) (vob_snerve-ob g y) (edgeU g x y w)
+    => pmap2 (\lam P Q => transport2 (\lam a b => a ~> b) (P *> pmap snerve-ob (pmap (\lam z => g (nerveOb 0, z)) w.2))
+                                                         (Q *> pmap snerve-ob (pmap (\lam z => g (nerveOb 0, z)) w.3))
+                                                         (dmap (realize-map (sliceProj 1) (gpost g (sliceProj 1) w.1)) edgeZ))
+             (\peval edge-vertex (gpost g (sliceProj 1) w.1) 0) (\peval edge-vertex (gpost g (sliceProj 1) w.1) 1)
+       *> pmap (transport2 (\lam a b => a ~> b) (vob_snerve-ob g (w.1 (edgeV 0)) *> pmap snerve-ob (pmap (\lam z => g (nerveOb 0, z)) w.2))
+                                                (vob_snerve-ob g (w.1 (edgeV 1)) *> pmap snerve-ob (pmap (\lam z => g (nerveOb 0, z)) w.3)))
+               (edge-liftZ g w.1)
+       *> aux w.2 w.3 (liftZ g (secLift w.1 0) (secLift w.1 1))
+    \where
+      \private \func aux {x0 x1 x y : simplex p 0} (P0 : x0 = x) (P1 : x1 = y) (L : vob g x0 ~> vob g x1)
+        : transport2 (\lam a b => a ~> b) (vob_snerve-ob g x0 *> pmap snerve-ob (pmap (\lam z => g (nerveOb 0, z)) P0))
+                                          (vob_snerve-ob g x1 *> pmap snerve-ob (pmap (\lam z => g (nerveOb 0, z)) P1)) L
+          = transport2 (\lam a b => a ~> b) (vob_snerve-ob g x) (vob_snerve-ob g y) (transport2 (\lam a b => a ~> b) (pmap (vob g) P0) (pmap (vob g) P1) L)
+        \elim P0, P1
+        | idp, idp => idp
+
+  -- | Paths of edge values.
+  \func edgeVal-path.{u} {C : \Cat u} {E : \Cat} {p : E ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> SNerveFib C s.1)
+                         {a a' b b' : simplex p 0} (P : a = a') (Q : b = b') {h : vob g a ~> vob g b} {h' : vob g a' ~> vob g b'}
+                         (H : transport2 (\lam x y => x ~> y) (pmap (vob g) P) (pmap (vob g) Q) h = h')
+    : ((a, (b, h)) : \Sigma (a : simplex p 0) (\Sigma (b : simplex p 0) (vob g a ~> vob g b))) = (a', (b', h')) \elim P, Q, H
+    | idp, idp, idp => idp
+
+}

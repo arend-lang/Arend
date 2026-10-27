@@ -121,4 +121,20 @@ public class PreludeTest extends TypeCheckingTestCase {
       """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(NotEqualExpressionsError.class));
   }
+
+  @Test
+  public void isoInfiniteLevelTest() {
+    typeCheckModule("""
+      \\func test (A B : \\Type) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) (i : I)
+        => iso f g p q i
+      """);
+  }
+
+  @Test
+  public void isoInfiniteLevelError() {
+    typeCheckModule("""
+      \\func test (A B : \\Type) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y)
+        => path (iso f g p q)
+      """, 1);
+  }
 }

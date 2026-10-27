@@ -95,6 +95,16 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public CoreDataDefinition getResizeCat() {
+    return Prelude.RESIZE_CAT;
+  }
+
+  @Override
+  public CoreConstructor getResizeCatCon() {
+    return Prelude.RESIZE_CAT_CON;
+  }
+
+  @Override
   public CoreDataDefinition getGroupoidType() {
     return Prelude.GROUPOID_TYPE;
   }
@@ -222,6 +232,11 @@ public class ConcretePrelude implements ArendPrelude {
   @Override
   public CoreFunctionDefinition getIso() {
     return Prelude.ISO;
+  }
+
+  @Override
+  public CoreFunctionDefinition getIsoCat() {
+    return Prelude.ISO_CAT;
   }
 
   @Override
@@ -381,6 +396,18 @@ public class ConcretePrelude implements ArendPrelude {
   }
 
   @Override
+  public ArendRef getResizeCatRef() {
+    if (Prelude.RESIZE_CAT != null) return Prelude.RESIZE_CAT.getRef();
+    return myPreludeScope.resolveName("ResizeCat");
+  }
+
+  @Override
+  public ArendRef getResizeCatConRef() {
+    if (Prelude.RESIZE_CAT_CON != null) return Prelude.RESIZE_CAT_CON.getRef();
+    return myPreludeScope.resolveName("resizeCat");
+  }
+
+  @Override
   public ArendRef getGroupoidTypeRef() {
     if (Prelude.GROUPOID_TYPE != null) return Prelude.GROUPOID_TYPE.getRef();
     return myPreludeScope.resolveName("GroupoidType");
@@ -534,6 +561,12 @@ public class ConcretePrelude implements ArendPrelude {
   public ArendRef getIsoRef() {
     if (Prelude.ISO != null) return Prelude.ISO.getRef();
     return myPreludeScope.resolveName("iso");
+  }
+
+  @Override
+  public ArendRef getIsoCatRef() {
+    if (Prelude.ISO_CAT != null) return Prelude.ISO_CAT.getRef();
+    return myPreludeScope.resolveName("isoCat");
   }
 
   @Override

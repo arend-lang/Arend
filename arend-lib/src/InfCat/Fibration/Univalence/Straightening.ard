@@ -1,9 +1,7 @@
 \import Equiv
 \import Equiv.Sigma
 \import Equiv.Univalence
-\import InfCat.Basics
-\import InfCat.Fibration.CovariantLift
-\import InfCat.Fibration.LeftFib
+\import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Objects
@@ -18,7 +16,7 @@
   => ∃ (S : \Type u) (HQEquiv {S} {X})
   \where {
     -- | A type has at most one small model up to identity.
-    \private \lemma levelProp.{u} {X : \Cat} : isProp (\Sigma (S : \Type u) (Equiv S X))
+    \protected \lemma levelProp.{u} {X : \Cat} : isProp (\Sigma (S : \Type u) (Equiv S X))
       => isContr'=>isProp \lam p => Contr.Contr_QEquiv
           (transQEquiv (sigma-right \lam (S : \Type u) => typeUnivalence {S} {p.1})
                        (sigma-right \lam (S : \Type u) => postcomp {S} (Equiv.toQEquiv p.2)))
@@ -30,8 +28,18 @@
           | ret_f e => Equiv.equals (ext \lam s => e0.ret_f (e s))
           | f_sec e => Equiv.equals (ext \lam s => e0.f_sec (e s))
 
-    \private \lemma extract.{u} {X : \Cat} (s : IsSmall.{u} X) : \Sigma (S : \Type u) (Equiv S X) \level levelProp \elim s
+    \protected \lemma extract.{u} {X : \Cat} (s : IsSmall.{u} X) : \Sigma (S : \Type u) (Equiv S X) \level levelProp \elim s
       | inP (S, e) => (S, mkEquiv (inP (HQEquiv.toQEquiv e)))
+
+    -- | A groupoid is small if its objects are equivalent to a small type.
+    \lemma fromGroupoid.{u} {X : \Cat} (Xg : IsGroupoid X) {S : \Type u} (e : QEquiv {S} {X}) : IsSmall.{u} X
+      => TruncP.map (IsHEquiv.trans (inP (type-HQEquiv (transQEquiv e ob-equiv))) (cat_ob Xg)) (\lam h => (S, h))
+      \where
+        \func ob-equiv {X : \Cat} : QEquiv {X} {Ob X} \cowith
+          | f => ob
+          | ret => unob
+          | ret_f _ => idp
+          | f_sec _ => ob_unob
 
     -- | The data that `Resize+` expects for a type {Y} equivalent to the objects of {X}.
     \sfunc toResize.{u} {X : \Cat} {Y : \Type} (s : IsSmall.{u} X) (e' : QEquiv {X} {Y})
@@ -43,7 +51,7 @@
 -- | A left fibration with small fibers is classified by `\Type u`.
 \type Straight.{u} {C : \Cat} {F : C ->⁺ \Cat} (Ff : IsLeftFib F) (s : \Pi (y : C) -> IsSmall.{u} (F y)) (y :⁺ C) : \Type u
   => Resize+ (CatTypeFamily F (leftFib-grpd Ff)) (\lam y => IsSmall.toResize (s y) CatTypeFamily.ob-equiv)
-             (\lam {a} {a'} f b => leftFib-lift (catType-leftFib Ff) f b) y
+             (\lam f b => leftFib-lift (catType-leftFib Ff) (_, _, f, b)) y
   \where {
     \func fromStraight.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y :⁺ C}
                            (r :⁺ Straight Ff s y) : F y \elim r
@@ -57,7 +65,7 @@
                                       (r :⁺ Straight Ff s y) : toStraight (fromStraight r) = r \elim r
       | resize+ b => path \lam i => resize+ (CatTypeFamily.toCatType_fromCatType b i)
 
-    \func equiv.{u} {C : \Cat} {F : C ->⁺ \Type} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y : C} : QEquiv {Straight Ff s y} {F y} \cowith
+    \func equiv.{u} {C : \Cat} {F : C ->⁺ \Cat} {Ff : IsLeftFib F} {s : \Pi (y : C) -> IsSmall.{u} (F y)} {y : C} : QEquiv {Straight Ff s y} {F y} \cowith
       | f => fromStraight
       | ret => toStraight
       | ret_f => toStraight_fromStraight

@@ -1,0 +1,291 @@
+{- | Right fibrations.
+ -
+ - A family `B : A ->⁺ \Cat` is a right fibration if lifts of arrows of {A} *into* a given point are unique.
+ - For a functor `q : E ->⁺ A`, the corresponding notion is `IsRightFib (Fibers q)`.
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Slice
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | The base data of a contravariant lift: a source, a target, an arrow between them, and a point over the target.
+\func ContLiftData {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) : \Cat
+  => \Sigma⁺ (a' a : A) (f : a' ~> a) (b : B a)
+
+-- | The category of contravariant lifts of `d.3` ending at `d.4`.
+\type ContLift {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) (d :⁺ ContLiftData B) : \Cat
+  => \Sigma⁺ (b' : B d.1) (DPath (\lam i => B (d.3 i)) b' d.4)
+
+\type IsRightFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
+  => \Pi (d : ContLiftData B) -> Contr (ContLift B d)
+
+\lemma rightFib-pullback {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsRightFib B) : IsRightFib (\lam a => B (f a))
+  => \lam d =>
+      \let | fd : ContLiftData B => (f d.1, f d.2, dmap f d.3, d.4)
+           | c => Bf fd
+      \in Contr.make {ContLift (\lam a =>⁺ B (f a)) d} (c.center.1, c.center.2)
+            \lam u => pmap {ContLift B fd} {ContLift (\lam a =>⁺ B (f a)) d} (\lam v => (v.1, v.2)) (c.contraction (u.1, u.2))
+
+-- | The slice over {x} is a right fibration.
+\lemma hom-rightFib {C : \Cat} (x : C) : IsRightFib (\lam y => y ~> x)
+  => \lam d => Contr.Contr_QEquiv (later \new QEquiv {
+    | f t => (t.1, t.2)
+    | ret t => (t.1, t.2)
+    | ret_f t => idp
+    | f_sec t => idp
+  }) (SliceCat.triangle-contr d.3 d.4)
+
+-- | Transport along an arrow in a right fibration.
+\func rightFib-tr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} (p : a' ~> a) (b : B a) : B a'
+  => (Bf (a', a, p, b)).center.1
+
+-- | A path over {p} ending at {b} starts at the transport of {b}.
+\func rightFib-tr-dpath {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {p : a' ~> a} {b : B a} {b' : B a'}
+  (t : DPath (\lam i => B (p i)) b' b) : rightFib-tr Bf p b = b'
+  => path \lam k => (isContr=>isProp (Bf (a', a, p, b)) (Bf (a', a, p, b)).center (b', t) k).1
+
+-- | Paths over {p} ending at {b} are paths from the transport of {b}.
+\lemma rightFib-dpath-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} (p : a' ~> a) (b : B a) {b' : B a'}
+  : IsEquiv {DPath (\lam i => B (p i)) b' b} {rightFib-tr Bf p b = b'} (rightFib-tr-dpath Bf)
+  => \let L => Bf (a', a, p, b)
+     \in (totalEquiv (\lam b' => rightFib-tr-dpath Bf {a'} {a} {p} {b} {b'})).2 (inP \new QEquiv {
+       | ret _ => (L.center.1, L.center.2)
+       | ret_f t => path \lam i => \let c => L.contraction (t.1, t.2) i \in (c.1, c.2)
+       | f_sec s => isContr=>isProp (lsigma (rightFib-tr Bf p b)) _ s
+     }) b'
+
+-- | If transport along {f} is an equivalence, then lifts of {f} starting at a given point are unique.
+\lemma rightFib-colift-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {f : a' ~> a}
+                             (fe : IsEquiv (rightFib-tr Bf f)) (r : B a') : Contr (CovLift B (a', a, f, r))
+  => Contr.Contr_QEquiv (symQEquiv (transQEquiv (\new QEquiv {CovLift B (a', a, f, r)} {\Sigma (s : B a) (DPath (\lam i => B (f i)) r s)} {
+       | f l => (l.1, l.2)
+       | ret l => (l.1, l.2)
+       | ret_f _ => idp
+       | f_sec _ => idp
+     }) (sigma-right \lam s => IsEquiv.toQEquiv (rightFib-dpath-equiv Bf f s {r})))) (IsEquiv=>contrFibers fe r)
+
+-- | Transport along an isomorphism is an equivalence.
+\lemma rightFib-tr-iso {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A} {f : a' ~> a} (fi : IsIso f) : IsEquiv (rightFib-tr Bf f)
+  => \case IsIso-char.1 fi \with {
+       | inP (P, Q) => aux P Q
+     }
+  \where
+    \private \lemma aux {a' a : A} (P : a' = a) {f : a' ~> a} (Q : =_~> P = f) : IsEquiv (rightFib-tr Bf f) \elim P, Q
+      | idp, idp => transport IsEquiv (ext \lam b => inv (rightFib-tr_idd Bf)) (inP idEquiv)
+
+-- | {rightFib-tr} commutes with identity.
+\sfunc rightFib-tr_idd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a : A} {b : B a} : rightFib-tr Bf idd b = b
+  => rightFib-tr-dpath Bf idd
+
+-- | {rightFib-tr} commutes with composition.
+\sfunc rightFib-tr_comp {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a a' a'' : A} (p : a ~> a') (q : a' ~> a'') {b : B a''}
+  : rightFib-tr Bf (comp p q) b = rightFib-tr Bf p (rightFib-tr Bf q b)
+  => \let | lq => (Bf (a', a'', q, b)).center
+          | lp => (Bf (a, a', p, lq.1)).center
+          | U : (a, lp.1) ~> {\Sigma⁺ (x : A) (B x)} (a', lq.1) => dpath \lam i => (p i, lp.2 i)
+          | V : (a', lq.1) ~> {\Sigma⁺ (x : A) (B x)} (a'', b) => dpath \lam i => (q i, lq.2 i)
+          | u => comp U V
+     \in pmap (rightFib-tr Bf __ b) (inv (dmap_comp {_} {A} (\lam s =>⁺ s.1) {_} {_} {_} {U} {V}))
+         *> rightFib-tr-dpath Bf {_} {_} {dmap (\lam (s :⁺ \Sigma⁺ (x : A) (B x)) =>⁺ s.1) u} (dpath \lam i => (u i).2)
+
+-- | Transport in the pullback of {B} along {f} is transport in {B} along the image of the arrow.
+\sfunc rightFib-pullback-tr {A' A : \Cat} (f : A' ->⁺ A) {B : A ->⁺ \Cat} (Bf : IsRightFib B) {a' a : A'} (p : a' ~> a) (b : B (f a))
+  : rightFib-tr (rightFib-pullback f Bf) p b = rightFib-tr Bf (dmap f p) b
+  => rightFib-tr-dpath (rightFib-pullback f Bf) (Bf (f a', f a, dmap f p, b)).center.2
+
+-- | Lifts in `Fibers q` ending at a point with the trivial path are arrows into it whose image is the given arrow.
+\func fibers-lift-equiv {E A : \Cat} (q : E ->⁺ A) (x : E) {a' : A} (p : a' ~> q x)
+  : QEquiv {ContLift (Fibers q) (a', q x, p, (x, idp))}
+           {\Sigma (w : \Sigma (y : E) (y ~> x)) (((q w.1, dpath \lam i => q (w.2 i)) : \Sigma (y : A) (y ~> q x)) = (a', p))} \cowith
+  | f u => ((u.1.1, dpath \lam i => (u.2 i).1), path \lam m => (u.1.2 m, dpath \lam i => (u.2 i).2 m))
+  | ret v => ((v.1.1, path \lam m => (v.2 m).1), dpath \lam i => (v.1.2 i, path \lam m => (v.2 m).2 i))
+  | ret_f u => idp
+  | f_sec v => idp
+
+{- | The full subcategory of the total category of a right fibration {Q} on a predicate {P} stable under transport
+ -   is a right fibration over {A}.
+ -}
+\lemma rightFib-full {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsRightFib Q) (P : \Sigma⁺ (a : A) (Q a) -> \Prop)
+                     (Ps : \Pi {a' a : A} (p : a' ~> a) (b : Q a) -> P (a, b) -> P (a', rightFib-tr Qf p b))
+  : IsRightFib (Fibers (subProj P))
+  => \lam d => aux d.4.1 d.3 d.4.2
+  \where {
+    \private \lemma aux {a' a : A} (x : FullSubCat P) (p : a' ~> a) (q : subProj P x = a)
+      : Contr (ContLift (Fibers (subProj P)) (a', a, p, (x, q))) \elim q
+      | idp => Contr.Contr_QEquiv (symQEquiv (lift-equiv P x p)) $
+                 sigma-Contr (rsigma $ later (a', p)) \lam u => base-contr Qf P Ps x u.1
+
+    -- | Arrows into the base point together with a path to `(a', p)`.
+    \func Base {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> subProj P x)
+      => \Sigma (u : \Sigma (k : \Sigma (y : A) (y ~> subProj P x)) (k = (a', p)))
+                (\Sigma (l : ContLift Q (u.1.1, subProj P x, u.1.2, (FullSubCat.inc x).2)) (P (u.1.1, l.1)))
+
+    -- | Lifts of the arrows into the base point that satisfy {P} form a contractible type.
+    \lemma base-contr {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsRightFib Q) (P : \Sigma⁺ (a : A) (Q a) -> \Prop)
+                      (Ps : \Pi {a' a : A} (p : a' ~> a) (b : Q a) -> P (a, b) -> P (a', rightFib-tr Qf p b))
+                      (x : FullSubCat P) (k : \Sigma (y : A) (y ~> subProj P x))
+      : Contr (\Sigma (l : ContLift Q (k.1, subProj P x, k.2, (FullSubCat.inc x).2)) (P (k.1, l.1)))
+      => \let c => Qf (k.1, subProj P x, k.2, (FullSubCat.inc x).2)
+         \in sigma-Contr c \lam l => isProp=>isContr (\lam _ _ => prop-pi) $
+               coe (\lam i => P (k.1, (c.contraction l i).1)) (Ps k.2 (FullSubCat.inc x).2 (FullSubCat.inc-con {_} {P})) right
+
+    -- | Lifts in the full subcategory are lifts in {Q} satisfying {P}.
+    \sfunc lift-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> subProj P x)
+      : QEquiv {ContLift (Fibers (subProj P)) (a', subProj P x, p, (x, idp))} {Base P x p}
+      => \let | T => \Sigma⁺ (a : A) (Q a)
+              | Pt (v : \Sigma (s : \Sigma (t : T) (P t)) (s.1 ~> FullSubCat.inc x))
+                => (v.1.1.1, dpath \lam i => (v.2 i).1) = {\Sigma (y : A) (y ~> subProj P x)} (a', p)
+              | ob-ff : QEquiv {\Sigma (y : FullSubCat P) (y ~> x)} {\Sigma (s : \Sigma (t : T) (P t)) (s.1 ~> FullSubCat.inc x)}
+                => sigma-equiv (IsEquiv.toQEquiv fullSub-ob-equiv) \lam y => IsEquiv.toQEquiv (FullSubCat.inc-ff y x)
+         \in fibers-lift-equiv (subProj P) x p `transQEquiv` qsigma-left ob-ff `transQEquiv` total-equiv P x p
+      \where {
+        -- | An arrow into `inc x` in the total category is an arrow in the base together with a path over it.
+        \private \func total-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x : FullSubCat P) {a' : A} (p : a' ~> subProj P x)
+          : QEquiv {\Sigma (v : \Sigma (s : \Sigma (t : \Sigma⁺ (a : A) (Q a)) (P t)) (s.1 ~> FullSubCat.inc x))
+                           (((v.1.1.1, dpath \lam i => (v.2 i).1) : \Sigma (y : A) (y ~> subProj P x)) = (a', p))}
+                   {Base P x p} \cowith
+          | f v => (((v.1.1.1.1, dpath \lam i => (v.1.2 i).1), v.2), ((v.1.1.1.2, dpath \lam i => (v.1.2 i).2), v.1.1.2))
+          | ret u => ((((u.1.1.1, u.2.1.1), u.2.2), dpath \lam i => (u.1.1.2 i, u.2.1.2 i)), u.1.2)
+          | ret_f v => idp
+          | f_sec u => idp
+      }
+  }
+
+-- | Under {subProj.fibers-equiv}, transport in {rightFib-full} is transport in {Q}.
+\sfunc rightFib-full-tr {A : \Cat} {Q : A ->⁺ \Cat} (Qf : IsRightFib Q) (P : \Sigma⁺ (a : A) (Q a) -> \Prop)
+                        (Ps : \Pi {a' a : A} (p : a' ~> a) (b : Q a) -> P (a, b) -> P (a', rightFib-tr Qf p b))
+                        {a' a : A} (p : a' ~> a) (z : Fibers (subProj P) a)
+  : (subProj.fibers-equiv P a' (rightFib-tr (rightFib-full Qf P Ps) p z)).1 = rightFib-tr Qf p (subProj.fibers-equiv P a z).1
+  => \let c => (rightFib-full Qf P Ps (a', a, p, z)).center
+     \in inv (rightFib-tr-dpath Qf (dpath \lam i => transport+ Q (c.2 i).2 (FullSubCat.inc (c.2 i).1).2))
+
+-- | Sections of a right fibration over an arrow are determined by their endpoint.
+\lemma rightFib-sections-ev {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) (v : DI ->⁺ A)
+  : IsEquiv {\Pi (i :⁺ DI) -> B (v i)} {B (v dright)} (\lam s => s dright)
+  => IsEquiv.trans (inP (DI-sections-equiv B v)) (inP (contr-right \lam b => Bf (_, _, dpath v, b)))
+  \where
+    -- | Sections over {DI} are the endpoint together with a lift.
+    \func DI-sections-equiv {A : \Cat} (B : A ->⁺ \Cat) (v : DI ->⁺ A)
+      : QEquiv {\Pi (i :⁺ DI) -> B (v i)} {\Sigma (b : B (v dright)) (ContLift B (_, _, dpath v, b))} \cowith
+      | f s => (s dright, (s dleft, dpath s))
+      | ret t i => t.2.2 i
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+-- | {B} is a right fibration if and only if sections over every arrow are determined by their endpoint.
+\lemma rightFib-sections {A : \Cat} {B : A ->⁺ \Cat}
+  : IsRightFib B <-> (\Pi (v : DI ->⁺ A) -> IsEquiv (\lam (s : \Pi (i :⁺ DI) -> B (v i)) => s dright))
+  => (rightFib-sections-ev,
+      \lam e d => Contr.Contr_QEquiv (proj-fib _ d.4) $
+        IsEquiv=>contrFibers (IsEquiv.rightFactor (inP (rightFib-sections-ev.DI-sections-equiv B (\lam i => d.3 i))) (e (\lam i => d.3 i))) d.4)
+
+-- | The fibers of the total projection of a right fibration form a right fibration.
+\lemma rightFib-total {B : \Cat} {Q : B ->⁺ \Cat} (Qr : IsRightFib Q) : IsRightFib (Fibers (totalProj Q))
+  => rightFib-sections.2 \lam v => IsEquiv.rightFactor (inP (fibers-total-equiv.sections v))
+      (IsEquiv.trans (rightFib-sections.1 Qr v) (inP (fibers-total-equiv (v dright))))
+
+-- | The total projection of a right fibration with contractible fibers is an equivalence.
+\lemma rightFib-contr-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) (Bc : \Pi (a : A) -> Contr (B a))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} __.1
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {A} {\lam s => s.1}).1
+       (\lam s t => IsEquiv.trans (inP (dpath-sigma-equiv (\lam _ => B))) (inP (contr-right \lam r => dpath-contr r)),
+        \lam a => inP ((a, (Bc a).center), idp))
+  \where
+    -- | Paths over an arrow {r} between points of contractible fibers form a contractible type.
+    \lemma dpath-contr {s t : \Sigma⁺ (a : A) (B a)} (r : s.1 ~> t.1) : Contr (DPath (\lam i => B (r i)) s.2 t.2)
+      => \let c : Contr (\Sigma (b' : B s.1) (DPath (\lam i => B (r i)) b' t.2))
+               => Contr.Contr_QEquiv (later \new QEquiv { | f u => (u.1, u.2) | ret u => (u.1, u.2) | ret_f _ => idp | f_sec _ => idp })
+                                     (Bf (s.1, t.1, r, t.2))
+         \in Contr.Contr_QEquiv (proj-fib (\lam b' => DPath (\lam i => B (r i)) b' t.2) s.2)
+                                (IsEquiv=>contrFibers (contr-equiv c (Bc s.1) {__.1}) s.2)
+
+{- | A map of total categories over the base between right fibrations is an equivalence if it is an equivalence on objects of fibers.
+ -
+ -   Proof: dual to `leftFib-fiberwise-equiv`. On hom-types, the map of lifts of an arrow `r` with a fixed target is a map over
+ -   the fiberwise equivalence between contractible types of all lifts, so it is an equivalence by {fiberwiseEquiv}.
+ -}
+\lemma rightFib-fiberwise-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsRightFib B) (Cf : IsRightFib C)
+                                (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (ge : \Pi (a : A) -> IsEquiv {B a} {C a} (\lam b => g (a, b)))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} (\lam s => (s.1, g s))
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} {\lam s => (s.1, g s)}).1
+      (\lam x y => IsEquiv.trans (inP (dpath-sigma-equiv \lam _ => B))
+                     {\lam s => dpath \lam i => ((s.1 i, lift-map {A} {B} {C} g s.1 s.2 i) : \Sigma⁺ (a : A) (C a))}
+                     (IsEquiv.trans ((totalEquiv (lift-map {A} {B} {C} g)).1 \lam r => lift-map-equiv Bf Cf g ge r)
+                                    (inP (symQEquiv (dpath-sigma-equiv (\lam _ => C) {x.1, g x} {y.1, g y})))),
+       \lam y => TruncP.map (IsEquiv.isSurj (ge y.1) y.2) \lam s => ((y.1, s.1), path \lam i => (y.1, s.2 i)))
+  \where \private {
+    -- | The action of {g} on lifts of an arrow of the base.
+    \func lift-map {A : \Cat} {B C : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1)
+                   {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) (t : DPath (\lam i => B (r i)) x.2 y.2)
+      : DPath (\lam i => C (r i)) (g x) (g y)
+      => dpath \lam i => g (r i, t i)
+
+    \lemma lift-map-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsRightFib B) (Cf : IsRightFib C)
+                          (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (ge : \Pi (a : A) -> IsEquiv {B a} {C a} (\lam b => g (a, b)))
+                          {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) : IsEquiv (lift-map {A} {B} {C} g {x} {y} r)
+      => fiberwiseEquiv (ge x.1) (\lam b t => lift-map {A} {B} {C} g {x.1, b} {y} r t)
+           (contr-equiv (Contr.Contr_QEquiv (lift-sigma B) (Bf (x.1, y.1, r, y.2)))
+                        (Contr.Contr_QEquiv (lift-sigma C) (Cf (x.1, y.1, r, g y)))) x.2
+
+    \func lift-sigma {A : \Cat} (B : A ->⁺ \Cat) {d : ContLiftData B}
+      : QEquiv {ContLift B d} {\Sigma (b : B d.1) (DPath (\lam i => B (d.3 i)) b d.4)} \cowith
+      | f l => (l.1, l.2)
+      | ret l => (l.1, l.2)
+      | ret_f _ => idp
+      | f_sec _ => idp
+  }
+
+-- | Right fibrations are invariant under equivalences over the base.
+\lemma rightFib-hequiv.{u} {A C D : \Cat u} {f : C ->⁺ D} (fe : IsHEquiv f) {p : C ->⁺ A} {p' : D ->⁺ A}
+                           (h : \Pi (z :⁺ C) -> p' (f z) = p z) (c : IsRightFib (Fibers p')) : IsRightFib (Fibers p)
+  => aux (HEquiv_= fe) h c
+  \where
+    \private \lemma aux.{u} {A C D : \Cat u} (r : C = D) {p : C ->⁺ A} {p' : D ->⁺ A}
+                            (h : \Pi (z :⁺ C) -> p' (transport+ (\lam Y => Y) r z) = p z) (c : IsRightFib (Fibers p')) : IsRightFib (Fibers p) \elim r
+      | idp => transport (\lam q => IsRightFib (Fibers q)) (funExt+ h) c
+
+-- | The map of slices induced by {q}.
+\func sliceMap {E A : \Cat} (q : E ->⁺ A) (x : E) (w : \Sigma (y : E) (y ~> x)) : \Sigma (a : A) (a ~> q x)
+  => (q w.1, dmap q w.2)
+
+-- | `Fibers q` is a right fibration if and only if the maps of slices induced by {q} are equivalences.
+\lemma rightFib-slice-char {E A : \Cat} {q : E ->⁺ A} : IsRightFib (Fibers q) <-> (\Pi (x : E) -> IsEquiv (sliceMap q x))
+  => (\lam qf x => contrFibers=>IsEquiv \lam z => Contr.Contr_QEquiv (fibers-lift-equiv q x z.2) (qf (z.1, q x, z.2, (x, idp))),
+      \lam e d => aux q e d.4.1 d.3 d.4.2)
+  \where
+    \private \lemma aux {E A : \Cat} (q : E ->⁺ A) (e : \Pi (x : E) -> IsEquiv (sliceMap q x)) {a' a : A} (x : E) (p : a' ~> a) (r : q x = a)
+      : Contr (ContLift (Fibers q) (a', a, p, (x, r))) \elim r
+      | idp => Contr.Contr_QEquiv (symQEquiv (fibers-lift-equiv q x p)) (IsEquiv=>contrFibers (e x) (a', p))
+
+-- | A composite of functors whose fibers form right fibrations has fibers forming a right fibration.
+\lemma rightFib-comp {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (ff : IsRightFib (Fibers f)) (gf : IsRightFib (Fibers g))
+  : IsRightFib (Fibers (\lam a => g (f a)))
+  => (rightFib-slice-char {A} {C} {\lam a => g (f a)}).2 \lam a =>
+       IsEquiv.trans ((rightFib-slice-char {A} {B} {f}).1 ff a) ((rightFib-slice-char {B} {C} {g}).1 gf (f a))
+
+-- | Cancellation: if the fibers of {g} and of `g ∘ f` form right fibrations, then so do the fibers of {f}.
+\lemma rightFib-cancel {A B C : \Cat} {f : A ->⁺ B} {g : B ->⁺ C} (gf : IsRightFib (Fibers g)) (gff : IsRightFib (Fibers (\lam a => g (f a))))
+  : IsRightFib (Fibers f)
+  => (rightFib-slice-char {A} {B} {f}).2 \lam a =>
+       IsEquiv.leftFactor ((rightFib-slice-char {B} {C} {g}).1 gf (f a)) ((rightFib-slice-char {A} {C} {\lam a => g (f a)}).1 gff a)
+
+-- | The fibers of a right fibration are groupoids.
+\lemma rightFib-grpd {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsRightFib B) (a : A) : IsGroupoid (B a)
+  => \lam {t} {t'} f => IsIso-diag-char.2 $ inP (t', path \lam k i => (isContr=>isProp (Bf (a,a,idd,t')) (t', idd) (t, f) k).2 i)

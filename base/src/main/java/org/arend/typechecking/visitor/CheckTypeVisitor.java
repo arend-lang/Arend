@@ -173,27 +173,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private boolean isVarianceAccessible(Binding binding, boolean withCovariant) {
-    return !(binding instanceof DependentLink dl) || dl.getVariance() == BindingVariance.INVARIANT || withCovariant && myCovariantContext.contains(binding);
-  }
-
-  public boolean hasCategoricalContext() {
-    return !myCovariantContext.isEmpty();
-  }
-
-  public boolean dependsOnCategoricalContext(Expression expr) {
-    if (myCovariantContext.isEmpty()) {
-      return false;
-    }
-    FreeVariablesCollector collector = new FreeVariablesCollector(true) {
-      @Override
-      public void addBinding(Binding binding) {
-        if (myCovariantContext.contains(binding)) {
-          super.addBinding(binding);
-        }
-      }
-    };
-    expr.accept(collector, null);
-    return !collector.getResult().isEmpty();
+    return binding.getVariance() == BindingVariance.INVARIANT || withCovariant && myCovariantContext.contains(binding);
   }
 
   public TypecheckingContext saveTypecheckingContext() {
@@ -223,7 +203,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     visitor.setInstancePool(typecheckingContext.instancePool().copy(visitor));
     visitor.setLevelContext(typecheckingContext.levelContext());
     for (Binding binding : typecheckingContext.localContext().values()) {
-      if (binding instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT) {
+      if (binding.getVariance() != BindingVariance.INVARIANT) {
         visitor.myCovariantContext.add(binding);
       }
     }
@@ -245,7 +225,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private void registerVarianceBinding(Binding binding) {
-    if (binding instanceof DependentLink dl && dl.getVariance() == BindingVariance.COVARIANT) {
+    if (binding.getVariance() != BindingVariance.INVARIANT) {
       myCovariantContext.add(binding);
     }
   }
@@ -2107,7 +2087,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       levels = typecheckLevels(definition, expr, implementedFields);
     }
 
-    return DefCallResult.makeTResult(expr, definition, levels, this);
+    return DefCallResult.makeTResult(expr, definition, levels);
   }
 
   private boolean checkUnresolved(Referable ref, Concrete.SourceNode sourceNode) {
@@ -2128,7 +2108,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       errorReporter.report(new IncorrectReferenceError(ref, sourceNode));
       return null;
     }
-    if (def instanceof DependentLink dl && dl.getVariance() != BindingVariance.INVARIANT && !myCovariantContext.contains(def)) {
+    if (def.getVariance() != BindingVariance.INVARIANT && !myCovariantContext.contains(def)) {
       errorReporter.report(new TypecheckingError("Covariant variable '" + ref.textRepresentation() + "' is used in an invariant position", sourceNode));
       return null;
     }
@@ -2374,7 +2354,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     FreeVariablesCollector collector = new FreeVariablesCollector() {
       @Override
       public void addBinding(Binding binding) {
-        if (binding instanceof DependentLink link && link.getVariance() != BindingVariance.INVARIANT) {
+        if (binding.getVariance() != BindingVariance.INVARIANT) {
           super.addBinding(binding);
         }
       }
@@ -2819,12 +2799,22 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       try (var ignored = clearCategoricalContext()) {
         result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
       }
+    } else if (list.getFirst().hasNext()) {
+      // The type may be released by previous parameters, so its sort is checked against the expected type later
+      result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
     } else {
       result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
     }
     if (result == null) return false;
 
     SortExpression sort = result.sort();
+    if (variance != BindingVariance.INVARIANT && sort.isInfinite()) {
+      Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(result.expression(), list.getFirst(), null);
+      SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
+      if (releasedSort != null) {
+        sort = releasedSort;
+      }
+    }
     boolean isProperty = arg.isProperty();
     boolean isProp = isProperty && sort.isProp();
     if (!isProp && isProperty) {
@@ -3102,11 +3092,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (result.expression.isInstance(ErrorExpression.class)) {
         result.expression = new OfTypeExpression(result.expression, result.type);
       }
-      return new Pair<>(TypedLetClause.make(!isHave, name, null, result.expression, result.type), result.type);
+      return new Pair<>(TypedLetClause.make(!isHave, name, null, result.expression, result.type, clause.isCovariant() ? BindingVariance.COVARIANT : BindingVariance.INVARIANT), result.type);
     }
   }
 
-  private Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> typecheckLetClausePattern(Concrete.Pattern pattern, TypecheckingResult tcResult, Set<Binding> bindings) {
+  private Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> typecheckLetClausePattern(Concrete.Pattern pattern, TypecheckingResult tcResult, BindingVariance variance, Set<Binding> bindings) {
     if (pattern instanceof Concrete.NamePattern) {
       Referable referable = ((Concrete.NamePattern) pattern).getRef();
       Concrete.Expression patternType = ((Concrete.NamePattern) pattern).type;
@@ -3119,7 +3109,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
       String name = referable == null ? null : referable.textRepresentation();
       if (referable != null) {
-        Binding binding = new TypedEvaluatingBinding(name, tcResult.expression, tcResult.type);
+        Binding binding = new TypedEvaluatingBinding(name, tcResult.expression, tcResult.type, variance);
         bindings.add(binding);
         addBinding(referable, binding);
       }
@@ -3153,7 +3143,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         field = notImplementedFields.get(i);
         newType = classCall.getFieldType(field, tcResult.expression);
       }
-      Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> pair = typecheckLetClausePattern(subPattern, new TypecheckingResult(link != null ? ProjExpression.make(tcResult.expression, i, link.isProperty()) : FieldCallExpression.make(notImplementedFields.get(i), tcResult.expression), newType), bindings);
+      Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> pair = typecheckLetClausePattern(subPattern, new TypecheckingResult(link != null ? ProjExpression.make(tcResult.expression, i, link.isProperty()) : FieldCallExpression.make(notImplementedFields.get(i), tcResult.expression), newType), variance, bindings);
       if (pair == null) {
         return null;
       }
@@ -3180,7 +3170,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         List<HaveClause> clauses = new ArrayList<>(abstractClauses.size());
         Set<Binding> definedBindings = new HashSet<>();
         for (Concrete.LetClause clause : abstractClauses) {
-          Pair<HaveClause, Expression> pair = typecheckLetClause(clause, expr.isHave());
+          Pair<HaveClause, Expression> pair;
+          if (clause.isCovariant()) {
+            pair = typecheckLetClause(clause, expr.isHave());
+          } else {
+            try (var ignored2 = clearCategoricalContext()) {
+              pair = typecheckLetClause(clause, expr.isHave());
+            }
+          }
           if (pair == null) {
             return null;
           }
@@ -3192,7 +3189,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             }
           } else {
             addBinding(null, pair.proj1);
-            Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> patternPair = typecheckLetClausePattern(clause.getPattern(), new TypecheckingResult(new ReferenceExpression(pair.proj1), pair.proj2), definedBindings);
+            Pair<LetClausePattern, LocalExpressionPrettifier.Accessor> patternPair = typecheckLetClausePattern(clause.getPattern(), new TypecheckingResult(new ReferenceExpression(pair.proj1), pair.proj2), pair.proj1.getVariance(), definedBindings);
             if (patternPair == null) {
               return null;
             }
@@ -3548,7 +3545,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Referable referable = expr.getFunction() instanceof Concrete.ReferenceExpression ? ((Concrete.ReferenceExpression) expr.getFunction()).getReferent() : null;
     Definition definition = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
-    if ((definition == Prelude.MOD || definition == Prelude.DIV_MOD) && expr.getArguments().size() == 2 && expr.getArguments().get(0).isExplicit() && expr.getArguments().get(1).isExplicit()) {
+    if (definition != null && (definition == Prelude.MOD || definition == Prelude.DIV_MOD) && expr.getArguments().size() == 2 && expr.getArguments().get(0).isExplicit() && expr.getArguments().get(1).isExplicit()) {
       TypecheckingResult arg1 = checkExpr(expr.getArguments().get(0).getExpression(), ExpressionFactory.Nat());
       TypecheckingResult arg2 = checkExpr(expr.getArguments().get(1).getExpression(), ExpressionFactory.Nat());
       if (arg1 == null || arg2 == null) {
@@ -3829,6 +3826,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
                 }
                 replacedBindings.add(entry.getValue());
                 entry.setValue((Binding) newBinding);
+                registerVarianceBinding((Binding) newBinding);
               } else if (removed != null) {
                 removed.add(entry);
               }

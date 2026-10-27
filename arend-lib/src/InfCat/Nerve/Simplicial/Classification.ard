@@ -1,0 +1,83 @@
+{- | Small categories are complete Segal simplicial types.
+
+ -   * {nerveObj-equiv}: the nerve is an equivalence from `\Cat u` to small complete Segal right fibrations over {DeltaCat}
+ -     ({CSRFibU}), with inverse the realization {realObj}. The round trips are the counit ({realization-nerve}, Step D) and the
+ -     unit ({nerve-real-path}, from {realization-unit-equiv}, Step E).
+ -   * {classify-equiv}: the realization of the category of simplices is an equivalence from complete Segal simplicial types to
+ -     `\Cat u` ({elUObj-cs-equiv} followed by {realObj-equiv}). Its value at {S} is the fibre of the universal family {UFam}
+ -     over {S} ({classify-uFam}). So {UFam} restricted to complete Segal simplicial types is univalent, and every small category
+ -     is one of its fibres ({uFam-classifies}).
+ -}
+
+\import Equiv
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Localization.Concrete
+\import InfCat.Nerve.Simplicial.Counit
+\import InfCat.Nerve.Simplicial.NerveSegal
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Nerve.Simplicial.SimplicialNerve
+\import InfCat.Nerve.Simplicial.Unit
+\import InfCat.Nerve.Simplicial.UniversalFamily
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.SimplicialType
+\import InfCat.Simplicial.SimplicialTypeEquiv
+\import Logic
+\import Paths
+\import Paths.Meta
+\open SimpType
+
+-- | Small complete Segal right fibrations over {DeltaCat}.
+\func CSRFibU.{u} => \Sigma (X : RFibU.{u}) (IsCompleteSegal {X.1} {X.2} X.3)
+
+-- | The nerve of {C} as a complete Segal right fibration.
+\func nerveObj.{u} (C : \Cat u) : CSRFibU.{u}
+  => ((SNerve C, SNerve.proj C, SNerveFib.isRightFib), snerve-completeSegal)
+
+-- | The realization of a complete Segal right fibration.
+\func realObj.{u} (X : CSRFibU.{u}) : \Cat u
+  => Realization X.1.2
+
+-- | The nerve of the realization of a complete Segal right fibration {X} is {X}.
+\sfunc nerve-real-path.{u} (X : CSRFibU.{u}) : nerveObj (realObj X) = X
+  => ext (inv (rfibU-path {X.1} {(nerveObj (realObj X)).1} {\lam e => (unitFib X.1.2 (X.1.2 e, (e, idp))).1} (unit-hequiv X) (\lam e => (unitFib X.1.2 (X.1.2 e, (e, idp))).2)))
+  \where
+    -- | The unit is an equivalence of total categories.
+    \lemma unit-hequiv.{v} (X : CSRFibU.{v}) : IsHEquiv {X.1.1} {SNerve (realObj X)} (\lam e => (unitFib X.1.2 (X.1.2 e, (e, idp))).1)
+      => IsHEquiv.trans (IsHEquiv.trans (fibers-sigma-hequiv X.1.2) (realization-unit-equiv X.2))
+           {\lam (w : \Sigma⁺ (b : DeltaCat) (SNerveFib (realObj X) b)) => w.2.1}
+           (IsHEquiv.rightFactor (fibers-sigma-hequiv (SNerve.proj (realObj X))) {\lam w => w.2.1} idHEquiv)
+
+-- | The nerve is an equivalence from small categories to small complete Segal right fibrations.
+\lemma nerveObj-equiv.{u} : IsEquiv nerveObj.{u}
+  => inP \new QEquiv {\Cat u} {CSRFibU.{u}} nerveObj.{u} {
+    | ret => realObj.{u}
+    | ret_f => realization-nerve.{u}
+    | f_sec => nerve-real-path.{u}
+  }
+
+-- | The realization is an equivalence from small complete Segal right fibrations to small categories.
+\lemma realObj-equiv.{u} : IsEquiv realObj.{u}
+  => inP \new QEquiv {CSRFibU.{u}} {\Cat u} realObj.{u} {
+    | ret => nerveObj.{u}
+    | ret_f => nerve-real-path.{u}
+    | f_sec => realization-nerve.{u}
+  }
+
+-- | The small category classified by a complete Segal simplicial type: the realization of its category of simplices.
+\func classify.{u} (s : \Sigma (S : SimpType.{u}) (IsCompleteSegalSimpType S)) : \Cat u
+  => Realization (elUProj s.1)
+
+-- | Complete Segal simplicial types classify small categories.
+\lemma classify-equiv.{u} : IsEquiv classify.{u}
+  => IsEquiv.trans elUObj-cs-equiv realObj-equiv
+
+-- | The category classified by `S` is the fibre of {UFam} over `S`.
+\lemma classify-uFam.{u} (s : \Sigma (S : SimpType.{u}) (IsCompleteSegalSimpType S)) : IsHEquiv {classify s} {UFam s.1} (localize-lift (uFamU-realization s.1).1)
+  => uFam-realization-equiv s.1
+
+-- | Every small category is the fibre of {UFam} over a complete Segal simplicial type.
+\func uFam-classifies.{u} (C : \Cat u) : \Sigma (s : \Sigma (S : SimpType.{u}) (IsCompleteSegalSimpType S)) (classify s = C)
+  => \let e => IsEquiv.toQEquiv classify-equiv.{u}
+     \in (e.ret C, e.f_ret C)

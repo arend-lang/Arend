@@ -38,6 +38,10 @@
   | left => A
   | right => B
 
+\func isoCat {A B : \Cat} (f : A ->⁺ B) (g : B ->⁺ A) (p : \Pi (x :⁺ A) -> g (f x) = x) (q : \Pi (y :⁺ B) -> f (g y) = y) (i : I) : \Cat \elim i
+  | left => A
+  | right => B
+
 \data DI
   | dleft
   | dright
@@ -98,6 +102,10 @@
                   (lift : \Pi {a a' :⁺ C} (f :⁺ a ~> a') (b :⁺ F a) -> \Sigma⁺ (b' : F a') (DPath (\lam i => F (f i)) b b'))
                   (y :⁺ C)
   | resize+ (b :⁺ F y)
+
+\data ResizeCat.{u} {C : \Cat} {S : \Type u} (to : S -> (DI ->⁺ C)) (from : (DI ->⁺ C) -> S)
+                    (from_to : \Pi (s : S) -> from (to s) = s) (to_from : \Pi (f : DI ->⁺ C) -> to (from f) = f)
+  | resizeCat (c :⁺ C)
 
 \data GroupoidType {C :⁺ \Cat} (Cg :⁺ \Pi {x y :⁺ C} (f :⁺ x ~> y) -> \Sigma⁺ (p : x = y) (coe (\lam i => x ~> p i) idd right = f))
   | groupoidType (_ :⁺ C)

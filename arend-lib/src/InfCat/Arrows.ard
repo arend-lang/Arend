@@ -1,11 +1,17 @@
 \import Equiv
+\import Equiv.Fiber
 \import Equiv.Sigma
+\import Function
 \import Function.Meta
+\import Homotopy.Fibration
 \import InfCat.Basics
+\import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Objects
+\import InfCat.Rezk
 \import Logic
 \import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -45,11 +51,28 @@
   | ret_f t => idp
   | f_sec s => idp
 
+-- | An arrow is a functor from {DI} together with paths identifying its endpoints.
+\func hom-endpoints {Z : \Cat} {x y : Z} : QEquiv {x ~> y} {\Sigma (h : DI ->⁺ Z) (h dleft = x) (h dright = y)} \cowith
+  | f p => (\lam i => p i, idp, idp)
+  | ret t => transport (x ~>) t.3 (transport (~> t.1 dright) t.2 (dpath t.1))
+  | ret_f p => idp
+  | f_sec t => aux t.1 t.2 t.3
+  \where
+    \private \sfunc aux {Z : \Cat} {x y : Z} (h : DI ->⁺ Z) (a : h dleft = x) (b : h dright = y)
+      : (transport (x ~>) b (transport (~> h dright) a (dpath h)), idp, idp)
+        = {\Sigma (h : DI ->⁺ Z) (h dleft = x) (h dright = y)} (h, a, b) \elim a, b
+      | idp, idp => idp
+
 -- | The diagonal map into the arrow category is fully faithful.
 \lemma diag-ff {C : \Cat} : IsFFMap {C} {DI ->⁺ C} (\lam c _ => c)
   => \lam a b => IsEquiv.leftFactor
         (inP $ DI-hom-equiv {C} `transQEquiv` contr-right \lam p => Contr.Contr_QEquiv (sigma-right \lam q => =_~>-equiv {_} {p} {q}) (lsigma p))
         (inP idEquiv)
+
+-- | Objects are the isomorphisms, via identities.
+\lemma rezk-equiv {C : \Cat} : IsEquiv {C} {\Sigma (h : DI ->⁺ C) (IsIso (dpath \lam i => h i))} (\lam c => (\lam _ => c, idd-iso))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection \lam (h : DI ->⁺ C) => IsIso (dpath \lam i => h i)) (IsFFMap.isObEmbedding diag-ff))
+       \lam t => \case IsIso-diag-char.1 t.2 \with { | inP (c, p) => inP (c, ext p) }
 
 -- | The diagonal map into the fiberwise arrow category of a family is fully faithful.
 \lemma diag-rel-ff {C : \Cat} {G : C ->⁺ \Cat} : IsFFMap {\Sigma⁺ (x : C) (G x)} {\Sigma⁺ (x : C) (DI ->⁺ G x)} (\lam s => (s.1, \lam _ => s.2))
@@ -70,3 +93,68 @@
       | ret_f t => idp
       | f_sec s => idp
   }
+
+-- | A functor is an equivalence if and only if postcomposition with it is an equivalence on arrows.
+\lemma post-DI-equiv {A B : \Cat} {g : A ->⁺ B} : IsHEquiv g <-> IsEquiv {DI ->⁺ A} {DI ->⁺ B} (\lam h i => g (h i))
+  => (\lam (inP e) => inP \new QEquiv {
+        | ret k => \lam i => e.finv (k i)
+        | ret_f h => ext \lam i => e.finv_f (h i)
+        | f_sec k => ext \lam i => e.f_finv (k i)
+      },
+      \lam pe => \have oe => ob-equiv {A} {B} {g} pe
+                 \in (ff-surj-equiv {A} {B} {g}).1
+                      (\lam x y => fiberwiseEquiv (pair-equiv oe) {\lam j => j.1 ~> j.2} {\lam j => j.1 ~> j.2} (\lam j p => dmap g p) (total-equiv {A} {B} {g} pe) (x,y),
+                       \lam y => inP (IsEquiv.ret oe y, IsEquiv.f_ret oe)))
+  \where {
+    -- | Objects of {A} are a retract of arrows of {A}.
+    \lemma ob-equiv {A B : \Cat} {g : A ->⁺ B} (pe : IsEquiv {DI ->⁺ A} {DI ->⁺ B} (\lam h i => g (h i))) : IsEquiv (\lam x => g x)
+      => IsEquiv.retract pe (\lam x _ => x) (\lam h => h dleft) (\lam _ => idp) (\lam y _ => y) (\lam k => k dleft) (\lam _ => idp) (\lam _ => idp) (\lam _ => idp)
+
+    -- | Postcomposition on arrows is the total map of {g} on homs.
+    \lemma total-equiv {A B : \Cat} {g : A ->⁺ B} (pe : IsEquiv {DI ->⁺ A} {DI ->⁺ B} (\lam h i => g (h i)))
+      : IsEquiv {\Sigma (j : \Sigma A A) (j.1 ~> j.2)} {\Sigma (j : \Sigma B B) (j.1 ~> j.2)} (\lam s => ((g s.1.1, g s.1.2), dmap g s.2))
+      => (IsEquiv.parallelEquiv (inP DI-equiv) (inP DI-equiv) (\lam h => idp)).1 pe
+  }
+
+-- | Arrows from a constant functor to {Y} are determined by their source component.
+\lemma const-ev0-equiv {C : \Cat} (a : C) (Y : DI ->⁺ C)
+  : IsEquiv {const a ~> Y} {a ~> Y dleft} (dmap \lam (F : DI ->⁺ C) => F dleft)
+  => IsEquiv.trans (inP $ later \new QEquiv {
+        | f N => (dpath \lam l => N l dleft, (dpath \lam l => N l dright, dpath \lam k => dpath \lam l => N l k))
+        | ret t => dpath \lam l k => t.2.2 k l
+        | ret_f N => idp
+        | f_sec t => idp
+      })
+      (inP $ contr-right \lam n0 => segal-contr.flipped n0 (dpath Y))
+
+{- | The bottom face and the interior of a box with the shape of {fill3} are unique.
+ -   The box is a square in the arrow category whose top-left corner is constant, and the source functor is fully faithful on such squares.
+ -}
+\lemma box-contr {C : \Cat} {a b d a' b' c' d' : C} (_ : \Sigma)
+                 {ab : a ~> b} {bd : b ~> d} {ad : a ~> d}
+                 {a'b' : a' ~> b'} {b'd' : b' ~> d'} {a'c' : a' ~> c'} {c'd' : c' ~> d'}
+                 {aa' : a ~> a'} {bb' : b ~> b'} {ac' : a ~> c'} {dd' : d ~> d'}
+                 (leftFace : DPath (\lam j => aa' j ~> ac' j) idd a'c')
+                 (rightFace : DPath (\lam j => bb' j ~> dd' j) bd b'd')
+                 (backFace : DPath (\lam i => ab i ~> ad i) idd bd)
+                 (frontFace : DPath (\lam i => a'b' i ~> c'd' i) a'c' b'd')
+                 (topFace : DPath (\lam i => ab i ~> a'b' i) aa' bb')
+  : Contr (\Sigma (bot : DPath (\lam i => ad i ~> c'd' i) ac' dd')
+                  (DPath (\lam i => DPath (\lam j => topFace i j ~> bot i j) (dpath \lam k => backFace i k) (dpath \lam k => frontFace i k)) leftFace rightFace))
+  => Contr.Contr_QEquiv (proj-fib _ topFace) $ flip IsEquiv=>contrFibers topFace $ IsEquiv.rightFactor (inP $ later \new QEquiv {
+         | f S => (dpath \lam i => dpath \lam j => S i j dleft, (dpath \lam i => dpath \lam j => S i j dright, dpath \lam i => dpath \lam j => dpath \lam k => S i j k))
+         | ret t => dpath \lam i => dpath \lam j => t.2.2 i j
+         | ret_f S => idp
+         | f_sec t => idp
+       }) (squares-at (\lam F => F dleft) (const-ev0-equiv a b'd') (dpath \lam i k =>⁺ backFace i k)
+                      (dpath \lam j => rightFace j) (dpath \lam j => leftFace j) (dpath \lam i => frontFace i))
+
+-- | An isomorphism is uniquely identified with a constant arrow.
+\lemma iso-const-contr {D : \Cat} {a : DI ->⁺ D} (ai : IsIso (dpath a)) : Contr (\Sigma⁺ (k : D) ((\lam i =>⁺ a i) = (\lam _ =>⁺ k)))
+  => \let | Fib => \Sigma (k : D) ((\lam _ =>⁺ k) = (\lam i =>⁺ a i))
+          | fp : isProp Fib => IsFFMap.fibProp diag-ff (\lam i => a i)
+          | T-prop : isProp (\Sigma⁺ (k : D) ((\lam i =>⁺ a i) = (\lam _ =>⁺ k)))
+              => isProp-retract {Fib} {\Sigma⁺ (k : D) ((\lam i =>⁺ a i) = (\lam _ =>⁺ k))} (\lam r => (r.1, inv r.2)) (\lam r => (r.1, inv r.2))
+                                (\lam r => path \lam k => (r.1, inv_inv k)) fp
+          | r => TruncP.remove fp (IsIso-diag-char.1 ai)
+     \in isProp=>isContr T-prop (r.1, inv r.2)

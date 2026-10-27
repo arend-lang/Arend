@@ -63,6 +63,24 @@ public class ElimTypechecking {
     return result == null ? null : result.add(BigInteger.ONE);
   }
 
+  /**
+   * For each parameter, checks if some subsequent parameter depends on it.
+   */
+  private static List<Boolean> computeDependents(DependentLink parameters, boolean inherited) {
+    List<DependentLink> params = DependentLink.Helper.toList(parameters);
+    List<Boolean> result = new ArrayList<>(params.size());
+    for (int i = 0; i < params.size(); i++) {
+      boolean dependent = inherited;
+      for (int j = i + 1; j < params.size() && !dependent; j++) {
+        if (params.get(j).getType().findBinding(params.get(i))) {
+          dependent = true;
+        }
+      }
+      result.add(dependent);
+    }
+    return result;
+  }
+
   public ElimTypechecking(@Nullable ErrorReporter errorReporter, Equations equations, Expression expectedType, PatternTypechecking.Mode mode, @Nullable BigInteger level, @NotNull ConstLevel actualLevel, boolean isSFunc, List<? extends Concrete.FunctionClause> clauses, int numberOfExternalParameters, Concrete.SourceNode sourceNode) {
     myErrorReporter = errorReporter;
     myEquations = equations;
@@ -343,7 +361,7 @@ public class ElimTypechecking {
       for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
         variances.add(link.getVariance());
       }
-      elimTree = clausesToElimTree(nonIntervalClauses, 0, 0, variances);
+      elimTree = clausesToElimTree(nonIntervalClauses, 0, 0, variances, computeDependents(parameters, false));
 
       reportMissingClauses(elimTree, parameters, elimParams);
 
@@ -810,7 +828,7 @@ public class ElimTypechecking {
     return true;
   }
 
-  private ElimTree clausesToElimTree(List<ExtElimClause> clauses, int argsStackSize, int numberOfIntervals, List<BindingVariance> variances) {
+  private ElimTree clausesToElimTree(List<ExtElimClause> clauses, int argsStackSize, int numberOfIntervals, List<BindingVariance> variances, List<Boolean> dependents) {
     try (Utils.ContextSaver ignored = new Utils.ContextSaver(myContext)) {
       int index = 0;
       loop:
@@ -921,6 +939,13 @@ public class ElimTypechecking {
 
       if (dataType == Prelude.INTERVAL) {
         if (myErrorReporter != null) myErrorReporter.report(new TypecheckingError("Pattern matching on the interval is not allowed here", getClause(conClause.index, someConPattern)));
+        myOK = false;
+        return null;
+      }
+
+      // Covariant matching is not allowed if other parameters depend on the matched variable
+      if (dataType != null && variances.get(index) == BindingVariance.COVARIANT && dependents.get(index) && (dataType.getConstructors().size() != 1 || dataType.isHIT())) {
+        if (myErrorReporter != null) myErrorReporter.report(new CovariantDependentPatternError(dataType, getClause(conClause.index, someConPattern)));
         myOK = false;
         return null;
       }
@@ -1112,11 +1137,14 @@ public class ElimTypechecking {
 
         List<BindingVariance> newVariances = new ArrayList<>();
         boolean forceInvariant = variances.get(index) == BindingVariance.INVARIANT;
-        for (DependentLink link = branchKey instanceof SingleConstructor ? someConPattern.getParameters() : branchKey.getParameters(someConPattern); link.hasNext(); link = link.getNext()) {
+        DependentLink branchParams = branchKey instanceof SingleConstructor ? someConPattern.getParameters() : branchKey.getParameters(someConPattern);
+        for (DependentLink link = branchParams; link.hasNext(); link = link.getNext()) {
           newVariances.add(forceInvariant ? BindingVariance.INVARIANT : link.getVariance());
         }
         newVariances.addAll(variances.subList(index + 1, variances.size()));
-        ElimTree elimTree = clausesToElimTree(conClauseList, argsStackSize + index + (hasVars ? 1 : 0), myLevel == null ? 0 : numberOfIntervals + (branchKey.getBody() instanceof IntervalElim ? ((IntervalElim) branchKey.getBody()).getNumberOfTotalElim() : 0), newVariances);
+        List<Boolean> newDependents = computeDependents(branchParams, dependents.get(index));
+        newDependents.addAll(dependents.subList(index + 1, dependents.size()));
+        ElimTree elimTree = clausesToElimTree(conClauseList, argsStackSize + index + (hasVars ? 1 : 0), myLevel == null ? 0 : numberOfIntervals + (branchKey.getBody() instanceof IntervalElim ? ((IntervalElim) branchKey.getBody()).getNumberOfTotalElim() : 0), newVariances, newDependents);
         if (elimTree == null) {
           myOK = false;
         } else {

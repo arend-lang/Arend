@@ -271,12 +271,12 @@ class ArendKeywordCompletionTest : ArendCompletionTestBase() {
             checkSingleCompletion("\\tru{-caret-}\\func", "\\truncated \\data \\func")
 
     fun `test completion in resulting type`() =
-            checkKeywordCompletionVariants(DATA_OR_EXPRESSION_KW + FAKE_NTYPE_LIST + LEVEL_KW_LIST + LEVEL_PLUS_KW_LIST, CompletionCondition.SAME_KEYWORDS,
+            checkKeywordCompletionVariants(DATA_OR_EXPRESSION_KW + FAKE_NTYPE_LIST + LEVEL_RETURN_KWS, CompletionCondition.SAME_KEYWORDS,
                     "\\func foo (a : Nat) : {-caret-}",
                     "\\class C\n  | f : {-caret-}")
 
     fun `test completion in resulting type 2`() =
-        checkKeywordCompletionVariants(DATA_OR_EXPRESSION_KW + FAKE_NTYPE_LIST + LEVEL_KW_LIST + LEVEL_PLUS_KW_LIST + THIS_KW_LIST, CompletionCondition.SAME_KEYWORDS,
+        checkKeywordCompletionVariants(DATA_OR_EXPRESSION_KW + FAKE_NTYPE_LIST + LEVEL_RETURN_KWS + THIS_KW_LIST, CompletionCondition.SAME_KEYWORDS,
             "\\class C { | f : {-caret-} }")
 
     fun `test no keyword completion after instance, open or wrong state`() =

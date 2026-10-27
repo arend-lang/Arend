@@ -1073,18 +1073,24 @@ public final class Concrete {
   public static class PatternLamExpression extends LamExpression {
     // null elements of the list correspond to parameters of the lambda
     private final List<Pattern> myPatterns;
+    private final BindingVariance myVariance;
 
-    private PatternLamExpression(Object data, List<Parameter> parameters, List<Pattern> patterns, Expression body) {
+    private PatternLamExpression(Object data, List<Parameter> parameters, List<Pattern> patterns, BindingVariance variance, Expression body) {
       super(data, parameters, body);
       myPatterns = patterns;
+      myVariance = variance;
     }
 
-    public static LamExpression make(Object data, List<Parameter> parameters, List<Pattern> patterns, Expression body) {
-      return patterns.isEmpty() ? new LamExpression(data, parameters, body) : new PatternLamExpression(data, parameters, patterns, body);
+    public static LamExpression make(Object data, List<Parameter> parameters, List<Pattern> patterns, BindingVariance variance, Expression body) {
+      return patterns.isEmpty() ? new LamExpression(data, parameters, body) : new PatternLamExpression(data, parameters, patterns, variance, body);
     }
 
     public List<Pattern> getPatterns() {
       return myPatterns;
+    }
+
+    public BindingVariance getVariance() {
+      return myVariance;
     }
   }
 
@@ -1093,20 +1099,22 @@ public final class Concrete {
     public Expression resultType;
     public Expression term;
     private final Pattern myPattern;
+    private final boolean myCovariant;
 
-    public LetClause(List<Parameter> parameters, Expression resultType, Expression term, Pattern pattern) {
+    public LetClause(List<Parameter> parameters, Expression resultType, Expression term, Pattern pattern, boolean isCovariant) {
       myParameters = parameters;
       this.resultType = resultType;
       this.term = term;
       myPattern = pattern;
+      myCovariant = isCovariant;
     }
 
-    public LetClause(Referable referable, List<Parameter> parameters, Expression resultType, Expression term) {
-      this(parameters, resultType, term, new NamePattern(referable, true, referable, null));
+    public LetClause(Referable referable, List<Parameter> parameters, Expression resultType, Expression term, boolean isCovariant) {
+      this(parameters, resultType, term, new NamePattern(referable, true, referable, null), isCovariant);
     }
 
-    public LetClause(Pattern pattern, Expression resultType, Expression term) {
-      this(Collections.emptyList(), resultType, term, pattern);
+    public LetClause(Pattern pattern, Expression resultType, Expression term, boolean isCovariant) {
+      this(Collections.emptyList(), resultType, term, pattern, isCovariant);
     }
 
     @Nullable
@@ -1131,6 +1139,10 @@ public final class Concrete {
 
     public Expression getResultType() {
       return resultType;
+    }
+
+    public boolean isCovariant() {
+      return myCovariant;
     }
 
     @Override

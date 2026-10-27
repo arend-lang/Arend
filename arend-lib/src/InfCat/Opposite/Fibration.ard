@@ -1,0 +1,186 @@
+{- | Opposites of right fibrations.
+ -
+ -   {opFunc-leftFib}: if `Fibers q` is a right fibration, then `Fibers (OpFunc q)` is a left fibration.
+ -   The fibers of `OpFunc f` over `toOp y` are the fibers of {f} over {y} ({op-fiber-equiv}),
+ -   and the coslices of `Op X` are the slices of {X} ({op-coslice-equiv}).
+ -   The identification of fibers is compatible with postcomposition ({op-fiber-postcomp}), paths of functors ({op-fiber-path})
+ -   and forgetting a factor of a composite ({op-fiber-forget}); the first and the last are restatements of {OpFunc_toOp-comp}.
+ -
+ -   Proof. Lifts in `Fibers (OpFunc q)` starting at `t` are fibers of the map of coslices
+ -   `Σ (t' : Op R) (t ~> t') -> Σ (a : Op L) (OpFunc q t ~> a)` ({fibers-colift-equiv}), so it suffices to show that this map
+ -   is an equivalence. We may assume `t = toOp r`. Then the coslices of `toOp r` and `toOp (q r)` are the slices of {r}
+ -   and `q r` ({op-coslice-equiv}), and by {opArr-OpFunc} the map of coslices corresponds to the map of slices,
+ -   which is an equivalence since `Fibers q` is a right fibration ({fibers-lift-equiv}).
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | The coslice of `toOp x` in `Op X` is the slice of {x} in {X}.
+\lemma op-coslice-equiv.{u} {X : \Cat u} (x : X)
+  : IsEquiv {\Sigma (y : X) (y ~> x)} {\Sigma (t : Op X) (Op.toOp x ~> t)} (\lam s => (Op.toOp s.1, opArr s.2))
+  => inP (sigma-equiv (IsEquiv.toQEquiv Op.toOp-equiv) \lam y => IsEquiv.toQEquiv (opArr-equiv {X} {y} {x}))
+
+-- | The fiber of `OpFunc f` over `toOp y` is the fiber of {f} over {y}.
+\lemma op-fiber-equiv.{u} {X Y : \Cat u} (f : X ->⁺ Y) (y : Y)
+  : IsEquiv {\Sigma (x : X) (f x = y)} {Fibers (OpFunc f) (Op.toOp y)}
+            (\lam s => (Op.toOp s.1, OpFunc_toOp f s.1 *> pmap Op.toOp s.2))
+  => IsEquiv.trans
+       (inP (sigma-equiv {X} {_} {_} {OpFunc f __ = Op.toOp y} (IsEquiv.toQEquiv Op.toOp-equiv) \lam x => IsEquiv.toQEquiv
+          (IsEquiv.trans (inP (Embedding.pmap-isEquiv {Embedding.fromIsEquiv Op.toOp-equiv} {f x} {y})) (inP (*>-equiv (OpFunc_toOp f x))))))
+       {\lam t => ((t.1, t.2) : Fibers (OpFunc f) (Op.toOp y))}
+       (inP \new QEquiv { | ret t => (t.1, t.2) | ret_f _ => idp | f_sec _ => idp })
+  \where
+    -- | Precomposition with a path is an equivalence.
+    \private \func *>-equiv {A : \Cat} {a b c : A} (p : a = b) : QEquiv {b = c} {a = c} (p *>) \cowith
+      | ret r => inv p *> r
+      | ret_f r => inv *>-assoc *> pmap (`*> r) inv_*> *> idp_*>
+      | f_sec r => inv *>-assoc *> pmap (`*> r) *>_inv *> idp_*>
+
+{- | {op-fiber-equiv} is compatible with postcomposition: the map `(x, p) ↦ (x, pmap+ g p)` from the fibers of {f}
+ -   to the fibers of `g ∘ f` corresponds to `(w, r) ↦ (w, OpFunc-comp *> pmap+ (OpFunc g) r)`.
+ -}
+\func op-fiber-postcomp.{u} {X Y Z : \Cat u} {f : X ->⁺ Y} {g : Y ->⁺ Z} {x : X} {y : Y} (p : f x = y)
+  : OpFunc-comp *> pmap+ (OpFunc g) (OpFunc_toOp f x *> pmap Op.toOp p)
+    = (OpFunc_toOp (\lam a => g (f a)) x *> pmap Op.toOp (pmap+ g p)) *> inv (OpFunc_toOp g y) \elim p
+  | idp => move-right OpFunc_toOp-comp
+  \where
+    \private \func move-right {A : \Cat} {u v w t : A} {c : u = v} {a : v = w} {b : w = t} {T : u = t} (h : c *> a *> b = T) : c *> a = T *> inv b \elim b, h
+      | idp, idp => idp
+
+{- | {op-fiber-equiv} is compatible with paths of functors: the map `(x, p) ↦ (x, H x *> p)` from the fibers of {V}
+ -   to the fibers of {U} corresponds to `(w, r) ↦ (w, OpFunc H w *> r)`, over any base point {z'} under `toOp y`.
+ -}
+\func op-fiber-path.{u} {X Y : \Cat u} {U V : X ->⁺ Y} (H : U = V) {x : X} {y : Y} (p : V x = y) {z' : Op Y} (e : Op.toOp y = z')
+  : path (\lam i => OpFunc (H i) (Op.toOp x)) *> ((OpFunc_toOp V x *> pmap Op.toOp p) *> e)
+    = (OpFunc_toOp U x *> pmap Op.toOp (path (\lam i => H i x) *> p)) *> e \elim H, p, e
+  | idp, idp, idp => idp_*>
+
+{- | {op-fiber-equiv} is compatible with forgetting {f}: the map `(x, p) ↦ (f x, p)` from the fibers of `g ∘ f`
+ -   to the fibers of {g} corresponds to `(w, r) ↦ (OpFunc f w, inv OpFunc-comp *> r)`, over any base point {z'} under `toOp z`.
+ -}
+\func op-fiber-forget.{u} {X Y Z : \Cat u} {f : X ->⁺ Y} {g : Y ->⁺ Z} {x : X} {z : Z} (p : g (f x) = z) {z' : Op Z} (e : Op.toOp z = z')
+  : (OpFunc f (Op.toOp x), inv OpFunc-comp *> ((OpFunc_toOp (\lam a => g (f a)) x *> pmap Op.toOp p) *> e))
+    = {Fibers (OpFunc g) z'} (Op.toOp (f x), (OpFunc_toOp g (f x) *> pmap Op.toOp p) *> e) \elim p, e
+  | idp, idp => sigma-ext (OpFunc_toOp f x) $ tr-path (OpFunc g) (OpFunc_toOp f x) _ *> cancel OpFunc_toOp-comp
+  \where \private {
+    \func tr-path {A Y : \Cat} (F : A ->⁺ Y) {y : Y} {a a' : A} (p : a = a') (r : F a = y)
+      : transport+ (\lam t => F t = y) p r = inv (pmap+ F p) *> r \elim p
+      | idp => inv idp_*>
+
+    \func cancel {A : \Cat} {u v w t : A} {c : u = v} {a : v = w} {b : w = t} {T : u = t} (h : c *> a *> b = T) : inv a *> inv c *> T = b \elim h
+      | idp => cancel-base c a b
+
+    \func cancel-base {A : \Cat} {u v w t : A} (c : u = v) (a : v = w) (b : w = t) : inv a *> inv c *> c *> a *> b = b \elim c, a, b
+      | idp, idp, idp => idp
+  }
+
+-- | If `Fibers q` is a right fibration, then `Fibers (OpFunc q)` is a left fibration.
+\lemma opFunc-leftFib.{u} {R L : \Cat u} {q : R ->⁺ L} (qf : IsRightFib (Fibers q)) : IsLeftFib (Fibers (OpFunc q))
+  => \lam d => \case \elim d \with {
+       | (a, a', f, (t, p)) => \case \elim a, \elim f, \elim p \with {
+         | _, f, idp => Contr.Contr_QEquiv (symQEquiv (fibers-colift-equiv (OpFunc q) t f)) (IsEquiv=>contrFibers (coslice-equiv qf t) (a', f))
+       }
+     }
+  \where {
+    -- | The map of coslices induced by `OpFunc q` is an equivalence.
+    \private \lemma coslice-equiv.{u} {R L : \Cat u} {q : R ->⁺ L} (qf : IsRightFib (Fibers q)) (t : Op R)
+      : IsEquiv (\lam (w : \Sigma (t' : Op R) (t ~> t')) => ((OpFunc q w.1, dmap (OpFunc q) w.2) : \Sigma (a : Op L) (OpFunc q t ~> a)))
+      => \case \elim t, IsEquiv.isSurj Op.toOp-equiv t \with {
+           | _, inP (r, idp) => IsEquiv.rightFactor (op-coslice-equiv r) $ transport IsEquiv (ext \lam w => inv (square q w))
+                                  (IsEquiv.trans (slice-equiv qf r) (target-equiv q r))
+         }
+
+    -- | The map of slices induced by {q} is an equivalence since `Fibers q` is a right fibration.
+    \private \lemma slice-equiv {R L : \Cat} {q : R ->⁺ L} (qf : IsRightFib (Fibers q)) (r : R)
+      : IsEquiv (\lam (w : \Sigma (y : R) (y ~> r)) => ((q w.1, dmap q w.2) : \Sigma (a : L) (a ~> q r)))
+      => contrFibers=>IsEquiv \lam z => Contr.Contr_QEquiv (fibers-lift-equiv q r z.2) (qf (z.1, q r, z.2, (r, idp)))
+
+    -- | The slice of `q r` is the coslice of `OpFunc q (toOp r)`.
+    \lemma target-equiv.{u} {R L : \Cat u} (q : R ->⁺ L) (r : R)
+      : IsEquiv {\Sigma (a : L) (a ~> q r)} {\Sigma (a : Op L) (OpFunc q (Op.toOp r) ~> a)}
+                (\lam z => (Op.toOp z.1, comp (=_~> (OpFunc_toOp q r)) (opArr z.2)))
+      => inP $ sigma-equiv (IsEquiv.toQEquiv Op.toOp-equiv)
+          \lam a => IsEquiv.toQEquiv $ IsEquiv.trans (opArr-equiv {L} {a} {q r}) $ comp-iso-left-equiv $ =_~>-iso (OpFunc_toOp _ _)
+
+    -- | The map of coslices corresponds to the map of slices ({opArr-OpFunc}).
+    \sfunc square.{u} {R L : \Cat u} (q : R ->⁺ L) {r : R} (w : \Sigma (y : R) (y ~> r))
+      : (OpFunc q (Op.toOp w.1), dmap (OpFunc q) (opArr w.2)) = {\Sigma (a : Op L) (OpFunc q (Op.toOp r) ~> a)}
+        (Op.toOp (q w.1), comp (=_~> (OpFunc_toOp q r)) (opArr (dmap q w.2)))
+      => sigma-ext.grpd {Op L} {_ ~>} (OpFunc_toOp _ _) $ transport_~>-right *> inv (=_~>-cancel _ _) *> pmap (comp _) (opArr-OpFunc q w.2)
+
+    \private \sfunc =_~>-cancel {A : \Cat} {a b c : A} (p : a = b) (h : a ~> c) : comp (=_~> p) (comp (=_~> (inv p)) h) = h \elim p
+      | idp => comp_idd-left *> comp_idd-left
+  }
+
+-- | The slice over `toOp x` in `Op X` is the coslice of {x} in {X}.
+\lemma op-slice-equiv.{u} {X : \Cat u} (x : X)
+  : IsEquiv {\Sigma (y : X) (x ~> y)} {\Sigma (t : Op X) (t ~> Op.toOp x)} (\lam s => (Op.toOp s.1, opArr s.2))
+  => inP (sigma-equiv (IsEquiv.toQEquiv Op.toOp-equiv) \lam y => IsEquiv.toQEquiv (opArr-equiv {X} {x} {y}))
+
+-- | If `Fibers (OpFunc q)` is a left fibration, then `Fibers q` is a right fibration.
+\lemma opFunc-leftFib-reflects.{u} {R L : \Cat u} {q : R ->⁺ L} (qf : IsLeftFib (Fibers (OpFunc q))) : IsRightFib (Fibers q)
+  => (rightFib-slice-char {R} {L} {q}).2 \lam r => IsEquiv.leftFactor (opFunc-leftFib.target-equiv q r) $
+       transport IsEquiv (ext \lam w => opFunc-leftFib.square q w) $
+       IsEquiv.trans (op-coslice-equiv r) (coslice-equiv qf (Op.toOp r))
+  \where
+    -- | The map of coslices induced by {q} is an equivalence since `Fibers q` is a left fibration.
+    \private \lemma coslice-equiv {R L : \Cat} {q : R ->⁺ L} (qf : IsLeftFib (Fibers q)) (t : R)
+      : IsEquiv (\lam (w : \Sigma (t' : R) (t ~> t')) => ((q w.1, dmap q w.2) : \Sigma (a : L) (q t ~> a)))
+      => contrFibers=>IsEquiv \lam z => Contr.Contr_QEquiv (fibers-colift-equiv q t z.2) (qf (q t, z.1, z.2, (t, idp)))
+
+{- | Left lifts in `Fibers q` along {b} correspond to right lifts in `Fibers (OpFunc q)` along `opArr b`:
+ -   if the former are unique, so are the latter, at the point corresponding to `(x, P)` under {op-fiber-equiv}.
+ -
+ -   Proof. Both are fibers of maps of (co)slices ({fibers-colift-equiv}, {fibers-lift-equiv}), and the map of coslices
+ -   of {q} under {x} corresponds to the map of slices of `OpFunc q` over `toOp x` ({op-slice-equiv}, {opArr-OpFunc}).
+ -}
+\lemma opFunc-colift-contr.{u} {R L : \Cat u} (q : R ->⁺ L) {c c' : L} (x : R) (P : q x = c) (b : c ~> c')
+  (cc : Contr (CovLift (Fibers q) (c, c', b, (x, P))))
+  : Contr (ContLift (Fibers (OpFunc q)) (Op.toOp c', Op.toOp c, opArr b, (Op.toOp x, OpFunc_toOp q x *> pmap Op.toOp P))) \elim P
+  | idp => base-path (OpFunc_toOp q x) $
+             Contr.Contr_QEquiv (symQEquiv (fibers-lift-equiv (OpFunc q) (Op.toOp x) _)) $
+             Contr.Contr_QEquiv (fib-parallel-equiv (op-slice-equiv x) (tgt-equiv q x) (square q x) (c', b)) $
+             Contr.Contr_QEquiv (fibers-colift-equiv q x b) cc
+  \where \private {
+    -- | The identification of the coslice of `q x` with the slice of `OpFunc q (toOp x)`.
+    \func tgt.{u} {R L : \Cat u} (q : R ->⁺ L) (x : R) (z : \Sigma (a : L) (q x ~> a)) : \Sigma (a : Op L) (a ~> OpFunc q (Op.toOp x))
+      => (Op.toOp z.1, comp (opArr z.2) (=_~> (inv (OpFunc_toOp q x))))
+
+    \lemma tgt-equiv.{u} {R L : \Cat u} (q : R ->⁺ L) (x : R) : IsEquiv (tgt q x)
+      => inP $ sigma-equiv (IsEquiv.toQEquiv Op.toOp-equiv)
+          \lam a => IsEquiv.toQEquiv $ IsEquiv.trans (opArr-equiv {L} {q x} {a}) $ comp-iso-right-equiv $ =_~>-iso (inv (OpFunc_toOp _ _))
+
+    -- | The map of coslices of {q} corresponds to the map of slices of `OpFunc q` ({opArr-OpFunc}).
+    \sfunc square.{u} {R L : \Cat u} (q : R ->⁺ L) (x : R) (w : \Sigma (y : R) (x ~> y))
+      : tgt q x (q w.1, dmap q w.2) = {\Sigma (a : Op L) (a ~> OpFunc q (Op.toOp x))} (OpFunc q (Op.toOp w.1), dmap (OpFunc q) (opArr w.2))
+      => inv $ sigma-ext.grpd {Op L} {__ ~> OpFunc q (Op.toOp x)} (OpFunc_toOp q w.1) $
+           transport_~>-left (OpFunc_toOp q w.1)
+           *> inv (cancel-right _ (OpFunc_toOp q x))
+           *> pmap (comp __ _) (inv comp-assoc *> opArr-OpFunc q w.2)
+
+    \sfunc transport_~>-left {A : \Cat} {a b c : A} (p : a = b) {g : a ~> c} : transport+ (__ ~> c) p g = comp (=_~> (inv p)) g \elim p
+      | idp => inv comp_idd-left
+
+    \sfunc cancel-right {A : \Cat} {a b c : A} (h : a ~> b) (p : b = c) : comp (comp h (=_~> p)) (=_~> (inv p)) = h \elim p
+      | idp => comp_idd-right *> comp_idd-right
+
+    -- | Uniqueness of lifts ending at `(y, P)` reduces to the case of the trivial path.
+    \lemma base-path {E A : \Cat} {F : E ->⁺ A} {y : E} {a' a : A} (P : F y = a) {h : a' ~> a}
+      (c : Contr (ContLift (Fibers F) (a', F y, comp h (=_~> (inv P)), (y, idp)))) : Contr (ContLift (Fibers F) (a', a, h, (y, P))) \elim P
+      | idp => transport (\lam h' => Contr (ContLift (Fibers F) (a', F y, h', (y, idp)))) comp_idd-right c
+  }

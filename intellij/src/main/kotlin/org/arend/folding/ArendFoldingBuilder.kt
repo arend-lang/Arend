@@ -45,7 +45,7 @@ class ArendFoldingBuilder : FoldingBuilderEx(), DumbAware {
         override fun visitElement(element: PsiElement) {
             super.visitElement(element)
             when (element) {
-                is ArendWithBody, is ArendConstructor, is ArendConstructorClause, is ArendDefClass, is ArendNewExpr, is ArendWhere -> foldBraces(element)
+                is ArendWithBody, is ArendConstructor, is ArendConstructorClause, is ArendDefClass, is ArendNewExpr, is ArendWhere, is ArendStatAccessMod -> foldBraces(element)
                 is ArendFunctionBody, is ArendDataBody -> fold(element)
             }
         }

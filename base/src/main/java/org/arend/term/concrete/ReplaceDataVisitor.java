@@ -120,7 +120,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   public Concrete.Expression visitLam(Concrete.LamExpression expr, Void params) {
     List<Concrete.Parameter> parameters = visitParameters(expr.getParameters());
     if (expr instanceof Concrete.PatternLamExpression) {
-      return Concrete.PatternLamExpression.make(getData(expr), parameters, visitPatterns(((Concrete.PatternLamExpression) expr).getPatterns()), expr.body.accept(this, null));
+      return Concrete.PatternLamExpression.make(getData(expr), parameters, visitPatterns(((Concrete.PatternLamExpression) expr).getPatterns()), ((Concrete.PatternLamExpression) expr).getVariance(), expr.body.accept(this, null));
     } else {
       return new Concrete.LamExpression(getData(expr), parameters, expr.body.accept(this, null));
     }
@@ -234,7 +234,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   public Concrete.Expression visitLet(Concrete.LetExpression expr, Void params) {
     List<Concrete.LetClause> clauses = new ArrayList<>(expr.getClauses().size());
     for (Concrete.LetClause clause : expr.getClauses()) {
-      clauses.add(new Concrete.LetClause(visitParameters(clause.getParameters()), clause.resultType == null ? null : clause.resultType.accept(this, null), clause.term.accept(this, null), clause.getPattern() == null ? null : visitPattern(clause.getPattern())));
+      clauses.add(new Concrete.LetClause(visitParameters(clause.getParameters()), clause.resultType == null ? null : clause.resultType.accept(this, null), clause.term.accept(this, null), clause.getPattern() == null ? null : visitPattern(clause.getPattern()), clause.isCovariant()));
     }
     return new Concrete.LetExpression(getData(expr), expr.isHave(), expr.isStrict(), clauses, expr.expression.accept(this, null));
   }

@@ -448,7 +448,8 @@ public final class ConsoleHelp {
     ConsoleHelpRenderer.printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
         + "itself, a .zip library, or a library name resolved via -L / the default library root "
         + "(~/.arend/libs). Omitted means ./arend.yaml is loaded when present. MODULE / MODULE:DEF "
-        + "positionals narrow the typecheck scope.", 0, width);
+        + "positionals narrow the typecheck scope; a MODULE may contain '*', which matches any characters "
+        + "including '.' (e.g. 'InfCat.*' is every module under InfCat/).", 0, width);
     System.out.println();
 
     Set<String> placed = new HashSet<>();

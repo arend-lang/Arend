@@ -1,6 +1,7 @@
 package org.arend.cat;
 
 import org.arend.core.definition.FunctionDefinition;
+import org.arend.core.expr.CaseExpression;
 import org.arend.core.expr.LamExpression;
 import org.arend.core.expr.SigmaExpression;
 import org.arend.ext.core.context.BindingVariance;
@@ -247,6 +248,190 @@ public class CovariantBindersTest extends TypeCheckingTestCase {
   @Test
   public void letTest3() {
     typeCheckDef("\\func test (y :+ Nat) => \\let | f (x : Nat) => x \\in f y", 1);
+  }
+
+  @Test
+  public void letCovariantError() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x => y \\in x", 1);
+  }
+
+  @Test
+  public void haveCovariantError() {
+    typeCheckDef("\\func test (y :+ Nat) => \\have x => y \\in x", 1);
+  }
+
+  @Test
+  public void letCovariantInvariantUseError() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x => y \\in suc x", 1);
+  }
+
+  @Test
+  public void letCovariantBodyTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x => 0 \\in y");
+  }
+
+  @Test
+  public void letCovariantClauseTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x =>+ y \\in x");
+  }
+
+  @Test
+  public void haveCovariantClauseTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\have x =>+ y \\in x");
+  }
+
+  @Test
+  public void letCovariantClauseUnicodeTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x =>⁺ y \\in x");
+  }
+
+  @Test
+  public void letCovariantClauseTypedTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let x : Nat =>+ y \\in x");
+  }
+
+  @Test
+  public void letCovariantClauseInvariantUseError() {
+    typeCheckDef("\\func test (y :+ Nat) (f : \\Pi (z : Nat) -> Nat) => \\let x =>+ y \\in f x", 1);
+  }
+
+  @Test
+  public void letCovariantClauseInvariantClauseError() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let | x =>+ y | z => x \\in z", 1);
+  }
+
+  @Test
+  public void letCovariantClauseCovariantClauseTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let | x =>+ y | z =>+ x \\in z");
+  }
+
+  @Test
+  public void letCovariantClauseParamTest() {
+    typeCheckDef("\\func test (y :+ Nat) => \\let f (n : Nat) =>+ y \\in f 0");
+  }
+
+  @Test
+  public void letCovariantClauseTupleTest() {
+    typeCheckDef("\\func test (p :+ \\Sigma Nat Nat) => \\let (a, b) =>+ p \\in a");
+  }
+
+  @Test
+  public void letCovariantClauseTupleError() {
+    typeCheckDef("\\func test (p :+ \\Sigma Nat Nat) => \\let (a, b) => p \\in a", 1);
+  }
+
+  @Test
+  public void letCovariantClauseTupleInvariantUseError() {
+    typeCheckDef("\\func test (p :+ \\Sigma Nat Nat) (f : \\Pi (z : Nat) -> Nat) => \\let (a, b) =>+ p \\in f b", 1);
+  }
+
+  private static final String COVARIANT_DATA = """
+    \\data D | con (n :+ Nat)
+    \\func id+ (d :+ D) => d
+    """;
+
+  private void assertCovariantCase() {
+    CaseExpression caseExpr = (CaseExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
+    assertEquals(BindingVariance.COVARIANT, caseExpr.getParameters().getVariance());
+  }
+
+  @Test
+  public void letCovariantConPatternElimTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) : Nat => \\let (con n) =>+ d \\in n");
+    assertCovariantCase();
+  }
+
+  @Test
+  public void haveCovariantConPatternElimTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) : Nat => \\have (con n) =>+ d \\in n");
+    assertCovariantCase();
+  }
+
+  @Test
+  public void letCovariantConPatternTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) : Nat => \\let (con n) =>+ id+ d \\in n");
+    assertCovariantCase();
+  }
+
+  @Test
+  public void letCovariantConPatternInvariantVarTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d : D) : Nat => \\let (con n) =>+ d \\in 0");
+  }
+
+  @Test
+  public void letCovariantConPatternInvariantVarTest2() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d : D) : Nat => \\let (con n) =>+ id+ d \\in n");
+    assertCovariantCase();
+  }
+
+  @Test
+  public void letInvariantConPatternElimError() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) : Nat => \\let (con n) => d \\in 0", 1);
+  }
+
+  @Test
+  public void letInvariantConPatternError() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) : Nat => \\let (con n) => id+ d \\in 0", 1);
+  }
+
+  @Test
+  public void letInvariantConPatternInvariantVarTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d : D) : Nat => \\let (con n) => d \\in 0");
+  }
+
+  @Test
+  public void letCovariantConPatternInvariantUseError() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) (g : \\Pi (m : Nat) -> Nat) : Nat => \\let (con n) =>+ d \\in g n", 1);
+  }
+
+  @Test
+  public void letCovariantConPatternInvariantClauseError() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) : Nat => \\let | (con n) =>+ d | m => n \\in m", 1);
+  }
+
+  @Test
+  public void letCovariantConPatternMixedTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test (d :+ D) (e : D) : Nat => \\let | (con n) =>+ d | (con k) => e \\in n");
+    CaseExpression caseExpr = (CaseExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
+    assertEquals(BindingVariance.COVARIANT, caseExpr.getParameters().getVariance());
+    assertEquals(BindingVariance.INVARIANT, caseExpr.getParameters().getNext().getVariance());
+  }
+
+  @Test
+  public void lamTuplePatternCovariantTest() {
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test : \\Pi (p :+ \\Sigma Nat Nat) -> Nat => \\lam (a, b) =>+ a");
+    assertEquals(BindingVariance.COVARIANT, ((LamExpression) Objects.requireNonNull(def.getBody())).getParameters().getVariance());
+  }
+
+  @Test
+  public void lamTuplePatternCovariantArgTest() {
+    typeCheckModule("""
+      \\func f (g : \\Pi (p :+ \\Sigma Nat Nat) -> Nat) => 0
+      \\func test => f (\\lam (a, b) =>+ a)
+      """);
+  }
+
+  @Test
+  public void lamNestedTuplePatternCovariantTest() {
+    typeCheckDef("\\func test : \\Pi (p :+ \\Sigma Nat (\\Sigma Nat Nat)) -> Nat => \\lam (a, (b, c)) =>+ b");
+  }
+
+  @Test
+  public void lamTuplePatternCovariantInvariantUseError() {
+    typeCheckDef("\\func test (f : \\Pi (z : Nat) -> Nat) : \\Pi (p :+ \\Sigma Nat Nat) -> Nat => \\lam (a, b) =>+ f a", 1);
+  }
+
+  @Test
+  public void lamTuplePatternCovariantError() {
+    typeCheckDef("\\func test : \\Pi (p : \\Sigma Nat Nat) -> Nat => \\lam (a, b) =>+ a", 1);
+  }
+
+  @Test
+  public void lamConPatternCovariantTest() {
+    typeCheckModule(COVARIANT_DATA + "\\func test : \\Pi (d :+ D) -> Nat => \\lam (con n) =>+ n");
+    LamExpression lamExpr = (LamExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
+    assertEquals(BindingVariance.COVARIANT, lamExpr.getParameters().getVariance());
+    assertEquals(BindingVariance.COVARIANT, ((CaseExpression) lamExpr.getBody()).getParameters().getVariance());
   }
 
   @Test

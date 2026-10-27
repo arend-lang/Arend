@@ -1,0 +1,171 @@
+\import Equiv
+\import Equiv.Sigma
+\import Homotopy.Fibration
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | The family of fibers of {p}.
+\func Fibers {E A : \Cat} (p : E ->⁺ A) (a :⁺ A) : \Cat
+  => \Sigma⁺ (e : E) (p e = a)
+
+{- | The fiber of {p} over a fixed {a}.
+ -   It is the same category as `Fibers p a`, but it lives in `\Cat u` since the path type is released by the binder of `e`.
+ -}
+\func Fiber {E A : \Cat} (p : E ->⁺ A) (a : A) : \Cat
+  => \Sigma⁺ (e : E) (p e = a)
+
+-- | The base change of {p} along {pi}.
+\func BaseChange.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) : \Cat u
+  => \Sigma⁺ (x : X) (\Sigma⁺ (e : E) (p e = pi x))
+
+-- | The projection from the total category of a family.
+\func totalProj {B : \Cat} (Q : B ->⁺ \Cat) (s :⁺ \Sigma⁺ (b : B) (Q b)) : B
+  => s.1
+
+-- | The fibers of {totalProj} are the values of {Q}.
+\func fibers-total-equiv {B : \Cat} {Q : B ->⁺ \Cat} (b : B) : QEquiv {Q b} {Fibers (totalProj Q) b} \cowith
+  | f q => ((b, q), idp)
+  | ret => fibers-total-ret
+  | ret_f _ => idp
+  | f_sec => fibers-total-ret-sec
+  \where {
+    \func fibers-total-ret {B : \Cat} {Q : B ->⁺ \Cat} {b :⁺ B} (t :⁺ Fibers (totalProj Q) b) : Q b
+      => transport+ Q t.2 t.1.2
+
+    \func fibers-total-ret-sec {B : \Cat} {Q : B ->⁺ \Cat} {b :⁺ B} (t :⁺ Fibers (totalProj Q) b)
+      : ((b, fibers-total-ret t), idp) = {Fibers (totalProj Q) b} t
+      => aux t.1.2 t.2
+      \where
+        \func aux {B : \Cat} {Q : B ->⁺ \Cat} {b' b :⁺ B} (q :⁺ Q b') (p :⁺ b' = b)
+          : ((b, transport+ Q p q), idp) = {Fibers (totalProj Q) b} ((b', q), p) \elim p
+          | idp => idp
+
+    -- | Sections of {Q} are sections of the fibers of {totalProj}.
+    \func sections {B Y : \Cat} {Q : B ->⁺ \Cat} (v : Y ->⁺ B)
+      : QEquiv {\Pi (y :⁺ Y) -> Q (v y)} {\Pi (y :⁺ Y) -> Fibers (totalProj Q) (v y)} \cowith
+      | f s y => ((v y, s y), idp)
+      | ret s y => fibers-total-ret (s y)
+      | ret_f _ => idp
+      | f_sec s => ext \lam y => fibers-total-ret-sec (s y)
+  }
+
+-- | The comparison of {fibers-total-equiv} is an equivalence of categories.
+\lemma fibers-total-hequiv {B : \Cat} {Q : B ->⁺ \Cat} (b : B) : IsHEquiv {Q b} {Fibers (totalProj Q) b} (\lam q => ((b, q), idp))
+  => IsHEquiv.biEquiv {Q b} {Fibers (totalProj Q) b} {\lam q => ((b, q), idp)} {fibers-total-equiv.fibers-total-ret} (\lam _ => idp)
+                      {fibers-total-equiv.fibers-total-ret} fibers-total-equiv.fibers-total-ret-sec
+
+-- | A category is the total category of the fibers of a functor out of it.
+\lemma fibers-sigma-hequiv {E A : \Cat} (p : E ->⁺ A) : IsHEquiv {E} {\Sigma⁺ (a : A) (Fibers p a)} (\lam e => (p e, (e, idp)))
+  => inP \new HQEquiv {
+    | finv s => s.2.1
+    | finv_f _ => idp
+    | f_finv s => aux p s.2.2
+  }
+  \where
+    \private \func aux {E A : \Cat} (p : E ->⁺ A) {a :⁺ A} {e :⁺ E} (q :⁺ p e = a)
+      : ((p e, (e, idp)) : \Sigma⁺ (a : A) (Fibers p a)) = (a, (e, q)) \elim q
+      | idp => idp
+
+-- | An equivalence over the base is an equivalence on fibers.
+\lemma fibers-hequiv.{u} {E E' A : \Cat u} {p : E ->⁺ A} {p' : E' ->⁺ A} {F : E ->⁺ E'} (Fe : IsHEquiv F)
+                         (Fp : \Pi (x :⁺ E) -> p' (F x) = p x) (a : A)
+  : IsHEquiv {Fibers p a} {Fibers p' a} (\lam t => (F t.1, Fp t.1 *> t.2))
+  => aux (HEquiv_= Fe) Fp a
+  \where {
+    \private \lemma aux.{v} {E E' A : \Cat v} (r : E = E') {p : E ->⁺ A} {p' : E' ->⁺ A}
+                            (h : \Pi (x :⁺ E) -> p' (transport+ (\lam Y => Y) r x) = p x) (a : A)
+      : IsHEquiv {Fibers p a} {Fibers p' a} (\lam t => (transport+ (\lam Y => Y) r t.1, h t.1 *> t.2)) \elim r
+      | idp => aux2 (funExt+ h) a
+
+    \private \lemma aux2 {E A : \Cat} {p' p : E ->⁺ A} (q : p' = p) (a : A)
+      : IsHEquiv {Fibers p a} {Fibers p' a} (\lam t => (t.1, path (\lam i => q i t.1) *> t.2)) \elim q
+      | idp => transport IsHEquiv (funExt+ \lam t => path \lam j => ((t.1, inv (idp_*> {_} {_} {_} {t.2}) j) : Fibers p a)) idHEquiv
+  }
+
+-- | Postcomposition of sections along {pi} with a map of families whose total map is an equivalence is an equivalence.
+\lemma sections-postcomp-equiv {B K : \Cat} {P Q : B ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (b : B) (P b)) -> Q s.1)
+                               (ge : IsHEquiv {\Sigma⁺ (b : B) (P b)} {\Sigma⁺ (b : B) (Q b)} (\lam s => (s.1, g s))) (pi : K ->⁺ B)
+  : IsEquiv {\Pi (t :⁺ K) -> P (pi t)} {\Pi (t :⁺ K) -> Q (pi t)} (\lam s t => g (pi t, s t))
+  => \let | post : QEquiv {K ->⁺ \Sigma⁺ (b : B) (P b)} {K ->⁺ \Sigma⁺ (b : B) (Q b)} => \new QEquiv {
+              | f h t => ((h t).1, g (h t))
+              | ret h t => IsHEquiv.ret ge (h t)
+              | ret_f h => funExt+ \lam t => IsHEquiv.ret_f ge
+              | f_sec h => funExt+ \lam t => IsHEquiv.f_ret ge
+            }
+     \in inP (fibers-total-equiv.sections pi `transQEquiv` split `transQEquiv` qsigma-left post `transQEquiv` symQEquiv split
+              `transQEquiv` symQEquiv (fibers-total-equiv.sections pi))
+  \where
+    -- | Sections of the fibers of a total category along {pi} are lifts of {pi}.
+    \func split {B K : \Cat} {R : B ->⁺ \Cat} {pi : K ->⁺ B}
+      : QEquiv {\Pi (t :⁺ K) -> Fibers (totalProj R) (pi t)} {\Sigma (h : K ->⁺ \Sigma⁺ (b : B) (R b)) (\Pi (t :⁺ K) -> (h t).1 = pi t)} \cowith
+      | f s => (\lam t => (s t).1, \lam t => (s t).2)
+      | ret v t => (v.1 t, v.2 t)
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+-- | The fibers of the base change of {p} along {pi} are the fibers of {p}.
+\func baseChange-fib.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) {x :⁺ X} (t :⁺ Fibers (\lam (w :⁺ BaseChange pi p) => w.1) x) : Fibers p (pi x)
+  => (t.1.2.1, t.1.2.2 *> pmap+ pi t.2)
+
+\lemma baseChange-fib-equiv.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) (x : X) : IsHEquiv (baseChange-fib pi p {x})
+  => inP \new HQEquiv {
+       | finv t => ((x, t), idp)
+       | finv_f t => baseChange-fib-sec t
+       | f_finv t => idp
+     }
+
+-- | The inclusion of `Fibers p (pi x)` into the fiber of the base change is a left inverse of {baseChange-fib}.
+\sfunc baseChange-fib-sec.{u} {X S E : \Cat u} {pi : X ->⁺ S} {p : E ->⁺ S} {x :⁺ X} (t :⁺ Fibers (\lam (w :⁺ BaseChange pi p) => w.1) x)
+  : (((x, baseChange-fib pi p t), idp) : Fibers (\lam (w :⁺ BaseChange pi p) => w.1) x) = t
+  => aux t.2
+  \where
+    \private \sfunc aux.{v} {X S E : \Cat v} {pi : X ->⁺ S} {p : E ->⁺ S} {x x' :⁺ X} {e :⁺ E} {r :⁺ p e = pi x'} (s :⁺ x' = x)
+      : (((x, (e, r *> pmap+ pi s)), idp) : Fibers (\lam (w :⁺ BaseChange pi p) => w.1) x) = ((x', (e, r)), s) \elim s
+      | idp => idp
+
+-- | Sections of fibers over a base with propositional paths of functors are determined by their values in the total category.
+\sfunc fibers-sections-ext {K E B : \Cat} {q : E ->⁺ B} {pi : K ->⁺ B} (Bp : \Pi (f g : K ->⁺ B) -> isProp (f = g))
+                           {u v : \Pi (w :⁺ K) -> Fibers q (pi w)} (p : \Pi (w :⁺ K) -> (u w).1 = (v w).1) : u = v
+  => \let e : QEquiv {\Pi (w :⁺ K) -> Fibers q (pi w)} {\Sigma (h : K ->⁺ E) ((\lam w =>⁺ q (h w)) = pi)} => \new QEquiv {
+              | f u => (\lam w => (u w).1, path \lam i w => (u w).2 @ i)
+              | ret t w => (t.1 w, path \lam i => (t.2 @ i) w)
+              | ret_f _ => idp
+              | f_sec _ => idp
+            }
+     \in IsEquiv.isInj (inP e) (ext (funExt+ p, Bp _ _ _ _))
+
+-- | An arrow of a fiber whose image in the total category is an isomorphism is an isomorphism.
+\lemma fibers-conservative {E A : \Cat} {p : E ->⁺ A} {a : A} {m : DI ->⁺ Fibers p a} (mi : IsIso (dpath \lam i => (m i).1))
+  : IsIso (dpath \lam i => m i)
+  => \case IsIso-diag-char.1 mi \with {
+    | inP (c, e) => aux e (\lam i => (m i).2)
+  }
+  \where
+    \private \lemma aux {c : E} {m1 : DI ->⁺ E} (e : (\lam _ => c) = {DI ->⁺ E} m1) (m2 : \Pi (i :⁺ DI) -> p (m1 i) = a)
+      : IsIso (dpath \lam i => ((m1 i, m2 i) : Fibers p a)) \elim e
+      | idp => dmap_IsIso (\lam (q : p c = a) => ((c, q) : Fibers p a)) {_} {_} {dpath m2} (IsIso-char.2 (inP (~>_= (dpath m2), ~>_=_~>)))
+
+-- | The base change of {p} along {pi} is the base change of {pi} along {p}.
+\func baseChange-swap.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) (c :⁺ BaseChange p pi) : BaseChange pi p
+  => (c.2.1, (c.1, inv c.2.2))
+
+\lemma baseChange-swap-equiv.{u} {X S E : \Cat u} (pi : X ->⁺ S) (p : E ->⁺ S) : IsHEquiv (baseChange-swap pi p)
+  => inP \new HQEquiv {
+    | finv => baseChange-swap p pi
+    | finv_f c => path \lam j => (c.1, (c.2.1, inv_inv j))
+    | f_finv c => path \lam j => (c.1, (c.2.1, inv_inv j))
+  }
+
+-- | Sections of the fibers of {g} along {v} are lifts of {v} along {g}.
+\func sections-fib {Y E A : \Cat} (g : E ->⁺ A) (v : Y ->⁺ A)
+  : QEquiv {Fib {Y ->⁺ E} {Y ->⁺ A} (\lam k y => g (k y)) v} {\Pi (y :⁺ Y) -> Fibers g (v y)} \cowith
+  | f p y => (p.1 y, path \lam i => p.2 i y)
+  | ret s => (\lam y => (s y).1, path \lam i y => (s y).2 i)
+  | ret_f _ => idp
+  | f_sec _ => idp

@@ -29,6 +29,10 @@
 
       \func IsRight {C D : \Cat} (g : C ->⁺ D) : \Prop
         => \Pi (j : J) -> IsOrthogonal (F j) g
+
+      -- | {f} is a left map if the right factor {catFactorRight} of its factorization is an equivalence.
+      \func IsLeft {C D : \Cat} (f : C ->⁺ D) : \Prop
+        => IsHEquiv (catFactorRight {\this} {C} {D} {f})
     }
 
     \data LData {fam : Family} {C D : \Cat} (f : C ->⁺ D)
@@ -82,7 +86,7 @@
         \in (r.1 y, path \lam i => (r.2 i).1.2 y)
       | isExt {j} u v c x => unfold_let
         \let | r => IsEquiv.f_ret (hr j) {(\lam x => (dataExt hr p (u x)).1, v), \lam x => c x *> inv (dataExt hr p (u x)).2}
-             | q => pmap+ (*> (dataExt hr p (u x)).2) $ inv idp_*> *> coe_path_pmap.conv (path \lam i => (r i).1.2 (F j x)) (path \lam i => h ((r i).1.1 x)) ((simp_coe in pmapd __.2 r) x) *> inv *>-assoc
+             | q =>⁺ pmap+ (*> (dataExt hr p (u x)).2) $ inv idp_*> *> coe_path_pmap.conv (path \lam i => (r i).1.2 (F j x)) (path \lam i => h ((r i).1.1 x)) ((simp_coe in pmapd __.2 r) x) *> inv *>-assoc
         \in sigma-depPath (path \lam i => (r i).1.1 x) (pathOver $ coe_path (path \lam i => h ((IsEquiv.f_ret (hr j) i).1.1 x)) _ _ *> rotatePathLeft (inv $ q *> *>-assoc *> pmap+ (_ *> __) inv_*>))
 
     -- | Sections of pullbacks over `LData f` are determined by their restrictions along {alpha}.
@@ -270,3 +274,25 @@
                 (p : \Pi (x :⁺ C) -> h (g x) = f x) (d :⁺ CatFactor f) : \Sigma⁺ (e : E) (h e = catFactorRight d)
       => dataExt {famHat} (famHat_IsRight hr) p d
   }
+
+-- | Left maps are left orthogonal to right maps.
+\lemma IsLeft-orthogonal {fam : Family} {C D E E' : \Cat} {f : C ->⁺ D} (fl : fam.IsLeft f) {g : E ->⁺ E'} (gr : fam.IsRight g)
+  : IsOrthogonal f g
+  => IsOrthogonal_o-left (catFactorLeft.isLeft gr) (IsOrthogonal_IsHEquiv-left fl)
+
+-- | If sections of {catFactorRight} restrict along {f} by an equivalence, then {f} is a left map.
+\lemma sections-IsLeft {fam : Family} {C D : \Cat} {f : C ->⁺ D}
+  (e : IsEquiv (restrict-sections f (catFactorRight {fam} {C} {D} {f}) id+)) : fam.IsLeft f
+  => \let | sigma => IsEquiv.ret e (\lam x => (catFactorLeft x, idp))
+          | o => IsOrthogonal-sections.1 (catFactorLeft.isLeft {fam} {C} {D} {f} catFactorRight.isRight) catFactorRight
+          | q : (\lam t =>⁺ sigma (catFactorRight t)) = (\lam t =>⁺ (t, idp))
+              => IsEquiv.isInj o (IsEquiv.f_ret e)
+     \in inP \new HQEquiv {
+       | finv d => (sigma d).1
+       | finv_f t => path (\lam i => (q i t).1)
+       | f_finv d => (sigma d).2
+     }
+
+-- | A map left orthogonal to its own right factor is a left map.
+\lemma orthogonal-IsLeft {fam : Family} {C D : \Cat} {f : C ->⁺ D} (o : IsOrthogonal f (catFactorRight {fam} {C} {D} {f})) : fam.IsLeft f
+  => sections-IsLeft (IsOrthogonal-sections.1 o id+)

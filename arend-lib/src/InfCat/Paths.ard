@@ -1,3 +1,4 @@
+\import Equiv
 \import Paths
 
 \func pmap+ {A B :⁺ \Cat} (f :⁺ A ->⁺ B) {a a' :⁺ A} (p :⁺ a = a') : f a = f a'
@@ -23,6 +24,13 @@
 \func funExt+ {A : \Cat} {B :⁺ A ->⁺ \Cat} {f g :⁺ \Pi (x :⁺ A) -> B x} (p :⁺ \Pi (x :⁺ A) -> f x = g x) : f = g
   => path \lam i x => p x i
 
+-- | Function extensionality for covariant functions.
+\func funExt+-equiv {A : \Cat} {B : A ->⁺ \Cat} {g g' : \Pi (x :⁺ A) -> B x} : QEquiv {\Pi (x :⁺ A) -> g x = g' x} {g = g'} \cowith
+  | f => funExt+
+  | ret p x => path \lam i => p i x
+  | ret_f h => idp
+  | f_sec p => idp
+
 \func transport+ {A :⁺ \Cat} (B :⁺ A ->⁺ \Cat) {a a' :⁺ A} (p :⁺ a = a') (b :⁺ B a) : B a'
   => coe (\lam i => B (p i)) b right
 
@@ -32,6 +40,12 @@
 \func transport+_path_pmap {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) {a a' :⁺ A} {p :⁺ a = a'} {q :⁺ f a = g a} {s :⁺ f a' = g a'}
                            (h :⁺ q *> pmap+ g p = pmap+ f p *> s) : transport+ (\lam x => f x = g x) p q = s \elim p
   | idp => h *> idp_*>
+
+\func transport+_inv_*> {A :⁺ \Cat} (C :⁺ A ->⁺ \Cat) {a a' :⁺ A} (r :⁺ a = a') {x :⁺ C a} : transport+ C (inv r) (transport+ C r x) = x \elim r
+  | idp => idp
+
+\func transport+_*>_inv {A :⁺ \Cat} (C :⁺ A ->⁺ \Cat) {a a' :⁺ A} (r :⁺ a = a') {y :⁺ C a'} : transport+ C r (transport+ C (inv r) y) = y \elim r
+  | idp => idp
 
 \func homotopy-isNatural+ {A B :⁺ \Cat} (f g :⁺ A ->⁺ B) (h :⁺ \Pi (a :⁺ A) -> f a = g a) {a a' :⁺ A} (p :⁺ a = a')
   : pmap+ f p *> h a' = h a *> pmap+ g p \elim p

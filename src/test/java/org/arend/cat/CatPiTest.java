@@ -3,6 +3,7 @@ package org.arend.cat;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
+import static org.arend.Matchers.argInferenceError;
 import static org.arend.Matchers.typecheckingError;
 
 public class CatPiTest extends TypeCheckingTestCase {
@@ -171,5 +172,44 @@ public class CatPiTest extends TypeCheckingTestCase {
       \\data D (l : \\Pi (a :+ Nat) (b :+ a ~> a) -> Nat) | con
       \\func f : D (\\lam a b => 0) => con
       """);
+  }
+
+  @Test
+  public void lamInfinityLevelImplicitArgError() {
+    typeCheckDef("""
+      \\func test.{u} {C : \\Cat u} (x : C) (F : C ->⁺ \\Type u)
+        => (\\lam y =>⁺ x ~> y) = F
+      """, 1);
+    assertThatErrorsAre(argInferenceError());
+  }
+
+  @Test
+  public void lamInfinityLevelExplicitArgError() {
+    typeCheckDef("""
+      \\func test.{u} {C : \\Cat u} (x : C) (F : C ->⁺ \\Type u)
+        => (\\lam y =>⁺ x ~> y) = {C ->⁺ \\Type} F
+      """, 1);
+  }
+
+  @Test
+  public void lamInfinityLevelExplicitArgError2() {
+    typeCheckDef("""
+      \\func test.{u} {C : \\Cat u} (x : C) (F : C ->⁺ \\Type u)
+        => (\\lam y =>⁺ x ~> y) = {C ->⁺ \\Type u} F
+      """, 1);
+  }
+
+  @Test
+  public void lamInfinityLevelNestedImplicitArgError() {
+    typeCheckDef("""
+      \\func test.{u} {C : \\Cat u} (x : C) (F : Nat ->⁺ C ->⁺ \\Type u)
+        => (\\lam (n : Nat) y =>⁺ x ~> y) = F
+      """, 1);
+    assertThatErrorsAre(argInferenceError());
+  }
+
+  @Test
+  public void covariantFamilyPathTest() {
+    typeCheckDef("\\func test.{u} {C : \\Cat u} (F G : C ->⁺ \\Type u) => F = G");
   }
 }

@@ -250,13 +250,13 @@ public class PatternTypechecking {
               boolean directedJ = isDirectedBinding(intervalBindings.get(j));
               Expression leftArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left(directed)));
               Expression rightArgType = new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right(directed)));
-              leftArg = new PathExpression(leftArgType, new LamExpression(lamBindings.get(j), leftArg), directedJ, myVisitor.dependsOnCategoricalContext(leftArgType));
-              rightArg = new PathExpression(rightArgType, new LamExpression(lamBindings.get(j), rightArg), directedJ, myVisitor.dependsOnCategoricalContext(rightArgType));
+              leftArg = new PathExpression(leftArgType, new LamExpression(lamBindings.get(j), leftArg), directedJ);
+              rightArg = new PathExpression(rightArgType, new LamExpression(lamBindings.get(j), rightArg), directedJ);
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
             Expression newArgumentType = new LamExpression(lamBindings.get(i), exprType);
-            exprType = new PathTypeExpression(newArgumentType, leftArg, rightArg, directed, myVisitor.dependsOnCategoricalContext(newArgumentType));
+            exprType = new PathTypeExpression(newArgumentType, leftArg, rightArg, directed);
           }
         } else {
           intervalBindings = null;

@@ -1,0 +1,139 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Slice.TotalSlice
+\import InfCat.SubCat.Full
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\open sumSlice-equiv
+\open ExpHelpers
+\open FullSubCat
+
+\module ExpHelpers \where {
+  -- | The exponent from {F} to `Op C ->⁺ \Type u` over {A}.
+  \func ExpPresheaf.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (a :⁺ A) : \Cat
+    => \Sigma⁺ (G : Op C ->⁺ \Type u) (G ~> const (F a))
+
+  -- | The total category of the exponent from {F} to {C} over {A}.
+  \func ExpTotal.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) : \Cat
+    => FullSubCat (ExpPred F C)
+
+  -- | All fibers of the presheaf over `F a` are representable.
+  \func ExpPred.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (s : \Sigma⁺ (a : A) (ExpPresheaf F C a)) : \Prop
+    => ∀ (v : F s.1) ∃ (c : C) (yoneda c = \lam y => fibFam s.2.2 (y,v))
+
+  -- | The projection from the total category to the base.
+  \func expProj.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (e :⁺ ExpTotal F C) : A
+    => (inc e).1
+
+  {- | Families of slices over {T} along {pi} are functors on `Σ⁺ (t : T) (F (pi t)) × Op C` to types:
+   -   uncurry the family, apply {sliceFiber-equiv} over `T × Op C` and compare with the fiberwise {sliceFiber} ({sliceFiber-curry}).
+   -}
+  \lemma curry-equiv.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {T : \Cat u} (pi : T ->⁺ A)
+    : IsEquiv {\Pi (t :⁺ T) -> ExpPresheaf F C (pi t)} {\Sigma⁺ (t : T) (F (pi t)) ->⁺ Op C ->⁺ \Type u}
+              (\lam s q u => sliceFiber (const (F (pi q.1))) (s q.1) (u, q.2))
+    => transport IsEquiv (path \lam j s (q :⁺ \Sigma⁺ (t : T) (F (pi t))) (u :⁺ Op C) => sliceFiber-curry s {(q.1, u), q.2} j) $
+       IsEquiv.trans (inP \new QEquiv {
+         | f s => sliceFiber-curry.uncurrySlice {T} {Op C} {\lam t => const (F (pi t))} s
+         | ret g t => (\lam u => g.1 (t, u), dpath \lam i u => g.2 i (t, u))
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }) $ IsEquiv.trans (IsHEquiv.toIsEquiv (sliceFiber-equiv (\lam w => F (pi w.1)))) $ inP \new QEquiv {
+         | f g q u => g ((q.1, u), q.2)
+         | ret k z => k (z.1.1, z.2) z.1.2
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }
+
+  \lemma sections-curry-equiv.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {T : \Cat u} (pi : T ->⁺ A)
+    : IsEquiv {\Sigma (s : \Pi (t :⁺ T) -> ExpPresheaf F C (pi t)) (\Pi (t : T) -> ExpPred F C (pi t, s t))}
+              {\Sigma (k : \Sigma⁺ (t : T) (F (pi t)) ->⁺ Op C ->⁺ \Type u)
+                      (\Pi (q : \Sigma⁺ (t : T) (F (pi t))) -> ∃ (c : C) (yoneda c = k q))}
+              (\lam s => (\lam q u => sliceFiber (const (F (pi q.1))) (s.1 q.1) (u, q.2), \lam q => s.2 q.1 q.2))
+    => inP $ sigma-equiv (IsEquiv.toQEquiv (curry-equiv {A} {F} {C} pi)) \lam s => later \new QEquiv {
+         | f p q => p q.1 q.2
+         | ret p t v => p (t, v)
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }
+
+  -- | The evaluation map together with its characterization.
+  \sfunc evalPair.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} (e :⁺ ExpTotal F C) (v :⁺ F (expProj F C e))
+    : \Sigma⁺ (c : C) (yoneda c = \lam u => sliceFiber (const (F (inc e).1)) (inc e).2 (u,v))
+    => ffMap-lift-pair yonedaEmbedding {\Sigma⁺ (e : ExpTotal F C) (F (expProj F C e))}
+        (\lam s v => sliceFiber (const (F (inc s.1).1)) (inc s.1).2 (v, s.2))
+        (\lam s => inc-con {_} {_} {s.1} s.2) (e,v)
+}
+
+-- | The exponent from {F} to {C} over {A}.
+\type ExpLL.{u} {A : \Cat} (F : A ->⁺ \Type u) (C : \Cat u) (a :⁺ A) : \Cat
+  => Fibers (expProj F C) a
+  \where {
+    -- | The evaluation map.
+    \protected \sfunc eval.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {a :⁺ A} (e :⁺ ExpLL F C a) (v :⁺ F a) : C \elim e
+      | (e,idp) => (evalPair e v).1
+
+    -- | Pointwise, the exponent consists of functors on the fiber ({eval-univ} over the unit category).
+    \protected \lemma eval-equiv.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} (a : A)
+      : IsEquiv {ExpLL F C a} {F a ->⁺ C} (\lam e v => eval e v)
+      => IsEquiv.trans (inP UnitCat-fun-equiv) $ IsEquiv.trans (eval-univ {A} {F} {C} {UnitCat} (\lam _ => a)) $ inP \new QEquiv {
+           | f G v => G (unitCat, v)
+           | ret H q => H q.2
+           | ret_f G => funExt+ \lam (q :⁺ \Sigma⁺ (t : UnitCat) (F a)) => \case \elim q \return G (unitCat, q.2) = G q \with {
+             | (unitCat, v) => idp
+           }
+           | f_sec _ => idp
+         }
+
+    -- | A version of {eval-univ} for a type {T}: covariant functions out of types are functions ({cov-pi-cat-equiv}).
+    \protected \lemma eval-univ-type.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {T : \Type u} (pi : T ->⁺ A)
+      : IsEquiv {\Pi (t :⁺ T) -> ExpLL F C (pi t)} {\Sigma⁺ (t : T) (F (pi t)) ->⁺ C} (\lam s q => eval (s q.1) q.2)
+      => IsEquiv.leftFactor {_} {_} {_} {_} {\lam (G : \Sigma⁺ (t : T) (F (pi t)) ->⁺ C) (t : T) (v : F (pi t)) => G (t, v)}
+           (IsEquiv.trans (IsHEquiv.toIsEquiv (cov-pi-cat-equiv type-groupoid \lam (_ : \Sigma⁺ (t : T) (F (pi t))) => C)) $
+             inP \new QEquiv {\Sigma⁺ (t : T) (F (pi t)) -> C} {\Pi (t : T) (v : F (pi t)) -> C} {
+               | f G t v => G (t, v)
+               | ret H q => H q.1 q.2
+               | ret_f _ => idp
+               | f_sec _ => idp
+             }) $
+         IsEquiv.trans (IsHEquiv.toIsEquiv (cov-pi-cat-equiv type-groupoid \lam t => ExpLL F C (pi t))) $
+         inP \new QEquiv {\Pi (t : T) -> ExpLL F C (pi t)} {\Pi (t : T) (v : F (pi t)) -> C} {
+           | f s t v => eval (s t) v
+           | ret s t => IsEquiv.ret (ev-equiv pi t) (s t)
+           | ret_f s => ext \lam t => IsEquiv.ret_f (ev-equiv pi t)
+           | f_sec s => path \lam i t => IsEquiv.f_ret (ev-equiv {A} {F} {C} pi t) {s t} @ i
+         }
+      \where {
+        \private \lemma ev-equiv.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {T : \Type u} (pi : T ->⁺ A) (t : T)
+          : IsEquiv {ExpLL F C (pi t)} {F (pi t) -> C} (\lam e v => eval e v)
+          => IsEquiv.trans (eval-equiv (pi t)) (IsHEquiv.toIsEquiv (cov-pi-cat-equiv type-groupoid \lam (_ : F (pi t)) => C))
+      }
+
+    -- | The universal property.
+    \protected \lemma eval-univ.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {T : \Cat u} (pi : T ->⁺ A)
+      : IsEquiv {\Pi (t :⁺ T) -> ExpLL F C (pi t)} {\Sigma⁺ (t : T) (F (pi t)) ->⁺ C} (\lam s q => eval (s q.1) q.2)
+      => IsEquiv.leftFactor (postcomp-image-equiv yonedaEmbedding) $
+         transport IsEquiv (ext \lam s => ext (funExt+ \lam q => eval-yoneda (s q.1) q.2)) $
+         IsEquiv.trans (inP $ later \new QEquiv {
+           | f s t => s t
+           | ret s t => s t
+           | ret_f _ => idp
+           | f_sec _ => idp
+         }) $ IsEquiv.trans (subProj.sections-equiv (ExpPred F C) pi) (sections-curry-equiv {A} {F} {C} pi)
+      \where
+        -- | The value of {ExpLL.eval} under the Yoneda embedding is the fiber of the presheaf.
+        \private \sfunc eval-yoneda.{u} {A : \Cat} {F : A ->⁺ \Type u} {C : \Cat u} {a :⁺ A} (z :⁺ ExpLL F C a) (v :⁺ F a)
+          : (\lam u =>⁺ sliceFiber (const (F a)) (transport+ (ExpPresheaf F C) z.2 (inc z.1).2) (u, v)) = yoneda (ExpLL.eval z v) \elim z
+          | (e, idp) => funExt+ \lam x => path (\lam i => inv (evalPair e v).2 i x) *> pmap+ (yoneda __ x) (inv \peval ExpLL.eval (e,idp) v)
+  }

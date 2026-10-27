@@ -1,0 +1,106 @@
+{- | The Segal condition for right fibrations over the simplex category.
+
+     A simplicial type is a functor `p : E ->⁺ DeltaCat` whose fibers form a right fibration; its `n`-simplices are the fiber over `[n]`.
+     Sections of `Fibers p` over `Nerve (Δ/[n])` are its `n`-simplices: the slice has a terminal object.
+     The span {SpanP}, `[k] ← [0] → [1]`, maps to `Δ/[k+1]` by {spanInc} (the first `k + 1` vertices, the last vertex,
+     and the last edge), and sections over it are pairs of a `k`-simplex and an edge glued along a vertex.
+     {p} is Segal if restriction of sections along {spanInc} is an equivalence ({IsSegal}). This is SCT Definition 11.8.15 in the
+     inductive form of SCT Lemma 11.8.16: the spine of `[k+1]` is the union of the spine of `[k]` and the last edge.
+ -}
+
+\import Category
+\import Category.Functor
+\import Category.Simplex
+\import Category.Slice
+\import Equiv
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Nerve.Nerve
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+-- # Slices
+
+-- | The slice `Δ/[n]`; its terminal object is the identity.
+\func SliceS (n : Nat) : Precat
+  => SlicePrecat {SimplexCat} n
+
+-- | The forgetful functor of {SliceS}.
+\func sliceForget (n : Nat) : Functor (SliceS n) SimplexCat
+  => SlicePrecat.forget {SimplexCat} n
+
+-- | The functor from the nerve of `Δ/[n]` to {DeltaCat}.
+\func sliceProj (n : Nat) (s :⁺ Nerve (SliceS n)) : DeltaCat
+  => nerveMap (sliceForget n) s
+
+-- # The span
+
+-- | The span `1 ← 0 → 2`.
+\func SpanP : Poset (Fin 3) \cowith
+  | <= (x y : Fin 3) : \Prop \with {
+    | 0, _ => \Sigma
+    | 1, 1 => \Sigma
+    | 2, 2 => \Sigma
+    | _, _ => Empty
+  }
+  | <=-refl {x} => \case \elim x \with {
+    | 0 => ()
+    | 1 => ()
+    | 2 => ()
+  }
+  | <=-transitive {x} {y} {z} p q => \case \elim x, \elim y, \elim z, \elim p, \elim q \with {
+    | 0, _, _, _, _ => ()
+    | 1, 1, 1, _, _ => ()
+    | 2, 2, 2, _, _ => ()
+  }
+  | <=-antisymmetric {x} {y} p q => \case \elim x, \elim y, \elim p, \elim q \with {
+    | 0, 0, _, _ => idp
+    | 0, 1, _, ()
+    | 0, 2, _, ()
+    | 1, 1, _, _ => idp
+    | 2, 2, _, _ => idp
+  }
+
+-- | The objects of the span in `Δ/[k+1]`: the last vertex, the first `k + 1` vertices, and the last edge.
+\func spanOb (k : Nat) (x : Fin 3) : SliceS (suc k) \elim x
+  | 0 => (0, segRes k ∘ vert (topV k))
+  | 1 => (k, segRes k)
+  | 2 => (1, lastEdge k)
+
+-- | The arrows of the span in `Δ/[k+1]`.
+\func spanHom (k : Nat) {x y : Fin 3} (p : x SpanP.<= y) : Hom {SliceS (suc k)} (spanOb k x) (spanOb k y) \elim x, y, p
+  | 0, 0, _ => (SliceS (suc k)).id {spanOb k 0}
+  | 0, 1, _ => (vert (topV k), idp)
+  | 0, 2, _ => (vert 0, inv (segRes-lastEdge k))
+  | 1, 1, _ => (SliceS (suc k)).id {spanOb k 1}
+  | 2, 2, _ => (SliceS (suc k)).id {spanOb k 2}
+
+-- | The span in `Δ/[k+1]`.
+\func spanInc (k : Nat) : Functor SpanP (SliceS (suc k)) \cowith
+  | F => spanOb k
+  | Func p => spanHom k p
+  | Func-id {x} => \case \elim x \with {
+    | 0 => idp
+    | 1 => idp
+    | 2 => idp
+  }
+  | Func-o {x} {y} {z} {g} {f} => \case \elim x, \elim y, \elim z, \elim g, \elim f \with {
+    | 0, 0, 0, _, _ => ext idp
+    | 0, 0, 1, _, _ => ext idp
+    | 0, 0, 2, _, _ => ext idp
+    | 0, 1, 1, _, _ => ext idp
+    | 0, 2, 2, _, _ => ext idp
+    | 1, 1, 1, _, _ => ext idp
+    | 2, 2, 2, _, _ => ext idp
+  }
+
+-- # The Segal condition
+
+-- | {p} is Segal if its sections over `Δ/[k+1]` are determined by their restrictions to the span (SCT Definition 11.8.15).
+\type IsSegal {E : \Cat} (p : E ->⁺ DeltaCat) : \Prop
+  => \Pi (k : Nat) -> IsEquiv {\Pi (s :⁺ Nerve (SliceS (suc k))) -> Fibers p (sliceProj (suc k) s)}
+                              {\Pi (s :⁺ Nerve SpanP) -> Fibers p (sliceProj (suc k) (nerveMap (spanInc k) s))}
+                              (\lam t s => t (nerveMap (spanInc k) s))

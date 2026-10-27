@@ -942,10 +942,10 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       if (pattern == null) {
         Referable referable = makeLocalReference(clause, myFreeVariablesCollector.getFreeVariables(clause), false);
         if (referable != null) {
-          clauses.add(new Concrete.LetClause(referable, Collections.emptyList(), null, convertExpr(clause.getExpression())));
+          clauses.add(new Concrete.LetClause(referable, Collections.emptyList(), null, convertExpr(clause.getExpression()), clause.getVariance() == BindingVariance.COVARIANT));
         }
       } else {
-        clauses.add(new Concrete.LetClause(pattern, null, convertExpr(clause.getExpression())));
+        clauses.add(new Concrete.LetClause(pattern, null, convertExpr(clause.getExpression()), clause.getVariance() == BindingVariance.COVARIANT));
       }
     }
 

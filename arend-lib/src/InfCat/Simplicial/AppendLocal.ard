@@ -1,0 +1,234 @@
+{- | Locality of appends.
+
+ -   For an arrow `h` of {DeltaCat}, let `joinSqOf h` be the naturality square of the initial segment {joinIncln} along `h`.
+ -   * {appRestr-tr-equiv}: if sections of `p` over `joinSqOf h` are determined by their restrictions to the horn ({hornRes}),
+ -     then transport in the fibers of {appRestr} along every arrow over `h` is an equivalence.
+ -
+ -   Proof. A section over the square is an arrow of {AppT} over `h` (its bottom side) whose restriction (its top side) is an arrow
+ -   `c` of `E` over `h`, together with the arrows of the restriction (its columns). So it is a path over `c` in the fibers of
+ -   {appRestr}, and transport along `c` sends its end to its start ({appRestr-tr-equiv.tr-sec}). A section over the horn is
+ -   an arrow `c` over `h` together with a point of the fiber over the source of `c` ({appSec-equiv}), and a section over the square
+ -   is an arrow `c` together with a point of the fiber over its target. So transport along all arrows `c` over `h` together
+ -   is the restriction to the horn, an equivalence, and it is an equivalence for each `c` ({totalEquiv}).
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Nerve.Nerve
+\import InfCat.Simplicial.Append
+\import InfCat.Simplicial.Join
+\import InfCat.Simplicial.SegalSquare
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Localization.ExtendRightFib
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.Simplicial.Realization
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import Category.Simplex
+\import Logic
+\import Paths
+\import Paths.Meta
+\open RealizationHelpers (lastN)
+
+-- | The naturality square of {joinIncln} along {h}.
+\func joinSqOf (h : DI ->⁺ DeltaCat) : DI ->⁺ DI ->⁺ DeltaCat
+  => \lam i => joinIncln (h i)
+
+-- | The restriction of the end of a section over {joinIncln} is its start.
+\func appSrc.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (b :⁺ DeltaCat)
+             (s :⁺ \Pi (j :⁺ DI) -> Fibers p (joinIncln b j)) : appRestr.{u} pf (b, s dright) = (s dleft).1
+  => path \lam m => (rightFib-lift-source pf {b, joinN b, joinIncln b, s dright} (s dleft, dpath \lam j => s j) m).1
+
+{- | The points of the fiber of {appRestr} over {y} are the sections over {joinIncln} starting at {y}:
+ -   a section `s` goes to its end, with {appSrc}.
+ -}
+\lemma appSec-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (b : DeltaCat) (y : Fibers p b)
+  : IsEquiv {\Sigma (s : \Pi (j :⁺ DI) -> Fibers p (joinIncln b j)) (y = s dleft)} {Fibers (appRestr.{u} pf) y.1}
+            (\lam t => ((b, t.1 dright), appSrc.{u} pf b t.1 *> pmap __.1 (inv t.2)))
+  => \let | phi (t : Fibers p (joinN b)) : Fibers p b => (rightFib-lift pf (b, joinN b, joinIncln b, t)).1
+          | srcF (s : \Pi (j :⁺ DI) -> Fibers p (joinIncln b j)) : phi (s dright) = s dleft
+              => rightFib-lift-source pf {b, joinN b, joinIncln b, s dright} (s dleft, dpath \lam j => s j)
+          | shift : IsEquiv {\Sigma (s : \Pi (j :⁺ DI) -> Fibers p (joinIncln b j)) (y = s dleft)} {Fib phi y}
+                            (\lam t => (t.1 dright, srcF t.1 *> inv t.2))
+              => inP (sigma-equiv (IsEquiv.toQEquiv (rightFib-sections-ev pf (\lam j => joinIncln b j))) \lam s => transQEquiv inv-equiv (pullback-equiv.concat-left (srcF s)))
+          | res => IsEquiv.trans shift (fib-equiv pf b y)
+     \in transport IsEquiv (ext \lam t => ext (idp, pmap_*>-comm __.1 (srcF t.1) (inv t.2))) res
+  \where {
+    {- | The points of the fiber of {appRestr} over {y} are the points of the fiber of the restriction of simplices over {y}.
+     -   The fibers of `g` over `y.1` are the fibers over `y` of the map induced on the fibers of `p ∘ g` ({fib-of-fibers}),
+     -   and the fibers of `p ∘ appRestr` over {b} are the simplices over `joinN b` ({appRestr-p}).
+     -}
+    \lemma fib-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (b : DeltaCat) (y : Fibers p b)
+      : IsEquiv {Fib (\lam (t : Fibers p (joinN b)) => (rightFib-lift pf (b, joinN b, joinIncln b, t)).1) y} {Fibers (appRestr.{u} pf) y.1}
+                (\lam s => ((b, s.1), pmap __.1 s.2))
+      => \let | u (t : Fibers p (joinN b)) : \Sigma (x : AppT.{u} p) (p (appRestr.{u} pf x) = b) => ((b, t), appRestr-p.{u} pf (b, t))
+              | u-equiv : IsEquiv u
+                  => IsEquiv.trans {_} {\Sigma (x : AppT.{u} p) (x.1 = b)} {_} {\lam t => ((b, t), idp)} (inP \new QEquiv {
+                       | ret s => transport (\lam b' => Fibers p (joinN b')) s.2 s.1.2
+                       | ret_f _ => idp
+                       | f_sec s => \case \elim s \with { | ((b', t), idp) => idp }
+                     }) {\lam (s : \Sigma (x : AppT.{u} p) (x.1 = b)) => ((s.1, appRestr-p.{u} pf s.1 *> s.2) : \Sigma (x : AppT.{u} p) (p (appRestr.{u} pf x) = b))} (inP (sigma-right \lam x => pullback-equiv.concat-left (appRestr-p.{u} pf x)))
+              | e1 : IsEquiv {Fib (\lam (t : Fibers p (joinN b)) => (rightFib-lift pf (b, joinN b, joinIncln b, t)).1) y}
+                             {Fib {\Sigma (x : AppT.{u} p) (p (appRestr.{u} pf x) = b)} {Fibers p b} (\lam x => (appRestr.{u} pf x.1, x.2)) y}
+                             (\lam s => (u s.1, s.2))
+                  => inP (sigma-equiv (IsEquiv.toQEquiv u-equiv) \lam t => idEquiv)
+              | res => IsEquiv.trans e1 (fib-of-fibers (appRestr.{u} pf) p y)
+         \in res
+
+    -- | The fibers of {g} over `y.1` are the fibers over {y} of the map induced by {g} on the fibers of `p ∘ g`.
+    \lemma fib-of-fibers {X E B : \Cat} (g : X ->⁺ E) (p : E ->⁺ B) {b : B} (y : Fibers p b)
+      : IsEquiv {Fib {\Sigma (x : X) (p (g x) = b)} {Fibers p b} (\lam x => (g x.1, x.2)) y} {Fibers g y.1}
+                (\lam s => (s.1.1, pmap __.1 s.2))
+      => inP \new QEquiv {
+           | ret t => fwd t.2 y.2
+           | ret_f s => back s.2
+           | f_sec t => fwd-sec t.2 y.2
+         }
+      \where \private {
+        \func fwd {x : X} {e : E} (r : g x = e) {b' : B} (P : p e = b')
+          : Fib {\Sigma (x : X) (p (g x) = b')} {Fibers p b'} (\lam x => (g x.1, x.2)) (e, P) \elim r
+          | idp => ((x, P), idp)
+
+        \func fwd-sec {x : X} {e : E} (r : g x = e) {b' : B} (P : p e = b')
+          : ((fwd r P).1.1, pmap __.1 (fwd r P).2) = {Fibers g e} (x, r) \elim r
+          | idp => idp
+
+        \func back {b' : B} {x : X} {P : p (g x) = b'} {y' : Fibers p b'} (q : ((g x, P) : Fibers p b') = y')
+          : fwd (pmap __.1 q) y'.2 = ((x, P), q) \elim q
+          | idp => idp
+      }
+  }
+
+-- | Transport in the fibers of {appRestr} along arrows over {h} is an equivalence if sections over `joinSqOf h` are sections over its horn.
+\lemma appRestr-tr-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (h : DI ->⁺ DeltaCat)
+  (hs : IsEquiv (hornRes {_} {Fibers p} {joinSqOf h})) (a : \Pi (i :⁺ DI) -> Fibers p (h i))
+  : IsEquiv (rightFib-tr (appRestr-rightFib pf) (dpath \lam i => (a i).1))
+  => (totalEquiv (\lam (a' : \Pi (i :⁺ DI) -> Fibers p (h i)) => rightFib-tr (appRestr-rightFib pf) (dpath \lam i => (a' i).1))).2
+       (AppendLocalHelpers.total-equiv pf h hs) a
+
+\private \module AppendLocalHelpers \where {
+  -- | The point of the fiber over the target of the top side given by a section over the square.
+  \func Lmap.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (h : DI ->⁺ DeltaCat) (s : \Pi (i j :⁺ DI) -> Fibers p (joinSqOf h i j))
+    : \Sigma (a' : \Pi (i :⁺ DI) -> Fibers p (h i)) (Fibers (appRestr.{u} pf) (a' dright).1)
+    => (\lam i => s i dleft, ((h dright, s dright dright), appSrc.{u} pf (h dright) (\lam j => s dright j)))
+
+  -- | The point of the fiber over the source of the top side given by a section over the horn.
+  \func Rmap.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (h : DI ->⁺ DeltaCat) (t : HornSec (Fibers p) (joinSqOf h))
+    : \Sigma (a' : \Pi (i :⁺ DI) -> Fibers p (h i)) (Fibers (appRestr.{u} pf) (a' dleft).1)
+    => (t.1, ((h dleft, t.2 dright), appSrc.{u} pf (h dleft) t.2 *> pmap __.1 (inv t.3)))
+
+  -- | Transport along the top side of a section over the square sends the end of its bottom side to the start.
+  \sfunc tr-sec.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (h : DI ->⁺ DeltaCat) (s : \Pi (i j :⁺ DI) -> Fibers p (joinSqOf h i j))
+    : rightFib-tr (appRestr-rightFib pf) (dpath \lam i => (s i dleft).1) (Lmap pf h s).2 = (Rmap pf h (hornRes {_} {Fibers p} {joinSqOf h} s)).2
+    => rightFib-tr-dpath (appRestr-rightFib pf) (dpath \lam i => (((h i, s i dright) : AppT.{u} p), appSrc.{u} pf (h i) (\lam j => s i j)))
+
+  \lemma R-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (h : DI ->⁺ DeltaCat) : IsEquiv (Rmap pf h)
+    => \let res => IsEquiv.trans assoc-l (inP (sigma-equiv idEquiv \lam (a' : \Pi (i :⁺ DI) -> Fibers p (h i)) => IsEquiv.toQEquiv (appSec-equiv pf (h dleft) (a' dleft))))
+       \in res
+
+  \lemma L-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (h : DI ->⁺ DeltaCat) : IsEquiv (Lmap pf h)
+    => \let | B' => \Pi (j :⁺ DI) -> Fibers p (joinIncln (h dright) j)
+            | U => \Pi (i :⁺ DI) -> Fibers p (h i)
+            | proj-equiv : IsEquiv {\Sigma (a' : U) (b' : B') (a' dright = b' dleft)} {Fibers p (joinN (h dright))} (\lam t => t.2 dright)
+                => \let res => IsEquiv.trans swap (IsEquiv.trans (inP (contr-right \lam (b' : B') => IsEquiv=>contrFibers (rightFib-sections-ev pf h) (b' dleft)))
+                                                                 (rightFib-sections-ev pf (\lam j => joinIncln (h dright) j)))
+                   \in res
+            | res'-equiv : IsEquiv {\Pi (i j :⁺ DI) -> Fibers p (joinSqOf h i j)} {\Sigma (a' : U) (b' : B') (a' dright = b' dleft)}
+                                   (\lam s => (\lam i => s i dleft, \lam j => s dright j, idp))
+                => IsEquiv.leftFactor proj-equiv (rightFib-square-sections pf (joinSqOf h))
+            | res => IsEquiv.trans res'-equiv (IsEquiv.trans assoc-l (inP (sigma-equiv idEquiv \lam (a' : \Pi (i :⁺ DI) -> Fibers p (h i)) => IsEquiv.toQEquiv (appSec-equiv pf (h dright) (a' dright)))))
+       \in res
+
+  \lemma total-equiv.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (h : DI ->⁺ DeltaCat)
+    (hs : IsEquiv (hornRes {_} {Fibers p} {joinSqOf h})) : IsEquiv (totalEquiv.total (\lam (a' : \Pi (i :⁺ DI) -> Fibers p (h i)) => rightFib-tr (appRestr-rightFib pf) (dpath \lam i => (a' i).1)))
+    => IsEquiv.rightFactor (L-equiv pf h) $ transport IsEquiv (ext \lam s => inv (pmap (\lam w => ((\lam i => s i dleft, w) : \Sigma (a' : \Pi (i :⁺ DI) -> Fibers p (h i)) (Fibers (appRestr.{u} pf) (a' dleft).1))) (tr-sec pf h s)))
+                                                 (IsEquiv.trans hs (R-equiv pf h))
+
+  \lemma swap {A B : \Cat} {C : A -> B -> \Cat}
+    : IsEquiv {\Sigma (a : A) (b : B) (C a b)} {\Sigma (b : B) (\Sigma (a : A) (C a b))} (\lam t => (t.2, (t.1, t.3)))
+    => inP \new QEquiv { | ret S => (S.2.1, S.1, S.2.2) | ret_f _ => idp | f_sec _ => idp }
+
+  \lemma assoc-l {A : \Cat} {B : A -> \Cat} {C : \Pi (a : A) -> B a -> \Cat}
+    : IsEquiv {\Sigma (a : A) (b : B a) (C a b)} {\Sigma (a : A) (\Sigma (b : B a) (C a b))} (\lam T => (T.1, (T.2, T.3)))
+    => inP \new QEquiv { | ret S => (S.1, S.2.1, S.2.2) | ret_f _ => idp | f_sec _ => idp }
+}
+
+-- # Arrows preserving last vertices
+
+-- | An arrow of {DeltaCat} preserving last vertices; {LastWeakEq} is this property of the image in {DeltaCat}.
+\func LastArr {b b' : DeltaCat} (f : b ~> b') : \Prop
+  => IsCocartesianArrow (nerveMap simplexProj) (dmap lastN f)
+
+\lemma lastArr-joinVertn (b : DeltaCat) : LastArr (joinVertn b)
+  => TruncP.rec prop-isProp (nerveOb-surj b) \lam s =>
+       transport (\lam b' => LastArr (joinVertn b')) s.2 $
+         transportInv (\lam f => LastArr f) (joinVertn-vertex s.1) ((lastWeakEq-char (vert (topV (suc s.1)))).2 idp)
+
+\lemma lastArr-bang : LastArr bang
+  => (lastWeakEq-char (constHom {1} {0} 0)).2 idp
+
+-- | Arrows preserving last vertices are closed under composition.
+\lemma lastArr-comp {a b c : DeltaCat} {f : a ~> b} {g : b ~> c} (fl : LastArr f) (gl : LastArr g) : LastArr (comp f g)
+  => transportInv (IsCocartesianArrow (nerveMap simplexProj)) (dmap_comp lastN) ((cocartesianArrow-comp fl).1 gl)
+
+-- | The only arrow from `[0]` to `[m]` preserving last vertices is the top vertex.
+\sfunc lastArr-vertex {m : Nat} (f : nerveOb 0 ~> nerveOb m) (fl : LastArr f) : f = nerveHom {SimplexCat} {0} {m} (vert (topV m))
+  => \let | g => IsEquiv.ret (nerveHom-equiv {SimplexCat} {0} {m}) f
+          | fg : nerveHom {SimplexCat} {0} {m} g = f => IsEquiv.f_ret (nerveHom-equiv {SimplexCat} {0} {m})
+          | gt : g 0 = topV m => (lastWeakEq-char g).1 (transportInv LastArr fg fl)
+     \in inv fg *> pmap (nerveHom {SimplexCat} {0} {m}) (simplexHom-ext \lam t => \case \elim t \with { | 0 => gt })
+
+-- # Locality
+
+-- | Sections over the square along an arrow from `[0]` preserving last vertices are determined by their restrictions to the horn.
+\lemma horn-lastArr.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p)
+                        {a b : DeltaCat} (f : a ~> b) (fl : LastArr f) (P : a = nerveOb 0)
+  : IsEquiv (hornRes {_} {Fibers p} {joinSqOf (\lam i => f i)})
+  => TruncP.rec prop-isProp (nerveOb-surj b) \lam s => aux P (inv s.2) f fl
+  \where
+    \private \lemma aux {m : Nat} {a b : DeltaCat} (P : a = nerveOb 0) (Q : b = nerveOb m) (f : a ~> b) (fl : LastArr f)
+      : IsEquiv (hornRes {_} {Fibers p} {joinSqOf (\lam i => f i)}) \elim P, Q
+      | idp, idp => transportInv (\lam (f' : nerveOb 0 ~> nerveOb m) => IsEquiv (hornRes {_} {Fibers p} {joinSqOf (\lam i => f' i)}))
+                                 (lastArr-vertex f fl) (segal-square pf ps m)
+
+-- | Transport in the fibers of {appRestr} along an arrow from a vertex preserving last vertices is an equivalence.
+\lemma appRestr-tr-vertex.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p)
+                              (c : DI ->⁺ E) (cl : LastArr (dpath \lam i => p (c i))) (P : p (c dleft) = nerveOb 0)
+  : IsEquiv (rightFib-tr (appRestr-rightFib pf) (dpath c))
+  => appRestr-tr-equiv pf (\lam i => p (c i)) (horn-lastArr pf ps (dpath \lam i => p (c i)) cl P) (\lam i => (c i, idp))
+
+{- | For a Segal right fibration, transport in the fibers of {appRestr} along arrows preserving last vertices is an equivalence.
+ -   An arrow `b : e -> e'` over a map preserving the last vertex is the second factor of a composite of arrows from the last vertex
+ -   of `e`, which are covered by {appRestr-tr-vertex}.
+ -}
+\lemma appRestr-local.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p)
+  (b : DI ->⁺ E) (bl : isWeakEq {LastWeakEq p} b) : IsEquiv (rightFib-tr (appRestr-rightFib pf) (dpath b))
+  => TruncP.rec prop-isProp (nerveOb-surj (p (b dleft))) \lam s =>
+       \let | l => rightFib-lift pf (nerveOb 0, nerveOb s.1, nerveHom {SimplexCat} {0} {s.1} (vert (topV s.1)), ((b dleft, inv s.2) : Fibers p (nerveOb s.1)))
+            | c : DI ->⁺ E => \lam i => (l.2 i).1
+            | cl : LastArr (dpath \lam i => p (c i))
+                => transportInv (\lam (h : DI ->⁺ DeltaCat) => LastArr (dpath \lam i => h i)) (path \lam k => \lam i =>⁺ (l.2 i).2 k)
+                                ((lastWeakEq-char (vert (topV s.1))).2 idp)
+            | e1 => appRestr-tr-vertex pf ps c cl l.1.2
+            | e2 => appRestr-tr-vertex pf ps (\lam i => comp (dpath c) (dpath b) i)
+                      (transportInv LastArr (dmap_comp p) (lastArr-comp cl bl)) l.1.2
+       \in IsEquiv.leftFactor e1 (transport IsEquiv (ext \lam w => rightFib-tr_comp (appRestr-rightFib pf) (dpath c) (dpath b)) e2)
+
+-- | For a Segal right fibration, the ways to append a vertex form a right fibration local with respect to {LastWeakEq}.
+\lemma appY-local.{u} {E : \Cat u} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (ps : IsSegal p) (y : simplex p 0)
+  : IsLocalRightFib (LastWeakEq p) (appY pf y)
+  => localRightFib-comp {_} {_} {_} {LastWeakEq p} {appRestr pf} {totalProj (\lam t => appLast pf t ~> y)}
+       (localRightFib-tr (appRestr-rightFib pf) (appRestr-local pf ps))
+       (localRightFib-total (rightFib-pullback (appLast pf) (hom-rightFib y)) \lam k _ =>
+          transportInv IsEquiv (ext \lam h => rightFib-pullback-tr (appLast pf) (hom-rightFib y) (dpath k) h)
+            (rightFib-tr-iso (hom-rightFib y) (rightFib-grpd pf (nerveOb 0) (dmap (appLast pf) (dpath k)))))

@@ -1110,13 +1110,13 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   @Override
   public Concrete.LamExpression visitLam2(Lam2Context ctx) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true, ctx.FAT_ARROW_PLUS() != null), visitIncompleteExpression(ctx.expr2(), ctx));
+    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true, ctx.FAT_ARROW_PLUS() != null), ctx.FAT_ARROW_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT, visitIncompleteExpression(ctx.expr2(), ctx));
   }
 
   @Override
   public Concrete.LamExpression visitLamExpr(LamExprContext ctx) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true, ctx.FAT_ARROW_PLUS() != null), visitIncompleteExpression(ctx.expr(), ctx));
+    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true, ctx.FAT_ARROW_PLUS() != null), ctx.FAT_ARROW_PLUS() != null ? BindingVariance.COVARIANT : BindingVariance.INVARIANT, visitIncompleteExpression(ctx.expr(), ctx));
   }
 
   private Concrete.Expression visitAppExpr(AppExprContext ctx) {
@@ -1212,7 +1212,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         term = visitExpr(((CoClauseExprContext) defBody).expr());
         if (!parameters.isEmpty() || !patterns.isEmpty()) {
           Position pos = tokenPosition(lamParamCtxs.getFirst().start);
-          term = Concrete.PatternLamExpression.make(pos, parameters, patterns, term);
+          term = Concrete.PatternLamExpression.make(pos, parameters, patterns, BindingVariance.INVARIANT, term);
         }
       } else {
         LocatedReferableImpl reference = makeReferable(position, isDefault ? AccessModifier.PROTECTED : AccessModifier.PUBLIC, id != null ? id.getText() : path.getLast(), visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.referable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
@@ -1284,7 +1284,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       term = visitExpr(exprCtx);
       if (!parameters.isEmpty() || !patterns.isEmpty()) {
         Position pos = tokenPosition(lamParamCtxs.getFirst().start);
-        term = Concrete.PatternLamExpression.make(pos, parameters, patterns, term);
+        term = Concrete.PatternLamExpression.make(pos, parameters, patterns, BindingVariance.INVARIANT, term);
       }
     } else {
       if (!parameters.isEmpty() || !patterns.isEmpty()) {
@@ -1815,12 +1815,13 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     TypeAnnotationContext typeAnnotationCtx = ctx.typeAnnotation();
     Concrete.Expression resultType = typeAnnotationCtx == null ? null : visitExpr(typeAnnotationCtx.expr());
 
+    boolean isCovariant = ctx.FAT_ARROW_PLUS() != null;
     TerminalNode id = ctx.ID();
     if (id != null) {
-      return new Concrete.LetClause(new ParsedLocalReferable(tokenPosition(ctx.start), id.getText()), arguments, resultType, visitExpr(ctx.expr()));
+      return new Concrete.LetClause(new ParsedLocalReferable(tokenPosition(ctx.start), id.getText()), arguments, resultType, visitExpr(ctx.expr()), isCovariant);
     }
 
-    return new Concrete.LetClause(((Concrete.Pattern) visit(ctx.atomPattern())).toConstructor(), resultType, visitExpr(ctx.expr()));
+    return new Concrete.LetClause(((Concrete.Pattern) visit(ctx.atomPattern())).toConstructor(), resultType, visitExpr(ctx.expr()), isCovariant);
   }
 
   private Concrete.Expression visitIncompleteExpression(ParserRuleContext exprCtx, ParserRuleContext parentCtx) {

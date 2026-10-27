@@ -1,0 +1,348 @@
+{- | Extension of local right fibrations along a localization (the converse of {rightFib-localize}).
+
+ -   Let `l : C ->⁺ L` be a localization of the weak equivalences {W} and let `q : R ->⁺ C` be a right fibration that is local with respect to {W}
+ -   ({IsLocalRightFib}): lifts of arrows in {W} with a given source are unique, that is, transport along them is an equivalence.
+ -   The extension {ExtR} is the localization of {R} at the arrows over {W}, with projection {extProj} induced by `l ∘ q`.
+ -   * {rightFib-extend}: {extProj} is a right fibration.
+ -   * {rightFib-extend-fiber}: the fibers of {q} are the fibers of {extProj}: `(r, P) ↦ (extMap r, pmap l P)` is an equivalence.
+ -
+ -   Proof. Pass to opposite categories, where `OpFunc q` is a left fibration ({opFunc-leftFib}). Its straightening `G` inverts
+ -   `OpWeakEq W` by locality ({opFunc-colift-contr}), so it extends along the localization `OpFunc l` ({OpFunc-isLocalization})
+ -   to `G' : Op L ->⁺ \Type u`. By {leftFib-isLocalization}, the total category `X` of `G'` is a localization of `Op R`
+ -   at the arrows over `OpWeakEq W`, and so is `Op (ExtR W q)` ({OpFunc-isLocalization}, {OpWeakEq-pullback}). Hence they are equivalent
+ -   over `Op L`, `OpFunc (extProj Lz q)` is a left fibration, and {extProj} is a right fibration ({opFunc-leftFib-reflects}).
+ -   The path between the two projections `Op (ExtR W q) ->⁺ Op L` is chosen by {epi-path}, so that its restriction along
+ -   `OpFunc (extMap W q)` is known. Then, on fibers, the map induced by `OpFunc (extMap W q)` followed by the equivalence is
+ -   the identification of the fibers of `OpFunc q` with the values of `G' ∘ OpFunc l`, so it is an equivalence.
+ -   The non-opposite statement follows by {op-fiber-equiv} and its compatibility with postcomposition and forgetting
+ -   ({op-fiber-postcomp}, {op-fiber-forget}).
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.FreeLeft
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Equiv
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.LocalizeLeftFib
+\import InfCat.Localization.Opposite
+\import InfCat.Opposite
+\import InfCat.Opposite.Fibration
+\import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\open ExtendHelpers
+
+-- | {q} is local with respect to {W}: lifts of arrows in {W} with a given source are unique.
+\type IsLocalRightFib.{u} {C : \Cat u} {R : \Cat} (W : CatWeakEq C) (q : R ->⁺ C) : \Prop
+  => \Pi (b : DI ->⁺ C) -> isWeakEq b -> \Pi (r : Fibers q (b dleft)) -> Contr (CovLift (Fibers q) (b dleft, b dright, dpath b, r))
+
+-- | A right fibration is local if transport along arrows in {W} is an equivalence.
+\lemma localRightFib-tr.{u} {C : \Cat u} {R : \Cat} {W : CatWeakEq C} {q : R ->⁺ C} (qf : IsRightFib (Fibers q))
+  (e : \Pi (b : DI ->⁺ C) -> isWeakEq b -> IsEquiv (rightFib-tr qf (dpath b))) : IsLocalRightFib W q
+  => \lam b w r => rightFib-colift-contr qf (e b w) r
+
+-- | The total projection of a right fibration is local if transport along arrows in {W} is an equivalence.
+\lemma localRightFib-total.{u} {B : \Cat u} {Q : B ->⁺ \Cat} (Qf : IsRightFib Q) {W : CatWeakEq B}
+  (e : \Pi (b : DI ->⁺ B) -> isWeakEq b -> IsEquiv (rightFib-tr Qf (dpath b))) : IsLocalRightFib W (totalProj Q)
+  => localRightFib-tr (rightFib-total Qf) \lam b w =>
+       \let | fte (x : B) : IsEquiv {Q x} {Fibers (totalProj Q) x} (\lam q => ((x, q), idp)) => inP (fibers-total-equiv {B} {Q} x)
+            | sq (q : Q (b dright)) : rightFib-tr (rightFib-total Qf) (dpath b) ((b dright, q), idp) = ((b dleft, rightFib-tr Qf (dpath b) q), idp)
+                => rightFib-tr-dpath (rightFib-total Qf) (dpath \lam i => ((b i, (Qf (b dleft, b dright, dpath b, q)).center.2 i), idp))
+       \in IsEquiv.rightFactor (fte (b dright)) $ transport IsEquiv (ext \lam q => inv (sq q)) (IsEquiv.trans (e b w) (fte (b dleft)))
+
+-- | A composite of local right fibrations is local.
+\lemma localRightFib-comp.{u} {C R : \Cat u} {S : \Cat} {W : CatWeakEq C} {f : R ->⁺ C} {g : S ->⁺ R}
+  (fl : IsLocalRightFib W f) (gl : IsLocalRightFib (PullbackWeakEq f) g) : IsLocalRightFib W (\lam s => f (g s))
+  => \lam b w r => aux r.1 r.2 (dpath b) w
+  \where {
+    \private \lemma aux (x : S) {c : C} (P : f (g x) = c) {c' : C} (h : c ~> c') (w : isWeakEq (\lam i => h i))
+      : Contr (CovLift (Fibers (\lam s => f (g s))) (c, c', h, (x, P))) \elim P
+      | idp => \let | cf : Contr (Fib (cosl f (g x)) ((c', h) : \Sigma (a : C) (f (g x) ~> a)))
+                        => Contr.Contr_QEquiv (fibers-colift-equiv f (g x) h) (fl (\lam i => h i) w (g x, idp))
+                    | cg (u : Fib (cosl f (g x)) ((c', h) : \Sigma (a : C) (f (g x) ~> a))) : Contr (Fib (cosl g x) u.1)
+                        => Contr.Contr_QEquiv (fibers-colift-equiv g x u.1.2)
+                             (gl (\lam i => u.1.2 i) (transport (\lam (z : \Sigma (a : C) (f (g x) ~> a)) => isWeakEq (\lam i => z.2 i)) (inv u.2) w) (x, idp))
+               \in Contr.Contr_QEquiv (symQEquiv (fibers-colift-equiv (\lam s => f (g s)) x h)) $
+                     Contr.Contr_QEquiv (symQEquiv (fib-comp (cosl f (g x)) (cosl g x) ((c', h) : \Sigma (a : C) (f (g x) ~> a)))) $
+                       Contr.Contr_QEquiv (symQEquiv (contr-left cf {\lam u => Fib (cosl g x) u.1})) (cg cf.center)
+
+    -- | The map of coslices induced by {q}.
+    \func cosl {E A : \Cat} (q : E ->⁺ A) (x : E) (w : \Sigma (y : E) (x ~> y)) : \Sigma (a : A) (q x ~> a)
+      => (q w.1, dpath \lam i => q (w.2 i))
+
+    -- | The fibers of a composite are the fibers of the second map followed by the fibers of the first.
+    \func fib-comp {X Y Z : \Cat} (F : Y -> Z) (G : X -> Y) (z : Z) : QEquiv {Fib (\lam x => F (G x)) z} {\Sigma (u : Fib F z) (Fib G u.1)} \cowith
+      | f s => ((G s.1, s.2), (s.1, idp))
+      | ret t => (t.2.1, pmap F t.2.2 *> t.1.2)
+      | ret_f s => pmap (\lam P => ((s.1, P) : Fib (\lam x => F (G x)) z)) idp_*>
+      | f_sec t => sec t.2.2 t.1.2
+      \where
+        \func sec {x : X} {y : Y} (R : G x = y) {z' : Z} (Q : F y = z')
+          : ((G x, pmap F R *> Q), (x, idp)) = {\Sigma (u : Fib F z') (Fib G u.1)} ((y, Q), (x, R)) \elim R, Q
+          | idp, idp => idp
+  }
+
+-- | The extension of {q}: the localization of {R} at the arrows over {W}.
+\func ExtR.{u} {C R : \Cat u} (W : CatWeakEq C) (q : R ->⁺ C) : \Cat u
+  => Localize (PullbackWeakEq q)
+
+\func extMap.{u} {C R : \Cat u} (W : CatWeakEq C) (q : R ->⁺ C) (r :⁺ R) : ExtR W q
+  => localize (PullbackWeakEq q) r
+
+-- | The projection of the extension, induced by `l ∘ q`.
+\func extProj.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l) (q : R ->⁺ C)
+                  (y :⁺ ExtR W q) : L
+  => localize-lift {PullbackWeakEq q} {L} {\lam r => l (q r)} (\new FuncWeakEq { | hfunc-we w => Lz.1.hfunc-we w }) y
+
+\private \module ExtendHelpers \where {
+  -- ## The opposite side
+
+  \lemma sm.{u} {C R : \Cat u} {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (z : Op C) : IsSmall.{u} (Fibers (OpFunc q) z)
+    => IsSmall.fromGroupoid (leftFib-grpd (opFunc-leftFib qf) z) {\Sigma (e : Op R) (OpFunc q e = z)} \new QEquiv {
+         | f s => ((s.1, s.2) : Fibers (OpFunc q) z)
+         | ret t => (t.1, t.2)
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }
+
+  -- | The straightening of `OpFunc q`.
+  \func G.{u} {C R : \Cat u} {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (z :⁺ Op C) : \Type u
+    => Straight (opFunc-leftFib qf) (sm qf) z
+
+  \lemma G-leftFib.{u} {C R : \Cat u} {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) : IsLeftFib (G qf)
+    => straighten-leftFib {Op C} {Fibers (OpFunc q)} {opFunc-leftFib qf} {sm qf}
+
+  -- | Transport along {h} in a left fibration is an equivalence if lifts of {h} with a given target are unique.
+  \lemma leftFib-tr-equiv {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsLeftFib B) {a a' : A} (h : a ~> a')
+                          (c : \Pi (b' : B a') -> Contr (ContLift B (a, a', h, b'))) : IsEquiv (leftFib-tr Bf h)
+    => contrFibers=>IsEquiv \lam b' => Contr.Contr_QEquiv (lift-fib b') (c b')
+    \where
+      \func lift-fib (b' : B a') : QEquiv {ContLift B (a, a', h, b')} {Fib (leftFib-tr Bf h) b'}
+        => transQEquiv (\new QEquiv {ContLift B (a, a', h, b')} {\Sigma (b : B a) (DPath (\lam i => B (h i)) b b')} {
+                          | f l => (l.1, l.2)
+                          | ret l => (l.1, l.2)
+                          | ret_f _ => idp
+                          | f_sec _ => idp
+                        })
+                       (sigma-right \lam b => IsEquiv.toQEquiv (leftFib-dpath-equiv Bf (leftFib-lift Bf (a, a', h, b)) {b'}))
+
+  -- | Locality of {q} implies that the straightening of `OpFunc q` inverts `OpWeakEq W`.
+  \lemma G-inverts.{u} {C R : \Cat u} {W : CatWeakEq C} {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q)
+    : InvertsWeakEq {OpWeakEq W} (G qf) \cowith
+    | hfunc-we {a} aw => \case aw \with {
+         | inP (b, w, p) => transport (\lam (a' : DI ->⁺ Op C) => IsIso (dpath \lam i => G qf (a' i))) p (iso-at b w)
+       }
+    \where {
+      \lemma iso-at (b : DI ->⁺ C) (w : isWeakEq b) : IsIso (dmap (G qf) (opArr (dpath b)))
+        => ~>_->-equiv-iso $ (IsEquiv.parallelEquiv (inP (symQEquiv Straight.equiv)) (inP (symQEquiv Straight.equiv))
+                               (\lam t => tr-straight (opArr (dpath b)) t)).1
+             (leftFib-tr-equiv (opFunc-leftFib qf) (opArr (dpath b)) \lam t' =>
+                \let r => IsEquiv.ret (op-fiber-equiv q (b dleft)) t'
+                \in transport (\lam t'' => Contr (ContLift (Fibers (OpFunc q)) (Op.toOp (b dright), Op.toOp (b dleft), opArr (dpath b), t'')))
+                              (IsEquiv.f_ret (op-fiber-equiv q (b dleft)))
+                              (opFunc-colift-contr q r.1 r.2 (dpath b) (wl b w (r.1, r.2))))
+
+      -- | Transport in the straightening is transport in the left fibration.
+      \sfunc tr-straight {z z' : Op C} (h : z ~> z') (t : Fibers (OpFunc q) z)
+        : Straight.toStraight (leftFib-tr (opFunc-leftFib qf) h t) = ~>_-> (dmap (G qf) h) (Straight.toStraight t)
+        => leftFib-tr-natural (opFunc-leftFib qf) (G-leftFib qf) (\lam s => Straight.toStraight s.2) h t
+           *> leftFib-tr-dpath (G-leftFib qf) (dpath \lam i => coe+ (\lam j => G qf (h j)) (Straight.toStraight t) i)
+    }
+
+  -- | The extension of {G} along `OpFunc l`.
+  \func G'.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+               {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (z :⁺ Op L) : \Type u
+    => IsLocalization.lift (OpFunc-isLocalization Lz) (G-inverts qf wl) z
+
+  \sfunc G'-restrict.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                         {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (z :⁺ Op C)
+    : G' Lz qf wl (OpFunc l z) = G qf z
+    => IsLocalization.lift.restrict {OpWeakEq W} {Op L} {\Type u} {OpFunc l} {OpFunc-isLocalization Lz} {G qf} {G-inverts qf wl} {z}
+
+  -- | The comparison functor from `Op R` to the total category of {G'}.
+  \func n.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+              {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (t :⁺ Op R)
+    : \Sigma⁺ (z : Op L) (G' Lz qf wl z)
+    => (OpFunc l (OpFunc q t), transport+ (\lam (Y : \Type u) => Y) (inv (G'-restrict Lz qf wl (OpFunc q t)))
+                                          (Straight.toStraight ((t, idp) : Fibers (OpFunc q) (OpFunc q t))))
+
+  \lemma tr-isEquiv.{u} {A B : \Type u} (P : A = B) : IsEquiv (transport+ (\lam (Y : \Type u) => Y) P) \elim P
+    | idp => inP idEquiv
+
+  \sfunc n-fiber-path.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                          {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (t : Op R) {z : Op C} (P : OpFunc q t = z)
+    : ((n Lz qf wl t, idp *> pmap+ (OpFunc l) P) : Fibers (totalProj (G' Lz qf wl)) (OpFunc l z))
+      = ((OpFunc l z, transport+ (\lam (Y : \Type u) => Y) (inv (G'-restrict Lz qf wl z)) (Straight.toStraight ((t, P) : Fibers (OpFunc q) z))), idp) \elim P
+    | idp => idp
+
+  -- | {n} induces equivalences of fibers.
+  \lemma n-fiber-equiv.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                           {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (z : Op C)
+    : IsEquiv {Fibers (OpFunc q) z} {Fibers (totalProj (G' Lz qf wl)) (OpFunc l z)} (\lam s => (n Lz qf wl s.1, idp *> pmap+ (OpFunc l) s.2))
+    => transport IsEquiv (ext \lam s => inv (n-fiber-path Lz qf wl s.1 s.2)) $
+         IsEquiv.trans (inP (symQEquiv Straight.equiv)) $
+         IsEquiv.trans (tr-isEquiv (inv (G'-restrict Lz qf wl z))) (inP (fibers-total-equiv {Op L} {G' Lz qf wl} (OpFunc l z)))
+
+  -- | {n} is a localization at the arrows over `OpWeakEq W`.
+  \lemma n-isLocalization.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                              {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q)
+    : IsLocalization {PullbackWeakEq {Op R} {OpWeakEq W} (OpFunc q)} (n Lz qf wl)
+    => leftFib-isLocalization (OpFunc-isLocalization Lz) {Op R} {\Sigma⁺ (z : Op L) (G' Lz qf wl z)} {OpFunc q} {totalProj (G' Lz qf wl)}
+         (opFunc-leftFib qf) (leftFib-total (leftFib-pullback (G' Lz qf wl) universe-leftFib)) {n Lz qf wl} (\lam _ => idp)
+         (n-fiber-equiv Lz qf wl)
+
+  -- ## The opposite of the extension
+
+  -- | `OpFunc (extMap W q)` is a localization at the same arrows as {n}.
+  \lemma opExt-isLocalization.{u} {C R : \Cat u} {W : CatWeakEq C} {q : R ->⁺ C}
+    : IsLocalization {PullbackWeakEq {Op R} {OpWeakEq W} (OpFunc q)} (OpFunc (extMap W q))
+    => transport (\lam (V : CatWeakEq (Op R)) => IsLocalization {V} (OpFunc (extMap W q))) (ext (ext \lam a => ext (OpWeakEq-pullback {R} {W} q a)))
+                 (OpFunc-isLocalization (localize-isLocalization {PullbackWeakEq q}))
+
+  -- | The equivalence between `Op (ExtR W q)` and the total category of {G'} under `Op R`.
+  \func U.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+              {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q)
+    : \Sigma (u : Op (ExtR W q) ->⁺ \Sigma⁺ (z : Op L) (G' Lz qf wl z)) (\Pi (x :⁺ Op R) -> u (OpFunc (extMap W q) x) = n Lz qf wl x) (IsHEquiv u)
+    => IsLocalization.unique opExt-isLocalization (n-isLocalization Lz qf wl)
+
+  -- | The two projections agree on `OpFunc (extMap W q)`.
+  \func proj-restr.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                       {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (x :⁺ Op R)
+    : totalProj (G' Lz qf wl) ((U Lz qf wl).1 (OpFunc (extMap W q) x)) = OpFunc (extProj Lz q) (OpFunc (extMap W q) x)
+    => pmap+ (totalProj (G' Lz qf wl)) ((U Lz qf wl).2 x)
+       *> inv (OpFunc-comp {R} {C} {L} {q} {l} {x}) *> OpFunc-comp {R} {ExtR W q} {L} {extMap W q} {extProj Lz q} {x}
+
+  -- | The projections agree, with restriction {proj-restr}.
+  \func proj-path.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                      {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q)
+    => epi-path (localization-epi (IsLocalization.univ (opExt-isLocalization {C} {R} {W} {q}) {Op L}))
+                {\lam y => totalProj (G' Lz qf wl) ((U Lz qf wl).1 y)} {OpFunc (extProj Lz q)} (proj-restr Lz qf wl)
+
+  \func delta.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                  {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (y :⁺ Op (ExtR W q))
+    : totalProj (G' Lz qf wl) ((U Lz qf wl).1 y) = OpFunc (extProj Lz q) y
+    => path \lam i => (proj-path Lz qf wl).1 i y
+
+  -- ## Transfer along an equivalence over the base
+
+  \lemma twist-equiv {Y B : \Cat} {g g' : Y ->⁺ B} (w : \Pi (y : Y) -> g y = g' y) (b : B)
+    : IsEquiv {Fibers g' b} {Fibers g b} (\lam s => (s.1, w s.1 *> s.2))
+    => inP \new QEquiv {
+         | ret s => (s.1, inv (w s.1) *> s.2)
+         | ret_f s => pmap (\lam r => ((s.1, r) : Fibers g' b)) (inv *>-assoc *> pmap (`*> s.2) inv_*> *> idp_*>)
+         | f_sec s => pmap (\lam r => ((s.1, r) : Fibers g b)) (inv *>-assoc *> pmap (`*> s.2) *>_inv *> idp_*>)
+       }
+
+  \lemma fib-hequiv.{u} {A A' : \Cat u} {B : \Cat} {p : A ->⁺ B} {p' : A' ->⁺ B} {u : A' ->⁺ A} (ue : IsHEquiv u)
+                        (d : \Pi (y :⁺ A') -> p (u y) = p' y) (b : B)
+    : IsEquiv {Fibers p' b} {Fibers p b} (\lam s => (u s.1, d s.1 *> s.2))
+    => aux (HEquiv_= ue) d b
+    \where
+      \private \lemma aux.{v} {A A' : \Cat v} {B : \Cat} (P : A' = A) {p : A ->⁺ B} {p' : A' ->⁺ B}
+                              (d : \Pi (y :⁺ A') -> p (transport+ (\lam Y => Y) P y) = p' y) (b : B)
+        : IsEquiv {Fibers p' b} {Fibers p b} (\lam s => (transport+ (\lam Y => Y) P s.1, d s.1 *> s.2)) \elim P
+        | idp => twist-equiv {A} {B} {p} {p'} (\lam y => d y) b
+
+  \lemma leftFib-transfer.{u} {A A' : \Cat u} {B : \Cat} {p : A ->⁺ B} {p' : A' ->⁺ B} {u : A' ->⁺ A} (ue : IsHEquiv u)
+                              (d : \Pi (y :⁺ A') -> p (u y) = p' y) (pf : IsLeftFib (Fibers p)) : IsLeftFib (Fibers p')
+    => aux (HEquiv_= ue) d pf
+    \where
+      \private \lemma aux.{v} {A A' : \Cat v} {B : \Cat} (P : A' = A) {p : A ->⁺ B} {p' : A' ->⁺ B}
+                              (d : \Pi (y :⁺ A') -> p (transport+ (\lam Y => Y) P y) = p' y) (pf : IsLeftFib (Fibers p))
+        : IsLeftFib (Fibers p') \elim P
+        | idp => transport (\lam (p'' : A ->⁺ B) => IsLeftFib (Fibers p'')) (funExt+ d) pf
+
+  -- ## Fibers on the opposite side
+
+  -- | The path in the base for the fibers of `OpFunc (extMap W q)`.
+  \func hh.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l) (q : R ->⁺ C) (t :⁺ Op R)
+    : OpFunc (extProj Lz q) (OpFunc (extMap W q) t) = OpFunc l (OpFunc q t)
+    => inv (OpFunc-comp {R} {ExtR W q} {L} {extMap W q} {extProj Lz q} {t}) *> OpFunc-comp {R} {C} {L} {q} {l} {t}
+
+  \sfunc alg {A : \Cat} {w x y z v : A} (a : w = x) (c1 : y = x) (c2 : y = z) (r : x = v)
+    : (a *> inv c1 *> c2) *> ((inv c2 *> c1) *> r) = a *> (idp *> r) \elim c1, c2, r
+    | idp, idp, idp => idp
+
+  \sfunc pt-eq {X B : \Cat} {pi : X ->⁺ B} {x x' :⁺ X} (e :⁺ x = x') {b :⁺ B} (Q :⁺ pi x' = b)
+    : ((x, pmap+ pi e *> Q) : Fibers pi b) = (x', Q) \elim e, Q
+    | idp, idp => idp
+
+  -- | The map of fibers of `OpFunc (extMap W q)` is an equivalence.
+  \lemma opFiber-equiv.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                           {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (z : Op C)
+    : IsEquiv {Fibers (OpFunc q) z} {Fibers (OpFunc (extProj Lz q)) (OpFunc l z)}
+              (\lam s => (OpFunc (extMap W q) s.1, hh Lz q s.1 *> pmap+ (OpFunc l) s.2))
+    => IsEquiv.leftFactor (fib-hequiv (U Lz qf wl).3 (delta Lz qf wl) (OpFunc l z)) $
+         transport IsEquiv (ext \lam s => inv (comp-path s.1 s.2)) (n-fiber-equiv Lz qf wl z)
+    \where
+      \sfunc comp-path (t : Op R) (P : OpFunc q t = z)
+        : (((U Lz qf wl).1 (OpFunc (extMap W q) t), delta Lz qf wl (OpFunc (extMap W q) t) *> (hh Lz q t *> pmap+ (OpFunc l) P))
+            : Fibers (totalProj (G' Lz qf wl)) (OpFunc l z))
+          = (n Lz qf wl t, idp *> pmap+ (OpFunc l) P)
+        => pmap (\lam r => (((U Lz qf wl).1 (OpFunc (extMap W q) t), r *> (hh Lz q t *> pmap+ (OpFunc l) P))
+                             : Fibers (totalProj (G' Lz qf wl)) (OpFunc l z))) ((proj-path Lz qf wl).2 t)
+           *> pmap (\lam r => (((U Lz qf wl).1 (OpFunc (extMap W q) t), r) : Fibers (totalProj (G' Lz qf wl)) (OpFunc l z)))
+                   (alg (pmap+ (totalProj (G' Lz qf wl)) ((U Lz qf wl).2 t)) (OpFunc-comp {R} {C} {L} {q} {l} {t})
+                        (OpFunc-comp {R} {ExtR W q} {L} {extMap W q} {extProj Lz q} {t}) (pmap+ (OpFunc l) P))
+           *> pt-eq {_} {_} {totalProj (G' Lz qf wl)} ((U Lz qf wl).2 t) (idp *> pmap+ (OpFunc l) P)
+}
+
+-- | The projection of the extension of a local right fibration is a right fibration.
+\lemma rightFib-extend.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                           {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q)
+  : IsRightFib (Fibers (extProj Lz q))
+  => opFunc-leftFib-reflects $ leftFib-transfer (U Lz qf wl).3 (delta Lz qf wl)
+       (leftFib-total (leftFib-pullback (G' Lz qf wl) universe-leftFib))
+
+-- | The fibers of a local right fibration are the fibers of its extension.
+\lemma rightFib-extend-fiber.{u} {C L R : \Cat u} {W : CatWeakEq C} {l : C ->⁺ L} (Lz : IsLocalization {W} l)
+                                 {q : R ->⁺ C} (qf : IsRightFib (Fibers q)) (wl : IsLocalRightFib W q) (c : C)
+  : IsEquiv {Fibers q c} {Fibers (extProj Lz q) (l c)} (\lam s => (extMap W q s.1, pmap+ l s.2))
+  => IsEquiv.trans (inP (fib-sigma q c)) $ IsEquiv.trans sigma-equiv' (inP (symQEquiv (fib-sigma (extProj Lz q) (l c))))
+  \where {
+    \lemma sigma-equiv' : IsEquiv {\Sigma (x : R) (q x = c)} {\Sigma (y : ExtR W q) (extProj Lz q y = l c)} (\lam s => (extMap W q s.1, pmap+ l s.2))
+      => IsEquiv.leftFactor (op-fiber-equiv (extProj Lz q) (l c)) $
+           transport IsEquiv (ext \lam s => inv (square s.1 s.2)) $
+           IsEquiv.trans (op-fiber-equiv q c) $ IsEquiv.trans (opFiber-equiv Lz qf wl (Op.toOp c)) (inP (post-path (OpFunc_toOp l c)))
+
+    \func fib-sigma {E A : \Cat} (f : E ->⁺ A) (a : A) : QEquiv {Fibers f a} {\Sigma (e : E) (f e = a)} \cowith
+      | f s => (s.1, s.2)
+      | ret s => (s.1, s.2)
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+    -- | Composition with a path in the base identifies fibers.
+    \func post-path {X Y : \Cat} {f : X ->⁺ Y} {y y' : Y} (p : y = y')
+      : QEquiv {Fibers f y} {Fibers f y'} (\lam t => (t.1, t.2 *> p)) \cowith
+      | ret t => (t.1, t.2 *> inv p)
+      | ret_f t => pmap (\lam r => ((t.1, r) : Fibers f y)) (*>-assoc *> pmap (t.2 *>) *>_inv)
+      | f_sec t => pmap (\lam r => ((t.1, r) : Fibers f y')) (*>-assoc *> pmap (t.2 *>) inv_*>)
+
+    \sfunc alg2 {A : \Cat} {u v w y t : A} (c : v = u) (d : v = w) (r : w = y) (e : y = t) {T : v = t}
+                (h : d *> r = T *> inv e) : ((inv c *> d) *> r) *> e = inv c *> T \elim e, h
+      | idp, idp => *>-assoc
+
+    -- | The map of fibers corresponds to the map of fibers of `OpFunc (extMap W q)` ({op-fiber-postcomp}, {op-fiber-forget}).
+    \sfunc square (x : R) (P : q x = c)
+      : (Op.toOp (extMap W q x), OpFunc_toOp (extProj Lz q) (extMap W q x) *> pmap Op.toOp (pmap+ l P))
+        = {Fibers (OpFunc (extProj Lz q)) (Op.toOp (l c))}
+        (OpFunc (extMap W q) (Op.toOp x), (hh Lz q (Op.toOp x) *> pmap+ (OpFunc l) (OpFunc_toOp q x *> pmap Op.toOp P)) *> OpFunc_toOp l c) \elim P
+      | idp => inv $ pmap (\lam r => ((OpFunc (extMap W q) (Op.toOp x), r) : Fibers (OpFunc (extProj Lz q)) (Op.toOp (l (q x)))))
+                          (alg2 _ _ _ _ (op-fiber-postcomp {R} {C} {L} {q} {l} {x} idp))
+                     *> op-fiber-forget {R} {ExtR W q} {L} {extMap W q} {extProj Lz q} {x} {l (q x)} idp idp
+  }

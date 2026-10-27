@@ -218,7 +218,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     FunCallExpression funCall = body.cast(FunCallExpression.class);
     boolean checkSigma = definition != Prelude.COERCE_PLUS;
 
-    if (funCall != null && (funCall.getDefinition() == Prelude.ISO && definition == Prelude.COERCE || funCall.getDefinition() == Prelude.ISO_PLUS && definition == Prelude.COERCE_PLUS)) {
+    if (funCall != null && ((funCall.getDefinition() == Prelude.ISO || funCall.getDefinition() == Prelude.ISO_CAT) && definition == Prelude.COERCE || funCall.getDefinition() == Prelude.ISO_PLUS && definition == Prelude.COERCE_PLUS)) {
       List<? extends Expression> isoArgs = funCall.getDefCallArguments();
       ReferenceExpression refExpr = isoArgs.getLast().accept(this, NormalizationMode.WHNF).cast(ReferenceExpression.class);
       if (refExpr != null && refExpr.getBinding() == param) {
@@ -542,7 +542,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
             } else {
               for (HaveClause letClause : let.getClauses()) {
                 substitution.add(letClause, letClause instanceof LetClause
-                  ? new ReferenceExpression(LetClause.make(true, letClause.getName(), letClause.getPattern(), letClause.getExpression().subst(substitution, levelSubstitution)))
+                  ? new ReferenceExpression(LetClause.make(true, letClause.getName(), letClause.getPattern(), letClause.getExpression().subst(substitution, levelSubstitution), letClause.getVariance()))
                   : LetExpression.normalizeClauseExpression(letClause.getPattern(), letClause.getExpression().subst(substitution, levelSubstitution)));
               }
             }
@@ -1006,7 +1006,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
       ExprSubstitution substitution = new ExprSubstitution();
       List<HaveClause> newClauses = new ArrayList<>(let.getClauses().size());
       for (HaveClause clause : let.getClauses()) {
-        HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, mode).subst(substitution));
+        HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, mode).subst(substitution), clause.getVariance());
         substitution.add(clause, new ReferenceExpression(newClause));
         newClauses.add(newClause);
       }
@@ -1110,13 +1110,13 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   @Override
   public Expression visitPath(PathExpression expr, NormalizationMode mode) {
     if (mode == NormalizationMode.WHNF) return expr;
-    return new PathExpression(expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode), expr.isDirected(), expr.isForcedInfinite());
+    return new PathExpression(expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode), expr.isDirected());
   }
 
   @Override
   public Expression visitPathType(PathTypeExpression expr, NormalizationMode mode) {
     if (mode == NormalizationMode.WHNF) return expr;
-    return new PathTypeExpression(expr.getArgumentType().accept(this, mode), expr.getLeftArgument().accept(this, mode), expr.getRightArgument().accept(this, mode), expr.isDirected(), expr.isForcedInfinite());
+    return new PathTypeExpression(expr.getArgumentType().accept(this, mode), expr.getLeftArgument().accept(this, mode), expr.getRightArgument().accept(this, mode), expr.isDirected());
   }
 
   @Override

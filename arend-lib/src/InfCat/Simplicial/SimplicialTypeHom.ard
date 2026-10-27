@@ -1,0 +1,163 @@
+{- | Maps of simplicial types are maps of their categories of simplices over {DeltaCat}.
+
+ -   A map `phi : X ~> Y` acts on categories of simplices by postcomposition ({elMap}). On the opposite total categories it is
+ -   `OpFunc (totalMap phi)` ({elOp-natural}): under {elOp}, both sides represent the left Kan extension of {elPair} along
+ -   `totalMap phi`, which is {elPair} of the postcomposite ({elPair-lan}). The comparison is adjoint to postcomposition on fibers
+ -   ({sliceFiber-postcomp}) and is an isomorphism since it maps universal elements to universal elements.
+ -   Transposing, {elTot} is natural ({elTot-natural}), and {depUnivalence} gives {elSec-equiv}: maps `X ~> Y` are sections
+ -   of the category of simplices of {Y} over that of {X} over {DeltaCat}.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Opposite
+\import InfCat.Opposite.Transpose
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Simplicial.SimplicialType
+\import InfCat.Simplicial.SimplicialTypeEquiv
+\import InfCat.Slice.TotalSlice
+\import InfCat.Yoneda.CovariantYoneda
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Paths
+\open SimpType
+
+-- | The action of a map of simplicial types on the small categories of simplices.
+\func elMap.{u} {X Y : SimpType.{u}} (phi : X ~> Y) (x :⁺ ElU X) : ElU Y
+  => resizeCat ((unresizeEl x).1, comp (unresizeEl x).2 (toPSh phi))
+
+-- | The action of a map of simplicial types on total categories.
+\func totMap.{u} {X Y : SimpType.{u}} (phi : X ~> Y) (s :⁺ \Sigma⁺ (y : Op DeltaCat) (X y)) : \Sigma⁺ (y : Op DeltaCat) (Y y)
+  => pullbackSlice-isProduct.totalMap (toPSh phi) s
+
+-- | The left Kan extension of {elPair} along {totMap} is {elPair} of the postcomposite, covariantly in the simplex.
+\sfunc elPair-lan.{u} {X Y : SimpType.{u}} (phi : X ~> Y) {x :⁺ ElU X}
+  : LeftKanExtType (totMap phi) (elPair X x) = elPair Y (elMap phi x)
+  => path \lam i => natIso-path (lanMap phi) (lanMap-iso phi) i x
+  \where \private {
+    -- | Postcomposition with {phi} on fibers, as a natural transformation.
+    \func theta.{v} {X Y : SimpType.{v}} (phi : X ~> Y) (x :⁺ ElU X) : elPair X x ~> (\lam t => elPair Y (elMap phi x) (totMap phi t))
+      => dpath \lam i t => dpath (iso+ \lam e => sliceFiber-postcomp (toPSh phi) {yoneda (unresizeEl x).1, (unresizeEl x).2} t e) i
+
+    -- | The comparison map adjoint to {theta}.
+    \sfunc lanMap.{v} {X Y : SimpType.{v}} (phi : X ~> Y) (x :⁺ ElU X) : LeftKanExtType (totMap phi) (elPair X x) ~> elPair Y (elMap phi x)
+      => (leftKanAdjunction (totMap phi)).heta_heps-rl (theta phi x)
+
+    -- | The base point of the universal element of {elPair}.
+    \func pt0.{v} {X : SimpType.{v}} (x : ElU X) : \Sigma⁺ (y : Op DeltaCat) (X y)
+      => (Op.toOp (unresizeEl x).1, yonedaLemma.fun (unresizeEl x).2)
+
+    -- | The universal element of {elPair}.
+    \func el0.{v} {X : SimpType.{v}} (x : ElU X) : elPair X x (pt0 x)
+      => Straight.toStraight (Op.Hom-idd (unresizeEl x).1, idp)
+
+    -- | {lanMap} is an isomorphism: it maps the universal element of the left Kan extension to that of {elPair}.
+    \lemma lanMap-iso.{v} {X Y : SimpType.{v}} (phi : X ~> Y) (x : ElU X) : IsIso (lanMap phi x)
+      => \let | n => (unresizeEl x).1
+              | a => (unresizeEl x).2
+              | K => ~>_->_comp-fam a (toPSh phi) (Op.toOp n) (Op.Hom-idd n)
+         \in (univElem-iso-char (leftKanExtType-univElem (totMap phi) (elPair.univElem X n a)) (elPair.univElem Y n (comp a (toPSh phi)))
+                                {=_~> (path \lam i => ((Op.toOp n, K i) : \Sigma⁺ (y : Op DeltaCat) (Y y)))}
+                                (~>_->_=_~> {_} {elPair Y (elMap phi x)} (path \lam i => ((Op.toOp n, K i) : \Sigma⁺ (y : Op DeltaCat) (Y y)))
+                                             (Straight.toStraight (Op.Hom-idd n, idp))
+                                 *> tr-fib {Y} {yoneda n, comp a (toPSh phi)} K
+                                 *> inv (unit-lanMap phi x))).2 (=_~>-iso _)
+
+    -- | {lanMap} maps the image of the universal element under the unit to its image under {theta}.
+    \sfunc unit-lanMap.{v} {X Y : SimpType.{v}} (phi : X ~> Y) (x : ElU X)
+      : ~>_-> (dmap (__ (totMap phi (pt0 x))) (lanMap phi x)) (~>_-> (dmap (__ (pt0 x)) (leftKanExtType-unit (totMap phi) (elPair X x))) (el0 x))
+        = ~>_-> (dmap (__ (pt0 x)) (theta phi x)) (el0 x)
+      => inv (~>_->_comp-fam (leftKanExtType-unit (totMap phi) (elPair X x)) (dmap (\lam Q t =>⁺ Q (totMap phi t)) (lanMap phi x)) (pt0 x) (el0 x))
+         *> pmap (\lam m => ~>_-> (dpath \lam i => comp (leftKanExtType-unit (totMap phi) (elPair X x)) (dmap (\lam Q t =>⁺ Q (totMap phi t)) m) i (pt0 x)) (el0 x))
+                 (\peval lanMap phi x)
+         *> pmap (\lam (s : elPair X x ~> (\lam t => elPair Y (elMap phi x) (totMap phi t))) => ~>_-> (dmap (__ (pt0 x)) s) (el0 x))
+                 ((leftKanAdjunction (totMap phi)).heta_heps-rlr {_} {_} {theta phi x})
+
+    -- | Transport of an element of a fiber along a path in the second component of the base point.
+    \sfunc tr-fib.{w} {Z : SimpType.{w}} {s : Slice Z} {y : Op.{w} DeltaCat} {g : s.1 y} {z' : Z y} (K : sliceFiber.covMap s.2 (y, g) = z')
+      : transport (\lam t => sliceFiber Z s t) (path \lam i => ((y, K i) : \Sigma⁺ (y : Op DeltaCat) (Z y))) (Straight.toStraight (g, idp))
+        = Straight.toStraight (g, K) \elim K
+      | idp => idp
+  }
+
+-- | {elOp} is natural: postcomposition with {phi} corresponds to `OpFunc (totMap phi)`.
+\sfunc elOp-natural.{u} {X Y : SimpType.{u}} (phi : X ~> Y) {x :⁺ ElU X}
+  : OpFunc (totMap phi) (elOp X x) = elOp Y (elMap phi x)
+  => path \lam i => ((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (\lam x => OpFunc (totMap phi) (elOp X x)) (\lam x => elOp Y (elMap phi x))).sec
+       (funExt+ \lam x => OpFunc.char *> pmap+ (LeftKanExtType (totMap phi)) elOp.hom *> elPair-lan phi *> inv elOp.hom) i x
+
+-- | {elTot} is natural: `OpFunc (elMap phi)` corresponds to {totMap}.
+\sfunc elTot-natural.{u} {X Y : SimpType.{u}} (phi : X ~> Y) {w :⁺ Op (ElU X)}
+  : elTot Y (OpFunc (elMap phi) w) = totMap phi (elTot X w)
+  => path \lam i => IsEquiv.isInj opTranspose-equiv {\lam (w :⁺ Op (ElU X)) => elTot Y (OpFunc (elMap phi) w)} {\lam w => totMap phi (elTot X w)}
+       (funExt+ \lam x => opTranspose-precomp *> elTot.transpose *> inv (elOp-natural phi)
+                          *> inv (pmap+ (OpFunc (totMap phi)) (elTot.transpose {X} {x}))
+                          *> inv (OpFunc-comp {_} {_} {_} {elTot X} {totMap phi})) i w
+
+-- | The section of the small category of simplices of {Y} over that of {X} given by {phi}.
+\func elSec.{u} {X Y : SimpType.{u}} (phi : X ~> Y) (x :⁺ ElU X) : Fibers (elUProj Y) (elUProj X x)
+  => (elMap phi x, idp)
+
+{- | Maps of simplicial types are maps of their small categories of simplices over {DeltaCat}.
+ -   Pass to opposites ({op-sections}), identify the opposite categories of simplices with the total categories ({elTot}),
+ -   and use {depUnivalence}; {elSec} corresponds to `phi` by {elTot-natural}.
+ -}
+\lemma elSec-equiv.{u} {X Y : SimpType.{u}}
+  : IsEquiv {X ~> Y} {\Pi (x :⁺ ElU X) -> Fibers (elUProj Y) (elUProj X x)} (elSec {X} {Y})
+  => IsEquiv.leftFactor {_} {_} {_} {elSec} {\lam s => post Y (\lam w => (op-sections (elUProj Y) (elUProj X)).f s w)}
+       (IsEquiv.trans (inP (op-sections (elUProj Y) (elUProj X))) (post-equiv X Y))
+       (transport IsEquiv (path \lam j phi => inv (compare phi) @ j) lam-equiv)
+  \where {
+    -- | The projection of the total category of {S}.
+    \func tproj.{u} {S : SimpType.{u}} (t :⁺ \Sigma⁺ (y : Op DeltaCat) (S y)) : Op DeltaCat
+      => t.1
+
+    -- | Postcomposition with {elTot} on fibers.
+    \func post.{u} {X : SimpType.{u}} (Y : SimpType.{u}) (s : \Pi (w :⁺ Op (ElU X)) -> Fibers (\lam e =>⁺ OpFunc (elUProj Y) e) (OpFunc (elUProj X) w))
+               (w :⁺ Op (ElU X)) : Fibers (tproj {Y}) (OpFunc (elUProj X) w)
+      => (elTot Y (s w).1, elTot-proj Y *> (s w).2)
+
+    \lemma post-equiv.{u} (X Y : SimpType.{u}) : IsEquiv (post {X} Y)
+      => sections-postcomp-equiv {_} {_} {Fibers (\lam e =>⁺ OpFunc (elUProj Y) e)} {Fibers (tproj {Y})}
+           (\lam z => (elTot Y z.2.1, elTot-proj Y *> z.2.2))
+           (IsHEquiv.rightFactor (fibers-sigma-hequiv (\lam e =>⁺ OpFunc (elUProj Y) e)) $
+              transport IsHEquiv (funExt+ \lam e => inv (fiber-path (elTot-proj Y {e})))
+                        (IsHEquiv.trans (elTot-equiv Y) (fibers-sigma-hequiv (tproj {Y}))))
+           (\lam w => OpFunc (elUProj X) w)
+
+    -- | A point of a fiber of a projection of a total category, as a point of the total category of fibers.
+    \sfunc fiber-path {E B : \Cat} {q : E ->⁺ B} {t :⁺ E} {b :⁺ B} (r :⁺ q t = b)
+      : ((b, (t, r)) : \Sigma⁺ (b : B) (Fibers q b)) = (q t, (t, idp)) \elim r
+      | idp => idp
+
+    -- | The map from {depUnivalence} to sections over the opposite category of simplices.
+    \func lam.{u} {X Y : SimpType.{u}} (phi : X ~> Y) (w :⁺ Op (ElU X)) : Fibers (tproj {Y}) (OpFunc (elUProj X) w)
+      => transport+ (Fibers (tproj {Y})) (elTot-proj X) (totMap phi (elTot X w), idp)
+
+    \lemma lam-equiv.{u} {X Y : SimpType.{u}} : IsEquiv (lam {X} {Y})
+      => IsEquiv.trans (inP toPSh-equiv) $ IsEquiv.trans (inP depUnivalence) $ IsEquiv.trans (inP (fibers-total-equiv.sections {_} {_} {Y} (tproj {X}))) $
+         IsEquiv.trans (sections-precomp-equiv (elTot-equiv X) {\lam s => Fibers (tproj {Y}) s.1}) $ inP \new QEquiv {
+           | f s w => transport+ (Fibers (tproj {Y})) (elTot-proj X) (s w)
+           | ret s w => transport+ (Fibers (tproj {Y})) (inv (elTot-proj X)) (s w)
+           | ret_f s => funExt+ \lam w => transport+_inv_*> (Fibers (tproj {Y})) (elTot-proj X)
+           | f_sec s => funExt+ \lam w => transport+_*>_inv (Fibers (tproj {Y})) (elTot-proj X)
+         }
+
+    -- | {elSec} corresponds to {lam} under {op-sections} and {post}.
+    \sfunc compare.{u} {X Y : SimpType.{u}} (phi : X ~> Y) : post Y (\lam w => (op-sections (elUProj Y) (elUProj X)).f (elSec phi) w) = lam phi
+      => fibers-sections-ext (op-fun-path-isProp (\lam {A} f g => deltaCat-fun-path-isProp f g)) \lam w => pmap+ (elTot Y) op-sections-fst *> elTot-natural phi *> inv (tr-fst (elTot-proj X))
+
+    -- | Transport in {Fibers} does not change the point of the total category.
+    \sfunc tr-fst {E B : \Cat} {q : E ->⁺ B} {b b' :⁺ B} (p :⁺ b = b') {t :⁺ Fibers q b} : (transport+ (Fibers q) p t).1 = t.1 \elim p
+      | idp => idp
+  }

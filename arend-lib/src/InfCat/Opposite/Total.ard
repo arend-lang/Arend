@@ -1,0 +1,214 @@
+{- | The opposite of the total category of a functor `Q : C ->⁺ \Type u` (a left fibration over {C}) is the comma category
+ -   `Op.Hom ↓ Q`, a right fibration over `Op C` ({op-total-equiv}).
+ -   Both are paired by {totPairing}: an object `(z, a)` of `Op.Hom ↓ Q` and an object `(c, q)` of the total category are paired
+ -   by the fiber of `a : Op.Hom z c -> Q c` over `q`. The pairing is perfect ({totPairing-perfect}), so {perfect-char} applies.
+ -   The comma category lives one universe level higher, since its objects contain arrows of `C ->⁺ \Type u`.
+ -
+ -   Commas are a special case: `d ↓ f` is the total category of {dualHom} ({rightComma-total-equiv}),
+ -   and `Op.Hom ↓ dualHom f d` is `OpFunc f ↓ toOp d` ({opComma-equiv}). The comparison map {opComma-map} is
+ -   the action of {f} on `Op.Hom` ({opHom-act}) followed by the given arrow.
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Homotopy.Fibration
+\import Equiv.Sigma
+\import InfCat.Basics
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.LeftComma
+\import InfCat.Functor.RightComma
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Opposite
+\import InfCat.Opposite.Pairing
+\import InfCat.Opposite.TwistedArrow
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.Slice.TotalSlice
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | The action of {f} on `Op.Hom`, given by the unit of the left Kan extension along {f}.
+\func opHom-act.{u} {C D : \Cat u} (f : C ->⁺ D)
+  : (\lam (v :⁺ \Sigma⁺ C (Op C)) => Op.Hom v.2 v.1) ~> (\lam v => Op.Hom (OpFunc f v.2) (f v.1))
+  => comp (dpath \lam i v => dmap (__ v.1) (leftKanExtType-unit f (Op.Hom v.2)) i)
+          (=_~> (funExt+ \lam v => inv (pmap+ (__ (f v.1)) OpFunc.char)))
+
+-- | The image of the identity of {e} under {opHom-act}; it is a universal element of `Op.Hom (OpFunc p (toOp e))` at `p e` ({opHom-iota-univElem}).
+\func opHom-iota.{u} {B E : \Cat u} (p : E ->⁺ B) (e : E) : Op.Hom (OpFunc p (Op.toOp e)) (p e)
+  => sliceFiber.covMap (opHom-act p) ((e, Op.toOp e), Op.Hom-idd e)
+
+-- | {opHom-iota} is the universal element of the left Kan extension of `Op.Hom (toOp e)` along {p}.
+\lemma opHom-iota-univElem.{u} {B E : \Cat u} (p : E ->⁺ B) (e : E)
+  : IsUnivElem (Op.Hom (OpFunc p (Op.toOp e))) (p e) (opHom-iota p e)
+  => \let | c : \Sigma⁺ E (Op E) => (e, Op.toOp e)
+          | eta => ~>_-> (dmap (\lam H => H e) (leftKanExtType-unit p (Op.Hom (Op.toOp e)))) (Op.Hom-idd e)
+     \in \have | s1 : opHom-iota p e = ~>_-> (dpath \lam i => (=_~> (funExt+ \lam v => inv (pmap+ (__ (p v.1)) (OpFunc.char {E} {B} {p} {v.2})))) i c) eta
+                    => ~>_->_comp-fam (dpath \lam i v => dmap (__ v.1) (leftKanExtType-unit p (Op.Hom v.2)) i) (=_~> (funExt+ \lam v => inv (pmap+ (__ (p v.1)) OpFunc.char))) c (Op.Hom-idd e)
+               | s2 : dpath (\lam i => (=_~> (funExt+ \lam v => inv (pmap+ (__ (p v.1)) (OpFunc.char {E} {B} {p} {v.2})))) i c) = =_~> (inv (pmap+ (__ (p e)) OpFunc.char))
+                    => =_~>-at (funExt+ \lam v => inv (pmap+ (__ (p v.1)) (OpFunc.char {E} {B} {p} {v.2}))) c
+     \in transportInv (IsUnivElem _ (p e)) (s1 *> pmap (~>_-> __ eta) s2)
+          (univElem-path OpFunc.char (leftKanExtType-univElem p (twArr-source-univElem e)))
+  \where
+    -- | {=_~>} of a path of functors evaluated at {x}.
+    \private \func =_~>-at {X D : \Cat} {F G : X ->⁺ D} (N : F = G) (x : X) : dpath (\lam i => (=_~> N) i x) = =_~> (path \lam i => N i x) \elim N
+      | idp => idp
+
+-- | The pairing of `Op.Hom ↓ Q` with the total category of {Q}: the fiber of `y.2 : Op.Hom y.1 ~> Q` over {x}.
+\func totPairing.{u} {C : \Cat u} (Q : C ->⁺ \Type u) (y :⁺ LeftComma.{\suc u} (Op.Hom {C}) Q) (x :⁺ \Sigma⁺ (c : C) (Q c)) : \Type u
+  => sliceFiber Q ((Op.Hom y.1, y.2) : Slice Q) x
+
+{- | {totPairing} is perfect.
+ -   * For `y = (toOp c0, a)`, the element `(Op.Hom-idd c0, idp)` at `(c0, a (Op.Hom-idd c0))` is universal in both variables
+ -     ({totPairing-perfect.univ-x}, {totPairing-perfect.univ-y}); every `y` has this form.
+ -     So the values of {totPairing} are representable, and {totPairing} is fully faithful by the Yoneda lemma.
+ -   * Every object `(c, q)` of the total category is the base point of `(toOp c, a)`, where `a` corresponds to `q` by {yonedaCov}.
+ -}
+\lemma totPairing-perfect.{u} {C : \Cat u} (Q : C ->⁺ \Type u) : IsPerfect.{\suc u} (totPairing Q)
+  => (\lam y y' => \case base-point Q y \with {
+        | inP (x, e, Ux, Uy) => IsEquiv.leftFactor (Ux (\lam t => totPairing Q y' t)) (univElem-equiv Uy y')
+      }, \lam y => \case base-point Q y \with {
+        | inP (x, e, Ux, Uy) => (representable-char.{\suc u} {_} {totPairing Q y}).2 (inP (x, e, Ux))
+      }, \lam x =>
+        \let | ye => yonedaCov x.1 Q
+             | a => IsEquiv.ret ye x.2
+             | U => univElem-lift.{u} {_} {totPairing Q (Op.toOp x.1, a)} (univElem-equiv (univ-x Q x.1 a))
+        \in inP ((Op.toOp x.1, a), inv (IsIso_= (univElem-equiv.univElem-iso U)).1
+                                   *> pmap ReprFunctor (path \lam i => ((x.1, IsEquiv.f_ret ye {x.2} i) : \Sigma⁺ (c : C) (Q c)))))
+  \where {
+    -- | A universal element of a family of small types over a large category, given by transports at the small level.
+    \lemma univElem-lift.{v} {C : \Cat (\suc v)} {F : C ->⁺ \Type v} {x : C} {p : F x}
+                             (e : \Pi (y : C) -> IsEquiv {x ~> y} {F y} (\lam h => ~>_->.{v} (dmap F h) p))
+      : IsUnivElem.{\suc v} F x p
+      => equiv-univElem.{\suc v} \lam y => transport IsEquiv (ext \lam h => inv (coe+-level.{v} {\lam i => F (h i)})) (e y)
+
+    -- | The base point of the total category corresponding to `(toOp c0, a)`.
+    \func basePt.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (c0 : C) (a : Op.Hom (Op.toOp c0) ~> Q) : \Sigma⁺ (c : C) (Q c)
+      => (c0, sliceFiber.covMap a (c0, Op.Hom-idd c0))
+
+    -- | The canonical element of {totPairing} at `(toOp c0, a)` and {basePt}.
+    \func baseElem.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (c0 : C) (a : Op.Hom (Op.toOp c0) ~> Q)
+      : totPairing Q (Op.toOp c0, a) (basePt Q c0 a)
+      => Straight.toStraight (Op.Hom-idd c0, idp)
+
+    -- | The canonical element is universal in the second variable: this is {sliceFiber-univElem} for the universal element of `Op.Hom (toOp c0)`.
+    \lemma univ-x.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (c0 : C) (a : Op.Hom (Op.toOp c0) ~> Q)
+      : IsUnivElem (totPairing Q (Op.toOp c0, a)) (basePt Q c0 a) (baseElem Q c0 a)
+      => sliceFiber-univElem (\lam c => c) Q (Op.Hom (Op.toOp c0), a) (twArr-source-univElem c0)
+
+    {- | Transport of the canonical element in the first variable is an equivalence. Summed over `a`, arrows out of `(toOp c0, a)`
+     -   are arrows of `Op C` out of `toOp c0` (since `Op.Hom ↓ Q` is a right fibration over `Op C`), and elements of {totPairing}
+     -   are elements of `Op.Hom y.1 c0` (since `a` is determined by its value at the identity, {yonedaCov}).
+     -   Under these identifications, transport of the canonical element is transport of `Op.Hom-idd c0`, which is universal ({twArr-target-univElem}).
+     -}
+    \lemma equiv-y.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (c0 : C) (y : LeftComma.{\suc v} (Op.Hom {C}) Q) (a : Op.Hom (Op.toOp c0) ~> Q)
+      : IsEquiv {(Op.toOp c0, a) ~> {LeftComma.{\suc v} (Op.Hom {C}) Q} y} {totPairing Q y (basePt Q c0 a)} (tr Q c0 y a)
+      => (totalEquiv (tr Q c0 y)).2
+           ((IsEquiv.parallelEquiv {_} {_} {_} {_} {totalEquiv.total (tr Q c0 y)} (arrows-equiv Q c0 y) (elems-equiv Q c0 y)
+              (\lam t => inv (~>_->-natural {_} {\lam y' => totPairing Q y' (basePt Q c0 t.1)} {\lam y' => Op.Hom y'.1 c0}
+                                             (\lam y' b => (Straight.fromStraight b).1) {_} {_} t.2 {baseElem Q c0 t.1}))).2
+             (univElem-equiv (twArr-target-univElem c0) y.1)) a
+      \where {
+        -- | Transport of {baseElem} in the first variable.
+        \func tr.{w} {C : \Cat w} (Q : C ->⁺ \Type w) (c0 : C) (y : LeftComma.{\suc w} (Op.Hom {C}) Q) (a : Op.Hom (Op.toOp c0) ~> Q)
+                 (h : (Op.toOp c0, a) ~> {LeftComma.{\suc w} (Op.Hom {C}) Q} y) : totPairing Q y (basePt Q c0 a)
+          => ~>_-> (dmap (\lam y' => totPairing Q y' (basePt Q c0 a)) h) (baseElem Q c0 a)
+
+        \lemma arrows-equiv.{w} {C : \Cat w} (Q : C ->⁺ \Type w) (c0 : C) (y : LeftComma.{\suc w} (Op.Hom {C}) Q)
+          : IsEquiv {\Sigma (a : Op.Hom (Op.toOp c0) ~> Q) ((Op.toOp c0, a) ~> {LeftComma.{\suc w} (Op.Hom {C}) Q} y)} {Op.toOp c0 ~> y.1}
+                    (\lam t => dpath \lam i => (t.2 i).1)
+          => inP (sigma-right (\lam a => dpath-sigma-equiv (\lam _ (z : Op C) => Op.Hom z ~> Q) {Op.toOp c0, a} {y.1, y.2})
+                   `transQEquiv` \new QEquiv {\Sigma (a : Op.Hom (Op.toOp c0) ~> Q) (\Sigma (r : Op.toOp c0 ~> y.1) (DPath (\lam i => Op.Hom (r i) ~> Q) a y.2))}
+                                              {\Sigma (r : Op.toOp c0 ~> y.1) (\Sigma (a : Op.Hom (Op.toOp c0) ~> Q) (DPath (\lam i => Op.Hom (r i) ~> Q) a y.2))} {
+                      | f t => (t.2.1, (t.1, t.2.2))
+                      | ret t => (t.2.1, (t.1, t.2.2))
+                      | ret_f t => idp
+                      | f_sec t => idp
+                    } `transQEquiv` contr-right (\lam m => Contr.Contr_QEquiv (\new QEquiv {ContLift (\lam (z : Op C) => Op.Hom z ~> Q) (Op.toOp c0, y.1, m, y.2)}
+                                                       {\Sigma (a : Op.Hom (Op.toOp c0) ~> Q) (DPath (\lam i => Op.Hom (m i) ~> Q) a y.2)} {
+                      | f l => (l.1, l.2)
+                      | ret l => (l.1, l.2)
+                      | ret_f l => idp
+                      | f_sec l => idp
+                    }) (rightFib-pullback (Op.Hom {C}) (hom-rightFib Q) (Op.toOp c0, y.1, m, y.2))))
+
+        \lemma elems-equiv.{w} {C : \Cat w} (Q : C ->⁺ \Type w) (c0 : C) (y : LeftComma.{\suc w} (Op.Hom {C}) Q)
+          : IsEquiv {\Sigma (a : Op.Hom (Op.toOp c0) ~> Q) (totPairing Q y (basePt Q c0 a))} {Op.Hom y.1 c0}
+                    (\lam t => (Straight.fromStraight t.2).1)
+          => inP (sigma-right {_} {\lam a => totPairing Q y (basePt Q c0 a)} (\lam a => Straight.equiv)
+                   `transQEquiv` later \new QEquiv {
+                      | f t => (t.2.1, (t.1, t.2.2))
+                      | ret t => (t.2.1, (t.1, t.2.2))
+                      | ret_f t => idp
+                      | f_sec t => idp
+                    } `transQEquiv` contr-right \lam g => Contr.Contr_QEquiv {Fib (yonedaCov.fun {C} {c0} {Q}) (sliceFiber.covMap y.2 (c0, g))}
+                      {\Sigma (a : ReprFunctor c0 ~> Q) (sliceFiber.covMap y.2 (c0, g) = yonedaCov.fun a)} (\new QEquiv {
+                      | f t => (t.1, inv t.2)
+                      | ret t => (t.1, inv t.2)
+                      | ret_f t => path \lam i => (t.1, inv_inv {_} {_} {_} {t.2} i)
+                      | f_sec t => path \lam i => (t.1, inv_inv {_} {_} {_} {t.2} i)
+                    }) (IsEquiv=>contrFibers (yonedaCov c0 Q) (sliceFiber.covMap y.2 (c0, g))))
+      }
+
+    -- | The canonical element is universal in the first variable.
+    \lemma univ-y.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (c0 : C) (a : Op.Hom (Op.toOp c0) ~> Q)
+      : IsUnivElem.{\suc v} (\lam y => totPairing Q y (basePt Q c0 a)) ((Op.toOp c0, a) : LeftComma.{\suc v} (Op.Hom {C}) Q) (baseElem Q c0 a)
+      => univElem-lift \lam y => equiv-y Q c0 y a
+
+    -- | Every object of `Op.Hom ↓ Q` has an element of {totPairing} that is universal in both variables.
+    \lemma base-point.{v} {C : \Cat v} (Q : C ->⁺ \Type v) (y : LeftComma.{\suc v} (Op.Hom {C}) Q)
+      : ∃ (x : \Sigma⁺ (c : C) (Q c)) (e : totPairing Q y x) (IsUnivElem.{\suc v} (totPairing Q y) x e) (IsUnivElem.{\suc v} (\lam y' => totPairing Q y' x) y e)
+      => \case IsEquiv.isSurj Op.toOp-equiv y.1 \with {
+           | inP (c0, p) => aux Q p y.2
+         }
+      \where
+        \private \lemma aux.{w} {C : \Cat w} (Q : C ->⁺ \Type w) {c0 : C} {z : Op C} (p : Op.toOp c0 = z) (b : Op.Hom z ~> Q)
+          : ∃ (x : \Sigma⁺ (c : C) (Q c)) (e : totPairing Q (z, b) x) (IsUnivElem.{\suc w} (totPairing Q (z, b)) x e)
+              (IsUnivElem.{\suc w} (\lam y' => totPairing Q y' x) ((z, b) : LeftComma.{\suc w} (Op.Hom {C}) Q) e) \elim p
+          | idp => inP (basePt Q c0 b, baseElem Q c0 b, univElem-lift (univElem-equiv (univ-x Q c0 b)), univ-y Q c0 b)
+  }
+
+-- | The total category of a left fibration `Q` over {C} is the opposite of `Op.Hom ↓ Q`, a right fibration over `Op C`.
+\lemma op-total-equiv.{u} {C : \Cat u} (Q : C ->⁺ \Type u)
+  : ∃ (F : LeftComma.{\suc u} (Op.Hom {C}) Q ->⁺ Op.{\suc u} (\Sigma⁺ (c : C) (Q c))) (IsHEquiv F)
+      (\Pi (y :⁺ LeftComma.{\suc u} (Op.Hom {C}) Q) (x :⁺ \Sigma⁺ (c : C) (Q c)) -> Op.Hom (F y) x = totPairing Q y x)
+  => perfect-char.1 (totPairing-perfect Q)
+
+-- | The functor `c ↦ Hom (d, f c)`, as `Op.Hom (toOp d) ∘ f`; the comma category `d ↓ f` is its total category ({rightComma-total-equiv}).
+\func dualHom.{u} {C D : \Cat u} (f : C ->⁺ D) (d : D) (c :⁺ C) : \Type u
+  => Op.Hom (Op.toOp d) (f c)
+
+-- | The comparison of `OpFunc f ↓ toOp d` with `Op.Hom ↓ dualHom f d`: the action of {f} on `Op.Hom` followed by `s.2`.
+\func opComma-map.{u} {C D : \Cat u} (f : C ->⁺ D) (d : D) (s :⁺ LeftComma (OpFunc f) (Op.toOp d)) : Op.Hom s.1 ~> dualHom f d
+  => comp (dpath \lam i c => opHom-act f i (c, s.1)) (dpath \lam i c => Op.Hom (s.2 i) (f c))
+
+-- | {opComma-map} is an equivalence: both sides are right fibrations over `Op C`, and on fibers it is the Yoneda lemma for {opHom-iota}.
+\lemma opComma-equiv.{u} {C D : \Cat u} (f : C ->⁺ D) (d : D)
+  : IsHEquiv {LeftComma (OpFunc f) (Op.toOp d)} {LeftComma.{\suc u} (Op.Hom {C}) (dualHom f d)}
+             (\lam s => (s.1, opComma-map f d s))
+  => rightFib-fiberwise-equiv (rightFib-pullback (OpFunc f) (hom-rightFib (Op.toOp d)))
+                              (rightFib-pullback (Op.Hom {C}) (hom-rightFib (dualHom f d)))
+                              (opComma-map f d) \lam z => \case IsEquiv.isSurj Op.toOp-equiv z \with {
+                                | inP (c0, p) => aux f d p
+                              }
+  \where
+    \private \lemma aux.{v} {C D : \Cat v} (f : C ->⁺ D) (d : D) {c0 : C} {z : Op C} (p : Op.toOp c0 = z)
+      : IsEquiv {OpFunc f z ~> Op.toOp d} {Op.Hom z ~> dualHom f d} (\lam h => opComma-map f d (z, h)) \elim p
+      | idp => IsEquiv.leftFactor (yonedaCov c0 (dualHom f d))
+                 (transport IsEquiv (ext \lam h => inv (~>_->_comp-fam (dpath \lam i c => opHom-act f i (c, Op.toOp c0))
+                                                                        (dpath \lam i c => Op.Hom (h i) (f c)) c0 (Op.Hom-idd c0)))
+                    (univElem-equiv ((hom-univElem-swap (opHom-iota f c0)).1 (opHom-iota-univElem f c0)) (Op.toOp d)))
+
+-- | The comma category `d ↓ f` is the total category of {dualHom}.
+\lemma rightComma-total-equiv.{u} {C D : \Cat u} (f : C ->⁺ D) (d : D)
+  : IsHEquiv {RightComma f d} {\Sigma⁺ (c : C) (dualHom f d c)} (\lam s => (s.1, Straight.toStraight s.2))
+  => leftFib-fiberwise-equiv (leftFib-pullback f (hom-leftFib d)) (leftFib-pullback (dualHom f d) universe-leftFib)
+                             (\lam s => Straight.toStraight s.2) (\lam c => inP (symQEquiv ReprFunctor.equiv))

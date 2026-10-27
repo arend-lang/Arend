@@ -12,6 +12,7 @@ import org.arend.core.expr.PathTypeExpression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.expr.SigmaExpression;
 import org.arend.core.expr.UniverseExpression;
+import org.arend.core.expr.visitor.GetTypeVisitor;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.error.GeneralError;
@@ -66,34 +67,20 @@ public class CoreDefinitionCheckerTest extends TypeCheckingTestCase {
     sigma.accept(checker, UniverseExpression.OMEGA);
   }
 
-  private static PathTypeExpression natPath(DependentLink x, boolean forced) {
-    return new PathTypeExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ExpressionFactory.Nat()), new ReferenceExpression(x), new ReferenceExpression(x), false, forced);
+  private static PathTypeExpression natPath(DependentLink x) {
+    return new PathTypeExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ExpressionFactory.Nat()), new ReferenceExpression(x), new ReferenceExpression(x), false);
   }
 
   @Test
-  public void unforcedPathInCategoricalContextRejected() {
+  public void pathInCategoricalContextIsInfinite() {
     DependentLink x = new TypedDependentLink(true, "x", ExpressionFactory.Nat(), false, BindingVariance.COVARIANT, EmptyDependentLink.getInstance());
-    CoreExpressionChecker checker = new CoreExpressionChecker(new HashSet<>(Collections.singletonList(x)), DummyEquations.getInstance(), null);
-    try {
-      natPath(x, false).accept(checker, UniverseExpression.OMEGA);
-      fail("A path type that depends on the categorical context must be forced to the infinite level");
-    } catch (CoreException e) {
-      // expected
-    }
+    assertTrue(GetTypeVisitor.INSTANCE.visitPathType(natPath(x), null).getSortExpression().isInfinite());
   }
 
   @Test
-  public void forcedPathInCategoricalContextAccepted() {
-    DependentLink x = new TypedDependentLink(true, "x", ExpressionFactory.Nat(), false, BindingVariance.COVARIANT, EmptyDependentLink.getInstance());
-    CoreExpressionChecker checker = new CoreExpressionChecker(new HashSet<>(Collections.singletonList(x)), DummyEquations.getInstance(), null);
-    natPath(x, true).accept(checker, UniverseExpression.OMEGA);
-  }
-
-  @Test
-  public void unforcedPathInInvariantContextAccepted() {
+  public void pathInInvariantContextIsFinite() {
     DependentLink x = new TypedDependentLink(true, "x", ExpressionFactory.Nat(), false, BindingVariance.INVARIANT, EmptyDependentLink.getInstance());
-    CoreExpressionChecker checker = new CoreExpressionChecker(new HashSet<>(Collections.singletonList(x)), DummyEquations.getInstance(), null);
-    natPath(x, false).accept(checker, UniverseExpression.OMEGA);
+    assertFalse(GetTypeVisitor.INSTANCE.visitPathType(natPath(x), null).getSortExpression().isInfinite());
   }
 
   @Test

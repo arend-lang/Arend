@@ -43,7 +43,7 @@ public record ConstLevel(BigInteger value) {
   }
 
   public boolean compare(ConstLevel level, CMP cmp) {
-    return cmp == CMP.EQ ? equals(level) : cmp == CMP.LE ? isLessOrEquals(level) : level.isLessOrEquals(this);
+    return cmp == CMP.EQ ? equals(level) && isCat() == level.isCat() : cmp == CMP.LE ? isLessOrEquals(level) : level.isLessOrEquals(this);
   }
 
   public ConstLevel max(ConstLevel level) {

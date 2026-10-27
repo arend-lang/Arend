@@ -828,7 +828,7 @@ public class TwoStageEquations implements Equations {
     loop:
     for (Pair<InferenceVariable, List<ClassCallExpression>> pair : list) {
       if (pair.proj2.size() == 1) {
-        solve(pair.proj1, pair.proj2.getFirst(), true);
+        solve(pair.proj1, pair.proj2.getFirst(), cmp == CMP.LE);
         solved = true;
         continue;
       }
@@ -979,7 +979,7 @@ public class TwoStageEquations implements Equations {
         }
       }
 
-      solve(pair.proj1, solution, true);
+      solve(pair.proj1, solution, cmp == CMP.LE);
       solved = true;
     }
     return allOK && solved;
@@ -1025,7 +1025,7 @@ public class TwoStageEquations implements Equations {
     Expression expectedType = var.getType().normalize(NormalizationMode.WHNF).replaceInferenceVariable();
     Expression result = ElimBindingVisitor.keepBindings(expr, var.getBounds(), isLowerBound);
 
-    if (result != null && !var.canBeInfinite() && result.isInfinityLevel()) {
+    if (result != null && !var.canBeInfinite() && result.getLamParameters(null).isInfinityLevel()) {
       return inferenceError(var, expr);
     }
 

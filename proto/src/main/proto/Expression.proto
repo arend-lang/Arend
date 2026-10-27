@@ -111,6 +111,7 @@ message Expression {
             // instead of creating a new clause.  Used when the same LetExpression
             // object appears in multiple places in a shared expression tree (DAG).
             int32 existing_ref = 5;
+            bool is_covariant = 6;
         }
 
         message Pattern {
@@ -160,7 +161,6 @@ message Expression {
         Expression argumentType = 3;
         Expression argument = 4;
         bool directed = 5;
-        bool forceInfinity = 6;
     }
     message At {
         Expression pathArgument = 3;
@@ -172,7 +172,6 @@ message Expression {
         Expression leftArgument = 2;
         Expression rightArgument = 3;
         bool directed = 4;
-        bool forceInfinity = 5;
     }
     message New {
         ClassCall class_call = 1;

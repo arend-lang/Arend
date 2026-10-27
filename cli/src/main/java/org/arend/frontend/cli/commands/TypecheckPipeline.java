@@ -3,7 +3,6 @@ package org.arend.frontend.cli.commands;
 import org.apache.commons.cli.CommandLine;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.visitor.SizeExpressionVisitor;
-import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
@@ -11,9 +10,11 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.frontend.TimedProgressReporter;
+import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.library.SourceLibrary;
+import org.arend.frontend.query.QualifiedName;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
@@ -36,9 +37,11 @@ import org.arend.typechecking.order.MapTarjanSCC;
 import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -76,6 +79,8 @@ public final class TypecheckPipeline {
   }
 
   private static boolean runPipeline(CommandContext ctx, CommandLine cmdLine) {
+    CliSetup.expandModulePatterns(ctx);
+    if (ctx.exitWithError) return false;
     extendScopeForPrintTarget(ctx, cmdLine);
     dropDeletedModules(ctx);
 
@@ -90,7 +95,7 @@ public final class TypecheckPipeline {
       // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
       ctx.server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
           .typecheck(ctx.cancellation, ProgressReporter.empty());
-      Set<String> libraryNames = requestedLibraryNames(ctx.requestedLibraries);
+      Set<String> libraryNames = QualifiedName.libraryNames(ctx.requestedLibraries);
       boolean resolvedRequestedScope = false;
       if (ctx.requestedModules.isEmpty()) {
         // Whole-library typechecking: resolve every module of each requested library.
@@ -139,7 +144,7 @@ public final class TypecheckPipeline {
         int totalModules = modulesToTypecheck.size();
         int checkedModules = 0;
         for (ModulePath modulePath : modulesToTypecheck) {
-          ctx.reportModuleProgress(checkedModules, totalModules, modulePath);
+          ctx.reportModuleProgress("Typechecking", checkedModules, totalModules, modulePath);
           ModuleLocation module = new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath);
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
@@ -169,9 +174,16 @@ public final class TypecheckPipeline {
           System.out.println("Number of modules with goals: " + numWithGoals);
         }
         System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+        printTimes(timedProgressReporter);
 
         if (cmdLine.hasOption(SHOW_SIZES)) {
-          showSizes(ctx, library);
+          List<ModuleLocation> modules = new ArrayList<>();
+          for (ModuleLocation module : ctx.server.getModules()) {
+            if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
+              modules.add(module);
+            }
+          }
+          showSizes(ctx, modules, false);
         }
 
         if (cmdLine.hasOption(SHOW_MODULES)) {
@@ -192,16 +204,23 @@ public final class TypecheckPipeline {
           time = System.currentTimeMillis();
 
           try {
-            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            List<ModuleLocation> modulesToCheck = new ArrayList<>();
             for (ModuleLocation module : ctx.server.getModules()) {
               if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-                ConcreteGroup group = ctx.server.getRawGroup(module);
-                if (group != null) {
-                  checker.checkGroup(group);
-                }
+                modulesToCheck.add(module);
+              }
+            }
+            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            for (int i = 0; i < modulesToCheck.size(); i++) {
+              ModuleLocation module = modulesToCheck.get(i);
+              ctx.reportModuleProgress("Checking", i, modulesToCheck.size(), module.getModulePath());
+              ConcreteGroup group = ctx.server.getRawGroup(module);
+              if (group != null) {
+                checker.checkGroup(group);
               }
             }
           } finally {
+            ctx.finishProgressLine();
             time = System.currentTimeMillis() - time;
             System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
           }
@@ -215,48 +234,84 @@ public final class TypecheckPipeline {
         }
       }
     } else {
+      // Times and sizes are reported once for all requested modules, in one list each, so
+      // everything is typechecked first and double-checked only after they are printed.
+      // Reported like a whole-library run: one banner, a progress line, the result table and
+      // the total time, rather than a banner and a time per requested module.
+      System.out.println();
+      System.out.println("--- Typechecking ---");
+      long time = System.currentTimeMillis();
+
+      Set<ModuleLocation> checkedModules = new LinkedHashSet<>();
+      List<ModuleLocation> modulesToDoubleCheck = new ArrayList<>();
+      int totalTargets = ctx.requestedModules.size();
+      int checkedTargets = 0;
       for (Pair<ModulePath, LongName> requested : ctx.requestedModules) {
         ModulePath modulePath = requested.proj1;
         LongName definitionName = requested.proj2;
+        ctx.reportModuleProgress("Typechecking", checkedTargets++, totalTargets, definitionName == null ? modulePath.toString() : modulePath + ":" + definitionName);
         ModuleLocation module = ctx.server.findModule(modulePath, null, true, false);
         if (module == null) {
           ctx.systemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
         } else if (definitionName != null) {
-          System.out.println();
           FullName fullName = new FullName(module, definitionName);
-          System.out.println("--- Typechecking " + fullName + " ---");
-          long time = System.currentTimeMillis();
-
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(Collections.singletonList(fullName), ctx.errorReporter, ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
-
-          System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+          checkedModules.add(module);
         } else {
-          System.out.println();
-          System.out.println("--- Typechecking " + module + " ---");
-          long time = System.currentTimeMillis();
-
           ctx.server.getCheckerFor(Collections.singletonList(module)).typecheck(ctx.cancellation, progressReporter);
           reportStoredDiagnostics(ctx, module, reported);
+          checkedModules.add(module);
+          modulesToDoubleCheck.add(module);
+        }
+      }
+      ctx.finishProgressLine();
 
-          System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+      time = System.currentTimeMillis() - time;
 
-          if (ctx.doubleCheck) {
-            System.out.println();
-            System.out.println("--- Checking " + module + " ---");
-            time = System.currentTimeMillis();
+      int numWithErrors = 0;
+      int numWithGoals = 0;
+      for (ModuleLocation module : checkedModules) {
+        GeneralError.Level result = ctx.moduleResults.get(module);
+        reportTypeCheckResult(ctx, module.getModulePath(), result);
+        if (result == GeneralError.Level.ERROR) numWithErrors++;
+        if (result == GeneralError.Level.GOAL) numWithGoals++;
+      }
 
-            try {
-              CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
-              ConcreteGroup group = ctx.server.getRawGroup(module);
-              if (group != null) {
-                checker.checkGroup(group);
-              }
-            } finally {
-              time = System.currentTimeMillis() - time;
-              System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+      if (numWithErrors > 0) {
+        ctx.exitWithError = true;
+        System.out.println("Number of modules with errors: " + numWithErrors);
+      }
+      if (numWithGoals > 0) {
+        System.out.println("Number of modules with goals: " + numWithGoals);
+      }
+      System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+
+      boolean qualify = checkedModules.size() > 1;
+      printTimes(timedProgressReporter, qualify);
+      if (cmdLine.hasOption(SHOW_SIZES)) {
+        showSizes(ctx, checkedModules, qualify);
+      }
+
+      if (ctx.doubleCheck && numWithErrors == 0 && !modulesToDoubleCheck.isEmpty()) {
+        System.out.println();
+        System.out.println("--- Checking ---");
+        time = System.currentTimeMillis();
+
+        try {
+          CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+          for (int i = 0; i < modulesToDoubleCheck.size(); i++) {
+            ModuleLocation module = modulesToDoubleCheck.get(i);
+            ctx.reportModuleProgress("Checking", i, modulesToDoubleCheck.size(), module.getModulePath());
+            ConcreteGroup group = ctx.server.getRawGroup(module);
+            if (group != null) {
+              checker.checkGroup(group);
             }
           }
+        } finally {
+          ctx.finishProgressLine();
+          time = System.currentTimeMillis() - time;
+          System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
         }
       }
       // See above: a cancelled run has nothing worth caching.
@@ -280,7 +335,7 @@ public final class TypecheckPipeline {
         int totalTestModules = testModulesToTypecheck.size();
         int checkedTestModules = 0;
         for (ModulePath modulePath : testModulesToTypecheck) {
-          ctx.reportModuleProgress(checkedTestModules, totalTestModules, modulePath);
+          ctx.reportModuleProgress("Typechecking", checkedTestModules, totalTestModules, modulePath);
           ctx.server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.TEST, modulePath))).typecheck(ctx.cancellation, progressReporter);
           checkedTestModules++;
         }
@@ -308,6 +363,7 @@ public final class TypecheckPipeline {
 
         System.out.println("Tests completed: " + total[0] + ", Failed: " + failed[0]);
         System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
+        printTimes(timedProgressReporter);
 
         if (ctx.doubleCheck) {
           System.out.println();
@@ -315,16 +371,23 @@ public final class TypecheckPipeline {
           time = System.currentTimeMillis();
 
           try {
-            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            List<ModuleLocation> modulesToCheck = new ArrayList<>();
             for (ModuleLocation module : ctx.server.getModules()) {
               if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
-                ConcreteGroup group = ctx.server.getRawGroup(module);
-                if (group != null) {
-                  checker.checkGroup(group);
-                }
+                modulesToCheck.add(module);
+              }
+            }
+            CoreModuleChecker checker = new CoreModuleChecker(ctx::reportAndPrint);
+            for (int i = 0; i < modulesToCheck.size(); i++) {
+              ModuleLocation module = modulesToCheck.get(i);
+              ctx.reportModuleProgress("Checking", i, modulesToCheck.size(), module.getModulePath());
+              ConcreteGroup group = ctx.server.getRawGroup(module);
+              if (group != null) {
+                checker.checkGroup(group);
               }
             }
           } finally {
+            ctx.finishProgressLine();
             time = System.currentTimeMillis() - time;
             System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
           }
@@ -332,22 +395,31 @@ public final class TypecheckPipeline {
       }
     }
 
-    if (timedProgressReporter != null) {
-      timedProgressReporter.print();
-    }
-
     return true;
   }
 
-  private static void showSizes(CommandContext ctx, SourceLibrary library) {
+  /**
+   * Times are printed right after the phase that collected them, not at the end of the run:
+   * whatever follows (double-check, persisting, tests) may fail or hang, and should not take
+   * the times with it.
+   */
+  private static void printTimes(TimedProgressReporter timedProgressReporter) {
+    printTimes(timedProgressReporter, false);
+  }
+
+  private static void printTimes(TimedProgressReporter timedProgressReporter, boolean qualify) {
+    if (timedProgressReporter != null) {
+      timedProgressReporter.print(qualify);
+    }
+  }
+
+  private static void showSizes(CommandContext ctx, Collection<ModuleLocation> modules, boolean qualify) {
     Map<Definition, Integer> sizes = new HashMap<>();
-    for (ModuleLocation module : ctx.server.getModules()) {
-      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
-        for (DefinitionData definitionData : ctx.server.getResolvedDefinitions(module)) {
-          Definition definition = definitionData.definition().getData().getTypechecked();
-          if (definition != null) {
-            sizes.put(definition, SizeExpressionVisitor.getSize(definition));
-          }
+    for (ModuleLocation module : modules) {
+      for (DefinitionData definitionData : ctx.server.getResolvedDefinitions(module)) {
+        Definition definition = definitionData.definition().getData().getTypechecked();
+        if (definition != null) {
+          sizes.put(definition, SizeExpressionVisitor.getSize(definition));
         }
       }
     }
@@ -359,7 +431,8 @@ public final class TypecheckPipeline {
     }
     list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
     for (Pair<Definition, Integer> pair : list) {
-      System.out.println(pair.proj1.getReferable().getRefLongName() + ": " + pair.proj2);
+      TCDefReferable referable = pair.proj1.getReferable();
+      System.out.println((qualify ? referable.getRefFullName() : referable.getRefLongName()) + ": " + pair.proj2);
     }
   }
 
@@ -487,14 +560,6 @@ public final class TypecheckPipeline {
     System.out.println("[INFO] -p target " + cmdLine.getOptionValue("p")
         + " is outside the typecheck scope; adding " + parsed.proj1 + " to it");
     ctx.requestedModules.add(new Pair<>(parsed.proj1, null));
-  }
-
-  private static Set<String> requestedLibraryNames(List<SourceLibrary> requestedLibraries) {
-    Set<String> result = new HashSet<>();
-    for (SourceLibrary library : requestedLibraries) {
-      result.add(library.getLibraryName());
-    }
-    return result;
   }
 
   private static List<SourceLibrary> dependencyFirstLibraries(CommandContext ctx) {

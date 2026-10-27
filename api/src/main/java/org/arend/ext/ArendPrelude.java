@@ -23,6 +23,8 @@ public interface ArendPrelude {
   CoreFunctionDefinition getFill3();
   CoreDataDefinition getResize();
   CoreConstructor getResizeCon();
+  CoreDataDefinition getResizeCat();
+  CoreConstructor getResizeCatCon();
   CoreDataDefinition getGroupoidType();
   CoreConstructor getGroupoidTypeCon();
   CoreFunctionDefinition getRezk();
@@ -49,6 +51,7 @@ public interface ArendPrelude {
   CoreFunctionDefinition getIdd();
   CoreFunctionDefinition getAt();
   CoreFunctionDefinition getIso();
+  CoreFunctionDefinition getIsoCat();
   CoreFunctionDefinition getDivMod();
   CoreFunctionDefinition getDiv();
   CoreFunctionDefinition getMod();
@@ -78,6 +81,8 @@ public interface ArendPrelude {
   ArendRef getFill3Ref();
   ArendRef getResizeRef();
   ArendRef getResizeConRef();
+  ArendRef getResizeCatRef();
+  ArendRef getResizeCatConRef();
   ArendRef getGroupoidTypeRef();
   ArendRef getGroupoidTypeConRef();
   ArendRef getRezkRef();
@@ -104,6 +109,7 @@ public interface ArendPrelude {
   ArendRef getIddRef();
   ArendRef getAtRef();
   ArendRef getIsoRef();
+  ArendRef getIsoCatRef();
   ArendRef getDivModRef();
   ArendRef getDivRef();
   ArendRef getModRef();

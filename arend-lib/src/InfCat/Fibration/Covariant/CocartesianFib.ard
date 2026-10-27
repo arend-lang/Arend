@@ -1,0 +1,202 @@
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Paths
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | {B} is a cocartesian fibration if every arrow in the base has a cocartesian lift from every point of the fiber.
+\type IsCocartesianFib {A : \Cat} (B : A ->⁺ \Cat) : \Prop
+  => \Pi (d : CovLiftData B) -> ∃ (l : CovLift B d) (IsCocartesianLift l)
+
+\lemma cocartesianFib-char {A : \Cat} {B : A ->⁺ \Cat}
+  : IsCocartesianFib B <-> IsHEquiv {FullSubCat {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} \lam t => IsCocartesianLift t.2}
+                                    {CovLiftData B}
+                                    (\lam x => (FullSubCat.inc x).1)
+  => \let T => \Sigma⁺ (d : CovLiftData B) (CovLift B d)
+     \in (\lam cf => (ff-surj-equiv {FullSubCat {T} \lam t => IsCocartesianLift t.2} {CovLiftData B} {\lam x => (FullSubCat.inc x).1}).1
+            (\lam x y => IsEquiv.trans (FullSubCat.inc-ff x y) (cocartesian-ff B (FullSubCat.inc-con {T} {_} {x})),
+             \lam s => \case cf s \with {
+               | inP (l,lc) => TruncP.map (FullSubCat.inc-sat {T} {_} {s,l} lc) \lam (d,p) => (d, pmap __.1 p)
+             }),
+          \lam e s => \let d => IsHEquiv.ret e s
+            \in transport (\lam s => ∃ (l : CovLift B s) (IsCocartesianLift l)) (IsHEquiv.f_ret e) (inP ((FullSubCat.inc d).2, FullSubCat.inc-con {_} {_} {d})))
+
+\sfunc cocartesianFib-lift {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) (d :⁺ CovLiftData B) : CovLift B d
+  => \have e => cocartesianFib-char.1 Bf
+     \in transport+ (CovLift B) (IsHEquiv.f_ret e) (FullSubCat.inc $ IsHEquiv.ret e d).2
+  \where {
+    \lemma isCocartesian (d : CovLiftData B) : IsCocartesianLift (cocartesianFib-lift {A} {B} Bf d)
+      => transportInv IsCocartesianLift (\peval cocartesianFib-lift {A} {B} Bf d) $
+          transport-cocartesian $ FullSubCat.inc-con {_} {_} {IsHEquiv.ret (cocartesianFib-char.1 Bf) d}
+
+    \private \lemma transport-cocartesian {s t : CovLiftData B} {p : s = t} {l : CovLift B s} (lc : IsCocartesianLift l)
+      : IsCocartesianLift (transport+ (CovLift B) p l) \elim p
+      | idp => lc
+  }
+
+-- | A family of cocartesian lifts is the chosen one, naturally in the data.
+\sfunc cocartesianFib-lift-unique {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {K : \Cat} (d : K ->⁺ CovLiftData B)
+                                  (l : \Pi (k :⁺ K) -> CovLift B (d k)) (lc : \Pi (k : K) -> IsCocartesianLift (l k)) {k :⁺ K}
+  : cocartesianFib-lift Bf (d k) = l k
+  => (\peval cocartesianFib-lift Bf (d k))
+     *> path (\lam m => lift-of {A} {B} {d k} (equiv-fibers (\lam x => (FullSubCat.inc x).1) (IsHEquiv.ret (cocartesianFib-char.1 Bf))
+                                                             (\lam _ => IsHEquiv.ret_f (cocartesianFib-char.1 Bf))
+                                                             (\lam _ => IsHEquiv.f_ret (cocartesianFib-char.1 Bf))
+                                                             {d k} {_, IsHEquiv.f_ret (cocartesianFib-char.1 Bf)}
+                                                             {(lifts Bf d l lc).1 k, pmap+ __.1 ((lifts Bf d l lc).2 k)} @ m))
+     *> lift-of-path ((lifts Bf d l lc).2 k)
+  \where {
+    -- | The cocartesian lifts as a functor into the full subcategory of cocartesian lifts.
+    \sfunc lifts {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {K : \Cat} (d : K ->⁺ CovLiftData B)
+                 (l : \Pi (k :⁺ K) -> CovLift B (d k)) (lc : \Pi (k : K) -> IsCocartesianLift (l k))
+      => ffMap-lift (FullSubCat.inc-ff {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} {\lam t => IsCocartesianLift t.2})
+                    (\lam k => ((d k, l k) : \Sigma⁺ (d : CovLiftData B) (CovLift B d))) (\lam k => FullSubCat.inc-sat (lc k))
+
+    -- | The lift carried by an element of the fiber over {d} of the full subcategory of cocartesian lifts.
+    \func lift-of {A : \Cat} {B : A ->⁺ \Cat} {d :⁺ CovLiftData B}
+                  (s :⁺ \Sigma⁺ (x : FullSubCat {\Sigma⁺ (d : CovLiftData B) (CovLift B d)} (\lam t => IsCocartesianLift t.2)) ((FullSubCat.inc x).1 = d))
+      : CovLift B d
+      => transport+ (CovLift B) s.2 (FullSubCat.inc s.1).2
+
+    \sfunc lift-of-path {A : \Cat} {B : A ->⁺ \Cat} {t t' :⁺ \Sigma⁺ (d : CovLiftData B) (CovLift B d)} (r :⁺ t = t')
+      : transport+ (CovLift B) (pmap+ __.1 r) t.2 = t'.2 \elim r
+      | idp => idp
+  }
+
+-- | Families of cocartesian lifts of a family of base data are unique.
+\lemma cocartesianFib-lifts-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {K : \Cat} (d : K ->⁺ CovLiftData B)
+  : Contr (\Sigma (l : \Pi (k :⁺ K) -> CovLift B (d k)) (\Pi (k : K) -> IsCocartesianLift (l k))) \cowith
+  | center => (\lam k => cocartesianFib-lift Bf (d k), \lam k => cocartesianFib-lift.isCocartesian (d k))
+  | contraction s => ext (funExt+ \lam k => cocartesianFib-lift-unique Bf d s.1 s.2 {k})
+
+{- | Given a family {F} and a map {p}, if a lift {l} in the pullback of {F} along {p} is cocartesian over {S},
+ -   then it is cocartesian over {X}.
+ -}
+\lemma cocartesianLift-pullback {X S : \Cat} {F : S ->⁺ \Cat} (p : X ->⁺ S) {d : CovLiftData (\lam x => F (p x))}
+                                {l : CovLift (\lam x => F (p x)) d}
+                                (lc : IsCocartesianLift {S} {F} {p d.1, p d.2, dmap p d.3, d.4} (l.1, l.2))
+  : IsCocartesianLift l
+  => \lam {a''} g l' => Contr.Contr_QEquiv (later \new QEquiv {
+    | f v => (v.1, dpath \lam i => dpath \lam j => v.2 j i)
+    | ret w => (w.1, dpath \lam i => dpath \lam j => w.2 j i)
+    | ret_f v => idp
+    | f_sec w => idp
+  }) $ cocartesian-square F {p d.1, p d.2, dmap p d.3, d.4} {p d.1, p a'', dmap p (comp d.3 g), d.4}
+        idd (dmap p g) (dpath \lam i => dpath \lam j => p (fill2 d.3 g j i)) idd (l.1, l.2) lc (l'.1, l'.2)
+
+-- | The base change of a cocartesian family along a functor is cocartesian.
+\lemma cocartesianFib-pullback {X S : \Cat} {F : S ->⁺ \Cat} (Ff : IsCocartesianFib F) (p : X ->⁺ S)
+  : IsCocartesianFib (\lam x => F (p x))
+  => \lam d => TruncP.map (Ff (_, _, dmap p d.3, d.4)) \lam s => ((s.1.1, s.1.2), cocartesianLift-pullback p s.2)
+
+-- | The transport of an arrow along an arrow of the base is unique.
+\lemma transports-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) {a a' : A} (m : a ~> a') (b : DI ->⁺ B a)
+  : Contr (Transports {A} {B} m b)
+  => \let | c0 => cocLift-contr Bf (a, a', m, b dleft)
+          | c1 => cocLift-contr Bf (a, a', m, b dright)
+     \in Contr.Contr_QEquiv (symQEquiv (contr-left c0 `transQEquiv` contr-left c1) `transQEquiv` symQEquiv transports-equiv)
+          (cocartesian-square B {a, a', m, b dleft} {a, a', m, b dright} idd idd (dpath \lam i => m) (dpath \lam i => b i)
+                              c0.center.1 c0.center.2 c1.center.1)
+  \where {
+    -- | Cocartesian lifts of an arrow at a point are unique.
+    \lemma cocLift-contr {A : \Cat} {B : A ->⁺ \Cat} (Bf : IsCocartesianFib B) (d : CovLiftData B)
+      : Contr (\Sigma (l : CovLift B d) (IsCocartesianLift l))
+      => Contr.Contr_QEquiv
+           (qsigma-left (IsEquiv.toQEquiv fullSub-ob-equiv) `transQEquiv` fib-equiv)
+           (IsEquiv=>contrFibers (IsHEquiv.toIsEquiv (cocartesianFib-char.1 Bf)) d)
+      \where {
+        -- | A cocartesian lift transported along a path of base data.
+        \func cocLift-transport {A : \Cat} {B : A ->⁺ \Cat} {d d' : CovLiftData B} (l : CovLift B d') (c : IsCocartesianLift l) (p : d' = d)
+          : \Sigma (l : CovLift B d) (IsCocartesianLift l) \elim p
+          | idp => (l, c)
+
+        \func fib-equiv {d : CovLiftData B}
+          : QEquiv {\Sigma (u : \Sigma (t : \Sigma⁺ (d' : CovLiftData B) (CovLift B d')) (IsCocartesianLift t.2)) (u.1.1 = d)}
+                   {\Sigma (l : CovLift B d) (IsCocartesianLift l)} \cowith
+          | f v => cocLift-transport v.1.1.2 v.1.2 v.2
+          | ret w => (((d, w.1), w.2), idp)
+          | ret_f v => aux v.1.1.2 v.1.2 v.2
+          | f_sec w => idp
+
+        \private \func aux {d d' : CovLiftData B} (l : CovLift B d') (c : IsCocartesianLift l) (p : d' = d)
+          : ((((d, (cocLift-transport l c p).1), (cocLift-transport l c p).2), idp)
+              : \Sigma (u : \Sigma (t : \Sigma⁺ (d'' : CovLiftData B) (CovLift B d'')) (IsCocartesianLift t.2)) (u.1.1 = d))
+            = (((d', l), c), p) \elim p
+          | idp => idp
+      }
+
+    -- | Transports of an arrow {b} along {m}: arrows over the target with a square whose horizontal sides are cocartesian lifts.
+    \func Transports {A : \Cat} {B : A ->⁺ \Cat} {a a' : A} (m : a ~> a') (b : DI ->⁺ B a) : \Type
+      => \Sigma (k : DI ->⁺ B a') (H : DPath (\lam i => DI ->⁺ B (m i)) b k)
+                (IsCocartesianLift {A} {B} {a, a', m, b dleft} (k dleft, dpath \lam i => H i dleft))
+                (IsCocartesianLift {A} {B} {a, a', m, b dright} (k dright, dpath \lam i => H i dright))
+
+    \func transports-equiv
+      : QEquiv {Transports {A} {B} m b}
+               {\Sigma (c : \Sigma (l : CovLift B (a, a', m, b dleft)) (IsCocartesianLift l))
+                       (\Sigma (c' : \Sigma (l' : CovLift B (a, a', m, b dright)) (IsCocartesianLift l'))
+                               (\Sigma (k : DPath (\lam i => B a') c.1.1 c'.1.1) (DPath (\lam i => DPath (\lam j => B (m j)) (b i) (k i)) c.1.2 c'.1.2)))}
+      \cowith
+      | f t => (((t.1 dleft, dpath \lam j => t.2 j dleft), t.3), (((t.1 dright, dpath \lam j => t.2 j dright), t.4),
+                 (dpath \lam i => t.1 i, dpath \lam i => dpath \lam j => t.2 j i)))
+      | ret v => (\lam i => v.2.2.1 i, dpath \lam j i => v.2.2.2 i j, v.1.2, v.2.1.2)
+      | ret_f t => idp
+      | f_sec v => idp
+  }
+
+\lemma leftFib=>cocartesian {C : \Cat} {F : C ->⁺ \Cat} (Ff : IsLeftFib F) : IsCocartesianFib F
+  => \lam d => inP (leftFib-lift Ff d, leftFib-lift-cocartesian Ff _)
+
+{- | A map of total categories over the base of a cocartesian fibration {B} is an equivalence
+ -   if it preserves cocartesian lifts and is an equivalence on every fiber.
+ -}
+\lemma cocartesianFib-fiberwise-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsCocartesianFib B)
+                                      (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (gc : PreservesCocartLift {A} {B} {C} g)
+                                      (ge : \Pi (a : A) -> IsHEquiv {B a} {C a} (\lam b => g (a, b)))
+  : IsHEquiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} (\lam s => (s.1, g s))
+  => (ff-surj-equiv {\Sigma⁺ (a : A) (B a)} {\Sigma⁺ (a : A) (C a)} {\lam s => (s.1, g s)}).1
+      (\lam x y => IsEquiv.trans (inP (dpath-sigma-equiv \lam _ => B))
+                     {\lam s => dpath \lam i => ((s.1 i, lift-map {A} {B} {C} g s.1 s.2 i) : \Sigma⁺ (a : A) (C a))}
+                     (IsEquiv.trans ((totalEquiv (lift-map {A} {B} {C} g)).1 (lift-map-equiv Bf g gc ge))
+                                    (inP (symQEquiv (dpath-sigma-equiv (\lam _ => C) {x.1, g x} {y.1, g y})))),
+       \lam y => TruncP.map ((ff-surj-equiv.2 (ge y.1)).2 y.2) \lam s => ((y.1, s.1), path \lam i => (y.1, s.2 i)))
+  \where \private {
+    -- | The action of {g} on lifts of an arrow of the base.
+    \func lift-map {A : \Cat} {B B' : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> B' s.1)
+                   {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) (t : DPath (\lam i => B (r i)) x.2 y.2)
+      : DPath (\lam i => B' (r i)) (g x) (g y)
+      => dpath \lam i => g (r i, t i)
+
+    -- | {lift-map} corresponds to the action of {g} on arrows out of the target of a cocartesian lift.
+    \lemma lift-map-equiv {A : \Cat} {B C : A ->⁺ \Cat} (Bf : IsCocartesianFib B)
+                          (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1) (gc : PreservesCocartLift {A} {B} {C} g)
+                          (ge : \Pi (a : A) -> IsHEquiv {B a} {C a} (\lam b => g (a, b)))
+                          {x y : \Sigma⁺ (a : A) (B a)} (r : x.1 ~> y.1) : IsEquiv (lift-map {A} {B} {C} g {x} {y} r)
+      => \let | d : CovLiftData B => (x.1, y.1, r, x.2)
+              | c => cocartesianFib-lift Bf d
+              | cc => cocartesianFib-lift.isCocartesian {_} {_} {Bf} d
+         \in (IsEquiv.parallelEquiv (cocartesian-lift-equiv c cc y.2) (cocartesian-lift-equiv (covLiftImage g c) (gc c cc) (g y)) (lift-map-comm g c cc (gc c cc))).2 ((ff-surj-equiv.2 (ge y.1)).1 c.1 y.2)
+
+    -- | The image under {g} of the factorization through a cocartesian lift {c} is the factorization through the image of {c}.
+    \sfunc lift-map-comm {A : \Cat} {B C : A ->⁺ \Cat} (g : \Pi (s :⁺ \Sigma⁺ (a : A) (B a)) -> C s.1)
+                         {x y : \Sigma⁺ (a : A) (B a)} {r : x.1 ~> y.1} (c : CovLift B (x.1, y.1, r, x.2)) (cc : IsCocartesianLift c)
+                         (gcc : IsCocartesianLift (covLiftImage {A} {B} {C} g c))
+                         (t : DPath (\lam i => B (r i)) x.2 y.2)
+      : (cocartesian-square C {_} {x.1, y.1, r, g x} idd idd (dpath \lam _ => r) idd (covLiftImage g c) gcc (g y, lift-map {A} {B} {C} g r t)).center.1
+        = dmap (\lam b => g (y.1, b)) (cocartesian-square B {_} {x.1, y.1, r, x.2} idd idd (dpath \lam _ => r) idd c cc (y.2, t)).center.1
+      => \let h => (cocartesian-square B {_} {x.1, y.1, r, x.2} idd idd (dpath \lam _ => r) idd c cc (y.2, t)).center
+         \in pmap __.1 $ isContr=>isProp (cocartesian-square C {_} {x.1, y.1, r, g x} idd idd (dpath \lam _ => r) idd (covLiftImage g c) gcc (g y, lift-map {A} {B} {C} g r t)) _
+                           (dmap (\lam b => g (y.1, b)) h.1, dpath \lam i => dpath \lam j => g (r j, h.2 i j))
+  }

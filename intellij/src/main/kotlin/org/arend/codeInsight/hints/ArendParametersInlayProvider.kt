@@ -17,7 +17,10 @@ import org.arend.core.context.param.DependentLink
 import org.arend.core.definition.ClassDefinition
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.psi.ext.*
+import org.arend.psi.ArendElementTypes.DOT
+import org.arend.psi.ArendElementTypes.LBRACE
 import org.arend.psi.ArendElementTypes.NO_CLASSIFYING_KW
+import org.arend.psi.ArendElementTypes.RBRACE
 import org.arend.psi.findNextSibling
 import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.PrettyPrintVisitor
@@ -74,6 +77,14 @@ class ArendParametersInlayProvider : InlayHintsProvider {
                 var lastElement = element
                 val sibling1 = lastElement.findNextSibling()
                 if (sibling1 is ArendAlias) lastElement = sibling1
+                var next = lastElement.findNextSibling()
+                if (next is LeafPsiElement && next.elementType == DOT) {
+                    while (next != null && (next is ArendLevelsDef || next is LeafPsiElement && (next.elementType == DOT || next.elementType == LBRACE || next.elementType == RBRACE))) {
+                        lastElement = next
+                        if (next is LeafPsiElement && next.elementType == RBRACE) break
+                        next = next.findNextSibling()
+                    }
+                }
                 val sibling2 = lastElement.findNextSibling()
                 if (sibling2 is LeafPsiElement && sibling2.elementType == NO_CLASSIFYING_KW) lastElement = sibling2
                 sink.addPresentation(InlineInlayPosition(lastElement.endOffset, true), hintFormat = HintFormat.default) {

@@ -1,0 +1,306 @@
+{- | Pullbacks in ∞-categories.
+ -
+ -   A square, viewed as an arrow of `DI ->⁺ C`, is a pullback square if it is cartesian for the target functor
+ -   with respect to constant arrows ({IsPullbackSquare}).
+ -   Pullback squares can be pasted ({IsPullbackSquare.paste}) and cancelled ({IsPullbackSquare.cancel}).
+ -
+ -   A square is a pullback square if and only if its left and top sides form a product in the slice over its bottom right corner
+ -   ({IsPullbackSquare.product-char}): in the slice the corner is terminal ({IsPullbackSquare.slice-char}),
+ -   and over a terminal corner pullbacks are products ({IsPullbackSquare.terminal-product}).
+ -   Consequently, pullback squares with a fixed right side embed into the slice over its target via their bottom sides
+ -   ({IsPullbackSquare.bottom-emb}), and this is an equivalence if pullbacks exist ({IsPullbackSquare.bottom-equiv}).
+ -
+ -   Equivalently, a square is a pullback square if arrows from every test object into its top left corner are cones over its
+ -   bottom and right sides ({IsPullbackSquare.pullback-char}), where the cones are read off sections of hom-types ({IsPullbackSquare.homSq}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.Fibration.Contravariant.CartesianMap
+\import InfCat.Interval
+\import InfCat.Limit.BaseHCat
+\import InfCat.Limit.Product
+\import InfCat.Limit.Terminal
+\import InfCat.Slice
+\import InfCat.Square
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | An ∞-category with pullbacks: its slices have binary products.
+\class HCatWithPullbacks \extends BaseHCat
+  | Pullback {x y z : C} (f : x ~> z) (g : y ~> z) : SliceCat z
+  | pbProj1 {x y z : C} (f : x ~> z) (g : y ~> z) : Pullback f g ~> (x,f)
+  | pbProj2 {x y z : C} (f : x ~> z) (g : y ~> z) : Pullback f g ~> (y,g)
+  | Pullback-isProduct {x y z : C} {f : x ~> z} {g : y ~> z} : IsProduct (pbProj1 f g) (pbProj2 f g)
+
+-- | A square is a pullback square if it is cartesian for the target functor with respect to constant arrows.
+\type IsPullbackSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
+  => \Pi (r : C) -> IsCartesianArrowAt (\lam w => w dright) (dpath phi) (const r)
+  \where {
+    -- | Identity squares are pullback squares.
+    \lemma isPullback-idd {C : \Cat} (u : DI ->⁺ C) : IsPullbackSquare (idd {DI ->⁺ C} {u})
+      => \lam r => idd-cartesian
+
+    -- | Pasting of pullback squares.
+    \lemma paste {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (fp : IsPullbackSquare f) (gp : IsPullbackSquare g)
+      : IsPullbackSquare (comp f g)
+      => \lam r => (cartesianArrow-comp (gp r)).1 (fp r)
+
+    -- | If the right square and the outer rectangle are pullback squares, then so is the left square.
+    \lemma cancel {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (gp : IsPullbackSquare g) (fgp : IsPullbackSquare (comp f g))
+      : IsPullbackSquare f
+      => \lam r => (cartesianArrow-comp (gp r)).2 (fgp r)
+
+    -- | A square whose bottom right corner is terminal is a pullback square if and only if its left and top sides form a product.
+    \lemma terminal-product {D : \Cat} (psi : DI ->⁺ DI ->⁺ D) (Tc : IsTerminal (psi dright dright))
+      : IsPullbackSquare psi <-> IsProduct (dpath (psi dleft)) (dpath \lam l => psi l dleft)
+      => \let | ctm (r : D) (w : const r ~> psi dright) => cotriangle-map (\lam w => w dright) (dpath psi) w
+              | eqr (r : D) : IsEquiv (totalEquiv.total (ctm r))
+                              <-> IsEquiv (\lam k => (comp k (dpath (psi dleft)), comp k (dpath \lam l => psi l dleft)))
+                => IsEquiv.parallelEquiv (cotri-equiv r (dpath psi)) (cod-equiv {D} {psi} Tc r) \lam a =>
+                     ext (inv (comp-equiv.flipped (dpath \lam j => dpath \lam i => a.2.1 i j)),
+                          inv (comp-char (dpath \lam i => dpath \lam l => a.2.2 i l dleft)))
+         \in (\lam pb r => (eqr r).1 ((totalEquiv (ctm r)).1 (pb r)),
+             \lam pp r w => (totalEquiv (ctm r)).2 ((eqr r).2 (pp r)) w)
+      \where {
+        -- | Factorizations through {h} of arrows from a constant arrow are determined by the top side of the factor.
+        \lemma cotri-equiv {D : \Cat} (x : D) {u v : DI ->⁺ D} (h : u ~> v)
+          : IsEquiv {\Sigma (w : const x ~> v) (\Sigma (k : const x ~> u) (DPath (\lam i => k i ~> w i) idd h))} {x ~> u dleft}
+                    (\lam a => dpath \lam i => a.2.1 i dleft)
+          => IsEquiv.trans
+               (inP $ later \new QEquiv {
+                  | f a => (a.2.1, (a.1, a.2.2))
+                  | ret b => (b.2.1, (b.1, b.2.2))
+                  | ret_f a => idp
+                  | f_sec b => idp
+                } `transQEquiv` contr-right (\lam k => segal-contr k h))
+               (const-ev0-equiv x u)
+
+        -- | If the bottom right corner is terminal, the codomain of {cotriangle-map} consists of pairs of arrows into the bottom left and top right corners.
+        \lemma cod-equiv {D : \Cat} {psi : DI ->⁺ DI ->⁺ D} (Tc : \Pi (r : D) -> Contr (r ~> psi dright dright)) (r : D)
+          : IsEquiv {\Sigma (w : const r ~> psi dright) (\Sigma (g : r ~> psi dleft dright) (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => psi i dright)))}
+                    {\Sigma (r ~> psi dleft dright) (r ~> psi dright dleft)}
+                    (\lam b => (b.2.1, dpath \lam i => b.1 i dleft))
+          => inP $ later \new QEquiv {
+               | f b => (b.2.1, (b.1, b.2.2))
+               | ret b => (b.2.1, (b.1, b.2.2))
+               | ret_f b => idp
+               | f_sec b => idp
+             } `transQEquiv` sigma-right \lam g => contr-right (\lam (w : const r ~> psi dright) =>
+                    Contr.Contr_QEquiv (symQEquiv (comp-equiv {D} {_} {_} {_} {g} {dpath \lam i => psi i dright} {dpath \lam i => w i dright}))
+                                       (isProp=>PathContr _ (isContr=>isProp (Tc r)) _ _))
+                  `transQEquiv` IsEquiv.toQEquiv (const-ev0-equiv r (psi dright))
+      }
+
+    -- | A pullback square reparametrized along an endomorphism of {DI} is a pullback square.
+    \lemma pullback-reparam {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare phi) (k : DI ->⁺ DI) : IsPullbackSquare (\lam i => phi (k i))
+      => aux pb (dpath k)
+      \where
+        \private \lemma aux {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare phi) {a b : DI} (p : a ~> b) : IsPullbackSquare (\lam i => phi (p i)) \elim a
+          | dleft => \case \elim b, \elim p \with {
+            | dleft, p => transport (\lam q => IsPullbackSquare (\lam i => phi (q i))) (isContr=>isProp DI-hom-ll-contr idd p) (isPullback-idd (phi dleft))
+            | dright, p => transport (\lam q => IsPullbackSquare (\lam i => phi (q i))) (isContr=>isProp DI-hom-lr-contr (dpath \lam i => i) p) pb
+          }
+          | dright => \case \elim b, \elim p \with {
+            | dleft, p => absurd (DI-hom-rl-empty p)
+            | dright, p => transport (\lam q => IsPullbackSquare (\lam i => phi (q i))) (isContr=>isProp DI-hom-rr-contr idd p) (isPullback-idd (phi dright))
+          }
+
+    -- | The section `(i,j) ↦ r ~> phi i j` of hom-types given by an arrow {k} into the top left corner.
+    \func homSq {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} (k : r ~> phi dleft dleft) (i j :⁺ DI) : r ~> phi i j
+      => comp k (dpath \lam m => phi (dmin m i) (dmin m j))
+
+    -- | The values of a family over a square on the bottom and right sides.
+    \func Boundary (Phi :⁺ DI ->⁺ DI ->⁺ \Cat) : \Cat
+      => \Sigma⁺ (b : Phi dright dleft) (g : Phi dleft dright) (c : Phi dright dright) (DPath (\lam j => Phi dright j) b c) (DPath (\lam i => Phi i dright) g c)
+
+    -- | The restriction of a section {L} to the two sides into the bottom right corner.
+    \func boundary {Phi :⁺ DI ->⁺ DI ->⁺ \Cat} (L :⁺ \Pi (i j :⁺ DI) -> Phi i j) : Boundary Phi
+      => (L dright dleft, L dleft dright, L dright dright, dpath (L dright), dpath \lam i => L i dright)
+
+    {- | A square is a pullback square if and only if, for every test object `r`, arrows into the top left corner are
+     -   cones over the bottom and right sides: the restriction of {homSq} to these sides is an equivalence.
+     -}
+    \lemma pullback-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+      : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k)))
+      => \let | ctm (r : C) (w : const r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
+              | eqr (r : C) : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
+                              <-> IsEquiv (totalEquiv.total (ctm r))
+                => IsEquiv.parallelEquiv (sec-equiv phi r) (inP (cone-equiv phi r)) (\lam k => idp)
+         \in (\lam pb r => (eqr r).2 ((totalEquiv (ctm r)).1 (pb r)),
+             \lam ce r w => (totalEquiv (ctm r)).2 ((eqr r).1 (ce r)) w)
+      \where \private {
+        -- | The factorization of {homSq} through the square.
+        \func sec {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) (k : r ~> phi dleft dleft)
+          : \Sigma (w : const r ~> phi dright) (\Sigma (K : const r ~> phi dleft) (DPath (\lam i => K i ~> w i) idd (dpath phi)))
+          => (dpath \lam i => \lam j => homSq phi k dright j i,
+              (dpath \lam i => \lam j => homSq phi k dleft j i, dpath \lam i => dpath \lam l => \lam j => homSq phi k l j i))
+
+        \lemma sec-equiv {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsEquiv (sec phi r)
+          => IsEquiv.leftFactor (terminal-product.cotri-equiv r (dpath phi))
+               (transport IsEquiv (ext \lam (k : r ~> phi dleft dleft) => inv comp_idd-right) (inP idEquiv))
+
+        -- | Squares from a constant arrow with a factorization of their bottom side are cones, by transposition.
+        \func cone-equiv {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+          : QEquiv {Boundary (\lam i j => r ~> phi i j)}
+                   {\Sigma (w : const r ~> phi dright)
+                           (\Sigma (g : r ~> phi dleft dright)
+                                   (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => phi i dright)))} \cowith
+          | f s => (dpath \lam m => \lam j => s.4 j m, (s.2, dpath \lam i => dpath \lam l => s.5 l i))
+          | ret t => (dpath \lam m => t.1 m dleft, t.2.1, dpath \lam m => t.1 m dright, dpath \lam j => dpath \lam m => t.1 m j,
+                      dpath \lam l => dpath \lam i => t.2.2 i l)
+          | ret_f _ => idp
+          | f_sec _ => idp
+      }
+
+    -- | A square in {C} as a square in the slice over its bottom right corner.
+    \func sliceSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (l j :⁺ DI) : SliceCat (phi dright dright)
+      => (phi l j, dpath \lam m => phi (dmax l m) (dmax j m))
+
+    -- | A square is a pullback square if and only if it is a pullback square in the slice over its bottom right corner.
+    \lemma slice-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : IsPullbackSquare phi <-> IsPullbackSquare (sliceSquare phi)
+      => \let -- The underlying arrow of an arrow of the slice.
+              | UE {X : C} (x :⁺ DI ->⁺ SliceCat X) : DI ->⁺ C
+                => \lam j => (x j).1
+              -- cotriangle-map for the target functor of `DI ->⁺ C`.
+              | ctmC (r : C) (w : const r ~> phi dright)
+                => cotriangle-map (\lam w => w dright) (dpath phi) w
+              -- cotriangle-map for the target functor of the arrow category of the slice, at a constant arrow over r.
+              | ctmD (r : C) (rho : r ~> phi dright dright) (w : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+                => cotriangle-map (\lam (w :⁺ DI ->⁺ SliceCat (phi dright dright)) => w dright) (dpath (sliceSquare phi)) w
+              -- Factorizations in the slice as factorizations in C.
+              | F1 (r : C) (a : \Sigma (rho : r ~> phi dright dright)
+                                       (\Sigma (w : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+                                               (\Sigma (k : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dleft)
+                                                       (DPath (\lam i => k i ~> w i) idd (dpath (sliceSquare phi))))))
+                : \Sigma (w : const r ~> phi dright) (\Sigma (k : const r ~> phi dleft) (DPath (\lam i => k i ~> w i) idd (dpath phi)))
+                => (dmap UE a.2.1, (dmap UE a.2.2.1, dpath \lam i => dmap UE (a.2.2.2 i)))
+              -- The base, the fibers and the domain of F2.
+              | F2Base (r : C) => \Sigma (rho : r ~> phi dright dright) (const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+              | F2Fib (r : C) (x : F2Base r)
+                => \Sigma (g : (r,x.1) ~> {SliceCat (phi dright dright)} sliceSquare phi dleft dright)
+                          (DPath (\lam i => g i ~> x.2 i dright) idd (dpath \lam i => sliceSquare phi i dright))
+              -- Factorizations of the target functor in the slice as factorizations in C.
+              | F2Dom (r : C)
+                => \Sigma (rho : r ~> phi dright dright)
+                          (\Sigma (w : const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)
+                                  (\Sigma (g : (r,rho) ~> {SliceCat (phi dright dright)} sliceSquare phi dleft dright)
+                                          (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => sliceSquare phi i dright))))
+              | F2 (r : C) (a : F2Dom r) : \Sigma (w : const r ~> phi dright) (\Sigma (g : r ~> phi dleft dright) (DPath (\lam i => g i ~> w i dright) idd (dpath \lam i => phi i dright)))
+                => (dmap UE a.2.1, cotriangle-map SliceCat.forget (dpath \lam i => sliceSquare phi i dright) (dpath \lam i => a.2.1 i dright) a.2.2)
+              | totD (r : C) => totalEquiv.total (\lam (rho : r ~> phi dright dright) => totalEquiv.total (ctmD r rho))
+         \in \have
+              | F1-equiv (r : C) : IsEquiv (F1 r)
+                => IsEquiv.leftFactor (terminal-product.cotri-equiv r (dpath phi))
+                     (IsEquiv.trans (IsSigma-right _ \lam rho => terminal-product.cotri-equiv {SliceCat (phi dright dright)} (r,rho) (dpath (sliceSquare phi)))
+                                    (SliceCat.dom-equiv r (sliceSquare phi dleft dleft)))
+              | base-equiv (r : C) : IsEquiv {\Sigma (rho : r ~> phi dright dright) (const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)} (\lam x => dmap UE x.2)
+                => IsEquiv.leftFactor (const-ev0-equiv r (phi dright))
+                     (IsEquiv.trans (IsSigma-right _ \lam rho => const-ev0-equiv {SliceCat (phi dright dright)} (r,rho) (sliceSquare phi dright))
+                                    (SliceCat.dom-equiv r (sliceSquare phi dright dleft)))
+              | F2-equiv (r : C) : IsEquiv (F2 r)
+                => IsEquiv.trans {_} {_} {_} {\lam (a : F2Dom r) => (((a.1, a.2.1), a.2.2) : \Sigma (x : F2Base r) (F2Fib r x))}
+                     (inP \new QEquiv {
+                        | ret b => (b.1.1, (b.1.2, b.2))
+                        | ret_f a => idp
+                        | f_sec b => idp
+                      })
+                     (IsEquiv.trans (IsSigma-right _ \lam (x : F2Base r) => SliceCat.forget-cartesian (dpath \lam i => sliceSquare phi i dright) (r, x.1) (dpath \lam i => x.2 i dright))
+                                    (inP (qsigma-left (IsEquiv.toQEquiv (base-equiv r)))))
+              | eqr (r : C) : IsEquiv (totD r) <-> IsEquiv (totalEquiv.total (ctmC r))
+                => IsEquiv.parallelEquiv (F1-equiv r) (F2-equiv r) (\lam _ => idp)
+         \in (\lam pb r w => (totalEquiv (ctmD r.1 r.2)).2
+                              ((totalEquiv \lam rho => totalEquiv.total (ctmD r.1 rho)).2
+                                 ((eqr r.1).2 ((totalEquiv (ctmC r.1)).1 (pb r.1))) r.2) w,
+             \lam pb r => (totalEquiv (ctmC r)).2 $ (eqr r).1 $
+                           (totalEquiv \lam rho => totalEquiv.total (ctmD r rho)).1 \lam rho => (totalEquiv (ctmD r rho)).1 (pb (r,rho)))
+
+    -- | A square is a pullback square if and only if its left and top sides form a product in the slice over its bottom right corner.
+    \lemma product-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+      : IsPullbackSquare phi <-> IsProduct (dpath (sliceSquare phi dleft)) (dpath \lam l => sliceSquare phi l dleft)
+      => \have | sc => slice-char phi
+               | tp => terminal-product (sliceSquare phi) SliceCat.terminal-contr
+         \in (\lam pb => tp.1 (sc.1 pb), \lam pp => sc.2 (tp.2 pp))
+
+    -- | The bottom side of a square into {sig} as an object of the slice over the target of {sig}.
+    \func bottom {C : \Cat} {sig : DI ->⁺ C} (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2)) : SliceCat (sig dright)
+      => (s.1.1 dright, dpath \lam l => s.1.2 l dright)
+
+    {- | Pullback squares with a fixed right side {sig} embed into the slice over the target of {sig} via their bottom sides.
+     -   The image consists of arrows along which {sig} has a pullback.
+     -}
+    \lemma bottom-emb {C : \Cat} (sig : DI ->⁺ C) : Embedding (bottom {C} {sig})
+      => transEmbedding (Embedding.fromIsEquiv cone-equiv)
+          (Embedding.sigma-prop-embedding \lam (t : SliceCat (sig dright)) => IsProduct.cones-unique {_} {t} {sig dleft, dpath sig})
+      \where {
+        {- | Pullback squares into {sig} are product cones over {sig} in the slice over the target of {sig}.
+         -   A square is sent to its left and top sides viewed as arrows of the slice ({sliceSquare}).
+         -}
+        \lemma cone-equiv {C : \Cat} {sig : DI ->⁺ C}
+          : IsEquiv {\Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2)}
+                    {\Sigma (t : SliceCat (sig dright)) (\Sigma (b : \Sigma (c : SliceCat t) (c.1 ~> (sig dleft, dpath sig))) (IsProduct b.1.2 b.2))}
+                    (\lam s => ((cone s.1.2).1, ((cone s.1.2).2, (product-char s.1.2).1 s.2)))
+          => \let | S => \Sigma (y : \Sigma (t : SliceCat (sig dright)) (\Sigma (c : SliceCat t) (c.1 ~> (sig dleft, dpath sig)))) (IsProduct y.2.1.2 y.2.2)
+                  | e : IsEquiv {\Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2)} {S} (\lam s => (cone s.1.2, (product-char s.1.2).1 s.2))
+                      => subtype-equiv (IsEquiv.trans lift-equiv (terminal-cone-equiv (lift sig) SliceCat.terminal-contr))
+                                       (\lam {s} => (product-char s.2).1) (\lam {s} => (product-char s.2).2)
+            \in IsEquiv.trans e $ inP \new QEquiv {
+                  | f y => (y.1.1, (y.1.2, y.2))
+                  | ret y => ((y.1, y.2.1), y.2.2)
+                  | ret_f y => idp
+                  | f_sec y => idp
+                }
+          \where \private {
+            -- | The left and top sides of {h} as a product cone in the slice.
+            \func cone {C : \Cat} {u sig : DI ->⁺ C} (h : u ~> sig)
+              : \Sigma (t : SliceCat (sig dright)) (\Sigma (c : SliceCat t) (c.1 ~> (sig dleft, dpath sig)))
+              => (sliceSquare h dleft dright, ((sliceSquare h dleft dleft, dpath (sliceSquare h dleft)), dpath \lam l => sliceSquare h l dleft))
+
+            -- | An arrow as an arrow of the slice over its target.
+            \func lift {C : \Cat} (sig : DI ->⁺ C) : DI ->⁺ SliceCat (sig dright)
+              => \lam j => (sig j, dpath \lam m => sig (dmax j m))
+
+            -- | Arrows into `lift sig` in the slice are arrows into {sig}.
+            \lemma lift-equiv {C : \Cat} {sig : DI ->⁺ C}
+              : IsEquiv {\Sigma (u : DI ->⁺ C) (u ~> sig)} {\Sigma (v : DI ->⁺ SliceCat (sig dright)) (v ~> lift sig)}
+                        (\lam s => (sliceSquare s.2 dleft, dpath (sliceSquare s.2)))
+              => IsEquiv.leftFactor (inP (lift-qequiv `transQEquiv` contr-right (\lam (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) => SliceCat.triangle-contr s.2 (dpath \lam m j => sig (dmax j m))))) (inP idEquiv)
+
+            -- | An arrow into `lift sig` is an arrow into {sig} together with a triangle over it in the slice of `DI ->⁺ C` over the target of {sig}.
+            \func lift-qequiv {C : \Cat} {sig : DI ->⁺ C}
+              : QEquiv {\Sigma (v : DI ->⁺ SliceCat (sig dright)) (v ~> lift sig)}
+                       {\Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig))
+                               (\Sigma (a : s.1 ~> const (sig dright))
+                                       (DPath (\lam i => s.2 i ~> const (sig dright)) a (dpath \lam m j => sig (dmax j m))))} \cowith
+              | f s => ((\lam j => (s.1 j).1, dmap (\lam x j =>⁺ (x j).1) s.2), (dpath \lam m j => (s.1 j).2 m, dpath \lam i => dpath \lam m j => (s.2 i j).2 m))
+              | ret t => (\lam j => (t.1.1 j, dpath \lam m => t.2.1 m j), dpath \lam i => \lam j => (t.1.2 i j, dpath \lam m => t.2.2 i m j))
+              | ret_f s => idp
+              | f_sec t => idp
+
+            -- | If the target of {v} is terminal, arrows into {v} are pairs of arrows from a common source, one of them into the source of {v}.
+            \lemma terminal-cone-equiv {D : \Cat} (v : DI ->⁺ D) (Tc : \Pi (r : D) -> Contr (r ~> v dright))
+              : IsEquiv {\Sigma (u : DI ->⁺ D) (u ~> v)} {\Sigma (t : D) (\Sigma (c : SliceCat t) (c.1 ~> v dleft))}
+                        (\lam s => (s.1 dright, ((s.1 dleft, dpath s.1), dpath \lam l => s.2 l dleft)))
+              => inP $ later \new QEquiv {
+                   | f s => ((s.1 dright, ((s.1 dleft, dpath s.1), dpath \lam l => s.2 l dleft)),
+                             (dpath \lam l => s.2 l dright, dpath \lam l => dpath \lam j => s.2 l j))
+                   | ret y => (\lam j => y.1.2.1.2 j, dpath \lam l => \lam j => y.2.2 l j)
+                   | ret_f s => idp
+                   | f_sec y => idp
+                 } `transQEquiv` contr-right \lam (y : \Sigma (t : D) (\Sigma (c : SliceCat t) (c.1 ~> v dleft))) =>
+                    Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam b => square-equiv y.2.2 b)
+                                       (sigma-Contr (Tc y.1) \lam b => isProp=>PathContr _ (isContr=>isProp (Tc y.2.1.1)) (comp y.2.2 (dpath v)) (comp y.2.1.2 b))
+          }
+      }
+
+    -- | If {C} has pullbacks, then pullback squares with a fixed right side {sig} are equivalent to the slice over the target of {sig}.
+    \lemma bottom-equiv {C : HCatWithPullbacks} (sig : DI ->⁺ C) : IsEquiv (bottom {C} {sig})
+      => IsEquiv.trans bottom-emb.cone-equiv $ inP $ contr-right \lam (t : SliceCat (sig dright)) =>
+           isProp=>isContr IsProduct.cones-unique (((Pullback t.2 (dpath sig), pbProj1 t.2 (dpath sig)), pbProj2 t.2 (dpath sig)), Pullback-isProduct)
+  }

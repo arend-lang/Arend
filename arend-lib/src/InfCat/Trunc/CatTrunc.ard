@@ -7,15 +7,16 @@
 \import InfCat.CatPushout
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
+\import InfCat.Groupoid
 \import InfCat.OFS.CatAccessibleOFS
 \import InfCat.OFS.CatOFS
+\import InfCat.Paths
 \import InfCat.Objects
 \import InfCat.Square
 \import InfCat.Trunc.IsCatTrunc
 \import Logic
 \import Meta
 \import Paths
-\import Paths.Meta
 
 -- | The universal category with hom-types of level {n} under {C}.
 \type CatTrunc (n : Nat) (C : \Cat) : \Cat
@@ -23,7 +24,7 @@
   \where {
     -- | Iterated codiagonals of {unob}.
     \protected \func codiagMap (n : Nat) : \Sigma (S : \Cat0) (S ->⁺ DI) \elim n
-      | 0 => (Ob DI, unob)
+      | 0 => (ToCat (Ob DI), \lam x => unob (fromCat x))
       | suc n => (CatPushout (codiagMap n).2 (codiagMap n).2, codiag (codiagMap n).2)
 
     -- | Right maps of this family are exactly the maps whose hom-types are `(n-1)`-types.
@@ -54,9 +55,19 @@
 
       \private \lemma truncMap-codiagMap {E : \Cat} (m : Nat) {j : Nat}
         : IsTruncMap j (res {_} {_} {E} (codiagMap m).2) <-> IsTruncMap (j Nat.+ m) (res {Ob DI} {DI} {E} unob) \elim m
-        | 0 => <->refl
+        | 0 => IsTruncMap.truncMap-post {_} {_} {_} {res {Ob DI} {DI} {E} unob} ToCat-precomp-equiv
         | suc m => <->trans truncMap-codiag (truncMap-codiagMap m)
         \where {
+          -- | Functors out of `ToCat (Ob DI)` are functors out of `Ob DI`.
+          \func ToCat-precomp-equiv {E : \Cat} : QEquiv {Ob DI ->⁺ E} {ToCat (Ob DI) ->⁺ E} (\lam G x => G (fromCat x)) \cowith
+            | ret H o => Ob-elim (\lam _ => E) (\lam d => H (toCat (ob d))) o
+            | ret_f G => funExt+ \lam (o :⁺ Ob DI) => \case \elim o \return Ob-elim (\lam _ => E) (\lam d => G (fromCat (toCat (ob d)))) o = G o \with {
+              | ob d => idp
+            }
+            | f_sec H => funExt+ \lam (x :⁺ ToCat (Ob DI)) => \case \elim x \return Ob-elim (\lam _ => E) (\lam d => H (toCat (ob d))) (fromCat x) = H x \with {
+              | toCat (ob d) => idp
+            }
+
           -- | Maps out of the pushout of {f} along itself are pairs of maps with equal restrictions along {f}.
           \func codiag-maps {A B E : \Cat} (f : A ->⁺ B)
             : QEquiv {CatPushout f f ->⁺ E} {\Sigma (u v : B ->⁺ E) (res f u = res f v)}

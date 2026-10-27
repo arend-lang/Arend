@@ -111,6 +111,8 @@
       | idp, idp, idp => idp
 
 \func path-sym.{u} {A : \Cat u} (a a' : A) : (a = a') = (a' = a) => path (iso {a = a'} {a' = a} inv inv (\lam p => inv_inv) (\lam p => inv_inv))
+  \where
+    \protected \func type.{u} {A : \Type u} (a a' : A) : (a = a') = (a' = a) => path (iso {a = a'} {a' = a} inv inv (\lam p => inv_inv) (\lam p => inv_inv))
 
 \func rotatePathLeft {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a' = a} {q :⁺ a' = a''} {r :⁺ a = a''} (t :⁺ q = p *> r)
   : inv p *> q = r \elim p, r, t

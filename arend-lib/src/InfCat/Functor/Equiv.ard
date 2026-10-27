@@ -53,6 +53,13 @@
     \sfunc f_ret {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {y :⁺ D} : f (ret e y) = y
       => pmap+ f (path (\lam i => (\peval ret e) i y) *> inv-equals f {(toTuple e).1.1} (toTuple e).1.2 (toTuple e).2.2) *> (toTuple e).2.2 y
 
+    \lemma ret-equiv {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) : IsHEquiv (ret e)
+      => inP \new HQEquiv {
+        | finv => f
+        | finv_f x => f_ret e
+        | f_finv y => ret_f e
+      }
+
     \lemma toIsEquiv {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) : IsEquiv (\lam x => f x) \elim e
       | inP e => inP (HQEquiv.toQEquiv e)
 
@@ -85,6 +92,42 @@
     \lemma rightFactor {A B C : \Cat} {f : A ->⁺ B} (e1 : IsHEquiv f) {g : B ->⁺ C} (e3 : IsHEquiv \lam a => g (f a)) : IsHEquiv g \elim e1, e3
       | inP e1, inP e3 => inP (HQEquiv.rightFactor e1 e3)
 
+    \lemma trans {A B C : \Cat} {f : A ->⁺ B} (e1 : IsHEquiv f) {g : B ->⁺ C} (e2 : IsHEquiv g) : IsHEquiv \lam a => g (f a) \elim e1, e2
+      | inP e1, inP e2 => inP \new HQEquiv {
+        | finv c => e1.finv (e2.finv c)
+        | finv_f a => pmap+ e1.finv (e2.finv_f (f a)) *> e1.finv_f a
+        | f_finv c => pmap+ g (e1.f_finv (e2.finv c)) *> e2.f_finv c
+      }
+
+    -- | Precomposition with an equivalence is an equivalence.
+    \lemma precomp {A B D : \Cat} {f : A ->⁺ B} (e : IsHEquiv f) : IsHEquiv {B ->⁺ D} {A ->⁺ D} (\lam G a => G (f a)) \elim e
+      | inP e => inP \new HQEquiv {
+        | finv K b => K (e.finv b)
+        | finv_f G => funExt+ \lam b => pmap+ G (e.f_finv b)
+        | f_finv K => funExt+ \lam a => pmap+ K (e.finv_f a)
+      }
+
+    -- | A functor is an equivalence if precomposition with it is an equivalence on functors to its domain and to its codomain.
+    \lemma fromPrecomp {A B : \Cat} {f : A ->⁺ B}
+                       (eA : IsEquiv {B ->⁺ A} {A ->⁺ A} (\lam G a => G (f a))) (eB : IsEquiv {B ->⁺ B} {A ->⁺ B} (\lam G a => G (f a)))
+      : IsHEquiv f
+      => \let | g => IsEquiv.ret eA (\lam a => a)
+              | p : (\lam a => g (f a)) = {A ->⁺ A} (\lam a => a) => IsEquiv.f_ret eA
+              | q : (\lam b => f (g b)) = {B ->⁺ B} (\lam b => b) => IsEquiv.isInj eB (pmap (\lam (h : A ->⁺ A) => \lam a =>⁺ f (h a)) p)
+         \in inP \new HQEquiv {
+           | finv => g
+           | finv_f x => path (\lam i => p i x)
+           | f_finv y => path (\lam i => q i y)
+         }
+
+    -- | Postcomposition with an equivalence is an equivalence.
+    \lemma postcomp {A B D : \Cat} {f : A ->⁺ B} (e : IsHEquiv f) : IsHEquiv {D ->⁺ A} {D ->⁺ B} (\lam G d => f (G d)) \elim e
+      | inP e => inP \new HQEquiv {
+        | finv K d => e.finv (K d)
+        | finv_f G => funExt+ \lam d => e.finv_f (G d)
+        | f_finv K => funExt+ \lam d => e.f_finv (K d)
+      }
+
     \lemma biEquiv {g : D ->⁺ C} (p : \Pi (x :⁺ C) -> g (f x) = x) {h : D ->⁺ C} (q : \Pi (y :⁺ D) -> f (h y) = y) : IsHEquiv f
       => inP \new HQEquiv {
         | finv => g
@@ -115,6 +158,12 @@
   | finv_f x => idp
   | f_finv x => idp
 
+\func symHQEquiv {C D : \Cat} (e : HQEquiv {C} {D}) : HQEquiv {D} {C} \cowith
+  | f => e.finv
+  | finv => e.f
+  | finv_f => e.f_finv
+  | f_finv => e.finv_f
+
 \lemma idHEquiv {C : \Cat} : IsHEquiv {C} (\lam x => x)
   => inP idHQEquiv
 
@@ -126,3 +175,25 @@
                *> pmap+ (_ *> __) (homotopy-isNatural+ _ _ e.coh_inv q) *> inv *>-assoc
                *> pmap+ (*> q) (pmap+ (_ *> __) (inv e.coh_inv_f) *> inv (pmap+_*> f) *> pmap+ (pmap+ f __) inv_*>) *> idp_*>
   }
+
+-- | An equivalence of ∞-categories is a path in `\Cat`.
+\func HEquiv_=.{u} {C D : \Cat u} {f : C ->⁺ D} (e : IsHEquiv f) : C = D
+  => path (isoCat f (IsHEquiv.ret e) (\lam x => IsHEquiv.ret_f e) (\lam y => IsHEquiv.f_ret e))
+
+-- | Base change of a family along an equivalence is an equivalence of total categories.
+\lemma sigma-base-equiv.{u} {A A' : \Cat u} {e : A ->⁺ A'} (ee : IsHEquiv e) {F : A' ->⁺ \Cat}
+  : IsHEquiv {\Sigma⁺ (a : A) (F (e a))} {\Sigma⁺ (a' : A') (F a')} (\lam s => (e s.1, s.2))
+  => aux (HEquiv_= ee)
+  \where
+    \private \lemma aux.{u} {A A' : \Cat u} (p : A = A') {F : A' ->⁺ \Cat}
+      : IsHEquiv {\Sigma⁺ (a : A) (F (transport+ (\lam Y => Y) p a))} {\Sigma⁺ (a' : A') (F a')} (\lam s => (transport+ (\lam Y => Y) p s.1, s.2)) \elim p
+      | idp => idHEquiv
+
+-- | Restriction of sections of a family along an equivalence is an equivalence.
+\lemma sections-precomp-equiv.{u} {Y' Y : \Cat u} {e : Y' ->⁺ Y} (ee : IsHEquiv e) {D : Y ->⁺ \Cat}
+  : IsEquiv {\Pi (y :⁺ Y) -> D y} {\Pi (y' :⁺ Y') -> D (e y')} (\lam s y' => s (e y'))
+  => aux (HEquiv_= ee)
+  \where
+    \private \lemma aux.{u} {Y' Y : \Cat u} (p : Y' = Y) {D : Y ->⁺ \Cat}
+      : IsEquiv {\Pi (y :⁺ Y) -> D y} {\Pi (y' :⁺ Y') -> D (transport+ (\lam Z => Z) p y')} (\lam s y' => s (transport+ (\lam Z => Z) p y')) \elim p
+      | idp => inP idEquiv

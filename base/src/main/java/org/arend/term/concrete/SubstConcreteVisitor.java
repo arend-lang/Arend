@@ -131,7 +131,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   @Override
   public Concrete.Expression visitLam(Concrete.LamExpression expr, Void ignored) {
     if (expr instanceof Concrete.PatternLamExpression) {
-      return Concrete.PatternLamExpression.make(myData != null ? myData : expr.getData(), visitParameters(expr.getParameters()), visitPatterns(((Concrete.PatternLamExpression) expr).getPatterns()), expr.body.accept(this, null));
+      return Concrete.PatternLamExpression.make(myData != null ? myData : expr.getData(), visitParameters(expr.getParameters()), visitPatterns(((Concrete.PatternLamExpression) expr).getPatterns()), ((Concrete.PatternLamExpression) expr).getVariance(), expr.body.accept(this, null));
     } else {
       return new Concrete.LamExpression(myData != null ? myData : expr.getData(), visitParameters(expr.getParameters()), expr.body.accept(this, null));
     }
@@ -306,7 +306,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   }
 
   private Concrete.LetClause visitLetClause(Concrete.LetClause clause) {
-    return new Concrete.LetClause(clause.getParameters().stream().map(this::visitParameter).collect(Collectors.toList()), nullableMap(clause.getResultType()), nullableMap(clause.getTerm()), visitPattern(clause.getPattern()));
+    return new Concrete.LetClause(clause.getParameters().stream().map(this::visitParameter).collect(Collectors.toList()), nullableMap(clause.getResultType()), nullableMap(clause.getTerm()), visitPattern(clause.getPattern()), clause.isCovariant());
   }
 
   @Override

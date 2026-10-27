@@ -6,6 +6,7 @@
 \import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.CatPushout
+\import InfCat.Fibration.Categorical
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Paths
@@ -261,11 +262,11 @@
 -- | {k} is left orthogonal to {g} if and only if sections of every pullback of {g} extend uniquely along {k}.
 \lemma IsOrthogonal-sections {X Y E F : \Cat} {k : X ->⁺ Y} {g : E ->⁺ F}
   : IsOrthogonal k g <-> (\Pi (v : Y ->⁺ F) -> IsEquiv (restrict-sections k g v))
-  => \have p => IsEquiv.parallelEquiv {Y ->⁺ E} {\Sigma (uv : \Sigma (X ->⁺ E) (Y ->⁺ F)) (\Pi (x :⁺ X) -> uv.2 (k x) = g (uv.1 x))}
-                   {_} {_} {\lam h => ((\lam x => h (k x), \lam y => g (h y)), \lam x => idp)} {totalEquiv.total (restrict-sections k g)}
+  => \have p => IsEquiv.parallelEquiv {Y ->⁺ E} {_} {_} {_}
+                  {\lam h => ((\lam x => h (k x), \lam y => g (h y)), \lam x => idp)} {totalEquiv.total (restrict-sections k g)}
                    (inP sections-equiv) (inP squares-equiv) (\lam h => idp)
-     \in (\lam o => propExt.conv (totalEquiv (restrict-sections k g)) (propExt.dir p o),
-          \lam e => propExt.conv p (propExt.dir (totalEquiv (restrict-sections k g)) e))
+     \in (\lam o => (totalEquiv (restrict-sections k g)).2 (p.1 o),
+          \lam e => p.2 ((totalEquiv (restrict-sections k g)).1 e))
   \where {
     -- | A functor to {E} is a functor to {F} together with a section of the pullback of {g} along it.
     \func sections-equiv : QEquiv {Y ->⁺ E} {\Sigma (v : Y ->⁺ F) (\Pi (y :⁺ Y) -> \Sigma⁺ (e : E) (g e = v y))} \cowith
@@ -283,6 +284,12 @@
       | f_sec (v, t) => path \lam i => (v, \lam x => ((t x).1, inv_inv {_} {_} {_} {(t x).2} i))
   }
 
+-- | Restriction of sections of {Q} along a functor left orthogonal to {totalProj} is an equivalence.
+\lemma IsOrthogonal-family-sections {X Y B : \Cat} {k : X ->⁺ Y} {Q : B ->⁺ \Cat} (o : IsOrthogonal k (totalProj Q)) (v : Y ->⁺ B)
+  : IsEquiv {\Pi (y :⁺ Y) -> Q (v y)} {\Pi (x :⁺ X) -> Q (v (k x))} (\lam s x => s (k x))
+  => IsEquiv.leftFactor (inP (fibers-total-equiv.sections (\lam x => v (k x))))
+      (IsEquiv.trans (inP (fibers-total-equiv.sections v)) (IsOrthogonal-sections.1 o v))
+
 -- | If {f} is left orthogonal to the maps from {Z} and from `DI ->⁺ Z` to the terminal category, then restriction along {f} is fully faithful.
 \lemma IsOrthogonal-res-ff {A B Z : \Cat} {f : A ->⁺ B} (o : IsOrthogonal f (\lam (z :⁺ Z) => ())) (oD : IsOrthogonal f (\lam (u :⁺ DI ->⁺ Z) => ()))
   : IsFFMap {B ->⁺ Z} {A ->⁺ Z} (\lam H a => H (f a))
@@ -290,7 +297,3 @@
       (\lam j p => dmap (\lam H a =>⁺ H (f a)) {j.1} {j.2} p)
       (IsEquiv.rightFactor (inP (DI-fun-equiv {B} {Z})) (IsEquiv.trans (IsOrthogonal-terminal.1 oD) (inP DI-fun-equiv)))
       (H1, H2)
-  \where {
-    \lemma pair-equiv {X Y : \Cat} {g : X -> Y} (e : IsEquiv g) : IsEquiv {\Sigma X X} {\Sigma Y Y} (\lam j => (g j.1, g j.2))
-      => IsEquiv.trans (IsSigma-right {X} {\lam _ => X} {\lam _ => Y} (\lam _ => g) (\lam _ => e)) (inP (qsigma-left {X} {Y} {\lam _ => Y} (IsEquiv.toQEquiv e)))
-  }

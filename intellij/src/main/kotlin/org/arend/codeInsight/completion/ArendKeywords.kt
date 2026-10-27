@@ -57,7 +57,9 @@ object ArendKeywords {
 
     private val UNIVERSE_KEYWORDS = UNIVERSES.values.toSet() + listOf(PROP_KW.toString(), SET_KW.toString())
 
-    private fun keywordText(token: String) = if (token.startsWith("\\")) token else UNIVERSES[token]
+    /** Keywords such as \Sigma+ are completed with the unicode superscript plus */
+    private fun keywordText(token: String) =
+        if (token.startsWith("\\")) (if (token.endsWith('+')) token.dropLast(1) + '⁺' else token) else UNIVERSES[token]
 
     private val SKIPPED_TOKENS = TokenSet.orSet(AREND_WHITE_SPACES, AREND_COMMENTS)
 

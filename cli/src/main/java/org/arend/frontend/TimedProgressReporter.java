@@ -43,7 +43,17 @@ public class TimedProgressReporter implements ProgressReporter<List<? extends Co
     }
   }
 
+  /** Prints the times collected since the previous call, and forgets them. */
   public void print() {
+    print(false);
+  }
+
+  /**
+   * Prints the times collected since the previous call, and forgets them.
+   *
+   * @param qualify whether to prefix each name with its module, for lists that span several modules.
+   */
+  public void print(boolean qualify) {
     if (myTimes.isEmpty()) return;
 
     System.out.println();
@@ -53,7 +63,8 @@ public class TimedProgressReporter implements ProgressReporter<List<? extends Co
     }
     list.sort((o1, o2) -> Long.compare(o2.proj2, o1.proj2));
     for (Pair<TCDefReferable, Long> pair : list) {
-      System.out.println(pair.proj1.getRefLongName() + ": " + timeToString(pair.proj2));
+      System.out.println((qualify ? pair.proj1.getRefFullName() : pair.proj1.getRefLongName()) + ": " + timeToString(pair.proj2));
     }
+    myTimes.clear();
   }
 }

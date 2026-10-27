@@ -37,7 +37,7 @@ public class CommandContextTest {
   @Test
   public void beginCommandDoesNotLeaveAProgressLineOpen() {
     CommandContext ctx = new CommandContext();
-    capturingErr(() -> ctx.reportModuleProgress(0, 2, ModulePath.fromString("Foo")));
+    capturingErr(() -> ctx.reportModuleProgress("Typechecking", 0, 2, ModulePath.fromString("Foo")));
     ctx.beginCommand();
     assertEquals("a new command must not inherit an open progress line",
         "", capturingErr(ctx::finishProgressLine));
@@ -50,9 +50,9 @@ public class CommandContextTest {
   @Test
   public void beginCommandForgetsThePreviousProgressWidth() {
     CommandContext ctx = new CommandContext();
-    capturingErr(() -> ctx.reportModuleProgress(0, 2, ModulePath.fromString("AVeryLongModuleName")));
+    capturingErr(() -> ctx.reportModuleProgress("Typechecking", 0, 2, ModulePath.fromString("AVeryLongModuleName")));
     ctx.beginCommand();
-    String fresh = capturingErr(() -> ctx.reportModuleProgress(0, 2, ModulePath.fromString("A")));
+    String fresh = capturingErr(() -> ctx.reportModuleProgress("Typechecking", 0, 2, ModulePath.fromString("A")));
     assertFalse("a fresh progress line must not be padded to the last command's width: <" + fresh + ">",
         fresh.contains("  "));
   }

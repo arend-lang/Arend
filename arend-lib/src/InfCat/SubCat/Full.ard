@@ -1,20 +1,17 @@
-\import Data.Bool
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Arrows
 \import InfCat.Basics
+\import InfCat.Fibration.Categorical
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful
-\import InfCat.Groupoid
 \import InfCat.OFS.CatAccessibleOFS
 \import InfCat.OFS.CatOFS
 \import InfCat.Objects
 \import InfCat.Paths
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -29,12 +26,12 @@
       | F _ => unob
 
     \protected \lemma family-ff {C D : \Cat} {f : C ->⁺ D} : family.IsRight f <-> IsFFMap f
-      => (\lam r => propExt.dir orth=ff (r ()), \lam ff () => propExt.conv orth=ff ff)
+      => (\lam r => orth=ff.1 (r ()), \lam ff () => orth=ff.2 ff)
       \where {
         \private \lemma orth=ff {C D : \Cat} {f : C ->⁺ D}
           : IsEquiv {DI ->⁺ C} {\Sigma (uv : \Sigma (Ob DI ->⁺ C) (DI ->⁺ D)) (\Pi (x :⁺ Ob DI) -> uv.2 (unob x) = f (uv.1 x))}
                     (\lam h => ((\lam x => h (unob x), \lam y => f (h y)), \lam x => idp))
-          = IsFFMap f
+          <-> IsFFMap f
           => IsEquiv.parallelEquiv (inP DI-equiv)
               (IsEquiv.trans
                 (IsEquiv.trans {_} {\Sigma (u : Ob DI ->⁺ C) (\Sigma (v : DI ->⁺ D) (\Pi (x :⁺ Ob DI) -> v (unob x) = f (u x)))} {_}
@@ -56,7 +53,7 @@
                   ))
                 (inP $ qsigma-left {Ob DI ->⁺ C} ObDI-equiv))
               (\lam h => idp)
-             *> inv (<->_=.1 ffMap-char)
+             `<->trans` <->sym ffMap-char
       }
 
     \func inc (d :⁺ FullSubCat P) : C
@@ -92,4 +89,69 @@
     \sfunc isMax {D : \Cat} {f : D ->⁺ C} (fs : \Pi (d : D) -> P (f d))
       : \Sigma (h : D ->⁺ FullSubCat P) (\Pi (y :⁺ D) -> inc (h y) = f y)
       => ffMap-lift inc-ff f \lam d => inc-sat (fs d)
+  }
+
+-- | Objects of a full subcategory are objects satisfying the predicate.
+\lemma fullSub-ob-equiv {C : \Cat} {P : C -> \Prop}
+  : IsEquiv {FullSubCat P} {\Sigma (x : C) (P x)} (\lam d => (FullSubCat.inc d, FullSubCat.inc-con {C} {P} {d}))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection P) (IsFFMap.isObEmbedding FullSubCat.inc-ff))
+      \lam s => TruncP.map (FullSubCat.inc-sat s.2) \lam d => (d.1, ext d.2)
+
+-- | Functors into a full subcategory are functors whose values satisfy the predicate.
+\lemma fullSub-fun-equiv {C : \Cat} {P : C -> \Prop} {T : \Cat}
+  : IsEquiv {T ->⁺ FullSubCat P} {\Sigma (g : T ->⁺ C) (\Pi (t : T) -> P (g t))}
+            (\lam h => (\lam t => FullSubCat.inc (h t), \lam t => FullSubCat.inc-con {C} {P}))
+  => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection \lam (g : T ->⁺ C) => \Pi (t : T) -> P (g t))
+                                        (IsFFMap.isObEmbedding (postcomp-ff FullSubCat.inc-ff)))
+       \lam s => \have l => FullSubCat.isMax {C} {P} {T} {s.1} s.2
+                 \in inP (l.1, ext (ext l.2))
+
+-- | The projection of the full subcategory on a \Sigma-type to the base.
+\func subProj {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (x :⁺ FullSubCat P) : A
+  => (FullSubCat.inc x).1
+  \where {
+    -- | Objects of the fibers {subProj} are objects of the fibers of {Q} satisfying {P}.
+    \func fibers-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) (a : A)
+      : QEquiv {Fibers (subProj P) a} {\Sigma (b : Q a) (P (a, b))} \cowith
+      | f u => (transport+ Q u.2 (FullSubCat.inc u.1).2, coe (\lam k => P (sigma-ext u.2 idp k)) (FullSubCat.inc-con {_} {P} {u.1}) right)
+      | ret s => (FullSubCat.make (a, s.1) s.2, idp)
+      | ret_f => \case \elim a, \elim __ \with {
+        | _, (x, idp) =>
+          \let | y => FullSubCat.make (FullSubCat.inc x) (FullSubCat.inc-con {_} {P} {x})
+               | emb => (IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb y x
+               | r : pmap (subProj P) (emb.sec idp) = idp => pmap (pmap (\lam (t : \Sigma⁺ (a : A) (Q a)) => t.1)) (emb.f_sec idp)
+          \in pmap (\lam z => ((y, z) : Fibers (subProj P) (subProj P x))) (inv r) *> aux (emb.sec idp)
+      }
+      | f_sec s => ext idp
+      \where
+        \private \func aux {y x : FullSubCat P} (e : y = x)
+          : (y, pmap (subProj P) e) = {Fibers (subProj P) (subProj P x)} (x, idp) \elim e
+          | idp => idp
+
+    -- | Sections of the fibers of {subProj} along {v} are sections of {Q} along {v} satisfying {P}.
+    \lemma sections-equiv {A : \Cat} {Q : A ->⁺ \Cat} (P : \Sigma⁺ (a : A) (Q a) -> \Prop) {Y : \Cat} (v : Y ->⁺ A)
+      : IsEquiv {\Pi (y :⁺ Y) -> Fibers (subProj P) (v y)} {\Sigma (s : \Pi (y :⁺ Y) -> Q (v y)) (\Pi (y : Y) -> P (v y, s y))}
+                (\lam z => (\lam y => transport+ Q (z y).2 (FullSubCat.inc (z y).1).2,
+                            \lam y => coe (\lam k => P (sigma-ext (z y).2 idp k)) FullSubCat.inc-con right))
+      => IsEquiv.trans (inP $ later \new QEquiv {
+            | f z => (\lam y => (z y).1, \lam y => (z y).2)
+            | ret t y => (t.1 y, t.2 y)
+            | ret_f _ => idp
+            | f_sec _ => idp
+          }) $ IsEquiv.trans (inP (qsigma-left (IsEquiv.toQEquiv fullSub-fun-equiv))) $ IsEquiv.trans
+          (inP \new QEquiv {\Sigma (g : \Sigma (g : Y ->⁺ \Sigma⁺ (a : A) (Q a)) (\Pi (y : Y) -> P (g y)))
+                                   (\Pi (y :⁺ Y) -> (g.1 y).1 = v y)}
+                           {\Sigma (t : \Pi (y :⁺ Y) -> Fibers (totalProj Q) (v y)) (\Pi (y : Y) -> P (t y).1)} {
+            | f g => (\lam y => (g.1.1 y, g.2 y), g.1.2)
+            | ret t => ((\lam y => (t.1 y).1, t.2), \lam y => (t.1 y).2)
+            | ret_f _ => idp
+            | f_sec _ => idp
+          })
+          (inP \new QEquiv {
+            | f t => (\lam y => transport+ Q (t.1 y).2 (t.1 y).1.2,
+                      \lam y => coe (\lam k => P (sigma-ext (t.1 y).2 idp k)) (t.2 y) right)
+            | ret p => (\lam y => ((v y, p.1 y), idp), p.2)
+            | ret_f t => ext ((fibers-total-equiv.sections v).f_sec t.1)
+            | f_sec _ => idp
+          })
   }

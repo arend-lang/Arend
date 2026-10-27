@@ -1,0 +1,71 @@
+{- | Some simplicial operators: vertices, constant maps, the inclusion `[n] -> [n+1]`, the last edge, and the long face of `[2]`.
+ -}
+
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Category
+\import Category.Simplex
+\import Logic
+\import Order.PartialOrder
+\import Paths.Meta
+
+-- | The top vertex of `[n]`.
+\func topV (n : Nat) : Fin (suc n) \elim n
+  | 0 => 0
+  | suc n => suc (topV n)
+
+-- | The constant map with value {v}.
+\func constHom {m n : Nat} (v : Fin (suc n)) : Hom {SimplexCat} m n
+  => \new PosetHom {
+    | func _ => v
+    | func-<= _ => <=-refl
+  }
+
+-- | The vertex {v} of `[n]`.
+\func vert {n : Nat} (v : Fin (suc n)) : Hom {SimplexCat} 0 n
+  => constHom v
+
+-- | The inclusion `[n] -> [n+1]`.
+\func segRes (n : Nat) : Hom {SimplexCat} n (suc n)
+  => \new PosetHom {
+    | func t => t
+    | func-<= q => \lam r => q r
+  }
+
+-- | The last edge `[1] -> [n+1]`.
+\func lastEdge (n : Nat) : Hom {SimplexCat} 1 (suc n)
+  => \new PosetHom {
+    | func t => \case t \with {
+      | 0 => topV n
+      | 1 => suc (topV n)
+    }
+    | func-<= {x} {y} q => \case \elim x, \elim y, q \with {
+      | 0, 0, _ => \lam r => NatSemiring.<-irreflexive r
+      | 0, 1, _ => \lam r => NatSemiring.<-irreflexive (NatSemiring.<-transitive r id<suc)
+      | 1, 0, q => absurd (q NatOrder.zero<suc)
+      | 1, 1, _ => \lam r => NatSemiring.<-irreflexive r
+    }
+  }
+
+-- | Monotone maps are determined by their values.
+\lemma simplexHom-ext {m n : Nat} {f g : Hom {SimplexCat} m n} (p : \Pi (t : Fin (suc m)) -> f t = g t) : f = g
+  => ext (ext p)
+
+-- | The two ways of including the vertex `n` of `[n+1]` agree.
+\lemma segRes-lastEdge (n : Nat) : segRes n SimplexCat.∘ vert (topV n) = lastEdge n SimplexCat.∘ vert 0
+  => simplexHom-ext \lam _ => idp
+
+-- | The face `[1] -> [2]` missing the vertex `1`.
+\func face1 : Hom {SimplexCat} 1 2
+  => \new PosetHom {
+    | func t => \case t \with {
+      | 0 => 0
+      | 1 => 2
+    }
+    | func-<= {x} {y} q => \case \elim x, \elim y, q \with {
+      | 0, 0, _ => \lam r => NatSemiring.<-irreflexive r
+      | 0, 1, _ => \lam r => \case r
+      | 1, 0, q => absurd (q NatOrder.zero<suc)
+      | 1, 1, _ => \lam r => NatSemiring.<-irreflexive r
+    }
+  }

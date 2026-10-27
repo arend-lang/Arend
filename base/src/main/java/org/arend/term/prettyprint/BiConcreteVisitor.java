@@ -1,5 +1,6 @@
 package org.arend.term.prettyprint;
 
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.extImpl.ConcreteFactoryImpl;
 import org.arend.naming.reference.Referable;
@@ -87,7 +88,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
         }
       }
     }
-    return Concrete.PatternLamExpression.make(expr.getData(), newParams, newPatterns, expr.getBody().accept(this, wideExpr.getBody()));
+    return Concrete.PatternLamExpression.make(expr.getData(), newParams, newPatterns, expr instanceof Concrete.PatternLamExpression patLam ? patLam.getVariance() : BindingVariance.INVARIANT, expr.getBody().accept(this, wideExpr.getBody()));
   }
 
   private static List<Concrete.Parameter> flattenTelescopes(List<? extends Concrete.Parameter> parameters) {
@@ -317,7 +318,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
     var newParameters = visitParameters(clause.getParameters(), wideClause.getParameters());
     var newResultType = clause.getResultType() == null ? null : clause.getResultType().accept(this, wideClause.getResultType());
     var newTerm = clause.term.accept(this, wideClause.term);
-    return new Concrete.LetClause(newParameters, newResultType, newTerm, newPattern);
+    return new Concrete.LetClause(newParameters, newResultType, newTerm, newPattern, clause.isCovariant());
   }
 
   @Override

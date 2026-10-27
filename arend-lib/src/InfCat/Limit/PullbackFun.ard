@@ -1,0 +1,162 @@
+{- | Pullbacks in functor categories are computed pointwise.
+ -
+ -   A square is a pullback square if and only if its restriction to the cospan formed by its bottom and right sides
+ -   is fully faithful on arrows from constant squares ({cospan-char}).
+ -   Postcomposition with a functor preserves this property ({postcomp-ff-at}),
+ -   so a square in `C ->⁺ D` which is a pullback square at every point is a pullback square ({pointwise-pullback}).
+ -
+ -   A square {Phi} of types is a pullback square if its sections are determined by their values on the bottom and right sides
+ -   ({type-pullback}). Together with {pointwise-pullback}, this detects pullback squares in `Y ->⁺ \Type u` pointwise.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Covariant.FreeLeft
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Limit.Pullback
+\import Logic
+\import Paths
+\import Paths.Meta
+\open IsPullbackSquare
+
+-- | The cospan `(1,0) -> (1,1) <- (0,1)` formed by the right and bottom sides of a square.
+\func Cospan : \Cat
+  => CatPushout {\Sigma} {DI} {DI} (\lam _ => dright) (\lam _ => dright)
+
+-- | The inclusion of {Cospan} into the square.
+\func cospanInc (x :⁺ Cospan) : \Sigma⁺ (i : DI) DI
+  => CatPushout.rec (\lam j => ((dright, j) : \Sigma⁺ (i : DI) DI)) (\lam i => ((i, dright) : \Sigma⁺ (i : DI) DI)) (\lam _ => idp) x
+
+-- | The restriction of a square to {Cospan}.
+\func cospan {C : \Cat} (phi :⁺ DI ->⁺ DI ->⁺ C) (x :⁺ Cospan) : C
+  => phi (cospanInc x).1 (cospanInc x).2
+
+-- | The constant square on {r}.
+\func constSq {C :⁺ \Cat} (r :⁺ C) : DI ->⁺ DI ->⁺ C
+  => \lam _ _ => r
+
+-- | Sections over {Cospan} as {Boundary} data.
+\func cospanBd {Phi : DI ->⁺ DI ->⁺ \Cat} (M : \Pi (x :⁺ Cospan) -> Phi (cospanInc x).1 (cospanInc x).2) : Boundary Phi
+  => (M (cinl dleft), M (cinr dleft), M (cinr dright),
+      transport (\lam c => DPath (\lam j => Phi dright j) (M (cinl dleft)) c) (path \lam k => M (cglue () k)) (dpath \lam j => M (cinl j)),
+      dpath \lam i => M (cinr i))
+
+\lemma cospanBd-equiv {Phi : DI ->⁺ DI ->⁺ \Cat} : IsEquiv (cospanBd {Phi})
+  => IsEquiv.trans (inP CatPushout.elim-equiv) $ inP \new QEquiv {
+       | f t => (t.1 dleft, t.2 dleft, t.2 dright, transport (\lam c => DPath (\lam j => Phi dright j) (t.1 dleft) c) (t.3 ()) (dpath t.1), dpath t.2)
+       | ret b => (\lam j => b.4 j, \lam i => b.5 i, \lam _ => idp)
+       | ret_f t => aux (dpath t.1) (t.3 ())
+       | f_sec _ => idp
+     }
+  \where
+    \private \sfunc aux {b : Phi dright dleft} {v : \Pi (i :⁺ DI) -> Phi i dright} {c : Phi dright dright} (p : DPath (\lam j => Phi dright j) b c) (e : c = v dright)
+      : (\lam j => transport (\lam c => DPath (\lam j => Phi dright j) b c) e p j, v, \lam _ => idp)
+        = {\Sigma (u : \Pi (j :⁺ DI) -> Phi dright j) (v : \Pi (i :⁺ DI) -> Phi i dright) (\Pi (x :⁺ \Sigma) -> u dright = v dright)}
+        (\lam j => p j, v, \lam _ => e)
+      \elim e
+      | idp => idp
+
+{- | A square is a pullback square if and only if, for every test object `r`, arrows from the constant square on `r`
+ -   are determined by their restrictions to {Cospan}.
+ -}
+\lemma cospan-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+  : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (dmap cospan {constSq r}))
+  => \have | bd-equiv (r : C) : IsEquiv (\lam (a : (\lam _ =>⁺ r) ~> cospan phi) => cospanBd {\lam i j => r ~> phi i j} (\lam x => dpath \lam m => a m x))
+             => IsEquiv.trans (inP \new QEquiv {(\lam _ => r) ~> {Cospan ->⁺ C} cospan phi} {\Pi (x :⁺ Cospan) -> r ~> cospan phi x} {
+                  | f a x => dpath \lam m => a m x
+                  | ret M => dpath \lam m x => M x m
+                  | ret_f _ => idp
+                  | f_sec _ => idp
+                }) (cospanBd-equiv {\lam i j => r ~> phi i j})
+           | sq-equiv (r : C) : IsEquiv {_} {constSq r ~> phi} (\lam k => dpath \lam m i j => homSq phi k i j m)
+             => IsEquiv.leftFactor (IsEquiv.trans (const-ev0-equiv (\lam _ =>⁺ r) phi) (const-ev0-equiv r (phi dleft)))
+                 (transport IsEquiv (ext \lam k => inv comp_idd-right) (inP idEquiv))
+     \in (\lam pb r => IsEquiv.rightFactor (sq-equiv r) $ IsEquiv.leftFactor (bd-equiv r) ((pullback-char phi).1 pb r),
+          \lam ce => (pullback-char phi).2 \lam r => IsEquiv.trans (IsEquiv.trans (sq-equiv r) (ce r)) (bd-equiv r))
+
+-- | A square in `C ->⁺ D` which is a pullback square at every point is a pullback square.
+\lemma pointwise-pullback {C D : \Cat} (phi : DI ->⁺ DI ->⁺ C ->⁺ D) (e : \Pi (c : C) -> IsPullbackSquare (\lam i j => phi i j c))
+  : IsPullbackSquare phi
+  => (cospan-char phi).2 \lam R => (IsEquiv.parallelEquiv {_} {_} {_} {_} {_}
+        {dmap {C ->⁺ DI ->⁺ DI ->⁺ D} {C ->⁺ Cospan ->⁺ D} (\lam G c => cospan (G c)) {\lam c => constSq (R c)} {\lam c i j => phi i j c}}
+        (inP \new QEquiv {constSq R ~> phi} {(\lam c => constSq (R c)) ~> {C ->⁺ DI ->⁺ DI ->⁺ D} (\lam c i j => phi i j c)} {
+          | f a => dpath \lam m c i j => a m i j c
+          | ret a => dpath \lam m i j c => a m c i j
+          | ret_f _ => idp
+          | f_sec _ => idp
+        })
+        (inP \new QEquiv {(\lam _ => R) ~> {Cospan ->⁺ C ->⁺ D} cospan phi} {(\lam c _ => R c) ~> {C ->⁺ Cospan ->⁺ D} (\lam c x => cospan phi x c)} {
+          | f b => dpath \lam m c x => b m x c
+          | ret b => dpath \lam m x c => b m c x
+          | ret_f _ => idp
+          | f_sec _ => idp
+        })
+        (\lam _ => idp)).2
+      (postcomp-ff-at (\lam psi => cospan psi) (\lam c => constSq (R c)) (\lam c i j => phi i j c) \lam x y => (cospan-char _).1 (e y) (R x))
+
+-- | Sections of a family of types over {DI} are determined by their starting point.
+\lemma DI-sections-ev.{u} (X : DI ->⁺ \Type u) : IsEquiv {\Pi (i :⁺ DI) -> X i} (\lam s => s dleft)
+  => leftFam-right-char.leftFib-sections.1 universe-leftFib X
+
+-- | Sections of a family of types over a square are determined by their value at the top left corner.
+\lemma square-sections-ev.{u} (Phi : DI ->⁺ DI ->⁺ \Type u) : IsEquiv {\Pi (i j :⁺ DI) -> Phi i j} (\lam L => L dleft dleft)
+  => IsEquiv.trans (DI-sections-ev (\lam i => \Pi (j :⁺ DI) -> Phi i j)) (DI-sections-ev (Phi dleft))
+
+-- | A covariant product of fiberwise equivalences is an equivalence.
+\lemma pi-equiv+.{u} {S : \Cat u} {A B : S ->⁺ \Type u} (h : \Pi (z :⁺ \Sigma⁺ (s : S) (A s)) -> B z.1)
+                     (e : \Pi (s : S) -> IsEquiv (\lam a => h (s,a)))
+  : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => h (s, f s))
+  => \let p => fun-path {S} {A} {B} h e
+     \in transport (\lam (q : A ~> B) => IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => q i s) (f s)))
+                   p.2 (path-equiv p.1)
+  \where {
+    \private \lemma path-equiv.{w} {S : \Cat w} {A B : S ->⁺ \Type w} (p : A = B)
+      : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => (=_~> p) i s) (f s)) \elim p
+      | idp => transport IsEquiv (ext \lam f s => inv ~>_->_idd) (inP idEquiv)
+
+    -- | A version of {pi-equiv+} for a type {S}.
+    \protected \lemma type.{u} {S : \Type u} {A B : S ->⁺ \Type u} (h : \Pi (z :⁺ \Sigma⁺ (s : S) (A s)) -> B z.1)
+                              (e : \Pi (s : S) -> IsEquiv (\lam a => h (s,a)))
+      : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => h (s, f s))
+      => \let p => fun-path {S} {A} {B} h e
+         \in transport (\lam (q : A ~> B) => IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => q i s) (f s)))
+                       p.2 (path-equiv-type p.1)
+
+    \private \lemma path-equiv-type.{w} {S : \Type w} {A B : S ->⁺ \Type w} (p : A = B)
+      : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => (=_~> p) i s) (f s)) \elim p
+      | idp => transport IsEquiv (ext \lam f s => inv ~>_->_idd) (inP idEquiv)
+  }
+
+-- | A square of types whose sections are determined by their values on the bottom and right sides is a pullback square.
+\lemma type-pullback.{u} (Phi : DI ->⁺ DI ->⁺ \Type u) (e : IsEquiv (boundary {Phi})) : IsPullbackSquare Phi
+  => (cospan-char Phi).2 \lam r =>
+       \have -- Arrows from the constant square are families of sections of {Phi} ({depUnivalence}).
+             | hom-equiv : IsEquiv (\lam (a : constSq r ~> Phi) (w :⁺ \Sigma⁺ (z : \Sigma⁺ (i : DI) DI) r) => ~>_-> (dpath \lam m => a m w.1.1 w.1.2) w.2)
+                => IsEquiv.trans (inP \new QEquiv {constSq r ~> Phi} {(\lam (z :⁺ \Sigma⁺ (i : DI) DI) => r) ~> (\lam z => Phi z.1 z.2)} {
+                     | f a => dpath \lam m z => a m z.1 z.2
+                     | ret b => dpath \lam m i j => b m (i,j)
+                     | ret_f _ => idp
+                     | f_sec _ => idp
+                   }) (inP depUnivalence)
+             -- Restriction of families of sections to {Cospan}.
+             | res-equiv : IsEquiv (\lam (L : \Pi (w :⁺ \Sigma⁺ (z : \Sigma⁺ (i : DI) DI) r) -> Phi w.1.1 w.1.2) (s :⁺ \Sigma⁺ Cospan r) => L (cospanInc s.1, s.2))
+                => IsEquiv.trans (inP \new QEquiv {\Pi (w :⁺ \Sigma⁺ (z : \Sigma⁺ (i : DI) DI) r) -> Phi w.1.1 w.1.2} {\Pi (x :⁺ r) (i j :⁺ DI) -> Phi i j} {
+                     | f L x i j => L ((i,j), x)
+                     | ret M w => M w.2 w.1.1 w.1.2
+                     | ret_f _ => idp
+                     | f_sec _ => idp
+                   }) $ IsEquiv.trans (pi-equiv+.type {r} {\lam _ => \Pi (i j :⁺ DI) -> Phi i j} {\lam _ => \Pi (y :⁺ Cospan) -> cospan Phi y}
+                                                 (\lam z y => z.2 (cospanInc y).1 (cospanInc y).2)
+                                                 (\lam _ => IsEquiv.leftFactor {_} {_} {_} {\lam (L : \Pi (i j :⁺ DI) -> Phi i j) (y :⁺ Cospan) => L (cospanInc y).1 (cospanInc y).2} (cospanBd-equiv {Phi}) e)) $
+                      inP \new QEquiv {\Pi (x :⁺ r) (y :⁺ Cospan) -> cospan Phi y} {\Pi (s :⁺ \Sigma⁺ Cospan r) -> cospan Phi s.1} {
+                        | f M s => M s.2 s.1
+                        | ret N x y => N (y, x)
+                        | ret_f _ => idp
+                        | f_sec _ => idp
+                      }
+       \in (IsEquiv.parallelEquiv hom-equiv (inP (depUnivalence {Cospan} {\lam _ => r} {cospan Phi})) (\lam _ => idp)).2 res-equiv

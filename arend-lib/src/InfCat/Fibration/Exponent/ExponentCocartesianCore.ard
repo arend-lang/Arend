@@ -1,0 +1,270 @@
+{- | The fiberwise core of the exponent of a cocartesian fibration.
+
+ -   Let `p : E ->⁺ B` be a cocartesian map and let {C} be a category. The fiberwise core of the exponent {ExpCocConst} is the small
+ -   category {ExpCocCore} with the projection {ExpCocCore.proj} to {B}; its objects over `b` are functors `Fibers p b ->⁺ C`,
+ -   and its arrows over `beta : b' ~> b` are those functors on `BaseChange beta p` that invert the cocartesian arrows:
+ -   * {ExpCocCore.eval}: an object `y` evaluated as a functor `Fibers p (proj y) ->⁺ C`; along every functor into {ExpCocCore}
+ -     it inverts the cocartesian arrows ({ExpCocCore.eval-inverts}).
+ -   * {ExpCocCore.eval-univ}: the universal property; functors `T ->⁺ ExpCocCore` are functors `pi : T ->⁺ B`
+ -     together with functors `BaseChange pi p ->⁺ C` inverting the arrows {CocartWeakEq} whose component in `E` is cocartesian.
+ -   * {ExpCocCore.sec-eval}, {ExpCocCore.sec-equiv}: the same for sections of the fibers of the projection along a fixed `pi`;
+ -     restriction of sections is precomposition. Hence restriction along a functor of bases is an equivalence if it induces
+ -     an equivalence of localizations of the base changes at {CocartWeakEq} ({ExpCocCore.sec-restrict-equiv}).
+ -   * {ExpCocCore.rightFib}: the fibers of the projection form a right fibration.
+ -   * {ExpCocCore.fiber-eval}, {ExpCocCore.fiber-equiv}: objects of the fiber over `b` are functors `Fibers p b ->⁺ C`;
+ -     transport along `beta` is precomposition with cocartesian transport along `beta` ({ExpCocCore.fiber-eval-tr}).
+
+ -   Construction: {ExpCocCore} is the subcategory of {ExpCocConst} on the arrows whose functor inverts the cocartesian lifts ({CoreHelpers.CoreP});
+ -   they are closed under composition ({CoreHelpers.coreP-closed}, from {invertsAlong-comp}).
+ -   * {ExpCocCore.eval-univ}: functors into the subcategory are functors whose arrows satisfy {CoreHelpers.CoreP} ({subCat-fun-equiv}),
+ -     which is to say that their functors invert {CocartWeakEq} ({invertsWeakEq-along}); conclude by {ExpCocConst.eval-univ}.
+ -   * {ExpCocCore.rightFib}: by {rightFib-slice-char}, it suffices that arrows of {ExpCocCore} are arrows of {B} into the projection
+ -     of the target. By {ExpCocCore.eval-univ} for `T = DI`, arrows are functors on `BaseChange w p` inverting {CocartWeakEq},
+ -     which are functors on the fiber over `w dright` ({restrict-end-equiv}). By {ExpCocCore.eval-univ} for the unit category
+ -     ({CoreHelpers.unit-equiv}), these are objects over `w dright`.
+ -   * {ExpCocCore.sec-equiv}: sections along varying `pi` are functors into the core ({CoreHelpers.secTot-equiv}), and over these
+ -     {ExpCocCore.sec-eval} is the map of {ExpCocCore.eval-univ} ({CoreHelpers.secTot-path}); take fibers over `pi` ({fiberwiseEquiv}).
+ -   * {ExpCocCore.fiber-eval-tr}: a section of the fibers over an arrow inverts {CocartWeakEq} ({CoreHelpers.fibSec-inverts}),
+ -     so it is determined by its value at the end ({invertsWeakEq-toEnd}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Exponent.ExponentCocartesian
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Groupoid
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Paths
+\import InfCat.Rezk
+\import InfCat.SubCat.Sub
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\open CoreHelpers
+
+-- | The fiberwise core of the exponent from the cocartesian map {p} to {C}.
+\type ExpCocCore.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : \Cat u
+  => SubCat (CoreP pc C)
+  \where {
+    -- | The projection of the core to the base.
+    \protected \func proj.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (y :⁺ ExpCocCore pc C) : B
+      => ExpCocConst.proj pc C (SubCat.inc y)
+
+    -- | The evaluation map.
+    \protected \func eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u}
+                              (y :⁺ ExpCocCore pc C) (x :⁺ Fibers p (proj pc C y)) : C
+      => ExpCocConst.eval pc (SubCat.inc y) x
+
+    -- | The evaluation along a functor into the core inverts the cocartesian arrows.
+    \protected \lemma eval-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (s : T ->⁺ ExpCocCore pc C)
+      : InvertsWeakEq {CocartWeakEq p (\lam t => proj pc C (s t))} (\lam q => eval pc (s q.1) q.2) \cowith
+      | hfunc-we => ((invertsWeakEq-along C (\lam t => proj pc C (s t)) {\lam q => eval pc (s q.1) q.2}).2 \lam k x l lc =>
+           SubCat.inc-con {ExpCocConst pc C} {CoreP pc C} (coreP-closed pc C) {\lam i => s (k i)} x (l.1, l.2) lc).hfunc-we
+
+    -- | The universal property: functors into the core are functors to {B} together with functors on the base change of {p} inverting {CocartWeakEq}.
+    \protected \lemma eval-univ.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} (T : \Cat u)
+      : IsEquiv {T ->⁺ ExpCocCore pc C} {\Sigma (pi : T ->⁺ B) (InvertingWeakEq (CocartWeakEq p pi) C)}
+                (\lam s => (\lam t => proj pc C (s t), eval-inverts pc s))
+      => transport IsEquiv (ext \lam s => ext (idp, FuncWeakEq.ext \lam q => idp)) $ IsEquiv.trans (inP $ later \new QEquiv {
+        | ret f t => f t
+        | ret_f x => idp
+        | f_sec x => idp
+      }) $ IsEquiv.trans (subCat-fun-equiv (coreP-closed pc C) {T}) (allP-equiv pc C T)
+
+    -- | The evaluation of an object of the fiber over {b}.
+    \protected \func fiber-eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {b :⁺ B}
+                                    (z :⁺ Fibers (proj pc C) b) (x :⁺ Fibers p b) : C \elim z
+      | (y, idp) => eval pc y x
+
+    -- | Objects of the fiber over {b} are functors on the fiber of {p} over {b}.
+    \protected \lemma fiber-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} (b : B)
+      : IsEquiv {Fibers (proj pc C) b} {Fibers p b ->⁺ C} (\lam z x => fiber-eval pc z x)
+      => fiberwiseEquiv (inP idEquiv) {\lam b => Fibers (proj pc C) b} {\lam b => Fibers p b ->⁺ C}
+           (\lam b z x => fiber-eval pc z x)
+           (IsEquiv.rightFactor (inP (fibers-total pc C)) (unit-equiv pc C)) b
+
+    -- | Transport along {beta} in the fibers of the projection is precomposition with cocartesian transport along {beta} ({toEnd}).
+    \protected \sfunc fiber-eval-tr.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {b' b : B} (beta : b' ~> b)
+                                       (z : Fibers (proj pc C) b) (x :⁺ Fibers p b')
+      : fiber-eval pc (rightFib-tr (rightFib pc) beta z) x = fiber-eval pc z (toEnd pc beta (dleft, x))
+      => \let l => (rightFib pc {C} (b', b, beta, z)).center
+         \in path \lam j => invertsWeakEq-toEnd pc beta (fibSec-inverts pc C (\lam i => beta i) (\lam i => l.2 i)) j (dleft, x)
+
+    -- | The evaluation along a section of the fibers of the projection over {pi}.
+    \protected \func sec-eval.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
+                                 (s : \Pi (t :⁺ T) -> Fibers (proj pc C) (pi t)) : InvertingWeakEq (CocartWeakEq p pi) C \cowith
+      | hfunc q => fiber-eval pc (s q.1) q.2
+      | hfunc-we => (fibSec-inverts pc C pi s).hfunc-we
+
+    {- | The universal property for sections: sections of the fibers of the projection over {pi}
+     -   are functors on the base change of {p} along {pi} inverting {CocartWeakEq}.
+     -}
+    \protected \lemma sec-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {T : \Cat u} (pi : T ->⁺ B)
+      : IsEquiv (sec-eval pc {C} pi)
+      => fiberwiseEquiv {T ->⁺ B} {T ->⁺ B} {\lam pi => pi} (inP idEquiv) {\lam pi => \Pi (t :⁺ T) -> Fibers (proj pc C) (pi t)} {\lam pi => InvertingWeakEq (CocartWeakEq p pi) C}
+           (\lam pi s => sec-eval pc pi s)
+           (transport IsEquiv (ext \lam (t : \Sigma (pi : T ->⁺ B) (\Pi (x :⁺ T) -> Fibers (proj pc C) (pi x))) => secTot-path pc C (\lam x => (t.2 x).1) (funExt+ \lam x => (t.2 x).2))
+                      (IsEquiv.trans (inP (secTot-equiv pc C T)) (eval-univ pc T)))
+           pi
+
+    {- | Restriction of sections along {h} is an equivalence if {h} induces an equivalence of localizations:
+     -   if {lam} is a localization at {CocartWeakEq} and so is its restriction along the base change of {h}.
+     -   This is the naturality of {sec-equiv} in the base.
+     -}
+    \protected \lemma sec-restrict-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u} {K K' L : \Cat u}
+      (pi : K ->⁺ B) (h : K' ->⁺ K) {lam : BaseChange pi p ->⁺ L} (Lz : IsLocalization {CocartWeakEq p pi} lam)
+      (Lz' : IsLocalization {CocartWeakEq p (\lam t => pi (h t))} (\lam q => lam (h q.1, q.2)))
+      : IsEquiv {\Pi (t :⁺ K) -> Fibers (proj pc C) (pi t)} {\Pi (t :⁺ K') -> Fibers (proj pc C) (pi (h t))} (\lam s t => s (h t))
+      => IsEquiv.leftFactor (sec-equiv pc (\lam t => pi (h t))) $
+           transport IsEquiv {\lam s => sec-eval pc pi s FuncWeakEq.∘ cocartWeakEq-map h} {\lam s => sec-eval pc (\lam t => pi (h t)) (\lam t => s (h t))}
+                     (ext \lam s => FuncWeakEq.levelProp _ _) $
+           IsEquiv.trans (sec-equiv pc pi) {FuncWeakEq.∘ cocartWeakEq-map h} $
+           IsEquiv.rightFactor {_} {_} {_} {FuncWeakEq.compose-left Lz.1} (loc-restrict-equiv (IsLocalization.univ Lz {C})) {FuncWeakEq.∘ cocartWeakEq-map h} $
+           transport IsEquiv {FuncWeakEq.compose-left Lz'.1} {\lam G => FuncWeakEq.compose-left Lz.1 G FuncWeakEq.∘ cocartWeakEq-map h} (ext \lam G => FuncWeakEq.levelProp {CocartWeakEq p (\lam t => pi (h t))} {MinCatWeakEq C} {\lam q => G (lam (h q.1, q.2))} _ _)
+                     (loc-restrict-equiv (IsLocalization.univ Lz' {C}))
+
+    -- | The fibers of the projection of the core form a right fibration.
+    \protected \lemma rightFib.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) {C : \Cat u}
+      : IsRightFib (Fibers (proj pc C))
+      => (rightFib-slice-char {_} {_} {proj pc C}).2 $ fiberwiseEquiv (inP idEquiv) (sliceMap (proj pc C)) (slices-equiv pc C)
+  }
+
+\module CoreHelpers \where {
+  -- | The universal functor on the base change of {p} along the projection of {ExpCocConst}.
+  \func univFun.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (q :⁺ BaseChange (ExpCocConst.proj pc C) p) : C
+    => ExpCocConst.eval pc q.1 q.2
+
+  -- | The arrows of {ExpCocConst} whose functor inverts the cocartesian lifts.
+  \type CoreP.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (a : DI ->⁺ ExpCocConst pc C) : \Prop
+    => InvertsAlong (univFun pc C) {a dleft} {a dright} (dpath \lam i => a i)
+
+  \lemma coreP-closed.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) : IsCompClosed (CoreP pc C)
+    => (\lam {h} _ => (invertsAlong-idd (univFun pc C) (h dleft), invertsAlong-idd (univFun pc C) (h dright)),
+        \lam Pf Pg => invertsAlong-comp {_} {_} {_} {C} pc {_} {univFun pc C} Pf Pg)
+
+  -- | The arrows of a functor into {ExpCocConst} satisfy {CoreP} if and only if its functor inverts {CocartWeakEq}.
+  \func allP-iff.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (g : T ->⁺ ExpCocConst pc C)
+    : QEquiv {\Pi (k : DI ->⁺ T) -> CoreP pc C (\lam i => g (k i))}
+             {InvertsWeakEq {CocartWeakEq p (\lam t => ExpCocConst.proj pc C (g t))} (\lam q => ExpCocConst.eval pc (g q.1) q.2)} \cowith
+    | f a => \new FuncWeakEq {
+      | hfunc-we => ((invertsWeakEq-along C (\lam t => ExpCocConst.proj pc C (g t)) {\lam q => ExpCocConst.eval pc (g q.1) q.2}).2 \lam k x l lc => a (\lam i => k i) x (l.1, l.2) lc).hfunc-we
+    }
+    | ret I k x l lc => (invertsWeakEq-along C _).1 I (dpath \lam i => k i) x (l.1, l.2) lc
+    | ret_f _ => prop-pi
+    | f_sec _ => FuncWeakEq.levelProp _ _
+
+  -- | Functors into {ExpCocConst} whose arrows satisfy {CoreP} are functors to {B} together with functors inverting {CocartWeakEq}.
+  \lemma allP-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u)
+    : IsEquiv {\Sigma (g : T ->⁺ ExpCocConst pc C) (\Pi (k : DI ->⁺ T) -> CoreP pc C (\lam i => g (k i)))}
+              {\Sigma (pi : T ->⁺ B) (InvertingWeakEq (CocartWeakEq p pi) C)}
+              (\lam s => (\lam t => ExpCocConst.proj pc C (s.1 t), allP-iff pc C s.1 s.2))
+    => inP $ sigma-right (allP-iff pc C) `transQEquiv`
+       qsigma-left (IsEquiv.toQEquiv (ExpCocConst.eval-univ pc T)) `transQEquiv`
+       later \new QEquiv {\Sigma (s : \Sigma (pi : T ->⁺ B) (BaseChange pi p ->⁺ C)) (InvertsWeakEq {CocartWeakEq p s.1} s.2)} {
+         | f s => (s.1.1, s.2)
+         | ret s => ((s.1, s.2.hfunc), s.2)
+         | ret_f _ => idp
+         | f_sec _ => idp
+       }
+
+  -- | Over the unit category, every functor on the base change inverts {CocartWeakEq}.
+  \lemma unit-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} {C : \Cat} {b : B} (G : Fibers p b ->⁺ C)
+    : InvertsWeakEq {CocartWeakEq {UnitCat} p \lam _ => b} (\lam q => G q.2) \cowith
+    | hfunc-we => ((invertsWeakEq-along C (\lam _ => b) {\lam q => G q.2}).2 \lam k => along k).hfunc-we
+    \where
+      -- | Since the base is constant, lifts of every arrow of {UnitCat} are lifts of an identity.
+      \private \lemma along {t t' : UnitCat} (k : t ~> t') : InvertsAlong {UnitCat} {B} {E} {C} {p} {\lam _ => b} (\lam q => G q.2) k
+        => \lam x l lc => \let l' : CovLift (Fibers p) (b, b, idd, x) => (l.1, l.2)
+                         \in dmap_IsIso G (cocartesianLift-idd-iso l' ((cocartesianLift<->arrow-at x.2 l').2 lc))
+
+  -- | Objects of the core are objects of {B} together with functors on their fibers.
+  \lemma unit-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u)
+    : IsEquiv {ExpCocCore pc C} {\Sigma (b : B) (Fibers p b ->⁺ C)} (\lam y => (ExpCocCore.proj pc C y, \lam x => ExpCocCore.eval pc y x))
+    => inP $ UnitCat-fun-equiv {ExpCocCore pc C} `transQEquiv` IsEquiv.toQEquiv (ExpCocCore.eval-univ pc UnitCat) `transQEquiv` later \new QEquiv {
+         | f s => (s.1 unitCat, \lam x => s.2 (unitCat, x))
+         | ret t => (\lam _ => t.1, unit-inverts t.2)
+         | ret_f s => unit-ret (funExt+ \lam (t :⁺ UnitCat) => \case \elim t \return s.1 unitCat = s.1 t \with {
+           | unitCat => idp
+         }) s.2
+         | f_sec _ => idp
+       }
+    \where
+      \private \sfunc unit-ret {b : B} {pi : UnitCat ->⁺ B} (h : (\lam _ => b) = {UnitCat ->⁺ B} pi) (G : InvertingWeakEq (CocartWeakEq p pi) C)
+        : ((\lam _ => pi unitCat, unit-inverts (\lam x => G (unitCat, x))) : \Sigma (pi' : UnitCat ->⁺ B) (InvertingWeakEq (CocartWeakEq p pi') C)) = (pi, G) \elim h
+        | idp => ext (idp, FuncWeakEq.ext \lam q => \case \elim q \with {
+          | (unitCat, y) => idp
+        })
+
+  -- | The evaluation along a section of the fibers of the projection inverts {CocartWeakEq}.
+  \lemma fibSec-inverts.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) {T : \Cat u} (pi : T ->⁺ B)
+                            (D : \Pi (t :⁺ T) -> Fibers (ExpCocCore.proj pc C) (pi t))
+    : InvertsWeakEq {CocartWeakEq p pi} (\lam q => ExpCocCore.fiber-eval pc (D q.1) q.2)
+    => aux pc C (\lam t => (D t).1) (funExt+ \lam t => (D t).2)
+    \where
+      \private \lemma aux.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat v) {T : \Cat v} (h : T ->⁺ ExpCocCore pc C)
+                              {pi : T ->⁺ B} (R : (\lam (t :⁺ T) => ExpCocCore.proj pc C (h t)) = {T ->⁺ B} pi)
+        : InvertsWeakEq {CocartWeakEq p pi} (\lam q => ExpCocCore.fiber-eval pc ((h q.1, path (\lam j => R j q.1)) : Fibers (ExpCocCore.proj pc C) (pi q.1)) q.2) \elim R
+        | idp => ExpCocCore.eval-inverts pc h
+
+  -- | Sections over varying `pi` are functors into the core.
+  \func secTot-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u) (T : \Cat u)
+    : QEquiv {\Sigma (pi : T ->⁺ B) (\Pi (t :⁺ T) -> Fibers (ExpCocCore.proj pc C) (pi t))} {T ->⁺ ExpCocCore pc C} (\lam t x => (t.2 x).1) \cowith
+    | ret h => (\lam t => ExpCocCore.proj pc C (h t), \lam t => (h t, idp))
+    | ret_f t => sec-path pc C (\lam x => (t.2 x).1) (funExt+ \lam x => (t.2 x).2)
+    | f_sec _ => idp
+    \where
+      \sfunc sec-path.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat v) {T : \Cat v} (h : T ->⁺ ExpCocCore pc C)
+                         {pi : T ->⁺ B} (R : (\lam (t :⁺ T) => ExpCocCore.proj pc C (h t)) = {T ->⁺ B} pi)
+        : ((\lam t => ExpCocCore.proj pc C (h t), \lam t => (h t, idp)) : \Sigma (pi : T ->⁺ B) (\Pi (t :⁺ T) -> Fibers (ExpCocCore.proj pc C) (pi t)))
+          = (pi, \lam t => (h t, path (\lam j => R j t))) \elim R
+        | idp => idp
+
+  -- | {ExpCocCore.sec-eval} over varying {pi} is the map of {ExpCocCore.eval-univ}.
+  \sfunc secTot-path.{v} {B E : \Cat v} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat v) {T : \Cat v} (h : T ->⁺ ExpCocCore pc C)
+                        {pi : T ->⁺ B} (R : (\lam (t :⁺ T) => ExpCocCore.proj pc C (h t)) = {T ->⁺ B} pi)
+    : ((\lam t => ExpCocCore.proj pc C (h t), ExpCocCore.eval-inverts pc h)
+         : \Sigma (pi : T ->⁺ B) (InvertingWeakEq (CocartWeakEq p pi) C))
+      = (pi, ExpCocCore.sec-eval pc pi (\lam t => (h t, path (\lam j => R j t)))) \elim R
+    | idp => ext (idp, FuncWeakEq.ext \lam q => idp)
+
+  -- | The core is the total category of the fibers of its projection.
+  \func fibers-total.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u)
+    : QEquiv {ExpCocCore pc C} {\Sigma (b : B) (Fibers (ExpCocCore.proj pc C) b)} \cowith
+    | f y => (ExpCocCore.proj pc C y, (y, idp))
+    | ret s => s.2.1
+    | ret_f _ => idp
+    | f_sec (b,(y,idp)) => idp
+
+  -- | Arrows of the core are arrows of {B} together with objects over their targets.
+  \lemma slices-equiv.{u} {B E : \Cat u} {p : E ->⁺ B} (pc : IsCocartesianMap p) (C : \Cat u)
+    : IsEquiv {\Sigma (x : ExpCocCore pc C) (\Sigma (y : ExpCocCore pc C) (y ~> x))} {\Sigma (x : ExpCocCore pc C) (\Sigma (a : B) (a ~> ExpCocCore.proj pc C x))}
+              (\lam s => (s.1, sliceMap (ExpCocCore.proj pc C) s.1 s.2))
+    => IsEquiv.rightFactor (inP arrows-equiv) $
+       IsEquiv.leftFactor (inP (qsigma-left (IsEquiv.toQEquiv (unit-equiv pc C)) `transQEquiv` reassoc)) $
+       IsEquiv.trans (ExpCocCore.eval-univ pc DI) (inP (sigma-right \lam w => IsEquiv.toQEquiv (restrict-end-equiv pc w {C})))
+    \where {
+      \func arrows-equiv
+        : QEquiv {DI ->⁺ ExpCocCore pc C}
+                 {\Sigma (x : ExpCocCore pc C) (\Sigma (y : ExpCocCore pc C) (y ~> x))} \cowith
+        | f h => (h dright, (h dleft, dpath \lam i => h i))
+        | ret s i => s.2.2 i
+        | ret_f _ => idp
+        | f_sec _ => idp
+
+      \func reassoc
+        : QEquiv {\Sigma (s : \Sigma (b : B) (Fibers p b ->⁺ C)) (\Sigma (a : B) (a ~> s.1))}
+                 {\Sigma (w : DI ->⁺ B) (Fibers p (w dright) ->⁺ C)} \cowith
+        | f s => (\lam i => s.2.2 i, s.1.2)
+        | ret t => ((t.1 dright, t.2), (t.1 dleft, dpath \lam i => t.1 i))
+        | ret_f _ => idp
+        | f_sec _ => idp
+    }
+}

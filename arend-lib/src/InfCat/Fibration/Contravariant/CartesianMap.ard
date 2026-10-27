@@ -1,0 +1,105 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Square
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+
+-- | Commutative triangles `k ; u = w` in {E} and their images under {p}.
+\func cotriangle-map {E A : \Cat} (p : E ->⁺ A) {e e' x : E} (u : e ~> e') (w : x ~> e')
+                     (s : \Sigma (k : x ~> e) (DPath (\lam i => k i ~> w i) idd u))
+  : \Sigma (g : p x ~> p e) (DPath (\lam i => g i ~> p (w i)) idd (dmap p u))
+  => (dmap p s.1, dpath \lam i => dmap p (s.2 i))
+
+-- | An arrow {u} is {p}-cartesian at {x} if factorizations of arrows from {x} through {u} are factorizations in the base.
+\type IsCartesianArrowAt {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') (x : E) : \Prop
+  => \Pi (w : x ~> e') -> IsEquiv (cotriangle-map p u w)
+
+-- | An arrow {u} is {p}-cartesian if it is {p}-cartesian at every test object.
+\type IsCartesianArrow {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') : \Prop
+  => \Pi (x : E) -> IsCartesianArrowAt p u x
+
+-- | {p} is a cartesian fibration if every arrow in the base into the image of an object has a cartesian lift.
+\type IsCartesianMap {E A : \Cat} (p : E ->⁺ A) : \Prop
+  => \Pi {e' : E} {a : A} (f : a ~> p e') -> ∃ (e : E) (u : e ~> e') (s : a = p e) (comp (=_~> s) (dmap p u) = f) (IsCartesianArrow p u)
+
+-- | Identity arrows are cartesian: both sides of {cotriangle-map} are contractible.
+\lemma idd-cartesian {E A : \Cat} {p : E ->⁺ A} {e x : E} : IsCartesianArrowAt p (idd {E} {e}) x
+  => \lam w => contr-equiv (conn-contr w) (conn-contr (dmap p w))
+  \where
+    \private \lemma conn-contr {E : \Cat} {x e : E} (w : x ~> e) : Contr (\Sigma (k : x ~> e) (DPath (\lam i => k i ~> w i) idd idd))
+      => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam k => later $ comp-equiv `transQEquiv` pathEquiv-right (comp_idd-right {_} {_} {_} {k}))) (rsigma w)
+
+{- | Pasting along a 2-simplex {t0} with edges {u}, {v}, {g}: a factorization of {w} through {g} together with a composite `z ; u`
+ -   gives a factorization of {w} through {v} followed by a factorization of the result through {u}.
+ -}
+\func copaste-face {E : \Cat} {x e e' e'' : E} {u : e ~> e'} {v : e' ~> e''} {g : e ~> e''} (t0 : DPath (\lam i => u i ~> g i) idd v) {w : x ~> e''}
+                   (s : CopasteDom u g w) : CopasteMid u v w
+  => ((s.2.1, simplex3-face s.2.2 t0 s.1.2), (s.1.1, s.2.2))
+  \where {
+    -- | Factorizations of {w} through {g} together with a composite of the factor and {u}.
+    \func CopasteDom {E : \Cat} {x e e' e'' : E} (u : e ~> e') (g : e ~> e'') (w : x ~> e'') : \Type
+      => \Sigma (s : \Sigma (z : x ~> e) (DPath (\lam i => z i ~> w i) idd g)) (\Sigma (r : x ~> e') (DPath (\lam i => s.1 i ~> r i) idd u))
+
+    -- | Factorizations of {w} through {v} followed by factorizations of the result through {u}.
+    \func CopasteMid {E : \Cat} {x e e' e'' : E} (u : e ~> e') (v : e' ~> e'') (w : x ~> e'') : \Type
+      => \Sigma (s : \Sigma (r : x ~> e') (DPath (\lam i => r i ~> w i) idd v)) (\Sigma (z : x ~> e) (DPath (\lam i => z i ~> s.1 i) idd u))
+
+    -- | The extra composite in {CopasteDom} is unique.
+    \lemma dom-proj {E : \Cat} {x e e' e'' : E} (u : e ~> e') (g : e ~> e'') (w : x ~> e'')
+      : IsEquiv {CopasteDom u g w} (\lam s => s.1)
+      => inP (contr-right \lam s => segal-contr s.1 u)
+
+    -- | {copaste-face} is an equivalence, since both sides are equivalent to the arrows into `e`.
+    \lemma copaste-face-equiv {E : \Cat} {x e e' e'' : E} {u : e ~> e'} {v : e' ~> e''} (g : e ~> e'') (t0 : DPath (\lam i => u i ~> g i) idd v) (w : x ~> e'')
+      : IsEquiv (copaste-face t0 {w})
+      => (totalEquiv (\lam w => copaste-face t0 {w})).2 (IsEquiv.leftFactor mid-proj dom-proj') w
+      \where {
+        \lemma dom-proj' : IsEquiv {\Sigma (w : x ~> e'') (CopasteDom u g w)} (\lam s => s.2.1.1)
+          => IsEquiv.trans (inP (\new QEquiv {\Sigma (w : x ~> e'') (CopasteDom u g w)}
+                                             {\Sigma (z : x ~> e) (\Sigma (t : \Sigma (w : x ~> e'') (DPath (\lam i => z i ~> w i) idd g))
+                                                                          (\Sigma (r : x ~> e') (DPath (\lam i => z i ~> r i) idd u)))} {
+                              | f s => (s.2.1.1, ((s.1, s.2.1.2), s.2.2))
+                              | ret t => (t.2.1.1, ((t.1, t.2.1.2), t.2.2))
+                              | ret_f s => idp
+                              | f_sec t => idp
+                            }))
+                           (inP (contr-right \lam z => sigma-Contr (segal-contr z g) \lam _ => segal-contr z u))
+
+        \lemma mid-proj : IsEquiv {\Sigma (w : x ~> e'') (CopasteMid u v w)} (\lam s => s.2.2.1)
+          => IsEquiv.trans (inP (\new QEquiv {\Sigma (w : x ~> e'') (CopasteMid u v w)}
+                                             {\Sigma (z : x ~> e) (\Sigma (s : \Sigma (r : x ~> e') (DPath (\lam i => z i ~> r i) idd u))
+                                                                          (\Sigma (w : x ~> e'') (DPath (\lam i => s.1 i ~> w i) idd v)))} {
+                              | f s => (s.2.2.1, ((s.2.1.1, s.2.2.2), (s.1, s.2.1.2)))
+                              | ret t => (t.2.2.1, ((t.2.1.1, t.2.2.2), (t.1, t.2.1.2)))
+                              | ret_f s => idp
+                              | f_sec t => idp
+                            }))
+                           (inP (contr-right \lam z => sigma-Contr (segal-contr z u) \lam s => segal-contr s.1 v))
+      }
+  }
+
+-- | Composition of cartesian arrows: if {v} is {p}-cartesian at {x}, then {u} is {p}-cartesian at {x} if and only if `comp u v` is.
+\lemma cartesianArrow-comp {E A : \Cat} {p : E ->⁺ A} {e e' e'' : E} {u : e ~> e'} {v : e' ~> e''} {x : E} (vc : IsCartesianArrowAt p v x)
+  : IsCartesianArrowAt p u x <-> IsCartesianArrowAt p (comp u v) x
+  => \let | t0 => dpath \lam i => dpath (fill2 u v i)
+          | dom-map (w : x ~> e'') (s : CopasteDom u (comp u v) w) : CopasteDom (dmap p u) (dmap p (comp u v)) (dmap p w)
+            => (cotriangle-map p (comp u v) w s.1, (dmap p s.2.1, dpath \lam i => dmap p (s.2.2 i)))
+          | mid-map (w : x ~> e'') (m : CopasteMid u v w) : CopasteMid (dmap p u) (dmap p v) (dmap p w)
+            => (cotriangle-map p v w m.1, cotriangle-map p u m.1.1 m.2)
+          | mid-equiv (w : x ~> e'') : IsEquiv (mid-map w) <-> IsEquiv (cotriangle-map p (comp u v) w)
+            => <->sym (IsEquiv.parallelEquiv {_} {_} {_} {_} {dom-map w} {mid-map w} (copaste-face-equiv (comp u v) t0 w)
+                                          (copaste-face-equiv (dmap p (comp u v)) (dpath \lam i => dmap p (t0 i)) (dmap p w))
+                                          (\lam s => path \lam l => ((dmap p s.2.1, inv (simplex3-face.natural p s.2.2 t0 s.1.2) l), cotriangle-map p u s.2.1 (s.1.1, s.2.2))))
+               `<->trans` IsEquiv.parallelEquiv (dom-proj u (comp u v) w) (dom-proj (dmap p u) (dmap p (comp u v)) (dmap p w)) (\lam s => idp)
+     \in (\lam uc w => (mid-equiv w).1 $
+            IsEquiv.trans (IsSigma-right {\Sigma (r : x ~> e') (DPath (\lam i => r i ~> w i) idd v)} (\lam s => cotriangle-map p u s.1) (\lam s => uc s.1))
+                          (inP (qsigma-left (IsEquiv.toQEquiv (vc w)))),
+          \lam gc r => fiberwiseEquiv (vc (comp r v)) (\lam s => cotriangle-map p u s.1)
+                         ((mid-equiv (comp r v)).2 (gc (comp r v)))
+                         (r, dpath \lam i => dpath (fill2 r v i)))
+    \where \open copaste-face

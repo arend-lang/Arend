@@ -1,0 +1,175 @@
+{- | The total space of a left fibration over a localization is the localization of the total space of its restriction
+ -   at the morphisms over weak equivalences ({leftFib-localize} for {Localize} and families of types,
+ -   {leftFib-isLocalization} for arbitrary localizations and left fibrations).
+ -
+ -   Proof: {Localize} is a pushout, so the total space is the pushout of the total spaces of the restrictions ({pushoutTot-precomp-equiv}).
+ -   Gluing data for a functor on the restriction to `C` is unique if it inverts the morphisms over weak equivalences
+ -   ({leftFib-localize.locGlue-contr}), since over each weak equivalence `m` the restriction is identified with a constant family along {cglue}.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.CatPushout
+\import InfCat.CatPushout.PushoutLeftFib
+\import InfCat.Fibration.Categorical
+\import InfCat.Functor.Equiv
+\import InfCat.Groupoid
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Paths
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+\open leftFib-pushout-equiv
+
+-- | The total space of a left fibration over a localization is a localization of the total space of its restriction.
+\lemma leftFib-localize.{u} {C : CatWeakEq.{u}} {F : Localize C ->⁺ \Type u}
+  : IsLocalization {LocTotWeakEq F} (map F)
+  => IsLocalization.fromUniv (localization-criterion locTot-inverts (restrict-equiv {C} {F}) (restrict-equiv {C} {F}))
+                             (localization-criterion locTot-inverts (restrict-equiv {C} {F}) (restrict-equiv {C} {F}))
+  \where {
+    -- | The total space of the restriction of {F} along {localize}.
+    \func LocTot.{u} {C : CatWeakEq.{u}} (F : Localize C ->⁺ \Type u) : \Cat u
+      => \Sigma⁺ (c : C) (F (localize C c))
+
+    -- | The morphisms of {LocTot} over weak equivalences.
+    \func LocTotWeakEq.{u} {C : CatWeakEq.{u}} (F : Localize C ->⁺ \Type u) : CatWeakEq (LocTot F) \cowith
+      | isWeakEq e => isWeakEq {C} (\lam i => (e i).1)
+
+    -- | The inclusion of {LocTot} into the total space of {F}.
+    \protected \func map.{u} {C : CatWeakEq.{u}} (F : Localize C ->⁺ \Type u) (s :⁺ LocTot F) : \Sigma⁺ (p : Localize C) (F p)
+      => (localize C s.1, s.2)
+
+    -- | {map} inverts the morphisms over weak equivalences, since the gluing paths of {Localize} lift to the total space.
+    \lemma locTot-inverts.{u} {C : CatWeakEq.{u}} {F : Localize C ->⁺ \Type u}
+      : InvertsWeakEq {LocTotWeakEq F} (map F) \cowith
+      | hfunc-we {e} w => (locGlue=>inverts {_} {\lam p => F p} {_} {map F}
+                            (\lam z => (cinr z.1, z.2), \lam x => path \lam i => (cglue x.1 i, coe (\lam j => F (cglue x.1 j)) x.2 i))).hfunc-we w
+
+    -- | Restriction along {map} is an equivalence onto functors inverting {LocTotWeakEq}.
+    \lemma restrict-equiv.{v} {C : CatWeakEq.{v}} {F : Localize C ->⁺ \Type v} {Z : \Cat v}
+      : IsEquiv (FuncWeakEq.compose-left {_} {_} {Z} (locTot-inverts {C} {F}))
+      => \let F' (p :⁺ LP C) : \Type v => F p
+         \in IsEquiv.trans (inP $ later \new QEquiv {
+                | f G x => G (x.1, x.2)
+                | ret G x => G (x.1, x.2)
+                | ret_f _ => idp
+                | f_sec _ => idp
+              }) $ IsEquiv.trans (pushoutTot-precomp-equiv F' Z) $
+                   IsEquiv.trans (inP CatPushout.elim-equiv) $
+                   inP \new QEquiv {_} {InvertingWeakEq (LocTotWeakEq F) Z} {
+                     | f s => \new FuncWeakEq {
+                       | hfunc y => s.1 y
+                       | hfunc-we w => (locGlue=>inverts {_} {F'} {_} {s.1} (s.2, s.3)).hfunc-we w
+                     }
+                     | ret t => \let c => locGlue-contr {_} {F'} {_} {t.hfunc} (\new FuncWeakEq { | hfunc-we w => t.hfunc-we w })
+                                \in (t.hfunc, c.center.1, c.center.2)
+                     | ret_f s => \let c => locGlue-contr (locGlue=>inverts {_} {F'} (s.2, s.3))
+                                  \in path \lam k => (s.1, (c.contraction (s.2, s.3) k).1, (c.contraction (s.2, s.3) k).2)
+                     | f_sec t => idp
+                   }
+
+    -- | The body of {Localize}.
+    \private \func LP (C : CatWeakEq) : \Cat
+      => CatPushout {\Sigma⁺ (MorW C) DI} {C} {MorW C} (\lam a => a.1.1 a.2) (\lam a => a.1)
+
+    -- | Gluing data for a functor on the restriction to `C`.
+    \private \func LocGlue.{v} {C : CatWeakEq.{v}} (F : LP C ->⁺ \Type v) {Z : \Cat v} (U : TotB F ->⁺ Z)
+      => \Sigma (V : TotC F ->⁺ Z) (\Pi (x :⁺ TotA F) -> U (totF F x) = V (totG F x))
+
+    -- | The morphisms over weak equivalences.
+    \private \func TotWeakEq.{v} {C : CatWeakEq.{v}} (F : LP C ->⁺ \Type v) : CatWeakEq (TotB F) \cowith
+      | isWeakEq e => isWeakEq {C} (\lam i => (e i).1)
+
+    -- | A functor with gluing data inverts the morphisms over weak equivalences: they are glued to morphisms in the discrete fibers over {MorW}.
+    \private \lemma locGlue=>inverts.{v} {C : CatWeakEq.{v}} {F : LP C ->⁺ \Type v} {Z : \Cat v} {U : TotB F ->⁺ Z}
+                                         (g : LocGlue F U) : InvertsWeakEq {TotWeakEq F} U \cowith
+      | hfunc-we {e} w => \let | m : MorW C => (\lam i => (e i).1, w)
+                            | t (i :⁺ DI) : F (cinr m) => (totG F ((m,i), (e i).2)).2
+                       \in transport (\lam q => IsIso (dpath q)) (path \lam j => \lam i =>⁺ inv (g.2 ((m,i), (e i).2)) j)
+                                     (dmap_IsIso (\lam y => g.1 (m,y)) (type-groupoid (dpath t)))
+
+    {- | Gluing data along a path {gamma} from a family of arrows {a} to constant arrows is unique
+     -   if the functor {U'} sends the arrows transported back from the constant ones to isomorphisms.
+     -}
+    \private \lemma path-glue-contr.{v}
+        {M : \Type} {L Z : \Cat} (G : L ->⁺ \Type v) {a : M ->⁺ DI ->⁺ L} {b : M ->⁺ L}
+        (gamma : a = {M ->⁺ DI ->⁺ L} (\lam m _ => b m))
+        (U' : \Sigma⁺ (q : \Sigma⁺ M DI) (G (a q.1 q.2)) ->⁺ Z)
+        (Ui : \Pi (z : \Sigma⁺ (m : M) (G (b m))) -> IsIso (dpath \lam i => U' ((z.1, i), transport+ G (inv (path \lam j => gamma j z.1 i)) z.2)))
+      : Contr (\Sigma (V : \Sigma⁺ (m : M) (G (b m)) ->⁺ Z)
+                      (\Pi (x :⁺ \Sigma⁺ (q : \Sigma⁺ M DI) (G (a q.1 q.2))) -> U' x = V (x.1.1, transport+ G (path \lam j => gamma j x.1.1 x.1.2) x.2))) \elim gamma
+      | idp => \let T (z :⁺ \Sigma⁺ (m : M) (G (b m))) => \Sigma⁺ (k : Z) ((\lam i =>⁺ U' ((z.1, i), z.2)) = (\lam _ =>⁺ k))
+               \in \case cov-pi-cat-equiv type-groupoid T \with {
+                 | inP e2 => Contr.Contr_QEquiv (symQEquiv (HQEquiv.toQEquiv e2) `transQEquiv` symQEquiv (later \new QEquiv {
+                   | f s z => (s.1 z, path \lam j => \lam i =>⁺ s.2 ((z.1, i), z.2) j)
+                   | ret t => (\lam z => (t z).1, \lam x => path \lam j => ((t (x.1.1, x.2)).2 j) x.1.2)
+                   | ret_f => idpe
+                   | f_sec => idpe
+                 })) $ pi-Contr (\lam z => T z) \lam z => iso-const-contr (Ui z)
+               }
+
+    -- | Gluing data for a functor inverting the morphisms over weak equivalences is unique.
+    \private \lemma locGlue-contr.{v} {C : CatWeakEq.{v}} {F : LP C ->⁺ \Type v} {Z : \Cat v}
+                                      {U : TotB F ->⁺ Z} (Uw : InvertsWeakEq {TotWeakEq F} U) : Contr (LocGlue F U)
+      => path-glue-contr F (path \lam j m i => cglue (m,i) j) (\lam x => U (totF F x)) \lam z => Uw.hfunc-we z.1.2
+  }
+
+{- | Pullbacks of localizations along left fibrations: in a square
+ -
+ -     n
+ -   Y -> X
+ -  p|    |q
+ -   C -> L
+ -     l
+ -
+ -   commuting via {kappa}, where `Fibers p` and `Fibers q` are left fibrations and {n} induces equivalences of fibers,
+ -   {n} is a localization at the morphisms over weak equivalences if {l} is a localization.
+ -
+ -   Proof: straightening `Fibers q` gives a family of types `G` over {L}, and {Y} and {X} are the total categories of `G ∘ l`
+ -   and `G` ({leftFib-fiberwise-equiv}). For families of types, the claim follows from {leftFib-localize},
+ -   since a general localization is equivalent to {Localize} under {C} ({type-case}).
+ -}
+\lemma leftFib-isLocalization.{u} {C : CatWeakEq.{u}} {L : \Cat u} {l : C ->⁺ L} (Lz : IsLocalization l)
+                                  {Y X : \Cat u} {p : Y ->⁺ C} {q : X ->⁺ L} (pf : IsLeftFib (Fibers p)) (qf : IsLeftFib (Fibers q))
+                                  {n : Y ->⁺ X} (kappa : \Pi (y :⁺ Y) -> q (n y) = l (p y))
+                                  (fe : \Pi (c : C) -> IsEquiv {Fibers p c} {Fibers q (l c)} (\lam s => (n s.1, kappa s.1 *> pmap+ l s.2)))
+  : IsLocalization {PullbackWeakEq p} n
+  => \let | sm (x : L) : IsSmall.{u} (Fibers q x)
+              => IsSmall.fromGroupoid (leftFib-grpd qf x) {\Sigma (e : X) (q e = x)} \new QEquiv {\Sigma (e : X) (q e = x)} {Fibers q x} {
+                   | f s => ((s.1, s.2) : Fibers q x)
+                   | ret t => (t.1, t.2)
+                   | ret_f _ => idp
+                   | f_sec _ => idp
+                 }
+          | G => Straight qf sm
+     \in isLocalization-transfer' (type-case Lz G)
+           (IsHEquiv.trans (fibers-sigma-hequiv p)
+              (leftFib-fiberwise-equiv pf (leftFib-pullback l straighten-leftFib)
+                                       (\lam s => Straight.toStraight ((n s.2.1, kappa s.2.1 *> pmap+ l s.2.2) : Fibers q (l s.1)))
+                                       (\lam c => IsEquiv.trans (fe c) (inP (symQEquiv Straight.equiv)))))
+           (IsHEquiv.trans (fibers-sigma-hequiv q)
+              (leftFib-fiberwise-equiv qf straighten-leftFib (\lam s => Straight.toStraight s.2) (\lam _ => inP (symQEquiv Straight.equiv))))
+           (\lam y => fiber-path qf sm (kappa y)) (\lam _ => (\lam w => w, \lam w => w))
+  \where \private {
+    -- | The case of a family of types over {L}.
+    \lemma type-case.{u} {C : CatWeakEq.{u}} {L : \Cat u} {l : C ->⁺ L} (Lz : IsLocalization l) (G : L ->⁺ \Type u)
+      : IsLocalization {PullbackWeakEq {\Sigma⁺ (c : C) (G (l c))} {C} __.1}
+                       (\lam (s :⁺ \Sigma⁺ (c : C) (G (l c))) => ((l s.1, s.2) : \Sigma⁺ (x : L) (G x)))
+      => \case IsLocalization.unique localize-isLocalization Lz \with {
+           | (v, vl, ve) => rewriteI (funExt+ vl) $ isLocalization-transfer leftFib-localize idHEquiv (sigma-base-equiv ve) (\lam _ => idp) (\lam _ => (\lam w => w, \lam w => w))
+         }
+
+    -- | The path in the total category of the straightening induced by a path in the base.
+    \func fiber-path.{u} {X L : \Cat u} {q : X ->⁺ L} (qf : IsLeftFib (Fibers q)) (sm : \Pi (x : L) -> IsSmall.{u} (Fibers q x))
+                         {a :⁺ L} {e :⁺ X} (r :⁺ q e = a)
+      : (q e, Straight.toStraight (e, idp)) = {\Sigma⁺ (x : L) (Straight qf sm x)} (a, Straight.toStraight (e, r)) \elim r
+      | idp => idp
+  }

@@ -6,7 +6,6 @@
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Logic
-\import Logic.Meta
 \import Paths
 \import Paths.Meta
 
@@ -178,6 +177,17 @@
         | f_sec => s.f_sec
       }
 
+    -- | A retract of an equivalence in the arrow category is an equivalence.
+    \lemma retract {A B C D : \Cat} {f : A -> B} (e : IsEquiv f) {g : C -> D}
+                   (sC : C -> A) (rC : A -> C) (rsC : \Pi (c : C) -> rC (sC c) = c)
+                   (sD : D -> B) (rD : B -> D) (rsD : \Pi (d : D) -> rD (sD d) = d)
+                   (fs : \Pi (c : C) -> f (sC c) = sD (g c)) (rf : \Pi (a : A) -> rD (f a) = g (rC a)) : IsEquiv g \elim e
+      | inP e => inP \new QEquiv {
+        | ret d => rC (e.ret (sD d))
+        | ret_f c => pmap (\lam b => rC (e.ret b)) (inv (fs c)) *> pmap rC (e.ret_f (sC c)) *> rsC c
+        | f_sec d => inv (rf _) *> pmap rD (e.f_sec (sD d)) *> rsD d
+      }
+
     \lemma trans {A B C : \Cat} {f : A -> B} (e : IsEquiv f) {g : B -> C} (e' : IsEquiv g) : IsEquiv \lam a => g (f a) \elim e, e'
       | inP e, inP e' => inP (transQEquiv e e')
 
@@ -188,9 +198,9 @@
       | inP e1, inP e3 => inP (QEquiv.rightFactor e1 e3)
 
     \lemma parallelEquiv {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
-                         (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab = IsEquiv cd
-      => propExt (\lam abe => rightFactor ace $ transport IsEquiv (ext h) $ trans abe bde)
-                 (\lam cde => leftFactor bde $ transportInv IsEquiv (ext h) $ trans ace cde)
+                         (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab <-> IsEquiv cd
+      => (\lam abe => rightFactor ace $ transport IsEquiv (ext h) $ trans abe bde,
+          \lam cde => leftFactor bde $ transportInv IsEquiv (ext h) $ trans ace cde)
   }
 
 \data Equiv (A B : \Cat)
@@ -307,6 +317,15 @@
   | ret_f _ => inv_inv
   | f_sec _ => inv_inv
 
+-- | Paths over a path {e} are transports along {e}.
+\func pathOver-transport-equiv {X : \Cat} (B : X -> \Cat) {x x' : X} (e : x = x') {b : B x} {b' : B x'}
+  : QEquiv {Path (\lam k => B (e k)) b b'} {transport B e b = b'} \elim e
+  | idp => idEquiv
+
+-- | Transport along a path is an equivalence.
+\lemma transport-isEquiv {A : \Cat} (F : A -> \Cat) {a a' : A} (p : a = a') : IsEquiv (transport F p) \elim p
+  | idp => inP idEquiv
+
 -- # Embeddings and surjections
 
 \record Embedding \extends TypeMap {
@@ -347,9 +366,46 @@
                 }
     \in inP (transQEquiv q s)
 
+  -- | The fiber of the diagonal over {t} is equivalent to the fiber of `pmap f` over `t.3`
+  \func diag-fib-equiv {A B : \Cat} {f : A -> B} (t : \Sigma (a1 a2 : A) (f a1 = f a2))
+    : QEquiv {\Sigma (a : A) ((a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)} {\Sigma (p : t.1 = t.2) (pmap f p = t.3)} \cowith
+    | f s => diag-fib s.2
+    | ret s => (t.1, fib-diag s.1 s.2)
+    | ret_f s => ret_f' s.2
+    | f_sec s => f_sec' s.1 s.2
+    \where {
+      \func diag-fib {A B : \Cat} {f : A -> B} {a : A} {t : \Sigma (a1 a2 : A) (f a1 = f a2)} (r : (a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)
+        : \Sigma (p : t.1 = t.2) (pmap f p = t.3) \elim r
+        | idp => (idp, idp)
+
+      \func fib-diag {A B : \Cat} {f : A -> B} {a a' : A} {q : f a = f a'} (p : a = a') (h : pmap f p = q)
+        : (a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} (a, a', q) \elim p, h
+        | idp, idp => idp
+
+      \func ret_f' {A B : \Cat} {f : A -> B} {a : A} {t : \Sigma (a1 a2 : A) (f a1 = f a2)} (r : (a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)
+        : (t.1, fib-diag (diag-fib r).1 (diag-fib r).2) = {\Sigma (a : A) ((a, a, idp) = {\Sigma (a1 a2 : A) (f a1 = f a2)} t)} (a, r) \elim r
+        | idp => idp
+
+      \func f_sec' {A B : \Cat} {f : A -> B} {a a' : A} {q : f a = f a'} (p : a = a') (h : pmap f p = q)
+        : diag-fib {A} {B} {f} (fib-diag p h) = {\Sigma (p : a = a') (pmap f p = q)} (p, h) \elim p, h
+        | idp, idp => idp
+    }
+
+  -- | A map is an embedding if and only if its diagonal is an equivalence
+  \lemma diag-char {A B : \Cat} {f : A -> B} : Embedding f <-> IsEquiv {A} {\Sigma (a1 a2 : A) (f a1 = f a2)} (\lam a => (a, a, idp))
+    => (\lam e => diag-equiv e, \lam e => \new Embedding {
+      | isEmb a a' => contrFibers=>QEquiv \lam q => Contr.Contr_QEquiv (diag-fib-equiv (a, a', q)) (IsEquiv=>contrFibers e (a, a', q))
+    })
+
   \lemma projection {A : \Cat} (B : A -> \Prop) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
     | isEmb p p' => \new Retraction {
       | sec q => ext q
+      | f_sec => idpe
+    }
+
+  \lemma sigma-prop-embedding {A : \Cat} {B : A -> \Cat} (Bp : \Pi (a : A) -> isProp (B a)) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
+    | isEmb s s' => \new Retraction {
+      | sec p => ext (p, Bp _ _ _)
       | f_sec => idpe
     }
 

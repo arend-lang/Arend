@@ -1,0 +1,116 @@
+{- | Fiberwise localizations of cocartesian fibrations [1, Section 7.6.3].
+ -
+ -   Let `F` be a cocartesian fibration over `S` and let `W` be a family of weak equivalences on its fibers
+ -   that is stable under cocartesian transport ({IsTransportStable}).
+ -   We define the weak equivalences {TotWeakEq} of the total category `\Sigma⁺ (s : S) (F s)`.
+ -   We take the localization of {TotWeakEq} in {FibLoc} and take the fibers of the induced projection to {S} in {FibLocFam}.
+ -   {FibLocFam} is again a cocartesian fibration (`fibLoc-cocartesian` in `Fiberwise.FiberwiseCocartesian`) and its fibers are
+ -   the localizations of the fibers of `F` (`fibLoc-fibre` in `Fiberwise.FiberwiseFiber`; [1, Proposition 7.6.16 (3) and Theorem 7.6.20];
+ -   see also V. Hinich, Dwyer-Kan localization revisited, Proposition 2.1.4).
+ -
+ -   [1] Denis-Charles Cisinski, Bastiaan Cnossen, Kim Nguyen, Tashi Walde, Synthetic Category Theory, 2026
+ -}
+
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Rezk
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+{- | A family of weak equivalences {W} on the fibers of {F} is stable under cocartesian transport
+ -   if the transport of a weak equivalence in `W s` along any `g : s ~> s'` is a weak equivalence in `W s'`.
+ -   The transport is given as an arbitrary square over `g` whose horizontal sides are cocartesian lifts.
+ -}
+\type IsTransportStable {S : \Cat} (F : S ->⁺ \Cat) (W : \Pi (s : S) -> CatWeakEq (F s)) : \Prop
+  => \Pi {s s' : S} (g : s ~> s') {b : DI ->⁺ F s} -> isWeakEq {W s} b ->
+       ∃ (k : DI ->⁺ F s') (isWeakEq {W s'} k) (H : DPath (\lam i => DI ->⁺ F (g i)) b k)
+         (IsCocartesianLift {S} {F} {s, s', g, b dleft} (k dleft, dpath \lam i => H i dleft))
+         (IsCocartesianLift {S} {F} {s, s', g, b dright} (k dright, dpath \lam i => H i dright))
+
+-- | Transport stability is preserved by base change along a functor.
+\lemma transportStable-pullback {X S : \Cat} {F : S ->⁺ \Cat} {W : \Pi (s : S) -> CatWeakEq (F s)}
+                                (Ws : IsTransportStable F W) (p : X ->⁺ S)
+  : IsTransportStable (\lam x => F (p x)) (\lam x => W (p x))
+  => \lam m wb => TruncP.map (Ws (dmap p m) wb) \lam t => (t.1, t.2, t.3, cocartesianLift-pullback p t.4, cocartesianLift-pullback p t.5)
+
+-- | A family of weak equivalences {W} on the values of {Q} as weak equivalences on the fibers of {totalProj}.
+\func TotalFibWeakEq {X : \Cat} {Q : X ->⁺ \Cat} (W : \Pi (x : X) -> CatWeakEq (Q x)) (x : X) : CatWeakEq (Fiber (totalProj Q) x) \cowith
+  | isWeakEq b => isWeakEq {W x} (\lam i => fibers-total-equiv.fibers-total-ret (b i))
+
+-- | The base change of a family of weak equivalences {W} on the fibers of {pi} along {rho}, on the fibers of `BaseChange rho pi`.
+\func BaseChangeWeakEq.{u} {S K Z : \Cat u} {pi : K ->⁺ S} (W : \Pi (s : S) -> CatWeakEq (Fiber pi s)) (rho : Z ->⁺ S) (z : Z)
+  : CatWeakEq (Fiber {BaseChange rho pi} (\lam w => w.1) z) \cowith
+  | isWeakEq b => isWeakEq {TotalFibWeakEq {Z} {\lam z => Fibers pi (rho z)} (\lam z => W (rho z)) z} b
+
+-- | Transport stability is preserved by passing to the fibers of {totalProj}.
+\lemma transportStable-total {X : \Cat} {Q : X ->⁺ \Cat} {W : \Pi (x : X) -> CatWeakEq (Q x)} (Ws : IsTransportStable Q W)
+  : IsTransportStable (Fibers (totalProj Q)) (TotalFibWeakEq {X} {Q} W)
+  => \lam {x} {x'} m {b} wb => transport {DI ->⁺ Fibers (totalProj Q) x} (\lam b' =>
+        ∃ (k : DI ->⁺ Fibers (totalProj Q) x') (isWeakEq {TotalFibWeakEq {X} {Q} W x'} k) (H : DPath (\lam i => DI ->⁺ Fibers (totalProj Q) (m i)) b' k)
+          (IsCocartesianLift {X} {Fibers (totalProj Q)} {x, x', m, b' dleft} (k dleft, dpath \lam i => H i dleft))
+          (IsCocartesianLift {X} {Fibers (totalProj Q)} {x, x', m, b' dright} (k dright, dpath \lam i => H i dright)))
+      (path \lam j i => fibers-total-equiv.fibers-total-ret-sec (b i) j)
+      (TruncP.map (Ws m wb) \lam t => (\lam i => ((x', t.1 i), idp), t.2, dpath \lam i => \lam j => ((m i, t.3 i j), idp),
+                                         cocartesianLift-total t.4, cocartesianLift-total t.5))
+
+-- | The transport of a weak equivalence along cocartesian lifts is a weak equivalence.
+\lemma transportStable-lift {S : \Cat} {F : S ->⁺ \Cat} (Ff : IsCocartesianFib F) {W : \Pi (s : S) -> CatWeakEq (F s)}
+                            (Ws : IsTransportStable F W) {s s' : S} (g : s ~> s') {b : DI ->⁺ F s} (wb : isWeakEq {W s} b)
+  : isWeakEq {W s'} (\lam i => (cocartesianFib-lift {_} {F} Ff (s, s', g, b i)).1)
+  => \case Ws g wb \with {
+    | inP (k, wk, H, cl, cr) => transport (isWeakEq {W s'}) (pmap __.1 (isContr=>isProp (transports-contr Ff g b) (k, H, cl, cr)
+        (\lam i => (cocartesianFib-lift {_} {F} Ff (s, s', g, b i)).1, dpath \lam j i => (cocartesianFib-lift {_} {F} Ff (s, s', g, b i)).2 j,
+         cocartesianFib-lift.isCocartesian {_} {F} (s, s', g, b dleft), cocartesianFib-lift.isCocartesian {_} {F} (s, s', g, b dright)))) wk
+  }
+
+-- | The morphisms of the total category {E} that lie in a single fiber and are weak equivalences there.
+\func TotWeakEq {S E : \Cat} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) : CatWeakEq E \cowith
+  | isWeakEq a => ∃ (s : S) (b : \Pi (i :⁺ DI) -> p (a i) = s) (isWeakEq {W s} \lam i => (a i, b i))
+
+-- | The projection to the base inverts {TotWeakEq}.
+\lemma proj-inverts {S E : \Cat} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) : InvertsWeakEq {TotWeakEq p W} p \cowith
+  | hfunc-we => \lam {a} (inP (s,b,Wab)) => IsIso-diag-char.2 $ inP (s, ext \lam i => inv (b i))
+
+-- | A functor inverting weak equivalences on every fiber inverts {TotWeakEq}.
+\lemma totWeakEq-inverts {S E D : \Cat} {p : E ->⁺ S} {W : \Pi (s : S) -> CatWeakEq (Fiber p s)} {T : E ->⁺ D}
+                         (Tw : \Pi (s : S) -> InvertsWeakEq {W s} (\lam y => T y.1))
+  : InvertsWeakEq {TotWeakEq p W} T \cowith
+  | hfunc-we => \lam (inP (s, b, w)) => (Tw s).hfunc-we w
+
+-- | A functor on the total category of {Q} inverting weak equivalences on every value of {Q} inverts {TotalFibWeakEq}.
+\lemma totalFibWeakEq-inverts {X D : \Cat} {Q : X ->⁺ \Cat} {W : \Pi (x : X) -> CatWeakEq (Q x)} {T : \Sigma⁺ (x : X) (Q x) ->⁺ D}
+                              (Tw : \Pi (x : X) -> InvertsWeakEq {W x} (\lam q => T (x, q)))
+  : InvertsWeakEq {TotWeakEq (totalProj Q) (TotalFibWeakEq {X} {Q} W)} T \cowith
+  | hfunc-we => \lam {a} (inP (x, b, w)) => transport {DI ->⁺ \Sigma⁺ (x : X) (Q x)} (\lam a' => IsIso (dpath \lam i => T (a' i)))
+      (path \lam j i => (fibers-total-equiv.fibers-total-ret-sec {X} {Q} {x} (a i, b i) j).1) ((Tw x).hfunc-we w)
+
+-- | Conversely, a functor inverting {TotalFibWeakEq} inverts weak equivalences on every value of {Q}.
+\lemma totalFibWeakEq-restrict {X D : \Cat} {Q : X ->⁺ \Cat} {W : \Pi (x : X) -> CatWeakEq (Q x)} {T : \Sigma⁺ (x : X) (Q x) ->⁺ D}
+                               (Ti : InvertsWeakEq {TotWeakEq (totalProj Q) (TotalFibWeakEq {X} {Q} W)} T) (x : X)
+  : InvertsWeakEq {W x} (\lam q => T (x, q)) \cowith
+  | hfunc-we {a} w => Ti.hfunc-we {\lam i => (x, a i)} (inP (x, \lam i => idp, w))
+
+-- | The localization of the total category of {p} at {TotWeakEq}.
+\func FibLoc {S E : \Cat} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) : \Cat
+  => Localize (TotWeakEq p W)
+
+-- | The projection of {FibLoc} to the base.
+\func fibLocProj {S E : \Cat} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (y :⁺ FibLoc p W) : S
+  => localize-lift (proj-inverts p W) y
+
+-- | The fiberwise localization of {p} at {W}: the family of fibers of {fibLocProj}.
+\func FibLocFam {S E : \Cat} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (s :⁺ S) : \Cat
+  => Fibers (fibLocProj p W) s
+
+-- | The map from the fibers of {p} to the fibers of {FibLocFam}.
+\func fibLoc-incl {S E : \Cat} (p : E ->⁺ S) (W : \Pi (s : S) -> CatWeakEq (Fiber p s)) (x :⁺ E) : FibLocFam p W (p x)
+  => (localize (TotWeakEq p W) x, idp)

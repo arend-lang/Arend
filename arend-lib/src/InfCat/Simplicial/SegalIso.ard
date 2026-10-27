@@ -1,0 +1,248 @@
+{- | Fully faithful maps of Segal right fibrations reflect isomorphisms (SCT Lemma 11.8.23).
+
+ -   Let `g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1` be a map of right fibrations over the simplex category,
+ -   fully faithful on edges ({edgeSec-map}, SCT Definition 11.8.21 and Remark 11.8.22).
+ -   * {map-pres-iso}: any map preserves isomorphisms.
+ -   * {ledge-map-equiv}: {g} is an equivalence on edges with lifts between given vertices ({LEdge}).
+ -   * {tri-map-equiv}: if {p} and {q} are Segal, {g} is an equivalence on 2-simplices with given vertices ({TriSec}), since
+ -     2-simplices are their short edges ({tri-faces-equiv}).
+ -   * {segal-ff-reflects-iso}: if {p} and {q} are Segal, {g} reflects isomorphisms. A left inverse of `g e` in {q} is a 2-simplex
+ -     over the vertices `g x`, `g y`, `g x` whose faces are `g e` and the degenerate edge. It comes from a 2-simplex of {p} with
+ -     faces `e` and the degenerate edge by {tri-map-equiv}. The vertex `0` of the given 2-simplex is identified with `g x` through
+ -     both faces, and the two identifications may differ by a loop. The loop is absorbed into the vertex `2`, using that the
+ -     degenerate edge is natural in its vertex ({degLEdge-tr}).
+ -   * {segal-ff-iso}: hence the square `Iso(p) → Iso(q)` over `p₁ → q₁` is a pullback: an edge is an isomorphism if and only if its
+ -     image is (SCT Lemma 11.8.23).
+ -}
+
+\import Category
+\import Category.Simplex
+\import Equiv
+\import Equiv.Sigma
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Nerve.Nerve
+\import InfCat.Simplicial.Complete
+\import InfCat.Simplicial.Segal
+\import InfCat.Simplicial.SimplexOperators
+\import InfCat.Simplicial.SimplexSections
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+\open simplex
+\open SimplexTri
+\open FaceLifts
+
+-- # Preservation
+
+-- | Any map of right fibrations preserves isomorphisms.
+\lemma map-pres-iso {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {qf : IsRightFib (Fibers q)}
+                    (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1) {e : simplex p 1} (i : IsIsoS pf e)
+  : IsIsoS qf (g (nerveOb 1, e))
+  => \let g1 (z : simplex p 1) => g (nerveOb 1, z)
+     \in \have | li : HasLeftInv qf (g1 e) => \case i.1 \with { | inP t => inP
+                   (g (nerveOb 2, t.1), g-act (segRes 1) t.1 *> pmap g1 t.2,
+                    g-act face1 t.1 *> pmap g1 t.3 *> inv (g-act (constHom 0) _) *> pmap (degen qf) (inv (g-act (vert 0) e))) }
+               | ri : HasRightInv qf (g1 e) => \case i.2 \with { | inP t => inP
+                   (g (nerveOb 2, t.1), g-act (lastEdge 1) t.1 *> pmap g1 t.2,
+                    g-act face1 t.1 *> pmap g1 t.3 *> inv (g-act (constHom 0) _) *> pmap (degen qf) (inv (g-act (vert 1) e))) }
+     \in (li, ri)
+  \where
+    -- | {g} commutes with simplicial operators.
+    \sfunc g-act {m n : Nat} (d : Hom {SimplexCat} m n) (s : simplex p n)
+      : act qf d (g (nerveOb {SimplexCat} n, s)) = g (nerveOb {SimplexCat} m, act pf d s)
+      => rightFib-tr-dpath qf (dpath \lam i => g (nerveHom {SimplexCat} {m} {n} d i,
+                                                (Contr.center {pf (nerveOb {SimplexCat} m, nerveOb {SimplexCat} n, nerveHom {SimplexCat} {m} {n} d, s)}).2 i))
+
+-- # Edges and 2-simplices
+
+-- | The action of {g} on edges with lifts.
+\func ledge-map {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+                {a b : simplex p 0} (w : LEdge p a b) : LEdge q (g (nerveOb 0, a)) (g (nerveOb 0, b))
+  => (g (nerveOb 1, w.1), liftG g w.2, liftG g w.3, pmap (\lam x => g (nerveOb 0, x)) w.4, pmap (\lam x => g (nerveOb 0, x)) w.5)
+
+-- | A fully faithful map is an equivalence on edges with lifts.
+\lemma ledge-map-equiv {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (qf : IsRightFib (Fibers q))
+                       (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+                       (g-ff : \Pi (x y : simplex p 0) -> IsEquiv (edgeSec-map g x y)) {a b : simplex p 0}
+  : IsEquiv (ledge-map g {a} {b})
+  => IsEquiv.rightFactor (secLEdge-equiv pf) {ledge-map g} (IsEquiv.trans (g-ff a b) (secLEdge-equiv qf))
+
+-- | {g} maps degenerate edges to degenerate edges.
+\sfunc ledge-map-deg {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (qf : IsRightFib (Fibers q))
+                     (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1) (x : simplex p 0)
+  : ledge-map g (degLEdge pf x) = degLEdge qf (g (nerveOb 0, x))
+  => pmap secLEdge (edgeSec-path Gc (vertex-coh 0) (vertex-coh 1))
+  \where \private {
+    -- | The image of the lift defining {constSec} is the lift defining {constSec} for {q}.
+    \sfunc Gc-lift (s :⁺ Nerve (SliceS 1))
+      : liftG g (rightFib-lift {DeltaCat} {Fibers p} pf (sliceProj 1 s, nerveOb 0, to0 (sliceProj 1 s), x))
+        = rightFib-lift {DeltaCat} {Fibers q} qf (sliceProj 1 s, nerveOb 0, to0 (sliceProj 1 s), g (nerveOb 0, x))
+      => rightFib-lift-unique {DeltaCat} {Fibers q} qf {_} {_} {_}
+
+    -- | The image of the degenerate section is the degenerate section.
+    \func Gc : gpost g (sliceProj 1) (constSec pf x) = constSec qf (g (nerveOb 0, x))
+      => path \lam k => \lam (s :⁺ Nerve (SliceS 1)) => (Gc-lift s @ k).1
+
+    -- | Paths of edges as sections.
+    \sfunc edgeSec-path {E : \Cat} {p : E ->⁺ DeltaCat} {a b : simplex p 0} {t t' : \Pi (s :⁺ Nerve (SliceS 1)) -> Fibers p (sliceProj 1 s)} (T : t = t')
+                        {P0 : t (edgeV 0) = a} {P0' : t' (edgeV 0) = a} (H0 : P0 = pmap (\lam u => u (edgeV 0)) T *> P0')
+                        {P1 : t (edgeV 1) = b} {P1' : t' (edgeV 1) = b} (H1 : P1 = pmap (\lam u => u (edgeV 1)) T *> P1')
+      : ((t, P0, P1) : EdgeSec p a b) = (t', P0', P1') \elim T
+      | idp => pmap2 (\lam P Q => ((t, P, Q) : EdgeSec p a b)) (H0 *> idp_*>) (H1 *> idp_*>)
+
+    -- | The image of {lift-vertex} is {lift-vertex} after {Gc}, since lifts along endomorphisms of `[0]` form a contractible type.
+    \sfunc vertex-coh (j : Fin 2)
+      : pmap (\lam z => g (nerveOb 0, z)) (lift-vertex pf {to0 (sliceProj 1 (edgeV j))} {x})
+        = pmap (\lam u => u (edgeV j)) Gc *> lift-vertex qf {to0 (sliceProj 1 (edgeV j))} {g (nerveOb 0, x)}
+      => \let | f => to0 (sliceProj 1 (edgeV j))
+              | gx => g (nerveOb 0, x)
+              | pr (w : lift-vertex.V0Lift q gx) => w.2.1
+              | glX (w : lift-vertex.V0Lift p x) : lift-vertex.V0Lift q gx => (w.1, liftG g w.2)
+              | Lp => isContr=>isProp (lift-vertex.V0Lift.contr pf x) (f, rightFib-lift {DeltaCat} {Fibers p} pf (nerveOb 0, nerveOb 0, f, x)) (idd, (x, idd))
+              | Lq => isContr=>isProp (lift-vertex.V0Lift.contr qf gx) (f, rightFib-lift {DeltaCat} {Fibers q} qf (nerveOb 0, nerveOb 0, f, gx)) (idd, (gx, idd))
+              | U : (f, liftG g (rightFib-lift {DeltaCat} {Fibers p} pf (nerveOb 0, nerveOb 0, f, x)))
+                    = {lift-vertex.V0Lift q gx} (f, rightFib-lift {DeltaCat} {Fibers q} qf (nerveOb 0, nerveOb 0, f, gx))
+                  => path \lam k => (f, Gc-lift (edgeV j) @ k)
+         \in pmap (pmap (\lam z => g (nerveOb 0, z))) (\peval lift-vertex pf {f} {x})
+             *> pmap (pmap pr) (isProp.=>isSet (isContr=>isProp (lift-vertex.V0Lift.contr qf gx)) _ _ (pmap glX Lp) (U *> Lq))
+             *> pmap_*>-comm pr U Lq
+             *> pmap (_ *> __) (inv (\peval lift-vertex qf {f} {gx}))
+  }
+
+-- | The action of {g} on 2-simplices with given vertices.
+\func tri-map {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+              {a b c : simplex p 0} (T : TriSec p a b c) : TriSec q (g (nerveOb 0, a)) (g (nerveOb 0, b)) (g (nerveOb 0, c))
+  => (gpost g (sliceProj 2) T.1, pmap (\lam x => g (nerveOb 0, x)) T.2, pmap (\lam x => g (nerveOb 0, x)) T.3, pmap (\lam x => g (nerveOb 0, x)) T.4)
+
+-- | A fully faithful map of Segal right fibrations is an equivalence on 2-simplices with given vertices.
+\lemma tri-map-equiv {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) (qf : IsRightFib (Fibers q))
+                     (ps : IsSegal p) (qs : IsSegal q) (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+                     (g-ff : \Pi (x y : simplex p 0) -> IsEquiv (edgeSec-map g x y)) {a b c : simplex p 0}
+  : IsEquiv (tri-map g {a} {b} {c})
+  => \have prod : IsEquiv {\Sigma (LEdge p a b) (LEdge p b c)} {\Sigma (LEdge q (g (nerveOb 0, a)) (g (nerveOb 0, b))) (LEdge q (g (nerveOb 0, b)) (g (nerveOb 0, c)))}
+                          (\lam w => (ledge-map g w.1, ledge-map g w.2))
+         => inP (sigma-equiv (IsEquiv.toQEquiv (ledge-map-equiv pf qf g g-ff {a} {b})) \lam _ => IsEquiv.toQEquiv (ledge-map-equiv pf qf g g-ff {b} {c}))
+     \in IsEquiv.leftFactor (tri-faces-equiv qf qs) (IsEquiv.trans (tri-faces-equiv pf ps) prod)
+
+-- # Reflection
+
+-- | SCT Lemma 11.8.23: a fully faithful map of Segal right fibrations reflects isomorphisms.
+\lemma segal-ff-reflects-iso {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {qf : IsRightFib (Fibers q)}
+  (ps : IsSegal p) (qs : IsSegal q) (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+  (g-ff : \Pi (x y : simplex p 0) -> IsEquiv (edgeSec-map g x y))
+  (e : simplex p 1) (i : IsIsoS qf (g (nerveOb 1, e))) : IsIsoS pf e
+  => (reflects-left i.1, reflects-right i.2)
+  \where {
+    -- | A left inverse of {e} is a 2-simplex over `x`, `y`, `x` whose faces are {e} and the degenerate edge, with the vertex `0` identified coherently.
+    \lemma leftInv-tri {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {e : simplex p 1} (h : HasLeftInv pf e)
+      : ∃ (T : TriSec p (src pf e) (tgt pf e) (src pf e)) (TriSec.d2 T = ledge pf e) (TriSec.d1 T = degLEdge pf (src pf e)) \elim h
+      | inP (tau, P, Q) =>
+        \let | u => src pf e
+             | sg => simplexSec pf tau
+             | St : sg top2 = tau => simplexSec.char pf tau
+             | Sg : sg eS = e => inv (section-act pf sg (segRes 1)) *> pmap (act pf (segRes 1)) St *> P
+             | Fg : sg eF = constSec pf u (nerveOb (1, SimplexCat.id {1}))
+                 => inv (section-act pf sg face1) *> pmap (act pf face1) St *> Q *> inv (constSec-top pf u)
+             | KS0 => lift-path pf Sg (cS0 sg) (vertLift pf 0 e)
+             | KS1 => lift-path pf Sg (cS1 sg) (vertLift pf 1 e)
+             | KF0 => lift-path pf Fg (cF0 sg) (secLift (constSec pf u) 0)
+             | KF2 => lift-path pf Fg (cF2 sg) (secLift (constSec pf u) 1)
+             | al0 : sg v0 = u => path \lam k => (KS0 k).1
+             | al1 : sg v1 = tgt pf e => path \lam k => (KS1 k).1
+             | be0 : sg v0 = constSec pf u (edgeV 0) => path \lam k => (KF0 k).1
+             | be2 : sg v2 = constSec pf u (edgeV 1) => path \lam k => (KF2 k).1
+             | lv0 : constSec pf u (edgeV 0) = u => lift-vertex pf
+             | lv1 : constSec pf u (edgeV 1) = u => lift-vertex pf
+             | m : u = u => inv (be0 *> lv0) *> al0
+             | A : be0 *> (lv0 *> m) = al0 => inv *>-assoc *> inv *>-assoc *> pmap (__ *> al0) *>_inv *> idp_*>
+        \in inP ((sg, al0, al1, be2 *> (lv1 *> m)), ledge-path Sg KS0 KS1 idp idp,
+                 pmap (\lam P' => ((sg eF, cF0 sg, cF2 sg, P', be2 *> (lv1 *> m)) : LEdge p u u)) (inv A)
+                   *> ledge-path Fg KF0 KF2 (lv0 *> m) (lv1 *> m) *> degLEdge-tr pf m)
+
+    -- | A right inverse of {e} is a 2-simplex over `y`, `x`, `y` whose faces are {e} and the degenerate edge, with the vertex `2` identified coherently.
+    \lemma rightInv-tri {E : \Cat} {p : E ->⁺ DeltaCat} (pf : IsRightFib (Fibers p)) {e : simplex p 1} (h : HasRightInv pf e)
+      : ∃ (T : TriSec p (tgt pf e) (src pf e) (tgt pf e)) (TriSec.d0 T = ledge pf e) (TriSec.d1 T = degLEdge pf (tgt pf e)) \elim h
+      | inP (tau, P, Q) =>
+        \let | w => tgt pf e
+             | sg => simplexSec pf tau
+             | St : sg top2 = tau => simplexSec.char pf tau
+             | Lg : sg eL = e => inv (section-act pf sg (lastEdge 1)) *> pmap (act pf (lastEdge 1)) St *> P
+             | Fg : sg eF = constSec pf w (nerveOb (1, SimplexCat.id {1}))
+                 => inv (section-act pf sg face1) *> pmap (act pf face1) St *> Q *> inv (constSec-top pf w)
+             | KL0 => lift-path pf Lg (cL0 sg) (vertLift pf 0 e)
+             | KL1 => lift-path pf Lg (cL1 sg) (vertLift pf 1 e)
+             | KF0 => lift-path pf Fg (cF0 sg) (secLift (constSec pf w) 0)
+             | KF2 => lift-path pf Fg (cF2 sg) (secLift (constSec pf w) 1)
+             | al1 : sg v1 = src pf e => path \lam k => (KL0 k).1
+             | al2 : sg v2 = w => path \lam k => (KL1 k).1
+             | be0 : sg v0 = constSec pf w (edgeV 0) => path \lam k => (KF0 k).1
+             | be2 : sg v2 = constSec pf w (edgeV 1) => path \lam k => (KF2 k).1
+             | lv0 : constSec pf w (edgeV 0) = w => lift-vertex pf
+             | lv1 : constSec pf w (edgeV 1) = w => lift-vertex pf
+             | m : w = w => inv (be2 *> lv1) *> al2
+             | A : be2 *> (lv1 *> m) = al2 => inv *>-assoc *> inv *>-assoc *> pmap (__ *> al2) *>_inv *> idp_*>
+        \in inP ((sg, be0 *> (lv0 *> m), al1, al2), ledge-path Lg KL0 KL1 idp idp,
+                 pmap (\lam P' => ((sg eF, cF0 sg, cF2 sg, be0 *> (lv0 *> m), P') : LEdge p w w)) (inv A)
+                   *> ledge-path Fg KF0 KF2 (lv0 *> m) (lv1 *> m) *> degLEdge-tr pf m)
+
+    -- | The canonical lift of a vertex inclusion into the image of an edge is the image of its canonical lift.
+    \sfunc vertK (j : Fin 2) : vertLift qf j (g (nerveOb 1, e)) = liftG g (vertLift pf j e)
+      => isContr=>isProp (qf (nerveOb 0, nerveOb 1, simplex-ve j, g (nerveOb 1, e))) _ _
+
+    -- | The vertex {j} of the image of an edge is the image of its vertex {j}.
+    \func vertG (j : Fin 2) : (vertLift qf j (g (nerveOb 1, e))).1 = g (nerveOb 0, (vertLift pf j e).1)
+      => path \lam k => (vertK j k).1
+
+    -- | The image of an edge, with its endpoints identified with the images of the endpoints of the edge.
+    \sfunc ledge-g : ledge-tr (vertG 0) (vertG 1) (ledge qf (g (nerveOb 1, e))) = ledge-map g (ledge pf e)
+      => pmap2 (\lam P Q => ((g (nerveOb 1, e), vertLift qf 0 (g (nerveOb 1, e)), vertLift qf 1 (g (nerveOb 1, e)), P, Q)
+                              : LEdge q (g (nerveOb 0, src pf e)) (g (nerveOb 0, tgt pf e)))) idp_*> idp_*>
+         *> ledge-path idp (vertK 0) (vertK 1) idp idp
+
+    \lemma reflects-left (h : HasLeftInv qf (g (nerveOb 1, e))) : HasLeftInv pf e
+      => \case leftInv-tri qf h \with {
+        | inP (T', eqS, eqF) =>
+          \let | x => src pf e
+               | G0 => vertG 0
+               | G1 => vertG 1
+               | T'' : TriSec q (g (nerveOb 0, x)) (g (nerveOb 0, tgt pf e)) (g (nerveOb 0, x)) => (T'.1, T'.2 *> G0, T'.3 *> G1, T'.4 *> G0)
+               | E2 : TriSec.d2 T'' = ledge-map g (ledge pf e) => pmap (ledge-tr G0 G1) eqS *> ledge-g
+               | E1 : TriSec.d1 T'' = ledge-map g (degLEdge pf x) => pmap (ledge-tr G0 G0) eqF *> degLEdge-tr qf G0 *> inv (ledge-map-deg pf qf g x)
+               | te => tri-map-equiv pf qf ps qs g g-ff {x} {tgt pf e} {x}
+               | Tp => IsEquiv.ret te T''
+               | TP : tri-map g Tp = T'' => IsEquiv.f_ret te
+               | D2 : TriSec.d2 Tp = ledge pf e => IsEquiv.isInj (ledge-map-equiv pf qf g g-ff {x} {tgt pf e}) (pmap TriSec.d2 TP *> E2)
+               | D1 : TriSec.d1 Tp = degLEdge pf x => IsEquiv.isInj (ledge-map-equiv pf qf g g-ff {x} {x}) (pmap TriSec.d1 TP *> E1)
+          \in inP (Tp.1 top2, section-act pf Tp.1 (segRes 1) *> pmap (\lam w => w.1) D2,
+                   section-act pf Tp.1 face1 *> pmap (\lam w => w.1) D1 *> constSec-top pf x)
+      }
+
+    \lemma reflects-right (h : HasRightInv qf (g (nerveOb 1, e))) : HasRightInv pf e
+      => \case rightInv-tri qf h \with {
+        | inP (T', eqE, eqF) =>
+          \let | y => tgt pf e
+               | G0 => vertG 0
+               | G1 => vertG 1
+               | T'' : TriSec q (g (nerveOb 0, y)) (g (nerveOb 0, src pf e)) (g (nerveOb 0, y)) => (T'.1, T'.2 *> G1, T'.3 *> G0, T'.4 *> G1)
+               | E0 : TriSec.d0 T'' = ledge-map g (ledge pf e) => pmap (ledge-tr G0 G1) eqE *> ledge-g
+               | E1 : TriSec.d1 T'' = ledge-map g (degLEdge pf y) => pmap (ledge-tr G1 G1) eqF *> degLEdge-tr qf G1 *> inv (ledge-map-deg pf qf g y)
+               | te => tri-map-equiv pf qf ps qs g g-ff {y} {src pf e} {y}
+               | Tp => IsEquiv.ret te T''
+               | TP : tri-map g Tp = T'' => IsEquiv.f_ret te
+               | D0 : TriSec.d0 Tp = ledge pf e => IsEquiv.isInj (ledge-map-equiv pf qf g g-ff {src pf e} {y}) (pmap TriSec.d0 TP *> E0)
+               | D1 : TriSec.d1 Tp = degLEdge pf y => IsEquiv.isInj (ledge-map-equiv pf qf g g-ff {y} {y}) (pmap TriSec.d1 TP *> E1)
+          \in inP (Tp.1 top2, section-act pf Tp.1 (lastEdge 1) *> pmap (\lam w => w.1) D0,
+                   section-act pf Tp.1 face1 *> pmap (\lam w => w.1) D1 *> constSec-top pf y)
+      }
+  }
+
+-- | SCT Lemma 11.8.23: for a fully faithful map of Segal right fibrations, an edge is an isomorphism if and only if its image is.
+\lemma segal-ff-iso {E N : \Cat} {p : E ->⁺ DeltaCat} {q : N ->⁺ DeltaCat} {pf : IsRightFib (Fibers p)} {qf : IsRightFib (Fibers q)}
+  (ps : IsSegal p) (qs : IsSegal q) (g : \Pi (s :⁺ \Sigma⁺ (b : DeltaCat) (Fibers p b)) -> Fibers q s.1)
+  (g-ff : \Pi (x y : simplex p 0) -> IsEquiv (edgeSec-map g x y)) (e : simplex p 1)
+  : IsIsoS pf e <-> IsIsoS qf (g (nerveOb 1, e))
+  => (map-pres-iso g, segal-ff-reflects-iso ps qs g g-ff e)

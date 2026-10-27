@@ -50,8 +50,16 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   }
 
   static boolean compare(SortExpression sortExpr1, SortExpression sortExpr2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
-    if (sortExpr1 instanceof Const(Sort sort1) && (cmp == CMP.LE && sort1.isProp() && !(sortExpr2 instanceof Const(Sort sort2) && sort2.getPLevel().hasInferenceVariables()) || cmp == CMP.GE && sort1.isOmega()) || sortExpr2 instanceof Const(Sort sort2) && (cmp == CMP.LE && sort2.isOmega() && !(sortExpr1 instanceof Const(Sort sort1) && sort1.getPLevel().hasInferenceVariables()) || cmp == CMP.GE && sort2.isProp()) || sortExpr1 instanceof Var && cmp == CMP.GE || sortExpr2 instanceof Var && cmp == CMP.LE) {
+    if (sortExpr1 instanceof Const(Sort sort1) && (cmp == CMP.LE && sort1.isProp() && !(sortExpr2 instanceof Const(Sort sort2) && (sort2.getPLevel().hasInferenceVariables() || isFiniteCat(sort2))) || cmp == CMP.GE && sort1.isOmega()) || sortExpr2 instanceof Const(Sort sort2) && (cmp == CMP.LE && sort2.isOmega() && !(sortExpr1 instanceof Const(Sort sort1) && sort1.getPLevel().hasInferenceVariables()) || cmp == CMP.GE && sort2.isProp() && !(sortExpr1 instanceof Const(Sort sort1) && isFiniteCat(sort1))) || sortExpr1 instanceof Var && cmp == CMP.GE || sortExpr2 instanceof Var && cmp == CMP.LE) {
       return true;
+    }
+
+    // In the context of its definition, a sort that depends on parameters evaluates to its infinite level, as a single Var does above.
+    if (cmp == CMP.LE && dependsOnlyOnParameters(sortExpr2)) {
+      return compare(sortExpr1, new Const(sortExpr2.withInfLevel()), cmp, equations, sourceNode);
+    }
+    if (cmp == CMP.GE && dependsOnlyOnParameters(sortExpr1)) {
+      return compare(new Const(sortExpr1.withInfLevel()), sortExpr2, cmp, equations, sourceNode);
     }
 
     switch (sortExpr1) {
@@ -73,6 +81,40 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return equations.addEquation(sortExpr1, sortExpr2, cmp, sourceNode);
   }
 
+
+  private static boolean isFiniteCat(Sort sort) {
+    return sort.getHLevel().isCat() && !sort.getPLevel().isInfinity();
+  }
+
+  /**
+   * @return true if {@code sort} contains a {@link Var} and otherwise consists only of constants, maxima, \Pi-sorts, predecessors and successors.
+   */
+  private static boolean dependsOnlyOnParameters(SortExpression sort) {
+    return containsVar(sort) && isParametric(sort);
+  }
+
+  private static boolean containsVar(SortExpression sort) {
+    return switch (sort) {
+      case Var ignored -> true;
+      case Max max -> max.getSorts().stream().anyMatch(SortExpression::containsVar);
+      case Pi pi -> containsVar(pi.getDomain()) || containsVar(pi.getCodomain());
+      case Prev prev -> containsVar(prev.getSort());
+      case Succ succ -> containsVar(succ.getSort());
+      default -> false;
+    };
+  }
+
+  private static boolean isParametric(SortExpression sort) {
+    return switch (sort) {
+      case Const ignored -> true;
+      case Var ignored -> true;
+      case Max max -> max.getSorts().stream().allMatch(SortExpression::isParametric);
+      case Pi pi -> isParametric(pi.getDomain()) && isParametric(pi.getCodomain());
+      case Prev prev -> isParametric(prev.getSort());
+      case Succ succ -> isParametric(succ.getSort());
+      default -> false;
+    };
+  }
 
   record Const(@NotNull Sort sort) implements SortExpression, ConstSortExpression {
     @Override

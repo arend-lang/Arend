@@ -245,7 +245,7 @@ coClauseDefBody : '=>' expr                                 # coClauseExpr
 
 localCoClause : longName lamParam* ('=>' expr | '{' ('|' localCoClause)* '}');
 
-letClause : (ID tele* | atomPattern) typeAnnotation? '=>' expr;
+letClause : (ID tele* | atomPattern) typeAnnotation? ('=>' | FAT_ARROW_PLUS) expr;
 
 typeAnnotation : ':' expr;
 

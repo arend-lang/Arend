@@ -1,0 +1,90 @@
+{- | Weakly contractible categories, that is, categories whose geometric realization is contractible.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Functor.Adjunction
+\import InfCat.Functor.Equiv
+\import InfCat.Groupoid
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Terminal
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.Opposite
+\import InfCat.Localization.Realization
+\import InfCat.Opposite
+\import InfCat.Rezk
+\import Logic.Unique
+\import Logic
+\import Paths
+
+-- | {C} is weakly contractible if its geometric realization is contractible.
+\func IsWeaklyContractible (C : \Cat) : \Prop
+  => IsHEquiv {Realization C} {\Sigma} (\lam _ => ())
+
+-- | Functors from a weakly contractible category to a groupoid are the constant ones.
+\lemma weaklyContractible-const {C G : \Cat} (Cw : IsWeaklyContractible C) (Gg : IsGroupoid G)
+  : IsHEquiv {G} {C ->⁺ G} (\lam g _ => g)
+  => IsHEquiv.trans unit-fun-equiv (IsHEquiv.trans (IsHEquiv.precomp Cw) (realization-univ Gg))
+  \where
+    \lemma unit-fun-equiv {G : \Cat} : IsHEquiv {G} {\Sigma ->⁺ G} (\lam g _ => g)
+      => inP \new HQEquiv {
+        | finv h => h ()
+        | finv_f _ => idp
+        | f_finv _ => idp
+      }
+
+-- | If {realize} is equal to a constant functor, then {C} is weakly contractible.
+\lemma realize-const-weaklyContractible {C : \Cat} (c : C) (p : \Pi (x :⁺ C) -> realize x = realize c) : IsWeaklyContractible C
+  => inP \new HQEquiv {
+    | finv _ => realize c
+    | finv_f y => inv (realization-ext {C} {Realization C} {\lam y => y} {\lam _ => realize c} p {y})
+    | f_finv _ => idp
+  }
+
+-- | Décalage: a zigzag `id ⇒ F ⇐ const c` of natural transformations implies that {C} is weakly contractible.
+\lemma decalage-weaklyContractible {C : \Cat} (F : C ->⁺ C) (c : C) (a : \Pi (x :⁺ C) -> x ~> F x) (b : \Pi (x :⁺ C) -> c ~> F x)
+  : IsWeaklyContractible C
+  => realize-const-weaklyContractible c \lam x =>
+      realize-natTrans {C} {C} {\lam x => x} {F} a x *> inv (realize-natTrans {C} {C} {\lam _ => c} {F} b x)
+
+-- | A category with a terminal object is weakly contractible.
+\lemma terminal-weaklyContractible {C : \Cat} {t : C} (tt : IsTerminal t) : IsWeaklyContractible C
+  => decalage-weaklyContractible (\lam _ => t) t (IsHEquiv.fib-sec (rightFib-contr-equiv (hom-rightFib t) tt)) (\lam _ => idd)
+
+-- | A category with an initial object is weakly contractible.
+\lemma initial-weaklyContractible {C : \Cat} {i : C} (ii : IsInitial i) : IsWeaklyContractible C
+  => decalage-weaklyContractible (\lam x => x) i (\lam _ => idd) (IsInitial.adjunction ii).heps
+
+-- | Weak contractibility is invariant under equivalences.
+\lemma weaklyContractible-hequiv.{u} {C C' : \Cat u} {e : C ->⁺ C'} (ee : IsHEquiv e) (Cw : IsWeaklyContractible C) : IsWeaklyContractible C'
+  => transport (\lam (X : \Cat u) => IsWeaklyContractible X) (HEquiv_= ee) Cw
+
+-- | {C} is weakly contractible if and only if its functor to the point is a localization at all arrows.
+\lemma weaklyContractible<->localization {C : \Cat} : IsWeaklyContractible C <-> IsLocalization {MaxCatWeakEq C} {UnitCat} (\lam _ => unitCat)
+  => (\lam w => (\new FuncWeakEq { | hfunc-we _ => idd-iso }, IsHEquiv.leftFactor UnitCat-equiv w), \lam Lz => IsHEquiv.trans Lz.2 UnitCat-equiv)
+
+-- | The opposite of the point is the point.
+\lemma op-unit-equiv.{u} : IsHEquiv {Op.{u} UnitCat} {UnitCat} (\lam _ => unitCat)
+  => IsHEquiv.leftFactor UnitCat-equiv $ ff-surj-equiv.1 (\lam a b => \case IsEquiv.isSurj (Op.toOp-equiv {UnitCat}) a, IsEquiv.isSurj (Op.toOp-equiv {UnitCat}) b \with {
+       | inP (unitCat, p), inP (unitCat, q) => aux p q
+     }, \lam _ => inP (Op.toOp unitCat, idp))
+  \where {
+    \private \lemma aux.{v} {a b : Op.{v} UnitCat} (p : Op.toOp unitCat = a) (q : Op.toOp unitCat = b)
+      : IsEquiv {a ~> b} {() ~> {\Sigma} ()} (\lam h => dpath \lam i => ()) \elim p, q
+      | idp, idp => contr-equiv (Contr.Contr_QEquiv (IsEquiv.toQEquiv (opArr-equiv {UnitCat} {unitCat} {unitCat})) unitCat-hom-contr) unit-hom-contr
+
+    \private \func unit-hom-contr : Contr (() ~> {\Sigma} ())
+      => Contr.make idd \lam _ => idp
+
+    \private \func unitCat-hom-contr : Contr (unitCat ~> {UnitCat} unitCat)
+      => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv ((ff-surj-equiv.2 UnitCat-equiv).1 unitCat unitCat))) unit-hom-contr
+  }
+
+-- | The opposite of a weakly contractible category is weakly contractible.
+\lemma op-weaklyContractible.{u} {C : \Cat u} (w : IsWeaklyContractible C) : IsWeaklyContractible (Op C)
+  => weaklyContractible<->localization.2 $
+       isLocalization-transfer (OpFunc-isLocalization {MaxCatWeakEq C} {UnitCat} (weaklyContractible<->localization.1 w)) idHEquiv op-unit-equiv
+          (\lam _ => idp) \lam a => (\lam _ => TruncP.map (IsEquiv.isSurj opArrow-equiv a) (\lam s => (s.1, (), s.2)), \lam _ => ())

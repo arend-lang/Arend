@@ -39,7 +39,6 @@ public class DefCallResult implements TResult {
   private final List<Expression> myArguments;
   private List<DependentLink> myParameters;
   private Expression myResultType;
-  private Boolean myForcedInfinite;
 
   private DefCallResult(Concrete.ReferenceExpression defCall, CallableDefinition definition, Levels levels, List<Expression> arguments, List<DependentLink> parameters, Expression resultType) {
     myDefCall = defCall;
@@ -50,19 +49,14 @@ public class DefCallResult implements TResult {
     myResultType = resultType;
   }
 
-  public static TResult makeTResult(Concrete.ReferenceExpression defCall, CallableDefinition definition, Levels levels, CheckTypeVisitor typechecker) {
+  public static TResult makeTResult(Concrete.ReferenceExpression defCall, CallableDefinition definition, Levels levels) {
     List<DependentLink> parameters = new ArrayList<>();
     Expression resultType = definition.getTypeWithParams(parameters, levels);
 
     if (parameters.isEmpty()) {
       return new TypecheckingResult(definition.getDefCall(levels, Collections.emptyList()), resultType);
     } else {
-      DefCallResult result = new DefCallResult(defCall, definition, levels, new ArrayList<>(), parameters, resultType);
-      if (!typechecker.hasCategoricalContext()) {
-        result.myForcedInfinite = false;
-        result.updateResultPathType();
-      }
-      return result;
+      return new DefCallResult(defCall, definition, levels, new ArrayList<>(), parameters, resultType);
     }
   }
 
@@ -70,35 +64,26 @@ public class DefCallResult implements TResult {
     return definition == Prelude.PATH || definition == Prelude.DPATH || definition == Prelude.PATH_INFIX || definition == Prelude.DPATH_INFIX || definition == Prelude.PATH_CON || definition == Prelude.DPATH_CON;
   }
 
-  private void updateResultPathType() {
-    if (!myForcedInfinite && myResultType instanceof PathTypeExpression pathType && pathType.isForcedInfinite()) {
-      myResultType = new PathTypeExpression(pathType.getArgumentType(), pathType.getLeftArgument(), pathType.getRightArgument(), pathType.isDirected(), false);
-    }
-  }
-
-  private boolean isForcedInfinite(CheckTypeVisitor typechecker) {
-    if (myForcedInfinite == null) {
-      myForcedInfinite = false;
-      if (typechecker != null && isPathDefinition(myDefinition)) {
-        for (Expression argument : myArguments) {
-          if (typechecker.dependsOnCategoricalContext(argument)) {
-            myForcedInfinite = true;
-            break;
-          }
-        }
+  /**
+   * A path type that depends on the categorical context lives in the infinite universe.
+   */
+  private boolean isInfinitePathType() {
+    if (!isPathDefinition(myDefinition)) return false;
+    for (Expression argument : myArguments) {
+      if (GetTypeVisitor.hasFreeCovariantVariable(argument)) {
+        return true;
       }
-      updateResultPathType();
     }
-    return myForcedInfinite;
+    return false;
   }
 
-  private Expression getCoreDefCall(CheckTypeVisitor typechecker) {
+  private Expression getCoreDefCall() {
     return myDefinition == Prelude.PATH_CON || myDefinition == Prelude.DPATH_CON
-      ? new PathExpression(myArguments.get(0), myArguments.get(1), myDefinition == Prelude.DPATH_CON, isForcedInfinite(typechecker))
+      ? new PathExpression(myArguments.get(0), myArguments.get(1), myDefinition == Prelude.DPATH_CON)
       : myDefinition == Prelude.PATH || myDefinition == Prelude.DPATH
-        ? new PathTypeExpression(myArguments.get(0), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH, isForcedInfinite(typechecker))
+        ? new PathTypeExpression(myArguments.get(0), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH)
         : myDefinition == Prelude.PATH_INFIX || myDefinition == Prelude.DPATH_INFIX
-          ? new PathTypeExpression(new LamExpression(myDefinition == Prelude.DPATH_INFIX ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, myArguments.get(0)), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH_INFIX, isForcedInfinite(typechecker))
+          ? new PathTypeExpression(new LamExpression(myDefinition == Prelude.DPATH_INFIX ? UnusedDirectedIntervalDependentLink.INSTANCE : UnusedIntervalDependentLink.INSTANCE, myArguments.get(0)), myArguments.get(1), myArguments.get(2), myDefinition == Prelude.DPATH_INFIX)
           : myDefinition == Prelude.AT || myDefinition == Prelude.DAT
             ? AtExpression.make(myArguments.get(3), myArguments.get(4), true, myDefinition == Prelude.DAT)
             : myDefinition.getDefCall(myLevels, myArguments);
@@ -112,7 +97,7 @@ public class DefCallResult implements TResult {
   @Override
   public TypecheckingResult toResult(CheckTypeVisitor typechecker, Expression expectedType) {
     if (myParameters.isEmpty()) {
-      return new TypecheckingResult(getCoreDefCall(typechecker), getType(typechecker));
+      return new TypecheckingResult(getCoreDefCall(), getType(typechecker));
     }
 
     {
@@ -175,20 +160,7 @@ public class DefCallResult implements TResult {
       }
     }
 
-    // A path type that depends on a covariant parameter of the eta-expansion depends on the categorical context
-    if (isPathDefinition(myDefinition) && !Boolean.TRUE.equals(myForcedInfinite)) {
-      for (SingleDependentLink parameter : parameters) {
-        if (parameter.getVariance() != BindingVariance.INVARIANT) {
-          myForcedInfinite = true;
-          if (myResultType instanceof PathTypeExpression pathType && !pathType.isForcedInfinite()) {
-            myResultType = new PathTypeExpression(pathType.getArgumentType(), pathType.getLeftArgument(), pathType.getRightArgument(), pathType.isDirected(), true);
-          }
-          break;
-        }
-      }
-    }
-
-    Expression expression = getCoreDefCall(typechecker);
+    Expression expression = getCoreDefCall();
     Expression resultType = myResultType instanceof UniverseExpression ? getType(typechecker) : myResultType.subst(substitution, LevelSubstitution.EMPTY);
     if (parameters.isEmpty()) {
       return new TypecheckingResult(expression, resultType);
@@ -214,7 +186,7 @@ public class DefCallResult implements TResult {
     subst.add(myParameters.getFirst(), expression);
     myParameters = DependentLink.Helper.subst(myParameters.subList(1, size), subst, LevelSubstitution.EMPTY);
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(typechecker), getType(typechecker));
+    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(), getType(typechecker));
   }
 
   public TResult applyExpressions(List<? extends Expression> expressions, @NotNull CheckTypeVisitor typechecker) {
@@ -229,7 +201,7 @@ public class DefCallResult implements TResult {
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
 
     assert expressions.size() <= size;
-    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(typechecker), getType(typechecker));
+    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(), getType(typechecker));
   }
 
   public TResult applyPathArgument(boolean isDirected, Expression argument, CheckTypeVisitor visitor, Concrete.SourceNode sourceNode) {
@@ -258,7 +230,7 @@ public class DefCallResult implements TResult {
 
     myParameters = Collections.emptyList();
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return new TypecheckingResult(getCoreDefCall(visitor), getType(visitor));
+    return new TypecheckingResult(getCoreDefCall(), getType(visitor));
   }
 
   @Override
@@ -276,7 +248,7 @@ public class DefCallResult implements TResult {
 
   @Override
   public Expression getType(@NotNull CheckTypeVisitor typechecker) {
-    if (myResultType instanceof UniverseExpression && isForcedInfinite(typechecker)) {
+    if (myResultType instanceof UniverseExpression && isInfinitePathType()) {
       return new UniverseExpression(new Sort(Level.INFINITY, ConstLevel.INFINITY));
     }
     if (myResultType instanceof UniverseExpression universe && !(universe.getSortExpression() instanceof SortExpression.Const) && !myArguments.isEmpty()) {

@@ -1,0 +1,231 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Kan.LeftKanExtType
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Paths
+\import InfCat.Resizing
+\import InfCat.Rezk
+\import InfCat.Square
+\import InfCat.SubCat.Full
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Meta
+\import Paths
+
+\type Op.{u} (C : \Cat u) : \Cat u
+  => ResizeFromObjects {OpLarge C} OpLargeOb-equiv OpLarge-hom
+  \where {
+    \private \func OpLarge.{u} (C : \Cat u)
+      => FullSubCat {C ->⁺ \Type u} IsRepresentable
+
+    \private \func OpLargeOb.{u} {C : \Cat u} (x : C) : OpLarge C
+      => FullSubCat.make (ReprFunctor x) $ inP (x,idp)
+
+    \private \sfunc OpLargeOb-equiv.{u} {C : \Cat u} : QEquiv (OpLargeOb {C})
+      => IsEquiv.toQEquiv $ IsEquiv.fromEmbSurj
+          (leftEmbedding (IsFFMap.isObEmbedding FullSubCat.inc-ff) ReprFunctor-embedding)
+          \lam y => \case FullSubCat.inc-con {_} {_} {y} \with {
+            | inP (x,p) => inP (x, ((IsFFMap.isObEmbedding FullSubCat.inc-ff).isEmb (OpLargeOb x) y).sec (inv p))
+          }
+
+    \private \sfunc OpLarge-hom.{u} {C : \Cat u} (x y : C) : QEquiv {y ~> x} {OpLargeOb x ~> OpLargeOb y}
+      => symQEquiv $ IsEquiv.toQEquiv $ IsEquiv.trans (FullSubCat.inc-ff _ _) yonedaEmbCov
+
+    \private \lemma OpLarge-equiv.{u} {C : \Cat u} : IsHEquiv {OpLarge C} {Op C} (\lam x => resizeCat x)
+      => inP \new HQEquiv {
+        | finv (resizeCat x) => x
+        | finv_f x => idp
+        | f_finv (resizeCat x) => idp
+      }
+
+    \func toLarge.{u} {C : \Cat u} (x :⁺ Op C) : OpLarge C \elim x
+      | resizeCat x => x
+
+    \func Hom.{u} {C : \Cat u} (x :⁺ Op C) (y :⁺ C) : \Type u
+      => FullSubCat.inc (toLarge x) y
+
+    \lemma Hom-ff.{u} {C : \Cat u} : IsFFMap (Hom {C})
+      => ffMap-comp (ff-surj-equiv.2 $ inP $ later \new HQEquiv {
+        | finv x => resizeCat x
+        | finv_f (resizeCat x) => idp
+        | f_finv => idpe
+      }).1 FullSubCat.inc-ff
+
+    -- | The values of {Hom} are representable.
+    \lemma Hom-repr.{u} {C : \Cat u} (x : Op C) : IsRepresentable (Hom x) \elim x
+      | resizeCat x => FullSubCat.inc-con {C ->⁺ \Type u} {IsRepresentable} {x}
+
+    \func toOp.{u} {C : \Cat u} (x : C) : Op C
+      => resizeCat (OpLargeOb x)
+
+    \lemma toOp-equiv.{u} {C : \Cat u} : IsEquiv (toOp {C})
+      => IsEquiv.trans (inP OpLargeOb-equiv) (IsHEquiv.toIsEquiv OpLarge-equiv)
+
+    -- | The identity of {x} as an element of `Hom (toOp x) x`.
+    \func Hom-idd.{u} {C : \Cat u} (x : C) : Hom (toOp x) x
+      => Straight.toStraight idd
+  }
+
+\func yoneda.{u} {C : \Cat u} (x :⁺ C) (y :⁺ Op C)
+  => Op.Hom y x
+
+\sfunc OpFunc.{u} {C D : \Cat u} (f : C ->⁺ D) (x :⁺ Op C) : Op D
+  => pair.1 x
+  \where {
+    \private \sfunc pair
+      => ffMap-lift Op.Hom-ff (\lam x => LeftKanExtType f (Op.Hom x))
+          \lam x' => \case IsEquiv.isSurj Op.toOp-equiv x' \with {
+            | inP (x,p) => inP (Op.toOp (f x), inv (IsIso_= LeftKanExtType-repr-iso).1 *> pmap (LeftKanExtType f) (pmap Op.Hom p))
+          }
+
+    \protected \sfunc char : Op.Hom (OpFunc f x) = LeftKanExtType f (Op.Hom x)
+      => pmap+ Op.Hom (\peval OpFunc f x) *> pair.2 x
+  }
+
+-- | {OpFunc} sends `toOp x` to `toOp (f x)`.
+\sfunc OpFunc_toOp.{u} {C D : \Cat u} (f : C ->⁺ D) (x : C) : OpFunc f (Op.toOp x) = Op.toOp (f x)
+  => ((IsFFMap.isObEmbedding Op.Hom-ff).isEmb _ _).sec toOp-hom
+  \where {
+    \sfunc toOp-hom.{u} {C D : \Cat u} {f : C ->⁺ D} {x : C} : Op.Hom (OpFunc f (Op.toOp x)) = ReprFunctor (f x)
+      => OpFunc.char *> (IsIso_= LeftKanExtType-repr-iso).1
+
+    \sfunc toOp-pmap.{u} {C D : \Cat u} {f : C ->⁺ D} {x : C} : pmap Op.Hom (OpFunc_toOp f x) = toOp-hom
+      => pmap (pmap Op.Hom) (\peval OpFunc_toOp f x) *> ((IsFFMap.isObEmbedding Op.Hom-ff).isEmb _ _).f_sec toOp-hom
+
+    -- | The image of {OpFunc_toOp} under {Op.Hom} is {OpFunc.char} followed by {LeftKanExtType-repr}.
+    \sfunc toOp-arr.{u} {C D : \Cat u} {f : C ->⁺ D} {x : C}
+      : dmap Op.Hom (=_~> (OpFunc_toOp f x)) = comp (=_~> OpFunc.char) (LeftKanExtType-repr f x)
+      => dmap_=_~> Op.Hom *> pmap =_~> (toOp-pmap *> \peval toOp-hom {C} {D} {f} {x}) *> inv =_~>_comp *> pmap (comp _) (IsIso_= LeftKanExtType-repr-iso).2
+  }
+
+-- | {OpFunc} preserves identities.
+\sfunc OpFunc-id.{u} {C : \Cat u} {z :⁺ Op C} : OpFunc (\lam x => x) z = z
+  => path \lam i => ((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (OpFunc \lam x => x) (\lam z => z)).sec
+                     (funExt+ \lam z => OpFunc.char *> LeftKanExtType-id) i z
+
+-- | {OpFunc} preserves composition.
+\sfunc OpFunc-comp.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : B ->⁺ C} {z :⁺ Op A} : OpFunc (\lam a => g (f a)) z = OpFunc g (OpFunc f z)
+  => path \lam i => ((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (OpFunc \lam a => g (f a)) (\lam z => OpFunc g (OpFunc f z))).sec
+                     (funExt+ \lam z => OpFunc.char *> path (\lam i => natIso-path (\lam w => LeftKanExtType-comp f g (Op.Hom w)) (\lam w => LeftKanExtType-comp-iso) i z)
+                                         *> inv (OpFunc.char *> pmap+ (LeftKanExtType g) OpFunc.char)) i z
+  \where {
+    -- | The image of {OpFunc-comp} under {Op.Hom}, followed by the {OpFunc.char} arrows, is {OpFunc.char} followed by {LeftKanExtType-comp}.
+    \sfunc comp-arr.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : B ->⁺ C} {z : Op A}
+      : comp (dmap Op.Hom (=_~> OpFunc-comp)) (comp (=_~> OpFunc.char) (dmap (LeftKanExtType g) (=_~> OpFunc.char)))
+        = comp (=_~> OpFunc.char) (LeftKanExtType-comp f g (Op.Hom z))
+      => \let | cgf => OpFunc.char
+              | Y => OpFunc.char *> pmap+ (LeftKanExtType g) OpFunc.char
+              | N => natIso-path (\lam w => LeftKanExtType-comp f g (Op.Hom w)) (\lam w => LeftKanExtType-comp-iso)
+              | LKc => path \lam i => N i z
+         \in \have
+              | p1 : pmap Op.Hom OpFunc-comp = cgf *> LKc *> inv Y
+                => pmap (pmap Op.Hom) (\peval OpFunc-comp {A} {B} {C} {f} {g} {z})
+                   *> pmap (\lam q => path \lam i => q i z)
+                           (((IsFFMap.isObEmbedding (postcomp-ff Op.Hom-ff)).isEmb (OpFunc \lam a => g (f a)) (\lam w => OpFunc g (OpFunc f w))).f_sec _)
+              | p2 : =_~> LKc = LeftKanExtType-comp f g (Op.Hom z)
+                => =_~>-eval N z *> pmap (dmap (\lam (H : Op A ->⁺ C ->⁺ \Type u) => H z))
+                                         (pmap =_~> (\peval natIso-path (\lam w => LeftKanExtType-comp f g (Op.Hom w)) (\lam w => LeftKanExtType-comp-iso)) *> (IsIso_= _).2)
+         \in pmap (comp __ _) (dmap_=_~> Op.Hom *> pmap =_~> p1)
+             *> pmap (comp _) (pmap (comp _) (dmap_=_~> (LeftKanExtType g)) *> =_~>_comp)
+             *> =_~>_comp *> pmap =_~> (*>-assoc *> pmap (cgf *>) (*>-assoc *> pmap (LKc *>) inv_*>))
+             *> inv =_~>_comp *> pmap (comp _) p2
+
+    -- | {=_~>} of a path of functors evaluated at {x}.
+    \func =_~>-eval {X Y D : \Cat} {F G : X ->⁺ Y ->⁺ D} (N : F = G) (x : X) : =_~> (path \lam i => N i x) = dmap (__ x) (=_~> N) \elim N
+      | idp => idp
+  }
+
+-- | The arrow of `Op C` opposite to {b}.
+\func opArr.{u} {C : \Cat u} {x y : C} (b : x ~> y) : Op.toOp y ~> Op.toOp x
+  => IsEquiv.ret (Op.Hom-ff (Op.toOp y) (Op.toOp x)) (IsEquiv.ret yonedaEmbCov b)
+  \where {
+    -- | The natural transformation of representable functors induced by {opArr} corresponds to {b}.
+    \sfunc unop.{u} {C : \Cat u} {x y : C} {b : x ~> y} : yonedaEmbCov.fun (dmap Op.Hom (opArr b)) = b
+      => pmap yonedaEmbCov.fun (IsEquiv.f_ret (Op.Hom-ff _ _)) *> IsEquiv.f_ret yonedaEmbCov
+
+    -- | {opArr} preserves and reflects isomorphisms.
+    \lemma isIso.{u} {C : \Cat u} {x y : C} {b : x ~> y} : IsIso (opArr b) <-> IsIso b
+      => (\lam e => transport IsIso unop $ yonedaEmbCov.isIso $ dmap_IsIso Op.Hom e,
+          \lam e => IsFFMap.isConservative Op.Hom-ff $ yonedaEmbCov.isConservative $ transportInv IsIso unop e)
+  }
+
+-- | Transport along `opArr v` in the first variable of {Op.Hom} is precomposition with {v}.
+\sfunc opArr-transport.{u} {C : \Cat u} {x x' y : C} (v : x' ~> x) (w : x ~> y)
+  : ~>_-> (dmap (Op.Hom __ y) (opArr v)) (Straight.toStraight w) = Straight.toStraight (comp v w)
+  => pmap (~>_-> (dmap (Op.Hom __ y) (opArr v))) (inv (ReprFunctor-transport-idd w))
+     *> ~>_->-natural (\lam z a => ~>_-> (dmap (Op.Hom z) w) a) (opArr v)
+     *> pmap (~>_-> (dmap (Op.Hom (Op.toOp x')) w))
+             (inv (Straight.toStraight_fromStraight _) *> pmap Straight.toStraight opArr.unop)
+     *> ReprFunctor-transport
+
+-- | {opArr} is an equivalence.
+\lemma opArr-equiv.{u} {X : \Cat u} {x y : X} : IsEquiv (opArr {X} {x} {y})
+  => IsEquiv.trans (IsEquiv.ret-equiv yonedaEmbCov) (IsEquiv.ret-equiv (Op.Hom-ff (Op.toOp y) (Op.toOp x)))
+
+-- | Arrows of `Op X` are the opposites of arrows of {X}.
+\lemma opArrow-equiv.{u} {X : \Cat u} : IsEquiv {DI ->⁺ X} {DI ->⁺ Op X} (\lam b i => opArr (dpath b) i)
+  => \let e1 : IsEquiv {\Sigma X X} {\Sigma (Op X) (Op X)} (\lam j => (Op.toOp j.2, Op.toOp j.1))
+              => IsEquiv.trans (pair-equiv Op.toOp-equiv) (inP \new QEquiv {\Sigma (Op X) (Op X)} {\Sigma (Op X) (Op X)} {
+                   | f j => (j.2, j.1)
+                   | ret j => (j.2, j.1)
+                   | ret_f _ => idp
+                   | f_sec _ => idp
+                 })
+     \in IsEquiv.trans (inP DI-equiv) $ IsEquiv.trans (inP (sigma-equiv (IsEquiv.toQEquiv e1) \lam j => IsEquiv.toQEquiv (opArr-equiv {X} {j.1} {j.2})))
+                                                      (inP (symQEquiv DI-equiv))
+
+-- | {OpFunc} sends `opArr b` to `opArr (dmap f b)`.
+\sfunc opArr-OpFunc.{u} {C D : \Cat u} (f : C ->⁺ D) {x y : C} (b : x ~> y)
+  : comp (=_~> (inv (OpFunc_toOp f y))) (comp (dmap (OpFunc f) (opArr b)) (=_~> (OpFunc_toOp f x))) = opArr (dmap f b)
+  => conj-square $ IsEquiv.isInj (Op.Hom-ff (OpFunc f (Op.toOp y)) (Op.toOp (f x))) $
+       dmap_comp Op.Hom *> pmap (comp _) OpFunc_toOp.toOp-arr *> comp-assoc
+       *> pmap (comp __ _) (~>-natural \lam w => =_~> (OpFunc.char {C} {D} {f} {w}))
+       *> inv comp-assoc
+       *> pmap (\lam t => comp (=_~> OpFunc.char) (comp (dmap (LeftKanExtType f) t) (LeftKanExtType-repr f x)))
+               (IsEquiv.f_ret (Op.Hom-ff (Op.toOp y) (Op.toOp x)))
+       *> pmap (comp _) (LeftKanExtType-repr-natural {C} {D} {f} b *> pmap (comp _) (inv (IsEquiv.f_ret (Op.Hom-ff (Op.toOp (f y)) (Op.toOp (f x))))))
+       *> comp-assoc *> pmap (comp __ _) (inv OpFunc_toOp.toOp-arr) *> inv (dmap_comp Op.Hom)
+  \where
+    -- | A conjugate of {g} by paths is {h} if the corresponding square commutes.
+    \private \sfunc conj-square {A : \Cat} {a a' b b' : A} {p : a = a'} {q : b = b'} {g : a ~> b} {h : a' ~> b'}
+                                (s : comp g (=_~> q) = comp (=_~> p) h) : comp (=_~> (inv p)) (comp g (=_~> q)) = h \elim p
+      | idp => comp_idd-left *> s *> comp_idd-left
+
+-- | {OpFunc_toOp} is compatible with {OpFunc-comp}.
+\sfunc OpFunc_toOp-comp.{u} {A B C : \Cat u} {f : A ->⁺ B} {g : B ->⁺ C} {x : A}
+  : OpFunc-comp *> pmap (OpFunc g) (OpFunc_toOp f x) *> OpFunc_toOp g (f x) = OpFunc_toOp (\lam a => g (f a)) x
+  => ((=_~>-embedding _ _).isEmb _ _).sec $ IsEquiv.isInj (Op.Hom-ff (OpFunc (\lam a => g (f a)) (Op.toOp x)) (Op.toOp (g (f x)))) $
+       pmap (dmap Op.Hom) (inv =_~>_comp *> pmap (comp _) (inv =_~>_comp)) *> dmap_comp Op.Hom *> pmap (comp _) (dmap_comp Op.Hom)
+       *> pmap (\lam t => comp _ (comp t _)) (pmap (dmap Op.Hom) (inv (dmap_=_~> (OpFunc g))))
+       *> pmap (\lam t => comp _ (comp _ t)) OpFunc_toOp.toOp-arr
+       *> pmap (comp _) (comp-assoc *> pmap (comp __ _) (~>-natural \lam w => =_~> (OpFunc.char {B} {C} {g} {w})))
+       *> pmap (\lam t => comp _ (comp (comp _ t) _)) (pmap (dmap (LeftKanExtType g)) OpFunc_toOp.toOp-arr *> dmap_comp (LeftKanExtType g))
+       *> pmap (comp _) (pmap (comp __ _) comp-assoc *> inv comp-assoc) *> comp-assoc
+       *> pmap (comp __ _) OpFunc-comp.comp-arr
+       *> inv comp-assoc *> pmap (comp _) (LeftKanExtType-comp-repr {A} {B} {C} {f} {g} {x})
+       *> inv OpFunc_toOp.toOp-arr
+
+-- | `OpFunc F` inverts `opArr b` if and only if {F} inverts {b}.
+\lemma OpFunc-iso.{u} {C D : \Cat u} (F : C ->⁺ D) {x y : C} (b : x ~> y)
+  : IsIso (dmap (OpFunc F) (opArr b)) <-> IsIso (dmap F b)
+  => \let | a => =_~>-iso (inv (OpFunc_toOp F y))
+          | c => =_~>-iso (OpFunc_toOp F x)
+     \in (\lam e => opArr.isIso.1 $ transport IsIso (opArr-OpFunc F b) $ (comp-IsIso-right a).2 $ (comp-IsIso-left c).2 e,
+          \lam e => (comp-IsIso-left c).1 $ (comp-IsIso-right a).1 $ transportInv IsIso (opArr-OpFunc F b) $ opArr.isIso.2 e)
+
+-- | {opArr-OpFunc} for arrows given as functors out of {DI}.
+\sfunc opArrow-OpFunc.{u} {C D : \Cat u} (f : C ->⁺ D) (b : DI ->⁺ C)
+  : (\lam i =>⁺ OpFunc f (opArr (dpath b) i)) = opArr (dpath \lam j => f (b j))
+  => arrow-path (OpFunc_toOp _ _) (OpFunc_toOp _ _) (opArr-OpFunc f (dpath b))
+  \where
+    -- | Arrows with equal endpoints whose conjugate by the endpoint paths are equal are equal as functors out of {DI}.
+    \private \func arrow-path {A : \Cat} {a a' b b' : A} {g : a ~> b} {g' : a' ~> b'} (p : a = a') (q : b = b')
+                              (h : comp (=_~> (inv p)) (comp g (=_~> q)) = g') : (\lam i => g i) = {DI ->⁺ A} (\lam i => g' i) \elim p, q
+      | idp, idp => pmap (\lam k => \lam i =>⁺ k i) (inv (pmap (comp idd) comp_idd-right *> comp_idd-left) *> h)

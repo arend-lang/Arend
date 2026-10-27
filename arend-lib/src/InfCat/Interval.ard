@@ -3,6 +3,12 @@
 \import Logic.Unique
 \import Paths
 
+-- | The minimum of two points of the directed interval.
+\func dmin (i j :⁺ DI) : DI => conn-right (dpath \lam k => k) i j
+
+-- | The maximum of two points of the directed interval.
+\func dmax (i j :⁺ DI) : DI => conn-left (dpath \lam k => k) i j
+
 \lemma DI-hom-ll-contr : Contr (dleft ~> dleft)
   => Contr.make idd \lam p => inv (comp-equiv.flipped.f (dpath \lam k => conn-right (dpath \lam i => i) (p k))) *> comp_idd-left
 
@@ -23,4 +29,16 @@
   | dright => \case \elim y \with {
     | dleft => \lam p => absurd (DI-hom-rl-empty p)
     | dright => isContr=>isProp DI-hom-rr-contr
+  }
+
+-- | A property of the arrows of {DI} holding for identities and for `dleft ~> dright` holds for all arrows.
+\lemma DI-arrow-ind (P : \Pi {i j : DI} -> i ~> j -> \Prop) (Pid : \Pi {i : DI} -> P (idd {DI} {i})) (P01 : P (dpath \lam i => i))
+                    {i j : DI} (k : i ~> j) : P k \elim i
+  | dleft => \case \elim j, \elim k \with {
+    | dleft, k => transportInv P (DI-hom-prop k idd) Pid
+    | dright, k => transportInv P (DI-hom-prop k (dpath \lam i => i)) P01
+  }
+  | dright => \case \elim j, \elim k \with {
+    | dleft, k => absurd (DI-hom-rl-empty k)
+    | dright, k => transportInv P (DI-hom-prop k idd) Pid
   }

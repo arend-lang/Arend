@@ -249,6 +249,53 @@ public class CatPreludeTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void isoCatTest() {
+    typeCheckModule("""
+      \\func endpoints.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        : \\Sigma (isoCat f g p q left = A) (isoCat f g p q right = B) => (idp, idp)
+      \\func cat-ua.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        : A = B => path (isoCat f g p q)
+      \\func coe-iso.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (a : A)
+        : coe (isoCat f g p q) a right = f a => idp
+      \\func coe-path-iso.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (a : A)
+        : coe (\\lam i => cat-ua f g p q @ i) a right = f a => idp
+      """);
+  }
+
+  @Test
+  public void isoCatLevelError() {
+    typeCheckModule("""
+      \\func test.{u} (A B : \\Cat (\\suc u)) (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (i : I)
+        : \\Cat u => isoCat f g p q i
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void isoCatInvariantHomotopyError() {
+    typeCheckModule("""
+      \\func test.{u} {A B : \\Cat u} (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        : A = B => path (isoCat f g p q)
+      """, 1);
+  }
+
+  @Test
+  public void isoCatInfiniteLevelTest() {
+    typeCheckModule("""
+      \\func test (A B : \\Cat) (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y) (i : I)
+        => isoCat f g p q i
+      """);
+  }
+
+  @Test
+  public void isoCatInfiniteLevelError() {
+    typeCheckModule("""
+      \\func test (A B : \\Cat) (f : A ->+ B) (g : B ->+ A) (p : \\Pi (x :+ A) -> g (f x) = x) (q : \\Pi (y :+ B) -> f (g y) = y)
+        => path (isoCat f g p q)
+      """, 1);
+  }
+
+  @Test
   public void isoCoePlusTest() {
     typeCheckModule("""
       \\func faces.{u} {A B :+ \\Type u} (p :+ A ~> B) (i :+ DI) (j : I)
@@ -395,6 +442,50 @@ public class CatPreludeTest extends TypeCheckingTestCase {
     typeCheckModule(RESIZE_DEFS + """
       \\func test {C : \\Cat} (F : C ->+ \\Type) (s : Small.{1} F) (l : \\Pi {a a' :+ C} (f :+ a ~> a') (b :+ F a) -> \\Sigma+ (b' : F a') (DPath (\\lam i => F (f i)) b b')) (y :+ C) : \\Type0
         => Resize+ F s l y
+      """, 1);
+  }
+
+  private static final String RESIZE_CAT_DEFS = """
+    \\func SmallCat.{u} (C : \\Cat)
+      => \\Sigma (S : \\Type u) (to : S -> (DI ->+ C)) (from : (DI ->+ C) -> S) (\\Pi (s : S) -> from (to s) = s) (\\Pi (f : DI ->+ C) -> to (from f) = f)
+    """;
+
+  @Test
+  public void resizeCatSortTest() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test (C : \\Cat) (s : SmallCat.{0} C) : \\Cat0 => ResizeCat s.2 s.3 s.4 s.5
+      """);
+  }
+
+  @Test
+  public void resizeCatArrowTest() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test {C : \\Cat} {s : SmallCat.{0} C} {x y :+ C} (f :+ x ~> y) : resizeCat {C} {s.1} {s.2} {s.3} {s.4} {s.5} x ~> resizeCat y
+        => dpath (\\lam i => resizeCat (f i))
+      """);
+  }
+
+  @Test
+  public void resizeCatElimTest() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func unresize {C : \\Cat} {s : SmallCat.{0} C} (r :+ ResizeCat s.2 s.3 s.4 s.5) : C \\elim r
+        | resizeCat c => c
+      \\func beta {C : \\Cat} {s : SmallCat.{0} C} (c : C) : unresize (resizeCat {C} {s.1} {s.2} {s.3} {s.4} {s.5} c) = c
+        => idp
+      """);
+  }
+
+  @Test
+  public void resizeCatNotTypeError() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test (C : \\Cat) (s : SmallCat.{0} C) : \\Type0 => ResizeCat s.2 s.3 s.4 s.5
+      """, 1);
+  }
+
+  @Test
+  public void resizeCatLevelError() {
+    typeCheckModule(RESIZE_CAT_DEFS + """
+      \\func test (C : \\Cat) (s : SmallCat.{1} C) : \\Cat0 => ResizeCat s.2 s.3 s.4 s.5
       """, 1);
   }
 

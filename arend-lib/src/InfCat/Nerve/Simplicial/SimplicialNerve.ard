@@ -1,0 +1,84 @@
+{- | The simplicial nerve of a category.
+
+     For a category {C}, the nerve (the Rezk nerve of SCT Definition 11.8.1) is the category {SNerve} with the projection {snerve-proj} to the simplex category {DeltaCat}.
+     Its fibers {SNerveFib} form a right fibration ({snerve-rightFib}), that is, a simplicial type: the `n`-simplices are functors
+     from `[n]` to {C} ({snerve-nu-equiv}), and transport along `d : [n] -> [n']` is precomposition with `d` ({snerve-nu-tr}).
+
+     The nerve is the fiberwise core {ExpCocCore} of the exponent from the universal cocartesian fibration {UnivSimplexFib}
+     (fibers `[n]`) to {C}, so it is characterized by the universal property {ExpCocCore.eval-univ}: functors into {SNerve}
+     are functors `pi : T ->⁺ DeltaCat` together with functors on `BaseChange pi (nerveMap simplexProj)` inverting the cocartesian arrows.
+ -}
+
+\import Arith.Fin.Order
+\import Category.Fibration.PosetElements
+\import Category.Simplex
+\import Equiv
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Covariant.CocartesianBaseChange
+\import InfCat.Fibration.Covariant.CocartesianFib
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Exponent.ExponentCocartesianCore
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Functor.Equiv
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveFib
+\import Logic.Unique
+\import Order.PartialOrder
+\import Paths
+
+-- | The poset `[n]`.
+\func Simplex (n : Nat) : Preorder
+  => FinOrder (suc n)
+
+-- | The simplicial nerve of {C}.
+\func SNerve.{u} (C : \Cat u) : \Cat u
+  => ExpCocCore univSimplex-cocartesianMap C
+  \where {
+    \protected \func proj.{u} (C : \Cat u) (z :⁺ SNerve C) : DeltaCat
+      => ExpCocCore.proj univSimplex-cocartesianMap C z
+  }
+
+-- | The fibers of the simplicial nerve of {C}.
+\func SNerveFib.{u} (C : \Cat u) (b :⁺ DeltaCat) : \Cat
+  => Fibers (SNerve.proj C) b
+  \where {
+    \protected \lemma isRightFib.{u} {C : \Cat u} : IsRightFib (SNerveFib C)
+      => ExpCocCore.rightFib univSimplex-cocartesianMap
+  }
+
+-- | The functor `[n] -> C` corresponding to an `n`-simplex of the nerve.
+\func snerve-nu.{u} {C : \Cat u} (n : Nat) (z : SNerveFib C (nerveOb n)) (t :⁺ Nerve (Simplex n)) : C
+  => ExpCocCore.fiber-eval univSimplex-cocartesianMap z (univSimplexFib-incl n t)
+
+-- | `n`-simplices of the nerve are functors `[n] -> C`.
+\lemma snerve-nu-equiv.{u} {C : \Cat u} (n : Nat)
+  : IsEquiv {SNerveFib C (nerveOb n)} {Nerve (Simplex n) ->⁺ C} (snerve-nu n)
+  => IsEquiv.trans (ExpCocCore.fiber-equiv univSimplex-cocartesianMap {C} (nerveOb n))
+                   (IsHEquiv.toIsEquiv (IsHEquiv.precomp {_} {_} {C} (univSimplexFib-fiber n)))
+
+-- | Transport along a simplicial operator {d} is precomposition with {d}.
+\sfunc snerve-nu-tr.{u} {C : \Cat u} {n n' : Nat} (d : SimplexCat.Hom n n') (z : SNerveFib C (nerveOb n')) {t :⁺ Nerve (Simplex n)}
+  : snerve-nu n (rightFib-tr SNerveFib.isRightFib (nerveHom d) z) t = snerve-nu n' z (nerveMap d t)
+  => ExpCocCore.fiber-eval-tr univSimplex-cocartesianMap (nerveHom {SimplexCat} d) z (univSimplexFib-incl n t)
+     *> path (\lam i => ExpCocCore.fiber-eval univSimplex-cocartesianMap z (toEnd-incl d i t))
+  \where {
+    -- | Cocartesian transport along {d} in {UnivSimplexFib} is {d}.
+    \sfunc toEnd-incl {n n' : Nat} (d : SimplexCat.Hom n n')
+      : (\lam t =>⁺ toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, univSimplexFib-incl n t)) = (\lam t =>⁺ univSimplexFib-incl n' (nerveMap d t))
+      => nerve-maps-ext' (univSimplexFib-truncCat n') (toEnd-vertex d) \lam f => univSimplexFib-thin n' _ _ _ _
+
+    -- | On vertices, cocartesian transport is the unique cocartesian lift `(d, refl)`.
+    \sfunc toEnd-vertex {n n' : Nat} (d : SimplexCat.Hom n n') (j : Fin (suc n))
+      : toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, univSimplexFib-incl n (nerveOb j)) = univSimplexFib-incl n' (nerveOb (d j))
+      => \let | Ff => cocartesianMap-char.1 univSimplex-cocartesianMap
+              | D : CovLiftData (Fibers (nerveMap simplexProj)) => (nerveOb {SimplexCat} n, nerveOb {SimplexCat} n', nerveHom {SimplexCat} d, (nerveOb {SimplexTotal} (n, j), idp))
+              | L0 : CovLift (Fibers (nerveMap simplexProj)) D
+                   => ((nerveOb (n', d j), idp), dpath \lam i => (nerveHom {SimplexTotal} (d, <=-refl) i, idp))
+              | L0c : IsCocartesianLift L0
+                    => (cocartesianLift<->arrow-at idp L0).2 (nerveHom-cocartesian simplexProj (PosetElements.lift-cocartesian simplexPoset d j))
+         \in pmap (\lam x => toEnd univSimplex-cocartesianMap (nerveHom {SimplexCat} d) (dleft, x)) (univSimplexFib-vertex n j)
+            *> pmap (\lam s => s.1.1) (isContr=>isProp (transports-contr.cocLift-contr Ff D) (cocartesianFib-lift Ff D, cocartesianFib-lift.isCocartesian D) (L0, L0c))
+            *> inv (univSimplexFib-vertex n' (d j))
+  }

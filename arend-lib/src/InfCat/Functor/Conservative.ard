@@ -4,14 +4,33 @@
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Rezk
 \import Logic
+\import Paths
 
 \type IsConservative {C D : \Cat} (f : C ->⁺ D) : \Prop
-  => \Pi {x y : C} (p : x ~> y) -> IsIso (dmap f p) -> IsIso p
+  => \Pi {x y : C} {p : x ~> y} -> IsIso (dmap f p) -> IsIso p
 
 -- | A natural transformation which is an isomorphism objectwise is an isomorphism.
 \lemma objectwise-iso {C D : \Cat} {f g : C ->⁺ D} {p : f ~> g} (e : \Pi (x : C) -> IsIso (dmap (\lam u => u x) p)) : IsIso p
   => \have (h,q) => ffMap-lift diag-ff (\lam x i => p i x) \lam x => IsIso-diag-char.1 (e x)
      \in IsIso-diag-char.2 $ inP (h, path \lam j i x => q x j i)
 
+-- | A natural transformation whose components are isomorphisms gives a path of functors.
+\sfunc natIso-path {C D : \Cat} {F G : C ->⁺ D} (t : \Pi (x :⁺ C) -> F x ~> G x) (ti : \Pi (x : C) -> IsIso (t x)) : F = G
+  => (IsIso_= (objectwise-iso {C} {D} {F} {G} {dpath \lam i x => t x i} ti)).1
+
+-- | The arrow of functors underlying {natIso-path} is the given natural transformation.
+\sfunc natIso-path-arrow {C D : \Cat} {F G : C ->⁺ D} (t : \Pi (x :⁺ C) -> F x ~> G x) (ti : \Pi (x : C) -> IsIso (t x))
+  : =_~> (natIso-path t ti) = dpath \lam i x => t x i
+  => path (\lam i => =_~> ((\peval natIso-path t ti) i)) *> (IsIso_= (objectwise-iso {C} {D} {F} {G} ti)).2
+
 \lemma cov-func-conservative {C D : \Cat} : IsConservative {C ->⁺ D} {C -> D} (\lam f x => f x)
-  => \lam p e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e
+  => \lam e => objectwise-iso \lam x => dmap_IsIso (\lam u => u x) e
+
+-- | A morphism in the arrow category is an isomorphism if and only if both of its components are.
+\lemma DI-iso-char {D : \Cat} {u v : DI ->⁺ D} {p : u ~> v}
+  : IsIso p <-> (\Sigma (IsIso (dmap (\lam h => h dleft) p)) (IsIso (dmap (\lam h => h dright) p)))
+  => (\lam e => (dmap_IsIso (\lam h => h dleft) e, dmap_IsIso (\lam h => h dright) e),
+      \lam s => objectwise-iso \lam x => \case \elim x \with {
+        | dleft => s.1
+        | dright => s.2
+      })

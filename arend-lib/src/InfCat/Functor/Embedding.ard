@@ -1,8 +1,21 @@
 \import Equiv
+\import Equiv.Fiber
 \import Equiv.Path
+\import Function
 \import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Objects
 \import InfCat.Paths
+\import InfCat.Rezk
 \import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
 \import Paths.Meta
 
 \type IsEmbedding {C D : \Cat} (f : C ->⁺ D) : \Prop
@@ -18,8 +31,151 @@
           | f_sec q => (lem q).2
         }
 
+    -- | Postcomposition with an embedding is an embedding.
+    \func post (fe : IsEmbedding f) (E : \Cat) : Embedding {E ->⁺ C} {E ->⁺ D} (\lam g x => f (g x)) \cowith
+      | isEmb g h => IsEquiv.toQEquiv (external fe g h)
+
+    -- | Lifts along an embedding are unique.
+    \lemma lift-isProp (fe : IsEmbedding f) {E : \Cat} (h : E ->⁺ D) : isProp (\Sigma (k : E ->⁺ C) (\Pi (x :⁺ E) -> f (k x) = h x))
+      => isProp-retract {Fib (post fe E) h} {\Sigma (k : E ->⁺ C) (\Pi (x :⁺ E) -> f (k x) = h x)}
+           (\lam s => (s.1, path \lam i x => s.2 x i)) (\lam t => (t.1, \lam x => path \lam i => t.2 i x)) (\lam s => idp)
+           (Embedding.embeddingFiber-isProp (post fe E) h)
+
     \sfunc isMono (fe : IsEmbedding f) {E : \Cat} (g h : E ->⁺ C) (p : \Pi (x :⁺ E) -> f (g x) = f (h x)) {x :⁺ E} : g x = h x
       => path \lam i => IsEquiv.ret (external fe g h) (path \lam j x => p x j) i x
+
+    -- | A functor is an embedding if and only if it is an embedding on objects and on homs.
+    \lemma char {C D : \Cat} {f : C ->⁺ D}
+      : IsEmbedding f <-> (\Sigma (Embedding {C} {D} (\lam x => f x)) (\Pi (x y : C) -> Embedding {x ~> y} (\lam p => dmap f p)))
+      => (\lam fe => \have e => diag-equiv.1 fe
+                     \in (diag-ob.1 (IsHEquiv.toIsEquiv e), diag-ff.1 (ff-surj-equiv.2 e).1),
+          \lam s => diag-equiv.2 $ ff-surj-equiv.1 ((diag-ff {C} {D} {f}).2 s.2, \lam t => inP (IsEquiv=>contrFibers ((diag-ob {C} {D} {f}).2 s.1) t).center))
+
+    -- | A functor which is an embedding on homs and whose paths lift is an embedding.
+    \lemma fromHoms {C D : \Cat} {f : C ->⁺ D} (he : \Pi (x y : C) -> Embedding {x ~> y} (dmap f))
+                    (pl : \Pi {x y : C} (p : f x = f y) -> ∃ (q : x = y) (pmap+ f q = p)) : IsEmbedding f
+      => (char {C} {D} {f}).2 (\new Embedding {
+           | isEmb x y => \new Retraction {
+             | sec p => (lift p).1
+             | f_sec p => (lift p).2
+           }
+         }, he)
+      \where {
+        -- | `pmap f` is an embedding since {=_~>} is and {f} is an embedding on homs.
+        \lemma pmap-emb {x y : C} : Embedding (pmap+ f {x} {y})
+          => leftEmbedding (=_~>-embedding (f x) (f y))
+               (transport (Embedding {x = y} {f x ~> f y}) (path \lam i p => dmap_=_~> f {x} {y} {p} @ i) (transEmbedding (=_~>-embedding x y) (he x y)))
+
+        \lemma lift {x y : C} (p : f x = f y) : \Sigma (q : x = y) (pmap+ f q = p)
+          => TruncP.remove (Embedding.embeddingFiber-isProp pmap-emb p) (pl p)
+      }
+
+    -- | An embedding which is surjective on objects and on homs is an equivalence.
+    \lemma surj-equiv {C D : \Cat} {f : C ->⁺ D} (fe : IsEmbedding f) (os : IsSurjMap f)
+                      (hs : \Pi (x y : C) -> IsSurj (dmap f {x} {y})) : IsHEquiv f
+      => (ff-surj-equiv {C} {D} {f}).1 (\lam x y => IsEquiv.fromEmbSurj ((char.1 fe).2 x y) (hs x y), os)
+
+    -- | The pullback of an embedding is an embedding.
+    \lemma pullback {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f)
+      : IsEmbedding {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1
+      => (char {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} {B} {\lam s => s.1}).2 (pullback-ob g fe, pullback-hom g fe)
+      \where {
+        \lemma pullback-ob {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f)
+          : Embedding {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} {B} (\lam s => s.1)
+          => Embedding.fibers _ \lam b => isProp-retract {Fib (\lam y => f y) (g b)} {Fib {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1 b}
+               (\lam u => (u.1.2.1, u.1.2.2 *> pmap+ g u.2)) (\lam v => ((b, (v.1, v.2)), idp))
+               (\lam u => fib-aux {B} {C} {D} {g} {f} u.2) (Embedding.embeddingFiber-isProp (char.1 fe).1 (g b))
+
+        \lemma pullback-hom {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f) (s t : \Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x)))
+          : Embedding {s ~> t} {s.1 ~> t.1} (\lam h => dpath \lam i => (h i).1)
+          => transEmbedding (Embedding.fromIsEquiv (inP (dpath-sigma-equiv {B} (\lam i x => \Sigma⁺ (y : C) (f y = g x)) {s} {t})))
+               (Embedding.sigma-prop-embedding \lam (r : s.1 ~> t.1) => pullback-hom-prop g fe r)
+
+        \lemma pullback-hom-prop {B C D : \Cat} (g : B ->⁺ D) {f : C ->⁺ D} (fe : IsEmbedding f) {s t : \Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} (r : s.1 ~> t.1)
+          : isProp (DPath (\lam i => \Sigma⁺ (y : C) (f y = g (r i))) s.2 t.2)
+          => \have e => ff-surj-equiv.contr.fib-equiv f (\lam i => g (r i)) {s.2} {t.2}
+             \in isProp-retract e e.ret e.ret_f (Embedding.embeddingFiber-isProp ((char.1 fe).2 _ _) _)
+
+        \private \func fib-aux {B C D : \Cat} {g : B ->⁺ D} {f : C ->⁺ D} {x b : B} {y : C} {q : f y = g x} (e : x = b)
+          : ((((b, (y, q *> pmap+ g e)) : \Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))), idp) : Fib {\Sigma⁺ (x : B) (\Sigma⁺ (y : C) (f y = g x))} __.1 b)
+            = ((x, (y, q)), e) \elim e
+          | idp => idp
+      }
+
+    -- | The diagonal of a functor.
+    \func diag {C D : \Cat} (f : C ->⁺ D) (x :⁺ C) : \Sigma⁺ (x y : C) (f x = f y)
+      => (x, x, idp)
+
+    -- | A functor is an embedding if and only if its diagonal is an equivalence.
+    \lemma diag-equiv {C D : \Cat} {f : C ->⁺ D} : IsEmbedding f <-> IsHEquiv (diag f)
+      => (\lam (inP e) => IsHEquiv.biEquiv {_} {_} {diag f} {__.1} (\lam x => idp) (\lam s => fib-diag (e s).1 (e s).2),
+          \lam e => inP \lam s => diag-fib (IsHEquiv.f_ret e))
+      \where {
+        \func diag-fib {C D : \Cat} {f : C ->⁺ D} {c :⁺ C} {s :⁺ \Sigma⁺ (x y : C) (f x = f y)} (r :⁺ diag f c = s)
+          : \Sigma⁺ (p : s.1 = s.2) (pmap+ f p = s.3) \elim r
+          | idp => (idp, idp)
+
+        \func fib-diag {C D : \Cat} {f : C ->⁺ D} {x y :⁺ C} {q :⁺ f x = f y} (p :⁺ x = y) (h :⁺ pmap+ f p = q)
+          : diag f x = {\Sigma⁺ (x y : C) (f x = f y)} (x, y, q) \elim p, h
+          | idp, idp => idp
+      }
+
+    -- | The diagonal of a functor is an equivalence on objects if and only if the functor is an embedding on objects.
+    \lemma diag-ob {C D : \Cat} {f : C ->⁺ D} : IsEquiv (\lam x => diag f x) <-> Embedding {C} {D} (\lam x => f x)
+      => <->trans (IsEquiv.parallelEquiv {C} {\Sigma⁺ (x y : C) (f x = f y)} {C} {\Sigma (x y : C) (f x = f y)}
+                    (inP idEquiv)
+                    (inP \new QEquiv {
+                      | f s => (s.1, s.2, s.3)
+                      | ret s => (s.1, s.2, s.3)
+                      | ret_f => idpe
+                      | f_sec => idpe
+                    }) (\lam x => idp))
+                  (<->sym Embedding.diag-char)
+
+    -- | The diagonal of a functor is fully faithful if and only if the functor is an embedding on homs.
+    \lemma diag-ff {C D : \Cat} {f : C ->⁺ D} : IsFFMap (diag f) <-> (\Pi (x y : C) -> Embedding {x ~> y} (dmap f))
+      => (\lam ff x y => Embedding.diag-char.2 $ (hom-equiv x y).1 (ff x y),
+          \lam he x y => (hom-equiv {C} {D} {f} x y).2 $ Embedding.diag-char.1 (he x y))
+      \where {
+        \lemma hom-equiv {C D : \Cat} {f : C ->⁺ D} (x y : C)
+          : IsEquiv (\lam p => dmap (diag f) {x} {y} p) <-> IsEquiv {x ~> y} {\Sigma (u v : x ~> y) (dmap f u = dmap f v)} (\lam u => (u, u, idp))
+          => IsEquiv.parallelEquiv (inP idEquiv) (inP $ later \new QEquiv {
+            | f h => (dpath \lam i => (h i).1, dpath \lam i => (h i).2, path \lam j => dpath \lam i => (h i).3 j)
+            | ret s => dpath \lam i => (s.1 i, s.2 i, path \lam j => s.3 j i)
+            | ret_f => idpe
+            | f_sec => idpe
+          }) (\lam u => idp)
+      }
   }
 
--- TODO: Prove that a functor is an embedding iff it is an embedding on objects and on homs
+-- | A fully faithful functor is an embedding.
+\lemma ffMap-embedding {C D : \Cat} {f : C ->⁺ D} (ff : IsFFMap f) : IsEmbedding f
+  => (IsEmbedding.char {C} {D} {f}).2 (IsFFMap.isObEmbedding ff, \lam x y => Embedding.fromIsEquiv (ff x y))
+
+-- | An embedding admits a lift of any functor whose arrows lift.
+\sfunc embedding-lift {B C : \Cat} {f : B ->⁺ C} (fe : IsEmbedding f) {D : \Cat} (g : D ->⁺ C)
+                      (gs : \Pi (k : DI ->⁺ D) -> ∃ (k' : DI ->⁺ B) (\Pi (i :⁺ DI) -> f (k' i) = g (k i)))
+  : \Sigma (h : D ->⁺ B) (\Pi (y :⁺ D) -> f (h y) = g y)
+  => \have | pe => IsEmbedding.pullback g fe
+           | e : IsHEquiv {\Sigma⁺ (x : D) (\Sigma⁺ (y : B) (f y = g x))} __.1
+               => post-DI-equiv.2 $ IsEquiv.fromEmbSurj (IsEmbedding.post pe DI) \lam k => \case gs k \with {
+                    | inP (k',p) => inP (\lam i => (k i, (k' i, p i)), idp)
+                  }
+     \in (\lam y =>⁺ (IsHEquiv.ret e y).2.1, \lam y => (IsHEquiv.ret e y).2.2 *> pmap+ g (IsHEquiv.f_ret e))
+
+-- | {unob} is an embedding on objects.
+\func unob-ob-embedding {C : \Cat} : Embedding {Ob C} {C} unob \cowith
+  | isEmb x y => \case \elim x, \elim y \with {
+    | ob x, ob y => \new Retraction {
+      | sec => pmap ob
+      | f_sec => idpe
+    }
+  }
+
+-- | {unob} is an embedding.
+\lemma unob-embedding {C : \Cat} : IsEmbedding (unob {C})
+  => (IsEmbedding.char {Ob C} {C} {unob}).2 (unob-ob-embedding, \lam x y => transport (Embedding __)
+        (ext \lam p => inv (dmap_=_~> unob) *> pmap (dmap unob) ~>_=_~>)
+        (transEmbedding (transEmbedding (Embedding.fromIsEquiv (inP (symQEquiv =_~>-equiv)))
+                                        (Embedding.fromIsEquiv (inP unob-ob-embedding.pmap-isEquiv)))
+                        (=_~>-embedding (unob x) (unob y))))

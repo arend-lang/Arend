@@ -1,0 +1,300 @@
+{- | The join with a point: the strict functor {JoinF} `[n] ↦ [n+1]`, `d ↦ d ⋆ [0]`, extending maps by the new top vertex.
+
+ -   * {joinIncl}: the initial segment `[n] -> [n+1]` ({segRes}), a natural transformation `Id -> JoinF`.
+ -   * {joinVert}: the new top vertex `[0] -> [n+1]`, a natural transformation `Const 0 -> JoinF`.
+ -   * {joinDeg}: the degeneracy `[n+2] -> [n+1]` collapsing the two top vertices ({lastDeg}), a natural transformation
+ -     `JoinF ∘ JoinF -> JoinF`.
+ -   * The relations between them: {joinDeg-incl}, {joinDeg-inclJ}, {joinDeg-vert}, {joinDeg-vertJ}, and {join-vert-lastEdge}.
+ -   * Their nerves {joinN}, {joinIncln}, {joinVertn}, {joinDegn}, with the relations as covariant families of paths
+ -     ({joinDegn-incl}, {joinDegn-inclJ}, {joinDegn-vert}, {joinDegn-vertJ}). They are obtained from the values at vertices
+ -     ({nerveTrans-vertex}: loops at vertices of {DeltaCat} are trivial) by {arrow-fam-ext}.
+ -}
+
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Category
+\import Category.Functor
+\import Category.Simplex
+\import Data.Or
+\import InfCat.Basics
+\import InfCat.Fibration.SimplexFib
+\import InfCat.Limit.Terminal
+\import InfCat.Nerve.Nerve
+\import InfCat.Nerve.NerveHom
+\import InfCat.Nerve.NerveTrans
+\import InfCat.Nerve.Simplicial.NerveSpine
+\import InfCat.Trunc.ArrowFam
+\import InfCat.Trunc.IsCatTrunc
+\import InfCat.Simplicial.SimplexOperators
+\import Logic
+\import Logic.Unique
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+
+-- | The extension of {f} to `[n+1]` by the value {x} at the top vertex.
+\func extBy {n : Nat} {X : \Type} (f : Fin (suc n) -> X) (x : X) (k : Fin (suc (suc n))) : X
+  => extBy' f x k (LinearOrder.dec<_<= {NatSemiring} k (suc n))
+  \where
+    \func extBy' {n : Nat} {X : \Type} (f : Fin (suc n) -> X) (x : X) (k : Fin (suc (suc n)))
+                 (d : (k NatSemiring.< suc n) `Or` (suc n NatSemiring.<= k)) : X \elim d
+      | inl kl => f (toFin k kl)
+      | inr _ => x
+
+-- | {extBy} is {f} on `[n]`.
+\lemma extBy-low {n : Nat} {X : \Set} (f : Fin (suc n) -> X) (x : X) (k : Fin (suc n)) : extBy f x k = f k
+  => aux _
+  \where
+    \private \lemma aux (d : (k NatSemiring.< suc n) `Or` (suc n NatSemiring.<= k)) : extBy.extBy' f x k d = f k \elim d
+      | inl kl => pmap f (fin_nat-inj toFin=id)
+      | inr q => absurd (q (fin_< k))
+
+-- | {extBy} is {x} at the top vertex.
+\lemma extBy-top {n : Nat} {X : \Set} (f : Fin (suc n) -> X) (x : X) : extBy f x (topV (suc n)) = x
+  => aux _
+  \where
+    \private \lemma aux (d : (topV (suc n) NatSemiring.< suc n) `Or` (suc n NatSemiring.<= topV (suc n))) : extBy.extBy' f x (topV (suc n)) d = x \elim d
+      | inl kl => absurd (NatSemiring.<-irreflexive (transport (NatSemiring.`< suc n) (topV-val (suc n)) kl))
+      | inr _ => idp
+
+-- | Every vertex of `[n+1]` is a vertex of `[n]` or the top vertex.
+\lemma fin-split {n : Nat} (k : Fin (suc (suc n))) : (\Sigma (j : Fin (suc n)) (k = j)) || (k = topV (suc n))
+  => \case LinearOrder.dec<_<= {NatSemiring} k (suc n) \with {
+       | inl kl => byLeft (toFin k kl, fin_nat-inj (inv toFin=id))
+       | inr q => byRight (fin_nat-inj (NatSemiring.<=-antisymmetric (<_suc_<= (fin_< k)) q *> inv (topV-val (suc n))))
+     }
+
+-- | {extBy} of a monotone map with a top value is monotone.
+\lemma extBy-mono {n m : Nat} (f : PosetHom (FinOrder (suc n)) (FinOrder (suc m))) (x : Fin (suc m))
+                  (fx : \Pi (j : Fin (suc n)) -> f j <= {FinOrder (suc m)} x)
+                  {k k' : Fin (suc (suc n))} (q : k <= {FinOrder (suc (suc n))} k')
+  : extBy {n} {Fin (suc m)} (\lam j => f j) x k <= {FinOrder (suc m)} extBy {n} {Fin (suc m)} (\lam j => f j) x k'
+  => \case fin-split k, fin-split k' \with {
+       | byLeft (j, kj), byLeft (j', kj') =>
+         transport2 (\lam a b => a <= {FinOrder (suc m)} b) (inv (pmap (extBy (\lam j => f j) x) kj *> extBy-low {n} {Fin (suc m)} _ x j))
+                    (inv (pmap (extBy (\lam j => f j) x) kj' *> extBy-low {n} {Fin (suc m)} _ x j'))
+                    (f.func-<= {j} {j'} \lam r => q (transport2 (\lam a b => a NatSemiring.< b) (pmap {Fin (suc (suc n))} {Nat} (\lam v => v) (inv kj'))
+                                                                                         (pmap {Fin (suc (suc n))} {Nat} (\lam v => v) (inv kj)) r))
+       | byLeft (j, kj), byRight kt' =>
+         transport2 (\lam a b => a <= {FinOrder (suc m)} b) (inv (pmap (extBy (\lam j => f j) x) kj *> extBy-low {n} {Fin (suc m)} _ x j))
+                    (inv (pmap (extBy (\lam j => f j) x) kt' *> extBy-top {n} {Fin (suc m)} _ x)) (fx j)
+       | byRight kt, byLeft (j', kj') =>
+         absurd (q (transport2 (\lam a b => a NatSemiring.< b) (pmap {Fin (suc (suc n))} {Nat} (\lam v => v) (inv kj'))
+                               (inv (topV-val (suc n)) *> pmap {Fin (suc (suc n))} {Nat} (\lam v => v) (inv kt)) (fin_< j')))
+       | byRight kt, byRight kt' =>
+         transport2 (\lam a b => a <= {FinOrder (suc m)} b) (inv (pmap (extBy (\lam j => f j) x) kt *> extBy-top {n} {Fin (suc m)} _ x))
+                    (inv (pmap (extBy (\lam j => f j) x) kt' *> extBy-top {n} {Fin (suc m)} _ x)) <=-refl
+     }
+
+-- | `d ⋆ [0]`: the extension of {d} by the top vertex.
+\func joinHom {n m : Nat} (d : Hom {SimplexCat} n m) : Hom {SimplexCat} (suc n) (suc m)
+  => \new PosetHom {
+    | func => extBy {n} {Fin (suc (suc m))} (\lam j => d j) (topV (suc m))
+    | func-<= q => extBy-mono (segRes m SimplexCat.∘ d) (topV (suc m)) (\lam j => le-top {suc m} (d j)) q
+  }
+
+-- | The degeneracy `[n+1] -> [n]` collapsing the two top vertices.
+\func lastDeg (n : Nat) : Hom {SimplexCat} (suc n) n
+  => \new PosetHom {
+    | func => extBy {n} {Fin (suc n)} (\lam j => j) (topV n)
+    | func-<= q => extBy-mono (SimplexCat.id {n}) (topV n) le-top q
+  }
+
+\lemma joinHom-low {n m : Nat} (d : Hom {SimplexCat} n m) (k : Fin (suc n)) : joinHom d k = d k
+  => extBy-low {n} {Fin (suc (suc m))} (\lam j => d j) (topV (suc m)) k
+
+\lemma joinHom-top {n m : Nat} (d : Hom {SimplexCat} n m) : joinHom d (topV (suc n)) = topV (suc m)
+  => extBy-top {n} {Fin (suc (suc m))} (\lam j => d j) (topV (suc m))
+
+\lemma lastDeg-low {n : Nat} (k : Fin (suc n)) : lastDeg n k = k
+  => extBy-low {n} {Fin (suc n)} (\lam j => j) (topV n) k
+
+\lemma lastDeg-top {n : Nat} : lastDeg n (topV (suc n)) = topV n
+  => extBy-top {n} {Fin (suc n)} (\lam j => j) (topV n)
+
+-- | `[n] ↦ [n+1]`.
+\func JoinF : Functor SimplexCat SimplexCat \cowith
+  | F n => suc n
+  | Func d => joinHom d
+  | Func-id {n} => simplexHom-ext (join-id n)
+  | Func-o {x} {y} {z} {g} {f} => simplexHom-ext (join-comp g f)
+  \where {
+    \lemma join-id (n : Nat) (k : Fin (suc (suc n))) : joinHom (SimplexCat.id {n}) k = k
+      => \case fin-split k \with {
+           | byLeft (j, kj) => pmap (joinHom (SimplexCat.id {n})) kj *> joinHom-low (SimplexCat.id {n}) j *> inv kj
+           | byRight kt => pmap (joinHom (SimplexCat.id {n})) kt *> joinHom-top (SimplexCat.id {n}) *> inv kt
+         }
+
+    \lemma join-comp {x y z : Nat} (g : Hom {SimplexCat} y z) (f : Hom {SimplexCat} x y) (k : Fin (suc (suc x)))
+      : joinHom (g SimplexCat.∘ f) k = joinHom g (joinHom f k)
+      => \case fin-split k \with {
+           | byLeft (j, kj) => pmap (joinHom (g SimplexCat.∘ f)) kj *> joinHom-low (g SimplexCat.∘ f) j
+                               *> inv (joinHom-low g (f j)) *> inv (pmap (joinHom g) (pmap (joinHom f) kj *> joinHom-low f j))
+           | byRight kt => pmap (joinHom (g SimplexCat.∘ f)) kt *> joinHom-top (g SimplexCat.∘ f)
+                           *> inv (joinHom-top g) *> inv (pmap (joinHom g) (pmap (joinHom f) kt *> joinHom-top f))
+         }
+  }
+
+-- | The initial segments `[n] -> [n+1]`.
+\func joinIncl : NatTrans Id JoinF \cowith
+  | trans n => segRes n
+  | natural {n} {m} d => simplexHom-ext \lam k => inv (joinHom-low d k)
+
+-- | The constant functor at `[0]`.
+\func Const0 : Functor SimplexCat SimplexCat
+  => Const {SimplexCat} {SimplexCat} 0
+
+-- | The new top vertices `[0] -> [n+1]`.
+\func joinVert : NatTrans Const0 JoinF \cowith
+  | trans n => vert (topV (suc n))
+  | natural {n} {m} d => simplexHom-ext \lam _ => inv (joinHom-top d)
+
+-- | The degeneracies `[n+2] -> [n+1]`.
+\func joinDeg : NatTrans (Comp JoinF JoinF) JoinF \cowith
+  | trans n => lastDeg (suc n)
+  | natural {n} {m} d => simplexHom-ext (deg-natural d)
+  \where
+    \lemma deg-natural {n m : Nat} (d : Hom {SimplexCat} n m) (k : Fin (suc (suc (suc n))))
+      : lastDeg (suc m) (joinHom (joinHom d) k) = joinHom d (lastDeg (suc n) k)
+      => \case fin-split k \with {
+           | byLeft (j, kj) => pmap (lastDeg (suc m)) (pmap (joinHom (joinHom d)) kj *> joinHom-low (joinHom d) j) *> lastDeg-low {suc m} (joinHom d j)
+                               *> inv (pmap (joinHom d) (pmap (lastDeg (suc n)) kj *> lastDeg-low {suc n} j))
+           | byRight kt => pmap (lastDeg (suc m)) (pmap (joinHom (joinHom d)) kt *> joinHom-top (joinHom d)) *> lastDeg-top {suc m}
+                           *> inv (joinHom-top d) *> inv (pmap (joinHom d) (pmap (lastDeg (suc n)) kt *> lastDeg-top {suc n}))
+         }
+
+-- # Relations
+
+-- | `σ ∘ J ι = id`.
+\lemma joinDeg-incl (n : Nat) : lastDeg (suc n) SimplexCat.∘ joinHom (segRes n) = SimplexCat.id {suc n}
+  => simplexHom-ext \lam k => \case fin-split k \with {
+       | byLeft (j, kj) => pmap (lastDeg (suc n)) (pmap (joinHom (segRes n)) kj *> joinHom-low (segRes n) j) *> lastDeg-low {suc n} j *> inv kj
+       | byRight kt => pmap (lastDeg (suc n)) (pmap (joinHom (segRes n)) kt *> joinHom-top (segRes n)) *> lastDeg-top {suc n} *> inv kt
+     }
+
+-- | `σ ∘ ι J = id`.
+\lemma joinDeg-inclJ (n : Nat) : lastDeg (suc n) SimplexCat.∘ segRes (suc n) = SimplexCat.id {suc n}
+  => simplexHom-ext \lam k => lastDeg-low {suc n} k
+
+-- | `σ ∘ J ν = ν ∘ !`.
+\lemma joinDeg-vert (n : Nat) : lastDeg (suc n) SimplexCat.∘ joinHom (vert (topV (suc n))) = vert (topV (suc n)) SimplexCat.∘ constHom {1} {0} 0
+  => simplexHom-ext \lam k => \case fin-split k \with {
+       | byLeft (j, kj) => pmap (lastDeg (suc n)) (pmap (joinHom (vert (topV (suc n)))) kj *> joinHom-low (vert (topV (suc n))) j) *> lastDeg-low {suc n} _
+       | byRight kt => pmap (lastDeg (suc n)) (pmap (joinHom (vert (topV (suc n)))) kt *> joinHom-top (vert (topV (suc n)))) *> lastDeg-top {suc n}
+     }
+
+-- | `σ ∘ ν J = ν`.
+\lemma joinDeg-vertJ (n : Nat) : lastDeg (suc n) SimplexCat.∘ vert (topV (suc (suc n))) = vert (topV (suc n))
+  => simplexHom-ext \lam _ => lastDeg-top {suc n}
+
+-- | The join of the top vertex of `[n]` is the last edge of `[n+1]`.
+\lemma join-vert-lastEdge (n : Nat) : joinHom (vert (topV n)) = lastEdge n
+  => simplexHom-ext \lam k => \case fin-split k \with {
+       | byLeft (j, kj) => pmap (joinHom (vert (topV n))) kj *> joinHom-low (vert (topV n)) j *> inv (pmap (lastEdge n) (kj *> fin1-zero j))
+       | byRight kt => pmap (joinHom (vert (topV n))) kt *> joinHom-top (vert (topV n)) *> inv (pmap (lastEdge n) kt)
+     }
+  \where
+    \lemma fin1-zero (j : Fin 1) : j = 0 \elim j
+      | 0 => idp
+
+-- # Nerves
+
+\func joinN (b :⁺ DeltaCat) : DeltaCat
+  => nerveMap JoinF b
+
+\sfunc nerveId-path : nerveMap (Id {SimplexCat}) = {DeltaCat ->⁺ DeltaCat} (\lam w => w)
+  => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> inv comp_idd-left
+
+\sfunc nerveConst-path : nerveMap Const0 = {DeltaCat ->⁺ DeltaCat} (\lam _ => nerveOb 0)
+  => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> nerveHom-id *> inv comp_idd-left
+
+\sfunc nerveJJ-path : nerveMap (Comp JoinF JoinF) = {DeltaCat ->⁺ DeltaCat} (\lam w => joinN (joinN w))
+  => nerve-maps-ext' nerve-isTruncCat (\lam _ => idp) \lam f => comp_idd-right *> inv comp_idd-left
+
+-- | The initial segments `b -> joinN b`.
+\func joinIncln (b :⁺ DeltaCat) : b ~> joinN b
+  => trArr {DeltaCat} {DeltaCat} {nerveMap Id} {nerveMap JoinF} {\lam w => w} {nerveMap JoinF} nerveId-path idp (nerveTrans {SimplexCat} {SimplexCat} {Id} {JoinF} joinIncl) b
+
+-- | The new top vertices `[0] -> joinN b`.
+\func joinVertn (b :⁺ DeltaCat) : nerveOb 0 ~> joinN b
+  => trArr {DeltaCat} {DeltaCat} {nerveMap Const0} {nerveMap JoinF} {\lam _ => nerveOb 0} {nerveMap JoinF} nerveConst-path idp (nerveTrans {SimplexCat} {SimplexCat} {Const0} {JoinF} joinVert) b
+
+-- | The degeneracies `joinN (joinN b) -> joinN b`.
+\func joinDegn (b :⁺ DeltaCat) : joinN (joinN b) ~> joinN b
+  => trArr {DeltaCat} {DeltaCat} {nerveMap (Comp JoinF JoinF)} {nerveMap JoinF} {\lam w => joinN (joinN w)} {nerveMap JoinF} nerveJJ-path idp (nerveTrans {SimplexCat} {SimplexCat} {Comp JoinF JoinF} {JoinF} joinDeg) b
+
+-- ## Values at vertices
+
+-- | Loops at vertices of {DeltaCat} are trivial.
+\sfunc delta-vertex-loop {n : Nat} (P : nerveOb {SimplexCat} n = nerveOb n) : P = idp
+  => inv (((nerveOb-emb {SimplexCat}).isEmb n n).f_sec P) *> pmap (pmap nerveOb) (set-pi {Nat} {n} {n} {((nerveOb-emb {SimplexCat}).isEmb n n).sec P} {idp})
+
+-- | {trArr} is transport along the values of the paths of functors.
+\sfunc trArr-transport {X Y : \Cat} {F0 G0 F G : X ->⁺ Y} (P0 : F0 = F) (P1 : G0 = G) (s : \Pi (w :⁺ X) -> F0 w ~> G0 w) (w : X)
+  : trArr P0 P1 s w = transport2 (\lam a b => a ~> b) (path \lam i => P0 i w) (path \lam i => P1 i w) (s w) \elim P0, P1
+  | idp, idp => idp
+
+-- | The value of {nerveTrans} at a vertex.
+\sfunc nerveTrans-vertex {C : Precat} {F G : Functor C SimplexCat} (alpha : NatTrans F G) (x : C)
+  : nerveTrans alpha (nerveOb x) = nerveHom (alpha x)
+  => trArr-transport _ _ _ (nerveOb x)
+     *> pmap2 (\lam P Q => transport2 (\lam a b => a ~> b) P Q (nerveHom (alpha x))) (delta-vertex-loop _) (delta-vertex-loop _)
+
+\sfunc joinIncln-vertex (n : Nat) : joinIncln (nerveOb n) = nerveHom (segRes n)
+  => trArr-transport _ _ _ (nerveOb n)
+     *> pmap2 (\lam P Q => transport2 (\lam a b => a ~> b) P Q (nerveTrans {SimplexCat} {SimplexCat} {Id} {JoinF} joinIncl (nerveOb n))) (delta-vertex-loop _) (delta-vertex-loop _)
+     *> nerveTrans-vertex {SimplexCat} {Id} {JoinF} joinIncl n
+
+\sfunc joinVertn-vertex (n : Nat) : joinVertn (nerveOb n) = nerveHom (vert (topV (suc n)))
+  => trArr-transport _ _ _ (nerveOb n)
+     *> pmap2 (\lam P Q => transport2 (\lam a b => a ~> b) P Q (nerveTrans {SimplexCat} {SimplexCat} {Const0} {JoinF} joinVert (nerveOb n))) (delta-vertex-loop _) (delta-vertex-loop _)
+     *> nerveTrans-vertex {SimplexCat} {Const0} {JoinF} joinVert n
+
+\sfunc joinDegn-vertex (n : Nat) : joinDegn (nerveOb n) = nerveHom (lastDeg (suc n))
+  => trArr-transport _ _ _ (nerveOb n)
+     *> pmap2 (\lam P Q => transport2 (\lam a b => a ~> b) P Q (nerveTrans {SimplexCat} {SimplexCat} {Comp JoinF JoinF} {JoinF} joinDeg (nerveOb n))) (delta-vertex-loop _) (delta-vertex-loop _)
+     *> nerveTrans-vertex {SimplexCat} {Comp JoinF JoinF} {JoinF} joinDeg n
+
+-- ## Relations
+
+-- | A covariant equality of families of arrows of {DeltaCat} that holds at vertices.
+\sfunc delta-fam-ext {F G : DeltaCat ->⁺ DeltaCat} (s1 s2 : \Pi (b :⁺ DeltaCat) -> F b ~> G b)
+                     (v : \Pi (n : Nat) -> s1 (nerveOb n) = s2 (nerveOb n)) (b :⁺ DeltaCat) : s1 b = s2 b
+  => arrow-fam-ext nerve-isTruncCat s1 s2
+       (\lam b => TruncP.rec (hom-isSet nerve-isTruncCat (F b) (G b) (s1 b) (s2 b)) (nerveOb-surj b)
+                    \lam t => transport (\lam b' => s1 b' = s2 b') t.2 (v t.1)) b
+
+\sfunc joinDegn-incl (b :⁺ DeltaCat) : comp (dmap joinN (joinIncln b)) (joinDegn b) = idd
+  => delta-fam-ext (\lam b => comp (dmap joinN (joinIncln b)) (joinDegn b)) (\lam b => idd)
+       (\lam n => pmap2 (\lam u v => comp (dmap joinN u) v) (joinIncln-vertex n) (joinDegn-vertex n)
+                  *> nerveHom-comp *> pmap (nerveHom {SimplexCat} {suc n} {suc n}) (joinDeg-incl n) *> nerveHom-id) b
+
+\sfunc joinDegn-inclJ (b :⁺ DeltaCat) : comp (joinIncln (joinN b)) (joinDegn b) = idd
+  => delta-fam-ext (\lam b => comp (joinIncln (joinN b)) (joinDegn b)) (\lam b => idd)
+       (\lam n => pmap2 comp (joinIncln-vertex (suc n)) (joinDegn-vertex n)
+                  *> nerveHom-comp *> pmap (nerveHom {SimplexCat} {suc n} {suc n}) (joinDeg-inclJ n) *> nerveHom-id) b
+
+\sfunc joinDegn-vert (b :⁺ DeltaCat)
+  : comp (dmap joinN (joinVertn b)) (joinDegn b) = comp (nerveHom {SimplexCat} {1} {0} (constHom {1} {0} 0)) (joinVertn b)
+  => delta-fam-ext (\lam b => comp (dmap joinN (joinVertn b)) (joinDegn b)) (\lam b => comp (nerveHom {SimplexCat} {1} {0} (constHom {1} {0} 0)) (joinVertn b))
+       (\lam n => pmap2 (\lam u v => comp (dmap joinN u) v) (joinVertn-vertex n) (joinDegn-vertex n)
+                  *> nerveHom-comp *> pmap (nerveHom {SimplexCat} {1} {suc n}) (joinDeg-vert n) *> inv nerveHom-comp
+                  *> inv (pmap (comp (nerveHom {SimplexCat} {1} {0} (constHom {1} {0} 0))) (joinVertn-vertex n))) b
+
+\sfunc joinDegn-vertJ (b :⁺ DeltaCat) : comp (joinVertn (joinN b)) (joinDegn b) = joinVertn b
+  => delta-fam-ext (\lam b => comp (joinVertn (joinN b)) (joinDegn b)) joinVertn
+       (\lam n => pmap2 comp (joinVertn-vertex (suc n)) (joinDegn-vertex n)
+                  *> nerveHom-comp *> pmap (nerveHom {SimplexCat} {0} {suc n}) (joinDeg-vertJ n) *> inv (joinVertn-vertex n)) b
+
+
+-- | `[0]` is a terminal object of {DeltaCat}.
+\lemma deltaCat0-terminal : IsTerminal (nerveOb {SimplexCat} 0)
+  => nerve-isTerminal {SimplexCat} {0} \lam m => isProp=>isContr (\lam a b => simplexHom-ext \lam t => join-vert-lastEdge.fin1-zero (a t) *> inv (join-vert-lastEdge.fin1-zero (b t))) (constHom 0)
+
+-- | Arrows into `[0]` are equal.
+\sfunc to0-path {b : DeltaCat} (u v : b ~> nerveOb {SimplexCat} 0) : u = v
+  => isContr=>isProp (deltaCat0-terminal b) u v
+
+-- | The arrow `[1] -> [0]`.
+\func bang : nerveOb {SimplexCat} 1 ~> nerveOb 0
+  => nerveHom {SimplexCat} {1} {0} (constHom 0)

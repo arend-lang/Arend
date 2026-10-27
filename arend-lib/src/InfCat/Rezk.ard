@@ -10,7 +10,7 @@
 
 \sfunc iso_= {C :⁺ \Cat} {x y :⁺ C} (f :⁺ x ~> y) (g :⁺ y ~> x) (p :⁺ comp f g = idd) (q :⁺ comp g f = idd)
   : \Sigma⁺ (r : x = y) (=_~> r = f)
-  => \have r => rezk f g (comp-char.conv p) (comp-char.conv q)
+  => \have r =>⁺ rezk f g (comp-char.conv p) (comp-char.conv q)
      \in (pmap+ __.1 r, inv transport_~>_idd-right *> sigma-unext2 r)
 
 \type IsIso {C : \Cat} {x y : C} (f : x ~> y) : \Prop
@@ -62,6 +62,12 @@
 \lemma dmap_IsIso {C D : \Cat} (f : C ->⁺ D) {x y : C} {p : x ~> y} (fi : IsIso p) : IsIso (dmap f p) \elim fi
   | inP r => inP (dmap f r.1, inv (dmap_comp f) *> pmap (dmap f) r.2, inv (dmap_comp f) *> pmap (dmap f) r.3)
 
+\lemma idd-iso {C : \Cat} {x : C} : IsIso (idd {C} {x})
+  => IsIso-char.2 $ inP (idp,idp)
+
+\lemma =_~>-iso {C : \Cat} {x y : C} (p : x = y) : IsIso (=_~> p)
+  | idp => idd-iso
+
 \sfunc IsIso_= {C : \Cat} {x y : C} {f : x ~> y} (fi : IsIso f) : \Sigma (p : x = y) (=_~> p = f)
   => \have r => iso_= f (IsIso.ret fi) (IsIso.f_ret fi) (IsIso.ret_f fi)
      \in (r.1,r.2)
@@ -70,7 +76,7 @@
   => (\lam fi => inP (IsIso_= fi),
       \lam (inP s) => transport IsIso s.2 $ inP (=_~> (inv s.1), =_~>_comp *> pmap+ =_~> inv_*>, =_~>_comp *> pmap+ =_~> *>_inv))
 
-\lemma =-char {C : \Cat} (x y : C)
+\lemma =-char {C : \Cat} {x y : C}
   : IsEquiv {x = y} {\Sigma (f : x ~> y) (IsIso f)} (\lam p => (=_~> p, IsIso-char.2 $ inP (p,idp)))
   => inP $ pathEquiv (\lam x y => \Sigma (f : x ~> y) (IsIso f)) \lam {x} {y} => \new Retraction {
     | f p => (=_~> p, IsIso-char.2 $ inP (p,idp))
@@ -79,7 +85,7 @@
   }
 
 \lemma =_~>-embedding {C : \Cat} (x y : C) : Embedding {x = y} =_~>
-  => transEmbedding (Embedding.fromIsEquiv (=-char x y)) (Embedding.projection {x ~> y} IsIso)
+  => transEmbedding (Embedding.fromIsEquiv =-char) (Embedding.projection {x ~> y} IsIso)
 
 -- | A morphism is an isomorphism iff it is identified with a constant arrow in the arrow category.
 \lemma IsIso-diag-char {A : \Cat} {a b : A} {q : a ~> b}
@@ -102,10 +108,46 @@
   => inP (IsEquiv.ret (e b) idd, IsEquiv.f_ret (e b),
           IsEquiv.isInj (e a) $ inv comp-assoc *> pmap (comp q __) (IsEquiv.f_ret (e b)) *> comp_idd-right *> inv comp_idd-left)
 
--- | Precomposition with the arrow of a path is an equivalence.
-\lemma comp_=_~>-left-equiv {C : \Cat} {a b c : C} (p : a = b) : IsEquiv {b ~> c} {a ~> c} (comp (=_~> p) __) \elim p
-  | idp => transport IsEquiv (ext \lam g => inv comp_idd-left) (inP idEquiv)
+-- | Precomposition with an isomorphism is an equivalence.
+\lemma comp-iso-left-equiv {C : \Cat} {a b c : C} {q : a ~> b} (qi : IsIso q) : IsEquiv {b ~> c} {a ~> c} (comp q)
+  \elim qi
+  | inP (r,rq=id,qr=id) => inP \new QEquiv {
+    | ret p => comp r p
+    | ret_f p => comp-assoc *> pmap (comp __ p) rq=id *> comp_idd-left
+    | f_sec p => comp-assoc *> pmap (comp __ p) qr=id *> comp_idd-left
+  }
 
--- | Postcomposition with the arrow of a path is an equivalence.
-\lemma comp_=_~>-right-equiv {C : \Cat} {a b c : C} (p : b = c) : IsEquiv {a ~> b} {a ~> c} (comp __ (=_~> p)) \elim p
-  | idp => transport IsEquiv (ext \lam g => inv comp_idd-right) (inP idEquiv)
+-- | Postcomposition with an isomorphism is an equivalence.
+\lemma comp-iso-right-equiv {C : \Cat} {a b c : C} {q : b ~> c} (qi : IsIso q) : IsEquiv {a ~> b} {a ~> c} (comp __ q)
+  \elim qi
+  | inP (r,rq=id,qr=id) => inP \new QEquiv {
+    | ret p => comp p r
+    | ret_f p => inv comp-assoc *> pmap (comp p) qr=id *> comp_idd-right
+    | f_sec p => inv comp-assoc *> pmap (comp p) rq=id *> comp_idd-right
+  }
+
+-- | Composites of isomorphisms are isomorphisms.
+\lemma comp-IsIso {C : \Cat} {a b c : C} {f : a ~> b} {g : b ~> c} (fi : IsIso f) (gi : IsIso g) : IsIso (comp f g)
+  => postcomp-equiv=>iso \lam x => transport IsEquiv (ext \lam h => inv comp-assoc)
+       (IsEquiv.trans (comp-iso-right-equiv fi) (comp-iso-right-equiv gi))
+
+-- | If {f} is an isomorphism, then `comp f g` is an isomorphism if and only if {g} is.
+\lemma comp-IsIso-right {C : \Cat} {a b c : C} {f : a ~> b} {g : b ~> c} (fi : IsIso f) : IsIso (comp f g) <-> IsIso g
+  => (\lam e => postcomp-equiv=>iso \lam x => IsEquiv.rightFactor (comp-iso-right-equiv fi) $
+                  transport IsEquiv (ext \lam h => comp-assoc) (comp-iso-right-equiv e),
+      comp-IsIso fi)
+
+-- | If {g} is an isomorphism, then `comp f g` is an isomorphism if and only if {f} is.
+\lemma comp-IsIso-left {C : \Cat} {a b c : C} {f : a ~> b} {g : b ~> c} (gi : IsIso g) : IsIso (comp f g) <-> IsIso f
+  => (\lam e => precomp-equiv=>iso \lam y => IsEquiv.rightFactor (comp-iso-left-equiv gi) $
+                  transport IsEquiv (ext \lam k => inv comp-assoc) (comp-iso-left-equiv e),
+      comp-IsIso __ gi)
+
+-- | An arrow {f} is an isomorphism if a composite `comp f g` and a composite `comp g' f` are isomorphisms.
+\lemma biinv-iso {C : \Cat} {a b : C} {f : a ~> b}
+  (r : ∃ (z : C) (g : b ~> z) (IsIso (comp f g))) (l : ∃ (z : C) (g : z ~> a) (IsIso (comp g f))) : IsIso f \elim r, l
+  | inP (_, g, inP (k, _, fgk)), inP (_, g', inP (k', k'g'f, _)) =>
+    \have | fR : comp f (comp g k) = idd => comp-assoc *> fgk
+          | Lf : comp (comp k' g') f = idd => inv comp-assoc *> k'g'f
+          | LR : comp k' g' = comp g k => inv comp_idd-right *> pmap (comp (comp k' g')) (inv fR) *> comp-assoc *> pmap (comp __ (comp g k)) Lf *> comp_idd-left
+    \in inP (comp k' g', Lf, transportInv (\lam X => comp f X = idd) LR fR)

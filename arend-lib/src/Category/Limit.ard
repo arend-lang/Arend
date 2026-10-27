@@ -1035,7 +1035,7 @@
   | Precat => FunctorPrecat J C
   | terminal => \new Product {
     | apex => Const C.terminal.apex
-    | proj => absurd
+    | proj j => absurd j
     | tupleMap _ => \new NatTrans {
       | trans _ => C.terminalMap
       | natural _ => C.terminal-unique

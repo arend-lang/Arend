@@ -153,7 +153,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if ((expr1 instanceof Concrete.PatternLamExpression) != (expr2 instanceof Concrete.PatternLamExpression)) return false;
     if (expr1 instanceof Concrete.PatternLamExpression lamExpr1) {
       Concrete.PatternLamExpression lamExpr2 = (Concrete.PatternLamExpression) expr2;
-      if (!(lamExpr1.getPatterns().size() == lamExpr2.getPatterns().size() && lamExpr1.getParameters().size() == lamExpr2.getParameters().size())) return false;
+      if (!(lamExpr1.getPatterns().size() == lamExpr2.getPatterns().size() && lamExpr1.getParameters().size() == lamExpr2.getParameters().size() && lamExpr1.getVariance() == lamExpr2.getVariance())) return false;
       int j = 0;
       for (int i = 0; i < lamExpr1.getPatterns().size(); i++) {
         Concrete.Pattern pattern1 = lamExpr1.getPatterns().get(i);
@@ -484,7 +484,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   private boolean compareLetClause(Concrete.LetClause clause1, Concrete.LetClause clause2) {
     updateData(clause1, clause2);
-    boolean result = compareParameters(clause1.getParameters(), clause2.getParameters()) && compare(clause1.getTerm(), clause2.getTerm()) && (clause1.getResultType() == null && clause2.getResultType() == null || clause1.getResultType() != null && clause2.getResultType() != null && compare(clause1.getResultType(), clause2.getResultType()));
+    boolean result = clause1.isCovariant() == clause2.isCovariant() && compareParameters(clause1.getParameters(), clause2.getParameters()) && compare(clause1.getTerm(), clause2.getTerm()) && (clause1.getResultType() == null && clause2.getResultType() == null || clause1.getResultType() != null && clause2.getResultType() != null && compare(clause1.getResultType(), clause2.getResultType()));
     freeParameters(clause1.getParameters());
     return result;
   }

@@ -1,0 +1,74 @@
+{- | The twisted arrow category (SCT §9.2).
+ -
+ -   {TwArr} is the total category of the Hom-functor `Op.Hom : Op C -> C -> \Type u`;
+ -   * {twArr-leftFib}: the Hom-functor is a left fibration over `Op C × C`.
+ -   * {twArr-source-univElem}, {twArr-target-univElem}: the fibers of projections from {TwArr} have initial objects
+ -     (SCT 9.2.4) stated as universal elements: `Hom-idd x` is universal in `Op.Hom (toOp x)` and in `yoneda x`.
+ -   * {twArr-swap}: `Tw (Op C)` is `Tw C` with the factors swapped (SCT 9.3.11), via {toOpOp} and {toOpOp.char}.
+ -}
+
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Functor.Equiv
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Yoneda.CovariantYoneda
+\import InfCat.Yoneda.YonedaLemma
+\import Logic
+\import Paths
+
+-- | The twisted arrow category of {C}.
+\func TwArr.{u} (C : \Cat u) : \Cat u
+  => \Sigma⁺ (x : Op C) (y : C) (Op.Hom x y)
+
+-- | The Hom-functor is a left fibration over `Op C × C`.
+\lemma twArr-leftFib.{u} {C : \Cat u} : IsLeftFib {\Sigma⁺ (x : Op C) C} (\lam s => Op.Hom s.1 s.2)
+  => leftFib-pullback (\lam (s :⁺ \Sigma⁺ (x : Op C) C) => Op.Hom s.1 s.2) universe-leftFib
+
+{- | The identity of {x} is a universal element of `Op.Hom (toOp x)`;
+ -   that is, it is initial in the fiber of the first projection from {TwArr} over `toOp x`.
+ -}
+\lemma twArr-source-univElem.{u} {C : \Cat u} (x : C) : IsUnivElem (Op.Hom (Op.toOp x)) x (Op.Hom-idd x)
+  => yonedaCov x
+
+{- | The identity of {y} is a universal element of `yoneda y`;
+ -   that is, it is initial in the fiber of the second projection from {TwArr} over {y}.
+ -}
+\lemma twArr-target-univElem.{u} {C : \Cat u} (y : C) : IsUnivElem (yoneda y) (Op.toOp y) (Op.Hom-idd y)
+  => yonedaLemma y
+
+-- | `TwArr C` is `TwArr (Op C)` with the factors swapped.
+\lemma twArr-swap.{u} {C : \Cat u} : IsHEquiv {TwArr C} {TwArr (Op C)} map
+  => IsHEquiv.trans (IsHEquiv.trans (swap-equiv \lam x y => toOpOp.char {C} {x} {y}) (sigma-base-equiv toOpOp.isEquiv)) flatten-equiv
+  \where {
+    \protected \func map.{u} {C : \Cat u} (w :⁺ TwArr C) : TwArr (Op C)
+      => (toOpOp w.2, w.1, transport+ (\lam T => T) (inv toOpOp.char) w.3)
+
+    -- | Swapping the base factors of a total category along a pointwise path of families.
+    \private \lemma swap-equiv.{u} {A B : \Cat u} {Q : A ->⁺ B ->⁺ \Type u} {R : B ->⁺ A ->⁺ \Type u}
+                                   (e : \Pi (a :⁺ A) (b :⁺ B) -> R b a = Q a b)
+      : IsHEquiv {\Sigma⁺ (a : A) (b : B) (Q a b)} {\Sigma⁺ (b : B) (\Sigma⁺ (a : A) (R b a))}
+                 (\lam w => (w.2, (w.1, transport+ (\lam T => T) (inv (e w.1 w.2)) w.3)))
+      => inP \new HQEquiv {\Sigma⁺ (a : A) (b : B) (Q a b)} {\Sigma⁺ (b : B) (\Sigma⁺ (a : A) (R b a))}
+                           (\lam w => (w.2, (w.1, transport+ (\lam T => T) (inv (e w.1 w.2)) w.3))) {
+        | finv w => (w.2.1, w.1, transport+ (\lam T => T) (e w.2.1 w.1) w.2.2)
+        | finv_f w => pmap+ (\lam t => ((w.1, w.2, t) : \Sigma⁺ (a : A) (b : B) (Q a b))) (tr-inv'.{u} (e w.1 w.2) {w.3})
+        | f_finv w => pmap+ (\lam t => ((w.1, (w.2.1, t)) : \Sigma⁺ (b : B) (\Sigma⁺ (a : A) (R b a)))) (tr-inv.{u} (e w.2.1 w.1) {w.2.2})
+      }
+
+    -- | Flattening a nested total category.
+    \private \lemma flatten-equiv {A : \Cat} {B : A ->⁺ \Cat} {Q : \Pi (a :⁺ A) -> B a ->⁺ \Cat}
+      : IsHEquiv {\Sigma⁺ (a : A) (\Sigma⁺ (b : B a) (Q a b))} {\Sigma⁺ (a : A) (b : B a) (Q a b)} (\lam w => (w.1, w.2.1, w.2.2))
+      => inP \new HQEquiv {\Sigma⁺ (a : A) (\Sigma⁺ (b : B a) (Q a b))} {\Sigma⁺ (a : A) (b : B a) (Q a b)} (\lam w => (w.1, w.2.1, w.2.2)) {
+        | finv w => (w.1, (w.2, w.3))
+        | finv_f _ => idp
+        | f_finv _ => idp
+      }
+
+    \private \sfunc tr-inv.{u} {T T' :⁺ \Type u} (p :⁺ T = T') {t :⁺ T}
+      : transport+ (\lam T => T) (inv p) (transport+ (\lam T => T) p t) = t \elim p
+      | idp => idp
+
+    \private \sfunc tr-inv'.{u} {T T' :⁺ \Type u} (p :⁺ T = T') {t :⁺ T'}
+      : transport+ (\lam T => T) p (transport+ (\lam T => T) (inv p) t) = t \elim p
+      | idp => idp
+  }

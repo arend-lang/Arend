@@ -11,13 +11,11 @@ public class PathExpression extends Expression implements CorePathExpression {
   private final Expression myArgumentType;
   private final Expression myArgument;
   private final boolean myDirected;
-  private final boolean myForcedInfinite;
 
-  public PathExpression(Expression argumentType, Expression argument, boolean directed, boolean forceInfinity) {
+  public PathExpression(Expression argumentType, Expression argument, boolean directed) {
     myArgumentType = argumentType;
     myArgument = argument;
     myDirected = directed;
-    myForcedInfinite = forceInfinity;
   }
 
   @Override
@@ -32,11 +30,6 @@ public class PathExpression extends Expression implements CorePathExpression {
 
   public boolean isDirected() {
     return myDirected;
-  }
-
-  @Override
-  public boolean isForcedInfinite() {
-    return myForcedInfinite;
   }
 
   @Override

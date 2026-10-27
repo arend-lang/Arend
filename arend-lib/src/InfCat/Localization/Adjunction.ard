@@ -1,0 +1,162 @@
+{- | Right adjoints descend to localizations: if `G : D ->⁺ C` is a right adjoint with left adjoint `F`,
+ -   `lC : C ->⁺ LC`, `lD : D ->⁺ LD` are localizations and `F' : LC ->⁺ LD`, `G' : LD ->⁺ LC` are functors with
+ -   `F' ∘ lC = lD ∘ F` and `G' ∘ lD = lC ∘ G` pointwise (for example, extensions along the localizations ({IsLocalization.lift})),
+ -   then `F' ⊣ G'` ({radj-lift}). If `G` is fully faithful, then so is `G'` ({radj-lift-ff}).
+ -   The images of universal arrows to `G` are universal arrows to `G'` ({radj-lift-univ}).
+ -
+ -   Proof. Restriction along a localization is fully faithful, so the transformations `lC x ~> G' (F' (lC x))`
+ -   and `F' (G' (lD y)) ~> lD y` given by the unit and the counit extend to transformations `y ~> G' (F' y)` and
+ -   `F' (G' y) ~> y`. The triangle identities hold on the images of {lC} and {lD}, where they are images of the
+ -   triangle identities of `F ⊣ G`. This is enough for the universality of the unit, since it is a proposition
+ -   and localizations are surjective on objects. If `G` is fully faithful, then the counit of `F ⊣ G` is invertible,
+ -   hence so is the counit of `F' ⊣ G'` on the image of {lD}, and so everywhere.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Adjunction
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Localization.Abstract
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Rezk
+\import InfCat.Square
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | A functor between localizations compatible with a right adjoint is a right adjoint.
+\func loc-adj-descent {C D : CatWeakEq} {LC LD : \Cat}
+                      {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization lC) (LzD : IsLocalization lD)
+                      (A : QAdjunction C D) {F' : LC ->⁺ LD} (Fl : \Pi (x :⁺ C) -> F' (lC x) = lD (A.ladj x))
+                      {G' : LD ->⁺ LC} (Gl : \Pi (y :⁺ D) -> G' (lD y) = lC (A.radj y))
+  : QAdjunction LC LD F' G' etaL
+  => (\new UnivUnit F' G' {
+    | ueta => etaL
+    | ueta-univ x y => etaL-univ
+  }).toAdjunction
+  \where {
+    -- | The unit on the image of {lC}, transported to `G' (F' (lC x))`.
+    \func eta0 (x :⁺ C) : lC x ~> G' (F' (lC x))
+      => comp (dmap lC (A.heta x)) (comp (=_~> (inv (Gl (A.ladj x)))) (dmap G' (=_~> (inv (Fl x)))))
+
+    -- | The counit on the image of {lD}, transported to `F' (G' (lD y))`.
+    \func eps0 (y :⁺ D) : F' (G' (lD y)) ~> lD y
+      => comp (dmap F' (=_~> (Gl y))) (comp (=_~> (Fl (A.radj y))) (dmap lD (A.heps y)))
+
+    -- | The unit as a transformation of endofunctors of {LC}, extended from {eta0} along {lC}.
+    \sfunc etaNat : (\lam y => y) ~> {LC ->⁺ LC} (\lam y => G' (F' y))
+      => IsEquiv.ret (localization-epi (IsLocalization.univ LzC) (\lam y => y) (\lam y => G' (F' y))) (dpath \lam i x => eta0 x i)
+
+    -- | The counit as a transformation of endofunctors of {LD}, extended from {eps0} along {lD}.
+    \sfunc epsNat : (\lam y => F' (G' y)) ~> {LD ->⁺ LD} (\lam y => y)
+      => IsEquiv.ret (localization-epi (IsLocalization.univ LzD) (\lam y => F' (G' y)) (\lam y => y)) (dpath \lam i x => eps0 x i)
+
+    -- | The unit of {loc-adj-descent}.
+    \func etaL (y :⁺ LC) : y ~> G' (F' y)
+      => dmap (\lam u => u y) etaNat
+
+    -- | The counit extended along {lD}; it agrees with the counit of {loc-adj-descent} ({heps-restrict}).
+    \func epsL (y :⁺ LD) : F' (G' y) ~> y
+      => dmap (\lam u => u y) epsNat
+
+    -- | The unit on the image of {lC}.
+    \sfunc etaL-restrict {x : C} : etaL (lC x) = eta0 x
+      => pmap (\lam N => dmap (\lam u => u (lC x)) N) (\peval etaNat)
+         *> pmap (dmap (\lam (u : C ->⁺ LC) => u x))
+              (IsEquiv.f_ret (localization-epi (IsLocalization.univ LzC) (\lam y => y) (\lam y => G' (F' y))) {dpath \lam i x => eta0 x i})
+
+    -- | The counit on the image of {lD}.
+    \sfunc epsL-restrict {y : D} : epsL (lD y) = eps0 y
+      => pmap (\lam N => dmap (\lam u => u (lD y)) N) (\peval epsNat)
+         *> pmap (dmap (\lam (u : D ->⁺ LD) => u y))
+              (IsEquiv.f_ret (localization-epi (IsLocalization.univ LzD) (\lam y => F' (G' y)) (\lam y => y)) {dpath \lam i x => eps0 x i})
+
+    -- | Cancelling the image of a path against the image of its inverse.
+    \private \sfunc cancel-inv {X Y : \Cat} (f : X ->⁺ Y) {x x' : X} (p : x = x') {y : Y} {r : f x' ~> y}
+      : comp (dmap f (=_~> (inv p))) (comp (dmap f (=_~> p)) r) = r \elim p
+      | idp => comp_idd-left *> comp_idd-left
+
+    -- | A path composed with its inverse is the identity.
+    \private \sfunc inv-cancel {X : \Cat} {x x' : X} {p : x = x'} : comp (=_~> p) (=_~> (inv p)) = idd \elim p
+      | idp => comp_idd-left
+
+    -- | A transformation at the endpoint of a path is conjugate to its value at the other endpoint.
+    \private \sfunc natural-at-path {X Y : \Cat} {f g : X ->⁺ Y} (h : \Pi (x :⁺ X) -> f x ~> g x) {x x' : X} (p : x = x')
+      : h x = comp (dmap f (=_~> p)) (comp (h x') (dmap g (=_~> (inv p)))) \elim p
+      | idp => inv (comp_idd-left *> comp_idd-right)
+
+    -- | The triangle identity for {G'} on the image of {lD}.
+    \sfunc triangle-left {b : D} : comp (etaL (G' (lD b))) (dmap G' (epsL (lD b))) = idd
+      => pmap (comp __ _) (natural-at-path etaL (Gl b)) *> pmap (comp _ __) (pmap (dmap G') epsL-restrict)
+         *> inv comp-assoc *> pmap (comp _ __) (inv comp-assoc *> inner) *> inv-cancel
+      \where
+        \sfunc inner : comp (etaL (lC (A.radj b))) (comp (dmap (\lam y => G' (F' y)) (=_~> (inv (Gl b)))) (dmap G' (eps0 b))) = =_~> (inv (Gl b))
+          => pmap (comp _ __) (inv (dmap_comp G') *> pmap (dmap G') (cancel-inv F' (Gl b)) *> dmap_comp G')
+             *> pmap (comp __ _) etaL-restrict
+             *> inv comp-assoc *> pmap (comp _ __) (inv comp-assoc *> pmap (comp _ __) (cancel-inv G' (Fl (A.radj b))))
+             *> pmap (comp _ __) (inv (~>-natural (\lam a => =_~> (inv (Gl a))) {_} {_} {A.heps b}))
+             *> comp-assoc *> pmap (comp __ _) (inv (dmap_comp lC) *> pmap (dmap lC) A.heta_heps-left) *> comp_idd-left
+
+    -- | The triangle identity for {F'} on the image of {lC}.
+    \sfunc triangle-right {a : C} : comp (dmap F' (etaL (lC a))) (epsL (F' (lC a))) = idd
+      => pmap (comp _ __) (natural-at-path epsL (Fl a)) *> pmap (comp __ _) (pmap (dmap F') etaL-restrict)
+         *> pmap (comp _ __) comp-assoc *> comp-assoc *> pmap (comp __ _) inner *> inv-cancel
+      \where
+        \sfunc inner : comp (dmap F' (eta0 a)) (comp (dmap (\lam y => F' (G' y)) (=_~> (Fl a))) (epsL (lD (A.ladj a)))) = =_~> (Fl a)
+          => pmap (comp __ _) (dmap_comp F' *> pmap (comp _ __) (dmap_comp F'))
+             *> inv comp-assoc *> pmap (comp _ __) (inv comp-assoc *> pmap (comp _ __) (cancel-inv (\lam y => F' (G' y)) (Fl a)))
+             *> pmap (comp _ __) (pmap (comp _ __) epsL-restrict *> cancel-inv F' (Gl (A.ladj a)))
+             *> comp-assoc *> pmap (comp __ _) (~>-natural (\lam x => =_~> (Fl x)) {_} {_} {A.heta a})
+             *> inv comp-assoc *> pmap (comp _ __) (inv (dmap_comp lD) *> pmap (dmap lD) A.heta_heps-right) *> comp_idd-right
+
+    -- | The unit is universal.
+    \lemma etaL-univ {x : LC} {y : LD} : IsEquiv (\lam (g : F' x ~> y) => comp (etaL x) (dmap G' g))
+      => \case \elim x, \elim y, IsLocalization.isSurj LzC x, IsLocalization.isSurj LzD y \with {
+        | _, _, inP (a, idp), inP (b, idp) => inP \new QEquiv {
+          | f g => comp (etaL (lC a)) (dmap G' g)
+          | ret h => comp (dmap F' h) (epsL (lD b))
+          | ret_f g => counit-comp-natural F' G' epsL (etaL (lC a)) g *> pmap (comp __ g) triangle-right *> comp_idd-left
+          | f_sec h => unit-comp-natural F' G' etaL h (epsL (lD b)) *> pmap (comp h __) triangle-left *> comp_idd-right
+        }
+      }
+
+    -- | The counit of {loc-adj-descent} on the image of {lD}.
+    \sfunc heps-restrict {b : D} : (loc-adj-descent LzC LzD A {F'} Fl {G'} Gl).heps (lD b) = eps0 b
+      => IsEquiv.isInj etaL-univ ((loc-adj-descent LzC LzD A {F'} Fl {G'} Gl).heta_heps-left *> inv triangle-left) *> epsL-restrict
+
+    -- | If `A.radj` is fully faithful, then the counit of {loc-adj-descent} is invertible.
+    \lemma heps-iso (ff : IsFFMap A.radj) (y : LD) : IsIso ((loc-adj-descent LzC LzD A {F'} Fl {G'} Gl).heps y)
+      => \case \elim y, IsLocalization.isSurj LzD y \with {
+        | _, inP (b, idp) => transportInv IsIso heps-restrict $
+            comp-IsIso (dmap_IsIso F' (=_~>-iso _)) (comp-IsIso (=_~>-iso _) (dmap_IsIso lD (A.radj-ff-char.1 ff b)))
+      }
+  }
+
+-- | If the right adjoint is fully faithful, then so is {G'}.
+\lemma radj-lift-ff {C D : CatWeakEq} {LC LD : \Cat}
+                    {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization lC) (LzD : IsLocalization lD)
+                    (A : QAdjunction C D) {F' : LC ->⁺ LD} (Fl : \Pi (x :⁺ C) -> F' (lC x) = lD (A.ladj x))
+                    {G' : LD ->⁺ LC} (Gl : \Pi (y :⁺ D) -> G' (lD y) = lC (A.radj y)) (ff : IsFFMap A.radj)
+  : IsFFMap G'
+  => (loc-adj-descent LzC LzD A Fl {G'} Gl).radj-ff-char.2
+      (loc-adj-descent.heps-iso {C} {D} {LC} {LD} {lC} {lD} {LzC} {LzD} {A} {F'} {Fl} {G'} {Gl} ff)
+
+-- | {G'} sends universal arrows to `A.radj` to universal arrows.
+\lemma radj-lift-univ {C D : CatWeakEq} {LC LD : \Cat}
+                      {lC : C ->⁺ LC} {lD : D ->⁺ LD} (LzC : IsLocalization lC) (LzD : IsLocalization lD)
+                      (A : QAdjunction C D) {F' : LC ->⁺ LD} (Fl : \Pi (x :⁺ C) -> F' (lC x) = lD (A.ladj x))
+                      {G' : LD ->⁺ LC} (Gl : \Pi (y :⁺ D) -> G' (lD y) = lC (A.radj y))
+                      {x : C} {y : D} {eta : x ~> A.radj y} (U : \Pi (y' : D) -> IsEquiv {y ~> y'} {x ~> A.radj y'} (\lam g => comp eta (dmap A.radj g)))
+                      (y' : LD)
+  : IsEquiv {lD y ~> y'} {lC x ~> G' y'} (\lam g => comp (comp (dmap lC eta) (=_~> (inv (Gl y)))) (dmap G' g))
+  => \let | ua : UnivArrow A.radj x => \new UnivArrow { | L0x => y | eta0x => eta | eta0x-univ {y'} => U y' }
+          | ub : UnivArrow A.radj x => \new UnivArrow { | L0x => A.ladj x | eta0x => A.heta x | eta0x-univ => inP A.heta_heps-equiv }
+          | k => =_~> (inv (Fl x))
+     \in transportInv {UnivArrow A.radj x}
+          (\lam t => \Pi (y' : LD) -> IsEquiv {lD t.L0x ~> y'} {lC x ~> G' y'} (\lam g => comp (comp (dmap lC t.eta0x) (=_~> (inv (Gl t.L0x)))) (dmap G' g)))
+          (UnivArrow.levelProp ua ub) (\lam y'' => IsEquiv.rightFactor (comp-iso-left-equiv (=_~>-iso (inv (Fl x)))) $
+           transport IsEquiv (ext \lam g' => pmap (comp __ _) (loc-adj-descent.etaL-restrict {C} {D} {LC} {LD} {lC} {lD} {LzC} {A} {F'} {Fl} {G'} {Gl})
+                                             *> pmap (comp __ _) comp-assoc *> inv comp-assoc *> pmap (comp _ __) (inv (dmap_comp G')))
+             (loc-adj-descent.etaL-univ {C} {D} {LC} {LD} {lC} {lD} {LzC} {LzD} {A} {F'} {Fl} {G'} {Gl} {lC x} {y''})) y'

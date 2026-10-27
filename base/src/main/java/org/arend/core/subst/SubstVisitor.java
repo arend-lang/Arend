@@ -251,7 +251,7 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
   public Expression visitLet(LetExpression letExpression, Void params) {
     List<HaveClause> clauses = new ArrayList<>(letExpression.getClauses().size());
     for (HaveClause clause : letExpression.getClauses()) {
-      HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, null));
+      HaveClause newClause = LetClause.make(clause instanceof LetClause, clause.getName(), clause.getPattern(), clause.getExpression().accept(this, null), clause.getVariance());
       clauses.add(newClause);
       myExprSubstitution.add(clause, new ReferenceExpression(newClause));
     }
@@ -340,12 +340,12 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
 
   @Override
   public Expression visitPath(PathExpression expr, Void params) {
-    return new PathExpression(expr.getArgumentType().accept(this, null), expr.getArgument().accept(this, null), expr.isDirected(), expr.isForcedInfinite());
+    return new PathExpression(expr.getArgumentType().accept(this, null), expr.getArgument().accept(this, null), expr.isDirected());
   }
 
   @Override
   public Expression visitPathType(PathTypeExpression expr, Void params) {
-    return new PathTypeExpression(expr.getArgumentType().accept(this, null), expr.getLeftArgument().accept(this, null), expr.getRightArgument().accept(this, null), expr.isDirected(), expr.isForcedInfinite());
+    return new PathTypeExpression(expr.getArgumentType().accept(this, null), expr.getLeftArgument().accept(this, null), expr.getRightArgument().accept(this, null), expr.isDirected());
   }
 
   @Override

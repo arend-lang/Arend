@@ -1,0 +1,99 @@
+{- | Beck–Chevalley along right fibrations ({rightFib-localize}): the pullback of a localization `l : C ->⁺ L`
+ -   along a functor `q : R ->⁺ L` such that `Fibers q` is a right fibration is a localization at the morphisms over weak equivalences.
+ -
+ -   Proof: pass to opposite categories. `OpFunc l` is a localization of `OpWeakEq C` ({OpFunc-isLocalization}), and `Fibers (OpFunc q)`
+ -   and the fibers of the opposite of the projection of the pullback are left fibrations ({opFunc-leftFib}, {rightFib-total}).
+ -   The opposite of the pullback square is a pullback square in the sense of {leftFib-isLocalization}:
+ -   on fibers over `toOp c` it is the identification of the fibers of the pullback with the fibers of {q}
+ -   ({rightFib-localize.fiber-equiv}). The map of fibers is a composite of postcomposition with {l}, transport along the square,
+ -   and forgetting the projection to {R}, each compatible with {op-fiber-equiv} ({op-fiber-postcomp}, {op-fiber-path}, {op-fiber-forget}).
+ -   So `OpFunc` of the projection is a localization, and {OpFunc-reflects-localization} concludes.
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Categorical
+\import InfCat.Fibration.Contravariant.ContravariantLift
+\import InfCat.Fibration.Contravariant.RightFib
+\import InfCat.Localization.CatWeakEq
+\import InfCat.Localization.Concrete
+\import InfCat.Localization.LocalizeLeftFib
+\import InfCat.Localization.Opposite
+\import InfCat.OFS.CatOFS
+\import InfCat.Opposite
+\import InfCat.Opposite.Fibration
+\import InfCat.Paths
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | The pullback of a localization along a right fibration is a localization.
+\lemma rightFib-localize.{u} {C : CatWeakEq.{u}} {L : \Cat u} {l : C ->⁺ L} (Lz : IsLocalization l)
+                             {R : \Cat u} {q : R ->⁺ L} (qf : IsRightFib (Fibers q))
+  : IsLocalization {PullbackWeakEq {BaseChange l q} {C} __.1} (\lam (s :⁺ BaseChange l q) => s.2.1)
+  => OpFunc-reflects-localization $
+       transportInv (\lam (V : CatWeakEq (Op (BaseChange l q))) => IsLocalization {V} (OpFunc \lam (s :⁺ BaseChange l q) => s.2.1))
+                    (ext (ext \lam a => ext (OpWeakEq-pullback __.1 a))) $
+       leftFib-isLocalization (OpFunc-isLocalization Lz)
+         (opFunc-leftFib {BaseChange l q} (rightFib-total (rightFib-pullback l qf))) (opFunc-leftFib qf)
+         (kappa l q) (fiber-equiv l q)
+  \where \private {
+    -- | The opposite of the pullback square commutes.
+    \func kappa.{u} {C L R : \Cat u} (l : C ->⁺ L) (q : R ->⁺ L) (w :⁺ Op (BaseChange l q))
+      : OpFunc q (OpFunc (\lam (s :⁺ BaseChange l q) => s.2.1) w) = OpFunc l (OpFunc (\lam (s :⁺ BaseChange l q) => s.1) w)
+      => inv OpFunc-comp *> path (\lam i => OpFunc (sq-path l q i) w) *> OpFunc-comp
+
+    -- | The pullback square commutes.
+    \func sq-path.{u} {C L R : \Cat u} (l : C ->⁺ L) (q : R ->⁺ L)
+      : (\lam s => q s.2.1) = {BaseChange l q ->⁺ L} (\lam s => l s.1)
+      => funExt+ \lam s => s.2.2
+
+    -- | The opposite of the pullback square induces equivalences of fibers.
+    \lemma fiber-equiv.{u} {C L R : \Cat u} (l : C ->⁺ L) (q : R ->⁺ L) (z : Op C)
+      : IsEquiv {Fibers (OpFunc (\lam (s :⁺ BaseChange l q) => s.1)) z} {Fibers (OpFunc q) (OpFunc l z)}
+                (\lam t => (OpFunc __.2.1 t.1, kappa l q t.1 *> pmap+ (OpFunc l) t.2))
+      => \case \elim z, IsEquiv.isSurj Op.toOp-equiv z \with {
+           | _, inP (c, idp) => IsEquiv.rightFactor (op-fiber-equiv __.1 c) $
+                                  transport IsEquiv (ext \lam t => inv (square l q t.1 t.2)) $
+                                  IsEquiv.trans (mu-equiv l q c) $ IsEquiv.trans (op-fiber-equiv q (l c)) $ inP $ post-path $ inv (OpFunc_toOp _ _)
+         }
+      \where {
+        -- | The fiber of the projection of the pullback over {c} is the fiber of {q} over `l c`.
+        \lemma mu-equiv.{u} {C L R : \Cat u} (l : C ->⁺ L) (q : R ->⁺ L) (c : C)
+          : IsEquiv {\Sigma (s : BaseChange l q) (s.1 = c)} {\Sigma (r : R) (q r = l c)}
+                    (\lam t => (t.1.2.1, t.1.2.2 *> pmap+ l t.2))
+          => inP \new QEquiv {
+               | ret t => (((c, (t.1, t.2)) : BaseChange l q), idp)
+               | ret_f t => mu-ret t.1.2.2 t.2
+               | f_sec _ => idp
+             }
+
+        \func mu-ret.{u} {C L R : \Cat u} {l : C ->⁺ L} {q : R ->⁺ L} {c' c : C} {e : R} (r : q e = l c') (p : c' = c)
+          : ((c, (e, r *> pmap+ l p)) , idp) = {\Sigma (s : BaseChange l q) (s.1 = c)} ((c', (e, r)) , p) \elim p
+          | idp => idp
+
+        -- | Composition with a path in the base identifies fibers.
+        \func post-path {X Y : \Cat} {f : X ->⁺ Y} {y y' : Y} (p : y = y')
+          : QEquiv {Fibers f y} {Fibers f y'} (\lam t => (t.1, t.2 *> p)) \cowith
+          | ret t => (t.1, t.2 *> inv p)
+          | ret_f t => pmap (\lam r => ((t.1, r) : Fibers f y)) (*>-assoc *> pmap (t.2 *>) *>_inv)
+          | f_sec t => pmap (\lam r => ((t.1, r) : Fibers f y')) (*>-assoc *> pmap (t.2 *>) inv_*>)
+
+        -- | The map of fibers corresponds to the identification of the fibers of the pullback with the fibers of {q}.
+        \sfunc square.{u} {C L R : \Cat u} (l : C ->⁺ L) (q : R ->⁺ L) {c : C} (s : BaseChange l q) (p : s.1 = c)
+          : ((OpFunc __.2.1 (Op.toOp s),
+              kappa l q (Op.toOp s) *> pmap+ (OpFunc l) (OpFunc_toOp _ _ *> pmap Op.toOp p)) : Fibers (OpFunc q) (OpFunc l (Op.toOp c)))
+            = (Op.toOp s.2.1, (OpFunc_toOp _ _ *> pmap Op.toOp (s.2.2 *> pmap+ l p)) *> inv (OpFunc_toOp _ _))
+          => pmap (\lam r => ((OpFunc (\lam s => s.2.1) (Op.toOp s), r) : Fibers (OpFunc q) (OpFunc l (Op.toOp c))))
+                  (*>-assoc *> pmap (_ *>) (*>-assoc *> pmap (_ *>) (op-fiber-postcomp {_} {C} {L} {_} {l} p)
+                                            *> op-fiber-path (sq-path l q) (pmap+ l p) _))
+             *> op-fiber-forget {BaseChange l q} {R} {L} {_} {q} (s.2.2 *> pmap+ l p) _
+      }
+  }
+
+-- | Restriction of sections of a right fibration along a localization is an equivalence.
+\lemma localization-rightFib-sections {C : CatWeakEq} {L : \Cat} {l : C ->⁺ L} (Lz : IsLocalization l)
+                                      {B : L ->⁺ \Cat} (Bf : IsRightFib B)
+  : IsEquiv {\Pi (y :⁺ L) -> B y} {\Pi (x :⁺ C) -> B (l x)} (\lam s x => s (l x))
+  => IsOrthogonal-family-sections (localization-orthogonal Lz (rightFib-conservative (rightFib-total Bf))) id+

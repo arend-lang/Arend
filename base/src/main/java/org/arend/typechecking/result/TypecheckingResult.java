@@ -1,5 +1,6 @@
 package org.arend.typechecking.result;
 
+import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.TypedEvaluatingBinding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
@@ -9,6 +10,8 @@ import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
+import org.arend.core.expr.visitor.FreeVariablesCollector;
+import org.arend.ext.core.context.BindingVariance;
 import org.arend.ext.core.context.CoreEvaluatingBinding;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
@@ -89,7 +92,14 @@ public class TypecheckingResult implements TResult, TypedExpression {
 
   @Override
   public @NotNull CoreEvaluatingBinding makeEvaluatingBinding(@Nullable String name) {
-    return new TypedEvaluatingBinding(name, expression, type);
+    boolean isCovariant = false;
+    for (Binding binding : FreeVariablesCollector.getFreeVariables(expression, true)) {
+      if (binding.getVariance() != BindingVariance.INVARIANT) {
+        isCovariant = true;
+        break;
+      }
+    }
+    return new TypedEvaluatingBinding(name, expression, type, isCovariant ? BindingVariance.COVARIANT : BindingVariance.INVARIANT);
   }
 
   @Override

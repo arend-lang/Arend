@@ -27,10 +27,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Two-phase setup for the CLI:
@@ -192,6 +194,8 @@ public final class CliSetup {
             ctx.systemErrErrorReporter.report(new GeneralError(GeneralError.Level.ERROR,
                 "Definition name missing after ':' in " + fileName));
           }
+        } else if (fileName.indexOf('*') >= 0) {
+          ctx.requestedModulePatterns.add(fileName);
         } else {
           ModulePath modulePath = ModulePath.fromString(fileName);
           if (FileUtils.isCorrectModulePath(modulePath)) {
@@ -246,6 +250,10 @@ public final class CliSetup {
         if (parsed != null) ctx.requestedModules.add(parsed);
         continue;
       }
+      if (positional.indexOf('*') >= 0) {
+        ctx.requestedModulePatterns.add(positional);
+        continue;
+      }
       ModulePath modulePath = ModulePath.fromString(positional);
       if (FileUtils.isCorrectModulePath(modulePath)) {
         ctx.requestedModules.add(new Pair<>(modulePath, null));
@@ -254,6 +262,39 @@ public final class CliSetup {
             "File " + positional + " not found"));
       }
     }
+  }
+
+  /**
+   * Expands {@link CommandContext#requestedModulePatterns} into {@link CommandContext#requestedModules}.
+   * A {@code *} matches any sequence of characters, dots included, so {@code InfCat.*} is every
+   * module under {@code InfCat/}. Only the source modules of the requested libraries are matched.
+   *
+   * <p>Runs after the libraries are known, not in {@link #classifyRequestedTargets}: the
+   * {@code ./arend.yaml} fallback is added only by {@link #loadRequestedLibraries}. A pattern
+   * matching nothing is an error; left silent, an empty scope would turn the run into a
+   * whole-library typecheck.
+   */
+  public static void expandModulePatterns(CommandContext ctx) {
+    for (String pattern : ctx.requestedModulePatterns) {
+      List<String> parts = new ArrayList<>();
+      for (String part : pattern.split("\\*", -1)) parts.add(Pattern.quote(part));
+      Pattern compiled = Pattern.compile(String.join(".*", parts));
+
+      List<ModulePath> matches = new ArrayList<>();
+      for (SourceLibrary library : ctx.requestedLibraries) {
+        for (ModulePath modulePath : library.findModules(false)) {
+          if (compiled.matcher(String.join(".", modulePath.toList())).matches()) matches.add(modulePath);
+        }
+      }
+      if (matches.isEmpty()) {
+        ctx.systemErrErrorReporter.report(new GeneralError(GeneralError.Level.ERROR,
+            "No modules match " + pattern));
+        continue;
+      }
+      Collections.sort(matches);
+      for (ModulePath modulePath : matches) ctx.requestedModules.add(new Pair<>(modulePath, null));
+    }
+    ctx.requestedModulePatterns.clear();
   }
 
   // ───────── helpers ─────────
