@@ -242,6 +242,22 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     testDefinition("\\func f => \\Sigma");
   }
 
+  private void testMeta(String text) {
+    StringBuilder sb = new StringBuilder();
+    resolveNamesDef(text).accept(new PrettyPrintVisitor(sb, 0), null);
+    assertEquals(text, sb.toString());
+  }
+
+  @Test
+  public void prettyPrintMeta() {
+    testMeta("\\meta f => \\Sigma");
+  }
+
+  @Test
+  public void prettyPrintMetaParameters() {
+    testMeta("\\meta f x y => x");
+  }
+
   @Test
   public void fieldCallTest() {
     ClassDefinition def = (ClassDefinition) typeCheckDef("\\record R (f : Nat)");

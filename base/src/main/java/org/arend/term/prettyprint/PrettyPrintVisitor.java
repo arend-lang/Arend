@@ -1955,16 +1955,17 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   public Void visitMeta(Concrete.MetaDefinition def, Void params) {
     myBuilder.append("\\meta ");
     prettyPrintNameWithPrecedence(def.getData());
-    if (!def.getParameters().isEmpty()) {
-      myBuilder.append(" ");
-      prettyPrintParameters(def.getParameters());
-    }
     if (def.body == null) {
+      if (!def.getParameters().isEmpty()) {
+        myBuilder.append(" ");
+        prettyPrintParameters(def.getParameters());
+      }
       return null;
     }
-    myBuilder.append("=>");
 
-    final BinOpLayout l = new BinOpLayout(){
+    // Names may contain '=', '>' and '_', so '=>' is separated from the name and the body by spaces
+    myBuilder.append(" ");
+    new BinOpLayout() {
       @Override
       void printLeft(PrettyPrintVisitor pp) {
         pp.prettyPrintParameters(def.getParameters());
@@ -1972,6 +1973,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
       @Override
       void printRight(PrettyPrintVisitor pp) {
+        pp.printExpr(def.body, new Precedence(Concrete.Expression.PREC));
       }
 
       @Override
@@ -1981,31 +1983,9 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
       @Override
       String getOpText() {
-        return "";
+        return "=>";
       }
-    };
-
-    final BinOpLayout r = new BinOpLayout(){
-      @Override
-      String getOpText() {
-        return "";
-      }
-
-      @Override
-      void printRight(PrettyPrintVisitor pp) {
-        pp.printExpr(def.body, new Precedence(Concrete.Expression.PREC));
-      }
-
-      @Override
-      void printLeft(PrettyPrintVisitor pp) {
-        l.printLeft(pp);
-      }
-
-      @Override
-      boolean printSpaceAfter() { return false; }
-    };
-
-    r.doPrettyPrint(this, noIndent);
+    }.doPrettyPrint(this, noIndent);
     return null;
   }
 
