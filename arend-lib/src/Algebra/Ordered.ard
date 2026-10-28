@@ -283,6 +283,16 @@
   \lemma disjoint_abs_+ {x y : E} (d : AreDisjoint x y) : abs (x + y) = abs x + abs y
     => <=-antisymmetric abs_+ $ =_<= (modularity *> pmap (_ +) d *> zro-right) <=∘ join-univ (disjoint_abs_+-left d) (disjoint_abs_+-right d)
 
+  \lemma disjoint-ldistr {a b c : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (c>=0 : 0 <= c) (d : b ∧ c = 0) : a ∧ (b + c) = a ∧ b + a ∧ c
+    => meet-comm *> disjoint-rdistr b>=0 c>=0 a>=0 d *> pmap2 (+) meet-comm meet-comm
+
+  \lemma disjoint-rdistr {a b c : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (c>=0 : 0 <= c) (d : a ∧ b = 0) : (a + b) ∧ c = a ∧ c + b ∧ c
+    => \have dc : (a ∧ c) ∧ (b ∧ c) = 0 => <=-antisymmetric (meet-monotone meet-left meet-left <=∘ =_<= d) (meet-univ (meet-univ a>=0 c>=0) (meet-univ b>=0 c>=0))
+       \in pmap (__ ∧ c) (modularity *> pmap (_ +) d *> zro-right) *> meet-rdistr *> inv (modularity *> pmap (_ +) dc *> zro-right)
+
+  \lemma part+-split {a b : E} : a = part+ (a - b) + a ∧ b
+    => inv $ pmap (+ _) part+_diff_meet *> +-assoc *> pmap (a +) negative-left *> zro-right
+
   \type IsSolid (U : Set E) => ∀ {y} {x : U} (abs y <= abs x -> U y)
 } \where {
     -- TODO: Make constructor classes

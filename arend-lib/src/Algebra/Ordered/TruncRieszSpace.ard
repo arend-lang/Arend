@@ -1,9 +1,11 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Ordered.RieszSpace
+\import Algebra.Ring.Boolean
 \import Function.Meta
 \import Order.PartialOrder
 \import Paths
+\import Paths.Meta
 
 \class TruncRieszSpace \extends RieszSpace {
   | trunc : E -> E
@@ -60,4 +62,84 @@
 
   \lemma trunc-lipschitz {a b : E} : abs (trunc a - trunc b) <= abs (a - b)
     => join-univ (trunc-diff <=∘ join-univ abs>=id abs>=0) (=_<= negative_- <=∘ trunc-diff <=∘ join-univ abs>=_- abs>=0)
+
+  \type InUnitCone (a : E) : \Prop
+    => trunc a = a
+
+  \type IsBoolean (a : E) : \Prop
+    => trunc (a + a) = a
+
+  \lemma IsBoolean>=0 {a : E} (p : IsBoolean a) : 0 <= a
+    => <=_+-cancel-left a $ =_<= zro-right <=∘ (inv p =<= trunc-bound)
+
+  \lemma IsBoolean_zro : IsBoolean 0
+    => pmap trunc zro-left *> trunc_zro
+
+  \lemma IsBoolean-trunc {a : E} (p : IsBoolean a) : InUnitCone a
+    => pmap trunc (inv p) *> trunc-idemp *> p
+
+  \lemma IsBoolean-orth {e y : E} (p : IsBoolean e) (ty : InUnitCone y) : e ∧ part+ (y - e) = 0
+    => \have | s : e + e ∧ part+ (y - e) <= trunc (e ∨ y)
+               => <=_+ <=-refl meet-right <=∘ =_<= (pmap (e +) part+_diff_join *> +-comm *> +-assoc *> pmap (_ +) negative-left *> zro-right *> join-comm *> inv (trunc_join *> pmap2 (∨) (IsBoolean-trunc p) ty))
+             | t : e + e ∧ part+ (y - e) <= e
+               => meet-univ <=-refl s <=∘ trunc-assoc <=∘ trunc-mono (<=_+ <=-refl meet-left) <=∘ =_<= p
+       \in <=-antisymmetric (<=_+-cancel-left e $ t <=∘ =_<= (inv zro-right)) (meet-univ (IsBoolean>=0 p) join-right)
+
+  \lemma IsBoolean_meet {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (a ∧ b)
+    => <=-antisymmetric (meet-univ (trunc-mono (<=_+ meet-left meet-left) <=∘ =_<= p) (trunc-mono (<=_+ meet-right meet-right) <=∘ =_<= q))
+        (=_<= (inv $ trunc_meet *> pmap2 (∧) (IsBoolean-trunc p) (IsBoolean-trunc q)) <=∘ trunc-mono (=_<= (inv zro-right) <=∘ <=_+ <=-refl (meet-univ (IsBoolean>=0 p) (IsBoolean>=0 q))))
+
+  \lemma IsBoolean_join {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (a ∨ b)
+    => pmap trunc join_+-comm *> trunc_join *> pmap2 (∨) p q
+
+  \lemma IsBoolean_diff {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (part+ (a - b))
+    => \let | c => part+ (a - b)
+       \in \have
+            | c>=0 : 0 <= c => join-right
+            | ab>=0 : 0 <= a ∧ b => meet-univ (IsBoolean>=0 p) (IsBoolean>=0 q)
+            | c<=a : c <= a => =_<= part+_diff_meet <=∘ <=_+ <=-refl (negative<=0 ab>=0) <=∘ =_<= zro-right
+            | c<=cc : c <= c + c => =_<= (inv zro-right) <=∘ <=_+ <=-refl c>=0
+            | bc : b ∧ c = 0 => IsBoolean-orth q (IsBoolean-trunc p)
+            | ab2c=0 : (a ∧ b) ∧ (c + c) = 0
+              => <=-antisymmetric (meet-monotone meet-right <=-refl <=∘ meet_+-subadditive (IsBoolean>=0 q) c>=0 c>=0 <=∘ =_<= (pmap2 (+) bc bc *> zro-left)) (meet-univ ab>=0 (<=_+-positive c>=0 c>=0))
+            | tc : trunc c = c => <=-antisymmetric trunc-bound (meet-univ <=-refl (c<=a <=∘ =_<= (inv (IsBoolean-trunc p))) <=∘ trunc-assoc)
+       \in <=-antisymmetric
+            (meet-univ trunc-bound (trunc-mono (<=_+ c<=a c<=a) <=∘ =_<= p) <=∘ =_<= (meet-comm *> pmap (__ ∧ _) part+-split *> disjoint-rdistr c>=0 ab>=0 (<=_+-positive c>=0 c>=0) (IsBoolean_diff-disj p q) *> pmap2 (+) (<=-antisymmetric meet-left (meet-univ <=-refl c<=cc)) ab2c=0 *> zro-right))
+            (=_<= (inv tc) <=∘ trunc-mono c<=cc)
+
+  \lemma IsBoolean_abs {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (abs (a - b))
+    => transport IsBoolean (pmap (_ ∨) (inv part-_diff_part+) *> parts_join) (IsBoolean_join (IsBoolean_diff p q) (IsBoolean_diff q p))
+
+  \lemma IsBoolean_diff-disj {a b : E} (p : IsBoolean a) (q : IsBoolean b) : part+ (a - b) ∧ (a ∧ b) = 0
+    => <=-antisymmetric (meet-monotone <=-refl meet-right <=∘ =_<= (meet-comm *> IsBoolean-orth q (IsBoolean-trunc p))) (meet-univ join-right (meet-univ (IsBoolean>=0 p) (IsBoolean>=0 q)))
+
+  \func BoolRing : BooleanRing (\Sigma (a : E) (IsBoolean a)) \cowith
+    | zro => (0, IsBoolean_zro)
+    | + a b => (abs (a.1 - b.1), IsBoolean_abs a.2 b.2)
+    | +-assoc {x} {y} {z} => ext $ abs-formula *> pmap2 (\lam u v => u + z.1 - (v + v)) abs-formula (meet-comm *> meet-formula (IsBoolean>=0 z.2) x.2 y.2 *> meet-swap)
+        *> equation.abGroup *> inv (abs-formula *> pmap2 (\lam u v => x.1 + u - (v + v)) abs-formula (meet-formula (IsBoolean>=0 x.2) y.2 z.2))
+    | +-comm => ext abs_-
+    | * a b => (a.1 ∧ b.1, IsBoolean_meet a.2 b.2)
+    | *-assoc => ext meet-assoc
+    | negative x => x
+    | negative-left => ext $ pmap abs negative-right *> abs_zro
+    | isBooleanRing => ext meet-idemp
+    | *-comm => ext meet-comm
+    | ldistr {x} {y} {z} => ext $ meet-formula (IsBoolean>=0 x.2) y.2 z.2 *> inv (abs-formula *> pmap (\lam w => x.1 ∧ y.1 + x.1 ∧ z.1 - (w + w))
+        (meet-assoc *> pmap (x.1 ∧) (inv meet-assoc *> pmap (__ ∧ z.1) meet-comm *> meet-assoc) *> inv meet-assoc *> pmap (__ ∧ _) meet-idemp))
+    | zro-left {x} => ext $ pmap abs zro-left *> abs_negative *> abs-ofPos (IsBoolean>=0 x.2)
+    \where {
+      \lemma abs-formula {a b : E} : abs (a - b) = a + b - (a ∧ b + a ∧ b)
+        => inv parts_+ *> pmap2 (+) part+_diff_meet part-_diff_meet *> equation.abGroup
+
+      \lemma meet-split {a b c : E} (c>=0 : 0 <= c) (p : IsBoolean a) (q : IsBoolean b) : c ∧ a = c ∧ part+ (a - b) + c ∧ (a ∧ b)
+        => meet-comm *> pmap (__ ∧ c) part+-split *> disjoint-rdistr join-right (meet-univ (IsBoolean>=0 p) (IsBoolean>=0 q)) c>=0 (IsBoolean_diff-disj p q) *> pmap2 (+) meet-comm meet-comm
+
+      \lemma meet-formula {a b c : E} (c>=0 : 0 <= c) (p : IsBoolean a) (q : IsBoolean b) : c ∧ abs (a - b) = c ∧ a + c ∧ b - (c ∧ (a ∧ b) + c ∧ (a ∧ b))
+        => meet-comm *> pmap (__ ∧ c) (inv parts_+) *> disjoint-rdistr join-right join-right c>=0 parts_meet *> pmap2 (+) meet-comm (pmap (__ ∧ c) part-_diff_part+ *> meet-comm)
+            *> inv (pmap2 (\lam u v => u + v - (c ∧ (a ∧ b) + c ∧ (a ∧ b))) (meet-split c>=0 p q) (meet-split c>=0 q p *> pmap (c ∧ part+ (b - a) +) (pmap (c ∧) meet-comm)) *> equation.abGroup)
+
+      \lemma meet-swap {a b c : E} : c ∧ a + c ∧ b - (c ∧ (a ∧ b) + c ∧ (a ∧ b)) = a ∧ c + b ∧ c - (a ∧ (b ∧ c) + a ∧ (b ∧ c))
+        => pmap2 (\lam u v => u + v - (c ∧ (a ∧ b) + c ∧ (a ∧ b))) meet-comm meet-comm *> pmap (\lam w => a ∧ c + b ∧ c - (w + w)) (meet-comm *> meet-assoc)
+    }
 }
