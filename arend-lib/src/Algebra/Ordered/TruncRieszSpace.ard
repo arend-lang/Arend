@@ -1,0 +1,63 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Ordered.RieszSpace
+\import Function.Meta
+\import Order.PartialOrder
+\import Paths
+
+\class TruncRieszSpace \extends RieszSpace {
+  | trunc : E -> E
+  | trunc_zro>=0 : 0 <= trunc 0
+  | trunc-bound {a : E} : trunc a <= a
+  | trunc-assoc {a b : E} : a ∧ trunc b <= trunc a
+
+  \lemma trunc_zro : trunc 0 = 0
+    => <=-antisymmetric trunc-bound trunc_zro>=0
+
+  \lemma trunc-pos {a : E} (a>=0 : 0 <= a) : 0 <= trunc a
+    => meet-univ a>=0 trunc_zro>=0 <=∘ trunc-assoc
+
+  \lemma trunc-neg {a : E} (a<=0 : a <= 0) : trunc a = a
+    => <=-antisymmetric trunc-bound $ meet-univ <=-refl (a<=0 <=∘ trunc_zro>=0) <=∘ trunc-assoc
+
+  \lemma trunc-mono {a b : E} (a<=b : a <= b) : trunc a <= trunc b
+    => meet-univ (trunc-bound <=∘ a<=b) <=-refl <=∘ trunc-assoc
+
+  \lemma trunc-idemp {a : E} : trunc (trunc a) = trunc a
+    => <=-antisymmetric trunc-bound (meet-univ <=-refl <=-refl <=∘ trunc-assoc)
+
+  \lemma trunc_join {a b : E} : trunc (a ∨ b) = trunc a ∨ trunc b
+    => <=-antisymmetric
+        (meet-univ trunc-bound <=-refl <=∘ rdistr>= <=∘ join-monotone trunc-assoc trunc-assoc)
+        (join-univ (trunc-mono join-left) (trunc-mono join-right))
+
+  \lemma trunc_meet {a b : E} : trunc (a ∧ b) = trunc a ∧ trunc b
+    => <=-antisymmetric
+        (meet-univ (trunc-mono meet-left) (trunc-mono meet-right))
+        (meet-univ (meet-monotone trunc-bound trunc-bound) meet-left <=∘ trunc-assoc)
+
+  \lemma trunc-spliit {a : E} : trunc a = trunc (part+ a) - part- a
+    => \let | y => trunc a + part- a
+       \in \have
+            | ge : trunc (part+ a) - part- a <= trunc a
+              => meet-univ (transport (_ <=) parts_- $ <=_+ trunc-bound <=-refl) (transport (_ <=) zro-right $ <=_+ <=-refl $ negative<=0 join-right) <=∘ trunc-assoc
+            | y<=p : y <= part+ a
+              => <=_+ trunc-bound <=-refl <=∘ =_<= (pmap (+ _) (inv parts_-) *> +-assoc *> pmap (_ +) negative-left *> zro-right)
+            | tp<=y : trunc (part+ a) <= y
+              => =_<= (inv $ +-assoc *> pmap (_ +) negative-left *> zro-right) <=∘ <=_+ ge <=-refl
+            | ty>=0 : 0 <= trunc y
+              => trunc-pos $ trunc-pos join-right <=∘ tp<=y
+            | y<=ty : y <= trunc y
+              => meet-univ <=-refl (<=_+ (meet-univ (=_<= (inv zro-right) <=∘ <=_+ <=-refl join-right) <=-refl <=∘ trunc-assoc) <=-refl)
+                <=∘ meet_+-subadditive (ty>=0 <=∘ trunc-bound) ty>=0 join-right <=∘ <=_+ meet-right (meet-monotone y<=p <=-refl <=∘ =_<= parts_meet) <=∘ =_<= zro-right
+       \in <=-antisymmetric (=_<= (inv $ +-assoc *> pmap (_ +) negative-right *> zro-right) <=∘ <=_+ (meet-univ y<=p y<=ty <=∘ trunc-assoc) <=-refl) ge
+
+  \lemma trunc-diff-cmp {a b : E} (b<=a : b <= a) : trunc a - trunc b <= a - b
+    => <=_+ (meet-univ trunc-bound (=_<= (inv zro-right) <=∘ <=_+ <=-refl (to>=0 b<=a)) <=∘ =_<= (pmap (__ ∧ _) (equation.abGroup : a = b + (a - b)) *> inv meet_+-right) <=∘ <=_+ trunc-assoc <=-refl) <=-refl <=∘ =_<= equation.abGroup
+
+  \lemma trunc-diff {a b : E} : trunc a - trunc b <= part+ (a - b)
+    => <=_+ <=-refl (negative_<= $ trunc-mono meet-right) <=∘ trunc-diff-cmp meet-left <=∘ =_<= (inv part+_diff_meet)
+
+  \lemma trunc-lipschitz {a b : E} : abs (trunc a - trunc b) <= abs (a - b)
+    => join-univ (trunc-diff <=∘ join-univ abs>=id abs>=0) (=_<= negative_- <=∘ trunc-diff <=∘ join-univ abs>=_- abs>=0)
+}

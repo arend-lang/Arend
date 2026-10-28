@@ -228,6 +228,21 @@
   \lemma parts_- {x : E} : part+ x - part- x = x
     => cancel-right (part- x) $ +-assoc *> pmap (_ +) negative-left *> zro-right *> join-comm *> inv (join_+-left *> pmap2 (∨) negative-right zro-right)
 
+  \lemma part-_diff_part+ {x y : E} : part- (x - y) = part+ (y - x)
+    => pmap (∨ 0) negative_-
+
+  \lemma part+_diff_meet {x y : E} : part+ (x - y) = x - x ∧ y
+    => inv $ pmap (x +) meet_negative *> join_+-left *> join-comm *> pmap (_ ∨) negative-right
+
+  \lemma part+_diff_join {x y : E} : part+ (x - y) = x ∨ y - y
+    => inv $ join_+-right *> pmap (_ ∨) negative-right
+
+  \lemma part-_diff_meet {x y : E} : part- (x - y) = y - x ∧ y
+    => part-_diff_part+ *> part+_diff_meet *> pmap (y -) meet-comm
+
+  \lemma part-_diff_join {x y : E} : part- (x - y) = x ∨ y - x
+    => part-_diff_part+ *> part+_diff_join *> pmap (- x) join-comm
+
   \lemma join_+-double {x y : E} : x + y <= (x + x) ∨ (y + y)
     => transport2 (x + __ <= __) zro-left (pmap (x +) join_+-right *> join_+-left *> pmap2 (x + __ ∨ __) (+-assoc *> pmap (x +) negative-left *> zro-right) (inv +-assoc *> pmap (+ y) (pmap (x +) negative_- *> +-comm *> +-assoc *> pmap (y +) negative-left *> zro-right))) $ <=_+ <=-refl $ <=_+ abs>=0 <=-refl
 
