@@ -6,6 +6,7 @@
 \import Analysis.Measure.MeasureRing
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
@@ -82,6 +83,21 @@
     }
 }
 
+\instance RatIntegrationSpace : IntegrationSpace Rat
+  | PosetAbGroup => RatField
+  | join => RatField.join
+  | join-left => join-left
+  | join-right => join-right
+  | join-univ => join-univ
+  | isDivisible a {n} n/=0 => inP (RatField.finv n * a, inv RatField.natCoef_*_*n *> inv *-assoc *> pmap (* a) (RatField.finv-right $ natRat/=0 n/=0) *> ide-left)
+  | trunc x => x ∧ 1
+  | trunc_zro>=0 => <=-refl
+  | trunc-bound => meet-left
+  | trunc-assoc => meet-univ (RatField.negative_<= join-left <=∘ =_<= RatField.negative-isInv) (RatField.negative_<= join-right <=∘ =_<= RatField.negative-isInv <=∘ meet-right)
+  | integral x => x
+  | integral>=0 p => rat_real_<=.1 p
+  | integral_+ => inv RealAbGroup.+-rat
+
 \class CompleteIntegrationSpace \extends IntegrationSpace, RieszLSpace, CompleteNormedAbGroup {
   | norm_+_>= {x} {y} x>=0 y>=0 => =_<= {RealAbGroup} $ inv $ pmap integral (abs-ofPos $ transport (`<= _) zro-left $ <=_+ x>=0 y>=0) *> integral_+ *> pmap2 (RealAbGroup.+) (pmap integral $ inv $ abs-ofPos x>=0) (pmap integral $ inv $ abs-ofPos y>=0)
 
@@ -95,6 +111,23 @@
     => \lam xl => equalizer-closed (trunc-metric ContMap.∘ +-cont ContMap.∘ ProductTopSpace.tuple ContMap.id ContMap.id) ContMap.id
         \lam Vo Vx => TruncP.map (xl Vo Vx) \lam s => (s.1, s.2, s.3)
 }
+
+\instance RealIntegrationSpace : CompleteIntegrationSpace Real
+  | PosetAbGroup => RealAbGroup
+  | join => RealAbGroup.join
+  | join-left => join-left
+  | join-right => join-right
+  | join-univ => join-univ
+  | isDivisible a {n} n/=0 => inP (RatField.finv n RealField.* a, inv RealField.natCoef_*_*n *> inv RealField.*-assoc *> pmap (RealField.* a) (pmap (RealField.* _) (inv RealField.coefMap_natCoef) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 n/=0)) *> RealField.ide-left)
+  | trunc x => x ∧ 1
+  | trunc_zro>=0 => meet-univ <=-refl (RealAbGroup.<=-less RealAbGroup.zro<ide)
+  | trunc-bound => meet-left
+  | trunc-assoc => meet-univ (RealAbGroup.negative_<= join-left <=∘ =_<= RealAbGroup.negative-isInv) (RealAbGroup.negative_<= join-right <=∘ =_<= RealAbGroup.negative-isInv <=∘ meet-right)
+  | integral x => x
+  | integral>=0 p => p
+  | integral_+ => idp
+  | norm-ext => RealNormed.norm-ext
+  | isStronglyComplete => RealNormed.isStronglyComplete
 
 \instance IntegrationSpaceCompletion (X : IntegrationSpace) : CompleteIntegrationSpace
   | IntegrationSpace => integration

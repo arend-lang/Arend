@@ -1,0 +1,42 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Analysis.Integral.IntegrationSpace
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Data.Array.EPerm
+\import Function.Meta
+\import Logic
+\import Paths
+\import Relation.Equivalence \hiding (~)
+\import Topology.NormedRing
+\open SFunc
+
+\instance SFuncIntegrationSpace (B : MeasureRing) : IntegrationSpace (SFunc RealAbGroup B)
+  | TruncRieszSpace => SFuncTruncRieszSpace RealIntegrationSpace B
+  | integral (f : SFunc RealAbGroup B) : Real \with {
+    | in~ f => sum f
+    | ~-equiv f g r => sum_~ r
+  }
+  | integral>=0 {a} => \case \elim a \with {
+    | in~ l => \lam (inP (d,dp,d>=0)) => transportInv (_ RealAbGroup.<=) (pmap integral (inv (AddGroup.minus_zro {_} {inSF l}) *> dp)) $
+        RealAbGroup.BigSum_>=0 {map (\lam s => s.1 * meas s.2) d} \lam j => RealField.<=_*-positive (d>=0 j) meas>=0
+  }
+  | integral_+ {a} {b} => \case \elim a, \elim b \with {
+    | in~ l, in~ l' => pmap RealAbGroup.BigSum (map_++ (\lam s => s.1 * meas s.2)) *> RealAbGroup.BigSum_++
+  }
+  \where {
+    \func sum (l : Array (\Sigma Real B)) : Real
+      => RealAbGroup.BigSum $ map (\lam s => s.1 * meas s.2) l
+
+    \lemma sum_~ {l l' : Array (\Sigma Real B)} (r : l ~ l') : sum l = sum l' \elim r
+      | ~-perm e => RealAbGroup.BigSum_EPerm (EPerm.EPerm_map (\lam (s : \Sigma Real B) => s.1 * meas s.2) e)
+      | ~-sym r => inv (sum_~ r)
+      | ~-trans r r' => sum_~ r *> sum_~ r'
+      | ~-zro-left idp => pmap (+ _) RealField.zro_*-left *> RealAbGroup.zro-left
+      | ~-zro-right idp => pmap (\lam x => _ * x + _) meas_zro *> pmap (+ _) RealField.zro_*-right *> RealAbGroup.zro-left
+      | ~-+-left idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.rdistr)
+      | ~-+-right {_} {v} idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.ldistr *> pmap (v *) (inv meas-modular) *> RealField.ldistr) *> RealAbGroup.+-assoc
+  }

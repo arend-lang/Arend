@@ -1,10 +1,10 @@
-\import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
 \import Algebra.Ring.Boolean
@@ -740,4 +740,37 @@
             | _, byRight r => byRight r
           })
         })
+  }
+
+\instance SFuncTruncRieszSpace (V : TruncRieszSpace) (B : BooleanRing) : TruncRieszSpace (SFunc V B)
+  | RieszSpace => SFuncRieszSpace V B
+  | trunc (f : SFunc V B) : SFunc V B \with {
+    | in~ f => inSF $ map (\lam s => (V.trunc s.1, s.2)) (reduce f)
+    | ~-equiv f g r => ~-sfequiv $ apply-left reduce_IsReduced reduce_IsReduced (~-trans reduce_~ $ ~-trans r $ ~-sym reduce_~) V.trunc V.trunc_zro
+  }
+  | trunc_zro>=0 => <=-refl
+  | trunc-bound {a} => \case \elim a \with {
+    | in~ l => transport (_ <=) (~-sfequiv reduce_~) $ (<=-common-char {_} {_} {map __.2 (reduce l)} reduce_IsReduced {map (\lam s => V.trunc s.1) (reduce l)} {map __.1 (reduce l)}).2 \lam j => byLeft V.trunc-bound
+  }
+  | trunc-assoc {a} {b} => \case \elim a, \elim b \with {
+    | in~ la, in~ lb => trunc-assoc-helper meet-left (meet-right {_} {inSF la})
+  }
+  \where {
+    \lemma trunc-reduced {l : Array (\Sigma V B)} (lr : IsReduced l) : trunc (inSF l) = inSF (map (\lam s => (V.trunc s.1, s.2)) l)
+      => ~-sfequiv $ apply-left reduce_IsReduced lr reduce_~ V.trunc V.trunc_zro
+
+    \lemma trunc-assoc-helper {h : SFunc V B} {la lb : Array (\Sigma V B)} (h<=a : h <= inSF la) (h<=tb : h <= trunc (inSF lb)) : h <= trunc (inSF la) \elim h
+      | in~ lh => \case ~-common (lh :: la :: lb :: nil) \with {
+        | inP (bs,bsr,vss,vssp) =>
+          \have | eh => ~-sfequiv (vssp 0)
+                | ta => pmap trunc (~-sfequiv (vssp 1)) *> trunc-reduced (later bsr)
+                | tb => pmap trunc (~-sfequiv (vssp 2)) *> trunc-reduced (later bsr)
+                | p => (<=-common-char bsr {vss 0} {vss 1}).1 (transport2 (<=) eh (~-sfequiv (vssp 1)) h<=a)
+                | q => (<=-common-char bsr {vss 0} {map V.trunc (vss 2)}).1 (transport2 (<=) eh tb h<=tb)
+          \in transport2 (<=) (inv eh) (inv ta) $ (<=-common-char bsr {vss 0} {map V.trunc (vss 1)}).2 \lam j => \case p j, q j \with {
+            | byLeft p, byLeft q => byLeft $ V.meet-univ p q <=∘ V.trunc-assoc
+            | byRight r, _ => byRight r
+            | _, byRight r => byRight r
+          }
+      }
   }
