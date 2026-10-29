@@ -10,7 +10,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -102,3 +101,39 @@
   => \lam {G} G<=F => \case (cauchyFilter-metric-char {X} {G}).1 G.isCauchyFilter eps>0 \with {
        | inP (x, Gb) => filter-mono Gb (h x (G<=F Gb))
      }
+
+-- | A complete space with a real-valued metric is strongly complete.
+\lemma metric-stronglyComplete {X : PseudoMetricSpace} (Xc : IsCompleteCoverSpace X) : IsStronglyCompleteCoverSpace X
+  => \lam F => \case Xc (regCF (ballFilter F)) \with {
+    | inP (z,p) => inP (z, \lam zU => \case regCF_<= (p zU) \with {
+      | inP (eps,eps>0,x,Fx,q) => filter-mono Fx \lam d => q $ U-closed d linarith
+    })
+  }
+  \where {
+    \func ballSetFilter (F : WeaklyCauchyFilter X) : SetFilter X \cowith
+      | F U => ∃ (eps : Rat) (0 < eps) (x : X) (F (OBall eps x)) (OBall (eps + eps) x ⊆ U)
+      | filter-mono (inP (eps,eps>0,x,Fx,q)) d => inP (eps, eps>0, x, Fx, q <=∘ d)
+      | filter-top => \case (cauchyFilter-metric-char {X} {F}).1 F.isCauchyFilter RatField.zro<ide \with {
+        | inP (x,Fx) => inP (1, RatField.zro<ide, x, Fx, \lam _ => ())
+      }
+      | filter-meet (inP (e1,e1>0,x1,F1,q1)) (inP (e2,e2>0,x2,F2,q2)) =>
+        \have | m<=e1 : e1 ∧ e2 <= e1 => meet-left
+              | m<=e2 : e1 ∧ e2 <= e2 => meet-right
+              | m>0 : 0 < e1 ∧ e2 => <_meet-univ e1>0 e2>0
+        \in \case (cauchyFilter-metric-char {X} {F}).1 F.isCauchyFilter {(e1 ∧ e2) * ratio 1 4} linarith \with {
+          | inP (x,Fx) => inP ((e1 ∧ e2) * ratio 1 4, linarith, x, Fx, \lam d => (q1 $ near linarith Fx F1 d linarith, q2 $ near linarith Fx F2 d linarith))
+        }
+
+    \func ballFilter (F : WeaklyCauchyFilter X) : CauchyFilter X \cowith
+      | SetFilter => ballSetFilter F
+      | isProper (inP (eps,eps>0,x,Fx,q)) => inP (x, q $ OBall-center linarith)
+      | isCauchyFilter => (cauchyFilter-metric-char {X} {ballSetFilter F}).2 \lam {eps} eps>0 => \case (cauchyFilter-metric-char {X} {F}).1 F.isCauchyFilter {eps * ratio 1 4} linarith \with {
+        | inP (x,Fx) => inP (x, later $ inP (eps * ratio 1 4, linarith, x, Fx, \lam d => U-closed d linarith))
+      }
+
+    \lemma near {F : WeaklyCauchyFilter X} {e e' : Rat} {x x' y : X} (e>0 : 0 < e) (Fx : F (OBall e x)) (Fx' : F (OBall e' x')) (xy<2e : (dist x y).U (e + e)) (e<=e' : e + e + e + e <= e') : (dist x' y).U (e' + e')
+      => \case RealAbGroup.<-comparison (X.dist x' x) {e + e'} {e + e' + e} (rat_real_<.1 linarith) \with {
+        | byLeft p => absurd $ F.isWeaklyProper $ filter-mono (filter-meet Fx Fx') \lam {w} s => absurd $ <-irreflexive $ p <∘ real_<_U.2 (X.halving-right s.2 s.1 linarith)
+        | byRight p => X.halving (real_<_U.1 p) xy<2e linarith
+      }
+  }

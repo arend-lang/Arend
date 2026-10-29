@@ -1,9 +1,8 @@
+\import Arith.Real
 \import Arith.Real.UpperReal
 \import Arith.Real.UpperRealLattice
 \import Function.Meta
 \import Logic
-\import Meta
-\import Order.Lattice
 \import Paths
 \import Topology.BanachSpace
 \import Topology.MetricSpace
@@ -18,8 +17,8 @@
 
 \class BanachLattice \extends ExPseudoNormedRieszSpace, RealBanachSpace
 
-\class RieszLSpace \extends BanachLattice
-  | norm_+_>= {x y : E} : 0 <= x -> 0 <= y -> norm x ExUpperReal.+ norm y ExUpperReal.<= norm (x + y)
+\class RieszLSpace \extends BanachLattice, PseudoNormedAbGroup
+  | norm_+_>= {x y : E} : 0 <= x -> 0 <= y -> norm x RealAbGroup.+ norm y RealAbGroup.<= norm (x + y)
 
 \class RieszMSpace \extends BanachLattice
   | norm_join {x y : E} : 0 <= x -> 0 <= y -> norm (x ∨ y) ExUpperReal.<= norm x ExUpperRealLattice.∨ norm y

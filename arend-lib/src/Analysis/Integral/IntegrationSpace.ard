@@ -1,0 +1,205 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered.TruncRieszSpace
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachLattice
+\import Topology.BanachSpace
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace.ExComplete(ExMetricCompletion)
+\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Complete
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Complete
+\import Topology.MetricSpace.UpperReal
+
+\class IntegrationSpace \extends TruncRieszSpace, PseudoNormedAbGroup, ExPseudoNormedRieszSpace, RealPreBanachSpace {
+  | integral : E -> Real
+  | integral>=0 {a : E} : 0 <= a -> RealAbGroup.zro RealAbGroup.<= integral a
+  | integral_+ {a b : E} : integral (a + b) = integral a RealAbGroup.+ integral b
+  | norm a => integral (abs a)
+  | norm_zro => pmap integral abs_zro *> pmap (\lam x => x)
+    (RealAbGroup.cancel-left (integral 0) (inv integral_+ *> pmap integral zro-right *> inv RealAbGroup.zro-right))
+  | norm_negative => pmap integral abs_negative
+  | norm_+ {x} {y} => transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper $ Real.<=-upper.1 $
+      transport2 (RealAbGroup.<=) RealAbGroup.zro-right
+        (inv integral_+ *> pmap integral (simplify : abs (x + y) + (abs x + abs y - abs (x + y)) = abs x + abs y) *> integral_+)
+        (RealAbGroup.<=_+ RealAbGroup.<=-refl $ integral>=0 $ to>=0 abs_+)
+  | norm_<= {x} {y} |x|<=|y| => Real.<=-upper.1 $ transport2 (RealAbGroup.<=) RealAbGroup.zro-right
+      (inv integral_+ *> pmap integral (simplify : abs x + (abs y - abs x) = abs y))
+      (RealAbGroup.<=_+ RealAbGroup.<=-refl $ integral>=0 $ to>=0 |x|<=|y|)
+  | norm-double {x} => transport (ExUpperRealAbMonoid.<= _) RealAbGroup.+-upper $ Real.<=-upper.1 $ =_<= {RealAbGroup} $
+      inv integral_+ *> pmap integral (inv $ pmap abs (pmap (+ x) (inv zro-left)) *> inv (abs_*n {_} {2}) *> pmap (+ _) zro-left)
+
+  \func integral-hom : AddGroupHom \this RealAbGroup integral \cowith
+    | func-+ => integral_+
+
+  \lemma integral-mono {a b : E} (a<=b : a <= b) : integral a RealAbGroup.<= integral b
+    => transport2 (RealAbGroup.<=) RealAbGroup.zro-right
+        (inv integral_+ *> pmap integral (simplify : a + (b - a) = b))
+        (RealAbGroup.<=_+ RealAbGroup.<=-refl $ integral>=0 $ to>=0 a<=b)
+
+  \lemma integral_abs {a : E} : RealAbGroup.abs (integral a) RealAbGroup.<= integral (abs a)
+    => RealAbGroup.join-univ (integral-mono abs>=id) $ transport (RealAbGroup.<= _) integral-hom.func-negative $ integral-mono abs>=neg
+
+  \lemma integral-metric : NormedAbGroupMap \this RealNormed integral \cowith
+    | func-+ => integral_+
+    | func-norm => Real.<=-upper.1 integral_abs
+
+  \lemma trunc-metric : MetricMap \this \this trunc \cowith
+    | func-dist => rewrite (norm-dist, norm-dist) $ Real.<=-upper.1 $ integral-mono trunc-lipschitz
+}
+
+\class CompleteIntegrationSpace \extends IntegrationSpace, RieszLSpace, CompleteNormedAbGroup
+  | norm_+_>= {x} {y} x>=0 y>=0 => =_<= {RealAbGroup} $ inv $ pmap integral (abs-ofPos $ transport (`<= _) zro-left $ <=_+ x>=0 y>=0) *> integral_+ *> pmap2 (RealAbGroup.+) (pmap integral $ inv $ abs-ofPos x>=0) (pmap integral $ inv $ abs-ofPos y>=0)
+
+\instance IntegrationSpaceCompletion (X : IntegrationSpace) : CompleteIntegrationSpace
+  | IntegrationSpace => integration
+  | norm-ext p => (ExNormedAbGroupCompletion X).norm-ext (norm-eq *> p)
+  | isStronglyComplete => metric-stronglyComplete {integration} (Completion X).isComplete
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+
+    \type \infix 4 <= (F G : RegularCauchyFilter X) => join-func F G = G
+
+    \func integration : IntegrationSpace (RegularCauchyFilter X) \cowith
+      | TopAbGroup => TopAbGroupCompletion X
+      | isDivisible a {n} n/=0 => inP (lift1 (X.*q-right-uniform {RatField.finv n}) a, inv *n-cover-char *> unique1 (*n-cover n ∘ lift1 X.*q-right-uniform) id
+          \lam x => pmap (*n-cover n) lift1-char *> *n-cover-point *> pmap pointCF (inv X.*q_*n *> inv X.*q-assoc *> pmap (\lam q => q X.*q x) (RatField.finv-right $ natRat/=0 n/=0) *> X.ide_*q))
+      | <= => <=
+      | <=-refl => join-idemp
+      | <=-transitive => <=-trans
+      | <=-antisymmetric p q => inv q *> join-comm *> p
+      | <=_+ p q => <=-trans (join-+-right *> pmap (+-func __ _) p) (join-+-left *> pmap (+-func _) q)
+      | join => join-func
+      | join-left => inv join-assoc *> pmap (join-func __ _) join-idemp
+      | join-right {F} {G} => inv join-assoc *> pmap (join-func __ _) join-comm *> join-assoc *> pmap (join-func F) join-idemp
+      | join-univ p q => join-assoc *> pmap (join-func _) q *> p
+      | trunc => trunc-cover
+      | trunc_zro>=0 => pmap (join-func _) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc_zro>=0) *> inv trunc-char
+      | trunc-bound => unique1 (join-cover ∘ tuple trunc-cover id) id
+          \lam x => pmap (join-func __ _) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc-bound)
+      | trunc-assoc => unique2 (join-cover ∘ tuple (meet-cover ∘ prod id trunc-cover) (trunc-cover ∘ proj1)) (trunc-cover ∘ proj1)
+          \lam x y => pmap2 join-func (pmap (meet-func _) trunc-char *> meet-char) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc-assoc) *> inv trunc-char
+      | integral => integral-cover
+      | integral>=0 {F} p => transport (RealAbGroup.zro RealAbGroup.<=) (pmap integral-cover p) $ transport (RealAbGroup.zro RealAbGroup.<=) (integral-abs-pos (join-cover ∘ tuple (const (pointCF X.zro)) id) (\lam x => transportInv (RealAbGroup.zro RealAbGroup.<=) (pmap integral-cover join-char *> integral-char) (X.integral>=0 join-left)) {F}) RealAbGroup.abs>=0
+      | integral_+ {F} {G} => dense-lift-unique (prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1)
+          (integral-cover ∘ +-cover) (RealNormed.+-cont ContMap.∘ prod integral-cover integral-cover) (\lam s => pmap integral-cover +-char *> integral-char *> X.integral_+ *> inv (pmap2 (RealAbGroup.+) integral-char integral-char)) (F,G)
+      | dist-uniform {C} => transport (\lam (d : RegularCauchyFilter X -> RegularCauchyFilter X -> ExUpperReal) => isUniform {UniformCompletion X} C <-> ∃ (eps : Rat) (0 RatField.< eps) ∀ x ∃ (U : C) ∀ {y} ((d x y).U eps -> U y)) {(ExMetricCompletion X).dist}
+          (ext \lam F G => norm-dist {ExNormedAbGroupCompletion X} *> norm-eq) ((ExMetricCompletion X).dist-uniform {C})
+
+    \sfunc join-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+      => lift2 X.join-uniform
+
+    \func join-func (F G : RegularCauchyFilter X) => join-cover (F,G)
+
+    \lemma join-char {x y : X} : join-cover (pointCF x, pointCF y) = pointCF (x ∨ y)
+      => rewrite (\peval join-cover) lift2-char
+
+    \func meet-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+      => negative-cover ∘ join-cover ∘ prod negative-cover negative-cover
+
+    \func meet-func (F G : RegularCauchyFilter X) => meet-cover (F,G)
+
+    \lemma meet-char {x y : X} : meet-func (pointCF x) (pointCF y) = pointCF (x ∧ y)
+      => pmap negative-cover (pmap2 join-func negative-char negative-char *> join-char) *> negative-char
+
+    \func abs-cover : CoverMap (Completion X) (Completion X)
+      => join-cover ∘ tuple id negative-cover
+
+    \lemma abs-char {x : X} : abs-cover (pointCF x) = pointCF (X.abs x)
+      => pmap (join-func _) negative-char *> join-char
+
+    \sfunc trunc-cover : CoverMap (Completion X) (Completion X)
+      => lift1 X.trunc-metric
+
+    \lemma trunc-char {x : X} : trunc-cover (pointCF x) = pointCF (X.trunc x)
+      => rewrite (\peval trunc-cover) lift1-char
+
+    \sfunc integral-cover : CoverMap (Completion X) RealNormed
+      => dense-lift completion completion.isDenseEmbedding X.integral-metric
+
+    \lemma integral-char {x : X} : integral-cover (pointCF x) = X.integral x
+      => rewrite (\peval integral-cover) (dense-lift-char completion.isDenseEmbedding x)
+
+    \func *n-cover (n : Nat) : CoverMap (Completion X) (Completion X) \elim n
+      | 0 => const (pointCF X.zro)
+      | suc n => +-cover ∘ tuple (*n-cover n) id
+
+    \lemma *n-cover-char {n : Nat} {F : RegularCauchyFilter X} : *n-cover n F = n AddMonoid.*n {TopAbGroupCompletion X} F \elim n
+      | 0 => idp
+      | suc n => pmap (+-func __ F) *n-cover-char
+
+    \lemma *n-cover-point {n : Nat} {x : X} : *n-cover n (pointCF x) = pointCF (n X.*n x) \elim n
+      | 0 => idp
+      | suc n => pmap (+-func __ _) *n-cover-point *> +-char
+
+    \lemma join-idemp {F : RegularCauchyFilter X} : join-func F F = F
+      => unique1 (join-cover ∘ tuple id id) id \lam x => join-char *> pmap pointCF X.join-idemp
+
+    \lemma join-comm {F G : RegularCauchyFilter X} : join-func F G = join-func G F
+      => unique2 join-cover (join-cover ∘ tuple proj2 proj1) \lam x y => join-char *> pmap pointCF X.join-comm *> inv join-char
+
+    \lemma join-assoc {F G H : RegularCauchyFilter X} : join-func (join-func F G) H = join-func F (join-func G H)
+      => unique3 (join-cover ∘ prod join-cover id) (join-cover ∘ tuple (proj1 ∘ proj1) (join-cover ∘ prod proj2 id))
+          \lam x y z => pmap (join-func __ _) join-char *> join-char *> pmap pointCF X.join-assoc *> inv (pmap (join-func _) join-char *> join-char)
+
+    \lemma join-+-left {F G H : RegularCauchyFilter X} : join-func (+-func F G) (+-func F H) = +-func F (join-func G H)
+      => unique3 (join-cover ∘ tuple (+-cover ∘ proj1) (+-cover ∘ tuple (proj1 ∘ proj1) proj2)) (+-cover ∘ tuple (proj1 ∘ proj1) (join-cover ∘ prod proj2 id))
+          \lam x y z => pmap2 join-func +-char +-char *> join-char *> pmap pointCF (inv X.join_+-left) *> inv (pmap (+-func _) join-char *> +-char)
+
+    \lemma join-+-right {F G H : RegularCauchyFilter X} : join-func (+-func F H) (+-func G H) = +-func (join-func F G) H
+      => unique3 (join-cover ∘ tuple (+-cover ∘ tuple (proj1 ∘ proj1) proj2) (+-cover ∘ tuple (proj2 ∘ proj1) proj2)) (+-cover ∘ prod join-cover id)
+          \lam x y z => pmap2 join-func +-char +-char *> join-char *> pmap pointCF (inv X.join_+-right) *> inv (pmap (+-func __ _) join-char *> +-char)
+
+    \lemma <=-trans {F G H : RegularCauchyFilter X} (p : F <= G) (q : G <= H) : F <= H
+      => pmap (join-func F) (inv q) *> inv join-assoc *> pmap (join-func __ H) p *> q
+
+    \lemma integral-abs-pos (c : CoverMap (Completion X) (Completion X)) (p : \Pi (x : X) -> RealAbGroup.zro RealAbGroup.<= integral-cover (c (pointCF x))) {F : RegularCauchyFilter X}
+      : RealAbGroup.abs (integral-cover (c F)) = integral-cover (c F)
+      => dense-lift-unique completion completion.isDenseEmbedding.1 (lnorm-metric {RealNormed} ∘ integral-cover ∘ c) (integral-cover ∘ c) (\lam x => RealAbGroup.abs-ofPos (p x)) F
+
+    \lemma norm-eq {F : RegularCauchyFilter X} : (ExNormedAbGroupCompletion X).norm F = {ExUpperReal} integral-cover (abs-cover F)
+      => completion-lift-unique {X} {ExUpperRealMetric} (norm-metric-map {ExNormedAbGroupCompletion X}) (norm-metric-map {RealNormed} ∘ integral-cover ∘ abs-cover)
+          (\lam x => completion-exNormed-isometry.func-norm-isometry *> Real.=-upper.1 (inv $ pmap (\lam z => RealAbGroup.abs (integral-cover z)) abs-char *> pmap RealAbGroup.abs integral-char *> RealAbGroup.abs-ofPos (X.integral>=0 X.abs>=0))) F
+        *> Real.=-upper.1 (integral-abs-pos abs-cover \lam x => transportInv (RealAbGroup.zro RealAbGroup.<=) (pmap integral-cover abs-char *> integral-char) (X.integral>=0 X.abs>=0))
+  }
+
+\func integrationCompletion {X : IntegrationSpace} : NormedIsometricMap X (IntegrationSpaceCompletion X) \cowith
+  | UniformMap => uniform-completion
+  | func-+ => inv TopAbGroupCompletion.+-char
+  | func-norm-isometry => Real.=-upper.1 $ pmap IntegrationSpaceCompletion.integral-cover IntegrationSpaceCompletion.abs-char *> IntegrationSpaceCompletion.integral-char
+  \where {
+    \lemma func-join {x y : X} : integrationCompletion (x ∨ y) = integrationCompletion x ∨ integrationCompletion y
+      => inv IntegrationSpaceCompletion.join-char
+
+    \lemma func-trunc {x : X} : integrationCompletion (X.trunc x) = trunc (integrationCompletion x)
+      => inv IntegrationSpaceCompletion.trunc-char
+
+    \lemma func-integral {x : X} : integral (integrationCompletion x) = X.integral x
+      => IntegrationSpaceCompletion.integral-char
+
+    \lemma func-<= {x y : X} (x<=y : x <= y) : integrationCompletion x <= integrationCompletion y
+      => IntegrationSpaceCompletion.join-char *> pmap pointCF (X.join_<= x<=y)
+  }
