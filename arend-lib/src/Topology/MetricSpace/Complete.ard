@@ -102,6 +102,22 @@
        | inP (x, Gb) => filter-mono Gb (h x (G<=F Gb))
      }
 
+-- | A space with an isometric map into a complete space with closed image is complete.
+\lemma isometric-closed-complete {X : PseudoMetricSpace} {Y : CompleteMetricSpace} (f : IsometricMap X Y)
+                                 (fc : Y.IsClosed \lam y => ∃ (x : X) (f x = y)) : IsCompleteCoverSpace X
+  => \lam F =>
+      \have G => f.func-cauchy F
+      \in \case fc {Y.filter-point G} (\lam Vo Vy => \case (Y.filter-point-char {G}).1 $ Y.open-char.1 Vo Vy \with {
+        | inP (W,W<=<V,GW) => \case isProper GW \with {
+          | inP (x,Wfx) => inP (f x, inP (x, idp), <=<_<= W<=<V Wfx)
+        }
+      }) \with {
+        | inP (x,p) => inP (x, \lam x<=<U => \case <=<-ball x<=<U \with {
+          | inP (eps,eps>0,h) => filter-mono (Y.filter-point-sub {G} $ rewriteI p $ OBall-center_<=< eps>0)
+            \lam d => h $ transport (\lam d => ExUpperReal.U {d} eps) func-isometry d
+        })
+      }
+
 -- | A complete space with a real-valued metric is strongly complete.
 \lemma metric-stronglyComplete {X : PseudoMetricSpace} (Xc : IsCompleteCoverSpace X) : IsStronglyCompleteCoverSpace X
   => \lam F => \case Xc (regCF (ballFilter F)) \with {

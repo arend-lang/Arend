@@ -266,11 +266,18 @@
   \type AreDisjoint (x y : E) : \Prop
     => abs x ∧ abs y = 0
 
+  \lemma pos-disjoint {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (d : x ∧ y = 0) : AreDisjoint x y
+    => pmap2 (∧) (abs-ofPos x>=0) (abs-ofPos y>=0) *> d
+
   \lemma disjoint_join>=0 {x y : E} (d : AreDisjoint x y) : 0 <= x ∨ y
     => negative-to>=0 $ =_<= join_negative <=∘ meet-monotone abs>=neg abs>=neg <=∘ =_<= d
 
   \lemma disjoint_+_join {x y : E} (d : AreDisjoint x y) : x + y <= x ∨ y
     => =_<= modularity <=∘ <=_+ <=-refl (meet-monotone abs>=id abs>=id <=∘ =_<= d) <=∘ =_<= zro-right
+
+  \lemma disjoint_pos_+_join {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (d : x ∧ y = 0) : x + y = x ∨ y
+    => <=-antisymmetric (disjoint_+_join (pos-disjoint x>=0 y>=0 d)) $
+        join-univ (=_<= (inv zro-right) <=∘ <=_+ <=-refl y>=0) (=_<= (inv zro-left) <=∘ <=_+ x>=0 <=-refl)
 
   \lemma disjoint_abs_+-left {x y : E} (d : AreDisjoint x y) : abs x <= abs (x + y)
     => \have | rev : abs x - abs y <= abs (x + y) => transport2 (\lam a b => abs x - a <= abs b) abs_negative (pmap (x +) negative-isInv) abs_-left

@@ -1,7 +1,6 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Operations
 \import Order.Directed
 \import Order.Lattice
@@ -113,3 +112,6 @@
           | inP (z,(Uz,Vz)) => inP ((z,z), idp, h Uz Vz)
         }
       })
+
+\lemma equalizer-closed {X : TopSpace} {Y : HausdorffTopSpace} (f g : ContMap X Y) : X.IsClosed \lam x => f x = g x
+  => cont-closed (ProductTopSpace.tuple f g) (hausdorff-char.1 Y.isHausdorff)

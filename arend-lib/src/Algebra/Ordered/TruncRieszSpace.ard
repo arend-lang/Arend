@@ -141,5 +141,15 @@
 
       \lemma meet-swap {a b c : E} : c ∧ a + c ∧ b - (c ∧ (a ∧ b) + c ∧ (a ∧ b)) = a ∧ c + b ∧ c - (a ∧ (b ∧ c) + a ∧ (b ∧ c))
         => pmap2 (\lam u v => u + v - (c ∧ (a ∧ b) + c ∧ (a ∧ b))) meet-comm meet-comm *> pmap (\lam w => a ∧ c + b ∧ c - (w + w)) (meet-comm *> meet-assoc)
+
+      \lemma join-char {a b : \Sigma (x : E) (IsBoolean x)} : (a BoolRing.∨ b).1 = a.1 ∨ b.1
+        => \have m=0 : (a.1 ∧ b.1) ∧ abs (a.1 - b.1) = 0
+                => meet-formula (meet-univ (IsBoolean>=0 a.2) (IsBoolean>=0 b.2)) a.2 b.2
+                  *> pmap2 (\lam u v => u + v - ((a.1 ∧ b.1) ∧ (a.1 ∧ b.1) + (a.1 ∧ b.1) ∧ (a.1 ∧ b.1)))
+                           (<=-antisymmetric meet-left (meet-univ <=-refl meet-left))
+                           (<=-antisymmetric meet-left (meet-univ <=-refl meet-right))
+                  *> pmap (\lam w => a.1 ∧ b.1 + a.1 ∧ b.1 - (w + w)) meet-idemp *> negative-right
+           \in abs-formula *> pmap (\lam w => abs (a.1 - b.1) + a.1 ∧ b.1 - (w + w)) (meet-comm *> m=0)
+              *> pmap (\lam u => u + a.1 ∧ b.1 - (0 + 0)) (abs-formula *> pmap (\lam v => v - (a.1 ∧ b.1 + a.1 ∧ b.1)) modularity) *> equation.abGroup
     }
 }
