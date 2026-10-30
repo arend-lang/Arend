@@ -1,17 +1,23 @@
 package org.arend.server;
 
 import org.arend.naming.NameResolverTestCase;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.Scope;
 import org.arend.server.impl.DefinitionData;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.Assert.*;
 
 /**
  * {@link ArendServer#getReferableScope} returns null for definitions that plainly exist, once the
- * server has seen a module more than once. Every test here fails on staging; each is one shape.
+ * server has seen a module more than once. The first four tests reproduce this, one shape each;
+ * their names and comments describe the failure as it was.
  *
  * <p>The server is the one {@link org.arend.ArendTestCase} creates, and it outlives both passes --
  * which is the whole condition. A process that parses each module once never reaches any of this,
@@ -23,6 +29,10 @@ import static org.junit.Assert.assertNotNull;
  * {@code ArendCheckerImpl} already treats a recreated referable as ordinary. But
  * {@code getReferableScope} matches ancestors by object identity, so it walks the group looking
  * for a referable that is not in it, and gives up.
+ *
+ * <p>Fix: {@code GroupData.updateGroup} reuses every top-level subtree either entirely or not at
+ * all, so the parent of every referable in the group is the referable of its enclosing group. The
+ * remaining tests pin which referables are reused.
  */
 public class ReferableScopeReproducerTest extends NameResolverTestCase {
   private static final String TWO_MEMBERS =
@@ -90,6 +100,79 @@ public class ReferableScopeReproducerTest extends NameResolverTestCase {
     for (DefinitionData data : server.getResolvedDefinitions(MODULE)) {
       Scope scope = server.getReferableScope(data.definition().getData());
       CachingScope.make(scope);
+    }
+  }
+
+  /** Re-parsing the same text reuses a {@code \module} block together with its members. */
+  @Test
+  public void identicalReparseReusesModuleMembers() {
+    resolveNamesModule(TWO_MEMBERS);
+    TCDefReferable f = get("M.f"), g = get("M.g");
+    incModification();
+    resolveNamesModule(TWO_MEMBERS);
+
+    assertSame(f, get("M.f"));
+    assertSame(g, get("M.g"));
+    assertParentsConsistent();
+  }
+
+  /** Changing only bodies reuses the definition and its {@code \where} block. */
+  @Test
+  public void bodyEditReusesDefinition() {
+    resolveNamesModule("\\func d : Nat => 0\n  \\where \\func f : Nat => 0\n");
+    TCDefReferable d = get("d"), f = get("d.f");
+    incModification();
+    resolveNamesModule("\\func d : Nat => 1\n  \\where \\func f : Nat => 2\n");
+
+    assertSame(d, get("d"));
+    assertSame(f, get("d.f"));
+    assertParentsConsistent();
+  }
+
+  /** Removing a member of a {@code \where} block reuses the rest of it. */
+  @Test
+  public void removingFromAWhereBlockReusesTheRest() {
+    resolveNamesModule("\\func d : Nat => 0\n  \\where {\n  \\func f : Nat => 0\n  \\func g : Nat => 1\n}\n");
+    TCDefReferable d = get("d"), f = get("d.f");
+    incModification();
+    resolveNamesModule("\\func d : Nat => 0\n  \\where \\func f : Nat => 0\n");
+
+    assertSame(d, get("d"));
+    assertSame(f, get("d.f"));
+    assertParentsConsistent();
+  }
+
+  /**
+   * Adding a member to a {@code \where} block recreates the whole top-level definition, since the
+   * new member is a child of a new referable. Other top-level definitions are still reused.
+   */
+  @Test
+  public void appendingToAWhereBlockRecreatesOnlyThatDefinition() {
+    resolveNamesModule("\\func d : Nat => 0\n  \\where \\func f : Nat => 0\n\\func e : Nat => 0\n");
+    TCDefReferable d = get("d"), e = get("e");
+    incModification();
+    resolveNamesModule("\\func d : Nat => 0\n  \\where {\n  \\func f : Nat => 0\n  \\func g : Nat => 1\n}\n\\func e : Nat => 0\n");
+
+    assertNotSame(d, get("d"));
+    assertSame(e, get("e"));
+    assertParentsConsistent();
+  }
+
+  /** Every referable below the top level is a child of the referable of its enclosing group. */
+  private void assertParentsConsistent() {
+    for (ConcreteStatement statement : getGroup().statements()) {
+      if (statement.group() != null) assertParentsConsistent(statement.group());
+    }
+  }
+
+  private static void assertParentsConsistent(ConcreteGroup group) {
+    List<ConcreteGroup> subgroups = new ArrayList<>(group.dynamicGroups());
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null) subgroups.add(statement.group());
+    }
+    for (ConcreteGroup subgroup : subgroups) {
+      assertSame(subgroup.referable().getRefName(), group.referable(), subgroup.referable().getLocatedReferableParent());
+      assertParentsConsistent(subgroup);
     }
   }
 }
