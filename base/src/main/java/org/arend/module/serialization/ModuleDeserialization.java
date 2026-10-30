@@ -191,17 +191,9 @@ public class ModuleDeserialization {
         }
       }
       if (referable == null) {
-        if (referable1 instanceof TCLevelReferable) {
-          // Level-parameter referables (from \plevels/\hlevels) are LocatedReferable but not
-          // TCDefReferable.  Store them directly so that pLevelsParent/hLevelsParent can be
-          // restored during fillInDefinition.
-          myCallTargetProvider.putCallTarget(callTargetTree.getIndex(), (LocatedReferable) referable1);
-        } else {
-          throw new DeserializationException("Cannot resolve reference '" + callTargetTree.getName() + "' in " + module);
-        }
-      } else {
-        myCallTargetProvider.putCallTarget(callTargetTree.getIndex(), referable);
+        throw new DeserializationException("Cannot resolve reference '" + callTargetTree.getName() + "' in " + module);
       }
+      myCallTargetProvider.putCallTarget(callTargetTree.getIndex(), referable);
     }
 
     List<ModuleProtos.CallTargetTree> subtreeList = callTargetTree.getSubtreeList();

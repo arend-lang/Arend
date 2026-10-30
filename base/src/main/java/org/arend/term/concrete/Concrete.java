@@ -1915,24 +1915,6 @@ public final class Concrete {
     }
   }
 
-  public static class LevelsDefinition extends SourceNodeImpl {
-    private final List<TCLevelReferable> myReferables;
-
-    public LevelsDefinition(Object data, List<TCLevelReferable> referables) {
-      super(data);
-      myReferables = referables;
-    }
-
-    public @NotNull List<? extends TCLevelReferable> getReferables() {
-      return myReferables;
-    }
-
-    @Override
-    public void prettyPrint(PrettyPrintVisitor visitor, Precedence prec) {
-      visitor.prettyPrintLevelsDefinition(this);
-    }
-  }
-
   public record ExternalParameters(List<? extends Parameter> parameters, LevelParameters pLevelParameters) {}
 
   public static abstract class Definition extends ResolvableDefinition implements ConcreteDefinition {

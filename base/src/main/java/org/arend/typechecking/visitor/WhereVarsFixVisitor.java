@@ -164,7 +164,6 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
             param.getType().accept(new FindLevelVariablesVisitor(levelRefs), null);
           }
         }
-        levelRefs.removeIf(ref -> ref instanceof TCLevelReferable);
         if (!levelRefs.isEmpty()) {
           Concrete.LevelParameters pLevels = null;
           Set<TCDefReferable> pLevelsDefs = new HashSet<>();

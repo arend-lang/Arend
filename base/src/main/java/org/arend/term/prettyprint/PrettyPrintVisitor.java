@@ -2008,10 +2008,6 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     prettyPrintLevelParameters(parameters.getReferables(), printHeader);
   }
 
-  public void prettyPrintLevelsDefinition(Concrete.LevelsDefinition def) {
-    prettyPrintLevelParameters(def.getReferables(), true);
-  }
-
   static public void printArguments(PrettyPrintVisitor pp, List<Concrete.Argument> args, boolean noIndent) {
     new ListLayout<Concrete.Argument>() {
       @Override
