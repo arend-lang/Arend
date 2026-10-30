@@ -196,6 +196,10 @@ public class ArendServerImpl implements ArendServer {
   }
 
   // New event notifications
+  private void notifyImportersInvalidated(ModuleLocation module, String reason) {
+    for (ArendServerListener l : myListeners) l.onImportersInvalidated(module, reason);
+  }
+
   void notifyModuleResolved(ModuleLocation module) {
     for (ArendServerListener l : myListeners) l.onModuleResolved(module);
   }
@@ -304,15 +308,24 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  private boolean resetReverseDependencies(ModulePath module, Set<ModulePath> visited) {
+  /**
+   * Marks modules that (transitively) import {@code module}.
+   * If the interface of {@code module} changed, they have to be resolved again.
+   * Otherwise, their resolved definitions are still valid and only definitions with errors have to be rechecked.
+   */
+  private boolean resetReverseDependencies(ModulePath module, Set<ModulePath> visited, boolean interfaceChanged) {
     if (!visited.add(module)) return false;
     Set<ModuleLocation> reverseDependencies = myReverseDependencies.get(module);
     if (reverseDependencies != null) {
       for (ModuleLocation dependency : reverseDependencies) {
-        if (resetReverseDependencies(dependency.getModulePath(), visited)) {
+        if (resetReverseDependencies(dependency.getModulePath(), visited, interfaceChanged)) {
           GroupData groupData = myGroups.get(dependency);
           if (groupData != null) {
-            groupData.clearResolved();
+            if (interfaceChanged) {
+              groupData.clearResolved();
+            } else {
+              groupData.markErrorsForRecheck();
+            }
           }
         }
       }
@@ -320,11 +333,19 @@ public class ArendServerImpl implements ArendServer {
     return true;
   }
 
+  GlobalTypingInfo computeTypingInfo(ModuleLocation module, ConcreteGroup group) {
+    GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
+    new TypingInfoVisitor(typingInfo).processGroup(group, getParentGroupScope(module, group));
+    return typingInfo;
+  }
+
   @Override
   public void updateModule(long modificationStamp, @NotNull ModuleLocation moduleLocation, @NotNull Supplier<ConcreteGroup> supplier) {
     final boolean[] changed = new boolean[1];
+    final String[] difference = new String[1];
+    final GlobalTypingInfo[] prevTypingInfo = new GlobalTypingInfo[1];
     myRequester.runUnderReadLock(() -> {
-      myGroups.compute(moduleLocation, (module, prevData) -> {
+      GroupData updatedData = myGroups.compute(moduleLocation, (module, prevData) -> {
         if (prevData != null) {
           if (prevData.isReadOnly()) {
             myLogger.severe("Read-only module '" + module + "' cannot be updated");
@@ -344,10 +365,14 @@ public class ArendServerImpl implements ArendServer {
         if (prevData != null) {
           clearReverseDependencies(module, prevData.getRawGroup());
         }
-        resetReverseDependencies(module.getModulePath(), new HashSet<>());
 
         GroupData newData = new GroupData(modificationStamp, group, prevData);
         updateReferables(newData.getRawGroup(), module);
+        if (prevData != null) {
+          difference[0] = GroupData.interfaceDifference(newData.getRawGroup(), prevData.getRawGroup());
+          prevTypingInfo[0] = prevData.getTypingInfo();
+          if (difference[0] == null && prevTypingInfo[0] == null) difference[0] = "typing info was not computed";
+        }
 
         if (prevData != null) {
           myInstanceCache.removeInstances(prevData.getRawGroup());
@@ -358,9 +383,27 @@ public class ArendServerImpl implements ArendServer {
         return newData;
       });
 
+      if (changed[0]) {
+        // Importers are resolved against the namespace and the typing info of this module.
+        // If both are the same, they do not have to be resolved again.
+        if (prevTypingInfo[0] != null && difference[0] == null && updatedData != null) {
+          GlobalTypingInfo typingInfo = computeTypingInfo(moduleLocation, updatedData.getRawGroup());
+          updatedData.setTypingInfo(typingInfo);
+          difference[0] = typingInfo.difference(prevTypingInfo[0]);
+        }
+        boolean interfaceChanged = prevTypingInfo[0] == null || difference[0] != null;
+        resetReverseDependencies(moduleLocation.getModulePath(), new HashSet<>(), interfaceChanged);
+      }
+
       return null;
     });
-    if (changed[0]) notifyModuleUpdated(moduleLocation);
+    if (changed[0]) {
+      if (difference[0] != null) {
+        myLogger.info(() -> "Importers of '" + moduleLocation + "' are invalidated: " + difference[0]);
+        notifyImportersInvalidated(moduleLocation, difference[0]);
+      }
+      notifyModuleUpdated(moduleLocation);
+    }
   }
 
   private void addGeneratedName(ArendLibraryImpl library, LocatedReferable referable) {

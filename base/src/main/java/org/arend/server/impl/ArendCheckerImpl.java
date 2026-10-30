@@ -15,8 +15,6 @@ import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.CollectingResolverListener;
-import org.arend.naming.resolving.typing.GlobalTypingInfo;
-import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
@@ -75,6 +73,17 @@ public class ArendCheckerImpl implements ArendChecker {
     }
   }
 
+  private void invalidateDefinition(TCDefReferable definition) {
+    withTCDefLock(() -> {
+      Set<? extends TCDefReferable> updatedSet = myServer.getDependencyCollector().update(definition);
+      myLogger.info(() -> "Updated definitions " + updatedSet);
+      ComputationRunner.getCancellationIndicator().cancel(updatedSet);
+      for (TCDefReferable updated : updatedSet) {
+        myServer.getErrorService().resetDefinition(updated);
+      }
+    });
+  }
+
   private Map<ModuleLocation, GroupData> getDependencies(@NotNull CancellationIndicator indicator) {
     if (myDependencies == null) {
       if (myInterrupted) return null;
@@ -127,9 +136,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
           for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
             if (!entry.getValue().isTypingInfoUpToDate()) {
-              GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
-              new TypingInfoVisitor(typingInfo).processGroup(entry.getValue().getRawGroup(), myServer.getParentGroupScope(entry.getKey(), entry.getValue().getRawGroup()));
-              entry.getValue().setTypingInfo(typingInfo);
+              entry.getValue().setTypingInfo(myServer.computeTypingInfo(entry.getKey(), entry.getValue().getRawGroup()));
               myLogger.info(() -> "Header of module '" + entry.getKey() + "' is resolved");
             }
           }
@@ -265,14 +272,7 @@ public class ArendCheckerImpl implements ArendChecker {
                     update = true;
                   }
                   if (update) {
-                    withTCDefLock(() -> {
-                      Set<? extends TCDefReferable> updatedSet = myServer.getDependencyCollector().update(entry.getValue().definition().getData());
-                      myLogger.info(() -> "Updated definitions " + updatedSet);
-                      ComputationRunner.getCancellationIndicator().cancel(updatedSet);
-                      for (TCDefReferable updated : updatedSet) {
-                        myServer.getErrorService().resetDefinition(updated);
-                      }
-                    });
+                    invalidateDefinition(entry.getValue().definition().getData());
                   }
                 }
               }
@@ -280,6 +280,18 @@ public class ArendCheckerImpl implements ArendChecker {
               myServer.getInstanceCache().addInstances(groupData, myServer.getTypingInfo());
               // Notify listeners that this module has been resolved
               myServer.notifyModuleResolved(module);
+            } else if (groupData.takeErrorsRecheck()) {
+              // A module imported by this one was updated without changing its interface, so this module
+              // was not resolved again. Its definitions with typechecking errors are still rechecked since
+              // their errors may be caused by the updated module (see the comment above).
+              Collection<DefinitionData> resolvedDefinitions = groupData.getResolvedDefinitions();
+              if (resolvedDefinitions != null) {
+                for (DefinitionData data : resolvedDefinitions) {
+                  if (!myServer.getErrorService().getTypecheckingErrors(data.definition().getData()).isEmpty()) {
+                    invalidateDefinition(data.definition().getData());
+                  }
+                }
+              }
             }
           }
         }

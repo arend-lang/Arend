@@ -24,6 +24,12 @@ public interface ArendServerListener {
   /** Called when a module has been removed. */
   default void onModuleRemoved(@NotNull ModuleLocation module) {}
 
+  /**
+   * Called when a module has been updated so that the modules importing it have to be resolved again.
+   * This happens when its namespace or typing info changes.
+   */
+  default void onImportersInvalidated(@NotNull ModuleLocation module, @NotNull String reason) {}
+
   /** Called when name resolution for a module is completed and resolved definitions are committed. */
   default void onModuleResolved(@NotNull ModuleLocation module) {}
 

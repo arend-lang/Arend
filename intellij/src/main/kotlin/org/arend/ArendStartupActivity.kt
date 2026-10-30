@@ -1,5 +1,7 @@
 package org.arend
 
+import com.intellij.openapi.diagnostic.logger
+import org.arend.ext.module.ModuleLocation
 import com.intellij.codeInsight.editorActions.SelectionQuotingTypedHandler
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate
 import com.intellij.ide.AppLifecycleListener
@@ -119,6 +121,10 @@ class ArendStartupActivity : ProjectActivity {
                 }
 
                 super.onLibraryUpdated(libraryName)
+            }
+
+            override fun onImportersInvalidated(module: ModuleLocation, reason: String) {
+                logger<ArendStartupActivity>().info("Importers of $module are invalidated: $reason")
             }
         })
 

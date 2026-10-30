@@ -1,6 +1,7 @@
 package org.arend.naming.resolving.typing;
 
 import org.arend.error.DummyErrorReporter;
+import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
@@ -190,7 +191,8 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
 
   @Override
   public GlobalTypingInfo visitFunction(Concrete.BaseFunctionDefinition def, Scope scope) {
-    if (def.getBody() instanceof Concrete.TermFunctionBody body) {
+    // The body of a lemma is a proof, so it is never used as a type
+    if (def.getBody() instanceof Concrete.TermFunctionBody body && def.getKind() != FunctionKind.LEMMA) {
       AbstractBody abstractBody = resolveAbstractBody(def.getParameters(), body.getTerm(), scope, false);
       if (abstractBody != null) myTypingInfo.addReferableBody(def.getData(), abstractBody);
     } else if (def.getBody() instanceof Concrete.CoelimFunctionBody body) {

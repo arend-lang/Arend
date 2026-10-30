@@ -62,7 +62,8 @@ public class ResolutionReuseTest {
     updateModule("A", "\\import B\n\\func a : Nat => 0\n\\func c => b");
     updateModule("B", "\\import A\n\\func b : a = 0 => idp");
     server.getCheckerFor(Collections.singletonList(moduleLoc("A"))).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-    updateModule("A", "\\import B\n\\func a : Nat => 0\n\\func c => b\n");
+    // A new definition changes the interface of A, so B has to be resolved again
+    updateModule("A", "\\import B\n\\func a : Nat => 0\n\\func c => b\n\\func d => 0");
     resolved.clear();
   }
 
@@ -94,7 +95,7 @@ public class ResolutionReuseTest {
       public void beginItem(@NotNull ModuleLocation item) {
         if (!updated[0]) {
           updated[0] = true;
-          updateModule("A", "\\import B\n\\func a : Nat => 0\n\\func c => b\n\n");
+          updateModule("A", "\\import B\n\\func a : Nat => 0\n\\func c => b\n\\func d => 0\n");
         }
       }
 

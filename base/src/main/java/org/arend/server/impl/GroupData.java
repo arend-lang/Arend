@@ -9,6 +9,7 @@ import org.arend.naming.scope.Scope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -20,6 +21,7 @@ public class GroupData {
   private Map<LongName, DefinitionData> myResolvedDefinitions;
   private boolean myResolved;
   private boolean myTypingInfoUpToDate;
+  private boolean myRecheckErrors;
 
   private GroupData(long timestamp, ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
     myTimestamp = timestamp;
@@ -225,6 +227,61 @@ public class GroupData {
     return new ConcreteGroup(group.description(), oldRef, newDef, statements, dynamicGroups, externalParameters);
   }
 
+  /**
+   * Compares the namespace exported by {@code newGroup} with the one exported by {@code oldGroup}:
+   * the same names in the same order bound to the same referables.
+   * If they are the same, then modules importing this group do not have to be resolved again.
+   *
+   * @return null if the namespaces are the same, and a description of the difference otherwise.
+   */
+  public static @Nullable String interfaceDifference(ConcreteGroup newGroup, ConcreteGroup oldGroup) {
+    LocatedReferable newRef = newGroup.referable(), oldRef = oldGroup.referable();
+    if (newRef != oldRef) {
+      if (oldRef instanceof TCDefReferable || newRef instanceof TCDefReferable || newGroup.definition() != null || oldGroup.definition() != null) return "'" + newRef.getRefLongName() + "' is new or was recreated";
+      if (!newRef.getClass().equals(oldRef.getClass()) || !newRef.getRefName().equals(oldRef.getRefName()) || newRef.getAccessModifier() != oldRef.getAccessModifier()) return "'" + newRef.getRefLongName() + "' is new or was changed";
+    }
+
+    List<? extends InternalReferable> newInternal = newGroup.getInternalReferables(), oldInternal = oldGroup.getInternalReferables();
+    if (newInternal.size() != oldInternal.size()) return "constructors or fields of '" + newRef.getRefLongName() + "' were changed";
+    for (int i = 0; i < newInternal.size(); i++) {
+      if (newInternal.get(i) != oldInternal.get(i) || newInternal.get(i).isVisible() != oldInternal.get(i).isVisible()) return "'" + newInternal.get(i).getRefName() + "' in '" + newRef.getRefLongName() + "' was changed";
+    }
+
+    List<? extends ParameterReferable> newParams = newGroup.externalParameters(), oldParams = oldGroup.externalParameters();
+    if (newParams.size() != oldParams.size()) return "external parameters of '" + newRef.getRefLongName() + "' were changed";
+    for (int i = 0; i < newParams.size(); i++) {
+      if (newParams.get(i).getIndex() != oldParams.get(i).getIndex() || !Objects.equals(newParams.get(i).getOriginalReferable().getRefName(), oldParams.get(i).getOriginalReferable().getRefName())) return "external parameters of '" + newRef.getRefLongName() + "' were changed";
+    }
+
+    Iterator<? extends ConcreteStatement> newIt = newGroup.statements().iterator(), oldIt = oldGroup.statements().iterator();
+    while (true) {
+      ConcreteGroup newSubgroup = nextGroup(newIt), oldSubgroup = nextGroup(oldIt);
+      if (newSubgroup == null || oldSubgroup == null) {
+        if (newSubgroup != oldSubgroup) return "members of '" + newRef.getRefLongName() + "' were added or removed";
+        break;
+      }
+      String difference = interfaceDifference(newSubgroup, oldSubgroup);
+      if (difference != null) return difference;
+    }
+
+    List<? extends ConcreteGroup> newDynamic = newGroup.dynamicGroups(), oldDynamic = oldGroup.dynamicGroups();
+    if (newDynamic.size() != oldDynamic.size()) return "dynamic members of '" + newRef.getRefLongName() + "' were added or removed";
+    for (int i = 0; i < newDynamic.size(); i++) {
+      String difference = interfaceDifference(newDynamic.get(i), oldDynamic.get(i));
+      if (difference != null) return difference;
+    }
+
+    return null;
+  }
+
+  private static ConcreteGroup nextGroup(Iterator<? extends ConcreteStatement> it) {
+    while (it.hasNext()) {
+      ConcreteGroup group = it.next().group();
+      if (group != null) return group;
+    }
+    return null;
+  }
+
   private static void replaceCoClauseFunctionReference(Concrete.CoClauseFunctionReference coclauseRef, Map<TCDefReferable, TCDefReferable> coclauseMap) {
     TCDefReferable newRef = coclauseMap.get(coclauseRef.functionReference);
     if (newRef != null) coclauseRef.functionReference = newRef;
@@ -290,10 +347,25 @@ public class GroupData {
   public void updateResolvedDefinitions(Map<LongName, DefinitionData> definitions) {
     myResolvedDefinitions = definitions;
     myResolved = true;
+    myRecheckErrors = false;
   }
 
   public void clearResolved() {
     myResolved = false;
     myTypingInfoUpToDate = false;
+  }
+
+  /**
+   * Marks that a module imported by this one was changed without changing its interface.
+   * The resolved definitions of this module are still valid, but its errors might be caused by the change.
+   */
+  public void markErrorsForRecheck() {
+    myRecheckErrors = true;
+  }
+
+  public boolean takeErrorsRecheck() {
+    boolean result = myRecheckErrors;
+    myRecheckErrors = false;
+    return result;
   }
 }
