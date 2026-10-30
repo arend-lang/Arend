@@ -1,4 +1,5 @@
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
@@ -10,6 +11,7 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
+\import Order.Lattice
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -75,4 +77,27 @@
       \protected \sfunc join (a b : A) : A
         => ratio 1 2 A.*q (a + b + (getAbs (a - b)).1)
     }
+}
+
+\record RieszSpaceHom \extends AddGroupHom, PosetHom {
+  \override Dom : RieszSpace
+  \override Cod : RieszSpace
+
+  | func-join>= {x y : Dom} : func (x ∨ y) <= func x ∨ func y
+
+  \lemma func-join {x y : Dom} : func (x ∨ y) = func x ∨ func y
+    => <=-antisymmetric func-join>= (join-univ (func-<= join-left) (func-<= join-right))
+
+  \lemma func-abs {x : Dom} : func (LatticeAbGroup.abs x) = LatticeAbGroup.abs (func x)
+    => func-join *> pmap (func x ∨) func-negative
+} \where {
+  \func id {X : RieszSpace} : RieszSpaceHom X X \cowith
+    | AddGroupHom => AddGroupHom.id
+    | PosetHom => PosetHom.id
+    | func-join>= => <=-refl
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {X Y Z : RieszSpace} (g : RieszSpaceHom Y Z) (f : RieszSpaceHom X Y) : RieszSpaceHom X Z \cowith
+    | AddGroupHom => g AddGroupHom.∘ f
+    | PosetHom => g PosetHom.∘ f
+    | func-join>= => func-<= func-join>= <=∘ func-join>=
 }

@@ -730,16 +730,24 @@
 
 \instance SFuncRieszSpace (V : RieszSpace) (B : BooleanRing) : RieszSpace (SFunc V B)
   => RieszSpace.fromAbs \lam a => \case makeReduced a \with {
-    | inP (l,lr,lp) => rewrite lp $ inP (inSF $ map (\lam s => (V.abs s.1, s.2)) l,
-        inP (map (\lam s => (V.abs s.1 - s.1, s.2)) l, ~-sfequiv $ ~_+ V.abs negative, \lam j => V.to>=0 V.abs>=id),
-        inP (map (\lam s => (V.abs s.1 + s.1, s.2)) l, ~-sfequiv $ ~-trans (~_+ V.abs (\lam x => negative (negative x))) $ ~-perm $ EPerm.eperm-= $ later $ exts \lam j => ext (pmap (_ +) V.negative-isInv, idp), \lam j => inv negative-left =<= V.<=_+ V.abs>=neg <=-refl),
-        \lam p q => \case <=-char.1 p \with {
-          | inP (bs,bsr,vs,vs',vsp,vs'p,r) => <=-char.2 $ inP (bs, bsr, map V.abs vs, vs', ~-sfequiv $ apply-left {_} {_} {_} {mkArray \lam i => (vs i, bs i)} lr bsr (Quotient.equalityEquiv ~_Equivalence (path \lam i => vsp i)) V.abs V.abs_zro, vs'p, \lam j => \case r j, (<=-common-char bsr {map negative vs}).1 (transport2 (<=) (pmap negative vsp) vs'p q) j \with {
-            | byLeft r1, byLeft r2 => byLeft $ V.join-univ r1 r2
-            | byRight r, _ => byRight r
-            | _, byRight r => byRight r
-          })
-        })
+    | inP (l,lr,lp) => rewrite lp $ inP (inSF $ map (\lam s => (V.abs s.1, s.2)) l, (isAbs lr).1, (isAbs lr).2, (isAbs lr).3)
+  }
+  \where {
+    \lemma isAbs {l : Array (\Sigma V B)} (lr : IsReduced l)
+      : \Sigma (inSF l <= inSF (map (\lam s => (V.abs s.1, s.2)) l)) (negative (inSF l) <= inSF (map (\lam s => (V.abs s.1, s.2)) l))
+               (\Pi {c : SFunc V B} -> inSF l <= c -> negative (inSF l) <= c -> inSF (map (\lam s => (V.abs s.1, s.2)) l) <= c)
+      => (inP (map (\lam s => (V.abs s.1 - s.1, s.2)) l, ~-sfequiv $ ~_+ V.abs negative, \lam j => V.to>=0 V.abs>=id),
+         inP (map (\lam s => (V.abs s.1 + s.1, s.2)) l, ~-sfequiv $ ~-trans (~_+ V.abs (\lam x => negative (negative x))) $ ~-perm $ EPerm.eperm-= $ later $ exts \lam j => ext (pmap (_ +) V.negative-isInv, idp), \lam j => inv negative-left =<= V.<=_+ V.abs>=neg <=-refl),
+         \lam p q => \case <=-char.1 p \with {
+           | inP (bs,bsr,vs,vs',vsp,vs'p,r) => <=-char.2 $ inP (bs, bsr, map V.abs vs, vs', ~-sfequiv $ apply-left {_} {_} {_} {mkArray \lam i => (vs i, bs i)} lr bsr (Quotient.equalityEquiv ~_Equivalence (path \lam i => vsp i)) V.abs V.abs_zro, vs'p, \lam j => \case r j, (<=-common-char bsr {map negative vs}).1 (transport2 (<=) (pmap negative vsp) vs'p q) j \with {
+             | byLeft r1, byLeft r2 => byLeft $ V.join-univ r1 r2
+             | byRight r, _ => byRight r
+             | _, byRight r => byRight r
+           })
+         })
+
+    \lemma abs-reduced {l : Array (\Sigma V B)} (lr : IsReduced l) : LatticeAbGroup.abs {SFuncRieszSpace V B} (inSF l) = inSF (map (\lam s => (V.abs s.1, s.2)) l)
+      => <=-antisymmetric (join-univ {SFuncRieszSpace V B} (isAbs lr).1 (isAbs lr).2) ((isAbs lr).3 (join-left {SFuncRieszSpace V B}) (join-right {SFuncRieszSpace V B}))
   }
 
 \instance SFuncTruncRieszSpace (V : TruncRieszSpace) (B : BooleanRing) : TruncRieszSpace (SFunc V B)

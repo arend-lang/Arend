@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered.TruncRieszSpace
+\import Equiv
 \import Analysis.Measure.MeasureRing
 \import Arith.Rat
 \import Arith.Real
@@ -97,6 +98,28 @@
   | integral x => x
   | integral>=0 p => rat_real_<=.1 p
   | integral_+ => inv RealAbGroup.+-rat
+
+\record IntegrationSpaceHom \extends TruncRieszSpaceHom, NormedIsometricMap {
+  \override Dom : IntegrationSpace
+  \override Cod : IntegrationSpace
+
+  | func-integral {x : Dom} : integral (func x) = integral x
+  | func-norm-isometry {x} => Real.=-upper.1 (pmap integral (inv func-abs) *> func-integral)
+
+  \protected \func IsDense : \Prop
+    => IsDenseSet {Cod} (\lam y => ∃ (x : Dom) (func x = y))
+} \where {
+  \lemma isometry-denseEmbedding {X Y : IntegrationSpace} {f : IntegrationSpaceHom X Y} (fd : f.IsDense) : f.IsDenseEmbedding
+    => (fd, f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2)
+
+  \func id {X : IntegrationSpace} : IntegrationSpaceHom X X \cowith
+    | TruncRieszSpaceHom => TruncRieszSpaceHom.id
+    | func-integral => idp
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {X Y Z : IntegrationSpace} (g : IntegrationSpaceHom Y Z) (f : IntegrationSpaceHom X Y) : IntegrationSpaceHom X Z \cowith
+    | TruncRieszSpaceHom => g TruncRieszSpaceHom.∘ f
+    | func-integral => func-integral *> func-integral
+}
 
 \class CompleteIntegrationSpace \extends IntegrationSpace, RieszLSpace, CompleteNormedAbGroup {
   | norm_+_>= {x} {y} x>=0 y>=0 => =_<= {RealAbGroup} $ inv $ pmap integral (abs-ofPos $ transport (`<= _) zro-left $ <=_+ x>=0 y>=0) *> integral_+ *> pmap2 (RealAbGroup.+) (pmap integral $ inv $ abs-ofPos x>=0) (pmap integral $ inv $ abs-ofPos y>=0)
@@ -259,4 +282,61 @@
 
     \lemma func-<= {x y : X} (x<=y : x <= y) : integrationCompletion x <= integrationCompletion y
       => IntegrationSpaceCompletion.join-char *> pmap pointCF (X.join_<= x<=y)
+
+    \protected \func inc : IntegrationSpaceHom X (IntegrationSpaceCompletion X) \cowith
+      | AddGroupHom => integrationCompletion
+      | func-<= => func-<=
+      | func-join>= => =_<= func-join
+      | func-trunc => func-trunc
+      | func-integral => func-integral
+
+    \lemma inc-dense : inc.IsDense
+      => completion.isDenseEmbedding.1
   }
+
+-- | Extension of a homomorphism along a dense homomorphism into a complete integration space.
+\func dense-integration-lift {X Y : IntegrationSpace} {Z : CompleteIntegrationSpace} (f : IntegrationSpaceHom X Y) (fd : f.IsDense) (g : IntegrationSpaceHom X Z) : IntegrationSpaceHom Y Z \cowith
+  | AddGroupHom => lift f fd g
+  | func-<= p => transport (_ <=) (inv (lift-join f fd g) *> pmap (lift f fd g) (Y.join_<= p)) join-left
+  | func-join>= => =_<= (lift-join f fd g)
+  | func-trunc {y} => dense-lift-unique f fd (lift f fd g ContMap.∘ Y.trunc-metric) (Z.trunc-metric ContMap.∘ lift f fd g)
+      (\lam x => pmap (lift f fd g) (inv f.func-trunc) *> char f fd g *> g.func-trunc *> pmap Z.trunc (inv (char f fd g))) y
+  | func-integral {y} => dense-lift-unique f fd (Z.integral-metric ContMap.∘ lift f fd g) Y.integral-metric
+      (\lam x => pmap Z.integral (char f fd g) *> g.func-integral *> inv f.func-integral) y
+  \where {
+    \func lift {X Y : IntegrationSpace} {Z : CompleteIntegrationSpace} (f : IntegrationSpaceHom X Y) (fd : f.IsDense) (g : IntegrationSpaceHom X Z) : NormedAbGroupMap Y Z
+      => dense-normed-lift f fd g
+
+    \lemma char {X Y : IntegrationSpace} {Z : CompleteIntegrationSpace} (f : IntegrationSpaceHom X Y) (fd : f.IsDense) (g : IntegrationSpaceHom X Z) {x : X} : lift f fd g (f x) = g x
+      => dense-normed-lift.char f fd g
+
+    \lemma lift-join {X Y : IntegrationSpace} {Z : CompleteIntegrationSpace} (f : IntegrationSpaceHom X Y) (fd : f.IsDense) (g : IntegrationSpaceHom X Z) {y y' : Y}
+      : lift f fd g (y ∨ y') = lift f fd g y ∨ lift f fd g y'
+      => dense-lift-unique (ProductCoverSpace.prod f f) (ProductTopSpace.prod.isDense {_} {_} {_} {_} {f} {f} fd fd)
+          (lift f fd g ContMap.∘ Y.join-uniform) (Z.join-uniform ContMap.∘ ProductCoverSpace.prod (lift f fd g) (lift f fd g))
+          (\lam s => pmap (lift f fd g) (inv f.func-join) *> char f fd g *> g.func-join *> inv (pmap2 (∨) (char f fd g) (char f fd g))) (y,y')
+
+    \lemma unique {X Y : IntegrationSpace} {Z : CompleteIntegrationSpace} {f : IntegrationSpaceHom X Y} (fd : f.IsDense) (h h' : IntegrationSpaceHom Y Z)
+                   (p : \Pi (x : X) -> h (f x) = h' (f x)) (y : Y) : h y = h' y
+      => dense-lift-unique f fd h h' p y
+  }
+
+-- | The universal property of the completion: a homomorphism into a complete integration space extends uniquely to the completion.
+\func integrationCompletion-lift {X : IntegrationSpace} {Z : CompleteIntegrationSpace} (g : IntegrationSpaceHom X Z) : IntegrationSpaceHom (IntegrationSpaceCompletion X) Z
+  => dense-integration-lift integrationCompletion.inc integrationCompletion.inc-dense g
+  \where {
+    \lemma char {X : IntegrationSpace} {Z : CompleteIntegrationSpace} {g : IntegrationSpaceHom X Z} {x : X} : integrationCompletion-lift g (integrationCompletion x) = g x
+      => dense-integration-lift.char integrationCompletion.inc integrationCompletion.inc-dense g
+
+    \lemma unique {X : IntegrationSpace} {Z : CompleteIntegrationSpace} (h h' : IntegrationSpaceHom (IntegrationSpaceCompletion X) Z)
+                   (p : \Pi (x : X) -> h (integrationCompletion x) = h' (integrationCompletion x)) (F : IntegrationSpaceCompletion X) : h F = h' F
+      => dense-integration-lift.unique integrationCompletion.inc-dense h h' p F
+  }
+
+-- | The homomorphism of completions induced by a homomorphism of integration spaces.
+\func integrationCompletion-map {X Y : IntegrationSpace} (f : IntegrationSpaceHom X Y) : IntegrationSpaceHom (IntegrationSpaceCompletion X) (IntegrationSpaceCompletion Y)
+  => integrationCompletion-lift (integrationCompletion.inc IntegrationSpaceHom.∘ f)
+
+-- | A homomorphism of integration spaces with dense image induces an isomorphism of completions.
+\lemma integrationCompletion-map-equiv {X Y : IntegrationSpace} {f : IntegrationSpaceHom X Y} (fd : f.IsDense) : IsEquiv (integrationCompletion-map f)
+  => lift1-equiv (IntegrationSpaceHom.isometry-denseEmbedding fd)

@@ -1,3 +1,4 @@
+\import Equiv
 \import Function
 \import Function.Meta
 \import Logic.Unique
@@ -339,6 +340,16 @@
       \lam (inP (W',W'<=<W,V,p,y<=<V)) => \case <=<-inter y<=<V \with {
         | inP (V',y<=<V',V'<=<V) => inP (W', W'<=<W, inP (V', V, p, V'<=<V, y<=<V'))
       })
+
+-- | Completions are unique: if `f` and `g` are dense embeddings into complete spaces, then a map `h` with `h (f x) = g x` is an equivalence.
+\lemma dense-lift-equiv {X : CoverSpace} {Y Z : CompleteCoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X Z} (gd : g.IsDenseEmbedding)
+                        (h : ContMap Y Z) (p : \Pi (x : X) -> h (f x) = g x) : IsEquiv h
+  => \let k => dense-lift g gd f
+     \in inP \new QEquiv {
+       | ret => k
+       | ret_f => dense-lift-unique f fd.1 (k ContMap.∘ h) ContMap.id \lam x => pmap k (p x) *> dense-lift-char gd x
+       | f_sec => dense-lift-unique g gd.1 (h ContMap.∘ k) ContMap.id \lam x => pmap h (dense-lift-char gd x) *> p x
+     }
 
 \open CompleteCoverSpace
 

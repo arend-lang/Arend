@@ -1,5 +1,14 @@
 \import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.QModule
+\import Algebra.Ring.Boolean
+\import Algebra.StrictlyOrdered
 \import Analysis.Integral.IntegrationSpace
 \import Analysis.Measure.MeasureRing
 \import Analysis.Measure.SimpleFunctions
@@ -7,12 +16,24 @@
 \import Arith.Real.Field
 \import Data.Array
 \import Data.Array.EPerm
+\import Equiv
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
+\import Paths.Meta
 \import Relation.Equivalence \hiding (~)
+\import Set.Fin
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
 \import Topology.NormedRing
+\import Topology.TopSpace
 \open SFunc
+\open SFuncPosetQModule (IsReduced, makeReduced, reduce, reduce_IsReduced, reduce_~, split1)
 
 \instance SFuncIntegrationSpace (B : MeasureRing) : IntegrationSpace (SFunc RealAbGroup B)
   | TruncRieszSpace => SFuncTruncRieszSpace RealIntegrationSpace B
@@ -40,3 +61,129 @@
       | ~-+-left idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.rdistr)
       | ~-+-right {_} {v} idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.ldistr *> pmap (v *) (inv meas-modular) *> RealField.ldistr) *> RealAbGroup.+-assoc
   }
+
+-- | The map `a => c [a]` scales distances by `|c|`; for `c = 1` it is an isometry.
+\lemma SFunc-single-dist {B : MeasureRing} {c : Real} {a b : B}
+  : lnorm {SFuncIntegrationSpace B} (inSF ((c,a) :: nil) - inSF ((c,b) :: nil)) = RealAbGroup.abs c * meas (a - b)
+  => \let | X => SFuncIntegrationSpace B
+          | u : X => inSF ((c, B.diff a b) :: nil)
+          | v : X => inSF ((c, B.diff b a) :: nil)
+          | e : inSF ((c,a) :: nil) - inSF ((c,b) :: nil) = {X} u - v
+              => pmap2 (\lam (x y : X) => x - y) (~-sfequiv (split1 b {c} {a} {nil}) *> pmap (\lam x => inSF ((c,x) :: nil) + u) (B.*-comm {b} {a})) (~-sfequiv (split1 a {c} {b} {nil})) *> +-minus-left {X} {inSF ((c, a * b) :: nil)} {u} {v}
+     \in pmap lnorm e *> pmap (integral {X}) (SFuncRieszSpace.abs-reduced {_} {B} {(c, B.diff a b) :: (negative c, B.diff b a) :: nil} (pair-reduced BooleanRing.diff_*_diff))
+          *> pmap (\lam z => _ + (z * meas (B.diff b a) + 0)) RealAbGroup.abs_negative *> pmap (_ +) RealAbGroup.zro-right
+          *> inv RealField.ldistr *> pmap (_ *) (inv (meas-disjoint BooleanRing.diff_*_diff) *> pmap meas (inv BooleanRing.+_diff *> pmap (a +) (inv BooleanRing.negative=id)))
+  \where {
+    \lemma pair-reduced {B : MeasureRing} {c c' : Real} {x y : B} (p : x * y = 0) : IsReduced {RealIntegrationSpace} ((c,x) :: (c',y) :: nil)
+      => \lam {i} {j} i/=j => \case \elim i, \elim j, i/=j \with {
+        | 0, 0, i/=j => absurd (i/=j idp)
+        | 0, 1, _ => p
+        | 1, 0, _ => B.*-comm *> p
+        | 1, 1, i/=j => absurd (i/=j idp)
+      }
+
+    \lemma +-minus-left {X : AbGroup} {w u v : X} : (w + u) - (w + v) = u - v
+      => equation.abGroup
+  }
+
+\func SFuncHom {A B : MeasureRing} (f : MeasureRingHom A B) : IntegrationSpaceHom (SFuncIntegrationSpace A) (SFuncIntegrationSpace B) \cowith
+  | AddGroupHom => hom f
+  | func-<= (inP (d,dp,d>=0)) => inP (mapB f d, inv (hom f).func-minus *> pmap (hom f) dp, d>=0)
+  | func-join>= => =_<= func-join
+  | func-trunc {x} => \case \elim x \with {
+    | in~ l => inv (SFuncTruncRieszSpace.trunc-reduced {_} {B} {mapB f (reduce l)} (mapB-reduced f reduce_IsReduced)) *> pmap trunc (~-sfequiv (mapB_~ f reduce_~))
+  }
+  | func-integral {x} => \case \elim x \with {
+    | in~ l => pmap RealAbGroup.BigSum (exts \lam j => pmap ((l j).1 *) f.func-meas)
+  }
+  \where {
+    \func mapB {A B : MeasureRing} (f : MeasureRingHom A B) (l : Array (\Sigma Real A)) : Array (\Sigma Real B)
+      => map (\lam s => (s.1, f s.2)) l
+
+    \lemma func-join_B {A B : MeasureRing} {f : MeasureRingHom A B} {a b : A} : f (a ∨ b) = f a ∨ f b
+      => f.func-+ *> pmap2 (+) f.func-+ f.func-*
+
+    \lemma mapB_~ {A B : MeasureRing} (f : MeasureRingHom A B) {l l' : Array (\Sigma Real A)} (r : l ~ {RealAbGroup} l') : mapB f l ~ {RealAbGroup} mapB f l' \elim r
+      | ~-perm e => ~-perm (EPerm.EPerm_map (\lam (s : \Sigma Real A) => (s.1, f s.2)) e)
+      | ~-sym r => ~-sym (mapB_~ f r)
+      | ~-trans r r' => ~-trans (mapB_~ f r) (mapB_~ f r')
+      | ~-zro-left idp => ~-zro-left idp
+      | ~-zro-right {v} idp => transportInv (\lam (x : B) => (v,x) :: mapB f l' ~ {RealAbGroup} mapB f l') f.func-zro (~-zro-right idp)
+      | ~-+-left idp idp => ~-+-left idp idp
+      | ~-+-right {l''} {v} idp idp => ~-trans (~-perm $ EPerm.eperm-= $ pmap2 (\lam x y => (v,x) :: (v,y) :: mapB f l'') func-join_B f.func-*) (~-+-right idp idp)
+
+    \lemma mapB-reduced {A B : MeasureRing} (f : MeasureRingHom A B) {l : Array (\Sigma Real A)} (lr : IsReduced {RealIntegrationSpace} l)
+      : IsReduced {RealIntegrationSpace} (mapB f l)
+      => \lam i/=j => inv f.func-* *> pmap f (lr i/=j) *> f.func-zro
+
+    \func hom {A B : MeasureRing} (f : MeasureRingHom A B) : AddGroupHom (SFuncIntegrationSpace A) (SFuncIntegrationSpace B) \cowith
+      | func (x : SFunc RealAbGroup A) : SFunc RealAbGroup B \with {
+        | in~ l => inSF (mapB f l)
+        | ~-equiv l l' r => ~-sfequiv (mapB_~ f r)
+      }
+      | func-+ {x} {y} => \case \elim x, \elim y \with {
+        | in~ l, in~ l' => pmap inSF (map_++ (\lam (s : \Sigma Real A) => (s.1, f s.2)))
+      }
+
+    \lemma func-abs {A B : MeasureRing} {f : MeasureRingHom A B} {a : SFuncIntegrationSpace A} : hom f (LatticeAbGroup.abs a) = LatticeAbGroup.abs (hom f a)
+      => \case makeReduced a \with {
+        | inP (l,lr,p) => rewrite p $ pmap (hom f) (SFuncRieszSpace.abs-reduced lr) *> inv (SFuncRieszSpace.abs-reduced {_} {B} {mapB f l} (mapB-reduced f lr))
+      }
+
+    \lemma func-join {A B : MeasureRing} {f : MeasureRingHom A B} {x y : SFuncIntegrationSpace A} : hom f (x ∨ y) = hom f x ∨ hom f y
+      => pmap (hom f) RieszSpace.join_abs *> func-*q *> pmap (_ QModule.*q) ((hom f).func-+ *> pmap2 (+) (hom f).func-+ (func-abs *> pmap LatticeAbGroup.abs (hom f).func-minus)) *> inv RieszSpace.join_abs
+  }
+
+\lemma SFuncHom-dense {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense)
+  : IsDenseSet {SFuncIntegrationSpace B} (\lam y => ∃ (x : SFunc RealAbGroup A) (SFuncHom f x = y))
+  => \lam {y} Uo Uy => \case (dist_open {SFuncIntegrationSpace B}).1 Uo Uy \with {
+    | inP (eps,eps>0,p) => \case approx fd (rat_real_<.1 eps>0) y \with {
+      | inP (m,d) => inP (inSF (SFuncHom.mapB f m), inP (inSF m, idp), p $ real_<_U.1 d)
+    }
+  }
+  \where {
+    \lemma approx-elem {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense) {d : Real} (d>0 : 0 < d) (b : B)
+      : ∃ (a : A) (meas (b - f a) < d)
+      => \let (inP (delta,delta>0,delta<d)) => real_<-char.1 d>0
+         \in \case fd {b} {OBall delta b} OBall-open (OBall-center (rat_real_<.2 delta>0)) \with {
+           | inP (y, inP (a,p), h) => inP (a, transport (`< _) (lnorm-ldist {B} {b} {f a}) (real_<_U.2 (transportInv (OBall delta b) p h)) <∘ delta<d)
+         }
+
+    \lemma list-bound {B : MeasureRing} {n : Nat} {c : Array Real n} {b b' : Array B n}
+      : lnorm {SFuncIntegrationSpace B} (inSF (\lam j => (c j, b j)) - inSF (\lam j => (c j, b' j))) <= RealAbGroup.BigSum (\lam j => RealAbGroup.abs (c j) * meas (b j - b' j)) \elim n
+      | 0 => =_<= (ldist-refl {SFuncIntegrationSpace B} {inSF nil})
+      | suc n => \let | X => SFuncIntegrationSpace B
+                       | s : X => inSF ((c 0, b 0) :: nil)
+                       | s' : X => inSF ((c 0, b' 0) :: nil)
+                       | t : X => inSF (\lam (j : Fin n) => (c (suc j), b (suc j)))
+                       | t' : X => inSF (\lam (j : Fin n) => (c (suc j), b' (suc j)))
+                 \in =_<= (pmap lnorm (+-minus-swap {X} {s} {t} {s'} {t'})) <=∘ lnorm_+ {X} {s - s'} {t - t'} <=∘ <=_+ (=_<= SFunc-single-dist) (list-bound {B} {n} {\lam j => c (suc j)} {\lam j => b (suc j)} {\lam j => b' (suc j)})
+      \where {
+        \private \lemma +-minus-swap {X : AbGroup} {s t s' t' : X} : (s + t) - (s' + t') = (s - s') + (t - t')
+          => equation.abGroup
+      }
+
+    \lemma approx {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense) {eps : Real} (eps>0 : 0 < eps) (y : SFunc RealAbGroup B)
+      : ∃ (m : Array (\Sigma Real A)) (ldist {SFuncIntegrationSpace B} y (inSF (SFuncHom.mapB f m)) < eps) \elim y
+      | in~ l => approx-list fd eps>0 l
+
+    -- | For each `(c_j,b_j)` in `l`, choose `a_j` with `meas (b_j - f a_j) < d`, where `d * (Σ_j |c_j| + 1) < eps`.
+    \lemma approx-list {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense) {eps : Real} (eps>0 : 0 < eps) (l : Array (\Sigma Real B))
+      : ∃ (m : Array (\Sigma Real A)) (ldist {SFuncIntegrationSpace B} (inSF l) (inSF (SFuncHom.mapB f m)) < eps)
+      => \let | S => RealAbGroup.BigSum (map (\lam s => RealAbGroup.abs s.1) l)
+              | S>=0 : 0 <= S => RealAbGroup.BigSum_>=0 \lam j => RealAbGroup.abs>=0
+              | (inP (d,d>0,dS<eps)) => split-eps eps>0 {S + 1} (S>=0 <∘r linarith)
+         \in \case FinSet.finiteAC (\lam j => approx-elem fd d>0 (l j).2) \with {
+           | inP h => inP (\lam j => ((l j).1, (h j).1),
+               (=_<= (lnorm-ldist {SFuncIntegrationSpace B} {inSF l} {inSF (\lam j => ((l j).1, f (h j).1))})
+               <=∘ list-bound {B} {l.len} {\lam j => (l j).1} {\lam j => (l j).2} {\lam j => f (h j).1}
+               <=∘ RealAbGroup.BigSum_<= {_} {\lam j => RealAbGroup.abs (l j).1 * meas ((l j).2 - f (h j).1)} {\lam j => RealAbGroup.abs (l j).1 * d} (\lam j => <=_*_positive-right RealAbGroup.abs>=0 (<=-less (h j).2))
+               <=∘ =_<= (inv (RealField.BigSum-rdistr {map (\lam s => RealAbGroup.abs s.1) l} {d}) *> *-comm))
+               <∘r (<_*_positive-right d>0 (linarith : S < S + 1) <∘ dS<eps))
+         }
+  }
+
+-- | A dense homomorphism of measure rings induces an isomorphism of the completions of the integration spaces of simple functions.
+\lemma SFuncHom-completion-equiv {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense)
+  : IsEquiv (integrationCompletion-map (SFuncHom f))
+  => integrationCompletion-map-equiv (SFuncHom-dense fd)

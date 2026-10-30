@@ -133,6 +133,13 @@
   \func const {Y X : TopSpace} (x : X) : ContMap Y X \cowith
     | func _ => x
     | func-cont _ => Y.cover-open \lam Ux => inP (top, open-top, (), \lam _ => Ux)
+
+  \lemma dense-comp {X Y Z : TopSpace} {f : ContMap X Y} (fd : f.IsDense) {g : ContMap Y Z} (gd : g.IsDense) : ContMap.IsDense {g ∘ f}
+    => \lam Uo Uz => \case gd Uo Uz \with {
+      | inP (_, inP (y,idp), Ugy) => \case fd (g.func-cont Uo) Ugy \with {
+        | inP (_, inP (x,idp), Ugfx) => inP (g (f x), inP (x, idp), Ugfx)
+      }
+    }
 }
 
 \lemma limit-transport {X : TopSpace} {I : DirectedSet} {f g : I -> X} {l : X} (fl : X.IsLimit f l) (p : \Pi (n : I) -> g n = f n) : X.IsLimit g l

@@ -153,3 +153,18 @@
               *> pmap (\lam u => u + a.1 ∧ b.1 - (0 + 0)) (abs-formula *> pmap (\lam v => v - (a.1 ∧ b.1 + a.1 ∧ b.1)) modularity) *> equation.abGroup
     }
 }
+
+\record TruncRieszSpaceHom \extends RieszSpaceHom {
+  \override Dom : TruncRieszSpace
+  \override Cod : TruncRieszSpace
+
+  | func-trunc {x : Dom} : func (trunc x) = trunc (func x)
+} \where {
+  \func id {X : TruncRieszSpace} : TruncRieszSpaceHom X X \cowith
+    | RieszSpaceHom => RieszSpaceHom.id
+    | func-trunc => idp
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {X Y Z : TruncRieszSpace} (g : TruncRieszSpaceHom Y Z) (f : TruncRieszSpaceHom X Y) : TruncRieszSpaceHom X Z \cowith
+    | RieszSpaceHom => g RieszSpaceHom.∘ f
+    | func-trunc => pmap g func-trunc *> func-trunc
+}

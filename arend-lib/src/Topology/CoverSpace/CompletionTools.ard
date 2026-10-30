@@ -1,10 +1,11 @@
 \import Arith.Real.UpperReal
+\import Equiv
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.PartialOrder
+\import Paths
 \import Paths.Meta
 \import Set.Set
 \import Topology.CoverSpace
@@ -17,11 +18,16 @@
 \import Topology.TopSpace.Product
 \open ProductCoverSpace
 
-\sfunc lift1 {X : CoverSpace} (f : CoverMap X X) : CoverMap (Completion X) (Completion X)
+-- | The map of completions induced by a cover map.
+\func lift1 {X Y : CoverSpace} (f : CoverMap X Y) : CoverMap (Completion X) (Completion Y)
   => dense-lift completion completion.isDenseEmbedding (completion CoverMap.∘ f)
 
-\lemma lift1-char {X : CoverSpace} {f : CoverMap X X} {x : X} : lift1 f (pointCF x) = pointCF (f x)
-  => rewrite (\peval lift1 f) $ dense-lift-char completion.isDenseEmbedding x
+\lemma lift1-char {X Y : CoverSpace} {f : CoverMap X Y} {x : X} : lift1 f (pointCF x) = pointCF (f x)
+  => dense-lift-char completion.isDenseEmbedding x
+
+-- | A dense embedding induces an equivalence of completions.
+\lemma lift1-equiv {X Y : CoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) : IsEquiv (lift1 f)
+  => dense-lift-equiv completion.isDenseEmbedding {completion CoverMap.∘ f} (PrecoverMap.denseEmbedding-comp fd completion.isDenseEmbedding) (lift1 f) \lam x => lift1-char
 
 \sfunc lift2 {X : CoverSpace} (f : CoverMap (ProductCoverSpace X X) X) : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
   => dense-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (completion CoverMap.∘ f)

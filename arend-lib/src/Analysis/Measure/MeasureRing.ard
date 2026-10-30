@@ -1,6 +1,7 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ring.Boolean
+\import Algebra.Ring.RingHom
 \import Arith.Real
 \import Arith.Real.UpperReal
 \import Function.Meta
@@ -28,5 +29,21 @@
 
 \lemma meas-modular {X : MeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
   => pmap (_ +) (pmap meas (later $ split *> pmap (_ ∨) *-comm) *> meas-disjoint (inv *-assoc *> pmap (* y) diff_* *> X.zro_*-left)) *> inv +-assoc *> inv (pmap (+ _) $ pmap meas (<=-antisymmetric (join-univ join-left $ transportInv (<= _) split $ join-univ join-right $ meet-right <=∘ join-left) $ join-univ join-left $ diff_<= <=∘ join-right) *> X.meas-disjoint (*-comm *> diff_*))
+
+\record MeasureRingHom \extends PseudoRingHom, NormedIsometricMap {
+  \override Dom : MeasureRing
+  \override Cod : MeasureRing
+
+  | func-meas {x : Dom} : meas (func x) = meas x
+  | func-norm-isometry => func-meas
+} \where {
+  \func id {B : MeasureRing} : MeasureRingHom B B \cowith
+    | PseudoRingHom => PseudoRingHom.id
+    | func-meas => idp
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {A B C : MeasureRing} (g : MeasureRingHom B C) (f : MeasureRingHom A B) : MeasureRingHom A C \cowith
+    | PseudoRingHom => g PseudoRingHom.∘ f
+    | func-meas => func-meas *> func-meas
+}
 
 \class CompleteMeasureRing \extends MeasureRing, CompleteNormedAbGroup

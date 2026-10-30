@@ -126,6 +126,12 @@
 
   \lemma embedding-left {X Y Z : PrecoverSpace} (f : PrecoverMap X Y) (g : PrecoverMap Y Z) (fg : PrecoverMap.IsEmbedding {g ∘ f}) : f.IsEmbedding
     => \lam Cc => cauchy-subset (g.func-cover $ fg Cc) \lam {_} (inP (V,r,idp)) => r
+
+  \lemma embedding-comp {X Y Z : PrecoverSpace} {f : PrecoverMap X Y} (fe : f.IsEmbedding) {g : PrecoverMap Y Z} (ge : g.IsEmbedding) : PrecoverMap.IsEmbedding {g ∘ f}
+    => \lam Cc => cauchy-subset (ge (fe Cc)) \lam {_} (inP (V, inP (U,CU,p), q)) => inP $ later (U, CU, \lam {x} c => p (q c))
+
+  \lemma denseEmbedding-comp {X Y Z : PrecoverSpace} {f : PrecoverMap X Y} (fd : f.IsDenseEmbedding) {g : PrecoverMap Y Z} (gd : g.IsDenseEmbedding) : PrecoverMap.IsDenseEmbedding {g ∘ f}
+    => (ContMap.dense-comp fd.1 gd.1, embedding-comp fd.2 gd.2)
 }
 
 \type \infix 4 <=< {X : PrecoverSpace} (V U : Set X) : \Prop
