@@ -27,6 +27,7 @@ import org.arend.ext.module.FullName
 import org.arend.naming.reference.TCDefReferable
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.visitor.ArendCheckerFactory
+import java.util.concurrent.ConcurrentHashMap
 
 @Service(Service.Level.PROJECT)
 class RunnerService(private val project: Project, private val coroutineScope: CoroutineScope) {
@@ -121,6 +122,19 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
 
     fun runChecker(module: ModuleLocation, onlyResolve: Boolean = false) =
         runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, null, onlyResolve)
+
+    private val backgroundJobs = ConcurrentHashMap<ModuleLocation, Job>()
+
+    /**
+     * Runs a background check of [module], cancelling the previous background check of it if it is still running.
+     * The new check supersedes it, so its results would be outdated anyway.
+     */
+    fun runBackgroundChecker(module: ModuleLocation): Job {
+        val job = runChecker(module)
+        backgroundJobs.put(module, job)?.cancel()
+        job.invokeOnCompletion { backgroundJobs.remove(module, job) }
+        return job
+    }
 
     companion object {
         private val LOG = logger<RunnerService>()

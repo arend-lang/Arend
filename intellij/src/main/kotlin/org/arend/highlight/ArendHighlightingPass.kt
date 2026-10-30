@@ -48,7 +48,7 @@ class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRan
 
         if (module != null && service<ArendSettings>().isBackgroundTypechecking) {
             invokeLater {
-                myProject.service<RunnerService>().runChecker(module)
+                myProject.service<RunnerService>().runBackgroundChecker(module)
             }
         } else if (!ApplicationManager.getApplication().isUnitTestMode) {
             DaemonCodeAnalyzer.getInstance(myProject).restart()

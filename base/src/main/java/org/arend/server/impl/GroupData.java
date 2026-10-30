@@ -19,12 +19,14 @@ public class GroupData {
   private GlobalTypingInfo myTypingInfo;
   private Map<LongName, DefinitionData> myResolvedDefinitions;
   private boolean myResolved;
+  private boolean myTypingInfoUpToDate;
 
   private GroupData(long timestamp, ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
     myTimestamp = timestamp;
     myRawGroup = rawGroup;
     myFileScope = CachingScope.make(LexicalScope.opened(rawGroup));
     myTypingInfo = typingInfo;
+    myTypingInfoUpToDate = typingInfo != null;
   }
 
   public GroupData(ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
@@ -258,6 +260,15 @@ public class GroupData {
 
   public void setTypingInfo(GlobalTypingInfo typingInfo) {
     myTypingInfo = typingInfo;
+    myTypingInfoUpToDate = true;
+  }
+
+  /**
+   * The typing info depends only on the group and the namespaces of imported modules.
+   * It becomes outdated when one of these modules changes (see {@link #clearResolved}).
+   */
+  public boolean isTypingInfoUpToDate() {
+    return myTypingInfoUpToDate;
   }
 
   public boolean isResolved() {
@@ -283,5 +294,6 @@ public class GroupData {
 
   public void clearResolved() {
     myResolved = false;
+    myTypingInfoUpToDate = false;
   }
 }

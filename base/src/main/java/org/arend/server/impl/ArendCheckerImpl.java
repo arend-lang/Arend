@@ -52,6 +52,7 @@ public class ArendCheckerImpl implements ArendChecker {
   private static final Logger myLogger = Logger.getLogger(ArendCheckerImpl.class.getName());
   private final List<? extends ModuleLocation> myModules;
   private boolean myInterrupted;
+  private boolean myResolutionFailed;
   private Map<ModuleLocation, GroupData> myDependencies;
   private ConcreteProvider myConcreteProvider;
   private final ReentrantLock myTCDefLock = new ReentrantLock();
@@ -125,7 +126,7 @@ public class ArendCheckerImpl implements ArendChecker {
           }
 
           for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
-            if (!entry.getValue().isResolved() || entry.getValue().getTypingInfo() == null) {
+            if (!entry.getValue().isTypingInfoUpToDate()) {
               GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
               new TypingInfoVisitor(typingInfo).processGroup(entry.getValue().getRawGroup(), myServer.getParentGroupScope(entry.getKey(), entry.getValue().getRawGroup()));
               entry.getValue().setTypingInfo(typingInfo);
@@ -300,8 +301,11 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   private ConcreteProvider getConcreteProvider(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
-    if (myConcreteProvider == null) {
+    if (myConcreteProvider == null && !myResolutionFailed) {
       myConcreteProvider = resolveModules(myModules, indicator, progressReporter, getDependencies(indicator), true);
+      // The result is discarded if a module was changed or the computation was interrupted.
+      // There is no point in resolving modules again since the change triggers a new check.
+      if (myConcreteProvider == null) myResolutionFailed = true;
     }
     return myConcreteProvider;
   }
