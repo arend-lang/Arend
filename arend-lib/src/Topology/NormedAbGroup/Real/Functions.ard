@@ -1,5 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
@@ -10,14 +12,15 @@
 \import Function.Meta
 \import Logic
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ManhattanProduct
 \import Topology.MetricSpace.UpperReal
@@ -25,6 +28,9 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Algebra.Ordered.Ring
 
 \lemma lnorm-metric {X : PseudoNormedAbGroup} : MetricMap X RealNormed X.norm \cowith
   | func-dist => rewrite (X.norm-dist,RealNormed.norm-dist) $ Real.<=-upper.1 $ join-univ lnorm_-left $ simplify lnorm_-right
@@ -137,3 +143,9 @@
 \lemma ex-upper-*-locally-uniform
   : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
   => transport (LocallyUniformMap _ _) (ext \lam s => UpperRealSemigroup.*-ex) (upper-ex-isometry LocallyUniformMap.∘l upper-*-locally-uniform)
+
+\lemma unique1_<= {X : CoverSpace} (f g : ContMap (Completion X) ExUpperRealMetric) (p : \Pi (x : X) -> f (pointCF x) <= g (pointCF x)) {x : RegularCauchyFilter X} : f x <= g x
+  => dense_<= upper-join-uniform completion completion.isDenseEmbedding.1 f g p x
+
+\lemma unique2_<= {X : CoverSpace} (f g : ContMap (Completion X `ProductCoverSpace` Completion X) ExUpperRealMetric) (p : \Pi (x y : X) -> f (pointCF x, pointCF y) <= g (pointCF x, pointCF y)) {x y : RegularCauchyFilter X} : f (x,y) <= g (x,y)
+  => dense_<= upper-join-uniform (ProductCoverSpace.prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) f g (\lam s => p s.1 s.2) (x,y)

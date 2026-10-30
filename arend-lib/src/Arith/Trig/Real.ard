@@ -1,15 +1,10 @@
 \import Algebra.Group
-\import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Semiring
-\import Order.Biordered
-\import Order.PartialOrder
-\import Order.StrictOrder
 \import Analysis.Series
 \import Analysis.PowerSeries
 \import Arith.Complex
@@ -21,15 +16,12 @@
 \import Arith.Real
 \import Arith.Real.Field
 \import Combinatorics.Factorial
-\import Function.Meta
-\import Meta
 \import Paths
 \import Paths.Meta
-\import Topology.BanachAlgebra
 \import Topology.CoverSpace.Complete
-\import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.TopSpace
+\import Algebra.QModule.Rat
 \open CoverMap (∘)
 \open Complex \using (iunit \as i)
 \open Monoid (pow)

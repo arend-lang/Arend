@@ -7,7 +7,6 @@
  -}
 
 \import Equiv
-\import Equiv.Path
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics

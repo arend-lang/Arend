@@ -1,10 +1,12 @@
 package org.arend.naming.scope;
 
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -26,6 +28,11 @@ public class RenamedScope extends DelegateScope {
       }
       return pred.test(newRef);
     }, context);
+  }
+
+  @Override
+  public @NotNull List<GlobalReferable> resolveExtensions(@NotNull String name) {
+    return parent.resolveExtensions(name).stream().map(ref -> ref instanceof TCDefReferable tcRef && myRenamer.get(tcRef) instanceof TCDefReferable newRef ? newRef : ref).toList();
   }
 
   @Override

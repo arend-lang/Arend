@@ -1,4 +1,4 @@
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -19,6 +19,8 @@
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Algebra.Semiring.Properties
+\import Algebra.Ordered.Properties
 \open PosetSemiring (<=_*_positive_positive)
 
 {- | **A separable complex polynomial has its derivative bounded below wherever it is small.**

@@ -1,14 +1,12 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Pointed
 \import Analysis.Limit
 \import Arith.Rat
-\import Arith.Real
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Directed
 \import Order.Lattice
 \import Order.PartialOrder
@@ -24,6 +22,7 @@
 \import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Topology.UniformSpace
+\import Set.Set.Lattice
 \open ProductCoverSpace
 \open CoverMap
 

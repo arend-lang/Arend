@@ -102,6 +102,10 @@
       => coe (\lam i => coe A a i = p i) idp right
   }
 
+-- | A path in a sigma type built from paths between its components
+\func sigmaPath {A : \Cat} {B : A -> \Cat} {p p' : \Sigma (a : A) (B a)} (s : p.1 = p'.1) (t : transport B s p.2 = p'.2) : p = p'
+  => path (\lam i => (s @ i, pathOver {\lam j => B (s @ j)} t @ i))
+
 \func coe_path {A :⁺ \Cat} {a1 a2 a3 a4 :⁺ A} (p :⁺ a2 = a1) (q :⁺ a2 = a3) (r :⁺ a3 = a4)
   : coe (\lam i => p i = r i) q right = inv p *> q *> r
   => coe (\lam j => coe (\lam i => p i = r i) q j = inv (psqueeze p j) *> q *> psqueeze r j) (inv idp_*>) right

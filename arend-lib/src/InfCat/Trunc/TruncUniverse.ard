@@ -10,7 +10,6 @@
 \import InfCat.Rezk
 \import InfCat.SubCat.Full
 \import Logic
-\import Meta
 \import Paths
 \import Paths.Meta
 \open FullSubCat

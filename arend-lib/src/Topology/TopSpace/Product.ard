@@ -8,6 +8,7 @@
 \import Paths.Meta
 \import Set.Set
 \import Topology.TopSpace
+\import Set.Set.Lattice
 
 \instance TopSpaceHasProduct.{u} : HasProduct TopSpace.{u}
   | Product X Y => ProductTopSpace X Y

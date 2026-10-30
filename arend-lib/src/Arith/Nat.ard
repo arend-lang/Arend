@@ -60,7 +60,6 @@
     | suc<suc p => p
 }
 
-\open NatOrder
 
 \lemma -'_< {n m : Nat} (p : 0 < n -' m) : m < n \elim n, m, p
   | suc n, 0, _ => zero<suc
@@ -190,7 +189,6 @@
   | natCoefZero => idp
   | natCoefSuc n => idp
   \where {
-    \open LinearOrder
 
     \lemma triEquals {n m : Nat} (p : n - m = 0) : n = m \elim n, m
       | 0, 0 => idp

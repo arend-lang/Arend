@@ -1,4 +1,3 @@
-\import Algebra.Ordered
 \import Arith.Nat
 \import Function.Meta
 \import Logic

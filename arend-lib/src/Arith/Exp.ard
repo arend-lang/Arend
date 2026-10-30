@@ -1,28 +1,20 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Pointed
-\import Algebra.QModule
-\import Algebra.Ring
 \import Algebra.Ring.FormalSeries
 \import Algebra.Ring.FormalSeries.Composition
 \import Algebra.Ring.FormalSeries.Derivative
 \import Algebra.Semiring
 \import Analysis.CauchyProduct
-\import Analysis.FuncLimit
-\import Analysis.Limit
 \import Analysis.PowerSeries
 \import Analysis.Series
 \import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
-\import Arith.Real
-\import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Arith.Real.UpperRealLattice
-\import Topology.NormedRing
 \import Combinatorics.Binom
 \import Combinatorics.Factorial
 \import Function.Meta
@@ -33,12 +25,14 @@
 \import Paths
 \import Paths.Meta
 \import Topology.BanachAlgebra
-\import Topology.BanachSpace
 \import Topology.CoverSpace.Complete
-\import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
-\open AddMonoid (BigSum)
+\import Algebra.Monoid.FinSum
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+
 \open Monoid (pow)
 
 -- | Coefficients of the function `exp x - 1`.
@@ -64,7 +58,7 @@
         \private \lemma exp-expm1 {A : RealBanachAlgebra} {x : A} (k : Nat)
           : powerSeries (\lam n => A.fromRat (exp.coef-Rat n)) x k - FSeriesRing.coef 1 k = A.fromRat (exp-1-coef k) * pow x k
           \elim k
-          | 0 => unfold powerSeries $ rewrite (A.fromRat_zro, pmap A.fromRat DiscreteField.finv_ide *> QModule.ide_*q) equation
+          | 0 => unfold powerSeries $ rewrite (A.fromRat_zro, pmap A.fromRat DiscreteField.finv_ide *> ide_*q) equation
           | suc k' => A.minus_zro
       }
 

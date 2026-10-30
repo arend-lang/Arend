@@ -1,6 +1,8 @@
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Base
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
@@ -9,7 +11,6 @@
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
-\import Category
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Pairs
@@ -27,9 +28,10 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.KFin
+\import Algebra.Monoid.Perm
+\import Algebra.Monoid.Properties
 \open EPerm
 \open Transitive(Closure,cin,ctrans)
-\open AddMonoid
 
 \type MonoidSet (M : \Set) (R : AddMonoid) => Quotient {Array (\Sigma R M)} (~)
   \where {
@@ -282,13 +284,13 @@
   | s :: l => pmap (_ +) msMonomial_BigSum-split
 
 \lemma msMonomial_BigProd {M : Monoid} {R : Semiring} (l : Array (\Sigma R M))
-  : Monoid.BigProd (map (\lam s => msMonomial s.1 s.2) l) = msMonomial (Monoid.BigProd $ map __.1 l) (Monoid.BigProd $ map __.2 l) \elim l
+  : BigProd (map (\lam s => msMonomial s.1 s.2) l) = msMonomial (BigProd $ map __.1 l) (BigProd $ map __.2 l) \elim l
   | nil => idp
   | s :: l => pmap (_ *) (msMonomial_BigProd l)
 
 \lemma msMonomial_BigProd_ide {M : Monoid} {R : Semiring} {l : Array M}
-  : Monoid.BigProd (map (\lam m => msMonomial R.ide m) l) = msMonomial R.ide (Monoid.BigProd l)
-  => msMonomial_BigProd (map (\lam m => (R.ide,m)) l) *> pmap (msMonomial __ _) Monoid.BigProd_replicate1
+  : BigProd (map (\lam m => msMonomial R.ide m) l) = msMonomial R.ide (BigProd l)
+  => msMonomial_BigProd (map (\lam m => (R.ide,m)) l) *> pmap (msMonomial __ _) BigProd_replicate1
 
 \lemma monoidSet-coefs_+ {M : \Set} {R : AbMonoid} {P : M -> \Prop} {d : \Pi (m : M) -> Dec (P m)} {x y : MonoidSet M R}
   : monoidSet-coefs d (x + y) = monoidSet-coefs d x + monoidSet-coefs d y \elim x, y
@@ -301,7 +303,7 @@
 
 \lemma msCoef-split {M : DecSet} {R : AbMonoid} (p : MonoidSet M R)
   : ∃ (l : Array M) (\Pi {i j : Fin l.len} -> l i = l j -> i = j) (p = BigSum (map (\lam m => msMonomial (msCoef p m) m) l)) \elim p
-  | in~ l => inP (nub (map __.2 l), nub-isInj, inv msMonomial_BigSum-split *> AbMonoid.BigSum_EPerm (EPerm_map (\lam s => msMonomial s.1 s.2) nub-split) *>
+  | in~ l => inP (nub (map __.2 l), nub-isInj, inv msMonomial_BigSum-split *> BigSum_EPerm (EPerm_map (\lam s => msMonomial s.1 s.2) nub-split) *>
       pmap BigSum (inv (Big++_map (\lam s => msMonomial s.1 s.2))) *> BigSum_Big++ *>
       (pmap (\lam x => BigSum (map x _)) {\lam m => BigSum (map (\lam s => msMonomial s.1 s.2) (keep (\lam s => M.decideEq m s.2) l))}
           (ext \lam m => msMonomial_BigSum-split *> fromClosure (unique-sum m \lam j => inv $ keep.satisfies {\Sigma R M} (\lam s => decideEq m s.2))) : BigSum (map _ (nub (map __.2 l))) = _))
@@ -310,7 +312,7 @@
   => \case msCoef-split p \with {
        | inP (l, inj, q) =>
         \let l' : Array M => remove (\lam m => decideEq (msCoef p m) 0) l
-        \in KFinSet.KFin+Dec=>Fin (\new KFinSet {
+        \in KFin+Dec=>Fin (\new KFinSet {
          | card => l'.len
          | finSurj => inP (\lam j => (l' j, remove.no-element \lam m => decideEq (msCoef p m) 0), \lam x => \case index-dec l' x.1 \with {
            | inl s => inP (s.1, ext s.2)

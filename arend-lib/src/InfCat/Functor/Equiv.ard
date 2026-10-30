@@ -3,7 +3,6 @@
 \import InfCat.Basics
 \import InfCat.Paths
 \import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 

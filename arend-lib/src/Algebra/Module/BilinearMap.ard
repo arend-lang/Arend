@@ -6,6 +6,7 @@
 \import Data.Array
 \import Paths
 \import Paths.Meta
+\import Algebra.Monoid.Properties
 
 \record BilinearMap {R : Ring} (A B C : LModule R) (\coerce func : A -> B -> C)
   | linear-left {b : B} : LinearMap A C (func __ b)

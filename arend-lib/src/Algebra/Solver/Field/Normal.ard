@@ -6,7 +6,6 @@
 \import Algebra.Solver.Semiring
 \import Arith.Int
 \import Paths
-\import Paths.Meta
 
 \open RingSolverModel.Term
 

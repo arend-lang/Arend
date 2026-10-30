@@ -1,6 +1,5 @@
 \import Homotopy.Pushout
 \import Homotopy.Space
-\import Homotopy.Suspension
 \import Logic
 \import Paths
 

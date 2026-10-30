@@ -2,19 +2,19 @@
 \import Algebra.Field.Algebraic
 \import Algebra.Group
 \import Algebra.Group.GroupHom
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring.Integral
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Factor
+\import Algebra.Ring.Factor.Field
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.Euclidean
 \import Algebra.Semiring
 \import Arith.Nat
-\import Category
 \import Data.Array
 \import Function.Meta ($)
 \import Logic
@@ -26,16 +26,18 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Countable
+\import Algebra.Ring.RingHom.Properties
+\import Algebra.Monoid.Properties
 \open Monoid
 
 \type IsSplittingField {k K : DiscreteField} (p : Poly k) (f : RingHom k K)
-  => ∃ (l : Array K) (c : K) (RingHom.isAlgebraGenerated f l) (polyMap f p = c PolyRing.*c Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))
+  => ∃ (l : Array K) (c : K) (isAlgebraGenerated f l) (polyMap f p = c PolyRing.*c BigProd (map (\lam a => padd 1 (negative a)) l))
 
 \lemma splitting-integral {k K : DiscreteField} {p : Poly k} {f : RingHom k K} (s : IsSplittingField p f) : isIntegralExt f \elim s
   | inP s => (finGenExt-char $ inP (s.1,s.3)).2 K.zeroDimensional
 
 \lemma splitting-monic {k K : DiscreteField} {p : Poly k} (pm : isMonic p) {f : RingHom k K} (s : IsSplittingField p f)
-  : ∃ (l : Array K) (RingHom.isAlgebraGenerated f l) (polyMap f p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) \elim pm, s
+  : ∃ (l : Array K) (isAlgebraGenerated f l) (polyMap f p = BigProd (map (\lam a => padd 1 (negative a)) l)) \elim pm, s
   | inP (n,pd,pc), inP (l, c, lg, lq) => inP (l, lg, lq *> pmap (PolyRing.*c _) (
     \have | pc1 : polyCoef (polyMap f p) n = 1 => polyCoef_polyMap *> pmap f pc *> func-ide
           | pc2 : polyCoef (polyMap f p) l.len = c => rewrite lq $ polyCoef_*c *> pmap (c *) (leadCoef_BigProd1 (\lam _ => idp) \lam _ => idp) *> ide-right
@@ -77,12 +79,12 @@
 
     \lemma splitting-degree {K L : DiscreteField} {p : Poly K} {n : Nat} (d : degree p = suc n) (p/=0 : p /= 0) (g : RingHom K L) {r : L} (isRoot : polyMapEval g p r = 0)
       : degree (rootDiv (polyMap g p) r) = n
-      => pmap pred (inv (rewrite (decideEq/=_reduce $ /=-sym zro/=ide) in inv (degree_polyMap RingHom.field-isInj) *> degree_*_= (\lam q => p/=0 $ polyMap-inj RingHom.field-isInj q) (rootDiv_* isRoot)) *> d)
+      => pmap pred (inv (rewrite (decideEq/=_reduce $ /=-sym zro/=ide) in inv (degree_polyMap field-isInj) *> degree_*_= (\lam q => p/=0 $ polyMap-inj field-isInj q) (rootDiv_* isRoot)) *> d)
 
     \lemma splitting-step.{u} {P : DiscreteField.{u} -> \Set u} {k : DiscreteField.{u}} {p : Poly k} (rfd : RootFieldData P k p) {K : DiscreteField.{u}} (f : RingHom rfd.RootField K)
                           (Ks : IsSplittingField (rootDiv (polyMap rfd.rootFieldHom p) rfd.root) f) : IsSplittingField p (f RingHom.∘ rfd.rootFieldHom)
       => TruncP.map Ks \lam (l,c,fl,q) => later
-          (f rfd.root :: l, c, RingHom.isAlgebraGenerated-comp rfd.RootField-gen fl,
+          (f rfd.root :: l, c, isAlgebraGenerated-comp rfd.RootField-gen fl,
            inv (polyMap-comp rfd.rootFieldHom f) *> pmap (polyMap f) (rootDiv_* rfd.isRoot) *> (polyMapRingHom f).func-* *> pmap (* _) q *> inv PolyRing.*c-comm-left *>
            pmap (c PolyRing.*c) (pmap (_ *) (pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative) *> *-comm {_} {_} {padd 1 (negative (f rfd.root))}))
 

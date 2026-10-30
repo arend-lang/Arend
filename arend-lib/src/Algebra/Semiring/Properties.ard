@@ -1,0 +1,37 @@
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Data.Array
+\import Function.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Algebra.Monoid.Properties
+\import Algebra.Pointed
+\open Monoid
+
+\lemma .BigSum-ldistr (SR : PseudoSemiring) {x : SR} {l : Array SR} : x * BigSum l = BigSum (map (x *) l) \elim l
+  | nil => zro_*-right
+  | :: a l => ldistr *> pmap (x * a +) BigSum-ldistr
+
+\lemma .BigSum-rdistr (SR : PseudoSemiring) {l : Array SR} {z : SR} : BigSum l * z = BigSum (\lam i => l i * z) \elim l
+  | nil => zro_*-left
+  | :: a arr => rdistr *> pmap (_ +) BigSum-rdistr
+
+\func .LDiv_BigSum (SR : Semiring) {a : SR} {l : Array SR} (p : \Pi (j : Fin l.len) -> LDiv a (l j)) : LDiv a (BigSum l) \cowith
+  | inv => BigSum (\lam j => LDiv.inv {p j})
+  | inv-right => BigSum-ldistr *> pmap BigSum (later $ exts \lam j => LDiv.inv-right {p j})
+
+\lemma .BigSum_replicate (SR : Semiring) {x : SR} {n : Nat} : BigSum (replicate n x) = natCoef n * x \elim n
+  | 0 => rewrite natCoefZero (inv zro_*-left)
+  | suc n => rewrite natCoefSuc $ pmap (x +) BigSum_replicate *> +-comm *> inv (rdistr *> pmap (_ +) ide-left)
+
+\lemma .BigSum_replicate1 (SR : Semiring) {n : Nat} : BigSum (replicate n ide) = natCoef n
+  => BigSum_replicate *> ide-right
+
+\lemma .BigProd_zro (SR : Semiring) {l : Array SR} (j : Fin l.len) (p : l j = 0) : BigProd l = 0 \elim l, j
+  | a :: l, 0 => pmap (* _) p *> zro_*-left
+  | a :: l, suc j => pmap (_ *) (BigProd_zro j p) *> zro_*-right
+
+-- | $\sum_{j<n} x^j$, the `n`-th partial sum of the geometric series.
+\func .powSum (SR : Semiring) (x : SR) (n : Nat) : SR
+  => BigSum \new Array SR n \lam j => pow x j

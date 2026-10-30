@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -27,8 +28,10 @@
 \import Paths
 \import Paths.Meta
 \import Topology.TopSpace
+\import Algebra.Semiring.Properties
+\import Algebra.Ordered.Properties
 \open Monoid (pow)
-\open PosetSemiring (<=_*_positive_positive, pow>=0, pow<=1, pow_<=-degree)
+\open PosetSemiring (<=_*_positive_positive, pow>=0)
 \open OrderedSemiring (pow>0)
 
 {- | **A quantitative Newton method over the complex numbers.**

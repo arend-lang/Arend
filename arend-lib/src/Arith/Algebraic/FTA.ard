@@ -2,6 +2,7 @@
 \import Algebra.Field.AlgebraicClosure
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -35,6 +36,10 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Algebra.Semiring.Properties
+\import Algebra.Ordered.Properties
+\import Algebra.Ring.Integral.Properties
+\import Algebra.Ring.Poly.Euclidean (degree-lead-Inv)
 \open PosetSemiring (<=_*_positive_positive)
 \open OrderedSemiring (<_*_positive_positive)
 \open LinearlyOrderedSemiring (<=_*-cancel-right)

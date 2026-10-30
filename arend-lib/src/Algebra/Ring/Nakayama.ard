@@ -2,6 +2,8 @@
 \import Algebra.Group.SubGroup
 \import Algebra.Linear.Matrix
 \import Algebra.Meta
+\import Algebra.Meta.Base
+\import Algebra.Meta.Simplify
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Module.SubLModule
@@ -22,13 +24,14 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Fin
+\import Algebra.Monoid.Properties
+\import Data.Fin
 
 \lemma nakayama {R : CRing} {M : LModule R} {I : Ideal R} (fg : M.IsFinitelyGenerated)
                 (c : topSubLModule M <= I *m topSubLModule M) : ∃ (e : R) (I (1 - e)) ∀ (m : M) (e *c m = 0) \elim fg
   | inP (l, lg) =>
-    \let | (inP f) => FinSet.finiteAC \lam j => c {l j} ()
-         | (inP g) => FinSet.finiteAC \lam i => FinSet.finiteAC \lam j => lg ((f i).1 j).3
+    \let | (inP f) => finiteAC \lam j => c {l j} ()
+         | (inP g) => finiteAC \lam i => finiteAC \lam j => lg ((f i).1 j).3
          | A => mkMatrix \lam i k => R.BigSum $ mkArray \lam j => ((f i).1 j).1 * (g i j).1 k
          | Al=l : product-gen A (mkColumn l) = mkColumn l => matrixExt \lam i k =>
              path (\lam i' => M.BigSum (\lam j => M.*c_BigSum-rdistr {mkArray \lam j' => ((f i).1 j').1 * (g i j').1 j} {l j} i')) *>

@@ -1,6 +1,6 @@
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
@@ -35,6 +35,10 @@
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
+\import Algebra.QModule.Rat
+\import Algebra.Field.Ordered
+\import Algebra.Ordered.Group
+\import Arith.Rat.Properties
 \open ProductCoverSpace
 \open DiscreteOrderedField
 \open LinearOrder \hiding (<=)

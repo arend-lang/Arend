@@ -1,0 +1,152 @@
+\import Algebra.Domain
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Meta.Simplify
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function
+\import Function.Meta ($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Algebra.Pointed
+\open Monoid
+\open Domain
+\open AddGroup.With#
+\open AddGroup.Dec
+\open Ring.With#
+\open CRing
+\open CMonoid
+\open DivQuotient
+
+\func .LDiv_TruncP (D : Domain.Dec) {a b : D} (p : TruncP (LDiv a b)) : LDiv a b
+  => \case decideEq a 0 \with {
+    | yes a=0 => LDiv.make 1 \case p \with {
+      | inP (_,q) => later (rewrite a=0 simplify) *> q
+    }
+    | no a/=0 => TruncP.remove (\lam d d' => ext $ nonZero-cancel-left a/=0 $ LDiv.inv-right {d} *> inv (LDiv.inv-right {d'})) p
+  }
+
+\func .subMonoid (D : Domain) : SubMonoid D \cowith
+  | contains => #0
+  | contains_ide => zro#ide
+  | contains_* => #0-*
+
+\func .nonZeroMonoid (D : Domain) : CancelMonoid \cowith
+  | E => subMonoid.Total
+  | ide => (ide, zro#ide)
+  | * x y => (x.1 * y.1, #0-* x.2 y.2)
+  | ide-left => ext ide-left
+  | ide-right => ext ide-right
+  | *-assoc => ext *-assoc
+  | cancel_*-left x {y} {z} x*y=x*z => ext (nonZero-cancel-left (apartNonZero x.2) (pmap __.1 x*y=x*z))
+  | cancel_*-right z {x} {y} x*z=y*z => ext (nonZero-cancel-right (apartNonZero z.2) (pmap __.1 x*z=y*z))
+
+\lemma .ldiv_nonZero (D : Domain) {a b : nonZeroMonoid} (a|b : Monoid.LDiv a.1 b.1) : Monoid.LDiv {nonZeroMonoid} a b \cowith
+  | inv => (a|b.inv, #0-*-right (transportInv #0 a|b.inv-right b.2))
+  | inv-right => ext a|b.inv-right
+
+\func .nonZero_ldiv (D : Domain) {a b : nonZeroMonoid} (a|b : Monoid.LDiv {nonZeroMonoid} a b) : Monoid.LDiv a.1 b.1 \cowith
+  | inv => a|b.inv.1
+  | inv-right => pmap __.1 a|b.inv-right
+
+\lemma .inv_nonZero (D : Domain) {a : nonZeroMonoid} (i : Monoid.Inv a.1) : Monoid.Inv {nonZeroMonoid} a \cowith
+  | inv => (i.inv, #0-*-right (transportInv #0 i.inv-right zro#ide))
+  | inv-left => ext i.inv-left
+  | inv-right => ext i.inv-right
+
+\lemma .nonZero_inv (D : Domain) {a : nonZeroMonoid} (i : Monoid.Inv {nonZeroMonoid} a) : Monoid.Inv a.1 \cowith
+  | inv => i.inv.1
+  | inv-left => pmap __.1 i.inv-left
+  | inv-right => pmap __.1 i.inv-right
+
+\lemma .fromNonZeroDivChain (D : IntegralDomain.Dec) (cc : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}) : CMonoid.DivChain {DivQuotientMonoid D}
+  => \lam a ac =>
+      \have | f => map IMonoid.embed
+            | f-inj : IsInj f => \lam {x} {y} => \case \elim x, \elim y \with {
+              | in~ x, in~ y => \lam p => \have t => make~ p \in ~-pequiv (TruncP.map t.1 ldiv_nonZero, TruncP.map t.2 ldiv_nonZero)
+            }
+            | r n (q : Not (∃ (j : Fin (suc (suc n))) (a (suc j) = in~ 0))) => TruncP.rec {_} {\Sigma (x : DivQuotient nonZeroCMonoid) (f x = a (suc n))} (\lam s s' => ext $ f-inj $ s.2 *> inv s'.2) (Quotient.in-surj (a (suc n)))
+               \lam s => (in~ (s.1, nonZeroApart \lam s=0 => q $ inP (n Nat.mod suc (suc n), pmap (\lam x => a (suc x)) (toFin'=id $ id<suc <∘ id<suc) *> inv s.2 *> pmap in~ s=0)), s.2)
+            | t => cc (\lam n => \case FinSet.search {FinFin (suc (suc n))} _ (\lam j => divQuotient_dec0 (a (suc j))) \with {
+                     | yes e => in~ (1,zro#ide)
+                     | no q => (r n q).1
+                   }) (\lam n => mcases {1} \with {
+                     | yes e => inP LDiv.ide-div
+                     | no q => rewrite (FinSet.search_no_reduce (\lam (j : Fin (suc (suc n))) => divQuotient_dec0 (a (suc j))) (\lam p => q p)) \case ac (suc n) \with {
+                       | inP d => divQuotient_LDiv.1 $ inP $ transport2 LDiv (inv (r (suc n) q).2) (inv (r n (\lam p => q p)).2) d
+                     }
+                   })
+      \in \case t \with {
+        | inP s => mcases {2} s.2 _ \with {
+            | yes e', s2 => TruncP.map e' \lam e => (e.1, \new LDiv {
+              | inv => in~ 0
+              | inv-right => cases (a e.1) \with {
+                | in~ b => pmap in~ zro_*-right *> inv e.2
+              }
+            })
+            | no q, s2 => rewrite (FinSet.search_no_reduce (\lam (j : Fin (suc (suc s.1))) => divQuotient_dec0 (a (suc j))) (\lam p => q p)) at s2 $
+                            inP (suc s.1, transport2 LDiv (r s.1 (\lam p => q p)).2 (r (suc s.1) q).2 $ f.func-LDiv s2)
+          }
+      }
+
+\lemma .oneDimensional-char (D : IntegralDomain.Dec) : Dim<= 1 <-> (\Pi (a u : D) -> a /= 0 -> ∃ (v : D) (n : Nat) (LDiv a (pow u n * (1 - u * v))))
+  => (\lam d a u a/=0 => \case d (a,u) \with {
+    | inP (b,m,p) => \have q => nonZero-cancel-left (apartNonZero $ pow_#0 $ nonZeroApart a/=0) (p *> inv zro_*-right)
+                     \in inP (b 1, m 1, LDiv.make (b 0) equation)
+  }, \lam f x => \case decideEq (x 0) 0 \with {
+    | yes x0=0 => inP ((1,1), (1,1), rewrite x0=0 simplify)
+    | no x0/=0 => \case f (x 0) (x 1) x0/=0 \with {
+      | inP (v,n,(y,p)) => inP ((y, v), (1, n), equation)
+    }
+  })
+
+\func .nonZeroCMonoid (D : IntegralDomain) : CancelCMonoid \cowith
+  | CancelMonoid => nonZeroMonoid
+  | *-comm => ext *-comm
+
+\lemma .div-inv (D : IntegralDomain) (x y : D) (x/=0 : x /= zro) (x|y : LDiv x y) (y|x : LDiv y x) : Inv x|y.inv
+  => Inv.rmake y|x.inv (Domain.nonZero-cancel-left x/=0 (equation {Monoid}))
+
+\func .gcd_nonZero (D : IntegralDomain) {a b : nonZeroCMonoid} (gcd : GCD a.1 b.1) : GCD {nonZeroCMonoid} a b \cowith
+  | res => (gcd, #0-*-left (transportInv #0 gcd.res|val1.inv-right a.2))
+  | res|val1 => ldiv_nonZero gcd.res|val1
+  | res|val2 => ldiv_nonZero gcd.res|val2
+  | res-univ g g|a g|b => ldiv_nonZero $ gcd.res-univ g.1 (nonZero_ldiv g|a) (nonZero_ldiv g|b)
+
+\func .nonZero_gcd (D : IntegralDomain) {a b : nonZeroCMonoid} (gcd : GCD {nonZeroCMonoid} a b) : GCD a.1 b.1 \cowith
+  | res => gcd.res.1
+  | res|val1 => nonZero_ldiv gcd.res|val1
+  | res|val2 => nonZero_ldiv gcd.res|val2
+  | res-univ g (g|a : LDiv g a.1) g|b => nonZero_ldiv {_} {g, #0-*-left $ transportInv #0 g|a.inv-right a.2} $ gcd.res-univ _ (ldiv_nonZero g|a) (ldiv_nonZero g|b)
+
+\lemma .divQuotient_LDiv (D : IntegralDomain) {x y : DivQuotient nonZeroCMonoid} : TruncP (LDiv {DivQuotientMonoid D} (map IMonoid.embed x) (map IMonoid.embed y)) <-> TruncP (LDiv {DivQuotientMonoid nonZeroCMonoid} x y) \elim x, y
+  | in~ x, in~ y => (\case __ \with {
+    | inP (in~ z, p) => TruncP.map (make~ p).2 \lam s => div-to~ {nonZeroCMonoid} $ ldiv_nonZero $ LDiv.trans (LDiv.factor-left LDiv.id-div) s
+  }, \case __ \with {
+    | inP (in~ z, p) => TruncP.map {LDiv (x nonZeroCMonoid.* z) y} (make~ p).2 \lam xz|y =>
+        \new LDiv (map IMonoid.embed (inD {nonZeroCMonoid} x)) (map IMonoid.embed (inD {nonZeroCMonoid} y)) (inD (z.1 * xz|y.inv.1)) $ pmap inD $ inv *-assoc *> pmap __.1 xz|y.inv-right
+  })
+
+\lemma .toNonZeroDivChain (D : IntegralDomain) (cc : CMonoid.DivChain {DivQuotientMonoid D}) : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}
+  => \lam a d => \have | (inP s) => cc (\lam i => map IMonoid.embed (a i)) \lam i => divQuotient_LDiv.2 (d i)
+                       | (inP d) => divQuotient_LDiv.1 (inP s.2)
+                 \in inP (s.1, d)
+
+\lemma .IsRegular_/=0 (D : IntegralDomain) {a : D} : IsRegularElem a <-> a /= 0
+  => (\lam ar a=0 => zro/=ide $ ar (rewrite a=0 simplify), \lam a/=0 p => nonZero-cancel-left a/=0 p)
+
+-- | {regulars} is {IsRegularElem} packaged as a submonoid, so this is {IsRegular_/=0}.
+\lemma .regulars-char (D : IntegralDomain) {r : D} : regulars r <-> r /= zro
+  => IsRegular_/=0

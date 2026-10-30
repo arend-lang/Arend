@@ -1,14 +1,12 @@
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Arith.Rat
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
-\import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
-\import Order.StrictOrder
 \import Paths
 \import Topology.MetricSpace
 \import Topology.UniformSpace.Product

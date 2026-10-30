@@ -1,4 +1,4 @@
-\import Algebra.Meta
+\import Algebra.Meta.Base
 \import Category
 \import Equiv
 \import Function.Meta

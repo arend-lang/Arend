@@ -22,8 +22,11 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 \open Monoid(pow)
-\open AddMonoid
 
 {- | Composition coefficient: the coefficient of $x^k$ in $A(B(x))$, where
      $A(y) = \sum_n a_n y^n$ and $B(x) = \sum_m b_m x^m$.  Defined as
@@ -86,7 +89,7 @@ $$(A \circ c)^n = A^n \circ c.$$
  -}
 \lemma pow-conv-compose {A : CRing} {b c : FSeries A} (c_0 : c 0 = A.zro) (n k : Nat)
   : pow (fcompose b c) n k = fcompose (pow b n) c k \elim n
-  | 0 => inv $ AddMonoid.BigSum-unique {A}
+  | 0 => inv $ BigSum-unique {A}
     {\new Array A (suc k) \lam (m : Fin (suc k)) => pow b 0 m * pow c m k} 0
     (\lam j zero-not-j => pmap (* _) (FSeriesRing.coef_/=0 \lam p => zero-not-j (fin_nat-inj (inv p))) *> A.zro_*-left)
     *> A.ide-left
@@ -165,7 +168,7 @@ $(b^{\star n})_m$ for $m < n$ ({pow-conv-zero-below} with $b_0 = 0$). -}
 -- | Right identity for substitution: $f \circ w = f$.
 \lemma compose-coef-subst-ide-right {R : Ring} (f : FSeries R) (k : Nat)
   : fcompose f subst-ide k = f k
-  => AddMonoid.BigSum-unique {R} {\new Array R (suc k) \lam n => f n * pow {FSeriesRing R} subst-ide n k}
+  => BigSum-unique {R} {\new Array R (suc k) \lam n => f n * pow {FSeriesRing R} subst-ide n k}
        (toFin k id<suc)
        (\lam j j/=spec => pmap (f j *) (pow-subst-ide-off j k (\lam p => j/=spec (fin_nat-inj (toFin=id *> inv p))))
                           *> R.zro_*-right)

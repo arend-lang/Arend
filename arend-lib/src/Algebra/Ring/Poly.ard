@@ -1,8 +1,9 @@
 \import Algebra.Algebra
 \import Algebra.Domain
-\import Algebra.Field
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Base
+\import Algebra.Meta.Simplify
 \import Algebra.Group
 \import Algebra.Module
 \import Algebra.Module.LinearMap
@@ -21,7 +22,6 @@
 \import Data.Array
 \import Data.Or
 \import Equiv
-\import Equiv.Fiber
 \import Function
 \import Function.Iterate
 \import Function.Meta
@@ -39,6 +39,9 @@
 \import Set
 \import Set.Countable
 \import Set.Fin
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 \open Monoid
 
 \data Poly (R : AddPointed)
@@ -86,7 +89,7 @@
       }
 
     \use \level levelSet {R : AddPointed} : isSet (Poly R)
-      => isSet.equiv (inP toQPoly-equiv) (\lam _ _ _ _ => set-pi)
+      => equiv-isSet (inP toQPoly-equiv) (\lam _ _ _ _ => set-pi)
 
     \func poly-countable {R : AddPointed} (c : Countable R) : Countable (Poly R)
       => surj-countable (quotient-countable (array-countable c)) (symQEquiv toQPoly-equiv).isSurj
@@ -147,7 +150,7 @@
   | c :: l => +-comm *> pmap2 (+) (inv ide-right) (pmap (* a) polyEval_fromArray *> R.BigSum-rdistr *> pmap R.BigSum (exts \lam j => *-assoc))
 
 \lemma polyMapEval_fromArray {R : AddPointed} {E : Ring} {f : AddPointedHom R E} {l : Array f.Dom} {a : f.Cod}
-  : polyMapEval f (Poly.fromArray l) a = AddMonoid.BigSum (\lam j => f (l j) * pow a j)
+  : polyMapEval f (Poly.fromArray l) a = BigSum (\lam j => f (l j) * pow a j)
   => pmap (polyEval __ a) polyMap_fromArray *> polyEval_fromArray
 
 \lemma polyCoef_fromArray {R : AddPointed} {l : Array R} {j : Fin l.len} : polyCoef (Poly.fromArray l) j = l j \elim l, j
@@ -225,8 +228,8 @@
   | padd p e, suc n => rewrite (polyEval_polyCoef (degree<_padd.conv d)) $ pmap2 (+) (R.BigSum-rdistr *> pmap (\lam x => R.BigSum (\new Array R n x)) (ext \lam j => *-assoc)) (inv ide-right) *> +-comm
 
 \lemma polyMapEval_polyCoef {f : RingHom} {p : Poly f.Dom} {a : f.Cod} {n : Nat} (d : degree< p n)
-  : polyMapEval f p a = AddMonoid.BigSum (\lam (i : Fin n) => f (polyCoef p i) * pow a i)
-  => polyEval_polyCoef (degree<_polyMap d) *> pmap AddMonoid.BigSum (exts \lam j => pmap (* _) polyCoef_polyMap)
+  : polyMapEval f p a = BigSum (\lam (i : Fin n) => f (polyCoef p i) * pow a i)
+  => polyEval_polyCoef (degree<_polyMap d) *> pmap BigSum (exts \lam j => pmap (* _) polyCoef_polyMap)
 
 \func degree<= {R : AddPointed} (p : Poly R) (n : Nat) : \Prop
   | pzero, n => \Sigma
@@ -587,7 +590,7 @@
   | padd p x, pzero, n => inv zro-right
   | padd p x, padd q y, suc n => polyCoef_+
 
-\lemma polyCoef_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} : polyCoef (AddMonoid.BigSum l) n = AddMonoid.BigSum (map (polyCoef __ n) l) \elim l
+\lemma polyCoef_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} : polyCoef (BigSum l) n = BigSum (map (polyCoef __ n) l) \elim l
   | nil => idp
   | a :: l => polyCoef_+ *> pmap (_ +) polyCoef_BigSum
 
@@ -693,15 +696,15 @@
   | padd p x, suc n => polyCoef_+ *> pmap2 (+) (leadCoef-product dp dq) (polyCoef_*c *> pmap (x *) (degree<=.toCoefs q m dq $ NatSemiring.<_+-left m NatOrder.zero<suc) *> zro_*-right) *> zro-right
 
 \lemma leadCoef_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (ld : \Pi (j : Fin l.len) -> degree<= (l j) (d j))
-  : polyCoef (BigProd l) (AddMonoid.BigSum d) = R.BigProd (\lam j => polyCoef (l j) (d j)) \elim l, d
+  : polyCoef (BigProd l) (BigSum d) = R.BigProd (\lam j => polyCoef (l j) (d j)) \elim l, d
   | nil, d => idp
   | p :: l, n :: d => leadCoef-product (ld 0) (degree<=_BigProd d (\lam j => ld (suc j))) *> pmap (_ *) (leadCoef_BigProd d (\lam j => ld (suc j)))
 
 \lemma leadCoef_BigProd1 {R : Ring} {l : Array (Poly R)} (ld : \Pi (j : Fin l.len) -> degree<= (l j) 1) (lc : \Pi (j : Fin l.len) -> polyCoef (l j) 1 = 1) : polyCoef (BigProd l) l.len = 1
-  => pmap (polyCoef _) (inv Semiring.BigSum_replicate1) *> leadCoef_BigProd (replicate l.len 1) ld *> pmap BigProd (exts lc) *> BigProd_replicate1 {_} {l.len}
+  => pmap (polyCoef _) (inv BigSum_replicate1) *> leadCoef_BigProd (replicate l.len 1) ld *> pmap BigProd (exts lc) *> BigProd_replicate1 {_} {l.len}
 
 \lemma leadCoef_pow {R : Ring} {p : Poly R} {d n : Nat} (pd : degree<= p d) : polyCoef (pow p n) (d * n) = pow (polyCoef p d) n
-  => pmap2 polyCoef (inv BigProd_replicate) (*-comm *> inv Semiring.BigSum_replicate) *> leadCoef_BigProd {R} {replicate n p} (replicate n d) (\lam _ => pd) *> BigProd_replicate
+  => pmap2 polyCoef (inv BigProd_replicate) (*-comm *> inv BigSum_replicate) *> leadCoef_BigProd {R} {replicate n p} (replicate n d) (\lam _ => pd) *> BigProd_replicate
 
 \lemma degree<=_+ {R : Ring} {p q : Poly R} {n : Nat} (dp : degree<= p n) (dq : degree<= q n) : degree<= (p + q) n \elim p, q, n
   | pzero, q, n => dq
@@ -709,11 +712,11 @@
   | padd p x, padd q y, 0 => pmap2 (+) dp dq
   | padd p x, padd q y, suc n => degree<=_+ dp dq
 
-\lemma degree<=_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} (d : \Pi (j : Fin l.len) -> degree<= (l j) n) : degree<= (AddMonoid.BigSum l) n
-  => AddMonoid.BigSum-pred {_} {degree<= __ n} () (\lam {p} {q} => degree<=_+) d
+\lemma degree<=_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} (d : \Pi (j : Fin l.len) -> degree<= (l j) n) : degree<= (BigSum l) n
+  => BigSum-pred {_} {degree<= __ n} () (\lam {p} {q} => degree<=_+) d
 
-\lemma degree<=_FinSum {R : Ring} {J : FinSet} {a : J -> Poly R} {n : Nat} (d : \Pi (j : J) -> degree<= (a j) n) : degree<= (AbMonoid.FinSum a) n
-  => AbMonoid.FinSum-pred {_} {degree<= __ n} () (\lam {p} {q} => degree<=_+) d
+\lemma degree<=_FinSum {R : Ring} {J : FinSet} {a : J -> Poly R} {n : Nat} (d : \Pi (j : J) -> degree<= (a j) n) : degree<= (FinSum a) n
+  => FinSum-pred {_} {degree<= __ n} () (\lam {p} {q} => degree<=_+) d
 
 \lemma degree<_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree< p n) : degree< (a PolyRing.*c p) n
   => \lam s => polyCoef_*c *> pmap (a *) (d s) *> R.zro_*-right
@@ -783,7 +786,7 @@
     }
   }
 
-\lemma polyDiv-linear {R : StrictIntegralDomain} {p q : Poly R} {l : Array R} (s : p * q = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))
+\lemma polyDiv-linear {R : StrictIntegralDomain} {p q : Poly R} {l : Array R} (s : p * q = BigProd (map (\lam a => padd 1 (negative a)) l))
   : (\Sigma (j : Fin l.len) (polyEval q (l j) = 0)) || Monoid.Inv q \elim l
   | nil => byRight (Monoid.Inv.lmake p s)
   | a :: l => \case R.zeroProduct {polyEval p a} {polyEval q a} (inv (polyEvalRingHom a).func-* *> pmap (polyEval __ a) s *> (polyEvalRingHom a).func-BigProd {map (\lam a => padd 1 (negative a)) (a :: l)} *> pmap (* _) simplify *> zro_*-left) \with {
@@ -816,15 +819,15 @@
   | padd p a => pmap lastCoef $ inv $ pmap (_ +) (inv PolyRing.zro_*c) *> d.inv-right
 
 \lemma degree<=_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (p : \Pi (j : Fin l.len) -> degree<= (l j) (d j))
-  : degree<= (BigProd l) (AddMonoid.BigSum d) \elim l, d
+  : degree<= (BigProd l) (BigSum d) \elim l, d
   | nil, d => idp
   | a :: l, n :: d => degree<=_* (p 0) $ degree<=_BigProd d \lam j => p (suc j)
 
 \lemma degree<=_BigProd1 {R : Ring} {l : Array (Poly R)} (p : \Pi (j : Fin l.len) -> degree<= (l j) 1) : degree<= (BigProd l) l.len
-  => transport (degree<= _) Semiring.BigSum_replicate1 (degree<=_BigProd (replicate l.len 1) p)
+  => transport (degree<= _) BigSum_replicate1 (degree<=_BigProd (replicate l.len 1) p)
 
 \lemma degree<=_pow {R : Ring} {p : Poly R} {d n : Nat} (pd : degree<= p d) : degree<= (pow p n) (d * n)
-  => transport2 degree<= BigProd_replicate (Semiring.BigSum_replicate *> *-comm) (degree<=_BigProd {_} {replicate n p} (replicate n d) \lam _ => pd)
+  => transport2 degree<= BigProd_replicate (BigSum_replicate *> *-comm) (degree<=_BigProd {_} {replicate n p} (replicate n d) \lam _ => pd)
 
 \lemma *c_monomial {R : Ring} {a c : R} {n : Nat} : a PolyRing.*c monomial c n = monomial (a * c) n \elim n
   | 0 => idp
@@ -926,9 +929,6 @@
     | yes p=0 => pmap (padd __ a) p=0
     | no p/=0 => \case rewrite (decideEq/=_reduce p/=0) in dp=0
   }
-
-\lemma field-toMonic {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) : isMonic (finv (leadCoef p) *c p)
-  => inP (degree p, degree<=_*c $ degree_degree<= <=-refl, polyCoef_*c *> pmap (_ *) (inv leadCoef_polyCoef) *> K.finv-left \lam s => p/=0 (leadCoef=0-lem s))
 
 \func polyDivision {R : CRing} (f g : Poly R) (k m n : Nat) (p : suc m = k + n) (df : degree<= f m) (dg : degree<= g n)
   : \Sigma (q r : Poly R) (pow (polyCoef g n) k *c f = q * g + r) (degree< r n) \elim k, m, n
@@ -1144,7 +1144,7 @@
 
 -- | A degree bound weakens to the next one.
 \lemma degree<-suc {R : AddPointed} {p : Poly R} {n : Nat} (d : degree< p n) : degree< p (suc n)
-  => \lam _ => d linarith
+  => \lam q => d (id<=suc <=∘ q)
 
 \private \lemma degree<_*-right {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree< p n)
   : degree< (p * padd pzero a) n
@@ -1244,7 +1244,7 @@
 
 -- | {degree<} passes to the tail of a `padd` **without shrinking the bound**.
 \lemma degree<_padd-tail {R : AddPointed} {p : Poly R} {e : R} {m : Nat} (d : degree< (padd p e) m) : degree< p m
-  => \lam {k} _ => d {suc k} linarith
+  => \lam {k} q => d {suc k} (q <=∘ id<=suc)
 
 -- | Two monic polynomials of degree {n} differ in degree `< n`.
 \lemma degree<-monic-diff {R : Ring} {a b : Poly R} {n : Nat}
@@ -1258,7 +1258,7 @@
                                     (ma : polyCoef a n = 1) (mb : polyCoef b n = 1) (d : Nat)
       : polyCoef (a - b) (n + d) = 0 \elim d
       | 0 => polyCoef_- *> AddGroup.toZero (ma *> inv mb)
-      | suc d => polyCoef_- *> AddGroup.toZero (da linarith *> inv (db linarith))
+      | suc d => polyCoef_- *> AddGroup.toZero (da (suc<=suc (<=_+ <=-refl zero<=_)) *> inv (db (suc<=suc (<=_+ <=-refl zero<=_))))
   }
 
 \lemma polyTranslate_degree< {R : CRing} (a : R) {f : Poly R} {n : Nat} (d : degree< f n)
@@ -1303,30 +1303,13 @@
 \lemma degree_LDiv {K : Domain.Dec} {q p : Poly K} (d : Monoid.LDiv q p) (p/=0 : p /= 0)
   : degree q <= degree p
   => \let (q/=0, i/=0) => LDiv/=0 d p/=0
-     \in linarith (pmap degree (inv d.inv-right) *> degree_* q/=0 i/=0)
+     \in transportInv (_ <=) (pmap degree (inv d.inv-right) *> degree_* q/=0 i/=0) (<=_+ <=-refl zero<=_)
 
 {- | **A non-zero constant polynomial is invertible.** The library has the converse (`polyInv`);
      this direction is what decides whether `gcd p p'` is a unit, which is the case split the
      separable reduction turns on. -}
-\lemma degree0-Inv {K : DiscreteField} {g : Poly K} (dg : degree g = 0) (g/=0 : g /= 0) : Monoid.Inv g
-  => \have g0 : g = padd pzero (polyCoef g 0)
-              => degree<=0 g (degree<_degree<= (degree_degree< {_} {g} {1}
-                                                  (rewrite dg NatOrder.zero<suc)))
-     \in \case eitherZeroOrInv (polyCoef g 0) \with {
-       | byLeft c=0 => absurd (g/=0 (g0 *> pmap (padd pzero) c=0 *> peq))
-       | byRight ci => Monoid.Inv.rmake (padd pzero ci.inv)
-           (pmap (`* padd pzero ci.inv) g0 *> pmap (padd pzero) (zro-left *> ci.inv-right))
-     }
 
 -- | The leading coefficient of a non-zero polynomial is non-zero.
 \lemma degree-lead/=0 {K : Ring.Dec} {p : Poly K} (p/=0 : p /= 0) {n : Nat}
                       (dp : degree p = suc n) : polyCoef p (suc n) /= 0
   => \lam c=0 => p/=0 (leadCoef=0-lem (leadCoef_polyCoef *> pmap (polyCoef p) dp *> c=0))
-
--- | Over a discrete field it is therefore invertible.
-\lemma degree-lead-Inv {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) {n : Nat}
-                       (dp : degree p = suc n) : Monoid.Inv (polyCoef p (suc n))
-  => \case eitherZeroOrInv (polyCoef p (suc n)) \with {
-    | byLeft lead=0 => absurd (degree-lead/=0 p/=0 dp lead=0)
-    | byRight i => i
-  }

@@ -1,10 +1,7 @@
 \import Equiv
-\import Equiv.BiEquiv
-\import Equiv.Path
 \import Equiv.Sigma
 \import Function
 \import Function.Meta
-\import Logic.Unique
 \import Homotopy.Square
 \import Logic
 \import Paths

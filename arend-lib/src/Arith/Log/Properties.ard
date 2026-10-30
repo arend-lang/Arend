@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ring.FormalSeries.Composition
 \import Analysis.SeriesComposition
@@ -24,6 +24,7 @@
 \import Paths.Meta
 \import Topology.BanachAlgebra
 \import Topology.NormedAbGroup
+\import Algebra.QModule.Rat
 \open Monoid (pow)
 
 -- | $\log(1 + (\exp w - 1)) = w$ whenever $\|w\| < \log 2$ in a commutative `RealBanachAlgebra`.

@@ -19,7 +19,6 @@
 \import InfCat.Rezk
 \import InfCat.Basics
 \import Paths.Meta
-\import Logic.Unique
 \import Category.Simplex
 \import InfCat.Fibration.Contravariant.ContravariantLift
 \import InfCat.Nerve.Simplicial.CospanIso

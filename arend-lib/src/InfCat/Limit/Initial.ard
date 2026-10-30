@@ -5,7 +5,6 @@
 \import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Adjunction
 \import InfCat.Rezk
-\import Logic.Unique
 
 \type IsInitial {C : \Cat} (x : C) : \Prop
   => \Pi (y : C) -> Contr (x ~> y)

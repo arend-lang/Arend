@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.FormalSeries
@@ -26,7 +26,6 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Directed
@@ -35,11 +34,11 @@
 \import Topology.MetricSpace.OpenBall
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
-\import Topology.TopAbGroup.Product
 \import Topology.TopSpace
-\import Topology.UniformSpace
+\import Algebra.Monoid.FinSum
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
 \open Monoid(pow)
 
 \func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (x : X) (n : Nat)

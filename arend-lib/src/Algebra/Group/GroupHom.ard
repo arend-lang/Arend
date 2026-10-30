@@ -1,5 +1,4 @@
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
@@ -33,11 +32,6 @@
     | func x => g (f x)
     | func-* => pmap g f.func-* *> g.func-*
 }
-
-\func conjugateHom {E : Group} (g : E) : GroupHom E E \cowith
-  | func => conjugate g
-  | func-ide => equation.group
-  | func-* => equation.group
 
 \record AddGroupHom \extends AddMonoidHom {
   \override Dom : AddGroup

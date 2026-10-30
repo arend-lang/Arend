@@ -98,6 +98,19 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
     }
   }
 
+  private static TCDefReferable getClassReference(Concrete.Expression expr) {
+    while (true) {
+      if (expr instanceof Concrete.AppExpression appExpr) {
+        expr = appExpr.getFunction();
+      } else if (expr instanceof Concrete.ClassExtExpression classExt) {
+        expr = classExt.getBaseClassExpression();
+      } else {
+        break;
+      }
+    }
+    return expr instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof TCDefReferable ref ? ref : null;
+  }
+
   private Concrete.Expression makeThisClassCall(Object data, TCDefReferable classRef, Concrete.LevelParameters levelParams) {
     List<Concrete.LevelExpression> levelArgs = levelParams == null ? null : new ArrayList<>(levelParams.referables.size());
     if (levelParams != null) {
@@ -119,6 +132,23 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
     if (def instanceof Concrete.CoClauseFunctionDefinition function && def.getLevelParameters() == null) {
       if (myConcreteProvider.getConcrete(function.getUseParent()) instanceof Concrete.ResolvableDefinition parent) {
         def.setLevelParameters(Concrete.LevelParameters.copyLevelParameters(def.getData(), parent.getLevelParameters()));
+      }
+    }
+
+    // The receiver of an extension function plays the role of the \this parameter
+    if (def.implicitReceiver && !def.getParameters().isEmpty() && def.getParameters().getFirst().getReferableList().size() == 1) {
+      Concrete.Parameter receiver = def.getParameters().getFirst();
+      TCDefReferable classRef = getClassReference(receiver.getType());
+      if (classRef != null && classRef.getTypechecked() instanceof ClassDefinition classDef) {
+        Set<TCDefReferable> fields = new HashSet<>();
+        getFields(classRef, fields);
+        def.accept(new ClassFieldChecker(receiver.getReferableList().getFirst(), myConcreteProvider, def.getRecursiveDefinitions(), classRef, Collections.singletonList(classDef), fields, null, myErrorReporter), null);
+        // As for \this, the receiver is bound by an implicit pattern in clauses without \elim
+        if (def.getBody().getEliminatedReferences().isEmpty()) {
+          for (Concrete.FunctionClause clause : def.getBody().getClauses()) {
+            clause.getPatterns().addFirst(new Concrete.NamePattern(clause.getData(), false, receiver.getReferableList().getFirst(), null));
+          }
+        }
       }
     }
 

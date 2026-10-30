@@ -1,17 +1,20 @@
 \import Algebra.Domain
 \import Algebra.Domain.IntegrallyClosed
+\import Algebra.Domain.Properties
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Localization
-\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.Properties
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Algebra.Ring.Localization \hiding (FieldOfQuotients)
+\import Algebra.Ring.Localization
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
+\import Algebra.Semiring.Properties
 \import Arith.Nat
 \import Data.Or
 \import Function.Meta ($)
@@ -162,7 +165,7 @@
         | inv => negative $ R.BigSum \new Array R n \lam j => polyCoef p j * pow a j * pow b (n -' suc j)
         | inv-right => \have | s i q : locR (polyCoef p i * pow a i * pow b (n -' i)) = polyCoef (polyMap locR p) i * pow (inl~ (a,b,Sb)) i * pow (locR b) n
                                  => locR.func-* *> pmap (locR _ *) locR.func-pow *> pmap (* _) (locR.func-* *> pmap2 (*) (inv (polyCoef_polyMap {locR})) locR.func-pow) *> *-assoc *> pmap (_ *) (later $ rewriteI {2} (<=_exists q) $ rewrite pow_+ $ pmap (* _) (pmap (pow __ i) (later $ ~-lequiv1 simplify) *> CMonoid.pow_*-comm) *> *-assoc) *> inv *-assoc
-                             | t => inv (R.BigSum_suc {n} {\lam j => polyCoef p j * pow a j * pow b (n -' j)}) *> LocMonoid.isLocalization.inL-inj nt (locR.func-BigSum {\new Array R (suc n) \lam j => polyCoef p j * pow a j * pow b (n -' j)} *> path (\lam i => AddMonoid.BigSum (\new Array (LocRing S) (suc n) \lam j => s j (<_suc_<= $ fin_< j) i)) *> inv (Semiring.BigSum-rdistr {_} {\new Array (LocRing S) (suc n) \lam j => polyCoef (polyMap locR p) j * pow (inl~ (a,b,Sb)) j}) *> pmap (* pow (locR b) n) (inv (polyEval_polyCoef $ degree<=_degree< $ degree<=_polyMap d) *> e) *> zro_*-left)
+                             | t => inv (R.BigSum_suc {n} {\lam j => polyCoef p j * pow a j * pow b (n -' j)}) *> LocMonoid.isLocalization.inL-inj nt (locR.func-BigSum {\new Array R (suc n) \lam j => polyCoef p j * pow a j * pow b (n -' j)} *> path (\lam i => BigSum (\new Array (LocRing S) (suc n) \lam j => s j (<_suc_<= $ fin_< j) i)) *> inv (BigSum-rdistr {_} {\new Array (LocRing S) (suc n) \lam j => polyCoef (polyMap locR p) j * pow (inl~ (a,b,Sb)) j}) *> pmap (* pow (locR b) n) (inv (polyEval_polyCoef $ degree<=_degree< $ degree<=_polyMap d) *> e) *> zro_*-left)
                              | q (j : Fin n) => *-comm *> pmap (pow b) {suc (n -' suc j)} (NatSemiring.cancel-left j $ <=_exists (suc_<_<= $ fin_< j) *> inv (<=_exists $ LinearOrder.<_<= $ fin_< j))
                        \in R.negative-unique _ (pmap (+ _) (R.negative_*-right *> pmap negative (R.BigSum-ldistr *> pmap R.BigSum (exts \lam j => equation.cRing {q j}))) *> negative-left) (pmap (_ +) (later (rewrite (m,-'id) simplify) *> inv (pmap (\lam x => polyCoef p x * pow a x * pow b (n -' x)) (mod_< id<suc))) *> t)
       })

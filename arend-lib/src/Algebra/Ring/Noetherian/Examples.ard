@@ -1,6 +1,5 @@
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Localization
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
@@ -19,14 +18,17 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Set.Fin
+\import Algebra.Ring.RingHom.Properties
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+\import Data.Fin
 \open Ideal
 
 \lemma SurjNoetherian {R S : CRing} (RN : IsNoetherian R) {f : RingHom R S} (fs : IsSurj f) : IsNoetherian S
   => bar-surj f fs $ bar-impl pauses-map RN
   \where {
     \lemma pauses-map {l : Array R} (p : PausesElem l) : PausesElem (map f l) \elim l, p
-      | a :: l, pauses-here p => pauses-here (PseudoRingHom.func-Ideal_closure f {_} {l} p)
+      | a :: l, pauses-here p => pauses-here (func-Ideal_closure f {_} {l} p)
       | a :: l, pauses-there p => pauses-there (pauses-map p)
   }
 
@@ -36,10 +38,10 @@
   }) pauses-loc RN
   \where {
     \lemma pauses-loc (as : Array L.B) (bs : Array L.L as.len) (c : ∀ j ∃ (s : L.B) (L.S s) (bs j * L s = L (as j))) (p : PausesElem as) : PausesElem bs \elim as, bs, p
-      | a :: as, b :: bs, pauses-here p => pauses-here \case FinSet.finiteAC c, closureN-lem.1 p \with {
+      | a :: as, b :: bs, pauses-here p => pauses-here \case finiteAC c, closureN-lem.1 p \with {
         | inP h, inP (l,p) => closureN-lem.2 $ inP (\lam j => L (l j) * L (h (suc j)).1 * (L.localization-inv (h 0).2).inv,
           (L.localization-inv (h 0).2).inv-cancel-right $ (h 0).3 *> pmap L p *> RingHom.func-BigSum *>
-          pmap AddMonoid.BigSum (exts \lam j => RingHom.func-* *> equation.cMonoid {(L.localization-inv (h 0).2).inv-right, (h (suc j)).3}) *> inv Semiring.BigSum-rdistr)
+          pmap BigSum (exts \lam j => RingHom.func-* *> equation.cMonoid {(L.localization-inv (h 0).2).inv-right, (h (suc j)).3}) *> inv BigSum-rdistr)
       }
       | a :: as, b :: bs, pauses-there p => pauses-there $ pauses-loc as bs (\lam j => c (suc j)) p
   }
@@ -69,11 +71,11 @@
           : PausesElem ((R.zro,b) :: map homl as ++ map homr bs) \elim as, p
           | nil, pauses-here p => pauses-here p
           | nil, pauses-there p => pauses-there p
-          | a' :: as, pauses-here p => pauses-there $ pauses-here $ lclosure_++-left $ PseudoRingHom.func-Ideal_lclosure homl {as} $
+          | a' :: as, pauses-here p => pauses-there $ pauses-here $ lclosure_++-left $ func-Ideal_lclosure homl {as} $
             lclosure-univ (lclosure as) {map ProductCRing.proj1 (map homl as ++ map homr (b :: bs))} (\lam j => \case \elim j, ++.split-index j \with {
               | _, inl (j,idp) => rewrite ++.++_index-left (lclosure-superset j)
               | _, inr (j,idp) => rewrite ++.++_index-right (lclosure as).contains_zro
-            }) (PseudoRingHom.func-Ideal_lclosure ProductCRing.proj1 p)
+            }) (func-Ideal_lclosure ProductCRing.proj1 p)
           | a' :: as, pauses-there p => PausesElem.++-insert {_} {homr b :: nil} {homl a' :: nil} (aux1 p)
 
         \lemma aux {l : Array (\Sigma R S)} {a : R} {as : Array R} {b : S} {bs : Array S}

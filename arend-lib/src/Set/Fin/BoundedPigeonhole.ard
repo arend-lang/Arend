@@ -1,5 +1,4 @@
 \import Arith.Fin.Order
-\import Data.Fin
 \import Function
 \import Logic
 \import Logic.Bar
@@ -7,9 +6,8 @@
 \import Order.LinearOrder
 \import Order.StrictOrder
 \import Paths
-\import Set.Fin (FinSet)
 \import Set.Fin.Noetherian
-\import Set.Fin.Pigeonhole
+\import Data.Fin
 
 \class BoundedPigeonholeSet \extends NoetherianSet {
   | card : Nat
@@ -26,6 +24,6 @@
 
 \lemma pigeonhole-surj (A : BoundedPigeonholeSet) {B : \Set} (f : A -> B) (s : IsSurj f) : BoundedPigeonholeSet B A.card \cowith
   | boundedPigeonhole g =>
-    \have | (inP t) => FinSet.finiteAC (\lam j => s (g j))
+    \have | (inP t) => finiteAC (\lam j => s (g j))
           | (inP r) => A.boundedPigeonhole (\lam j => (t j).1)
     \in inP (r.1, r.2, r.3, inv (t r.1).2 *> pmap f r.4 *> (t r.2).2)

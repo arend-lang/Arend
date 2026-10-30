@@ -10,6 +10,9 @@
 \import Meta
 \import Paths
 \import Paths.Meta
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.Properties
 
 \func pairs {A B C : \Type} (f : A -> B -> C) (l : Array A) (l' : Array B) : Array C \elim l
   | nil => nil

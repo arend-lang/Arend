@@ -1,9 +1,6 @@
 \import Equiv
-\import Equiv.Fiber
-\import Equiv.Path
 \import Function
 \import Function.Meta
-\import Homotopy.Fibration
 \import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.Functor.Equiv

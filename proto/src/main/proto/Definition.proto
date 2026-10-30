@@ -220,6 +220,8 @@ message Referable {
     // Access modifier (PUBLIC=0, PROTECTED=1, PRIVATE=2). Default 0 = PUBLIC
     // preserves backward compatibility with .arc files that don't encode this.
     AccessModifier access_modifier = 6;
+    // True for extension functions \func .foo (r : R)
+    bool is_dynamic_extension = 7;
 }
 
 enum AccessModifier {

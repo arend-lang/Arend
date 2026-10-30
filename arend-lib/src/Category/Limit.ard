@@ -1,4 +1,5 @@
 \import Category
+\import Category.FreeCat
 \import Category.Adjoint
 \import Category.Functor
 \import Category.Product
@@ -1074,3 +1075,15 @@
     }
     | tupleEq c => exts \lam j => C.pair-unique (path \lam i => c 0 i j) (path \lam i => c 1 i j)
   }
+
+-- | Right adjoints preserve limits
+\lemma .preservesLimits (A : Adjunction) {J : Precat} {G : Functor J A.D} : PreservesLimit A.RAdj G
+  => \lam c cl z => IsEquiv.rightFactor (inP A.eta_epsilon-equiv) $ transport IsEquiv (ext \lam h => exts \lam j => pmap (∘ _) Func-o *> o-assoc) $
+      IsEquiv.trans (cl (A.LAdj z)) {\lam c' => conePullback {J} {_} {Comp A.RAdj G} (Cone.map A.RAdj c') z (A.eta z)} $ later $ inP \new QEquiv {
+        | ret c' => \new Cone {
+          | coneMap j => A.epsilon (G j) ∘ A.LAdj.Func (c'.coneMap j)
+          | coneCoh h => inv o-assoc *> pmap (∘ _) (inv (A.epsilon.natural _)) *> o-assoc *> pmap (_ ∘) (inv A.LAdj.Func-o) *> pmap (_ ∘ A.LAdj.Func __) (c'.coneCoh h)
+        }
+        | ret_f c' => exts \lam j => A.eta_epsilon-equiv.ret_f _
+        | f_sec c' => exts \lam j => A.eta_epsilon-equiv.f_ret _
+      }

@@ -1,5 +1,4 @@
 \import Equiv
-\import Equiv.Fiber
 \import Function.Meta
 \import Homotopy.Diagonal
 \import Homotopy.HLevel

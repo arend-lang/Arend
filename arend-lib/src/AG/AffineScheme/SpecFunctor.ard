@@ -29,6 +29,7 @@
 \import Paths
 \import Paths.Meta
 \import Topology.Locale.PreorderSite
+\import Order.PartialOrder.PosetHom
 \open Monoid
 \open SubMonoid
 \open Localization

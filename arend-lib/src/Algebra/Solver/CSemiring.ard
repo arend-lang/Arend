@@ -6,7 +6,6 @@
 \import Arith.Nat
 \import Arith.Fin.Order
 \import Data.List
-\import Function.Meta
 \import Paths
 \open SemiringSolverModel \hiding (natCoef)
 

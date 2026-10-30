@@ -11,6 +11,7 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
+\import Set.Set.Lattice
 \open Set
 \open ClosurePrecoverSpace
 

@@ -5,7 +5,6 @@
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed.PointedHom
-\import Algebra.Ring.Localization
 \import Algebra.Ring.RingCat
 \import Algebra.Ring.RingHom
 \import Category
@@ -13,7 +12,6 @@
 \import Category.Limit
 \import Category.Topos.Sheaf
 \import Category.Topos.Sheaf.DenseExtend
-\import Data.Array
 \import Equiv
 \import Function.Meta
 \import Logic
@@ -22,9 +20,9 @@
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths
 \import Paths.Meta
-\import Relation.Equivalence
 \import Set.Set
 \import Topology.Locale
 \import Topology.Locale.PreorderSite
@@ -32,7 +30,6 @@
 \open SiteLocale
 \open CompleteLattice
 \open Cover
-\open SubMonoid (powers, powers-id)
 
 \record LRLSchemeSiteHom.{u} (L : LocallyRingedLocale.{u}) (S : SatSchemeSite.{u}) (\coerce f* : PreorderHom S L) (f# : NatTrans S.R (Comp L.R.F f*.op)) {
   | isLRLSchemeSiteHom-top : top <= IJoin f*
@@ -63,7 +60,7 @@
             (path \lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R) {matchingFamily U} i (a,Ua) x)) $
         (L.R.F.Func meet-left).func-Inv xi) <=∘ SJoin-cond (cover-refl idp) <=∘ SJoin-conde (embed b) (later (embed-univ $ U.2 $ cover-inj b<=a Ua,
           (SiteLocaleSheaf.embedProj {_} {CRingBicat} b).equiv-Inv (CRingCat.Iso<->IsEquiv.1 (SiteLocaleSheaf.embed-iso {S.toSite} S.toLRLSite.R-sheaf)) $
-          transport Inv (x.2 b<=a) $ bl.localization-inv powers-id))
+          transport Inv (x.2 b<=a) $ bl.localization-inv SubMonoid.powers-id))
     }
     \where {
       \func matchingFamily (U : SiteLocale S.toSite) : MatchingFamily {L} L.R {Set.Total U.1} (SJoin toPreorderSiteHom U.1) (\lam j => (f* j.1, SJoin-cond j.2)) (LimitCRing (SiteLocaleSheaf.extend.limFunctor {_} {CRingBicat} {S.R} U)) \cowith
@@ -145,7 +142,7 @@
     | <=f*-meet b<=ha1 b<=ha2 => cover-sub (h.isLRLSchemeSiteHom-meet (b<=ha1,b<=ha2)) \lam {y} (inP (_, inP (x,idp), y<=hx)) => inP (x.1, x.2.1, x.2.2, y<=hx)
     | <=f*-loc {a} {a'} a'<=a {b} b<=a => \case S.loc-restrict a'<=a \with {
       | inP (x,xl) => \case loc-exists $ (h.f# a x).1 (b,b<=a) \with {
-        | inP (b',b'<=b,xb') => cover-refl $ (b<=a, inP (b', b'<=b, h.isLRLSchemeSiteHom-loc a'<=a xl (embed-univ $ (h a).2 $ cover-inj b'<=b b<=a) ((SiteLocaleSheaf.embedProj {_} {CRingBicat} b').equiv-Inv (CRingCat.Iso<->IsEquiv.1 (SiteLocaleSheaf.embed-iso {T.toSite} T.toLRLSite.R-sheaf)) $ transport Inv ((h.f# a x).2 b'<=b) $ xb'.localization-inv powers-id) (cover-refl idp), x, xl, xb'))
+        | inP (b',b'<=b,xb') => cover-refl $ (b<=a, inP (b', b'<=b, h.isLRLSchemeSiteHom-loc a'<=a xl (embed-univ $ (h a).2 $ cover-inj b'<=b b<=a) ((SiteLocaleSheaf.embedProj {_} {CRingBicat} b').equiv-Inv (CRingCat.Iso<->IsEquiv.1 (SiteLocaleSheaf.embed-iso {T.toSite} T.toLRLSite.R-sheaf)) $ transport Inv ((h.f# a x).2 b'<=b) $ xb'.localization-inv SubMonoid.powers-id) (cover-refl idp), x, xl, xb'))
       }
     }
     | <=f*-cover-left {b} {a} c => (h a).2 c

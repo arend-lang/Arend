@@ -1,0 +1,70 @@
+\import Algebra.Group.Symmetric
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Perm
+\import Data.Fin (unfsuc, searchFin-equiv, FinCardBij)
+\import Data.Or
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\open EPerm
+\open Perm
+
+\func eperm_equiv {A : \Type} {l l' : Array A} (p : EPerm l l') : \Sigma (e : QEquiv {Fin l'.len} {Fin l.len}) (\Pi (j : Fin l'.len) -> l' j = l (e j)) \elim l, l', p
+  | nil, nil, eperm-nil => (idEquiv, \case __)
+  | x :: l3, y :: l4, eperm-:: p q =>
+    \have (e,f) => eperm_equiv q
+    \in (lift.aux e, \case \elim __ \with {
+      | 0 => inv p
+      | suc j => f j
+    })
+  | x :: (x' :: l), y :: (y' :: l'), eperm-swap p1 p2 q => transport (\lam (l'' : Array A) => \Sigma (e : QEquiv {Fin (suc (suc l''.len))} {Fin (suc (suc l.len))}) (\Pi (j : Fin (suc (suc l''.len))) -> (y :: y' :: l'') j = (x :: x' :: l) (e j))) q
+    (transposition1 (0 : Fin (suc l.len)), \case \elim __ \with {
+      | 0 => rewrite transposition1.transposition1-left (inv p2)
+      | 1 => rewrite transposition1.transposition1-right (inv p1)
+      | suc (suc j) => rewrite (transposition1.transposition1_/= (later \case __) (later \case __)) idp
+    })
+  | l, l', eperm-trans p1 p2 =>
+    \have | (e1,f1) => eperm_equiv p1
+          | (e2,f2) => eperm_equiv p2
+    \in (transQEquiv e2 e1, \lam j => f2 j *> f1 (e2 j))
+  \where {
+    \func conv {A : \Type} {l l' : Array A} (s : \Sigma (e : QEquiv {Fin l'.len} {Fin l.len}) (\Pi (j : Fin l'.len) -> l' j = l (e j))) : EPerm l l'
+      => transportInv (\lam n => \Pi (l' : Array A n) -> \Sigma (e : QEquiv {Fin l'.len} {Fin l.len}) (\Pi (j : Fin l'.len) -> l' j = l (e j)) -> EPerm l l') (FinCardBij s.1) (\lam l' s => Perm_EPerm {_} {l.len} {\new l} (perm_equiv.conv {_} {_} {\new l} s)) (\new l') s
+  }
+
+\func EPermDec {A : DecSet} {l l' : Array A} : Or (EPerm l l') (Not (EPerm l l'))
+  => \case searchFin-equiv {QEquiv {FinFin l'.len} {FinFin l.len}} (symQEquiv EquivFin.equiv_fin.2) (\lam e => \Pi (j : Fin l'.len) -> l' j = l (e j)) (\lam e => decide {FinDec \lam j => EqualityDecide A (l' j) (l (e j))}) \with {
+    | inl p => inl (eperm_equiv.conv p)
+    | inr q => inr \lam e => q (eperm_equiv e).1 (eperm_equiv e).2
+  }
+
+\func perm_equiv {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))
+  => eperm_equiv (EPerm.Perm_EPerm p)
+  \where {
+    \func conv {A : \Type} {n : Nat} {l l' : Array A n} (s : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))) : Perm l l'
+      => transportInv (Perm l) (exts s.2) (equiv_perm s.1)
+  }
+
+\func perm-map-conv {A B : \Set} (f : A -> B) (inj : IsInj f) {n : Nat} {l1 l2 : Array A n} (p : Perm (map f l1) (map f l2)) : Perm l1 l2
+  => \have (e,f) => perm_equiv {_} {_} {map f l1} p
+     \in transport (Perm l1) (exts \lam j => inj $ inv $ f j) (equiv_perm e)
+
+\func EPerm_map-conv {A B : \Set} (f : A -> B) (inj : IsInj f) {l l' : Array A} (e : EPerm (map f l) (map f l')) : EPerm l l'
+  => aux f inj (EPerm_len e) e
+  \where
+    \private \func aux {A B : \Set} (f : A -> B) (inj : IsInj f) {n m : Nat} (p : n = m) {l : Array A n} {l' : Array A m} (e : EPerm (map f l) (map f l')) : EPerm l l' \elim p
+      | idp => Perm_EPerm $ perm-map-conv f inj $ EPerm_Perm {B} {_} {map f l} e
+
+\func EPerm_Perm {A : \Type} {n : Nat} {l l' : Array A n} (p : EPerm l l') : Perm l l'
+  => \have (e,f) => eperm_equiv p
+     \in transport (Perm l) (exts \lam j => inv (f j)) (Perm.equiv_perm e)
+
+\func EPerm_Perm_transport {A : \Type} {n m : Nat} {l : Array A n} {l' : Array A m} (e : EPerm l l') (p : n = m) : Perm (transport (\lam n => Array A n) p l) l' \elim p
+  | idp => EPerm_Perm e

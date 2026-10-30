@@ -1,15 +1,15 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.Ring
 \import Algebra.Ring.FormalSeries
 \import Algebra.Ring.FormalSeries.Composition
 \import Algebra.Semiring
 \import Analysis.FuncLimit
-\import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
@@ -44,6 +44,14 @@
 \import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Algebra.Monoid.FinSum
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+\import Order.Lattice.Properties
+\import Algebra.Ordered.Properties
+\import Arith.Rat.Properties
+\import Data.Fin
 \open Monoid
 
 \func Series (A : \Set) => Nat -> A
@@ -237,7 +245,7 @@
   | suc n, 0 => ExUpperRealSemigroup.*_>=0
   | suc n, suc m => midSum_<=-ldistr \lam j => b>=0 (suc j)
   \where {
-    \lemma BigSum_<=-ldistr {x : ExUpperReal} {l : Array ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) : AddMonoid.BigSum (\lam j => x * l j) <= x * AddMonoid.BigSum l \elim l
+    \lemma BigSum_<=-ldistr {x : ExUpperReal} {l : Array ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) : BigSum (\lam j => x * l j) <= x * BigSum l \elim l
       | nil => ExUpperRealSemigroup.*_>=0
       | a :: l => transportInv (_ <=) (ExUpperRealSemigroup.ldistr (l>=0 0) $ ExUpperRealAbMonoid.BigSum_>=0 \lam j => l>=0 (suc j)) $ <=_+ <=-refl $ BigSum_<=-ldistr \lam j => l>=0 (suc j)
   }
@@ -338,7 +346,7 @@
   => ∃ (B : Rat) ∀ n ((S n).U B)
   \where {
     \lemma shifted {N : Nat} (SN : \Pi {n : Nat} -> n < N -> ∃ (S n).U) {B : Rat} (SB : \Pi {n : Nat} -> N <= n -> (S n).U B) : IsBoundedUpperSeries S
-      => \case FinSet.finiteAC (\lam j => SN (fin_< j)) \with {
+      => \case finiteAC (\lam j => SN (fin_< j)) \with {
         | inP h => inP (Big (∨) B \lam j => (h j).1, \lam n => \case LinearOrder.dec<_<= n N \with {
           | inl n<N => transport (\lam x => ExUpperReal.U {S x} _) toFin=id $ ExUpperReal.U_<= (h (toFin n n<N)).2 $ RatField.Big_<=_join1 (toFin n n<N)
           | inr N<=n => ExUpperReal.U_<= (SB N<=n) RatField.Big_<=_join0
@@ -456,7 +464,7 @@
 \lemma partialSum_+ {A : AbMonoid} {f g : Series A} {N : Nat}
   : partialSum (\lam n => f n + g n) N = partialSum f N + partialSum g N
   => (\peval partialSum (\lam n => f n + g n) N)
-     *> AbMonoid.BigSum_+
+     *> BigSum_+
      *> pmap2 (+) (inv (\peval partialSum f N)) (inv (\peval partialSum g N))
 
 -- | Finite majorant principle: $\|\sum_{k < N} S_k\| \leq \sum_{k < N} \|S_k\|$.
@@ -474,7 +482,7 @@
       }
 
 \lemma upper-constSeries-conv {a : ExUpperReal} : IsConvUpperSeries (FSeriesRing.coef a)
-  => \lam eps>0 => inP (1, \lam n>=1 => rewrite (midSum.=FinSum *> {ExUpperReal} AbMonoid.FinSum_zro (later \case \elim __ \with {
+  => \lam eps>0 => inP (1, \lam n>=1 => rewrite (midSum.=FinSum *> {ExUpperReal} FinSum_zro (later \case \elim __ \with {
     | (0, p, _) => absurd (p NatOrder.zero<suc)
     | (suc _, _, _) => idp
   })) eps>0)

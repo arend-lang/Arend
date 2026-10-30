@@ -1,9 +1,7 @@
-\import Data.Bool
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Directed
 \import Order.Lattice
 \import Order.PartialOrder
@@ -13,6 +11,7 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
+\import Set.Set.Lattice
 
 \func DirectedCoverSpace (I : DirectedSet) : CoverSpace I
   => RegPrecoverSpace precover

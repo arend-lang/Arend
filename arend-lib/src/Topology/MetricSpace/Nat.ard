@@ -1,5 +1,6 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
@@ -18,7 +19,6 @@
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
-\import Set.Fin
 \import Set.Set
 \import Topology.Compact
 \import Topology.CoverSpace
@@ -27,7 +27,8 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
-\open LinearlyOrderedAbGroup
+\import Algebra.Ordered.Group
+\import Data.Fin
 \open RatField (finv)
 \open NatOrder \hiding (<)
 
@@ -44,7 +45,7 @@
     \lemma uniform-char {C : Set (Set Nat)} : NatMetricSpace.isUniform C <-> Cover C
       => (\lam Cu => \case NatMetricSpace.dist-uniform.1 Cu \with {
         | inP (eps,eps>0,h) => \case Real.natBounded {finv (eps * ratio 1 2) : Real} \with {
-          | inP (N,eps<N) => \case h N, FinSet.finiteAC {N} (\lam j => NatMetricSpace.uniform-cover Cu j) \with {
+          | inP (N,eps<N) => \case h N, finiteAC {N} (\lam j => NatMetricSpace.uniform-cover Cu j) \with {
             | inP (U,CU,g), inP c => inP (U, CU, N, \lam {n} N<=n => g $ LatticeAbGroup.abs_+ <∘r
                 (\have lem {m : Nat} (p : finv (eps * ratio 1 2) < m) : finv (suc m) < eps * ratio 1 2
                     => transport (_ <) RatField.finv_finv $ RatField.finv_< (RatField.finv>0 linarith) $ p <∘ fromInt_< (pos<pos id<suc)

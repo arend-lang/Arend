@@ -1,7 +1,5 @@
 \import Equiv
 \import Function
-\import Logic.Unique
-\import Homotopy.Fibration
 \import Logic
 \import Paths
 

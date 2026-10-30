@@ -4,13 +4,10 @@
  -   * Mathieu Anel, Georg Biedermann, Eric Finster, André Joyal, A Generalized Blakers-Massey Theorem (https://arxiv.org/abs/1703.09050)
  -  -}
 
-\import Algebra.Meta
 \import Equiv
 \import Equiv.Sigma
 \import Equiv.Univalence
 \import Function.Meta
-\import Logic.Unique
-\import Homotopy.Fibration
 \import Homotopy.Join
 \import Homotopy.Localization.Connected
 \import Homotopy.Localization.Universe

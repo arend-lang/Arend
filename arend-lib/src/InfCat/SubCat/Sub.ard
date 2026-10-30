@@ -2,7 +2,6 @@
 \import Category
 \import Category.SubcatPred
 \import Equiv.Sigma
-\import Homotopy.Fibration
 \import Function.Meta
 \import Homotopy.Truncation
 \import InfCat.Arrows
@@ -21,7 +20,6 @@
 \import InfCat.Square
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 

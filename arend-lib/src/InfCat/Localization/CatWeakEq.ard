@@ -1,5 +1,4 @@
 \import Equiv
-\import Equiv.Path
 \import Equiv.Sigma
 \import InfCat.Limit.BaseHCat
 \import InfCat.Paths

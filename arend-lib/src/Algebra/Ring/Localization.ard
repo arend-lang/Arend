@@ -1,7 +1,6 @@
 \import Algebra.Domain
-\import Algebra.Field
-\import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.MonoidHom
@@ -11,18 +10,15 @@
 \import Algebra.Pointed.SubPointed
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
-\import Algebra.Ring.Local
 \import Algebra.Ring.RingHom
-\import Equiv
 \import Function.Meta
 \import Logic.Meta
-\import Logic.Unique
 \import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set
+\import Algebra.Ring.RingHom.Properties
 \open Monoid
 \open SubMonoid
 
@@ -128,18 +124,6 @@
     | inP (c,Sc,p) => inP (c, Sc, simplify in p)
   }, \lam (inP (c,Sc,p)) => ~-lequiv c Sc (simplify p))
 
-\instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField \cowith
-  | CRing => LocRing D.subMonoid
-  | zro/=ide p => \case LocMonoid.isLocalization.localization-inj p \with {
-    | inP (c,c#0,q) => D.#0-zro $ transportInv D.#0 (simplify in q) c#0
-  }
-  | eitherZeroOrInv => \case \elim __ \with {
-    | in~ x => \case decideEq x.1 0 \with {
-      | yes e => byLeft $ ~-lequiv1 $ ide-right *> e *> inv D.zro_*-left
-      | no q => byRight $ Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ unfold $ ~-lequiv1 (simplify *-comm)
-    }
-  }
-
 \func LocalizationIdeal (I : Ideal) {R : CRing} (f : RingHom I.S R) {S : SubMonoid I.S} (L : Localization S R f) : Ideal R \cowith
   | contains a => ∃ (b : S.contains) (c : I.contains) (a * f b = f c)
   | contains_zro => inP (1, contains_ide, 0, contains_zro, R.zro_*-left *> inv func-zro)
@@ -156,6 +140,6 @@
 
     \lemma sclosure-char {T R : CRing} {U : T -> \Prop} {f : RingHom T R} {S : SubMonoid T} (L : Localization S R f) {x : R}
       : LocalizationIdeal (Ideal.sclosure U) f L x <-> Ideal.sclosure (SetIm f U) x
-      => (\lam (inP (b,Sb,c,Uc,p)) => transportInv (Ideal.sclosure _) ((L.localization-inv Sb).rotate-inv-right p) $ ideal-right $ PseudoRingHom.func-Ideal_sclosure f Uc,
+      => (\lam (inP (b,Sb,c,Uc,p)) => transportInv (Ideal.sclosure _) ((L.localization-inv Sb).rotate-inv-right p) $ ideal-right $ func-Ideal_sclosure f Uc,
           Ideal.sclosure-univ $ SetIm-elim \lam {a} Ua => inP $ later (1, contains_ide, a, Ideal.sclosure-superset Ua, pmap (_ *) func-ide *> ide-right))
   }

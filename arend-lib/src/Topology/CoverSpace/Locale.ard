@@ -1,5 +1,4 @@
 \import Category.Functor
-\import Data.Bool
 \import Equiv
 \import Function.Meta
 \import Logic
@@ -21,6 +20,8 @@
 \import Topology.Locale.Points
 \import Topology.Locale.PreorderSite
 \import Topology.RatherBelow
+\import Order.PartialOrder.PosetHom
+\import Set.Set.Lattice
 \open LocalePrecoverSpace
 \open RatherBelow
 \open CompleteLattice

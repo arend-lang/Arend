@@ -1,11 +1,9 @@
 \import Category
 \import Category.Functor
-\import Category.Slice
 \import Category.Topos.Sheaf.Site
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Paths
 \import Paths.Meta
 \open Covering

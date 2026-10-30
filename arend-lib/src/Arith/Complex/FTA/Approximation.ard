@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed

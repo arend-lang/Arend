@@ -9,7 +9,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths
@@ -21,6 +20,7 @@
 \import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Set.Set.Lattice
 \open ContMap
 \open MeetSemilattice
 

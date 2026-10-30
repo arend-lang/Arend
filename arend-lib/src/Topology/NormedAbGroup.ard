@@ -1,6 +1,8 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -11,7 +13,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -19,13 +20,15 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
-\import Set.Set
 \import Topology.CoverSpace
 \import Topology.MetricSpace
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
+\import Algebra.Monoid.FinSum
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
 \open RatField(half,half>0)
 
 \class ExPseudoNormedAbGroup \extends ExPseudoMetricSpace, TopAbGroup {

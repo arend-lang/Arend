@@ -7,16 +7,13 @@
  -}
 
 \import Equiv
-\import Equiv.Fiber
 \import Function.Meta
-\import Homotopy.Fibration
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Covariant.CovariantLift
 \import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.OFS.CatAccessibleOFS
 \import InfCat.OFS.CatOFS
 \import Logic
-\import Logic.Unique
 \import Paths
 
 -- | The family consisting of the single map `dleft : 1 ->⁺ DI`.

@@ -2,7 +2,6 @@
      Graham Manuell, Uniform locales and their constructive aspects, 2021, https://arxiv.org/abs/2106.00678
  -}
 
-\import Algebra.Meta
 \import Category
 \import Category.Factorization
 \import Category.Meta
@@ -24,6 +23,7 @@
 \import Topology.Locale.HausdorffLocale
 \import Topology.Locale.LocaleCat
 \import Topology.Locale.PreorderSite
+\import Order.PartialOrder.PosetHom
 \open Locale
 \open Nucleus
 \open MeetSemilattice

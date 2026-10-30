@@ -1,12 +1,11 @@
 \import Algebra.Domain
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.GroupCat
-\import Algebra.Group.GroupHom
 \import Algebra.Group.SubGroup
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.Matrix.Smith
-\import Algebra.Meta
+\import Algebra.Domain.Smith
+\import Algebra.Meta.Linear
 \import Algebra.Module
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
@@ -18,11 +17,8 @@
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
-\import Category
 \import Data.Array
 \import Data.Or
-\import Equiv
-\import Function (Image)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -38,7 +34,11 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
-\open LModule \hiding (count)
+\import Algebra.Module.Basis
+\import Algebra.Monoid.Properties
+\import Algebra.Linear.Matrix.LinearMap
+\import Data.Fin
+\open LModule
 
 \class VectorSpace \extends LModule {
   \override R : DiscreteField
@@ -134,7 +134,7 @@
           \case LinearOrder.dec<_<= j lv.len \with {
             | inl p => B j (toFin j p)
             | inr _ => zro
-          }, \lam j => path (\lam i => q i (lu' j)) *> LinearMap.toLinearMap-basis bu' lv' *> mcases \with {
+          }, \lam j => path (\lam i => q i (lu' j)) *> toLinearMap-basis bu' lv' *> mcases \with {
              | inl j<lv => V.BigSum-unique {\lam k => B j k *c lv' k} (toFin j j<lv) (\lam k j/=k => pmap (*c _) (Bs.1 \lam j=k => j/=k $ fin_nat-inj $ toFin=id *> j=k) *> V.*c_zro-left) *> pmap (_ *c) (inv $ fit_< lv' j<lv)
              | inr lv<=j => V.BigSum_zro (\lam k => pmap (*c _) (later $ Bs.1 \lam j=k => linarith (fin_< k)) *> V.*c_zro-left) *> inv V.*c_zro-left
            }, \lam j => mcases \with {
@@ -143,7 +143,6 @@
              | inr lv<=j => (\lam _ => rank<=columns <=∘ lv<=j, \lam _ => idp)
            })
   \where {
-    \open LinearMap
     \open Monoid
 
     \lemma M~_toLinearMap {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) {A B : Matrix R lu.len lv.len} (A~B : A M~ B)
@@ -160,9 +159,9 @@
   }
   \where {
     \protected \lemma basis {U V : LModule R} (f : LinearMap U V) {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv')
-      : ∃ (l : Array (ImLModule f)) (IsBasis {ImLModule f} l) (l.len = rank (LinearMap.toMatrix lu' bv' f))
+      : ∃ (l : Array (ImLModule f)) (IsBasis {ImLModule f} l) (l.len = rank (toMatrix lu' bv' f))
       => \let | (inP (lu, bu, lv, bv, d, g, d0)) => smith-bases bu' bv' f
-              | r => rank (LinearMap.toMatrix lu bv f)
+              | r => rank (toMatrix lu bv f)
               | lic j : ImLModule f => (f (take r lu rank<=rows j), inP (_, idp))
          \in inP (lic,
                   (\lam c p j => R.nonZero-right (\lam c => NatSemiring.<-irreflexive $ fin_< j <∘l (rewrite toFin=id in (d0 _).1 c)) $
@@ -178,7 +177,7 @@
                                           \lam j r<=j => func-*c *> pmap (_ *c) (g j *> pmap (*c _) ((d0 j).2 r<=j) *> *c_zro-left) *> *c_zro-right) *> inv IModule.embed.func-BigSum)),
                   rank.rank_M~ $ change-basis_M~ f bu bu' bv bv')
 
-    \lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) : FinModule.dimension (image-fin f) = rank (LinearMap.toMatrix lu bv f)
+    \lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) : FinModule.dimension (image-fin f) = rank (toMatrix lu bv f)
       => \case basis f bu bv \with {
            | inP (li,bi,p) => FinModule.dimension-unique bi *> p
          }
@@ -190,8 +189,8 @@
     | inP (_,bu'), inP (_,bv') => \case smith-bases bu' bv' f \with {
         | inP (lu, bu, lv, bv, d, g, d0) =>
           \have | KerFin : FinSet (\Sigma (j : Fin lu.len) (d j = 0)) => SigmaFin (FinFin lu.len) (\lam j => DecFin (decideEq (d j) 0))
-                | kb : LModule.IsBasisSet {IModule (KernelLModule f)} (\lam s => (lu s.1, g s.1 *> pmap (*c _) s.2 *> V.*c_zro-left))
-                => (LinearMap.IsIndependentSet_func {IModule.embed} $ LModule.IsIndependentSet-right-inj (\lam p => ext p) ((U.IsIndependent<->IsIndependentSet {lu}).1 bu.1),
+                | kb : IsBasisSet {IModule (KernelLModule f)} (\lam s => (lu s.1, g s.1 *> pmap (*c _) s.2 *> V.*c_zro-left))
+                => (LinearMap.IsIndependentSet_func {IModule.embed} $ IsIndependentSet-right-inj (\lam p => ext p) ((U.IsIndependent<->IsIndependentSet {lu}).1 bu.1),
                     \lam x => inP (map (\lam s => (U.basis-split bu x.1 s.1, s)) (filter0 d), ext $ U.basis-split-char {_} {bu} *> filter0_BigSum d (\lam j => basis-split bu x.1 j *c lu j) (\lam j dj/=0 => pmap (*c _) (
                       \case LinearOrder.dec<_<= j lv.len \with {
                         | inl j<lv => Domain.nonZero-right dj/=0 $ inv (fit_<' (\lam j => basis-split bu x.1 j R.* d j) j<lv) *>

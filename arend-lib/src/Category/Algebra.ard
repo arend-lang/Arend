@@ -7,9 +7,9 @@
 \import Category.Limit
 \import Category.Subcat
 \import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
+\import Equiv
 \open PrecatWithBprod
 \open PrecatWithTerminal
 \open PreservesBprod

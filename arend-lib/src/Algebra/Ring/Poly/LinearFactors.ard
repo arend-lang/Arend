@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -9,6 +10,8 @@
 \import Data.Array.Perm
 \import Function (IsInj)
 \import Paths
+\import Algebra.Monoid.Perm
+\import Algebra.Monoid.Properties
 
 {- | **Products of monic linear factors**: $\prod_{i<n}(X - r_i)$ for a finite array of roots `r`,
      its value at a point, and the identities needed to pull one factor out. -}
@@ -77,14 +80,14 @@
 }
 
 {- | **`prodLin` is permutation invariant.** Reindexing along an injection of `Fin n` leaves the
-     monic product unchanged; the content is `CMonoid.BigProd_Perm` plus `Perm.perm-fin`. -}
+     monic product unchanged; the content is `BigProd_Perm` plus `Perm.perm-fin`. -}
 \lemma prodLin-perm {R : CRing} {n : Nat} (s : Array R n) (f : Fin n -> Fin n) (finj : IsInj f)
   : prodLin (\lam i => s (f i)) = prodLin s
-  => asBigProd (\lam i => s (f i)) *> CMonoid.BigProd_Perm (linPerm s f finj) *> inv (asBigProd s)
+  => asBigProd (\lam i => s (f i)) *> BigProd_Perm (linPerm s f finj) *> inv (asBigProd s)
   \where {
     -- | `prodLin` as a product over the array of its linear factors.
     \private \lemma asBigProd {R : CRing} {n : Nat} (r : Array R n)
-      : prodLin r = CMonoid.BigProd (\new Array (Poly R) n (\lam i => padd 1 (negative (r i))))
+      : prodLin r = BigProd (\new Array (Poly R) n (\lam i => padd 1 (negative (r i))))
       \elim n, r
       | 0, nil => idp
       | suc n, a :: l => pmap (`* padd 1 (negative a)) (asBigProd l) *> *-comm

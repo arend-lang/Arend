@@ -1,5 +1,4 @@
 \import Equiv
-\import Equiv.Path
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Paths

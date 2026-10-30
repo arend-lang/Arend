@@ -319,6 +319,29 @@ public class CachingTest {
   }
 
   @Test
+  public void extensionFunctionRoundTrip() {
+    addModule("A", "\\func .twice (n : Nat) => n Nat.+ n");
+    typecheck("A");
+
+    errorList.clear();
+    persistAll();
+    assertThat(errorList, is(empty()));
+
+    ArendServer srv2 = loadFromBinary("A");
+    ConcreteGroup aGroup = srv2.getRawGroup(moduleLoc("A"));
+    assertNotNull(aGroup);
+    assertTrue(getDef(aGroup, "twice").isDynamicExtension());
+
+    ModuleLocation bModule = moduleLoc("B");
+    ConcreteGroup bGroup = parseModule("\\import A \\func g (n : Nat) : Nat => n.twice", bModule);
+    assertNotNull(bGroup);
+    srv2.updateModule(modStamp++, bModule, () -> bGroup);
+    srv2.getCheckerFor(Collections.singletonList(bModule)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    assertThat(srv2.getErrorMap().values().stream().flatMap(List::stream).toList(), is(empty()));
+    assertThat(getDef(srv2.getRawGroup(bModule), "g").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+  }
+
+  @Test
   public void dataDefinitionRoundTrip() {
     addModule("A", "\\data D | con1 | con2 Nat");
     typecheck("A");

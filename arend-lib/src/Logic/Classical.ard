@@ -1,7 +1,5 @@
 \import Data.Bool
-\import Homotopy.Fibration
 \import Logic
-\import Logic.Meta
 \import Paths
 \import Relation.Equivalence
 \import Set

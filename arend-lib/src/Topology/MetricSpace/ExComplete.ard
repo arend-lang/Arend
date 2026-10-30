@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Arith.Rat
 \import Arith.Real.UpperReal
@@ -20,6 +20,7 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace.Complete
+\import Algebra.QModule.Rat
 
 \func dense-metric-lift {X Y : ExPseudoMetricSpace} {Z : CompleteExMetricSpace} (f : IsometricMap X Y) (fd : f.IsDense) (g : MetricMap X Z) : MetricMap Y Z \cowith
   | UniformMap => dense-uniform-lift f (f.dense->uniformEmbedding fd) g

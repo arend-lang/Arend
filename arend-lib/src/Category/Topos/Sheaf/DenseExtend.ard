@@ -3,7 +3,6 @@
 \import Category.Limit
 \import Category.Slice
 \import Category.Subcat
-\import Category.Topos.Presheaf
 \import Category.Topos.Sheaf
 \import Category.Topos.Sheaf.Site
 \import Category.Topos.Sheaf.SiteHom

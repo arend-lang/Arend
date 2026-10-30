@@ -1,4 +1,5 @@
-\import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Rat
@@ -31,6 +32,7 @@
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace
 \import Topology.UniformSpace.StronglyComplete
+\import Set.Set.Lattice
 
 \func dense-metric-lift {X Y : PseudoMetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap X Z) : MetricMap Y Z \cowith
   | UniformMap => weaklyDense-uniform-lift f fd g

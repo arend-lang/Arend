@@ -10,7 +10,6 @@
 \import Function.Meta
 \import Logic
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -24,6 +23,8 @@
 \import Topology.TopRing
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
+\import Algebra.QModule.Rat
+\import Arith.Rat.Properties
 \open Monoid(pow)
 
 \class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing

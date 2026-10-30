@@ -2,6 +2,7 @@
 \import Algebra.Group.SubGroup
 \import Algebra.Module
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.SubMonoid
@@ -28,8 +29,9 @@
 \import Set
 \import Set.Countable
 \import Set.Fin
-\open AddMonoid
-\open AbMonoid
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 
 -- | Left ideal of a rng
 \record PseudoLIdeal \extends SubPseudoRing {
@@ -125,8 +127,8 @@
     | contains_+ {x} {y} (inP (n,xS)) (inP (m,yS)) => inP (n + m, transportInv contains binom.expansion $ bigSum
         (\new Array S (suc (n + m)) (\lam i => natCoef (binom (n + m) i) * (Monoid.pow x i * Monoid.pow y (n + m -' i))))
         \lam i => ideal-left \case NatSemiring.splitSum $ =_<= $ inv $ <=_exists $ <_suc_<= (fin_< i) \with {
-          | byLeft n<=i => ideal-right $ rewriteI (<=_exists n<=i) $ rewrite Monoid.pow_+ (ideal-right xS)
-          | byRight m<=j => ideal-left $ rewriteI (<=_exists m<=j) $ rewrite Monoid.pow_+ (ideal-right yS)
+          | byLeft n<=i => ideal-right $ rewriteI (<=_exists n<=i) $ rewrite pow_+ (ideal-right xS)
+          | byRight m<=j => ideal-left $ rewriteI (<=_exists m<=j) $ rewrite pow_+ (ideal-right yS)
         })
     | ideal-left (inP (n,s)) => inP (n, transportInv contains CMonoid.pow_*-comm (ideal-left s))
 
@@ -146,7 +148,7 @@
     => inP (1, transportInv contains ide-left s)
 
   \lemma radical_pow {x : S} {n : Nat} (s : radical (Monoid.pow x n)) : radical x \elim s
-    | inP (m,p) => inP (n * m, transportInv contains Monoid.pow_* p)
+    | inP (m,p) => inP (n * m, transportInv contains pow_* p)
 
   \lemma radical_square {x : S} (s : radical (x * x)) : radical x
     => radical_pow {_} {x} {2} $ transportInv radical (*-assoc *> ide-left) s

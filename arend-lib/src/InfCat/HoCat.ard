@@ -1,7 +1,6 @@
 \import Category
 \import Category.Functor
 \import Equiv
-\import Equiv.Fiber
 \import Function.Meta
 \import Homotopy.HLevel
 \import Homotopy.Truncation
@@ -9,11 +8,8 @@
 \import InfCat.Objects
 \import InfCat.Rezk
 \import Logic
-\import Logic.Meta
-\import Logic.Unique
 \import Meta
 \import Paths
-\import Paths.Meta
 \import Set
 
 \func HoPrecat (C : \Cat) : Precat (Ob C) \cowith

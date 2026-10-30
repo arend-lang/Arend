@@ -1,0 +1,68 @@
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Nat
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Algebra.Monoid.Properties
+\import Algebra.Ordered.Properties
+\import Algebra.Pointed
+\import Order.PartialOrder
+\open Monoid(Inv)
+\open LinearlyOrderedAbMonoid
+\open OrderedSemiring
+\open LinearlyOrderedSemiring
+\open PosetSemiring
+\open OrderedAddMonoid
+\open Monoid
+\open StrictPoset
+
+\lemma .BigSum_>0 (SO : LinearlyOrderedAbMonoid) {l : Array SO} (q : \Pi (j : Fin l.len) -> 0 <= l j) (p : ∃ (j : Fin l.len) (0 < l j)) : 0 < BigSum l \elim l, p
+  | nil, inP ((),_)
+  | a :: l, inP (0, p) => transport (< _) zro-right $ <=_+-right p $ BigSum_>=0 \lam j => q (suc j)
+  | a :: l, inP (suc j, p) => transport (< _) zro-right $ <=_+-left (q 0) $ BigSum_>0 (\lam j => q (suc j)) $ inP (j,p)
+
+\lemma .Big_join-choice (SO : LinearlyOrderedAbMonoid) {n : Nat} {l : Array SO (suc n)} {e : SO} (e>0 : 0 < e) : ∃ (a : l) (Big (∨) (l 0) (tail l) < a + e) \elim n, l
+  | 0, a :: l => inP (0, transport (< _) zro-right $ <_+-right a e>0)
+  | suc n, a :: l => \case <-comparison (Big (∨) a l) {l 0} {l 0 + e} $ transport (< _) zro-right $ <_+-right (l 0) e>0 \with {
+    | byLeft p =>
+      \have t => LinearOrder.join/=left (<_/= p)
+      \in \case Big_join-choice {_} {n} {a :: \lam j => l (suc j)} e>0 \with {
+        | inP (0, q) => inP (0, transportInv (< _) t q)
+        | inP (suc j, q) => inP (suc (suc j), transportInv (< _) t q)
+      }
+    | byRight p => inP (1, p)
+  }
+
+\lemma .natCoef_< (SO : OrderedSemiring) {n m : Nat} (p : n NatOrder.< m) : natCoef n < natCoef m \elim n, m, p
+  | 0, 1, NatOrder.zero<suc => rewrite (natCoefZero,natCoefSuc,natCoefZero,zro-left) zro<ide
+  | 0, suc (suc m), NatOrder.zero<suc => rewrite (natCoefZero,natCoefSuc) $ transport (< _) (zro-right *> natCoefZero) $ <_+ (natCoef_< NatOrder.zero<suc) zro<ide
+  | suc n, suc m, NatOrder.suc<suc p => rewrite (natCoefSuc,natCoefSuc) $ <_+-left ide (natCoef_< p)
+
+\lemma .pow<id (SO : OrderedSemiring) {a : SO} (a>0 : 0 < a) (a<1 : a < 1) {k : Nat} (k>1 : 1 NatOrder.< k) : pow a k < a \elim k, k>1
+  | 1, NatOrder.suc<suc ()
+  | 2, _ => transport2 (__ * a < __) (inv ide-left) ide-right $ <_*_positive-right a>0 a<1
+  | suc (suc (suc k)), _ => transport (_ <) ide-right (<_*_positive-right (pow>0 a>0 {suc (suc k)}) a<1) <∘ pow<id a>0 a<1 {suc (suc k)} (NatOrder.suc<suc NatOrder.zero<suc)
+
+\lemma .pow_<-degree (SO : OrderedSemiring) {a : SO} (a>0 : 0 < a) (a<1 : a < 1) {n k : Nat} (n<k : n NatOrder.< k) : pow a k < pow a n
+  => rewrite (inv (<=_exists (suc_<_<= n<k)), pow_+) (rewrite (inv *-assoc, ide-right) in
+    <_*_positive-right {_} {_} {pow a (suc (k -' suc n))} {ide} (OrderedSemiring.pow>0 a>0 {n}) (OrderedSemiring.pow<ide a>0 a<1))
+
+\lemma .sum_squares_>0 (SO : LinearlyOrderedSemiring) {l : Array SO} (p : ∃ (j : Fin l.len) (0 < l j || l j < 0)) : 0 < BigSum (map (\lam x => x * x) l) \elim p
+  | inP (j,p) => BigSum_>0 (\lam j => square_>=0) $ inP $ later (j, \case \elim p \with {
+    | byLeft p => <_*_positive_positive p p
+    | byRight p => <_*_negative_negative p p
+  })
+
+\lemma .natCoef>0 (SO : LinearlyOrderedSemiring) {n : Nat} (p : 0 NatOrder.< n) : zro < natCoef n \elim n
+  | 0 => \case p
+  | suc n => rewrite natCoefSuc $ transport (< _) zro-left $ <=_+-left natCoef>=0 zro<ide

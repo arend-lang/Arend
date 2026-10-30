@@ -1,5 +1,3 @@
-\import Algebra.Group
-\import Algebra.Group.GroupHom
 \import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Ordered
@@ -14,31 +12,28 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
-\import Operations
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ExComplete
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.ExComplete
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
-\import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product
 \import Topology.TopSpace
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
 \import Topology.UniformSpace.Product
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
 
 \class PreBanachSpace (A : RatValue) \extends BoundedExPseudoNormedAbGroup, DivisibleGroup {
   | norm_*n {n : Nat} {x : E} : norm (n *n x) = A.norm n ExUpperReal.* norm x
@@ -59,7 +54,7 @@
     => A.norm_Inv-cancel-left (RatField.nonZero-Inv $ natRat/=0 ratDenom/=0) norm>=0 ExUpperRealSemigroup.*_>=0 $
         inv norm_*n *> pmap norm (inv (*q-assoc *> *q_*n) *> pmap (*q _) rat*denom-left *> *q_*i) *> norm_*i *> pmap (* _) (inv (pmap A.norm rat*denom-left) *> A.norm_*) *> *-assoc
 
-  \lemma *q-uniform : LocallyUniformMap (ProductUniformSpace A \this) \this \lam s => s.1 QModule.*q s.2
+  \lemma *q-uniform : LocallyUniformMap (ProductUniformSpace A \this) \this \lam s => s.1 *q s.2
     => bilinear-locally-uniform {A} (*q) toRatModule.*c-rdistr_- toRatModule.*c-ldistr_- \lam {q} {x} => =_<= norm_*q
 
   \protected \lemma *q-right-uniform {q : Rat} : UniformNormedAbGroupMap \this \this (q *q) \cowith
@@ -166,6 +161,6 @@
    | CompleteExNormedAbGroup => ExNormedAbGroupCompletion X
    | isDivisible F {n} n/=0 =>
      \have *q-lift => dense-uniform-lift separated-completion (separated-completion.dense->uniformEmbedding separated-completion.isDense) (separated-completion UniformMap.∘ (SeparatedBanachReflection X).*q-right-uniform {RatField.finv n})
-     \in inP (*q-lift F, dense-lift-unique separated-completion separated-completion.isDense (*n-uniform {_} {n} UniformMap.∘ *q-lift) UniformMap.id (\lam x => pmap (n AddMonoid.*n) (dense-lift-char ((IsometricMap.dense->uniformEmbedding separated-completion.isDense).1, UniformMap.embedding->coverEmbedding _) x) *> inv separated-completion.func-*n *> pmap separated-completion (inv QModule.*q_*n *> inv QModule.*q-assoc *> pmap (QModule.*q _) (RatField.finv-right $ natRat/=0 n/=0) *> QModule.ide_*q)) F)
+     \in inP (*q-lift F, dense-lift-unique separated-completion separated-completion.isDense (*n-uniform {_} {n} UniformMap.∘ *q-lift) UniformMap.id (\lam x => pmap (n AddMonoid.*n) (dense-lift-char ((IsometricMap.dense->uniformEmbedding separated-completion.isDense).1, UniformMap.embedding->coverEmbedding _) x) *> inv separated-completion.func-*n *> pmap separated-completion (inv *q_*n *> inv *q-assoc *> pmap (*q _) (RatField.finv-right $ natRat/=0 n/=0) *> ide_*q)) F)
    | norm_*n {n} {F} => completion-lift-unique (norm-metric-map {ExNormedAbGroupCompletion X} UniformMap.∘ *n-uniform) (upper-*-left-uniform (A.norm-bounded _) UniformMap.∘ norm-metric-map {ExNormedAbGroupCompletion X})
      (\lam x => pmap norm (inv completion-topAb.func-*n) *> completion-exNormed-isometry.func-norm-isometry *> norm_*n *> pmap (_ *) (inv completion-exNormed-isometry.func-norm-isometry)) F

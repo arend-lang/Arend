@@ -1,6 +1,7 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.QModule
 \import Algebra.Ring.FormalSeries
@@ -30,6 +31,8 @@
 \import Paths.Meta
 \import Topology.BanachAlgebra
 \import Topology.NormedAbGroup
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
 \open Monoid (pow)
 
 -- | Rational Taylor coefficients of $\log(1 + w) = \sum_{n \geq 1} \frac{(-1)^{n - 1}}{n} w^n$.
@@ -160,8 +163,8 @@
         -- | The tail $\sum_{i = 2}^{n + 2} f_i \cdot (-1)^{n + 2 - i}$ vanishes by IH: every term has factor $f_i = 0$.
         \private \lemma exp-log1p-step-tail-zero (n : Nat)
                                                  (IH : \Pi (j : Nat) -> 2 <= j -> j <= suc (suc n) -> exp-log1p-coef-Rat j = 0)
-          : AddMonoid.BigSum (\new Array Rat (suc n) (exp-log1p-tail-term n)) = 0
-          => AddMonoid.BigSum_zro {RatField} {\new Array Rat (suc n) (exp-log1p-tail-term n)} \lam j =>
+          : BigSum (\new Array Rat (suc n) (exp-log1p-tail-term n)) = 0
+          => BigSum_zro {RatField} {\new Array Rat (suc n) (exp-log1p-tail-term n)} \lam j =>
             pmap (* _) (IH (suc (suc j)) (suc<=suc (suc<=suc zero<=_)) (suc<=suc (suc<=suc (<_suc_<= (fin_< j))))) *> zro_*-left
           \where {
             \private \func exp-log1p-tail-term (n : Nat) (i : Fin (suc n)) : Rat
@@ -220,7 +223,7 @@
         *> pmap A.fromRat (compose-coef-expm1-log1p k) *> subst-ide_fromRat,
         \have A0 => A.toRatModule.*c_BigSum-rdistr {\new Array Rat (suc k) \lam n => exp-1-coef n * pow-conv log1p-coef n k},
         later $ rewrite A0,
-        AddMonoid.BigSum-ext {A} {suc k}
+        BigSum-ext {A} {suc k}
           {\new Array A (suc k) \lam n => A.fromRat (exp-1-coef n) * pow-conv (\lam m => A.fromRat (log1p-coef m)) n k}
           {\new Array A (suc k) \lam n => A.fromRat (exp-1-coef n * pow-conv log1p-coef n k)},
           \lam i,

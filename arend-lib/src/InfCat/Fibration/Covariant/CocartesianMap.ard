@@ -1,8 +1,6 @@
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
-\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Covariant.CocartesianFib
@@ -180,7 +178,7 @@
       : QEquiv {Fib {_} {\Sigma (g : p e' ~> p e'') (DPath (\lam i => p (u i) ~> p (w i)) idd g)} (triangle-map p u w) (k, t)}
                {\Sigma (v : e' ~> e'') (comp u v = w) (dmap p v = k)}
       => \let | T (g : p e' ~> p e'') => DPath (\lam i => p (u i) ~> p (w i)) idd g
-              | Tp (g : p e' ~> p e'') : isProp (T g) => isProp.equiv {T g} {comp (dmap p u) g = dmap p w} (inP comp-equiv) (As _ _)
+              | Tp (g : p e' ~> p e'') : isProp (T g) => equiv-isProp {T g} {comp (dmap p u) g = dmap p w} (inP comp-equiv) (As _ _)
          \in sigma-right (\lam s => sigmaEquiv T (triangle-map p u w s) (k, t))
              `transQEquiv` sigma-right (\lam s => contr-right (\lam r => isProp=>PathContr (T k) (Tp k) (transport T r (triangle-map p u w s).2) t))
              `transQEquiv` \new QEquiv {\Sigma (s : \Sigma (v : e' ~> e'') (DPath (\lam i => u i ~> w i) idd v)) (dmap p s.1 = k)}

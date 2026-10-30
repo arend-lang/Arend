@@ -4,7 +4,6 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Solver
-\import Algebra.Solver.Monoid
 \import Algebra.Solver.Semiring
 \import Arith.Fin.Order
 \import Arith.Int
@@ -14,8 +13,7 @@
 \import Meta
 \import Order.Lexicographical
 \import Paths
-\import Paths.Meta
-\import Set
+\import Algebra.Monoid.Properties
 \open SemiringSolverModel
 
 \func RingSolverModel (R : Ring) : SolverModel R \cowith

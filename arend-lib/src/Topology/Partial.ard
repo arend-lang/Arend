@@ -2,7 +2,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths
@@ -11,6 +10,7 @@
 \import Set.Set
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Set.Set.Lattice
 
 \instance PartialTopSpace (Y : TopSpace) : TopSpace (Partial Y)
   | isOpen U => \Pi {y : Partial Y} -> U y -> (U = {Set (Partial Y)} top) || Given (U' : Y.isOpen) (p : y.isDefined) (U' (y p)) ∀ {y' : U'} (U (defined y'))

@@ -2,16 +2,15 @@
 \import Algebra.Domain
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Poly
 \import Algebra.Ring.RingHom
-\import Algebra.Semiring
 \import Arith.Nat
 \import Data.Or
 \import Equiv
-\import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -23,7 +22,9 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
-\import Set.Fin.Instances
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.Properties
 \open AddGroup
 \open Monoid (pow)
 
@@ -224,7 +225,7 @@
   | suc k => idp
 
 \lemma conv_BigSum {A : Ring} (a b : FSeries A) (n : Nat)
-  : (FSeriesRing A).* a b n = AddMonoid.BigSum (\new Array A (suc n) (\lam k => a k * b (n -' k)))
+  : (FSeriesRing A).* a b n = BigSum (\new Array A (suc n) (\lam k => a k * b (n -' k)))
   => A.FinSum_char2 {FSeriesRing.PairsFinSet n} {\lam s => a s.1 A.* b s.2}
     \new QEquiv {
       | f i => (i, n -' i, <=_exists (<_suc_<= (fin_< i)))

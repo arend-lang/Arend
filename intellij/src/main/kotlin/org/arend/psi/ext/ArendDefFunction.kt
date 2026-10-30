@@ -42,6 +42,8 @@ class ArendDefFunction : ArendFunctionDefinition<ArendDefFunctionStub>, Abstract
 
     override fun getKind() = GlobalReferable.Kind.FUNCTION
 
+    override fun isDynamicExtension() = functionKw.findNextSibling()?.elementType == DOT
+
     override val psiElementType: PsiElement?
         get() = resultType
 }

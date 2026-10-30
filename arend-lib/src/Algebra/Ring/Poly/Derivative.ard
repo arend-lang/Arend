@@ -1,6 +1,7 @@
 \import Algebra.Domain
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -10,7 +11,6 @@
 \import Arith.Nat
 \import Function.Meta
 \import Logic
-\import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta

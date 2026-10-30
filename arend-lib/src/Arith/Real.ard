@@ -1,6 +1,8 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
@@ -23,6 +25,9 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Algebra.QModule.Rat
+\import Algebra.Field.Ordered
+\import Algebra.StrictlyOrdered.Group
 \open LinearOrder \hiding (<=)
 
 \func \infix 4 <LU (x : ExUpperReal) (y : LowerReal) : \Prop
@@ -72,7 +77,6 @@
 } \where {
   \open DiscreteOrderedField
   \open DiscreteField
-  \open LinearlyOrderedSemiring
 
   \use \coerce fromRat (x : Rat) : Real \cowith
     | InfReal => InfReal.fromRat x
@@ -176,7 +180,6 @@
     }
   }
   \where {
-    \open OrderedSemiring
 
     \sfunc \infixl 6 + (x y : Real) : Real \cowith
       | InfReal => x InfRealAbMonoid.+ y

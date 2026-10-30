@@ -10,12 +10,12 @@
 \import Meta
 \import Paths
 \import Paths.Meta
+\import Algebra.Monoid.Properties
 \open GradedCRing
-\open AddMonoid
 
 \record HomogenIdeal \extends Ideal {
   \override S : GradedCRing
-  | isHomogenIdeal {l : Array S} : isHomogenArray l -> contains (AddMonoid.BigSum l) -> ∀ (x : l) (contains x)
+  | isHomogenIdeal {l : Array S} : isHomogenArray l -> contains (BigSum l) -> ∀ (x : l) (contains x)
 } \where {
   \func hasHomogenGen {R : GradedCRing} (I : Ideal R)
     => \Sigma (U : R -> \Prop) (\Pi (x : R) -> U x -> ∃ (n : Nat) (isHomogen x n)) (\Pi (x : R) -> I x <-> Ideal.sclosure U x)

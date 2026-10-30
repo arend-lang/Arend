@@ -13,6 +13,7 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
+\import Algebra.Monoid.FinSum
 
 \lemma fanTheorem {A : \Set} {P : Array A -> \Prop} (Pm : IsBarMonotone P) (b : Bar P nil) : Bar (AllPaths P) nil
   => coe (\lam i => Bar (AllPaths \lam l => P (++_nil {_} {l} i)) nil) (induction b) right
@@ -148,7 +149,7 @@
                 | suc k, suc m => \lam p => pmap fsuc (state.good-diff k m p)
               }
             }
-            | no q => byLeft \case FinSet.finiteAC (\lam j => \case FinSet.search (\lam k => pat k = (i,j)) (pat-dec __ j) \with {
+            | no q => byLeft \case finiteAC (\lam j => \case FinSet.search (\lam k => pat k = (i,j)) (pat-dec __ j) \with {
               | yes (inP (k,p)) => inP $ later ((good' k).1, setPair-unext2 $ pmap (\lam x => pathAt (good' k).1 x.1) (inv p) *> p,
                                                 transport (Q _) (later $ pmap __.1 p) $ (good' k).3)
               | no c => absurd $ q $ inP (j, \lam k p => c $ inP (k,p))

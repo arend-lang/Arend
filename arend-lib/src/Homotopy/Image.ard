@@ -6,9 +6,6 @@
 \import Equiv
 \import Equiv.Univalence
 \import Function
-\import Function.Meta
-\import Logic.Unique
-\import Homotopy.Fibration
 \import Homotopy.Pushout
 \import Logic
 \import Paths

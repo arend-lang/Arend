@@ -4,6 +4,8 @@
 
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
@@ -30,14 +32,14 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set
 \import Topology.BanachAlgebra
-\import Topology.BanachSpace
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
-\import Topology.TopSpace
-\import Topology.TopSpace.Product
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Group
+\import Algebra.Ordered.Ring
+\import Arith.Rat.Properties
 
 \class OrderedC*Algebra \extends QAlgebra, PosetQModule, CRing {
   | c*-archimedean (a : E) : ∃ (B : Nat) (a <= natCoef B)
@@ -255,16 +257,16 @@
 
 {- | On `Real`, the Banach-algebra `fromRat` (defined as $q *_q 1$) agrees with
      the canonical `Real.fromRat`. Strategy: multiply both sides by `ratDenom q`
-     and apply `QModule.*q-cancel`; both sides reduce to `Real.fromRat (ratNom q)`. -}
+     and apply `*q-cancel`; both sides reduce to `Real.fromRat (ratNom q)`. -}
 \lemma RealStoneC*Algebra_fromRat (q : Rat) : RealStoneC*Algebra.fromRat q = Real.fromRat q
-  => QModule.*q-cancel (natRat/=0 ratDenom/=0) $
-       inv QModule.*q-assoc
-       *> pmap (QModule.*q _) rat*denom-left
-       *> QModule.*q_*i
+  => *q-cancel (natRat/=0 ratDenom/=0) $
+       inv *q-assoc
+       *> pmap (*q _) rat*denom-left
+       *> *q_*i
        *> int*i_ide
        *> pmap Real.fromRat (inv rat*denom-left *> RatField.natCoef_*_*n)
        *> rat-real-hom.func-*n
-       *> inv QModule.*q_*n
+       *> inv *q_*n
   \where {
     \private \lemma int*i_ide {z : Int} : z AbGroup.*i (1 : Real) = Real.fromRat z \elim z
       | pos n => inv RealField.natCoef_*n

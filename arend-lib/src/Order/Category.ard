@@ -4,6 +4,7 @@
 \import Order.Lattice
 \import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Order.StrictOrder
 \import Paths.Meta
 \import Set

@@ -1,7 +1,6 @@
 \import Algebra.Field
 \import Algebra.Field.Algebraic
-\import Algebra.Meta
-\import Algebra.Monoid
+\import Algebra.Meta.Linear
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Integral
@@ -21,6 +20,8 @@
 \import Paths
 \import Paths.Meta
 \import Set
+\import Algebra.StrictlyOrdered.Properties
+\import Algebra.Ring.Integral.Properties
 
 {- | **The algebraic numbers form a discrete subfield of the complex numbers.**
 

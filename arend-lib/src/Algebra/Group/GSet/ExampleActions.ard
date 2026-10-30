@@ -1,5 +1,4 @@
 \import Algebra.Group
-\import Algebra.Group.GroupHom
 \import Algebra.Group.GSet
 \import Algebra.Meta
 \import Algebra.Monoid

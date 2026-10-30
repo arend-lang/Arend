@@ -157,6 +157,10 @@ public final class Abstract {
     @NotNull Precedence getPrecedence();
     @NotNull Precedence getAliasPrecedence();
     @Nullable String getAliasName();
+
+    default boolean isDynamicExtension() {
+      return false;
+    }
   }
 
   public interface Group {

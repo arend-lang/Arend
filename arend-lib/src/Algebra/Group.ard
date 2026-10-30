@@ -1,8 +1,7 @@
-\import Algebra.Meta
+\import Algebra.Meta.Base
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Arith.Int()
 \import Data.Array
 \import Data.Fin
 \import Data.Or
@@ -15,6 +14,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Algebra.Monoid.Properties
 
 \class Group \extends CancelMonoid {
   | inverse : E -> E
@@ -49,32 +49,6 @@
   \func ipow (a : E) (x : Int) : E \elim x
     | pos n => pow a n
     | neg n => pow (inverse a) n
-
-  \lemma ipow_+ {a : E} {x y : Int} : ipow a (x + y) = ipow a x * ipow a y \elim x, y
-    | pos n, pos m => pow_+
-    | pos n, neg m => ipow_-
-    | neg n, pos m => ipow_- *> pow-comm2 (inverse-right *> inv inverse-left)
-    | neg n, neg m => pow_+
-    \where {
-      \open Arith.Int.IntRing(+,+-comm)
-
-      \lemma ipow_- {a : E} {n m : Nat} : ipow a (n Nat.- m) = pow a n * pow (inverse a) m \elim n, m
-        | 0, m => inv ide-left
-        | suc n, 0 => inv ide-right
-        | suc n, suc m => equation.monoid {ipow_-, inv (pow-left {_} {inverse a}), inverse-right {_} {a}}
-    }
-
-  \lemma ipow_negaitve {a : E} {x : Int} : ipow a (negative x) = inverse (ipow a x) \elim x
-    | pos n => inv inverse_pow
-    | neg n => inv inverse-isInv *> pmap inverse inverse_pow
-    \where \open Arith.Int.IntRing(negative)
-
-  \lemma ipow_* {a : E} {x y : Int} : ipow a (x * y) = ipow (ipow a x) y \elim x, y
-    | pos n, pos m => pow_*
-    | pos n, neg m => pow_* *> pmap (pow __ m) (inv inverse_pow)
-    | neg (suc n), pos m => pow_*
-    | neg (suc n), neg m => pow_* *> pmap (pow __ m) (inv (inverse_pow {_} {_} {suc n} *> pmap (pow __ (suc n)) inverse-isInv))
-    \where \open Arith.Int.IntRing(*)
 
   \lemma ipow_ide {x : Int} : ipow ide x = ide \elim x
     | pos n => pow_ide
@@ -181,22 +155,6 @@
 \func commutator {E : Group} (g h : E)
   => g * h * inverse g * inverse h
 
-\lemma commutator=ide<->comm {E : Group} {g h : E} : commutator g h = ide <-> g * h = h * g
-  => (\lam p => equation.group {pmap (* (h * g)) p},
-      \lam q => equation.group {pmap (\lam x => x * inverse g * inverse h) q})
-
-\lemma comm_sym {E : Group} {g h : E} (p : commutator g h = ide) : commutator h g = ide
-  => equation.group {pmap inverse p}
-
-\lemma comm_conjugate {E : Group} {g h : E} (p : commutator g h = ide) : conjugate g h = h
-  => equation.group {pmap (* h) p}
-
-\lemma comm_inverse-right {E : Group} {g h : E} (p : commutator g h = ide) : commutator g (inverse h) = ide
-  => equation.group {pmap (\lam x => conjugate (inverse h) (inverse x)) p}
-
-\lemma comm_inverse-left {E : Group} {g h : E} (p : commutator g h = ide) : commutator (inverse g) h = ide
-  => comm_sym $ comm_inverse-right $ comm_sym p
-
 \class AddGroup \extends AddMonoid {
   | negative : E -> E
   | negative-left {x : E} : negative x + x = zro
@@ -244,13 +202,6 @@
     | pos n => *n_pow
     | neg n => *n_pow
 
-  \lemma *i-assoc {x y : Int} {a : E} : (x * y) *i a = x *i (y *i a)
-    => pmap (*i _) *-comm *> *i_ipow *> \this.ipow_* *> inv (pmap (_ *i) *i_ipow *> *i_ipow)
-    \where \open Arith.Int.IntRing(*,*-comm)
-
-  \lemma *i-rdistr {x y : Int} {a : E} : (x Arith.Int.IntRing.+ y) *i a = x *i a + y *i a
-    => *i_ipow *> \this.ipow_+ *> inv (pmap2 (+) *i_ipow *i_ipow)
-
   \lemma diff_+ {x y z : E} : (z - y) + (y - x) = z - x =>
     (z - y) + (y - x)          ==< +-assoc >==
     z + (negative y + (y - x)) ==< inv (pmap (z +) +-assoc) >==
@@ -268,7 +219,7 @@
       => Group.inverse-equality A B z m e
 
   -- | An additive group with a tight apartness relation.
-  \class With# \extends AddGroup, Set# {
+  \protected \class With# \extends AddGroup, Set# {
     | \fix 8 #0 : E -> \Prop
     | #0-zro : Not (zro `#0)
     | #0-negative {x : E} : x `#0 -> negative x `#0
@@ -291,7 +242,7 @@
       => ||.map (\lam r => r) #0-negative-inv $ #0-+ $ transportInv #0 (+-assoc *> pmap (x +) negative-right *> zro-right) x#0
 
     \lemma #0-+-right {x y : E} (y#0 : #0 y) : #0 (x + y) || #0 x
-      => ||.rec' (\lam r => byRight (#0-negative-inv r)) byLeft $ #0-+ {_} {negative x} {x + y} $ transportInv #0 simplify y#0
+      => ||.rec' (\lam r => byRight (#0-negative-inv r)) byLeft $ #0-+ {_} {negative x} {x + y} $ transportInv #0 (inv +-assoc *> pmap (+ y) negative-left *> zro-left) y#0
 
     \lemma #0-BigSum {l : Array E} (p : BigSum l `#0) : ∃ (j : Fin l.len) (l j `#0) \elim l
       | nil => absurd (#0-zro p)
@@ -319,7 +270,7 @@
   }
 
   -- | An additive group with decidable equality.
-  \class Dec \extends With#, DecSet {
+  \protected \class Dec \extends With#, DecSet {
     | nonZeroApart {x : E} (x/=0 : x /= zro) : x `#0
     | #0-negative x#0 => nonZeroApart (\lam -x=0 => #0-zro (transport #0 (inv negative-isInv *> pmap negative -x=0 *> negative_zro) x#0))
     | #0-+ {x} {y} x+y#0 => \case decideEq y zro \with {
@@ -378,14 +329,6 @@
   an `AbGroup`: $\sum_k l_k - \sum_k l'_k = \sum_k (l_k - l'_k)$. -}
   \lemma BigSum_- {n : Nat} {l l' : Array E n} : BigSum (\lam k => l k - l' k) = BigSum l - BigSum l'
     => BigSum_+ *> inv (pmap (_ +) BigSum_negative)
-
-  -- | `FinSum` analog of `BigSum_negative` on `Fin n`.
-  \lemma FinSum_negative {n : Nat} {x : Fin n -> E} : negative (FinSum x) = FinSum (\lam k => negative (x k))
-    => pmap negative FinSum=BigSum *> BigSum_negative *> inv FinSum=BigSum
-
-  -- | `FinSum` analog of `BigSum_-` on `Fin n`.
-  \lemma FinSum_- {n : Nat} {x y : Fin n -> E} : FinSum (\lam k => x k - y k) = FinSum x - FinSum y
-    => FinSum=BigSum *> BigSum_- *> pmap2 (-) (inv FinSum=BigSum) (inv FinSum=BigSum)
 
   \lemma sum-cancel-left {x y z : E} : x + z - (x + y) = z - y
     => pmap (_ +) negative_+ *> pmap2 (+) +-comm +-comm *> +-assoc *> pmap (z +) (inv +-assoc *> pmap (- y) negative-right *> zro-left)

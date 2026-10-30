@@ -1,10 +1,11 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Algebra.Ring.Reduced
 \import Algebra.Semiring
 \import Arith.Complex
 \import Arith.Real
@@ -23,6 +24,8 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
+\import Algebra.Monoid.Properties
+\import Algebra.Ordered.Group
 \open Monoid (pow)
 \open Complex \using (iunit \as i)
 

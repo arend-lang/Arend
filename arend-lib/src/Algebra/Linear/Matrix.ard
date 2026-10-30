@@ -1,8 +1,10 @@
 \import Algebra.Algebra
 \import Algebra.Group
-\import Algebra.Group.GroupHom
 \import Algebra.Group.Symmetric
 \import Algebra.Meta
+\import Algebra.Meta.Base
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
@@ -16,7 +18,7 @@
 \import Arith.Nat
 \import Data.Array
 \import Data.Array.Perm
-\import Data.Fin (fsuc, fsuc/=)
+\import Data.Fin (fsuc, fsuc/=, fin-inc, fin-raise, fin-skip)
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -28,6 +30,11 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Algebra.Monoid.Perm
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 
 \type Matrix (R : \Type) (n m : Nat) => Array (Array R m) n
 
@@ -426,7 +433,7 @@
              FinSum (\lam i => M i 0 * pow -1 i * determinant (minor M i 0)) ==< FinSum=BigSum >==
              R.BigSum (\lam i => M i 0 * pow -1 i * determinant (minor M i 0)) `qed
       \where {
-        \func skip_skip {A : \Type} {n : Nat} {l : Array A (suc n)} {k j : Fin (suc n)} {d : k /= j} : skip l k (FinSet.skip k j d) = l j \elim n, l, k, j
+        \func skip_skip {A : \Type} {n : Nat} {l : Array A (suc n)} {k j : Fin (suc n)} {d : k /= j} : skip l k (fin-skip k j d) = l j \elim n, l, k, j
           | n, l, 0, 0 => absurd (d idp)
           | suc n, a :: l, 0, suc j => idp
           | suc n, a :: l, suc k, 0 => idp
@@ -483,7 +490,7 @@
   }
 
 \lemma determinant_transpose {R : CRing} {n : Nat} (M : Matrix R n n) : determinant (transpose M) = determinant M
-  => R.FinSum_Equiv SymmetricGroup.inv-isEquiv *> pmap R.FinSum (ext \lam (e : Sym n) => pmap2 (*) sign_inverse $ CMonoid.BigProd_Perm $ transport (Perm _) (arrayExt \lam j => later $ pmap (M (e j)) (e.ret_f j)) (Perm.equiv_perm e))
+  => R.FinSum_Equiv SymmetricGroup.inv-isEquiv *> pmap R.FinSum (ext \lam (e : Sym n) => pmap2 (*) sign_inverse $ BigProd_Perm $ transport (Perm _) (arrayExt \lam j => later $ pmap (M (e j)) (e.ret_f j)) (Perm.equiv_perm e))
 
 \func adjugate {R : CRing} {n : Nat} (M : Matrix R n n) : Matrix R n n \elim n
   | 0 => M
@@ -552,7 +559,7 @@
   \where \open Monoid
 
 \lemma determinant_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : f (determinant A) = determinant (matrix-map f A)
-  => AddMonoidHom.func-FinSum f *> pmap AbMonoid.FinSum (ext \lam e => func-* *> pmap2 (*) (sign.sign_hom f) f.func-BigProd)
+  => func-FinSum f *> pmap FinSum (ext \lam e => func-* *> pmap2 (*) (sign.sign_hom f) f.func-BigProd)
 
 \lemma determinant_block {R : CRing} {n m : Nat} (A : Matrix R n n) (B : Matrix R m m) : determinant (blockMatrix A B) = determinant A * determinant B \elim n
   | 0 => inv (pmap (* _) (determinant00 A) *> ide-left)

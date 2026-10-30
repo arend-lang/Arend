@@ -40,7 +40,6 @@
 \import InfCat.Opposite.Total
 \import InfCat.Rezk
 \import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 

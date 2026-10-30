@@ -1,7 +1,4 @@
-\import Algebra.Group
-\import Algebra.Ordered
 \import Function.Meta
-\import Meta
 \import Order.Directed
 \import Order.PartialOrder
 \import Paths
@@ -9,6 +6,7 @@
 \import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Algebra.Ordered.Group
 \open ProductTopSpace
 \open ContMap
 

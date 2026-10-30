@@ -13,6 +13,7 @@
 \import Set.Set
 \import Topology.Locale
 \import Topology.Locale.PreorderSite
+\import Order.PartialOrder.PosetHom
 \open CompleteLattice
 \open SiteLocale
 \open Cover

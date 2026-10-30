@@ -12,13 +12,10 @@
   * `Real-exp-strict-mono`   — strict monotonicity from `exp_+` and positivity.
   * `Real-exp-inj`           — strict monotonicity gives injectivity.
 -}
-\import Algebra.Field
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.QModule
-\import Algebra.Ring
 \import Algebra.Semiring
 \import Algebra.StrictlyOrdered
 \import Analysis.Limit
@@ -38,16 +35,16 @@
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Algebra.Meta
-\import Topology.BanachAlgebra
+\import Algebra.Meta.Linear
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
+\import Algebra.QModule.Rat
+\import Algebra.StrictlyOrdered.Group
 \open Monoid (pow)
 
 -- | Real limits are bounded below by any tail lower bound on the sequence.
@@ -156,11 +153,11 @@
   \where {
     -- | $0 \leq \exp x$ via $\exp x = \exp(x/2)^2$ and square non-negativity.
     \private \lemma exp>=0 {x : Real} : 0 <= exp x
-      => \let | half : Real => RatField.finv 2 QModule.*q x
-              | two-q-half : 2 QModule.*q half = x
-                 => inv QModule.*q-assoc *> pmap (QModule.*q x) (RatField.finv-right (natRat/=0 {2} suc/=0)) *> QModule.ide_*q
+      => \let | half : Real => RatField.finv 2 *q x
+              | two-q-half : 2 *q half = x
+                 => inv *q-assoc *> pmap (*q x) (RatField.finv-right (natRat/=0 {2} suc/=0)) *> ide_*q
               | half-sum : half + half = x
-                 => inv QModule.*q_*2 *> two-q-half
+                 => inv *q_*2 *> two-q-half
               | sq-eq : exp x = exp half * exp half
                  => pmap exp (inv half-sum) *> exp_+
          \in transportInv (0 <=) sq-eq RealField.square_>=0

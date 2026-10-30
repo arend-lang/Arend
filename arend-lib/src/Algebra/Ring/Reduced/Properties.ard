@@ -1,0 +1,48 @@
+\import Algebra.Group
+\import Algebra.Group.SubGroup
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Reduced
+\import Function.Meta
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Algebra.Pointed
+\open Monoid(LDiv,Inv)
+\open equation(cRing)
+\open ReducedCRing
+\open CRing
+\open PseudoRing
+\open CMonoid
+\open Monoid
+\open AddGroup
+
+\lemma .div-cancel (R : ReducedCRing) {a b b' : R} (d : LDiv a b) (d' : LDiv a b') (p : a * b = a * b') : b = b'
+  => div_pow-cancel {_} {a} {b} {b'} {1} {1} (rewrite ide-left d) (rewrite ide-left d') p
+
+\lemma .div_pow-cancel (R : ReducedCRing) {a b b' : R} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : a * b = a * b') : b = b'
+  => \let | I => (Ideal.closure1 a).radical 
+          | (inP (k,c)) => I.contains_- (inP (n, Ideal.closure1_LDiv.2 $ inP d)) (inP (n', Ideal.closure1_LDiv.2 $ inP d'))
+          | (inP dd) => Ideal.closure1_LDiv.1 c
+     \in fromZero $ div_pow_zero dd $ ldistr_- *> toZero p
+
+\lemma .div_div-cancel (R : ReducedCRing) {a b b' : R} (d : LDiv a b) (d' : LDiv a b') (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv
+  => div_pow_div-cancel {_} {a} {b} {b'} {1} {1} (rewrite ide-left d) (rewrite ide-left d') p
+
+\lemma .div_pow_div-cancel (R : ReducedCRing) {a b b' : R} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv \cowith
+  | inv-right => div_pow-cancel {_} {a} (rewrite pow_*-comm $ LDiv.factor-left d) d' $ inv *-assoc *> p.inv-right
+
+\lemma .bezout->strictBezout (R : PPRing) (bez : IsBezout) : IsStrictBezout
+  => \lam a b =>
+      \let | (inP (s,t,(a',p),(b',q))) => bez a b
+           | g => s * a + t * b
+           | (inP (w,g=wg,f)) => isPPRing g
+           | g[1-w]=0 : g * (1 - w) = 0 => cRing {1 g=wg}
+      \in inP (w * t, w * s + (1 - w), w * b', w * a' + (1 - w),
+               cRing { f {b' * a - a' * b} $ cRing {p,q}, inv q, g[1-w]=0 },
+               cRing {
+                 cRing {f {1 - w} g[1-w]=0} : w * w = w,
+                 f {t * b' + s * a' - 1} $ cRing {p,q}
+               })

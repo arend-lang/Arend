@@ -22,6 +22,7 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set.SetCategory
+\import Logic.Meta
 \open SetColimit
 
 \instance MonoidLatticeColimit.{u} {D : BottomJoinSemilattice} (F : Functor D MonoidCat.{u}) : Monoid (SetColimit (Comp MonoidCat.forget F))
@@ -186,3 +187,12 @@
     | byLeft r => byLeft $ inv $ ~-cequiv D.bottom-univ $ func-zro *> inv r
     | byRight (r : Monoid.Inv) => byRight $ Monoid.Inv.lmake (inC (x.1, r.inv)) $ later $ inv $ ~-cequiv D.bottom-univ $ func-ide *> inv (pmap (F.Func _) r.inv-left *> func-ide) *> func-*
   }
+
+-- | Equal elements of a colimit over a join-semilattice are already equal at some stage
+\lemma unext-ub.{u} {J : JoinSemilattice} {F : Functor J SetCat.{u}} {s s' : \Sigma (j : J) (F j)} (p : inC s = inC s')
+  : ∃ (j : J) (p : s.1 <= j) (q : s'.1 <= j) (F.Func p s.2 = F.Func q s'.2)
+  => Quotient.equalityClosure (\new Equivalence (\Sigma (j : J) (F j)) _ {
+    | ~-transitive => later \lam (inP s) (inP t) => inP (s.1 ∨ t.1, s.2 <=∘ join-left, t.3 <=∘ join-right, Func-app F *> pmap (F.Func join-left) s.4 *> inv (Func-app F) *> poset-app *> Func-app F *> pmap (F.Func join-right) t.4 *> inv (Func-app F))
+    | ~-reflexive {x} => later $ inP (x.1, <=-refl, <=-refl, idp)
+    | ~-symmetric => later \lam (inP s) => inP (s.1, s.3, s.2, inv s.4)
+  }) (later \lam {x} {y} s => inP (x.1 ∨ y.1, join-left, join-right, Func-app F *> pmap (F.Func join-right) s.2)) (path \lam i => p i)

@@ -270,6 +270,13 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   }
 
   private void visitReference(Concrete.ReferenceExpression expr, List<? extends Concrete.Argument> arguments) {
+    if (expr.getExtensions() != null) {
+      for (GlobalReferable extension : expr.getExtensions()) {
+        if (extension != expr.getReferent() && extension instanceof TCDefReferable ref) {
+          visitReference(new Concrete.ReferenceExpression(expr.getData(), ref), arguments);
+        }
+      }
+    }
     if (!(expr.getReferent() instanceof TCDefReferable ref)) return;
 
     if (myExcluded == null || !myExcluded.contains(ref)) {
@@ -356,5 +363,17 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   public Void visitReference(Concrete.ReferenceExpression expr, Void params) {
     visitReference(expr, Collections.emptyList());
     return null;
+  }
+
+  @Override
+  public Void visitFieldCall(Concrete.FieldCallExpression expr, Void params) {
+    for (GlobalReferable extension : expr.getExtensions()) {
+      if (extension instanceof TCDefReferable ref) {
+        // The receiver is the first argument, so instances required by the other parameters are collected as for an ordinary call
+        boolean implicitReceiver = myConcreteProvider != null && myConcreteProvider.getConcrete(ref) instanceof Concrete.Definition def && def.implicitReceiver;
+        visitReference(new Concrete.ReferenceExpression(expr.getData(), ref), Collections.singletonList(new Concrete.Argument(expr.getArgument(), !implicitReceiver)));
+      }
+    }
+    return super.visitFieldCall(expr, params);
   }
 }

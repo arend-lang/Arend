@@ -354,7 +354,9 @@ public class ModuleDeserialization {
     } else if (kind == GlobalReferable.Kind.META) {
       referable = new MetaReferable(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), new MetaTypechecker() {}, null, parent.referable());
     } else {
-      referable = new LocatedReferableImpl(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), parent.referable(), kind);
+      LocatedReferableImpl locatedReferable = new LocatedReferableImpl(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), parent.referable(), kind);
+      locatedReferable.setDynamicExtension(referableProto.getIsDynamicExtension());
+      referable = locatedReferable;
     }
 
     if (referable instanceof TCDefReferable && groupProto.hasDefinition()) {

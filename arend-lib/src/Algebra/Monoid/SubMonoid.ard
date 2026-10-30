@@ -13,6 +13,8 @@
 \import Paths
 \import Paths.Meta
 \import Set.SubSet
+\import Algebra.Monoid.Properties
+\open CMonoid (IsRegularElem)
 
 \class SubSemigroup \extends SubSet {
   \override S : Semigroup
@@ -115,11 +117,11 @@
     | 0 => contains_zro
     | suc n => contains_+ (contains_*n c) c
 
-  \lemma contains_BigSum {l : Array S} (p : \Pi (j : Fin l.len) -> contains (l j)) : contains (AddMonoid.BigSum l) \elim l
+  \lemma contains_BigSum {l : Array S} (p : \Pi (j : Fin l.len) -> contains (l j)) : contains (BigSum l) \elim l
     | nil => contains_zro
     | a :: l => contains_+ (p 0) $ contains_BigSum \lam j => p (suc j)
 
-  \lemma sub-BigSum {l : Array (IAddMonoid \this)} : ((IAddMonoid \this).BigSum l).1 = AddMonoid.BigSum (map __.1 l) \elim l
+  \lemma sub-BigSum {l : Array (IAddMonoid \this)} : ((IAddMonoid \this).BigSum l).1 = BigSum (map __.1 l) \elim l
     | nil => idp
     | a :: l => pmap (a.1 +) sub-BigSum
 } \where {
@@ -178,3 +180,8 @@
 \func ImMonoidLeftHom (f : MonoidHom) : MonoidHom f.Dom (ImMonoid f) \cowith
   | PointedHom => ImPointedLeftHom f
   | func-* => ext func-*
+
+\func .regulars (CM : CMonoid) : SubMonoid CM \cowith
+  | contains r => IsRegularElem r
+  | contains_ide p => inv ide-left *> p *> ide-left
+  | contains_* p q s => q (p (inv *-assoc *> s *> *-assoc))

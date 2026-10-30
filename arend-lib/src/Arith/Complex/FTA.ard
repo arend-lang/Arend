@@ -1,7 +1,6 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.LinearFactors
@@ -32,6 +31,7 @@
 \import Topology.MetricSpace.Complete
 \import Topology.MetricSpace.Multiset
 \import Topology.NormedAbGroup
+\import Set.Set.Lattice
 \open Monoid (pow)
 
 {- | **Richman's reformulated fundamental theorem.** The multiset of roots of a monic degree-`n`

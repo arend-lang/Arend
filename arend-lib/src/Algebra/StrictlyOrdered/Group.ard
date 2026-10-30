@@ -1,0 +1,122 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ordered.Group
+\import Algebra.Pointed
+\import Algebra.StrictlyOrdered
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid(Inv)
+\open BaseSet
+
+\class PreorderedAddGroup \extends AddGroup
+  | isPos : E -> \Prop
+  | zro/>0 : Not (isPos zro)
+  | positive_+ {x y : E} : isPos x -> isPos y -> isPos (x + y)
+
+\class OrderedAddGroup \extends OrderedAddMonoid, PreorderedAddGroup {
+  | < => OrderedAddGroup.<
+  | <-irreflexive x<x => zro/>0 (transport isPos negative-right x<x)
+  | <-transitive x<y y<z => transport isPos diff_+ (positive_+ y<z x<y)
+  | <_+-left z {x} {y} x<y => transport isPos (inv (
+    (y + z) - (x + z)          ==< pmap ((y + z) +) negative_+ >==
+    (y + z) + (negative z - x) ==< +-assoc >==
+    y + (z + (negative z - x)) ==< inv (pmap (y +) +-assoc) >==
+    y + ((z - z) - x)          ==< pmap (y + (__ - x)) negative-right >==
+    y + (zro - x)              ==< pmap (y +) zro-left >==
+    y - x                      `qed)) x<y
+
+  | isNeg : E -> \Prop
+  | isNeg x => isPos (negative x)
+
+  \lemma fromNeg {x y : E} (x-y<0 : isNeg (x - y)) : x < y
+    => transport isPos (negative_+ *> pmap (- x) negative-isInv) x-y<0
+
+  \lemma toNeg {x y : E} (x<y : x < y) : isNeg (x - y)
+    => transport isPos (inv (negative_+ *> pmap (- x) negative-isInv)) x<y
+
+  \lemma pos_>0 {x : E} (p : isPos x) : x > zro
+    => transportInv (\lam y => isPos (x + y)) negative_zro $ transportInv isPos zro-right p
+
+  \lemma >0_pos {x : E} (x>0 : x > zro) : isPos x
+    => transport isPos zro-right $ transport (\lam y => isPos (x + y)) negative_zro x>0
+
+  \lemma neg_<0 {x : E} (p : isNeg x) : x < zro
+    => rewrite negative-isInv in positive_negative (pos_>0 p)
+
+  \lemma <0_neg {x : E} (x<0 : x < zro) : isNeg x
+    => >0_pos (negative_positive x<0)
+
+  \lemma positive_negative' {x : E} (x>0 : isPos x) : isNeg (negative x)
+    => transportInv isPos negative-isInv x>0
+
+  \lemma positive_negative {x : E} (x>0 : x > zro) : negative x < zro
+    => transport isPos (unfold (-) $ rewrite (negative-isInv,negative_zro) (zro-right *> inv zro-left)) x>0
+
+  \lemma negative_positive' {x : E} (-x<0 : isNeg (negative x)) : isPos x
+    => transport isPos negative-isInv -x<0
+
+  \lemma negative_positive {x : E} (x<0 : x < zro) : negative x > zro
+    => transport isPos (unfold (-) $ rewrite negative_zro (zro-left *> inv zro-right)) x<0
+
+  \lemma negative_< {x y : E} (x<y : x < y) : negative y < negative x
+    => transportInv (\lam y => isPos (_ + y)) negative-isInv $ >0_pos $ rewrite negative-left in <_+-right (negative x) x<y
+
+  \lemma negative_<-inv {x y : E} (p : negative x < negative y) : y < x
+    => transport2 (<) negative-isInv negative-isInv (negative_< p)
+
+  \lemma negative_<-left {x y : E} (p : negative x < y) : negative y < x
+    => transport (_ <) negative-isInv (negative_< p)
+
+  \lemma negative_<-right {x y : E} (p : x < negative y) : y < negative x
+    => transport (< _) negative-isInv (negative_< p)
+
+  \lemma <-diff-mid {x y z : E} (p : x - y < z) : x < z + y
+    => transport (__ < _) (+-assoc *> pmap (x +) negative-left *> zro-right) (<_+-left y p)
+
+  \lemma <-diff-mid-conv {x y z : E} (p : x < z + y) : x - y < z
+    => transport (_ <) (+-assoc *> pmap (z +) negative-right *> zro-right) (<_+-left (negative y) p)
+
+  \lemma from>0 {x y : E} (p : 0 < y - x) : x < y
+    => transport (< _) (zro-left *> negative-isInv) (<-diff-mid-conv p)
+
+  \lemma to>0 {x y : E} (p : x < y) : 0 < y - x
+    => <-diff-mid $ transportInv (< _) (zro-left *> negative-isInv) p
+
+  \lemma from<0 {x y : E} (p : x - y < 0) : x < y
+    => transport (x <) zro-left (<-diff-mid p)
+
+  \lemma to<0 {x y : E} (p : x < y) : x - y < 0
+    => <-diff-mid-conv $ transportInv (x <) zro-left p
+} \where {
+  \type \infix 4 < {A : PreorderedAddGroup} (x y : A) => isPos (y - x)
+}
+
+\class OrderedAbGroup \extends OrderedAbMonoid, OrderedAddGroup, AbGroup {
+  \lemma <-diff-left {x y z : E} (p : x - y < z) : x - z < y
+    => transport2 (<) +-comm (inv +-assoc *> pmap (+ y) negative-left *> zro-left) (<_+-right (negative z) (<-diff-mid p))
+}
+
+\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, LatticeAbGroup {
+  | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
+  | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
+
+  | <_+-cancel-left x {y} {z} x+y<x+z =>
+    transport2 (<)
+      (inv +-assoc *> pmap (+ y) negative-left *> zro-left)
+      (inv +-assoc *> pmap (+ z) negative-left *> zro-left)
+      (<_+-right (negative x) x+y<x+z)
+  | <-comparison y {x} {z} x<z => \case <_+-comparison (z - y) (y - x) (transport isPos (inv OrderedAddGroup.diff_+) x<z) \with {
+    | byLeft p => byRight p
+    | byRight p => byLeft p
+  }
+  | <-connectedness x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) \lam p => x/<y (fromNeg p)
+
+  \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z
+    => <_join-univ p (transportInv (__ < z) negative_- q)
+}

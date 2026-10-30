@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -24,6 +24,7 @@
 \import Topology.CoverSpace.StronglyComplete
 \import Topology.UniformSpace
 \import Topology.UniformSpace.StronglyComplete
+\import Set.Set.Lattice
 
 \instance InfRealUniformSpace : StronglyCompleteUniformSpace InfReal
   | StronglyRegularUniformSpace => InfRealUniformSpace

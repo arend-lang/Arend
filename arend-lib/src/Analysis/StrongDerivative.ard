@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Module
 \import Algebra.Module.BilinearMap
 \import Algebra.Module.LinearMap
@@ -9,8 +10,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
-\import Order.Lattice
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
@@ -20,6 +19,7 @@
 \import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Set.Set.Lattice
 \open IsDerivQuot
 \open ContMap
 \open ProductTopSpace

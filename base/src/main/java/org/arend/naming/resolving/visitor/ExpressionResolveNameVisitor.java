@@ -231,6 +231,17 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       if (removeRedirection) {
         referable = RedirectingReferable.getOriginalReferable(referable);
       }
+      if (referable instanceof ErrorReference && resolved == null && unresolved.getPath().size() == 1) {
+        // Extension functions with a class or a record receiver can be used without it; the typechecker chooses one of them
+        List<GlobalReferable> extensions = scope.resolveExtensions(unresolved.getPath().getFirst());
+        if (!extensions.isEmpty()) {
+          referable = extensions.getFirst();
+          refExpr.setExtensions(extensions);
+          if (resolvedRefs != null && !resolvedRefs.isEmpty() && resolvedRefs.getLast() instanceof ErrorReference) {
+            resolvedRefs.set(resolvedRefs.size() - 1, referable);
+          }
+        }
+      }
     } else {
       resolved = null;
     }
@@ -344,21 +355,41 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
         ? myTypingInfo.getBodyDynamicScopeProvider(typedExpr.getType())
         : myTypingInfo.getTypeDynamicScopeProvider(argument);
 
+      // Extensions are chosen by the typechecker according to the type of the argument
+      List<GlobalReferable> extensions = myScope.resolveExtensions(unresolved.getRefName());
       if (provider != null) {
-        ref = unresolved.resolve(new DynamicScope(provider, myTypingInfo, DynamicScope.Extent.WITH_DYNAMIC), null, myResolverListener);
-        if (ref instanceof ErrorReference errorRef) {
-          myErrorReporter.report(errorRef.getError());
+        Scope dynamicScope = new DynamicScope(provider, myTypingInfo, DynamicScope.Extent.WITH_DYNAMIC);
+        if (extensions.isEmpty()) {
+          ref = unresolved.resolve(dynamicScope, null, myResolverListener);
+          if (ref instanceof ErrorReference errorRef) {
+            myErrorReporter.report(errorRef.getError());
+          }
+        } else {
+          ref = unresolved.tryResolve(new MergeScope(dynamicScope, new ExtensionScope(myScope)), null, Scope.ScopeContext.STATIC, myResolverListener);
+          if (isExtension(ref)) ref = null;
         }
       } else {
-        ref = unresolved.tryResolve(myScope, null, Scope.ScopeContext.DYNAMIC, myResolverListener);
+        ref = unresolved.tryResolve(extensions.isEmpty() ? myScope : new MergeScope(myScope, new ExtensionScope(myScope)), null, Scope.ScopeContext.DYNAMIC, myResolverListener);
+        if (isExtension(ref)) ref = null;
+        if (ref != null && !extensions.isEmpty()) {
+          // The resolved dynamic definition is used only if neither a field nor an extension is applicable
+          return new Concrete.FieldCallExpression(expr.getData(), ref, expr.fixity, argument, extensions);
+        }
       }
 
       if (ref != null && myResolverListener != null) {
         myResolverListener.fieldCallResolved(expr, unresolved, ref);
       }
+      if (ref == null && !extensions.isEmpty()) {
+        return new Concrete.FieldCallExpression(expr.getData(), expr.getField(), expr.fixity, argument, extensions);
+      }
     }
 
     return ref != null ? Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), ref), argument, false) : super.visitFieldCall(expr, params);
+  }
+
+  private static boolean isExtension(Referable ref) {
+    return RedirectingReferable.getOriginalReferable(ref) instanceof GlobalReferable global && global.isDynamicExtension();
   }
 
   public Concrete.Expression convertMetaResult(ConcreteExpression expr, Concrete.ReferenceExpression refExpr, List<Concrete.Argument> args, Concrete.Coclauses coclauses, Concrete.FunctionClauses clauses) {

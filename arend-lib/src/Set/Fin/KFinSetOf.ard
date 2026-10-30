@@ -1,19 +1,14 @@
 \import Data.Array
-\import Data.Bool
 \import Data.Or
 \import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Order.Lattice
-\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set
-\import Set.Fin
-\import Set.Set
 \import Set.Fin.KFin
+\import Data.Fin
 
 \record KFinSetOf (X : \Set) (\coerce P : X -> \Prop) {
   | isFinSubSet : ∃ (l : Array X) ∀ x (P x <-> TSetIm l x)
@@ -76,7 +71,7 @@
 
   \lemma preimage {X Y : \Set} (f : X -> Y) (fi : IsInj f) (A : KFinSetOf Y) (As : ∀ {y : A.P} ∃ (x : X) (f x = y)) : KFinSetOf X (\lam x => A (f x)) \cowith
     | isFinSubSet => \case A.isFinSubSet \with {
-      | inP (l,Al) => \case FinSet.finiteAC (\lam j => As {l j} $ (Al _).2 $ TSetIm-con j) \with {
+      | inP (l,Al) => \case finiteAC (\lam j => As {l j} $ (Al _).2 $ TSetIm-con j) \with {
         | inP g => inP (\lam j => (g j).1, \lam x => <->trans (Al (f x)) $ later (\lam (inP (j,lj=fx)) => inP (j, fi $ (g j).2 *> lj=fx), TSetIm-elim \lam j => later $ inP (j, inv (g j).2)))
       }
     }
@@ -84,37 +79,11 @@
   \lemma image {X Y : \Set} (R : X -> Y -> \Prop) (A : KFinSetOf X) (Rs : ∀ {x : A.P} ∃ (y : Y) (R x y))
     : ∃ (B : KFinSetOf Y) (∀ {x : A.P} ∃ (y : B.P) (R x y)) (∀ {y : B.P} ∃ (x : A.P) (R x y))
     => \case A.isFinSubSet \with {
-      | inP (l,Al) => \case FinSet.finiteAC (\lam j => Rs {l j} $ (Al _).2 $ TSetIm-con j) \with {
+      | inP (l,Al) => \case finiteAC (\lam j => Rs {l j} $ (Al _).2 $ TSetIm-con j) \with {
         | inP g => inP (\new KFinSetOf Y (TSetIm \lam j => (g j).1) $ inP (\lam j => (g j).1, \lam y => <->refl),
                         \lam {x} Ax => TSetIm-elim (\lam j => inP $ later ((g j).1, TSetIm-con j, (g j).2)) $ (Al x).1 Ax,
                         TSetIm-elim \lam j => inP $ later (l j, (Al _).2 $ TSetIm-con j, (g j).2))
       }
     }
 
-  \lemma DecUnion-split {X : \Set} (A : KFinSetOf X) {I : DecSet} {S : I -> Set X} (A<=S : ∀ {x : A.P} ∃ (i : I) (S i x))
-    : ∃ (T : I -> KFinSetOf X) (∀ {x : A.P} ∃ (i : I) (T i x)) (∀ i (T i ⊆ A.P ∧ S i))
-    => \let | (inP (l,Al)) => A.isFinSubSet
-            | (inP g) => FinSet.finiteAC \lam j => A<=S $ (Al _).2 (TSetIm-con j)
-       \in inP (\lam i => \new KFinSetOf {
-         | P x => ∃ (j : Fin l.len) (l j = x) ((g j).1 = i)
-         | isFinSubSet =>
-           \let indices => keep (\lam j => decideEq (g j).1 i) \new Array (Fin l.len) l.len \lam j => j
-           \in inP (\lam k => l (indices k), \lam x =>
-             (\lam (inP (j,lj=x,gj=i)) => \let index => keep.element gj=i \in inP (index.1, pmap l index.2 *> lj=x),
-              TSetIm-elim \lam k => inP $ later (indices k, idp, keep.satisfies \lam j => decideEq (g j).1 i)))
-       }, \lam {x} Ax => \case (Al x).1 Ax \with {
-         | inP (j,lj=x) => inP ((g j).1, inP (j, lj=x, idp))
-       }, \lam i {x} (inP (j,lj=x,gj=i)) => ((Al x).2 $ inP (j,lj=x), transport2 S gj=i lj=x (g j).2))
-
-  \lemma union-split {X : \Set} (A : KFinSetOf X) {B C : Set X} (A<=BC : A ⊆ B ∪ C)
-    : ∃ (B' C' : KFinSetOf X) (A ⊆ B'.P ∪ C'.P) (B' ⊆ A.P ∧ B) (C' ⊆ A.P ∧ C)
-    => \case DecUnion-split A {DecBool} {if __ B C} (\lam Ax => \case A<=BC Ax \with {
-      | byLeft Bx => inP (true, Bx)
-      | byRight Cx => inP (false, Cx)
-    }) \with {
-      | inP (T,A<=T,T<=ABC) => inP (T true, T false, \lam Ax => \case A<=T Ax \with {
-        | inP (true, Tx) => byLeft Tx
-        | inP (false, Tx) => byRight Tx
-      }, T<=ABC true, T<=ABC false)
-    }
 }

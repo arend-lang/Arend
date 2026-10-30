@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class LongUnresolvedReference implements UnresolvedReference {
@@ -129,6 +130,10 @@ public class LongUnresolvedReference implements UnresolvedReference {
       listener.resolving(myReferences.get(myPath.size() - 1), scope, context, !onlyTry);
     }
     resolved = scope.resolveName(name, context);
+    if (resolved == null && myPath.size() > 1 && (context == null || context == Scope.ScopeContext.STATIC)) {
+      // A qualified name can refer to an extension function explicitly
+      resolved = scope.resolveName(name, Scope.ScopeContext.EXTENSION);
+    }
     if (resolved == null && !onlyTry) {
       Object data = getData();
       resolved = new ErrorReference(data, make(data, myPath.subList(0, myPath.size() - 1)), myPath.size() - 1, name);
@@ -178,6 +183,10 @@ public class LongUnresolvedReference implements UnresolvedReference {
 
     String name = myPath.getLast();
     resolved = scope.resolveName(name);
+    if (resolved == null && myPath.size() > 1 && scope != initialScope) {
+      // A qualified name can refer to an extension function explicitly
+      resolved = scope.resolveName(name, Scope.ScopeContext.EXTENSION);
+    }
     if (listener != null && myPath.size() - 1 < myReferences.size() && myReferences.get(myPath.size() - 1) != null) {
       listener.resolving(myReferences.get(myPath.size() - 1), scope, Scope.ScopeContext.STATIC, !onlyTry && resolved != null);
     }
@@ -236,6 +245,13 @@ public class LongUnresolvedReference implements UnresolvedReference {
       resolved = resolvedRefs != null ? resolvedRefs.get(i) : scope.resolveName(myPath.get(i));
     }
 
+    if (resolved == null || resolved instanceof ErrorReference) {
+      // An extension function with a class receiver can be used without it, so the rest of the path consists of field calls
+      resolved = scope.resolveName(myPath.get(i), Scope.ScopeContext.EXTENSION);
+      if (resolved != null && resolvedRefs != null && i < resolvedRefs.size()) {
+        resolvedRefs.set(i, resolved);
+      }
+    }
     if (resolved == null) {
       if (!onlyTry) {
         resolved = new ErrorReference(myData, make(myData, myPath.subList(0, i)), i, myPath.get(i));
@@ -263,17 +279,19 @@ public class LongUnresolvedReference implements UnresolvedReference {
       if (provider == null) {
         newResolved = initialScope.resolveName(myPath.get(i), Scope.ScopeContext.DYNAMIC);
         if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
-          listener.resolving(myReferences.get(i), initialScope, Scope.ScopeContext.DYNAMIC, !onlyTry);
+          listener.resolving(myReferences.get(i), new MergeScope(initialScope, new ExtensionScope(initialScope)), Scope.ScopeContext.DYNAMIC, !onlyTry);
         }
       } else {
         Scope dynamicScope = new DynamicScope(provider, typingInfo, DynamicScope.Extent.WITH_DYNAMIC);
         newResolved = dynamicScope.resolveName(myPath.get(i));
         if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
-          listener.resolving(myReferences.get(i), dynamicScope, Scope.ScopeContext.STATIC, !onlyTry);
+          listener.resolving(myReferences.get(i), result == null ? dynamicScope : new MergeScope(dynamicScope, new ExtensionScope(initialScope)), Scope.ScopeContext.STATIC, !onlyTry);
         }
       }
-      if (newResolved == null) {
-        if (provider != null) {
+      if (newResolved == null || provider == null) {
+        // Extensions are chosen by the typechecker according to the type of the argument
+        List<GlobalReferable> extensions = result == null ? Collections.emptyList() : initialScope.resolveExtensions(myPath.get(i));
+        if (newResolved == null && provider != null && extensions.isEmpty()) {
           if (onlyTry) {
             resolved = null;
             return null;
@@ -283,9 +301,19 @@ public class LongUnresolvedReference implements UnresolvedReference {
             resolvedRefs.add(resolved);
           }
           return null;
-        } else {
-          for (; i < myPath.size(); i++) {
-            result = new Concrete.FieldCallExpression(myData, new NamedUnresolvedReference(i < myReferences.size() ? myReferences.get(i) : myData, myPath.get(i)), i == myPath.size() - 1 ? Fixity.UNKNOWN : Fixity.NONFIX, result);
+        }
+        if (newResolved == null || !extensions.isEmpty()) {
+          result = new Concrete.FieldCallExpression(myData, newResolved != null ? newResolved : new NamedUnresolvedReference(i < myReferences.size() ? myReferences.get(i) : myData, myPath.get(i)), i == myPath.size() - 1 ? Fixity.UNKNOWN : Fixity.NONFIX, result, extensions);
+          // If the result type of the extension function is known, the rest of the path is resolved in its dynamic scope
+          DynamicScopeProvider extProvider = newResolved == null && extensions.size() == 1 ? typingInfo.getTypeDynamicScopeProvider(extensions.getFirst()) : null;
+          if (extProvider != null && i + 1 < myPath.size()) {
+            provider = extProvider;
+            continue;
+          }
+          for (i++; i < myPath.size(); i++) {
+            // The type of the argument is not known here, so a dynamic definition is looked up by its name
+            Referable dynamicRef = initialScope.resolveName(myPath.get(i), Scope.ScopeContext.DYNAMIC);
+            result = new Concrete.FieldCallExpression(myData, dynamicRef != null ? dynamicRef : new NamedUnresolvedReference(i < myReferences.size() ? myReferences.get(i) : myData, myPath.get(i)), i == myPath.size() - 1 ? Fixity.UNKNOWN : Fixity.NONFIX, result, initialScope.resolveExtensions(myPath.get(i)));
           }
           return result;
         }

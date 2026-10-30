@@ -138,6 +138,28 @@ public class UnusedImportsTest {
   }
 
   @Test
+  public void anImportUsedOnlyByAnExtensionFunctionIsKept() {
+    addModule("Foo", "\\func .twice (n : Nat) => n Nat.+ n");
+    addModule("Main", "\\import Foo\n\n\\func h (n : Nat) => n.twice");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void anImportUsedOnlyByAnUnqualifiedExtensionFunctionIsKept() {
+    addModule("R", "\\record R (x : Nat)");
+    addModule("Foo", "\\import R\n\n\\func .foo (r : R) => r.x");
+    addModule("Main", "\\import R\n\\import Foo\n\n\\func h (r : R) => foo {r}");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void anExplicitImportOfAnUnusedExtensionFunctionIsReported() {
+    addModule("Foo", "\\func .twice (n : Nat) => n Nat.+ n\n\\func f => 0");
+    addModule("Main", "\\import Foo (twice, f)\n\n\\func h => f");
+    assertEquals("\\import Foo (twice)", unused("Main"));
+  }
+
+  @Test
   public void onlyTheNamesOfAnExplicitImportThatAreUnusedAreReported() {
     addModule("Foo", "\\func f => 1\n\\func g => 2\n\\func h => 3");
     addModule("Main", "\\import Foo (f, g, h)\n\n\\func r => f Nat.+ h");

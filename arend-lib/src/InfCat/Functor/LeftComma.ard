@@ -30,7 +30,6 @@
 \import InfCat.Functor.FullyFaithful
 \import InfCat.Slice
 \import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 

@@ -14,6 +14,7 @@
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
 \import Topology.TopSpace
+\import Set.Set.Lattice
 
 \instance WeaklyCauchyFilterPoset (S : CoverSpace) : Poset (WeaklyCauchyFilter S)
   | <= F G => F ⊆ G
@@ -87,7 +88,6 @@
 \lemma sregCF_<= {S : StronglyRegularCoverSpace} {F : WeaklyCauchyFilter S} : sregCF F ⊆ F
   => \lam u => u <=-refl
 
-\open RatherBelow
 
 \func pointSCF {S : StronglyRegularCoverSpace} (x : S) : StronglyRegularCauchyFilter S \cowith
   | F U => single x <=< U

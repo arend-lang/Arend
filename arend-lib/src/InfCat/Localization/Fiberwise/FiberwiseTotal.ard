@@ -24,8 +24,8 @@
 \import InfCat.Localization.Concrete
 \import InfCat.Localization.Fiberwise
 \import Logic
-\import Logic.Unique
 \import Paths
+\import Equiv
 
 -- | A fiberwise localization of a cocartesian map is a localization.
 \lemma fiberwise-isLocalization.{u} {X K M : \Cat u} {pi : K ->⁺ X} (pc : IsCocartesianMap pi)

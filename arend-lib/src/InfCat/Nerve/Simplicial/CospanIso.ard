@@ -6,7 +6,6 @@
 \import InfCat.Limit.Terminal
 \import InfCat.Rezk
 \import Logic
-\import Logic.Unique
 \import Paths
 
 -- | The arrow {u} followed by the inverse of {v}.

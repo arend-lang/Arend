@@ -1,16 +1,12 @@
-\import Algebra.Monoid
-\import Arith.Nat
 \import Category
 \import Category.Functor
 \import Category.Limit
 \import Equiv
 \import Function (IsInj)
 \import Function.Meta
-\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Order.Lattice
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
@@ -124,14 +120,6 @@
       : in~ s = {SetColimit F} in~ s'
       => path (\lam i => ~-equiv s s' (f,p) i)
 
-    \lemma unext-ub.{u} {J : JoinSemilattice} {F : Functor J SetCat.{u}} {s s' : \Sigma (j : J) (F j)} (p : inC s = inC s')
-      : ∃ (j : J) (p : s.1 <= j) (q : s'.1 <= j) (F.Func p s.2 = F.Func q s'.2)
-      => Quotient.equalityClosure (\new Equivalence (\Sigma (j : J) (F j)) _ {
-        | ~-transitive => later \lam (inP s) (inP t) => inP (s.1 ∨ t.1, s.2 <=∘ join-left, t.3 <=∘ join-right, Func-app F *> pmap (F.Func join-left) s.4 *> inv (Func-app F) *> poset-app *> Func-app F *> pmap (F.Func join-right) t.4 *> inv (Func-app F))
-        | ~-reflexive {x} => later $ inP (x.1, <=-refl, <=-refl, idp)
-        | ~-symmetric => later \lam (inP s) => inP (s.1, s.3, s.2, inv s.4)
-      }) (later \lam {x} {y} s => inP (x.1 ∨ y.1, join-left, join-right, Func-app F *> pmap (F.Func join-right) s.2)) (path \lam i => p i)
-
     \lemma Func-app.{u} {J : Precat} (F : Functor J SetCat.{u}) {j1 j2 j3 : J} {f : Hom j1 j2} {g : Hom j2 j3} {a : F j1} : F.Func (g ∘ f) a = F.Func g (F.Func f a)
       => pmap (__ a) F.Func-o
 
@@ -214,32 +202,6 @@
   : \Sigma (y : SetColimit F) (SetColimit.map f y = SetColimit.map g y) \elim x
   | in~ (j,s) => (in~ (j,s.1), pmap (\lam t => SetColimit.inC (j,t)) s.2)
   | ~-equiv t t' r => ext (path \lam i => ~-equiv (t.1,t.2.1) (t'.1,t'.2.1) (r.1, pmap (__.1) r.2) i)
-
-\func NatFunctor {C : Precat} (F : Nat -> C) (f : \Pi {n : Nat} -> Hom (F n) (F (suc n))) : Functor NatSemiring C \cowith
-  | F => F
-  | Func p => natHom (_, <=_exists p)
-  | Func-id => pmap natHom (sigma-isProp _ (0,idp)) *> natHom_id
-  | Func-o => pmap natHom (sigma-isProp _ _) *> natHom-comp
-  \where {
-    \lemma sigma-isProp {n m : Nat} : isProp (\Sigma (k : Nat) (n + k = m))
-      => \lam s t => ext $ NatSemiring.cancel-left n $ s.2 *> inv t.2
-
-    \func natHom {n m : Nat} (s : \Sigma (k : Nat) (n + k = m)) : Hom (F n) (F m) \elim m, s
-      | _, (0, idp) => id
-      | 0, (suc k, ())
-      | suc m, (suc k, q) => f ∘ natHom (k, pmap pred q)
-
-    \lemma natHom_id {n : Nat} : natHom (0,idp) = id {_} {F n} \elim n
-      | 0 => idp
-      | suc n => idp
-
-    \lemma natHom-comp {n m k : Nat} {s : \Sigma (l : Nat) (n + l = m)} {t : \Sigma (l : Nat) (m + l = k)}
-      : natHom (s.1 + t.1, inv +-assoc *> pmap (+ _) s.2 *> t.2) = natHom t ∘ natHom s \elim k, t
-      | 0, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
-      | suc k, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
-      | 0, (suc m, ())
-      | suc k, (suc m, q) => pmap (f ∘) (pmap natHom (sigma-isProp _ _) *> natHom-comp) *> inv o-assoc
-  }
 
 -- | The canonical equalizer of two maps of sets.
 \func sigmaEqualizer.{u} {A B : \Set u} (f g : A -> B)

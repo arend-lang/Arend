@@ -4,8 +4,6 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
-\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Set.Set (Set, ⊆)

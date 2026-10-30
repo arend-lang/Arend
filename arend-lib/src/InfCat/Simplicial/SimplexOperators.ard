@@ -7,6 +7,7 @@
 \import Category.Simplex
 \import Logic
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths.Meta
 
 -- | The top vertex of `[n]`.

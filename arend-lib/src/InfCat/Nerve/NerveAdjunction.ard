@@ -3,7 +3,6 @@
 \import Category.Functor
 \import Equiv
 \import Function.Meta
-\import Homotopy.Fibration
 \import Homotopy.HLevel
 \import Homotopy.Truncation
 \import InfCat.Basics
@@ -12,15 +11,11 @@
 \import InfCat.HoCat
 \import InfCat.Nerve.Nerve
 \import InfCat.Nerve.NerveHom
-\import InfCat.Objects
-\import InfCat.Rezk
 \import InfCat.Square
 \import InfCat.Trunc.CatTrunc
 \import InfCat.Trunc.CatTruncHom
 \import InfCat.Trunc.IsCatTrunc
 \import Logic
-\import Logic.Unique
-\import Meta
 \import Paths
 \import Paths.Meta
 \open NerveCounit

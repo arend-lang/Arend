@@ -2,6 +2,7 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Field
 \import Algebra.Monoid
 \import Algebra.Ring
 \import Algebra.Ring.FormalSeries.Derivative

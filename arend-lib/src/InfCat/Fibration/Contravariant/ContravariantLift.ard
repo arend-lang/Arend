@@ -9,7 +9,6 @@
  -}
 
 \import Equiv
-\import Equiv.Path
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
@@ -24,7 +23,6 @@
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic
-\import Logic.Unique
 \import Meta
 \import Paths
 

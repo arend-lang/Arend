@@ -1,6 +1,5 @@
 \import Algebra.Group
 \import Algebra.Group.GSet
-\import Function
 \import Paths
 \import Set.SetHom
 

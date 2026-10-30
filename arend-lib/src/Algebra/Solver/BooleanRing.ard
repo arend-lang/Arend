@@ -17,6 +17,8 @@
 \import Paths
 \import Paths.Meta
 \import Set
+\import Algebra.Monoid.Properties
+\import Order.Lattice.Properties
 
 \func BooleanRingSolverModel (B : BooleanRing) : SolverModel B \cowith
   | Term => Term

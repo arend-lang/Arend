@@ -1,5 +1,7 @@
 package org.arend.naming.scope;
 
+import org.arend.naming.reference.GlobalReferable;
+import org.arend.naming.reference.RedirectingReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.jetbrains.annotations.NotNull;
@@ -14,7 +16,10 @@ import java.util.function.Predicate;
 
 // Minimal definition: (find or getElements) and resolveNamespace
 public interface Scope {
-  enum ScopeContext { STATIC, DYNAMIC, LEVEL }
+  /**
+   * EXTENSION contains extension functions {@code \func .foo (r : R)}, which are not available in STATIC context.
+   */
+  enum ScopeContext { STATIC, DYNAMIC, LEVEL, EXTENSION }
 
   default @Nullable Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
     for (Referable referable : getElements(context)) {
@@ -64,6 +69,20 @@ public interface Scope {
 
   default @Nullable Scope resolveNamespace(@NotNull String name) {
     return null;
+  }
+
+  /**
+   * Returns all extension functions with the given name visible in this scope.
+   * Unlike {@link #resolveName}, it does not stop at the first one since extensions with the same name might apply to different types.
+   */
+  default @NotNull List<GlobalReferable> resolveExtensions(@NotNull String name) {
+    List<GlobalReferable> result = new ArrayList<>();
+    for (Referable ref : getElements(ScopeContext.EXTENSION)) {
+      if (RedirectingReferable.getOriginalReferable(ref) instanceof GlobalReferable global && global.isDynamicExtension() && (name.equals(ref.textRepresentation()) || name.equals(global.getAliasName())) && !result.contains(global)) {
+        result.add(global);
+      }
+    }
+    return result;
   }
 
   default @NotNull Scope getGlobalSubscope() {

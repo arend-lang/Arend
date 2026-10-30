@@ -1,4 +1,3 @@
-\import Algebra.Group
 \import Algebra.Ordered.RieszSpace
 \import Arith.Int
 \import Arith.Nat
@@ -12,12 +11,12 @@
 \import Paths.Meta
 \import Set.Set
 \import Topology.CoverSpace
-\import Topology.MetricSpace
-\import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Product
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Group
 
 \class TopRieszSpace \extends TopAbGroup, RieszSpace {
   | solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U)

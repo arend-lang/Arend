@@ -1,13 +1,16 @@
 \import Algebra.Domain.GCD(GCDDomain)
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Base
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
+\import Algebra.Monoid.Properties
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
-\import Algebra.Ring.Reduced
-\import Algebra.Semiring
+\import Algebra.Ring.Reduced.Properties
+\import Algebra.Semiring.Properties
 \import Data.Array
 \import Data.Fin (fsuc/=)
 \import Function.Meta
@@ -117,7 +120,21 @@
   | isGCDDomain x y _ _ => TruncP.map (isBezout x y) (\lam p => bezoutGCD p.3 p.4)
 } \where {
   \class Dec \extends StrictBezoutDomain, GCDDomain.Dec
-    | isStrictBezout => PPRing.bezout->strictBezout isBezout
+    | isStrictBezout => bezout->strictBezout isBezout
 }
 
 \class StrictBezoutDomain \extends BezoutDomain, StrictBezoutRing
+
+\lemma .bezout_finitelyGenerated_principal (R : CRing) : R.IsBezout <-> (\Pi {I : Ideal R} -> I.IsFinitelyGenerated -> I.IsPrincipal)
+  => (\lam bez {I} Ifg =>
+        \have | (inP s) => Ifg
+              | (inP t) => BezoutRing.bezoutArray_LDiv {\new BezoutRing { | CRing => R | isBezout => bez }} s.1
+        \in inP (BigSum (\lam j => t.1 j * s.1 j), (I.bigSum _ \lam j => ideal-left $ later (s.2.1 j), \lam {b} Ib =>
+             TruncP.map (s.2.2 Ib) \lam u => transportInv (LDiv _ __) u.2 (LDiv_BigSum \lam j => later $ LDiv.factor-right $ t.2 j))),
+      \lam p a b =>
+        \have | (inP (d,s)) => p {Ideal.closure (a :: b :: nil)} Ideal.closure-finGenerated
+              | (inP t) => Ideal.closureN-lem.1 s.1
+              | (inP d|a) => s.2 (Ideal.closure-superset {_} {_} {a :: b :: nil} (later 0))
+              | (inP d|b) => s.2 (Ideal.closure-superset {_} {_} {a :: b :: nil} (later 1))
+              | p => unfold BigSum at t $ rewrite zro-right in t.2
+        \in inP (t.1 0, t.1 1, rewriteI p d|a, rewriteI p d|b))

@@ -1,6 +1,7 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
@@ -21,6 +22,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Algebra.QModule.Rat
 
 \record InfReal \extends LowerReal, ExUpperReal {
   | LU-disjoint {q : Rat} : L q -> U q -> Empty

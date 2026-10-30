@@ -14,41 +14,32 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Monoid.MonoidHom
-\import Algebra.Ordered
-\import Algebra.QModule
-\import Algebra.Ring
 \import Algebra.StrictlyOrdered
 \import Algebra.Semiring
-\import Analysis.PowerSeries
-\import Analysis.Series
-\import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Logic.Meta
-\import Topology.BanachAlgebra
 \import Topology.StoneCStarAlgebra
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Arith.Log
 \import Arith.Exp
 \import Arith.Exp.Real
-\import Combinatorics.Factorial
 \import Function.Meta
 \import Logic
 \import Meta
 \import Order.Biordered
 \import Order.LinearOrder
-\import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
+\import Algebra.QModule.Rat
+\import Arith.Rat.Properties
 \open Monoid (pow)
 
 -- | $\ell(a) := \mathrm{log1p}(a - 1)$ for $a \in (0, 2)$.
@@ -105,7 +96,7 @@
       (exp_+
        *> pmap2 (*) (exp-ell y y-pos _) log2.exp-log2
        *> *-comm
-       *> pmap (* y) (inv (RealStoneC*Algebra_fromRat 2) *> QAlgebra.fromRat_natCoef))
+       *> pmap (* y) (inv (RealStoneC*Algebra_fromRat 2) *> fromRat_natCoef))
 
 -- | The Real logarithm $\log : \mathbb R_{>0} \to \mathbb R$.
 \sfunc log-Real (x : Real) (x>0 : (0 : Real) < x) : Real

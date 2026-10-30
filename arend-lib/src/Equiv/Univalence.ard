@@ -1,10 +1,7 @@
 \import Function.Meta
 \import Logic
-\import Meta
 \import Paths
-\import Paths.Meta
 \import Equiv
-\import Equiv.Path
 
 \func =_Equiv.{u} {A B : \Type u} (p : A = B) : Equiv A B
   => transport (Equiv A __) p $ mkEquiv (inP idEquiv)

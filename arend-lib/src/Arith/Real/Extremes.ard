@@ -1,7 +1,7 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Semiring
 \import Arith.Rat
@@ -21,6 +21,9 @@
 \import Paths
 \import Paths.Meta
 \import Set.Set
+\import Order.Lattice.Properties
+\import Algebra.StrictlyOrdered.Properties
+\import Algebra.Ordered.Group
 \open LatticeAbGroup
 
 \func IsSup (A : Set Real) (b : Real) : \Prop

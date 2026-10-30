@@ -10,6 +10,8 @@
 \import Paths
 \import Paths.Meta
 \import Set
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 
 \func Trace {R : Ring} {n : Nat} : LinearMap (MatrixModule R n n) (RingLModule R) \cowith
   | func M => BigSumHom (diag M)

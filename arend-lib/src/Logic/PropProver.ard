@@ -1,0 +1,7 @@
+\import Algebra.Meta.Base
+\import Logic
+\import Logic.Meta
+\import Meta
+
+-- | Proves that a type defined by pattern matching is a proposition by checking all pairs of its constructors
+\meta isProp-prover => \lam x y => cases (x,y) (cong prop-pi <|> contradiction)

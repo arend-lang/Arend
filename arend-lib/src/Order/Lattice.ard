@@ -1,20 +1,14 @@
 \import Algebra.Monoid
 \import Algebra.Semiring
 \import Category.Limit
-\import Data.Array
-\import Data.Array.EPerm
-\import Data.Bool
-\import Equiv
 \import Function.Meta
 \import Logic.Unique
-\import Homotopy.Fibration
 \import Logic
-\import Meta
 \import Order.Directed
 \import Paths
 \import Order.PartialOrder
 \import Paths.Meta
-\import Set.Fin
+\import Order.Biordered
 
 \class MeetSemilattice \extends Poset, PrecatWithBprod, PrecatWithPullbacks {
   | meet \alias \infixl 7 ∧ : E -> E -> E
@@ -41,12 +35,6 @@
     | pbBeta2 => prop-pi
     | pbEta _ _ => prop-pi
   }
-  \func Big_meet \alias Big_∧ {n : Nat} (l : Array E (suc n)) : E \elim l
-    | a :: l => Big (∧) a l
-
-  \lemma Big_meet-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : Big_∧ l <= l j \elim l, j
-    | a :: l, 0 => Big_<=_meet0
-    | a :: l, suc j => Big_<=_meet1 j
 
   \lemma meet-idemp {x : E} : x ∧ x = x =>
     <=-antisymmetric meet-left (meet-univ <=-refl <=-refl)
@@ -67,18 +55,6 @@
 
   \lemma meet_<=' {x y : E} (p : x ∧ y = x) : x <= y
     => transport (<= y) p meet-right
-
-  \lemma Big_<=_meet0 {l : Array E} {x : E} : Big (∧) x l <= x \elim l
-    | nil => <=-refl
-    | :: a l => meet-right <=∘ Big_<=_meet0
-
-  \lemma Big_<=_meet1 {l : Array E} {x : E} (i : Fin l.len) : Big (∧) x l <= l i \elim l, i
-    | :: a l, 0 => meet-left
-    | :: a l, suc i => meet-right <=∘ Big_<=_meet1 i
-
-  \lemma Big_meet-univ {l : Array E} {x y : E} (p : y <= x) (f : \Pi (i : Fin l.len) -> y <= l i) : y <= Big (∧) x l \elim l
-    | nil => p
-    | :: a l => meet-univ (f 0) (Big_meet-univ p (\lam i => f (suc i)))
 
   \protected \func op : JoinSemilattice \cowith {
     | Poset => Poset.op
@@ -102,13 +78,6 @@
   | join-right {x y : E} : y <= x ∨ y
   | join-univ {x y z : E} : x <= z -> y <= z -> x ∨ y <= z
 
-  \func Big_join \alias Big_∨ {n : Nat} (l : Array E (suc n)) : E \elim l
-    | a :: l => Big (∨) a l
-
-  \lemma Big_join-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : l j <= Big_∨ l \elim l, j
-    | a :: l, 0 => Big_<=_join0
-    | a :: l, suc j => Big_<=_join1 j
-
   \lemma join-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∨ y <= x' ∨ y'
     => join-univ (p <=∘ join-left) (q <=∘ join-right)
 
@@ -130,22 +99,6 @@
 
   \lemma join_<=' {x y : E} (p : x ∨ y = y) : x <= y
     => transport (x <=) p join-left
-
-  \lemma Big_<=_join0 {l : Array E} {x : E} : x <= Big (∨) x l \elim l
-    | nil => <=-refl
-    | :: a l => Big_<=_join0 <=∘ join-right
-
-  \lemma Big_<=_join1 {l : Array E} {x : E} (i : Fin l.len) : l i <= Big (∨) x l \elim l, i
-    | :: a l, 0 => join-left
-    | :: a l, suc i => Big_<=_join1 i <=∘ join-right
-
-  \lemma Big_<=_join {n : Nat} {l : Array E (suc n)} (i : Fin (suc n)) : l i <= Big (∨) (l 0) (tail l) \elim l, i
-    | :: a l, 0 => Big_<=_join0
-    | :: a l, suc i => Big_<=_join1 i
-
-  \lemma Big_join-univ {l : Array E} {x y : E} (p : x <= y) (f : \Pi (i : Fin l.len) -> l i <= y) : Big (∨) x l <= y \elim l
-    | nil => p
-    | :: a l => join-univ (f 0) (Big_join-univ p (\lam i => f (suc i)))
 
   \protected \func op : MeetSemilattice \cowith
     | Poset => Poset.op
@@ -206,17 +159,6 @@
   \lemma top-right {x : E} : x ∧ top = x
     => <=-antisymmetric meet-left (meet-univ <=-refl top-univ)
 
-  \func BigMeet (l : Array E) : E
-    => Big (∧) top l
-
-  \lemma BigMeet-cond {l : Array E} (j : Fin l.len) : BigMeet l <= l j \elim l, j
-    | a :: l, 0 => meet-left
-    | a :: l, suc j => meet-right <=∘ BigMeet-cond j
-
-  \lemma BigMeet-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> x <= l j) : x <= BigMeet l \elim l
-    | nil => top-univ
-    | a :: l => meet-univ (p 0) $ BigMeet-univ \lam j => p (suc j)
-
   \protected \func op : BottomJoinSemilattice \cowith
     | JoinSemilattice => MeetSemilattice.op
     | bottom => top
@@ -242,47 +184,6 @@
 
   \lemma bottom-right {x : E} : x ∨ bottom = x
     => <=-antisymmetric (join-univ <=-refl bottom-univ) join-left
-
-  \func BigJoin (l : Array E) : E
-    => Big (∨) bottom l
-
-  \lemma BigJoin-cond {l : Array E} (j : Fin l.len) : l j <= BigJoin l \elim l, j
-    | a :: l, 0 => join-left
-    | a :: l, suc j => BigJoin-cond j <=∘ join-right
-
-  \lemma BigJoin-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> l j <= x) : BigJoin l <= x \elim l
-    | nil => bottom-univ
-    | a :: l => join-univ (p 0) $ BigJoin-univ \lam j => p (suc j)
-
-  \sfunc FinJoin {J : FinSet} (a : J -> E) : E
-    => \this.FinSum a
-
-  \lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a
-    => \case AbMonoid.FinSum.aux.2 \with {
-         | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
-                        \in transport2 (<=) (pmap a (e.f_ret j)) (inv t) (BigJoin-cond (e.ret j))
-       }
-
-  \lemma FinJoin-univ {J : FinSet} {a : J -> E} {x : E} (p : \Pi (j : J) -> a j <= x) : FinJoin a <= x
-    => \case AbMonoid.FinSum.aux.2 \with {
-         | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
-                        \in transportInv (<= x) t $ BigJoin-univ \lam j => p (e j)
-       }
-
-  \lemma FinJoin_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinJoin x = FinJoin (\lam a => x (e a))
-    => (\peval FinJoin x) *> \this.FinSum_Equiv e *> inv (\peval FinJoin _)
-
-  \lemma FinJoin=BigJoin {n : Nat} {x : Fin n -> E} : FinJoin x = BigJoin x
-    => (\peval FinJoin x) *> \this.FinSum=BigSum
-
-  \lemma BigJoin_EPerm {l l' : Array E} (e : EPerm l l') : BigJoin l = BigJoin l'
-    => \this.BigSum_EPerm e
-
-  \lemma BigJoin_++ {l l' : Array E} : BigJoin (l ++ l') = BigJoin l ∨ BigJoin l'
-    => \this.BigSum_++
-
-  \lemma BigJoin_join {n : Nat} {l l' : Array E n} : BigJoin (\lam i => l i ∨ l' i) = BigJoin l ∨ BigJoin l'
-    => \this.BigSum_+
 
   \protected \func op : TopMeetSemilattice \cowith
     | MeetSemilattice => JoinSemilattice.op
@@ -311,13 +212,6 @@
   \lemma bottom-rdistr {x : E} : bottom ∧ x = bottom
     => <=-antisymmetric meet-left bottom-univ
 
-  \lemma BigJoin-ldistr {l : Array E} {x : E} : x ∧ BigJoin l = BigJoin \lam j => x ∧ l j \elim l
-    | nil => bottom-ldistr
-    | a :: l => meet-ldistr *> pmap (_ ∨) BigJoin-ldistr
-
-  \lemma BigJoin-rdistr {l : Array E} {x : E} : BigJoin l ∧ x = BigJoin \lam j => l j ∧ x \elim l
-    | nil => bottom-rdistr
-    | a :: l => meet-rdistr *> pmap (_ ∨) BigJoin-rdistr
 }
 
 \class BoundedDistributiveLattice \extends BottomDistributiveLattice, BoundedLattice
@@ -336,3 +230,15 @@
       | zro_*-left {x} => <=-antisymmetric meet-left bottom-univ
       | *-comm => L.meet-comm
   }
+
+\class BiorderedLattice \extends BiorderedSet, Lattice {
+  | <_meet-univ {x y z : E} : x < y -> x < z -> x < y ∧ z
+  | <_join-univ {x y z : E} : x < z -> y < z -> x ∨ y < z
+
+  \lemma <_meet-monotone {x x' y y' : E} (p : x < y) (q : x' < y') : x ∧ x' < y ∧ y'
+    => <_meet-univ (meet-left <∘r p) (meet-right <∘r q)
+
+  \lemma <_join-monotone {x x' y y' : E} (p : x < y) (q : x' < y') : x ∨ x' < y ∨ y'
+    => <_join-univ (p <∘l join-left) (q <∘l join-right)
+
+}

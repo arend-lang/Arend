@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.SubMonoid
@@ -20,6 +21,7 @@
 \import Relation.Equivalence
 \import Set.Fin.Instances
 \import Set.Set
+\import Algebra.Group.Properties
 \open Group \hiding (Dec)
 
 \class SubGroup \extends SubMonoid {

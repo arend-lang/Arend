@@ -1,9 +1,7 @@
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function
 \import Function.Meta
-\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Functor.FullyFaithful

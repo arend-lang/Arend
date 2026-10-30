@@ -4,6 +4,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.UnresolvedReference;
 import org.arend.naming.renamer.Renamer;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.term.Fixity;
@@ -27,7 +28,7 @@ public class ExpressionBinOpEngine implements BinOpEngine<Concrete.Expression> {
   public @Nullable Referable getReferable(@NotNull Concrete.Expression elem) {
     return elem instanceof Concrete.ReferenceExpression ? ((Concrete.ReferenceExpression) elem).getReferent()
             : elem instanceof Concrete.AppExpression appExpr && appExpr.getFunction() instanceof Concrete.ReferenceExpression refExpr ? refExpr.getReferent()
-            : elem instanceof Concrete.FieldCallExpression fieldCall ? fieldCall.getField() : null;
+            : elem instanceof Concrete.FieldCallExpression fieldCall ? (fieldCall.getField() instanceof UnresolvedReference && !fieldCall.getExtensions().isEmpty() ? fieldCall.getExtensions().getFirst() : fieldCall.getField()) : null;
   }
 
   @Override

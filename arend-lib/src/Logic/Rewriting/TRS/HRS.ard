@@ -4,7 +4,7 @@
 \import Logic.Meta
 \import Paths
 \import Data.SubList
-\import Logic.Rewriting.TRS.Substitutions
+\import Logic.Rewriting.TRS.Utils.Shifts
 \import Logic.Rewriting.TRS.Utils.FinFunctions
 \import Paths.Meta
 
@@ -180,3 +180,35 @@
   }
 
 \class SimpleHigherOrderTermRewritingSystem \extends HigherOrderTermRewritingSystem, SimpleARS
+
+\func weakening
+  {env : FSignature} {s' : Sort} {narrow-context wide-context : List Sort} {mc : MetaContext Sort}
+  (t : Term env narrow-context s' mc)
+  (sublist : SubList narrow-context wide-context)
+  : Term env wide-context s' mc
+\elim t
+  | var index p => var (shift-index sublist index) (Shifts.proof sublist index p)
+  | metavar m arguments => metavar m (\lam i1 => weakening (arguments i1) sublist)
+  | func f arguments => func f (\lam i1 => weakening (arguments i1) (SubList.extend-right-both sublist))
+
+\func append-context-right
+  {env : FSignature} {old-context new-context : List Sort} {mc : MetaContext Sort}
+  (subst : Substitution old-context new-context mc)
+  {additional-context : List Sort}
+  (index : Index (old-context ++ additional-context))
+  : Term env (new-context ++ additional-context) ((old-context ++ additional-context) !! index) mc
+\elim old-context, index
+  | nil, index => weakening (var index idp) SubList.id+left
+  | :: a old-context, zero => weakening (subst 0) SubList.id+right
+  | :: a old-context, suc index => append-context-right (\lam i => subst (suc i)) index
+
+\func extend-substitution-left
+  {env : FSignature} {left-context right-context some-context : List Sort} {mc : MetaContext Sort}
+  (sublist : SubList left-context some-context)
+  (chooser : Substitution right-context some-context mc)
+  (j : Index (left-context ++ right-context))
+  : Term env some-context ((left-context ++ right-context) !! j) mc
+\elim left-context, j
+  | nil, j => chooser j
+  | :: a left-context, 0 => weakening (var 0 idp) sublist
+  | :: a left-context, suc j => extend-substitution-left (SubList.shrink sublist) chooser j

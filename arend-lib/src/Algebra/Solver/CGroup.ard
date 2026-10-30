@@ -1,18 +1,16 @@
+\import Data.Fin (fin_nat_/=)
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Solver
 \import Algebra.Solver.Group
-\import Algebra.Solver.Monoid
 \import Arith.Int
 \import Data.Array
-\import Data.Bool
 \import Function.Meta
-\import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Set
+\import Algebra.Monoid.Properties
 \open GroupSolverModel
 
 \func CGroupSolverModel (G : CGroup) : SolverModel G \cowith
@@ -47,11 +45,11 @@
     \lemma interpretNF-correct (cs : Array Int) {env : Array G cs.len} : sBigProd (toArray cs env) = interpretNF' cs env \elim cs, env
       | nil, nil => idp
       | 0 :: cs, _ :: env => interpretNF-correct cs *> inv ide-left
-      | pos (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
-      | neg (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
+      | pos (suc m) :: cs, a :: env => sBigProd_:: *> pmap (_ *) (interpretNF-correct (_ :: cs)) *> inv *-assoc *> pmap (* _) G.pow-left
+      | neg (suc m) :: cs, a :: env => sBigProd_:: *> pmap (_ *) (interpretNF-correct (_ :: cs)) *> inv *-assoc *> pmap (* _) G.pow-left
 
     \lemma interpretNF-consistent' {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' (normalize t) env = interpret env t \elim t
-      | var i => G.BigProd-unique i (\lam j p => later $ rewrite (decideEq/=_reduce p) idp) *> rewrite (decideEq=_reduce idp) ide-left
+      | var i => G.BigProd-unique i (\lam j p => later $ rewrite (decideEq/=_reduce (fin_nat_/= p)) idp) *> rewrite (decideEq=_reduce idp) ide-left
       | :ide => G.BigProd_replicate1
       | :inverse t => G.BigProd-ext (\lam i => G.ipow_negaitve) *> inv G.BigProd_inverse *> pmap inverse interpretNF-consistent'
       | t :* s => G.BigProd-ext (\lam i => G.ipow_+) *> G.BigProd_* *> pmap2 (*) interpretNF-consistent' interpretNF-consistent'

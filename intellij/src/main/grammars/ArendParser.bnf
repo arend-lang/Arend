@@ -247,7 +247,7 @@ private defIdentifier_module ::= defIdentifier {
 
 private defIdentifier_module_recover ::= !ALIAS_KW & statement_recover
 
-defFunction ::= functionKw prec? defIdentifier_func alias? levelParams? nameTele* functionType? functionBody? where? {
+defFunction ::= functionKw DOT? prec? defIdentifier_func alias? levelParams? nameTele* functionType? functionBody? where? {
     pin = 1
     elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
 }

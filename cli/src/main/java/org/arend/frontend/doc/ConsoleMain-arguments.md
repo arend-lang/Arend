@@ -31,6 +31,8 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | *(none)* | `--show-sizes`                  | No | Show sizes (expression node counts) of typechecked definitions, sorted descending    |
 | *(none)* | `--show-modules`                | No | Show module dependency cycles                                                        |
 | *(none)* | `--show-modules-with-instances` | No | Show module dependency cycles, filtered to modules that contain instances            |
+| *(none)* | `--show-cycles`                 | No | Show import cycles (including meta modules) with the definitions each import is needed for |
+| *(none)* | `--dependency-graph <file>`    | Yes | Write definitions, their dependencies, and module imports as JSON              |
 
 ---
 

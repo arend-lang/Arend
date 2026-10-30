@@ -15,6 +15,7 @@
 \import Order.Lattice
 \import Paths
 \import Paths.Meta
+\import Algebra.Monoid.Properties
 
 \class SubLModule (R : Ring) \extends SubAddGroup {
   \override S : LModule R

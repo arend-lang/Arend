@@ -24,7 +24,6 @@
 \import InfCat.Functor.Equiv
 \import InfCat.Nerve.Nerve
 \import InfCat.Nerve.NerveFib
-\import Logic.Unique
 \import Order.PartialOrder
 \import Paths
 

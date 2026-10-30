@@ -9,7 +9,6 @@
 
 \import Category
 \import Category.Functor
-\import Equiv
 \import Equiv.Sigma
 \import InfCat.Basics
 \import InfCat.Nerve.Nerve
@@ -20,6 +19,7 @@
 \import Logic.Unique
 \import Paths
 \import Paths.Meta
+\import Equiv
 \open NerveTransHelpers
 
 -- | Arrows in the arrow category of a category with hom-sets are determined by their two edges.
@@ -28,7 +28,7 @@
                    (e1 : dpath (\lam j => u j dright) = dpath (\lam j => v j dright)) : u = v
   => \let | S (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) => DPath (\lam i => dpath X i ~> dpath Y i) t.1 t.2
           | Sp (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) : isProp (S t)
-              => isProp.equiv (inP (square-equiv (dpath X) (dpath Y))) (hom-isSet Zt _ _ _ _)
+              => equiv-isProp (inP (square-equiv (dpath X) (dpath Y))) (hom-isSet Zt _ _ _ _)
           | sq (w : X ~> Y) : \Sigma (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) (S t)
               => ((dpath \lam j => w j dleft, dpath \lam j => w j dright), dpath \lam i => dpath \lam j => w j i)
           | back (s : \Sigma (t : \Sigma (X dleft ~> Y dleft) (X dright ~> Y dright)) (S t)) : X ~> Y

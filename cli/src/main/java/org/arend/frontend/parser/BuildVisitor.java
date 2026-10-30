@@ -610,6 +610,13 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     DefIdContext defId = topDefId.defId();
     Pair<String, Precedence> alias = visitAlias(defId.alias());
     LocatedReferableImpl referable = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.referable(), GlobalReferable.Kind.FUNCTION);
+    if (ctx.DOT() != null) {
+      if (ctx.funcKw() instanceof FuncKwCoerceContext || ctx.funcKw() instanceof FuncKwLevelContext) {
+        myErrorReporter.report(new ParserError(tokenPosition(ctx.DOT().getSymbol()), "\\use definitions cannot be extension functions"));
+      } else {
+        referable.setDynamicExtension(true);
+      }
+    }
     List<ConcreteStatement> statements = new ArrayList<>();
     ReturnType returnType = visitReturnExpr(ctx.returnExpr2());
 
@@ -814,6 +821,9 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
           case ClassFieldOrImplStatContext classFieldOrImplStatContext ->
               visitInstanceStatement(classFieldOrImplStatContext.classFieldOrImpl(), elements, parentClass);
           case ClassDefinitionStatContext defStat -> {
+            if (defStat.definition() instanceof DefFunctionContext defFunCtx && defFunCtx.DOT() != null) {
+              myErrorReporter.report(new ParserError(tokenPosition(defFunCtx.DOT().getSymbol()), "Extension functions cannot be dynamic"));
+            }
             ConcreteGroup subgroup = visitDefinition(visitAccessModifier(defStat.accessMod()), defStat.definition(), parent, parentClass.getData());
             if (defStat.USE() != null && subgroup.definition() instanceof Concrete.Definition def) {
               def.setUseParent(parentClass.getData());

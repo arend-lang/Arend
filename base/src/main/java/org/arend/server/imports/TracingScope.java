@@ -1,10 +1,12 @@
 package org.arend.server.imports;
 
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,4 +23,13 @@ interface TracingScope extends Scope {
   record Binding(@Nullable Referable referable, @Nullable Scope scope, ImportUsageData.@Nullable Part part) {}
 
   @NotNull Map<String, Binding> getBindings(@NotNull ScopeContext context);
+
+  /**
+   * Extensions are chosen by the typechecker, so we charge the command that brought in the first extension with the given name.
+   */
+  @Override
+  default @NotNull List<GlobalReferable> resolveExtensions(@NotNull String name) {
+    resolveName(name, ScopeContext.EXTENSION);
+    return Scope.super.resolveExtensions(name);
+  }
 }

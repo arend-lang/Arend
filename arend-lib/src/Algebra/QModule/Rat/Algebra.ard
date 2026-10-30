@@ -1,0 +1,8 @@
+\import Algebra.Algebra
+\import Algebra.QModule
+\import Algebra.QModule.Rat
+\import Arith.Rat
+
+\func .toRatAlgebra (A : QAlgebra) : AAlgebra RatField \cowith
+  | PseudoAlgebra => Algebra.QModule.Rat.toRatAlgebra {A}
+  | Ring => A

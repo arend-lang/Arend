@@ -1,42 +1,33 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Module
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.QModule
-\import Algebra.Ring
-\import Algebra.Ring.Reduced
 \import Algebra.Semiring
-\import Algebra.StrictlyOrdered
 \import Arith.Complex
 \import Arith.Complex.Norm
-\import Arith.Nat
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.Root
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
-\import Meta
-\import Order.LinearOrder
 \import Order.PartialOrder
-\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Arith.Rat
-\import Order.Lattice
 \import Set.Filter
 \import Set.Set
-\import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.BanachAlgebra
-\import Topology.BanachSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
 \import Topology.StoneCStarAlgebra (RealStoneC*Algebra_fromRat)
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Group
 \open Monoid (pow)
 \open AddMonoid (*n)
 \open LatticeAbGroup
@@ -135,7 +126,7 @@
 
 -- | {conj} fixes $\mathrm{fromRat}\ r$ on `ComplexBanach`.
 \lemma conj_fromRat {r : Rat} : conj (ComplexBanach.fromRat r) = ComplexBanach.fromRat r
-  => func-*q {_} {_} {conjAddHom} *> pmap (r QModule.*q) conj_ide
+  => func-*q {_} {_} {conjAddHom} *> pmap (r *q) conj_ide
 
 \lemma complexBanach-fromRat {r : Rat} : ComplexBanach.fromRat r = Complex.fromReal (Real.fromRat r)
   => inv (func-*q {_} {_} {fromRealMap}) *> pmap Complex.fromReal (RealStoneC*Algebra_fromRat r)

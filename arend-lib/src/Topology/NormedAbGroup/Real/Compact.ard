@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Arith.Int
 \import Arith.Nat
@@ -9,7 +9,6 @@
 \import Arith.Real
 \import Arith.Real.Approximate
 \import Arith.Real.Field
-\import Data.Fin
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -22,6 +21,8 @@
 \import Topology.Compact
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Ring
 
 -- | Splits the interval `[a,b]` into `n` equal parts.
 \func real-split (a b : Real) (n : Nat) : Array Real (suc n) \cowith

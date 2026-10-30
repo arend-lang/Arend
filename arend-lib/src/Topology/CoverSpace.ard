@@ -1,4 +1,3 @@
-\import Data.Bool
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -13,6 +12,8 @@
 \import Set.Set
 \import Topology.RatherBelow
 \import Topology.TopSpace
+\import Order.Lattice.Properties
+\import Set.Set.Lattice
 \open Set
 \open ClosurePrecoverSpace
 
@@ -72,7 +73,7 @@
   : isCauchy (\lam U => ∃ (V W : Set X) (C V) (D W) (U = V ∧ W))
   => cauchy-glue Cc \lam _ => Dc
 
-\lemma cauchy-array-inter {X : PrecoverSpace} (Cs : Array (Given X.isCauchy)) : isCauchy \lam V => ∃ (Us : Array (Set X) Cs.len) (\Pi (j : Fin Cs.len) -> (Cs j).1 (Us j)) (V = MeetSemilattice.Big_∧ (top :: Us)) \elim Cs
+\lemma cauchy-array-inter {X : PrecoverSpace} (Cs : Array (Given X.isCauchy)) : isCauchy \lam V => ∃ (Us : Array (Set X) Cs.len) (\Pi (j : Fin Cs.len) -> (Cs j).1 (Us j)) (V = Big_∧ (top :: Us)) \elim Cs
   | nil => top-cauchy $ inP $ later (nil, \case __ \with {}, idp)
   | C :: Cs => cauchy-subset (cauchy-inter C.2 (cauchy-array-inter Cs)) \lam {W} (inP (U, V, CU, inP (Us,f,q), p)) => inP $ later (U :: Us, \case \elim __ \with {
     | 0 => CU

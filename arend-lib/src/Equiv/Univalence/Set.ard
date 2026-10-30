@@ -1,8 +1,6 @@
 \import Equiv
-\import Equiv.Path
 \import Function.Meta
 \import Paths
-\import Paths.Meta
 
 \func =-to-QEquiv.{u} {A B : \Set u} (p : A = B) : QEquiv {A} {B} \cowith
   | f => transport (\lam X => X) p

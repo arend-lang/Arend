@@ -1,5 +1,4 @@
 \import Logic
-\import Logic.Meta
 \import Paths
 
 \func id {A : \Cat} => \lam (x : A) => x
@@ -21,7 +20,7 @@
   }
 
 \func IsSurj {A B : \Cat} (f : A -> B)
-  => \Pi (y : B) -> ∃ (x : A) (f x = y)
+  => \Pi (y : B) -> TruncP (\Sigma (x : A) (f x = y))
   \where {
     \lemma comp {A B C : \Cat} {f : A -> B} (fs : IsSurj f) {g : B -> C} (gs : IsSurj g) : IsSurj (g o f)
       => \lam z => \have | (inP (y,gy=z)) => gs z
@@ -35,10 +34,10 @@
   }
 
 \func IsSplitSurj {A B : \Type} (f : A -> B)
-  => ∃ (g : B -> A) ∀ y (f (g y) = y)
+  => TruncP (\Sigma (g : B -> A) (\Pi (y : B) -> f (g y) = y))
 
 \func assuming {A B : \Type} (f : (A -> B) -> B) (g : A -> B) => f g
 
-\type Image {A B : \Type} (f : A -> B) => \Sigma (b : B) (∃ (a : A) (f a = b))
+\type Image {A B : \Type} (f : A -> B) => \Sigma (b : B) (TruncP (\Sigma (a : A) (f a = b)))
 
 \meta flip f a b => f b a

@@ -1,7 +1,7 @@
-\import Algebra.Algebra
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -9,13 +9,9 @@
 \import Algebra.Semiring
 \import Algebra.Ring.FormalSeries
 \import Analysis.Series
-\import Equiv
 \import Arith.Nat
 \import Arith.Rat
-\import Arith.Real
-\import Arith.Real.Field
 \import Arith.Real.UpperReal
-\import Data.Array
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -33,10 +29,14 @@
 \import Topology.BanachAlgebra
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
-\import Topology.TopAbGroup
-\import Topology.TopSpace
-\open AddMonoid (BigSum)
-\open AbMonoid
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Module.Basis
+\import Algebra.Ordered.Properties
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+
 \open ExUpperRealSemigroup (*_>=0)
 \open FSeriesRing (PairsFinSet)
 
@@ -70,7 +70,7 @@
   => transport2 (<=)
       (inv $ partialSum.=FinSum *> later (FinSum-double-dep _))
       (inv $ pmap2 (*) partialSum.=FinSum partialSum.=FinSum) $
-      later $ PosetAbMonoid.FinSum_<=-inj2 {_} {_} {ProdFin (FinFin n) (FinFin n)}
+      later $ FinSum_<=-inj2 {_} {_} {ProdFin (FinFin n) (FinFin n)}
                 (later \lam s => (toFin s.2.1 $ <=_+ <=-refl zero<=_ <∘r =_<= s.2.3 <∘r fin_< s.1,
                                   toFin s.2.2 $ <=_+ zero<=_ <=-refl <∘r =_<= s.2.3 <∘r fin_< s.1))
                 (\lam {s} {s'} p => \have | p1 => inv toFin=id *> pmap __.1 p *> {Nat} toFin=id
@@ -220,7 +220,7 @@
       : partialSum (\lam k => a k * partialSum b (suc n -' k)) n =
         partialSum (\lam k => a k * partialSum b (n -' k)) n + partialSum (\lam k => a k * b (n -' k)) n
       => (\peval partialSum (\lam k => a k * partialSum b (suc n -' k)) n)
-         *> AbMonoid.BigSum-ext (\lam i => pmap (\lam x => a i * partialSum b x) (-'_suc (<=-less (fin_< i))) *> pmap (a i *) partialSum_suc *> ldistr)
+         *> BigSum-ext (\lam i => pmap (\lam x => a i * partialSum b x) (-'_suc (<=-less (fin_< i))) *> pmap (a i *) partialSum_suc *> ldistr)
          *> BigSum_+
          *> pmap2 (+)
               (inv \peval partialSum (\lam k => a k * partialSum b (n -' k)) n)
@@ -250,9 +250,9 @@
       : partialSum a n * sb - partialSum (conv a b) n =
         FinSum (\lam (k : Fin n) => a k * (sb - partialSum b (n -' k)))
       => pmap (\lam x => x * sb - partialSum (conv a b) n) (\peval partialSum a n)
-         *> pmap2 (-) Semiring.BigSum-rdistr (fubini-conv *> \peval partialSum (\lam k => a k * partialSum b (n -' k)) n)
+         *> pmap2 (-) BigSum-rdistr (fubini-conv *> \peval partialSum (\lam k => a k * partialSum b (n -' k)) n)
          *> inv AbGroup.BigSum_-
-         *> AbMonoid.BigSum-ext (\lam k => inv A.ldistr_-)
+         *> BigSum-ext (\lam k => inv A.ldistr_-)
          *> inv FinSum=BigSum
 
     {- | Full decomposition used in the Mertens proof:

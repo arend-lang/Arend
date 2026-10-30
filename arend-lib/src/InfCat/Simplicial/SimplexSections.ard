@@ -30,7 +30,6 @@
 \import InfCat.Simplicial.SegalSquare
 \import InfCat.Simplicial.SimplexOperators
 \import Logic
-\import Logic.Unique
 \import Paths
 \open simplex
 

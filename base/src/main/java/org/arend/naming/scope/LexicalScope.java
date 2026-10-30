@@ -68,6 +68,13 @@ public class LexicalScope implements Scope {
     for (ConcreteStatement statement : myGroup.statements()) {
       ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
+        if (subgroup.referable().isDynamicExtension()) {
+          if (context == null || context == ScopeContext.EXTENSION) {
+            Referable ref = checkReferable(subgroup.referable(), pred);
+            if (ref != null) return ref;
+          }
+          continue;
+        }
         if (context == null || context == ScopeContext.STATIC) {
           Referable ref = checkSubgroup(subgroup, pred);
           if (ref != null) return ref;
@@ -186,6 +193,15 @@ public class LexicalScope implements Scope {
     for (ConcreteStatement statement : myGroup.statements()) {
       ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
+        if (resolveType == ResolveType.REF && subgroup.referable().isDynamicExtension()) {
+          if (context == null || context == ScopeContext.EXTENSION) {
+            Object result = resolveSubgroup(subgroup, name, resolveType);
+            if (result != null) {
+              return result;
+            }
+          }
+          continue;
+        }
         if (resolveType != ResolveType.REF || context == null || context == ScopeContext.STATIC) {
           Object result = resolveSubgroup(subgroup, name, resolveType);
           if (result != null) {

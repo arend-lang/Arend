@@ -1,5 +1,4 @@
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
@@ -11,7 +10,6 @@
 \import InfCat.Square
 \import InfCat.SubCat.Full
 \import Logic
-\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta

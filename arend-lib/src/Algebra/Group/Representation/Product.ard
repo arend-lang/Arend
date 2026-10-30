@@ -3,12 +3,12 @@
 \import Algebra.Group.Representation
 \import Algebra.Meta
 \import Algebra.Module
-\import Algebra.Module.LinearMap
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Function.Meta
 \import Paths
 \import Paths.Meta
+\import Algebra.Module.Instances
 
 \func ProductLRepres {R : Ring} {G : Group} (A B : LinRepres R G) : LinRepres R G \cowith
   | LModule => ProductLModule R A B

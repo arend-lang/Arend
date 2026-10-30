@@ -2,8 +2,9 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Local
@@ -12,11 +13,12 @@
 \import Arith.Real
 \import Function.Meta
 \import Logic
-\import Meta
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Arith.Real.Field
+\import Algebra.Monoid.Properties
+\import Algebra.StrictlyOrdered.Properties
 \open Complex \using (iunit \as i)
 
 \record Complex (re im : Real)

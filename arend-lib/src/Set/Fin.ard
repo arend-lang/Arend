@@ -1,19 +1,16 @@
-\import Algebra.Meta
+\import Data.Array
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Arith.Fin.Order
-\import Arith.Nat \using (pred \as pred')
+\import Arith.Nat
 \import Data.Bool
 \import Data.Fin
 \import Data.Or
 \import Equiv
 \import Function
 \import Function.Meta ($)
-\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -69,199 +66,24 @@
         | inP Xcard=A, inP Ycard=A => FinCardBij (Xcard=A `transQEquiv` symQEquiv Ycard=A)
       })
 
-  \lemma ||-finiteAC {n : Nat} {A : \Type} {B : Fin n -> \Type} (f : \Pi (i : Fin n) -> A || B i) : A || (\Pi (i : Fin n) -> B i) \elim n
-    | 0 => byRight \case __
-    | suc n => \case f 0, ||-finiteAC (\lam i => f (suc i)) \with {
-      | byLeft a, _ => byLeft a
-      | _, byLeft a => byLeft a
-      | byRight b0, byRight bs => byRight \case \elim __ \with {
-        | 0 => b0
-        | suc j => bs j
-      }
-    }
-
-  \lemma finiteAC {n : Nat} {A : Fin n -> \Type} (f : \Pi (i : Fin n) -> TruncP (A i)) : TruncP (\Pi (i : Fin n) -> A i)
-    => \case ||-finiteAC {_} {Empty} (\lam i => \case f i \with {
-      | inP a => byRight a
-    }) \with {
-      | byLeft ()
-      | byRight r => inP r
-    }
-
-    \func searchFin {n : Nat} (A : Fin n -> \Prop) (d : \Pi (j : Fin n) -> Dec (A j))
-      : Or (\Sigma (j0 : Fin n) (A j0) (\Pi (j : Fin n) -> A j -> (j0 : Nat) <= j)) (\Pi (j : Fin n) -> Not (A j)) \elim n
-      | 0 => inr (\case __)
-      | suc n => \case d 0, searchFin _ (\lam j => d (suc j)) \with {
-        | yes e, _ => inl (0, e, \lam j _ => zero<=_)
-        | no e, inl (j0,Aj0,u) => inl (suc j0, Aj0, \case \elim __ \with {
-          | 0 => \lam A0 => absurd (e A0)
-          | suc j => \lam Aj+1 => suc<=suc (u j Aj+1)
-        })
-        | no e, inr f => inr \case \elim __ \with {
-          | 0 => e
-          | suc j => f j
-        }
-      }
-
-  \func searchFin-equiv {B : \Type} {n : Nat} (e : QEquiv {Fin n} {B}) (A : B -> \Prop) (d : \Pi (b : B) -> Dec (A b))
-    : Or (\Sigma (b : B) (A b)) (\Pi (b : B) -> Not (A b))
-    => \case searchFin (\lam j => A (e j)) (\lam j => d (e j)) \with {
-         | inl p => inl (e p.1, p.2)
-         | inr q => inr \lam b Ab => q (e.ret b) $ transportInv A (e.f_ret b) Ab
-       }
-
-  \lemma searchFin-unique {n : Nat} (A : Fin n -> \Prop) (d : \Pi (j : Fin n) -> Dec (A j)) (c : ∃ (j : Fin n) (A j))
-      : Contr (\Sigma (j0 : Fin n) (A j0) (\Pi (j : Fin n) -> A j -> (j0 : Nat) <= j))
-      => \case \elim c \with {
-        | inP (j,Aj) => isProp=>isContr (\lam t s => ext $ nat_fin_= $ <=-antisymmetric (t.3 s.1 s.2) (s.3 t.1 t.2)) \case searchFin A d \with {
-          | inl r => r
-          | inr e => absurd (e j Aj)
-        }
-      }
-
-    \func pred {n : Nat} (x : Fin (suc (suc n))) : Fin (suc n) \elim x
-      | 0 => 0
-      | suc x => x
-
-    \lemma suc-isInj {n : Nat} (x y : Fin n) (p : suc x = suc y) : x = y \elim n
-      | suc n => pmap pred p
-
-    \lemma FinCardBij {n m : Nat} (p : QEquiv {Fin n} {Fin m}) : n = m
-      => <=-antisymmetric (FinCardInj p p.isInj) (FinCardInj p.ret (symQEquiv p).isInj)
-
-    \lemma FinCardInj {n m : Nat} (f : Fin n -> Fin m) (f-inj : IsInj f) : n <= m \elim n, m
-      | 0, _ => zero<=_
-      | suc n, 0 => \case f 0
-      | suc n, suc m => suc<=suc (FinCardInj (\lam x => skip (f 0) (f (suc x)) (\lam f_0=f_suc => \case f-inj f_0=f_suc))
-                                             (\lam {x} {y} p => suc-isInj x y (f-inj (skip-isInj p))))
-
-    \func skip {n : Nat} (x0 x : Fin (suc n)) (d : x0 /= x) : Fin n \elim n, x0, x
-      | _, 0, 0 => absurd (d idp)
-      | _, 0, suc x => x
-      | suc n, suc x0, 0 => 0
-      | suc n, suc x0, suc x => suc (skip x0 x (\lam x0=x => d (pmap (suc __) x0=x)))
-
-    \lemma skip-isInj {n : Nat} {x0 x y : Fin (suc n)} {d : x0 /= x} {d' : x0 /= y} (p : skip x0 x d = skip x0 y d') : x = y \elim n, x0, x, y
-      | _, 0, 0, _ => absurd (d idp)
-      | _, 0, _, 0 => absurd (d' idp)
-      | _, _, 0, 0 => idp
-      | suc n, 0, suc x, suc y => pmap (suc __) p
-      | suc n, suc x0, 0, suc y => \case p
-      | suc n, suc x0, suc x, 0 => \case p
-      | suc n, suc x0, suc x, suc y => pmap (suc __) (skip-isInj (suc-isInj _ _ p))
-
-    \lemma sface_skip {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} : sface x0 (skip x0 x d) = x \elim n, x0, x
-      | _, 0, 0 => absurd (d idp)
-      | suc n, 0, suc x => idp
-      | suc n, suc x0, 0 => idp
-      | suc n, suc x0, suc x => pmap fsuc sface_skip
-
-    \lemma skip_sface {n : Nat} {k : Fin (suc n)} {i : Fin n} {d : k /= sface k i} : skip k (sface k i) d = i \elim n, k, i
-      | suc n, 0, i => idp
-      | suc n, suc k, 0 => idp
-      | suc n, suc k, suc i => pmap fsuc skip_sface
-
-    \open NatOrder
-
-    \lemma skip_< {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : skip x0 x d < skip x0 x' d') : x < x' \elim n, x0, x, x', p
-      | _, 0, 0, _, _ => absurd (d idp)
-      | _, 0, _, 0, _ => absurd (d' idp)
-      | suc n, 0, suc x, suc x', p => suc<suc p
-      | suc n, suc x0, 0, suc x', p => zero<suc
-      | suc n, suc x0, suc x, suc x', suc<suc p => suc<suc (skip_< p)
-
-    \lemma <_skip {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : x < x') : skip x0 x d < skip x0 x' d' \elim n, x0, x, x', p
-      | _, 0, 0, _, _ => absurd (d idp)
-      | _, 0, _, 0, _ => absurd (d' idp)
-      | suc n, 0, suc x, suc x', suc<suc p => p
-      | suc n, suc x0, 0, suc x', p => zero<suc
-      | suc n, suc x0, suc x, suc x', suc<suc p => suc<suc (<_skip p)
-
-    \lemma skip-left {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} (p : x < x0) : skip x0 x d = {Nat} x \elim n, x0, x, p
-      | 0, 0, 0, ()
-      | suc n, suc x0, 0, _ => idp
-      | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-left p)
-
-    \lemma skip-right {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} (p : x0 < x) : skip x0 x d = {Nat} pred' x \elim n, x0, x, p
-      | 0, 0, 0, ()
-      | suc n, 0, suc x, _ => idp
-      | suc n, suc x0, 0, _ => idp
-      | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-right p) *> suc_pred (/=-sym $ NatSemiring.<_/= $ zero<=_ <∘r p)
-
     \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) (q : \Pi {i j : Fin l.len} -> l i = l j -> i = j) : FinSet A l.len \cowith
       | finEq => IsEquiv.fromInjSurj q p
   }
 
 \lemma card_Equiv {A B : FinSet} (e : QEquiv {A} {B}) : A.card = B.card
   => \case A.finEq, B.finEq \with {
-    | inP e1, inP e2 => FinSet.FinCardBij $ e1 `transQEquiv` e `transQEquiv` symQEquiv e2
+    | inP e1, inP e2 => FinCardBij $ e1 `transQEquiv` e `transQEquiv` symQEquiv e2
   }
 
 \lemma card_inj {A B : FinSet} (f : A -> B) (inj : IsInj f) : A.card <= B.card
   => \case A.finEq, B.finEq \with {
-    | inP e1, inP e2 => FinSet.FinCardInj (\lam x => e2.ret (f (e1 x))) \lam p => e1.isInj $ inj $ (symQEquiv e2).isInj p
+    | inP e1, inP e2 => FinCardInj (\lam x => e2.ret (f (e1 x))) \lam p => e1.isInj $ inj $ (symQEquiv e2).isInj p
   }
 
 \lemma FinSet-transport (A : FinSet) {B : \Set} (e : QEquiv {A} {B}) : FinSet B A.card \cowith
   | finEq => \case A.finEq \with {
     | inP e' => inP (transQEquiv e' e)
   }
-
-\lemma transport_zero {n m : Nat} (p : n = m) : transport Fin (pmap suc p) 0 = 0 \elim p
-  | idp => idp
-
-\lemma transport_suc {n m : Nat} (p : n = m) (x : Fin n) : transport Fin (pmap suc p) (suc x) = suc (transport Fin p x) \elim p
-  | idp => idp
-
-\lemma fin_transport {n m : Nat} {j : Fin n} {p : n = m} : transport Fin p j = {Nat} j \elim p
-  | idp => idp
-
-\func fin-inc_<= {n m : Nat} (p : n <= m) (i : Fin n) : Fin m
-  => toFin i (fin_< i NatSemiring.<∘l p)
-
-\func fin-inc {n m : Nat} (i : Fin n) : Fin (n + m) \elim n, i
-  | suc n, 0 => 0
-  | suc n, suc i => suc (fin-inc i)
-  \where {
-    \lemma char {n m : Nat} {i : Fin n} : fin-inc {n} {m} i = {Nat} i \elim n, i
-      | suc n, 0 => idp
-      | suc n, suc i => pmap suc char
-
-    \lemma char_nat {n : Nat} (i : Nat) : fin-inc {suc i} {n} (i Nat.mod suc i) = {Nat} i
-      => char *> mod_< id<suc
-  }
-
-\func fin-inc-right {n m : Nat} (i : Fin m) : Fin (n + m)
-  => fin-inc_<= (<=_+ zero<=_ <=-refl) i
-  \where {
-    \lemma char_nat {n : Nat} (i : Nat) : fin-inc-right {n} {suc i} (i Nat.mod suc i) = {Nat} i
-      => toFin=id *> mod_< id<suc
-  }
-
-\func fin-raise {n k : Nat} (i : Fin n) : Fin (k + n) \elim k
-  | 0 => i
-  | suc k => suc (fin-raise i)
-  \where
-    \lemma char {n k : Nat} {i : Fin n} : fin-raise {n} {k} i = {Nat} k Nat.+ i \elim k
-      | 0 => idp
-      | suc k => pmap suc char
-
-\func sface {n : Nat} (k : Fin (suc n)) (i : Fin n) : Fin (suc n) \elim n, k, i
-  | suc n, 0, i => suc i
-  | suc n, suc k, 0 => 0
-  | suc n, suc k, suc i => suc (sface k i)
-
-\lemma sface-skip {n : Nat} {k : Fin (suc n)} {i : Fin n} : sface k i /= k \elim n, k, i
-  | suc n, 0, i => \case __
-  | suc n, suc k, 0 => \case __
-  | suc n, suc k, suc i => fsuc/= sface-skip
-
-\lemma sface-inj {n : Nat} {k : Fin (suc n)} {i i' : Fin n} (p : sface k i = sface k i') : i = i' \elim n, k, i, i'
-  | suc n, 0, i, i' => pmap (fpred i) p
-  | suc n, suc k, 0, 0 => idp
-  | suc n, suc k, 0, suc i' => \case p
-  | suc n, suc k, suc i, 0 => \case p
-  | suc n, suc k, suc i, suc i' => pmap fsuc $ sface-inj $ pmap (fpred k) p
 
 \instance EmptyFin : FinSet Empty
   | card => 0
@@ -344,41 +166,7 @@
 \instance OrFin (S T : FinSet) : FinSet (Or S T)
   | card => S.card + T.card
   | finEq => \case S.finEq, T.finEq \with {
-    | inP Se, inP Te => inP $ transQEquiv (aux {S.card} {T.card}) (Or.Or_QEquiv Se Te)
-  }
-  \where {
-    \func aux {n m : Nat} : QEquiv {Fin (n + m)} {Or (Fin n) (Fin m)} \cowith
-      | f (i : Fin (n + m)) : Or (Fin n) (Fin m) \elim n, i {
-        | 0, i => inr i
-        | suc n, 0 => inl 0
-        | suc n, suc i => Or.map (f i) fsuc id
-      }
-      | ret (e : Or (Fin n) (Fin m)) : Fin (n + m) \with {
-        | inl s => fin-inc s
-        | inr t => fin-raise t
-      }
-      | ret_f (i : Fin (n + m)) : ret (f i) = i \elim n, i {
-        | 0, i => idp
-        | suc n, 0 => idp
-        | suc n, suc i => cases (f i arg addPath) \with {
-          | inl s, p => \have q => inv (pmap ret p) *> ret_f i \in \case \elim n, \elim i, \elim s, \elim q \with {
-            | suc n, i, s, q => pmap fsuc q
-          }
-          | inr t, p => pmap (\lam i => suc i) (inv (pmap ret p) *> ret_f i)
-        }
-      }
-      | f_sec => \case \elim __ \with {
-        | inl s => ret_inl-lem s
-        | inr t => ret_inr-lem t
-      }
-
-    \lemma ret_inl-lem {n m : Nat} (i : Fin n) : OrFin.aux.f {n} {m} (fin-inc i) = inl i \elim n, i
-      | suc n, 0 => idp
-      | suc n, suc i => rewrite ret_inl-lem idp
-
-    \lemma ret_inr-lem {n m : Nat} (t : Fin m) : aux.f (fin-raise {m} {n} t) = inr t \elim n
-      | 0 => idp
-      | suc n => rewrite (ret_inr-lem {n} t) idp
+    | inP Se, inP Te => inP $ transQEquiv (fin-split {S.card} {T.card}) (Or.Or_QEquiv Se Te)
   }
 
 \func finSet {A : FinSet} => A
@@ -479,4 +267,13 @@
               | p2 : extendSeq f b 1 = f 1 => extendSeq-agree f b (fsuc fzero)
         \in transport2 R (inv p1) (inv p2) (chain 0)
       | suc n, suc i => extendChain R (\lam j => f (suc j)) b (\lam j => chain (suc j)) Rfnb i
+  }
+
+\lemma KFin+Dec=>Fin {A : \Set} (k : KFinSet A) {d : DecSet A} : FinSet A
+  => \case KFinSet.toArray k \with {
+    | inP (l,q) =>
+      \let l' => nub l
+      \in FinSet.fromArray l' (\lam a => TruncP.map (q a) \lam p =>
+          \let t => nub-isSurj l p.1
+          \in (t.1, t.2 *> p.2)) nub-isInj
   }

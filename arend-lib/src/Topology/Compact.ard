@@ -1,6 +1,5 @@
 \import Algebra.Pointed
 \import Arith.Rat
-\import Arith.Real.UpperReal
 \import Data.Or
 \import Equiv
 \import Function.Meta
@@ -13,13 +12,15 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\import Set.Fin
 \import Set.Fin.Instances
 \import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.UniformSpace
+\import Order.Lattice.Properties
+\import Data.Fin
+\import Set.Set.Lattice
 \open IsTotallyBounded(IsCover,Cond)
 \open ClosurePrecoverSpace
 
@@ -34,8 +35,8 @@
 \lemma totallyBounded-uniform {X : RegularPreuniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) : Cond X.isCauchy isUniform
   => \lam Cc =>
     \have | (inP (D,Dc,f)) => Xtb $ X.<=*-cauchy-regular Cc
-          | (inP g) => FinSet.finiteAC f
-          | (inP h) => FinSet.finiteAC (\lam j => (g j).3)
+          | (inP g) => finiteAC f
+          | (inP h) => finiteAC (\lam j => (g j).3)
     \in inP (\lam i => (g i).1, uniform-refine (Xp $ X.uniform-inter-big (\lam j => (h j).1) (\lam j => (h j).2)) \lam {W'} (EW', inP (x,W'x)) => \case Dc x \with {
       | inP (_, inP (j,idp), Dx) => inP (_, inP (j,idp), \case Refines-inter-big (\lam j => (h j).1) j EW' \with {
         | inP (W,hW,W'<=W) => W'<=W <=∘ Set.Union-cond (later (hW, (x, (Dx, W'<=W W'x)))) <=∘ (h j).3
@@ -50,18 +51,18 @@
 \lemma totallyBounded-strong-uniform {X : StronglyRegularPreuniformSpace} (Xp : X.IsWeaklyProperUniform) (Xtb : IsTotallyBounded X) : Cond X.isCauchy isUniform
   => \lam Cc =>
     \have | (inP (V,Vc,g)) => Xtb $ X.s<=*-cauchy-regular Cc
-          | (inP h) => FinSet.finiteAC g
+          | (inP h) => finiteAC g
     \in inP (\lam i => (h i).1, Xp $ uniform-refine (X.uniform-inter-big (\lam j W => (W = Compl (V j)) || (W = (h j).1)) (\lam j => (h j).3))
               \lam {W} c => \case rewrite CoverInterBig-char in c \with {
-                | inP (Ws,We,W=Ws) => \case FinSet.finiteAC (\lam j => ||.toOr (We j)) \with {
-                  | inP o => \case FinSet.searchFin (\lam j => \Sigma (p : Ws j = (h j).1) (o j = inr p)) (\lam j => cases (o j) \with {
+                | inP (Ws,We,W=Ws) => \case finiteAC (\lam j => Or.fromTruncOr (We j)) \with {
+                  | inP o => \case searchFin (\lam j => \Sigma (p : Ws j = (h j).1) (o j = inr p)) (\lam j => cases (o j) \with {
                     | inl _ => no \lam q => \case q.2
                     | inr p => yes (p,idp)
                   }) \with {
-                    | inl (j,(p,_),_) => inP (_, byRight $ inP (j,idp), rewrite (W=Ws, inv p) $ TopMeetSemilattice.BigMeet-cond {_} {Ws} j)
+                    | inl (j,(p,_),_) => inP (_, byRight $ inP (j,idp), rewrite (W=Ws, inv p) $ BigMeet-cond {_} {Ws} j)
                     | inr f => inP (_, byLeft idp, \lam {x} Wx => \case Vc x \with {
                       | inP (_, inP (j,idp), Vjx) => \case f j (cases (o j) \with {
-                        | inl q => \case (rewrite q in TopMeetSemilattice.BigMeet-cond {_} {Ws} j (rewrite W=Ws in Wx)) Vjx
+                        | inl q => \case (rewrite q in BigMeet-cond {_} {Ws} j (rewrite W=Ws in Wx)) Vjx
                         | inr p => (p,idp)
                       })
                     })
@@ -83,14 +84,14 @@
       | closure Cu => base Cu
       | closure-top idp => inP (top :: nil, \lam x => inP (top, inP (0, idp), ()), \lam (0) => idp)
       | closure-refine Dc D<C => \case totallyBounded-closure base Dc \with {
-        | inP (U,Uc,DU) => \case FinSet.finiteAC (\lam j => D<C (DU j)) \with {
+        | inP (U,Uc,DU) => \case finiteAC (\lam j => D<C (DU j)) \with {
           | inP V => inP (\lam j => (V j).1, \lam x => \case Uc x \with {
             | inP (_, inP (j,idp), Ux) => inP (_, inP (j, idp), (V j).3 Ux)
           }, \lam j => (V j).2)
         }
       }
       | closure-trans {D} Dc {E} Ec idp => \case totallyBounded-closure base Dc \with {
-        | inP (V,Vc,DV) => \case FinSet.finiteAC (\lam j => totallyBounded-closure base $ Ec (DV j)) \with {
+        | inP (V,Vc,DV) => \case finiteAC (\lam j => totallyBounded-closure base $ Ec (DV j)) \with {
           | inP W => \have e => SigmaFin.aux {_} {\lam i => (W i).1.len} \in inP
             (\lam k => V (e k).1 ∧ (W (e k).1).1 (e k).2,
              \lam x => \case Vc x \with {
@@ -120,13 +121,13 @@
 \lemma totallyBoundedSet-char {X : CoverSpace} {U : Set X}
   : IsTotallyBoundedSet U <-> ∀ {C : isCauchy} ∃ (D : Array (Set X)) (∀ {x : U} ∃ (V : D) (V x)) (∀ (V : D) (C V))
   => (\lam f Cc => \case f $ func-cover {PrecoverTransfer-map {\Sigma (x : X) (U x)} __.1} Cc \with {
-    | inP (D,Dc,Dp) => \case FinSet.finiteAC Dp \with {
+    | inP (D,Dc,Dp) => \case finiteAC Dp \with {
       | inP g => inP (\lam j => (g j).1, \lam {x} Ux => \case Dc (x,Ux) \with {
         | inP (_, inP (j,idp), Dx) => inP (j, rewrite (g j).3 in Dx)
       }, \lam j => (g j).2)
     }
   }, \lam f Cc => \case f Cc \with {
-    | inP (D,Dc,Dp) => \case FinSet.finiteAC Dp \with {
+    | inP (D,Dc,Dp) => \case finiteAC Dp \with {
       | inP g => inP (\lam j => (g j).1, \lam x => \case Dc x.2 \with {
         | inP (j,Dx) => inP (_, inP (j,idp), (g j).3 Dx)
       }, \lam j => (g j).2)
@@ -142,7 +143,7 @@
   : IsTotallyBoundedSet S <-> ∀ {C : isUniform} ∃ (D : Array (Set X)) (∀ {x : S} ∃ (V : D) (V x)) (∀ (V : D) (C V))
   => (\lam tb Cu => totallyBoundedSet-char.1 tb $ uniform-cauchy.2 $ closure Cu,
       \lam tb => totallyBounded-uniform-char {RegularPreuniformTransfer __.1} \lam Cu => \case tb Cu \with {
-        | inP (D,g,h) => \case FinSet.finiteAC h \with {
+        | inP (D,g,h) => \case finiteAC h \with {
           | inP f => inP (\lam j => (f j).1, \lam x => \case g x.2 \with {
             | inP (j,Dx) => inP (_, inP (j, idp), (f j).3 Dx)
           }, \lam j => (f j).2)
@@ -152,14 +153,14 @@
 \lemma totallyBoundedSet-metric-char {X : ExPseudoMetricSpace} {S : Set X}
   : IsTotallyBoundedSet S <-> ∀ {eps : Rat} (0 < eps) ∃ (D : Array X) ∀ {x : S} ∃ (y : D) ((dist y x).U eps)
   => (\lam tb eps>0 => \case totallyBoundedSet-uniform-char.1 tb (X.metricUniform eps>0) \with {
-    | inP (D,DS,h) => \case FinSet.finiteAC h \with {
+    | inP (D,DS,h) => \case finiteAC h \with {
       | inP g => inP (\lam j => (g j).1, \lam Sx => \case DS Sx \with {
         | inP (j,Dx) => inP (j, rewrite (g j).2 in Dx)
       })
     }
   }, \lam tb => totallyBoundedSet-uniform-char.2 \lam Cu => \case dist-uniform.1 Cu \with {
     | inP (eps,eps>0,h) => \case tb eps>0 \with {
-      | inP (D,g) => \case FinSet.finiteAC (\lam j => h (D j)) \with {
+      | inP (D,g) => \case finiteAC (\lam j => h (D j)) \with {
         | inP f => inP (\lam j => (f j).1, \lam Sx => \case g Sx \with {
           | inP (j,d) => inP (j, (f j).3 d)
         }, \lam j => (f j).2)

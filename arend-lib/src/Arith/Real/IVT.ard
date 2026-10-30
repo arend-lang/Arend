@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Semiring
@@ -10,7 +10,6 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
@@ -26,6 +25,7 @@
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
 \import Topology.TopSpace
+\import Algebra.QModule.Rat
 \open IntervalSubset
 
 -- | A subset of {Real} containing a closed interval.

@@ -37,7 +37,6 @@
 \import InfCat.Square
 \import InfCat.SubCat.Sub
 \import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 \open CatUnivHelpers

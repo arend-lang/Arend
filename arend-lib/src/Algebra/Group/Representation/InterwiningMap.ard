@@ -1,5 +1,4 @@
 \import Algebra.Group
-\import Algebra.Group.GSet
 \import Algebra.Group.GSet.EquivariantMap
 \import Algebra.Group.Representation
 \import Algebra.Module.LinearMap

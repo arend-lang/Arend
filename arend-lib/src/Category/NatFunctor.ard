@@ -1,0 +1,35 @@
+\import Arith.Nat
+\import Category
+\import Category.Functor
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import Algebra.Monoid
+\import Function.Meta
+
+-- | A functor from the poset of natural numbers given by a sequence of morphisms
+\func NatFunctor {C : Precat} (F : Nat -> C) (f : \Pi {n : Nat} -> Hom (F n) (F (suc n))) : Functor NatSemiring C \cowith
+  | F => F
+  | Func p => natHom (_, <=_exists p)
+  | Func-id => pmap natHom (sigma-isProp _ (0,idp)) *> natHom_id
+  | Func-o => pmap natHom (sigma-isProp _ _) *> natHom-comp
+  \where {
+    \lemma sigma-isProp {n m : Nat} : isProp (\Sigma (k : Nat) (n + k = m))
+      => \lam s t => ext $ NatSemiring.cancel-left n $ s.2 *> inv t.2
+
+    \func natHom {n m : Nat} (s : \Sigma (k : Nat) (n + k = m)) : Hom (F n) (F m) \elim m, s
+      | _, (0, idp) => id
+      | 0, (suc k, ())
+      | suc m, (suc k, q) => f ∘ natHom (k, pmap pred q)
+
+    \lemma natHom_id {n : Nat} : natHom (0,idp) = id {_} {F n} \elim n
+      | 0 => idp
+      | suc n => idp
+
+    \lemma natHom-comp {n m k : Nat} {s : \Sigma (l : Nat) (n + l = m)} {t : \Sigma (l : Nat) (m + l = k)}
+      : natHom (s.1 + t.1, inv +-assoc *> pmap (+ _) s.2 *> t.2) = natHom t ∘ natHom s \elim k, t
+      | 0, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
+      | suc k, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
+      | 0, (suc m, ())
+      | suc k, (suc m, q) => pmap (f ∘) (pmap natHom (sigma-isProp _ _) *> natHom-comp) *> inv o-assoc
+  }

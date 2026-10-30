@@ -1,26 +1,30 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Module(*c)
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.Perm
 \import Algebra.Monoid.PermSet
-\import Algebra.Ordered
+\import Algebra.Monoid.Properties
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Ring.Integral
+\import Algebra.Ring.Integral.Properties
 \import Algebra.Ring.MonoidRing
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom.Properties
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.SubRing
 \import Algebra.Ring.ZeroDimensional
 \import Algebra.Semiring
+\import Algebra.Semiring.Properties
 \import Arith.Fin
 \import Arith.Nat
-\import Category
 \import Data.Array
 \import Data.Array.EPerm
 \import Equiv (IsEquiv)
@@ -30,7 +34,9 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
+\import Order.Lattice.Properties
 \import Order.LinearOrder
+\import Order.LinearOrder.Properties
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -38,7 +44,6 @@
 \import Relation.Equivalence
 \import Set.Fin
 \open Monoid
-\open AddMonoid
 
 {- | If `f : K -> R` is integral and {K} is a field, then {R} is 0-dimensional.
  -
@@ -82,7 +87,7 @@
   }
 
 \func mPoly_integral {K : DiscreteField} {S : CRing} (f : RingHom K S) {a : S} {l : Array S} (p : MPoly (Fin (suc l.len)) K) (p/=0 : p /= 0) (pe : mPolyMapEval f p (a :: l) = 0)
-  : \Sigma (g : RingHom K (ICRing subring)) (l' : Array (ICRing subring) l.len) (RingHom.isAlgebraGenerated g l') (h : RingHom (ICRing subring) S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly (ICRing subring)) (l j = polyMapEval h q a)) (IsInj h) (isIntegral h a) (h RingHom.∘ g = f)
+  : \Sigma (g : RingHom K (ICRing subring)) (l' : Array (ICRing subring) l.len) (isAlgebraGenerated g l') (h : RingHom (ICRing subring) S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly (ICRing subring)) (l j = polyMapEval h q a)) (IsInj h) (isIntegral h a) (h RingHom.∘ g = f)
   => \let | d j => pow (suc (mdegree p)) (suc j)
           | l' => mkArray \lam j => l j - pow a (d j)
           | t => mPolyImage-finGen f l'
@@ -161,9 +166,9 @@
             \func leadCoef_BigSum {R : CRing} {n : Nat} {l : Array (Poly R) (suc n)} (pd : Array Nat (suc n))
                                   (pc : \Pi (j : Fin (suc n)) -> degree<= (l j) (pd j)) (inj : IsInj pd)
               : \Sigma (m : Nat) (degree<= (BigSum l) m) (j : Fin (suc n)) (polyCoef (BigSum l) m = polyCoef (l j) (pd j))
-              => (NatSemiring.Big_∨ pd, degree<=_BigSum \lam j => degree<=-trans (pc j) $ NatSemiring.Big_join-cond, (LinearOrder.findMax pd).1,
-                  rewrite (LinearOrder.findMax pd).2 $ polyCoef_BigSum {_} {l} *> BigSum-unique {_} {map (polyCoef __ _) l} _ \lam k j/=k =>
-                      degree<=.toCoefs (l k) (pd k) (pc k) $ LinearOrder.<=_/= (transport (_ <=) (LinearOrder.findMax pd).2 $ NatSemiring.Big_join-cond) \lam p => j/=k $ inv (inj p)
+              => (NatSemiring.Big_∨ pd, degree<=_BigSum \lam j => degree<=-trans (pc j) $ NatSemiring.Big_join-cond, (findMax pd).1,
+                  rewrite (findMax pd).2 $ polyCoef_BigSum {_} {l} *> BigSum-unique {_} {map (polyCoef __ _) l} _ \lam k j/=k =>
+                      degree<=.toCoefs (l k) (pd k) (pc k) $ LinearOrder.<=_/= (transport (_ <=) (findMax pd).2 $ NatSemiring.Big_join-cond) \lam p => j/=k $ inv (inj p)
               )
 
             \func leadCoef_BigSum_/=0 {R : CRing} {l : Array (Poly R)} (pd : Array Nat l.len)
@@ -175,7 +180,7 @@
             \func poly-degrees {R : CRing} {l : Array (Poly R)} (pc : Array R l.len) (pd : Array Nat l.len)
                                (pdp : \Pi (j : Fin l.len) -> \Sigma (degree<= (l j) (pd j)) (polyCoef (l j) (pd j) = 1))
                                (pcp : \Pi (j : Fin l.len) -> Monoid.Inv (pc j)) (inj : IsInj pd) (l/=0 : l.len /= 0)
-                               {p : Poly R} (pp : p = AddMonoid.BigSum \lam j => pc j PolyRing.*c l j)
+                               {p : Poly R} (pp : p = BigSum \lam j => pc j PolyRing.*c l j)
               : \Sigma (m : Nat) (degree<= p m) (Monoid.Inv (polyCoef p m)) \elim pp
               | idp => \let t => leadCoef_BigSum_/=0 {R} {\lam j => pc j PolyRing.*c l j} pd (\lam j => degree<=_*c (pdp j).1) inj l/=0
                        \in (t.1, t.2, rewrite (t.4 *> polyCoef_*c *> pmap (_ *) (pdp t.3).2 *> ide-right) (pcp t.3))
@@ -193,10 +198,10 @@
         }
     }
 
-\func mPoly_integralExt {K : DiscreteField} {S : CRing} (f : RingHom K S) {n : Nat} {l : Array S (suc n)} (gen : RingHom.isAlgebraGenerated f l) (p : MPoly (Fin (suc n)) K) (p/=0 : p /= zro) (pe : mPolyMapEval f p l = 0)
-  : \Sigma (g : RingHom K (ICRing subring)) (l' : Array (ICRing subring) n) (RingHom.isAlgebraGenerated g l') (h : RingHom (ICRing subring) S) (IsInj h) (isIntegralExt h) (h RingHom.∘ g = f)
+\func mPoly_integralExt {K : DiscreteField} {S : CRing} (f : RingHom K S) {n : Nat} {l : Array S (suc n)} (gen : isAlgebraGenerated f l) (p : MPoly (Fin (suc n)) K) (p/=0 : p /= zro) (pe : mPolyMapEval f p l = 0)
+  : \Sigma (g : RingHom K (ICRing subring)) (l' : Array (ICRing subring) n) (isAlgebraGenerated g l') (h : RingHom (ICRing subring) S) (IsInj h) (isIntegralExt h) (h RingHom.∘ g = f)
   => \case mPoly_integral f p p/=0 pe \with {
-       | (g,l',gen',h,hg,hinj,hint,hg=f) => (g,l',gen',h,hinj, integralExt-finite-char (l 0 :: nil) (RingHom.isAlgebraGenerated-poly \lam x =>
+       | (g,l',gen',h,hg,hinj,hint,hg=f) => (g,l',gen',h,hinj, integralExt-finite-char (l 0 :: nil) (isAlgebraGenerated-poly \lam x =>
            TruncP.map (gen x) \lam s => (mPolyEval (\lam j => (hg j).1) $ MPoly_Fin-suc' (mPoly-map g s.1), MPoly_Fin-suc'.mapEval-comm h {_} {_} {\lam j => (hg j).1} *> pmap2 (mPolyEval __ __) (exts \case \elim __ \with {
              | 0 => idp
              | suc j => inv (hg j).2
@@ -211,10 +216,10 @@
 
      It is actually enough to assume that {K} is reduced and 0-dimensional. Also, if {E} is local, then these equivalent conditions hold.
  -}
-\lemma finGenExt-char {K : DiscreteField} {E : CRing} {f : RingHom K E} (gen : RingHom.isFiniteAlgebra f) : isIntegralExt f <-> E.IsZeroDimensional \elim gen
+\lemma finGenExt-char {K : DiscreteField} {E : CRing} {f : RingHom K E} (gen : isFiniteAlgebra f) : isIntegralExt f <-> E.IsZeroDimensional \elim gen
   | inP s => (integralExt-zeroDim, aux __ f s.2)
   \where {
-    \private \lemma aux {K : DiscreteField} {S : CRing} (Szd : S.IsZeroDimensional) (f : RingHom K S) {n : Nat} {l : Array S n} (gen : RingHom.isAlgebraGenerated f l) : isIntegralExt f \elim n, l
+    \private \lemma aux {K : DiscreteField} {S : CRing} (Szd : S.IsZeroDimensional) (f : RingHom K S) {n : Nat} {l : Array S n} (gen : isAlgebraGenerated f l) : isIntegralExt f \elim n, l
       | 0, nil => integralExt-finite-char nil gen 1 0 \case __
       | suc n, a :: l =>
         \let | (inP (b,m,q)) => Szd a

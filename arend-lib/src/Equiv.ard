@@ -1,13 +1,8 @@
-\import Equiv.BiEquiv
-\import Equiv.Fiber
-\import Equiv.Path
 \import Function
 \import Function.Meta
-\import Logic.Unique
-\import Homotopy.Fibration
 \import Logic
+\import Logic.Unique
 \import Paths
-\import Paths.Meta
 
 -- # Definition of equivalences
 
@@ -84,7 +79,7 @@
     => pmap f p *> f_ret b
 } \where {
     \sfunc fromInjSurj {A B : \Set} {f : A -> B} (inj : IsInj f) (surj : IsSurj f) : QEquiv f
-      => \have s b => TruncP.remove (\lam t t' => ext $ inj $ t.2 *> inv t'.2) (surj b)
+      => \have s b => TruncP.remove (\lam t t' => sigmaPath (inj $ t.2 *> inv t'.2) prop-pi) (surj b)
          \in \new QEquiv {
            | ret b => (s b).1
            | ret_f a => inj (s (f a)).2
@@ -92,7 +87,13 @@
          }
 
     \lemma equals {A B : \Set} {e e' : QEquiv {A} {B}} (p : \Pi (a : A) -> e a = e' a) : e = e'
-      => exts (p, \lam b => e.isInj $ e.f_ret b *> inv (p _ *> e'.f_ret b))
+      => \have | pf : e.f = e'.f => path (\lam i a => p a @ i)
+                | pr : e.ret = e'.ret => path (\lam i b => (e.isInj $ e.f_ret b *> inv (p _ *> e'.f_ret b)) @ i)
+         \in path (\lam i => \new QEquiv {A} {B} (pf @ i) {
+           | ret => pr @ i
+           | ret_f => prop-dpi (\lam j => \Pi (a : A) -> (pr @ j) ((pf @ j) a) = a) e.ret_f e'.ret_f @ i
+           | f_sec => prop-dpi (\lam j => \Pi (b : B) -> (pf @ j) ((pr @ j) b) = b) e.f_sec e'.f_sec @ i
+         })
 
     \func leftFactor {A B C : \Cat} {f : A -> B} {g : B -> C} (e2 : Section g) (e3 : QEquiv (g `o` f)) : QEquiv f \cowith
       | ret b => e3.ret (g b)
@@ -199,8 +200,9 @@
 
     \lemma parallelEquiv {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
                          (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab <-> IsEquiv cd
-      => (\lam abe => rightFactor ace $ transport IsEquiv (ext h) $ trans abe bde,
-          \lam cde => leftFactor bde $ transportInv IsEquiv (ext h) $ trans ace cde)
+      => \have q : (\lam a => bd (ab a)) = (\lam a => cd (ac a)) => path (\lam i a => h a @ i)
+         \in (\lam abe => rightFactor ace $ transport IsEquiv q $ trans abe bde,
+              \lam cde => leftFactor bde $ transportInv IsEquiv q $ trans ace cde)
   }
 
 \data Equiv (A B : \Cat)
@@ -272,12 +274,12 @@
   | A => p = p'
   | B => \Sigma (s : p.1 = p'.1) (transport B s p.2 = p'.2)
   | f q => (pmap __.1 q, pmapd __.2 q)
-  | ret q => ext q
-  | ret_f q => Jl (\lam p'' q' => ext (pmap __.1 q', pmapd __.2 q') = q') idp q
+  | ret q => sigmaPath q.1 q.2
+  | ret_f q => Jl (\lam p'' q' => sigmaPath (pmap __.1 q') (pmapd __.2 q') = q') idp q
   | f_sec q =>
-    ext (idp, \case p'.1 \as p'1        , q.1 \as q1 : p.1 = p'1,
+    sigmaPath idp (\case p'.1 \as p'1        , q.1 \as q1 : p.1 = p'1,
                     p'.2 \as p'2 : B p'1, q.2 \as q2 : transport B q1 p.2 = p'2
-              \return pmapd __.2 {p} {p'1, p'2} (ext (q1,q2)) = q2 \with {
+              \return pmapd __.2 {p} {p'1, p'2} (sigmaPath q1 q2) = q2 \with {
                 | p'1, idp, p'2, idp => idp
               })
 
@@ -399,13 +401,13 @@
 
   \lemma projection {A : \Cat} (B : A -> \Prop) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
     | isEmb p p' => \new Retraction {
-      | sec q => ext q
+      | sec q => sigmaPath q prop-pi
       | f_sec => idpe
     }
 
   \lemma sigma-prop-embedding {A : \Cat} {B : A -> \Cat} (Bp : \Pi (a : A) -> isProp (B a)) : Embedding {\Sigma (a : A) (B a)} __.1 \cowith
     | isEmb s s' => \new Retraction {
-      | sec p => ext (p, Bp _ _ _)
+      | sec p => sigmaPath p (Bp _ _ _)
       | f_sec => idpe
     }
 
@@ -450,3 +452,262 @@
     | sec p => path \lam i a => ((e a).isEmb (f a) (g a)).sec (path \lam j => p j a) i
     | f_sec p => path \lam i j a => ((e a).isEmb (f a) (g a)).f_sec (path \lam j => p j a) i j
   }
+
+-- | If ``a = a'`` is a retract of ``R a a'``, then ``a = a'`` is equivalent to ``R a a'``.
+\func pathEquiv {A : \Cat} (R : A -> A -> \Cat) (p : \Pi {a a' : A} -> Retraction {a = a'} {R a a'}) {a a' : A} : QEquiv {a = a'} p \cowith
+  | ret => p.sec
+  | ret_f => Jl (\lam _ q' => p.sec (p q') = q') (
+    \let | h {a a' : A} (q : a = a') => p.sec (p q)
+         | h-idemp {a a' : A} (q : a = a') : h (h q) = h q => pmap p.sec (p.f_sec (p q))
+    \in Jl (\lam _ q => h idp = h q *> inv q) idp (h idp) *> pmap (*> inv (h idp)) (h-idemp idp) *> *>_inv
+  )
+  | f_sec => p.f_sec
+
+\func pathConcatEquiv {A : \Cat} {a b c : A} (p : a = b) : QEquiv {a = c} {b = c} \cowith
+  | f => inv p *>
+  | ret => p *>
+  | ret_f q => inv *>-assoc *> pmap (*> q) *>_inv *> idp_*>
+  | f_sec q => inv *>-assoc *> pmap (*> q) inv_*> *> idp_*>
+
+-- | If ``f : A -> B`` is an equivalence, then ``pmap f`` is also an equivalence.
+\lemma pmapIsEquiv {A B : \Cat} {f : A -> B} (e : IsEquiv f) {a a' : A} : IsEquiv (pmap f {a} {a'}) \elim e
+  | inP e => inP $ pathEquiv (f __ = f __) \lam {a} {a'} => \new Retraction {
+    | f => pmap f
+    | sec p => inv (e.ret_f a) *> pmap e.ret p *> e.ret_f a'
+    | f_sec p => \let hae : HAEquiv f => e \in
+      pmap f (inv (e.ret_f a) *> pmap e.ret p *> e.ret_f a')                   ==< pmap_*>-comm f (inv (e.ret_f a)) (pmap e.ret p *> e.ret_f a') >==
+      pmap f (inv (e.ret_f a)) *> pmap f (pmap e.ret p *> e.ret_f a')          ==< pmap2 (*>) (pmap_inv-comm f (e.ret_f a)) (pmap_*>-comm f (pmap e.ret p) (e.ret_f a')) >==
+      inv (pmap f (e.ret_f a)) *> pmap f (pmap e.ret p) *> pmap f (e.ret_f a') ==< rotatePathLeft (
+        pmap f (pmap e.ret p) *> pmap f (e.ret_f a') ==< pmap (pmap f (pmap e.ret p) *> __) (hae.f_ret_f=f_sec_f a') >==
+        pmap f (pmap e.ret p) *> hae.f_sec (f a')    ==< homotopy-isNatural (\lam y => f (e.ret y)) (\lam y => y) hae.f_sec p >==
+        hae.f_sec (f a) *> p                         ==< inv (pmap (*> p) (hae.f_ret_f=f_sec_f a)) >==
+        pmap f (e.ret_f a) *> p                      `qed) >==
+      p `qed
+  }
+
+-- | If ``f : A -> B`` is an embedding, then ``pmap f`` is also an embedding.
+\func pmapEmbedding (e : Embedding) {a a' : e.A} : Embedding {a = a'} (pmap e) \cowith
+  | isEmb _ _ => IsEquiv.toQEquiv $ pmapIsEquiv $ inP (e.pmap-isEquiv {a} {a'})
+
+-- | If ``f : A -> B`` is a section, then ``pmap f`` is also a section.
+\func pmapSection (s : Section) {a a' : s.A} : Section {a = a'} (pmap s) \cowith
+  | ret q => (inv (s.ret_f a) *> pmap s.ret q) *> s.ret_f a'
+  | ret_f q => Jl (\lam a'' q' => (inv (s.ret_f a) *> pmap s.ret (pmap s q')) *> s.ret_f a'' = q') inv_*> q
+
+\func Total {B : \Cat} (F : B -> \Cat) => \Sigma (b : B) (F b)
+  \where
+    \func proj (F : B -> \Cat) => \lam (t : Total F) => t.1
+
+\func Fib {A B : \Cat} (f : A -> B) (base : B) => \Sigma (a : A) (f a = base)
+  \where {
+    \func make {base : B} (a : A) (p : f a = base) : Fib f base => (a,p)
+
+    \func ext (b0 : B) (x x' : Fib f b0) (p : x.1 = x'.1) (q : pmap f p *> x'.2 = x.2) : x = x'
+      => (retraction b0 x' x p q).1
+      \where
+        \func retraction (b0 : B) (x' x : Fib f b0) (p : x.1 = x'.1) (q : pmap f p *> x'.2 = x.2)
+          : \Sigma (t : x = x') (transport (\lam x'' => \Sigma (p : x.1 = x''.1) (pmap f p *> x''.2 = x.2)) t (idp, idp_*>) = (p,q)) \elim x', x, p, q
+          | (x'1,idp), (x1,x2), idp, idp => (idp,idp)
+
+    \func equiv (b0 : B) (x x' : Fib f b0) : QEquiv {x = x'} {\Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)} =>
+      \let S {b0 : B} (x x' : Fib f b0) => \Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)
+      \in pathEquiv S (\lam {x x' : Fib f b0} =>
+          \new Retraction {
+            | f q => transport (S x) q (idp, idp_*>)
+            | sec s => ext b0 x x' s.1 s.2
+            | f_sec s => (ext.retraction b0 x' x s.1 s.2).2
+          })
+  }
+
+-- | Fibers of a projection are the fibers of the family.
+\func proj-fib {A : \Cat} (B : A -> \Cat) (a : A) : QEquiv {Fib {\Sigma (x : A) (B x)} __.1 a} {B a} \cowith
+  | f w => transport B w.2 w.1.2
+  | ret b => ((a,b), idp)
+  | ret_f w => aux w.1.1 w.1.2 w.2
+  | f_sec b => idp
+  \where
+    \private \func aux (x : A) (b : B x) {a : A} (p : x = a)
+      : ((a, transport B p b), idp) = {Fib {\Sigma (x : A) (B x)} {A} __.1 a} ((x,b),p) \elim p
+      | idp => idp
+
+-- | A path between elements of a fiber relates their second components.
+\func fib-path {A B : \Cat} {f : A -> B} {b : B} {s t : Fib f b} (e : s = t)
+  : pmap (\lam z => f z.1) e *> t.2 = s.2 \elim e
+  | idp => idp_*>
+
+\record HAEquiv \extends QEquiv
+  | f_ret_f=f_sec_f : \Pi (x : A) -> pmap f (ret_f x) = f_sec (f x)
+  \where {
+    \protected \func coh_f_sec (s : Section) (r : \Pi (y : s.B) -> s (s.ret y) = y) (y : s.B) : s (s.ret y) = y
+      => inv (r (s (s.ret y))) *> pmap s (s.ret_f (s.ret y)) *> r y
+
+    \protected \func coh_f_ret_f=f_sec_f (s : Section) (r : \Pi (y : s.B) -> s (s.ret y) = y) (x : s.A) : pmap s (s.ret_f x) = coh_f_sec s r (s x)
+      => inv $ rotatePathLeft $
+          pmap s (s.ret_f (s.ret (s x))) *> r (s x)               ==< pmap (pmap s __ *> r (s x)) (homotopy_app-comm (\lam x => s.ret (s x)) s.ret_f x) >==
+          pmap (\lam x => s (s.ret (s x))) (s.ret_f x) *> r (s x) ==< homotopy-isNatural (\lam y => s (s.ret y)) (\lam y => y) r (pmap s (s.ret_f x))   >==
+          r (s (s.ret (s x))) *> pmap s (s.ret_f x)               `qed
+
+    \use \coerce fromQEquiv (e : QEquiv) : HAEquiv \cowith
+      | Section => e
+      | f_sec => coh_f_sec e e.f_sec
+      | f_ret_f=f_sec_f => coh_f_ret_f=f_sec_f e e.f_sec
+
+    \lemma levelProp.{u} {A B : \Type u} {f : A -> B} : isProp (HAEquiv f)
+      => \lam e e' =>
+          \let -- HAEquiv = Retraction + T1' = Retraction + T1
+           | T1' (r : Retraction f) (x : A) =>
+              (r.sec (f x), r.f_sec (f x)) = {Fib f (f x)} (x,idp)
+           | T1 (r : Retraction f) (x : A) =>
+              \Sigma (p : r.sec (f x) = x) (pmap f p = r.f_sec (f x))
+           | T1'=T1 (r : Retraction f) (x : A) : T1' r x = T1 r x =>
+              QEquiv_= (Fib.equiv (f x) (r.sec (f x), r.f_sec (f x)) (x,idp))
+           | T1'-isContr (r : Retraction f) (x : A) : Contr (T1' r x) =>
+              isProp=>PathContr (Fib f (f x)) (isContr=>isProp (IsEquiv=>contrFibers (inP e) (f x))) _ _
+           | T1-isContr (r : Retraction f) (x : A) : Contr (T1 r x) =>
+              transport (\lam X => Contr X) (T1'=T1 r x) (T1'-isContr r x)
+           | T2 => \Sigma (r : Retraction f) (\Pi (x : A) -> T1 r x)
+           | T2-isContr : Contr T2 => sigma-Contr
+                                        (Retraction.isContr e)
+                                        (\lam r => pi-Contr (T1 r) (T1-isContr r))
+           | E : T2 = HAEquiv f => path (iso (\lam (t : T2) => \new HAEquiv f {
+                                          | ret => sec {t.1}
+                                          | f_sec => f_sec {t.1}
+                                          | ret_f x => (t.2 x).1
+                                          | f_ret_f=f_sec_f x => (t.2 x).2
+                                          }) (\lam (r : HAEquiv f) => (\new Retraction f r.sec r.f_sec, \lam x => (r.ret_f x, r.f_ret_f=f_sec_f x)))
+                                             (\lam t2 => idp) (\lam (hae : HAEquiv f) => idp {HAEquiv f hae.ret hae.ret_f hae.f_sec hae.f_ret_f=f_sec_f}))
+          \in isContr=>isProp (transport (\lam X => Contr X) E T2-isContr) e e'
+  }
+
+\func HasContrFibers {A B : \Cat} (f : A -> B) : \Prop
+  => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
+
+\func contrFibers=>QEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : QEquiv f \cowith
+  | ret y => (p y).center.1
+  | ret_f x => pmap (\lam (r : Fib f (f x)) => r.1) ((p (f x)).contraction (x,idp))
+  | f_sec y => (p y).center.2
+
+\lemma contrFibers=>IsEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
+  => inP (contrFibers=>QEquiv p)
+
+\lemma IsEquiv=>contrFibers {A B : \Cat} {f : A -> B} (e : IsEquiv f) : HasContrFibers f \elim e
+  | inP e => fromSection e e
+  \where {
+    \protected \lemma fromSection (s : Section f) (r : Retraction f) : HasContrFibers f
+      => \lam b0 =>
+          \let | r' y => pmap (\lam y => f (s.ret y)) (inv (r.f_sec y)) *> pmap f (s.ret_f (r.sec y)) *> r.f_sec y
+               | f_sec => HAEquiv.coh_f_sec s r'
+               | x0 => Fib.make (s.ret b0) (f_sec b0)
+          \in Contr.make x0 (\lam x =>
+              \let -- p0 proves that the first components are equal: x0.over = x.over.
+                   | p0 => pmap s.ret (inv x.2) *> s.ret_f x.1
+                   -- q0 proves that the second compontents are equal: pmap f p0 *> x.basePath = x0.basePath.
+                   | q0 =>
+                     pmap f p0 *> x.2                                               ==< pmap (*> x.2) (pmap_*>-comm f _ _) >==
+                     (pmap f (pmap s.ret (inv x.2)) *> pmap f (s.ret_f x.1)) *> x.2 ==< pmap ((pmap f (pmap s.ret (inv x.2)) *> __) *> x.2) (HAEquiv.coh_f_ret_f=f_sec_f s r' x.1) >==
+                     (pmap f (pmap s.ret (inv x.2)) *> f_sec (f x.1)) *> x.2      ==< pmap (*> x.2) (homotopy-isNatural (\lam x => f (s.ret x)) (\lam x => x) f_sec (inv x.2)) >==
+                     (f_sec b0 *> inv x.2) *> x.2                                 ==< *>-assoc >==
+                     f_sec b0 *> (inv x.2 *> x.2)                                 ==< pmap (f_sec b0 *>) inv_*> >==
+                     f_sec b0                                                     `qed
+              \in Fib.ext b0 x0 x p0 q0)
+  }
+
+\record BiEquiv \extends Section, Retraction
+  \where {
+    \use \coerce fromQEquiv (e : QEquiv) : BiEquiv \cowith
+      | Section => e
+      | Retraction => e
+
+    \use \coerce toQEquiv (e : BiEquiv) : QEquiv \cowith
+      | Section => e
+      | f_sec y => pmap (\lam y => e (ret y)) (inv (f_sec y)) *> pmap e (ret_f (sec y)) *> f_sec y
+
+    \func equals {A B : \Cat} {e e' : BiEquiv {A} {B}} (p : e.f = e'.f) : e = e'
+      => path \lam i => \new BiEquiv {
+        | Section => pathOver (Section.levelProp e' (transport (\lam g => Section {A} {B} g) p (\new Section e.f e.ret e.ret_f)) (\new Section e'.f e'.ret e'.ret_f)) @ i
+        | Retraction => pathOver (Retraction.levelProp e' (transport (\lam g => Retraction {A} {B} g) p (\new Retraction e.f e.sec e.f_sec)) (\new Retraction e'.f e'.sec e'.f_sec)) @ i
+      }
+
+    \lemma levelProp {A B : \Cat} {f : A -> B} : isProp (BiEquiv f)
+      => \lam e e' => path \lam i => \new BiEquiv {
+        | Section => Section.levelProp e e e' i
+        | Retraction => Retraction.levelProp e e e' i
+      }
+  }
+
+\func BiEquiv~Equiv {A B : \Cat} : QEquiv {BiEquiv {A} {B}} {Equiv A B} \cowith
+  | f e => mkEquiv (inP e)
+  | ret e => Equiv.toQEquiv e
+  | ret_f e => BiEquiv.equals idp
+  | f_sec e => Equiv.equals idp
+
+-- # Contractible types
+
+\class Contr (A : \Cat) (center : A) (contraction : \Pi (a' : A) -> center = a') {
+  \sfunc toSigma : \Sigma (x : A) (\Pi (a : A) -> x = a)
+    => (center, contraction)
+} \where {
+    \func make {A : \Cat} (a : A) (p : \Pi (a' : A) -> a = a')
+      => \new Contr A a p
+
+    \use \level levelProp (A : \Cat) (c1 c2 : Contr A) : c1 = c2 => path (\lam i => \new Contr A {
+      | center => c1.contraction c2.center i
+      | contraction a' => pathOver {\lam i => c1.contraction c2.center i = a'} {c1.contraction a'} {c2.contraction a'}
+          (isProp.=>isSet (\lam x y => inv (c1.contraction x) *> c1.contraction y) c2.center a' _ _) i
+    })
+
+    \lemma Contr_QEquiv {A B : \Cat} (e : QEquiv {A} {B}) (c : Contr A) : Contr B \cowith
+      | center => e c.center
+      | contraction b => e.adjointInv (c.contraction _)
+  }
+
+\lemma contr-equiv {A B : \Cat} (Ac : Contr A) (Bc : Contr B) {f : A -> B} : IsEquiv f
+  => inP \new QEquiv {
+    | ret _ => Ac.center
+    | ret_f x => Ac.contraction x
+    | f_sec y => isContr=>isProp Bc _ _
+  }
+
+\func isContr=>isProp {A : \Cat} (c : Contr A) : isProp A
+  => \lam a a' => inv (c.contraction a) *> c.contraction a'
+
+\lemma isContr'=>isProp {A : \Cat} (c : A -> Contr A) : isProp A
+  => \lam a => isContr=>isProp (c a) a
+
+\func isProp=>isContr {A : \Cat} (p : isProp A) (a : A) : Contr A
+  => Contr.make a (p a)
+
+\lemma isProp'=>isContr {A : \Cat} (p : isProp A) (a : TruncP A) : Contr A \elim a
+  | inP a => isProp=>isContr p a
+
+\lemma isProp=>PathContr (A : \Cat) (p : isProp A) (a a' : A) : Contr (a = a')
+  => isProp=>isContr (isProp.=>isSet p a a') (p a a')
+
+\lemma pi-Contr {A : \Cat} (B : A -> \Cat) (p : \Pi (a : A) -> Contr (B a)) : Contr (\Pi (a : A) -> B a)
+  => Contr.make (\lam a => Contr.center {p a}) (\lam f => path (\lam i a => Contr.contraction {p a} (f a) @ i))
+
+-- | Contr-based hLevels are closed under sigma-types
+\lemma sigma-Contr (A : Contr) (B : \Pi (a : A) -> Contr) : Contr (\Sigma (a : A) (B a))
+  => \let | a0 => A.center
+          | p0 => ((a0, (B a0).center) : \Sigma (a : A) (B a))
+     \in Contr.make p0 (\lam p => sigmaPath (A.contraction p.1) (isContr=>isProp (B p.1) _ _))
+
+-- | If the total space of a family over a contractible base is contractible, then so is every fiber.
+\lemma fiber-Contr {A : \Cat} (B : A -> \Type) (cA : Contr A) (cT : Contr (\Sigma (a : A) (B a))) (a : A) : Contr (B a)
+  => \have c => transport B (isContr=>isProp cA cT.center.1 a) cT.center.2
+     \in Contr.make c \lam b =>
+          \have t => sigmaEquiv B (a,c) (a,b) (isContr=>isProp cT _ _)
+          \in pmap (transport B __ c) (isProp.=>isSet (isContr=>isProp cA) a a idp t.1) *> t.2
+
+-- | Paths over a path in a family of contractible types form a contractible type.
+\lemma contr-pathOver {A : \Cat} (C : A -> \Cat) (Cc : \Pi (a : A) -> Contr (C a)) {a a' : A} (q : a = a') (u : C a) (v : C a')
+  : Contr (Path (\lam j => C (q j)) u v) \elim q
+  | idp => isProp=>PathContr _ (isContr=>isProp (Cc a)) u v
+
+-- | Propositions are closed under equivalences
+\lemma equiv-isProp {A B : \Type} {f : A -> B} (e : IsEquiv f) (As : isProp B) : isProp A
+  => \lam a a' => inv (IsEquiv.ret_f e) *> pmap (IsEquiv.ret e) (As _ _) *> IsEquiv.ret_f e
+
+-- | Sets are closed under equivalences
+\lemma equiv-isSet {A B : \Type} {f : A -> B} (e : IsEquiv f) (As : isSet B) : isSet A
+  => \lam a a' => equiv-isProp (pmapIsEquiv e) (As _ _)

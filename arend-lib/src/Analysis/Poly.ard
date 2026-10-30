@@ -1,5 +1,4 @@
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
@@ -23,8 +22,12 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
 \import Topology.TopSpace
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+\import Order.Lattice.Properties
+\import Algebra.Ordered.Properties
 \open Monoid (pow)
-\open JoinSemilattice (Big_<=_join0, Big_<=_join1)
+
 
 {- | **Norm estimates for polynomial evaluation**, and the continuity of `polyEval` that follows
      from reading a polynomial as a terminating power series. -}

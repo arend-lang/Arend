@@ -1,0 +1,249 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Monoid.Properties
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open AddGroup (negative-isInv)
+\open LatticeAbGroup
+\open PosetAddMonoid
+\open AddMonoid
+\open DistributiveLattice
+\open PosetAddGroup
+\open AbGroup
+\open BaseSet
+\open AddGroup
+\open MeetSemilattice
+\open JoinSemilattice
+
+\lemma .abs_- (L : LatticeAbGroup) {x y : L} : abs (x - y) = abs (y - x)
+  => inv abs_negative *> pmap abs negative_-
+
+\lemma .abs_-right (L : LatticeAbGroup) {x y : L} : abs y - abs x <= abs (x - y)
+  => transport (_ <=) abs_- abs_-left
+
+\class PosetAddGroup \extends PosetAddMonoid, AddGroup {
+  \lemma from>=0 {x y : E} (p : 0 <= y - x) : x <= y
+    => transport2 (<=) zro-left (+-assoc *> pmap (y +) negative-left *> zro-right) (<=_+ p <=-refl)
+
+  \lemma to>=0 {x y : E} (p : x <= y) : 0 <= y - x
+    => transport (<= _) negative-right (<=_+ p <=-refl)
+
+  \lemma from<=0 {x y : E} (p : x - y <= 0) : x <= y
+    => transport2 (<=) (+-assoc *> pmap (x +) negative-left *> zro-right) zro-left (<=_+ p <=-refl)
+
+  \lemma to<=0 {x y : E} (p : x <= y) : x - y <= 0
+    => transport (_ <=) negative-right (<=_+ p <=-refl)
+
+  \lemma negative_<= {x y : E} (x<=y : x <= y) : negative y <= negative x
+    => transport2 (<=) (inv +-assoc *> pmap (- y) negative-left *> zro-left) zro-right $ <=_+ <=-refl (to<=0 x<=y)
+
+  \lemma negative_<=-conv {x y : E} (p : negative y <= negative x) : x <= y
+    => transport2 (<=) negative-isInv negative-isInv (negative_<= p)
+
+  \lemma negative>=0 {x : E} (x<=0 : x <= 0) : 0 <= negative x
+    => transport (<= _) negative_zro (negative_<= x<=0)
+
+  \lemma negative-to<=0 {x : E} (p : 0 <= negative x) : x <= 0
+    => negative_<=-conv $ transportInv (<= _) negative_zro p
+
+  \lemma negative<=0 {x : E} (x>=0 : 0 <= x) : negative x <= 0
+    => transport (_ <=) negative_zro (negative_<= x>=0)
+
+  \lemma negative-to>=0 {x : E} (p : negative x <= 0) : 0 <= x
+    => negative_<=-conv $ transportInv (_ <=) negative_zro p
+
+  \lemma <=_+-cancel-left (x : E) {y z : E} (p : x + y <= x + z) : y <= z
+    => transport2 (<=) (inv +-assoc *> pmap (+ y) negative-left *> zro-left) (inv +-assoc *> pmap (+ z) negative-left *> zro-left) (<=_+ <=-refl p)
+
+  \lemma <=_+-cancel-right (z : E) {x y : E} (p : x + z <= y + z) : x <= y
+    => transport2 (<=) (+-assoc *> pmap (x +) negative-right *> zro-right) (+-assoc *> pmap (y +) negative-right *> zro-right) (<=_+ p <=-refl)
+}
+
+\class PosetAbGroup \extends PosetAddGroup, PosetAbMonoid, AbGroup
+
+\class PosetDivAbGroup \extends PosetAbGroup, TorsionFreeGroup {
+  | <=_*n-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
+  | noTorsion n/=0 na=0 => <=-antisymmetric (negative-to<=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n_negative $ negative>=0 $ =_<= na=0) (<=_*n-div n/=0 $ =_<= $ inv na=0)
+
+  \lemma <=_*n-cancel-left {n : Nat} (n/=0 : n /= 0) {a b : E} (na<=nb : n *n a <= n *n b) : a <= b
+    => from>=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n-ldistr_- (to>=0 na<=nb)
+}
+
+-- | {LatticeAbGroup} is a {PosetAbGroup} which has meets and joins.
+\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, DistributiveLattice, PosetDivAbGroup {
+  | meet_+-left {a} {b} {c} => <=-antisymmetric (meet-univ (<=_+ <=-refl meet-left) (<=_+ <=-refl meet-right)) $ <=_+-cancel-left (negative a) $ meet-univ (<=_+ <=-refl meet-left <=∘ =_<= (inv +-assoc *> pmap (+ b) negative-left *> zro-left)) (<=_+ <=-refl meet-right <=∘ =_<= (inv +-assoc *> pmap (+ c) negative-left *> zro-left)) <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-left) *> +-assoc)
+  | join_+-left {a} {b} {c} => <=-antisymmetric (<=_+-cancel-left (negative a) $ (inv +-assoc *> pmap (+ _) negative-left *> zro-left) =<= join-univ (<=_+-cancel-left a $ join-left <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-right) *> +-assoc)) (<=_+-cancel-left a $ join-right <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-right) *> +-assoc))) $ join-univ (<=_+ <=-refl join-left) (<=_+ <=-refl join-right)
+  | ldistr>= {x} {y} {z} => (inv $ meet_+-right *> pmap2 (∧) (+-assoc *> pmap (x +) (negative-left {_} {y ∨ z}) *> zro-right) zro-left) =<= <=_+-cancel-left _ ((inv +-assoc *> pmap (+ _) negative-left *> zro-left) =<= join-univ (<=_+-cancel-left _ $ meet_+-right =<= meet-monotone (+-assoc =<= <=_+ <=-refl (<=_+ <=-refl join-left <=∘ =_<= negative-left) <=∘ =_<= zro-right) (=_<= zro-left) <=∘ join-left <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc)) (<=_+-cancel-left _ $ meet_+-right =<= meet-monotone (+-assoc =<= <=_+ <=-refl (<=_+ <=-refl join-right <=∘ =_<= negative-left) <=∘ =_<= zro-right) (=_<= zro-left) <=∘ join-right <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc)))
+  | <=_*n-div {n} n/=0 {a} na>=0 =>
+    \have | q>=0 : 0 <= negative (a ∧ 0) => negative>=0 meet-right
+          | p>=0 : 0 <= a - a ∧ 0 => to>=0 meet-left
+          | pq : (a - a ∧ 0) ∧ negative (a ∧ 0) = 0 => pmap (_ ∧) (inv zro-left) *> inv meet_+-right *> negative-right
+          | nq<=np : n *n negative (a ∧ 0) <= n *n (a - a ∧ 0) => transport (<= _) zro-left (<=_+ na>=0 <=-refl) <=∘ =_<= (inv *n-ldistr)
+          | nq=0 : n *n negative (a ∧ 0) = 0 => <=-antisymmetric (meet-univ nq<=np <=-refl <=∘ =_<= (meet_*n-zro (*n_>=0 p>=0) q>=0 $ meet-comm *> meet_*n-zro q>=0 p>=0 (meet-comm *> pq))) (*n_>=0 q>=0)
+    \in negative-to>=0 (*n>=id n/=0 q>=0 <=∘ =_<= nq=0) <=∘ meet-left
+
+  \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y
+    => <=-antisymmetric (negative_<= (meet-univ (negative_<= join-left <=∘ =_<= negative-isInv) (negative_<= join-right <=∘ =_<= negative-isInv)) <=∘ =_<= negative-isInv) $ join-univ (negative_<= meet-left) (negative_<= meet-right)
+
+  \lemma join_negative {x y : E} : negative (x ∨ y) = negative x ∧ negative y
+    => <=-antisymmetric (meet-univ (negative_<= join-left) (negative_<= join-right)) $ inv negative-isInv =<= negative_<= (join-univ (inv negative-isInv =<= negative_<= meet-left) (inv negative-isInv =<= negative_<= meet-right))
+
+  \lemma modularity {x y : E} : x + y = (x ∨ y) + (x ∧ y)
+    => cancel-right (negative (x ∧ y)) $ pmap (_ +) meet_negative *> join_+-left *> pmap2 (∨) (+-comm *> inv +-assoc *> pmap (+ y) negative-left *> zro-left) (+-assoc *> pmap (x +) negative-right *> zro-right) *> join-comm *> inv (+-assoc *> pmap (_ +) negative-right *> zro-right)
+
+  \func abs (x : E) => x ∨ negative x
+
+  \lemma abs>=id {x : E} : x <= abs x
+    => join-left
+
+  \lemma abs>=neg {x : E} : negative x <= abs x
+    => join-right
+
+  \lemma abs_negative {x : E} : abs (negative x) = abs x
+    => <=-antisymmetric (join-univ join-right $ rewrite negative-isInv join-left) (join-univ (inv negative-isInv =<= join-right) join-left)
+
+  \lemma abs-ofPos {x : E} (x>=0 : 0 <= x) : abs x = x
+    => <=-antisymmetric (join-univ <=-refl $ transport2 (<=) zro-left negative-right (<=_+ x>=0 <=-refl) <=∘ x>=0) join-left
+
+  \lemma abs-ofNeg {x : E} (x<=0 : x <= 0) : abs x = negative x
+    => inv abs_negative *> abs-ofPos (rewrite negative_zro in negative_<= x<=0)
+
+  \lemma abs_abs {x : E} : abs (abs x) = abs x
+    => <=-antisymmetric (join-univ <=-refl $ negative_<= abs>=id <=∘ abs>=neg) abs>=id
+
+  \lemma abs_+ {x y : E} : abs (x + y) <= abs x + abs y
+    => join-univ (<=_+ join-left join-left) $ rewrite (negative_+,+-comm) $ <=_+ join-right join-right
+
+  \lemma abs_-left {x y : E} : abs x - abs y <= abs (x - y)
+    => transport (_ <=) (+-assoc *> pmap (_ +) negative-right *> zro-right) $ <=_+ (transport (abs __ <= _) (+-assoc *> pmap (x +) negative-left *> zro-right) abs_+) <=-refl
+
+  \lemma abs_zro : abs zro = zro
+    => <=-antisymmetric (join-univ <=-refl $ rewrite negative_zro <=-refl) abs>=id
+
+  \lemma abs_zro-ext {x : E} (p : abs x = zro) : x = zro
+    => <=-antisymmetric (transport (_ <=) p join-left) $ transport2 (<=) negative_zro negative-isInv $ negative_<= $ transport (_ <=) p join-right
+
+  \lemma abs>=_- {x y : E} : y - x <= abs (x - y)
+    => transportInv (_ <=) negative_+ (later $ rewrite negative-isInv <=-refl) <=∘ abs>=neg
+
+  \lemma abs-univ {x y z : E} (p : x - y <= z) (q : y - x <= z) : abs (x - y) <= z
+    => join-univ p (negative_- =<= q)
+
+  \lemma abs>=0 {x : E} : 0 <= abs x
+    => \have | aa>=0 : 0 <= abs x + abs x => transport (<= _) negative-right $ <=_+ abs>=id abs>=neg
+             | ma>=m : abs x ∧ 0 <= (abs x ∧ 0) + abs x => meet-univ (meet-right <=∘ aa>=0) (meet-left <=∘ =_<= (inv zro-left)) <=∘ =_<= (inv meet_+-right)
+       \in <=_+-cancel-left _ $ transportInv (<= _) zro-right ma>=m
+
+  \func part+ (x : E) => x ∨ 0
+
+  \func part- (x : E) => negative x ∨ 0
+
+  \lemma parts_join {x : E} : part+ x ∨ part- x = abs x
+    => <=-antisymmetric (join-univ (join-univ abs>=id abs>=0) (join-univ abs>=neg abs>=0)) $ join-univ (join-left <=∘ join-left) (join-left <=∘ join-right)
+
+  \lemma parts_meet {x : E} : part+ x ∧ part- x = 0
+    => cancel-left (part+ x ∨ part- x) $ inv modularity *> parts_+ *> inv (zro-right *> parts_join)
+
+  \lemma parts_+ {x : E} : part+ x + part- x = abs x
+    => join_+-right *> pmap2 (∨) (join_+-left *> join-comm *> pmap2 (∨) zro-right negative-right) zro-left *> parts_join
+
+  \lemma parts_- {x : E} : part+ x - part- x = x
+    => cancel-right (part- x) $ +-assoc *> pmap (_ +) negative-left *> zro-right *> join-comm *> inv (join_+-left *> pmap2 (∨) negative-right zro-right)
+
+  \lemma part-_diff_part+ {x y : E} : part- (x - y) = part+ (y - x)
+    => pmap (∨ 0) negative_-
+
+  \lemma part+_diff_meet {x y : E} : part+ (x - y) = x - x ∧ y
+    => inv $ pmap (x +) meet_negative *> join_+-left *> join-comm *> pmap (_ ∨) negative-right
+
+  \lemma part+_diff_join {x y : E} : part+ (x - y) = x ∨ y - y
+    => inv $ join_+-right *> pmap (_ ∨) negative-right
+
+  \lemma part-_diff_meet {x y : E} : part- (x - y) = y - x ∧ y
+    => part-_diff_part+ *> part+_diff_meet *> pmap (y -) meet-comm
+
+  \lemma part-_diff_join {x y : E} : part- (x - y) = x ∨ y - x
+    => part-_diff_part+ *> part+_diff_join *> pmap (- x) join-comm
+
+  \lemma join_+-double {x y : E} : x + y <= (x + x) ∨ (y + y)
+    => transport2 (x + __ <= __) zro-left (pmap (x +) join_+-right *> join_+-left *> pmap2 (x + __ ∨ __) (+-assoc *> pmap (x +) negative-left *> zro-right) (inv +-assoc *> pmap (+ y) (pmap (x +) negative_- *> +-comm *> +-assoc *> pmap (y +) negative-left *> zro-right))) $ <=_+ <=-refl $ <=_+ abs>=0 <=-refl
+
+  \lemma join_+-comm {x y : E} : (x ∨ y) + (x ∨ y) = (x + x) ∨ (y + y)
+    => join_+-left *> pmap2 (∨) join_+-right join_+-right *> <=-antisymmetric (join-univ (join-univ join-left $ +-comm =<= join_+-double) (join-univ join_+-double join-right)) (join-univ (join-left <=∘ join-left) (join-right <=∘ join-right))
+
+  \lemma join_*n {n : Nat} {x y : E} : n *n (x ∨ y) = (n *n x) ∨ (n *n y)
+    => <=-antisymmetric (<=_+-cancel-right ((NatSemiring.pow 2 n -' n) *n (x ∨ y)) $ (inv *n-rdistr *> pmap (*n _) (<=_exists $ NatSemiring.<=-less id<pow2) *> steps *> inv (pmap2 (∨) (inv *n-rdistr *> pmap (*n _) (<=_exists $ NatSemiring.<=-less id<pow2)) (inv *n-rdistr *> pmap (*n _) (<=_exists $ NatSemiring.<=-less id<pow2)))) =<= join-univ (<=_+ join-left $ *n_<= join-left) (<=_+ join-right $ *n_<= join-right)) $ join-univ (*n_<= join-left) (*n_<= join-right)
+    \where {
+      \private \lemma steps {k : Nat} {x y : E} : NatSemiring.pow 2 k *n (x ∨ y) = (NatSemiring.pow 2 k *n x) ∨ (NatSemiring.pow 2 k *n y) \elim k
+        | 0 => zro-left *> inv (pmap2 (∨) zro-left zro-left)
+        | suc k => *n-rdistr *> pmap2 (+) steps steps *> join_+-comm *> inv (pmap2 (∨) (pmap (*n x) (NatSemiring.*-comm {_} {2}) *> *n-assoc *> +-assoc *> zro-left) (pmap (*n y) (NatSemiring.*-comm {_} {2}) *> *n-assoc *> +-assoc *> zro-left))
+    }
+
+  \lemma abs_*n {n : Nat} {x : E} : n *n abs x = abs (n *n x)
+    => join_*n *> pmap (_ ∨) *n_negative
+
+  \lemma meet_*n {n : Nat} {x y : E} : n *n (x ∧ y) = (n *n x) ∧ (n *n y)
+    => inv negative-isInv *> pmap negative (inv *n_negative *> pmap (n *n) meet_negative *> join_*n *> pmap2 (∨) *n_negative *n_negative *> inv meet_negative) *> negative-isInv
+
+  \type AreDisjoint (x y : E) : \Prop
+    => abs x ∧ abs y = 0
+
+  \lemma pos-disjoint {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (d : x ∧ y = 0) : AreDisjoint x y
+    => pmap2 (∧) (abs-ofPos x>=0) (abs-ofPos y>=0) *> d
+
+  \lemma disjoint_join>=0 {x y : E} (d : AreDisjoint x y) : 0 <= x ∨ y
+    => negative-to>=0 $ =_<= join_negative <=∘ meet-monotone abs>=neg abs>=neg <=∘ =_<= d
+
+  \lemma disjoint_+_join {x y : E} (d : AreDisjoint x y) : x + y <= x ∨ y
+    => =_<= modularity <=∘ <=_+ <=-refl (meet-monotone abs>=id abs>=id <=∘ =_<= d) <=∘ =_<= zro-right
+
+  \lemma disjoint_pos_+_join {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (d : x ∧ y = 0) : x + y = x ∨ y
+    => <=-antisymmetric (disjoint_+_join (pos-disjoint x>=0 y>=0 d)) $
+        join-univ (=_<= (inv zro-right) <=∘ <=_+ <=-refl y>=0) (=_<= (inv zro-left) <=∘ <=_+ x>=0 <=-refl)
+
+  \lemma disjoint_abs_+-left {x y : E} (d : AreDisjoint x y) : abs x <= abs (x + y)
+    => \have | rev : abs x - abs y <= abs (x + y) => transport2 (\lam a b => abs x - a <= abs b) abs_negative (pmap (x +) negative-isInv) abs_-left
+             | eq : abs x = (abs x - abs y) ∨ 0 => inv zro-right *> pmap (abs x +) (inv negative_zro *> pmap negative (inv d *> meet-comm) *> meet_negative) *> join_+-left *> pmap (_ ∨) negative-right
+       \in =_<= eq <=∘ join-univ rev abs>=0
+
+  \lemma disjoint_abs_+-right {x y : E} (d : AreDisjoint x y) : abs y <= abs (x + y)
+    => transport (_ <=) (pmap abs +-comm) $ disjoint_abs_+-left (meet-comm *> d)
+
+  \lemma disjoint_abs_+ {x y : E} (d : AreDisjoint x y) : abs (x + y) = abs x + abs y
+    => <=-antisymmetric abs_+ $ =_<= (modularity *> pmap (_ +) d *> zro-right) <=∘ join-univ (disjoint_abs_+-left d) (disjoint_abs_+-right d)
+
+  \lemma disjoint-ldistr {a b c : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (c>=0 : 0 <= c) (d : b ∧ c = 0) : a ∧ (b + c) = a ∧ b + a ∧ c
+    => meet-comm *> disjoint-rdistr b>=0 c>=0 a>=0 d *> pmap2 (+) meet-comm meet-comm
+
+  \lemma disjoint-rdistr {a b c : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (c>=0 : 0 <= c) (d : a ∧ b = 0) : (a + b) ∧ c = a ∧ c + b ∧ c
+    => \have dc : (a ∧ c) ∧ (b ∧ c) = 0 => <=-antisymmetric (meet-monotone meet-left meet-left <=∘ =_<= d) (meet-univ (meet-univ a>=0 c>=0) (meet-univ b>=0 c>=0))
+       \in pmap (__ ∧ c) (modularity *> pmap (_ +) d *> zro-right) *> meet-rdistr *> inv (modularity *> pmap (_ +) dc *> zro-right)
+
+  \lemma part+-split {a b : E} : a = part+ (a - b) + a ∧ b
+    => inv $ pmap (+ _) part+_diff_meet *> +-assoc *> pmap (a +) negative-left *> zro-right
+
+} \where {
+    -- TODO: Make constructor classes
+    \protected \class FromMeet \extends LatticeAbGroup
+      | join a b => negative (negative a ∧ negative b)
+      | join-left => inv negative-isInv =<= negative_<= meet-left
+      | join-right => inv negative-isInv =<= negative_<= meet-right
+      | join-univ x<=z y<=z => negative_<= (meet-univ (negative_<= x<=z) (negative_<= y<=z)) <=∘ =_<= negative-isInv
+
+    \protected \class FromJoin \extends LatticeAbGroup
+      | meet a b => negative (negative a ∨ negative b)
+      | meet-left => negative_<= join-left <=∘ =_<= negative-isInv
+      | meet-right => negative_<= join-right <=∘ =_<= negative-isInv
+      | meet-univ z<=x z<=y => inv negative-isInv =<= negative_<= (join-univ (negative_<= z<=x) (negative_<= z<=y))
+  }

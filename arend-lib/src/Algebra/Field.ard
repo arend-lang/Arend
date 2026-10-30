@@ -2,6 +2,7 @@
 \import Algebra.Domain.GCD
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Pointed
@@ -10,6 +11,7 @@
 \import Algebra.Ring.Local
 \import Data.Or
 \import Equiv
+\import Function (IsInj)
 \import Function.Meta ($)
 \import Logic
 \import Meta
@@ -170,3 +172,6 @@
       | func-* => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-* *> pmap2 (*) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
     }) (IsEquiv.ret-equiv e) D
 }
+
+\lemma field-isInj {K : Field} {R : NonZeroRing} {f : RingHom K R} : IsInj f
+  => f.injective \lam p => K.#0-tight \lam a#0 => R.inv-nonZero (f.func-Inv a#0) p

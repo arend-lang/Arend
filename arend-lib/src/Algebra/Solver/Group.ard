@@ -1,7 +1,6 @@
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Solver \using (>>=-consistent)
-\import Algebra.Solver.Monoid
 \import Arith.Fin.Order
 \import Data.Bool
 \import Data.List

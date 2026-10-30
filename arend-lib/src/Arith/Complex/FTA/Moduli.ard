@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -22,14 +23,15 @@
 \import Logic.Meta
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set.Fin
 \import Topology.MetricSpace.Multiset
 \import Topology.NormedAbGroup
+\import Algebra.Semiring.Properties
+\import Algebra.Ordered.Properties
+\import Data.Fin
 \open Monoid (pow)
 
 {- | **The shrinking lemma (Richman's spectrum).** Two `delta`-near factorisations of the

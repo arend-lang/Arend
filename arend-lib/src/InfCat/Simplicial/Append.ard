@@ -17,7 +17,6 @@
 \import InfCat.Functor.Conservative
 \import InfCat.Groupoid
 \import Equiv.Sigma
-\import Logic.Unique
 \import InfCat.Nerve.Nerve
 \import InfCat.Paths
 \import InfCat.Simplicial.Complete

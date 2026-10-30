@@ -1,8 +1,5 @@
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.Semiring
-\import Algebra.StrictlyOrdered
 \import Arith.Complex
 \import Arith.Complex.Norm
 \import Arith.Nat
@@ -16,6 +13,7 @@
 \import Order.Biordered
 \import Order.StrictOrder
 \import Paths
+\import Algebra.StrictlyOrdered.Properties
 
 {- | Every nonzero complex number has a $k$-th root for $k \geq 1$.
 

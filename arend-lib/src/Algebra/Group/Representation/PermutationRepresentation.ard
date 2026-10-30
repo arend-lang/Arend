@@ -4,12 +4,10 @@
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.SubLRepres
 \import Algebra.Module
-\import Algebra.Module.LinearMap
 \import Algebra.Module.PowerLModule
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Category.Functor
 \import Function.Meta
 \import Logic
 \import Logic.Meta

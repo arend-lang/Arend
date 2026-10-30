@@ -1,0 +1,63 @@
+\import Algebra.Group.SubGroup
+\import Algebra.Meta.Simplify
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.MPoly
+\import Algebra.Ring.Poly()
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set.SetHom
+\import Algebra.Monoid.Properties
+
+\func .Kernel (h : RingHom) : TIdeal Dom \cowith
+  | SubAddGroup => KernelAddGroup h
+  | ideal-left A0 => rewrite (func-*, A0, zro_*-right) idp
+  | ideal-right A0 => rewrite (func-*, A0, zro_*-left) idp
+
+\lemma func-Ideal_closure {R S : CRing} (f : PseudoRingHom R S) {J : \Set} {g : J -> R} {x : R} (gx : Ideal.closure g x) : Ideal.closure (\lam j => f (g j)) (f x) \elim gx
+  | inP (l,p) => inP (map (\lam s => (f s.1, s.2)) l, pmap f p *> f.func-BigSum *> pmap S.BigSum (exts \lam j => f.func-*))
+
+\lemma func-Ideal_sclosure {R S : CRing} (f : PseudoRingHom R S) {U : R -> \Prop} {x : R} (Ux : Ideal.sclosure U x) : Ideal.sclosure (SetIm f U) (f x) \elim Ux
+  | inP (l,p) => inP (map (\lam s => later (f s.1, (f s.2.1, SetIm-con s.2.2))) l, pmap f p *> f.func-BigSum *> pmap S.BigSum (exts \lam j => f.func-*))
+
+\lemma func-Ideal_lclosure {R S : CRing} (f : PseudoRingHom R S) {l : Array R} {x : R} (lx : Ideal.lclosure l x) : Ideal.lclosure (\lam j => f (l j)) (f x)
+  => func-Ideal_closure f {_} {l} lx
+
+\func func-Ideal {R S : CRing} (f : PseudoRingHom R S) (I : Ideal S) : Ideal R \cowith
+  | contains x => I (f x)
+  | contains_zro => transportInv I f.func-zro I.contains_zro
+  | contains_+ Ifx Ify => transportInv I f.func-+ $ I.contains_+ Ifx Ify
+  | ideal-left Ifa => transportInv I f.func-* $ I.ideal-left Ifa
+
+\type isAlgebraGenerated {R E : CRing} (f : RingHom R E) (l : Array E) : \Prop
+  => \Pi (x : E) -> ∃ (p : MPoly (Fin l.len) R) (x = mPolyEval l (mPoly-map f p))
+
+\type isFiniteAlgebra {R E : CRing} (f : RingHom R E) : \Prop
+  => ∃ (l : Array E) (isAlgebraGenerated f l)
+
+\open Algebra.Ring.Poly
+\open RingHom
+\open SetHom
+
+\lemma isAlgebraGenerated-comp {R E S : CRing} {f : RingHom R E} {g : RingHom E S} {a : E} {l : Array S}
+                               (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) (gg : isAlgebraGenerated g l) : isAlgebraGenerated (g ∘ f) (g a :: l)
+  => \lam x =>
+      \have | (inP (p,pq)) => gg x
+            | (inP ((s : MPoly (Fin l.len) (PolyAlgebra R)),sq)) => MPoly-surj {Fin l.len} (polyMapEvalRingHom f a) fg p
+      \in inP (MPoly_Fin-suc'.retHom s, pq *> rewrite (inv sq, MPoly_Fin-suc'.map-comm) (pmap (mPolyEval l)
+          (inv mPoly-map-comp *> pmap (mPoly-map __ s) (exts \lam p => unfold (inv polyEval_polyMap) *> pmap (polyEval __ _) (polyMap-comp f g)) *> mPoly-map-comp {_} {PolyAlgebra R} {PolyAlgebra S}) *> inv MPoly_Fin-suc'.eval-comm))
+
+\lemma isAlgebraGenerated-poly {R E : CRing} {f : RingHom R E} {a : E}
+                               (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) : isAlgebraGenerated f (a :: nil)
+  => isAlgebraGenerated-comp {R} {E} {E} {f} {RingHom.id} {a} {nil} fg \lam x => inP (mConst x, simplify)
+
+\func KernelC {R : CRing} {S : Ring} (f : RingHom R S) : Ideal R \cowith
+  | TIdeal => f.Kernel

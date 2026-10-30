@@ -1,5 +1,5 @@
 \import InfCat.Limit.BaseHCat
-\import Logic.Unique
+\import Equiv
 
 \type IsTerminal {C : \Cat} (t : C) : \Prop
   => \Pi (y : C) -> Contr (y ~> t)

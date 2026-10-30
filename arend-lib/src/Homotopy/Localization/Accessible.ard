@@ -1,7 +1,6 @@
 \import Algebra.Meta
 \import Data.Or
 \import Equiv
-\import Equiv.Path
 \import Equiv.Sigma
 \import Function
 \import Function.Meta

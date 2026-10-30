@@ -1,4 +1,3 @@
-\import Data.Bool
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -6,13 +5,12 @@
 \import Operations
 \import Order.Lattice
 \import Order.PartialOrder
-\import Paths
 \import Paths.Meta
 \import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Product
-\import Topology.TopSpace.Product
 \import Topology.UniformSpace
+\import Set.Set.Lattice
 \open ClosurePrecoverSpace
 \open Set
 

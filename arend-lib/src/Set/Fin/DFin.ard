@@ -19,3 +19,6 @@
       => \lam f inj a => TruncP.map (A.pigeonhole< (\lam i => iterr f i a))
           \lam t => (_, inv $ iterr_inj f inj a t.1 t.2 t.3 t.4)
   }
+
+\lemma .isEquiv (P : PigeonholeSet) (f : P -> P) (inj : IsInj f) : IsEquiv f
+  => isDFin.isEquiv (isDFin.fromPigeonhole P) f inj

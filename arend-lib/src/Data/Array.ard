@@ -1,4 +1,4 @@
-\import Algebra.Meta
+\import Algebra.Meta.Base
 \import Arith.Nat
 \import Data.Bool
 \import Data.Fin
@@ -14,7 +14,6 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\import Set.Fin
 
 \func mkArray {A : \Type} {n : Nat} (f : Fin n -> A) => \new Array A n f
 
@@ -58,7 +57,7 @@
 
     \func split-index {n m : Nat} (i : Fin (n Nat.+ m))
       : Or (\Sigma (j : Fin n) (i = fin-inc j)) (\Sigma (j : Fin m) (i = fin-raise j))
-      => rewriteI (OrFin.aux.ret_f i) $ cases (OrFin.aux.f i) \with {
+      => rewriteI (fin-split.ret_f i) $ cases (fin-split.f i) \with {
         | inl j => inl (j,idp)
         | inr j => inr (j,idp)
       }
@@ -696,10 +695,6 @@
     | no q => count_++
   }
 
-\lemma count_Big++ {A : DecSet} {ls : Array (Array A)} {a : A} : count (Big (++) nil ls) a = NatSemiring.BigSum (map (count __ a) ls) \elim ls
-  | nil => idp
-  | l :: ls => count_++ *> pmap (_ Nat.+) count_Big++
-
 \lemma count-all {A : DecSet} {l : Array A} {a : A} (p : \Pi (j : Fin l.len) -> l j = a) : count l a = l.len \elim l
   | nil => idp
   | x :: l => rewrite (decideEq=_reduce $ inv $ p 0) $ pmap suc $ count-all \lam j => p (suc j)
@@ -771,7 +766,7 @@
 
 \func fit_>= {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : l.len <= j) : fit a l j = a \elim n, l, j
   | suc n, nil, j => idp
-  | suc n, b :: l, 0 => absurd linarith
+  | suc n, b :: l, 0 => absurd (p NatOrder.zero<suc)
   | suc n, b :: l, suc j => fit_>= l (suc<=suc.conv p)
 
 \func fit_<' {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin l.len} (p : j NatOrder.< n) : fit a l (toFin j p) = l j \elim n, l, j, p
@@ -857,7 +852,7 @@
   | suc n, a :: l => pmap (a ::) take_drop
 
 \func singleAt {A : \Type} {n : Nat} (j : Fin n) (value def : A) : Array A n \cowith
-  | at i => \case decideEq j i \with {
+  | at i => \case decideEq (j : Nat) i \with {
     | yes _ => value
     | no _ => def
   }
@@ -871,8 +866,8 @@
       | suc n, suc j => exts (\case \elim __ \with {
         | 0 => idp
         | suc k => mcases {2} \with {
-          | yes p => rewrite (decideEq=_reduce $ pmap fsuc p) idp
-          | no q => rewrite (decideEq/=_reduce $ fsuc/= q) idp
+          | yes p => rewrite (decideEq=_reduce $ pmap suc p) idp
+          | no q => rewrite (decideEq/=_reduce \lam s => q (pmap pred s)) idp
         }
       }) *> pmap {Array A n} (def :: __) char
   }

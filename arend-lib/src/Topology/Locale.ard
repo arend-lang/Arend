@@ -6,7 +6,6 @@
  -}
 
 \import Algebra.Meta
-\import Algebra.Ordered
 \import Category.Functor
 \import Category.Topos.Sheaf.Site
 \import Category.Topos.Sheaf.SiteHom
@@ -22,12 +21,13 @@
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths
 \import Paths.Meta
-\import Set.Fin
 \import Set.Fin.KFinSetOf
 \import Set.Set
 \import Topology.RatherBelow
+\import Data.Fin
 \open MeetSemilattice
 \open JoinSemilattice
 \open Locale
@@ -133,7 +133,7 @@
 
   \lemma <<_IJoin {x y : E} (x<<y : x << y) {J : \Type} {g : J -> E} (y<=g : y <= IJoin g) : ∃ (l : Array J) (x <= IJoin \lam j => g (l j))
     => \case x<<y y<=g \with {
-      | inP (l,gl,x<=l) => \case FinSet.finiteAC (\lam j => gl j) \with {
+      | inP (l,gl,x<=l) => \case finiteAC (\lam j => gl j) \with {
         | inP h => inP (\lam j => (h j).1, x<=l <=∘ IJoin-univ \lam j => inv (h j).2 =<= IJoin-cond j)
       }
     }
@@ -287,7 +287,7 @@
 
       \lemma compact-char {b : restrict a} : (restrict a).IsCompactOpen b <-> IsCompactOpen b.1
         => (\lam bc {U} b<=U => \case bc {\lam x => ∃ (y : U) (x.1 <= y)} (meet-univ <=-refl b<=U <=∘ Join-ldistr>= <=∘ SJoin-univ \lam {c} Uc => SJoin-conde (later (b.1 ∧ c, meet-left <=∘ b.2)) $ inP $ later (c, Uc, meet-right)) \with {
-          | inP (l,l<=U,b<=l) => \case FinSet.finiteAC l<=U \with {
+          | inP (l,l<=U,b<=l) => \case finiteAC l<=U \with {
             | inP g => inP (\lam j => (g j).1, \lam j => (g j).2, b<=l <=∘ Join-univ (SetIm-elim $ TSetIm-elim \lam j => (g j).3 <=∘ IJoin-cond j))
           }
         }, \lam bc {U} b<=U => \case bc {\lam x => \Sigma (p : x <= a) (U (x,p))} (b<=U <=∘ SJoin-univ \lam {c} Uc => Join-cond $ later (c.2, Uc)) \with {

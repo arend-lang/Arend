@@ -1,10 +1,12 @@
 package org.arend.naming.scope;
 
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -35,6 +37,12 @@ public class LazyScope implements Scope {
   }
 
   @Nullable
+  @Override
+  public @NotNull List<GlobalReferable> resolveExtensions(@NotNull String name) {
+    updateScope();
+    return myScope.resolveExtensions(name);
+  }
+
   @Override
   public Scope resolveNamespace(@NotNull String name) {
     return new LazyScope(() -> {

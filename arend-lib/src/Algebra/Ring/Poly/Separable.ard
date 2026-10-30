@@ -1,6 +1,7 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring

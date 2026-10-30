@@ -27,7 +27,7 @@ public class Names {
   public static final FullName PRECAT = fullName(getCategoryModule(), new LongName("Precat"));
   public static final FullName LINEAR_ORDER = fullName(getLinearOrderModule(), new LongName("LinearOrder"));
   public static final FullName LESS = fullName(getStrictOrderModule(), new LongName("StrictPoset", "<"));
-  public static final FullName ORDERED_ASSOC_ALGEBRA = fullName(getOrderedModule(), new LongName("OrderedAAlgebra"));
+  public static final FullName ORDERED_ASSOC_ALGEBRA = fullName(getOrderedRingModule(), new LongName("OrderedAAlgebra"));
   public static final FullName LEFT_MODULE = fullName(getModuleModule(), new LongName("LModule"));
   public static final FullName INT_RING = fullName(getIntModule(), new LongName("IntRing"));
   public static final FullName NAT_SEMIRING = fullName(getNatModule(), new LongName("NatSemiring"));
@@ -130,6 +130,14 @@ public class Names {
 
   public static ModulePath getOrderedModule() {
     return new ModulePath("Algebra", "StrictlyOrdered");
+  }
+
+  public static ModulePath getOrderedGroupModule() {
+    return new ModulePath("Algebra", "StrictlyOrdered", "Group");
+  }
+
+  public static ModulePath getOrderedRingModule() {
+    return new ModulePath("Algebra", "StrictlyOrdered", "Ring");
   }
 
   public static ModulePath getPointedModule() {

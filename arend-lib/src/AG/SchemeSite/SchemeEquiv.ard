@@ -4,7 +4,6 @@
 \import AG.Scheme
 \import AG.SchemeSite
 \import AG.SchemeSite.LRLSchemeSiteHom
-\import AG.SchemeSite.SchemeSiteHom
 \import AG.SchemeSite.SchemeSitePrecat
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
@@ -21,7 +20,6 @@
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
 \import Paths
-\import Relation.Equivalence
 \import Topology.Locale.PreorderSite
 \open LRLSchemeSiteHom
 

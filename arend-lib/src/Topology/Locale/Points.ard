@@ -9,7 +9,6 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set
 \import Set.Filter
 \import Set.Set
 \import Topology.Locale
@@ -17,6 +16,8 @@
 \import Topology.Locale.PreorderSite
 \import Topology.TopSpace
 \import Topology.TopSpace.TopSpaceCategory
+\import Order.PartialOrder.PosetHom
+\import Set.Set.Lattice
 \open SiteLocale
 \open Cover
 

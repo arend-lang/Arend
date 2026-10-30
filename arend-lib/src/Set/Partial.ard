@@ -1,10 +1,8 @@
 \import Algebra.Monoid
 \import Function.Meta
 \import Logic
-\import Meta
 \import Paths
 \import Paths.Meta
-\import Set
 
 \record Partial (E : \Set) {
   | isDefined : \Prop

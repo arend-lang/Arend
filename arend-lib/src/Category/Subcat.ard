@@ -4,7 +4,6 @@
 \import Category.Limit
 \import Equiv
 \import Function.Meta
-\import Homotopy.Fibration
 \import Logic
 \import Meta
 \import Paths

@@ -1,8 +1,4 @@
-\import Equiv
-\import Equiv.Path
-\import Logic
 \import Paths
-\import Paths.Meta
 
 -- # Prop
 
@@ -15,8 +11,6 @@
     \use \level levelProp (A : \Cat) (e e' : isProp A) : e = e'
       => path \lam i a a' => =>isSet e a a' (e a a') (e' a a') i
 
-    \lemma equiv {A B : \Type} {f : A -> B} (e : IsEquiv f) (As : isProp B) : isProp A
-      => \lam a a' => inv (IsEquiv.ret_f e) *> pmap (IsEquiv.ret e) (As _ _) *> IsEquiv.ret_f e
   }
 
 \func isSet (A : \Cat) => \Pi (a a' : A) (p q : a = a') -> p = q
@@ -24,8 +18,6 @@
     \use \level levelProp {A : \Cat} (e e' : isSet A) : e = e'
       => path \lam i a a' => isProp.levelProp (a = a') (e a a') (e' a a') i
 
-    \lemma equiv {A B : \Type} {f : A -> B} (e : IsEquiv f) (As : isSet B) : isSet A
-      => \lam a a' => isProp.equiv (pmapIsEquiv e) (As _ _)
   }
 
 -- | hLevels are closed under pi-types
@@ -34,66 +26,5 @@
 
 -- # Contr
 
-\class Contr (A : \Cat) (center : A) (contraction : \Pi (a' : A) -> center = a') {
-  \sfunc toSigma : \Sigma (x : A) (\Pi (a : A) -> x = a)
-    => (center, contraction)
-} \where {
-    \func make {A : \Cat} (a : A) (p : \Pi (a' : A) -> a = a')
-      => \new Contr A a p
-
-    \use \level levelProp (A : \Cat) (c1 c2 : Contr A) : c1 = c2 => path (\lam i => \new Contr A {
-      | center => c1.contraction c2.center i
-      | contraction a' => pathOver {\lam i => c1.contraction c2.center i = a'} {c1.contraction a'} {c2.contraction a'}
-          (isProp.=>isSet (\lam x y => inv (c1.contraction x) *> c1.contraction y) c2.center a' _ _) i
-    })
-
-    \lemma Contr_QEquiv {A B : \Cat} (e : QEquiv {A} {B}) (c : Contr A) : Contr B \cowith
-      | center => e c.center
-      | contraction b => e.adjointInv (c.contraction _)
-  }
-
-\lemma contr-equiv {A B : \Cat} (Ac : Contr A) (Bc : Contr B) {f : A -> B} : IsEquiv f
-  => inP \new QEquiv {
-    | ret _ => Ac.center
-    | ret_f x => Ac.contraction x
-    | f_sec y => isContr=>isProp Bc _ _
-  }
-
-\func isContr=>isProp {A : \Cat} (c : Contr A) : isProp A
-  => \lam a a' => inv (c.contraction a) *> c.contraction a'
-
-\lemma isContr'=>isProp {A : \Cat} (c : A -> Contr A) : isProp A
-  => \lam a => isContr=>isProp (c a) a
-
-\func isProp=>isContr {A : \Cat} (p : isProp A) (a : A) : Contr A
-  => Contr.make a (p a)
-
-\lemma isProp'=>isContr {A : \Cat} (p : isProp A) (a : TruncP A) : Contr A \elim a
-  | inP a => isProp=>isContr p a
-
-\lemma isProp=>PathContr (A : \Cat) (p : isProp A) (a a' : A) : Contr (a = a')
-  => isProp=>isContr (isProp.=>isSet p a a') (p a a')
-
-\lemma pi-Contr {A : \Cat} (B : A -> \Cat) (p : \Pi (a : A) -> Contr (B a)) : Contr (\Pi (a : A) -> B a)
-  => Contr.make (\lam a => Contr.center {p a}) (\lam f => path (\lam i a => Contr.contraction {p a} (f a) @ i))
-
--- | Contr-based hLevels are closed under sigma-types
-\lemma sigma-Contr (A : Contr) (B : \Pi (a : A) -> Contr) : Contr (\Sigma (a : A) (B a))
-  => \let | a0 => A.center
-          | p0 => ((a0, (B a0).center) : \Sigma (a : A) (B a))
-     \in Contr.make p0 (\lam p => ext (A.contraction p.1, isContr=>isProp (B p.1) _ _))
-
--- | If the total space of a family over a contractible base is contractible, then so is every fiber.
-\lemma fiber-Contr {A : \Cat} (B : A -> \Type) (cA : Contr A) (cT : Contr (\Sigma (a : A) (B a))) (a : A) : Contr (B a)
-  => \have c => transport B (isContr=>isProp cA cT.center.1 a) cT.center.2
-     \in Contr.make c \lam b =>
-          \have t => sigmaEquiv B (a,c) (a,b) (isContr=>isProp cT _ _)
-          \in pmap (transport B __ c) (isProp.=>isSet (isContr=>isProp cA) a a idp t.1) *> t.2
-
 \func isProp-retract {A B : \Cat} (f : B -> A) (g : A -> B) (gf : \Pi (b : B) -> g (f b) = b) (p : isProp A) : isProp B
   => \lam b b' => inv (gf b) *> pmap g (p (f b) (f b')) *> gf b'
-
--- | Paths over a path in a family of contractible types form a contractible type.
-\lemma contr-pathOver {A : \Cat} (C : A -> \Cat) (Cc : \Pi (a : A) -> Contr (C a)) {a a' : A} (q : a = a') (u : C a) (v : C a')
-  : Contr (Path (\lam j => C (q j)) u v) \elim q
-  | idp => isProp=>PathContr _ (isContr=>isProp (Cc a)) u v

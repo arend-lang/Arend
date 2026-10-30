@@ -1,0 +1,75 @@
+\import Data.Array
+\import Data.Or
+\import Function.Meta ($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.Lattice.Properties
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open TotalOrder
+\open LinearOrder
+\open StrictPoset
+
+\lemma .Big01_meet-isMin (LO : TotalOrder) (l : Array LO) (x : LO) : (\Sigma (j : Fin l.len) (Big (∧) x l = l j)) || (Big (∧) x l = x) \elim l
+  | nil => byRight idp
+  | a :: l => \case meet-isMin a (Big (∧) x l), Big01_meet-isMin l x \with {
+    | byLeft r, _ => byLeft (0, r)
+    | byRight r, byLeft q => byLeft (suc q.1, r *> q.2)
+    | byRight r, byRight q => byRight (r *> q)
+  }
+
+\lemma .Big_meet-isMin (LO : TotalOrder) {n : Nat} (l : Array LO (suc n)) : ∃ (j : Fin (suc n)) (Big_∧ l = l j) \elim l
+  | a :: l => \case Big01_meet-isMin l a \with {
+    | byLeft r => inP (suc r.1, r.2)
+    | byRight r => inP (0, r)
+  }
+
+\lemma .Big01_join-isMax (LO : TotalOrder) (l : Array LO) (x : LO) : (\Sigma (j : Fin l.len) (Big (∨) x l = l j)) || (Big (∨) x l = x) \elim l
+  | nil => byRight idp
+  | a :: l => \case join-isMax a (Big (∨) x l), Big01_join-isMax l x \with {
+    | byLeft r, _ => byLeft (0, r)
+    | byRight r, byLeft q => byLeft (suc q.1, r *> q.2)
+    | byRight r, byRight q => byRight (r *> q)
+  }
+
+\lemma .Big_join-isMax (LO : TotalOrder) {n : Nat} (l : Array LO (suc n)) : ∃ (j : Fin (suc n)) (Big_∨ l = l j) \elim l
+  | a :: l => \case Big01_join-isMax l a \with {
+    | byLeft r => inP (suc r.1, r.2)
+    | byRight r => inP (0, r)
+  }
+
+\lemma .Big_meet_< (LO : LinearLattice) {l : Array LO} {x c : LO} (h : Big (∧) x l < c)
+  : (x < c) || ∃ (i : Fin l.len) (l i < c) \elim l
+  | nil => byLeft h
+  | :: a l => \case <-comparison a h \with {
+    | byLeft r => \case Big_meet_< (transport (< c) (LinearOrder.meet/=left (<_/= r)) h) \with {
+      | byLeft x<c => byLeft x<c
+      | byRight (inP (i, p)) => byRight (inP (suc i, p))
+    }
+    | byRight a<c => byRight (inP (0,a<c))
+  }
+
+\func findMin {A : LinearOrder.Dec} {n : Nat} (l : Array A (suc n)) : \Sigma (j : Fin (suc n)) (Big_∧ l = l j) \elim n, l
+  | 0, a :: l => (0, idp)
+  | suc n, a :: a' :: l => \case dec<_<= a' (Big (∧) a l) \with {
+    | inl r => (1, <=-antisymmetric meet-left $ meet-univ <=-refl $ <_<= r)
+    | inr r => \case findMin (a :: l) \with {
+      | (0, p) => (0, rewrite p $ <=-antisymmetric meet-right $ meet-univ (rewrite p in r) <=-refl)
+      | (suc j, p) => (suc (suc j), rewrite p $ <=-antisymmetric meet-right $ meet-univ (rewrite p in r) <=-refl)
+    }
+  }
+
+\func findMax {A : LinearOrder.Dec} {n : Nat} (l : Array A (suc n)) : \Sigma (j : Fin (suc n)) (Big_∨ l = l j) \elim n, l
+  | 0, a :: l => (0, idp)
+  | suc n, a :: a' :: l => \case dec<_<= a' (Big (∨) a l) \with {
+    | inl r => \case findMax (a :: l) \with {
+      | (0, p) => (0, rewrite p $ <=-antisymmetric (join-univ (<_<= $ rewrite p in r) <=-refl) join-right)
+      | (suc j, p) => (suc (suc j), rewrite p $ <=-antisymmetric (join-univ (<_<= $ rewrite p in r) <=-refl) join-right)
+    }
+    | inr r => (1, <=-antisymmetric (join-univ <=-refl r) join-left)
+  }

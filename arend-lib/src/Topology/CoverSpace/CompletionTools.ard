@@ -1,19 +1,14 @@
-\import Arith.Real.UpperReal
 \import Equiv
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Order.PartialOrder
-\import Paths
 \import Paths.Meta
 \import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
 \import Topology.CoverSpace.StronglyComplete
-\import Topology.MetricSpace.UpperReal
-\import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \open ProductCoverSpace
@@ -43,12 +38,6 @@
 
 \lemma unique3 {X : CoverSpace} (f g : ContMap (Completion X `ProductCoverSpace` Completion X `ProductCoverSpace` Completion X) (Completion X)) (p : \Pi (x y z : X) -> f ((pointCF x, pointCF y), pointCF z) = g ((pointCF x, pointCF y), pointCF z)) {x y z : RegularCauchyFilter X} : f ((x,y),z) = g ((x,y),z)
   => dense-lift-unique (prod (prod completion completion) completion) (ProductTopSpace.prod.isDense (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) completion.isDenseEmbedding.1) f g (\lam s => p s.1.1 s.1.2 s.2) ((x,y),z)
-
-\lemma unique1_<= {X : CoverSpace} (f g : ContMap (Completion X) ExUpperRealMetric) (p : \Pi (x : X) -> f (pointCF x) <= g (pointCF x)) {x : RegularCauchyFilter X} : f x <= g x
-  => dense_<= upper-join-uniform completion completion.isDenseEmbedding.1 f g p x
-
-\lemma unique2_<= {X : CoverSpace} (f g : ContMap (Completion X `ProductCoverSpace` Completion X) ExUpperRealMetric) (p : \Pi (x y : X) -> f (pointCF x, pointCF y) <= g (pointCF x, pointCF y)) {x y : RegularCauchyFilter X} : f (x,y) <= g (x,y)
-  => dense_<= upper-join-uniform (prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) f g (\lam s => p s.1 s.2) (x,y)
 
 \lemma completion-lift-neighborhood2 {X Y : CoverSpace} {Z : CompleteCoverSpace} (g : CoverMap (ProductCoverSpace X Y) Z) (F : Completion X) (G : Completion Y) (W : Set Z)
   : single (cauchy-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) g (F,G)) <=< W <->

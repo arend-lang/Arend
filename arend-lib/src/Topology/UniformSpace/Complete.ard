@@ -12,6 +12,7 @@
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
 \import Topology.UniformSpace
+\import Set.Set.Lattice
 \open ClosurePrecoverSpace
 \open Completion
 

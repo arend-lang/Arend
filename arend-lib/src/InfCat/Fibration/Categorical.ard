@@ -1,6 +1,5 @@
 \import Equiv
 \import Equiv.Sigma
-\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
 \import InfCat.Paths

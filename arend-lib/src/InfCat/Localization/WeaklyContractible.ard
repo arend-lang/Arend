@@ -4,7 +4,6 @@
 \import Equiv
 \import Function.Meta
 \import InfCat.Fibration.Contravariant.RightFib
-\import InfCat.Functor.Adjunction
 \import InfCat.Functor.Equiv
 \import InfCat.Groupoid
 \import InfCat.Limit.Initial
@@ -16,7 +15,6 @@
 \import InfCat.Localization.Realization
 \import InfCat.Opposite
 \import InfCat.Rezk
-\import Logic.Unique
 \import Logic
 \import Paths
 

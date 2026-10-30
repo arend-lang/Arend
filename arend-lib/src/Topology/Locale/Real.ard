@@ -1,12 +1,8 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Arith.Rat
-\import Category
-\import Data.Array
-\import Data.Bool
 \import Data.Or
-\import Equiv
 \import Function.Meta
 \import Logic
 \import Logic.Meta

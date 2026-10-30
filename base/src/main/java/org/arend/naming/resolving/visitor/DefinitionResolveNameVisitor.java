@@ -258,7 +258,36 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, visitLevelParameters(def.getLevelParameters()));
     exprVisitor.visitParameters(def.getParameters(), null);
+    if (def.getData().isDynamicExtension()) {
+      makeReceiverImplicit(def);
+    }
     return exprVisitor;
+  }
+
+  /**
+   * If the first parameter of an extension function is a class or a record, then it becomes implicit.
+   * Such a function behaves as a dynamic definition of this class: it can be invoked as {@code foo}, {@code foo {x}}, or {@code x.foo}.
+   */
+  private static void makeReceiverImplicit(Concrete.BaseFunctionDefinition def) {
+    if (def.getParameters().isEmpty()) return;
+    Concrete.Parameter param = def.getParameters().getFirst();
+    if (!def.implicitReceiver && param.isExplicit() && param.getReferableList().size() == 1 && param.getType() != null && isClassReference(param.getType())) {
+      param.setExplicit(false);
+      def.implicitReceiver = true;
+    }
+  }
+
+  private static boolean isClassReference(Concrete.Expression expr) {
+    while (true) {
+      if (expr instanceof Concrete.AppExpression appExpr) {
+        expr = appExpr.getFunction();
+      } else if (expr instanceof Concrete.ClassExtExpression classExt) {
+        expr = classExt.getBaseClassExpression();
+      } else {
+        break;
+      }
+    }
+    return expr instanceof Concrete.ReferenceExpression refExpr && RedirectingReferable.getOriginalReferable(refExpr.getReferent()) instanceof GlobalReferable global && global.getKind().isRecord();
   }
 
   @Override
@@ -716,7 +745,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       LongUnresolvedReference reference = namespaceCommand.module().copy();
       Scope importedScope = namespaceScope.getCommandPathSubScope(namespaceCommand);
       List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
-      reference.resolve(importedScope, resolvedRefs, myResolverListener);
+      // The namespace of an extension function can be opened too
+      reference.resolve(namespaceCommand.isImport() ? importedScope : new StaticOrExtensionScope(importedScope), resolvedRefs, myResolverListener);
       if (myResolverListener != null) {
         myResolverListener.namespaceResolved(namespaceCommand, resolvedRefs);
       }
@@ -765,7 +795,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
         for (ConcreteNamespaceCommand.NameHiding nameHiding : namespaceCommand.hidings()) {
           Referable oldRef = nameHiding.reference();
-          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext(), myResolverListener);
+          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new StaticOrExtensionScope(new PrivateFilteredScope(curScope, true)), nameHiding.scopeContext(), myResolverListener);
           if (myResolverListener != null) {
             myResolverListener.hidingResolved(nameHiding, oldRef, ref);
           }

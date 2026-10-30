@@ -1,5 +1,4 @@
 \import Equiv
-\import Equiv.HalfAdjoint
 \import Homotopy.Connected
 \import Homotopy.Cube
 \import Homotopy.Join

@@ -1,8 +1,8 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
-\import Algebra.Linear.Matrix
-\import Algebra.Linear.Matrix.Smith (M~)
 \import Algebra.Meta
+\import Algebra.Meta.Base
+\import Algebra.Meta.Simplify
 \import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
@@ -10,12 +10,10 @@
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Semiring
-\import Arith.Fin.Order
 \import Arith.Nat
-\import Category
 \import Data.Array
 \import Data.Array.Perm
-\import Data.Fin (nat_fin_=)
+\import Data.Fin (nat_fin_=, finiteAC)
 \import Data.Or
 \import Equiv
 \import Function \hiding (id, o)
@@ -29,8 +27,12 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
-\open AddMonoid
 \open AddMonoidHom \hiding(id)
+\import Algebra.Algebra
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Module.Basis
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 
 \record LinearMap {R : Ring} \extends AddGroupHom {
   \override Dom : LModule R
@@ -44,13 +46,13 @@
   \lemma inj->independent {l : Array Dom} (li : LModule.IsIndependent (map func l)) (inj : IsInj func) : LModule.IsIndependent l
     => \lam c p j => li c (inv (linearComb {_} {c}) *> pmap func p *> func-zro) j
 
-  \lemma IsIndependentSet_func {J : \Set} {g : J -> Dom} (fgi : LModule.IsIndependentSet (\lam j => func (g j))) : LModule.IsIndependentSet g
+  \lemma IsIndependentSet_func {J : \Set} {g : J -> Dom} (fgi : IsIndependentSet (\lam j => func (g j))) : IsIndependentSet g
     => \lam c p => fgi c $ inv (func-BigSum *> pmap BigSum (exts \lam j => func-*c)) *> pmap func p *> func-zro
 
   \lemma IsIndependentDec_func {J : DecSet} {g : J -> Dom} (fgi : LModule.IsIndependentDec (\lam j => func (g j))) : LModule.IsIndependentDec g
-    => LModule.IsIndependentSet<->IsIndependentDec.1 $ IsIndependentSet_func $ LModule.IsIndependentSet<->IsIndependentDec.2 fgi
+    => IsIndependentSet<->IsIndependentDec.1 $ IsIndependentSet_func $ IsIndependentSet<->IsIndependentDec.2 fgi
 
-  \lemma IsIndependentSet-left-inj {J : \Set} (inj : IsInj func) {g : J -> Dom} (gi : LModule.IsIndependentSet g) : LModule.IsIndependentSet (\lam j => func (g j))
+  \lemma IsIndependentSet-left-inj {J : \Set} (inj : IsInj func) {g : J -> Dom} (gi : IsIndependentSet g) : IsIndependentSet (\lam j => func (g j))
     => \lam c p => gi c $ inj $ func-BigSum *> pmap BigSum (exts \lam j => func-*c) *> p *> inv func-zro
 } \where {
   \protected \func id {R : Ring} {M : LModule R} : LinearMap M M \cowith
@@ -79,19 +81,19 @@
          | inP (c,q) => rewrite q $ f.func-BigSum *> pmap BigSum (exts \lam j => f.func-*c *> pmap (c j *c) (p j) *> inv g.func-*c) *> inv g.func-BigSum
        }
 
-  \open LModule.IsIndependentSet
+  \open IsIndependentSet
 
   \func extendSet {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} (ub : U.IsBasisSet u) (v : J -> V) : LinearMap U V \cowith
-    | func x => (LModule.basisSet-split ub v x).1
-    | func-+ {x} {y} => \case (LModule.basisSet-split ub v (x + y)).2, (LModule.basisSet-split ub v x).2, (LModule.basisSet-split ub v y).2 \with {
+    | func x => (basisSet-split ub v x).1
+    | func-+ {x} {y} => \case (basisSet-split ub v (x + y)).2, (basisSet-split ub v x).2, (basisSet-split ub v y).2 \with {
       | inP c1, inP c2, inP c3 => c1.3 *> ~_= v (=_~ ub.1 $ inv c1.2 *> pmap2 (+) c2.2 c3.2 *> inv (sum_++ u)) *> sum_++ v *> inv (pmap2 (+) c2.3 c3.3)
     }
-    | func-*c {r} {x} => \case (LModule.basisSet-split ub v (r *c x)).2, (LModule.basisSet-split ub v x).2 \with {
+    | func-*c {r} {x} => \case (basisSet-split ub v (r *c x)).2, (basisSet-split ub v x).2 \with {
       | inP c1, inP c2 => c1.3 *> ~_= v (=_~ ub.1 (later $ inv c1.2 *> pmap (r *c) c2.2 *> sum-ldistr u)) *> inv (sum-ldistr v) *> pmap (r *c) (inv c2.3)
     }
 
   \lemma extendSet-char {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} {ub : U.IsBasisSet u} {v : J -> V} {j : J} : extendSet ub v (u j) = v j
-    => \case (LModule.basisSet-split ub v (u j)).2 \with {
+    => \case (basisSet-split ub v (u j)).2 \with {
          | inP c => c.3 *> ~_= v {c.1} {(1,j) :: nil} (=_~ ub.1 $ inv $ zro-right *> ide_*c *> c.2) *> zro-right *> ide_*c
        }
 
@@ -100,54 +102,6 @@
          | inP c => rewrite c.2 $ func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) (p (c.1 j).2) *> inv func-*c) *> inv func-BigSum
        }
 
-  \func toMatrix {R : Ring} {U V : LModule R} {lv : Array V} (lu : Array U) (bv : V.IsBasis lv) (f : LinearMap U V) : Matrix R lu.len lv.len
-    => mkMatrix \lam i => V.basis-split bv $ f (lu i)
-
-  \lemma toMatrix_ide {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : toMatrix l lb id = 1
-    => matrixExt \lam i j => U.basis_split_basis
-
-  \lemma toMatrix_* {R : Ring} {U V W : LModule R} (f : LinearMap U V) (g : LinearMap V W) {lv : Array V} {lw : Array W} (lu : Array U) (bv : V.IsBasis lv) (bw : W.IsBasis lw)
-    : toMatrix lu bw (g ∘ f) = toMatrix lu bv f MatrixRing.product toMatrix lv bw g
-    => matrixExt \lam i j =>
-        \let h j : Array R lv.len => \lam k => V.basis-split bv (f (lu i)) k R.* W.basis-split bw (g (lv k)) j
-        \in W.basis-split-unique bw (\lam j => BigSum (h j)) (pmap g (V.basis-split-char {lv} {bv}) *> g.linearComb {V.basis-split bv (f (lu i))} *> pmap BigSum (exts \lam j => pmap (_ *c) (W.basis-split-char {lw} {bw}) *> W.*c_BigSum-ldistr *> pmap BigSum (exts \lam k => inv *c-assoc)) *> W.BigSum-transpose _ *> inv (path (\lam i' => BigSum (\new Array W lw.len \lam j => W.*c_BigSum-rdistr {\new Array R lv.len (h j)} {lw j} i')))) j
-
-  \func toLinearMap {R : Ring} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) (lv : Array V) (A : Matrix R lu.len lv.len) : LinearMap U V
-    => extend bu \lam j => MatrixRing.product-gen A (mkColumn lv) j 0
-
-  \lemma toLinearMap-basis {R : Ring} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) (lv : Array V) {A : Matrix R lu.len lv.len} {i : Fin lu.len}
-    : toLinearMap bu lv A (lu i) = BigSum (\lam j => A i j *c lv j)
-    => extend-char bu (MatrixRing.product-gen A (mkColumn lv) __ 0) i
-
-  \lemma toLinearMap_toMatrix-left {R : Ring} {U V : LModule R} {n : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv : Array V} {bv : V.IsBasis lv} {f : LinearMap U V} {u : U}
-    : toLinearMap bu' lv (toMatrix lu bv f) u = f (extend bu' lu u)
-    => inv $ func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) V.basis-split-char)
-
-  \lemma toLinearMap_toMatrix-right {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U} (bu : U.IsBasis lu) {lv lv' : Array V n} (bv : V.IsBasis lv) (bv' : V.IsBasis lv') {f : LinearMap U V} {u : U}
-    : toLinearMap bu lv' (toMatrix lu bv f) u = extend bv lv' (f u)
-    => path (\lam i => BigSum (\lam j => V.*c_BigSum-ldistr {U.basis-split bu u j} {\lam k => V.basis-split bv (f (lu j)) k *c lv' k} i)) *>
-        V.BigSum-transpose _ *> pmap BigSum (exts \lam j => pmap BigSum (exts \lam j => inv V.*c-assoc) *>
-          inv (V.*c_BigSum-rdistr {\lam k => U.basis-split bu u k * V.basis-split bv (f (lu k)) j}) *> pmap (*c _) (inv $ V.basis-split-unique bv (\lam k => BigSum (\lam j => U.basis-split bu u j * V.basis-split bv (f (lu j)) k))
-            (pmap f (U.basis-split-char {lu} {bu}) *> func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) (V.basis-split-char {lv} {bv}) *> V.*c_BigSum-ldistr *> pmap BigSum (exts \lam k => inv *c-assoc)) *>
-              V.BigSum-transpose _ *> inv (path (\lam i => BigSum \lam j => V.*c_BigSum-rdistr {\lam k => U.basis-split bu u k * V.basis-split bv (f (lu k)) j} {lv j} i))) j))
-
-  \func matrix-equiv {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv)
-    : QEquiv {LinearMap U V} {Matrix R lu.len lv.len} \cowith
-    | f => toMatrix lu bv __
-    | ret => toLinearMap bu lv
-    | ret_f f => exts \lam u => toLinearMap_toMatrix-left bu bu *> pmap f (basis-ext (extend bu \new lu) id bu.2 (\lam j => inv U.basis-split-char) u)
-    | f_sec A => matrixExt \lam i j => pmap (V.basis-split bv __ j) (V.BigSum-unique {\lam j => U.basis-split bu (lu i) j *c BigSum (\lam k => A j k *c lv k)} i (\lam k i/=k => pmap (*c _) (U.basis_split_/= i/=k) *> V.*c_zro-left) *> pmap (*c _) U.basis_split_= *> ide_*c) *> V.basis-split-unique bv (A i) idp j
-
-  \lemma toLinearMap_ide {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : toLinearMap lb l MatrixRing.ide = id {R} {U}
-    => (matrix-equiv lb lb).isInj $ (matrix-equiv lb lb).f_sec MatrixRing.ide *> inv (toMatrix_ide lb)
-
-  \lemma toLinearMap_* {R : Ring} {U V W : LModule R} {lu : Array U} {lv : Array V} {lw : Array W} (A : Matrix R lu.len lv.len) (B : Matrix R lv.len lw.len) (bu : U.IsBasis lu) (bv : V.IsBasis lv) (bw : W.IsBasis lw)
-    : toLinearMap bu lw (A MatrixRing.product B) = toLinearMap bv lw B ∘ toLinearMap bu lv A
-    => (matrix-equiv bu bw).isInj $ (matrix-equiv bu bw).f_sec (A MatrixRing.product B) *> inv (pmap2 (MatrixRing.product) ((matrix-equiv bu bv).f_sec A) ((matrix-equiv bv bw).f_sec B)) *> inv (toMatrix_* (toLinearMap bu lv A) (toLinearMap bv lw B) lu bv bw)
-
-  \lemma change-basis-left {R : Ring} {U V W : LModule R} (f : LinearMap V W) {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) (A : Matrix R lu.len lv.len)
-    : f ∘ toLinearMap bu lv A = toLinearMap bu (map f lv) A
-    => exts \lam u => f.func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) (func-BigSum *> pmap BigSum (exts \lam k => func-*c)))
 }
 
 \lemma *-linear-left {R : Ring} {x : R} : LinearMap (RingLModule R) (RingLModule R) (* x) \cowith
@@ -240,8 +194,8 @@
             \let (j,l) => SigmaFin.aux.f s \in inv (U.*c-assoc {(xc.1 j).1} {y j l} {H (z j l)}) i)
 
     \func linearComb-div {R : CRing} {x : R} {J : \Set} {g : J -> R} (c : IsLinearComb {R} {RingLModule R} x g) {d : R} (p : \Pi (j : J) -> TruncP (Monoid.LDiv d (g j))) : TruncP (Monoid.LDiv d x)
-      => \case FinSet.finiteAC (\lam j => p (c.1 j).2) \with {
-           | inP f => inP $ rewrite c.2 $ Semiring.LDiv_BigSum \lam j => later $ Monoid.LDiv.factor-right (f j)
+      => \case finiteAC (\lam j => p (c.1 j).2) \with {
+           | inP f => inP $ rewrite c.2 $ LDiv_BigSum \lam j => later $ Monoid.LDiv.factor-right (f j)
          }
 
     \func multiLinear-comb.{u} (args : Array (\Sigma (x : A) (J : \Set u) (g : J -> A) (IsLinearComb x g))) (f : Array A args.len -> B) (fm : isMultiLinear f)
@@ -345,3 +299,11 @@
                       BigSum_zro (\lam j => pmap (_ *c) (later $ pmap f insert_zro *> aux (\lam r => f (l j :: r)) (isMultiLinear.reduce f fl) l Ag a (\lam c => p (j :: c))) *> B.*c_zro-right)
       }
   }
+
+\lemma *alg-linear-left {R : CRing} {A : AAlgebra R} {b : A} : LinearMap A A (* b) \cowith
+  | func-+ => A.rdistr
+  | func-*c => inv *c-comm-left
+
+\lemma *alg-linear-right {R : CRing} {A : AAlgebra R} {a : A} : LinearMap A A (a *) \cowith
+  | func-+ => A.ldistr
+  | func-*c => inv *c-comm-right

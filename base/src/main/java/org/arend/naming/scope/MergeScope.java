@@ -1,5 +1,6 @@
 package org.arend.naming.scope;
 
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -57,6 +58,17 @@ public class MergeScope implements Scope {
       }
     }
     return null;
+  }
+
+  @Override
+  public @NotNull List<GlobalReferable> resolveExtensions(@NotNull String name) {
+    List<GlobalReferable> result = new ArrayList<>();
+    for (Scope scope : myScopes) {
+      for (GlobalReferable ref : scope.resolveExtensions(name)) {
+        if (!result.contains(ref)) result.add(ref);
+      }
+    }
+    return result;
   }
 
   @Nullable

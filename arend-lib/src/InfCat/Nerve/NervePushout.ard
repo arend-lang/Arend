@@ -27,7 +27,6 @@
 \import Logic
 \import Logic.Meta
 \import InfCat.Functor.Equiv
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 

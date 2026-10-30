@@ -1,0 +1,65 @@
+\import Algebra.Linear.Matrix
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.Properties
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Data.Array
+\import Equiv
+\import Function.Meta
+\import Paths
+\import Paths.Meta
+\open AddMonoidHom \hiding(id)
+\open LinearMap
+\open LinearMap (id, ∘)
+
+\func toMatrix {R : Ring} {U V : LModule R} {lv : Array V} (lu : Array U) (bv : V.IsBasis lv) (f : LinearMap U V) : Matrix R lu.len lv.len
+  => mkMatrix \lam i => V.basis-split bv $ f (lu i)
+
+\lemma toMatrix_ide {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : toMatrix l lb id = 1
+  => matrixExt \lam i j => U.basis_split_basis
+
+\lemma toMatrix_* {R : Ring} {U V W : LModule R} (f : LinearMap U V) (g : LinearMap V W) {lv : Array V} {lw : Array W} (lu : Array U) (bv : V.IsBasis lv) (bw : W.IsBasis lw)
+  : toMatrix lu bw (g ∘ f) = toMatrix lu bv f MatrixRing.product toMatrix lv bw g
+  => matrixExt \lam i j =>
+      \let h j : Array R lv.len => \lam k => V.basis-split bv (f (lu i)) k R.* W.basis-split bw (g (lv k)) j
+      \in W.basis-split-unique bw (\lam j => BigSum (h j)) (pmap g (V.basis-split-char {lv} {bv}) *> g.linearComb {V.basis-split bv (f (lu i))} *> pmap BigSum (exts \lam j => pmap (_ *c) (W.basis-split-char {lw} {bw}) *> W.*c_BigSum-ldistr *> pmap BigSum (exts \lam k => inv *c-assoc)) *> W.BigSum-transpose _ *> inv (path (\lam i' => BigSum (\new Array W lw.len \lam j => W.*c_BigSum-rdistr {\new Array R lv.len (h j)} {lw j} i')))) j
+
+\func toLinearMap {R : Ring} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) (lv : Array V) (A : Matrix R lu.len lv.len) : LinearMap U V
+  => extend bu \lam j => MatrixRing.product-gen A (mkColumn lv) j 0
+
+\lemma toLinearMap-basis {R : Ring} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) (lv : Array V) {A : Matrix R lu.len lv.len} {i : Fin lu.len}
+  : toLinearMap bu lv A (lu i) = BigSum (\lam j => A i j *c lv j)
+  => extend-char bu (MatrixRing.product-gen A (mkColumn lv) __ 0) i
+
+\lemma toLinearMap_toMatrix-left {R : Ring} {U V : LModule R} {n : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv : Array V} {bv : V.IsBasis lv} {f : LinearMap U V} {u : U}
+  : toLinearMap bu' lv (toMatrix lu bv f) u = f (extend bu' lu u)
+  => inv $ func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) V.basis-split-char)
+
+\lemma toLinearMap_toMatrix-right {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U} (bu : U.IsBasis lu) {lv lv' : Array V n} (bv : V.IsBasis lv) (bv' : V.IsBasis lv') {f : LinearMap U V} {u : U}
+  : toLinearMap bu lv' (toMatrix lu bv f) u = extend bv lv' (f u)
+  => path (\lam i => BigSum (\lam j => V.*c_BigSum-ldistr {U.basis-split bu u j} {\lam k => V.basis-split bv (f (lu j)) k *c lv' k} i)) *>
+      V.BigSum-transpose _ *> pmap BigSum (exts \lam j => pmap BigSum (exts \lam j => inv V.*c-assoc) *>
+        inv (V.*c_BigSum-rdistr {\lam k => U.basis-split bu u k * V.basis-split bv (f (lu k)) j}) *> pmap (*c _) (inv $ V.basis-split-unique bv (\lam k => BigSum (\lam j => U.basis-split bu u j * V.basis-split bv (f (lu j)) k))
+          (pmap f (U.basis-split-char {lu} {bu}) *> func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) (V.basis-split-char {lv} {bv}) *> V.*c_BigSum-ldistr *> pmap BigSum (exts \lam k => inv *c-assoc)) *>
+            V.BigSum-transpose _ *> inv (path (\lam i => BigSum \lam j => V.*c_BigSum-rdistr {\lam k => U.basis-split bu u k * V.basis-split bv (f (lu k)) j} {lv j} i))) j))
+
+\func matrix-equiv {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv)
+  : QEquiv {LinearMap U V} {Matrix R lu.len lv.len} \cowith
+  | f => toMatrix lu bv __
+  | ret => toLinearMap bu lv
+  | ret_f f => exts \lam u => toLinearMap_toMatrix-left bu bu *> pmap f (basis-ext (extend bu \new lu) id bu.2 (\lam j => inv U.basis-split-char) u)
+  | f_sec A => matrixExt \lam i j => pmap (V.basis-split bv __ j) (V.BigSum-unique {\lam j => U.basis-split bu (lu i) j *c BigSum (\lam k => A j k *c lv k)} i (\lam k i/=k => pmap (*c _) (U.basis_split_/= i/=k) *> V.*c_zro-left) *> pmap (*c _) U.basis_split_= *> ide_*c) *> V.basis-split-unique bv (A i) idp j
+
+\lemma toLinearMap_ide {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : toLinearMap lb l MatrixRing.ide = id {R} {U}
+  => (matrix-equiv lb lb).isInj $ (matrix-equiv lb lb).f_sec MatrixRing.ide *> inv (toMatrix_ide lb)
+
+\lemma toLinearMap_* {R : Ring} {U V W : LModule R} {lu : Array U} {lv : Array V} {lw : Array W} (A : Matrix R lu.len lv.len) (B : Matrix R lv.len lw.len) (bu : U.IsBasis lu) (bv : V.IsBasis lv) (bw : W.IsBasis lw)
+  : toLinearMap bu lw (A MatrixRing.product B) = toLinearMap bv lw B ∘ toLinearMap bu lv A
+  => (matrix-equiv bu bw).isInj $ (matrix-equiv bu bw).f_sec (A MatrixRing.product B) *> inv (pmap2 (MatrixRing.product) ((matrix-equiv bu bv).f_sec A) ((matrix-equiv bv bw).f_sec B)) *> inv (toMatrix_* (toLinearMap bu lv A) (toLinearMap bv lw B) lu bv bw)
+
+\lemma change-basis-left {R : Ring} {U V W : LModule R} (f : LinearMap V W) {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) (A : Matrix R lu.len lv.len)
+  : f ∘ toLinearMap bu lv A = toLinearMap bu (map f lv) A
+  => exts \lam u => f.func-BigSum *> pmap BigSum (exts \lam j => func-*c *> pmap (_ *c) (func-BigSum *> pmap BigSum (exts \lam k => func-*c)))

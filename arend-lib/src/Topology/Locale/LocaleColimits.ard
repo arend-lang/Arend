@@ -1,12 +1,12 @@
 \import Function.Meta
 \import Logic
-\import Meta
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Topology.Locale
+\import Order.PartialOrder.PosetHom
 \open CompleteLattice
 \open LocaleHom
 

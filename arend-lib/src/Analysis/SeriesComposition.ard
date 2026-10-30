@@ -1,10 +1,7 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Monoid.MonoidHom
-\import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Ring.FormalSeries
 \import Algebra.Ring.FormalSeries.Composition
@@ -16,8 +13,6 @@
 \import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
-\import Arith.Real
-\import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
@@ -36,7 +31,14 @@
 \import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
-\open AddMonoid (BigSum)
+\import Algebra.Monoid.FinSum
+\import Algebra.Ordered.Properties
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+\import Order.Lattice.Properties
+\import Data.Fin
+
 
 {- | The $n$-fold self-convolution of a series, representing the
      coefficient sequence of $A(x)^n$ where $A(x) = \sum_k a_k x^k$.
@@ -55,7 +57,7 @@
     (bound : \Pi (k : Nat) -> k < m -> (A.norm (S k)).U c)
   : (A.norm (partialSum S m)).U (Rat.fromInt (pos (suc m)) * c)
   => rewrite partialSum.=FinSum $ A.norm_FinSum $ ExUpperRealAbMonoid.FinSum_<= (\lam j => ExUpperReal.<_<= $ bound j (fin_< j)) $
-      rewriteI (AddMonoidHom.func-FinSum rat-upperReal) $ transportInv (< _) RatField.FinSum_replicate $ RatField.<_*_positive-left linarith c>0
+      rewriteI (func-FinSum rat-upperReal) $ transportInv (< _) RatField.FinSum_replicate $ RatField.<_*_positive-left linarith c>0
 
 {- | If $a$ is absolutely convergent, so is `pow-conv a n`.  By induction on $n$
      using `conv-absConv` at the inductive step. -}
@@ -184,7 +186,7 @@
                 => RatField.<_*_positive_positive (RatField.<_*_positive_positive eps>0 linarith) finv-sucN0>0
              | per-k (k : Fin N0) : ∃ (Mk : Nat) ∀ {N'} (Mk <= N') ((dist (L k) (F k N')).U (eps * ratio 1 3 * RatField.finv (suc N0)))
                 => limit-metric-char.1 (F-conv k) eps/k>0
-             | (inP allM) => FinSet.finiteAC per-k
+             | (inP allM) => finiteAC per-k
        \in \let | M_max => NatBSemilattice.BigJoin \new Array Nat N0 \lam k => (allM k).1
                 | N_max => N0 ∨ M_max
        \in inP (N_max, \lam {N} N_max<=N =>
@@ -367,8 +369,8 @@
 \lemma fromRat-pow-conv {A : RealBanachAlgebra} {b : Series Rat} {n k : Nat}
   : pow-conv (\lam m => A.fromRat (b m)) n k = A.fromRat (pow-conv b n k)
   \elim n, k
-  | 0, 0 => inv QModule.ide_*q
-  | 0, suc k => inv QModule.*q_*n
+  | 0, 0 => inv ide_*q
+  | 0, suc k => inv *q_*n
   | suc n', k =>
     \have ih-series : pow-conv (\lam m => A.fromRat (b m)) n' = (\lam j => A.fromRat (pow-conv b n' j))
                     => ext \lam j => fromRat-pow-conv
@@ -376,7 +378,7 @@
 
 \lemma compose-coef-fromRat {A : RealBanachAlgebra} (a b : Series Rat) (k : Nat)
   : fcompose (\lam n => A.fromRat (a n)) (\lam n => A.fromRat (b n)) k = A.fromRat (fcompose a b k)
-  => AddMonoid.BigSum-ext {A} {suc k}
+  => BigSum-ext {A} {suc k}
        {\new Array A (suc k) (\lam n => A.fromRat (a n) * pow-conv (\lam m => A.fromRat (b m)) n k)}
        {\new Array A (suc k) (\lam n => A.fromRat (a n * pow-conv b n k))}
        (\lam n => pmap (_ *) fromRat-pow-conv *> A.fromRat_*)

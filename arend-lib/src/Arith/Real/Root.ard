@@ -1,5 +1,4 @@
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Algebra.Semiring
@@ -25,6 +24,8 @@
 \import Topology.TopRing
 \import Topology.TopRing.Real
 \import Topology.TopSpace
+\import Algebra.Ordered.Properties
+\import Algebra.Ordered.Group
 \open Monoid(pow)
 \open ContMap
 

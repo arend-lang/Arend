@@ -3,6 +3,7 @@
 -- see https://www.cs.ru.nl/~herman/PUBS/Types00-GeuversWiedijkZwanenburg.pdf
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -33,9 +34,17 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
+\import Algebra.Monoid.Perm
+\import Algebra.QModule.Rat
+\import Algebra.Field.Ordered
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+\import Algebra.Ordered.Properties
+\import Algebra.StrictlyOrdered.Properties
+\import Algebra.Ordered.Group
+\import Algebra.StrictlyOrdered.Group
 \open Monoid (pow)
-\open AddMonoid (BigSum, BigSum_suc, BigSum-ext, BigSum-split)
-\open LinearlyOrderedAbGroup
+
 \open OrderedField (pinv, pinv-left, pinv-right, pinv>0, pinv_*)
 \open OrderedSemiring (<_*_positive-left, <_*_positive-right, <_*_positive_positive)
 
@@ -50,10 +59,10 @@
 \private \lemma one/2>=0 : ratio 1 2 >= {RealField} zro => linarith
 
 \private \lemma pow1/3-strict-monotone {i k : Nat} (p : k < i) : pow one/3 i < pow one/3 k
-  => OrderedSemiring.pow_<-degree {_} {one/3} one/3>0 one/3<1 p
+  => pow_<-degree {_} {one/3} one/3>0 one/3<1 p
 
 \private \lemma pow1/3-monotone {i k : Nat} (p : k <= i) : pow one/3 i <= pow one/3 k
-  => PosetSemiring.pow_<=-degree one/3>=0 (<=-less one/3<1) p
+  => pow_<=-degree one/3>=0 (<=-less one/3<1) p
 
 \lemma MainLemma {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0)
                  (a : Nat -> Real)
@@ -82,7 +91,7 @@
       | r>0 : r > 0
         => LinearlyOrderedSemiring.<_*_positive_positive r0>0 (LinearlyOrderedSemiring.pow>0 {_} one/3>0 {j + 1})
       | r<=r0 : r <= r0
-        => transport (_ <=) ide-right $ PosetSemiring.<=_*_positive-right (<=-less r0>0) $ PosetSemiring.pow<=1 one/3>=0 linarith {j + 1}
+        => transport (_ <=) ide-right $ PosetSemiring.<=_*_positive-right (<=-less r0>0) $ pow<=1 one/3>=0 linarith {j + 1}
       | a0_minus_eps_>0 : a 0 - eps > 0 => linarith
       | -2eps=-eps-eps x : x - (natCoef 2 * eps) = x - eps - eps => linarith
       | three_times_one_third : (3 : Real) * one/3 = 1 => linarith
@@ -98,7 +107,7 @@
               rewrite (CMonoid.pow_*-comm {_} {r * natCoef 3} {_} {suc k}),
               rewrite (*-assoc {_} {a (suc k)}),
               rewrite (*-assoc {_} {pow (r * natCoef 3) (suc k)}),
-              rewriteI (CMonoid.pow_+ {_} {one/3} {suc k} {suc i}),
+              rewriteI (pow_+ {_} {one/3} {suc k} {suc i}),
               rewriteI (*-assoc {_} {a (suc k)}),
               rewriteI (rdistr, *-assoc),
               <_*_positive-left {RealField} {_} {_} {pow one/3 (k Nat.+ i + 2)} __ (OrderedSemiring.pow>0 one/3>0 {k Nat.+ i + 2}),
@@ -113,7 +122,7 @@
           < a (suc k) * pow r (suc k) * pow one/3 (k -' i) + eps * pow 3 (suc i)
         => run {
             rewriteI (ide-right {_} {pow r (suc i)}, ide-right {_} {pow one/3 (k -' i)}, third^m*3^m=1 (suc i)),
-            rewriteI (*-assoc {_} {pow one/3 (k -' i)} {pow one/3 (suc i)}, Monoid.pow_+ {RealField} {one/3} {k -' i} {suc i}),
+            rewriteI (*-assoc {_} {pow one/3 (k -' i)} {pow one/3 (suc i)}, pow_+ {RealField} {one/3} {k -' i} {suc i}),
             rewrite (+-comm {_} {k -' i} {i}, <=_exists (<_suc_<= (fin_< i))),
             rewriteI (*-assoc {RealField} {a (suc k) * pow r (suc k)} {pow one/3 (suc k)} {pow 3 (suc i)}),
             rewriteI (*-assoc, *-assoc, rdistr),
@@ -136,7 +145,7 @@
               => ext (\lam i => rewrite (mod_< {k -' i} {suc k} (<=_<_suc -'<=id)) idp)
             | sum-arr-1/3^k-i-computation : BigSum arr-1/3^k-i = BigSum arr-1/3^i - ide
               => linarith (rewrite (BigSum_suc, helper, mod_< {k} {suc k} id<suc, -'id)
-                             in AbMonoid.BigSum-reverse arr-1/3^i)
+                             in BigSum-reverse arr-1/3^i)
             | sum-arr-1/3^k-i-estimate : BigSum arr-1/3^k-i <= Real.fromRat (ratio 3 2) * (Real.fromRat 1 - pow one/3 n) - ide
               => rewrite sum-arr-1/3^k-i-computation (<=_+ (geom_sum_upper' {n} {suc k} (suc_<_<= (fin_< k)) ) (<=-refl {_} {negative ide}))
            \in linarith (pow1/3-strict-monotone id<suc)
@@ -151,14 +160,14 @@
           \have sum-arr-1/3^k+i+2<=1 : BigSum arr-1/3^k+i+2 <= ide => run {
             \have one/3^k+1<=1 : pow one/3 (suc k) <= ide => <=-less (pow1/3-strict-monotone {_} NatOrder.zero<suc),
             \have one-1/3^n>=0 : Real.fromRat 1 - pow one/3 n >= zro =>
-              rewriteI (negative-right {RealField} {pow one/3 n}) (<=_+ (PosetSemiring.pow<=1 one/3>=0 linarith {n}) <=-refl),
+              rewriteI (negative-right {RealField} {pow one/3 n}) (<=_+ (pow<=1 one/3>=0 linarith {n}) <=-refl),
               <=∘ rewriteI {2} (zro-right {_} {ide}) (<=_+ (<=-refl {_} {Real.fromRat ide}) (PosetAddGroup.negative<=0 (<=-less (OrderedSemiring.pow>0 one/3>0 {n})))),
               <=∘ (rewrite *-assoc in (rewrite ide-left in (<=_*_positive-left (rewrite ide-left in <=_*_positive-left {RealField} one/3^k+1<=1 one/2>=0) one-1/3^n>=0) <=∘
                                                           (<=_*_positive-left linarith one-1/3^n>=0))),
             unfold arr-1/3^k+i+2,
-            \have helper : (\lam (i : Fin (n-1 -' k)) => pow one/3 (suc (suc k) Nat.+ i)) = (\lam i => pow one/3 (suc k) * pow one/3 (suc i)) => ext (\lam _ => rewrite Monoid.pow_+ equation.cMonoid),
+            \have helper : (\lam (i : Fin (n-1 -' k)) => pow one/3 (suc (suc k) Nat.+ i)) = (\lam i => pow one/3 (suc k) * pow one/3 (suc i)) => ext (\lam _ => rewrite pow_+ equation.cMonoid),
             rewrite helper,
-            rewriteI (Semiring.BigSum-ldistr {_} {pow one/3 (suc k)} {\new Array RealField (n-1 -' k) (\lam i => pow one/3 (suc i))}),
+            rewriteI (BigSum-ldistr {_} {pow one/3 (suc k)} {\new Array RealField (n-1 -' k) (\lam i => pow one/3 (suc i))}),
             <=_*_positive-right {RealField} {pow one/3 (suc k)} (<=-less (OrderedSemiring.pow>0 one/3>0 {suc k})),
             geom_sum_upper {n} {n-1 -' k} (-'<=id <=∘ id<=suc)
           },
@@ -167,7 +176,7 @@
           later $ rewrite (helper, ldistr),
           rewrite {2} +-comm,
           LinearlyOrderedAbMonoid.<=_+-right linarith,
-          PosetSemiring.pow_<=-degree_>=1 {RealField} (PosetSemiring.natCoef_<= {_} {1} {3} linarith) (<_suc_<= (fin_< (suc k))) <=∘,
+          pow_<=-degree_>=1 {RealField} (natCoef_<= {_} {1} {3} linarith) (<_suc_<= (fin_< (suc k))) <=∘,
           rewriteI {1} ide-left,
           <=_*_positive-left __ (PosetSemiring.pow>=0 {_} {_} {suc _} linarith),
           linarith
@@ -186,10 +195,10 @@
              `<=_+ (<=-refl {RealField} {negative eps}),
              \have helper : a (suc k0) * pow r (suc k0) >= (a 0 - eps) * pow one/3 (2 * n * n) => run {
                rewrite (pmap (a (suc k0) *) (CMonoid.pow_*-comm {RealField} {r0} {pow one/3 (suc j)} {suc k0})),
-               rewrite (pmap (pow r0 (suc k0) *) (inv (Monoid.pow_* {RealField} {one/3} {suc j} {suc k0}))),
+               rewrite (pmap (pow r0 (suc k0) *) (inv (pow_* {RealField} {one/3} {suc j} {suc k0}))),
                rewrite (inv (*-assoc {RealField}) *> pmap (* pow one/3 ((suc j : Nat) * suc k0)) C1),
                <=_*_positive-right (<=-less a0_minus_eps_>0),
-               PosetSemiring.pow_<=-degree one/3>=0 linarith {suc _} {suc (suc _)},
+               pow_<=-degree one/3>=0 linarith {suc _} {suc (suc _)},
                <=_* {suc j} {2 * n} {suc k0} {n} (suc_<_<= (fin_< j NatSemiring.<∘ id<suc)) (suc_<_<= (fin_< k0))
              },
              <=∘ helper,
@@ -202,16 +211,16 @@
            },
            ai_ri_<_a0 (suc k) NatOrder.zero<suc,
            run {
-             <=_+ (PosetAddMonoid.BigSum_<= {RealField} {k} {\lam i => a (suc i) * pow r (suc i)}
+             <=_+ (BigSum_<= {RealField} {k} {\lam i => a (suc i) * pow r (suc i)}
                {\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i) + eps * pow 3 (suc i)} (\lam i => <=-less (C2j+2 i)))
-               (PosetAddMonoid.BigSum_<= {RealField} {n-1 -' k} {\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)}
+               (BigSum_<= {RealField} {n-1 -' k} {\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)}
                  {\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i) + eps * pow one/3 (k Nat.+ i + 2) } (\lam i => <=-less (C2j i))) <∘r,
-             rewrite (AbMonoid.BigSum_+ {RealField} {n-1 -' k} {\new Array RealField (n-1 -' k) (\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i))} {\new Array RealField (n-1 -' k) (\lam i => eps * pow one/3 (k Nat.+ i + 2))}),
-             rewrite (AbMonoid.BigSum_+ {RealField} {k} {\new Array RealField k (\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i))} {\new Array RealField k (\lam i => eps * pow 3 (suc i))}),
-             rewriteI (Semiring.BigSum-ldistr {_} {a (suc k) RealField.* (pow {RealField} r (suc k))} {arr-1/3^i+1}),
-             later $ rewriteI (Semiring.BigSum-ldistr {_} {eps} {arr-1/3^k+i+2}),
-             rewriteI (Semiring.BigSum-ldistr {_} {a (suc k) RealField.* (pow {RealField} r (suc k))} {arr-1/3^k-i}),
-             later $ rewriteI (Semiring.BigSum-ldistr {_} {eps} {arr-3^i+1}),
+             rewrite (BigSum_+ {RealField} {n-1 -' k} {\new Array RealField (n-1 -' k) (\lam i => a (suc k) * pow r (suc k) * pow one/3 (suc i))} {\new Array RealField (n-1 -' k) (\lam i => eps * pow one/3 (k Nat.+ i + 2))}),
+             rewrite (BigSum_+ {RealField} {k} {\new Array RealField k (\lam i => a (suc k) * pow r (suc k) * pow one/3 (k -' i))} {\new Array RealField k (\lam i => eps * pow 3 (suc i))}),
+             rewriteI (BigSum-ldistr {_} {a (suc k) RealField.* (pow {RealField} r (suc k))} {arr-1/3^i+1}),
+             later $ rewriteI (BigSum-ldistr {_} {eps} {arr-1/3^k+i+2}),
+             rewriteI (BigSum-ldistr {_} {a (suc k) RealField.* (pow {RealField} r (suc k))} {arr-1/3^k-i}),
+             later $ rewriteI (BigSum-ldistr {_} {eps} {arr-3^i+1}),
              \have helper-reorder :
                a (suc k) RealField.* (pow r (k Nat.+ 1)) * BigSum arr-1/3^k-i + eps * BigSum arr-3^i+1 +
               (a (suc k) RealField.* (pow r (k Nat.+ 1)) * BigSum arr-1/3^i+1 + eps * BigSum arr-1/3^k+i+2) =
@@ -297,12 +306,12 @@
                                 unfold (-),
                                 rewriteI (-eps2-eps2=-eps, +-assoc, *-assoc),
                                 <_+-left {_} (negative eps/2),
-                                OrderedAddMonoid.<_+-right _ (OrderedAddGroup.negative_< (<_*_positive-right eps>0 ((PosetSemiring.pow<=id one/3>=0 linarith {suc i} (\case __)) <∘r linarith))) <∘l,
+                                OrderedAddMonoid.<_+-right _ (OrderedAddGroup.negative_< (<_*_positive-right eps>0 ((pow<=id one/3>=0 linarith {suc i} (\case __)) <∘r linarith))) <∘l,
                                 (rewrite PseudoRing.rdistr_- in <=_*_positive-left (<=-less (IA (suc i) linarith)) (PosetSemiring.pow>=0 {_} {one/3} {suc i} one/3>=0)) <=∘,
                                 rewriteI {2} (*-assoc {_} {a (suc kj)}),
                                 <=_*_positive-right (PosetSemiring.<=_*_positive_positive (ai>=0 (suc kj)) (PosetSemiring.pow>=0 {_} {_} {suc kj}
                                   (PosetSemiring.<=_*_positive_positive (<=-less r0>0) ( PosetSemiring.pow>=0 one/3>=0)))),
-                                PosetSemiring.pow_<=-degree one/3>=0 linarith {suc kj} {suc i} (suc<=suc (NatSemiring.<=-less kj<i))
+                                pow_<=-degree one/3>=0 linarith {suc kj} {suc i} (suc<=suc (NatSemiring.<=-less kj<i))
                               },
                               i-term-eps<kj-term-eps/2 <∘,
                               <_+-left (negative eps/2) (rewrite (toFin=id, nat_fin_= (mod_< {suc kj} {suc n} (<=_<_suc kj+1<=n))) in Pk' (toFin kj id<suc)) <∘l,
@@ -468,7 +477,7 @@
           | inP (eps, eps>0, cond1, cond2) =>
             \have
               | scale<=1 : pow one/3 (2 * n * n) * cabs (b 0) <= cabs (b 0)
-                => PosetSemiring.<=_*_positive-left (PosetSemiring.pow<=1 one/3>=0 (<=-less one/3<1) {2 * n * n})
+                => PosetSemiring.<=_*_positive-left (pow<=1 one/3>=0 (<=-less one/3<1) {2 * n * n})
                      (<=-less a0>0) <=∘ =_<= ide-left
               | a0>eps : cabs (b 0) > eps => linarith
             \in \case MainLemma n>0 eps>0 (\lam i => cabs (b i)) a0>eps
@@ -495,7 +504,7 @@
                         => <_*_positive-right (OrderedSemiring.pow>0 one/3>0 {n}) lower
                       | pow-split : pow one/3 n * (pow one/3 (2 * n * n) * cabs (b 0) - 2 * eps)
                                = pow one/3 (2 * n * n + n) * cabs (b 0) - 2 * (pow one/3 n * eps)
-                        => rewrite (Monoid.pow_+ {RealField} {one/3} {2 * n * n} {n}) equation.cRing
+                        => rewrite (pow_+ {RealField} {one/3} {2 * n * n} {n}) equation.cRing
                       | eps-third : pow one/3 n * eps <= one/3 * eps
                         => PosetSemiring.<=_*_positive-left
                              (pow1/3-monotone {n} {1} (suc_<_<= n>0) <=∘ =_<= ide-left) (<=-less eps>0)

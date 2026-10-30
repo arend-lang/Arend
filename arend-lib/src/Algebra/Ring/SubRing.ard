@@ -1,15 +1,9 @@
-\import Algebra.Group
 \import Algebra.Group.SubGroup
 \import Algebra.Monoid
 \import Algebra.Monoid.SubMonoid
-\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring.SubSemiring
-\import Logic.Unique
-\import Logic
-\import Logic.Meta
-\import Paths
 \import Paths.Meta
 
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {

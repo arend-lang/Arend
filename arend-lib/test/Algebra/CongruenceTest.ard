@@ -1,4 +1,5 @@
 \import Algebra.Meta
+\import Algebra.Meta.Base
 \import Algebra.Monoid
 \import Meta
 \import Paths

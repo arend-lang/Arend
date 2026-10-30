@@ -30,7 +30,18 @@ public class NamespaceCommandNamespace implements Scope {
   }
 
   private Referable resolve(NamedUnresolvedReference ref, ScopeContext context) {
-    return ref.resolve(new PrivateFilteredScope(myModuleNamespace, true), null, context, null);
+    return ref.resolve(new StaticOrExtensionScope(new PrivateFilteredScope(myModuleNamespace, true)), null, context, null);
+  }
+
+  /**
+   * Names in namespace commands without a context refer to extension functions as well as to static definitions.
+   */
+  private static boolean matches(ScopeContext entryContext, @Nullable ScopeContext context) {
+    return context == null || entryContext == context || entryContext == ScopeContext.STATIC && context == ScopeContext.EXTENSION;
+  }
+
+  private static ScopeContext getContext(Referable ref, ScopeContext entryContext) {
+    return entryContext == ScopeContext.STATIC && ref instanceof GlobalReferable global && global.isDynamicExtension() ? ScopeContext.EXTENSION : entryContext;
   }
 
   @NotNull
@@ -38,7 +49,7 @@ public class NamespaceCommandNamespace implements Scope {
   public Collection<? extends Referable> getElements(@Nullable ScopeContext context) {
     Set<String> hidden = new HashSet<>();
     for (ConcreteNamespaceCommand.NameHiding hiddenElement : myNamespaceCommand.hidings()) {
-      if (context == null || hiddenElement.scopeContext() == context) {
+      if (matches(hiddenElement.scopeContext(), context)) {
         hidden.add(hiddenElement.reference().getRefName());
       }
     }
@@ -46,10 +57,13 @@ public class NamespaceCommandNamespace implements Scope {
     List<Referable> elements = new ArrayList<>();
     for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
       ScopeContext renamingContext = renaming.scopeContext();
-      if (!(context == null || context == renamingContext)) {
+      if (!matches(renamingContext, context)) {
         continue;
       }
       Referable oldRef = resolve(renaming.reference(), renamingContext);
+      if (!(context == null || getContext(oldRef, renamingContext) == context)) {
+        continue;
+      }
       if (!(oldRef instanceof ErrorReference || oldRef instanceof GlobalReferable && ((GlobalReferable) oldRef).getAccessModifier() == AccessModifier.PRIVATE)) {
         String newName = renaming.newName();
         String name = newName != null ? newName : oldRef.textRepresentation();
@@ -82,7 +96,7 @@ public class NamespaceCommandNamespace implements Scope {
 
   private boolean isHidden(String name, ScopeContext context) {
     for (ConcreteNamespaceCommand.NameHiding hiddenRef : myNamespaceCommand.hidings()) {
-      if ((context == null || context == hiddenRef.scopeContext()) && hiddenRef.reference().getRefName().equals(name)) {
+      if (matches(hiddenRef.scopeContext(), context) && hiddenRef.reference().getRefName().equals(name)) {
         return true;
       }
     }
@@ -112,7 +126,7 @@ public class NamespaceCommandNamespace implements Scope {
 
     for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
       ScopeContext renamingContext = renaming.scopeContext();
-      if (!(context == null || context == renamingContext)) {
+      if (!matches(renamingContext, context)) {
         continue;
       }
 
@@ -120,6 +134,9 @@ public class NamespaceCommandNamespace implements Scope {
       NamedUnresolvedReference oldRef = renaming.reference();
       if (name.equals(newName) || newName == null && oldRef.getRefName().equals(name)) {
         Referable ref = resolve(oldRef, renamingContext);
+        if (!(context == null || getContext(ref, renamingContext) == context)) {
+          continue;
+        }
         return ref instanceof ErrorReference ? null : newName != null ? new RedirectingReferableImpl(ref, renaming.newPrecedence(), newName) : ref;
       }
     }

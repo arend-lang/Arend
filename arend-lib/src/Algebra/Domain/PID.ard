@@ -5,15 +5,14 @@
  -   Irving Kaplansky, Elementary divisors and modules, 1949
 -}
 
-\import Algebra.Domain
 \import Algebra.Domain.Bezout
 \import Algebra.Domain.GCD
 \import Algebra.Group
-\import Algebra.Linear.Matrix.Smith
+\import Algebra.Domain.Smith
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
-\import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
 \import Algebra.Ring.Ideal
@@ -28,13 +27,14 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
+\import Algebra.Domain.Properties
 \open DivQuotient \hiding (~)
 \open Monoid
 \open equation(cRing)
 
 \class PID \extends SmithDomain, WeaklyNoetherianCRing {
   | divChain : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}
-  | isWeaklyNoetherian I Ifg => Ideal.fromMonoidChainCondition (IntegralDomain.Dec.fromNonZeroDivChain divChain) I \lam n => bezout_finitelyGenerated_principal.1 isBezout (Ifg n)
+  | isWeaklyNoetherian I Ifg => Ideal.fromMonoidChainCondition (fromNonZeroDivChain divChain) I \lam n => bezout_finitelyGenerated_principal.1 isBezout (Ifg n)
   | isKaplansky => adequate_kaplansky \lam a/=0 => adequate'_adequate (domain_adequate' divChain a/=0)
 
   \lemma is1Dim : Dim<= 1
@@ -97,6 +97,6 @@
             \have | d_c : IsCoprime d c => \lam z (x1,p1) (x2,p2) => a_b_c z
                             (LDiv.trans (LDiv.make x1 p1) d1, LDiv.make (x1 * y - x2 * c* * (1 - b)) (cRing {p1,p2,p}), LDiv.make x2 p2)
                   | d_R : IsCoprime d r.1 => BezoutRing.bezout_coprime {_} {y} {(1 - b) * c'} (cRing {p,cp})
-            \in d_R d LDiv.id-div $ Domain.Dec.LDiv_TruncP $ r.4 d d1 d_c)
+            \in d_R d LDiv.id-div $ LDiv_TruncP $ r.4 d d1 d_c)
     }
 }

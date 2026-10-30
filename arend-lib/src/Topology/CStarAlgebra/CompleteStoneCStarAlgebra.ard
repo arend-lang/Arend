@@ -1,21 +1,18 @@
 \import Algebra.Group
-\import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Pointed
-\import Algebra.QModule
 \import Algebra.Ring.RingHom
-\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Order.Category
 \import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
@@ -34,7 +31,8 @@
 \import Topology.TopAbGroup.Complete
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
-\open QModule
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Group
 \open PosetQModule
 
 \record OrderedC*AlgebraHom \extends RingHom, PosetHom {

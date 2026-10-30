@@ -1,4 +1,4 @@
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Arith.Real
 \import Arith.Real.Field

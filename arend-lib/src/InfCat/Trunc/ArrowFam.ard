@@ -33,7 +33,7 @@
                                  {a a' : A} (r : a ~> a') (p : s1 a = s2 a) (p' : s1 a' = s2 a')
       : Contr (DPath (\lam i => s1 (r i) = s2 (r i)) p p')
       => \let | B (xy : \Sigma (F a ~> G a) (F a' ~> G a')) => DPath (\lam i => F (r i) ~> G (r i)) xy.1 xy.2
-              | Bp : isProp (B (s2 a, s2 a')) => isProp.equiv (inP (square-equiv (dmap F r) (dmap G r))) (hom-isSet Zt _ _ _ _)
+              | Bp : isProp (B (s2 a, s2 a')) => equiv-isProp (inP (square-equiv (dmap F r) (dmap G r))) (hom-isSet Zt _ _ _ _)
          \in Contr.Contr_QEquiv (symQEquiv (later \new QEquiv {
                 | f D => path \lam k => dpath \lam i => D i k
                 | ret Q => dpath \lam i => path \lam k => Q k i

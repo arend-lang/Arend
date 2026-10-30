@@ -1,13 +1,13 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
-\import Algebra.StrictlyOrdered
 \import Analysis.PowerSeries
 \import Analysis.Series
 \import Arith.Complex
@@ -20,18 +20,12 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Real.Root
 \import Arith.Real.UpperReal
 \import Arith.Trig.Real
-\import Analysis.CauchyProduct
-\import Analysis.Limit
-\import Analysis.SeriesComposition
-\import Combinatorics.Factorial
 \import Data.Or
 \import Function.Meta
 \import Logic
 \import Meta
-\import Set.Partial
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -41,10 +35,12 @@
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedRing (RealValuedRing)
-\import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.StoneCStarAlgebra()
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
+\import Algebra.Ordered.Group
 \open Monoid (pow)
 \open Complex \using (iunit \as i)
 \open LatticeAbGroup

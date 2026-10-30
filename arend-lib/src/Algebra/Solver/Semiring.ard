@@ -1,9 +1,6 @@
-\import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed.PointedHom
-\import Algebra.Ring
 \import Algebra.Pointed
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
@@ -21,6 +18,7 @@
 \import Paths.Meta
 \import Prelude \hiding (nil,::)
 \import Set
+\import Algebra.Monoid.Properties
 \open Sort
 
 \func SemiringSolverModel (R : Semiring) : SolverModel R \cowith
@@ -158,7 +156,7 @@
         : interpretNF' (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l * MonoidSolverModel.interpretNF env a3 \elim l
         | nil => inv (pmap (* _) R.zro_*-right *> R.zro_*-left)
         | :: a l => rewrite (interpretNF_::,interpretNF_::,MonoidSolverModel.interpretNF_++,MonoidSolverModel.interpretNF_++,alg.func-*,ldistr,rdistr) $
-            pmap2 (+) (equation.monoid {alg-comm a.2 (MonoidSolverModel.interpretNF env a2)}) interpretNF_map
+            pmap2 (+) (*-assoc *> pmap (_ *) (inv *-assoc *> pmap (* _) (alg-comm a.2 (MonoidSolverModel.interpretNF env a2)) *> *-assoc *> pmap (_ *) (inv *-assoc) *> inv *-assoc) *> inv *-assoc *> pmap (* _) (inv *-assoc)) interpretNF_map
 
       \lemma interpretNF_map-left {a1 : C} {a2 : List (Fin env.len)} {l : NF}
         : interpretNF' (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l

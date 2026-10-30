@@ -1,15 +1,16 @@
+\import Algebra.Domain
+\import Algebra.Domain.Properties
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Ordered
-\import Algebra.Ring.RingHom
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Algebra.Ring.Local
 \import Algebra.Ring.Localization
 \import Algebra.Semiring
 \import Function.Meta
@@ -22,8 +23,12 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\open Monoid
+\import Set
+\import Algebra.Field.Ordered
+\import Algebra.StrictlyOrdered.Group
+\import Algebra.StrictlyOrdered.Ring
 \open LocRing(isLocalization \as LR)
+\open Monoid (Inv)
 
 \lemma localization-isField {R : CRing} (S : SubMonoid R) (nt : Not (S zro))
                             (loc : ∀ {x} {y} (S (x + y)) ∃ (r : R) (S (x * r) || S (y * r)))
@@ -135,3 +140,15 @@
   })
   | OrderedField => localization-isOrderedField R
   \where \open OrderedRing
+
+\instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField \cowith
+  | CRing => LocRing D.subMonoid
+  | zro/=ide p => \case LocMonoid.isLocalization.localization-inj p \with {
+    | inP (c,c#0,q) => D.#0-zro $ transportInv D.#0 (simplify in q) c#0
+  }
+  | eitherZeroOrInv => \case \elim __ \with {
+    | in~ x => \case decideEq x.1 0 \with {
+      | yes e => byLeft $ ~-lequiv1 $ ide-right *> e *> inv D.zro_*-left
+      | no q => byRight $ Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ unfold $ ~-lequiv1 (simplify *-comm)
+    }
+  }

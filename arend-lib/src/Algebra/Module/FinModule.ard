@@ -1,5 +1,5 @@
 \import Algebra.Linear.Matrix
-\import Algebra.Meta
+\import Algebra.Meta.Base
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Module.ModuleIso
@@ -7,9 +7,7 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Arith.Nat
-\import Category
 \import Data.Array
-\import Equiv
 \import Function \hiding (id, o)
 \import Function.Meta
 \import Logic
@@ -20,6 +18,9 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Algebra.Monoid.Properties
+\import Algebra.Linear.Matrix.LinearMap
+\import Data.Fin
 
 \class FinModule \extends LModule
   | isFinModule : ∃ (l : Array E) (IsBasis l)
@@ -29,7 +30,7 @@
     \lemma surj-lift {R : Ring} {F : FinModule R} {U V : LModule R} (f : LinearMap F V) (g : LinearMap U V) (gs : IsSurj g)
       : ∃ (h : LinearMap F U) ∀ x (g (h x) = f x)
       => \have | (inP (l,lb)) => F.isFinModule
-               | (inP s) => FinSet.finiteAC (\lam j => gs (f (l j)))
+               | (inP s) => finiteAC (\lam j => gs (f (l j)))
                | h => extend lb \lam j => (s j).1
          \in inP (h, basis-ext (g LinearMap.∘ h) f lb.2 \lam j => pmap g (U.BigSum-unique {\lam k => F.basis-split lb (l j) k *c (s k).1} j (\lam k j/=k => pmap (*c _) (F.basis_split_/= j/=k) *> U.*c_zro-left) *> pmap (*c _) F.basis_split_= *> ide_*c) *> (s j).2)
 

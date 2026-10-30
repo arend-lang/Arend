@@ -11,6 +11,8 @@
 \import Arith.Real.Field
 \import Order.PartialOrder
 \import Paths
+\import Algebra.Semiring.Properties
+\import Algebra.Ordered.Properties
 \open PosetSemiring (<=_*_positive_positive)
 
 {- | **First- and second-order Taylor estimates for a complex polynomial, uniform on a disc.**

@@ -37,6 +37,8 @@ public class ConsoleMain {
   private final static String SHOW_MODULES = TypecheckPipeline.SHOW_MODULES;
   private final static String SHOW_MODULES_WITH_INSTANCES = TypecheckPipeline.SHOW_MODULES_WITH_INSTANCES;
   private final static String LINT = TypecheckPipeline.LINT;
+  private final static String SHOW_CYCLES = TypecheckPipeline.SHOW_CYCLES;
+  private final static String DEPENDENCY_GRAPH = TypecheckPipeline.DEPENDENCY_GRAPH;
 
   /** The query tools, in help/dispatch order; iterated for registration, {@code --help} and dispatch. */
   public static final List<ConsoleQueryTool> QUERY_TOOLS = List.of(
@@ -94,11 +96,13 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder().longOpt(SHOW_SIZES).desc("after typechecking, print every definition's typechecked core-term size (number of subterms), sorted descending").build());
       cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES).desc("after typechecking, print the module import-DAG in topological order via Tarjan SCC. Single modules: `[Module]`; import cycles: `[M1, M2, ...]`.").build());
       cmdOptions.addOption(Option.builder().longOpt(SHOW_MODULES_WITH_INSTANCES).desc("like --show-modules, but restricted to modules that define at least one \\instance -- useful for spotting cycles among instance-providing modules").build());
+      cmdOptions.addOption(Option.builder().longOpt(SHOW_CYCLES).desc("after typechecking, print every import cycle of the library, including cycles through meta modules of extensions, together with the definitions that each import inside a cycle is needed for. Imports that no definition needs are marked as removable.").build());
+      cmdOptions.addOption(Option.builder().longOpt(DEPENDENCY_GRAPH).hasArg().argName("file").desc("after typechecking, write every definition of the library together with the definitions it depends on, and the imports of every module, to the given file as JSON").build());
       cmdOptions.addOption(Option.builder().longOpt(LINT).desc("after typechecking, report the \\import and \\open commands the code does without, and the unused names inside them, as module:line:column messages. Nothing is reported if the run had any errors, since a name that is unused only because of an error becomes used once the error is fixed.").build());
       CommandLine cmdLine = new DefaultParser().parse(cmdOptions, args);
 
       if (cmdLine.hasOption("h")) {
-        ConsoleHelp.printGrouped(cmdOptions, List.of(SHOW_TIMES, SHOW_SIZES, SHOW_MODULES, SHOW_MODULES_WITH_INSTANCES, LINT));
+        ConsoleHelp.printGrouped(cmdOptions, List.of(SHOW_TIMES, SHOW_SIZES, SHOW_MODULES, SHOW_MODULES_WITH_INSTANCES, SHOW_CYCLES, DEPENDENCY_GRAPH, LINT));
         return ParsedArgs.served();
       }
 

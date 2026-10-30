@@ -5,7 +5,6 @@
 \import Data.List
 \import Function.Iterate
 \import Function.Meta
-\import Meta
 \import Paths
 \import Paths.Meta
 \open MonoidSolverModel

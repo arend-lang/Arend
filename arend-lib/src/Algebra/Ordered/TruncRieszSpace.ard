@@ -6,6 +6,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
+\import Algebra.Ordered.Group
 
 \class TruncRieszSpace \extends RieszSpace {
   | trunc : E -> E

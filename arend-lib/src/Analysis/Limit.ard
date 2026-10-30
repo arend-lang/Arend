@@ -1,5 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
@@ -16,7 +18,6 @@
 \import Order.Biordered
 \import Order.Directed
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -28,12 +29,15 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Directed
 \import Topology.MetricSpace
-\import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
 \import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.UniformSpace
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Properties
+\import Arith.Rat.Properties
+\import Set.Set.Lattice
 
 \func IsConvergent {I : DirectedSet} {X : CoverSpace} (f : I -> X) : \Prop
   => CoverMap (DirectedCoverSpace I) X f

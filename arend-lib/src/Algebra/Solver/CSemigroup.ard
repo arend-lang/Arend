@@ -2,11 +2,8 @@
 \import Algebra.Solver
 \import Algebra.Solver.Semigroup
 \import Arith.Fin.Order
-\import Data.Fin
 \import Data.List
-\import Logic
 \import Paths
-\import Paths.Meta
 \open SemigroupSolverModel
 \open Sort
 

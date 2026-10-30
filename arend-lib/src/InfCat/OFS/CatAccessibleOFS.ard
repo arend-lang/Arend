@@ -1,6 +1,5 @@
 \import Data.Bool
 \import Equiv
-\import Equiv.Fiber
 \import Function
 \import Function.Meta
 \import Homotopy.Cube
@@ -12,7 +11,6 @@
 \import InfCat.Paths
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta

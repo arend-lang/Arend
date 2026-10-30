@@ -13,10 +13,15 @@
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Group
+\import Set.Set
+\open LatticeAbGroup (abs)
 
 \class PosetQModule \extends QModule, PosetDivAbGroup {
   \lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
@@ -101,3 +106,5 @@
     | PosetHom => g PosetHom.∘ f
     | func-join>= => func-<= func-join>= <=∘ func-join>=
 }
+
+\type .IsSolid (L : LatticeAbGroup) (U : Set L) => ∀ {y} {x : U} (abs y <= abs x -> U y)

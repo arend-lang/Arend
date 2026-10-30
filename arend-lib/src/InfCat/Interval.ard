@@ -2,6 +2,7 @@
 \import Logic
 \import Logic.Unique
 \import Paths
+\import Equiv
 
 -- | The minimum of two points of the directed interval.
 \func dmin (i j :⁺ DI) : DI => conn-right (dpath \lam k => k) i j

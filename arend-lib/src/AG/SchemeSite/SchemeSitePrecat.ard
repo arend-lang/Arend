@@ -5,7 +5,6 @@
 \import Logic
 \import Order.PartialOrder
 \import Paths
-\import Relation.Equivalence
 \open SchemeSitePrehom
 
 \func SchemeSitePrehomPrecat.{u} : Precat SchemeSite.{u} \cowith

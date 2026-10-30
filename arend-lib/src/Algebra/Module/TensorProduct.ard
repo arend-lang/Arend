@@ -1,4 +1,4 @@
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Module
 \import Algebra.Module.BilinearMap
 \import Algebra.Module.LinearMap
@@ -13,6 +13,8 @@
 \import Meta
 \import Paths
 \import Paths.Meta
+\import Algebra.Monoid.Perm
+\import Algebra.Monoid.Properties
 \open EPerm
 
 \truncated \data TensorProduct {R : CRing} (A B : LModule R) : \Set
@@ -134,28 +136,28 @@
   | func-*c => tensor_*c-right
 
 \lemma tensorSum_BigSum {R : CRing} {A B : LModule R} {l : Array (\Sigma A B)}
-  : tensorSum l = AddMonoid.BigSum (map (\lam s => tensor s.1 s.2) l) \elim l
+  : tensorSum l = BigSum (map (\lam s => tensor s.1 s.2) l) \elim l
   | nil => idp
   | s :: l => pmap (_ +) tensorSum_BigSum
 
 \lemma tensor-repr {R : CRing} {A B : LModule R} (x : TensorProduct A B)
-  : ∃ (l : Array (\Sigma A B)) (x = AddMonoid.BigSum (map (\lam s => tensor s.1 s.2) l)) \elim x
+  : ∃ (l : Array (\Sigma A B)) (x = BigSum (map (\lam s => tensor s.1 s.2) l)) \elim x
   | tensorSum l => inP (l, tensorSum_BigSum)
 
 \func tensorLift {R : CRing} {A B C : LModule R} (f : BilinearMap A B C) : LinearMap (TensorProductModule A B) C \cowith
   | func (x : TensorProduct A B) : C \with {
-    | tensorSum l => AddMonoid.BigSum $ map (\lam s => f s.1 s.2) l
-    | tensorSum-perm e => AbMonoid.BigSum_EPerm $ EPerm_map (\lam s => f s.1 s.2) e
+    | tensorSum l => BigSum $ map (\lam s => f s.1 s.2) l
+    | tensorSum-perm e => BigSum_EPerm $ EPerm_map (\lam s => f s.1 s.2) e
     | tensorSum_zro => pmap (+ _) f.linear-left.func-zro *> zro-left
     | tensorSum_+-left => pmap (+ _) f.linear-left.func-+ *> +-assoc
     | tensorSum_+-right => pmap (+ _) f.linear-right.func-+ *> +-assoc
     | tensorSum-scalar => pmap (+ _) $ f.linear-left.func-*c *> inv f.linear-right.func-*c
   }
   | func-+ {x} {y} => \case \elim x, \elim y \with {
-    | tensorSum l, tensorSum l' => pmap AddMonoid.BigSum (map_++ \lam s => f s.1 s.2) *> AddMonoid.BigSum_++
+    | tensorSum l, tensorSum l' => pmap BigSum (map_++ \lam s => f s.1 s.2) *> BigSum_++
   }
   | func-*c {r} {x} => \case \elim x \with {
-    | tensorSum l => pmap AddMonoid.BigSum (exts \lam j => f.linear-left.func-*c) *> inv LModule.*c_BigSum-ldistr
+    | tensorSum l => pmap BigSum (exts \lam j => f.linear-left.func-*c) *> inv LModule.*c_BigSum-ldistr
   }
 
 \lemma tensorLift_tensor {R : CRing} {A B C : LModule R} {f : BilinearMap A B C} {a : A} {b : B} : tensorLift f (tensor a b) = f a b
@@ -164,7 +166,7 @@
 \lemma tensorLift-unique {R : CRing} {A B C : LModule R} (f g : LinearMap (TensorProductModule A B) C)
                          (p : \Pi (a : A) (b : B) -> f (tensor a b) = g (tensor a b)) {x : TensorProduct A B} : f x = g x
   => \case tensor-repr x \with {
-    | inP (l,q) => pmap f q *> f.func-BigSum *> pmap AddMonoid.BigSum (exts \lam j => p _ _) *> inv g.func-BigSum *> pmap g (inv q)
+    | inP (l,q) => pmap f q *> f.func-BigSum *> pmap BigSum (exts \lam j => p _ _) *> inv g.func-BigSum *> pmap g (inv q)
   }
 
 \lemma tensorLift_+ {R : CRing} {A B C : LModule R} (f g : BilinearMap A B C) {x : TensorProduct A B}

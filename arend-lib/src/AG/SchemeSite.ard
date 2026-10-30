@@ -3,6 +3,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.MonoidHom
@@ -24,10 +25,10 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Meta
 \import Order.Lattice
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
@@ -36,6 +37,11 @@
 \import Set.Set
 \import Topology.Locale
 \import Topology.Locale.PreorderSite
+\import Algebra.Monoid.FinSum
+\import Algebra.Ring.RingHom.Properties
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+\import Data.Fin
 \open SubMonoid
 \open Monoid
 \open Cover
@@ -68,7 +74,7 @@
     | basic-cover-stable {a'} {a} a'a {U} a<=U => inP (\lam x => Given (x <= a') ∃ (b : U) (x <= b),
       Ideal.sclosure-mono (SetIm-elim $ later \lam {x} (inP (b,c,bc,Uc,ba,bl)) => \case loc-stable-forall a'a ba bl \with {
         | inP (b',b'a',b'b,b'l) => inP (b', b', <=-refl, (b'a', inP (c, Uc, b'b <=∘ bc)), b'a', b'l)
-      }) $ rewrite (R.Func a'a).func-ide in PseudoRingHom.func-Ideal_sclosure (R.Func a'a) a<=U, __.2, __.1)
+      }) $ rewrite (R.Func a'a).func-ide in func-Ideal_sclosure (R.Func a'a) a<=U, __.2, __.1)
 
   \lemma basicCover-stable {a' a : P} (a'a : a' <= a) {U : Set P} (a<=U : toSite.isBasicCover a U) : toSite.isBasicCover a' U
     => \case toSite.basic-cover-stable a'a a<=U \with {
@@ -87,7 +93,7 @@
       \private \lemma setPreorderSheaf : IsPreorderSheaf {toSite} (Comp forget.{u} R)
         => \lam {a} {U} a<=U U<=a {D} => IsPreorderSheaf.SetSheafCond a U
           \let | (inP (l,p)) => Cover_Ideal_<= U<=a (cover-basic a<=U)
-               | (inP h) => FinSet.finiteAC (\lam j => (l j).2.2)
+               | (inP h) => finiteAC (\lam j => (l j).2.2)
                | index j : \Sigma (b : \Sigma (b : P) (b <= a)) (U b.1) => (((h j).1, (h j).3), (h j).2)
           \in IsEquiv.fromInjSurj (\lam {f} {g} q => ext \lam _ =>
                 localization-merge-unique {_} {map (\lam s => (s.1, s.2.1)) l} (inv p) (\lam j => (h j).4)
@@ -100,9 +106,9 @@
                          \lam z => inv (path \lam i => R.Func-o i z) *> pmap (R.Func __ z) prop-pi *> path (\lam i => R.Func-o i z),
                          path \lam k => mf.isMatching {index i} {index j} prop-pi k ())
                 \in inP (\lam _ => r.1, later $ exts \lam b => ext \lam _ => unfold $ unfold $ unfold
-                    \case FinSet.finiteAC (\lam j => loc-stable-forall b.1.2 (h j).3 (h j).4) \with {
+                    \case finiteAC (\lam j => loc-stable-forall b.1.2 (h j).3 (h j).4) \with {
                       | inP c => localization-merge-unique {_} {map (\lam s => (R.Func b.1.2 s.1, R.Func b.1.2 s.2.1)) l}
-                        (pmap AddMonoid.BigSum (exts \lam j => inv func-*) *> inv AddMonoidHom.func-BigSum *> pmap (R.Func b.1.2) (inv p) *> func-ide)
+                        (pmap BigSum (exts \lam j => inv func-*) *> inv AddMonoidHom.func-BigSum *> pmap (R.Func b.1.2) (inv p) *> func-ide)
                         (\lam j => (c j).4)
                         \lam j => inv (path \lam i => R.Func-o i _) *> pmap (R.Func __ _) prop-pi
                           *> path (\lam i => R.Func-o i _) *> pmap (R.Func (c j).3) (r.2 j)
@@ -141,7 +147,7 @@
                       (inP (1, LDiv.make _ $ q *> inv ide-left))),
                   pmap (y *) func-* *> inv *-assoc *> pmap (* _) q *> *-comm *> inv func-*)
              }) __
-           | (inP h) => FinSet.finiteAC \lam j => \case (l j).2.2 \return ∃ (n : Nat) (I a (pow (l j).2.1 n)) \with {
+           | (inP h) => finiteAC \lam j => \case (l j).2.2 \return ∃ (n : Nat) (I a (pow (l j).2.1 n)) \with {
                | inP (b,c,bc,Tc,ba,bl) => \case (LocalizationIdeal.unit-char {I a} bl).1 $ lem ba bl $ basicCover-stable bc $ Cover_Ideal (T<=U Tc) \with {
                  | inP (_, inP (n,idp), r) => inP (n,r)
                }
@@ -153,7 +159,7 @@
     : Ideal.sclosure (\lam x => ∃ (b : U) (ba : b <= a) (IsLocalizationAt ba x)) 1
     => \case Cover_Ideal c \with {
       | inP (l,p) =>
-        \let | (inP h) => FinSet.finiteAC \lam j => \case (l j).2.2
+        \let | (inP h) => finiteAC \lam j => \case (l j).2.2
                   \return ∃ (b : U) (ba : b <= a) (y : R a) (IsLocalizationAt ba y) (n : Nat) (LDiv y (pow (l j).2.1 n)) \with {
                  | inP (b,c,bc,Uc,ba,xl) =>
                    \let | (inP (y,yl)) => loc-restrict (U<=a Uc)
@@ -165,7 +171,7 @@
                }
              | (inP (ts,q)) => pow-lin-comb1 {_} {map (\lam s => (s.1,s.2.1)) l} (inv p) (\lam j => (h j).6)
         \in inP (mkArray \lam j => later (ts j * (h j).7.inv, ((h j).4, inP ((h j).1, (h j).2, (h j).3, (h j).5))),
-                 inv $ pmap AddMonoid.BigSum (exts \lam j => *-assoc *> pmap (_ *) (*-comm *> (h j).7.inv-right)) *> q)
+                 inv $ pmap BigSum (exts \lam j => *-assoc *> pmap (_ *) (*-comm *> (h j).7.inv-right)) *> q)
     }
 
   \lemma equiv-cover {a b : P} (ba : b <= a) (e : IsEquiv (R.Func ba)) : Cover1 {toSite} a b
@@ -183,11 +189,11 @@
                    (bl : IsLocalizationAt ba x) (cl : IsLocalizationAt ca y) : Cover1 {toSite} b c
     => inv-cover ca ba cl $ Inv.Inv_LDiv (bl.localization-inv powers-id) $ (R.Func ba).func-LDiv y|x
 
-  \lemma cover-BigSum {a : P} {n : Nat} {l : Array (R a) n} (p : AddMonoid.BigSum l = 1) {U : Set P}
+  \lemma cover-BigSum {a : P} {n : Nat} {l : Array (R a) n} (p : BigSum l = 1) {U : Set P}
                       (lU : ∀ (x : l) ∃ (b : P) (Cover {toSite} b U) (ba : b <= a) (IsLocalizationAt ba x)) : Cover {toSite} a U
     => \have lem : toSite.isBasicCover a (Cover {toSite} __ U) => inP (mkArray \lam j => later (1, (l j, \case lU j \with {
           | inP (b,bU,ba,bl) => inP (b, b, <=-refl, bU, ba, bl)
-        })), inv $ pmap AddMonoid.BigSum (exts \lam j => ide-left) *> p)
+        })), inv $ pmap BigSum (exts \lam j => ide-left) *> p)
        \in cover-trans lem \lam c => c
 } \where {
   \open CRingCat (forget)
@@ -224,7 +230,7 @@
   \lemma localization-merge-unique {R : CRing} {l : Array (\Sigma R R)} (lc : R.BigSum (map (\lam s => s.1 * s.2) l) = 1)
                                    (L : \Pi (j : Fin l.len) -> Localization (powers (l j).2))
                                    {x y : R} (e : \Pi (j : Fin l.len) -> L j x = L j y) : x = y
-    => \case FinSet.finiteAC (\lam j => Localization.localization-inj1 (L j) (e j)) \with {
+    => \case finiteAC (\lam j => Localization.localization-inj1 (L j) (e j)) \with {
       | inP h => \case pow-lin-comb1 lc (\lam j => (h j).1) \with {
         | inP (ts,q) => inv ide-right *> pmap (x *) (inv q) *> R.BigSum-ldistr
           *> pmap R.BigSum (exts \lam j => pmap (x *) *-comm *> inv *-assoc *> pmap (* _) (h j).2 *> *-assoc *> pmap (y *) *-comm)
@@ -237,7 +243,7 @@
     (v : \Pi (j : Fin l.len) -> L j)
     (Lc : \Pi (i j : Fin l.len) -> \Sigma (T : Localization (powers (L i (l j).2))) (S : MonoidHom (L j) T) (∀ z (T (L i z) = S (L j z))) (T (v i) = S (v j)))
     : ∃ (r : R) ∀ (j : Fin l.len) (L j r = v j)
-    => \let | (inP v') => FinSet.finiteAC \lam j => Localization.localization-surj1 (L j) (v j)
+    => \let | (inP v') => finiteAC \lam j => Localization.localization-surj1 (L j) (v j)
             | am i j : (Lc i j).1 (L i ((v' i).1 * pow (l j).2 (v' j).2)) = (Lc i j).1 (L i ((v' j).1 * pow (l i).2 (v' i).2))
                => pmap (Lc i j).1 (func-* *> pmap (* _) (inv (v' i).3)) *> func-* *> pmap (* _) func-* *> *-assoc
                *> pmap2 (*) (Lc i j).4 (*-comm *> pmap2 (*) ((Lc i j).3 _) ((Lc i j).3 _)) *> inv *-assoc *> pmap (* _) (inv func-*)

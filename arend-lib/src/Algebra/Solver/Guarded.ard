@@ -1,5 +1,3 @@
-\import Data.Fin
-\import Paths
 
 {- | A variant of `SolverModel` for the case when normalization needs a hypothesis and is correct only if the
    environment satisfies a guard. For example, a field has no total inverse, so an inverse can be treated as an atom only

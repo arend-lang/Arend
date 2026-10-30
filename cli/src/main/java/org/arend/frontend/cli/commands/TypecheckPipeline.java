@@ -35,6 +35,7 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.order.MapTarjanSCC;
+import org.arend.typechecking.visitor.CollectDefCallsVisitor;
 
 import static org.arend.ext.prettyprinting.PrettyPrinterConfig.DEFAULT;
 
@@ -44,11 +45,14 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * The typecheck command: load what caches are usable, typecheck what is left, report, and
@@ -64,6 +68,9 @@ public final class TypecheckPipeline {
   public static final String SHOW_MODULES = "show-modules";
   public static final String SHOW_MODULES_WITH_INSTANCES = "show-modules-with-instances";
   public static final String LINT = "lint";
+  public static final String SHOW_CYCLES = "show-cycles";
+  public static final String DEPENDENCY_GRAPH = "dependency-graph";
+  private static final int MAX_CYCLE_USERS = 6;
 
   private TypecheckPipeline() {}
 
@@ -200,6 +207,15 @@ public final class TypecheckPipeline {
           System.out.println();
           System.out.println("Modules with instances cycles:");
           showModules(ctx, library, false);
+        }
+
+        if (cmdLine.hasOption(SHOW_CYCLES)) {
+          System.out.println();
+          showCycles(ctx, library);
+        }
+
+        if (cmdLine.hasOption(DEPENDENCY_GRAPH)) {
+          writeDependencyGraph(ctx, library, cmdLine.getOptionValue(DEPENDENCY_GRAPH));
         }
 
         if (cmdLine.hasOption(LINT)) {
@@ -575,6 +591,178 @@ public final class TypecheckPipeline {
         System.out.println(scc);
       }
     }.order();
+  }
+
+  /**
+   * Prints the import cycles of {@param library} that contain at least one source module.
+   * Meta modules of extensions are nodes of the graph too; their edges are the imports declared by the extension.
+   * For every import inside a cycle, it prints which definitions of the importing module use which definitions of the imported one.
+   */
+  private static void showCycles(CommandContext ctx, SourceLibrary library) {
+    Map<ModulePath, ModuleLocation> nodes = new LinkedHashMap<>();
+    for (ModuleLocation module : ctx.server.getModules()) {
+      if (module.getLibraryName().equals(library.getLibraryName()) && (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE || module.getLocationKind() == ModuleLocation.LocationKind.GENERATED)) {
+        nodes.putIfAbsent(module.getModulePath(), module);
+      }
+    }
+
+    Map<ModulePath, List<ModulePath>> graph = new LinkedHashMap<>();
+    for (Map.Entry<ModulePath, ModuleLocation> entry : nodes.entrySet()) {
+      ConcreteGroup group = ctx.server.getRawGroup(entry.getValue());
+      List<ModulePath> dependencies = new ArrayList<>();
+      if (group != null) {
+        for (ConcreteStatement statement : group.statements()) {
+          ConcreteNamespaceCommand cmd = statement.command();
+          if (cmd != null && cmd.isImport()) {
+            ModulePath path = new ModulePath(cmd.module().getPath());
+            if (nodes.containsKey(path) && !path.equals(entry.getKey()) && !dependencies.contains(path)) {
+              dependencies.add(path);
+            }
+          }
+        }
+      }
+      graph.put(entry.getKey(), dependencies);
+    }
+
+    List<List<ModulePath>> cycles = new ArrayList<>();
+    new MapTarjanSCC<>(graph) {
+      @Override
+      protected void unitFound(ModulePath unit, boolean withLoops) {}
+
+      @Override
+      protected void sccFound(List<ModulePath> scc) {
+        for (ModulePath module : scc) {
+          if (nodes.get(module).getLocationKind() == ModuleLocation.LocationKind.SOURCE) {
+            cycles.add(scc);
+            return;
+          }
+        }
+      }
+    }.order();
+
+    Comparator<ModulePath> comparator = Comparator.comparing(ModulePath::toString);
+    int number = 0;
+    for (List<ModulePath> cycle : cycles) {
+      List<ModulePath> sorted = new ArrayList<>(cycle);
+      sorted.sort(comparator);
+      Set<ModulePath> inCycle = new HashSet<>(cycle);
+      System.out.println("Cycle " + (++number) + " (" + cycle.size() + " modules): " + sorted);
+      for (ModulePath module : sorted) {
+        ModuleLocation location = nodes.get(module);
+        Map<ModulePath, Map<String, Set<String>>> uses = location.getLocationKind() == ModuleLocation.LocationKind.SOURCE ? collectUses(ctx, location) : null;
+        List<ModulePath> targets = new ArrayList<>(graph.get(module));
+        targets.retainAll(inCycle);
+        targets.sort(comparator);
+        for (ModulePath target : targets) {
+          if (uses == null) {
+            System.out.println("  " + module + " -> " + target + ": declared by the extension");
+            continue;
+          }
+          Map<String, Set<String>> targetUses = uses.get(target);
+          if (targetUses == null || targetUses.isEmpty()) {
+            System.out.println("  " + module + " -> " + target + ": removable, no definition uses it");
+            continue;
+          }
+          System.out.println("  " + module + " -> " + target + ": " + targetUses.size() + " definition(s)");
+          for (Map.Entry<String, Set<String>> entry : targetUses.entrySet()) {
+            List<String> users = new ArrayList<>(entry.getValue());
+            String suffix = users.size() > MAX_CYCLE_USERS ? ", ... (" + (users.size() - MAX_CYCLE_USERS) + " more)" : "";
+            System.out.println("    " + entry.getKey() + " <- " + String.join(", ", users.subList(0, Math.min(users.size(), MAX_CYCLE_USERS))) + suffix);
+          }
+        }
+      }
+      System.out.println();
+    }
+    System.out.println(number == 0 ? "No import cycles" : "Import cycles: " + number);
+  }
+
+  /**
+   * Writes the definitions of the source modules of {@param library} and their dependencies as a JSON array.
+   * Every element is {@code {"module", "name", "kind", "dynamic", "deps": ["module:name", ...]}}.
+   * Imports of every module are written as {@code {"module", "imports": [...]}}.
+   */
+  private static void writeDependencyGraph(CommandContext ctx, SourceLibrary library, String file) {
+    StringBuilder builder = new StringBuilder("{\"definitions\": [\n");
+    boolean first = true;
+    List<String> imports = new ArrayList<>();
+    for (ModuleLocation module : ctx.server.getModules()) {
+      if (!module.getLibraryName().equals(library.getLibraryName())) continue;
+      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE && module.getLocationKind() != ModuleLocation.LocationKind.GENERATED) continue;
+      ConcreteGroup group = ctx.server.getRawGroup(module);
+      if (group != null) {
+        List<String> moduleImports = new ArrayList<>();
+        for (ConcreteStatement statement : group.statements()) {
+          ConcreteNamespaceCommand cmd = statement.command();
+          if (cmd != null && cmd.isImport()) moduleImports.add(jsonString(String.join(".", cmd.module().getPath())));
+        }
+        imports.add("{\"module\": " + jsonString(module.getModulePath().toString()) + ", \"generated\": " + (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) + ", \"imports\": [" + String.join(", ", moduleImports) + "]}");
+      }
+      if (module.getLocationKind() != ModuleLocation.LocationKind.SOURCE) continue;
+      for (DefinitionData data : ctx.server.getResolvedDefinitions(module)) {
+        Concrete.ResolvableDefinition definition = data.definition();
+        Set<TCDefReferable> dependencies = new LinkedHashSet<>();
+        definition.accept(new CollectDefCallsVisitor(dependencies, true), null);
+        Definition typechecked = definition.getData().getTypechecked();
+        if (typechecked != null && typechecked.getUsedInstances() != null) {
+          dependencies.addAll(typechecked.getUsedInstances());
+        }
+        List<String> deps = new ArrayList<>();
+        for (TCDefReferable dependency : dependencies) {
+          ModuleLocation location = dependency.getLocation();
+          if (location == null || dependency == definition.getData()) continue;
+          deps.add(jsonString(location.getModulePath() + ":" + dependency.getRefLongName()));
+        }
+        if (!first) builder.append(",\n");
+        first = false;
+        builder.append("{\"module\": ").append(jsonString(module.getModulePath().toString()))
+          .append(", \"name\": ").append(jsonString(definition.getData().getRefLongName().toString()))
+          .append(", \"kind\": ").append(jsonString(definition.getData().getKind().toString()))
+          .append(", \"dynamic\": ").append(definition.getEnclosingClass() != null)
+          .append(", \"deps\": [").append(String.join(", ", deps)).append("]}");
+      }
+    }
+    builder.append("\n], \"modules\": [\n").append(String.join(",\n", imports)).append("\n]}\n");
+    try {
+      java.nio.file.Files.writeString(java.nio.file.Path.of(file), builder);
+      System.out.println("Dependency graph is written to " + file);
+    } catch (java.io.IOException e) {
+      System.out.println("[ERROR] Cannot write " + file + ": " + e.getMessage());
+    }
+  }
+
+  private static String jsonString(String str) {
+    StringBuilder builder = new StringBuilder("\"");
+    for (char c : str.toCharArray()) {
+      if (c == '"' || c == '\\') builder.append('\\').append(c);
+      else if (c < 0x20) builder.append(String.format("\\u%04x", (int) c));
+      else builder.append(c);
+    }
+    return builder.append('"').toString();
+  }
+
+  /**
+   * @return a map from imported modules to the map from the used definitions to the definitions of {@param module} that use them.
+   */
+  private static Map<ModulePath, Map<String, Set<String>>> collectUses(CommandContext ctx, ModuleLocation module) {
+    Map<ModulePath, Map<String, Set<String>>> result = new HashMap<>();
+    for (DefinitionData data : ctx.server.getResolvedDefinitions(module)) {
+      Concrete.ResolvableDefinition definition = data.definition();
+      Set<TCDefReferable> dependencies = new LinkedHashSet<>();
+      definition.accept(new CollectDefCallsVisitor(dependencies, true), null);
+      Definition typechecked = definition.getData().getTypechecked();
+      if (typechecked != null && typechecked.getUsedInstances() != null) {
+        dependencies.addAll(typechecked.getUsedInstances());
+      }
+      String user = definition.getData().getRefLongName().toString();
+      for (TCDefReferable dependency : dependencies) {
+        ModuleLocation location = dependency.getLocation();
+        if (location == null || location.getModulePath().equals(module.getModulePath())) continue;
+        result.computeIfAbsent(location.getModulePath(), k -> new TreeMap<>())
+          .computeIfAbsent(dependency.getRefLongName().toString(), k -> new TreeSet<>())
+          .add(user);
+      }
+    }
+    return result;
   }
 
   private static void reportTypeCheckResult(CommandContext ctx, ModulePath modulePath, GeneralError.Level result) {

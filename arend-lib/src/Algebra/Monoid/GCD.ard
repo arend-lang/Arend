@@ -17,6 +17,9 @@
 \import Set
 \open Monoid(LDiv,Inv)
 \open Preorder(PreorderC,EquivRel)
+\import Algebra.Semiring
+\import Algebra.Ring
+\import Algebra.Monoid.Properties
 
 \record GCD {M : CMonoid}
             (val1 val2 : M) (\coerce res : M)
@@ -94,11 +97,11 @@
   \lemma IsCoprime_pow-right {a b : E} (a_b : IsCoprime a b) {n : Nat} : IsCoprime a (Monoid.pow b n)
     => IsCoprime.swap $ IsCoprime_pow-left (IsCoprime.swap a_b)
 
-  \lemma IsCoprime_BigProd-right {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime a (l j)) : IsCoprime a (Monoid.BigProd l) \elim l
+  \lemma IsCoprime_BigProd-right {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime a (l j)) : IsCoprime a (BigProd l) \elim l
     | nil => \lam z _ (z|1 : LDiv z 1) => Inv.lmake z|1.inv (*-comm *> z|1.inv-right)
     | b :: l => IsCoprime_*-right (p 0) (IsCoprime_BigProd-right \lam j => p (suc j))
 
-  \lemma IsCoprime_BigProd-left {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime (l j) a) : IsCoprime (Monoid.BigProd l) a
+  \lemma IsCoprime_BigProd-left {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime (l j) a) : IsCoprime (BigProd l) a
     => IsCoprime.swap $ IsCoprime_BigProd-right \lam j => IsCoprime.swap (p j)
 
   \lemma coprime_*_div-left {d e a : E} (d_e : IsCoprime d e) (d|a : LDiv d a) (e|a : LDiv e a) : TruncP (LDiv (d * e) a)
@@ -230,7 +233,7 @@
       | <=-refl {x} => inP (\new LDiv x x ide ide-right)
       | <=-transitive {x} {y} {z} (inP y|x) (inP z|y) => inP (LDiv.trans z|y y|x)
 
-    \func \infix 4 ~ {M : CMonoid} => Equivalence.~ {EquivRel {DivPreoder M}}
+    \protected \func \infix 4 ~ {M : CMonoid} => Equivalence.~ {EquivRel {DivPreoder M}}
 
     \cons inD {M : CMonoid} (x : M) : DivQuotient M => in~ x
 
@@ -390,3 +393,30 @@
   }
 
 \type IsCoprimeArray {M : CMonoid} (l : Array M) => \Pi (z : M) -> DArray (\lam j => LDiv z (l j)) -> Inv z
+
+\lemma .divQuotient_un0 (CS : CSemiring) {a : CS} (p : in~ a = {DivQuotient CS} in~ 0) : a = 0
+  => \case (DivQuotient.make~ p).1 \with {
+       | inP d => inv (Monoid.LDiv.inv-right {d}) *> zro_*-left
+     }
+
+\lemma .divQuotient_dec0 (D : CRing.Dec) (a : DivQuotient D) : Set.Dec (a = in~ 0)
+  | in~ a => \case decideEq a 0 \with {
+    | yes e => yes $ ~-pequiv $ rewrite e (inP LDiv.id-div, inP LDiv.id-div)
+    | no q => no \lam p => q \case (DivQuotient.make~ p).1 \with {
+      | inP d => inv (LDiv.inv-right {d}) *> zro_*-left
+    }
+  }
+
+\func .bezoutGCD (R : CRing) {a b s t : R} (p : LDiv (s * a + t * b) a) (q : LDiv (s * a + t * b) b) : GCD a b (s * a + t * b) \cowith
+  | res|val1 => p
+  | res|val2 => q
+  | res-univ g (g|x : LDiv g a) (g|y : LDiv g b) => \new LDiv {
+    | inv => s * g|x.inv + t * g|y.inv
+    | inv-right =>
+      g * (s * g|x.inv + t * g|y.inv)       ==< ldistr >==
+      g * (s * g|x.inv) + g * (t * g|y.inv) ==< inv (pmap2 (+) *-assoc *-assoc) >==
+      (g * s) * g|x.inv + (g * t) * g|y.inv ==< pmap2 (__ * g|x.inv + __ * g|y.inv) *-comm *-comm >==
+      (s * g) * g|x.inv + (t * g) * g|y.inv ==< pmap2 (+) *-assoc *-assoc >==
+      s * (g * g|x.inv) + t * (g * g|y.inv) ==< pmap2 (s * __ + t * __) g|x.inv-right g|y.inv-right >==
+      s * a + t * b                         `qed
+  }

@@ -1,5 +1,4 @@
 \import Logic
-\import Meta
 \import Paths
 
 \data Bool | false | true
@@ -19,8 +18,9 @@
   | true => false
   | false => true
 
-\lemma not-isInv {b : Bool} : not (not b) = b
-  => cases b idp
+\lemma not-isInv {b : Bool} : not (not b) = b \elim b
+  | true => idp
+  | false => idp
 
 \func if {A : \Type} (b : Bool) (then else : A) : A \elim b
   | true => then

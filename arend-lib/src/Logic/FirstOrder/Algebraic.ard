@@ -1,9 +1,7 @@
-\import Algebra.Meta
+\import Algebra.Meta.Base
 \import Arith.Nat
-\import Data.Bool
 \import Data.Or
 \import Function.Meta
-\import Homotopy.Fibration
 \import Logic
 \import Logic.FirstOrder.Term
 \import Logic.Meta
@@ -14,7 +12,6 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set
 \import Set.Fin
 
 \class Signature \extends TermSig

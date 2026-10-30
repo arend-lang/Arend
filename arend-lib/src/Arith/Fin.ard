@@ -1,7 +1,6 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Prime
@@ -10,21 +9,20 @@
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
-\import Data.Or
 \import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set \hiding (#)
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 \open Nat(div,mod,divModProp)
-\open AddMonoid
 
 \lemma int_n*_+_mod_n {n r : Nat} {q : Int} (r<=n : r < suc n) : (pos (suc n) * q + r) mod suc n = r
   => mod-unique {(pos (suc n) * q + r) div suc n} {q} natMod<right r<=n (natDivModProp (pos (suc n) * q + r) n)
@@ -56,8 +54,8 @@
 
 \lemma base-digit-sum {l : Array Nat} {b : Nat} (p : \Pi (j : Fin l.len) -> l j < b) {j : Fin l.len}
   : l j = base-digit (BigSum (\lam j => l j * Monoid.pow b j)) b j \elim l, j
-  | a :: l, 0 => inv $ pmap (mod b) +-comm *> pmap (\lam x => (x + a) mod b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_mod_n {b} {BigSum (\lam j => l j * Monoid.pow b j)} (p 0)
-  | a :: l, suc j => base-digit-sum (\lam j => p (suc j)) *> pmap (base-digit __ b j) (unfold BigSum $ inv $ pmap (div b) +-comm *> pmap (\lam x => (x + a) div b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_div_n=div (later \lam b=0 => \case rewrite b=0 in p 0) *> pmap (_ +) (div_< (p 0)) *> zro-right)
+  | a :: l, 0 => inv $ pmap (mod b) +-comm *> pmap (\lam x => (x + a) mod b) (inv $ *-comm *> BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_mod_n {b} {BigSum (\lam j => l j * Monoid.pow b j)} (p 0)
+  | a :: l, suc j => base-digit-sum (\lam j => p (suc j)) *> pmap (base-digit __ b j) (unfold BigSum $ inv $ pmap (div b) +-comm *> pmap (\lam x => (x + a) div b) (inv $ *-comm *> BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_div_n=div (later \lam b=0 => \case rewrite b=0 in p 0) *> pmap (_ +) (div_< (p 0)) *> zro-right)
 
 \instance FinRing {n : Nat} : CRing.Dec (Fin (suc n))
   | zro => 0

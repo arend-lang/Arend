@@ -7,12 +7,12 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
+\import Algebra.Ordered.Group
 \open LocAbType
 
 \instance LocPosetAbMonoid {M : PosetAbMonoid} (S : SubAddMonoid M) : PosetAbMonoid (LocAbType S) \cowith

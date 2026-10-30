@@ -1,7 +1,6 @@
 \import Arith.Fin.Order
 \import Arith.Nat
 \import Data.Or
-\import Equiv
 \import Function
 \import Function.Meta ($)
 \import Logic
@@ -11,8 +10,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Set
-\import Set.Fin(FinSet)
-\import Set.Fin.DFin
+\import Data.Fin
 
 \class PigeonholeSet \extends BaseSet {
   | pigeonhole (f : Nat -> E) : ∃ (i j : Nat) (i /= j) (f i = f j)
@@ -24,19 +22,17 @@
       | greater c => (t.2, t.1, c, inv t.4)
     }
 
-  \lemma isEquiv (f : E -> E) (inj : IsInj f) : IsEquiv f
-    => isDFin.isEquiv (isDFin.fromPigeonhole \this) f inj
 }
 
 \lemma pigeonhole-fin {n m : Nat} (f : Fin m -> Fin n) (p : n < m) : ∃ (i j : Fin m) (i /= j) (f i = f j)
-  => aux f \lam inj => <-irreflexive $ p <∘l FinSet.FinCardInj f inj
+  => aux f \lam inj => <-irreflexive $ p <∘l FinCardInj f inj
   \where {
     \lemma search-pair {n : Nat} {A : DecSet} (f : Fin n -> A) : Dec (∃ (i j : Fin n) (i /= j) (f i = f j))
-      => \have t i : Dec (∃ (j : Fin n) (i /= j) (f i = f j)) => \case FinSet.searchFin (\lam j => \Sigma (i /= j) (f i = f j)) (\lam j => decide) \with {
+      => \have t i : Dec (∃ (j : Fin n) (i /= j) (f i = f j)) => \case searchFin (\lam j => \Sigma (i /= j) (f i = f j)) (\lam j => decide) \with {
            | inl (j,p,_) => yes (inP (j, p.1, p.2))
            | inr q => no \lam (inP (j, s, p)) => q j (s,p)
          }
-         \in \case FinSet.searchFin _ t \with {
+         \in \case searchFin _ t \with {
           | inl (i,p,_) => yes $ TruncP.map p (\lam q => (i, q.1, q.2, q.3))
           | inr q => no \lam (inP (i,j,e,p)) => q i (inP (j, e, p))
         }

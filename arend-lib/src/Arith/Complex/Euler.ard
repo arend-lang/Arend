@@ -1,7 +1,5 @@
-\import Algebra.Meta
 \import Algebra.Pointed
 \import Algebra.Monoid
-\import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Complex
 \import Arith.Complex.Banach
@@ -11,11 +9,8 @@
 \import Arith.Real.Field
 \import Arith.Real.Pi
 \import Function.Meta
-\import Logic
-\import Meta
 \import Arith.Trig.Real
 \import Paths
-\import Paths.Meta
 \open Complex \using (iunit \as i)
 \open Monoid (pow)
 

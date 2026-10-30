@@ -4,7 +4,6 @@
 \import Algebra.Pointed
 \import Function.Meta
 \import Logic
-\import Meta
 \import Operations
 \import Paths
 \import Paths.Meta
@@ -16,6 +15,7 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace.Product
+\import Algebra.Monoid.Properties
 
 \instance ProductTopAbGroup (X Y : TopAbGroup) : TopAbGroup (\Sigma X Y)
   | UniformSpace => ProductUniformSpace X Y

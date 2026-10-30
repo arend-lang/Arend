@@ -1464,6 +1464,9 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       case INSTANCE -> myBuilder.append("\\instance ");
     }
 
+    if (def.getData().isDynamicExtension()) {
+      myBuilder.append(".");
+    }
     prettyPrintNameWithPrecedence(def.getData());
 
     if (def.getLevelParameters() != null) {
@@ -1480,7 +1483,14 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     final BinOpLayout l = new BinOpLayout() {
       @Override
       void printLeft(PrettyPrintVisitor pp) {
-        pp.prettyPrintParameters(def.getParameters());
+        // The receiver of an extension function is written explicitly even if it was made implicit
+        Concrete.Parameter receiver = def.implicitReceiver && !def.getParameters().isEmpty() ? def.getParameters().getFirst() : null;
+        if (receiver != null) receiver.setExplicit(true);
+        try {
+          pp.prettyPrintParameters(def.getParameters());
+        } finally {
+          if (receiver != null) receiver.setExplicit(false);
+        }
       }
 
       @Override

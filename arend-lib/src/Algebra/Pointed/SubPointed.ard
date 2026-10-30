@@ -1,10 +1,8 @@
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Function
-\import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Paths
 \import Paths.Meta
 \import Set.SubSet
 

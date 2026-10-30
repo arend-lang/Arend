@@ -1,6 +1,5 @@
 \import Algebra.Group
 \import Algebra.Monoid
-\import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
@@ -16,6 +15,9 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Algebra.StrictlyOrdered.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Monoid.Properties
 \open LinearOrder (trichotomy)
 
 \func isuc (x : Int) : Int
@@ -158,7 +160,6 @@
   | natCoefSuc _ => idp
   \where {
     \open Nat(-)
-    \open OrderedRing
 
     -- ## +
 
@@ -340,6 +341,10 @@
   | neg n, neg (suc m) => neg<=neg $ suc_<_<= $ neg<neg.conv p
 
 \open Monoid(LDiv)
+\open Group
+\open AddGroup
+\open AddGroup (*i_ipow)
+\open Monoid
 
 \lemma ldiv_iabs {x y : Int} (d : LDiv x y) : LDiv (iabs x) (iabs y) (iabs d.inv) \cowith
   | inv-right => inv iabs_* *> pmap iabs d.inv-right
@@ -501,3 +506,68 @@
 
 \lemma int_<-dec {x y : Int} {so : So (int_<=-dec.int_<=_Bool (isuc x) y)} : x < y
   => id<isuc <∘l int_<=-dec {isuc x} {y} {so}
+
+\func intMap {R : Ring} : RingHom IntRing R \cowith
+  | func => intCoef
+  | func-+ {x y : Int} : R.intCoef (x + y) = intCoef x + intCoef y \elim x, y {
+    | pos n, pos m => natMap.func-+
+    | pos n, neg (suc _ \as m) => intCoef_diff n m
+    | neg (suc _ \as n), pos m => intCoef_diff m n *> +-comm
+    | neg (suc _ \as n), neg (suc _ \as m) => pmap negative natMap.func-+ *> negative_+ *> +-comm
+  }
+  | func-ide => natMap.func-ide
+  | func-* {x y : Int} : R.intCoef (x * y) = intCoef x * intCoef y \elim x, y {
+    | pos n, pos m => natMap.func-*
+    | pos n, neg (suc _ \as m) => intCoef_neg _ *> pmap negative natMap.func-* *> inv R.negative_*-right
+    | neg (suc _ \as n), pos m => intCoef_neg _ *> pmap negative natMap.func-* *> inv R.negative_*-left
+    | neg (suc _ \as n), neg m => natMap.func-* *> inv (pmap (negative (natCoef n) *) (intCoef_neg m) *> R.negative_*)
+  }
+  \where {
+    \open AddGroup(negative_zro,negative_+)
+    \open Ring
+
+    \lemma intCoef_diff {R : Ring} (n m : Nat) : R.intCoef (n Nat.- m) = intCoef n - intCoef m \elim n, m
+      | 0, 0 => inv (pmap (natCoef 0 + negative __) natCoefZero *> pmap (natCoef 0 +) negative_zro *> zro-right)
+      | 0, suc _ \as m => inv (pmap (__ - natCoef m) natCoefZero *> zro-left)
+      | suc _ \as n, 0 => inv (pmap (natCoef n + negative __) natCoefZero *> pmap (natCoef n +) negative_zro *> zro-right)
+      | suc n, suc m => intCoef_diff n m *>
+      pmap (natCoef n +) (inv (pmap (ide +) negative_+ *> inv +-assoc *> pmap (- natCoef m) negative-right *> zro-left)) *>
+      inv (pmap2 (__ + negative __) (natCoefSuc n) (natCoefSuc m) *> +-assoc)
+  }
+
+\lemma intComm {R : Ring} (n : Int) (x : R) : intMap n * x = x * intMap n \elim n
+  | pos n => natComm n x
+  | neg n => rewrite Ring.intCoef_neg (Ring.negative_*-left *> pmap negative (natComm n x) *> inv Ring.negative_*-right)
+
+\lemma .ipow_+ (G : Group) {a : G} {x y : Int} : ipow a (x + y) = ipow a x * ipow a y \elim x, y
+  | pos n, pos m => pow_+
+  | pos n, neg m => ipow_-
+  | neg n, pos m => ipow_- *> pow-comm2 (inverse-right *> inv inverse-left)
+  | neg n, neg m => pow_+
+  \where {
+    \open Arith.Int.IntRing(+,+-comm)
+
+    \lemma ipow_- {a : G} {n m : Nat} : ipow a (n Nat.- m) = pow a n * pow (inverse a) m \elim n, m
+      | 0, m => inv ide-left
+      | suc n, 0 => inv ide-right
+      | suc n, suc m => ipow_- *> pmap (pow a n *) (inv ide-left *> pmap (* _) (inv (inverse-right {_} {a})) *> *-assoc *> pmap (a *) (pow-left {_} {inverse a})) *> inv *-assoc
+  }
+
+\lemma .ipow_negaitve (G : Group) {a : G} {x : Int} : ipow a (negative x) = inverse (ipow a x) \elim x
+  | pos n => inv inverse_pow
+  | neg n => inv inverse-isInv *> pmap inverse inverse_pow
+  \where \open Arith.Int.IntRing(negative)
+
+\lemma .ipow_* (G : Group) {a : G} {x y : Int} : ipow a (x * y) = ipow (ipow a x) y \elim x, y
+  | pos n, pos m => pow_*
+  | pos n, neg m => pow_* *> pmap (pow __ m) (inv inverse_pow)
+  | neg (suc n), pos m => pow_*
+  | neg (suc n), neg m => pow_* *> pmap (pow __ m) (inv (inverse_pow {_} {_} {suc n} *> pmap (pow __ (suc n)) inverse-isInv))
+  \where \open Arith.Int.IntRing(*)
+
+\lemma .*i-assoc (A : AddGroup) {x y : Int} {a : A} : (x * y) *i a = x *i (y *i a)
+  => pmap (*i _) *-comm *> *i_ipow *> ipow_* {AddGroup.toGroup A} *> inv (pmap (_ *i) *i_ipow *> *i_ipow)
+  \where \open Arith.Int.IntRing(*,*-comm)
+
+\lemma .*i-rdistr (A : AddGroup) {x y : Int} {a : A} : (x Arith.Int.IntRing.+ y) *i a = x *i a + y *i a
+  => *i_ipow *> ipow_+ {AddGroup.toGroup A} *> inv (pmap2 (+) *i_ipow *i_ipow)

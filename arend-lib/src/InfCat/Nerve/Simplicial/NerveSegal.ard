@@ -17,12 +17,9 @@
  -   On degenerate edges it is {rezk-equiv} for {C}, so it is also surjective, hence an equivalence.
  -}
 
-\import Arith.Fin.Order
 \import Arith.Nat
 \import Category
-\import Category.Functor
 \import Category.Simplex
-\import Category.Slice
 \import Equiv
 \import Function.Meta
 \import InfCat.Interval

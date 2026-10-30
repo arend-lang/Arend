@@ -1,6 +1,7 @@
 \import Algebra.Domain
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Localization
+\import Algebra.Domain.Properties
 
 \class IntegrallyClosedDomain \extends IntegralDomain
   | isIntegrallyClosedDomain : isIntegrallyClosed (locR {_} {subMonoid})

@@ -8,13 +8,10 @@
  -     out of the realization ({realize-map}).
  -}
 
-\import Category
 \import Category.Simplex
-\import Category.Slice
 \import Arith.Fin.Order
 \import Order.PartialOrder
 \import Equiv
-\import Equiv.Path
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Basics
@@ -116,7 +113,7 @@
 
 -- | The realization of `Δ/[n]` has propositional hom-types, since it is `[n]`.
 \lemma realization-slice-thin (n : Nat) (a b : Realization (sliceProj n)) : isProp (a ~> b)
-  => isProp.equiv ((ff-surj-equiv.2 (realization-slice n)).1 a b) (nerve-preorder-prop _ _)
+  => equiv-isProp ((ff-surj-equiv.2 (realization-slice n)).1 a b) (nerve-preorder-prop _ _)
 
 {- | For a section {t} of the nerve over `Δ/[1]`, the image of the arrow from the vertex `0` to the terminal object is an isomorphism
  -   if and only if the edge of the functor `[1] -> C` given by the top simplex is.

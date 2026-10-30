@@ -4,7 +4,6 @@
 \import Arith.Rat
 \import Arith.Real.Root
 \import Arith.Real.UpperReal
-\import Data.Bool
 \import Function.Meta
 \import Logic
 \import Logic.Meta

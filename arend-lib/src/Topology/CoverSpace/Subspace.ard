@@ -12,6 +12,7 @@
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
 \import Topology.TopSpace
+\import Set.Set.Lattice
 \open Set
 
 \func OpenCoverSpace {X : CoverSpace} {S : Set X} (So : X.isOpen S) : CoverSpace (Total S) \cowith

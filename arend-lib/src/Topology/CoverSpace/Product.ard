@@ -1,4 +1,3 @@
-\import Data.Bool
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -14,6 +13,7 @@
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
 \import Topology.TopSpace.Product
+\import Set.Set.Lattice
 \open CoverMap
 \open ClosurePrecoverSpace \hiding (closure-univ)
 \open ProductCoverSpace

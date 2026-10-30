@@ -1,0 +1,131 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.StrictlyOrdered
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Algebra.StrictlyOrdered.Ring
+\open Monoid(Inv)
+
+\class OrderedField \extends OrderedCRing, Field {
+  | zro/=ide _0=1 => <-irreflexive (transport (< ide) _0=1 zro<ide)
+  | locality x => \case <_+-comparison (x + ide) (negative x) (transport isPos (inv (pmap (- x) +-comm *> +-assoc *> pmap (ide +) negative-right *> zro-right)) ide>zro) \with {
+    | byLeft x+1>0 => byRight (positive=>#0 x+1>0)
+    | byRight x<0 => byLeft (negative=>#0 x<0)
+  }
+  | pos_*-cancel-left x*y>0 x>0 =>
+    \case #0=>eitherPosOrNeg (Inv.cfactor-right (positive=>#0 x*y>0)) \with {
+      | byLeft y>0 => y>0
+      | byRight y<0 => absurd (zro/>0 (transport isPos negative-right (positive_+ x*y>0 (positive_negative_* x>0 y<0))))
+    }
+  | negative=>#0 x<0 => transport #0 negative-isInv (Ring.negative_inv (positive=>#0 x<0))
+
+  \func pinv (x : E) (\property x>0 : 0 < x) : E
+    => Inv.inv {pos#0 x>0}
+
+  \lemma pinv-left {x : E} (x>0 : 0 < x) : pinv x x>0 * x = 1
+    => Inv.inv-left {pos#0 x>0}
+
+  \lemma pinv-right {x : E} (x>0 : 0 < x) : x * pinv x x>0 = 1
+    => Inv.inv-right {pos#0 x>0}
+
+  \lemma pinv_pos-inv {x : E} (x>0 : 0 < x) : pinv (pinv x x>0) (pinv>0 x>0) = x
+    => inv $ Inv.inv-isUnique (Inv.reverse {pos#0 x>0}) (pos#0 $ pinv>0 x>0) idp
+
+  \lemma pinv_< {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<y : x < y) : pinv y y>0 < pinv x x>0
+    => pinv_<-conv (pinv>0 y>0) (pinv>0 x>0) $ transport2 (<) (inv $ pinv_pos-inv x>0) (inv $ pinv_pos-inv y>0) x<y
+
+  \lemma pinv_<-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 < pinv x x>0) : x < y
+    => transport2 (<) (inv *-assoc *> pmap (* x) (pinv-right y>0) *> ide-left) ide-right $ <_*_positive-right y>0 $ transport (_ <) (pinv-left x>0) (<_*_positive-left p x>0)
+
+  \lemma pinv_<= {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<=y : x <= y) : pinv y y>0 <= pinv x x>0
+    => \lam q => x<=y (pinv_<-conv y>0 x>0 q)
+
+  \lemma pinv_<=-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 <= pinv x x>0) : x <= y
+    => \lam q => p (pinv_< y>0 x>0 q)
+
+  \lemma pinv>0 {x : E} (x>0 : 0 < x) : 0 < pinv x x>0
+    => positive_*-cancel-left (transportInv (0 <) (pinv-right x>0) zro<ide) x>0
+
+  \lemma pinv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < pinv x x>0
+    => transport (< _) pinv_ide $ pinv_< x>0 zro<ide x<1
+
+  \lemma pinv_ide : pinv 1 zro<ide = 1
+    => inv ide-left *> pinv-right zro<ide
+
+  \lemma pinv_* {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : pinv x x>0 * pinv y y>0 = pinv (x * y) (<_*_positive_positive x>0 y>0)
+    => Inv.inv-isUnique (Inv.lmake _ $ *-assoc *> pmap (_ *) (inv *-assoc *> pmap (* x) (pinv-left y>0) *> ide-left) *> pinv-left x>0) (pos#0 $ <_*_positive_positive x>0 y>0) *-comm
+
+  \lemma pinv_pow {x : E} (x>0 : 0 < x) {n : Nat} : pow (pinv x x>0) n = pinv (pow x n) (pow>0 x>0) \elim n
+    | 0 => inv pinv_ide
+    | suc n => pmap (* _) (pinv_pow x>0) *> pinv_* (pow>0 x>0) x>0
+}
+
+\class DiscreteOrderedField \extends OrderedCRing.Dec, OrderedField, DiscreteField {
+  | positive=>#0 {x} x>0 => \case eitherZeroOrInv x \with {
+    | byLeft x=0 => absurd (zro/>0 (transport isPos x=0 x>0))
+    | byRight x-isInv => x-isInv
+  }
+  | +_trichotomy x => \case eitherZeroOrInv x \with {
+    | byLeft x=0 => equals x=0
+    | byRight x-isInv => \case #0=>eitherPosOrNeg x-isInv \with {
+      | byLeft x>0 => greater $ pos_>0 x>0
+      | byRight x<0 => less $ neg_<0 x<0
+    }
+  }
+
+  \lemma finv>0 {x : E} (x>0 : 0 < x) : 0 < finv x
+    => >0_Inv (nonZero-Inv (>_/= x>0)) x>0
+
+  \lemma finv<0 {x : E} (x<0 : x < 0) : finv x < 0
+    => inv-negative (nonZero-Inv (<_/= x<0)) x<0
+
+  \lemma finv<1 {x : E} (x>1 : 1 < x) : finv x < 1
+    => \have x>0 => zro<ide <∘ x>1
+       \in transport2 (<) ide-left (finv-right $ >_/= x>0) $ <_*_positive-left x>1 (finv>0 x>0)
+
+  \lemma finv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < finv x
+    => transport2 (<) (finv-right $ >_/= x>0) ide-left $ <_*_positive-left x<1 (finv>0 x>0)
+
+  \lemma finv_< {x y : E} (x>0 : 0 < x) (x<y : x < y) : finv y < finv x
+    => rewrite (finv-right $ >_/= x>0, ide-right, inv *-assoc, finv-left $ >_/= $ x>0 <∘ x<y, ide-left) in <_*_positive-right (finv>0 $ x>0 <∘ x<y) (<_*_positive-left x<y (finv>0 x>0))
+
+  \lemma finv_<-conv {x y : E} (x>0 : 0 < x) (p : finv x < finv y) : y < x
+    => transport2 (<) finv_finv finv_finv $ finv_< (finv>0 x>0) p
+
+  \lemma finv_<-left {x y : E} (x>0 : 0 < x) (p : finv x < y) : finv y < x
+    => transport (_ <) finv_finv $ finv_< (finv>0 x>0) p
+
+  \lemma finv_<-right {x y : E} (x>0 : 0 < x) (p : x < finv y) : y < finv x
+    => transport (< _) finv_finv $ finv_< x>0 p
+
+  \lemma <_rotate-right {x y z : E} (y>0 : 0 < y) (xy<z : x * y < z) : x < z * finv y
+    => transport (< _) (*-assoc *> pmap (x *) (finv-right (>_/= y>0)) *> ide-right) (<_*_positive-left xy<z (finv>0 y>0))
+
+  \lemma <_rotate-left {x y z : E} (y>0 : 0 < y) (p : x < y * z) : finv y * x < z
+    => transport (_ <) (inv *-assoc *> pmap (* z) (finv-left (>_/= y>0)) *> ide-left) (<_*_positive-right (finv>0 y>0) p)
+
+  \lemma <_rotate-right-conv {x y z : E} (y>0 : 0 < y) (p : x < z * finv y) : x * y < z
+    => transport (< z) (*-comm *> pmap (x *) finv_finv) $ <_rotate-left (finv>0 y>0) $ transport (x <) *-comm p
+
+  \lemma <_rotate-left-conv {x y z : E} (y>0 : 0 < y) (p : finv y * x < z) : x < y * z
+    => transport (x <) (pmap (z *) finv_finv *> *-comm) $ <_rotate-right (finv>0 y>0) $ transport (< z) *-comm p
+
+  \lemma finv_<= {x y : E} (x>0 : 0 < x) (x<=y : x <= y) : finv y <= finv x
+    => \lam p => x<=y (finv_<-conv x>0 p)
+
+  \lemma finv>=0 {x : E} (x>=0 : 0 <= x) : 0 <= finv x
+    => \lam p => x>=0 $ transport (< 0) finv_finv (finv<0 p)
+
+  \lemma finv>0-diff {x : E} (x>0 : 0 < x) : finv x - finv (x + 1) = finv (x * (x + 1))
+    => finv-diff (\lam x=0 => <-irreflexive $ transport (0 <) x=0 x>0)
+                 (\lam x+1=0 => <-irreflexive $ transport (0 <) x+1=0 $ transport (`< _) zro-left $ <_+ x>0 zro<ide)
+}
+
+\class OrderedFieldAlgebra \extends OrderedCAlgebra, OrderedField

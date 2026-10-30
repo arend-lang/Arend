@@ -5,7 +5,8 @@
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.QModule
@@ -19,12 +20,9 @@
 \import Arith.Real.Root \using (sqrt \as sqrtR)
 \import Arith.Real.UpperReal
 \import Data.Or
-\import Set.Fin
 \import Function.Meta
 \import Logic
-\import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -46,6 +44,9 @@
 \import Topology.TopAbGroup.Product
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Properties
+\import Arith.Rat.Properties
 
 \class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing {
   -- | Norm of `fromRat q` is bounded by the scalar norm of `q`. In a valued ring, this is an equality.

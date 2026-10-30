@@ -14,7 +14,6 @@
 \import Set.Fin.BoundedPigeonhole
 \import Set.Fin.Instances
 \import Set.Fin.KFin
-\import Set.Fin.Pigeonhole
 \open Group
 \open Monoid(LDiv)
 
@@ -35,5 +34,5 @@
   }
   \where {
     \lemma Cosets-fin (H : DecSubGroup) (_ : KFinSet H.S) : FinSet H.Cosets
-      => KFinSet.KFin+Dec=>Fin QuotientKFin {QuotientDec \lam g g' => later $ H.isDec _}
+      => KFin+Dec=>Fin QuotientKFin {QuotientDec \lam g g' => later $ H.isDec _}
   }

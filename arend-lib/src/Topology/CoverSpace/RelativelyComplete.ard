@@ -1,7 +1,6 @@
 \import Category.Factorization
 \import Equiv
 \import Function.Meta
-\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -17,6 +16,7 @@
 \import Topology.CoverSpace.Product
 \import Topology.RatherBelow
 \import Topology.TopSpace
+\import Set.Set.Lattice
 
 \func IsRelativelyComplete {X Y : CoverSpace} (p : X -> Y) : \Prop
   => \Pi (F : CauchyFilter X) {y : Y} -> pointCF y ⊆ SetFilter-map p F -> ∃ (x : X) (p x = y) (pointCF x ⊆ F)

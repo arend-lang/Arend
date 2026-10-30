@@ -1,6 +1,7 @@
 \import Algebra.Domain.Bezout
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.GCD
@@ -27,7 +28,7 @@
   }
   \default isValuationRing a b =>
     \let | (inP bez) => isBezout a b
-         | gcd : GCD => BezoutDomain.bezoutGCD bez.3 bez.4
+         | gcd : GCD => bezoutGCD bez.3 bez.4
          | d => 1 - bez.1 * gcd.res|val1.inv - bez.2 * gcd.res|val2.inv
          | lem {a g e : E} (d : LDiv g a) (c : Inv (e * d.inv)) : LDiv a g =>
            \have c' : Inv d.inv => Inv.cfactor-right c

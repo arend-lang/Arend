@@ -1,5 +1,5 @@
 \import Algebra.Algebra
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Module.BilinearMap
 \import Algebra.Module.LinearMap
 \import Algebra.Module.TensorProduct
@@ -14,15 +14,16 @@
 \import Meta
 \import Paths
 \import Paths.Meta
+\import Algebra.Monoid.Properties
 
 \instance TensorProductAAlgebra {R : CRing} (A B : AAlgebra R) : AAlgebra R (TensorProduct A B)
   | LModule => TensorProductModule A B
   | * x => tensorLift (tensorLift *-bilinear x)
   | *-assoc {x} {y} {z} => tensorLift-unique (tensorLift _) (tensorLift _ LinearMap.∘ tensorLift _) \lam a b => \case \elim x, \elim y \with {
     | tensorSum lx, tensorSum ly => simplify $ pmap (\lam (x : BilinearMap A B _) => x a b) (tensorLift _).func-BigSum
-      *> BigSum-char a b *> pmap AddMonoid.BigSum (exts \lam j => simplify $ pmap (tensorLift *-bilinear __ a b) (BigSum-char (ly j).1 _)
+      *> BigSum-char a b *> pmap BigSum (exts \lam j => simplify $ pmap (tensorLift *-bilinear __ a b) (BigSum-char (ly j).1 _)
         *> pmap (\lam (x : BilinearMap A B _) => x a b) (tensorLift *-bilinear).func-BigSum *> BigSum-char a b
-        *> pmap AddMonoid.BigSum (exts \lam i => pmap2 tensor *-assoc *-assoc) *> inv (BigSum-char (_ * a) _))
+        *> pmap BigSum (exts \lam i => pmap2 tensor *-assoc *-assoc) *> inv (BigSum-char (_ * a) _))
       *> inv (tensorLift _).func-BigSum *> pmap tensorLift.func (inv (BigSum-char a b))
   }
   | ldistr => (tensorLift (tensorLift *-bilinear _)).func-+
@@ -32,7 +33,7 @@
   | ide => tensor 1 1
   | ide-left => tensorLift-unique (tensorLift (tensorLift *-bilinear (tensor 1 1))) LinearMap.id \lam a b => simplify
   | ide-right {x} => zro-right *> \case \elim x, tensor-repr x \with {
-    | _, inP (l,idp) => rewrite (tensorLift *-bilinear).func-BigSum $ BigSum-char A.ide B.ide *> pmap AddMonoid.BigSum (exts \lam j => simplify)
+    | _, inP (l,idp) => rewrite (tensorLift *-bilinear).func-BigSum $ BigSum-char A.ide B.ide *> pmap BigSum (exts \lam j => simplify)
   }
   \where {
     \open BilinearMapModule (BigSum-char)

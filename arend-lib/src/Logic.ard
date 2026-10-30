@@ -1,11 +1,6 @@
-\import Algebra.Meta
-\import Data.Or
 \import Function.Meta
 \import Logic.Unique
-\import Logic.Meta
-\import Meta
 \import Paths
-\import Paths.Meta
 
 \data Empty
 
@@ -39,11 +34,13 @@
       => p _ _
 
     \lemma rec-set {A : \Cat} {B : \Set} (t : TruncP A) (f : A -> B) (p : \Pi (a a' : A) -> f a = f a')
-      : \Sigma (b : B) (∃ (a : A) (f a = b)) \level level p \elim t
+      : \Sigma (b : B) (TruncP (\Sigma (a : A) (f a = b))) \level level p \elim t
       | inP a => (f a, inP (a, idp))
       \where {
-        \lemma level (p : \Pi (a a' : A) -> f a = f a') : isProp (\Sigma (b : B) (∃ (a : A) (f a = b)))
-          => \lam (b, inP (a,fa=b)) (b', inP (a',fa'=b')) => ext $ inv fa=b *> p a a' *> fa'=b'
+        \lemma level (p : \Pi (a a' : A) -> f a = f a') : isProp (\Sigma (b : B) (TruncP (\Sigma (a : A) (f a = b))))
+          => \lam (b, inP (a,fa=b)) (b', inP (a',fa'=b')) =>
+               \let q => inv fa=b *> p a a' *> fa'=b'
+               \in path (\lam i => (q @ i, prop-dpi (\lam j => TruncP (\Sigma (a : A) (f a = q @ j))) (inP (a,fa=b)) (inP (a',fa'=b')) @ i))
       }
 
     \lemma rec-set-eval {A : \Cat} {B : \Set} (a : A) {f : A -> B} {p : \Pi (a a' : A) -> f a = f a'} : (rec-set (inP a) f p).1 = f a
@@ -98,14 +95,6 @@
       | byLeft a => byLeft (f a)
       | byRight b => byRight (g b)
 
-    \lemma fromOr {A B : \Cat} (p : Or A B) : A || B \elim p
-      | inl a => byLeft a
-      | inr b => byRight b
-
-    \lemma toOr {A B : \Cat} (p : A || B) : TruncP (Or A B) \elim p
-      | byLeft a => inP (inl a)
-      | byRight b => inP (inr b)
-
     \lemma flip {A B : \Cat} (e : A || B) : B || A \elim e
       | byLeft a => byRight a
       | byRight b => byLeft b
@@ -114,7 +103,7 @@
 \func \infix 0 <-> (P Q : \Prop) => \Sigma (P -> Q) (Q -> P)
 
 \lemma <->_= {P Q : \Prop} : (P <-> Q) <-> (P = Q)
-  => (\lam p => ext p, \lam p => rewrite p (\lam x => x, \lam x => x))
+  => (\lam p => propExt p.1 p.2, \lam p => (propExt.dir p, propExt.conv p))
 
 \lemma <->refl {P : \Prop} : P <-> P
   => (\lam p => p, \lam p => p)
@@ -127,7 +116,7 @@
 
 -- | `TSetIm f` is the set `{ f a | a : A }`.
 \type TSetIm {A B : \Cat} (f : A -> B) (b : B)
-  => ∃ (a : A) (f a = b)
+  => TruncP (\Sigma (a : A) (f a = b))
 
 \lemma TSetIm-con {A B : \Cat} {f : A -> B} (a : A) : TSetIm f (f a)
   => inP (a,idp)
@@ -137,7 +126,7 @@
 
 -- | `SetIm f P` is the set `{ f a | a : A, P a }`.
 \type SetIm {A B : \Cat} (f : A -> B) (P : A -> \Cat) (b : B)
-  => TSetIm (\lam (s : Given P) => f s.1) b
+  => TSetIm (\lam (s : \Sigma (a : A) (P a)) => f s.1) b
 
 \lemma SetIm-con {A B : \Cat} {f : A -> B} {P : A -> \Cat} {a : A} (Pa : P a) : SetIm f P (f a)
   => inP ((a,Pa),idp)
@@ -149,19 +138,22 @@
   => TSetIm-elim (\lam t => c t.2) s
 
 \lemma SetIm_id {A : \Cat} {P : A -> \Prop} : SetIm (\lam x => x) P = P
-  => ext \lam a => propExt (SetIm-elim \lam p => p) SetIm-con
+  => \have e (a : A) : SetIm (\lam x => x) P a = P a => propExt (SetIm-elim \lam p => p) SetIm-con
+     \in path (\lam i a => e a @ i)
 
 \lemma SetIm_o {A B C : \Cat} {f : A -> B} {g : B -> C} {P : A -> \Prop} : SetIm (\lam x => g (f x)) P = SetIm g (SetIm f P)
-  => ext \lam c => ext (SetIm-elim \lam p => SetIm-con $ SetIm-con p, SetIm-elim $ SetIm-elim SetIm-con)
+  => \have e (c : C) : SetIm (\lam x => g (f x)) P c = SetIm g (SetIm f P) c => propExt (SetIm-elim \lam p => SetIm-con $ SetIm-con p) (SetIm-elim $ SetIm-elim SetIm-con)
+     \in path (\lam i c => e c @ i)
 
 \lemma SetIm_TSetIm {A B C : \Cat} {f : A -> B} {g : B -> C} : SetIm g (TSetIm f) = TSetIm (\lam a => g (f a))
-  => ext \lam c => propExt (SetIm-elim $ TSetIm-elim TSetIm-con) (TSetIm-elim \lam a => SetIm-con $ TSetIm-con a)
+  => \have e (c : C) : SetIm g (TSetIm f) c = TSetIm (\lam a => g (f a)) c => propExt (SetIm-elim $ TSetIm-elim TSetIm-con) (TSetIm-elim \lam a => SetIm-con $ TSetIm-con a)
+     \in path (\lam i c => e c @ i)
 
-\func OneOf (l : Array \Prop) => ∃ (P : l) P
+\func OneOf (l : Array \Prop) => TruncP (\Sigma (j : Fin l.len) (l j))
 
-\func ElemOf (l : Array \Prop) => Given (P : l) P
+\func ElemOf (l : Array \Prop) => \Sigma (j : Fin l.len) (l j)
 
-\type arraySubset {X : \Type} (l : Array X) (x : X) => ∃ (y : l) (y = x)
+\type arraySubset {X : \Type} (l : Array X) (x : X) => TruncP (\Sigma (j : Fin l.len) (l j = x))
 
 \lemma propExt {A B : \Prop} (f : A -> B) (g : B -> A) : A = B =>
   path (iso f g (\lam _ => prop-pi) (\lam _ => prop-pi))
@@ -170,8 +162,6 @@
 
     \lemma conv {A B : \Prop} (p : A = B) (b : B) : A => dir (inv p) b
   }
-
-\meta isProp-prover => \lam x y => cases (x,y) (cong prop-pi <|> contradiction)
 
 \class NegatedProp (P : \Prop)
   | isNegated : Not (Not P) -> P

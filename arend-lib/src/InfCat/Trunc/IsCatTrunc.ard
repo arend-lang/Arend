@@ -26,7 +26,7 @@
 \func transf-hom-ext {D Z : \Cat} (Zt : IsTruncCat 1 Z) {F G : D ->⁺ Z} {p q : \Sigma⁺ (d : D) (F d ~> G d)} {u v : p ~> q}
                      (e : dpath (\lam i => (u i).1) = dpath (\lam i => (v i).1)) : u = v
   => \have E => dpath-sigma-equiv (\lam _ d => F d ~> G d)
-     \in inv (E.ret_f u) *> pmap E.ret (sigma-prop-ext (\lam r => isProp.equiv (inP (square-equiv (dmap F r) (dmap G r) {q.2} {p.2}))
+     \in inv (E.ret_f u) *> pmap E.ret (sigma-prop-ext (\lam r => equiv-isProp (inP (square-equiv (dmap F r) (dmap G r) {q.2} {p.2}))
                                                      (ToProp.fromProp (Zt _ _ _ _))) {E u} {E v} e) *> E.ret_f v
 
 -- | Hom-types of a category with hom-sets are sets.
@@ -35,4 +35,4 @@
 
 -- | Objects of a category with hom-sets form a 1-type.
 \lemma truncCat-ob-isGpd {Z : \Cat} (Zt : IsTruncCat 1 Z) (a b : Z) : isSet (a = b)
-  => \lam p q => isProp.equiv (inP (=_~>-embedding a b).pmap-isEquiv) (hom-isSet Zt a b (=_~> p) (=_~> q))
+  => \lam p q => equiv-isProp (inP (=_~>-embedding a b).pmap-isEquiv) (hom-isSet Zt a b (=_~> p) (=_~> q))

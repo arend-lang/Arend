@@ -1,9 +1,8 @@
 \import Category
 \import Category.Functor
-\import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Paths
+\import Equiv
 
 -- | A morphism {f} is {F}-cocartesian if every morphism `h` out of its domain factors uniquely through {f} over any given factorization of `F h`.
 \func IsCocartesianMor {C D : Precat} (F : Functor C D) {x y : C} (f : Hom x y) : \Prop

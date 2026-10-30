@@ -1,9 +1,7 @@
 \import Algebra.Monoid
 \import Algebra.Solver
-\import Data.Fin
 \import Data.List
 \import Paths
-\import Paths.Meta
 
 {- | Reflective solver model for (non-commutative) semigroups. The normal form of a
  -   word is the non-empty list of its variables (head + tail), flattened by

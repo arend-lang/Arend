@@ -7,7 +7,6 @@
 \import Equiv.Univalence
 \import Function
 \import Function.Meta
-\import Logic.Unique
 \import Homotopy.Image
 \import Homotopy.Localization.Equiv
 \import Homotopy.Localization.Universe

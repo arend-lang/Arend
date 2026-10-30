@@ -1,0 +1,12 @@
+\import Algebra.Domain.Bezout
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Ring
+\import Logic.Meta
+
+\class SmithRing \extends StrictBezoutRing
+  | isKaplansky : IsKaplansky \this
+  \where
+    \type IsKaplansky (R : CRing) => \Pi (a b c : R) -> IsCoprimeArray (a,b,c) -> ∃ (t s : R) (IsCoprime (t * a) (t * b + s * c))
+
+\class SmithDomain \extends BezoutDomain.Dec, SmithRing

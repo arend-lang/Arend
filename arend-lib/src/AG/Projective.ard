@@ -2,6 +2,7 @@
 \import AG.Scheme
 \import AG.SchemeSite
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.MonoidHom
@@ -20,9 +21,11 @@
 \import Logic.Meta
 \import Meta
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
+\import Algebra.Monoid.Properties
 \open SubMonoid
 \open Monoid
 \open LocRing(isLocalization \as LR)

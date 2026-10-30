@@ -5,10 +5,7 @@
      Similarly, the nerve of the span {SpanP} is the pushout of two copies of `[1]` along the vertex `0` ({span-pushout}).
  -}
 
-\import Arith.Fin.Order
 \import Arith.Nat
-\import Category.Functor
-\import Category.Simplex
 \import Equiv
 \import Function.Meta
 \import InfCat.CatPushout
@@ -22,6 +19,7 @@
 \import Logic
 \import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths
 \import Paths.Meta
 

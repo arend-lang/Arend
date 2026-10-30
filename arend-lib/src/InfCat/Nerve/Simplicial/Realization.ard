@@ -21,7 +21,6 @@
 \import Category
 \import Category.Functor
 \import Category.Simplex
-\import Category.Slice
 \import Equiv
 \import Logic.Meta
 \import InfCat.Basics
@@ -42,13 +41,13 @@
 \import InfCat.Simplicial.Segal
 \import InfCat.Simplicial.SimplexOperators
 \import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 \import InfCat.Fibration.Contravariant.ContravariantLift
 \import InfCat.Fibration.Contravariant.RightFib
 \import InfCat.Nerve.NerveTrans
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import InfCat.Functor.Conservative
 \import InfCat.Fibration.Covariant.CocartesianMap
 \open RealizationHelpers

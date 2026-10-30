@@ -1,33 +1,33 @@
 \import Algebra.Group
 \import Algebra.Group.Symmetric
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ordered
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Real.UpperReal
 \import Combinatorics.Factorial
 \import Data.Array
-\import Data.Fin (fsuc)
+\import Data.Fin (fsuc, sface, sface-skip, sface-inj)
 \import Equiv
 \import Function (IsInj)
 \import Logic
 \import Logic.Meta
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set.Fin
-\import Set.Fin.Pigeonhole
+\import Set.Fin.DFin
 \import Topology.MetricSpace
 \import Topology.MetricSpace.Complete
-\open JoinSemilattice (Big_<=_join0, Big_<=_join1, Big_join-univ, join-comm, join-idemp)
-\open MeetSemilattice (Big_<=_meet1, Big_meet-univ)
-\open BiorderedLattice (Big_<_join-univ)
+\import Order.Lattice.Properties
+\import Order.LinearOrder.Properties
+\open JoinSemilattice (join-comm, join-idemp)
+
+
 
 {- | For a pseudometric space `X`, `Array X n` carries
      $d(r,s) = \min_{\sigma \in S_n} \max_i d(r_i, s_{\sigma i})$.
@@ -77,7 +77,7 @@
 -- | `rawDist` is below the cost of any injective pairing.
 \lemma rawDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n}
                     (fi : IsInj f) : rawDist r s <= maxDist r s f
-  => \have e => IsEquiv.toQEquiv (PigeonholeSet.isEquiv f fi)
+  => \have e => IsEquiv.toQEquiv (isEquiv f fi)
      \in Big_<=_meet1 (SymFin.fin_equiv.ret e) <=∘ =_<= (pmap (maxDist r s __) (SymFin.fin_equiv.f_ret e))
 
 -- | ...and it is the greatest such bound.

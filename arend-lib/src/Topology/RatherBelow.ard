@@ -4,7 +4,6 @@
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths.Meta
-\import Set.Set
 
 \class RatherBelow {A : TopMeetSemilattice} (R : A -> A -> \Prop) {
   | <=<-left {U V W : A} : R U V -> V <= W -> R U W
@@ -48,7 +47,6 @@
            },
            inP (V1, V2, U1, U2, RV1U1, R'V2U2, idp, idp))
     }
-
 
   \type \infix 4 <=<c (V U : A) : \Prop
     => ∃ (R' : A -> A -> \Prop) (\Pi {V U : A} -> R' V U -> R V U) (\Pi {V U : A} -> R' V U -> ∃ (W : A) (R' V W) (R' W U)) (R' V U)
@@ -94,7 +92,3 @@
     => inP (\lam V _ => V = bottom, \lam q => rewrite q p, \lam q => inP (bottom, q, idp), idp)
 }
 
-\lemma <=<c_^-1 {X Y : \Set} {RX : RatherBelow {SetLattice X}} {RY : RatherBelow {SetLattice Y}} {f : X -> Y} (<=<_^-1 : \Pi {U V : Set Y} -> RY U V -> RX (f ^-1 U) (f ^-1 V)) {U V : Set Y} (p : U RY.<=<c V) : f ^-1 U RX.<=<c f ^-1 V \elim p
-  | inP (R',g,h,r) => inP (\lam U V => ∃ (U' V' : R') (U = f ^-1 U') (V = f ^-1 V'), \lam (inP (U',V',R'U'V',p,q)) => rewrite (p,q) $ <=<_^-1 $ g R'U'V', \lam (inP (U',V',R'U'V',p,q)) => \case h R'U'V' \with {
-    | inP (W,R'U'W,R'WV') => inP (f ^-1 W, inP (U', W, R'U'W, p, idp), inP (W, V', R'WV', idp, q))
-  }, inP (U, V, r, idp, idp))

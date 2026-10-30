@@ -9,7 +9,6 @@
  -     of {C} between the images of {x} and {y}.
  -}
 
-\import Category.Simplex
 \import Equiv
 \import Equiv.Sigma
 \import Function.Meta

@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Base
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.MonoidHom
@@ -20,8 +21,6 @@
 \import Category.Topos.Sheaf.Site
 \import Data.Array
 \import Equiv
-\import Equiv.Path
-\import Equiv.Sigma
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -33,8 +32,9 @@
 \import Paths.Meta
 \import Set.Set
 \import Topology.Locale
-\import Topology.Locale.LocaleCat
 \import Topology.Locale.PreorderSite
+\import Order.PartialOrder.PosetHom
+\import Algebra.Monoid.Properties
 \open SiteLocale
 \open Monoid
 \open SubMonoid(powers)
@@ -213,7 +213,7 @@
       | (b<=a, byRight e) => Join-cond (b<=a, byRight $ Inv.cfactor-left $ transport Inv func-* e)
     }
 
-  \lemma locallyRinged-split_Inv {n : Nat} {a : L} {l : Array (R.F a) n} (q : Inv (AddMonoid.BigSum l))
+  \lemma locallyRinged-split_Inv {n : Nat} {a : L} {l : Array (R.F a) n} (q : Inv (BigSum l))
     : a <= Join (\lam b => Given (p : b <= a) ∃ (x : l) (Inv (R.F.Func p x))) \elim n, l
     | 0, nil => isLRLNonTrivial a (Ring.Inv_zro.1 q) <=∘ bottom-univ
     | suc n, x :: l => locallyRinged-split2_Inv q <=∘ Join-univ \case \elim __ \with {
@@ -222,7 +222,7 @@
         \lam {z} (zw, inP (j,zi)) => Join-cond (zw <=∘ wa, inP (suc j, transportInv Inv (path \lam i => R.F.Func-o i _) zi))
     }
 
-  \lemma locallyRinged-split_ide {a : L} {l : Array (R.F a)} (q : AddMonoid.BigSum l = 1)
+  \lemma locallyRinged-split_ide {a : L} {l : Array (R.F a)} (q : BigSum l = 1)
     : a <= Join (\lam b => Given (p : b <= a) ∃ (x : l) (Inv (R.F.Func p x)))
     => locallyRinged-split_Inv $ transportInv Inv q Inv.ide-isInv
 

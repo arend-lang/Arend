@@ -29,6 +29,11 @@ public interface RedirectingReferable extends GlobalReferable {
   }
 
   @Override
+  default boolean isDynamicExtension() {
+    return getOriginalReferable() instanceof GlobalReferable global && global.isDynamicExtension();
+  }
+
+  @Override
   @NotNull
   default Referable.RefKind getRefKind() {
     return getOriginalReferable().getRefKind();

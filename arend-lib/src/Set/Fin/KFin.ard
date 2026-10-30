@@ -1,5 +1,4 @@
 \import Arith.Nat(id<suc)
-\import Data.Array
 \import Data.Or
 \import Function
 \import Function.Meta ($)
@@ -9,9 +8,9 @@
 \import Paths
 \import Relation.Equivalence
 \import Set
-\import Set.Fin
 \import Set.Fin.BoundedPigeonhole
 \import Set.Fin.Pigeonhole
+\import Data.Fin
 
 \class KFinSet \extends BoundedPigeonholeSet {
   | finSurj : ∃ (f : Fin card -> E) (IsSurj f)
@@ -21,7 +20,7 @@
 
   \lemma search (A : E -> \Prop) (d : \Pi (e : E) -> Dec (A e)) : Dec (∃ (e : E) (A e))
     => \case finSurj \with {
-      | inP (f,fs) => \case FinSet.searchFin (\lam j => A (f j)) (\lam j => d (f j)) \with {
+      | inP (f,fs) => \case searchFin (\lam j => A (f j)) (\lam j => d (f j)) \with {
         | inl a => yes (inP (f a.1, a.2))
         | inr q => no \lam (inP t) => \case fs t.1 \with {
           | inP (j,p) => q j (transportInv A p t.2)
@@ -31,7 +30,7 @@
 
   \lemma ||-search {A : \Type} {B : E -> \Prop} (f : \Pi (x : E) -> A || B x) : A || (\Pi (x : E) -> B x)
     => \case finSurj \with {
-      | inP (g,gs) => \case FinSet.||-finiteAC (\lam i => f (g i)) \with {
+      | inP (g,gs) => \case ||-finiteAC (\lam i => f (g i)) \with {
         | byLeft a => byLeft a
         | byRight r => byRight \lam x => \case gs x \with {
           | inP (i,gi=x) => transport B gi=x (r i)
@@ -64,15 +63,6 @@
 
     \lemma toArray (A : KFinSet) : ∃ (l : Array A) ∀ a ∃ (i : Fin l.len) (l i = a)
       => TruncP.map A.finSurj \lam (f,p) => (f,p)
-
-    \lemma KFin+Dec=>Fin {A : \Set} (k : KFinSet A) {d : DecSet A} : FinSet A
-      => \case toArray k \with {
-        | inP (l,q) =>
-          \let l' => nub l
-          \in FinSet.fromArray l' (\lam a => TruncP.map (q a) \lam p =>
-              \let t => nub-isSurj l p.1
-              \in (t.1, t.2 *> p.2)) nub-isInj
-      }
 }
 
 \lemma QuotientKFin {A : KFinSet} {R : A -> A -> \Type} : KFinSet (Quotient R) A.card \cowith

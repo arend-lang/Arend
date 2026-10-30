@@ -9,7 +9,6 @@
 \import Algebra.Ring.FormalSeries.Composition
 \import Algebra.Semiring
 \import Arith.Nat
-\import Arith.Rat
 \import Data.Or
 \import Function
 \import Function.Meta
@@ -23,6 +22,9 @@
 \import Paths.Meta
 \import Set.Fin
 \import Set.Fin.Instances
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Semiring.Properties
 \open Monoid (pow)
 
 {- | Formal derivative on power series:

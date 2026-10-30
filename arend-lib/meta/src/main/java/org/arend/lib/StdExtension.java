@@ -249,14 +249,13 @@ public class StdExtension implements ArendExtension {
         ``repeat f x` repeats `f` until it fails and returns `x` in this case
         """), makeDef(function, "repeat", new RepeatMeta()));
 
+    ModulePath algebraBase = new ModulePath("Algebra", "Meta", "Base");
+    contributor.declare(algebraBase, Names.getPathsModule());
     ModulePath algebra = new ModulePath("Algebra", "Meta");
     contributor.declare(algebra, Names.getAlgebraModule());
     contributor.declare(algebra, Names.getGroupModule());
-    contributor.declare(algebra, Names.getGroupSolverModule(), "NatData", "CGroupData", "GroupTerm");
-    contributor.declare(algebra, Names.getLinearSolverModule());
     contributor.declare(algebra, Names.getMonoidModule());
     contributor.declare(algebra, Names.getMonoidSolverModule());
-    contributor.declare(algebra, Names.getOrderedModule());
     contributor.declare(algebra, Names.getPointedModule());
     contributor.declare(algebra, Names.getRingModule());
     contributor.declare(algebra, Names.getRingSolverModule());
@@ -269,9 +268,6 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getNewGroupSolverModule());
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getNewRingSolverModule());
-    contributor.declare(algebra, Names.getFieldModule());
-    contributor.declare(algebra, Names.getFieldSolverModule(), "FieldSolverModel");
-    contributor.declare(algebra, Names.getFieldNormalSolverModule(), "FieldNormalSolverModel");
     contributor.declare(algebra, Names.getNewSemiringSolverModule());
     contributor.declare(algebra, Names.getSemigroupSolverModule());
     contributor.declare(algebra, Names.getCSemigroupSolverModule());
@@ -279,18 +275,59 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getBooleanRingSolverModule());
     contributor.declare(algebra, Names.getIntModule());
     contributor.declare(algebra, Names.getNatModule());
-    contributor.declare(algebra, Names.getRatModule());
     contributor.declare(algebra, Names.getCategoryModule(), "Precat");
     contributor.declare(algebra, Names.getCategorySolverModule());
     contributor.declare(algebra, Names.getBoolModule());
     contributor.declare(algebra, Names.getListModule());
     contributor.declare(algebra, Names.getEquivModule());
     contributor.declare(algebra, Names.getLatticeModule());
-    contributor.declare(algebra, Names.getLinearOrderModule());
-    contributor.declare(algebra, Names.getPartialOrderModule());
-    contributor.declare(algebra, Names.getStrictOrderModule());
     contributor.declare(algebra, Names.getPathsModule());
     contributor.declare(algebra, Names.getSetModule());
+    ModulePath algebraSimplify = new ModulePath("Algebra", "Meta", "Simplify");
+    contributor.declare(algebraSimplify, Names.getGroupModule());
+    contributor.declare(algebraSimplify, Names.getGroupSolverModule(), "NatData", "CGroupData", "GroupTerm");
+    contributor.declare(algebraSimplify, Names.getMonoidModule());
+    contributor.declare(algebraSimplify, Names.getPointedModule());
+    contributor.declare(algebraSimplify, Names.getRingModule());
+    contributor.declare(algebraSimplify, Names.getSemiringModule());
+    contributor.declare(algebraSimplify, Names.getNewRingSolverModule());
+    contributor.declare(algebraSimplify, Names.getFieldSolverModule(), "FieldSolverModel");
+    contributor.declare(algebraSimplify, Names.getPathsModule());
+    contributor.declare(algebraSimplify, Names.getSetModule());
+    ModulePath algebraLinear = new ModulePath("Algebra", "Meta", "Linear");
+    contributor.declare(algebraLinear, Names.getAlgebraModule());
+    contributor.declare(algebraLinear, Names.getGroupModule());
+    contributor.declare(algebraLinear, Names.getLinearSolverModule());
+    contributor.declare(algebraLinear, Names.getMonoidModule());
+    contributor.declare(algebraLinear, Names.getMonoidSolverModule());
+    contributor.declare(algebraLinear, Names.getOrderedModule());
+    contributor.declare(algebraLinear, Names.getOrderedGroupModule());
+    contributor.declare(algebraLinear, Names.getOrderedRingModule());
+    contributor.declare(algebraLinear, Names.getPointedModule());
+    contributor.declare(algebraLinear, Names.getRingSolverModule());
+    contributor.declare(algebraLinear, Names.getSemiringModule());
+    contributor.declare(algebraLinear, Names.getIntModule());
+    contributor.declare(algebraLinear, Names.getNatModule());
+    contributor.declare(algebraLinear, Names.getRatModule());
+    contributor.declare(algebraLinear, Names.getBoolModule());
+    contributor.declare(algebraLinear, Names.getLatticeModule());
+    contributor.declare(algebraLinear, Names.getLinearOrderModule());
+    contributor.declare(algebraLinear, Names.getPartialOrderModule());
+    contributor.declare(algebraLinear, Names.getStrictOrderModule());
+    contributor.declare(algebraLinear, Names.getPathsModule());
+    ModulePath algebraField = new ModulePath("Algebra", "Meta", "Field");
+    contributor.declare(algebraField, Names.getGroupModule());
+    contributor.declare(algebraField, Names.getGroupSolverModule(), "NatData", "CGroupData", "GroupTerm");
+    contributor.declare(algebraField, Names.getMonoidModule());
+    contributor.declare(algebraField, Names.getPointedModule());
+    contributor.declare(algebraField, Names.getRingModule());
+    contributor.declare(algebraField, Names.getSemiringModule());
+    contributor.declare(algebraField, Names.getNewRingSolverModule());
+    contributor.declare(algebraField, Names.getFieldModule());
+    contributor.declare(algebraField, Names.getFieldSolverModule(), "FieldSolverModel");
+    contributor.declare(algebraField, Names.getFieldNormalSolverModule(), "FieldNormalSolverModel");
+    contributor.declare(algebraField, Names.getPathsModule());
+    contributor.declare(algebraField, Names.getSetModule());
     ConcreteMetaDefinition equation = makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(new EquationMeta(this), true)));
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
@@ -514,7 +551,7 @@ public class StdExtension implements ArendExtension {
         An explicit argument is a proof of the equality with cleared denominators; for example,
         `run { dfield_simp {x/=0}, equation.cRing }` delegates that equality to the solver for commutative rings.
         In the forward mode, `dfield_simp {x/=0} p` converts `p` into the equality with cleared denominators.
-        """), makeDef(algebra, "dfield_simp", new DependencyMetaTypechecker(DFieldSimpMeta.class, () -> new DeferredMetaDefinition(new DFieldSimpMeta(), true))));
+        """), makeDef(algebraField, "dfield_simp", new DependencyMetaTypechecker(DFieldSimpMeta.class, () -> new DeferredMetaDefinition(new DFieldSimpMeta(), true))));
     ConcreteMetaDefinition cRingAlgoSolver = makeDef(equation.getRef(), "cRingAuto", new DependencyMetaTypechecker(CRingAlgoSolverMeta.class, () -> new DeferredMetaDefinition(new CRingAlgoSolverMeta(), true)));
     contributor.declare(multiline("""
         TODO
@@ -542,15 +579,15 @@ public class StdExtension implements ArendExtension {
         Several hypotheses are applied sequentially.
         For example, if `p : a = b + c`, `q : b + b * c = c`, and the goal is `a * b = c`, then `bRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "bRing", new DependencyMetaTypechecker(BooleanRingEquationMeta.class, () -> new DeferredMetaDefinition(new BooleanRingEquationMeta(), true))));
-    contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
+    contributor.declare(text("Solve systems of linear equations"), makeDef(algebraLinear, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Like linarith, but additionally synthesizes hypotheses about div, mod, and truncated minus (-') subterms for Nat"),
-        makeDef(algebra, "natarith", new DependencyMetaTypechecker(NatArithMeta.class, () -> new DeferredMetaDefinition(new NatArithMeta(), true))));
+        makeDef(algebraLinear, "natarith", new DependencyMetaTypechecker(NatArithMeta.class, () -> new DeferredMetaDefinition(new NatArithMeta(), true))));
     contributor.declare(text("Like linarith, but additionally converts strict Int inequalities x < y into isuc x <= y"),
-        makeDef(algebra, "intarith", new DependencyMetaTypechecker(IntArithMeta.class, () -> new DeferredMetaDefinition(new IntArithMeta(), true))));
+        makeDef(algebraLinear, "intarith", new DependencyMetaTypechecker(IntArithMeta.class, () -> new DeferredMetaDefinition(new IntArithMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
-        makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
+        makeDef(algebraBase, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown. An equality in a commutative ring is also cleared of denominators, that is, of the projections `inv` of `Monoid.Inv`."),
-        makeDef(algebra, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(), true))));
+        makeDef(algebraSimplify, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(), true))));
     contributor.declare(vList(
             hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
             text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),

@@ -885,6 +885,13 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     LinkList list = new LinkList();
     Pair<SortExpression, Expression> pair = typecheckParameters(def, typedDef, list, localInstancePool, implementedField, null);
+    if (def.implicitReceiver && typedDef.getParameters().hasNext() && typedDef.getParameters().getType() instanceof ClassCallExpression) {
+      // The receiver is a class or a record, so the function behaves as a dynamic definition of it
+      typedDef.setHasEnclosingClass(true);
+    }
+    if (def.getData().isDynamicExtension() && CheckTypeVisitor.getExtensionTarget(typedDef) == null) {
+      errorReporter.report(new TypecheckingError("The type of the first explicit parameter of an extension function must be a definition call", def.getParameters().isEmpty() ? def : def.getParameters().getFirst()));
+    }
     if (def.getBody() instanceof Concrete.CoelimFunctionBody || def.getBody() instanceof Concrete.ElimFunctionBody && def.getBody().getClauses().isEmpty()) {
       checkNoStrictParameters(def.getParameters());
     } else {

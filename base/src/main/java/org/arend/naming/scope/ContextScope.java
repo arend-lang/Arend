@@ -28,7 +28,7 @@ public class ContextScope extends DelegateScope {
   @Override
   public Collection<? extends Referable> getElements(@Nullable ScopeContext context) {
     if (parent == EmptyScope.INSTANCE && context != null) {
-      return context == ScopeContext.STATIC ? myContext.stream().map(TypedReferable::getReferable).toList() : myPLevels;
+      return context == ScopeContext.STATIC ? myContext.stream().map(TypedReferable::getReferable).toList() : context == ScopeContext.LEVEL ? myPLevels : Collections.emptyList();
     }
     List<Referable> result = new ArrayList<>();
     Set<String> names = new HashSet<>();
@@ -85,7 +85,7 @@ public class ContextScope extends DelegateScope {
           return myContext.get(i).getReferable();
         }
       }
-    } else {
+    } else if (context == ScopeContext.LEVEL) {
       for (int i = myPLevels.size() - 1; i >= 0; i--) {
         if (myPLevels.get(i).getRefName().equals(name)) {
           return myPLevels.get(i);

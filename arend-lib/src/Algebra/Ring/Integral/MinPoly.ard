@@ -4,9 +4,11 @@
 \import Algebra.Field
 \import Algebra.Field.Algebraic
 \import Algebra.Group.GroupHom
-\import Algebra.Linear.Matrix.Smith
+\import Algebra.Domain.Smith
 \import Algebra.Linear.VectorSpace
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Module
 \import Algebra.Module.FinModule
 \import Algebra.Monoid
@@ -16,10 +18,11 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Factor
+\import Algebra.Ring.Factor.Field
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Poly
-\import Algebra.Ring.Poly.Euclidean()
+\import Algebra.Ring.Poly.Euclidean (field-toMonic)
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.SubRing
 \import Algebra.Semiring
@@ -40,6 +43,7 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
+\import Algebra.Ring.Integral.Properties
 
 \func isMinPoly (f : RingHom) (a : f.Cod) (p : Poly f.Dom) : \Prop
   => \Sigma (polyMapEval f p a = 0) (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q))
@@ -121,7 +125,7 @@
   }
 
 \lemma minPoly_prime {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (p/=0 : p /= 0) (pm : isMinPoly f a p) : Prime p
-  => FactorIrrField.conv (\lam q => Domain.nonZero-cancel-left p/=0 q) $ DiscreteField.backwards (integral_factor f a p pm.1) (integral_factor-equiv f a p pm) $ polyImage_field f a (isIntegral.fromPoly p/=0 pm.1)
+  => FactorIrrField.conv (\lam q => Domain.nonZero-cancel-left p/=0 q) $ DiscreteField.backwards (integral_factor f a p pm.1) (integral_factor-equiv f a p pm) $ polyImage_field f a (isIntegral-fromPoly p/=0 pm.1)
 
 \lemma minPoly-char {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
   : TFAE (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q),

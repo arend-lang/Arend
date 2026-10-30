@@ -1,7 +1,5 @@
 \import Function
 \import Logic
-\import Logic.Meta
-\import Meta
 \import Paths
 \import Set
 
@@ -108,11 +106,11 @@
       | 0, nil => in~ nil
       | suc k, :: a l => \case \elim a, liftArray (\lam {j} => R {suc j}) (\lam {j} => refl {suc j}) l \with {
         | in~ a, in~ a1 => in~ (a :: a1)
-        | in~ a, ~-equiv x y r i => ~-equiv _ _ (later \case \elim __ \with {
+        | in~ a, ~-equiv x y r i => ~-equiv (a :: x) (a :: y) (\case \elim __ \with {
           | 0 => refl _
           | suc j => r j
         }) i
-        | ~-equiv x y r i, in~ a => ~-equiv _ _ (later \case \elim __ \with {
+        | ~-equiv x y r i, in~ a => ~-equiv (x :: a) (y :: a) (\case \elim __ \with {
           | 0 => r
           | suc j => refl _
         }) i

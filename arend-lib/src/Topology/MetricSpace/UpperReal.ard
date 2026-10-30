@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Rat
@@ -14,10 +14,7 @@
 \import Paths.Meta
 \import Set.Filter
 \import Set.Set
-\import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
-\import Topology.TopAbGroup
-\import Topology.UniformSpace
 
 \instance ExUpperRealMetric : CompleteExMetricSpace ExUpperReal
   | dist (x y : ExUpperReal) : ExUpperReal \cowith {

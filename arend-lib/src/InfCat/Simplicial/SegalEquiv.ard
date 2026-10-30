@@ -20,15 +20,10 @@
  -     surjectivity on vertices for a complete target.
  -}
 
-\import Category
 \import Category.Simplex
-\import Category.Slice
 \import Equiv
-\import Equiv.Fiber
-\import Equiv.Path
 \import Equiv.Sigma
 \import Function (IsSurj)
-\import Homotopy.Fibration
 \import InfCat.CatPushout
 \import InfCat.CatPushoutHom
 \import InfCat.Fibration.Categorical

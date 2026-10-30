@@ -1,6 +1,5 @@
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Ring.FormalSeries.Derivative
 \import Analysis.PowerSeries
 \import Analysis.Series
@@ -23,6 +22,7 @@
 \import Topology.BanachAlgebra
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
+\import Algebra.QModule.Rat
 
 \lemma derivative-convRadius {A : RealPreBanachAlgebra} {cs : Nat -> A} : convRadius (deriv cs) = convRadius cs
   => <=-antisymmetric

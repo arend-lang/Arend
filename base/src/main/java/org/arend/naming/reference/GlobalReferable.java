@@ -63,6 +63,13 @@ public interface GlobalReferable extends Referable {
 
   @NotNull Kind getKind();
 
+  /**
+   * @return true if this is an extension function {@code \func .foo (r : R)}, which is accessible only as {@code r.foo}.
+   */
+  default boolean isDynamicExtension() {
+    return false;
+  }
+
   @Override
   default boolean isLocalRef() {
     return false;

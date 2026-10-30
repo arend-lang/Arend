@@ -1,9 +1,7 @@
 \import Algebra.Group
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Arith.Fin.Order
 \import Data.Array
-\import Data.Array.EPerm
 \import Data.Fin (fpred, fsuc, fsuc_fpred)
 \import Equiv
 \import Function
@@ -59,10 +57,6 @@
       | suc n, a1 :: l1, a2 :: l2, perm-:: p q => perm-:: (pmap f p) (perm-map f q)
       | suc (suc n), a1 :: (a1' :: l), a2 :: (a2' :: _), perm-swap p1 p2 idp => perm-swap (pmap f p1) (pmap f p2) idp
       | n, l1, l2, perm-trans p1 p2 => perm-trans (perm-map f p1) (perm-map f p2)
-      \where
-        \func conv {A B : \Set} (f : A -> B) (inj : IsInj f) {n : Nat} {l1 l2 : Array A n} (p : Perm (map f l1) (map f l2)) : Perm l1 l2
-          => \have (e,f) => perm_equiv {_} {_} {map f l1} p
-             \in transport (Perm l1) (exts \lam j => inj $ inv $ f j) (equiv_perm e)
 
     \func perm-remove {A : DecSet} {n : Nat} (l : Array A (suc n)) (j : Fin (suc n)) : Perm l (l j :: remove1 (l j) l) \elim n, l, j
       | 0, a :: nil, 0 => perm-refl
@@ -90,10 +84,4 @@
     \func equiv_perm {A : \Type} {n : Nat} {l : Array A n} (e : QEquiv {Fin n} {Fin n}) : Perm l (\lam j => l (e j))
       => perm-map l $ perm-sym $ perm-fin (\lam j => e j) e.isInj
 
-    \func perm_equiv {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))
-      => EPerm.eperm_equiv (EPerm.Perm_EPerm p)
-      \where {
-        \func conv {A : \Type} {n : Nat} {l l' : Array A n} (s : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))) : Perm l l'
-          => transportInv (Perm l) (exts s.2) (equiv_perm s.1)
-      }
   }

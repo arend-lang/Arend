@@ -1,7 +1,6 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
-\import Algebra.Ring.RingHom
 \import Algebra.Ring.Solver
 \import Algebra.Semiring
 \import Arith.Nat
@@ -17,6 +16,12 @@
 \import Order.StrictOrder
 \import Paths
 \open LinearlyOrderedAbMonoid
+\import Algebra.Algebra
+\import Algebra.Module
+\import Algebra.Ring.RingHom
+\import Algebra.Monoid.Properties
+\import Algebra.StrictlyOrdered.Properties
+\import Algebra.StrictlyOrdered.Ring
 
 \data Operation | Less | LessOrEquals | Equals
 
@@ -117,7 +122,7 @@
       \lemma aux (p : Problem) (c : Cert p.len) (cc : ∃ (j : Fin p.len) (0 < c j) ((p j).2 = Less)) (h : ∀ (e : p) (interpretEq e))
         : certSum (map __.1 p) c < certSum (map __.3 p) c \elim p, c, cc
         | nil, nil, inP ((),_,_)
-        | e :: p, k :: c, inP (0, k>0, p0=less) => <=_+-right (<_*_positive-right (transport (< _) natCoefZero $ OrderedSemiring.natCoef_< k>0) (transport (\lam r => interpretEq (e.1,r,e.3)) p0=less (h 0))) (aux_<= p c (\lam j => h (suc j)))
+        | e :: p, k :: c, inP (0, k>0, p0=less) => <=_+-right (<_*_positive-right (transport (< _) natCoefZero $ natCoef_< k>0) (transport (\lam r => interpretEq (e.1,r,e.3)) p0=less (h 0))) (aux_<= p c (\lam j => h (suc j)))
         | e :: p, k :: c, inP (suc j, cj>0, pj=less) => <=_+-left (<=_*_positive-right natCoef>=0 (interpretEq_<= e (h 0))) (aux p c (inP (j, cj>0, pj=less)) (\lam j => h (suc j)))
     }
 
@@ -168,4 +173,19 @@
 
 \class LinearRatAlgebraData \extends RatAlgebraData, LinearData {
   \override R : OrderedAAlgebra RatField
+}
+
+\class RatData \extends BaseRingData
+  | C => RatField
+  | S => RatField
+  | R => RatField
+  | alg => RingHom.id
+  | alg-comm x y => RatField.*-comm
+
+\class RatAlgebraData \extends BaseRingData {
+  | C => RatField
+  | S => RatField
+  \override R : AAlgebra RatField
+  | alg => AAlgebra.coefHom {R}
+  | alg-comm x y => pmap (* _) coefMap_*c *> inv *c-comm-left *> pmap (x *c) (ide-left *> inv ide-right) *> *c-comm-right *> inv (pmap (y *) coefMap_*c)
 }

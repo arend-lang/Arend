@@ -1,8 +1,8 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Base
 \import Algebra.Module
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
@@ -26,6 +26,12 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.Perm
+\import Algebra.QModule.Rat
+\import Order.Lattice.Properties
+\import Algebra.Ordered.Group
+\import Data.Array.EPerm.Equiv
 
 \type SFunc (V : AddMonoid) (B : BottomDistributiveLattice) => Quotient (~ {V} {B})
   \where {
@@ -137,7 +143,7 @@
   }
 
 \instance SFuncQModule (V : QModule) (B : BottomDistributiveLattice) : QModule (SFunc V B)
-  => QModule.fromRatModule module
+  => fromRatModule module
   \where {
     \func module : LModule RatField \cowith
       | AbGroup => SFuncAbGroup V B
@@ -167,9 +173,9 @@
       | ~-+-left idp idp => ~-trans (~-+-left idp idp) $ ~-perm $ EPerm.eperm-= $ path (\lam i => (inv V.toRatModule.*c-ldistr i, _) :: _)
       | ~-+-right idp idp => ~-+-right idp idp
 
-    \lemma *q-char {q : Rat} {l : Array (\Sigma V B)} : q QModule.*q {SFuncQModule V B} inSF l = inSF (map (\lam s => (q V.*q s.1, s.2)) l)
-      => (SFuncQModule V B).noTorsion-div (ratDenom/=0 {q}) $ inv QModule.*q_*n *> inv QModule.*q-assoc *> pmap (QModule.*q _) rat*denom-left *> QModule.*q_*i *>
-          SFuncAbGroup.*i-char *> pmap inSF (exts \lam j => ext (inv QModule.*q_*i *> pmap (QModule.*q _) (inv rat*denom-left) *> QModule.*q-assoc *> QModule.*q_*n, idp)) *> inv SFuncAbMonoid.*n-char
+    \lemma *q-char {q : Rat} {l : Array (\Sigma V B)} : q *q {SFuncQModule V B} inSF l = inSF (map (\lam s => (q V.*q s.1, s.2)) l)
+      => (SFuncQModule V B).noTorsion-div (ratDenom/=0 {q}) $ inv *q_*n *> inv *q-assoc *> pmap (*q _) rat*denom-left *> *q_*i *>
+          SFuncAbGroup.*i-char *> pmap inSF (exts \lam j => ext (inv *q_*i *> pmap (*q _) (inv rat*denom-left) *> *q-assoc *> *q_*n, idp)) *> inv SFuncAbMonoid.*n-char
   }
 
 \instance SFuncPosetQModule (V : PosetQModule) (B : BooleanRing) : PosetQModule (SFunc V B)
@@ -187,7 +193,7 @@
     })
   }
   | <=_*n-div {n} n/=0 => \case \elim __ \with {
-    | inP (l,lp,lf) => inP (map (\lam s => (RatField.finv n V.*q s.1, s.2)) l, AddGroup.minus_zro *> inv QModule.ide_*q *> pmap (QModule.*q _) (inv $ RatField.finv-left $ natRat/=0 n/=0) *> QModule.*q-assoc *> pmap (_ QModule.*q) (QModule.*q_*n *> inv AddGroup.minus_zro *> lp) *> SFuncQModule.*q-char, \lam j => V.*q_>=0 (RatField.finv>=0 fromNat_>=0) (lf j))
+    | inP (l,lp,lf) => inP (map (\lam s => (RatField.finv n V.*q s.1, s.2)) l, AddGroup.minus_zro *> inv ide_*q *> pmap (*q _) (inv $ RatField.finv-left $ natRat/=0 n/=0) *> *q-assoc *> pmap (_ *q) (*q_*n *> inv AddGroup.minus_zro *> lp) *> SFuncQModule.*q-char, \lam j => V.*q_>=0 (RatField.finv>=0 fromNat_>=0) (lf j))
   }
   \where {
     \protected \func PFunc => Array (\Sigma V B)
@@ -312,7 +318,7 @@
       => (\lam k => \case r2.1 k \with {
         | byLeft p => byLeft p
         | byRight p =>
-          \have r => FinSet.||-finiteAC {_} {(l3 k).1 = 0} {\lam j => (l2 j).2 ∧ (l3 k).2 B.<= B.BigJoin (map __.2 l1)} (\lam j => \case r1.1 j, r2.2 j \with {
+          \have r => ||-finiteAC {_} {(l3 k).1 = 0} {\lam j => (l2 j).2 ∧ (l3 k).2 B.<= B.BigJoin (map __.2 l1)} (\lam j => \case r1.1 j, r2.2 j \with {
                  | byLeft p, inP (k',p',q') => \case decideEq k k' \with {
                    | yes e => byLeft $ pmap (\lam x => (l3 x).1) e *> inv p' *> p
                    | no q => byRight $ B.meet-monotone q' <=-refl <=∘ l3r (/=-sym q) =<= bottom-univ
@@ -346,7 +352,7 @@
       })
 
     \lemma SFRefines_EPerm {l l' : PFunc} (e : EPerm l l') : SFRefines l l'
-      => \have (f,g) => EPerm.eperm_equiv e
+      => \have (f,g) => eperm_equiv e
          \in (\lam j => byRight $ pmap __.2 (g j) =<= B.BigJoin-cond {map __.2 l} (f j),
               \lam j => inP (f.ret j, pmap __.1 $ inv $ g (f.ret j) *> pmap l (f.f_ret j), =_<= $ pmap __.2 $ inv $ g (f.ret j) *> pmap l (f.f_ret j)))
 
@@ -408,7 +414,7 @@
       | x :: l => add_IsReduced reduce_IsReduced
 
     \lemma SFRefines-common {b c d : PFunc} (br : IsReduced b) (cr : IsReduced c) (dr : IsReduced d) (b<d : SFRefines b d) (c<d : SFRefines c d) : ∃ (a : IsReduced) (SFRefines a b) (SFRefines a c)
-      => \case FinSet.finiteAC b<d.2, FinSet.finiteAC c<d.2 \with {
+      => \case finiteAC b<d.2, finiteAC c<d.2 \with {
         | inP f1, inP f2 =>
           \let P => SigmaFin (ProdFin (FinFin b.len) (FinFin c.len)) \lam s => DecFin (decideEq (f1 s.1).1 (f2 s.2).1)
           \in \case P.finEq \with {
@@ -538,7 +544,7 @@
           | inP ((),_,_)
         }
       }, \case __)
-      | a :: l' => \case FinSet.finiteAC r.2 \with {
+      | a :: l' => \case finiteAC r.2 \with {
         | inP f =>
           \let | D i => decideEq (f i).1 0
                | indices => \new Array (Fin l.len) l.len \lam i => i
@@ -573,7 +579,7 @@
     \lemma >=0-reduced-char {l : PFunc} (lr : IsReduced l) : 0 <= inSF l <-> ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
       => (\lam (inP (d,dp,d>=0)) => \case ~_=-unequals (inv AddGroup.minus_zro *> dp) \with {
         | inP (m,mr,m<l,m<d) => reduce_>=0-conv lr $ SFRefines_>=0-right m<l reduce_IsReduced $ SFRefines_>=0-left m<d $ reduce_>=0 d>=0
-      }, \lam r => \case FinSet.finiteAC (\lam j => ||.toOr (r j)) \with {
+      }, \lam r => \case finiteAC (\lam j => Or.fromTruncOr (r j)) \with {
         | inP f => hiding r $ inP (mkArray \lam i => Or.rec (\lam _ => l i) (\lam _ => (0,0)) (f i), AddGroup.minus_zro {_} {inSF l} *> ~-sfequiv (~_zro {_} {_} {l} \lam j => later $ cases (f j) \with {
           | inl _ => byLeft idp
           | inr r => byRight (r,idp)
@@ -635,7 +641,7 @@
                         | no r => byRight $ B.meet-monotone <=-refl q <=∘ =_<= (l'r r)
                       }
               }
-              \in \case FinSet.||-finiteAC opt \with {
+              \in \case ||-finiteAC opt \with {
                 | byLeft r => byLeft r
                 | byRight h => byRight $ <=-antisymmetric (meet-univ <=-refl q <=∘ B.BigJoin-ldistr =<= B.BigJoin-univ \lam i => later $ h i) bottom-univ
               }

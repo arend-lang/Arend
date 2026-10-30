@@ -1,11 +1,12 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Arith.Nat
 \import Data.Array
-\import Data.Fin (fsuc/=, nat_fin_=)
+\import Data.Fin (fsuc/=, nat_fin_=, fin-inc, fin-inc-right, finiteAC)
 \import Data.Or
 \import Equiv
 \import Function.Meta ($)
@@ -13,13 +14,16 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.Lattice
 \import Order.LinearOrder
 \import Paths
 \import Paths.Meta
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
 
 \class GradedCRing \extends CRing {
   | isHomogen : E -> Nat -> \Prop
@@ -313,14 +317,13 @@
   \lemma sum-decomp (l : Array (\Sigma E E)) (c : \Pi (i : Fin l.len) -> ∃ (n : Nat) (isHomogen (l i).2 n))
     : ∃ (N : Nat) (f : \Pi (n : Fin N) -> \Sigma (J : FinSet.{0}) (g : J -> E) (\Pi (j : J) -> \Sigma (n : Nat) (isHomogen (g j) n)) (h : J -> Fin l.len) (\Pi (j : J) -> isHomogen (g j * (l (h j)).2) n))
         (BigSum (map (\lam s => s.1 * s.2) l) = BigSum (\lam n => FinSum (\lam j => (f n).2 j * (l ((f n).4 j)).2)))
-    => \let | (inP c') => FinSet.finiteAC c
-            | (inP d) => FinSet.finiteAC (\lam i => homogen-decomp (l i).1)
+    => \let | (inP c') => finiteAC c
+            | (inP d) => finiteAC (\lam i => homogen-decomp (l i).1)
             | p k : _ => later $ (k.2 Nat.+ (c' k.1).1, homogen-* ((d k.1).2 k.2) (c' k.1).2)
             | q => path (\lam i => BigSum (\lam i' => inv (FinSum=BigSum *> (d i').3) i * (l i').2)) *> inv FinSum=BigSum *>
                    pmap FinSum (ext \lam j => FinSum-rdistr) *> FinSum-double-dep (\lam i => FinFin (DArray.len {(d i).1})) *> FinSum-homogen p
        \in inP (suc _, \lam n => (SigmaFin (SigmaFin (FinFin l.len) (\lam i => FinFin (DArray.len {(d i).1}))) (\lam k => DecFin (decideEq (p k).1 n)), \lam k => (d k.1.1).1 k.1.2, \lam k => (k.1.2, (d k.1.1).2 k.1.2), __.1.1, \lam k => transport (isHomogen _) k.2 (p k.1).2), q)
 } \where {
-  \open BottomJoinSemilattice
 
   \data Similar {A : AddPointed} (l l' : Array A) \elim l, l'
     | nil, nil => nil-nil-similar

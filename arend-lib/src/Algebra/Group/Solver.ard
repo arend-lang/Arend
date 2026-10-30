@@ -15,7 +15,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Order.Biordered
 \import Order.Lattice
 \import Order.Lexicographical
 \import Order.LinearOrder
@@ -24,8 +23,8 @@
 \import Paths
 \import Paths.Meta
 \import Set
+\import Algebra.Monoid.Properties
 \open Sort
-\open OrderedAddMonoid
 \open LinearlyOrderedAbMonoid
 
 \data GroupTerm (V : \Type)

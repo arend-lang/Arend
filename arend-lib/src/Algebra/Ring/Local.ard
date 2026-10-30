@@ -1,5 +1,4 @@
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -7,9 +6,8 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Paths
-\import Paths.Meta
+\import Algebra.Monoid.Properties
 \open Monoid(Inv,LInv)
 
 \class LocalRing \extends Ring, NonZeroRing {

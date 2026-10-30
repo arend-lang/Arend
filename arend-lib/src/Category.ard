@@ -1,11 +1,8 @@
 \import Equiv
-\import Equiv.Path
 \import Function.Meta ($)
 \import Logic
 \import Logic.Unique (isSet)
-\import Meta
 \import Paths
-\import Paths.Meta
 \import Set
 
 \class Precat (Ob : \Type) {
@@ -103,7 +100,13 @@
   \protected \func op : Iso => \new Iso {C.op} f hinv f_hinv hinv_f
 } \where {
     \use \func equals {C : Precat} {x y : C} (e e' : Iso {C} {x} {y}) (p : e.f = e'.f) : e = e'
-      => ext (p, isMono {e} (e.f_hinv *> inv e'.f_hinv *> inv (pmap (e'.hinv >>) p)))
+      => \let q : e.hinv = e'.hinv => isMono {e} (e.f_hinv *> inv e'.f_hinv *> inv (pmap (e'.hinv >>) p))
+         \in path (\lam i => \new Iso {C} {x} {y} {
+           | f => p @ i
+           | hinv => q @ i
+           | hinv_f => prop-dpi (\lam j => q @ j ∘ p @ j = id) e.hinv_f e'.hinv_f @ i
+           | f_hinv => prop-dpi (\lam j => p @ j ∘ q @ j = id) e.f_hinv e'.f_hinv @ i
+         })
 
     \use \level levelProp {C : Precat} {x y : C} (f : Hom x y) (e e' : Iso f) => equals e e' idp
 
@@ -140,7 +143,7 @@
 
   \protected \func op : Cat \cowith
     | Precat => Precat.op
-    | univalence => univalenceFromQEquiv {Precat.op} (\lam {a} {b} => transQEquiv (IsEquiv.toQEquiv univalence) $ later \new QEquiv {
+    | univalence => univalenceFromQEquiv {Precat.op} (\lam {a} {b} => transQEquiv (IsEquiv.toQEquiv univalence) $ \new QEquiv {Iso {_} {a} {b}} {Iso {Precat.op} {a} {b}} {
       | f (e : Iso) => e.op.reverse
       | ret (e : Iso) => e.op.reverse
       | ret_f => idpe
@@ -173,12 +176,14 @@
 
   -- | Objects of a univalent category form a 1-type.
   \lemma ob-isGpd (a b : Ob) : isSet (a = b)
-    => isSet.equiv univalence \lam e e' => prop-isProp
+    => equiv-isSet univalence \lam e e' => prop-isProp
 } \where {
   \lemma univalenceFromQEquiv {C : Precat} (e : \Pi {a b : C} -> QEquiv {a = b} {Iso {C} {a} {b}}) (i : \Pi {a : C} -> (e (idpe a)).f = id) {a b : C} : IsEquiv (C.idtoiso {a} {b})
-    => \have t : e.f = C.idtoiso {a} {b} => ext (\case \elim b, \elim __ \with {
-      | b, idp => Iso.equals _ _ i
-    }) \in transport (IsEquiv __) t (inP e)
+    => \have | h (p : a = b) : e.f p = C.idtoiso p => \case \elim b, \elim p \with {
+                | b, idp => Iso.equals _ _ i
+              }
+              | t : e.f = C.idtoiso {a} {b} => path (\lam j p => h p @ j)
+       \in transport (IsEquiv __) t (inP e)
 
   \lemma makeUnivalence {C : Precat} (c : \Pi (e : Iso {C}) -> \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p id = e)) {a b : C} : IsEquiv (C.idtoiso {a} {b})
     => inP $ pathEquiv (\lam a b => Iso {C} {a} {b}) (\lam {a} {b} => \new Retraction {
@@ -197,9 +202,15 @@
   | o {x y z : X} (t : Trunc0 (y = z)) (s : Trunc0 (x = y)) : Trunc0 (x = z) \elim t, s {
     | in0 y=z, in0 x=y => in0 (x=y *> y=z)
   }
-  | id-left {_} {_} {p} => cases p idp
-  | id-right {_} {_} {p} => cases p (pmap in0 idp_*>)
-  | o-assoc {_} {_} {_} {_} {p} {q} {r} => cases (p,q,r) (pmap in0 (inv *>-assoc))
+  | id-left {_} {_} {p} => \case \elim p \with {
+    | in0 _ => idp
+  }
+  | id-right {_} {_} {p} => \case \elim p \with {
+    | in0 _ => pmap in0 idp_*>
+  }
+  | o-assoc {_} {_} {_} {_} {p} {q} {r} => \case \elim p, \elim q, \elim r \with {
+    | in0 _, in0 _, in0 _ => pmap in0 (inv *>-assoc)
+  }
   \where {
     \func map {X : \Type} {D : Precat} (f : X -> D) {x y : X} (h : Hom {DiscretePrecat X} x y) : Hom (f x) (f y) \elim h
       | in0 idp => id
@@ -255,18 +266,5 @@
   \lemma concat-assoc {x y z w : V} {p : Paths x y} {q : Paths y z} {r : Paths z w} : concat (concat p q) r = concat p (concat q r) \elim p
     | empty idp => idp
     | cons e p => pmap (cons e) concat-assoc
-
-  \func FreeCat : Cat V \cowith
-    | Hom => Paths
-    | id => empty idp
-    | o q p => concat p q
-    | id-left => concat_idp
-    | id-right => idp
-    | o-assoc => inv concat-assoc
-    | univalence => Cat.makeUnivalence $ later \case \elim __ \with {
-      | (x, y, empty idp, _, _, _) => (idp,idp)
-      | (x, y, cons e p, _, (), _)
-    }
 }
 
-\func TrivialCat : Cat => (\new Graph (\Sigma) (\lam _ _ => Empty)).FreeCat

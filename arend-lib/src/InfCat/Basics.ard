@@ -2,7 +2,6 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import InfCat.Paths
-\import Logic.Unique
 \import Meta
 \import Paths
 

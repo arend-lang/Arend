@@ -14,7 +14,6 @@
 \import Paths
 \import Paths.Meta
 \import Logic
-\import Logic.Unique
 \open FunctorCartesian
 
 {- | The exponent of functors `B ->⁺ \Type u`: the right Kan extension of `G ∘ p` along the projection `p` of the total category of {F}.

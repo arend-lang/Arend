@@ -1,0 +1,134 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.QModule
+\import Algebra.Ring.RingHom
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Function.Meta
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Algebra.Semiring
+\import Algebra.Pointed
+\open QModule
+\open TorsionFreeGroup
+\open AbGroup
+\open Semiring
+\open AddGroup
+\open AbMonoid
+\open Semigroup
+\open AddMonoid
+
+\sfunc .\infixl 7 *q (M : QModule) (q : Rat) (a : M) : M
+  => ratNom q *i (uniquelyDivisible a (ratDenom/=0 {q})).center.1
+
+\lemma .*q_*i (M : QModule) {x : Int} {a : M} : x *q a = x *i a
+  => (\peval _ *q _) *> pmap (x *i) (QModule.ud-unique zro-left)
+
+\lemma .*q_*n (M : QModule) {n : Nat} {a : M} : n *q a = n *n a
+  => *q_*i
+
+\lemma .*q_*2 (M : QModule) {a : M} : 2 *q a = a + a
+  => *q_*n *> +-assoc *> zro-left
+
+\lemma .ide_*q (M : QModule) {a : M} : 1 *q a = a
+  => (\peval _ *q _) *> zro-left *> QModule.ud-unique zro-left
+
+\lemma .*q-assoc (M : QModule) {q r : Rat} {a : M} : q * r *q a = q *q (r *q a)
+  => *aq.*q_*aq *> pmap (*aq a) RatField.*_alt *> *aq.*aq-assoc {_} {rat_alt q} {rat_alt r} *> inv (pmap (_ *q) *aq.*q_*aq *> *aq.*q_*aq)
+
+\lemma .*q-cancel (M : QModule) {q : Rat} (q/=0 : q /= RatField.zro) {a b : M} (p : q *q a = q *q b) : a = b
+  => inv (pmap (*q a) (RatField.finv-left q/=0) *> ide_*q) *> *q-assoc *> pmap (RatField.finv q *q) p *> inv *q-assoc *> pmap (*q b) (RatField.finv-left q/=0) *> ide_*q
+
+\func .\infixl 7 *aq (M : QModule) (q : Rat.AltRat) (a : M) : M \elim q
+  | in~ (n, d, d>0) => n *i (uniquelyDivisible a $ >_/= d>0).center.1
+  | ~-equiv (n1, d1, d1>0) (n2, d2, d2>0) r => noTorsion-div (>_/= d1>0) $
+      inv (*i-assoc {_} {iabs d1}) *> pmap (*i _) *-comm *> *i-assoc *> pmap (n1 *i) (QModule.ud-cond *> inv QModule.ud-cond *> pmap (*i _) (>_iabs d2>0)) *> inv *i-assoc *> pmap (*i _) (r *> pmap (n2 *) (inv (>_iabs d1>0)) *> *-comm) *> *i-assoc {_} {iabs d1}
+  \where {
+    \lemma >_/= {d : Int} (p : signum d = 1) : iabs d /= 0 \elim d
+      | pos n => \lam n=0 => \case rewrite n=0 p
+      | neg n => \lam n=0 => \case rewrite n=0 p
+
+    \lemma >_iabs {d : Int} (p : signum d = 1) : pos (iabs d) = d \elim d
+      | pos n => iabs.ofPos (pos<=pos zero<=_)
+      | neg (suc n) => \case p
+
+    \protected \lemma *q_*aq {q : Rat} {a : M} : q *q a = rat_alt q *aq a
+      => \peval q *q a
+
+    \protected \lemma *aq-assoc {q r : Rat.AltRat} {a : M} : q Rat.AltRat.* r *aq a = q *aq (r *aq a) \elim q, r
+      | in~ q, in~ r => *i-assoc *> pmap (q.1 *i) (noTorsion-div (*aq.>_/= q.3) $ inv (*i-assoc {_} {iabs q.2}) *> pmap (*i _) *-comm *> *i-assoc *> pmap (r.1 *i) (noTorsion-div (*aq.>_/= r.3) $ inv (*i-assoc {_} {iabs r.2} {iabs q.2}) *> pmap (*n _) (*-comm *> inv iabs_*) *> QModule.ud-cond *> inv QModule.ud-cond) *> inv QModule.ud-cond)
+
+    \protected \lemma *aq-rdistr {q r : Rat.AltRat} {a : M} : (q Rat.AltRat.+ r) *aq a = q *aq a + r *aq a \elim q, r
+      | in~ q, in~ r => *i-rdistr *> pmap2 (+)
+                                       (*i-assoc *> pmap (q.1 *i) (noTorsion-div (*aq.>_/= q.3) $ inv (*i-assoc {_} {iabs q.2}) *> pmap (*i _) (pmap (_ *) (inv (*aq.>_iabs r.3)) *> pmap pos (inv iabs_*)) *> QModule.ud-cond *> inv QModule.ud-cond))
+                                       (*i-assoc *> pmap (r.1 *i) (noTorsion-div (*aq.>_/= r.3) $ inv (*i-assoc {_} {iabs r.2}) *> pmap (*i _) (*-comm *> pmap (* _) (inv (*aq.>_iabs q.3)) *> pmap pos (inv iabs_*)) *> QModule.ud-cond *> inv QModule.ud-cond))
+  }
+
+\func .toRatModule (M : QModule) : LModule RatField \cowith
+  | AbGroup => M
+  | *c => *q
+  | *c-assoc => *q-assoc
+  | *c-ldistr => (\peval _ *q _) *> pmap (_ *i) (QModule.ud-unique $ *n-ldistr *> pmap2 (+) QModule.ud-cond QModule.ud-cond) *> *i-ldistr *> inv (pmap2 (+) (\peval _ *q _) (\peval _ *q _))
+  | *c-rdistr {r} {s} {a} => *aq.*q_*aq *> pmap (*aq a) RatField.+_alt *> *aq.*aq-rdistr {_} {rat_alt r} {rat_alt s} *> inv (pmap2 (+) *aq.*q_*aq *aq.*q_*aq)
+  | ide_*c => ide_*q
+
+\lemma .*q-comm-left (A : QPseudoAlgebra) {r : Rat} {a b : A} : r *q (a * b) = r *q a * b
+  => inv $ func-*q {_} {_} {*-addGroupHom-right}
+
+\lemma .*q-comm-right (A : QPseudoAlgebra) {r : Rat} {a b : A} : r *q (a * b) = a * (r *q b)
+  => inv $ func-*q {_} {_} {*-addGroupHom-left}
+
+\lemma .*q-square (A : QPseudoAlgebra) {q : Rat} {a : A} (qs : RatField.IsSquare q) (as : IsSquare a) : IsSquare (q *q a) \elim qs, as
+  | inP (r,rr=q), inP (b,bb=a) => inP (r *q b, inv *q-comm-left *> pmap (r *q) (inv *q-comm-right) *> inv *q-assoc *> pmap2 (*q) rr=q bb=a)
+
+\func .toRatAlgebra (A : QPseudoAlgebra) : PseudoAlgebra RatField \cowith
+  | LModule => toRatModule
+  | PseudoRing => A
+  | *c-comm-left => *q-comm-left
+  | *c-comm-right => *q-comm-right
+
+\func .fromRat (A : QAlgebra) (q : Rat) => q *q 1
+
+\lemma .fromRat_* (A : QAlgebra) {q r : Rat} : fromRat q * fromRat r = fromRat (q RatField.* r)
+  => inv *q-comm-left *> pmap (q *q) ide-left *> inv *q-assoc
+
+\lemma .fromRat_natCoef (A : QAlgebra) {n : Nat} : fromRat n = natCoef n
+  => *q_*n *> inv natCoef_*n
+
+\lemma .fromRat_zro (A : QAlgebra) : fromRat RatField.zro = zro
+  => *q_*n
+
+\lemma .fromRat_ide (A : QAlgebra) : fromRat RatField.ide = ide
+  => ide_*q
+
+\lemma .fromRat-comm (A : QAlgebra) {q : Rat} {a : A} : fromRat q * a = a * fromRat q
+  => inv *q-comm-left *> pmap (q *q) (ide-left *> inv ide-right) *> *q-comm-right
+
+\lemma .natCoef_*_*q (A : QAlgebra) {n : Nat} {a : A} : natCoef n * a = n *q a
+  => natCoef_*_*n *> inv *q_*n
+
+\func fromRatModule (M : LModule RatField) : QModule \cowith
+  | AbGroup => M
+  | isDivisible a {n} n/0 => inP (RatField.finv n *c a, inv (*c-assoc *> M.natCoef_*c) *> pmap (*c a) (RatField.finv-right $ natRat/=0 n/0) *> ide_*c)
+  | noTorsion n/=0 na=0 => inv (pmap (*c _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*c) *> *c-assoc *> pmap (_ *c) (M.natCoef_*c *> na=0) *> M.*c_zro-right
+
+\lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
+  => pmap f (\peval _ A.*q _) *> f.func-*i *> pmap (_ B.*i) (inv $ B.ud-unique $ inv f.func-*n *> pmap f A.ud-cond) *> inv (\peval _ B.*q _)
+
+\func fromRatPseudoAlgebra (R : PseudoAlgebra RatField) : QPseudoAlgebra \cowith
+  | QModule => fromRatModule R
+  | PseudoRing => R
+
+\func fromRatAlgebra (R : AAlgebra RatField) : QAlgebra \cowith
+  | QModule => fromRatModule R
+  | Ring => R
+
+\instance RatQAlgebra : QAlgebra Rat
+  | Ring => RatField
+  | QModule => fromRatModule ringAlgebra

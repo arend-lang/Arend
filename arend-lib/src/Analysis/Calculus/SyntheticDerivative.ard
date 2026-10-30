@@ -1,6 +1,8 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Module
+\import Algebra.Module.Instances
 \import Algebra.Module.BilinearMap
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid

@@ -3,22 +3,18 @@
 \import AG.Scheme
 \import AG.SchemeSite
 \import AG.SchemeSite.LRLSchemeSiteHom
-\import AG.SchemeSite.SchemeSiteHom
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
-\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Localization
-\import Algebra.Ring.RingCat
 \import Algebra.Ring.RingHom
 \import Category.Functor
-\import Category.Topos.Sheaf.LocalPredicate
-\import Equiv
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -26,17 +22,12 @@
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths
-\import Paths.Meta
-\import Relation.Equivalence
-\import Set.Set
-\import Topology.Locale
 \import Topology.Locale.PreorderSite
 \open Monoid
 \open SubMonoid
-\open LocRing(isLocalization \as LR)
 \open Localization
-\open Cover
 \open CompleteLattice
 
 \func Spec.{u} (R : CRing.{u}) : Scheme
@@ -107,7 +98,6 @@
         \lam x => Localization.localizations-equiv1 LocRing.isLocalization (X.principal-localization ta specUnit-principal) {specUnit.siteHom.f# x} (\lam y => lift_inL) $ inP (1, inP (1, simplify)),
       \lam XA => LocallyRingedLocaleCat.iso-affine specUnit XA Spec.isAffineScheme)
   \where {
-    \open LocaleSite
 
     \lemma specUnit-principal {x : X.GlobalSections} : X.IsPrincipalOpenAt (top-univ {_} {specUnit.siteHom ((), x)}) x
       => LocallyRingedLocale.principalOpen-principal

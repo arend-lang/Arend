@@ -90,6 +90,9 @@ public class ModuleSerialization {
     // Preserve access modifier — without this, deserialized \protected members become PUBLIC,
     // which leaks them into dynamic scope walks and triggers spurious duplicate-import warnings.
     refBuilder.setAccessModifier(DefinitionSerialization.writeAccessModifier(referable.getAccessModifier()));
+    if (referable.isDynamicExtension()) {
+      refBuilder.setIsDynamicExtension(true);
+    }
 
     Definition typechecked = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
     if (typechecked != null && !(typechecked instanceof Constructor || typechecked instanceof ClassField)) {

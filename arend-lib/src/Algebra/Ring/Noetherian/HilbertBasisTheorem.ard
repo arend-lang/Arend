@@ -6,7 +6,6 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Noetherian
 \import Algebra.Ring.Poly
-\import Algebra.Ring.RingHom
 \import Arith.Nat
 \import Data.Array
 \import Function.Meta
@@ -22,6 +21,8 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Algebra.Ring.RingHom.Properties
+\import Algebra.Monoid.Properties
 
 \truncated \data Tailored {A : \Set} (R : A -> A -> \Prop) (as bs : Array A) : \Prop \elim as, bs
   | a :: as, b :: bs => tailored-in (R a b) (as = bs)
@@ -60,13 +61,13 @@
               (exts \lam j => \have |lj|=0 => separatedEq \lam |lj|/=0 => c $ inP (j, rewrite |p|=0 $ nonZero>0 |lj|/=0)
                               \in rewrite |lj|=0 $ inv $ degree<=0 _ $ rewrite |lj|=0 in (l j).3)
               (later $ rewrite |p|=0 $ inv $ degree<=0 p.1 $ rewrite |p|=0 in p.3) $
-              PseudoRingHom.func-Ideal_lclosure polyHom {\lam j => polyCoef (l j).1 (l j).2} r
+              func-Ideal_lclosure polyHom {\lam j => polyCoef (l j).1 (l j).2} r
           | suc k, |p|=k+1 => \case (Ideal.closureN-lem {_} {_} {\lam j => polyCoef (l j).1 (l j).2}).1 r \with {
             | inP (d,e) =>
               \have split j => +-comm *> <=_exists {(l j).2} (transport (_ <=) |p|=k+1 \lam t => c $ inP (j,t))
               \in bar-shift-right $ bar-impl (\lam {s} => rewrite map_++ \lam pe => rewrite map_++ $
                   PausesElem.lincomb (\lam j => monomial (d j) (suc k -' (l j).2)) pe) $
-                bar-shift-left $ h {(p.1 - AddMonoid.BigSum (\lam j => monomial (d j) (suc k -' (l j).2) * (l j).1), k,
+                bar-shift-left $ h {(p.1 - BigSum (\lam j => monomial (d j) (suc k -' (l j).2) * (l j).1), k,
                   \box degree-reduce _ k (degree<=_+ (rewriteI |p|=k+1 p.3) $ degree<=_negative $ degree<=_BigSum \lam j =>
                       rewriteI (split j) $ degree<=_* degree<=_monomial (l j).3) $
                     polyCoef_+ *> pmap (_ +) polyCoef_negative *> R.toZero (pmap (polyCoef _) (inv |p|=k+1) *> e *>

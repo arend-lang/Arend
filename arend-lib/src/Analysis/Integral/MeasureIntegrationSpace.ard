@@ -1,12 +1,12 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Ordered.TruncRieszSpace
-\import Algebra.QModule
 \import Algebra.Ring.Boolean
 \import Algebra.StrictlyOrdered
 \import Analysis.Integral.IntegrationSpace
@@ -27,11 +27,17 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence \hiding (~)
-\import Set.Fin
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
 \import Topology.TopSpace
+\import Algebra.Monoid.Perm
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
+\import Algebra.Semiring.Properties
+\import Algebra.Ordered.Properties
+\import Algebra.Ordered.Group
+\import Data.Fin
 \open SFunc
 \open SFuncPosetQModule (IsReduced, makeReduced, reduce, reduce_IsReduced, reduce_~, split1)
 
@@ -131,7 +137,7 @@
       }
 
     \lemma func-join {A B : MeasureRing} {f : MeasureRingHom A B} {x y : SFuncIntegrationSpace A} : hom f (x ∨ y) = hom f x ∨ hom f y
-      => pmap (hom f) RieszSpace.join_abs *> func-*q *> pmap (_ QModule.*q) ((hom f).func-+ *> pmap2 (+) (hom f).func-+ (func-abs *> pmap LatticeAbGroup.abs (hom f).func-minus)) *> inv RieszSpace.join_abs
+      => pmap (hom f) RieszSpace.join_abs *> func-*q *> pmap (_ *q) ((hom f).func-+ *> pmap2 (+) (hom f).func-+ (func-abs *> pmap LatticeAbGroup.abs (hom f).func-minus)) *> inv RieszSpace.join_abs
   }
 
 \lemma SFuncHom-dense {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense)
@@ -173,7 +179,7 @@
       => \let | S => RealAbGroup.BigSum (map (\lam s => RealAbGroup.abs s.1) l)
               | S>=0 : 0 <= S => RealAbGroup.BigSum_>=0 \lam j => RealAbGroup.abs>=0
               | (inP (d,d>0,dS<eps)) => split-eps eps>0 {S + 1} (S>=0 <∘r linarith)
-         \in \case FinSet.finiteAC (\lam j => approx-elem fd d>0 (l j).2) \with {
+         \in \case finiteAC (\lam j => approx-elem fd d>0 (l j).2) \with {
            | inP h => inP (\lam j => ((l j).1, (h j).1),
                (=_<= (lnorm-ldist {SFuncIntegrationSpace B} {inSF l} {inSF (\lam j => ((l j).1, f (h j).1))})
                <=∘ list-bound {B} {l.len} {\lam j => (l j).1} {\lam j => (l j).2} {\lam j => f (h j).1}

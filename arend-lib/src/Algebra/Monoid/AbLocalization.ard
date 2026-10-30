@@ -4,12 +4,8 @@
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
 \import Function.Meta
-\import Logic
-\import Logic.Meta
-\import Order.PartialOrder
 \import Paths
 \import Relation.Equivalence
-\import Set
 
 \type LocAbType {M : AbMonoid} (S : SubAddMonoid M) => Quotient (~)
   \where {

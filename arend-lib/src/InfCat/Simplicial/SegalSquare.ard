@@ -9,9 +9,7 @@
  -     terminal. So this is {IsSegal} together with {span-sections}.
  -}
 
-\import Category
 \import Category.Simplex
-\import Category.Slice
 \import Equiv
 \import Equiv.Sigma
 \import Function.Meta
@@ -171,7 +169,7 @@
                    (s : DPath (\lam i => ab i ~> cd i) ac bd) (s' : DPath (\lam i => ab' i ~> cd' i) ac' bd')
                    (e1 : ab = ab') (e2 : cd = cd') (e3 : ac = ac') (e4 : bd = bd')
   : (\lam i => \lam j =>⁺ s i j) = {DI ->⁺ DI ->⁺ Z} (\lam i => \lam j =>⁺ s' i j) \elim e1, e2, e3, e4
-  | idp, idp, idp, idp => path \lam k i j => isProp.equiv (inP (square-equiv ab cd)) (hom-isSet Zt _ _ _ _) s s' k i j
+  | idp, idp, idp, idp => path \lam k i j => equiv-isProp (inP (square-equiv ab cd)) (hom-isSet Zt _ _ _ _) s s' k i j
 
 -- # The Segal condition for squares
 

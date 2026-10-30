@@ -5,6 +5,7 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
@@ -116,3 +117,24 @@
   : \Sigma (M : Ideal (PolyAlgebra K)) M.IsMaximal (M p)
   => \let (M,Mm,g) => BezoutRing.maximal-ideal (Poly.poly-countable c) poly-dec-div (p :: nil) (\lam c => pc $ c p \lam (0) => LDiv.id-div)
      \in (M, Mm, g 0)
+
+-- | Over a discrete field it is therefore invertible.
+\lemma degree-lead-Inv {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) {n : Nat}
+                       (dp : degree p = suc n) : Monoid.Inv (polyCoef p (suc n))
+  => \case eitherZeroOrInv (polyCoef p (suc n)) \with {
+    | byLeft lead=0 => absurd (degree-lead/=0 p/=0 dp lead=0)
+    | byRight i => i
+  }
+
+\lemma degree0-Inv {K : DiscreteField} {g : Poly K} (dg : degree g = 0) (g/=0 : g /= 0) : Monoid.Inv g
+  => \have g0 : g = padd pzero (polyCoef g 0)
+              => degree<=0 g (degree<_degree<= (degree_degree< {_} {g} {1}
+                                                  (rewrite dg NatOrder.zero<suc)))
+     \in \case eitherZeroOrInv (polyCoef g 0) \with {
+       | byLeft c=0 => absurd (g/=0 (g0 *> pmap (padd pzero) c=0 *> peq))
+       | byRight ci => Monoid.Inv.rmake (padd pzero ci.inv)
+           (pmap (`* padd pzero ci.inv) g0 *> pmap (padd pzero) (zro-left *> ci.inv-right))
+     }
+
+\lemma field-toMonic {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) : isMonic (finv (leadCoef p) *c p)
+  => inP (degree p, degree<=_*c $ degree_degree<= <=-refl, polyCoef_*c *> pmap (_ *) (inv leadCoef_polyCoef) *> K.finv-left \lam s => p/=0 (leadCoef=0-lem s))

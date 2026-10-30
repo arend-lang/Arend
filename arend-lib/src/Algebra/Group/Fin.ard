@@ -1,12 +1,9 @@
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
-\import Arith.Int
 \import Arith.Nat
 \import Arith.Nat.Sequence
 \import Function.Meta
-\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -18,10 +15,12 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin.Pigeonhole
+\import Equiv
+\import Algebra.Monoid.Properties
 
 \lemma hasFiniteOrder {G : Group} {P : PigeonholeSet G} (g : G) : ∃ (n : Nat) (n > 0) (G.pow g n = 1)
   => TruncP.map (P.pigeonhole< (\lam n => G.pow g n)) \lam (i,j,i<j,p) =>
-      (j -' i, pos<pos.conv $ transportInv (_ <) (-'=- $ <=-less i<j) linarith, cancel_*-right (G.pow g i) $ inv G.pow_+ *> pmap (G.pow g) (unpos $ pmap (+ pos i) (-'=- $ <=-less i<j) *> linarith) *> inv p *> inv ide-left)
+      (j -' i, <_-' i<j, cancel_*-right (G.pow g i) $ inv G.pow_+ *> pmap (G.pow g) (NatSemiring.+-comm *> <=_exists (<=-less i<j)) *> inv p *> inv ide-left)
 
 \sfunc order {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G) : Nat
   => (aux g).1

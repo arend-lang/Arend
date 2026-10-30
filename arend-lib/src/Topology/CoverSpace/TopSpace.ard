@@ -6,6 +6,7 @@
 \import Set.Set
 \import Topology.CoverSpace
 \import Topology.TopSpace
+\import Set.Set.Lattice
 
 \func TopCover {X : TopSpace} (Xr : X.IsRegular) : CoverSpace X \cowith
   | isCauchy C => \Pi (x : X) -> ∃ (U : C) (V : X.isOpen) (V x) (V ⊆ U)

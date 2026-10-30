@@ -1,6 +1,6 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Function.Meta
@@ -17,6 +17,7 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace
+\import Set.Set.Lattice
 
 \class TopAbGroup \extends TopSpace, AbGroup, UniformSpace {
   | +-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 + s.2

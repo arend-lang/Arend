@@ -1,0 +1,10 @@
+\import Algebra.Ordered
+\import Algebra.Ordered.Group
+\import Algebra.Ring
+\import Function.Meta
+\import Paths
+
+\class PosetRing \extends PosetSemiring, Ring, PosetAbGroup
+  | <=_*-positive {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : 0 <= x * y
+  | <=_*_positive-left x<=y z>=0 => from>=0 $ transport (0 <=) rdistr_- $ <=_*-positive (to>=0 x<=y) z>=0
+  | <=_*_positive-right x>=0 y<=z => from>=0 $ transport (0 <=) ldistr_- $ <=_*-positive x>=0 (to>=0 y<=z)

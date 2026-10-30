@@ -12,10 +12,11 @@
 \import Logic.Bar.FanTheorem
 \import Logic.Meta
 \import Meta
-\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Set.Set
+\import Algebra.Ring.RingHom.Properties
+\import Algebra.Monoid.Properties
 
 \class WeaklyNoetherianCRing \extends CRing
   | isWeaklyNoetherian (I : Nat -> Ideal \this) : (\Pi (n : Nat) -> (I n).IsFinitelyGenerated) -> Ideal.ChainCondition I
@@ -59,7 +60,7 @@
     \open Ideal
 
     \protected \lemma map {R S : CRing} (f : PseudoRingHom R S) {l : Array R} (p : PausesElem l) : PausesElem (amap f l) \elim l, p
-      | a :: l, pauses-here p => pauses-here (PseudoRingHom.func-Ideal_closure f {_} {l} p)
+      | a :: l, pauses-here p => pauses-here (func-Ideal_closure f {_} {l} p)
       | a :: l, pauses-there p => pauses-there (map f p)
 
     \lemma lincomb {l r : Array R} {a : R} (c : Array R r.len) (p : PausesElem (l ++ a - R.BigSum (\lam j => c j * r j) :: r)) : PausesElem (l ++ a :: r) \elim l, p
@@ -102,7 +103,6 @@
         }) e) $
       indexedFanTheorem Pauses.isBarMonotone b (\lam l j => Ideal.closure (drop (suc j) l) (l j)) Pauses.toIndex
   \where {
-    \open fanTheorem
     \open drop
 
     \func fgIdeal (l : Array R) : \Sigma (I : Ideal R) (I.IsFinitelyGenerated)

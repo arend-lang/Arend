@@ -19,10 +19,8 @@
  -}
 
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
-\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Contravariant.RightFib
@@ -42,7 +40,6 @@
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
 \open ExtendHelpers

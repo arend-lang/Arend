@@ -1,13 +1,11 @@
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Arith.Rat
 \import Arith.Real.UpperReal
 \import Data.Array.Pairs
 \import Function.Meta
 \import Logic
-\import Order.Biordered
 \import Order.PartialOrder
-\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Topology.Compact

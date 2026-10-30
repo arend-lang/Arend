@@ -6,6 +6,14 @@
   | inl A
   | inr B
   \where {
+    \lemma toTruncOr {A B : \Cat} (p : Or A B) : A || B \elim p
+      | inl a => byLeft a
+      | inr b => byRight b
+
+    \lemma fromTruncOr {A B : \Cat} (p : A || B) : TruncP (Or A B) \elim p
+      | byLeft a => inP (inl a)
+      | byRight b => inP (inr b)
+
     \func levelProp {A B : \Prop} (e : A -> B -> Empty) (x y : Or A B) : x = y \elim x, y
       | inl a, inl a' => pmap inl prop-pi
       | inl a, inr b => absurd (e a b)

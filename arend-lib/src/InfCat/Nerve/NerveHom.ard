@@ -2,7 +2,6 @@
 \import Category.Functor
 \import Equiv
 \import Function.Meta
-\import Homotopy.Fibration
 \import Homotopy.HLevel
 \import InfCat.Basics
 \import InfCat.Fibration.Univalence.DirectedUnivalence
@@ -176,7 +175,7 @@
 \lemma nerve-preorder-prop.{u} {P : Preorder.{u}} (a b : Nerve P) : isProp (a ~> b)
   => \case nerveOb-surj a, nerveOb-surj b \with {
     | inP (x, p), inP (y, q) => transport2 (\lam a b => isProp (a ~> b)) p q
-        (isProp.equiv (IsEquiv.ret-equiv nerveHom-equiv) \lam f g => prop-pi)
+        (equiv-isProp (IsEquiv.ret-equiv nerveHom-equiv) \lam f g => prop-pi)
   }
 
 -- | The nerve of a functor which is bijective on morphisms is fully faithful.

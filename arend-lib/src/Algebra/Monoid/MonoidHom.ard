@@ -2,11 +2,10 @@
 \import Algebra.Pointed.PointedHom
 \import Equiv
 \import Function.Meta
-\import Logic
 \import Paths
 \import Paths.Meta
-\import Set.Fin
 \import Set.SetHom
+\import Algebra.Monoid.Properties
 
 \record SemigroupHom \extends SetHom {
   \override Dom : Semigroup
@@ -22,7 +21,7 @@
     | 0 => func-ide
     | suc n => func-* *> pmap (* _) func-pow
 
-  \lemma func-BigProd {l : Array Dom} : func (Monoid.BigProd l) = Monoid.BigProd (\lam j => func (l j)) \elim l
+  \lemma func-BigProd {l : Array Dom} : func (BigProd l) = BigProd (\lam j => func (l j)) \elim l
     | nil => func-ide
     | a :: l => func-* *> pmap (_ *) func-BigProd
 
@@ -64,7 +63,7 @@
   \override Cod : AddMonoid
   | func-+ {x y : Dom} : func (x + y) = func x + func y
 
-  \lemma func-BigSum {l : Array Dom} : func (AddMonoid.BigSum l) = AddMonoid.BigSum (\lam j => func (l j)) \elim l
+  \lemma func-BigSum {l : Array Dom} : func (BigSum l) = BigSum (\lam j => func (l j)) \elim l
     | nil => func-zro
     | a :: l => func-+ *> pmap (_ +) func-BigSum
 
@@ -89,8 +88,4 @@
     | func-zro => pmap g func-zro *> func-zro
     | func-+ => pmap g func-+ *> func-+
 
-  \lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j))
-    => \case A.FinSum_char a \with {
-         | inP (e,q) => pmap f q *> f.func-BigSum *> inv (B.FinSum_char2 e)
-       }
 }

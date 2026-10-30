@@ -1,0 +1,49 @@
+\import Algebra.Monoid
+\import Arith.Nat
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Perm
+\import Data.Fin (fsuc, fsuc/=, nat_fin_=)
+\import Function.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Order.Lattice
+\import Algebra.Monoid.Properties
+\import Order.Lattice.Properties
+
+\lemma .BigSum_EPerm (AM : AbMonoid) {l l' : Array AM} (e : EPerm l l') : BigSum l = BigSum l' \elim l, l', e
+  | nil, nil, eperm-nil => idp
+  | x :: l1, y :: l2, eperm-:: p e => pmap2 (+) p (BigSum_EPerm e)
+  | x :: (x' :: l1), y :: (y' :: l2), eperm-swap idp idp r => inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (\lam s => x' + (x + s)) (pmap BigSum r)
+  | l, l', eperm-trans e1 e2 => BigSum_EPerm e1 *> BigSum_EPerm e2
+
+\lemma .BigSum_Perm (AM : AbMonoid) {n : Nat} {l l' : Array AM n} (p : Perm l l') : BigSum l = BigSum l'
+  => BigSum_EPerm (EPerm.Perm_EPerm p)
+
+-- | Reversing an array preserves its BigSum.
+\lemma .BigSum-reverse (AM : AbMonoid) {k : Nat} (l : Array AM (suc k))
+  : BigSum (\new Array AM (suc k) (\lam i => l ((k -' i) Nat.mod suc k))) = BigSum l
+  => BigSum_Perm {_} {suc k} reverse-perm
+  \where {
+    -- | The permutation that reverses an array of length `suc k`.
+    \private \func reverse-perm {A : \Set} {k : Nat} {l : Array A (suc k)}
+      : Perm (mkArray (\lam i => l ((k -' i) Nat.mod suc k))) l
+      => Perm.perm-map {Fin (suc k)} {A} l {suc k} {\lam j => (k -' j) Nat.mod suc k} {\lam j => j}
+        (Perm.perm-fin {suc k} (\lam j => (k -' j) Nat.mod suc k)
+          (\lam {a} {a'} p => run {
+            \have a<=k : a <= k => <_suc_<= (fin_< a),
+            \have a'<=k : a' <= k => <_suc_<= (fin_< a'),
+            nat_fin_= (rewrite (mod_< $ suc_<=_< (suc<=suc -'<=id), mod_< $ suc_<=_< (suc<=suc -'<=id), -'_inv a<=k, -'_inv a'<=k) in pmap (k -' __) p)
+          }))
+  }
+
+\lemma .BigProd_EPerm (CM : CMonoid) {l l' : Array CM} (e : EPerm l l') : BigProd l = BigProd l'
+  => BigSum_EPerm {AbMonoid.fromCMonoid CM} e
+
+\lemma .BigProd_Perm (CM : CMonoid) {n : Nat} {l l' : Array CM n} (p : Perm l l') : BigProd l = BigProd l'
+  => BigSum_Perm {AbMonoid.fromCMonoid CM} p
+
+\lemma .BigJoin_EPerm (L : BottomJoinSemilattice) {l l' : Array L} (e : EPerm l l') : BigJoin l = BigJoin l'
+  => BigSum_EPerm {BottomJoinSemilattice.toMonoid L} e

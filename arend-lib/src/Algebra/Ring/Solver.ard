@@ -1,9 +1,6 @@
-\import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Group.GroupHom
-\import Algebra.Module
 \import Arith.Fin.Order
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Solver
 \import Algebra.Pointed
@@ -13,7 +10,6 @@
 \import Arith.Int
 \import Arith.Nat
 \import Algebra.Semiring
-\import Arith.Rat
 \import Data.Bool
 \import Data.List
 \import Function.Meta
@@ -78,7 +74,7 @@
       repeat {2} (rewrite BaseData.cons),
       repeat {2} (rewrite mData.interpretNF_++),
       rewrite (alg.func-*, interpretNF_map, ldistr, rdistr),
-      pmap (+ _) $ equation.monoid {alg-comm a.2 (mData.interpretNF a2)}
+      pmap (+ _) $ *-assoc *> pmap (_ *) (inv *-assoc *> pmap (* _) (alg-comm a.2 (mData.interpretNF a2)) *> *-assoc *> pmap (_ *) (inv *-assoc) *> inv *-assoc) *> inv *-assoc *> pmap (* _) (inv *-assoc)
     }
 
   \lemma interpretNF_map-left (a1 : C) (a2 : List V) (l : List (\Sigma (List V) C)) : interpretRingNF (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l
@@ -408,21 +404,6 @@
   | S => IntRing
   | alg => intMap
   | alg-comm => intComm
-
-\class RatData \extends BaseRingData
-  | C => RatField
-  | S => RatField
-  | R => RatField
-  | alg => RingHom.id
-  | alg-comm x y => RatField.*-comm
-
-\class RatAlgebraData \extends BaseRingData {
-  | C => RatField
-  | S => RatField
-  \override R : AAlgebra RatField
-  | alg => AAlgebra.coefHom {R}
-  | alg-comm x y => pmap (* _) coefMap_*c *> inv *c-comm-left *> pmap (x *c) (ide-left *> inv ide-right) *> *c-comm-right *> inv (pmap (y *) coefMap_*c)
-}
 
 \class CRingData \extends CAlgData, RingData {
   \override R : CRing

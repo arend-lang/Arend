@@ -1,8 +1,6 @@
 \import Arith.Nat
 \import Equiv
-\import Equiv.Path
 \import Equiv.Sigma
-\import Homotopy.Fibration
 \import Logic
 \import Logic.Unique
 \import Order.PartialOrder

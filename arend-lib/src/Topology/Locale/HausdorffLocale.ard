@@ -2,9 +2,7 @@
 
 \import Function.Meta
 \import Logic
-\import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder

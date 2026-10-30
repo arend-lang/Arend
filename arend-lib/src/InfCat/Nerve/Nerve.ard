@@ -2,7 +2,6 @@
 \import Category.Functor
 \import Equiv
 \import Equiv.Sigma
-\import Function.Meta
 \import InfCat.Basics
 \import InfCat.Paths
 \import InfCat.Trunc.IsCatTrunc
@@ -109,7 +108,7 @@
 \lemma NRels-isProp {C : Precat} {Z : \Cat} (Zt : IsTruncCat 1 Z) (b : NGraph C Z) : isProp (NRels b)
   => \have | hp {a a' : Z} {p q : a ~> a'} : isProp (p = q) => ToProp.fromProp (Zt a a' p q)
            | tp {a b c : Z} {ab : a ~> b} {bc : b ~> c} {ac : a ~> c} : isProp (DPath (\lam i => ab i ~> ac i) idd bc)
-               => isProp.equiv (inP comp-equiv) hp
+               => equiv-isProp (inP comp-equiv) hp
      \in \lam r r' => ext (ext \lam f g => tp _ _, ext \lam x => hp _ _)
 
 -- | Maps from the nerve to a 1-category are determined by the images of vertices and edges.

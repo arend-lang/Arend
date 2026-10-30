@@ -27,10 +27,11 @@
 \import InfCat.Trunc.IsCatTrunc
 \import InfCat.Simplicial.SimplexOperators
 \import Logic
-\import Logic.Unique
 \import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Paths
+\import Equiv
 
 -- | The extension of {f} to `[n+1]` by the value {x} at the top vertex.
 \func extBy {n : Nat} {X : \Type} (f : Fin (suc n) -> X) (x : X) (k : Fin (suc (suc n))) : X

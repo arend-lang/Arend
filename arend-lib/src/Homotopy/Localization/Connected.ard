@@ -1,8 +1,6 @@
 \import Equiv
 \import Equiv.Sigma
 \import Function.Meta
-\import Logic.Unique
-\import Homotopy.Fibration
 \import Homotopy.Join
 \import Homotopy.Localization.Accessible
 \import Homotopy.Localization.Universe

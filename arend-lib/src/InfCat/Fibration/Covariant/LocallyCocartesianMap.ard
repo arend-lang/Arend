@@ -1,8 +1,6 @@
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
-\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Covariant.CocartesianMap
 \import InfCat.Fibration.Covariant.LocallyCocartesianFib
@@ -10,7 +8,6 @@
 \import InfCat.Square
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Meta
 \import Paths
 

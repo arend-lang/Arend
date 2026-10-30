@@ -1,0 +1,156 @@
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Nat
+\import Data.Array
+\import Data.Fin (fsuc, fsuc/=, nat_fin_=, fin-split, fin-inc, fin-raise, finiteAC)
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid
+\open AddMonoid
+
+\lemma .pow_+ (MM : Monoid) {a : MM} {n m : Nat} : pow a (n + m) = pow a n * pow a m \elim m
+  | 0 => inv ide-right
+  | suc m => pmap (* a) pow_+ *> *-assoc
+
+\lemma .pow_* (MM : Monoid) {a : MM} {n m : Nat} : pow a (n Nat.* m) = pow (pow a n) m \elim m
+  | 0 => idp
+  | suc m => pow_+ *> pmap (* _) pow_*
+
+\func .BigProd (MM : Monoid) (l : Array MM) => Big (*) ide l
+
+\lemma .BigProd-ext (MM : Monoid) {n : Nat} {l l' : Array MM n} (p : \Pi (i : Fin n) -> l i = l' i) : BigProd l = BigProd l'
+  => pmap BigProd (arrayExt p)
+
+\lemma .BigProd_ide (MM : Monoid) {l : Array MM} (p : \Pi (j : Fin l.len) -> l j = ide) : BigProd l = ide
+  => BigSum_zro {AddMonoid.fromMonoid MM} p
+
+\lemma .BigProd-unique (MM : Monoid) {l : Array MM} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> i /= j -> l j = 1) : BigProd l = l i
+  => BigSum-unique {AddMonoid.fromMonoid MM} i p
+
+\lemma .BigProd_++ (MM : Monoid) {l l' : Array MM} : BigProd (l ++ l') = BigProd l * BigProd l'
+  => BigSum_++ {AddMonoid.fromMonoid MM}
+
+\lemma .BigProd_suc (MM : Monoid) {n : Nat} {l : Array MM (suc n)} : BigProd l = BigProd (\new Array MM n (\lam i => l i)) * l (n Nat.mod suc n)
+  => BigSum_suc {AddMonoid.fromMonoid MM}
+
+\lemma .BigProd_replicate (MM : Monoid) {x : MM} {n : Nat} : BigProd (replicate n x) = pow x n \elim n
+  | 0 => idp
+  | suc n => pmap (x *) BigProd_replicate *> pow-left
+
+\lemma .BigProd_replicate1 (MM : Monoid) {n : Nat} : BigProd (replicate n ide) = ide
+  => BigProd_replicate *> pow_ide
+
+\lemma .*n-rdistr (AM : AddMonoid) {n m : Nat} {a : AM} : (n Nat.+ m) *n a = n *n a + m *n a
+  => AddMonoid.*n_pow *> pow_+ {AddMonoid.toMonoid AM} *> inv (pmap2 (+) AddMonoid.*n_pow AddMonoid.*n_pow)
+
+\lemma .*n-assoc (AM : AddMonoid) {n m : Nat} {a : AM} : (n Nat.* m) *n a = n *n (m *n a)
+  => pmap (*n a) NatSemiring.*-comm *> AddMonoid.*n_pow *> pow_* {AddMonoid.toMonoid AM} *> inv AddMonoid.*n_pow *> pmap (n *n) (inv AddMonoid.*n_pow)
+
+\func .BigSum (AM : AddMonoid) (l : Array AM) => Big (+) zro l
+
+\lemma .BigSum-ext (AM : AddMonoid) {n : Nat} {l l' : Array AM n} (p : \Pi (i : Fin n) -> l i = l' i) : BigSum l = BigSum l'
+  => pmap BigSum (arrayExt p)
+
+\lemma .BigSum_++ (AM : AddMonoid) {l l' : Array AM} : BigSum (l ++ l') = BigSum l + BigSum l' \elim l
+  | nil => inv zro-left
+  | :: a l => unfold BigSum (rewrite BigSum_++ (inv +-assoc))
+
+\lemma .BigSum_Big++ (AM : AddMonoid) {ls : Array (Array AM)} : BigSum (Big (++) nil ls) = BigSum (map BigSum ls) \elim ls
+  | nil => idp
+  | l :: ls => BigSum_++ *> pmap (_ +) BigSum_Big++
+
+\lemma .BigSum_++' (AM : AddMonoid) {l : Array AM} {n : Nat} {l' : Array AM n} : BigSum (l ++' l') = BigSum l + BigSum l' \elim l
+  | nil => inv zro-left
+  | a :: l => pmap (a +) BigSum_++' *> inv +-assoc
+
+\lemma .BigSum-split (AM : AddMonoid) {n m : Nat} {l : Array AM (n Nat.+ m)}
+  : BigSum l = BigSum (\lam (i : Fin n) => l (fin-inc i)) + BigSum (\lam (j : Fin m) => l (fin-raise j)) \elim n, l
+  | 0, l => inv zro-left
+  | suc n, a :: l => pmap (a +) BigSum-split *> inv +-assoc
+
+\lemma .BigSum_suc (AM : AddMonoid) {n : Nat} {l : Array AM (suc n)} : BigSum l = BigSum (\new Array AM n (\lam i => l i)) + l (n Nat.mod suc n) \elim n, l
+  | 0, :: a nil => zro-right *> inv zro-left
+  | suc n, :: a l => pmap (a +) (BigSum_suc {_} {n} {l} *> pmap (_ + (a :: l) __) (fin_nat-inj (pmap suc (mod_< id<suc) *> inv (mod_< id<suc)))) *> inv +-assoc
+
+\lemma .BigSum_suc-nat (AM : AddMonoid) {n : Nat} {f : Nat -> AM} : BigSum (\new Array AM (suc n) (f __)) = BigSum (\new Array AM n (f __)) + f n
+  => BigSum_suc {_} {n} {f __} *> pmap (_ + f __) (mod_< id<suc)
+
+\lemma .BigSum_zro (AM : AddMonoid) {l : Array AM} (p : \Pi (j : Fin l.len) -> l j = zro) : BigSum l = zro \elim l
+  | nil => idp
+  | :: a arr => pmap2 (+) (p 0) (BigSum_zro (\lam j => p (suc j))) *> zro-left
+
+\lemma .BigSum-unique (AM : AddMonoid) {l : Array AM} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> i /= j -> l j = 0) : BigSum l = l i \elim l, i
+  | a :: l, 0 => pmap (a +) (BigSum_zro \lam j => p (suc j) (\case __)) *> zro-right
+  | a :: l, suc i => pmap (a +) (BigSum-unique i \lam j q => p (suc j) (fsuc/= q)) *> pmap (+ l i) (p 0 (\case __)) *> zro-left
+
+\lemma .BigSum-unique2 (AM : AddMonoid) {l : Array AM} {i j : Fin l.len} (i<j : i NatOrder.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j \elim l, i, j, i<j
+  | a :: l, 0, suc j, _ => pmap (a +) $ BigSum-unique j \lam k j/=k => p (suc k) (\case __) $ fsuc/= \lam q => j/=k (inv q)
+  | a :: l, suc i, suc j, NatOrder.suc<suc i<j => pmap (+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
+
+\lemma .BigSum-pred (AM : AddMonoid) {P : AM -> \Prop} (P0 : P 0) (P+ : \Pi {x y : AM} -> P x -> P y -> P (x + y)) {l : Array AM} (p : \Pi (j : Fin l.len) -> P (l j)) : P (BigSum l) \elim l
+  | nil => P0
+  | a :: l => P+ (p 0) $ BigSum-pred P0 P+ \lam j => p (suc j)
+
+\lemma .BigSum_replicate0 (AM : AddMonoid) {n : Nat} : BigSum (replicate n zro) = 0 \elim n
+  | 0 => idp
+  | suc n => zro-left *> BigSum_replicate0
+
+\lemma .BigSum-subset (AM : AddMonoid) {l l' : Array AM} (p : l.len <= l'.len) (q1 : \Pi (j : Fin l.len) -> l j = l' (toFin j $ fin_< j <∘l p)) (q2 : \Pi (j : Fin l'.len) -> l.len <= j -> l' j = 0) : BigSum l = BigSum l' \elim l, l'
+  | nil, l => inv $ BigSum_zro \lam j => q2 j zero<=_
+  | a :: l, nil => absurd (p NatOrder.zero<suc)
+  | a :: l, a' :: l' => pmap2 (+) (q1 0) $ BigSum-subset (suc<=suc.conv p) (\lam j => q1 (suc j)) (\lam j p => q2 (suc j) (suc<=suc p))
+
+\lemma .fit_BigSum (AM : AddMonoid) {n : Nat} {l : Array AM} (p : \Pi (j : Fin l.len) -> n <= j -> l j = 0) : BigSum (fit 0 {n} l) = BigSum l \elim n, l
+  | 0, l => inv $ BigSum_zro \lam j => p j zero<=_
+  | suc n, nil => BigSum_replicate0 {_} {suc n}
+  | suc n, a :: l => pmap (a +) $ fit_BigSum \lam j n<=j => p (suc j) (suc<=suc n<=j)
+
+\lemma .fit-transpose (AM : AddMonoid) {n m : Nat} (l : Array (Array AM m) n) : BigSum (\lam j => fit zro (l j) j) = BigSum (\lam k => fit zro (l __ k) k) \elim n, m, l
+  | 0, 0, nil => idp
+  | 0, suc m, nil => inv $ BigSum_replicate0 {_} {suc m}
+  | suc n, 0, c :: l => BigSum_replicate0 {_} {suc n}
+  | suc n, suc m, c :: l => pmap (c 0 +) $ fit-transpose \lam i => \lam j => l i (suc j)
+
+\lemma .BigProd_* (CM : CMonoid) {n : Nat} {l l' : Array CM n} : BigProd (\lam i => l i * l' i) = BigProd l * BigProd l'
+  => BigSum_+ {AbMonoid.fromCMonoid CM}
+
+\lemma .BigProd_pow (CM : CMonoid) {k : Nat} {l : Array CM} : BigProd (\lam i => pow (l i) k) = pow (BigProd l) k \elim k
+  | 0 => BigProd_replicate1
+  | suc k => BigProd_* {_} {_} {\lam i => pow (l i) k} *> pmap (* _) BigProd_pow
+
+\func .LDiv_BigProd (CM : CMonoid) {l : Array CM} (j : Fin l.len) : LDiv (l j) (BigProd l) \elim l, j
+  | a :: l, 0 => LDiv.factor-left LDiv.id-div
+  | a :: l, suc j => LDiv.trans (LDiv_BigProd j) (LDiv.factor-right LDiv.id-div)
+
+\func .LDiv_BigProd-coord (CM : CMonoid) {n : Nat} {l l' : Array CM n} (p : \Pi (j : Fin n) -> LDiv (l j) (l' j)) : LDiv (BigProd l) (BigProd l') \elim n, l, l'
+  | 0, nil, nil => LDiv.ide-div
+  | suc n, a :: l, a' :: l' => LDiv.product (p 0) $ LDiv_BigProd-coord \lam j => p (suc j)
+
+\lemma .LDiv_BigProd_TruncP (CM : CMonoid) {n : Nat} {l l' : Array CM n} (p : \Pi (j : Fin n) -> TruncP (LDiv (l j) (l' j))) : TruncP (LDiv (BigProd l) (BigProd l'))
+  => TruncP.map (finiteAC p) LDiv_BigProd-coord
+
+\lemma .BigSum_+ (AM : AbMonoid) {n : Nat} {l l' : Array AM n} : BigSum (\lam i => l i + l' i) = BigSum l + BigSum l' \elim n, l, l'
+  | 0, _, _ => inv zro-left
+  | suc n, :: a l, :: a' l' => pmap ((a + a') +) (BigSum_+ {_} {n} {l}) *> +-assoc *> pmap (a +) (inv +-assoc *> pmap (+ _) +-comm *> +-assoc) *> inv +-assoc
+
+\lemma .BigSum-transpose (AM : AbMonoid) {m n : Nat} (f : Fin m -> Fin n -> AM)
+  : BigSum (\lam i => BigSum (f i)) = BigSum (\lam j => BigSum (f __ j)) \elim n
+  | 0 => BigSum_zro (\lam _ => idp)
+  | suc _ => BigSum_+ *> pmap (_ +) (BigSum-transpose _)
+
+\lemma .BigSum_Or (AM : AbMonoid) {n m : Nat} (x : Or (Fin n) (Fin m) -> AM)
+  : BigSum (\lam j => x (fin-split j)) = BigSum (\lam j => x (inl j)) + BigSum (\lam j => x (inr j)) \elim n
+  | 0 => inv zro-left
+  | suc n => pmap (_ +) (BigSum_Or (\lam a => x (Or.map a fsuc id))) *> inv +-assoc
+
+\lemma count_Big++ {A : DecSet} {ls : Array (Array A)} {a : A} : count (Big (++) nil ls) a = NatSemiring.BigSum (map (count __ a) ls) \elim ls
+  | nil => idp
+  | l :: ls => count_++ *> pmap (_ Nat.+) count_Big++

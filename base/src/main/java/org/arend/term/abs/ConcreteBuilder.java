@@ -59,7 +59,9 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       }
     }
 
-    return new LocatedReferableImpl(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), parent, referable.getKind());
+    LocatedReferableImpl result = new LocatedReferableImpl(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), parent, referable.getKind());
+    result.setDynamicExtension(referable.isDynamicExtension());
+    return result;
   }
 
   private InternalReferableImpl convertInternalReferable(Abstract.AbstractLocatedReferable referable, TCDefReferable parent, boolean isVisible) {

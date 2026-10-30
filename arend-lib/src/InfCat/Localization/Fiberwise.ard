@@ -22,9 +22,9 @@
 \import InfCat.Rezk
 \import Logic
 \import Logic.Meta
-\import Logic.Unique
 \import Paths
 \import Paths.Meta
+\import Equiv
 
 {- | A family of weak equivalences {W} on the fibers of {F} is stable under cocartesian transport
  -   if the transport of a weak equivalence in `W s` along any `g : s ~> s'` is a weak equivalence in `W s'`.

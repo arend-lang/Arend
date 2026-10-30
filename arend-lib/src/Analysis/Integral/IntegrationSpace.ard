@@ -1,6 +1,6 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Ordered.TruncRieszSpace
 \import Equiv
@@ -34,6 +34,7 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
 \import Topology.MetricSpace.UpperReal
+\import Algebra.QModule.Rat
 
 \class IntegrationSpace \extends TruncRieszSpace, PseudoNormedAbGroup, ExPseudoNormedRieszSpace, RealPreBanachSpace {
   | integral : E -> Real

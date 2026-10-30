@@ -1,4 +1,4 @@
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring.Poly
@@ -26,6 +26,7 @@
 \import Topology.MetricSpace
 \import Topology.MetricSpace.Multiset
 \import Topology.NormedAbGroup
+\import Algebra.Ordered.Properties
 \open Monoid (pow)
 
 {- | **The fundamental theorem of algebra from countable choice.**

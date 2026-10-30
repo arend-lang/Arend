@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Arith.Rat
 \import Arith.Real
@@ -21,6 +21,7 @@
 \import Topology.RatherBelow
 \import Topology.TopSpace
 \import Topology.UniformSpace
+\import Set.Set.Lattice
 \open Set
 
 \func LBall {X : ExPseudoMetricSpace} (r : LowerReal) (c : X) : Set X

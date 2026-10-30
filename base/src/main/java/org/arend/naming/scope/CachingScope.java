@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 
 public class CachingScope implements Scope {
   private final EnumMap<ScopeContext, Map<String, Referable>> myElements = new EnumMap<>(ScopeContext.class);
+  private final List<Referable> myExtensions = new ArrayList<>(); // extensions are not unique by name
   private final Map<String, Scope> myNamespaces = new HashMap<>();
   private final Scope myScope;
   private final static Scope EMPTY_SCOPE = new Scope() {};
@@ -17,6 +18,13 @@ public class CachingScope implements Scope {
   private CachingScope(Scope scope) {
     myScope = scope;
     for (ScopeContext context : ScopeContext.values()) {
+      if (context == ScopeContext.EXTENSION) {
+        scope.find(ref -> {
+          myExtensions.add(ref);
+          return false;
+        }, context);
+        continue;
+      }
       scope.find(ref -> {
         myElements.compute(context, (k, map) -> {
           if (map == null) map = new LinkedHashMap<>();
@@ -34,6 +42,13 @@ public class CachingScope implements Scope {
 
   @Override
   public @Nullable Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
+    if (context == null || context == ScopeContext.EXTENSION) {
+      for (Referable ref : myExtensions) {
+        if (pred.test(ref)) {
+          return ref;
+        }
+      }
+    }
     if (context == null) {
       for (Map<String, Referable> map : myElements.values()) {
         for (Referable ref : map.values()) {
@@ -42,7 +57,7 @@ public class CachingScope implements Scope {
           }
         }
       }
-    } else {
+    } else if (context != ScopeContext.EXTENSION) {
       Map<String, Referable> map = myElements.get(context);
       if (map != null) {
         for (Referable ref : map.values()) {
@@ -61,6 +76,9 @@ public class CachingScope implements Scope {
     if (context == null) {
       return Scope.super.getElements(null);
     }
+    if (context == ScopeContext.EXTENSION) {
+      return myExtensions;
+    }
     Map<String, Referable> map = myElements.get(context);
     return map == null ? Collections.emptyList() : map.values();
   }
@@ -72,6 +90,13 @@ public class CachingScope implements Scope {
       for (ScopeContext ctx : ScopeContext.values()) {
         Referable ref = resolveName(name, ctx);
         if (ref != null) {
+          return ref;
+        }
+      }
+      return null;
+    } else if (context == ScopeContext.EXTENSION) {
+      for (Referable ref : myExtensions) {
+        if (name.equals(ref.textRepresentation())) {
           return ref;
         }
       }

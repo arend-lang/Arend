@@ -4,13 +4,13 @@
 
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Pointed
-\import Algebra.QModule
-\import Algebra.Ring
 \import Algebra.Ring.UnitAlgebra
 \import Analysis.Limit
 \import Arith.Nat
@@ -41,6 +41,9 @@
 \import Topology.TopPoset
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Algebra.QModule.Rat
+\import Algebra.Ordered.Group
+\import Algebra.Ordered.Ring
 \open CompleteLattice
 
 \instance UnitC*Algebra (A : StoneC*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)

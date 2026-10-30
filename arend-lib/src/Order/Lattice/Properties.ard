@@ -1,0 +1,95 @@
+\import Data.Array
+\import Function.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Algebra.Monoid.Properties
+\import Order.StrictOrder
+\open BottomDistributiveLattice
+\open DistributiveLattice
+
+\func .Big_meet \alias Big_∧ (LL : MeetSemilattice) {n : Nat} (l : Array LL (suc n)) : LL \elim l
+  | a :: l => Big (∧) a l
+
+\lemma .Big_meet-cond (LL : MeetSemilattice) {n : Nat} {l : Array LL (suc n)} {j : Fin (suc n)} : Big_∧ l <= l j \elim l, j
+  | a :: l, 0 => Big_<=_meet0
+  | a :: l, suc j => Big_<=_meet1 j
+
+\lemma .Big_<=_meet0 (LL : MeetSemilattice) {l : Array LL} {x : LL} : Big (∧) x l <= x \elim l
+  | nil => <=-refl
+  | :: a l => meet-right <=∘ Big_<=_meet0
+
+\lemma .Big_<=_meet1 (LL : MeetSemilattice) {l : Array LL} {x : LL} (i : Fin l.len) : Big (∧) x l <= l i \elim l, i
+  | :: a l, 0 => meet-left
+  | :: a l, suc i => meet-right <=∘ Big_<=_meet1 i
+
+\lemma .Big_meet-univ (LL : MeetSemilattice) {l : Array LL} {x y : LL} (p : y <= x) (f : \Pi (i : Fin l.len) -> y <= l i) : y <= Big (∧) x l \elim l
+  | nil => p
+  | :: a l => meet-univ (f 0) (Big_meet-univ p (\lam i => f (suc i)))
+
+\func .Big_join \alias Big_∨ (LL : JoinSemilattice) {n : Nat} (l : Array LL (suc n)) : LL \elim l
+  | a :: l => Big (∨) a l
+
+\lemma .Big_join-cond (LL : JoinSemilattice) {n : Nat} {l : Array LL (suc n)} {j : Fin (suc n)} : l j <= Big_∨ l \elim l, j
+  | a :: l, 0 => Big_<=_join0
+  | a :: l, suc j => Big_<=_join1 j
+
+\lemma .Big_<=_join0 (LL : JoinSemilattice) {l : Array LL} {x : LL} : x <= Big (∨) x l \elim l
+  | nil => <=-refl
+  | :: a l => Big_<=_join0 <=∘ join-right
+
+\lemma .Big_<=_join1 (LL : JoinSemilattice) {l : Array LL} {x : LL} (i : Fin l.len) : l i <= Big (∨) x l \elim l, i
+  | :: a l, 0 => join-left
+  | :: a l, suc i => Big_<=_join1 i <=∘ join-right
+
+\lemma .Big_<=_join (LL : JoinSemilattice) {n : Nat} {l : Array LL (suc n)} (i : Fin (suc n)) : l i <= Big (∨) (l 0) (tail l) \elim l, i
+  | :: a l, 0 => Big_<=_join0
+  | :: a l, suc i => Big_<=_join1 i
+
+\lemma .Big_join-univ (LL : JoinSemilattice) {l : Array LL} {x y : LL} (p : x <= y) (f : \Pi (i : Fin l.len) -> l i <= y) : Big (∨) x l <= y \elim l
+  | nil => p
+  | :: a l => join-univ (f 0) (Big_join-univ p (\lam i => f (suc i)))
+
+\func .BigMeet (LL : TopMeetSemilattice) (l : Array LL) : LL
+  => Big (∧) top l
+
+\lemma .BigMeet-cond (LL : TopMeetSemilattice) {l : Array LL} (j : Fin l.len) : BigMeet l <= l j \elim l, j
+  | a :: l, 0 => meet-left
+  | a :: l, suc j => meet-right <=∘ BigMeet-cond j
+
+\lemma .BigMeet-univ (LL : TopMeetSemilattice) {l : Array LL} {x : LL} (p : \Pi (j : Fin l.len) -> x <= l j) : x <= BigMeet l \elim l
+  | nil => top-univ
+  | a :: l => meet-univ (p 0) $ BigMeet-univ \lam j => p (suc j)
+
+\func .BigJoin (LL : BottomJoinSemilattice) (l : Array LL) : LL
+  => Big (∨) bottom l
+
+\lemma .BigJoin-cond (LL : BottomJoinSemilattice) {l : Array LL} (j : Fin l.len) : l j <= BigJoin l \elim l, j
+  | a :: l, 0 => join-left
+  | a :: l, suc j => BigJoin-cond j <=∘ join-right
+
+\lemma .BigJoin-univ (LL : BottomJoinSemilattice) {l : Array LL} {x : LL} (p : \Pi (j : Fin l.len) -> l j <= x) : BigJoin l <= x \elim l
+  | nil => bottom-univ
+  | a :: l => join-univ (p 0) $ BigJoin-univ \lam j => p (suc j)
+
+\lemma .BigJoin_++ (LL : BottomJoinSemilattice) {l l' : Array LL} : BigJoin (l ++ l') = BigJoin l ∨ BigJoin l'
+  => BigSum_++ {BottomJoinSemilattice.toMonoid LL}
+
+\lemma .BigJoin_join (LL : BottomJoinSemilattice) {n : Nat} {l l' : Array LL n} : BigJoin (\lam i => l i ∨ l' i) = BigJoin l ∨ BigJoin l'
+  => BigSum_+ {BottomJoinSemilattice.toMonoid LL}
+
+\lemma .BigJoin-ldistr (LL : BottomDistributiveLattice) {l : Array LL} {x : LL} : x ∧ BigJoin l = BigJoin \lam j => x ∧ l j \elim l
+  | nil => bottom-ldistr
+  | a :: l => meet-ldistr *> pmap (_ ∨) BigJoin-ldistr
+
+\lemma .BigJoin-rdistr (LL : BottomDistributiveLattice) {l : Array LL} {x : LL} : BigJoin l ∧ x = BigJoin \lam j => l j ∧ x \elim l
+  | nil => bottom-rdistr
+  | a :: l => meet-rdistr *> pmap (_ ∨) BigJoin-rdistr
+
+\lemma .Big_<_meet-univ (LL : BiorderedLattice) {l : Array LL} {x y : LL} (p : y < x) (f : \Pi (i : Fin l.len) -> y < l i) : y < Big (∧) x l \elim l
+  | nil => p
+  | :: a l => <_meet-univ (f 0) (Big_<_meet-univ p (\lam i => f (suc i)))
+
+\lemma .Big_<_join-univ (LL : BiorderedLattice) {l : Array LL} {x y : LL} (p : x < y) (f : \Pi (i : Fin l.len) -> l i < y) : Big (∨) x l < y \elim l
+  | nil => p
+  | :: a l => <_join-univ (f 0) (Big_<_join-univ p (\lam i => f (suc i)))

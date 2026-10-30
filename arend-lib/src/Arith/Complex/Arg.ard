@@ -1,8 +1,8 @@
 \import Algebra.Domain
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Semiring
 \import Algebra.StrictlyOrdered
@@ -22,6 +22,9 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Order.Lattice
+\import Algebra.Field.Ordered
+\import Algebra.Ordered.Group
 \open Complex \using (iunit \as i)
 \open LatticeAbGroup
 \open OrderedField (pinv, pinv-left, pinv-right, pinv>0)

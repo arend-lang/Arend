@@ -9,8 +9,6 @@
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
 \import Algebra.Ring
-\import Category
-\import Data.Array
 \import Equiv
 \import Function \hiding (id, o)
 \import Function.Meta
@@ -19,6 +17,8 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.Properties
 
 \class MaschkeLemma {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} {S : SubLRepres R G E} {
   \func mean_func {E W : LinRepres R G} (f : LinearMap E W) : InterwiningMap E W
@@ -32,11 +32,11 @@
       \func SumOverGroup-multiply : SumOverGroup f t.1 = R.natCoef G.card *c t
         => SumOverGroup_same-elements *> SumOverGroup.FinSumEqual-multiply t
 
-      \lemma SumOverGroup_Sub : SumOverGroup f t.1 = AbMonoid.FinSum (\lam g => g ** f (inverse g ** t.1))
+      \lemma SumOverGroup_Sub : SumOverGroup f t.1 = FinSum (\lam g => g ** f (inverse g ** t.1))
         => SumOverGroup.FinSumRewrite (\lam g => SumOverGroup.adjust g f) t.1
 
-      \lemma SumOverGroup_same-elements : SumOverGroup f t.1 = AbMonoid.FinSum (\lam (_ : G) => t)
-        => SumOverGroup_Sub *> AbMonoid.FinSum-ext (\lam g => SumOverGroup_subrepr-property g t)
+      \lemma SumOverGroup_same-elements : SumOverGroup f t.1 = FinSum (\lam (_ : G) => t)
+        => SumOverGroup_Sub *> FinSum-ext (\lam g => SumOverGroup_subrepr-property g t)
 
       \lemma SumOverGroup_subrepr-property (g : G) (t : ILinRepres S) : g ** f (inverse g ** t.1) = t
         => pmap (g **) (p (inverse g ** t)) *> inv **-assoc *> pmap (** t) inverse-right *> **_ide
@@ -114,7 +114,7 @@ produces an interwining linear map $f'$ via the following formula
         \lemma step-4 (h : G) (a : A)
           : B.FinSum (\lam g => h B.** adjust (inverse h * g) f a) =
             B.FinSum (\lam g => g B.** f (inverse g A.** (h A.** a)))
-          => rewrite (AbMonoid.FinSum-ext helper) idp
+          => rewrite (FinSum-ext helper) idp
           \where {
             \func helper {h : G}{a : A}(g : G) : h B.** adjust (inverse h * g) f a = g B.** f (inverse g A.** (h A.** a))
               => unfold $ rewrite (G.inverse_*, G.inverse-isInv, A.**-assoc, inv B.**-assoc, inv G.*-assoc, G.inverse-right, G.ide-left) idp
@@ -126,7 +126,7 @@ produces an interwining linear map $f'$ via the following formula
         | inP a => rewrite (a.2, BigSumEqual A.card) idp
       }
       \where {
-        \func BigSumEqual (n : Nat) : AddMonoid.BigSum (\new Array E n (\lam _ => e)) = R.natCoef n *c e \elim n
+        \func BigSumEqual (n : Nat) : BigSum (\new Array E n (\lam _ => e)) = R.natCoef n *c e \elim n
           | 0 => rewrite (R.natCoefZero, E.*c_zro-left) idp
           | suc n => rewrite (R.natCoefSuc n, E.*c-rdistr, inv $ BigSumEqual n, E.ide_*c, E.+-comm) idp
       }

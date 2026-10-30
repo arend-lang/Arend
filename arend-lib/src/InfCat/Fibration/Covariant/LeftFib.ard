@@ -1,8 +1,6 @@
 \import Equiv
-\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
-\import Homotopy.Fibration
 \import InfCat.Basics
 \import InfCat.Fibration.Categorical
 \import InfCat.Fibration.Covariant.CovariantLift
@@ -14,7 +12,6 @@
 \import InfCat.Rezk
 \import InfCat.Square
 \import Logic
-\import Logic.Unique
 \import Meta
 \import Paths
 

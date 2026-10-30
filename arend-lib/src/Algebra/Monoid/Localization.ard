@@ -1,4 +1,5 @@
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.SubMonoid
@@ -10,12 +11,11 @@
 \import Logic
 \import Logic.Meta
 \import Logic.TFAE
-\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set
+\import Algebra.Monoid.Properties
 \open Monoid
 \open SubMonoid
 
@@ -61,7 +61,7 @@
     \where {
       \protected \lemma contr : Contr (Given (k : K) ∃ (x c : B) (S c) (a * inL c = inL x) (k * f c = f x))
         => \case localization-surj a \with {
-          | inP (x,c,Sc,ac=x) => \new Logic.Unique.Contr {
+          | inP (x,c,Sc,ac=x) => \new Contr {
             | center => (f x * (l Sc).inv, inP (x, c, Sc, ac=x, *-assoc *> pmap (_ *) inv-left *> ide-right))
             | contraction (k', inP (y,d,Sd,ad=y,p)) => ext $ inv $ Inv.rotate-inv-right \case quot-equals (localization-inv Sd) (localization-inv Sc) ad=y ac=x \with {
               | inP (e,Se,yce=xde) => (l Sd).inv-cancel-right $ equation.cMonoid {p} $ *-comm *> inv func-* *> (l Se).inv-cancel-right (inv func-* *> pmap f yce=xde *> func-*) *> func-* *> *-comm

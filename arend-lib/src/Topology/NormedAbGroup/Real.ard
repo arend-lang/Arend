@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Ordered
@@ -35,6 +35,12 @@
 \import Topology.TopAbGroup.Product
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Algebra.QModule.Rat
+\import Algebra.Field.Ordered
+\import Algebra.Ordered.Group
+\import Algebra.StrictlyOrdered.Group
+\import Arith.Rat.Properties
+\import Set.Set.Lattice
 \open LatticeAbGroup
 \open LinearlyOrderedAbGroup
 \open RealNormed

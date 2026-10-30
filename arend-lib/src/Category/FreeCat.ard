@@ -1,0 +1,21 @@
+\import Category
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\open Graph
+
+-- | The free category on a graph
+\func .FreeCat (G : Graph) : Cat G.V \cowith
+  | Hom => Paths
+  | id => empty idp
+  | o q p => concat p q
+  | id-left => concat_idp
+  | id-right => idp
+  | o-assoc => inv concat-assoc
+  | univalence => Cat.makeUnivalence $ later \case \elim __ \with {
+    | (x, y, empty idp, _, _, _) => (idp,idp)
+    | (x, y, cons e p, _, (), _)
+  }
+
+\func TrivialCat : Cat => (\new Graph (\Sigma) (\lam _ _ => Empty)).FreeCat

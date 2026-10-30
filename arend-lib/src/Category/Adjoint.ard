@@ -1,6 +1,5 @@
 \import Category
 \import Category.Functor
-\import Category.Limit
 \import Equiv
 \import Function.Meta
 \import Logic
@@ -27,17 +26,6 @@
       | hinv => Func (epsilon Y)
       | hinv_f => eta_epsilon-left
     }) e idp
-
-  \lemma preservesLimits {J : Precat} {G : Functor J D} : PreservesLimit RAdj G
-    => \lam c cl z => IsEquiv.rightFactor (inP eta_epsilon-equiv) $ transport IsEquiv (ext \lam h => exts \lam j => pmap (∘ _) Func-o *> o-assoc) $
-        IsEquiv.trans (cl (LAdj z)) {\lam c' => conePullback {J} {_} {Comp RAdj G} (Cone.map RAdj c') z (eta z)} $ later $ inP \new QEquiv {
-          | ret c' => \new Cone {
-            | coneMap j => epsilon (G j) ∘ LAdj.Func (c'.coneMap j)
-            | coneCoh h => inv o-assoc *> pmap (∘ _) (inv (epsilon.natural _)) *> o-assoc *> pmap (_ ∘) (inv LAdj.Func-o) *> pmap (_ ∘ LAdj.Func __) (c'.coneCoh h)
-          }
-          | ret_f c' => exts \lam j => eta_epsilon-equiv.ret_f _
-          | f_sec c' => exts \lam j => eta_epsilon-equiv.f_ret _
-        }
 } \where {
     \func comp {C D E : Precat} (A1 : Adjunction C D) (A2 : Adjunction D E) : Adjunction C E \cowith
       | LAdj => Comp A2.LAdj A1.LAdj

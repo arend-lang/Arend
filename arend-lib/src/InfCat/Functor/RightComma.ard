@@ -13,7 +13,6 @@
 \import InfCat.Fibration.Categorical
 \import InfCat.Functor.FullyFaithful
 \import Logic
-\import Logic.Unique
 
 -- | The comma category `b ↓ f`.
 \func RightComma.{u} {A B : \Cat u} (f : A ->⁺ B) (b : B) : \Cat u

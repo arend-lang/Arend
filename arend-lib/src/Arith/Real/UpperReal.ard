@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
@@ -23,6 +24,14 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
+\import Algebra.Monoid.FinSum
+\import Algebra.Monoid.FinSum.Double
+\import Algebra.Ordered.Properties
+\import Algebra.QModule.Rat
+\import Algebra.Monoid.Properties
+\import Algebra.Ordered.Ring
+\import Algebra.StrictlyOrdered.Group
+\import Arith.Rat.Properties
 
 \record ExUpperReal {
   | \protected U : Rat -> \Prop
@@ -421,52 +430,52 @@
       => ExUpperRealSemigroup.*-comm *> zro_*-left xb
 
     \protected \lemma BigSum-ldistr {l : Array ExUpperReal} {z : ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) (zb : z.IsBounded)
-      : z * AddMonoid.BigSum l = AddMonoid.BigSum (\lam i => z * l i)
-      => ExUpperRealSemigroup.*-comm *> BigSum-rdistr l>=0 zb *> pmap AddMonoid.BigSum (exts \lam j => ExUpperRealSemigroup.*-comm)
+      : z * BigSum l = BigSum (\lam i => z * l i)
+      => ExUpperRealSemigroup.*-comm *> BigSum-rdistr l>=0 zb *> pmap BigSum (exts \lam j => ExUpperRealSemigroup.*-comm)
 
     \protected \lemma BigSum-rdistr {l : Array ExUpperReal} {z : ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) (zb : z.IsBounded)
-      : AddMonoid.BigSum l * z = AddMonoid.BigSum (\lam i => l i * z) \elim l
+      : BigSum l * z = BigSum (\lam i => l i * z) \elim l
       | nil => zro_*-left zb
       | a :: l => rdistr (l>=0 0) (ExUpperRealAbMonoid.BigSum_>=0 \lam j => l>=0 (suc j)) *> pmap (_ +) (BigSum-rdistr (\lam j => l>=0 (suc j)) zb)
 
     \protected \lemma FinSum-ldistr {A : FinSet} {f : A -> ExUpperReal} {z : ExUpperReal} (f>=0 : \Pi (j : A) -> 0 <= f j) (zb : z.IsBounded)
-      : z * AbMonoid.FinSum f = AbMonoid.FinSum (\lam i => z * f i)
-      => \case AbMonoid.FinSum_char f \with {
-        | inP (e,p) => pmap (z *) p *> BigSum-ldistr (\lam j => f>=0 (e j)) zb *> inv (AbMonoid.FinSum_char2 e)
+      : z * FinSum f = FinSum (\lam i => z * f i)
+      => \case FinSum_char f \with {
+        | inP (e,p) => pmap (z *) p *> BigSum-ldistr (\lam j => f>=0 (e j)) zb *> inv (FinSum_char2 e)
       }
 
     \protected \lemma FinSum-rdistr {A : FinSet} {f : A -> ExUpperReal} {z : ExUpperReal} (f>=0 : \Pi (j : A) -> 0 <= f j) (zb : z.IsBounded)
-      : AbMonoid.FinSum f * z = AbMonoid.FinSum (\lam i => f i * z)
-      => ExUpperRealSemigroup.*-comm *> FinSum-ldistr f>=0 zb *> AbMonoid.FinSum-ext \lam j => ExUpperRealSemigroup.*-comm
+      : FinSum f * z = FinSum (\lam i => f i * z)
+      => ExUpperRealSemigroup.*-comm *> FinSum-ldistr f>=0 zb *> FinSum-ext \lam j => ExUpperRealSemigroup.*-comm
 
     \protected \lemma FinSum-distr {A B : FinSet}
                                    {f : A -> ExUpperReal} (f>=0 : \Pi (i : A) -> 0 <= f i) (fb : \Pi (i : A) -> (f i).IsBounded)
                                    {g : B -> ExUpperReal} (g>=0 : \Pi (j : B) -> 0 <= g j) (gb : \Pi (j : B) -> (g j).IsBounded)
-      : AbMonoid.FinSum f * AbMonoid.FinSum g = AbMonoid.FinSum (\lam (s : \Sigma A B) => f s.1 * g s.2)
-      => FinSum-rdistr f>=0 (FinSum-bounded gb) *> AbMonoid.FinSum-ext (\lam i => FinSum-ldistr g>=0 (fb i)) *> AbMonoid.FinSum-double
+      : FinSum f * FinSum g = FinSum (\lam (s : \Sigma A B) => f s.1 * g s.2)
+      => FinSum-rdistr f>=0 (FinSum-bounded gb) *> FinSum-ext (\lam i => FinSum-ldistr g>=0 (fb i)) *> FinSum-double
 
     \lemma BigSum-ldistr_<= {l : Array ExUpperReal} {z : ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j)
-      : AddMonoid.BigSum (\lam i => z * l i) <= z * AddMonoid.BigSum l \elim l
+      : BigSum (\lam i => z * l i) <= z * BigSum l \elim l
       | nil => *_>=0
       | a :: l => <=_+ <=-refl (BigSum-ldistr_<= \lam j => l>=0 (suc j)) <=∘ =_<= (inv $ ldistr (l>=0 0) $ ExUpperRealAbMonoid.BigSum_>=0 \lam j => l>=0 (suc j))
 
     \lemma BigSum-rdistr_<= {l : Array ExUpperReal} {z : ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j)
-      : AddMonoid.BigSum (\lam i => l i * z) <= AddMonoid.BigSum l * z
-      => transport (_ <=) ExUpperRealSemigroup.*-comm $ =_<= (pmap AddMonoid.BigSum $ exts \lam j => ExUpperRealSemigroup.*-comm) <=∘ BigSum-ldistr_<= l>=0
+      : BigSum (\lam i => l i * z) <= BigSum l * z
+      => transport (_ <=) ExUpperRealSemigroup.*-comm $ =_<= (pmap BigSum $ exts \lam j => ExUpperRealSemigroup.*-comm) <=∘ BigSum-ldistr_<= l>=0
 
     \lemma FinSum-ldistr_<= {A : FinSet} {f : A -> ExUpperReal} {z : ExUpperReal} (f>=0 : \Pi (j : A) -> 0 <= f j)
-      : AbMonoid.FinSum (\lam i => z * f i) <= z * AbMonoid.FinSum f
-      => \case AbMonoid.FinSum_char f \with {
-        | inP (e,p) => transport2 (__ <= z * __) (inv $ AbMonoid.FinSum_char2 e) (inv p) $ BigSum-ldistr_<= \lam j => f>=0 (e j)
+      : FinSum (\lam i => z * f i) <= z * FinSum f
+      => \case FinSum_char f \with {
+        | inP (e,p) => transport2 (__ <= z * __) (inv $ FinSum_char2 e) (inv p) $ BigSum-ldistr_<= \lam j => f>=0 (e j)
       }
 
     \lemma FinSum-rdistr_<= {A : FinSet} {f : A -> ExUpperReal} {z : ExUpperReal} (f>=0 : \Pi (j : A) -> 0 <= f j)
-      : AbMonoid.FinSum (\lam i => f i * z) <= AbMonoid.FinSum f * z
-      => transport (_ <=) ExUpperRealSemigroup.*-comm $ =_<= (AbMonoid.FinSum-ext \lam j => ExUpperRealSemigroup.*-comm) <=∘ FinSum-ldistr_<= f>=0
+      : FinSum (\lam i => f i * z) <= FinSum f * z
+      => transport (_ <=) ExUpperRealSemigroup.*-comm $ =_<= (FinSum-ext \lam j => ExUpperRealSemigroup.*-comm) <=∘ FinSum-ldistr_<= f>=0
 
     \lemma FinSum-distr_<= {A B : FinSet} {f : A -> ExUpperReal} (f>=0 : \Pi (j : A) -> 0 <= f j) {g : B -> ExUpperReal} (g>=0 : \Pi (j : B) -> 0 <= g j)
-      : AbMonoid.FinSum (\lam (s : \Sigma A B) => f s.1 * g s.2) <= AbMonoid.FinSum f * AbMonoid.FinSum g
-      => =_<= (inv AbMonoid.FinSum-double) <=∘ ExUpperRealAbMonoid.FinSum_<= (\lam a => FinSum-ldistr_<= g>=0) <=∘ FinSum-rdistr_<= f>=0
+      : FinSum (\lam (s : \Sigma A B) => f s.1 * g s.2) <= FinSum f * FinSum g
+      => =_<= (inv FinSum-double) <=∘ ExUpperRealAbMonoid.FinSum_<= (\lam a => FinSum-ldistr_<= g>=0) <=∘ FinSum-rdistr_<= f>=0
 
     \lemma *n_*_<= {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) : n AddMonoid.*n x <= n * x \elim n
       | 0 => *_>=0

@@ -1,5 +1,4 @@
 \import Equiv
-\import Homotopy.Fibration
 \import Homotopy.HLevel
 \import Logic
 \import Paths

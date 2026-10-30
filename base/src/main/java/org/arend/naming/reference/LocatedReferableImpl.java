@@ -17,6 +17,7 @@ public class LocatedReferableImpl implements TCDefReferable {
   private final LocatedReferable myParent;
   private Kind myKind;
   private Definition myTypechecked;
+  private boolean myDynamicExtension;
 
   public LocatedReferableImpl(@Nullable Object data, @NotNull AccessModifier accessModifier, @NotNull Precedence precedence, @NotNull String name, @NotNull Precedence aliasPrecedence, @Nullable String aliasName, @Nullable LocatedReferable parent, @NotNull Kind kind) {
     myData = data;
@@ -74,6 +75,15 @@ public class LocatedReferableImpl implements TCDefReferable {
 
   public void setKind(Kind kind) {
     myKind = kind;
+  }
+
+  @Override
+  public boolean isDynamicExtension() {
+    return myDynamicExtension;
+  }
+
+  public void setDynamicExtension(boolean isDynamicExtension) {
+    myDynamicExtension = isDynamicExtension;
   }
 
   @Override

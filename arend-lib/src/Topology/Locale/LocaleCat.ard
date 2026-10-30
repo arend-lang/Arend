@@ -4,26 +4,23 @@
 \import Category.Limit
 \import Category.Meta
 \import Category.Subcat
-\import Data.Array
 \import Equiv
 \import Function (IsSurj)
 \import Function.Meta
 \import Logic
-\import Logic.Meta
 \import Meta
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
-\import Order.PartialOrder.Coproduct
 \import Paths
 \import Paths.Meta
-\import Set
 \import Set.SetCategory
-\import Set.Set
 \import Topology.Locale
 \import Topology.Locale.LocaleColimits
 \import Topology.Locale.LocaleProduct
 \import Topology.Locale.PreorderSite
+\import Order.PartialOrder.PosetHom
+\import Set.Set.Lattice
 \open CompleteLattice
 \open SiteLocale \hiding (<=)
 \open LocaleSite

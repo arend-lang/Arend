@@ -1,9 +1,8 @@
-\import Algebra.Domain
-\import Algebra.Domain.Bezout
 \import Algebra.Domain.GCD
 \import Algebra.Domain.PID
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Pointed
@@ -20,7 +19,6 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -28,6 +26,7 @@
 \import Relation.Equivalence
 \import Set \hiding (#)
 \import Set.Fin
+\import Algebra.Domain.Properties
 \open Monoid(LDiv,Inv)
 
 \class EuclideanSemiringData \extends CSemiring, DecSet {
@@ -157,7 +156,7 @@
          }
          | no a/=0 => \case decideEq (divMod 1 a).2 0 \with {
            | yes q => yes $ Inv.lmake (divMod 1 a).1 $ inv zro-right *> pmap2 (+) *-comm (inv q) *> isDivMod 1 a
-           | no q => no \lam ai => linarith (f ai q, isEuclideanMap 1 a a/=0 q)
+           | no q => no \lam ai => <-irreflexive (f ai q <∘r isEuclideanMap 1 a a/=0 q)
          }
        }
 } \where {
@@ -354,7 +353,7 @@
 
     \func equal-mod_LDiv {x y m : Int} (m/=0 : m /= 0) (p : x mod m = y mod m) : LDiv m (x - y) \cowith
       | inv => x div m - y div m
-      | inv-right => IntRing.ldistr_- *> linarith (divModProp x m m/=0, divModProp y m m/=0)
+      | inv-right => IntRing.ldistr_- *> inv (pmap2 (-) (inv $ divModProp x m m/=0) (inv $ divModProp y m m/=0) *> rewrite p equation.abGroup)
 
     \lemma mod-unique {q q' : Int} {n r r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : pos n * q + r = pos n * q' + r') : r = r' \elim q, q'
       | pos q, pos q' => Arith.Nat.mod-unique r<n r'<n (pmap iabs p)
@@ -460,7 +459,7 @@
          gcd a b
 
 \func nat_gcd_*_div {a b c : Nat} (a|bc : LDiv a (b * c)) (a_b : gcd a b = 1) : LDiv a c
-  => ldiv_int_nat $ Domain.Dec.LDiv_TruncP $ IntDomain.coprime_*_div {pos a} {pos b} {pos c} (ldiv_nat_int a|bc) $ IsCoprime.<=gcd $ gcd_nat_int $ transport (GCD a b __) a_b (gcd-isGCD a b)
+  => ldiv_int_nat $ LDiv_TruncP $ IntDomain.coprime_*_div {pos a} {pos b} {pos c} (ldiv_nat_int a|bc) $ IsCoprime.<=gcd $ gcd_nat_int $ transport (GCD a b __) a_b (gcd-isGCD a b)
 
 \lemma nat_gcd-comm {a b : Nat} : gcd a b = gcd b a
   => nat_gcd-isUnique (gcd-isGCD a b) (GCD.swap {gcd-isGCD b a})

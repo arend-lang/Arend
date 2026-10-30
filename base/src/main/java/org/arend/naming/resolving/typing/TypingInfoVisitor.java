@@ -80,11 +80,18 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
   }
 
   private static AbstractBody resolveAbstractBody(List<? extends Concrete.Parameter> parameters, Concrete.Expression expr, Scope scope, Boolean isType) {
+    return resolveAbstractBody(parameters, expr, scope, isType, false);
+  }
+
+  /**
+   * @param isExtension if true, then the first explicit parameter is the receiver of an extension function, which is not counted.
+   */
+  private static AbstractBody resolveAbstractBody(List<? extends Concrete.Parameter> parameters, Concrete.Expression expr, Scope scope, Boolean isType, boolean isExtension) {
     if (expr == null) return null;
     ExpressionResolveNameVisitor exprVisitor = scope == null ? null : new ExpressionResolveNameVisitor(scope, new ArrayList<>(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, null, ResolverListener.EMPTY);
     if (exprVisitor != null) exprVisitor.updateScope(parameters);
 
-    int paramsNumber = 0;
+    int paramsNumber = isExtension ? -1 : 0;
     for (Concrete.Parameter parameter : parameters) {
       if (parameter.isExplicit()) {
         paramsNumber += parameter.getNumberOfParameters();
@@ -200,7 +207,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
         }
       }
     }
-    AbstractBody abstractBody = resolveAbstractBody(def.getParameters(), def.getResultType(), scope, true);
+    AbstractBody abstractBody = resolveAbstractBody(def.getParameters(), def.getResultType(), scope, true, def.getData().isDynamicExtension() && !(def instanceof Concrete.Definition cdef && cdef.implicitReceiver));
     if (abstractBody != null) myTypingInfo.addReferableType(def.getData(), abstractBody);
     return null;
   }

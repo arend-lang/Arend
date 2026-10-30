@@ -2163,7 +2163,35 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return false;
   }
 
+  /**
+   * Chooses an extension function for a reference that was resolved without a receiver.
+   * Only extensions of classes and records can be used in this way.
+   *
+   * @return the chosen extension or null if an error was reported.
+   */
+  private @Nullable Referable chooseExtension(Concrete.ReferenceExpression expr) {
+    List<GlobalReferable> candidates = new ArrayList<>();
+    for (GlobalReferable extension : expr.getExtensions()) {
+      if (extension instanceof TCDefReferable tcRef && tcRef.getTypechecked() != null && tcRef.getTypechecked().hasEnclosingClass()) {
+        candidates.add(extension);
+      }
+    }
+    if (candidates.size() == 1) {
+      expr.setReferent(candidates.getFirst());
+      expr.setExtensions(null);
+      return candidates.getFirst();
+    }
+    String name = expr.getReferent().textRepresentation();
+    errorReporter.report(new TypecheckingError(candidates.isEmpty()
+      ? "Extension function '" + name + "' can be used only as 'x." + name + "'"
+      : "Ambiguous extension function '" + name + "'; use 'x." + name + "' to choose one of them", expr));
+    return null;
+  }
+
   private TResult visitReference(Concrete.ReferenceExpression expr, Set<ClassField> implementedFields) {
+    if (expr.getExtensions() != null && chooseExtension(expr) == null) {
+      return null;
+    }
     Referable ref = expr.getReferent();
     if (ref instanceof CoreReferable) {
       TypecheckingResult result = ((CoreReferable) ref).result;
@@ -2188,10 +2216,82 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return visitReference(expr, expectedType, true, true);
   }
 
+  /**
+   * @return the definition of the type of the first explicit parameter of an extension function or null if it is not a defcall.
+   */
+  public static @Nullable Definition getExtensionTarget(@Nullable Definition definition) {
+    if (definition == null) return null;
+    if (definition.hasEnclosingClass()) return definition.getEnclosingClass();
+    for (DependentLink link = definition.getParameters(); link.hasNext(); link = link.getNext()) {
+      if (link.isExplicit()) {
+        return link.getType() instanceof DefCallExpression defCall ? defCall.getDefinition() : null;
+      }
+    }
+    return null;
+  }
+
+  private static int getExtensionMatch(Definition target, Expression type, Expression normType) {
+    if (target == null) return 0;
+    if (type instanceof DefCallExpression defCall && defCall.getDefinition() == target) return 2;
+    if (normType instanceof DefCallExpression defCall && defCall.getDefinition() == target) return 2;
+    return normType instanceof ClassCallExpression classCall && target instanceof ClassDefinition classDef && classCall.getDefinition().isSubClassOf(classDef) ? 1 : 0;
+  }
+
+  /**
+   * Replaces a field call with extension candidates by an expression without them.
+   * The argument of the field call is already typechecked.
+   *
+   * @return the desugared expression or null if an error was reported.
+   */
+  private Concrete.Expression desugarExtensionCall(Concrete.FieldCallExpression expr, TypecheckingResult argResult) {
+    argResult = TypeConstructorExpression.unfoldResult(argResult);
+    Expression type = argResult.type;
+    List<SingleDependentLink> params = new ArrayList<>();
+    Expression normType = type.getPiParameters(params, true);
+    if (!params.isEmpty()) {
+      type = normType;
+    }
+
+    if (!(normType instanceof ClassCallExpression classCall && classCall.getDefinition().findField(field -> expr.getFieldName().equals(field.getName())) != null)) {
+      GlobalReferable best = null;
+      int bestMatch = 0;
+      for (GlobalReferable extension : expr.getExtensions()) {
+        int match = extension instanceof TCDefReferable tcRef ? getExtensionMatch(getExtensionTarget(tcRef.getTypechecked()), type, normType) : 0;
+        if (match > bestMatch) {
+          best = extension;
+          bestMatch = match;
+        }
+      }
+
+      if (best != null) {
+        if (expr.getField() instanceof DataContainer dataContainer && dataContainer.getData() instanceof AbstractReference fieldRef) {
+          myResolveListener.addReference(fieldRef, best);
+        }
+        boolean explicit = !(best instanceof TCDefReferable tcRef && tcRef.getTypechecked() != null && tcRef.getTypechecked().hasEnclosingClass());
+        return Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), best), new Concrete.ReferenceExpression(expr.getArgument().getData(), new CoreReferable(null, argResult)), explicit);
+      }
+
+      if (expr.getField() instanceof GlobalReferable) {
+        return Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), expr.getField()), new Concrete.ReferenceExpression(expr.getArgument().getData(), new CoreReferable(null, argResult)), false);
+      }
+
+      if (!(normType instanceof ClassCallExpression)) {
+        errorReporter.report(new TypecheckingError("Cannot find field or extension function '" + expr.getFieldName() + "' for an expression of type " + normType, expr));
+        return null;
+      }
+    }
+
+    return new Concrete.FieldCallExpression(expr.getData(), expr.getField(), expr.fixity, new Concrete.ReferenceExpression(expr.getArgument().getData(), new CoreReferable(null, argResult)));
+  }
+
   @Override
   public TypecheckingResult visitFieldCall(Concrete.FieldCallExpression expr, Expression expectedType) {
     TypecheckingResult argResult = checkExpr(expr.getArgument(), null);
     if (argResult == null) return null;
+    if (!expr.getExtensions().isEmpty()) {
+      Concrete.Expression newExpr = desugarExtensionCall(expr, argResult);
+      return newExpr == null ? null : checkExpr(newExpr, expectedType);
+    }
     argResult = TypeConstructorExpression.unfoldResult(argResult);
     List<SingleDependentLink> params = new ArrayList<>();
     Expression type = argResult.type.getPiParameters(params, true);
@@ -2212,6 +2312,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     ClassField field = classCall.getDefinition().findField(field2 -> expr.getFieldName().equals(field2.getName()));
     if (field == null) {
+      // A dynamic definition might be called on an expression whose type is not known to the resolver
+      if (expr.getField() instanceof TCDefReferable dynRef && dynRef.getTypechecked() != null && dynRef.getTypechecked().getEnclosingClass() instanceof ClassDefinition enclosingClass && classCall.getDefinition().isSubClassOf(enclosingClass)) {
+        return checkExpr(Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), dynRef), new Concrete.ReferenceExpression(expr.getArgument().getData(), new CoreReferable(null, argResult)), false), expectedType);
+      }
       errorReporter.report(new NotInDynamicScopeError(classCall.getDefinition(), expr.getFieldName(), expr));
       return null;
     }
@@ -3528,6 +3632,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private TypecheckingResult visitApp(Concrete.AppExpression expr, Expression expectedType, boolean inferTailImplicits) {
+    if (expr.getFunction() instanceof Concrete.FieldCallExpression fieldCall && !fieldCall.getExtensions().isEmpty()) {
+      TypecheckingResult argResult = checkExpr(fieldCall.getArgument(), null);
+      if (argResult == null) return null;
+      Concrete.Expression newFun = desugarExtensionCall(fieldCall, argResult);
+      return newFun == null ? null : checkExpr(Concrete.AppExpression.make(expr.getData(), newFun, expr.getArguments()), expectedType);
+    }
+
     if (expr.getFunction() instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof TCDefReferable && ((TCDefReferable) refExpr.getReferent()).getTypechecked() instanceof ClassDefinition) {
       List<SingleDependentLink> params = expectedType == null ? null : new ArrayList<>();
       if (expectedType != null) {

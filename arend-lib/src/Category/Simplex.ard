@@ -11,11 +11,12 @@
 \import Order.Category
 \import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.PartialOrder.PosetHom
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set.SetHom
-\import Set.Fin
+\import Data.Fin
 
 \lemma monotone-inj {P1 : BiorderedSet} {P2 : LinearOrder.Dec} (f : PosetHom P1 P2) (f-inj : IsInj f) : StrictPosetHom P1 P2 (func {f}) \cowith
   | func-< {a} {b} p => \case P2.trichotomy (f a) (f b) \with {
@@ -46,7 +47,7 @@
       | o-assoc => idp
 
     \lemma Simplex_iso {n m : Nat} (iso : Iso {SimplexPrecat} {n} {m}) : n = m
-      => pmap pred $ FinSet.FinCardBij \new QEquiv {
+      => pmap pred $ FinCardBij \new QEquiv {
         | f => iso.f
         | ret => iso.hinv
         | ret_f y => path \lam i => iso.hinv_f i y

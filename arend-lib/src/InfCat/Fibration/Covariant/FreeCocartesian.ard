@@ -14,7 +14,6 @@
 \import InfCat.Slice
 \import InfCat.Square
 \import Logic
-\import Logic.Unique
 \import Meta
 \import Paths
 

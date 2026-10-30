@@ -1,12 +1,11 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Paths
 \import Paths.Meta
 \import Set.Filter

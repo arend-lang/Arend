@@ -613,6 +613,7 @@ public final class Concrete {
     public static final byte PREC = 12;
     private Referable myReferent;
     private List<LevelExpression> myLevels;
+    private List<GlobalReferable> myExtensions;
 
     public ReferenceExpression(Object data, @NotNull Referable referable, List<LevelExpression> levels) {
       super(data);
@@ -643,6 +644,18 @@ public final class Concrete {
       myLevels = levels;
     }
 
+    /**
+     * Extension functions with the name of this reference if it was resolved to one of them without a receiver.
+     * The typechecker chooses the one whose receiver is a class or a record.
+     */
+    public @Nullable List<GlobalReferable> getExtensions() {
+      return myExtensions;
+    }
+
+    public void setExtensions(@Nullable List<GlobalReferable> extensions) {
+      myExtensions = extensions;
+    }
+
     @Override
     public <P, R> R accept(ConcreteExpressionVisitor<? super P, ? extends R> visitor, P params) {
       return visitor.visitReference(this, params);
@@ -654,12 +667,30 @@ public final class Concrete {
     private final Referable myFieldRef;
     public Fixity fixity;
     public Expression argument;
+    private @NotNull List<GlobalReferable> myExtensions;
 
-    public FieldCallExpression(Object data, @NotNull Referable fieldRef, @NotNull Fixity fixity, Expression argument) {
+    public FieldCallExpression(Object data, @NotNull Referable fieldRef, @NotNull Fixity fixity, Expression argument, @NotNull List<GlobalReferable> extensions) {
       super(data);
       myFieldRef = fieldRef;
       this.fixity = fixity;
       this.argument = argument;
+      myExtensions = extensions;
+    }
+
+    public FieldCallExpression(Object data, @NotNull Referable fieldRef, @NotNull Fixity fixity, Expression argument) {
+      this(data, fieldRef, fixity, argument, Collections.emptyList());
+    }
+
+    /**
+     * Extension functions visible at this place with the name of this field call.
+     * The typechecker chooses one of them according to the type of the argument.
+     */
+    public @NotNull List<GlobalReferable> getExtensions() {
+      return myExtensions;
+    }
+
+    public void setExtensions(@NotNull List<GlobalReferable> extensions) {
+      myExtensions = extensions;
     }
 
     public @NotNull Referable getField() {
@@ -1939,6 +1970,10 @@ public final class Concrete {
     private TCDefReferable myReferable;
     private TCDefReferable myUseParent;
     public TCDefReferable enclosingClass;
+    /**
+     * True for extension functions whose receiver is a class or a record; the receiver is the first parameter, which was made implicit.
+     */
+    public boolean implicitReceiver;
     private Set<TCDefReferable> myRecursiveDefinitions = Collections.emptySet();
     private Map<TCDefReferable, ExternalParameters> myExternalParameters = Collections.emptyMap();
     private List<TCDefReferable> myUsedDefinitions = Collections.emptyList();
@@ -1959,6 +1994,7 @@ public final class Concrete {
       newDef.levelParameters = levelParameters;
       newDef.myUseParent = myUseParent;
       newDef.enclosingClass = enclosingClass;
+      newDef.implicitReceiver = implicitReceiver;
       newDef.myRecursiveDefinitions = myRecursiveDefinitions;
       newDef.myExternalParameters = myExternalParameters;
       newDef.myUsedDefinitions = myUsedDefinitions;
@@ -2178,6 +2214,7 @@ public final class Concrete {
     public CoClauseFunctionDefinition copy(List<Parameter> parameters, FunctionBody body) {
       Concrete.CoClauseFunctionDefinition result = new CoClauseFunctionDefinition(getKind(), getData(), getUseParent(), getImplementedField(), parameters, getResultType(), getResultTypeLevel(), body);
       result.enclosingClass = enclosingClass;
+      result.implicitReceiver = implicitReceiver;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
       result.setNumberOfExternalParameters(myNumberOfExternalParameters);
@@ -2575,6 +2612,7 @@ public final class Concrete {
     public FunctionDefinition copy(List<Parameter> parameters, FunctionBody body) {
       FunctionDefinition result = new FunctionDefinition(myKind, getData(), levelParameters, parameters, getResultType(), getResultTypeLevel(), body);
       result.enclosingClass = enclosingClass;
+      result.implicitReceiver = implicitReceiver;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
       result.setGroupoidalLevelProof(isGroupoidalLevelProof());

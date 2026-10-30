@@ -1,10 +1,6 @@
 \import Equiv
-\import Equiv.Fiber
-\import Equiv.Path
-\import Equiv.HalfAdjoint
 \import Function.Meta
 \import Logic.Unique
-\import Homotopy.Fibration
 \import Logic
 \import Meta
 \import Paths

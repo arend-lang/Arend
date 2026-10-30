@@ -23,7 +23,6 @@
 \import InfCat.Paths
 \import InfCat.Rezk
 \import Logic
-\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta

@@ -1,5 +1,6 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Rat
@@ -7,7 +8,6 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -18,7 +18,6 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
-\import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ExComplete
 \import Topology.MetricSpace.UpperReal
@@ -28,6 +27,7 @@
 \import Topology.TopAbGroup.Complete
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Algebra.QModule.Rat
 
 \func dense-normed-lift {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) : NormedAbGroupMap Y Z \cowith
   | MetricMap => dense-metric-lift f fd g

@@ -1,17 +1,18 @@
 \import AG.SchemeSite
-\import Algebra.Meta
+\import Algebra.Meta.Simplify
 \import Algebra.Monoid
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.Properties
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
-\import Algebra.Ring.Ideal
 \import Algebra.Ring.Localization
 \import Algebra.Ring.RingHom
 \import Category.Topos.Sheaf
 \import Category.Topos.Sheaf.LocalPredicate
 \import Data.Array
+\import Data.Fin
 \import Equiv
 \import Function
 \import Function.Meta
@@ -21,8 +22,6 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Relation.Equivalence
-\import Set.Fin
 \import Set.Set
 \import Topology.Locale.PreorderSite
 \open Monoid
@@ -65,20 +64,20 @@
   \lemma <=f*_Cover {b : Dom} {a : Cod} {U : Set Cod} (ba : b <=f* a) (a<=U : Cover {Cod.toSite} a U)
     : Cover {Dom.toSite} b \lam x => ∃ (y : U) (x <=f* y)
     => \case Cod.Cover_Ideal a<=U \with {
-      | inP (l,p) => \case FinSet.finiteAC (\lam j => (l j).2.2) \with {
+      | inP (l,p) => \case finiteAC (\lam j => (l j).2.2) \with {
         | inP g => cover-trans*
           (cover-interN-down
             (\lam j b0 => Given (b0<=a : b0 <=f* a) ∃ (b' : Dom) (b'<=b : b' <= b0) (b'<=a' : b' <=f* (g j).1) (Dom.IsLocalizationAt b'<=b (f# b0<=a (l j).2.1)))
             (\lam j => <=f*-loc-forall (g j).5 ba (g j).6))
           \lam {c} h =>
-            \have | (inP h1) => FinSet.finiteAC h.2
-                  | (inP h2) => FinSet.finiteAC \lam j => (h1 j).2.2
-                  | (inP r) => FinSet.finiteAC \lam j => SchemeSite.loc-stable-forall (h1 j).3 (h2 j).2 (h2 j).4
+            \have | (inP h1) => finiteAC h.2
+                  | (inP h2) => finiteAC \lam j => (h1 j).2.2
+                  | (inP r) => finiteAC \lam j => SchemeSite.loc-stable-forall (h1 j).3 (h2 j).2 (h2 j).4
                   | ca => <=f*-left h.1 ba
             \in cover-basic $ inP (mkArray \lam j => later (f# ca (l j).1, (f# ca (l j).2.1,
                     inP ((r j).1, (h2 j).1, (r j).3, inP ((g j).2, (g j).4, <=f*-right (h2 j).3 (g j).3), (r j).2,
                          transport (SchemeSite.IsLocalizationAt _) (f#_f*-left *> pmap (f# __ _) prop-pi) (r j).4))),
-                  inv func-ide *> pmap (f# ca) p *> AddMonoidHom.func-BigSum *> pmap AddMonoid.BigSum (exts \lam j => func-*))
+                  inv func-ide *> pmap (f# ca) p *> AddMonoidHom.func-BigSum *> pmap BigSum (exts \lam j => func-*))
       }
     }
 

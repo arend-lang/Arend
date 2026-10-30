@@ -1,7 +1,6 @@
 \import Algebra.Group
-\import Algebra.Meta
+\import Algebra.Meta.Linear
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Arith.Rat
 \import Data.Or
@@ -17,6 +16,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Algebra.QModule.Rat
 
 \record ExtendedLowerReal {
   | \protected L : Rat -> \Prop

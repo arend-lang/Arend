@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Predicate;
 
 public class PrivateFilteredScope extends DelegateScope {
@@ -36,6 +37,12 @@ public class PrivateFilteredScope extends DelegateScope {
   public @Nullable Referable resolveName(@NotNull String name, @Nullable ScopeContext context) {
     Referable ref = parent.resolveName(name, context);
     return myDiscardPrivate && ref instanceof GlobalReferable && ((GlobalReferable) ref).getAccessModifier() == AccessModifier.PRIVATE ? null : ref;
+  }
+
+  @Override
+  public @NotNull List<GlobalReferable> resolveExtensions(@NotNull String name) {
+    List<GlobalReferable> result = parent.resolveExtensions(name);
+    return myDiscardPrivate ? result.stream().filter(ref -> ref.getAccessModifier() != AccessModifier.PRIVATE).toList() : result;
   }
 
   @Override
