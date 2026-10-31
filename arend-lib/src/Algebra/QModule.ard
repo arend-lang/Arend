@@ -97,6 +97,16 @@
     | AbGroup => M
     | isDivisible a {n} n/0 => inP (RatField.finv n *c a, inv (*c-assoc *> M.natCoef_*c) *> pmap (*c a) (RatField.finv-right $ natRat/=0 n/0) *> ide_*c)
     | noTorsion n/=0 na=0 => inv (pmap (*c _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*c) *> *c-assoc *> pmap (_ *c) (M.natCoef_*c *> na=0) *> M.*c_zro-right
+
+  \lemma fromRatModule_*q {M : LModule RatField} {q : Rat} {a : M} : q QModule.*q a = q *c a
+    => \let F => fromRatModule M
+       \in F.noTorsion-div (ratDenom/=0 {q}) $ inv F.*q_*n *> inv F.*q-assoc *> pmap (\lam t => t F.*q a) rat*denom-left *> F.*q_*i
+            *> inv (M.intCoef_*c {ratNom q} {a}) *> pmap (*c a) (intCoef_rat *> inv rat*denom-left) *> *c-assoc *> M.natCoef_*c
+    \where
+      \private \lemma intCoef_rat {x : Int} : RatField.intCoef x = x \elim x
+        | pos n => idp
+        | neg 0 => idp
+        | neg (suc n) => idp
 }
 
 \lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a

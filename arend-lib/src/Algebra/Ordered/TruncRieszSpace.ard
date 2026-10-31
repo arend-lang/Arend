@@ -1,8 +1,16 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Ring.Boolean
+\import Arith.Rat
+\import Data.Array
+\import Data.Fin (fsuc/=, fsuc/=0)
 \import Function.Meta
+\import Logic
+\import Order.Biordered
+\import Order.Lattice
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
@@ -63,8 +71,44 @@
   \lemma trunc-lipschitz {a b : E} : abs (trunc a - trunc b) <= abs (a - b)
     => join-univ (trunc-diff <=∘ join-univ abs>=id abs>=0) (=_<= negative_- <=∘ trunc-diff <=∘ join-univ abs>=_- abs>=0)
 
-  \type InUnitCone (a : E) : \Prop
+  \lemma trunc_+-pos-disjoint {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (d : a ∧ b = 0) : trunc (a + b) = trunc a + trunc b
+    => pmap trunc (disjoint_pos_+_join a>=0 b>=0 d) *> trunc_join *> inv (disjoint_pos_+_join (trunc-pos a>=0) (trunc-pos b>=0) $
+        <=-antisymmetric (meet-monotone trunc-bound trunc-bound <=∘ =_<= d) (meet-univ (trunc-pos a>=0) (trunc-pos b>=0)))
+
+  \lemma trunc_+-disjoint {a b : E} (d : AreDisjoint a b) : trunc (a + b) = trunc a + trunc b
+    => trunc-spliit *> pmap2 (\lam u v => trunc u - v) (part+_+-disjoint d) (part-_+-disjoint d)
+        *> pmap (__ - _) (trunc_+-pos-disjoint join-right join-right $ <=-antisymmetric (meet-monotone part+<=abs part+<=abs <=∘ =_<= d) (meet-univ join-right join-right))
+        *> equation.abGroup *> inv (pmap2 (+) trunc-spliit trunc-spliit)
+
+  \lemma trunc_BigSum-disjoint {l : Array E} (d : \Pi {i j : Fin l.len} -> i /= j -> AreDisjoint (l i) (l j)) : trunc (BigSum l) = BigSum (map trunc l) \elim l
+    | nil => trunc_zro
+    | a :: l => trunc_+-disjoint (disjoint_BigSum-right \lam j => d {0} {suc j} (/=-sym fsuc/=0)) *> pmap (_ +) (trunc_BigSum-disjoint \lam {i} {j} p => d {suc i} {suc j} (fsuc/= p))
+
+  \type IsUnderUnit (a : E) : \Prop
     => trunc a = a
+
+  \lemma InUnderUnit_<= {a b : E} (a<=b : a <= b) (tb : IsUnderUnit b) : IsUnderUnit a
+    => <=-antisymmetric trunc-bound (meet-univ <=-refl (a<=b <=∘ =_<= (inv tb)) <=∘ trunc-assoc)
+
+  \lemma trunc_*q-boolean_<=1 {q : Rat} (q<=1 : q RatField.<= 1) {e : E} (p : IsBoolean e) : IsUnderUnit (q *q e)
+    => InUnderUnit_<= (<=_*q-left q<=1 (IsBoolean>=0 p) <=∘ =_<= ide_*q) (IsBoolean-trunc p)
+
+  \lemma trunc_*q-boolean_>=1 {q : Rat} (q>=1 : 1 RatField.<= q) {e : E} (p : IsBoolean e) : trunc (q *q e) = e
+    => \let | e>=0 => IsBoolean>=0 p
+            | y => trunc (q *q e) - e
+            | y>=0 : 0 <= y => to>=0 $ =_<= (inv (IsBoolean-trunc p)) <=∘ trunc-mono (=_<= (inv ide_*q) <=∘ <=_*q-left q>=1 e>=0)
+            | ye : y ∧ e = 0 => meet-comm *> pmap (e ∧) (inv (part+-ofPos y>=0)) *> IsBoolean-orth p trunc-idemp
+            | (n,q<n) => rat_natBound q
+            | y<=ne : y <= n *n e => <=_+ trunc-bound (negative<=0 e>=0) <=∘ =_<= zro-right <=∘ <=_*q-left (<=-less q<n) e>=0 <=∘ =_<= *q_*n
+       \in AddGroup.fromZero $ <=-antisymmetric (meet-univ <=-refl y<=ne <=∘ =_<= (meet_*n-zro y>=0 e>=0 ye)) y>=0
+
+  \lemma trunc_*q-boolean {q : Rat} {e : E} (p : IsBoolean e) : trunc (q *q e) = (q RatField.∧ 1) *q e
+    => \case RatField.totality q 1 \with {
+      | byLeft q<=1 => \have t : q = q RatField.∧ 1 => RatField.<=-antisymmetric (RatField.meet-univ RatField.<=-refl q<=1) RatField.meet-left
+                       \in trunc_*q-boolean_<=1 q<=1 p *> pmap (__ *q e) t
+      | byRight q>=1 => \have t : q RatField.∧ 1 = 1 => RatField.<=-antisymmetric RatField.meet-right (RatField.meet-univ q>=1 RatField.<=-refl)
+                        \in trunc_*q-boolean_>=1 q>=1 p *> inv (pmap (__ *q e) t *> ide_*q)
+    }
 
   \type IsBoolean (a : E) : \Prop
     => trunc (a + a) = a
@@ -75,10 +119,10 @@
   \lemma IsBoolean_zro : IsBoolean 0
     => pmap trunc zro-left *> trunc_zro
 
-  \lemma IsBoolean-trunc {a : E} (p : IsBoolean a) : InUnitCone a
+  \lemma IsBoolean-trunc {a : E} (p : IsBoolean a) : IsUnderUnit a
     => pmap trunc (inv p) *> trunc-idemp *> p
 
-  \lemma IsBoolean-orth {e y : E} (p : IsBoolean e) (ty : InUnitCone y) : e ∧ part+ (y - e) = 0
+  \lemma IsBoolean-orth {e y : E} (p : IsBoolean e) (ty : IsUnderUnit y) : e ∧ part+ (y - e) = 0
     => \have | s : e + e ∧ part+ (y - e) <= trunc (e ∨ y)
                => <=_+ <=-refl meet-right <=∘ =_<= (pmap (e +) part+_diff_join *> +-comm *> +-assoc *> pmap (_ +) negative-left *> zro-right *> join-comm *> inv (trunc_join *> pmap2 (∨) (IsBoolean-trunc p) ty))
              | t : e + e ∧ part+ (y - e) <= e

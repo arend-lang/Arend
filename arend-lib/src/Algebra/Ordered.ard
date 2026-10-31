@@ -6,6 +6,7 @@
 \import Algebra.Semiring
 \import Arith.Nat
 \import Data.Array
+\import Data.Fin
 \import Function
 \import Function.Meta
 \import Logic
@@ -29,6 +30,10 @@
 
   \lemma BigSum_>=0 {l : Array E} (q : \Pi (j : Fin l.len) -> 0 <= l j) : 0 <= BigSum l
     => transport (<= _) BigSum_replicate0 $ BigSum_<= {_} {_} {replicate l.len zro} q
+
+  \lemma BigSum_>=0-zero {l : Array E} (q : \Pi (j : Fin l.len) -> 0 <= l j) (p : BigSum l = 0) (j : Fin l.len) : l j = 0 \elim l, j
+    | a :: l, 0 => <=-antisymmetric (=_<= (inv zro-right) <=∘ <=_+ <=-refl (BigSum_>=0 \lam j => q (suc j)) <=∘ =_<= p) (q 0)
+    | a :: l, suc j => BigSum_>=0-zero (\lam j => q (suc j)) (<=-antisymmetric (=_<= (inv zro-left) <=∘ <=_+ (q 0) <=-refl <=∘ =_<= p) (BigSum_>=0 \lam j => q (suc j))) j
 
   \lemma <=_+-positive {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) : 0 <= a + b
     => transport (<= _) zro-left $ <=_+ a>=0 b>=0
@@ -216,6 +221,12 @@
 
   \func part- (x : E) => negative x ∨ 0
 
+  \lemma part+<=abs {x : E} : part+ x <= abs x
+    => join-univ abs>=id abs>=0
+
+  \lemma part+-ofPos {x : E} (x>=0 : 0 <= x) : part+ x = x
+    => <=-antisymmetric (join-univ <=-refl x>=0) join-left
+
   \lemma parts_join {x : E} : part+ x ∨ part- x = abs x
     => <=-antisymmetric (join-univ (join-univ abs>=id abs>=0) (join-univ abs>=neg abs>=0)) $ join-univ (join-left <=∘ join-left) (join-left <=∘ join-right)
 
@@ -289,6 +300,17 @@
 
   \lemma disjoint_abs_+ {x y : E} (d : AreDisjoint x y) : abs (x + y) = abs x + abs y
     => <=-antisymmetric abs_+ $ =_<= (modularity *> pmap (_ +) d *> zro-right) <=∘ join-univ (disjoint_abs_+-left d) (disjoint_abs_+-right d)
+
+  \lemma disjoint_+-right {x y z : E} (d : AreDisjoint x y) (d' : AreDisjoint x z) : AreDisjoint x (y + z)
+    => <=-antisymmetric (meet-monotone <=-refl abs_+ <=∘ meet_+-subadditive abs>=0 abs>=0 abs>=0 <=∘ =_<= (pmap2 (+) d d' *> zro-left)) (meet-univ abs>=0 abs>=0)
+
+  \lemma disjoint_BigSum-right {x : E} {l : Array E} (d : \Pi (j : Fin l.len) -> AreDisjoint x (l j)) : AreDisjoint x (BigSum l) \elim l
+    | nil => pmap (_ ∧) abs_zro *> <=-antisymmetric meet-right (meet-univ abs>=0 <=-refl)
+    | a :: l => disjoint_+-right (d 0) (disjoint_BigSum-right \lam j => d (suc j))
+
+  \lemma disjoint_abs_BigSum {l : Array E} (d : \Pi {i j : Fin l.len} -> i /= j -> AreDisjoint (l i) (l j)) : abs (BigSum l) = BigSum (map abs l) \elim l
+    | nil => abs_zro
+    | a :: l => disjoint_abs_+ (disjoint_BigSum-right \lam j => d {0} {suc j} (/=-sym fsuc/=0)) *> pmap (_ +) (disjoint_abs_BigSum \lam {i} {j} p => d {suc i} {suc j} (fsuc/= p))
 
   \lemma disjoint-ldistr {a b c : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (c>=0 : 0 <= c) (d : b ∧ c = 0) : a ∧ (b + c) = a ∧ b + a ∧ c
     => meet-comm *> disjoint-rdistr b>=0 c>=0 a>=0 d *> pmap2 (+) meet-comm meet-comm

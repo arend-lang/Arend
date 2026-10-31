@@ -49,8 +49,24 @@
   \lemma join_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x y : E} : q *q (x ∨ y) = (q *q x) ∨ (q *q y)
     => noTorsion-div ratDenom/=0 $ inv *q_*n *> inv *q-assoc *> pmap (*q _) rat*denom-left *> *q_*i *> pmap (*i _) (inv $ iabs.ofPos $ <=_ratNom.conv q>=0) *> join_*n *> pmap2 (∨) (pmap (*i x) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q x) (inv rat*denom-left) *> *q-assoc *> *q_*n) (pmap (*i y) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (*q y) (inv rat*denom-left) *> *q-assoc *> *q_*n) *> inv join_*n
 
-  \lemma abs_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : abs (q *q x) = q *q abs x
+  \lemma abs_*q>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : abs (q *q x) = q *q abs x
     => inv $ join_*q q>=0 *> pmap (_ ∨) toRatModule.*c_negative-right
+
+  \lemma abs_*q {q : Rat} {x : E} : abs (q *q x) = RatField.abs q *q abs x
+    => \case RatField.totality 0 q \with {
+      | byLeft q>=0 => abs_*q>=0 q>=0 *> pmap (`*q _) (inv (RatField.abs-ofPos q>=0))
+      | byRight q<=0 => pmap abs (inv (pmap (`*q x) RatField.negative-isInv) *> toRatModule.*c_negative-left) *> abs_negative
+          *> abs_*q>=0 (RatField.negative>=0 q<=0) *> pmap (`*q _) (inv (RatField.abs-ofNeg q<=0))
+    }
+
+  \lemma abs_*q_<=_*n {q : Rat} {x : E} : ∃ (n : Nat) (abs (q *q x) <= n *n abs x)
+    => \have (n,|q|<n) => rat_natBound (RatField.abs q)
+       \in inP (n, =_<= abs_*q <=∘ <=_*q-left (<=-less |q|<n) abs>=0 <=∘ =_<= *q_*n)
+
+  \lemma disjoint_*q {q r : Rat} {x y : E} (d : AreDisjoint x y) : AreDisjoint (q *q x) (r *q y)
+    => \case abs_*q_<=_*n {\this} {q} {x}, abs_*q_<=_*n {\this} {r} {y} \with {
+      | inP (n,p), inP (m,p') => <=-antisymmetric (meet-monotone p p' <=∘ =_<= (meet-comm *> meet_*n-zro (*n_>=0 abs>=0) abs>=0 (meet-comm *> meet_*n-zro abs>=0 abs>=0 d))) (meet-univ abs>=0 abs>=0)
+    }
 
   \lemma meet_*q {q : Rat} {x y : E} (q>=0 : RatField.zro RatField.<= q) : q *q (x ∧ y) = (q *q x) ∧ (q *q y)
     => inv negative-isInv *> pmap negative (inv toRatModule.*c_negative-right *> pmap (q *q) meet_negative *> join_*q q>=0 *> pmap2 (∨) toRatModule.*c_negative-right toRatModule.*c_negative-right *> inv meet_negative) *> negative-isInv
@@ -60,6 +76,16 @@
 
   \lemma meet_abs {x y : E} : x ∧ y = ratio 1 2 *q (x + y - abs (x - y))
     => inv negative-isInv *> pmap negative (meet_negative *> join_abs) *> inv toRatModule.*c_negative-right *> pmap (_ *q) (later $ rewrite (pmap abs (pmap (_ +) negative-isInv *> +-comm) *> abs_-) equation.abGroup)
+
+  \lemma part+_abs {x : E} : part+ x = ratio 1 2 *q (x + abs x)
+    => join_abs *> pmap (\lam y => ratio 1 2 *q (x + 0 + abs y)) AddGroup.minus_zro *> pmap (\lam y => ratio 1 2 *q (y + abs x)) zro-right
+
+  \lemma part+_+-disjoint {x y : E} (d : AreDisjoint x y) : part+ (x + y) = part+ x + part+ y
+    => part+_abs *> pmap (\lam z => ratio 1 2 *q (x + y + z)) (disjoint_abs_+ d) *> pmap (ratio 1 2 *q) (equation.abGroup : x + y + (abs x + abs y) = (x + abs x) + (y + abs y))
+        *> toRatModule.*c-ldistr *> inv (pmap2 (+) part+_abs part+_abs)
+
+  \lemma part-_+-disjoint {x y : E} (d : AreDisjoint x y) : part- (x + y) = part- x + part- y
+    => pmap part+ (equation.abGroup : negative (x + y) = negative x + negative y) *> part+_+-disjoint (pmap2 (∧) abs_negative abs_negative *> d)
 } \where {
   \func fromAbs {A : PosetQModule} (abs : \Pi (a : A) -> ∃ (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)) : RieszSpace \cowith
     | PosetQModule => A

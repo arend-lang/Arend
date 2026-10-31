@@ -1,7 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
@@ -12,7 +11,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -312,6 +310,9 @@
 
 \lemma func-lisometry {X Y : PseudoMetricSpace} {f : IsometricMap X Y} {x x' : X} : Y.dist (f x) (f x') = X.dist x x'
   => Real.=-upper.2 f.func-isometry
+
+\lemma isometric-inj {X : ExMetricSpace} {Y : ExPseudoMetricSpace} (f : IsometricMap X Y) : IsInj f
+  => \lam {x} {x'} p => dist-ext $ inv f.func-isometry *> pmap (dist (f x)) (inv p) *> dist-refl
 
 \class CompleteExMetricSpace \extends ExMetricSpace, CompleteUniformSpace {
   | isCompleteMetric (F : ProperFilter E) : ∀ {eps} (0 < eps) ∃ (x : E) (F (OBall eps x)) -> ∃ (x : E) ∀ {eps} (0 < eps) (F (OBall eps x))

@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered.TruncRieszSpace
+\import Algebra.QModule
 \import Equiv
 \import Analysis.Measure.MeasureRing
 \import Arith.Rat
@@ -63,6 +64,9 @@
 
   \lemma integral_abs {a : E} : RealAbGroup.abs (integral a) RealAbGroup.<= integral (abs a)
     => RealAbGroup.join-univ (integral-mono abs>=id) $ transport (RealAbGroup.<= _) integral-hom.func-negative $ integral-mono abs>=neg
+
+  \lemma integral_*q {q : Rat} {a : E} : integral (q *q a) = q RealField.* integral a
+    => func-*q {_} {_} {integral-hom} *> QModule.fromRatModule_*q
 
   \lemma integral-metric : NormedAbGroupMap \this RealNormed integral \cowith
     | func-+ => integral_+

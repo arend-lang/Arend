@@ -82,6 +82,13 @@
     \lemma ~-zros-left {l : Array (\Sigma V B)} (p : \Pi (i : Fin l.len) -> (l i).1 = 0) : l ~ nil \elim l
       | nil => ~_Equivalence.~-reflexive
       | a :: l => transportInv (\lam x => (x,a.2) :: l ~ nil) (p 0) $ ~-trans (~-zro-left idp) $ ~-zros-left \lam i => p (suc i)
+
+    \lemma ~-zero-terms {l : Array (\Sigma V B)} (p : ∀ (x : l) ((x.1 = 0) || (x.2 = bottom))) : l ~ nil \elim l
+      | nil => ~_Equivalence.~-reflexive
+      | a :: l => ~-trans (\case p 0 \with {
+        | byLeft q => transportInv (\lam x => (x,a.2) :: l ~ l) q (~-zro-left idp)
+        | byRight q => transportInv (\lam x => (a.1,x) :: l ~ l) q (~-zro-right idp)
+      }) $ ~-zero-terms \lam j => p (suc j)
   }
 
 \open SFunc
@@ -192,7 +199,7 @@
   \where {
     \protected \func PFunc => Array (\Sigma V B)
 
-    \type \infix 4 <= (x y : SFunc V B) : \Prop
+    \protected \type \infix 4 <= (x y : SFunc V B) : \Prop
       => ∃ (l : PFunc) (y - x = inSF l) ∀ (s : l) (0 V.<= s.1)
 
     \sfunc add (v : V) (b : B) (l : PFunc) : PFunc

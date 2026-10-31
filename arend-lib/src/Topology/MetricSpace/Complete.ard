@@ -118,6 +118,35 @@
         })
       }
 
+-- | An isometric map from a complete space has closed image.
+\lemma isometric-complete-closed {X : PseudoMetricSpace} {Y : MetricSpace} (Xc : IsCompleteCoverSpace X) (f : IsometricMap X Y)
+  : Y.IsClosed \lam y => ∃ (x : X) (f x = y)
+  => \lam {y} yl =>
+      \have near {eps : Rat} (eps>0 : 0 < eps) : ∃ (x : X) ((dist y (f x)).U eps)
+        => \case yl OBall-open (OBall-center eps>0) \with {
+          | inP (_, inP (x,idp), d) => inP (x,d)
+        }
+      \in \let | S : SetFilter X => \new SetFilter {
+                | F U => ∃ (eps : Rat) (0 < eps) (\Pi {x : X} -> (dist y (f x)).U eps -> U x)
+                | filter-mono (inP (eps,eps>0,h)) d => inP (eps, eps>0, \lam c => d (h c))
+                | filter-top => inP (1, RatField.zro<ide, \lam _ => ())
+                | filter-meet (inP (e1,e1>0,h1)) (inP (e2,e2>0,h2)) => inP (e1 ∧ e2, <_meet-univ e1>0 e2>0, \lam c => (h1 (ExUpperReal.U_<= c meet-left), h2 (ExUpperReal.U_<= c meet-right)))
+              }
+              | F : CauchyFilter X => \new CauchyFilter {
+                | SetFilter => S
+                | isProper (inP (eps,eps>0,h)) => TruncP.map (near eps>0) \lam s => (s.1, h s.2)
+                | isCauchyFilter => (cauchyFilter-metric-char {X} {S}).2 \lam {eps} eps>0 => \case near {eps * ratio 1 2} linarith \with {
+                  | inP (x0,d0) => inP (x0, inP (eps * ratio 1 2, linarith, \lam {x} d => transport (\lam e => ExUpperReal.U {e} eps) (func-isometry {f} {x0} {x}) $ Y.halving-left d0 d linarith))
+                }
+              }
+         \in \case Xc (regCF F) \with {
+           | inP (x0,x0F) => inP (x0, metric-ext \lam {eps} eps>0 => \case regCF_<= {X} {F} $ x0F $ OBall-center_<=< {X} {eps * ratio 1 2} linarith \with {
+             | inP (delta,delta>0,h) => \case near (<_meet-univ delta>0 (linarith : 0 < eps * ratio 1 2)) \with {
+               | inP (x,d) => Y.halving-right (transport (\lam e => ExUpperReal.U {e} (eps * ratio 1 2)) (inv (func-isometry {f} {x0} {x})) $ h $ ExUpperReal.U_<= d meet-left) (ExUpperReal.U_<= d meet-right) linarith
+             }
+           })
+         }
+
 -- | A complete space with a real-valued metric is strongly complete.
 \lemma metric-stronglyComplete {X : PseudoMetricSpace} (Xc : IsCompleteCoverSpace X) : IsStronglyCompleteCoverSpace X
   => \lam F => \case Xc (regCF (ballFilter F)) \with {

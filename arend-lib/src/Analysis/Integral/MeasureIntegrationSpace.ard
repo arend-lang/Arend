@@ -12,69 +12,76 @@
 \import Analysis.Integral.IntegrationSpace
 \import Analysis.Measure.MeasureRing
 \import Analysis.Measure.SimpleFunctions
+\import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
 \import Data.Array
 \import Data.Array.EPerm
+\import Data.Or
 \import Equiv
+\import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Order.Biordered
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence \hiding (~)
 \import Set.Fin
+\import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
 \import Topology.TopSpace
 \open SFunc
-\open SFuncPosetQModule (IsReduced, makeReduced, reduce, reduce_IsReduced, reduce_~, split1)
+\open SFuncPosetQModule
 
-\instance SFuncIntegrationSpace (B : MeasureRing) : IntegrationSpace (SFunc RealAbGroup B)
-  | TruncRieszSpace => SFuncTruncRieszSpace RealIntegrationSpace B
-  | integral (f : SFunc RealAbGroup B) : Real \with {
+\instance SFuncIntegrationSpace (B : MeasureRing) : IntegrationSpace (SFunc RatField B)
+  | TruncRieszSpace => SFuncTruncRieszSpace RatIntegrationSpace B
+  | integral (f : SFunc RatField B) : Real \with {
     | in~ f => sum f
     | ~-equiv f g r => sum_~ r
   }
   | integral>=0 {a} => \case \elim a \with {
     | in~ l => \lam (inP (d,dp,d>=0)) => transportInv (_ RealAbGroup.<=) (pmap integral (inv (AddGroup.minus_zro {_} {inSF l}) *> dp)) $
-        RealAbGroup.BigSum_>=0 {map (\lam s => s.1 * meas s.2) d} \lam j => RealField.<=_*-positive (d>=0 j) meas>=0
+        RealAbGroup.BigSum_>=0 {map (\lam s => s.1 RealField.* meas s.2) d} \lam j => RealField.<=_*-positive (rat_real_<=.1 (d>=0 j)) meas>=0
   }
   | integral_+ {a} {b} => \case \elim a, \elim b \with {
-    | in~ l, in~ l' => pmap RealAbGroup.BigSum (map_++ (\lam s => s.1 * meas s.2)) *> RealAbGroup.BigSum_++
+    | in~ l, in~ l' => pmap RealAbGroup.BigSum (map_++ (\lam s => s.1 RealField.* meas s.2)) *> RealAbGroup.BigSum_++
   }
   \where {
-    \func sum (l : Array (\Sigma Real B)) : Real
-      => RealAbGroup.BigSum $ map (\lam s => s.1 * meas s.2) l
+    \func sum (l : Array (\Sigma Rat B)) : Real
+      => RealAbGroup.BigSum $ map (\lam s => s.1 RealField.* meas s.2) l
 
-    \lemma sum_~ {l l' : Array (\Sigma Real B)} (r : l ~ l') : sum l = sum l' \elim r
-      | ~-perm e => RealAbGroup.BigSum_EPerm (EPerm.EPerm_map (\lam (s : \Sigma Real B) => s.1 * meas s.2) e)
+    \lemma sum_~ {l l' : Array (\Sigma Rat B)} (r : l ~ {RatField} l') : sum l = sum l' \elim r
+      | ~-perm e => RealAbGroup.BigSum_EPerm (EPerm.EPerm_map (\lam (s : \Sigma Rat B) => s.1 RealField.* meas s.2) e)
       | ~-sym r => inv (sum_~ r)
       | ~-trans r r' => sum_~ r *> sum_~ r'
       | ~-zro-left idp => pmap (+ _) RealField.zro_*-left *> RealAbGroup.zro-left
       | ~-zro-right idp => pmap (\lam x => _ * x + _) meas_zro *> pmap (+ _) RealField.zro_*-right *> RealAbGroup.zro-left
-      | ~-+-left idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.rdistr)
-      | ~-+-right {_} {v} idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.ldistr *> pmap (v *) (inv meas-modular) *> RealField.ldistr) *> RealAbGroup.+-assoc
+      | ~-+-left idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.rdistr *> pmap (RealField.* _) RealAbGroup.+-rat)
+      | ~-+-right {_} {v} idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.ldistr *> pmap (v RealField.*) (inv meas-modular) *> RealField.ldistr) *> RealAbGroup.+-assoc
   }
 
 -- | The map `a => c [a]` scales distances by `|c|`; for `c = 1` it is an isometry.
-\lemma SFunc-single-dist {B : MeasureRing} {c : Real} {a b : B}
-  : lnorm {SFuncIntegrationSpace B} (inSF ((c,a) :: nil) - inSF ((c,b) :: nil)) = RealAbGroup.abs c * meas (a - b)
+\lemma SFunc-single-dist {B : MeasureRing} {c : Rat} {a b : B}
+  : lnorm {SFuncIntegrationSpace B} (inSF ((c,a) :: nil) - inSF ((c,b) :: nil)) = RealAbGroup.abs c RealField.* meas (a - b)
   => \let | X => SFuncIntegrationSpace B
           | u : X => inSF ((c, B.diff a b) :: nil)
           | v : X => inSF ((c, B.diff b a) :: nil)
           | e : inSF ((c,a) :: nil) - inSF ((c,b) :: nil) = {X} u - v
               => pmap2 (\lam (x y : X) => x - y) (~-sfequiv (split1 b {c} {a} {nil}) *> pmap (\lam x => inSF ((c,x) :: nil) + u) (B.*-comm {b} {a})) (~-sfequiv (split1 a {c} {b} {nil})) *> +-minus-left {X} {inSF ((c, a * b) :: nil)} {u} {v}
      \in pmap lnorm e *> pmap (integral {X}) (SFuncRieszSpace.abs-reduced {_} {B} {(c, B.diff a b) :: (negative c, B.diff b a) :: nil} (pair-reduced BooleanRing.diff_*_diff))
-          *> pmap (\lam z => _ + (z * meas (B.diff b a) + 0)) RealAbGroup.abs_negative *> pmap (_ +) RealAbGroup.zro-right
-          *> inv RealField.ldistr *> pmap (_ *) (inv (meas-disjoint BooleanRing.diff_*_diff) *> pmap meas (inv BooleanRing.+_diff *> pmap (a +) (inv BooleanRing.negative=id)))
+          *> pmap (\lam (z : Rat) => _ + (z RealField.* meas (B.diff b a) + 0)) RatField.abs_negative *> pmap (_ +) RealAbGroup.zro-right
+          *> inv RealField.ldistr *> pmap (_ RealField.*) (inv (meas-disjoint BooleanRing.diff_*_diff) *> pmap meas (inv BooleanRing.+_diff *> pmap (a +) (inv BooleanRing.negative=id)))
+          *> pmap (RealField.* _) (inv RealAbGroup.abs-rat)
   \where {
-    \lemma pair-reduced {B : MeasureRing} {c c' : Real} {x y : B} (p : x * y = 0) : IsReduced {RealIntegrationSpace} ((c,x) :: (c',y) :: nil)
+    \lemma pair-reduced {B : MeasureRing} {c c' : Rat} {x y : B} (p : x * y = 0) : IsReduced {RatIntegrationSpace} ((c,x) :: (c',y) :: nil)
       => \lam {i} {j} i/=j => \case \elim i, \elim j, i/=j \with {
         | 0, 0, i/=j => absurd (i/=j idp)
         | 0, 1, _ => p
@@ -94,35 +101,35 @@
     | in~ l => inv (SFuncTruncRieszSpace.trunc-reduced {_} {B} {mapB f (reduce l)} (mapB-reduced f reduce_IsReduced)) *> pmap trunc (~-sfequiv (mapB_~ f reduce_~))
   }
   | func-integral {x} => \case \elim x \with {
-    | in~ l => pmap RealAbGroup.BigSum (exts \lam j => pmap ((l j).1 *) f.func-meas)
+    | in~ l => pmap RealAbGroup.BigSum (exts \lam j => pmap ((l j).1 RealField.*) f.func-meas)
   }
   \where {
-    \func mapB {A B : MeasureRing} (f : MeasureRingHom A B) (l : Array (\Sigma Real A)) : Array (\Sigma Real B)
+    \func mapB {A B : MeasureRing} (f : MeasureRingHom A B) (l : Array (\Sigma Rat A)) : Array (\Sigma Rat B)
       => map (\lam s => (s.1, f s.2)) l
 
     \lemma func-join_B {A B : MeasureRing} {f : MeasureRingHom A B} {a b : A} : f (a ∨ b) = f a ∨ f b
       => f.func-+ *> pmap2 (+) f.func-+ f.func-*
 
-    \lemma mapB_~ {A B : MeasureRing} (f : MeasureRingHom A B) {l l' : Array (\Sigma Real A)} (r : l ~ {RealAbGroup} l') : mapB f l ~ {RealAbGroup} mapB f l' \elim r
-      | ~-perm e => ~-perm (EPerm.EPerm_map (\lam (s : \Sigma Real A) => (s.1, f s.2)) e)
+    \lemma mapB_~ {A B : MeasureRing} (f : MeasureRingHom A B) {l l' : Array (\Sigma Rat A)} (r : l ~ {RatField} l') : mapB f l ~ {RatField} mapB f l' \elim r
+      | ~-perm e => ~-perm (EPerm.EPerm_map (\lam (s : \Sigma Rat A) => (s.1, f s.2)) e)
       | ~-sym r => ~-sym (mapB_~ f r)
       | ~-trans r r' => ~-trans (mapB_~ f r) (mapB_~ f r')
       | ~-zro-left idp => ~-zro-left idp
-      | ~-zro-right {v} idp => transportInv (\lam (x : B) => (v,x) :: mapB f l' ~ {RealAbGroup} mapB f l') f.func-zro (~-zro-right idp)
+      | ~-zro-right {v} idp => transportInv (\lam (x : B) => (v,x) :: mapB f l' ~ {RatField} mapB f l') f.func-zro (~-zro-right idp)
       | ~-+-left idp idp => ~-+-left idp idp
       | ~-+-right {l''} {v} idp idp => ~-trans (~-perm $ EPerm.eperm-= $ pmap2 (\lam x y => (v,x) :: (v,y) :: mapB f l'') func-join_B f.func-*) (~-+-right idp idp)
 
-    \lemma mapB-reduced {A B : MeasureRing} (f : MeasureRingHom A B) {l : Array (\Sigma Real A)} (lr : IsReduced {RealIntegrationSpace} l)
-      : IsReduced {RealIntegrationSpace} (mapB f l)
+    \lemma mapB-reduced {A B : MeasureRing} (f : MeasureRingHom A B) {l : Array (\Sigma Rat A)} (lr : IsReduced {RatIntegrationSpace} l)
+      : IsReduced {RatIntegrationSpace} (mapB f l)
       => \lam i/=j => inv f.func-* *> pmap f (lr i/=j) *> f.func-zro
 
     \func hom {A B : MeasureRing} (f : MeasureRingHom A B) : AddGroupHom (SFuncIntegrationSpace A) (SFuncIntegrationSpace B) \cowith
-      | func (x : SFunc RealAbGroup A) : SFunc RealAbGroup B \with {
+      | func (x : SFunc RatField A) : SFunc RatField B \with {
         | in~ l => inSF (mapB f l)
         | ~-equiv l l' r => ~-sfequiv (mapB_~ f r)
       }
       | func-+ {x} {y} => \case \elim x, \elim y \with {
-        | in~ l, in~ l' => pmap inSF (map_++ (\lam (s : \Sigma Real A) => (s.1, f s.2)))
+        | in~ l, in~ l' => pmap inSF (map_++ (\lam (s : \Sigma Rat A) => (s.1, f s.2)))
       }
 
     \lemma func-abs {A B : MeasureRing} {f : MeasureRingHom A B} {a : SFuncIntegrationSpace A} : hom f (LatticeAbGroup.abs a) = LatticeAbGroup.abs (hom f a)
@@ -135,7 +142,7 @@
   }
 
 \lemma SFuncHom-dense {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense)
-  : IsDenseSet {SFuncIntegrationSpace B} (\lam y => ∃ (x : SFunc RealAbGroup A) (SFuncHom f x = y))
+  : IsDenseSet {SFuncIntegrationSpace B} (\lam y => ∃ (x : SFunc RatField A) (SFuncHom f x = y))
   => \lam {y} Uo Uy => \case (dist_open {SFuncIntegrationSpace B}).1 Uo Uy \with {
     | inP (eps,eps>0,p) => \case approx fd (rat_real_<.1 eps>0) y \with {
       | inP (m,d) => inP (inSF (SFuncHom.mapB f m), inP (inSF m, idp), p $ real_<_U.1 d)
@@ -149,8 +156,8 @@
            | inP (y, inP (a,p), h) => inP (a, transport (`< _) (lnorm-ldist {B} {b} {f a}) (real_<_U.2 (transportInv (OBall delta b) p h)) <∘ delta<d)
          }
 
-    \lemma list-bound {B : MeasureRing} {n : Nat} {c : Array Real n} {b b' : Array B n}
-      : lnorm {SFuncIntegrationSpace B} (inSF (\lam j => (c j, b j)) - inSF (\lam j => (c j, b' j))) <= RealAbGroup.BigSum (\lam j => RealAbGroup.abs (c j) * meas (b j - b' j)) \elim n
+    \lemma list-bound {B : MeasureRing} {n : Nat} {c : Array Rat n} {b b' : Array B n}
+      : lnorm {SFuncIntegrationSpace B} (inSF (\lam j => (c j, b j)) - inSF (\lam j => (c j, b' j))) <= RealAbGroup.BigSum (\lam j => RealAbGroup.abs (c j) RealField.* meas (b j - b' j)) \elim n
       | 0 => =_<= (ldist-refl {SFuncIntegrationSpace B} {inSF nil})
       | suc n => \let | X => SFuncIntegrationSpace B
                        | s : X => inSF ((c 0, b 0) :: nil)
@@ -163,13 +170,13 @@
           => equation.abGroup
       }
 
-    \lemma approx {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense) {eps : Real} (eps>0 : 0 < eps) (y : SFunc RealAbGroup B)
-      : ∃ (m : Array (\Sigma Real A)) (ldist {SFuncIntegrationSpace B} y (inSF (SFuncHom.mapB f m)) < eps) \elim y
+    \lemma approx {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense) {eps : Real} (eps>0 : 0 < eps) (y : SFunc RatField B)
+      : ∃ (m : Array (\Sigma Rat A)) (ldist {SFuncIntegrationSpace B} y (inSF (SFuncHom.mapB f m)) < eps) \elim y
       | in~ l => approx-list fd eps>0 l
 
     -- | For each `(c_j,b_j)` in `l`, choose `a_j` with `meas (b_j - f a_j) < d`, where `d * (Σ_j |c_j| + 1) < eps`.
-    \lemma approx-list {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense) {eps : Real} (eps>0 : 0 < eps) (l : Array (\Sigma Real B))
-      : ∃ (m : Array (\Sigma Real A)) (ldist {SFuncIntegrationSpace B} (inSF l) (inSF (SFuncHom.mapB f m)) < eps)
+    \lemma approx-list {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense) {eps : Real} (eps>0 : 0 < eps) (l : Array (\Sigma Rat B))
+      : ∃ (m : Array (\Sigma Rat A)) (ldist {SFuncIntegrationSpace B} (inSF l) (inSF (SFuncHom.mapB f m)) < eps)
       => \let | S => RealAbGroup.BigSum (map (\lam s => RealAbGroup.abs s.1) l)
               | S>=0 : 0 <= S => RealAbGroup.BigSum_>=0 \lam j => RealAbGroup.abs>=0
               | (inP (d,d>0,dS<eps)) => split-eps eps>0 {S + 1} (S>=0 <∘r linarith)
@@ -177,7 +184,7 @@
            | inP h => inP (\lam j => ((l j).1, (h j).1),
                (=_<= (lnorm-ldist {SFuncIntegrationSpace B} {inSF l} {inSF (\lam j => ((l j).1, f (h j).1))})
                <=∘ list-bound {B} {l.len} {\lam j => (l j).1} {\lam j => (l j).2} {\lam j => f (h j).1}
-               <=∘ RealAbGroup.BigSum_<= {_} {\lam j => RealAbGroup.abs (l j).1 * meas ((l j).2 - f (h j).1)} {\lam j => RealAbGroup.abs (l j).1 * d} (\lam j => <=_*_positive-right RealAbGroup.abs>=0 (<=-less (h j).2))
+               <=∘ RealAbGroup.BigSum_<= {_} {\lam j => RealAbGroup.abs (l j).1 RealField.* meas ((l j).2 - f (h j).1)} {\lam j => RealAbGroup.abs (l j).1 RealField.* d} (\lam j => <=_*_positive-right RealAbGroup.abs>=0 (<=-less (h j).2))
                <=∘ =_<= (inv (RealField.BigSum-rdistr {map (\lam s => RealAbGroup.abs s.1) l} {d}) *> *-comm))
                <∘r (<_*_positive-right d>0 (linarith : S < S + 1) <∘ dS<eps))
          }
@@ -187,3 +194,92 @@
 \lemma SFuncHom-completion-equiv {A B : MeasureRing} {f : MeasureRingHom A B} (fd : f.IsDense)
   : IsEquiv (integrationCompletion-map (SFuncHom f))
   => integrationCompletion-map-equiv (SFuncHom-dense fd)
+
+-- | If the measure of a measure ring separates points, then so does the norm on simple functions with rational coefficients.
+\lemma SFunc-norm-ext {B : MeasureRing} (Bext : \Pi {e : B} -> meas e = 0 -> e = 0) {x : SFuncIntegrationSpace B} (p : lnorm x = 0) : x = 0
+  => \case makeReduced x \with {
+    | inP (l,lr,q) => \have t => RealAbGroup.BigSum_>=0-zero {map (\lam s => RatField.abs s.1 RealField.* meas s.2) l}
+                                   (\lam j => RealField.<=_*-positive (rat_real_<=.1 RatField.abs>=0) meas>=0)
+                                   (inv (pmap (integral {SFuncIntegrationSpace B}) (SFuncRieszSpace.abs-reduced lr)) *> pmap (lnorm {SFuncIntegrationSpace B}) (inv q) *> p)
+                          \in q *> ~-sfequiv (~-zero-terms \lam j => \case LinearOrder.dec<_<= 0 (RatField.abs (l j).1) \with {
+                            | inl |c|>0 => byRight $ Bext $ RealAbGroup.<=-antisymmetric (\lam m>0 => RealAbGroup.<-irreflexive $ transport (0 <) (t j) $ RealField.<_*_positive_positive (rat_real_<.1 |c|>0) m>0) meas>=0
+                            | inr |c|<=0 => byLeft $ RatField.abs_zro-ext $ <=-antisymmetric |c|<=0 RatField.abs>=0
+                          })
+  }
+
+-- | The counit of the adjunction between measure rings and integration spaces.
+\func integrationCounit (Z : IntegrationSpace) : IntegrationSpaceHom (SFuncIntegrationSpace Z.MeasRing) Z \cowith
+  | AddGroupHom => hom
+  | func-<= {x} {y} (inP (d,dp,d>=0)) => Z.from>=0 $ transport (0 <=) (pmap hom (inv dp) *> hom.func-minus) $
+      Z.BigSum_>=0 {sum.terms d} \lam j => Z.*q_>=0 (d>=0 j) (Z.IsBoolean>=0 (d j).2.2)
+  | func-join>= => =_<= func-join
+  | func-trunc {x} => \case makeReduced x \with {
+    | inP (l,lr,p) => rewrite p $ pmap hom (SFuncTruncRieszSpace.trunc-reduced lr) *> inv (sum-trunc lr)
+  }
+  | func-integral {x} => \case \elim x \with {
+    | in~ l => Z.integral-hom.func-BigSum *> pmap RealAbGroup.BigSum (exts \lam j => Z.integral_*q)
+  }
+  \where {
+    \func sum {Z : IntegrationSpace} (l : Array (\Sigma Rat Z.MeasRing)) : Z
+      => Z.BigSum (terms l)
+      \where
+        \func terms {Z : IntegrationSpace} (l : Array (\Sigma Rat Z.MeasRing)) : Array Z
+          => map (\lam s => s.1 Z.*q s.2.1) l
+
+    \lemma sum_~ {Z : IntegrationSpace} {l l' : Array (\Sigma Rat Z.MeasRing)} (r : l ~ {RatField} l') : sum l = sum l' \elim r
+      | ~-perm e => Z.BigSum_EPerm (EPerm.EPerm_map (\lam (s : \Sigma Rat Z.MeasRing) => s.1 Z.*q s.2.1) e)
+      | ~-sym r => inv (sum_~ r)
+      | ~-trans r r' => sum_~ r *> sum_~ r'
+      | ~-zro-left idp => pmap (`+ _) Z.toRatModule.*c_zro-left *> Z.zro-left
+      | ~-zro-right idp => pmap (`+ _) Z.toRatModule.*c_zro-right *> Z.zro-left
+      | ~-+-left idp idp => inv Z.+-assoc *> pmap (`+ _) (inv Z.toRatModule.*c-rdistr)
+      | ~-+-right {_} {v} {a} {b} idp idp => inv Z.+-assoc *> pmap (`+ _) (inv Z.toRatModule.*c-ldistr *> pmap (v Z.*q) (pmap (`+ _) TruncRieszSpace.BoolRing.join-char *> inv Z.modularity) *> Z.toRatModule.*c-ldistr) *> Z.+-assoc
+
+    \func hom {Z : IntegrationSpace} : AddGroupHom (SFuncIntegrationSpace Z.MeasRing) Z \cowith
+      | func (x : SFunc RatField Z.MeasRing) : Z \with {
+        | in~ l => sum l
+        | ~-equiv l l' r => sum_~ r
+      }
+      | func-+ {x} {y} => \case \elim x, \elim y \with {
+        | in~ l, in~ l' => pmap Z.BigSum (map_++ (\lam (s : \Sigma Rat Z.MeasRing) => s.1 Z.*q s.2.1)) *> Z.BigSum_++
+      }
+
+    \lemma terms-disjoint {Z : IntegrationSpace} {l : Array (\Sigma Rat Z.MeasRing)} (lr : IsReduced {RatIntegrationSpace} l) {i j : Fin l.len} (i/=j : i /= j)
+      : Z.AreDisjoint ((l i).1 Z.*q (l i).2.1) ((l j).1 Z.*q (l j).2.1)
+      => Z.disjoint_*q $ Z.pos-disjoint (Z.IsBoolean>=0 (l i).2.2) (Z.IsBoolean>=0 (l j).2.2) (pmap __.1 (lr i/=j))
+
+    \lemma sum-abs {Z : IntegrationSpace} {l : Array (\Sigma Rat Z.MeasRing)} (lr : IsReduced {RatIntegrationSpace} l)
+      : Z.abs (sum l) = sum (map (\lam s => (RatField.abs s.1, s.2)) l)
+      => Z.disjoint_abs_BigSum {sum.terms l} (terms-disjoint lr) *> pmap Z.BigSum (exts \lam j => Z.abs_*q *> pmap (_ Z.*q) (Z.abs-ofPos (Z.IsBoolean>=0 (l j).2.2)))
+
+    \lemma sum-trunc {Z : IntegrationSpace} {l : Array (\Sigma Rat Z.MeasRing)} (lr : IsReduced {RatIntegrationSpace} l)
+      : Z.trunc (sum l) = sum (map (\lam s => (RatIntegrationSpace.trunc s.1, s.2)) l)
+      => Z.trunc_BigSum-disjoint {sum.terms l} (terms-disjoint lr) *> pmap Z.BigSum (exts \lam j => Z.trunc_*q-boolean (l j).2.2)
+
+
+    \lemma func-abs {Z : IntegrationSpace} {a : SFuncIntegrationSpace Z.MeasRing} : hom (LatticeAbGroup.abs a) = Z.abs (hom a)
+      => \case makeReduced a \with {
+        | inP (l,lr,p) => rewrite p $ pmap hom (SFuncRieszSpace.abs-reduced lr) *> inv (sum-abs lr)
+      }
+
+    \lemma func-join {Z : IntegrationSpace} {x y : SFuncIntegrationSpace Z.MeasRing} : hom (x ∨ y) = hom x ∨ hom y
+      => pmap hom RieszSpace.join_abs *> func-*q *> pmap (_ QModule.*q) (hom.func-+ *> pmap2 (+) hom.func-+ (func-abs *> pmap Z.abs hom.func-minus)) *> inv RieszSpace.join_abs
+  }
+
+-- | For a complete integration space, the comparison map $\Phi$ is injective.
+\lemma integrationCounit-inj {Z : CompleteIntegrationSpace} : IsInj (integrationCounit Z)
+  => \lam {x} {y} p => AddGroup.fromZero $ SFunc-norm-ext (\lam q => Z.CompleteMeasRing.norm-ext (Real.=-upper.1 q)) $
+      inv (integrationCounit Z).func-integral *> pmap Z.integral ((integrationCounit Z).func-abs *> pmap Z.abs ((integrationCounit Z).func-minus *> pmap (_ -) (inv p) *> negative-right) *> Z.abs_zro) *> Z.integral-hom.func-zro
+
+-- | The counit of the adjunction between complete measure rings and complete integration spaces.
+\func completeIntegrationCounit (Z : CompleteIntegrationSpace) : IntegrationSpaceHom (IntegrationSpaceCompletion (SFuncIntegrationSpace Z.MeasRing)) Z
+  => integrationCompletion-lift (integrationCounit Z)
+
+\lemma completeIntegrationCounit-char {Z : CompleteIntegrationSpace} {x : SFuncIntegrationSpace Z.MeasRing} : completeIntegrationCounit Z (integrationCompletion x) = integrationCounit Z x
+  => integrationCompletion-lift.char
+
+\lemma completeIntegrationCounit-inj {Z : CompleteIntegrationSpace} : IsInj (completeIntegrationCounit Z)
+  => isometric-inj (completeIntegrationCounit Z)
+
+\lemma completeIntegrationCounit-closed {Z : CompleteIntegrationSpace} : Z.IsClosed \lam z => ∃ (x : IntegrationSpaceCompletion (SFuncIntegrationSpace Z.MeasRing)) (completeIntegrationCounit Z x = z)
+  => isometric-complete-closed (CompleteCoverSpace.isComplete {IntegrationSpaceCompletion (SFuncIntegrationSpace Z.MeasRing)}) (completeIntegrationCounit Z)
