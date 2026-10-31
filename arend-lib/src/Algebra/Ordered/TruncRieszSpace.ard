@@ -122,6 +122,13 @@
   \lemma IsBoolean-trunc {a : E} (p : IsBoolean a) : IsUnderUnit a
     => pmap trunc (inv p) *> trunc-idemp *> p
 
+  \func defect (x : E) => trunc (x + x) - x
+
+  -- | The defect `trunc (x + x) - x` vanishes on Boolean elements and is 3-Lipschitz.
+  \lemma IsBoolean-defect {e x : E} (p : IsBoolean e) : abs (defect x) <= abs (x - e) + abs (x - e) + abs (x - e)
+    => =_<= (pmap abs equation.abGroup *> pmap (\lam y => abs (trunc (x + x) - trunc (e + e) + (y - x))) p)
+        <=∘ abs_+ <=∘ <=_+ (trunc-lipschitz <=∘ =_<= (pmap abs equation.abGroup) <=∘ abs_+) (=_<= abs_-)
+
   \lemma IsBoolean-orth {e y : E} (p : IsBoolean e) (ty : IsUnderUnit y) : e ∧ part+ (y - e) = 0
     => \have | s : e + e ∧ part+ (y - e) <= trunc (e ∨ y)
                => <=_+ <=-refl meet-right <=∘ =_<= (pmap (e +) part+_diff_join *> +-comm *> +-assoc *> pmap (_ +) negative-left *> zro-right *> join-comm *> inv (trunc_join *> pmap2 (∨) (IsBoolean-trunc p) ty))

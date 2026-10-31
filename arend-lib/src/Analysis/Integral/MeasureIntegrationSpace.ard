@@ -68,18 +68,17 @@
       | ~-+-right {_} {v} idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.ldistr *> pmap (v RealField.*) (inv meas-modular) *> RealField.ldistr) *> RealAbGroup.+-assoc
   }
 
--- | The map `a => c [a]` scales distances by `|c|`; for `c = 1` it is an isometry.
-\lemma SFunc-single-dist {B : MeasureRing} {c : Rat} {a b : B}
-  : lnorm {SFuncIntegrationSpace B} (inSF ((c,a) :: nil) - inSF ((c,b) :: nil)) = RealAbGroup.abs c RealField.* meas (a - b)
+-- | `|c [a] - c [b]| = |c| [a + b]`.
+\lemma SFunc-single-abs {B : MeasureRing} {c : Rat} {a b : B}
+  : LatticeAbGroup.abs (inSF ((c,a) :: nil) - inSF ((c,b) :: nil)) = inSF ((RatField.abs c, a + b) :: nil)
   => \let | X => SFuncIntegrationSpace B
           | u : X => inSF ((c, B.diff a b) :: nil)
           | v : X => inSF ((c, B.diff b a) :: nil)
           | e : inSF ((c,a) :: nil) - inSF ((c,b) :: nil) = {X} u - v
               => pmap2 (\lam (x y : X) => x - y) (~-sfequiv (split1 b {c} {a} {nil}) *> pmap (\lam x => inSF ((c,x) :: nil) + u) (B.*-comm {b} {a})) (~-sfequiv (split1 a {c} {b} {nil})) *> +-minus-left {X} {inSF ((c, a * b) :: nil)} {u} {v}
-     \in pmap lnorm e *> pmap (integral {X}) (SFuncRieszSpace.abs-reduced {_} {B} {(c, B.diff a b) :: (negative c, B.diff b a) :: nil} (pair-reduced BooleanRing.diff_*_diff))
-          *> pmap (\lam (z : Rat) => _ + (z RealField.* meas (B.diff b a) + 0)) RatField.abs_negative *> pmap (_ +) RealAbGroup.zro-right
-          *> inv RealField.ldistr *> pmap (_ RealField.*) (inv (meas-disjoint BooleanRing.diff_*_diff) *> pmap meas (inv BooleanRing.+_diff *> pmap (a +) (inv BooleanRing.negative=id)))
-          *> pmap (RealField.* _) (inv RealAbGroup.abs-rat)
+     \in pmap LatticeAbGroup.abs e *> SFuncRieszSpace.abs-reduced {_} {B} {(c, B.diff a b) :: (negative c, B.diff b a) :: nil} (pair-reduced BooleanRing.diff_*_diff)
+          *> pmap (\lam (z : Rat) => inSF ((RatField.abs c, B.diff a b) :: (z, B.diff b a) :: nil)) RatField.abs_negative
+          *> ~-sfequiv (merge-disjoint BooleanRing.diff_*_diff) *> pmap (\lam x => inSF ((RatField.abs c, x) :: nil)) (inv BooleanRing.+_diff)
   \where {
     \lemma pair-reduced {B : MeasureRing} {c c' : Rat} {x y : B} (p : x * y = 0) : IsReduced {RatIntegrationSpace} ((c,x) :: (c',y) :: nil)
       => \lam {i} {j} i/=j => \case \elim i, \elim j, i/=j \with {
@@ -91,7 +90,18 @@
 
     \lemma +-minus-left {X : AbGroup} {w u v : X} : (w + u) - (w + v) = u - v
       => equation.abGroup
+
+    \lemma merge-disjoint {B : BooleanRing} {v : Rat} {x y : B} (p : x * y = 0) : (v,x) :: (v,y) :: nil ~ (v, x ∨ y) :: nil
+      => \have | q : (v, x ∧ y) :: nil ~ nil => ~-zro-right (pmap (\lam z => (v,z) :: nil) p)
+               | r : (v, x ∨ y) :: (v, x ∧ y) :: nil ~ (v,x) :: (v,y) :: nil => ~-+-right {_} {_} {_} {_} {nil} idp idp
+         \in ~-sym $ ~-trans (~_:: (~-sym q)) r
   }
+
+-- | The map `a => c [a]` scales distances by `|c|`; for `c = 1` it is an isometry.
+\lemma SFunc-single-dist {B : MeasureRing} {c : Rat} {a b : B}
+  : lnorm {SFuncIntegrationSpace B} (inSF ((c,a) :: nil) - inSF ((c,b) :: nil)) = RealAbGroup.abs c RealField.* meas (a - b)
+  => pmap (SFuncIntegrationSpace B).integral SFunc-single-abs *> RealAbGroup.zro-right
+      *> pmap2 (RealField.*) (inv RealAbGroup.abs-rat) (pmap (\lam x => meas (a + x)) (inv BooleanRing.negative=id))
 
 \func SFuncHom {A B : MeasureRing} (f : MeasureRingHom A B) : IntegrationSpaceHom (SFuncIntegrationSpace A) (SFuncIntegrationSpace B) \cowith
   | AddGroupHom => hom f
@@ -205,6 +215,144 @@
                             | inl |c|>0 => byRight $ Bext $ RealAbGroup.<=-antisymmetric (\lam m>0 => RealAbGroup.<-irreflexive $ transport (0 <) (t j) $ RealField.<_*_positive_positive (rat_real_<.1 |c|>0) m>0) meas>=0
                             | inr |c|<=0 => byLeft $ RatField.abs_zro-ext $ <=-antisymmetric |c|<=0 RatField.abs>=0
                           })
+  }
+
+-- | The characteristic simple function `[a]` of an element of a measure ring.
+\func SFunc-char {B : MeasureRing} (a : B) : SFunc RatField B
+  => inSF ((1,a) :: nil)
+
+-- | The unit of the adjunction between {MeasureRing} and {IntegrationSpace}.
+\func integrationUnit (B : MeasureRing) : MeasureRingHom B (SFuncIntegrationSpace B).MeasRing \cowith
+  | func a => (SFunc-char a, char-boolean)
+  | func-+ => ext $ inv $ SFunc-single-abs *> pmap (\lam (z : Rat) => inSF ((z, _) :: nil)) abs-ide
+  | func-* {a} {b} => ext $ inv $ pmap2 (∧) (~-sfequiv (split1 b {1} {a} {nil}) *> pmap (\lam x => SFunc-char x + SFunc-char (B.diff a b)) B.*-comm) (~-sfequiv (split1 a {1} {b} {nil}))
+      *> inv (meet_+-left {SFuncIntegrationSpace B} {SFunc-char (a * b)} {SFunc-char (B.diff a b)} {SFunc-char (B.diff b a)}) *> pmap (_ +) (char-disjoint BooleanRing.diff_*_diff) *> zro-right
+  | func-meas => RealAbGroup.zro-right *> RealField.ide-left
+  \where {
+    \lemma single-reduced {B : BooleanRing} {c : Rat} {a : B} : IsReduced {RatIntegrationSpace} ((c,a) :: nil)
+      => \lam {i} {j} i/=j => \case \elim i, \elim j, i/=j \with {
+        | 0, 0, i/=j => absurd (i/=j idp)
+      }
+
+    \lemma abs-ide : RatField.abs 1 = 1
+      => RatField.abs-ofPos RatField.zro<=ide
+
+    \lemma char-boolean {B : MeasureRing} {a : B} : (SFuncIntegrationSpace B).IsBoolean (SFunc-char a)
+      => pmap trunc (~-sfequiv (~-+-left {RatField} {B} {_} {_} {nil} idp idp)) *> SFuncTruncRieszSpace.trunc-reduced single-reduced
+          *> pmap (\lam (z : Rat) => inSF ((z,a) :: nil)) (RatField.<=-antisymmetric RatField.meet-right (RatField.meet-univ linarith RatField.<=-refl))
+
+    \lemma char-disjoint {B : MeasureRing} {x y : B} (p : x * y = 0) : SFunc-char x ∧ SFunc-char y = 0
+      => RieszSpace.meet_abs {SFuncIntegrationSpace B} {SFunc-char x} {SFunc-char y} *> pmap (ratio 1 2 QModule.*q) (pmap2 (\lam u w => u - w)
+          (~-sfequiv (SFunc-single-abs.merge-disjoint p) *> pmap SFunc-char (inv (BooleanRing.+_join p)))
+          (SFunc-single-abs {B} {1} *> pmap (\lam (z : Rat) => inSF ((z, x + y) :: nil)) abs-ide) *> negative-right {SFuncIntegrationSpace B} {SFunc-char (x + y)}) *> (SFuncIntegrationSpace B).toRatModule.*c_zro-right
+
+    \lemma char-zero {B : MeasureRing} {x : B} (q : SFunc-char x = 0) : x = 0
+      => \case (>=0-reduced-char single-reduced).1 (transport (\lam z => 0 <= negative z) (inv q) (=_<= (inv AddGroup.negative_zro))) 0 \with {
+        | byLeft c => absurd linarith
+        | byRight r => r
+      }
+  }
+
+{- | Every simple function `s` is within `|trunc (s + s) - s|` of a characteristic function:
+ -   round the coefficients of a reduced representation at `1/2`.
+ -}
+\lemma SFunc-round {B : MeasureRing} (s : SFuncIntegrationSpace B)
+  : ∃ (a : B) (LatticeAbGroup.abs (SFunc-char a - s) = LatticeAbGroup.abs (TruncRieszSpace.defect s))
+  => \case makeReduced s \with {
+    | inP (l,lr,p) =>
+      \have coeffs : map (\lam s => (RatField.abs (chi s.1 - s.1), s.2)) l = map (\lam s => (RatField.abs ((s.1 + s.1) RatField.∧ 1 - s.1), s.2)) l
+          => exts \lam j => ext (chi-defect, idp)
+      \in rewrite p $ inP (B.BigJoin (map round-elem l),
+        pmap (\lam z => LatticeAbGroup.abs (z - inSF l)) (char-join lr) *> pmap LatticeAbGroup.abs (~-sfequiv (~_+ {RatField} {B} chi negative {l})) *> SFuncRieszSpace.abs-reduced {_} {B} {map (\lam s => (chi s.1 + negative s.1, s.2)) l} lr
+        *> pmap inSF coeffs
+        *> inv (pmap LatticeAbGroup.abs (pmap (__ - inSF l) (pmap trunc (~-sfequiv (~_+ {RatField} {B} (\lam r => r) (\lam r => r) {l})) *> SFuncTruncRieszSpace.trunc-reduced {_} {B} {map (\lam s => (s.1 + s.1, s.2)) l} lr) *> ~-sfequiv (~_+ {RatField} {B} (\lam r => (r + r) RatField.∧ 1) negative {l})) *> SFuncRieszSpace.abs-reduced {_} {B} {map (\lam s => ((s.1 + s.1) RatField.∧ 1 + negative s.1, s.2)) l} lr))
+  }
+  \where {
+    \func Half (r : Rat) => (ratio 1 2 RatField.< r) `Or` (r RatField.<= ratio 1 2)
+
+    \func chi (r : Rat) : Rat
+      => chi-dec (LinearOrder.dec<_<= (ratio 1 2) r)
+
+    \func chi-dec {r : Rat} (d : Half r) : Rat \elim d
+      | inl _ => 1
+      | inr _ => 0
+
+    \func round-elem {B : BooleanRing} (s : \Sigma Rat B) : B
+      => round-elem-dec (LinearOrder.dec<_<= (ratio 1 2) s.1)
+
+    \func round-elem-dec {B : BooleanRing} {s : \Sigma Rat B} (d : Half s.1) : B \elim d
+      | inl _ => s.2
+      | inr _ => 0
+
+    \lemma round-elem<= {B : BooleanRing} {s : \Sigma Rat B} (d : Half s.1) : round-elem-dec d BooleanRing.<= s.2 \elim d
+      | inl _ => B.isBooleanRing
+      | inr _ => B.zro_*-left
+
+    \lemma round-null {B : BooleanRing} {s : \Sigma Rat B} (d : Half s.1)
+      : ((chi-dec d, s.2) = (1, round-elem-dec d)) || (\Sigma ((chi-dec d = 0) || (s.2 = 0)) ((1 = {Rat} 0) || (round-elem-dec d = 0))) \elim d
+      | inl _ => byLeft idp
+      | inr _ => byRight (byLeft idp, byRight idp)
+
+    \lemma chi-defect-dec {r : Rat} (d : Half r) : RatField.abs (chi-dec d - r) = RatField.abs ((r + r) RatField.∧ 1 - r) \elim d
+      | inl h => pmap (\lam z => RatField.abs (z - r)) (inv $ RatField.<=-antisymmetric RatField.meet-right (RatField.meet-univ linarith RatField.<=-refl))
+      | inr h => pmap RatField.abs RatField.zro-left *> RatField.abs_negative *> pmap RatField.abs (equation.abGroup : r = r + r - r)
+                  *> inv (pmap (\lam z => RatField.abs (z - r)) (RatField.<=-antisymmetric RatField.meet-left (RatField.meet-univ RatField.<=-refl linarith)))
+
+    \lemma chi-defect {r : Rat} : RatField.abs (chi r - r) = RatField.abs ((r + r) RatField.∧ 1 - r)
+      => chi-defect-dec (LinearOrder.dec<_<= (ratio 1 2) r)
+
+    \lemma char-join {B : MeasureRing} {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l)
+      : SFunc-char (B.BigJoin (map round-elem l)) = inSF (map (\lam s => (chi s.1, s.2)) l)
+      => inv $ ~-sfequiv $ ~-trans (~-null-terms {RatField} {B} {map (\lam s => (chi s.1, s.2)) l} {map (\lam s => ((1 : Rat), round-elem s)) l} \lam j => round-null (LinearOrder.dec<_<= (ratio 1 2) (l j).1))
+          (~-+s-left {RatIntegrationSpace} {B} {map (\lam s => ((1 : Rat), round-elem s)) l} (\lam i/=j => <=-antisymmetric (B.meet-monotone (round-elem<= _) (round-elem<= _) <=∘ =_<= (lr i/=j)) bottom-univ) (\lam i => idp) idp)
+  }
+
+-- | Characteristic functions approximate Boolean elements: if `f s` is close to a Boolean `e`, then so is `f [a]` for some `a`.
+\lemma SFunc-char-approx {B : MeasureRing} {Y : TruncRieszSpace} (f : TruncRieszSpaceHom (SFuncIntegrationSpace B) Y) {e : Y} (eb : Y.IsBoolean e) (s : SFuncIntegrationSpace B)
+  : ∃ (a : B) (Y.abs (f (SFunc-char a) - e) <= Y.abs (f s - e) + Y.abs (f s - e) + Y.abs (f s - e) + Y.abs (f s - e))
+  => \case SFunc-round s \with {
+    | inP (a,p) => inP (a, =_<= (pmap Y.abs (equation.abGroup : f (SFunc-char a) - e = f (SFunc-char a) - f s + (f s - e))) <=∘ Y.abs_+
+        <=∘ Y.<=_+ (=_<= (pmap Y.abs (inv f.func-minus) *> inv f.func-abs *> pmap f p *> f.func-abs *> pmap Y.abs (f.func-minus *> pmap (__ - f s) (f.func-trunc *> pmap Y.trunc f.func-+))) <=∘ Y.IsBoolean-defect eb) <=-refl)
+  }
+
+-- | The unit of the adjunction between {MeasureRing} and {IntegrationSpace} is a bijection.
+\lemma integrationUnit-equiv {B : MeasureRing} : IsEquiv (integrationUnit B)
+  => IsEquiv.fromInjSurj (\lam {a} {a'} p => AddGroup.fromZero $ pmap (a +) BooleanRing.negative=id *> integrationUnit.char-zero (pmap __.1 $ (integrationUnit B).func-+ *> pmap (\lam z => z + integrationUnit B a') p *> (SFuncIntegrationSpace B).MeasRing.double=0 {integrationUnit B a'})) \lam y => \case SFunc-char-approx TruncRieszSpaceHom.id y.2 y.1 \with {
+    | inP (a,p) => inP (a, ext $ AddGroup.fromZero $ LatticeAbGroup.abs_zro-ext $ <=-antisymmetric (p <=∘ =_<= (pmap (\lam z => z + z + z + z) (pmap LatticeAbGroup.abs negative-right *> LatticeAbGroup.abs_zro) *> zro-right *> zro-right *> zro-right)) LatticeAbGroup.abs>=0)
+  }
+
+-- | The unit of the adjunction between {CompleteMeasureRing} and {CompleteIntegrationSpace}.
+\func completeIntegrationUnit (B : MeasureRing) : MeasureRingHom B (IntegrationSpaceCompletion (SFuncIntegrationSpace B)).MeasRing
+  => (integrationCompletion.inc {SFuncIntegrationSpace B}).MeasRingHom MeasureRingHom.∘ integrationUnit B
+
+-- | The unit of the adjunction between {CompleteMeasureRing} and {CompleteIntegrationSpace} is an equivalence.
+\lemma completeIntegrationUnit-equiv {B : CompleteMeasureRing} : IsEquiv (completeIntegrationUnit B)
+  => \let | Y => IntegrationSpaceCompletion (SFuncIntegrationSpace B)
+          | g : IsometricMap B Y => \new IsometricMap {
+            | func a => integrationCompletion (SFunc-char a)
+            | func-isometry {a} {a'} => IntegrationSpace.MeasRing.inc.func-isometry {completeIntegrationUnit B a} {completeIntegrationUnit B a'} *> (completeIntegrationUnit B).func-isometry
+          }
+     \in IsEquiv.fromInjSurj (isometric-inj (completeIntegrationUnit B)) \lam y => TruncP.map (isometric-complete-closed B.isComplete g (limit y)) \lam s => (s.1, ext s.2)
+  \where {
+    \lemma limit {B : CompleteMeasureRing} (y : (IntegrationSpaceCompletion (SFuncIntegrationSpace B)).MeasRing)
+      : TopSpace.IsLimitPoint {IntegrationSpaceCompletion (SFuncIntegrationSpace B)} y.1 \lam z => ∃ (a : B) (integrationCompletion (SFunc-char a) = z)
+      => \let Y => IntegrationSpaceCompletion (SFuncIntegrationSpace B)
+         \in \lam {V} Vo Vy => \case (dist_open {Y} {V}).1 Vo Vy \with {
+           | inP (eps,eps>0,h) =>
+             \have | delta>0 : 0 < eps * ratio 1 4 => linarith
+                   | t : Real.fromRat (eps * ratio 1 4) RealAbGroup.+ Real.fromRat (eps * ratio 1 4) RealAbGroup.+ Real.fromRat (eps * ratio 1 4) RealAbGroup.+ Real.fromRat (eps * ratio 1 4) = Real.fromRat eps
+                       => pmap (\lam x => x RealAbGroup.+ Real.fromRat (eps * ratio 1 4)) (pmap (\lam x => x RealAbGroup.+ Real.fromRat (eps * ratio 1 4)) RealAbGroup.+-rat *> RealAbGroup.+-rat) *> RealAbGroup.+-rat
+                           *> pmap Real.fromRat (RatField.<=-antisymmetric linarith linarith)
+             \in \case integrationCompletion.inc-dense {SFuncIntegrationSpace B} {y.1} {OBall (eps * ratio 1 4) y.1} (OBall-open {Y} {eps * ratio 1 4} {y.1}) (OBall-center {Y} delta>0 {y.1}) \with {
+               | inP (z, inP (s,zp), zin) => \case SFunc-char-approx integrationCompletion.inc y.2 s \with {
+                 | inP (a,q) =>
+                   \have | n : Y.integral (Y.abs (integrationCompletion s - y.1)) < Real.fromRat (eps * ratio 1 4)
+                             => transport (`< _) (lnorm-ldist {Y} {y.1} {integrationCompletion s} *> pmap Y.integral Y.abs_-) $ real_<_U.2 $ transportInv (OBall (eps * ratio 1 4) y.1) zp zin
+                   \in inP (integrationCompletion (SFunc-char a), inP (a, idp), h $ real_<_U.1 $ transportInv (`< _) (lnorm-ldist {Y} {y.1} {integrationCompletion (SFunc-char a)} *> pmap Y.integral Y.abs_-) $
+                          Y.integral-mono q <∘r transportInv (`< _) (Y.integral_+ *> pmap (\lam x => x RealAbGroup.+ _) (Y.integral_+ *> pmap (\lam x => x RealAbGroup.+ _) Y.integral_+)) (linarith : _ < Real.fromRat eps))
+               }
+             }
+         }
   }
 
 -- | The counit of the adjunction between measure rings and integration spaces.

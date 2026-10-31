@@ -89,6 +89,19 @@
         | byLeft q => transportInv (\lam x => (x,a.2) :: l ~ l) q (~-zro-left idp)
         | byRight q => transportInv (\lam x => (a.1,x) :: l ~ l) q (~-zro-right idp)
       }) $ ~-zero-terms \lam j => p (suc j)
+
+    -- | Two lists are equivalent if they agree pointwise up to terms with a zero coefficient or a zero element.
+    \lemma ~-null-terms {l : Array (\Sigma V B)} {l' : Array (\Sigma V B) l.len}
+                        (p : \Pi (j : Fin l.len) -> (l j = l' j) || (\Sigma (((l j).1 = 0) || ((l j).2 = bottom)) (((l' j).1 = 0) || ((l' j).2 = bottom)))) : l ~ l' \elim l, l'
+      | nil, nil => ~_Equivalence.~-reflexive
+      | a :: l, a' :: l' => \case p 0 \with {
+        | byLeft q => ~_::_= q $ ~-null-terms \lam j => p (suc j)
+        | byRight s => ~-trans (null-cons s.1) $ ~-trans (~-null-terms \lam j => p (suc j)) $ ~-sym (null-cons s.2)
+      }
+      \where
+        \lemma null-cons {x : \Sigma V B} {l : Array (\Sigma V B)} (n : (x.1 = 0) || (x.2 = bottom)) : x :: l ~ l \elim n
+          | byLeft q => transportInv (\lam v => (v,x.2) :: l ~ l) q (~-zro-left idp)
+          | byRight q => transportInv (\lam b => (x.1,b) :: l ~ l) q (~-zro-right idp)
   }
 
 \open SFunc
