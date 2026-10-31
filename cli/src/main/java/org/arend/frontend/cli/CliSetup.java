@@ -4,6 +4,7 @@ import org.apache.commons.cli.CommandLine;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.LongName;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.frontend.TimedProgressReporter;
@@ -295,6 +296,32 @@ public final class CliSetup {
       for (ModulePath modulePath : matches) ctx.requestedModules.add(new Pair<>(modulePath, null));
     }
     ctx.requestedModulePatterns.clear();
+  }
+
+  /**
+   * The source modules of the requested libraries that the server already holds and whose file
+   * still exists, as dotted module names in sorted order. These are what a daemon's
+   * {@code refresh} re-checks: the cones earlier commands asked for, and nothing beyond them.
+   *
+   * <p>A module whose file is gone is left out rather than passed on, since naming it would be
+   * reported as "module not found" instead of being dropped quietly by the pipeline.
+   */
+  public static List<String> loadedModuleTargets(CommandContext ctx) {
+    List<ModulePath> result = new ArrayList<>();
+    for (SourceLibrary library : ctx.requestedLibraries) {
+      Set<ModulePath> onDisk = new HashSet<>(library.findModules(false));
+      for (ModuleLocation module : ctx.server.getModules()) {
+        if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE
+            && module.getLibraryName().equals(library.getLibraryName())
+            && onDisk.contains(module.getModulePath())) {
+          result.add(module.getModulePath());
+        }
+      }
+    }
+    Collections.sort(result);
+    List<String> names = new ArrayList<>(result.size());
+    for (ModulePath modulePath : result) names.add(String.join(".", modulePath.toList()));
+    return names;
   }
 
   // ───────── helpers ─────────

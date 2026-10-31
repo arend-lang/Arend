@@ -59,6 +59,8 @@ public class DaemonServerSocketTest {
   }
 
   private String boundAddress;
+  /** The context the most recent {@link #serverFor} bootstrapped. */
+  private CommandContext bootstrappedCtx;
 
   /** A server on the fixture library, bootstrapped with {@code extraArgs}. */
   private DaemonServer serverFor(String stateDir, String... extraArgs) throws IOException {
@@ -67,6 +69,7 @@ public class DaemonServerSocketTest {
     System.arraycopy(extraArgs, 0, args, 1, extraArgs.length);
     CommandContext ctx = new ConsoleMain().runDaemonBootstrap(args);
     assertNotNull("daemon bootstrap failed", ctx);
+    bootstrappedCtx = ctx;
 
     Path sock = tempFolder.newFolder(stateDir).toPath().resolve("daemon.sock");
     SocketBinder.Bound bound = SocketBinder.bind(sock, "0123456789abcde" + stateDir.charAt(0));
@@ -223,6 +226,8 @@ public class DaemonServerSocketTest {
       SocketAddress refreshAddress = SocketAddress.parse(boundAddress);
       List<String> chunks = new ArrayList<>();
       try (DaemonClient client = DaemonClient.connect(refreshAddress)) {
+        // Something for the refresh to re-check: a fresh daemon holds no modules.
+        client.invoke("cli", Map.of("args", List.of("Good")), null);
         client.invoke("refresh", Map.of(), frame -> {
           Object data = frame.get("data");
           if (data != null) chunks.add(String.valueOf(data));
@@ -236,6 +241,38 @@ public class DaemonServerSocketTest {
     } finally {
       refreshServer.close();
     }
+  }
+
+  /**
+   * The bootstrap only registers the library. Typechecking it there would hold the whole library
+   * in memory for the daemon's lifetime, however little of it the requests actually use.
+   */
+  @Test
+  public void theBootstrapLoadsNoModules() {
+    boolean holdsFixtureModule = bootstrappedCtx.server.getModules().stream()
+        .anyMatch(module -> !module.getLibraryName().equals(org.arend.prelude.Prelude.LIBRARY_NAME));
+    assertFalse("bootstrap must not load library modules: " + bootstrappedCtx.server.getModules(),
+        holdsFixtureModule);
+    assertTrue("bootstrap must not typecheck anything", bootstrappedCtx.moduleResults.isEmpty());
+  }
+
+  /** With nothing loaded there is nothing to refresh -- and no reason to check the whole library. */
+  @Test
+  public void refreshOnAFreshDaemonDoesNothing() throws IOException {
+    Result result = invoke("refresh", Map.of());
+    assertEquals(result.output(), 0, result.exitCode());
+    assertTrue(result.output(), result.output().contains("nothing to refresh"));
+    assertFalse(result.output(), result.output().contains("Typechecking"));
+  }
+
+  /** A refresh re-checks the modules earlier commands loaded, and only those. */
+  @Test
+  public void refreshRechecksOnlyTheLoadedModules() throws IOException {
+    assertEquals(0, cli("Good").exitCode());
+    Result result = invoke("refresh", Map.of());
+    assertEquals(result.output(), 0, result.exitCode());
+    assertTrue(result.output(), reportsModule(result.output(), "Good"));
+    assertFalse("Bad was never requested: " + result.output(), reportsModule(result.output(), "Bad"));
   }
 
   @Test

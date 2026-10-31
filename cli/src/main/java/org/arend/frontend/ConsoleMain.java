@@ -79,11 +79,11 @@ public class ConsoleMain {
             .hasArgs().argName(tool.argName()).desc(tool.cliDescription()).build());
       }
       cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results:[...],count:N}; -sc uses {target,entries:[...],count:N}; -ch uses {target,superclasses:[...],subclasses:[...],instances:[...],newSites:[...],counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
-      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library: a LIBRARY positional anchored to an arend.yaml, or a name resolved via -L, defaulting to ./arend.yaml when omitted. The daemon does the normal load+typecheck+persist once, then idles serving future client requests.").build());
+      cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library: a LIBRARY positional anchored to an arend.yaml, or a name resolved via -L, defaulting to ./arend.yaml when omitted. The daemon only registers the library at start; each served request typechecks just the import cone it needs, which then stays warm for later requests.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-stop").desc("stop the daemon serving the given library (single positional library reference).").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-ping").desc("ping the daemon serving the given library; reports IDLE or BUSY.").build());
       cmdOptions.addOption(Option.builder().longOpt("daemon-status").desc("dump the daemon's state: queue depth, uptime, current task, protocol version and locked flags.").build());
-      cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-run the bootstrap pipeline on the daemon's warm context so source edits are picked up.").build());
+      cmdOptions.addOption(Option.builder().longOpt("daemon-refresh").desc("re-typecheck the modules the daemon has already loaded so source edits are picked up; does nothing if none are loaded.").build());
       cmdOptions.addOption(Option.builder().longOpt("no-daemon").desc("force in-process execution even if a daemon serves the requested library.").build());
       cmdOptions.addOption(Option.builder().longOpt("log-file").hasArg().argName("path").desc("with --json -ss/-ps/-fu/-sc/-ch: write diagnostics here instead of the default <tmpdir>/arend-symbol-search.log").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
@@ -147,6 +147,29 @@ public class ConsoleMain {
    * @return the loaded context, or null if there is nothing to hold.
    */
   public CommandContext warmContext(String[] args) {
+    return buildContext(args, true);
+  }
+
+  /**
+   * The context a {@link org.arend.frontend.cli.daemon.server.DaemonServer} serves: the requested
+   * libraries registered with the server, and nothing parsed or typechecked yet. Each served
+   * command then loads and checks only the import cone it asks for, so the daemon holds the
+   * union of the cones actually requested rather than the whole library. Also remembers the argv
+   * it was built from, which the daemon's {@code status} and {@code refresh} ops need.
+   */
+  public CommandContext runDaemonBootstrap(String[] args) {
+    CommandContext ctx = buildContext(args, false);
+    if (ctx != null) ctx.bootstrapArgs = args.clone();
+    return ctx;
+  }
+
+  /**
+   * Loads the libraries named by {@code args} into a fresh context and, if {@code runCommand},
+   * runs the command they describe once.
+   *
+   * @return the loaded context, or null if there is nothing to hold.
+   */
+  private CommandContext buildContext(String[] args, boolean runCommand) {
     ParsedArgs parsed = parseArgs(args);
     if (parsed.cmdLine() == null) return null;
     CommandLine cmdLine = parsed.cmdLine();
@@ -156,26 +179,17 @@ public class ConsoleMain {
     CliSetup.classifyRequestedTargets(ctx, cmdLine);
     if (!CliSetup.loadRequestedLibraries(ctx, cmdLine)) return null;
 
-    try {
-      Dispatch.execute(ctx, cmdLine);
-    } catch (Throwable t) {
-      System.err.println("[ERROR] unhandled exception while loading the context:");
-      t.printStackTrace();
-      return null;
+    if (runCommand) {
+      try {
+        Dispatch.execute(ctx, cmdLine);
+      } catch (Throwable t) {
+        System.err.println("[ERROR] unhandled exception while loading the context:");
+        t.printStackTrace();
+        return null;
+      }
     }
     // This command's verdict is not the next one's.
     ctx.beginCommand();
-    return ctx;
-  }
-
-  /**
-   * The context a {@link org.arend.frontend.cli.daemon.server.DaemonServer} serves: a
-   * {@link #warmContext} that also remembers the argv it was built from, which the daemon's
-   * {@code status} and {@code refresh} ops need.
-   */
-  public CommandContext runDaemonBootstrap(String[] args) {
-    CommandContext ctx = warmContext(args);
-    if (ctx != null) ctx.bootstrapArgs = args.clone();
     return ctx;
   }
 

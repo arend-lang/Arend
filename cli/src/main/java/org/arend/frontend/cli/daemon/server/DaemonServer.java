@@ -1,5 +1,6 @@
 package org.arend.frontend.cli.daemon.server;
 
+import org.arend.frontend.cli.CliSetup;
 import org.arend.frontend.cli.CommandContext;
 import org.arend.frontend.cli.Dispatch;
 import org.arend.frontend.cli.daemon.LockFile;
@@ -206,14 +207,13 @@ public final class DaemonServer {
         workQueue.add(SHUTDOWN);
       }
       case CLI_OP -> queue(new WorkItem(id, extractArgs(req), ch, extractCwd(req), false));
-      case REFRESH_OP -> {
-        // The daemon's own bootstrap argv, re-dispatched against the warm context so
-        // source-timestamp checks pick up edits. Marked internal: these args are what the locked
-        // flags are locked *to*, so putting them through the client-facing policy would warn that
-        // the authoritative values are being ignored -- false, and unactionable from a refresh.
-        String[] args = ctx.bootstrapArgs == null ? new String[0] : ctx.bootstrapArgs.clone();
-        queue(new WorkItem(id, args, ch, extractCwd(req), true));
-      }
+      case REFRESH_OP ->
+        // Re-checks the modules the daemon already holds; the argv is built by the worker when it
+        // gets to it (see refreshArgs), since only the worker may look at the server. Marked
+        // internal: it starts from the bootstrap argv, which is what the locked flags are locked
+        // *to*, so putting it through the client-facing policy would warn that the authoritative
+        // values are being ignored -- false, and unactionable from a refresh.
+        queue(new WorkItem(id, null, ch, extractCwd(req), true));
       default -> {
         ch.write(FrameChannel.errorFrame(id, "unknown op: " + op));
         ch.write(FrameChannel.doneFrame(id, 1));
@@ -305,9 +305,17 @@ public final class DaemonServer {
           // instant after it was taken off it. Starting the run anyway would hold the worker for
           // a whole typecheck and then throw the answer away.
           if (!item.cancel().get()) {
-            exitCode = item.internal()
-                ? Dispatch.run(ctx, item.args(), item.clientCwd())
-                : runner.run(ctx, item.args(), item.clientCwd());
+            if (item.internal()) {
+              String[] args = refreshArgs();
+              if (args == null) {
+                System.out.println("[INFO] No modules loaded; nothing to refresh");
+                exitCode = 0;
+              } else {
+                exitCode = Dispatch.run(ctx, args, item.clientCwd());
+              }
+            } else {
+              exitCode = runner.run(ctx, item.args(), item.clientCwd());
+            }
           }
         } catch (Throwable t) {
           t.printStackTrace(); // goes to the client via the redirect
@@ -341,9 +349,25 @@ public final class DaemonServer {
   }
 
   /**
+   * The argv of a {@code refresh}: the daemon's bootstrap argv plus every module it already holds,
+   * so source-timestamp checks pick up edits in exactly the cones earlier commands loaded. Null
+   * when it holds none -- an empty target list would mean the whole library, which is what the
+   * lazy bootstrap exists to avoid.
+   */
+  private String[] refreshArgs() {
+    List<String> modules = CliSetup.loadedModuleTargets(ctx);
+    if (modules.isEmpty()) return null;
+    List<String> args = new ArrayList<>();
+    if (ctx.bootstrapArgs != null) args.addAll(List.of(ctx.bootstrapArgs));
+    args.addAll(modules);
+    return args.toArray(new String[0]);
+  }
+
+  /**
    * One queued command: the request it answers, the argv, the channel its output streams back on,
-   * and the flag that abandons it. {@code internal} marks the daemon's own bootstrap argv, which
-   * bypasses the client-facing policy in {@link CliDispatcher}.
+   * and the flag that abandons it. {@code internal} marks a {@code refresh}, whose argv is null
+   * here and built by the worker ({@link #refreshArgs}); it bypasses the client-facing policy in
+   * {@link CliDispatcher}.
    */
   private record WorkItem(String requestId, String[] args, FrameChannel replyTo,
                           String clientCwd, boolean internal, AtomicBoolean cancel) {

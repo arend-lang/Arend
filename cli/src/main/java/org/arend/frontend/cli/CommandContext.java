@@ -58,8 +58,8 @@ public class CommandContext {
 
   /**
    * The argv the daemon was started with, or null for a local run. The daemon's {@code refresh}
-   * op re-dispatches exactly these against the warm context, so that source-timestamp checks
-   * see the same scope the bootstrap did.
+   * op re-dispatches these, with the modules the server already holds appended as targets, so
+   * that source-timestamp checks pick up edits in the cones earlier commands loaded.
    */
   public String[] bootstrapArgs;
 

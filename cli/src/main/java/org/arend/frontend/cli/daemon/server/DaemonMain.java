@@ -17,7 +17,8 @@ import java.util.Arrays;
  * process's stdout and stderr at {@code daemon.log} and stdin at the null device, so everything
  * the pipeline prints lands in the log without any setOut/setErr of our own.
  *
- * <p>Strip the flag and its library reference; bootstrap the warm context from the remaining args;
+ * <p>Strip the flag and its library reference; bootstrap the context from the remaining args
+ * (libraries registered, nothing typechecked -- see {@link ConsoleMain#runDaemonBootstrap});
  * bind the socket; start the {@link DaemonServer}; install the shutdown hook; then publish the
  * lock -- after the hook, so a signal in between cannot leave the lock behind -- and block until
  * the server says to stop.

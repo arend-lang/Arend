@@ -55,7 +55,9 @@ public class CancelledRunTest {
         .runDaemonBootstrap(new String[] { root.toString(), "--serialize" });
     assertNotNull("bootstrap failed", ctx);
 
-    // Baseline: the fixture really does write caches when a run completes.
+    // Baseline: the fixture really does write caches when a run completes. The bootstrap itself
+    // typechecks nothing, so the completed run is a first command against it.
+    Dispatch.run(ctx, new String[] { root.toString() });
     assertFalse("the fixture must produce caches on a completed run", binaries(root).isEmpty());
     for (Path arc : binaries(root)) Files.delete(arc);
     assertTrue(binaries(root).isEmpty());

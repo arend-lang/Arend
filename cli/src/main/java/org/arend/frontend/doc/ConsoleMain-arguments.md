@@ -25,7 +25,7 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | *(none)* | `--daemon-stop`                 | No | Stop the daemon serving the library                                                  |
 | *(none)* | `--daemon-ping`                 | No | Report whether the daemon is IDLE or BUSY                                            |
 | *(none)* | `--daemon-status`               | No | Dump the daemon's queue depth, uptime, current task, protocol version, locked flags  |
-| *(none)* | `--daemon-refresh`              | No | Re-run the bootstrap pipeline on the daemon's warm context to pick up source edits   |
+| *(none)* | `--daemon-refresh`              | No | Re-typecheck the modules the daemon already holds, picking up source edits           |
 | *(none)* | `--no-daemon`                   | No | Run in this process even if a daemon serves the library                              |
 | *(none)* | `--show-times`                  | No | Show typechecking times per definition                                               |
 | *(none)* | `--show-sizes`                  | No | Show sizes (expression node counts) of typechecked definitions, sorted descending    |
@@ -62,7 +62,11 @@ A daemon is a long-lived JVM holding a warm `ArendServer` for one library, so th
 second `arend` call over the same sources does not repeat the load, the resolve and the
 typecheck it already did.
 
-- `arend LIBRARY -d` starts one: the normal load + typecheck + persist once, then it idles.
+- `arend LIBRARY -d` starts one. It only registers the library: nothing is parsed or
+  typechecked until a request asks for it. Each request loads and checks just the import cone
+  of its targets, which then stays warm, so the daemon holds the union of the cones actually
+  used rather than the whole library. A request with no module targets still typechecks the
+  whole library.
 - After that an ordinary `arend LIBRARY ...` is **routed to the daemon automatically**; the
   output and exit code are the same as running in this process, and a relative path in the
   command means the directory you typed it in, not the daemon's. `--no-daemon` opts out.
