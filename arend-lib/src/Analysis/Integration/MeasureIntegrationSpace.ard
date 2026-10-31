@@ -9,7 +9,7 @@
 \import Algebra.QModule
 \import Algebra.Ring.Boolean
 \import Algebra.StrictlyOrdered
-\import Analysis.Integral.IntegrationSpace
+\import Analysis.Integration.IntegrationSpace
 \import Analysis.Measure.MeasureRing
 \import Analysis.Measure.SimpleFunctions
 \import Arith.Rat
@@ -412,6 +412,26 @@
 
     \lemma func-join {Z : IntegrationSpace} {x y : SFuncIntegrationSpace Z.MeasRing} : hom (x ∨ y) = hom x ∨ hom y
       => pmap hom RieszSpace.join_abs *> func-*q *> pmap (_ QModule.*q) (hom.func-+ *> pmap2 (+) hom.func-+ (func-abs *> pmap Z.abs hom.func-minus)) *> inv RieszSpace.join_abs
+  }
+
+-- | The counit is natural.
+\lemma integrationCounit-natural {Z Z' : IntegrationSpace} (f : IntegrationSpaceHom Z Z') (x : SFuncIntegrationSpace Z.MeasRing)
+  : integrationCounit Z' (SFuncHom f.MeasRingHom x) = f (integrationCounit Z x) \elim x
+  | in~ l => inv $ f.func-BigSum *> pmap Z'.BigSum (exts \lam j => func-*q)
+
+-- | The counit maps the characteristic function of a Boolean element to this element.
+\lemma integrationCounit-char {Z : IntegrationSpace} {a : Z.MeasRing} : integrationCounit Z (SFunc-char a) = a.1
+  => zro-right *> Z.ide_*q
+
+-- | The counit of `L B` is a retraction of `L` of the unit of `B`.
+\lemma integrationCounit-unit {B : MeasureRing} (x : SFuncIntegrationSpace B)
+  : integrationCounit (SFuncIntegrationSpace B) (SFuncHom (integrationUnit B) x) = x \elim x
+  | in~ l => unit-list l
+  \where {
+    \lemma unit-list {B : MeasureRing} (l : Array (\Sigma Rat B))
+      : integrationCounit (SFuncIntegrationSpace B) (SFuncHom (integrationUnit B) (inSF l)) = inSF l \elim l
+      | nil => idp
+      | (c,b) :: l => pmap2 (+) (SFuncQModule.*q-char {_} {_} {c} {(1,b) :: nil} *> pmap (\lam z => inSF ((z,b) :: nil)) RatIntegrationSpace.rat_*q) (unit-list l)
   }
 
 -- | For a complete integration space, the comparison map $\Phi$ is injective.

@@ -136,8 +136,17 @@ public class SIPMeta extends BaseMetaDefinition {
     ConcreteExpression eFuncInvPath = factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(homFunc.getRef()), false, Collections.singletonList(factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(eFuncInv, factory.ref(iRef))))))));
     ConcreteExpression eInvFuncPath = factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(homFunc.getRef()), false, Collections.singletonList(factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(eInvFunc, factory.ref(iRef))))))));
 
-    List<ConcreteClassElement> obFields = new ArrayList<>();
+    // Data fields go first: the types of properties may refer to implemented fields whose bodies use data fields declared later
+    // (e.g. a superclass property mentions `norm`, which a subclass implements via its own field), and implementations are typechecked in order.
+    List<CoreClassField> dataFields = new ArrayList<>();
+    List<CoreClassField> propFields = new ArrayList<>();
     for (CoreClassField field : ((CoreClassCallExpression) ob).getDefinition().getNotImplementedFields()) {
+      (field.isProperty() || Utils.isProp(field.getResultType()) ? propFields : dataFields).add(field);
+    }
+    dataFields.addAll(propFields);
+
+    List<ConcreteClassElement> obFields = new ArrayList<>();
+    for (CoreClassField field : dataFields) {
       if (!((CoreClassCallExpression) ob).isImplementedHere(field)) {
         ConcreteExpression arg = factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(factory.proj(factory.ref(sipRef), field.equals(homFunc) ? 0 : 1), factory.ref(iRef)));
         obFields.add(factory.implementation(field.getRef(), field.equals(homFunc) ? arg : factory.app(factory.ref(field.getRef()), false, Collections.singletonList(arg))));

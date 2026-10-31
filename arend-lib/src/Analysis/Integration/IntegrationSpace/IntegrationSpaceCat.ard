@@ -1,0 +1,124 @@
+\import Algebra.Group
+\import Algebra.Ordered.RieszSpace
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.MeasureIntegrationSpace
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.MeasureRing.MeasureRingCat
+\import Arith.Real
+\import Category
+\import Category.Adjoint
+\import Category.Functor
+\import Category.Meta
+\import Category.Subcat
+\import Equiv
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Topology.CoverSpace
+\import Topology.UniformSpace
+
+\instance IntegrationSpaceCat.{u} : Cat IntegrationSpace.{u}
+  | Hom => IntegrationSpaceHom
+  | id => IntegrationSpaceHom.id
+  | o => IntegrationSpaceHom.∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam {X} {S1} {S2} h1 h2 => exts IntegrationSpace {
+    | zro => h1.func-zro
+    | + x y => h1.func-+
+    | negative x => AddGroup.negative-equality S1 S2 h1.func-zro h1.func-+ x
+    | <= x y => ext (h1.func-<=, h2.func-<=)
+    | join x y => RieszSpaceHom.func-join {h1}
+    | trunc x => h1.func-trunc
+    | integral x => inv h1.func-integral
+    | dist x y => inv (Real.=-upper.2 h1.func-isometry)
+    | isUniform C => ext (\lam Cu => uniform-subset (h2.func-uniform Cu) \lam (inP (V,CV,p)) => transportInv C p CV,
+                          \lam Cu => uniform-subset (h1.func-uniform Cu) \lam (inP (V,CV,p)) => transportInv C p CV)
+    | isCauchy C => ext (\lam Cc => cauchy-subset (h2.func-cover Cc) \lam (inP (V,CV,p)) => transportInv C p CV,
+                         \lam Cc => cauchy-subset (h1.func-cover Cc) \lam (inP (V,CV,p)) => transportInv C p CV)
+    | isOpen U => ext (h2.func-cont, h1.func-cont)
+  }
+
+\instance CompleteIntegrationSpaceCat.{u} : Cat CompleteIntegrationSpace.{u}
+  => subCat {IntegrationSpaceCat} \new Embedding {
+    | f X => X
+    | isEmb X Y => \new Retraction {
+      | sec p => ext CompleteIntegrationSpace { | IntegrationSpace => p }
+      | f_sec => idpe
+    }
+  }
+
+\func MeasureIntegrationAdjunction.{u} : Adjunction MeasureRingCat.{u} IntegrationSpaceCat.{u} \cowith
+  | LAdj : Functor MeasureRingCat.{u} IntegrationSpaceCat.{u} \cowith {
+    | F B => SFuncIntegrationSpace B
+    | Func => SFuncHom
+    | Func-id => exts \lam (in~ a) => idp
+    | Func-o => exts \lam (in~ a) => idp
+  }
+  | RAdj : Functor IntegrationSpaceCat.{u} MeasureRingCat.{u} \cowith {
+    | F X => X.MeasRing
+    | Func f => f.MeasRingHom
+    | Func-id => idp
+    | Func-o => idp
+  }
+  | eta {
+    | trans B => integrationUnit B
+    | natural f => idp
+  }
+  | epsilon {
+    | trans X => integrationCounit X
+    | natural f => exts \lam x => integrationCounit-natural f x
+  }
+  | eta_epsilon-left => exts \lam a => ext integrationCounit-char
+  | eta_epsilon-right => exts \lam x => integrationCounit-unit x
+  \where {
+    -- | The unit of the adjunction between measure rings and integration spaces is an isomorphism.
+    \lemma integrationUnit-iso.{u} {B : MeasureRing.{u}} : Iso (integrationUnit B)
+      => MeasureRingCat.Iso<->IsEquiv.{u}.2 integrationUnit-equiv
+  }
+
+\func CompleteMeasureIntegrationAdjunction.{u} : Adjunction CompleteMeasureRingCat.{u} CompleteIntegrationSpaceCat.{u} \cowith
+  | LAdj : Functor CompleteMeasureRingCat.{u} CompleteIntegrationSpaceCat.{u} \cowith {
+    | F B => IntegrationSpaceCompletion (SFuncIntegrationSpace B)
+    | Func f => integrationCompletion-map (SFuncHom f)
+    | Func-id => exts \lam F => integrationCompletion-lift.unique (integrationCompletion-map (SFuncHom MeasureRingHom.id)) IntegrationSpaceHom.id (\lam (in~ l) => integrationCompletion-map.char) F
+    | Func-o {_} {_} {_} {g} {f} => exts \lam F => integrationCompletion-lift.unique (integrationCompletion-map (SFuncHom (g MeasureRingHom.∘ f))) (integrationCompletion-map (SFuncHom g) ∘ integrationCompletion-map (SFuncHom f))
+        (\lam (in~ l) => integrationCompletion-map.char *> inv (pmap (integrationCompletion-map (SFuncHom g)) integrationCompletion-map.char *> integrationCompletion-map.char)) F
+  }
+  | RAdj : Functor CompleteIntegrationSpaceCat.{u} CompleteMeasureRingCat.{u} \cowith {
+    | F X => X.CompleteMeasRing
+    | Func f => f.MeasRingHom
+    | Func-id => idp
+    | Func-o => idp
+  }
+  | eta {
+    | trans X => completeIntegrationUnit X
+    | natural f => exts \lam a => ext (inv integrationCompletion-map.char)
+  }
+  | epsilon {
+    | trans X => completeIntegrationCounit X
+    | natural => counit-natural
+  }
+  | eta_epsilon-left {Y} => exts \lam a => ext (completeIntegrationCounit-char *> integrationCounit-char)
+  | eta_epsilon-right => counit-unit
+  \where {
+    \private \lemma counit-natural {X Y : CompleteIntegrationSpace} (f : IntegrationSpaceHom X Y)
+      : completeIntegrationCounit Y IntegrationSpaceHom.∘ integrationCompletion-map (SFuncHom f.MeasRingHom) = f IntegrationSpaceHom.∘ completeIntegrationCounit X
+      => exts \lam x => integrationCompletion-lift.unique (completeIntegrationCounit Y IntegrationSpaceHom.∘ integrationCompletion-map (SFuncHom f.MeasRingHom)) (f IntegrationSpaceHom.∘ completeIntegrationCounit X)
+          (\lam s => pmap (completeIntegrationCounit Y) integrationCompletion-map.char *> completeIntegrationCounit-char *> integrationCounit-natural f s *> inv (pmap f completeIntegrationCounit-char)) x
+
+    \private \lemma counit-unit {B : CompleteMeasureRing}
+      : completeIntegrationCounit (IntegrationSpaceCompletion (SFuncIntegrationSpace B)) IntegrationSpaceHom.∘ integrationCompletion-map (SFuncHom (completeIntegrationUnit B)) = IntegrationSpaceHom.id
+      => exts \lam x => integrationCompletion-lift.unique (completeIntegrationCounit _ IntegrationSpaceHom.∘ integrationCompletion-map (SFuncHom (completeIntegrationUnit B))) IntegrationSpaceHom.id
+          (\lam s => pmap (completeIntegrationCounit _) integrationCompletion-map.char *> completeIntegrationCounit-char *> unit-aux s) x
+
+    \private \lemma unit-aux {B : MeasureRing} (s : SFuncIntegrationSpace B)
+      : integrationCounit (IntegrationSpaceCompletion (SFuncIntegrationSpace B)) (SFuncHom (completeIntegrationUnit B) s) = integrationCompletion s \elim s
+      | in~ l => integrationCounit-natural integrationCompletion.inc (SFuncHom (integrationUnit B) (in~ l)) *> pmap integrationCompletion (integrationCounit-unit (in~ l))
+
+    -- | The unit of the adjunction between complete measure rings and complete integration spaces is an isomorphism.
+    \lemma completeIntegrationUnit-iso.{u} {B : CompleteMeasureRing.{u}} : Iso (CompleteMeasureIntegrationAdjunction.eta B)
+      => CompleteMeasureRingCat.Iso<->IsEquiv.2 completeIntegrationUnit-equiv
+  }

@@ -157,9 +157,28 @@ public class ExtMeta extends BaseMetaDefinition {
       return factory.lam(Collections.singletonList(factory.param(coeRef)), factory.meta("ext_coe", new MetaDefinition() {
         @Override
         public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
+          // The types of the substituted bindings may refer to other preceding bindings (e.g. the carrier), so they must be substituted too
+          Set<CoreBinding> closure = null;
+          if (used != null) {
+            List<CoreParameter> preceding = new ArrayList<>();
+            for (CoreParameter param = typeParams; param.getBinding() != paramBinding; param = param.getNext()) {
+              preceding.add(param);
+            }
+            closure = new HashSet<>(used);
+            for (int k = preceding.size() - 1; k >= 0; k--) {
+              if (!closure.contains(preceding.get(k).getBinding())) continue;
+              Set<CoreBinding> finalClosure = closure;
+              preceding.get(k).getType().processSubexpression(e -> {
+                if (e instanceof CoreReferenceExpression refExpr) {
+                  finalClosure.add(refExpr.getBinding());
+                }
+                return CoreExpression.FindAction.CONTINUE;
+              });
+            }
+          }
           List<SubstitutionPair> substitution = new ArrayList<>();
           for (CoreParameter param = typeParams; param.getBinding() != paramBinding; param = param.getNext()) {
-            if (used == null || used.contains(param.getBinding())) {
+            if (closure == null || closure.contains(param.getBinding())) {
               substitution.add(new SubstitutionPair(param.getBinding(), sigmaRefs.get(param.getBinding()).applyAt(coeRef, factory, typechecker.getPrelude())));
             }
           }
@@ -286,8 +305,11 @@ public class ExtMeta extends BaseMetaDefinition {
 
                   boolean added = false;
                   for (CoreClassField field : implClass.getNotImplementedFields()) {
-                    if (!classCall.isImplementedHere(field) && !propFields.contains(field)) {
-                      if (implMap.putIfAbsent(field.getRef(), new CoclauseData(coclause, false)) == null) {
+                    if (!classCall.isImplementedHere(field)) {
+                      if (propFields.contains(field)) {
+                        // Take properties from the given path too, so that the result restricts definitionally to it
+                        superFields.putIfAbsent(field, new FieldPathExpression(field, factory.core(coclauseResult)));
+                      } else if (implMap.putIfAbsent(field.getRef(), new CoclauseData(coclause, false)) == null) {
                         superFields.put(field, new FieldPathExpression(field, factory.core(coclauseResult)));
                         added = true;
                       }
@@ -680,9 +702,13 @@ public class ExtMeta extends BaseMetaDefinition {
           if (arrayLength != null) {
             classElements.add(factory.implementation(typechecker.getPrelude().getArrayLengthRef(), arrayLength));
           }
+          // Data fields go first: the types of properties may refer to implemented fields whose bodies use data fields declared later,
+          // and implementations are typechecked in order
+          List<ConcreteClassElement> propElements = new ArrayList<>();
           for (int j = 0; j < classFields.size(); j++) {
-            classElements.add(factory.implementation(classFields.get(j).getRef(), fields.get(j)));
+            (propFields.contains(classFields.get(j)) ? propElements : classElements).add(factory.implementation(classFields.get(j).getRef(), fields.get(j)));
           }
+          classElements.addAll(propElements);
           concreteResult = factory.newExpr(factory.classExt(factory.ref(((CoreClassCallExpression) type).getDefinition().getRef()), classElements));
         } else {
           concreteResult = factory.tuple(fields);

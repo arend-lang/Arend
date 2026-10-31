@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
+\import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.TruncRieszSpace
@@ -103,6 +104,11 @@
   | integral x => x
   | integral>=0 p => rat_real_<=.1 p
   | integral_+ => inv RealAbGroup.+-rat
+  \where {
+    \lemma rat_*q {c : Rat} : c RatIntegrationSpace.*q 1 = c
+      => func-*q {RatIntegrationSpace} {QModule.fromRatModule (RingLModule RatField)} {\new AddGroupHom { | func x => x | func-+ => idp }}
+        *> QModule.fromRatModule_*q *> RatField.ide-right
+  }
 
 \record IntegrationSpaceHom \extends TruncRieszSpaceHom, NormedIsometricMap {
   \override Dom : IntegrationSpace
@@ -336,11 +342,11 @@
   }
 
 -- | The universal property of the completion: a homomorphism into a complete integration space extends uniquely to the completion.
-\func integrationCompletion-lift {X : IntegrationSpace} {Z : CompleteIntegrationSpace} (g : IntegrationSpaceHom X Z) : IntegrationSpaceHom (IntegrationSpaceCompletion X) Z
+\sfunc integrationCompletion-lift {X : IntegrationSpace} {Z : CompleteIntegrationSpace} (g : IntegrationSpaceHom X Z) : IntegrationSpaceHom (IntegrationSpaceCompletion X) Z
   => dense-integration-lift integrationCompletion.inc integrationCompletion.inc-dense g
   \where {
     \lemma char {X : IntegrationSpace} {Z : CompleteIntegrationSpace} {g : IntegrationSpaceHom X Z} {x : X} : integrationCompletion-lift g (integrationCompletion x) = g x
-      => dense-integration-lift.char integrationCompletion.inc integrationCompletion.inc-dense g
+      => pmap (\lam (h : IntegrationSpaceHom (IntegrationSpaceCompletion X) Z) => h (integrationCompletion x)) (\peval integrationCompletion-lift g) *> dense-integration-lift.char integrationCompletion.inc integrationCompletion.inc-dense g
 
     \lemma unique {X : IntegrationSpace} {Z : CompleteIntegrationSpace} (h h' : IntegrationSpaceHom (IntegrationSpaceCompletion X) Z)
                    (p : \Pi (x : X) -> h (integrationCompletion x) = h' (integrationCompletion x)) (F : IntegrationSpaceCompletion X) : h F = h' F
@@ -348,9 +354,13 @@
   }
 
 -- | The homomorphism of completions induced by a homomorphism of integration spaces.
-\func integrationCompletion-map {X Y : IntegrationSpace} (f : IntegrationSpaceHom X Y) : IntegrationSpaceHom (IntegrationSpaceCompletion X) (IntegrationSpaceCompletion Y)
+\sfunc integrationCompletion-map {X Y : IntegrationSpace} (f : IntegrationSpaceHom X Y) : IntegrationSpaceHom (IntegrationSpaceCompletion X) (IntegrationSpaceCompletion Y)
   => integrationCompletion-lift (integrationCompletion.inc IntegrationSpaceHom.∘ f)
+  \where {
+    \protected \lemma char {X Y : IntegrationSpace} {f : IntegrationSpaceHom X Y} {x : X} : integrationCompletion-map f (integrationCompletion x) = integrationCompletion (f x)
+      => pmap (\lam (h : IntegrationSpaceHom (IntegrationSpaceCompletion X) (IntegrationSpaceCompletion Y)) => h (integrationCompletion x)) (\peval integrationCompletion-map f) *> integrationCompletion-lift.char
+  }
 
 -- | A homomorphism of integration spaces with dense image induces an isomorphism of completions.
 \lemma integrationCompletion-map-equiv {X Y : IntegrationSpace} {f : IntegrationSpaceHom X Y} (fd : f.IsDense) : IsEquiv (integrationCompletion-map f)
-  => lift1-equiv (IntegrationSpaceHom.isometry-denseEmbedding fd)
+  => transportInv (\lam (h : IntegrationSpaceHom (IntegrationSpaceCompletion X) (IntegrationSpaceCompletion Y)) => IsEquiv h) ((\peval integrationCompletion-map f) *> (\peval integrationCompletion-lift (integrationCompletion.inc IntegrationSpaceHom.∘ f))) (lift1-equiv (IntegrationSpaceHom.isometry-denseEmbedding fd))
