@@ -1,0 +1,85 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ring.Boolean
+\import Algebra.Semiring
+\import Analysis.Measure.SimpleFunctions
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Order.Lattice
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence \hiding (~)
+\open SFunc
+\open SFuncAbMonoid (lift, inSF-BigSum, single_zro-left, single_zro-right, single_+, single-modular)
+\open SFuncRepr (makeReduced)
+
+{- | The tensor product of Boolean rings.
+ -   Its elements are finite formal sums of rectangles `rect a b`.
+ -}
+\instance BooleanRingTensor (A B : BooleanRing) : BooleanRing (SFunc A B)
+  | AbGroup => SFuncAbGroup A B
+  | * x y => mulR y x
+  | *-assoc {x} {y} {z} => mulR-assoc x
+  | ldistr {x} {y} {z} => mulR-ldistr x
+  | rdistr {x} {y} {z} => func-+ {mulR z}
+  | isBooleanRing {x} => mulR-idemp x
+  \where {
+    \lemma BigSum_map_zro {M : AddMonoid} {X : \Type} (f : X -> M) (p : \Pi (x : X) -> f x = M.zro) (l : Array X) : M.BigSum (map f l) = M.zro \elim l
+      | nil => idp
+      | a :: l => pmap2 (M.+) (p a) (BigSum_map_zro f p l) *> M.zro-left
+
+    \lemma BigSum_map_+ {M : AbMonoid} {X : \Type} (f g k : X -> M) (p : \Pi (x : X) -> f x M.+ g x = k x) (l : Array X)
+      : M.BigSum (map f l) M.+ M.BigSum (map g l) = M.BigSum (map k l) \elim l
+      | nil => M.zro-left
+      | a :: l => equation.abMonoid {p a, BigSum_map_+ f g k p l}
+
+    \func single (a : A) (b : B) : SFunc A B => inSF ((a,b) :: nil)
+
+    -- | Multiplication by a rectangle from the right.
+    \func rmul (c : A) (d : B) : AddMonoidHom (SFuncAbMonoid A B) (SFuncAbMonoid A B)
+      => lift (\lam a b => single (a * c) (b * d)) (\lam {b} => single_zro-left zro_*-left) (\lam {a} => single_zro-right zro_*-left) (\lam {u} {v} {b} => single_+ (inv rdistr))
+          (\lam {a} {b} {b'} => single-modular {A} {B} {a * c} {b * d} {b' * d} {(b ∨ b') * d} {(b ∧ b') * d} equation.bRing equation.bRing)
+
+    \func mulR (y : SFunc A B) : AddMonoidHom (SFuncAbMonoid A B) (SFuncAbMonoid A B)
+      => lift (\lam c d => rmul c d y) (\lam {d} => rmul-zro-left {A} {B} {d} y) (\lam {c} => rmul-zro-right {A} {B} {c} y) (\lam {u} {v} {d} => rmul-+ y) (\lam {c} {b} {b'} => rmul-modular y)
+
+    \lemma rmul-zro-left {d : B} (y : SFunc A B) : rmul A.zro d y = inSF nil \elim y
+      | in~ l => BigSum_map_zro (\lam s => single (s.1 * A.zro) (s.2 * d)) (\lam s => single_zro-left zro_*-right) l
+
+    \lemma rmul-zro-right {c : A} (y : SFunc A B) : rmul c B.zro y = inSF nil \elim y
+      | in~ l => BigSum_map_zro (\lam s => single (s.1 * c) (s.2 * B.zro)) (\lam s => single_zro-right zro_*-right) l
+
+    \lemma rmul-+ {u v : A} {d : B} (y : SFunc A B) : rmul u d y + rmul v d y = rmul (u + v) d y \elim y
+      | in~ l => BigSum_map_+ (\lam s => single (s.1 * u) (s.2 * d)) (\lam s => single (s.1 * v) (s.2 * d)) (\lam s => single (s.1 * (u + v)) (s.2 * d)) (\lam s => single_+ (inv ldistr)) l
+
+    \lemma rmul-modular {c : A} {b b' : B} (y : SFunc A B) : rmul c (b ∨ b') y + rmul c (b ∧ b') y = rmul c b y + rmul c b' y \elim y
+      | in~ l => BigSum_map_+ (\lam s => single (s.1 * c) (s.2 * (b ∨ b'))) (\lam s => single (s.1 * c) (s.2 * (b ∧ b'))) (\lam s => single (s.1 * c) (s.2 * b) + single (s.1 * c) (s.2 * b'))
+                   (\lam s => single-modular {A} {B} {s.1 * c} {s.2 * b} {s.2 * b'} {s.2 * (b ∨ b')} {s.2 * (b ∧ b')} equation.bRing equation.bRing) l
+                 *> inv (BigSum_map_+ (\lam s => single (s.1 * c) (s.2 * b)) (\lam s => single (s.1 * c) (s.2 * b')) _ (\lam s => idp) l)
+
+    \lemma mulR-single {c : A} {d : B} {y : SFunc A B} : mulR y (single c d) = rmul c d y
+      => AddMonoid.zro-right {SFuncAbMonoid A B}
+
+    \lemma rmul-assoc {c e : A} {d f : B} (z : SFunc A B) : rmul (e * c) (f * d) z = rmul c d (rmul e f z) \elim z
+      | in~ l => pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => pmap2 single (inv *-assoc) (inv *-assoc) *> inv zro-right) *> inv ((rmul c d).func-BigSum)
+
+    \lemma mulR-rmul {c : A} {d : B} (y z : SFunc A B) : mulR z (rmul c d y) = rmul c d (mulR z y) \elim y
+      | in~ l => (mulR z).func-BigSum *> pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => mulR-single *> rmul-assoc z) *> inv ((rmul c d).func-BigSum)
+
+    \lemma mulR-assoc {y z : SFunc A B} (x : SFunc A B) : mulR z (mulR y x) = mulR (mulR z y) x \elim x
+      | in~ l => (mulR z).func-BigSum *> pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => mulR-rmul {_} {_} {(l j).1} {(l j).2} y z)
+
+    \lemma mulR-ldistr {y z : SFunc A B} (x : SFunc A B) : mulR (y + z) x = mulR y x + mulR z x \elim x
+      | in~ l => inv $ BigSum_map_+ (\lam s => rmul s.1 s.2 y) (\lam s => rmul s.1 s.2 z) (\lam s => rmul s.1 s.2 (y + z)) (\lam s => inv (func-+ {rmul s.1 s.2})) l
+
+    \lemma mulR-idemp (x : SFunc A B) : mulR x x = x
+      => \case makeReduced x \with {
+        | inP (l,lr,p) => rewrite p $ pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam i => AddMonoid.BigSum-unique {SFuncAbMonoid A B} {map (\lam s => single (s.1 * (l i).1) (s.2 * (l i).2)) l} i (\lam j i/=j => single_zro-right (lr {j} {i} (/=-sym i/=j))) *> pmap2 single isBooleanRing isBooleanRing) *> inv inSF-BigSum
+      }
+  }
+
+-- | The rectangle `a ⊗ b`.
+\func rect {A B : BooleanRing} (a : A) (b : B) : BooleanRingTensor A B
+  => inSF ((a,b) :: nil)

@@ -39,7 +39,7 @@
 \import Topology.NormedRing
 \import Topology.TopSpace
 \open SFunc
-\open SFuncPosetQModule
+\open SFuncRepr
 
 \instance SFuncIntegrationSpace (B : MeasureRing) : IntegrationSpace (SFunc RatField B)
   | TruncRieszSpace => SFuncTruncRieszSpace RatIntegrationSpace B
@@ -247,7 +247,7 @@
           (SFunc-single-abs {B} {1} *> pmap (\lam (z : Rat) => inSF ((z, x + y) :: nil)) abs-ide) *> negative-right {SFuncIntegrationSpace B} {SFunc-char (x + y)}) *> (SFuncIntegrationSpace B).toRatModule.*c_zro-right
 
     \lemma char-zero {B : MeasureRing} {x : B} (q : SFunc-char x = 0) : x = 0
-      => \case (>=0-reduced-char single-reduced).1 (transport (\lam z => 0 <= negative z) (inv q) (=_<= (inv AddGroup.negative_zro))) 0 \with {
+      => \case (SFuncPosetQModule.>=0-reduced-char single-reduced).1 (transport (\lam z => 0 <= negative z) (inv q) (=_<= (inv AddGroup.negative_zro))) 0 \with {
         | byLeft c => absurd linarith
         | byRight r => r
       }
