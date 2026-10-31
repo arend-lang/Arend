@@ -44,6 +44,7 @@ import org.arend.term.concrete.LocalVariablesCollector
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.error.local.ImpossibleEliminationError
 import org.arend.util.ArendBundle
+import org.arend.term.prettyprint.PrettyPrintVisitor
 
 class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val cause: SmartPsiElementPointer<ArendCompositeElement>) : IntentionAction {
     override fun startInWriteAction(): Boolean = true
@@ -270,7 +271,7 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
 
         fun doWriteTypeQualification(psiFactory: ArendPsiFactory, expression: Expression, caseArg: ArendCaseArg) {
             val ppConfig = object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = PsiLocatedRenamer(caseArg) }
-            val typeExpr = psiFactory.createExpression(ToAbstractVisitor.convert(expression, ppConfig).toString())
+            val typeExpr = psiFactory.createExpression(PrettyPrintVisitor.printCode(ToAbstractVisitor.convert(expression, ppConfig)))
             val caseArgExpr = caseArg.type
             if (caseArgExpr != null) {
                 caseArgExpr.replace(typeExpr)

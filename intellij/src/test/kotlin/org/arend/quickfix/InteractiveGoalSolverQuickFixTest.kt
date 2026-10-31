@@ -42,6 +42,19 @@ class InteractiveGoalSolverQuickFixTest : QuickFixTestBase() {
         """
     )
 
+    fun `test class implementations are put on separate lines`() = doTestWithGoalSolver(
+        TestGoalSolver("\\new R { | a => {?} | b => {?} }", project), """
+            \record R (a b : Nat)
+            \func test : R => {-caret-}{?}
+        """, """
+            \record R (a b : Nat)
+            \func test : R => \new R {
+              | a => {-caret-}{?}
+              | b => {?}
+            }
+        """
+    )
+
     private fun doTestWithGoalSolver(
         solver: InteractiveGoalSolver,
         @Language("Arend") before: String,

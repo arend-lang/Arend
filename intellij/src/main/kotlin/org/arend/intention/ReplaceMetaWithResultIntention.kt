@@ -16,6 +16,7 @@ import org.arend.psi.ext.*
 import org.arend.refactoring.*
 import org.arend.term.prettyprint.DefinitionRenamerConcreteVisitor
 import org.arend.util.ArendBundle
+import org.arend.term.prettyprint.PrettyPrintVisitor
 
 class ReplaceMetaWithResultIntention : BaseArendIntention(ArendBundle.message("arend.expression.replaceMetaWithResult")) {
     override fun isAvailable(project: Project, editor: Editor?, element: PsiElement): Boolean {
@@ -39,7 +40,7 @@ class ReplaceMetaWithResultIntention : BaseArendIntention(ArendBundle.message("a
             }
         }
 
-        val text = cExpr.toString()
+        val text = PrettyPrintVisitor.printCode(cExpr)
         WriteCommandAction.writeCommandAction(project).run<Exception> {
             definitionRenamer.writeAllImportCommands()
             PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(editor.document)

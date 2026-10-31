@@ -216,7 +216,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                     val newConcrete = rebuildDefinition(scope, expectedConstructorErrorEntries, elimParams)
 
                     val builder = StringBuilder()
-                    val visitor = PrettyPrintVisitor(builder, 0)
+                    val visitor = PrettyPrintVisitor(builder, 0).setBreakCoclauses(true)
                     when (newConcrete) {
                         is Concrete.Constructor -> visitor.prettyPrintConstructor(newConcrete)
                         is Concrete.DataDefinition -> visitor.visitData(newConcrete, null)

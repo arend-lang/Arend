@@ -54,6 +54,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   private boolean myAligned;
   private final Deque<Map<String, ConcreteGroup>> myCoclauseGroupsStack = new ArrayDeque<>();
   private NameAnnotator myNameAnnotator;
+  private boolean myBreakCoclauses;
 
   public PrettyPrintVisitor(StringBuilder builder, int indent, boolean doIndent, int lineLength) {
     myBuilder = builder;
@@ -68,6 +69,19 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
   public PrettyPrintVisitor(StringBuilder builder, int indent) {
     this(builder, indent, true);
+  }
+
+  // Class implementations are put on separate lines even if they fit on one
+  public PrettyPrintVisitor setBreakCoclauses(boolean breakCoclauses) {
+    myBreakCoclauses = breakCoclauses;
+    return this;
+  }
+
+  // Layout for code inserted into the source: class implementations always on separate lines
+  public static String printCode(Concrete.Expression expr) {
+    StringBuilder builder = new StringBuilder();
+    expr.accept(new PrettyPrintVisitor(builder, 0).setBreakCoclauses(true), new Precedence(Concrete.Expression.PREC));
+    return builder.toString();
   }
 
   // Names are printed as placeholders, which the annotator decodes, see NameAnnotator
@@ -209,6 +223,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     PrettyPrintVisitor copy = new PrettyPrintVisitor(builder, indent, doIndent, myLineLength);
     copy.myCoclauseGroupsStack.addAll(myCoclauseGroupsStack);
     copy.myNameAnnotator = myNameAnnotator;
+    copy.myBreakCoclauses = myBreakCoclauses;
     return copy;
   }
 
@@ -1190,7 +1205,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         implementations.add(implementation);
       }
 
-      if (fitsOnLine && column() + length <= myLineLength) {
+      if (!myBreakCoclauses && fitsOnLine && column() + length <= myLineLength) {
         myBuilder.append("{");
         for (String implementation : implementations) {
           myBuilder.append(" | ").append(implementation);

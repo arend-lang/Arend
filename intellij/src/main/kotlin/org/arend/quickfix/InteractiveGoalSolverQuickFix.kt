@@ -18,6 +18,7 @@ import org.arend.term.prettyprint.DefinitionRenamerConcreteVisitor
 import org.arend.typechecking.error.local.GoalError
 import org.arend.typechecking.visitor.CheckTypeVisitor
 import org.arend.ui.impl.ArendEditorUI
+import org.arend.term.prettyprint.PrettyPrintVisitor
 
 class InteractiveGoalSolverQuickFix(private val element: ArendExpr,
                                     private val goal: GoalError,
@@ -41,7 +42,7 @@ class InteractiveGoalSolverQuickFix(private val element: ArendExpr,
         runReadAction {
             if (element.isValid && !editor.isDisposed) {
                 val definitionRenamer = PsiLocatedRenamer(element)
-                val text = concrete.accept(DefinitionRenamerConcreteVisitor(CachingDefinitionRenamer(definitionRenamer)), null).toString()
+                val text = PrettyPrintVisitor.printCode(concrete.accept(DefinitionRenamerConcreteVisitor(CachingDefinitionRenamer(definitionRenamer)), null))
                 ApplicationManager.getApplication().runWriteAction {
                     action(editor, concrete, text)
                     definitionRenamer.writeAllImportCommands()
