@@ -34,9 +34,14 @@ public abstract class ArendTestCase {
     return ArendServerRequester.TRIVIAL;
   }
 
+  /** Whether the server drops {@code \lemma} bodies once they are typechecked, as the CLI and the plugin do. */
+  protected boolean clearLemmas() {
+    return false;
+  }
+
   @Before
   public void initializeServer() {
-    server = new ArendServerImpl(getRequester(), false, false, false);
+    server = new ArendServerImpl(getRequester(), false, false, clearLemmas());
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
   }
 

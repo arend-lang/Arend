@@ -530,7 +530,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
             clausesMap.put((FunctionDefinition) def, clauses);
           }
         }
-        clearLemma(def);
 
         ArendExtension extension = suspension.typechecker.getExtension();
         if (extension != null) {
@@ -597,6 +596,11 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     findAxiomsAndGoals(orderedDefinitions, newDefs);
+
+    // Bodies are cleared only now: the checks above and findAxiomsAndGoals need them
+    for (Definition def : newDefs) {
+      clearLemma(def);
+    }
 
     for (Pair<Definition, DefinitionListener> pair : listeners) {
       pair.proj2.typechecked(pair.proj1);
