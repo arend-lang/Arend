@@ -1,5 +1,11 @@
 package org.arend.typechecking.doubleChecker;
 
+import org.arend.core.context.binding.Binding;
+import org.arend.core.context.param.DependentLink;
+import org.arend.core.definition.ClassDefinition;
+import org.arend.core.expr.ClassCallExpression;
+import org.arend.core.expr.visitor.FreeVariablesCollector;
+import org.arend.core.definition.Definition;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.DeferredMetaDefinition;
@@ -21,6 +27,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Set;
+import static org.junit.Assert.assertEquals;
 import java.util.Collections;
 
 /**
@@ -227,5 +238,83 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
       \\func test2 {A : \\Type} (a : A) (t : \\Sigma+ (x : A) (x = a)) : A \\elim a, t
         | _, (x, idp) => x
       """);
+  }
+
+  // The type of p depends on g, which is declared later, through the implementation of f.
+  // Fields must be reordered so that the telescope of fields is well-scoped.
+  @Test
+  public void implementationForwardDependencyTest() {
+    typeCheckModule("""
+      \\class A (E : \\Set) {
+        | f : E -> Nat
+        | p : \\Pi (x : E) -> f x = f x
+      }
+      \\class B \\extends A {
+        | g : E -> Nat
+        | f x => g x
+      }
+      \\func test (b : B) : Nat \\elim b
+        | (E, g, p) => 0
+      """);
+    assertEquals(Arrays.asList("E", "g", "p"), ((ClassDefinition) getDefinition("B")).getNotImplementedFields().stream().map(Definition::getName).toList());
+    assertFieldParametersScoped("B");
+  }
+
+  // \this is passed as an instance of a superclass whose field is implemented in a subclass via a field the superclass does not have.
+  @Test
+  public void superClassThisImplementationTest() {
+    typeCheckModule("""
+      \\class A (E : \\Set) | a : E -> Nat
+      \\func F (X : A) : \\Prop => X.a = X.a
+      \\class B \\extends A {
+        | b : Nat
+        | a _ => b
+      }
+      \\class C \\extends B
+        | c : F \\this
+      \\func test (x : C) : Nat \\elim x
+        | (E, b, c) => b
+      """);
+    assertFieldParametersScoped("C");
+  }
+
+  // The implementation of s in D contains a \\type constructor applied to \\this.
+  // It must not be replaced with the whole object being constructed when the telescope of fields of D2 is computed.
+  @Test
+  public void superClassThisTypeConstructorTest() {
+    typeCheckModule("""
+      \\class A (E : \\Set) | a : Nat
+      \\type T (X : A) => X.a = X.a
+      \\class S \\extends A
+        | s : \\Sigma (T \\this) Nat
+      \\class D \\extends S {
+        | d : Nat
+        | s => (idp, d)
+      }
+      \\func F (X : S) : \\Set => Nat
+      \\class D2 \\extends D
+        | f : F \\this
+      \\func test (x : D2) : Nat \\elim x
+        | (E, a, d, f) => d
+      """);
+    assertFieldParametersScoped("D2");
+  }
+
+  /**
+   * Checks that the type of every parameter returned by {@link ClassCallExpression#getClassFieldParameters} refers only to preceding parameters.
+   */
+  private void assertFieldParametersScoped(String className) {
+    ClassDefinition classDef = (ClassDefinition) getDefinition(className);
+    DependentLink params = new ClassCallExpression(classDef, classDef.makeIdLevels(), new LinkedHashMap<>()).getClassFieldParameters();
+    Set<Binding> allParams = new HashSet<>(DependentLink.Helper.toList(params));
+    Set<Binding> preceding = new HashSet<>();
+    for (DependentLink link = params; link.hasNext(); link = link.getNext()) {
+      for (Binding binding : FreeVariablesCollector.getFreeVariables(link.getType())) {
+        if (allParams.contains(binding) && !preceding.contains(binding)) {
+          throw new AssertionError("The type of field parameter '" + link.getName() + "' refers to '" + binding.getName() + "', which is not a preceding parameter");
+        }
+      }
+      preceding.add(link);
+    }
   }
 }

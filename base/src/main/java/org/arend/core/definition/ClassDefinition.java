@@ -3,6 +3,7 @@ package org.arend.core.definition;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.expr.*;
+import org.arend.core.expr.visitor.FieldsCollector;
 import org.arend.core.expr.visitor.FindBindingVisitor;
 import org.arend.core.expr.visitor.GetTypeVisitor;
 import org.arend.core.sort.Level;
@@ -394,6 +395,77 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
 
   public void addField(ClassField field) {
     myNotImplementedFields.add(field);
+  }
+
+  /**
+   * Reorders not implemented fields so that the type of every field refers only to preceding fields.
+   * Implemented fields are unfolded, that is, a reference to an implemented field counts as references to the fields its implementation depends on.
+   * The sort is stable: a field is moved only if it precedes some of its dependencies.
+   */
+  public void sortNotImplementedFields() {
+    if (myImplemented.isEmpty() || myNotImplementedFields.size() <= 1) return;
+
+    Set<ClassField> allFields = getAllFields();
+    Map<ClassField, Set<ClassField>> directDeps = new HashMap<>();
+    java.util.function.Function<ClassField, Set<ClassField>> getDirectDeps = field -> directDeps.computeIfAbsent(field, f -> {
+      Set<ClassField> result = new HashSet<>();
+      AbsExpression impl = myImplemented.get(f);
+      if (impl != null) {
+        FieldsCollector.getFields(impl.getExpression(), impl.getBinding(), allFields, result);
+      } else {
+        PiExpression type = getOverriddenType(f);
+        if (type == null) type = f.getType();
+        FieldsCollector.getFields(type.getCodomain(), type.getParameters(), allFields, result);
+      }
+      result.remove(f);
+      return result;
+    });
+
+    // Not implemented fields on which the type of a field depends (through implemented fields)
+    Map<ClassField, Set<ClassField>> deps = new HashMap<>();
+    for (ClassField field : myNotImplementedFields) {
+      Set<ClassField> result = new LinkedHashSet<>();
+      Set<ClassField> visited = new HashSet<>();
+      Deque<ClassField> toVisit = new ArrayDeque<>(getDirectDeps.apply(field));
+      while (!toVisit.isEmpty()) {
+        ClassField dep = toVisit.pop();
+        if (dep == field || !visited.add(dep)) continue;
+        if (myImplemented.containsKey(dep)) {
+          toVisit.addAll(getDirectDeps.apply(dep));
+        } else if (myNotImplementedFields.contains(dep)) {
+          result.add(dep);
+        }
+      }
+      deps.put(field, result);
+    }
+
+    List<ClassField> sorted = new ArrayList<>(myNotImplementedFields.size());
+    Set<ClassField> emitted = new HashSet<>();
+    Set<ClassField> inProgress = new HashSet<>();
+    List<ClassField> original = new ArrayList<>(myNotImplementedFields);
+    for (ClassField field : original) {
+      emitSorted(field, deps, original, sorted, emitted, inProgress);
+    }
+    if (!sorted.equals(original)) {
+      myNotImplementedFields.clear();
+      myNotImplementedFields.addAll(sorted);
+    }
+  }
+
+  private static void emitSorted(ClassField field, Map<ClassField, Set<ClassField>> deps, List<ClassField> original, List<ClassField> sorted, Set<ClassField> emitted, Set<ClassField> inProgress) {
+    if (emitted.contains(field) || !inProgress.add(field)) return; // cycles are reported elsewhere
+    Set<ClassField> fieldDeps = deps.get(field);
+    if (fieldDeps != null && !fieldDeps.isEmpty()) {
+      // Emit dependencies in their original order
+      for (ClassField dep : original) {
+        if (fieldDeps.contains(dep)) {
+          emitSorted(dep, deps, original, sorted, emitted, inProgress);
+        }
+      }
+    }
+    inProgress.remove(field);
+    emitted.add(field);
+    sorted.add(field);
   }
 
   public void addPersonalField(ClassField field) {

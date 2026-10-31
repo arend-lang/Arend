@@ -2709,6 +2709,11 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       typedDef.removeDefault(field);
     }
 
+    // Make sure that the type of each field depends only on preceding fields
+    if (checkImplementations) {
+      typedDef.sortNotImplementedFields();
+    }
+
     // Set fields covariance
     allFields = typedDef.getAllFields();
     Set<ClassField> covariantFields = new HashSet<>(allFields);

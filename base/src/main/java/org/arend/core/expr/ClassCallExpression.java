@@ -6,6 +6,7 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.*;
+import org.arend.core.elimtree.ElimBody;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.StripVisitor;
@@ -369,11 +370,13 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Cor
             if (type instanceof ClassCallExpression classCall && getDefinition().isSubClassOf(classCall.getDefinition())) {
               Map<ClassField, Expression> subImplementations = new LinkedHashMap<>(classCall.getImplementedHere());
               ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), getLevels(classCall.getDefinition()), subImplementations);
-              Expression resultRef = new ReferenceExpression(resultClassCall.myThisBinding);
+              Expression thisRef = new ReferenceExpression(thisBinding);
               for (ClassField field : classCall.getDefinition().getNotImplementedFields()) {
-                Expression impl = getImplementation(field, resultRef);
+                // Implementations of fields of the subclass may refer to fields that the superclass does not have,
+                // so they must be computed with respect to the whole object and not with respect to resultClassCall
+                Expression impl = getImplementation(field, thisRef);
                 if (impl != null) {
-                  subImplementations.put(field, impl);
+                  subImplementations.put(field, impl.accept(this, null));
                 } else {
                   impl = implementations.get(field);
                   if (impl != null) {
@@ -402,6 +405,20 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Cor
           assert expr instanceof LeveledDefCallExpression;
           List<Expression> newArgs = visitArgs(expr.getDefCallArguments(), expr.getDefinition().getParameters());
           return expr.getDefinition().getDefCall(((LeveledDefCallExpression) expr).getLevels().subst(getLevelSubstitution()), newArgs);
+        }
+
+        @Override
+        public Expression visitTypeConstructor(TypeConstructorExpression expr, Void params) {
+          DependentLink clauseParams;
+          if (expr.getClauseIndex() == -1) {
+            clauseParams = expr.getDefinition().getParameters();
+          } else {
+            clauseParams = expr.getDefinition().getActualBody() instanceof ElimBody elimBody && expr.getClauseIndex() < elimBody.getClauses().size() ? elimBody.getClauses().get(expr.getClauseIndex()).getParameters() : null;
+          }
+          if (clauseParams == null || DependentLink.Helper.size(clauseParams) != expr.getClauseArguments().size()) {
+            return super.visitTypeConstructor(expr, params);
+          }
+          return TypeConstructorExpression.make(expr.getDefinition(), expr.getLevels().subst(getLevelSubstitution()), expr.getClauseIndex(), visitArgs(expr.getClauseArguments(), clauseParams), expr.getArgument().accept(this, null));
         }
 
         private Constructor constructor;
