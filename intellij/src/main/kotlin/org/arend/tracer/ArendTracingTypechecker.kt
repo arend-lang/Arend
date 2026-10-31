@@ -16,8 +16,8 @@ import org.arend.typechecking.visitor.CheckTypeVisitor
 class ArendTracingTypechecker private constructor(localContext: MutableMap<Referable, Binding>?, localPrettifier: LocalExpressionPrettifier, errorReporter: ErrorReporter?, pool: GlobalInstancePool?, arendExtension: ArendExtension?, holder: UserDataHolderImpl?) :
     CheckTypeVisitor(localContext, localPrettifier, errorReporter, pool, arendExtension, ArendServerResolveListener.EMPTY, holder) {
 
-    constructor(errorReporter: ErrorReporter, extension: ArendExtension?)
-        : this(LinkedHashMap<Referable, Binding>(), LocalExpressionPrettifier(), errorReporter, null, extension, null)
+    constructor(errorReporter: ErrorReporter?, pool: GlobalInstancePool?, extension: ArendExtension?)
+        : this(LinkedHashMap<Referable, Binding>(), LocalExpressionPrettifier(), errorReporter, pool, extension, null)
 
     private val traceEntries: MutableList<ArendTraceEntry> = mutableListOf()
     private val entriesStack: ArrayDeque<ArendTraceEntry> = ArrayDeque()

@@ -2,7 +2,7 @@ package org.arend.tracer
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.Presentation
-import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.util.EditorUtil
@@ -15,9 +15,7 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import org.arend.actions.ArendPopupAction
 import org.arend.codeInsight.ArendPopupHandler
-import org.arend.core.definition.FunctionDefinition
-import org.arend.ext.error.ErrorReporter
-import org.arend.ext.error.GeneralError
+import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.FullName
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.*
@@ -25,14 +23,9 @@ import org.arend.psi.ext.*
 import org.arend.refactoring.collectArendExprs
 import org.arend.refactoring.selectedExpr
 import org.arend.server.ArendServerService
-import org.arend.server.impl.ArendLibraryImpl
-import org.arend.term.concrete.Concrete
-import org.arend.typechecking.error.local.GoalDataHolder
-import org.arend.typechecking.instance.pool.GlobalInstancePool
-import org.arend.typechecking.provider.ConcreteProvider
-import org.arend.typechecking.visitor.DefinitionTypechecker
-import org.arend.typechecking.visitor.DesugarVisitor
-import org.arend.typechecking.visitor.WhereVarsFixVisitor
+import org.arend.server.ProgressReporter
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.typechecking.runner.RunnerService
 import org.arend.util.ArendBundle
 
 class ArendTraceAction : ArendPopupAction() {
@@ -64,25 +57,25 @@ class ArendTraceAction : ArendPopupAction() {
         override fun invoke(project: Project, editor: Editor, file: PsiFile) {
             val (expression, definitionRef) = getElementAtCursor(file, editor)
                 ?: return displayErrorHint(editor, ArendBundle.message("arend.trace.action.cannot.find.expression"))
-            val definition = project.service<ArendServerService>().server
-                .getResolvedDefinition(definitionRef)?.definition as? Concrete.Definition
-                ?: return displayErrorHint(
-                    editor, ArendBundle.message(
-                        "arend.trace.action.cannot.find.concrete.definition",
-                        definitionRef.representableName
-                    )
+            val notFoundMessage = ArendBundle.message("arend.trace.action.cannot.find.concrete.definition", definitionRef.representableName)
+            val module = definitionRef.location ?: return displayErrorHint(editor, notFoundMessage)
+            val factory = ArendTracingCheckerFactory()
+            var tracingData: ArendTracingData? = null
+            project.service<RunnerService>().runChecker(module, definitionRef.refLongName, factory, null, {
+                tracingData = runReadAction { factory.getTracingData(expression) }
+            }) {
+                val data = tracingData ?: return@runChecker displayErrorHint(editor, notFoundMessage)
+                val starter = object : XDebugProcessStarter() {
+                    override fun start(session: XDebugSession): XDebugProcess = ArendTraceProcess(session, data)
+                }
+                XDebuggerManager.getInstance(project).startSessionAndShowTab(
+                    definitionRef.representableName,
+                    TRACE_ICON,
+                    null,
+                    false,
+                    starter
                 )
-            val tracingData = runTracingTypechecker(project, definition, expression)
-            val starter = object : XDebugProcessStarter() {
-                override fun start(session: XDebugSession): XDebugProcess = ArendTraceProcess(session, tracingData)
             }
-            XDebuggerManager.getInstance(project).startSessionAndShowTab(
-                definition.data.representableName,
-                TRACE_ICON,
-                null,
-                false,
-                starter
-            )
         }
     }
 
@@ -159,37 +152,20 @@ class ArendTraceAction : ArendPopupAction() {
             return Pair(head, ref)
         }
 
+        /**
+         * Synchronously typechecks a renamed copy of [definitionRef] with a tracing checker.
+         * Returns `null` if the definition cannot be found.
+         */
         internal fun runTracingTypechecker(
             project: Project,
-            definition: Concrete.Definition,
+            definitionRef: TCDefReferable,
             expression: ArendExpr
-        ): ArendTracingData {
-            // TODO[server2]: Rewrite this using ArendChecker
-            val errorsConsumer = ErrorsConsumer()
-            val server = project.service<ArendServerService>().server
-            val extension = definition.data.getLocation()?.libraryName?.let { server.getLibrary(it) as? ArendLibraryImpl }?.extension
-            val instances = server.getResolvedDefinition(definition.data)?.instances?.instancesList ?: emptyList<FunctionDefinition>()
-            val tracer = ArendTracingTypechecker(errorsConsumer, extension).apply {
-                instancePool = GlobalInstancePool(instances, this)
-            }
-            var firstTraceEntryIndex = -1
-            ActionUtil.underModalProgress(project, ArendBundle.message("arend.tracer.collecting.tracing.data")) {
-                DesugarVisitor.desugar(definition, ConcreteProvider.EMPTY, tracer.errorReporter)
-                WhereVarsFixVisitor.fixDefinition(listOf(definition), tracer.errorReporter)
-                definition.accept(DefinitionTypechecker(tracer, definition.recursiveDefinitions), null)
-                firstTraceEntryIndex = tracer.trace.indexOfEntry(expression)
-            }
-            return ArendTracingData(tracer.trace, errorsConsumer.hasErrors, firstTraceEntryIndex)
-        }
-
-        private class ErrorsConsumer : ErrorReporter {
-            var hasErrors = false
-
-            override fun report(error: GeneralError) {
-                if (error !is GoalDataHolder) {
-                    hasErrors = true
-                }
-            }
+        ): ArendTracingData? {
+            val module = definitionRef.location ?: return null
+            val factory = ArendTracingCheckerFactory()
+            project.service<ArendServerService>().server.getCheckerFor(listOf(module))
+                .typecheck(FullName(module, definitionRef.refLongName), factory, null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+            return runReadAction { factory.getTracingData(expression) }
         }
     }
 }
