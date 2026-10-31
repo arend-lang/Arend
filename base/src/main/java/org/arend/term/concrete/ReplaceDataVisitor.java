@@ -213,7 +213,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
     if (coclauses == null) return null;
     List<Concrete.ClassFieldImpl> result = new ArrayList<>(coclauses.getCoclauseList().size());
     for (Concrete.ClassFieldImpl coclause : coclauses.getCoclauseList()) {
-      Concrete.ClassFieldImpl newCoclause = new Concrete.ClassFieldImpl(getData(coclause), coclause.getImplementedField(), coclause.implementation == null ? null : coclause.implementation.accept(this, null), coclause.getSubCoclauses() == null ? null : visitCoclauses(coclause.getSubCoclauses()), coclause.isDefault());
+      Concrete.ClassFieldImpl newCoclause = new Concrete.ClassFieldImpl(getData(coclause), copyRef(coclause.getImplementedField()), coclause.implementation == null ? null : coclause.implementation.accept(this, null), coclause.getSubCoclauses() == null ? null : visitCoclauses(coclause.getSubCoclauses()), coclause.isDefault());
       newCoclause.classRef = coclause.classRef;
       result.add(newCoclause);
     }
@@ -270,7 +270,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.LevelExpression visitVar(Concrete.VarLevelExpression expr, Void param) {
-    return new Concrete.VarLevelExpression(getData(expr), expr.getReferent(), expr.isInference());
+    return new Concrete.VarLevelExpression(getData(expr), copyRef(expr.getReferent()), expr.isInference());
   }
 
   @Override
@@ -371,7 +371,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
           }
           elements.add(new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), previousTypeCopied, field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null), field.isCoerce()));
         }
-        case Concrete.OverriddenField field -> elements.add(new Concrete.OverriddenField(getData(field), field.getOverriddenField(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), field.getResultType().accept(this, null), field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null)));
+        case Concrete.OverriddenField field -> elements.add(new Concrete.OverriddenField(getData(field), copyRef(field.getOverriddenField()), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), field.getResultType().accept(this, null), field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null)));
         case null, default -> throw new IllegalStateException();
       }
     }
