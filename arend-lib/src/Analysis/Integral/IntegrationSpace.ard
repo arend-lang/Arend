@@ -2,6 +2,7 @@
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Ordered
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.QModule
 \import Equiv
@@ -110,9 +111,18 @@
   | func-integral {x : Dom} : integral (func x) = integral x
   | func-norm-isometry {x} => Real.=-upper.1 (pmap integral (inv func-abs) *> func-integral)
 
-  \protected \func IsDense : \Prop
-    => IsDenseSet {Cod} (\lam y => ∃ (x : Dom) (func x = y))
+  \lemma func-boolean {x : Dom} (xb : IsBoolean x) : IsBoolean (func x)
+    => pmap trunc (inv func-+) *> inv func-trunc *> pmap func xb
+
+  \func MeasRingHom : MeasureRingHom (MeasRing {Dom}) (MeasRing {Cod}) \cowith
+    | func a => (func a.1, func-boolean a.2)
+    | func-+ => ext $ func-abs *> pmap LatticeAbGroup.abs func-minus
+    | func-* => ext func-meet
+    | func-meas => func-integral
 } \where {
+  \open TruncRieszSpace
+  \open IntegrationSpace
+
   \lemma isometry-denseEmbedding {X Y : IntegrationSpace} {f : IntegrationSpaceHom X Y} (fd : f.IsDense) : f.IsDenseEmbedding
     => (fd, f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2)
 

@@ -116,6 +116,10 @@
 
   \lemma func-abs {x : Dom} : func (LatticeAbGroup.abs x) = LatticeAbGroup.abs (func x)
     => func-join *> pmap (func x ∨) func-negative
+
+  \lemma func-meet {x y : Dom} : func (x ∧ y) = func x ∧ func y
+    => pmap func (inv AddGroup.negative-isInv *> pmap negative LatticeAbGroup.meet_negative) *> func-negative *> pmap negative func-join *> LatticeAbGroup.join_negative
+       *> pmap2 (∧) (pmap negative func-negative *> AddGroup.negative-isInv) (pmap negative func-negative *> AddGroup.negative-isInv)
 } \where {
   \func id {X : RieszSpace} : RieszSpaceHom X X \cowith
     | AddGroupHom => AddGroupHom.id
