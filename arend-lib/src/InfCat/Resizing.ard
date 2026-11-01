@@ -2,7 +2,6 @@
 \import Equiv.Sigma
 \import InfCat.Arrows
 \import InfCat.Functor.Equiv
-\import InfCat.Groupoid
 \import Logic
 \import Logic.Meta
 
@@ -21,12 +20,6 @@
       => \case ResizeFromObjects-equiv Se Te \with {
         | inP r => inP (ResizeFromObjects Se Te, symHQEquiv r)
       }
-
-    -- | A version of {fromObjects} for a type of objects.
-    \protected \lemma fromTypeObjects.{u} {C : \Cat} {S : \Type u} (Se : QEquiv {S} {C})
-                                          {T : S -> S -> \Type u} (Te : \Pi (x y : S) -> QEquiv {T x y} {Se x ~> Se y})
-      : IsSmallCat.{u} C
-      => fromObjects (symQEquiv ToCat-equiv `transQEquiv` Se) {\lam x y => T (fromCat x) (fromCat y)} (\lam x y => Te (fromCat x) (fromCat y))
   }
 
 \type ResizeFromArrows.{u} {C : \Cat} {S : \Type u} (e : QEquiv {DI ->⁺ C} {S}) : \Cat u

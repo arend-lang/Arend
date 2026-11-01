@@ -66,10 +66,25 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   public Expression check(Expression expectedType, Expression actualType, Expression expression) {
-    if (expectedType != null && !CompareVisitor.compare(myEquations, CMP.LE, actualType, expectedType, UniverseExpression.OMEGA, mySourceNode)) {
+    if (expectedType != null && !CompareVisitor.compare(myEquations, CMP.LE, actualType, expectedType, UniverseExpression.OMEGA, mySourceNode) && !checkClassCallEta(expectedType, actualType, expression)) {
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(expectedType, actualType, mySourceNode), expression));
     }
     return actualType;
+  }
+
+  /**
+   * An instance {@code expression} of a class call also has the type in which every field is implemented by {@code expression.field} (eta for records).
+   * The typechecker wraps such expressions in {@code \new} (see {@link org.arend.typechecking.visitor.CheckTypeVisitor#checkResult}),
+   * but solutions of inference variables may be left unwrapped.
+   */
+  private boolean checkClassCallEta(Expression expectedType, Expression actualType, Expression expression) {
+    if (expression == null) return false;
+    ClassCallExpression expectedClassCall = expectedType.normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
+    if (expectedClassCall == null || expectedClassCall.getImplementedHere().isEmpty()) return false;
+    ClassCallExpression actualClassCall = actualType.normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
+    if (actualClassCall == null || actualClassCall.getDefinition() == Prelude.DEP_ARRAY || !actualClassCall.getDefinition().isSubClassOf(expectedClassCall.getDefinition())) return false;
+    ClassCallExpression etaType = new NewExpression(expression, new ClassCallExpression(actualClassCall.getDefinition(), actualClassCall.getLevels(), Collections.emptyMap())).getType();
+    return CompareVisitor.compare(myEquations, CMP.LE, etaType, expectedClassCall, UniverseExpression.OMEGA, mySourceNode);
   }
 
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst) {

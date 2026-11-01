@@ -39,12 +39,12 @@ public class CatUniverseTest extends TypeCheckingTestCase {
 
   @Test
   public void catUniverseTest() {
-    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u");
+    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Cat u");
   }
 
   @Test
   public void catUniverseError() {
-    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Cat u", 1);
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
@@ -74,39 +74,33 @@ public class CatUniverseTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void typeCatSubtypeError() {
-    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => A", 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+  public void typeCatSubtypeTest() {
+    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => A");
   }
 
   @Test
-  public void typeSucCatSubtypeError() {
-    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat (\\suc u) => A", 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+  public void typeSucCatSubtypeTest() {
+    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat (\\suc u) => A");
   }
 
   @Test
-  public void setCatSubtypeError() {
-    typeCheckDef("\\func test.{u} (A : \\Set u) : \\Cat u => A", 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+  public void setCatSubtypeTest() {
+    typeCheckDef("\\func test.{u} (A : \\Set u) : \\Cat u => A");
   }
 
   @Test
-  public void propCatSubtypeError() {
-    typeCheckDef("\\func test.{u} (A : \\Prop) : \\Cat u => A", 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+  public void propCatSubtypeTest() {
+    typeCheckDef("\\func test.{u} (A : \\Prop) : \\Cat u => A");
   }
 
   @Test
-  public void natCatError() {
-    typeCheckDef("\\func test : \\Cat 0 => Nat", 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+  public void natCatTest() {
+    typeCheckDef("\\func test : \\Cat 0 => Nat");
   }
 
   @Test
-  public void sigmaCatSubtypeError() {
-    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => \\Sigma (a b : A)", 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+  public void sigmaCatSubtypeTest() {
+    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => \\Sigma (a b : A)");
   }
 
   @Test
@@ -149,13 +143,13 @@ public class CatUniverseTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void dataCovariantTypeFieldError() {
-    typeCheckDef("\\data D.{u} (A : \\Type u) : \\Cat u | d (a :+ A)", 1);
+  public void dataCovariantTypeField() {
+    typeCheckDef("\\data D.{u} (A : \\Type u) : \\Cat u | d (a :+ A)");
   }
 
   @Test
   public void dataMixedFields() {
-    typeCheckDef("\\data D.{u} (A : \\Type u) (C : \\Cat u) : \\Cat u | d (a :+ A) (c :+ C)", 1);
+    typeCheckDef("\\data D.{u} (A : \\Type u) (C : \\Cat u) : \\Cat u | d (a :+ A) (c :+ C)");
   }
 
   @Test
@@ -169,11 +163,10 @@ public class CatUniverseTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void dataInferredSortError() {
+  public void dataInferredSortTest() {
     typeCheckModule("""
       \\data D.{u} (A : \\Type u) | d A
       \\func test.{u} (A : \\Type u) : \\Cat u => D A
-      """, 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+      """);
   }
 }

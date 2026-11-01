@@ -240,6 +240,44 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
       """);
   }
 
+  // The implicit argument C is solved by a variable whose type does not implement E, while the expected type implements it.
+  // Such a solution is correct up to eta for records.
+  @Test
+  public void inferredClassInstanceEtaTest() {
+    typeCheckModule("""
+      \\class R (E : \\Type) | r : E -> Nat
+      \\func aux {X : \\Type} (p : X -> X) {C : R X} (q : \\Pi (e : X) -> C.r e = C.r e) : Nat => 0
+      \\func test (C : R) : Nat => aux (\\lam (x : C.E) => x) (\\lam e => idp {Nat} {C.r e})
+      """);
+  }
+
+  // Since \\Type u is a subtype of \\Cat u, a type can be a component of a \\Sigma-type in \\Cat u in any position, also covariantly varying.
+  // The sort inferred for a solution of an inference variable must agree with checking against \\Cat u.
+  @Test
+  public void sigmaTypeComponentSortTest() {
+    typeCheckModule("""
+      \\data P {A B : \\Cat} (f : A ->⁺ B) | pl (b :⁺ B) | pa (a :⁺ A)
+      \\func Tot.{u} {A B : \\Cat u} {f : A ->⁺ B} (F : P f ->⁺ \\Type u) : \\Cat u => \\Sigma⁺ (b : B) (F (pl b))
+      \\func test.{u} (X : \\Type u) (D : \\Cat u) (F : P {\\Sigma⁺ X D} {\\Sigma⁺ X D} (\\lam a => a) ->⁺ \\Type u) => Tot.{u} F
+      \\func test2.{u} (X : \\Type u) (D : \\Cat u) : \\Cat u => P {\\Sigma⁺ X D} {\\Sigma⁺ X D} (\\lam a => a)
+      \\func test3.{u} (A :⁺ \\Type u) : \\Cat u => \\Sigma⁺ DI A
+      \\func test4.{u} (A :⁺ \\Type u) : \\Cat u => \\Sigma⁺ A DI
+      """);
+  }
+
+  @Test
+  public void sigmaTypeReleasedComponentSortTest() {
+    typeCheckModule("""
+      \\data P {A B : \\Cat} (f : A ->⁺ B) | pl (b :⁺ B) | pa (a :⁺ A)
+      \\func Tot.{u} {A B : \\Cat u} {f : A ->⁺ B} (F : P f ->⁺ \\Type u) : \\Cat u => \\Sigma⁺ (b : B) (F (pl b))
+      \\func test.{u} (X : \\Type u) (D : \\Cat u) (F : P {\\Sigma⁺ D X} {\\Sigma⁺ D X} (\\lam a => a) ->⁺ \\Type u) => Tot.{u} F
+      \\func test2.{u} (X : \\Type u) (D : \\Cat u) : \\Cat u => P {\\Sigma⁺ D X} {\\Sigma⁺ D X} (\\lam a => a)
+      \\func test3.{u} (X Y : \\Type u) : \\Type u => \\Sigma⁺ X Y
+      \\func test4.{u} (X Y : \\Type u) => \\Sigma⁺ X Y
+      \\func test5.{u} (X Y : \\Type u) : \\Type u => test4 X Y
+      """);
+  }
+
   // The type of p depends on g, which is declared later, through the implementation of f.
   // Fields must be reordered so that the telescope of fields is well-scoped.
   @Test
