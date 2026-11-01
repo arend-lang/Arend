@@ -1,3 +1,5 @@
+\import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Data.Array
 \import Data.Fin
@@ -12,6 +14,8 @@
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
 \import Topology.NormedAbGroup
 \open BooleanRing \hiding (<=)
 
@@ -29,6 +33,12 @@
   | norm_zro => meas_zro
   | norm_negative => pmap meas negative=id
   | norm_+ => transport (_ ExUpperReal.<=) RealAbGroup.+-upper (Real.<=-upper.1 meas_+)
+
+  -- | Multiplication is 1-Lipschitz with respect to the sum metric on the product.
+  \lemma *-metric : MetricMap (ManhattanProductPseudoMetricSpace \this \this) \this (\lam s => s.1 * s.2) \cowith
+    | func-dist {s} {t} => transport2 (ExUpperReal.<=) (inv norm-dist) (RealAbGroup.+-upper *> inv (pmap2 (ExUpperReal.+) norm-dist norm-dist)) $ Real.<=-upper.1 $
+        transportInv (meas __ RealAbGroup.<= _) (equation.bRing : s.1 * s.2 - t.1 * t.2 = (s.1 - t.1) * s.2 + t.1 * (s.2 - t.2)) $
+          meas_+ RealAbGroup.<=∘ RealAbGroup.<=_+ (meas-mono meet-left) (meas-mono meet-right)
 
   -- | The measure of a sum of pairwise disjoint elements is the sum of their measures.
   \lemma meas_BigSum-disjoint {l : Array E} (d : \Pi {i j : Fin l.len} -> i /= j -> l i * l j = 0)
