@@ -145,9 +145,9 @@
       => ~-sfequiv $ ~-+-right {_} {_} {_} {_} {nil} (pmap2 (\lam x y => (v,x) :: (v,y) :: nil) p q) idp
 
     -- | The universal property of simple functions: a map that is additive in the coefficient and modular in the element extends to an additive map.
-    \func lift {M : AbMonoid} (h : V -> B -> M) (h0 : \Pi {b : B} -> h 0 b = 0) (hb : \Pi {v : V} -> h v bottom = 0)
-               (h+ : \Pi {u v : V} {b : B} -> h u b M.+ h v b = h (u V.+ v) b)
-               (hm : \Pi {v : V} {a b : B} -> h v (a ∨ b) M.+ h v (a ∧ b) = h v a M.+ h v b)
+    \func lift {M : AbMonoid} (h : V -> B -> M) (\property h0 : \Pi {b : B} -> h 0 b = 0) (\property hb : \Pi {v : V} -> h v bottom = 0)
+               (\property h+ : \Pi {u v : V} {b : B} -> h u b M.+ h v b = h (u V.+ v) b)
+               (\property hm : \Pi {v : V} {a b : B} -> h v (a ∨ b) M.+ h v (a ∧ b) = h v a M.+ h v b)
       : AddMonoidHom (SFuncAbMonoid V B) M \cowith
       | func (x : SFunc V B) : M \with {
         | in~ l => M.BigSum (map (\lam s => h s.1 s.2) l)
@@ -668,13 +668,13 @@
     \lemma ~-unequals-reduced-conv {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : ∃ (m : IsReduced) (SFRefines m l) (SFRefines m l')) : l ~ l' \elim l~l'
       | inP (m,mr,m<l,m<l') => ~-unequals-conv $ inP (m, mr, SFRefines-trans reduce_IsReduced m<l $ reduce_SFRefines lr, SFRefines-trans reduce_IsReduced m<l' $ reduce_SFRefines l'r)
 
-    \lemma SFRefines_apply-left {l l' : PFunc} (l<l' : SFRefines l l') (f : V -> V) (f0 : f 0 = 0) : SFRefines (map (\lam s => (f s.1, s.2)) l) (map (\lam s => (f s.1, s.2)) l')
+    \lemma SFRefines_apply-left {W : AbMonoid} {l l' : PFunc} (l<l' : SFRefines l l') (f : V -> W) (f0 : f 0 = 0) : SFRefines {W} (map (\lam s => (f s.1, s.2)) l) (map (\lam s => (f s.1, s.2)) l')
       => (\lam j => ||.map (\lam q => pmap f q *> f0) (\lam q => q) (l<l'.1 j),
           \lam j => TruncP.map (l<l'.2 j) \lam (k,p,q) => (k, pmap f p, q))
 
-    \lemma apply-left {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : l ~ l') (f : V -> V) (f0 : f 0 = 0) : map (\lam s => (f s.1, s.2)) l ~ map (\lam s => (f s.1, s.2)) l'
+    \lemma apply-left {W : AbMonoid} {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : l ~ l') (f : V -> W) (f0 : f 0 = 0) : map (\lam s => (f s.1, s.2)) l ~ {W} map (\lam s => (f s.1, s.2)) l'
       => \case ~-unequals-reduced lr l'r l~l' \with {
-        | inP (m,mr,m<l,m<l') => ~-unequals-reduced-conv lr l'r $ inP (map (\lam s => (f s.1, s.2)) m, mr, SFRefines_apply-left m<l f f0, SFRefines_apply-left m<l' f f0)
+        | inP (m,mr,m<l,m<l') => ~-unequals-reduced-conv {W} {B} {map (\lam s => (f s.1, s.2)) l} {map (\lam s => (f s.1, s.2)) l'} lr l'r $ inP (map (\lam s => (f s.1, s.2)) m, mr, SFRefines_apply-left m<l f f0, SFRefines_apply-left m<l' f f0)
       }
   }
 
@@ -812,7 +812,7 @@
       => (inP (map (\lam s => (V.abs s.1 - s.1, s.2)) l, ~-sfequiv $ ~_+ V.abs negative, \lam j => V.to>=0 V.abs>=id),
          inP (map (\lam s => (V.abs s.1 + s.1, s.2)) l, ~-sfequiv $ ~-trans (~_+ V.abs (\lam x => negative (negative x))) $ ~-perm $ EPerm.eperm-= $ later $ exts \lam j => ext (pmap (_ +) V.negative-isInv, idp), \lam j => inv negative-left =<= V.<=_+ V.abs>=neg <=-refl),
          \lam p q => \case <=-char.1 p \with {
-           | inP (bs,bsr,vs,vs',vsp,vs'p,r) => <=-char.2 $ inP (bs, bsr, map V.abs vs, vs', ~-sfequiv $ apply-left {_} {_} {_} {mkArray \lam i => (vs i, bs i)} lr bsr (Quotient.equalityEquiv ~_Equivalence (path \lam i => vsp i)) V.abs V.abs_zro, vs'p, \lam j => \case r j, (<=-common-char bsr {map negative vs}).1 (transport2 (<=) (pmap negative vsp) vs'p q) j \with {
+           | inP (bs,bsr,vs,vs',vsp,vs'p,r) => <=-char.2 $ inP (bs, bsr, map V.abs vs, vs', ~-sfequiv $ apply-left lr bsr (Quotient.equalityEquiv ~_Equivalence (path \lam i => vsp i)) V.abs V.abs_zro, vs'p, \lam j => \case r j, (<=-common-char bsr {map negative vs}).1 (transport2 (<=) (pmap negative vsp) vs'p q) j \with {
              | byLeft r1, byLeft r2 => byLeft $ V.join-univ r1 r2
              | byRight r, _ => byRight r
              | _, byRight r => byRight r

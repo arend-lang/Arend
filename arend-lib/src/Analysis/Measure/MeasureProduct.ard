@@ -1,11 +1,17 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
 \import Algebra.Ring.Boolean
 \import Algebra.Semiring
+\import Analysis.Measure.MeasureRing
 \import Analysis.Measure.SimpleFunctions
+\import Arith.Real
+\import Arith.Real.Field
 \import Data.Array
+\import Equiv
 \import Function.Meta
+\import Logic.Meta
 \import Logic
 \import Order.Lattice
 \import Paths
@@ -13,7 +19,7 @@
 \import Relation.Equivalence \hiding (~)
 \open SFunc
 \open SFuncAbMonoid (lift, inSF-BigSum, single_zro-left, single_zro-right, single_+, single-modular)
-\open SFuncRepr (makeReduced)
+\open SFuncRepr
 
 {- | The tensor product of Boolean rings.
  -   Its elements are finite formal sums of rectangles `rect a b`.
@@ -63,16 +69,21 @@
       => AddMonoid.zro-right {SFuncAbMonoid A B}
 
     \lemma rmul-assoc {c e : A} {d f : B} (z : SFunc A B) : rmul (e * c) (f * d) z = rmul c d (rmul e f z) \elim z
-      | in~ l => pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => pmap2 single (inv *-assoc) (inv *-assoc) *> inv zro-right) *> inv ((rmul c d).func-BigSum)
+      | in~ l => pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => pmap2 single (inv *-assoc) (inv *-assoc) *> inv zro-right) *> inv (rmul c d).func-BigSum
 
     \lemma mulR-rmul {c : A} {d : B} (y z : SFunc A B) : mulR z (rmul c d y) = rmul c d (mulR z y) \elim y
-      | in~ l => (mulR z).func-BigSum *> pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => mulR-single *> rmul-assoc z) *> inv ((rmul c d).func-BigSum)
+      | in~ l => (mulR z).func-BigSum *> pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => mulR-single *> rmul-assoc z) *> inv (rmul c d).func-BigSum
 
     \lemma mulR-assoc {y z : SFunc A B} (x : SFunc A B) : mulR z (mulR y x) = mulR (mulR z y) x \elim x
       | in~ l => (mulR z).func-BigSum *> pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => mulR-rmul {_} {_} {(l j).1} {(l j).2} y z)
 
     \lemma mulR-ldistr {y z : SFunc A B} (x : SFunc A B) : mulR (y + z) x = mulR y x + mulR z x \elim x
       | in~ l => inv $ BigSum_map_+ (\lam s => rmul s.1 s.2 y) (\lam s => rmul s.1 s.2 z) (\lam s => rmul s.1 s.2 (y + z)) (\lam s => inv (func-+ {rmul s.1 s.2})) l
+
+    -- | Multiplication of two simple functions over a common disjoint family is computed coefficientwise.
+    \lemma mul-common {bs : Array B} (bsr : IsReducedB bs) (u v : Array A bs.len)
+      : mulR (inSF (mkArray \lam i => (v i, bs i))) (inSF (mkArray \lam i => (u i, bs i))) = inSF (mkArray \lam i => (u i * v i, bs i))
+      => pmap (AddMonoid.BigSum {SFuncAbMonoid A B}) (exts \lam j => AddMonoid.BigSum-unique {SFuncAbMonoid A B} {map (\lam s => single (s.1 * u j) (s.2 * bs j)) (mkArray \lam i => (v i, bs i))} j (\lam i j/=i => single_zro-right (bsr (/=-sym j/=i))) *> pmap2 single *-comm isBooleanRing) *> inv inSF-BigSum
 
     \lemma mulR-idemp (x : SFunc A B) : mulR x x = x
       => \case makeReduced x \with {
@@ -83,3 +94,137 @@
 -- | The rectangle `a ⊗ b`.
 \func rect {A B : BooleanRing} (a : A) (b : B) : BooleanRingTensor A B
   => inSF ((a,b) :: nil)
+
+\lemma rect_+-left {A B : BooleanRing} {a a' : A} {b : B} : rect (a + a') b = rect a b + rect a' b
+  => inv (single_+ idp)
+
+\lemma rect_+-right {A B : BooleanRing} {a : A} {b b' : B} : rect a (b + b') = rect a b + rect a b'
+  => \let | s => b + b'
+          | t => b * b'
+          | e : rect a (b ∨ b') = rect a s + rect a t
+              => inv (pmap (rect a (b ∨ b') +) (single_zro-right idp) *> zro-right) *> single-modular equation.bRing equation.bRing
+          | z : rect a t + rect a t = inSF nil
+              => single_+ A.double=0 *> single_zro-left idp
+     \in inv $ inv (single-modular idp idp) *> pmap (+ rect a t) e *> +-assoc {_} {rect a s} {rect a t} {rect a t} *> pmap (_ +) z *> zro-right
+
+\lemma rect_* {A B : BooleanRing} {a a' : A} {b b' : B} : rect (a * a') (b * b') = rect a b * rect a' b'
+  => inv $ BooleanRingTensor.mulR-single {A} {B} {a} {b} {rect a' b'} *> zro-right *> pmap2 BooleanRingTensor.single *-comm *-comm
+
+-- | The tensor product of measure rings: the measure of `∑ aᵢ ⊗ bᵢ` over a disjoint family `bᵢ` is `∑ μ(aᵢ) ν(bᵢ)`.
+\instance MeasureRingTensor (A B : MeasureRing) : MeasureRing (SFunc A B)
+  | BooleanRing => BooleanRingTensor A B
+  | meas (x : SFunc A B) : Real \with {
+    | in~ l => measL (reduce l)
+    | ~-equiv l l' r => measL-~ reduce_IsReduced reduce_IsReduced (~-trans reduce_~ (~-trans r (~-sym reduce_~)))
+  }
+  | meas_zro => idp
+  | meas>=0 {x} => \case \elim x \with {
+    | in~ l => RealAbGroup.BigSum_>=0 \lam j => RealField.<=_*-positive meas>=0 meas>=0
+  }
+  | meas-disjoint p => inv $ tmeas-modular *> pmap (_ +) (pmap meas p) *> RealAbGroup.zro-right
+  \where {
+    \func measL (l : Array (\Sigma A B)) : Real
+      => RealAbGroup.BigSum (map (\lam s => A.meas s.1 RealField.* B.meas s.2) l)
+
+    \lemma measH : AddMonoidHom (SFuncAbMonoid RealAbGroup B) RealAbGroup SFuncAbMonoid.lift.func
+      => SFuncAbMonoid.lift (\lam r b => r RealField.* B.meas b) (\lam {b} => RealField.zro_*-left) (\lam {r} => pmap (r RealField.*) B.meas_zro *> RealField.zro_*-right) (\lam {u} {v} {b} => inv RealField.rdistr)
+           (\lam {r} {a} {b} => inv RealField.ldistr *> pmap (r RealField.*) (inv meas-modular) *> RealField.ldistr)
+
+    \lemma measL-~ {l l' : Array (\Sigma A B)} (lr : IsReduced l) (l'r : IsReduced l') (r : l ~ l') : measL l = measL l'
+      => pmap measH (~-sfequiv (apply-left {A} {B} {RealAbGroup} lr l'r r A.meas meas_zro))
+
+    \lemma meas-reduced {l : Array (\Sigma A B)} (lr : IsReduced l) : meas (inSF l) = measL l
+      => measL-~ reduce_IsReduced lr reduce_~
+
+    \func merge {bs : Array B} (u : Array A bs.len) : BooleanRingTensor A B
+      => inSF (mkArray \lam i => (u i, bs i))
+
+    \lemma meas_merge {bs : Array B} (bsr : IsReducedB bs) (u : Array A bs.len) : meas (merge u) = RealAbGroup.BigSum (\lam i => A.meas (u i) RealField.* B.meas (bs i))
+      => meas-reduced {A} {B} {mkArray \lam i => (u i, bs i)} bsr
+
+    \lemma makeCommon (x y : SFunc A B) : ∃ (bs : IsReducedB {B}) (u v : Array A bs.len) (x = merge u) (y = merge v) \elim x, y
+      | in~ lx, in~ ly => \case ~-common (lx :: ly :: nil) \with {
+        | inP (bs,bsr,vss,e) => inP (bs, bsr, vss 0, vss 1, ~-sfequiv (e 0), ~-sfequiv (e 1))
+      }
+
+    \lemma join-common {bs : Array B} (bsr : IsReducedB bs) (u v : Array A bs.len) : merge u ∨ merge v = merge (\lam i => u i ∨ v i)
+      => pmap2 (+) (~-sfequiv (~_+' bs u v)) (BooleanRingTensor.mul-common bsr u v) *> ~-sfequiv (~_+' bs (\lam i => u i + v i) (\lam i => u i * v i))
+
+    \lemma tmeas-modular {x y : BooleanRingTensor A B} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
+      => \case makeCommon x y \with {
+        | inP (bs,bsr,u,v,px,py) => rewrite (px,py) $ pmap2 (+) (meas_merge bsr u) (meas_merge bsr v)
+            *> inv (RealAbGroup.BigSum_+ {bs.len})
+            *> pmap RealAbGroup.BigSum (exts \lam i => inv RealField.rdistr *> pmap (* _) meas-modular *> RealField.rdistr)
+            *> RealAbGroup.BigSum_+ {bs.len}
+            *> inv (pmap2 (+) (pmap meas (join-common bsr u v) *> meas_merge bsr (\lam i => u i ∨ v i)) (pmap meas (BooleanRingTensor.mul-common bsr u v) *> meas_merge bsr (\lam i => u i * v i)))
+      }
+  }
+
+\lemma meas_rect {A B : MeasureRing} {a : A} {b : B} : meas (rect a b) = meas a * meas b
+  => MeasureRingTensor.meas-reduced {A} {B} {(a,b) :: nil} (\lam {0} {0} i/=j => absurd (i/=j idp)) *> zro-right
+
+-- | A measure bimorphism `A × B -> C`: additive in each variable, multiplicative on rectangles, and multiplicative in measures.
+\record MeasureBimorphism (A B C : MeasureRing) (\coerce bfunc : A -> B -> C) {
+  | bfunc-+-left {a a' : A} {b : B} : bfunc (a + a') b = bfunc a b + bfunc a' b
+  | bfunc-+-right {a : A} {b b' : B} : bfunc a (b + b') = bfunc a b + bfunc a b'
+  | bfunc-* {a a' : A} {b b' : B} : bfunc a b * bfunc a' b' = bfunc (a * a') (b * b')
+  | bfunc-meas {a : A} {b : B} : meas (bfunc a b) = meas a RealField.* meas b
+
+  \lemma bfunc-zro-left {b : B} : bfunc 0 b = 0
+    => pmap (bfunc __ b) (inv zro-left) *> bfunc-+-left *> C.double=0
+
+  \lemma bfunc-zro-right {a : A} : bfunc a 0 = 0
+    => pmap (bfunc a) (inv zro-left) *> bfunc-+-right *> C.double=0
+}
+
+-- | The bimorphism `(a,b) => f (a ⊗ b)` associated to a homomorphism out of the tensor product.
+\func toBimorphism {A B C : MeasureRing} (f : MeasureRingHom (MeasureRingTensor A B) C) : MeasureBimorphism A B C \cowith
+  | bfunc a b => f (rect a b)
+  | bfunc-+-left {a} {a'} {b} => pmap f rect_+-left *> f.func-+ {rect a b} {rect a' b}
+  | bfunc-+-right {a} {b} {b'} => pmap f rect_+-right *> f.func-+ {rect a b} {rect a b'}
+  | bfunc-* => inv f.func-* *> pmap f rect_*
+  | bfunc-meas => f.func-meas *> meas_rect
+
+-- | The homomorphism `∑ aᵢ ⊗ bᵢ => ∑ h aᵢ bᵢ` associated to a bimorphism `h`.
+\func fromBimorphism {A B C : MeasureRing} (h : MeasureBimorphism A B C) : MeasureRingHom (MeasureRingTensor A B) C \cowith
+  | func => hom h
+  | func-+ => (hom h).func-+
+  | func-* {x} {y} => \have t {a : A} {b : B} (y : SFunc A B) : hom h (BooleanRingTensor.mulR y (rect a b)) = hom h (rect a b) * hom h y
+                          => SFuncAbMonoid.hom-ext {A} {B} {C} {mulLeft h (rect a b)} {cmulLeft (hom h (rect a b)) (hom h)} (\lam a' b' => pmap (hom h) rect_* *> C.zro-right *> inv h.bfunc-* *> inv (pmap2 (*) C.zro-right C.zro-right)) y
+                      \in SFuncAbMonoid.hom-ext {A} {B} {C} {mulRight h y} {cmulRight (hom h) (hom h y)} (\lam a b => t y) x
+  | func-meas {x} => \case makeReduced x \with {
+    | inP (l,lr,p) => rewrite p $ C.meas_BigSum-disjoint {map (\lam s => h s.1 s.2) l} (\lam {i} {j} i/=j => h.bfunc-* *> pmap (h _) (lr i/=j) *> MeasureBimorphism.bfunc-zro-right)
+        *> pmap RealAbGroup.BigSum (exts \lam j => h.bfunc-meas) *> inv (MeasureRingTensor.meas-reduced lr)
+  }
+  \where {
+    \lemma hom (h : MeasureBimorphism A B C) : AddMonoidHom (SFuncAbMonoid A B) C SFuncAbMonoid.lift.func
+      => SFuncAbMonoid.lift (\lam a b => h a b) (\lam {b} => MeasureBimorphism.bfunc-zro-left) (\lam {a} => MeasureBimorphism.bfunc-zro-right) (\lam {u} {v} {b} => inv h.bfunc-+-left)
+           (\lam {a} {b} {b'} => pmap (+ _) (h.bfunc-+-right *> pmap (+ _) h.bfunc-+-right) *> C.+-assoc *> pmap (_ +) BooleanRing.double=0 *> C.zro-right)
+
+    -- | `y => hom h (x * y)`
+    \func mulLeft (h : MeasureBimorphism A B C) (x : SFunc A B) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
+      | func y => hom h (BooleanRingTensor.mulR y x)
+      | func-zro => pmap (hom h) zro_*-right *> (hom h).func-zro
+      | func-+ => pmap (hom h) (BooleanRingTensor.mulR-ldistr x) *> (hom h).func-+
+
+    -- | `x => hom h (x * y)`
+    \func mulRight (h : MeasureBimorphism A B C) (y : SFunc A B) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
+      | func x => hom h (BooleanRingTensor.mulR y x)
+      | func-zro => pmap (hom h) (BooleanRingTensor.mulR y).func-zro *> (hom h).func-zro
+      | func-+ => pmap (hom h) (BooleanRingTensor.mulR y).func-+ *> (hom h).func-+
+
+    \func cmulLeft (c : C) (g : AddMonoidHom (SFuncAbMonoid A B) C) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
+      | func z => c * g z
+      | func-zro => pmap (c *) g.func-zro *> C.zro_*-right
+      | func-+ => pmap (c *) g.func-+ *> C.ldistr
+
+    \func cmulRight (g : AddMonoidHom (SFuncAbMonoid A B) C) (c : C) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
+      | func z => g z * c
+      | func-zro => pmap (* c) g.func-zro *> C.zro_*-left
+      | func-+ => pmap (* c) g.func-+ *> C.rdistr
+  }
+
+-- | The universal property of the tensor product: homomorphisms `A ⊗ B -> C` correspond to measure bimorphisms `A × B -> C`.
+\lemma tensor-univ {A B C : MeasureRing} : QEquiv (toBimorphism {A} {B} {C}) fromBimorphism \cowith
+  | ret_f f => exts \lam x => SFuncAbMonoid.hom-ext {A} {B} {C} {fromBimorphism.hom (toBimorphism f)} (\lam a b => C.zro-right) x
+  | f_sec h => exts \lam a b => C.zro-right

@@ -1,10 +1,13 @@
 \import Algebra.Monoid
+\import Data.Array
+\import Data.Fin
 \import Algebra.Ordered
 \import Algebra.Ring.Boolean
 \import Algebra.Ring.RingHom
 \import Arith.Real
 \import Arith.Real.UpperReal
 \import Function.Meta
+\import Logic
 \import Meta
 \import Order.Lattice
 \import Order.PartialOrder
@@ -12,7 +15,7 @@
 \import Topology.NormedAbGroup
 \open BooleanRing \hiding (<=)
 
-\class MeasureRing \extends BooleanRing, PseudoNormedAbGroup
+\class MeasureRing \extends BooleanRing, PseudoNormedAbGroup {
   | meas : E -> Real
   | meas_zro : meas 0 = 0
   | meas>=0 {x : E} : 0 RealAbGroup.<= meas x
@@ -26,6 +29,14 @@
   | norm_zro => meas_zro
   | norm_negative => pmap meas negative=id
   | norm_+ => transport (_ ExUpperReal.<=) RealAbGroup.+-upper (Real.<=-upper.1 meas_+)
+
+  -- | The measure of a sum of pairwise disjoint elements is the sum of their measures.
+  \lemma meas_BigSum-disjoint {l : Array E} (d : \Pi {i j : Fin l.len} -> i /= j -> l i * l j = 0)
+    : meas (BigSum l) = RealAbGroup.BigSum (map meas l) \elim l
+    | nil => meas_zro
+    | x :: l => \have q : x * BigSum l = 0 => BigSum-ldistr *> BigSum_zro (\lam j => d (/=-sym fsuc/=0))
+                \in pmap meas (inv $ pmap (_ +) q *> zro-right) *> meas-disjoint q *> pmap (_ RealAbGroup.+) (meas_BigSum-disjoint \lam {i} {j} i/=j => d {suc i} \lam p => i/=j (unfsuc p))
+}
 
 \lemma meas-modular {X : MeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
   => pmap (_ +) (pmap meas (later $ split *> pmap (_ ∨) *-comm) *> meas-disjoint (inv *-assoc *> pmap (* y) diff_* *> X.zro_*-left)) *> inv +-assoc *> inv (pmap (+ _) $ pmap meas (<=-antisymmetric (join-univ join-left $ transportInv (<= _) split $ join-univ join-right $ meet-right <=∘ join-left) $ join-univ join-left $ diff_<= <=∘ join-right) *> X.meas-disjoint (*-comm *> diff_*))
