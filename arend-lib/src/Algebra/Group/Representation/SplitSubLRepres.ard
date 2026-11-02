@@ -2,71 +2,148 @@
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.IntertwiningMap
-\import Algebra.Linear.SplitSubLModule
+\import Algebra.Group.Representation.Finite
+\import Algebra.Group.Representation.SubLRepres
+\import Algebra.Linear.BasedSplitSubLModule
+\import Algebra.Module
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
-\import Algebra.Module.ModuleCat
+\import Algebra.Module.SubLModule
+\import Algebra.Module.SubLModule.Split
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Category
+\import Equiv
 \import Function
 \import Logic
 \import Paths
 \import Paths.Meta
 
-{- | A subrepresentation of {E} with a linear (not necessarily equivariant) left inverse:
-    an injective intertwiner {incl} that is a split monomorphism in the category of modules.
-    Unlike `SubLRepres`, membership is not an arbitrary proposition, so the strong dichotomy of `SubLRepres.IsTrivial` does not apply.
-    A split monomorphism in the category of representations would be an invariant direct summand; that is what averaging produces. -}
-\record SplitSubLRepres.{u} {R : Ring.{u}} {G : Group.{u}} (E : LinRepres.{u} R G)
-  | sub : LinRepres.{u} R G
-  | incl : IntertwiningMap sub E
-  | split : SplitMono {LModuleCat.{u} R} {sub} {E} incl
-  \where {
-    \func retr.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) : LinearMap E S.sub
-      => S.split.hinv
+{- | A subrepresentation with a linear retraction of its canonical inclusion.
+    Membership is inherited from {SubLRepres}; splitting is inherited from {SplitSubLModule}.
+    The retraction need not be equivariant, and no basis of the submodule is assumed. -}
+\class SplitSubLRepres \extends SplitSubLModule, SubLRepres {
+  \override S : LinRepres R G
+  -- | The representation carried by the inherited membership subtype.
+  \func sub : LinRepres R G => ILinRepres \this
 
-    \lemma retr_incl.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (x : S.sub) : retr S (S.incl x) = x
-      => path (\lam i => (S.split.hinv_f @ i) x)
+  -- | The inherited linear retraction, regarded as a map into the subrepresentation.
+  \func retr : LinearMap S sub => retract
 
-    \lemma incl-inj.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) : IsInj S.incl
-      => \lam {x} {y} p => inv (retr_incl S x) *> pmap (retr S) p *> retr_incl S y
+  \lemma retr_incl (x : sub) : retr (incl x) = x => retract_incl x
 
-    \lemma incl-surj-section.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (s : IsSurj S.incl) (e : E) : S.incl (retr S e) = e
-      => \case s e \with {
-        | inP (x, p) => rewriteI p (pmap S.incl (retr_incl S x))
+  \lemma incl-inj : IsInj incl => \lam {x} {y} p => ext p
+
+  \lemma incl-surj-section (s : IsSurj incl) (e : S) : incl (retr e) = e
+    => \case s e \with { | inP (x, p) => rewriteI p (pmap incl (retr_incl x)) }
+
+  \lemma full-of-surj (s : IsSurj incl) (v : S) : contains v
+    => \case s v \with { | inP ((w, p), q) => transport contains q p }
+
+  \lemma incl-invariant (g : G) (x : sub) : incl (retr (g ** incl x)) = g ** incl x
+    => pmap (\lam z => z.1) (retract_incl (g ** x))
+} \where {
+  -- | Adding invariance to a split submodule preserves its membership and retraction.
+  \func fromInvariant {R : Ring} {G : Group} {E : LinRepres R G}
+    (B : SplitSubLModule R E) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+    : SplitSubLRepres R G E { | contains => B.contains } \cowith
+    | contains_zro => B.contains_zro
+    | contains_+ => B.contains_+
+    | contains_negative => B.contains_negative
+    | contains_*c => B.contains_*c
+    | contains_** => P-inv _
+    | retract => B.retract
+    | retract_incl => B.retract_incl
+
+  -- | An arbitrary split intertwiner has the canonical split image subrepresentation.
+  \func fromSplitMono {R : Ring} {G : Group} {W E : LinRepres R G}
+    (j : IntertwiningMap W E) (r : LinearMap E W) (rj : \Pi (w : W) -> r (j w) = w)
+    : SplitSubLRepres { | SubLRepres => ImageLRepres j } \cowith
+    | retract => (SplitSubLModule.fromSplitMono j r rj).retract
+    | retract_incl => (SplitSubLModule.fromSplitMono j r rj).retract_incl
+
+  -- | An arbitrary split monomorphism and its canonical image have equivalent domains.
+  \func imageEquiv {R : Ring} {G : Group} {W E : LinRepres R G}
+    (j : IntertwiningMap W E) (r : LinearMap E W) (rj : \Pi (w : W) -> r (j w) = w)
+    : QEquiv (ImLRepresLeftHom j) \cowith
+    | ret x => r x.1
+    | ret_f => rj
+    | f_sec x => (fromSplitMono j r rj).retract_incl x
+
+  -- | The canonical formulation gives the same zero-or-surjective dichotomy for every split monomorphism.
+  \lemma splitMono-dichotomy {R : Ring} {G : Group} {W E : LinRepres R G}
+    (j : IntertwiningMap W E) (r : LinearMap E W) (rj : \Pi (w : W) -> r (j w) = w)
+    (d : (\Pi (x : (fromSplitMono j r rj).sub) -> x = (fromSplitMono j r rj).sub.zro)
+         || IsSurj (fromSplitMono j r rj).incl)
+    : (\Pi (w : W) -> w = 0) || IsSurj j
+    => \case d \with {
+      | byLeft z => byLeft \lam w => inv (rj w) *>
+          pmap r (pmap (\lam x => x.1) (z (j w, inP (w, idp)))) *> r.func-zro
+      | byRight s => byRight \lam e => \case s e \with {
+        | inP ((v, p), q) => \case p \with { | inP (w, jw=v) => inP (w, jw=v *> q) }
       }
+    }
 
-    \lemma incl-invariant.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} (S : SplitSubLRepres.{u} E) (g : G) (x : S.sub)
-      : S.incl (retr S (g ** S.incl x)) = g ** S.incl x
-      => pmap (\lam z => S.incl (retr S z)) (inv S.incl.func-**) *> pmap S.incl (retr_incl S _) *> S.incl.func-**
+  -- | A zero membership subtype has no nonzero member in the ambient representation.
+  \lemma fromInvariant-zero {R : Ring} {G : Group} {E : LinRepres R G}
+    (B : SplitSubLModule R E) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+    (z : \Pi (x : (fromInvariant B P-inv).sub) -> x = 0) {v : E} (Pv : B v) : v = 0
+    => pmap (\lam x => x.1) (z (v, Pv))
+}
 
-    -- | The action on $R^{dim}$ of an invariant split submodule.
-    \func arrayRepres {R : Ring} {G : Group} {E : LinRepres R G} {P : E -> \Prop} (S : SplitSubLModule E P)
-                      (P-inv : \Pi (g : G) {v : E} -> P v -> P (g ** v)) : LinRepres R G \cowith
-      | LModule => ArrayFinModule {R} S.dim
-      | ** g x => S.retr (g ** S.incl x)
-      | **-assoc {m} {n} {x} => pmap S.retr (E.**-assoc *> pmap (m **) (inv (S.incl_retr (P-inv n (S.incl-in x)))))
-      | **_ide {x} => pmap S.retr E.**_ide *> S.retr_incl x
-      | **-ldistr {g} {x} {y} => pmap S.retr (pmap (g **) S.incl.func-+ *> E.**-ldistr) *> S.retr.func-+
-      | **_*c {g} {x} {c} => pmap S.retr (pmap (g **) S.incl.func-*c *> E.**_*c) *> S.retr.func-*c
+-- | A split subrepresentation with specified finite free coordinates on its membership subtype.
+\class BasedSplitSubLRepres \extends BasedSplitSubLModule, SplitSubLRepres {
+  \override S : LinRepres R G
+} \where {
+    -- | Adding invariance to a based split submodule retains its coordinate data by inheritance.
+    \func fromInvariant {R : Ring} {G : Group} {E : LinRepres R G}
+      (B : BasedSplitSubLModule { | R => R | S => E }) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+      : BasedSplitSubLRepres R G E { | contains => B.contains } \cowith
+      | dim => B.dim
+      | basisIncl => B.basisIncl
+      | coords => B.coords
+      | coords_basisIncl => B.coords_basisIncl
+      | basisIncl_in => B.basisIncl_in
+      | basisIncl_coords => B.basisIncl_coords
+      | contains_** => P-inv _
 
-    \func arrayIncl {R : Ring} {G : Group} {E : LinRepres R G} {P : E -> \Prop} (S : SplitSubLModule E P)
-                     (P-inv : \Pi (g : G) {v : E} -> P v -> P (g ** v)) : IntertwiningMap (arrayRepres S P-inv) E \cowith
-      | LinearMap => S.incl
-      | func-** {x} {g} => S.incl_retr (P-inv g (S.incl-in x))
+    -- | The induced representation in the chosen coordinates.
+    \func arrayRepres {R : Ring} {G : Group} {E : LinRepres R G}
+      (B : BasedSplitSubLModule { | R => R | S => E }) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v)) : LinRepres R G \cowith
+      | LModule => ArrayFinModule {R} B.dim
+      | ** g x => B.coords (g ** B.basisIncl x)
+      | **-assoc {m} {n} {x} => pmap B.coords (E.**-assoc *> pmap (m **) (inv (B.basisIncl_coords (P-inv n (B.basisIncl_in x)))))
+      | **_ide {x} => pmap B.coords E.**_ide *> B.coords_basisIncl x
+      | **-ldistr {g} {x} {y} => pmap B.coords (pmap (g **) B.basisIncl.func-+ *> E.**-ldistr) *> B.coords.func-+
+      | **_*c {g} {x} {c} => pmap B.coords (pmap (g **) B.basisIncl.func-*c *> E.**_*c) *> B.coords.func-*c
 
-    -- | An invariant split submodule is a split subrepresentation.
-    \func fromInvariant.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} {P : E -> \Prop} (S : SplitSubLModule E P)
-                        (P-inv : \Pi (g : G) {v : E} -> P v -> P (g ** v)) : SplitSubLRepres.{u} E \cowith
-      | sub => arrayRepres S P-inv
-      | incl => arrayIncl S P-inv
-      | split => \new SplitMono {
-        | hinv => S.retr
-        | hinv_f => exts S.retr_incl
-      }
+    -- | The inclusion written in the chosen coordinates.
+    \func arrayIncl {R : Ring} {G : Group} {E : LinRepres R G}
+      (B : BasedSplitSubLModule { | R => R | S => E }) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+      : IntertwiningMap (arrayRepres B P-inv) E \cowith
+      | LinearMap => B.basisIncl
+      | func-** {x} {g} => B.basisIncl_coords (P-inv g (B.basisIncl_in x))
 
-    \lemma fromInvariant-zero.{u} {R : Ring.{u}} {G : Group.{u}} {E : LinRepres.{u} R G} {P : E -> \Prop} (S : SplitSubLModule E P)
-      (P-inv : \Pi (g : G) {v : E} -> P v -> P (g ** v)) (z : \Pi (x : (fromInvariant S P-inv).sub) -> x = 0) {v : E} (Pv : P v) : v = 0
-      => inv (S.incl_retr Pv) *> pmap S.incl (z (S.retr v)) *> S.incl.func-zro
+    -- | The coordinate presentation is isomorphic to the same canonical membership subrepresentation.
+    \func arrayToSub {R : Ring} {G : Group} {E : LinRepres R G}
+      (B : BasedSplitSubLModule { | R => R | S => E }) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+      : IntertwiningMap (arrayRepres B P-inv) (fromInvariant B P-inv).sub \cowith
+      | LinearMap => (BasedSplitSubLModule.coordinateIso B).f
+      | func-** {x} {g} => ext (B.basisIncl_coords (P-inv g (B.basisIncl_in x)))
+
+    \func arrayToSubEquiv {R : Ring} {G : Group} {E : LinRepres R G}
+      (B : BasedSplitSubLModule { | R => R | S => E }) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+      : QEquiv (arrayToSub B P-inv) \cowith
+      | ret => (BasedSplitSubLModule.coordinateIso B).finv
+      | ret_f => B.coords_basisIncl
+      | f_sec x => ext (B.basisIncl_coords x.2)
+
+    \func finiteSub {R : Ring} {G : Group} {E : LinRepres R G}
+      (B : BasedSplitSubLModule { | R => R | S => E }) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+      : FinLinRepres { | LinRepres => (fromInvariant B P-inv).sub } \cowith
+      | isFinModule => inP (_, BasedSplitSubLModule.basis B)
+
+    \func arrayFinite {R : Ring} {G : Group} {E : LinRepres R G}
+      (B : BasedSplitSubLModule { | R => R | S => E }) (P-inv : \Pi (g : G) {v : E} -> B v -> B (g ** v))
+      : FinLinRepres { | LinRepres => arrayRepres B P-inv } \cowith
+      | isFinModule => (ArrayFinModule {R} B.dim).isFinModule
   }

@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Group.Representation
+\import Algebra.Group.Representation.Finite
 \import Algebra.Linear.Matrix
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
@@ -26,14 +27,6 @@
     }
 
 
--- | A representation on a finite free module.
-\class FinLinRepres \extends LinRepres
-  | isFinRepres : ∃ (l : Array E) (IsBasis l)
-  \where
-    \func toFinModule {R : Ring} {G : Group} (E : FinLinRepres R G) : FinModule R \cowith
-      | LModule => E
-      | isFinModule => E.isFinRepres
-
 -- | The action is multiplicative.
 \lemma toLinearMap_* {R : Ring} {G : Group} {E : LinRepres R G} {g h : G}
   : E.toLinearMap (g * h) = E.toLinearMap g LinearMap.∘ E.toLinearMap h
@@ -47,7 +40,7 @@
 
 -- | Fulton--Harris §2.1: the character of a finite free representation, independent of any basis.
 \func character {R : CRing} {G : Group} (E : FinLinRepres R G) (g : G) : R
-  => endoTrace {R} {FinLinRepres.toFinModule E} (E.toLinearMap g)
+  => endoTrace {R} {E} (E.toLinearMap g)
 
 \lemma character-char {R : CRing} {G : Group} {E : FinLinRepres R G} {lv : Array E} (bv : E.IsBasis lv) (g : G)
   : character E g = Character E bv g
@@ -55,7 +48,7 @@
 
 -- | Characters are class functions.
 \lemma character_conj {R : CRing} {G : Group} {E : FinLinRepres R G} (g h : G) : character E (h * g * inverse h) = character E g
-  => \case E.isFinRepres \with {
+  => \case E.isFinModule \with {
     | inP (lv, bv) =>
       \let M (x : G) => LinearMap.toMatrix lv bv (E.toLinearMap x)
       \in character-char bv _ *>
@@ -67,7 +60,7 @@
   }
 
 -- | $\chi_E(1) = \dim E$.
-\lemma character_ide {R : NonZeroCRing} {G : Group} {E : FinLinRepres R G} : character E ide = R.natCoef (FinModule.dimension (FinLinRepres.toFinModule E))
-  => \case E.isFinRepres \with {
+\lemma character_ide {R : NonZeroCRing} {G : Group} {E : FinLinRepres R G} : character E ide = R.natCoef (FinModule.dimension E)
+  => \case E.isFinModule \with {
     | inP (lv, bv) => character-char bv ide *> Character.of-1 *> pmap R.natCoef (inv (FinModule.dimension-unique bv))
   }

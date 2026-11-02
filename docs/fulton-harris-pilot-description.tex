@@ -1,0 +1,368 @@
+% Build from the repository root:
+% latexmk -pdf -interaction=nonstopmode -halt-on-error \
+%   -outdir=/tmp/fulton-harris-description-build docs/fulton-harris-pilot-description.tex
+% cp /tmp/fulton-harris-description-build/fulton-harris-pilot-description.pdf docs/
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=23mm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{microtype}
+\usepackage[table]{xcolor}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=teal!60!black,urlcolor=teal!60!black]{hyperref}
+\definecolor{ink}{HTML}{183947}
+\definecolor{muted}{HTML}{53636A}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{ink}{Fulton--Harris pilot: mathematical description}}
+\fancyhead[R]{\small\textcolor{muted}{20 October 2026}}
+\fancyfoot[C]{\small\thepage}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 1pt}
+\setlength{\emergencystretch}{2em}
+\setlist{leftmargin=*,itemsep=3pt,topsep=4pt,parsep=0pt}
+\renewcommand{\arraystretch}{1.2}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\C}{\mathbb C}
+\newcommand{\Hom}{\operatorname{Hom}}
+\newcommand{\End}{\operatorname{End}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\id}{\operatorname{id}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\source}[1]{\par{\small\raggedright\color{muted}Implementation: #1.\par}}
+\hypersetup{pdftitle={Fulton--Harris pilot: a mathematical description},
+  pdfsubject={Constructive representations, split submodules, characters, and S3},
+  pdfauthor={Arend formalization project}}
+
+\begin{document}
+\thispagestyle{empty}
+{\color{ink}\LARGE Fulton--Harris pilot\par}
+{\Large A mathematical description of the formalization\par}
+{\color{muted}20 October 2026\par}
+
+The pilot develops a constructive version of selected results from the first
+two lectures of Fulton--Harris, inside \code{arend-lib}. Its worked example is
+the representation theory of $S_3$: the trivial, sign, standard and permutation
+representations, an explicit decomposition, and character computations.
+This document explains the current mathematics; the detailed implementation
+plan is in \href{fulton-harris-pilot-plan.pdf}{\code{fulton-harris-pilot-plan.pdf}}.
+
+\textbf{Representations and their maps.}
+A representation consists of an $R$-module $V$ and a linear action of a group
+$G$. Writing the action as $gv$, its laws include
+\[
+  (gh)v=g(hv),\qquad 1v=v,\qquad
+  g(v+w)=gv+gw,\qquad g(av)=a(gv).
+\]
+An intertwiner $f:V\to W$ is a linear map satisfying $f(gv)=g f(v)$.
+The usual constructions are present: direct sums, tensor products, duals,
+and the action on linear maps
+\[
+  (g\cdot f)(v)=g f(g^{-1}v),\qquad
+  V^*=\Hom_R(V,R),
+\]
+where $R$ has the trivial action. The underlying objects are modules.
+Many constructions work over commutative rings; stronger assumptions are
+attached to the particular theorems that need them.
+
+\textbf{One hierarchy of subrepresentations.}
+The existing class \code{SubLRepres} describes an invariant submodule by a
+membership predicate $P(v)$ and its closure laws. Its underlying representation
+is the canonical subtype
+\[
+                         W=\{v\in V\mid P(v)\},
+\]
+with inclusion $j(v,p)=v$. The new descendant \code{SplitSubLRepres} adds a
+linear retraction $r:V\to W$ satisfying $r\circ j=\id_W$. It inherits the
+membership predicate and inclusion; it does not introduce a different
+subrepresentation. The retraction need not respect the group action.
+The map $p=j\circ r$ is a projection, since $p^2=p$.
+
+The module classes follow the same pattern. In code, \code{SubLModule} and
+\code{SubLRepres} coerce to the module or representation on their members.
+Thus \code{x : W} denotes a member of $W$, while \code{W v} is the proposition
+that an ambient vector $v$ belongs to $W$. The ambient object is \code{W.S}.
+The split and based descendants inherit these coercions. The based descendants
+additionally record finite free coordinates for $W$.
+
+\textbf{What is assumed about $W$.}
+To test irreducibility, we consider an invariant submodule $W\subseteq V$
+and a supplied linear map $r:V\to W$ that fixes $W$: $r(w)=w$ for every
+$w\in W$. This is the splitting stored by \code{SplitSubLRepres}.
+No basis of $W$ is assumed. A finite basis of $V$ is assumed to exist.
+
+A basis of $W$ can be supplied as additional data for coordinate computations.
+The based classes record this extra data. It is not needed for the
+irreducibility condition.
+
+\textbf{The working irreducibility notion.}
+The class \code{FinIrreducibleRepres} extends \code{FinLinRepres}, which
+inherits finite freeness from the existing \code{FinModule} class. Thus a finite
+basis of $V$ is assumed to exist; no particular basis is chosen. Its
+\code{nontrivial} field asserts $\exists v\in V,\ v\ne0$. Together these
+properties imply that every basis is nonempty, as proved by
+\code{basis-nonempty}.
+
+Its \code{irreducible} field says that for every split subrepresentation
+$W\subseteq V$ with its retraction, either every element of $W$
+is zero, or $j$ is surjective. Thus every invariant submodule with a linear
+retraction is zero or whole. This is the pilot's finite free notion of
+irreducibility; a general notion for arbitrary modules is outside its scope.
+
+\source{\code{SubLRepres}, \code{SplitSubLRepres}, \code{BasedSplitSubLRepres},
+\code{FinLinRepres}, \code{FinIrreducibleRepres.splitMono-irreducible}}
+
+\newpage
+\textbf{Why a splitting is part of the hypothesis.}
+Finite dimension of the ambient space does not, by itself, constructively
+supply a complement to a submodule described by an arbitrary predicate.
+For any proposition $P$, consider the submodule of the trivial representation
+on a nonzero ring
+\[
+                   W_P=\{x\in R\mid P\lor x=0\}.
+\]
+The zero alternative ensures that this is a submodule even when $P$ is false.
+If $W_P$ is zero, then $P$ is false, because $P$ would put $1$ in $W_P$.
+If $W_P$ is whole, membership of $1$ implies $P$. Consequently, a theorem
+asserting that every such predicate submodule is zero or whole would decide
+every proposition. This implication is formalized for the old definition,
+now named \code{IsStronglyIrreducible}.
+
+The split formulation only applies when the retraction is supplied or proved
+to exist. No general procedure producing a retraction for every $W_P$ is
+assumed. The distinction concerns the information available about a
+submodule, including in a finite-dimensional ambient space.
+
+\textbf{Maschke's averaging argument.}
+Let $G$ be finite and suppose an inverse of the scalar $|G|\cdot1_R$ is given.
+Starting with the linear retraction above, define
+\[
+                 \bar r(v)=\frac1{|G|}\sum_{g\in G}g\,r(g^{-1}v).
+\]
+The implementation proves that $\bar r$ is an intertwiner and that
+$\bar r\circ j=\id_W$. Thus a splitting of modules becomes a splitting of
+representations. Equivalently, averaging $j\circ r$ gives an equivariant
+projection $\bar p$ onto $j(W)$.
+
+The expected decomposition is
+\[
+ v=\bar p(v)+(v-\bar p(v)),\qquad
+ \bar p(v-\bar p(v))=0.
+\]
+The averaging theorem works over a commutative ring with the supplied inverse
+and needs no finite basis. The implemented theorem constructing the
+complement and an isomorphism $V\cong W\oplus C$ additionally assumes a finite
+basis of $V$ and the library's \code{SmithDomain} linear-algebra structure.
+This includes discrete fields; it is not an assertion of such a basis
+construction over arbitrary constructive $\C$.
+
+\textbf{Proving irreducibility through scalar endomorphisms.}
+Suppose every intertwiner $V\to V$ is multiplication by a scalar.
+For a split invariant submodule, the averaged projection therefore has the form
+\[
+               \bar p=c\,\id_V,\qquad c^2=c.
+\]
+Over a commutative local ring, the scalar $c$ is zero or one. If it is zero,
+the submodule is zero; if it is one, the inclusion is surjective. This proves
+the pilot's irreducibility statement. The argument decides only a scalar
+already known to be idempotent; it needs no test of whether an arbitrary
+scalar is zero. This is the route used for the standard representation of
+$S_3$ over constructive $\C$.
+
+\source{\code{IsStronglyIrreducible.excludedMiddle}, \code{maschke-split},
+\code{maschke-complement}, \code{irreducible-from-commutant}}
+
+\newpage
+\textbf{Schur's lemma and its constructive boundary.}
+Over a discrete field $K$ (a field with decidable equality), the implementation
+proves that an intertwiner between irreducible representations is zero or an
+isomorphism. The theorem takes irreducible representations directly, rather than a
+representation and a separate proof of an irreducibility predicate.
+Its proof constructs split presentations of the kernel and image.
+Irreducibility then says that the image is zero or whole, and that the kernel
+is zero or whole. The resulting cases give the conclusion.
+
+The unrestricted zero-or-isomorphism conclusion is not asserted over
+constructive $\C$. Already on the one-dimensional trivial representation,
+multiplication by any scalar $c$ is an intertwiner. Such a dichotomy would
+tell us whether $c=0$ or $c$ is invertible, and hence decide scalar equality.
+The source records this obstruction as \code{schur-decideEq}. It is an
+implication from the proposed theorem, not a proof of its negation.
+
+For complex character theory the available route keeps the useful
+hypotheses explicit: all endomorphisms are scalar, or all intertwiners
+between two specified representations vanish. Deriving these hypotheses
+from irreducibility in full generality remains a separate problem.
+
+\textbf{What information permits division.}
+The implementation distinguishes three sorts of evidence:
+\begin{itemize}
+  \item an equality $a=0$;
+  \item its negation $\neg(a=0)$;
+  \item positive invertibility evidence: a scalar $b$ with $ab=ba=1$.
+\end{itemize}
+Over a discrete field the relevant zero tests and inverse construction are
+available. Over constructive $\C$, a negated equality is not silently turned
+into an inverse or into positive apartness evidence. When a computation
+divides, its hypotheses must justify that division.
+
+For example, a pivot test in elimination asks whether a matrix entry $a$ is
+zero, then uses an inverse in the nonzero branch. This is stronger than merely
+performing additions and multiplications. Such elimination belongs to the
+discrete-field part of the pilot. Averaging instead takes its required inverse
+as an explicit input.
+
+\textbf{The passage from rational to complex coefficients.}
+The pilot constructs the ring homomorphism $\Q\to\C$ and uses it to transport
+inverses of positive integers. In particular, the complex inverses of $3$
+and $6$ come from their rational inverses. No search for an arbitrary
+complex inverse is needed.
+
+The formulas for the $S_3$ representations, their decomposition and their
+characters are proved with general coefficients and instantiated at $\C$.
+The standard representation's complex irreducibility has the scalar-projection
+proof described above. It is not inferred merely from irreducibility over
+$\Q$: irreducibility need not survive a field extension in general.
+General scalar-extension machinery is not part of this pilot.
+
+\textbf{Rank one.}
+A representation free of rank one is proved irreducible in the split sense
+when the coefficient ring has only the idempotents $0$ and $1$. This proof
+does not need averaging or an inverse of $|G|$. The condition matters over
+rings: a product ring has proper direct summands even as a rank-one module
+over itself.
+
+\source{\code{SchurLemma}, \code{schur-decideEq}, \code{rank-one-irreducible};
+\code{Arith/Complex/RatHom.ard}}
+
+\newpage
+\textbf{Characters and their basic formulas.}
+For a finite free representation over a commutative ring, define
+\[
+                      \chi_V(g)=\tr(\rho_V(g)).
+\]
+The trace is proved independent of the chosen basis. The resulting character
+is constant on conjugacy classes, and $\chi_V(1)$ is the dimension interpreted
+as a scalar in the coefficient ring. The implementation proves
+\begin{align*}
+ \chi_{V\oplus W}(g)&=\chi_V(g)+\chi_W(g),\\
+ \chi_{V\otimes W}(g)&=\chi_V(g)\chi_W(g),\\
+ \chi_{V^*}(g)&=\chi_V(g^{-1}),\\
+ \chi_{\Hom_R(V,W)}(g)&=\chi_V(g^{-1})\chi_W(g).
+\end{align*}
+
+\textbf{A character without a basis of the submodule.}
+If $j:W\to V$ has a linear retraction $r$, and $V$ is finite free, define
+\[
+           \chi_W(g)=\tr_V\bigl(j\circ\rho_W(g)\circ r\bigr).
+\]
+This uses a trace on the ambient module. It does not require a basis of $W$.
+The formalization proves independence of the choice of retraction, agreement
+with the ordinary character if a basis of $W$ is available, agreement with the chosen coordinate
+presentation (\code{splitCharacter-coordinates}), and additivity
+across a supplied decomposition into split subrepresentations. These are the
+implemented results in \code{SplitCharacter.ard}.
+
+\textbf{Averaging, invariants and orthogonality.}
+The map
+\[
+                 P(v)=\frac1{|G|}\sum_{g\in G}gv
+\]
+is proved to project onto the invariant vectors. Its trace is
+$|G|^{-1}\sum_g\chi_V(g)$. If those invariant vectors have a supplied finite
+free split presentation of rank $d$, the trace is also $d\cdot1_R$.
+The existence of such a presentation is proved over discrete fields.
+
+The character pairing is defined algebraically by
+\[
+       \langle\chi,\psi\rangle
+       =\frac1{|G|}\sum_{g\in G}\chi(g^{-1})\psi(g).
+\]
+Applying the averaging trace formula to $\Hom_R(V,W)$ gives the route to
+orthogonality. Vanishing of all intertwiners implies pairing zero; a scalar
+endomorphism space gives self-pairing one for a nonzero finite free
+representation. The library also deduces the non-isomorphic irreducible case
+over discrete fields using Schur's lemma. These general orthogonality results
+depend on Exercise~1.2, which is deliberately left as a hole.
+
+For a supplied finite family of pairwise non-isomorphic irreducibles with
+scalar endomorphisms, the implementation uses characters to prove uniqueness
+of multiplicities in two given isomorphic direct sums. This theorem assumes
+a discrete field and injectivity of the natural-number map into it
+(characteristic zero). It inherits the exercise dependency. It does not
+construct a decomposition of an arbitrary representation.
+
+\source{\code{Characters.ard}, \code{CharacterFormulas.ard}, \code{Tensor.ard},
+\code{SplitCharacter.ard}, \code{Invariants.ard}, \code{Orthogonality.ard},
+\code{Multiplicities.ard}}
+
+\newpage
+\textbf{The explicit $S_3$ example.}
+The permutation representation is the action on $R^3$ by permuting
+coordinates. Its standard subrepresentation is the sum-zero plane
+\[
+                 W=\{(x,y,z)\in R^3\mid x+y+z=0\}.
+\]
+It has explicit coordinates and a retraction
+\[
+       j(a,b)=(a,b-a,-b),\qquad r(x,y,z)=(x,-z).
+\]
+Here $rj=\id$, and $jr$ is the identity on the sum-zero plane. This
+presentation uses no division. When $3$ is invertible, put
+$m=(x+y+z)/3$. The equivariant decomposition is
+\[
+ (x,y,z)=m(1,1,1)+(x-m,y-m,z-m),\qquad
+ R^3\cong R_{\mathrm{triv}}\oplus W.
+\]
+Both directions of the isomorphism and their inverse laws are implemented.
+An explicit calculation shows that every equivariant endomorphism of $W$
+is scalar. Averaging then proves irreducibility over a commutative local ring
+with $6$ invertible, including $\Q$ and constructive $\C$.
+
+The computed character values are:
+\begin{center}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Representation & Identity & Transposition & Three-cycle\\
+\midrule
+Trivial     & $1$ & $1$  & $1$\\
+Sign        & $1$ & $-1$ & $1$\\
+Standard    & $2$ & $0$  & $-1$\\
+Permutation & $3$ & $1$  & $0$\\
+\bottomrule
+\end{tabular}
+\end{center}
+The six permutations are explicitly enumerated, and all nine pairings among
+the trivial, sign and standard characters are proved: one on the diagonal,
+zero off it. These direct calculations are independent of the exercise holes
+and apply over constructive $\C$ using the supplied inverse of $6$.
+The pilot does not yet prove that these exhaust all irreducible
+representations of $S_3$.
+
+\textbf{The intentional holes.}
+Two exercises remain stated with unfilled proofs, as requested:
+\begin{itemize}
+ \item Exercise~1.2: invariant elements of $\Hom_R(V,W)$ are exactly
+       intertwiners. Its goal is \code{FH_L01_Ex1_2}.
+ \item Exercise~2.5: the character of a permutation representation counts
+       fixed points. Its goal is \code{FH_L02_Ex2_5}.
+\end{itemize}
+Any result using these holes is conditional on the corresponding exercise.
+The direct $S_3$ computations and its irreducibility proof do not use them.
+
+\textbf{The present boundary.}
+The pilot supplies constructive representations, split irreducibility,
+averaging, characters and the explicit $S_3$ results under their stated
+hypotheses. General scalar extension, a general decomposition algorithm,
+completeness of the $S_3$ list, Hermitian forms, and the general complex
+consequences of Schur's lemma from irreducibility alone remain outside these
+implemented results.
+
+\source{\code{Symmetric3.ard}, \code{Symmetric3Characters.ard};
+\code{test/Algebra/Representation/S3Test.ard}}
+\end{document}

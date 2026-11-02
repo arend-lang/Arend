@@ -1,3 +1,4 @@
+\import Algebra.Group.Representation.Finite
 \import Algebra.Group
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
@@ -13,7 +14,7 @@
 \import Algebra.Group.Symmetric
 \import Algebra.Group.Symmetric.Action
 \import Algebra.Linear.Matrix (MatrixRing)
-\import Algebra.Linear.SplitSubLModule (SplitSubLModule)
+\import Algebra.Linear.BasedSplitSubLModule (BasedSplitSubLModule)
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Module.FinModule
@@ -100,9 +101,9 @@
 
 {- | The standard representation as the split invariant subspace $\{f \mid f_0 + f_1 + f_2 = 0\}$ of {Perm3},
     with basis $e_0 - e_1$, $e_1 - e_2$ and retraction $f \mapsto (f_0, -f_2)$. -}
-\func stdSplit (R : CRing) : SplitSubLModule (Perm3 R) (\lam f => AbMonoid.FinSum {R} {FinFin 3} f = 0) \cowith
+\func stdSplit (R : CRing) : BasedSplitSubLModule { | R => R | S => Perm3 R | contains => \lam f => AbMonoid.FinSum {R} {FinFin 3} f = 0 } \cowith
   | dim => 2
-  | incl => \new LinearMap {
+  | basisIncl => \new LinearMap {
     | func x => stdVec x
     | func-+ => exts \lam j => \case \elim j \with {
       | 0 => idp
@@ -115,7 +116,7 @@
       | 2 => equation
     }
   }
-  | retr => \new LinearMap {
+  | coords => \new LinearMap {
     | func f => \lam i => stdCoords f i
     | func-+ => exts \lam i => \case \elim i \with {
       | 0 => idp
@@ -126,12 +127,12 @@
       | 1 => equation
     }
   }
-  | retr_incl x => exts \lam i => \case \elim i \with {
+  | coords_basisIncl x => exts \lam i => \case \elim i \with {
     | 0 => idp
     | 1 => R.negative-isInv
   }
-  | incl-in x => AbMonoid.FinSum=BigSum *> equation
-  | incl_retr {f} p => exts \lam j => \case \elim j \with {
+  | basisIncl_in x => AbMonoid.FinSum=BigSum *> equation
+  | basisIncl_coords {f} p => exts \lam j => \case \elim j \with {
     | 0 => idp
     | 1 => \have s : f 0 + (f 1 + (f 2 + 0)) = 0 => inv AbMonoid.FinSum=BigSum *> p
            \in (equation : negative (f 2) - f 0 = f 1 - (f 0 + (f 1 + (f 2 + 0)))) *> pmap (f 1 -) s *> equation
@@ -142,12 +143,12 @@
   : AbMonoid.FinSum {R} {FinFin 3} (\lam j => f (symQEquiv (symQEquiv g) j)) = 0
   => inv (AbMonoid.FinSum_Equiv {R} {FinFin 3} {FinFin 3} (symQEquiv (symQEquiv g)) {f}) *> p
 
-\func stdSub.{u} (R : CRing.{u}) : SplitSubLRepres.{u} (Perm3 R)
-  => SplitSubLRepres.fromInvariant (stdSplit R) std-invariant
+\func stdSub.{u} (R : CRing.{u}) : BasedSplitSubLRepres R S3 (Perm3 R)
+  => BasedSplitSubLRepres.fromInvariant (stdSplit R) std-invariant
 
 -- | The standard representation of $S_3$ on $R^2$.
 \func StdRep (R : CRing) : LinRepres R S3
-  => SplitSubLRepres.arrayRepres (stdSplit R) std-invariant
+  => BasedSplitSubLRepres.arrayRepres (stdSplit R) std-invariant
 
 \func e0 {R : CRing} : Array R 2 => R.ide :: R.zro :: nil
 
@@ -185,7 +186,7 @@
      })
 
 -- | The standard representation is irreducible over every commutative local ring in which $6$ is invertible.
-\lemma std-irreducible.{u} {R : LocalCRing.{u}} (cardInv : Monoid.Inv (R.natCoef S3.card)) : IsFinIrreducible (StdRep R)
+\func std-irreducible.{u} {R : LocalCRing.{u}} (cardInv : Monoid.Inv (R.natCoef S3.card)) : FinIrreducibleRepres { | LinRepres => StdRep R }
   => irreducible-from-commutant cardInv {StdRep R} {MatrixRing.ide} NatOrder.zero<suc ArrayFinModule.basis std-commutant
 
 \func mean3 {R : CRing} (inv3 : Monoid.Inv (R.natCoef 3)) (f : Fin 3 -> R) : R
@@ -207,40 +208,40 @@
 {- | The permutation representation of $S_3$ is the direct sum of the trivial and the standard representations,
     over every commutative ring in which $3$ is invertible. -}
 \func perm-decomp-from (R : CRing) : IntertwiningMap (ProductLRepres (TrivialAction (RingLModule R) S3) (StdRep R)) (Perm3 R)
-  => ProductLRepres.coprod-map {R} {S3} {TrivialAction (RingLModule R) S3} {StdRep R} {Perm3 R} (lineIncl R) (SplitSubLRepres.arrayIncl (stdSplit R) std-invariant)
+  => ProductLRepres.coprod-map {R} {S3} {TrivialAction (RingLModule R) S3} {StdRep R} {Perm3 R} (lineIncl R) (BasedSplitSubLRepres.arrayIncl (stdSplit R) std-invariant)
 
 \func perm-decomp-to {R : CRing} (inv3 : Monoid.Inv (R.natCoef 3)) : IntertwiningMap (Perm3 R) (ProductLRepres (TrivialAction (RingLModule R) S3) (StdRep R)) \cowith
-  | func f => (mean3 inv3 f, (stdSplit R).retr (\lam j => f j - mean3 inv3 f))
+  | func f => (mean3 inv3 f, (stdSplit R).coords (\lam j => f j - mean3 inv3 f))
   | func-+ {f} {f'} => \have m+ : mean3 inv3 (\lam j => f j + f' j) = mean3 inv3 f + mean3 inv3 f' => pmap (inv3.inv *) (AbMonoid.FinSum_+ {R} {FinFin 3} {f} {f'}) *> R.ldistr
-                       \in ext (m+, pmap (stdSplit R).retr {\lam j => (f j + f' j) - mean3 inv3 (\lam j => f j + f' j)} {\lam j => (f j - mean3 inv3 f) + (f' j - mean3 inv3 f')} (ext \lam j => pmap (\lam z => (f j + f' j) - z) m+ *> equation) *>
-                                    (stdSplit R).retr.func-+ {\lam j => f j - mean3 inv3 f} {\lam j => f' j - mean3 inv3 f'})
+                       \in ext (m+, pmap (stdSplit R).coords {\lam j => (f j + f' j) - mean3 inv3 (\lam j => f j + f' j)} {\lam j => (f j - mean3 inv3 f) + (f' j - mean3 inv3 f')} (ext \lam j => pmap (\lam z => (f j + f' j) - z) m+ *> equation) *>
+                                    (stdSplit R).coords.func-+ {\lam j => f j - mean3 inv3 f} {\lam j => f' j - mean3 inv3 f'})
   | func-*c {r} {f} => \have m* : mean3 inv3 (\lam j => r * f j) = r * mean3 inv3 f => pmap (inv3.inv *) (inv (R.FinSum-ldistr {FinFin 3} {r} {f})) *> equation
-                       \in ext (m*, pmap (stdSplit R).retr {\lam j => r * f j - mean3 inv3 (\lam j => r * f j)} {\lam j => r * (f j - mean3 inv3 f)} (ext \lam j => pmap (\lam z => r * f j - z) m* *> equation) *>
-                                    (stdSplit R).retr.func-*c {r} {\lam j => f j - mean3 inv3 f})
+                       \in ext (m*, pmap (stdSplit R).coords {\lam j => r * f j - mean3 inv3 (\lam j => r * f j)} {\lam j => r * (f j - mean3 inv3 f)} (ext \lam j => pmap (\lam z => r * f j - z) m* *> equation) *>
+                                    (stdSplit R).coords.func-*c {r} {\lam j => f j - mean3 inv3 f})
   | func-** {f} {g} => \have mg : mean3 inv3 (\lam j => f (symQEquiv (symQEquiv g) j)) = mean3 inv3 f
                                 => pmap (inv3.inv *) (inv (AbMonoid.FinSum_Equiv {R} {FinFin 3} {FinFin 3} (symQEquiv (symQEquiv g)) {f}))
-                       \in ext (mg, pmap (stdSplit R).retr {\lam j => f (symQEquiv (symQEquiv g) j) - mean3 inv3 (\lam j => f (symQEquiv (symQEquiv g) j))} {\lam j => f (symQEquiv (symQEquiv g) j) - mean3 inv3 f} (ext \lam j => pmap (\lam z => f (symQEquiv (symQEquiv g) j) - z) mg) *>
-                                    pmap (\lam (z : Fin 3 -> R) => (stdSplit R).retr (\lam j => z (symQEquiv (symQEquiv g) j))) (inv ((stdSplit R).incl_retr (mean3-sum inv3 f))))
+                       \in ext (mg, pmap (stdSplit R).coords {\lam j => f (symQEquiv (symQEquiv g) j) - mean3 inv3 (\lam j => f (symQEquiv (symQEquiv g) j))} {\lam j => f (symQEquiv (symQEquiv g) j) - mean3 inv3 f} (ext \lam j => pmap (\lam z => f (symQEquiv (symQEquiv g) j) - z) mg) *>
+                                    pmap (\lam (z : Fin 3 -> R) => (stdSplit R).coords (\lam j => z (symQEquiv (symQEquiv g) j))) (inv ((stdSplit R).basisIncl_coords (mean3-sum inv3 f))))
 
 \func perm-decomp-from-to {R : CRing} (inv3 : Monoid.Inv (R.natCoef 3)) (f : Fin 3 -> R) : perm-decomp-from R (perm-decomp-to inv3 f) = f
-  => ext \lam j => pmap (mean3 inv3 f +) (path (\lam t => (stdSplit R).incl_retr (mean3-sum inv3 f) t j)) *> equation
+  => ext \lam j => pmap (mean3 inv3 f +) (path (\lam t => (stdSplit R).basisIncl_coords (mean3-sum inv3 f) t j)) *> equation
 
 \func perm-decomp-to-from {R : CRing} (inv3 : Monoid.Inv (R.natCoef 3)) (c : R) (x : Array R 2)
   : perm-decomp-to inv3 (perm-decomp-from R (c, x)) = (c, x)
   => \let | m=c : mean3 inv3 (perm-decomp-from R (c, x)) = c => pmap (inv3.inv *) (AbMonoid.FinSum=BigSum *> (equation : (c + x 0) + ((c + (x 1 - x 0)) + ((c + negative (x 1)) + 0)) = R.natCoef 3 * c)) *> inv *-assoc *> pmap (`* c) inv3.inv-left *> ide-left
-     \in ext (m=c, pmap (stdSplit R).retr {\lam j => perm-decomp-from R (c, x) j - mean3 inv3 (perm-decomp-from R (c, x))} {\lam j => stdVec x j} (ext \lam j => pmap (perm-decomp-from R (c, x) j -) m=c *> equation) *> (stdSplit R).retr_incl x)
+     \in ext (m=c, pmap (stdSplit R).coords {\lam j => perm-decomp-from R (c, x) j - mean3 inv3 (perm-decomp-from R (c, x))} {\lam j => stdVec x j} (ext \lam j => pmap (perm-decomp-from R (c, x) j -) m=c *> equation) *> (stdSplit R).coords_basisIncl x)
 
 -- | The trivial one-dimensional representation is irreducible over every nonzero commutative ring without nontrivial idempotents.
-\lemma trivial-irreducible.{u} {R : NonZeroCRing.{u}} {G : Group.{u}} (conn : R.IsConnected) : IsFinIrreducible (TrivialAction (RingLModule R) G)
-  => rank-one-irreducible conn RingLModule.basis
+\func trivial-irreducible.{u} {R : NonZeroCRing.{u}} {G : Group.{u}} (conn : R.IsConnected) : FinIrreducibleRepres { | LinRepres => TrivialAction (RingLModule R) G }
+  => rank-one-irreducible {R} {G} {TrivialAction (RingLModule R) G} conn RingLModule.basis
 
 -- | The sign representation is irreducible over every nonzero commutative ring without nontrivial idempotents.
-\lemma sign-irreducible.{u} {R : NonZeroCRing.{u}} {n : Nat} (conn : R.IsConnected) : IsFinIrreducible (SignLRepres R n)
-  => rank-one-irreducible conn RingLModule.basis
+\func sign-irreducible.{u} {R : NonZeroCRing.{u}} {n : Nat} (conn : R.IsConnected) : FinIrreducibleRepres { | LinRepres => SignLRepres R n }
+  => rank-one-irreducible {R} {SymFinGroup n} {SignLRepres R n} conn RingLModule.basis
 
 -- | Fulton--Harris Cor. 1.6 for the presented input: the permutation representation of $S_3$ is the direct sum of two irreducible representations.
 \func perm3-complete-reducibility.{u} {R : LocalCRing.{u}} (cardInv : Monoid.Inv (R.natCoef S3.card)) (inv3 : Monoid.Inv (R.natCoef 3))
-  : \Sigma (IsFinIrreducible (TrivialAction (RingLModule R) S3)) (IsFinIrreducible (StdRep R))
+  : \Sigma (FinIrreducibleRepres { | LinRepres => TrivialAction (RingLModule R) S3 }) (FinIrreducibleRepres { | LinRepres => StdRep R })
            (\Pi (f : Fin 3 -> R) -> perm-decomp-from R (perm-decomp-to inv3 f) = f)
            (\Pi (c : R) (x : Array R 2) -> perm-decomp-to inv3 (perm-decomp-from R (c, x)) = (c, x))
   => (trivial-irreducible R.connected, std-irreducible cardInv, perm-decomp-from-to inv3, perm-decomp-to-from inv3)

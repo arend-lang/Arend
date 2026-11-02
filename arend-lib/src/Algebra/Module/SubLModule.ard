@@ -19,16 +19,20 @@
 \class SubLModule (R : Ring) \extends SubAddGroup {
   \override S : LModule R
   | contains_*c {a : R} {b : S} : contains b -> contains (a *c b)
+} \where {
+  -- | The module carried by the membership subtype.
+  \use \coerce toLModule (W : SubLModule {}) : LModule W.R \cowith
+    | AddGroup => IAddGroup W
+    | +-comm => ext +-comm
+    | *c r p => (r *c p.1, contains_*c p.2)
+    | *c-assoc => ext *c-assoc
+    | *c-ldistr => ext *c-ldistr
+    | *c-rdistr => ext *c-rdistr
+    | ide_*c => ext ide_*c
 }
 
 \instance IModule (S : SubLModule {}) : LModule S.R
-  | AddGroup => IAddGroup S
-  | +-comm => ext +-comm
-  | *c r p => (r *c p.1, contains_*c p.2)
-  | *c-assoc => ext *c-assoc
-  | *c-ldistr => ext *c-ldistr
-  | *c-rdistr => ext *c-rdistr
-  | ide_*c => ext ide_*c
+  => SubLModule.toLModule S
   \where
     \func embed : LinearMap (IModule S) S.S \cowith
       | AddGroupHom => IAddGroup.embed

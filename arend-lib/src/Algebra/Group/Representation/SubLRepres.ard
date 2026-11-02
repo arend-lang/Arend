@@ -13,14 +13,23 @@
 \class SubLRepres \extends SubLModule, SubGSet {
   \override S : LinRepres R G
 
+  -- | The canonical inclusion into the ambient representation.
+  \func incl : IntertwiningMap \this S \cowith
+    | LinearMap => IModule.embed
+    | func-** => idp
+
   \func IsTrivial => ∀ {x} (contains x -> x = 0) || ∀ x (contains x)
+} \where {
+  -- | The representation carried by the membership subtype.
+  \use \coerce toLinRepres (W : SubLRepres {}) : LinRepres W.R W.G \cowith
+    | LModule => IModule W
+    | GSet => IGSet W
+    | **-ldistr => ext **-ldistr
+    | **_*c => ext **_*c
 }
 
 \instance ILinRepres (S : SubLRepres {}) : LinRepres
-  | LModule => IModule S
-  | GSet => IGSet S
-  | **-ldistr => ext **-ldistr
-  | **_*c => ext **_*c
+  => SubLRepres.toLinRepres S
   \where
     \func embed : IntertwiningMap (ILinRepres S) S.S \cowith
       | LinearMap => IModule.embed

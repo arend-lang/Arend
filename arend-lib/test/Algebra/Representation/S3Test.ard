@@ -22,12 +22,12 @@
 \import Paths
 
 -- R3 over the rationals (it uses the scalar commutant R7).
-\lemma std-irreducible-Q : IsFinIrreducible (StdRep RatField)
+\func std-irreducible-Q : FinIrreducibleRepres { | LinRepres => StdRep RatField }
   => std-irreducible (natCoef-Inv-Rat 5)
 
 
 -- R8a: the same statements over constructive complex numbers. The only inverse used is the image of $1/6$; no zero test.
-\lemma std-irreducible-C : IsFinIrreducible (StdRep ComplexField)
+\func std-irreducible-C : FinIrreducibleRepres { | LinRepres => StdRep ComplexField }
   => std-irreducible (natCoef-Inv-Complex 5)
 
 
@@ -59,17 +59,17 @@
 
 -- One-dimensional representations are irreducible without averaging: over $\mathbb{Z}$, where $|G|$ is not invertible.
 -- $\mathbb{Z}$ is a domain, so its only idempotents are $0$ and $1$.
-\lemma trivial-irreducible-Z-C2 : IsFinIrreducible (TrivialAction (RingLModule IntRing) (SymFinGroup 2))
+\func trivial-irreducible-Z-C2 : FinIrreducibleRepres { | LinRepres => TrivialAction (RingLModule IntRing) (SymFinGroup 2) }
   => trivial-irreducible (\lam _ => IntRing.isImpotent)
 
-\lemma sign-irreducible-Z : IsFinIrreducible (SignLRepres IntRing 3)
+\func sign-irreducible-Z : FinIrreducibleRepres { | LinRepres => SignLRepres IntRing 3 }
   => sign-irreducible (\lam _ => IntRing.isImpotent)
 
 -- The basis-free character of the standard summand of the permutation representation is its ordinary character.
 \func stdSubFin-Q => SplitSubLRepres.fromInvariant {RatField} {S3} {Perm3Fin RatField} (stdSplit RatField) std-invariant
 
 \lemma std-splitCharacter-Q (g : S3) : splitCharacter stdSubFin-Q g = character (StdFin RatField) g
-  => splitCharacter-basis stdSubFin-Q ArrayFinModule.basis g *> inv (character-char ArrayFinModule.basis g)
+  => splitCharacter-coordinates {RatField} {S3} {Perm3Fin RatField} (stdSplit RatField) std-invariant g
 
 -- Negative control: the checker must reject an invalid proof.
 \func control-invalid-proof => fails {0 = {Nat} 1} idp

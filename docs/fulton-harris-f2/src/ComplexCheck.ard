@@ -1,0 +1,12 @@
+\import AveragingRoute
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.Orthogonality (pairing)
+\import Algebra.Group.Representation.Symmetric3
+\import Algebra.Module.FinModule
+\import Arith.Complex
+\import Arith.Complex.RatHom
+
+-- This uses the scalar commutant rather than the explicit six-term character sum.
+\lemma std-self-pairing-C
+  : pairing (natCoef-Inv-Complex 5) (character (StdFin ComplexField)) (character (StdFin ComplexField)) = ComplexField.ide
+  => orthogonality-self-commutant (natCoef-Inv-Complex 5) (StdFin ComplexField) ArrayFinModule.basis 0 std-commutant

@@ -1,0 +1,37 @@
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.IntertwiningMap
+\import Algebra.Group.Representation.Irreducible
+\import Algebra.Group.Representation.Multiplicities (ZeroFin)
+\import Algebra.Group.Representation.Orthogonality
+\import Algebra.Group.Representation.Symmetric3
+\import Algebra.Ring.Local
+\import Arith.Complex
+\import Arith.Complex.RatHom
+\import Arith.Rat
+\import Equiv
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set
+
+-- The discrete-field theorem supplies the rank-one hypothesis of the obstruction.
+\lemma schur-decideEq-Q (x y : Rat) : Dec (x = y)
+  => \let irr => trivial-irreducible {RatField} {S3} RatField.connected
+     \in schur-decideEq (SchurLemma {RatField} {S3} {irr} {irr}) x y
+
+-- Over Complex the same conclusion would decide scalar equality; the hypothesis is explicit.
+\lemma schur-decideEq-C
+  (schur : \Pi (f : IntertwiningMap (TrivialFin ComplexField S3) (TrivialFin ComplexField S3)) -> f.IsZero || IsEquiv f)
+  (x y : Complex) : Dec (x = y)
+  => schur-decideEq schur x y
+
+-- These use the general character theorems, so they remain conditional on Exercise 1.2.
+\lemma pairing-std-std-commutant-C
+  : pairing (natCoef-Inv-Complex 5) (character (StdFin ComplexField)) (character (StdFin ComplexField)) = ComplexField.ide
+  => orthogonality-self (natCoef-Inv-Complex 5) (std-irreducible (natCoef-Inv-Complex 5)) std-commutant
+
+\lemma pairing-std-zero-C
+  : pairing (natCoef-Inv-Complex 5) (character (StdFin ComplexField)) (character (ZeroFin {ComplexField} {S3})) = ComplexField.zro
+  => orthogonality-zeroHom (natCoef-Inv-Complex 5) (StdFin ComplexField) (ZeroFin {ComplexField} {S3})
+       (\lam f v => exts \lam i => \case i \with {})

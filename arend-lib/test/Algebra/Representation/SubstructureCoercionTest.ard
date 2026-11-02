@@ -1,0 +1,44 @@
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.SplitSubLRepres
+\import Algebra.Group.Representation.SubLRepres
+\import Algebra.Linear.BasedSplitSubLModule
+\import Algebra.Module
+\import Algebra.Module.SubLModule
+\import Algebra.Module.SubLModule.Split
+\import Algebra.Monoid
+\import Paths
+
+\func module-argument (W : SubLModule {}) : LModule W.R => W
+
+\func module-member (W : SubLModule {}) (v : W) : W.Total => v
+
+\lemma module-membership (W : SubLModule {}) (v : W.S) : W v = W.contains v => idp
+
+\lemma module-addition (W : SubLModule {}) (x y : W) : (x + y).1 = x.1 + y.1 => idp
+
+\func representation-argument (W : SubLRepres {}) : LinRepres W.R W.G => W
+
+\func representation-member (W : SubLRepres {}) (v : W) : W.Total => v
+
+\lemma representation-membership (W : SubLRepres {}) (v : W.S) : W v = W.contains v => idp
+
+\lemma representation-action (W : SubLRepres {}) (g : W.G) (v : W) : (g ** v).1 = g ** v.1 => idp
+
+\private \func module-scale (M : LModule {}) (r : M.R) (v : M) : M => r *c v
+
+-- The inherited module coercion and the representation coercion give the same scalar action.
+\lemma representation-module-coherence (W : SubLRepres {}) (r : W.R) (v : W)
+  : module-scale W r v = (ILinRepres W).*c r v => idp
+
+\func split-module-argument (W : SplitSubLModule {}) : LModule W.R => W
+
+\func based-module-argument (W : BasedSplitSubLModule {}) : LModule W.R => W
+
+\func split-representation-argument (W : SplitSubLRepres {}) : LinRepres W.R W.G => W
+
+\func based-representation-argument (W : BasedSplitSubLRepres {}) : LinRepres W.R W.G => W
+
+\func based-representation-member (W : BasedSplitSubLRepres {}) (v : W) : W.Total => v
+
+\lemma based-representation-membership (W : BasedSplitSubLRepres {}) (v : W.S) : W v = W.contains v => idp

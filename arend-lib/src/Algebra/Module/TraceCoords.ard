@@ -1,4 +1,4 @@
-\import Algebra.Linear.SplitSubLModule (basis-split_+, basis-split_*c)
+\import Algebra.Linear.BasedSplitSubLModule (basis-split_+, basis-split_*c)
 \import Algebra.Module
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap

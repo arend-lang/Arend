@@ -1,3 +1,4 @@
+\import Algebra.Group.Representation.Finite
 \import Algebra.Group
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
@@ -89,13 +90,13 @@
 
 \func TensorFin {R : CRing} {G : Group} (A B : FinLinRepres R G) : FinLinRepres R G \cowith
   | LinRepres => TensorLRepres A B
-  | isFinRepres => \case A.isFinRepres, B.isFinRepres \with {
+  | isFinModule => \case A.isFinModule, B.isFinModule \with {
     | inP (la, ba), inP (lb, bb) => CoordSystem.toBasis (tensorCS (basisCS ba) (basisCS bb))
   }
 
 -- | Fulton--Harris Prop. 2.1: $\chi_{A \otimes B} = \chi_A \chi_B$.
 \lemma character_tensor {R : CRing} {G : Group} (A B : FinLinRepres R G) (g : G) : character (TensorFin A B) g = character A g * character B g
-  => \case A.isFinRepres, B.isFinRepres \with {
+  => \case A.isFinModule, B.isFinModule \with {
     | inP (la, ba), inP (lb, bb) =>
       \let | CA => basisCS ba
            | CB => basisCS bb

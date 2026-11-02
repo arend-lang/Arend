@@ -1,0 +1,707 @@
+% Build: pdflatex -interaction=nonstopmode -halt-on-error directed-theory.tex
+% Run twice to resolve references. No external bibliography or images are needed.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=25mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{microtype}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{tikz-cd}
+\usepackage{needspace}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Directed type theory in Arend}
+\fancyhead[R]{\small Implementation rules}
+\fancyfoot[C]{\thepage}
+\setlength{\headheight}{14pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt}
+\setlength{\emergencystretch}{2em}
+\setlist{nosep,leftmargin=*}
+\lstset{basicstyle=\small\ttfamily,columns=fullflexible,keepspaces=true,
+  showstringspaces=false,breaklines=true,frame=single,framerule=.25pt,
+  xleftmargin=4pt,xrightmargin=4pt,aboveskip=8pt,belowskip=8pt}
+\newcommand{\Cat}{\mathsf{Cat}}
+\newcommand{\Type}{\mathsf{Type}}
+\newcommand{\Set}{\mathsf{Set}}
+\newcommand{\Prop}{\mathsf{Prop}}
+\newcommand{\I}{\mathbb I}
+\newcommand{\DI}{\mathbb D}
+\newcommand{\dl}{0_{\!d}}
+\newcommand{\dr}{1_{\!d}}
+\newcommand{\il}{0_{\!I}}
+\newcommand{\ir}{1_{\!I}}
+\newcommand{\Path}{\mathsf{Path}}
+\newcommand{\DPath}{\mathsf{DPath}}
+\newcommand{\hpath}{\mathsf{path}}
+\newcommand{\dpath}{\mathsf{dpath}}
+\newcommand{\idd}{\mathsf{idd}}
+\newcommand{\idp}{\mathsf{idp}}
+\newcommand{\coe}{\mathsf{coe}}
+\newcommand{\coep}{\mathsf{coe}^{+}}
+\newcommand{\isop}{\mathsf{iso}^{+}}
+\newcommand{\isocoe}{\mathsf{iso}^{+}_{\mathsf{coe}^{+}}}
+\newcommand{\filltwo}{\mathsf{fill}_{2}}
+\newcommand{\fillthree}{\mathsf{fill}_{3}}
+\newcommand{\rezk}{\mathsf{rezk}}
+\newcommand{\Hom}[3]{\mathsf{Hom}_{#1}(#2,#3)}
+\newcommand{\arr}{\mathrel{\rightsquigarrow}}
+\newcommand{\apd}{\mathbin{@_{d}}}
+\newcommand{\lamplus}[1]{\lambda^{+}#1.\,}
+\newcommand{\ty}{\ \mathsf{type}}
+\newcommand{\ctx}{\ \mathsf{ctx}}
+\newcommand{\FV}{\mathsf{FV}}
+\newcommand{\rulelabel}[1]{\quad\text{\scriptsize(#1)}}
+\newcommand{\infer}[3]{\frac{\begin{gathered}#1\end{gathered}}{#2}\rulelabel{#3}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\source}[1]{\par{\footnotesize\raggedright\textit{Implementation:} #1\par}\par}
+\newcommand{\blocktitle}[1]{\Needspace{5\baselineskip}\subsection*{#1}}
+\title{\vspace{-12mm}Directed type theory in Arend\\[3pt]
+  \large Formation, introduction, elimination, and computation rules}
+\author{}
+\date{Repository snapshot \texttt{a7a01117506d}\quad\textbullet\quad 22 September 2026}
+
+\begin{document}
+\maketitle
+\vspace{-8mm}
+\thispagestyle{plain}
+
+This note extracts the directed core from the checked-out implementation of
+Arend. It follows the rule-and-equation presentation of \S2.1 of
+\href{https://arend-lang.github.io/assets/lang-paper.pdf}{\emph{Theorem prover
+Arend}} by Fedor Part, Valery Isaev, and Sergey Sinchuk. The source of the
+directed rules is this repository, especially \code{lib/Prelude.ard} and the
+typechecker; the linked paper describes the earlier HoTT-I core.
+
+The extension keeps the ordinary interval and equality and adds a directed
+interval, morphisms, composition fillers, transport for families of groupoids,
+directed univalence, and a Rezk principle. The rules below describe the
+implemented primitives. Statements explicitly called \emph{derived} are
+library constructions, not additional judgmental equalities.
+
+\section{Contexts, universes, and variance}\label{sec:contexts}
+
+\textbf{Judgments.} Write $\Gamma\vdash A\ty$ for a well-formed type,
+$\Gamma\vdash a:A$ for typing, and $a\equiv b$ for judgmental equality.
+In contrast, $a=_A b$ is the ordinary path type. As in the paper, ambient
+contexts are omitted from equations. Substitution $A[i:=r]$ is abbreviated
+to $A(r)$ when the bound variable is clear.
+
+There are two kinds of variable: invariant $x:A$ and covariant $x:^{+}A$.
+The latter may occur only in positions checked covariantly. This is a
+syntactic restriction, even when $A$ happens to be a groupoid. There is no
+contravariant binding annotation in this implementation.
+Write $\Gamma^\circ$ for the available invariant context: entering an
+invariant position hides the previously available covariant bindings.
+New covariant binders introduced inside that position are still permitted.
+
+\[
+\infer{\Gamma^\circ\vdash A\ty}{\Gamma,x:A\ctx}{invariant extension}
+\qquad
+\infer{\Gamma\vdash A\ty}{\Gamma,x:^{+}A\ctx}{covariant extension}
+\]
+All contexts in these schemata are assumed well formed. In particular,
+declaring an invariant parameter does not allow its type to depend on an
+earlier covariant parameter.
+
+\textbf{Universes.} $\Type_u$ is the universe of groupoidal types of size
+$u$, and $\Cat_u$ permits categorical types. The relevant cumulative rules are
+\[
+\infer{\Gamma\vdash A:\Type_u}{\Gamma\vdash A:\Cat_u}{inclusion}
+\qquad
+\Gamma\vdash\Type_u:\Cat_{u+1},\qquad
+\Gamma\vdash\Cat_u:\Cat_{u+1}.
+\]
+Both hierarchies are cumulative in $u$. The converse inclusion is absent;
+in particular $\Type_u:\Type_{u+1}$ is rejected. The finite homotopy levels
+remain: $\Prop\subseteq\Set_u\subseteq\Type_u$ and
+$\Set_u:(1\text{-}\Type)_{u+1}$.
+Unsubscripted $\Type$ and $\Cat$ below follow the implementation's unindexed
+universe notation; they do not assert a particular finite size level.
+
+\source{\code{BindingVariance}; \code{CheckTypeVisitor.clearCategoricalContext}
+and \code{visitParameter}; \code{ConstLevel.succ}; \code{Sort.compare}.
+Tests: \code{CatUniverseTest}, \code{CatPiTest}. Full paths are in Appendix~\ref{app:sources}.}
+
+\blocktitle{Dependent functions and covariant sums}
+Write $\Pi^{\nu}_{x:A}B$ for a dependent function type whose binder has mode
+$\nu\in\{0,+\}$; $0$ is the ordinary invariant binder. Its introduction and
+application have the following shapes, assuming the displayed function type
+is well formed:
+\[
+\infer{\Gamma,x:^{\nu}A\vdash b:B}
+ {\Gamma\vdash\lambda^{\nu}x.b:\Pi^{\nu}_{x:A}B}{function introduction}
+\]
+\[
+\infer{\Gamma\vdash f:\Pi^{\nu}_{x:A}B\qquad
+       \Gamma^{\nu}\vdash a:A}
+ {\Gamma\vdash f\,a:B[x:=a]}{application}
+\qquad \Gamma^{+}=\Gamma,\quad\Gamma^{0}=\Gamma^\circ.
+\]
+The usual function $\beta$ and $\eta$ equations apply, with variance respected.
+A covariant function $f:A\to^{+}B$ therefore acts on morphisms by
+\[
+ f_{*}(p)\;\coloneqq\;\dpath(\lamplus{i}f(p\apd i)).
+\]
+An arbitrary invariant function $A\to B$ cannot be substituted for $f$ here.
+
+There is an additional formation restriction: when a $\Pi$-type is checked
+as a type expression, its domains are checked invariantly. Thus a covariantly
+varying $A$ cannot in general be used to form $A\to^{+}B$ as an expression.
+Declaration telescopes have a special checking rule for function-typed
+parameters: a covariant parameter $f:^{+}A\to^{+}B$ may have a covariantly
+varying $A$, as in the primitive $\isop$ below. This permission propagates
+through successive covariant function domains, not through an invariant or
+nested negative domain. It does not supply a general covariance rule for
+function-type formation.
+
+The covariant dependent sum is a categorical type former:
+\[
+\infer{\Gamma\vdash A:\Cat\qquad\Gamma,x:^{+}A\vdash B:\Cat}
+ {\Gamma\vdash\Sigma^{+}_{x:A}B:\Cat}{covariant sum}
+\]
+\[
+\infer{\Gamma\vdash a:A\qquad\Gamma\vdash b:B[a/x]}
+ {\Gamma\vdash(a,b):\Sigma^{+}_{x:A}B}{pair}
+\qquad
+\infer{\Gamma\vdash s:\Sigma^{+}_{x:A}B}
+ {\Gamma\vdash s.1:A\qquad\Gamma\vdash s.2:B[s.1/x]}{projections}
+\]
+\[
+ (a,b).1\equiv a,\qquad (a,b).2\equiv b,\qquad(s.1,s.2)\equiv s.
+\]
+Arend writes this as \code{\Sigma+ (x : A) (B x)}: the mode is on the
+sum, not on individual fields. Ordinary \code{\Sigma} uses invariant
+fields and removes the categorical part of their universe levels; for
+example, for invariant $C:\Cat$, $\Sigma_{x:C}\mathsf{Nat}:\Type$ whereas
+$\Sigma^{+}_{x:C}\mathsf{Nat}:\Cat$. Covariant tuple elimination is
+supported for $\Sigma^{+}$, but not for ordinary $\Sigma$.
+
+\source{\code{CheckTypeVisitor.checkPi}, \code{visitTypeParameter},
+\code{visitSigmaParameter}, \code{visitTuple};
+\code{DefinitionTypechecker.typecheckParameters};
+\code{StdImplicitArgsInference}. Tests: \code{CatPiTest}, \code{CatSigmaTest}.}
+
+\section{The two intervals and their paths}\label{sec:paths}
+
+\textbf{Ordinary paths.} The HoTT-I interval $\I$ (\code{I}) with endpoints
+$\il$ (\code{left}) and $\ir$ (\code{right}) is retained. For an invariant
+interval variable, $\Path(\lambda i.C,a,b)$ has introduction $\hpath$,
+evaluation $p@i$, and the usual $\beta$, $\eta$, and endpoint equations.
+The implementation allows the family to take values in $\Cat$.
+Ordinary transport is
+\[
+\infer{\Gamma,i:\I\vdash C:\Cat\qquad
+       \Gamma\vdash a:C(\il)\qquad\Gamma^\circ\vdash r:\I}
+ {\Gamma\vdash\coe(\lambda i.C,a,r):C(r)}{ordinary transport}
+\]
+with $\coe(\lambda i.C,a,\il)\equiv a$ and
+$\coe(\lambda i.C,a,r)\equiv a$ when $i\notin\FV(C)$.
+This ordinary equality, rather than the directed morphism type, is used
+for the homotopies in Sections~\ref{sec:univalence} and~\ref{sec:rezk}.
+
+\textbf{Directed interval.} The new primitive is $\DI$ (\code{DI}), with
+endpoints $\dl$ (\code{dleft}) and $\dr$ (\code{dright}):
+\[
+\infer{\Gamma\ctx}{\Gamma\vdash\DI:\Set_0}{directed interval}
+\qquad
+\infer{\Gamma\ctx}{\Gamma\vdash\dl:\DI}{left endpoint}
+\qquad
+\infer{\Gamma\ctx}{\Gamma\vdash\dr:\DI}{right endpoint}.
+\]
+A directed section uses a \emph{covariant} interval variable.
+Given a covariant family $C$ and endpoints $a,b$, its morphism type has rules
+\[
+\infer{\Gamma,i:^{+}\DI\vdash C:\Cat\\
+       \Gamma\vdash a:C(\dl)\qquad\Gamma\vdash b:C(\dr)}
+ {\Gamma\vdash\DPath(\lamplus{i}C,a,b):\Type}{directed path formation}
+\]
+\[
+\infer{\Gamma,i:^{+}\DI\vdash t:C}
+ {\Gamma\vdash\dpath(\lamplus{i}t):
+  \DPath(\lamplus{i}C,t(\dl),t(\dr))}{directed path introduction}
+\]
+\[
+\infer{\Gamma\vdash p:\DPath(\lamplus{i}C,a,b)\qquad\Gamma\vdash r:\DI}
+ {\Gamma\vdash p\apd r:C(r)}{directed evaluation}.
+\]
+The formation rule presupposes the well-formed family from its first
+premise; the introduction rule has that same presupposition.
+The defining equations are
+\begin{align*}
+ \dpath(\lamplus{i}t)\apd r&\equiv t[i:=r],
+ &\dpath(\lamplus{i}p\apd i)&\equiv p\quad(i\notin\FV(p)),\\
+ p\apd\dl&\equiv a,
+ &p\apd\dr&\equiv b.
+\end{align*}
+For a constant family, put
+\[
+ \Hom{C}{a}{b}\;\coloneqq\;\DPath(\lamplus{i}C,a,b),\qquad
+ \idd_a\;\coloneqq\;\dpath(\lamplus{i}a):\Hom{C}{a}{a}.
+\]
+We also write $a\arr b$ when $C$ is clear. Arend uses \code{a ~> b},
+\code{idd}, and \code{p d@ i}; application \code{p i} elaborates to the
+same directed evaluation. Below, $p(i)$ abbreviates $p\apd i$.
+Morphisms in a category form a groupoidal type: the conclusion is $\Type$,
+not an arbitrary $\Cat$.
+
+\textbf{Elimination of the interval.} Matching on \code{DI} endpoints is
+allowed for an invariant parameter $i:\DI$. With a well-formed invariant
+motive $B$, branches $b_0:B(\dl)$ and $b_1:B(\dr)$ give
+\[
+ \mathsf{case}_{B}(\dl;b_0,b_1)\equiv b_0,
+ \qquad\mathsf{case}_{B}(\dr;b_0,b_1)\equiv b_1.
+\]
+Such an eliminator takes its interval argument invariantly. Endpoint
+matching on $i:^{+}\DI$ is rejected, so this is not an eliminator for
+arbitrary directed sections. The partial boundary specifications of the
+primitive fillers and transport below are installed specially by the
+prelude implementation.
+
+\source{\code{lib/Prelude.ard}: \code{DI}, \code{DPath}, \code{dpath},
+\code{~>}, \code{idd}, \code{d@}; \code{AtExpression.make};
+\code{CompareVisitor.comparePathEta}; \code{PatternTypechecking};
+\code{ElimTypechecking}. Tests: \code{CatPreludeTest}.}
+
+\clearpage
+\section{Composition fillers}\label{sec:fillers}
+
+\blocktitle{A two-dimensional filler}
+For composable morphisms, there is a chosen square with three prescribed
+edges:
+\[
+\infer{\Gamma\vdash C:\Cat\qquad\Gamma\vdash a,b,c:C\\
+       \Gamma\vdash f:a\arr b\qquad\Gamma\vdash g:b\arr c\\
+       \Gamma\vdash r,s:\DI}
+ {\Gamma\vdash\filltwo(f,g,r,s):C}{\code{fill2}}
+\]
+\begin{align*}
+ \filltwo(f,g,\dl,j)&\equiv a,\\
+ \filltwo(f,g,\dr,j)&\equiv g(j),\\
+ \filltwo(f,g,i,\dl)&\equiv f(i).
+\end{align*}
+All parameters in this primitive, including the category, objects, arrows,
+and the two interval coordinates, are covariant. The square is oriented as
+follows; its fourth edge is the composite.
+\[
+\begin{tikzcd}[row sep=large,column sep=huge]
+ a \arrow[r,dashed,"g\circ f"] & c\\
+ a \arrow[u,"\idd_a"] \arrow[r,"f"'] & b \arrow[u,"g"']
+\end{tikzcd}
+\qquad
+\begin{gathered}
+ i:\ \text{left to right},\\
+ j:\ \text{bottom to top}.
+\end{gathered}
+\]
+\textbf{Derived composition:}
+\[
+ g\circ f\;\coloneqq\;
+ \dpath(\lamplus{i}\filltwo(f,g,i,\dr)):a\arr c.
+\]
+There is no further primitive reduction for the free edge $j=\dr$.
+In particular, the unit and associativity laws are ordinary paths proved
+in the library, not extra judgmental equations for $\filltwo$.
+
+\blocktitle{A three-dimensional filler}
+The primitive \code{fill3} fills a particular five-face boundary, with
+one collapsed edge. Its exact boundary is needed: it is not an unrestricted
+cubical horn-filling rule.
+
+Fix $C:\Cat$ and seven objects $a,b,d,a',b',c',d':C$ with arrows
+\[
+\begin{array}{lll}
+ ab:a\arr b,& bd:b\arr d,& ad:a\arr d,\\
+ a'b':a'\arr b',& b'd':b'\arr d',& a'c':a'\arr c',\\
+ c'd':c'\arr d',& aa':a\arr a',& bb':b\arr b',\\
+ ac':a\arr c',& dd':d\arr d'.&
+\end{array}
+\]
+These are names of arrows, not compositions. Supply the following faces:
+\begin{align*}
+ L&:\DPath(\lamplus{k}(a\arr a'c'(k)),aa',ac'),\\
+ R&:\DPath(\lamplus{k}(bd(k)\arr b'd'(k)),bb',dd'),\\
+ B&:\DPath(\lamplus{i}(ab(i)\arr ad(i)),\idd_a,bd),\\
+ F&:\DPath(\lamplus{i}(a'b'(i)\arr c'd'(i)),a'c',b'd'),\\
+ T&:\DPath(\lamplus{i}(ab(i)\arr a'b'(i)),aa',bb').
+\end{align*}
+Let $\partial$ denote exactly these objects, arrows, and five faces. Then
+\[
+\infer{\Gamma\vdash\partial\ \text{as above}\qquad
+       \Gamma\vdash r,s,t:\DI}
+ {\Gamma\vdash\fillthree(\partial;r,s,t):C}{\code{fill3}}
+\]
+has the judgmental boundary equations
+\begin{align*}
+ \fillthree(\partial;\dl,j,k)&\equiv L(k)(j),&
+ \fillthree(\partial;\dr,j,k)&\equiv R(k)(j),\\
+ \fillthree(\partial;i,\dl,k)&\equiv B(i)(k),&
+ \fillthree(\partial;i,\dr,k)&\equiv F(i)(k),\\
+ \fillthree(\partial;i,j,\dl)&\equiv T(i)(j).&&
+\end{align*}
+The face types enforce agreement on all overlaps. In particular,
+$\fillthree(\partial;\dl,\dl,k)\equiv a$: this is the collapsed edge.
+The missing $k=\dr$ face yields the derived term
+\[
+ \dpath\bigl(\lamplus{i}\dpath(\lamplus{j}
+              \fillthree(\partial;i,j,\dr))\bigr)
+ :\DPath(\lamplus{i}(ad(i)\arr c'd'(i)),ac',dd').
+\]
+All the mathematical parameters above are covariant. The concrete prelude
+also has one invariant dummy argument of unit type, supplied as
+\code{fill3 ()}; it is omitted from the mathematical notation.
+
+\textbf{Derived coherence.} The library uses $\filltwo$ and $\fillthree$
+to prove contractibility of the type of a composite together with a
+composition triangle:
+\[
+ \Sigma^{+}_{h:a\arr c}
+   \DPath(\lamplus{i}(f(i)\arr h(i)),\idd_a,g).
+\]
+Its chosen point is
+$(g\circ f,\dpath(\lamplus{i}\dpath(\lamplus{j}\filltwo(f,g,i,j))))$.
+Consequently the library proves
+$f\circ\idd_a=f$, $\idd_b\circ f=f$, and
+$h\circ(g\circ f)=(h\circ g)\circ f$ as ordinary equalities.
+
+\source{\code{lib/Prelude.ard}: \code{fill2}, \code{fill3}; corresponding
+cases of \code{Prelude.update}. Derived constructions:
+\code{arend-lib/src/InfCat/Basics.ard}, especially \code{comp},
+\code{segal2Prop}, \code{comp-char}, \code{comp_idd-left},
+\code{comp_idd-right}, and \code{comp-assoc}.}
+
+\section{Directed transport and directed univalence}\label{sec:univalence}
+
+\blocktitle{Forward transport in a family of groupoids}
+\[
+\infer{\Gamma,i:^{+}\DI\vdash A:\Type_u\qquad
+       \Gamma\vdash a:A(\dl)\qquad\Gamma\vdash r:\DI}
+ {\Gamma\vdash\coep(\lamplus{i}A,a,r):A(r)}{\code{coe+}}
+\]
+\[
+ \coep(\lamplus{i}A,a,\dl)\equiv a.
+\]
+The family, starting element, and interval argument are covariant.
+The family must take values in $\Type_u$; there is no primitive of this
+signature for arbitrary $A:\DI\to^{+}\Cat_u$, nor a primitive backward
+transport along a general directed arrow.
+
+\textbf{No general regularity equation.} Unlike ordinary $\coe$, the
+normalizer does \emph{not} impose
+$\coep(\lamplus{i}A,a,r)\equiv a$ for a constant family. Only the endpoint
+rule above and the $\isop$ rule below are specified. This is an intentional
+distinction in this description of the implementation, irrespective of
+which propositional equalities can be derived.
+
+\Needspace{16\baselineskip}
+\blocktitle{A function determines a directed path of types}
+\[
+\infer{\Gamma\vdash A,B:\Type_u\qquad
+       \Gamma\vdash f:A\to^{+}B\qquad\Gamma\vdash r:\DI}
+ {\Gamma\vdash\isop(A,B,f,r):\Type_u}{\code{iso+}}
+\]
+This uses the covariant declaration-parameter convention described in
+Section~\ref{sec:contexts}: $A,B,f,r$ are all covariant parameters.
+Implicit $A,B$ are normally suppressed. Its equations are
+\begin{align*}
+ \isop(A,B,f,\dl)&\equiv A,&
+ \isop(A,B,f,\dr)&\equiv B,\\
+ \coep(\lamplus{i}\isop(A,B,f,i),a,\dr)&\equiv f(a)
+ &&\bigl(i\notin\FV(A,B,f)\bigr).
+\end{align*}
+Only a forward function is required. No inverse or inverse homotopies
+occur in this directed principle. Define
+\[
+ \mathsf{ua}^{+}(f)\coloneqq\dpath(\lamplus{i}\isop(A,B,f,i)):A\arr B,
+ \qquad
+ \mathsf{tr}(p)\coloneqq\lamplus{a}
+       \coep(\lamplus{i}p(i),a,\dr).
+\]
+Then $\mathsf{tr}(\mathsf{ua}^{+}(f))\equiv f$ by the computation rule
+and function $\eta$.
+
+\blocktitle{The other composite is homotopic to the identity}
+For $A,B:\Type_u$ and $p:A\arr B$, the primitive
+\code{iso+_coe+} supplies a mixed directed/ordinary square:
+\[
+\infer{\Gamma\vdash A,B:\Type_u\qquad\Gamma\vdash p:A\arr B\\
+       \Gamma\vdash r:\DI\qquad\Gamma^\circ\vdash s:\I}
+ {\Gamma\vdash\isocoe(p,r,s):\Type_u}{\code{iso+_coe+}}
+\]
+The parameters $A,B,p,r$ are covariant, while $s$ is invariant. Its four
+boundary equations are
+\begin{align*}
+ \isocoe(p,\dl,j)&\equiv A,&
+ \isocoe(p,\dr,j)&\equiv B,\\
+ \isocoe(p,i,\il)&\equiv\isop(A,B,\mathsf{tr}(p),i),&
+ \isocoe(p,i,\ir)&\equiv p(i).
+\end{align*}
+Thus the other round trip is witnessed by an \emph{ordinary path}:
+\[
+ \hpath\bigl(\lambda j.\dpath(\lamplus{i}\isocoe(p,i,j))\bigr)
+ :\mathsf{ua}^{+}(\mathsf{tr}(p))=p.
+\]
+In an invariant context, these give a function/path correspondence
+$(A\to^{+}B)\simeq\Hom{\Type_u}{A}{B}$. This correspondence is a consequence
+of the three primitives, with one judgmental round trip and one supplied
+homotopy; it is not a judgmental $\eta$ rule for $\isop$.
+
+\source{\code{lib/Prelude.ard}: \code{coe+}, \code{iso+}, \code{iso+_coe+};
+\code{Prelude.update}; \code{NormalizeVisitor.normalizeCoe}, including its
+exclusion of \code{COERCE_PLUS} from constant-family reduction.
+Tests: \code{CatPreludeTest.coePlusTest}, \code{isoPlusTest},
+\code{isoPlusLevelError}, \code{isoCoePlusTest}.}
+
+\clearpage
+\section{Rezk completeness and the groupoidal fragment}\label{sec:rezk}
+
+\blocktitle{The Rezk principle}
+Let $C:\Cat$, $x,y:C$, $f:x\arr y$, and $g:y\arr x$. Instead of merely
+asking for equations between composites, the primitive takes two
+composition triangles:
+\[
+ P:\DPath(\lamplus{i}(f(i)\arr x),\idd_x,g),\qquad
+ Q:\DPath(\lamplus{i}(g(i)\arr y),\idd_y,f).
+\]
+Writing $S_x\coloneqq\Sigma^{+}_{z:C}\Hom{C}{x}{z}$, the rule is
+\[
+\infer{\Gamma\vdash C:\Cat\qquad\Gamma\vdash x,y:C\\
+       \Gamma\vdash f:x\arr y\qquad\Gamma\vdash g:y\arr x\\
+       \Gamma\vdash P,Q\ \text{of the displayed triangle types}}
+ {\Gamma\vdash\rezk(f,g,P,Q):(x,\idd_x)=_{S_x}(y,f)}{\code{rezk}}.
+\]
+All arguments are covariant. Projecting this ordinary path to its first
+component yields $x=_C y$; the second component identifies the chosen
+arrow with the arrow represented by that equality. Thus the primitive
+records more than a bare identification of objects.
+
+\textbf{Computation.} No defining body or special judgmental computation
+rule is installed for $\rezk$. Its ordinary path evaluations still satisfy
+the general endpoint equations:
+\[
+ \rezk(f,g,P,Q)@\il\equiv(x,\idd_x),\qquad
+ \rezk(f,g,P,Q)@\ir\equiv(y,f).
+\]
+Using the composition-triangle characterization of Section~\ref{sec:fillers},
+the library derives that an invertible morphism is represented by an
+ordinary equality. In particular, it proves the equivalence between
+$x=_C y$ and the type of isomorphisms from $x$ to $y$.
+
+\blocktitle{Identity elimination for morphisms in a groupoid}
+When $A:\Type$, a morphism in a \emph{constant} family admits identity
+elimination. A representative based form is
+\[
+\infer{\Gamma\vdash A:\Type\qquad\Gamma\vdash a:A\\
+       \Gamma,y:A,p:a\arr y\vdash B(y,p)\ty\\
+       \Gamma\vdash b:B(a,\idd_a)\qquad
+       \Gamma\vdash y:A\qquad\Gamma\vdash p:a\arr y}
+ {\Gamma\vdash J_d(B,b,y,p):B(y,p)}{groupoidal directed identity elimination}
+\]
+\[
+ J_d(B,b,a,\idd_a)\equiv b.
+\]
+This schema is stated in the invariant fragment. In the syntax it is a
+definition by the pattern \code{idd}. The checker requires a constant
+ambient family whose type has a noncategorical sort and an endpoint
+variable that can be eliminated, with the usual dependency/occurs checks.
+It rejects the analogous general rule for $A:\Cat$, as well as an
+unrestricted fixed-endpoint $K$ rule.
+
+Ordinary identity elimination gives a map $(a=_C b)\to(a\arr b)$ for
+any $C:\Cat$. For $A:\Type$, the rule above also gives the reverse map,
+and the library proves
+\[
+ \Hom{A}{a}{b}\simeq(a=_A b).
+\]
+This explains the groupoidal fragment without identifying directed
+morphisms with ordinary equality in a general category.
+
+\source{\code{lib/Prelude.ard}: \code{rezk}; \code{Prelude.update};
+\code{PatternTypechecking} and \code{CoreExpressionChecker} for
+\code{idd} patterns. Tests: \code{IddTest}, especially \code{jTest},
+\code{kTest}, \code{notInTypeError}, and \code{inTypeOk}.
+Derived results: \code{InfCat/Basics.ard} and \code{InfCat/Rezk.ard}.}
+
+\clearpage
+\appendix
+\section{Implementation qualifications and source map}\label{app:sources}
+
+\textbf{Size of path types.} The formation rule in Section~\ref{sec:paths}
+deliberately uses unindexed $\Type$. In an invariant context the size of
+$\DPath(C,a,b)$ is computed from its family, with groupoidal homotopy
+level. Unlike ordinary $\Path$, $\DPath$ does not lower a finite homotopy
+level. If the path arguments depend on currently available covariant
+variables, the elaborator forces both path forms to unindexed $\Type$
+(infinite size and groupoidal homotopy level). It does not preserve the
+family's finite size in that case. For example, invariant
+$x:\mathsf{Nat}$ permits $x\arr x:\Type_0$, while covariant
+$x:^{+}\mathsf{Nat}$ permits $x\arr x:\Type$ but not that finite-size
+conclusion. This is implemented by \code{DefCallResult.isForcedInfinite}
+and \code{GetTypeVisitor.visitPathType}, and tested by
+\code{CatPreludeTest.dPathCovariantTest} and its variants.
+
+\textbf{Scope.} This is a presentation of the directed core and the
+structural rules it needs. Arend's general inductive definitions, records,
+truncation, level proofs, termination, and elaboration have further
+restrictions; their full rule systems are outside this note. For example,
+covariant datatype parameters do not automatically permit constructors
+with conditions or truncated declarations. The ordinary univalence
+primitive \code{iso} also remains in the prelude, for groupoidal types.
+No normalization, canonicity, or model-theoretic completeness theorem is
+claimed here.
+
+The following paths are relative to the repository root at commit
+\code{a7a01117506d}. The full identifier is\par
+{\small\code{a7a01117506d7c81c7d38b78feec5204af7ec949}.}\par
+The working tree had no
+tracked source modifications when inspected.
+
+Java paths in the list below, unless prefixed by \code{api/}, are relative to
+\path|base/src/main/java/org/arend/|.
+
+\begingroup\footnotesize\raggedright
+\begin{description}[style=nextline,font=\normalfont\bfseries,itemsep=4pt]
+\item[Primitive signatures and boundaries]
+\path|lib/Prelude.ard|;\newline
+\path|prelude/Prelude.java|,
+method \code{update} (the directed cases are adjacent).
+\item[Variance and type formation]
+\path|api/src/main/java/org/arend/ext/core/context/BindingVariance.java|;\newline
+\path|typechecking/visitor/CheckTypeVisitor.java|;\newline
+\path|typechecking/visitor/DefinitionTypechecker.java|;\newline
+\path|typechecking/implicitargs/StdImplicitArgsInference.java|.
+\item[Universe levels]
+\path|api/src/main/java/org/arend/ext/core/level/ConstLevel.java|;\newline
+\path|core/sort/Sort.java|;\newline
+\path|core/sort/SortExpression.java|.
+\item[Path typing, evaluation, and conversion]
+\path|typechecking/result/DefCallResult.java|;\newline
+\path|core/expr/AtExpression.java|;\newline
+\path|core/expr/visitor/GetTypeVisitor.java|;\newline
+\path|core/expr/visitor/CompareVisitor.java|;\newline
+\path|core/expr/visitor/NormalizeVisitor.java|.
+\item[Elimination restrictions]
+\path|typechecking/patternmatching/PatternTypechecking.java|;\newline
+\path|typechecking/patternmatching/ElimTypechecking.java|;\newline
+\path|typechecking/doubleChecker/CoreExpressionChecker.java|.
+\item[Regression tests]
+\path|src/test/java/org/arend/cat/| (\code{CatPreludeTest}, \code{CatUniverseTest},
+\code{CatPiTest}, \code{CatSigmaTest}, and related tests);\newline
+\path|src/test/java/org/arend/typechecking/patternmatching/IddTest.java|.
+\item[Derived categorical laws]
+\path|arend-lib/src/InfCat/Basics.ard|;\newline
+\path|arend-lib/src/InfCat/Rezk.ard|;\newline
+\path|arend-lib/src/InfCat/Groupoid.ard|.
+\end{description}
+\endgroup
+
+\clearpage
+\section{Concrete syntax examples}\label{app:examples}
+
+These examples use only the prelude. ASCII \code{:+}, \code{->+},
+\code{=>+}, and \code{\Sigma+} are the counterparts of the superscript-plus
+forms in \code{lib/Prelude.ard}. Expected types let the checker infer the
+variance of the unannotated lambda binders in these examples.
+
+\begin{lstlisting}
+\func identity {C :+ \Cat} {a :+ C} : a ~> a
+  => dpath (\lam _ => a)
+
+\func map {C D :+ \Cat} (f :+ C ->+ D)
+          {a b :+ C} (p :+ a ~> b) : f a ~> f b
+  => dpath (\lam i => f (p i))
+
+\func compose {C :+ \Cat} {a b c :+ C}
+              (f :+ a ~> b) (g :+ b ~> c) : a ~> c
+  => dpath (\lam i => fill2 f g i dright)
+
+\func uaPlus.{u} {A B :+ \Type u} (f :+ A ->+ B) : A ~> B
+  => dpath (\lam i => iso+ f i)
+
+\func uaBeta.{u} {A B :+ \Type u}
+                 (f :+ A ->+ B) (a :+ A)
+  : coe+ (\lam i => iso+ f i) a dright = f a
+  => idp
+
+\func uaEta.{u} {A B :+ \Type u} (p :+ A ~> B)
+  : dpath (\lam i =>
+      iso+ (\lam a => coe+ (\lam k => p k) a dright) i) = p
+  => path (\lam j => dpath (\lam i => iso+_coe+ p i j))
+
+\func directedJ {A : \Type} {a : A}
+  (B : \Pi {b : A} -> a ~> b -> \Type)
+  (base : B idd) {b : A} (p : a ~> b) : B p \elim p
+  | idd => base
+\end{lstlisting}
+
+The equations witnessed by \code{idp} in these examples are judgmental;
+\code{uaEta} instead explicitly constructs an ordinary path.
+The supplied PDF is compiled from this self-contained source. Rebuild
+with two runs of \code{pdflatex directed-theory.tex}; see the accompanying
+\code{README.md} for validation commands.
+
+\clearpage
+\section{A consistency counterexample}\label{app:inconsistency}
+
+\textbf{The inspected snapshot is inconsistent.} The following prelude-only
+module defines a closed term of a datatype with no constructors. It was
+accepted by the repository's typechecker and its core double checker at
+commit \code{a7a01117506d}. It is also saved as
+\code{docs/directed/inconsistency.ard}.
+
+\begin{lstlisting}
+\data Empty
+
+\func Family (i : DI) : \Type0 \elim i
+  | dleft => \Sigma
+  | dright => Empty
+
+\func collapse {i : DI} (p : dleft ~> i) : Family i \elim p
+  | idd => ()
+
+\func contradiction : Empty
+  => collapse (dpath (\lam i => i))
+\end{lstlisting}
+
+The derivation uses three features together:
+\begin{enumerate}[itemsep=6pt]
+\item The prelude declares \code{DI} as a datatype with two nullary
+constructors. Its inferred sort is \code{\Set0}, and
+\code{Prelude.update} does not replace that sort with a categorical one.
+Thus $\DI:\Set_0\subseteq\Type$.
+\item Directed path introduction gives the canonical segment
+\[
+ s\coloneqq\dpath(\lamplus{i}i):\dl\arr\dr.
+\]
+Since $\DI$ is classified as groupoidal, the \code{idd} pattern accepts
+the based eliminator \code{collapse}.
+\item Invariant endpoint matching gives
+$\mathsf{Family}(\dl)\equiv\mathbf{1}$ and
+$\mathsf{Family}(\dr)\equiv\mathbf{0}$. The identity case of
+\code{collapse} is therefore the unit value $()$. Applying it to $s$
+gives a term of $\mathsf{Family}(\dr)\equiv\mathbf{0}$.
+\end{enumerate}
+
+There are no user axioms, holes, recursive definitions, or additional
+library imports in this module. Neither composition fillers nor directed
+univalence nor the Rezk primitive is needed for the contradiction.
+
+The decisive implementation locations are the \code{"DI"} case of
+\code{Prelude.update} and the \code{typeSort.getHLevel().isCat()} check
+for directed identity patterns in \code{PatternTypechecking}. A repair
+must break this combination of rules; rejecting groupoidal elimination
+on the directed interval would block this particular derivation.
+That observation alone is not a consistency proof for a repaired system.
+
+The 234 passing regression tests and the examples in Appendix~\ref{app:examples}
+remain valid reports of checker behavior. They do not establish logical
+consistency. This counterexample concerns the implemented snapshot; a
+revised directed theory requires a separate soundness argument.
+
+\end{document}

@@ -1,0 +1,172 @@
+--- a/arend-error-extraneous-input/SKILL.md
++++ b/arend-error-extraneous-input/SKILL.md
+@@ -60,6 +60,16 @@
+ 
+ ---
+ 
++### Digit-leading *pattern variable* (2026-10-12)
++
++**Repro:** a clause `| byRight 1=0 => …`, with `1=0` meant as the name of a proof of `1 = 0`.
++
++**Error:** not a parser error but `'Nat.suc' is not a constructor of data type Path` — the pattern `1=0` lexes as the numeral `1` followed by more tokens, so the clause matches the path against `suc zero`.
++
++**Fix:** start the name with a letter (`one=zero`).
++
++---
++
+ ## How to extend this skill
+ 
+ When you fix a fresh `extraneous input` instance whose root cause isn't in the catalogue above:
+--- a/arend-error-type-mismatch/SKILL.md
++++ b/arend-error-type-mismatch/SKILL.md
+@@ -99,6 +99,30 @@
+ 
+ ---
+ 
++### Record subtyping: `Cannot infer parameter 'A' … Candidate is: SomeRecord {R}` (2026-10-12)
++
++**Repro:** a path chain `p *> pmap F q *> r` proving an equality between two record values, e.g. two linear maps `LinearMap U U`.
++
++**Error:** `Cannot infer parameter 'A' of definition '*>' — Candidate is: LinearMap {R}`.
++
++**Why:** a record type with more fields implemented (`LinearMap U U`) is a subtype of one with fewer (`LinearMap {R}`), so the carrier type of the chain is not determined.
++
++**Fix:** prove the equality pointwise (`exts \lam v => …`), or give `*>` its type explicitly.
++
++**Diagnostic:** the "candidate" is the bare record name with almost none of its parameters.
++
++---
++
++### `\type` synonym not unfolded: `Cannot solve equation Rec … / E` (2026-10-12)
++
++**Repro:** `\type T => Rec A B`; a value `x : Rec A B` (e.g. built with `\cowith`) is passed where an element of a class instance with carrier `T` is expected.
++
++**Fix:** convert explicitly with an identity function of type `Rec A B -> T` (the library defines such functions, e.g. `Sym.fromEquiv`), or declare the value at type `T`.
++
++**Diagnostic:** one side is a concrete record type, the other the carrier field `E` of an instance whose carrier is a `\type` synonym of that record.
++
++---
++
+ ## How to extend this skill
+ 
+ When you fix a fresh `Type mismatch` whose root cause isn't in the catalogue above:
+--- a/arend-formalize/SKILL.md
++++ b/arend-formalize/SKILL.md
+@@ -17,7 +17,7 @@
+ **Serialization is opt-in** (commit `9a59b3151`, 2026-05-15). Without `--serialize`, typechecking runs but **no `.arc` files are written** — so every invocation re-typechecks arend-lib from source (~2 min cold), and nothing you do makes the next run any faster. Pass it on every typechecking invocation:
+ 
+ ```bash
+-cd /home/sergey/Documents/Arend/arend-lib && arend --serialize <Module>
++cd /Users/admin/codingspace/arend-lang-new/Arend/arend-lib && arend --serialize <Module>
+ ```
+ 
+ The first run pays the full cost and persists the caches; subsequent runs deserialize the unchanged cone and only re-typecheck what you edited — seconds instead of minutes. That difference is the whole edit loop, so make `--serialize` the default on every typecheck, not something you remember occasionally.
+@@ -102,7 +102,7 @@
+ 5. **Capture knowledge as you go.**
+    - If you learned a *language-level* fact (a quirk, a syntax surprise, a typing rule that bit you), add it to `~/.claude/skills/arend-quirks/SKILL.md`.
+    - If you learned a *meta-level* fact (a failure mode, a non-obvious meta interaction), add it to `~/.claude/skills/arend-prove/SKILL.md`.
+-   - If something was **cumbersome, slow, or painful** in a way that feels like a *tooling* issue rather than your mistake (typechecker quirk, slow/misleading CLI behavior, confusing diagnostic), append it to `arend-issues.md` at the repo root — `/home/sergey/Documents/Arend/arend-issues.md`. The file was deleted on 2026-05-21 (`f0c5f9dbf`) and **recreated on 2026-08-03** at the user's request to hold CLI/typechecker feature requests; its old numbered entries are gone, so never cite "`arend-issues.md` #N". **Do not** log missing library statements here — a missing lemma is not an issue, it's something to add. If a helper is missing from arend-lib, put it in the right module and move on.
++   - If something was **cumbersome, slow, or painful** in a way that feels like a *tooling* issue rather than your mistake (typechecker quirk, slow/misleading CLI behavior, confusing diagnostic), append it to `arend-issues.md` at the repo root — `/Users/admin/codingspace/arend-lang-new/Arend/arend-issues.md`. The file was deleted on 2026-05-21 (`f0c5f9dbf`) and **recreated on 2026-08-03** at the user's request to hold CLI/typechecker feature requests; its old numbered entries are gone, so never cite "`arend-issues.md` #N". **Do not** log missing library statements here — a missing lemma is not an issue, it's something to add. If a helper is missing from arend-lib, put it in the right module and move on.
+ 
+ 6. **Done when the only remaining errors are `GOAL` (unproven `{?}`s).** Type-mismatch, unresolved-reference, universe-level, and termination errors must all be gone. If any non-GOAL error remains, you're not done.
+ 
+@@ -202,7 +202,23 @@
+ `\where`-private lemmas don't inherit the outer's implicit binders even when they syntactically reference outer variables. When recursing — or calling sibling private lemmas — pass the outer implicits explicitly: `outer-lemma {A} {b} {x} N` instead of `outer-lemma N`. Alternative: avoid `\where` and put helpers at top-level (still `\private`).
+ 
+ ---
++
++### "`arend -t` says `Failed: 2` but prints no errors"
++
++The test runner only counts failures. Typecheck the test file as a throwaway library to see the messages: copy it to `/tmp/probe/src/Probe.ard`, write `/tmp/probe/arend.yaml` with `dependencies: [arend-lib]`, and run `arend --no-daemon -L <dir containing arend-lib> Probe` from `/tmp/probe`.
++
++### "A module's goals are missing from a multi-module check"
++
++In `arend -r -c A B C`, a module that is first typechecked *as a dependency* of an earlier target does not get its `[GOAL]` lines printed, although the summary still counts it (`◯`, "Number of modules with goals"). When auditing goals, list targets in dependency order or check modules one at a time.
+ 
++### Daemon hygiene
++
++A daemon fixes `-r`, `-c`, `--serialize`, `-L` at start-up and ignores them per request — a fresh verification run needs `--no-daemon`. After renaming or deleting a module, restart it (`arend --daemon-stop`, then `arend -d --serialize`) and delete the stale `.arc`; after ordinary edits `arend --daemon-refresh` suffices. `-fu`/`-ss --json` write their `[INFO]` line to stderr — parse stdout only. `-fu --json` reports the *enclosing declaration* of each usage, which is enough to compute which declarations transitively depend on a given one (e.g. on an intentional `{?}`).
++
++### Pruning imports
++
++Unused imports are found reliably by trial: remove one `\import` line, typecheck the module through the daemon, keep the removal only if there are no errors and the goal count is unchanged. Arend imports are not transitive, so removals cannot break other modules.
++
+ ## Quick reference — which CLI flag for which question
+ 
+ | Question | Flag |
+--- a/arend-prove/SKILL.md
++++ b/arend-prove/SKILL.md
+@@ -183,6 +183,22 @@
+     - A meta *inside* a concrete-`Complex` operation is unsolvable: matching `cabs (?x * ?y)` against `cabs (b i * pow z i)` becomes higher-order once `*` unfolds, so `cabs_*`, `cabs_+`, `cabs_negative` need their implicits spelled out (`cabs_* {b i} {pow z i}`) — or, better, the operands must be *variables*, i.e. parameters of a helper lemma (`dir-cabs (b0 bk : Complex) (t : Real)`). Metas in **bare** positions are fine: in `cabs_+3 (X : Complex) {Y Z : Complex} … : cabs (X + (Y + Z)) <= cabs X + (y + z)`, `Y`/`Z` are inferred from the two bound arguments' types, but `X` had to be made explicit because its only other occurrence is under the `+`.
+ 
+ 17. **`rewrite zro_*-left` / `zro_*-right` over `Real` can misfire.** `zro * x` normalizes to `fromRat zro`, so the pattern that gets searched is not the one you wrote and the rewrite can hit the wrong side (symptom: an argument's expected type collapses to `zro < fromRat zro`). Use `transportInv (\`< <the other side>) zro_*-left h` there — the explicit motive says exactly which occurrence to abstract.
++
++18. **Composition aliases (`LinearMap.∘`, `compose`) often infer the wrong implicit modules.** Symptom: an argument plainly of type `LinearMap U W` is rejected with `Expected type: LinearMap V V`. Write the composition with all implicits, `LinearMap.compose {R} {U} {V} {W} g f`; likewise give `toMatrix` / `toMatrix_*` their module implicits when several array modules are around, and disambiguate identity matrices of different sizes as `Ring.ide {MatrixRing R n}`.
++
++19. **Path chains between records: `Cannot infer parameter 'A' of definition '*>' — Candidate is: SomeRecord {R}`.** A record type with more fields implemented is a subtype of one with fewer, so the carrier type of the chain is not determined. For maps, prove the equality pointwise (`exts \lam v => …`); for a pair whose second component is a proposition, `ext (exts \lam v => …)`.
++
++20. **`exts` on maps out of an array module (`ArrayFinModule n`) can fail** with `\Pi {y : E} -> …` vs `\Pi {y : Array R n} -> …`. If the statement is about matrices anyway, compare entries: `matrixExt \lam a c => pmap (\lam z => LModule.basis-split {ArrayFinModule {R} n} b z c) (…)`.
++
++21. **`equation` may pick the non-commutative monoid solver for an additive abelian group, and treats definitionally equal terms as different atoms.** Symptom: `Monoid solver failed` with two atoms that are the same application, one of them unfolded. State the identity once over variables and apply it: `\lemma sub-distr {A : AbGroup} (a b c d : A) : (a + b) - (c + d) = (a - c) + (b - d) => equation.abGroup`. Solver names: `equation.abGroup` is additive abelian; `equation.cGroup` is *multiplicative* commutative.
++
++22. **The ring solver does not normalize everything that computes.** Applications of a group's `inverse` inside an action (`inverse g ** v`), even for explicit `g`, stay opaque atoms, while `g ** v` reduces. For closed computations, first rewrite such subterms to explicit values with separate lemmas (proved by `\elim` and `idp`), then call `equation`.
++
++23. **`basis-split` is an `\sfunc`, so coordinates with respect to a basis never compute.** For concrete numerical goals use coordinate functionals that reduce — projections `x ↦ x k`, evaluation `f ↦ f y`, delta functions — then `FinSum=BigSum *> equation`.
++
++24. **Inference gaps that look like errors in the statement.** `pmap f (ext …)` and `pmap BigSum (exts …)` often cannot infer the endpoints — pass `{a} {a'}`, or use `BigSum-ext {n} {l} {l'}`. `FinSum-ext` over a product index may need the instance (`R.FinSum-ext {ProdFin A B} …`). `rewrite toFin=id` can report `Cannot find subexpression` when the target only appears after inference; use `transportInv (`< m) toFin=id h` / `transport (r <=) toFin=id h`.
++
++25. **No numeral literals for types without a numeral instance** (e.g. `Complex`): `… = 1` gives `Cannot solve equation Complex / Nat`. Write `ComplexField.ide`, `ComplexField.zro`, or state the lemma over an abstract `{R : CRing}` and instantiate (see 16).
+ 
+ ### Workflow and language gotchas
+ 
+@@ -619,7 +635,7 @@
+ 
+ ## Log friction
+ 
+-Anything that felt unreasonable about the **tooling** — surprising typechecker errors, instance inference that should "just work", misleading diagnostics, slow CLI paths — goes to `arend-issues.md` at the repo root (`/home/sergey/Documents/Arend/arend-issues.md`) with a one-liner on where it bit you. Future you needs the trail.
++Anything that felt unreasonable about the **tooling** — surprising typechecker errors, instance inference that should "just work", misleading diagnostics, slow CLI paths — goes to `arend-issues.md` at the repo root (`/Users/admin/codingspace/arend-lang-new/Arend/arend-issues.md`) with a one-liner on where it bit you. Future you needs the trail.
+ 
+ **State of that file: deleted 2026-05-21 (`f0c5f9dbf`, "Remove issues/blueprint"), recreated 2026-08-03** at the user's request to hold CLI/typechecker feature requests derived from the two "Refactor AI slop" reviews. Its old numbered entries are gone, so never cite "`arend-issues.md` #N" — append new entries instead.
+ 
+--- a/arend-quirks/SKILL.md
++++ b/arend-quirks/SKILL.md
+@@ -10,7 +10,7 @@
+ 
+ Sources referenced below live in the **website** repo, `/home/sergey/Documents/site/` — not in the Arend or arend-lib tree: `src/documentation/tutorial/PartI/*.md`, `src/documentation/tutorial/PartII/*.md`, `src/documentation/language-reference/*`, and `src/documentation/standard-tactics/*.md`. (Other checkouts of the same docs exist at `/home/sergey/Documents/Site/documentation/` and `/home/sergey/Documents/arend-lang.github.io/documentation/`; the `src/documentation/…` paths quoted below match the `site/` layout.)
+ 
+-Library citations of the form `Module/File.ard:NNN` are relative to `/home/sergey/Documents/Arend/arend-lib/src/` and were re-verified against branch `staging` on 2026-07-28.
++Library citations of the form `Module/File.ard:NNN` are relative to `/Users/admin/codingspace/arend-lang-new/Arend/arend-lib/src/` and were re-verified against branch `staging` on 2026-07-28.
+ 
+ Companion skills:
+ - **arend-formalize** — procedural workflow for going from an informal math statement to a typechecking `.ard` file (which CLI tools to use, in what order).
+@@ -376,6 +376,8 @@
+ 
+ (Line comments `-- | ...` do not nest and are immune. Prefer `-- |` for one-liners that don't contain LaTeX braces; reserve `{- | ... -}` for multi-line docs and accept the audit cost.)
+ 
++**`-- |` is a single-line doc comment.** Continuation lines written as `--   more text` after a `-- |` line are ordinary comments and are *not* part of the documentation (the parser's `DOC_SINGLE_LINE_START` covers one line; the pretty-printer emits `{- | ... -}` whenever a description has more than one line). A doc comment that spans several lines must be a `{- | ... -}` block — and then the `{-`/`-}` audit above applies to its text (e.g. write `g^{ -1}`).
++
+ ## 20. Extending records and closing inherited fields (`\extends` / `| F => v`)
+ 
+ > **Provenance.** The running example below (`RatAnalytic`, `BoundedDiskRatAnalytic`, `disk-open-aux`, `eval-IsSeriesSum`, `disk-incl`, `radius-loc`) came from `Analysis/RatAnalytic.ard`, which commit `8363cdac2` "Refactor RatAnalytic" **deleted** — the development was dissolved into plain functions in `Analysis/PowerSeries.ard` and `Analysis/PowerSeries/Derivative.ard`, with no `\record` surviving. Don't go looking for those names; they aren't in the tree. The *library types* the section cites are all still live: `CoverMap`, `SetHom` (with `\coerce func`, `Set/SetHom.ard:4`), `StronglyCauchyMap`, `PrecoverSpace.open-char`, `OpenCompleteCoverSpace`, `RegularPreuniformSpace`, `func-cover` / `func-weak-cauchy` / `func-cauchy`. The lessons are general `\extends` behaviour and still apply.
+@@ -455,6 +457,21 @@
+ 
+ These pitfalls compound: a single naïve `| InheritedField => method-defined-later` line can trigger any of forward-reference-failure, implicit-arg-failure, *and* implementation-cycle errors, none of which name the underlying ordering/scoping issue. When debugging a record refactor, audit field-default expressions for: (a) only-fields-and-top-level-functions referenced, (b) all implicit args spelled out, (c) `|`-block ends before the first `\func`/`\lemma`, (d) sibling-class method calls (like `open-char`) are qualified with the receiver instance.
+ 
++## 22. More surface-syntax and elaboration surprises
++
++- **Doc comments.** See §19: `-- |` covers one line; multi-line docs are `{- | … -}`. Inside doc text, `{Name}` is a *link* that must resolve in the module's scope (a definition of the module, an imported name, or a parameter of the documented declaration); otherwise the IDE reports `Cannot resolve reference 'Name'`. The CLI typecheck does not check links. For a name not in scope write `` `Name` ``. Braces inside `$…$` are LaTeX, not links.
++- **An infix operator cannot be applied prefix with an implicit argument.** `GSet.** {X} g x` fails with confusing errors (`Expected expression after an infix operator`, or an unintended section). Bind the instance (`\let | X => someInstance`) and write `g X.** x`.
++- **`\let | x : SomeClass A B => …` can fail with `Infinite level is not allowed here`.** Drop the type annotation on let-bound class instances.
++- **Precedence of `||` and `=`:** `P || x = 0` parses as `(P || x) = 0`. Write `P || (x = 0)`.
++- **Pattern variables cannot start with a digit either:** `| byRight 1=0 => …` lexes `1` as a numeral pattern; the error is `'Nat.suc' is not a constructor of data type Path`.
++- **A recursive `\func` whose result is a class instance** (`\func F … : SomeClass R G \elim l`) fails with `Infinite level is not allowed here`. Add a level parameter and bound the carriers: `\func F.{u} {R : Ring.{u}} … : SomeClass.{u} R G`. Callers then pass `.{u}` too, and helpers in a `\where` cannot see `u` — make them top-level with their own `.{u}`. `Array (SomeClass …)` hits the same error; index by a function `Fin r -> SomeClass.{u} …` instead.
++- **`\type` synonyms are not unfolded by unification.** With `\type T => Rec …`, a term built by `\cowith` at type `Rec …` is rejected where `T` is expected (`Cannot solve equation Rec … / E`). Convert explicitly (a `fromRec`-style identity function, e.g. `Sym.fromEquiv`), or give the definition the synonym type.
++- **A dotted top-level name declares a local module.** `\func Rec.helper …` outside `Rec`'s `\where` makes `Rec` a local name that shadows the imported record (`Definition 'Rec' is not imported since it is defined in this module`, then `Expected a class`). Use an undotted name, or put the helper in the record's `\where`.
++- **Same field names in two imported records:** `x.f` can resolve to the other record's field `f`. Import only the record names, `\import M (Rec)`; dot syntax does not need the fields in scope.
++- **`IsEquiv f` is `TruncP (QEquiv f)`.** `e.isInj` resolves to `QEquiv.isInj` and fails; write `IsEquiv.isInj e`, and get surjectivity by `\case e \with { | inP q => inP (q.ret w, q.f_ret w) }`.
++- **Truncated elimination in a lambda needs the binder type.** `\lam h => \case h \with { | inP … }` can fail with `Expected type: a data type — Actual type: TruncP (…)` when `h`'s type is only known later. Annotate the binder, e.g. `\lam (h : ∃ (u : U) (f u = v)) => \let | (inP (u, p)) => h \in …`.
++- **`cases (x arg addPath, y arg addPath)` patterns alternate value and path:** `| a, pa, b, pb => …`. `cases` only abstracts occurrences that appear literally in the goal, not inside a definition that would unfold to them. If the goal mentions `f e` and `f` cases on `e 0`, prove a helper that takes the values and their equations explicitly, eliminate on the values, then specialise it with `idp`.
++
+ ## 21. Quick decision table when stuck
+ 
+ | Symptom | First thing to try |

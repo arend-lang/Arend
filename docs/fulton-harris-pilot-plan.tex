@@ -25,7 +25,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small\textcolor{ink}{Fulton--Harris pilot: detailed formalization plan}}
-\fancyhead[R]{\small\textcolor{muted}{12 October 2026}}
+\fancyhead[R]{\small\textcolor{muted}{20 October 2026}}
 \fancyfoot[C]{\small\thepage}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt plus 1pt}
@@ -67,7 +67,8 @@
 \vspace{3mm}
 {\Large Lectures 1--2, items P01--P12, and the exact $S_3$ example\par}
 \vspace{3mm}
-{\color{muted}12 October 2026\quad/\quad companion to \src{docs/fulton-harris-plan.tex}\par}
+{\color{muted}12 October 2026; hierarchy and F2 update 20 October 2026\\
+companion to \src{docs/fulton-harris-plan.tex}\par}
 \vspace{3mm}
 
 \decision{\textbf{What this document adds.} The whole-book plan fixes the
@@ -75,7 +76,7 @@ pilot's \emph{scope}: 12 items from Lectures 1--2, the $S_3$ regression example
 and a choice-free policy. This document turns that scope into work: concrete
 data structures, proposed Arend signatures, a proof route for each item, the
 infrastructure lemmas each route needs, a dependency-ordered schedule, and
-acceptance commands. Every library name below was retrieved from the checkout
+acceptance commands. The original library survey used the checkout
 on 12 October 2026 with the rebuilt CLI (\code{-ss}, \code{-fu}, \code{-ch}).
 Signatures marked \emph{sketch} are design proposals that have not been
 typechecked yet.}
@@ -90,21 +91,19 @@ typechecked yet.}
   linear-algebra, trace, tensor, rational, complex or symmetric-group module can
   reach \code{Logic.Classical} or \code{Logic.Choice}. In the whole library, only
   \src{Arith/Complex/FTA/Classical.ard} uses an axiom, and nothing imports it.
-  \item \textbf{Replacing \code{IsIrreducible} is cheap.} Its only consumers are
-  \code{SchurLemma}, which has no callers, and
-  \code{PermutationRepresReducible.Not-Irreducible}. For the
-  finite-dimensional pilot, the proposed notion \code{IsFinIrreducible} tests
-  \emph{split} invariant subspaces, given as an inclusion with a linear
-  retraction, over any \code{NonZeroRing} (Section~\ref{sec:design}, D3). It is \emph{not}
-  the general replacement for arbitrary modules. That design is a separate
-  item, D3b, and the name \code{IsIrreducible} is reserved for it.
-  \item \textbf{The work is mostly linear-algebra infrastructure.} The library
-  has bases, coordinates, matrices of maps, change of basis, Smith-form ranks,
-  finiteness of kernels and images, and trace invariance under conjugation. It
-  lacks basis-independent traces, block and Kronecker traces, a basis for Hom,
-  bases of products and tensor products, and trace~=~rank for idempotents. The
-  plan registers 22 infrastructure items, L01--L22 (L08 split into L08a and L08b)
-  (Section~\ref{sec:infra}).
+  \item \textbf{The pilot uses a descendant class.}
+  \code{FinLinRepres} inherits finite freeness from \code{FinModule};
+  \code{FinIrreducibleRepres} adds a nonzero-vector witness and the split
+  invariant-submodule dichotomy. The tested submodule needs no basis.
+  Schur and character theorems take the descendant directly. The old
+  standalone \code{IsFinIrreducible} predicate has been removed.
+  The general-module design remains D3b.
+  \item \textbf{The pilot adds linear-algebra infrastructure.} Starting from
+  the existing bases, coordinates, matrices and Smith-form results, it adds
+  basis-independent traces, coordinates for sums, Hom and tensor products,
+  kernel/image splittings under their stated hypotheses, and the averaging
+  trace formulas. The plan records these as L01--L22 (L08 split into L08a
+  and L08b); the implementation status is recorded below.
   \item \textbf{Decidable zero only where it is used.} The definitions are
   stated over \code{Ring}, \code{CRing} or \code{Field}. \code{DiscreteField}
   is a hypothesis only of the kernel and image constructions that test pivots:
@@ -210,11 +209,11 @@ Only the second tier is reported as ``pilot complete'' without qualification.
 \begin{itemize}
   \item Group-theoretic identities (actions, traces of products, averaging) are
   stated over \code{{R : CRing}}. Averaging takes
-  \code{cardInv : Monoid.Inv (R.natCoef G.card)}, matching the existing
-  \code{MaschkeLemma} class.
+  \code{cardInv : Monoid.Inv (R.natCoef G.card)}, an explicit inverse
+  passed to the standalone function \code{mean_func}.
   \item Definitions use the weakest class that makes them meaningful. The
   split subrepresentation works over any \code{Ring}, and
-  \code{IsFinIrreducible} over any \code{NonZeroRing}, which excludes the zero
+  \code{FinIrreducibleRepres} over any \code{NonZeroRing}, which excludes the zero
   ring. The Hom and dual representations need a \code{CRing}.
   \item \code{DiscreteField} is a hypothesis only of constructions that test
   pivots, that is, kernel and image bases built from \code{image-fin},
@@ -233,13 +232,17 @@ Only the second tier is reported as ``pilot complete'' without qualification.
 \end{itemize}
 
 \stage{D2}{Finite-dimensional representations: truncated versus chosen bases}
-Two layers are added. The first is the interface; the second does the
-computing.
+The finite interface is implemented by inheritance. Computation uses
+explicit arrays and basis proofs. The optional \code{BasedLinRepres} wrapper
+below remains a design sketch; the implemented constructors take its data
+as separate arguments.
 \begin{lstlisting}
--- sketch; Algebra/Group/Representation/FinRepres.ard
-\class FinLinRepres \extends LinRepres, FinModule     -- isFinModule : ∃ basis (truncated)
+-- Algebra/Group/Representation/Finite.ard
+-- Parent order preserves the conventional scalar/group argument order.
+\class FinLinRepres \extends FinModule, LinRepres     -- isFinModule : ∃ basis (truncated)
 
-\class BasedLinRepres \extends LinRepres {            -- chosen basis, for computation
+-- sketch: optional wrapper for a chosen basis
+\class BasedLinRepres \extends LinRepres {
   | basis : Array E
   | isBasis : IsBasis basis
 }
@@ -252,31 +255,86 @@ Rules:
   a \code{\level}~\code{\Sigma} over the truncated basis
   (\src{Algebra/Module/FinModule.ard:47}).
   \item Constructions such as matrices, splittings and averaged projectors
-  take a \code{BasedLinRepres}.
+  take explicit basis arguments; they do not require that optional wrapper.
   \item No global choice of a basis is made anywhere.
 \end{itemize}
 
 \stage{D3}{Finite-dimensional irreducibility via split invariant subspaces (pilot notion)}
-A split subrepresentation is data: a representation \code{sub}, an intertwiner
-\code{incl} into $E$, and a \emph{linear} retraction of \code{incl}. The
-retraction makes \code{incl} a split monomorphism (\code{SplitMono},
-\src{Category.ard:61}) in the category of modules \code{LModuleCat}, not in the
-category of representations \code{RepresentationCat}.
+The existing \code{SubLRepres} is the canonical membership-based interface:
+its predicate $P$ defines the subtype $W=\{v:E\mid P(v)\}$ with inclusion
+$j(v,p)=v$. Its descendant \code{SplitSubLRepres} adds a \emph{linear}
+retraction $r:E\to W$ satisfying $rj=\mathrm{id}_W$. No basis of $W$ is assumed.
+The retraction need not commute with the action. The module classes follow
+the same hierarchy; coordinates are added only in the based descendants.
+The following excerpt shows the implemented class structure; the displayed
+ellipsis stands for the unchanged coordinate laws.
+\needspace{12\baselineskip}
 \begin{lstlisting}
+-- Algebra/Module/SubLModule/Split.ard
+\class SplitSubLModule \extends SubLModule {
+  | retract : LinearMap S (IModule
+      (\new SubLModule { | SubLModule => \this }))
+  | retract_incl (x : IModule
+      (\new SubLModule { | SubLModule => \this }))
+      : retract x.1 = x
+}
+
+-- Algebra/Linear/BasedSplitSubLModule.ard
+\class BasedSplitSubLModule \extends SplitSubLModule {
+  | dim : Nat
+  | basisIncl : LinearMap (ArrayFinModule {R} dim) S
+  | coords : LinearMap S (ArrayFinModule {R} dim)
+  ...
+}
+
 -- Algebra/Group/Representation/SplitSubLRepres.ard
-\record SplitSubLRepres.{u} {R : Ring.{u}} {G : Group.{u}} (E : LinRepres.{u} R G)
-  | sub : LinRepres.{u} R G
-  | incl : IntertwiningMap sub E
-  | split : SplitMono {LModuleCat.{u} R} {sub} {E} incl
+\class SplitSubLRepres \extends SplitSubLModule, SubLRepres {
+  \override S : LinRepres R G
+  -- sub is the canonical membership subtype ILinRepres
+  -- incl is its canonical inclusion; retr is retract
+}
+\class BasedSplitSubLRepres
+  \extends BasedSplitSubLModule, SplitSubLRepres {
+  \override S : LinRepres R G
+}
 
--- an invariant split submodule (R^k, incl, retr) gives sub = R^k with g . x := retr (g ** incl x)
-\func SplitSubLRepres.fromInvariant (S : SplitSubLModule E P) (P-inv : ...) : SplitSubLRepres E
-
--- Algebra/Group/Representation/Irreducible.ard (pilot notion; no decidable equality)
-\func IsFinIrreducible.{u} {R : NonZeroRing.{u}} {G : Group.{u}} (E : LinRepres.{u} R G) : \Prop
-  => \Sigma (∃ (l : Array E) (0 < l.len) (E.IsBasis l))              -- finite free, positive rank
-            (\Pi (S : SplitSubLRepres.{u} E) -> (\Pi (x : S.sub) -> x = 0) || IsSurj S.incl)
+-- Algebra/Group/Representation/Irreducible.ard
+\class FinIrreducibleRepres.{u} \extends FinLinRepres.{u} {
+  \override R : NonZeroRing.{u}
+  \override G : Group.{u}
+  \override E : \Set u
+  | nontrivial : ∃ (v : E) (v /= 0)
+  | irreducible (S : SplitSubLRepres R G
+      (\new LinRepres { | LinRepres => \this }))
+      : (\Pi (x : S.sub) -> x = S.sub.zro) || IsSurj S.incl
+}
 \end{lstlisting}
+The base classes register \code{SubLModule.toLModule} and
+\code{SubLRepres.toLinRepres} as coercions to the structures on their members.
+For a subobject \code{W}, \code{x : W} denotes a member and \code{W v} is
+its membership proposition; \code{W.S} remains the ambient object. The split
+and based descendants inherit the coercions. The explicit instances
+\code{IModule} and \code{ILinRepres} call these same constructions, so the
+module and representation coercions agree on the underlying module.
+
+The irreducibility condition considers an invariant submodule $W\subseteq E$
+with a supplied linear map $r:E\to W$ satisfying $r(w)=w$ for every $w\in W$.
+It requires no basis of $W$. A finite basis is assumed to exist for the
+ambient representation $E$.
+
+One may also specify the subrepresentation using a separate representation
+$U$, an intertwiner $j:U\to E$, and a linear map $s:E\to U$ satisfying
+$s(j(u))=u$. The lemma \code{splitMono-irreducible} then concludes that $U$
+is zero or $j$ is surjective. Its proof applies the irreducibility condition
+to the image $W=j(U)$. The map $j:U\to W$ is an isomorphism, with inverse
+$w\mapsto s(w)$; no basis of $U$ is used. The functions \code{fromSplitMono}
+and \code{imageEquiv}, together with \code{splitMono-dichotomy}, implement
+this proof.
+
+A basis of $W$ is additional data, recorded by the based descendants.
+The maps \code{coordinateIso} and \code{arrayToSub} relate those coordinates
+to the vectors of $W$.
+\needspace{9\baselineskip}
 \begin{itemize}
   \item \textbf{Linear, not equivariant, retraction.} A split monomorphism in
   \code{RepresentationCat} is an invariant direct summand, and testing only
@@ -285,25 +343,27 @@ category of representations \code{RepresentationCat}.
   spanned by $(1,1)$ is invariant and linearly split, but has no invariant
   complement. The equivariant split is what averaging produces
   (\code{maschke-split}, P04a), when $|G|$ is invertible.
-  \item \textbf{Universe levels.} \code{LModuleCat} and
-  \code{RepresentationCat} take objects at a finite level \code{u}, so
-  \code{SplitSubLRepres}, \code{IsFinIrreducible} and the declarations that
-  quantify over them carry a level parameter \code{.\{u\}}.
-  \item \textbf{No decidable equality in the definition.} The first component
-  is the truncated existence of a basis of positive length; no basis is
-  chosen, and no \code{dimension} or decision procedure is needed. (An earlier
-  version phrased it as a surjective split inclusion $R^k \to E$. That is
-  equivalent, since such an inclusion is an isomorphism and its invariance
-  condition is automatic, but it misleadingly looked like a statement about
-  subrepresentations.)
-  \item \textbf{Nontrivial scalars are required.} Positive rank alone does not
-  exclude the zero module. Over the zero ring, $R^1$ is already zero, and with
-  \code{{R : Ring}} the predicate would call it irreducible. Hence
-  \code{{R : NonZeroRing}}. This is a nontriviality assumption, the negated
-  equality $0\ne1$; it is not positive evidence in the apartness or
-  invertibility sense. It needs no decidable equality. The alternative of an explicit nontriviality field on
-  $E$ is listed for review. \code{DiscreteField} only enters through the constructions that
-  produce split subspaces (L08b, P03).
+  \needspace{5\baselineskip}
+  \item \textbf{Universe levels.} The membership and split classes inherit
+  their universes from their parent classes and ambient module. The finite
+  irreducible descendant retains its explicit parameter \code{.\{u\}}.
+  Categorical conclusions such as \code{maschke-split} use
+  \code{RepresentationCat} at that level.
+  \item \textbf{No decidable equality in the definition.} Finite freeness is inherited from \code{FinModule}. The
+  \code{nontrivial} field asserts $\exists v\in E,\ v\ne0$; the lemma
+  \code{basis-nonempty} proves that any basis is nonempty. The
+  \code{irreducible} field expresses the split-submodule dichotomy. No basis
+  is chosen, and no \code{dimension} or decision procedure is needed.
+  This descendant class replaces the former standalone predicate and its
+  anonymous pair of proofs.
+  \item \textbf{Scalar and module nontriviality.} The class retains the
+  \code{NonZeroRing} coefficient convention. Its \code{nontrivial} field
+  separately excludes the zero representation, by witnessing a vector
+  $v\ne0$. Both $0\ne1$ and $v\ne0$ are negated equalities, not positive
+  apartness or invertibility evidence. No zero test is assumed. The
+  nonzero-vector field is essential: finite freeness alone includes the
+  zero module. \code{DiscreteField} only enters the constructions that
+  produce image splittings (L08b, P03).
   \item \textbf{Why this escapes the $W_P$ argument.} A split subspace comes
   with a retraction. For $W_P\subseteq\Q$ that would mean a linear
   $r:\Q\to W_P$ with $r\circ j=\mathrm{id}$, so $j\circ r$ is multiplication
@@ -314,7 +374,7 @@ category of representations \code{RepresentationCat}.
   \item \textbf{Recorded restrictions.}
   \begin{itemize}
     \item The notion only makes sense for finite free representations, and it
-    tests only split invariant subspaces of finite rank.
+    tests split invariant submodules without requiring a basis of the submodule.
     \item It is the pilot's working definition, not the general replacement.
     Arbitrary and infinite-dimensional modules (for example Verma modules)
     need the separate design item D3b, which is out of scope here.
@@ -322,7 +382,8 @@ category of representations \code{RepresentationCat}.
   \end{itemize}
   \item \textbf{Open questions for M1 review.}
   \begin{itemize}
-    \item Should a nonzero-vector witness replace the positive-rank component?
+    \item Resolved on 20 October: \code{nontrivial} is a nonzero-vector witness;
+    finite freeness is inherited, and nonemptiness of the basis is derived.
     \item \code{sub} is an arbitrary representation, so finite projective
     summands are allowed. Rank-one irreducibility then needs a ring without
     nontrivial idempotents: over $R\times R$, the summand $R\times 0$ is a
@@ -345,6 +406,7 @@ category of representations \code{RepresentationCat}.
 \func TensorLRepres {R : CRing} {G : Group} (A B : LinRepres R G) : LinRepres R G
   -- carrier TensorProductModule A B; g acts by tensorLift of (a, b) |-> g a ⊗ g b
 \end{lstlisting}
+\needspace{10\baselineskip}
 \begin{itemize}
   \item The direct sum is the existing \code{ProductLRepres}.
   \item Finite indexed sums are iterated \code{ProductLRepres}. They are only
@@ -426,7 +488,7 @@ L17 & \code{SymFinGroup (n : Nat) : FinGroup (Sym n)} from \code{SymmetricGroup}
 L18 & Natural action \code{SymAction n : GSet (SymmetricGroup n)} on \code{Fin n}. Products are left-to-right (\code{(e * e') j = e' (e j)}, \src{Equiv.ard:233}), so the action must be \code{e ** i = inverse e i}; then \code{PermRepr} gives $(g\cdot f)(j)=f(g\,j)$ & \code{symQEquiv}, \code{Sym.equals} & S & R2, R4, R5 \\
 L19 & Fixed points as a decidable subset of a finite \code{GSet} with decidable equality, with a \code{FinSet} instance (\code{SigmaFin.DecSubSet-isFin}); conjugacy classes of an explicit finite group as decidable subsets & \code{DecSubSet}, \code{SigmaFin}, \code{FinSum-inj} & S & P10, R1 \\
 L20 & Inversion $g\mapsto g^{-1}$ as a \code{QEquiv} for every \code{Group}, and the reindexing \code{FinSum (x o inverse) = FinSum x} (today only \code{SymmetricGroup.inv-isEquiv} exists) & \code{inverse-isInv}, \code{FinSum_Equiv} & S & P09, P11, P12 \\
-L21 & \textbf{Irreducibility from a scalar commutant.} Over a commutative \code{LocalRing} $R$ (hence \code{NonZeroRing}), with \code{cardInv}: if $E\cong R^n$ with $n>0$ (a full split subspace $T$ with \code{0 < T.dim}) and every intertwiner $E\to E$ is scalar, then \code{IsFinIrreducible E}. Positive rank is essential, since the zero representation also has only scalar endomorphisms. Route: a split invariant $S$ gives the equivariant idempotent $\pi=\mathit{incl}\circ\rho$ (P04a). By the commutant $\pi=c\cdot\mathrm{id}_E$, so $(c^2-c)\,\mathrm{id}_E=0$. Evaluating at $T.\mathit{incl}(e_0)$ and applying $T.\mathit{retr}$ gives $(c^2-c)e_0=0$ in $R^n$, hence $c^2=c$; this step uses $n>0$. Then \code{LocalRing.connected} (\src{Algebra/Ring/Local.ard:37}) gives $c=0$ (so \code{dim = 0}, using $0\ne1$) or $c=1$ (so \code{incl} is surjective). No zero test is used, so it applies to \code{ComplexField}. & P04a, \code{LocalRing.connected}, L10 & M & R3, R8a \\
+L21 & \textbf{Irreducibility from a scalar commutant.} Over a commutative \code{LocalRing} $R$ (hence \code{NonZeroRing}), with \code{cardInv}: if $E\cong R^n$ with $n>0$ (a full split subspace $T$ with \code{0 < T.dim}) and every intertwiner $E\to E$ is scalar, then return a \code{FinIrreducibleRepres} extending $E$. Positive rank is essential, since the zero representation also has only scalar endomorphisms. Route: a split invariant $S$ gives the equivariant idempotent $\pi=\mathit{incl}\circ\rho$ (P04a). By the commutant $\pi=c\cdot\mathrm{id}_E$, so $(c^2-c)\,\mathrm{id}_E=0$. Evaluating at $T.\mathit{incl}(e_0)$ and applying $T.\mathit{retr}$ gives $(c^2-c)e_0=0$ in $R^n$, hence $c^2=c$; this step uses $n>0$. Then \code{LocalRing.connected} (\src{Algebra/Ring/Local.ard:37}) gives $c=0$ (so the submodule is zero, using $0\ne1$) or $c=1$ (so \code{incl} is surjective). No zero test is used, so it applies to \code{ComplexField}. & P04a, \code{LocalRing.connected}, L10 & M & R3, R8a \\
 L22 & Ring homomorphism $\Q\to\C$: \code{fromRealRingHom} (\src{Arith/Complex.ard:108}) composed with the structure map of \code{RealField : OrderedFieldAlgebra RatField Real}; transport of matrices (\code{matrix-map}), of traces, and of \code{Monoid.Inv} along a ring homomorphism, which gives the inverses of $2,3,6$ in \code{ComplexField} & \code{fromRealRingHom}, \code{RingHom}, \code{charPoly_map} pattern & S & R8a, R8b \\
 \bottomrule
 \end{longtable}}
@@ -466,7 +528,7 @@ invariant subspace.
 \field{Target}
 \begin{itemize}
   \item D2 (\code{FinLinRepres} and \code{BasedLinRepres}).
-  \item D3 (\code{SplitSubLRepres} and the pilot notion \code{IsFinIrreducible}).
+  \item D3 (\code{SplitSubLRepres} and the pilot class \code{FinIrreducibleRepres}).
   \item The bridge to $G\to\mathrm{GL}(V)$, with the order fixed.
   \code{LinearMapRing} multiplies as \code{f * g = g ∘ f}
   (\src{Algebra/Module/Instances.ard:28}), while an action satisfies
@@ -493,13 +555,13 @@ Relation: \code{reformulated}. Invariant subspaces are replaced by split ones.
   arbitrary ring and an arbitrary \code{GSet X}, with the same hypotheses as
   now. The old theorem's conclusion \code{0 = {R} 1} turns into the hypothesis
   that $R$ is a \code{NonZeroRing}, and the new conclusion is
-  \code{Not (IsFinIrreducible (PermRepr X))}.
+  \code{Not (FinIrreducibleRepres { | LinRepres => PermRepr X })}.
   \item The constant line $j(c)=(c,c,\dots)$ with $r(f)=f(x_0)$ is a
   split invariant subspace of dimension~1 for any $X$. \code{nonConstantVector}
-  shows that $j$ is not surjective. The refutation only uses the second
-  component of \code{IsFinIrreducible}.
+  shows that $j$ is not surjective. The refutation uses only the
+  \code{irreducible} field of \code{FinIrreducibleRepres}.
   \item \textbf{Recorded change of strength.} For infinite $X$, the new
-  predicate's first component, finite freeness, generally fails anyway.
+  class requirement of finite freeness generally fails anyway.
   The migrated theorem is then weaker than the old one, which refuted
   irreducibility in the strong sense for every $X$. The general-module form
   waits for D3b.
@@ -512,7 +574,8 @@ $\mathit{dim}\le1$). The migrated \code{Not-Irreducible} checks.
 \end{item-spec}
 
 \begin{item-spec}{P01b}{The old notion implies excluded middle}
-\field{Target} \code{IsStronglyIrreducible.excludedMiddle}: from
+\field{Target} \code{IsStronglyIrreducible.excludedMiddle}.\par
+From
 \code{IsStronglyIrreducible (TrivialAction (RingLModule R) G)} and $0\neq1$
 in $R$, derive \code{\Pi (P : \Prop) -> P || Not P}.
 \field{Route}
@@ -548,8 +611,8 @@ registered goal remains.
 \field{Source} Schur 1.7(1), p.~7.
 \field{Target}
 \begin{lstlisting}
-\lemma SchurLemma {K : DiscreteField} {G : Group} {A B : BasedLinRepres K G}
-  (p : IsFinIrreducible A) (q : IsFinIrreducible B) (f : IntertwiningMap A B)
+\lemma SchurLemma.{u} {K : DiscreteField.{u}} {G : Group.{u}}
+  {A B : FinIrreducibleRepres.{u} K G} (f : IntertwiningMap A B)
   : f.IsZero || IsEquiv f
 \end{lstlisting}
 Relation: \code{reformulated}. It uses the pilot irreducibility. As
@@ -564,8 +627,9 @@ for the definitions.
   pivots, so this is where \code{DiscreteField} is used. The target is a
   proposition, so the truncation in \code{smith-bases} can be eliminated.
   \item Invariance comes from \code{KernelLRepres} and \code{ImageLRepres}.
-  \item Then copy the case structure of the existing \code{SchurLemma}
-  (\src{Irreducible.ard:14--21}), using L09 for ``dim equal implies surjective''.
+  \item Apply the named \code{irreducible} fields of the domain and codomain
+  to these split presentations. The zero/whole cases give the conclusion
+  directly; no dimension comparison is required.
 \end{itemize}
 \field{Risk} This item validates D3, so it is prototyped first, typechecked
 together with L08a and L08b. If the image splitting cannot be stated cleanly,
@@ -596,7 +660,7 @@ subspace; the whole-book plan, page~6, explains why.
 \begin{itemize}
   \item Average $p_0=\mathit{incl}\circ\mathit{retr}$. Reuse
   \code{SumOverGroup}, \code{FinSumRewrite} and the
-  \code{mean-func-preserve} argument (\src{MaschkeLemma.ard:28--45}),
+  \code{mean-func-preserve} argument (\src{Group/Representation/MaschkeLemma.ard}),
   generalized from a \code{SubLRepres} target to \code{E}.
   \item The complement is $\ker\pi$, split by $\mathrm{id}-\pi$. L08a supplies
   its basis over any \code{SmithDomain}; \code{DiscreteField} is stated for
@@ -623,8 +687,8 @@ inclusions out explicitly. Irreducibility of the standard representation is R3.
 \field{Source} Schur 1.7(2), p.~7.
 \field{Target}
 \begin{itemize}
-  \item \code{IsSplitIrreducible E}: \code{IsFinIrreducible} plus
-  ``every \code{IntertwiningMap E E} is a scalar multiple of the identity''.
+  \item A \code{FinIrreducibleRepres} with the explicit additional hypothesis that
+  every \code{IntertwiningMap E E} is a scalar multiple of the identity.
   \item A proof that one-dimensional representations are split irreducible.
   \item A proof that the standard representation of $S_3$ is split
   irreducible over any commutative \code{LocalRing} in which $6$ is invertible;
@@ -773,15 +837,15 @@ generators are $\sigma=(1\,2)$ (\code{transposition}) and $\tau=(1\,2\,3)$
 \toprule
 ID & Statement & Route \\
 \midrule
-R1 & The six elements, listed explicitly, are pairwise distinct and exhaust $S_3$. The class sizes are $1,3,2$; each class is a decidable subset with its \code{card} computed. \code{card = fac 3} reduces to $6$. & L17, L19; decidable equality from \code{SymFin}; \code{Sym.equals} \\
-R2 & Representations: trivial; sign ($g\cdot x=\mathrm{sgn}(g)x$, a new \code{CharacterLRepres} for a \code{MonoidHom} into the multiplicative monoid, using \code{signHom} and \code{sign_*}); \code{PermRepr} on \code{Fin 3}; standard ($e_1-e_2$, $e_2-e_3$, as a \code{SplitSubLRepres} of \code{PermRepr}). The standard representation is given by an explicit inclusion $R^2\to R^3$ and an explicit retraction, so it needs only the D3 definitions (wave 1), not the P01 bridge or the product basis L07. & D3, L18 \\
-R3 & The standard representation is irreducible, by L21 applied to the scalar commutant (R7). A split invariant subspace gives an equivariant idempotent (P04a), which is a scalar $c$ with $c^2=c$, so $c=0$ or $c=1$ by locality. The same proof works over \code{ComplexField} (R8a). \emph{Rejected route:} excluding a rational eigenvector of $\tau$ needs a proof that $\lambda^2+\lambda+1$ has no rational root, for example by ordered-field positivity; \code{equation.cRing} alone cannot do it, and the route does not transfer to $\C$. & R7, L21, P04a \\
+R1 & The six permutations are explicitly enumerated and proved pairwise distinct and exhaustive. The implementation gives an equivalence $\mathrm{Fin}\,6\simeq S_3$ and a formula for summing over that enumeration. Conjugacy-class sizes are not formalized separately. & L17; explicit finite cases \\
+R2 & Representations: trivial; sign ($g\cdot x=\mathrm{sgn}(g)x$, a new \code{CharacterLRepres} for a \code{MonoidHom} into the multiplicative monoid, using \code{signHom} and \code{sign_*}); \code{PermRepr} on \code{Fin 3}; standard ($e_1-e_2$, $e_2-e_3$, as a \code{BasedSplitSubLRepres} of \code{PermRepr}). The standard representation is given by an explicit inclusion $R^2\to R^3$ and an explicit retraction, so it needs only the D3 definitions (wave 1), not the P01 bridge or the product basis L07. & D3, L18 \\
+R3 & The standard representation extends to \code{FinIrreducibleRepres}, by L21 and the scalar commutant R7. Averaging any split invariant submodule gives an idempotent scalar $c$, and locality gives $c=0$ or $c=1$. This same argument applies over constructive $\C$. & R7, L21, P04a \\
 R4 & \code{PermRepr} is isomorphic to trivial $\oplus$ standard (P05). & P04b or explicit maps \\
-R5 & Character rows: trivial $(1,1,1)$, sign $(1,-1,1)$, standard $(2,0,-1)$ on $[1],[\sigma],[\tau]$; permutation $(3,1,0)$, also as P10's consequence (conditional). & Explicit $2\times2$ traces \\
-R6 & Orthogonality table: the nine pairings $\langle\chi_i,\chi_j\rangle$ computed by exact arithmetic with weights $1,3,2$ and $|G|^{-1}=1/6$. & L16, normalization in \code{Rat} \\
-R7 & Scalar commutant of the standard representation over a commutative \code{LocalRing} with $6$ invertible (P06), instantiated at \code{RatField}; and the Hom-dimension consequences used in P12. Proved before R3 and R8a, which depend on it. & Linear equations over an abstract ring \\
-R8a & \textbf{Constructive-$\C$ bridge, structural stage.} Transport R2's matrices along the ring homomorphism $\Q\to\C$ (L22). This gives the decomposition maps of R4, with their inverses, and $|G|^{-1}$ and the other denominators as images of rational inverses, so no zero test on $\C$ is used. The scalar commutant of R7 is instantiated at \code{ComplexField}. Irreducibility over $\C$ gets its own proof through L21; it is \emph{not} inferred from irreducibility over $\Q$, since irreducibility does not transfer in general. & L21, L22, P04a, R4, R7 \\
-R8b & \textbf{Constructive-$\C$ bridge, character stage.} The character values of R5 over \code{ComplexField}, as images of rationals under L22 (traces commute with ring homomorphisms), and the R6 pairings over $\C$. & R5, R6, R8a, L22 \\
+R5 & Character rows: trivial $(1,1,1)$, sign $(1,-1,1)$, standard $(2,0,-1)$ and permutation $(3,1,0)$ on identity, transposition and three-cycle representatives. The direct trace proofs do not use Exercise~2.5. & Explicit coordinate traces \\
+R6 & All nine pairings $\langle\chi_i,\chi_j\rangle$ are computed by summing over the six enumerated elements, with an explicit inverse of $6$. They are $1$ on the diagonal and $0$ off it. & R1, L16; finite sums \\
+R7 & Every equivariant endomorphism of the standard representation is scalar, over any commutative ring. Comparing the coordinates for a transposition and a three-cycle proves this without division. Instantiate at \code{RatField} and \code{ComplexField}. & Explicit linear equations \\
+R8a & \textbf{Constructive-$\C$ stage.} Instantiate the generic representation formulas, decomposition maps and scalar commutant at \code{ComplexField}. Supply the inverses of $3$ and $6$ through $\Q\to\C$. Prove complex irreducibility through L21; no general transfer of irreducibility from $\Q$ is assumed. & L21, L22, P04a, R4, R7 \\
+R8b & \textbf{Constructive-$\C$ characters.} Instantiate the generic character values and all nine finite-sum pairings at \code{ComplexField}, supplying the inverse of $6$. & R5, R6, L22 \\
 \bottomrule
 \end{tabularx}}
 
@@ -880,7 +944,7 @@ separate track.}
 Wave & Items & Gate to the next wave \\
 \midrule
 0 & Finish M0 (Section~\ref{sec:baseline}) $\mid$ control tests $\mid$ manifest skeleton for all P/L/R items $\mid$ statement review of D3, L08a, L08b, P03 & D3 statement review signed off \\
-1 & \textbf{Prototype:} D3 definitions (\code{SplitSubLRepres}, \code{IsFinIrreducible} over \code{NonZeroRing}, old notion renamed) $\to$ (L08a $\mid$ L08b $\mid$ L09) $\to$ P03; everything typechecked with no goals & Schur typechecks; D3 stands or is revised \\
+1 & \textbf{Prototype:} D3 definitions (\code{SplitSubLRepres}, \code{FinIrreducibleRepres} over \code{NonZeroRing}, old notion renamed) $\to$ (L08a $\mid$ L08b $\mid$ L09) $\to$ P03; everything typechecked with no goals & Schur typechecks; D3 stands or is revised \\
 2 & \textbf{Interface test on $S_3$ over $\Q$ and $\C$.} Chain A: (L16 $\mid$ L17 $\mid$ L18 $\mid$ L19 $\mid$ L20) $\to$ R1 $\to$ R2 $\to$ P06/R7. Chain B, in parallel with A: P04a $\to$ L10 $\to$ L21 (generic; no $S_3$ input). Chain C, after A and B: R3 $\to$ R4 (with explicit decomposition maps, since P04b comes in wave 3). Chain D, after C: L22 $\to$ R8a & Decomposition, commutant and irreducibility check over both fields, with no zero test on $\C$ \\
 3 & L01 $\to$ ((L02 $\to$ L04 $\to$ L05 $\to$ P08) $\mid$ (P01 bridge with $\rho(g^{-1})$, migration $\to$ P02 with hole)); in parallel: P01b $\mid$ (P04b $\to$ P05) $\mid$ L03 & Characters and Maschke complements check \\
 4 & (L06 $\mid$ L07 $\mid$ P10 with hole) $\to$ R5 $\to$ R8b-values; (L11--L13 $\mid$ L15) $\to$ P11 & Invariant-dimension formula and $\C$ character values check \\
@@ -1019,7 +1083,7 @@ Daemon flag locking & A ``fresh'' run silently reuses caches & Acceptance uses \
 
 \stage{Decisions}{Needed from the project owner before wave 1}
 \begin{enumerate}
-  \item Approve D3 as the \emph{pilot} notion \code{IsFinIrreducible}, over
+  \item Approve D3 as the \emph{pilot} notion \code{FinIrreducibleRepres}, over
   any \code{NonZeroRing}, together with its recorded restrictions and the three open
   questions listed under it.
   \item Confirm that the name \code{IsIrreducible} stays reserved for the
@@ -1030,12 +1094,13 @@ Daemon flag locking & A ``fresh'' run silently reuses caches & Acceptance uses \
   \item Approve the character route for P07, with its characteristic-0
   restriction and its status
   \code{conditional-on-exercises}.
-  \item Choose where the manifest lives: \src{arend-lib/docs/fulton-harris/}
-  as in the whole-book plan, or the repository's \src{docs/}.
+  \item Manifest location resolved: \src{arend-lib/docs/fulton-harris/}.
 \end{enumerate}
 
 \stage{Revision note}{Corrections in this version}
-This version incorporates a review of the first draft.
+This version incorporates reviews of the first draft and the hierarchy refactor
+of 20 October 2026. The current API uses a descendant class; the earlier
+standalone \code{IsFinIrreducible} predicate has been removed.
 \begin{itemize}
   \item L08 is split into L08a and L08b. Image splitting is false over a
   general \code{SmithDomain}.
@@ -1046,16 +1111,16 @@ This version incorporates a review of the first draft.
   longer called a monoid map.
   \item R3 now goes through the scalar commutant and Maschke averaging (L21).
   \item The exit criteria now have two tiers.
-  \item Second review: L21 requires positive rank and reuses
-  \code{LocalRing.connected}; \code{IsFinIrreducible} requires
+  \item Second review: L21 requires positive rank. Its proof uses
+  \code{LocalRing.connected}. The scalar ring must be a
   \code{NonZeroRing}, which excludes the zero ring; waves list their internal
   dependency chains; L19 moves to wave 2; R8 is split into a structural stage
   (R8a) and a character stage (R8b); and the claim about complex kernels and
   images is softened.
   \item Third review: $0\ne1$ is described as a nontriviality assumption;
   stale ``any \code{Ring}'' wording is corrected; R2 depends only on D3 and L18.
-  \item Wave~1 implementation: the old notion is named
-  \code{IsStronglyIrreducible}, with \code{SchurLemma-strong}. A nested name
+  \item Wave~1: the old notion is named \code{IsStronglyIrreducible}.
+  Its lemma is \code{SchurLemma-strong}. A nested name
   \code{IsIrreducible.Strong} would need a definition called
   \code{IsIrreducible}, and that name is reserved for D3b. The new Schur lemma
   concludes \code{IsEquiv f}, as the old one did.
@@ -1066,20 +1131,55 @@ This version incorporates a review of the first draft.
 
 
 \newpage
-\section{Implementation status (12 October 2026)}\label{sec:status}
+\section{Implementation status (updated 20 October 2026)}\label{sec:status}
+
+\textbf{Class refactor (20 October).} The finite representation class now
+lives in \src{Group/Representation/Finite.ard} and inherits the existing
+\code{FinModule} structure. The irreducible descendant in
+\src{Group/Representation/Irreducible.ard} has named \code{nontrivial} and
+\code{irreducible} fields. The lemma \code{basis-nonempty} derives nonemptiness of
+the basis. Constructors return class extensions of the specified action;
+Schur, orthogonality and multiplicity theorems consume those classes directly.
+The former \code{isFinRepres} field and \code{toFinModule} adapter are removed:
+a finite representation is already a finite module by inheritance.
+
+The subobject interfaces now form one hierarchy. \code{SplitSubLModule} in
+\src{Module/SubLModule/Split.ard} extends the existing \code{SubLModule};
+\code{SplitSubLRepres} extends it and the existing \code{SubLRepres}.
+\code{BasedSplitSubLModule} in \src{Linear/BasedSplitSubLModule.ard} and
+\code{BasedSplitSubLRepres} add the coordinate data used by kernel/image
+algorithms and the explicit $S_3$ plane. The old pilot module
+\src{Linear/SplitSubLModule.ard} is replaced, and all imports are migrated.
+Both split classes were introduced by the pilot; they are not pre-pilot
+library interfaces. Only the membership parents were already present.
+Averaging, complements, split characters and irreducibility consume the
+basis-free descendant. Dimension formulas explicitly consume the based one.
+The proofs \code{imageEquiv}, \code{splitMono-dichotomy} and
+\code{splitMono-irreducible} establish compatibility with arbitrary split
+intertwiner presentations; \code{coordinateIso}, \code{arrayToSubEquiv} and
+\code{splitCharacter-coordinates} establish compatibility with coordinates.
+The irreducibility premise is unchanged by this hierarchy refactor.
+
+All 466 library modules pass a fresh normal typecheck. The pilot's 26 manifest
+modules pass fresh double-checking, and 136 formal targets are verified.
+All 704 tests pass. Exactly the two registered exercise holes remain.
+The F2 companion also passes a fresh double-check. A separate whole-library
+double-check encounters the previously recorded error at
+\src{Category/Limit.ard:1034}; it is not a pilot-module failure.
+
 All P-, L- and R-items were implemented in \src{arend-lib}. The only open goals
 in the library outside block comments are the two registered exercise holes.
 Paths are relative to \src{arend-lib/src/Algebra/}.
 
 {\small
-\begin{longtable}{@{}P{16mm}P{66mm}P{78mm}@{}}
+\begin{longtable}{@{}P{16mm}P{66mm}P{75.5mm}@{}}
 \toprule
 Item & Declarations (module) & Notes \\
 \midrule
 \endhead
-D3 & \code{SplitSubLRepres}, \code{SplitSubLRepres.fromInvariant}, \code{IsFinIrreducible} (\src{Group/Representation/SplitSubLRepres}, \src{Irreducible}) & Old notion renamed \code{IsStronglyIrreducible}, Schur as \code{SchurLemma-strong}. The first component of \code{IsFinIrreducible} is stated as existence of a basis of positive length. \code{SplitSubLRepres} is an intertwiner that is a \code{SplitMono} in \code{LModuleCat}; it and its consumers are universe-polymorphic. \\
+D3 & \code{SplitSubLRepres}, \code{SplitSubLRepres.fromInvariant}, \code{FinIrreducibleRepres} (\src{Group/Representation/SplitSubLRepres}, \src{Irreducible}) & Old notion renamed \code{IsStronglyIrreducible}, Schur as \code{SchurLemma-strong}. \code{FinIrreducibleRepres} now extends \code{FinLinRepres}; the latter inherits \code{FinModule}. The named fields are \code{nontrivial} and \code{irreducible}; nonemptiness of the basis is derived by \code{basis-nonempty}. \code{SplitSubLRepres} descends from the existing \code{SubLRepres} and the new \code{SplitSubLModule}; the based descendants add coordinates. The split-monomorphism bridges preserve the quantification domain. \\
 P01 & \code{toUnitsHom}, \code{fromUnitsHom} and both round-trip laws (\src{Hom}); \code{PermRepr-not-FinIrreducible} (\src{PermutationRepresentation}); \code{rank-one-idempotent}, \code{rank-one-irreducible} (\src{Irreducible}) & Uses \code{InvGroup} from \src{Arith/Nat/EulerTotient}. Rank-one irreducibility holds over every \code{NonZeroCRing} without nontrivial idempotents (\code{IsConnected}), without averaging. \\
-P01b & \code{IsStronglyIrreducible.excludedMiddle} & Proved; no axiom. \\
+P01b & \src{IsStronglyIrreducible.excludedMiddle} & Proved; no axiom. \\
 P02 & \code{HomLRepres}, \code{DualLRepres}, \code{invariantHom} & \code{invariantHom} is the hole \code{FH_L01_Ex1_2}. \\
 P03 & \code{SchurLemma} & Over \code{DiscreteField}; concludes \code{IsEquiv f}. \\
 P04 & \code{splitProjector}, \code{maschke-split} (P04a, \src{Averaging}); \code{maschke-complement} (P04b, \src{Complement}) & P04a over \code{CRing}; \code{maschke-split} makes \code{incl} a \code{SplitMono} in \code{RepresentationCat}; P04b weakened during cleanup from \code{DiscreteField} to \code{SmithDomain}. \\
@@ -1093,8 +1193,8 @@ P11 & \code{invProj}, \code{invProj.trace}, \code{dim-invariants}, \code{invaria
 P12 & \code{orthogonality-noniso}, \code{orthogonality-self}, \code{orthogonality-iso} (\src{Orthogonality}) & Conditional on Ex.~1.2. \\
 L01--L05 & \code{toLinearMap_*}, \code{toMatrix-action_*}, \code{Trace-coords}, \code{Trace-basis-indep}, \code{endoTrace} (\src{Module/TraceCoords}) & L04 holds over any \code{CRing}, for bases of possibly different lengths, with no inverses. L03 is subsumed by \code{Trace-coords}. \\
 L06--L07, L11--L14 & \code{CoordSystem}, \code{productCS}, \code{homCS}, \code{tensorCS}, \code{deltaCS}, \code{arrayCS} (\src{Module/CoordSystem}, \src{Tensor}) & One mechanism (finite set-indexed coordinates and \code{Trace-coords}) replaces block and Kronecker matrices. \\
-L08--L09 & \code{kernel-split}, \code{image-split}, \code{split-full-surj} (\src{Linear/SplitSubLModule}) & As corrected: kernel over \code{SmithDomain}, image over \code{DiscreteField}. \\
-L10 & \code{split-dim-<=} (\src{Linear/SplitSubLModule}) & No longer used downstream: rank-one irreducibility goes through \code{rank-one-idempotent}. \\
+L08--L09 & \code{kernel-split}, \code{image-split}, \code{split-full-surj} (\src{Linear/BasedSplitSubLModule}) & As corrected: kernel over \code{SmithDomain}, image over \code{DiscreteField}. \\
+L10 & \code{split-dim-<=} (\src{Linear/BasedSplitSubLModule}) & No longer used downstream: rank-one irreducibility goes through \code{rank-one-idempotent}. \\
 L15 & \code{trace-split} & Cyclicity of the trace; no kernel basis. \\
 L16, L22 & \code{natCoef-Inv-Rat}, \code{ratToComplex}, \code{natCoef-Inv-Complex} (\src{../Arith/Complex/RatHom}) & \\
 L17--L20 & \code{SymFinGroup}, \code{SymAction} (\src{Group/Symmetric/Action}), \code{FixedPointsFin}, \code{right-translate} & L20's inversion reindexing was not needed and was removed. \\
@@ -1104,6 +1204,7 @@ R8a/b & \src{test/Algebra/Representation/S3Test.ard} & Irreducibility, decomposi
 \bottomrule
 \end{longtable}}
 
+\needspace{8\baselineskip}
 \textbf{Conditional declarations.} Through \code{invariant-intertwining}, these
 depend on the hole \code{FH_L01_Ex1_2}:
 \begin{itemize}
@@ -1122,13 +1223,13 @@ on either hole.
   \item Plan IDs in doc comments were replaced by book references.
   \item Hypothesis weakening was tried; P04b now holds over any
   \code{SmithDomain}.
-  \item Not attempted: removing redundant explicit implicit arguments, and
-  weakening \code{invariants-split} via a kernel splitting.
+  \item Not attempted: removing redundant explicit implicit arguments;
+  weakening \code{invariants-split} using a kernel splitting.
 \end{itemize}
 
 \textbf{Completion audit.}
 \begin{itemize}
-  \item The manifest is \src{arend-lib/docs/fulton-harris/manifest.jsonl}: 45
+  \item The manifest is \src{arend-lib/docs/fulton-harris/manifest.jsonl}: 48
   records with formal targets, source relation and status. This settles
   decision~5.
   \item \src{arend-lib/tools/autoformalization/pilot_acceptance.py} checks
@@ -1146,9 +1247,9 @@ on either hole.
     \item a negative control: a temporary module with an invalid proof is
     rejected;
     \item doc comments are well formed: multi-line docs use
-    \code{{- | ... -}}, not a \code{-- |} line followed by \code{--}
+    \verb!{- | ... -}!, not a \verb!-- |! line followed by \verb!--!
     continuation lines, which would fall outside the documentation. Block docs
-    must not contain \code{{-} or \code{-}}.
+    must not contain \verb!{-! or \verb!-}!.
   \end{enumerate}
   Check~1 queries the symbol index rather than the file text, so a definition
   swallowed by a stray comment delimiter is caught.
@@ -1163,11 +1264,13 @@ on either hole.
 \textbf{Not yet done.}
 \begin{itemize}
   \item The general-module design D3b.
-  \item F2 below, needed before Lecture~3. F1 is implemented.
+  \item The general complex irreducibility-to-commutant bridge in F2 below.
+  The F2 design decision and standalone averaging prototypes are recorded in
+  the 19 October update; they are not integrated into arend-lib. F1 is implemented.
 \end{itemize}
 
 \subsection*{Follow-up items for Lectures 3 onward}
-\textbf{Relation of the two irreducibility notions.} An earlier version of
+\textbf{Relation of the two irreducibility notions.} Before the basis-free redesign (which predates the current hierarchy refactor),
 \code{SplitSubLRepres} tested only free summands $R^k$ with a linear
 retraction. The current notion tests every split subrepresentation
 (\code{SplitMono} in \code{LModuleCat}), and it is strictly stronger:
@@ -1213,7 +1316,7 @@ are \code{SplitSubLRepres} values directly, with $\pi$ as retraction.
   \begin{itemize}
     \item \code{endoTrace-comm} and \code{endoTrace-sum}: cyclicity and
     additivity of the basis-free trace;
-    \item \code{splitCharacter}, defined with the record's retraction, and
+    \item \code{splitCharacter}, defined with the inherited retraction, and
     \code{splitCharacter-retr}: any other retraction gives the same value;
     \item \code{splitCharacter-basis}: if \code{S.sub} has a basis, the value
     is its ordinary \code{Character}. The proof expands \code{S.sub} along
@@ -1242,18 +1345,111 @@ are \code{SplitSubLRepres} values directly, with $\pi$ as retraction.
   From Lecture~3 on, Schur over $\C$ is used throughout.
   \item \textbf{This holds for both irreducibility notions.} It is not caused
   by the redesign.
-  \item \textbf{Directions to evaluate.}
-  \begin{itemize}
-    \item A conclusion weaker than ``zero or isomorphism'' that suffices for
-    the character theory, for example a statement about the averaged
-    projections.
-    \item Hypotheses that make kernels and images split, such as an
-    apartness-based rank argument over a Heyting field.
-    \item Routing the needed consequences, such as orthogonality, through
-    \code{maschke-split} and the commutant instead of through kernels.
-  \end{itemize}
-  \item \textbf{Decision needed} before planning Lecture~3.
+  \item \textbf{Decision (20 October 2026).} Keep the existing
+  \code{DiscreteField} dichotomy. For constructive complex character theory,
+  use the trace of averaging with explicit scalar-commutant and zero-Hom
+  hypotheses. Deriving those hypotheses from \code{FinIrreducibleRepres} is a
+  separate, still open theorem. The prototypes below verify this separation.
 \end{itemize}
 \end{item-spec}
+
+\subsection*{F2 update: the scalar obstruction}
+The obstruction is already visible in dimension one, independently of any
+kernel algorithm. Let $R$ be a commutative local ring and let $E=R$ carry the
+trivial action of any group. The existing \code{rank-one-irreducible} proves
+an extension of $E$ to \code{FinIrreducibleRepres}, using \code{LocalRing.connected}. For any $c\in R$,
+the map $m_c(x)=cx$ is an intertwiner. A proposed general Schur dichotomy gives
+\[
+  m_c=0\ \lor\ m_c\text{ is an isomorphism}
+  \quad\Longrightarrow\quad c=0\ \lor\ c\text{ is a unit}.
+\]
+In the first case evaluate at $1$. In the second case take the inverse image
+of $1$; if it is $b$, then $cb=1$, so $c$ is invertible by commutativity.
+For a \code{Field}, this constructs a \code{DiscreteField} on the same carrier
+and operations. This is an implication from the proposed dichotomy, not a
+proof of its negation inside Arend. It identifies the additional assumption
+that a purported constructive proof would supply.
+
+The distinction between a field where noninvertibility implies zero and one
+where every element is zero or invertible is also discussed by
+\href{https://arxiv.org/abs/2207.03873}{Blechschmidt--Schuster,
+\emph{Maximal ideals in countable rings, constructively}}. The reduction above
+is checked against this repository's definitions, without using a classical
+axiom or any exercise hole.
+
+Consequently, apartness-based elimination can be useful with explicit rank
+or splitting evidence, but it cannot supply the unrestricted dichotomy over
+\code{ComplexField} without also supplying scalar discreteness. Do not
+replace positive apartness by logical negation of equality in such hypotheses.
+
+\subsection*{F2 update: averaging without a basis of the invariants}
+For finite free $V,W$ over a commutative ring with $|G|$ invertible, put
+$H=\Hom_R(V,W)$ and let $P$ be the existing averaging projection on $H$.
+The existing \code{invProj.trace} and \code{character_hom} give
+\[
+  \langle\chi_V,\chi_W\rangle=\tr_H(P).
+\]
+This identity does not require \code{invariants-split}. It supports two
+constructive consequences:
+\begin{itemize}
+  \item If every intertwiner $V\to W$ is zero, every $P(f)$ is zero, hence
+  $\tr_H(P)=0$. This assumes zero Hom explicitly; it does not deduce it from
+  non-isomorphism of irreducibles over $\C$.
+  \item Suppose $V$ has a basis with a specified index $j$, and every
+  intertwiner $V\to V$ is scalar. Define $\lambda(f)$ to be the $j$-th
+  coordinate of $f(v_j)$. Then $\lambda(I)=1$ and
+  $P(f)=\lambda(P(f))I$. The rank-one trace identity
+  $\tr(u\mapsto d(u)v)=d(v)$ gives
+  $\tr_H(P)=\lambda(P(I))=\lambda(I)=1$.
+\end{itemize}
+Both consequences hold over \code{CRing}; no zero test, invariant-submodule
+basis, or inverse of $\dim V$ is used. A selected basis index witnesses
+positive rank for the second statement. The scalar-commutant assumption is
+retained explicitly even though it also implies irreducibility over a local
+ring by the existing \code{irreducible-from-commutant}.
+
+\textbf{Standalone formal checks.} The companion library is
+\src{docs/fulton-harris-f2}, with dependency \code{arend-lib}:
+\begin{itemize}
+  \item \src{src/SchurObstruction.ard}:\\
+  \code{SchurDichotomy},
+  \code{zero-or-invertible-of-schur}, and \code{discrete-from-schur}.
+  \item \src{src/AveragingRoute.ard}: \code{pairing-average},
+  \code{trace-rank-one}, \code{orthogonality-zero-hom}, and
+  \code{orthogonality-self-commutant}.
+  \item \src{src/ComplexCheck.ard}: \code{std-self-pairing-C} instantiates
+  the latter theorem with \code{std-commutant} and \code{ComplexField},
+  using only the inverse of $6$ for averaging.
+\end{itemize}
+The two new orthogonality results and their complex specialization are
+\emph{conditional on Exercise~1.2}, through the existing
+\code{invariant-intertwining}. The scalar obstruction, rank-one trace lemma,
+and averaging trace identity do not consume that hole. No new exercise holes
+are introduced. These are standalone checks, not additions to the production
+manifest or a replacement for the existing hole-independent $S_3$ computations.
+
+From \src{docs/fulton-harris-f2}, run:
+\begin{lstlisting}[language={}]
+arend --no-daemon -r -c -L ../.. \
+  Algebra.Group.Representation.Hom \
+  Algebra.Group.Representation.CharacterFormulas \
+  SchurObstruction AveragingRoute ComplexCheck
+\end{lstlisting}
+List the two exercise-bearing dependency modules first so their registered
+goals remain visible. A successful check must have no errors and exactly the
+existing goals \code{FH_L01_Ex1_2} and \code{FH_L02_Ex2_5}.
+On 20 October, after the hierarchy migration, this command exited~0 with
+exactly those two goals; the three prototype modules passed the double-check. Their import closures contain
+neither \code{Logic.Classical} nor \code{Logic.Choice}. The scoped result is
+recorded in \src{docs/fulton-harris-f2/validation.json}.
+
+\textbf{Remaining before general Lecture~3 claims.} Integrate the reusable
+trace and averaging lemmas with the production manifest and its dependency
+audit. Then establish which additional hypotheses suffice to derive scalar
+commutants and zero Hom from the chosen complex irreducibility notion.
+An invariant positive-definite Hermitian form and spectral projections are a
+possible route to investigate, not an implemented theorem. Neither the
+prototype nor F1 establishes that bridge, complete reducibility over $\C$,
+or a general complex Schur lemma.
 
 \end{document}

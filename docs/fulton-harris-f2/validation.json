@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-20",
+  "command": "arend --no-daemon -r -c -L ../.. Algebra.Group.Representation.Hom Algebra.Group.Representation.CharacterFormulas SchurObstruction AveragingRoute ComplexCheck",
+  "exit_code": 0,
+  "errors": [],
+  "registered_goals": [
+    "FH_L01_Ex1_2",
+    "FH_L02_Ex2_5"
+  ],
+  "double_checked_modules": [
+    "SchurObstruction",
+    "AveragingRoute",
+    "ComplexCheck"
+  ],
+  "new_holes": 0,
+  "forbidden_imports": [],
+  "conditional_on_FH_L01_Ex1_2": [
+    "AveragingRoute:orthogonality-zero-hom",
+    "AveragingRoute:orthogonality-self-commutant",
+    "ComplexCheck:std-self-pairing-C"
+  ],
+  "scope": "Standalone F2 checks; does not certify concurrent production edits or the full library test suite.",
+  "source_sha256": {
+    "src/AveragingRoute.ard": "84608e687ff77c596a8357885794d08986a14f3ef9529ff38c12712e23b05375",
+    "src/ComplexCheck.ard": "f12f17c9700860800225a24729e046fb2d21ae6dbb89bbed96b96f31f629cee3",
+    "src/SchurObstruction.ard": "ce84437cf1e85f21dabced8f30370ab4595dd896c246feb2e7cfbb135ca7cf8e"
+  }
+}

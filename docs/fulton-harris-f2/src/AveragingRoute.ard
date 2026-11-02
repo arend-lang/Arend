@@ -1,0 +1,84 @@
+\import Algebra.Group.Representation.Finite
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.CharacterFormulas
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.Hom
+\import Algebra.Group.Representation.Invariants
+\import Algebra.Group.Representation.IntertwiningMap
+\import Algebra.Group.Representation.Orthogonality (pairing, invariant-intertwining)
+\import Algebra.Linear.BasedSplitSubLModule (basis-split_+, basis-split_*c)
+\import Algebra.Module
+\import Algebra.Module.CoordSystem
+\import Algebra.Module.FinModule
+\import Algebra.Module.Instances
+\import Algebra.Module.LinearMap
+\import Algebra.Module.TraceCoords
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Nat
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+\lemma pairing-average {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card))
+  (V W : FinLinRepres R G)
+  : pairing cardInv (character V) (character W) =
+      endoTrace {R} {(HomFin V W)} (invProj cardInv (HomFin V W))
+  => inv (invProj.trace cardInv (HomFin V W) *>
+          pmap (cardInv.inv *) (R.FinSum-ext (character_hom V W)))
+
+\lemma trace-rank-one {R : CRing} {U : FinModule R} (v : U) (d : LinearMap U (RingLModule R))
+  (T : LinearMap U U) (p : \Pi (u : U) -> T u = d u *c v)
+  : endoTrace T = d v
+  => \case U.isFinModule \with {
+    | inP (l, lb) => endoTrace-char lb *>
+        R.BigSum-ext {l.len} {\lam j => coordFun lb j (T (l j))} {\lam j => coordFun lb j v * d (l j)}
+          (\lam j => pmap (coordFun lb j) (p (l j)) *> (coordFun lb j).func-*c *> R.*-comm) *>
+        inv (d.linearComb {\lam j => coordFun lb j v} {\lam j => l j}) *>
+        pmap d (inv (U.basis-split-char {_} {lb}))
+  }
+
+{- | Direct averaging route to orthogonality. Conditional on Exercise 1.2 through
+    `invariant-intertwining`; no basis of the invariant submodule is needed. -}
+\lemma orthogonality-zero-hom {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card))
+  (V W : FinLinRepres R G) (zero : \Pi (h : IntertwiningMap V W) -> h.IsZero)
+  : pairing cardInv (character V) (character W) = R.zro
+  => \let | H => HomFin V W
+          | P => invProj cardInv H
+          | (inP (l, lb)) => H.isFinModule
+          | p=0 (f : H) : P f = {LinearMap V W} 0
+              => exts (zero (invariant-intertwining (P f) (invProj.invariant cardInv f)))
+     \in pairing-average cardInv V W *> endoTrace-char lb *>
+         R.BigSum-ext {l.len} {\lam j => coordFun lb j (P (l j))} {\lam _ => R.zro}
+           (\lam j => pmap (coordFun lb j) (p=0 (l j)) *>
+           (coordFun lb j).func-zro) *> R.BigSum_zro (\lam _ => idp)
+
+{- | Scalar commutants suffice for self-orthogonality over a commutative ring.
+    Conditional on Exercise 1.2 through `invariant-intertwining`. -}
+\lemma orthogonality-self-commutant {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card))
+  (V : FinLinRepres R G) {l : Array V} (lb : V.IsBasis l) (j : Fin l.len)
+  (comm : \Pi (h : IntertwiningMap V V) -> ∃ (c : R) (\Pi (v : V) -> h v = c *c v))
+  : pairing cardInv (character V) (character V) = R.ide
+  => \let | H => HomFin V V
+          | P => invProj cardInv H
+          | lam : LinearMap (LinearMapLModule V V) (RingLModule R) => \new LinearMap {
+              | func f => V.basis-split lb (f (l j)) j
+              | func-+ => basis-split_+ lb j
+              | func-*c => basis-split_*c lb j
+            }
+          | lam-id : lam LinearMap.id = R.ide => V.basis_split_=
+          | d => LinearMap.compose {R} {H} {H} {RingLModule R} lam P
+          | scalar (f : H) : P f = d f *c LinearMap.id
+              => \let | (inP (c, hc)) => comm (invariant-intertwining (P f) (invProj.invariant cardInv f))
+                      | eq : P f = c *c LinearMap.id => exts hc
+                 \in eq *> pmap (\lam a => a *c LinearMap.id)
+                      (inv (pmap lam eq *> lam.func-*c *> pmap (c *) lam-id *> R.ide-right))
+          | id-invariant : IsInvariant {R} {G} {H} LinearMap.id
+              => \lam g => exts \lam v => inv V.**-assoc *> pmap (`** v) G.inverse-right *> V.**_ide
+     \in pairing-average cardInv V V *>
+         trace-rank-one {R} {H} LinearMap.id d P scalar *>
+         pmap lam (invProj.on-invariant cardInv id-invariant) *> lam-id

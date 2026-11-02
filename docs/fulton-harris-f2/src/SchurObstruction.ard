@@ -1,0 +1,44 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.IntertwiningMap
+\import Algebra.Group.Representation.Irreducible
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.Local
+\import Algebra.Semiring
+\import Equiv
+\import Logic
+\import Paths
+
+\func SchurDichotomy.{u} (R : NonZeroRing.{u}) (G : Group.{u}) : \Prop
+  => \Pi {A B : LinRepres.{u} R G}
+       {IA : FinIrreducibleRepres.{u} { | LinRepres => A }}
+       {IB : FinIrreducibleRepres.{u} { | LinRepres => B }} ->
+       \Pi (f : IntertwiningMap IA IB) -> f.IsZero || IsEquiv f
+
+{- | Even the rank-one trivial representation forces scalar discreteness if every
+    intertwiner between finite irreducibles is zero or an isomorphism. -}
+\lemma zero-or-invertible-of-schur.{u} {R : LocalCRing.{u}} {G : Group.{u}}
+  (schur : SchurDichotomy R G) (c : R)
+  : (c = R.zro) || Monoid.Inv c
+  => \have irr : FinIrreducibleRepres.{u} { | LinRepres => TrivialAction (RingLModule R) G }
+       => rank-one-irreducible {R} {G} {TrivialAction (RingLModule R) G} R.connected RingLModule.basis
+     \in \case schur {_} {_} {irr} {irr} (scalar c) \with {
+       | byLeft z => byLeft (inv R.ide-right *> z R.ide)
+       | byRight (inP e) => byRight (Monoid.Inv.rmake (e.ret R.ide) (e.f_ret R.ide))
+     }
+  \where {
+    \func scalar {R : CRing} {G : Group} (c : R)
+      : IntertwiningMap (TrivialAction (RingLModule R) G) (TrivialAction (RingLModule R) G) \cowith
+      | func x => c * x
+      | func-+ => R.ldistr
+      | func-*c => equation
+      | func-** => idp
+  }
+
+\func discrete-from-schur.{u} {K : Field.{u}} {G : Group.{u}} (schur : SchurDichotomy K G)
+  : DiscreteField { | Field => K } \cowith
+  | eitherZeroOrInv => zero-or-invertible-of-schur schur

@@ -72,37 +72,33 @@
 }
 
 
--- | The constant line in a permutation representation is a split invariant subspace of dimension 1, for every {GSet}.
--- | The constant functions form a split subrepresentation of {PermRepr}; evaluation at {x0} is a linear retraction.
-\func constLine.{u} {R : Ring.{u}} {G : Group.{u}} (X : GSet.{u} G) (x0 : X) : SplitSubLRepres.{u} (PermRepr {R} X) \cowith
-  | sub => TrivialAction (RingLModule R) G
-  | incl => \new IntertwiningMap {
-    | func c => \lam _ => c
-    | func-+ => idp
-    | func-*c => idp
-    | func-** => idp
+-- | The constant functions form a split subrepresentation of {PermRepr}; evaluation at {x0} supplies the retraction.
+\func constLine.{u} {R : Ring.{u}} {G : Group.{u}} (X : GSet.{u} G) (x0 : X) : SplitSubLRepres R G (PermRepr {R} X) \cowith
+  | contains f => \Pi (x y : X) -> f x = f y
+  | contains_zro _ _ => idp
+  | contains_+ p q x y => pmap2 (+) (p x y) (q x y)
+  | contains_negative p x y => pmap negative (p x y)
+  | contains_*c {r} p x y => pmap (r *) (p x y)
+  | contains_** p x y => p _ _
+  | retract => \new LinearMap {
+    | func f => (\lam _ => f x0, \lam _ _ => idp)
+    | func-+ => ext idp
+    | func-*c => ext idp
   }
-  | split => \new SplitMono {
-    | hinv => \new LinearMap {
-      | func f => f x0
-      | func-+ => idp
-      | func-*c => idp
-    }
-    | hinv_f => idp
-  }
+  | retract_incl x => ext (exts \lam y => x.2 x0 y)
 
--- | Migration of {PermutationRepresReducible.Not-Irreducible} to {IsFinIrreducible}, with the same hypotheses on {X}.
+-- | Migration of {PermutationRepresReducible.Not-Irreducible} to {FinIrreducibleRepres}, with the same hypotheses on {X}.
 \lemma PermRepr-not-FinIrreducible.{u} {R : NonZeroRing.{u}} {G : Group.{u}} (X : GSet.{u} G) (somepoint somepoint' : X)
   (different-points : somepoint' /= somepoint) (decideEq-somepoint : \Pi (x : X) -> Dec (x = somepoint))
-  (p : IsFinIrreducible (PermRepr {R} X)) : Empty
+  (E : FinIrreducibleRepres.{u} { | LinRepres => PermRepr {R} X }) : Empty
   => \let | P => \new PermutationRepresReducible {R} {G} X somepoint somepoint' different-points decideEq-somepoint
           | S => constLine {R} X somepoint
-     \in \case p.2 S \with {
-       | byLeft z => R.zro/=ide (inv (z R.ide))
+     \in \case E.irreducible S \with {
+       | byLeft z => R.zro/=ide (inv (pmap (\lam x => x.1 somepoint) (z (\lam _ => R.ide, \lam _ _ => idp))))
        | byRight s => \case s P.nonConstantVector \with {
          | inP (c, q) =>
            \have const : P.nonConstantVector somepoint' = P.nonConstantVector somepoint
-                 => inv (path (\lam i => (q @ i) somepoint')) *> path (\lam i => (q @ i) somepoint)
+                 => inv (path (\lam i => (q @ i) somepoint')) *> c.2 somepoint' somepoint *> path (\lam i => (q @ i) somepoint)
            \in cases (P.decideEq-somepoint somepoint', P.decideEq-somepoint somepoint, unfold P.nonConstantVector in const) \with {
              | yes e, yes _, _ => different-points e
              | yes _, no n, _ => n idp

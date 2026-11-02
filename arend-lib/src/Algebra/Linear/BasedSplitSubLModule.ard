@@ -1,3 +1,4 @@
+\import Algebra.Group
 \import Algebra.Field
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.Matrix.Smith
@@ -6,6 +7,9 @@
 \import Algebra.Module
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
+\import Algebra.Module.ModuleIso
+\import Algebra.Module.SubLModule
+\import Algebra.Module.SubLModule.Split
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -23,24 +27,64 @@
 \import Paths.Meta
 \import Set.Fin
 
-{- | A finite free direct summand of {U} given by an inclusion of $R^{dim}$ with a linear retraction,
-    whose image consists exactly of the elements satisfying {P}. -}
-\record SplitSubLModule {R : Ring} (U : LModule R) (P : U -> \Prop)
+{- | A split submodule with specified finite free coordinates.
+    The coordinate inclusion {basisIncl} and map {coords} present the same membership submodule. -}
+\class BasedSplitSubLModule \extends SplitSubLModule {
   | dim : Nat
-  | incl : LinearMap (ArrayFinModule {R} dim) U
-  | retr : LinearMap U (ArrayFinModule {R} dim)
-  | retr_incl (x : Array R dim) : retr (incl x) = x
-  | incl-in (x : Array R dim) : P (incl x)
-  | incl_retr {u : U} : P u -> incl (retr u) = u
-  \where {
-    \lemma dim=0 {R : Ring} {U : LModule R} {P : U -> \Prop} (S : SplitSubLModule U P) (p : S.dim = 0) {u : U} (Pu : P u) : u = 0
-      => inv (S.incl_retr Pu) *> pmap S.incl (exts \lam j => \case transport Fin p j \with {}) *> S.incl.func-zro
+  | basisIncl : LinearMap (ArrayFinModule {R} dim) S
+  | coords : LinearMap S (ArrayFinModule {R} dim)
+  | coords_basisIncl (x : Array R dim) : coords (basisIncl x) = x
+  | basisIncl_in (x : Array R dim) : contains (basisIncl x)
+  | basisIncl_coords {v : S} : contains v -> basisIncl (coords v) = v
 
-    \lemma surj {R : Ring} {U : LModule R} {P : U -> \Prop} (S : SplitSubLModule U P) (s : IsSurj S.incl) (u : U) : P u
-      => \case s u \with {
-        | inP (x, p) => transport P p (S.incl-in x)
-      }
+  | contains_zro => transport contains basisIncl.func-zro (basisIncl_in 0)
+  | contains_+ {a} {b} pa pb => transport contains
+      (basisIncl.func-+ *> pmap2 (+) (basisIncl_coords pa) (basisIncl_coords pb))
+      (basisIncl_in (coords a + coords b))
+  | contains_negative {a} pa => transport contains
+      (basisIncl.func-negative *> pmap negative (basisIncl_coords pa)) (basisIncl_in (negative (coords a)))
+  | contains_*c {r} {a} pa => transport contains
+      (basisIncl.func-*c *> pmap (r *c) (basisIncl_coords pa)) (basisIncl_in (r *c coords a))
+  | retract => \new LinearMap {
+    | func v => (basisIncl (coords v), basisIncl_in (coords v))
+    | func-+ => ext (pmap basisIncl coords.func-+ *> basisIncl.func-+)
+    | func-*c => ext (pmap basisIncl coords.func-*c *> basisIncl.func-*c)
   }
+  | retract_incl x => ext (basisIncl_coords x.2)
+} \where {
+  -- | Coordinates identify the membership subtype with the specified free module.
+  \func coordinateIso (B : BasedSplitSubLModule {}) : ModuleIso {B.R} {ArrayFinModule {B.R} B.dim} {IModule B} \cowith
+    | f => \new LinearMap {
+      | func x => (B.basisIncl x, B.basisIncl_in x)
+      | func-+ => ext B.basisIncl.func-+
+      | func-*c => ext B.basisIncl.func-*c
+    }
+    | finv => \new LinearMap {
+      | func x => B.coords x.1
+      | func-+ => B.coords.func-+
+      | func-*c => B.coords.func-*c
+    }
+    | finv_f => B.coords_basisIncl
+    | f_finv x => ext (B.basisIncl_coords x.2)
+
+  -- | The chosen coordinates give an actual basis of the canonical submodule.
+  \lemma basis (B : BasedSplitSubLModule {})
+    : (IModule B).IsBasis (map (coordinateIso B).f MatrixRing.ide)
+    => iso-basis {B.R} {ArrayFinModule {B.R} B.dim} {IModule B} (coordinateIso B) ArrayFinModule.basis
+
+  \func finiteSubmodule (B : BasedSplitSubLModule {}) : FinModule { | LModule => IModule B } \cowith
+    | isFinModule => inP (_, basis B)
+
+  \lemma dim=0 {R : Ring} {U : LModule R} {P : U -> \Prop}
+    (B : BasedSplitSubLModule { | R => R | S => U | contains => P }) (p : B.dim = 0) {u : U} (Pu : P u) : u = 0
+    => inv (B.basisIncl_coords Pu) *> pmap B.basisIncl (exts \lam j => \case transport Fin p j \with {}) *> B.basisIncl.func-zro
+
+  \lemma surj {R : Ring} {U : LModule R} {P : U -> \Prop}
+    (B : BasedSplitSubLModule { | R => R | S => U | contains => P }) (s : IsSurj B.basisIncl) (u : U) : P u
+    => \case s u \with {
+      | inP (x, p) => transport P p (B.basisIncl_in x)
+    }
+}
 
 \lemma basis-split_+ {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) {x y : U} (j : Fin l.len)
   : U.basis-split lb (x + y) j = U.basis-split lb x j + U.basis-split lb y j
@@ -57,15 +101,15 @@
 \func selectSplit {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) {k : Nat} (idx : Array (Fin l.len) k) (inj : IsInj idx)
   (P : U -> \Prop) (inSpan : \Pi (x : Array R k) -> P (U.BigSum (\lam i => x i *c l (idx i))))
   (coefOut : \Pi {u : U} -> P u -> \Pi (j : Fin l.len) -> (\Pi (i : Fin k) -> idx i /= j) -> U.basis-split lb u j = 0)
-  : SplitSubLModule U P \cowith
+  : BasedSplitSubLModule { | R => R | S => U | contains => P } \cowith
   | dim => k
-  | incl => inclMap
-  | retr => retrMap
-  | retr_incl x => exts \lam i => path (\lam t => retrMap.linearComb {x} {\lam i' => l (idx i')} t i) *> ArrayLModule.BigSum-index *>
+  | basisIncl => inclMap
+  | coords => retrMap
+  | coords_basisIncl x => exts \lam i => path (\lam t => retrMap.linearComb {x} {\lam i' => l (idx i')} t i) *> ArrayLModule.BigSum-index *>
       R.BigSum-unique i (\lam i' i/=i' => pmap (x i' *) (U.basis_split_/= \lam q => i/=i' (inv (inj q))) *> R.zro_*-right) *>
       pmap (x i *) U.basis_split_= *> ide-right
-  | incl-in => inSpan
-  | incl_retr {u} Pu => inv (AbMonoid.FinSum=BigSum {U}) *>
+  | basisIncl_in => inSpan
+  | basisIncl_coords {u} Pu => inv (AbMonoid.FinSum=BigSum {U}) *>
       inv (U.FinSum-inj {FinFin k} {FinFin l.len} idx inj {\lam j => U.basis-split lb u j *c l j} (\lam j nj => pmap (*c _) (coefOut Pu j nj) *> U.*c_zro-left)) *>
       AbMonoid.FinSum=BigSum {U} *> inv (U.basis-split-char {_} {lb})
   \where {
@@ -95,7 +139,7 @@
 
 -- | The kernel of a linear map between based modules over a Smith domain is a split submodule.
 \lemma kernel-split {R : SmithDomain} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V)
-  : TruncP (SplitSubLModule U (\lam u => f u = 0))
+  : TruncP (BasedSplitSubLModule { | R => R | S => U | contains => \lam u => f u = 0 })
   => \case smith-bases bu bv f \with {
     | inP (lu', bu', lv', bv', d, g, d0) =>
       \let r => rank (LinearMap.toMatrix lu' bv' f)
@@ -128,7 +172,7 @@
 {- | Over a discrete field the image of a linear map between based modules is a split submodule.
     Over a general Smith domain this fails: the image $2\mathbb{Z}$ of multiplication by $2$ has a basis but no retraction from $\mathbb{Z}$. -}
 \lemma image-split {K : DiscreteField} {U V : LModule K} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V)
-  : TruncP (SplitSubLModule V (\lam v => ∃ (u : U) (f u = v)))
+  : TruncP (BasedSplitSubLModule { | R => K | S => V | contains => \lam v => ∃ (u : U) (f u = v) })
   => \case smith-bases bu bv f \with {
     | inP (lu', bu', lv', bv', d, g, d0) =>
       \let | r => rank (LinearMap.toMatrix lu' bv' f)

@@ -1,3 +1,4 @@
+\import Algebra.Group.Representation.Finite
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.Representation
@@ -24,7 +25,7 @@
 
 \func ZeroFin.{u} {R : Ring.{u}} {G : Group} : FinLinRepres.{u} R G \cowith
   | LinRepres => TrivialAction {R} (ArrayFinModule {R} 0) G
-  | isFinRepres => inP (MatrixRing.ide, ArrayFinModule.basis {R} {0})
+  | isFinModule => inP (MatrixRing.ide, ArrayFinModule.basis {R} {0})
 
 \lemma character_zero.{u} {R : CRing.{u}} {G : Group} (g : G) : character (ZeroFin.{u} {R} {G}) g = 0
   => character-char (ArrayFinModule.basis {R} {0}) g
@@ -53,37 +54,34 @@
 \lemma natCoef1 {R : Semiring} : R.natCoef 1 = 1
   => R.natCoefSuc 0 *> pmap (`+ 1) R.natCoefZero *> R.zro-left
 
-\lemma delta-case.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
-  (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
+\lemma delta-case.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinIrreducibleRepres.{u} K G)
   (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
   (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
   (x j : Fin r)
   : pairing cardInv (character (V x)) (character (V j)) = K.natCoef (\case decideEq x j \with { | yes _ => 1 | no _ => 0 })
   => cases (decideEq x j) \with {
     | yes p => transportInv (\lam y => pairing cardInv (character (V y)) (character (V j)) = K.natCoef 1) p
-                 (orthogonality-self cardInv (V j) (irr j) (comm j) *> inv natCoef1)
-    | no n => orthogonality-noniso cardInv (V x) (V j) (irr x) (irr j) (noniso x j n) *> inv K.natCoefZero
+                 (orthogonality-self cardInv (V j) (comm j) *> inv natCoef1)
+    | no n => orthogonality-noniso cardInv (V x) (V j) (noniso x j n) *> inv K.natCoefZero
   }
 
-\lemma count-pairing.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
-  (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
+\lemma count-pairing.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinIrreducibleRepres.{u} K G)
   (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
   (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
   (a : Array (Fin r)) (j : Fin r)
-  : pairing cardInv (character (DSum.{u} V a)) (character (V j)) = K.natCoef (countFin j a) \elim a
+  : pairing cardInv (character (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a)) (character (V j)) = K.natCoef (countFin j a) \elim a
   | nil => pmap (pairing cardInv __ (character (V j))) {character (ZeroFin.{u} {K} {G})} {\lam _ => 0} (ext character_zero.{u}) *> pairing-zero cardInv _ *> inv K.natCoefZero
-  | x :: a => pmap (pairing cardInv __ (character (V j))) {character (SumFin (V x) (DSum.{u} V a))} {\lam g => character (V x) g + character (DSum.{u} V a) g} (ext (character_sum (V x) (DSum.{u} V a))) *>
-              pairing-+ cardInv (character (V x)) (character (DSum.{u} V a)) (character (V j)) *> pmap2 (+) (delta-case cardInv V irr comm noniso x j) (count-pairing cardInv V irr comm noniso a j) *> inv K.natCoef_+
+  | x :: a => pmap (pairing cardInv __ (character (V j))) {character (SumFin (V x) (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a))} {\lam g => character (V x) g + character (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a) g} (ext (character_sum (V x) (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a))) *>
+              pairing-+ cardInv (character (V x)) (character (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a)) (character (V j)) *> pmap2 (+) (delta-case cardInv V comm noniso x j) (count-pairing cardInv V comm noniso a j) *> inv K.natCoef_+
 
 {- | Fulton--Harris Prop. 1.8, constructive variant: multiplicities of pairwise non-isomorphic split irreducibles in a direct sum are determined by the isomorphism class.
     Restricted to characteristic $0$ (injectivity of {natCoef}) and conditional on Exercise 1.2. -}
-\lemma multiplicities.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinLinRepres.{u} K G)
-  (irr : \Pi (i : Fin r) -> IsFinIrreducible (V i))
+\lemma multiplicities.{u} {K : DiscreteField.{u}} {G : FinGroup.{u}} (cardInv : Monoid.Inv (K.natCoef G.card)) {r : Nat} (V : Fin r -> FinIrreducibleRepres.{u} K G)
   (comm : \Pi (i : Fin r) (h : IntertwiningMap (V i) (V i)) -> ∃ (c : K) (\Pi (e : V i) -> h e = c *c e))
   (noniso : \Pi (i j : Fin r) -> i /= j -> Not (∃ (f : IntertwiningMap (V i) (V j)) (IsEquiv f)))
   (natCoef-inj : \Pi (m n : Nat) -> K.natCoef m = K.natCoef n -> m = n)
-  (a b : Array (Fin r)) (f : IntertwiningMap (DSum.{u} V a) (DSum.{u} V b)) (e : IsEquiv f) (j : Fin r)
+  (a b : Array (Fin r)) (f : IntertwiningMap (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a) (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) b)) (e : IsEquiv f) (j : Fin r)
   : countFin j a = countFin j b
-  => natCoef-inj _ _ (inv (count-pairing cardInv V irr comm noniso a j) *>
-       pmap (pairing cardInv __ (character (V j))) {character (DSum.{u} V a)} {character (DSum.{u} V b)} (ext (character-iso {K} {G} {DSum.{u} V a} {DSum.{u} V b} f e)) *>
-       count-pairing cardInv V irr comm noniso b j)
+  => natCoef-inj _ _ (inv (count-pairing cardInv V comm noniso a j) *>
+       pmap (pairing cardInv __ (character (V j))) {character (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a)} {character (DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) b)} (ext (character-iso {K} {G} {DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) a} {DSum.{u} (\lam i => \new FinLinRepres { | FinLinRepres => V i }) b} f e)) *>
+       count-pairing cardInv V comm noniso b j)

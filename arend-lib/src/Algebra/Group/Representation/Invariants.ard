@@ -1,3 +1,4 @@
+\import Algebra.Group.Representation.Finite
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.GSet
@@ -7,7 +8,7 @@
 \import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.MaschkeLemma
 \import Algebra.Linear.Matrix
-\import Algebra.Linear.SplitSubLModule (SplitSubLModule, image-split)
+\import Algebra.Linear.BasedSplitSubLModule (BasedSplitSubLModule, image-split)
 \import Algebra.Module
 \import Algebra.Module.CoordSystem
 \import Algebra.Module.FinModule
@@ -57,52 +58,52 @@
 
     -- | $\mathrm{tr}\, \varphi = \frac{1}{|G|} \sum_g \chi_E(g)$.
     \lemma trace {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : FinLinRepres R G)
-      : endoTrace {R} {FinLinRepres.toFinModule E} (invProj cardInv E) = cardInv.inv * R.FinSum (\lam g => character E g)
-      => \case E.isFinRepres \with {
+      : endoTrace {R} {E} (invProj cardInv E) = cardInv.inv * R.FinSum (\lam g => character E g)
+      => \case E.isFinModule \with {
         | inP (l, lb) =>
           \let C => basisCS lb
-          \in CoordSystem.trace {R} {FinLinRepres.toFinModule E} C (invProj cardInv E) *>
+          \in CoordSystem.trace {R} {E} C (invProj cardInv E) *>
               R.FinSum-ext (\lam j => (C.coord j).func-*c *> pmap (cardInv.inv *) (AddMonoidHom.func-FinSum (C.coord j) {G} {\lam g => g ** C.vec j})) *>
               inv R.FinSum-ldistr *> pmap (cardInv.inv *) (FinSum-swap *> inv (R.FinSum-ext (\lam g => character-coords C g)))
       }
   }
 
 -- | The trace of an idempotent-like endomorphism whose fixed vectors form a split submodule is its rank.
-\lemma trace-split {R : CRing} {U : FinModule R} (p : LinearMap U U) {P : U -> \Prop} (S : SplitSubLModule U P)
+\lemma trace-split {R : CRing} {U : FinModule R} (p : LinearMap U U) {P : U -> \Prop} (S : BasedSplitSubLModule { | R => R | S => U | contains => P })
   (pP : \Pi (u : U) -> P (p u)) (Pp : \Pi {u : U} -> P u -> p u = u)
   : endoTrace p = R.natCoef S.dim
   => \case U.isFinModule \with {
     | inP (l, lb) =>
       \let | b : LModule.IsBasis {ArrayFinModule {R} S.dim} MatrixRing.ide => ArrayFinModule.basis
-           | q : LinearMap U (ArrayFinModule {R} S.dim) => LinearMap.compose {R} {U} {U} {ArrayFinModule {R} S.dim} S.retr p
+           | q : LinearMap U (ArrayFinModule {R} S.dim) => LinearMap.compose {R} {U} {U} {ArrayFinModule {R} S.dim} S.coords p
       \in endoTrace-char lb *>
-          pmap (\lam f => Trace (LinearMap.toMatrix l lb f)) (exts \lam u => inv (S.incl_retr (pP u))) *>
-          pmap Trace (LinearMap.toMatrix_* {R} {U} {ArrayFinModule {R} S.dim} {U} q S.incl l b lb) *>
-          Trace-prod (LinearMap.toMatrix {R} {U} {ArrayFinModule {R} S.dim} l b q) (LinearMap.toMatrix {R} {ArrayFinModule {R} S.dim} {U} MatrixRing.ide lb S.incl) *>
-          pmap Trace (inv (LinearMap.toMatrix_* {R} {ArrayFinModule {R} S.dim} {U} {ArrayFinModule {R} S.dim} S.incl q MatrixRing.ide lb b) *>
-                      matrixExt (\lam i j => pmap (\lam z => LModule.basis-split {ArrayFinModule {R} S.dim} b z j) (pmap S.retr (Pp (S.incl-in _)) *> S.retr_incl _)) *>
+          pmap (\lam f => Trace (LinearMap.toMatrix l lb f)) (exts \lam u => inv (S.basisIncl_coords (pP u))) *>
+          pmap Trace (LinearMap.toMatrix_* {R} {U} {ArrayFinModule {R} S.dim} {U} q S.basisIncl l b lb) *>
+          Trace-prod (LinearMap.toMatrix {R} {U} {ArrayFinModule {R} S.dim} l b q) (LinearMap.toMatrix {R} {ArrayFinModule {R} S.dim} {U} MatrixRing.ide lb S.basisIncl) *>
+          pmap Trace (inv (LinearMap.toMatrix_* {R} {ArrayFinModule {R} S.dim} {U} {ArrayFinModule {R} S.dim} S.basisIncl q MatrixRing.ide lb b) *>
+                      matrixExt (\lam i j => pmap (\lam z => LModule.basis-split {ArrayFinModule {R} S.dim} b z j) (pmap S.coords (Pp (S.basisIncl_in _)) *> S.coords_basisIncl _)) *>
                       LinearMap.toMatrix_ide b) *>
           Trace-ide
   }
 
-\func changePred {R : Ring} {U : LModule R} {P Q : U -> \Prop} (S : SplitSubLModule U P) (pq : \Pi (u : U) -> P u <-> Q u) : SplitSubLModule U Q \cowith
+\func changePred {R : Ring} {U : LModule R} {P Q : U -> \Prop} (S : BasedSplitSubLModule { | R => R | S => U | contains => P }) (pq : \Pi (u : U) -> P u <-> Q u) : BasedSplitSubLModule { | R => R | S => U | contains => Q } \cowith
   | dim => S.dim
-  | incl => S.incl
-  | retr => S.retr
-  | retr_incl => S.retr_incl
-  | incl-in x => (pq _).1 (S.incl-in x)
-  | incl_retr q => S.incl_retr ((pq _).2 q)
+  | basisIncl => S.basisIncl
+  | coords => S.coords
+  | coords_basisIncl => S.coords_basisIncl
+  | basisIncl_in x => (pq _).1 (S.basisIncl_in x)
+  | basisIncl_coords q => S.basisIncl_coords ((pq _).2 q)
 
 -- | Fulton--Harris (2.9): the rank of any split subspace of invariant vectors is $\frac{1}{|G|} \sum_g \chi_E(g)$.
 \lemma dim-invariants {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) (E : FinLinRepres R G)
-  (S : SplitSubLModule E (\lam v => IsInvariant v))
+  (S : BasedSplitSubLModule { | R => R | S => E | contains => \lam v => IsInvariant v })
   : R.natCoef S.dim = cardInv.inv * R.FinSum (\lam g => character E g)
-  => inv (trace-split {R} {FinLinRepres.toFinModule E} (invProj cardInv E) S (invProj.invariant cardInv) (invProj.on-invariant cardInv)) *> invProj.trace cardInv E
+  => inv (trace-split {R} {E} (invProj cardInv E) S (invProj.invariant cardInv) (invProj.on-invariant cardInv)) *> invProj.trace cardInv E
 
 -- | Over a discrete field such a split subspace exists.
 \lemma invariants-split {K : DiscreteField} {G : FinGroup} (cardInv : Monoid.Inv (K.natCoef G.card)) (E : FinLinRepres K G)
-  : TruncP (SplitSubLModule E (\lam v => IsInvariant v))
-  => \case E.isFinRepres \with {
+  : TruncP (BasedSplitSubLModule { | R => K | S => E | contains => \lam v => IsInvariant v })
+  => \case E.isFinModule \with {
     | inP (l, lb) => TruncP.map (image-split lb lb (invProj cardInv E)) \lam S => changePred S \lam v =>
         (\lam (h : ∃ (u : E) (invProj cardInv E u = v)) => \let | (inP (u, p)) => h \in transport IsInvariant p (invProj.invariant cardInv u),
          \lam inv-v => inP (v, invProj.on-invariant cardInv inv-v))

@@ -3,6 +3,7 @@ package org.arend.lib;
 import org.arend.ext.*;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
+import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
@@ -108,6 +109,14 @@ public class StdExtension implements ArendExtension {
 
   private ConcreteMetaDefinition makeDef(ArendRef parent, String name, DependencyMetaTypechecker typechecker) {
     return makeDef(factory.metaRef(parent, name, Precedence.DEFAULT, null, null, null, typechecker));
+  }
+
+  /**
+   * A reference to a Prelude definition in documentation, or its name when the Prelude is not loaded
+   * yet: the IDE may set a library's extension up before the Prelude, and `refDoc(null)` asserts.
+   */
+  private static LineDoc preludeDoc(ArendRef ref, String name) {
+    return ref == null ? text(name) : refDoc(ref);
   }
 
   @Override
@@ -217,11 +226,11 @@ public class StdExtension implements ArendExtension {
         text("* If the goal is `coe (\\lam i => \\Pi (x : A) -> B x i) f right a = b'`, then the subgoal is `coe (B a) (f a) right = b`."),
         text("* If the goal is `coe (\\lam i => \\Pi (x : A) -> B x i) f right = g'`, then the subgoal is `\\Pi (a : A) -> coe (B a) (f a) right = g a`."),
         text("* If the goal is `coe (\\lam i => A i -> B i) f right = g'`, then the subgoal is `\\Pi (a : A left) -> coe B (f a) right = g (coe A a right)`."),
-        hList(text("* If the type under "), refDoc(prelude.getCoerceRef()), text(" is a higher-order non-dependent function type, "), refDoc(simp_coe.getRef()), text(" simplifies it recursively.")),
+        hList(text("* If the type under "), preludeDoc(prelude.getCoerceRef(), "coe"), text(" is a higher-order non-dependent function type, "), refDoc(simp_coe.getRef()), text(" simplifies it recursively.")),
         text("* If the goal is `(coe (\\lam i => \\Sigma (x_1 : A_1 i) ... (x_n : A_n i) ...) t right).n = b'`, then the subgoal is `coe A_n t.n right = b`."),
         text("* If the goal is `coe (\\lam i => \\Sigma (x_1 : A_1) ... (x_n : A_n) (B_{n+1} i) ... (B_k i)) t right = s'`, then the subgoal is a \\Sigma type consisting of equalities as specified above ignoring fields in \\Prop."),
-        hList(text("* If the type under "), refDoc(prelude.getCoerceRef()), text(" is a record, then "), refDoc(simp_coe.getRef()), text(" works similarly to the case of \\Sigma types. The copattern matching syntax as in "), refDoc(extMeta.getRef()), text("is also supported.")),
-        hList(text("* All of the above cases also work for goals with `Paths.transport` instead of "), refDoc(prelude.getCoerceRef()), text(" since the former evaluates to the latter.")),
+        hList(text("* If the type under "), preludeDoc(prelude.getCoerceRef(), "coe"), text(" is a record, then "), refDoc(simp_coe.getRef()), text(" works similarly to the case of \\Sigma types. The copattern matching syntax as in "), refDoc(extMeta.getRef()), text("is also supported.")),
+        hList(text("* All of the above cases also work for goals with `Paths.transport` instead of "), preludeDoc(prelude.getCoerceRef(), "coe"), text(" since the former evaluates to the latter.")),
         text("* If the goal is `transport (\\lam x => f x = g x) p q = s`, then the subgoal is `q *> pmap g p = pmap f p *> s`. If `f` does not depend on `x`, then the right hand side of the subgoal is simply `s`."),
         text("If the expected type is unknown or if the meta is applied to more than one argument, then it applies to the type of the argument instead of the expected type.")),
         simp_coe);

@@ -1,0 +1,28 @@
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Module.SubLModule
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Logic
+\import Paths
+\import Paths.Meta
+
+{- | A submodule with a linear retraction of its canonical inclusion.
+    Membership and the inclusion come from {SubLModule}; no basis is assumed. -}
+\class SplitSubLModule \extends SubLModule {
+  | retract : LinearMap S (IModule (\new SubLModule { | SubLModule => \this }))
+  | retract_incl (x : IModule (\new SubLModule { | SubLModule => \this })) : retract x.1 = x
+} \where {
+  {- | A split linear monomorphism determines a split membership submodule.
+      Its membership predicate is the image of {j}. -}
+  \func fromSplitMono {R : Ring} {W V : LModule R} (j : LinearMap W V) (r : LinearMap V W)
+    (rj : \Pi (x : W) -> r (j x) = x) : SplitSubLModule { | SubLModule => ImageLModule j } \cowith
+    | retract => \new LinearMap {
+      | func v => (j (r v), inP (r v, idp))
+      | func-+ => ext (pmap j r.func-+ *> j.func-+)
+      | func-*c => ext (pmap j r.func-*c *> j.func-*c)
+    }
+    | retract_incl (v, p) => \case p \with {
+      | inP (w, jw=v) => ext (pmap (\lam v => j (r v)) (inv jw=v) *> pmap j (rj w) *> jw=v)
+    }
+}

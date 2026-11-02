@@ -1,0 +1,13 @@
+-- Accepted by the typechecker and core double checker at a7a01117506d.
+-- This defines a closed inhabitant of a datatype with no constructors.
+\data Empty
+
+\func Family (i : DI) : \Type0 \elim i
+  | dleft => \Sigma
+  | dright => Empty
+
+\func collapse {i : DI} (p : dleft ~> i) : Family i \elim p
+  | idd => ()
+
+\func contradiction : Empty
+  => collapse (dpath (\lam i => i))

@@ -1,0 +1,5 @@
+\import Algebra.Group.Representation
+\import Algebra.Module.FinModule
+
+-- | A representation on a finite free module. Existence of a basis is inherited from {FinModule}; no basis is chosen.
+\class FinLinRepres \extends FinModule, LinRepres
