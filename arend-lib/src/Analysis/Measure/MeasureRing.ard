@@ -1,25 +1,34 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Real.Field
 \import Data.Array
 \import Data.Fin
 \import Algebra.Ordered
 \import Algebra.Ring.Boolean
 \import Algebra.Ring.RingHom
+\import Arith.Rat
 \import Arith.Real
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Data.Or
 \import Meta
+\import Order.Biordered
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ManhattanProduct
 \import Topology.NormedAbGroup
-\open BooleanRing \hiding (<=)
+\import Topology.TopSpace
+\open BooleanRing
 
-\class MeasureRing \extends BooleanRing, PseudoNormedAbGroup {
+\class PseudoMeasureRing \extends BooleanRing, PseudoNormedAbGroup {
   | meas : E -> Real
   | meas_zro : meas 0 = 0
   | meas>=0 {x : E} : 0 RealAbGroup.<= meas x
@@ -46,25 +55,80 @@
     | nil => meas_zro
     | x :: l => \have q : x * BigSum l = 0 => BigSum-ldistr *> BigSum_zro (\lam j => d (/=-sym fsuc/=0))
                 \in pmap meas (inv $ pmap (_ +) q *> zro-right) *> meas-disjoint q *> pmap (_ RealAbGroup.+) (meas_BigSum-disjoint \lam {i} {j} i/=j => d {suc i} \lam p => i/=j (unfsuc p))
+
+  -- | A measure ring is discrete if the measure of every element is either zero or positive.
+  \type IsDiscreteMeasure : \Prop
+    => \Pi (a : E) -> (meas a = RealAbGroup.zro) || (RealAbGroup.zro RealAbGroup.< meas a)
+
+  -- | A measure ring has rational values if the measure of every element is a rational number.
+  \type IsRationalMeasure : \Prop
+    => ∀ a ∃ (q : Rat) (meas a = Real.fromRat q)
+
+  \lemma rational-discrete (r : IsRationalMeasure) : IsDiscreteMeasure
+    => \lam a => \case r a \with {
+      | inP (q,p) => \case LinearOrder.dec<_<= (0 : Rat) q \with {
+        | inl q>0 => byRight $ transportInv (0 RealAbGroup.<) p (rat_real_<.1 q>0)
+        | inr q<=0 => byLeft $ p *> pmap Real.fromRat (RatField.<=-antisymmetric q<=0 $ rat_real_<=.2 $ transport (0 RealAbGroup.<=) p meas>=0)
+      }
+    }
 }
 
-\lemma meas-modular {X : MeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
+\lemma meas-modular {X : PseudoMeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
   => pmap (_ +) (pmap meas (later $ split *> pmap (_ ∨) *-comm) *> meas-disjoint (inv *-assoc *> pmap (* y) diff_* *> X.zro_*-left)) *> inv +-assoc *> inv (pmap (+ _) $ pmap meas (<=-antisymmetric (join-univ join-left $ transportInv (<= _) split $ join-univ join-right $ meet-right <=∘ join-left) $ join-univ join-left $ diff_<= <=∘ join-right) *> X.meas-disjoint (*-comm *> diff_*))
 
 \record MeasureRingHom \extends PseudoRingHom, NormedIsometricMap {
-  \override Dom : MeasureRing
-  \override Cod : MeasureRing
+  \override Dom : PseudoMeasureRing
+  \override Cod : PseudoMeasureRing
 
   | func-meas {x : Dom} : meas (func x) = meas x
   | func-norm-isometry => func-meas
+
+  -- | {y} can be approximated by elements of the image of {func}.
+  \type IsApprox (y : Cod) : \Prop
+    => ∀ {eps} (0 < eps) ∃ (x : Dom) (lnorm (y + func x) < eps)
+
+  \lemma approx-dense (p : \Pi (y : Cod) -> IsApprox y) : IsDense
+    => \lam {y} Uo Uy => \case dist_open.1 Uo Uy \with {
+      | inP (eps,eps>0,q) => \case p y (rat_real_<.1 eps>0) \with {
+        | inP (x,d) => inP (func x, inP (x, idp), q $ real_<_U.1 $ transportInv (`< _) (lnorm-ldist *> pmap meas (pmap (y +) BooleanRing.negative=id)) d)
+      }
+    }
+
+  \lemma dense-approx (hd : IsDense) (y : Cod) : IsApprox y
+    => \lam {d} (d>0 : 0 < d) =>
+        \let (inP (delta,delta>0,delta<d)) => real_<-char.1 d>0
+        \in \case hd {y} {OBall delta y} OBall-open (OBall-center (rat_real_<.2 delta>0)) \with {
+          | inP (z, inP (x,p), q) => inP (x, transport (`< _) (lnorm-ldist *> pmap meas (pmap (y +) BooleanRing.negative=id)) (real_<_U.2 (transportInv (OBall delta y) p q)) <∘ delta<d)
+        }
+
+  \lemma approx-zro : IsApprox 0
+    => \lam eps>0 => inP (0, transportInv (< _) (pmap meas (pmap (0 +) func-zro *> zro-left) *> meas_zro) eps>0)
+
+  \lemma approx-+ {y y' : Cod} (p : IsApprox y) (p' : IsApprox y') : IsApprox (y + y')
+    => \lam {eps} eps>0 => \case split-eps eps>0 {2} linarith \with {
+      | inP (d,d>0,d2<eps) => \case p d>0, p' d>0 \with {
+        | inP (x,q), inP (x',q') => inP (x + x', transportInv (< _) (pmap meas (pmap (_ +) func-+ *> equation.abMonoid)) $ meas_+ <∘r (linarith : meas (y + func x) + meas (y' + func x') < eps))
+      }
+    }
+
+  \lemma approx-BigSum {l : Array Cod} (p : \Pi (j : Fin l.len) -> IsApprox (l j)) : IsApprox (AddMonoid.BigSum l) \elim l
+    | nil => approx-zro
+    | y :: l => approx-+ (p 0) (approx-BigSum \lam j => p (suc j))
 } \where {
-  \func id {B : MeasureRing} : MeasureRingHom B B \cowith
+  \func id {B : PseudoMeasureRing} : MeasureRingHom B B \cowith
     | PseudoRingHom => PseudoRingHom.id
     | func-meas => idp
 
-  \func \fixl 8 compose \alias \infixl 8 ∘ {A B C : MeasureRing} (g : MeasureRingHom B C) (f : MeasureRingHom A B) : MeasureRingHom A C \cowith
+  \func \fixl 8 compose \alias \infixl 8 ∘ {A B C : PseudoMeasureRing} (g : MeasureRingHom B C) (f : MeasureRingHom A B) : MeasureRingHom A C \cowith
     | PseudoRingHom => g PseudoRingHom.∘ f
     | func-meas => func-meas *> func-meas
+
+  \lemma dense-comp {A B C : PseudoMeasureRing} {f : MeasureRingHom A B} {g : MeasureRingHom B C} (fd : f.IsDense) (gd : g.IsDense) : (g MeasureRingHom.∘ f).IsDense
+    => ContMap.dense-comp fd gd
 }
+
+\class MeasureRing \extends PseudoMeasureRing, NormedAbGroup
+  | meas-ext {x : E} : meas x = RealAbGroup.zro -> x = 0
+  | norm-ext p => meas-ext ((Real.=-upper {_} {RealAbGroup.zro}).2 p)
 
 \class CompleteMeasureRing \extends MeasureRing, CompleteNormedAbGroup

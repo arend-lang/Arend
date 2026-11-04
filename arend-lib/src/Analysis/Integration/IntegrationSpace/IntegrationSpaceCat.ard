@@ -75,7 +75,7 @@
   | eta_epsilon-right => exts \lam x => integrationCounit-unit x
   \where {
     -- | The unit of the adjunction between measure rings and integration spaces is an isomorphism.
-    \lemma integrationUnit-iso.{u} {B : MeasureRing.{u}} : Iso (integrationUnit B)
+    \lemma integrationUnit-iso.{u} {B : PseudoMeasureRing.{u}} : Iso (integrationUnit B)
       => MeasureRingCat.Iso<->IsEquiv.{u}.2 integrationUnit-equiv
   }
 
@@ -114,7 +114,7 @@
       => exts \lam x => integrationCompletion-lift.unique (completeIntegrationCounit _ IntegrationSpaceHom.∘ integrationCompletion-map (SFuncHom (completeIntegrationUnit B))) IntegrationSpaceHom.id
           (\lam s => pmap (completeIntegrationCounit _) integrationCompletion-map.char *> completeIntegrationCounit-char *> unit-aux s) x
 
-    \private \lemma unit-aux {B : MeasureRing} (s : SFuncIntegrationSpace B)
+    \private \lemma unit-aux {B : PseudoMeasureRing} (s : SFuncIntegrationSpace B)
       : integrationCounit (IntegrationSpaceCompletion (SFuncIntegrationSpace B)) (SFuncHom (completeIntegrationUnit B) s) = integrationCompletion s \elim s
       | in~ l => integrationCounit-natural integrationCompletion.inc (SFuncHom (integrationUnit B) (in~ l)) *> pmap integrationCompletion (integrationCounit-unit (in~ l))
 

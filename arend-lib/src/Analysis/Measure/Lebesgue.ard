@@ -1,0 +1,390 @@
+{- | Lebesgue measure rings.
+ -
+ -   The ring `B₀⁽¹⁾ = IntervalRing` of finite unions of rational intervals is built only in dimension one.
+ -   Higher dimensions come from the tensor product: `B₀⁽⁰⁾ = 2` and `B₀⁽ⁿ⁺¹⁾ = B₀⁽ⁿ⁾ ⊗ B₀⁽¹⁾`.
+ -   The Lebesgue measure ring is `λₙ`, the completion of `B₀⁽ⁿ⁾`, and the Lebesgue integral is `L¹(ℝⁿ) = L¹(B₀⁽ⁿ⁾)`.
+ -}
+
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.Boolean
+\import Algebra.Ring.RingHom
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.MeasureIntegrationSpace
+\import Analysis.Measure.IntervalRing
+\import Analysis.Measure.MeasureProduct
+\import Analysis.Measure.MeasureProduct.Complete
+\import Analysis.Measure.MeasureProduct.Monoidal
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.MeasureRing.MeasureRingCat
+\import Analysis.Measure.MeasureRing.MeasureRingCompletion
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Data.Bool
+\import Data.Fin (fsuc/=0, unfsuc)
+\import Equiv
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.Fin
+\open SFunc (inSF)
+\open SFuncRepr (IsReduced, makeReduced)
+
+-- | `B₀⁽ⁿ⁾`, defined by `B₀⁽⁰⁾ = 2` and `B₀⁽ⁿ⁺¹⁾ = B₀⁽ⁿ⁾ ⊗ B₀⁽¹⁾`.
+\func LebesgueRing0 (n : Nat) : MeasureRing.{0} \elim n
+  | 0 => UnitMeasureRing
+  | suc n => MeasureRingTensor (LebesgueRing0 n) IntervalRing (PseudoMeasureRing.rational-discrete IntervalRing-rational)
+
+-- | The ring of intervals agrees with `B₀⁽¹⁾ = 2 ⊗ B₀⁽¹⁾` as defined by the recursion.
+\lemma IntervalRing-equiv : IsEquiv (unitL {IntervalRing})
+  => unitL-equiv
+
+-- | The Lebesgue measure ring `λₙ`.
+\func LebesgueMeasureRing (n : Nat) : CompleteMeasureRing
+  => MeasureRingCompletion (LebesgueRing0 n)
+
+-- | The Lebesgue integral `L¹(ℝⁿ) = L¹(B₀⁽ⁿ⁾)`.
+\func LebesgueL1 (n : Nat) : CompleteIntegrationSpace
+  => IntegrationSpaceCompletion (SFuncIntegrationSpace (LebesgueRing0 n))
+
+-- | `L¹(ℝⁿ) ≅ L¹(λₙ)`.
+\lemma LebesgueL1-equiv {n : Nat} : IsEquiv (integrationCompletion-map (SFuncHom (measureCompletion {LebesgueRing0 n})))
+  => SFuncHom-completion-equiv measureCompletion.dense
+
+-- | Each `B₀⁽ⁿ⁾` is a measure ring with rational values.
+\lemma LebesgueRing0-rational {n : Nat} : (LebesgueRing0 n).IsRationalMeasure \elim n
+  | 0 => UnitMeasureRing.isRational
+  | suc n => tensor-rational LebesgueRing0-rational IntervalRing-rational
+
+-- | The isomorphism `B₀⁽ᵐ⁾ ⊗ B₀⁽ⁿ⁾ -> B₀⁽ᵐ⁺ⁿ⁾`.
+\func lebesgueTensor (m n : Nat) : MeasureRingHom (PseudoMeasureRingTensor (LebesgueRing0 m) (LebesgueRing0 n)) (LebesgueRing0 (m Nat.+ n)) \elim n
+  | 0 => unitR-inverse
+  | suc n => tensorMap (lebesgueTensor m n) MeasureRingHom.id MeasureRingHom.∘ assocL
+
+-- | `B₀⁽ᵐ⁾ ⊗ B₀⁽ⁿ⁾ ≅ B₀⁽ᵐ⁺ⁿ⁾`.
+\lemma lebesgueTensor-equiv {m n : Nat} : IsEquiv (lebesgueTensor m n) \elim n
+  | 0 => unitR-inverse-equiv
+  | suc n => IsEquiv.trans assocL-equiv (tensorMap-equiv lebesgueTensor-equiv (inP idEquiv))
+
+-- | The Boolean ring of all subsets of `X`, as boolean predicates.
+\func PointRing (X : \Type) : BooleanRing (X -> Bool) \cowith
+  | zro _ => false
+  | + f g x => f x xor g x
+  | zro-left => ext \lam x => xor_false-left
+  | +-assoc => ext \lam x => xor-assoc
+  | +-comm => ext \lam x => xor-comm
+  | negative f => f
+  | negative-left => ext \lam x => xor-self
+  | * f g x => f x and g x
+  | *-assoc => ext \lam x => and-assoc
+  | ldistr => ext \lam x => and-xor-ldistr
+  | *-comm => ext \lam x => and-comm
+  | isBooleanRing => ext \lam x => and-idemp
+
+-- | The first `n` coordinates of a point of `A^(n+1)`.
+\func initA {A : \Type} {n : Nat} (z : Array A (suc n)) : Array A n
+  => \new Array A n (\lam i => z (fin-inc {n} {1} i))
+
+-- | The last coordinate of a point of `A^(n+1)`.
+\func lastA {A : \Type} {n : Nat} (z : Array A (suc n)) : A
+  => z (fin-raise {1} {n} 0)
+
+-- | The points of an element of `B₀⁽ⁿ⁾`: `∑ᵢ aᵢ ⊗ cᵢ => ⋃ᵢ aᵢ × cᵢ`.
+\func lebPts (n : Nat) : PseudoRingHom (LebesgueRing0 n) (PointRing (Array Rat n)) \elim n
+  | 0 => \new PseudoRingHom {
+    | func e _ => e
+    | func-+ => idp
+    | func-* => idp
+  }
+  | suc n => fromBoolBimorphism (\new BoolBimorphism (LebesgueRing0 n) IntervalRing (PointRing (Array Rat (suc n))) {
+    | bfunc a c z => lebPts n a (initA z) and ratPoints c (lastA z)
+    | bfunc-+-left {a} {a'} {c} => ext \lam z => pmap (\lam f => f (initA z) and ratPoints c (lastA z)) (lebPts n).func-+ *> and-xor-rdistr
+    | bfunc-+-right {a} {c} {c'} => ext \lam z => pmap (lebPts n a (initA z) and) (ratPoints_+ {c} {c'}) *> and-xor-ldistr
+    | bfunc-* {a} {a'} {c} {c'} => ext \lam z => and-4 *> inv (pmap2 (and) (pmap (__ (initA z)) (lebPts n).func-*) (ratPoints_* {c} {c'}))
+  })
+  \where {
+    \lemma and-xor-rdistr {a b c : Bool} : (a xor b) and c = (a and c) xor (b and c) => cases (a,b,c) idp
+    \lemma and-4 {a b c d : Bool} : (a and b) and (c and d) = (a and c) and (b and d) => cases (a,b,c,d) idp
+  }
+
+\lemma lebPts-rect {n : Nat} {a : LebesgueRing0 n} {c : RatIntervalSet} {z : Array Rat (suc n)}
+  : lebPts (suc n) (rect a c) z = lebPts n a (initA z) and ratPoints c (lastA z)
+  => xor_false-right
+
+\lemma lebPts-zro {n : Nat} {z : Array Rat n} : lebPts n (LebesgueRing0 n).zro z = false
+  => pmap (__ z) (lebPts n).func-zro
+
+\lemma lebPts-join {n : Nat} {x y : LebesgueRing0 n} {z : Array Rat n} : lebPts n (x ∨ y) z = lebPts n x z or lebPts n y z
+  => pmap (__ z) (lebPts n).func-+ *> pmap2 (xor) (pmap (__ z) (lebPts n).func-+) (pmap (__ z) (lebPts n).func-*) *> xor-or-and
+
+-- | A box `∏ᵢ [pᵢ,qᵢ)` in `Rat^n`.
+\func RatBox (n : Nat) => Array RatInterval n
+
+\func inRatBox {n : Nat} (b : RatBox n) (z : Array Rat n) : Bool \elim n
+  | 0 => true
+  | suc n => inRatBox (initA b) (initA z) and inRI (lastA b) (lastA z)
+
+-- | The union of a finite list of boxes.
+\func inRatBoxes {n : Nat} (l : Array (RatBox n)) (z : Array Rat n) : Bool \elim l
+  | nil => false
+  | b :: l => inRatBox b z or inRatBoxes l z
+
+-- | The volume `∏ᵢ (qᵢ - pᵢ)` of a box (zero if it is empty).
+\func ratVolume {n : Nat} (b : RatBox n) : Rat \elim n
+  | 0 => 1
+  | suc n => ratVolume (initA b) RatField.* (((lastA b).2 - (lastA b).1) ∨ 0)
+
+-- | The element of `B₀⁽ⁿ⁾` corresponding to a box.
+\func ratBoxElem (n : Nat) (b : RatBox n) : LebesgueRing0 n \elim n
+  | 0 => true
+  | suc n => rect (ratBoxElem n (initA b)) (ratIntervals (lastA b :: nil))
+
+-- | The element of `B₀⁽ⁿ⁾` corresponding to a finite union of boxes.
+\func ratBoxUnion {n : Nat} (l : Array (RatBox n)) : LebesgueRing0 n \elim l
+  | nil => AddPointed.zro {LebesgueRing0 n}
+  | b :: l => ratBoxElem n b ∨ ratBoxUnion l
+
+\lemma lebPts-box {n : Nat} (b : RatBox n) (z : Array Rat n) : lebPts n (ratBoxElem n b) z = inRatBox b z \elim n
+  | 0 => idp
+  | suc n => lebPts-rect {n} {ratBoxElem n (initA b)} {ratIntervals (lastA b :: nil)} {z} *> pmap2 (and) (lebPts-box (initA b) (initA z)) ratPoints-interval
+
+\lemma lebPts-boxes {n : Nat} (l : Array (RatBox n)) (z : Array Rat n) : lebPts n (ratBoxUnion l) z = inRatBoxes l z \elim l
+  | nil => lebPts-zro {n} {z}
+  | b :: l => lebPts-join *> pmap2 (or) (lebPts-box b z) (lebPts-boxes l z)
+
+-- | The measure of a box is its volume.
+\lemma boxElem-meas {n : Nat} (b : RatBox n) : meas (ratBoxElem n b) = Real.fromRat (ratVolume b) \elim n
+  | 0 => idp
+  | suc n => meas_rect *> pmap2 (RealField.*) (boxElem-meas (initA b)) meas_interval *> RealField.*-rat
+
+\protected \module Points \where {
+  \func arr0 {A : \Type} (z : Array A 0) : z = {Array A 0} nil
+    => exts \lam i => \case i
+
+  \func ++'-nil {A : \Type} {n : Nat} (x : Array A n) (y : Array A 0) : x ++' y = {Array A n} x \elim n, x
+    | 0, nil => arr0 y
+    | suc n, a :: x => pmap {Array A n} {Array A (suc n)} (\lam w => a :: w) (++'-nil x y)
+
+  \func initA-cons {A : \Type} {n : Nat} {a : A} {w : Array A (suc n)} : initA (a :: w) = {Array A (suc n)} a :: initA w
+    => exts \lam i => \case \elim i \with {
+      | 0 => idp
+      | suc i => idp
+    }
+
+  \func initA-++' {A : \Type} {n : Nat} (x : Array A) {y : Array A (suc n)} : initA (x ++' y) = {Array A (x.len Nat.+ n)} x ++' initA y \elim x
+    | nil => idp
+    | a :: x => initA-cons *> pmap {Array A (x.len Nat.+ n)} {Array A (suc (x.len Nat.+ n))} (\lam w => a :: w) (initA-++' x {y})
+
+  \func lastA-++' {A : \Type} {n : Nat} (x : Array A) {y : Array A (suc n)} : lastA (x ++' y) = lastA y \elim x
+    | nil => idp
+    | a :: x => lastA-++' x
+
+  \func initA-snoc {A : \Type} {n : Nat} {x : Array A n} {a : A} : initA (x ++' (a :: nil)) = {Array A n} x
+    => exts \lam i => ++'.++'_index-left
+
+  \func lastA-snoc {A : \Type} {n : Nat} {x : Array A n} {a : A} : lastA (x ++' (a :: nil)) = a
+    => ++'.++'_index-right
+
+  \lemma and-true {a : Bool} : a and true = a => cases a idp
+  \lemma and-false {a : Bool} : a and false = false => cases a idp
+  \lemma and-or-rdistr {a b c : Bool} : (a and c) or (b and c) = (a or b) and c => cases (a,b,c) idp
+  \lemma and-or-ldistr {a b c : Bool} : (a and b) or (a and c) = a and (b or c) => cases (a,b,c) idp
+
+  \lemma xor-or-disj (a b : Bool) (h : a = true -> b = false) : a xor b = a or b \elim a, b
+    | true, true => absurd (true/=false (h idp))
+    | true, false => idp
+    | false, b => cases b idp
+
+  \lemma xor-zero-disj (a b : Bool) (e : a xor b = false) (h : a = true -> b = false) : \Sigma (a = false) (b = false) \elim a, b
+    | true, true => absurd (true/=false (h idp))
+    | true, false => absurd (true/=false e)
+    | false, true => absurd (true/=false e)
+    | false, false => (idp, idp)
+
+  \lemma inBoxes_++ {n : Nat} {l l' : Array (RatBox n)} {z : Array Rat n} : inRatBoxes (l ++ l') z = inRatBoxes l z or inRatBoxes l' z \elim l
+    | nil => idp
+    | b :: l => pmap (inRatBox b z or) inBoxes_++ *> inv (cases (inRatBox b z, inRatBoxes l z, inRatBoxes l' z) idp : (inRatBox b z or inRatBoxes l z) or inRatBoxes l' z = inRatBox b z or (inRatBoxes l z or inRatBoxes l' z))
+
+  -- | The boxes `b × c` for `b` in `La` and `c` in `lc`.
+  \func prodBoxes {n : Nat} (La : Array (RatBox n)) (lc : Array RatInterval) : Array (RatBox (suc n)) \elim La
+    | nil => nil
+    | b :: La => map (\lam c => b ++' (c :: nil)) lc ++ prodBoxes La lc
+
+  \lemma inBoxes-map {n : Nat} (b : RatBox n) (lc : Array RatInterval) (z : Array Rat (suc n))
+    : inRatBoxes (map (\lam c => b ++' (c :: nil)) lc) z = inRatBox b (initA z) and inRIs lc (lastA z) \elim lc
+    | nil => inv and-false
+    | c :: lc => pmap2 (or) (pmap2 (\lam b' c' => inRatBox b' (initA z) and inRI c' (lastA z)) initA-snoc lastA-snoc) (inBoxes-map b lc z) *> and-or-ldistr
+
+  \lemma inBoxes-prod {n : Nat} (La : Array (RatBox n)) (lc : Array RatInterval) (z : Array Rat (suc n))
+    : inRatBoxes (prodBoxes La lc) z = inRatBoxes La (initA z) and inRIs lc (lastA z) \elim La
+    | nil => idp
+    | b :: La => inBoxes_++ *> pmap2 (or) (inBoxes-map b lc z) (inBoxes-prod La lc z) *> and-or-rdistr
+
+  \lemma intervals-rep (u : RatIntervalSet) : ∃ (lc : Array RatInterval) (\Pi (t : Rat) -> ratPoints u t = inRIs lc t) \elim u
+    | in~ lc => inP (lc, \lam t => idp)
+
+  \lemma reduced-tail {n : Nat} {s : \Sigma (LebesgueRing0 n) RatIntervalSet} {l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)}
+                      (lr : IsReduced {LebesgueRing0 n} {IntervalRing} (s :: l)) : IsReduced {LebesgueRing0 n} {IntervalRing} l
+    => \lam {i} {j} i/=j => lr {suc i} {suc j} \lam p => i/=j (unfsuc p)
+
+  \lemma reduced-head {n : Nat} {s : \Sigma (LebesgueRing0 n) RatIntervalSet} {l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)}
+                      (lr : IsReduced {LebesgueRing0 n} {IntervalRing} (s :: l)) (k : Fin l.len) {t : Rat} (h : ratPoints s.2 t = true) : ratPoints (l k).2 t = false
+    => \have d : ratPoints s.2 t and ratPoints (l k).2 t = false => inv (ratPoints_* {s.2} {(l k).2}) *> pmap (ratPoints __ t) (lr {0} {suc k} \lam p => fsuc/=0 (inv p))
+       \in transport (\lam b => b and ratPoints (l k).2 t = false) h d
+
+  \lemma lebPts-cons {n : Nat} {s : \Sigma (LebesgueRing0 n) RatIntervalSet} {l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)} {z : Array Rat (suc n)}
+    : lebPts (suc n) (inSF (s :: l)) z = (lebPts n s.1 (initA z) and ratPoints s.2 (lastA z)) xor lebPts (suc n) (inSF l) z
+    => pmap (__ z) ((lebPts (suc n)).func-+ {rect s.1 s.2} {inSF l}) *> pmap (`xor _) lebPts-rect
+
+  \lemma lebPts-vanish {n : Nat} {l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)} {z : Array Rat (suc n)}
+                       (h : \Pi (k : Fin l.len) -> ratPoints (l k).2 (lastA z) = false) : lebPts (suc n) (inSF l) z = false \elim l
+    | nil => lebPts-zro {suc n} {z}
+    | s :: l => lebPts-cons *> pmap2 (xor) (pmap (_ and) (h 0) *> and-false) (lebPts-vanish \lam k => h (suc k))
+
+  -- | On a disjoint representative, the terms have disjoint points.
+  \lemma cons-disj {n : Nat} {s : \Sigma (LebesgueRing0 n) RatIntervalSet} {l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)} (lr : IsReduced {LebesgueRing0 n} {IntervalRing} (s :: l)) {z : Array Rat (suc n)}
+    : (lebPts n s.1 (initA z) and ratPoints s.2 (lastA z)) = true -> lebPts (suc n) (inSF l) z = false
+    => \lam e => lebPts-vanish \lam k => reduced-head lr k (and.toSigma e).2
+}
+\open Points
+
+-- | Every element of `B₀⁽ⁿ⁾` is a finite union of boxes.
+\lemma lebPts-image (n : Nat) (x : LebesgueRing0 n) : ∃ (l : Array (RatBox n)) (\Pi (z : Array Rat n) -> lebPts n x z = inRatBoxes l z) \elim n
+  | 0 => \case \elim x \with {
+    | true => inP (nil :: nil, \lam z => idp)
+    | false => inP (nil, \lam z => idp)
+  }
+  | suc n => \case makeReduced x \with {
+    | inP (l,lr,q) => \case aux l lr \with {
+      | inP (L,e) => inP (L, \lam z => pmap (\lam y => lebPts (suc n) y z) q *> e z)
+    }
+  }
+  \where
+    \private \lemma aux {n : Nat} (l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)) (lr : IsReduced {LebesgueRing0 n} {IntervalRing} l)
+      : ∃ (L : Array (RatBox (suc n))) (\Pi (z : Array Rat (suc n)) -> lebPts (suc n) (inSF l) z = inRatBoxes L z) \elim l
+      | nil => inP (nil, \lam z => lebPts-zro {suc n} {z})
+      | s :: l => \case lebPts-image n s.1, intervals-rep s.2, aux l (reduced-tail lr) \with {
+        | inP (La,ea), inP (lc,ec), inP (L,e) => inP (prodBoxes La lc ++ L, \lam z => lebPts-cons *> xor-or-disj _ _ (cons-disj lr)
+            *> pmap2 (or) (pmap2 (and) (ea (initA z)) (ec (lastA z)) *> inv (inBoxes-prod La lc z)) (e z) *> inv (inBoxes_++ {suc n} {prodBoxes La lc} {L} {z}))
+      }
+
+-- | Only `0` has no points.
+\lemma lebPts-kernel (n : Nat) (x : LebesgueRing0 n) (h : \Pi (z : Array Rat n) -> lebPts n x z = false) : x = AddPointed.zro {LebesgueRing0 n} \elim n
+  | 0 => h nil
+  | suc n => \case makeReduced x \with {
+    | inP (l,lr,q) => q *> aux l lr (\lam z => pmap (\lam y => lebPts (suc n) y z) (inv q) *> h z)
+  }
+  \where
+    \private \lemma aux {n : Nat} (l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)) (lr : IsReduced {LebesgueRing0 n} {IntervalRing} l)
+                        (h : \Pi (z : Array Rat (suc n)) -> lebPts (suc n) (inSF l) z = false) : inSF l = {SFunc (LebesgueRing0 n) IntervalRing} inSF nil \elim l
+      | nil => idp
+      | s :: l =>
+        \have | hz (z : Array Rat (suc n)) => xor-zero-disj _ _ (inv lebPts-cons *> h z) (cons-disj lr)
+              | rest => aux l (reduced-tail lr) (\lam z => (hz z).2)
+              | term : rect s.1 s.2 = {SFunc (LebesgueRing0 n) IntervalRing} inSF nil => \case IntervalRing-point s.2 \with {
+                | byLeft e => pmap (rect s.1) e *> rect_zro-right
+                | byRight (inP (t,pt)) => pmap (rect __ s.2) (lebPts-kernel n s.1 \lam w =>
+                    inv (pmap2 (\lam w' t' => lebPts n s.1 w' and ratPoints s.2 t') initA-snoc lastA-snoc *> pmap (_ and) pt *> and-true) *> (hz (w ++' (t :: nil))).1) *> rect_zro-left
+              }
+        \in pmap2 (+ {PseudoMeasureRingTensor (LebesgueRing0 n) IntervalRing}) term rest
+
+-- | Elements of `B₀⁽ⁿ⁾` are determined by their points.
+\lemma lebPts-inj (n : Nat) {x y : LebesgueRing0 n} (p : \Pi (z : Array Rat n) -> lebPts n x z = lebPts n y z) : x = y
+  => \have e : x + y = AddPointed.zro {LebesgueRing0 n} => lebPts-kernel n (x + y) \lam z => pmap (__ z) (lebPts n).func-+ *> pmap (_ xor) (inv (p z)) *> xor-self
+     \in inv zro-right *> pmap (x +) (inv BooleanRing.double=0) *> inv +-assoc *> pmap (+ y) e *> zro-left
+
+-- | The ring of finite unions of rational boxes in `Rat^n`, as a subset of the predicates on `Rat^n`.
+\type RatBoxUnion (n : Nat)
+  => Given (P : Array Rat n -> Bool) ∃ (l : Array (RatBox n)) ∀ z (P z = inRatBoxes l z)
+
+-- | The map `B₀⁽ⁿ⁾ -> BoxUnion n`, `∑ᵢ aᵢ ⊗ cᵢ => ⋃ᵢ aᵢ × cᵢ`.
+\func toRatBoxUnion {n : Nat} (x : LebesgueRing0 n) : RatBoxUnion n
+  => (lebPts n x, lebPts-image n x)
+
+-- | Part (3): `B₀⁽ⁿ⁾` is isomorphic to the ring of finite unions of half-open rational boxes in `Rat^n`.
+\lemma toRatBoxUnion-equiv {n : Nat} : IsEquiv (toRatBoxUnion {n})
+  => IsEquiv.fromInjSurj (\lam {x} {y} p => lebPts-inj n \lam z => pmap (\lam (u : RatBoxUnion n) => u.1 z) p)
+                         (\lam u => \case u.2 \with {
+                           | inP (l,e) => inP (ratBoxUnion l, ext (ext \lam z => lebPts-boxes l z *> inv (e z)))
+                         })
+
+-- | Part (3): the measure of a box is its volume.
+\lemma lebPts-volume {n : Nat} {x : LebesgueRing0 n} {b : RatBox n} (p : \Pi (z : Array Rat n) -> lebPts n x z = inRatBox b z) : meas x = Real.fromRat (ratVolume b)
+  => pmap meas (lebPts-inj n \lam z => p z *> inv (lebPts-box b z)) *> boxElem-meas b
+
+-- | Part (2): the isomorphism `B₀⁽ᵐ⁾ ⊗ B₀⁽ⁿ⁾ ≅ B₀⁽ᵐ⁺ⁿ⁾` sends a rectangle `a ⊗ b` to the product `a × b`.
+\lemma lebesgueTensor-rect {m n : Nat} {a : LebesgueRing0 m} {b : LebesgueRing0 n} {x : Array Rat m} {y : Array Rat n}
+  : lebPts (m Nat.+ n) (lebesgueTensor m n (rect a b)) (x ++' y) = lebPts m a x and lebPts n b y \elim n
+  | 0 => pmap (\lam w => lebPts m w (x ++' y)) unitR-inverse-rect *> pmap (lebPts m (unitL.smul b a)) (++'-nil x y) *> smul-pts b
+  | suc n =>
+    \let | F (u : SFunc (LebesgueRing0 n) IntervalRing) (y' : Array Rat (suc n)) : Bool => lebPts (m Nat.+ suc n) (lebesgueTensor m (suc n) (rect a u)) (x ++' y')
+         | G (u : SFunc (LebesgueRing0 n) IntervalRing) (y' : Array Rat (suc n)) : Bool => lebPts m a x and lebPts (suc n) u y'
+         | P => PointRing (Array Rat (suc n))
+    \in pmap (__ y) (tensor-fun-ext {LebesgueRing0 n} {IntervalRing} {P} F G
+          (ext \lam y' => pmap (\lam w => lebPts _ (lebesgueTensor m (suc n) w) (x ++' y')) (rect_zro-right {LebesgueRing0 m} {PseudoMeasureRingTensor (LebesgueRing0 n) IntervalRing} {a}) *> pmap (\lam w => lebPts _ w (x ++' y')) (lebesgueTensor m (suc n)).func-zro *> lebPts-zro {m Nat.+ suc n} {x ++' y'})
+          (ext \lam y' => pmap (_ and) (lebPts-zro {suc n} {y'}) *> and-false)
+          (\lam u u' => ext \lam y' => pmap (\lam w => lebPts _ (lebesgueTensor m (suc n) w) (x ++' y')) rect_+-right
+                                      *> pmap (\lam w => lebPts _ w (x ++' y')) ((lebesgueTensor m (suc n)).func-+ {rect a u} {rect a u'}) *> pmap (__ (x ++' y')) (lebPts _).func-+)
+          (\lam u u' => ext \lam y' => pmap (_ and) (pmap (__ y') (lebPts (suc n)).func-+) *> and-xor-ldistr)
+          (\lam b' c => ext \lam y' => pmap (\lam w => lebPts _ (tensorMap (lebesgueTensor m n) MeasureRingHom.id w) (x ++' y')) assocL-rect
+                                      *> pmap (\lam w => lebPts _ w (x ++' y')) (tensorMap-rect {_} {_} {_} {_} {lebesgueTensor m n} {MeasureRingHom.id} {rect a b'} {c}) *> lebPts-rect
+                                      *> pmap2 (\lam w t => lebPts (m Nat.+ n) (lebesgueTensor m n (rect a b')) w and ratPoints c t) (initA-++' x) (lastA-++' x)
+                                      *> pmap (`and _) (lebesgueTensor-rect {m} {n} {a} {b'} {x} {initA y'}) *> and-assoc *> inv (pmap (_ and) lebPts-rect)) b)
+  \where
+    \lemma smul-pts {m : Nat} (e : Bool) {a : LebesgueRing0 m} {x : Array Rat m} : lebPts m (unitL.smul e a) x = lebPts m a x and e \elim e
+      | true => inv and-true
+      | false => lebPts-zro *> inv and-false
+
+-- | The isomorphism `λₘ ⊠ λₙ ≅ λₘ₊ₙ`.
+\func lebesgueBoxtimes (m n : Nat) : MeasureRingHom (CMeasureRingTensor (LebesgueMeasureRing m) (LebesgueMeasureRing n)) (LebesgueMeasureRing (m Nat.+ n))
+  => measureCompletion-map (lebesgueTensor m n) MeasureRingHom.∘ MeasureRingCat.inverse (measureTensor-completion-equiv {LebesgueRing0 m} {LebesgueRing0 n})
+
+\lemma lebesgueBoxtimes-rect {m n : Nat} {a : LebesgueRing0 m} {b : LebesgueRing0 n}
+  : lebesgueBoxtimes m n (crect (measureCompletion a) (measureCompletion b)) = measureCompletion (lebesgueTensor m n (rect {LebesgueRing0 m} {LebesgueRing0 n} a b))
+  => pmap (measureCompletion-map (lebesgueTensor m n)) (pmap (MeasureRingCat.inverse measureTensor-completion-equiv) (inv (measureTensor-map_rect {LebesgueRing0 m} {LebesgueMeasureRing m} {LebesgueRing0 n} {LebesgueMeasureRing n} {measureCompletion} {measureCompletion} {a} {b})) *> IsEquiv.ret_f measureTensor-completion-equiv)
+     *> measureCompletion-map.char
+
+-- | `λₘ₊ₙ ≅ λₘ ⊠ λₙ`.
+\lemma lebesgueBoxtimes-equiv {m n : Nat} : IsEquiv (lebesgueBoxtimes m n)
+  => IsEquiv.trans (MeasureRingCat.inverse-equiv measureTensor-completion-equiv) (measureCompletion-map-equiv (MeasureRingHom.equiv-dense lebesgueTensor-equiv))
+
+-- | The Lebesgue measure ring of the line as the completion of the ring of intervals.
+\func LebesgueLine : CompleteMeasureRing
+  => MeasureRingCompletion IntervalRing
+
+-- | `LebesgueLine ≅ λ₁`, since `B₀⁽¹⁾ = 2 ⊗ IntervalRing` and `2 ⊠ A ≅ Ā`.
+\lemma LebesgueLine-equiv : IsEquiv (measureTensorUnit {IntervalRing})
+  => measureTensorUnit-equiv
+
+\func LebesgueLinePowT (n : Nat) : PseudoMeasureRing.{0} \elim n
+  | 0 => UnitMeasureRing
+  | suc n => PseudoMeasureRingTensor (MeasureRingCompletion (LebesgueLinePowT n)) LebesgueLine
+
+-- | The power `λ₁^⊠ⁿ`, with `λ₁^⊠⁰ = 2̄` and `λ₁^⊠⁽ⁿ⁺¹⁾ = λ₁^⊠ⁿ ⊠ λ₁`.
+\func LebesgueLinePow (n : Nat) : CompleteMeasureRing
+  => MeasureRingCompletion (LebesgueLinePowT n)
+
+-- | The homomorphism `B₀⁽ⁿ⁾ -> λ₁^⊠ⁿ` before completion.
+\func lebesguePowMap (n : Nat) : MeasureRingHom (LebesgueRing0 n) (LebesgueLinePowT n) \elim n
+  | 0 => MeasureRingHom.id
+  | suc n => tensorMap (measureCompletion MeasureRingHom.∘ lebesguePowMap n) measureCompletion
+
+\lemma lebesguePowMap-dense {n : Nat} : (lebesguePowMap n).IsDense \elim n
+  | 0 => MeasureRingHom.equiv-dense {MeasureRingHom.id {UnitMeasureRing}} (inP idEquiv)
+  | suc n => tensorMap-dense (MeasureRingHom.dense-comp lebesguePowMap-dense measureCompletion.dense) measureCompletion.dense
+
+-- | `λₙ ≅ λ₁^⊠ⁿ`.
+\lemma lebesgue-pow-equiv {n : Nat} : IsEquiv (measureCompletion-map (lebesguePowMap n))
+  => measureCompletion-map-equiv lebesguePowMap-dense
+
+-- | `L¹(ℝⁿ) ≅ L¹(λ₁^⊠ⁿ)`, so the Lebesgue integral is determined by `λ₁` and the product.
+\lemma LebesgueL1-pow-equiv {n : Nat} : IsEquiv (integrationCompletion-map (SFuncHom (measureCompletion MeasureRingHom.∘ lebesguePowMap n)))
+  => SFuncHom-completion-equiv (MeasureRingHom.dense-comp lebesguePowMap-dense measureCompletion.dense)

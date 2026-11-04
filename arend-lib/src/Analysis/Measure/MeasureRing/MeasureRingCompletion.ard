@@ -1,4 +1,3 @@
-\import Algebra.Group
 \import Algebra.Monoid
 \import Analysis.Measure.MeasureRing
 \import Arith.Rat
@@ -8,13 +7,11 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Paths
 \import Paths.Meta
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
-\import Topology.MetricSpace
 \import Topology.MetricSpace.Complete
 \import Topology.MetricSpace.ExComplete(ExMetricCompletion)
 \import Topology.MetricSpace.UpperReal
@@ -29,16 +26,16 @@
 \import Topology.UniformSpace.Complete
 
 -- | The completion of a measure ring.
-\instance MeasureRingCompletion (X : MeasureRing) : CompleteMeasureRing
-  | MeasureRing => measRing
-  | norm-ext p => (ExNormedAbGroupCompletion X).norm-ext (norm-eq *> p)
+\instance MeasureRingCompletion (X : PseudoMeasureRing) : CompleteMeasureRing
+  | PseudoMeasureRing => measRing
+  | meas-ext p => (ExNormedAbGroupCompletion X).norm-ext (norm-eq *> p)
   | isStronglyComplete => metric-stronglyComplete {measRing} (Completion X).isComplete
   \where {
     \open ProductCoverSpace
     \open CoverMap
     \open TopAbGroupCompletion
 
-    \func measRing : MeasureRing (RegularCauchyFilter X) \cowith
+    \func measRing : PseudoMeasureRing (RegularCauchyFilter X) \cowith
       | TopAbGroup => TopAbGroupCompletion X
       | * => *-func
       | *-assoc => unique3 (*-cover ∘ prod *-cover id) (*-cover ∘ tuple (proj1 ∘ proj1) (*-cover ∘ prod proj2 id))
@@ -86,18 +83,18 @@
   }
 
 -- | The inclusion of a measure ring into its completion.
-\func measureCompletion {X : MeasureRing} : MeasureRingHom X (MeasureRingCompletion X) \cowith
+\func measureCompletion {X : PseudoMeasureRing} : MeasureRingHom X (MeasureRingCompletion X) \cowith
   | UniformMap => uniform-completion
   | func-+ => inv TopAbGroupCompletion.+-char
   | func-* => inv MeasureRingCompletion.*-char
   | func-meas => MeasureRingCompletion.meas-char
   \where {
-    \lemma dense {X : MeasureRing} : ContMap.IsDense {measureCompletion {X}}
+    \lemma dense {X : PseudoMeasureRing} : ContMap.IsDense {measureCompletion {X}}
       => completion.isDenseEmbedding.1
   }
 
 -- | Extension of a homomorphism along a dense homomorphism into a complete measure ring.
-\func dense-measure-lift {X Y : MeasureRing} {Z : CompleteMeasureRing} (f : MeasureRingHom X Y) (fd : f.IsDense) (g : MeasureRingHom X Z) : MeasureRingHom Y Z \cowith
+\func dense-measure-lift {X Y : PseudoMeasureRing} {Z : CompleteMeasureRing} (f : MeasureRingHom X Y) (fd : f.IsDense) (g : MeasureRingHom X Z) : MeasureRingHom Y Z \cowith
   | AddGroupHom => lift f fd g
   | func-* {y} {y'} => dense-lift-unique (ProductCoverSpace.prod f f) (ProductTopSpace.prod.isDense {_} {_} {_} {_} {f} {f} fd fd)
       (lift f fd g ContMap.∘ Y.*-metric) (Z.*-metric ContMap.∘ ProductCoverSpace.prod (lift f fd g) (lift f fd g))
@@ -105,38 +102,38 @@
   | func-meas {y} => dense-lift-unique f fd (lnorm-metric {Z} ContMap.∘ lift f fd g) (lnorm-metric {Y})
       (\lam x => pmap Z.meas (char f fd g) *> g.func-meas *> inv f.func-meas) y
   \where {
-    \func lift {X Y : MeasureRing} {Z : CompleteMeasureRing} (f : MeasureRingHom X Y) (fd : f.IsDense) (g : MeasureRingHom X Z) : NormedAbGroupMap Y Z
+    \func lift {X Y : PseudoMeasureRing} {Z : CompleteMeasureRing} (f : MeasureRingHom X Y) (fd : f.IsDense) (g : MeasureRingHom X Z) : NormedAbGroupMap Y Z
       => dense-normed-lift f fd g
 
-    \lemma char {X Y : MeasureRing} {Z : CompleteMeasureRing} (f : MeasureRingHom X Y) (fd : f.IsDense) (g : MeasureRingHom X Z) {x : X} : lift f fd g (f x) = g x
+    \lemma char {X Y : PseudoMeasureRing} {Z : CompleteMeasureRing} (f : MeasureRingHom X Y) (fd : f.IsDense) (g : MeasureRingHom X Z) {x : X} : lift f fd g (f x) = g x
       => dense-normed-lift.char f fd g
 
-    \lemma unique {X Y : MeasureRing} {Z : CompleteMeasureRing} {f : MeasureRingHom X Y} (fd : f.IsDense) (h h' : MeasureRingHom Y Z)
-                   (p : \Pi (x : X) -> h (f x) = h' (f x)) (y : Y) : h y = h' y
+    \lemma unique {X Y : PseudoMeasureRing} {Z : CompleteMeasureRing} {f : MeasureRingHom X Y} (fd : f.IsDense) (h h' : MeasureRingHom Y Z)
+                  (p : \Pi (x : X) -> h (f x) = h' (f x)) (y : Y) : h y = h' y
       => dense-lift-unique f fd h h' p y
   }
 
 -- | The universal property of the completion: a homomorphism into a complete measure ring extends uniquely to the completion.
-\sfunc measureCompletion-lift {X : MeasureRing} {Z : CompleteMeasureRing} (g : MeasureRingHom X Z) : MeasureRingHom (MeasureRingCompletion X) Z
+\sfunc measureCompletion-lift {X : PseudoMeasureRing} {Z : CompleteMeasureRing} (g : MeasureRingHom X Z) : MeasureRingHom (MeasureRingCompletion X) Z
   => dense-measure-lift measureCompletion measureCompletion.dense g
   \where {
-    \lemma char {X : MeasureRing} {Z : CompleteMeasureRing} {g : MeasureRingHom X Z} {x : X} : measureCompletion-lift g (measureCompletion x) = g x
+    \lemma char {X : PseudoMeasureRing} {Z : CompleteMeasureRing} {g : MeasureRingHom X Z} {x : X} : measureCompletion-lift g (measureCompletion x) = g x
       => pmap (\lam (h : MeasureRingHom (MeasureRingCompletion X) Z) => h (measureCompletion x)) (\peval measureCompletion-lift g) *> dense-measure-lift.char measureCompletion measureCompletion.dense g
 
-    \lemma unique {X : MeasureRing} {Z : CompleteMeasureRing} (h h' : MeasureRingHom (MeasureRingCompletion X) Z)
-                   (p : \Pi (x : X) -> h (measureCompletion x) = h' (measureCompletion x)) (F : MeasureRingCompletion X) : h F = h' F
+    \lemma unique {X : PseudoMeasureRing} {Z : CompleteMeasureRing} (h h' : MeasureRingHom (MeasureRingCompletion X) Z)
+                  (p : \Pi (x : X) -> h (measureCompletion x) = h' (measureCompletion x)) (F : MeasureRingCompletion X) : h F = h' F
       => dense-measure-lift.unique measureCompletion.dense h h' p F
   }
 
 -- | The homomorphism of completions induced by a homomorphism of measure rings.
-\sfunc measureCompletion-map {X Y : MeasureRing} (f : MeasureRingHom X Y) : MeasureRingHom (MeasureRingCompletion X) (MeasureRingCompletion Y)
+\sfunc measureCompletion-map {X Y : PseudoMeasureRing} (f : MeasureRingHom X Y) : MeasureRingHom (MeasureRingCompletion X) (MeasureRingCompletion Y)
   => measureCompletion-lift (measureCompletion MeasureRingHom.∘ f)
   \where {
-    \protected \lemma char {X Y : MeasureRing} {f : MeasureRingHom X Y} {x : X} : measureCompletion-map f (measureCompletion x) = measureCompletion (f x)
+    \protected \lemma char {X Y : PseudoMeasureRing} {f : MeasureRingHom X Y} {x : X} : measureCompletion-map f (measureCompletion x) = measureCompletion (f x)
       => pmap (\lam (h : MeasureRingHom (MeasureRingCompletion X) (MeasureRingCompletion Y)) => h (measureCompletion x)) (\peval measureCompletion-map f) *> measureCompletion-lift.char
   }
 
 -- | A homomorphism of measure rings with dense image induces an isomorphism of completions.
-\lemma measureCompletion-map-equiv {X Y : MeasureRing} {f : MeasureRingHom X Y} (fd : f.IsDense) : IsEquiv (measureCompletion-map f)
+\lemma measureCompletion-map-equiv {X Y : PseudoMeasureRing} {f : MeasureRingHom X Y} (fd : f.IsDense) : IsEquiv (measureCompletion-map f)
   => transportInv (\lam (h : MeasureRingHom (MeasureRingCompletion X) (MeasureRingCompletion Y)) => IsEquiv h) ((\peval measureCompletion-map f) *> (\peval measureCompletion-lift (measureCompletion MeasureRingHom.∘ f)))
       (lift1-equiv (fd, f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2))

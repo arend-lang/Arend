@@ -1,3 +1,4 @@
+\import Data.Bool
 \import Equiv
 \import Paths
 \import Logic
@@ -38,3 +39,7 @@
 
 \sfunc uninr {A B : \Cat} {b b' : B} (p : inr b = {Or A B} inr b') : b = b'
   => pmap (Or.rec (\lam x => b) (\lam x => x)) p
+
+\func orBool {A B : \Type} (o : Or A B) : Bool \elim o
+  | inl _ => true
+  | inr _ => false

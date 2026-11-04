@@ -77,7 +77,7 @@
   \lemma trunc-metric : MetricMap \this \this trunc \cowith
     | func-dist => rewrite (norm-dist, norm-dist) $ Real.<=-upper.1 $ integral-mono trunc-lipschitz
 
-  \func MeasRing : MeasureRing \cowith
+  \func MeasRing : PseudoMeasureRing \cowith
     | BooleanRing => BoolRing
     | meas a => integral a.1
     | meas_zro => integral-hom.func-zro
@@ -145,8 +145,8 @@
   | norm_+_>= {x} {y} x>=0 y>=0 => =_<= {RealAbGroup} $ inv $ pmap integral (abs-ofPos $ transport (`<= _) zro-left $ <=_+ x>=0 y>=0) *> integral_+ *> pmap2 (RealAbGroup.+) (pmap integral $ inv $ abs-ofPos x>=0) (pmap integral $ inv $ abs-ofPos y>=0)
 
   \func CompleteMeasRing : CompleteMeasureRing \cowith
-    | MeasureRing => MeasRing
-    | norm-ext {x} p => ext $ norm-ext $ pmap integral (abs-ofPos (IsBoolean>=0 x.2)) *> p
+    | PseudoMeasureRing => MeasRing
+    | meas-ext {x} p => ext $ norm-ext $ pmap integral (abs-ofPos (IsBoolean>=0 x.2)) *> p
     | isStronglyComplete => metric-stronglyComplete $ isometric-closed-complete IntegrationSpace.MeasRing.inc $
         transport IsClosed (ext \lam y => ext (\lam b => inP ((y,b), idp), \lam (inP (x,p)) => transport IsBoolean p x.2)) IsBoolean-closed
 

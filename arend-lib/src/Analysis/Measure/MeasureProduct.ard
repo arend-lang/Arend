@@ -2,10 +2,13 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
+\import Algebra.Ring.RingHom
 \import Algebra.Ring.Boolean
 \import Algebra.Semiring
 \import Analysis.Measure.MeasureRing
+\import Analysis.Measure.MeasureRing.MeasureRingCat
 \import Analysis.Measure.SimpleFunctions
+\import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
 \import Data.Array
@@ -14,6 +17,8 @@
 \import Logic.Meta
 \import Logic
 \import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence \hiding (~)
@@ -111,7 +116,7 @@
   => inv $ BooleanRingTensor.mulR-single {A} {B} {a} {b} {rect a' b'} *> zro-right *> pmap2 BooleanRingTensor.single *-comm *-comm
 
 -- | The tensor product of measure rings: the measure of `∑ aᵢ ⊗ bᵢ` over a disjoint family `bᵢ` is `∑ μ(aᵢ) ν(bᵢ)`.
-\instance MeasureRingTensor (A B : MeasureRing) : MeasureRing (SFunc A B)
+\instance PseudoMeasureRingTensor (A B : PseudoMeasureRing) : PseudoMeasureRing (SFunc A B)
   | BooleanRing => BooleanRingTensor A B
   | meas (x : SFunc A B) : Real \with {
     | in~ l => measL (reduce l)
@@ -160,15 +165,14 @@
       }
   }
 
-\lemma meas_rect {A B : MeasureRing} {a : A} {b : B} : meas (rect a b) = meas a * meas b
-  => MeasureRingTensor.meas-reduced {A} {B} {(a,b) :: nil} (\lam {0} {0} i/=j => absurd (i/=j idp)) *> zro-right
+\lemma meas_rect {A B : PseudoMeasureRing} {a : A} {b : B} : meas (rect a b) = meas a * meas b
+  => PseudoMeasureRingTensor.meas-reduced {A} {B} {(a,b) :: nil} (\lam {0} {0} i/=j => absurd (i/=j idp)) *> zro-right
 
--- | A measure bimorphism `A × B -> C`: additive in each variable, multiplicative on rectangles, and multiplicative in measures.
-\record MeasureBimorphism (A B C : MeasureRing) (\coerce bfunc : A -> B -> C) {
+-- | A Boolean bimorphism `A × B -> C`: additive in each variable and multiplicative on rectangles.
+\record BoolBimorphism (A B C : BooleanRing) (\coerce bfunc : A -> B -> C) {
   | bfunc-+-left {a a' : A} {b : B} : bfunc (a + a') b = bfunc a b + bfunc a' b
   | bfunc-+-right {a : A} {b b' : B} : bfunc a (b + b') = bfunc a b + bfunc a b'
   | bfunc-* {a a' : A} {b b' : B} : bfunc a b * bfunc a' b' = bfunc (a * a') (b * b')
-  | bfunc-meas {a : A} {b : B} : meas (bfunc a b) = meas a RealField.* meas b
 
   \lemma bfunc-zro-left {b : B} : bfunc 0 b = 0
     => pmap (bfunc __ b) (inv zro-left) *> bfunc-+-left *> C.double=0
@@ -177,38 +181,42 @@
     => pmap (bfunc a) (inv zro-left) *> bfunc-+-right *> C.double=0
 }
 
+-- | A measure bimorphism `A × B -> C`: a Boolean bimorphism that is multiplicative in measures.
+\record MeasureBimorphism \extends BoolBimorphism {
+  \override A : PseudoMeasureRing
+  \override B : PseudoMeasureRing
+  \override C : PseudoMeasureRing
+  | bfunc-meas {a : A} {b : B} : meas (bfunc a b) = meas a RealField.* meas b
+}
+
 -- | The bimorphism `(a,b) => f (a ⊗ b)` associated to a homomorphism out of the tensor product.
-\func toBimorphism {A B C : MeasureRing} (f : MeasureRingHom (MeasureRingTensor A B) C) : MeasureBimorphism A B C \cowith
+\func toBimorphism {A B C : PseudoMeasureRing} (f : MeasureRingHom (PseudoMeasureRingTensor A B) C) : MeasureBimorphism A B C \cowith
   | bfunc a b => f (rect a b)
   | bfunc-+-left {a} {a'} {b} => pmap f rect_+-left *> f.func-+ {rect a b} {rect a' b}
   | bfunc-+-right {a} {b} {b'} => pmap f rect_+-right *> f.func-+ {rect a b} {rect a b'}
   | bfunc-* => inv f.func-* *> pmap f rect_*
   | bfunc-meas => f.func-meas *> meas_rect
 
--- | The homomorphism `∑ aᵢ ⊗ bᵢ => ∑ h aᵢ bᵢ` associated to a bimorphism `h`.
-\func fromBimorphism {A B C : MeasureRing} (h : MeasureBimorphism A B C) : MeasureRingHom (MeasureRingTensor A B) C \cowith
+-- | The ring homomorphism `∑ aᵢ ⊗ bᵢ => ∑ h aᵢ bᵢ` associated to a Boolean bimorphism `h`.
+\func fromBoolBimorphism {A B C : BooleanRing} (h : BoolBimorphism A B C) : PseudoRingHom (BooleanRingTensor A B) C \cowith
   | func => hom h
   | func-+ => (hom h).func-+
   | func-* {x} {y} => \have t {a : A} {b : B} (y : SFunc A B) : hom h (BooleanRingTensor.mulR y (rect a b)) = hom h (rect a b) * hom h y
                           => SFuncAbMonoid.hom-ext {A} {B} {C} {mulLeft h (rect a b)} {cmulLeft (hom h (rect a b)) (hom h)} (\lam a' b' => pmap (hom h) rect_* *> C.zro-right *> inv h.bfunc-* *> inv (pmap2 (*) C.zro-right C.zro-right)) y
                       \in SFuncAbMonoid.hom-ext {A} {B} {C} {mulRight h y} {cmulRight (hom h) (hom h y)} (\lam a b => t y) x
-  | func-meas {x} => \case makeReduced x \with {
-    | inP (l,lr,p) => rewrite p $ C.meas_BigSum-disjoint {map (\lam s => h s.1 s.2) l} (\lam {i} {j} i/=j => h.bfunc-* *> pmap (h _) (lr i/=j) *> MeasureBimorphism.bfunc-zro-right)
-        *> pmap RealAbGroup.BigSum (exts \lam j => h.bfunc-meas) *> inv (MeasureRingTensor.meas-reduced lr)
-  }
   \where {
-    \lemma hom (h : MeasureBimorphism A B C) : AddMonoidHom (SFuncAbMonoid A B) C SFuncAbMonoid.lift.func
-      => SFuncAbMonoid.lift (\lam a b => h a b) (\lam {b} => MeasureBimorphism.bfunc-zro-left) (\lam {a} => MeasureBimorphism.bfunc-zro-right) (\lam {u} {v} {b} => inv h.bfunc-+-left)
+    \lemma hom (h : BoolBimorphism A B C) : AddMonoidHom (SFuncAbMonoid A B) C SFuncAbMonoid.lift.func
+      => SFuncAbMonoid.lift (\lam a b => h a b) (\lam {b} => BoolBimorphism.bfunc-zro-left) (\lam {a} => BoolBimorphism.bfunc-zro-right) (\lam {u} {v} {b} => inv h.bfunc-+-left)
            (\lam {a} {b} {b'} => pmap (+ _) (h.bfunc-+-right *> pmap (+ _) h.bfunc-+-right) *> C.+-assoc *> pmap (_ +) BooleanRing.double=0 *> C.zro-right)
 
     -- | `y => hom h (x * y)`
-    \func mulLeft (h : MeasureBimorphism A B C) (x : SFunc A B) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
+    \func mulLeft (h : BoolBimorphism A B C) (x : SFunc A B) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
       | func y => hom h (BooleanRingTensor.mulR y x)
       | func-zro => pmap (hom h) zro_*-right *> (hom h).func-zro
       | func-+ => pmap (hom h) (BooleanRingTensor.mulR-ldistr x) *> (hom h).func-+
 
     -- | `x => hom h (x * y)`
-    \func mulRight (h : MeasureBimorphism A B C) (y : SFunc A B) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
+    \func mulRight (h : BoolBimorphism A B C) (y : SFunc A B) : AddMonoidHom (SFuncAbMonoid A B) C \cowith
       | func x => hom h (BooleanRingTensor.mulR y x)
       | func-zro => pmap (hom h) (BooleanRingTensor.mulR y).func-zro *> (hom h).func-zro
       | func-+ => pmap (hom h) (BooleanRingTensor.mulR y).func-+ *> (hom h).func-+
@@ -224,7 +232,118 @@
       | func-+ => pmap (* c) g.func-+ *> C.rdistr
   }
 
+\lemma fromBoolBimorphism_rect {A B C : BooleanRing} {h : BoolBimorphism A B C} {a : A} {b : B} : fromBoolBimorphism h (rect a b) = h a b
+  => C.zro-right
+
+-- | Additive maps out of the tensor product are determined by their values on rectangles.
+\lemma tensor-add-ext {A B : BooleanRing} {C : AddMonoid} {h h' : AddMonoidHom (BooleanRingTensor A B) C}
+                      (p : \Pi (a : A) (b : B) -> h (rect a b) = h' (rect a b)) (x : SFunc A B) : h x = h' x
+  => SFuncAbMonoid.hom-ext p x
+
+-- | Additive functions out of the tensor product are determined by their values on rectangles.
+\lemma tensor-fun-ext {A B : BooleanRing} {M : AddMonoid} (f g : SFunc A B -> M) (f0 : f 0 = 0) (g0 : g 0 = 0)
+                      (f+ : \Pi (x y : SFunc A B) -> f (x + y) = f x + f y) (g+ : \Pi (x y : SFunc A B) -> g (x + y) = g x + g y)
+                      (p : \Pi (a : A) (b : B) -> f (rect a b) = g (rect a b)) (x : SFunc A B) : f x = g x
+  => tensor-add-ext {A} {B} {M} {\new AddMonoidHom (BooleanRingTensor A B) M f f0 (f+ _ _)} {\new AddMonoidHom (BooleanRingTensor A B) M g g0 (g+ _ _)} p x
+
+-- | If a ring homomorphism out of the tensor product scales the measure of rectangles by `k`, then it scales all measures by `k`.
+\lemma tensor-meas-scale {A B : PseudoMeasureRing} {C : PseudoMeasureRing} (h : PseudoRingHom (BooleanRingTensor A B) C) (k : Real)
+                         (p : \Pi {a : A} {b : B} -> meas (h (rect a b)) = k RealField.* (meas a RealField.* meas b)) (x : SFunc A B)
+  : meas (h x) = k RealField.* meas x
+  => \case makeReduced x \with {
+    | inP (l,lr,q) => rewrite q $ pmap meas (pmap h SFuncAbMonoid.inSF-BigSum *> h.func-BigSum)
+        *> C.meas_BigSum-disjoint {\lam j => h (rect (l j).1 (l j).2)} (\lam {i} {j} i/=j => inv h.func-* *> pmap h (inv rect_* *> pmap (rect _) (lr i/=j) *> rect_zro-right) *> h.func-zro)
+        *> pmap RealAbGroup.BigSum (exts \lam j => p) *> inv RealField.BigSum-ldistr *> inv (pmap (k RealField.*) (PseudoMeasureRingTensor.meas-reduced lr))
+  }
+
+-- | A ring homomorphism out of the tensor product is measure preserving if it is so on rectangles.
+\lemma tensor-meas-hom {A B : PseudoMeasureRing} {C : PseudoMeasureRing} (h : PseudoRingHom (BooleanRingTensor A B) C)
+                       (p : \Pi {a : A} {b : B} -> meas (h (rect a b)) = meas a RealField.* meas b) (x : SFunc A B)
+  : meas (h x) = meas x
+  => tensor-meas-scale h 1 (\lam {a} {b} => p *> inv RealField.ide-left) x *> RealField.ide-left
+
+-- | `a ⊗ 0 = 0`
+\lemma rect_zro-right {A B : BooleanRing} {a : A} : rect a (0 : B) = 0
+  => SFuncAbMonoid.single_zro-right idp
+
+-- | `0 ⊗ b = 0`
+\lemma rect_zro-left {A B : BooleanRing} {b : B} : rect (0 : A) b = 0
+  => SFuncAbMonoid.single_zro-left idp
+
+-- | The homomorphism `∑ aᵢ ⊗ bᵢ => ∑ h aᵢ bᵢ` associated to a measure bimorphism `h`.
+\func fromBimorphism {A B C : PseudoMeasureRing} (h : MeasureBimorphism A B C) : MeasureRingHom (PseudoMeasureRingTensor A B) C \cowith
+  | PseudoRingHom => fromBoolBimorphism h
+  | func-meas {x} => tensor-meas-hom (fromBoolBimorphism h) (\lam {a} {b} => pmap meas fromBoolBimorphism_rect *> h.bfunc-meas) x
+
 -- | The universal property of the tensor product: homomorphisms `A ⊗ B -> C` correspond to measure bimorphisms `A × B -> C`.
-\lemma tensor-univ {A B C : MeasureRing} : QEquiv (toBimorphism {A} {B} {C}) fromBimorphism \cowith
-  | ret_f f => exts \lam x => SFuncAbMonoid.hom-ext {A} {B} {C} {fromBimorphism.hom (toBimorphism f)} (\lam a b => C.zro-right) x
+\lemma tensor-univ {A B C : PseudoMeasureRing} : QEquiv (toBimorphism {A} {B} {C}) fromBimorphism \cowith
+  | ret_f f => exts \lam x => SFuncAbMonoid.hom-ext {A} {B} {C} {fromBoolBimorphism.hom (toBimorphism f)} (\lam a b => C.zro-right) x
   | f_sec h => exts \lam a b => C.zro-right
+
+-- | If the measure of `b` is positive, then `meas a * meas b = 0` implies `meas a = 0`.
+\lemma meas-zero-factor {A B : PseudoMeasureRing} {a : A} {b : B} (p : meas a * meas b = 0) (q : 0 < meas b) : meas a = 0
+  => <=-antisymmetric (\lam a>0 => <-irreflexive (transport (0 <) p (RealField.<_*_positive_positive a>0 q))) meas>=0
+
+\func MeasureRingTensor (A B : MeasureRing) (Bd : B.IsDiscreteMeasure) : MeasureRing (SFunc A B) \cowith
+  | PseudoMeasureRing => PseudoMeasureRingTensor A B
+  | meas-ext {x} p => \case makeReduced x \with {
+    | inP (l,lr,q) => q *> ~-sfequiv (~-zero-terms \lam j => term-zero $ RealAbGroup.BigSum_>=0-zero (\lam j => RealField.<=_*-positive meas>=0 meas>=0)
+                                                                           (inv (PseudoMeasureRingTensor.meas-reduced lr) *> pmap meas (inv q) *> p) j)
+  }
+  \where
+    \lemma term-zero {a : A} {b : B} (p : meas a RealField.* meas b = 0) : (a = 0) || (b = 0)
+      => \case Bd b \with {
+        | byLeft q => byRight (meas-ext q)
+        | byRight q => byLeft (meas-ext (meas-zero-factor p q))
+      }
+
+-- | The tensor product of measure rings with rational values has rational values.
+\lemma tensor-rational {A B : PseudoMeasureRing} (Ar : A.IsRationalMeasure) (Br : B.IsRationalMeasure) : (PseudoMeasureRingTensor A B).IsRationalMeasure
+  => \lam (x : SFunc A B) => \case \elim x \with {
+    | in~ l => measL-rational (reduce l)
+  }
+  \where
+    \lemma measL-rational (l : Array (\Sigma A B)) : ∃ (q : Rat) (PseudoMeasureRingTensor.measL l = Real.fromRat q) \elim l
+      | nil => inP (0, idp)
+      | s :: l => \case Ar s.1, Br s.2, measL-rational l \with {
+        | inP (q1,e1), inP (q2,e2), inP (q,e) => inP (q1 RatField.* q2 RatField.+ q, pmap2 (+) (pmap2 (RealField.*) e1 e2 *> RealField.*-rat) e *> RealAbGroup.+-rat)
+      }
+
+-- | The bimorphism `(a,b) => f a ⊗ g b`.
+\func tensorBimorphism {A A' B B' : PseudoMeasureRing} (f : MeasureRingHom A A') (g : MeasureRingHom B B') : MeasureBimorphism A B (PseudoMeasureRingTensor A' B') \cowith
+  | bfunc a b => rect (f a) (g b)
+  | bfunc-+-left => pmap (rect __ _) f.func-+ *> rect_+-left
+  | bfunc-+-right => pmap (rect _) g.func-+ *> rect_+-right
+  | bfunc-* => inv rect_* *> pmap2 rect (inv f.func-*) (inv g.func-*)
+  | bfunc-meas => meas_rect *> pmap2 (RealField.*) f.func-meas g.func-meas
+
+-- | The homomorphism `f ⊗ g : A ⊗ B -> A' ⊗ B'` with `a ⊗ b => f a ⊗ g b`.
+\func tensorMap {A A' B B' : PseudoMeasureRing} (f : MeasureRingHom A A') (g : MeasureRingHom B B') : MeasureRingHom (PseudoMeasureRingTensor A B) (PseudoMeasureRingTensor A' B')
+  => fromBimorphism (tensorBimorphism f g)
+
+\lemma tensorMap-rect {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} {a : A} {b : B} : tensorMap f g (rect a b) = rect (f a) (g b)
+  => zro-right
+
+-- | Homomorphisms out of the tensor product are determined by their values on rectangles.
+\lemma tensor-hom-ext {A B : PseudoMeasureRing} {C : PseudoMeasureRing} {h h' : MeasureRingHom (PseudoMeasureRingTensor A B) C} (p : \Pi (a : A) (b : B) -> h (rect a b) = h' (rect a b)) (x : SFunc A B) : h x = h' x
+  => SFuncAbMonoid.hom-ext {A} {B} {C} {h} {h'} p x
+
+\lemma tensorMap-id {A B : PseudoMeasureRing} (x : SFunc A B) : tensorMap (MeasureRingHom.id {A}) (MeasureRingHom.id {B}) x = x
+  => tensor-hom-ext {A} {B} {PseudoMeasureRingTensor A B} {tensorMap MeasureRingHom.id MeasureRingHom.id} {MeasureRingHom.id} (\lam a b => tensorMap-rect) x
+
+\lemma tensorMap-comp {A A' A'' B B' B'' : PseudoMeasureRing} {f : MeasureRingHom A A'} {f' : MeasureRingHom A' A''} {g : MeasureRingHom B B'} {g' : MeasureRingHom B' B''} (x : SFunc A B)
+  : tensorMap (f' MeasureRingHom.∘ f) (g' MeasureRingHom.∘ g) x = tensorMap f' g' (tensorMap f g x)
+  => tensor-hom-ext {_} {_} {_} {tensorMap (f' MeasureRingHom.∘ f) (g' MeasureRingHom.∘ g)} {tensorMap f' g' MeasureRingHom.∘ tensorMap f g}
+      (\lam a b => tensorMap-rect *> inv (pmap (tensorMap f' g') tensorMap-rect *> tensorMap-rect)) x
+
+-- | The tensor product of isomorphisms is an isomorphism.
+\lemma tensorMap-equiv {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} (fe : IsEquiv f) (ge : IsEquiv g) : IsEquiv (tensorMap f g)
+  => \let | f' => MeasureRingCat.inverse fe
+          | g' => MeasureRingCat.inverse ge
+     \in inP \new QEquiv {
+       | ret => tensorMap f' g'
+       | ret_f x => inv (tensorMap-comp x) *> tensor-hom-ext {_} {_} {_} {tensorMap (f' MeasureRingHom.∘ f) (g' MeasureRingHom.∘ g)} {MeasureRingHom.id}
+                      (\lam a b => tensorMap-rect *> pmap2 rect (IsEquiv.ret_f fe {a}) (IsEquiv.ret_f ge {b})) x
+       | f_sec y => inv (tensorMap-comp y) *> tensor-hom-ext {_} {_} {_} {tensorMap (f MeasureRingHom.∘ f') (g MeasureRingHom.∘ g')} {MeasureRingHom.id}
+                      (\lam a b => tensorMap-rect *> pmap2 rect (IsEquiv.f_ret fe {a}) (IsEquiv.f_ret ge {b})) y
+     }

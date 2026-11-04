@@ -520,6 +520,9 @@
           | there c => there (p c)
   }
 
+\type ListSub {A : \Type} (E T : List A) : \Prop
+  => \Pi {e : A} -> InList e E -> InList e T
+
 \lemma InList_++ {A : \Type} {a : A} {l l' : List A} (p : InList a (l ++ l')) : InList a l || InList a l' \elim l, p
   | nil, p => byRight p
   | a' :: l, here p => byLeft (here p)

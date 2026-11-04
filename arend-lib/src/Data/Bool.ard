@@ -61,3 +61,50 @@
   | true, true => false
 
 \lemma true/=false (p : true = false) : Empty => transport So p ()
+
+\lemma bool-ext {x y : Bool} (p : x = true -> y = true) (q : y = true -> x = true) : x = y \elim x, y
+  | false, false => idp
+  | false, true => q idp
+  | true, false => inv (p idp)
+  | true, true => idp
+
+\lemma bool-false {x : Bool} (p : x = true -> Empty) : x = false \elim x
+  | false => idp
+  | true => absurd (p idp)
+
+\lemma not-char {b : Bool} : not b = true <-> b = false \elim b
+  | false => (\lam _ => idp, \lam _ => idp)
+  | true => (\lam p => inv p, \lam p => inv p)
+
+\lemma and-assoc {a b c : Bool} : (a and b) and c = a and (b and c)
+  => cases (a,b,c) idp
+
+\lemma and-comm {a b : Bool} : a and b = b and a
+  => cases (a,b) idp
+
+\lemma and-idemp {a : Bool} : a and a = a
+  => cases a idp
+
+\lemma xor-assoc {a b c : Bool} : (a xor b) xor c = a xor (b xor c)
+  => cases (a,b,c) idp
+
+\lemma xor-comm {a b : Bool} : a xor b = b xor a
+  => cases (a,b) idp
+
+\lemma xor_false-left {a : Bool} : false xor a = a
+  => cases a idp
+
+\lemma xor_false-right {a : Bool} : a xor false = a
+  => cases a idp
+
+\lemma xor-self {a : Bool} : a xor a = false
+  => cases a idp
+
+\lemma and-xor-ldistr {a b c : Bool} : a and (b xor c) = (a and b) xor (a and c)
+  => cases (a,b,c) idp
+
+\lemma xor-or-and {a b : Bool} : (a xor b) xor (a and b) = a or b
+  => cases (a,b) idp
+
+\lemma or-false {a : Bool} : a or false = a
+  => cases a idp

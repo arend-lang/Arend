@@ -1,0 +1,340 @@
+{- | The symmetric monoidal structure of the tensor product of measure rings (integrals-measures.tex, Cor. product-props(3)).
+ -   The tensor product `A ⊗ B` is not quotiented by null elements, so symmetry, associativity and the unit laws hold exactly,
+ -   for arbitrary measure rings, by isomorphisms that send rectangles to rectangles.
+ -   They are then transferred to the product `A ⊠ B`.
+ -}
+
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring.Boolean
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Analysis.Measure.MeasureProduct
+\import Analysis.Measure.MeasureProduct.Complete
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.MeasureRing.MeasureRingCat
+\import Analysis.Measure.MeasureRing.MeasureRingCompletion
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Bool
+\import Equiv
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+
+-- | The two-element measure ring `2 = {0,1}` with `μ(1) = 1`.
+\func UnitMeasureRing : MeasureRing Bool \cowith
+  | zro => false
+  | + => xor
+  | zro-left => xor_false-left
+  | +-assoc => xor-assoc
+  | +-comm => xor-comm
+  | negative x => x
+  | negative-left => xor-self
+  | * => and
+  | *-assoc => and-assoc
+  | ldistr => and-xor-ldistr
+  | *-comm => and-comm
+  | isBooleanRing => and-idemp
+  | meas b => Real.fromRat (if b 1 0)
+  | meas_zro => idp
+  | meas>=0 {b} => rat_real_<=.1 (cases b \with {
+    | true => LinearOrder.<_<= RatField.zro<ide
+    | false => <=-refl
+  })
+  | meas-disjoint {x} {y} p => cases (x,y,p) \with {
+    | true, true, p => absurd (true/=false p)
+    | true, false, _ => inv RealAbGroup.zro-right
+    | false, true, _ => inv RealAbGroup.zro-left
+    | false, false, _ => inv RealAbGroup.zro-left
+  }
+  | meas-ext {b} => \case \elim b \with {
+    | true => \lam p => absurd (RatField.zro/=ide (inv (Real.fromRat-inj p)))
+    | false => \lam _ => idp
+  }
+  \where {
+    \protected \lemma isRational : UnitMeasureRing.IsRationalMeasure
+      => \lam b => inP (if b 1 0, idp)
+  }
+
+-- | The symmetry `A ⊗ B -> B ⊗ A`, `a ⊗ b => b ⊗ a`.
+\func tensorSwap {A B : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor A B) (PseudoMeasureRingTensor B A)
+  => fromBimorphism swapBimorphism
+  \where
+    \func swapBimorphism : MeasureBimorphism A B (PseudoMeasureRingTensor B A) \cowith
+      | bfunc a b => rect b a
+      | bfunc-+-left => rect_+-right
+      | bfunc-+-right => rect_+-left
+      | bfunc-* => inv rect_*
+      | bfunc-meas => meas_rect *> RealField.*-comm
+
+\lemma tensorSwap-rect {A B : PseudoMeasureRing} {a : A} {b : B} : tensorSwap (rect a b) = rect b a
+  => zro-right
+
+\lemma tensorSwap-swap {A B : PseudoMeasureRing} (x : SFunc A B) : tensorSwap (tensorSwap x) = x
+  => tensor-hom-ext {A} {B} {_} {tensorSwap MeasureRingHom.∘ tensorSwap} {MeasureRingHom.id} (\lam a b => pmap tensorSwap tensorSwap-rect *> tensorSwap-rect) x
+
+\lemma tensorSwap-equiv {A B : PseudoMeasureRing} : IsEquiv (tensorSwap {A} {B})
+  => inP \new QEquiv {
+    | ret => tensorSwap
+    | ret_f => tensorSwap-swap
+    | f_sec => tensorSwap-swap
+  }
+
+-- | The left unitor `A -> 2 ⊗ A`, `a => 1 ⊗ a`.
+\func unitL {A : PseudoMeasureRing} : MeasureRingHom A (PseudoMeasureRingTensor UnitMeasureRing A) \cowith
+  | func a => rect true a
+  | func-+ => rect_+-right
+  | func-* {x} {y} => rect_* {UnitMeasureRing} {A} {true} {true} {x} {y}
+  | func-meas => meas_rect *> RealField.ide-left
+  \where {
+    -- | The scalar multiplication `e a` by `e ∈ 2`.
+    \func smul (e : Bool) (a : A) : A \elim e
+      | true => a
+      | false => A.zro
+
+    \lemma smul-+-left (e e' : Bool) (a : A) : smul (e xor e') a = smul e a + smul e' a \elim e, e'
+      | true, true => inv A.double=0
+      | true, false => inv zro-right
+      | false, true => inv zro-left
+      | false, false => inv zro-left
+
+    \lemma smul-+-right (e : Bool) (b b' : A) : smul e (b + b') = smul e b + smul e b' \elim e
+      | true => idp
+      | false => inv zro-left
+
+    \lemma smul-* (e e' : Bool) (a a' : A) : smul e a * smul e' a' = smul (e and e') (a * a') \elim e, e'
+      | true, true => idp
+      | true, false => zro_*-right
+      | false, true => zro_*-left
+      | false, false => zro_*-left
+
+    \lemma smul-meas (e : Bool) (a : A) : meas (smul e a) = UnitMeasureRing.meas e RealField.* meas a \elim e
+      | true => inv RealField.ide-left
+      | false => meas_zro *> inv RealField.zro_*-left
+
+    -- | The bimorphism `(e,a) => e a`.
+    \func counit : MeasureBimorphism UnitMeasureRing A A \cowith
+      | bfunc => smul
+      | bfunc-+-left {e} {e'} {a} => smul-+-left e e' a
+      | bfunc-+-right {e} {b} {b'} => smul-+-right e b b'
+      | bfunc-* {e} {e'} {a} {a'} => smul-* e e' a a'
+      | bfunc-meas {e} {a} => smul-meas e a
+
+    \func inverse : MeasureRingHom (PseudoMeasureRingTensor UnitMeasureRing A) A
+      => fromBimorphism counit
+  }
+
+\lemma unitL-ret {A : PseudoMeasureRing} (a : A) : unitL.inverse (unitL a) = a
+  => zro-right
+
+\lemma unitL-sec {A : PseudoMeasureRing} (y : SFunc UnitMeasureRing A) : unitL (unitL.inverse y) = y
+  => tensor-hom-ext {UnitMeasureRing} {A} {_} {unitL MeasureRingHom.∘ unitL.inverse} {MeasureRingHom.id} (\lam e a => pmap unitL zro-right *> aux e a) y
+  \where
+    \private \lemma aux {A : PseudoMeasureRing} (e : Bool) (a : A) : rect {UnitMeasureRing} true (unitL.smul e a) = rect e a \elim e
+      | true => idp
+      | false => rect_zro-right *> inv rect_zro-left
+
+\lemma unitL-equiv {A : PseudoMeasureRing} : IsEquiv (unitL {A})
+  => inP \new QEquiv {
+    | ret => unitL.inverse
+    | ret_f => unitL-ret
+    | f_sec => unitL-sec
+  }
+
+\lemma unitL-inverse-equiv {A : PseudoMeasureRing} : IsEquiv (unitL.inverse {A})
+  => inP \new QEquiv {
+    | ret => unitL
+    | ret_f => unitL-sec
+    | f_sec => unitL-ret
+  }
+
+-- | The right unitor `A -> A ⊗ 2`, `a => a ⊗ 1`.
+\func unitR {A : PseudoMeasureRing} : MeasureRingHom A (PseudoMeasureRingTensor A UnitMeasureRing)
+  => tensorSwap MeasureRingHom.∘ unitL
+
+\lemma unitR-char {A : PseudoMeasureRing} {a : A} : unitR a = rect a true
+  => tensorSwap-rect
+
+\lemma unitR-equiv {A : PseudoMeasureRing} : IsEquiv (unitR {A})
+  => IsEquiv.trans unitL-equiv tensorSwap-equiv
+
+-- | The inverse of the right unitor, `A ⊗ 2 -> A`, `a ⊗ e => e a`.
+\func unitR-inverse {A : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor A UnitMeasureRing) A
+  => unitL.inverse MeasureRingHom.∘ tensorSwap
+
+\lemma unitR-inverse-rect {A : PseudoMeasureRing} {a : A} {e : Bool} : unitR-inverse (rect a e) = unitL.smul e a
+  => pmap unitL.inverse tensorSwap-rect *> zro-right
+
+\lemma unitR-inverse-equiv {A : PseudoMeasureRing} : IsEquiv (unitR-inverse {A})
+  => IsEquiv.trans tensorSwap-equiv unitL-inverse-equiv
+
+-- | For a fixed `c`, the Boolean bimorphism `(a,b) => a ⊗ (b ⊗ c)`.
+\func assocBoolL {A B C : BooleanRing} (c : C) : BoolBimorphism A B (BooleanRingTensor A (BooleanRingTensor B C)) \cowith
+  | bfunc a b => rect a (rect b c)
+  | bfunc-+-left => rect_+-left
+  | bfunc-+-right {a} {b} {b'} => pmap (rect a) (rect_+-left {B} {C} {b} {b'} {c}) *> rect_+-right {A} {BooleanRingTensor B C} {a} {rect b c} {rect b' c}
+  | bfunc-* {a} {a'} {b} {b'} => inv (rect_* {A} {BooleanRingTensor B C} {a} {a'} {rect b c} {rect b' c}) *> pmap (rect (a * a')) (inv (rect_* {B} {C} {b} {b'} {c} {c}) *> pmap (rect (b * b')) isBooleanRing)
+
+-- | For a fixed `a`, the Boolean bimorphism `(b,c) => (a ⊗ b) ⊗ c`.
+\func assocBoolR {A B C : BooleanRing} (a : A) : BoolBimorphism B C (BooleanRingTensor (BooleanRingTensor A B) C) \cowith
+  | bfunc b c => rect (rect a b) c
+  | bfunc-+-left {b} {b'} {c} => pmap (rect __ c) (rect_+-right {A} {B} {a} {b} {b'}) *> rect_+-left {BooleanRingTensor A B} {C} {rect a b} {rect a b'} {c}
+  | bfunc-+-right => rect_+-right
+  | bfunc-* {b} {b'} {c} {c'} => inv (rect_* {BooleanRingTensor A B} {C} {rect a b} {rect a b'} {c} {c'}) *> pmap (rect __ (c * c')) (inv (rect_* {A} {B} {a} {a} {b} {b'}) *> pmap (rect __ (b * b')) isBooleanRing)
+
+-- | The associator `(A ⊗ B) ⊗ C -> A ⊗ (B ⊗ C)`, `(a ⊗ b) ⊗ c => a ⊗ (b ⊗ c)`.
+\func assocR {A B C : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor (PseudoMeasureRingTensor A B) C) (PseudoMeasureRingTensor A (PseudoMeasureRingTensor B C))
+  => fromBimorphism assocBimorphism
+  \where \private {
+    -- | For a fixed `c`, the ring homomorphism `A ⊗ B -> A ⊗ (B ⊗ C)`, `a ⊗ b => a ⊗ (b ⊗ c)`.
+    \func L (c : C) : PseudoRingHom (BooleanRingTensor A B) (BooleanRingTensor A (BooleanRingTensor B C))
+      => fromBoolBimorphism (assocBoolL c)
+
+    \lemma L-rect {c : C} {a : A} {b : B} : L c (rect a b) = rect a (rect b c)
+      => zro-right
+
+    \lemma L-meas {c : C} (x : SFunc A B) : meas {PseudoMeasureRingTensor A (PseudoMeasureRingTensor B C)} (L c x) = meas c RealField.* meas {PseudoMeasureRingTensor A B} x
+      => tensor-meas-scale {A} {B} {PseudoMeasureRingTensor A (PseudoMeasureRingTensor B C)} (L c) (meas c) (\lam {a} {b} => pmap meas L-rect *> meas_rect *> pmap (_ RealField.*) meas_rect *> inv RealField.*-assoc *> RealField.*-comm) x
+
+    \lemma L-mul (c c' : C) (x x' : SFunc A B)
+      : L {A} {B} {C} c x * {BooleanRingTensor A (BooleanRingTensor B C)} L {A} {B} {C} c' x' = L {A} {B} {C} (c * c') (x * {BooleanRingTensor A B} x')
+      => \let | T => BooleanRingTensor A (BooleanRingTensor B C)
+              | S => BooleanRingTensor A B
+              | Lc => L {A} {B} {C} c
+              | Lc' => L {A} {B} {C} c'
+              | Lcc => L {A} {B} {C} (c * c')
+         \in tensor-fun-ext {A} {B} {T} (\lam (y : S) => Lc y * {T} Lc' x') (\lam (y : S) => Lcc (y * {S} x'))
+              (pmap (\lam w => w * {T} Lc' x') Lc.func-zro *> T.zro_*-left {Lc' x'}) (pmap Lcc (S.zro_*-left {x'}) *> Lcc.func-zro)
+              (\lam y y' => pmap (\lam w => w * {T} Lc' x') Lc.func-+ *> T.rdistr) (\lam y y' => pmap Lcc S.rdistr *> Lcc.func-+)
+              (\lam a b => tensor-fun-ext {A} {B} {T} (\lam (y' : S) => Lc (rect a b) * {T} Lc' y') (\lam (y' : S) => Lcc (rect a b * {S} y'))
+                  (pmap (\lam w => Lc (rect a b) * {T} w) Lc'.func-zro *> T.zro_*-right {Lc (rect a b)}) (pmap Lcc (S.zro_*-right {rect a b}) *> Lcc.func-zro)
+                  (\lam y y' => pmap (\lam w => Lc (rect a b) * {T} w) Lc'.func-+ *> T.ldistr {Lc (rect a b)} {Lc' y} {Lc' y'}) (\lam y y' => pmap Lcc (S.ldistr {rect a b} {y} {y'}) *> Lcc.func-+)
+                  (\lam a' b' => pmap2 (T.*) L-rect L-rect *> inv (rect_* {A} {BooleanRingTensor B C} {a} {a'} {rect b c} {rect b' c'}) *> pmap (rect (a * a')) (inv (rect_* {B} {C} {b} {b'} {c} {c'})) *> inv (pmap Lcc (inv (rect_* {A} {B} {a} {a'} {b} {b'})) *> L-rect)) x') x
+
+    \func assocBimorphism : MeasureBimorphism (PseudoMeasureRingTensor A B) C (PseudoMeasureRingTensor A (PseudoMeasureRingTensor B C)) \cowith
+      | bfunc x c => L {A} {B} {C} c x
+      | bfunc-+-left {x} {x'} {c} => (L {A} {B} {C} c).func-+
+      | bfunc-+-right {x} {c} {c'} => tensor-fun-ext (L {A} {B} {C} (c + c')) (\lam y => L {A} {B} {C} c y + L {A} {B} {C} c' y) (L {A} {B} {C} (c + c')).func-zro (pmap2 (+) (L {A} {B} {C} c).func-zro (L {A} {B} {C} c').func-zro)
+                                        (\lam y y' => (L {A} {B} {C} (c + c')).func-+) (\lam y y' => pmap2 (+) (L {A} {B} {C} c).func-+ (L {A} {B} {C} c').func-+ *> equation.abMonoid)
+                                        (\lam a b => L-rect *> pmap (rect a) (rect_+-right {B} {C} {b} {c} {c'}) *> rect_+-right {A} {BooleanRingTensor B C} {a} {rect b c} {rect b c'} *> inv (pmap2 (+) L-rect L-rect)) x
+      | bfunc-* {x} {x'} {c} {c'} => L-mul c c' x x'
+      | bfunc-meas {x} {c} => L-meas x *> RealField.*-comm
+  }
+
+\lemma assocR-rect {A B C : PseudoMeasureRing} {a : A} {b : B} {c : C} : assocR (rect (rect a b) c) = rect a (rect b c)
+  => zro-right *> zro-right
+
+-- | The inverse associator `A ⊗ (B ⊗ C) -> (A ⊗ B) ⊗ C`, `a ⊗ (b ⊗ c) => (a ⊗ b) ⊗ c`.
+\func assocL {A B C : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor A (PseudoMeasureRingTensor B C)) (PseudoMeasureRingTensor (PseudoMeasureRingTensor A B) C)
+  => fromBimorphism assocBimorphism
+  \where \private {
+    -- | For a fixed `a`, the ring homomorphism `B ⊗ C -> (A ⊗ B) ⊗ C`, `b ⊗ c => (a ⊗ b) ⊗ c`.
+    \func R (a : A) : PseudoRingHom (BooleanRingTensor B C) (BooleanRingTensor (BooleanRingTensor A B) C)
+      => fromBoolBimorphism (assocBoolR a)
+
+    \lemma R-rect {a : A} {b : B} {c : C} : R a (rect b c) = rect (rect a b) c
+      => zro-right
+
+    \lemma R-meas {a : A} (y : SFunc B C) : meas {PseudoMeasureRingTensor (PseudoMeasureRingTensor A B) C} (R a y) = meas a RealField.* meas {PseudoMeasureRingTensor B C} y
+      => tensor-meas-scale {B} {C} {PseudoMeasureRingTensor (PseudoMeasureRingTensor A B) C} (R a) (meas a) (\lam {b} {c} => pmap meas R-rect *> meas_rect *> pmap (RealField.`* _) meas_rect *> RealField.*-assoc) y
+
+    \lemma R-mul (a a' : A) (y y' : SFunc B C)
+      : R {A} {B} {C} a y * {BooleanRingTensor (BooleanRingTensor A B) C} R {A} {B} {C} a' y' = R {A} {B} {C} (a * a') (y * {BooleanRingTensor B C} y')
+      => \let | T => BooleanRingTensor (BooleanRingTensor A B) C
+              | S => BooleanRingTensor B C
+              | Ra => R {A} {B} {C} a
+              | Ra' => R {A} {B} {C} a'
+              | Raa => R {A} {B} {C} (a * a')
+         \in tensor-fun-ext {B} {C} {T} (\lam (z : S) => Ra z * {T} Ra' y') (\lam (z : S) => Raa (z * {S} y'))
+              (pmap (\lam w => w * {T} Ra' y') Ra.func-zro *> T.zro_*-left {Ra' y'}) (pmap Raa (S.zro_*-left {y'}) *> Raa.func-zro)
+              (\lam z z' => pmap (\lam w => w * {T} Ra' y') Ra.func-+ *> T.rdistr) (\lam z z' => pmap Raa S.rdistr *> Raa.func-+)
+              (\lam b c => tensor-fun-ext {B} {C} {T} (\lam (z' : S) => Ra (rect b c) * {T} Ra' z') (\lam (z' : S) => Raa (rect b c * {S} z'))
+                  (pmap (\lam w => Ra (rect b c) * {T} w) Ra'.func-zro *> T.zro_*-right {Ra (rect b c)}) (pmap Raa (S.zro_*-right {rect b c}) *> Raa.func-zro)
+                  (\lam z z' => pmap (\lam w => Ra (rect b c) * {T} w) Ra'.func-+ *> T.ldistr {Ra (rect b c)} {Ra' z} {Ra' z'}) (\lam z z' => pmap Raa (S.ldistr {rect b c} {z} {z'}) *> Raa.func-+)
+                  (\lam b' c' => pmap2 (T.*) R-rect R-rect *> inv (rect_* {BooleanRingTensor A B} {C} {rect a b} {rect a' b'} {c} {c'}) *> pmap (rect __ (c * c')) (inv (rect_* {A} {B} {a} {a'} {b} {b'})) *> inv (pmap Raa (inv (rect_* {B} {C} {b} {b'} {c} {c'})) *> R-rect)) y') y
+
+    \func assocBimorphism : MeasureBimorphism A (PseudoMeasureRingTensor B C) (PseudoMeasureRingTensor (PseudoMeasureRingTensor A B) C) \cowith
+      | bfunc a y => R {A} {B} {C} a y
+      | bfunc-+-left {a} {a'} {y} => tensor-fun-ext (R {A} {B} {C} (a + a')) (\lam z => R {A} {B} {C} a z + R {A} {B} {C} a' z) (R {A} {B} {C} (a + a')).func-zro (pmap2 (+) (R {A} {B} {C} a).func-zro (R {A} {B} {C} a').func-zro)
+                                        (\lam z z' => (R {A} {B} {C} (a + a')).func-+) (\lam z z' => pmap2 (+) (R {A} {B} {C} a).func-+ (R {A} {B} {C} a').func-+ *> equation.abMonoid)
+                                        (\lam b c => R-rect *> pmap (rect __ c) (rect_+-left {A} {B} {a} {a'} {b}) *> rect_+-left {BooleanRingTensor A B} {C} {rect a b} {rect a' b} {c} *> inv (pmap2 (+) R-rect R-rect)) y
+      | bfunc-+-right {a} => (R {A} {B} {C} a).func-+
+      | bfunc-* {a} {a'} {y} {y'} => R-mul a a' y y'
+      | bfunc-meas {a} {y} => R-meas y
+  }
+
+\lemma assocL-rect {A B C : PseudoMeasureRing} {a : A} {b : B} {c : C} : assocL (rect a (rect b c)) = rect (rect a b) c
+  => zro-right *> zro-right
+
+\lemma assocLR {A B C : PseudoMeasureRing} (z : SFunc (PseudoMeasureRingTensor A B) C) : assocL (assocR z) = z
+  => tensor-hom-ext {PseudoMeasureRingTensor A B} {C} {_} {assocL MeasureRingHom.∘ assocR} {MeasureRingHom.id} (\lam x c =>
+        tensor-fun-ext (\lam y => assocL (assocR (rect y c))) (\lam y => rect y c)
+          (pmap (\lam z => assocL (assocR z)) (rect_zro-left {PseudoMeasureRingTensor A B} {C} {c}) *> pmap assocL assocR.func-zro *> assocL.func-zro) rect_zro-left
+                       (\lam y y' => pmap (\lam z => assocL (assocR z)) rect_+-left *> pmap assocL (assocR.func-+ {rect y c} {rect y' c}) *> assocL.func-+) (\lam y y' => rect_+-left)
+                       (\lam a b => pmap assocL assocR-rect *> assocL-rect) x) z
+
+\lemma assocRL {A B C : PseudoMeasureRing} (w : SFunc A (PseudoMeasureRingTensor B C)) : assocR (assocL w) = w
+  => tensor-hom-ext {A} {PseudoMeasureRingTensor B C} {_} {assocR MeasureRingHom.∘ assocL} {MeasureRingHom.id} (\lam a y =>
+        tensor-fun-ext (\lam z => assocR (assocL (rect a z))) (\lam z => rect a z)
+          (pmap (\lam z => assocR (assocL z)) (rect_zro-right {A} {PseudoMeasureRingTensor B C} {a}) *> pmap assocR assocL.func-zro *> assocR.func-zro) rect_zro-right
+                       (\lam z z' => pmap (\lam w => assocR (assocL w)) rect_+-right *> pmap assocR (assocL.func-+ {rect a z} {rect a z'}) *> assocR.func-+) (\lam z z' => rect_+-right)
+                       (\lam b c => pmap assocR assocL-rect *> assocR-rect) y) w
+
+\lemma assocR-equiv {A B C : PseudoMeasureRing} : IsEquiv (assocR {A} {B} {C})
+  => inP \new QEquiv {
+    | ret => assocL
+    | ret_f => assocLR
+    | f_sec => assocRL
+  }
+
+\lemma assocL-equiv {A B C : PseudoMeasureRing} : IsEquiv (assocL {A} {B} {C})
+  => inP \new QEquiv {
+    | ret => assocR
+    | ret_f => assocRL
+    | f_sec => assocLR
+  }
+
+-- | The symmetry `A ⊠ B ≅ B ⊠ A`.
+\func measureTensorSwap {A B : PseudoMeasureRing} : MeasureRingHom (CMeasureRingTensor A B) (CMeasureRingTensor B A)
+  => measureCompletion-map tensorSwap
+
+\lemma measureTensorSwap_rect {A B : PseudoMeasureRing} {a : A} {b : B} : measureTensorSwap (crect a b) = crect b a
+  => measureCompletion-map.char *> pmap measureCompletion tensorSwap-rect
+
+\lemma measureTensorSwap-equiv {A B : PseudoMeasureRing} : IsEquiv (measureTensorSwap {A} {B})
+  => measureCompletion-map-equiv (MeasureRingHom.equiv-dense tensorSwap-equiv)
+
+-- | The unit `Ā ≅ 2 ⊠ A`.
+\func measureTensorUnit {A : PseudoMeasureRing} : MeasureRingHom (MeasureRingCompletion A) (CMeasureRingTensor UnitMeasureRing A)
+  => measureCompletion-map unitL
+
+\lemma measureTensorUnit-char {A : PseudoMeasureRing} {a : A} : measureTensorUnit (measureCompletion a) = crect true a
+  => measureCompletion-map.char
+
+\lemma measureTensorUnit-equiv {A : PseudoMeasureRing} : IsEquiv (measureTensorUnit {A})
+  => measureCompletion-map-equiv (MeasureRingHom.equiv-dense unitL-equiv)
+
+-- | The associator `(A ⊠ B) ⊠ C ≅ A ⊠ (B ⊠ C)`.
+\func measureTensorAssoc {A B C : PseudoMeasureRing} : MeasureRingHom (CMeasureRingTensor (CMeasureRingTensor A B) C) (CMeasureRingTensor A (CMeasureRingTensor B C))
+  => measureTensor-map MeasureRingHom.id measureCompletion MeasureRingHom.∘ measureCompletion-map assocR MeasureRingHom.∘ MeasureRingCat.inverse inner-equiv
+  \where
+    -- | `(A ⊗ B) ⊠ C ≅ (A ⊠ B) ⊠ C`
+    \lemma inner-equiv : IsEquiv (measureTensor-map (measureCompletion {PseudoMeasureRingTensor A B}) (MeasureRingHom.id {C}))
+      => measureTensor-map-equiv measureCompletion.dense (MeasureRingHom.equiv-dense (inP idEquiv))
+
+\lemma measureTensorAssoc_rect {A B C : PseudoMeasureRing} {a : A} {b : B} {c : C}
+  : measureTensorAssoc (crect (crect a b) c) = crect a (crect b c)
+  => pmap (\lam z => measureTensor-map MeasureRingHom.id measureCompletion (measureCompletion-map assocR (MeasureRingCat.inverse measureTensorAssoc.inner-equiv z)))
+          (inv (measureTensor-map_rect {_} {_} {_} {_} {measureCompletion} {MeasureRingHom.id} {rect a b} {c}))
+     *> pmap (\lam z => measureTensor-map MeasureRingHom.id measureCompletion (measureCompletion-map assocR z)) (IsEquiv.ret_f measureTensorAssoc.inner-equiv)
+     *> pmap (measureTensor-map MeasureRingHom.id measureCompletion) (measureCompletion-map.char *> pmap measureCompletion assocR-rect)
+     *> measureTensor-map_rect
+
+\lemma measureTensorAssoc-equiv {A B C : PseudoMeasureRing} : IsEquiv (measureTensorAssoc {A} {B} {C})
+  => IsEquiv.trans (IsEquiv.trans (MeasureRingCat.inverse-equiv measureTensorAssoc.inner-equiv) (measureCompletion-map-equiv (MeasureRingHom.equiv-dense assocR-equiv)))
+                   (measureTensor-map-equiv (MeasureRingHom.equiv-dense (inP idEquiv)) measureCompletion.dense)

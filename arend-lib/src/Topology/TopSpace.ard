@@ -1,4 +1,4 @@
-\import Data.Bool
+\import Equiv
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -121,6 +121,10 @@
 
   \func IsDenseTopEmbedding : \Prop
     => \Sigma IsDense IsTopEmbedding
+
+  -- | An isomorphism of measure rings has dense image.
+  \lemma equiv-dense (e : IsEquiv func) : IsDense
+    => \lam {y} Uo Uy => inP (y, inP (IsEquiv.ret e y, IsEquiv.f_ret e), Uy)
 } \where {
   \func id {X : TopSpace} : ContMap X X \cowith
     | func x => x

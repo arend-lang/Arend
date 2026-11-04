@@ -1,0 +1,100 @@
+{- | The product measure ring `A ⊠ B`, the completion of the tensor product `A ⊗ B`.
+ -}
+
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.Boolean
+\import Algebra.Semiring
+\import Analysis.Measure.MeasureProduct
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.MeasureRing.MeasureRingCompletion
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Real
+\import Arith.Real.Field
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Relation.Equivalence \hiding (~)
+
+\lemma meas-rect-dist {A B : PseudoMeasureRing} {a a' : A} {b b' : B}
+  : meas (rect a b + rect a' b') <= meas a * meas (b + b') + meas (a + a') * meas b'
+  => \have | e1 : rect a b + {PseudoMeasureRingTensor A B} rect a b' = rect a (b + b') => inv rect_+-right
+           | e2 : rect a b' + {PseudoMeasureRingTensor A B} rect a' b' = rect (a + a') b' => inv rect_+-left
+     \in transportInv (RealAbGroup.`<= _) (pmap meas (boolean-tri {PseudoMeasureRingTensor A B} {rect a b} {rect a b'} {rect a' b'})) $ meas_+ {PseudoMeasureRingTensor A B} {rect a b + rect a b'} {rect a b' + rect a' b'}
+          <=∘ =_<= (pmap2 (+) (pmap meas e1 *> meas_rect) (pmap meas e2 *> meas_rect))
+  \where {
+    \lemma boolean-tri {R : BooleanRing} {x y z : R} : x + z = (x + y) + (y + z)
+      => equation.bRing
+  }
+
+\lemma approx-rect {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} (fd : f.IsDense) (gd : g.IsDense) (a' : A') (b' : B')
+  : (tensorMap f g).IsApprox (rect a' b')
+  => \lam {eps} eps>0 => \case split-eps eps>0 {2} (linarith : (0 : Real) RealAbGroup.< 2) \with {
+    | inP (e,e>0,e2<eps) => \case split-eps e>0 {meas a' + 1} (\have m0 => meas>=0 {_} {a'} \in linarith) \with {
+      | inP (d1,d1>0,d1w<e) => \case g.dense-approx gd b' d1>0 \with {
+        | inP (b,bd) => \case split-eps e>0 {meas (g b) + 1} (\have m0 => meas>=0 {_} {g b} \in linarith) \with {
+          | inP (d2,d2>0,d2w<e) => \case f.dense-approx fd a' d2>0 \with {
+            | inP (a,ad) => inP (rect a b, transportInv (\lam z => meas (rect a' b' + z) RealAbGroup.< eps) tensorMap-rect $
+                meas-rect-dist <∘r (\have | s1 => small-prod {meas a'} {meas (b' + g b)} {d1} {e} meas>=0 bd d1>0 d1w<e
+                                          | s2 => small-prod {meas (g b)} {meas (a' + f a)} {d2} {e} meas>=0 ad d2>0 d2w<e
+                                          | c1 : meas (a' + f a) RealField.* meas (g b) = meas (g b) RealField.* meas (a' + f a) => RealField.*-comm
+                                    \in linarith))
+          }
+        }
+      }
+    }
+  }
+  \where {
+    \lemma small-prod {x y d e : Real} (x>=0 : 0 <= x) (y<d : y < d) (d>0 : 0 < d) (de : d * (x + 1) < e) : x * y < e
+      => \have | h1 : x * y <= x * d => RealField.<=_*_positive-right x>=0 (LinearOrder.<_<= y<d)
+               | h2 : d * (x + 1) = x * d + d => equation
+         \in linarith
+  }
+
+-- | The tensor product of dense homomorphisms is dense.
+\lemma tensorMap-dense {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} (fd : f.IsDense) (gd : g.IsDense) : (tensorMap f g).IsDense
+  => MeasureRingHom.approx-dense \lam (y : SFunc A' B') => \case \elim y \with {
+    | in~ l => transportInv (tensorMap f g).IsApprox SFuncAbMonoid.inSF-BigSum ((tensorMap f g).approx-BigSum {\lam j => rect (l j).1 (l j).2} \lam j => approx-rect fd gd (l j).1 (l j).2)
+  }
+
+-- | The product measure ring `A ⊠ B`.
+\instance CMeasureRingTensor (A B : PseudoMeasureRing) : CompleteMeasureRing
+  => MeasureRingCompletion (PseudoMeasureRingTensor A B)
+
+-- | The rectangle `a ⊠ b`.
+\func crect {A B : PseudoMeasureRing} (a : A) (b : B) : CMeasureRingTensor A B
+  => measureCompletion (rect a b)
+
+-- | The extension of a measure bimorphism `A × B -> C` to `A ⊠ B`.
+\func measureTensor-lift {A B : PseudoMeasureRing} {C : CompleteMeasureRing} (h : MeasureBimorphism A B C) : MeasureRingHom (CMeasureRingTensor A B) C
+  => measureCompletion-lift (fromBimorphism h)
+
+\lemma measureTensor-lift_rect {A B : PseudoMeasureRing} {C : CompleteMeasureRing} {h : MeasureBimorphism A B C} {a : A} {b : B} : measureTensor-lift h (crect a b) = h a b
+  => measureCompletion-lift.char *> zro-right
+
+-- | Homomorphisms out of `A ⊠ B` are determined by their values on rectangles.
+\lemma measureTensor-hom-ext {A B : PseudoMeasureRing} {C : CompleteMeasureRing} (k k' : MeasureRingHom (CMeasureRingTensor A B) C)
+                             (p : \Pi (a : A) (b : B) -> k (crect a b) = k' (crect a b)) (z : CMeasureRingTensor A B) : k z = k' z
+  => measureCompletion-lift.unique k k' (tensor-hom-ext {A} {B} {C} {k MeasureRingHom.∘ measureCompletion} {k' MeasureRingHom.∘ measureCompletion} p) z
+
+-- | The homomorphism `f ⊠ g : A ⊠ B -> A' ⊠ B'` with `a ⊠ b => f a ⊠ g b`.
+\func measureTensor-map {A A' B B' : PseudoMeasureRing} (f : MeasureRingHom A A') (g : MeasureRingHom B B') : MeasureRingHom (CMeasureRingTensor A B) (CMeasureRingTensor A' B')
+  => measureCompletion-map (tensorMap f g)
+
+\lemma measureTensor-map_rect {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} {a : A} {b : B}
+  : measureTensor-map f g (crect a b) = crect (f a) (g b)
+  => measureCompletion-map.char *> pmap measureCompletion tensorMap-rect
+
+-- | If {f} and {g} have dense images, then `f ⊠ g` is an isomorphism.
+\lemma measureTensor-map-equiv {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} (fd : f.IsDense) (gd : g.IsDense) : IsEquiv (measureTensor-map f g)
+  => measureCompletion-map-equiv (tensorMap-dense fd gd)
+
+-- | The product depends only on the completions: `A ⊠ B ≅ Ā ⊠ B̄`.
+\lemma measureTensor-completion-equiv {A B : PseudoMeasureRing} : IsEquiv (measureTensor-map (measureCompletion {A}) (measureCompletion {B}))
+  => measureTensor-map-equiv measureCompletion.dense measureCompletion.dense

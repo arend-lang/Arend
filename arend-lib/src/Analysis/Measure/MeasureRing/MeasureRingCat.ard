@@ -13,14 +13,14 @@
 \import Topology.CoverSpace
 \import Topology.UniformSpace
 
-\instance MeasureRingCat.{u} : Cat MeasureRing.{u}
+\instance MeasureRingCat.{u} : Cat PseudoMeasureRing.{u}
   | Hom => MeasureRingHom
   | id => MeasureRingHom.id
   | o => MeasureRingHom.∘
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
-  | univalence => sip \lam {X} {S1} {S2} h1 h2 => exts MeasureRing {
+  | univalence => sip \lam {X} {S1} {S2} h1 h2 => exts PseudoMeasureRing {
     | zro => h1.func-zro
     | + x y => h1.func-+
     | negative x => AddGroup.negative-equality S1 S2 h1.func-zro h1.func-+ x
@@ -34,7 +34,7 @@
     | isOpen U => ext (h2.func-cont, h1.func-cont)
   }
   \where {
-    \lemma Iso<->IsEquiv.{u} {A B : MeasureRing.{u}} {f : MeasureRingHom A B} : Iso {MeasureRingCat} f <-> IsEquiv f
+    \lemma Iso<->IsEquiv.{u} {A B : PseudoMeasureRing.{u}} {f : MeasureRingHom A B} : Iso {MeasureRingCat} f <-> IsEquiv f
       => (\lam e => inP \new QEquiv {
             | ret => e.hinv
             | ret_f x => pmap (\lam (g : MeasureRingHom A A) => g x) e.hinv_f
@@ -47,18 +47,26 @@
           })
 
     -- | The inverse of a bijective homomorphism of measure rings.
-    \func inverse {A B : MeasureRing} {f : MeasureRingHom A B} (e : IsEquiv f) : MeasureRingHom B A \cowith
+    \func inverse {A B : PseudoMeasureRing} {f : MeasureRingHom A B} (e : IsEquiv f) : MeasureRingHom B A \cowith
       | func => IsEquiv.ret e
       | func-+ => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-+ *> pmap2 (+) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
       | func-* => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-* *> pmap2 (*) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
       | func-meas => inv f.func-meas *> pmap meas (IsEquiv.f_ret e)
+
+    -- | The inverse of an isomorphism of measure rings is an isomorphism.
+    \lemma inverse-equiv {A B : PseudoMeasureRing} {f : MeasureRingHom A B} (e : IsEquiv f) : IsEquiv (inverse e)
+      => inP \new QEquiv {
+        | ret => f
+        | ret_f y => IsEquiv.f_ret e
+        | f_sec x => IsEquiv.ret_f e
+      }
   }
 
 \instance CompleteMeasureRingCat.{u} : Cat CompleteMeasureRing.{u}
   => subCat {MeasureRingCat} \new Embedding {
     | f X => X
     | isEmb X Y => \new Retraction {
-      | sec p => ext CompleteMeasureRing { | MeasureRing => p }
+      | sec p => ext CompleteMeasureRing { | PseudoMeasureRing => p }
       | f_sec => idpe
     }
   }
