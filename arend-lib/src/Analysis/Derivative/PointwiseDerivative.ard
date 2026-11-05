@@ -10,7 +10,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Lattice
 \import Paths
 \import Paths.Meta
@@ -87,7 +86,7 @@
 
 -- | # Derivative at a point
 
-\func IsDerivAt {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (Df : X -> Y) : \Prop
+\type IsDerivAt {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (Df : X -> Y) : \Prop
   => \Pi (a0 : X) -> Y.IsLimit {DirSet So a0} (\lam h => dquot f h.6.1 _ h.6.2) (Df a0)
   \where {
     \protected \lemma isLimitPoint (So : isOpen S) {a : X} : TopSpace.IsLimitPoint {ProductTopSpace R X} (0, a) (\lam s => \Sigma (Inv s.1) (S (x.1 + s.1 *c s.2)))
