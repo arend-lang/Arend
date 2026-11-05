@@ -81,6 +81,7 @@ public class LockFileTest {
       List<Path> extra = entries.filter(p -> !p.equals(path)).toList();
       assertTrue("scratch files left behind: " + extra, extra.isEmpty());
     }
-    assertEquals("uds:/tmp/b.sock", LockFile.readIfValid(path).orElseThrow().socketPath());
+    // As sample() writes it: the path in the platform's form (\tmp\b.sock on Windows)
+    assertEquals("uds:" + Path.of("/tmp/b.sock"), LockFile.readIfValid(path).orElseThrow().socketPath());
   }
 }

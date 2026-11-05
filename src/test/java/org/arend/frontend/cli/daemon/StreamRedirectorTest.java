@@ -56,8 +56,9 @@ public class StreamRedirectorTest {
       System.out.println("out line");
       System.err.println("err line");
     });
-    assertEquals("out line\n", dataOf(frames, "stdout"));
-    assertEquals("err line\n", dataOf(frames, "stderr"));
+    // println ends a line with the platform's separator (\r\n on Windows), which is forwarded as is
+    assertEquals("out line" + System.lineSeparator(), dataOf(frames, "stdout"));
+    assertEquals("err line" + System.lineSeparator(), dataOf(frames, "stderr"));
   }
 
   /**
@@ -82,6 +83,6 @@ public class StreamRedirectorTest {
     String line = "x".repeat(FrameChannel.MAX_FRAME_BYTES + 1024);
     List<Map<String, Object>> frames = framesFrom(() -> System.out.println(line));
     assertTrue("an oversize line must be split across frames, not sent as one", frames.size() > 1);
-    assertEquals("every byte of the line must arrive", line + "\n", dataOf(frames, "stdout"));
+    assertEquals("every byte of the line must arrive", line + System.lineSeparator(), dataOf(frames, "stdout"));
   }
 }
