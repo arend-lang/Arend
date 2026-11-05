@@ -217,6 +217,10 @@ tasks.withType<Test>().configureEach {
     // generate-function intentions). Keep the Academy jars available, but let the IDE's own copies win.
     val isAcademyJar = { file: File -> file.path.contains("JetBrainsAcademy") }
     classpath = classpath.filter { !isAcademyJar(it) } + classpath.filter(isAcademyJar)
+    // The platform's test framework fails a test that reads a file outside its allowed roots, which include the user's
+    // home. A repository cloned under the home (as on Linux and macOS, also on CI) is inside them; on Windows, where CI
+    // checks it out to D:\a\Arend\Arend, the test data in src/test/resources and the sandbox in .intellijPlatform were not.
+    systemProperty("vfs.additional-allowed-roots", rootProject.projectDir.invariantSeparatorsPath)
 }
 
 // The whole-standard-library formatter stress test lives in its own `slowTest` source set rather than
