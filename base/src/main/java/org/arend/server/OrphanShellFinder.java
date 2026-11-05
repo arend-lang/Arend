@@ -15,7 +15,11 @@ import org.arend.core.expr.DataCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.expr.FunCallExpression;
+import org.arend.core.expr.PiExpression;
+import org.arend.core.expr.TypeConstructorExpression;
+import org.arend.core.expr.TypeDestructorExpression;
 import org.arend.core.expr.visitor.VoidExpressionVisitor;
+import org.arend.ext.util.Pair;
 
 import java.util.List;
 import java.util.Map;
@@ -74,6 +78,18 @@ final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
       for (Map.Entry<ClassField, AbsExpression> entry : cls.getImplemented()) {
         if (found) return;
         entry.getValue().getExpression().accept(this, null);
+      }
+      // An overridden type can be the only place where a class mentions another one: TopAbGroupMap holds TopAbGroup
+      // just in \override Dom, and subclasses compare their own overrides against it.
+      for (Map.Entry<ClassField, Pair<PiExpression, ClassDefinition>> entry : cls.getOverriddenFields()) {
+        if (found) return;
+        entry.getValue().proj1.accept(this, null);
+        if (found) return;
+        check(entry.getValue().proj2);
+      }
+      for (Map.Entry<ClassField, Pair<AbsExpression, Boolean>> entry : cls.getDefaults()) {
+        if (found) return;
+        entry.getValue().proj1.getExpression().accept(this, null);
       }
     }
     if (found) return;
@@ -154,5 +170,17 @@ final class OrphanShellFinder extends VoidExpressionVisitor<Void> {
   public Void visitConCall(ConCallExpression expr, Void params) {
     check(expr.getDefinition().getDataType());
     return found ? null : super.visitConCall(expr, params);
+  }
+
+  @Override
+  public Void visitTypeConstructor(TypeConstructorExpression expr, Void params) {
+    check(expr.getDefinition());
+    return found ? null : super.visitTypeConstructor(expr, params);
+  }
+
+  @Override
+  public Void visitTypeDestructor(TypeDestructorExpression expr, Void params) {
+    check(expr.getDefinition());
+    return found ? null : super.visitTypeDestructor(expr, params);
   }
 }
