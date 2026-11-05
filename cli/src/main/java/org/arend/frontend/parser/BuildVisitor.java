@@ -2,6 +2,7 @@ package org.arend.frontend.parser;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
@@ -31,12 +32,50 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   private final ModuleLocation myModule;
   private final ErrorReporter myErrorReporter;
 
+  /**
+   * Where the rule entered last starts: the best position there is for a part of the tree that is
+   * missing altogether.
+   */
+  private Position myLastPosition;
+
   public BuildVisitor(ModuleLocation module, ErrorReporter errorReporter) {
     myModule = module;
     myErrorReporter = errorReporter;
+    myLastPosition = new Position(module, 1, 0);
   }
 
   public record ReturnType(Concrete.Expression type, Concrete.Expression typeLevel, boolean isTypeLevelPlus) {}
+
+  @Override
+  public Object visit(ParseTree tree) {
+    if (tree instanceof ParserRuleContext ctx && ctx.start != null) {
+      myLastPosition = tokenPosition(ctx.start);
+    }
+    return super.visit(tree);
+  }
+
+  /*
+   * After a syntax error, which the parser has already reported, ANTLR's error recovery hands over
+   * a tree with holes in it: a child that is absent (null), or a context of the bare rule class
+   * rather than one of its labelled alternatives, which no visit method builds anything for. The
+   * two helpers below fill such holes the way ConcreteBuilder does for the IDE -- with an error
+   * hole, which typechecks to an error expression without reporting anything more -- instead of
+   * failing on them, which took the whole module (and the CLI with it) down.
+   */
+
+  /** The expression {@code ctx} builds, or an error hole where the tree has none. */
+  private Concrete.Expression expressionOrHole(ParserRuleContext ctx) {
+    Object result = ctx == null ? null : visit(ctx);
+    if (result instanceof Concrete.Expression expr) return expr;
+    return new Concrete.ErrorHoleExpression(ctx != null && ctx.start != null ? tokenPosition(ctx.start) : myLastPosition, null);
+  }
+
+  /** The return type {@code ctx} builds; none when the definition declares none; an error hole where the tree is broken. */
+  private ReturnType returnTypeOrHole(ParserRuleContext ctx) {
+    if (ctx == null) return new ReturnType(null, null, false);
+    Object result = visit(ctx);
+    return result instanceof ReturnType returnType ? returnType : new ReturnType(expressionOrHole(null), null, false);
+  }
 
   private String getVar(AtomFieldsAccContext ctx) {
     if (!(ctx.DOT().isEmpty() && ctx.atom() instanceof AtomLiteralContext)) {
@@ -106,19 +145,19 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   public Concrete.Expression visitExpr(ExprContext expr) {
-    return (Concrete.Expression) visit(expr);
+    return expressionOrHole(expr);
   }
 
   public Concrete.Expression visitExpr(Expr2Context expr) {
-    return (Concrete.Expression) visit(expr);
+    return expressionOrHole(expr);
   }
 
   private Concrete.Expression visitExpr(AtomContext expr) {
-    return (Concrete.Expression) visit(expr);
+    return expressionOrHole(expr);
   }
 
   private Concrete.Expression visitExpr(LiteralContext expr) {
-    return (Concrete.Expression) visit(expr);
+    return expressionOrHole(expr);
   }
 
   private Concrete.UniverseExpression visitExpr(UniverseAtomContext expr) {
@@ -573,11 +612,11 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   private ReturnType visitReturnExpr(ReturnExprContext returnExprCtx) {
-    return returnExprCtx == null ? new ReturnType(null, null, false) : (ReturnType) visit(returnExprCtx);
+    return returnTypeOrHole(returnExprCtx);
   }
 
   private ReturnType visitReturnExpr(ReturnExpr2Context returnExprCtx) {
-    return returnExprCtx == null ? new ReturnType(null, null, false) : (ReturnType) visit(returnExprCtx);
+    return returnTypeOrHole(returnExprCtx);
   }
 
   private ConcreteGroup visitDefMeta(AccessModifier accessModifier, DefMetaContext ctx, ConcreteGroup parent, TCDefReferable enclosingClass) {
@@ -1120,7 +1159,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   private Concrete.Expression visitAppExpr(AppExprContext ctx) {
-    return (Concrete.Expression) visit(ctx);
+    return expressionOrHole(ctx);
   }
 
   @Override
@@ -1828,7 +1867,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     if (exprCtx == null) {
       return new Concrete.IncompleteExpression(new Position(myModule, parentCtx.stop.getLine(), parentCtx.stop.getCharPositionInLine() + parentCtx.stop.getText().length()));
     } else {
-      return (Concrete.Expression) visit(exprCtx);
+      return expressionOrHole(exprCtx);
     }
   }
 

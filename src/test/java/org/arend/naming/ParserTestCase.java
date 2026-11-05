@@ -77,6 +77,18 @@ public abstract class ParserTestCase extends ArendTestCase {
     return parseModule(text, 0);
   }
 
+  /**
+   * Parses a module with syntax errors the way a source is loaded ({@code StreamRawSource}): the
+   * group is built from whatever tree the parser recovered, errors or not. The helpers above skip
+   * building when there are errors, so they never see such a tree.
+   */
+  protected ConcreteGroup parseModuleWithSyntaxErrors(String text) {
+    ListErrorReporter errorReporter = new ListErrorReporter();
+    ArendParser.StatementsContext tree = _parse(text, errorReporter).statements();
+    assertThat("the text should have syntax errors", errorReporter.getErrorList(), Matchers.not(Matchers.empty()));
+    return new BuildVisitor(MODULE, errorReporter).visitStatements(tree);
+  }
+
 
   protected static boolean compareAbstract(Concrete.Expression expr1, Concrete.Expression expr2) {
     return new ConcreteCompareVisitor().compare(expr1, expr2);
