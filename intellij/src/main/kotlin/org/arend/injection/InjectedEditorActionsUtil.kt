@@ -7,6 +7,7 @@ import org.arend.core.expr.ClassCallExpression.ClassCallBinding
 import org.arend.core.expr.DefCallExpression
 import org.arend.core.expr.Expression
 import org.arend.core.expr.FieldCallExpression
+import org.arend.core.expr.PathTypeExpression
 import org.arend.core.expr.ReferenceExpression
 import org.arend.ext.error.GeneralError
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
@@ -15,6 +16,7 @@ import org.arend.ext.prettyprinting.doc.Doc
 import org.arend.ext.reference.Precedence
 import org.arend.injection.actions.NormalizationCache
 import org.arend.naming.reference.ModuleReferable
+import org.arend.prelude.Prelude
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.Concrete.LongReferenceExpression
 import org.arend.term.prettyprint.PrettyPrintVisitor
@@ -156,6 +158,11 @@ private class InterceptingPrettyPrintVisitor(
             val definition = core.definition.type.allParameters().flatMap { it.parameters.allBindings() }
             val subtractee = (expr as? LongReferenceExpression)?.qualifier?.referent?.takeIf { it !is ModuleReferable }?.let { 1 } ?: 0
             return definition.count { !it.isExplicit } - subtractee
+        }
+        if (core is PathTypeExpression) {
+            // Printed infix (= or ~>), a path type has one implicit argument, the type of its sides; as Path it has none
+            val referent = expr.referent
+            return if (referent == Prelude.PATH_INFIX.referable || referent == Prelude.DPATH_INFIX.referable) 1 else 0
         }
         if (core is ClassCallExpression) {
             val implementations = core.implementations

@@ -243,13 +243,20 @@ public class ConcreteExpressionFactory {
   }
 
   public static Concrete.Expression cBinOp(Concrete.Expression left, Referable binOp, Concrete.Expression implicit, Concrete.Expression right) {
+    return cBinOp(null, left, binOp, implicit, right);
+  }
+
+  /**
+   * @param binOpData the data of the reference to {@code binOp}
+   */
+  public static Concrete.Expression cBinOp(Object binOpData, Concrete.Expression left, Referable binOp, Concrete.Expression implicit, Concrete.Expression right) {
     List<Concrete.Argument> args = new ArrayList<>(3);
     if (implicit != null) {
       args.add(new Concrete.Argument(implicit, false));
     }
     args.add(new Concrete.Argument(left, true));
     args.add(new Concrete.Argument(right, true));
-    return Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(null, binOp), args);
+    return Concrete.AppExpression.make(null, new Concrete.ReferenceExpression(binOpData, binOp), args);
   }
 
   public static Concrete.NumericLiteral cNum(BigInteger num) {

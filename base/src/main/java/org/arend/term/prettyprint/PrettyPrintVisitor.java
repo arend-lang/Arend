@@ -958,6 +958,15 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     return null;
   }
 
+  private static void printInfixOperator(PrettyPrintVisitor pp, Concrete.ReferenceExpression infix, List<Concrete.Argument> implicitArgs) {
+    pp.printReferenceName(infix, null);
+    for (Concrete.Argument arg : implicitArgs) {
+      pp.myBuilder.append(" {");
+      pp.printExpr(arg.expression, new Precedence(Expression.PREC));
+      pp.printClosingBrace();
+    }
+  }
+
   private Precedence visitBinOp(Concrete.Expression left, Concrete.ReferenceExpression infix, List<Concrete.Argument> implicitArgs, Concrete.Expression right, Precedence prec, StringBuilder builder) {
     Precedence infixPrec = ((GlobalReferable) infix.getReferent()).getRepresentablePrecedence();
     boolean needParens = prec.priority > infixPrec.priority || prec.priority == infixPrec.priority && (prec.associativity != infixPrec.associativity || prec.associativity == Precedence.Associativity.NON_ASSOC);
@@ -967,13 +976,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     Precedence rightPrec = infixPrec.associativity != Precedence.Associativity.RIGHT_ASSOC ? new Precedence(Precedence.Associativity.NON_ASSOC, infixPrec.priority, infixPrec.isInfix) : infixPrec;
     if (left != null && right != null) {
       StringBuilder opBuilder = new StringBuilder();
-      PrettyPrintVisitor opVisitor = copy(opBuilder, 0, !noIndent);
-      opVisitor.printReferenceName(infix, null);
-      for (Concrete.Argument arg : implicitArgs) {
-        opVisitor.myBuilder.append(" {");
-        opVisitor.printExpr(arg.expression, new Precedence(Expression.PREC));
-        opVisitor.printClosingBrace();
-      }
+      printInfixOperator(copy(opBuilder, 0, !noIndent), infix, implicitArgs);
       String opText = opBuilder.toString();
 
       new BinOpLayout() {
@@ -990,6 +993,12 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         @Override
         String getOpText() {
           return opText;
+        }
+
+        // Printed by the visitor itself, so that a subclass sees the operator's reference as it sees the operands'
+        @Override
+        void printOp(PrettyPrintVisitor pp, String op) {
+          printInfixOperator(pp, infix, implicitArgs);
         }
 
         @Override
@@ -2165,6 +2174,14 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     boolean printSpaceBefore() {return true;}
     boolean printSpaceAfter() {return true;}
 
+    /**
+     * Prints {@code op}, the trimmed {@link #getOpText}, when the layout is disabled and everything is printed in order
+     * by one visitor. A layout that prints the operator with that visitor produces the same text.
+     */
+    void printOp(PrettyPrintVisitor pp, String op) {
+      pp.myBuilder.append(op);
+    }
+
     public void doPrettyPrint(PrettyPrintVisitor ppv_default, boolean disabled) {
       if (disabled) {
         StringBuilder builder = ppv_default.myBuilder;
@@ -2173,7 +2190,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         boolean leftIsEmpty = builder.length() == start;
         String op = getOpText().trim();
         if (printSpaceBefore() && !(leftIsEmpty && op.isEmpty())) builder.append(" ");
-        builder.append(op);
+        printOp(ppv_default, op);
         if (printSpaceAfter() && !(op.isEmpty() && (leftIsEmpty || printSpaceBefore()))) builder.append(" ");
         int rightStart = builder.length();
         printRight(ppv_default);

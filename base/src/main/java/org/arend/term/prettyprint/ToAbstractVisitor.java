@@ -230,7 +230,9 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     if (expr1 != null) {
       if (expr1.getParameters().isUnused() || !expr1.getBody().findBinding(expr1.getParameters())) {
         Referable infix = (expr.isDirected() ? Prelude.DPATH_INFIX : Prelude.PATH_INFIX).getReferable();
-        return cBinOp(convertExpr(expr.getLeftArgument()), infix, hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || convertSubexpr(expr1.getBody()) || getVerboseLevel(expr) > 0 ? convertExpr(expr1.getBody()) : null, convertExpr(expr.getRightArgument()));
+        // The operator refers to expr, as references produced by cVar refer to theirs: revealing the implicit argument
+        // raises the verbose level of the operator's data, which is the level checked here
+        return cBinOp(expr, convertExpr(expr.getLeftArgument()), infix, hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || convertSubexpr(expr1.getBody()) || getVerboseLevel(expr) > 0 ? convertExpr(expr1.getBody()) : null, convertExpr(expr.getRightArgument()));
       }
     }
     return null;
