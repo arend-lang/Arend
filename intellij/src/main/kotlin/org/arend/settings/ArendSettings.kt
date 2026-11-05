@@ -25,6 +25,9 @@ class ArendSettings : PersistentStateComponent<ArendSettings> {
     // Background typechecking
     var isBackgroundTypechecking = true
 
+    // Binary cache: .arc files are written only if this is explicitly enabled
+    var saveBinaryCache = false
+
     // Other settings
     var withClauseLimit = true
     var clauseLimit = 10
