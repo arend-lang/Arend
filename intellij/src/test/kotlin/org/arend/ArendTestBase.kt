@@ -76,7 +76,11 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
         // back into `foo-lemma`. Templates behave as in production once testing mode is on.
         TemplateManagerImpl.setTemplateTesting(testRootDisposable)
 
-        service<ArendSettings>().isBackgroundTypechecking = true
+        // ArendHighlightingPass starts the background checker when it is done, and whether its results reach what a
+        // test looks at next (highlights, available intentions) depends on timing: tests failed on CI and passed locally,
+        // or failed because the set of intentions changed between two queries. A test that needs typechecking calls
+        // typecheck(), which finishes before it returns.
+        service<ArendSettings>().isBackgroundTypechecking = false
 
         project.service<ReloadLibrariesService>().doReload(true)
         module.register()

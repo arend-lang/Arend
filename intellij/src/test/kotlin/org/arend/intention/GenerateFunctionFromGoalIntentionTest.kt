@@ -6,7 +6,7 @@ import org.intellij.lang.annotations.Language
 
 class GenerateFunctionFromGoalIntentionTest : QuickFixTestBase() {
     private fun doTest(@Language("Arend") contents: String, @Language("Arend") result: String) =
-        simpleQuickFixTest(ArendBundle.message("arend.generate.function.from.goal"), contents.trimIndent(), result.trimIndent())
+        typedQuickFixTest(ArendBundle.message("arend.generate.function.from.goal"), contents.trimIndent(), result.trimIndent())
 
 
     fun `test basic`() = doTest("""

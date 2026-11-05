@@ -22,7 +22,7 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun `test meta definition`() {
         addMeta()
-        simpleQuickFixTest(fixName, """
+        typedQuickFixTest(fixName, """
             \import Meta
             \func test => {-caret-}myMeta 1 2 3
         """, """
@@ -33,7 +33,7 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun `test meta in binop`() {
         addMeta()
-        simpleQuickFixTest(fixName, """
+        typedQuickFixTest(fixName, """
             \import Meta
             \func test (n : Nat) => 1 Nat.+ {-caret-}myMeta 1 n 3 Nat.+ 2
         """, """
@@ -50,7 +50,7 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
             }, null))
         }
 
-        simpleQuickFixTest(fixName, """
+        typedQuickFixTest(fixName, """
             \import Meta
             \func test => {-caret-}myMeta 1 2 3
         """, """
@@ -70,7 +70,7 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun `test meta resolver argument`() {
         addResolver()
-        simpleQuickFixTest(fixName, """
+        typedQuickFixTest(fixName, """
             \import Meta
             \func test => {-caret-}myMeta 1 2 3
         """, """
@@ -81,7 +81,7 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun `test meta resolver argument in binop`() {
         addResolver()
-        simpleQuickFixTest(fixName, """
+        typedQuickFixTest(fixName, """
             \import Meta
             \func test (n : Nat) => 1 Nat.+ {-caret-}myMeta 1 n 3 Nat.+ 2
         """, """
@@ -92,7 +92,7 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun `test meta resolver with clauses`() {
         addResolver()
-        simpleQuickFixTest(fixName, """
+        typedQuickFixTest(fixName, """
             \import Meta
             \func test => {-caret-}myMeta 1 2 3 \with {}
         """, """
@@ -111,7 +111,7 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
             }, null))
         }
 
-        simpleQuickFixTest(fixName, """
+        typedQuickFixTest(fixName, """
             \import Meta
             \func test (n : Nat) : Nat => {-caret-}myMeta n \with { | 0 => 0 | suc n => n }
         """, """

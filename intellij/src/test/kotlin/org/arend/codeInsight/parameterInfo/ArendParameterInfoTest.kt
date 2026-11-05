@@ -1,13 +1,11 @@
 package org.arend.codeInsight.parameterInfo
 
 import com.intellij.codeInsight.hint.ShowParameterInfoHandler
-import com.intellij.openapi.components.service
 import com.intellij.psi.PsiElement
 import com.intellij.testFramework.utils.parameterInfo.MockCreateParameterInfoContext
 import com.intellij.testFramework.utils.parameterInfo.MockUpdateParameterInfoContext
 import org.arend.ArendLanguage
 import org.arend.ArendTestBase
-import org.arend.settings.ArendSettings
 import org.junit.Assert
 
 class ArendParameterInfoTest : ArendTestBase() {
@@ -18,9 +16,7 @@ class ArendParameterInfoTest : ArendTestBase() {
         if (typecheck) {
             typecheck()
         } else {
-            service<ArendSettings>().isBackgroundTypechecking = false
             myFixture.doHighlighting()
-            service<ArendSettings>().isBackgroundTypechecking = true
         }
 
         val handler = ShowParameterInfoHandler.getHandlers(project, ArendLanguage.INSTANCE).firstOrNull() ?:

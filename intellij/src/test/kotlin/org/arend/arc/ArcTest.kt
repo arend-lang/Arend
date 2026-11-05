@@ -492,7 +492,14 @@ class ArcTest : ArendTestBase() {
         val otherDocument = FileDocumentManager.getInstance().getDocument(other)!!
         waitForText(otherDocument, "\\func o")
         val declaration = otherDocument.text.indexOf("\\func o") + "\\func ".length
-        PlatformTestUtil.waitWithEventsDispatching("The caret did not go to o", {
+        PlatformTestUtil.waitWithEventsDispatching({
+            // Test editors have no virtual file of their own (see Editor.virtualFile); their documents do
+            val editor = FileEditorManager.getInstance(project).selectedTextEditor
+            val shown = editor?.document?.let { FileDocumentManager.getInstance().getFile(it)?.name }
+            val link = linkAt(arcFile(file), text.indexOf("=> o") + 3)
+            "The caret did not go to o at $declaration of Other.arc: the selected editor shows $shown with the caret at " +
+                "${editor?.caretModel?.offset}, and the link of o in Main.arc goes to ${link?.containingFile?.name} at ${link?.textOffset}"
+        }, {
             FileEditorManager.getInstance(project).selectedTextEditor?.let { it.document == otherDocument && it.caretModel.offset == declaration } == true
         }, 60)
 
