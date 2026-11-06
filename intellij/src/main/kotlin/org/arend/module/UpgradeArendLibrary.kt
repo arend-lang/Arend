@@ -27,9 +27,18 @@ import java.nio.file.StandardCopyOption
 const val AREND_REPO = "arend-lang/Arend"
 const val AREND_LIB = "arend-lib"
 
+/**
+ * Maps language versions to the arend-lib release to download. Every installed plugin reads it from this URL, so the file
+ * must stay at this path on master.
+ */
+internal const val AREND_LIB_VERSIONS_URL = "https://raw.githubusercontent.com/$AREND_REPO/master/$AREND_LIB/versions"
+
+/** The `arend-lib.zip` asset of the GitHub release that the release workflow creates for the tag `v<version>`. */
+internal fun arendLibZipUrl(version: String) = "https://github.com/$AREND_REPO/releases/download/v$version/$AREND_LIB.zip"
+
 @Throws(IOException::class)
 internal fun getVersion(): String? {
-    val versionsConn = URL("https://raw.githubusercontent.com/$AREND_REPO/master/$AREND_LIB/versions").openConnection()
+    val versionsConn = URL(AREND_LIB_VERSIONS_URL).openConnection()
     BufferedReader(InputStreamReader(versionsConn.getInputStream())).use { reader ->
         while (true) {
             val str = reader.readLine() ?: break
@@ -108,7 +117,7 @@ private fun downloadArendLib(project: Project, indicator: ProgressIndicator, pat
             return false
         }
 
-        val conn = URL("https://github.com/$AREND_REPO/releases/download/v${version}/$AREND_LIB.zip").openConnection()
+        val conn = URL(arendLibZipUrl(version)).openConnection()
         val size = conn.contentLengthLong
         if (size < 0) {
             indicator.isIndeterminate = true
