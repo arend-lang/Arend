@@ -1,0 +1,60 @@
+\import Algebra.Group.Product
+\import Algebra.Meta
+\import Arith.Real
+\import Arith.Real.Field
+\import Logic
+\import Order.PartialOrder
+\import Paths
+\import Topology.Compact
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Compact
+
+-- | The product of normed groups with the sum of the norms.
+\instance ProductPseudoNormedAbGroup (A B : PseudoNormedAbGroup) : PseudoNormedAbGroup (\Sigma A B)
+  | PseudoMetricSpace => ManhattanMetricSpace A B
+  | AbGroup => ProductAbGroup A B
+  | norm s => A.norm s.1 RealAbGroup.+ B.norm s.2
+  | norm-dist => Real.=-upper.1 (pmap2 (RealAbGroup.+) lnorm-ldist lnorm-ldist)
+
+-- | The product of normed groups with the sum of the norms.
+\instance ProductNormedAbGroup (A B : NormedAbGroup) : NormedAbGroup (\Sigma A B)
+  | PseudoNormedAbGroup => ProductPseudoNormedAbGroup A B
+  | norm-ext {x} p =>
+    \have | s : lnorm x.1 RealAbGroup.+ lnorm x.2 = RealAbGroup.zro => (Real.=-upper {_} {RealAbGroup.zro}).2 p
+          | a>=0 : RealAbGroup.zro <= lnorm x.1 => lnorm>=0
+          | b>=0 : RealAbGroup.zro <= lnorm x.2 => lnorm>=0
+          | a=0 : lnorm x.1 = RealAbGroup.zro => <=-antisymmetric linarith a>=0
+          | b=0 : lnorm x.2 = RealAbGroup.zro => <=-antisymmetric linarith b>=0
+    \in pmap2 (__,__) (A.norm-ext (Real.=-upper.1 a=0)) (B.norm-ext (Real.=-upper.1 b=0))
+
+-- | The zero normed group.
+\instance UnitNormedAbGroup : CompleteNormedAbGroup (\Sigma)
+  | CompleteMetricSpace => UnitMetricSpace
+  | zro => ()
+  | + _ _ => ()
+  | negative _ => ()
+  | zro-left => idp
+  | zro-right => idp
+  | +-assoc => idp
+  | +-comm => idp
+  | negative-left => idp
+  | norm _ => 0
+  | norm-dist => idp
+  | norm-ext _ => idp
+
+-- | The space `ℝⁿ`.
+\func RealN (n : Nat) : NormedAbGroup.{0} \elim n
+  | 0 => UnitNormedAbGroup
+  | suc n => ProductNormedAbGroup (RealN n) RealNormed
+
+-- | Balls of `ℝⁿ` are totally bounded.
+\lemma RealN-ballsTB (n : Nat) : BallsTotallyBounded (RealN n) \elim n
+  | 0 => \lam _ _ => totallyBoundedSet-metric-char.2 \lam eps>0 => inP (() :: nil, \lam _ => inP (0, OBall-center {RealN 0} eps>0 {()}))
+  | suc n => manhattan-ballsTB (RealN-ballsTB n) real-bounded-tb
+
+-- | Cover maps out of `ℝⁿ` are uniform on bounded sets.
+\lemma RealN-locallyUniform (n : Nat) : IsLocallyUniformSpace (RealN n)
+  => metric-locallyUniform (RealN-ballsTB n)

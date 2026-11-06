@@ -34,7 +34,6 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Fin
 \open SFunc (inSF)
 \open SFuncRepr (IsReduced, makeReduced)
 
@@ -88,14 +87,6 @@
   | ldistr => ext \lam x => and-xor-ldistr
   | *-comm => ext \lam x => and-comm
   | isBooleanRing => ext \lam x => and-idemp
-
--- | The first `n` coordinates of a point of `A^(n+1)`.
-\func initA {A : \Type} {n : Nat} (z : Array A (suc n)) : Array A n
-  => \new Array A n (\lam i => z (fin-inc {n} {1} i))
-
--- | The last coordinate of a point of `A^(n+1)`.
-\func lastA {A : \Type} {n : Nat} (z : Array A (suc n)) : A
-  => z (fin-raise {1} {n} 0)
 
 -- | The points of an element of `B₀⁽ⁿ⁾`: `∑ᵢ aᵢ ⊗ cᵢ => ⋃ᵢ aᵢ × cᵢ`.
 \func lebPts (n : Nat) : PseudoRingHom (LebesgueRing0 n) (PointRing (Array Rat n)) \elim n

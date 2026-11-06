@@ -44,6 +44,14 @@
 \func cong_:: {A : \Type} {a a' : A} (p : a = a') {l l' : Array A} (q : l = l') : a :: l = a' :: l'
   => path \lam i => p i :: q i
 
+-- | The first `n` coordinates of a point of `A^(n+1)`.
+\func initA {A : \Type} {n : Nat} (z : Array A (suc n)) : Array A n
+  => \new Array A n (\lam i => z (fin-inc {n} {1} i))
+
+-- | The last coordinate of a point of `A^(n+1)`.
+\func lastA {A : \Type} {n : Nat} (z : Array A (suc n)) : A
+  => z (fin-raise {1} {n} 0)
+
 \func \infixr 5 ++' {A : \Type} (xs : Array A) {n : Nat} (ys : Array A n) : Array A (xs.len Nat.+ n) \elim xs
   | nil => ys
   | a :: xs => a :: xs ++' ys

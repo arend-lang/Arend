@@ -1,0 +1,247 @@
+{- | Open intervals with real endpoints in `ℝ¹`.
+ -
+ -   We construct trapezoid cutoffs and show that {OpenInterval} has located volume.
+ -   In particular, bounded cover maps on such intervals are integrable.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Integration.Pointwise.CompactSupport
+\import Analysis.Integration.Pointwise.OpenIntegral
+\import Analysis.Measure.IntervalRing
+\import Analysis.Measure.Lebesgue
+\import Analysis.Measure.MeasureRing
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopSpace
+\import Topology.UniformSpace.Product
+
+-- | The interval `(a,b)` in `ℝ¹`.
+\func OpenInterval (a b : Real) : Set (RealN 1)
+  => \lam x => \Sigma (a < x.2) (x.2 < b)
+
+\lemma ldist-coord {x y : RealN 1} : ldist {RealN 1} x y = ldist {RealNormed} x.2 y.2
+  => RealAbGroup.zro-left
+
+\lemma interval-open (a b : Real) : isOpen {RealN 1} (OpenInterval a b)
+  => (dist_open {RealN 1}).2 \lam {x} (s : \Sigma (a < x.2) (x.2 < b)) =>
+    \have | a<x => s.1
+          | x<b => s.2
+          | m>0 : 0 < (x.2 - a) ∧ (b - x.2) => <_meet-univ linarith linarith
+    \in \case real_<-rat-char.1 m>0 \with {
+      | inP (e,eU,eL) =>
+        \have | e>0 : (0 : Real) < Real.fromRat e => real_<_U.2 eU
+              | em : Real.fromRat e < (x.2 - a) ∧ (b - x.2) => real_<_L.2 eL
+              | e1 : Real.fromRat e < x.2 - a => em <∘l meet-left
+              | e2 : Real.fromRat e < b - x.2 => em <∘l meet-right
+        \in inP (e, rat_real_<.2 e>0, \lam {y} d =>
+          \have | d' : RealAbGroup.abs (x.2 - y.2) < Real.fromRat e => transport (`< _) ldist-coord (real_<_U.2 d)
+                | d1 : x.2 - y.2 <= RealAbGroup.abs (x.2 - y.2) => RealAbGroup.abs>=id
+                | d2 : negative (x.2 - y.2) <= RealAbGroup.abs (x.2 - y.2) => RealAbGroup.abs>=neg
+          \in (linarith, linarith))
+    }
+
+-- | The coordinate of a point of `ℝ¹`.
+\func coord : CoverMap (RealN 1) RealNormed __.2
+  => ProductUniformSpace.proj2 {UnitMetricSpace} {RealNormed}
+
+-- | Multiplication by a positive rational number.
+\func real-scale {k : Rat} (k>0 : 0 < k) : UniformMetricMap RealNormed RealNormed (Real.fromRat k RealField.*) \cowith
+  | func-dist-uniform {eps} eps>0 =>
+    \have | k'>0 : 0 < RatField.finv k => RatField.finv>0 k>0
+          | d>0 : 0 < eps * RatField.finv k => RatField.<_*_positive_positive eps>0 k'>0
+          | e : k * (eps * RatField.finv k) = eps => pmap (k *) *-comm *> inv *-assoc *> pmap (`* eps) (RatField.finv-right (/=-sym (StrictPoset.<_/= k>0))) *> ide-left
+          | k>0' : 0 < Real.fromRat k => rat_real_<.1 k>0
+    \in inP (eps * RatField.finv k, d>0, \lam {x} {y} p =>
+      \have | p' : RealAbGroup.abs (x - y) < Real.fromRat (eps * RatField.finv k) => real_<_U.2 p
+            | q : RealAbGroup.abs (Real.fromRat k RealField.* x - Real.fromRat k RealField.* y) = Real.fromRat k RealField.* RealAbGroup.abs (x - y)
+                => pmap RealAbGroup.abs (inv RealField.ldistr_-) *> RealField.abs_* *> pmap (RealField.* _) (RealAbGroup.abs-ofPos (<=-less k>0'))
+      \in real_<_U.1 $ rewrite q $ transport (_ <) (RealField.*-rat *> pmap Real.fromRat e) (RealField.<_*_positive-right k>0' p'))
+
+-- | The distance to the complement of `(a,b)`.
+\func inner (a b t : Real) : Real
+  => (t - a) ∧ (b - t)
+
+-- | The value of the trapezoid at `t`, which is 0 if `inner a b t ≤ h` and 1 if `inner a b t ≥ 2h`.
+\func trapValue (a b : Real) (h : Rat) (t : Real) : Real
+  => 0 ∨ (1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)))
+
+\func trapMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CoverMap (RealN 1) RealNormed (\lam x => trapValue a b h x.2)
+  => \let | t1 => coverSum coord (CoverMap.const (negative a))
+          | t2 => coverSum (CoverMap.const b) (coverNegative coord)
+          | m => cover2 real-meet-uniform t1 t2
+          | s => coverSum m (CoverMap.const (negative (Real.fromRat h)))
+          | r => real-scale (RatField.finv>0 h>0) CoverMap.∘ s
+     \in cover2 real-join-uniform (CoverMap.const 0) (cover2 real-meet-uniform (CoverMap.const 1) r)
+
+\lemma inv-mul {h : Rat} (h>0 : 0 < h) : Real.fromRat (RatField.finv h) RealField.* Real.fromRat h = 1
+  => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (/=-sym (StrictPoset.<_/= h>0)))
+
+\lemma trap-low {a b t : Real} {h : Rat} (h>0 : 0 < h) (p : inner a b t <= Real.fromRat h) : trapValue a b h t = 0
+  => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => rat_real_<.1 (RatField.finv>0 h>0)
+           | d<=0 : inner a b t - Real.fromRat h <= 0 => linarith
+           | r<=0 : Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h) <= 0
+               => transport (_ <=) RealField.zro_*-right (RealField.<=_*_positive-right (<=-less k>0) d<=0)
+           | m<=0 : 1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)) <= 0 => meet-right <=∘ r<=0
+     \in <=-antisymmetric (join-univ <=-refl m<=0) join-left
+
+\lemma trap-high {a b t : Real} {h : Rat} (h>0 : 0 < h) (p : Real.fromRat h RealAbGroup.+ Real.fromRat h <= inner a b t) : trapValue a b h t = 1
+  => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => rat_real_<.1 (RatField.finv>0 h>0)
+           | d>=h : Real.fromRat h <= inner a b t - Real.fromRat h => linarith
+           | r>=1 : 1 <= Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)
+               => transport (`<= _) (inv-mul h>0) (RealField.<=_*_positive-right (<=-less k>0) d>=h)
+           | m=1 : 1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)) = 1 => RealAbGroup.meet_<= r>=1
+           | z : (0 : Real) <= 1 => <=-less RealField.zro<ide
+     \in pmap (0 ∨) m=1 *> RealAbGroup.join_<= z
+
+\lemma trap-pos {a b t : Real} {h : Rat} (h>0 : 0 < h) (p : 0 < trapValue a b h t) : Real.fromRat h < inner a b t
+  => \case real-join-lt p \with {
+    | byLeft q => absurd (<-irreflexive q)
+    | byRight q =>
+      \have | r>0 : 0 < Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h) => q <∘l meet-right
+            | h>0' : 0 < Real.fromRat h => rat_real_<.1 h>0
+            | e : Real.fromRat h RealField.* (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)) = inner a b t - Real.fromRat h
+                => inv RealField.*-assoc *> pmap (RealField.* _) (RealField.*-comm *> inv-mul h>0) *> ide-left
+            | w : 0 < inner a b t - Real.fromRat h => transport (0 <) e (RealField.<_*_positive_positive h>0' r>0)
+      \in linarith
+  }
+
+-- | The trapezoid as a function with compact support.
+\func intervalCompactCoverMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CompactCoverMap 1 \cowith
+  | map => trapMap a b h>0
+  | support => \case Real.U-inh {RealAbGroup.abs a}, Real.U-inh {RealAbGroup.abs b} \with {
+    | inP (Ra,ua), inP (Rb,ub) => inP (Ra ∨ Rb, \lam {x} r =>
+      \have | h>0' : 0 < Real.fromRat h => rat_real_<.1 h>0
+            | ua' : RealAbGroup.abs a < Real.fromRat Ra => real_<_U.2 ua
+            | ub' : RealAbGroup.abs b < Real.fromRat Rb => real_<_U.2 ub
+            | ja : Real.fromRat Ra <= Real.fromRat (Ra ∨ Rb) => rat_real_<=.1 join-left
+            | jb : Real.fromRat Rb <= Real.fromRat (Ra ∨ Rb) => rat_real_<=.1 join-right
+            | a1 : a <= RealAbGroup.abs a => RealAbGroup.abs>=id
+            | a2 : negative a <= RealAbGroup.abs a => RealAbGroup.abs>=neg
+            | b1 : b <= RealAbGroup.abs b => RealAbGroup.abs>=id
+            | e : lnorm {RealN 1} x = RealAbGroup.abs x.2 => RealAbGroup.zro-left
+            | r' : Real.fromRat (Ra ∨ Rb) < x.2 ∨ negative x.2 => transport (_ <) e r
+            | m1 : inner a b x.2 <= x.2 - a => meet-left
+            | m2 : inner a b x.2 <= b - x.2 => meet-right
+      \in trap-low h>0 $ \case real-join-lt r' \with {
+        | byLeft s => linarith
+        | byRight s => linarith
+      })
+  }
+
+-- | The trapezoid as a cutoff for `(a,b)`.
+\func intervalCutoff (a b : Real) {h : Rat} (h>0 : 0 < h) : Cutoff (OpenInterval a b) (intervalCompactCoverMap a b h>0) \cowith
+  | cut>=0 => join-left
+  | cut<=1 => join-univ (<=-less RealField.zro<ide) meet-left
+  | cut-inside => inP (h, h>0, \lam {x} p {y} d =>
+    \have | hm : Real.fromRat h < inner a b x.2 => trap-pos h>0 p
+          | h1 : Real.fromRat h < x.2 - a => hm <∘l meet-left
+          | h2 : Real.fromRat h < b - x.2 => hm <∘l meet-right
+          | d' : RealAbGroup.abs (x.2 - y.2) < Real.fromRat h => transport (`< _) ldist-coord (real_<_U.2 d)
+          | d1 : x.2 - y.2 <= RealAbGroup.abs (x.2 - y.2) => RealAbGroup.abs>=id
+          | d2 : negative (x.2 - y.2) <= RealAbGroup.abs (x.2 - y.2) => RealAbGroup.abs>=neg
+    \in ((linarith : a < y.2), (linarith : y.2 < b)))
+
+-- | The interval `[p,q)` as an element of `LebesgueRing0 1`.
+\sfunc box1 (p q : Rat) : LebesgueRing0 1
+  => ratBoxElem 1 ((p,q) :: nil)
+
+\lemma box-mem {p q : Rat} {z : Array Rat 1} (l : p <= lastA z) (r : lastA z < q) : lebPts 1 (box1 p q) z = true
+  => rewrite (\peval box1 p q) $ lebPts-box ((p,q) :: nil) z *> (inRI-char {p,q}).2 (l,r)
+
+\lemma box-meas {p q : Rat} (pq : p <= q) : meas {LebesgueRing0 1} (box1 p q) = Real.fromRat (q - p)
+  => \have d>=0 : 0 <= q - p => linarith
+     \in rewrite (\peval box1 p q) $ boxElem-meas {1} ((p,q) :: nil) *> pmap Real.fromRat (ide-left *> <=-antisymmetric (join-univ <=-refl d>=0) join-left)
+
+\lemma or-false {x y : Bool} (p : x or y = false) : \Sigma (x = false) (y = false) \elim x, y
+  | true, _ => \case p \with {}
+  | false, true => \case p \with {}
+  | false, false => (idp, idp)
+
+\lemma sum4 {h : Rat} : Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h = Real.fromRat (h + h + h + h)
+  => pmap (RealAbGroup.+ _) (pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat) *> RealAbGroup.+-rat
+
+\lemma four-rat {p h : Rat} : Real.fromRat (p + h + h + h + h) = Real.fromRat p RealAbGroup.+ (Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h)
+  => inv (pmap (_ RealAbGroup.+) sum4 *> RealAbGroup.+-rat *> pmap Real.fromRat linarith)
+
+\lemma four-rat' {q h : Rat} : Real.fromRat (q - h - h - h - h) = Real.fromRat q - (Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h)
+  => inv (pmap (\lam w => Real.fromRat q RealAbGroup.+ negative w) sum4 *> pmap (_ RealAbGroup.+) RealAbGroup.negative-rat *> RealAbGroup.+-rat *> pmap Real.fromRat linarith)
+
+-- | The interval `(a,b)` has located volume.
+\lemma interval-located (a b : Real) : HasLocatedVolume (interval-open a b)
+  => located-content \lam {eps} eps>0 =>
+    \let | h : Rat => eps * ratio 1 16
+         | H : Real => Real.fromRat h
+    \in \have | h>0 : 0 < h => linarith
+              | H>0 : 0 < H => rat_real_<.1 h>0
+              | a-h<a : a - H < a => linarith
+              | b<b+h : b < b RealAbGroup.+ H => linarith
+    \in \case real_<-rat-char.1 a-h<a, real_<-rat-char.1 b<b+h \with {
+      | inP (p,pU,pL), inP (q,qU,qL) =>
+        \let | p' : Rat => p + h + h + h + h
+             | q' : Rat => q - h - h - h - h
+             | A1 : LebesgueRing0 1 => box1 p p'
+             | A2 : LebesgueRing0 1 => box1 q' q
+             | AJ : LebesgueRing0 1 => join {LebesgueRing0 1} A1 A2
+             | AM : LebesgueRing0 1 => meet {LebesgueRing0 1} A1 A2
+        \in \have | m1 : meas {LebesgueRing0 1} A1 = Real.fromRat (p' - p) => box-meas {p} {p'} linarith
+                  | m2 : meas {LebesgueRing0 1} A2 = Real.fromRat (q - q') => box-meas {q'} {q} linarith
+                  | mm : meas {LebesgueRing0 1} A1 RealAbGroup.+ meas {LebesgueRing0 1} A2 = meas {LebesgueRing0 1} AJ RealAbGroup.+ meas {LebesgueRing0 1} AM => meas-modular {LebesgueRing0 1} {A1} {A2}
+                  | m0 : 0 <= meas {LebesgueRing0 1} AM => meas>=0 {LebesgueRing0 1} {AM}
+                  | ms : Real.fromRat (p' - p) RealAbGroup.+ Real.fromRat (q - q') < Real.fromRat eps => transportInv (`< _) RealAbGroup.+-rat (rat_real_<.1 linarith)
+                  | a-h<p : a - H < Real.fromRat p => real_<_U.2 pU
+                  | p<a : Real.fromRat p < a => real_<_L.2 pL
+                  | b<q : b < Real.fromRat q => real_<_U.2 qU
+                  | q<b+h : Real.fromRat q < b RealAbGroup.+ H => real_<_L.2 qL
+        \in inP (intervalCutoff a b h>0, AJ, linarith, \lam z qz Uz =>
+          \let r => lastA z
+          \in \have | t1 : a < Real.fromRat r => Uz.1
+                    | t2 : Real.fromRat r < b => Uz.2
+                    | (f1,f2) => or-false (inv (lebPts-join {1} {A1} {A2} {z}) *> qz)
+                    | p<r : p < r => rat_real_<.2 (p<a <∘ t1)
+                    | r<q : r < q => rat_real_<.2 (t2 <∘ b<q)
+                    | hi : p' <= r => \case LinearOrder.dec<_<= r p' \with {
+                      | inl s => absurd $ \case inv f1 *> box-mem {p} {p'} {z} (<=-less p<r) s \with {}
+                      | inr s => s
+                    }
+                    | lo : r <= q' => \case LinearOrder.dec<_<= r q' \with {
+                      | inl s => <=-less s
+                      | inr s => absurd $ \case inv f2 *> box-mem {q'} {q} {z} s r<q \with {}
+                    }
+                    | hi' : Real.fromRat p' <= Real.fromRat r => rat_real_<=.1 hi
+                    | lo' : Real.fromRat r <= Real.fromRat q' => rat_real_<=.1 lo
+                    | ep : Real.fromRat p' = Real.fromRat p RealAbGroup.+ (H RealAbGroup.+ H RealAbGroup.+ H RealAbGroup.+ H) => four-rat
+                    | eq : Real.fromRat q' = Real.fromRat q - (H RealAbGroup.+ H RealAbGroup.+ H RealAbGroup.+ H) => four-rat'
+                    | i1 : H RealAbGroup.+ H <= Real.fromRat r - a => linarith
+                    | i2 : H RealAbGroup.+ H <= b - Real.fromRat r => linarith
+          \in trap-high h>0 (meet-univ i1 i2))
+    }
+
+-- | Bounded cover maps on `(a,b)` are integrable.
+\lemma interval-integrable {a b : Real} {f : CoverMap (OpenCoverSpace {RealN 1} (interval-open a b)) RealNormed} {M : Real}
+                           (h : \Pi (u : Set.Total (OpenInterval a b)) -> RealAbGroup.abs (f u) <= M) : IsIntegrableOn (interval-open a b) f
+  => integrable-bounded (interval-located a b) h

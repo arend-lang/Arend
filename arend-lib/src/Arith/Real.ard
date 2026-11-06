@@ -414,6 +414,11 @@
 \lemma rat_real_<= {a b : Rat} : a <= b <-> Real.fromRat a <= Real.fromRat b
   => (\lam p q => p $ rat_real_<.2 q, \lam p q => p $ rat_real_<.1 q)
 
+\lemma real_<=-eps {x y : Real} (h : \Pi {d : Rat} -> 0 < d -> x < y + d) : x <= y
+  => \lam y<x => \case real_<-rat-char.1 (OrderedAddGroup.to>0 y<x) \with {
+    | inP (a,p,q) => <-irreflexive $ real_<_L.2 q <∘ OrderedAddGroup.<-diff-mid-conv (transport (_ <) +-comm (h (rat_real_<.2 (real_<_U.2 p))))
+  }
+
 \lemma rat_real_meet {a b : Rat} : Real.fromRat (a ∧ b) = Real.fromRat a ∧ Real.fromRat b
   => <=-antisymmetric (meet-univ (rat_real_<=.1 meet-left) (rat_real_<=.1 meet-right)) \case TotalOrder.meet-isMin a b \with {
     | byLeft p => rewrite p meet-left

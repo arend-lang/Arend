@@ -1,0 +1,455 @@
+{- | Cover maps `ℝⁿ -> ℝ` with compact support and the embedding {iota} to the Lebesgue integral `L¹(ℝⁿ)`.
+ -
+ -   An approximant of `g` is a rational step function close to `g` at rational points, see {IsApprox}.
+ -   Approximants exist by uniform continuity, and {iota} is their limit.
+ -}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.MeasureIntegrationSpace
+\import Analysis.Measure.Lebesgue
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.SimpleFunctions
+\import Analysis.Measure.RatSFunc
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Topology.Compact
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Product
+\import Topology.CoverSpace.Product
+\open SFunc (inSF)
+\open SFuncRepr (IsReduced)
+
+-- | The radius of a ball containing the cube `[-R,R)ⁿ`.
+\func cubeRad (n : Nat) (R : Rat) : Rat \elim n
+  | 0 => 0
+  | suc n => cubeRad n R + R
+
+\lemma cube-in {n : Nat} {R : Rat} {z : Array Rat n} (h : lebPts n (ratCube n R) z = true) : lnorm (ratPt z) <= cubeRad n R \elim n
+  | 0 => <=-refl
+  | suc n =>
+    \have | (c1,c2,c3) => ratCube-mem.1 h
+          | i : lnorm (ratPt (initA z)) <= cubeRad n R => cube-in {n} {R} {initA z} c1
+          | b : RatField.abs (lastA z) <= R => RatField.join-univ (<=-less c3) linarith
+          | b' : RealAbGroup.abs (Real.fromRat (lastA z)) <= Real.fromRat R => rewrite RealAbGroup.abs-rat (rat_real_<=.1 b)
+          | p : Real.fromRat (cubeRad n R + R) = Real.fromRat (cubeRad n R) RealAbGroup.+ Real.fromRat R => inv RealAbGroup.+-rat
+    \in transportInv (_ <=) p $ RealAbGroup.<=_+ i b'
+
+\lemma cube-out {n : Nat} {R : Rat} {z : Array Rat n} (h : lebPts n (ratCube n R) z = false) : Real.fromRat R <= lnorm {RealN n} (ratPt z) \elim n
+  | 0 => contradiction
+  | suc n =>
+    \have | d1>=0 : 0 <= lnorm {RealN n} (ratPt (initA z)) => lnorm>=0 {RealN n}
+          | d2>=0 : 0 <= RealAbGroup.abs (Real.fromRat (lastA z)) => lnorm>=0 {RealNormed}
+          | e : lnorm {RealN (suc n)} (ratPt z) = lnorm {RealN n} (ratPt (initA z)) RealAbGroup.+ RealAbGroup.abs (Real.fromRat (lastA z)) => idp
+          | big (b : R <= RatField.abs (lastA z)) : Real.fromRat R <= lnorm {RealN (suc n)} (ratPt z) =>
+            \have b' : Real.fromRat R <= RealAbGroup.abs (Real.fromRat (lastA z)) => rewrite RealAbGroup.abs-rat (rat_real_<=.1 b)
+            \in linarith
+     \in cases (lebPts n (ratCube n R) (initA z) arg addPath) \with {
+      | false, q => \have i : Real.fromRat R <= lnorm {RealN n} (ratPt (initA z)) => cube-out {n} {R} {initA z} q \in hiding (big) linarith
+      | true, q => \case LinearOrder.dec<_<= (lastA z) (negative R), LinearOrder.dec<_<= (lastA z) R \with {
+        | inl p, _ => big (\have a : negative (lastA z) <= RatField.abs (lastA z) => RatField.abs>=neg \in hiding (big) linarith)
+        | _, inr p => big (\have a : lastA z <= RatField.abs (lastA z) => RatField.abs>=id \in hiding (big) linarith)
+        | inr p1, inl p2 => absurd $ \case inv h *> ratCube-mem.2 (q,p1,p2) \with {}
+      }
+    }
+
+-- | Cover maps `ℝⁿ -> ℝ` with compact support.
+\record CompactCoverMap' (n : Nat) \extends CoverMap
+  | Dom => RealN n
+  | Cod => RealNormed
+  | support' : ∃ (R : Rat) ∀ {x} (Real.fromRat R < lnorm x) (func x = 0)
+  \where {
+    \protected \lemma ext {n : Nat} {g h : CompactCoverMap' n} (p : \Pi (x : RealN n) -> g x = h x) : g = h
+      => Paths.Meta.ext (exts p)
+  }
+
+-- | Cover maps `ℝⁿ -> ℝ` with compact support.
+\record CompactCoverMap (n : Nat) (map : CoverMap (RealN n) RealNormed)
+  | support : ∃ (R : Rat) ∀ {x} (Real.fromRat R < lnorm x) (map x = 0)
+  \where {
+    \protected \lemma ext {n : Nat} {g h : CompactCoverMap n} (p : \Pi (x : RealN n) -> g.map x = h.map x) : g = h
+      => Paths.Meta.ext (exts p)
+  }
+
+-- | {s} is {e}-close to {g} at the rational points of {K} and equal to {g} at other rational points.
+\type IsApprox {n : Nat} (g : RealN n -> Real) (K : LebesgueRing0 n) (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) : \Prop
+  => \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z) - stepEval z s) <= if (lebPts n K z) e 0
+
+-- | Approximants of a cover map with compact support exist.
+\lemma approx-exists {n : Nat} (g : CoverMap (RealN n) RealNormed) {R : Rat} (gR : \Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) {e : Rat} (e>0 : 0 < e)
+  : ∃ (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g (ratCube n (R + 1)) e s)
+  => \let | R' : Rat => R + 1
+          | M : Rat => (cubeRad n R' ∨ 0) + 2
+     \in \have | j1 : cubeRad n R' <= cubeRad n R' ∨ 0 => join-left
+               | j2 : 0 <= cubeRad n R' ∨ 0 => join-right
+               | M>0 : 0 < M => linarith
+               | e2>0 : 0 < e * ratio 1 2 => linarith
+     \in \case cover-uniform-ball (RealN-ballsTB n) g 0 M>0 e2>0 \with {
+       | inP (d,d>0,gu) =>
+         \have d'>0 : 0 < d ∧ 1 => <_meet-univ d>0 RatField.zro<ide
+         \in \case cubeCells n R' d'>0 \with {
+           | inP (l,l1,l2,l3) => \case FinSet.finiteAC (\lam (i : Fin l.len) => rat-approx (g (l i).1) e2>0) \with {
+             | inP c =>
+               \let | arr : Array (\Sigma RatIntegrationSpace (LebesgueRing0 n)) l.len => mkArray \lam i => ((c i).1, (l i).2)
+               \in \have ar : IsReduced arr => disjoint-reduced {n} {arr} l1
+               \in inP (inSF arr, \lam z => cases (lebPts n (ratCube n (R + 1)) z arg addPath) \with {
+                 | true, zK => \case l3 zK \with {
+                   | inP (i,q) =>
+                     \have | (q1,_) => l2 q
+                           | se : stepEval z (inSF arr) = (c i).1 => (lebPoint z).evalL-index {_} {arr} ar q
+                           | ci : RealAbGroup.abs (g (l i).1 - Real.fromRat (c i).1) < Real.fromRat (e * ratio 1 2) => (c i).2
+                           | z<A : (dist {RealN n} 0 (ratPt z)).U ((cubeRad n R' ∨ 0) + 1) => real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n}) $ cube-in zK <∘r rat_real_<.1 linarith
+                           | cz<1 : (dist (l i).1 (ratPt z)).U 1 => ExUpperReal.U_<= (real_<_U.1 q1) meet-right
+                           | cz<d : (dist (l i).1 (ratPt z)).U d => ExUpperReal.U_<= (real_<_U.1 q1) meet-left
+                           | gcz : RealAbGroup.abs (g (l i).1 - g (ratPt z)) < Real.fromRat (e * ratio 1 2)
+                               => real_<_U.2 (gu ((RealN n).halving-right z<A cz<1 linarith) (ExUpperReal.U_<= z<A linarith) cz<d)
+                     \in rewrite se (real-abs-triangle gcz ci (RealAbGroup.+-rat *> pmap Real.fromRat linarith))
+                 }
+                 | false, zK =>
+                   \have | g0 : g (ratPt z) = 0 => gR $ (rat_real_< {R} {R'}).1 linarith <∘l cube-out zK
+                         | s0 : stepEval z (inSF arr) = 0 => (lebPoint z).evalL-false {_} {arr} \lam j => cases (lebPts n (l j).2 z arg addPath) \with {
+                           | true, q => absurd $ \case inv zK *> (l2 q).2 \with {}
+                           | false, q => idp
+                         }
+                   \in rewrite (g0, s0) $ =_<= $ pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro
+               })
+           }
+         }
+     }
+  \where
+    \lemma real-abs-triangle {a b c h h' e : Real} (p : RealAbGroup.abs (a - b) < h) (q : RealAbGroup.abs (a - c) < h') (r : h RealAbGroup.+ h' = e) : RealAbGroup.abs (b - c) <= e
+      => \have | a1 : a - b <= RealAbGroup.abs (a - b) => RealAbGroup.abs>=id
+               | a2 : negative (a - b) <= RealAbGroup.abs (a - b) => RealAbGroup.abs>=neg
+               | b1 : a - c <= RealAbGroup.abs (a - c) => RealAbGroup.abs>=id
+               | b2 : negative (a - c) <= RealAbGroup.abs (a - c) => RealAbGroup.abs>=neg
+         \in <=-less (RealAbGroup.abs_-_< linarith linarith)
+
+-- | The inclusion of step functions to `L¹(ℝⁿ)`.
+\func stepL1 {n : Nat} (s : SFuncIntegrationSpace (LebesgueRing0 n)) : LebesgueL1 n
+  => integrationCompletion s
+
+\lemma stepL1-dist {n : Nat} {s t : SFuncIntegrationSpace (LebesgueRing0 n)}
+  : ldist (stepL1 s) (stepL1 t) = integral (LatticeAbGroup.abs {SFuncIntegrationSpace (LebesgueRing0 n)} (s - t))
+  => Real.=-upper.2 $ integrationCompletion.func-isometry *> norm-dist {SFuncIntegrationSpace (LebesgueRing0 n)}
+
+\lemma approx-triangle {a : Real} {b c e e' : Rat} (p : RealAbGroup.abs (a - b) <= e) (q : RealAbGroup.abs (a - c) <= e')
+  : RatField.abs (b - c) <= e + e'
+  => \have | a1 : a - b <= RealAbGroup.abs (a - b) => RealAbGroup.abs>=id
+           | a2 : negative (a - b) <= RealAbGroup.abs (a - b) => RealAbGroup.abs>=neg
+           | b1 : a - c <= RealAbGroup.abs (a - c) => RealAbGroup.abs>=id
+           | b2 : negative (a - c) <= RealAbGroup.abs (a - c) => RealAbGroup.abs>=neg
+           | h : Real.fromRat (e + e') = e RealAbGroup.+ e' => inv RealAbGroup.+-rat
+           | m : Real.fromRat (b - c) = Real.fromRat b - c => inv (pmap (_ +) RealAbGroup.negative-rat *> RealAbGroup.+-rat)
+           | u : Real.fromRat b - c <= e + e' => linarith
+           | v : negative (Real.fromRat b - c) <= e + e' => linarith
+           | r : RealAbGroup.abs (Real.fromRat b - c) <= (e + e') => RealAbGroup.join-univ u v
+     \in rat_real_<=.2 $ transport (<= _) (pmap RealAbGroup.abs (inv m) *> RealAbGroup.abs-rat) r
+
+-- | Approximants are close.
+\lemma approx-close {n : Nat} {g : RealN n -> Real} {K K' : LebesgueRing0 n} {e e' : Rat} {s s' : SFuncIntegrationSpace (LebesgueRing0 n)} (a : IsApprox g K e s) (a' : IsApprox g K' e' s')
+  : ldist (stepL1 s) (stepL1 s') <= e RealField.* meas K + e' RealField.* meas K'
+  => \have h : integral (stepChar e K + stepChar e' K') = e RealField.* meas K RealAbGroup.+ e' RealField.* meas K'
+              => IntegrationSpace.integral_+ *> pmap2 (RealAbGroup.+) integral-stepChar integral-stepChar
+     \in rewrite stepL1-dist $ transport (_ <=) h $ step-norm-bound \lam z =>
+        transportInv (_ <=) (stepEval_+ *> pmap2 (+) stepEval-char stepEval-char) $
+        transportInv (\lam x => RatField.abs x <= _) (stepEval_+ *> pmap (_ +) stepEval_negative) (approx-triangle (a z) (a' z))
+
+-- | Approximants on the cube can be arbitrarily close to {g} in norm.
+\lemma approx-small {n : Nat} (g : CoverMap (RealN n) RealNormed) {R : Rat} (gR : \Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) {d : Rat} (d>0 : 0 < d)
+  : ∃ (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g (ratCube n (R + 1)) e s) (e RealField.* meas (ratCube n (R + 1)) < d)
+  => \case Real.U-inh_>0 {meas (ratCube n (R + 1))} \with {
+    | inP (V,mV,V>0) =>
+      \have | e>0 : 0 < d * RatField.finv V => RatField.<_*_positive_positive d>0 (RatField.finv>0 V>0)
+            | ee : (d * RatField.finv V) * V = d => *-assoc *> pmap (d *) (RatField.finv-left (/=-sym (StrictPoset.<_/= V>0))) *> ide-right
+      \in \case approx-exists g gR e>0 \with {
+        | inP (s,a) => inP (d * RatField.finv V, s, a, transport (_ <) (RealField.*-rat *> pmap Real.fromRat ee) $ RealField.<_*_positive-right (rat_real_<.1 e>0) (real_<_U.2 mV))
+      }
+  }
+
+-- | {u} is the limit of approximants of {g}.
+\type IsIota {n : Nat} (g : RealN n -> Real) (u : LebesgueL1 n) : \Prop
+  => \Pi {K : LebesgueRing0 n} {e : Rat} {s : SFuncIntegrationSpace (LebesgueRing0 n)} -> IsApprox g K e s -> ldist u (stepL1 s) <= e RealField.* meas K
+
+\lemma iota-unique {n : Nat} (g : CoverMap (RealN n) RealNormed) {R : Rat} (gR : \Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) {u u' : LebesgueL1 n} (p : IsIota g u) (q : IsIota g u') : u = u'
+  => dist-ext {LebesgueL1 n} $ Real.=-upper.1 $ <=-antisymmetric (real_<=-eps \lam {d} d>0 =>
+      \have d2>0 : 0 < d * ratio 1 2 => linarith
+      \in \case approx-small g gR d2>0 \with {
+        | inP (e,s,ap,em) =>
+          \have | a => p ap
+                | b => q ap
+                | t : ldist {LebesgueL1 n} u u' <= ldist {LebesgueL1 n} u (stepL1 s) RealAbGroup.+ ldist {LebesgueL1 n} (stepL1 s) u' => ldist-triang {LebesgueL1 n}
+                | sy : ldist {LebesgueL1 n} (stepL1 s) u' = ldist {LebesgueL1 n} u' (stepL1 s) => ldist-symm {LebesgueL1 n}
+                | h : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+          \in linarith
+      }) (ldist>=0 {LebesgueL1 n})
+
+\sfunc iota-exists {n : Nat} (g : CoverMap (RealN n) RealNormed) {R : Rat} (gR : \Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) : \Sigma (u : LebesgueL1 n) (IsIota g u)
+  => (family-limit P Pi Pc, \lam {K'} {e'} {s'} ap' => real_<=-eps \lam {d} d>0 =>
+      \have d4>0 : 0 < d * ratio 1 4 => linarith
+      \in \case approx-small g gR d4>0 \with {
+        | inP (e,s,ap,em) =>
+          \let L => family-limit P Pi Pc
+          \in \have | l : ldist {LebesgueL1 n} L (stepL1 s) < Real.fromRat (d * ratio 1 2) => real_<_U.2 (family-limit.char {LebesgueL1 n} {P} {Pi} {Pc} d4>0 (inP (e, s, ap, em, idp)) linarith)
+                    | c => approx-close {n} {g} ap ap'
+                    | t : ldist {LebesgueL1 n} L (stepL1 s') <= ldist {LebesgueL1 n} L (stepL1 s) RealAbGroup.+ ldist {LebesgueL1 n} (stepL1 s) (stepL1 s') => ldist-triang {LebesgueL1 n}
+                    | h : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 4) RealAbGroup.+ Real.fromRat (d * ratio 1 4) = Real.fromRat d
+                        => pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat *> pmap Real.fromRat linarith
+                    | d4' : 0 < Real.fromRat (d * ratio 1 4) => rat_real_<.1 d4>0
+              \in linarith
+      })
+  \where \private {
+    \type P (a : Rat) (x : LebesgueL1 n) : \Prop
+      => ∃ (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g (ratCube n (R + 1)) e s) (e RealField.* meas (ratCube n (R + 1)) < a) (x = stepL1 s)
+
+    \lemma Pi {a : Rat} (a>0 : 0 < a) : ∃ (x : LebesgueL1 n) (P a x)
+      => \case approx-small g gR a>0 \with {
+        | inP (e,s,ap,em) => inP (stepL1 s, inP (e, s, ap, em, idp))
+      }
+
+    \lemma Pc {a b : Rat} {x y : LebesgueL1 n} (a>0 : 0 < a) (b>0 : 0 < b) (Px : P a x) (Py : P b y) : dist x y ExUpperReal.<= a RatField.+ b
+      => \lam {c} (ab<c : a + b < c) => \case \elim x, \elim y, Px, Py \with {
+        | x, y, inP (e,s,ap,em,idp), inP (e',s',ap',em',idp) => real_<_U.1 $
+          \have | t => approx-close {n} {g} ap ap'
+                | h : Real.fromRat a RealAbGroup.+ Real.fromRat b < Real.fromRat c => transportInv (`< _) RealAbGroup.+-rat (rat_real_<.1 ab<c)
+          \in linarith
+      }
+  }
+
+-- | The embedding `ι : C_c(ℝⁿ) -> L¹(ℝⁿ)`.
+\sfunc iota {n : Nat} (g : CompactCoverMap n) : LebesgueL1 n
+  => (iota-pair g).1
+  \where {
+    \private \lemma iota-pair {n : Nat} (g : CompactCoverMap n) : \Sigma (u : LebesgueL1 n) (IsIota g.map u)
+      \level \lam u v => \case g.support \with {
+        | inP (R,gR) => ext (iota-unique g.map gR u.2 v.2)
+      }
+      => \case g.support \with {
+        | inP (R,gR) => iota-exists g.map gR
+      }
+
+    \protected \lemma char {n : Nat} {g : CompactCoverMap n} : IsIota g.map (iota g)
+      => rewrite (\peval iota g) (iota-pair g).2
+  }
+
+-- | Pointwise operations on real-valued cover maps.
+\func cover2 {X : CoverSpace} (op : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed) (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => op (f x, g x))
+  => op CoverMap.∘ ProductCoverSpace.tuple f g
+
+\lemma CompactCoverMap_+ {n : Nat} (g h : CompactCoverMap n) : CompactCoverMap n (cover2 +-uniform g.map h.map) \cowith
+  | support => \case g.support, h.support \with {
+    | inP (R1,g0), inP (R2,h0) => inP (R1 ∨ R2, \lam {x} r =>
+      \have | j1 : Real.fromRat R1 <= Real.fromRat (R1 ∨ R2) => rat_real_<=.1 join-left
+            | j2 : Real.fromRat R2 <= Real.fromRat (R1 ∨ R2) => rat_real_<=.1 join-right
+      \in pmap2 (RealAbGroup.+) (g0 (j1 <∘r r)) (h0 (j2 <∘r r)) *> RealAbGroup.zro-left)
+  }
+
+\lemma CompactCoverMap_negative {n : Nat} (g : CompactCoverMap n) : CompactCoverMap n (negative-uniform CoverMap.∘ g.map) \cowith
+  | support => \case g.support \with {
+    | inP (R,g0) => inP (R, \lam r => pmap negative (g0 r) *> RealAbGroup.negative_zro)
+  }
+
+\lemma CompactCoverMap_abs {n : Nat} (g : CompactCoverMap n)
+  : CompactCoverMap n (cover2 real-join-uniform g.map (negative-uniform CoverMap.∘ g.map)) \cowith
+  | support => \case g.support \with {
+    | inP (R,g0) => inP (R, \lam {x} r => pmap RealAbGroup.abs (g0 r) *> RealAbGroup.abs_zro)
+  }
+
+\func CompactCoverMap_join {n : Nat} (g h : CompactCoverMap n) : CompactCoverMap n \cowith
+  | map => cover2 real-join-uniform g.map h.map
+  | support => \case CompactCoverMap-common g h \with {
+    | inP (R,g0,h0) => inP (R, \lam {x} r => pmap2 (∨) (g0 r) (h0 r) *> RealAbGroup.join_<= <=-refl)
+  }
+
+\lemma approx_+ {n : Nat} {g h : RealN n -> Real} {K : LebesgueRing0 n} {e e' : Rat} {s t : SFuncIntegrationSpace (LebesgueRing0 n)} (a : IsApprox g K e s) (b : IsApprox h K e' t)
+  : IsApprox (\lam x => g x RealAbGroup.+ h x) K (e + e') (s + t)
+  => \lam z =>
+    \have | p : Real.fromRat (stepEval z (s + t)) = Real.fromRat (stepEval z s) RealAbGroup.+ Real.fromRat (stepEval z t) => pmap Real.fromRat stepEval_+ *> inv RealAbGroup.+-rat
+          | q : (g (ratPt z) RealAbGroup.+ h (ratPt z)) - Real.fromRat (stepEval z (s + t)) = (g (ratPt z) - Real.fromRat (stepEval z s)) RealAbGroup.+ (h (ratPt z) - Real.fromRat (stepEval z t))
+              => rewrite p equation.abGroup
+    \in rewrite q $ RealAbGroup.abs_+ <=∘ transport (_ <=) (if-add _ e e') (RealAbGroup.<=_+ (a z) (b z))
+  \where {
+    \lemma if-add (b : Bool) (e e' : Rat) : if b e 0 RealAbGroup.+ if b e' 0 = Real.fromRat (if b (e + e') 0) \elim b
+      | true => RealAbGroup.+-rat
+      | false => RealAbGroup.+-rat *> pmap Real.fromRat zro-left
+  }
+
+\lemma approx_negative {n : Nat} {g : RealN n -> Real} {K : LebesgueRing0 n} {e : Rat} {s : SFuncIntegrationSpace (LebesgueRing0 n)} (a : IsApprox g K e s)
+  : IsApprox (\lam x => negative (g x)) K e (negative s)
+  => \lam z =>
+    \have | p : Real.fromRat (stepEval z (negative s)) = negative (Real.fromRat (stepEval z s)) => pmap Real.fromRat stepEval_negative *> inv RealAbGroup.negative-rat
+          | q : negative (g (ratPt z)) - Real.fromRat (stepEval z (negative s)) = negative (g (ratPt z) - Real.fromRat (stepEval z s)) => rewrite p equation.abGroup
+    \in rewrite (q, RealAbGroup.abs_negative) (a z)
+
+\lemma approx_abs {n : Nat} {g : RealN n -> Real} {K : LebesgueRing0 n} {e : Rat} {s : SFuncIntegrationSpace (LebesgueRing0 n)} (a : IsApprox g K e s)
+  : IsApprox (\lam x => RealAbGroup.abs (g x)) K e (LatticeAbGroup.abs {SFuncIntegrationSpace (LebesgueRing0 n)} s)
+  => \lam z =>
+    \have p : Real.fromRat (stepEval z (LatticeAbGroup.abs {SFuncIntegrationSpace (LebesgueRing0 n)} s)) = RealAbGroup.abs (Real.fromRat (stepEval z s)) => pmap Real.fromRat stepEval_abs *> inv RealAbGroup.abs-rat
+    \in rewrite p $ RealAbGroup.abs-univ RealAbGroup.abs_-left RealAbGroup.abs_-right <=∘ a z
+
+\lemma stepL1_+ {n : Nat} {s t : SFuncIntegrationSpace (LebesgueRing0 n)} : stepL1 (s + t) = stepL1 s + stepL1 t
+  => integrationCompletion.func-+
+
+\lemma stepL1_negative {n : Nat} {s : SFuncIntegrationSpace (LebesgueRing0 n)} : stepL1 (negative s) = negative (stepL1 s)
+  => integrationCompletion.func-negative
+
+\lemma stepL1_abs {n : Nat} {s : SFuncIntegrationSpace (LebesgueRing0 n)} : stepL1 (LatticeAbGroup.abs {SFuncIntegrationSpace (LebesgueRing0 n)} s) = LatticeAbGroup.abs {LebesgueL1 n} (stepL1 s)
+  => integrationCompletion.func-join *> pmap (_ ∨) stepL1_negative
+
+-- | A criterion for an element to be equal to the image of a function under {iota}.
+\lemma iota-eq {n : Nat} {g : CompactCoverMap n} {v : LebesgueL1 n}
+               (h : \Pi {d : Rat} -> 0 < d -> ∃ (K : LebesgueRing0 n) (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g.map K e s) (e RealField.* meas K < d) (ldist {LebesgueL1 n} v (stepL1 s) < d))
+  : iota g = v
+  => dist-ext {LebesgueL1 n} $ Real.=-upper.1 $ <=-antisymmetric (real_<=-eps \lam {d} d>0 =>
+      \have d2>0 : 0 < d * ratio 1 2 => linarith
+      \in \case h d2>0 \with {
+        | inP (K,e,s,ap,em,vs) =>
+          \have | a => iota.char {n} {g} ap
+                | t : ldist {LebesgueL1 n} (iota g) v <= ldist {LebesgueL1 n} (iota g) (stepL1 s) RealAbGroup.+ ldist {LebesgueL1 n} (stepL1 s) v => ldist-triang {LebesgueL1 n}
+                | sy : ldist {LebesgueL1 n} (stepL1 s) v = ldist {LebesgueL1 n} v (stepL1 s) => ldist-symm {LebesgueL1 n}
+                | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+          \in hiding (h) linarith
+      }) (ldist>=0 {LebesgueL1 n})
+
+\lemma CompactCoverMap-common {n : Nat} (g h : CompactCoverMap n) : ∃ (R : Rat) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g.map x = 0) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> h.map x = 0)
+  => \case g.support, h.support \with {
+    | inP (R1,g0), inP (R2,h0) => inP (R1 ∨ R2,
+        \lam r => g0 (rat_real_<=.1 join-left <∘r r),
+        \lam r => h0 (rat_real_<=.1 join-right <∘r r))
+  }
+
+-- | {iota} is additive.
+\lemma iota_+ {n : Nat} {g h : CompactCoverMap n} : iota (CompactCoverMap_+ g h) = iota g + iota h
+  => iota-eq \lam {d} d>0 =>
+      \have | d4>0 : 0 < d * ratio 1 4 => linarith
+            | (inP (R,g0,h0)) => CompactCoverMap-common g h
+            | (inP (e,s,a,em)) => approx-small g.map g0 d4>0
+            | (inP (e',t,b,em')) => approx-small h.map h0 d4>0
+            | c1 => iota.char {n} {g} a
+            | c2 => iota.char {n} {h} b
+            | r : Real.fromRat (d * ratio 1 4) RealAbGroup.+ Real.fromRat (d * ratio 1 4) RealAbGroup.+ Real.fromRat (d * ratio 1 4) RealAbGroup.+ Real.fromRat (d * ratio 1 4) = Real.fromRat d
+                => pmap (RealAbGroup.+ _) (pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat) *> RealAbGroup.+-rat *> pmap Real.fromRat linarith
+            | d4' : 0 < Real.fromRat (d * ratio 1 4) => rat_real_<.1 d4>0
+            | m : (e + e') RealField.* meas (ratCube n (R + 1)) = e RealField.* meas (ratCube n (R + 1)) RealAbGroup.+ e' RealField.* meas (ratCube n (R + 1))
+                => pmap (RealField.* _) (inv RealAbGroup.+-rat) *> RealField.rdistr
+            | t1 : ldist {LebesgueL1 n} (iota g + iota h) (stepL1 s + stepL1 t) <= ldist {LebesgueL1 n} (iota g) (stepL1 s) RealAbGroup.+ ldist {LebesgueL1 n} (iota h) (stepL1 t) => ldist_+ {LebesgueL1 n}
+      \in inP (ratCube n (R + 1), e + e', s + t, approx_+ {n} {g.map} {h.map} a b, rewrite m linarith, rewrite stepL1_+ linarith)
+
+-- | {iota} preserves negation.
+\lemma iota_negative {n : Nat} {g : CompactCoverMap n} : iota (CompactCoverMap_negative g) = negative (iota g)
+  => iota-eq \lam {d} d>0 =>
+      \have | (inP (R,g0)) => g.support
+            | (inP (e,s,a,em)) => approx-small g.map g0 d>0
+            | c => iota.char {n} {g} a
+            | e' : ldist {LebesgueL1 n} (negative (iota g)) (negative (stepL1 s)) = ldist {LebesgueL1 n} (iota g) (stepL1 s) => ldist_negative {LebesgueL1 n}
+      \in inP (ratCube n (R + 1), e, negative s, approx_negative {n} {g.map} a, em, rewrite stepL1_negative linarith)
+
+-- | {iota} preserves the absolute value.
+\lemma iota_abs {n : Nat} {g : CompactCoverMap n} : iota (CompactCoverMap_abs g) = LatticeAbGroup.abs {LebesgueL1 n} (iota g)
+  => iota-eq \lam {d} d>0 => \case g.support \with {
+    | inP (R,g0) => \case approx-small g.map g0 d>0 \with {
+      | inP (e,s,a,em) =>
+        \have | c => iota.char {n} {g} a
+              | e' : ldist {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (iota g)) (LatticeAbGroup.abs {LebesgueL1 n} (stepL1 s)) <= ldist {LebesgueL1 n} (iota g) (stepL1 s) => (LebesgueL1 n).ldist_abs
+        \in inP (ratCube n (R + 1), e, LatticeAbGroup.abs {SFuncIntegrationSpace (LebesgueRing0 n)} s, approx_abs {n} {g.map} a, em, rewrite stepL1_abs linarith)
+    }
+  }
+
+-- | The bound of `∫ |ι g|` by a bound of `g` at rational points.
+\lemma iota-bound {n : Nat} {g : CompactCoverMap n} {a : LebesgueRing0 n} {M : Rat} (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g.map (ratPt z)) <= Real.fromRat (if (lebPts n a z) M 0))
+  : integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (iota g)) <= M RealField.* meas a
+  => real_<=-eps \lam {d} d>0 =>
+    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \in \case g.support \with {
+      | inP (R,g0) => \case approx-small g.map g0 d2>0 \with {
+        | inP (e,s,ap,em) =>
+          \let | K => ratCube n (R + 1)
+               | t => stepChar M a + stepChar e K
+               | X => iota g
+               | S => stepL1 s
+          \in \have | pt (z : Array Rat n) : RatField.abs (stepEval z s) <= stepEval z t =>
+                        \have | e1 : Real.fromRat (RatField.abs (stepEval z s)) = RealAbGroup.abs (Real.fromRat (stepEval z s)) => inv RealAbGroup.abs-rat
+                              | e2 : Real.fromRat (stepEval z t) = Real.fromRat (if (lebPts n a z) M 0) RealAbGroup.+ Real.fromRat (if (lebPts n K z) e 0)
+                                  => pmap Real.fromRat (stepEval_+ {n} {z} {stepChar M a} {stepChar e K} *> pmap2 (+) stepEval-char stepEval-char) *> inv RealAbGroup.+-rat
+                              | u : RealAbGroup.abs (Real.fromRat (stepEval z s)) <= RealAbGroup.abs (g.map (ratPt z)) RealAbGroup.+ RealAbGroup.abs (g.map (ratPt z) - Real.fromRat (stepEval z s))
+                                  => transport (\lam w => RealAbGroup.abs w <= _) (equation.abGroup : g.map (ratPt z) + negative (g.map (ratPt z) - Real.fromRat (stepEval z s)) = Real.fromRat (stepEval z s))
+                                      (RealAbGroup.abs_+ <=∘ transport (\lam w => _ RealAbGroup.+ w <= _) (inv RealAbGroup.abs_negative) <=-refl)
+                        \in (rat_real_<= {RatField.abs (stepEval z s)} {stepEval z t}).2 $ transport2 (<=) (inv e1) (inv e2) (u <=∘ RealAbGroup.<=_+ (h z) (ap z))
+                  | s1 : integral (LatticeAbGroup.abs {SFuncIntegrationSpace (LebesgueRing0 n)} s) <= integral {SFuncIntegrationSpace (LebesgueRing0 n)} t => step-norm-bound {n} {_} {t} pt
+                  | s2 : integral {SFuncIntegrationSpace (LebesgueRing0 n)} t = M RealField.* meas a RealAbGroup.+ e RealField.* meas K
+                      => IntegrationSpace.integral_+ {SFuncIntegrationSpace (LebesgueRing0 n)} {stepChar M a} {stepChar e K} *> pmap2 (RealAbGroup.+) integral-stepChar integral-stepChar
+                  | s3 : integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} S) = integral (LatticeAbGroup.abs {SFuncIntegrationSpace (LebesgueRing0 n)} s)
+                      => pmap (integral {LebesgueL1 n}) (inv stepL1_abs) *> integrationCompletion.func-integral
+                  | c : ldist {LebesgueL1 n} X S <= e RealField.* meas K => iota.char {n} {g} ap
+                  | c' : ldist {LebesgueL1 n} X S = integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (X - S)) => lnorm-ldist {LebesgueL1 n}
+                  | tr : integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} X) <= integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (X - S)) RealAbGroup.+ integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} S)
+                      => transportInv (_ <=) (inv (IntegrationSpace.integral_+ {LebesgueL1 n})) $ IntegrationSpace.integral-mono {LebesgueL1 n} $
+                          transport (\lam w => LatticeAbGroup.abs {LebesgueL1 n} w <= {LebesgueL1 n} _) (+-assoc {LebesgueL1 n} *> pmap (X +) (negative-left {LebesgueL1 n}) *> zro-right {LebesgueL1 n}) (LatticeAbGroup.abs_+ {LebesgueL1 n})
+                  | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+             \in hiding (pt,h) linarith
+      }
+    }
+
+-- | Maps with compact support are uniformly continuous.
+\lemma CompactCoverMap-uniform {n : Nat} (g : CompactCoverMap n) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (d : Rat) (0 < d) ∀ {x y} ((dist x y).U d) (RealAbGroup.abs (g.map x - g.map y) < eps)
+  => \have | (inP (R,g0)) => g.support
+           | j0 : 0 <= R ∨ 0 => join-right
+           | j1 : R <= R ∨ 0 => join-left
+           | B>0 : 0 < (R ∨ 0) + 3 => linarith
+           | (inP (d,d>0,gu)) => cover-uniform-ball (RealN-ballsTB n) g.map 0 B>0 eps>0
+           | dm>0 : 0 < d ∧ 1 => <_meet-univ d>0 RatField.zro<ide
+     \in inP (d ∧ 1, dm>0, \lam {x} {y} xy => \case Real.LU-located {lnorm x} {(R ∨ 0) + 1} {(R ∨ 0) + 2} linarith \with {
+            | byRight u =>
+              \have u' : (dist {RealN n} 0 x).U ((R ∨ 0) + 2) => real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n}) (real_<_U.2 u)
+              \in real_<_U.2 $ gu (ExUpperReal.U_<= u' linarith) ((RealN n).halving u' (ExUpperReal.U_<= xy meet-right) linarith) (ExUpperReal.U_<= xy meet-left)
+            | byLeft l =>
+              \have | l' : Real.fromRat ((R ∨ 0) + 1) < lnorm x => real_<_L.2 l
+                    | xy1 : ldist {RealN n} x y < 1 => real_<_U.2 (ExUpperReal.U_<= xy meet-right)
+                    | t : lnorm x - lnorm y <= ldist {RealN n} x y => transportInv (_ <=) (lnorm-ldist {RealN n}) (lnorm_-left {RealN n})
+                    | rr : Real.fromRat ((R ∨ 0) + 1) = Real.fromRat (R ∨ 0) RealAbGroup.+ 1 => inv RealAbGroup.+-rat
+                    | rj : Real.fromRat R <= Real.fromRat (R ∨ 0) => rat_real_<=.1 j1
+                    | x0 : g.map x = 0 => g0 (linarith : Real.fromRat R < lnorm x)
+                    | y0 : g.map y = 0 => g0 (linarith : Real.fromRat R < lnorm y)
+              \in rewrite (x0, y0) $ transportInv (`< _) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) (rat_real_<.1 eps>0)
+          })
+
+-- | The integral is monotone on functions with compact support.
+\lemma CompactCoverMap-integral-mono {n : Nat} {g h : CompactCoverMap n} (p : \Pi (x : RealN n) -> g.map x <= h.map x)
+  : integral {LebesgueL1 n} (iota g) <= integral {LebesgueL1 n} (iota h)
+  => \let d => CompactCoverMap_+ h (CompactCoverMap_negative g)
+     \in \have | e : CompactCoverMap_abs d = d => CompactCoverMap.ext {n} {CompactCoverMap_abs d} {d} (\lam x => RealAbGroup.abs-ofPos (RealAbGroup.to>=0 (p x)))
+               | e1 : iota d = LatticeAbGroup.abs {LebesgueL1 n} (iota d) => inv (pmap iota e) *> iota_abs {n} {d}
+               | e2 : iota d = iota h - iota g => iota_+ {n} {h} {CompactCoverMap_negative g} *> pmap (_ +) (iota_negative {n} {g})
+               | e3 : integral {LebesgueL1 n} (iota d) = integral {LebesgueL1 n} (iota h) - integral {LebesgueL1 n} (iota g)
+                   => pmap (integral {LebesgueL1 n}) e2 *> IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}})
+               | pos : 0 <= integral {LebesgueL1 n} (iota d) => transportInv (\lam w => 0 <= integral {LebesgueL1 n} w) e1 (IntegrationSpace.integral>=0 {LebesgueL1 n} (LatticeAbGroup.abs>=0 {LebesgueL1 n}))
+     \in linarith

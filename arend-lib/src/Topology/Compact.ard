@@ -1,3 +1,5 @@
+\import Algebra.Meta
+\import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real.UpperReal
@@ -7,6 +9,7 @@
 \import Logic
 \import Logic.Meta
 \import Meta
+\import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -186,13 +189,63 @@
 \lemma locallyTotallyBounded-locallyUniform {X : StronglyRegularUniformSpace} (Xltb : X.isUniform IsTotallyBoundedSet) (Xd : X.IsProperUniform) : IsLocallyUniformSpace X
   => inP (\lam U => \Sigma (IsTotallyBoundedSet U) (∃ U), Xd Xltb, locallyUniform-cover-char (later __.1) (later __.2))
 
-\func BallsTotallyBounded (X : ExPseudoMetricSpace) : \Prop
+\type BallsTotallyBounded (X : ExPseudoMetricSpace) : \Prop
   => \Pi (x : X) {eps : Rat} -> 0 < eps -> IsTotallyBoundedSet (OBall eps x)
 
 \lemma metric-locallyUniform {X : PseudoMetricSpace} (Xbtb : BallsTotallyBounded X) : IsLocallyUniformSpace X
   => locallyTotallyBounded-locallyUniform (uniform-subset (X.metricUniform RatField.zro<ide) $ later \lam {_} (inP (x,idp)) => Xbtb x RatField.zro<ide) X.metricProperUniform
 
+-- | Every Cauchy cover is uniform on {T}.
+\type IsCauchyUniformSet {X : PreuniformSpace} (T : Set X) : \Prop
+  => ∀ {E : X.isCauchy} (isUniform \lam V => ∃ (W : E) (T ∧ V ⊆ W))
+
+\lemma cauchyUniformSet-subset {X : PreuniformSpace} {S T : Set X} (S<=T : S ⊆ T) (Tc : IsCauchyUniformSet T) : IsCauchyUniformSet S
+  => \lam Ec => uniform-subset (Tc Ec) \lam {V} (inP (W,EW,p)) => inP $ later (W, EW, \lam {x} (Sx,Vx) => p (S<=T Sx, Vx))
+
+\lemma totallyBoundedSet-cauchyUniform {X : StronglyRegularUniformSpace} {T : Set X} (Ttb : IsTotallyBoundedSet T) (Tp : ∃ T) : IsCauchyUniformSet T
+  => \lam Ec => locallyUniform-cover-char {X} {\lam U => U = T} (\lam p => rewrite p Ttb) (\lam p => rewrite p Tp) Ec idp
+
+-- | In a metric space, totally bounded sets are Cauchy-uniform; unlike {totallyBoundedSet-cauchyUniform}, this does not require {T} to be inhabited.
+\lemma totallyBoundedSet-cauchyUniform-metric {X : PseudoMetricSpace} {T : Set X} (Ttb : IsTotallyBoundedSet T) : IsCauchyUniformSet T
+  => \case totallyBoundedSet-metric-char.1 Ttb RatField.zro<ide \with {
+    | inP (nil, g) => \lam Ec => uniform-subset (X.metricUniform RatField.zro<ide) $ later \lam {_} (inP (x,idp)) => \case cauchy-cover Ec x \with {
+      | inP (W,EW,_) => inP $ later (W, EW, \lam {y} (Ty,_) => \case g Ty \with {
+        | inP ((),_)
+      })
+    }
+    | inP (:: x0 _, _) => cauchyUniformSet-subset (\lam Tx => byLeft Tx) $ totallyBoundedSet-cauchyUniform {X} {\lam x => T x || (x = x0)} (insert-tb x0 Ttb) (inP (x0, byRight idp))
+  }
+  \where {
+    \lemma insert-tb {X : ExPseudoMetricSpace} {T : Set X} (x0 : X) (Ttb : IsTotallyBoundedSet T) : IsTotallyBoundedSet (\lam x => T x || (x = x0))
+      => (totallyBoundedSet-metric-char {X} {\lam x => T x || (x = x0)}).2 \lam eps>0 => \case totallyBoundedSet-metric-char.1 Ttb eps>0 \with {
+        | inP (D,g) => inP (x0 :: D, \lam {x} h => \case \elim h \with {
+          | byLeft Tx => \case g Tx \with {
+            | inP (j,d) => inP (suc j, d)
+          }
+          | byRight p => inP (0, rewrite p (OBall-center eps>0))
+        })
+      }
+  }
+
+-- | In a space with totally bounded balls, bounded sets are totally bounded.
+\lemma ballsTB-totallyBounded {X : ExPseudoMetricSpace} (Xb : BallsTotallyBounded X) {T : Set X} (Tb : IsBoundedSet T) : IsTotallyBoundedSet T \elim Tb
+  | inP (x0,B,h) =>
+    \have B'>0 : 0 < B ∨ 1 => RatField.zro<ide <∘l join-right
+    \in totallyBoundedSet-subset (\lam Tx => ExUpperReal.U_<= (h Tx) join-left) (Xb x0 B'>0)
+
 \lemma locallyUniformMapFromCover {X Y : RegularPreuniformSpace} (Xlu : IsLocallyUniformSpace X) (f : CoverMap X Y) : LocallyUniformMap X Y f \cowith
   | func-locally-uniform Eu => \case Xlu \with {
     | inP (C,Cu,h) => inP (C, Cu, \lam CU => uniform-subset (h (f.func-cover (Y.makeCauchy Eu)) CU) \lam {V} (inP (_, inP (W,EW,idp), p)) => inP $ later (W, EW, p))
   }
+
+-- | A cover map from a space with totally bounded balls is uniform on balls.
+\lemma cover-uniform-ball {X : PseudoMetricSpace} {Y : ExPseudoMetricSpace} (Xb : BallsTotallyBounded X) (g : CoverMap X Y) (x0 : X) {R eps : Rat} (R>0 : 0 < R) (eps>0 : 0 < eps)
+  : ∃ (d : Rat) (0 < d) ∀ {x y : X} (OBall R x0 x) (OBall R x0 y) ((dist x y).U d -> (dist (g x) (g y)).U eps)
+  => \have | e>0 : 0 < eps * ratio 1 2 => linarith
+           | Ec => g.func-cover (Y.makeCauchy (Y.metricUniform e>0))
+           | lu => locallyUniform-cover-char {X} {\lam U => U = OBall R x0} (\lam p => rewrite p (Xb x0 R>0)) (\lam p => rewrite p $ inP (x0, OBall-center R>0)) Ec idp
+     \in \case dist-uniform.1 lu \with {
+       | inP (d,d>0,h) => inP (d, d>0, \lam {x} {y} Bx By xy<d => \case h x \with {
+         | inP (V, inP (_, inP (_, inP (t,idp), idp), q), g') => Y.halving1/2 (q (Bx, g' (OBall-center {X} d>0))) (q (By, g' xy<d))
+       })
+     }

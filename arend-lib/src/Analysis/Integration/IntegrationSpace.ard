@@ -70,6 +70,9 @@
   \lemma integral_*q {q : Rat} {a : E} : integral (q *q a) = q RealField.* integral a
     => func-*q {_} {_} {integral-hom} *> QModule.fromRatModule_*q
 
+  \lemma ldist_abs {a b : E} : ldist (abs a) (abs b) RealAbGroup.<= ldist a b
+    => rewrite (lnorm-ldist, lnorm-ldist) $ integral-mono $ abs-univ abs_-left abs_-right
+
   \lemma integral-metric : NormedAbGroupMap \this RealNormed integral \cowith
     | func-+ => integral_+
     | func-norm => Real.<=-upper.1 integral_abs

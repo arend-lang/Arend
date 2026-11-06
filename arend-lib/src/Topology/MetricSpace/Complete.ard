@@ -1,3 +1,4 @@
+\import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -182,3 +183,54 @@
         | byRight p => X.halving (real_<_U.1 p) xy<2e linarith
       }
   }
+
+-- | {z} is a limit of the family {P} if it is within `a` of every element of `P a`.
+\type IsFamilyLimit {X : ExPseudoMetricSpace} (P : Rat -> Set X) (z : X) : \Prop
+  => \Pi {a : Rat} {x : X} -> 0 < a -> P a x -> dist z x <= a
+
+-- | The limit of a family of inhabited sets such that elements of `P a` and `P b` are within `a + b` of each other.
+\sfunc family-limit {X : CompleteMetricSpace} (P : Rat -> Set X) (Pi : \Pi {a : Rat} -> 0 < a -> ∃ (x : X) (P a x))
+                    (Pc : \Pi {a b : Rat} {x y : X} -> 0 < a -> 0 < b -> P a x -> P b y -> dist x y <= a RatField.+ b) : X
+  => X.filter-point (limitFilter P Pi Pc)
+  \where {
+    \func limitSetFilter {X : CompleteMetricSpace} (P : Rat -> Set X) (Pi : \Pi {a : Rat} -> 0 < a -> ∃ (x : X) (P a x)) : SetFilter X \cowith
+      | F U => ∃ (e : Rat) (0 < e) (\Pi {b : Rat} {y : X} -> 0 < b -> b <= e -> P b y -> U y)
+      | filter-mono (inP (e,e>0,q)) p => inP (e, e>0, \lam b>0 b<=e Py => p (q b>0 b<=e Py))
+      | filter-top => inP (1, RatField.zro<ide, \lam _ _ _ => ())
+      | filter-meet (inP (e,e>0,q)) (inP (e',e'>0,q')) => inP (e ∧ e', <_meet-univ e>0 e'>0, \lam b>0 b<=m Py => (q b>0 (b<=m <=∘ meet-left) Py, q' b>0 (b<=m <=∘ meet-right) Py))
+
+    \func limitFilter {X : CompleteMetricSpace} (P : Rat -> Set X) (Pi : \Pi {a : Rat} -> 0 < a -> ∃ (x : X) (P a x))
+                      (Pc : \Pi {a b : Rat} {x y : X} -> 0 < a -> 0 < b -> P a x -> P b y -> dist x y <= a RatField.+ b) : CauchyFilter X \cowith
+      | SetFilter => limitSetFilter P Pi
+      | isProper (inP (e,e>0,q)) => \case Pi e>0 \with {
+        | inP (x,Px) => inP (x, q e>0 <=-refl Px)
+      }
+      | isCauchyFilter => (cauchyFilter-metric-char {X} {limitSetFilter P Pi}).2 \lam {eps} eps>0 =>
+        \have e>0 : 0 < eps * ratio 1 4 => linarith
+        \in \case Pi e>0 \with {
+          | inP (x,Px) => inP (x, inP (eps * ratio 1 4, e>0, \lam {b} {y} b>0 b<=e Py => Pc e>0 b>0 Px Py linarith))
+        }
+
+    \lemma char {X : CompleteMetricSpace} {P : Rat -> Set X} {Pi : \Pi {a : Rat} -> 0 < a -> ∃ (x : X) (P a x)}
+                {Pc : \Pi {a b : Rat} {x y : X} -> 0 < a -> 0 < b -> P a x -> P b y -> dist x y <= a RatField.+ b}
+      : IsFamilyLimit P (family-limit P Pi Pc)
+      => rewrite (\peval family-limit P Pi Pc) \lam {a} {x} a>0 Px {c} a<c =>
+        \let d => (c - a) * ratio 1 4
+        \in \have d>0 : 0 < d => linarith
+        \in \case X.filter-point-limit {limitFilter P Pi Pc} OBall-open (OBall-center d>0) \with {
+          | inP (e,e>0,q) =>
+            \have | m>0 : 0 < e ∧ d => <_meet-univ e>0 d>0
+                  | m<=d : e ∧ d <= d => meet-right
+            \in \case Pi m>0 \with {
+              | inP (y,Py) => X.halving (q m>0 meet-left Py) (Pc m>0 a>0 Py Px {a + d + d} linarith) linarith
+            }
+        }
+  }
+
+-- | The limit of a family of inhabited sets is unique.
+\lemma family-limit-unique {X : ExMetricSpace} {P : Rat -> Set X} (Pi : \Pi {a : Rat} -> 0 < a -> ∃ (x : X) (P a x)) {z z' : X} (l : IsFamilyLimit P z) (l' : IsFamilyLimit P z') : z = z'
+  => dist-ext $ <=-antisymmetric (\lam {c} c>0 =>
+      \have a>0 : 0 < c * ratio 1 4 => linarith
+      \in \case Pi a>0 \with {
+        | inP (x,Px) => X.halving-right (l a>0 Px {c * ratio 1 2} linarith) (l' a>0 Px {c * ratio 1 2} linarith) linarith
+      }) dist>=0

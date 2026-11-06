@@ -1,0 +1,229 @@
+{- | Rational step functions, that is, simple functions over the Lebesgue rings `B₀⁽ⁿ⁾`.
+ -
+ -   They are compared at rational points, which determine them by {lebPts-inj}.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.MeasureIntegrationSpace
+\import Analysis.Measure.IntervalRing
+\import Analysis.Measure.Lebesgue
+\import Analysis.Measure.MeasureProduct
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.SFuncPoints
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin.Instances
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\open SFunc (inSF)
+
+-- | A rational point as a point of the Boolean ring `B₀⁽ⁿ⁾`.
+\func lebPoint {n : Nat} (z : Array Rat n) : BoolPoint (LebesgueRing0 n) \cowith
+  | belongs a => lebPts n a z
+  | belongs_zro => lebPts-zro
+  | belongs_meet => pmap (__ z) (lebPts n).func-*
+  | belongs_join => lebPts-join
+
+-- | The value of a step function at a rational point.
+\func stepEval {n : Nat} (z : Array Rat n) (s : SFuncIntegrationSpace (LebesgueRing0 n)) : Rat
+  => (lebPoint z).sfEval s
+
+-- | The step function with value {c} on {a}.
+\func stepChar {n : Nat} (c : Rat) (a : LebesgueRing0 n) : SFuncIntegrationSpace (LebesgueRing0 n)
+  => inSF ((c,a) :: nil)
+
+\lemma stepEval_+ {n : Nat} {z : Array Rat n} {s t : SFuncIntegrationSpace (LebesgueRing0 n)} : stepEval z (s + t) = stepEval z s + stepEval z t
+  => BoolPoint.sfEval_+
+
+\lemma stepEval_negative {n : Nat} {z : Array Rat n} {s : SFuncIntegrationSpace (LebesgueRing0 n)} : stepEval z (negative s) = negative (stepEval z s)
+  => BoolPoint.sfEval_negative
+
+\lemma stepEval_abs {n : Nat} {z : Array Rat n} {s : SFuncIntegrationSpace (LebesgueRing0 n)} : stepEval z (LatticeAbGroup.abs s) = RatField.abs (stepEval z s)
+  => BoolPoint.sfEval_abs
+
+\lemma stepEval-char {n : Nat} {z : Array Rat n} {c : Rat} {a : LebesgueRing0 n} : stepEval z (stepChar c a) = if (lebPts n a z) c 0
+  => zro-right
+
+\lemma integral-stepChar {n : Nat} {c : Rat} {a : LebesgueRing0 n} : integral (stepChar c a) = c RealField.* meas a
+  => RealAbGroup.zro-right
+
+-- | Step functions are ordered pointwise.
+\lemma step_<= {n : Nat} {s t : SFuncIntegrationSpace (LebesgueRing0 n)} (h : \Pi (z : Array Rat n) -> stepEval z s <= stepEval z t) : s <= t
+  => PosetAbGroup.from>=0 $ sfunc>=0 lebPoint (\lam {b} => lebPts-kernel n b) \lam z =>
+      \have e : stepEval z (t - s) = stepEval z t - stepEval z s => stepEval_+ *> pmap (_ +) stepEval_negative
+      \in transportInv (0 <=) e $ RatField.to>=0 (h z)
+
+-- | The points `k * d - R` of a grid.
+\func gridT (R d : Rat) (k : Nat) : Rat \elim k
+  | 0 => negative R
+  | suc k => gridT R d k + d
+
+\lemma gridT>= {R d : Rat} (d>0 : 0 < d) (k : Nat) : negative R <= gridT R d k \elim k
+  | 0 => <=-refl
+  | suc k => linarith (gridT>= {R} d>0 k)
+
+\lemma gridT-mono {R d : Rat} (d>0 : 0 < d) {k k' : Nat} (p : k < k') : gridT R d k + d <= gridT R d k' \elim k, k', p
+  | 0, suc k', _ => linarith (gridT>= {R} d>0 k')
+  | suc k, suc k', p => linarith (gridT-mono {R} d>0 (NatOrder.unsuc< p))
+
+\lemma gridT-cover {R d t : Rat} (N : Nat) (l : negative R <= t) (u : t < gridT R d N) : ∃ (k : Nat) (k < N) (gridT R d k <= t) (t < gridT R d (suc k)) \elim N
+  | 0 => absurd linarith
+  | suc N => \case LinearOrder.dec<_<= t (gridT R d N) \with {
+    | inl p => \case gridT-cover N l p \with {
+      | inP (k,kN,q1,q2) => inP (k, kN <∘ id<suc, q1, q2)
+    }
+    | inr p => inP (N, id<suc, p, u)
+  }
+
+\lemma gridT-formula {R d : Rat} (k : Nat) : gridT R d k = RatField.natCoef k * d - R \elim k
+  | 0 => inv $ pmap (\lam x => x * d - R) RatField.natCoefZero *> pmap (`- R) RatField.zro_*-left *> zro-left
+  | suc k =>
+    \have h : RatField.natCoef (suc k) * d = RatField.natCoef k * d + d => pmap (__ * d) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left
+    \in pmap (`+ d) (gridT-formula k) *> linarith
+
+\lemma gridT-bound {R d : Rat} (d>0 : 0 < d) : ∃ (N : Nat) (R <= gridT R d N)
+  => \case (Real.fromRat ((R + R) * RatField.finv d)).natBounded \with {
+    | inP (N,p) =>
+      \have | d/=0 : d /= 0 => /=-sym (StrictPoset.<_/= d>0)
+            | q : (R + R) * RatField.finv d < RatField.natCoef N => p
+            | m : ((R + R) * RatField.finv d) * d < RatField.natCoef N * d => RatField.<_*_positive-left q d>0
+            | e : ((R + R) * RatField.finv d) * d = R + R => *-assoc *> pmap (_ *) (RatField.finv-left d/=0) *> ide-right
+      \in inP (N, rewrite (gridT-formula N) linarith)
+  }
+
+-- | A rational cell of the grid on `[-R,R)`.
+\sfunc gridCell (R d : Rat) (k : Nat) : RatIntervalSet
+  => ratIntervals ((gridT R d k, (gridT R d k + d) ∧ R) :: nil)
+
+\lemma gridCell-mem {R d t : Rat} {k : Nat} : ratPoints (gridCell R d k) t = true <-> (\Sigma (gridT R d k <= t) (t < gridT R d k + d) (t < R))
+  => \let c : RatInterval => (gridT R d k, (gridT R d k + d) ∧ R)
+     \in rewrite (\peval gridCell R d k) (\lam p =>
+            \have | s : \Sigma (c.1 <= t) (t < c.2) => (inRI-char {c} {t}).1 (inv (ratPoints-interval {c} {t}) *> p)
+                  | m1 : (gridT R d k + d) ∧ R <= gridT R d k + d => meet-left
+                  | m2 : (gridT R d k + d) ∧ R <= R => meet-right
+            \in (s.1, s.2 <∘l m1, s.2 <∘l m2),
+         \lam s => ratPoints-interval {c} {t} *> (inRI-char {c} {t}).2 (s.1, <_meet-univ s.2 s.3))
+
+-- | A partition of `[-R,R)` into intervals of length at most {d}.
+\lemma cells1 (R : Rat) {d : Rat} (d>0 : 0 < d) : ∃ (m : Array (\Sigma Rat RatIntervalSet))
+    (\Pi {i j : Fin m.len} {t : Rat} -> ratPoints (m i).2 t = true -> ratPoints (m j).2 t = true -> i = j)
+    (\Pi {i : Fin m.len} {t : Rat} -> ratPoints (m i).2 t = true -> \Sigma (RatField.abs ((m i).1 - t) < d) (negative R <= t) (t < R))
+    (\Pi {t : Rat} -> negative R <= t -> t < R -> ∃ (i : Fin m.len) (ratPoints (m i).2 t = true))
+  => \case gridT-bound {R} d>0 \with {
+    | inP (N,RN) => inP (mkArray {_} {N} \lam k => (gridT R d k, gridCell R d k),
+      \lam {i} {j} p q => \have | (s1,s2,_) => gridCell-mem.1 p
+                               | (s1',s2',_) => gridCell-mem.1 q
+                         \in \case LinearOrder.trichotomy (i : Nat) (j : Nat) \with {
+                           | less i<j => absurd $ linarith (gridT-mono {R} d>0 i<j)
+                           | equals e => fin_nat-inj e
+                           | greater j<i => absurd $ linarith (gridT-mono {R} d>0 j<i)
+                         },
+      \lam {i} {t} p => \have | (s1,s2,s3) => gridCell-mem.1 p
+                              | g => gridT>= {R} d>0 i
+                        \in (RatField.abs_-_< linarith linarith, linarith, s3),
+      \lam {t} l u => \case gridT-cover {R} {d} N l (u <∘l RN) \with {
+        | inP (k,kN,q1,q2) => inP (toFin k kN, rewrite toFin=id $ gridCell-mem.2 (q1, q2, u))
+      })
+  }
+
+-- | The cube `[-R,R)ⁿ`.
+\func ratCube (n : Nat) (R : Rat) : LebesgueRing0 n \elim n
+  | 0 => true
+  | suc n => rect (ratCube n R) (ratIntervals ((negative R, R) :: nil))
+
+-- | The inclusion of rational points to `ℝⁿ`.
+\func ratPt {n : Nat} (z : Array Rat n) : RealN n \elim n
+  | 0 => ()
+  | suc n => (ratPt (initA z), lastA z)
+
+\lemma lebPts-rect-char {n : Nat} {a : LebesgueRing0 n} {c : RatIntervalSet} {z : Array Rat (suc n)}
+  : lebPts (suc n) (rect a c) z = true <-> (\Sigma (lebPts n a (initA z) = true) (ratPoints c (lastA z) = true))
+  => (\lam p => and.toSigma (inv (lebPts-rect {n} {a} {c} {z}) *> p), \lam s => lebPts-rect {n} {a} {c} {z} *> and.fromSigma s)
+
+\lemma ratCube-mem {n : Nat} {R : Rat} {z : Array Rat (suc n)}
+  : lebPts (suc n) (ratCube (suc n) R) z = true <-> (\Sigma (lebPts n (ratCube n R) (initA z) = true) (negative R <= lastA z) (lastA z < R))
+  => \let c : RatInterval => (negative R, R)
+     \in (\lam p => \have | s => (lebPts-rect-char {n} {ratCube n R} {ratIntervals (c :: nil)} {z}).1 p
+                           | t : \Sigma (c.1 <= lastA z) (lastA z < c.2) => (inRI-char {c} {lastA z}).1 (inv (ratPoints-interval {c} {lastA z}) *> s.2)
+                     \in (s.1, t.1, t.2),
+         \lam s => (lebPts-rect-char {n} {ratCube n R} {ratIntervals (c :: nil)} {z}).2 (s.1, ratPoints-interval {c} {lastA z} *> (inRI-char {c} {lastA z}).2 (s.2, s.3)))
+
+-- | A partition of the cube `[-R,R)ⁿ` into cells of diameter at most {d} with a point near each cell.
+\lemma cubeCells (n : Nat) (R : Rat) {d : Rat} (d>0 : 0 < d) : ∃ (l : Array (\Sigma (RealN n) (LebesgueRing0 n)))
+    (\Pi {i j : Fin l.len} {z : Array Rat n} -> lebPts n (l i).2 z = true -> lebPts n (l j).2 z = true -> i = j)
+    (\Pi {i : Fin l.len} {z : Array Rat n} -> lebPts n (l i).2 z = true -> \Sigma (ldist {RealN n} (l i).1 (ratPt z) < d) (lebPts n (ratCube n R) z = true))
+    (\Pi {z : Array Rat n} -> lebPts n (ratCube n R) z = true -> ∃ (i : Fin l.len) (lebPts n (l i).2 z = true)) \elim n
+  | 0 => inP (((),true) :: nil, \lam {i} {j} _ _ => \case \elim i, \elim j \with { | 0, 0 => idp }, \lam {i} {z} _ => \case \elim i \with { | 0 => (rat_real_<.1 d>0, idp) }, \lam {z} p => inP (0, p))
+  | suc n =>
+    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \in \case cubeCells n R d2>0, cells1 R d2>0 \with {
+      | inP (l,l1,l2,l3), inP (m,m1,m2,m3) =>
+        \let e => ProdFin.prod_equiv {l.len} {m.len}
+        \in inP (mkArray \lam k => (((l (e k).1).1, Real.fromRat (m (e k).2).1), rect (l (e k).1).2 (m (e k).2).2),
+          \lam {i} {j} {z} p q =>
+            \have | (p1,p2) => (lebPts-rect-char {n} {(l (e i).1).2} {(m (e i).2).2} {z}).1 p
+                  | (q1,q2) => (lebPts-rect-char {n} {(l (e j).1).2} {(m (e j).2).2} {z}).1 q
+            \in inv (e.ret_f i) *> pmap e.ret (ext (l1 p1 q1, m1 p2 q2)) *> e.ret_f j,
+          \lam {i} {z} p =>
+            \have | (p1,p2) => (lebPts-rect-char {n} {(l (e i).1).2} {(m (e i).2).2} {z}).1 p
+                  | (a1,a2) => l2 p1
+                  | (b1,b2,b3) => m2 p2
+                  | s1 : ldist {RealN n} (l (e i).1).1 (ratPt (initA z)) < Real.fromRat (d * ratio 1 2) => a1
+                  | s2 : ldist {RealNormed} (Real.fromRat (m (e i).2).1) (Real.fromRat (lastA z)) < Real.fromRat (d * ratio 1 2) => rat-ldist b1
+                  | h : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+            \in (linarith, ratCube-mem.2 (a2,b2,b3)),
+          \lam {z} p =>
+            \have (c1,c2,c3) => ratCube-mem.1 p
+            \in \case l3 c1, m3 c2 c3 \with {
+              | inP (i,q1), inP (j,q2) => inP (e.sec (i,j), (lebPts-rect-char {n} {_} {_} {z}).2 (transportInv (\lam (w : \Sigma (Fin l.len) (Fin m.len)) => \Sigma (lebPts n (l w.1).2 (initA z) = true) (ratPoints (m w.2).2 (lastA z) = true)) (e.f_sec (i,j)) (q1,q2)))
+            })
+    }
+
+-- | A family of pairwise disjoint sets of rational points is reduced.
+\lemma disjoint-reduced {n : Nat} {l : Array (\Sigma RatIntegrationSpace (LebesgueRing0 n))}
+                        (h : \Pi {i j : Fin l.len} {z : Array Rat n} -> lebPts n (l i).2 z = true -> lebPts n (l j).2 z = true -> i = j)
+  : SFuncRepr.IsReduced l
+  => \lam {i} {j} ne => lebPts-kernel n _ \lam z => pmap (__ z) (lebPts n).func-* *> and-false _ _ \lam p q => ne (h p q)
+  \where
+    \lemma and-false (a b : Bool) (h : a = true -> b = true -> Empty) : a and b = false \elim a, b
+      | true, true => absurd (h idp idp)
+      | true, false => idp
+      | false, _ => idp
+
+-- | Every real number has a rational approximation.
+\lemma rat-approx (y : Real) {e : Rat} (e>0 : 0 < e) : ∃ (c : Rat) (RealAbGroup.abs (y - Real.fromRat c) < Real.fromRat e)
+  => \case y.LU-focus e e>0 \with {
+    | inP (c,p,q) =>
+      \have | p' : Real.fromRat c < y => real_<_L.2 p
+            | q' : y < Real.fromRat (c + e) => real_<_U.2 q
+            | h : Real.fromRat (c + e) = Real.fromRat c RealAbGroup.+ Real.fromRat e => inv RealAbGroup.+-rat
+            | e' : 0 < Real.fromRat e => rat_real_<.1 e>0
+      \in inP (c, RealAbGroup.abs_-_< linarith linarith)
+  }
+
+-- | A pointwise bound by a step function gives a bound on the norm.
+\lemma step-norm-bound {n : Nat} {s t : SFuncIntegrationSpace (LebesgueRing0 n)} (h : \Pi (z : Array Rat n) -> RatField.abs (stepEval z s) <= stepEval z t)
+  : integral (LatticeAbGroup.abs s) <= integral t
+  => IntegrationSpace.integral-mono $ step_<= {n} {_} {t} \lam z => rewrite (stepEval_abs {n}) (h z)

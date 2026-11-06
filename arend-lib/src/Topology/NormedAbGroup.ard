@@ -11,7 +11,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -19,14 +18,12 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
-\import Set.Set
 \import Topology.CoverSpace
 \import Topology.MetricSpace
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
-\open RatField(half,half>0)
 
 \class ExPseudoNormedAbGroup \extends ExPseudoMetricSpace, TopAbGroup {
   | norm : E -> ExUpperReal
@@ -38,7 +35,7 @@
   | +-cont => \new UniformMap (ProductUniformSpace \this \this) \this {
     | func s => s.1 + s.2
     | func-uniform Eu => \case dist-uniform.1 Eu \with {
-      | inP (eps,eps>0,h) => inP (_, metricUniform $ half>0 eps>0, _, metricUniform $ half>0 eps>0, \lam (inP (_, inP (x,idp), _, inP (y,idp), p)) => \case h (x + y) \with {
+      | inP (eps,eps>0,h) => inP (_, metricUniform $ RatField.half>0 eps>0, _, metricUniform $ RatField.half>0 eps>0, \lam (inP (_, inP (x,idp), _, inP (y,idp), p)) => \case h (x + y) \with {
         | inP (V,EV,g) => inP (_, inP (V, EV, idp), rewrite p \lam {(x',y')} (xx'<eps/2,yy'<eps/2) => g $ rewrite (norm-dist, equation.abGroup : x + y - (x' + y') = x - x' + (y - y')) $ ExUpperReal.U_<= (ExUpperReal.<=_+-char norm_+ (rewrite norm-dist in xx'<eps/2) (rewrite norm-dist in yy'<eps/2)) linarith
         )
       })
@@ -153,6 +150,15 @@
 
 \lemma lnorm-ldist {X : PseudoNormedAbGroup} {x y : X} : ldist x y = lnorm (x - y)
   => Real.=-upper.2 (later norm-dist)
+
+\lemma ldist_zro-left {X : PseudoNormedAbGroup} {x : X} : ldist 0 x = lnorm x
+  => ldist-symm *> lnorm-ldist *> pmap lnorm simplify
+
+\lemma ldist_+ {X : PseudoNormedAbGroup} {a b c d : X} : ldist (a + b) (c + d) <= ldist a c + ldist b d
+  => transport2 (<=) (inv lnorm-ldist) (inv (pmap2 (+) lnorm-ldist lnorm-ldist)) $ transport (<= _) (pmap lnorm equation.abGroup) lnorm_+
+
+\lemma ldist_negative {X : PseudoNormedAbGroup} {a b : X} : ldist (negative a) (negative b) = ldist a b
+  => lnorm-ldist *> pmap lnorm (pmap (_ +) X.negative-isInv *> +-comm) *> lnorm_- *> inv lnorm-ldist
 
 \lemma lnorm_BigSum {X : PseudoNormedAbGroup} {l : Array X} : lnorm (X.BigSum l) <= RealAbGroup.BigSum \lam j => lnorm (l j) \elim l
   | nil => transportInv (<= _) lnorm_zro <=-refl

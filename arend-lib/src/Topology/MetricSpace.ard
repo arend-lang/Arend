@@ -102,6 +102,10 @@
 \func OBall {X : ExPseudoMetricSpace} (eps : Rat) (x : X) : Set X
   => \lam y => (dist x y).U eps
 
+-- | {T} is contained in a ball.
+\type IsBoundedSet {X : ExPseudoMetricSpace} (T : Set X) : \Prop
+  => ∃ (x0 : X) (B : Rat) ∀ {x : T} (OBall B x0 x)
+
 \lemma OBall-center {X : ExPseudoMetricSpace} {eps : Rat} (eps>0 : 0 < eps) {x : X} : OBall eps x x
   => unfold OBall (rewrite dist-refl eps>0)
 
@@ -137,6 +141,9 @@
 
 \lemma OBall_<=* {X : ExPseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x <=* OBall eps x
   => inP (_, metricUniform {_} {(eps - delta) * ratio 1 2} linarith, \lam {w} (inP (_, (inP (y,idp), (z,(xz<delta,yz<e))), yw<e)) => X.halving xz<delta (X.halving1/2 yz<e yw<e) linarith)
+
+\lemma ball-<=* {X : ExPseudoMetricSpace} {T U : Set X} {r : Rat} (r>0 : 0 < r) (h : ∀ {x : T} (OBall r x ⊆ U)) : T <=* U
+  => inP (_, metricUniform {_} {r * ratio 1 2} linarith, \lam {w} (inP (_, (inP (y,idp), (x,(Tx,yx))), yw)) => h Tx (X.halving1/2 yx yw))
 
 \lemma OBall_<=< {X : ExPseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x <=< OBall eps x
   => <=*_<=< (OBall_<=* delta<eps)
