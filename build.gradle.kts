@@ -79,7 +79,7 @@ subprojects {
                     licenses {
                         license {
                             name.set("Apache-2.0")
-                            url.set("https://github.com/JetBrains/Arend/blob/master/LICENSE")
+                            url.set("https://github.com/arend-lang/Arend/blob/master/LICENSE")
                         }
                     }
                 }

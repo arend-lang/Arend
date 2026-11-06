@@ -1,1 +1,9 @@
-jdk: openjdk11
+# The modules the README offers as dependencies. JitPack's default, `./gradlew build publishToMavenLocal`, would also
+# build and test the IntelliJ plugin. The build needs JDK 21; this is how https://docs.jitpack.io/building/ installs it.
+jdk:
+  - openjdk17
+before_install:
+  - sdk install java 21-open
+  - sdk use java 21-open
+install:
+  - ./gradlew :api:publishToMavenLocal :proto:publishToMavenLocal :parser:publishToMavenLocal :base:publishToMavenLocal

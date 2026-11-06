@@ -14,7 +14,7 @@ Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
 We use gradle to build the compiler. It comes with a wrapper script (`gradlew` or `gradlew.bat` in
 the root of the repository) which downloads appropriate version of gradle
-automatically as long as you have JDK (version >= 11) installed.
+automatically as long as you have JDK (version >= 21) installed.
 
 ## Common Gradle Tasks
 
@@ -83,6 +83,6 @@ Things to keep in mind:
 + Never add generated files to the git repo.
 
 If you don't know where to start but looking for a chance of contribution,
-go ahead to [list of issues](https://github.com/JetBrains/Arend/issues) and pick
+go ahead to [list of issues](https://github.com/arend-lang/Arend/issues) and pick
 one you like. You can ask a developer on [gitter](https://gitter.im/arend-lang/community).
 -->
