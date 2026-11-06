@@ -44,6 +44,7 @@ public final class Dispatch {
       return parsed.failed() ? 1 : 0;
     }
     ctx.beginCommand();
+    ctx.clientCwd = clientCwd;
     CliSetup.populateRequestedTargets(ctx, parsed.cmdLine(), clientCwd);
     // A target that named nothing has been reported. Stop rather than dispatching with an
     // empty scope, which means "the whole library".
@@ -72,10 +73,12 @@ public final class Dispatch {
     // what keeps CLI and REPL behaviour identical.
     ConsoleQueryTool.QueryContext queryCtx = new ConsoleQueryTool.QueryContext(
         ctx.requestedLibraries, ctx.libraryManager, ctx.server, ctx.systemErrErrorReporter,
-        json.stdout(), json.active(), Set.of(), ctx.cancellation);
+        json.stdout(), json.active(), Set.of(), ctx.cancellation, ctx.clientCwd);
     for (ConsoleQueryTool tool : ConsoleMain.QUERY_TOOLS) {
       if (!cmdLine.hasOption(tool.shortName())) continue;
-      ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(cmdLine.getOptionValues(tool.shortName()));
+      // A flag given with no sub-arguments (allowed for argumentsOptional() tools) has no values.
+      String[] values = cmdLine.getOptionValues(tool.shortName());
+      ConsoleQueryTool.ConsoleToolRunner parsed = tool.parseArgs(values == null ? new String[0] : values);
       // The tool has already printed its own diagnostic on a parse failure.
       if (parsed == null) return 1;
       return (parsed.run(queryCtx) == 0 && !ctx.exitWithError) ? 0 : 1;

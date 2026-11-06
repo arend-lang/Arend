@@ -16,6 +16,7 @@ import org.arend.frontend.library.*;
 import org.arend.frontend.query.*;
 import org.arend.frontend.query.classhierarchy.ClassHierarchyTool;
 import org.arend.frontend.query.findusages.FindUsagesTool;
+import org.arend.frontend.query.guide.GuideCheckTool;
 import org.arend.frontend.query.proofsearch.ProofSearchTool;
 import org.arend.frontend.query.scopeinfo.ScopeInfoTool;
 import org.arend.frontend.query.symbolsearch.SymbolSearchTool;
@@ -41,7 +42,7 @@ public class ConsoleMain {
   /** The query tools, in help/dispatch order; iterated for registration, {@code --help} and dispatch. */
   public static final List<ConsoleQueryTool> QUERY_TOOLS = List.of(
           SymbolSearchTool.INSTANCE, ProofSearchTool.INSTANCE, FindUsagesTool.INSTANCE,
-          ClassHierarchyTool.INSTANCE, ScopeInfoTool.INSTANCE);
+          ClassHierarchyTool.INSTANCE, ScopeInfoTool.INSTANCE, GuideCheckTool.INSTANCE);
 
 
   /**
@@ -76,7 +77,7 @@ public class ConsoleMain {
       // The query tools (-ss/-ps/-fu/-ch/-sc): registered from the shared registry so each flag's option identity lives on its ConsoleQueryTool.
       for (ConsoleQueryTool tool : QUERY_TOOLS) {
         cmdOptions.addOption(Option.builder(tool.shortName()).longOpt(tool.longName())
-            .hasArgs().argName(tool.argName()).desc(tool.cliDescription()).build());
+            .hasArgs().optionalArg(tool.argumentsOptional()).argName(tool.argName()).desc(tool.cliDescription()).build());
       }
       cmdOptions.addOption(Option.builder().longOpt("json").desc("with -ss/-ps/-fu/-sc/-ch: print results as a single JSON object on stdout ({results:[...],count:N}; -sc uses {target,entries:[...],count:N}; -ch uses {target,superclasses:[...],subclasses:[...],instances:[...],newSites:[...],counts}); all diagnostics ([INFO]/[WARN]/[ERROR], query echo) go to a log file, keeping stdout pure JSON and the console clean (ignored in REPL mode). For -fu, each usage is a separate entry (never grouped by row).").build());
       cmdOptions.addOption(Option.builder("d").longOpt("daemon").desc("start a daemon for the given library: a LIBRARY positional anchored to an arend.yaml, or a name resolved via -L, defaulting to ./arend.yaml when omitted. The daemon only registers the library at start; each served request typechecks just the import cone it needs, which then stays warm for later requests.").build());

@@ -64,6 +64,13 @@ public class CommandContext {
   public String[] bootstrapArgs;
 
   /**
+   * The directory the current command was issued from, when that is not this process's own (a
+   * daemon serves clients anywhere). Null for a local run. Relative paths in the command's
+   * arguments are relative to it.
+   */
+  public String clientCwd;
+
+  /**
    * Trips the long-running commands. A local run leaves the unstoppable default; the daemon
    * worker swaps in a per-task indicator, so a client {@code cancel} reaches
    * {@code ComputationRunner.checkCanceled()} inside the typechecker.
@@ -161,6 +168,7 @@ public class CommandContext {
    * forgotten in a reset method somewhere else is a leak nobody would find.
    */
   public void beginCommand() {
+    clientCwd = null;
     exitWithError = false;
     moduleResults.clear();
     streamDiagnostics = true;

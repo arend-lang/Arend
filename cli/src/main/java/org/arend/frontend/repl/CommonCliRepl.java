@@ -418,7 +418,7 @@ public abstract class CommonCliRepl extends Repl {
    */
   public ConsoleQueryTool.QueryContext replQueryContext(LibraryManager manager, List<SourceLibrary> libs, PrintStream capture) {
     return new ConsoleQueryTool.QueryContext(libs, manager, myServer, errorReporter, capture, false,
-        Set.of(REPL_NAME), UnstoppableCancellationIndicator.INSTANCE);
+        Set.of(REPL_NAME), UnstoppableCancellationIndicator.INSTANCE, null);
   }
 
   private final class ChangePromptCommand implements ReplCommand {

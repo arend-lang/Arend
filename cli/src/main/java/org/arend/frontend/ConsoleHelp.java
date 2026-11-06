@@ -420,6 +420,104 @@ public final class ConsoleHelp {
     return SCOPE_HELP;
   }
 
+  /** The {@code -gc} / {@code :guide-check} help (shared by the CLI and the REPL). */
+  public static String guideCheckHelp() {
+    return GUIDE_CHECK_HELP;
+  }
+
+  public static void printGuideCheck() {
+    ConsoleHelpRenderer.printTopicHelp(GUIDE_CHECK_HELP);
+  }
+
+  private static final String GUIDE_CHECK_HELP = """
+      arend [LIBRARY] -gc [stamp|fix|tasks] [option ...]
+
+      Check the library's GUIDE against its source. The guide is a directory of markdown pages,
+      one per module (<library>/.aiGuide/A/B/C.md describes module A.B.C), whose entries
+      `- **`Name`**: description` describe definitions. The check needs no typechecking: it
+      parses the library and compares each entry with fingerprints recorded when the entry was
+      last known to be right.
+
+      ACTIONS
+        (default)          check, and exit 1 if anything needs fixing
+        stamp              record the current fingerprints of the entries in scope: run it after
+                           an entry was written or confirmed. Fingerprints are kept in
+                           <guide>/.fingerprints/A/B/C.tsv, so the pages themselves stay plain text.
+        fix                make the repairs that need no judgment, and list them (with dry-run:
+                           only list them). An entry naming only definitions gone without a trace
+                           is deleted, such a name dropped from an entry naming others; an entry
+                           whose definition moved (same statement and name, one other module) is
+                           moved to that module's page; a page whose module is gone is renamed
+                           after the module most of its names are in, merged into its page, or
+                           deleted; an ambiguous name is qualified when only one candidate was
+                           fingerprinted. Moved entries are left unstamped, to be confirmed.
+        tasks              turn what is left into work: one packet per page with every task on it
+                           and what it needs -- the entry, the statement as it was and as it is,
+                           the definition's line, candidates for a vanished name. Tasks: VERIFY,
+                           VERIFY-OVERVIEW, CONFIRM-RENAME, FIX-NAME, WRITE (an undocumented
+                           definition), FIX-PAGE; a module without a page gets a packet of WRITEs.
+                           Prints a summary per page; with out=DIR writes DIR/<page>.json and
+                           DIR/index.json; with --json prints all packets.
+
+      WHAT IS FINGERPRINTED
+        signature    the statement, as -ss prints it: a function's or lemma's header; the
+                     fields / constructors of a \\class, \\record or \\data. The definition's
+                     own name is left out, so a rename is recognised as one.
+        definition   the whole printed definition, for \\func, \\sfunc, \\type, \\cons and \\meta
+                     only, whose bodies ARE their meaning. A \\lemma's body is a proof: changing
+                     it never makes a description wrong, so it is not fingerprinted.
+        mentions     the definitions of the module that the description mentions in `code`.
+      Fingerprints are taken from the parsed definition, so formatting and comments never matter.
+
+      PROBLEMS (exit 1)
+        GONE         the entry names a definition the module no longer has; where a definition
+                     with the recorded statement, or the same name, now is gets suggested
+        SIGNATURE    the statement changed since the entry was stamped; the new one is shown
+        DEFINITION   a \\func / \\data / ... body changed since the entry was stamped
+        REVIEW       the description mentions a definition that changed or disappeared
+        UNSTAMPED    nothing recorded for the entry yet
+        PAGE-GONE    the page describes a module that does not exist
+      WARNINGS
+        AMBIGUOUS    the name matches several definitions of the module (qualify it)
+        UNREADABLE   the page's module did not parse
+        UNDOCUMENTED a public definition its module's page does not describe (counted; listed
+                     with `undocumented`)
+        NO-PAGE      a module with public definitions and no page (likewise)
+
+      OPTIONS
+        in=A.B[,...]       only the pages of these modules and their submodules. With stamp,
+                           in=A.B:Name stamps just that entry of A.B (repeatable).
+        page=A.B[,...]     only the pages of exactly these modules, not their submodules: the
+                           scope to check and stamp a page one is working on
+        dir=PATH           the guide directory (default <library root>/.aiGuide)
+        undocumented       list UNDOCUMENTED and NO-PAGE instead of only counting them
+        strict             make UNDOCUMENTED and NO-PAGE fail the check too
+        helpers            expect definitions in \\where blocks to be documented too (by default
+                           only top-level definitions and class members are, as the guide was
+                           written: "skip purely internal helpers")
+        dry-run            with fix: report the repairs, write nothing
+        out=DIR            with tasks: write the packets to DIR
+        limit=N            cap the problems printed (default 200; 0 = all); counts are always complete
+
+      OUTPUT
+        One block per problem: `page.md:line: PROBLEM Name [kind]`, then what changed and, where
+        it helps to rewrite the entry, the current signature. Then a summary line. With --json:
+        {"library","guide","pages","entries","failing","counts":{...},"findings":[{"problem",
+        "failing","page","file","line","module","name","kind","detail","was","signature"}..]}
+        (an array of these when several libraries are requested; stamp prints {"stamped":{...}}).
+
+      WORKFLOW
+        arend arend-lib -gc                      what is stale?
+        arend arend-lib -gc fix dry-run          what can be repaired mechanically?
+        arend arend-lib -gc fix                  repair it
+        arend arend-lib -gc tasks out=tasks      the rest, one packet per page
+        (work each packet: edit the page, rerun `-gc in=Module` until only UNSTAMPED is left)
+        arend arend-lib -gc stamp in=Algebra.Ordered:LatticeAbGroup.abs_+   accept one entry
+        arend arend-lib -gc stamp in=Algebra.Ordered                         accept a page
+        arend arend-lib -gc stamp                                            accept everything
+      Stamping a page accepts every entry on it, reviewed or not: stamp the entries you checked.
+      """;
+
 
   static void printGrouped(Options cmdOptions, List<String> diagnosticOptions) {
     record Group(String title, List<String> longOpts) {}
@@ -439,6 +537,8 @@ public final class ConsoleHelp {
         new Group("REPL", List.of("interactive")),
         new Group("Information retrieval (queries against the loaded library)", List.of(
             "symbol-search", "proof-search", "find-usages", "class-hierarchy", "scope")),
+        new Group("Guide maintenance (check the library's .aiGuide pages against its source)", List.of(
+            "guide-check")),
         new Group("Diagnostics / verbosity", diagnosticOptions),
         new Group("Meta", List.of("help", "version"))
     );
@@ -451,6 +551,7 @@ public final class ConsoleHelp {
     System.out.println("  arend [LIBRARY] -i [plain|jline]                   REPL");
     System.out.println("  arend [LIBRARY] -d|--daemon-{stop,status,refresh}  Daemon control");
     System.out.println("  arend [LIBRARY] {-ss|-ps|-fu|-ch|-sc} ...          Information retrieval (no typecheck)");
+    System.out.println("  arend [LIBRARY] -gc [stamp] ...                    Guide check (no typecheck)");
     System.out.println();
     ConsoleHelpRenderer.printWrapped("LIBRARY is a path to a directory containing arend.yaml, the arend.yaml file "
         + "itself, a .zip library, or a library name resolved via -L / the default library root "

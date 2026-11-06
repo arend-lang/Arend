@@ -82,6 +82,14 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
   public abstract String argName();
 
   /**
+   * Whether the flag may be given with no sub-arguments at all ({@code arend lib -gc}). Then
+   * {@link #parseArgs} receives an empty array.
+   */
+  public boolean argumentsOptional() {
+    return false;
+  }
+
+  /**
    * One-line option description for the CLI's grouped {@code --help} listing. Named
    * distinctly from {@link org.arend.repl.action.ReplCommand#description()} (the REPL
    * {@code :help} sentence) so a tool can supply both without a signature clash.
@@ -146,6 +154,9 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
    *                           before matching); the daemon passes a per-request indicator so a
    *                           client {@code cancel} is honoured, the REPL and local CLI pass
    *                           the unstoppable default
+   * @param clientCwd          the directory the command was issued from when that is not this
+   *                           process's own (a daemon's client); null otherwise. A tool resolves
+   *                           relative paths in its arguments with {@link #resolvePath}.
    */
   public record QueryContext(List<SourceLibrary> requestedLibraries,
                              LibraryManager libraryManager,
@@ -154,7 +165,18 @@ public abstract class ConsoleQueryTool extends AliasableCommand {
                              PrintStream out,
                              boolean json,
                              Set<String> excludeLibraries,
-                             CancellationIndicator cancellation) {
+                             CancellationIndicator cancellation,
+                             @Nullable String clientCwd) {
+    /** The directory relative paths are relative to: the client's, else this process's. */
+    public java.nio.file.Path workingDirectory() {
+      return (clientCwd == null ? java.nio.file.Path.of("") : java.nio.file.Path.of(clientCwd)).toAbsolutePath();
+    }
+
+    /** {@code path} as the user meant it: resolved against {@link #workingDirectory()}. */
+    public java.nio.file.Path resolvePath(String path) {
+      return workingDirectory().resolve(path).normalize();
+    }
+
     /**
      * Applies the environment flags this context carries onto a tool's parsed options.
      * (Scope exclusion is not among them: it is applied authoritatively in

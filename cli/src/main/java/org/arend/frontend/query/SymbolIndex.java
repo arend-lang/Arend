@@ -230,7 +230,8 @@ public final class SymbolIndex {
     }
   }
 
-  private static @Nullable Concrete.GeneralDefinition findInternalDefinition(
+  /** The constructor / field definition behind an internal referable of {@code outer}, if any; shared with {@code -gc}. */
+  public static @Nullable Concrete.GeneralDefinition findInternalDefinition(
       @Nullable Concrete.ResolvableDefinition outer, LocatedReferable internal) {
     if (outer instanceof Concrete.DataDefinition data) {
       for (Concrete.ConstructorClause clause : data.getConstructorClauses()) {
