@@ -1,21 +1,28 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.jetbrains.changelog.Changelog
+import org.jetbrains.changelog.ChangelogPluginExtension
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.intellij.platform.gradle.tasks.GenerateLexerTask
 import org.jetbrains.intellij.platform.gradle.tasks.GenerateParserTask
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 import org.jetbrains.intellij.platform.gradle.tasks.BuildPluginTask
 import org.jetbrains.intellij.platform.gradle.tasks.BuildSearchableOptionsTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask.FailureLevel
 import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware
 import org.jetbrains.intellij.platform.gradle.utils.asPath
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 
 group = "org.arend.lang"
-version = "1.12.0"
+// The version in gradle.properties, with the plugin revision if there is one; see the root build script
+version = rootProject.extra["pluginVersion"] as String
 
 val baseName = "intellij-arend"
 
@@ -100,6 +107,24 @@ intellijPlatform {
         name = "Arend"
     }
     instrumentCode = true
+    pluginVerification {
+        // What keeps the plugin from loading or working, such as the unresolved org.arend.core classes of 1.11.0. The
+        // default also fails on internal and override-only API usages, which the plugin has had for many releases; the
+        // report lists them.
+        failureLevel = listOf(FailureLevel.COMPATIBILITY_PROBLEMS, FailureLevel.MISSING_DEPENDENCIES, FailureLevel.INVALID_PLUGIN)
+        ides {
+            // `verifyPlugin` checks against the latest release of each supported platform version, and with
+            // -PverifyPluginEap, as the weekly workflow runs it, also against the EAP and RC builds of the next one. Those
+            // are an early warning: a release is not held up by a platform that is not out yet.
+            select {
+                channels = if (providers.gradleProperty("verifyPluginEap").isPresent) {
+                    listOf(ProductRelease.Channel.RELEASE, ProductRelease.Channel.EAP, ProductRelease.Channel.RC)
+                } else {
+                    listOf(ProductRelease.Channel.RELEASE)
+                }
+            }
+        }
+    }
 }
 
 configurations.all {
@@ -153,12 +178,51 @@ tasks.withType<BuildSearchableOptionsTask>().configureEach {
 tasks.withType<PatchPluginXmlTask>().configureEach {
     version = project.version.toString()
     pluginId.set(project.group.toString())
-    changeNotes.set(file("src/main/html/change-notes.html").readText())
+    // The section of this version in CHANGELOG.md; a development build, which has none, shows the unreleased changes
+    val changelog = rootProject.extensions.getByType<ChangelogPluginExtension>()
+    changeNotes.set(provider {
+        val item = changelog.getOrNull(project.version.toString()) ?: changelog.getUnreleased()
+        changelog.renderItem(item.withHeader(false).withLinks(false).withEmptySections(false), Changelog.OutputType.HTML)
+    })
     pluginDescription.set(file("src/main/html/description.html").readText())
 }
 
 tasks.withType<BuildPluginTask>().configureEach {
   archiveBaseName = baseName
+}
+
+// Marketplace got the thin intellij-1.11.0.jar instead of this zip for 1.11.0 and 1.11.0.1, and without the core in
+// base-*.jar the plugin could not load. The release workflow checks the zip that is then uploaded.
+val verifyPluginPackage = tasks.register("verifyPluginPackage") {
+    group = "verification"
+    description = "Checks that the plugin zip contains the Arend core and the version and change notes of this release"
+    val pluginZip = tasks.named<BuildPluginTask>("buildPlugin").flatMap { it.archiveFile }
+    val arendVersion = rootProject.version.toString()
+    val pluginVersion = project.version.toString()
+    inputs.file(pluginZip)
+    doLast {
+        ZipFile(pluginZip.get().asFile).use { zip ->
+            // Entries are <plugin directory>/lib/<jar>
+            val jars = zip.entries().asSequence().filter { it.name.endsWith(".jar") }.associateBy { it.name.substringAfter('/') }
+            fun entriesOf(jar: String): Map<String, String> {
+                val entry = jars[jar] ?: throw GradleException("${pluginZip.get().asFile.name} has no $jar; it has ${jars.keys.sorted()}")
+                return ZipInputStream(zip.getInputStream(entry)).use { input ->
+                    generateSequence { input.nextEntry }
+                        .associate { it.name to if (it.name == "META-INF/plugin.xml") input.readBytes().decodeToString() else "" }
+                }
+            }
+
+            check(entriesOf("lib/base-$arendVersion.jar").keys.any { it.startsWith("org/arend/core/") }) {
+                "lib/base-$arendVersion.jar has no org.arend.core"
+            }
+            entriesOf("lib/api-$arendVersion.jar")
+            entriesOf("lib/proto-$arendVersion.jar")
+            val pluginXml = entriesOf("lib/intellij-$pluginVersion.jar")["META-INF/plugin.xml"]
+                ?: throw GradleException("lib/intellij-$pluginVersion.jar has no META-INF/plugin.xml")
+            check("<version>$pluginVersion</version>" in pluginXml) { "plugin.xml does not have version $pluginVersion" }
+            check(Regex("""<change-notes><!\[CDATA\[\s*\S""").containsMatchIn(pluginXml)) { "plugin.xml has no change notes" }
+        }
+    }
 }
 
 val generateArendLexer = tasks.register<GenerateLexerTask>("genArendLexer") {

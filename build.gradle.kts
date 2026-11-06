@@ -1,9 +1,19 @@
+import org.jetbrains.changelog.Changelog
+import java.security.MessageDigest
+
 plugins {
     java
     idea
     `java-library`
     `maven-publish`
+    id("org.jetbrains.changelog") version "2.5.0"
 }
+
+// The one place a release sets its version; see gradle.properties.
+val arendVersion = providers.gradleProperty("arendVersion").get()
+val pluginRevision = providers.gradleProperty("pluginRevision").orNull?.trim()?.takeIf { it.isNotEmpty() }
+// The version of :intellij, and the one a release tag names: 1.12.0, or 1.12.0.1 for a release of the plugin alone.
+val pluginVersion by extra(arendVersion + pluginRevision?.let { ".$it" }.orEmpty())
 
 var annotationsVersion: String by rootProject.ext
 var protobufVersion: String by rootProject.ext
@@ -15,7 +25,7 @@ antlrVersion = "4.10"
 
 allprojects {
     group = "org.arend"
-    version = "1.12.0"
+    version = arendVersion
     repositories {
         mavenCentral()
     }
@@ -246,5 +256,113 @@ tasks.register<Test>("partialCacheTest") {
     testLogging {
         events("passed", "skipped", "failed", "standardOut", "standardError")
         showStandardStreams = true
+    }
+}
+
+// Releases. RELEASING.md describes the procedure; .github/workflows/release.yml runs these tasks.
+
+// A section of CHANGELOG.md is both the plugin's change notes (see :intellij) and the body of the GitHub release.
+changelog {
+    version = pluginVersion
+    // The default accepts semantic versions only, and a release of the plugin alone has a fourth component
+    headerParserRegex = """^(\d+\.\d+\.\d+(?:\.\d+)?)$"""
+    groups = listOf("Language", "Plugin", "CLI", "arend-lib")
+}
+
+// Fails `check` on the version slips of past releases: 1.11 did not bump the version here, 1.10 shipped without its
+// line in arend-lib/versions (which every installed plugin reads from master to find the library), and 1.7 had a line
+// there naming a tag that did not exist. With -PreleaseTag, as the release workflow runs it, the tag must also name this
+// version, and CHANGELOG.md must have its section.
+val verifyReleaseMetadata = tasks.register("verifyReleaseMetadata") {
+    group = "verification"
+    description = "Checks that the version agrees with arend-lib, the changelog and the release tag"
+    val arendLibConfig = file("arend-lib/arend.yaml")
+    val arendLibVersions = file("arend-lib/versions")
+    val changelogFile = file("CHANGELOG.md")
+    val prelude = file("lib/Prelude.ard")
+    val pluginPrelude = file("intellij/src/main/resources/lib/Prelude.ard")
+    val releaseTag = providers.gradleProperty("releaseTag").orNull
+    inputs.files(arendLibConfig, arendLibVersions, changelogFile, prelude, pluginPrelude)
+    doLast {
+        val errors = mutableListOf<String>()
+        fun expect(condition: Boolean, message: () -> String) {
+            if (!condition) errors += message()
+        }
+
+        expect(Regex("""\d+\.\d+\.\d+""").matches(arendVersion)) {
+            "gradle.properties: arendVersion=$arendVersion must have three components, like 1.13.0"
+        }
+        expect(pluginRevision == null || pluginRevision.all(Char::isDigit)) {
+            "gradle.properties: pluginRevision=$pluginRevision must be empty or a number"
+        }
+
+        val majorMinor = arendVersion.split('.').take(2).joinToString(".")
+        val config = arendLibConfig.readLines().associate { it.substringBefore(':').trim() to it.substringAfter(':', "").trim() }
+        for (key in listOf("langVersion", "version")) {
+            expect(config[key] == majorMinor) { "arend-lib/arend.yaml: $key is ${config[key]}, must be $majorMinor" }
+        }
+        val versionsLine = arendLibVersions.readLines().lastOrNull { it.isNotBlank() }?.trim()
+        expect(versionsLine == "$majorMinor -> $arendVersion") {
+            "arend-lib/versions: the last line is '$versionsLine', must be '$majorMinor -> $arendVersion'"
+        }
+
+        // The CLI reads the first copy, the plugin the second
+        expect(prelude.readText().replace("\r\n", "\n") == pluginPrelude.readText().replace("\r\n", "\n")) {
+            "intellij/src/main/resources/lib/Prelude.ard differs from lib/Prelude.ard; copy it with ./gradlew :intellij:prelude"
+        }
+
+        if (releaseTag != null) {
+            expect(releaseTag == "v$pluginVersion" || releaseTag.startsWith("v$pluginVersion-")) {
+                "The tag $releaseTag does not name version $pluginVersion: it must be v$pluginVersion, or v$pluginVersion-<suffix> for a rehearsal"
+            }
+            val section = Regex("""^## \[?${Regex.escape(pluginVersion)}]?(\s|$)""", RegexOption.MULTILINE)
+            expect(section.containsMatchIn(changelogFile.readText())) {
+                "CHANGELOG.md has no section '## $pluginVersion - <date>'; ./gradlew patchChangelog renames the Unreleased section to it"
+            }
+        }
+
+        if (errors.isNotEmpty()) {
+            throw GradleException(errors.joinToString("\n", "Release metadata is inconsistent:\n"))
+        }
+    }
+}
+
+tasks.check {
+    dependsOn(verifyReleaseMetadata)
+}
+
+val releaseNotes = tasks.register("releaseNotes") {
+    description = "Writes the CHANGELOG.md section of this version as the body of its GitHub release"
+    val output = layout.buildDirectory.file("releaseNotes/NOTES.md")
+    inputs.file("CHANGELOG.md")
+    inputs.property("pluginVersion", pluginVersion)
+    outputs.file(output)
+    doLast {
+        val item = changelog.get(pluginVersion).withHeader(false).withLinks(false).withEmptySections(false)
+        output.get().asFile.writeText(changelog.renderItem(item, Changelog.OutputType.MARKDOWN).trim() + "\n")
+    }
+}
+
+// Everything a release publishes, built from this checkout and nothing else, in build/release: the GitHub release files
+// under the names they are downloaded by, the plugin zip that is uploaded to Marketplace by hand, SHA256SUMS of all of
+// them, and the release notes. Every file used to be built by hand, and that shipped a plugin jar Marketplace could not
+// load and arend-lib zips with uncommitted modules in them.
+val releaseAssets = tasks.register<Sync>("releaseAssets") {
+    group = "distribution"
+    description = "Builds and checks the release files in build/release"
+    dependsOn(":arend-lib:meta:verifyLibZip", ":intellij:verifyPluginPackage")
+    from(project(":cli").tasks.named("jarDep")) { rename { "Arend.jar" } }
+    from(project(":api").tasks.named("jar")) { rename { "Arend-api.jar" } }
+    from(project(":api").tasks.named("sourcesJar")) { rename { "Arend-api-sources.jar" } }
+    from(project(":arend-lib:meta").tasks.named("libZip"))
+    from(project(":intellij").tasks.named("buildPlugin"))
+    from(releaseNotes)
+    into(layout.buildDirectory.dir("release"))
+    doLast {
+        val files = destinationDir.listFiles()!!.filter { it.isFile && it.name != "NOTES.md" }.sortedBy { it.name }
+        destinationDir.resolve("SHA256SUMS").writeText(files.joinToString("") { file ->
+            val digest = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+            digest.joinToString("") { "%02x".format(it) } + "  " + file.name + "\n"
+        })
     }
 }
