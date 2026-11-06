@@ -1,0 +1,2 @@
+# Executable scripts: a CRLF checkout (core.autocrlf=true) breaks their #! line.
+/scripts/** text eol=lf

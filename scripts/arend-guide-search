@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+"""Semantic search over arend-lib that answers in Arend.
+
+Runs `jbcontext search` over the guide (arend-lib/.aiGuide), takes the definitions
+named in the matching guide entries, and prints their real signatures and source
+locations from arend-lib (via `arend -ss`), not the guide's prose.
+
+  scripts/arend-guide-search "every ideal of a Noetherian ring is finitely generated"
+  scripts/arend-guide-search -c 2 --body 10 "Chinese remainder theorem"
+  scripts/arend-guide-search -n 5 "Chinese remainder theorem"      # flat top 5 instead of sections
+  scripts/arend-guide-search -p Topology "completion of a metric space"
+
+Needs jbcontext (with this repository indexed at a commit that contains the guide)
+and the `arend` launcher on PATH.
+"""
+import argparse
+import errno
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+GUIDE = "arend-lib/.aiGuide"
+ENTRY = re.compile(r"^\s*- \*\*`")
+SIG_WIDTH = 400
+
+
+def header_names(line):
+    """Names in an entry header: the leading bold code spans (and bold spans in parentheses), up to ':'."""
+    rest = line.lstrip()[2:]  # drop "- "
+    names, i, n = [], 0, len(rest)
+    while i < n:
+        if rest.startswith("**`", i):
+            end = rest.find("`**", i + 3)
+            if end < 0:
+                break
+            for k, part in enumerate(rest[i + 3:end].split("`")):
+                if k % 2 == 0 and part.strip():
+                    add_name(names, part)
+            i = end + 3
+        elif rest[i] == "(":
+            close = rest.find(")", i)
+            if close < 0:
+                break
+            for m in re.finditer(r"\*\*`([^`]+)`\*\*", rest[i:close]):
+                add_name(names, m.group(1))
+            i = close + 1
+        elif rest[i] in ",/& \t":
+            i += 1
+        elif rest.startswith("and ", i) or rest.startswith("or ", i):
+            i += 4 if rest[i] == "a" else 3
+        else:
+            break
+    return names, rest[i:].lstrip(": ").strip()
+
+
+def add_name(names, written):
+    for word in written.split():
+        if word.startswith("\\"):
+            continue  # `\instance Foo` names Foo
+        if word not in names:
+            names.append(word)
+        return
+
+
+def words(text):
+    """Lowercase word stems of length >= 3; names split at operators and digits (chinese2 -> chinese)."""
+    stop = {"the", "and", "for", "with", "that", "every", "any", "all", "its", "are", "has", "from", "over", "into"}
+    return {w.rstrip("s") for w in re.findall(r"[a-z]{3,}", text.lower())} - stop
+
+
+def run(cmd):
+    try:
+        p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    except OSError as e:
+        exe = shutil.which(cmd[0])
+        if e.errno != errno.ENOEXEC or exe is None:
+            raise
+        # A launcher script without a #! line (like the homebrew `arend`): run it with sh.
+        p = subprocess.run(["sh", exe, *cmd[1:]], cwd=ROOT, capture_output=True, text=True)
+    if p.returncode != 0 and not p.stdout.strip():
+        sys.exit(f"{' '.join(cmd[:3])} ... failed:\n{p.stderr.strip()}")
+    return p.stdout
+
+
+def guide_hits(query, chunks, subdir):
+    path = GUIDE + ("/" + subdir.strip("/") if subdir else "")
+    out = run(["jbcontext", "search", "--project-path", ROOT, "-p", path,
+               f"--limit={chunks}", "--json-output", query])
+    try:
+        data = json.loads(out[out.index("{"):])
+    except ValueError:
+        sys.exit("jbcontext returned no JSON:\n" + out.strip())
+    if not data.get("results"):
+        sys.exit("No guide matches." + (" " + data["message"] if data.get("message") else ""))
+    return data["results"]
+
+
+def chunks(results):
+    """The usable hit chunks, best first: (module, page, [(names, gloss), ...]) per chunk.
+
+    A chunk with no entries -- typically a page's overview, which is often the best match for
+    a theorem's classical name -- stands for the entries of its whole page."""
+    out = []
+    for r in results:
+        page = r["result"]["sourcePosition"]["relativePath"]
+        if "/." in page[len(GUIDE):] or not page.endswith(".md") or page.endswith("README.md"):
+            continue
+        module = page[len(GUIDE) + 1:-3].replace("/", ".")
+        entries = entries_in(r.get("content", "")) or entries_in(read_page(page))
+        if entries:
+            out.append((module, page, entries))
+    return out
+
+
+def entries_in(text):
+    return [header_names(line) for line in text.splitlines() if ENTRY.match(line)]
+
+
+def read_page(page):
+    try:
+        with open(os.path.join(ROOT, page), encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def candidates(hit_chunks, query):
+    """(module, name, gloss, chunk index) for every entry in the hit chunks, best first."""
+    q = words(query)
+    seen, cands = set(), []
+    for rank, (module, page, entries) in enumerate(hit_chunks):
+        for names, gloss in entries:
+            overlap = len(q & words(gloss + " " + " ".join(names)))
+            for name in names:
+                if (module, name) in seen:
+                    continue
+                seen.add((module, name))
+                # Chunk rank from the semantic search, pulled forward by words shared with the query.
+                cands.append((rank - 1.5 * overlap, len(cands), module, name, gloss, rank))
+    cands.sort()
+    return [c[2:] for c in cands]
+
+
+def lookup(cands):
+    """Arend signature and location of each candidate, keyed by (module, guide name)."""
+    patterns = sorted({f"{m}.{n}" for m, n, *_ in cands})
+    out = run(["arend", "arend-lib", "--json", "-ss", *patterns, "limit=0"])
+    try:
+        results = json.loads(out[out.index("{"):])["results"]
+    except ValueError:
+        sys.exit("arend -ss returned no JSON:\n" + out.strip())
+    found = {}
+    for r in results:
+        for m, n, *_ in cands:
+            if r["module"] == m and (r["name"] == n or r["name"].endswith("." + n)):
+                # Prefer the exact long name, then the shortest.
+                old = found.get((m, n))
+                if old is None or (old["name"] != n and len(r["name"]) < len(old["name"])) or r["name"] == n:
+                    found[(m, n)] = r
+    return found
+
+
+def body(file, line, max_lines):
+    try:
+        with open(os.path.join(ROOT, file), encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return []
+    start = line - 1
+    indent = len(lines[start]) - len(lines[start].lstrip())
+    out = [lines[start]]
+    for l in lines[start + 1:]:
+        if len(out) >= max_lines:
+            out.append(" " * indent + "  ...")
+            break
+        if l.strip() and len(l) - len(l.lstrip()) <= indent:
+            break
+        out.append(l)
+    while out and not out[-1].strip():
+        out.pop()
+    return out
+
+
+def print_def(r, gloss, a):
+    loc = r["location"]
+    print(f"{loc['file']}:{loc['line']}  {r['module']}:{r['name']}  [{r['kind'].lower()}]")
+    if a.gloss and gloss:
+        print(f"  -- {gloss}")
+    if a.body:
+        for l in body(loc["file"], loc["line"], a.body):
+            print("    " + l)
+    else:
+        sig = " ".join(r["signature"].split())  # class signatures span lines; keep one line each
+        if not a.full and len(sig) > SIG_WIDTH:
+            sig = sig[:SIG_WIDTH] + " ..."
+        print("    " + sig)
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Semantic search over arend-lib via its guide, answering with Arend definitions. "
+                    "By default prints the best-matching guide sections, each with the real signatures of "
+                    "all definitions it describes; -n N prints a flat list of N definitions instead.")
+    ap.add_argument("query", nargs="+", help="what you are looking for, phrased as a statement")
+    ap.add_argument("-c", type=int, default=3, help="guide sections to print (default 3)")
+    ap.add_argument("-n", type=int, help="print a flat list of this many definitions instead of sections")
+    ap.add_argument("-k", type=int, default=8, help="guide chunks to retrieve (default 8)")
+    ap.add_argument("-p", metavar="DIR", help="restrict to a guide subdirectory, e.g. Topology or Algebra/Ring")
+    ap.add_argument("--body", nargs="?", const=25, type=int, metavar="LINES",
+                    help="print each definition's source instead of its signature (default up to 25 lines)")
+    ap.add_argument("--gloss", action="store_true", help="also print the guide's one-line description")
+    ap.add_argument("--full", action="store_true", help="do not shorten long signatures")
+    a = ap.parse_args()
+    query = " ".join(a.query)
+
+    hit_chunks = chunks(guide_hits(query, max(a.k, a.c), a.p))
+    if not hit_chunks:
+        sys.exit("No guide sections matched.")
+    cands = candidates(hit_chunks if a.n else hit_chunks[:a.c], query)
+    found = lookup(cands)
+    missing = [f"{m}.{n}" for m, n, *_ in cands if (m, n) not in found]
+    shown = 0
+    if a.n:
+        for module, name, gloss, _ in cands:
+            if (module, name) in found and shown < a.n:
+                shown += 1
+                print_def(found[(module, name)], gloss, a)
+                print()
+    else:
+        printed = set()
+        for i, (module, page, entries) in enumerate(hit_chunks[:a.c]):
+            defs = [(found[(module, n)], g) for names, g in entries for n in names if (module, n) in found]
+            defs = [(r, g) for r, g in defs if (r["module"], r["name"]) not in printed]
+            if not defs:
+                continue
+            print(f"== {i + 1}. {module}  ({page})")
+            for r, g in defs:
+                printed.add((r["module"], r["name"]))
+                shown += 1
+                print_def(r, g, a)
+            print()
+    if not shown:
+        print("Guide matched, but none of its names resolved in arend-lib.")
+    if missing:
+        print(f"(not found in source, guide may be stale: {', '.join(missing[:8])}{' ...' if len(missing) > 8 else ''})",
+              file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
