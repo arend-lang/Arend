@@ -64,6 +64,25 @@ public class Version implements Comparable<Version> {
     int j = minor.compareTo(o.minor);
     if (j != 0) return j;
     int k = patch.compareTo(o.patch);
-    return k != 0 ? k : rest.compareTo(o.rest);
+    return k != 0 ? k : compareRest(rest, o.rest);
+  }
+
+  /**
+   * Compares the components after the patch, such as a plugin revision, one by one: numerically if both are numbers,
+   * so that revision 10 comes after revision 9, and as strings otherwise. A missing component comes first.
+   */
+  private static int compareRest(String rest1, String rest2) {
+    String[] split1 = rest1.isEmpty() ? new String[0] : rest1.split("\\.");
+    String[] split2 = rest2.isEmpty() ? new String[0] : rest2.split("\\.");
+    for (int i = 0; i < Math.min(split1.length, split2.length); i++) {
+      int c;
+      try {
+        c = new BigInteger(split1[i]).compareTo(new BigInteger(split2[i]));
+      } catch (NumberFormatException e) {
+        c = split1[i].compareTo(split2[i]);
+      }
+      if (c != 0) return c;
+    }
+    return Integer.compare(split1.length, split2.length);
   }
 }
