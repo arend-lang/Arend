@@ -24,9 +24,10 @@ val buildPrelude = tasks.register<org.arend.gradle.BuildPreludeTask>("buildPrelu
     workingDir(rootProject.rootDir)
 }
 
+// Only the source: the CLI and the plugin both load the prelude from Prelude.ard. A Prelude.arc that buildPrelude left
+// in lib/ is not tracked by git and would be stale in a jar built from a working copy, as it was in 1.11.0 and 1.12.0.
 val copyPrelude = tasks.register<Copy>("copyPrelude") {
-    // dependsOn(buildPrelude)
-    from(rootProject.file("lib"))
+    from(rootProject.file("lib")) { include("Prelude.ard") }
     into(buildDir.resolve("classes/java/main/lib"))
 }
 
