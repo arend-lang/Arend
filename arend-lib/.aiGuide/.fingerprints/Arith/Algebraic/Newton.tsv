@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Arith.Algebraic.Newton. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+newton	func	e8e857342a0c	4305c7baf4e3	6a84dfc2		\func newton (p : Poly ComplexField) (dinv z0 : Complex) (k : Nat) : Complex
+newton-root	lemma	1d840405a420	-	0294b79d		\lemma newton-root {p : Poly ComplexField} {M : Nat} (dp : degree< p M) {dinv z0 : Complex} (bd : polyEval (polyDeriv p) z0 * dinv = 1) {R R0 B Dd e0 : Real} (hz0 : cabs z0 <= R0) (hR : R0 + B <= R) (B>=0 : 0 <= B) (hdinv : cabs dinv <= Dd) (hv0 : cabs (polyEval p z0) <= e0) (e0>=0 : 0 <= e0) (hB : e0 * Dd + e0 * Dd <= B) (hL : coefMax {ComplexValuedRing} (polyDeriv p) M * RealField.powSum R M * RealField.powSum R M * B * Dd <= quarter) (hC : coefMax {ComplexValuedRing} p M * RealField.powSum R M * RealField.powSum R M * RealField.powSum R M * (Dd * Dd) * e0 <= quarter) : ∃ (z : Complex) (polyEval p z = 0)
+(overview)	-	-	-	c6e9e172	5d0bf962:newton bba01f14:newton-root	-

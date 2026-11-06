@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Topology.CoverSpace.TopSpace. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TopCover	func	34bd64d0b010	7647d12f5629	38ab80e8		\func TopCover {X : TopSpace} (Xr : X.IsRegular) : CoverSpace X
+top-cover-unit	lemma	880696ec939d	-	5c0d79af	a8f1cc24:TopCover	\lemma top-cover-unit {X : TopSpace} {Xr : X.IsRegular} : ContMap X (TopCover Xr) (\lam x => x)
+(overview)	-	-	-	c7925069		-

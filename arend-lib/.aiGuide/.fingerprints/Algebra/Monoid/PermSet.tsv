@@ -1,0 +1,24 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.PermSet. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PermSet	type	73455c6c1b05	a2fbaa89221f	020f1d0b		\type PermSet (A : \Set)
+PermSet.inPS~	func	0c458e2db3c8	83f689dc218e	1c884eaf		\func inPS~ {A : \Set} (l : Array A) : Quotient EPerm
+PermSet.inPS	func	40d7016568a6	d93f1cae890f	383af0f5	0bfe5d29:PermSet	\func inPS {A : \Set} (l : Array A) : PermSet A
+PermSet.unext	lemma	798369e8733b	-	f2c7fde4		\lemma unext {A : \Set} {l l' : Array A} (p : inPS~ l = {PermSet A} inPS~ l') : TruncP (EPerm l l')
+PermSet.~-psequiv	lemma	b95719b22988	-	6faae12e	0bfe5d29:PermSet e234ed6e:PermSet.inPS	\lemma ~-psequiv {A : \Set} {l l' : Array A} (e : EPerm l l') : inPS l = inPS l'
+permSet-ext	lemma	d6e754f06a79	-	b8449493	0bfe5d29:PermSet	\lemma permSet-ext {A : \Set} {x y : PermSet A} (p : x = {Quotient EPerm} y) : x = y
+PermSetDec	instance	8d35e1b775d9	-	4a15db70	0bfe5d29:PermSet	\instance PermSetDec (A : DecSet) : DecSet (PermSet A)
+PermSetMonoid	instance	01cdd9575c69	-	b5d92317		\instance PermSetMonoid (A : \Set) : CMonoid (PermSet A)
+permSet-map	func	ea58d25f76f8	32bbc82f1f83	70274c88	0bfe5d29:PermSet	\func permSet-map {A B : \Set} (f : A -> B) (s : PermSet A) : PermSet B
+permSet-map-comp	lemma	38f8c72f656e	-	e44bf954	0263f14d:permSet-map	\lemma permSet-map-comp {A B C : \Set} {f : A -> B} {g : B -> C} {s : PermSet A} : permSet-map g (permSet-map f s) = permSet-map (\lam a => g (f a)) s
+permSet-hom	func	92aa8c09ec42	8efe39b56962	2ad7799f	fa90bf25:PermSetMonoid 0263f14d:permSet-map	\func permSet-hom {A B : \Set} (f : A -> B) : MonoidHom (PermSetMonoid A) (PermSetMonoid B) (permSet-map f)
+permSet-map_+	lemma	f1301995fb41	-	73012870	0263f14d:permSet-map	\lemma permSet-map_+ {A B : \Set} {f : A -> B} {x y : PermSet A} : permSet-map f (x * y) = permSet-map f x * permSet-map f y
+permSet-sum	func	69def283a9d4	ad08b3317665	3ad8ef9f	0bfe5d29:PermSet	\func permSet-sum {A : CMonoid} (x : PermSet A) : A
+permSet-sum-natural	lemma	1352519e2e54	-	f23fde92	492b9765:permSet-sum	\lemma permSet-sum-natural {A B : CMonoid} (f : MonoidHom A B) {x : PermSet A} : f (permSet-sum x) = permSet-sum (permSet-map f x)
+permSet-sum_+	lemma	afc9868c4967	-	587211cb	492b9765:permSet-sum	\lemma permSet-sum_+ {A : CMonoid} {x y : PermSet A} : permSet-sum (x * y) = permSet-sum x * permSet-sum y
+permSet-univ	func	f2934dfa80c5	c9fd4cc95759	bd3323b0	fa90bf25:PermSetMonoid 0263f14d:permSet-map 492b9765:permSet-sum	\func permSet-univ {A : \Set} {B : CMonoid} (f : A -> B) : MonoidHom (PermSetMonoid A) B
+permSet-univ-natural	lemma	1352519e2e54	-	a16a95d5	d8553ed6:permSet-sum-natural	\lemma permSet-univ-natural {A B : CMonoid} (f : MonoidHom A B) {x : PermSet A} : f (permSet-sum x) = permSet-sum (permSet-map f x)
+permSet-zro-dec	func	9073e4706e51	2017954f30db	00b455f5	0bfe5d29:PermSet 3d8956ca:PermSet.unext	\func permSet-zro-dec {A : \Set} (x : PermSet A) : Dec (x = ide)
+permSet-length	func	c1cd7af006a1	690ea5ae6df8	ddb2605e	0bfe5d29:PermSet	\func permSet-length {A : \Set} (p : PermSet A) : Nat
+permSet-split	lemma	967d58e7f1bf	-	51128c60	0bfe5d29:PermSet e234ed6e:PermSet.inPS	\lemma permSet-split {A : \Set} {l : Array A} : Monoid.BigProd (map (\lam a => inPS (a :: nil)) l) = inPS l
+permSet-pow	lemma	4f219bdfb38f	-	7eb64afa	e234ed6e:PermSet.inPS	\lemma permSet-pow {A : \Set} {a : A} {n : Nat} : Monoid.pow (inPS (a :: nil)) n = inPS (replicate n a)
+(overview)	-	-	-	86b8d8a5	0bfe5d29:PermSet c3c6fe8e:permSet-univ	-

@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Topology.NormedAbGroup.ExComplete. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+dense-normed-lift	func	b5f852c819c9	bc939a6cd02b	d4836a37		\func dense-normed-lift {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) : NormedAbGroupMap Y Z
+dense-normed-lift.char	lemma	d6529a837c67	-	10070b85	78601560:dense-normed-lift	\lemma char {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) {x : X} : dense-normed-lift f fd g (f x) = g x
+ExNormedAbGroupCompletion	instance	b650e177a371	-	df1ba35c		\instance ExNormedAbGroupCompletion (X : ExPseudoNormedAbGroup) : CompleteExNormedAbGroup
+ExNormedAbGroupCompletion.filter-norm_dist	lemma	7e83710e071d	-	e5bb77d5		\lemma filter-norm_dist {F : RegularCauchyFilter X} : norm F = (ExMetricCompletion X).dist F (pointCF 0)
+ExNormedAbGroupCompletion.norm-cont	lemma	1724d304e715	-	2b1575e9		\lemma norm-cont : ContMap (ExMetricCompletion X) ExUpperRealMetric norm
+completion-exNormed-isometry	func	25e973e887b8	fcad98482297	4c8d1dff	84f831de:ExNormedAbGroupCompletion	\func completion-exNormed-isometry {X : ExPseudoNormedAbGroup} : NormedIsometricMap X (ExNormedAbGroupCompletion X)
+SeparatedNormedAbGroupReflection	instance	6ef40defabdc	-	f2c764e4		\instance SeparatedNormedAbGroupReflection (X : ExPseudoNormedAbGroup) : ExNormedAbGroup (Quot X)
+SeparatedNormedAbGroupReflection.Quot	type	82060f5ddab2	d82f84b8e1f7	38831716		\type Quot (X : ExPseudoNormedAbGroup)
+SeparatedNormedAbGroupReflection.inN	func	754ad726bc98	bfdfc7073854	96f7d3d7	5538b3a8:SeparatedNormedAbGroupReflection.Quot	\func inN {X : ExPseudoNormedAbGroup} (x : X) : Quot X
+SeparatedNormedAbGroupReflection.~-nequiv	lemma	0487d3aa6b20	-	6d1b4998	cc732ea8:SeparatedNormedAbGroupReflection.inN	\lemma ~-nequiv {X : ExPseudoNormedAbGroup} {x x' : X} (e : X.norm (x - x') = 0) : inN x = inN x'
+SeparatedNormedAbGroupReflection.inN-isometry	lemma	9d6ed1d8df88	-	32ef0cc4	cc732ea8:SeparatedNormedAbGroupReflection.inN	\lemma inN-isometry {X : ExPseudoNormedAbGroup} : NormedIsometricMap X (SeparatedNormedAbGroupReflection X) inN
+separated-completion	func	72f417833c2e	f78a17ef0075	12754995	84f831de:ExNormedAbGroupCompletion d38ac58c:SeparatedNormedAbGroupReflection	\func separated-completion {X : ExPseudoNormedAbGroup} : NormedIsometricMap (SeparatedNormedAbGroupReflection X) (ExNormedAbGroupCompletion X)
+separated-completion.isDense	lemma	be295dafdc16	-	c150759e	c53bbc5b:separated-completion	\lemma isDense : (separated-completion {X}).IsDense
+(overview)	-	-	-	a6769579		-

@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GSet.CategoricalDefinition. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MonoidCatAction	class	ab01a426f036	-	407fe684	72ec2809:MonoidCatAction.C 71fd1512:MonoidCatAction.M 0898eec6:MonoidCatAction.c f4e2eac0:MonoidCatAction.functor	\class MonoidCatAction {C : Precat} (M : Monoid) (c : C) { | act : MonoidHom M (End c) }
+MonoidCatAction.functor	func	0b4e85f40f5e	f4cf47bb3bb3	3e2710f7	0f25d23d:DeloopM 72ec2809:MonoidCatAction.C 71fd1512:MonoidCatAction.M 767231b1:MonoidCatAction.act 0898eec6:MonoidCatAction.c	\func functor : Functor (DeloopM M) C
+DeloopM	instance	6b0ae1deddf6	-	6a7f4dc5	71fd1512:MonoidCatAction.M	\instance DeloopM (M : Monoid) : Precat
+functor->action	func	57591f4d356b	07d79e1bd8f3	103f842f	0f25d23d:DeloopM 93ac39d6:MonoidCatAction 72ec2809:MonoidCatAction.C 71fd1512:MonoidCatAction.M	\func functor->action {C : Precat} {M : Monoid} (f : Functor (DeloopM M) C) : MonoidCatAction M
+Action<->Functor	func	583667fa114f	847f106cf9d4	dd6ee9db	0f25d23d:DeloopM 93ac39d6:MonoidCatAction 72ec2809:MonoidCatAction.C 71fd1512:MonoidCatAction.M	\func Action<->Functor {C : Precat} {M : Monoid} : QEquiv {MonoidCatAction M} {Functor (DeloopM M) C}
+(overview)	-	-	-	46c14b1c	0f25d23d:DeloopM 93ac39d6:MonoidCatAction 72ec2809:MonoidCatAction.C 71fd1512:MonoidCatAction.M 0898eec6:MonoidCatAction.c	-

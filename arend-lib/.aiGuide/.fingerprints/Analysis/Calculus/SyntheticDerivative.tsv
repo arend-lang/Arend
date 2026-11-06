@@ -1,0 +1,18 @@
+# arend -gc fingerprints v2 for module Analysis.Calculus.SyntheticDerivative. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SyntheticDiff	class	82bd34f18649	-	dd1242c2	052c194e:SyntheticDiff.R 81c63753:SyntheticDiff.isOpenProp 30f9a91b:SyntheticDiff.meet-isOpenProp a7170045:SyntheticDiff.top-isOpenProp	\class SyntheticDiff \noclassifying (R : CRing) { | isOpenProp : \Prop -> \Prop | top-isOpenProp : isOpenProp (\Sigma) | meet-isOpenProp {P Q : \Prop} : isOpenProp P -> isOpenProp Q -> isOpenProp (\Sigma P Q) }
+SyntheticDiff.meet3-isOpenProp	lemma	50a8575ee6f0	-	052a8be2	81c63753:SyntheticDiff.isOpenProp	\lemma meet3-isOpenProp {P Q R : \Prop} (Po : isOpenProp P) (Qo : isOpenProp Q) (Ro : isOpenProp R) : isOpenProp (\Sigma P Q R)
+SyntheticDiff.IsOpenPred	func	cdd7db254f2b	9f072c85ecc8	ed1c0132	81c63753:SyntheticDiff.isOpenProp	\func IsOpenPred {A : \Type} (U : A -> \Prop) : \Prop
+SyntheticDiff.IsInvDense	func	64893d7050c0	e583cdc571c2	e8739cc2	052c194e:SyntheticDiff.R	\func IsInvDense (B : \Set) : \Prop
+SyntheticDiff.cancel-lem	lemma	f8e53d7c6535	-	26c21736	32f1d359:SyntheticDiff.IsInvDense 052c194e:SyntheticDiff.R	\lemma cancel-lem {B : LModule R} (Bd : IsInvDense B) {U : R -> \Prop} (Uo : IsOpenPred U) (f g : \Sigma (z : R) (U z) -> B) (s : \Pi (p : \Sigma (z : R) (u : U z)) -> p.1 *c f p = p.1 *c g p) (p : \Sigma (z : R) (u : U z)) : f p = g p
+SyntheticDiff.IsDiff	func	680665df0c23	b0e6911c6bcb	09cfd6d2		\func IsDiff {A B : LModule R} (Bd : IsInvDense B) {U : A -> \Prop} (Uo : IsOpenPred U) (f : \Sigma (x : A) (U x) -> B) : \Set
+SyntheticDiff.IsDiff.levelProp	level	f93b2f877c8d	-	c04896f1	94762227:SyntheticDiff.IsDiff 579a1510:SyntheticDiff.cancel-lem	\use \level levelProp (d d' : IsDiff Bd Uo f) : d = d'
+SyntheticDiff.IsDiffT	func	0c943617616e	a09e23476446	8d87a37d	94762227:SyntheticDiff.IsDiff	\func IsDiffT {A B : LModule R} (Bd : IsInvDense B) (f : A -> B)
+SyntheticDiff.deriv	func	53e5b934cd6f	baff4ff0c588	d5b62c02	94762227:SyntheticDiff.IsDiff	\func deriv {A B : LModule R} (Bd : IsInvDense B) {U : A -> \Prop} (Uo : IsOpenPred U) {f : \Sigma (x : A) (U x) -> B} (d : IsDiff Bd Uo f) (x : \Sigma (a : A) (U a)) : LinearMap A B
+SyntheticDiff.deriv.sub-lem	lemma	eaa9711a736c	-	4a13732c		\lemma sub-lem {A : LModule} {U : A -> \Prop} {a : A} (x : \Sigma (a : A) (U a)) : U (x.1 + 0 *c a)
+SyntheticDiff.linear_diff	func	cf01e5095a6e	dd95fd5d76b0	834ac0ba		\func linear_diff {A B : LModule R} (Bd : IsInvDense B) (f : LinearMap A B) : IsDiffT Bd f
+SyntheticDiff.const_diff	func	ddab0f5f4640	797b270c0d0f	eb0f074a		\func const_diff {A B : LModule R} (Bd : IsInvDense B) (b : B) : IsDiffT Bd (\lam (_ : A) => b)
+SyntheticDiff.+_diff	func	03caf66c5a42	3ac2e72605b5	1ed7a0c5		\func +_diff {A B : LModule R} (Bd : IsInvDense B) {U : A -> \Prop} (Uo : IsOpenPred U) {f g : \Sigma (a : A) (U a) -> B} (df : IsDiff Bd Uo f) (dg : IsDiff Bd Uo g) : IsDiff Bd Uo (\lam x => f x + g x)
+SyntheticDiff.o_diff	func	24f562f634aa	b5fba6cf24c0	1174d6c6		\func o_diff {A B C : LModule R} (Bd : IsInvDense B) (Cd : IsInvDense C) {U : A -> \Prop} (Uo : IsOpenPred U) {V : B -> \Prop} (Vo : IsOpenPred V) {f : \Sigma (a : A) (U a) -> \Sigma (b : B) (V b)} {g : \Sigma (b : B) (V b) -> C} (df : IsDiff Bd Uo (f __).1) (dg : IsDiff Cd Vo g) : IsDiff Cd Uo (\lam x => g (f x))
+SyntheticDiff.bilinear_diff	func	577c5425897f	fb0abbeac624	2e8ee30b		\func bilinear_diff {A B C : LModule R} (Cd : IsInvDense C) (m : BilinearMap A B C) : IsDiffT Cd (\lam (p : \Sigma A B) => m p.1 p.2)
+(overview)	-	-	-	937d49ad	4d7ce1d8:SyntheticDiff 32f1d359:SyntheticDiff.IsInvDense 9836f655:SyntheticDiff.IsOpenPred 052c194e:SyntheticDiff.R 81c63753:SyntheticDiff.isOpenProp	-

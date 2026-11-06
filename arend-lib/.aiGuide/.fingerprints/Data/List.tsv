@@ -1,0 +1,82 @@
+# arend -gc fingerprints v2 for module Data.List. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+List	data	8ed9385c7287	-	73de7376	86530387:List.:: d4f1b28b:List.nil	\data List (A : \Type) | nil | \infixr 5 :: A (List A)
+length	func	e17b0a57f603	fe2461d0ec81	6c05891f		\func length {A : \Type} (l : List A) : Nat
+!!	func	e408a55efc42	3b1f6a8730a6	460c27e8	438f9a33:List b5bddf96:length	\func !! {A : \Type} (l : List A) (i : Fin (length l)) : A
+++	func	9d6c3759f8ee	2a5e23cc01f1	8b19b0a7		\func ++ {A : \Type} (xs ys : List A) : List A
+headDef	func	53ef9fbab4f4	b2a2c804d1f8	2e81d11b		\func headDef {A : \Type} (x : A) (xs : List A) : A
+tail	func	2dfc30163203	f9c8e8c4dda6	bed6adc1	d4f1b28b:List.nil	\func tail {A : \Type} (l : List A) : List A
+replicate	func	dfa5f9a90e22	979ef549613e	80e426bc		\func replicate {A : \Type} (n : Nat) (a : A) : List A
+++-assoc	func	2e7dce5e52a7	59e45f5f4c50	da628894	1291c7e7:++	\func ++-assoc {A : \Type} {xs ys zs : List A} : (xs ++ ys) ++ zs = xs ++ (ys ++ zs)
+++_nil	func	d107724ae890	6bcb1a4f38f3	782fa7ac	1291c7e7:++ d4f1b28b:List.nil	\func ++_nil {A : \Type} {l : List A} : l ++ nil = l
+length_++	lemma	d0da4c043fb7	-	13cff253	1291c7e7:++ b5bddf96:length	\lemma length_++ {A : \Type} {l l' : List A} : length (l ++ l') = length l Nat.+ length l'
+length_replicate	lemma	f7e100c602f8	-	4cfc4445	b5bddf96:length 5e6d093a:replicate	\lemma length_replicate {A : \Type} {n : Nat} {a : A} : length (replicate n a) = n
+ListMonoid	instance	ddfc8c923b4c	-	53e70da7	1291c7e7:++ 438f9a33:List d4f1b28b:List.nil	\instance ListMonoid {A : \Set} : Monoid (List A)
+map	func	4e389ea00c7c	9dcf9ea6d7c3	fc374352		\func map {A B : \Type} (f : A -> B) (l : List A) : List B
+length_map	func	567e74fb3faa	6b4c344b3a40	710ca9ea	079e387c:map	\func length_map {A B : \Type} (f : A -> B) (l : List A) : length (map f l) = length l
+map_id	func	c8f94b84c8dd	9bec49a41900	b9fd018d	079e387c:map	\func map_id {A : \Type} {l : List A} : map (\lam x => x) l = l
+map_comp	func	3c4bf1365385	a37b14d61bc3	9d90bdf3	079e387c:map	\func map_comp {A B C : \Type} (g : B -> C) (f : A -> B) (l : List A) : map (\lam x => g (f x)) l = map g (map f l)
+splitAt	func	6929219137e5	b2a5f172b810	d803d2df		\func splitAt {A : \Type} (n : Nat) (l : List A) : \Sigma (List A) (List A)
+splitAt.appendLem	func	80da3c6e62e8	2590317bfc74	58dd697d	1291c7e7:++ e9ad74f3:drop 07d63093:take	\func appendLem {A : \Type} (n : Nat) (l : List A) : take n l ++ drop n l = l
+take	func	693bf7c239d5	479f1545308e	78efff38	97373b6b:splitAt	\func take {A : \Type} (n : Nat) (l : List A)
+drop	func	693bf7c239d5	0b7d21b47720	78efff38	97373b6b:splitAt	\func drop {A : \Type} (n : Nat) (l : List A)
+replace	func	11b14888aee7	de83ff1a6a80	c6642349		\func replace {A : \Type} (l : List A) (i s : Nat) (r : List A)
+slice	func	6f6f2476767f	df98e6c86ba4	7b6f0121		\func slice {A : \Type} (l : List A) (i s : Nat)
+slice.appendLem	func	b68da20e4611	07656d71d09a	22f07a89	1291c7e7:++ e9ad74f3:drop 2cfc862c:slice 07d63093:take	\func appendLem {A : \Type} (l : List A) (i s : Nat) : take i l ++ slice l i s ++ drop s (drop i l) = l
+All	data	46a9340f4b01	-	3ac7dcec	4a9c9f04:All.all-cons d4f1b28b:All.all-nil	\data All {A : \Type} (P : A -> \Prop) (l : List A) \elim l | nil => all-nil | :: x l => all-cons (P x) (All P l)
+all-map	lemma	e31a0378575b	-	a68ea668	9394022a:All 079e387c:map	\lemma all-map {A B : \Type} (f : A -> B) {P : B -> \Prop} {l : List A} (a : All P (map f l)) : All (\lam a => P (f a)) l
+all-implies	lemma	f5ee79430fbd	-	d3d5bd06	9394022a:All	\lemma all-implies {A : \Type} {P Q : A -> \Prop} {l : List A} (a : All P l) (p : All (\lam a => P a -> Q a) l) : All Q l
+all-forall	lemma	3618f902e928	-	508d0c31	9394022a:All	\lemma all-forall {A : \Type} {P : A -> \Prop} {l : List A} (p : \Pi (a : A) -> P a) : All P l
+All2	data	e99a5726302e	-	f8826e4c		\data All2 {A : \Type} (P : A -> A -> \Prop) (l : List A) \elim l | nil => all2-nil | :: x l => all2-cons (All (P x) l) (All2 P l)
+AllC	data	dc83a17c40f4	-	c32a168e		\data AllC {A : \Type} (P : A -> A -> \Prop) (l : List A) \elim l | nil => allC-nil | :: x nil => allC-single | :: x :: y l => allC-cons (P x y) (AllC P (y :: l))
+allC-tail	lemma	4304dbbac7c3	-	961784c7	a635ac75:AllC	\lemma allC-tail {A : \Type} {a : A} {l : List A} {P : A -> A -> \Prop} (a : AllC P (a :: l)) : AllC P l
+count	func	c8a370113633	ab4ae183b0d7	68e0d179		\func count {A : DecSet} (l : List A) (a : A) : Nat
+count.all-diff	lemma	8870c86390b2	-	30be1f1a	9394022a:All 948bc6c5:count	\lemma all-diff {A : DecSet} {l : List A} {a : A} (d : All (a /=) l) : count l a = 0
+count_perm	lemma	6e353fd00a3a	-	0907bbbd		\lemma count_perm {A : DecSet} {l l' : List A} (p : Perm l l') (a : A) : count l a = count l' a
+count_++	lemma	816a2c19e379	-	c9321daa	1291c7e7:++ 948bc6c5:count	\lemma count_++ {A : DecSet} {l l' : List A} {a : A} : count (l ++ l') a = count l a Nat.+ count l' a
+group	func	967a88346a54	bd243a61f6c3	cc26eb7d	438f9a33:List	\func group {A : DecSet} (l : List A) : List (\Sigma A Nat)
+group-sorted	lemma	4676f84cd5bb	-	927d5893	aac168de:group	\lemma group-sorted {A : DecSet} {P : Preorder A} {l : List A} (s : Sorted l) : Sorted (map __.1 (group l))
+group-diff	lemma	a6c52078825e	-	b536a5dd	d53c67bd:All2	\lemma group-diff {A : DecSet} {P : Poset A} {l : List A} (s : Sorted l) : All2 (__.1 /= __.1) (group l)
+group_count-lem	lemma	fc853c6de02a	-	a01c6edd	948bc6c5:count	\lemma group_count-lem {A : DecSet} {P : Poset A} {l : List A} (s : Sorted l) : All (\lam p => p.2 = count l p.1) (group l)
+Sort.Perm	data	4a3bc0f36124	-	8fbb1834	ec4447fb:Sort.Perm.perm-:: d4f1b28b:Sort.Perm.perm-nil 2e233c8d:Sort.Perm.perm-swap 86b7e4d0:Sort.Perm.perm-trans	\data Perm {A : \Type} (xs ys : List A) \elim xs, ys | nil, nil => perm-nil | :: x xs, :: y ys => perm-:: (x = y) (Perm xs ys) | :: x :: x' xs, :: y :: y' ys => perm-swap (x = y') (x' = y) (xs = ys) | xs, ys => perm-trans {zs : List A} (Perm xs zs) (Perm zs ys)
+Sort.Perm.perm-refl	func	8f862b263d06	14499277ec6f	bfd7f267		\func perm-refl {A : \Type} {xs : List A} : Perm xs xs
+Sort.Perm.perm-sym	func	6803a155c666	15e6b1692118	bfd7f267		\func perm-sym {A : \Type} {xs ys : List A} (p : Perm xs ys) : Perm ys xs
+Sort.Perm.perm-head	func	19dd4f308f37	b44afb2958e6	a63baaab	1291c7e7:++ 86530387:List.:: 2773eb25:Sort.Perm	\func perm-head {A : \Type} {a : A} {xs ys : List A} : Perm (a :: xs ++ ys) (xs ++ a :: ys)
+Sort.Perm.perm_length	lemma	568e7f654440	-	b106722b		\lemma perm_length {A : \Type} {xs ys : List A} (p : Perm xs ys) : length xs = length ys
+Sort.Sorted	data	d5e10a3777aa	-	decd4f72	196fe5c6:Sort.Sorted.sorted-cons	\data Sorted {A : Preorder} (xs : List A) \elim xs | nil => sorted-nil | :: x xs => sorted-cons (x A.<= headDef x xs) (Sorted xs)
+Sort.Sorted.allSorted	lemma	8b8350628a3a	-	72b0f780		\lemma allSorted {A : Preorder} {a1 a2 : A} (l1 l2 : List A) (s : Sorted (a1 :: l1 ++ a2 :: l2)) : a1 A.<= a2
+Sort.Sorted.headSorted	lemma	f1edb8d21348	-	86e1fe24		\lemma headSorted {A : Preorder} {l1 l2 : List A} (s : Sorted (l1 ++ l2)) : Sorted l1
+Sort.Sorted.tailSorted	lemma	c6338ff5c4d3	-	86e1fe24		\lemma tailSorted {A : Preorder} (l1 l2 : List A) (s : Sorted (l1 ++ l2)) : Sorted l2
+Sort.Insertion.sort	func	45418b945867	c0c3304bbdd9	efa11c1f		\func sort {A : Dec} (xs : List A) : List A
+Sort.Insertion.sort.insert	func	53fb037a1d4d	0bced37a9afc	d1d2d7fc		\func insert {A : Dec} (a : A) (xs : List A) : List A
+Sort.Insertion.sort-sorted	lemma	276211c7c3eb	-	044fa03d	fbeff36a:Sort.Sorted	\lemma sort-sorted {A : Dec} (xs : List A) : Sorted (sort xs)
+Sort.Insertion.sort-sorted.insert-sorted	lemma	2b46236fa417	-	044fa03d	fbeff36a:Sort.Sorted	\lemma insert-sorted {A : Dec} (a : A) {xs : List A} (s : Sorted xs) : Sorted (sort.insert a xs)
+Sort.Insertion.sort-perm	func	4426d8190f39	ce0aa301b69d	1d7a2b8f	2773eb25:Sort.Perm	\func sort-perm {A : Dec} (xs : List A) : Perm xs (sort xs)
+Sort.Insertion.sort-perm.insert-perm	func	35b52fa9c626	002a7d3a04a8	1d7a2b8f	2773eb25:Sort.Perm	\func insert-perm {A : Dec} (a : A) (xs : List A) : Perm (a :: xs) (insert a xs)
+Sort.Insertion.sort-perm.insert-comm	lemma	0003d39bd518	-	1d7a2b8f	2773eb25:Sort.Perm	\lemma insert-comm {A : Dec} (a a' : A) (l : List A) : insert a (insert a' l) = insert a' (insert a l)
+Sort.Insertion.perm_sort	lemma	d45ba0fbfe6e	-	88f82cdd	2773eb25:Sort.Perm	\lemma perm_sort {A : Dec} {xs ys : List A} (p : Perm xs ys) : sort xs = sort ys
+Sort.Insertion.sorted_sort	lemma	ac6a8a6f48f8	-	7e0a1fa1		\lemma sorted_sort {A : Dec} {xs : List A} (s : Sorted xs) : sort xs = xs
+Sort.RedBlack.sort	func	48f9ae45f3f3	d890fbd53c2c	144d6249		\func sort {A : Dec} (l : List A)
+Sort.RedBlack.sort.Color	data	816c221af038	-	762bdcb1	d4f1b28b:Sort.RedBlack.sort.Color.black d4f1b28b:Sort.RedBlack.sort.Color.red 36bf7d7e:Sort.RedBlack.sort.RBTree.rbBranch d4f1b28b:Sort.RedBlack.sort.RBTree.rbLeaf	\data Color | red | black
+Sort.RedBlack.sort.RBTree	data	696332d5c760	-	762bdcb1	d4f1b28b:Sort.RedBlack.sort.Color.black d4f1b28b:Sort.RedBlack.sort.Color.red 36bf7d7e:Sort.RedBlack.sort.RBTree.rbBranch d4f1b28b:Sort.RedBlack.sort.RBTree.rbLeaf	\data RBTree (A : \Type) | rbLeaf | rbBranch Color (RBTree A) A (RBTree A)
+Sort.RedBlack.sort.rbTreeToList	func	335868dcb4ac	69cbb9c36772	286485e3		\func rbTreeToList {A : \Type} (t : RBTree A) (r : List A) : List A
+Sort.RedBlack.toList	func	659f8afbf19d	13289c7d9863	286485e3		\func toList {A : \Type} (t : RBTree A) : List A
+Sort.RedBlack.sort.aux	func	0e24e3ae5b3b	defbf0eb83a8	643b1571		\func aux {A : Dec} (l : List A) (\strict r : RBTree A) : RBTree A
+Sort.RedBlack.sort.repaint	func	0cae87425d1c	b99cae5a9670	643b1571		\func repaint {A : \Type} (t : RBTree A) : RBTree A
+Sort.RedBlack.sort.insert	func	7da9390e3ebb	fa5a454bc883	643b1571		\func insert {A : Dec} (a : A) (t : RBTree A) : RBTree A
+Sort.RedBlack.sort.balanceLeft	func	ffbbe174e456	938b369607c0	643b1571		\func balanceLeft {A : \Type} (c : Color) (\strict l : RBTree A) (v : A) (r : RBTree A) : RBTree A
+Sort.RedBlack.sort.balanceRight	func	66863b591039	0902c7afa017	643b1571		\func balanceRight {A : \Type} (c : Color) (l : RBTree A) (v : A) (\strict r : RBTree A) : RBTree A
+Sort.RedBlack.sort=insert	lemma	912d52095ca2	-	65c61032	9f84b4d8:Sort.Insertion.sort.insert 78861ddd:Sort.RedBlack.sort=insert.aux=makeTree 128c699b:Sort.RedBlack.sort=insert.makeTree_insert 52834ced:Sort.RedBlack.sort=insert.toList_insert 944b4a49:Sort.RedBlack.sort=insert.toList_repaint	\lemma sort=insert {A : Dec} (l : List A) : sort l = Insertion.sort l
+contains	func	d937f627d52f	eb1fd59359aa	eb0f5e17		\func contains {A : DecSet} (l : List A) (a : A) : Bool
+union	func	b97ab0dada56	c1421b2d7113	65e548be	77af61ca:contains	\func union {A : DecSet} (l l' : List A) : List A
+InList	data	9e1d8241835c	-	4786bba4	d0f24e52:InList.here b4231c04:InList.there	\data InList {A : \Type} (a : A) (l : List A) : \Prop \elim l | a' :: l => here (a = a') there (InList a l)
+InList.~	func	87512c92c1b1	7a7a11162886	e40dd6e0	47c9d694:InList	\func ~ {A : \Type} (l l' : List A)
+InList.~_::	lemma	c0e59e68fac2	-	2651850c	93f1b31f:InList.~	\lemma ~_:: {A : \Type} {a : A} {l l' : List A} (p : l ~ l') : a :: l ~ a :: l'
+InList.~_::.InList_::	lemma	7c6c9953178c	-	2651850c	93f1b31f:InList.~	\lemma InList_:: {A : \Type} {a b : A} {l l' : List A} (p : InList b l -> InList b l') (c : InList b (a :: l)) : InList b (a :: l')
+ListSub	type	376156cb6cf9	6f5ef27ad2ae	7dd2d88b	47c9d694:InList	\type ListSub {A : \Type} (E T : List A) : \Prop
+InList_++	lemma	62913af0fdc5	-	beae9854	1291c7e7:++	\lemma InList_++ {A : \Type} {a : A} {l l' : List A} (p : InList a (l ++ l')) : InList a l || InList a l'
+InList_++-left	lemma	6e16948894be	-	beae9854	1291c7e7:++	\lemma InList_++-left {A : \Type} {a : A} {l l' : List A} (p : InList a l) : InList a (l ++ l')
+InList_++-right	lemma	90c0f52bda0b	-	beae9854	1291c7e7:++	\lemma InList_++-right {A : \Type} {a : A} {l l' : List A} (p : InList a l') : InList a (l ++ l')
+contains_InList	lemma	9cd5b99d76ef	-	3ff90ca7	47c9d694:InList 77af61ca:contains	\lemma contains_InList {A : DecSet} {a : A} {l : List A} : (contains l a = true) <-> InList a l
+union~++	lemma	4c950a6f1956	-	f57c12ea	1291c7e7:++ fec3674f:union	\lemma union~++ {A : DecSet} {l l' : List A} : union l l' ~ l ++ l'
+(overview)	-	-	-	59f8c114	821d3fd5:!! 1291c7e7:++ 9394022a:All d53c67bd:All2 a635ac75:AllC 47c9d694:InList 438f9a33:List d4f1b28b:List.nil 9da763e5:Sort 9da763e5:Sort.Insertion 2773eb25:Sort.Perm 9da763e5:Sort.RedBlack fbeff36a:Sort.Sorted 948bc6c5:count aac168de:group b5bddf96:length 079e387c:map	-

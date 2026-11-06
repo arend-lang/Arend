@@ -1,0 +1,19 @@
+# arend -gc fingerprints v2 for module Arith.Trig.Complex. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+cos	sfunc	9b3835a82077	640f8a7a8dd8	9b33559e		\sfunc cos (z : Complex) : Complex
+sin	sfunc	9b3835a82077	98dfdffe2ab5	908d0fb9		\sfunc sin (z : Complex) : Complex
+cos_zro	lemma	236afc7af911	-	9dc6dae2	f63f66b9:cos 5a90b7aa:sin	\lemma cos_zro : cos 0 = {Complex} 1
+sin_zro	lemma	b690eeea7e88	-	9dc6dae2	f63f66b9:cos 5a90b7aa:sin	\lemma sin_zro : sin 0 = {Complex} 0
+cos_negative	lemma	500d6dafa554	-	1950dbba	f63f66b9:cos 5a90b7aa:sin	\lemma cos_negative {z : Complex} : cos (negative z) = cos z
+sin_negative	lemma	9cd8550be845	-	1950dbba	f63f66b9:cos 5a90b7aa:sin	\lemma sin_negative {z : Complex} : sin (negative z) = negative (sin z)
+cos_+	lemma	ffb3b409486d	-	a026b7ab	f63f66b9:cos 5a90b7aa:sin	\lemma cos_+ {x y : Complex} : cos (x + y) = cos x * cos y - sin x * sin y
+sin_+	lemma	f45d5ba7d276	-	a026b7ab	f63f66b9:cos 5a90b7aa:sin	\lemma sin_+ {x y : Complex} : sin (x + y) = cos x * sin y + sin x * cos y
+cos_minus	lemma	7b05e6532a0a	-	d208bf50	f63f66b9:cos 5a90b7aa:sin	\lemma cos_minus {x y : Complex} : cos (x - y) = cos x * cos y + sin x * sin y
+sin_minus	lemma	251add480992	-	d208bf50	f63f66b9:cos 5a90b7aa:sin	\lemma sin_minus {x y : Complex} : sin (x - y) = sin x * cos y - cos x * sin y
+euler	lemma	845732ad2819	-	d380c191	f63f66b9:cos 5a90b7aa:sin	\lemma euler {z : Complex} : exp (i * z) = cos z + i * sin z
+pythagoras	lemma	dbb50a2c3bfd	-	8ea98d14	f63f66b9:cos 5a90b7aa:sin	\lemma pythagoras {z : Complex} : cos z * cos z + sin z * sin z = {Complex} 1
+cos-sum-to-product	lemma	20c58ab0b1dc	-	a70c7fde	f63f66b9:cos 5a90b7aa:sin	\lemma cos-sum-to-product {x y : Complex} : cos x - cos y = negative (2 * sin ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2))
+sin-sum-to-product	lemma	4027aa1143a3	-	a70c7fde	f63f66b9:cos 5a90b7aa:sin	\lemma sin-sum-to-product {x y : Complex} : sin x - sin y = 2 * cos ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2)
+cos-fromReal	lemma	415cd5b07b36	-	b55f126f	f63f66b9:cos 5a90b7aa:sin	\lemma cos-fromReal {x : Real} : cos x = {Complex} rcos x
+sin-fromReal	lemma	aa1d9586ffed	-	b55f126f	f63f66b9:cos 5a90b7aa:sin	\lemma sin-fromReal {x : Real} : sin x = {Complex} rsin x
+(overview)	-	-	-	f84227cb	f63f66b9:cos 66da5891:cos-fromReal 50387ddf:euler a7021d30:pythagoras 5a90b7aa:sin 217d21bc:sin-fromReal	-

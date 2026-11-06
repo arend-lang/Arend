@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Category.Adjoint. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Adjunction	record	3ae29ed96078	-	4b923b60	72ec2809:Adjunction.C 72ec2809:Adjunction.D c4e5410c:Adjunction.LAdj dccb2f57:Adjunction.RAdj 024c584d:Adjunction.epsilon fac956dc:Adjunction.eta 288ff503:Adjunction.eta_epsilon-left ee9f7dcb:Adjunction.eta_epsilon-right	\record Adjunction (C : Precat) (D : Precat) { | LAdj : Functor C D | RAdj : Functor D C | eta : NatTrans Id (Comp RAdj LAdj) | epsilon : NatTrans (Comp LAdj RAdj) Id | eta_epsilon-left {Y : D} : RAdj.Func (epsilon Y) ∘ eta (RAdj Y) = id | eta_epsilon-right {X : C} : epsilon (LAdj X) ∘ LAdj.Func (eta X) = id }
+Adjunction.eta_epsilon-equiv	lemma	3c0751bcc4ff	-	ad920d82	c4e5410c:Adjunction.LAdj dccb2f57:Adjunction.RAdj 024c584d:Adjunction.epsilon fac956dc:Adjunction.eta	\lemma eta_epsilon-equiv {X : C} {Y : D} : QEquiv {Hom (LAdj X) Y} {Hom X (RAdj Y)} (Func __ ∘ eta X) (epsilon Y ∘ LAdj.Func __)
+Adjunction.eta_Iso	lemma	828ef8907f15	-	85191440	dccb2f57:Adjunction.RAdj 024c584d:Adjunction.epsilon fac956dc:Adjunction.eta	\lemma eta_Iso {Y : D} (e : Iso (eta (RAdj Y))) : Func (epsilon Y) = e.hinv
+Adjunction.preservesLimits	lemma	f46858296ada	-	bda54099	dccb2f57:Adjunction.RAdj	\lemma preservesLimits {J : Precat} {G : Functor J D} : PreservesLimit RAdj G
+Adjunction.rightFactor	func	7e7ff715c702	31ccff012aaa	1c0d5e00	72ec2809:Adjunction.C 72ec2809:Adjunction.D	\func rightFactor {C D E : Precat} (G1 : FullyFaithfulFunctor D E) (G2 : Functor C D) (adj : (Adjunction E C) { | RAdj => Comp G1 G2 }) : Adjunction D C
+CatEquiv	class	06c5bbffba25	-	8c38db32	cb4214ac:Adjunction cbfbec50:CatEquiv.epsilon-iso cd3dbd2d:CatEquiv.eta-iso	\class CatEquiv \extends Adjunction { \field eta-iso {X : C} : Iso (eta X) \field epsilon-iso {Y : D} : Iso (epsilon Y) }
+CatEquiv.RAdj-FF	lemma	e1772b83e55a	-	6a6274db		\lemma RAdj-FF {X Y : D} : IsEquiv (RAdj.Func {X} {Y})
+CatEquiv.op	func	5882d318c087	96f159ced040	2b0ac2fa		\func op : CatEquiv C.op D.op
+CatEquiv.reverse	func	656a98d314a3	8a248067f652	81e356a0	72ec2809:Adjunction.C 72ec2809:Adjunction.D c4e5410c:Adjunction.LAdj dccb2f57:Adjunction.RAdj a8e393e0:CatEquiv	\func reverse : CatEquiv D C
+(overview)	-	-	-	d75cfec3	cb4214ac:Adjunction 72ec2809:Adjunction.C 72ec2809:Adjunction.D c4e5410c:Adjunction.LAdj dccb2f57:Adjunction.RAdj 024c584d:Adjunction.epsilon fac956dc:Adjunction.eta a8e393e0:CatEquiv	-

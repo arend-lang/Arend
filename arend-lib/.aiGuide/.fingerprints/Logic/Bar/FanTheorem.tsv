@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Logic.Bar.FanTheorem. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+fanTheorem	lemma	b1eebc99772b	-	6826310f	48da5381:fanTheorem.AllPaths 66b5d4ff:indexedFanTheorem.State.ls	\lemma fanTheorem {A : \Set} {P : Array A -> \Prop} (Pm : IsBarMonotone P) (b : Bar P nil) : Bar (AllPaths P) nil
+indexedFanTheorem	lemma	928563e50357	-	c588661c	81a9a5cf:fanTheorem.walk 8347be5a:indexedFanTheorem.IsFan 66b5d4ff:indexedFanTheorem.State.ls	\lemma indexedFanTheorem {A : \Set} {P : Array A -> \Prop} (Pm : IsBarMonotone P) (b : Bar P nil) (Q : \Pi (l : Array A) -> Fin l.len -> \Prop) (PQ : ∀ {l : P} ∃ (i : Fin l.len) (Q l i)) : Bar IsFan nil
+(overview)	-	-	-	a5fb3bd6	48da5381:fanTheorem.AllPaths 43cf1f1c:indexedFanTheorem	-

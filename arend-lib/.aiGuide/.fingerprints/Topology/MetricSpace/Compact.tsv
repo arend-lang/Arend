@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.Compact. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+product-balls-tb	lemma	35b5dbfc1645	-	0f3fafe6		\lemma product-balls-tb {X Y : ExPseudoMetricSpace} (Xb : BallsTotallyBounded X) (Yb : BallsTotallyBounded Y) : BallsTotallyBounded (ManhattanProductPseudoMetricSpace X Y)
+(overview)	-	-	-	d3eee043		-

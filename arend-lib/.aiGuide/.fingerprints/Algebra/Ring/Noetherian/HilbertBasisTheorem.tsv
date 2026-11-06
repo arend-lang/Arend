@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Noetherian.HilbertBasisTheorem. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HilbertBasisTheorem	lemma	4422e25c538f	-	c1e2d032		\lemma HilbertBasisTheorem {R : CRing} (RN : IsNoetherian R) : IsNoetherian (PolyAlgebra R)
+Tailored	data	ae206222dd1a	-	63377039		\data Tailored {A : \Set} (R : A -> A -> \Prop) (as bs : Array A) : \Prop \elim as, bs | a :: as, b :: bs => tailored-in (R a b) (as = bs) | as, b :: bs => tailored-step (Tailored R as bs)
+tailored-induction	lemma	bcb083bfb42c	-	d664d5b0	65937409:Tailored	\lemma tailored-induction {A : \Set} {R : A -> A -> \Prop} {l : Array A} (P : Array A -> \Prop) (h1 : ∀ {l'} (Tailored R l' l) (P l')) (h2 : \Pi {a : A} -> ∀ {l'} (Tailored R l' (a :: l)) (P l') -> P (a :: l)) {a : A} (acc : Acc R a) : P (a :: l)
+(overview)	-	-	-	2e889d3e	65937409:Tailored	-

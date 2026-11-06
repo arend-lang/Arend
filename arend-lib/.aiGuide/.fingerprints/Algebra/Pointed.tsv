@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Pointed. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Pointed	class	2aca102c738c	-	d5dc5292	2177db59:Pointed.ide	\class Pointed \extends BaseSet { | ide : E }
+AddPointed	class	778a53c4cf9b	-	08e3b6ce	2177db59:AddPointed.zro	\class AddPointed \extends BaseSet { | zro : E }
+AddPointed.IsZero	func	d143af8bb978	534d297ad279	38e685c5		\func IsZero : \Prop
+Pointed.equals	func	32970d033ff3	e22940110694	94394844	be615324:Pointed 2177db59:Pointed.ide	\func equals {X Y : Pointed.{u}} (p : X = {\Set u} Y) (q : coe (p @) ide right = ide) : X = {Pointed.{u}} Y
+AddPointed.fromPointed	coerce	48bb106d3a66	-	3252e5fa	908b8d51:AddPointed 2177db59:AddPointed.zro be615324:Pointed 2177db59:Pointed.ide	\use \coerce fromPointed (P : Pointed)
+AddPointed.toPointed	coerce	eedaaff1961d	-	0431ec73	908b8d51:AddPointed 2177db59:AddPointed.zro be615324:Pointed 2177db59:Pointed.ide	\use \coerce toPointed (P : AddPointed)
+(overview)	-	-	-	554e5e40	908b8d51:AddPointed 2177db59:AddPointed.zro be615324:Pointed 6b7d1fa2:Pointed.equals 2177db59:Pointed.ide	-

@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Topology.BanachLattice. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ExPseudoNormedRieszSpace	class	2ccec90aae6b	-	a07b917b	795e82a7:ExPseudoNormedRieszSpace.norm_<=	\class ExPseudoNormedRieszSpace \extends ExPseudoNormedAbGroup, TopRieszSpace { | norm_<= {x y : E} : abs x <= abs y -> norm x ExUpperReal.<= norm y | solid-neighborhood => \lam U0 => (\case <=<-ball U0 \with { | inP (eps, eps>0, p) => inP (OBall eps 0, \lam |x|<eps |y|<=|x| => transport (ExUpperReal.U {__} eps) norm_dist $ norm_<= |y|<=|x| $ transportInv (ExUpperReal.U {__} eps) norm_dist |x|<eps, OBall-center_<=< eps>0, p) }) }
+BanachLattice	class	14ac797e1229	-	5b4f6b35	f8804ddc:ExPseudoNormedRieszSpace	\class BanachLattice \extends ExPseudoNormedRieszSpace, RealBanachSpace
+RieszLSpace	class	1ffa7853e73c	-	2d2469c1	2f4d6f59:BanachLattice c5032ede:RieszLSpace.norm_+_>=	\class RieszLSpace \extends BanachLattice, PseudoNormedAbGroup { | norm_+_>= {x y : E} : 0 <= x -> 0 <= y -> norm x RealAbGroup.+ norm y RealAbGroup.<= norm (x + y) }
+RieszMSpace	class	09ebadc3bb40	-	4f4f4a8a	2f4d6f59:BanachLattice 421105b3:RieszMSpace.norm_join	\class RieszMSpace \extends BanachLattice { | norm_join {x y : E} : 0 <= x -> 0 <= y -> norm (x ∨ y) ExUpperReal.<= norm x ExUpperRealLattice.∨ norm y }
+(overview)	-	-	-	2ba1e26b	f8804ddc:ExPseudoNormedRieszSpace f89b7b4e:RieszLSpace bf856e4a:RieszMSpace	-

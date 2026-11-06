@@ -1,0 +1,28 @@
+# arend -gc fingerprints v2 for module Algebra.LatticeColimit. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MonoidLatticeColimit.Func-app	lemma	66350738e588	-	fad6dbea		\lemma Func-app {j1 j2 j3 : D} {f : Hom j1 j2} {g : Hom j2 j3} {a : F j1} : F.Func (g ∘ f) a = F.Func g (F.Func f a)
+AddMonoidLatticeColimit.Func-app	lemma	66350738e588	-	fad6dbea		\lemma Func-app {j1 j2 j3 : D} {f : Hom j1 j2} {g : Hom j2 j3} {a : F j1} : F.Func (g ∘ f) a = F.Func g (F.Func f a)
+RingLatticeColimit.Func-app	lemma	66350738e588	-	fad6dbea		\lemma Func-app {j1 j2 j3 : D} {f : Hom j1 j2} {g : Hom j2 j3} {a : F j1} : F.Func (g ∘ f) a = F.Func g (F.Func f a)
+MonoidLatticeColimit.poset-app	lemma	eca87b6c1842	-	83aff244		\lemma poset-app {j j' : D} {f g : j <= j'} {a : F j} : F.Func f a = F.Func g a
+AddMonoidLatticeColimit.poset-app	lemma	eca87b6c1842	-	83aff244		\lemma poset-app {j j' : D} {f g : j <= j'} {a : F j} : F.Func f a = F.Func g a
+RingLatticeColimit.poset-app	lemma	eca87b6c1842	-	83aff244		\lemma poset-app {j j' : D} {f g : j <= j'} {a : F j} : F.Func f a = F.Func g a
+MonoidLatticeColimit.poset-id	lemma	ec70a2cad890	-	810df3b9		\lemma poset-id {j : D} {p : j <= j} {a : F j} : F.Func p a = a
+AddMonoidLatticeColimit.poset-id	lemma	ec70a2cad890	-	810df3b9		\lemma poset-id {j : D} {p : j <= j} {a : F j} : F.Func p a = a
+MonoidLatticeColimit	instance	a349498d6374	-	9e6170f7		\instance MonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D MonoidCat.{u}) : Monoid (SetColimit (Comp MonoidCat.forget F))
+MonoidLatticeColimit.inMap	func	94de0fafb627	ab8a2b62ad71	80a5e686	a64949e2:MonoidLatticeColimit	\func inMap (d : D) : MonoidHom (F d) (MonoidLatticeColimit F)
+MonoidLatticeColimit.inMap-coh	lemma	c14d60f90049	-	4ed824f0		\lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' MonoidHom.∘ F.Func p
+AddMonoidLatticeColimit	instance	1e2cb79d0b71	-	62b438c7		\instance AddMonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddMonoidCat.{u}) : AddMonoid (SetColimit (Comp AddMonoidCat.forget F))
+AddMonoidLatticeColimit.inMap	func	5159ee21f050	8550795ed7a8	de67172d	1218e987:AddMonoidLatticeColimit	\func inMap (d : D) : AddMonoidHom (F d) (AddMonoidLatticeColimit F)
+AddMonoidLatticeColimit.inMap-coh	lemma	5f8ac7320ad5	-	8569ed35		\lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddMonoidHom.∘ F.Func p
+AddGroupLatticeColimit	instance	1f10c44d5600	-	342dad97	1218e987:AddMonoidLatticeColimit	\instance AddGroupLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddGroupCat.{u}) : AddGroup (SetColimit (Comp AddGroupCat.forget F))
+AddGroupLatticeColimit.inMap	func	9cdde5a66d8d	11e5401163f3	e926035b	2c7fe7c0:AddGroupLatticeColimit	\func inMap (d : D) : AddGroupHom (F d) (AddGroupLatticeColimit F)
+AddGroupLatticeColimit.inMap-coh	lemma	9680bdffbc5e	-	fae5b3a8		\lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddGroupHom.∘ F.Func p
+AbGroupLatticeColimit	instance	88ceede30f80	-	3a967569	2c7fe7c0:AddGroupLatticeColimit	\instance AbGroupLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AbGroupCat.{u}) : AbGroup (SetColimit (Comp AbGroupCat.forget F))
+AbGroupLatticeColimit.inMap	func	e7729849a624	50be08d7cc08	64a363c0	95ba0f02:AbGroupLatticeColimit	\func inMap (d : D) : AddGroupHom (F d) (AbGroupLatticeColimit F)
+AbGroupLatticeColimit.inMap-coh	lemma	9680bdffbc5e	-	fae5b3a8		\lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' AddGroupHom.∘ F.Func p
+RingLatticeColimit	instance	790780679cfb	-	03d4c9fb	95ba0f02:AbGroupLatticeColimit a64949e2:MonoidLatticeColimit	\instance RingLatticeColimit {D : BottomJoinSemilattice} (F : Functor D RingCat.{u}) : Ring (SetColimit (Comp RingCat.forget F))
+RingLatticeColimit.inMap	func	7f6677193a8a	e1185b27658b	9716d15f	030ce831:RingLatticeColimit	\func inMap (d : D) : RingHom (F d) (RingLatticeColimit F)
+RingLatticeColimit.inMap-coh	lemma	6564fa8ac092	-	fae5b3a8		\lemma inMap-coh {d d' : D} (p : d <= d') : inMap d = inMap d' RingHom.∘ F.Func p
+CRingLatticeColimit	instance	043b353357ae	-	29440e4e	030ce831:RingLatticeColimit	\instance CRingLatticeColimit {D : BottomJoinSemilattice} (F : Functor D CRingCat.{u}) : CRing (SetColimit (Comp CRingCat.forget F))
+DiscreteFieldLatticeColimit	func	8064b2c0a9b5	c070444b7e22	709d684a	83f04cba:CRingLatticeColimit	\func DiscreteFieldLatticeColimit {D : BottomJoinSemilattice} (F : Functor D CRingCat.{u}) (p : \Pi (d : D) -> DiscreteField { | CRing => F d }) : DiscreteField (SetColimit (Comp CRingCat.forget F))
+(overview)	-	-	-	c8938c99	95ba0f02:AbGroupLatticeColimit a64949e2:MonoidLatticeColimit 030ce831:RingLatticeColimit	-

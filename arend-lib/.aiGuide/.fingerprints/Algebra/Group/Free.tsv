@@ -1,0 +1,31 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Free. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FreeGroup	instance	4f0787615f0d	-	6e1b6e9c		\instance FreeGroup (S : \Set) : Group
+FreeGroup.can	func	c20246bb0fc7	04f439a1a484	763003e7	34f58ebe:FreeGroup	\func can {S : \Set} (s : S) : FreeGroup S
+FreeGroup.W	func	0b82612c3026	884a92de4aeb	49c5f437		\func W : Monoid
+FreeGroup.inv	func	47aeae07c000	00a13819b966	0d04c353		\func inv (w : W) : W
+FreeGroup.AreAdjacent	func	292bbd82bb2d	9301c632c37f	5ddf8686		\func AreAdjacent (w_1 w_2 : W)
+FreeGroup.equivWords	instance	1babe3ebd649	-	79c7ca18	770e1b67:FreeGroup.AreAdjacent 2b25639f:FreeGroup.W	\instance equivWords : Equivalence W
+FreeGroup.inv_*	lemma	51001b94143d	-	cdf3af92	51d0421b:FreeGroup.inv	\lemma inv_* (x y : W) : inv (x * y) = inv y * inv x
+FreeGroup.adjacent_cons	lemma	677c97f1505c	-	230c096e		\lemma adjacent_cons {w1 w2 : W} (gen : \Sigma S Bool) (w1~w2 : w1 ~ w2) : gen :: w1 ~ gen :: w2
+FreeGroup.adjacent_snoc	lemma	90116a07ebec	-	e1f4370f		\lemma adjacent_snoc {w1 w2 : W} {gen : \Sigma S Bool} (w1~w2 : w1 ~ w2) : w1 ++ (gen :: nil) ~ w2 ++ (gen :: nil)
+FreeGroup.equivMulRight	lemma	29c62f6be164	-	7abc7e78		\lemma equivMulRight {a b c : W} (equiv : a ~ b) : a * c ~ b * c
+FreeGroup.equivMulLeft	lemma	5b0b45416cb9	-	7abc7e78		\lemma equivMulLeft {a b c : W} (equiv : a ~ b) : c * a ~ c * b
+FreeGroup.equiv_inv	lemma	fe744f0d3603	-	a6d3bbd3	51d0421b:FreeGroup.inv	\lemma equiv_inv {a b : W} (equiv : a ~ b) : inv a ~ inv b
+FreeGroup.inv_mul	lemma	219b99669480	-	6e255b81	51d0421b:FreeGroup.inv	\lemma inv_mul {a : W} : inv a * a ~ nil
+FreeGroup.univ_map	func	c773f18e5285	8620f9b14b5c	3feb701f		\func univ_map {G : Group} (i : S -> G) (l : List (\Sigma S Bool)) : G
+FreeGroup.univ_map_++	lemma	fcffdf589b3f	-	2a044728	aa722149:FreeGroup.univ_map	\lemma univ_map_++ {G : Group} (i : S -> G) (l1 l2 : List (\Sigma S Bool)) : univ_map i (l1 ++ l2) = univ_map i l1 G.* univ_map i l2
+FreeGroup.univ_equiv	lemma	b9216a56dbae	-	b4116b38	aa722149:FreeGroup.univ_map	\lemma univ_equiv {G : Group} (i : S -> G) (w1 w2 : W) (equiv : w1 ~ w2) : univ_map i w1 = univ_map i w2
+FreeGroup.univ_map'	func	db4e0ea8e76e	c9775962383b	a8698907	34f58ebe:FreeGroup	\func univ_map' {G : Group} (i : S -> G) (w : FreeGroup S) : G
+FreeGroupUniversalProperty	func	1e1fe255ba1e	d192c3069c93	c48ee2b0	34f58ebe:FreeGroup b92e2d02:FreeGroup.can	\func FreeGroupUniversalProperty (S : \Set) (G : Group) (i : S -> G) : \Sigma (f : GroupHom (FreeGroup S) G) (f o FreeGroup.can = i)
+reduce	func	2f159b2e3efe	a5d0ffcf39a8	ff2d59a7		\func reduce {S : DecSet} (x : List (\Sigma S Bool)) : List (\Sigma S Bool)
+reduce_equiv	func	534b287d2722	a2931bd6cc6e	419912a5	0f17483b:reduce	\func reduce_equiv {S : DecSet} (x : List (\Sigma S Bool)) : x ~ reduce x
+isIrreducible	func	88f1752f9213	19e7709170e0	79b9fa5e		\func isIrreducible {S : DecSet} (x : List (\Sigma S Bool)) : Bool
+isIrreducibleCons	func	5163b8defbd2	5548256885e4	6ad06f9e		\func isIrreducibleCons {S : DecSet} {a : \Sigma S Bool} {x : List (\Sigma S Bool)} : isIrreducible (a :: x) = true -> isIrreducible x = true
+reduceIsIrreducible	func	38c2c1ebfdd0	89f57bf7ff0b	7d438810	0f17483b:reduce	\func reduceIsIrreducible {S : DecSet} (x : List (\Sigma S Bool)) : isIrreducible (reduce x) = true
+reduce_inP	func	bc4bcd12752c	ab1ea13e7e37	d0ff8cd1	0f17483b:reduce	\func reduce_inP {S : DecSet} (x y : List (\Sigma S Bool)) (s : S) (b : Bool) : reduce (x ++ ((s, b) :: (s, not b) :: y)) = reduce (x ++ y)
+reduce_equivWords	func	8de6fecca45c	8bfd0a4df14c	53641d37	0f17483b:reduce	\func reduce_equivWords {S : DecSet} {l1 l2 : List (\Sigma S Bool)} (eq : l1 FreeGroup.equivWords.~ l2) : reduce l1 = reduce l2
+reduceHom	func	a11d02c9e67d	daed9e5bfe9b	cca219e0	34f58ebe:FreeGroup	\func reduceHom {S : DecSet} (x : FreeGroup S) : List (\Sigma S Bool)
+DecWordMonoid	instance	d5afef81ad6e	-	4e6c3201		\instance DecWordMonoid (S : DecSet) : DecSet
+FreeDecGroup	instance	768026b313ef	-	7959dbee	34f58ebe:FreeGroup 01196e3b:reduceHom	\instance FreeDecGroup (S : DecSet) : Group.Dec
+(overview)	-	-	-	78286eb3	2b25639f:FreeGroup.W 51d0421b:FreeGroup.inv	-

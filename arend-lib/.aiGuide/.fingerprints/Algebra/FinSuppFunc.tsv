@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Algebra.FinSuppFunc. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FinSuppFunc	record	f460ba6655b8	-	8008c4a8	08f5d85c:FinSuppFunc.fSupp	\record FinSuppFunc \extends SetHom { \override Cod : AddPointed | fSupp : ∃ (s : Array Dom) ∀ i ((\Pi (j : Fin s.len) -> s j /= i) -> func i = 0) }
+FinSuppFuncDec	instance	dff211dbeee4	-	bddee352	af238470:FinSuppFunc	\instance FinSuppFuncDec (M : DecSet) (R : AddPointed) {D : DecSet R} : DecSet (FinSuppFunc M R)
+FinSuppFuncAddPointed	instance	35bf567e8058	-	0f8c730b		\instance FinSuppFuncAddPointed {A : BaseSet} {B : AddPointed} : AddPointed (FinSuppFunc A B)
+FinSuppFuncAddMonoid	instance	db5db9fbd0c2	-	011a2ae3		\instance FinSuppFuncAddMonoid {A : BaseSet} {B : AddMonoid} : AddMonoid (FinSuppFunc A B)
+FinSuppFuncAbMonoid	instance	fbf911676ae4	-	5572524b		\instance FinSuppFuncAbMonoid {A : BaseSet} {B : AbMonoid} : AbMonoid (FinSuppFunc A B)
+FinSuppFuncAddGroup	instance	d9dee132eecd	-	ea0637a2		\instance FinSuppFuncAddGroup {A : BaseSet} {B : AddGroup} : AddGroup (FinSuppFunc A B)
+FinSuppFuncAbGroup	instance	dc594be21eb2	-	09ec5013	1daf5173:FinSuppFuncAddGroup	\instance FinSuppFuncAbGroup {A : BaseSet} {B : AbGroup} : AbGroup (FinSuppFunc A B)
+(overview)	-	-	-	54fc2da2	af238470:FinSuppFunc	-

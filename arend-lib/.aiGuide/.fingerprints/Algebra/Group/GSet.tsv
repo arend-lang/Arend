@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GSet. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+GSet	class	e82027e10d05	-	a6000237	13a11314:GSet.** b6c82b02:GSet.**-assoc cb54afa7:GSet.**_ide 9dcebdf5:GSet.G	\class GSet (G : Group) \extends BaseSet { | \infixl 8 ** : G -> E -> E | **_ide {e : E} : ide ** e = e | **-assoc {m n : G} {e : E} : (m * n) ** e = m ** (n ** e) }
+GSet.**	field	c0f47458ca9a	-	73de5b36	9dcebdf5:GSet.G	| ** : G -> E -> E
+GSet.Stabilizer	func	973a24dfc1fd	d7a7a43ce1e1	a531be72	13a11314:GSet.** 9dcebdf5:GSet.G	\func Stabilizer (s : E) : SubGroup G
+GSet.choosePoint	func	e23a8ad3e073	935d8dc8438c	92b1a471	da3eedee:GSet.Stabilizer	\func choosePoint (e : E)
+TransitiveGroupAction	class	9308f81784a2	-	9fe90d74	3c457cb2:GSet 13a11314:GSet.** 9dcebdf5:GSet.G 1e203a57:TransitiveGroupAction.isTransAction	\class TransitiveGroupAction \extends GSet { | isTransAction : \Pi (v v' : E) -> ∃ (g : G) (g ** v = v') }
+ActionBySubgroup	func	15cc01c6112f	1d58435bfe55	54c1cd4f	13a11314:GSet.** 9dcebdf5:GSet.G	\func ActionBySubgroup {G : Group} (H : SubGroup G) : GSet G
+ActionBySubgroup.trivialRelation	lemma	3842fa406e3a	-	2192c6c3		\lemma trivialRelation (g x y : G) : g * x * (inverse x * y) = g * y
+TransitiveActionBySubgroup	instance	ad1f1b1e6254	-	058230f5	61501709:ActionBySubgroup 9dcebdf5:GSet.G dd7a6b3b:TransitiveGroupAction	\instance TransitiveActionBySubgroup {G : Group} (H : SubGroup G) : TransitiveGroupAction G
+(overview)	-	-	-	1c7e1594	3c457cb2:GSet 13a11314:GSet.** 9dcebdf5:GSet.G da3eedee:GSet.Stabilizer	-

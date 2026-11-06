@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.Module.Instances. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LinearMapLModule	instance	222c7bcefb1a	-	783a0f78		\instance LinearMapLModule {R : CRing} (A B : LModule R) : LModule R
+LinearMapAbGroup	instance	d486b70af145	-	3983ae0e		\instance LinearMapAbGroup {R : Ring} (A B : LModule R) : AbGroup (LinearMap A B)
+LinearMapRing	instance	3609e0243e17	-	863d774c		\instance LinearMapRing {R : Ring} (U : LModule R) : Ring (LinearMap U U)
+LinearMapRing.*c-hom	func	09f578c53979	4e7baf22afc4	e36e1253		\func *c-hom {R : CRing} {U : LModule R} : RingHom R (LinearMapRing U)

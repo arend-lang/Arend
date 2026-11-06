@@ -1,0 +1,30 @@
+# arend -gc fingerprints v2 for module Data.Array.EPerm. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+EPerm	data	e5cc6ddd950b	-	70b18f68	27ea2c2c:EPerm.eperm-:: d4f1b28b:EPerm.eperm-nil ae60ba3b:EPerm.eperm-swap f5fe15e4:EPerm.eperm-trans	\data EPerm {A : \Type} (l1 l2 : Array A) \elim l1, l2 | nil, nil => eperm-nil | :: x l1, :: y l2 => eperm-:: (x = y) (EPerm l1 l2) | :: x :: x' l1, :: y :: y' l2 => eperm-swap (x = y') (x' = y) (l1 = l2) | l1, l2 => eperm-trans {l : Array A} (EPerm l1 l) (EPerm l l2)
+keep_remove-split	func	ad447f352ad6	b7bec3ba6b77	f339e380	f884ea10:EPerm	\func keep_remove-split {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : EPerm l (keep D l ++ remove D l)
+EPerm.eperm-refl	func	be7eaa3451f3	05d8b2f53daa	a749b657	f884ea10:EPerm	\func eperm-refl {A : \Type} {l : Array A} : EPerm l l
+EPerm.eperm-=	func	99b8b6f683e1	814b854b1ef1	d8438fb4	f884ea10:EPerm	\func eperm-= {A : \Type} {l l' : Array A} (p : l = l') : EPerm l l'
+EPerm.eperm-sym	func	7e888bd97edf	1d573567ad3d	c2490a40		\func eperm-sym {A : \Type} {l l' : Array A} (e : EPerm l l') : EPerm l' l
+EPerm.EPerm-equivalence	func	e0191ceead7d	591523d4e5ad	618c011d	f884ea10:EPerm	\func EPerm-equivalence {A : \Set} : Equivalence (Array A) (\lam l l' => TruncP (EPerm l l'))
+EPerm.eperm-++-comm	func	5c12de28c87d	866470904918	58d6e3c0	f884ea10:EPerm	\func eperm-++-comm {A : \Type} {l l' : Array A} : EPerm (l ++ l') (l' ++ l)
+EPerm.eperm-++-left	func	3ec855df224e	7d7628f5a062	c496c8b1	f884ea10:EPerm	\func eperm-++-left {A : \Type} {l1 l2 l : Array A} (e : EPerm l1 l2) : EPerm (l1 ++ l) (l2 ++ l)
+EPerm.eperm-++-right	func	ccaaeeb44fed	19b5c84eba85	90b14bc0	f884ea10:EPerm	\func eperm-++-right {A : \Type} {l l1 l2 : Array A} (e : EPerm l1 l2) : EPerm (l ++ l1) (l ++ l2)
+EPerm.eperm-++	func	633c71254d75	657039ab055e	e5af51a7	f884ea10:EPerm	\func eperm-++ {A : \Type} {l1 l1' l2 l2' : Array A} (e1 : EPerm l1 l1') (e2 : EPerm l2 l2') : EPerm (l1 ++ l2) (l1' ++ l2')
+EPerm.EPerm_++-swap	func	4eae00899122	5336ece3c7a6	1ca4143c	f884ea10:EPerm	\func EPerm_++-swap {A : \Type} {l l' : Array A} {a : A} : EPerm (l ++ a :: l') (a :: l ++ l')
+EPerm.eperm-swap-trans	func	cc886cae5927	c5a7198987b0	ec5f2705		\func eperm-swap-trans {A : \Type} {x y : A} {l l' : Array A} (e : EPerm (y :: x :: l) l') : EPerm (x :: y :: l) l'
+EPerm.eperm-swap-tail	func	d39bedd7c7ae	ef1b5748e510	3f4828ab	f884ea10:EPerm	\func eperm-swap-tail {A : \Type} {x y : A} {l l' : Array A} (e : EPerm l l') : EPerm (x :: y :: l) (y :: x :: l')
+EPerm.EPerm_map	func	b7ce4e911ce9	87026c175883	d3fe2357	f884ea10:EPerm	\func EPerm_map {A B : \Type} (f : A -> B) {l l' : Array A} (e : EPerm l l') : EPerm (map f l) (map f l')
+EPerm.EPerm_keep	func	0766cddfed36	ed9288669cfe	f81d58ce		\func EPerm_keep {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} (p : EPerm l l') : EPerm (keep D l) (keep D l')
+EPerm.EPerm_remove	func	cd8b1f50e5e1	bfe1d0c331f4	f81d58ce		\func EPerm_remove {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} (p : EPerm l l') : EPerm (remove D l) (remove D l')
+EPerm.EPerm_nub	func	e33b8e6b5345	2642dafaf3f7	60baae11		\func EPerm_nub {A : DecSet} {l l' : Array A} (p : EPerm l l') : EPerm (nub l) (nub l')
+EPerm.EPerm_filter	func	371800ce8435	244da48e864f	a30fbe4c		\func EPerm_filter {A : \Type} (f : A -> Bool) {l l' : Array A} (e : EPerm l l') : EPerm (filter f l) (filter f l')
+EPerm.eperm-remove	func	9388f8e74038	0a2e1343bf04	b501b7d0	f884ea10:EPerm	\func eperm-remove {A : DecSet} {l : Array A} (inj : IsInj l) (j : Fin l.len) : EPerm l (l j :: removeElem (l j) l)
+EPerm.Perm_EPerm	func	261c358a5fee	de4ff94e14a6	183f9e0b	f884ea10:EPerm	\func Perm_EPerm {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : EPerm l l'
+EPerm.EPerm_Perm	func	f554e4f3c966	87fc52321de4	7c19d29b	f884ea10:EPerm	\func EPerm_Perm {A : \Type} {n : Nat} {l l' : Array A n} (p : EPerm l l') : Perm l l'
+EPerm.EPerm_Perm_transport	func	233a82d960b8	1cd9c60a4621	b895ab66	f884ea10:EPerm	\func EPerm_Perm_transport {A : \Type} {n m : Nat} {l : Array A n} {l' : Array A m} (e : EPerm l l') (p : n = m) : Perm (transport (\lam n => Array A n) p l) l'
+EPerm.eperm_equiv	func	fd6bcf1b8d00	b77775d910c0	17639f22		\func eperm_equiv {A : \Type} {l l' : Array A} (p : EPerm l l') : \Sigma (e : QEquiv {Fin l'.len} {Fin l.len}) (\Pi (j : Fin l'.len) -> l' j = l (e j))
+EPerm.EPerm_len	lemma	061620412f89	-	b106722b		\lemma EPerm_len {A : \Type} {l l' : Array A} (e : EPerm l l') : l.len = l'.len
+EPerm.EPermDec	func	da5d5102d2ac	1753ecadd583	54eb1822	f884ea10:EPerm	\func EPermDec {A : DecSet} {l l' : Array A} : Or (EPerm l l') (Not (EPerm l l'))
+EPerm.EPerm_count	lemma	f1bcc252405b	-	239141ac		\lemma EPerm_count {A : DecSet} {l l' : Array A} (e : EPerm l l') (a : A) : count l a = count l' a
+EPerm.count_EPerm	func	9306c7f66467	6d2f5d39dea8	a86e50f8	f884ea10:EPerm 51967a05:keep_remove-split	\func count_EPerm {A : DecSet} {l l' : Array A} (p : \Pi (a : A) -> count l a = count l' a) : EPerm l l'
+(overview)	-	-	-	9583c12c	f884ea10:EPerm	-

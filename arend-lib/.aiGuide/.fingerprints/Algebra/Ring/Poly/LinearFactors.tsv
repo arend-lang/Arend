@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Poly.LinearFactors. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+prodLin	func	c4d3dc774358	cdd5ac5dbb48	d22377f3		\func prodLin {R : CRing} {n : Nat} (r : Array R n) : Poly R
+prodLin-degree	lemma	951a3e90b757	-	f19d3945	e6b7712b:prodLin	\lemma prodLin-degree {R : CRing} {n : Nat} (r : Array R n) : degree< (prodLin r) (suc n)
+prodLin-monic	lemma	ed9430a4347d	-	7e2fcef7	e6b7712b:prodLin	\lemma prodLin-monic {R : CRing} {n : Nat} (r : Array R n) : polyCoef (prodLin r) n = 1
+linProd	func	8372bc3e1322	0e1c8731e8a4	cd9893d0		\func linProd {R : CRing} {n : Nat} (r : Array R n) (z : R) : R
+polyEval_prodLin	lemma	b1c3e2767a7b	-	85f052d4	db845cc0:linProd e6b7712b:prodLin	\lemma polyEval_prodLin {R : CRing} {n : Nat} (r : Array R n) (z : R) : polyEval (prodLin r) z = linProd r z
+linProd-root	lemma	3b9b9125503b	-	8a4f3202	db845cc0:linProd	\lemma linProd-root {R : CRing} {n : Nat} (r : Array R n) (i : Fin n) : linProd r (r i) = 0
+prodLin-root	lemma	7bf74af02a8b	-	da26a021	e6b7712b:prodLin	\lemma prodLin-root {R : CRing} {n : Nat} (r : Array R n) (i : Fin n) : polyEval (prodLin r) (r i) = 0
+prodLin-skip	lemma	7b56524ba820	-	4f21c79a	e6b7712b:prodLin	\lemma prodLin-skip {R : CRing} {n : Nat} (r : Array R (suc n)) (k : Fin (suc n)) : prodLin r = padd {R} 1 (negative (r k)) * prodLin (skip r k)
+prodLin-deflate-id	lemma	6e01479930cc	-	f90c4d02	e6b7712b:prodLin	\lemma prodLin-deflate-id {R : CRing} {m : Nat} (r s : Array R (suc m)) (j : Fin (suc m)) : (prodLin (skip r 0) - prodLin (skip s j)) * padd 1 (negative (r 0)) = (prodLin r - prodLin s) - prodLin (skip s j) * padd pzero (s j - r 0)
+prodLin-perm	lemma	6239bc0b2a57	-	1b72c36f	e6b7712b:prodLin	\lemma prodLin-perm {R : CRing} {n : Nat} (s : Array R n) (f : Fin n -> Fin n) (finj : IsInj f) : prodLin (\lam i => s (f i)) = prodLin s
+(overview)	-	-	-	7f25a517	db845cc0:linProd e6b7712b:prodLin	-

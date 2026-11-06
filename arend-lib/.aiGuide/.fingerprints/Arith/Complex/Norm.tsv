@@ -1,0 +1,51 @@
+# arend -gc fingerprints v2 for module Arith.Complex.Norm. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+cabs2	func	8ccce08eb8cd	22969ab1d20b	32fbab4f		\func cabs2 (z : Complex) : Real
+cabs2>=0	lemma	6a8c9ff22f2e	-	fc99aadf	456dd5cb:cabs2	\lemma cabs2>=0 {z : Complex} : (0 : Real) <= cabs2 z
+cabs2_zro	lemma	20ce2b5696cc	-	2c029b5b	456dd5cb:cabs2	\lemma cabs2_zro : cabs2 (zro : Complex) = (0 : Real)
+cabs2_ide	lemma	a376d1360e1f	-	2c029b5b	456dd5cb:cabs2	\lemma cabs2_ide : cabs2 (ide : Complex) = (1 : Real)
+cabs2_negative	lemma	de9ced90c810	-	5dcaf9ba	456dd5cb:cabs2	\lemma cabs2_negative {z : Complex} : cabs2 (negative z) = cabs2 z
+cabs2_*	lemma	72f8f735aa5a	-	0220fbf1	456dd5cb:cabs2	\lemma cabs2_* {x y : Complex} : cabs2 (x * y) = cabs2 x * cabs2 y
+cabs2_*_CS	lemma	dae91632d869	-	441f2415		\lemma cabs2_*_CS {x y : Complex} : cabs2 x * cabs2 y - (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im) = (x.re * y.im - x.im * y.re) * (x.re * y.im - x.im * y.re)
+CS_<=	lemma	753ac8758dbf	-	511b22f3		\lemma CS_<= {x y : Complex} : (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im) <= cabs2 x * cabs2 y
+cabs2_i	lemma	fb89f2f41a11	-	bb503822	456dd5cb:cabs2	\lemma cabs2_i : cabs2 i = 1
+cabs2_conj	lemma	898fe40aecf4	-	aed1cd8e	456dd5cb:cabs2	\lemma cabs2_conj {z : Complex} : cabs2 (conj z) = cabs2 z
+cabs	func	8ccce08eb8cd	c7cff16e9653	09002015		\func cabs (z : Complex) : Real
+cabs>=0	lemma	7351f759ad42	-	8d50b693	079be9d6:cabs	\lemma cabs>=0 {z : Complex} : 0 <= cabs z
+cabs_zro	lemma	3c2eed7e7e71	-	c82a9ce7	079be9d6:cabs	\lemma cabs_zro : cabs 0 = 0
+cabs_ide	lemma	e741b1c3bd18	-	c82a9ce7	079be9d6:cabs	\lemma cabs_ide : cabs 1 = 1
+cabs_negative	lemma	5923a7467481	-	2b6022b6	079be9d6:cabs	\lemma cabs_negative {z : Complex} : cabs (negative z) = cabs z
+cabs-square	lemma	5328571bd63a	-	4e750a16	079be9d6:cabs 456dd5cb:cabs2	\lemma cabs-square {z : Complex} : cabs z * cabs z = cabs2 z
+cabs_fromReal	lemma	6b400aa8b7c5	-	03007b74		\lemma cabs_fromReal {x : Real} : cabs x = RealField.abs x
+cabs_*	lemma	16abbe45897c	-	f3839078		\lemma cabs_* {x y : Complex} : cabs (x * y) = cabs x * cabs y
+cabs_pow	lemma	416d792d5da3	-	c81c6cf4	079be9d6:cabs	\lemma cabs_pow {z : Complex} {k : Nat} : cabs (pow z k) = pow (cabs z) k
+cabs_zro-ext	lemma	ec7bf2d27c5c	-	3009a27a	079be9d6:cabs	\lemma cabs_zro-ext {c : Complex} (p : cabs c = 0) : c = 0
+abs_i	lemma	b517b142a3fd	-	131c8a87	079be9d6:cabs	\lemma abs_i : cabs i = 1
+cabs_i_*	lemma	bb494f86e680	-	f478cad6	079be9d6:cabs	\lemma cabs_i_* {z : Complex} : cabs (i * z) = cabs z
+cabs_conj	lemma	7fe2d4135170	-	b41941c3	079be9d6:cabs	\lemma cabs_conj {z : Complex} : cabs (conj z) = cabs z
+cabs_+	lemma	91b9c0a9aed2	-	16a199f3	079be9d6:cabs	\lemma cabs_+ {x y : Complex} : cabs (x + y) <= cabs x + cabs y
+cabs_-	lemma	6264eb5063fa	-	e60d6c7b	079be9d6:cabs	\lemma cabs_- {x y : Complex} : cabs (x - y) <= cabs x + cabs y
+cabs_BigSum	lemma	b09b7408d1e4	-	4e313dd7		\lemma cabs_BigSum {l : Array Complex} : cabs (ComplexField.BigSum l) <= RealAbGroup.BigSum (\lam i => cabs (l i))
+cabs_-comm	lemma	be28bf9f966d	-	7dbc3ca6	079be9d6:cabs	\lemma cabs_-comm {x y : Complex} : cabs (x - y) = cabs (y - x)
+cabs_-triang	lemma	42507a7fb367	-	c488d704	079be9d6:cabs	\lemma cabs_-triang {x y z : Complex} : cabs (x - z) <= cabs (x - y) + cabs (y - z)
+cabs-rev-triang	lemma	e5edaee02b15	-	522c5834	079be9d6:cabs	\lemma cabs-rev-triang {x y : Complex} : cabs x - cabs y <= cabs (x + y)
+cabs_re_<=	lemma	5e20f7175771	-	a0273c5d		\lemma cabs_re_<= {c : Complex} : RealField.abs c.re <= cabs c
+cabs_im_<=	lemma	61207d11c79e	-	a0273c5d		\lemma cabs_im_<= {c : Complex} : RealField.abs c.im <= cabs c
+ComplexNormed	instance	47e90da5e371	-	8a4eca3c	079be9d6:cabs	\instance ComplexNormed : NormedAbGroup Complex
+ComplexValuedRing	instance	780572625ccb	-	a2bd5f26		\instance ComplexValuedRing : PseudoValuedRing Complex
+Re	func	8f2a6c66a8fa	30b011c4ab20	1ddf3a33	557f6726:ComplexNormed	\func Re : NormedAbGroupMap ComplexNormed RealNormed
+Im	func	8f2a6c66a8fa	1cd22018ed73	1ddf3a33	557f6726:ComplexNormed	\func Im : NormedAbGroupMap ComplexNormed RealNormed
+fromRealMap	func	9366fca9d3d8	43aaa4a4925e	0b1cfb40	557f6726:ComplexNormed	\func fromRealMap : NormedIsometricMap RealNormed ComplexNormed Complex.fromReal
+mulIMap	func	5e0443946a77	2ad3d81cbd2b	e1a98d51		\func mulIMap : NormedIsometricMap ComplexNormed ComplexNormed (i *)
+conjMap	func	549a4bcb5da4	59bf297c906a	4f98c2ba		\func conjMap : NormedIsometricMap ComplexNormed ComplexNormed conj
+cabs_dist_U	lemma	771aca46994a	-	2a8824c3	079be9d6:cabs	\lemma cabs_dist_U (x y : Complex) {eps : Rat} : cabs (x - y) < eps <-> (dist x y).U eps
+mul-conj	lemma	56931c77c882	-	b15517a5	456dd5cb:cabs2	\lemma mul-conj {z : Complex} : z * conj z = Complex.fromReal (cabs2 z)
+cabs>0_Inv	lemma	73936d6cd2b2	-	26d6171d	079be9d6:cabs	\lemma cabs>0_Inv {z : Complex} : 0 < cabs z <-> Monoid.Inv z
+OnUnitCircle	func	b499ee9233dc	93018ac34466	383c8418	456dd5cb:cabs2	\func OnUnitCircle (u : Complex) : \Prop
+cabs=1_OnUnitCircle	lemma	acfcfa847289	-	23481c49	0ab10e61:OnUnitCircle 079be9d6:cabs	\lemma cabs=1_OnUnitCircle {u : Complex} (p : cabs u = 1) : OnUnitCircle u
+OnUnitCircle_*	lemma	884a42ddc1ea	-	1bcff5a7		\lemma OnUnitCircle_* {u w : Complex} (pu : OnUnitCircle u) (pw : OnUnitCircle w) : OnUnitCircle (u * w)
+OnUnitCircle_negative	lemma	09042e2a93fb	-	d427eb8f		\lemma OnUnitCircle_negative {u : Complex} (pu : OnUnitCircle u) : OnUnitCircle (ComplexField.negative u)
+OnUnitCircle_conj	lemma	f4395f425da1	-	9bc03531		\lemma OnUnitCircle_conj {u : Complex} (pu : OnUnitCircle u) : OnUnitCircle (conj u)
+OnUnitCircle_conj-inv	lemma	d0e00352fd97	-	a4e3b44a		\lemma OnUnitCircle_conj-inv {v : Complex} (unit : OnUnitCircle v) : conj v * v = 1
+OnUnitCircle-rotate	lemma	23aebf33374a	-	5cdebeb6		\lemma OnUnitCircle-rotate {u v : Complex} (unit : OnUnitCircle v) : u = (u * conj v) * v
+(overview)	-	-	-	90d8f6ba	557f6726:ComplexNormed 56537619:ComplexValuedRing 0ab10e61:OnUnitCircle 079be9d6:cabs 456dd5cb:cabs2	-

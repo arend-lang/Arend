@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProductLRepres	func	4bd21ba258a0	e65ea011d6d4	88c7e725		\func ProductLRepres {R : Ring} {G : Group} (A B : LinRepres R G) : LinRepres R G
+ProductLRepres.in_1	func	0c6cbd97e001	ccc2c25a9443	7f35e535		\func in_1 {R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap A (ProductLRepres A B)
+ProductLRepres.in_2	func	a1deebc01c6c	5f491983c81b	b213051f		\func in_2 {R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap B (ProductLRepres A B)
+ProductLRepres.proj_1	func	4351babc1360	90ca2073fcbc	781293ae		\func proj_1 {R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap (ProductLRepres A B) A
+ProductLRepres.proj_2	func	6e5af8603727	0015dfd7e37e	b6f2814f		\func proj_2 {R : Ring} {G : Group} (A B : LinRepres R G) : InterwiningMap (ProductLRepres A B) B
+ProductLRepres.coprod-map	func	331a3c62744a	911498f3ed3c	29797815		\func coprod-map {R : Ring} {G : Group} {A B C : LinRepres R G} (i : InterwiningMap A C) (j : InterwiningMap B C) : InterwiningMap (ProductLRepres A B) C
+(overview)	-	-	-	e1cdaa16		-

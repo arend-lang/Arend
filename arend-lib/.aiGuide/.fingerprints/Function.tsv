@@ -1,0 +1,14 @@
+# arend -gc fingerprints v2 for module Function. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+id	func	e8036b280bab	e0ed06390629	7fd5bbe1		\func id {A : \Cat}
+o	func	cb94271da879	e651c008affb	afc78933		\func o {A B C : \Cat} (g : B -> C) (f : A -> B)
+-o	func	e505dd97af36	7a7baaee3c27	6f365e3c		\func -o {A B C : \Cat} (f : A -> B)
+o-	func	4d8c6fc201e2	4ce7a645f515	6b1ed95d		\func o- {A B C : \Cat} (g : B -> C)
+IsInj	func	e72b9c887f0c	72ebe28f6012	1f8fe67c		\func IsInj {A B : \Set} (f : A -> B)
+IsSurj	func	b8338863bff8	063d8962d60b	4c4fca89		\func IsSurj {A B : \Cat} (f : A -> B)
+IsSplitSurj	func	15e313f5524f	37f2eafac2eb	06076324		\func IsSplitSurj {A B : \Type} (f : A -> B)
+IsSurj.comp	lemma	322a1e0ed4aa	-	b9c0ec52	65e7f1bd:o	\lemma comp {A B C : \Cat} {f : A -> B} (fs : IsSurj f) {g : B -> C} (gs : IsSurj g) : IsSurj (g o f)
+Image	type	dbff83e120fe	82706c335352	0a3375a1		\type Image {A B : \Type} (f : A -> B)
+assuming	func	3d051e48c82a	58ac270ed442	978518fd		\func assuming {A B : \Type} (f : (A -> B) -> B) (g : A -> B)
+flip	meta	d5d520fee5dc	9ca8a84fc740	86e2136e		\meta flip f a b
+(overview)	-	-	-	88701b87	7ec1683e:-o f5b30f87:Image 65e7f1bd:o 631b0224:o-	-

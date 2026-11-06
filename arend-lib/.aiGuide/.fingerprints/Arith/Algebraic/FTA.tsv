@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Arith.Algebraic.FTA. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+separable-root	lemma	8cc3bdd61c7a	-	62e5eaed		\lemma separable-root {q : Poly ComplexField} (sep : IsSeparable q) {m : Nat} (deg : degree< q (suc (suc m))) (ci : Monoid.Inv (polyCoef q (suc m))) : ∃ (z : Complex) (polyEval q z = 0)
+FTA-discrete	lemma	0fbfe6df4436	-	1a1efaff		\lemma FTA-discrete {K : DiscreteField} (f : RingHom K ComplexField) {p : Poly K} {n : Nat} (dp : degree p = suc n) : ∃ (z : Complex) (polyEval (polyMap f p) z = 0) (isIntegral f z)
+FTA-rat	lemma	04b8251bc24b	-	c4be8a43	8372b69a:FTA-discrete	\lemma FTA-rat {p : Poly RatField} {n : Nat} (dp : degree p = suc n) : ∃ (z : Complex) (polyEval (polyMap ratToComplex p) z = 0) (IsAlgNumber z)
+FTA-algNumbers	lemma	befaeb11ab35	-	eb2de9cc	8372b69a:FTA-discrete	\lemma FTA-algNumbers {p : Poly AlgNumbersRing} {n : Nat} (dp : degree {AlgNumbersField} p = suc n) : ∃ (z : AlgNumbersRing) (polyEval p z = 0)
+algNumbers-algClosed	lemma	2710ef8c4296	-	305eacee	4cd3b3fa:FTA-algNumbers	\lemma algNumbers-algClosed : IsAlgebraicallyClosed AlgNumbersRing
+(overview)	-	-	-	b77f7fd9		-

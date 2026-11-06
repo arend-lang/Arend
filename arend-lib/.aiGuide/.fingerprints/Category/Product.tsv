@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Category.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProductPrecat	instance	affe8352d2df	-	9b37568c		\instance ProductPrecat (C D : Precat) : Precat
+ProductCat	instance	b5cafc8f2113	-	eb16a0bd	05c632e5:ProductPrecat	\instance ProductCat (C D : Cat) : Cat
+ProductPrecat.iso-first	func	5ec74a30dc75	34fbb76d7cd0	b55ae619	05c632e5:ProductPrecat	\func iso-first {C D : Precat} {a b : Ob {ProductPrecat C D}} (iso : Iso {ProductPrecat C D} {a} {b}) : Iso {C} {a.1} {b.1}
+ProductPrecat.iso-second	func	47bce512309d	2a8009615a23	8a2c2a95	05c632e5:ProductPrecat c43141b9:ProductPrecat.iso-first	\func iso-second {C D : Precat} {a b : Ob {ProductPrecat C D}} (iso : Iso {ProductPrecat C D} {a} {b}) : Iso {D} {a.2} {b.2}
+(overview)	-	-	-	6de7bf17		-

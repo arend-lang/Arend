@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Topology.Elem. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ElemTopSpace	instance	4eaefaa88ae3	-	1d294364		\instance ElemTopSpace {X : TopSpace} (S : Set X) : TopSpace (Elem S)
+ElemCoverSpace	instance	33c3909efbab	-	e8bfdaaa		\instance ElemCoverSpace {X : CoverSpace} (S : Set X) : CoverSpace (Elem S)
+ElemUniformSpace	instance	0537728bfd66	-	b7a15aff		\instance ElemUniformSpace {X : UniformSpace} (S : Set X) : UniformSpace (Elem S)
+ElemMetricSpace	instance	b2c5897a9f8d	-	90322e37		\instance ElemMetricSpace {X : MetricSpace} (S : Set X) : MetricSpace (Elem S)
+elemCont	lemma	e2aaed035f36	-	ecb31c7a		\lemma elemCont {X : TopSpace} {S : Set X} : ContMap (ElemTopSpace S) X (\lam s => s.1)
+(overview)	-	-	-	706d96ff		-

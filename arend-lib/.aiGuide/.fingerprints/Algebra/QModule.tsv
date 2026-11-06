@@ -1,0 +1,44 @@
+# arend -gc fingerprints v2 for module Algebra.QModule. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+DivisibleGroup	class	174a2b1fa2d7	-	9e9f84e7		\class DivisibleGroup \extends AbGroup { | isDivisible (a : E) {n : Nat} : n /= 0 -> ∃ (b : E) (n *n b = a) }
+TorsionFreeGroup	class	704c34c8c003	-	346f90ba		\class TorsionFreeGroup \extends AbGroup { | noTorsion {a : E} {n : Nat} : n /= 0 -> n *n a = 0 -> a = 0 }
+TorsionFreeGroup.noTorsion-div	lemma	2a1ad1fd8335	-	2183970b		\lemma noTorsion-div {a b : E} {n : Nat} (n/=0 : n /= 0) (p : n *n a = n *n b) : a = b
+QModule	class	59ff6862d5c6	-	91fd5895	684c4ebb:DivisibleGroup 35d1494b:TorsionFreeGroup	\class QModule \extends DivisibleGroup, TorsionFreeGroup
+QModule.uniquelyDivisible	lemma	216f99906944	-	f491e231		\lemma uniquelyDivisible (a : E) {n : Nat} (n/=0 : n /= 0) : Contr (\Sigma (b : E) (n *n b = a))
+QModule.*q	sfunc	61c1a8fbfa6f	5008bb26fc9a	031c4948		\sfunc *q (q : Rat) (a : E) : E
+QModule.*q_*i	lemma	45bffcebf9f5	-	fd4ee2b0	5b1edd0a:QModule.*q	\lemma *q_*i {x : Int} {a : E} : x *q a = x *i a
+QModule.*q_*n	lemma	b0b98e36d80f	-	efbf1d8c	5b1edd0a:QModule.*q	\lemma *q_*n {n : Nat} {a : E} : n *q a = n *n a
+QModule.*q_*2	lemma	024566b23e49	-	77db3251	5b1edd0a:QModule.*q	\lemma *q_*2 {a : E} : 2 *q a = a + a
+QModule.ide_*q	lemma	f7cb8501d0d9	-	a96a9025	5b1edd0a:QModule.*q	\lemma ide_*q {a : E} : 1 *q a = a
+QModule.*q-assoc	lemma	0d7ee86c6b5e	-	8347d4ae	5b1edd0a:QModule.*q	\lemma *q-assoc {q r : Rat} {a : E} : q * r *q a = q *q (r *q a)
+QModule.*q-cancel	lemma	b7112b366b03	-	46e9de71	5b1edd0a:QModule.*q	\lemma *q-cancel {q : Rat} (q/=0 : q /= RatField.zro) {a b : E} (p : q *q a = q *q b) : a = b
+QModule.ud-cond	lemma	b71dc64e79cb	-	9fab25c5		\lemma ud-cond {a : E} {n : Nat} {n/=0 : n /= 0} : n *n (uniquelyDivisible a n/=0).center.1 = a
+QModule.ud-unique	lemma	8b9eae69f34e	-	1607f96e		\lemma ud-unique {a b : E} {n : Nat} {n/=0 : n /= 0} (p : n *n b = a) : (uniquelyDivisible a n/=0).center.1 = b
+QModule.ud-pi	lemma	0ae67a57f1f2	-	25747312		\lemma ud-pi {a : E} {n m : Nat} {n/=0 : n /= 0} {m/=0 : m /= 0} (p : n = m) : (uniquelyDivisible a n/=0).center.1 = (uniquelyDivisible a m/=0).center.1
+QModule.*aq	func	11d59442a5a2	332b57235397	ffa94830		\func *aq (q : Rat.AltRat) (a : E) : E
+QModule.*aq.>_/=	lemma	d8dad340f66c	-	ef9b86ad		\lemma >_/= {d : Int} (p : signum d = 1) : iabs d /= 0
+QModule.*aq.>_iabs	lemma	dec7741aab43	-	ef9b86ad		\lemma >_iabs {d : Int} (p : signum d = 1) : pos (iabs d) = d
+QModule.*aq.*q_*aq	lemma	00b4f423791c	-	badcb1eb	2df20c55:QModule.*aq 5b1edd0a:QModule.*q	\lemma *q_*aq {q : Rat} {a : E} : q *q a = rat_alt q *aq a
+QModule.*aq.*aq-assoc	lemma	dd973422b1a5	-	54296d99	5b1edd0a:QModule.*q	\lemma *aq-assoc {q r : Rat.AltRat} {a : E} : q Rat.AltRat.* r *aq a = q *aq (r *aq a)
+QModule.*aq.*aq-rdistr	lemma	08fff7e67cbf	-	54296d99	5b1edd0a:QModule.*q	\lemma *aq-rdistr {q r : Rat.AltRat} {a : E} : (q Rat.AltRat.+ r) *aq a = q *aq a + r *aq a
+QModule.toRatModule	func	65cc11107647	231812c12111	1eb87dd3	0543924f:QModule 5b1edd0a:QModule.*q	\func toRatModule : LModule RatField
+QModule.fromRatModule	func	c2a0fcea4b5b	40375e10bb5f	81772301	0543924f:QModule	\func fromRatModule (M : LModule RatField) : QModule
+func-*q	lemma	34e65f3af3c7	-	3afd0e71	0543924f:QModule 5b1edd0a:QModule.*q	\lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
+QPseudoAlgebra	class	6135aa19ce7c	-	167c8c1d	0543924f:QModule	\class QPseudoAlgebra \extends QModule, PseudoRing
+QPseudoAlgebra.*q-comm-left	lemma	ea7aad4f55df	-	2a341170	5b1edd0a:QModule.*q	\lemma *q-comm-left {r : Rat} {a b : E} : r *q (a * b) = r *q a * b
+QPseudoAlgebra.*q-comm-right	lemma	0529a2987210	-	30b5babf	5b1edd0a:QModule.*q	\lemma *q-comm-right {r : Rat} {a b : E} : r *q (a * b) = a * (r *q b)
+QPseudoAlgebra.*q-square	lemma	197349a03da9	-	6d4686ed	5b1edd0a:QModule.*q	\lemma *q-square {q : Rat} {a : E} (qs : RatField.IsSquare q) (as : IsSquare a) : IsSquare (q *q a)
+QPseudoAlgebra.toRatAlgebra	func	550e011b0a25	89c6420308d2	841bd05a		\func toRatAlgebra : PseudoAlgebra RatField
+QPseudoAlgebra.fromRatAlgebra	func	fe9088103872	5e2f208e340e	9ffc5502	7154d6f2:QPseudoAlgebra	\func fromRatAlgebra (R : PseudoAlgebra RatField) : QPseudoAlgebra
+QAlgebra	class	1640303cb63f	-	9296c27f	7154d6f2:QPseudoAlgebra	\class QAlgebra \extends QPseudoAlgebra, Ring
+QAlgebra.natCoef_*_*q	lemma	fa2e1ccb2c9a	-	c4e8d95f	5b1edd0a:QModule.*q	\lemma natCoef_*_*q {n : Nat} {a : E} : natCoef n * a = n *q a
+QAlgebra.toRatAlgebra	func	3d56b9d95c05	cedebe36deb2	f40b47ce		\func toRatAlgebra : AAlgebra RatField
+QAlgebra.fromRatAlgebra	func	cd11fd3050c5	b287d3d15f73	7cefbf52	027ca1d6:QAlgebra	\func fromRatAlgebra (R : AAlgebra RatField) : QAlgebra
+RatQAlgebra	instance	b93fc00cc16d	-	48d547b8	027ca1d6:QAlgebra	\instance RatQAlgebra : QAlgebra Rat
+QAlgebra.fromRat	func	7f773689dfb7	848691458fa6	08089a13	5b1edd0a:QModule.*q	\func fromRat (q : Rat)
+QAlgebra.fromRat_*	lemma	3ea0c36218de	-	c2b5dc40	a31b3db0:QAlgebra.fromRat	\lemma fromRat_* {q r : Rat} : fromRat q * fromRat r = fromRat (q RatField.* r)
+QAlgebra.fromRat_natCoef	lemma	e8f2f4df203a	-	ee133b56	a31b3db0:QAlgebra.fromRat	\lemma fromRat_natCoef {n : Nat} : fromRat n = natCoef n
+QAlgebra.fromRat_zro	lemma	dba6bedd8111	-	da82df3e	a31b3db0:QAlgebra.fromRat	\lemma fromRat_zro : fromRat RatField.zro = zro
+QAlgebra.fromRat_ide	lemma	3ed82e386f72	-	7e11a646	a31b3db0:QAlgebra.fromRat	\lemma fromRat_ide : fromRat RatField.ide = ide
+QAlgebra.fromRat-comm	lemma	237d6352eaa8	-	07710e12	a31b3db0:QAlgebra.fromRat	\lemma fromRat-comm {q : Rat} {a : E} : fromRat q * a = a * fromRat q
+(overview)	-	-	-	db1336e0	5b1edd0a:QModule.*q 97e9f2fc:QModule.uniquelyDivisible	-

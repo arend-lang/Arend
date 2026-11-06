@@ -1,0 +1,31 @@
+# arend -gc fingerprints v2 for module Topology.CoverSpace.Locale. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CoverSpaceLocale	func	42d36e5e027c	9418b86c0468	ce585dd2	4bc13864:CoverSpaceLocale.site	\func CoverSpaceLocale (X : PrecoverSpace) : Locale
+CoverSpaceLocale.cover-cauchy	lemma	7c8ac8ec4af8	-	765c62aa		\lemma cover-cauchy {X : PrecoverSpace} {C : Set (Set X)} (Cc : isCauchy C) : Cover {site} top C
+CoverSpaceLocale.cover-reg	lemma	914ffa4bbfb1	-	fa4b68f6		\lemma cover-reg {X : PrecoverSpace} {U : Set X} : Cover {site} U (\lam V => V s<=< U)
+CoverSpaceLocale.cover-empty	lemma	cd21cb902185	-	46dc172d		\lemma cover-empty {X : PrecoverSpace} {U : Set X} (Ue : \Pi {x : X} -> Not (U x)) {C : Set (Set X)} : Cover {site} U C
+CoverSpaceLocale.embed_<=<	lemma	73056d54078f	-	76111a04	604acdc2:CoverSpaceLocale	\lemma embed_<=< {V U : Set X} (V<=<U : V s<=< U) : embed V Locale.<=< {CoverSpaceLocale X} embed U
+CoverSpaceLocale.regular	lemma	ed94544bdc32	-	da71f158	604acdc2:CoverSpaceLocale	\lemma regular : Locale.IsRegularLocale {CoverSpaceLocale X}
+CoverSpaceLocale.cover-char	lemma	129cadea9cde	-	b9b95ebe		\lemma cover-char {X : StronglyRegularCoverSpace} {U : Set X} {C : Set (Set X)} (c : Cover {site} U C) {U' : Set X} (U'<=<U : U' s<=< U) : X.isCauchy (\lam V => (V = Compl U') || C V)
+CoverSpaceLocale.cover-point-char	lemma	48fcaed6cbfd	-	13cbb83c		\lemma cover-point-char {X : StronglyRegularCoverSpace} {U : Set X} {C : Set (Set X)} (c : Cover {site} U C) {x : X} (x<=<U : single x <=< U) : ∃ (V : C) (single x <=< V)
+CoverSpaceLocale.hasWeaklyDensePoints	lemma	d1bfec16c355	-	c5fd7ded	604acdc2:CoverSpaceLocale	\lemma hasWeaklyDensePoints {X : StronglyRegularCoverSpace} (Xd : X.HasWeaklyDensePoints) : HasDensePoints (CoverSpaceLocale X)
+CoverSpaceLocale.cover-inh	lemma	d9069c89a01e	-	3cc264cb		\lemma cover-inh {X : PrecoverSpace} (Xd : X.HasDensePoints) {U : Set X} : Cover {site} U (\lam _ => ∃ (x : X) (U x))
+CoverSpaceLocale.cover-reg-inh	lemma	69de0e0bd9b5	-	3cc264cb		\lemma cover-reg-inh {X : PrecoverSpace} (Xd : X.HasDensePoints) {U : Set X} : Cover {site} U (\lam _ => ∃ (x : X) (single x <=< U))
+CoverSpaceLocale.hasStronglyDensePoints	lemma	d320b2e71a2e	-	ec6af413	604acdc2:CoverSpaceLocale	\lemma hasStronglyDensePoints {X : StronglyRegularCoverSpace} (Xd : X.HasDensePoints) : HasStronglyDensePoints (CoverSpaceLocale X)
+LocalePrecoverSpace	func	86614fdeb51e	b4788e6e8308	9d261221		\func LocalePrecoverSpace (L : Locale) : PrecoverSpace
+LocalePrecoverSpace.points_<=<	lemma	2e5616dfab90	-	0eb7e392		\lemma points_<=< {a b : L} (p : a L.<=< b) : points^* a s<=< {LocalePrecoverSpace L} points^* b
+LocalePrecoverSpace.cover-cauchy	lemma	ebc5dfd90f18	-	18ebf4a0		\lemma cover-cauchy {C : Set L} (p : top <= L.Join C) : isCauchy {LocalePrecoverSpace L} (\lam U => ∃ (a : C) (points^* a = U))
+LocalePrecoverSpace.single_<=<-char	lemma	a18f8abb7d24	-	b37812d0		\lemma single_<=<-char {x : CompleteFilter L} {U : Set (CompleteFilter L)} (x<=<U : single x <=< {LocalePrecoverSpace L} U) : ∃ (a : L) (x a) (points^* a ⊆ U)
+LocalePrecoverSpace.hasWeaklyDensePoints	lemma	c17927ecd353	-	a891a001		\lemma hasWeaklyDensePoints (Ld : HasDensePoints L) : (LocalePrecoverSpace L).HasWeaklyDensePoints
+LocalePrecoverSpace.hasDensePoints	lemma	c6d63c045509	-	295cb66e		\lemma hasDensePoints (Ld : HasStronglyDensePoints L) : (LocalePrecoverSpace L).HasDensePoints
+LocaleCoverSpace	func	750ea1e9d381	66affe2479ce	52ee2109	cc89ac1b:LocalePrecoverSpace	\func LocaleCoverSpace {L : Locale} (Lr : L.IsRegularLocale) : StronglyRegularCoverSpace
+LocaleCoverSpaceFunctor	func	9d378cce56f8	79d81fb437be	88b31475	cc89ac1b:LocalePrecoverSpace	\func LocaleCoverSpaceFunctor : Functor LocaleCat.{u} PrecoverSpaceCat.{u}
+LocaleCoverSpaceFunctor-fullyFaithful	lemma	3f5ae625c02f	-	4210f530	81861bee:LocaleCoverSpaceFunctor-fullyFaithful.frameHom	\lemma LocaleCoverSpaceFunctor-fullyFaithful {L M : Locale.{u}} (Ld : HasDensePoints L) (Mr : M.IsRegularLocale) : IsEquiv (LocaleCoverSpaceFunctor.Func {L} {M})
+LocaleCoverSpaceFunctor-fullyFaithful.frameHom	func	0de5936e0446	86a26bb14b60	7c27e81b		\func frameHom (f : PrecoverMap (LocalePrecoverSpace L) (LocalePrecoverSpace M)) : FrameHom M L
+CoverSpaceLocale-unit	func	bd8e1bcb3153	7c73c3f41703	98b075c6	604acdc2:CoverSpaceLocale 40b0a8da:LocaleCoverSpace	\func CoverSpaceLocale-unit {X : StronglyRegularCoverSpace} (Xo : X.HasWeaklyDensePoints) : PrecoverMap X (LocaleCoverSpace {CoverSpaceLocale X} CoverSpaceLocale.regular)
+CoverSpaceLocale-unit.isDense	lemma	292ec0058cc4	-	3c85bf57		\lemma isDense (Xd : X.HasWeaklyDensePoints) : PrecoverMap.IsWeaklyDense {CoverSpaceLocale-unit Xd}
+CoverSpaceLocale-unit.isEmbedding	lemma	28df04e7b453	-	64b46010		\lemma isEmbedding (Xd : X.HasWeaklyDensePoints) : PrecoverMap.IsEmbedding {CoverSpaceLocale-unit Xd}
+CoverSpaceLocale-unit.isDenseEmbedding	lemma	2076f361558d	-	59fdee47		\lemma isDenseEmbedding (Xd : X.HasWeaklyDensePoints) : PrecoverMap.IsWeaklyDenseEmbedding {CoverSpaceLocale-unit Xd}
+LocaleCompleteCoverSpace	func	3b842542b7b1	75a20c344ccb	bed98a0e	40b0a8da:LocaleCoverSpace	\func LocaleCompleteCoverSpace {L : Locale} (Lr : L.IsRegularLocale) : StronglyCompleteCoverSpace
+LocaleCompleteCoverSpace.makeFilter	func	cad9d5ea7fa7	e0e5e5460982	7a3efaa1	40b0a8da:LocaleCoverSpace	\func makeFilter (F : WeaklyCauchyFilter (LocaleCoverSpace Lr)) : CompleteFilter L
+(overview)	-	-	-	68a150c0	604acdc2:CoverSpaceLocale 40b0a8da:LocaleCoverSpace cc89ac1b:LocalePrecoverSpace	-

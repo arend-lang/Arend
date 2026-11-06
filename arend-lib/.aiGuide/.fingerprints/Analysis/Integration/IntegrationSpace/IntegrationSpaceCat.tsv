@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Analysis.Integration.IntegrationSpace.IntegrationSpaceCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IntegrationSpaceCat	instance	3ac3aeea58bb	-	9c6a0060		\instance IntegrationSpaceCat : Cat IntegrationSpace.{u}
+CompleteIntegrationSpaceCat	instance	cc9a7b205539	-	1cdeedc1	7c6b9e6d:IntegrationSpaceCat	\instance CompleteIntegrationSpaceCat : Cat CompleteIntegrationSpace.{u}
+MeasureIntegrationAdjunction	func	6116cb9f4e8a	8f7ddd36c4ef	f99bec29	7c6b9e6d:IntegrationSpaceCat	\func MeasureIntegrationAdjunction : Adjunction MeasureRingCat.{u} IntegrationSpaceCat.{u}
+CompleteMeasureIntegrationAdjunction	func	7a5971cb4873	8785b0986d51	d901ec9f	574ecbec:CompleteIntegrationSpaceCat	\func CompleteMeasureIntegrationAdjunction : Adjunction CompleteMeasureRingCat.{u} CompleteIntegrationSpaceCat.{u}
+(overview)	-	-	-	d5397b28	574ecbec:CompleteIntegrationSpaceCat 7c6b9e6d:IntegrationSpaceCat	-

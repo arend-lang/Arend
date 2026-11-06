@@ -1,0 +1,37 @@
+# arend -gc fingerprints v2 for module Algebra.Ordered.TruncRieszSpace. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TruncRieszSpace	class	69791cfdbf59	-	976498e0	97b987d0:TruncRieszSpace.trunc	\class TruncRieszSpace \extends RieszSpace { | trunc : E -> E | trunc_zro>=0 : 0 <= trunc 0 | trunc-bound {a : E} : trunc a <= a | trunc-assoc {a b : E} : a ∧ trunc b <= trunc a }
+TruncRieszSpace.trunc_zro	lemma	8d76c8fb18a8	-	806d0742	97b987d0:TruncRieszSpace.trunc	\lemma trunc_zro : trunc 0 = 0
+TruncRieszSpace.trunc-pos	lemma	f6128fb33efd	-	84e13ab6	97b987d0:TruncRieszSpace.trunc	\lemma trunc-pos {a : E} (a>=0 : 0 <= a) : 0 <= trunc a
+TruncRieszSpace.trunc-neg	lemma	fad0b5849ad6	-	b079508c	97b987d0:TruncRieszSpace.trunc	\lemma trunc-neg {a : E} (a<=0 : a <= 0) : trunc a = a
+TruncRieszSpace.trunc-mono	lemma	4488db5717f7	-	a61d5156	97b987d0:TruncRieszSpace.trunc	\lemma trunc-mono {a b : E} (a<=b : a <= b) : trunc a <= trunc b
+TruncRieszSpace.trunc-idemp	lemma	4918e211b18b	-	86dca7db	97b987d0:TruncRieszSpace.trunc	\lemma trunc-idemp {a : E} : trunc (trunc a) = trunc a
+TruncRieszSpace.trunc_join	lemma	5395a48c1c81	-	9651c2f7	97b987d0:TruncRieszSpace.trunc	\lemma trunc_join {a b : E} : trunc (a ∨ b) = trunc a ∨ trunc b
+TruncRieszSpace.trunc_meet	lemma	33c44265bafe	-	e1a732ff	97b987d0:TruncRieszSpace.trunc	\lemma trunc_meet {a b : E} : trunc (a ∧ b) = trunc a ∧ trunc b
+TruncRieszSpace.trunc-spliit	lemma	0ec90152a213	-	8e4540a0	97b987d0:TruncRieszSpace.trunc	\lemma trunc-spliit {a : E} : trunc a = trunc (part+ a) - part- a
+TruncRieszSpace.trunc-diff-cmp	lemma	fc1500b5b5c9	-	dc59cf67	97b987d0:TruncRieszSpace.trunc	\lemma trunc-diff-cmp {a b : E} (b<=a : b <= a) : trunc a - trunc b <= a - b
+TruncRieszSpace.trunc-diff	lemma	8e3ce7826c9f	-	3dc848fa	97b987d0:TruncRieszSpace.trunc	\lemma trunc-diff {a b : E} : trunc a - trunc b <= part+ (a - b)
+TruncRieszSpace.trunc-lipschitz	lemma	6d93eb2295fc	-	8fafd1c9	97b987d0:TruncRieszSpace.trunc	\lemma trunc-lipschitz {a b : E} : abs (trunc a - trunc b) <= abs (a - b)
+TruncRieszSpace.trunc_+-pos-disjoint	lemma	c2dc7382d502	-	85a0d96d	97b987d0:TruncRieszSpace.trunc	\lemma trunc_+-pos-disjoint {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (d : a ∧ b = 0) : trunc (a + b) = trunc a + trunc b
+TruncRieszSpace.trunc_+-disjoint	lemma	588fac2eadce	-	968dd9ad		\lemma trunc_+-disjoint {a b : E} (d : AreDisjoint a b) : trunc (a + b) = trunc a + trunc b
+TruncRieszSpace.trunc_BigSum-disjoint	lemma	320edf062bd1	-	32815ce2		\lemma trunc_BigSum-disjoint {l : Array E} (d : \Pi {i j : Fin l.len} -> i /= j -> AreDisjoint (l i) (l j)) : trunc (BigSum l) = BigSum (map trunc l)
+TruncRieszSpace.IsUnderUnit	type	32f8ab7f3dcc	995872faf4a6	d136581a	97b987d0:TruncRieszSpace.trunc	\type IsUnderUnit (a : E) : \Prop
+TruncRieszSpace.InUnderUnit_<=	lemma	ba6ede2fcd82	-	b480bd74	f78b49fb:TruncRieszSpace.IsUnderUnit	\lemma InUnderUnit_<= {a b : E} (a<=b : a <= b) (tb : IsUnderUnit b) : IsUnderUnit a
+TruncRieszSpace.trunc_*q-boolean_<=1	lemma	ac7c66eee260	-	c706b8a6		\lemma trunc_*q-boolean_<=1 {q : Rat} (q<=1 : q RatField.<= 1) {e : E} (p : IsBoolean e) : IsUnderUnit (q *q e)
+TruncRieszSpace.trunc_*q-boolean_>=1	lemma	965e3a92b5fe	-	020f6882	97b987d0:TruncRieszSpace.trunc	\lemma trunc_*q-boolean_>=1 {q : Rat} (q>=1 : 1 RatField.<= q) {e : E} (p : IsBoolean e) : trunc (q *q e) = e
+TruncRieszSpace.trunc_*q-boolean	lemma	d52f78089fa0	-	8f285901	97b987d0:TruncRieszSpace.trunc	\lemma trunc_*q-boolean {q : Rat} {e : E} (p : IsBoolean e) : trunc (q *q e) = (q RatField.∧ 1) *q e
+TruncRieszSpace.IsBoolean	type	32f8ab7f3dcc	5c1743577627	ec3dbba7	97b987d0:TruncRieszSpace.trunc	\type IsBoolean (a : E) : \Prop
+TruncRieszSpace.IsBoolean>=0	lemma	2bffb47a5e27	-	c196dc7b		\lemma IsBoolean>=0 {a : E} (p : IsBoolean a) : 0 <= a
+TruncRieszSpace.IsBoolean_zro	lemma	aebf0c1b97d5	-	b28682c6		\lemma IsBoolean_zro : IsBoolean 0
+TruncRieszSpace.IsBoolean-trunc	lemma	376a327c1eda	-	58992f98		\lemma IsBoolean-trunc {a : E} (p : IsBoolean a) : IsUnderUnit a
+TruncRieszSpace.defect	func	ad5ffcad4839	2deb5c919029	5412fb6d	97b987d0:TruncRieszSpace.trunc	\func defect (x : E)
+TruncRieszSpace.IsBoolean-defect	lemma	0b55eb560d84	-	ebd2d543	73aaf7de:TruncRieszSpace.defect	\lemma IsBoolean-defect {e x : E} (p : IsBoolean e) : abs (defect x) <= abs (x - e) + abs (x - e) + abs (x - e)
+TruncRieszSpace.IsBoolean-orth	lemma	2335c34dc8ab	-	8200f1c2		\lemma IsBoolean-orth {e y : E} (p : IsBoolean e) (ty : IsUnderUnit y) : e ∧ part+ (y - e) = 0
+TruncRieszSpace.IsBoolean_meet	lemma	41fd3e1fc0aa	-	a2a4845c		\lemma IsBoolean_meet {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (a ∧ b)
+TruncRieszSpace.IsBoolean_join	lemma	ae97168d48a3	-	fba23594		\lemma IsBoolean_join {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (a ∨ b)
+TruncRieszSpace.IsBoolean_diff	lemma	996859667499	-	c02f5f61		\lemma IsBoolean_diff {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (part+ (a - b))
+TruncRieszSpace.IsBoolean_abs	lemma	589584412dd3	-	cc5e5ac3		\lemma IsBoolean_abs {a b : E} (p : IsBoolean a) (q : IsBoolean b) : IsBoolean (abs (a - b))
+TruncRieszSpace.IsBoolean_diff-disj	lemma	a1d9f36643f8	-	1f9f535a		\lemma IsBoolean_diff-disj {a b : E} (p : IsBoolean a) (q : IsBoolean b) : part+ (a - b) ∧ (a ∧ b) = 0
+TruncRieszSpace.BoolRing	func	2fc095169039	68bce7eea7ec	9bfdc60b	f49e82a6:TruncRieszSpace.BoolRing.abs-formula 30548c63:TruncRieszSpace.BoolRing.join-char c5802540:TruncRieszSpace.BoolRing.meet-formula c2e55b57:TruncRieszSpace.BoolRing.meet-split ff48daf8:TruncRieszSpace.BoolRing.meet-swap	\func BoolRing : BooleanRing (\Sigma (a : E) (IsBoolean a))
+TruncRieszSpaceHom	record	e0f77768d0c4	-	b5069ca5	97b987d0:TruncRieszSpace.trunc 21a1992b:TruncRieszSpaceHom.compose 9c8e4113:TruncRieszSpaceHom.id	\record TruncRieszSpaceHom \extends RieszSpaceHom { \override Dom : TruncRieszSpace \override Cod : TruncRieszSpace | func-trunc {x : Dom} : func (trunc x) = trunc (func x) }
+(overview)	-	-	-	4a3efe56	c1fecd01:TruncRieszSpace d4360aaf:TruncRieszSpace.BoolRing e91e4eb1:TruncRieszSpace.IsBoolean f78b49fb:TruncRieszSpace.IsUnderUnit 97b987d0:TruncRieszSpace.trunc d67fa7e7:TruncRieszSpaceHom	-

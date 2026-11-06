@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Analysis.Measure.MeasureRing.MeasureRingCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MeasureRingCat	instance	3a3b59b4eee0	-	4db90301		\instance MeasureRingCat : Cat PseudoMeasureRing.{u}
+MeasureRingCat.Iso<->IsEquiv	lemma	30aadd57aa9e	-	8ae3b645	f8ff2050:MeasureRingCat	\lemma Iso<->IsEquiv {A B : PseudoMeasureRing.{u}} {f : MeasureRingHom A B} : Iso {MeasureRingCat} f <-> IsEquiv f
+MeasureRingCat.inverse	func	5990d041f8fb	926e6de29a6d	c399564c		\func inverse {A B : PseudoMeasureRing} {f : MeasureRingHom A B} (e : IsEquiv f) : MeasureRingHom B A
+MeasureRingCat.inverse-equiv	lemma	b81cd6289952	-	83fb5f40		\lemma inverse-equiv {A B : PseudoMeasureRing} {f : MeasureRingHom A B} (e : IsEquiv f) : IsEquiv (inverse e)
+CompleteMeasureRingCat	instance	61453c317533	-	a7e8469a	f8ff2050:MeasureRingCat	\instance CompleteMeasureRingCat : Cat CompleteMeasureRing.{u}
+CompleteMeasureRingCat.Iso<->IsEquiv	lemma	5a8cc91e3e2d	-	8b7e573b	d37e5200:CompleteMeasureRingCat	\lemma Iso<->IsEquiv {A B : CompleteMeasureRing.{u}} {f : MeasureRingHom A B} : Iso {CompleteMeasureRingCat.{u}} f <-> IsEquiv f
+(overview)	-	-	-	61eacb78	d37e5200:CompleteMeasureRingCat f8ff2050:MeasureRingCat	-

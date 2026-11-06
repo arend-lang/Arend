@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Arith.Complex.FTA. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ComplexMultiset	func	75a89a75f50c	8df9376f57fc	eab4032c		\func ComplexMultiset (n : Nat) : CompleteMetricSpace
+specSetFilter	func	f6ba43a83bd5	b7728b7ea2e4	f7bb9089		\func specSetFilter {n : Nat} (p : Poly ComplexField) : SetFilter (Array Complex n)
+specFilter	func	98ff20a4548b	c106a814b1fc	5e3ecbcf	40cf1d99:specSetFilter	\func specFilter {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n)) (monic : polyCoef p n = 1) : CauchyFilter (MultisetPseudoMetric {ComplexNormed} n)
+spectrum	func	8c243472e003	5fa47ade0d6b	8f7b88fd	c01c0227:ComplexMultiset	\func spectrum {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n)) (monic : polyCoef p n = 1) : ComplexMultiset n
+nearRootSet	func	2a63d0ec479f	51320e99bb81	cfdee11e		\func nearRootSet {m : Nat} (z : Complex) (eps : Real) : Set (Array Complex (suc m))
+multiset-mem	func	8a7758d7a043	4647b3c2d706	c4c762cb	d1860575:nearRootSet	\func multiset-mem {m : Nat} (mu : ComplexMultiset (suc m)) (z : Complex) : \Prop
+root-mem	lemma	5990486c474d	-	080108d4	05e9df45:spectrum	\lemma root-mem {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m))) (monic : polyCoef p (suc m) = 1) {z : Complex} (root : polyEval p z = 0) : multiset-mem (spectrum p deg monic) z
+spectrum-char	lemma	5aa500ca7ea8	-	a6c3e8e3	05e9df45:spectrum	\lemma spectrum-char {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m))) (monic : polyCoef p (suc m) = 1) (z : Complex) : multiset-mem (spectrum p deg monic) z <-> polyEval p z = 0
+root-mem-prodLin	lemma	11dab868c534	-	920fb310		\lemma root-mem-prodLin {m : Nat} (r : Array Complex (suc m)) (i : Fin (suc m)) : multiset-mem (spectrum (prodLin r) (prodLin-degree r) (prodLin-monic r)) (r i)
+spectrum_prodLin	lemma	4f80558a2816	-	4152dd72	05e9df45:spectrum	\lemma spectrum_prodLin {n : Nat} (r : Array Complex n) : spectrum (prodLin r) (prodLin-degree r) (prodLin-monic r) = pointSCF r
+spectrum-factors	lemma	c1ee95cb303d	-	acced65d	05e9df45:spectrum	\lemma spectrum-factors {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n)) (monic : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps) : spectrum p deg monic (nearFactorSet p eps)
+spectrum-inj	lemma	9274bacd87c0	-	dbc04f3b		\lemma spectrum-inj {n : Nat} (p q : Poly ComplexField) (dp : degree< p (suc n)) (mp : polyCoef p n = 1) (dq : degree< q (suc n)) (mq : polyCoef q n = 1) (h : spectrum p dp mp = spectrum q dq mq) : p = q
+spectrum-cont	lemma	11a7c5b4d8a3	-	03160e44	05e9df45:spectrum	\lemma spectrum-cont {n : Nat} (p : Poly ComplexField) (dp : degree< p (suc n)) (mp : polyCoef p n = 1) {eps : Real} (eps>0 : 0 < eps) : ∃ (delta : Real) (0 < delta) (\Pi (q : Poly ComplexField) (dq : degree< q (suc n)) (mq : polyCoef q n = 1) -> (\Pi (j : Nat) -> cabs (polyCoef p j - polyCoef q j) < delta) -> dist {ComplexMultiset n} (spectrum p dp mp) (spectrum q dq mq) < eps)
+(overview)	-	-	-	7aba8631	c01c0227:ComplexMultiset 96d41573:specFilter 40cf1d99:specSetFilter 05e9df45:spectrum aadca22f:spectrum-char 66a36e34:spectrum-cont 40f8d58f:spectrum-inj f67a2743:spectrum_prodLin	-

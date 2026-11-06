@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.ManhattanProduct. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ManhattanProductPseudoMetricSpace	instance	534158f9656e	-	e549c071		\instance ManhattanProductPseudoMetricSpace (X Y : ExPseudoMetricSpace) : ExPseudoMetricSpace (\Sigma X Y)
+(overview)	-	-	-	9f1de58e		-

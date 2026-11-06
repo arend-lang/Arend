@@ -1,0 +1,24 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.RingCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RingCat	instance	d9002337d059	-	d88187ac		\instance RingCat : Cat Ring.{u}
+RingCat.natCoefUnique	lemma	c6919088fe87	-	66a436fd		\lemma natCoefUnique {X : \Set} (R S : Ring X) (h : RingHom R S (\lam x => x)) (n : Nat) : R.natCoef n = S.natCoef n
+RingCat.forgetToAbGroup	func	530a5f326933	4de228807f68	11d53b03	a01a9abb:RingCat	\func forgetToAbGroup : Functor RingCat.{u} AbGroupCat
+RingCat.forgetToMonoid	func	b65a9819baa5	0c3f33f28066	c0cf043c	a01a9abb:RingCat	\func forgetToMonoid : Functor RingCat.{u} MonoidCat
+RingCat.forget	func	8133737704cc	95e94dcf5cf0	030db893	a01a9abb:RingCat	\func forget : Functor RingCat.{u} SetCat
+RingCat.Group-Iso->Ring-Iso	lemma	cac5c9ad8043	-	a79c510e	a01a9abb:RingCat	\lemma Group-Iso->Ring-Iso {G H : Ring.{u}} {f : RingHom G H} (f_iso : Iso {GroupCat.{u}} (AddGroupHom.toGroupHom f)) : Iso {RingCat.{u}} f
+RingCat.Iso<->Inj+Surj	lemma	4536b0f001da	-	d699da52		\lemma Iso<->Inj+Surj {G H : Ring.{u}} (f : RingHom G H) : Iso {RingCat} f <-> (\Sigma (IsInj f) (IsSurj f))
+RingCat.image-iso	func	f73ad3a49bc5	c4617fbcc9a7	2f0bc15d	a01a9abb:RingCat	\func image-iso {R S : Ring.{u}} {f : RingHom R S} (p : IsSurj f) : Iso {RingCat} {ImRing f} {S}
+CRingCat	instance	fc881cfe90e0	-	66ba6bbd	a01a9abb:RingCat	\instance CRingCat : Cat CRing.{u}
+CRingCat.forgetToRing	func	819e8607a629	d01920f6a505	bc1c35a6	a2f0772f:CRingCat a01a9abb:RingCat	\func forgetToRing : Functor CRingCat.{u} RingCat
+CRingCat.forget	func	0c3ac959ec7d	93c50311daad	b220bb57	a2f0772f:CRingCat	\func forget : Functor CRingCat.{u} SetCat
+CRingCat.forget.reflectsLimit	sfunc	6f59eec5ee22	3877197c9048	c2ff052c		\sfunc reflectsLimit {J : Precat} (H : Functor J CRingCat.{u}) : ReflectsLimit forget.{u} H
+CRingCat.forget.preservesLimit	lemma	9cfbc5deac5a	-	2f7a9ae2		\lemma preservesLimit {J : Precat} (H : Functor J CRingCat.{u}) : PreservesLimit forget.{u} H
+LimitCRing	instance	495ae586a466	-	04652387	a2f0772f:CRingCat 1b6e0c9c:LimitCRing.limMap c7a6ddbb:LimitCRing.limProj	\instance LimitCRing {J : Precat.{u, u}} (F : Functor J CRingCat.{u}) : CRing
+CRingBicat	instance	493e5ecb8860	-	9b6baefc	920fd931:CRingBicat.catEquiv 39e85ad0:CRingBicat.theory a2f0772f:CRingCat	\instance CRingBicat : BicompleteCat.{u}
+CRingBicat.theory	instance	d4751e3b4b37	-	f8bab4d7		\instance theory : Theory
+CRingBicat.modToRing	func	3ce57f2f8c89	cfdff04775f4	fdc34496	39e85ad0:CRingBicat.theory	\func modToRing (M : Model theory) : CRing (M ())
+CRingBicat.ringtoMod	func	3704b2f3466b	77a2c82b42f9	32bbb5bd	39e85ad0:CRingBicat.theory	\func ringtoMod (R : CRing) : Model theory (\lam _ => R)
+CRingBicat.ringtoMod.functor	func	2396919f52b0	6e0d0ce5e6e7	f1cbfce3	55af060e:CRingBicat.ringtoMod 39e85ad0:CRingBicat.theory a2f0772f:CRingCat	\func functor : Functor CRingCat.{u} (ModelCat theory) (ringtoMod __)
+CRingBicat.catEquiv	func	b91b6b2ec166	da2949389bca	7bd2fd38	67cc8c93:CRingBicat.modToRing.functor 5256f54b:CRingBicat.ringtoMod.functor 39e85ad0:CRingBicat.theory a2f0772f:CRingCat	\func catEquiv : CatEquiv CRingCat.{u} (ModelCat theory)
+CRingBicat.createsLimits	sfunc	20ea9dbee956	cee38af99c10	d4159450	a2f0772f:CRingCat eff29835:CRingCat.forget.preservesLimit b3116dca:CRingCat.forget.reflectsLimit	\sfunc createsLimits {J : Precat.{u, u}} (F : Functor J CRingCat.{u}) : CreatesLimit CRingCat.forget F
+(overview)	-	-	-	e1245ad5	920fd931:CRingBicat.catEquiv a2f0772f:CRingCat a01a9abb:RingCat	-

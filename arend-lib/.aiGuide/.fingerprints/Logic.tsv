@@ -1,0 +1,56 @@
+# arend -gc fingerprints v2 for module Logic. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Empty	data	72849923d494	-	8c59ce56		\data Empty
+absurd	func	d23a1b54ab7e	6363e3b7006a	b022dedb	6e14378b:Empty	\func absurd {A : \Cat} (x : Empty) : A
+absurd+	func	ca9197ce2bcd	f2f6af1d0fa7	8878ec2f	6e14378b:Empty 96f09455:absurd	\func absurd+ {A :⁺ \Cat} (x :⁺ Empty) : A
+Not	func	76b21d8380c9	06d711ea87cc	2ceb6e1a	6e14378b:Empty	\func Not (A : \Cat)
+/=	func	0b869ad1f710	6581ddcdd14b	d49ead22	adcbf348:Not	\func /= {A : \Cat} (a a' : A)
+/=-sym	lemma	4e6162a33468	-	329c329a		\lemma /=-sym {A : \Cat} {a a' : A} (p : a /= a') : a' /= a
+TruncP	data	a49e49f45043	-	94165b42	05c93fd4:TruncP.inP 6df9d250:TruncP.truncP	\data TruncP (A : \Cat) | inP A | truncP (a a' : TruncP A) : a = a'
+TruncP.levelProp	level	e47ae3208839	-	f92e5065	4fb38f91:TruncP	\use \level levelProp {A : \Cat} (a a' : TruncP A) : a = a'
+TruncP.remove	lemma	76fedbc3eaff	-	186910a1	4fb38f91:TruncP	\lemma remove {A : \Cat} (p : isProp A) (t : TruncP A) : \level A p
+TruncP.remove'	lemma	e3afc38f3294	-	e1b5ebe2	91f88098:TruncP.remove	\lemma remove' {A : \Prop} (t : TruncP A) : A
+TruncP.rec	lemma	c624bd81ca9b	-	cece3f8b	4fb38f91:TruncP	\lemma rec {A B : \Cat} (p : isProp B) (t : TruncP A) (f : A -> B) : \level B p
+TruncP.rec-eval	lemma	7c81194f7ce7	-	2e28b407	05c93fd4:TruncP.inP	\lemma rec-eval {A B : \Cat} {p : isProp B} {a : A} {f : A -> B} : \level rec p (inP a) f = f a isProp.=>isSet p _ _
+TruncP.rec-set	lemma	293c9c0e7cf2	-	10fdf673		\lemma rec-set {A : \Cat} {B : \Set} (t : TruncP A) (f : A -> B) (p : \Pi (a a' : A) -> f a = f a') : \level \Sigma (b : B) (∃ (a : A) (f a = b)) level p
+TruncP.map	func	253e6cbb72fa	3fc0c2a00e0b	fc1a3270	4fb38f91:TruncP	\func map {A B : \Cat} (t : TruncP A) (f : A -> B) : TruncP B
+prop-pi	lemma	753e3862efae	-	93299d89		\lemma prop-pi {A : \Prop} {a a' : A} : a = a'
+prop-isProp	lemma	f162156c59b5	-	975be070		\lemma prop-isProp {A : \Prop} : isProp A
+set-pi	lemma	df3a855ea43b	-	62a35490		\lemma set-pi {A : \Set} {a b : A} {p q : a = b} : p = q
+prop-dpi	lemma	1790d21a4ad2	-	35fac660		\lemma prop-dpi (A : I -> \Prop) (a : A left) (a' : A right) : Path A a a'
+setPair-unext2	lemma	7c1acf78db5f	-	0696d62a		\lemma setPair-unext2 {A : \Set} {B : A -> \Set} {a : A} {b : B a} {b' : B a} (p : (a, b) = {\Sigma (a : A) (B a)} (a, b')) : b = b'
+propExt	lemma	e7f090843353	-	4208ca8d		\lemma propExt {A B : \Prop} (f : A -> B) (g : B -> A) : A = B
+propExt.dir	lemma	117810dcadf7	-	0ec3220e		\lemma dir {A B : \Prop} (p : A = B) (a : A) : B
+propExt.conv	lemma	0c4026cbe5e8	-	0ec3220e		\lemma conv {A B : \Prop} (p : A = B) (b : B) : A
+ToProp	data	04e45f8af3b6	-	8f4e7f38		\data ToProp (A : \Cat) (p : isProp A) | toProp A
+ToProp.fromProp	lemma	81e0ae3fce4b	-	8be2cb0a		\lemma fromProp {A : \Cat} {p : isProp A} (t : ToProp A p) : \level A p
+ToProp.levelProp	level	f56858273567	-	94217677	fcbfef9e:ToProp	\use \level levelProp {A : \Cat} {p : isProp A} (x y : ToProp A p) : x = y
+||	data	05cd7d21ccc3	-	ac5abf88	05c93fd4:||.byLeft 6b6126ca:||.byRight	\data \infixr 2 || (A B : \Cat) : \Prop | byLeft A | byRight B
+||.rec	lemma	791965a4e60d	-	d0be29e0		\lemma rec {A B C : \Cat} (p : isProp C) (f : A -> C) (g : B -> C) (t : A || B) : \level C p
+||.rec'	lemma	561d5c07faa3	-	b16a4e9d		\lemma rec' {A B : \Cat} {C : \Prop} (f : A -> C) (g : B -> C) (t : A || B) : C
+||.map	func	6cc2313342a7	fcc8222acfc1	d232c60d		\func map {A B C D : \Cat} (f : A -> C) (g : B -> D) (t : A || B) : C || D
+||.fromOr	lemma	46bb6ac56d09	-	5de84c90	6a6c0631:||	\lemma fromOr {A B : \Cat} (p : Or A B) : A || B
+||.toOr	lemma	f1aecc0db260	-	81d58ae3	4fb38f91:TruncP 6a6c0631:||	\lemma toOr {A B : \Cat} (p : A || B) : TruncP (Or A B)
+||.flip	lemma	3a489dbc5cbe	-	0cc45923		\lemma flip {A B : \Cat} (e : A || B) : B || A
+<->	func	85632a8058f2	6659902400de	8aabf027	82e99bd9:NegatedProp.P	\func <-> (P Q : \Prop)
+<->_=	lemma	6822bfe6a168	-	0fe2ede8	827b69b0:<-> 82e99bd9:NegatedProp.P	\lemma <->_= {P Q : \Prop} : (P <-> Q) <-> (P = Q)
+<->refl	lemma	e79b973b0f8f	-	4ce619f8	827b69b0:<->	\lemma <->refl {P : \Prop} : P <-> P
+<->trans	lemma	87b4d5fb8f4a	-	4ce619f8	827b69b0:<->	\lemma <->trans {P Q S : \Prop} (f : P <-> Q) (g : Q <-> S) : P <-> S
+<->sym	lemma	6e1c8b831c58	-	4ce619f8	827b69b0:<->	\lemma <->sym {P Q : \Prop} (f : P <-> Q) : Q <-> P
+TSetIm	type	8ea79b074634	96a000aa933c	a412fb39		\type TSetIm {A B : \Cat} (f : A -> B) (b : B)
+TSetIm-con	lemma	3da57f44da92	-	b5a7b784	c6b2a728:TSetIm	\lemma TSetIm-con {A B : \Cat} {f : A -> B} (a : A) : TSetIm f (f a)
+TSetIm-elim	lemma	1c81bcece266	-	0ed28c04	c6b2a728:TSetIm	\lemma TSetIm-elim {A B : \Cat} {C : B -> \Prop} {f : A -> B} (c : \Pi (a : A) -> C (f a)) {b : B} (s : TSetIm f b) : C b
+SetIm	type	e708b002d93d	d2407b70a6df	8a422003	82e99bd9:NegatedProp.P	\type SetIm {A B : \Cat} (f : A -> B) (P : A -> \Cat) (b : B)
+SetIm-con	lemma	74440d209af8	-	d1f1562e	82e99bd9:NegatedProp.P 17e56d7d:SetIm	\lemma SetIm-con {A B : \Cat} {f : A -> B} {P : A -> \Cat} {a : A} (Pa : P a) : SetIm f P (f a)
+SetIm-cone	lemma	4ec23cd025a7	-	d1f1562e	82e99bd9:NegatedProp.P 17e56d7d:SetIm	\lemma SetIm-cone {A B : \Cat} {f : A -> B} {P : A -> \Cat} (a : A) (Pa : P a) : SetIm f P (f a)
+SetIm-elim	lemma	b573a0fcc673	-	4f6f677c	82e99bd9:NegatedProp.P 17e56d7d:SetIm	\lemma SetIm-elim {A B : \Cat} {C : B -> \Prop} {f : A -> B} {P : A -> \Cat} (c : \Pi {a : A} -> P a -> C (f a)) {b : B} (s : SetIm f P b) : C b
+SetIm_id	lemma	fd03da1b29a6	-	25f98c9d	82e99bd9:NegatedProp.P	\lemma SetIm_id {A : \Cat} {P : A -> \Prop} : SetIm (\lam x => x) P = P
+SetIm_o	lemma	a8214a7c4151	-	6f458132		\lemma SetIm_o {A B C : \Cat} {f : A -> B} {g : B -> C} {P : A -> \Prop} : SetIm (\lam x => g (f x)) P = SetIm g (SetIm f P)
+SetIm_TSetIm	lemma	492781460cdf	-	e986a1a8	17e56d7d:SetIm c6b2a728:TSetIm	\lemma SetIm_TSetIm {A B C : \Cat} {f : A -> B} {g : B -> C} : SetIm g (TSetIm f) = TSetIm (\lam a => g (f a))
+OneOf	func	caf40b584e03	ceb5557140dd	8dc469b7		\func OneOf (l : Array \Prop)
+ElemOf	func	caf40b584e03	5d6fc0d005ff	9cab8289	a6a91417:OneOf	\func ElemOf (l : Array \Prop)
+arraySubset	type	8d7a386b5315	e3485e65397d	f419c8af		\type arraySubset {X : \Type} (l : Array X) (x : X)
+isProp-prover	meta	67a08463e44b	ca828c0afaa9	ddab99f7	d37e3d65:prop-pi	\meta isProp-prover
+NegatedProp	class	3a6635791fb9	-	edb50e8b	82e99bd9:NegatedProp.P d0dd4153:NegatedProp.isNegated adcbf348:Not	\class NegatedProp (P : \Prop) { | isNegated : Not (Not P) -> P }
+EmptyNegated	instance	da6fbf0773c1	-	62c84b31	6e14378b:Empty ea9f23e2:NegatedProp	\instance EmptyNegated : NegatedProp Empty
+(overview)	-	-	-	97d50304	6e14378b:Empty ea9f23e2:NegatedProp adcbf348:Not 4fb38f91:TruncP d37e3d65:prop-pi 38e87518:propExt 7f98688d:set-pi 6a6c0631:||	-

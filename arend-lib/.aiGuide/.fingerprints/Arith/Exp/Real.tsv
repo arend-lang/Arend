@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Arith.Exp.Real. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Real-limit->=	lemma	c60cc3512bef	-	519443a7		\lemma Real-limit->= {f : Nat -> Real} {l : Real} (lim : RealNormed.IsLimit f l) {c : Real} {N0 : Nat} (lb : \Pi {n : Nat} (N0 <= n) -> c <= f n) : c <= l
+Real-limit-<=	lemma	798e32cdf2de	-	f04d9d21		\lemma Real-limit-<= {f : Nat -> Real} {l : Real} (lim : RealNormed.IsLimit f l) {c : Real} {N0 : Nat} (ub : \Pi {n : Nat} (N0 <= n) -> f n <= c) : l <= c
+partialSum_<=_seriesSum	lemma	b7c8ec4f0235	-	7b653485		\lemma partialSum_<=_seriesSum {S : Series Real} (S>=0 : \Pi (n : Nat) -> 0 <= S n) {l : Real} (Sl : IsSeriesSum S l) (N : Nat) : partialSum S N <= l
+seriesSum_norm_<=	lemma	9508e9bc9b30	-	450ffb69		\lemma seriesSum_norm_<= {A : ExNormedAbGroup} {S : Series A} {l : A} (Sl : IsSeriesSum S l) {B : ExUpperReal} (B-bound : \Pi (N : Nat) -> partialSum (\lam k => A.norm (S k)) N <= B) : A.norm l <= B
+Real-exp->=1-of-nonneg	lemma	afb859f0808c	-	72a49b2e		\lemma Real-exp->=1-of-nonneg {x : Real} (x>=0 : 0 <= x) : 1 <= exp x
+Real-exp->1-of-pos	lemma	6a83dbd511c7	-	300f33d8		\lemma Real-exp->1-of-pos {x : Real} (x>0 : 0 < x) : 1 < exp x
+Real-exp-pos	lemma	ad34b4e885ab	-	245500a6		\lemma Real-exp-pos (x : Real) : 0 < exp {RealStoneC*Algebra} x
+Real-exp-strict-mono	lemma	55672a683967	-	b32329c3		\lemma Real-exp-strict-mono {x y : Real} (x<y : x < y) : exp x < exp y
+Real-exp-inj	lemma	d4cbe03742bb	-	669b00c2		\lemma Real-exp-inj {x y : Real} (eq : exp x = exp y) : x = y
+(overview)	-	-	-	3757f255		-

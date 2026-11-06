@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.Monoid. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MonoidSolverModel	func	962eb73b6320	e56a09b91f29	a78e7b70	a17f7ae0:MonoidSolverModel.Term	\func MonoidSolverModel (M : Monoid) : SubstSolverModel M
+AddMonoidSolverModel	func	a393a3178f45	ba703a2785ab	4fffe028	6ed2b5ad:MonoidSolverModel	\func AddMonoidSolverModel (A : AddMonoid) : SubstSolverModel A
+MonoidSolverModel.Term	data	e6a124952974	-	fd272fa5	63e001eb:MonoidSolverModel.Term.:* d4f1b28b:MonoidSolverModel.Term.:ide 5fa62920:MonoidSolverModel.Term.var	\data Term (n : Nat) | var (Fin n) | :ide | \infixl 7 :* (t s : Term n)
+MonoidSolverModel.normalize-aux	func	52b0f0712c09	cf46c1287722	cb0d0f83	a17f7ae0:MonoidSolverModel.Term	\func normalize-aux {n : Nat} (t : Term n) (acc : List (Fin n)) : List (Fin n)
+MonoidSolverModel.interpretNF	func	350224f5f92f	2830f7a96ef8	6fe81132		\func interpretNF {V : \Set} (env : V -> M) (l : List V) : M
+MonoidSolverModel.interpretNF_::	lemma	8a7cb3beed8c	-	af5bdba1	e18a5825:MonoidSolverModel.interpretNF	\lemma interpretNF_:: {V : \Set} {env : V -> M} {x : V} {l : List V} : interpretNF env (x :: l) = env x * interpretNF env l
+MonoidSolverModel.interpretNF_++	lemma	17e6c7026850	-	8d9b8393	e18a5825:MonoidSolverModel.interpretNF	\lemma interpretNF_++ {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s
+MonoidSolverModel.interpretNF-consistent-aux	lemma	64bf5c37b334	-	679e4e28	e18a5825:MonoidSolverModel.interpretNF 0541f1e0:MonoidSolverModel.normalize-aux	\lemma interpretNF-consistent-aux {n : Nat} {env : Fin n -> M} {t : Term n} {acc : List (Fin n)} : interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc
+MonoidSolverModel.>>=	func	b85998336e6c	d58a82f14e75	598590e5		\func >>= {U V : \Set} (l : List U) (k : U -> List V) : List V
+MonoidSolverModel.>>=-consistent	lemma	b3e2b42121fc	-	13a2b501		\lemma >>=-consistent {U V : \Set} {env : V -> M} {l : List U} {k : U -> List V} : interpretNF env (l >>= k) = interpretNF (\lam u => interpretNF env (k u)) l
+(overview)	-	-	-	37a49e91	f8a8df95:MonoidSolverModel.>>= a17f7ae0:MonoidSolverModel.Term	-

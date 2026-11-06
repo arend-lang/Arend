@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation.Characters. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Character	func	cb9cfcc8c3c5	d20f14d81f1d	bfbbe5e3		\func Character {R : Ring} {G : Group} (E : LinRepres R G) {lv : Array E} (bv : E.IsBasis lv) (g : G) : R
+Character.chi	func	6dc5699535c3	84e9c09dabe3	8fb032a6	fb2fe814:Character	\func chi (g : G) : R
+Character.of-1	func	2a15ba1d8fc8	21561fc9e96c	8c7b05fc	3db5f024:Character.chi	\func of-1 : chi G.ide = R.natCoef lv.len
+Character.Matrix-of-1	func	383b1a26474d	ae82cfb451a2	688b47e0		\func Matrix-of-1 : LinearMap.toMatrix lv bv (E.toLinearMap G.ide) = MatrixRing.ide
+(overview)	-	-	-	56202f28		-

@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.Nat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+NatMetricSpace	instance	269044430a27	-	deb363b6		\instance NatMetricSpace : MetricSpace Nat
+NatMetricSpace.Cover	func	8c73bc68a4e5	1d08c4245a7f	402f97d6		\func Cover (C : Set (Set Nat)) : \Prop
+NatMetricSpace.uniform-char	lemma	01bcab91d078	-	dae773f2	b332ded8:NatMetricSpace.Cover	\lemma uniform-char {C : Set (Set Nat)} : NatMetricSpace.isUniform C <-> Cover C
+NatMetricSpace.cauchy-char	lemma	ad2d9b46df59	-	0b6eb1ff	b332ded8:NatMetricSpace.Cover	\lemma cauchy-char {C : Set (Set Nat)} : NatMetricSpace.isCauchy C <-> Cover C
+NatMetricSpace.totallyBounded	lemma	905a1037c65b	-	cb2c3325	5e7059da:NatMetricSpace	\lemma totallyBounded : IsTotallyBounded NatMetricSpace
+NatMetricSpace.makeUniform	lemma	07d75d91a5b1	-	60059c28		\lemma makeUniform (N : Nat) : NatMetricSpace.isUniform (\lam U => (U = (N <=)) || (\Sigma (n : Nat) (n < N) (U = single n)))
+NatMetricSpace.makeCover	lemma	80570184d38b	-	bd20de0b		\lemma makeCover (N : Nat) : NatMetricSpace.isCauchy (\lam U => (U = (N <=)) || (\Sigma (n : Nat) (n < N) (U = single n)))
+atTop	func	c5882a3b58c2	427b96c3fb0d	fae2666c	5e7059da:NatMetricSpace	\func atTop : CauchyFilter NatMetricSpace
+(overview)	-	-	-	42f983ac	ee081189:atTop	-

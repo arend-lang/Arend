@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.Linear.Matrix.CayleyHamilton. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+cayley-hamilton	lemma	077a086a41ff	-	52b0b4a8		\lemma cayley-hamilton {R : CRing} {n : Nat} (A : Matrix R n n) : polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) (charPoly A) A = 0
+cayley-hamilton.toLinearMap	func	50a561e2b298	e6277a27b3bd	121823d4		\func toLinearMap {R : CRing} {n m : Nat} (A : Matrix R n m) : LinearMap (ArrayFinModule n) (ArrayFinModule m)
+cayley-hamilton.poly_func_matrix	lemma	0435564a035b	-	67fbd3ae	3a3c07e2:cayley-hamilton.toLinearMap	\lemma poly_func_matrix {R : CRing} {n : Nat} (p : Poly R) (A : Matrix R n n) (i j : Fin n) : polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) p A i j = polyModule.poly_func p (toLinearMap A) (MatrixRing.ide i) j
+(overview)	-	-	-	0526df26		-

@@ -1,0 +1,18 @@
+# arend -gc fingerprints v2 for module Set.Filter. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Filter	record	41d2d521bb8e	-	32fef801	ed149a7c:Filter.A 4fe27038:Filter.F be01afaf:Filter.filter-meet 694852db:Filter.filter-mono ce75307b:Filter.filter-top	\record Filter (A : TopMeetSemilattice) (\coerce F : A -> \Prop) { | filter-mono {a b : A} : F a -> a <= b -> F b | filter-top : F top | filter-meet {a b : A} : F a -> F b -> F (a ∧ b) }
+Filter.principal	func	d08b3b2406fe	645f3f0744f6	31529f6b	ed149a7c:Filter.A	\func principal {A : TopMeetSemilattice} (a : A) : Filter A
+CompleteFilter	record	c819d60e365f	-	36f99a0b	8f3e2a26:CompleteFilter.filter-Join 4ab429e1:Filter ed149a7c:Filter.A 4fe27038:Filter.F	\record CompleteFilter \extends Filter { \override A : CompleteLattice | filter-Join {C : A -> \Prop} : F (Join C) -> ∃ (w : C) (F w) }
+CompleteFilter.filter-SJoin	lemma	61bf30f38a07	-	792f57cc	8f3e2a26:CompleteFilter.filter-Join	\lemma filter-SJoin {I : \Type} {f : I -> A} {C : I -> \Prop} (FJ : F (CompleteLattice.SJoin f C)) : ∃ (i : C) (F (f i))
+CompleteFilter.filter-IJoin	lemma	29c598463b4c	-	48e7caa5	8f3e2a26:CompleteFilter.filter-Join ed149a7c:Filter.A	\lemma filter-IJoin {I : \Type} {f : I -> A} (FJ : F (CompleteLattice.IJoin f)) : ∃ (i : I) (F (f i))
+CompleteFilter.isProper	lemma	669ba87fb0c7	-	969a795f		\lemma isProper (p : F CompleteLattice.bottom) : Empty
+SetFilter	record	47bfcc65e102	-	34825075	4ab429e1:Filter ed149a7c:Filter.A f18ee3e2:SetFilter.X	\record SetFilter (X : \Set) \extends Filter { | A => SetLattice X }
+SetFilter-map	func	fa20ddc6d6d6	f7f04ff7fb9f	7b1eb771	4f1250e5:SetFilter f18ee3e2:SetFilter.X	\func SetFilter-map {X Y : \Set} (f : X -> Y) (F : SetFilter X) : SetFilter Y
+WeaklyProperFilter	record	a64888f0f533	-	6ff43993	4fe27038:Filter.F 4f1250e5:SetFilter f2e843d1:WeaklyProperFilter.isWeaklyProper	\record WeaklyProperFilter \extends SetFilter { | isWeaklyProper : Not (F bottom) }
+ProperFilter	record	de1b2fbaaa10	-	e766bb27	96540144:WeaklyProperFilter	\record ProperFilter \extends WeaklyProperFilter { | isProper {U : Set X} : F U -> ∃ U | isWeaklyProper => \lam Fb => (\case isProper Fb \with { | inP (x, inP (_, (), _)) }) }
+pointFilter	func	ad1678998d99	a3e63cbaaac3	5ae998e1	f18ee3e2:SetFilter.X	\func pointFilter {X : \Set} (x : X) : ProperFilter X
+WeaklyProperFilter-map	func	30c346d0f4cd	06535a72a8ca	26aedd20	ca2e608a:SetFilter-map f18ee3e2:SetFilter.X	\func WeaklyProperFilter-map {X Y : \Set} (f : X -> Y) (F : WeaklyProperFilter X) : WeaklyProperFilter Y
+ProperFilter-map	func	e06f50475745	ef1547b46c37	185a31ff	ca2e608a:SetFilter-map	\func ProperFilter-map {X Y : \Set} (f : X -> Y) (F : ProperFilter X) : ProperFilter Y
+WeaklyProperFilterSemilattice	instance	0f681ad43039	-	a6daddba	4fe27038:Filter.F f18ee3e2:SetFilter.X 96540144:WeaklyProperFilter	\instance WeaklyProperFilterSemilattice (X : \Set) : MeetSemilattice (WeaklyProperFilter X)
+ProperFilterSemilattice	instance	134ea0bfcdd1	-	0d346d91	3471252d:ProperFilter f18ee3e2:SetFilter.X	\instance ProperFilterSemilattice (X : \Set) : MeetSemilattice (ProperFilter X)
+(overview)	-	-	-	b9765f44	4ab429e1:Filter 3471252d:ProperFilter 4f1250e5:SetFilter ca2e608a:SetFilter-map f18ee3e2:SetFilter.X 96540144:WeaklyProperFilter	-

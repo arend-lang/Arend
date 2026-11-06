@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Category.Topos.Presheaf.PrelocalPredicate. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PrelocalPredicate	record	72008243b08f	-	0bd122e0	72ec2809:PrelocalPredicate.C 73decd59:PrelocalPredicate.S cde9c087:PrelocalPredicate.pred	\record PrelocalPredicate .{u} {C : Precat} (S : Presheaf.{u} C) (\coerce pred : \Pi {a : C} -> S a -> \Prop) { | isPrelocalPredicate {a b : C} {f : Hom a b} {x : S b} : pred x -> pred (S.F.Func f x) }
+PrelocalPredicate.toSubFunctor	func	60882c0c567b	54c16cf0d5d0	06f17703	73decd59:PrelocalPredicate.S	\func toSubFunctor : Functor C.op SetCat
+PrelocalPredicate.toSubPresheaf	func	bae838d98865	80cf2ab77872	6c0820a2	73decd59:PrelocalPredicate.S	\func toSubPresheaf : Presheaf C
+PrelocalPredicate.embedding	func	3660d337e46d	4874323e515c	c1e639bf	73decd59:PrelocalPredicate.S ac33d226:PrelocalPredicate.toSubFunctor	\func embedding : NatTrans toSubFunctor S
+PrelocalPredicate_Subobj	func	73dbdb4a2f44	1269c3793cab	355b8b93	73decd59:PrelocalPredicate.S	\func PrelocalPredicate_Subobj {C : Precat.{o, h}} (S : Presheaf.{h} C) : QEquiv {PrelocalPredicate S} {Subobj S}
+exists-prelocalPredicate	lemma	ce7b76a57c0f	-	27df4fce	73decd59:PrelocalPredicate.S	\lemma exists-prelocalPredicate {C : Precat} {S T : Presheaf.{u} C} (P : PrelocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S T)) : PrelocalPredicate S (\lam {a} x => ∃ (y : T a) (P (x, y)))
+equality-prelocalPredicate	lemma	3073ac4ed500	-	303fd702	73decd59:PrelocalPredicate.S	\lemma equality-prelocalPredicate {C : Precat} (S : Presheaf.{u} C) : PrelocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S S) (\lam s => s.1 = s.2)
+(overview)	-	-	-	cff102a3	297e80c7:PrelocalPredicate 72ec2809:PrelocalPredicate.C 73decd59:PrelocalPredicate.S	-

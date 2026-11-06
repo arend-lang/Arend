@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Category.Topos.Sheaf.LocalPredicate. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LocalPredicate	record	770d15e4d258	-	03920e0c		\record LocalPredicate .{u} \extends PrelocalPredicate.{u} { \override C : Site | isLocalPredicate {a : C} {U : Presieve a} (a<=U : isCover a U) {x : S a} : ∀ {y : U} (pred (S.F.Func y.2 x)) -> pred x }
+LocalPredicate.byCovering	lemma	792dfab0c66e	-	6b1b4f61		\lemma byCovering {a : C} {U : Presieve a} (a<=U : Covering a U) {x : S a} (Ux : ∀ {y : U} (pred (S.F.Func y.2 x))) : pred x
+exists-localPredicate	lemma	f87c93b0fe1e	-	9019f708		\lemma exists-localPredicate {C : Site} {S : Presheaf.{u} C} {T : Sheaf.{u} C} (P : LocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S T)) (unique : \Pi {a : C} {x : S a} {y y' : T a} -> P (x, y) -> P (x, y') -> y = y') : LocalPredicate S (\lam {a} x => ∃ (y : T a) (P (x, y)))
+equality-localPredicate	lemma	72d03dceb0c7	-	72238870		\lemma equality-localPredicate {C : Site} (S : SeparatedVPresheaf SetCat.{u} C) : LocalPredicate (VPresheafComplete.BprodPresheaf {SetBicat} S S) (\lam s => s.1 = s.2)
+inv-localPredicate	lemma	7e8c822c8c55	-	b77eea62		\lemma inv-localPredicate {C : Site.{u, u}} {S : VSheaf CRingCat.{u} C} : LocalPredicate (S.toPresheaf CRingCat.forget) Monoid.Inv
+(overview)	-	-	-	d1ddc285	15d8ab0a:LocalPredicate	-

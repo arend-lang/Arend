@@ -1,0 +1,17 @@
+# arend -gc fingerprints v2 for module Data.Fin. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+fzero	cons	242f88caac1b	f4c9344c3708	25f9ba0f		\cons fzero {n : Nat} : Fin (suc n)
+fsuc	cons	6e3fd3c6cb36	4b05f46209e9	bc6b2d08		\cons fsuc {n : Nat} (x : Fin n) : Fin (suc n)
+fpred	func	f11f39b6ad0a	9185219c3efd	3f6ad1fa		\func fpred {n : Nat} (def : Fin n) (x : Fin (suc n)) : Fin n
+fcase	func	af7cf306e363	881fec6fbf50	b053d389		\func fcase {A : \Type} {n : Nat} (a : A) (f : Fin n -> A) (j : Fin (suc n)) : A
+fpredP	func	d236106ad458	55f595817f8b	a1fb75f8		\func fpredP {n : Nat} (j : Fin (suc n)) (j/=0 : j /= 0) : Fin n
+finLast	func	769de1be4c91	38fd3027a400	a40f2e01		\func finLast (n : Nat) : Fin (suc n)
+unfsuc	lemma	a61088834c4f	-	18f42afd	7c2d9eb9:fsuc	\lemma unfsuc {n : Nat} {x y : Fin n} (p : suc x = suc y) : x = y
+fsuc/=	lemma	30b61b20e4bb	-	de2c4e2e	7c2d9eb9:fsuc	\lemma fsuc/= {n : Nat} {x y : Fin n} (p : x /= y) : fsuc x /= fsuc y
+fsuc/=0	lemma	54f6e32128a6	-	1fdd2788	7c2d9eb9:fsuc	\lemma fsuc/=0 {n : Nat} {x : Fin n} : fsuc x /= 0
+fsuc/=-conv	lemma	9151a34cfaf2	-	d9da45e1	7c2d9eb9:fsuc 83da9463:fsuc/=	\lemma fsuc/=-conv {n : Nat} {x y : Fin n} (p : fsuc x /= fsuc y) : x /= y
+nat_fin_=	lemma	71648d1e6873	-	af73059e		\lemma nat_fin_= {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y
+fin_nat_/=	lemma	b1f92222f6e7	-	bf3fdb96		\lemma fin_nat_/= {n : Nat} {x y : Fin n} (p : x /= y) : (x : Nat) /= y
+fsuc_fpred	lemma	11554d993e80	-	b7c8411f	ad81a2cf:fpred 7c2d9eb9:fsuc	\lemma fsuc_fpred {n : Nat} {x : Fin (suc n)} {d : Fin n} (p : x /= 0) : fsuc (fpred d x) = x
+fsuc_fpredP	lemma	e4213222d3dd	-	52bf1909	ae1dc8da:fpredP 7c2d9eb9:fsuc	\lemma fsuc_fpredP {n : Nat} {x : Fin (suc n)} (p : x /= 0) : fsuc (fpredP x p) = x
+(overview)	-	-	-	b6b0d418	80c5326f:fcase ad81a2cf:fpred ae1dc8da:fpredP 7c2d9eb9:fsuc 22cc7ba4:fzero	-

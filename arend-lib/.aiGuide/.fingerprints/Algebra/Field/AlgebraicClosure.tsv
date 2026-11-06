@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Algebra.Field.AlgebraicClosure. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsAlgebraicallyClosed	type	41739936a577	0a0161e7031a	086e6ad8		\type IsAlgebraicallyClosed (K : Ring)
+algebraicallyClosed<->split	lemma	caa1571a32e8	-	620c6476	e6c85dba:IsAlgebraicallyClosed 6f23986a:algebraicallyClosed<->split.aux	\lemma algebraicallyClosed<->split {K : CRing} : TFAE (IsAlgebraicallyClosed K, \Pi {p : Poly K} -> isMonic p -> ∃ (l : Array K) (p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)), \Pi {p : Poly K} (n : Nat) -> degree<= p n -> polyCoef p n = 1 -> ∃ (l : Array K n) (p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)))
+algebraicallyClosed-integrallyClosed	lemma	c81af1f61870	-	8bd2b2c9		\lemma algebraicallyClosed-integrallyClosed {K : CRing} (ac : IsAlgebraicallyClosed K) {E : StrictIntegralDomain} (f : RingHom K E) : isIntegrallyClosed f
+IsAlgebraicClosure	type	567f5345e766	6a78004ce0ea	5effe24e	e6c85dba:IsAlgebraicallyClosed	\type IsAlgebraicClosure (f : RingHom)
+algebraicClosure-split	lemma	e01cca8871fc	-	493537df	f638f9a1:IsAlgebraicClosure	\lemma algebraicClosure-split {K : CRing} {E : StrictIntegralDomain} (f : RingHom K E) (fi : isIntegralExt f) (c : \Pi {p : Poly K} -> isMonic p -> ∃ (l : Array E) (polyMap f p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))) : IsAlgebraicClosure f
+countableAlgebraicClosure	sfunc	1ef7c58493b3	4acd3bb96b96	83b74685	f638f9a1:IsAlgebraicClosure	\sfunc countableAlgebraicClosure {k : DiscreteField.{u}} (c : Countable k) : \Sigma (K : DiscreteField.{u}) (f : RingHom k K) (IsAlgebraicClosure f)
+countableAlgebraicClosure.sequence	func	b55ec47b6f63	ba3521e2f492	5c8f4c4a		\func sequence {k : DiscreteField.{u}} (kc : Countable k) (f : Nat -> Poly k) (n : Nat) : \Sigma (K : DiscreteField.{u}) (Countable K) (g : RingHom k K) (isIntegralExt g)
+countableAlgebraicClosure.sequence3	lemma	66b4bccf19a3	-	c40ce6a2	d28e27ee:countableAlgebraicClosure.sequence	\lemma sequence3 {k : DiscreteField.{u}} {kc : Countable k} {f : Nat -> Poly k} {n : Nat} {a : k} : NatFunctor.natHom {CRingCat.{u}} {_} {\lam {n} => (countableSplittingField (sequence kc f n).2 {polyMap (sequence kc f n).3 (f n)}).3} {0} (n, idp) a = (sequence kc f n).3 a
+(overview)	-	-	-	dcb5bd17		-

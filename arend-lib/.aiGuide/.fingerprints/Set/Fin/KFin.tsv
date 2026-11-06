@@ -1,0 +1,14 @@
+# arend -gc fingerprints v2 for module Set.Fin.KFin. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+KFinSet	class	6d05c99e9d80	-	3978ef1b		\class KFinSet \extends BoundedPigeonholeSet { | finSurj : ∃ (f : (Fin card -> E)) (IsSurj f) | boundedPigeonhole => \case finSurj \with { | inP (f, s) => boundedPigeonhole {pigeonhole-surj (\new (BoundedPigeonholeSet (Fin card) card (pigeonhole-fin __ id<suc))) f s} } }
+KFinSet.search	lemma	7d851d86b41a	-	20ac3050		\lemma search (A : E -> \Prop) (d : \Pi (e : E) -> Dec (A e)) : Dec (∃ (e : E) (A e))
+KFinSet.||-search	lemma	99f432f5f8bb	-	8856e915		\lemma ||-search {A : \Type} {B : E -> \Prop} (f : \Pi (x : E) -> A || B x) : A || (\Pi (x : E) -> B x)
+KFinSet.search_yes_reduce	lemma	e970386b5b6f	-	ee8ab675	9073615b:KFinSet.search	\lemma search_yes_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (e : ∃ (e : E) (A e)) : search A d = yes e
+KFinSet.search_no_reduce	lemma	d4c5b49582a3	-	cc50a492	9073615b:KFinSet.search	\lemma search_no_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (q : Not (∃ (e : E) (A e))) : search A d = no q
+KFinSet.forall-dec	lemma	2b364ff3a673	-	5e07e7a4	24a48917:KFinSet	\lemma forall-dec (A : E -> \Prop) (d : \Pi (e : E) -> Dec (A e)) : Dec (∀ e (A e))
+KFinSet.dec	lemma	8063297060ac	-	0ef0c975		\lemma dec : Dec (TruncP E)
+KFinSet.fromArray	lemma	718df25cb424	-	f7424b14	24a48917:KFinSet	\lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) : KFinSet A l.len
+KFinSet.toArray	lemma	e04f04fa1caf	-	d5210dd8	24a48917:KFinSet	\lemma toArray (A : KFinSet) : ∃ (l : Array A) ∀ a ∃ (i : Fin l.len) (l i = a)
+KFinSet.KFin+Dec=>Fin	lemma	fa88d7ff124f	-	127062b0		\lemma KFin+Dec=>Fin {A : \Set} (k : KFinSet A) {d : DecSet A} : FinSet A
+QuotientKFin	lemma	d4ae774c27c9	-	ab700ae3	24a48917:KFinSet	\lemma QuotientKFin {A : KFinSet} {R : A -> A -> \Type} : KFinSet (Quotient R) A.card
+(overview)	-	-	-	153bb957	24a48917:KFinSet	-

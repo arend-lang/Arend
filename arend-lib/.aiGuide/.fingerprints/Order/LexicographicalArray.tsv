@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Order.LexicographicalArray. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LexicographicalArray.<A	data	34ad40f17d44	-	aded8003	e4f4ff2c:LexicographicalArray.<A.<head fe4167a8:LexicographicalArray.<A.<tail	\data \infix 4 <A {n : Nat} {A : Dec} (l1 l2 : Array A n) : \Prop \elim n, l1, l2 | suc n, a :: as, b :: bs => <head (a < b) <tail (a = b) (as <A bs)
+LexicographicalArray	instance	b8ef9ae2bb9b	-	1f5f33f0	b3a3e165:LexicographicalArray.<A	\instance LexicographicalArray {n : Nat} (A : Dec) : Dec (Array A n)
+(overview)	-	-	-	ab111876	9d7bfc3e:LexicographicalArray b3a3e165:LexicographicalArray.<A	-

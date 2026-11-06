@@ -1,0 +1,35 @@
+# arend -gc fingerprints v2 for module Arith.Real.InfReal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+InfReal	record	0bd152adb4ac	-	dcddbd9c	5acb6302:InfReal.LU-disjoint 7169932f:InfReal.LU-focus-bound 87e97176:InfReal.LU-focus-bound-impl ccdd474a:InfReal.LU-less 0bb21f69:InfReal.LU-located 28d31ff0:InfRealAbMonoid.<	\record InfReal \extends LowerReal, ExUpperReal { | LU-disjoint {q : Rat} : L q -> U q -> Empty | LU-located {q r : Rat} : q < r -> L q || U r | LU-focus-bound (B : Rat) {eps : Rat} : eps > 0 -> L B || Given (a : L) (U (a + eps)) | LU-located => \lam {q} {r} q<r => (\case LU-focus-bound q {r - q} (RatField.pos_>0 q<r) \with { | byLeft p => byLeft p | byRight (s, Ls, Us+r-q) => \case LinearOrder.trichotomy q s \with { | less q<s => byLeft (L-closed Ls q<s) | equals q=s => byLeft (transportInv L q=s Ls) | greater s<q => byRight $ U-closed Us+r-q $ transport (_ <) (equation : q + (r - q) = r) (<_+-left (r - q) s<q) } }) | L-inh => \case LU-focus-bound 1 {1} idp \with { | byLeft p => inP (1, p) | byRight p => inP (p.1, p.2) } | LU-focus-bound => LU-focus-bound-impl }
+InfReal.LU-less	lemma	36daaecbf1ba	-	4cffbbd5	28d31ff0:InfRealAbMonoid.<	\lemma LU-less {q r : Rat} (Lq : L q) (Ur : U r) : q < r
+InfReal.fromRat	coerce	34135b2e41a3	-	98bb463d	96255b5d:InfReal	\use \coerce fromRat (x : Rat) : InfReal
+InfReal.pow>id	lemma	214a0e25db73	-	03f19f43	ca06b717:InfReal.focus-iter	\lemma pow>id (n : Nat) : Monoid.pow (ratio 3 2) n > n
+InfReal.focus-iter	lemma	21ad8bfe3e71	-	97b0a108	7169932f:InfReal.LU-focus-bound 0bb21f69:InfReal.LU-located	\lemma focus-iter (rat : Rat) (rat>=0 : 0 <= rat) (P : Rat -> Rat -> \Prop) (f : \Pi (q r : Rat) -> P q r -> ∃ (q' r' : P) ((r' - q') * rat <= r - q)) (n : Nat) (q r : Rat) (Pqr : P q r) : ∃ (q' r' : P) ((r' - q') * Monoid.pow rat n <= r - q)
+InfReal.real-ext	lemma	e6cdf4324b99	-	f273481e	96255b5d:InfReal	\lemma real-ext {x y : InfReal} (p : \Pi {a : Rat} -> x.L a <-> y.L a) : x = y
+InfReal.real-lower-ext	lemma	d4b856ba5b44	-	fe822767	96255b5d:InfReal	\lemma real-lower-ext {x y : InfReal} (p : x = {LowerReal} y) : x = y
+InfRealAbMonoid	instance	ccc9862f055b	-	1dabc04f	96255b5d:InfReal b884fc21:InfReal.fromRat 28d31ff0:InfRealAbMonoid.< be83d7e2:InfRealAbMonoid.join 469a264c:InfRealAbMonoid.meet	\instance InfRealAbMonoid : LinearlyBiorderedAbMonoid InfReal
+InfRealAbMonoid.+	sfunc	a4ee1a410440	e9b658848225	41ea66d6	96255b5d:InfReal	\sfunc + (x y : InfReal) : InfReal
+InfRealAbMonoid.+-lower	lemma	b23b6b357943	-	bb408291	a4bef68b:InfRealAbMonoid.+	\lemma +-lower {x y : InfReal} : x + y = {LowerReal} x LowerRealAbMonoid.+ y
+InfRealAbMonoid.+-upper	lemma	b2864fc15508	-	4be35c63	a4bef68b:InfRealAbMonoid.+	\lemma +-upper {x y : InfReal} : x + y = x ExUpperReal.+ y
+InfRealAbMonoid.+-rat	lemma	2894bd08f537	-	63f5fa26	b884fc21:InfReal.fromRat a4bef68b:InfRealAbMonoid.+	\lemma +-rat {x y : Rat} : InfReal.fromRat x + InfReal.fromRat y = InfReal.fromRat (x RatField.+ y)
+InfRealAbMonoid.+_L	lemma	7cdc3c38a044	-	2429235e	a4bef68b:InfRealAbMonoid.+ 28d31ff0:InfRealAbMonoid.<	\lemma +_L {x y : InfReal} {a : Rat} : InfReal.L {x + y} a <-> ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c)
+InfRealAbMonoid.+_L_<=	lemma	2c59559f1bd2	-	ee53c41e	a4bef68b:InfRealAbMonoid.+	\lemma +_L_<= {x y : InfReal} {a b : Rat} (b<x : x.L b) {c : Rat} (c<y : y.L c) (a<=b+c : a RatField.<= b RatField.+ c) : InfReal.L {x + y} a
+InfRealAbMonoid.+_U	lemma	bba642a2f51d	-	515e2222	a4bef68b:InfRealAbMonoid.+ 28d31ff0:InfRealAbMonoid.<	\lemma +_U {x y : InfReal} {a : Rat} : InfReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
+InfRealAbMonoid.+_U_<=	lemma	721f56b51e16	-	b660b844	a4bef68b:InfRealAbMonoid.+	\lemma +_U_<= {x y : InfReal} {a b : Rat} (x<b : x.U b) {c : Rat} (y<c : y.U c) (b+c<=a : b RatField.+ c RatField.<= a) : InfReal.U {x + y} a
+InfRealAbMonoid.<	type	703cc0ad048f	6b3ce14aceb2	3fda04d8		\type < (x y : InfReal)
+InfRealAbMonoid.<=_L	lemma	60d878e45035	-	5134fc35	28d31ff0:InfRealAbMonoid.<	\lemma <=_L {x y : InfReal} : Not (y < x) <-> ∀ {a : x.L} (y.L a)
+InfRealAbMonoid.<=_U	lemma	b767a26d1828	-	b427cd07	28d31ff0:InfRealAbMonoid.<	\lemma <=_U {x y : InfReal} : Not (y < x) <-> ∀ {b : y.U} (x.U b)
+InfRealAbMonoid.zro<ide	lemma	2d652fc8912a	-	7c7cabe6	96255b5d:InfReal 28d31ff0:InfRealAbMonoid.<	\lemma zro<ide : InfReal.fromRat 0 < InfReal.fromRat 1
+InfRealAbMonoid.<_L	lemma	273bd3104077	-	ac789f96	28d31ff0:InfRealAbMonoid.<	\lemma <_L {a : Rat} {x : InfReal} : (a : InfReal) < x <-> x.L a
+InfRealAbMonoid.<_U	lemma	f5e821faf669	-	4b7e42d5	28d31ff0:InfRealAbMonoid.<	\lemma <_U {a : Rat} {x : InfReal} : x < a <-> x.U a
+InfRealAbMonoid.<_+	lemma	252ea4e0287e	-	c61fc770	a4bef68b:InfRealAbMonoid.+ 28d31ff0:InfRealAbMonoid.<	\lemma <_+ {a b c d : InfReal} (p : a < c) (q : b < d) : a + b < c + d
+InfRealAbMonoid.meet	sfunc	a4ee1a410440	3b20facc860b	d15ca5e4		\sfunc meet (x y : InfReal) : InfReal
+InfRealAbMonoid.meet-lower	lemma	705dd33dce44	-	4b9abba2		\lemma meet-lower {x y : InfReal} : meet x y = {LowerReal} LowerRealAbMonoid.meet x y
+InfRealAbMonoid.meet_L	lemma	1804e08fc162	-	59667ea7	469a264c:InfRealAbMonoid.meet	\lemma meet_L {x y : InfReal} {a : Rat} : InfReal.L {meet x y} a <-> (\Sigma (x.L a) (y.L a))
+InfRealAbMonoid.meet_U	lemma	77a637c76fef	-	78ee0cf5	469a264c:InfRealAbMonoid.meet	\lemma meet_U {x y : InfReal} {a : Rat} : InfReal.U {meet x y} a <-> x.U a || y.U a
+InfRealAbMonoid.join	sfunc	a4ee1a410440	d19e4996e57f	e9704f65		\sfunc join (x y : InfReal) : InfReal
+InfRealAbMonoid.join-lower	lemma	27c8fd8c780b	-	9f3d5db0		\lemma join-lower {x y : InfReal} : join x y = {LowerReal} LowerRealAbMonoid.join x y
+InfRealAbMonoid.join_L	lemma	5573f2013df8	-	9cd91f02	be83d7e2:InfRealAbMonoid.join	\lemma join_L {x y : InfReal} {a : Rat} : InfReal.L {join x y} a <-> x.L a || y.L a
+InfRealAbMonoid.join_U	lemma	4b8fa470e90b	-	723c96a9	be83d7e2:InfRealAbMonoid.join	\lemma join_U {x y : InfReal} {a : Rat} : InfReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
+inf-real_<_LowerReal	lemma	414cab7c50e5	-	1197d66b	96255b5d:InfReal 28d31ff0:InfRealAbMonoid.<	\lemma inf-real_<_LowerReal {x y : InfReal} : x < y <-> x LowerRealAbMonoid.< y
+(overview)	-	-	-	8963c000	96255b5d:InfReal 5acb6302:InfReal.LU-disjoint 7169932f:InfReal.LU-focus-bound 0bb21f69:InfReal.LU-located ca06b717:InfReal.focus-iter 211c0474:InfReal.real-lower-ext a4bef68b:InfRealAbMonoid.+	-

@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Order.Biordered. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BiorderedSet	class	4a0c34ca93ad	-	c9e869c5		\class BiorderedSet \extends StrictPoset, Poset { | <-transitive-right \alias \infixr 9 <∘r {a1 a2 a3 : E} : a1 <= a2 -> a2 < a3 -> a1 < a3 | <-transitive-left \alias \infixl 8 <∘l {a1 a2 a3 : E} : a1 < a2 -> a2 <= a3 -> a1 < a3 | <=-less {a1 a2 : E} : a1 < a2 -> a1 <= a2 }
+BiorderedSet.<-transitive-right	field	02152faed5df	-	94e641e6		| <-transitive-right {a1 a2 a3 : E} : a1 <= a2 -> a2 < a3 -> a1 < a3
+BiorderedSet.<-transitive-left	field	b636ffa9bc67	-	a899c6b4		| <-transitive-left {a1 a2 a3 : E} : a1 < a2 -> a2 <= a3 -> a1 < a3
+BiorderedSet.<=-less	field	69fbfe4a7809	-	2c6e8c7e		| <=-less {a1 a2 : E} : a1 < a2 -> a1 <= a2
+BiorderedSet.op	func	a359fafc6dab	599481d81af1	51b4290e		\func op : BiorderedSet
+BiorderedLattice	class	b3ecb15e6311	-	117339ea	baec5d83:BiorderedSet	\class BiorderedLattice \extends BiorderedSet, Lattice { | <_meet-univ {x y z : E} : x < y -> x < z -> x < y ∧ z | <_join-univ {x y z : E} : x < z -> y < z -> x ∨ y < z }
+BiorderedLattice.<_meet-univ	field	42b1ba7d837e	-	3cc9a677		| <_meet-univ {x y z : E} : x < y -> x < z -> x < y ∧ z
+BiorderedLattice.<_join-univ	field	f05e2ca6bfe0	-	9a18fcd1		| <_join-univ {x y z : E} : x < z -> y < z -> x ∨ y < z
+BiorderedLattice.<_meet-monotone	lemma	fb14bbfda564	-	7cadad94		\lemma <_meet-monotone {x x' y y' : E} (p : x < y) (q : x' < y') : x ∧ x' < y ∧ y'
+BiorderedLattice.<_join-monotone	lemma	c51a0c27761a	-	2f7af129		\lemma <_join-monotone {x x' y y' : E} (p : x < y) (q : x' < y') : x ∨ x' < y ∨ y'
+BiorderedLattice.Big_<_meet-univ	lemma	b8193b3879de	-	f38ab5cb		\lemma Big_<_meet-univ {l : Array E} {x y : E} (p : y < x) (f : \Pi (i : Fin l.len) -> y < l i) : y < Big ∧ x l
+BiorderedLattice.Big_<_join-univ	lemma	8af6f5fe4c6e	-	873419ec		\lemma Big_<_join-univ {l : Array E} {x y : E} (p : x < y) (f : \Pi (i : Fin l.len) -> l i < y) : Big ∨ x l < y
+(overview)	-	-	-	dd587c35	820443e9:BiorderedLattice	-

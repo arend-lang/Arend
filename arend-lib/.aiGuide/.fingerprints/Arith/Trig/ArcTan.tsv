@@ -1,0 +1,14 @@
+# arend -gc fingerprints v2 for module Arith.Trig.ArcTan. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+arctan-coef-Rat	sfunc	8ee4e1e1a679	3a0727e2f578	d6de6f08	ae2fcb18:arctan-coef-Rat.even f8cf2000:arctan-coef-Rat.odd	\sfunc arctan-coef-Rat (m : Nat) : Rat
+arctan-coef	func	ce4ee49a18f0	4aa723a42389	93baa4a3		\func arctan-coef (m : Nat) : Real
+arctan-gen	sfunc	d4599754a374	b4515babcbb6	2bb84f78	262ccedb:arctan-coef-Rat 0c66046a:arctan-gen.arctan-coef-abs-<=1	\sfunc arctan-gen {A : RealBanachAlgebra} (x : A) (|x|<1 : (norm x).U 1) : A
+arctan	sfunc	9119dc2b2d80	77b17f13a6c8	4b4a8d2c	e555a2b1:arctan-gen	\sfunc arctan (x : Real) (|x|<1 : abs x < 1) : Real
+arctan-coef-powerSeries-IsSeriesSum	lemma	e4b29e29548d	-	754f672d	6625c1cf:arctan bf55fd76:arctan-coef	\lemma arctan-coef-powerSeries-IsSeriesSum {x : Real} (|x|<1 : abs x < 1) : IsSeriesSum (powerSeries arctan-coef x) (arctan x |x|<1)
+tan-arctan	lemma	73652c2bd55c	-	a71465e5	6625c1cf:arctan	\lemma tan-arctan {x : Real} (|x|<1 : abs x < 1) : sin (arctan x |x|<1) = x * cos (arctan x |x|<1)
+cos-arctan-sq	lemma	25973b4a30a8	-	a7240ccf	6625c1cf:arctan	\lemma cos-arctan-sq {x : Real} (|x|<1 : abs x < 1) : (1 + x * x) * (cos (arctan x |x|<1) * cos (arctan x |x|<1)) = 1
+sin-arctan-sq	lemma	552b569da670	-	6cd3c8bd	6625c1cf:arctan	\lemma sin-arctan-sq {x : Real} (|x|<1 : abs x < 1) : (1 + x * x) * (sin (arctan x |x|<1) * sin (arctan x |x|<1)) = x * x
+cos-double-arctan	lemma	bc1f8d5b448e	-	6114964e	6625c1cf:arctan	\lemma cos-double-arctan {x : Real} (|x|<1 : abs x < 1) : (1 + x * x) * cos (2 * arctan x |x|<1) = 1 - x * x
+sin-double-arctan	lemma	3f29f2e5455e	-	4089228f	6625c1cf:arctan	\lemma sin-double-arctan {x : Real} (|x|<1 : abs x < 1) : (1 + x * x) * sin (2 * arctan x |x|<1) = 2 * x
+arctan-addition	lemma	839d4edae84b	-	99c25f79	6625c1cf:arctan	\lemma arctan-addition {a b : Real} (|a|<1 : abs a < 1) (|b|<1 : abs b < 1) : sin (arctan a |a|<1 + arctan b |b|<1) * (1 - a * b) = (a + b) * cos (arctan a |a|<1 + arctan b |b|<1)
+(overview)	-	-	-	2eb40c15	6625c1cf:arctan bfc7d4cf:arctan-addition bf55fd76:arctan-coef 262ccedb:arctan-coef-Rat e555a2b1:arctan-gen fcb3d474:cos-arctan-sq a1242700:cos-double-arctan 8e807013:sin-arctan-sq 1ebe5c3b:sin-double-arctan cfc0ed6d:tan-arctan	-

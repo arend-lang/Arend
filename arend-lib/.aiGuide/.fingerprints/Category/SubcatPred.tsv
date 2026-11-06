@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Category.SubcatPred. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubcatPred	record	210e7f5375e0	-	1dfe0a19	72ec2809:SubcatPred.C f5d07d5e:SubcatPred.hom 8cf8befc:SubcatPred.hom-cod 2af359fe:SubcatPred.hom-dom 8eefb8a4:SubcatPred.hom-o e65b80f0:SubcatPred.ob 224ab10a:SubcatPred.ob-id	\record SubcatPred (C : Precat) { | ob : C -> \Prop | hom {x y : C} : Hom x y -> \Prop | hom-dom {x y : C} {f : Hom x y} : hom f -> ob x | hom-cod {x y : C} {f : Hom x y} : hom f -> ob y | ob-id {x : C} : ob x -> hom (id {C} {x}) | hom-o {x y z : C} {g : Hom y z} {f : Hom x y} : hom g -> hom f -> hom (g ∘ f) }
+SubcatPred.hom-transport	lemma	f19643cad38a	-	32920678	f5d07d5e:SubcatPred.hom	\lemma hom-transport {x x' y y' : C} (p : x = x') (q : y = y') {f : Hom x y} (h : hom f) : hom (transport (Hom x' __) q (transport (Hom __ y) p f))
+SubcatPred.toPrecat	func	d8f4d3251c23	60077a5a811a	112cd1f6	72ec2809:SubcatPred.C f5d07d5e:SubcatPred.hom e65b80f0:SubcatPred.ob	\func toPrecat : Precat (\Sigma (x : C) (ob x))
+SubcatPred.incl	func	f73e003106a0	255eed888008	a97c28e2	72ec2809:SubcatPred.C be2552c6:SubcatPred.toPrecat	\func incl : FaithfulFunctor toPrecat C __.1
+SubcatPred.toCat	func	f31a03b96d0e	7474c1859856	122c76d3	72ec2809:SubcatPred.C	\func toCat {C : Cat} (S : SubcatPred C) : Cat
+SubcatPred.pullback	func	6e88cf714abe	762f10e7ae48	f4d4c9e7	3c862189:SubcatPred 72ec2809:SubcatPred.C f5d07d5e:SubcatPred.hom e65b80f0:SubcatPred.ob	\func pullback {C D : Precat} (F : Functor C D) (S : SubcatPred D) : SubcatPred C
+IsGeneratingFunctor	func	331d4673ba2b	4b50647a1589	538efeb8	3c862189:SubcatPred	\func IsGeneratingFunctor {A B : Cat} (L : Functor A B) : \Prop
+(overview)	-	-	-	47ed669b	3c862189:SubcatPred 72ec2809:SubcatPred.C f5d07d5e:SubcatPred.hom e65b80f0:SubcatPred.ob	-

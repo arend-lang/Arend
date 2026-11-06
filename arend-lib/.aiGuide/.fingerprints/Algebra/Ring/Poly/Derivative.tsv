@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Poly.Derivative. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+polyDeriv	func	47a82d0600d4	02423caab25b	fbe30827		\func polyDeriv {R : Ring} (p : Poly R) : Poly R
+polyCoef_polyDeriv	lemma	2e5ede1e384b	-	4d1090b6	f374f531:polyDeriv	\lemma polyCoef_polyDeriv {R : Ring} {p : Poly R} {n : Nat} : polyCoef (polyDeriv p) n = natCoef (suc n) * polyCoef p (suc n)
+polyDeriv_+	lemma	2574f13d78d9	-	5e1abad2		\lemma polyDeriv_+ {R : Ring} {p q : Poly R} : polyDeriv (p + q) = polyDeriv p + polyDeriv q
+polyDeriv_*c	lemma	8fd79b94dc1c	-	e8fb4281		\lemma polyDeriv_*c {R : Ring} {r : R} {q : Poly R} : polyDeriv (r *c q) = r *c polyDeriv q
+polyDeriv_*	lemma	9aed698da8f5	-	7a950516		\lemma polyDeriv_* {R : Ring} {p q : Poly R} : polyDeriv (p * q) = polyDeriv p * q + p * polyDeriv q
+degree<_polyDeriv	lemma	1ae6f150de5b	-	dafb5f28	f374f531:polyDeriv	\lemma degree<_polyDeriv {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) : degree< (polyDeriv p) n
+polyDeriv_polyMap	lemma	aed3fc3c2c82	-	022be8bf		\lemma polyDeriv_polyMap {f : RingHom} {p : Poly f.Dom} : polyDeriv (polyMap f p) = polyMap f (polyDeriv p)
+polyEval_deflate-diag	lemma	cec1c5254f25	-	4639ab9f	f374f531:polyDeriv	\lemma polyEval_deflate-diag {R : CRing} (p : Poly R) (z : R) : polyEval (deflate p z) z = polyEval (polyDeriv p) z
+polyTaylor2	lemma	eab966880800	-	fbed6e00		\lemma polyTaylor2 {R : CRing} (p : Poly R) (z y : R) : polyEval p y - polyEval p z - polyEval (polyDeriv p) z * (y - z) = polyEval (deflate (deflate p z) z) y * ((y - z) * (y - z))
+polyDeriv/=0	lemma	f303078a9fee	-	10831c33	f374f531:polyDeriv	\lemma polyDeriv/=0 {K : Domain} (char0 : \Pi (n : Nat) -> 0 < n -> natCoef {K} n /= 0) {p : Poly K} {n : Nat} (lead : polyCoef p (suc n) /= 0) : polyDeriv p /= 0
+(overview)	-	-	-	fef27685	f374f531:polyDeriv	-

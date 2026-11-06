@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Logic.PropFin. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+InjData	class	67ecd6ae5a5f	-	f446400f	81c63753:InjData.f 5c7bfc5e:InjData.inj	\class InjData (f : \Prop -> \Prop) (inj : \Pi {A B : \Prop} -> f A = f B -> A = B)
+InjData.PropFin	lemma	ad7cca8d9332	-	0b9289f1	81c63753:InjData.f	\lemma PropFin (A : \Prop) : f (f A) = A
+InjData.aux	lemma	113adebc7fca	-	a1c3f2bb	81c63753:InjData.f	\lemma aux {P : \Prop} (h : f P) : f (\Sigma) = P
+InjData.true=>equals	lemma	d4fadc787a93	-	632f59a0	69264d58:InjData	\lemma true=>equals {P : \Prop} (h : P) : P = (\Sigma)
+InjData.equals=>true	lemma	98b7204a533f	-	0a1cadd6	509ae2d2:InjData.true=>equals	\lemma equals=>true {P : \Prop} (p : P = (\Sigma)) : P
+(overview)	-	-	-	e463b7d2	69264d58:InjData 81c63753:InjData.f	-

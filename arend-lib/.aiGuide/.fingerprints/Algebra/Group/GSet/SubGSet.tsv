@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GSet.SubGSet. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubGSet	class	d299630b7d24	-	6f1964b6	9dcebdf5:SubGSet.G	\class SubGSet (G : Group) \extends SubSet { \override S : GSet G | contains_** {x : G} {a : S} : contains a -> contains (x ** a) }
+IGSet	instance	b1e747856ed0	-	46c1f243	18daf190:SubGSet	\instance IGSet (S : SubGSet {}) : GSet S.G
+ImageGSet	func	0a07c5b74a7c	b72f3b5ffa42	b7ca19f5	18daf190:SubGSet	\func ImageGSet (f : EquivariantMap {}) : SubGSet f.G f.Cod
+ImGSet	func	1521d679f04b	fcc16809107d	d5a296f2	7370ecfb:ImageGSet	\func ImGSet (f : EquivariantMap {}) : GSet
+ImGSetRightHom	func	a6f9d315b120	27c5bb3ea287	78900466	980d1a9c:ImGSet	\func ImGSetRightHom (f : EquivariantMap {}) : EquivariantMap (ImGSet f) f.Cod
+ImGSetLeftHom	func	b6f41a271eb1	583eba25c9ff	f6af9bf3	980d1a9c:ImGSet	\func ImGSetLeftHom (f : EquivariantMap {}) : EquivariantMap f.Dom (ImGSet f)
+(overview)	-	-	-	ec2a9ebe	ae66d6f5:IGSet 18daf190:SubGSet	-

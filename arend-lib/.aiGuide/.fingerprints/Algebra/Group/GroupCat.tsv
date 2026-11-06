@@ -1,0 +1,17 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GroupCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+GroupCat	instance	61b35182ada3	-	dc45a1d0		\instance GroupCat : Cat Group.{u}
+GroupCat.ForgetSet	func	21c2353692ff	2e2d260a65e3	2e292aaf	e9a3abae:GroupCat	\func ForgetSet : FaithfulFunctor GroupCat.{u} SetCat
+GroupCat.Iso<->Inj+Surj	lemma	ba8a756683f5	-	c15239bd	e9a3abae:GroupCat	\lemma Iso<->Inj+Surj {G H : Group.{u}} (f : GroupHom G H) : Iso {GroupCat.{u}} f <-> f.IsIsomorphism
+GroupCat.Iso<->Inj+Surj.this_iso	func	36508c8c2549	7182225f18bb	b9a21bd5		\func this_iso (p : f.IsIsomorphism)
+GroupCat.Iso<->Inj+Surj.inve	func	36508c8c2549	c6bd0d0c77af	b9a21bd5		\func inve (p : f.IsIsomorphism)
+GroupCat.Iso<->Inj+Surj.this_inv_ap	lemma	fe571fa4ca80	-	80e75f2a	237638d0:GroupCat.Iso<->Inj+Surj.inve	\lemma this_inv_ap (p : f.IsIsomorphism) (h : H) : h = f (inve p h)
+GroupCat.Iso<->Inj+Surj.inv_this_ap	lemma	39c25722512b	-	80e75f2a	237638d0:GroupCat.Iso<->Inj+Surj.inve	\lemma inv_this_ap (p : f.IsIsomorphism) (g : G) : g = inve p (f g)
+GroupCat.Iso<->Inj+Surj.SetIso->Inj+Surj	lemma	8f0eb29dce81	-	659a6037		\lemma SetIso->Inj+Surj (f : Iso {SetCat.{u}}) : \Sigma (IsInj f.f) (IsSurj f.f)
+AddGroupCat	instance	5c0c317981a5	-	2ee3a97d		\instance AddGroupCat : Cat AddGroup.{u}
+AddGroupCat.forgetToAddMonoid	func	3c7e22dcf12c	57c9a36c5d84	e42346b7	d723f919:AddGroupCat	\func forgetToAddMonoid : Functor AddGroupCat.{u} AddMonoidCat
+AddGroupCat.forget	func	6e36f33c9079	172eed532772	c44a1bc8	d723f919:AddGroupCat	\func forget : Functor AddGroupCat.{u} SetCat
+AbGroupCat	instance	af26860dff37	-	35775df7	d723f919:AddGroupCat	\instance AbGroupCat : Cat AbGroup.{u}
+AbGroupCat.forgetToAddGroup	func	6e7634526678	dea161ac12bd	76098e0f	1bc9f7a2:AbGroupCat d723f919:AddGroupCat	\func forgetToAddGroup : Functor AbGroupCat.{u} AddGroupCat
+AbGroupCat.forget	func	e8b0f6f0c316	e821b60744c8	625ddbd4	1bc9f7a2:AbGroupCat	\func forget : Functor AbGroupCat.{u} SetCat
+(overview)	-	-	-	3d29c6cb	1bc9f7a2:AbGroupCat d723f919:AddGroupCat e9a3abae:GroupCat	-

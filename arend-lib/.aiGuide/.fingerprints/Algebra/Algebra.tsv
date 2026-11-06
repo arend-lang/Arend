@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Algebra.Algebra. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PseudoAlgebra	class	671d20d85cfd	-	1824e0d3	754576cc:PseudoAlgebra.*c-comm-left e2c32517:PseudoAlgebra.*c-comm-right	\class PseudoAlgebra \extends LModule, PseudoRing { \override R : CRing | *c-comm-left {r : R} {a b : E} : r *c (a * b) = (r *c a) * b | *c-comm-right {r : R} {a b : E} : r *c (a * b) = a * (r *c b) }
+AAlgebra	class	8ebe12d3ebf3	-	b14ae2f4	91525db6:AAlgebra.coefMap 85a453e3:AAlgebra.coefMap_*c 4ea14239:PseudoAlgebra	\class AAlgebra \extends PseudoAlgebra, Ring { | coefMap : R -> E | coefMap_*c {x : R} : coefMap x = x *c 1 | coefMap => coefMap-impl | coefMap_*c => coefMap_*c-impl }
+PseudoCAlgebra	class	7f83642a9d56	-	bfafdf67	4ea14239:PseudoAlgebra 754576cc:PseudoAlgebra.*c-comm-left e2c32517:PseudoAlgebra.*c-comm-right	\class PseudoCAlgebra \extends PseudoAlgebra, CRing { | *c-comm-right => pmap (_ *c) *-comm *> *c-comm-left *> *-comm }
+CAlgebra	class	6c9dae57393f	-	abbedbe7	060b9daf:AAlgebra 411274a3:PseudoCAlgebra	\class CAlgebra \extends AAlgebra, PseudoCAlgebra
+AAlgebra.coefHom	func	7effc7d9141e	e4b2389972f8	6a4d42a1	91525db6:AAlgebra.coefMap	\func coefHom : RingHom R \this
+AAlgebra.coefMap_natCoef	lemma	9db7a20b0b61	-	d1bbf196	91525db6:AAlgebra.coefMap	\lemma coefMap_natCoef {n : Nat} : coefMap (R.natCoef n) = natCoef n
+homAlgebra	func	cec5d6df76ff	5380d798a15a	a0950f09	e917cc36:CAlgebra	\func homAlgebra {R E : CRing} (f : RingHom R E) : CAlgebra
+ringAlgebra	func	1edd41aa2e2b	3c35abc2e35f	dd90988f	80d6bb17:homAlgebra	\func ringAlgebra {R : CRing} : CAlgebra R
+*a	func	e828a7ec07c7	023efbae2d7d	23b65fb2	91525db6:AAlgebra.coefMap	\func *a {R : CRing} {A : AAlgebra R} {X : LModule A} (a : R) (x : X) : X
+*a-assoc	lemma	475f48fa484f	-	6d06c3e9	bb56582e:*a	\lemma *a-assoc {R : CRing} {A : AAlgebra R} {X : LModule A} {a b : R} {x : X} : a * b *a x = a *a (b *a x)
+*alg-linear-left	lemma	470146fa216b	-	2824499b		\lemma *alg-linear-left {R : CRing} {A : AAlgebra R} {b : A} : LinearMap A A (* b)
+*alg-linear-right	lemma	27b819392191	-	a886fa6e		\lemma *alg-linear-right {R : CRing} {A : AAlgebra R} {a : A} : LinearMap A A (a *)
+(overview)	-	-	-	8e963c21	91525db6:AAlgebra.coefMap e917cc36:CAlgebra 754576cc:PseudoAlgebra.*c-comm-left e2c32517:PseudoAlgebra.*c-comm-right 411274a3:PseudoCAlgebra 80d6bb17:homAlgebra	-

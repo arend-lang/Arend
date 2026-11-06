@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Analysis.Measure.MeasureProduct.Complete. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+meas-rect-dist	lemma	05aeca642cb9	-	738adf08		\lemma meas-rect-dist {A B : PseudoMeasureRing} {a a' : A} {b b' : B} : meas (rect a b + rect a' b') <= meas a * meas (b + b') + meas (a + a') * meas b'
+approx-rect	lemma	8e5fc5eac7de	-	8ff50b99		\lemma approx-rect {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} (fd : f.IsDense) (gd : g.IsDense) (a' : A') (b' : B') : (tensorMap f g).IsApprox (rect a' b')
+tensorMap-dense	lemma	6e6178e42b3f	-	4c600797		\lemma tensorMap-dense {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} (fd : f.IsDense) (gd : g.IsDense) : (tensorMap f g).IsDense
+CMeasureRingTensor	instance	2a60c6ca24c8	-	8f15c3ae		\instance CMeasureRingTensor (A B : PseudoMeasureRing) : CompleteMeasureRing
+crect	func	1c0cb07e8281	fe9be1200b72	eff5beca		\func crect {A B : PseudoMeasureRing} (a : A) (b : B) : CMeasureRingTensor A B
+measureTensor-lift	func	506c8010a68c	3b34ed12af4a	e2a3e28e		\func measureTensor-lift {A B : PseudoMeasureRing} {C : CompleteMeasureRing} (h : MeasureBimorphism A B C) : MeasureRingHom (CMeasureRingTensor A B) C
+measureTensor-lift_rect	lemma	0f68b4aa663c	-	8fca1e0b	007158a4:measureTensor-lift	\lemma measureTensor-lift_rect {A B : PseudoMeasureRing} {C : CompleteMeasureRing} {h : MeasureBimorphism A B C} {a : A} {b : B} : measureTensor-lift h (crect a b) = h a b
+measureTensor-hom-ext	lemma	a838fcfb7bbc	-	c483bd1f		\lemma measureTensor-hom-ext {A B : PseudoMeasureRing} {C : CompleteMeasureRing} (k k' : MeasureRingHom (CMeasureRingTensor A B) C) (p : \Pi (a : A) (b : B) -> k (crect a b) = k' (crect a b)) (z : CMeasureRingTensor A B) : k z = k' z
+measureTensor-map	func	590a6cc7b30d	fd59eab2a2f4	49a6ac59		\func measureTensor-map {A A' B B' : PseudoMeasureRing} (f : MeasureRingHom A A') (g : MeasureRingHom B B') : MeasureRingHom (CMeasureRingTensor A B) (CMeasureRingTensor A' B')
+measureTensor-map_rect	lemma	6fff7b94f1a9	-	74fdf6cb		\lemma measureTensor-map_rect {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} {a : A} {b : B} : measureTensor-map f g (crect a b) = crect (f a) (g b)
+measureTensor-map-equiv	lemma	59ce417068a3	-	f249d62c		\lemma measureTensor-map-equiv {A A' B B' : PseudoMeasureRing} {f : MeasureRingHom A A'} {g : MeasureRingHom B B'} (fd : f.IsDense) (gd : g.IsDense) : IsEquiv (measureTensor-map f g)
+measureTensor-completion-equiv	lemma	8f3d9c733ccf	-	61c91641		\lemma measureTensor-completion-equiv {A B : PseudoMeasureRing} : IsEquiv (measureTensor-map (measureCompletion {A}) (measureCompletion {B}))
+(overview)	-	-	-	d5167c02	1a37c245:CMeasureRingTensor 64600284:approx-rect 41457884:meas-rect-dist bc90a89e:measureTensor-completion-equiv 007158a4:measureTensor-lift d65d9bb7:measureTensor-map f702433d:tensorMap-dense	-

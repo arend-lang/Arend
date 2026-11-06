@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Arith.Complex.FTA.Classical. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+NearSeq	record	bf976e4dfe19	-	e88d562b	6b4bf6d0:NearSeq.p	\record NearSeq (m : Nat) (p : Poly ComplexField) { | seq : \Pi (k : Nat) -> StepA {m} p k }
+Threading	record	22823c765b83	-	98e6ee44	7bc8f26b:NearSeq	\record Threading \extends NearSeq { | align : \Pi (k : Nat) -> StepB \this k }
+FTA	lemma	d92e4e1c1aa5	-	d82bcdbb	0328dfca:NearSeq.m 6b4bf6d0:NearSeq.p	\lemma FTA {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m))) (monic : polyCoef p (suc m) = 1) : ∃ (z : Complex) (polyEval p z = 0)
+(overview)	-	-	-	ae919d02	86cb7e87:FTA 7bc8f26b:NearSeq c2fcdcd7:Threading	-

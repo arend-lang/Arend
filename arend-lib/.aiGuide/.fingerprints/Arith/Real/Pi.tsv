@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Arith.Real.Pi. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+pi	sfunc	84f1835b0cbd	917d1bb2b951	c5f72d81	ccc30468:pi.ratio-norm-<1	\sfunc pi : Real
+cos_pi	lemma	ea1db25ab36c	-	ce27d8bf	509e8a4f:cos_pi.cos_pi/2 34cf59b6:cos_pi.pi/4 5b7bb21d:cos_pi.pi=4*pi/4 c94cd989:cos_pi.tan_pi/4 b38ea380:pi	\lemma cos_pi : cos pi = negative 1
+sin_pi	lemma	e644aef73a42	-	7724c7ab	b38ea380:pi	\lemma sin_pi : sin pi = {Real} 0
+cos_two_pi	lemma	ed942c423eb9	-	dce871bb	b38ea380:pi	\lemma cos_two_pi : cos (2 * pi) = {Real} 1
+sin_two_pi	lemma	c0394368eb3a	-	e20b1e01	b38ea380:pi	\lemma sin_two_pi : sin (2 * pi) = {Real} 0
+cos_period	lemma	a5bd18db97d4	-	dd316364	b38ea380:pi	\lemma cos_period {x : Real} : cos (x + 2 * pi) = cos x
+sin_period	lemma	d13d585c2872	-	1f032703	b38ea380:pi	\lemma sin_period {x : Real} : sin (x + 2 * pi) = sin x
+(overview)	-	-	-	7c6ce266	c2e182af:cos_pi b38ea380:pi	-

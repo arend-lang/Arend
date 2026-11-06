@@ -1,0 +1,19 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation.MaschkeLemma. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MaschkeLemma	class	d21540225016	-	00defbe6	1ed77789:MaschkeLemma.E 66a91c6e:MaschkeLemma.G 052c194e:MaschkeLemma.R 37d27caf:MaschkeLemma.S 5a6c363f:MaschkeLemma.cardInv	\class MaschkeLemma {R : CRing} {G : FinGroup} (cardInv : Monoid.Inv (R.natCoef G.card)) {E : LinRepres R G} {S : SubLRepres R G E}
+MaschkeLemma.mean_func	func	9f3630797cde	0e86c507982f	12fd994f	1ed77789:MaschkeLemma.E 6f9d9cbe:SumOverGroup	\func mean_func {E W : LinRepres R G} (f : LinearMap E W) : InterwiningMap E W
+MaschkeLemma.mean-func-preserve	lemma	052d0a0cf0c3	-	c59f801a	66a91c6e:MaschkeLemma.G 37d27caf:MaschkeLemma.S 79b9a808:MaschkeLemma.mean_func	\lemma mean-func-preserve {f : LinearMap E (ILinRepres S)} (p : \Pi (s : ILinRepres S) -> f s.1 = s) (t : ILinRepres S) : mean_func f t.1 = t
+SumOverGroup	func	2609031909fe	df9305b58766	45458424	66a91c6e:MaschkeLemma.G	\func SumOverGroup {R : CRing} {G : FinGroup} {A B : LinRepres R G} (f : LinearMap A B) : InterwiningMap A B
+SumOverGroup.Ab	func	74c15f902040	7cd4b3fec398	5498e1cd	052c194e:MaschkeLemma.R f99f52e6:SumOverGroup.int	\func Ab : AbGroup
+SumOverGroup.adjust	func	d4f908c2297d	6ea9a7d8fbdc	0b351552		\func adjust (g : G) (f : LinearMap A B) : LinearMap A B
+SumOverGroup.int	func	8d06ad53d0b3	ff7953f77af0	17fdd761	6f9d9cbe:SumOverGroup 9f5557ed:SumOverGroup.adjust	\func int : LinearMap A B
+SumOverGroup.group_prop	func	a1ce5dec5b17	24961300a318	fdaf27c4	9f5557ed:SumOverGroup.adjust	\func group_prop (g h : G) (a : A) : adjust g f (h A.** a) = h B.** adjust (inverse h * g) f a
+SumOverGroup.bring_h_out	func	f9aa4df82b4a	0329df249e1e	65a81ff8	66a91c6e:MaschkeLemma.G f99f52e6:SumOverGroup.int	\func bring_h_out (h : G) (a : A) : int (h A.** a) = h B.** (Ab.FinSum (\lam g => adjust (inverse h * g) f)) a
+SumOverGroup.FinSum-equivariance	func	bdb1d534b986	e4b48a811528	9397056d	66a91c6e:MaschkeLemma.G 98d03b95:SumOverGroup.FinSum-equivariance.BigSum-equivariance	\func FinSum-equivariance (h : G) {x : G -> B} : h B.** B.FinSum x = B.FinSum (\lam z => h B.** x z)
+SumOverGroup.FinSum-equivariance.BigSum-equivariance	func	9a8aa611a3d7	853537453a8d	102a4dfd		\func BigSum-equivariance (e : Array B) : h B.** B.BigSum e = B.BigSum (act_array h e)
+SumOverGroup.FinSumRewrite	func	81d5f13abb12	e68e0b4af200	b4da4269	8ee69b9a:SumOverGroup.Ab	\func FinSumRewrite (x : G -> Ab) (a : A) : (Ab.FinSum x) a = B.FinSum (\lam e => (x e) a)
+SumOverGroup.PermutationInvariance	lemma	46cab60a6fff	-	0a50ffa6	66a91c6e:MaschkeLemma.G	\lemma PermutationInvariance {E : AbMonoid} {A : FinSet} (x : A -> E) (p : A -> A) (permute : QEquiv p) : E.FinSum x = E.FinSum {A} (x Function.o p)
+SumOverGroup.rearrange	lemma	926e310526b3	-	0399463f	6002a49a:SumOverGroup.PermutationInvariance a9f4ef9d:SumOverGroup.bring_h_out f99f52e6:SumOverGroup.int	\lemma rearrange (h : G) : int = Ab.FinSum (\lam (g : G) => adjust (inverse h * g) f)
+SumOverGroup.ap-rearrange	lemma	29ec9b8d9273	-	0399463f	6002a49a:SumOverGroup.PermutationInvariance a9f4ef9d:SumOverGroup.bring_h_out f99f52e6:SumOverGroup.int	\lemma ap-rearrange (h : G) (a : A) : int a = Ab.FinSum (\lam g => adjust (inverse h * g) f) a
+SumOverGroup.FinSumEqual-multiply	func	cedf38d5680e	f7e0c797d548	89aa3fdf	052c194e:MaschkeLemma.R 5a6c363f:MaschkeLemma.cardInv 5554945c:MaschkeLemma.mean-func-preserve	\func FinSumEqual-multiply {E : LModule R} {A : FinSet} (e : E) : E.FinSum (\lam (_ : A) => e) = R.natCoef A.card *c e
+(overview)	-	-	-	8a40ffe5	4da1a415:MaschkeLemma 66a91c6e:MaschkeLemma.G 052c194e:MaschkeLemma.R 5a6c363f:MaschkeLemma.cardInv 6f9d9cbe:SumOverGroup	-

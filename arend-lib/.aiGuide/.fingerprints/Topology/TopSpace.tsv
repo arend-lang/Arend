@@ -1,0 +1,63 @@
+# arend -gc fingerprints v2 for module Topology.TopSpace. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TopSpace	class	d465327625ee	-	c6a36051	5b6220e0:TopSpace.isOpen fb643cd2:TopSpace.open-Union 1355c3ea:TopSpace.open-inter e0fd0d20:TopSpace.open-top	\class TopSpace \extends BaseSet { | isOpen : Set E -> \Prop | open-top : isOpen top | open-inter {U V : Set E} : isOpen U -> isOpen V -> isOpen (U ∧ V) | open-Union {S : Set (Set E)} : ∀ {U : S} (isOpen U) -> isOpen (Set.Union S) }
+TopSpace.cover-open	lemma	815ffd595a69	-	0fc5e41c		\lemma cover-open {U : Set E} (c : ∀ {x : U} ∃ (V : isOpen) (V x) (V ⊆ U)) : isOpen U
+TopSpace.open-IUnion	lemma	c889f2554853	-	c9eb3304		\lemma open-IUnion {J : \Type} (g : J -> Given isOpen) : isOpen (\lam x => ∃ (j : J) ((g j).1 x))
+TopSpace.open-bottom	lemma	993ee6c87ec2	-	38fa88f5		\lemma open-bottom : isOpen bottom
+TopSpace.open-union	lemma	47699629776a	-	9fef3ef9		\lemma open-union {U V : Set E} (Uo : isOpen U) (Vo : isOpen V) : isOpen (U ∨ V)
+TopSpace.<=<T	type	17a666cbbf19	0ec7d06c4a4b	b689aed7		\type <=<T (V U : Set E) : \Prop
+TopSpace.IsRegular	func	8bd4e46a43a0	966b27be00cf	825ed177		\func IsRegular
+TopSpace.IsLimit	func	19495af6bada	283daf5347e6	cac05c0b		\func IsLimit {I : DirectedSet} (f : I -> E) (l : E) : \Prop
+TopSpace.IsFilterLimit	func	192e6711e967	0426e6bd77ef	b2c38ed9		\func IsFilterLimit (F : SetFilter E) (l : E) : \Prop
+TopSpace.IsLimitPoint	func	1ae88b767de9	950fd2ab1ab1	7bc23d81		\func IsLimitPoint (x : E) (U : Set E) : \Prop
+TopSpace.IsClosed	type	cb030cce03e5	3e25bb5068a4	2f866147		\type IsClosed (U : Set E) : \Prop
+TopSpace.closed-limit	lemma	1e6ef5808ab1	-	20ce5f24		\lemma closed-limit {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) {N : I} (Uf : \Pi {n : I} -> N <= n -> U (f n)) : U x
+TopSpace.closed-limit0	lemma	e239b3320262	-	20ce5f24		\lemma closed-limit0 {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) (Uf : \Pi (n : I) -> U (f n)) : U x
+TopSpace.closed-inter	lemma	86224120ce6a	-	a66a1d51		\lemma closed-inter {U V : Set E} (Uc : IsClosed U) (Vc : IsClosed V) : IsClosed (U ∧ V)
+DiscreteTopSpace	func	7c477525b212	e2cd1346c722	e316aa4e		\func DiscreteTopSpace (X : \Set) : TopSpace X
+NFilter	func	3503c9f92c1f	e8a240f06d52	0d817d71		\func NFilter {X : TopSpace} (x : X) : ProperFilter X
+IsWeaklyDenseSet	func	5a3d44889b22	d7e2584e563e	0f9b173c		\func IsWeaklyDenseSet {X : TopSpace} (S : Set X) : \Prop
+IsDenseSet	func	5a3d44889b22	1dcd0058e354	80865dfa		\func IsDenseSet {X : TopSpace} (S : Set X) : \Prop
+denseSet->weaklyDense	lemma	6bdea80291ed	-	54674437		\lemma denseSet->weaklyDense {X : TopSpace} {S : Set X} (d : IsDenseSet S) : IsWeaklyDenseSet S
+ContMap	record	94458ba2df04	-	1226c8fe	dc3bf61f:ContMap.func-cont de071ff5:TopSpace	\record ContMap \extends SetHom { \override Dom : TopSpace \override Cod : TopSpace | func-cont {U : Cod -> \Prop} : isOpen U -> isOpen (\lam x => U (func x)) }
+ContMap.IsWeaklyDense	func	d143af8bb978	f429af8bb72d	218d766f		\func IsWeaklyDense : \Prop
+ContMap.IsDense	func	d143af8bb978	e9a1ab129707	218d766f		\func IsDense : \Prop
+ContMap.dense->weaklyDense	lemma	4c6b2700917c	-	a527dab0		\lemma dense->weaklyDense (d : IsDense) : IsWeaklyDense
+ContMap.equiv-dense	lemma	e3a73d3f5614	-	72387dbd		\lemma equiv-dense (e : IsEquiv func) : IsDense
+ContMap.IsTopEmbedding	func	d143af8bb978	7068009a8dfd	e2535a49		\func IsTopEmbedding : \Prop
+ContMap.topEmbedding-char	lemma	8deb7c5cde88	-	b1c99ce3		\lemma topEmbedding-char : IsTopEmbedding <-> ∀ {U : isOpen} {x : U} ∃ (V : isOpen) (V (func x)) (func ^-1 V ⊆ U)
+ContMap.IsDenseTopEmbedding	func	d143af8bb978	17221908db99	03b339ac		\func IsDenseTopEmbedding : \Prop
+ContMap.id	func	f30a567b79f5	e60234e28163	68cb5123		\func id {X : TopSpace} : ContMap X X
+ContMap.compose	func	afef81d98b2b	91e953096d76	502bae70		\func compose {X Y Z : TopSpace} (g : ContMap Y Z) (f : ContMap X Y) : ContMap X Z
+ContMap.const	func	880bdaf66e5e	8c3f149d5f1c	dcd35a75		\func const {Y X : TopSpace} (x : X) : ContMap Y X
+limit-transport	lemma	d8697ba3cac5	-	3b48b655		\lemma limit-transport {X : TopSpace} {I : DirectedSet} {f g : I -> X} {l : X} (fl : X.IsLimit f l) (p : \Pi (n : I) -> g n = f n) : X.IsLimit g l
+const-limit	lemma	aa0905a9b1ea	-	0e3b5419		\lemma const-limit {I : DirectedSet} {X : TopSpace} {x : X} : X.IsLimit (\lam (_ : I) => x) x
+cont-limit	lemma	c75ad4daeee2	-	1a112974		\lemma cont-limit {I : DirectedSet} {X Y : TopSpace} {f : I -> X} {l : X} (p : X.IsLimit f l) (g : ContMap X Y) : Y.IsLimit (\lam n => g (f n)) (g l)
+IsCont	func	54a20e4aa27c	0a3b046463b1	f8e03969	5e27de9c:ContMap	\func IsCont {X Y : TopSpace} (f : X -> Y) : \Prop
+IsContAt	func	5fc40aa829c3	9a29c7f8f86a	a988484f		\func IsContAt {X Y : TopSpace} (f : X -> Y) (x : X) : \Prop
+cont-char	lemma	aa25df955521	-	4a6bf114		\lemma cont-char {X Y : TopSpace} {f : X -> Y} : IsCont f <-> (\Pi (x : X) -> IsContAt f x)
+contAt-comp	lemma	59b8644cafe2	-	90997193		\lemma contAt-comp {X Y Z : TopSpace} (f : X -> Y) (g : Y -> Z) {x : X} (fc : IsContAt f x) (gc : IsContAt g (f x)) : IsContAt (\lam x => g (f x)) x
+contAt-left	lemma	2ae1cf81fe90	-	90997193		\lemma contAt-left {X Y Z : TopSpace} {f : X -> Y} (g : ContMap Y Z) {x : X} (fc : IsContAt f x) : IsContAt (\lam x => g (f x)) x
+contAt-right	lemma	026251d641bf	-	90997193		\lemma contAt-right {X Y Z : TopSpace} (f : ContMap X Y) (g : Y -> Z) {x : X} (gc : IsContAt g (f x)) : IsContAt (\lam x => g (f x)) x
+contAt-limit	lemma	5d700425d336	-	b55f0403		\lemma contAt-limit {I : DirectedSet} {X Y : TopSpace} {f : I -> X} {l : X} (p : X.IsLimit f l) {g : X -> Y} (gc : IsContAt g l) : Y.IsLimit (\lam n => g (f n)) (g l)
+cont-limit-point	lemma	9573b898d909	-	339460c2		\lemma cont-limit-point {X Y : TopSpace} (f : ContMap X Y) {S : Set Y} {x : X} (xl : X.IsLimitPoint x (f ^-1 S)) : Y.IsLimitPoint (f x) S
+cont-closed	lemma	e0c1ba49678e	-	cadb29bc		\lemma cont-closed {X Y : TopSpace} (f : ContMap X Y) {S : Set Y} (Sc : Y.IsClosed S) : X.IsClosed (f ^-1 S)
+HausdorffTopSpace	class	4135801acdbb	-	47fd6eca	dcf67650:HausdorffTopSpace.isHausdorff de071ff5:TopSpace	\class HausdorffTopSpace \extends TopSpace { | isHausdorff {x y : E} : ∀ {U V : isOpen} (U x) (V y) ∃ (U ∧ V) -> x = y }
+HausdorffTopSpace.limit-unique	lemma	46d47df7c502	-	85532ac2		\lemma limit-unique {I : DirectedSet} {f : I -> E} {x y : E} (lx : IsLimit f x) (ly : IsLimit f y) : x = y
+StronglyHausdorffTopSpace	class	5b6954d5206f	-	f0ae580e	be783ec5:HausdorffTopSpace dcf67650:HausdorffTopSpace.isHausdorff 95a7f91d:StronglyHausdorffTopSpace.isStronglyHausdorff	\class StronglyHausdorffTopSpace \extends HausdorffTopSpace, SeparatedSet { | isStronglyHausdorff {x y : E} : ∀ {U V : isOpen} (U x) (V y) (Not (Not (Given (U ∧ V)))) -> x = y | isHausdorff => \lam p => isStronglyHausdorff (\lam Uo Vo Ux Vy q => (\case p Uo Vo Ux Vy \with { | inP r => q r })) | separatedEq => \lam {x} p => isStronglyHausdorff (\lam Uo Vo Ux Vy q => p (\lam x=y => q (x, (Ux, rewrite x=y Vy)))) }
+denseSet-lift-unique	lemma	37ccd95071f1	-	018e6f30		\lemma denseSet-lift-unique {X : TopSpace} {Y : HausdorffTopSpace} {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x = g x) {x : X} : f x = g x
+dense-lift-unique	lemma	ec935ea01745	-	8aff43b1		\lemma dense-lift-unique {X Y : TopSpace} {Z : HausdorffTopSpace} (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) = h (f x)) (y : Y) : g y = h y
+weaklyDenseSet-lift-unique	lemma	c6ff032b34c4	-	6ee2c7ce	527f356e:denseSet-lift-unique	\lemma weaklyDenseSet-lift-unique {X : TopSpace} {Y : StronglyHausdorffTopSpace} {S : Set X} (Sd : IsWeaklyDenseSet S) (f g : ContMap X Y) (f=g : \Pi {x : X} -> S x -> f x = g x) {x : X} : f x = g x
+weaklyDense-lift-unique	lemma	317b9d9e3058	-	75592129		\lemma weaklyDense-lift-unique {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} (f : ContMap X Y) (fd : f.IsWeaklyDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) = h (f x)) (y : Y) : g y = h y
+TopTransfer	func	4550676ecde5	aa1e3d32a71b	652f6301		\func TopTransfer {X : \Set} {Y : TopSpace} (f : X -> Y) : TopSpace X
+TopTransfer-map	lemma	34869a031e66	-	d2f5b2b4		\lemma TopTransfer-map {X : \Set} {Y : TopSpace} (f : X -> Y) : ContMap (TopTransfer f) Y f
+TopTransfer-lift	lemma	27a67b449846	-	0a9c235e		\lemma TopTransfer-lift {X Y : TopSpace} {U : Set Y} (f : ContMap X Y) (p : \Pi (x : X) -> U (f x)) : ContMap X (TopTransfer {Set.Total U} __.1) (\lam x => (f x, p x))
+TopSub	func	63f1584a329d	46123cc5fdbb	e6e968f2	176d5643:TopTransfer	\func TopSub {X : TopSpace} (S : Set X) : TopSpace (Set.Total S)
+TopSub-map	lemma	c0adea51ef5f	-	e32ac850	84f851f5:TopSub	\lemma TopSub-map {X : TopSpace} {S : Set X} : ContMap (TopSub S) X __.1
+TopSub-func	lemma	a14ee6a9c98b	-	118d44bb		\lemma TopSub-func {X Y : TopSpace} (f : ContMap X Y) {U : Set X} {V : Set Y} (p : ∀ {x : U} (V (f x))) : ContMap (TopSub U) (TopSub V) (\lam s => (f s.1, p s.2))
+TopSub-inc	lemma	ef0c5cd4a2a1	-	a78a8d41		\lemma TopSub-inc {X : TopSpace} {U V : Set X} (p : U ⊆ V) : ContMap (TopSub U) (TopSub V) (\lam s => (s.1, p s.2))
+TopSub-limit	lemma	604a72ca2e60	-	3cadfb57		\lemma TopSub-limit {X : TopSpace} {S : Set X} {I : DirectedSet} {f : I -> Set.Total S} {x : Set.Total S} (l : X.IsLimit (\lam n => (f n).1) x.1) : TopSpace.IsLimit {TopSub S} f x
+IsRelativelyHausdorff	func	54a20e4aa27c	e2cee4e2cd85	7c8fb589		\func IsRelativelyHausdorff {X Y : TopSpace} (f : X -> Y) : \Prop
+denseSet-relative-lift-unique	lemma	4cc4a3777d2e	-	91bc5500		\lemma denseSet-relative-lift-unique {X Y Z : TopSpace} (p : Y -> Z) (ph : IsRelativelyHausdorff p) {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (dp : \Pi {x : X} -> S x -> f x = g x) (dq : \Pi {x : X} -> p (f x) = p (g x)) {x : X} : f x = g x
+dense-relative-lift-unique	lemma	066e4a5e69a1	-	df99d69b		\lemma dense-relative-lift-unique {X Y Z W : TopSpace} (p : Z -> W) (ph : IsRelativelyHausdorff p) (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (dp : \Pi (x : X) -> g (f x) = h (f x)) (dq : \Pi {y : Y} -> p (g y) = p (h y)) (y : Y) : g y = h y
+(overview)	-	-	-	7552789e	5e27de9c:ContMap de071ff5:TopSpace 5b6220e0:TopSpace.isOpen 84f851f5:TopSub 176d5643:TopTransfer	-

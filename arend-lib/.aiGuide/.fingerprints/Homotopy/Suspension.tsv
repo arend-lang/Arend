@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Homotopy.Suspension. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Susp	func	6e8ca0fd21b3	6c95b12d637f	a8c45f86		\func Susp (A : \Type)
+north	cons	d70ea9e09468	2417343f3d8f	fb0f2689	9fb6e459:Susp	\cons north {A : \Type} : Susp A
+south	cons	d70ea9e09468	24d51c5df697	dfbe714f	9fb6e459:Susp	\cons south {A : \Type} : Susp A
+pmerid	func	faacd80d99db	41992d20c79c	30eb5b33	bed3bd32:north 6f865a61:south	\func pmerid {A : \Type} (a : A) : north = south
+Susp.rec	func	b0763051ba08	e373bc9e81bd	2693d6f6	9fb6e459:Susp bed3bd32:north 27c71028:pmerid 6f865a61:south	\func rec {A B : \Type} (b1 b2 : B) (f : A -> b1 = b2) (x : Susp A) : B
+Susp.pointed	func	6e8ca0fd21b3	3688b0489e0e	821336af	9fb6e459:Susp bed3bd32:north	\func pointed (A : \Type)
+Susp.pushout	func	b461e3efaf43	0b59f080fd16	8bc4876a	9fb6e459:Susp	\func pushout (A : \Type u)
+(overview)	-	-	-	f9c4fa94	9fb6e459:Susp bed3bd32:north 27c71028:pmerid 6f865a61:south	-

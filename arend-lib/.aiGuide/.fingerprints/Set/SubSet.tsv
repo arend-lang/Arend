@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Set.SubSet. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubSet	class	5e5e6dda781b	-	6f5027f4	7b14d68f:SubSet.ISet f3684270:SubSet.S bc3b9499:SubSet.contains	\class SubSet (S : BaseSet) (contains : S -> \Prop)
+DecSubSet	class	5cab503dbd64	-	ef0c2a92	560deb84:DecSubSet.isDec 187b2ea4:SubSet	\class DecSubSet \extends SubSet { | isDec (x : S) : Dec (contains x) }
+DecSubSet.max	func	6c36084fe7f9	9ca178d45625	06048c55		\func max {S : BaseSet} : DecSubSet S
+SubSet.Total	type	99a35f364b48	8702325a724b	3f8d70c6	f3684270:SubSet.S bc3b9499:SubSet.contains	\type Total
+SubSet.ISet	func	c02bc3b7bc08	8d8ad81e240a	bb90e441	0e5361cf:SubSet.Total	\func ISet : BaseSet
+SubsetPoset	instance	0c9b5823bcf5	-	acf9fd71	f3684270:SubSet.S	\instance SubsetPoset {X : BaseSet} : Poset (SubSet X)

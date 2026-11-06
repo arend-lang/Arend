@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Data.Maybe. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Maybe	data	1adfedc9f156	-	8fda4298	05c93fd4:Maybe.just d4f1b28b:Maybe.nothing	\data Maybe (A : \Type) | nothing | just A
+Maybe.map	func	9a376dd7d250	ea0c245cf901	5c45c9d4	871c1daa:Maybe 05c93fd4:Maybe.just d4f1b28b:Maybe.nothing	\func map {A B : \Type} (f : A -> B) (m : Maybe A) : Maybe B
+maybe	func	844958257fd0	5ebaf6f51713	ce9467c4	871c1daa:Maybe 05c93fd4:Maybe.just d4f1b28b:Maybe.nothing	\func maybe {A B : \Type} (b : B) (f : A -> B) (m : Maybe A) : B
+unjust	func	5358fd7b1f60	ed710400c558	ac75fb3c	871c1daa:Maybe 05c93fd4:Maybe.just d4f1b28b:Maybe.nothing	\func unjust {A : \Type} (a : A) (maybe : Maybe A) : A
+just-injective	func	e282d0ac879e	d05f3948c1fb	d322fc01	05c93fd4:Maybe.just 5d341ac8:unjust	\func just-injective {A : \Type} {a b : A} (eq : just a = just b) : a = b
+(overview)	-	-	-	97d66058	871c1daa:Maybe 05c93fd4:Maybe.just d4f1b28b:Maybe.nothing cdb58723:just-injective fa67496a:maybe 5d341ac8:unjust	-

@@ -1,0 +1,46 @@
+# arend -gc fingerprints v2 for module Analysis.Measure.Lebesgue. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LebesgueRing0	func	5b9cb0f18f28	23a7269bd473	dca20968		\func LebesgueRing0 (n : Nat) : MeasureRing.{0}
+IntervalRing-equiv	lemma	4a1723a74d39	-	47b12e82		\lemma IntervalRing-equiv : IsEquiv (unitL {IntervalRing})
+LebesgueMeasureRing	func	21ff32a02893	e972a9abd648	1b88bdf7	218b5416:LebesgueRing0	\func LebesgueMeasureRing (n : Nat) : CompleteMeasureRing
+LebesgueL1	func	972d85831ff1	be36c4532458	6a6bd6cb	218b5416:LebesgueRing0	\func LebesgueL1 (n : Nat) : CompleteIntegrationSpace
+LebesgueL1-equiv	lemma	d3e51a0d359b	-	a74e0074		\lemma LebesgueL1-equiv {n : Nat} : IsEquiv (integrationCompletion-map (SFuncHom (measureCompletion {LebesgueRing0 n})))
+LebesgueRing0-rational	lemma	0d800739dc7d	-	0d331b87	218b5416:LebesgueRing0	\lemma LebesgueRing0-rational {n : Nat} : (LebesgueRing0 n).IsRationalMeasure
+lebesgueTensor	func	2ec40f24843e	9b12ee39647d	68a476dd	218b5416:LebesgueRing0	\func lebesgueTensor (m n : Nat) : MeasureRingHom (PseudoMeasureRingTensor (LebesgueRing0 m) (LebesgueRing0 n)) (LebesgueRing0 (m Nat.+ n))
+lebesgueTensor-equiv	lemma	42776695769b	-	22427c61	23a89315:lebesgueTensor	\lemma lebesgueTensor-equiv {m n : Nat} : IsEquiv (lebesgueTensor m n)
+lebesgueTensor-rect	lemma	1d62cb6ba677	-	aa5ec7e8	23a89315:lebesgueTensor	\lemma lebesgueTensor-rect {m n : Nat} {a : LebesgueRing0 m} {b : LebesgueRing0 n} {x : Array Rat m} {y : Array Rat n} : lebPts (m Nat.+ n) (lebesgueTensor m n (rect a b)) (x ++' y) = lebPts m a x and lebPts n b y
+lebesgueBoxtimes	func	a00576ec3817	510f65e5b69c	8d51e87e	23a89315:lebesgueTensor	\func lebesgueBoxtimes (m n : Nat) : MeasureRingHom (CMeasureRingTensor (LebesgueMeasureRing m) (LebesgueMeasureRing n)) (LebesgueMeasureRing (m Nat.+ n))
+lebesgueBoxtimes-rect	lemma	2f0d9f77de31	-	6152a63a	f0382f5a:lebesgueBoxtimes 23a89315:lebesgueTensor	\lemma lebesgueBoxtimes-rect {m n : Nat} {a : LebesgueRing0 m} {b : LebesgueRing0 n} : lebesgueBoxtimes m n (crect (measureCompletion a) (measureCompletion b)) = measureCompletion (lebesgueTensor m n (rect {LebesgueRing0 m} {LebesgueRing0 n} a b))
+lebesgueBoxtimes-equiv	lemma	5021e202d539	-	10cd471f	f0382f5a:lebesgueBoxtimes	\lemma lebesgueBoxtimes-equiv {m n : Nat} : IsEquiv (lebesgueBoxtimes m n)
+PointRing	func	3ce601d10d54	1d5ddb41bc0f	9fc739e9		\func PointRing (X : \Type) : BooleanRing (X -> Bool)
+initA	func	34a08a5312b2	b44800d101fa	1d9e06c7		\func initA {A : \Type} {n : Nat} (z : Array A (suc n)) : Array A n
+lastA	func	2527dbbb84d1	da9c85a1bccd	1d9e06c7		\func lastA {A : \Type} {n : Nat} (z : Array A (suc n)) : A
+lebPts	func	c93da6ae1fe5	846c092a0e43	7f931079	218b5416:LebesgueRing0 353599ae:PointRing	\func lebPts (n : Nat) : PseudoRingHom (LebesgueRing0 n) (PointRing (Array Rat n))
+lebPts-rect	lemma	54b6046c5576	-	dac6c5d0		\lemma lebPts-rect {n : Nat} {a : LebesgueRing0 n} {c : RatIntervalSet} {z : Array Rat (suc n)} : lebPts (suc n) (rect a c) z = lebPts n a (initA z) and ratPoints c (lastA z)
+lebPts-zro	lemma	feb7b2496f42	-	28f7d5d2		\lemma lebPts-zro {n : Nat} {z : Array Rat n} : lebPts n (LebesgueRing0 n).zro z = false
+lebPts-join	lemma	5586819a36a6	-	28f7d5d2		\lemma lebPts-join {n : Nat} {x y : LebesgueRing0 n} {z : Array Rat n} : lebPts n (x ∨ y) z = lebPts n x z or lebPts n y z
+lebPts-kernel	lemma	14067c4f10d9	-	c08ef2e9		\lemma lebPts-kernel (n : Nat) (x : LebesgueRing0 n) (h : \Pi (z : Array Rat n) -> lebPts n x z = false) : x = AddPointed.zro {LebesgueRing0 n}
+lebPts-inj	lemma	4b47ddb706cf	-	3ac23853		\lemma lebPts-inj (n : Nat) {x y : LebesgueRing0 n} (p : \Pi (z : Array Rat n) -> lebPts n x z = lebPts n y z) : x = y
+lebPts-image	lemma	2a558eddf7c4	-	8dbc1347		\lemma lebPts-image (n : Nat) (x : LebesgueRing0 n) : ∃ (l : Array (RatBox n)) (\Pi (z : Array Rat n) -> lebPts n x z = inRatBoxes l z)
+RatBox	func	c977946e2aeb	2ec0e791fd92	3ae1a70f		\func RatBox (n : Nat)
+inRatBox	func	c43505fe2b16	25dd6b9a730d	a6bb7c77		\func inRatBox {n : Nat} (b : RatBox n) (z : Array Rat n) : Bool
+inRatBoxes	func	d92201730f2f	2daf3d8a10ce	ed716666		\func inRatBoxes {n : Nat} (l : Array (RatBox n)) (z : Array Rat n) : Bool
+ratVolume	func	88fd5abb619e	448fee96a9b1	103a898f		\func ratVolume {n : Nat} (b : RatBox n) : Rat
+ratBoxElem	func	7289e5bb4f0d	483f9c60a0b2	b903b162		\func ratBoxElem (n : Nat) (b : RatBox n) : LebesgueRing0 n
+ratBoxUnion	func	fbf92007bddc	4d7ef52fe446	6d313255		\func ratBoxUnion {n : Nat} (l : Array (RatBox n)) : LebesgueRing0 n
+lebPts-box	lemma	ee76daca364a	-	ddb8bb9f	4d3f8bb8:inRatBox 12247cbe:inRatBoxes f1a38d2a:ratBoxElem dcc84fe6:ratBoxUnion	\lemma lebPts-box {n : Nat} (b : RatBox n) (z : Array Rat n) : lebPts n (ratBoxElem n b) z = inRatBox b z
+lebPts-boxes	lemma	171ac9873270	-	ddb8bb9f	4d3f8bb8:inRatBox 12247cbe:inRatBoxes f1a38d2a:ratBoxElem dcc84fe6:ratBoxUnion	\lemma lebPts-boxes {n : Nat} (l : Array (RatBox n)) (z : Array Rat n) : lebPts n (ratBoxUnion l) z = inRatBoxes l z
+boxElem-meas	lemma	cae01f1e1dc9	-	b16644e9		\lemma boxElem-meas {n : Nat} (b : RatBox n) : meas (ratBoxElem n b) = Real.fromRat (ratVolume b)
+lebPts-volume	lemma	e9310d7a2e59	-	56bab6a5		\lemma lebPts-volume {n : Nat} {x : LebesgueRing0 n} {b : RatBox n} (p : \Pi (z : Array Rat n) -> lebPts n x z = inRatBox b z) : meas x = Real.fromRat (ratVolume b)
+RatBoxUnion	type	37387ea5db36	a0f9f228908a	1d49b7ca		\type RatBoxUnion (n : Nat)
+toRatBoxUnion	func	1ef1d6f48dc7	f9d491a9b183	1acf062c	86ea75bc:RatBoxUnion	\func toRatBoxUnion {n : Nat} (x : LebesgueRing0 n) : RatBoxUnion n
+toRatBoxUnion-equiv	lemma	278580a4df2b	-	a775bbb8		\lemma toRatBoxUnion-equiv {n : Nat} : IsEquiv (toRatBoxUnion {n})
+LebesgueLine	func	963d6a2b6175	211e3ff74d95	a29c48c7		\func LebesgueLine : CompleteMeasureRing
+LebesgueLine-equiv	lemma	c305a5bb2167	-	6fb2f3f3	e2d4bc2a:LebesgueLine	\lemma LebesgueLine-equiv : IsEquiv (measureTensorUnit {IntervalRing})
+LebesgueLinePowT	func	cf499a69ebda	a93eca08c820	4e86a488	e2d4bc2a:LebesgueLine	\func LebesgueLinePowT (n : Nat) : PseudoMeasureRing.{0}
+LebesgueLinePow	func	21ff32a02893	6d79e19e4a92	d9ed468d	5e90e924:LebesgueLinePowT	\func LebesgueLinePow (n : Nat) : CompleteMeasureRing
+lebesguePowMap	func	dbd52768b288	6ff1815d262d	a0b86a06	5e90e924:LebesgueLinePowT	\func lebesguePowMap (n : Nat) : MeasureRingHom (LebesgueRing0 n) (LebesgueLinePowT n)
+lebesguePowMap-dense	lemma	0758d1270edd	-	57d36612	bdaee203:lebesguePowMap	\lemma lebesguePowMap-dense {n : Nat} : (lebesguePowMap n).IsDense
+lebesgue-pow-equiv	lemma	a4eb585782da	-	4f1ef021		\lemma lebesgue-pow-equiv {n : Nat} : IsEquiv (measureCompletion-map (lebesguePowMap n))
+LebesgueL1-pow-equiv	lemma	6ecac044313f	-	9773b73d		\lemma LebesgueL1-pow-equiv {n : Nat} : IsEquiv (integrationCompletion-map (SFuncHom (measureCompletion MeasureRingHom.∘ lebesguePowMap n)))
+(overview)	-	-	-	1287ec09	13521de5:LebesgueL1 70454ded:LebesgueMeasureRing 218b5416:LebesgueRing0 c6a014cf:boxElem-meas aaf96b73:lebPts 84a9b533:lebesgue-pow-equiv e109c2e4:lebesgueBoxtimes-equiv 9d8e1255:lebesgueTensor-equiv	-

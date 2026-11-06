@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Homotopy.Space. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BaseSpace	class	77f4e4daafbb	-	4d0ca8b8	31fb904e:BaseSpace.E	\class BaseSpace (E : \Type)
+InhSpace	class	91b522428a18	-	7047bde1	37c0bed6:BaseSpace 31fb904e:BaseSpace.E 93005f65:InhSpace.isInh	\class InhSpace \extends BaseSpace { | isInh : TruncP E }
+(overview)	-	-	-	78096ba1	37c0bed6:BaseSpace ed43e620:InhSpace	-

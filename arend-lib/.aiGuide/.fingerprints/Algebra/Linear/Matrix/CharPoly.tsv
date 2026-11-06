@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Linear.Matrix.CharPoly. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+charPoly	func	2cfdec2c5375	9bb6160d3bc5	d6267d08		\func charPoly {R : CRing} {n : Nat} (M : Matrix R n n) : Poly R
+charPoly-degree	lemma	d28bd88296cb	-	6fc217b9	08c3a3dd:charPoly	\lemma charPoly-degree {R : CRing} {n : Nat} (M : Matrix R n n) : degree<= (charPoly M) n
+charPoly-monic	lemma	0bd39bdd85d5	-	f72839f9	08c3a3dd:charPoly	\lemma charPoly-monic {R : CRing} {n : Nat} (M : Matrix R n n) : polyCoef (charPoly M) n = 1
+charPoly_map	lemma	0a9511c0c552	-	be77f58d	08c3a3dd:charPoly	\lemma charPoly_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : polyMap f (charPoly A) = charPoly (matrix-map f A)
+isEigenvalue	type	9d0022deb2f5	4a1943b51bc2	653764f9		\type isEigenvalue {R : Ring} {n : Nat} (A : Matrix R n n) (a : R)
+eigen-root	lemma	5e84dd8e91ff	-	1ed8b1df	08c3a3dd:charPoly	\lemma eigen-root {R : CRing} {n : Nat} (A : Matrix R n n) {a : R} (e : isEigenvalue A a) : polyEval (charPoly A) a = 0
+(overview)	-	-	-	39e09c74	08c3a3dd:charPoly	-

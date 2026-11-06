@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.GrothendieckRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+GrothendieckRing	instance	f560cf743ef3	-	3905e1bf		\instance GrothendieckRing (R : Semiring) : Ring
+GrothendieckCRing	instance	c46750df9b7e	-	da59f221	4bc65b2a:GrothendieckRing	\instance GrothendieckCRing (R : CSemiring) : CRing
+(overview)	-	-	-	c7e8a7d0		-

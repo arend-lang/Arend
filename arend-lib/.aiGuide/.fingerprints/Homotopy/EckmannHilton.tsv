@@ -1,0 +1,21 @@
+# arend -gc fingerprints v2 for module Homotopy.EckmannHilton. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Algebraic-Eckmann-Hilton	class	97ea6ed36bd8	-	a4f54a55	e44fefeb:Algebraic-Eckmann-Hilton.# 51c53be2:Algebraic-Eckmann-Hilton.id_# 51c53be2:Algebraic-Eckmann-Hilton.id_o e44fefeb:Algebraic-Eckmann-Hilton.o cbc5ae08:Algebraic-Eckmann-Hilton.rel	\class Algebraic-Eckmann-Hilton (X : \Type) { | \infix 7 o : X -> X -> X | \infix 7 # : X -> X -> X | id_o : X | id_o-left {x : X} : id_o o x = x | id_o-right {x : X} : x o id_o = x | id_# : X | id_#-left {x : X} : id_# # x = x | id_#-right {x : X} : x # id_# = x | rel {a b c d : X} : (a # b) o (c # d) = (a o c) # (b o d) }
+Algebraic-Eckmann-Hilton.units-coincide	func	d4457719ceee	1abe0cc98a76	b610ba3f	51c53be2:Algebraic-Eckmann-Hilton.id_# 51c53be2:Algebraic-Eckmann-Hilton.id_o	\func units-coincide : id_o = id_#
+Algebraic-Eckmann-Hilton.binop_rels_1	func	95153bccf33b	0c2e0a4ad5ce	624d831b	e44fefeb:Algebraic-Eckmann-Hilton.# e44fefeb:Algebraic-Eckmann-Hilton.o	\func binop_rels_1 {a b : X} : a o b = b # a
+Algebraic-Eckmann-Hilton.binop_rels_2	func	fb332c27768d	f7a2fda14e19	a61d2765	e44fefeb:Algebraic-Eckmann-Hilton.# e44fefeb:Algebraic-Eckmann-Hilton.o	\func binop_rels_2 {a b : X} : b # a = b o a
+Algebraic-Eckmann-Hilton.comm	func	e291df4dc0c8	19b802f87201	dbf03fc6	e44fefeb:Algebraic-Eckmann-Hilton.o	\func comm {a b : X} : a o b = b o a
+Algebraic-Eckmann-Hilton.binops_coincide	func	c8e549d8ff64	56f5a8d4f47d	3827270b	e44fefeb:Algebraic-Eckmann-Hilton.# e44fefeb:Algebraic-Eckmann-Hilton.o	\func binops_coincide {a b : X} : a o b = a # b
+Algebraic-Eckmann-Hilton.comm-#	func	fefe1b049d87	58f37a2a926f	51347838	e44fefeb:Algebraic-Eckmann-Hilton.#	\func comm-# {a b : X} : a # b = b # a
+Algebraic-Eckmann-Hilton.rel-o	func	d74cf9e26b39	d8d39c772516	0a7cb0dc	e44fefeb:Algebraic-Eckmann-Hilton.o	\func rel-o {a b c d : X} : (a o b) o (c o d) = (a o c) o (b o d)
+Algebraic-Eckmann-Hilton.assoc	func	a7c4298064c7	f8560c208b33	27a3d525	e44fefeb:Algebraic-Eckmann-Hilton.o fc0fc74c:Algebraic-Eckmann-Hilton.rel-o	\func assoc {a b c : X} : (a o b) o c = a o (b o c)
+RightHorizontalWhiskering	func	623d1cab2afc	f4a4bb641927	d0b2c4ab		\func RightHorizontalWhiskering {X : \Type} {a b c : X} {p q : a = b} (alp : p = q) (r : b = c) : p *> r = q *> r
+LeftHorizontalWhiskering	func	5ff84c4256e3	aac34a9e5e7f	d541ab17		\func LeftHorizontalWhiskering {X : \Type} {a b c : X} (q : a = b) {r s : b = c} (bet : r = s) : q *> r = q *> s
+Omega^2-Commutative	class	7c479faf9e9a	-	743dabce		\class Omega^2-Commutative (X : HPointed)
+Omega^2-Commutative.Omega^2_X	func	8bd4e46a43a0	2d918c58ff42	e04d7865		\func Omega^2_X
+Omega^2-Commutative.LeftHorizontalWhiskering-relation	func	202d526691a4	f04db6f08bee	45bfd4c0	9c069679:LeftHorizontalWhiskering	\func LeftHorizontalWhiskering-relation {b c : X} {r s : b = c} (bet : r = s) : LeftHorizontalWhiskering (idp {X} {b}) bet = idp_*> *> bet *> inv idp_*>
+Omega^2-Commutative.st1	func	51c7d1478dd1	5e52a2634b13	7a52cff6		\func st1 {a b c : X} {p q : a = b} {r s : b = c} (alp : p = q) (bet : r = s) : p *> r = q *> s
+Omega^2-Commutative.st2	func	51c7d1478dd1	d9fd7935ee9a	7d782e9e		\func st2 {a b c : X} {p q : a = b} {r s : b = c} (alp : p = q) (bet : r = s) : p *> r = q *> s
+Omega^2-Commutative.Relation	func	76624e96d77d	cc5a38939bd7	5d56c30e	96b395ff:Omega^2-Commutative.st1 9bbff7f6:Omega^2-Commutative.st2	\func Relation {a b c : X} {p q : a = b} {r s : b = c} (alp : p = q) (bet : r = s) : alp st1 bet = alp st2 bet
+Omega^2-Commutative.Commutative	func	0aad1bcd0980	df4afbc8f892	02082b39	879e6b50:Omega^2-Commutative.Commutative.Relation1 9e94a59d:Omega^2-Commutative.Commutative.Relation2 454c9ad5:Omega^2-Commutative.Commutative.Relation3 3710c8c9:Omega^2-Commutative.Omega^2_X ff061e0f:Omega^2-Commutative.Relation 96b395ff:Omega^2-Commutative.st1 9bbff7f6:Omega^2-Commutative.st2	\func Commutative (alp bet : Omega^2_X) : alp *> bet = bet *> alp
+(overview)	-	-	-	882dec02	f9dbad16:Algebraic-Eckmann-Hilton e44fefeb:Algebraic-Eckmann-Hilton.# e44fefeb:Algebraic-Eckmann-Hilton.o 0c0b008c:Omega^2-Commutative	-

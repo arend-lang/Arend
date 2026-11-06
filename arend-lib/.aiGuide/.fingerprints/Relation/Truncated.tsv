@@ -1,0 +1,18 @@
+# arend -gc fingerprints v2 for module Relation.Truncated. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Rel	func	3cc1e0532727	86bd383e8256	33ade1e7		\func Rel (A : \Set) : \Set
+TransClosure	data	475075ba568e	-	7ce7fab3		\data TransClosure {A : \Set} (R : Rel A) (a b : A) : \Prop | tc-direct (a `R` b) | tc-connect {c : A} (TransClosure R a c) (R c b)
+TransClosure.tc-direct	cons	958b659a8c6c	-	6cc17d55		| tc-direct (a `R` b)
+TransClosure.tc-connect	cons	9c2d1d276cce	-	7fa4061e	cd3bfbf5:TransClosure	| tc-connect {c : A} (TransClosure R a c) (R c b)
+transitive-refl-closure	data	9afdffd82ae3	-	ad03c382		\data transitive-refl-closure {A : \Set} (R : Rel A) (a b : A) : \Prop | trc-direct (a = b) | trc-connect (c : A) (a `R` c) (transitive-refl-closure R c b)
+transitive-refl-closure.trc-direct	cons	98db58cec78c	-	db2ce846		| trc-direct (a = b)
+transitive-refl-closure.trc-connect	cons	e9eeedc7e4ba	-	86742b74		| trc-connect (c : A) (a `R` c) (transitive-refl-closure R c b)
+trc-unary	cons	c7da7f9e9bc0	550d4f297c8d	26d2e63b	26f44b3e:transitive-refl-closure.trc-connect 6d408a37:transitive-refl-closure.trc-direct	\cons trc-unary {A : \Set} {R : Rel A} {a b : A} (p : a `R` b) : transitive-refl-closure R a b
+trc-direct'	cons	41c8e2c21986	97ff2b24ad16	2c743d93	48153858:transitive-refl-closure	\cons trc-direct' {A : \Set} {R : Rel A} {a : A} : transitive-refl-closure R a a
+symmetric-closure	data	526d064118bb	-	f7983b69		\data symmetric-closure {A : \Set} (R : Rel A) (a b : A) : \Prop | sc-left (a `R` b) | sc-right (b `R` a)
+symmetric-closure.sc-left	cons	958b659a8c6c	-	5ff5f147		| sc-left (a `R` b)
+symmetric-closure.sc-right	cons	486165d5afb0	-	37806662		| sc-right (b `R` a)
+reflexive-closure	data	d4e71d0eb6ce	-	ca036fba		\data reflexive-closure {A : \Set} (R : Rel A) (a b : A) : \Prop | rc-id (a = b) | rc-rel (a `R` b)
+reflexive-closure.rc-id	cons	98db58cec78c	-	d96f85c5		| rc-id (a = b)
+reflexive-closure.rc-rel	cons	958b659a8c6c	-	6cc17d55		| rc-rel (a `R` b)
+(overview)	-	-	-	c0e8b1c7	c33d220b:Rel	-

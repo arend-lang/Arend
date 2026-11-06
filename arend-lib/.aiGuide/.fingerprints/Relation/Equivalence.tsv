@@ -1,0 +1,28 @@
+# arend -gc fingerprints v2 for module Relation.Equivalence. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Transitive	class	12ab903ff5a9	-	e879d20c	f18ee3e2:Transitive.A b408e01f:Transitive.~ 84b3907b:Transitive.~-transitive	\class Transitive (A : \Set) { | \infix 4 ~ : A -> A -> \Prop | ~-transitive {x y z : A} : x ~ y -> y ~ z -> x ~ z }
+Transitive.Closure	data	975241107972	-	0c20f6be		\data Closure {A : \Type} (R : A -> A -> \Type) (x y : A) : \Prop | cin (R x y) | ctrans {z : A} (Closure R x z) (Closure R z y)
+Transitive.Closure.isTransitive	func	30b45123b485	d59218eb79e4	f760361c	938493e6:Transitive f18ee3e2:Transitive.A	\func isTransitive {A : \Set} (R : A -> A -> \Type) : Transitive A
+Transitive.Closure.isSymmetric	lemma	e561593af8be	-	944cb653		\lemma isSymmetric {A : \Set} {R : A -> A -> \Type} (sym : \Pi {a a' : A} -> R a a' -> R a' a) {a a' : A} (c : Closure R a a') : Closure R a' a
+Transitive.Closure.univ	lemma	a9602d7ec5d6	-	f6f429d4	938493e6:Transitive	\lemma univ {A : \Set} {R : A -> A -> \Type} (E : Transitive A) (f : \Pi {x y : A} -> R x y -> x ~ y) {x y : A} (c : Closure R x y) : x ~ y
+Transitive.Closure.ofTransitive	lemma	0c7211b31df3	-	f9575e50	938493e6:Transitive b408e01f:Transitive.~	\lemma ofTransitive (E : Transitive) {x y : E} (c : Closure ~ x y) : x ~ y
+Transitive.Closure.toEquality	lemma	60931c4b77b1	-	6d9cb93a	f18ee3e2:Transitive.A	\lemma toEquality {A B : \Set} (f : A -> B) {R : A -> A -> \Type} (p : \Pi {a a' : A} -> R a a' -> f a = f a') {a a' : A} (c : Closure R a a') : f a = f a'
+Equivalence	class	9ea06a63fa91	-	bbb98e2e	4174e07a:Equivalence.~-reflexive e0f2e2de:Equivalence.~-symmetric 938493e6:Transitive	\class Equivalence \extends Transitive { | ~-reflexive {x : A} : x ~ x | ~-symmetric {x y : A} : x ~ y -> y ~ x }
+Equivalence.map	func	ed3149124176	dcfecf5f9578	b7b934e6	f18ee3e2:Transitive.A	\func map {A B : \Set} (f : A -> B) (E : Equivalence B) : Equivalence A
+Equivalence.Closure	data	812b3829487e	-	62a2e84b	a23cf1aa:Equivalence.Closure.crefl 8aa1e1dc:Equivalence.Closure.csym	\data Closure {A : \Type} (R : A -> A -> \Type) (x y : A) : \Prop | cin (R x y) | crefl (x = y) | csym (Closure R y x) | ctrans {z : A} (Closure R x z) (Closure R z y)
+Equivalence.Closure.isEquivalence	func	f73125ffe325	6ebf395517fe	aa72126d	9a5aa872:Equivalence	\func isEquivalence {A : \Set} (R : A -> A -> \Type) : Equivalence A
+Equivalence.Closure.univ	lemma	3c0943ec0376	-	a0564307	9a5aa872:Equivalence	\lemma univ {A : \Set} {R : A -> A -> \Type} (E : Equivalence A) (f : \Pi {x y : A} -> R x y -> x ~ y) {x y : A} (c : Closure R x y) : x ~ y
+Equivalence.Closure.ofEquivalence	lemma	05ff4dac0fb6	-	57ae8105	9a5aa872:Equivalence b408e01f:Transitive.~	\lemma ofEquivalence (E : Equivalence) {x y : E} (c : Closure ~ x y) : x ~ y
+Quotient	data	67890f7c349f	-	d9bf36aa	05c93fd4:Quotient.in~ 03d44bea:Quotient.~-equiv f18ee3e2:Transitive.A	\data Quotient {A : \Type} (R : A -> A -> \Type) : \Set | in~ A | ~-equiv (x y : A) (R x y) : in~ x = in~ y
+~-pequiv	func	1a2e3b672f7a	81007cce9f8b	fd6198b5	05c93fd4:Quotient.in~	\func ~-pequiv {A : \Type} {R : A -> A -> \Type} {x y : A} (r : R x y) : in~ x = in~ y
+Quotient.in-surj	lemma	e94f62818ed4	-	00fab757	05c93fd4:Quotient.in~	\lemma in-surj {A : \Type} {R : A -> A -> \Type} : IsSurj (in~ {A} {R})
+Quotient.equality	lemma	9962a58e47cb	-	a4d57a0e	05c93fd4:Quotient.in~	\lemma equality {A : \Type} {R : A -> A -> \Type} {x y : A} (p : in~ x = {Quotient R} in~ y) : Closure R x y
+Quotient.equalityEquiv	lemma	e7feaf8b300d	-	dc31d20f	9a5aa872:Equivalence b408e01f:Transitive.~	\lemma equalityEquiv (E : Equivalence) {x y : E} (p : in~ x = {Quotient ~} in~ y) : x ~ y
+Quotient.equalityClosure	lemma	381185f9811d	-	0fb1ff46	b408e01f:Transitive.~	\lemma equalityClosure (E : Equivalence) {R : E -> E -> \Type} (s : \Pi {x y : E} -> R x y -> x ~ y) {x y : E} (p : in~ x = {Quotient R} in~ y) : x ~ y
+Quotient.fromEquality	lemma	8ab0b684c909	-	f64a9837		\lemma fromEquality {A : \Type} {R : A -> A -> \Type} {x y : A} (p : Closure R x y) : in~ x = {Quotient R} in~ y
+Quotient.map	func	0f810276ca1a	f351679e5dae	ead28fe0	ab6b39c8:Quotient f18ee3e2:Transitive.A	\func map {A B : \Type} (f : A -> B) {R : A -> A -> \Type} {Q : B -> B -> \Type} (p : \Pi {a a' : A} -> R a a' -> Q (f a) (f a')) (x : Quotient R) : Quotient Q
+Quotient.liftArray	func	1e4fc9629881	a62ca167419a	20834f7f		\func liftArray {k : Nat} {A : Fin k -> \Type} (R : \Pi {j : Fin k} -> A j -> A j -> \Type) (refl : \Pi {j : Fin k} (x : A j) -> R x x) (ts : DArray (\lam j => Quotient (R {j}))) : Quotient {DArray A} (\lam f g => \Pi (j : Fin ts.len) -> R (f j) (g j))
+Quotient.liftArrayFun	func	33519c78e357	7f45ef4ec71f	85727602	f18ee3e2:Transitive.A	\func liftArrayFun {k : Nat} {A : Fin k -> \Type} (R : \Pi {j : Fin k} -> A j -> A j -> \Type) (refl : \Pi {j : Fin k} (x : A j) -> R x x) {B : \Type} (S : B -> B -> \Type) (h : DArray A -> B) (p : \Pi (l l' : DArray A) -> (\Pi (j : Fin k) -> R (l j) (l' j)) -> S (h l) (h l')) (ts : DArray (\lam j => Quotient (R {j}))) : Quotient S
+SubQuotient	type	64c565f54aa3	f7889027e1da	43d0feea		\type SubQuotient {A : \Type} (R : A -> A -> \Type)
+QuotientDec	func	5f6e2d98279d	6795946db970	d1733875	ab6b39c8:Quotient b408e01f:Transitive.~	\func QuotientDec {R : Equivalence} (D : \Pi (a a' : R) -> Dec (a ~ a')) : DecSet (Quotient ~)
+(overview)	-	-	-	0e571a48	9a5aa872:Equivalence 91ab6cb9:Equivalence.Closure ab6b39c8:Quotient 05c93fd4:Quotient.in~ 938493e6:Transitive ec101fb7:Transitive.Closure b408e01f:Transitive.~	-

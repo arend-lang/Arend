@@ -1,0 +1,154 @@
+# arend -gc fingerprints v2 for module Topology.Locale. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Locale	class	285d6a9bafae	-	8c69fa9b	56727a27:Locale.Join-ldistr>=	\class Locale \extends CompleteLattice, HeytingAlebra, Site { | join => \lam x y => Join (\lam z => (z = x) || (z = y)) | join-left => Join-cond (byLeft idp) | join-right => Join-cond (byRight idp) | join-univ => \lam x<=z y<=z => Join-univ (\case \elim __ \with { | byLeft p => transportInv (<= _) p x<=z | byRight p => transportInv (<= _) p y<=z }) | Join-ldistr>= {C : E -> \Prop} {e : E} : e ∧ Join C <= SJoin (e ∧) C | ldistr>= => Join-ldistr>= <=∘ Join-univ (SetIm-elim $ later (\case \elim __ \with { | byLeft p => transportInv (_ ∧ __ <= _) p join-left | byRight p => transportInv (_ ∧ __ <= _) p join-right })) | isCover => \lam x C => x <= Join (\lam y => \Sigma (p : y <= x) (C (y, p))) | cover-stable => \lam {x} {y} x<=y {S} Sc => inP (\lam px => ∃ (py : S) (px.1 <= py.1), meet-univ <=-refl (x<=y <=∘ Sc) <=∘ Join-ldistr>= <=∘ Join-univ (SetIm-elim (\lam s => Join-cond $ later (meet-left, inP (_, s.2, meet-right)))), \lam inP (py, Spy, px<=py) => inP (py, Spy, px<=py, prop-pi)) | Meet => \lam C => Join (\lam x => ∀ {y : C} (x <= y)) | Meet-cond => \lam Cx => Join-univ (__ Cx) | Meet-univ => Join-cond | --> => \lam x y => Join (__ ∧ x <= y) | <=-curry => Join-cond | <=-uncurry => \lam p => meet-monotone p <=-refl <=∘ meet-comm =<= Join-ldistr>= <=∘ Join-univ (SetIm-elim (\lam {c} ca<=b => meet-comm =<= ca<=b)) }
+Locale.Join-ldistr>=	field	f1c5936d51d2	-	382aeb8d		| Join-ldistr>= {C : E -> \Prop} {e : E} : e ∧ Join C <= SJoin (e ∧) C
+Locale.Join-ldistr	lemma	714206a488c6	-	71dd96c3		\lemma Join-ldistr {C : E -> \Prop} {e : E} : e ∧ Join C = SJoin (e ∧) C
+Locale.Join-rdistr	lemma	b80062d1bb4c	-	71dd96c3		\lemma Join-rdistr {C : E -> \Prop} {e : E} : Join C ∧ e = SJoin (∧ e) C
+Locale.Join-rdistr>=	lemma	cf64d28c13c6	-	71dd96c3		\lemma Join-rdistr>= {C : E -> \Prop} {e : E} : Join C ∧ e <= SJoin (∧ e) C
+Locale.Join-distr	lemma	605c4a6a29db	-	71dd96c3		\lemma Join-distr {C D : E -> \Prop} : Join C ∧ Join D = SJoin (\lam s => s.1 ∧ s.2) (\lam s => \Sigma (C s.1) (D s.2))
+Locale.Join-distr>=	lemma	d2e5c06778b1	-	71dd96c3		\lemma Join-distr>= {C D : E -> \Prop} : Join C ∧ Join D <= SJoin (\lam s => s.1 ∧ s.2) (\lam s => \Sigma (C s.1) (D s.2))
+Locale.SJoin-ldistr>=	lemma	28be515351bd	-	dddec31e		\lemma SJoin-ldistr>= {A : \Type} {f : A -> E} {P : A -> \Prop} {e : E} : e ∧ SJoin f P <= SJoin (\lam x => e ∧ f x) P
+Locale.SJoin-ldistr	lemma	fd70ed413327	-	dddec31e		\lemma SJoin-ldistr {A : \Type} {f : A -> E} {P : A -> \Prop} {e : E} : e ∧ SJoin f P = SJoin (\lam x => e ∧ f x) P
+Locale.SJoin-rdistr>=	lemma	27cf3bb9c9b8	-	dddec31e		\lemma SJoin-rdistr>= {A : \Type} {f : A -> E} {P : A -> \Prop} {e : E} : SJoin f P ∧ e <= SJoin (\lam x => f x ∧ e) P
+Locale.SJoin-rdistr	lemma	6dbb0796d8f8	-	dddec31e		\lemma SJoin-rdistr {A : \Type} {f : A -> E} {P : A -> \Prop} {e : E} : SJoin f P ∧ e = SJoin (\lam x => f x ∧ e) P
+Locale.SJoin-distr>=	lemma	e2fba0b52a30	-	dddec31e		\lemma SJoin-distr>= {A B : \Type} {f : A -> E} {g : B -> E} {P : A -> \Prop} {Q : B -> \Prop} : SJoin f P ∧ SJoin g Q <= SJoin {_} {\Sigma A B} (\lam s => f s.1 ∧ g s.2) (\lam s => \Sigma (P s.1) (Q s.2))
+Locale.SJoin-distr	lemma	da77c3fc6ffa	-	dddec31e		\lemma SJoin-distr {A B : \Type} {f : A -> E} {g : B -> E} {P : A -> \Prop} {Q : B -> \Prop} : SJoin f P ∧ SJoin g Q = SJoin {_} {\Sigma A B} (\lam s => f s.1 ∧ g s.2) (\lam s => \Sigma (P s.1) (Q s.2))
+Locale.IJoin-ldistr>=	lemma	eb2fd969f946	-	e12e9dcc		\lemma IJoin-ldistr>= {J : \Type} {f : J -> E} {e : E} : e ∧ IJoin f <= IJoin (\lam x => e ∧ f x)
+Locale.IJoin-ldistr	lemma	915d89a3531e	-	e12e9dcc		\lemma IJoin-ldistr {J : \Type} {f : J -> E} {e : E} : e ∧ IJoin f = IJoin (\lam x => e ∧ f x)
+Locale.IJoin-rdistr>=	lemma	3ce21d61029e	-	e12e9dcc		\lemma IJoin-rdistr>= {J : \Type} {f : J -> E} {e : E} : IJoin f ∧ e <= IJoin (\lam x => f x ∧ e)
+Locale.IJoin-rdistr	lemma	8d261af4811c	-	e12e9dcc		\lemma IJoin-rdistr {J : \Type} {f : J -> E} {e : E} : IJoin f ∧ e = IJoin (\lam x => f x ∧ e)
+Locale.IJoin-distr>=	lemma	0cca9df6a5ec	-	e12e9dcc		\lemma IJoin-distr>= {J : \Type} {f : J -> E} {g : J -> E} : IJoin f ∧ IJoin g <= IJoin (\lam (s : \Sigma J J) => f s.1 ∧ g s.2)
+Locale.IJoin-distr	lemma	3eb11185e44c	-	e12e9dcc		\lemma IJoin-distr {J : \Type} {f : J -> E} {g : J -> E} : IJoin f ∧ IJoin g = IJoin (\lam (s : \Sigma J J) => f s.1 ∧ g s.2)
+Locale.<<	type	76a9eefe4c3a	86cc91a8adfc	d3c3a192		\type << (x y : E)
+Locale.<<-char	lemma	a6e9c69d16ea	-	5dc3eef2	141f5ceb:Locale.<<	\lemma <<-char {x y : E} : x << y <-> ∀ {U : (E -> \Prop)} (y <= Join U) ∃ (V : KFinSetOf E) (V ⊆ U) (x <= Join V)
+Locale.<<_join	lemma	8fb74ca97779	-	11a9a9c9	141f5ceb:Locale.<<	\lemma <<_join {a b c d : E} (a<<b : a << b) (c<<d : c << d) : a ∨ c << b ∨ d
+Locale.<<_IJoin	lemma	20a04292c249	-	9335f32b	141f5ceb:Locale.<<	\lemma <<_IJoin {x y : E} (x<<y : x << y) {J : \Type} {g : J -> E} (y<=g : y <= IJoin g) : ∃ (l : Array J) (x <= IJoin (\lam j => g (l j)))
+Locale.IsCompactOpen	func	0638edb3db8c	54c4df12d187	067f0851	141f5ceb:Locale.<<	\func IsCompactOpen (a : E)
+Locale.compact_bottom	lemma	cd6fec43d249	-	208c9c68		\lemma compact_bottom : IsCompactOpen bottom
+Locale.compact_join	lemma	af780d1edbdf	-	208c9c68		\lemma compact_join {a b : E} (ac : IsCompactOpen a) (bc : IsCompactOpen b) : IsCompactOpen (a ∨ b)
+Locale.compact_IJoin	lemma	f6c3ce10906d	-	208c9c68		\lemma compact_IJoin {l : Array E} (ac : \Pi (j : Fin l.len) -> IsCompactOpen (l j)) : IsCompactOpen (IJoin l)
+Locale.IsCompact	func	8bd4e46a43a0	33cea0fccd7e	7e5f0051		\func IsCompact
+Locale.IsLocallyCompact	type	99a35f364b48	836c3843e82d	c63bf82b		\type IsLocallyCompact
+Locale.IsAlgebraic	func	8bd4e46a43a0	0ad7c0dfe336	12c9de13		\func IsAlgebraic
+Locale.IsCoherent	func	8bd4e46a43a0	949078e6d336	1b30de9a		\func IsCoherent
+discreteLocale.exponent	lemma	bb746e722bf0	-	3c73823a	5aee3fbe:discreteLocale	\lemma exponent {X : \Set} (P Q : X -> \Prop) : P --> {discreteLocale X} Q = (\lam x => P x -> Q x)
+Locale.<=<	type	76a9eefe4c3a	4a24ae5ca189	a39a62cf		\type <=< (x y : E)
+Locale.make<=<	lemma	a3403b6b6ba4	-	ece4c095	10705475:Locale.<=<	\lemma make<=< {x y : E} (p : top <= HeytingAlebra.neg x ∨ y) : x <=< y
+Locale.compact_<=<	lemma	6e57e0e35e59	-	3409980f	141f5ceb:Locale.<< 10705475:Locale.<=<	\lemma compact_<=< (c : IsCompact) {x y : E} (x<=<y : x <=< y) : x << y
+Locale.<=<w	type	76a9eefe4c3a	7a6ddd3aa140	6eb84f7d	c314ddd0:NucleusFrame	\type <=<w (x y : E)
+Locale.<=<w_<=	lemma	643cc4acfced	-	8b2b4f3c	571c586c:Locale.<=<w	\lemma <=<w_<= {x y : E} (w : x <=<w y) : x <= y
+Locale.IsRegularLocale	type	99a35f364b48	928603c04a34	b9c3fa23		\type IsRegularLocale
+Locale.IsWeaklyRegularLocale	type	99a35f364b48	5fd1384a4dff	99c1f761		\type IsWeaklyRegularLocale
+Locale.compact-regular	lemma	0a4eab43f41d	-	f01f8d44		\lemma compact-regular (c : IsCompact) (r : IsRegularLocale) : IsLocallyCompact
+Locale.open	func	b5bb836b2781	80cdf3db734e	3c97f7b1		\func open (a : E) : Nucleus _ (a --> __)
+Nucleus.open_exp	lemma	94ccbb1a3bd7	-	65ac339d	a757403a:Locale.open a68dafd4:Nucleus.L	\lemma open_exp {L : Locale} {a : L} (x y : (open a).locale) : (x --> {(open a).locale} y).1 = x.1 --> y.1
+Nucleus.open-isOpen	lemma	90f8824a008d	-	27ade143	f3698278:FrameHom.IsOpen a757403a:Locale.open	\lemma open-isOpen {L : Locale} (a : L) : (open a).map.IsOpen
+Locale.closed	func	eb0291bbb913	7132af540022	1303f39f		\func closed (a : E) : Nucleus _ (a ∨ __)
+Locale.closed-isClosed	lemma	75c9fa020356	-	fb281756	2635bcef:Nucleus.isClosed	\lemma closed-isClosed (a : E) : Nucleus.isClosed {closed a}
+Locale.pHat	func	c996cfd6d6f0	cbc18bbf844e	dd0f2550		\func pHat (P : \Prop)
+Locale.pHat-impl	lemma	17d1bb2fe0d1	-	defc2de7	a01f828b:Locale.pHat	\lemma pHat-impl {P Q : \Prop} (f : P -> Q) : pHat P <= pHat Q
+Locale.pHat_meet>=	lemma	f1b67ad744fe	-	6b0f5eed	a01f828b:Locale.pHat	\lemma pHat_meet>= {P Q : \Prop} : pHat P ∧ pHat Q <= pHat (\Sigma P Q)
+Locale.pHat_meet	lemma	c372f1c22ad2	-	6b0f5eed	a01f828b:Locale.pHat	\lemma pHat_meet {P Q : \Prop} : pHat P ∧ pHat Q = pHat (\Sigma P Q)
+Locale.pHat_meet-left	lemma	ef085453347d	-	7344458f	a01f828b:Locale.pHat	\lemma pHat_meet-left {P : \Prop} {W V : E} (f : P -> W <= V) : pHat P ∧ W <= V
+Locale.pHat-char	lemma	c75031b718f4	-	59c6f015	a01f828b:Locale.pHat	\lemma pHat-char {P : \Prop} {a : E} : pHat P <= a <-> (P -> top <= a)
+Locale.pHat-left	lemma	93f1c124c4fc	-	41e0a8b3	a01f828b:Locale.pHat	\lemma pHat-left {P : \Prop} {a : E} (p : a <= pHat P) : a <= IJoin (\lam (_ : P) => a)
+Locale.IsPositive	type	ff57c6996eb7	505c5abe3ce1	1ba1b520	a01f828b:Locale.pHat	\type IsPositive (a : E)
+Locale.positive_<=	lemma	667bb424367d	-	ca996d4a		\lemma positive_<= {a b : E} (p : IsPositive a) (a<=b : a <= b) : IsPositive b
+Locale.positive_cover	lemma	484494f48b4e	-	a2e86793		\lemma positive_cover {a : E} (p : IsPositive a) {C : E -> \Prop} (c : a <= Join C) : ∃ C
+Locale.positive_Join	lemma	837c00127204	-	d1791bf2		\lemma positive_Join (o : IsOvert) {P : E -> \Prop} (J>0 : IsPositive (Join P)) : ∃ (a : P) (IsPositive a)
+Locale.positive_Join.conv	lemma	eafa3b45aa76	-	d1791bf2		\lemma conv {P : E -> \Prop} (p : ∃ (a : P) (IsPositive a)) : IsPositive (Join P)
+Locale.positive_SJoin	lemma	3b9704343551	-	92b71253		\lemma positive_SJoin (o : IsOvert) {A : \Type} {f : A -> E} {C : A -> \Prop} (J>0 : IsPositive (SJoin f C)) : ∃ (a : C) (IsPositive (f a))
+Locale.positive_SJoin.conv	lemma	920aca79c975	-	92b71253		\lemma conv {A : \Type} {f : A -> E} {C : A -> \Prop} (p : ∃ (a : C) (IsPositive (f a))) : IsPositive (SJoin f C)
+Locale.IsOvert	func	8bd4e46a43a0	24ff6777785d	b2965c03	a01f828b:Locale.pHat	\func IsOvert
+Locale.IsOvert_IJoin	lemma	f617dcfb2249	-	30159401	8f5b542f:Locale.IsPositive	\lemma IsOvert_IJoin (o : IsOvert) {a : E} : a <= IJoin (\lam (_ : IsPositive a) => a)
+Locale.restrict	func	7acbd632b6be	b6e8daf7e0f1	3e725929		\func restrict (a : E) : Locale
+Locale.restrict.map	func	719c39e32383	5210ef4b3af0	1ef92809	4802f1a5:Locale.restrict a68dafd4:Nucleus.L	\func map : FrameHom \this (restrict a)
+Locale.restrict.functor	func	fdb1b9adfe49	c05b7cc46fb5	edbf72ea	4802f1a5:Locale.restrict a68dafd4:Nucleus.L	\func functor : Functor (restrict a) \this
+FrameHom	record	720ff5be4df8	-	58e14031	82e23035:FrameHom.func-Join	\record FrameHom \extends PosetHom { \override Dom : Locale \override Cod : Locale | func-top : func top = top | func-top>= : top <= func top | func-meet {x y : Dom} : func (x ∧ y) = func x ∧ func y | func-meet>= {x y : Dom} : func x ∧ func y <= func (x ∧ y) | func-Join {C : Dom -> \Prop} : func (Join C) = SJoin func C | func-Join>= {C : Dom -> \Prop} : func (Join C) <= SJoin func C | func-Join>= => =_<= func-Join | func-Join => <=-antisymmetric func-Join>= $ SJoin-univ (\lam Ca => func-<= (Join-cond Ca)) | func-top>= => transportInv (_ <=) func-top <=-refl | func-top => <=-antisymmetric top-univ func-top>= | func-<= => \lam x<=y => rewrite (inv (pmap func (meet_<= x<=y)) *> func-meet) meet-right | func-meet>= => =_<= (inv func-meet) | func-meet => <=-antisymmetric (meet-univ (func-<= meet-left) (func-<= meet-right)) func-meet>= }
+LocaleHom	func	96e5e89026c2	007d69f32ae0	a8ca92ca	5f9924ae:FrameHom a68dafd4:Nucleus.L	\func LocaleHom (L M : Locale)
+FrameHom.func-SJoin	lemma	e2040db49b83	-	f93d95cf		\lemma func-SJoin {A : \Type} {f : A -> Dom} {P : A -> \Prop} : func (SJoin f P) = SJoin (\lam a => func (f a)) P
+FrameHom.func-SJoin>=	lemma	9f1d4c069a4a	-	f93d95cf		\lemma func-SJoin>= {A : \Type} {f : A -> Dom} {P : A -> \Prop} : func (SJoin f P) <= SJoin (\lam a => func (f a)) P
+FrameHom.func-IJoin	lemma	759236263234	-	f93d95cf		\lemma func-IJoin {J : \Type} {f : J -> Dom} : func (IJoin f) = IJoin (\lam a => func (f a))
+FrameHom.func-IJoin>=	lemma	888f402b43ac	-	f93d95cf		\lemma func-IJoin>= {J : \Type} {f : J -> Dom} : func (IJoin f) <= IJoin (\lam a => func (f a))
+FrameHom.func-join	lemma	6dff639ae704	-	f663d2e6		\lemma func-join {x y : Dom} : func (x ∨ y) = func x ∨ func y
+FrameHom.func-join>=	lemma	edbba151c4c3	-	f663d2e6		\lemma func-join>= {x y : Dom} : func (x ∨ y) <= func x ∨ func y
+FrameHom.func-bottom	lemma	ece7a6540e6e	-	1b4d1a9c		\lemma func-bottom : func bottom = bottom
+FrameHom.func-bottom>=	lemma	052f2bdc189b	-	1b4d1a9c		\lemma func-bottom>= : func bottom <= bottom
+FrameHom.func-pHat	lemma	b4c52095a743	-	9379bfdd	a01f828b:Locale.pHat	\lemma func-pHat {P : \Prop} : func (pHat P) = pHat P
+FrameHom.func-pHat<=	lemma	ece666004b05	-	9379bfdd	a01f828b:Locale.pHat	\lemma func-pHat<= {P : \Prop} : pHat P <= func (pHat P)
+FrameHom.func-pHat>=	lemma	74f10ee7bcbd	-	9379bfdd	a01f828b:Locale.pHat	\lemma func-pHat>= {P : \Prop} : func (pHat P) <= pHat P
+FrameHom.direct	func	a8294497a898	8c8b4d662d13	869d8432		\func direct (y : Cod) : Dom
+FrameHom.direct-<=	lemma	14655e180852	-	2421156c	748cd11a:FrameHom.direct	\lemma direct-<= {y z : Cod} (p : y <= z) : direct y <= direct z
+FrameHom.direct-unit	lemma	8508f90ad5d7	-	2421156c	748cd11a:FrameHom.direct	\lemma direct-unit {x : Dom} : x <= direct (func x)
+FrameHom.direct-counit	lemma	a7d495dd0f0a	-	2421156c	748cd11a:FrameHom.direct	\lemma direct-counit {y : Cod} : func (direct y) <= y
+FrameHom.direct-adjoint	lemma	1feca3715f43	-	2421156c	748cd11a:FrameHom.direct	\lemma direct-adjoint {x : Dom} {y : Cod} : func x <= y <-> x <= direct y
+FrameHom.direct-meet	lemma	aa76ed1523e2	-	06cf14a0	748cd11a:FrameHom.direct	\lemma direct-meet {y z : Cod} : direct (y ∧ z) = direct y ∧ direct z
+FrameHom.direct-top	lemma	42c74dafb511	-	06cf14a0	748cd11a:FrameHom.direct	\lemma direct-top : direct top = top
+FrameHom.func_direct_func	lemma	5b8d3530903f	-	54798650	748cd11a:FrameHom.direct	\lemma func_direct_func {x : Dom} : func (direct (func x)) = func x
+FrameHom.image	func	cf7c7989d484	90fe09e24603	23d14e5e	748cd11a:FrameHom.direct	\func image : Nucleus _ (\lam x => direct (func x))
+FrameHom.factor	func	bc24f9e6200f	4d36aa9b9a9e	11f59047		\func factor : FrameHom image.locale Cod
+FrameHom.IsDense	func	8bd4e46a43a0	2f1d07aa3bfe	8dc6bf8e		\func IsDense
+FrameHom.dense_direct	lemma	091857a0f00b	-	7a33aac3	748cd11a:FrameHom.direct	\lemma dense_direct (d : IsDense) : direct bottom <= bottom
+FrameHom.direct_dense	lemma	c726afb82df9	-	7a33aac3	748cd11a:FrameHom.direct	\lemma direct_dense (d : direct bottom <= bottom) : IsDense
+FrameHom.IsStronglyDense	type	99a35f364b48	e7877532f712	7a2938ec	a01f828b:Locale.pHat	\type IsStronglyDense
+FrameHom.IsWeaklyClosed	func	8bd4e46a43a0	93966adaf1a4	41363da4	a01f828b:Locale.pHat	\func IsWeaklyClosed
+FrameHom.wclosed-image	func	4da738d55175	85639db34dd9	12be6b5b		\func wclosed-image : Nucleus _
+FrameHom.wclosed-factor	func	6552c330c456	86c58053fcab	0cd7bc47		\func wclosed-factor : FrameHom wclosed-image.locale Cod
+FrameHom.wclosed-factor-sdense	lemma	ca71f27881ca	-	c922bbd6		\lemma wclosed-factor-sdense : wclosed-factor.IsStronglyDense
+FrameHom.isClosed	func	8bd4e46a43a0	2ae7e95e0250	49ba1c26	748cd11a:FrameHom.direct	\func isClosed
+FrameHom.image_closed	lemma	f598aa167b54	-	21328183		\lemma image_closed (c : isClosed) : image.isClosed
+FrameHom.closed-embedding_image	lemma	c3f92cca4058	-	21328183		\lemma closed-embedding_image (s : IsSurj func) (c : image.isClosed) : isClosed
+FrameHom.IsOpen	func	8bd4e46a43a0	621f67d8cd23	56fc813d	748cd11a:FrameHom.direct	\func IsOpen
+FrameHom.surjective-split	lemma	5a23ff1ad4ab	-	65871deb	748cd11a:FrameHom.direct	\lemma surjective-split (s : IsSurj func) (x : Cod) : func (direct x) = x
+FrameHom.surj_nucleus	lemma	a7d3870ebb15	-	df818301		\lemma surj_nucleus (s : IsSurj func) : IsEquiv factor
+FrameHom.functor	func	2bf2739f1f7b	22db5fc54827	9fdb53a7		\func functor : SiteHom Dom Cod
+FrameHom.direct_o	lemma	7ad9be295096	-	ed1cb550	748cd11a:FrameHom.direct	\lemma direct_o {L M K : Locale} (f : FrameHom L M) (g : FrameHom M K) {x : K} : direct {g ∘ f} x = f.direct (g.direct x)
+sdense_positive	lemma	83bc6f2fe51a	-	4c5ac66a		\lemma sdense_positive {f : FrameHom} (d : f.IsStronglyDense) {x : f.Dom} (p : IsPositive x) : IsPositive (f x)
+func_positive	lemma	5f8e53bfcd61	-	4c5ac66a		\lemma func_positive {f : FrameHom} {x : f.Dom} (p : IsPositive (f x)) : IsPositive x
+direct_positive	lemma	23e9a0008804	-	60fb9469		\lemma direct_positive {f : FrameHom} (d : f.IsStronglyDense) {x : f.Cod} (p : IsPositive (f.direct x)) : IsPositive x
+sdense_overt	lemma	d9312958c2f6	-	b3415656		\lemma sdense_overt {f : FrameHom} (d : f.IsStronglyDense) (o : IsOvert {f.Cod}) : IsOvert {f.Dom}
+Nucleus	record	dc247931f11b	-	8e409f81	a68dafd4:Nucleus.L	\record Nucleus (L : Locale) (\coerce nucleus : L -> L) { | nucleus-meet {x y : L} : nucleus (x ∧ y) = nucleus x ∧ nucleus y | nucleus-meet>= {x y : L} : nucleus x ∧ nucleus y <= nucleus (x ∧ y) | nucleus-<= {x y : L} : x <= y -> nucleus x <= nucleus y | nucleus-unit {x : L} : x <= nucleus x | nucleus-join>= {x : L} : nucleus (nucleus x) <= nucleus x | nucleus-join {x : L} : nucleus (nucleus x) = nucleus x | nucleus-<= => \lam p => rewrite (inv (pmap nucleus (meet_<= p)) *> nucleus-meet) meet-right | nucleus-meet => <=-antisymmetric (meet-univ (nucleus-<= meet-left) (nucleus-<= meet-right)) nucleus-meet>= | nucleus-meet>= => =_<= (inv nucleus-meet) | nucleus-join => <=-antisymmetric nucleus-join>= nucleus-unit | nucleus-join>= => =_<= nucleus-join }
+Nucleus.nucleus-univ	lemma	f5a45618a3f4	-	454ce435		\lemma nucleus-univ {x y : L} (p : x <= nucleus y) : nucleus x <= nucleus y
+Nucleus.nucleus_exponent	lemma	6af482138b47	-	860c15d8		\lemma nucleus_exponent {x y : L} (p : nucleus y <= y) : nucleus (x --> y) <= x --> y
+Nucleus.exponent-func	lemma	65907a340f79	-	4f4cd39c		\lemma exponent-func {x y : L} : x --> y <= nucleus x --> nucleus y
+Nucleus.nucleus_meet-left	lemma	e8abe3238854	-	47a8faa7		\lemma nucleus_meet-left {L : Locale} {j : Nucleus L} {a b : L} : j a ∧ b <= j (a ∧ b)
+Nucleus.Subtype	type	99a35f364b48	a736c1581df3	aa733d57		\type Subtype
+Nucleus.locale	instance	643c9b32cd0f	-	f39cf9ed	87496787:Nucleus.Subtype	\instance locale : Locale Subtype
+Nucleus.map	func	586593bf7a91	4c3868b2cdac	8663eae1	a68dafd4:Nucleus.L cad185b1:Nucleus.map.surjective	\func map : FrameHom L locale
+Nucleus.functor	func	3b91c268c3a1	f8239ee7fc7b	8c377e17	a68dafd4:Nucleus.L 214721d5:Nucleus.locale	\func functor : Functor locale L
+Nucleus.lift	func	bb1dfb9a1eb1	6bb55107f55d	19b170ce	a68dafd4:Nucleus.L 214721d5:Nucleus.locale	\func lift {M : Locale} (f : LocaleHom M L) (f<=j : \Pi {x : L} -> f (nucleus x) <= f x) : LocaleHom M locale
+Nucleus.lift_map	lemma	6e735c8f2b7c	-	2f585968	1a3dde37:Nucleus.lift	\lemma lift_map {M : Locale} {f : LocaleHom M L} (f<=j : \Pi {x : L} -> f (nucleus x) <= f x) : map LocaleHom.∘ lift f f<=j = f
+Nucleus.map_direct	lemma	32dc8b361483	-	94542c7c		\lemma map_direct (x : locale) : map.direct x = x.1
+Nucleus.locale_pHat	lemma	c5c0e72bfe61	-	8f3ae875	a01f828b:Locale.pHat a68dafd4:Nucleus.L 214721d5:Nucleus.locale	\lemma locale_pHat {P : \Prop} : (locale.pHat P).1 = nucleus (pHat P)
+Nucleus.locale_IJoin	lemma	c61703497e27	-	8f3ae875	a01f828b:Locale.pHat a68dafd4:Nucleus.L 214721d5:Nucleus.locale	\lemma locale_IJoin {J : \Type} {g : J -> Subtype} : (locale.IJoin g).1 = nucleus (IJoin (\lam j => (g j).1))
+Nucleus.isClosed	func	8bd4e46a43a0	93b8845a4fa8	c9596a2a	f65a5591:Nucleus.nucleus	\func isClosed
+Nucleus.IsDense	func	8bd4e46a43a0	4a87fcf5e8d9	dc517782	f65a5591:Nucleus.nucleus	\func IsDense
+Nucleus.exp	func	2b0bdeaf032c	010a02743ccb	5c9ce23c		\func exp {L : Locale} (j j' : Nucleus L) : Nucleus L
+Nucleus.exp-univ1	lemma	a009576a1e7e	-	e6bf9eb3	18a895d3:Nucleus.exp	\lemma exp-univ1 {L : Locale} {j k n : Nucleus L} (p : \Pi {x : L} -> (NucleusFrame L).join j k x <= n x) {x : L} : j x <= exp k n x
+Nucleus.exp-univ2	lemma	357849faf063	-	e6bf9eb3	18a895d3:Nucleus.exp	\lemma exp-univ2 {L : Locale} {k n : Nucleus L} {x y : L} (p : y <= exp k n x) : y ∧ k x <= n x
+NucleusFrame	instance	f652a1de251e	-	2f6e5751	9a39df02:Nucleus a68dafd4:Nucleus.L	\instance NucleusFrame (L : Locale) : CompleteLattice (Nucleus L)
+NucleusFrame.<=-map	func	10d04af8c677	3afd613433af	93363a53		\func <=-map {L : Locale} (j j' : Nucleus L) (j'<=j : j' <= j) : FrameHom j.locale j'.locale
+NucleusFrame.double-nucleus-left	lemma	62652e53b527	-	dc6d1c0c		\lemma double-nucleus-left {L : Locale} {j k : Nucleus L} (k<=j : k <= j) (x : L) : k (j x) = k x
+NucleusFrame.double-nucleus-right	lemma	f9c6a69d3102	-	dc6d1c0c		\lemma double-nucleus-right {L : Locale} {j k : Nucleus L} (k<=j : k <= j) (x : L) : j (k x) = k x
+NucleusFrame.wclosure_<=	lemma	85c001fa72b8	-	3fdc8b52		\lemma wclosure_<= {j : Nucleus} : j <= {NucleusFrame _} j.map.wclosed-image
+NucleusFrame.wclosure-sdense	lemma	afe0816ac824	-	3fdc8b52		\lemma wclosure-sdense {j : Nucleus} : IsStronglyDense {<=-map j.map.wclosed-image j wclosure_<=}
+NucleusFrame.wclosure-inclusion	lemma	d0a036ea282b	-	3fdc8b52		\lemma wclosure-inclusion {j : Nucleus} (x : j.L) : <=-map j.map.wclosed-image j wclosure_<= (j.map.wclosed-image.map x) = j.map x
+NucleusFrame.nucleus<=open	lemma	df62c23a9804	-	47aca553	a757403a:Locale.open	\lemma nucleus<=open {L : Locale} {a : L} {j : Nucleus L} (c : top <= j a) : j <= open a
+NucleusFrame.nucleus<=open.conv	lemma	f9d353ae73ff	-	47aca553	a757403a:Locale.open	\lemma conv {L : Locale} {a : L} {j : Nucleus L} (c : j <= open a) : top <= j a
+NucleusFrame.open_<=	lemma	cd011f18c8ed	-	0f00d167	a757403a:Locale.open	\lemma open_<= {L : Locale} {a b : L} (p : a <= b) : open a <= open b
+NucleusFrame.open_<=.conv	lemma	e16a1b33fb28	-	0f00d167	a757403a:Locale.open	\lemma conv {L : Locale} {a b : L} (p : open a <= open b) : a <= b
+Nucleus.idNucleus	func	8f7ef378047d	58c0054d0827	cf23048c		\func idNucleus {L : Locale} : Nucleus L
+Nucleus.topNucleus	func	8f7ef378047d	54e21e68c0c8	cf23048c		\func topNucleus {L : Locale} : Nucleus L
+closed<=open	lemma	99a9c2465a8f	-	f58079bc	902867c8:Locale.closed a757403a:Locale.open	\lemma closed<=open {L : Locale} {c a : L} (p : top <= c ∨ a) : closed c <= open a
+closed<=open.conv	lemma	40a09fce261e	-	f58079bc	902867c8:Locale.closed a757403a:Locale.open	\lemma conv {L : Locale} {c a : L} (p : closed c <= open a) : top <= c ∨ a
+open<=closed	lemma	9cac50101ecd	-	9704b3d1	902867c8:Locale.closed a757403a:Locale.open	\lemma open<=closed {L : Locale} {c a : L} (p : c ∧ a <= bottom) : open a <= closed c
+open<=closed.conv	lemma	7405da7df3b2	-	9704b3d1	902867c8:Locale.closed a757403a:Locale.open	\lemma conv {L : Locale} {c a : L} (p : open a <= closed c) : c ∧ a <= bottom
+closed-compact	lemma	98ac9ed72a9d	-	94dc69c4	141f5ceb:Locale.<< a757403a:Locale.open	\lemma closed-compact {L : Locale} {N : Nucleus L} (c : N.isClosed) {a : L} (w : a << top) (b : N <= open a) : N.locale.IsCompact
+discreteLocale	func	2fb3575f9518	be930b33039b	9170213b		\func discreteLocale (X : \Set) : Locale (X -> \Prop)
+overt=open	lemma	02061b08fb5b	-	3e18ee65	a68dafd4:Nucleus.L 4cfe2667:discreteLocale.terminalMap	\lemma overt=open {L : Locale} : L.IsOvert <-> (discreteLocale.terminalMap L).IsOpen
+<<_<=	lemma	0f99d8e8c4d0	-	05aec53e	141f5ceb:Locale.<<	\lemma <<_<= {L : Locale} {x y : L} (x<<y : x << y) : x <= y
+<<-left	lemma	685cb8ff338c	-	8c7fa059	141f5ceb:Locale.<<	\lemma <<-left {L : Locale} {x y z : L} (x<<y : x << y) (y<=z : y <= z) : x << z
+<<-right	lemma	6a37247d7c29	-	8c7fa059	141f5ceb:Locale.<<	\lemma <<-right {L : Locale} {x y z : L} (x<=y : x <= y) (y<<z : y << z) : x << z
+<=<_<=	lemma	7c943d1762c7	-	dacb83cc	10705475:Locale.<=<	\lemma <=<_<= {L : Locale} {x y : L} (x<=<y : x <=< y) : x <= y
+LocaleRatherBelow	instance	ab6df1c74d7a	-	07b84b87	10705475:Locale.<=<	\instance LocaleRatherBelow {L : Locale} : RatherBelow L.<=<
+(overview)	-	-	-	bc509f8f	5f9924ae:FrameHom 141f5ceb:Locale.<< 10705475:Locale.<=< a284bf88:LocaleHom a68dafd4:Nucleus.L	-

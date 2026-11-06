@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.FreeMonoid. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+universalFreeMonoidMap	func	abf9b0ec40b7	daff6855a7ba	9d802ba9		\func universalFreeMonoidMap {S : \Set} {M : Monoid} (in : S -> M) : MonoidHom (ListMonoid {S}) M
+universalFreeMonoidMap.extension	func	fb510809d291	ffbfce5a5c46	afcbe951		\func extension (list : ListMonoid {S}) : M
+universalFreeMonoidMap.helper	func	5b2db389e2c2	56f14fc670a8	73f7017d	6edeea10:universalFreeMonoidMap.extension	\func helper {x y : List S} : extension (x ++ y) = extension x M.* extension y
+isMonoidGenerated	func	d7c0756a5600	0f64c87c5783	4acd77f3	2cc7e790:universalFreeMonoidMap	\func isMonoidGenerated {M : Monoid} {S : \Set} (j : S -> M)
+(overview)	-	-	-	a6b894da	6edeea10:universalFreeMonoidMap.extension	-

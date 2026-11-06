@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module AG.Scheme. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Scheme	record	11bd8e9e531f	-	7e7414ad	e9db6594:Scheme.isLocallyAffine	\record Scheme \extends LocallyRingedLocale { | isLocallyAffine : top <= Join IsAffineOpen }
+(overview)	-	-	-	f3099527	47ee0c4c:Scheme	-

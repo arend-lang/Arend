@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Category.Fibration. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsCocartesianMor	func	1b5fe27ec885	053315b64a15	b3c70dc0		\func IsCocartesianMor {C D : Precat} (F : Functor C D) {x y : C} (f : Hom x y) : \Prop
+IsCocartesianFunctor	func	9e1cd98eb53c	4bcfa4f8bad8	6d99ea19		\func IsCocartesianFunctor {C D : Precat} (F : Functor C D) : \Prop
+(overview)	-	-	-	c2a0f3f3		-

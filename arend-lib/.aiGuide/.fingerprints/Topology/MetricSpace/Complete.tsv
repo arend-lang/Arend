@@ -1,0 +1,14 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.Complete. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+dense-metric-lift	func	160b3fcd0b9f	cfd3e227af00	c70e7f10		\func dense-metric-lift {X Y : PseudoMetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap X Z) : MetricMap Y Z
+sregCF-metric	lemma	959f0f3cc30f	-	39e49c45		\lemma sregCF-metric {X : PseudoMetricSpace} {F : WeaklyCauchyFilter X} {U : Set X} {eps : Rat} (eps>0 : 0 < eps) (h : \Pi (x : X) -> F (OBall eps x) -> OBall eps x ⊆ U) : sregCF F U
+isometric-closed-complete	lemma	8c51b8a94452	-	8b76eba0		\lemma isometric-closed-complete {X : PseudoMetricSpace} {Y : CompleteMetricSpace} (f : IsometricMap X Y) (fc : Y.IsClosed (\lam y => ∃ (x : X) (f x = y))) : IsCompleteCoverSpace X
+isometric-complete-closed	lemma	ea665a369e89	-	5ce27172		\lemma isometric-complete-closed {X : PseudoMetricSpace} {Y : MetricSpace} (Xc : IsCompleteCoverSpace X) (f : IsometricMap X Y) : Y.IsClosed (\lam y => ∃ (x : X) (f x = y))
+metric-stronglyComplete	lemma	289dcda07cca	-	12a69cdf		\lemma metric-stronglyComplete {X : PseudoMetricSpace} (Xc : IsCompleteCoverSpace X) : IsStronglyCompleteCoverSpace X
+MetricCompletion	instance	e52531eee4ac	-	93521e0a		\instance MetricCompletion (X : PseudoMetricSpace) : CompleteMetricSpace
+MetricCompletion.dist-cover	sfunc	d5f98910c908	1f57a1c0a72b	634b1bb0		\sfunc dist-cover : CoverMap (StrongCompletion X `ProductCoverSpace` StrongCompletion X) RealNormed
+MetricCompletion.dist-char	lemma	beeb594fe9ac	-	7c786c01	2c912e99:MetricCompletion.dist-cover	\lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = ldist x y
+MetricCompletion.dist-refl-lem	lemma	8519821f438d	-	589942f3	2c912e99:MetricCompletion.dist-cover	\lemma dist-refl-lem {F : StronglyRegularCauchyFilter X} : dist-cover (F, F) = 0
+MetricCompletion.filter-dist-triang	lemma	2c83d9f4289e	-	ed7be0e8	2c912e99:MetricCompletion.dist-cover	\lemma filter-dist-triang (x y z : StronglyRegularCauchyFilter X) : dist-cover (x, z) <= dist-cover (x, y) + dist-cover (y, z)
+MetricCompletion.dist-neighborhood	lemma	68522ec5fe39	-	64f9a5ea	2c912e99:MetricCompletion.dist-cover	\lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Rat} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (RatField.half (RatField.half eps)) x)) (Gx : G (OBall (RatField.half (RatField.half eps)) x)) : (dist-cover (F, G)).U eps
+(overview)	-	-	-	a76fdad1		-

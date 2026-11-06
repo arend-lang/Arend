@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Order.Category. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+StrictPosetHom	record	13e0264a3894	-	ab142b2e	7d7f9445:StrictPosetHom.func-<	\record StrictPosetHom \extends SetHom { \override Dom : StrictPoset \override Cod : StrictPoset | func-< {x y : Dom} : x < y -> func x < func y }
+PosetCat	instance	73cd76bf7c78	-	f092c826		\instance PosetCat : Cat Poset.{u}
+StrictPosetCat	instance	947269506bb0	-	93e81a24	b8809b60:PosetCat 0e5d7331:StrictPosetHom	\instance StrictPosetCat : Cat StrictPoset.{u}
+DecLinearOrderCat	instance	4ea084a7d317	-	ebd31f25		\instance DecLinearOrderCat : Cat LinearOrder.Dec.{u}
+(overview)	-	-	-	29fc639d	d8c17b78:DecLinearOrderCat b8809b60:PosetCat 416633d5:StrictPosetCat 39ef12d2:StrictPosetHom.id	-

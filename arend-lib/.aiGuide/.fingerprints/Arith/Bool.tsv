@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Arith.Bool. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BoolLattice	instance	a12f699c7278	-	2498de8b		\instance BoolLattice : BoundedDistributiveLattice Bool
+BoolLattice.<=	data	9a93db5ac252	-	4e93ffbc	d4f1b28b:BoolLattice.<=.false<=_ d4f1b28b:BoolLattice.<=.true<=true	\data \infix 4 <= (x y : Bool) \with | false, _ => false<=_ | true, true => true<=true
+BoolPoset	instance	82d4b8444fca	-	d20dbf9a		\instance BoolPoset : Dec Bool
+BoolPoset.<	data	99f79b9e0867	-	8001f2a8	d4f1b28b:BoolPoset.<.false<true	\data \infix 4 < (x y : Bool) \with | false, true => false<true
+(overview)	-	-	-	3c06b43f	7b34ae12:BoolLattice.<=	-

@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Graded.Ideal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HomogenIdeal	record	474db1e43acd	-	738f3e6b	dc90acf3:HomogenIdeal.isHomogenIdeal	\record HomogenIdeal \extends Ideal { \override S : GradedCRing | isHomogenIdeal {l : Array S} : isHomogenArray l -> contains (AddMonoid.BigSum l) -> ∀ (x : l) (contains x) }
+HomogenIdeal.hasHomogenGen	func	d69e74575f97	a5ade625984f	1000a9d3		\func hasHomogenGen {R : GradedCRing} (I : Ideal R)
+HomogenIdeal.toGen	func	5deee636fbfc	80d91a2b1552	d001d1e4	e2c332b6:HomogenIdeal	\func toGen (I : HomogenIdeal) : hasHomogenGen I
+HomogenIdeal.fromGen	func	203d128aa6d3	a46b880e96e0	21b9e953	e2c332b6:HomogenIdeal dc90acf3:HomogenIdeal.isHomogenIdeal	\func fromGen {R : GradedCRing} (I : Ideal R) (h : TruncP (hasHomogenGen I)) : HomogenIdeal
+irrelevantIdeal	func	93129c87e025	5f9b7ea0ba3c	725b89f6	bfc50b20:HomogenIdeal.fromGen	\func irrelevantIdeal (R : GradedCRing) : HomogenIdeal R
+(overview)	-	-	-	ab465993		-

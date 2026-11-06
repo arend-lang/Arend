@@ -1,0 +1,24 @@
+# arend -gc fingerprints v2 for module Arith.Trig.Real. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+cos	sfunc	9334e6cf45ce	9846d5a5b2cc	66604c4f		\sfunc cos (x : Real) : Real
+sin	sfunc	9334e6cf45ce	40c7e8221f5d	1635d43c		\sfunc sin (x : Real) : Real
+cos_zro	lemma	c2560be4f6fa	-	9dc6dae2	67715938:cos d3dac1f8:sin	\lemma cos_zro : cos 0 = 1
+sin_zro	lemma	8494f0dc3f08	-	9dc6dae2	67715938:cos d3dac1f8:sin	\lemma sin_zro : sin 0 = 0
+cos_+	lemma	06a270f7e91d	-	a026b7ab	67715938:cos d3dac1f8:sin	\lemma cos_+ {x y : Real} : cos (x + y) = cos x * cos y - sin x * sin y
+sin_+	lemma	6e69169bc1de	-	a026b7ab	67715938:cos d3dac1f8:sin	\lemma sin_+ {x y : Real} : sin (x + y) = cos x * sin y + sin x * cos y
+cos_minus	lemma	23c9b78a0777	-	d208bf50	67715938:cos d3dac1f8:sin	\lemma cos_minus {x y : Real} : cos (x - y) = cos x * cos y + sin x * sin y
+sin_minus	lemma	4f8ee9e2065a	-	d208bf50	67715938:cos d3dac1f8:sin	\lemma sin_minus {x y : Real} : sin (x - y) = sin x * cos y - cos x * sin y
+cosMap	lemma	ec41189df1b3	-	5b216c45	67715938:cos d3dac1f8:sin	\lemma cosMap : CoverMap RealNormed RealNormed cos
+sinMap	lemma	b4ec3589f9f0	-	5b216c45	67715938:cos d3dac1f8:sin	\lemma sinMap : CoverMap RealNormed RealNormed sin
+conj_exp	lemma	e6262b9d3434	-	38d691f0		\lemma conj_exp {z : Complex} : conj (exp z) = exp (conj z)
+cos_negative	lemma	34158e2b8dc3	-	1ce55fbb		\lemma cos_negative {x : Real} : cos (negative x) = cos x
+sin_negative	lemma	9d849a2b2e45	-	1ce55fbb		\lemma sin_negative {x : Real} : sin (negative x) = negative (sin x)
+exp-conj-cancel	lemma	51ea3538d24a	-	2549c241		\lemma exp-conj-cancel {x : Real} : exp (i * x) * conj (exp (i * x)) = 1
+pythagoras	lemma	dbe14273e50a	-	f1da6cd9	67715938:cos d3dac1f8:sin	\lemma pythagoras {x : Real} : cos x * cos x + sin x * sin x = 1
+cos-diff-ring	lemma	ab9940ffc754	-	2d11b0df		\lemma cos-diff-ring {R : CRing} {C1 S1 C2 S2 : R} : (C1 * C2 - S1 * S2) - (C1 * C2 + S1 * S2) = negative (2 * S1 * S2)
+sin-diff-ring	lemma	4991c6be7a27	-	2d11b0df		\lemma sin-diff-ring {R : CRing} {C1 S1 C2 S2 : R} : (C1 * S2 + S1 * C2) - (S1 * C2 - C1 * S2) = 2 * C1 * S2
+half-plus-ring	lemma	7d7e365e5f4d	-	0d2c04f6		\lemma half-plus-ring {R : CRing} {x y h : R} (hh : h + h = 1) : (x + y) * h + (x - y) * h = x
+half-minus-ring	lemma	adb9b1dab52b	-	0d2c04f6		\lemma half-minus-ring {R : CRing} {x y h : R} (hh : h + h = 1) : (x + y) * h - (x - y) * h = y
+cos-sum-to-product	lemma	356cbf590227	-	004ca621	67715938:cos d3dac1f8:sin	\lemma cos-sum-to-product {x y : Real} : cos x - cos y = negative (2 * sin ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2))
+sin-sum-to-product	lemma	1cb6c6f9278c	-	e41c8497	67715938:cos d3dac1f8:sin	\lemma sin-sum-to-product {x y : Real} : sin x - sin y = 2 * cos ((x + y) * ratio 1 2) * sin ((x - y) * ratio 1 2)
+(overview)	-	-	-	d28484d9	94042354:conj_exp 67715938:cos b15fa1da:cosMap 5580a0df:exp-conj-cancel 929f9281:pythagoras d3dac1f8:sin e58cb27b:sinMap	-

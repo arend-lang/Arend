@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Arith.Nat.Sequence. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+search	lemma	704848f312a2	-	79371ace		\lemma search (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (c : ∃ (n : Nat) (A n)) : Contr (\Sigma (n0 : Nat) (A n0) (\Pi (n : Nat) -> A n -> n0 <= n))
+NatFinSubset	lemma	982ee5dc224d	-	edd24a3c		\lemma NatFinSubset (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (M : Nat) (c : \Pi (n : Nat) -> A n -> n < M) : FinSet (\Sigma (n : Nat) (A n))
+(overview)	-	-	-	ac96e0d6		-

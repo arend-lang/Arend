@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Order.Lexicographical. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LexicographicalProduct	instance	93ed0dcdf3ab	-	8fd4cb4e		\instance LexicographicalProduct (A B : Dec) : Dec (\Sigma A B)
+LexicographicalList	instance	3ae2098533cf	-	dffefb20	644abe35:LexicographicalList.<L	\instance LexicographicalList (A : Dec) : Dec (List A)
+LexicographicalList.<L	data	6109e69a858d	-	da50b617		\data \infix 4 <L {A : Dec} (l1 l2 : List A) : \Prop \elim l1, l2 | nil, :: _ _ => nil<:: | :: a as, :: b bs => <head (a < b) <tail (a = b) (as <L bs)
+LexicographicalList.<L.nil<::	cons	3eb7330949e1	-	2b5e57cb	644abe35:LexicographicalList.<L	| nil<::
+LexicographicalList.<L.<head	cons	b4edfcdd3e0e	-	35a83808	644abe35:LexicographicalList.<L	| <head (a < b)
+LexicographicalList.<L.<tail	cons	ecc01c1c97e4	-	24b9fc60	644abe35:LexicographicalList.<L	| <tail (a = b) (as <L bs)
+(overview)	-	-	-	d1134a82	644abe35:LexicographicalList.<L	-

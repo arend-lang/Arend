@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Topology.TopPoset. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HausdorffTopPoset	class	a1ddcdfda3e3	-	28413f16		\class HausdorffTopPoset \extends HausdorffTopSpace, Poset { | <=-closed : (ProductTopSpace \this \this).IsClosed (\lam s => s.1 <= s.2) | isHausdorff => \have P => ProductTopSpace \this \this \in hausdorff-char.2 $ transport P.IsClosed (ext (\lam s => ext (\lam p => <=-antisymmetric p.1 p.2, \lam p => (=_<= p, =_<= (inv p))))) $ P.closed-inter <=-closed $ cont-closed (tuple proj2 proj1) <=-closed }
+HausdorffTopPoset.<=-closed	field	b6ffcf6ff034	-	b8498eb8		| <=-closed : (ProductTopSpace \this \this).IsClosed (\lam s => s.1 <= s.2)
+HausdorffTopPoset.<=-closed-left	lemma	a160bf85a7ad	-	0fc75f8c		\lemma <=-closed-left {b : E} : IsClosed (<= b)
+HausdorffTopPoset.<=-closed-right	lemma	ad82e7fe9398	-	f3d28e7b		\lemma <=-closed-right {a : E} : IsClosed (a <=)
+HausdorffTopPoset.limit-Join	lemma	37ccab606852	-	06e3bdef		\lemma limit-Join {I : DirectedSet} {f : I -> E} (fm : \Pi {i j : I} -> i I.<= j -> f i <= f j) {l : E} (fl : IsLimit f l) : IsJoin f l
+HausdorffTopPoset.limit-Meet	lemma	2ba787f87dda	-	6ff23dbd		\lemma limit-Meet {I : DirectedSet} {f : I -> E} (fm : \Pi {i j : I} -> i I.<= j -> f j <= f i) {l : E} (fl : IsLimit f l) : IsMeet f l
+HausdorffTopPosetAbGroup	class	16c18235f3c5	-	3afe3028	a6761b40:HausdorffTopPoset	\class HausdorffTopPosetAbGroup \extends HausdorffTopAbGroup, HausdorffTopPoset, PosetAbGroup { | positive-closed : IsClosed (0 <=) | <=-closed => transport (IsClosed {ProductTopSpace \this \this}) (ext (\lam s => ext (from>=0, to>=0))) $ cont-closed (subtract-cont ContMap.∘ tuple proj2 proj1) positive-closed | positive-closed => <=-closed-right }
+HausdorffTopPosetAbGroup.positive-closed	field	1cdc096794a7	-	f00e38e8		| positive-closed : IsClosed (0 <=)
+(overview)	-	-	-	75348845		-

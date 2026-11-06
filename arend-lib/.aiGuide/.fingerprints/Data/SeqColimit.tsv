@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Data.SeqColimit. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Seq	record	979a5bbbc643	-	5100f552	df4fda73:Seq.A f140fb6a:Seq.f	\record Seq (A : Nat -> \Type) (f : \Pi {n : Nat} -> A n -> A (suc n))
+SeqColimit	data	d967626491a0	-	bb1191b3	54f04dae:Seq df4fda73:Seq.A f140fb6a:Seq.f ba94e537:SeqColimit.inSC 35523ec8:SeqColimit.quotSC	\data SeqColimit (s : Seq) | inSC {n : Nat} (s.A n) | quotSC {n : Nat} (x : s.A n) : inSC x = inSC (s.f x)
+SeqColimit.flattening	func	11647838ab74	660e77d3000e	ee86f561	df4fda73:Seq.A 0e8ea140:SeqColimit 30a6c3ca:SeqColimit.flattening.total ba94e537:SeqColimit.inSC 35523ec8:SeqColimit.quotSC	\func flattening {s : Seq.{u}} (P : SeqColimit s -> \Type u) : total = (\Sigma (w : SeqColimit s) (P w))
+SeqColimit.flattening.total	func	8bd4e46a43a0	22c5e40aa176	d2106788	54f04dae:Seq df4fda73:Seq.A f140fb6a:Seq.f bc3d2171:SeqColimit.flattening.total.seq ba94e537:SeqColimit.inSC 35523ec8:SeqColimit.quotSC	\func total
+SeqColimit.flattening.TotalSeqColimit	data	2a9fd0e9ae61	-	f05f1a68	0e8ea140:SeqColimit f44f0555:SeqColimit.flattening.TotalSeqColimit.tinSC 24c90771:SeqColimit.flattening.TotalSeqColimit.tquotSC 30a6c3ca:SeqColimit.flattening.total	\data TotalSeqColimit (j : I) | tinSC {n : Nat} (x : s.A n) (P (inSC x)) | tquotSC {n : Nat} (x : s.A n) (i : I) (w : P (quotSC x (I.squeeze i j))) \elim i { | left => tinSC x w | right => tinSC (s.f x) (coe2 (\lam i => P (quotSC x i)) j w right) }
+SeqColimit.flattening.totalSeqColimitLeft	func	fdede6cffefe	d0cb32f93bc8	d7788817	18da9ef5:SeqColimit.flattening.TotalSeqColimit 30a6c3ca:SeqColimit.flattening.total	\func totalSeqColimitLeft : QEquiv {total} {TotalSeqColimit left}
+SeqColimit.flattening.totalSeqColimitRight	func	5065b79e9e2b	f6f6a17c00b7	44245f2a	0e8ea140:SeqColimit 18da9ef5:SeqColimit.flattening.TotalSeqColimit	\func totalSeqColimitRight : QEquiv {TotalSeqColimit right} {\Sigma (w : SeqColimit s) (P w)}
+seqColimit-surj	lemma	378ad26d0137	-	29700f25	f140fb6a:Seq.f 0e8ea140:SeqColimit ba94e537:SeqColimit.inSC	\lemma seqColimit-surj (s : Seq) (p : \Pi (n : Nat) -> IsSurj (s.f {n})) : IsSurj (inSC {s} {0})
+seqColimit-surj.helper	lemma	1957a10f4246	-	f49e3390	ba94e537:SeqColimit.inSC	\lemma helper {n : Nat} (x : s.A n) : TruncP (Fib (inSC {s} {0}) (inSC x))
+constantMaps	lemma	351dba5422a3	-	9037aac9	df4fda73:Seq.A f140fb6a:Seq.f 0e8ea140:SeqColimit	\lemma constantMaps (s : Seq) (p : \Pi (n : Nat) -> \Sigma (x : s.A (suc n)) (\Pi (a : s.A n) -> s.f a = x)) : Contr (SeqColimit s)
+constantMaps.points	func	69d8a4e19bd2	3959c7dc79fb	a14ff96f	ba94e537:SeqColimit.inSC	\func points (n : Nat) : inSC (p n).1 = inSC (p 0).1
+constantMaps.contraction	func	fd3fb77a644c	24bceb692ccd	8d6d7d09	ba94e537:SeqColimit.inSC 35523ec8:SeqColimit.quotSC 3e7dda7e:constantMaps.points	\func contraction (x : SeqColimit s) : x = inSC (p 0).1
+(overview)	-	-	-	aaf73d94	54f04dae:Seq df4fda73:Seq.A f140fb6a:Seq.f 0e8ea140:SeqColimit 18da9ef5:SeqColimit.flattening.TotalSeqColimit ba94e537:SeqColimit.inSC 35523ec8:SeqColimit.quotSC	-

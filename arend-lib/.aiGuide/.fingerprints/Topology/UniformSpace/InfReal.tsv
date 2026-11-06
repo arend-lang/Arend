@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Topology.UniformSpace.InfReal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+InfRealUniformSpace	instance	7dc6277dc193	-	26632d7a		\instance InfRealUniformSpace : StronglyCompleteUniformSpace InfReal
+InfRealUniformSpace.makeUniform	func	4b39dd6fc994	b1f1b80005f5	153d6c72		\func makeUniform (B : Real) {eps : Real} (eps>0 : 0 < eps) : InfRealUniformSpace.isUniform (\lam U => ((B InfRealAbMonoid.<) = U) || Given (x : Real) (U = (\lam y => ∃ (z : Real) (z = y) (RealAbGroup.abs (x - z) < eps))))
+InfRealUniformSpace.NFilter	func	1538d4a7f52c	f6c6cebdf830	1eaacb64		\func NFilter (x : InfReal) : SetFilter InfReal
+InfRealUniformSpace.cauchy-ball	lemma	fd71d9e46f9a	-	b55599ef		\lemma cauchy-ball {C : Set (Set InfReal)} (Cc : InfRealUniformSpace.isCauchy C) (x : InfReal) : ∃ (U : C) (Given (eps : Real) (0 < eps) (x1 : Real) (x1 = x) ∀ {y : Real} (RealAbGroup.abs (x1 - y) < eps -> U y) || Given (B : Real) (B InfRealAbMonoid.< x) ∀ {y : InfReal} (B InfRealAbMonoid.< y -> U y))
+InfRealUniformSpace.<=<-ball	lemma	993f4674585b	-	d3fe045a		\lemma <=<-ball {x : InfReal} {U : Set InfReal} (x<=<U : single x <=< {InfRealUniformSpace} U) : Given (eps : Real) (0 < eps) (x1 : Real) (x1 = x) ∀ {y : Real} (RealAbGroup.abs (x1 - y) < eps -> U y) || Given (B : Real) (B InfRealAbMonoid.< x) ∀ {y : InfReal} (B InfRealAbMonoid.< y -> U y)
+InfRealUniformSpace.fromCF	func	0842f5c8ba27	cf24e7d1f811	c377bb59	8d583d89:InfRealUniformSpace	\func fromCF (F : StronglyRegularCauchyFilter InfRealUniformSpace) : InfReal
+infReal-ball-open	lemma	0c90aecf3b7e	-	b125ac6b		\lemma infReal-ball-open (eps x : Real) : InfRealUniformSpace.isOpen (\lam y => TruncP (\Sigma (y' : Real) (y' = y) (RealAbGroup.abs (y' - x) < eps)))
+infReal-half-open	lemma	fca45f58a8fa	-	9928f93a		\lemma infReal-half-open (B : Real) : InfRealUniformSpace.isOpen (B InfRealAbMonoid.<)
+(overview)	-	-	-	8c313982		-

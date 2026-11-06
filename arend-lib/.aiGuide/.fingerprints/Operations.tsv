@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Operations. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HasProduct	class	d3b4e139e8ad	-	f963fc81	62b8ffdc:HasProduct.Product	\class HasProduct (E : \Cat) { | Product \alias \infixl 7 ⨯ : E -> E -> E }
+TypeHasProduct	instance	3a5e9f64649c	-	8a0070bf	bd898ba5:HasProduct 62b8ffdc:HasProduct.Product	\instance TypeHasProduct : HasProduct (\Type u)
+SetHasProduct	instance	73628751d163	-	22049437	bd898ba5:HasProduct 62b8ffdc:HasProduct.Product	\instance SetHasProduct : HasProduct (\Set u)
+HasCoproduct	class	cdfe20951512	-	ebe030f9	62b8ffdc:HasCoproduct.Coproduct	\class HasCoproduct (E : \Cat) { | Coproduct \alias \infixl 6 ⨿ : E -> E -> E }
+TypeHasCoproduct	instance	9df880eaae87	-	63f73abe	410b47f4:HasCoproduct 62b8ffdc:HasCoproduct.Coproduct	\instance TypeHasCoproduct : HasCoproduct (\Type u)
+SetHasCoproduct	instance	67316e015e9b	-	a7329d12	410b47f4:HasCoproduct 62b8ffdc:HasCoproduct.Coproduct	\instance SetHasCoproduct : HasCoproduct (\Set u)
+(overview)	-	-	-	755c9a64	410b47f4:HasCoproduct 62b8ffdc:HasCoproduct.Coproduct bd898ba5:HasProduct 62b8ffdc:HasProduct.Product	-

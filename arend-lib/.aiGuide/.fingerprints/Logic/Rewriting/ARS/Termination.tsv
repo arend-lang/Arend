@@ -1,0 +1,14 @@
+# arend -gc fingerprints v2 for module Logic.Rewriting.ARS.Termination. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+isNormalForm	func	a578a381c3f5	7772931a0cf6	6f7f60f2		\func isNormalForm {A : SimpleARS} (a : A) : \Prop
+HasNormalForm	data	d0a136359bd1	-	481bff7f	c3ed8d26:HasNormalForm.normal-form	\data HasNormalForm {A : SimpleARS} (a : A) : \Prop | normal-form (b : A) (isNormalForm b) (a ~>_* b)
+isNormalizing	func	16ffb3fb0ee3	460eea145ff1	50fdfb1a		\func isNormalizing (A : SimpleARS) : \Prop
+Acc-Trans	func	a128ddfcc822	7685f7d1f32f	7af33ff2		\func Acc-Trans {A : \Set} (R : Rel A) (a : A) : \Prop
+Acc=>AccTrans	lemma	3605ca24da60	-	597ce596		\lemma Acc=>AccTrans {A : \Set} {R : Rel A} {a : A} (acc : Acc R a) : Acc (TransClosure R) a
+isTerminating	func	16ffb3fb0ee3	0752712db79b	a2d239e1		\func isTerminating (A : SimpleARS) : \Prop
+Termination=>Normalization	lemma	9b71a28a0640	-	a4e6ca30		\lemma Termination=>Normalization {A : SimpleARS} (dec : \Pi (a : A) -> Dec (∃ (a' : A) (a ~> a'))) (a : A) (term : Acc (\lam x y => y ~> x) a) : HasNormalForm a
+well-founded-induction	func	25df7d9aebec	7aa0fdcc5b96	837184be		\func well-founded-induction {A : \Set} {R : Rel A} (C : A -> \Type) (induction : \Pi (a : A) (\Pi (b : A) (R b a) -> C b) -> C a) (a : A) (a-is-accessible : Acc R a) : C a
+well-founded-induction-transitive	func	3b8e8c642d62	6d4e12e0d576	2c8e0a25	bec33f64:Acc-Trans	\func well-founded-induction-transitive {A : \Set} {R : Rel A} (C : A -> \Type) (induction : \Pi (a : A) (\Pi (b : A) (TransClosure R b a) -> C b) -> C a) (a : A) (a-is-accessible : Acc-Trans R a) : C a
+one-step-reduction	func	5bf7a1d8648c	027c6520d89b	4daf4c31		\func one-step-reduction {A : SimpleARS} (a : A) : \Set
+ReductionPath	data	f737631b6621	-	955d9e7b	e3ad8c83:ReductionPath.branch 88a05a62:ReductionPath.leaf	\data ReductionPath {A : SimpleARS} (a : A) | branch (b : A) (ReductionPath b) (a ~> b) | leaf (isNormalForm a)
+(overview)	-	-	-	c38988c2		-

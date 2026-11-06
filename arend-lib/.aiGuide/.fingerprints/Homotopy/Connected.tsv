@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Homotopy.Connected. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Connected0	class	eb146029b51c	-	f399f248	f85c6833:Connected0.isConn0	\class Connected0 \extends InhSpace { | isConn0 (x y : E) : TruncP (x = y) }
+UnitConnected0	instance	99cb0014f384	-	d8b6229d		\instance UnitConnected0 : Connected0 (\Sigma)
+PushoutConnected0	instance	411fdfd3b153	-	3299f48c		\instance PushoutConnected0 {A : InhSpace} {B C : Connected0} {f : A -> B} {g : A -> C} : Connected0 (PushoutData f g)
+(overview)	-	-	-	813ba7d2		-

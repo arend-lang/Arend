@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Topology.CoverSpace.Directed. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+DirectedCoverSpace	func	d1a1ce11b8eb	8aadf19512b5	4d9f9a53	6e95b0c8:DirectedCoverSpace.precover	\func DirectedCoverSpace (I : DirectedSet) : CoverSpace I
+DirectedCoverSpace.precover	func	389bf0d52869	cca2d113e1bc	7af8bafa		\func precover : PrecoverSpace I
+DirectedCoverSpace.makePrecover	lemma	f7d28dd28537	-	9dddab95		\lemma makePrecover (N : I) : precover.isCauchy (\lam V => (V = (\lam n => N <= n)) || Given (n : I) (V = single n))
+EventualityFilter	func	9d884e2f1188	7f42ea116571	2abb837d	4a01eedc:DirectedCoverSpace	\func EventualityFilter {I : DirectedSet} : CauchyFilter (DirectedCoverSpace I)
+DirectProdCover	func	2119b6e3ebbf	28cf128addcb	1703a372		\func DirectProdCover {I : DirectedSet} {X : CoverSpace} (D : Set (Set (\Sigma I X))) : \Prop
+DirectProdCover.Space	func	80b774f9a571	f5107a7dd1ae	5f614649	94cb0b38:DirectProdCover	\func Space : PrecoverSpace (\Sigma I X)
+directedProdCover-char	lemma	ce67a2b55252	-	c09cb686	94cb0b38:DirectProdCover 6e95b0c8:DirectedCoverSpace.precover	\lemma directedProdCover-char {I : DirectedSet} {X : CoverSpace} {D : Set (Set (\Sigma I X))} : isCauchy {DirectedCoverSpace.precover `ProductPrecoverSpace` X} D <-> DirectProdCover D
+(overview)	-	-	-	4eb6ac87	94cb0b38:DirectProdCover 3e4d902f:EventualityFilter	-

@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Poly.Euclidean. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PolyEuclideanRingData	instance	10265703ebfd	-	2e073a01	47864fea:PolyEuclideanRingData.divMod_fuel	\instance PolyEuclideanRingData (R : DiscreteField) : EuclideanRingData (Poly R)
+PolyEuclideanDomain	instance	260449314583	-	b9b3aab2		\instance PolyEuclideanDomain (R : DiscreteField) : EuclideanDomain (Poly R)
+PolyEuclideanRingData.divMod_fuel	func	e85a467ee0ad	124cdd12b666	9fadf930		\func divMod_fuel {R : DiscreteField} (p q : Poly R) (n : Nat) : \Sigma (Poly R) (Poly R)
+PolyEuclideanRingData.divMod_fuel-correct	lemma	c625edf5c384	-	6b23a725	47864fea:PolyEuclideanRingData.divMod_fuel	\lemma divMod_fuel-correct {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} (s : degree p < n) : q * (divMod_fuel p q n).1 + (divMod_fuel p q n).2 = p
+PolyEuclideanRingData.divMod_fuel-rem-lem	lemma	bb6df2c9da18	-	4e2fb262	47864fea:PolyEuclideanRingData.divMod_fuel	\lemma divMod_fuel-rem-lem {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} : degree (divMod_fuel p q n).2 < degree q
+PolyEuclideanRingData.diff-lem	lemma	5e7f06f96264	-	6ef04395		\lemma diff-lem {R : Ring.Dec} {p q : Poly R} (s : degree p = degree q) (t : leadCoef p = leadCoef q) (dq/=0 : degree q /= 0) : degree (p - q) < degree p
+poly-dec-unit	lemma	b907feaabc1d	-	eb91e7b7		\lemma poly-dec-unit {R : DiscreteField} (p : Poly R) : Dec (Inv p)
+poly-dec-div	lemma	ba26627ad70b	-	5c87faa4		\lemma poly-dec-div {R : DiscreteField} (a b : Poly R) : Dec (TruncP (LDiv a b))
+poly-maximal-ideal	sfunc	e2a4ba748790	a36dc301c246	c313c73a		\sfunc poly-maximal-ideal {K : DiscreteField} (c : Countable K) (p : Poly K) (pc : Not (Monoid.Inv p)) : \Sigma (M : Ideal (PolyAlgebra K)) M.IsMaximal (M p)
+(overview)	-	-	-	b345f7d5	47864fea:PolyEuclideanRingData.divMod_fuel	-

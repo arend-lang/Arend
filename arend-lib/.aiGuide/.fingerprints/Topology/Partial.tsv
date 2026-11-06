@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Topology.Partial. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PartialTopSpace	instance	6906a72e2f34	-	047404ce		\instance PartialTopSpace (Y : TopSpace) : TopSpace (Partial Y)
+PartialTopSpace.totalOpen	func	66444a52f242	83b70b785bef	4eea5f39	24187d8f:PartialTopSpace	\func totalOpen {Y : TopSpace} : isOpen {PartialTopSpace Y} (\lam s => isDefined {s})
+PartialTopSpace.makeOpen	func	4dd217e59641	defbc18ac910	b4c666a9	24187d8f:PartialTopSpace	\func makeOpen {Y : TopSpace} {U : Set Y} (Uo : isOpen U) : isOpen {PartialTopSpace Y} (\lam s => \Sigma (p : isDefined {s}) (U (s p)))
+PartialTopSpace-char	lemma	55794ad0360b	-	11780b52		\lemma PartialTopSpace-char {X Y : TopSpace} {f : X -> Partial Y} : ContMap X (PartialTopSpace Y) f <-> (\Sigma (X.isOpen (\lam x => isDefined {f x})) (ContMap (TopTransfer {Set.Total (\lam x => isDefined {f x})} __.1) Y (\lam x => f x.1 x.2)))
+plift-cont	lemma	6ba48d1a3815	-	f80210fb	24187d8f:PartialTopSpace	\lemma plift-cont {X Y : TopSpace} (f : ContMap X Y) : ContMap (PartialTopSpace X) (PartialTopSpace Y) (plift f)
+plift2-cont	lemma	cf86bcb55266	-	0e70e098	24187d8f:PartialTopSpace	\lemma plift2-cont {X Y Z : TopSpace} (f : ContMap (ProductTopSpace X Y) Z) : ContMap (PartialTopSpace X `ProductTopSpace` PartialTopSpace Y) (PartialTopSpace Z) (\lam s => plift2 (\lam x y => f (x, y)) s.1 s.2)
+(overview)	-	-	-	7c207157	c702c9e7:PartialTopSpace.makeOpen f906756f:PartialTopSpace.totalOpen	-

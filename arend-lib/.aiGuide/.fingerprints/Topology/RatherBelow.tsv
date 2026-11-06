@@ -1,0 +1,21 @@
+# arend -gc fingerprints v2 for module Topology.RatherBelow. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RatherBelow	class	3f54afa74c2d	-	40d98407	ed149a7c:RatherBelow.A b408e01f:RatherBelow.R	\class RatherBelow {A : TopMeetSemilattice} (R : A -> A -> \Prop) { | <=<-left {U V W : A} : R U V -> V <= W -> R U W | <=<-right {U V W : A} : U <= V -> R V W -> R U W | <=<_top {V : A} : R V top | <=<_meet {U V U' V' : A} : R U V -> R U' V' -> R (U ∧ U') (V ∧ V') }
+RatherBelow.<=<-left	field	76410f87ba59	-	8b632dfd	b408e01f:RatherBelow.R	| <=<-left {U V W : A} : R U V -> V <= W -> R U W
+RatherBelow.<=<-right	field	1117c61a5a61	-	90d13ddd	b408e01f:RatherBelow.R	| <=<-right {U V W : A} : U <= V -> R V W -> R U W
+RatherBelow.<=<_top	field	bc2fbe5dd883	-	0dfb4b6c		| <=<_top {V : A} : R V top
+RatherBelow.<=<_meet	field	a0bef0106da5	-	7ad0fd46	b408e01f:RatherBelow.R	| <=<_meet {U V U' V' : A} : R U V -> R U' V' -> R (U ∧ U') (V ∧ V')
+RatherBelow.<=<_meet-same	lemma	5a157dc7aafb	-	a8d7ae08	b408e01f:RatherBelow.R	\lemma <=<_meet-same {U V V' : A} (p : R U V) (q : R U V') : R U (V ∧ V')
+RatherBelow.<=<o	type	365d91a6ec1c	3c2bd6f017ce	5fa45d1b	b408e01f:RatherBelow.R	\type <=<o (V U : A) : \Prop
+RatherBelow.<=<o_<=<	lemma	2e3c503fb431	-	55188012	40a01e78:RatherBelow.<=<o b408e01f:RatherBelow.R	\lemma <=<o_<=< {V U : A} (p : V <=<o U) : R V U
+RatherBelow.<=<o-inter	lemma	411420080e22	-	b970a44b	40a01e78:RatherBelow.<=<o b408e01f:RatherBelow.R	\lemma <=<o-inter {V U : A} (p : V <=<o U) : ∃ (W : A) (V <=<o W) (R W U)
+RatherBelow.Omega	func	761b29f38e67	e2c4fd1319ea	e1bf7424	548c108d:RatherBelow 40a01e78:RatherBelow.<=<o	\func Omega : RatherBelow {A}
+RatherBelow.<=<c	type	365d91a6ec1c	bc5d328f2491	25d0ec21	b408e01f:RatherBelow.R	\type <=<c (V U : A) : \Prop
+RatherBelow.<=<c_<=<o	lemma	07886281a956	-	274bf2d7	2e55440f:RatherBelow.<=<c 40a01e78:RatherBelow.<=<o	\lemma <=<c_<=<o {V U : A} (p : V <=<c U) : V <=<o U
+RatherBelow.<=<c_<=<	lemma	85fff4a11652	-	096bc3a0	2e55440f:RatherBelow.<=<c b408e01f:RatherBelow.R	\lemma <=<c_<=< {V U : A} (p : V <=<c U) : R V U
+RatherBelow.<=<c-inter	lemma	2f19305a5017	-	52d2df94	2e55440f:RatherBelow.<=<c	\lemma <=<c-inter {V U : A} (p : V <=<c U) : ∃ (W : A) (V <=<c W) (W <=<c U)
+RatherBelow.<=<c-func	lemma	058de4e82c04	-	947ae9cd	2e55440f:RatherBelow.<=<c b408e01f:RatherBelow.R	\lemma <=<c-func {R2 : RatherBelow {A}} (p : \Pi {V U : A} -> R V U -> R2 V U) {V U : A} (q : V <=<c U) : V R2.<=<c U
+RatherBelow.Interpolative	func	761b29f38e67	be50aa4814bf	b4579194	548c108d:RatherBelow 2e55440f:RatherBelow.<=<c	\func Interpolative : RatherBelow {A}
+RatherBelow.<=<c_bottom	lemma	c63da64aee90	-	bdd5817a	b408e01f:RatherBelow.R	\lemma <=<c_bottom {A : BoundedLattice} {R : RatherBelow {A}} (p : \Pi {U : A} -> R bottom U) {U : A} : bottom R.<=<c U
+<=<c_^-1	lemma	7a8841c74a2d	-	cbcc4162	2e55440f:RatherBelow.<=<c b408e01f:RatherBelow.R	\lemma <=<c_^-1 {X Y : \Set} {RX : RatherBelow {SetLattice X}} {RY : RatherBelow {SetLattice Y}} {f : X -> Y} (<=<_^-1 : \Pi {U V : Set Y} -> RY U V -> RX (f ^-1 U) (f ^-1 V)) {U V : Set Y} (p : U RY.<=<c V) : f ^-1 U RX.<=<c f ^-1 V
+(overview)	-	-	-	1e3d912e	548c108d:RatherBelow 2e55440f:RatherBelow.<=<c 40a01e78:RatherBelow.<=<o b408e01f:RatherBelow.R	-

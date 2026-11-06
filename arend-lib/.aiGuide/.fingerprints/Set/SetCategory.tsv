@@ -1,0 +1,30 @@
+# arend -gc fingerprints v2 for module Set.SetCategory. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SetCat	instance	1ffb6ea167cf	-	f77fca25		\instance SetCat : Cat (\Set u)
+SIP_Set	sfunc	818f7dd99264	ed208d840ef5	3cfba585	4608850a:SetCat	\sfunc SIP_Set (Str : \Set u -> \Type) (isHom : \Pi {x y : \Set u} -> Str x -> Str y -> (x -> y) -> \Type) (st : \Pi {X : \Set u} {S1 S2 : Str X} -> isHom S1 S2 (\lam x => x) -> isHom S2 S1 (\lam x => x) -> S1 = S2) {X Y : \Set u} (e : Iso {SetCat} {X} {Y}) (S1 : Str X) (S2 : Str Y) (p : isHom S1 S2 e.f) (q : isHom S2 S1 e.hinv) : \Sigma (p : X = Y) (Path (\lam i => Str (p @ i)) S1 S2) (\Pi (x : X) -> transport (\lam Z => Z) p x = e.f x)
+SetCoproduct	instance	38e5d7f2dc3f	-	d7d9a7d9	4608850a:SetCat	\instance SetCoproduct {J : \Type u} (F : J -> \Set u) : Product {J} {SetCat.op} F
+SetCoequalizer	instance	218e93eb23ae	-	78fc07b8	4608850a:SetCat	\instance SetCoequalizer {X Y : \Set u} (f g : X -> Y) : Equalizer {SetCat.op} f g
+SetBicat	instance	493e5ecb8860	-	e40c6838	9f24f7a7:SetBicat.LimitSet 4608850a:SetCat 51d1d792:SetCoequalizer 06b8d0a0:SetCoproduct	\instance SetBicat : BicompleteCat.{u}
+SetBicat.cone-isLim	lemma	454758e8363a	-	729df8cb		\lemma cone-isLim (c : Cone { | D => SetCat.{u} }) (e : IsEquiv (conePullback c (\Sigma))) : Limit { | Cone => c }
+colimitFunctor	func	94a995920ddc	23907379dd92	5a953aac	4608850a:SetCat 5dc8c50c:SetColimit db9a4dff:SetColimit.map	\func colimitFunctor (J : Precat.{u, u}) : Functor (FunctorPrecat J SetCat.{u}) SetCat.{u}
+prodFunctor	func	cb0e01d12e5c	4e3e668c925d	062887dc	4608850a:SetCat	\func prodFunctor {J : Precat} (F G : Functor J SetCat.{u}) : Functor J SetCat.{u}
+prodColimitMap	func	69f2f9189f09	be6e755109e7	fb9bafbc	5dc8c50c:SetColimit 06131b2b:prodFunctor	\func prodColimitMap {J : Precat.{u, u}} (F G : Functor J SetCat.{u}) (x : SetColimit (prodFunctor F G)) : \Sigma (SetColimit F) (SetColimit G)
+eqFunctor	func	d615440eb594	f5d57c3e95e8	4695635c		\func eqFunctor {J : Precat} {F G : Functor J SetCat.{u}} (f g : NatTrans F G) : Functor J SetCat.{u}
+eqColimitMap	func	18bbfb939e6f	f73c4629ab53	f2b3536d	5dc8c50c:SetColimit db9a4dff:SetColimit.map 13a68360:eqFunctor	\func eqColimitMap {J : Precat.{u, u}} {F G : Functor J SetCat.{u}} (f g : NatTrans F G) (x : SetColimit (eqFunctor f g)) : \Sigma (y : SetColimit F) (SetColimit.map f y = SetColimit.map g y)
+sigmaEqualizer	func	a04517260741	d73ea2f02722	5fdfb5d6	4608850a:SetCat	\func sigmaEqualizer {A B : \Set u} (f g : A -> B) : Equalizer {SetCat.{u}} f g (\Sigma (a : A) (f a = g a)) __.1 (ext (\lam s => s.2))
+functorEqualizer	func	506d38e718bc	3011ab5af150	1b057e07	4608850a:SetCat 13a68360:eqFunctor	\func functorEqualizer {J : Precat} {X Y : Functor J SetCat.{u}} (f g : NatTrans X Y) : Equalizer {FunctorPrecat J SetCat.{u}} f g (eqFunctor f g) (\new NatTrans { | trans => \lam j => __.1 | natural => \lam h => idp }) (exts (\lam j => ext (\lam s => s.2)))
+SetColimit	type	f516aa68b553	a7400c05dee4	7544c203	4608850a:SetCat	\type SetColimit {J : Precat} (F : Functor J SetCat.{u})
+SetColimit.inC	func	d8b9f25d3c17	59ac3c1095bf	1cd3fc12		\func inC {J : Precat} {F : Functor J SetCat.{u}} (s : \Sigma (j : J) (F j)) : SetColimit F
+SetColimit.~-cequiv	lemma	2a3dd3c04a00	-	19b5a148	5dc8c50c:SetColimit	\lemma ~-cequiv {s s' : \Sigma (j : J) (F j)} (f : Hom s.1 s'.1) (p : F.Func f s.2 = s'.2) : in~ s = {SetColimit F} in~ s'
+SetColimit.unext-ub	lemma	7b1be2c8ee14	-	743c2a2a	7f8ac932:SetColimit.inC	\lemma unext-ub {J : JoinSemilattice} {F : Functor J SetCat.{u}} {s s' : \Sigma (j : J) (F j)} (p : inC s = inC s') : ∃ (j : J) (p : s.1 <= j) (q : s'.1 <= j) (F.Func p s.2 = F.Func q s'.2)
+SetColimit.Func-app	lemma	14118bb43ed7	-	f12da65d		\lemma Func-app {J : Precat} (F : Functor J SetCat.{u}) {j1 j2 j3 : J} {f : Hom j1 j2} {g : Hom j2 j3} {a : F j1} : F.Func (g ∘ f) a = F.Func g (F.Func f a)
+SetColimit.poset-app	lemma	20401d95b42f	-	2c11fed4		\lemma poset-app {J : Poset} {F : Functor J SetCat.{u}} {j j' : J} {f g : j <= j'} {a : F j} : F.Func f a = F.Func g a
+SetColimit.poset-id	lemma	1e9b9364331c	-	a527cb56		\lemma poset-id {J : Poset} {F : Functor J SetCat.{u}} {j : J} {p : j <= j} {a : F j} : F.Func p a = a
+SetColimit.inMap	func	6e0f423b4706	98805bd209e9	fbd95900	5dc8c50c:SetColimit	\func inMap (j : J) (a : F j) : SetColimit F
+SetColimit.inMap-coh	lemma	a1506f989d95	-	b39c23c1	87673c68:SetColimit.inMap	\lemma inMap-coh {j j' : J} (f : Hom j j') (a : F j) : inMap j a = inMap j' (F.Func f a)
+NatFunctor	func	95c674975af4	3c7d0bd32a94	e11bcd9b		\func NatFunctor {C : Precat} (F : Nat -> C) (f : \Pi {n : Nat} -> Hom (F n) (F (suc n))) : Functor NatSemiring C
+NatFunctor.sigma-isProp	lemma	196a4491e24d	-	2cd85de9		\lemma sigma-isProp {n m : Nat} : isProp (\Sigma (k : Nat) (n + k = m))
+NatFunctor.natHom	func	d2bbd3d9192f	e9297b0a70ba	a6cb0d7c		\func natHom {n m : Nat} (s : \Sigma (k : Nat) (n + k = m)) : Hom (F n) (F m)
+NatFunctor.natHom_id	lemma	7c8fd55d6e19	-	d8c994cb	91f9db51:NatFunctor.natHom	\lemma natHom_id {n : Nat} : natHom (0, idp) = id {_} {F n}
+NatFunctor.natHom-comp	lemma	a93008c677de	-	946aa245	91f9db51:NatFunctor.natHom	\lemma natHom-comp {n m k : Nat} {s : \Sigma (l : Nat) (n + l = m)} {t : \Sigma (l : Nat) (m + l = k)} : natHom (s.1 + t.1, inv +-assoc *> pmap (+ _) s.2 *> t.2) = natHom t ∘ natHom s
+(overview)	-	-	-	6ee35e2a	4608850a:SetCat 51d1d792:SetCoequalizer 5dc8c50c:SetColimit 06b8d0a0:SetCoproduct	-

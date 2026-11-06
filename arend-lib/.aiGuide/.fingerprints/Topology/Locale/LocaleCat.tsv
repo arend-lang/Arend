@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Topology.Locale.LocaleCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FrameCat	func	84cf949b48e6	996d373d6902	a296e60e		\func FrameCat : Cat Locale.{u}
+FrameCat.equiv_iso	func	7e244644706c	ef5ed898a339	e6e16210	71cf05f3:FrameCat	\func equiv_iso {L M : Locale.{u}} {f : FrameHom L M} (e : QEquiv f) : Iso {FrameCat.{u}} f
+FrameReflectiveSubcat	func	e03e92fb7f2f	0cf6951ff77a	a7db1f53	71cf05f3:FrameCat dafc609f:PreorderSiteCat	\func FrameReflectiveSubcat : ReflectiveSubPrecat FrameCat.{u} PreorderSiteCat.{u}
+LocaleCat	instance	679cf8864336	-	1e6a45e6	71cf05f3:FrameCat	\instance LocaleCat : Cat Locale.{u}
+PreorderSiteCat	func	3d89eeecf843	b35c7df53a60	125da07f		\func PreorderSiteCat : Cat PreorderSite.{u}
+LocaleCartesianPrecat	instance	e63483ecf39b	-	f02f9d2a	b53cccea:LocaleCat	\instance LocaleCartesianPrecat : CartesianPrecat
+discreteLocaleFunctor	func	865e871e36d1	34bd827b5ef1	90940c06	b53cccea:LocaleCat	\func discreteLocaleFunctor : Functor SetCat.{u} LocaleCat.{u}
+localeEqualizer	func	ae9235692b8a	df0dec023a60	48760fed		\func localeEqualizer {L M : Locale.{u}} (f g : LocaleHom L M) : Equalizer {LocaleCat.{u}} f g
+regular_surj	lemma	524069e3b755	-	5d0d4d3e	b53cccea:LocaleCat	\lemma regular_surj {L M : Locale.{u}} {f : LocaleHom L M} (reg : IsRegularMono {LocaleCat.{u}} f) : IsSurj f
+surj_regular	lemma	3be3cc96e7e8	-	9acbaeba	b53cccea:LocaleCat	\lemma surj_regular {L M : Locale.{u}} {f : LocaleHom L M} (sur : IsSurj f) : IsRegularMono {LocaleCat.{u}} f
+surj_equiv	func	e1c8346279e2	97ff83b3c8eb	df7033f6	71cf05f3:FrameCat	\func surj_equiv {L M : Locale.{u}} {f : FrameHom L M} (sur : IsSurj f) : Iso {FrameCat.{u}} {f.image.locale} {M}
+surj_equiv.map-comm	lemma	ed64e0175bed	-	df7033f6	71cf05f3:FrameCat	\lemma map-comm (sur : IsSurj f) (x : L) : Iso.f {surj_equiv sur} (f.image.map x) = f x
+dense_closed_ofs	func	bfe1a39653ed	6a866745ae93	c4f1d8db	b53cccea:LocaleCat	\func dense_closed_ofs : OFS {LocaleCat.{u}}
+sdense_wclosed_ofs	func	bfe1a39653ed	1c5ac207f70a	208db4e8	b53cccea:LocaleCat	\func sdense_wclosed_ofs : OFS {LocaleCat.{u}}

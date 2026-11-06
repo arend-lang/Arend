@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Set.Fin.KFinSetOf. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+KFinSetOf	record	85529a2fe6f1	-	479c1af0	557954a1:KFinSetOf.P f18ee3e2:KFinSetOf.X	\record KFinSetOf (X : \Set) (\coerce P : X -> \Prop) { | isFinSubSet : ∃ (l : Array X) ∀ x (P x <-> TSetIm l x) }
+KFinSetOf.enumerate	lemma	646aa29d9abe	-	1b67581f	557954a1:KFinSetOf.P	\lemma enumerate : ∃ (n : Nat) (f : (Fin n -> \Sigma (x : X) (P x))) (IsSurj f)
+KFinSetOf.toKFin	lemma	67410406fc4f	-	d9040aa1	557954a1:KFinSetOf.P	\lemma toKFin : TruncP (KFinSet (\Sigma (x : X) (P x)))
+KFinSetOf.empty	lemma	87c25a884d4a	-	c3b14923		\lemma empty {X : \Set} : KFinSetOf X (\lam _ => Empty)
+KFinSetOf.single	lemma	3212c25f9365	-	9d7c6960		\lemma single {X : \Set} (x : X) : KFinSetOf X (x =)
+KFinSetOf.fromArray	lemma	1e3adad561b5	-	0df40533		\lemma fromArray {X : \Set} (l : Array X) : KFinSetOf X (TSetIm l)
+KFinSetOf.union	lemma	cc387fcb304b	-	527f7566		\lemma union {X : \Set} (A B : KFinSetOf X) : KFinSetOf X (\lam x => A x || B x)
+KFinSetOf.BigUnion	lemma	4a2e51c263f8	-	8e57dd4e		\lemma BigUnion {n : Nat} {X : \Set} (B : Fin n -> KFinSetOf X) : KFinSetOf X (\lam x => ∃ (j : Fin n) (B j x))
+KFinSetOf.FinUnion	lemma	4b4fbfc9c776	-	3836a2df		\lemma FinUnion (I : KFinSet) {X : \Set} (B : I -> KFinSetOf X) : KFinSetOf X (\lam x => ∃ (i : I) (B i x))
+KFinSetOf.preimage	lemma	dfc39ca941c9	-	649c37b2		\lemma preimage {X Y : \Set} (f : X -> Y) (fi : IsInj f) (A : KFinSetOf Y) (As : ∀ {y : A.P} ∃ (x : X) (f x = y)) : KFinSetOf X (\lam x => A (f x))
+KFinSetOf.image	lemma	64bab38cdfa8	-	5aebbed4		\lemma image {X Y : \Set} (R : X -> Y -> \Prop) (A : KFinSetOf X) (Rs : ∀ {x : A.P} ∃ (y : Y) (R x y)) : ∃ (B : KFinSetOf Y) (∀ {x : A.P} ∃ (y : B.P) (R x y)) (∀ {y : B.P} ∃ (x : A.P) (R x y))
+KFinSetOf.DecUnion-split	lemma	136a2d3a3c17	-	edf49e29		\lemma DecUnion-split {X : \Set} (A : KFinSetOf X) {I : DecSet} {S : I -> Set X} (A<=S : ∀ {x : A.P} ∃ (i : I) (S i x)) : ∃ (T : (I -> KFinSetOf X)) (∀ {x : A.P} ∃ (i : I) (T i x)) (∀ i (T i ⊆ A.P ∧ S i))
+KFinSetOf.union-split	lemma	9d44afaf07c5	-	925183d9		\lemma union-split {X : \Set} (A : KFinSetOf X) {B C : Set X} (A<=BC : A ⊆ B ∪ C) : ∃ (B' C' : KFinSetOf X) (A ⊆ B'.P ∪ C'.P) (B' ⊆ A.P ∧ B) (C' ⊆ A.P ∧ C)
+(overview)	-	-	-	78031209	ce95230f:KFinSetOf 557954a1:KFinSetOf.P f18ee3e2:KFinSetOf.X f809ccbd:KFinSetOf.isFinSubSet	-

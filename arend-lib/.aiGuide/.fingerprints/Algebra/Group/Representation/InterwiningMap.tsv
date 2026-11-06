@@ -1,0 +1,3 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation.InterwiningMap. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+InterwiningMap	record	6ba638c8232b	-	42956ef3		\record InterwiningMap \extends LinearMap, EquivariantMap { \override Dom : LinRepres R G \override Cod : LinRepres R G }

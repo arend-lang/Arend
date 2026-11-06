@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Category.Topos.Sheaf.Site. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Presieve	func	cb13d80e2c80	69b8f230af64	1e96bca2		\func Presieve {C : Precat} (x : C)
+Site	class	b48fcaea3e0f	-	990c6e42	773929fb:Presieve 2278128b:Site.cover-stable b092c52c:Site.isCover	\class Site \extends Precat { | isCover (x : Ob) : Presieve x -> \Prop | cover-stable {x y : Ob} (h : Hom x y) : ∀ {S : isCover y} ∃ (T : isCover x) ∀ {px : T} ∃ (py : S) (f : Hom px.1 py.1) (py.2 ∘ f = h ∘ px.2) }
+Site.IsCoverFam	func	a6ebb51d4bf8	e01a3804f097	f29b14a3		\func IsCoverFam {J : \Type} {x : Ob} (f : J -> ObOver x) : \Prop
+Site.isCover_IsCoverFam	func	1fff42bc92b3	2c6c19c26bf1	21fbf34e		\func isCover_IsCoverFam {x : Ob} {P : Presieve x} : isCover x P <-> IsCoverFam {_} {Given P} __.1
+Covering	data	f98c452d4afd	-	bd147372	3aa4f153:Covering.covering-inj aa709340:Covering.covering-trans b092c52c:Site.isCover	\data Covering {C : Site} (x : C) (U : Presieve x) : \Prop | covering-inj {y : C} (s : Hom x y) (p : Hom y x) (p ∘ s = id) (U (y, p)) | covering-trans {T : Presieve x} (isCover x T) (∀ {y : T} (Covering y.1 (\lam z => ∃ (u : U) (f : Hom z.1 u.1) (u.2 ∘ f = y.2 ∘ z.2))))
+(overview)	-	-	-	ad7d1007	d5cc714f:Covering 773929fb:Presieve c948c334:Site b092c52c:Site.isCover	-

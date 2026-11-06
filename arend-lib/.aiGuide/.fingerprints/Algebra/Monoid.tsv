@@ -1,0 +1,144 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Semigroup	class	cd6088a1b6fb	-	3975de50	62b8ffdc:Semigroup.*	\class Semigroup \extends BaseSet { | \infixl 7 * : E -> E -> E | *-assoc {x y z : E} : (x * y) * z = x * (y * z) }
+Semigroup.IsSquare	func	ad5ffcad4839	61d89286231a	ba63d1fb	62b8ffdc:Semigroup.*	\func IsSquare (x : E)
+Semigroup.op	func	2ab50c81903d	cccab52c4d36	3b978ac7		\func op : Semigroup E
+CSemigroup	class	a0be1e8462cd	-	b9165c38	01c4f7a9:CSemigroup.*-comm	\class CSemigroup \extends Semigroup { | *-comm {x y : E} : x * y = y * x }
+Monoid	class	42a1e6fc9b41	-	b9df00c5	86fed3f0:Semigroup	\class Monoid \extends Pointed, Semigroup { | ide-left {x : E} : ide * x = x | ide-right {x : E} : x * ide = x }
+Monoid.pow	func	785267ce0a69	3575b5b9af45	ae4224d1	62b8ffdc:Semigroup.*	\func pow (a : E) (n : Nat) : E
+Monoid.pow_+	lemma	8aab740f741a	-	6b643dbd	c548d1f8:Monoid.pow 62b8ffdc:Semigroup.*	\lemma pow_+ {a : E} {n m : Nat} : pow a (n + m) = pow a n * pow a m
+Monoid.pow_*	lemma	753fb453677b	-	6b643dbd	c548d1f8:Monoid.pow 62b8ffdc:Semigroup.*	\lemma pow_* {a : E} {n m : Nat} : pow a (n Nat.* m) = pow (pow a n) m
+Monoid.pow-comm1	lemma	8345b1fc9862	-	dc509f61		\lemma pow-comm1 {a b : E} (p : a * b = b * a) {n : Nat} : pow a n * b = b * pow a n
+Monoid.pow-comm2	lemma	711f86b5cc92	-	dc509f61		\lemma pow-comm2 {a b : E} (p : a * b = b * a) {n m : Nat} : pow a n * pow b m = pow b m * pow a n
+Monoid.pow-comm	lemma	fe7a0f0cb7eb	-	dc509f61		\lemma pow-comm {a b : E} (p : a * b = b * a) {n : Nat} : pow (a * b) n = pow a n * pow b n
+Monoid.pow_ide	lemma	f6f7e791300f	-	53679879	c548d1f8:Monoid.pow 62b8ffdc:Semigroup.*	\lemma pow_ide {n : Nat} : pow ide n = ide
+Monoid.pow-left	lemma	487eae6ef24c	-	53679879	c548d1f8:Monoid.pow 62b8ffdc:Semigroup.*	\lemma pow-left {a : E} {n : Nat} : a * pow a n = pow a n * a
+Monoid.IsCentral	func	a5925689e217	76298614561e	2e8b4031	62b8ffdc:Semigroup.*	\func IsCentral (x : E) : \Prop
+Monoid.IsCentral_ide	lemma	d77c8268bdf9	-	e485e87e	c548d1f8:Monoid.pow	\lemma IsCentral_ide : IsCentral 1
+Monoid.IsCentral_*	lemma	9e8d7593590b	-	e485e87e	c548d1f8:Monoid.pow	\lemma IsCentral_* {x y : E} (xc : IsCentral x) (yc : IsCentral y) : IsCentral (x * y)
+Monoid.IsCentral_pow	lemma	ace47ffbe859	-	e485e87e	c548d1f8:Monoid.pow	\lemma IsCentral_pow {x : E} (xc : IsCentral x) {n : Nat} : IsCentral (pow x n)
+CMonoid.pow_*-comm	lemma	a44b83f1fadf	-	14105985	c548d1f8:Monoid.pow 62b8ffdc:Semigroup.*	\lemma pow_*-comm {a b : E} {n : Nat} : pow (a * b) n = pow a n * pow b n
+Monoid.op	func	a59044c44ebc	5bfc0ac015e9	37b50609	62b8ffdc:Semigroup.*	\func op : Monoid E
+Monoid.equals	func	abb1a2348477	bdeff64a08e8	437f63c9		\func equals {M N : Monoid.{u}} (p : M = {\Set u} N) (q : \let f x => coe (p @) x right \in \Pi (x y : M) -> f (x * y) = f x * f y) : M = {Monoid.{u}} N
+CMonoid	class	7b6c4bfe56e1	-	3e82b1ed	765d23b7:CSemigroup 817d7bbf:Monoid f474132e:Monoid.ide-left 8aaa47ea:Monoid.ide-right	\class CMonoid \extends Monoid, CSemigroup { | ide-left => *-comm *> ide-right | ide-right => *-comm *> ide-left }
+CancelMonoid	class	5b90f34bd5f8	-	28e16358		\class CancelMonoid \extends Monoid { | cancel_*-left (x : E) {y z : E} (p : x * y = x * z) : y = z | cancel_*-right (z : E) {x y : E} (p : x * z = y * z) : x = y }
+CancelCMonoid	class	192953b23b7f	-	f6714c29		\class CancelCMonoid \extends CancelMonoid, CMonoid { | cancel_*-right => \lam z {x} {y} x*z=y*z => cancel_*-left z (*-comm *> x*z=y*z *> *-comm) }
+Monoid.BigProd	func	3bacece31d40	89fd5aa72a81	7a35f83f	62b8ffdc:Semigroup.*	\func BigProd (l : Array E)
+Monoid.BigProd-ext	lemma	08da07fa2157	-	2b855467		\lemma BigProd-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigProd l = BigProd l'
+Monoid.BigProd_ide	lemma	1603f78e596e	-	55258ef8		\lemma BigProd_ide {l : Array E} (p : \Pi (j : Fin l.len) -> l j = ide) : BigProd l = ide
+Monoid.BigProd-unique	lemma	df1a46a7ff4a	-	b21be6cb		\lemma BigProd-unique {l : Array E} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> i /= j -> l j = 1) : BigProd l = l i
+Monoid.BigProd_++	lemma	69836234c104	-	ebfb9928		\lemma BigProd_++ {l l' : Array E} : BigProd (l ++ l') = BigProd l * BigProd l'
+Monoid.BigProd_suc	lemma	b22f7e7f8515	-	ebfb9928		\lemma BigProd_suc {n : Nat} {l : Array E (suc n)} : BigProd l = BigProd (\new (Array E n (\lam i => l i))) * l (n Nat.mod suc n)
+Monoid.BigProd_replicate	lemma	6672aa5a1ca3	-	db41dfbd	54ec52cd:Monoid.BigProd c548d1f8:Monoid.pow	\lemma BigProd_replicate {x : E} {n : Nat} : BigProd (replicate n x) = pow x n
+Monoid.BigProd_replicate1	lemma	ec7667fbea21	-	db41dfbd	54ec52cd:Monoid.BigProd c548d1f8:Monoid.pow	\lemma BigProd_replicate1 {n : Nat} : BigProd (replicate n ide) = ide
+CMonoid.BigProd_*	lemma	3754118db833	-	0d33be5b	c548d1f8:Monoid.pow 62b8ffdc:Semigroup.*	\lemma BigProd_* {n : Nat} {l l' : Array E n} : BigProd (\lam i => l i * l' i) = BigProd l * BigProd l'
+CMonoid.BigProd_pow	lemma	8ea1df329b6a	-	0d33be5b	c548d1f8:Monoid.pow 62b8ffdc:Semigroup.*	\lemma BigProd_pow {k : Nat} {l : Array E} : BigProd (\lam i => pow (l i) k) = pow (BigProd l) k
+CMonoid.BigProd_EPerm	lemma	9c8973f70867	-	8ec2c78d		\lemma BigProd_EPerm {l l' : Array E} (e : EPerm l l') : BigProd l = BigProd l'
+CMonoid.BigProd_Perm	lemma	283c63982eba	-	8ec2c78d		\lemma BigProd_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigProd l = BigProd l'
+CMonoid.LDiv_BigProd	func	60f4e7032542	99e3eb5d1115	b3f1bc07		\func LDiv_BigProd {l : Array E} (j : Fin l.len) : LDiv (l j) (BigProd l)
+CMonoid.LDiv_BigProd-coord	func	4bc3ee292a6c	350522d6521e	b3f1bc07		\func LDiv_BigProd-coord {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> LDiv (l j) (l' j)) : LDiv (BigProd l) (BigProd l')
+CMonoid.LDiv_BigProd_TruncP	lemma	c18eec3603a5	-	b3f1bc07		\lemma LDiv_BigProd_TruncP {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> TruncP (LDiv (l j) (l' j))) : TruncP (LDiv (BigProd l) (BigProd l'))
+Monoid.DivBase	record	70e882608ec9	-	bd0c7f47	8c02cb60:Monoid.DivBase.elem 8c02cb60:Monoid.DivBase.inv 8c02cb60:Monoid.DivBase.val	\record DivBase {M : Monoid} (\coerce val : M) (elem : M) (inv : M)
+Monoid.LDiv	record	5daf239a1286	-	8176e2dd	8c02cb60:Monoid.DivBase.elem 8c02cb60:Monoid.DivBase.inv 8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\record LDiv \extends DivBase { | inv-right : val * inv = elem }
+Monoid.LDiv.make	func	588f776061fd	a324c25f447b	885b0ce1	bac02e7d:Monoid.LDiv	\func make {M : Monoid} {a b : M} (c : M) (p : a * c = b) : LDiv a b
+Monoid.Inv.product	lemma	9c3a5475c8b3	-	885b0ce1	bac02e7d:Monoid.LDiv	\lemma product {M : Monoid} (i j : Inv {M}) : Inv (i * j)
+Monoid.LDiv.product-left	lemma	c4df0a4f8a5f	-	885b0ce1	bac02e7d:Monoid.LDiv	\lemma product-left {M : Monoid} (x : M) {y z : M} (y|z : LDiv y z) : LDiv (x * y) (x * z) y|z.inv
+Monoid.LDiv.product-right	lemma	9ae8f2760f6c	-	885b0ce1	bac02e7d:Monoid.LDiv	\lemma product-right {M : CMonoid} (z : M) {x y : M} (x|y : LDiv x y) : LDiv (x * z) (y * z) x|y.inv
+Monoid.LDiv.factor-left	lemma	af1b4389acbb	-	e4bf6557	62b8ffdc:Semigroup.*	\lemma factor-left {M : Monoid} {x y z : M} (x|y : LDiv x y) : LDiv x (y * z) (x|y.inv * z)
+Monoid.LDiv.factor-right	lemma	6cd7b33cbb68	-	e4bf6557	62b8ffdc:Semigroup.*	\lemma factor-right {M : CMonoid} {x y z : M} (x|z : LDiv x z) : LDiv x (y * z) (x|z.inv * y)
+Monoid.LDiv.cancel-left	lemma	97ba95afdc8c	-	164a6a6a		\lemma cancel-left {M : CancelMonoid} (x : M) {y z : M} (x*y|x*z : LDiv (x * y) (x * z)) : LDiv y z x*y|x*z.inv
+Monoid.LDiv.cancel-right	lemma	d5dd1f911202	-	164a6a6a		\lemma cancel-right {M : CancelCMonoid} {x y : M} (z : M) (x*z|y*z : LDiv (x * z) (y * z)) : LDiv x y x*z|y*z.inv
+Monoid.LDiv.trans	lemma	595994fc70ea	-	e2409c4f		\lemma trans {M : Monoid} {x y z : M} (x|y : LDiv x y) (y|z : LDiv y z) : LDiv x z (x|y.inv * y|z.inv)
+Monoid.LDiv.ide-div	lemma	941ceeba9b03	-	008426df		\lemma ide-div {M : Monoid} {x : M} : LDiv ide x x
+Monoid.LDiv.id-div	lemma	c938d08373e8	-	008426df		\lemma id-div {M : Monoid} {x : M} : LDiv x x ide
+Monoid.LDiv.swap	lemma	49549cc53fe0	-	03176dd1	8c02cb60:Monoid.DivBase.inv 8c02cb60:Monoid.DivBase.val	\lemma swap {M : CMonoid} (l : LDiv {M}) : LDiv l.inv l.elem l.val
+Monoid.LDiv.idempt	lemma	c6e8a0ea399a	-	ba40abdb	62b8ffdc:Semigroup.*	\lemma idempt {M : Monoid} (l : LDiv {M}) (p : l * l = l) : l * l.elem = l.elem
+Monoid.LDiv.cancelProp	lemma	89f030edec9c	-	33b36925	bac02e7d:Monoid.LDiv	\lemma cancelProp {M : Monoid} (x : M) (q : \Pi {a b : M} -> x * a = x * b -> a = b) (y : M) : isProp (LDiv x y)
+Monoid.LDiv.fromTruncP	lemma	6d5f05b2eadd	-	33b36925	bac02e7d:Monoid.LDiv	\lemma fromTruncP {M : Monoid} {x y : M} (q : \Pi {a b : M} -> x * a = x * b -> a = b) (t : TruncP (LDiv x y)) : \level LDiv x y cancelProp x q y
+associates.levelProp	level	4e669081d398	-	33b36925	bac02e7d:Monoid.LDiv	\use \level levelProp {M : CancelMonoid} (x y : M) (t t' : associates x y) : t = t'
+Monoid.RDiv	record	26cea2238e94	-	a230ff83	8c02cb60:Monoid.DivBase.elem 8c02cb60:Monoid.DivBase.inv 8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\record RDiv \extends DivBase { | inv-left : inv * val = elem }
+Monoid.LInv	record	f8513614fc4d	-	43fe0d70	8c02cb60:Monoid.DivBase.elem 428f4fe9:Monoid.RDiv 62b8ffdc:Semigroup.*	\record LInv \extends RDiv { | elem => ide }
+Monoid.RInv	record	637de93b7638	-	fe75c70b	8c02cb60:Monoid.DivBase.elem bac02e7d:Monoid.LDiv	\record RInv \extends LDiv { | elem => ide }
+Monoid.LInv.inv-cancel-left	lemma	1b84c79a503c	-	9e3f32c4	8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\lemma inv-cancel-left {y z : M} (p : val * y = val * z) : y = z
+Monoid.LInv.rotate-inv-left	lemma	d6ac5aa5c411	-	5e1fd649	8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\lemma rotate-inv-left {x y : M} (p : val * x = y) : x = RInv.inv * y
+Monoid.LInv.rotate-right	lemma	e470971b3d89	-	5e1fd649	8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\lemma rotate-right {x y : M} (p : x * LInv.inv = y) : x = y * val
+Monoid.RInv.inv-cancel-right	lemma	7d8430e37ff7	-	36c1cb15	8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\lemma inv-cancel-right {x y : M} (p : x * val = y * val) : x = y
+Monoid.RInv.rotate-inv-right	lemma	548a1595757e	-	41d900e5	8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\lemma rotate-inv-right {x y : M} (p : x * val = y) : x = y * RInv.inv
+Monoid.RInv.rotate-left	lemma	ca80960c1b43	-	41d900e5	8c02cb60:Monoid.DivBase.val 62b8ffdc:Semigroup.*	\lemma rotate-left {x y : M} (p : LInv.inv * x = y) : x = val * y
+Monoid.Inv	record	61e907b5604c	-	edd008ee	8c02cb60:Monoid.DivBase.inv 8c02cb60:Monoid.DivBase.val fbfd7c76:Monoid.Inv.reverse	\record Inv \extends LInv, RInv
+Monoid.Inv.inv-isUnique	lemma	e8db39227667	-	8492c6ed	6cc0073a:Monoid.Inv	\lemma inv-isUnique {M : Monoid} (j j' : Inv {M}) (p : j.val = j'.val) : j.inv = j'.inv
+Monoid.Inv.reverse	func	a375b63d5183	acc541be2edb	b4c6a92d	8c02cb60:Monoid.DivBase.inv 8c02cb60:Monoid.DivBase.val 6cc0073a:Monoid.Inv	\func reverse : Inv DivBase.inv val
+Monoid.Inv.ide-isInv	lemma	d24f930a1aa8	-	7b978fce		\lemma ide-isInv {M : Monoid} : Inv {M} ide
+Monoid.Inv.prod	lemma	ce7c978839a3	-	498d610a	62b8ffdc:Semigroup.*	\lemma prod {M : Monoid} (i j : Inv {M}) : Inv (i * j) (j.inv * i.inv)
+Monoid.Inv.factor-left	lemma	4afda6ad5213	-	45d78e58	6cc0073a:Monoid.Inv 62b8ffdc:Semigroup.*	\lemma factor-left {M : Monoid} {x y : M} (i : RInv y) (j : Inv (x * y)) : Inv x
+Monoid.Inv.factor-right	lemma	80f2d48435d8	-	45d78e58	6cc0073a:Monoid.Inv 62b8ffdc:Semigroup.*	\lemma factor-right {M : Monoid} {x y : M} (i : LInv x) (j : Inv (x * y)) : Inv y
+Monoid.Inv.lmake	lemma	f1e2fbc14de2	-	bca7a59e		\lemma lmake {M : CMonoid} {x : M} (y : M) (p : y * x = ide) : Inv x y
+Monoid.Inv.rmake	lemma	5eb03aacb563	-	bca7a59e		\lemma rmake {M : CMonoid} {x : M} (y : M) (p : x * y = ide) : Inv x y
+Monoid.Inv.ldiv	lemma	8c652e99e2d2	-	bca7a59e		\lemma ldiv {M : CMonoid} {x : M} (d : LDiv x ide) : Inv x d.inv
+Monoid.Inv.rdiv	lemma	413f6f19b886	-	bca7a59e		\lemma rdiv {M : CMonoid} {x : M} (d : RDiv x ide) : Inv x d.inv
+Monoid.Inv.cfactor-left	lemma	85d17d24736c	-	d66b925b	aab90f50:CMonoid	\lemma cfactor-left {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv x
+Monoid.Inv.cfactor-right	lemma	832a9672ac2a	-	d66b925b	aab90f50:CMonoid	\lemma cfactor-right {M : CMonoid} {x y : M} (i : Inv (x * y)) : Inv y
+CMonoid.divInv	lemma	d7f62f930c5a	-	c9840518	6cc0073a:Monoid.Inv bac02e7d:Monoid.LDiv 62b8ffdc:Semigroup.*	\lemma divInv {x y : E} (cancel : \Pi {a b : E} -> x * a = x * b -> a = b) (xy|x : LDiv (x * y) x) : Inv y
+CancelCMonoid.divInv	lemma	f4a0f11ed128	-	c9840518	6cc0073a:Monoid.Inv bac02e7d:Monoid.LDiv 62b8ffdc:Semigroup.*	\lemma divInv {x y : E} (xy|x : Monoid.LDiv (x * y) x) : Monoid.Inv y
+associates	func	952f412cd907	3a7aa49afe60	3ee00cb1	6cc0073a:Monoid.Inv 62b8ffdc:Semigroup.*	\func associates {M : Monoid} (x y : M)
+associates-sym	func	c857e59f3abd	d324c74ad478	4bd3f935		\func associates-sym {M : Monoid} {x y : M} (a : associates x y) : associates y x
+AddMonoid	class	bf78f47ea0bd	-	e54b80c1	62b8ffdc:AddMonoid.+ 8d2e080b:AddMonoid.+-assoc 817d7bbf:Monoid	\class AddMonoid \extends AddPointed { | \infixl 6 + : E -> E -> E | zro-left {x : E} : zro + x = x | zro-right {x : E} : x + zro = x | +-assoc {x y z : E} : (x + y) + z = x + (y + z) }
+AddMonoid.negative-unique	lemma	42197a4ccb29	-	c8ab0358	62b8ffdc:AddMonoid.+	\lemma negative-unique {x z : E} (y : E) (p : x + y = zro) (q : y + z = zro) : x = z
+AddMonoid.*n	func	1585e53b199a	e16f64f5bc46	844a2c2d		\func *n (n : Nat) (a : E) : E
+AddMonoid.*n_pow	lemma	69ac867944d6	-	8b5c92c5	438f3763:AddMonoid.*n c548d1f8:Monoid.pow	\lemma *n_pow {n : Nat} {a : E} : n *n a = \this.pow a n
+AddMonoid.*n-rdistr	lemma	ba6fab2aeffd	-	8b5c92c5	438f3763:AddMonoid.*n c548d1f8:Monoid.pow	\lemma *n-rdistr {n m : Nat} {a : E} : (n Nat.+ m) *n a = n *n a + m *n a
+AddMonoid.*n-assoc	lemma	c80822f157cb	-	8b5c92c5	438f3763:AddMonoid.*n c548d1f8:Monoid.pow	\lemma *n-assoc {n m : Nat} {a : E} : (n Nat.* m) *n a = n *n (m *n a)
+AddMonoid.op	func	51a18378b50a	bce7df190b9f	7734d502		\func op : AddMonoid E
+AddMonoid.fromMonoid	coerce	098669ce8973	-	0db62593		\use \coerce fromMonoid (M : Monoid)
+AddMonoid.toMonoid	coerce	50e415effd59	-	0db62593		\use \coerce toMonoid (M : AddMonoid)
+AbMonoid	class	6517a6dab1c1	-	6480e305	c69571d5:AbMonoid.+-comm 89c60de3:AddMonoid dcdd9bd1:AddMonoid.zro-left bd276537:AddMonoid.zro-right	\class AbMonoid \extends AddMonoid { | +-comm {x y : E} : x + y = y + x | zro-left => +-comm *> zro-right | zro-right => +-comm *> zro-left }
+AbMonoid.fromCMonoid	coerce	14eb037ec312	-	c6b61040	aab90f50:CMonoid	\use \coerce fromCMonoid (M : CMonoid)
+AbMonoid.toCMonoid	coerce	817fae949dfd	-	c6b61040	aab90f50:CMonoid	\use \coerce toCMonoid (M : AbMonoid)
+AbMonoid.*n-ldistr	lemma	e55314b57cf2	-	e02413e1	438f3763:AddMonoid.*n 62b8ffdc:AddMonoid.+	\lemma *n-ldistr {n : Nat} {a b : E} : n *n (a + b) = n *n a + n *n b
+AddMonoid.BigSum	func	3bacece31d40	311366dc42e2	e6bb698a	54ec52cd:Monoid.BigProd	\func BigSum (l : Array E)
+AddMonoid.BigSum-ext	lemma	a0451c9d9d3c	-	52fef6a4		\lemma BigSum-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigSum l = BigSum l'
+AddMonoid.BigSum_++	lemma	3d9e016eea06	-	57688063		\lemma BigSum_++ {l l' : Array E} : BigSum (l ++ l') = BigSum l + BigSum l'
+AddMonoid.BigSum_Big++	lemma	d7a74a5aca07	-	57688063		\lemma BigSum_Big++ {ls : Array (Array E)} : BigSum (Big ++ nil ls) = BigSum (map BigSum ls)
+AddMonoid.BigSum_++'	lemma	dc5e84f098be	-	57688063		\lemma BigSum_++' {l : Array E} {n : Nat} {l' : Array E n} : BigSum (l ++' l') = BigSum l + BigSum l'
+AddMonoid.BigSum-split	lemma	21e63cec2fcc	-	81da117b	62b8ffdc:AddMonoid.+	\lemma BigSum-split {n m : Nat} {l : Array E (n Nat.+ m)} : BigSum l = BigSum (\lam (i : Fin n) => l (fin-inc i)) + BigSum (\lam (j : Fin m) => l (fin-raise j))
+AbMonoid.BigSum-reverse	lemma	a93e363ec739	-	aa7997d2	56d9f45c:AddMonoid.BigSum	\lemma BigSum-reverse {k : Nat} (l : Array E (suc k)) : BigSum (\new (Array E (suc k) (\lam i => l ((k -' i) Nat.mod suc k)))) = BigSum l
+AddMonoid.BigSum_suc	lemma	65d670fbb079	-	1ff0b676		\lemma BigSum_suc {n : Nat} {l : Array E (suc n)} : BigSum l = BigSum (\new (Array E n (\lam i => l i))) + l (n Nat.mod suc n)
+AddMonoid.BigSum_suc-nat	lemma	bc5cbfa0e85d	-	1ff0b676		\lemma BigSum_suc-nat {n : Nat} {f : Nat -> E} : BigSum (\new (Array E (suc n) (f __))) = BigSum (\new (Array E n (f __))) + f n
+AddMonoid.BigSum_zro	lemma	4905abb44774	-	b8af149e		\lemma BigSum_zro {l : Array E} (p : \Pi (j : Fin l.len) -> l j = zro) : BigSum l = zro
+AddMonoid.BigSum_replicate0	lemma	463d98a9802b	-	b8af149e		\lemma BigSum_replicate0 {n : Nat} : BigSum (replicate n zro) = 0
+AddMonoid.BigSum-unique	lemma	df9916adb855	-	de9206e5		\lemma BigSum-unique {l : Array E} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> i /= j -> l j = 0) : BigSum l = l i
+AddMonoid.BigSum-unique2	lemma	609451587c3b	-	de9206e5		\lemma BigSum-unique2 {l : Array E} {i j : Fin l.len} (i<j : i NatOrder.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j
+AddMonoid.BigSum-pred	lemma	3c54b8fe6bd4	-	c00255cc	62b8ffdc:AddMonoid.+ 56d9f45c:AddMonoid.BigSum	\lemma BigSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {l : Array E} (p : \Pi (j : Fin l.len) -> P (l j)) : P (BigSum l)
+AddMonoid.BigSum-subset	lemma	fb552e0dda5a	-	59351286		\lemma BigSum-subset {l l' : Array E} (p : l.len <= l'.len) (q1 : \Pi (j : Fin l.len) -> l j = l' (toFin j $ fin_< j <∘l p)) (q2 : \Pi (j : Fin l'.len) -> l.len <= j -> l' j = 0) : BigSum l = BigSum l'
+AddMonoid.fit_BigSum	lemma	c0a7895da1ed	-	4cf04d5a		\lemma fit_BigSum {n : Nat} {l : Array E} (p : \Pi (j : Fin l.len) -> n <= j -> l j = 0) : BigSum (fit 0 {n} l) = BigSum l
+AddMonoid.fit-transpose	lemma	33e5b65e620e	-	4cf04d5a		\lemma fit-transpose {n m : Nat} (l : Array (Array E m) n) : BigSum (\lam j => fit zro (l j) j) = BigSum (\lam k => fit zro (l __ k) k)
+AbMonoid.BigSum_+	lemma	5af8a0db2819	-	faa73006		\lemma BigSum_+ {n : Nat} {l l' : Array E n} : BigSum (\lam i => l i + l' i) = BigSum l + BigSum l'
+AbMonoid.BigSum-transpose	lemma	40085c7fa68a	-	80088866		\lemma BigSum-transpose {m n : Nat} (f : Fin m -> Fin n -> E) : BigSum (\lam i => BigSum (f i)) = BigSum (\lam j => BigSum (f __ j))
+AbMonoid.BigSum-double-dep	lemma	3d90d33920e0	-	4e955474		\lemma BigSum-double-dep {n : Nat} (m : Fin n -> Nat) (y : \Sigma (i : Fin n) (Fin (m i)) -> E) : BigSum (\lam i => BigSum (\lam j => y (i, j))) = BigSum (\lam k => y (SigmaFin.aux.f k))
+AbMonoid.BigSum_Or	lemma	e0b52b6ea0b1	-	4e955474		\lemma BigSum_Or {n m : Nat} (x : Or (Fin n) (Fin m) -> E) : BigSum (\lam j => x (OrFin.aux j)) = BigSum (\lam j => x (inl j)) + BigSum (\lam j => x (inr j))
+AbMonoid.BigSum_EPerm	lemma	74deeb722569	-	8ec2c78d		\lemma BigSum_EPerm {l l' : Array E} (e : EPerm l l') : BigSum l = BigSum l'
+AbMonoid.BigSum_Perm	lemma	8f40eaf8bbdf	-	8ec2c78d		\lemma BigSum_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigSum l = BigSum l'
+AbMonoid.FinSum	sfunc	f82b3db7a66b	3a75eabbef04	ecad8824		\sfunc FinSum {A : FinSet} (x : A -> E) : E
+AbMonoid.FinSum_char	lemma	3b9ecaea39f4	-	896c6bc2	56d9f45c:AddMonoid.BigSum	\lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : QEquiv {Fin A.card} {A}) (FinSum {_} {A} x = BigSum (\lam j => x (e j)))
+AbMonoid.FinSum_char2	lemma	898ba129103d	-	896c6bc2	56d9f45c:AddMonoid.BigSum	\lemma FinSum_char2 {A : FinSet} {x : A -> E} (e : QEquiv {Fin A.card} {A}) : FinSum x = BigSum (\lam j => x (e j))
+AbMonoid.FinSum_zro	lemma	e70b38a32e7f	-	387577a6		\lemma FinSum_zro {J : FinSet} {x : J -> E} (p : \Pi (j : J) -> x j = 0) : FinSum x = 0
+AbMonoid.FinSum_+	lemma	30f59c3878f4	-	387577a6		\lemma FinSum_+ {J : FinSet} {x : J -> E} {y : J -> E} : FinSum (\lam j => x j + y j) = FinSum x + FinSum y
+AbMonoid.FinSum-const	lemma	c1e9d4432b36	-	387577a6		\lemma FinSum-const {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = BigSum (\new (Array E A.card (\lam j => x)))
+AbMonoid.FinSum-double-dep	lemma	9bc8717a3b3d	-	3a935fd9	21716194:AbMonoid.FinSum	\lemma FinSum-double-dep {A : FinSet} (B : A -> FinSet) {x : \Sigma (a : A) (B a) -> E} : FinSum (\lam a => FinSum (\lam b => x (a, b))) = FinSum {_} {SigmaFin A B} x
+AbMonoid.FinSum-double	lemma	6cdf4b2901c9	-	3a935fd9	21716194:AbMonoid.FinSum	\lemma FinSum-double {A B : FinSet} {x : A -> B -> E} : FinSum (\lam a => FinSum (\lam b => x a b)) = FinSum (\lam (p : \Sigma A B) => x p.1 p.2)
+AbMonoid.FinSum=BigSum	lemma	e136699082c7	-	9ebd7e25	56d9f45c:AddMonoid.BigSum	\lemma FinSum=BigSum {n : Nat} {x : Fin n -> E} : FinSum x = BigSum x
+AbMonoid.FinSum_Equiv	lemma	38d9221ba13c	-	89bc5159		\lemma FinSum_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinSum x = FinSum (\lam a => x (e a))
+AbMonoid.FinSum_Equiv2	lemma	2dbf3aa6e8ae	-	89bc5159		\lemma FinSum_Equiv2 {A B : FinSet} (e : QEquiv {A} {B}) {x : A -> E} {y : B -> E} (p : \Pi (a : A) -> x a = y (e a)) : FinSum x = FinSum y
+AbMonoid.FinSum-double-dep'	lemma	fdfb911d02de	-	58c092b7	21716194:AbMonoid.FinSum 6b896df5:AbMonoid.FinSum-double-dep	\lemma FinSum-double-dep' {A : FinSet} (B : A -> FinSet) {x : \Pi (a : A) -> B a -> E} : FinSum (\lam a => FinSum (x a)) = FinSum {_} {SigmaFin A B} (\lam s => x s.1 s.2)
+AbMonoid.FinSum-ext	lemma	823be4928f79	-	2fba5860	21716194:AbMonoid.FinSum	\lemma FinSum-ext {A : FinSet} {x y : A -> E} (p : \Pi (a : A) -> x a = y a) : FinSum x = FinSum y
+AbMonoid.FinSum-inj	lemma	5a3953042daa	-	0b96f210		\lemma FinSum-inj {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0) : FinSum x = FinSum (\lam a => x (f a))
+AbMonoid.FinSum-inj2	lemma	01b0c2abb49a	-	3009cde6	52b2507d:AbMonoid.FinSum-inj	\lemma FinSum-inj2 {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0) {y : A -> E} (q : \Pi (a : A) -> x (f a) = y a) : FinSum x = FinSum y
+AbMonoid.FinSum_Or	lemma	3a080152c88e	-	fcb5af3c		\lemma FinSum_Or {A B : FinSet} {x : Or A B -> E} : FinSum x = FinSum (\lam a => x (inl a)) + FinSum (\lam b => x (inr b))
+AbMonoid.FinSum-unique	lemma	f0bd9bd1688b	-	4f910187		\lemma FinSum-unique {J : FinSet} {a : J -> E} (j : J) (p : \Pi (j' : J) -> j' /= j -> a j' = 0) : FinSum a = a j
+AbMonoid.FinSum-unique2	lemma	fae0461430ff	-	4f910187		\lemma FinSum-unique2 {J : FinSet} {i j : J} (i/=j : i /= j) {x : J -> E} (p : \Pi (k : J) -> k /= i -> k /= j -> x k = 0) : FinSum x = x i + x j
+AbMonoid.FinSum-pred	lemma	b26d98a4c2cc	-	c2f76ce8	7bcb9a1a:AddMonoid.BigSum-pred	\lemma FinSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {J : FinSet} {a : J -> E} (p : \Pi (j : J) -> P (a j)) : P (AbMonoid.FinSum a)
+CMonoid.IsRegularElem	func	0638edb3db8c	5eb1afdf42fe	5233cf8d	62b8ffdc:Semigroup.*	\func IsRegularElem (a : E)
+CMonoid.regulars	func	fb96c3b94123	546255ab39cd	1b7ee601	b43c6557:CMonoid.IsRegularElem	\func regulars : SubMonoid \this
+CMonoid.LDiv_IsRegular	lemma	d39eb8a82af7	-	4db74b2a		\lemma LDiv_IsRegular {a b : E} (d : LDiv a b) (c : IsRegularElem b) : IsRegularElem a
+CMonoid.DivChain	func	d143af8bb978	a3fa0e736de4	c2508fcb	bac02e7d:Monoid.LDiv	\func DivChain : \Prop
+(overview)	-	-	-	dc352a35	cb48505e:AbMonoid 21716194:AbMonoid.FinSum 89c60de3:AddMonoid 438f3763:AddMonoid.*n 56d9f45c:AddMonoid.BigSum 890e5940:AddMonoid.fromMonoid 632f2a32:AddMonoid.toMonoid 817d7bbf:Monoid 54ec52cd:Monoid.BigProd 6cc0073a:Monoid.Inv bac02e7d:Monoid.LDiv 2b529ef3:Monoid.LInv 428f4fe9:Monoid.RDiv ee09643a:Monoid.RInv c548d1f8:Monoid.pow 86fed3f0:Semigroup	-

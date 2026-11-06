@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GSet.GSetCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+GSetCategory	instance	dd3e4f5114be	-	bf916110		\instance GSetCategory (G : Group) : Cat (GSet.{u} G)
+(overview)	-	-	-	54538a75		-

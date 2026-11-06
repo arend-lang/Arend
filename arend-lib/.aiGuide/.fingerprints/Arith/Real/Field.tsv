@@ -1,0 +1,30 @@
+# arend -gc fingerprints v2 for module Arith.Real.Field. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RealField	instance	79e63a8c81c5	-	13e21000	9a57071b:RealField.*	\instance RealField : OrderedFieldAlgebra RatField Real
+RealField.unique1	lemma	97583747eb09	-	4f784951		\lemma unique1 {X : SeparatedCoverSpace} (f g : CoverMap RealNormed X) (p : \Pi (x : Rat) -> f x = g x) {x : Real} : f x = g x
+RealField.unique2	lemma	98a085722f2b	-	b242d453		\lemma unique2 {X : SeparatedCoverSpace} (f g : CoverMap (RealNormed ⨯ RealNormed) X) (p : \Pi (x y : Rat) -> f (x, y) = g (x, y)) {x y : Real} : f (x, y) = g (x, y)
+RealField.unique3	lemma	dda57f653103	-	33009be0		\lemma unique3 {X : SeparatedCoverSpace} (f g : CoverMap (RealNormed ⨯ RealNormed ⨯ RealNormed) X) (p : \Pi (x y z : Rat) -> f ((x, y), z) = g ((x, y), z)) {x y z : Real} : f ((x, y), z) = g ((x, y), z)
+RealField.*-rat-locally-uniform	lemma	c9c2f0205681	-	57ffb42d	9a57071b:RealField.*	\lemma *-rat-locally-uniform : LocallyUniformMap (RatNormed ⨯ RatNormed) RatNormed (\lam s => s.1 *' s.2)
+RealField.*-cover-def	func	8f897841c870	d88ea8fa82f7	81900104	d251a79b:RealField.*-rat-locally-uniform	\func *-cover-def : CoverMap (RealNormed ⨯ RealNormed) RealNormed
+RealField.*	sfunc	ee722198d86a	677c3ab906a8	473beb89	d96ddf04:RealField.*-cover-def	\sfunc * (x y : Real) : Real
+RealField.*-rat	lemma	6447fe8b2c19	-	dd671e53		\lemma *-rat {x y : Rat} : x * y = {Real} x *' y
+RealField.pow-rat	lemma	50e41c9651c8	-	19a1658b		\lemma pow-rat {x : Rat} {n : Nat} : RealField.pow x n = {Real} RatField.pow x n
+RealField.*-cover	lemma	939542f967fc	-	9adffa2f	9a57071b:RealField.*	\lemma *-cover : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed (\lam s => s.1 * s.2)
+RealField.*_>=0-char	lemma	00b3d528fdad	-	3d173a70	9a57071b:RealField.*	\lemma *_>=0-char {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {d : Rat} : (x * y).U d <-> ∃ (a : x.U) (b : y.U) (a *' b <= d)
+RealField.*_>=0-char.*_>0-char	lemma	169bc5f1b0c4	-	dfeb0081	9a57071b:RealField.*	\lemma *_>0-char {x y d : Real} (y>0 : 0 < y) (xy<d : x * y < d) : ∃ (a : x.U) (a * y < d)
+RealField.*_>=0-char.*_>0-char2	lemma	b8c11f5bfa0c	-	0d8cf4dd		\lemma *_>0-char2 {x y : Real} (x>=0 : 0 <= x) (y>0 : 0 < y) {d : Rat} (xy<d : (x * y).U d) : ∃ (a : x.U) (b : y.U) (a *' b <= d)
+RealField.*-upper	lemma	0bf0821f6d4f	-	04d33ffe	9a57071b:RealField.*	\lemma *-upper {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : x * y = x ExUpperReal.* y
+RealField.pow-upper	lemma	c153910e576a	-	a59d163e		\lemma pow-upper {x : Real} (x>=0 : 0 <= x) {n : Nat} : RealField.pow x n = ExUpperRealSemigroup.pow x n
+RealField.*_positive-char	lemma	8a6e30edf273	-	502ef6da	9a57071b:RealField.*	\lemma *_positive-char {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) {c d : Rat} : open-rat-int c d (x * y) <-> ∃ (a b a' b' : Rat) (0 < a) (0 < a') (open-rat-int a b x) (open-rat-int a' b' y) (c < a *' a') (b *' b' < d)
+RealField.*_positive-L	lemma	7d6806bd13eb	-	704ceffc	9a57071b:RealField.*	\lemma *_positive-L {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) {c : Rat} : LowerReal.L {x * y} c <-> ∃ (a a' : Rat) (0 < a) (0 < a') (x.L a) (y.L a') (c < a *' a')
+RealField.*_positive-U	lemma	5aab5a1eae18	-	5f25d3c8	9a57071b:RealField.*	\lemma *_positive-U {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) {d : Rat} : UpperReal.U {x * y} d <-> ∃ (b b' : Rat) (x.U b) (y.U b') (b *' b' < d)
+RealField.real-pos-inv	func	063f0ebf3729	65b57f9292dd	75d3352b		\func real-pos-inv {x : Real} (x>0 : x.L 0) : Real
+RealField.real-pos-inv>0	lemma	0196a21b0ac1	-	8e87c114		\lemma real-pos-inv>0 {x : Real} (x>0 : x.L 0) : LowerReal.L {real-pos-inv x>0} 0
+RealField.pos-inv_rat	lemma	7634f0c6235c	-	1c3bd445		\lemma pos-inv_rat {x : Rat} (x>0 : 0 < Real.fromRat x) : RealField.pinv x x>0 = Real.fromRat (finv x)
+RealField.finv-left	lemma	2a29cbf2217d	-	0cd69866	9a57071b:RealField.*	\lemma finv-left {x : Rat} (x/=0 : x /= 0) : finv x * x = 1
+RealField.finv-right	lemma	3c885b67d57f	-	d5f619da	9a57071b:RealField.*	\lemma finv-right {x : Rat} (x/=0 : x /= 0) : x * finv x = 1
+RealField.half	func	7bf031c1013c	8a800774e19c	62c68bc9	9a57071b:RealField.*	\func half (x : Real)
+pow_<1-decay	lemma	cd66ab051586	-	e808f6fb	9a57071b:RealField.*	\lemma pow_<1-decay {s : Real} (s>=0 : 0 <= s) (s<1 : s < 1) (A : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (N : Nat) (pow s N * A < eps)
+split-eps	lemma	7825ce73381d	-	f66a6e24	9a57071b:RealField.*	\lemma split-eps {eps : Real} (eps>0 : 0 < eps) {w : Real} (w>0 : 0 < w) : ∃ (d : Real) (0 < d) (d * w < eps)
+array-eps-max	lemma	c5172be760e7	-	61ab534c		\lemma array-eps-max {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0) (c : Array Real n) : ∃ (k : Fin n) ∀ (i : Fin n) (c i < c k + eps)
+(overview)	-	-	-	34f89eb5	ba848729:RealField.real-pos-inv 8af222fe:RealField.unique1 9f2ea108:RealField.unique2 1478c92b:RealField.unique3	-

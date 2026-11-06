@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Topology.TopRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TopSemigroup	class	1bad92ade85d	-	3c37be25	b90fc76e:TopSemigroup.*-cont	\class TopSemigroup \extends TopSpace, Semigroup { | *-cont : ContMap (ProductTopSpace \this \this) \this (\lam s => s.1 * s.2) }
+TopMonoid	class	786fd36dc734	-	3d48ad68	f6036814:TopMonoid.pow-cont edb00bc3:TopSemigroup	\class TopMonoid \extends TopSemigroup, Monoid
+TopMonoid.pow-cont	lemma	2cadcedd8719	-	84eb0d56		\lemma pow-cont {n : Nat} : IsCont (pow __ n)
+TopRing	class	42a47a21360a	-	65cf0eac	5b3ac49a:TopMonoid	\class TopRing \extends TopAbGroup, TopMonoid, Ring
+NearSkewField	class	e71eaaaf35a2	-	b48d2ce5	b6c5fa44:NearSkewField.inv-dense f42e6b51:TopRing	\class NearSkewField \extends TopRing { | inv-dense : IsDenseSet (\lam (x : E) => Monoid.Inv x) }
+NearField	class	be3be8958d5d	-	15c7e816	3ee0ec07:NearSkewField	\class NearField \extends NearSkewField, CRing
+nearField-map-unique	lemma	4712eb801a35	-	adcb3e3d	3ee0ec07:NearSkewField	\lemma nearField-map-unique {R : NearSkewField} {Y : HausdorffTopLModule R} {U : Set R} (Uo : isOpen U) (f g : ContMap (TopSub U) Y) (p : \Pi {h : R} (Uh : U h) -> h *c f (h, Uh) = h *c g (h, Uh)) {h : R} (Uh : U h) : f (h, Uh) = g (h, Uh)
+nearField-tmap-unique	lemma	09ccd11b8ec6	-	f2d0976f		\lemma nearField-tmap-unique {R : NearSkewField} {Y : HausdorffTopLModule R} (f g : ContMap R Y) (p : \Pi {h : R} -> h *c f h = h *c g h) {h : R} : f h = g h
+(overview)	-	-	-	bbc22576	5a59d558:NearField 3ee0ec07:NearSkewField 5b3ac49a:TopMonoid f42e6b51:TopRing	-

@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Equiv.Univalence. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+=_Equiv	func	6c01be4d97de	0a70253d6cce	d001b8d4		\func =_Equiv {A B : \Type u} (p : A = B) : Equiv A B
+Equiv_=	func	589d54ff7731	1d4959345599	4586e73d		\func Equiv_= {A B : \Type u} (e : Equiv A B) : A = B
+typeUnivalence	sfunc	34ee87b089ef	7f8b2a5e5383	3d6c9f25	0cbc8040:=_Equiv 85ec4a7d:Equiv_=	\sfunc typeUnivalence {A B : \Type u} : QEquiv {A = B} {Equiv A B} =_Equiv Equiv_=
+(overview)	-	-	-	898c33e0	0cbc8040:=_Equiv	-

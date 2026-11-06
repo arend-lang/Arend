@@ -1,0 +1,26 @@
+# arend -gc fingerprints v2 for module Topology.Locale.Real. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Interval	type	20569cd4706a	6b11a7f852f4	ffef7b77	d940bd24:IntervalBiordered.<	\type Interval (Q : StrictPoset)
+IntervalPoset	instance	6cefb5ffd742	-	f81c758c	354f2165:Interval 1836b5af:IntervalPoset.<=	\instance IntervalPoset (Q : BiorderedSet) : Poset (Interval Q)
+IntervalPoset.<=	type	f5206aee6a73	df7ae1967986	8085bc69		\type <= {Q : BiorderedSet} (x y : Interval Q)
+IntervalBiordered	instance	e38bbebc5bd3	-	c19e8b81	d940bd24:IntervalBiordered.<	\instance IntervalBiordered (Q : BiorderedSet) : BiorderedSet (Interval Q)
+IntervalBiordered.<	type	f5206aee6a73	d315c67f86ef	d45c2444		\type < {Q : BiorderedSet} (x y : Interval Q)
+RealPres	instance	0fdf802b8322	-	c402d548	354f2165:Interval d940bd24:IntervalBiordered.<	\instance RealPres (Q : LinearOrder.Dec) : PreorderSite (Interval Q)
+RealPres.toPointwiseCover	lemma	ff4aff72f89d	-	61ae1e32	d940bd24:IntervalBiordered.<	\lemma toPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {U : Set (Interval Q)} (a<=U : Cover a U) {x : Q} (a1<x : a.1 < x) (x<a2 : x < a.2) : ∃ (b : U) (b.1 < x) (x < b.2)
+RealPres.locallyCompact	lemma	02f3700db4de	-	2175b5c4	d7e3aff0:RealPres	\lemma locallyCompact {Q : DenseLinearOrder.Dec} : (RealPres Q).IsLocallyCompact
+RealLocale	func	f251e6938215	b71b9868670b	7f46be73	d7e3aff0:RealPres	\func RealLocale : Locale
+RealLocale.locallyCompact	lemma	8207105ccad8	-	6f323bea	bb7d7224:RealLocale	\lemma locallyCompact : RealLocale.IsLocallyCompact
+RealLocale.<=<-intervals	lemma	532e9cdfffd1	-	727317ad	d940bd24:IntervalBiordered.<	\lemma <=<-intervals {x y : Interval RatField} (r : x < y) : embed x <=< embed y
+RealLocale.regular	lemma	f29c80b4baa8	-	f68aa4f7	bb7d7224:RealLocale	\lemma regular : RealLocale.IsRegularLocale
+RealLocale.ratPoint	func	d48abd5800ae	0fd547bf5f74	96cfc7f7	d940bd24:IntervalBiordered.< bb7d7224:RealLocale 6f75dee7:RealLocale.ratPoint.sitePoint d7e3aff0:RealPres	\func ratPoint (x : Rat) : CompleteFilter RealLocale
+RealLocale.hasStronglyDensePoints	lemma	d3cbfe6de4cd	-	02ccc173	bb7d7224:RealLocale	\lemma hasStronglyDensePoints : HasStronglyDensePoints RealLocale
+lowerHalf	sfunc	87d1f79d6014	d7c68168e7ea	e0b22776	1836b5af:IntervalPoset.<=	\sfunc lowerHalf (x : Rat) : RealLocale
+upperHalf	sfunc	87d1f79d6014	a960253f0c79	5f35ffc5	d5e81986:lowerHalf	\sfunc upperHalf (x : Rat) : RealLocale
+closedInterval	func	23ba7d2f40ef	b79a669f28e9	7fa708b7	17ad4a77:closedInterval.nucleus d5e81986:lowerHalf d04ef54a:upperHalf	\func closedInterval (x y : Rat)
+closedInterval.nucleus	func	2b0acb04336c	3746f20fc318	ff7daf02	bb7d7224:RealLocale d5e81986:lowerHalf d04ef54a:upperHalf	\func nucleus (x y : Rat) : Nucleus
+halves-cover	lemma	a9e98d5d8132	-	49a378f4	d940bd24:IntervalBiordered.< 1836b5af:IntervalPoset.<= d5e81986:lowerHalf d04ef54a:upperHalf	\lemma halves-cover {x y : Rat} (x<y : x < y) : top <= lowerHalf y ∨ upperHalf x
+halves3-cover	lemma	3de53f6f14fc	-	f10552ca	d940bd24:IntervalBiordered.< 1836b5af:IntervalPoset.<= d5e81986:lowerHalf d04ef54a:upperHalf	\lemma halves3-cover {x y : Rat} {a : Interval RatField} (a1<x : a.1 < x) (y<a2 : y < a.2) : top <= lowerHalf x ∨ upperHalf y ∨ embed a
+halves-inter	lemma	9a853dc3b760	-	115b0ce9	1836b5af:IntervalPoset.<= d5e81986:lowerHalf d04ef54a:upperHalf	\lemma halves-inter {x y : Rat} {c : Interval RatField} (c1<=x : c.1 <= x) (y<=c2 : y <= c.2) : upperHalf x ∧ lowerHalf y <= embed c
+closedInterval.compact	lemma	0fb00759f2b1	-	e7fafc6b		\lemma compact (x y : Rat) : (closedInterval x y).IsCompact
+rat_real	func	3f60db632516	ab9d830cccc0	786940e5	d940bd24:IntervalBiordered.< bb7d7224:RealLocale	\func rat_real : LocaleHom (discreteLocale Rat) RealLocale
+(overview)	-	-	-	94167dd5	d940bd24:IntervalBiordered.< bb7d7224:RealLocale ab81e8e7:RealLocale.ratPoint d7e3aff0:RealPres	-

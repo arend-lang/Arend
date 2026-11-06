@@ -1,0 +1,3 @@
+# arend -gc fingerprints v2 for module Topology.TopSpace.TopSpaceCategory. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TopCat	instance	124b7c84ceb0	-	baee27c5		\instance TopCat : Cat TopSpace.{u}

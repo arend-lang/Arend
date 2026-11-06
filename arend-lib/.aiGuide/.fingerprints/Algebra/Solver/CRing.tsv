@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.CRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CRingSolverModel	func	e1029aacbba6	c823628be51e	d590c935		\func CRingSolverModel (R : CRing) : SolverModel R
+CRingSolverModel.terms-equality	lemma	ce503b189ab3	-	abfe306a		\lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : ringInterpretNF env (sortMonomials (normalize (t :_+ :negative s))) = 0) : interpret env t = interpret env s
+CRingSolverModel.terms-equality-conv	lemma	2e24de079ea7	-	f5cd25b0		\lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : ringInterpretNF env (sortMonomials (normalize (t :_+ :negative s))) = 0
+CRingSolverModel.diffNF	lemma	a6a7b5213a86	-	a36d082f		\lemma diffNF (env : Array R) (left right : NF Int env.len) (p : (RingData env).interpretNF' (left ++ Data.List.map (\lam s => (s.1, negative s.2)) right) = 0) : (RingData env).interpretNF' left = (RingData env).interpretNF' right
+CRingSolverModel.apply-axioms	lemma	18a587b3f148	-	922b49a0		\lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len) : ringInterpretNF env (sortMonomials (Big ++ add (map (\lam s => multiply s.1 (normalize (s.2 :_+ :negative s.3))) l))) = ringInterpretNF' add
+(overview)	-	-	-	c3e5d989	5dfc0b9d:CRingSolverModel.apply-axioms	-

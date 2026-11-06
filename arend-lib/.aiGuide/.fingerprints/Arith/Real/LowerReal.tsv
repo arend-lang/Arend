@@ -1,0 +1,27 @@
+# arend -gc fingerprints v2 for module Arith.Real.LowerReal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ExtendedLowerReal	record	27c0d1833052	-	51fb5477	9b3f71df:ExtendedLowerReal.L d6e54cd1:ExtendedLowerReal.L-closed b3114dac:ExtendedLowerReal.L-rounded	\record ExtendedLowerReal { | L : Rat -> \Prop | L-closed {q q' : Rat} : L q -> q' < q -> L q' | L-rounded {q : Rat} : L q -> ∃ (r : L) (q < r) }
+ExtendedLowerReal.fromRat	coerce	e6ed6cd4e799	-	3b1c55d8	78fbe4a7:ExtendedLowerReal 193c47e4:LowerRealAbMonoid.<	\use \coerce fromRat (x : Rat) : ExtendedLowerReal
+ExtendedLowerReal.L_<=	lemma	311ac3ccfa73	-	713474c7	9b3f71df:ExtendedLowerReal.L 193c47e4:LowerRealAbMonoid.< 7f6d1b5e:LowerRealAbMonoid.<=	\lemma L_<= {q r : Rat} (Lq : L q) (p : r <= q) : L r
+LowerReal	record	f60f4e4c4178	-	472500b2	78fbe4a7:ExtendedLowerReal 9b3f71df:ExtendedLowerReal.L 00ce5717:LowerReal.L-inh	\record LowerReal \extends ExtendedLowerReal { | L-inh : ∃ L }
+LowerReal.fromRat	coerce	9b675fcbfc3e	-	5d88a714	902541ff:LowerReal	\use \coerce fromRat (x : Rat) : LowerReal
+LowerReal.BJoin	func	534dc8f8d08a	5ef31a4e70af	c9cf7604	78fbe4a7:ExtendedLowerReal 902541ff:LowerReal	\func BJoin (b : LowerReal) {J : \Set} (f : J -> ExtendedLowerReal) : LowerReal
+LowerReal.BJoin-bound	lemma	cf6c0d4f681e	-	f77f0046	f2d62328:LowerReal.BJoin 7f6d1b5e:LowerRealAbMonoid.<=	\lemma BJoin-bound {b : LowerReal} {J : \Set} {f : J -> ExtendedLowerReal} : b <= BJoin b f
+LowerReal.BJoin-cond	lemma	676ada10dfa1	-	d9d5d429	f2d62328:LowerReal.BJoin 7f6d1b5e:LowerRealAbMonoid.<=	\lemma BJoin-cond {b : LowerReal} {J : \Set} (j : J) {f : J -> ExtendedLowerReal} : f j <= BJoin b f
+LowerReal.BJoin-univ	lemma	d2acdf63ec34	-	4e17a76b	f2d62328:LowerReal.BJoin	\lemma BJoin-univ {b : LowerReal} {J : \Set} {f : J -> ExtendedLowerReal} {e : ExtendedLowerReal} (b<=e : b <= e) (c : \Pi (j : J) -> f j <= e) : BJoin b f <= e
+LowerRealAbMonoid	instance	7d2bf3ef7914	-	9d3d1c46	902541ff:LowerReal 193c47e4:LowerRealAbMonoid.< 7f6d1b5e:LowerRealAbMonoid.<=	\instance LowerRealAbMonoid : BiorderedLatticeAbMonoid LowerReal
+LowerRealAbMonoid.+	sfunc	c99f8f322d9f	23d29b63e3bf	b523437c	9b3f71df:ExtendedLowerReal.L 193c47e4:LowerRealAbMonoid.<	\sfunc + (x y : LowerReal) : LowerReal
+LowerRealAbMonoid.+_L	lemma	24b38a1e706d	-	d53f2993	1c744f70:LowerRealAbMonoid.+	\lemma +_L {x y : LowerReal} {a : Rat} : LowerReal.L {x + y} a <-> ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c)
+LowerRealAbMonoid.+-rat	lemma	9e26c46e8aae	-	f98008b5	1c744f70:LowerRealAbMonoid.+	\lemma +-rat {x y : Rat} : LowerReal.fromRat x + LowerReal.fromRat y = LowerReal.fromRat (x RatField.+ y)
+LowerRealAbMonoid.<=	type	a45f74f5b086	dd441e72e2d4	aca40fbb	78fbe4a7:ExtendedLowerReal	\type <= (x y : ExtendedLowerReal)
+LowerRealAbMonoid.<	type	a45f74f5b086	1ea8a6ba47da	251c7113	7f6d1b5e:LowerRealAbMonoid.<=	\type < (x y : ExtendedLowerReal)
+LowerRealAbMonoid.lower_<_L	lemma	5eab9f3fa68e	-	c2e52e57	902541ff:LowerReal 193c47e4:LowerRealAbMonoid.<	\lemma lower_<_L {a : Rat} {x : LowerReal} : (a : LowerReal) LowerRealAbMonoid.< x <-> x.L a
+LowerRealAbMonoid.meet	sfunc	c99f8f322d9f	d380543ac1f4	a0945856	9b3f71df:ExtendedLowerReal.L	\sfunc meet (x y : LowerReal) : LowerReal
+LowerRealAbMonoid.meet_L	lemma	123751e655d1	-	29c0c517	85d7b69e:LowerRealAbMonoid.meet	\lemma meet_L {x y : LowerReal} {a : Rat} : LowerReal.L {meet x y} a <-> (\Sigma (x.L a) (y.L a))
+LowerRealAbMonoid.join	sfunc	c99f8f322d9f	9977bd455f8f	500afc05	9b3f71df:ExtendedLowerReal.L	\sfunc join (x y : LowerReal) : LowerReal
+LowerRealAbMonoid.join_L	lemma	ac095b25c339	-	14e60a1b	7a3aa184:LowerRealAbMonoid.join	\lemma join_L {x y : LowerReal} {a : Rat} : LowerReal.L {join x y} a <-> x.L a || y.L a
+LowerRealAbMonoid.zro<ide	lemma	232c6a2adec3	-	e387cdf1	193c47e4:LowerRealAbMonoid.<	\lemma zro<ide : (0 : LowerReal) < (1 : LowerReal)
+LowerRealAbMonoid.<=-char	lemma	6de490e88f8d	-	329573b9	7f6d1b5e:LowerRealAbMonoid.<=	\lemma <=-char {x : LowerReal} {a : Rat} (p : Not (x.L a)) : x <= LowerReal.fromRat a
+LowerRealAbMonoid.<_+	lemma	3e04a82bbdea	-	91c693dc	1c744f70:LowerRealAbMonoid.+ 193c47e4:LowerRealAbMonoid.<	\lemma <_+ {a b c d : LowerReal} (p : a < c) (q : b < d) : a + b < c + d
+ExtendedLowerRealLattice	instance	7c157f4a542a	-	7a76f0e4	78fbe4a7:ExtendedLowerReal 9b3f71df:ExtendedLowerReal.L f2d62328:LowerReal.BJoin	\instance ExtendedLowerRealLattice : CompleteLattice ExtendedLowerReal
+(overview)	-	-	-	89eabff6	78fbe4a7:ExtendedLowerReal 9b3f71df:ExtendedLowerReal.L 902541ff:LowerReal f2d62328:LowerReal.BJoin 00ce5717:LowerReal.L-inh 193c47e4:LowerRealAbMonoid.< 7f6d1b5e:LowerRealAbMonoid.<=	-

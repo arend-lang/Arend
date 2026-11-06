@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Topology.TopAbGroup.Complete. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CompleteTopAbGroup	class	45be1ccb042c	-	26cc6963		\class CompleteTopAbGroup \extends TopAbGroup, CompleteUniformSpace
+dense-topAb-lift	func	5efaf9d9f667	6a64c8929f80	18bf6de9		\func dense-topAb-lift {X Y : TopAbGroup} {Z : CompleteTopAbGroup} (f : TopAbGroupMap X Y) (fd : f.IsDenseTopEmbedding) (g : TopAbGroupMap X Z) : TopAbGroupMap Y Z
+TopAbGroupCompletion	instance	4465e9444109	-	8e63343e	ea9e8a1c:CompleteTopAbGroup	\instance TopAbGroupCompletion (X : TopAbGroup) : CompleteTopAbGroup
+TopAbGroupCompletion.abGroup	func	e123f9dcdb01	bc56c7170346	35655105	f8497241:TopAbGroupCompletion.+-func fe9e79be:TopAbGroupCompletion.negative-cover	\func abGroup : AbGroup (RegularCauchyFilter X)
+TopAbGroupCompletion.subtract-cover	func	9cb6ed91e6a1	4a7117e7bd61	677052ab		\func subtract-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+TopAbGroupCompletion.subtract_-	lemma	c0f7fd31fa0a	-	7fc9a17d	1585bb0f:TopAbGroupCompletion.abGroup 6607a54d:TopAbGroupCompletion.subtract-cover	\lemma subtract_- {F G : RegularCauchyFilter X} : subtract-cover (F, G) = F - {abGroup} G
+TopAbGroupCompletion.+-cover	sfunc	1c869fbb1cb3	db50fbc916c2	3fe27d0f	fe9e79be:TopAbGroupCompletion.negative-cover 6607a54d:TopAbGroupCompletion.subtract-cover	\sfunc +-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+TopAbGroupCompletion.+-func	func	c00fd576a2fa	df01fb895ba2	efceca34	629b6e6f:TopAbGroupCompletion.+-cover	\func +-func (x y : RegularCauchyFilter X)
+TopAbGroupCompletion.+-char	lemma	84e7faf08c33	-	8bec47f7	629b6e6f:TopAbGroupCompletion.+-cover	\lemma +-char {x y : X} : +-cover (pointCF x, pointCF y) = pointCF (x + y)
+TopAbGroupCompletion.negative-cover	sfunc	e3f690e30f32	f3e82b11cb2d	0cffec1b		\sfunc negative-cover : CoverMap (Completion X) (Completion X)
+TopAbGroupCompletion.negative-char	lemma	63291b9c9758	-	7938a66a	fe9e79be:TopAbGroupCompletion.negative-cover	\lemma negative-char {x : X} : negative-cover (pointCF x) = pointCF (negative x)
+TopAbGroupCompletion.topAb-neighborhood	lemma	142979ae4a79	-	8f37dbb8		\lemma topAb-neighborhood {F G : RegularCauchyFilter X} {U : Set (Completion X)} : single (F - {abGroup} G) <=< U <-> ∃ (U' : Set (Completion X)) (U' <=< U) (V1 : Set X) (F V1) (V2 : Set X) (G V2) ∀ {x : V1} {y : V2} (U' (pointCF (x - y)))
+completion-topAb	func	c1163728ce76	785d19b32c4b	f9c946b3	377e8901:TopAbGroupCompletion 79de9405:dense-topAb-lift	\func completion-topAb {X : TopAbGroup} : TopAbGroupMap X (TopAbGroupCompletion X)
+(overview)	-	-	-	8d3f9228	377e8901:TopAbGroupCompletion b16c0b26:completion-topAb 79de9405:dense-topAb-lift	-

@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.QPoly. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+QPoly	func	f0f3f45e8430	34ff1dd1291f	1900c426		\func QPoly (R : AddPointed)
+QPoly.~	data	2c7c07b6954b	-	8c88bb1c		\data \infix 5 ~ {R : AddPointed} (l l' : Array R) | eq-left (n : Nat) (l ++ replicate n zro = l') | eq-right (n : Nat) (l' ++ replicate (suc n) zro = l)
+QPoly.~.eq-left	cons	e70ad13802d9	-	baf8b983		| eq-left (n : Nat) (l ++ replicate n zro = l')
+QPoly.~.eq-right	cons	cf929bbb877a	-	5db84682		| eq-right (n : Nat) (l' ++ replicate (suc n) zro = l)
+QPoly.~.lists-lem1	lemma	3176106a906f	-	99005c9d		\lemma lists-lem1 {R : AddPointed} {l l' : Array R} (n m : Nat) (p : l ++ replicate n zro = l') (q : l ++ replicate m zro = l') : n = m
+QPoly.~.lists-lem2	lemma	33790c1e08a9	-	343e6e62		\lemma lists-lem2 {R : AddPointed} {l l' : Array R} {n m : Nat} (p : l ++ replicate n zro = l') (q : l' ++ replicate (suc m) zro = l) : Empty
+QPoly.~.levelProp	level	c20b68c35650	-	0b4e0cab	ffa0745a:QPoly.~	\use \level levelProp {R : AddPointed} {l l' : Array R} (x y : l ~ l') : x = y
+QPoly.~-isEquiv	func	30600f836b93	4a26041ef523	3ef702c5	ffa0745a:QPoly.~	\func ~-isEquiv {R : AddPointed} : Equivalence (Array R)
+QPoly.~-isEquiv.symm	lemma	5083f8bd0894	-	4777f360	ffa0745a:QPoly.~	\lemma symm {R : AddPointed} {x y : Array R} (p : x ~ y) : y ~ x
+QPoly.~-isEquiv.lists-lem1	lemma	9bad704af9c9	-	a1a5191e	ffa0745a:QPoly.~	\lemma lists-lem1 {R : AddPointed} {x z : Array R} (n m : Nat) (p : x ++ replicate n zro = z ++ replicate m zro) (q : m <= n) : x ~ z
+QPoly.~-isEquiv.lists-lem2	lemma	12f8177aa611	-	026f0780	ffa0745a:QPoly.~	\lemma lists-lem2 {R : AddPointed} {x y z : Array R} (n m : Nat) (p : y ++ replicate n zro = x) (q : y ++ replicate m zro = z) (s : n <= m) : x ~ z
+QPoly.from=to~	lemma	a61d90e187d9	-	0c363f26	851c7fcb:QPoly ffa0745a:QPoly.~	\lemma from=to~ {R : AddPointed} {l l' : Array R} (p : in~ l = {QPoly R} in~ l') : l ~ l'
+QPoly.from~to=	lemma	cceb4cc5108f	-	bfeebf92	851c7fcb:QPoly ffa0745a:QPoly.~	\lemma from~to= {R : AddPointed} {l l' : Array R} (p : l ~ l') : in~ l = {QPoly R} in~ l'
+QPoly.qadd	func	a54edcf2b913	d907924f62d7	1bdde6fa	851c7fcb:QPoly	\func qadd {R : AddPointed} (p : QPoly R) (e : R) : QPoly R
+QPoly.nil_cons	lemma	de9a0dccb4a3	-	09a4d8f8	851c7fcb:QPoly	\lemma nil_cons {R : AddPointed} {e : R} {l : Array R} (s : in~ nil = {QPoly R} in~ (e :: l)) : \Sigma (zro = e) (in~ nil = {QPoly R} in~ l)
+QPoly.qadd_nil	lemma	9cfae5d00b4f	-	387caf8a	44d37b66:QPoly.qadd	\lemma qadd_nil {R : AddPointed} {p : QPoly R} {e : R} (s : qadd p e = in~ nil) : \Sigma (p = in~ nil) (e = 0)
+QPoly.qadd_cons	lemma	398f33ccd269	-	4930908a	44d37b66:QPoly.qadd	\lemma qadd_cons {R : AddPointed} {e a : R} {p : QPoly R} {l' : Array R} (s : qadd p e = in~ (a :: l')) : \Sigma (e = a) (p = in~ l')
+(overview)	-	-	-	4e99472c	851c7fcb:QPoly ffa0745a:QPoly.~	-

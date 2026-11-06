@@ -1,0 +1,38 @@
+# arend -gc fingerprints v2 for module Algebra.Domain. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Domain	class	dd387a1da93c	-	2aeaa2a4	601a3b2c:Domain.#0-* 09855fc3:Domain.zro#ide	\class Domain \extends Ring.With#, ImpotentRing, NonZeroRing { | zro#ide : #0 ide | #0-* {x y : E} : #0 x -> #0 y -> #0 (x * y) | isReduced => \lam p => #0-tight (\lam a#0 => #0-zro $ transport #0 p (#0-* a#0 a#0)) | isImpotent => \lam {a} p => (\have q : a * (1 - a) = 0 => ldistr_- *> toZero (ide-right *> inv p) \in \case #0-+ (transportInv #0 (+-comm *> +-assoc *> pmap (1 +) negative-left *> zro-right) zro#ide) \with { | byLeft a#0 => byRight $ inv $ fromZero $ #0-tight (\lam zro-a#0 => apartNonZero (#0-* a#0 zro-a#0) q) | byRight zro-a#0 => byLeft $ #0-tight (\lam a#0 => apartNonZero (#0-* a#0 zro-a#0) q) }) | zro/=ide => \lam zro=ide => #0-zro (transportInv #0 zro=ide zro#ide) }
+Domain.nonZero_*	lemma	c47be976d3a8	-	abf61bae		\lemma nonZero_* {x y : E} (x/=0 : x /= zro) (y/=0 : y /= zro) : x * y /= zro
+Domain.nonZero-left	lemma	5a1c69cd917b	-	07bb1df7		\lemma nonZero-left {x y : E} (x/=0 : x /= zro) (x*y=0 : x * y = zro) : y = zro
+Domain.nonZero-right	lemma	406d4d8a8ac3	-	07bb1df7		\lemma nonZero-right {x y : E} (y/=0 : y /= zro) (x*y=0 : x * y = zro) : x = zro
+Domain.nonZero-cancel-left	lemma	7159c6435992	-	9c55c5f7		\lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= zro) (x*y=x*z : x * y = x * z) : y = z
+Domain.nonZero-cancel-right	lemma	27fb33037379	-	9c55c5f7		\lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= zro) (x*z=y*z : x * z = y * z) : x = y
+Domain.nonZeroMonoid	func	7bb0fa44d2de	f449e8c15ad0	7a5bf975		\func nonZeroMonoid : CancelMonoid
+Domain.subMonoid	func	fb96c3b94123	a5c0c1e1553c	604a5faf		\func subMonoid : SubMonoid \this
+Domain.ldiv_nonZero	lemma	241559a7276c	-	41463efb	647ccd9d:Domain.nonZeroMonoid	\lemma ldiv_nonZero {a b : nonZeroMonoid} (a|b : Monoid.LDiv a.1 b.1) : Monoid.LDiv {nonZeroMonoid} a b
+Domain.nonZero_ldiv	func	1061080fa4f1	1e7ef2e2c658	41463efb	647ccd9d:Domain.nonZeroMonoid	\func nonZero_ldiv {a b : nonZeroMonoid} (a|b : Monoid.LDiv {nonZeroMonoid} a b) : Monoid.LDiv a.1 b.1
+Domain.inv_nonZero	lemma	8f5fa3edf140	-	7a2b1054	647ccd9d:Domain.nonZeroMonoid	\lemma inv_nonZero {a : nonZeroMonoid} (i : Monoid.Inv a.1) : Monoid.Inv {nonZeroMonoid} a
+Domain.nonZero_inv	lemma	79f9a2e19dd2	-	7a2b1054	647ccd9d:Domain.nonZeroMonoid	\lemma nonZero_inv {a : nonZeroMonoid} (i : Monoid.Inv {nonZeroMonoid} a) : Monoid.Inv a.1
+Domain.pow_#0	lemma	941380ff066c	-	5fa74a75		\lemma pow_#0 {a : E} {n : Nat} (a#0 : #0 a) : #0 (pow a n)
+Domain.Dec	class	f6ebb7a2ad5c	-	116dc7a8	61330873:Domain 601a3b2c:Domain.#0-* 09855fc3:Domain.zro#ide efeb1a59:StrictDomain a4f6368f:StrictDomain.zeroProduct	\class Dec \extends Domain, Ring.Dec, StrictDomain { | zeroProduct => \lam {x} {y} xy=0 => (\case decideEq x zro, decideEq y zro \with { | yes x=0, _ => byLeft x=0 | _, yes y=0 => byRight y=0 | no x/=0, no y/=0 => absurd $ #0-zro $ transport #0 xy=0 $ #0-* (nonZeroApart x/=0) (nonZeroApart y/=0) }) | zro#ide => nonZeroApart (\lam x => zro/=ide (inv x)) | #0-* => \lam x#0 y#0 => nonZeroApart (\lam xy=0 => ||.rec' (apartNonZero x#0) (apartNonZero y#0) (zeroProduct xy=0)) }
+Domain.Dec.LDiv_TruncP	func	00364e5e7bbd	9d1b11842f18	a2fc9764		\func LDiv_TruncP {a b : E} (p : TruncP (LDiv a b)) : LDiv a b
+IntegralDomain	class	40b1dd970336	-	26dbac40	61330873:Domain	\class IntegralDomain \extends Domain, CRing.With#, ImpotentCRing, NonZeroCRing
+IntegralDomain.nonZeroCMonoid	func	7880c75ba28c	ac15b01c96dc	12db6f0f	647ccd9d:Domain.nonZeroMonoid	\func nonZeroCMonoid : CancelCMonoid
+IntegralDomain.div-inv	lemma	32d90bf8b3bf	-	12931578		\lemma div-inv (x y : E) (x/=0 : x /= zro) (x|y : LDiv x y) (y|x : LDiv y x) : Inv x|y.inv
+IntegralDomain.gcd_nonZero	func	25f47fb619ae	247002170156	13f8c84b	9328a5a1:IntegralDomain.nonZeroCMonoid	\func gcd_nonZero {a b : nonZeroCMonoid} (gcd : GCD a.1 b.1) : GCD {nonZeroCMonoid} a b
+IntegralDomain.nonZero_gcd	func	ecca20fbbc6d	f5884dd7cc8f	13f8c84b	9328a5a1:IntegralDomain.nonZeroCMonoid	\func nonZero_gcd {a b : nonZeroCMonoid} (gcd : GCD {nonZeroCMonoid} a b) : GCD a.1 b.1
+IntegralDomain.divQuotient_LDiv	lemma	c06992e5c5fe	-	daf80695	9328a5a1:IntegralDomain.nonZeroCMonoid	\lemma divQuotient_LDiv {x y : DivQuotient nonZeroCMonoid} : TruncP (LDiv {DivQuotientMonoid \this} (map IMonoid.embed x) (map IMonoid.embed y)) <-> TruncP (LDiv {DivQuotientMonoid nonZeroCMonoid} x y)
+IntegralDomain.toNonZeroDivChain	lemma	7531e83eb838	-	7034689b		\lemma toNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid \this}) : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}
+IntegralDomain.IsRegular_/=0	lemma	7f837cea079a	-	6d5e8a12		\lemma IsRegular_/=0 {a : E} : IsRegularElem a <-> a /= 0
+IntegralDomain.regulars-char	lemma	8d12e8d766e1	-	10a9e8a3		\lemma regulars-char {r : E} : regulars r <-> r /= zro
+IntegralDomain.Dec	class	8e7c91d10853	-	60a3cd3f	b3ff19cf:Domain.Dec 701b2176:IntegralDomain 63bee8e6:StrictIntegralDomain	\class Dec \extends IntegralDomain, Domain.Dec, CRing.Dec, StrictIntegralDomain, PPRing { | isPPRing => \lam a => inP (\case decideEq a 0 \with { | yes a=0 => (0, rewrite a=0 (inv zro_*-left), \lam _ => zro_*-left) | no a/=0 => (1, inv ide-left, \lam p => ide-left *> nonZero-left a/=0 p) }) }
+IntegralDomain.Dec.fromNonZeroDivChain	lemma	6b939dd61044	-	ae80ddcc	38ee59b0:IntegralDomain.toNonZeroDivChain	\lemma fromNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}) : CMonoid.DivChain {DivQuotientMonoid \this}
+IntegralDomain.Dec.oneDimensional-char	lemma	adfe72839c41	-	61327b4a		\lemma oneDimensional-char : Dim<= 1 <-> (\Pi (a u : E) -> a /= 0 -> ∃ (v : E) (n : Nat) (LDiv a (pow u n * (1 - u * v))))
+StrictDomain	class	a0656a04db39	-	ba04e79c	a4f6368f:StrictDomain.zeroProduct	\class StrictDomain \extends Ring, NonZeroSemiring, ImpotentRing { | zeroProduct {x y : E} : x * y = zro -> (x = zro) || (y = zro) | isReduced => \case zeroProduct __ \with { | byLeft r => r | byRight r => r } | isImpotent => \lam {a} p => (\have q : a * (a - 1) = 0 => ldistr_- *> toZero (p *> inv ide-right) \in \case zeroProduct q \with { | byLeft r => byLeft r | byRight r => byRight (fromZero r) }) }
+StrictDomain.zeroBigProd	lemma	55f6c92871d8	-	6a5f047c		\lemma zeroBigProd {l : Array E} (p : BigProd l = zro) : ∃ (j : Fin l.len) (l j = 0)
+StrictDomain.zeroOrCancel-left	lemma	aeea4f39c8df	-	ff6dfb37		\lemma zeroOrCancel-left {x y z : E} (p : x * y = x * z) : (x = 0) || (y = z)
+StrictDomain.zeroOrCancel-right	lemma	69e638e3e2f1	-	ff6dfb37		\lemma zeroOrCancel-right {x y z : E} (p : x * z = y * z) : (x = y) || (z = 0)
+StrictDomain.nonZero-cancel-left	lemma	b35d185833db	-	4dfb920c		\lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= 0) (p : x * y = x * z) : y = z
+StrictDomain.nonZero-cancel-right	lemma	ceb7e4959c30	-	4dfb920c		\lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= 0) (p : x * z = y * z) : x = y
+StrictIntegralDomain	class	a11868b29a2d	-	7d327df2	efeb1a59:StrictDomain	\class StrictIntegralDomain \extends StrictDomain, ImpotentCRing
+StrictIntegralDomain.div-associates	lemma	94f5ce38b285	-	2589ab23		\lemma div-associates {a b : E} (a|b : LDiv a b) (b|a : LDiv b a) : TruncP (associates a b)
+(overview)	-	-	-	2d987260	61330873:Domain 701b2176:IntegralDomain efeb1a59:StrictDomain 63bee8e6:StrictIntegralDomain	-

@@ -1,0 +1,90 @@
+# arend -gc fingerprints v2 for module Algebra.Module. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LModule	class	f31b7b6efb75	-	6580fbd1	c4cdc640:LModule.*c d6095b26:LModule.*c-assoc b04d47bd:LModule.*c-ldistr cc836ca1:LModule.*c-rdistr 6e2a124b:LModule.R bdb83b20:LModule.ide_*c	\class LModule (R : Ring) \extends AbGroup { | \infixl 7 *c : R -> E -> E | *c-assoc {r r' : R} {a : E} : r * r' *c a = r *c (r' *c a) | *c-ldistr {r : R} {a b : E} : r *c (a + b) = r *c a + r *c b | *c-rdistr {r s : R} {a : E} : (r R.+ s) *c a = r *c a + s *c a | ide_*c {a : E} : 1 *c a = a }
+LModule.cancel	lemma	91b4b6fdc10e	-	a407c3a7	c4cdc640:LModule.*c	\lemma cancel {r : R} {a b : E} (i : Monoid.Inv r) (s : r *c a = r *c b) : a = b
+LModule.*c_zro-left	lemma	37fd5c535ba9	-	067754eb	c4cdc640:LModule.*c	\lemma *c_zro-left {a : E} : 0 *c a = 0
+LModule.*c_zro-right	lemma	b8ea560e8d06	-	067754eb	c4cdc640:LModule.*c	\lemma *c_zro-right {r : R} : r *c 0 = 0
+LModule.intCoef_*c	lemma	122ac19903df	-	826c89bc	c4cdc640:LModule.*c	\lemma intCoef_*c {x : Int} {a : E} : R.intCoef x *c a = x *i a
+LModule.*c_negative-left	lemma	48f313d3db3b	-	a3fea291		\lemma *c_negative-left {r : R} {a : E} : R.negative r *c a = negative (r *c a)
+LModule.*c_negative-right	lemma	f6b7a1ed3dfa	-	a3fea291		\lemma *c_negative-right {r : R} {a : E} : r *c negative a = negative (r *c a)
+LModule.*c-ldistr_-	lemma	8c0247d107c2	-	73cad3af		\lemma *c-ldistr_- {r : R} {a b : E} : r *c (a - b) = r *c a - r *c b
+LModule.*c-rdistr_-	lemma	c0362c53dc4e	-	73cad3af		\lemma *c-rdistr_- {r s : R} {a : E} : (r - s) *c a = r *c a - s *c a
+LModule.neg_ide_*c	lemma	c0b29d6f9229	-	4ba2a20c	c4cdc640:LModule.*c	\lemma neg_ide_*c {a : E} : -1 *c a = negative a
+LModule.natCoef_*c	lemma	0f3515c8d049	-	f1c53982	c4cdc640:LModule.*c	\lemma natCoef_*c {n : Nat} {a : E} : natCoef n *c a = n *n a
+LModule.*c_BigSum-rdistr	lemma	1acb34ebb85b	-	fc264d63	c4cdc640:LModule.*c	\lemma *c_BigSum-rdistr {l : Array R} {a : E} : R.BigSum l *c a = BigSum (\lam i => l i *c a)
+LModule.*c_BigSum-ldistr	lemma	1755e6ab69b5	-	fc264d63	c4cdc640:LModule.*c	\lemma *c_BigSum-ldistr {r : R} {l : Array E} : r *c BigSum l = BigSum (\lam i => r *c l i)
+LModule.*c_FinSum-rdistr	lemma	ff57bef11941	-	75dac336		\lemma *c_FinSum-rdistr {J : FinSet} {f : J -> R} {a : E} : R.FinSum f *c a = FinSum (\lam j => f j *c a)
+LModule.*c_FinSum-ldistr	lemma	bba06e34ea64	-	75dac336		\lemma *c_FinSum-ldistr {r : R} {J : FinSet} {f : J -> E} : r *c FinSum f = FinSum (\lam j => r *c f j)
+LModule.IsDependent	func	786043c63e98	ad75ade950dd	92a97853		\func IsDependent (l : Array E) : \Prop
+LModule.IsIndependent	func	786043c63e98	be22064cc645	681b59fd		\func IsIndependent (l : Array E) : \Prop
+LModule.IsGenerated	type	817d310d3595	1e5790063775	4ef087fb		\type IsGenerated (l : Array E) : \Prop
+LModule.IsBasis	type	817d310d3595	3ba572cec076	3e4636ab	cd8b6a16:LModule.IsGenerated 20425f4e:LModule.IsIndependent	\type IsBasis (l : Array E) : \Prop
+LModule.independent-subset	lemma	ac51f6c0bceb	-	13ba0445		\lemma independent-subset {l : Array E} (li : IsIndependent l) {k : Nat} (p : k <= l.len) : IsIndependent (\lam j => l (fin-inc_<= p j))
+LModule.independent-nonZero	lemma	f36ea5f2c341	-	ae8ff55d	6e2a124b:LModule.R	\lemma independent-nonZero {l : Array E} (lb : IsIndependent l) {j : Fin l.len} (p : l j = 0) : 0 = {R} 1
+LModule.IsIndependentSet	type	6d77e2d793ea	5c4c6c0113cc	8f638c53	1f9a487f:LModule.IsZeroSum 6e2a124b:LModule.R	\type IsIndependentSet {J : \Set} (g : J -> E) : \Prop
+LModule.IsIndependentSet.sum	func	6784b39ba852	472cb493bf8c	d0d784e8	6e2a124b:LModule.R	\func sum (g : J -> E) (c : Array (\Sigma R J))
+LModule.IsIndependentSet.sum-ldistr	lemma	0ca25286249b	-	559af6be	0413eca1:LModule.IsIndependentSet.sum	\lemma sum-ldistr (g : J -> E) {r : R} {c : Array (\Sigma R J)} : r *c sum g c = sum g (map (\lam s => (r * s.1, s.2)) c)
+LModule.IsIndependentSet.sum_++	lemma	61b035124124	-	559af6be	0413eca1:LModule.IsIndependentSet.sum	\lemma sum_++ (g : J -> E) {c d : Array (\Sigma R J)} : sum g (c ++ d) = sum g c + sum g d
+LModule.IsIndependentSet.sum_Big++	lemma	7c3fcd2399ae	-	559af6be	0413eca1:LModule.IsIndependentSet.sum	\lemma sum_Big++ (g : J -> E) {l : Array (Array (\Sigma R J))} : sum g (Big ++ nil l) = BigSum (map (sum g) l)
+LModule.IsIndependentSet.sum_negative	lemma	fc30292670ea	-	559af6be	0413eca1:LModule.IsIndependentSet.sum	\lemma sum_negative (g : J -> E) {c : Array (\Sigma R J)} : negative (sum g c) = sum g (map (\lam s => (R.negative s.1, s.2)) c)
+LModule.IsIndependentSet.sum_EPerm	lemma	93c5e133a3dd	-	559af6be	0413eca1:LModule.IsIndependentSet.sum	\lemma sum_EPerm (g : J -> E) {l l' : Array (\Sigma R J)} (p : EPerm l l') : sum g l = sum g l'
+LModule.IsIndependentSet.=_~	lemma	e33e707f3f7a	-	09783714	a8694051:LModule.Z~	\lemma =_~ (gi : IsIndependentSet g) {c d : Array (\Sigma R J)} (p : sum g c = sum g d) : c Z~ d
+LModule.IsIndependentSet.IsZeroSum_=	lemma	e12a6a2890d9	-	beb4b0d6	a8694051:LModule.Z~	\lemma IsZeroSum_= (g : J -> E) {c : Array (\Sigma R J)} (p : IsZeroSum c) : sum g c = 0
+LModule.IsIndependentSet.~_=	lemma	e008ed1d1041	-	beb4b0d6	a8694051:LModule.Z~	\lemma ~_= (g : J -> E) {c d : Array (\Sigma R J)} (p : c Z~ d) : sum g c = sum g d
+LModule.IsIndependentSet-right-inj	lemma	99e2a39ca6da	-	9f7bca80		\lemma IsIndependentSet-right-inj {J K : \Set} {f : J -> K} (inj : IsInj f) {g : K -> E} (gi : IsIndependentSet g) : IsIndependentSet (\lam j => g (f j))
+LModule.IsIndependentDec	type	6d77e2d793ea	6189fa232f2a	19e7d005		\type IsIndependentDec {J : \Set} (g : J -> E) : \Prop
+LModule.IsIndependentSet<->IsIndependentDec	lemma	c0c1370d3538	-	69cf1bab	c8cdb22f:LModule.IsIndependentDec dfdaaba1:LModule.IsIndependentSet	\lemma IsIndependentSet<->IsIndependentDec {J : DecSet} {g : J -> E} : IsIndependentSet g <-> IsIndependentDec g
+LModule.IsIndependent<->IsIndependentSet	lemma	388a94417460	-	6ba5f48a		\lemma IsIndependent<->IsIndependentSet {l : Array E} : IsIndependent l <-> IsIndependentSet l
+LModule.IsIndependentSet-fin	lemma	b9beb3b7f638	-	b53022f7		\lemma IsIndependentSet-fin {J : FinSet} {g : J -> E} : IsIndependentSet g <-> (\Pi (c : J -> R) -> FinSum (\lam j => c j *c g j) = 0 -> \Pi (j : J) -> c j = 0)
+LModule.IsGeneratingSet	type	6d77e2d793ea	b4d56348533e	0dcc03e3	0413eca1:LModule.IsIndependentSet.sum	\type IsGeneratingSet {J : \Set} (g : J -> E) : \Prop
+LModule.IsGeneratingSet-fin	lemma	470ac813e787	-	3dae7618		\lemma IsGeneratingSet-fin {J : \Set} {g : J -> E} : IsGeneratingSet g <-> (\Pi (x : E) -> ∃ (K : FinSet.{0}) (c : (K -> \Sigma R J)) (x = FinSum (\lam k => (c k).1 *c g (c k).2)))
+LModule.IsGeneratingSet-surj	lemma	af79f2b9a6ae	-	2dcbdf2c		\lemma IsGeneratingSet-surj {J K : \Set} {f : J -> K} (surj : IsSurj f) {g : K -> E} (gi : IsGeneratingSet g) : IsGeneratingSet (\lam j => g (f j))
+LModule.IsBasisSet	type	6d77e2d793ea	059a3f9647e3	7cfee700	9501436a:LModule.IsGeneratingSet dfdaaba1:LModule.IsIndependentSet	\type IsBasisSet {J : \Set} (g : J -> E) : \Prop
+LModule.IsBasisSet-equiv	lemma	b25e7635464a	-	f2aa339e		\lemma IsBasisSet-equiv {J K : \Set} (e : QEquiv {J} {K}) {g : K -> E} (gb : IsBasisSet g) : IsBasisSet (\lam j => g (e j))
+LModule.IsGenerated<->IsGeneratingSet	lemma	bccfc97b3792	-	0b204a08		\lemma IsGenerated<->IsGeneratingSet {l : Array E} : IsGenerated l <-> IsGeneratingSet l
+LModule.IsBasis<->IsBasisSet	lemma	10abeb865cce	-	0b204a08		\lemma IsBasis<->IsBasisSet {l : Array E} : IsBasis l <-> IsBasisSet l
+LModule.independent-split-unique	lemma	6ec12d905f05	-	9081f096		\lemma independent-split-unique {l : Array E} (li : IsIndependent l) {c d : Array R l.len} (p : BigSum (\lam j => c j *c l j) = BigSum (\lam j => d j *c l j)) (j : Fin l.len) : c j = d j
+LModule.basis-split-pair	lemma	1d552fb4c931	-	5f9a272c	c4cdc640:LModule.*c	\lemma basis-split-pair {l : Array E} (lb : IsBasis l) (x : E) : \level \Sigma (c : Array R l.len) (x = BigSum (\lam j => c j *c l j)) basis-split-unique lb.1 x
+LModule.basis-split-pair.basis-split-unique	lemma	5d4d7c7ecec2	-	45cd3084		\lemma basis-split-unique {l : Array E} (li : IsIndependent l) (x : E) : isProp (\Sigma (c : Array R l.len) (x = BigSum (\lam j => c j *c l j)))
+LModule.basis-split	sfunc	a43c23cbdf9e	0b2214efb3dc	69918c81		\sfunc basis-split {l : Array E} (lb : IsBasis l) (x : E) : Array R l.len
+LModule.basis-split-char	lemma	a4d82f7cbab9	-	9b7a0711	c4cdc640:LModule.*c 4cc0a602:LModule.basis-split	\lemma basis-split-char {l : Array E} {lb : IsBasis l} {x : E} : x = BigSum (\lam j => basis-split lb x j *c l j)
+LModule.basis-split-unique	lemma	f6a5665c537e	-	b2f7cd51	4cc0a602:LModule.basis-split	\lemma basis-split-unique {l : Array E} (lb : IsBasis l) {x : E} (d : Array R l.len) (p : x = BigSum (\lam j => d j *c l j)) (j : Fin l.len) : basis-split lb x j = d j
+LModule.basis_split_basis	lemma	5ff9eaaaef18	-	75850e6e	4cc0a602:LModule.basis-split	\lemma basis_split_basis {l : Array E} {lb : IsBasis l} {j k : Fin l.len} : basis-split lb (l j) k = (\case decideEq j k \with { | yes _ => 1 | no _ => 0 })
+LModule.basis_split_=	lemma	1294dd1c64b7	-	75850e6e	4cc0a602:LModule.basis-split	\lemma basis_split_= {l : Array E} {lb : IsBasis l} {j : Fin l.len} : basis-split lb (l j) j = 1
+LModule.basis_split_/=	lemma	3eb9e5d2a3b4	-	75850e6e	4cc0a602:LModule.basis-split	\lemma basis_split_/= {l : Array E} {lb : IsBasis l} {j k : Fin l.len} (j/=k : j /= k) : basis-split lb (l j) k = 0
+LModule.IsGeneratedFin	type	993e2e6c3136	fd5efdcca5ce	0ac0d904		\type IsGeneratedFin {J : FinSet} (f : J -> E) : \Prop
+LModule.IsFinitelyGenerated	func	d143af8bb978	f8ec8c00e08a	798a6383		\func IsFinitelyGenerated : \Prop
+LModule.basisSet_basis	lemma	d4dfe49d7346	-	ae9a1a61		\lemma basisSet_basis (J : FinSet) {g : J -> E} (gb : IsBasisSet g) : ∃ (l : Array E J.card) (IsBasis l)
+LModule.free-char	lemma	26e94505313d	-	8bf4a9a9		\lemma free-char : ∃ (l : Array E) (IsBasis l) <-> ∃ (J : FinSet.{0}) (g : (J -> E)) (IsBasisSet g)
+LModule.generated-array-fin	lemma	638120cf6e0d	-	9c1ff9e9	c0195c75:LModule.IsFinitelyGenerated cd8b6a16:LModule.IsGenerated f7b7bd7e:LModule.IsGeneratedFin	\lemma generated-array-fin {l : Array E} (g : IsGenerated l) : IsGeneratedFin l
+LModule.generated-fin-array	lemma	d67154ab64f0	-	9c1ff9e9	c0195c75:LModule.IsFinitelyGenerated cd8b6a16:LModule.IsGenerated f7b7bd7e:LModule.IsGeneratedFin	\lemma generated-fin-array {J : FinSet} {f : J -> E} (g : IsGeneratedFin f) : IsFinitelyGenerated
+LModule.IsFaithful	func	d143af8bb978	8ad4301b45c8	1dc51bd6		\func IsFaithful : \Prop
+LModule.count	func	a6d5a8d59781	26f5f351998d	db02381a	6e2a124b:LModule.R	\func count {R : Semiring} {J : DecSet} (l : Array (\Sigma R J)) (j : J) : R
+LModule.count_zro	lemma	6cf03a9f90c1	-	85b2785d	117eab14:LModule.count	\lemma count_zro {R : Semiring} {J : DecSet} {l : Array (\Sigma R J)} (j : J) (p : \Pi (k : Fin l.len) -> j /= (l k).2) : count {R} l j = 0
+LModule.count-unique	lemma	f21f2d0bbdda	-	883e4473	117eab14:LModule.count	\lemma count-unique {R : Semiring} {J : DecSet} {l : Array J} {c : Array R l.len} (inj : IsInj l) (k : Fin l.len) : count (\lam j => (c j, l j)) (l k) = c k
+LModule.IsZeroSum	type	cb90477c5e7d	d7b33c9e6963	8cc8ab14		\type IsZeroSum {R : Semiring} {J : \Set} (l : Array (\Sigma R J)) : \Prop
+LModule.IsZeroSum.aux	lemma	f4d78ac6febb	-	c3606190		\lemma aux {l : Array (\Sigma (Array R) J)} : Big ++ nil (map (\lam s => map (__, s.2) s.1) l) = Big ++ nil (mkArray (\lam i => map (__, (remove (\lam s => decideEq (DArray.len {s.1}) 0) l i).2) (remove (\lam s => decideEq (DArray.len {s.1}) 0) l i).1))
+LModule.IsZeroSum.nonEmpty	lemma	5ca4e63aac2f	-	8ea0627f		\lemma nonEmpty {l : Array (\Sigma R J)} (zs : IsZeroSum l) : ∃ (l' : Array (\Sigma (c : Array R) J (c.len /= 0))) (EPerm l (Big ++ nil $ map (\lam s => map (__, s.2) s.1) l')) (\Pi (j : Fin l'.len) -> R.BigSum (l' j).1 = 0)
+LModule.Z~	type	cd8b673fe0e8	f7000c68b758	12f531c2		\type Z~ {R : Ring} {J : \Set} (l1 l2 : Array (\Sigma R J)) : \Prop
+LModule.count_IsZeroSum	lemma	7856c5675a09	-	4ef75ee4		\lemma count_IsZeroSum {R : Semiring} {J : DecSet} {l : Array (\Sigma R J)} (p : \Pi (j : Fin (DArray.len {nub $ map __.2 l})) -> count l (nub (map __.2 l) j) = 0) : IsZeroSum l
+LModule.IsZeroSum_count	lemma	5411399843a7	-	4b82a4fc	c59e99de:LModule.IsZeroSum_count.count_++ cbea27f1:LModule.IsZeroSum_count.count_Big++ b4e85ac2:LModule.IsZeroSum_count.count_EPerm	\lemma IsZeroSum_count {R : Semiring} {J : DecSet} {l : Array (\Sigma R J)} (p : IsZeroSum l) (j : J) : count l j = 0
+LModule.basisSet-split	sfunc	2187f34cc86e	413f4f0cf1b2	efabe8ab	a8694051:LModule.Z~	\sfunc basisSet-split {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} (ub : U.IsBasisSet u) (v : J -> V) (x : U) : \Sigma (y : V) (∃ (c : Array (\Sigma R J)) (x = sum u c) (y = sum v c))
+LModule.pullback	func	e81be48f5841	571b627af021	e96337c1	c4cdc640:LModule.*c	\func pullback (f : RingHom) (M : LModule f.Cod) : LModule f.Dom
+LModule.generated-fin-comp	lemma	16e489ea95f0	-	f781b3ff		\lemma generated-fin-comp (f : RingHom) {M : LModule f.Cod} {I J : FinSet} {a : I -> f.Cod} {b : J -> M} (Cg : (homLModule f).IsGeneratedFin a) (Mg : M.IsGeneratedFin b) : LModule.IsGeneratedFin {pullback f M} (\lam (p : \Sigma J I) => a p.2 *c b p.1)
+LModule.generated-pullback	lemma	294bd8d2b6ae	-	2b97fff2		\lemma generated-pullback (f : RingHom) {M : LModule f.Cod} (Cg : (homLModule f).IsFinitelyGenerated) (Mg : M.IsFinitelyGenerated) : (pullback f M).IsFinitelyGenerated
+LModule.generated-comp	lemma	b7b077c45ec8	-	a26df89c		\lemma generated-comp {R S T : Ring} (f : RingHom R S) (g : RingHom S T) (fg : (homLModule f).IsFinitelyGenerated) (gg : (homLModule g).IsFinitelyGenerated) : (homLModule (g RingHom.∘ f)).IsFinitelyGenerated
+ProductLModule	instance	70436a1940db	-	dac356c8	6e2a124b:LModule.R	\instance ProductLModule (R : Ring) (A B : LModule R) : LModule R
+ProductLModule.in1	func	cf41a7e8cdd0	4000c1ab5d11	e63f7caf		\func in1 {R : Ring} (A B : LModule R) : LinearMap A (ProductLModule R A B)
+ProductLModule.in2	func	9abf41818562	7aaff85ad4d0	e63f7caf		\func in2 {R : Ring} (A B : LModule R) : LinearMap B (ProductLModule R A B)
+ProductLModule.proj1	func	3d3fdc701f22	49b9ea9ce9e3	576b6b89		\func proj1 {R : Ring} (A B : LModule R) : LinearMap (ProductLModule R A B) A
+ProductLModule.proj2	func	a3f47030e5b2	544e370d7db6	576b6b89		\func proj2 {R : Ring} (A B : LModule R) : LinearMap (ProductLModule R A B) B
+ProductLModule.coprod-map	func	9b3867727a9d	4a32bad2feaa	2b930802		\func coprod-map {R : Ring} {A B C : LModule R} (i : LinearMap A C) (j : LinearMap B C) : LinearMap (ProductLModule R A B) C
+ProductLModule.prod-map	func	b187eab163e0	2d1b2c5fab41	fe971160		\func prod-map {R : Ring} {A B C : LModule R} (a : LinearMap C A) (b : LinearMap C B) : LinearMap C (ProductLModule R A B)
+RingLModule	func	70f01844f4dd	8fbb4bf593db	42a2cdc3	c4cdc640:LModule.*c 6e2a124b:LModule.R	\func RingLModule (R : Ring) : LModule R
+RingLModule.basis	lemma	ae145ce7992a	-	0ad32da3	6e2a124b:LModule.R	\lemma basis {R : Ring} : LModule.IsBasis {RingLModule R} (1 :: nil)
+ArrayLModule	instance	774483d67a04	-	7d84b519	6e2a124b:LModule.R	\instance ArrayLModule {R : Ring} (n : Nat) (M : LModule R) : LModule R (Array M n)
+ArrayLModule.skip_*c	lemma	277d58da31ab	-	6c5d3f18		\lemma skip_*c {R : CRing} {n : Nat} {r : R} {l : Array R (suc n)} {k : Fin (suc n)} : skip (r *c {ArrayLModule _ (RingLModule R)} l) k = r *c {ArrayLModule _ (RingLModule R)} skip l k
+ArrayLModule.skip_+	lemma	1a224621320b	-	6c5d3f18		\lemma skip_+ {R : CRing} {n : Nat} {l l' : Array R (suc n)} {k : Fin (suc n)} : skip (l + {ArrayLModule _ (RingLModule R)} l') k = skip l k + {ArrayLModule _ (RingLModule R)} skip l' k
+ArrayLModule.BigSum-index	lemma	6d6df8107430	-	c511e0ef		\lemma BigSum-index {R : Ring} {n : Nat} {M : LModule R} {l : Array (Array M n)} {i : Fin n} : AddMonoid.BigSum {ArrayLModule n M} l i = M.BigSum (map {Array M n} (__ i) l)
+homLModule	func	78867fbb8ca2	998f64ebe09a	edfa1df6	c4cdc640:LModule.*c	\func homLModule (f : RingHom) : LModule f.Dom
+(overview)	-	-	-	efc60cc9	3e54501d:LModule c4cdc640:LModule.*c b3f77b83:LModule.IsBasis 205ae99a:LModule.IsBasisSet cd8b6a16:LModule.IsGenerated 9501436a:LModule.IsGeneratingSet 20425f4e:LModule.IsIndependent dfdaaba1:LModule.IsIndependentSet 6e2a124b:LModule.R a8694051:LModule.Z~	-

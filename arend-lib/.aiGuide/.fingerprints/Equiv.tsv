@@ -1,0 +1,41 @@
+# arend -gc fingerprints v2 for module Equiv. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TypeMap	record	7a9057f517c0	-	9f15890a	f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\record TypeMap {A : \Cat} {B : \Cat} (\coerce f : A -> B)
+Section	record	69ff4d81335c	-	99d3568e	80867655:Section.Section~Fiber f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\record Section \extends TypeMap { | ret : B -> A | ret_f : \Pi (x : A) -> ret (f x) = x }
+Retraction	record	b91d0e3895cc	-	71088b7c	03db11f6:Retraction.Retraction~Fiber f3b02fac:Retraction.f_sec ca971f3f:Retraction.sec 9e0e8813:Section f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\record Retraction \extends TypeMap { | sec : B -> A | f_sec : \Pi (y : B) -> f (sec y) = y }
+Equiv	data	ac06e4cfd455	-	b978f846	ad60b982:Equiv.mkEquiv 1aeba7ec:Equiv.toFunc 289f6017:Equiv.toFunc-embedding 6d925a68:IsEquiv e18c594b:QEquiv f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\data Equiv (A B : \Cat) | mkEquiv {f : A -> B} (IsEquiv f)
+QEquiv	record	5d0d40d575b0	-	fb28ec0a	2d35250f:Retraction ca971f3f:Retraction.sec 9e0e8813:Section	\record QEquiv \extends Section, Retraction { | sec => ret }
+QEquiv.f_ret	func	714ad791fe68	f7a68851427f	02d9265d	e18c594b:QEquiv f3b02fac:Retraction.f_sec 5ed314cf:TypeMap.f	\func f_ret (y : B) : f (ret y) = y
+QEquiv.isInj	func	3d1c07cf5be0	bf5b0417334b	f197ff2d	e18c594b:QEquiv 5ed314cf:TypeMap.f	\func isInj {a a' : A} (p : f a = f a') : a = a'
+QEquiv.isSurj	lemma	852a1f5cd887	-	94ec9da7	e18c594b:QEquiv 5ed314cf:TypeMap.f	\lemma isSurj : IsSurj f
+QEquiv.splitSurj	func	033cf39164a1	448f40fd5cf0	690a5f01	e18c594b:QEquiv f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\func splitSurj (b : B) : \Sigma (a : A) (f a = b)
+QEquiv.adjoint	func	3adbe22e46ec	b4d2e47f0e29	e0197af7	e18c594b:QEquiv 5ed314cf:TypeMap.f	\func adjoint {a : A} {b : B} (p : f a = b) : a = ret b
+QEquiv.adjointInv	func	18c0bc00d51d	e426369c3290	ccc8f4fe	5ed314cf:TypeMap.f	\func adjointInv {a : A} {b : B} (p : a = ret b) : f a = b
+QEquiv_=	func	e822c2b4e009	db4dbd7db47e	4cf17f0b	e18c594b:QEquiv f8d8661d:TypeMap.A f8d8661d:TypeMap.B	\func QEquiv_= {A B : \Type} (e : QEquiv {A} {B}) (i : I) : \Type
+IsEquiv	type	78d24826a1f1	0f0da8a3e227	14c72214	bf74f3d4:IsEquiv.fromEmbSurj bdba21ce:IsEquiv.parallelEquiv 10a7610b:IsEquiv.retract c3ad28e1:IsEquiv.trans e18c594b:QEquiv f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\type IsEquiv {A B : \Cat} (f : A -> B) : \Prop
+idEquiv	func	f5c2406ecfdd	ddf6daf789ec	6e120cf2		\func idEquiv {A : \Cat} : QEquiv
+symQEquiv	func	115ce5b0e473	f33a03b848fd	7e0ea784	e18c594b:QEquiv 5ed314cf:TypeMap.f	\func symQEquiv {A B : \Cat} (e : QEquiv {A} {B}) : QEquiv {B} {A}
+transQEquiv	func	9c378f587e97	15bce07dec11	b2f3aa09		\func transQEquiv {A B C : \Cat} (e1 : QEquiv {A} {B}) (e2 : QEquiv {B} {C}) : QEquiv {A} {C}
+transEmbedding	func	86cf15c7415c	a32a4eade9f0	a2d260cc		\func transEmbedding {A B C : \Cat} (e1 : Embedding {A} {B}) (e2 : Embedding {B} {C}) : Embedding {A} {C}
+-o_IsEquiv	lemma	9bfe060dc081	-	3c68b398	f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\lemma -o_IsEquiv {A B C : \Cat} {f : A -> B} (e : IsEquiv f) : IsEquiv {B -> C} {A -> C} (-o f)
+o-_IsEquiv	lemma	87646fdfaff1	-	4a149b12	f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\lemma o-_IsEquiv {A B C : \Cat} {f : A -> B} (e : IsEquiv f) : IsEquiv {C -> A} {C -> B} (o- f)
+QEquiv.leftFactor	func	b2f7b8ae7cd7	21ff61981120	e6dc0f6c	e18c594b:QEquiv 5ed314cf:TypeMap.f	\func leftFactor {A B C : \Cat} {f : A -> B} {g : B -> C} (e2 : Section g) (e3 : QEquiv (g `o` f)) : QEquiv f
+QEquiv.rightFactor	func	139cd64f669b	9c84dcf6e1de	dee67341	e18c594b:QEquiv 5ed314cf:TypeMap.f	\func rightFactor {A B C : \Cat} {f : A -> B} (e1 : Retraction f) {g : B -> C} (e3 : QEquiv (g `o` f)) : QEquiv g
+IsEquiv.leftFactor	lemma	eeae18757077	-	c7c2a612	5ed314cf:TypeMap.f	\lemma leftFactor {A B C : \Cat} {f : A -> B} {g : B -> C} (e2 : IsEquiv g) (e3 : IsEquiv (\lam a => g (f a))) : IsEquiv f
+IsEquiv.rightFactor	lemma	8feecf166d10	-	1201da0f	5ed314cf:TypeMap.f	\lemma rightFactor {A B C : \Cat} {f : A -> B} (e1 : IsEquiv f) {g : B -> C} (e3 : IsEquiv (\lam a => g (f a))) : IsEquiv g
+IsEquiv.parallelEquiv	lemma	a20d3f552f92	-	91d3af7e	6d925a68:IsEquiv	\lemma parallelEquiv {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D} (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : IsEquiv ab <-> IsEquiv cd
+piEquiv	func	ebb4cc11a2ed	be1a4783c17f	42ff0da5	5ed314cf:TypeMap.f	\func piEquiv {A : \Cat} (B : A -> \Cat) (f f' : \Pi (a : A) -> B a) : QEquiv
+sigmaEquiv	func	a80426c0bc80	24775b71a6ab	de6cfd70		\func sigmaEquiv {A : \Cat} (B : A -> \Cat) (p p' : \Sigma (a : A) (B a)) : QEquiv
+piSigmaEquiv	func	cb90837ad63c	c366f0bfd98d	f111161d	f8d8661d:TypeMap.A f8d8661d:TypeMap.B	\func piSigmaEquiv {A A' : \Cat} (h : A -> A') (B : A' -> \Cat) : QEquiv {\Pi (a : A) -> B (h a)} {\Sigma (g : A -> \Sigma (a' : A') (B a')) ((\lam a => (g a).1) = h)}
+piSigmaIdEquiv	func	1de0ff1b0f58	7fad437a9724	789e441c	5dbae6fd:piSigmaEquiv	\func piSigmaIdEquiv {A : \Cat} (B : A -> \Cat) : QEquiv {\Pi (a : A) -> B a} {\Sigma (g : A -> \Sigma (a : A) (B a)) ((\lam a => (g a).1) = id)}
+emptyEquiv	func	30a9dee240be	f9cd48b44fbd	ff172b5a		\func emptyEquiv {A B : \Cat} (Ae : A -> Empty) (Be : B -> Empty) : QEquiv {A} {B}
+pathEquiv-right	func	e84a16343f1d	a5c9cd0595de	74a17ab0	e18c594b:QEquiv	\func pathEquiv-right {A : \Cat} {a b c : A} (ab : a = b) : QEquiv {a = c} {b = c}
+inv-equiv	func	bdf66d9b4188	d6984e10ab4e	f44b350b	e18c594b:QEquiv	\func inv-equiv {A : \Cat} {a b : A} : QEquiv {a = b} {b = a}
+pathOver-transport-equiv	func	261da59336b9	c936f38d4278	13e0b171	f8d8661d:TypeMap.B	\func pathOver-transport-equiv {X : \Cat} (B : X -> \Cat) {x x' : X} (e : x = x') {b : B x} {b' : B x'} : QEquiv {Path (\lam k => B (e k)) b b'} {transport B e b = b'}
+transport-isEquiv	lemma	0b486df76601	-	15413e11		\lemma transport-isEquiv {A : \Cat} (F : A -> \Cat) {a a' : A} (p : a = a') : IsEquiv (transport F p)
+Embedding	record	25e20815f691	-	e07126be	ecd735a0:Embedding.diag-equiv 7178de09:Embedding.embeddingFiber-isProp 67da5c23:Embedding.fibers 62b4f523:Embedding.fromInjection 841727f8:Embedding.pmap-isEquiv 94317b36:Embedding.projection 153d1a52:TypeMap f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\record Embedding \extends TypeMap { | isEmb : \Pi (a a' : A) -> Retraction (pmap f {a} {a'}) }
+Embedding.pmap-isEquiv	sfunc	32579999c4f3	4a8bcd80253d	9a2ae0c4	e18c594b:QEquiv 5ed314cf:TypeMap.f	\sfunc pmap-isEquiv {a a' : A} : QEquiv (pmap f {a} {a'})
+Embedding.surj-split	lemma	a0480e834f54	-	c750f38a	f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	\lemma surj-split (s : IsSurj f) (y : B)
+leftEmbedding	lemma	6ae32cb9a734	-	d3035cde	5ed314cf:TypeMap.f	\lemma leftEmbedding {A B C : \Cat} {f : A -> B} (g : Embedding {B} {C}) (e : Embedding (\lam x => g (f x))) : Embedding f
+piEmbedding	lemma	98a6eea11238	-	4b5b4cdb	f8d8661d:TypeMap.B	\lemma piEmbedding {A : \Cat} {B C : A -> \Cat} (e : \Pi (a : A) -> Embedding {B a} {C a}) : Embedding {\Pi (a : A) -> B a} {\Pi (a : A) -> C a} (\lam f a => e a (f a))
+(overview)	-	-	-	c16fa99e	224dc24e:Embedding 75e123a7:Equiv 6d925a68:IsEquiv e18c594b:QEquiv 2d35250f:Retraction ca971f3f:Retraction.sec 9e0e8813:Section 153d1a52:TypeMap f8d8661d:TypeMap.A f8d8661d:TypeMap.B 5ed314cf:TypeMap.f	-

@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Order.PartialOrder.Coproduct. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CoproductPreorder	instance	338a25e674c3	-	efda7744	adbbba1f:CoproductPreorder.Elem	\instance CoproductPreorder {J : \Type} (P : J -> Preorder) : Preorder (Elem P)
+CoproductPreorder.Elem	data	013f8a3809f7	-	1469e891	bbcad3fe:CoproductPreorder.Elem.elem	\data Elem (P : J -> Preorder) : \Set | elem (j : J) (P j)
+CoproductPreorder.<=	type	424e078c735f	3b796fe957d1	701ee8b1	adbbba1f:CoproductPreorder.Elem bbcad3fe:CoproductPreorder.Elem.elem	\type <= (x y : Elem P) : \Prop
+CoproductPreorder.<=_transport	lemma	bb4b58ed6420	-	fb477182	e88b3c1a:CoproductPreorder.<=	\lemma <=_transport {i j : J} {p : i = j} {x y : P i} (x<=y : x Preorder.<= y) : transport (P __) p x Preorder.<= transport (P __) p y
+CoproductPreorder.Elem_=	lemma	acb42a469374	-	a31149c9	bbcad3fe:CoproductPreorder.Elem.elem	\lemma Elem_= {i j : J} {a : P i} {b : P j} (p : i = j) (q : transport (P __) p a = b) : elem i a = elem j b
+CoproductPreorder.<=-elem-left	lemma	89d37b94be42	-	e55943d3	e88b3c1a:CoproductPreorder.<= bbcad3fe:CoproductPreorder.Elem.elem	\lemma <=-elem-left {x y : Elem P} (x<=y : x <= y) {j : J} {a : P j} (p : y = elem j a) : ∃ (b : P j) (b Preorder.<= a) (x = elem j b)
+(overview)	-	-	-	d6a50049	aea5dca2:CoproductPreorder e88b3c1a:CoproductPreorder.<= adbbba1f:CoproductPreorder.Elem bbcad3fe:CoproductPreorder.Elem.elem	-

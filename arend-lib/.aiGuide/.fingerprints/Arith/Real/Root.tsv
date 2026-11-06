@@ -1,0 +1,25 @@
+# arend -gc fingerprints v2 for module Arith.Real.Root. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+root	sfunc	8877123c7163	211e7fc2cc0b	dac4954b		\sfunc root (n : Nat) (x : Real) : Real
+root.rootEquiv	lemma	e56931e46182	-	4ececaf4		\lemma rootEquiv {n : Nat} (n/=0 : n /= 0) : IsEquiv {Elem {Real} (0 <=)} {Elem {Real} (0 <=)} (\lam s => (pow s.1 n, RealField.pow>=0 {s.1} s.2))
+root>=0	lemma	0b1188fb877b	-	413e1205	f31d2f7a:root	\lemma root>=0 {n : Nat} {x : Real} : 0 <= root n x
+root_pow	lemma	c2ac547406c5	-	5037aa1e	f31d2f7a:root	\lemma root_pow {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : root n (pow x n) = x
+pow_root	lemma	42c817a32ce6	-	c493397b	f31d2f7a:root	\lemma pow_root {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : pow (root n x) n = x
+root_zro	lemma	8c298c50eedc	-	43710a66	f31d2f7a:root	\lemma root_zro {n : Nat} : root n 0 = 0
+root_ide	lemma	d6d0591da604	-	aeb82def	f31d2f7a:root	\lemma root_ide {n : Nat} (n/=0 : n /= 0) : root n 1 = 1
+root-monotone	lemma	9f713e564b16	-	d063a22d	f31d2f7a:root	\lemma root-monotone {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : root n x < root n y
+root>0	lemma	e8d0c9222058	-	9b5f642b	f31d2f7a:root	\lemma root>0 {n : Nat} (n/=0 : n /= 0) {x : Real} (x>0 : 0 < x) : 0 < root n x
+sqrt-cancel	lemma	c67ac431824f	-	aada5d61		\lemma sqrt-cancel {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : x * x = y * y) : x = y
+pow_<-cancel	lemma	7970e6161c8a	-	1f3fcc6d		\lemma pow_<-cancel {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : pow x n < pow y n) : x < y
+root-rat	lemma	43cd199b84a8	-	d0c56aff		\lemma root-rat {n : Nat} (n/=0 : n /= 0) {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < pow q n) (pow r n < b)
+sqrt	sfunc	d21b86ea2b0c	2e805c478ee1	2e339770	f31d2f7a:root	\sfunc sqrt (x : Real)
+sqrt_pow_abs	lemma	4a95616eb266	-	00dc4959	906b634d:sqrt	\lemma sqrt_pow_abs {x : Real} : sqrt (x * x) = RealAbGroup.abs x
+sqrt>=0	lemma	0e4cb85aef36	-	95b339ef	906b634d:sqrt	\lemma sqrt>=0 {x : Real} : 0 <= sqrt x
+sqrt_pow	lemma	602b378580ac	-	583a4d3c	906b634d:sqrt	\lemma sqrt_pow {x : Real} (x>=0 : 0 <= x) : sqrt (x * x) = x
+pow_sqrt	lemma	980bd34be48b	-	cfe6c8bc	906b634d:sqrt	\lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x
+sqrt_zro	lemma	4f731cb9bd24	-	867d07a3	906b634d:sqrt	\lemma sqrt_zro : sqrt 0 = 0
+sqrt_ide	lemma	139d5af59292	-	99c1d85e	906b634d:sqrt	\lemma sqrt_ide : sqrt 1 = 1
+sqrt-monotone	lemma	35004ce967af	-	1ceb78dd	906b634d:sqrt	\lemma sqrt-monotone {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : sqrt x < sqrt y
+sqrt>0	lemma	627dcd702dd4	-	a357d07f	906b634d:sqrt	\lemma sqrt>0 {x : Real} (x>0 : 0 < x) : 0 < sqrt x
+sqrt-rat	lemma	d20db443e7df	-	48ebb37f		\lemma sqrt-rat {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < q * q) (r * r < b)
+(overview)	-	-	-	4daddec4	f31d2f7a:root 906b634d:sqrt	-

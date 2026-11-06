@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProductCRing	instance	08093c357f3f	-	ed253aef	a4dad9f2:ProductCRing.proj1 084c6ebe:ProductCRing.proj2	\instance ProductCRing (R S : CRing) : CRing (\Sigma R S)
+(overview)	-	-	-	16a54989		-

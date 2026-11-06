@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Logic.Rewriting.ARS.Relation. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+StraightJoin	record	5aec6de76015	-	0aee46f6	31fb904e:StraightJoin.A aa0a893e:StraightJoin.a 2e15bd6a:StraightJoin.a~>cr aa0a893e:StraightJoin.b a4d9fd77:StraightJoin.b~>cr aa0a893e:StraightJoin.common-reduct e27176c8:StraightJoin.rel	\record StraightJoin {A : \Type} (a : A) (b : A) (rel : A -> A -> \Type) { | common-reduct : A | a~>cr : rel a common-reduct | b~>cr : rel b common-reduct }
+Closure	data	ec1df2508545	-	3bc5173e	949c9d17:Closure.c-basic 9eb1ea12:Closure.c-connect 6d408a37:Closure.c-trivial aa0a893e:StraightJoin.a aa0a893e:StraightJoin.b	\data Closure {A : \Type} (R : A -> A -> \Type) (a b : A) | c-trivial (a = b) | c-basic (a `R` b) | c-connect (c : A) (a `R` c) (Closure R c b)
+Closure.compose	func	6a3acd47c47b	ad7f888bb48e	6f4858b0	b0a3de5f:Closure aa0a893e:StraightJoin.a aa0a893e:StraightJoin.b	\func compose {A : \Type} {R : A -> A -> \Type} {a b c : A} (a~>b : Closure R a b) (b~>c : Closure R b c) : Closure R a c
+Closure.lift	func	b2c67c990bf2	8c13ce2c5ad2	19dad57e	b0a3de5f:Closure 31fb904e:StraightJoin.A e27176c8:StraightJoin.rel	\func lift {A B : \Type} {rel : A -> A -> \Type} {rel' : B -> B -> \Type} (map : A -> B) (rel-map : \Pi {a b : A} (rel a b) -> rel' (map a) (map b)) (x y : A) (closure : Closure rel x y) : Closure rel' (map x) (map y)
+Closure.flatten	func	fd017ec95c65	6e1d18c8a195	ca29a118	b0a3de5f:Closure e27176c8:StraightJoin.rel	\func flatten {A : \Type} {rel : A -> A -> \Type} {x y : A} (closure : Closure (Closure rel) x y) : Closure rel x y
+Closure.extract	func	b26412db893e	b383823d1dc4	48d74c48	e27176c8:StraightJoin.rel	\func extract {A : \Type} {rel : A -> A -> \Type} {x y : A} (closure : Closure rel x y) : Or (x = y) (\Sigma (z : A) (rel x z))
+(overview)	-	-	-	f7160512	b0a3de5f:Closure f7f268fd:StraightJoin 31fb904e:StraightJoin.A	-

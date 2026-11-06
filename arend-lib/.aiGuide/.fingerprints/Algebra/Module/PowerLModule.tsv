@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Algebra.Module.PowerLModule. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PowerLModule	instance	68ab7b17a828	-	e2e1d57e		\instance PowerLModule {R : Ring} (J : \Set) (M : LModule R) : LModule R (J -> M)
+FunctorPowerLMod	func	069fb3b437d3	5b7c7514f121	c58bf669	6a4e5be0:PowerLModule	\func FunctorPowerLMod {R : Ring.{u}} : Functor SetCat.{u}.op (LModuleCat.{u} R)
+(overview)	-	-	-	3166bf72		-

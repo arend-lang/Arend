@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Set.Fin.BoundedPigeonhole. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BoundedPigeonholeSet	class	c281ed3f19ec	-	3f4e4b4a	c464223e:BoundedPigeonholeSet.boundedPigeonhole 0328dfca:BoundedPigeonholeSet.card	\class BoundedPigeonholeSet \extends NoetherianSet { | card : Nat | boundedPigeonhole (f : Fin (suc card) -> E) : ∃ (i j : Fin (suc card)) (i /= j) (f i = f j) | isNoetherianSet => bounded-bar (suc card) (\lam l => boundedPigeonhole l) }
+BoundedPigeonholeSet.boundedPigeonhole	field	fb1ccfeb6538	-	ffa1d736	0328dfca:BoundedPigeonholeSet.card	| boundedPigeonhole (f : Fin (suc card) -> E) : ∃ (i j : Fin (suc card)) (i /= j) (f i = f j)
+BoundedPigeonholeSet.boundedPigeonhole<	lemma	6570d3a16ea9	-	bab68cef	c464223e:BoundedPigeonholeSet.boundedPigeonhole	\lemma boundedPigeonhole< (f : Fin (suc card) -> E) : ∃ (i j : Fin (suc card)) (i < j) (f i = f j)
+pigeonhole-surj	lemma	8abf317d3f89	-	371788c2	5cefdb89:BoundedPigeonholeSet 0328dfca:BoundedPigeonholeSet.card	\lemma pigeonhole-surj (A : BoundedPigeonholeSet) {B : \Set} (f : A -> B) (s : IsSurj f) : BoundedPigeonholeSet B A.card

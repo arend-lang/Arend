@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Homotopy.HLevel. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ofHLevel_-1+	func	7b93e85bb270	66f6d7728d68	cfd721db	038039a6:ofHLevel_-1+.levelProp	\func ofHLevel_-1+ (A : \Cat) (n : Nat) : \Prop
+ofHLevel_-2+	func	7b93e85bb270	1a85b2c3037e	0ec0d726		\func ofHLevel_-2+ (A : \Cat) (n : Nat) : \Prop
+hLevel-inh	func	33e182d42125	d8a74f153609	dfd8f505		\func hLevel-inh {A : \Cat} (n : Nat) (f : A -> A ofHLevel_-1+ n) : A ofHLevel_-1+ n
+I-isContr	func	15c0088fd9df	9adfc5aa43a5	b75ea86d		\func I-isContr : Contr I
+IsTruncMap	type	8fce7360e364	3efbe6a6eb4b	8d88da37	6ff81acf:ofHLevel_-2+	\type IsTruncMap {X Y : \Cat} (n : Nat) (f : X -> Y) : \Prop
+HLevel_-2+1=>HLevel_-1	func	83687037e33a	70840250c490	59ec77ef	867640d3:ofHLevel_-1+ 6ff81acf:ofHLevel_-2+	\func HLevel_-2+1=>HLevel_-1 (A : \Cat) (n : Nat) (p : A ofHLevel_-2+ suc n) : A ofHLevel_-1+ n
+HLevel_-1=>HLevel_-2+1	lemma	755ea626f8e5	-	9218334e	867640d3:ofHLevel_-1+ 6ff81acf:ofHLevel_-2+	\lemma HLevel_-1=>HLevel_-2+1 (A : \Cat) (n : Nat) (p : A ofHLevel_-1+ n) : A ofHLevel_-2+ suc n
+HLevel_-1_suc	func	241a582602d7	85e46e6736fc	77f71b3e		\func HLevel_-1_suc {A : \Cat} {n : Nat} (p : A ofHLevel_-1+ n) : A ofHLevel_-1+ suc n
+HLevel_-1_+	func	7a79147cb7fd	1977bdadc51d	324fa6f5	867640d3:ofHLevel_-1+	\func HLevel_-1_+ {A : \Cat} {k : Nat} (n : Nat) (p : A ofHLevel_-1+ k) : A ofHLevel_-1+ k Nat.+ n
+HLevel_-1_<=	func	877c302beab9	a4141c21237b	d2f4810a		\func HLevel_-1_<= {A : \Cat} (k : Nat) (n : Nat) (q : k <= n) (p : A ofHLevel_-1+ k) : A ofHLevel_-1+ n
+HLevel-retracts	func	e7ee66b812a6	2c72dd351a39	37a96ab9		\func HLevel-retracts (s : Section) {n : Nat} (p : s.B ofHLevel_-1+ n) : s.A ofHLevel_-1+ n
+HLevels-pi	func	a6fcedbbfd1d	092334e3e2a0	f5633f54		\func HLevels-pi {A : \Cat} (B : A -> \Cat) {n : Nat} (p : \Pi (a : A) -> B a ofHLevel_-1+ n) : (\Pi (a : A) -> B a) ofHLevel_-1+ n
+HLevels-sigma	func	e1fcef137709	ca00ca450e0d	9bca43a5		\func HLevels-sigma {A : \Cat} (B : A -> \Cat) {n : Nat} (pA : A ofHLevel_-1+ n) (pB : \Pi (a : A) -> B a ofHLevel_-1+ n) : (\Sigma (a : A) (B a)) ofHLevel_-1+ n
+HLevels-embeddings	func	0b3baecd446c	5032e7037506	db7f69c3		\func HLevels-embeddings (e : Embedding) {n : Nat} (p : e.B ofHLevel_-1+ n) : e.A ofHLevel_-1+ n
+HLevel_-2-retracts	lemma	7864f62611a8	-	61cc1147		\lemma HLevel_-2-retracts (s : Section) {n : Nat} (p : s.B ofHLevel_-2+ n) : s.A ofHLevel_-2+ n
+HLevels_-2-pi	lemma	3185f4ce6f40	-	d0b1e61e		\lemma HLevels_-2-pi {A : \Cat} (B : A -> \Cat) {n : Nat} (p : \Pi (a : A) -> B a ofHLevel_-2+ n) : (\Pi (a : A) -> B a) ofHLevel_-2+ n
+HLevels_-2-sigma	lemma	05f411a1576d	-	667d002c		\lemma HLevels_-2-sigma {A : \Cat} (B : A -> \Cat) {n : Nat} (pA : A ofHLevel_-2+ n) (pB : \Pi (a : A) -> B a ofHLevel_-2+ n) : (\Sigma (a : A) (B a)) ofHLevel_-2+ n
+(overview)	-	-	-	a55e9d2d	f1b1ac1e:HLevel_-1=>HLevel_-2+1 2b15a632:HLevel_-2+1=>HLevel_-1 867640d3:ofHLevel_-1+ 6ff81acf:ofHLevel_-2+	-

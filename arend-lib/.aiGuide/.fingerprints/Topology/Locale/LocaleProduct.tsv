@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Topology.Locale.LocaleProduct. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProductLocale.proj1	func	b58dc09367a9	7321aec10967	dcecb226		\func proj1 : LocaleHom (ProductLocale X Y) X
+ProductLocale.proj2	func	096d157969b2	36652a750549	dcecb226		\func proj2 : LocaleHom (ProductLocale X Y) Y
+LocaleHasProduct	instance	15d585e579b6	-	b579ba81	c5fc8d5a:ProductLocale	\instance LocaleHasProduct : HasProduct Locale.{u}
+ProductLocale	func	6f41640d7e78	6740014bb5c1	97c60a58		\func ProductLocale (X Y : Locale) : Locale
+localeDiagonal	func	0a915ed224ff	6c78621b327b	06bb5744	c5fc8d5a:ProductLocale	\func localeDiagonal {L : Locale} : LocaleHom L (ProductLocale L L)

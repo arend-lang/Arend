@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Homotopy.Localization.Modality. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Modality	class	b234806b6570	-	4c393ce1	5953b84f:Modality.isModality	\class Modality \extends ReflUniverse { | isModality (A : Local) (B : A -> Local) : Local (\Sigma (a : A) (B a)) }
+modality-elim	lemma	3c4bea29dd40	-	f18d45f9		\lemma modality-elim {U : Modality.{u}} {A : \Type u} (B : LType A -> Local) : IsEquiv {\Pi (x : LType A) -> B x} {\Pi (a : A) -> B (lEta a)} (\lam f a => f (lEta a))
+(overview)	-	-	-	d0e0a8d3	7b31260e:Modality 77af3dfd:modality-elim	-

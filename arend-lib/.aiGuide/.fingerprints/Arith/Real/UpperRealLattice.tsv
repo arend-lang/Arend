@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Arith.Real.UpperRealLattice. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ExUpperRealLattice	instance	1ece5675f725	-	57196cb7		\instance ExUpperRealLattice : CompleteLattice ExUpperReal
+ExUpperRealLattice.*n_join	lemma	3453dc04e22b	-	6d4cc34d		\lemma *n_join {n : Nat} {x y : ExUpperReal} : n AddMonoid.*n (x ∨ y) = n AddMonoid.*n x ∨ n AddMonoid.*n y
+ExUpperRealLattice.+_join	lemma	6b6e7d540b9e	-	99fdf50c		\lemma +_join {x y : ExUpperReal} : (x ∨ y) + (x ∨ y) = (x + x) ∨ (y + y)
+ExUpperRealLattice.join-square	lemma	66a04b766c8c	-	64ab20b7		\lemma join-square {x y : ExUpperReal} : (x ∨ y) * (x ∨ y) = x * x ∨ y * y
+(overview)	-	-	-	53b5e5a1		-

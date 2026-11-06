@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.AbLocalization. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LocAbType	type	1d31459d8a3d	b624d1663480	595511ab		\type LocAbType {M : AbMonoid} (S : SubAddMonoid M)
+LocAbType.SType	func	3122097e2875	575d87db170c	afd9d08b		\func SType {M : AbMonoid} (S : SubAddMonoid M)
+LocAbType.~	func	76ea14531775	2e540d9fc1c8	f10322b4		\func ~ (a b : SType S)
+LocAbType.inl~	func	e062fac6b218	84575e732c41	79d88387		\func inl~ (a : SType S) : LocAbType S
+LocAbType.~-lequiv	lemma	72e691b6eaf9	-	b87a88b3	1584e635:LocAbType	\lemma ~-lequiv {a b : SType S} (p : a ~ b) : inl~ a = inl~ b
+LocAbType.~-lequiv-right	lemma	59f8b4acd4cd	-	680aed81	c15e8214:LocAbType.inl~	\lemma ~-lequiv-right {a b : SType S} {c : M} (Sc : S c) (p : a.1 + b.2 + c = b.1 + a.2 + c) : inl~ a = inl~ b
+LocAbMonoid	instance	2c031928084a	-	0de8b42a	1584e635:LocAbType	\instance LocAbMonoid {M : AbMonoid} (S : SubAddMonoid M) : AbMonoid (LocAbType S)
+MaxLocAbType	func	bda4800e9f36	47eb42021ddc	167c4e97		\func MaxLocAbType (M : AbMonoid)
+GrothendieckAbGroup	instance	8a7f5ad7d5eb	-	6d7efba2	7ea02a59:LocAbMonoid b8acb75f:MaxLocAbType	\instance GrothendieckAbGroup (M : AbMonoid) : AbGroup (MaxLocAbType M)
+(overview)	-	-	-	6f14adbe	27d49ff8:LocAbType.~	-

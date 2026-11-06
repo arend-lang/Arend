@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Category.Solver. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CatTerm	data	9a61748ae419	-	260c080b	6d408a37:CatTerm.:id 4302418c:CatTerm.:o 8e9f5371:CatTerm.var a77121d6:HData.H f18ee3e2:HData.V	\data CatTerm {V : \Type} (a b : V) (H : V -> V -> \Type) | var (H a b) | :id (a = b) | :o (c : V) (CatTerm c b H) (CatTerm a c H)
+CatNF	data	eec779f75086	-	389803dd	67561876:CatNF.:cons 6d408a37:CatNF.:nil	\data CatNF {V : \Type} (a b : V) (H : V -> V -> \Type) | :nil (a = b) | \infixl 7 :cons {c : V} (H c b) (CatNF a c H)
+normalize	func	967b0f9331df	43e724b1d594	d0e1000f	aea6a173:CatNF febdc8f2:CatTerm a77121d6:HData.H	\func normalize {V : \Type} {a b : V} {H : V -> V -> \Type} (t : CatTerm a b H) : CatNF a b H
+normalize.aux	func	4ee22e6881f0	9d07a1bbd952	32ae1e3f		\func aux {V : \Type} {a b c : V} {H : V -> V -> \Type} (t : CatTerm b c H) (acc : CatNF a b H) : CatNF a c H
+HData	class	757f70f0ffb1	-	e016fbdd	72ec2809:HData.C a77121d6:HData.H f18ee3e2:HData.V f3201c53:HData.f d728e327:HData.g	\class HData \noclassifying {C : Precat} {V : \Set} (f : V -> C) (H : V -> V -> \Set) (g : \Pi {x y : V} -> H x y -> Hom (f x) (f y))
+HData.interpret	func	37b42b2b284f	5d99cf8444bd	45b2b03e	febdc8f2:CatTerm a77121d6:HData.H f3201c53:HData.f	\func interpret {a b : V} (t : CatTerm a b H) : Hom (f a) (f b)
+HData.interpretNF	func	77cff95784ad	87ea8f0c02c2	7221ed65	aea6a173:CatNF a77121d6:HData.H	\func interpretNF {a b : V} (t : CatNF a b H) : Hom (f a) (f b)
+HData.interpretNF.cons	lemma	593ffe647ecf	-	6ca49919	67561876:CatNF.:cons d728e327:HData.g dedd36b0:HData.interpretNF	\lemma cons {a b c : V} (h : H b c) (l : CatNF a b H) : interpretNF (h :cons l) = g h ∘ interpretNF l
+HData.:_++	func	aea78dcd2540	6b1c12929aca	4fe40864		\func :_++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : CatNF a c H
+HData.interpretNF_++	lemma	38dbcb70a318	-	88c05c29	1de40bdc:HData.:_++ dedd36b0:HData.interpretNF	\lemma interpretNF_++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : interpretNF (h :_++ h') = interpretNF h ∘ interpretNF h'
+HData.normalize-consistent	lemma	f1896bcd6fed	-	ef4b9c3a	f4477a8f:HData.interpret dedd36b0:HData.interpretNF 4e217930:normalize	\lemma normalize-consistent {a b : V} (t : CatTerm a b H) : interpret t = interpretNF (normalize t)
+HData.normalize-consistent.aux	lemma	50819533a0ef	-	4abdcbcb	f4477a8f:HData.interpret dedd36b0:HData.interpretNF cefccf0b:normalize.aux	\lemma aux {a b c : V} (t : CatTerm b c H) (acc : CatNF a b H) : interpret t ∘ interpretNF acc = interpretNF (normalize.aux t acc)
+HData.terms-equality	lemma	acf0cfce6929	-	b8ecd3d9	f4477a8f:HData.interpret	\lemma terms-equality {a b : V} (t s : CatTerm a b H) (p : interpretNF (normalize t) = interpretNF (normalize s)) : interpret t = interpret s
+(overview)	-	-	-	09c44410	aea6a173:CatNF febdc8f2:CatTerm 36d5874e:HData	-

@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Algebra.Semiring.SubSemiring. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubPseudoSemiring	class	cf141792217d	-	d79ef961		\class SubPseudoSemiring \extends SubAddMonoid, SubSemigroup { \override S : PseudoSemiring }
+SubSemiring	class	69ed3b6c4299	-	55dc7022	7461edb8:SubPseudoSemiring	\class SubSemiring \extends SubPseudoSemiring, SubMonoid { \override S : Semiring }
+SubSemiring.max	func	c9b3e9b91ac3	69d8920cb053	b07f31e2		\func max {A : Semiring} : SubSemiring
+IPseudoSemiring	instance	ac1faa527067	-	f06feff3	7461edb8:SubPseudoSemiring	\instance IPseudoSemiring (S : SubPseudoSemiring {}) : PseudoSemiring
+IPseudoCSemiring	instance	f296be2c42f8	-	f4110504		\instance IPseudoCSemiring {R : PseudoCSemiring} (S : SubPseudoSemiring R) : PseudoCSemiring
+ISemiring	instance	4515187b1bf8	-	55e1b946	0f565dd9:IPseudoSemiring 6cc58338:ISemiring.embed e72a1610:SubSemiring	\instance ISemiring (S : SubSemiring {}) : Semiring
+ICSemiring	instance	3a75e87f76a1	-	71662b40		\instance ICSemiring {R : CSemiring} (S : SubSemiring R) : CSemiring
+ImageSemiring	func	c7f0f7a73158	523631806059	6a02a8b4	e72a1610:SubSemiring	\func ImageSemiring (f : SemiringHom) : SubSemiring f.Cod
+ImSemiring	func	1bebec62037d	1ae89cc84212	118b35ca	040b3e5a:ISemiring d8717b34:ImageSemiring	\func ImSemiring (f : SemiringHom) : Semiring
+ImSemiringLeftHom	func	8d1f5829cf81	8a8cd370394a	3d38d6e3	07990a4a:ImSemiring	\func ImSemiringLeftHom (f : SemiringHom) : SemiringHom f.Dom (ImSemiring f)
+(overview)	-	-	-	406ec26d		-

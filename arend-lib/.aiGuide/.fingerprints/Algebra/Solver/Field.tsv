@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.Field. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FieldSolverModel	func	4ebe2df26436	74a100b1ffc4	3f5e7f2b		\func FieldSolverModel (R : CRing) : GuardedSolverModel R
+(overview)	-	-	-	22af84d9	f94d9859:FieldSolverModel.InverseOf	-

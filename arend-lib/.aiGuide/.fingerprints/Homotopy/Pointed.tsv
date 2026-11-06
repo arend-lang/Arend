@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Homotopy.Pointed. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Pointed	class	10465d12ee6f	-	71cb6d73	2177db59:Pointed.base	\class Pointed \extends InhSpace { | base : E | isInh => inP base }
+Pointed.make	func	4292cba96ac9	329368e86a3c	758dd732	df5072d0:Pointed	\func make {E : \Type} (e : E)
+UnitPointed	instance	f60effda47de	-	2dfd029a		\instance UnitPointed : Pointed (\Sigma)
+->*	func	996d3dca1e2d	f61b8127fba2	fe6d4bd8	2177db59:Pointed.base	\func ->* (A B : Pointed)
+->*.ext	func	5e3206ba5c63	cfb1de5f66a0	9d9e122d	2177db59:Pointed.base	\func ext {A B : Pointed} {f g : A ->* B} (p : \Pi (x : A) -> f.1 x = g.1 x) (q : p base *> g.2 = f.2) : f = g
+PointedTrunc0	func	f847b2599ba6	a90366018838	381beb18	df5072d0:Pointed	\func PointedTrunc0 (X : Pointed) : AlgPointed
+PointedTrunc0-Func	func	f3be6a6f4b4d	661f40ae0221	4ee78ae1	1021c81e:->*	\func PointedTrunc0-Func {X Y : Pointed} (f : X ->* Y) : PointedHom (PointedTrunc0 X) (PointedTrunc0 Y)
+(overview)	-	-	-	3a9697e3		-

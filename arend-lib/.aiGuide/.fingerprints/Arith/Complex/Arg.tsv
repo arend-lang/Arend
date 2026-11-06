@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Arith.Complex.Arg. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+stereo	func	05be5168d4b1	4dfdcecfa906	bf284930		\func stereo (u : Complex) (re>0 : u.re > 0) : Real
+stereo<1	lemma	5b4d3057bc40	-	bb52f10a	c3710c5b:stereo	\lemma stereo<1 {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : abs (stereo u re>0) < 1
+arg-right	func	20918ac5c979	02509482496f	6aefa0c7		\func arg-right {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : Real
+exp^i*_arg-right	lemma	cb5fe3487f8d	-	163a35bb	04c2c246:arg-right	\lemma exp^i*_arg-right {u : Complex} (unit : OnUnitCircle u) (re>0 : u.re > 0) : exp^i* (arg-right unit re>0) = u
+unit-arg	lemma	c55b945fa82e	-	a2e605a4		\lemma unit-arg {u : Complex} (unit : OnUnitCircle u) : ∃ (theta : Real) (exp^i* theta = u)
+complex-arg	lemma	c80886d473ee	-	aa5cb640		\lemma complex-arg {z : Complex} (rho>0 : 0 < cabs z) : ∃ (theta : Real) (z = Complex.fromReal (cabs z) * exp^i* theta)
+(overview)	-	-	-	9e550b08	3667f9b9:complex-arg c3710c5b:stereo f377d21e:unit-arg	-

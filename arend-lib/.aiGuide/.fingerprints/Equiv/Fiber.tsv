@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Equiv.Fiber. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HasContrFibers	func	98565fd4e588	943ef00b859a	4061cece		\func HasContrFibers {A B : \Cat} (f : A -> B) : \Prop
+contrFibers=>QEquiv	func	5e2d3ff1a0de	a5c51678dd09	9419a17f	c2c17fd9:HasContrFibers	\func contrFibers=>QEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : QEquiv f
+contrFibers=>IsEquiv	lemma	c9d5030a72f2	-	d117244e	c2c17fd9:HasContrFibers	\lemma contrFibers=>IsEquiv {A B : \Cat} {f : A -> B} (p : HasContrFibers f) : IsEquiv f
+IsEquiv=>contrFibers	lemma	22d7af453678	-	6bc7bbba		\lemma IsEquiv=>contrFibers {A B : \Cat} {f : A -> B} (e : IsEquiv f) : HasContrFibers f
+IsEquiv=>contrFibers.fromSection	lemma	ffd35e4c1325	-	530e1573	c2c17fd9:HasContrFibers	\lemma fromSection (s : Section f) (r : Retraction f) : HasContrFibers f
+(overview)	-	-	-	938a9f26		-

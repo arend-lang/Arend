@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation.LinRepresCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RepresentationCat	instance	9b891b78cefc	-	e6c6a20a		\instance RepresentationCat (R : Ring) (G : Group) : Cat (LinRepres.{u} R G)
+InterwiningMapLModule	instance	27d0cccee0a3	-	101a4df0		\instance InterwiningMapLModule {R : CRing} {G : Group} (A B : LinRepres R G) : LModule R (InterwiningMap A B)
+InterwiningMapLModule.zeroInterwining	func	41287a2fb03e	a0081e4cc4b5	51f85b58		\func zeroInterwining : InterwiningMap A B
+InterwiningMapLModule.addInterwining	func	3fda634dda18	d76262b40be1	1cbb0398		\func addInterwining (f g : InterwiningMap A B) : InterwiningMap A B
+InterwiningMapLModule.negativeInterwining	func	74114494c837	b521a32b1943	513a5d91		\func negativeInterwining (f : InterwiningMap A B) : InterwiningMap A B
+InterwiningMapLModule.mulconstInterwining	func	e46706666dc2	416a11621f0e	4063a9fc		\func mulconstInterwining (c : R) (f : InterwiningMap A B) : InterwiningMap A B
+(overview)	-	-	-	97d0200d		-

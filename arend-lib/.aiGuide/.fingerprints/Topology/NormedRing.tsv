@@ -1,0 +1,35 @@
+# arend -gc fingerprints v2 for module Topology.NormedRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ExPseudoNormedPseudoRing	class	9abc8c5808e4	-	e389808b		\class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing { | norm_*_<= {x y : E} : norm (x * y) <= norm x ExUpperReal.* norm y | *-cont => bilinear-locally-uniform * rdistr_- ldistr_- norm_*_<= }
+*-locally-uniform	lemma	ef51d13dc823	-	370de999		\lemma *-locally-uniform {X : ExPseudoNormedPseudoRing} : LocallyUniformMap (ProductUniformSpace X X) X (\lam s => s.1 * s.2)
+PseudoNormedPseudoRing	class	d62869d41bd3	-	6e41ddff	f7a473f6:ExPseudoNormedPseudoRing	\class PseudoNormedPseudoRing \extends ExPseudoNormedPseudoRing, PseudoNormedAbGroup
+lnorm_*_<=	lemma	cddc5443e85a	-	be4f3313		\lemma lnorm_*_<= {X : PseudoNormedPseudoRing} {x y : X} : lnorm (x * y) <= lnorm x * lnorm y
+ExPseudoNormedRing	class	cd3c9aa9266d	-	148147ec	f7a473f6:ExPseudoNormedPseudoRing	\class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, TopRing { | norm_ide_<= : norm 1 <= ExUpperReal.fromRat 1 }
+ExPseudoNormedRing.norm_<=_pow	lemma	a3dd7ee9bda4	-	57b69332		\lemma norm_<=_pow {x : E} {n : Nat} : norm (pow x n) <= ExUpperRealSemigroup.pow (norm x) n
+ExPseudoNormedRing.pow-cover	lemma	91a59aafb5f5	-	0268aa9d		\lemma pow-cover (n : Nat) : CoverMap \this \this (pow __ n)
+CompleteExNormedRing	class	5a136aada8c3	-	68233198	0465b1b4:ExPseudoNormedRing	\class CompleteExNormedRing \extends ExPseudoNormedRing, CompleteExNormedAbGroup
+PseudoNormedRing	class	09757578000b	-	6165482a	0465b1b4:ExPseudoNormedRing 108cf5d6:PseudoNormedPseudoRing	\class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
+lnorm_ide_<=	lemma	58f0f630faa2	-	cbe98d2e		\lemma lnorm_ide_<= {X : PseudoNormedRing} : X.norm 1 <= 1
+norm_ide=0	lemma	741dc401b019	-	3000b764		\lemma norm_ide=0 {X : ExPseudoNormedRing} (p : X.norm 1 = 0) {x : X} (xb : (norm x).IsBounded) : norm x = 0
+norm_ide<1	lemma	950b6892326d	-	823e0dfa		\lemma norm_ide<1 {X : ExPseudoNormedRing} (|1|<1 : (X.norm 1).U 1) : X.norm 1 = 0
+norm_ide<1.aux	lemma	c372db9b8d9d	-	55e6a2d4		\lemma aux {q : Rat} (q>0 : q > 0) (q<1 : q < 1) (p : (X.norm 1).U q) {n : Nat} : (X.norm 1).U (pow q n)
+norm_ide/=0	lemma	46bdc398ba1e	-	b101a6db		\lemma norm_ide/=0 {X : ExPseudoNormedRing} (p : X.norm 1 /= 0) : X.norm 1 = 1
+norm_ide-left	lemma	827def53467f	-	74bd17bd		\lemma norm_ide-left {X : ExPseudoNormedRing} {x : X} : X.norm 1 * norm x = norm x
+norm_ide-right	lemma	8b6197dffd12	-	74bd17bd		\lemma norm_ide-right {X : ExPseudoNormedRing} {x : X} : X.norm x * X.norm 1 = norm x
+norm_zro_ide	lemma	5f5a4a5f6797	-	e643e6f0	fef3eb89:PseudoNormedRing	\lemma norm_zro_ide {X : PseudoNormedRing} : (X.norm 1 = (0 : Real)) || (X.norm 1 = (1 : Real))
+lnorm_<=_pow	lemma	aabcfa6fa440	-	f0c23e7c		\lemma lnorm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : lnorm (pow x n) <= pow (lnorm x) n
+ExPseudoValuedPseudoRing	class	bdf78364f2a0	-	fa732376	f7a473f6:ExPseudoNormedPseudoRing	\class ExPseudoValuedPseudoRing \extends ExPseudoNormedPseudoRing { | norm_* {x y : E} : norm (x * y) = norm x ExUpperReal.* norm y | norm_*_<= => =_<= norm_* }
+lnorm_*	lemma	2c2c4859706c	-	016bc38d	fa425bc5:PseudoValuedRing	\lemma lnorm_* {X : PseudoValuedRing} {x y : X} : lnorm (x * y) = lnorm x * lnorm y
+ExPseudoValuedRing	class	6e74802360c2	-	64f087cd	0465b1b4:ExPseudoNormedRing 11976121:ExPseudoValuedPseudoRing	\class ExPseudoValuedRing \extends ExPseudoValuedPseudoRing, ExPseudoNormedRing, Ring { | norm_ide : norm 1 = ExUpperReal.fromRat 1 | norm_ide_<= => =_<= norm_ide }
+ExPseudoValuedRing.norm_Inv-cancel-left	lemma	13c0350da35f	-	6cad1d40		\lemma norm_Inv-cancel-left {x : E} (d : Monoid.Inv x) {y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) (p : norm x ExUpperRealSemigroup.* y = norm x ExUpperRealSemigroup.* z) : y = z
+ExPseudoValuedRing.norm_Inv-cancel-right	lemma	50393b53ef65	-	6cad1d40		\lemma norm_Inv-cancel-right {x y : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {z : E} (d : Monoid.Inv z) (p : x ExUpperRealSemigroup.* norm z = y ExUpperRealSemigroup.* norm z) : x = y
+norm_pow	lemma	79023c570896	-	5cffe571		\lemma norm_pow {X : ExPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = ExUpperRealSemigroup.pow (norm x) n
+PseudoValuedRing	class	dc3cb3c4fad0	-	e79bf54f	2297610d:ExPseudoValuedRing fef3eb89:PseudoNormedRing	\class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
+lnorm_ide	lemma	07e62d12d089	-	b503672c		\lemma lnorm_ide {X : PseudoValuedRing} : X.norm 1 = 1
+lnorm_pow	lemma	428fdf8b9b39	-	2c11393c		\lemma lnorm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : lnorm (pow x n) = pow (lnorm x) n
+CompleteValuedRing	class	62fd6dbce935	-	acb1d370	2ad0885a:CompleteExNormedRing fa425bc5:PseudoValuedRing	\class CompleteValuedRing \extends PseudoValuedRing, CompleteExNormedRing, CompleteNormedAbGroup
+CompleteValuedCRing	class	280ba3696b6b	-	1e7fb3f5	ef729829:CompleteValuedRing	\class CompleteValuedCRing \extends CompleteValuedRing, CRing
+RatValue	func	8bd4e46a43a0	c2aa325ce6a5	9e9fa7fc	2297610d:ExPseudoValuedRing	\func RatValue
+RatValuedRing	instance	0239624171f7	-	3a9dd744	fa425bc5:PseudoValuedRing	\instance RatValuedRing : PseudoValuedRing Rat
+RealValuedRing	instance	c368f02dc5be	-	1de044fd	ac6eb8b7:CompleteValuedCRing	\instance RealValuedRing : CompleteValuedCRing Real
+(overview)	-	-	-	bff0f959	24a4ff31:RatValuedRing 8ad0bf18:RealValuedRing	-

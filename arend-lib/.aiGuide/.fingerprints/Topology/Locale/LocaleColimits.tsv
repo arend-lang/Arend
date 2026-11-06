@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Topology.Locale.LocaleColimits. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+InitialLocale	func	770abca1e66f	f585c5c08817	9cc42680		\func InitialLocale : Locale (\Sigma)
+InitialLocale.initialMap	func	db5023356f97	f19e3c4ba470	92f8119e	e70088b9:InitialLocale	\func initialMap {L : Locale} : LocaleHom InitialLocale L
+InitialLocale.initialMap-unique	lemma	674c9a9c1e92	-	dda62984	e70088b9:InitialLocale	\lemma initialMap-unique {L : Locale} {f g : LocaleHom InitialLocale L} : f = g
+PushoutLocale	func	9bbcdbbd4dda	8f4a54096005	2565aa9b		\func PushoutLocale {L M K : Locale} (f : LocaleHom L M) (g : LocaleHom L K) : Locale (\Sigma (x : M) (y : K) (f x = g y))
+PushoutLocale.pinl	func	e341c0f75c7d	b2b2d68a0f36	3494479e	6fe6aaa9:PushoutLocale	\func pinl : LocaleHom M (PushoutLocale f g)
+PushoutLocale.pinr	func	12892ac106bd	d76aef7b0ca5	099114e2	6fe6aaa9:PushoutLocale	\func pinr : LocaleHom K (PushoutLocale f g)
+PushoutLocale.pushoutCoh	lemma	a391b94e4ea1	-	4a6858af	b7928414:PushoutLocale.pinl f7a8f7a0:PushoutLocale.pinr	\lemma pushoutCoh : pinl ∘ f = pinr ∘ g
+(overview)	-	-	-	295bb57e	e70088b9:InitialLocale 6fe6aaa9:PushoutLocale	-

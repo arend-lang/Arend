@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Factor. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FactorPseudoRing	instance	6613e3079c72	-	7e0130e4	fbf84cad:FactorPseudoRing.Type d8b1f62c:FactorRing	\instance FactorPseudoRing (I : PseudoTIdeal) : PseudoRing
+FactorRing	instance	795d3be89216	-	9cf8d6a1		\instance FactorRing (I : Ideal) : CRing
+FactorPseudoRing.Type	type	a93cc75c7d70	eb0b1883d84f	95ce8ff6	d8b1f62c:FactorRing	\type Type (I : PseudoTIdeal)
+FactorRing.inF	func	c22aca91c040	52a072c8b9c2	c028e846	73892579:FactorPseudoRing.inF d8b1f62c:FactorRing	\func inF {I : Ideal} (a : I.S) : FactorPseudoRing.Type I
+FactorRing.fequiv	lemma	62c5ae460c4d	-	677116ed		\lemma fequiv {I : Ideal} {a b : I.S} (p : I (a - b)) : inF a = inF b
+FactorRing.fequiv0	lemma	95d1bbd6f6b8	-	8c4510fc		\lemma fequiv0 {I : Ideal} {a : I.S} (p : I a) : inF a = inF 0
+FactorRing.unfequiv	lemma	96e189f628a2	-	7e978698		\lemma unfequiv {I : Ideal} {a b : I.S} (p : inF a = inF b) : I (a - b)
+FactorRing.unfequiv0	lemma	0b0d20f4d90f	-	6f727fa5		\lemma unfequiv0 {I : Ideal} {a : I.S} (p : inF a = inF 0) : I a
+factorPseudoHom	func	101f38b31c37	1edf47542544	26181329	4d43e0dc:FactorPseudoRing	\func factorPseudoHom {I : PseudoTIdeal} : PseudoRingHom I.S (FactorPseudoRing I)
+factorHom	func	5297a9d672cc	9e8de6557435	25bd8756		\func factorHom {I : Ideal} : RingHom I.S (FactorRing I)
+factor-lift	func	c33d5827c22d	0a1f02440e43	5d8a53e6		\func factor-lift {I : Ideal} {R : Ring} (f : RingHom I.S R) (p : \Pi {a : I.S} -> I a -> f a = 0) : RingHom (FactorRing I) R
+FactorField	instance	a12740de8218	-	060e5e3c		\instance FactorField {I : Ideal} (Im : I.IsMaximal) : DiscreteField
+FactorField.conv	lemma	7759c1ba1ea0	-	b3416d24		\lemma conv {I : Ideal} (p : 0 /= {FactorRing I} 1) (q : \Pi (x : FactorRing I) -> (x = 0) || Inv x) : I.IsMaximal
+FactorIrrField	instance	7fbc71827d10	-	b50cb2dd		\instance FactorIrrField (R : BezoutRing) (p : Irr {R}) : DiscreteField
+FactorIrrField.trivial_Inv	lemma	0b501624993b	-	785da788		\lemma trivial_Inv {R : CRing} {p : R} : (0 = {FactorRing (Ideal.closure1 p)} 1) <-> Inv p
+FactorIrrField.zeroOrInv-char	lemma	8e13caa75945	-	0efaa799		\lemma zeroOrInv-char {R : CRing} {p : R} : (\Pi (a : FactorRing (Ideal.closure1 p)) -> (a = 0) || Inv a) <-> (\Pi (a : R) -> Monoid.LDiv p a || (\Sigma (s t : R) (s * a + t * p = 1)))
+FactorIrrField.conv	lemma	a94facfc4637	-	e03e726f		\lemma conv {R : CRing} {p : R} (c : \Pi {x y : R} -> p * x = p * y -> x = y) (d : DiscreteField { | CRing => FactorRing (Ideal.closure1 p) }) : Prime p
+(overview)	-	-	-	c87b488f	14ebb0a5:FactorField a84afb8e:FactorIrrField c10b1ca1:factor-lift 42554ae6:factorHom 0b83b9d8:factorPseudoHom	-

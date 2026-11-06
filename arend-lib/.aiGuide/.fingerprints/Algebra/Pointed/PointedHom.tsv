@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Algebra.Pointed.PointedHom. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PointedHom	record	2ca73ee47fed	-	b4846ffe	636adf34:PointedHom.func-ide	\record PointedHom \extends SetHom { \override Dom : Pointed \override Cod : Pointed | func-ide : func ide = ide }
+PointedHom.id	func	cee55e77ced9	d44b19fb3a48	5cb47b75	86c42c6e:PointedHom	\func id {X : Pointed} : PointedHom X X
+PointedHom.compose	func	59516bf58c9c	7e7f865154da	a0ed62ae	86c42c6e:PointedHom	\func compose {X Y Z : Pointed} (g : PointedHom Y Z) (f : PointedHom X Y) : PointedHom X Z
+AddPointedHom	record	e5982d597a41	-	ecdae815	c63cbb2b:AddPointedHom.func-zro	\record AddPointedHom \extends SetHom { \override Dom : AddPointed \override Cod : AddPointed | func-zro : func zro = zro }
+AddPointedHom.id	func	cab04ed5c8f8	b69e9cf48d25	e812b2cb	c52369a7:AddPointedHom	\func id {X : AddPointed} : AddPointedHom X X
+AddPointedHom.compose	func	19b6d5b59fea	81d57bebef49	7db0a235	c52369a7:AddPointedHom	\func compose {A B C : AddPointed} (g : AddPointedHom B C) (f : AddPointedHom A B) : AddPointedHom A C
+AddPointedHom.IsZero	func	d143af8bb978	3582ac1039d8	44bf2d94		\func IsZero : \Prop
+(overview)	-	-	-	5644b5e8	c52369a7:AddPointedHom 86c42c6e:PointedHom	-

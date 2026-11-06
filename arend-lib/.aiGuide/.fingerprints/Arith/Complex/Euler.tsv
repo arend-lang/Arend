@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Arith.Complex.Euler. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+complex-decomp	lemma	1e181b2920b2	-	0530728d		\lemma complex-decomp (z : Complex) : z = fromReal z.re + i * z.im
+exp^i*	func	f1c309c1e622	97d8d67b746c	e01e3892		\func exp^i* (t : Real) : Complex
+euler	lemma	a632b4cc8120	-	2f0e9dd0	1a825a14:exp^i*	\lemma euler {x : Real} : exp^i* x = fromReal (cos x) + i * sin x
+exp^i*_zro	lemma	19aff7ae30b2	-	ab729453	1a825a14:exp^i*	\lemma exp^i*_zro : exp^i* 0 = 1
+exp^i*_+	lemma	5fbe4be2111e	-	f9d5acb9	1a825a14:exp^i*	\lemma exp^i*_+ {a b : Real} : exp^i* (a + b) = exp^i* a * exp^i* b
+pow_exp^i*	lemma	0fd2554e122e	-	8ce7d5b7	1a825a14:exp^i*	\lemma pow_exp^i* {a : Real} {k : Nat} : pow (exp^i* a) k = exp^i* (k RealField.* a)
+exp^i*_pi	lemma	cc908513c830	-	265c8531	1a825a14:exp^i*	\lemma exp^i*_pi : exp^i* pi = ComplexField.negative 1
+(overview)	-	-	-	80c69c87	12fa31ff:euler 1a825a14:exp^i* 3cddcef2:pow_exp^i*	-

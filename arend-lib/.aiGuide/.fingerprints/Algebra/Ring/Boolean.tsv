@@ -1,0 +1,24 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Boolean. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BooleanRing	class	03664883790c	-	5ce11c6a	d8684d88:BooleanRing.<= abc2212e:BooleanRing.isBooleanRing	\class BooleanRing \extends PseudoCRing, BottomDistributiveLattice { | isBooleanRing {x : E} : x * x = x | <= => BooleanRing.<= | <=-refl => isBooleanRing | <=-transitive => \lam xy=x yz=y => pmap (* _) (inv xy=x) *> *-assoc *> pmap (_ *) yz=y *> xy=x | <=-antisymmetric => \lam xy=x yx=y => inv xy=x *> *-comm *> yx=y | meet => * | meet-left => *-comm *> inv *-assoc *> pmap (* _) isBooleanRing | meet-right => *-assoc *> pmap (_ *) isBooleanRing | meet-univ => \lam zx=z zy=z => inv *-assoc *> pmap (* _) zx=z *> zy=z | join => \lam x y => x + y + x * y | join-left => ldistr *> pmap2 + ldistr (inv *-assoc) *> +-assoc *> pmap2 + isBooleanRing (pmap (_ + __ * _) isBooleanRing *> sum2 isBooleanRing) *> zro-right | join-right => ldistr *> pmap2 (__ + _ * __) ldistr *-comm *> +-comm *> inv +-assoc *> pmap2 + (pmap (+ _) (inv *-assoc *> pmap (* _) isBooleanRing) *> sum2 isBooleanRing) isBooleanRing *> zro-left | join-univ => \lam xz=x yz=y => rdistr *> pmap2 + (rdistr *> pmap2 + xz=x yz=y) (*-assoc *> pmap (_ *) yz=y) | bottom => 0 | bottom-univ => zro_*-left | ldistr>= => pmap (_ *) (inv $ ldistr *> pmap2 + ldistr (pmap (* _) (inv isBooleanRing) *> *-assoc *> pmap (_ *) (inv *-assoc *> pmap (* _) *-comm *> *-assoc) *> inv *-assoc)) *> isBooleanRing | *-comm => \lam {x} {y} => inv zro-left *> pmap (+ _) (cancel-right y $ zro-left *> cancel-left x (inv isBooleanRing *> ldistr *> pmap2 + rdistr rdistr *> pmap2 (__ + _ + (_ + __)) isBooleanRing isBooleanRing *> +-assoc) *> inv +-assoc) *> +-assoc *> pmap (_ +) (sum2 isBooleanRing) *> zro-right }
+UnitalBooleanRing	class	06e1b6ef27fc	-	ba18b255		\class UnitalBooleanRing \extends BooleanRing, CRing, BooleanAlgebra { | top => 1 | top-univ => ide-right | compl => \lam a => a + 1 | compl-meet => zro_*-right *> inv (ldistr *> pmap2 + isBooleanRing ide-right *> double=0) | compl-join => unfold $ ide-left *> pmap2 + (inv +-assoc *> pmap (+ 1) double=0 *> zro-left) (ldistr *> pmap2 + isBooleanRing ide-right *> double=0) *> zro-right }
+BooleanRing.<=	type	3b77fbcbed68	324f0545eea0	f4d16f7d	2eaa968a:BooleanRing	\type <= {R : Semigroup} (x y : R)
+BooleanRing.isBooleanRing	field	ce83f8357726	-	27a58ac5		| isBooleanRing {x : E} : x * x = x
+BooleanRing.double=0	lemma	a7bb3a83c610	-	9599b3b6		\lemma double=0 {x : E} : x + x = 0
+BooleanRing.negative=id	lemma	89c3db114326	-	c7f60d8a		\lemma negative=id {x : E} : negative x = x
+BooleanRing.sum2	lemma	4e658cc028cf	-	8d2903d3		\lemma sum2 {R : PseudoRing} (br : \Pi {x : R} -> x * x = x) {x : R} : x + x = 0
+BooleanRing.+_join	lemma	83a6656af290	-	2581d9d7		\lemma +_join {x y : E} (xy=0 : x * y = 0) : x + y = x ∨ y
+BooleanRing.diff	func	cdabb85877f0	d0b6e0c0913f	06bacafe		\func diff (x y : E)
+BooleanRing.diff_<=	lemma	843b7e362341	-	df9bc330	d8684d88:BooleanRing.<= d830d04b:BooleanRing.diff	\lemma diff_<= {x y : E} : diff x y <= x
+BooleanRing.diff_*	lemma	1d457993e5b9	-	d5b6a011	d830d04b:BooleanRing.diff	\lemma diff_* {x y : E} : diff x y * y = 0
+BooleanRing.diff-univ	lemma	dd31b1c83647	-	b2c7a7ed	d8684d88:BooleanRing.<= d830d04b:BooleanRing.diff	\lemma diff-univ {x y z : E} (p : x <= y) (q : x * z = 0) : x <= diff y z
+BooleanRing.diff-mono	lemma	7d62c0818e08	-	8488b349	d830d04b:BooleanRing.diff	\lemma diff-mono {x y x' y' : E} (p : x <= x') (q : y' <= y) : diff x y <= diff x' y'
+BooleanRing.diff_*_diff	lemma	5f0b2d1d87c5	-	16bff29e	d830d04b:BooleanRing.diff	\lemma diff_*_diff {x y : E} : diff x y * diff y x = 0
+BooleanRing.+_diff	lemma	4451c13cc848	-	42a82c26	d830d04b:BooleanRing.diff	\lemma +_diff {x y : E} : x + y = diff x y ∨ diff y x
+BooleanRing.split_<=	lemma	0de2f65affdd	-	4adb6bd3	d8684d88:BooleanRing.<= d830d04b:BooleanRing.diff	\lemma split_<= {x y : E} (p : y <= x) : x = diff x y ∨ y
+BooleanRing.split	lemma	00cebacc3368	-	99046a0c	d830d04b:BooleanRing.diff	\lemma split {x y : E} : x = diff x y ∨ x * y
+BooleanRing.diff-trans	lemma	595598fccc0a	-	c2904f27	d8684d88:BooleanRing.<= d830d04b:BooleanRing.diff	\lemma diff-trans {x y z : E} : diff x z <= diff x y ∨ diff y z
+BooleanRing.diff_BigJoin	lemma	8639fdd7db25	-	c019250e	d830d04b:BooleanRing.diff	\lemma diff_BigJoin {l : Array E} {x : E} : diff (BigJoin l) x = BigJoin (\lam j => diff (l j) x)
+UnitalBooleanRing.fromBooleanAlgebra	coerce	1ec59bd9c710	-	5fd9c9be	a97c49a7:UnitalBooleanRing	\use \coerce fromBooleanAlgebra (R : BooleanAlgebra) : UnitalBooleanRing R
+HeytingBooleanRing	instance	afa3370aa779	-	49da1307	a97c49a7:UnitalBooleanRing	\instance HeytingBooleanRing (R : HeytingAlebra) : UnitalBooleanRing (NegatedElem R)
+(overview)	-	-	-	2fa25fc9	d8684d88:BooleanRing.<= d830d04b:BooleanRing.diff	-

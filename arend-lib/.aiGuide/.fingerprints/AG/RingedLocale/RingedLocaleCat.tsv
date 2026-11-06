@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module AG.RingedLocale.RingedLocaleCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RingedLocalePrecat	func	35ef49434671	32c635f47be4	3315f686		\func RingedLocalePrecat : Precat RingedLocale.{u}
+RingedLocalePrecat.forget	func	18171f896bb4	675dedfd9b5d	7d12f26a	49aca1e7:RingedLocalePrecat	\func forget : Functor RingedLocalePrecat.{u} LocaleCat.{u}
+RingedLocaleCat.fromIso	func	6f5dee1dcb9e	4c8847ece334	8d288d18		\func fromIso {L : Locale.{u}} {R1 R2 : RingedLocale.{u} L} (f : RingedLocaleHom R1 R2 LocaleHom.id) (e : \Pi (x : L) -> Iso (f.f# x)) : Iso {VSheafCat CRingCat.{u} L} {R2.R} {R1.R}
+RingedLocaleCat	instance	86514bb77cba	-	46caa56f	49aca1e7:RingedLocalePrecat	\instance RingedLocaleCat : Cat RingedLocale.{u}
+LocallyRingedLocalePrecat	func	70b6d344a3c1	35c69b28c1a9	d491ca30	93834834:LocallyRingedLocalePrecat.forget 49aca1e7:RingedLocalePrecat	\func LocallyRingedLocalePrecat : Precat LocallyRingedLocale.{u}
+LocallyRingedLocaleCat	instance	759c13e41865	-	91752ce7	c2cef232:LocallyRingedLocaleCat.embedding f01e9b73:RingedLocaleCat	\instance LocallyRingedLocaleCat : Cat LocallyRingedLocale.{u}
+(overview)	-	-	-	a43d0189		-

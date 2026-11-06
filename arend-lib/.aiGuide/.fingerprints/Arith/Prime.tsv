@@ -1,0 +1,30 @@
+# arend -gc fingerprints v2 for module Arith.Prime. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+nat_irr-isPrime	lemma	7dd99226a5f0	-	dd0334fe		\lemma nat_irr-isPrime (p : Irr {NatSemiring}) : Prime p p.notInv
+prime-div	lemma	e756e1692258	-	674e20ec		\lemma prime-div {n : Nat} : Prime n = (\Sigma (n /= 1) (\Pi {k : Nat} -> LDiv k n -> (k = n) || (k = 1)))
+prime-div.dir	lemma	025b194373e8	-	0660b983		\lemma dir {n : Nat} (p : Irr n) {k : Nat} (k|n : LDiv k n) : (k = n) || (k = 1)
+prime-div.conv	lemma	d4304395b36c	-	0660b983		\lemma conv {n : Nat} (n/=1 : n /= 1) (f : \Pi {k : Nat} -> LDiv k n -> (k = n) || (k = 1)) : Prime n
+prime-less	lemma	713367ccb0af	-	d207eb0b	f1be829d:isPrime.<	\lemma prime-less {n : Nat} : Prime n = (\Sigma (n > 1) (\Pi {k : Nat} -> k < n -> LDiv k n -> k = 1))
+prime-less.dir	lemma	3d8e0df34289	-	fcff041c		\lemma dir {n : Nat} (p : Irr n) {k : Nat} (k<n : k < n) (k|n : LDiv k n) : k = 1
+prime-less.conv	lemma	d3247a40c060	-	fcff041c		\lemma conv {n : Nat} (n>1 : n > 1) (f : \Pi {k : Nat} -> k < n -> LDiv k n -> k = 1) : Prime n
+isPrime	func	224af1a7118a	66a53344307c	5a0e6084		\func isPrime (n : Nat) : Bool
+isPrime.isPositive	func	224af1a7118a	9b47c83e9764	0521fc63		\func isPositive (n : Nat) : Bool
+isPrime.<	func	3d7cfcba3e19	49abe5af7f4c	1813e252		\func < (n m : Nat) : Bool
+isPrime.rec	func	9994de304f9a	9ee85ecb2f05	2fc34010	f1be829d:isPrime.<	\func rec (n c j : Nat) : Bool
+isPrime=>prime	lemma	b2ff278c61d4	-	be9273eb	6682a875:isPrime	\lemma isPrime=>prime {n : Nat} (p : isPrime n = true) : Prime n
+isPrime=>prime.mod_div-lem	lemma	ed6e0ffa4513	-	ef1cc54d		\lemma mod_div-lem {k n : Nat} (p : isPositive (n mod k) = true) : Not (LDiv k n)
+isPrime=>prime.isOdd	func	aa5c65c4fa5b	8bdeb43dc1aa	e8864346		\func isOdd (n : Nat) : \Prop
+isPrime=>prime.square_<=-lem	lemma	b2b6590609a0	-	c332a090		\lemma square_<=-lem {k : Nat} : k <= k * k
+isPrime=>prime.odd_suc-lem	lemma	37d49576758e	-	216e740b		\lemma odd_suc-lem {j : Nat} (j-odd : isOdd j) (sj-odd : isOdd (suc j)) : Empty
+isPrime=>prime.odd-lem	lemma	60021f7e91da	-	b8561a26		\lemma odd-lem {j k : Nat} (j-odd : isOdd j) (k-odd : isOdd k) (j<=k : j <= k) (j/=k : j /= k) : suc (suc j) <= k
+isPrime=>prime.rec-lem	lemma	6a18ad74762a	-	a58062f2	06329936:isPrime.rec	\lemma rec-lem {n c j : Nat} (p : rec n c j = true) (j-odd : isOdd j) (s : n < c + j) {k : Nat} (k-odd : isOdd k) (j<=k : j <= k) (k*k<=n : k * k <= n) (k|n : LDiv k n) : Empty
+isPrime=>prime.oddOrEven	lemma	248faccece78	-	ef687f52		\lemma oddOrEven (n : Nat) : isOdd n || LDiv 2 n
+isPrime=>prime.prime-lem	lemma	6c4f9d0de0d3	-	9bf3d9ff		\lemma prime-lem {n : Nat} (n>1 : n > 1) (div2 : Not (LDiv 2 n)) (divOdd : \Pi {k : Nat} -> isOdd k -> 3 <= k -> k * k <= n -> Not (LDiv k n)) : Prime n
+isPrime=>prime.prime-lem2	lemma	9cfc8a7905cf	-	c1391f18		\lemma prime-lem2 {n : Nat} (n>1 : n > 1) (f : \Pi {j : Nat} -> j * j <= n -> LDiv j n -> j = 1) : Prime n
+prime=>isPrime	lemma	85fed1dc241e	-	9eddd884	6682a875:isPrime	\lemma prime=>isPrime {n : Nat} (p : Prime n) : isPrime n = true
+prime=>isPrime.mod-lem	lemma	234427367545	-	52eb5fde	f1be829d:isPrime.<	\lemma mod-lem {k n : Nat} (p : Prime n) (k<n : k < n) (k/=1 : k /= 1) : isPositive (n mod k) = true
+prime=>isPrime.<-lem	lemma	b0d932a46912	-	13c0bcf2	f1be829d:isPrime.<	\lemma <-lem {n m : Nat} (n<m : n < m) : n isPrime.< m = true
+prime=>isPrime.square_<-lem	lemma	81b1014f01f3	-	e76ab6dc	f1be829d:isPrime.<	\lemma square_<-lem {j : Nat} (j>1 : j > 1) : suc j < j * j
+prime=>isPrime.rec-lem	lemma	a9e395a8e053	-	86ebe6b7		\lemma rec-lem {n c j : Nat} (p : Prime n) (j>1 : j > 1) : rec n c j = true
+prime-isDec	func	085cf04e24fd	d8275dc53db9	1e449239	6682a875:isPrime	\func prime-isDec {n : Nat} : Dec (Prime n)
+(overview)	-	-	-	8ec5d4be	6682a875:isPrime f58a1ea5:isPrime=>prime.isOdd c523f699:prime-isDec	-

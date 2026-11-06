@@ -1,0 +1,81 @@
+# arend -gc fingerprints v2 for module Algebra.Group. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Group	class	2b5f78dd90af	-	ab442c3a	97b987d0:Group.inverse 54a5fe34:Group.inverse-left 9adb2df1:Group.inverse-right 5e814717:Group.op	\class Group \extends CancelMonoid { | inverse : E -> E | inverse-left {x : E} : inverse x * x = ide | inverse-right {x : E} : x * inverse x = ide | inverse-left => make-inverse-left ide-right inverse inverse-right | inverse-right => make-inverse-left {Semigroup.op} ide-left inverse inverse-left | ide-left => make-ide-left ide-right inverse inverse-right inverse-left | ide-right => make-ide-left {Semigroup.op} ide-left inverse inverse-left inverse-right | cancel_*-left => \lam x {y} {z} p => qed (y ==< inv ide-left >== ide * y ==< pmap (* y) (inv inverse-left) >== (inverse x * x) * y ==< *-assoc >== inverse x * (x * y) ==< pmap (inverse x *) p >== inverse x * (x * z) ==< inv *-assoc >== (inverse x * x) * z ==< pmap (* z) inverse-left >== ide * z ==< ide-left >== z) | cancel_*-right => \lam z {x} {y} p => qed (x ==< inv ide-right >== x * ide ==< pmap (x *) (inv inverse-right) >== x * (z * inverse z) ==< inv *-assoc >== (x * z) * inverse z ==< pmap (* inverse z) p >== (y * z) * inverse z ==< *-assoc >== y * (z * inverse z) ==< pmap (y *) inverse-right >== y * ide ==< ide-right >== y) }
+Group.Dec	class	9d5c0ad22a5a	-	8b93cf32	30603062:Group	\class Dec \extends Group, DecSet
+Group.op	func	1186dbd41f94	2de7eab0bc67	fa2e61ce	97b987d0:Group.inverse	\func op : Group
+CGroup	class	15b29fcf23b0	-	9fad577b	30603062:Group 9adb2df1:Group.inverse-right	\class CGroup \extends Group, CancelCMonoid { | inverse-right => *-comm *> inverse-left }
+FinGroup	class	95f205372333	-	74792d6d	30603062:Group d80d16ed:Group.Dec	\class FinGroup \extends Group, Group.Dec, FinSet
+Group.ipow	func	5865af648724	01db89255650	983bdb12	97b987d0:Group.inverse	\func ipow (a : E) (x : Int) : E
+Group.ipow_+	lemma	0c8192982680	-	7937c51d	8e6a7c2b:Group.ipow	\lemma ipow_+ {a : E} {x y : Int} : ipow a (x + y) = ipow a x * ipow a y
+Group.ipow_*	lemma	c32ac7daa214	-	7937c51d	8e6a7c2b:Group.ipow	\lemma ipow_* {a : E} {x y : Int} : ipow a (x * y) = ipow (ipow a x) y
+Group.ipow_negaitve	lemma	d6cf5d429998	-	7937c51d	8e6a7c2b:Group.ipow	\lemma ipow_negaitve {a : E} {x : Int} : ipow a (negative x) = inverse (ipow a x)
+Group.ipow_ide	lemma	78a0a453badc	-	7937c51d	8e6a7c2b:Group.ipow	\lemma ipow_ide {x : Int} : ipow ide x = ide
+Group.inverse-isInv	lemma	86ef70311027	-	82002a6c	97b987d0:Group.inverse	\lemma inverse-isInv {x : E} : inverse (inverse x) = x
+Group.inverse_ide	lemma	9391e2502995	-	3f0cf88a	97b987d0:Group.inverse	\lemma inverse_ide : inverse ide = ide
+Group.inverse_*	lemma	edfc94a6d3de	-	e9dbb1ea	97b987d0:Group.inverse	\lemma inverse_* {x y : E} : inverse (x * y) = inverse y * inverse x
+Group.inverse_pow	lemma	7f81405bcb33	-	64fb9dc3	97b987d0:Group.inverse	\lemma inverse_pow {x : E} {n : Nat} : inverse (pow x n) = pow (inverse x) n
+Group.makeInv	lemma	c13988131333	-	798a485b	97b987d0:Group.inverse	\lemma makeInv (a : E) : Inv a (inverse a)
+Group.inverse-equality	lemma	415c0bf66758	-	5bf641f2		\lemma inverse-equality {X : \Set} (G H : Group X) (z : G.ide = H.ide) (m : \Pi {x y : G} -> x G.* y = x H.* y) (e : G) : G.inverse e = H.inverse e
+Group.equals	func	1f25913998ba	02114a341de2	915d833d		\func equals (G H : Group.{u}) (p : G = {Monoid.{u}} H) : G = {Group.{u}} H
+Group.make-inverse-left	lemma	fae2c4b2ad3f	-	bb253921		\lemma make-inverse-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M) (inverse-right : \Pi {x : M} -> x * inverse x = ide) {x : M} : inverse x * x = ide
+Group.make-ide-left	lemma	ec68d40d5307	-	bb253921		\lemma make-ide-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M) (inverse-right : \Pi {x : M} -> x * inverse x = ide) (inverse-left : \Pi {x : M} -> inverse x * x = ide) {x : M} : ide * x = x
+Group.translate-is-Equiv	func	614c89d730b4	cbf77e4730ce	3a14a511	97b987d0:Group.inverse	\func translate-is-Equiv {G : Group} (h : G) : QEquiv (h *)
+/	func	05a981079067	633523ca5dc8	9a653cec	97b987d0:Group.inverse	\func / {G : Group} (x y : G)
+conjugate	func	1c4d7ab19499	fab82d0780d3	74d23d37	97b987d0:Group.inverse	\func conjugate {E : Group} (g h : E)
+conjugate-via-id	lemma	c08ac9be5bf4	-	934e80ec	6c3f3eb3:conjugate	\lemma conjugate-via-id {G : Group} {g : G} : conjugate ide g = g
+commutator	func	1c4d7ab19499	fd161334d7ee	412926f3	97b987d0:Group.inverse	\func commutator {E : Group} (g h : E)
+commutator=ide<->comm	lemma	eb378787941d	-	9b18d11e	2c1edca4:commutator	\lemma commutator=ide<->comm {E : Group} {g h : E} : commutator g h = ide <-> g * h = h * g
+comm_sym	lemma	ea73bdafa00c	-	14121b71	2c1edca4:commutator	\lemma comm_sym {E : Group} {g h : E} (p : commutator g h = ide) : commutator h g = ide
+comm_conjugate	lemma	fecd0054e1d5	-	fc634613	2c1edca4:commutator 6c3f3eb3:conjugate	\lemma comm_conjugate {E : Group} {g h : E} (p : commutator g h = ide) : conjugate g h = h
+comm_inverse-right	lemma	4c61337cd70a	-	8b38b7d7		\lemma comm_inverse-right {E : Group} {g h : E} (p : commutator g h = ide) : commutator g (inverse h) = ide
+comm_inverse-left	lemma	b41ef73f97ae	-	8b38b7d7		\lemma comm_inverse-left {E : Group} {g h : E} (p : commutator g h = ide) : commutator (inverse g) h = ide
+AddGroup	class	d8875ddfa81d	-	ef988caa	97b987d0:AddGroup.negative 9eafe6f4:AddGroup.negative-left 7289d4c7:AddGroup.negative-right	\class AddGroup \extends AddMonoid { | negative : E -> E | negative-left {x : E} : negative x + x = zro | negative-right {x : E} : x + negative x = zro }
+AddGroup.fromGroup	coerce	d7113476a0d2	-	881555f7	e2c8961c:AddGroup 30603062:Group	\use \coerce fromGroup (G : Group)
+AddGroup.toGroup	coerce	051bfe14e33d	-	881555f7	e2c8961c:AddGroup 30603062:Group	\use \coerce toGroup (G : AddGroup)
+AddGroup.negative-equality	lemma	aa3629e68808	-	38624d53	e2c8961c:AddGroup	\lemma negative-equality {X : \Set} (A B : AddGroup X) (z : A.zro = B.zro) (m : \Pi {x y : A} -> x A.+ y = x B.+ y) (e : A) : A.negative e = B.negative e
+-	func	80dfa9bbb543	a9900bf83d8d	9dbc46d4	97b987d0:AddGroup.negative	\func - {G : AddGroup} (x y : G)
+AddGroup.cancel-left	lemma	0ef085d0ae78	-	590b9b2a		\lemma cancel-left (x : E) {y z : E} (p : x + y = x + z) : y = z
+AddGroup.cancel-right	lemma	f9c25befdffb	-	590b9b2a		\lemma cancel-right (z : E) {x y : E} (p : x + z = y + z) : x = y
+AddGroup.negative-isInv	lemma	2b4209c348bd	-	e7d706f8	97b987d0:AddGroup.negative	\lemma negative-isInv {x : E} : negative (negative x) = x
+AddGroup.negative_+	lemma	aba6fe6ee572	-	c8de142f	6f0971b3:- 97b987d0:AddGroup.negative	\lemma negative_+ {x y : E} : negative (x + y) = negative y - x
+AddGroup.negative_-	lemma	a805df2465b8	-	2d7ebaff	6f0971b3:- 97b987d0:AddGroup.negative	\lemma negative_- {x y : E} : negative (x - y) = y - x
+AddGroup.negative_zro	lemma	d78043558300	-	8fad010b	97b987d0:AddGroup.negative	\lemma negative_zro : negative zro = zro
+AddGroup.minus_zro	lemma	9ff5167a9b1a	-	2e32a9f3	6f0971b3:-	\lemma minus_zro {x : E} : x - zro = x
+AddGroup.fromZero	lemma	825adccea1fa	-	1a8a3258	6f0971b3:-	\lemma fromZero {x y : E} (x-y=0 : x - y = zro) : x = y
+AddGroup.toZero	lemma	475aeaf31837	-	1a8a3258	6f0971b3:-	\lemma toZero {x y : E} (x=y : x = y) : x - y = zro
+AddGroup.*n_negative	lemma	df17ad726f6c	-	2f0dd644	97b987d0:AddGroup.negative	\lemma *n_negative {n : Nat} {a : E} : n *n negative a = negative (n *n a)
+AddGroup.diff_+	lemma	0a0ef1ae20fb	-	d9d96141	6f0971b3:-	\lemma diff_+ {x y z : E} : (z - y) + (y - x) = z - x
+AddGroup.minus_+	lemma	111439a29a33	-	0ea7f7a4	6f0971b3:-	\lemma minus_+ {x y : E} : (x - y) + y = x
+AddGroup.*i	func	f5771c2be012	3e9a2ebf5642	89524b7d	e2c8961c:AddGroup	\func *i (x : Int) (a : E) : E
+AddGroup.*i_ipow	lemma	2dacb313c55d	-	c00581cc	af8091da:AddGroup.*i 8e6a7c2b:Group.ipow	\lemma *i_ipow {x : Int} {a : E} : x *i a = \this.ipow a x
+AddGroup.*i-assoc	lemma	a692b41f18e6	-	c335caf9	af8091da:AddGroup.*i	\lemma *i-assoc {x y : Int} {a : E} : (x * y) *i a = x *i (y *i a)
+AddGroup.*i-rdistr	lemma	8ea7a5e390cb	-	fd8c720c	af8091da:AddGroup.*i	\lemma *i-rdistr {x y : Int} {a : E} : (x Arith.Int.IntRing.+ y) *i a = x *i a + y *i a
+AddGroup.With#	class	5f4c6288d250	-	3e9c973c	6f0971b3:- e2c8961c:AddGroup	\class With# \extends AddGroup, Set# { | \fix 8 #0 : E -> \Prop | #0-zro : Not (#0 zro) | #0-negative {x : E} : #0 x -> #0 (negative x) | #0-+ {x y : E} : #0 (x + y) -> #0 (#0 x || y) | #0-tight {x : E} : Not (#0 x) -> x = zro | # => \lam x y => #0 (x - y) | #-irreflexive => \lam x-x#0 => #0-zro (transport #0 negative-right x-x#0) | #-symmetric => \lam x-y#0 => transport #0 (negative_+ *> pmap (+ negative _) negative-isInv) (#0-negative x-y#0) | #-comparison => \lam x y z x-z#0 => #0-+ (transport #0 (inv diff_+) x-z#0) | tightness => \lam x-y/#0 => fromZero (#0-tight x-y/#0) }
+AddGroup.With#.apartNonZero	lemma	bace25623c0f	-	24a1f7c3		\lemma apartNonZero {x : E} (x#0 : #0 x) : x /= zro
+AddGroup.With#.#0-negative-inv	lemma	ec0cff5ac86b	-	04c0848e	97b987d0:AddGroup.negative	\lemma #0-negative-inv {x : E} (p : #0 (negative x)) : #0 x
+AddGroup.With#.#0-+-left	lemma	9244f0cfeecc	-	d4eca7e3		\lemma #0-+-left {x y : E} (x#0 : #0 x) : #0 (x + y) || #0 y
+AddGroup.With#.#0-+-right	lemma	e0668ca8cd54	-	d4eca7e3		\lemma #0-+-right {x y : E} (y#0 : #0 y) : #0 (x + y) || #0 x
+AddGroup.With#.#0-BigSum	lemma	f91f74d2259e	-	535ad0c0		\lemma #0-BigSum {l : Array E} (p : #0 (BigSum l)) : ∃ (j : Fin l.len) (#0 (l j))
+AddGroup.With#.#0-BigSum-conv	lemma	c6b0c5eb3bb0	-	535ad0c0		\lemma #0-BigSum-conv {l : Array E} {i : Fin l.len} (p : #0 (l i)) : #0 (BigSum l) || (\Sigma (j : Fin l.len) (j /= i) (#0 (l j)))
+AddGroup.Dec	class	fbee25a91ae2	-	8b53f70d	0b866762:AddGroup.Dec.nonZeroApart baa0bfb3:AddGroup.With#	\class Dec \extends With#, DecSet { | nonZeroApart {x : E} (x/=0 : x /= zro) : #0 x | #0-negative => \lam x#0 => nonZeroApart (\lam -x=0 => #0-zro (transport #0 (inv negative-isInv *> pmap negative -x=0 *> negative_zro) x#0)) | #0-+ => \lam {x} {y} x+y#0 => (\case decideEq y zro \with { | yes y=0 => byLeft (transport #0 (pmap (x +) y=0 *> zro-right) x+y#0) | no y/=0 => byRight (nonZeroApart y/=0) }) | #0-tight => \lam {x} x/#0 => (\case decideEq x zro \with { | yes x=0 => x=0 | no x/=0 => absurd (x/#0 (nonZeroApart x/=0)) }) | nonEqualApart => \lam p => nonZeroApart (\lam x-y=0 => p (fromZero x-y=0)) | #0 => #0 | #0-zro => #0-zro | nonZeroApart => notEqualApartImpl }
+AddGroup.Dec.decide#0	lemma	6bc7bd0567a5	-	9f9c6766		\lemma decide#0 (a : E) : \level Or (a = 0) (With#.#0 a) Or.levelProp (\lam p q => apartNonZero q p)
+CGroup.ipow_*-comm	lemma	dcb26644e650	-	f9d11550	8e6a7c2b:Group.ipow	\lemma ipow_*-comm {a b : E} {x : Int} : ipow (a * b) x = ipow a x * ipow b x
+CGroup.BigProd_inverse	lemma	9272e61c7f84	-	d3b73e6b	97b987d0:Group.inverse	\lemma BigProd_inverse {l : Array E} : inverse (BigProd l) = BigProd (map inverse l)
+CGroup.BigProd_ipow	lemma	9f1c92627ad1	-	436ae99f	8e6a7c2b:Group.ipow	\lemma BigProd_ipow {k : Int} {l : Array E} : BigProd (\lam i => ipow (l i) k) = ipow (BigProd l) k
+AbGroup	class	3168505558c8	-	719e8153	e2c8961c:AddGroup 7289d4c7:AddGroup.negative-right	\class AbGroup \extends AddGroup, AbMonoid { | negative-right => +-comm *> negative-left }
+AbGroup.fromCGroup	coerce	feb1074b849f	-	85688af3	a6da213a:AbGroup 5de55bc8:CGroup	\use \coerce fromCGroup (G : CGroup)
+AbGroup.toCGroup	coerce	74fd26607ae8	-	85688af3	a6da213a:AbGroup 5de55bc8:CGroup	\use \coerce toCGroup (G : AbGroup)
+AbGroup.equals	func	0e2e13cec5d2	ef3cc621b412	289a7d67	a6da213a:AbGroup e2c8961c:AddGroup	\func equals (A B : AbGroup.{u}) (p : A = {AddGroup.{u}} B) : A = {AbGroup.{u}} B
+AbGroup.*n-ldistr_-	lemma	b43aff734432	-	48cd05a4	6f0971b3:-	\lemma *n-ldistr_- {n : Nat} {a b : E} : n *n (a - b) = n *n a - n *n b
+AbGroup.*i-ldistr	lemma	b48f1fff905e	-	1e7d4745	af8091da:AddGroup.*i	\lemma *i-ldistr {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
+AbGroup.BigSum_negative	lemma	72fc0c0c1ee1	-	9b6bc93c	97b987d0:AddGroup.negative	\lemma BigSum_negative {l : Array E} : negative (BigSum l) = BigSum (map negative l)
+AbGroup.BigSum_-	lemma	a28e499c558a	-	52b04e0d		\lemma BigSum_- {n : Nat} {l l' : Array E n} : BigSum (\lam k => l k - l' k) = BigSum l - BigSum l'
+AbGroup.FinSum_negative	lemma	06a72d2a37a6	-	1e5e001b	fccd04ea:AbGroup.BigSum_- 906b381f:AbGroup.BigSum_negative	\lemma FinSum_negative {n : Nat} {x : Fin n -> E} : negative (FinSum x) = FinSum (\lam k => negative (x k))
+AbGroup.FinSum_-	lemma	c35f02549774	-	1e5e001b	fccd04ea:AbGroup.BigSum_- 906b381f:AbGroup.BigSum_negative	\lemma FinSum_- {n : Nat} {x y : Fin n -> E} : FinSum (\lam k => x k - y k) = FinSum x - FinSum y
+AbGroup.sum-cancel-left	lemma	c0e539d0c11f	-	186baa8e		\lemma sum-cancel-left {x y z : E} : x + z - (x + y) = z - y
+AbGroup.sum-cancel-right	lemma	0294cd93cd34	-	186baa8e		\lemma sum-cancel-right {x y z : E} : z + x - (y + x) = z - y
+AbGroup.diff-cancel-left	lemma	f399f161e5c4	-	b4e06a9a	6f0971b3:-	\lemma diff-cancel-left {x y z : E} : x - z - (x - y) = y - z
+AbGroup.negative_+-comm	lemma	5798e8a3fd4e	-	c8ce0e9c	6f0971b3:- 97b987d0:AddGroup.negative	\lemma negative_+-comm {x y : E} : negative (x + y) = negative x - y
+AbGroup.diff_sum	lemma	e7322a3863ef	-	4b973e39	6f0971b3:-	\lemma diff_sum {x y z : E} : x - (y + z) = x - y - z
+AbGroup.diff_diff	lemma	aa579b1d120d	-	bef0b3d2	6f0971b3:-	\lemma diff_diff {x y z : E} : x - (y - z) = x - y + z
+(overview)	-	-	-	95534cfb	a6da213a:AbGroup e2c8961c:AddGroup af8091da:AddGroup.*i baa0bfb3:AddGroup.With# 5de55bc8:CGroup d5138099:FinGroup 30603062:Group 97b987d0:Group.inverse 8e6a7c2b:Group.ipow	-

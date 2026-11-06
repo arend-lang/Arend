@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Category.Comma. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+commaPrecat	func	1ba7d8a0b839	99fbf5f9b3ae	ccd028ae		\func commaPrecat {C D E : Precat} (F : Functor C E) (G : Functor D E) : Precat
+commaCat	func	332e8751fa71	99c6c248529f	af5603ac	dd2d4d36:commaPrecat	\func commaCat {C D : Cat} {E : Precat} (F : Functor C E) (G : Functor D E) : Cat
+commaPrecat.leftForget	lemma	ff83c162fd52	-	527e4053		\lemma leftForget {C D E : Precat} (F : Functor C E) (G : Functor D E) : Functor (commaPrecat F G) C __.1 __.1
+commaPrecat.rightForget	lemma	bdf15e04816a	-	129c3ec9		\lemma rightForget {C D E : Precat} (F : Functor C E) (G : Functor D E) : Functor (commaPrecat F G) D __.2 __.2
+commaPrecat.functor	func	c52b366b2a19	19c3ed94724a	0dc44ba5		\func functor {C D E : Precat} (F F' : Functor C E) (G G' : Functor D E) (a : NatTrans F' F) (b : NatTrans G G') : Functor (commaPrecat F G) (commaPrecat F' G')
+(overview)	-	-	-	9679d464		-

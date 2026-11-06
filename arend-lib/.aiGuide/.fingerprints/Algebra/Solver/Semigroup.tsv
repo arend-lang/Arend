@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.Semigroup. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SemigroupSolverModel	func	a00aa007eb50	33193fcfdb1f	6451a5d8		\func SemigroupSolverModel (S : Semigroup) : SolverModel S
+(overview)	-	-	-	0715ee45		-

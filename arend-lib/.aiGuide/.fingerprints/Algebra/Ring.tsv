@@ -1,0 +1,52 @@
+# arend -gc fingerprints v2 for module Algebra.Ring. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PseudoRing	class	3d791e571fe3	-	1e73c27e		\class PseudoRing \extends PseudoSemiring, AbGroup { | zro_*-left => \lam {x} => AddGroup.cancel-left (zro * x) (qed (zro * x + zro * x ==< inv rdistr >== (zro + zro) * x ==< pmap (* x) zro-left >== zro * x ==< inv zro-right >== zro * x + zro)) | zro_*-right => \lam {x} => AddGroup.cancel-left (x * zro) (qed (x * zro + x * zro ==< inv ldistr >== x * (zro + zro) ==< pmap (x *) zro-left >== x * zro ==< inv zro-right >== x * zro + zro)) }
+PseudoRing.negative_*-left	lemma	3d28c6e6256b	-	13b6e6ae		\lemma negative_*-left {x y : E} : negative x * y = negative (x * y)
+PseudoRing.negative_*-right	lemma	88b7c7dfd89e	-	622f678a		\lemma negative_*-right {x y : E} : x * negative y = negative (x * y)
+PseudoRing.negative_*	lemma	099b2df3c3c0	-	c9a33f75		\lemma negative_* {x y : E} : negative x * negative y = x * y
+PseudoRing.ldistr_-	lemma	429b09095a02	-	4080cd12		\lemma ldistr_- {x y z : E} : x * (y - z) = x * y - x * z
+PseudoRing.rdistr_-	lemma	28aeb35b74ea	-	4e57c6d9		\lemma rdistr_- {x y z : E} : (x - y) * z = x * z - y * z
+PseudoRing.*_sum_diff	lemma	7fd8511effbf	-	ed1d459c		\lemma *_sum_diff {x y : E} (p : x * y = y * x) : (x + y) * (x - y) = x * x - y * y
+PseudoRing.*_diff_sum	lemma	edbd71215bd1	-	ae11d67f		\lemma *_diff_sum {x y : E} (p : x * y = y * x) : (x - y) * (x + y) = x * x - y * y
+PseudoRing.op	func	a4058008f6ca	5d0d51c2b4e2	1dc2996c		\func op : PseudoRing
+Ring	class	4a4afc8a3de7	-	8e05d2e2	fb87fd11:PseudoRing	\class Ring \extends PseudoRing, Semiring
+Ring.intCoef	func	7d78446699a8	14b43412abec	d36c9eb7		\func intCoef (x : Int) : E
+Ring.intCoef_neg	lemma	3e0f3dc73b66	-	b3e06b93	5c451fa3:Ring.intCoef	\lemma intCoef_neg (n : Nat) : intCoef (neg n) = negative (natCoef n)
+Ring.negative_ide-left	lemma	9bb5ac551ef7	-	86a75885		\lemma negative_ide-left {x : E} : negative ide * x = negative x
+Ring.negative_ide-right	lemma	13441bf217a4	-	5db24aa6		\lemma negative_ide-right {x : E} : x * negative ide = negative x
+Ring.negative_inv	lemma	f10c10d99011	-	9da464c7		\lemma negative_inv (j : Monoid.Inv {\this}) : Monoid.Inv (negative j) (negative j.inv)
+Ring.Inv_negative	lemma	0d096002a2ee	-	64226e12	47a10a3a:Ring.negative_inv	\lemma Inv_negative {x : E} (j : Monoid.Inv (negative x)) : Monoid.Inv x
+Ring.geometric-partial-sum	lemma	f9be3a881ba0	-	91920414		\lemma geometric-partial-sum {n : Nat} {x : E} : (1 - x) * BigSum (\new (Array E n (\lam j => pow x j))) = 1 - pow x n
+Ring.geometric-like-partial-sum	lemma	712a3040e5f4	-	5ed0e4cf		\lemma geometric-like-partial-sum {k n : Nat} {x : E} : (1 - x) * AddMonoid.BigSum (\new (Array E n (\lam j => pow x (j Nat.+ k)))) = pow x k - pow x (n Nat.+ k)
+Ring.pow_-1_+2	lemma	77418c967ff9	-	42be17ff		\lemma pow_-1_+2 {n : Nat} : pow -1 (n Nat.+ 2) = pow -1 n
+Ring.pow_-1_even	lemma	e9ed983f18e8	-	3876dbc2		\lemma pow_-1_even {n : Nat} : pow -1 (n Nat.* 2) = 1
+Ring.pow_-1_odd	lemma	bffad0ec3b93	-	e8c6ed2f		\lemma pow_-1_odd {k : Nat} : Monoid.pow (negative ide) (2 Nat.* k Nat.+ 1) = negative ide
+Ring.pow_-1_mod2	lemma	3280c169d619	-	ed8997e5		\lemma pow_-1_mod2 {n : Nat} : pow -1 n = pow -1 (n Nat.mod 2)
+Ring.idempotent_LDiv	lemma	64f493f558a1	-	e44583a6		\lemma idempotent_LDiv {a b : E} (q : b * b = b) (d : Monoid.LDiv b a) : a = b * a
+Ring.IsConnected	type	99a35f364b48	20ee0b194a2f	eee607f6		\type IsConnected
+Ring.IsVonNeumannRegular	func	8bd4e46a43a0	9047d30fc5b0	a1fa2546		\func IsVonNeumannRegular
+Ring.zro-nilpotent	lemma	0ee4ffbd71c9	-	21cceb73		\lemma zro-nilpotent : IsNilpotent zro
+Ring.IsLocal	func	8bd4e46a43a0	ca4f7db6bdc6	7184693d		\func IsLocal
+Ring.isLocal-sum-char	lemma	419160c05b06	-	4edd89f3	7fb5d9ed:Ring.IsLocal	\lemma isLocal-sum-char : IsLocal <-> ∀ {x} {y} (x + y = 1) (Monoid.Inv x || Monoid.Inv y)
+Ring.op	func	e69de5e47e97	19534509fbb2	f8c77622		\func op : Ring
+Ring.With#	class	94785c678877	-	cd54a7d7	c0354ea8:Ring.With#.#0-*-left 63d0d7fe:Ring.With#.#0-*-right	\class With# \extends Ring, AddGroup.With# { | #0-*-left {x y : E} : #0 (x * y) -> #0 x | #0-*-right {x y : E} : #0 (x * y) -> #0 y | #0-negative => \lam {x} x#0 => #0-*-left (transport #0 (inv (negative_* *> ide-right)) x#0) }
+Ring.With#.#0-FinSum	lemma	6ff705469a8a	-	5901c788		\lemma #0-FinSum {J : FinSet} {x : J -> E} (p : #0 (FinSum x)) : ∃ (j : J) (#0 (x j))
+Ring.With#.#0-FinSum-conv	lemma	4cbe28243720	-	666a76f0		\lemma #0-FinSum-conv {J : FinSet} {x : J -> E} {i : J} (xi#0 : #0 (x i)) : #0 (FinSum x) || (\Sigma (j : J) (j /= i) (#0 (x j)))
+Ring.Dec	class	a2d9bbcf0b4e	-	6f38f353	97f2341e:Ring.With#	\class Dec \extends AddGroup.Dec, With# { | #0-*-left => \lam {x} {y} x*y#0 => (\case decideEq x zro \with { | yes x=0 => absurd (#0-zro (transport #0 (pmap (* y) x=0 *> zro_*-left) x*y#0)) | no x/=0 => nonZeroApart x/=0 }) | #0-*-right => \lam {x} {y} x*y#0 => (\case decideEq y zro \with { | yes y=0 => absurd (#0-zro (transport #0 (pmap (x *) y=0 *> zro_*-right) x*y#0)) | no y/=0 => nonZeroApart y/=0 }) }
+NonZeroRing	class	fbc6a8b2b20a	-	0de1b85d		\class NonZeroRing \extends Ring, NonZeroSemiring
+PseudoCRing	class	651baef66d10	-	916ee9a4	fb87fd11:PseudoRing	\class PseudoCRing \extends PseudoRing, PseudoCSemiring
+CRing	class	c1ca7b64c556	-	10249714	d9986de6:PseudoCRing 77c6f006:Ring	\class CRing \extends Ring, PseudoCRing, CSemiring
+CRing.IsBezout	func	8bd4e46a43a0	b38461f34230	e4f1bae2		\func IsBezout
+CRing.regulars-zro-char	lemma	b1e35c4bb52b	-	40a32b0b		\lemma regulars-zro-char {r : E} : IsRegularElem r <-> (\Pi {x : E} -> r * x = 0 -> x = 0)
+CRing.IsStrictBezout	func	8bd4e46a43a0	c404845ba38c	bc450c72		\func IsStrictBezout
+CRing.bezout_finitelyGenerated_principal	lemma	cdd3e9ccf9df	-	7a9f61a0	8cb94170:CRing.IsBezout	\lemma bezout_finitelyGenerated_principal : IsBezout <-> (\Pi {I : Ideal \this} -> I.IsFinitelyGenerated -> I.IsPrincipal)
+CRing.bezoutGCD	func	c2593d3b2919	2ba311e6b445	25a898b3		\func bezoutGCD {a b s t : E} (p : LDiv (s * a + t * b) a) (q : LDiv (s * a + t * b) b) : GCD a b (s * a + t * b)
+CRing.Dim<=	type	7365c5635fee	d2215d00e5c6	c9188303	9d3bb9fc:CRing.Dim<=.fold	\type Dim<= (k : Nat)
+CRing.Dim<=.fold	func	11574feb0cb0	7e2f49c27dbd	977f296d		\func fold {k : Nat} (xs as : Array E k) (ms : Array Nat k) : E
+CRing.IsZeroDimensional	type	99a35f364b48	af8e3aadda08	45d7ce9f		\type IsZeroDimensional
+CRing.finite-zeroDimensional	lemma	68f83f7ee99c	-	c50a45f3		\lemma finite-zeroDimensional (c : FinSet E) : IsZeroDimensional
+CRing.With#	class	77f843e2a97d	-	ef88cc5e	c0354ea8:Ring.With#.#0-*-left 63d0d7fe:Ring.With#.#0-*-right	\class With# \extends CRing, Ring.With# { | #0-*-right => \lam x*y#0 => #0-*-left (transport #0 *-comm x*y#0) }
+CRing.Dec	class	08a0e21358c3	-	1a7d0441		\class Dec \extends Ring.Dec, With#
+CRing.Dec.divQuotient_dec0	lemma	3c16677f64e2	-	80478cb7		\lemma divQuotient_dec0 (a : DivQuotient \this) : Set.Dec (a = in~ 0)
+NonZeroCRing	class	baed9f34a25c	-	e4edcd7d		\class NonZeroCRing \extends CRing, NonZeroRing
+(overview)	-	-	-	66ef853c	d6e35047:CRing fb87fd11:PseudoRing 77c6f006:Ring	-

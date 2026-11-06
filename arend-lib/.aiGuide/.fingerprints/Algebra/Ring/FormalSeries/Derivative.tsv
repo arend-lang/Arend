@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.FormalSeries.Derivative. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+deriv	func	9787f74565fb	5fe8db7c062e	df5ecc9e		\func deriv {A : Ring} (a : FSeries A) : FSeries A
+deriv_ide	lemma	a4770eb7a700	-	6a9d9c75		\lemma deriv_ide {A : Ring} : deriv {A} 1 = 0
+deriv-leibniz	lemma	8bdd270a2b48	-	a69115d9		\lemma deriv-leibniz {A : Ring} {a b : FSeries A} : deriv (a * b) = deriv a * b + a * deriv b
+deriv-pow-conv-suc	lemma	884be44d6ac2	-	b4dea21a		\lemma deriv-pow-conv-suc {A : CRing} (b : FSeries A) (n : Nat) : deriv (pow b (suc n)) = natCoef (suc n) *c (pow b n * deriv b)
+deriv-compose	lemma	ff087dda3af5	-	5d875f24		\lemma deriv-compose {A : CRing} (a b : FSeries A) (b_0 : b 0 = A.zro) (k : Nat) : deriv (fcompose a b) k = (fcompose (deriv a) b * deriv b) k
+(overview)	-	-	-	2095204d	1c575af2:deriv	-

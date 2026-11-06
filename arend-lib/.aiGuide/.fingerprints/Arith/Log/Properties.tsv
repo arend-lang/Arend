@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Arith.Log.Properties. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+log1p-expm1	lemma	c811fd40ffc3	-	5c6e25f4		\lemma log1p-expm1 {A : RealBanachAlgebra} {w : A} (wc : A.IsCentral w) (w-small : A.norm w < log2) : log1+ (exp w - 1) (exp-w-bound w-small) = w
+(overview)	-	-	-	e381449e		-

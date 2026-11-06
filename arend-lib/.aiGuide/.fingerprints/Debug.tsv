@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Debug. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+runTimed	meta	f6be83ab76a1	afdd2ac8165e	f696e496		\meta runTimed m
+(overview)	-	-	-	fcdb4cb4		-

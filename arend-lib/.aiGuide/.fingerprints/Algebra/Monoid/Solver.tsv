@@ -1,0 +1,30 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.Solver. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MonoidTerm	data	640ff3285ba2	-	1fa9aa64	47fae62c:MonoidData.V 2e2415e5:MonoidTerm.:* d4f1b28b:MonoidTerm.:ide 1c0371fa:MonoidTerm.var	\data MonoidTerm (V : \Type) | var V | :ide | \infixl 7 :* (t s : MonoidTerm V)
+normalize	func	c25583ade984	f52b73a85288	c020effd	47fae62c:MonoidData.V b6d3e0b0:MonoidTerm 1df9d7d7:normalize.aux	\func normalize {V : \Type} (t : MonoidTerm V)
+MonoidData	class	442b9ea08371	-	157347ca	71fd1512:MonoidData.M 6c0a236d:MonoidData.vars	\class MonoidData \noclassifying {M : Monoid} (vars : Array M)
+MonoidData.V	meta	67a08463e44b	aa47e4c53068	bcbace45		\meta V
+MonoidData.interpret	func	d33224d1b7db	adc75087e134	3b234e17	71fd1512:MonoidData.M 47fae62c:MonoidData.V 6c0a236d:MonoidData.vars b6d3e0b0:MonoidTerm	\func interpret (t : MonoidTerm V) : M
+MonoidData.interpretNF	func	dd645ee3fa0c	5a6e71140b4c	1b707baf	71fd1512:MonoidData.M 47fae62c:MonoidData.V 108fd174:MonoidData.interpretNF.cons	\func interpretNF (l : List V) : M
+MonoidData.normalize-consistent	lemma	5983972ed0dc	-	d8a616d3	8c9e7a54:MonoidData.interpret 0a3ccbf9:MonoidData.interpretNF 0145a15e:MonoidData.normalize-consistent.aux e0c06421:normalize	\lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (normalize t)
+MonoidData.terms-equality	lemma	c9a4bbe4c11b	-	b145bb1a	0a3ccbf9:MonoidData.interpretNF	\lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (normalize t) = interpretNF (normalize s)) : interpret t = interpret s
+MonoidData.terms-equality-conv	lemma	2fc97c952ecf	-	2f91572a	8c9e7a54:MonoidData.interpret 0a3ccbf9:MonoidData.interpretNF e0c06421:normalize	\lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (normalize t) = interpretNF (normalize s)
+MonoidData.interpretNF_++	lemma	1c7d32b906ad	-	eaae5470		\lemma interpretNF_++ (l1 l2 : List V) : interpretNF (l1 ++ l2) = interpretNF l1 * interpretNF l2
+MonoidData.replace-consistent	lemma	5dece9fdf6b1	-	04b42eae		\lemma replace-consistent (l : List V) (i s : Nat) (r : List V) (p : interpretNF (slice l i s) = interpretNF r) : interpretNF l = interpretNF (replace l i s r)
+CMonoidData	class	32681ef95bc0	-	077cc1a6	2702e713:MonoidData 71fd1512:MonoidData.M	\class CMonoidData \extends MonoidData { \override M : CMonoid }
+CMonoidData.sort-consistent	lemma	387dbf880e99	-	e9ff5cb6		\lemma sort-consistent (l : List V) : interpretNF l = interpretNF (sort l)
+CMonoidData.perm-consistent	lemma	4f5360fd4e6e	-	b2477e6c		\lemma perm-consistent {l l' : List V} (p : Perm l l') : interpretNF l = interpretNF l'
+CMonoidData.normalize-consistent	lemma	5274a91a73f5	-	e6f750ab	8c9e7a54:MonoidData.interpret 0a3ccbf9:MonoidData.interpretNF e0c06421:normalize	\lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (sort (normalize t))
+CMonoidData.terms-equality	lemma	33835ba30d6a	-	904b9eb3		\lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (sort (normalize t)) = interpretNF (sort (normalize s))) : interpret t = interpret s
+CMonoidData.terms-equality-conv	lemma	b9e73f15698b	-	904b9eb3		\lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (sort (normalize t)) = interpretNF (sort (normalize s))
+CMonoidData.replace-consistent	lemma	14f17a66b255	-	81d3743e	f83a8911:CMonoidData.removeIndices	\lemma replace-consistent (l : List V) (is : List Nat) (r : List V) (p : interpretNF (indices is l) = interpretNF r) : interpretNF l = interpretNF (r ++ removeIndices is l)
+CMonoidData.replace-consistent-lem	lemma	9ffadd2b004e	-	d293f9a9	431444d4:CMonoidData.indices f83a8911:CMonoidData.removeIndices 0a3ccbf9:MonoidData.interpretNF	\lemma replace-consistent-lem (is : List Nat) (l : List V) : interpretNF l = interpretNF (indices is l ++ removeIndices is l)
+CMonoidData.indices	func	ab4911232798	51e6fc6e3ecf	ae1e1747		\func indices {A : \Type} (is : List Nat) (l : List A) : List A
+CMonoidData.removeIndices	func	ab4911232798	e4885aa0e050	ef8aa8e4		\func removeIndices {A : \Type} (is : List Nat) (l : List A) : List A
+LData	class	1ca81b9619bf	-	09c32bad	5882f5f6:CMonoidData ed149a7c:LData.L 71fd1512:MonoidData.M	\class LData {L : TopMeetSemilattice} \extends CMonoidData { | M => L }
+LData.removeDuplicates	func	4b1368837767	6b305d6a489d	f1709867	47fae62c:MonoidData.V	\func removeDuplicates (l : List V) : List V
+LData.removeDuplicates-consistent	lemma	9cdd075a850b	-	3693a2fe	e60d9723:LData.removeDuplicates 0a3ccbf9:MonoidData.interpretNF	\lemma removeDuplicates-consistent (l : List V) : interpretNF l = interpretNF (removeDuplicates l)
+LData.normalize-consistent	lemma	398a33f2a245	-	a67127fc	e60d9723:LData.removeDuplicates 8c9e7a54:MonoidData.interpret 0a3ccbf9:MonoidData.interpretNF e0c06421:normalize	\lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (removeDuplicates (RedBlack.sort (normalize t)))
+LData.terms-equality	lemma	9a56e0c4cc1c	-	65cea5d6		\lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (removeDuplicates (RedBlack.sort (normalize t))) = interpretNF (removeDuplicates (RedBlack.sort (normalize s)))) : interpret t = interpret s
+LData.terms-equality-conv	lemma	96f073f7eca0	-	65cea5d6		\lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (removeDuplicates (RedBlack.sort (normalize t))) = interpretNF (removeDuplicates (RedBlack.sort (normalize s)))
+(overview)	-	-	-	c2a5337c	5882f5f6:CMonoidData ed149a7c:LData.L 2702e713:MonoidData 71fd1512:MonoidData.M 47fae62c:MonoidData.V 8c9e7a54:MonoidData.interpret 0a3ccbf9:MonoidData.interpretNF 6c0a236d:MonoidData.vars b6d3e0b0:MonoidTerm	-

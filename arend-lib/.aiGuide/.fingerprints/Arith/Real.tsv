@@ -1,0 +1,70 @@
+# arend -gc fingerprints v2 for module Arith.Real. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+<LU	func	2c9da79b5ecf	cfc149f8f761	70352a4b		\func <LU (x : ExUpperReal) (y : LowerReal) : \Prop
+<LU-transitive	lemma	7b62e03b9969	-	a65c8afe	ca50bdf2:<LU	\lemma <LU-transitive {x : UpperReal} {y z : LowerReal} (p : x <LU y) (q : y <= z) : x <LU z
+Real	record	221ba2ce83c4	-	70f12b25	badd35bf:Real.LU-focus 8448b0e0:RealAbGroup.+	\record Real \extends InfReal, UpperReal { | LU-focus (eps : Rat) : eps > 0 -> ∃ (a : L) (U (a + eps)) | LU-located => \lam {q} {r} q<r => (\case LU-focus (r - q) (RatField.pos_>0 q<r) \with { | inP (s, Ls, Us+r-q) => \case trichotomy q s \with { | less q<s => byLeft (L-closed Ls q<s) | equals q=s => byLeft (transportInv L q=s Ls) | greater s<q => byRight $ U-closed Us+r-q $ transport (_ <) (equation : q + (r - q) = r) (<_+-left (r - q) s<q) } }) | L-inh => TruncP.map (LU-focus 1 idp) (\lam x => (x.1, x.2)) | U-inh => TruncP.map (LU-focus 1 idp) (\lam x => (x.1 + 1, x.3)) | LU-focus => \lam eps eps>0 => (\case U-inh \with { | inP (r, Ur) => \case LU-focus-bound r eps>0 \with { | byLeft Lr => absurd (LU-disjoint Lr Ur) | byRight s => inP s } }) }
+Real.LU_*-focus-right	lemma	c368321eb2c4	-	72d4f64e		\lemma LU_*-focus-right (x>0 : L 0) {d : Rat} (d>1 : 1 < d) : ∃ (a : Rat) (0 < a) (L a) (U (a * d))
+Real.LU_*-focus-left	lemma	9e06c2052492	-	b6f76359		\lemma LU_*-focus-left (x>0 : L 0) {c : Rat} (c<1 : c < 1) : ∃ (b : Rat) (L (b * c)) (U b)
+Real.fromRat	coerce	bce49c088b16	-	3a6aaff7		\use \coerce fromRat (x : Rat) : Real
+Real.real-ext	lemma	b8dd4b48e4e1	-	db9913ee		\lemma real-ext {x y : Real} (p : \Pi {a : Rat} -> x.L a <-> y.L a) : x = y
+Real.real-lower-ext	lemma	df04d2ee73e7	-	26df9629		\lemma real-lower-ext {x y : Real} (p : x = {LowerReal} y) : x = y
+Real.fromRat-inj	lemma	6ee40d564261	-	d7845c0d		\lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y
+Real.<=-upper	lemma	bd773086cde2	-	fecc8b91	e6a489a6:Real cd03bef1:RealAbGroup	\lemma <=-upper {x y : Real} : x RealAbGroup.<= y <-> x ExUpperReal.<= y
+Real.=-upper	lemma	d63636df3340	-	fecc8b91	e6a489a6:Real cd03bef1:RealAbGroup	\lemma =-upper {x y : Real} : (x = y) <-> (x = {ExUpperReal} y)
+real-upperReal	lemma	d8f6d67f8836	-	9bd74bbe	e6a489a6:Real	\lemma real-upperReal : AddMonoidHom RealAbGroup ExUpperRealAbMonoid (\lam x => x)
+RealPointed	instance	3ca05c49e9c4	-	1b2941b3	e6a489a6:Real	\instance RealPointed : Pointed Real
+RealAbGroup	instance	6386668677ac	-	ad674106	e6a489a6:Real 8448b0e0:RealAbGroup.+ 291bd8fb:RealAbGroup.join 7a33bea6:RealAbGroup.meet 443f2c54:RealAbGroup.negative	\instance RealAbGroup : LinearlyOrderedAbGroup Real
+RealAbGroup.+	sfunc	ee722198d86a	546240ea22f9	9898b0e3		\sfunc + (x y : Real) : Real
+RealAbGroup.+_L	lemma	aec9e09ed0bc	-	75564231	8448b0e0:RealAbGroup.+	\lemma +_L {x y : Real} {a : Rat} : Real.L {x + y} a <-> ∃ (b : x.L) (c : y.L) (a < b RatField.+ c)
+RealAbGroup.+_U	lemma	d978c1865e86	-	75564231	8448b0e0:RealAbGroup.+	\lemma +_U {x y : Real} {a : Rat} : Real.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c < a)
+RealAbGroup.+-upper	lemma	f33f5212cb83	-	373e9d12		\lemma +-upper {x y : Real} : x + y = x ExUpperReal.+ y
+RealAbGroup.+-lower	lemma	0bea036bc743	-	373e9d12		\lemma +-lower {x y : Real} : x + y = x LowerRealAbMonoid.+ y
+RealAbGroup.+-inf	lemma	d590167278c8	-	373e9d12		\lemma +-inf {x y : Real} : x + y = x InfRealAbMonoid.+ y
+RealAbGroup.+-rat	lemma	595d680126c8	-	51014138		\lemma +-rat {x y : Rat} : x + y = {Real} x RatField.+ y
+rat-real-hom	lemma	6616a5be2910	-	2e3f007b	2f41e60e:Real.fromRat cd03bef1:RealAbGroup	\lemma rat-real-hom : AddMonoidHom RatField RealAbGroup Real.fromRat
+RealAbGroup.*n-upper	lemma	5b8e15502507	-	26e04d91		\lemma *n-upper {n : Nat} {x : Real} : n RealAbGroup.*n x = n ExUpperRealAbMonoid.*n x
+RealAbGroup.negative	sfunc	9334e6cf45ce	f854c7435d3f	fb6ed5be		\sfunc negative (x : Real) : Real
+RealAbGroup.negative_L	lemma	6aca3b02cdfb	-	91f5621c	443f2c54:RealAbGroup.negative	\lemma negative_L {x : Real} {a : Rat} : Real.L {negative x} a <-> x.U (RatField.negative a)
+RealAbGroup.negative_U	lemma	b05387675477	-	91f5621c	443f2c54:RealAbGroup.negative	\lemma negative_U {x : Real} {a : Rat} : Real.U {negative x} a <-> x.L (RatField.negative a)
+RealAbGroup.negative-rat	lemma	a3dbc7d58ecf	-	e83125b1		\lemma negative-rat {x : Rat} : negative x = {Real} RatField.negative x
+RealAbGroup.minus-rat	lemma	a259f6d88ba8	-	e83125b1		\lemma minus-rat {x y : Rat} : x - {RealAbGroup} y = {Real} x - y
+RealAbGroup.diff-rat	lemma	a259f6d88ba8	-	e83125b1		\lemma diff-rat {x y : Rat} : x - {RealAbGroup} y = {Real} x - y
+RealAbGroup.meet	sfunc	ee722198d86a	38a6f069ff17	29c5f01c		\sfunc meet (x y : Real) : Real
+RealAbGroup.join	sfunc	ee722198d86a	90db52c40e33	29c5f01c		\sfunc join (x y : Real) : Real
+RealAbGroup.meet_L	lemma	096607001dd7	-	78fc3e06		\lemma meet_L {x y : Real} {a : Rat} : Real.L {meet x y} a <-> (\Sigma (x.L a) (y.L a))
+RealAbGroup.meet_U	lemma	5795a35df1a5	-	78fc3e06		\lemma meet_U {x y : Real} {a : Rat} : Real.U {meet x y} a <-> x.U a || y.U a
+RealAbGroup.join_L	lemma	06dab16b4c2b	-	78fc3e06		\lemma join_L {x y : Real} {a : Rat} : Real.L {join x y} a <-> x.L a || y.L a
+RealAbGroup.join_U	lemma	031305d136e5	-	78fc3e06		\lemma join_U {x y : Real} {a : Rat} : Real.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
+RealAbGroup.meet-inf	lemma	b2bfb461e1e7	-	2e665fc4		\lemma meet-inf {x y : Real} : meet x y = InfRealAbMonoid.meet x y
+RealAbGroup.join-inf	lemma	3038b17b9924	-	2e665fc4		\lemma join-inf {x y : Real} : join x y = InfRealAbMonoid.join x y
+RealAbGroup.join-upper	lemma	ff4c133e348e	-	2e665fc4		\lemma join-upper {x y : Real} : join x y = ExUpperReal.join x y
+RealAbGroup.join-rat	lemma	f23fbc2a016c	-	b6020d24		\lemma join-rat {x y : Rat} : join x y = {Real} x ∨ y
+rat_real_meet	lemma	1e6e0f2ae11d	-	b6020d24		\lemma rat_real_meet {a b : Rat} : Real.fromRat (a ∧ b) = Real.fromRat a ∧ Real.fromRat b
+rat_real_join	lemma	ce8c6c884ed6	-	b6020d24		\lemma rat_real_join {a b : Rat} : Real.fromRat (a ∨ b) = Real.fromRat a ∨ Real.fromRat b
+rat_real_abs	lemma	546c3c00af1f	-	b6020d24		\lemma rat_real_abs {a : Rat} : Real.fromRat (RatField.abs a) = RealAbGroup.abs (Real.fromRat a)
+RealAbGroup.abs-rat	lemma	58db27dc40a4	-	b6020d24		\lemma abs-rat {x : Rat} : RealAbGroup.abs x = {Real} RatField.abs x
+RealAbGroup.dist-rat	lemma	0ab28f57b04d	-	b6020d24		\lemma dist-rat {x y : Rat} : RealAbGroup.abs (x - {RealAbGroup} y) = {Real} RatField.abs (x - y)
+RealAbGroup.half+half	lemma	e3472a3bfb94	-	0a897a4b	8448b0e0:RealAbGroup.+	\lemma half+half {x : Rat} : RatField.half x + RatField.half x = Real.fromRat x
+RealAbGroup.zro<ide	lemma	4662d9351fa5	-	eca6da50	e6a489a6:Real	\lemma zro<ide : Real.fromRat 0 RealAbGroup.< Real.fromRat 1
+real_<-rat-char	lemma	b0f3548f1b9c	-	9a2a74c4		\lemma real_<-rat-char {x y : Real} : x < y <-> ∃ (a : Rat) (x.U a) (y.L a)
+real_<-char	lemma	5d33838d69ee	-	3cdb0c52		\lemma real_<-char {x y : Real} : x < y <-> ∃ (a : Rat) (x < a) ((a : Real) < y)
+real_<_L	lemma	e90c9a266e11	-	fa7585f8		\lemma real_<_L {a : Rat} {x : Real} : (a : Real) < x <-> x.L a
+real_<_U	lemma	7e246a08a9f7	-	fa7585f8		\lemma real_<_U {a : Rat} {x : Real} : x < a <-> x.U a
+real_<_InfReal	lemma	4f20a9ee010b	-	7a110a9b		\lemma real_<_InfReal {x y : Real} : x < y <-> x InfRealAbMonoid.< y
+real_<=_InfReal	lemma	6eacea7839b9	-	7a110a9b		\lemma real_<=_InfReal {x y : Real} : x <= y <-> x InfRealAbMonoid.<= y
+rat_real_<	lemma	fbbd85264305	-	97a4305c	e6a489a6:Real	\lemma rat_real_< {a b : Rat} : a < b <-> Real.fromRat a < Real.fromRat b
+rat_real_<=	lemma	04d4452efbcc	-	97a4305c	e6a489a6:Real	\lemma rat_real_<= {a b : Rat} : a <= b <-> Real.fromRat a <= Real.fromRat b
+RealAbGroup.lower_<-char	lemma	1badf2ec6d28	-	511d0e0b	e6a489a6:Real cd03bef1:RealAbGroup	\lemma lower_<-char {x y : Real} : x LowerRealAbMonoid.< y <-> x RealAbGroup.< y
+RealAbGroup.lower_<=-char	lemma	9361d61a5bc6	-	511d0e0b	e6a489a6:Real cd03bef1:RealAbGroup	\lemma lower_<=-char {x y : Real} : x LowerRealAbMonoid.<= y <-> x RealAbGroup.<= y
+<=_L-char	lemma	63a3b205e644	-	8a0cd239		\lemma <=_L-char {x y : Real} : x <= y <-> (\Pi {a : Rat} -> x.L a -> y.L a)
+<=_U-char	lemma	cd73fd4b0cd5	-	8a0cd239		\lemma <=_U-char {x y : Real} : x <= y <-> (\Pi {a : Rat} -> y.U a -> x.U a)
+RealDenseOrder	instance	187624bc0a44	-	4555afb0		\instance RealDenseOrder : UnboundedDenseLinearOrder
+real-located	lemma	e79c210e56cf	-	f803f777	e6a489a6:Real	\lemma real-located {x a b : Real} (p : a < b) : a < x || x < b
+real-below-all-positive	lemma	adca2a3b0c83	-	1a8e530b		\lemma real-below-all-positive {x : Real} (x>=0 : 0 <= x) (h : \Pi {c : Real} -> 0 < c -> x < c) : x = 0
+real-focus	lemma	8237c0eaa1a7	-	aa6b1c22	8448b0e0:RealAbGroup.+	\lemma real-focus (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (a : Real) (a < x) (x < a + eps)
+real_join_L	lemma	81e0055c9a82	-	3b726801		\lemma real_join_L {a b : Rat} {x : Real} (a<x : x.L a) (b<x : x.L b) : x.L (a ∨ b)
+LU-focus-bound-real	lemma	8c3ea1584ce9	-	a7185f6f	8448b0e0:RealAbGroup.+	\lemma LU-focus-bound-real {x : InfReal} (B : Real) {eps : Real} (eps>0 : eps > 0) : B InfRealAbMonoid.< x || Given (a : Real) (a InfRealAbMonoid.< x) (x < a + eps)
+inf-real-located	lemma	b074547afb13	-	2d0abd54		\lemma inf-real-located {x : InfReal} {a b : Real} (p : a < b) : a InfRealAbMonoid.< x || x < b
+inf-real-real	func	fa9407832afd	1ba92954f9dd	98e41af0	e6a489a6:Real	\func inf-real-real (x : InfReal) {B : Real} (x<B : x < B) : Real
+inf-real-bounded	func	4394225b6442	590192fd018c	405412c0	e6a489a6:Real	\func inf-real-bounded (x : InfReal) (xB : ∃ (B : Real) (x < B)) : Real
+(overview)	-	-	-	9c6010b6	e6a489a6:Real 2f41e60e:Real.fromRat 8448b0e0:RealAbGroup.+	-

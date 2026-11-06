@@ -1,0 +1,145 @@
+# arend -gc fingerprints v2 for module Category.Limit. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Cone	class	b7f9b95a8669	-	244effc9	9b6479b3:Cone.coneMap	\class Cone {J : Precat} {D : Precat} (G : Functor J D) (apex : D) { | coneMap (j : J) : Hom apex (G j) | coneCoh {j j' : J} (h : Hom j j') : G.Func h ∘ coneMap j = coneMap j' }
+Cone.map	func	6eb1a8e72919	33d6f3c42740	d7a17b7f	4c2dcb72:Diagram.F	\func map {C D : Precat} (F : Functor C D) {J : Precat} {G : Functor J C} (c : Cone G) : Cone (Comp F G)
+Cone.premap	func	d0baabdd7fd6	63ec50db8ae3	93afe2bf	4c2dcb72:Diagram.F	\func premap {J J' : Precat} (F : Functor J J') (c : (Cone {J'}) {}) : Cone (Comp c.G F)
+Cone.mapEquiv	func	5b5e8bd6ba83	238ee7287907	c7fe8664	4c2dcb72:Diagram.F	\func mapEquiv {C D : Precat} (F : FullyFaithfulFunctor C D) {J : Precat} {G : Functor J C} (X : C) : QEquiv {Cone G X} {Cone (Comp F G) (F X)} (\lam c => map F c)
+conePullback	func	03ca51c0b921	9d6612b191d6	9f6f8019	99d372dd:Pullback.z	\func conePullback {J : Precat} {D : Precat} {F : Functor J D} (C : Cone F) (z : D) (f : Hom z C.apex) : Cone F z
+Limit	class	0741f0cc30eb	-	c2344e25	b28038d3:Cone 013b2670:IsLimitCone ec03ff08:Limit.isLimit e041efca:Limit.limBeta 15d5e531:Limit.limMap c7ab0106:Limit.limUnique 99d372dd:Pullback.z 5d813a4f:conePullback	\class Limit \extends Cone { | isLimit : IsLimitCone \this | limMap {z : D} (c : Cone G z) : Hom z apex | limBeta {z : D} (c : Cone G z) (j : J) : coneMap j ∘ limMap c = c.coneMap j | limUnique {z : D} {f g : Hom z apex} (p : \Pi (j : J) -> coneMap j ∘ f = coneMap j ∘ g) : f = g | limMap => limMap-impl | limBeta => limBeta-impl | limUnique => \lam {z} {f} {g} p => IsEquiv.isInj (isLimit z) (exts p) | isLimit => \lam z => inP (\new QEquiv { | ret => limMap | ret_f => \lam f => limUnique (limBeta (conePullback _ z f)) | f_sec => \lam c => exts (limBeta c) }) }
+IsLimitCone	func	3eaf1faf554c	b000387ee3e1	ca34ce7b	99d372dd:Pullback.z 5d813a4f:conePullback	\func IsLimitCone {J D : Precat} {F : Functor J D} (C : Cone F) : \Prop
+Limit.limUniqueBeta	lemma	05449389c5aa	-	3d867b92	9b6479b3:Cone.coneMap 15d5e531:Limit.limMap	\lemma limUniqueBeta {z : D} {c : Cone G z} {g : Hom z apex} (p : \Pi (j : J) -> c.coneMap j = coneMap j ∘ g) : limMap c = g
+Limit.levelProp	level	a277cb4beff2	-	5c544a4c		\use \level levelProp {J : Precat} {D : Precat} (G : Functor J D) (apex : D) (cm : \Pi (j : J) -> Hom apex (G j)) (L L' : Limit G apex cm) : L = L'
+Limit.iso_lim	lemma	4e204fbdfbc4	-	340a1be5		\lemma iso_lim {J : Precat} {D : Precat} {G : Functor J D} (c : Cone G) (L : Limit G) (e : Iso (L.limMap c)) : Limit { | Cone => c }
+Limit.lim_iso	lemma	9c79026f11cd	-	85307d3e		\lemma lim_iso {J : Precat} {D : Precat} {G : Functor J D} (L L' : Limit G) : Iso (L.limMap L')
+Limit.transFuncMap	func	ac0da21131f9	2086fdd380a5	c2ba7869		\func transFuncMap {D : Precat} (L L' : Limit { | D => D }) (H : Functor L.J L'.J) (a : NatTrans (Comp L'.G H) L.G) : Hom L' L
+Colimit	meta	9d016a42cf59	d101adeb80ab	6788d703		\meta Colimit G
+Diagram	class	df18c677ef5c	-	b3560b89		\class Diagram (G : Graph) (D : Precat) (F : G -> D) (Func : \Pi {x y : G} -> G.E x y -> Hom (F x) (F y))
+Diagram.functor	func	c332ca7fc345	168c782bdd1b	b40da3ce		\func functor : Functor G.FreeCat D
+DiagramCone	class	868bda2d6c5f	-	f6367f81	b28038d3:Cone bb9a7cd5:Diagram f255dee3:DiagramCone.coneCoh-lem b2b6f747:DiagramCone.diagramCoh	\class DiagramCone \extends Diagram, Cone { | J => G.FreeCat | Cone.D => Diagram.D | Cone.G => Diagram.functor | diagramCoh {g g' : G} (e : G.E g g') : Func e ∘ coneMap g = coneMap g' | coneCoh => coneCoh-lem apex coneMap diagramCoh }
+DiagramCone.pullback	func	e478ab8b2da7	584823f09ccc	e69e23db	5d813a4f:conePullback	\func pullback {G : Graph} {D : Diagram G} {C : DiagramCone { | Diagram => D }} (z : D.D) (f : Hom z C.apex) : DiagramCone
+DiagramCone.equiv	func	7e54bdb6bbb0	22d698d404d7	8209c2a5	b28038d3:Cone de56a1bf:DiagramCone	\func equiv {D : Diagram} (Z : D.D) : QEquiv {DiagramCone { | Diagram => D | apex => Z }} {Cone D.functor Z} (\lam d => d)
+LimitDiagram	class	9db9005b4d9b	-	5505df70	de56a1bf:DiagramCone 4167cb64:Limit	\class LimitDiagram \extends DiagramCone, Limit { | isLimitDiagram (Z : D) : IsEquiv (DiagramCone.pullback Z) | isLimit => \lam Z => IsEquiv.trans (isLimitDiagram Z) $ inP (DiagramCone.equiv Z) }
+Product	class	c2598a48b702	-	5e551975	9b6479b3:Product.proj 703cb9d9:Product.tupleBeta 04951fb4:Product.tupleEq d01d2bb8:Product.tupleMap	\class Product {J : \Type} {D : Precat} (G : J -> D) (apex : D) { | proj (j : J) : Hom apex (G j) | tupleMap {Z : D} (f : \Pi (j : J) -> Hom Z (G j)) : Hom Z apex | tupleBeta {Z : D} {f : \Pi (j : J) -> Hom Z (G j)} {j : J} : proj j ∘ tupleMap f = f j | tupleEq {Z : D} {h1 h2 : Hom Z apex} : (\Pi (j : J) -> proj j ∘ h1 = proj j ∘ h2) -> h1 = h2 }
+Product.isProduct	lemma	499ed69d79db	-	23dbdf07		\lemma isProduct (Z : D) : IsEquiv (\lam (h : Hom Z apex) => proj __ ∘ h)
+Product.tupleMapComp	lemma	cd3dbed23faa	-	9c2f1d4d	d01d2bb8:Product.tupleMap	\lemma tupleMapComp {W Z : D} (f : \Pi (j : J) -> Hom Z (G j)) (h : Hom W Z) : tupleMap f ∘ h = tupleMap (f __ ∘ h)
+Product.tupleEta	lemma	dc3e741dab94	-	3e7df614	9b6479b3:Product.proj d01d2bb8:Product.tupleMap	\lemma tupleEta {Z : D} {f : Hom Z apex} : tupleMap (\lam j => proj j ∘ f) = f
+Product.toLimit	func	c8ba607ebca9	ed1865f220bf	95eeb4b4		\func toLimit : Limit {DiscretePrecat J} {D}
+Product.functor	func	d1bbbc8f74e6	7f87dc07b61e	da6339c4		\func functor {J : \Type} {D : Precat} (G : J -> D) : Functor (DiscretePrecat J) D
+Product.fromLimit	coerce	2edbe86caf21	-	509504aa	60b73b76:Product	\use \coerce fromLimit {J : \Type} {D : Precat} (L : Limit {DiscretePrecat J} {D}) : Product L.G L.apex L.coneMap
+Equalizer	class	60ef56b3df3e	-	dce5cfc5	99d372dd:Equalizer.X 6a1c90a6:Equalizer.eql	\class Equalizer {D : Precat} {X : D} {Y : D} (f : Hom X Y) (g : Hom X Y) (apex : D) (eql : Hom apex X) (equal : f ∘ eql = g ∘ eql) { | isEqualizer (Z : D) : IsEquiv {Hom Z apex} {\Sigma (h : Hom Z X) (f ∘ h = g ∘ h)} (\lam h => (eql ∘ h, inv o-assoc *> pmap (∘ h) equal *> o-assoc)) }
+Equalizer.eqMap	func	56627bd95dad	d49f787c4795	8509573f	6a1c90a6:Equalizer.eql	\func eqMap {Z : D} (h : Hom Z X) (p : f ∘ h = g ∘ h) : Hom Z apex
+Equalizer.eqBeta	lemma	afb7ab0c022a	-	8509573f	6a1c90a6:Equalizer.eql	\lemma eqBeta {Z : D} {h : Hom Z X} {p : f ∘ h = g ∘ h} : eql ∘ eqMap h p = h
+Equalizer.eqMono	lemma	2f7bc1a41985	-	8509573f	6a1c90a6:Equalizer.eql	\lemma eqMono {Z : D} {h1 h2 : Hom Z apex} (p : eql ∘ h1 = eql ∘ h2) : h1 = h2
+Equalizer.toLimit	func	cf9b4fa5f84f	3768a01c314e	14ac2759		\func toLimit : Limit {Shape} {D}
+Equalizer.Arrows	data	e9c3e4472d7e	-	83822386		\data Arrows (x y : Bool) \with | false, true => arrow1 arrow2 | false, false => id_false | true, true => id_true
+Equalizer.Shape	func	d74626f87018	d527ef37c0aa	83822386		\func Shape : Precat Bool
+Equalizer.functor	func	47e5fe4b6ccd	e3f8a4e75d1e	83822386		\func functor {D : Precat} {x y : D} (f g : Hom x y) : Functor Shape D
+Equalizer.fromLimit	coerce	16c917d64b5b	-	024e88c9	9a2cf1d6:Equalizer	\use \coerce fromLimit {D : Precat} {x y : D} {f g : Hom x y} (L : Limit (functor f g)) : Equalizer f g
+Equalizer.unique	func	bf7524ca6b30	678681ae433d	e305147d	6a1c90a6:Equalizer.eql	\func unique {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : Iso {D} {E} {E'}
+Equalizer.unique-map	lemma	89a5ec0d34c5	-	e305147d	6a1c90a6:Equalizer.eql	\lemma unique-map {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : E'.eql ∘ Iso.f {unique E E'} = E.eql
+Equalizer.mono=>equalizer	lemma	c615222f90dc	-	e24b9650		\lemma mono=>equalizer {D : Precat} {x y e : D} {f g : Hom x y} {eql : Hom e x} (m : Mono eql) (equal : f ∘ eql = g ∘ eql) (p : \Pi {z : D} (h : Hom z x) -> f ∘ h = g ∘ h -> ∃ (k : Hom z e) (eql ∘ k = h)) : Equalizer f g e eql equal
+Equalizer.id-equalizer	func	eeb9f37c7bf9	88e3526f9aa4	9065f0b6	99d372dd:Equalizer.X	\func id-equalizer {D : Precat} {X Y : D} {f : Hom X Y} : Equalizer f f X id
+Equalizer.equalizer-iso	func	05e87f683587	7cf1466aea1a	a3253938	99d372dd:Equalizer.X 6a1c90a6:Equalizer.eql	\func equalizer-iso {D : Precat} {X Y : D} {f : Hom X Y} (eq : Equalizer f f) : Iso {D} {eq} {X} eq.eql
+Pullback	class	c2012e61cec2	-	8dc31738	130d46ce:Pullback.pbBeta1 e98d6c2a:Pullback.pbBeta2 4e9d4e50:Pullback.pbEta 64f3fb14:Pullback.pbMap f5e04edc:Pullback.pbProj1 a95fbcb3:Pullback.pbProj2	\class Pullback {D : Precat} {x : D} {y : D} {z : D} (f : Hom x z) (g : Hom y z) (apex : D) { | pbProj1 : Hom apex x | pbProj2 : Hom apex y | pbCoh : f ∘ pbProj1 = g ∘ pbProj2 | pbMap {w : D} (p1 : Hom w x) (p2 : Hom w y) : f ∘ p1 = g ∘ p2 -> Hom w apex | pbBeta1 {w : D} {p1 : Hom w x} {p2 : Hom w y} {c : f ∘ p1 = g ∘ p2} : pbProj1 ∘ pbMap p1 p2 c = p1 | pbBeta2 {w : D} {p1 : Hom w x} {p2 : Hom w y} {c : f ∘ p1 = g ∘ p2} : pbProj2 ∘ pbMap p1 p2 c = p2 | pbEta {w : D} {h1 h2 : Hom w apex} : pbProj1 ∘ h1 = pbProj1 ∘ h2 -> pbProj2 ∘ h1 = pbProj2 ∘ h2 -> h1 = h2 }
+Pullback.pbMap-comp	lemma	002b9798481b	-	063ccb8d	64f3fb14:Pullback.pbMap	\lemma pbMap-comp {a b : D} {p1 : Hom b x} {p2 : Hom b y} {c : f ∘ p1 = g ∘ p2} {h : Hom a b} : pbMap p1 p2 c ∘ h = pbMap (p1 ∘ h) (p2 ∘ h) (inv o-assoc *> pmap (∘ h) c *> o-assoc)
+Pullback.flip	func	21872e41a8eb	e896e447a4c6	0c2a1bd0		\func flip : Pullback g f apex pbProj2 pbProj1 (inv pbCoh)
+Pullback.toLimit	func	3996083d785d	d83f448e0a45	bab54a96	1f9774e5:LimitDiagram	\func toLimit : LimitDiagram
+Pullback.Shape	instance	325676db6233	-	23f6c5c2		\instance Shape : Graph.{0, 0}
+Pullback.diagram	func	5d2dfc70f354	fd4451474c7f	23f6c5c2		\func diagram {D : Precat} {x y z : D} (f : Hom x z) (g : Hom y z) : Diagram Shape D
+Pullback.fromLimit	coerce	1ea0d3a74586	-	89ad8084	7a3eb9e2:Pullback	\use \coerce fromLimit {D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (L : Limit (diagram f g).functor) : Pullback f g L.apex
+Pullback.fromIso	func	c49b541fc809	2d8edb4fbed9	a8008daf		\func fromIso (P : Pullback {}) (e : (Iso {P.D}) { | cod => P }) : Pullback P.f P.g e.dom
+Pullback.unique	func	a6e175a89cb4	cd9fe1a11a90	36bd151c		\func unique {D : Precat} {x y z : D} (f : Hom x z) (g : Hom y z) (P P' : Pullback f g) : Iso {D} {P} {P'}
+Pullback.unique.p-map	func	dfaf23c13a76	83215aad25f3	36bd151c		\func p-map {D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (P P' : Pullback f g) : Hom P P'
+Pullback.unique.hinv'	func	29d160991459	faf6d2157a32	36bd151c		\func hinv' {D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (P P' : Pullback f g) : (p-map P' P) ∘ (p-map P P') = id
+limits<=pr+eq	func	a52b1b6a1df5	c93b89acac34	fc4f4805		\func limits<=pr+eq {D : Precat} (pr : \Pi (J : \Type u) (G : J -> D) -> Product G) (eq : \Pi {X Y : D} (f g : Hom X Y) -> Equalizer f g) {J : Precat.{u, u}} (G : Functor J D) : Limit G
+pullback-pr+eq	func	2cb8e5fede34	e6704de94aba	9eeba569	55f6889b:PrecatWithBprod.proj1 e5b61d86:PrecatWithBprod.proj2	\func pullback-pr+eq {D : PrecatWithBprod} {x y z : D} {f : Hom x z} {g : Hom y z} (Q : Equalizer (f ∘ D.proj1) (g ∘ D.proj2)) : Pullback f g Q.apex
+PrecatWithPullbacks	class	1f850d1c85a2	-	467c32d6		\class PrecatWithPullbacks \extends Precat { | pullback {x y z : Ob} (f : Hom x z) (g : Hom y z) : Pullback f g }
+pullbackFunctor	func	419b82962027	36f37da02d51	dc71750c	fe1fcfc7:PrecatWithPullbacks 99d372dd:Pullback.x 99d372dd:Pullback.y	\func pullbackFunctor {C : PrecatWithPullbacks} {x y : C} (f : Hom x y) : Functor (SlicePrecat y) (SlicePrecat x)
+terminal-obj	meta	d6dc415b6e3e	4f41da956bca	80115a3c	60b73b76:Product	\meta terminal-obj C
+terminal-obj-iso	func	01eaf482ff9d	d892b5dfaca9	22c47e8d		\func terminal-obj-iso {C : Precat} (a b : terminal-obj C) : Iso {C} {a} {b}
+terminalMap'	func	980c634904cc	6341e19e2abe	9b5bcaed		\func terminalMap' {C : Precat} {t : terminal-obj C} {x : C} : Hom x t
+terminal-unique'	lemma	c1aff9901943	-	9b5bcaed		\lemma terminal-unique' {C : Precat} {terminal : terminal-obj C} {x : C} {f g : Hom x terminal} : f = g
+isTerminal	func	6e472b291291	5c8380c12475	9d0331b8		\func isTerminal {C : Precat} (a : C) (e : \Pi (b : C) -> Contr (Hom b a)) : terminal-obj C a
+terminal-prop	func	115e280e587e	74eea527beb5	d8e6a6c3		\func terminal-prop {C : Cat} : isProp (terminal-obj C)
+IsTerminal	func	fad8c16c849f	dbc65d6f8244	f232f69b		\func IsTerminal {C : Precat} (t : C) : \Prop
+PrecatWithTerminal	class	e37554180a2b	-	8e1668ef	024fc38f:PrecatWithTerminal.terminal b2d275eb:terminal-obj	\class PrecatWithTerminal \extends Precat { | terminal : terminal-obj \this }
+PrecatWithTerminal.terminalMap	func	efeff23a02db	c57cfdacf3dd	6087c829	024fc38f:PrecatWithTerminal.terminal 99d372dd:Pullback.x	\func terminalMap {x : Ob} : Hom x terminal
+PrecatWithTerminal.terminal-unique	lemma	2ac07030da16	-	6087c829	024fc38f:PrecatWithTerminal.terminal 99d372dd:Pullback.x	\lemma terminal-unique {x : Ob} {f g : Hom x terminal} : f = g
+PrecatWithTerminal.point-splitMono	func	61facac16693	fffc69eec600	197bbb12	024fc38f:PrecatWithTerminal.terminal	\func point-splitMono {c : Ob} {p : Hom terminal c} : SplitMono p
+terminal-isTerminal	lemma	406f6b8af19b	-	dc53fd5b	66df1870:IsTerminal e8129277:PrecatWithTerminal	\lemma terminal-isTerminal {C : PrecatWithTerminal} : IsTerminal {C} C.terminal.apex
+PrecatWithBprod	class	4546ff9ef9be	-	533fa1d8	4816adf6:PrecatWithBprod.Bprod 60b73b76:Product 99d372dd:Pullback.x 99d372dd:Pullback.y	\class PrecatWithBprod \extends Precat { | Bprod (x y : Ob) : Product (x :: y :: nil) }
+PrecatWithBprod.proj1	func	6f7028c8ced6	8b64bcb3e0f0	ff62caff	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y	\func proj1 {x y : Ob}
+PrecatWithBprod.proj2	func	6f7028c8ced6	c105a81ce972	ff62caff	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y	\func proj2 {x y : Ob}
+PrecatWithBprod.pair	func	7bcf492731de	d3ef0fcfe565	8da8f725	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y 99d372dd:Pullback.z	\func pair {x y z : Ob} (f : Hom z x) (g : Hom z y) : Hom z (Bprod x y)
+PrecatWithBprod.beta1	lemma	1aafca3f601c	-	a1f632f1	c879e675:PrecatWithBprod.pair 55f6889b:PrecatWithBprod.proj1 e5b61d86:PrecatWithBprod.proj2	\lemma beta1 {x y z : Ob} {f : Hom z x} {g : Hom z y} : proj1 ∘ pair f g = f
+PrecatWithBprod.beta2	lemma	05fb1614c24d	-	a1f632f1	c879e675:PrecatWithBprod.pair 55f6889b:PrecatWithBprod.proj1 e5b61d86:PrecatWithBprod.proj2	\lemma beta2 {x y z : Ob} {f : Hom z x} {g : Hom z y} : proj2 ∘ pair f g = g
+PrecatWithBprod.pair-unique	lemma	fe1b15895c8b	-	b6c366cf	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y	\lemma pair-unique {x y z : Ob} {h1 h2 : Hom z (Bprod x y)} (p1 : proj1 ∘ h1 = proj1 ∘ h2) (p2 : proj2 ∘ h1 = proj2 ∘ h2) : h1 = h2
+PrecatWithBprod.pair-comp	lemma	c066016602c1	-	bc78206b	c879e675:PrecatWithBprod.pair	\lemma pair-comp {x y z w : Ob} {f : Hom x y} {g : Hom y z} {h : Hom y w} : pair g h ∘ f = pair (g ∘ f) (h ∘ f)
+PrecatWithBprod.pair-eta	lemma	6af61ffabed8	-	d69c9d05	c879e675:PrecatWithBprod.pair 55f6889b:PrecatWithBprod.proj1 e5b61d86:PrecatWithBprod.proj2	\lemma pair-eta {x y : Ob} : pair proj1 proj2 = id {_} {Bprod x y}
+PrecatWithBprod.prodMap	func	95081d81d3d2	a4462f97fcd4	affbc44b	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y	\func prodMap {x y x' y' : Ob} (f : Hom x y) (f' : Hom x' y') : Hom (Bprod x x') (Bprod y y')
+PrecatWithBprod.prodMap-comp	lemma	6fa94ff99c5e	-	0f53ff9d	8162a117:PrecatWithBprod.prodMap	\lemma prodMap-comp {x y x' y' z z' : Ob} {f : Hom x y} {g : Hom y z} {f' : Hom x' y'} {g' : Hom y' z'} : prodMap g g' ∘ prodMap f f' = prodMap (g ∘ f) (g' ∘ f')
+PrecatWithBprod.prod-id	lemma	f51c3e97d61f	-	f21ad4f7	8162a117:PrecatWithBprod.prodMap	\lemma prod-id {x y : Ob} : prodMap id id = id {_} {Bprod x y}
+PrecatWithBprod.prodMap-split-right	func	c37bf774ed50	6035174c6b90	d9008b54	8162a117:PrecatWithBprod.prodMap	\func prodMap-split-right {x y x' y' : Ob} (f : Hom x y) (g : Hom x' y') : prodMap f g = prodMap f id ∘ prodMap id g
+PrecatWithBprod.prod-id-left	func	fa38583ba03d	6926f8a5fb36	bf7caff8	8162a117:PrecatWithBprod.prodMap	\func prod-id-left {x y z w : Ob} {g : Hom y z} {f : Hom x y} : prodMap (id {_} {w}) g ∘ prodMap id f = prodMap id (g ∘ f)
+PrecatWithBprod.prod-id-right	func	70140b386fa2	bc8354073763	bf7caff8	8162a117:PrecatWithBprod.prodMap	\func prod-id-right {x y z w : Ob} {g : Hom y z} {f : Hom x y} : prodMap g (id {_} {w}) ∘ prodMap f id = prodMap (g ∘ f) id
+PrecatWithBprod.prodMap-pair	lemma	6bb4a7907a1e	-	ffba6ebe	c879e675:PrecatWithBprod.pair 8162a117:PrecatWithBprod.prodMap	\lemma prodMap-pair {x y x' y' z : Ob} {f : Hom x y} {g : Hom x' y'} {a : Hom z x} {b : Hom z x'} : prodMap f g ∘ pair a b = pair (f ∘ a) (g ∘ b)
+PrecatWithBprod.diagonal	func	45a471fc94b2	42eb572366c7	faa96052	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x	\func diagonal (x : Ob) : Hom x (Bprod x x)
+PrecatWithBprod.diagonal-splitMono	lemma	d9252097149d	-	49325594	55f6889b:PrecatWithBprod.proj1	\lemma diagonal-splitMono {x : Ob} : SplitMono (diagonal x) proj1
+PrecatWithBprod.associator	func	4f37bdb9a3ea	903857e5e5b7	9dd12342	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y 99d372dd:Pullback.z	\func associator {x y z : Ob} : Hom (Bprod (Bprod x y) z) (Bprod x (Bprod y z))
+PrecatWithBprod.associator-iso	func	822f26b4e85e	1f8ea946760d	beebcdb2	07870a48:PrecatWithBprod.associator	\func associator-iso {x y z : Ob} : Iso (associator {_} {x} {y} {z})
+PrecatWithBprod.associator-pair	lemma	c6e6c9043853	-	1ee7f275	07870a48:PrecatWithBprod.associator	\lemma associator-pair {x y z w : Ob} {f : Hom w x} {g : Hom w y} {h : Hom w z} : associator ∘ pair (pair f g) h = pair f (pair g h)
+PrecatWithBprod.associator-inv-pair	lemma	48082ce62bef	-	1ee7f275	07870a48:PrecatWithBprod.associator	\lemma associator-inv-pair {x y z w : Ob} {f : Hom w x} {g : Hom w y} {h : Hom w z} : associator-iso.hinv ∘ pair f (pair g h) = pair (pair f g) h
+PrecatWithBprod.associator-prod	lemma	8148722b0546	-	c28ba92c	07870a48:PrecatWithBprod.associator 8162a117:PrecatWithBprod.prodMap	\lemma associator-prod {x y z : Ob} {x' y' z' : Ob} {f : Hom x x'} {g : Hom y y'} {h : Hom z z'} : prodMap f (prodMap g h) ∘ associator = associator ∘ prodMap (prodMap f g) h
+PrecatWithBprod.associator-inv-prod	lemma	7ffb6304046c	-	c28ba92c	07870a48:PrecatWithBprod.associator 8162a117:PrecatWithBprod.prodMap	\lemma associator-inv-prod {x y z : Ob} {x' y' z' : Ob} {f : Hom x x'} {g : Hom y y'} {h : Hom z z'} : prodMap (prodMap f g) h ∘ associator-iso.hinv = associator-iso.hinv ∘ prodMap f (prodMap g h)
+PrecatWithBprod.swap	func	8b2a9a61823f	c0daadf7bf9c	8dca87d7	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y	\func swap {x y : Ob} : Hom (Bprod x y) (Bprod y x)
+PrecatWithBprod.swap-inv	lemma	efee17819fb5	-	580da34f	c4760367:PrecatWithBprod.swap	\lemma swap-inv {x y : Ob} : swap ∘ swap = id {_} {Bprod x y}
+PrecatWithBprod.swap-iso	func	b6b5c018619c	121ed4fc3f69	e11dd6c5	4816adf6:PrecatWithBprod.Bprod c4760367:PrecatWithBprod.swap 99d372dd:Pullback.x 99d372dd:Pullback.y	\func swap-iso {x y : Ob} : Iso (swap {_} {x} {y})
+PrecatWithBprod.bprod-comm	func	b6b5c018619c	dd879bb9ab80	e11dd6c5	4816adf6:PrecatWithBprod.Bprod c4760367:PrecatWithBprod.swap 99d372dd:Pullback.x 99d372dd:Pullback.y	\func bprod-comm {x y : Ob} : Iso (swap {_} {x} {y})
+PrecatWithBprod.swap-pair	lemma	610eaf5bb32f	-	03796479	c879e675:PrecatWithBprod.pair c4760367:PrecatWithBprod.swap	\lemma swap-pair {z x y : Ob} {f : Hom z x} {g : Hom z y} : swap ∘ pair f g = pair g f
+PrecatWithBprod.swap-prod	lemma	006748651b32	-	e278d816	8162a117:PrecatWithBprod.prodMap c4760367:PrecatWithBprod.swap	\lemma swap-prod {x y x' y' : Ob} {f : Hom x x'} {g : Hom y y'} : swap ∘ prodMap f g = prodMap g f ∘ swap
+PrecatWithBprod.bprodBiFunctor	func	d0a82f392b54	0bab69e05724	09e4a557		\func bprodBiFunctor : Functor (ProductPrecat \this \this) \this
+PrecatWithBprod.bprodFunctorRight	func	84e63a671bbb	add9faaaebd6	cd181b08	99d372dd:Equalizer.Y	\func bprodFunctorRight (Y : Ob) : Functor \this \this
+CartesianPrecat	class	c54b83dc90ec	-	8e4f5917	8a7e8d3f:PrecatWithBprod e8129277:PrecatWithTerminal	\class CartesianPrecat \extends PrecatWithTerminal, PrecatWithBprod
+CartesianPrecat.Bprod_terminal-left	func	9cf74d1b8c69	a1aa4a5e89ca	a8dbaaba	99d372dd:Equalizer.X	\func Bprod_terminal-left {X : Ob} : Iso {\this} {X} {Bprod terminal X}
+FinCompletePrecat	class	f34400b3de6d	-	b098125d	a00f52f4:CartesianPrecat fe1fcfc7:PrecatWithPullbacks	\class FinCompletePrecat \extends PrecatWithPullbacks, CartesianPrecat { | Bprod => \lam x y => \new Product { | apex => pullback (terminal.tupleMap (\case __ \with {})) (tupleMap (\case __ \with {})) | proj => \case \elim __ \with { | 0 => pbProj1 | 1 => pbProj2 } | tupleMap => \lam f => pbMap (f 0) (f 1) $ tupleEq (\case __ \with {}) | tupleBeta => \lam {_} {_} {j} => (\case \elim j \with { | 0 => pbBeta1 | 1 => pbBeta2 }) | tupleEq => \lam f => pbEta (f 0) (f 1) } }
+FinCompletePrecat.equalizer	func	d9192844ffbb	e0b4b7ec68b6	d9f9156d	b2d31ee7:Equalizer.mono=>equalizer c879e675:PrecatWithBprod.pair	\func equalizer {x y : Ob} {f g : Hom x y} : Equalizer f g
+CompletePrecat	class	698b9d945097	-	6cb36add	5037f192:CompletePrecat.limit 41861f51:FinCompletePrecat	\class CompletePrecat .{u} \extends FinCompletePrecat { | limit {J : Precat.{u, u}} (G : Functor J \this) : Limit G | pullback => \lam f g => Pullback.fromLimit (limit {_} {Pullback.Shape.FreeCat} (Pullback.diagram f g).functor) | terminal => Product.fromLimit (limit (Product.functor absurd)) | Bprod => \lam x y => Product.fromLimit (limit (Product.functor (x :: y :: nil))) }
+CompletePrecat.product	func	88398f1b0e86	de8e78dc0722	9f19b16b		\func product {J : \Type u} (G : J -> Ob) : Product G
+CompletePrecat.op	func	d4796073bc6e	494c30f47963	4077632d	5c03a48c:CocompletePrecat	\func op : CocompletePrecat.{u}
+CompletePrecat.applyEquiv	func	1ead688d60e6	51b30681c192	769655d9		\func applyEquiv {D : CompletePrecat.{u}} (E : CatEquiv { | D => D }) {J : Precat.{u, u}} (G : Functor J E.C) : Limit G
+CompleteCat	class	f4198d6e6042	-	717cc465	0653412a:CompletePrecat	\class CompleteCat .{u} \extends CompletePrecat.{u}, Cat
+CompleteCat.op	func	2c6bb9f8204e	878f14f7d635	72454b22	6bfeeb2a:CocompleteCat	\func op : CocompleteCat.{u}
+CocompletePrecat	class	01b9b002fe14	-	1ec9b99f	fcf2ca39:CocompletePrecat.colimit	\class CocompletePrecat .{u} \extends Precat { | colimit {J : Precat.{u, u}} (G : Functor J \this) : Colimit G }
+CocompleteCat	class	33290ff55296	-	1ec9b99f	fcf2ca39:CocompletePrecat.colimit	\class CocompleteCat .{u} \extends CocompletePrecat.{u}, Cat
+BicompleteCat	class	eb3a41c1c15b	-	1ec9b99f	fcf2ca39:CocompletePrecat.colimit	\class BicompleteCat .{u} \extends CompleteCat.{u}, CocompleteCat.{u}
+CocompletePrecat.op	func	28fce28e9b4d	61c424028996	0ed7a6c5		\func op : CompletePrecat.{u}
+CocompleteCat.op	func	9668245b9d42	49c406b38b67	0ed7a6c5		\func op : CompleteCat.{u}
+BicompleteCat.op	func	db372c0d6f8d	70c7ba61c08b	0ed7a6c5		\func op : BicompleteCat.{u}
+PreservesLimit	func	f5fac0e5d338	64c95f423b33	f2c1512f	d3937a44:Cone.map 4c2dcb72:Diagram.F	\func PreservesLimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
+ReflectsLimit	func	f5fac0e5d338	d3b901c44b98	186f77d8		\func ReflectsLimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
+PreservesColimit	func	f5fac0e5d338	9b66d2b536b4	ad68eec7	22cd984b:PreservesLimit	\func PreservesColimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
+preservesLimit-fromLimit	lemma	02a813c5a012	-	079e8f04	4c2dcb72:Diagram.F	\lemma preservesLimit-fromLimit {J C D : Precat} (G : Functor C D) {F : Functor J C} (L : Limit F) (p : IsLimitCone (Cone.map G L)) : PreservesLimit G F
+fullyFaithful-reflectsLimit	lemma	0fb10a744928	-	0dd04add		\lemma fullyFaithful-reflectsLimit {J C D : Precat} (G : FullyFaithfulFunctor C D) (F : Functor J C) : ReflectsLimit G F
+IsFiniteCat	type	2d46bc3c7fe2	0ad5d05c8edd	c1aef070		\type IsFiniteCat (J : Precat) : \Prop
+isFiniteCat-op	lemma	b6044665f3c4	-	14133fb8		\lemma isFiniteCat-op {J : Precat} (fin : IsFiniteCat J) : IsFiniteCat J.op
+PreservesFiniteLimits	func	69fd63bbe4d5	0e00464cae15	1a8e70d4		\func PreservesFiniteLimits {C D : Precat} (G : Functor C D) : \Prop
+PreservesFiniteColimits	func	69fd63bbe4d5	d9bc809a73f2	1a8e70d4		\func PreservesFiniteColimits {C D : Precat} (G : Functor C D) : \Prop
+preservesFiniteLimits-comp	lemma	5c7513571575	-	74d7dfb7		\lemma preservesFiniteLimits-comp {C D E : Precat} {G : Functor D E} {F : Functor C D} (pg : PreservesFiniteLimits.{u} G) (pf : PreservesFiniteLimits.{u} F) : PreservesFiniteLimits.{u} (Comp G F)
+PreservesTerminal	func	c23bc071e30e	0fca71fa3db3	0dc116a1		\func PreservesTerminal {C D : PrecatWithTerminal} (G : Functor C D) : \Prop
+preservesTerminal-comp	lemma	68a32257845f	-	2a2439c1		\lemma preservesTerminal-comp {C D E : PrecatWithTerminal} {G : Functor D E} {F : Functor C D} (ptg : PreservesTerminal G) (ptf : PreservesTerminal F) : PreservesTerminal (Comp G F)
+PreservesBprod	func	8adf6b354df3	a8d2a1709f78	066f5cb3	4816adf6:PrecatWithBprod.Bprod 99d372dd:Pullback.x 99d372dd:Pullback.y	\func PreservesBprod {C D : PrecatWithBprod} (G : Functor C D) : \Prop
+preservesBprod-comp	func	aecb05ea1851	02295beadbdb	d3993af4		\func preservesBprod-comp {C D E : PrecatWithBprod} {G : Functor D E} {F : Functor C D} (pbg : PreservesBprod G) (pbf : PreservesBprod F) : PreservesBprod (Comp G F)
+PreservesEqualizer	func	8de40778b394	9a2165a419e8	5d322094		\func PreservesEqualizer {C D : Precat} (H : Functor C D) : \Prop
+FunctorCartesianPrecat	func	7f60899001d7	f7596f204af7	0197d2d6		\func FunctorCartesianPrecat (J : Precat) (C : CartesianPrecat) : CartesianPrecat (Functor J C)
+evalFunctor-preservesTerminal	lemma	52f77c5ec466	-	b79eb4e5	d2032cb7:FunctorCartesianPrecat	\lemma evalFunctor-preservesTerminal {J : Precat} {C : CartesianPrecat} (j : J) : PreservesTerminal {FunctorCartesianPrecat J C} {C} (evalFunctor j)
+evalFunctor-preservesBprod	lemma	0b0efaa0f4ca	-	b79eb4e5	d2032cb7:FunctorCartesianPrecat	\lemma evalFunctor-preservesBprod {J : Precat} {C : CartesianPrecat} (j : J) : PreservesBprod {FunctorCartesianPrecat J C} {C} (evalFunctor j)
+CreatesLimit	func	f5fac0e5d338	4138c4f0556c	e851afc3	4c2dcb72:Diagram.F	\func CreatesLimit {J C D : Precat} (G : Functor C D) (F : Functor J C)
+Mono_pullback	lemma	c0fb30bfea43	-	c87c99c2		\lemma Mono_pullback (P : Pullback {}) (m : Mono P.g) : Mono P.pbProj1
+IsRegularMono	func	e9b7b008155f	0fead0793614	0ad0ad5e		\func IsRegularMono {C : Precat} {x y : C} (f : Hom x y)
+regularMono_Mono	lemma	c3c1c7de0e04	-	5e9a71f7		\lemma regularMono_Mono {C : Precat} {x y : C} {f : Hom x y} (reg : IsRegularMono f) : Mono f
+regularMono_pullback	lemma	360b44a455dc	-	83c18e50		\lemma regularMono_pullback (P : Pullback {}) (m : IsRegularMono P.g) : IsRegularMono P.pbProj1
+splitMono_regular	lemma	6006415938cf	-	9a28ec40		\lemma splitMono_regular (f : SplitMono {}) : IsRegularMono f.f
+isRegularEpi	func	e9b7b008155f	7ef49047a228	e11fab29		\func isRegularEpi {C : Precat} {x y : C} (f : Hom x y)
+pullback-lemma	func	aafd5b5b7675	db5c2c52f1ec	12c73777		\func pullback-lemma (P : Pullback {}) (Q : (Pullback {P.D}) { | y => P | z => P.x | g => P.pbProj1 }) : Pullback (P.f ∘ Q.f) P.g Q Q.pbProj1 (P.pbProj2 ∘ Q.pbProj2)
+pullback-lemma-conv	func	00573f6caa84	ac7db66f3cf5	06cf0177		\func pullback-lemma-conv (P : Pullback {}) (Q : (Pullback {P.D}) { | y => P.y | z => P.z | g => P.g }) (t : Hom Q.x P.x) (fs=Qf : P.f ∘ t = Q.f) : Pullback t P.pbProj1 Q Q.pbProj1
+(overview)	-	-	-	0c0528bb	a00f52f4:CartesianPrecat 69c64b4f:Colimit d63d9218:CompleteCat 0653412a:CompletePrecat b28038d3:Cone bb9a7cd5:Diagram de56a1bf:DiagramCone 41861f51:FinCompletePrecat 4167cb64:Limit fe1fcfc7:PrecatWithPullbacks 7dd3e173:limits<=pr+eq	-

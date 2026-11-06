@@ -1,0 +1,22 @@
+# arend -gc fingerprints v2 for module Arith.Real.IVT. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IntervalSubset	func	8bd4e46a43a0	e90f6a2dd416	2dc89b1b		\func IntervalSubset
+IntervalSubset.left	func	984ec8f2e954	a21613cd231b	a4bdc3a4		\func left (S : IntervalSubset) : Elem S.1
+IntervalSubset.right	func	984ec8f2e954	0d93e2c4eba3	3b3c0530		\func right (S : IntervalSubset) : Elem S.1
+IntervalSubset.inside	func	91f74b8c06fe	21550a6c6444	49b4f056		\func inside (S : IntervalSubset) : Set Real
+IVT-monotone	lemma	5712e849792d	-	bfd06c56	da89a889:IntervalSubset.left 2555f175:IntervalSubset.right	\lemma IVT-monotone {S : IntervalSubset} (f : Elem S.1 -> Real) (fm : IsStrictlyMonotone f) (fc : IsCont f) (y : Real) (fa<=y : f (left S) <= y) (y<=fb : y <= f (right S)) : Contr (\Sigma (x : Elem S.1) (f x = y))
+IVT-monotone.point	func	41104c6d3821	808ec08187e7	012081e4		\func point (fm : IsStrictlyMonotone f) : Real
+IVT-monotone.point>=left	lemma	4ffbd6e0ed9f	-	770c72e3		\lemma point>=left (fm : IsStrictlyMonotone f) : S.2 <= point fm
+IVT-monotone.point<=right	lemma	30b14974f52a	-	770c72e3		\lemma point<=right (fm : IsStrictlyMonotone f) : point fm <= S.3
+IVT-monotone.point<-char	lemma	a808444ff8b8	-	ba47a1bc	bb64c8eb:IVT-monotone.point	\lemma point<-char (fm : IsStrictlyMonotone f) {x : Real} : x < point fm <-> ∃ (x' : Real) (x < x') (p : S.2 <= x') (q : x' <= S.3) (f (x', S.5 p q) <= y)
+IVT-monotone.point>-char	lemma	a430cb692a54	-	ba47a1bc	bb64c8eb:IVT-monotone.point	\lemma point>-char (fm : IsStrictlyMonotone f) {x : Real} : point fm < x <-> ∃ (x' : Real) (x' < x) (p : S.2 <= x') (q : x' <= S.3) (y <= f (x', S.5 p q))
+IVT-monotone.elem	func	86f60f828a67	5294eeef050c	8ef790ed	bb64c8eb:IVT-monotone.point	\func elem (fm : IsStrictlyMonotone f) : Elem S.1
+IVT-monotone.point<-cont-char	lemma	ff846e2960d7	-	6b522383	bb64c8eb:IVT-monotone.point	\lemma point<-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<b : x < S.3) (fc : IsContAt f (x, S.5 a<=x (<=-less x<b))) (fx<y : f (x, S.5 a<=x (<=-less x<b)) < y) : x < point fm
+IVT-monotone.point>-cont-char	lemma	82c94c7a7e0a	-	6b522383	bb64c8eb:IVT-monotone.point	\lemma point>-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<x : S.2 < x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 (<=-less a<x) x<=b)) (fx<y : y < f (x, S.5 (<=-less a<x) x<=b)) : point fm < x
+IVT-monotone.point>=-cont-char	lemma	7192ef461e73	-	24f698e2	bb64c8eb:IVT-monotone.point	\lemma point>=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (p<=x : point fm <= x) : y <= f (x, S.5 a<=x x<=b)
+IVT-monotone.point<=-cont-char	lemma	02f4cf4fc5fd	-	24f698e2	bb64c8eb:IVT-monotone.point	\lemma point<=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (x<=p : x <= point fm) : f (x, S.5 a<=x x<=b) <= y
+IVT-monotone.image	lemma	4ebf54c7deba	-	352acc9a	c6e9c481:IVT-monotone.elem	\lemma image (fm : IsStrictlyMonotone f) (fc : IsContAt f (elem fm)) : f (elem fm) = y
+monotone-inverse	lemma	889236a05728	-	850515b5	956af3a8:IVT-monotone	\lemma monotone-inverse {U V : Set Real} (f : Elem U -> Real) (fm : IsStrictlyMonotone f) (fc : IsCont f) (fV : \Pi (x : Elem U) -> V (f x)) (fU : ∀ {v : V} ∃ (a b : Real) (p : a < b) (q : (\Pi {x : Real} -> a <= x -> x <= b -> U x)) (f (a, q <=-refl (<=-less p)) <= v) (v <= f (b, q (<=-less p) <=-refl))) : IsEquiv {Elem U} {Elem V} (\lam u => (f u, fV u))
+real-cont_<-inv	lemma	cbf9969e9d73	-	63466f9f		\lemma real-cont_<-inv {f : Real -> Real} {x y : Real} (fc : IsContAt f x) (fx<fy : f x < f y) : x < y || y < x
+real-cont_<-inv-mono	lemma	12c1ce3bd7e5	-	08a796fc		\lemma real-cont_<-inv-mono {f : Real -> Real} {x y : Real} (fm : y < x -> f y <= f x) (fc : IsContAt f x) (fx<fy : f x < f y) : x < y
+(overview)	-	-	-	cfcbd8ca	956af3a8:IVT-monotone e45353ef:IntervalSubset	-

@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GSet.ExampleActions. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TranslationAction	func	b7471374beb2	294dc964c547	68236d0d		\func TranslationAction (G : Group) : TransitiveGroupAction G
+TranslationActionOnSubsets	func	1dba27fc89a8	e990b2567477	c54300be		\func TranslationActionOnSubsets (G : Group) : GSet G
+conjAction	func	1dba27fc89a8	d483f2b05a5d	bd6c9adb		\func conjAction (G : Group) : GSet G
+trivialAction	func	2919a833bd90	c1a234a9b8e4	4c9a8165		\func trivialAction (G : Group) (E : \Set) : GSet G E
+conjugate-subset	func	86ec77c73648	ee3ea4cc283e	07a42a78		\func conjugate-subset {G : Group} (g : G) (S : SubSet G) : SubSet G
+(overview)	-	-	-	10a063d2		-

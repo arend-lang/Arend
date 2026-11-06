@@ -1,0 +1,3 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GSet.EquivariantMap. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+EquivariantMap	record	b025f1fb9653	-	d71cc08c	9dcebdf5:EquivariantMap.G fba5d4b1:EquivariantMap.func-**	\record EquivariantMap {G : Group} \extends SetHom { \override Dom : GSet G \override Cod : GSet G | func-** {e : Dom} {g : G} : func (g ** e) = g ** func e }

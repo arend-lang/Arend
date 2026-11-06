@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Arith.Real.Approximate. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+real-rat-approx	lemma	69b901396c6b	-	93903011		\lemma real-rat-approx (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (q : Rat) (RealNormed.dist q x < eps)
+real-int-approx	lemma	fb482eff172f	-	4df65bcd		\lemma real-int-approx (x : Real) : ∃ (n : Int) (RealNormed.dist n x < 1)
+real-int-approx.exact	lemma	664287475ee2	-	4b26fb8c		\lemma exact (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (n : Int) (RealNormed.dist n x < Real.fromRat (ratio 1 2) + eps)
+real-nat-approx	lemma	8cf8664d1969	-	4f98596e	58b89bfb:real-int-approx	\lemma real-nat-approx {x : Real} (x>=0 : 0 <= x) : ∃ (n : Nat) (RealNormed.dist n x < 1)
+(overview)	-	-	-	5436179e		-

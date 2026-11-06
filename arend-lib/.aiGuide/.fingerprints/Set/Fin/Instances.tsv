@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Set.Fin.Instances. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SigmaFin	lemma	c8ec35435a77	-	0362f8e5		\lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => (Q i).card))
+SigmaFin.aux	func	577dbfa0a4eb	8f28716e26af	16e81734		\func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (BigSum Q)} {\Sigma (i : Fin n) (Fin (Q i))}
+SigmaFin.DecSubSet-isFin	lemma	ec81133e337a	-	b689b112		\lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet
+ProdFin	instance	e21ae4d6e83e	-	d8c82ad0	d23c894d:SigmaFin	\instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.card Nat.* B.card)
+ProdFin.prod_equiv	func	63e4f8eb8db6	877de89f9859	1ecda387	69f4f71c:SigmaFin.aux	\func prod_equiv {n m : Nat} : QEquiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
+(overview)	-	-	-	8752f311		-

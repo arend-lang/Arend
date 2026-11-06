@@ -1,0 +1,26 @@
+# arend -gc fingerprints v2 for module Logic.Rewriting.ARS.Confluence. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+StrongJoin	data	3b05fb441dbe	-	203b515f		\data StrongJoin {A : SimpleARS} (b c : A) : \Prop | strong-join (d : A) (b ~>_= d) (c ~>_* d)
+isStronglyConfluent	func	16ffb3fb0ee3	9064e6d50813	2483436c		\func isStronglyConfluent (A : SimpleARS) : \Prop
+isChurchRosser	func	16ffb3fb0ee3	4572a9e7e12d	8814a4b9		\func isChurchRosser (A : SimpleARS) : \Prop
+isConfluent	func	16ffb3fb0ee3	42ae0f55ea66	df964021		\func isConfluent (A : SimpleARS) : \Prop
+isLocallyConfluent	func	16ffb3fb0ee3	e622b4d680a0	8f8850cd		\func isLocallyConfluent (A : SimpleARS) : \Prop
+hasUniqueNormalFormsWrtReduction	func	16ffb3fb0ee3	14d8a0c57e93	f33ce8b5		\func hasUniqueNormalFormsWrtReduction (A : SimpleARS) : \Prop
+hasUniqueNormalForms	func	16ffb3fb0ee3	89c5d0580c9b	647f1540		\func hasUniqueNormalForms (A : SimpleARS) : \Prop
+hasNormalFormProperty	func	16ffb3fb0ee3	2b649ff43e5b	3fd11e08		\func hasNormalFormProperty (A : SimpleARS) : \Prop
+ChurchRosser=>Confluence	lemma	3cd925f90667	-	a41dde7f		\lemma ChurchRosser=>Confluence {A : SimpleARS} (cr : isChurchRosser A) : isConfluent A
+Confluence=>ChurchRosser	lemma	2e3bf414793d	-	71455e59		\lemma Confluence=>ChurchRosser {A : SimpleARS} (conf : isConfluent A) : isChurchRosser A
+Confluence=>ChurchRosser.conf=>rc-helper	lemma	cc11b9aff30a	-	5b9ecf61		\lemma conf=>rc-helper (a b : A) (a<~>*b : a <~>* b) : Join a b
+ChurchRosser=Confluence	lemma	7b6dc5dbd6a0	-	68fa3e3a	8f82dcaa:isChurchRosser 1b17cc95:isConfluent	\lemma ChurchRosser=Confluence {A : SimpleARS} : isChurchRosser A = isConfluent A
+StrongConfluence=>Confluence	lemma	4ed7c22ad0b8	-	2e6e7416		\lemma StrongConfluence=>Confluence {A : SimpleARS} (sconf : isStronglyConfluent A) : isConfluent A
+StrongConfluence=>Confluence.SCR=>strong-join	lemma	52709879e45d	-	0287fb82	9fa68324:StrongJoin	\lemma SCR=>strong-join {a b c : A} (a~>*b : a ~>_* b) (a~>c : a ~> c) : StrongJoin b c
+StrongConfluence=>Confluence.strong-join=>Confluence	lemma	ea0644f1ff9b	-	f8b77812		\lemma strong-join=>Confluence {x y z : A} (x~>*y : x ~>_* y) (x~>*z : x ~>_* z) : Join y z
+Confluence=>LocalConfluence	lemma	d659fb6353fa	-	edbe6156		\lemma Confluence=>LocalConfluence {A : SimpleARS} (conf : isConfluent A) : isLocallyConfluent A
+Confluence=>NormalFormProperty	lemma	15253913a4a8	-	6ca0fa02		\lemma Confluence=>NormalFormProperty {A : SimpleARS} (conf : isConfluent A) : hasNormalFormProperty A
+Confluence=>NormalFormProperty.conf=>nfp-helper	lemma	0960ec362102	-	544fddc4		\lemma conf=>nfp-helper (a b : A) (a<~>*b : a <~>* b) (bnf : isNormalForm b) : a ~>_* b
+NormalFormProperty=>UniqueNormalForms	lemma	844b1b73588d	-	31f9eb98		\lemma NormalFormProperty=>UniqueNormalForms {A : SimpleARS} (nfp : hasNormalFormProperty A) : hasUniqueNormalForms A
+UniqueNormalForms=>UniqueNormalFormsWrtReduction	lemma	8f74de823c89	-	75d84157		\lemma UniqueNormalForms=>UniqueNormalFormsWrtReduction {A : SimpleARS} (unf : hasUniqueNormalForms A) : hasUniqueNormalFormsWrtReduction A
+Normalization+UniqueNormalForms=>Confluence	lemma	59e3c617af56	-	9d66598a		\lemma Normalization+UniqueNormalForms=>Confluence {A : SimpleARS} (norm : isNormalizing A) (unf : hasUniqueNormalForms A) : isConfluent A
+Termination+LocalConfluence=>Confluence	lemma	6f62b8b5ccbf	-	3ca49b49		\lemma Termination+LocalConfluence=>Confluence {A : SimpleARS} (term : isTerminating A) (lconf : isLocallyConfluent A) : isConfluent A
+Termination=>[LocalConfluence=Confluence]	lemma	22f42c28dec2	-	d75d380c		\lemma Termination=>[LocalConfluence=Confluence] {A : SimpleARS} (term : isTerminating A) : isLocallyConfluent A = isConfluent A
+(overview)	-	-	-	0d8b7efb		-

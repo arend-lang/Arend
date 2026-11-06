@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module AG.SchemeSite.SchemeEquiv. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SchemeSiteFunctor	func	b2b674757d6f	c4e3b92464c2	0a56c30d		\func SchemeSiteFunctor : FullyFaithfulFunctor SatSchemeSitePrecat.{u} LocallyRingedLocaleCat.{u}
+LRL->SchemeSiteHom	func	8b0533d8b6e1	66d3f3fe3345	567804ee	4393d2b3:LRL->SchemeSiteHom.isIso	\func LRL->SchemeSiteHom {S : Scheme.{u}} : LRLSchemeSiteHom S (maxSchemeSite S)
+(overview)	-	-	-	aecf4736	682e0b44:LRL->SchemeSiteHom 4393d2b3:LRL->SchemeSiteHom.isIso 969d4c2c:SchemeSiteFunctor	-

@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Logic.Accessible. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Acc	data	cb3f45c4945e	-	3b4edf69	dfe05963:Acc.acc	\data Acc {A : \Set} (R : A -> A -> \Prop) (a : A) | acc (\Pi {b : A} -> R b a -> Acc R b)
+nat-acc	lemma	cd6957262fd8	-	c99a5ff5		\lemma nat-acc {n : Nat} : Acc < n
+map-acc	lemma	a4a4d705dcc3	-	38e23ec5		\lemma map-acc {A B : \Set} (f : A -> B) {R : B -> B -> \Prop} {a : A} (acc : Acc R (f a)) : Acc (\lam a1 a2 => R (f a1) (f a2)) a

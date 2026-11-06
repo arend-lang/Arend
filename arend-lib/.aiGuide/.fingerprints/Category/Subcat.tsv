@@ -1,0 +1,14 @@
+# arend -gc fingerprints v2 for module Category.Subcat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+subPrecat	func	3dd60a537b82	8ba931633f48	89bc88c3		\func subPrecat {C : Precat} {X : \Type} (f : X -> C) : Precat X
+subPrecat.embedding	func	1a6ee1913f5a	7cda416c2d75	3951563c	f9e31e1b:subPrecat	\func embedding {C : Precat} {X : \Type} (f : X -> C) : FullyFaithfulFunctor (subPrecat f) C f
+subPrecat.pred	func	6905945052b6	a74f40d5972b	74440e77	f9e31e1b:subPrecat	\func pred {C : Precat} (P : C -> \Prop)
+subPrecat.pred.embedding	func	6905945052b6	0bb24c86f66d	7e452fcd		\func embedding {C : Precat} (P : C -> \Prop)
+subPrecat.funcLift	func	cff6c8cadcb1	6ac6b2f01c1f	99c0ec9e	f9e31e1b:subPrecat	\func funcLift {C D : Precat} {X : \Type} (f : X -> D) (g : C -> X) (G : Functor C D) (p : \Pi {a : C} -> Iso {D} {f (g a)} {G a}) : Functor C (subPrecat f) g
+subCat	func	1c4de442db9a	7a22df699f8b	8ba9e5ec	f9e31e1b:subPrecat	\func subCat {C : Cat} {X : \Type} (e : Embedding {X} {C}) : Cat
+subCat-iso	lemma	bec8ce55bac6	-	d6f5c77b	f9e31e1b:subPrecat	\lemma subCat-iso {C : Precat} {X : \Type} {f : X -> C} (e : Iso {subPrecat f}) : Iso {C} {f e.dom} {f e.cod} e
+subCat-iso.conv	lemma	bf6de6b22f81	-	4a405fb9	f9e31e1b:subPrecat	\lemma conv {C : Precat} {X : \Type} {f : X -> C} {x x' : X} (e : Iso {C} {f x} {f x'}) : Iso {subPrecat f} {x} {x'} e
+ReflectiveSubPrecat	class	56a15741f7fc	-	94b98111	60ac4a58:ReflectiveSubPrecat.isReflective 42b93cc1:ReflectiveSubPrecat.reflector 3fc2d6f3:ReflectiveSubPrecat.reflectorMap	\class ReflectiveSubPrecat \extends FullyFaithfulFunctor { | reflector : D -> C | reflectorMap (X : D) : Hom X (F (reflector X)) \field isReflective {X : D} {Y : C} : QEquiv {Hom (reflector X) Y} {Hom X (F Y)} (Func __ ∘ reflectorMap X) }
+ReflectiveSubPrecat.toAdjunction	func	cfa4a3dfaf4c	69135f08414f	ef354de9	60ac4a58:ReflectiveSubPrecat.isReflective 3fc2d6f3:ReflectiveSubPrecat.reflectorMap	\func toAdjunction : Adjunction.FromReflector D C \this
+reflectiveSubPrecatColimit	func	4188e2747761	977891a7e8b9	30fe0ec7		\func reflectiveSubPrecatColimit {J : Precat} (I : ReflectiveSubPrecat) (F : Functor J I.C) (c : Colimit (Comp I F)) : Limit F.op
+(overview)	-	-	-	d02a2e16	a4c4d66f:ReflectiveSubPrecat.toAdjunction e0b5201c:subPrecat.pred	-

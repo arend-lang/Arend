@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Topology.TopRieszSpace. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TopRieszSpace	class	40227dc54e4c	-	e632db23		\class TopRieszSpace \extends TopAbGroup, RieszSpace { | solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U) }
+TopRieszSpace.solid-neighborhood	field	5c57c8c2ded7	-	dc07107c		| solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U)
+TopRieszSpace.abs-uniform	lemma	677dd8db99b8	-	4f0fbd74		\lemma abs-uniform : UniformMap \this \this abs
+TopRieszSpace.*q-right-uniform	lemma	2b3c5d057530	-	0c7dda91		\lemma *q-right-uniform {q : Rat} : TopAbGroupMap \this \this (q *q)
+TopRieszSpace.*q-right-uniform.*q_<=1-right-uniform	lemma	65f96d2c09ab	-	9ab0715b		\lemma *q_<=1-right-uniform {q : Rat} (q>=0 : RatField.zro RatField.<= q) (q<=1 : q RatField.<= 1) : TopAbGroupMap \this \this (q *q)
+TopRieszSpace.join-uniform	lemma	3d0f82f9245a	-	8e02b75f		\lemma join-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∨ s.2)
+TopRieszSpace.meet-uniform	lemma	acf7b39b731c	-	b77bcb61		\lemma meet-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∧ s.2)
+(overview)	-	-	-	2b09b0de		-

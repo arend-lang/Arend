@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Arith.Complex.Banach. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+cabs_<=_re_+_im	lemma	a8ad252c29e4	-	ef8e0adb		\lemma cabs_<=_re_+_im {c : Complex} : cabs c <= abs c.re + abs c.im
+cabs_+-double	lemma	ad9d287b2240	-	2be574d7		\lemma cabs_+-double {c : Complex} : cabs c + cabs c = cabs (c + c)
+ComplexComplete	instance	9eb622cc3f4b	-	ebe623f9		\instance ComplexComplete : CompleteExNormedAbGroup
+ComplexCompleteRing	instance	400b0f0a4f6a	-	c031ebff	8e8bbbb8:ComplexComplete	\instance ComplexCompleteRing : CompleteExNormedRing
+ComplexBanach	instance	9633bf0112be	-	73b521de	b4ec77ac:ComplexBanach.complex-div-cancel 61fe25f0:ComplexBanach.real-div-cancel 0e4a7cb8:ComplexCompleteRing	\instance ComplexBanach : RealBanachCAlgebra Complex
+conj_fromRat	lemma	29eb89543133	-	c7d19cf1		\lemma conj_fromRat {r : Rat} : conj (ComplexBanach.fromRat r) = ComplexBanach.fromRat r
+complexBanach-fromRat	lemma	e5aafa2c250b	-	1fea8b91		\lemma complexBanach-fromRat {r : Rat} : ComplexBanach.fromRat r = Complex.fromReal (Real.fromRat r)
+(overview)	-	-	-	e3b8ae14	a165dce1:ComplexBanach 0e4a7cb8:ComplexCompleteRing	-

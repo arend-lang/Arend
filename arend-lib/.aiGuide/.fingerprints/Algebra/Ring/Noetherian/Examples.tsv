@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Noetherian.Examples. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SurjNoetherian	lemma	9ea5ae58acec	-	56dee593		\lemma SurjNoetherian {R S : CRing} (RN : IsNoetherian R) {f : RingHom R S} (fs : IsSurj f) : IsNoetherian S
+LocalizationNoetherian	lemma	d3199b9f0cd7	-	d25e33a9		\lemma LocalizationNoetherian (L : RingLocalization {}) (RN : IsNoetherian L.B) : IsNoetherian L.L
+ProductNoetherian	lemma	6abe248c4b60	-	43a141ec		\lemma ProductNoetherian {R S : CRing} (RN : IsNoetherian R) (SN : IsNoetherian S) : IsNoetherian (ProductCRing R S)
+(overview)	-	-	-	25b4e90f		-

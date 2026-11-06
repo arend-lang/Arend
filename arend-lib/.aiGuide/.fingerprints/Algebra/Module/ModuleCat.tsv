@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Module.ModuleCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LModuleCat	instance	774c4cecc7e1	-	2f3e3098		\instance LModuleCat (R : Ring) : Cat (LModule.{u} R)
+LModulePreAdditive	instance	91289cff0b2e	-	4f86d702	7871baaf:LModuleCat	\instance LModulePreAdditive (R : Ring) : PreAdditivePrecat (LModule.{u} R)

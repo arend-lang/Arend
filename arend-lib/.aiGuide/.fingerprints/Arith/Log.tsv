@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Arith.Log. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+log1p-coef	func	bbab7b083bb9	341b2c95c7ec	ebb64678		\func log1p-coef (n : Nat) : Rat
+log1p-coef-abs-<=1	lemma	175d8ddecb7f	-	78e8fef6		\lemma log1p-coef-abs-<=1 (n : Nat) : RatField.abs (log1p-coef n) <= 1
+log1+	sfunc	03eac317a392	2da57e2d3856	b820edf6	27f17b9f:log1+.asFld ed0c603f:log1p-coef	\sfunc log1+ {A : RealBanachAlgebra} (w : A) (\property |w|<1 : (A.norm w).U 1) : A
+compose-coef-expm1-log1p	lemma	6f739e4088b3	-	e158421b		\lemma compose-coef-expm1-log1p (k : Nat) : fcompose exp-1-coef log1p-coef k = subst-ide k
+exp-log1p	lemma	36f3e93f10f5	-	9031c561	f7c23cd6:log1+	\lemma exp-log1p {A : RealBanachAlgebra} (w : A) (wc : A.IsCentral w) (|w|<1 : (A.norm w).U 1) : exp (log1+ w |w|<1) = 1 + w
+(overview)	-	-	-	a979089e	8d9f3650:compose-coef-expm1-log1p 754b7972:exp-log1p f7c23cd6:log1+ ed0c603f:log1p-coef	-

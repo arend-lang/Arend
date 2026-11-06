@@ -1,0 +1,60 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Ideal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LIdeal	record	bc1221bf8ba6	-	309132d5	d3190888:PseudoLIdeal 0a6b0de2:PseudoLIdeal.ideal-left	\record LIdeal \extends PseudoLIdeal { \override S : Ring | contains_negative => \lam c => transport contains (Ring.negative_*-left *> pmap negative ide-left) (ideal-left c) }
+RIdeal	record	0d8effdc64ff	-	8bb05873	1bf1acc2:PseudoRIdeal e4d03330:PseudoRIdeal.ideal-right	\record RIdeal \extends PseudoRIdeal { \override S : Ring | contains_negative => \lam c => transport contains (Ring.negative_*-right *> pmap negative ide-right) (ideal-right c) }
+TIdeal	record	6a3249bc1ed5	-	b55b1d1f	0444ffe4:LIdeal 3a0f991a:PseudoTIdeal 4b8c1ef6:RIdeal	\record TIdeal \extends PseudoTIdeal, LIdeal, RIdeal { \override S : Ring }
+PseudoLIdeal	record	05cc58c3ea21	-	bbbfa7c6	0a6b0de2:PseudoLIdeal.ideal-left	\record PseudoLIdeal \extends SubPseudoRing { | ideal-left {r a : S} : contains a -> contains (r * a) | contains_* => \lam _ c => ideal-left c }
+PseudoRIdeal	record	3dd88c3420ab	-	7c821b69	e4d03330:PseudoRIdeal.ideal-right	\record PseudoRIdeal \extends SubPseudoRing { | ideal-right {r a : S} : contains a -> contains (a * r) | contains_* => \lam c _ => ideal-right c }
+PseudoTIdeal	record	b0059361f923	-	65f53683	d3190888:PseudoLIdeal 1bf1acc2:PseudoRIdeal	\record PseudoTIdeal \extends PseudoLIdeal, PseudoRIdeal
+PseudoIdeal	record	83ee9083590b	-	5a943706	3a0f991a:PseudoTIdeal	\record PseudoIdeal \extends PseudoTIdeal { \override S : PseudoCRing | ideal-right => \lam s => transport contains *-comm (ideal-left s) }
+RIdeal.ldiv	lemma	aa69a3fe6219	-	a929d0ab		\lemma ldiv {a b : S} (a|b : Monoid.LDiv a b) (Ia : contains a) : contains b
+Ideal	record	9ddbabd02681	-	d406d76d	c62b19d2:PseudoIdeal 54d43566:TIdeal	\record Ideal \extends PseudoIdeal, TIdeal { \override S : CRing }
+Ideal.radical	func	95077527e027	b76ae18de086	a25acb31	b1cdf772:Ideal	\func radical : Ideal S
+Ideal.module	func	ac6e22e3d209	45151c398db5	e6386938		\func module : LModule S
+Ideal.module.finitelyGenerated	lemma	2ae1ed65ca8c	-	67b0c06d		\lemma finitelyGenerated (p : IsFinitelyGenerated) : module.IsFinitelyGenerated
+Ideal.radical-superset	lemma	0c6c4f6f4cc9	-	96d1e798		\lemma radical-superset {x : S} (s : contains x) : radical x
+Ideal.radical_square	lemma	1bdee9a0f54c	-	1c1cfbd3		\lemma radical_square {x : S} (s : radical (x * x)) : radical x
+Ideal.radical_pow	lemma	2a312587241b	-	2a5cb2c5		\lemma radical_pow {x : S} {n : Nat} (s : radical (Monoid.pow x n)) : radical x
+Ideal.radical-univ	lemma	d72bd6b47ac8	-	a70a016e		\lemma radical-univ {I : Ideal S} (p : \Pi {x : S} -> I x -> radical x) {x : S} (s : I.radical x) : radical x
+Ideal.radical_ide	lemma	d8e207e84f18	-	6c1be8ef		\lemma radical_ide (p : radical 1) : contains 1
+Ideal.bigSum	lemma	1fe8a4cffd3f	-	601f4941		\lemma bigSum (l : Array S) (p : \Pi (i : Fin l.len) -> contains (l i)) : contains (BigSum l)
+Ideal.finSum	lemma	ff82759a8915	-	2779c794		\lemma finSum {J : FinSet} {a : J -> S} (p : \Pi (j : J) -> contains (a j)) : contains (FinSum a)
+Ideal.IsGeneratedBy	func	b710ecbb1fd3	cd8818306516	0838c970		\func IsGeneratedBy (l : Array S)
+Ideal.IsFinitelyGenerated	func	8bd4e46a43a0	445eb8e5336c	d04105f1		\func IsFinitelyGenerated
+Ideal.IsGeneratedBy1	func	529cb053d50a	b963a02d268e	f083ff3b		\func IsGeneratedBy1 (a : S)
+Ideal.IsPrincipal	func	8bd4e46a43a0	72bd3704cb7c	2188eeed		\func IsPrincipal
+Ideal.principal->finitelyGenerated	lemma	625721fe4141	-	b32e736b		\lemma principal->finitelyGenerated (p : IsPrincipal) : IsFinitelyGenerated
+Ideal.generatedBy-char	lemma	e795a06d58bd	-	fd982c6b		\lemma generatedBy-char {l : Array S} : IsGeneratedBy l <-> (\this = {Ideal S} closure l)
+Ideal.IsMaximal	func	8bd4e46a43a0	70d4f2a4817f	3f2583d1		\func IsMaximal
+Ideal.closure	func	908cc05eda6a	4e71dbde9722	ffaf2cd7		\func closure {R : CRing} {J : \Set} (g : J -> R) : Ideal R
+Ideal.sclosure	func	4543d2e8cdc3	869693ce34e4	bfa06563		\func sclosure {R : CRing} (U : R -> \Prop)
+Ideal.closure-superset	lemma	a56560e9944d	-	5fb4ed2d		\lemma closure-superset {R : CRing} {J : \Set} {g : J -> R} (j : J) : closure g (g j)
+Ideal.sclosure-superset	lemma	a77c49504ba6	-	5fb4ed2d		\lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x
+Ideal.closure-univ	lemma	2113047b55a3	-	12401b54		\lemma closure-univ {R : CRing} {J : \Set} {g : J -> R} {I : Ideal R} (c : \Pi (j : J) -> I (g j)) {x : R} (d : closure g x) : I x
+Ideal.sclosure-univ	lemma	52aaffda7d72	-	12401b54		\lemma sclosure-univ {R : CRing} {U : R -> \Prop} {I : Ideal R} (c : \Pi {x : R} -> U x -> I x) {x : R} (d : sclosure U x) : I x
+Ideal.closure1	func	cdcbf53f2f1a	3d67028ff0ab	634e8cdf		\func closure1 {R : CRing} (a : R) : Ideal R
+Ideal.closure1-lem	lemma	4ecb9314963c	-	32666026	16541e92:Ideal.closure1	\lemma closure1-lem {R : CRing} {a b : R} : closure1 a b <-> ∃ (c : R) (b = a * c)
+Ideal.closure1_LDiv	lemma	63ad0a0356d1	-	2e7394ef	16541e92:Ideal.closure1	\lemma closure1_LDiv {R : CRing} {a b : R} : closure1 a b <-> TruncP (Monoid.LDiv a b)
+Ideal.closure1-principal	lemma	fd0599750794	-	8124dd72	16541e92:Ideal.closure1	\lemma closure1-principal {R : CRing} {a : R} : IsPrincipal {closure1 a}
+Ideal.closure2-lem	lemma	a47748c2549e	-	cca5682c		\lemma closure2-lem {R : CRing} {a : R} (f : Bool -> R) : closure f a <-> ∃ (c d : R) (a = f true * c + f false * d)
+Ideal.fin-closure-lem	lemma	1eb7877fad98	-	78f89bdf		\lemma fin-closure-lem {D : FinSet} {R : CRing} {a : R} (f : D -> R) : closure f a <-> ∃ (c : (D -> R)) (a = FinSum (\lam i => c i * f i))
+Ideal.closureN-lem	lemma	d06dc6237b38	-	1cfd2e56	50984834:Ideal.closureN-lem.singleton-lem 2e73ac4d:Ideal.closureN-lem.suc-eq	\lemma closureN-lem {R : CRing} {a : R} {B : Array R} : closure B a <-> ∃ (c : Array R B.len) (a = BigSum (\lam i => c i * B i))
+Ideal.closure-generated	lemma	27f7fc3a3841	-	3097e0e1		\lemma closure-generated {R : CRing} {l : Array R} : IsGeneratedBy {closure l} l
+Ideal.closure-finGenerated	lemma	9864ee75624d	-	3097e0e1		\lemma closure-finGenerated {R : CRing} {l : Array R} : Ideal.IsFinitelyGenerated {closure l}
+Ideal.ChainCondition	func	e23acb4bf15b	7595992e5f8b	cf2e36ec	b1cdf772:Ideal	\func ChainCondition {R : CRing} (I : Nat -> Ideal R)
+Ideal.fromMonoidChainCondition	lemma	847704ca89d1	-	a93251d9		\lemma fromMonoidChainCondition {R : CRing} (cc : CMonoid.DivChain {DivQuotient.DivQuotientMonoid R}) (I : Nat -> Ideal R) (p : \Pi (n : Nat) -> Ideal.IsPrincipal {I n}) : ChainCondition I
+Ideal.direct-union	func	0bbe38270f97	af09d3dc4c31	c3220d01		\func direct-union {R : CRing} (I : Nat -> Ideal R) (\property inc : \Pi {n : Nat} {a : R} -> I n a -> I (suc n) a) : Ideal R
+Ideal.countable-maximal	sfunc	623d5a0f8bcd	286095b41f40	70dd975e		\sfunc countable-maximal {R : CRing} (c : Countable R) (Id : \Pi (I : Ideal R) -> I.IsFinitelyGenerated -> \Pi (x : R) -> Dec (I x)) {I : Ideal R} (Ig : I.IsFinitelyGenerated) (Ip : Not (I 1)) : \Sigma (M : Ideal R) M.IsMaximal (\Pi {a : R} -> I a -> M a)
+Ideal.countable-maximal.next	func	727cf1cd47bf	55d78a615e26	ae81d00b		\func next (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal R
+Ideal.countable-maximal.next-fg	lemma	c289c4d1e640	-	a52d5d5c	fed1a6cc:Ideal.countable-maximal.next	\lemma next-fg (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal.IsFinitelyGenerated {next n I}
+Ideal.countable-maximal.ideal	func	711b6d83437e	ed17550aeee5	7fb56df1		\func ideal (n : Nat) : \Sigma (I : Ideal R) I.IsFinitelyGenerated
+Ideal.countable-maximal.ideal-proper	lemma	239ca756ebb2	-	254f8786		\lemma ideal-proper (n : Nat) (c : (ideal n).1 1) : Empty
+IdealLattice	instance	bda7c0f56cc2	-	3769e2a2	b1cdf772:Ideal	\instance IdealLattice {R : CRing} : BoundedLattice (Ideal R)
+IdealMonoid	instance	cc8390fe3411	-	cec07994	b1cdf772:Ideal	\instance IdealMonoid {R : CRing} : CMonoid (Ideal R)
+IdealMonoid.func	func	b63cdd4f958f	c2b7f99eab15	9ab0efee		\func func {R : CRing} (I J : Ideal R)
+IdealMonoid.product	func	b63cdd4f958f	0e9427516927	e0b3e0e0	ccc5724e:IdealMonoid.func	\func product {R : CRing} (I J : Ideal R)
+IdealMonoid.product-left	lemma	c758d922d53f	-	935676b2		\lemma product-left {R : CRing} {I J : Ideal R} : product I J <= I
+IdealMonoid.product-right	lemma	985f41fc4885	-	935676b2		\lemma product-right {R : CRing} {I J : Ideal R} : product I J <= J
+IdealMonoid.product_meet	lemma	ad3490edea24	-	81f7b2f8		\lemma product_meet {R : CRing} {I J : Ideal R} : product I J <= I ∧ J
+Ideal.direct-union.include	lemma	2322ae3e5d44	-	75d2fd14		\lemma include {n m : Nat} {a : R} (Ia : I n a) : I (n + m) a
+(overview)	-	-	-	da67cbbf	b1cdf772:Ideal df2f2edf:Ideal.countable-maximal bf6ab3af:IdealLattice 86f7be80:IdealMonoid 0444ffe4:LIdeal 4b8c1ef6:RIdeal 54d43566:TIdeal	-

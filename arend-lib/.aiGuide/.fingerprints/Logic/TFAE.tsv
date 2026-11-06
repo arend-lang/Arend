@@ -1,0 +1,33 @@
+# arend -gc fingerprints v2 for module Logic.TFAE. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TFAE	type	68ebd532b695	0f25e7a08b0e	67bcbacc		\type TFAE (l : Array \Prop) : \Prop
+TFAE.proof'	lemma	64338159b3d7	-	2c6d1068	4a4ee0e3:TFAE 4b7a5277:TFAE.proof'.checkConnected	\lemma proof' {l : Array \Prop} (p : Array (\Sigma (s : \Sigma (Fin l.len) (Fin l.len)) (l s.1 -> l s.2))) {s : So (checkConnected (map __.1 p) l.len)} : TFAE l
+TFAE.proof	meta	506c46551bfe	f770dd940c4c	51b178b9	10c0bd68:TFAE.proof'	\meta proof P
+TFAE.cycle'	lemma	13d8c402dfc3	-	f1f11cff	4a4ee0e3:TFAE	\lemma cycle' {n : Nat} {l : Array \Prop (suc n)} (p : DArray {suc n} (\lam i => l i -> l (suc i Nat.mod suc n))) : TFAE l
+TFAE.cycle	meta	506c46551bfe	a3715b6f6d49	06f11483	4c65e5c0:TFAE.cycle'	\meta cycle P
+TFAE.proof'.Graph	func	026994b6f7dc	2bd973f19ad8	bcd07dc6		\func Graph (A : \Set)
+TFAE.proof'.Path	data	99771599e43f	-	beb91dcd	1e61053c:TFAE.proof'.Path.step d0f24e52:TFAE.proof'.Path.trivial	\data Path {A : \Set} (G : Graph A) (a a' : A) : \Prop | trivial (a = a') | step (i : Fin G.len) (a = (G i).1) (Path G (G i).2 a')
+TFAE.proof'.path-proof	lemma	49eb522baf49	-	04404154	8aac6330:TFAE.proof'.Path	\lemma path-proof {l : Array \Prop} (p : Array (\Sigma (s : \Sigma (Fin l.len) (Fin l.len)) (l s.1 -> l s.2))) {i j : Fin l.len} (c : Path (map __.1 p) i j) (a : l i) : l j
+TFAE.proof'.checkConnected	func	4cb60f467c2d	786799b1cc63	f48818af	3ce9b185:TFAE.proof'.Graph	\func checkConnected (\strict G : Graph Nat) (t : Nat) : Bool
+TFAE.proof'.checkConnected1	func	edc096874c81	3990e76214be	5725b39b		\func checkConnected1 (G : Graph Nat) (i t : Nat) : Bool
+TFAE.proof'.step1	func	e91203ce84c5	85c82b46f4ca	8fd491db		\func step1 (G : Graph Nat) (ex : List Nat) (i : Nat) : List Nat
+TFAE.proof'.makeStep	func	a39ddbeab5c1	9c7f1d2e551d	8fd491db		\func makeStep (G : Graph Nat) (\strict ex : List Nat) (l : List Nat) : List Nat
+TFAE.proof'.collect	func	9a41edcbc16f	0c873af532c6	8fd491db		\func collect (G : Graph Nat) (\strict acc : List Nat) (l : List Nat) (n : Nat) : List Nat
+TFAE.proof'.step1'	func	3130e1106060	6fee7f10369a	6f66a608		\func step1' (G : Graph Nat) (i : Nat) : List Nat
+TFAE.proof'.makeStep'	func	e073cc06adbb	812556f5417e	6f66a608		\func makeStep' (G : Graph Nat) (l : List Nat) : List Nat
+TFAE.proof'.collect'	func	666f599d181e	265e84b7bb1a	6f66a608		\func collect' (G : Graph Nat) (l : List Nat) (n : Nat) : List Nat
+TFAE.proof'.checkConnected-correct	lemma	ab6a0e3c5fa0	-	0a9bd71a	8aac6330:TFAE.proof'.Path 4b7a5277:TFAE.proof'.checkConnected	\lemma checkConnected-correct {n : Nat} {G : Graph (Fin n)} (s : checkConnected G n = true) (i j : Fin n) : Path G i j
+TFAE.proof'.checkConnected1-correct	lemma	702aef1a6361	-	9b1cb7a0	8aac6330:TFAE.proof'.Path 92497fd0:TFAE.proof'.checkConnected1	\lemma checkConnected1-correct {n : Nat} {G : Graph (Fin n)} (i j : Fin n) (s : checkConnected1 G i n = true) : Path G i j
+TFAE.proof'.Path-Nat_Fin	lemma	a790ce2cdf29	-	6b657054	8aac6330:TFAE.proof'.Path	\lemma Path-Nat_Fin {n : Nat} {G : Graph (Fin n)} {i j : Fin n} (p : Path {Nat} G i j) : Path G i j
+TFAE.proof'.step1'-correct	lemma	a5023d639a92	-	b405a303	8aac6330:TFAE.proof'.Path	\lemma step1'-correct {G : Graph Nat} {i j : Nat} (c : InList j (step1' G i)) : TruncP (Index (i, j) G)
+TFAE.proof'.makeStep'-correct	lemma	0c01a84fac2c	-	b405a303	8aac6330:TFAE.proof'.Path	\lemma makeStep'-correct {G : Graph Nat} {l : List Nat} {j : Nat} (c : InList j (makeStep' G l)) : ∃ (i : Nat) (InList i l) (Index (i, j) G)
+TFAE.proof'.collect'-correct	lemma	3558c510fe0b	-	b405a303	8aac6330:TFAE.proof'.Path	\lemma collect'-correct {G : Graph Nat} {l : List Nat} {n j : Nat} (c : InList j (collect' G l n)) : ∃ (i : Nat) (InList i l) (Path G i j)
+TFAE.proof'.step1->step1'	lemma	4ed09a694fce	-	51a3b82c		\lemma step1->step1' {G : Graph Nat} {ex : List Nat} {i a : Nat} (c : InList a (step1 G ex i)) : InList a (step1' G i)
+TFAE.proof'.makeStep->makeStep'	lemma	d292d8b83907	-	51a3b82c		\lemma makeStep->makeStep' {G : Graph Nat} {ex l : List Nat} {a : Nat} (c : InList a (makeStep G ex l)) : InList a (makeStep' G l)
+TFAE.proof'.collect->collect'	lemma	51f370039b4a	-	51a3b82c		\lemma collect->collect' {G : Graph Nat} {acc l : List Nat} {n a : Nat} (c : InList a (collect G acc l n)) : InList a (acc ++ collect' G l n)
+TFAE.proof'.step1'_makeStep'	lemma	6ab9b4c8cbe2	-	01f422fa	936cb742:TFAE.proof'.collect'	\lemma step1'_makeStep' {G : Graph Nat} {l : List Nat} {a b : Nat} (p : InList b l) (c : InList a (step1' G b)) : InList a (makeStep' G l)
+TFAE.proof'.makeStep'-monotone	lemma	c7ab403a4067	-	01f422fa	936cb742:TFAE.proof'.collect'	\lemma makeStep'-monotone {G : Graph Nat} {l l' : List Nat} {a : Nat} (p : \Pi (a : Nat) -> InList a l -> InList a l') (c : InList a (makeStep' G l)) : InList a (makeStep' G l')
+TFAE.proof'.collect'-monotone	lemma	60c507dd25eb	-	01f422fa	936cb742:TFAE.proof'.collect'	\lemma collect'-monotone {G : Graph Nat} {l l' : List Nat} {n : Nat} (p : \Pi (a : Nat) -> InList a l -> InList a l') {i : Nat} (c : InList i (collect' G l n)) : InList i (collect' G l' n)
+TFAE.cycle'.aux	lemma	c77d899969e0	-	dee908ad		\lemma aux {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) {i j : Fin (suc n)} {k : Nat} (q : i Nat.+ k = j) (a : l i) : l j
+TFAE.cycle'.aux2	lemma	31cc886cfc21	-	5c3f4e23	4a4ee0e3:TFAE	\lemma aux2 {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) (q : l (n Nat.mod suc n) -> l 0) : TFAE l
+(overview)	-	-	-	f1d428ef	4a4ee0e3:TFAE 1c3f9668:TFAE.cycle 4c65e5c0:TFAE.cycle' 219c461e:TFAE.proof 10c0bd68:TFAE.proof' 8aac6330:TFAE.proof'.Path 4b7a5277:TFAE.proof'.checkConnected dbe0f2c3:TFAE.proof'.collect 7da22f43:TFAE.proof'.step1	-

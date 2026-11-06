@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Combinatorics.Factorial. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+fac	func	bf96254df1c3	b97bddf64f28	7a04fe5e		\func fac (n : Nat) : Nat
+fac>0	lemma	a1ca36b7a75e	-	78020f77	e548c1d6:fac	\lemma fac>0 {n : Nat} : 0 < fac n
+fac/=0	lemma	ed224518a164	-	9734a45f	e548c1d6:fac 82a4bf80:fac>0	\lemma fac/=0 {n : Nat} : fac n /= 0
+(overview)	-	-	-	6d9e585d		-

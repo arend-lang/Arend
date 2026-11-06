@@ -1,0 +1,42 @@
+# arend -gc fingerprints v2 for module Algebra.Group.SubGroup. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubGroup	class	6e88b4bf9c05	-	d06413d7	57c1dd69:SubGroup.contains_inverse	\class SubGroup \extends SubMonoid { \override S : Group | contains_inverse {x : S} : contains x -> contains (inverse x) }
+SubGroup.equivalence	func	54cc778b2e4d	6dc7a5c6937f	fad64c70		\func equivalence : Equivalence S
+SubGroup.Cosets	func	8bd4e46a43a0	168ad4d357a5	c98b6bc7		\func Cosets
+SubGroup.inc~	func	73ecca87f1c6	9cb5e082a817	c74e1d27	0f037ae6:SubGroup.Cosets	\func inc~ (x : S) : Cosets
+SubGroup.contains_~	lemma	3db416a06557	-	a1f0d5a4		\lemma contains_~ {x : S} : contains x <-> 1 equivalence.~ x
+SubGroup.~-pequiv-left	lemma	29e5338548ae	-	b4bf0653	fda43f83:SubGroup.inc~	\lemma ~-pequiv-left {x y : S} (p : 1 equivalence.~ y) : inc~ x = inc~ (x * y)
+DecSubGroup	class	bb429b9efbd7	-	04d20052	ab6bc9c7:SubGroup	\class DecSubGroup \extends SubGroup, DecSubMonoid { \override S : Group }
+FinSubGroup	class	25a71856fa9a	-	2a5e9adc	d4cfd904:DecSubGroup	\class FinSubGroup \extends DecSubGroup { \override S : FinGroup }
+SubGroupPoset	instance	fd3b43a05939	-	6953dc06		\instance SubGroupPoset {G : Group} : Poset (SubGroup G)
+IGroup	instance	5e0fd4ce6a43	-	4770f335	db7d290b:IGroup.embed	\instance IGroup (S : SubGroup {}) : Group
+ICGroup	instance	e29fa9f71e3f	-	73276b56		\instance ICGroup {G : CGroup} (S : SubGroup G) : CGroup
+IFinGroup	instance	378b7e242119	-	579b21fe	f98d6fc6:FinSubGroup	\instance IFinGroup (S : FinSubGroup {}) : FinGroup
+NormalSubGroup	class	aadcfb18e896	-	3c72e1ef	457b4113:NormalSubGroup.isNormal ab6bc9c7:SubGroup	\class NormalSubGroup \extends SubGroup { | isNormal (g : S) {h : S} : contains h -> contains (conjugate g h) }
+NormalSubGroup.isNormal'	lemma	062289c3f49f	-	d23849b9		\lemma isNormal' (g : S) {h : S} (c : contains h) : contains (inverse g * h * g)
+NormalSubGroup.Quot	func	6dbc34ccd9e3	5464eee4c26d	75ca586f	0f037ae6:SubGroup.Cosets	\func Quot : Group Cosets
+NormalSubGroup.quotHom	func	fa03697ceca9	9f06012df7ab	55154ec4	bd89580d:NormalSubGroup.Quot	\func quotHom : GroupHom S Quot
+NormalSubGroup.quotHom-surj	lemma	954daacc64df	-	8557df3e	217ddc5e:NormalSubGroup.quotHom	\lemma quotHom-surj : IsSurj quotHom
+NormalSubGroup.quotHom_=1	lemma	15a415e8ee6d	-	ca69c527	bd89580d:NormalSubGroup.Quot 217ddc5e:NormalSubGroup.quotHom	\lemma quotHom_=1 {x : S} (c : contains x) : quotHom x = ide {Quot}
+NormalSubGroup.quotHom-eq	lemma	8cd345ab6b10	-	bc47701a	217ddc5e:NormalSubGroup.quotHom	\lemma quotHom-eq {x y : S} (c : contains (x * inverse y)) : quotHom x = quotHom y
+NormalSubGroup.quot-univ	func	b44523647e66	1fed4b25307f	145e504e	bd89580d:NormalSubGroup.Quot	\func quot-univ {K : Group} (f : GroupHom S K) (p : \Pi (x : S) -> contains x -> f x = 1) : GroupHom Quot K
+NormalSubGroup.quot-univ-beta	lemma	54348b92badc	-	5c13792d	61f71945:NormalSubGroup.quot-univ 217ddc5e:NormalSubGroup.quotHom	\lemma quot-univ-beta {K : Group} {f : GroupHom S K} {p : \Pi (x : S) -> contains x -> f x = 1} : quot-univ f p GroupHom.∘ quotHom = f
+NormalSubGroup.quot-hom-ext	lemma	dca3a206bfc9	-	f506fc04	bd89580d:NormalSubGroup.Quot 217ddc5e:NormalSubGroup.quotHom	\lemma quot-hom-ext {K : Group} {f g : GroupHom Quot K} (p : \Pi (x : S) -> f (quotHom x) = g (quotHom x)) : f = g
+SubAddGroup	class	6791a7534d9a	-	44164735	5232932b:SubAddGroup.contains_negative ab6bc9c7:SubGroup	\class SubAddGroup \extends SubAddMonoid { \override S : AddGroup | contains_negative {x : S} : contains x -> contains (negative x) }
+SubAddGroup.contains_-	lemma	ed0877b0ebf9	-	9ee89c8b		\lemma contains_- {x y : S} : contains x -> contains y -> contains (x - y)
+SubAddGroup.contains_*i	lemma	73394ab01425	-	c1f8400f		\lemma contains_*i {x : S} (c : contains x) {n : Int} : contains (n AddGroup.*i x)
+SubAddGroup.max	func	788554612b79	1c552922d07f	1b944590		\func max {A : AddGroup} : SubAddGroup
+IAddGroup	instance	f2c0e92d7f12	-	0bb3a13f	9cded9f6:SubAddGroup	\instance IAddGroup (S : SubAddGroup {}) : AddGroup
+IAbGroup	instance	c85adb8b6d19	-	523b1a9e		\instance IAbGroup {A : AbGroup} (S : SubAddGroup A) : AbGroup
+KernelGroup	func	8790bf6411e7	f6736afb85c1	dfcf36f9		\func KernelGroup (f : GroupHom) : NormalSubGroup f.Dom
+Kernel-trivial-char	lemma	0452957d05f5	-	c2fec292		\lemma Kernel-trivial-char {f : GroupHom} : IsKernelTrivial f <-> IsInj f
+KernelAddGroup	func	e6fea3c042f6	a917415a8a02	57be1d6b	9cded9f6:SubAddGroup	\func KernelAddGroup (f : AddGroupHom) : SubAddGroup f.Dom
+AddKernel-trivial-char	lemma	689e5383fce9	-	8f6dfca6		\lemma AddKernel-trivial-char {f : AddGroupHom} : IsAddKernelTrivial f <-> IsInj f
+PreimageGroup	func	6be75d386b87	b47abea0e4f7	9cb59cfa		\func PreimageGroup (f : GroupHom) (H : SubGroup f.Cod) : SubGroup f.Dom
+ImageGroup	func	089ac33f85f2	6aba32c60057	ee604c51		\func ImageGroup (f : GroupHom) : SubGroup f.Cod
+ImGroup	func	a2fa5b4aa5c8	3b8d4e9a4ede	06de6213		\func ImGroup (f : GroupHom) : Group
+ImGroupLeftHom	func	95e835a5fd17	17e9fb2136a4	499c88c2	f71bcbe1:ImGroup	\func ImGroupLeftHom (f : GroupHom) : GroupHom f.Dom (ImGroup f)
+ImageAddGroup	func	42721369dc08	388e2bf371bd	16fb78de	9cded9f6:SubAddGroup	\func ImageAddGroup (f : AddGroupHom) : SubAddGroup f.Cod
+ImAddGroup	func	79e30b6ebf50	4cb2256ab975	a7146dac		\func ImAddGroup (f : AddGroupHom) : AddGroup
+ImAddGroupLeftHom	func	46b6026e2581	d9e7e6c1b9bf	693d7b7e	9c0e510e:ImAddGroup	\func ImAddGroupLeftHom (f : AddGroupHom) : AddGroupHom f.Dom (ImAddGroup f)
+(overview)	-	-	-	3aaac867		-

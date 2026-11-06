@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.CSemiring. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CSemiringSolverModel	func	6479a39fa2d1	c61dbe106a0c	36c11c64	500f245e:CSemiringSolverModel.sortMonomials	\func CSemiringSolverModel (R : CSemiring) : SolverModel R
+CSemiringSolverModel.sortMonomials	func	f165003f0adb	d2f9b2f6b5e8	67df17f9		\func sortMonomials {n : Nat} {C : \Set} (l : NF C n)
+CSemiringSolverModel.interpretNF_sort	lemma	9677dc4a1649	-	4885a91d	500f245e:CSemiringSolverModel.sortMonomials	\lemma interpretNF_sort {R : CSemiring} {d : Data R} {l : NF} : interpretNF' (sortMonomials l) = interpretNF' l
+CSemiringSolverModel.apply-axiom	lemma	fc0bf6b4ad45	-	274a149c		\lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (mul add : NF Nat env.len)
+CSemiringSolverModel.apply-axiom.apply-axiom'	lemma	203600d4ec0d	-	ecc2831c	417957ca:CSemiringSolverModel.apply-axiom	\lemma apply-axiom' {R : CSemiring} {d : Data R} (t s : Term C env.len) (p : interpret t = interpret s) (mul add : NF) : interpretNF (sortMonomials (multiply mul (normalize t)) ++ add) = interpretNF (sortMonomials (multiply mul (normalize s)) ++ add)
+(overview)	-	-	-	7aa74008		-

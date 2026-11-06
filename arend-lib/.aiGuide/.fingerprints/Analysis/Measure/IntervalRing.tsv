@@ -1,0 +1,40 @@
+# arend -gc fingerprints v2 for module Analysis.Measure.IntervalRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ratLt	func	0f18472eba52	ac87f8d13fc0	8920fa9f		\func ratLt (x y : Rat) : Bool
+ratLt-char	lemma	a568f3edd788	-	5a58949c	baaca10e:ratLt	\lemma ratLt-char {x y : Rat} : ratLt x y = true <-> x < y
+ratLt-false	lemma	a5f3b653f677	-	5a58949c	baaca10e:ratLt	\lemma ratLt-false {x y : Rat} : ratLt x y = false <-> y <= x
+RatInterval	type	99a35f364b48	9e0fb0880d79	d3578d3a		\type RatInterval
+inRI	func	1caff874d288	5f729ca40701	c5ae9d59	a7ba4693:RatInterval	\func inRI (c : RatInterval) (t : Rat) : Bool
+inRI-char	lemma	cd691e691627	-	b415c10f	4e79ef66:inRI	\lemma inRI-char {c : RatInterval} {t : Rat} : inRI c t = true <-> (\Sigma (c.1 <= t) (t < c.2))
+inRIs	func	a8d4c25cdaf6	03b9ec8381c6	2da502ec		\func inRIs (l : Array RatInterval) (t : Rat) : Bool
+ends	func	d87ab97d771a	95fd8c348333	3f22bee3		\func ends (l : Array RatInterval) : List Rat
+snap	func	214639923021	52294ff50841	560c89f4		\func snap (T : List Rat) (P : Rat -> Bool) (t : Rat) : Bool
+Adapted	type	f25aa85783e1	f643baaf4570	8d447b2d	a41f0df9:snap	\type Adapted (T : List Rat) (P : Rat -> Bool) : \Prop
+cells	func	50c08ad975f6	5d037e372a48	9718be1a		\func cells (T : List Rat) (P : Rat -> Bool) : Array RatInterval
+measT	func	fbfdea93c053	3eb4f325b417	182a7caa		\func measT (T : List Rat) (P : Rat -> Bool) : Rat
+measL	func	24f965bb7423	83eecb9decc2	dfacaa28	10473b31:measT	\func measL (l : Array RatInterval) : Rat
+measL-char	lemma	c5d98d67625b	-	323a6472	3f1d18dd:inRIs 180b8ba4:measL 10473b31:measT	\lemma measL-char {l : Array RatInterval} {T : List Rat} {P : Rat -> Bool} (S : Sorted T) (A : Adapted T P) (e : \Pi (t : Rat) -> inRIs l t = P t) : measL l = measT T P
+refine	func	062cfad28281	90f7a88fa036	8ba1a13c		\func refine (l l' : Array RatInterval) : List Rat
+refine-left	lemma	51f1954d8341	-	fcc7f72a	3f1d18dd:inRIs 2e380050:refine	\lemma refine-left {l l' : Array RatInterval} : Adapted (refine l l') (inRIs l)
+refine-right	lemma	58111581824f	-	fcc7f72a	3f1d18dd:inRIs 2e380050:refine	\lemma refine-right {l l' : Array RatInterval} : Adapted (refine l l') (inRIs l')
+measL-equiv	lemma	c62fc7c3941c	-	fc7140c6		\lemma measL-equiv {l l' : Array RatInterval} (r : \Pi (t : Rat) -> inRIs l t = inRIs l' t) : measL l = measL l'
+RatIntervalEq	func	f24d89520e14	7fb0e30b5378	cc6c3a66		\func RatIntervalEq (l l' : Array RatInterval) : \Prop
+RatIntervalSet	func	8bd4e46a43a0	80e2cc871567	2d6b1cf2	602ab6d1:RatIntervalEq	\func RatIntervalSet
+ratIntervals	func	659ec490fe92	9eae87afce25	55dfd0f0	0b1f3c61:RatIntervalSet	\func ratIntervals (l : Array RatInterval) : RatIntervalSet
+ratPoints	func	5d61c1c2cab8	b267c51dc6f2	2644dfa7	0b1f3c61:RatIntervalSet	\func ratPoints (u : RatIntervalSet) (t : Rat) : Bool
+ratPoints-ext	lemma	d479b6a730e5	-	7d631a63		\lemma ratPoints-ext {u v : RatIntervalSet} (p : \Pi (t : Rat) -> ratPoints u t = ratPoints v t) : u = v
+opRIs	func	963328b444e9	c87fe41345db	e53cc2ec		\func opRIs (f : Bool -> Bool -> Bool) (l l' : Array RatInterval) : Array RatInterval
+inRIs-opRIs	lemma	5a14e0dc0809	-	a0a08882	1853c934:opRIs	\lemma inRIs-opRIs (f : Bool -> Bool -> Bool) (f0 : f false false = false) {l l' : Array RatInterval} {t : Rat} : inRIs (opRIs f l l') t = f (inRIs l t) (inRIs l' t)
+opRISet	func	0be982c2e88c	9500bcfaa2e6	ed438a7e	0b1f3c61:RatIntervalSet 1853c934:opRIs	\func opRISet (f : Bool -> Bool -> Bool) (f0 : f false false = false) (u v : RatIntervalSet) : RatIntervalSet
+ratPoints_opRISet	lemma	24569a3ad904	-	ba29d22c	74294930:opRISet	\lemma ratPoints_opRISet (f : Bool -> Bool -> Bool) (f0 : f false false = false) {u v : RatIntervalSet} {t : Rat} : ratPoints (opRISet f f0 u v) t = f (ratPoints u t) (ratPoints v t)
+IntervalBRing	instance	218a36b9c65d	-	67ed0239	0b1f3c61:RatIntervalSet	\instance IntervalBRing : BooleanRing RatIntervalSet
+ratPoints_+	lemma	986891762899	-	72a69f03		\lemma ratPoints_+ {u v : IntervalBRing} {t : Rat} : ratPoints (u + v) t = ratPoints u t xor ratPoints v t
+ratPoints_*	lemma	ac98c6e1a384	-	72a69f03		\lemma ratPoints_* {u v : IntervalBRing} {t : Rat} : ratPoints (u * v) t = ratPoints u t and ratPoints v t
+ratPoints_join	lemma	b4070037f424	-	72a69f03		\lemma ratPoints_join {u v : IntervalBRing} {t : Rat} : ratPoints (u ∨ v) t = ratPoints u t or ratPoints v t
+ratPoints-interval	lemma	bd72ab53a1e5	-	9da864b5	4e79ef66:inRI	\lemma ratPoints-interval {c : RatInterval} {t : Rat} : ratPoints (ratIntervals (c :: nil)) t = inRI c t
+measQ	func	57aa918d78ab	e9a4a250257f	5cf583d5	0b1f3c61:RatIntervalSet 180b8ba4:measL	\func measQ (u : RatIntervalSet) : Rat
+IntervalRing	instance	8d573c99416e	-	2e299d4c	0b1f3c61:RatIntervalSet a5e9221d:measQ	\instance IntervalRing : MeasureRing RatIntervalSet
+IntervalRing-rational	lemma	bc17204fba70	-	1a8eed8c	ef30f761:IntervalRing	\lemma IntervalRing-rational : IntervalRing.IsRationalMeasure
+IntervalRing-point	lemma	35aa6aea2604	-	11ef998f		\lemma IntervalRing-point (u : RatIntervalSet) : (u = in~ nil) || ∃ (t : Rat) (ratPoints u t = true)
+meas_interval	lemma	993944dd2545	-	1e395554		\lemma meas_interval {p q : Rat} : meas {IntervalRing} (ratIntervals ((p, q) :: nil)) = Real.fromRat ((q - p) ∨ 0)
+(overview)	-	-	-	43527fd1	f716789c:IntervalBRing ef30f761:IntervalRing a7ba4693:RatInterval 602ab6d1:RatIntervalEq 0b1f3c61:RatIntervalSet 9da763e5:Refinement a5e9221d:measQ	-

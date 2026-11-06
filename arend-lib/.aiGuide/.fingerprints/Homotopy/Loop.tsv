@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Homotopy.Loop. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Loop	instance	5fb38a9af9cc	-	0cad6f6d		\instance Loop (X : Pointed) : Pointed
+Loop-Func	func	4f64cbe4fee9	d926f781968e	72bb5eb3	9f0c1d6a:Loop	\func Loop-Func {X Y : Pointed} (f : X ->* Y) : Loop X ->* Loop Y
+loop-level	lemma	47f5e885df68	-	1119a891		\lemma loop-level {X : \Type} (n : Nat) (p : \Pi (x0 : X) -> (x0 = x0) ofHLevel_-1+ n) : X ofHLevel_-1+ suc n
+loop-level-iter	lemma	d23b9c4c90f8	-	86708ed3		\lemma loop-level-iter {X : \Type u} (n : Nat) (c : \Pi (x0 : X) -> Contr (iterl {Pointed.{u}} (Loop __) n (\new (Pointed X x0)))) : X ofHLevel_-1+ n
+loop-level-iter-inv	lemma	e56a6d59d2a7	-	0cb26429		\lemma loop-level-iter-inv {X : \Type u} (n : Nat) (h : X ofHLevel_-1+ n) (x0 : X) : Contr (iterl {Pointed.{u}} (Loop __) n (\new (Pointed X x0)))
+SuspLoopEquiv	func	01d86eedef14	f33e3c9fc53b	c08389d2	9f0c1d6a:Loop	\func SuspLoopEquiv (A B : Pointed.{u}) : (Susp.pointed A ->* B) = (A ->* Loop B)
+SphereLoopEquiv	func	e02809550289	05b4230c8c79	8eb5b9ea	9f0c1d6a:Loop d1ee826c:SuspLoopEquiv	\func SphereLoopEquiv (n : Nat) (B : Pointed.{u}) : (Sphere.pointed n ->* B) = iterl {Pointed.{u}} (Loop __) n B
+Omega^	func	a274cf1b860d	1d7a7c123518	c4c9ce91	9f0c1d6a:Loop	\func Omega^ (n : Nat) (X : Pointed.{u}) : Pointed.{u}
+Omega^-Func	func	c2048d481b4e	593010099bd8	627c28ce	a9f4a71f:Loop-Func b62e1d45:Omega^	\func Omega^-Func (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) : Omega^ n X ->* Omega^ n Y
+(overview)	-	-	-	8879a233	9f0c1d6a:Loop b62e1d45:Omega^	-

@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Category.PreAdditive. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PreAdditivePrecat	class	c6e813f7e678	-	94d6819a	c2d2a9db:PreAdditivePrecat.AbHom e4f6fcc4:PreAdditivePrecat.l-bilinear 9453c8c8:PreAdditivePrecat.r-bilinear	\class PreAdditivePrecat \extends Precat { | AbHom {X Y : Ob} : AbGroup (Hom X Y) | l-bilinear {X Y Z : Ob} {g h : Hom X Y} {f : Hom Y Z} : (g AbHom.+ h) >> f = g >> f AbHom.+ h >> f | r-bilinear {X Y Z : Ob} {g h : Hom Y Z} {f : Hom X Y} : f >> (g AbHom.+ h) = f >> g AbHom.+ f >> h }
+AdditivePrecat	class	f4cf8b120f16	-	5f071c3b	5ab321d6:PreAdditivePrecat	\class AdditivePrecat \extends PreAdditivePrecat, CartesianPrecat
+Ring=OneObjectPreAdd	func	f70e69ac1d92	bba2e4c7b431	a39294bd	5ab321d6:PreAdditivePrecat d66ca85e:Ring=OneObjectPreAdd.PreAdditiveCategory-OneObject 472731ba:Ring=OneObjectPreAdd.Ring_toCat f228bd3c:Ring=OneObjectPreAdd.natCoefCoincide	\func Ring=OneObjectPreAdd : QEquiv {PreAdditivePrecat.{u} (\Sigma)} {Ring.{u}}
+Ring=OneObjectPreAdd.Ring_toCat	func	dc59f10eb8db	2c2f6fcb2b96	93e44180		\func Ring_toCat (R : Ring) : PreAdditivePrecat (\Sigma)
+Ring=OneObjectPreAdd.PreAdditiveCategory-OneObject	func	d34cf7d860eb	a20bb5bb8d6e	a272cbf0	c2d2a9db:PreAdditivePrecat.AbHom	\func PreAdditiveCategory-OneObject (X : PreAdditivePrecat (\Sigma)) : Ring (X.Hom () ())
+Ring=OneObjectPreAdd.natCoefCoincide	func	ac386d1b0da9	10659fbd5f1e	391548b9	c16a70fa:Ring=OneObjectPreAdd	\func natCoefCoincide {b : Ring} {n : Nat} : natCoef {PreAdditiveCategory-OneObject (Ring_toCat b)} n = b.natCoef n
+(overview)	-	-	-	be9bd5cf		-

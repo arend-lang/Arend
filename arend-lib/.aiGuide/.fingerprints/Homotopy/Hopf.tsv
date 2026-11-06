@@ -1,0 +1,24 @@
+# arend -gc fingerprints v2 for module Homotopy.Hopf. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HSpace	class	3f4bcc5ee58a	-	b490b817	62b8ffdc:HSpace.* c2220152:HSpace.base-left 9c18a303:HSpace.base-right	\class HSpace \extends Pointed { | \infixl 7 * : E -> E -> E | base-left (x : E) : base * x = x | base-right (x : E) : x * base = x }
+HSpaceConn	class	301732a4815c	-	04df5866	e68252b8:HSpace	\class HSpaceConn \extends HSpace, Connected0
+HSpaceConn-left	lemma	154c464ba981	-	434e2851	62b8ffdc:HSpace.*	\lemma HSpaceConn-left {A : HSpaceConn} (x : A)
+HSpaceConn-left.lem	lemma	240d9737a216	-	3862182c	62b8ffdc:HSpace.*	\lemma lem {A : HSpace} {x : A} (c : TruncP (base = x)) : IsEquiv (x *)
+HSpaceConn-right	lemma	154c464ba981	-	b6dc6447	62b8ffdc:HSpace.*	\lemma HSpaceConn-right {A : HSpaceConn} (x : A)
+HSpaceConn-right.lem	lemma	ec18eccab85a	-	8ce2dce1		\lemma lem {A : HSpace} {x : A} (c : TruncP (base = x)) : IsEquiv (__ * x)
+Circle_HSpace	instance	bfa682330d20	-	0a951019		\instance Circle_HSpace : HSpaceConn Sphere1
+Circle_HSpace.circle-loop	func	ee6893f5b1b6	0492a176770d	f9715eb7		\func circle-loop (y : Sphere1) : y = y
+Circle_HSpace.mult	func	054b40d76ffb	ffa9e5bef8b0	9907e6cd	dc1f43ec:Circle_HSpace.circle-loop 62b8ffdc:HSpace.*	\func mult (x y : Sphere1) : Sphere1
+Circle_HSpace.mult-right	func	32c647897c0e	1f61ceca98db	9fd6b3c2	089a2911:Circle_HSpace.mult	\func mult-right (x : Sphere1) : mult x base1 = x
+Sphere1_HSpace	instance	0cd18e0b088a	-	de084f7e	e1cd0969:Circle_HSpace	\instance Sphere1_HSpace : HSpaceConn (Sphere 1)
+hopf	func	2b190143d6a2	863028a6e732	e85b89ec	c6d1d3ef:HSpaceConn-left	\func hopf {A : HSpaceConn.{u}} (x : Susp A) : \Type u
+hopf.total-equiv	func	0b3e4d3f190b	a067b8b59b6c	2831eae6	bf2cbc04:hopf 547677a8:hopf.total-equiv.total_join-equiv	\func total-equiv {A : HSpaceConn.{u}} : (\Sigma (x : Susp A) (hopf x)) = Join A A
+hopf.total-equiv.total	func	2a6dc7930f3d	a5471414b92a	1b20180d	62b8ffdc:HSpace.*	\func total (A : HSpace)
+hopf.total-equiv.total_join-equiv	func	ffc10e8fdf3f	57db4db4d23f	3026c916	4a90eda0:hopf.total-equiv.total	\func total_join-equiv {A : HSpaceConn} : QEquiv {total A} {Join A A}
+hopf.total-equiv.totalJoin	func	308467719a33	addf026e79e3	adf71bda	62b8ffdc:HSpace.*	\func totalJoin {A : HSpace} (x : total A) : Join A A
+hopf.total-equiv.joinTotal	func	f3a0cbbf13a4	a132ce4dad86	d4b8e4d2	62b8ffdc:HSpace.* c6d1d3ef:HSpaceConn-right	\func joinTotal {A : HSpaceConn} (x : Join A A) : total A
+hopf.total-equiv.joinTotalJoin	func	a41c5cf90354	3efeb018906c	cc2ee8eb		\func joinTotalJoin {A : HSpaceConn} (x : Join A A) : totalJoin (joinTotal x) = x
+hopf.total-equiv.totalJoinTotal	func	ade476e43635	b427434e0c20	cf8ccc53		\func totalJoinTotal {A : HSpaceConn} (x : total A) : joinTotal (totalJoin x) = x
+hopfS2	func	e47c1187cebe	540f0ff798f0	ea8bc28e	bf2cbc04:hopf	\func hopfS2 (x : Sphere 2)
+hopfS2.total-equiv	func	8bd4e46a43a0	75ae94d8a93a	46744171	2ef0daab:hopfS2	\func total-equiv
+(overview)	-	-	-	bc0c242d	62b8ffdc:HSpace.* bf2cbc04:hopf	-

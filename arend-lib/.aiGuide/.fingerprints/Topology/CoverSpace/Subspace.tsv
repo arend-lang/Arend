@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Topology.CoverSpace.Subspace. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+OpenCoverSpace	func	a49c76353ef0	1a0985dc2e0d	8cf95ce0	734cf2d5:OpenCoverSpace.isBasicCover	\func OpenCoverSpace {X : CoverSpace} {S : Set X} (So : X.isOpen S) : CoverSpace (Total S)
+OpenCoverSpace.isBasicCover	func	c4f160e080b7	db8502b6ca06	13de7376		\func isBasicCover {X : CoverSpace} {S : Set X} (C : Set (Set (Total S))) : \Prop
+OpenCoverSpace.basicCover-cover	lemma	6c7fb2eca002	-	74ee4c48		\lemma basicCover-cover {X : CoverSpace} {S : Set X} (So : X.isOpen S) {C : Set (Set (Total S))} (Cc : isBasicCover C) (s : Total S) : ∃ (U : C) (U s)
+OpenCoverSpace.basicCover-regular	lemma	a93b6adacf09	-	50dcde2b		\lemma basicCover-regular {X : CoverSpace} {S : Set X} {C : Set (Set (Total S))} (Cc : isBasicCover C) : Closure isBasicCover (\lam V => ∃ (U : C) (Closure isBasicCover (\lam W => Given (V ∧ W) -> W ⊆ U)))
+OpenCoverSpace.makeBasicCover	lemma	62a66daa4495	-	f386ac99		\lemma makeBasicCover {X : CoverSpace} {S : Set X} {D : Set (Set X)} (e : X.isCauchy D || RegularClosure (single (single S)) D) : Closure isBasicCover (\lam U => ∃ (V : D) (U = restrict V))
+OpenCoverSpace.RegularClosure	data	ac29512a78a9	-	8f1180a8		\data RegularClosure {X : CoverSpace} (A : Set (Set X) -> \Prop) (C : Set (Set X)) : \Prop | regular-closure (A C) | regular-closure-extends {D : Set (Set X)} (RegularClosure A D) (C = (\lam V => ∃ (U : D) (V <=< U)))
+OpenCoverSpace.RegularClosure.regular-closure	cons	f9cdfa3f8ef0	-	557d33a8	990bd977:OpenCoverSpace.C	| regular-closure (A C)
+OpenCoverSpace.RegularClosure.regular-closure-extends	cons	78601e3ebaac	-	feeb0322		| regular-closure-extends {D : Set (Set X)} (RegularClosure A D) (C = (\lam V => ∃ (U : D) (V <=< U)))
+OpenCoverSpace.closure-neighborhood	lemma	ede49b4b25fc	-	39b471ef		\lemma closure-neighborhood {X : CoverSpace} {A : Set (Set X) -> \Prop} {x : X} (Ax : ∀ {C : A} ∃ (U : C) (single x <=< U)) {C : Set (Set X)} (CC : RegularClosure A C) : ∃ (U : C) (single x <=< U)
+OpenCoverSpace.func	func	fc798b94ec7f	524259c3c0a7	617058af	2430ce07:OpenCoverSpace	\func func {X : CoverSpace} {S : Set X} (So : X.isOpen S) : CoverMap (OpenCoverSpace So) X __.1
+OpenCoverSpace.<=<-conv	lemma	5b9a66668206	-	3401f796		\lemma <=<-conv {X : CoverSpace} {S : Set X} (So : X.isOpen S) {x : Total S} {U : Set (Total S)} (x<=<U : single x <=< {OpenCoverSpace So} U) : single x.1 <=< extend U
+filter-extend	func	6c98e2384398	d9ede6a3d0a3	06c60ff1		\func filter-extend {X : \Set} (U : Set X) (F : SetFilter (Total U)) : SetFilter X
+proper-filter-extend	func	fb51f562b3fa	535360c26052	0f4cc9df		\func proper-filter-extend {X : \Set} (U : Set X) (F : ProperFilter (Total U)) : ProperFilter X
+cauchy-filter-extend	func	700d209955ff	9a943545bf1c	816e75f2	2430ce07:OpenCoverSpace	\func cauchy-filter-extend {X : CoverSpace} {S : Set X} (So : X.isOpen S) (F : CauchyFilter (OpenCoverSpace So)) : CauchyFilter X
+OpenCompleteCoverSpace	func	1bb0d40279cd	14efc5f11d27	123426ca	4f5c1e61:cauchy-filter-extend	\func OpenCompleteCoverSpace {X : CompleteCoverSpace} {S : Set X} (So : X.isOpen S) : CompleteCoverSpace (Total S)
+ClosedCoverSpace	func	b530ddc21dfd	7adbaed58a57	1250149b		\func ClosedCoverSpace {X : CompleteCoverSpace} {S : Set X} (Sc : X.IsClosed S) : CompleteCoverSpace (Total S)
+ClosedCoverSpace.conv	lemma	e9117c7b0ce0	-	23c8f75d		\lemma conv {X : SeparatedCoverSpace} {S : Set X} (Sc : IsCompleteCoverSpace (CoverTransfer {Total S} __.1)) : X.IsClosed S
+(overview)	-	-	-	7f49b0f0	ea65fbea:OpenCoverSpace.RegularClosure	-

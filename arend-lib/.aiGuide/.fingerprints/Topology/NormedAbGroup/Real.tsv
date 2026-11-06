@@ -1,0 +1,21 @@
+# arend -gc fingerprints v2 for module Topology.NormedAbGroup.Real. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RatNormed	instance	01bf79186076	-	1ce41ca9		\instance RatNormed : NormedAbGroup
+RealNormed	instance	d83eaabc8735	-	3c740725	86dacc80:RatNormed 1736accf:RealNormed.fromCF	\instance RealNormed : CompleteNormedAbGroup
+RealNormed.RealNormedAbGroup	func	85cf202b61d6	e2dfba6254b7	e2d094d6		\func RealNormedAbGroup : NormedAbGroup
+RealNormed.fromCF	func	a78edace9f2d	af8f39a9cc1a	3db521e8	86dacc80:RatNormed	\func fromCF (F : StronglyRegularCauchyFilter RatNormed) : Real
+rat_real	func	8264d57f0d42	d354302ce917	c9bc1dcb	86dacc80:RatNormed 89afbbe7:RealNormed.RealNormedAbGroup	\func rat_real : NormedIsometricMap RatNormed RealNormedAbGroup Real.fromRat
+rat_real.dense	lemma	7b00ba68f870	-	24b7ddd8	cfb3a949:rat_real	\lemma dense : rat_real.IsDense
+rat_real.dense-coverEmbedding	lemma	052383909d38	-	d584ba45	86dacc80:RatNormed a2b8593b:RealNormed cfb3a949:rat_real	\lemma dense-coverEmbedding : CoverMap.IsDenseEmbedding {rat_real}
+open-rat-int	func	cb5145e9b5ed	74c53c35bb36	e0982763		\func open-rat-int (a b : Rat) : Set Real
+dense-lift-real-char	lemma	7ceaa3839ae9	-	694fa672	8539ae27:open-rat-int	\lemma dense-lift-real-char {X Y : CoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X RealNormed} (y : Y) (a b : Rat) : open-rat-int a b (cauchy-lift f fd g y) <-> ∃ (a' b' : Rat) (a < a') (b' < b) (V : Set Y) (f ^-1 V ⊆ g ^-1 open-rat-int a' b') (single y <=< V)
+dense-lift-real-char.makeRealCover	lemma	36d96bf8cb9e	-	1eefadfd	a2b8593b:RealNormed 8539ae27:open-rat-int	\lemma makeRealCover (eps : Rat) (eps>0 : 0 < eps) : RealNormed.isCauchy (\lam U => ∃ (a : Rat) (U = open-rat-int a (a + eps)))
+dense-lift-real-char.<=<_open-rat-int	lemma	abaabe27d71e	-	b885890f		\lemma <=<_open-rat-int {a b a' b' : Rat} (a<a' : a < a') (b'<b : b' < b) : open-rat-int a' b' <=< open-rat-int a b
+dense-lift-real-char.point_<=<	lemma	bbdc03ad2212	-	c252c700	8539ae27:open-rat-int	\lemma point_<=< {x : Real} {a b : Rat} (a<x : x.L a) (x<b : x.U b) : single x <=< open-rat-int a b
+<=<-open-int	lemma	e3d151c074c4	-	b751e763		\lemma <=<-open-int {x : Real} {U : Set Real} (p : single x <=< U) : ∃ (a b : Rat) (x.L a) (x.U b) ∀ (y : Real) (y.L a -> y.U b -> U y)
+real-lift2	func	57a0b4d74b04	1795609adb24	2250f3dc	86dacc80:RatNormed a2b8593b:RealNormed cfb3a949:rat_real	\func real-lift2 {X : CompleteCoverSpace} (f : CoverMap (RatNormed ⨯ RatNormed) X) : CoverMap (RealNormed ⨯ RealNormed) X
+real-lift2-char	lemma	f1f3ca04e740	-	07d14bf1	8539ae27:open-rat-int 17e3c446:real-lift2	\lemma real-lift2-char {f : CoverMap (RatNormed ⨯ RatNormed) RealNormed} {x y : Real} (a b : Rat) : open-rat-int a b (real-lift2 f (x, y)) <-> ∃ (a' b' c1 d1 c2 d2 : Rat) (a < a') (b' < b) (x.L c1) (x.U d1) (y.L c2) (y.U d2) (\Pi {x y : Rat} -> \Sigma (c1 < x) (x < d1) -> \Sigma (c2 < y) (y < d2) -> open-rat-int a' b' (f (x, y)))
+harmonic-limit	lemma	3c885dff0d90	-	f8f11f47	a2b8593b:RealNormed	\lemma harmonic-limit : RealNormed.IsLimit (\lam n => RatField.finv (suc n)) 0
+ratio-shift-one-limit	lemma	12a7b48cca52	-	903e8801	a2b8593b:RealNormed	\lemma ratio-shift-one-limit : RealNormed.IsLimit (\lam n => suc (suc n) RatField.* RatField.finv (suc n)) 1
+real-dist>0	lemma	3b9f79aaaf60	-	76e82495		\lemma real-dist>0 {x y : Real} (xy>0 : 0 < ldist x y) : x < y || y < x
+(overview)	-	-	-	360e1320	86dacc80:RatNormed a2b8593b:RealNormed cfb3a949:rat_real	-

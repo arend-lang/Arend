@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProductGroup	instance	3b85ba761739	-	9593c108		\instance ProductGroup (G H : Group) : Group
+ProductCGroup	instance	99ca467d874c	-	67004200	af6d20e5:ProductGroup	\instance ProductCGroup (G H : CGroup) : CGroup
+ProductAddGroup	instance	a0c18c01b8b1	-	2b19fd57		\instance ProductAddGroup (A B : AddGroup) : AddGroup
+ProductAbGroup	instance	d5ccbcc8ffc0	-	375ca79b	0ef22e88:ProductAddGroup	\instance ProductAbGroup (A B : AbGroup) : AbGroup
+(overview)	-	-	-	a3b07bcb		-

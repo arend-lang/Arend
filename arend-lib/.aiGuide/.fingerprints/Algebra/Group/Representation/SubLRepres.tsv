@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation.SubLRepres. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ImageLRepres	func	9e4e2ba520ed	0c17261ba05c	01918724	95e9b14d:SubLRepres	\func ImageLRepres (f : InterwiningMap {}) : SubLRepres f.R f.G f.Cod
+SubLRepres	class	2e6998c83f67	-	aa63179b	090fe0f9:SubLRepres.IsTrivial	\class SubLRepres \extends SubLModule, SubGSet { \override S : LinRepres R G }
+SubLRepres.IsTrivial	func	8bd4e46a43a0	61aad28be6d8	f0cda901		\func IsTrivial
+ILinRepres	instance	833a6bde8aa9	-	1b450cab	7b8f11e4:ILinRepres.embed 95e9b14d:SubLRepres	\instance ILinRepres (S : SubLRepres {}) : LinRepres
+KernelLRepres	func	74c41f3c1e3d	2d1c5a16838d	42e0a29a	95e9b14d:SubLRepres	\func KernelLRepres (f : InterwiningMap {}) : SubLRepres f.R f.G f.Dom
+ImLRepres	func	aa2333892de1	91492695f144	dff7bb07	682551dd:ILinRepres 52259604:ImageLRepres	\func ImLRepres (f : InterwiningMap {}) : LinRepres
+ImLRepresLeftHom	func	43ba91731c6b	399bbd6eabad	51c0b347	6c54f796:ImLRepres	\func ImLRepresLeftHom (f : InterwiningMap {}) : InterwiningMap f.Dom (ImLRepres f)

@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Homotopy.Square. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Square	record	1e717838ee60	-	5b1733ac	86215115:Square.U 86215115:Square.V 86215115:Square.X 86215115:Square.Y fbb37f8f:Square.sqcomm c7519f96:Square.uv e7753e9e:Square.ux 17ecdda1:Square.vy 54928282:Square.xy	\record Square .{u} (U : \Type u) (V : \Type u) (X : \Type u) (Y : \Type u) (ux : U -> X) (vy : V -> Y) (uv : U -> V) (xy : X -> Y) (sqcomm : \Pi (u : U) -> vy (uv u) = xy (ux u))
+Square.pull	func	85d2fb98f8ac	66c756e1d36a	d7304658	86215115:Square.U	\func pull (s : Square.{u}) {U' : \Type u} (f : U' -> s.U) : Square
+Square.push	func	f604813dddef	ff36f09b8d7e	3d78210d	86215115:Square.Y	\func push (s : Square.{u}) {Y' : \Type u} (f : s.Y -> Y') : Square
+Pullback	class	79c40dd830c4	-	26efc845	b49d344b:Pullback.pullback-univ 4f8b4b0f:Pullback.square 9af766ca:Square e871ed8c:Square.pull 17ecdda1:Square.vy 54928282:Square.xy	\class Pullback .{u} (square : Square.{u}) { | pullback-univ {Z : \Type u} : IsEquiv {Z -> square.U} {Square { | U => Z | V => square.V | X => square.X | Y => square.Y | vy => square.vy | xy => square.xy }} (pull square) }
+sigmaPullback	func	d05f7af8919d	bdd758ad9ebc	88b27d9e	86215115:Square.V 86215115:Square.X 86215115:Square.Y c7519f96:Square.uv e7753e9e:Square.ux 17ecdda1:Square.vy 54928282:Square.xy	\func sigmaPullback {V X Y : \Type u} (vy : V -> Y) (xy : X -> Y) : Pullback
+productPullback	func	7c4734a8a527	0a37a9ef77a0	1929d2ca		\func productPullback (A B : \Type u) : Pullback
+pathPullback	func	3cb9bd255032	349ea07dd3a7	4e2a0d31		\func pathPullback {A : \Type u} (x y : A) : Pullback
+(overview)	-	-	-	5807cd4d	fe878c6b:Pullback 9af766ca:Square 86215115:Square.U 86215115:Square.V 86215115:Square.X 86215115:Square.Y e871ed8c:Square.pull a95189a3:Square.push fbb37f8f:Square.sqcomm c7519f96:Square.uv e7753e9e:Square.ux 17ecdda1:Square.vy 54928282:Square.xy	-

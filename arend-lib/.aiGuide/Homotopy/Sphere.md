@@ -1,0 +1,10 @@
+### Homotopy.Sphere
+
+Defines the n-dimensional sphere as an iterated suspension of the empty type.
+
+The sphere `S^n` is built by applying the suspension operation `n+1` times to `Empty`, following the standard homotopy-theoretic construction where `S^0 = Susp Empty` (two points), `S^1 = Susp S^0` (the circle), and so on. The base type `Empty` provides the starting point, `iterr Susp n` iterates the suspension functor, and the outer `Susp` ensures the result is always pointed (with `north` as the basepoint). This recursive definition makes spheres directly compatible with suspension-based proofs and the homotopy machinery built on `Susp`.
+
+#### Definitions
+
+- **`Sphere`**: The n-sphere, defined as `Susp (iterr Susp n Empty)`. Concretely, `Sphere 0` is the 0-sphere (suspension of `Empty`, i.e. two disjoint points), `Sphere 1` is the circle, and in general `Sphere n` has the homotopy type of the standard n-sphere.
+- **`Sphere.pointed`**: Pointed-space structure on `Sphere n`, taking `north` as the basepoint. Provides a `Pointed (Sphere n) north` instance, making spheres usable wherever a pointed type is required (e.g., homotopy groups, loop spaces).

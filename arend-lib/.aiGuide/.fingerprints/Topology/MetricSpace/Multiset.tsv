@@ -1,0 +1,32 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.Multiset. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+pairCosts	func	cfd6bdafcac7	3e67dfd22907	380b4369		\func pairCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) (f : Fin n -> Fin n) : Array Real n
+maxDist	func	1eefdee62dfa	1aad0fcd5c00	41784e2d	43395b8d:pairCosts	\func maxDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) (f : Fin n -> Fin n) : Real
+maxDist>=0	lemma	ba65986fd045	-	fec7b99f	f16a37fa:maxDist	\lemma maxDist>=0 {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} : 0 <= maxDist r s f
+maxDist-cond	lemma	32e80066f44a	-	1c8b65cc	f16a37fa:maxDist	\lemma maxDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} (i : Fin n) : ldist (r i) (s (f i)) <= maxDist r s f
+maxDist-univ	lemma	1c6369d0ee01	-	3be80591	f16a37fa:maxDist	\lemma maxDist-univ {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} {c : Real} (c>=0 : 0 <= c) (h : \Pi (i : Fin n) -> ldist (r i) (s (f i)) <= c) : maxDist r s f <= c
+maxDist-triang	lemma	7fc3b546b7af	-	d7b4a8bd	f16a37fa:maxDist	\lemma maxDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n} (f g : Fin n -> Fin n) : maxDist r t (\lam i => g (f i)) <= maxDist r s f + maxDist s t g
+permCosts	func	fe7bf880a6be	8b918b9e7bd3	87886f73		\func permCosts {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Array Real (fac n)
+rawDist	func	f3ab65903f53	a494345dd2f8	5470481b	4dd23b35:permCosts	\func rawDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Real
+rawDist>=0	lemma	66b2e08522bd	-	edaf1b34	f9594fb6:rawDist	\lemma rawDist>=0 {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} : 0 <= rawDist r s
+rawDist-cond	lemma	0808d857658a	-	e2c5f8b4	f9594fb6:rawDist	\lemma rawDist-cond {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {f : Fin n -> Fin n} (fi : IsInj f) : rawDist r s <= maxDist r s f
+rawDist-univ	lemma	12458e14d1bb	-	eebd1dbc	f9594fb6:rawDist	\lemma rawDist-univ {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c : Real} (h : \Pi (f : Fin n -> Fin n) -> IsInj f -> c <= maxDist r s f) : c <= rawDist r s
+rawDist-lt	lemma	389f4c97b82e	-	1edc097a	f9594fb6:rawDist	\lemma rawDist-lt {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} {c : Real} (h : rawDist r s < c) : ∃ (f : (Fin n -> Fin n)) (IsInj f) (maxDist r s f < c)
+rawDist-triang	lemma	cc72c726d1bb	-	d2636724	f9594fb6:rawDist	\lemma rawDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n} : rawDist r t <= rawDist r s + rawDist s t
+extendMatch	func	515b11029b89	c1875c562817	6cb5eecc		\func extendMatch {m : Nat} (j : Fin (suc m)) (f : Fin m -> Fin m) (i : Fin (suc m)) : Fin (suc m)
+extendMatch-inj	lemma	e62a7fddf897	-	a137e931		\lemma extendMatch-inj {m : Nat} {j : Fin (suc m)} {f : Fin m -> Fin m} (fi : IsInj f) : IsInj (extendMatch j f)
+maxDist-extend	lemma	a93c71c7e589	-	8ddd0d04		\lemma maxDist-extend {X : PseudoMetricSpace} {m : Nat} (r s : Array X (suc m)) (j : Fin (suc m)) (f : Fin m -> Fin m) {c : Real} (h0 : ldist (r 0) (s j) < c) (h1 : maxDist (skip r 0) (skip s j) f < c) : maxDist r s (extendMatch j f) < c
+matchDist	func	f3ab65903f53	0176896076cd	aa11bc95	f9594fb6:rawDist	\func matchDist {X : PseudoMetricSpace} {n : Nat} (r s : Array X n) : Real
+matchDist-refl	lemma	1f718934a274	-	d5ae301f	16b00a39:matchDist	\lemma matchDist-refl {X : PseudoMetricSpace} {n : Nat} {r : Array X n} : matchDist r r = 0
+matchDist-symm	lemma	50fb74f40464	-	b9b3ae05	16b00a39:matchDist	\lemma matchDist-symm {X : PseudoMetricSpace} {n : Nat} {r s : Array X n} : matchDist r s = matchDist s r
+matchDist-triang	lemma	95d1976275c5	-	a7dbed1a	16b00a39:matchDist	\lemma matchDist-triang {X : PseudoMetricSpace} {n : Nat} {r s t : Array X n} : matchDist r t <= matchDist r s + matchDist s t
+MultisetPseudoMetric	instance	d8d62283c671	-	c05e627e	16b00a39:matchDist	\instance MultisetPseudoMetric {X : PseudoMetricSpace} (n : Nat) : PseudoMetricSpace (Array X n)
+MultisetCompletion	func	b963a1b421e7	7955c6257429	fefa170e	2f3d7200:MultisetPseudoMetric	\func MultisetCompletion (X : PseudoMetricSpace) (n : Nat) : CompleteMetricSpace
+pointCosts	func	7078c45e15c6	0369797e24ae	541d3fbe		\func pointCosts {X : PseudoMetricSpace} {n : Nat} (s : Array X n) (z : X) : Array Real n
+minDist	func	26d3cf24947e	029ed651a87a	9db65686		\func minDist {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X) : Real
+minDist>=0	lemma	2dcfa8fa47c3	-	d51d9683	7a31e183:minDist	\lemma minDist>=0 {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X) : 0 <= minDist s z
+minDist-cond	lemma	3ac9458bcdcb	-	437c2d43	7a31e183:minDist	\lemma minDist-cond {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X) (j : Fin (suc n)) : minDist s z <= ldist z (s j)
+minDist-index	lemma	ffb97454f25d	-	50e802ab	7a31e183:minDist	\lemma minDist-index {X : PseudoMetricSpace} {n : Nat} (s : Array X (suc n)) (z : X) {c : Real} (h : minDist s z < c) : ∃ (j : Fin (suc n)) (ldist z (s j) < c)
+minDist-lip	lemma	9a14e1036997	-	39493ebf	7a31e183:minDist f9594fb6:rawDist	\lemma minDist-lip {X : PseudoMetricSpace} {n : Nat} (r s : Array X (suc n)) (z : X) : minDist r z <= minDist s z + rawDist s r
+minDist-lipM	lemma	631c3bc0dd6f	-	1909df9a	16b00a39:matchDist	\lemma minDist-lipM {X : PseudoMetricSpace} {n : Nat} (r s : Array X (suc n)) (z : X) : minDist r z <= minDist s z + matchDist r s
+(overview)	-	-	-	925303ae	22da4727:MultisetCompletion fb0ecfb1:extendMatch 16b00a39:matchDist f16a37fa:maxDist 7a31e183:minDist f9594fb6:rawDist	-

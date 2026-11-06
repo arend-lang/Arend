@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Logic.Classical. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+alem	axiom	9f635061f1d6	-	9960d788		\axiom alem (P : \Prop) : Dec P
+achoice	axiom	f2ca6e917db9	-	8b842bfd		\axiom achoice {A : \Set} (B : A -> \Set) : (\Pi (x : A) -> TruncP (B x)) -> TruncP (\Pi (x : A) -> B x)
+achoice.lemFromChoice	lemma	dae5f23f2345	-	f2f7ccbf	27e3b59f:achoice	\lemma lemFromChoice (P : \Prop) : Dec P
+(overview)	-	-	-	fa01aefc	27e3b59f:achoice 44bbfb9b:achoice.lemFromChoice ed4ff277:alem	-

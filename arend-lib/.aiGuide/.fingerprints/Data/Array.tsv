@@ -1,0 +1,148 @@
+# arend -gc fingerprints v2 for module Data.Array. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+mkArray	func	22653b1b86f8	afede7f7cfc5	9e7457b3		\func mkArray {A : \Type} {n : Nat} (f : Fin n -> A)
+arrayExt	func	a76e42d4a503	e62b51a647a3	74bb6e5d		\func arrayExt {A : \Type} {n : Nat} {l l' : Array A n} (p : \Pi (j : Fin n) -> l j = l' j) : l = l'
+array-unext	func	d953f853a078	ea8a89807e4a	55aa594c		\func array-unext {A : \Type} {n : Nat} {l l' : Array A n} (p : l = {Array A} l') (j : Fin n) : l j = l' j
+replicate	func	bc7b6e05d963	f6be75525ebd	fd099f8a		\func replicate {A : \Type} (n : Nat) (a : A)
+replicate_+	func	f670cd7aca10	bfd9f8f505e9	08de225c	d8a3d0e6:++ 47a829f3:replicate	\func replicate_+ {A : \Type} {n m : Nat} {a : A} : replicate (n Nat.+ m) a = replicate n a ++ replicate m a
+singleAt	func	197acd7ad3f1	12bc8efdb01f	485ed88a	85a0f7d2:singleAt.alt 893b309e:singleAt.char	\func singleAt {A : \Type} {n : Nat} (j : Fin n) (value def : A) : Array A n
+tail	func	792f1625e535	cb9701afd197	6f329ef7		\func tail {A : \Type} (l : Array A) : Array A
+taild	func	9f9f9d681865	4492d8999d8d	03987d92		\func taild {n : Nat} {A : Fin (suc n) -> \Type} (a : DArray A) : DArray (\lam j => A (suc j))
+unhead	func	36a4eee8a205	f9020a7a92d3	0999ef82	ece22f46:unhead.headDef	\func unhead {A : \Type} {a a' : A} {l l' : Array A} (p : a :: l = a' :: l') : a = a'
+untail	func	766eaa967ade	4a67caf1ad93	ceb6464f	42a39031:untail.tailDef	\func untail {A : \Type} {a a' : A} {l l' : Array A} (p : a :: l = a' :: l') : l = l'
+len=0	func	acf7d5966239	e541afd0e9d5	0ca8b62c		\func len=0 {A : \Type} {l : Array A} (p : l.len = 0) : l = nil
+cong_::	func	f9910d4de101	4d07f5e36abd	8da268c9		\func cong_:: {A : \Type} {a a' : A} (p : a = a') {l l' : Array A} (q : l = l') : a :: l = a' :: l'
+map	func	b71700628105	e9339f154a54	fc374352		\func map {A B : \Type} (f : A -> B) (as : Array A) : Array B
+map_::	func	b0bd451d898e	b7e2f2b9d76d	282f3389	cb72bb32:map	\func map_:: {A B : \Type} (f : A -> B) {a : A} {l : Array A} : map f (a :: l) = f a :: map f l
+map_++	func	ba0073b526b3	bf8ee6f1f50e	55c07875	cb72bb32:map	\func map_++ {A B : \Type} (f : A -> B) {l l' : Array A} : map f (l ++ l') = map f l ++ map f l'
+map_++'	func	04cfe45e9125	0af90af90c34	55c07875	cb72bb32:map	\func map_++' {A B : \Type} (f : A -> B) {l : Array A} {n : Nat} {l' : Array A n} : map f (l ++' l') = map f l ++' map f l'
+map2_++'	func	98dd4034ec00	28df44514a48	55c07875	cb72bb32:map	\func map2_++' {A B C : \Type} (f : A -> B -> C) {n : Nat} {l1 : Array A n} {l2 : Array B n} {m : Nat} {l1' : Array A m} {l2' : Array B m} : mkArray (\lam j => f (++' l1 l1' j) (++' l2 l2' j)) = mkArray (\lam j => f (l1 j) (l2 j)) ++' mkArray (\lam j => f (l1' j) (l2' j))
+map_replace	func	c5b848dc606f	26a7ab03c0f1	536107df	e19000bc:fit a39b2555:insert cb72bb32:map 54ce621f:replace 5274c0c4:skip	\func map_replace {A B : \Type} (f : A -> B) {l : Array A} {i : Fin l.len} {a : A} : map f (replace l i a) = replace (map f l) i (f a)
+map_insert	func	89604597e50c	85313eb494f2	536107df	e19000bc:fit a39b2555:insert cb72bb32:map 54ce621f:replace 5274c0c4:skip	\func map_insert {A B : \Type} (f : A -> B) {a : A} {l : Array A} {j : Fin (suc l.len)} : map f (insert a l j) = insert (f a) (map f l) j
+skip_map	func	26d696c8ce57	dfd7c3f35a3e	536107df	e19000bc:fit a39b2555:insert cb72bb32:map 54ce621f:replace 5274c0c4:skip	\func skip_map {A B : \Type} (f : A -> B) {n : Nat} {l : Array A (suc n)} {k : Fin (suc n)} : map f (skip l k) = skip (map f l) k
+fit_map	func	6eb29e54cb52	1774d602e792	536107df	e19000bc:fit a39b2555:insert cb72bb32:map 54ce621f:replace 5274c0c4:skip	\func fit_map {A B : \Type} (f : A -> B) {a : A} {b : B} (p : f a = b) {n : Nat} {l : Array A} : map f (fit a {n} l) = fit b (map f l)
+++'	func	d7bac859ba1a	f32ba705f107	b3a66217		\func ++' {A : \Type} (xs : Array A) {n : Nat} (ys : Array A n) : Array A (xs.len Nat.+ n)
+++'.++'_index-left	func	756d9894318d	b0351e87189e	7cabf4f8	5c104e00:++'	\func ++'_index-left {A : \Type} {l : Array A} {n : Nat} {m : Array A n} {i : Fin l.len} : (l ++' m) (fin-inc i) = l i
+++'.++'_index-right	func	474bbb7c5bd8	6cbdc120dcbe	7cabf4f8	5c104e00:++'	\func ++'_index-right {A : \Type} {l : Array A} {n : Nat} {m : Array A n} {i : Fin n} : (l ++' m) (fin-raise i) = m i
+++'.split-index	func	14c685dccbf4	979e0aed3c40	b28db09d		\func split-index {n m : Nat} (i : Fin (n Nat.+ m)) : Or (\Sigma (j : Fin n) (i = fin-inc j)) (\Sigma (j : Fin m) (i = fin-raise j))
+++'-split	func	100ab1cfda89	092fa505c197	cc3dbe3d	5c104e00:++'	\func ++'-split {A : \Type} {n m : Nat} {l : Array A (n Nat.+ m)} : l = (\new (Array A n (\lam i => l (fin-inc i)))) ++' (\new (Array A m (\lam j => l (fin-raise j))))
+++	func	3454ffcdb3f4	7414e960f264	b34376dd		\func ++ {A : \Type} (xs ys : Array A) : Array A
+++_++'	func	6487e0028483	7a077b0a1a79	1eff5ce2		\func ++_++' {A : \Type} {l : Array A} {n : Nat} {l' : Array A n} : l ++ l' = l ++' l'
+++.index-left	func	891f56ca22d3	3c3d393f666e	80b3d988		\func index-left {A : \Type} {l m : Array A} (i : Fin l.len) : Fin (l ++ m).len
+++.index-right	func	a521064ed773	7bbb56509038	80b3d988		\func index-right {A : \Type} {l m : Array A} (i : Fin m.len) : Fin (l ++ m).len
+++.++_index-left	func	7e3e518f22e1	4cab19040ea3	80b3d988		\func ++_index-left {A : \Type} {l m : Array A} (i : Fin l.len) : (l ++ m) (index-left i) = l i
+++.++_index-right	func	0ea16c785ba8	923babc6d2be	80b3d988		\func ++_index-right {A : \Type} {l m : Array A} {i : Fin m.len} : (l ++ m) (index-right i) = m i
+++.index-left-nat	lemma	76d18eff438c	-	01beaac7		\lemma index-left-nat {A : \Type} {l m : Array A} {i : Fin l.len} : index-left {A} {l} {m} i = {Nat} i
+++.index-right-nat	lemma	ad77599288bc	-	01beaac7		\lemma index-right-nat {A : \Type} {l m : Array A} {i : Fin m.len} : index-right {A} {l} i = {Nat} l.len Nat.+ i
+++.index-left-inj	lemma	404d94e6555c	-	01beaac7		\lemma index-left-inj {A : \Type} {l m : Array A} : IsInj (index-left {A} {l} {m})
+++.index-right-inj	lemma	4fa5f979869f	-	01beaac7		\lemma index-right-inj {A : \Type} {l m : Array A} : IsInj (index-right {A} {l} {m})
+++.index-left/=right	lemma	013a89f743d2	-	01beaac7		\lemma index-left/=right {A : \Type} {l m m' : Array A} {i : Fin l.len} {j : Fin m'.len} : index-left {A} {l} {m} i /= {Nat} index-right {A} {l} j
+++.split-index	func	a946687ccdea	ecdaf79a6f35	570653dd	d8a3d0e6:++	\func split-index {A : \Type} {l m : Array A} (i : Fin (l ++ m).len) : Or (\Sigma (j : Fin l.len) (i = index-left j)) (\Sigma (j : Fin m.len) (i = index-right j))
+++.++-all	func	7f2ec9df175d	f76244cb357e	e1671b79	d8a3d0e6:++	\func ++-all {A : \Type} {P : A -> \Type} {l l' : Array A} (Pl : \Pi (i : Fin l.len) -> P (l i)) (Pl' : \Pi (i : Fin l'.len) -> P (l' i)) (j : Fin (l ++ l').len) : P ((l ++ l') j)
+++.index-big	func	3b1d3411da82	c2bf610acb44	1fdc42ad		\func index-big {A : \Type} {ls : Array (Array A)} (i : Fin ls.len) (j : Fin (ls i).len) : Fin (Big ++ nil ls).len
+++.Big++-index	func	9d276fa14ef8	dfebbdc90ced	1fdc42ad		\func Big++-index {A : \Type} {ls : Array (Array A)} {i : Fin ls.len} {j : Fin (ls i).len} : Big ++ nil ls (index-big i j) = ls i j
+++_nil	func	7ba873be4d65	551b8d407b20	f33882ba	d8a3d0e6:++	\func ++_nil {A : \Type} {l : Array A} : l ++ nil = l
+++-assoc	func	6e0dbbcac44d	f58bb92ed7f8	96f7ecc2		\func ++-assoc {A : \Type} {xs ys zs : Array A} : (xs ++ ys) ++ zs = xs ++ (ys ++ zs)
+++-cancel-left	func	507d8ef162e8	659233753d2d	8534a953		\func ++-cancel-left {A : \Type} {l l1 l2 : Array A} (p : l ++ l1 = l ++ l2) : l1 = l2
+++-cancel-right	func	7b4928c3784d	d8711e6ed860	8534a953		\func ++-cancel-right {A : \Type} {l l1 l2 : Array A} (p : l1 ++ l = l2 ++ l) : l1 = l2
+len_++	lemma	7d691dadd45b	-	406ed0db		\lemma len_++ {A : \Type} {l l' : Array A} : (l ++ l').len = l.len Nat.+ l'.len
+Big	func	216122621c4c	dcaf430776e7	a319114f		\func Big {A B : \Type} (op : A -> B -> B) (b : B) (l : Array A) : B
+Big++_map	func	4c6afcdce9bd	39b4b8b48f59	6a140f41	d8a3d0e6:++ 69dcdb26:Big cb72bb32:map	\func Big++_map {A B : \Type} (f : A -> B) {ls : Array (Array A)} : Big ++ nil (map (map f) ls) = map f (Big ++ nil ls)
+Big++-split	func	81f0296a7961	48fbbb1e9e7b	6a140f41	d8a3d0e6:++ 69dcdb26:Big cb72bb32:map	\func Big++-split {A : \Type} {l : Array A} : l = Big ++ nil (map (:: nil) l)
+Index	func	5fcdf5c2ec31	af9d738ecf01	765c187a		\func Index {A : \Type} (x : A) (l : Array A)
+index-left	func	6de2ca6a1ca5	5dd8888b6abf	2fd2dc46	d8a3d0e6:++	\func index-left {A : \Type} {x : A} {l l' : Array A} (i : Index x l) : Index x (l ++ l')
+index-right	func	125ea88cf9ef	6465982fca33	2fd2dc46	d8a3d0e6:++	\func index-right {A : \Type} {x : A} {l l' : Array A} (i : Index x l') : Index x (l ++ l')
+index-dec	sfunc	124846155a5a	2b01c904b23b	401a3a83		\sfunc index-dec {A : DecSet} (l : Array A) (a : A) : Or (Index a l) (Not (Index a l))
+find	func	07fb23226cf8	ac5422650a77	84c848e2		\func find {A : \Type} (P : A -> Decide) (l : Array A) : Or (\Sigma (j : Fin l.len) (P (l j)) (\Pi {i : Fin l.len} -> i NatOrder.< j -> P (l i) -> Empty)) (\Pi {j : Fin l.len} -> P (l j) -> Empty)
+repeats-dec	func	44f3f8380b5b	d3e4c3928e9b	e182ca95		\func repeats-dec {A : DecSet} (l : Array A) : Or (\Sigma (i j : Fin l.len) (i /= j) (l i = l j)) (IsInj l)
+filter	func	39df5a19d7fc	8f42cf2abd2b	3b3877d9		\func filter {A : \Type} (p : A -> Bool) (l : Array A) : Array A
+filter-sat	lemma	9417bc0aa164	-	f7806187	3eecb6df:filter	\lemma filter-sat {A : \Type} (p : A -> Bool) (l : Array A) (i : Fin (filter p l).len) : p (filter p l i) = true
+filter_true	func	89ad90bebc51	c63e7b124c1c	9ca6a511		\func filter_true {A : \Type} {p : A -> Bool} {l : Array A} (c : \Pi (j : Fin l.len) -> p (l j) = true) : filter p l = l
+filter_false	func	e631e5d3b650	e436c78d4820	9ca6a511		\func filter_false {A : \Type} {p : A -> Bool} {l : Array A} (c : \Pi (j : Fin l.len) -> p (l j) = false) : filter p l = nil
+filter-index	func	f5a2f2c71ca2	5ac8b5878e9f	85123991	3eecb6df:filter	\func filter-index {A : \Type} (p : A -> Bool) (l : Array A) (i : Fin l.len) (px : p (l i) = true) : Index (l i) (filter p l)
+filterMap	func	0f16adf9a62b	da086176ae8e	112cb912		\func filterMap {A B : \Type} (f : A -> Maybe B) (l : Array A) : Array B
+filterMap-index	func	337dbc194724	8e1c37382c74	d347110e		\func filterMap-index {A B : \Type} (f : A -> Maybe B) (l : Array A) {b : B} {j : Fin l.len} (p : f (l j) = just b) : Index b (filterMap f l)
+keep	func	d0a549a1d51e	8d96a59af925	a99cfe39	3eecb6df:filter	\func keep {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) (l : Array A) : Array A
+keep.satisfies	lemma	3ee920b33153	-	c0bf1ec2	3aa80791:keep	\lemma satisfies {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) {l : Array A} {i : Fin (keep D l).len} : P (keep D l i)
+keep.element	func	25f81658b431	16e634411673	c0bf1ec2	3aa80791:keep	\func element {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {j : Fin l.len} (p : P (l j)) : Index (l j) (keep D l)
+keep.preimage	func	922b150bf0c7	dc2d58fadb23	c0bf1ec2	3aa80791:keep	\func preimage {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (i : Fin (keep D l).len) : \Sigma (j : Fin l.len) (keep D l i = l j)
+keep.no-repeats	lemma	05adfe7186d8	-	c0bf1ec2	3aa80791:keep	\lemma no-repeats {A : \Type} {l : Array A} (p : \Pi {i j : Fin l.len} -> l i = l j -> i = j) {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {i j : Fin (keep D l).len} (q : keep D l i = keep D l j) : i = j
+keep_++	func	8e5c52057cab	ceb53f86900a	64089b53	d8a3d0e6:++	\func keep_++ {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} : keep D (l ++ l') = keep D l ++ keep D l'
+keep-all	func	fbfe7f3af216	ebe2e66975ca	64089b53	d8a3d0e6:++	\func keep-all {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (p : \Pi (j : Fin l.len) -> P (l j)) : keep D l = l
+keep-none	func	dafc2986a057	63210230337e	64089b53	d8a3d0e6:++	\func keep-none {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (p : \Pi (j : Fin l.len) -> Not (P (l j))) : keep D l = nil
+keep-unique	func	4b8c23f664bb	3fe00d84d25f	64089b53	d8a3d0e6:++	\func keep-unique {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {j : Fin l.len} (Pj : P (l j)) (nPj : \Pi (i : Fin l.len) -> P (l i) -> i = j) : keep D l = l j :: nil
+remove	func	d0a549a1d51e	0e334a6728d6	397b7d92	3aa80791:keep	\func remove {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) (l : Array A) : Array A
+remove.no-element	lemma	525db5e1b516	-	c811835f	5ec343ac:remove	\lemma no-element {A : \Type} {P : A -> \Prop} (D : \Pi (a : A) -> Dec (P a)) {l : Array A} {i : Fin (remove D l).len} (p : P (remove D l i)) : Empty
+remove.element	func	3ed04040cbdb	4302b478c60a	c811835f	5ec343ac:remove	\func element {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {j : Fin l.len} (p : Not (P (l j))) : Index (l j) (remove D l)
+remove.preimage	func	9a9e5abd429e	b641dbd41832	c811835f	5ec343ac:remove	\func preimage {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (i : Fin (remove D l).len) : \Sigma (j : Fin l.len) (remove D l i = l j)
+remove.no-repeats	lemma	df48f07a8aed	-	c811835f	5ec343ac:remove	\lemma no-repeats {A : \Type} {l : Array A} (p : \Pi {i j : Fin l.len} -> l i = l j -> i = j) {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {i j : Fin (remove D l).len} (q : remove D l i = remove D l j) : i = j
+remove.equals	func	29f2e8a18072	57f225a41e96	c811835f	5ec343ac:remove	\func equals {A : \Type} {P Q : A -> \Prop} (pq : \Pi {a : A} -> P a -> Q a) (qp : \Pi {a : A} -> Q a -> P a) {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} {l : Array A} : remove DP l = remove DQ l
+remove-none	func	0a8a612cc732	ae8091010d1d	6fac4941	cb72bb32:map 5ec343ac:remove	\func remove-none {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} (p : \Pi (j : Fin l.len) -> Not (P (l j))) : remove D l = l
+remove_map	func	efdd24dcd3a8	f006cee32a80	6fac4941	cb72bb32:map 5ec343ac:remove	\func remove_map {A B : \Type} (f : A -> B) {P : B -> \Prop} {D : \Pi (b : B) -> Dec (P b)} {l : Array A} : remove D (map f l) = map f (remove (\lam a => D (f a)) l)
+remove_remove	func	5430d2e67692	82719414b725	6fac4941	cb72bb32:map 5ec343ac:remove	\func remove_remove {A : \Type} {P Q : A -> \Prop} {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} {l : Array A} : remove DP (remove DQ l) = remove (\lam a => Dec_|| (DP a) (DQ a)) l
+remove-swap	func	3f0db8865166	9f23029918ec	6fac4941	cb72bb32:map 5ec343ac:remove	\func remove-swap {A : \Type} {P Q : A -> \Prop} {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} {l : Array A} : remove DP (remove DQ l) = remove DQ (remove DP l)
+keep=remove	func	69b05efd9cb7	03b21f36d90a	553adfd8	3aa80791:keep 5ec343ac:remove	\func keep=remove {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : keep D l = remove (\lam a => NotDec (D a)) l
+remove=keep	func	6ae6852fb66f	fd9a59fe6311	553adfd8	3aa80791:keep 5ec343ac:remove	\func remove=keep {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : remove D l = keep (\lam a => NotDec (D a)) l
+keep_remove=keep	func	fece2c0e72a6	1c932f57c7ed	42f36a94	3aa80791:keep 5ec343ac:remove	\func keep_remove=keep {A : \Type} {P Q : A -> \Prop} {DP : \Pi (a : A) -> Dec (P a)} {DQ : \Pi (a : A) -> Dec (Q a)} (PQ : \Pi {a : A} -> P a -> Q a -> Empty) {l : Array A} : keep DP (remove DQ l) = keep DP l
+remove<=	lemma	295e28d5fd2e	-	ab8d74ec	5ec343ac:remove	\lemma remove<= {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : (remove D l).len <= l.len
+removeElem	func	0a2668c602b7	ece059ecdb2f	9265108f		\func removeElem {A : DecSet} (a : A) (l : Array A) : Array A
+remove1	func	9f727da5f1b9	3ad5a2c985b5	8b231435		\func remove1 {A : DecSet} (a : A) {n : Nat} (l : Array A (suc n)) : Array A n
+remove1-surj	func	ea8ff3fe328c	c70dc271e5a5	fd081c23		\func remove1-surj {A : DecSet} (a : A) {n : Nat} (l : Array A (suc n)) (i : Fin n) : \Sigma (j : Fin (suc n)) (remove1 a l i = l j)
+remove1/=	lemma	b84df0c2b0a5	-	fd081c23		\lemma remove1/= {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : IsInj l) {j : Fin n} : remove1 a l j /= a
+remove1-inj	lemma	1b70ea3e65ca	-	fd081c23		\lemma remove1-inj {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : IsInj l) {i j : Fin n} (p : remove1 a l i = remove1 a l j) : i = j
+count	func	f13ff97caf1d	3e5995593bf5	b407f6b6		\func count {A : DecSet} (l : Array A) (a : A) : Nat
+count<=	lemma	97bdb181d208	-	9fa7bf2e	7797d6bb:count	\lemma count<= {A : DecSet} {l : Array A} {a : A} : count l a <= l.len
+count_++	lemma	317627b3f1a5	-	a82b5254	d8a3d0e6:++	\lemma count_++ {A : DecSet} {l l' : Array A} {a : A} : count (l ++ l') a = count l a Nat.+ count l' a
+count_Big++	lemma	293397530066	-	a82b5254	d8a3d0e6:++	\lemma count_Big++ {A : DecSet} {ls : Array (Array A)} {a : A} : count (Big ++ nil ls) a = NatSemiring.BigSum (map (count __ a) ls)
+count-all	lemma	f2a8c86c082f	-	ae45fafe		\lemma count-all {A : DecSet} {l : Array A} {a : A} (p : \Pi (j : Fin l.len) -> l j = a) : count l a = l.len
+count-none	lemma	7272ec59fd98	-	ae45fafe		\lemma count-none {A : DecSet} {l : Array A} {a : A} (p : \Pi (j : Fin l.len) -> l j /= a) : count l a = 0
+keep_count	lemma	576403b0aa4e	-	53143042	7797d6bb:count 3aa80791:keep 47a829f3:replicate	\lemma keep_count {A : DecSet} {l : Array A} {a : A} : keep (decideEq a) l = replicate (count l a) a
+count_remove_yes	lemma	109efaab30bf	-	65513c74	5ec343ac:remove	\lemma count_remove_yes {A : DecSet} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {a : A} (Pa : P a) : count (remove D l) a = 0
+count_remove_no	lemma	2ebd01f66b88	-	65513c74	5ec343ac:remove	\lemma count_remove_no {A : DecSet} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} {a : A} (Pa : Not (P a)) : count (remove D l) a = count l a
+count_remove	lemma	eb1de04ce2bc	-	65513c74	5ec343ac:remove	\lemma count_remove {A : DecSet} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} {a : A} (p : count l a = count l' a) : count (remove D l) a = count (remove D l') a
+nub	func	e6f5d1a22724	3936f1555904	1b4bc9dd		\func nub {A : DecSet} (l : Array A) : Array A
+nub-isSurj	func	006dd847bf69	89cec04a70ec	2ec69bb1	46322501:nub	\func nub-isSurj {A : DecSet} (l : Array A) (i : Fin l.len) : \Sigma (j : Fin (nub l).len) (nub l j = l i)
+nub-preimage	func	928c99d24013	1c663178714b	46217d55	46322501:nub	\func nub-preimage {A : DecSet} {l : Array A} (j : Fin (nub l).len) : \Sigma (i : Fin l.len) (nub l j = l i)
+nub-isInj	lemma	4f9637211d0a	-	0bf99b1d	46322501:nub	\lemma nub-isInj {A : DecSet} {l : Array A} {i j : Fin (nub l).len} (p : nub l i = nub l j) : i = j
+nub_id	func	c021646221de	8bc6400ede36	d436e77a	46322501:nub	\func nub_id {A : DecSet} {l : Array A} (inj : IsInj l) : nub l = l
+insert	func	a8dd77e809d1	955b61a2a585	01a4cf96		\func insert {A : \Type} (a : A) (l : Array A) (j : Fin (suc l.len)) : Array A (suc l.len)
+insert_zro	func	65fdecf09f8a	51cd0d0aae1d	4334c0e8		\func insert_zro {A : \Type} {n : Nat} {a : A} {l : Array A n} : insert a l 0 = a :: l
+insert-index	func	09eef7a3623f	6319f6dc962a	4334c0e8		\func insert-index {A : \Type} {a : A} {l : Array A} {j : Fin (suc l.len)} : insert a l j j = a
+skip	func	a906eed58226	d330e0bda521	8845754c		\func skip {A : \Type} {n : Nat} (l : Array A (suc n)) (k : Fin (suc n)) : Array A n
+skip.newIndex	func	bbc82a28af4b	3282d50c8cf8	1359f785		\func newIndex {n : Nat} {j i : Fin (suc n)} (p : i /= j) : Fin n
+skip.newIndex_<	lemma	e13b3ee48e3c	-	ba3c0f53	24240d53:skip.newIndex	\lemma newIndex_< {n : Nat} {i j k : Fin (suc n)} {pj : j /= i} {pk : k /= i} (q : j < k) : newIndex pj < newIndex pk
+skip_++'	func	5514fa854f02	fd6db37821ad	934dc6a3	5c104e00:++' 5274c0c4:skip	\func skip_++' {A : \Type} {n m : Nat} {l : Array A (suc n)} {l' : Array A m} {k : Fin (suc n)} : skip (l ++' l') (fin-inc k) = skip l k ++' l'
+skipExt	func	bd6ec4679508	31f85aebfc11	934dc6a3	5c104e00:++' 5274c0c4:skip	\func skipExt {A : \Type} {n : Nat} {l l' : Array A (suc n)} {k : Fin (suc n)} (p : \Pi (i : Fin (suc n)) -> i /= k -> l i = l' i) : skip l k = skip l' k
+skip_0	func	c5a32b2eaa5a	2778b29c54dc	934dc6a3	5c104e00:++' 5274c0c4:skip	\func skip_0 {A : \Type} {n : Nat} {l : Array A (suc n)} {j : Fin n} : skip l 0 j = l (suc j)
+skip_replicate	func	b8718db81057	17d75d45ceb4	b65a9366	47a829f3:replicate 5274c0c4:skip	\func skip_replicate {A : \Type} {n : Nat} (a : A) {k : Fin (suc n)} : skip (replicate (suc n) a) k = replicate n a
+skip-index	func	215e23f2e903	4be0f2ce9a52	1d698d2d	5274c0c4:skip 24240d53:skip.newIndex	\func skip-index {A : \Type} {n : Nat} {l : Array A (suc n)} {i j : Fin (suc n)} {p : j /= i} : skip l i (skip.newIndex p) = l j
+skip-sface	func	6457fb0dc47a	0cf036d60840	69860415	5274c0c4:skip	\func skip-sface {A : \Type} {n : Nat} (l : Array A (suc n)) (k : Fin (suc n)) (i : Fin n) : skip l k i = l (sface k i)
+replace	func	16bbbc82574c	4e892f1168ce	4273d659		\func replace {A : \Type} (l : Array A) (i : Fin l.len) (a : A) : Array A l.len
+replace-index	func	3f1aa73b058b	c612fa8cce2a	ab4ebd2d		\func replace-index {A : \Type} {l : Array A} {i : Fin l.len} {a : A} : replace l i a i = a
+replace-notIndex	func	47e3fe517c4e	161d8788eb15	ab4ebd2d		\func replace-notIndex {A : \Type} {l : Array A} {i j : Fin l.len} (i/=j : i /= {Nat} j) {a : A} : replace l i a j = l j
+replace_insert	func	5f775157bf33	db7fcb12413e	7dbdf465		\func replace_insert {A : \Type} {l : Array A} {i : Fin (suc l.len)} {a b : A} : replace (insert a l i) i b = insert b l i
+skip_replace_=	func	7a32a0762f09	528772fe5c58	8825314c		\func skip_replace_= {A : \Type} {n : Nat} {l : Array A (suc n)} {i : Fin (suc n)} {a : A} : skip (replace l i a) i = skip l i
+skip_replace_/=	func	1c16146c2372	2b1f24a1b293	8825314c		\func skip_replace_/= {A : \Type} {n : Nat} {l : Array A (suc n)} {j i : Fin (suc n)} {a : A} (p : j /= i) : skip (replace l j a) i = replace (skip l i) (skip.newIndex p) a
+insert_skip	func	26c5767e2edc	4c67cf0989cf	bd533822	a39b2555:insert 54ce621f:replace 5274c0c4:skip	\func insert_skip {A : \Type} {n : Nat} {l : Array A (suc n)} {k : Fin (suc n)} {a : A} : insert a (skip l k) k = replace l k a
+skip_insert_=	func	bac9ffdefd59	a8ffda97185d	a352f0a2	a39b2555:insert 5274c0c4:skip	\func skip_insert_= {A : \Type} {n : Nat} {a : A} {l : Array A n} {j : Fin (suc n)} : skip (insert a l j) j = l
+forall	func	842845066eb6	4f463358e967	12a4b039		\func forall {A : \Type} (p : A -> Bool) (l : Array A) : Bool
+forall-char	lemma	fda22d0e91bf	-	630cb452	0686cd30:forall	\lemma forall-char {A : \Type} {p : A -> Bool} {l : Array A} (s : forall p l = true) (j : Fin l.len) : p (l j) = true
+fit	func	c719fa117c8e	9c2ab6fb42b9	5b11471e		\func fit {A : \Type} (a : A) {n : Nat} (l : Array A) : Array A n
+fit_<	func	5a294b82cd33	8f2dc8bd6bbf	90adf463	e19000bc:fit	\func fit_< {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : j NatOrder.< l.len) : fit a l j = l (toFin j p)
+fit_<'	func	2234d1b30463	133836c30a82	90adf463	e19000bc:fit	\func fit_<' {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin l.len} (p : j NatOrder.< n) : fit a l (toFin j p) = l j
+fit_>=	func	a75e75f4df0c	189323d03050	90adf463	e19000bc:fit	\func fit_>= {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : l.len <= j) : fit a l j = a
+take	func	702094527780	6ab8146ab0b7	e0fac818		\func take {A : \Type} (n : Nat) (l : Array A) (p : n <= l.len) : Array A n
+take-index	func	22c2c95c5f09	24ed3a318fd0	50077bd1	5a4c4b00:take	\func take-index {A : \Type} {n : Nat} {l : Array A} {p : n <= l.len} {j : Fin n} : take n l p j = l (fin-inc_<= p j)
+take'	func	cc69281e4a28	6274ba7c6769	74e53cce	5a4c4b00:take	\func take' {A : \Type} (n : Nat) (l : Array A) : Array A
+drop	func	e03f5aaaa5f3	46294f981eaf	1e168f7a	4332de1a:drop.ndrop	\func drop {A : \Type} (n : Nat) (l : Array A) : Array A (ndrop n l.len)
+drop_map	func	61d6401275c3	2833e8328cfd	579d3708	921f340a:drop cb72bb32:map	\func drop_map {A B : \Type} (f : A -> B) {n : Nat} {l : Array A} : drop n (map f l) = map f (drop n l)
+take_drop	func	28e54a3d76f0	64fd426ffc62	bc142dc9	d8a3d0e6:++ 921f340a:drop ee39ae18:take'	\func take_drop {A : \Type} {n : Nat} {l : Array A} : take' n l ++ drop n l = l
+chooseRight	lemma	0d2634cc1ff9	-	61a08dcc		\lemma chooseRight {A : \Type} (l : Array A) {P Q : A -> \Type} (pq : ∀ (a : l) (P a || Q a)) : ∃ (l' : Array A) (∀ (a' : l') (Q a')) ∀ (a : l) (P a || Given (a' : l') (a = a'))
+array/=	func	12705fe36575	bbbbfa3417b0	f0edc77e		\func array/= {A : DecSet} {n : Nat} {l l' : Array A n} (p : l /= l') : \Sigma (j : Fin n) (l j /= l' j)
+indexed	func	3ec3e313e19b	05dfa56b8bf0	e4af512c		\func indexed (l : DArray) : DArray (\lam j => \Sigma (Fin l.len) (l.A j))
+indexed'	func	4dc390cdad0f	46e5d6784287	50a5ac34		\func indexed' (l : DArray) : Array (\Sigma (j : Fin l.len) (l.A j))
+toList	func	042ede6b55bc	251d6ed392eb	61371761		\func toList {A : \Type} (l : Array A) : List A
+toList_length	lemma	3a44f8f65a76	-	c97c0e6e	46730210:toList	\lemma toList_length {A : \Type} {l : Array A} : length (toList l) = l.len
+fromList	func	c92dcd3b896c	7091487e1bec	c0f493cc		\func fromList {A : \Type} (l : List A) : Array A (length l)
+fromList_toList	func	667fc749ff1d	d36289538fb6	495eb872	30b52129:fromList 46730210:toList	\func fromList_toList {A : \Type} {l : Array A} : fromList (toList l) = l
+(overview)	-	-	-	83a95189	d8a3d0e6:++ 5c104e00:++' fd4c8f4d:++.++_index-left 813fac81:arrayExt 3eecb6df:filter a6c29f30:filterMap a39b2555:insert 4d642387:insert-index 3aa80791:keep cb72bb32:map ac2abc01:mkArray 46322501:nub 5ec343ac:remove 54ce621f:replace 47a829f3:replicate 5274c0c4:skip 18eeb0bf:skip-index 1deb02a2:tail 5a4c4b00:take	-

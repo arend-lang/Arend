@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Homotopy.Localization.Connected. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+isConnectedType	func	9b121fe117b6	0ff7a13715c5	a9644ce2	2c90dfd5:Connected.U 86215115:Connected.X	\func isConnectedType {U : Universe.{u}} (X : \Type u)
+isConnected=>contr	lemma	f6493b33f01e	-	395ed81f	86215115:Connected.X	\lemma isConnected=>contr {U : ReflUniverse.{u}} (X : \Type u) (c : isConnectedType X) : Contr (LType X)
+contr=>isConnected	lemma	183b4d7bc16c	-	e5b3c7bb	86215115:Connected.X	\lemma contr=>isConnected {U : ReflUniverse.{u}} (X : \Type u) (c : Contr (LType X)) : isConnectedType X
+Connected	class	6240ec445380	-	232f8f61	86215115:Connected.X 493a5723:Connected.connected 2224ba8f:isConnectedType	\class Connected .{u} {U : Universe.{u}} (X : \Type u) { | connected : isConnectedType X }
+Connected.equiv	lemma	589477a1111b	-	07afd251	86215115:Connected.X	\lemma equiv (Z : Local {U}) : IsEquiv {Z} {X -> Z} (\lam z _ => z)
+connected_join	lemma	b401590b4857	-	e965343b	86215115:Connected.X	\lemma connected_join (X Y M N : \Type u) (X-conn : isConnectedType {nullTypeUniverse M} X) (Y-conn : isConnectedType {nullTypeUniverse N} Y) : isConnectedType {nullTypeUniverse (Join M N)} (Join X Y)
+connected_join.local_join	lemma	29fd4e207dac	-	1901fc83		\lemma local_join (A A' B : \Type u) : (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> f a = b))) = (nullTypeUniverse (Join A A')).isLocal B
+connected_join.connected_local_join-left	lemma	b89e431d774d	-	d2545ffa	86215115:Connected.X	\lemma connected_local_join-left (X Y M N : \Type u) (X-conn : isConnectedType {nullTypeUniverse M} X) (Y-local : (nullTypeUniverse (Join M N)).isLocal Y) : (nullTypeUniverse (Join X N)).isLocal Y
+connected_join.connected_local_join-right	lemma	ede9a0456695	-	ee2a2688		\lemma connected_local_join-right (X Y M N : \Type u) (Y-conn : isConnectedType {nullTypeUniverse N} Y) (X-local : (nullTypeUniverse (Join M N)).isLocal X) : (nullTypeUniverse (Join M Y)).isLocal X
+isConnectedMap	func	1602ead71f62	f57dcba728d3	20ddcb61		\func isConnectedMap {U : Universe.{u}} {A B : \Type u} (f : A -> B)
+(overview)	-	-	-	5392cd25	3017e7fa:Connected 2c90dfd5:Connected.U 86215115:Connected.X	-

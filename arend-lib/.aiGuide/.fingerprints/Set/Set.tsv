@@ -1,0 +1,41 @@
+# arend -gc fingerprints v2 for module Set.Set. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Set	func	35f3dc31d6b0	0a70270c7215	4645aa12		\func Set (X : \Type)
+Elem	type	bb8f647904d4	d6312289fcbd	78b2516f		\type Elem {X : \Type} (U : Set X)
+Set.Total	func	e612d4198983	49d88e12e92a	64944486	e0bcce58:Elem cc3c1f3e:Set	\func Total {X : \Type} (U : Set X)
+empty	func	177e01206305	0c2f160ec33e	5ab97684		\func empty {A : \Type} : Set A
+single	func	8c957e7b675a	738d861c5bec	ab424194		\func single {X : \Set} (a : X) : Set X
+Subset	type	26cf80b2250d	e4d013af5e5d	860e6275		\type Subset {X : \Type} (U V : Set X)
+union	func	f72d8e67282e	3fb6a0c2fff3	a3b1f590		\func union {A : \Type} (U V : Set A) : Set A
+Compl	func	26c7959eec6f	678340e5025d	b79d4efb		\func Compl {X : \Type} (U : Set X) : Set X
+^-1	func	64f612aa8cc4	74f6cc9bf5c3	4967dcd7		\func ^-1 {X Y : \Type} (f : X -> Y) (S : Set Y) : Set X
+Set.Union	func	3b3ff62e1f5c	05ebe9517f7f	65a18ef7	cc3c1f3e:Set	\func Union {X : \Type} (S : Set X -> \Type) : Set X
+Set.restrict	func	2bf5e67cc1f7	9ab4011a24a2	b25f6cd8	8a42627f:Set.Total	\func restrict {X : \Type} {U : Set X} (V : Set X) : Set (Total U)
+Set.Prod	func	149306a4bcac	fb02a0c837da	101b70f2	d9e321db:Subset	\func Prod {X Y : \Type} (U : Set X) (V : Set Y) : Set (\Sigma X Y)
+extend	func	12a7962871a6	5afb6a4820ca	9187a8bf	8a42627f:Set.Total	\func extend {X : \Type} {U : Set X} (V : Set (Set.Total U)) : Set X
+SetLattice	instance	18150badd390	-	6f1d3bd7	cc3c1f3e:Set d9e321db:Subset	\instance SetLattice (A : \Type) : Locale (Set A)
+single_<=	lemma	a1bd6c7ce5fa	-	af7900c6	d9e321db:Subset c2386c32:single	\lemma single_<= {X : \Set} {a : X} {U : Set X} (Ua : U a) : single a ⊆ U
+empty-univ	lemma	e1e0fc04479f	-	c89540b3	d9e321db:Subset 9a869a79:empty	\lemma empty-univ {A : \Type} {U : Set A} : empty ⊆ U
+join_union	lemma	1f198d62ef96	-	2fdd6b81	b1ad1db3:SetLattice 05557489:union	\lemma join_union {A : \Type} {U V : Set A} : U ∨ V = U ∪ V
+bottom-empty	lemma	6dc175bb1e84	-	4581c80d		\lemma bottom-empty {A : \Type} {E : \Prop} {x : A} (b : (SetLattice A).bottom x) : E
+extend-sub	lemma	b38eb5838057	-	8bef8c0a	d9e321db:Subset b966c47d:extend	\lemma extend-sub {X : \Type} {U : Set X} {V : Set (Set.Total U)} : extend V ⊆ U
+extend-mono	lemma	c4f979894e07	-	3b88cc94	b966c47d:extend	\lemma extend-mono {X : \Type} {U : Set X} {V W : Set (Set.Total U)} (p : V ⊆ W) : extend V ⊆ extend W
+extend_meet	lemma	cf1037b6418f	-	c6580aec	b966c47d:extend	\lemma extend_meet {X : \Type} {U : Set X} {V W : Set (Set.Total U)} : extend (V ∧ W) = extend V ∧ extend W
+restrict_extend	lemma	9e73efb78b4d	-	8dbdfc4a	fd1c68f3:Set.restrict b966c47d:extend	\lemma restrict_extend {X : \Type} {U : Set X} {V : Set (Set.Total U)} : Set.restrict (extend V) = V
+extend_restrict	lemma	5cd6455099c9	-	af6ea05e	fd1c68f3:Set.restrict d9e321db:Subset b966c47d:extend	\lemma extend_restrict {X : \Type} {U : Set X} {V : Set X} : extend (Set.restrict {X} {U} V) ⊆ V
+^-1_<=	lemma	d8b716394ca6	-	9d366827	d9e321db:Subset ed22c2ce:^-1	\lemma ^-1_<= {A B : \Type} (f : A -> B) {U V : Set B} (p : U ⊆ V) : f ^-1 U ⊆ f ^-1 V
+^-1_FrameHom	func	cb29a8b6bc45	eba883bc0220	a12e8c99	b1ad1db3:SetLattice ed22c2ce:^-1	\func ^-1_FrameHom {A B : \Type} (f : A -> B) : FrameHom (SetLattice B) (SetLattice A)
+Set.CoverInter	func	037c54700cd8	eb48f26727ff	fa06ac33		\func CoverInter {X : \Type} (C : Set (Set X)) (D : Set (Set X)) : Set (Set X)
+Set.CoverInterBig	func	c2f64cbf5c18	91760d618785	9b9c1eb3	5c39633f:Set.CoverInter c2386c32:single	\func CoverInterBig {X : \Type} (Cs : Array (Set (Set X))) : Set (Set X)
+CoverInterBig-char	lemma	027068bf5699	-	bdeef1ba	dafb52da:Set.CoverInterBig	\lemma CoverInterBig-char {X : \Type} {Cs : Array (Set (Set X))} : Set.CoverInterBig Cs = (\lam W => ∃ (Us : Array (Set X) Cs.len) (\Pi (j : Fin Cs.len) -> Cs j (Us j)) (W = Big {Set X} ∧ top Us))
+Refines	func	d0dd50302cfa	8c1733b771bb	1525f8f1		\func Refines {P : Preorder} (C D : Set P) : \Prop
+<=_Refines	lemma	81273bc2efb3	-	2ed01307	ce94fad1:Refines d9e321db:Subset	\lemma <=_Refines {P : Preorder} {C D : Set P} (C<=D : C ⊆ D) : Refines C D
+Refines-cover	lemma	ed31f88e6826	-	0a86cf87		\lemma Refines-cover {X : \Type} {C D : Set (Set X)} (r : Refines C D) {x : X} (p : ∃ (U : C) (U x)) : ∃ (V : D) (V x)
+Refines-single_top	lemma	e14eab537357	-	4f36bf9a		\lemma Refines-single_top {X : \Type} {C : Set (Set X)} : Refines C (single top)
+Refines-refl	lemma	22e4cf3f8849	-	fd4fe97d		\lemma Refines-refl {P : Preorder} {C : Set P} : Refines C C
+Refines-trans	lemma	5bc17cff19e4	-	3c4c74e4		\lemma Refines-trans {X : \Type} {C D E : Set (Set X)} (r1 : Refines C D) (r2 : Refines D E) : Refines C E
+Refines-inter-left	lemma	1aece1b25d1a	-	a22456ee	5c39633f:Set.CoverInter	\lemma Refines-inter-left {X : \Type} {C D : Set (Set X)} : Refines (Set.CoverInter C D) C
+Refines-inter-right	lemma	924974359028	-	a22456ee	5c39633f:Set.CoverInter	\lemma Refines-inter-right {X : \Type} {C D : Set (Set X)} : Refines (Set.CoverInter C D) D
+Refines-inter-big	lemma	3f5249c1fb53	-	6a05dd47	dafb52da:Set.CoverInterBig	\lemma Refines-inter-big {X : \Type} (Cs : Array (Set (Set X))) (j : Fin Cs.len) : Refines (Set.CoverInterBig Cs) (Cs j)
+Refines-inter	lemma	71e9d3887b31	-	49a384bd	ce94fad1:Refines 5c39633f:Set.CoverInter	\lemma Refines-inter {X : \Type} {C D C' D' : Set (Set X)} (r : Refines C D) (r' : Refines C' D') : Refines (Set.CoverInter C C') (Set.CoverInter D D')
+(overview)	-	-	-	5509fba0	cc3c1f3e:Set 5c39633f:Set.CoverInter 8a42627f:Set.Total fd1c68f3:Set.restrict b1ad1db3:SetLattice d9e321db:Subset ed22c2ce:^-1 b966c47d:extend	-

@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Reduced. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ReducedRing	class	ace722e1e38a	-	47ff664d	bc6ed02a:ReducedRing.isReduced	\class ReducedRing \extends Ring { | isReduced {a : E} : a * a = 0 -> a = 0 }
+ReducedRing.noNilpotent	lemma	6316a410b419	-	d1103195		\lemma noNilpotent {a : E} {n : Nat} (p : pow a n = 0) : a = 0
+ReducedRing.noNilpotent.aux	lemma	5b1708a964c6	-	04d99d9f	09ef7928:ReducedRing.noNilpotent	\lemma aux {a : E} {n : Nat} (p : pow a (NatSemiring.pow 2 n) = 0) : a = 0
+ReducedCRing	class	938ca155f4db	-	dcbb41de	b0dec3b2:ReducedRing	\class ReducedCRing \extends ReducedRing, CRing
+ReducedCRing.div_zero	lemma	ebbd77335ba3	-	cae7d55e		\lemma div_zero {a b : E} (d : LDiv a b) (p : a * b = 0) : b = 0
+ReducedCRing.div_pow_zero	lemma	c17ecfae129b	-	589f79cf		\lemma div_pow_zero {a b : E} {n : Nat} (d : LDiv a (pow b n)) (p : a * b = 0) : b = 0
+ReducedCRing.div-cancel	lemma	5e9b0c3be4c2	-	8ed9e6ec		\lemma div-cancel {a b b' : E} (d : LDiv a b) (d' : LDiv a b') (p : a * b = a * b') : b = b'
+ReducedCRing.div_pow-cancel	lemma	7eea5295410a	-	d2b173bb		\lemma div_pow-cancel {a b b' : E} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : a * b = a * b') : b = b'
+ReducedCRing.div_div-cancel	lemma	3629769a99c8	-	07fd1448		\lemma div_div-cancel {a b b' : E} (d : LDiv a b) (d' : LDiv a b') (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv
+ReducedCRing.div_pow_div-cancel	lemma	f50b1c022963	-	78156aa8	c71d6917:ReducedCRing.div_div-cancel	\lemma div_pow_div-cancel {a b b' : E} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv
+PPRing	class	120d0ee0cf8f	-	c201bff3	58356e02:PPRing.isPPRing 52315960:ReducedCRing	\class PPRing \extends ReducedCRing { | isPPRing (a : E) : ∃ (u : E) (a = u * a) ∀ {x} (a * x = 0 -> u * x = 0) | isReduced => \lam {a} aa=0 => (\case isPPRing a \with { | inP s => s.2 *> s.3 aa=0 }) }
+PPRing.bezout->strictBezout	lemma	4878b8b318b0	-	85b48663		\lemma bezout->strictBezout (bez : IsBezout) : IsStrictBezout
+ImpotentRing	class	5c24e817750c	-	72a977e7	b0dec3b2:ReducedRing	\class ImpotentRing \extends ReducedRing, NonZeroRing { | isImpotent {a : E} : a * a = a -> (a = 0) || (a = 1) }
+ImpotentRing.decomp	lemma	b540d2a41c8a	-	5837f11d		\lemma decomp {a b : E} (a+b=1 : a + b = 1) (ab=0 : a * b = 0) : (\Sigma (a = 1) (b = 0)) || (\Sigma (a = 0) (b = 1))
+ImpotentRing.subring	func	d195e27e8861	3b06c1b336a9	e735b691	fee7a833:ImpotentRing	\func subring {R : Ring} {E : ImpotentRing} (f : RingHom R E) (inj : IsInj f) : ImpotentRing { | Ring => R }
+ImpotentCRing	class	7def2c55d6e5	-	8d0b68d5	fee7a833:ImpotentRing 52315960:ReducedCRing	\class ImpotentCRing \extends ImpotentRing, ReducedCRing, NonZeroCRing
+ImpotentCRing.subring	func	b11bb27d291c	490dd80d9249	a217ab83	f7a417de:ImpotentCRing d12e679e:ImpotentRing.subring	\func subring {R : CRing} {E : ImpotentRing} (f : RingHom R E) (inj : IsInj f) : ImpotentCRing { | CRing => R }
+(overview)	-	-	-	11800cf4	fee7a833:ImpotentRing 13f4ae88:PPRing 52315960:ReducedCRing	-

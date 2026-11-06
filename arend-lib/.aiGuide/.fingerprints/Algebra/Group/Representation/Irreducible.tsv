@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation.Irreducible. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsIrreducible	func	96825a67abe3	212db972fe8d	03e99dba		\func IsIrreducible {R : Ring} {G : Group} (E : LinRepres R G) : \Prop
+SchurLemma	lemma	fc4f6bcfdcc0	-	133e871e		\lemma SchurLemma {R : Ring} {G : Group} {A B : LinRepres R G} (p : IsIrreducible A) (q : IsIrreducible B) (f : InterwiningMap A B) : f.IsZero || IsEquiv f
+(overview)	-	-	-	716f387e		-

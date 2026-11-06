@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Graded.Localization. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HomogenLocRing	func	6479dbf577e6	d41eb7d1c58c	4ce36b1c	afed8576:HomogenLocRing.subRing	\func HomogenLocRing {R : GradedCRing} (S : SubMonoid R) : CRing
+HomogenLocRing.subRing	func	c3549d2edfd8	3d03f53ea018	7c9971fa		\func subRing : SubRing (LocRing S)
+HomogenLocRing.fromSType	func	527a2905f875	9ea46d2a857f	9805d389	51172f9a:HomogenLocRing	\func fromSType (y : \Sigma (x y : R) (S y)) {n : Nat} (\property y1h : isHomogen y.1 n) (\property y2h : isHomogen y.2 n) : HomogenLocRing S
+HomogenLocRing.fromSType.equality	lemma	e5013832ce94	-	eb65f51d	7451e794:HomogenLocRing.fromSType	\lemma equality (x : LocRing S) (x=[y] : x = inl~ y) : fromSType y y1h y2h = (x, inP (y, x=[y], n, y1h, y2h))
+(overview)	-	-	-	ecd4b080	51172f9a:HomogenLocRing 7451e794:HomogenLocRing.fromSType	-

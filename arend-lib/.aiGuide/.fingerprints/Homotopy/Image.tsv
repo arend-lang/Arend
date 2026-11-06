@@ -1,0 +1,19 @@
+# arend -gc fingerprints v2 for module Homotopy.Image. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MJoin	func	0e39d3e3cc54	cf3d534ceee8	c12dd1d9	86215115:MJoin.MData.A 7111b135:MJoin.MData.B aba756c7:MJoin.MData.R	\func MJoin {A B : \Type} (R : A -> B -> \Type)
+MJoin.MData	class	8261f904192e	-	8c49a5d9	86215115:MJoin.MData.A 7111b135:MJoin.MData.B aba756c7:MJoin.MData.R 5ed314cf:MJoin.MData.f 859af1dd:MJoin.MData.ret	\class MData .{u} \noclassifying {A : \Type u} {B : \Cat (\suc u)} (f : A -> B) (R : B -> B -> \Type u) (ret : \Pi (b b' : B) -> R b b' -> b = b')
+MJoin.MData.MImageAppr	func	9d5e4b5ac7f8	509ff71be66b	8bb0bcad	86215115:MJoin.MData.A 7111b135:MJoin.MData.B aba756c7:MJoin.MData.R 5ed314cf:MJoin.MData.f	\func MImageAppr (n : Nat) : \Sigma (X : \Type u) (X -> B)
+MJoin.MData.MImage	func	8bd4e46a43a0	e12080684557	fd89e892		\func MImage
+MJoin.MData.seq	func	f399831b688f	60e1c5818ff0	8ad491d2	01e10329:MJoin.MData.MImage	\func seq : Seq
+MJoin.MData.dom-map	func	1cb2b5b3aabf	5eb1f8bd0a9a	0f533da3	86215115:MJoin.MData.A 01e10329:MJoin.MData.MImage	\func dom-map (a : A) : MImage
+MJoin.MData.cod-map	func	d22c8d9e3d46	f5d51039f0ee	8da12ab9	7111b135:MJoin.MData.B 01e10329:MJoin.MData.MImage b7f425cb:MJoin.MData.MImageAppr	\func cod-map (x : MImage) : B
+MJoin.MData.dom-map-surj	lemma	6d9aeb9d82dd	-	68deece5	aba756c7:MJoin.MData.R	\lemma dom-map-surj (refl : \Pi {b : B} -> R b b) : IsSurj dom-map
+MJoin.MData.cod-map-emb	lemma	94fe849742a9	-	c36d0a5c	aba756c7:MJoin.MData.R 859af1dd:MJoin.MData.ret	\lemma cod-map-emb (refl : \Pi {b : B} -> R b b) (refl-idp : \Pi {b : B} -> ret b b refl = idp) {x y : MImage} : IsEquiv {x = y} (pmap cod-map)
+MJoin.MData.cod-map-emb.fibers-contr	lemma	4da408633186	-	c9fe0289	5ed314cf:MJoin.MData.f	\lemma fibers-contr (refl : \Pi {b : B} -> R b b) (refl-idp : \Pi {b : B} -> ret b b refl = idp) (a : A) : Contr (Fib cod-map (f a))
+YImage	func	d6dedefe262c	50182de8afce	42f6d4f4	5b60d44c:MJoin.MData 86215115:MJoin.MData.A 7111b135:MJoin.MData.B aba756c7:MJoin.MData.R 859af1dd:MJoin.MData.ret	\func YImage {A B : \Type u} (S : A -> B -> \Type u)
+YImage.data	instance	a873ba58186a	-	c1b6c328	5b60d44c:MJoin.MData	\instance data : MData (\lam a b => S a b)
+YImage.dom-map	func	336ac64a23a1	0126047fa005	7930c18b	86215115:MJoin.MData.A 813a183f:YImage	\func dom-map (a : A) : YImage S
+YImage.cod-map	func	b84f829ddfe5	2b2f1c697de3	8b3cd08e	7111b135:MJoin.MData.B 813a183f:YImage	\func cod-map (y : YImage S) (b : B)
+YImage.dom-map-surj	lemma	f3d82ed8e2ba	-	86a4863e		\lemma dom-map-surj : IsSurj dom-map
+YImage.cod-map-emb	lemma	ac0457154dec	-	5c295f10		\lemma cod-map-emb {x y : YImage S} : IsEquiv {x = y} (pmap cod-map)
+(overview)	-	-	-	63330260	01e10329:MJoin.MData.MImage aba756c7:MJoin.MData.R 859af1dd:MJoin.MData.ret 813a183f:YImage	-

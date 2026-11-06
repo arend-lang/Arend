@@ -1,0 +1,29 @@
+# arend -gc fingerprints v2 for module Algebra.Ordered.RieszSpace. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PosetQModule	class	478a84564a32	-	e32e0bfe		\class PosetQModule \extends QModule, PosetDivAbGroup
+PosetQModule.*q_>=0	lemma	6f9d4f75ec58	-	13ab2d99		\lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
+PosetQModule.*q_>=0-cancel	lemma	fd7d1c4c70ee	-	2855ba98		\lemma *q_>=0-cancel {q : Rat} (q>0 : 0 < q) {a : E} (qa>=0 : 0 <= q *q a) : 0 <= a
+PosetQModule.<=_*q-left	lemma	e835ade02ee2	-	3a03901a		\lemma <=_*q-left {q r : Rat} (q<=r : q RatField.<= r) {a : E} (a>=0 : 0 <= a) : q *q a <= r *q a
+PosetQModule.<=_*q-right	lemma	eff190972ed0	-	a098a24a		\lemma <=_*q-right {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a b : E} (a<=b : a <= b) : q *q a <= q *q b
+PosetQModule.<=_*q-cancel-left	lemma	ca2212a0404e	-	f5523a40		\lemma <=_*q-cancel-left {q : Rat} (q>0 : 0 < q) {a b : E} (qa<=qb : q *q a <= q *q b) : a <= b
+PosetQModule.<=_*q-rotate-left	lemma	41812b300844	-	ba9f7dd8		\lemma <=_*q-rotate-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= RatField.finv q *q b) : q *q a <= b
+PosetQModule.<=_*q-rotate-right	lemma	56da637de005	-	b5e06b3d		\lemma <=_*q-rotate-right {q : Rat} (q>0 : 0 < q) {a b : E} (p : RatField.finv q *q a <= b) : a <= q *q b
+PosetQModule.<=_*q-rotate_finv-left	lemma	ec71ce40f3e7	-	fac2dee1		\lemma <=_*q-rotate_finv-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= q *q b) : RatField.finv q *q a <= b
+RieszSpace	class	2d6be5a2ebbe	-	45f7cdf8	802dc9ab:PosetQModule	\class RieszSpace \extends PosetQModule, LatticeAbGroup.FromJoin
+RieszSpace.join_*q	lemma	ea1ea94bd750	-	17eb0689		\lemma join_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x y : E} : q *q (x ∨ y) = (q *q x) ∨ (q *q y)
+RieszSpace.abs_*q>=0	lemma	b63ccaff33d0	-	96a100a3		\lemma abs_*q>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : abs (q *q x) = q *q abs x
+RieszSpace.abs_*q	lemma	d67e585a1df6	-	ebb4a1f0		\lemma abs_*q {q : Rat} {x : E} : abs (q *q x) = RatField.abs q *q abs x
+RieszSpace.abs_*q_<=_*n	lemma	111d4c90e6c6	-	4f7360bb		\lemma abs_*q_<=_*n {q : Rat} {x : E} : ∃ (n : Nat) (abs (q *q x) <= n *n abs x)
+RieszSpace.disjoint_*q	lemma	88648bd3b7d6	-	b7a53701		\lemma disjoint_*q {q r : Rat} {x y : E} (d : AreDisjoint x y) : AreDisjoint (q *q x) (r *q y)
+RieszSpace.meet_*q	lemma	67fe9eaa8113	-	117bf429		\lemma meet_*q {q : Rat} {x y : E} (q>=0 : RatField.zro RatField.<= q) : q *q (x ∧ y) = (q *q x) ∧ (q *q y)
+RieszSpace.join_abs	lemma	b6e47df5f7c7	-	61db1e30		\lemma join_abs {x y : E} : x ∨ y = ratio 1 2 *q (x + y + abs (x - y))
+RieszSpace.meet_abs	lemma	162b4634c515	-	348eeef2		\lemma meet_abs {x y : E} : x ∧ y = ratio 1 2 *q (x + y - abs (x - y))
+RieszSpace.part+_abs	lemma	d02b38744748	-	0a24c5cf		\lemma part+_abs {x : E} : part+ x = ratio 1 2 *q (x + abs x)
+RieszSpace.part+_+-disjoint	lemma	22a6fa174ee4	-	ca55d860		\lemma part+_+-disjoint {x y : E} (d : AreDisjoint x y) : part+ (x + y) = part+ x + part+ y
+RieszSpace.part-_+-disjoint	lemma	ffc09815b3da	-	157d58a9		\lemma part-_+-disjoint {x y : E} (d : AreDisjoint x y) : part- (x + y) = part- x + part- y
+RieszSpace.fromAbs	func	5594fa1468a2	9656303c24fd	23ae735e	802dc9ab:PosetQModule 405790a0:RieszSpace	\func fromAbs {A : PosetQModule} (abs : \Pi (a : A) -> ∃ (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)) : RieszSpace
+RieszSpaceHom	record	726603931ba5	-	55b6cf38		\record RieszSpaceHom \extends AddGroupHom, PosetHom { \override Dom : RieszSpace \override Cod : RieszSpace | func-join>= {x y : Dom} : func (x ∨ y) <= func x ∨ func y }
+RieszSpaceHom.func-join	lemma	6dff639ae704	-	e58c17e8		\lemma func-join {x y : Dom} : func (x ∨ y) = func x ∨ func y
+RieszSpaceHom.func-abs	lemma	4d5e39132040	-	46f354f7		\lemma func-abs {x : Dom} : func (LatticeAbGroup.abs x) = LatticeAbGroup.abs (func x)
+RieszSpaceHom.func-meet	lemma	9952814a0b6d	-	6f04082e		\lemma func-meet {x y : Dom} : func (x ∧ y) = func x ∧ func y
+(overview)	-	-	-	e35f4517	802dc9ab:PosetQModule a0366a41:RieszSpace.fromAbs	-

@@ -1,0 +1,68 @@
+# arend -gc fingerprints v2 for module Arith.Int. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+isuc	func	7ab9a3e135bb	3d5a04b3bf74	efcefe3a		\func isuc (x : Int) : Int
+ipred	func	7ab9a3e135bb	0c3582ece3ad	64c499c5		\func ipred (x : Int) : Int
+ipred_isuc	lemma	a3d58c9f6c55	-	6635cd84	76a6ecf9:ipred 069e308d:isuc	\lemma ipred_isuc (x : Int) : ipred (isuc x) = x
+isuc_ipred	lemma	5a4ea7d07103	-	6e69b640	76a6ecf9:ipred 069e308d:isuc	\lemma isuc_ipred (x : Int) : isuc (ipred x) = x
+id<isuc	lemma	9252ed05795f	-	de6e2927	069e308d:isuc	\lemma id<isuc {x : Int} : x < isuc x
+isuc_<_<=	lemma	f46975633cd1	-	b4ccdadd	069e308d:isuc	\lemma isuc_<_<= {x y : Int} (p : x < y) : isuc x <= y
+signum	func	7ab9a3e135bb	33cd61948d17	8ba81bd6		\func signum (x : Int) : Int
+signum.*-comm	lemma	41da938e95f8	-	9aab9718	0a2ebfb1:signum	\lemma *-comm {x y : Int} : signum (x IntRing.* y) = signum x IntRing.* signum y
+signum.signum_pos	lemma	e92199a2dd2c	-	3fa5fbee		\lemma signum_pos {n : Nat} (n/=0 : Not (n = 0)) : signum n = 1
+signum.signum_neg	lemma	8e7b4548e7fa	-	3fa5fbee		\lemma signum_neg {n : Nat} (n/=0 : Not (n = 0)) : signum (neg n) = -1
+signum.signum_neg/=1	lemma	c3716164fac8	-	a2914d45	0a2ebfb1:signum	\lemma signum_neg/=1 {n : Nat} (p : signum (neg n) = 1) : Empty
+signum.signum_-	lemma	b9202ca7ee2f	-	dcca1044	0a2ebfb1:signum	\lemma signum_- {x y : Int} : signum (x - y) = negative (signum (y - x))
+IntRing	instance	1777c5478a9f	-	157dded0	0a2ebfb1:signum	\instance IntRing : OrderedCRing.Dec Int
+IntRing.lldistr	lemma	f86df03472b4	-	9567ce95		\lemma lldistr (n m k : Nat) : (n Nat.+ m) - k = pos n + (m - k)
+IntRing.lrdistr	lemma	48adf8b15cbd	-	9567ce95		\lemma lrdistr (n m k : Nat) : (n Nat.+ m) - k = (n - k) + pos m
+IntRing.rldistr	lemma	6d7bfda1fdc3	-	9567ce95		\lemma rldistr (n m k : Nat) : n - (m Nat.+ k) = neg m + (n - k)
+IntRing.rrdistr	lemma	07a2143fb087	-	9567ce95		\lemma rrdistr (n m k : Nat) : n - (m Nat.+ k) = (n - m) + neg k
+IntRing.minus+pos	lemma	98562f0d97fc	-	96d4b39e		\lemma minus+pos (n m k : Nat) : (n - m) + pos k = pos n + (k - m)
+IntRing.minus+neg	lemma	9357e036e024	-	96d4b39e		\lemma minus+neg (n m k : Nat) : (n - m) + neg k = neg m + (n - k)
+IntRing.minus__	lemma	83f9083d1fdf	-	0f302808		\lemma minus__ {n : Nat} : n - n = 0
+IntRing.suc-left	lemma	218d83e1c7b6	-	4b0d0948	069e308d:isuc	\lemma suc-left {x : Int} {n : Nat} : pos (suc n) + x = isuc (pos n + x)
+IntRing.suc-right	lemma	d0686f2e9ace	-	4b0d0948	069e308d:isuc	\lemma suc-right {x : Int} {n : Nat} : x + pos (suc n) = isuc (x + pos n)
+IntRing.pred-left	lemma	4920d034b323	-	bc2aa2b7	76a6ecf9:ipred	\lemma pred-left {x : Int} {n : Nat} : neg (suc n) + x = ipred (neg n + x)
+IntRing.pred-right	lemma	1ffd1a8a5253	-	bc2aa2b7	76a6ecf9:ipred	\lemma pred-right {x : Int} {n : Nat} : x + neg (suc n) = ipred (x + neg n)
+IntRing.neg*pos	lemma	b798e85ad6ee	-	7d26ecff		\lemma neg*pos {n m : Nat} : neg n * pos m = neg (n Nat.* m)
+IntRing.neg*neg	lemma	53ed39c9cbad	-	7d26ecff		\lemma neg*neg {n m : Nat} : neg n * neg m = pos (n Nat.* m)
+IntRing.pos_neg_+	lemma	58684af8f88e	-	8bb3181d		\lemma pos_neg_+ {n m k : Nat} : pos (n Nat.+ k) + neg (m Nat.+ k) = pos n + neg m
+IntRing.pos_minus-ldistr	lemma	7b6dd14c1375	-	6dccfe82		\lemma pos_minus-ldistr {n m k : Nat} : pos n * (m - k) = pos (n Nat.* m) + neg (n Nat.* k)
+IntRing.neg_minus-ldistr	lemma	9d82e36dced9	-	6dccfe82		\lemma neg_minus-ldistr {n m k : Nat} : neg n * (m - k) = neg (n Nat.* m) + pos (n Nat.* k)
+IntRing.neg<=0	lemma	e07a8f8ae285	-	5f5924ca		\lemma neg<=0 {n : Nat} : neg n IntRing.<= 0
+IntRing.pos>=0	lemma	0516f86c987c	-	5f5924ca		\lemma pos>=0 {n : Nat} : 0 IntRing.<= pos n
+iabs	func	f43635498977	181e84f70b89	6de26b89		\func iabs (x : Int) : Nat
+iabs.signum_/=0	lemma	e129c1a16d2c	-	aeef7ecf	f063db3a:iabs 0a2ebfb1:signum	\lemma signum_/=0 {x : Int} (x/=0 : Not (x = 0)) : iabs (signum x) = 1
+iabs.signum_*	lemma	d76f3000ae8d	-	4520b285	f063db3a:iabs 0a2ebfb1:signum	\lemma signum_* {x : Int} : pos (iabs x) = x * signum x
+iabs.*_signum	lemma	9eb4897c6a46	-	4520b285	f063db3a:iabs 0a2ebfb1:signum	\lemma *_signum {x : Int} : pos (iabs x) * signum x = x
+iabs.negative-comm	lemma	a4113be698af	-	3c6653cb	f063db3a:iabs	\lemma negative-comm {x : Int} : iabs (IntRing.negative x) = iabs x
+iabs.equals0	lemma	b3577767b894	-	ededfc5f	f063db3a:iabs	\lemma equals0 {x : Int} (|x|=0 : iabs x = 0) : x = 0
+iabs.ofPos	lemma	b8e64aacdba6	-	c5148de3	f063db3a:iabs	\lemma ofPos {x : Int} (x>=0 : 0 <= x) : pos (iabs x) = x
+iabs.ofNeg	lemma	0759b9ef6fe9	-	c5148de3	f063db3a:iabs	\lemma ofNeg {x : Int} (x<=0 : x <= 0) : pos (iabs x) = negative x
+iabs=abs	lemma	f2834ee1dd1f	-	ef82da20	f063db3a:iabs	\lemma iabs=abs {x : Int} : pos (iabs x) = IntRing.abs x
+iabs_*	lemma	8290494e7d5d	-	cfeea4b1	f063db3a:iabs	\lemma iabs_* {x y : Int} : iabs (x * y) = iabs x * iabs y
+ldiv_iabs	lemma	ce47fe0b2884	-	2396f564	f063db3a:iabs	\lemma ldiv_iabs {x y : Int} (d : LDiv x y) : LDiv (iabs x) (iabs y) (iabs d.inv)
+iabs_ldiv	func	d502647df697	f0e8122c94d5	b7637b95	f063db3a:iabs	\func iabs_ldiv {x y : Int} (d : LDiv (iabs x) (iabs y)) : LDiv x y
+intUnits	func	b21721835c9e	d29043f72104	3b0ae9fe		\func intUnits {x y : Int} (p : x * y = 1) : Or (y = 1) (y = -1)
+<_+1_<=	lemma	e5920a08561b	-	9d6a5ee1		\lemma <_+1_<= {x y : Int} (p : x < y + 1) : x <= y
+pos_iabs	lemma	74eb95df58ec	-	73f58bba	f063db3a:iabs	\lemma pos_iabs {x y : Nat} (y<=x : y <= x) : pos (iabs (x Nat.- y)) = x Nat.- y
+neg_iabs	lemma	f8027676cfdc	-	73f58bba	f063db3a:iabs	\lemma neg_iabs {x y : Nat} (x<=y : x <= y) : neg (iabs (x Nat.- y)) = x Nat.- y
+iabs_-_suc	lemma	2aa3c28ec3fe	-	9cdd28a0	f063db3a:iabs	\lemma iabs_-_suc {n i : Nat} (p : i <= n) : iabs (suc n Nat.- i) = suc (iabs (n Nat.- i))
+zro-id=neg	lemma	63f0580328c0	-	b6b98618		\lemma zro-id=neg {n : Nat} : 0 Nat.- n = neg n
+-'=-	lemma	befe46888059	-	e4f14dbd		\lemma -'=- {n m : Nat} (p : m <= n) : pos (n -' m) = n Nat.- m
+unpos	lemma	6a794a9468b9	-	e0dfdf29		\lemma unpos {n m : Nat} (p : pos n = pos m) : n = m
+pos<pos	lemma	003521531d70	-	15b8aa0c		\lemma pos<pos {n m : Nat} (p : n < m) : pos n < pos m
+pos<pos.conv	lemma	2d8fff57cae5	-	15b8aa0c		\lemma conv {n m : Nat} (p : pos n < pos m) : n < m
+neg<neg	lemma	11db8720c1fc	-	8fb8f68e		\lemma neg<neg {n m : Nat} (p : n < m) : neg m < neg n
+neg<neg.conv	lemma	fef888cbd3a7	-	8fb8f68e		\lemma conv {n m : Nat} (p : neg m < neg n) : n < m
+pos<=pos	lemma	a71af131c623	-	53e06dfd		\lemma pos<=pos {n m : Nat} (p : n <= m) : pos n <= pos m
+pos<=pos.conv	lemma	5da2a0119e45	-	53e06dfd		\lemma conv {n m : Nat} (p : pos n <= pos m) : n <= m
+neg<=pos	lemma	23626074d6a4	-	8525d6a7		\lemma neg<=pos {n m : Nat} : neg n <= pos m
+pos/<=neg	lemma	59aaf85cef08	-	b507c8b2		\lemma pos/<=neg {n m : Nat} (p : pos n <= neg m) : m = 0
+neg<=neg	lemma	8e10f0c3f39d	-	8204df21		\lemma neg<=neg {n m : Nat} (p : n <= m) : neg m <= neg n
+neg<=neg.conv	lemma	c4338bf3efcb	-	8204df21		\lemma conv {n m : Nat} (p : neg n <= neg m) : m <= n
+signum_iabs_eq	lemma	d9b847f16743	-	e7f1b2e0		\lemma signum_iabs_eq {x y : Int} (p : signum x = signum y) (q : iabs x = iabs y) : x = y
+int_<=-dec	lemma	f8c098ac8e63	-	5d523b24	c1676871:int_<=-dec.int_<=_Bool	\lemma int_<=-dec {x y : Int} {so : So (int_<=_Bool x y)} : x <= y
+int_<=-dec.int_<=_Bool	func	1ccad6511ea7	519799d4164b	1a8dfff1		\func int_<=_Bool (x y : Int) : Bool
+int_<-dec	lemma	dbd0318ffebd	-	e03c5f95	c1676871:int_<=-dec.int_<=_Bool 069e308d:isuc	\lemma int_<-dec {x y : Int} {so : So (int_<=-dec.int_<=_Bool (isuc x) y)} : x < y
+(overview)	-	-	-	afdf61e2	6ec9f91a:IntRing f063db3a:iabs	-

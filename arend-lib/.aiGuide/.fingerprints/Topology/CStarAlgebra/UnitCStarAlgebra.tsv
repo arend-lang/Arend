@@ -1,0 +1,32 @@
+# arend -gc fingerprints v2 for module Topology.CStarAlgebra.UnitCStarAlgebra. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+UnitC*Algebra	instance	6ff11ca872ce	-	f1a659fa		\instance UnitC*Algebra (A : StoneC*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)
+UnitC*Algebra.inhabitted	lemma	3f9610106a15	-	f0676992		\lemma inhabitted : ∃ (y : A) (A.norm y <= 1)
+StoneC*AlgebraRieszSpace	func	630d9f431366	11eb40adaaf8	43a700e9	d45e1324:StoneC*AlgebraRieszSpace.abs-aux	\func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A
+StoneC*AlgebraRieszSpace.StoneC*AlgebraTopPoset	func	12a4f1e80c66	b660be115ead	ecd4138c		\func StoneC*AlgebraTopPoset : HausdorffTopPosetAbGroup
+StoneC*AlgebraRieszSpace.abs-aux	lemma	0f5d3d520f3c	-	c682aece		\lemma abs-aux (a : A) : ∃ (b : A) (b * b = a * a) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)
+StoneC*AlgebraRieszSpace.abs-square	lemma	fe45faeebb2b	-	5a913159		\lemma abs-square {a : A} : (StoneC*AlgebraRieszSpace A).abs a * (StoneC*AlgebraRieszSpace A).abs a = a * a
+StoneC*AlgebraRieszSpace.c*abs	func	2234cbcb923c	49203c30c091	b92bce09		\func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A
+StoneC*AlgebraRieszSpace.c*abs.yfunc>=0	lemma	9a755fb9c539	-	53220b90		\lemma yfunc>=0 {x : A} (x<=1 : x <= 1) {n : Nat} : 0 <= yfunc n x
+StoneC*AlgebraRieszSpace.c*abs.square-norm	lemma	1e415f517175	-	9611644c		\lemma square-norm : norm (1 - a * a) <= 1
+StoneC*AlgebraRieszSpace.c*abs.c*abs>=id	lemma	2604e07c91c8	-	ea47b1a8		\lemma c*abs>=id {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : x <= c*abs x x<=1 -x<=1
+StoneC*AlgebraRieszSpace.c*abs.c*abs>=neg	lemma	7342b492b24f	-	ea47b1a8		\lemma c*abs>=neg {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : negative x <= c*abs x x<=1 -x<=1
+StoneC*AlgebraRieszSpace.c*abs.c*abs>=id.induction	lemma	3e442a9a8af8	-	a9410bbf	1f1a6fe3:StoneC*AlgebraRieszSpace.c*abs.c*abs>=id	\lemma induction (n : Nat) : x <= 1 - yfunc n (x * x)
+StoneC*AlgebraRieszSpace.c*abs.zfunc_pow>0	lemma	cc2d2c46f719	-	46594675		\lemma zfunc_pow>0 {w : A} (w<=1 : w <= 1) (|1-w|<1 : (norm (1 - w)).U 1) : zfunc-lim (w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1) = w
+StoneC*AlgebraRieszSpace.c*abs.zfunc_pow	lemma	795b6fde9b53	-	46594675		\lemma zfunc_pow {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : zfunc-lim (w * w, zfunc_pow>0.square-norm w<=1 |1-w|<=1) = w
+StoneC*AlgebraRieszSpace.c*abs.zfunc_pow'	lemma	8ca3e8e96c0f	-	46594675		\lemma zfunc_pow' {w : A} (w>=0 : 0 <= w) (w<=1 : w <= 1)
+StoneC*AlgebraRieszSpace.c*abs.zfunc_pow>0.square-norm	lemma	9d3bb5261bf0	-	1a1cef9e		\lemma square-norm (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : norm (1 - w * w) <= 1
+StoneC*AlgebraRieszSpace.c*abs.yfunc-step	lemma	3789632fde35	-	d0a95768		\lemma yfunc-step {x : A} (x<=1 : x <= 1) {n : Nat} : yfunc n x <= yfunc (suc n) x
+StoneC*AlgebraRieszSpace.c*abs.yfunc-mono	lemma	5ae564ce23e2	-	d0a95768		\lemma yfunc-mono {x y : A} (x<=y : x <= y) (y<=1 : y <= 1) {n : Nat} : yfunc n y <= yfunc n x
+StoneC*AlgebraRieszSpace.c*abs.zfunc-lim-meet	lemma	148f922ba8f0	-	c5f2be32		\lemma zfunc-lim-meet {s : UnitBall {A}} (s<=1 : s.1 <= 1) : A.IsMeet (zfunc __ s.1) (zfunc-lim s)
+StoneC*AlgebraRieszSpace.c*abs.c*abs-univ-bounded	lemma	7278f8a52c4f	-	4ee1f846	050f753e:StoneC*AlgebraRieszSpace.c*abs	\lemma c*abs-univ-bounded {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) (x<=w : x <= w) (-x<=w : negative x <= w) : c*abs x x<=1 -x<=1 <= w
+StoneC*AlgebraRieszSpace.c*abs.sqrt-t	func	8b39015d284b	243ec5f42c1f	a2ec8fd7		\func sqrt-t (s : UnitBall {A})
+StoneC*AlgebraRieszSpace.c*abs.square-inj	lemma	896aa18c9258	-	70d7e0f0		\lemma square-inj {x y : A} (x>=0 : 0 <= x) (x<=1 : x <= 1) (y>=0 : 0 <= y) (y<=1 : y <= 1) (xx=yy : x * x = y * y) : x = y
+StoneC*AlgebraRieszSpace.c*abs.elem>=0	lemma	9cd55468eb7c	-	0a6cb83e		\lemma elem>=0 {a x : A} (a<=x : a <= x) (-a<=x : negative a <= x) : 0 <= x
+StoneC*AlgebraRieszSpace.c*abs.c*abs>=0	lemma	dc3a1009ed98	-	4f7ccda8		\lemma c*abs>=0 {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : 0 <= c*abs x x<=1 -x<=1
+StoneC*AlgebraRieszSpace.c*abs.c*abs<=1	lemma	6e04b11ff748	-	4f7ccda8		\lemma c*abs<=1 {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : c*abs x x<=1 -x<=1 <= 1
+StoneC*AlgebraRieszSpace.c*abs.c*abs_*q	lemma	4db5d20f402e	-	d5460c91		\lemma c*abs_*q {q : Rat} (q>=0 : 0 <= q) (q<=1 : q <= 1) {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} {qx<=1 : q A.*q x <= 1} {-qx<=1 : negative (q A.*q x) <= 1} : q A.*q c*abs x x<=1 -x<=1 = c*abs (q A.*q x) qx<=1 -qx<=1
+StoneC*AlgebraRieszSpace.c*abs.c*abs-univ	lemma	6bce658746bd	-	1f014250	050f753e:StoneC*AlgebraRieszSpace.c*abs	\lemma c*abs-univ {w : A} (a<=w : a <= w) (-a<=w : negative a <= w) : c*abs a a<=1 -a<=1 <= w
+StoneC*PseudoAlgebraRieszSpace	func	8d83b340cf49	758e2626b145	2c2159ab	810027aa:UnitC*Algebra	\func StoneC*PseudoAlgebraRieszSpace (A : StoneC*PseudoAlgebra) : RieszSpace A
+StoneC*PseudoAlgebraRieszSpace.StoneC*PseudoAlgebaPoset	func	067c0a2fcd33	af362474ee95	674ad9a0		\func StoneC*PseudoAlgebaPoset : PosetQModule
+(overview)	-	-	-	2f870433		-

@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.OpenBall. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LBall	func	2769e5b4d0a7	7adb8703b5c4	cf1b05ec		\func LBall {X : ExPseudoMetricSpace} (r : LowerReal) (c : X) : Set X
+LBall-open	lemma	8d3f4b26d587	-	0b44a157	9e1f2880:LBall	\lemma LBall-open {X : ExPseudoMetricSpace} {r : LowerReal} {c : X} : isOpen (LBall r c)
+LBall_<=*	lemma	0f425a75575b	-	6c5f4433	9e1f2880:LBall	\lemma LBall_<=* {X : ExPseudoMetricSpace} {c : X} {r' : Rat} {r : LowerReal} (r'<r : r.L r') : OBall r' c <=* LBall r c
+LBall_<=<	lemma	e202ce748f1d	-	2e183be7	9e1f2880:LBall	\lemma LBall_<=< {X : ExPseudoMetricSpace} {c : X} {r' : Rat} {r : LowerReal} (r'<r : r.L r') : OBall r' c <=< LBall r c
+OpenBallCoverSpace	func	0b0e349f622e	17ea962d46cf	e8eadbbb	9e1f2880:LBall 0138a05c:OpenBallCoverSpace.<=<-conv 4891de54:OpenBallCoverSpace.<=<-dir 0dc4dc1f:OpenBallCoverSpace.basicCover-cover 6e7733da:OpenBallCoverSpace.basicCover-regular 5a09b433:OpenBallCoverSpace.func df0afa0f:OpenBallCoverSpace.isBasicCover 7b41b865:OpenBallCoverSpace.makeBasicCover1 838212e1:OpenBallCoverSpace.makeBasicCover2	\func OpenBallCoverSpace {X : ExPseudoMetricSpace} (c : X) (r : LowerReal) : CoverSpace (Total (LBall r c))
+OpenBallCoverSpace.infinity-inv	func	a28116b85f39	30d648e103ac	7c46b2b5		\func infinity-inv (Xb : X.IsDistBounded) (r=inf : r = LowerReal.infinity) (x : X) : OpenBallCoverSpace c r
+OpenBallCoverSpace.infinity-inv-cover	lemma	c79d170cabc1	-	7c46b2b5		\lemma infinity-inv-cover (Xb : X.IsDistBounded) (r=inf : r = LowerReal.infinity) : CoverMap X (OpenBallCoverSpace c r) (infinity-inv Xb r=inf)
+OpenBallCompleteCoverSpace	func	44c62e5cfd93	8b5b8600d24b	1fd1279f	5b235f20:OpenBallCompleteCoverSpace.cauchy-filter-extend	\func OpenBallCompleteCoverSpace {X : CompleteExMetricSpace} (c : X) (r : LowerReal) : CompleteCoverSpace (Total (LBall r c))
+(overview)	-	-	-	7fe3b2b7	9e1f2880:LBall 939bd7e9:OpenBallCompleteCoverSpace c48f8a70:OpenBallCoverSpace	-

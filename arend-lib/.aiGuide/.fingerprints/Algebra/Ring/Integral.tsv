@@ -1,0 +1,51 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Integral. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+polyImage	func	911e2d2c9747	ffb75df7e110	d5dc9188		\func polyImage {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : SubRing E
+polyImage-closed	lemma	74d089cd50ce	-	685c8dc3	52d94b69:polyImage	\lemma polyImage-closed {R : Ring} {E : CRing} (f : RingHom R E) (a : E) (x : IRing (polyImage f a)) : polyImage f a (a * x.1)
+polyImage-ext	lemma	5e3f46b8fb44	-	65af2d59	52d94b69:polyImage	\lemma polyImage-ext {R : Ring} {E : CRing} (f : RingHom R E) (a : E) (b : R) : polyImage f a (f b)
+polyImage-element	lemma	c337d3449a6a	-	1689d6bd	52d94b69:polyImage	\lemma polyImage-element {R : Ring} {E : CRing} {f : RingHom R E} {a : E} : polyImage f a a
+polyImage-pow	lemma	5f9880fa9e1a	-	6fc39c97	52d94b69:polyImage	\lemma polyImage-pow {R : Ring} {E : CRing} (f : RingHom R E) (a : E) {n : Nat} : polyImage f a (pow a n)
+polyImageHom	func	e2a171743fe5	2e1f274d711f	03a68458	52d94b69:polyImage	\func polyImageHom {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : RingHom R (IRing (polyImage f a))
+polyImageHomPoly	func	4c6477fe16e9	f1d0f45e2b28	0c7fd7aa	52d94b69:polyImage	\func polyImageHomPoly {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : RingHom (PolyRing R) (IRing (polyImage f a))
+mPolyImage	func	d4dcdd4ca6f4	eb59fcf5c5f8	c957e180		\func mPolyImage {R E : CRing} (f : RingHom R E) (l : Array E) : SubRing E
+mPolyImage-ext	lemma	d48e6ddc281a	-	76ecd349	d1e6cbb9:mPolyImage	\lemma mPolyImage-ext {R E : CRing} (f : RingHom R E) (l : Array E) (b : R) : mPolyImage f l (f b)
+mPolyImage-element	func	ad6a2b454448	eb5a661f39a4	76ecd349	d1e6cbb9:mPolyImage	\func mPolyImage-element {R E : CRing} (f : RingHom R E) (l : Array E) (j : Fin l.len) : mPolyImage f l (l j)
+mPolyImageHom	func	b419a35e9ac1	c152275c5fdf	e21917c8	d1e6cbb9:mPolyImage	\func mPolyImageHom {R E : CRing} (f : RingHom R E) (l : Array E) : RingHom R (IRing (mPolyImage f l))
+mPolyImage-finGen	sfunc	57ffd5f735ad	e1bed5f7c39e	f8b851e0	d1e6cbb9:mPolyImage	\sfunc mPolyImage-finGen {R E : CRing} (f : RingHom R E) (l : Array E) : \Sigma (l' : Array (IRing (mPolyImage f l)) l.len) (RingHom.isAlgebraGenerated (mPolyImageHom f l) l')
+isIntegral	func	dff6e3ae7f50	c827063faab3	04329372		\func isIntegral (f : RingHom) (x : f.Cod) : \Prop
+isIntegral.fromInv	lemma	9afc0d83ca41	-	3dcff4b8		\lemma fromInv {K R : CRing} {f : RingHom K R} {a : R} {p : Poly K} {n : Nat} (d : degree<= p n) (pi : Inv (polyCoef p n)) (pe : polyEval (polyMap f p) a = 0) : isIntegral f a
+isIntegral.fromPoly	lemma	e4c71f8f95b4	-	c0c4c757		\lemma fromPoly {K : DiscreteField} {R : CRing} {f : RingHom K R} {a : R} {p : Poly K} (p/=0 : p /= 0) (pe : polyEval (polyMap f p) a = 0) : isIntegral f a
+isIntegralExt	func	123ebd067535	2da43c6eb876	eaa7c600		\func isIntegralExt (f : RingHom) : \Prop
+isIntegrallyClosed	func	a641c43f934c	0e706f41545d	93e25e39		\func isIntegrallyClosed (f : RingHom)
+monic-generated	lemma	7f55f40cb863	-	88751756	52d94b69:polyImage	\lemma monic-generated {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (n : Nat) (dp : degree<= p n) (dm : polyCoef p n = 1) (e : polyEval (polyMap f p) a = 0) : LModule.IsGenerated {homLModule (polyImageHom f a)} (\new (Array _ n (\lam i => pow {IRing (polyImage f a)} (a, polyImage-element) i)))
+module-integral	lemma	43e3e3cded09	-	5e4e5939		\lemma module-integral {R E : CRing} (f : RingHom R E) (a : E) (S : SubRing E) (SR : \Pi (x : R) -> S (f x)) (Sg : LModule.IsFinitelyGenerated {homLModule (IRing.corestrict f SR)}) (Sa : S a) : isIntegral f a
+module-integral.module-monic	lemma	6b0493b9e82a	-	2bdce4e7		\lemma module-monic (l : Array (IRing S)) (Sg : LModule.IsGenerated {homLModule (IRing.corestrict f SR)} l) : ∃ (p : Poly R) (degree<= p l.len) (polyCoef p l.len = 1) (polyEval (polyMap f p) a = 0)
+finite-integralExt	lemma	e7ee875a2f78	-	ae6d67c7		\lemma finite-integralExt {R E : CRing} {f : RingHom R E} (gen : LModule.IsFinitelyGenerated {homLModule f}) : isIntegralExt f
+integral-generated	lemma	071a3301f9fe	-	fa9396e9	52d94b69:polyImage	\lemma integral-generated {R E : CRing} (f : RingHom R E) (a : E) (ai : isIntegral f a) : LModule.IsFinitelyGenerated {homLModule (polyImageHom f a)}
+integralExt-generated	lemma	cd1a4f7dfca4	-	516f9eab		\lemma integralExt-generated {R S : CRing} (f : RingHom R S) {l : Array S} (fi : ∀ (x : l) (isIntegral f x)) (gen : RingHom.isAlgebraGenerated f l) : LModule.IsFinitelyGenerated {homLModule f}
+integralExt-finite-char	lemma	3e23dfab6c10	-	02ced758		\lemma integralExt-finite-char {R E : CRing} {f : RingHom R E} (l : Array E) (gen : RingHom.isAlgebraGenerated f l) : TFAE (isIntegralExt f, ∀ (x : l) (isIntegral f x), LModule.IsFinitelyGenerated {homLModule f})
+poly_integral	lemma	a7e784bccebe	-	26d0226e		\lemma poly_integral {R E : CRing} (f : RingHom R E) (a : E) (ai : isIntegral f a) (q : Poly R) : isIntegral f (polyEval (polyMap f q) a)
+poly_integral.aux	lemma	0738cb402cf0	-	62c51d77		\lemma aux {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (n : Nat) (d : degree<= p n) (c : polyCoef p n = 1) (pa : polyEval (polyMap f p) a = 0) (q : Poly R) {b : E} (qb : polyEval (polyMap f q) a = b) : ∃ (p' : Poly R) (degree<= p' n) (polyCoef p' n = 1) (polyEval (polyMap f p') b = 0)
+polyImage_integral	lemma	86b6669c4ec4	-	e1d5fb3c	52d94b69:polyImage	\lemma polyImage_integral {R E : CRing} (f : RingHom R E) (a : E) (ai : isIntegral f a) {x : E} (xi : polyImage f a x) : isIntegral f x
+polyImage_integralExt	lemma	9cf33cd54018	-	3c2ebbc5	a20bf551:polyImageHom	\lemma polyImage_integralExt {R E : CRing} {f : RingHom R E} (a : E) (ai : isIntegral f a) : isIntegralExt (polyImageHom f a)
+integral_image-comp	lemma	65052df2a313	-	d11b345b		\lemma integral_image-comp {R S E : Ring} {f : RingHom R S} (g : RingHom S E) {a : S} (ai : isIntegral f a) : isIntegral (g ∘ f) (g a)
+integralExt-surj	lemma	8083d59a3e85	-	fec2897f		\lemma integralExt-surj (f : RingHom) (s : IsSurj f) : isIntegralExt f
+integralExt_id	lemma	a6c1ae668ac0	-	057c2b28		\lemma integralExt_id {R : Ring} : isIntegralExt (id {R})
+integral_image	lemma	e1c34cff5bc1	-	5f020b58		\lemma integral_image (f : RingHom) (a : f.Dom) : isIntegral f (f a)
+integralExt_polyDiv	lemma	2fdb2500d47a	-	049f54c2		\lemma integralExt_polyDiv {R E : CRing} {f : RingHom R E} (fi : isIntegralExt f) {p : Poly E} (pm : isMonic p) : ∃ (q : Poly R) (isMonic q) (LDiv p (polyMap f q))
+integralExt-left	lemma	a8f929c1c68f	-	f8c2ff60		\lemma integralExt-left {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (inj : IsInj g) (int : isIntegralExt (g ∘ f)) : isIntegralExt f
+integral-right	lemma	68c6ca55b4c8	-	a65cb466		\lemma integral-right {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (x : E) (int : isIntegral (g ∘ f) x) : isIntegral g x
+integralExt-right	lemma	0c6dc7f0a62e	-	a65cb466		\lemma integralExt-right {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (int : isIntegralExt (g ∘ f)) : isIntegralExt g
+integral-comp	lemma	57686142c944	-	2b05e4ed		\lemma integral-comp {R S T : CRing} {f : RingHom R S} {g : RingHom S T} (fi : isIntegralExt f) {a : T} (ai : isIntegral g a) : isIntegral (g ∘ f) a
+integralExt-comp	lemma	4be56c7fcf86	-	f9f33ad1		\lemma integralExt-comp {R S E : CRing} (f : RingHom R S) (g : RingHom S E) (fi : isIntegralExt f) (gi : isIntegralExt g) : isIntegralExt (g ∘ f)
+integralClosure-subring	func	5f4696c7c95f	0c0e672c7bf2	1e658e2b		\func integralClosure-subring {R E : CRing} (f : RingHom R E) : SubRing E
+integralClosure-subring.integral-combined	lemma	722f965c6086	-	79ab79c7		\lemma integral-combined {R E : CRing} (f : RingHom R E) {a b : E} (ai : isIntegral f a) (bi : isIntegral f b) : isIntegralExt (polyImageHom (IRing.embed {polyImage f a}) b ∘ polyImageHom f a)
+integralClosure	func	ad80032a291e	5394e3c8223f	ede85e55		\func integralClosure {R E : CRing} (f : RingHom R E) : CRing
+integralClosure-left	func	be85c3265cec	e25a35374b44	21825551	fd3a0262:integralClosure	\func integralClosure-left {R E : CRing} (f : RingHom R E) : RingHom R (integralClosure f)
+integralClosure-right	func	ec1658c48c79	d6f43d6c7d74	91e8f72f	fd3a0262:integralClosure	\func integralClosure-right {R E : CRing} (f : RingHom R E) : RingHom (integralClosure f) E
+integralClosure-integral	lemma	e37cf7847a6c	-	3f93916f	db3dd4db:integralClosure-left	\lemma integralClosure-integral {R E : CRing} (f : RingHom R E) : isIntegralExt (integralClosure-left f)
+integralClosure-closed	lemma	37cfee0e32fa	-	aba2f128	8eca116b:integralClosure-right	\lemma integralClosure-closed {R E : CRing} (f : RingHom R E) : isIntegrallyClosed (integralClosure-right f)
+integral_factor	func	8a72bb53d2df	7359392aa552	2d9e6815	52d94b69:polyImage	\func integral_factor {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (e : polyEval (polyMap f p) a = 0) : RingHom (FactorRing (Ideal.closure1 p)) (IRing (polyImage f a))
+poly-integralExt	lemma	589c425ae229	-	e00a0cc1		\lemma poly-integralExt {R : CRing} {I : Ideal (PolyAlgebra R)} {p : Poly R} (pm : isMonic p) (Ip : I p) : isIntegralExt (factorHom {I} ∘ polyHom)
+integralExt-directColimit	lemma	fcd9f068395b	-	1abb29e2		\lemma integralExt-directColimit {J : BottomJoinSemilattice.{s}} (F : Functor J RingCat.{p}) (p : \Pi {j j' : J} (f : j <= j') -> isIntegralExt (F.Func f)) (j : J) : isIntegralExt (RingLatticeColimit.inMap j)
+(overview)	-	-	-	ab4df605	52d94b69:polyImage	-

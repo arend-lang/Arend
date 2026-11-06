@@ -1,0 +1,103 @@
+# arend -gc fingerprints v2 for module Arith.Nat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+-'	func	6258d7a2d601	ed3e115c0b0c	275cc535		\func -' (n m : Nat) : Nat
+pred	func	b5b638334631	43ca76c94948	4693ec55		\func pred (x : Nat) : Nat
+suc_pred	lemma	ce209e34faca	-	0db958d7	5628ca74:pred	\lemma suc_pred {n : Nat} (n/=0 : n /= 0) : suc (pred n) = n
+-'0	lemma	6cbe7b98a5fb	-	ca755a63	05ac9453:-'	\lemma -'0 {n : Nat} : n -' 0 = n
+-'+	lemma	d631ea1bc2e8	-	51ae365d	05ac9453:-'	\lemma -'+ {n m : Nat} : n + m -' m = n
+-'id	lemma	4dbf46945f1a	-	046c6019	05ac9453:-'	\lemma -'id {n : Nat} : n -' n = 0
+-'-'l	lemma	fce54efab506	-	adea92f8	05ac9453:-'	\lemma -'-'l {a b c : Nat} : a -' b -' c = a -' (b + c)
+-'-'r	lemma	bb72f9ac9553	-	5d12e104	05ac9453:-'	\lemma -'-'r {n m k : Nat} (k<=m : k <= m) (m<=n : m <= n) : n -' (m -' k) = n -' m + k
+-'-'r_id	lemma	9d2c9c6df20d	-	49814e26	05ac9453:-'	\lemma -'-'r_id {n k : Nat} (k<=n : k <= n) : n -' (n -' k) = k
+-'_inv	func	e5f8839c56ab	b214fb34d94c	49814e26	05ac9453:-'	\func -'_inv {k m : Nat} (A0 : m <= k) : k -' (k -' m) = m
+-'_suc	func	54a9b15103f7	072b4e8eba6e	5967d16d	05ac9453:-'	\func -'_suc {n m : Nat} (p : m <= n) : suc n -' m = suc (n -' m)
+-'_<=+	lemma	d116979a01b7	-	06a982ee	05ac9453:-'	\lemma -'_<=+ {n m : Nat} : n <= (n -' m) + m
+-'_+_<=	lemma	799da2dd637b	-	3ddf6e05	05ac9453:-'	\lemma -'_+_<= {n m k : Nat} (p : n + m <= k) : n <= k -' m
+-'=0	lemma	3d9aef77d795	-	5177c271	05ac9453:-'	\lemma -'=0 {n m : Nat} (p : n <= m) : n -' m = 0
+-'_<-monotone-left	lemma	468ab9431154	-	5c2187f6	05ac9453:-' 6ab0dd14:NatOrder.<	\lemma -'_<-monotone-left {n m k : Nat} (p : n < m) (q : k < m) : n -' k < m -' k
+suc/=0	func	f8d783ae43c8	621187546648	fd51996a		\func suc/=0 {n : Nat} (p : suc n = 0) : Empty
+NatOrder.<	data	6ab166ecf516	-	68961193		\data \infix 4 < (n m : Nat) \with | 0, suc _ => zero<suc | suc n, suc m => suc<suc (n < m)
+NatOrder.unsuc<	lemma	eb27673c21b0	-	69202408	6ab0dd14:NatOrder.< 05ee5b7e:NatOrder.<.suc<suc	\lemma unsuc< {n m : Nat} (p : suc n < suc m) : n < m
+-'_<	lemma	9af6c99fa2bd	-	54284b3e	05ac9453:-' 6ab0dd14:NatOrder.<	\lemma -'_< {n m : Nat} (p : 0 < n -' m) : m < n
+<_-'	lemma	ae6e7d195af4	-	cdddc7c2	05ac9453:-' 6ab0dd14:NatOrder.<	\lemma <_-' {n m : Nat} (p : m < n) : 0 < n -' m
+id<suc	lemma	159955a4b041	-	fd60c2bc	6ab0dd14:NatOrder.<	\lemma id<suc {n : Nat} : n < suc n
+id/=suc	lemma	7c20b42d6175	-	cfa1b375		\lemma id/=suc {n : Nat} : n /= suc n
+nonZero>0	lemma	2d8381f221ab	-	d8161383	6ab0dd14:NatOrder.<	\lemma nonZero>0 {n : Nat} (n/=0 : n /= 0) : 0 < n
+fin_<	lemma	f15f19f23221	-	e74388d2		\lemma fin_< {n : Nat} (x : Fin n) : x < n
+toFin	func	2de5f9ac0983	5710de260364	9717ed79	6ab0dd14:NatOrder.<	\func toFin (k : Nat) {n : Nat} (\property p : k < n) : Fin n
+toFin=id	lemma	7c847eba6f98	-	c1e811f0	42def93d:toFin	\lemma toFin=id {k n : Nat} {p : k < n} : toFin k p = {Nat} k
+toFin=fin	lemma	2de652bb0c7b	-	cfc316df	42def93d:toFin	\lemma toFin=fin {n : Nat} {k : Fin n} : toFin k (fin_< k) = k
+toFin'	func	99e670298352	2468c7a01885	f016ad5a		\func toFin' {k n : Nat} (p : k < n) : Fin n
+mod_Fin	func	f3d07cd09560	bd75ce5d3482	37355d55	6ab0dd14:NatOrder.<	\func mod_Fin (k : Nat) {n : Nat} (p : 0 < n) : Fin n
+mod_Fin=mod	lemma	94c3e4d77add	-	5cd66d56	68abbf8b:mod_Fin	\lemma mod_Fin=mod {k n : Nat} {p : 0 < n} : mod_Fin k p = {Nat} k mod n
+fin_nat-inj	lemma	71648d1e6873	-	3cbcdbfd		\lemma fin_nat-inj {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y
+fin_nat-ineq	lemma	acf50622ff93	-	452503fb		\lemma fin_nat-ineq {n : Nat} {x y : Fin n} (p : Not (x = y)) : Not (x = {Nat} y)
+toFin'=id	lemma	cee6c014556b	-	06ab59ff	6ab0dd14:NatOrder.< a60bdb47:toFin'	\lemma toFin'=id {k n : Nat} (p : k < n) : toFin' p = {Nat} k
+mod_Fin_<	lemma	42ec47156f98	-	ba061203	6ab0dd14:NatOrder.< 68abbf8b:mod_Fin	\lemma mod_Fin_< {n k : Nat} {p : 0 < n} (q : k < n) : mod_Fin k p = {Nat} k
+mod_Fin=id	lemma	100562492a8a	-	92b9cc63	68abbf8b:mod_Fin	\lemma mod_Fin=id {n : Nat} {k : Fin n} {p : 0 < n} : mod_Fin k p = k
+fin_mod_id	lemma	a9dce4a0b6dd	-	5e14d01b		\lemma fin_mod_id {n : Nat} (x : Fin (suc n)) : x mod suc n = x
+finMod	func	4ba5e9a99336	eab78e37c6f2	d9baf736		\func finMod {n : Nat} (k : Nat) : Fin (suc n)
+NatSemiring	instance	13291cfb9e64	-	e63e4462	6ab0dd14:NatOrder.<	\instance NatSemiring : LinearlyOrderedCSemiring.Dec Nat
+NatSemiring.triEquals	lemma	322669c406b2	-	4c1e0650		\lemma triEquals {n m : Nat} (p : n - m = 0) : n = m
+NatSemiring.triGreater	lemma	e1fc0c530bd7	-	4c1e0650		\lemma triGreater {n m d : Nat} (p : n - m = suc d) : m < n
+NatSemiring.triLess	lemma	576304bb90f4	-	4c1e0650		\lemma triLess {n m d : Nat} (p : n - m = neg (suc d)) : n < m
+NatSemiring.cancel-left	lemma	a3717d6a2452	-	590b9b2a		\lemma cancel-left (n : Nat) {m k : Nat} (p : n + m = n + k) : m = k
+NatSemiring.cancel-right	lemma	266fc1c491dc	-	590b9b2a		\lemma cancel-right {n m : Nat} (k : Nat) (p : n + k = m + k) : n = m
+NatSemiring.cancel_*-left	lemma	8e0b4a988d64	-	7b0969ba		\lemma cancel_*-left {k : Nat} (k/=0 : k /= 0) {n m : Nat} (p : k * n = k * m) : n = m
+NatSemiring.cancel_*-right	lemma	227360a30321	-	7b0969ba		\lemma cancel_*-right {n m k : Nat} (k/=0 : k /= 0) (p : n * k = m * k) : n = m
+NatBSemilattice	instance	98390caa1463	-	b2a354f1		\instance NatBSemilattice : BottomJoinSemilattice
+NatBSemilattice.<=_cancel-left	lemma	e5a695e02dc1	-	8fbc03c8		\lemma <=_cancel-left (n : Nat) {m k : Nat} (p : n + m <= n + k) : m <= k
+NatBSemilattice.<=_cancel-right	lemma	12a352d60ebb	-	8fbc03c8		\lemma <=_cancel-right (n : Nat) {m k : Nat} (p : m + n <= k + n) : m <= k
+NatBSemilattice.ldistr0	lemma	8585cb25df74	-	685596e5		\lemma ldistr0 {x : Nat} : x ∧ 0 = 0
+NatBSemilattice.rdistr0	lemma	559ea87423f8	-	685596e5		\lemma rdistr0 {x : Nat} : 0 ∧ x = 0
+zero<=_	lemma	96a25179448f	-	6b35e79a		\lemma zero<=_ {x : Nat} : 0 <= x
+suc<=suc	lemma	6683aa0b9f82	-	11ba65a8	a22ebac4:suc<=suc.conv	\lemma suc<=suc {x y : Nat} (p : x <= y) : suc x <= suc y
+<=_exists	lemma	2164f23077fa	-	4b711045	05ac9453:-'	\lemma <=_exists {n m : Nat} (p : n <= m) : n + (m -' n) = m
+-'<=id	lemma	155190c2e35a	-	0bee5724	05ac9453:-'	\lemma -'<=id {n m : Nat} : n -' m <= n
+-'+-comm	lemma	9a5419c1a274	-	736b36a9	05ac9453:-'	\lemma -'+-comm {n m k : Nat} (p : m <= n) : n + k -' m = n -' m + k
+-'-monotone-left	lemma	4ca3714d5911	-	179e39ac	05ac9453:-'	\lemma -'-monotone-left {n m k : Nat} (p : n <= m) : n -' k <= m -' k
+-'-monotone-right	lemma	e9d14f28255f	-	179e39ac	05ac9453:-'	\lemma -'-monotone-right {n m k : Nat} (p : m <= n) : k -' n <= k -' m
+-'_<=	lemma	1ade6e58f7ac	-	478a2df3	05ac9453:-'	\lemma -'_<= {n m : Nat} (p : n -' m = 0) : n <= m
+<=_*	lemma	adb11e408707	-	1d86da3f		\lemma <=_* {n m k l : Nat} (n<=m : n <= m) (k<=l : k <= l) : n * k <= m * l
+monotone-diagonal	lemma	1402af6a76ba	-	45a15cbd		\lemma monotone-diagonal (f : Nat -> Nat) (mon : \Pi (n : Nat) -> suc (f n) <= f (suc n)) {n : Nat} : n <= f n
+sequence-monotone	lemma	b4384917e5d0	-	3e3af2e2	6f375a39:sequence-monotone.induction	\lemma sequence-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f n X.<= f (suc n)) {n k : Nat} (p : n <= k) : f n X.<= f k
+sequence-anti-monotone	lemma	8bef0cef7bc9	-	3e3af2e2	6f375a39:sequence-monotone.induction	\lemma sequence-anti-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f (suc n) X.<= f n) {n k : Nat} (p : n <= k) : f k X.<= f n
+suc_<_<=	lemma	781274a2eb39	-	28f7bcba	6ab0dd14:NatOrder.<	\lemma suc_<_<= {n m : Nat} (p : n < m) : suc n <= m
+<_suc_<=	lemma	ccfc6fe349c7	-	28f7bcba	6ab0dd14:NatOrder.<	\lemma <_suc_<= {n m : Nat} (p : n < suc m) : n <= m
+suc_<=_<	lemma	b20bb058ac0d	-	28f7bcba	6ab0dd14:NatOrder.<	\lemma suc_<=_< {n m : Nat} (p : suc n <= m) : n < m
+<=_<_suc	lemma	7f573619bd05	-	28f7bcba	6ab0dd14:NatOrder.<	\lemma <=_<_suc {n m : Nat} (p : n <= m) : n < suc m
+id<=suc	lemma	a1df844f0292	-	88cc703d		\lemma id<=suc {n : Nat} : n <= suc n
+n*_+_<n	lemma	82f3076f845a	-	599309bb	6ab0dd14:NatOrder.<	\lemma n*_+_<n {n q r : Nat} (p : n * q + r < n) : q = 0
+mod-unique	lemma	268df132053b	-	b2b280fb		\lemma mod-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : n * q + r = n * q' + r') : r = r'
+div-unique	lemma	f63bc35932da	-	b2b280fb		\lemma div-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (n/=0 : n /= 0) (p : n * q + r = n * q' + r') : q = q'
+mod<=left	lemma	353ae3ffd5c0	-	409773f6		\lemma mod<=left {n m : Nat} : n mod m <= n
+mod<right	lemma	aab96ae95e9f	-	34b10275	6ab0dd14:NatOrder.<	\lemma mod<right {n m : Nat} (m/=0 : m /= 0) : n mod m < m
+div_<	lemma	605d848a24ad	-	67562d42	6ab0dd14:NatOrder.<	\lemma div_< {n m : Nat} (n<m : n < m) : n div m = 0
+mod_<	lemma	962c4e54d314	-	67562d42	6ab0dd14:NatOrder.<	\lemma mod_< {n m : Nat} (n<m : n < m) : n mod m = n
+natUnit	lemma	10bb163cdc02	-	854c9f75		\lemma natUnit {n m : Nat} (p : n * m = 1) : m = 1
+ldiv*div=id	lemma	f2576c4c9401	-	3cffc82b		\lemma ldiv*div=id {n m : Nat} (m|n : LDiv m n) : m * (n div m) = n
+nat-parity	func	b6d6f750e7ac	e914a68ac013	774eb0c6		\func nat-parity (n : Nat) : Or (\Sigma (k : Nat) (n = 2 * k)) (\Sigma (k : Nat) (n = 2 * k + 1))
+natAssociates-areEqual	lemma	2ba23ffd6baa	-	1695530f		\lemma natAssociates-areEqual {n m : Nat} (n|m : LDiv n m) (m|n : LDiv m n) : n = m
+ldiv_<=	lemma	f6ed4e4653c5	-	a76fe7a7		\lemma ldiv_<= {n m : Nat} (m/=0 : m /= 0) (n|m : LDiv n m) : n <= m
+mod_div	func	78cda6026cf4	0a6958ea1ef4	39e99b9f		\func mod_div {n m : Nat} (p : n mod m = 0) : LDiv m n
+div_mod	lemma	6233151cd243	-	0a3ec77c		\lemma div_mod {n m : Nat} (m|n : LDiv m n) : n mod m = 0
+id_mod	lemma	777d6c5bcd9a	-	0f7a0c8c		\lemma id_mod {n : Nat} : n mod n = 0
+div_*<=id	lemma	c3e5913e0ce6	-	89dea063		\lemma div_*<=id {n m : Nat} : n div m * m <= n
+nat_<=-dec	lemma	c37f77317b03	-	6b64ddc6	05ac9453:-' 5758267d:nat_<=-dec.nat_<=_Bool	\lemma nat_<=-dec {n m : Nat} {so : So (nat_<=_Bool n m)} : n <= m
+nat_<=-dec.nat_<=_Bool	func	3d7cfcba3e19	f0b76fd9d64b	e1542462		\func nat_<=_Bool (n m : Nat) : Bool
+nat_<-dec	lemma	41d4c2418ce2	-	2f0283e7	6ab0dd14:NatOrder.<	\lemma nat_<-dec {n m : Nat} {so : So (nat_<=-dec.nat_<=_Bool (suc n) m)} : n < m
+id<pow2	lemma	dddac7bee4da	-	022dcc01	6ab0dd14:NatOrder.<	\lemma id<pow2 {n : Nat} : n < Monoid.pow 2 n
+n*_+_mod_n	lemma	f4d8fb084c02	-	17a88750	6ab0dd14:NatOrder.<	\lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r
+n*_+_mod_n=mod	lemma	5aa066717b42	-	301cbdc7		\lemma n*_+_mod_n=mod {n q r : Nat} : (suc n * q + r) mod suc n = r mod suc n
+mod_+-left	lemma	8fd705053766	-	c73a8723		\lemma mod_+-left {n a b : Nat} : (a mod suc n + b) mod suc n = (a + b) mod suc n
+mod_+-right	lemma	3b3d634a64a5	-	c73a8723		\lemma mod_+-right {n a b : Nat} : (a + b mod suc n) mod suc n = (a + b) mod suc n
+mod_*-left	lemma	f1c0d13ea6dc	-	9b299e03		\lemma mod_*-left {n a b : Nat} : (a mod suc n * b) mod suc n = (a * b) mod suc n
+mod_*-right	lemma	6379ea5e7f84	-	9b299e03		\lemma mod_*-right {n a b : Nat} : (a * b mod suc n) mod suc n = (a * b) mod suc n
+mod_+-cong-left	lemma	f29db6ea0900	-	3e09695c		\lemma mod_+-cong-left {n c a b : Nat} (p : a mod suc n = b mod suc n) : (c + a) mod suc n = (c + b) mod suc n
+mod_+-cong-right	lemma	238f1106bee2	-	3e09695c		\lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
+div_suc-lem	lemma	4bb40443f8a2	-	45b6ebde		\lemma div_suc-lem {n m : Nat} (m/=0 : m /= 0) : (n + m) div m = suc (n div m)
+n*_+_div_n=div	lemma	d8077f1a4981	-	fce57553		\lemma n*_+_div_n=div {m q r : Nat} (m/=0 : m /= 0) : (m * q + r) div m = q + r div m
+*_div=id	lemma	65ade62ece9c	-	eee4b294		\lemma *_div=id {m q : Nat} (m/=0 : m /= 0) : (q * m) div m = q
+mod_suc	lemma	11f195565367	-	455bb58c	6ab0dd14:NatOrder.<	\lemma mod_suc {n : Nat} (i : Nat) (p : i < suc n) : suc (i mod suc n) = suc i mod suc (suc n)
+div-monotone	lemma	efcf63003a03	-	370451d6	13a88cef:div-monotone.aux	\lemma div-monotone {n k m : Nat} (p : n <= k) : n div m <= k div m
+(overview)	-	-	-	a286e052	05ac9453:-' f3217e23:NatBSemilattice 6ab0dd14:NatOrder.< 1cce1786:NatSemiring 68abbf8b:mod_Fin 5628ca74:pred 42def93d:toFin a60bdb47:toFin'	-

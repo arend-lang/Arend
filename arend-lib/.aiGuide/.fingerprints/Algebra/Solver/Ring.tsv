@@ -1,0 +1,29 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.Ring. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RingSolverModel	func	d34b28ecb33a	63c095e44bbd	ffdd5ef9	565569ed:RingSolverModel.Term 8e732b70:RingSolverModel.ringInterpretNF	\func RingSolverModel (R : Ring) : SolverModel R
+RingSolverModel.Term	data	c21edf70bb81	-	cc93b525		\data Term (C : \Set) (n : Nat) | var (Fin n) | coef C | :zro | :ide | :negative (Term C n) | \infixl 6 :_+ (t s : Term C n) | \infixl 7 :* (t s : Term C n)
+RingSolverModel.Term.var	cons	ffa9148e8ef8	-	6aeac495		| var (Fin n)
+RingSolverModel.Term.coef	cons	1a064851d8b0	-	b9b574a6		| coef C
+RingSolverModel.Term.:zro	cons	3eb7330949e1	-	074be50f		| :zro
+RingSolverModel.Term.:ide	cons	3eb7330949e1	-	074be50f		| :ide
+RingSolverModel.Term.:negative	cons	3821e647e3b3	-	2c99749c		| :negative (Term C n)
+RingSolverModel.Term.:_+	cons	4367a0c84bd9	-	aed92612		| :_+ (t s : Term C n)
+RingSolverModel.Term.:*	cons	4367a0c84bd9	-	c9be9cf6		| :* (t s : Term C n)
+RingSolverModel.normalize	func	a3b5cff391ca	6b2f01329220	c137e5f7	565569ed:RingSolverModel.Term	\func normalize {n : Nat} {C : Ring.Dec} (t : Term C n) : NF C n
+RingSolverModel.interpret	func	2181cb7d64a4	30bb6504ef9b	36ac94d9	565569ed:RingSolverModel.Term	\func interpret (env : Array R) (t : Term Int env.len) : R
+RingSolverModel.intCoef	func	d6f433768843	f0c12b693f93	ea4a15f9		\func intCoef (x : Int) : R
+RingSolverModel.intCoef-correct	lemma	355a4835358a	-	ef86e9fa	04d92945:RingSolverModel.intCoef	\lemma intCoef-correct {x : Int} : R.intCoef x = intCoef x
+RingSolverModel.intMap'	lemma	a16e733d6c9a	-	cc40517c	04d92945:RingSolverModel.intCoef	\lemma intMap' : RingHom IntRing R intCoef
+RingSolverModel.RingData	func	8446e6f5ceed	fb5a52228d05	3e45aef1	9612b7f0:RingSolverModel.intMap'	\func RingData (env : Array R) : Data R IntRing IntRing intMap' env
+RingSolverModel.signMulCoef	func	64ec647ea4f0	b860e22a9d3e	37105cac		\func signMulCoef (c : Int) (r : R) : R
+RingSolverModel.ringMulCoef	func	c39bd819e0f2	3fd8e1325661	597008e0	a2587457:RingSolverModel.signMulCoef	\func ringMulCoef {env : Array R} (c : Int) (l : List (Fin env.len)) : R
+RingSolverModel.ringInterpretNF'	func	3feb8d635d5e	b1ad0397e92e	7ae163b7	4030d524:RingSolverModel.ringMulCoef	\func ringInterpretNF' {env : Array R} (l : SemiringSolverModel.NF Int env.len) : R
+RingSolverModel.ringInterpretNF	func	048c03271424	abcecde997d8	663f345b	5210cdf6:RingSolverModel.ringInterpretNF'	\func ringInterpretNF (env : Array R) (l : SemiringSolverModel.NF Int env.len)
+RingSolverModel.ringMulCoef-correct	lemma	beb74c62508a	-	e2e08055	4030d524:RingSolverModel.ringMulCoef	\lemma ringMulCoef-correct {env : Array R} {c : Int} {l : List (Fin env.len)} : ringMulCoef c l = (RingData env).mulCoef c l
+RingSolverModel.ringInterpretNF-correct	lemma	1d39c6235c2d	-	c07c3fde	5210cdf6:RingSolverModel.ringInterpretNF'	\lemma ringInterpretNF-correct {env : Array R} {l : SemiringSolverModel.NF Int env.len} : ringInterpretNF' l = (RingData env).interpretNF' l
+RingSolverModel.interpretNF_negative	lemma	441f69e13a35	-	8299beb3		\lemma interpretNF_negative {env : Array R} {l : NF Int env.len} : (RingData env).interpretNF' (map (\lam s => (s.1, negative s.2)) l) = negative ((RingData env).interpretNF' l)
+RingSolverModel.normalize-consistent	lemma	a9b7ebd71d3f	-	48d312aa	1197ed7b:RingSolverModel.interpret fcd0afad:RingSolverModel.normalize	\lemma normalize-consistent {env : Array R} {t : Term Int env.len} : (RingData env).interpretNF' (normalize t) = interpret env t
+RingSolverModel.terms-equality	lemma	765141a98775	-	97e2c559	76a92217:RingSolverModel.Term.:_+ 5fbb0049:RingSolverModel.Term.:negative 1197ed7b:RingSolverModel.interpret fcd0afad:RingSolverModel.normalize 8e732b70:RingSolverModel.ringInterpretNF	\lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : ringInterpretNF env (normalize (t :_+ :negative s)) = 0) : interpret env t = interpret env s
+RingSolverModel.terms-equality-conv	lemma	a45f3d982fc5	-	afa4860d	78f0694d:RingSolverModel.terms-equality	\lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : ringInterpretNF env (normalize (t :_+ :negative s)) = 0
+RingSolverModel.apply-axioms	lemma	1e6cc74339ba	-	cec63a05	76a92217:RingSolverModel.Term.:_+ 5fbb0049:RingSolverModel.Term.:negative fcd0afad:RingSolverModel.normalize 5210cdf6:RingSolverModel.ringInterpretNF'	\lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len) : ringInterpretNF env (Big ++ add (arrayMap (\lam s => multiply s.1 (normalize (s.2 :_+ :negative s.3))) l)) = ringInterpretNF' add
+(overview)	-	-	-	4243b05e	565569ed:RingSolverModel.Term 5fbb0049:RingSolverModel.Term.:negative dee4d4f6:RingSolverModel.apply-axioms 04d92945:RingSolverModel.intCoef	-

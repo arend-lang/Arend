@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Homotopy.Fibration. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Total	func	6d4241b60056	0d22ea0199d6	b49ca26d		\func Total {B : \Cat} (F : B -> \Cat)
+Total.proj	func	fbacaaa63e5a	5254dc062f14	f4f93b48		\func proj (F : B -> \Cat)
+Fib	func	5074c7b6a07a	683a1a6c2c7f	050919b3		\func Fib {A B : \Cat} (f : A -> B) (base : B)
+Fib.make	func	9167891e1728	5314d8edd9f9	fa90f3b9		\func make {base : B} (a : A) (p : f a = base) : Fib f base
+proj-fib	func	4aecd8decd4c	e7b990800c57	336acc2b		\func proj-fib {A : \Cat} (B : A -> \Cat) (a : A) : QEquiv {Fib {\Sigma (x : A) (B x)} __.1 a} {B a}
+fib-path	func	cd60e4a65c89	178b6d2c8feb	0d33fabb		\func fib-path {A B : \Cat} {f : A -> B} {b : B} {s t : Fib f b} (e : s = t) : pmap (\lam z => f z.1) e *> t.2 = s.2
+Fib.ext	func	bd52f3f252b7	5cece8ffbff5	8f152098	e9e9696a:Fib	\func ext (b0 : B) (x x' : Fib f b0) (p : x.1 = x'.1) (q : pmap f p *> x'.2 = x.2) : x = x'
+Fib.ext.retraction	func	91fe310fe398	a7fe8753b4b7	e3586fc6	a84c7e45:Fib.ext	\func retraction (b0 : B) (x' x : Fib f b0) (p : x.1 = x'.1) (q : pmap f p *> x'.2 = x.2) : \Sigma (t : x = x') (transport (\lam x'' => \Sigma (p : x.1 = x''.1) (pmap f p *> x''.2 = x.2)) t (idp, idp_*>) = (p, q))
+Fib.equiv	func	03341a6bb63c	940efe06b521	a8b1da4d	a84c7e45:Fib.ext	\func equiv (b0 : B) (x x' : Fib f b0) : QEquiv {x = x'} {\Sigma (p : x.1 = x'.1) (pmap f p *> x'.2 = x.2)}
+(overview)	-	-	-	57a3e6a5	e9e9696a:Fib	-

@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Arith.Complex.FTA.Kneser. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+kneser-q	func	5ac2123f830f	5df415edecae	e5e4e99a		\func kneser-q (n : Nat) : Real
+kneser-q>0	lemma	2c3d42e1f4d0	-	ce972fc5	2312ff2f:kneser-q	\lemma kneser-q>0 {n : Nat} (n>0 : 0 < n) : 0 < kneser-q n
+kneser-q<1	lemma	105a95915421	-	74f61213	2312ff2f:kneser-q	\lemma kneser-q<1 {n : Nat} : kneser-q n < 1
+MainLemma	lemma	ba908b7bbdd6	-	33295090		\lemma MainLemma {n : Nat} (n>0 : n > 0) {eps : Real} (eps>0 : eps > 0) (a : Nat -> Real) (a0>eps : a 0 > eps) (ai>=0 : \Pi (i : Nat) -> a i >= 0) (an=1 : a n = 1) : ∃ (r : Real) (r>0 : r > 0) (k : Fin n) (pow r n < a 0) (pow one/3 (2 * n * n) * a 0 - 2 * eps < a (suc k) * pow r (suc k)) (a (suc k) * pow r (suc k) < a 0) (BigSum (\new (Array Real k (\lam i => a (i Nat.+ 1) * pow r (i + 1)))) + BigSum (\new (Array Real (pred n -' k) (\lam i => a (k Nat.+ i + 2) * pow r (k Nat.+ i + 2)))) < a (suc k) * pow r (suc k) * (Real.fromRat 1 - pow one/3 n) + eps * pow 3 n)
+KneserLemma	lemma	fc5079a5f726	-	330b3e0c	2312ff2f:kneser-q	\lemma KneserLemma {n : Nat} (n>0 : 0 < n) (b : Nat -> Complex) (bn=1 : b n = 1) {c : Real} (b0<c : cabs (b 0) < c) : ∃ (z : Complex) (pow (cabs z) n < c) (cabs (BigSum (\new (Array Complex (suc n) (\lam i => b i * pow z i)))) < kneser-q n * c)
+KneserLemma-poly	lemma	9ee75ffcc019	-	a2ccce3d	2312ff2f:kneser-q	\lemma KneserLemma-poly {n : Nat} (n>0 : 0 < n) (f : Poly ComplexField) (deg : degree< f (suc n)) (monic : polyCoef f n = 1) {c : Real} (f0<c : cabs (polyEval f 0) < c) : ∃ (z : Complex) (pow (cabs z) n < c) (cabs (polyEval f z) < kneser-q n * c)
+(overview)	-	-	-	3868c548	ec337b7e:KneserLemma 37e92b1e:KneserLemma-poly c73143cc:MainLemma 2312ff2f:kneser-q	-

@@ -1,0 +1,32 @@
+# arend -gc fingerprints v2 for module Data.Bool. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Bool	data	89ab7eb1ca2f	-	c0eec8d8	d4f1b28b:Bool.false d4f1b28b:Bool.true	\data Bool | false | true
+So	func	05b449a0aba2	91623e474fcb	bb1d9ce4	6b17407e:Bool d4f1b28b:Bool.false d4f1b28b:Bool.true	\func So (b : Bool) : \Prop
+So.fromSo	lemma	dc8b3d0b7db8	-	871c7418	d4f1b28b:Bool.true cd4fca31:So	\lemma fromSo {b : Bool} (s : So b) : b = true
+So.toSo	lemma	3012b9d68de4	-	92843ff8	d4f1b28b:Bool.true cd4fca31:So	\lemma toSo {b : Bool} (p : b = true) : So b
+not	func	89876f5dbb0d	f1627bee5848	ed9ff960	d4f1b28b:Bool.false d4f1b28b:Bool.true	\func not (b : Bool) : Bool
+not-isInv	lemma	e53f0c8e2ade	-	114801fb	776dc78e:not	\lemma not-isInv {b : Bool} : not (not b) = b
+if	func	4cdeb2c2eca5	389c31babe3a	4c452f4a	6b17407e:Bool d4f1b28b:Bool.true	\func if {A : \Type} (b : Bool) (then else : A) : A
+and	func	e7228877286c	f477b95a9dc3	ba2b553d	d4f1b28b:Bool.false d4f1b28b:Bool.true	\func and (x y : Bool) : Bool
+and.toSigma	lemma	20c310a87c4f	-	8d7fd83e	d4f1b28b:Bool.true f1211f7a:and	\lemma toSigma {x y : Bool} (p : x and y = true) : \Sigma (x = true) (y = true)
+and.fromSigma	lemma	646fe9d1e793	-	cbc1dcdc	d4f1b28b:Bool.true f1211f7a:and	\lemma fromSigma {x y : Bool} (p : \Sigma (x = true) (y = true)) : x and y = true
+and-assoc	lemma	36be4f181cd8	-	8aec2dcd	f1211f7a:and	\lemma and-assoc {a b c : Bool} : (a and b) and c = a and (b and c)
+and-comm	lemma	b6bf617f09c0	-	8aec2dcd	f1211f7a:and	\lemma and-comm {a b : Bool} : a and b = b and a
+and-idemp	lemma	b68e8b6acd0a	-	8aec2dcd	f1211f7a:and	\lemma and-idemp {a : Bool} : a and a = a
+or	func	e7228877286c	6ce308b69c2f	f7fe847d	d4f1b28b:Bool.false d4f1b28b:Bool.true	\func or (x y : Bool) : Bool
+or.toOr	lemma	d94d3113f039	-	be997668	d4f1b28b:Bool.true 1df89f8c:or	\lemma toOr {x y : Bool} (p : x or y = true) : (x = true) || (y = true)
+or.fromOr	lemma	83ecb4cb218c	-	d8dc2f6f	d4f1b28b:Bool.true 1df89f8c:or	\lemma fromOr {x y : Bool} (p : (x = true) || (y = true)) : x or y = true
+or-false	lemma	c076fe6dc36c	-	3be797ce	d4f1b28b:Bool.false 1df89f8c:or	\lemma or-false {a : Bool} : a or false = a
+xor	func	defeee4f5dc9	dba9342a14e2	c92afd03		\func xor (a b : Bool) : Bool
+xor-assoc	lemma	5bfd3a176623	-	8a05bd8b	d648ba7e:xor	\lemma xor-assoc {a b c : Bool} : (a xor b) xor c = a xor (b xor c)
+xor-comm	lemma	f377e2177e52	-	8a05bd8b	d648ba7e:xor	\lemma xor-comm {a b : Bool} : a xor b = b xor a
+xor_false-left	lemma	c3bbd4046b53	-	caf2d83b	d4f1b28b:Bool.false d648ba7e:xor	\lemma xor_false-left {a : Bool} : false xor a = a
+xor_false-right	lemma	85e44bf37bd6	-	caf2d83b	d4f1b28b:Bool.false d648ba7e:xor	\lemma xor_false-right {a : Bool} : a xor false = a
+xor-self	lemma	20257daadde9	-	f83d97df	d4f1b28b:Bool.false d648ba7e:xor	\lemma xor-self {a : Bool} : a xor a = false
+and-xor-ldistr	lemma	c83a6e3feaf1	-	2521693b	f1211f7a:and d648ba7e:xor	\lemma and-xor-ldistr {a b c : Bool} : a and (b xor c) = (a and b) xor (a and c)
+xor-or-and	lemma	01da1ca39871	-	2eb05b53	f1211f7a:and 1df89f8c:or d648ba7e:xor	\lemma xor-or-and {a b : Bool} : (a xor b) xor (a and b) = a or b
+true/=false	lemma	e78991846544	-	5e1c7681	d4f1b28b:Bool.false d4f1b28b:Bool.true	\lemma true/=false (p : true = false) : Empty
+bool-ext	lemma	8e9fcb85c5dd	-	6ea94d53	d4f1b28b:Bool.true	\lemma bool-ext {x y : Bool} (p : x = true -> y = true) (q : y = true -> x = true) : x = y
+bool-false	lemma	21b2a25df4c9	-	1d3b95f2	d4f1b28b:Bool.false d4f1b28b:Bool.true	\lemma bool-false {x : Bool} (p : x = true -> Empty) : x = false
+not-char	lemma	cda10bdc45a2	-	060884ab	d4f1b28b:Bool.false d4f1b28b:Bool.true 776dc78e:not	\lemma not-char {b : Bool} : not b = true <-> b = false
+(overview)	-	-	-	6b968ef8	6b17407e:Bool d4f1b28b:Bool.false d4f1b28b:Bool.true cd4fca31:So f1211f7a:and 776dc78e:not 1df89f8c:or d648ba7e:xor	-

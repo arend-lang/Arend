@@ -1,0 +1,14 @@
+# arend -gc fingerprints v2 for module Algebra.Domain.PID. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PID	class	79ca4a865e18	-	3b6392a1	2657772d:PID.divChain	\class PID \extends SmithDomain, WeaklyNoetherianCRing { | divChain : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid} | isWeaklyNoetherian => \lam I Ifg => Ideal.fromMonoidChainCondition (IntegralDomain.Dec.fromNonZeroDivChain divChain) I (\lam n => bezout_finitelyGenerated_principal.1 isBezout (Ifg n)) | isKaplansky => adequate_kaplansky (\lam a/=0 => adequate'_adequate (domain_adequate' divChain a/=0)) }
+PID.is1Dim	lemma	005abc6cd131	-	824de6ab		\lemma is1Dim : Dim<= 1
+PID.IsAdequate	func	c3ee4846133c	3f9972563523	05ac4f7e		\func IsAdequate {M : CMonoid} (a : M)
+PID.IsAdequate'	func	c3ee4846133c	2799a05cebad	a5ae18d2		\func IsAdequate' {M : CMonoid} (a : M)
+PID.adequate'_adequate	lemma	a36c22206967	-	cc793539	517549a1:PID.IsAdequate b11778a4:PID.IsAdequate'	\lemma adequate'_adequate {M : GCDMonoid} {a : M} (adeq : IsAdequate' a) : IsAdequate a
+PID.unitless_adequate'	lemma	cd052d96a1ee	-	3be4a4de	b11778a4:PID.IsAdequate'	\lemma unitless_adequate' {M : UnitlessGCDMonoid} (dc : M.DivChain) (a : M) : IsAdequate' a
+PID.monoid_adequate'	lemma	ed64f32e540c	-	bcdf416f		\lemma monoid_adequate' {M : CancelGCDMonoid} (dc : CMonoid.DivChain {DivQuotientMonoid M}) (a : M) : IsAdequate' a
+PID.domain_adequate'	lemma	d8f2718ec51d	-	5050e363	b11778a4:PID.IsAdequate'	\lemma domain_adequate' {M : GCDDomain.Dec} (dc : CMonoid.DivChain {DivQuotientMonoid M.nonZeroGCDMonoid}) {a : M} (a/=0 : a /= 0) : IsAdequate' a
+PID.oneDim_adequate'	lemma	a743b906508b	-	9269aa11	b11778a4:PID.IsAdequate'	\lemma oneDim_adequate' {R : GCDDomain.Dec} (d : R.Dim<= 1) {a : R} (a/=0 : a /= 0) : IsAdequate' a
+PID.bezout_1Dim<->adequate'	lemma	15d85ad4a3fc	-	0ccf5664	b11778a4:PID.IsAdequate'	\lemma bezout_1Dim<->adequate' {R : BezoutDomain.Dec} : R.Dim<= 1 <-> (\Pi {a : R} -> a /= 0 -> IsAdequate' a)
+PID.adequate_kaplansky	lemma	47ca90ec9d8a	-	b30c8ae4	517549a1:PID.IsAdequate	\lemma adequate_kaplansky {R : BezoutDomain.Dec} (adeq : \Pi {a : R} -> a /= 0 -> IsAdequate a) : SmithRing.IsKaplansky R
+(overview)	-	-	-	e181b34b	6d0bae35:PID 517549a1:PID.IsAdequate b11778a4:PID.IsAdequate'	-

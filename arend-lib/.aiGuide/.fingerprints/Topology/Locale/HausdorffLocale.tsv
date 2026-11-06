@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Topology.Locale.HausdorffLocale. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsHausdorffLocale	func	02fec69e6194	ea92c718004d	32b9e05e		\func IsHausdorffLocale (L : Locale)
+IsRegular_IsHausdorff	lemma	b0036f651a29	-	8c3d3460		\lemma IsRegular_IsHausdorff {L : Locale} (reg : L.IsRegularLocale) : IsHausdorffLocale L
+IsWeaklyHausdorff	type	eead6b6b099d	da22a3cb203f	0abbf0bf		\type IsWeaklyHausdorff (L : Locale)
+wregular_wHausdorff	lemma	8b97d3253161	-	ac66a853		\lemma wregular_wHausdorff {L : Locale} (reg : L.IsWeaklyRegularLocale) : IsWeaklyHausdorff L
+(overview)	-	-	-	58b77518		-

@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Analysis.Measure.MeasureRing.MeasureRingCompletion. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MeasureRingCompletion	instance	3a23f5b86900	-	1618808f		\instance MeasureRingCompletion (X : PseudoMeasureRing) : CompleteMeasureRing
+measureCompletion	func	5211d374fe89	7d455cc7292b	350b81dc	1e75ec32:MeasureRingCompletion 6df364e4:measureCompletion.dense	\func measureCompletion {X : PseudoMeasureRing} : MeasureRingHom X (MeasureRingCompletion X)
+dense-measure-lift	func	df18d0330803	1b5497ba29ee	676a30ae		\func dense-measure-lift {X Y : PseudoMeasureRing} {Z : CompleteMeasureRing} (f : MeasureRingHom X Y) (fd : f.IsDense) (g : MeasureRingHom X Z) : MeasureRingHom Y Z
+measureCompletion-lift	sfunc	c30d507d1f36	8fb262440f27	22d73c7e	1e75ec32:MeasureRingCompletion 5ca97507:measureCompletion	\sfunc measureCompletion-lift {X : PseudoMeasureRing} {Z : CompleteMeasureRing} (g : MeasureRingHom X Z) : MeasureRingHom (MeasureRingCompletion X) Z
+measureCompletion-map	sfunc	6161198a9ad7	d9e210720326	cc513768		\sfunc measureCompletion-map {X Y : PseudoMeasureRing} (f : MeasureRingHom X Y) : MeasureRingHom (MeasureRingCompletion X) (MeasureRingCompletion Y)
+measureCompletion-map-equiv	lemma	976dd0c6b979	-	219602e8		\lemma measureCompletion-map-equiv {X Y : PseudoMeasureRing} {f : MeasureRingHom X Y} (fd : f.IsDense) : IsEquiv (measureCompletion-map f)
+(overview)	-	-	-	d7413f6a	1e75ec32:MeasureRingCompletion 7999dfc9:MeasureRingCompletion.*-cover 1ce94139:MeasureRingCompletion.meas-cover 432fbc58:MeasureRingCompletion.measRing f6c3a036:dense-measure-lift 5ca97507:measureCompletion 405de1ee:measureCompletion-lift fa2f1d7b:measureCompletion-map	-

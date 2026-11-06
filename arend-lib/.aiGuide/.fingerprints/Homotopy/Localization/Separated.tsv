@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Homotopy.Localization.Separated. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Separated	func	7ee7038e69d9	8535a6ff7876	6b25200a		\func Separated (U : Universe.{u}) : Universe.{u}
+ReflSeparated	func	b96efbc4a365	2a4d70d5ab8e	317fb4b6	49274a49:ReflSeparated.pathEquiv f264163f:ReflSeparated.separatedLocalization bcc3294b:Separated	\func ReflSeparated (U : ReflUniverse.{u}) : ReflUniverse
+ReflSeparated.S	func	dae58211931f	20faecc53252	0c5a0708		\func S {U : ReflUniverse.{u}} {A : \Type u} (a a' : A) : \Type u
+ReflSeparated.F	func	d81c8a3bf463	eaf21b9cc4ce	66b1328d		\func F {U : ReflUniverse.{u}} {A : \Type u} (a : A) : YImage S
+ReflSeparated.pathEquiv	func	f040f8a7524a	3bdeaeb34315	ccb9bbcf	2a519003:ReflSeparated.F	\func pathEquiv {U : ReflUniverse.{u}} {A : \Type u} (a a' : A) : (F a = F a') = LType (a = a')
+ReflSeparated.separatedLocalization	lemma	84a6cd497026	-	b0b7e657	7673edc6:ReflSeparated bcc3294b:Separated	\lemma separatedLocalization {U : Universe.{u}} {A B : \Type u} {f : A -> B} (fs : IsSurj f) (p : \Pi (a a' : A) -> \Sigma (P : Local (f a = f a')) (Localization (a = a') P)) : \Sigma (L : Local {Separated U} B) (Localization {Separated U} A L f)
+(overview)	-	-	-	3990a7d9	49274a49:ReflSeparated.pathEquiv bcc3294b:Separated	-

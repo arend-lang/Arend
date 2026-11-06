@@ -1,0 +1,86 @@
+# arend -gc fingerprints v2 for module Arith.Real.UpperReal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ExUpperReal	record	b2d5f049ba16	-	2d4f6ebc	9b3f71df:ExUpperReal.U 42715b95:ExUpperReal.U-closed 52e4bfcc:ExUpperReal.U-rounded 186d84e4:ExUpperRealAbMonoid.<	\record ExUpperReal { | U : Rat -> \Prop | U-closed {q q' : Rat} : U q -> q < q' -> U q' | U-rounded {q : Rat} : U q -> ∃ (r : U) (r < q) }
+ExUpperReal.U_<=	lemma	0ce4da23587f	-	c7e81db1	8b933068:ExUpperReal.<= 42715b95:ExUpperReal.U-closed 52e4bfcc:ExUpperReal.U-rounded	\lemma U_<= {q r : Rat} (Uq : U q) (p : q RatField.<= r) : U r
+ExUpperReal.IsBounded	func	d143af8bb978	31be9aa9e394	aa6bd4e7	9b3f71df:ExUpperReal.U	\func IsBounded : \Prop
+ExUpperReal.fromRat	coerce	a395ab50bb12	-	23536f58	12e0b076:ExUpperReal 186d84e4:ExUpperRealAbMonoid.<	\use \coerce fromRat (x : Rat) : ExUpperReal
+ExUpperReal.fromRat-inj	lemma	6ee40d564261	-	b97574a7		\lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y
+ExUpperReal.+	sfunc	1d8d4d185f99	b510c5ae0f8f	f34982ae	9b3f71df:ExUpperReal.U 186d84e4:ExUpperRealAbMonoid.<	\sfunc + (x y : ExUpperReal) : ExUpperReal
+ExUpperReal.+_U	lemma	1c2b80abbc79	-	64379096	91014be7:ExUpperReal.+	\lemma +_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
+ExUpperReal.+_U_<=	lemma	ccf494e5bcf4	-	64379096	91014be7:ExUpperReal.+	\lemma +_U_<= {x y : ExUpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.<= a)
+ExUpperReal.+-rat	lemma	ba6d6c001917	-	22ec55a9	91014be7:ExUpperReal.+	\lemma +-rat {x y : Rat} : fromRat x + fromRat y = fromRat (x RatField.+ y)
+ExUpperReal.*	sfunc	1d8d4d185f99	833796139874	bc957b6f	186d84e4:ExUpperRealAbMonoid.<	\sfunc * (x y : ExUpperReal) : ExUpperReal
+ExUpperReal.*_U	lemma	e743567dd93f	-	24c93f4b		\lemma *_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a)
+ExUpperReal.*_U_<=	lemma	65342fe2cc08	-	24c93f4b		\lemma *_U_<= {x y : ExUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.<= a)
+ExUpperReal.*_U_<	lemma	7a4f4d6baa53	-	24c93f4b		\lemma *_U_< {x y : ExUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : Rat) (x <= b) (0 RatField.<= b) (c : Rat) (y <= c) (0 RatField.<= c) (b RatField.* c < a)
+ExUpperReal.*-rat	lemma	2b94ceca1e43	-	a5c17ddc		\lemma *-rat {x y : Rat} (x>=0 : 0 RatField.<= x) (y>=0 : 0 RatField.<= y) : fromRat x * fromRat y = fromRat (x RatField.* y)
+ExUpperReal.<=	type	5a74bb17647f	8be08d909f98	10b01ac1	9b3f71df:ExUpperReal.U	\type <= (x y : ExUpperReal)
+ExUpperReal.<=-rat	lemma	f0ecf85a8a1d	-	f7f418cb	8b933068:ExUpperReal.<= 9b3f71df:ExUpperReal.U	\lemma <=-rat {a b : Rat} : a RatField.<= b <-> a <= b
+ExUpperReal.<_<=	lemma	918957768f56	-	f7f418cb	8b933068:ExUpperReal.<= 9b3f71df:ExUpperReal.U	\lemma <_<= {x : ExUpperReal} {q : Rat} (x<q : x.U q) : x <= q
+ExUpperReal.<=_+-char	lemma	a8aae9dbf427	-	4779d1bb	91014be7:ExUpperReal.+ 8b933068:ExUpperReal.<=	\lemma <=_+-char {x y z : ExUpperReal} {a b : Rat} (x<=y+z : x <= y + z) (y<a : y.U a) (z<b : z.U b) : x.U (a RatField.+ b)
+ExUpperReal.meet	sfunc	1d8d4d185f99	2147f025fd7b	626e2ad8		\sfunc meet (x y : ExUpperReal) : ExUpperReal
+ExUpperReal.join	sfunc	1d8d4d185f99	50106c32be05	9cb1c170		\sfunc join (x y : ExUpperReal) : ExUpperReal
+ExUpperReal.meet_U	lemma	5f7edaf19ae8	-	6bcdeb3a		\lemma meet_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {meet x y} a <-> x.U a || y.U a
+ExUpperReal.join_U	lemma	16438b6db6c2	-	6bcdeb3a		\lemma join_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
+ExUpperReal.join-bounded	lemma	c4e891dad467	-	f3ffe623	c0476e62:ExUpperReal.IsBounded 673dc4d0:ExUpperReal.join	\lemma join-bounded {x y : ExUpperReal} (xb : x.IsBounded) (yb : y.IsBounded) : (join x y).IsBounded
+real_meet_U	lemma	862a8929b6d9	-	d6660e2b		\lemma real_meet_U {a b : Rat} {x : ExUpperReal} (x<a : x.U a) (x<b : x.U b) : x.U (a ∧ b)
+ExUpperRealPointed	instance	7500f2ff7051	-	20a5eeb3		\instance ExUpperRealPointed : Pointed ExUpperReal
+ExUpperRealAbMonoid	instance	035ff3b68a19	-	649efb65	8b933068:ExUpperReal.<= 186d84e4:ExUpperRealAbMonoid.<	\instance ExUpperRealAbMonoid : BiorderedLatticeAbMonoid ExUpperReal
+ExUpperRealAbMonoid.<	type	5a74bb17647f	643e20d9b11c	41234fb0	8b933068:ExUpperReal.<=	\type < (x y : ExUpperReal)
+ExUpperRealAbMonoid.<-rat	lemma	72921ff4281e	-	8fe8a0aa	186d84e4:ExUpperRealAbMonoid.<	\lemma <-rat {x : ExUpperReal} {y : Rat} : x < y <-> x.U y
+ExUpperRealAbMonoid.zro<ide	lemma	04623d14f817	-	43ff1e7a	186d84e4:ExUpperRealAbMonoid.<	\lemma zro<ide : fromRat 0 < fromRat 1
+ExUpperRealAbMonoid.<_+	lemma	9ddcd61041b0	-	98c29247	91014be7:ExUpperReal.+	\lemma <_+ {x y x' y' : ExUpperReal} (x<x' : x < x') (y<y' : y < y') : x + y < x' + y'
+ExUpperRealAbMonoid.<_+-left	lemma	00d2ca120488	-	98c29247	91014be7:ExUpperReal.+	\lemma <_+-left {x y : ExUpperReal} (x<y : x < y) {z : Rat} : x + z < y + z
+ExUpperRealAbMonoid.<_+-right	lemma	524cd213008c	-	98c29247	91014be7:ExUpperReal.+	\lemma <_+-right {x : Rat} {y z : ExUpperReal} (y<z : y < z) : x + y < x + z
+ExUpperRealAbMonoid.<=_+-cancel-left	lemma	d3cb7d44cb30	-	bd583f6b	8b933068:ExUpperReal.<= 8c887ba2:ExUpperRealAbMonoid.<=_+-cancel-left.steps	\lemma <=_+-cancel-left {x y z : ExUpperReal} (xb : x.IsBounded) {q : Rat} (q<=x : q <= x) (p : x + y <= x + z) : y <= z
+ExUpperRealAbMonoid.<=_+-cancel-right	lemma	ea8176a8920d	-	bd583f6b	8b933068:ExUpperReal.<= 8c887ba2:ExUpperRealAbMonoid.<=_+-cancel-left.steps	\lemma <=_+-cancel-right {x y z : ExUpperReal} (zb : z.IsBounded) {q : Rat} (q<=z : q <= z) (p : x + z <= y + z) : x <= y
+ExUpperRealAbMonoid.*n_U	lemma	2bfc8807bfad	-	5bf943c3		\lemma *n_U {n : Nat} (n/=0 : n /= 0) {x : ExUpperReal} {q : Rat} : (n ExUpperRealAbMonoid.*n x).U q <-> ∃ (r : x.U) (n RatField.* r RatField.<= q)
+ExUpperRealAbMonoid.*n_finv	lemma	48f2cb7e4541	-	5bf943c3		\lemma *n_finv {n : Nat} (n/=0 : n /= 0) {x : ExUpperReal} {q : Rat} : (n ExUpperRealAbMonoid.*n x).U q <-> x.U (RatField.finv n RatField.* q)
+rat-upperReal	lemma	1ec82f066ee7	-	8d01ccdd	203ab7d3:ExUpperRealAbMonoid	\lemma rat-upperReal : AddMonoidHom RatField ExUpperRealAbMonoid ExUpperReal.fromRat
+ExUpperRealSemigroup	instance	766f858ad4b1	-	66ff07a1		\instance ExUpperRealSemigroup : CSemigroup ExUpperReal
+ExUpperRealSemigroup.ide-left_<=	lemma	e73a79cbeb75	-	9ef0e0a9	8b933068:ExUpperReal.<=	\lemma ide-left_<= {x : ExUpperReal} : x <= fromRat 1 * x
+ExUpperRealSemigroup.ide-left	lemma	c7b1aee75433	-	9ef0e0a9	8b933068:ExUpperReal.<=	\lemma ide-left {x : ExUpperReal} (x>=0 : 0 <= x) : fromRat 1 * x = x
+ExUpperRealSemigroup.ide-right	lemma	f04b92302c92	-	9ef0e0a9	8b933068:ExUpperReal.<=	\lemma ide-right {x : ExUpperReal} (x>=0 : 0 <= x) : x * fromRat 1 = x
+ExUpperRealSemigroup.<=_*	lemma	326e24e39504	-	e0802151		\lemma <=_* {x x' y y' : ExUpperReal} (x<=x' : x <= x') (y<=y' : y <= y') : x * y <= x' * y'
+ExUpperRealSemigroup.<_*	lemma	a986b1f98286	-	e0802151		\lemma <_* {x x' y y' : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (x<x' : x < x') (y<y' : y < y') : x * y < x' * y'
+ExUpperRealSemigroup.*_join	lemma	5b341fea2aa5	-	a7ed8817		\lemma *_join {x y : ExUpperReal} : x * y = join x 0 * join y 0
+ExUpperRealSemigroup.<_*_U-left	lemma	b7a7884dafc3	-	7fdaee44		\lemma <_*_U-left {x : ExUpperReal} {y z : Rat} (x<y : x.U y) (y>0 : 0 RatField.< y) (z>0 : 0 RatField.< z) : (x * z).U (y RatField.* z)
+ExUpperRealSemigroup.<_*_U-right	lemma	d4d978429a81	-	7fdaee44		\lemma <_*_U-right {x : Rat} (x>0 : 0 RatField.< x) {y : ExUpperReal} {z : Rat} (z>0 : 0 RatField.< z) (y<z : y.U z) : (x * y).U (x RatField.* z)
+ExUpperRealSemigroup.<_*-left	lemma	57a598978cd4	-	ae2f2bf4		\lemma <_*-left {x y : ExUpperReal} (x<y : x < y) (y>0 : 0 < y) {z : Rat} (z>0 : 0 RatField.< z) : x * z < y * z
+ExUpperRealSemigroup.<_*-right	lemma	4081f2076cdb	-	ae2f2bf4		\lemma <_*-right {x : Rat} (x>0 : 0 RatField.< x) {y z : ExUpperReal} (y<z : y < z) (z>0 : 0 < z) : x * y < x * z
+ExUpperRealSemigroup.<_*-left'	lemma	a8ab3992f125	-	ae2f2bf4		\lemma <_*-left' {x y : ExUpperReal} (x<y : x < y) (x>=0 : 0 <= x) {z : Rat} (z>0 : 0 RatField.< z) : x * z < y * z
+ExUpperRealSemigroup.<_*-right'	lemma	7e543c378073	-	ae2f2bf4		\lemma <_*-right' {x : Rat} (x>0 : 0 RatField.< x) {y z : ExUpperReal} (y<z : y < z) (y>=0 : 0 <= y) : x * y < x * z
+ExUpperRealSemigroup.*_>=0	lemma	fa2c8ec7cb48	-	7d1e2fc2		\lemma *_>=0 {x y : ExUpperReal} : 0 <= x * y
+ExUpperRealSemigroup.ldistr_<=	lemma	2265bc0befa3	-	63ada192		\lemma ldistr_<= {x y z : ExUpperReal} : x * (y + z) <= x * y + x * z
+ExUpperRealSemigroup.rdistr_<=	lemma	371e66564878	-	63ada192		\lemma rdistr_<= {x y z : ExUpperReal} : (x + y) * z <= x * z + y * z
+ExUpperRealSemigroup.ldistr	lemma	7c102ad98542	-	1ab4b8af		\lemma ldistr {x y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) : x * (y + z) = x * y + x * z
+ExUpperRealSemigroup.rdistr	lemma	30fc2d9cd195	-	1ab4b8af		\lemma rdistr {x y z : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : (x + y) * z = x * z + y * z
+ExUpperRealSemigroup.zro_*-left	lemma	9416c6742024	-	fa46f30a		\lemma zro_*-left {x : ExUpperReal} (xb : x.IsBounded) : 0 * x = 0
+ExUpperRealSemigroup.zro_*-right	lemma	4c2e44a21fbe	-	fa46f30a		\lemma zro_*-right {x : ExUpperReal} (xb : x.IsBounded) : x * 0 = 0
+ExUpperRealSemigroup.*n_*_<=	lemma	02142b1d12c7	-	064a133d		\lemma *n_*_<= {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) : n AddMonoid.*n x <= n * x
+ExUpperRealSemigroup.*n_*	lemma	ea78a7ac61bb	-	064a133d		\lemma *n_* {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) (xb : x.IsBounded) : n AddMonoid.*n x = n * x
+ExUpperRealSemigroup.<_*-positive	lemma	73415e406683	-	accd654d	186d84e4:ExUpperRealAbMonoid.<	\lemma <_*-positive {x y : ExUpperReal} (x>0 : 0 < x) (y>0 : 0 < y) : 0 < x * y
+ExUpperRealSemigroup.div-lb	sfunc	9ad763c7f81f	41a6fcb1fba9	cead2b01	8b933068:ExUpperReal.<=	\sfunc div-lb {a : Rat} {b : ExUpperReal} (a>0 : 0 < a) (b>0 : 0 < b) : \Sigma (c : ExUpperReal) (0 < c) (a * c <= b)
+ExUpperRealSemigroup.div-lb-rat	lemma	b8c34678a315	-	75c084b4	8b933068:ExUpperReal.<=	\lemma div-lb-rat {a : Rat} {b : ExUpperReal} (a>0 : 0 < a) (b>0 : 0 < b) : ∃ (c : Rat) (0 RatField.< c) (a * c <= b)
+ExUpperRealSemigroup.finv_<=-rotate-right	lemma	35a04a64e165	-	187a608c		\lemma finv_<=-rotate-right {a : Rat} (a>0 : 0 RatField.< a) {b c : ExUpperReal} (p : RatField.finv a * b <= c) : b <= a * c
+ExUpperRealSemigroup.finv_<-rotate-right	lemma	fe3bd00e14ec	-	187a608c		\lemma finv_<-rotate-right {a : Rat} (a>0 : 0 RatField.< a) {b c : ExUpperReal} (p : RatField.finv a * b < c) : b < a * c
+ExUpperRealSemigroup.finv_<-rotate-left	lemma	68318bd95263	-	187a608c		\lemma finv_<-rotate-left {a : Rat} (a>0 : 0 RatField.< a) {b c : ExUpperReal} (c>0 : 0 < c) (p : b < a * c) : RatField.finv a * b < c
+ExUpperRealSemigroup.pow	func	a15dde09472c	09676da7a901	f78300cb		\func pow (x : ExUpperReal) (n : Nat) : ExUpperReal
+ExUpperRealSemigroup.rat-pow	lemma	efa8f688a2f5	-	c488effe	d6b28fc7:ExUpperRealSemigroup.pow	\lemma rat-pow {x : Rat} (x>=0 : 0 RatField.<= x) {n : Nat} : pow x n = ExUpperReal.fromRat (RatField.pow x n)
+ExUpperRealSemigroup.pow_<=	lemma	18c219d712aa	-	b6e9dbbb	d6b28fc7:ExUpperRealSemigroup.pow	\lemma pow_<= {x y : ExUpperReal} (x<=y : x <= y) {n : Nat} : pow x n <= pow y n
+ExUpperRealSemigroup.pow_>=0	lemma	a099601caa27	-	b6e9dbbb	d6b28fc7:ExUpperRealSemigroup.pow	\lemma pow_>=0 {x : ExUpperReal} {n : Nat} : 0 <= pow x n
+ExUpperRealSemigroup.square_<=	lemma	46015922b25a	-	ad6a5197	8b933068:ExUpperReal.<=	\lemma square_<= {x : ExUpperReal} {q : Rat} (q>=0 : 0 RatField.<= q) (xx<=qq : x * x <= q RatField.* q) : x <= q
+ExUpperRealSemigroup.square<=1	lemma	d657fa3b7931	-	ad6a5197	8b933068:ExUpperReal.<=	\lemma square<=1 {x : ExUpperReal} (xx<=1 : x * x <= 1) : x <= 1
+ExUpperRealSemigroup.square-bound-div	lemma	efba6c1a28a6	-	7ce77182	8b933068:ExUpperReal.<= bea0a85b:ExUpperRealSemigroup.square-bound-div.aux	\lemma square-bound-div {x : ExUpperReal} (xb : x.IsBounded) {q : Rat} (q>=0 : 0 RatField.<= q) (xx<=qx : x * x <= q * x) : x <= q
+ExUpperRealSemigroup.*n-bounded	lemma	d31ce98ba685	-	bdf99662		\lemma *n-bounded {n : Nat} {x : ExUpperReal} (xb : x.IsBounded) : (n ExUpperRealAbMonoid.*n x).IsBounded
+UpperReal	record	f2213da88554	-	cea7bade	12e0b076:ExUpperReal 9b3f71df:ExUpperReal.U 6d894e8c:UpperReal.U-inh	\record UpperReal \extends ExUpperReal { | U-inh : ∃ U }
+UpperReal.natBounded	lemma	bfd90a891dcf	-	7dc2be5f		\lemma natBounded : ∃ (n : Nat) (U n)
+UpperReal.U-inh_>0	lemma	5d087efc0f86	-	30efe54f		\lemma U-inh_>0 : ∃ (q : U) (0 < q)
+UpperReal.IsLocated	type	42c97c0e6dd7	30122dbd0e05	709790cf	9b3f71df:ExUpperReal.U 186d84e4:ExUpperRealAbMonoid.<	\type IsLocated : \Prop
+UpperReal.fromRat	coerce	7e5fd62dd190	-	d4f7f07b	8c2ac5a5:ExUpperReal.fromRat 86be8f29:UpperReal	\use \coerce fromRat (x : Rat) : UpperReal
+UpperReal.ex-ext	lemma	9919d1e50a9e	-	cebc7e1e	12e0b076:ExUpperReal 86be8f29:UpperReal	\lemma ex-ext {x y : UpperReal} (p : x = {ExUpperReal} y) : x = y
+UpperRealSemigroup	instance	647cff477509	-	5b721218	12e0b076:ExUpperReal 86be8f29:UpperReal	\instance UpperRealSemigroup : CSemigroup UpperReal
+UpperRealSemigroup.*	sfunc	5e94f2a9b19a	29a630c8467b	a475f605	d45c30b9:ExUpperReal.* 86be8f29:UpperReal 6d894e8c:UpperReal.U-inh	\sfunc * (x y : UpperReal) : UpperReal
+UpperRealSemigroup.*_U	lemma	83a93172d04c	-	ba7bd24f		\lemma *_U {x y : UpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a)
+UpperRealSemigroup.*-ex	lemma	62602d60f816	-	58070142	12e0b076:ExUpperReal 86be8f29:UpperReal	\lemma *-ex {x y : UpperReal} : x * y = x ExUpperReal.* y
+(overview)	-	-	-	13c665c6	12e0b076:ExUpperReal 91014be7:ExUpperReal.+ 8b933068:ExUpperReal.<= c0476e62:ExUpperReal.IsBounded 9b3f71df:ExUpperReal.U 86be8f29:UpperReal dd9cbe6a:UpperReal.IsLocated 6d894e8c:UpperReal.U-inh	-

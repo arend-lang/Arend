@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.Group.QuotientProperties. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+//	func	cd643a41c08c	b992f3cf522e	1ed041a5		\func // (G : Group) (H : NormalSubGroup G) : Group
+kerQuotHom	func	89012ed99ddb	b6bca8ea516f	2177cb61	dd2b773c://	\func kerQuotHom {G H : Group} (f : GroupHom G H) : GroupHom (G // KernelGroup f) H
+FirstIsoTheorem	lemma	ce55f6f4f93f	-	f88f3ac3	ea4bb131:kerQuotHom	\lemma FirstIsoTheorem {G H : Group} (f : GroupHom G H) (p : IsSurj f) : (kerQuotHom f).IsIsomorphism
+(overview)	-	-	-	2c62e0df	dd2b773c:// ea4bb131:kerQuotHom	-

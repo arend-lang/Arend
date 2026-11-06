@@ -1,0 +1,18 @@
+# arend -gc fingerprints v2 for module Topology.ContGerm. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ContGerm	type	a09cdfbe9a62	fa258feac3ef	355e2cf2		\type ContGerm (X Y : TopSpace) (x : X)
+ContGerm.equivalence	func	fe193e797420	a9703455080e	807b315e		\func equivalence : Equivalence (\Sigma (U : Set X) (isOpen U) (U x) (ContMap (TopSub U) Y))
+inCG	func	77d7f4c47bb5	33b4267bc99b	cc16dee6		\func inCG {X Y : TopSpace} {x : X} {U : Set X} (Uo : isOpen U) (Ux : U x) (f : ContMap (TopSub U) Y) : ContGerm X Y x
+inCGt	sfunc	4072e35a8a2d	3943ec5ca10e	48df40b4		\sfunc inCGt {X Y : TopSpace} {x : X} (f : ContMap X Y) : ContGerm X Y x
+ContGerm.comp-right	func	be11f91f4c69	3cf48a940988	39a8eedd	1233625e:ContGerm	\func comp-right {X Y Z : TopSpace} {x : X} (g : ContGerm X Y x) (h : ContMap Y Z) : ContGerm X Z x
+ContGerm.tuple	func	0da03db0f58c	37e3041d315a	6253b32f	1233625e:ContGerm	\func tuple {X Y Z : TopSpace} {x : X} (f : ContGerm X Y x) (g : ContGerm X Z x) : ContGerm X (ProductTopSpace Y Z) x
+~-cgequiv	lemma	9da37c098fd4	-	d072fe04		\lemma ~-cgequiv {X Y : TopSpace} {x : X} {u v : \Sigma (U : Set X) (isOpen U) (U x) (ContMap (TopSub U) Y)} {V : Set X} (Vo : isOpen V) (Vx : V x) (p : V ⊆ u.1) (q : V ⊆ v.1) (e : \Pi {x : X} (Vx : V x) -> u.4 (x, p Vx) = v.4 (x, q Vx)) : in~ u = {ContGerm X Y x} in~ v
+~-cgequiv.conv	lemma	3c2d6f46a32e	-	3d7363e2		\lemma conv {X Y : TopSpace} {x : X} {u v : \Sigma (U : Set X) (isOpen U) (U x) (ContMap (TopSub U) Y)} (p : in~ u = {ContGerm X Y x} in~ v) : ∃ (V : isOpen) (Vx : V x) (p : V ⊆ u.1) (q : V ⊆ v.1) (e : (\Pi {x : X} (Vx : V x) -> u.4 (x, p Vx) = v.4 (x, q Vx)))
+evalCG	func	7d683d203e14	acc718a2dfea	3bcc488d		\func evalCG {X Y : TopSpace} {x : X} (g : ContGerm X Y x) : Y
+ContGermAbGroup	instance	36184da9d351	-	a1da6290	1233625e:ContGerm 4cadf490:ContGerm.tuple	\instance ContGermAbGroup (X : TopSpace) (Y : TopAbGroup) (x : X) : AbGroup (ContGerm X Y x)
+ContGermRing	instance	a65b0770a6ce	-	850c6531	1233625e:ContGerm 4cadf490:ContGerm.tuple 30a4287c:ContGermAbGroup	\instance ContGermRing (X : TopSpace) (Y : TopRing) (x : X) : Ring (ContGerm X Y x)
+ContGermLModule	instance	bcf89baa0ac4	-	10e070d1	1233625e:ContGerm dd1352bf:ContGermRing	\instance ContGermLModule (X : TopSpace) {R : TopRing} (Y : TopLModule R) (x : X) : LModule (ContGermRing X R x) (ContGerm X Y x)
+evalCGAddGroupHom	lemma	b95c74647d80	-	ea7d5dc7	30a4287c:ContGermAbGroup c1eda249:evalCG	\lemma evalCGAddGroupHom {X : TopSpace} {Y : TopAbGroup} {x : X} : AddGroupHom (ContGermAbGroup X Y x) Y evalCG
+evalCG-linear	lemma	ea99aaf6eea8	-	8c4541cb	c1eda249:evalCG faa08bcd:inCGt	\lemma evalCG-linear {X : TopSpace} {R : TopRing} {Y : TopLModule R} {x : X} {r : R} {g : ContGerm X Y x} : evalCG (inCGt (const r) *c g) = r *c evalCG g
+cg-module-inj	lemma	8f03169876ea	-	3c8edb52	1233625e:ContGerm faa08bcd:inCGt	\lemma cg-module-inj {R : NearSkewField} {Y : HausdorffTopLModule R} {f g : ContGerm R Y 0} (p : inCGt id *c f = inCGt id *c g) : f = g
+(overview)	-	-	-	0cc6db41	1233625e:ContGerm	-

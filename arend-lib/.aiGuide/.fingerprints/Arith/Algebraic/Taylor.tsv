@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Arith.Algebraic.Taylor. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+polyEval-diff-bound	lemma	8af5c60776a3	-	b790f4c6		\lemma polyEval-diff-bound {p : Poly ComplexField} {m : Nat} (d : degree< p m) {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c) {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R) : cabs (polyEval p y - polyEval p z) <= c * RealField.powSum R m * RealField.powSum R m * cabs (y - z)
+polyEval-remainder-bound	lemma	38e6cdd95cc1	-	c42c10f6		\lemma polyEval-remainder-bound {p : Poly ComplexField} {m : Nat} (d : degree< p m) {c : Real} (c>=0 : 0 <= c) (hc : \Pi (j : Nat) -> cabs (polyCoef p j) <= c) {R : Real} {z y : Complex} (hz : cabs z <= R) (hy : cabs y <= R) : cabs (polyEval p y - polyEval p z - polyEval (polyDeriv p) z * (y - z)) <= c * RealField.powSum R m * RealField.powSum R m * RealField.powSum R m * (cabs (y - z) * cabs (y - z))
+(overview)	-	-	-	035b7c99		-

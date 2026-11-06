@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.ExComplete. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+dense-metric-lift	func	cd8982765428	02ea13320b12	dea77f66		\func dense-metric-lift {X Y : ExPseudoMetricSpace} {Z : CompleteExMetricSpace} (f : IsometricMap X Y) (fd : f.IsDense) (g : MetricMap X Z) : MetricMap Y Z
+ExMetricCompletion	instance	508d0eb29733	-	cc521bb9		\instance ExMetricCompletion (X : ExPseudoMetricSpace) : CompleteExMetricSpace
+completion-ex-isometry	func	c8b4303468ad	e5e04399d5c4	6ba39215	608f51a9:ExMetricCompletion 9b144efc:dense-metric-lift	\func completion-ex-isometry {X : ExPseudoMetricSpace} : IsometricMap X (ExMetricCompletion X)
+(overview)	-	-	-	2e300fc5		-

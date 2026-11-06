@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Category.Topos.Sheaf.DenseExtend. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SiteLocaleSheaf.extend	func	f98881ead7c4	58574b398162	041d7b71		\func extend : Functor (SiteLocale P).op D
+SiteLocaleSheaf.extend.limFunctor	func	083ca2dcabb6	78878ea49242	a7f065a4	167eceb0:SiteLocaleSheaf.extend	\func limFunctor (b : Opens P)
+SiteLocaleSheaf.extend.lim	func	083ca2dcabb6	61d860d946dc	a7f065a4	167eceb0:SiteLocaleSheaf.extend	\func lim (b : Opens P)
+denseSite-FF	lemma	608df284452d	-	637788c5		\lemma denseSite-FF (f : SiteDensePrehom) {E : Precat} {F : Functor f.D.op E} {G : Functor f.D.op E} (G-sheaf : IsSheaf G) : IsEquiv {NatTrans F G} {NatTrans (Comp F f.op) (Comp G f.op)} (\lam a => NatTrans.Comp-left a f.op)
+SiteLocaleSheaf	lemma	f20e2e33acb0	-	b42056d0	167eceb0:SiteLocaleSheaf.extend	\lemma SiteLocaleSheaf {P : PreorderSite.{u}} {D : CompleteCat.{u}} (F : Functor P.op D) (FS : IsPreorderSheaf F) : VSheaf D (SiteLocale P) extend

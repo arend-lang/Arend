@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Analysis.CauchyProduct. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+conv	func	561d594d54f5	879f966540cb	2f3e3bb1		\func conv {A : Ring} (a b : Series A) : Series A
+uconv	func	f1ffcb1f93f7	9017e80d40e9	0938b713		\func uconv (a b : Series ExUpperReal) : Series ExUpperReal
+conv-norm_<=	lemma	ef62f64c05c0	-	6ab46484	d1f610ba:conv 685516f6:uconv	\lemma conv-norm_<= {A : ExPseudoNormedRing} (a b : Series A) (n : Nat) : norm (conv a b n) <= uconv (\lam j => norm (a j)) (\lam j => norm (b j)) n
+conv_fromRat	lemma	5435d4a8736e	-	541f5554	d1f610ba:conv	\lemma conv_fromRat {A : RealBanachAlgebra} (a b : Series Rat) (k : Nat) : conv (\lam n => A.fromRat (a n)) (\lam n => A.fromRat (b n)) k = A.fromRat (conv a b k)
+partialSum-uconv-square	lemma	1b2a103e89b0	-	89d83c2b	685516f6:uconv	\lemma partialSum-uconv-square {a b : Series ExUpperReal} (a>=0 : \Pi (n : Nat) -> 0 <= a n) (b>=0 : \Pi (n : Nat) -> 0 <= b n) {n : Nat} : partialSum (uconv a b) n <= partialSum a n * partialSum b n
+midSum-uconv-bound	lemma	7b032f974da9	-	5c58db3a	685516f6:uconv	\lemma midSum-uconv-bound {a b : Series ExUpperReal} (a>=0 : \Pi (n : Nat) -> 0 <= a n) (b>=0 : \Pi (n : Nat) -> 0 <= b n) {N M n : Nat} (MN : 2 Nat.* M <= N) (ab : \Pi (i : Nat) -> (a i).IsBounded) (bb : \Pi (j : Nat) -> (b j).IsBounded) : midSum (uconv a b) N n <= midSum a M n * partialSum b n + partialSum a n * midSum b M n
+partialSum-from-termBound	lemma	b72e5ca198a1	-	03a96374		\lemma partialSum-from-termBound {S : Series ExUpperReal} {B : Rat} (hB : \Pi (n : Nat) -> (S n).U B) (n : Nat) : ∃ (C : Rat) ((partialSum S n).U C)
+partialSum-uniform-bound	lemma	0e7d15691371	-	a0fc6475		\lemma partialSum-uniform-bound {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (Sb : IsBoundedUpperSeries S) (Sc : IsConvUpperSeries S) : ∃ (B : Rat) ∀ (n : Nat) ((partialSum S n).U B)
+uconv-conv	lemma	43443289bd0e	-	1a45bbca		\lemma uconv-conv {a b : Series ExUpperReal} (a>=0 : \Pi (n : Nat) -> 0 <= a n) (b>=0 : \Pi (n : Nat) -> 0 <= b n) (aB : IsBoundedUpperSeries a) (bB : IsBoundedUpperSeries b) (ac : IsConvUpperSeries a) (bc : IsConvUpperSeries b) : IsConvUpperSeries (uconv a b)
+conv-absConv	lemma	14cbf3cb20da	-	6b7488e8		\lemma conv-absConv {A : ExPseudoNormedRing} {a b : Series A} (ac : IsAbsConvSeries a) (bc : IsAbsConvSeries b) : IsAbsConvSeries (conv a b)
+conv-sum	lemma	3c3a7f7c8d27	-	774402b4	d1f610ba:conv	\lemma conv-sum {A : ExPseudoNormedRing} {a b : Series A} {sa sb : A} (ac : IsSeriesSum a sa) (bc : IsSeriesSum b sb) (ac-abs : IsAbsConvSeries a) (bc-abs : IsAbsConvSeries b) : IsSeriesSum (conv a b) (sa * sb)
+conv-seriesSum	lemma	75d6587b8978	-	3cb0c13e	d1f610ba:conv 4d2713fe:conv-sum	\lemma conv-seriesSum {A : CompleteExNormedRing} {a b : Series A} (ac-abs : IsAbsConvSeries a) (bc-abs : IsAbsConvSeries b) : IsSeriesSum (conv a b) (seriesSum a (absConv-isConv ac-abs) * seriesSum b (absConv-isConv bc-abs))
+(overview)	-	-	-	230b86f9	d1f610ba:conv d43cbe10:conv-absConv 870b02c9:conv-seriesSum 4d2713fe:conv-sum 685516f6:uconv	-

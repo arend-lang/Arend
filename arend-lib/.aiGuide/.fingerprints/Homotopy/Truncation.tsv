@@ -1,0 +1,18 @@
+# arend -gc fingerprints v2 for module Homotopy.Truncation. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Truncated_-1+	class	31a2d8af89aa	-	4cd4b09a	86215115:Truncated_-1+.A 1a0478bd:Truncated_-1+.isTruncated 0328dfca:Truncated_-1+.n	\class Truncated_-1+ .{u} (n : Nat) (A : \Type u) { | isTruncated : A ofHLevel_-1+ n }
+Truncated_-1+.equiv	func	4d879afedd1b	8c9337331017	ab2e27e4	98ee728f:Truncated_-1+	\func equiv {n : Nat} (t t' : Truncated_-1+.{u} n) : QEquiv {t = t'} {t.A = t'.A}
+Truncated_-1+.up	func	d9090f2793ab	4229beabf413	24e9a6e4		\func up (t : Truncated_-1+.{u})
+truncatedEquiv	instance	4ced29ce3f78	-	a74c3eff		\instance truncatedEquiv {n : Nat} (t t' : Truncated_-1+.{u} n) : Truncated_-1+ n (Equiv t t')
+truncatedTypesLevel	instance	9473eaf4ca99	-	18d9547f		\instance truncatedTypesLevel (n : Nat) : Truncated_-1+ (suc n) (Truncated_-1+.{u} n)
+Set-isGpd	lemma	9c42c8c46dc8	-	b668e43d		\lemma Set-isGpd : \Set u ofHLevel_-1+ 2
+Trunc_-1+	data	c0f75742d507	-	27bc9e03	86215115:Truncated_-1+.A	\data Trunc_-1+ (n : Nat) (A : \Cat) | inT A | hubT (Sphere n -> Trunc_-1+ n A) | spokeT (r : Sphere n -> Trunc_-1+ n A) (x : Sphere n) : r x = hubT r
+Trunc_-1+.inT	cons	a6b155b7e01a	-	d14723e7	7ccaa32e:Trunc_-1+ 86215115:Truncated_-1+.A 0328dfca:Truncated_-1+.n	| inT A
+Trunc_-1+.hubT	cons	006286be71d0	-	26ce1bc2	7ccaa32e:Trunc_-1+ 86215115:Truncated_-1+.A 0328dfca:Truncated_-1+.n	| hubT (Sphere n -> Trunc_-1+ n A)
+Trunc_-1+.spokeT	cons	89dc15e513de	-	b12f5bec		| spokeT (r : Sphere n -> Trunc_-1+ n A) (x : Sphere n) : r x = hubT r
+Trunc_-1+.level	instance	f1b30b39bc76	-	3f00124a	7ccaa32e:Trunc_-1+ 86215115:Truncated_-1+.A 0328dfca:Truncated_-1+.n	\instance level (n : Nat) (A : \Cat u) : Truncated_-1+ n (Trunc_-1+ n A)
+Trunc_-1+.elim	func	5c5951b996eb	df943f39a613	a365e2d4	7ccaa32e:Trunc_-1+ 05c93fd4:Trunc_-1+.inT 86215115:Truncated_-1+.A 0328dfca:Truncated_-1+.n	\func elim {n : Nat} {A : \Cat} (P : Trunc_-1+ n A -> Truncated_-1+.{u} n) (g : \Pi (a : A) -> P (inT a)) (x : Trunc_-1+ n A) : P x
+Trunc_-1+.elim2	func	706436b9fbbe	1bef9482a218	8592da96	e4e168e2:Trunc_-1+.elim	\func elim2 {n : Nat} {A : \Cat} (P : Trunc_-1+ n A -> Trunc_-1+ n A -> Truncated_-1+.{u} n) (g : \Pi (a a' : A) -> P (inT a) (inT a')) (x y : Trunc_-1+ n A) : P x y
+Trunc_-1+.equality	func	57a69c92316b	45fdd57a9c54	e9529fe5	7ccaa32e:Trunc_-1+ bcfe61fd:Trunc_-1+.elim2 05c93fd4:Trunc_-1+.inT 86215115:Truncated_-1+.A 0328dfca:Truncated_-1+.n	\func equality {n : Nat} {A : \Type u} (a a' : A) : QEquiv {inT a = {Trunc_-1+ (suc n) A} inT a'} {Trunc_-1+ n (a = a')}
+Trunc1	data	d84054ebc20a	-	dccaec84	05c93fd4:Trunc1.in1 ed29a87f:Trunc1.trunc1 86215115:Truncated_-1+.A	\data Trunc1 (A : \Cat) | in1 A | trunc1 (x y : Trunc1 A) (p q : x = y) (r s : p = q) : r = s
+(overview)	-	-	-	c452bea1	7ccaa32e:Trunc_-1+ 71f5d8a4:Trunc_-1+.hubT 05c93fd4:Trunc_-1+.inT 9d3b8021:Trunc_-1+.spokeT	-

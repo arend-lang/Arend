@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Set.Fin.Noetherian. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+NoetherianSet	class	767428b29232	-	1e6380e0	e56738e4:NoetherianSet.isNoetherianSet	\class NoetherianSet \extends PigeonholeSet { | isNoetherianSet : Bar {E} (\lam l => ∃ (i j : Fin l.len) (i /= j) (l i = l j)) nil | pigeonhole => \lam f => (\case bar-stream isNoetherianSet f \with { | inP (r, rp, inP (i, j, i/=j, ri=rj)) => inP (r.len -' suc i, r.len -' suc j, \lam p => i/=j $ fin_nat-inj $ pmap pred $ inv (-'-'r_id $ suc_<_<= $ fin_< i) *> pmap (r.len -') p *> -'-'r_id (suc_<_<= $ fin_< j), inv (IsInvPrefix.toIndex rp) *> ri=rj *> IsInvPrefix.toIndex rp) }) }
+(overview)	-	-	-	ff73b705	f3741f53:NoetherianSet	-

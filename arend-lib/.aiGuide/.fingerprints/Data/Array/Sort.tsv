@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Data.Array.Sort. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+sort	func	04c54d601c03	e2b7ac2f0f74	32e6e6ea		\func sort {A : LinearOrder.Dec} (l : Array A) : Array A l.len
+sort.IsSorted	func	72346ee88d10	3b91f971f6de	3fb57296		\func IsSorted {A : Preorder} (l : Array A)
+sort.sorted_transport	lemma	944dadbcf62a	-	00bc63eb	779665dd:sort.IsSorted	\lemma sorted_transport {A : Preorder} {n m : Nat} {l : Array A n} (p : n = m) (s : IsSorted l) : IsSorted (transport (\lam n => Array A n) p l)
+sort.list_sorted	lemma	f922830effe0	-	f1c529f5	779665dd:sort.IsSorted	\lemma list_sorted {A : Preorder} {l : List A} (s : Sort.Sorted l) : IsSorted (fromList l)
+sort.list_sorted.headDef_fromList	lemma	31a9cc7389b8	-	e48ff526		\lemma headDef_fromList {a : A} {l : List A} {j : Fin (length l)} (s : Sort.Sorted l) : headDef a l <= fromList l j
+sort.sorted_list	lemma	b743190d2179	-	1d646e21	779665dd:sort.IsSorted	\lemma sorted_list {A : Preorder} {l : Array A} (s : IsSorted l) : Sort.Sorted (toList l)
+sort.sort-sorted	lemma	e9c6be57033c	-	c3ee5325	1ab5cee1:sort 779665dd:sort.IsSorted	\lemma sort-sorted {A : LinearOrder.Dec} {l : Array A} : IsSorted (sort l)
+sort.sort-perm	sfunc	3233b70ecf44	438f5a9c1cfb	88a63ba1	1ab5cee1:sort	\sfunc sort-perm {A : LinearOrder.Dec} {n : Nat} {l : Array A n} : Perm l (sort l)
+sort.sort-perm.list_perm	func	65f1267b1a87	0490fdb4a122	7ff10694		\func list_perm {A : \Type} {l l' : List A} (p : Sort.Perm l l') : EPerm (fromList l) (fromList l')
+sort.sort-perm.sort-eperm	func	82cc2b233525	da8050b803f2	fec4a6cc		\func sort-eperm {A : LinearOrder.Dec} {l : Array A} : EPerm l (fromList (Sort.Insertion.sort (toList l)))
+sort.perm_list	func	25456f467845	7cf2cc524292	8e3b6d55		\func perm_list {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : Sort.Perm (toList l) (toList l')
+sort.perm_=	lemma	a25eefb9c8ab	-	f1f7726d	1ab5cee1:sort 779665dd:sort.IsSorted	\lemma perm_= {A : LinearOrder.Dec} {n : Nat} {l l' : Array A n} (p : Perm l l') (s : IsSorted l) (s' : IsSorted l') : l = l'
+(overview)	-	-	-	9af84b33	1ab5cee1:sort cd3d818c:sort.perm_= 3d991493:sort.sort-perm c109e267:sort.sort-sorted	-

@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Algebra.Ordered.OrderedLocalization. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LocPosetAbMonoid	instance	d1cb5c9e4f28	-	99ce8466		\instance LocPosetAbMonoid {M : PosetAbMonoid} (S : SubAddMonoid M) : PosetAbMonoid (LocAbType S)
+GrothendieckOrderedAbGroup	instance	745b2092a029	-	22ddd3ae	0899ad3b:LocPosetAbMonoid	\instance GrothendieckOrderedAbGroup (M : PosetAbMonoid) : PosetAbGroup (MaxLocAbType M)
+LocPosetMeetSemilattice	instance	e5257d1ea8ba	-	cfe9cd7d		\instance LocPosetMeetSemilattice {M : MeetSemilatticeAbMonoid} (S : SubAddMonoid M) : MeetSemilatticeAbMonoid (LocAbType S)
+GrothendieckMeetLattice	instance	7327511eedc9	-	278667bc	a71f42ab:GrothendieckOrderedAbGroup 11519b9f:LocPosetMeetSemilattice	\instance GrothendieckMeetLattice (M : MeetSemilatticeAbMonoid) : LatticeAbGroup.FromMeet (MaxLocAbType M)
+(overview)	-	-	-	dc86ef70		-

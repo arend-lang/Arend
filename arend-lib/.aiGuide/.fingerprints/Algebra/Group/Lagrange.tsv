@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Lagrange. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+lagrange-gen	func	7c5190300aa7	df849abd1c35	ffa0e716		\func lagrange-gen (H : SubGroup) (c : IsSplitSurj H.inc~) : TruncP (QEquiv {H.S} {\Sigma H.Cosets (IGroup H)})
+lagrange	func	9109f531e222	68c990310774	3bdc73b0		\func lagrange (H : FinSubGroup) : LDiv (IFinGroup H).card (card {H.S})
+lagrange.Cosets-fin	lemma	a323f0e0052b	-	6dfd7eea	3430fa35:lagrange	\lemma Cosets-fin (H : DecSubGroup) (_ : KFinSet H.S) : FinSet H.Cosets
+(overview)	-	-	-	9c95ebc4	3430fa35:lagrange ce410c98:lagrange-gen efe5a574:lagrange.Cosets-fin	-

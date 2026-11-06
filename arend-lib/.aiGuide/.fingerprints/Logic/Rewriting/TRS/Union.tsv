@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Logic.Rewriting.TRS.Union. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SumFSignature	func	c6e46a841e47	7ed26d20915d	ebcc09fd		\func SumFSignature {J Sort : \Set} (S : J -> FSignature Sort) : FSignature Sort
+inject-term	func	53f00dbe8144	81b2f99cc4fc	e5ea56c6	131ff9a1:SumFSignature	\func inject-term {J Sort : \Set} (S : J -> FSignature Sort) {s : Sort} {c : List Sort} {mc : MetaContext Sort} {j : J} (t : Term (S j) c s mc) : Term (SumFSignature S) c s mc
+inject-term.over-transport-sort	lemma	32179f00e736	-	89484213	88b9b657:inject-term	\lemma over-transport-sort {J Sort : \Set} {S : J -> FSignature Sort} {s s' : Sort} {c : List Sort} {mc : MetaContext Sort} (eq : s = s') {j : J} (t : Term (S j) c s mc) : inject-term S (transport (Term (S j) c __ mc) eq t) = transport (Term (SumFSignature S) c __ mc) eq (inject-term S t)
+inject-term.over-transport-ctx	lemma	760f5ca74f08	-	1b040e47	88b9b657:inject-term	\lemma over-transport-ctx {J Sort : \Set} {S : J -> FSignature Sort} {s : Sort} {c c' : List Sort} {mc : MetaContext Sort} (eq : c = c') {j : J} (t : Term (S j) c s mc) : inject-term S (transport (Term (S j) __ s mc) eq t) = transport (Term (SumFSignature S) __ s mc) eq (inject-term S t)
+inject-rule-container	func	ef1721f6d207	f32593fe70e9	aca2fa6e	131ff9a1:SumFSignature	\func inject-rule-container {J Sort : \Set} (S : J -> FSignature Sort) {s : Sort} {j : J} (R : RewriteRule {S j} s) : RewriteRule {SumFSignature S} s
+SumRegistry	func	2a24605c47c4	bbae491e31bd	9a4f3d20	131ff9a1:SumFSignature	\func SumRegistry {J Sort : \Set} (S : J -> FSignature Sort) (L : \Pi (j : J) -> RuleRegistry (S j)) : RuleRegistry (SumFSignature S)
+(overview)	-	-	-	b3d7f228	131ff9a1:SumFSignature	-

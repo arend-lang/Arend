@@ -1,0 +1,49 @@
+# arend -gc fingerprints v2 for module Topology.Locale.Uniform. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+star	func	4ed053371616	2b7ef91d3afb	274b0000		\func star {L : Locale} (x : L) (U : L -> \Prop)
+star.star_<=	lemma	df49561368d0	-	c2f8e7a2	7bbf1728:star	\lemma star_<= {L : Locale} {x y : L} (x<=y : x <= y) (U : L -> \Prop) : star x U <= star y U
+star.star-refl	lemma	4aebd50ebc0e	-	721aa75c	7bbf1728:star	\lemma star-refl {L : PreuniformLocale} {x : L} {U : L -> \Prop} (uU : isUniform U) : x <= star x U
+nucleus-star	func	555d756108fe	d17ecf476e29	fb309a0a	7bbf1728:star	\func nucleus-star {L : Locale} (j : Nucleus L) (U : L -> \Prop)
+nucleus-star.star_open	lemma	167f6ce601f2	-	40414e2f	9abe2963:nucleus-star 7bbf1728:star	\lemma star_open {L : Locale} (a : L) (U : L -> \Prop) : nucleus-star (open a) U = star a U
+PreuniformLocale	class	e2af8436ddff	-	69198d5c	0c13df27:PreuniformLocale.isUniform	\class PreuniformLocale \extends Locale { | uniform-overt : IsOvert | isUniform : (E -> \Prop) -> \Prop | isCovering {U : E -> \Prop} : isUniform U -> top <= Join U | isDownset {U : E -> \Prop} {x y : E} : isUniform U -> U y -> x <= y -> U x | top-uniform : isUniform (\lam _ => \Sigma) | meet-uniform {U V : E -> \Prop} : isUniform U -> isUniform V -> isUniform (\lam x => \Sigma (U x) (V x)) | <=-uniform {U V : E -> \Prop} : isUniform U -> (\Pi {x : E} -> U x -> V x) -> (\Pi {x y : E} -> V y -> x <= y -> V x) -> isUniform V | star-uniform {U : E -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ {x : V} (U (star x V)) }
+PreuniformLocale.dClosure	lemma	0155f0c41490	-	7dda1f8b		\lemma dClosure {L M : Preorder} {f : L -> M} {U : L -> \Prop} {x y : M} (p : ∃ (z : L) (U z) (y <= f z)) (x<=y : x <= y) : ∃ (z : L) (U z) (x <= f z)
+UniformHom	record	4d31159e4222	-	61ca41f2		\record UniformHom \extends FrameHom { \override Dom : PreuniformLocale \override Cod : PreuniformLocale | func-uniform {U : Dom -> \Prop} : isUniform U -> isUniform (\lam y => ∃ (x : Dom) (U x) (y <= func x)) }
+UniformEmbedding	record	9570a301651d	-	e99b23d4	a5cc2043:UniformEmbedding.isUniformEmbedding 9d32a71c:UniformHom	\record UniformEmbedding \extends UniformHom { | isEmbedding : IsSurj func | isUniformEmbedding {U : Cod -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ {x} (V x -> U (func x)) }
+UniformEmbedding.direct-uniform	lemma	db1ec35a4463	-	3c9ebfc9		\lemma direct-uniform {U : Cod -> \Prop} : isUniform U -> isUniform (\lam x => ∃ (y : Cod) (U y) (x <= direct y))
+UniformEmbedding.comp	func	aa4d06de0ddf	40c5b63edcf4	c230be23		\func comp {L M K : PreuniformLocale} (g : UniformEmbedding M K) (f : UniformEmbedding L M) : UniformEmbedding L K
+<=u	func	bf01f27416e1	67a17bf2e939	8ed4c709	7bbf1728:star	\func <=u {L : PreuniformLocale} (a b : L)
+<=u.func-<=u	lemma	0eb1a99c2b3f	-	410a09e8	ab0e3d05:<=u	\lemma func-<=u (f : UniformHom) {a b : f.Dom} (p : a <=u b) : f a <=u f b
+<=u.adjoint	lemma	049111bdaefc	-	cb919dc1	ab0e3d05:<=u	\lemma adjoint (f : UniformHom) {a : f.Dom} {b : f.Cod} (p : a <=u f.direct b) : f a <=u b
+<=u.dense	lemma	bfa9a448ea67	-	933a5e4e	ab0e3d05:<=u	\lemma dense {L : PreuniformLocale} {a c : L} (p : a <=u c) : ∃ (b : L) (a <=u b) (b <=u c)
+<=u.dense.meet_star-comm	lemma	10bd41d96585	-	4d032792	7bbf1728:star	\lemma meet_star-comm {L : Locale} (o : L.IsOvert) {a b : L} {U : L -> \Prop} (p : IsPositive (a ∧ star b U)) : IsPositive (b ∧ star a U)
+<=u.uniform-refine	lemma	ee94d81bb796	-	eef19c27	ab0e3d05:<=u	\lemma uniform-refine {L : PreuniformLocale} {U : L -> \Prop} (uU : isUniform U) : isUniform (\lam b => ∃ (a : L) (U a) (b <=u a))
+<=u-trans-left	lemma	4b94468857db	-	0084102d	ab0e3d05:<=u	\lemma <=u-trans-left {L : PreuniformLocale} (a : L) {b c : L} (p : a <=u b) (b<=c : b <= c) : a <=u c
+<=u-trans-right	lemma	8e300d9a5752	-	0084102d	ab0e3d05:<=u	\lemma <=u-trans-right {L : PreuniformLocale} {a b c : L} (a<=b : a <= b) (p : b <=u c) : a <=u c
+<=u_meet	lemma	691cdaabdf8d	-	0ad1ec4a	ab0e3d05:<=u	\lemma <=u_meet {L : PreuniformLocale} {a a' b b' : L} (p : a <=u a') (q : b <=u b') : a ∧ b <=u a' ∧ b'
+<=u_top	lemma	ae98ea04e18d	-	cd5e3beb	ab0e3d05:<=u	\lemma <=u_top {L : PreuniformLocale} {a : L} : a <=u top
+<=u_<=	lemma	e18306fec77c	-	8cea3923	ab0e3d05:<=u	\lemma <=u_<= {L : PreuniformLocale} {a b : L} (p : a <=u b) : a <= b
+UniformLocale	class	1a4a135ee4f7	-	4b02ab13	ab0e3d05:<=u 37f82b45:PreuniformLocale	\class UniformLocale \extends PreuniformLocale { | isAdmissible (b : E) : b <= Join (<=u b) }
+UniformLocale.IsComplete	func	8bd4e46a43a0	2d6bdb8c56ec	ca03f1e4	3109d510:Completion 433a18ce:completion	\func IsComplete
+UniformLocale.star_wclosure	lemma	fb03201d6e94	-	a0106150	9abe2963:nucleus-star	\lemma star_wclosure {L : PreuniformLocale} {j : Nucleus L} {U : L -> \Prop} (uU : isUniform U) : nucleus-star j.map.wclosed-image U = nucleus-star j U
+uniform=>wregular	lemma	935a167efd1b	-	5f3dd922		\lemma uniform=>wregular {L : UniformLocale} : L.IsWeaklyRegularLocale
+PreuniformCat	func	914d163db25c	ab1a56c0a95e	761e800f		\func PreuniformCat : Cat PreuniformLocale.{u}
+PreuniformCat.uniform-lem	lemma	a63da9ac0c40	-	ac7a6fc0		\lemma uniform-lem {L : PreuniformLocale} {U : L -> \Prop} (u : isUniform (\lam y => ∃ (x : L) (U x) (y <= x))) (d : \Pi {x y : L} -> U y -> x <= y -> U x) : isUniform U
+UniformCat	func	4330b1192299	e858f57b0b1f	db9bb0f2	a39fd79d:PreuniformCat	\func UniformCat : Cat UniformLocale.{u}
+CompletionLocale	func	a80d0cbe9323	2a35adaeec81	3eb46bb0	3929b203:CompletionSite	\func CompletionLocale (L : UniformLocale)
+CompletionSite	func	81929ce7d798	f2642a29d4db	1ded8d84	ab0e3d05:<=u	\func CompletionSite (L : UniformLocale) : PreorderSite
+completionLocale	func	4cc98b29d473	bdfe56ded0aa	fb5f2f12	7dc6e4f0:CompletionLocale	\func completionLocale {L : UniformLocale} : LocaleHom L (CompletionLocale L)
+completionLocale.presentation	func	75ab07bdc197	569ace2356ff	0d91f10f	3929b203:CompletionSite	\func presentation {L : UniformLocale} : PreorderSiteHom (CompletionSite L) (LocaleSite L)
+completionLocale.sdense	lemma	23a4f0f468b6	-	1cb21b84		\lemma sdense {L : UniformLocale} : IsStronglyDense {completionLocale {L}}
+completionLocale.completion_embed	lemma	22cfecdf8f8a	-	ca29ba0e	7c90f367:completionLocale	\lemma completion_embed {L : UniformLocale} {a : L} : completionLocale (embed a) = a
+Completion	func	e9665cd6fffa	e2ad2dc52d3d	b4326a47	7dc6e4f0:CompletionLocale	\func Completion (L : UniformLocale) : UniformLocale
+Completion.make-covering	func	68a3940207dc	856c58aaaec1	9c193c83	7bbf1728:star	\func make-covering {L : UniformLocale} (U : L -> \Prop) (uU : L.isUniform U) : \Sigma (V : CompletionLocale L -> \Prop) (isUniform V) (\Pi (a : L) -> star {CompletionLocale L} (embed a) V <= embed (star a U))
+completion	func	b32ecf22e06f	82a1440a6370	9d5ccefd	3109d510:Completion 9bbf40f9:UniformEmbedding	\func completion {L : UniformLocale} : UniformEmbedding (Completion L) L
+completion.isMono	lemma	2510973bfab7	-	7a73e7d5	f30a1ba8:UniformCat 433a18ce:completion	\lemma isMono {L M : UniformLocale.{u}} {f g : UniformHom M (Completion L)} (p : completion UniformHom.∘ f = completion UniformHom.∘ g) : f = g
+completion-factor	sfunc	bfc10a7a31c3	e3b42e6bbf44	4d6472bd	3109d510:Completion 8504f70f:UniformHom.compose 433a18ce:completion	\sfunc completion-factor {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.IsStronglyDense) : \Sigma (g : UniformHom (Completion L) M) (f UniformHom.∘ g = completion)
+completion-factor.presentation	func	8d5317c79715	ae4ea44071aa	09d5d08c	3929b203:CompletionSite	\func presentation {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.IsStronglyDense) : PreorderSiteHom (CompletionSite L) (LocaleSite M)
+completion-isComplete	lemma	64f63987882a	-	cf4852a9	3109d510:Completion	\lemma completion-isComplete (L : UniformLocale.{u}) : (Completion L).IsComplete
+completion-functor	func	0b0a14cbf9ea	c265fe09d9ac	2724e5fa	3109d510:Completion	\func completion-functor {L M : UniformLocale} (f : UniformHom M L) : UniformHom (Completion M) (Completion L)
+completion-functor.presentation	func	ce24f4e15e5c	3b3af8af5588	27ba80fc	ab0e3d05:<=u	\func presentation {L M : UniformLocale} (f : UniformHom M L) : PreorderSiteHom (CompletionSite M) (LocaleSite (Completion L))
+completion-natural	lemma	98b1d51dc1a6	-	69b3372e	8504f70f:UniformHom.compose 433a18ce:completion 0a039c63:completion-functor	\lemma completion-natural {L M : UniformLocale} {f : UniformHom M L} : completion UniformHom.∘ completion-functor f = f UniformHom.∘ completion
+completion-isReflector	lemma	d649184e5df6	-	4cefb324	3109d510:Completion f30a1ba8:UniformCat 433a18ce:completion	\lemma completion-isReflector {L M : UniformLocale.{u}} (Mc : M.IsComplete) : IsEquiv {UniformHom M (Completion L)} {UniformHom M L} (\lam g => completion UniformHom.∘ g)
+(overview)	-	-	-	d7442c8d	ab0e3d05:<=u 3109d510:Completion 3929b203:CompletionSite 37f82b45:PreuniformLocale 0c13df27:PreuniformLocale.isUniform 6d7fe8c9:UniformLocale 7bbf1728:star	-

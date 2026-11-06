@@ -1,0 +1,46 @@
+# arend -gc fingerprints v2 for module Topology.BanachAlgebra. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BanachAlgebra	class	01619737c98d	-	066769a2		\class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing
+RealPreBanachAlgebra	class	cef460d8d406	-	6b9f82e2		\class RealPreBanachAlgebra \extends RealPreBanachSpace, ExPseudoNormedRing
+RealBanachPseudoAlgebra	class	2f40c10956c9	-	8d53d544		\class RealBanachPseudoAlgebra \extends RealBanachSpace, QPseudoAlgebra, ExPseudoNormedPseudoRing, CompleteExNormedAbGroup
+RealBanachAlgebra	class	5dd6985c0683	-	86badb8f	699cad01:BanachAlgebra a4cf64bd:RealBanachPseudoAlgebra ceccb4a9:RealPreBanachAlgebra	\class RealBanachAlgebra \extends RealBanachPseudoAlgebra, BanachAlgebra, RealPreBanachAlgebra
+RealBanachCAlgebra	class	dac2bdc9c70d	-	ed92bad6	da944aaf:RealBanachAlgebra	\class RealBanachCAlgebra \extends RealBanachAlgebra, CRing
+BanachAlgebra.norm_fromRat	lemma	3148999e1cd1	-	845bf62f		\lemma norm_fromRat {q : Rat} : norm (fromRat q) <= A.norm q
+RealBanachPseudoAlgebra.*r-comm-left	lemma	37a8db84209c	-	c91296df		\lemma *r-comm-left {r : Real} {a b : E} : r *r (a * b) = r *r a * b
+RealBanachPseudoAlgebra.*r-comm-right	lemma	98f8e16216b9	-	5b077b99		\lemma *r-comm-right {r : Real} {a b : E} : r *r (a * b) = a * (r *r b)
+RealBanachPseudoAlgebra.*r_>=0-square	lemma	a6ec4e7b4b5c	-	b3ef210e		\lemma *r_>=0-square {r : Real} {a : E} (r>=0 : 0 <= r) (as : IsSquare a) : IsSquare (r *r a)
+RealBanachPseudoAlgebra.*q_>=0-square	lemma	1b8c6d64b7fd	-	ef58f6f3		\lemma *q_>=0-square {q : Rat} {a : E} (q>=0 : 0 <= q) (as : IsSquare a) : IsSquare (q *q a)
+RealBanachPseudoAlgebra.toRealAlgebra	func	7a43c7fad924	c69968ff17ee	e8160e83		\func toRealAlgebra : PseudoAlgebra RealField
+RealBanachAlgebra.sqrt	sfunc	b19f7a387222	92ba9d826e22	dd4d3d62	487f3813:RealBanachAlgebra.sqrt.zfunc	\sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
+RealBanachAlgebra.sqrt.UnitBall	func	8bd4e46a43a0	084ea6c88d1a	d22badfd		\func UnitBall
+RealBanachAlgebra.sqrt.yfunc	sfunc	98943a6e1cd1	6c228e88da54	cd8c2096		\sfunc yfunc (n : Nat) (x : E) : E
+RealBanachAlgebra.sqrt.zfunc	func	4f6450bccbb0	04fc581ebf01	78ec6506	91daa642:RealBanachAlgebra.sqrt	\func zfunc (n : Nat) (x : E)
+RealBanachAlgebra.sqrt.zfunc-lim	func	8bd4e46a43a0	128ae011c2f6	be82fa5a	91daa642:RealBanachAlgebra.sqrt c6787af9:RealBanachAlgebra.sqrt.UnitBall 487f3813:RealBanachAlgebra.sqrt.zfunc	\func zfunc-lim
+RealBanachAlgebra.sqrt.yfunc<=rfunc	lemma	45a0fd45d600	-	e243c62f	d8693adc:RealBanachAlgebra.rfunc 22831ee2:RealBanachAlgebra.sqrt.yfunc	\lemma yfunc<=rfunc {n : Nat} {s : UnitBall} : norm (yfunc n s.1) <= rfunc n
+RealBanachAlgebra.sqrt.yfunc-comm	lemma	3e59bda24114	-	e94f8e69		\lemma yfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : yfunc n x * a = a * yfunc n x
+RealBanachAlgebra.sqrt.zfunc-comm	lemma	3e46a44d8d68	-	e94f8e69		\lemma zfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : zfunc n x * a = a * zfunc n x
+RealBanachAlgebra.sqrt.yfunc-rec	lemma	9147b02ddabb	-	8bd10e25		\lemma yfunc-rec {n : Nat} {x : E} : yfunc (suc (suc n)) x - yfunc (suc n) x = ratio 1 2 *q ((yfunc (suc n) x + yfunc n x) * (yfunc (suc n) x - yfunc n x))
+RealBanachAlgebra.sqrt.yfunc_rfunc-diff1	lemma	358742664dcf	-	33ecdbcc	d8693adc:RealBanachAlgebra.rfunc	\lemma yfunc_rfunc-diff1 {n : Nat} {s : UnitBall} : norm (yfunc (suc n) s.1 - yfunc n s.1) <= rfunc (suc n) - rfunc n
+RealBanachAlgebra.sqrt.yfunc_rfunc-diff	lemma	5c4d7c3c576f	-	33ecdbcc	d8693adc:RealBanachAlgebra.rfunc	\lemma yfunc_rfunc-diff {n k : Nat} {s : UnitBall} : norm (yfunc (n Nat.+ k) s.1 - yfunc n s.1) <= rfunc (n Nat.+ k) - rfunc n
+RealBanachAlgebra.sqrt.zfunc_rfunc-diff	lemma	5b545aa3fd62	-	69148e79	487f3813:RealBanachAlgebra.sqrt.zfunc	\lemma zfunc_rfunc-diff {n k : Nat} (n<=k : n <= k) {s : UnitBall} : norm (zfunc k s.1 - zfunc n s.1) <= rfunc k - rfunc n
+RealBanachAlgebra.sqrt.zfunc-uni	lemma	b432e94b0388	-	b06c614d	c6787af9:RealBanachAlgebra.sqrt.UnitBall 487f3813:RealBanachAlgebra.sqrt.zfunc	\lemma zfunc-uni : IsUniFuncConvergent {_} {UnitBall} (\lam n s => zfunc n s.1)
+RealBanachAlgebra.sqrt.zfunc-funcConv	lemma	9ad61e52a6d9	-	b06c614d	c6787af9:RealBanachAlgebra.sqrt.UnitBall 487f3813:RealBanachAlgebra.sqrt.zfunc	\lemma zfunc-funcConv : IsFuncConvergent {_} {UnitBall} (\lam n s => zfunc n s.1)
+RealBanachAlgebra.sqrt.yfunc-cover	lemma	daf046c58438	-	d08ecde6		\lemma yfunc-cover (n : Nat) : CoverMap \this \this (yfunc n)
+RealBanachAlgebra.sqrt.zfunc-cover	lemma	39186a7408f6	-	d08ecde6		\lemma zfunc-cover (n : Nat) : CoverMap UnitBall \this (\lam s => zfunc n s.1)
+RealBanachAlgebra.sqrt.isSquare	lemma	31b050e8fea3	-	de996da0	91daa642:RealBanachAlgebra.sqrt	\lemma isSquare : sqrt x |1-x|<=1 * sqrt x |1-x|<=1 = x
+RealBanachAlgebra.sqrt.isSquare.dist-lem	lemma	7deb406f687d	-	1c956790		\lemma dist-lem (n : Nat) : zfunc n x * zfunc n x - x = RatField.natCoef 2 *q (yfunc (suc n) x - yfunc n x)
+RealBanachAlgebra.sqrt.comm	lemma	3bea1ceb5c1d	-	8dd41a15	91daa642:RealBanachAlgebra.sqrt	\lemma comm {y : E} (yx=xy : y * x = x * y) : sqrt x |1-x|<=1 * y = y * sqrt x |1-x|<=1
+RealBanachAlgebra.norm-square	lemma	7413da8fb9a3	-	693e1872		\lemma norm-square {x : E} (p : norm (1 - x) <= RatField.ide) : IsSquare x
+RealBanachAlgebra.norm-square'	lemma	7a6445510ad8	-	7d50979e		\lemma norm-square' {x : E} (p : norm x <= RatField.ide) : IsSquare (1 - x)
+RealBanachAlgebra.norm_*q-square	lemma	350ad6031cdb	-	5f9137c4		\lemma norm_*q-square {q : Rat} (q>0 : 0 < q) {x : E} (p : norm (q *q 1 - x) <= q) : IsSquare x
+RealBanachAlgebra.rfunc	sfunc	0b35edc2fd60	38b012fa2db1	fe32ddc4		\sfunc rfunc (n : Nat) : Rat
+RealBanachAlgebra.rfunc>=0	lemma	456e51c4803b	-	f27f5ff9	d8693adc:RealBanachAlgebra.rfunc	\lemma rfunc>=0 {n : Nat} : 0 <= rfunc n
+RealBanachAlgebra.rfunc<=1	lemma	34bae7d25110	-	f27f5ff9	d8693adc:RealBanachAlgebra.rfunc	\lemma rfunc<=1 {n : Nat} : rfunc n <= 1
+RealBanachAlgebra.rfunc-inc	lemma	8a5d0563066b	-	e3e38a29		\lemma rfunc-inc {n : Nat} : rfunc n <= rfunc (suc n)
+RealBanachAlgebra.rfunc-rec	lemma	0997a5bf7906	-	d854e972		\lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n))
+RealBanachAlgebra.rfunc-bound	lemma	31c423d2a642	-	2132662a	d8693adc:RealBanachAlgebra.rfunc	\lemma rfunc-bound {eps : Rat} (eps>0 : 0 < eps) {n : Nat} (p : rfunc n <= 1 - eps) : 1 - rfunc n <= RatField.pow (1 - ratio 1 2 * eps) n
+RealBanachAlgebra.rfunc-limit	lemma	5ad5da9cbbef	-	e360ce78	d8693adc:RealBanachAlgebra.rfunc	\lemma rfunc-limit : TopSpace.IsLimit rfunc 1
+BanachAlgebraCompletion	instance	6339efbdfc8d	-	19e20045	da944aaf:RealBanachAlgebra ceccb4a9:RealPreBanachAlgebra	\instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra
+BanachAlgebraCompletion.*-cover	func	9cb6ed91e6a1	853fd604db3b	b6449b67		\func *-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+BanachAlgebraCompletion.*-func	func	c00fd576a2fa	cb727b9c9c5f	6ef553b5		\func *-func (x y : RegularCauchyFilter X)
+(overview)	-	-	-	9a34f020	699cad01:BanachAlgebra 9be6ed18:BanachAlgebraCompletion da944aaf:RealBanachAlgebra d8693adc:RealBanachAlgebra.rfunc 91daa642:RealBanachAlgebra.sqrt a4cf64bd:RealBanachPseudoAlgebra ceccb4a9:RealPreBanachAlgebra	-

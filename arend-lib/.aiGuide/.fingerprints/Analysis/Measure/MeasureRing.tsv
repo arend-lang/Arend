@@ -1,0 +1,26 @@
+# arend -gc fingerprints v2 for module Analysis.Measure.MeasureRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PseudoMeasureRing	class	c32a3cd0b7a2	-	a3adb3de	7f45956e:PseudoMeasureRing.meas 3d20bdde:PseudoMeasureRing.meas_+	\class PseudoMeasureRing \extends BooleanRing, PseudoNormedAbGroup { | meas : E -> Real | meas_zro : meas 0 = 0 | meas>=0 {x : E} : 0 RealAbGroup.<= meas x | meas-disjoint {x y : E} : x * y = 0 -> meas (x ∨ y) = meas x RealAbGroup.+ meas y | meas-mono {x y : E} : x <= y -> meas x RealAbGroup.<= meas y | meas-mono => \lam p => transport2 RealAbGroup.<= RealAbGroup.zro-left (inv (meas-disjoint (rdistr *> pmap (_ +) (*-assoc *> pmap (_ *) isBooleanRing) *> double=0)) *> pmap meas (inv (split_<= p))) (<=_+ meas>=0 RealAbGroup.<=-refl) | meas_+ {x y : E} : meas (x + y) RealAbGroup.<= meas x RealAbGroup.+ meas y | meas_+ => transportInv (RealAbGroup.<= _) (pmap meas +_diff *> meas-disjoint diff_*_diff) $ <=_+ (meas-mono diff_<=) (meas-mono diff_<=) | norm => meas | norm_zro => meas_zro | norm_negative => pmap meas negative=id | norm_+ => transport (_ ExUpperReal.<=) RealAbGroup.+-upper (Real.<=-upper.1 meas_+) }
+PseudoMeasureRing.meas	field	37644a7f3a27	-	0c98de6e		| meas : E -> Real
+PseudoMeasureRing.meas_zro	field	8d3ca8ecbe9e	-	1efe18d4	7f45956e:PseudoMeasureRing.meas	| meas_zro : meas 0 = 0
+PseudoMeasureRing.meas>=0	field	4f7923af57ac	-	a5f90519		| meas>=0 {x : E} : 0 RealAbGroup.<= meas x
+PseudoMeasureRing.meas-disjoint	field	3910f64dcca5	-	76b0ac85	7f45956e:PseudoMeasureRing.meas	| meas-disjoint {x y : E} : x * y = 0 -> meas (x ∨ y) = meas x RealAbGroup.+ meas y
+PseudoMeasureRing.meas-mono	field	cac2a6478277	-	a25c6b47	7f45956e:PseudoMeasureRing.meas	| meas-mono {x y : E} : x <= y -> meas x RealAbGroup.<= meas y
+PseudoMeasureRing.meas_+	field	3c9d31c980f8	-	65149714	7f45956e:PseudoMeasureRing.meas	| meas_+ {x y : E} : meas (x + y) RealAbGroup.<= meas x RealAbGroup.+ meas y
+PseudoMeasureRing.*-metric	lemma	bc16583a81cd	-	310619ef		\lemma *-metric : MetricMap (ManhattanProductPseudoMetricSpace \this \this) \this (\lam s => s.1 * s.2)
+PseudoMeasureRing.meas_BigSum-disjoint	lemma	37b163985476	-	7172575c		\lemma meas_BigSum-disjoint {l : Array E} (d : \Pi {i j : Fin l.len} -> i /= j -> l i * l j = 0) : meas (BigSum l) = RealAbGroup.BigSum (map meas l)
+PseudoMeasureRing.IsDiscreteMeasure	type	42c97c0e6dd7	219a67177784	c271a215		\type IsDiscreteMeasure : \Prop
+PseudoMeasureRing.IsRationalMeasure	type	42c97c0e6dd7	0e43a0260158	b86a14ca		\type IsRationalMeasure : \Prop
+PseudoMeasureRing.rational-discrete	lemma	9bd45efcc512	-	c16a006d		\lemma rational-discrete (r : IsRationalMeasure) : IsDiscreteMeasure
+meas-modular	lemma	0d32698055a4	-	71927cfe	7f45956e:PseudoMeasureRing.meas	\lemma meas-modular {X : PseudoMeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
+MeasureRingHom	record	2eee3fc6bffc	-	7e1ddbdf	20a85252:MeasureRingHom.func-meas 7f45956e:PseudoMeasureRing.meas	\record MeasureRingHom \extends PseudoRingHom, NormedIsometricMap { \override Dom : PseudoMeasureRing \override Cod : PseudoMeasureRing | func-meas {x : Dom} : meas (func x) = meas x | func-norm-isometry => func-meas }
+MeasureRingHom.IsApprox	type	4526905ea1ed	078e07e0ab6f	41173a84		\type IsApprox (y : Cod) : \Prop
+MeasureRingHom.approx-dense	lemma	244a6bbfab12	-	bf8f80ab	fb665b14:MeasureRingHom.IsApprox	\lemma approx-dense (p : \Pi (y : Cod) -> IsApprox y) : IsDense
+MeasureRingHom.dense-approx	lemma	f444f20514a8	-	3e131534		\lemma dense-approx (hd : IsDense) (y : Cod) : IsApprox y
+MeasureRingHom.approx-zro	lemma	d8b846823e52	-	4d38d787		\lemma approx-zro : IsApprox 0
+MeasureRingHom.approx-+	lemma	82f3a88feb08	-	2bae1779		\lemma approx-+ {y y' : Cod} (p : IsApprox y) (p' : IsApprox y') : IsApprox (y + y')
+MeasureRingHom.approx-BigSum	lemma	496551b403b6	-	a49dba5e		\lemma approx-BigSum {l : Array Cod} (p : \Pi (j : Fin l.len) -> IsApprox (l j)) : IsApprox (AddMonoid.BigSum l)
+MeasureRing	class	30a4f34a62f0	-	1cd6cb40	3b2efd9c:MeasureRing.meas-ext dbe4e829:PseudoMeasureRing	\class MeasureRing \extends PseudoMeasureRing, NormedAbGroup { | meas-ext {x : E} : meas x = RealAbGroup.zro -> x = 0 | norm-ext => \lam p => meas-ext ((Real.=-upper {_} {RealAbGroup.zro}).2 p) }
+MeasureRing.meas-ext	field	ff571ff1cf10	-	428c14f7	7f45956e:PseudoMeasureRing.meas	| meas-ext {x : E} : meas x = RealAbGroup.zro -> x = 0
+CompleteMeasureRing	class	efde07cce00a	-	139dd779	b8169abd:MeasureRing	\class CompleteMeasureRing \extends MeasureRing, CompleteNormedAbGroup
+(overview)	-	-	-	a76f2611	08652da4:CompleteMeasureRing b8169abd:MeasureRing 802bb74d:MeasureRingHom dbe4e829:PseudoMeasureRing 7f45956e:PseudoMeasureRing.meas	-

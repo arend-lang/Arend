@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Order.StrictOrder. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+StrictPoset	class	b467a6a84736	-	e92b136a	cf355103:StrictPoset.< 6a6fb282:StrictPoset.<-irreflexive f618f283:StrictPoset.<-transitive cf355103:StrictPoset.>	\class StrictPoset \extends BaseSet { | \infix 4 < : E -> E -> \Prop | <-irreflexive {x : E} : Not (x < x) | <-transitive \alias \infixr 9 <∘ {x y z : E} : x < y -> y < z -> x < z | \infix 4 > : E -> E -> \Prop | > => \lam x y => y < x }
+StrictPoset.<	field	6b3a812ffbf1	-	741a4563		| < : E -> E -> \Prop
+StrictPoset.>	field	6b3a812ffbf1	-	2150fa00	cf355103:StrictPoset.<	| > : E -> E -> \Prop
+StrictPoset.<-irreflexive	field	bb34e5025a8a	-	23e28f98	cf355103:StrictPoset.<	| <-irreflexive {x : E} : Not (x < x)
+StrictPoset.<-transitive	field	eede398853b0	-	ab405d9b	cf355103:StrictPoset.<	| <-transitive {x y z : E} : x < y -> y < z -> x < z
+StrictPoset.op	func	7cecf8111930	6550b2ad98b4	8e48feec	cf355103:StrictPoset.< cf355103:StrictPoset.>	\func op : StrictPoset E
+StrictPoset.<_/=	lemma	7071f3ff2c15	-	83cd027b	cf355103:StrictPoset.<	\lemma <_/= {x y : E} (x<y : x < y) : x /= y
+StrictPoset.>_/=	lemma	8b6b0b8e05d6	-	60afaf7b	cf355103:StrictPoset.>	\lemma >_/= {x y : E} (y<x : x > y) : x /= y
+StrictPoset.Reasoning.>>>	lemma	6b77ce4324e5	-	c876115b	cf355103:StrictPoset.<	\lemma >>> {P : StrictPoset} {x y z : P}
+StrictPoset.Reasoning.>>=	lemma	6be48f8e4b12	-	524c6494	cf355103:StrictPoset.<	\lemma >>= {P : StrictPoset} {x y z : P} (x<y : x < y) (y=z : y = z)
+StrictPoset.Reasoning.>=>	lemma	9c00ae4aa67a	-	21b78107	cf355103:StrictPoset.<	\lemma >=> {P : StrictPoset} {x y z : P} (x=y : x = y) (y<z : y < z)
+StrictPoset.Reasoning.<<<	func	3da2ea08d715	0315363bfd0f	22935ada	cf355103:StrictPoset.<	\func <<< {P : StrictPoset} (x : P) {y : P} (p : x < y)
+IsStrictlyMonotone	func	7dd890ef60de	7dda1ec962c1	d3e29c0d	cf355103:StrictPoset.<	\func IsStrictlyMonotone {X Y : StrictPoset} (f : X -> Y)
+(overview)	-	-	-	20a74e2e	c4b5294c:IsStrictlyMonotone 6eda6b41:StrictPoset cf355103:StrictPoset.< f45c1071:StrictPoset.<_/= cf355103:StrictPoset.> 1c9dc5b1:StrictPoset.>_/= 9da763e5:StrictPoset.Reasoning 514fe41a:StrictPoset.op	-

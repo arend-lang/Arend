@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Set.Fin.Pigeonhole. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PigeonholeSet	class	3f9c3f628c54	-	cff658b3		\class PigeonholeSet \extends BaseSet { | pigeonhole (f : Nat -> E) : ∃ (i j : Nat) (i /= j) (f i = f j) }
+PigeonholeSet.pigeonhole	field	28cf628bd996	-	f3e084bd	847fef69:PigeonholeSet	| pigeonhole (f : Nat -> E) : ∃ (i j : Nat) (i /= j) (f i = f j)
+PigeonholeSet.pigeonhole<	lemma	0b5002c9bf35	-	4fb073f3		\lemma pigeonhole< (f : Nat -> E) : ∃ (i j : Nat) (i < j) (f i = f j)
+PigeonholeSet.isEquiv	lemma	6a4147ce1ee5	-	4bf7b558	847fef69:PigeonholeSet	\lemma isEquiv (f : E -> E) (inj : IsInj f) : IsEquiv f
+pigeonhole-fin	lemma	71202566b26f	-	654c219a		\lemma pigeonhole-fin {n m : Nat} (f : Fin m -> Fin n) (p : n < m) : ∃ (i j : Fin m) (i /= j) (f i = f j)
+pigeonhole-fin.search-pair	lemma	c210c35f976f	-	5c7d6e8a		\lemma search-pair {n : Nat} {A : DecSet} (f : Fin n -> A) : Dec (∃ (i j : Fin n) (i /= j) (f i = f j))
+pigeonhole-fin.aux	lemma	1c3d2d0878cc	-	d7be8044		\lemma aux {n : Nat} {A : DecSet} (f : Fin n -> A) (p : Not (IsInj f)) : ∃ (i j : Fin n) (i /= j) (f i = f j)
+(overview)	-	-	-	064f4325	847fef69:PigeonholeSet	-

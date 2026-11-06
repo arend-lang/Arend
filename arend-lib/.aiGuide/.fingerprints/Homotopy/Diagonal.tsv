@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Homotopy.Diagonal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Diagonal	func	912f46043e7c	c33034e3af2c	37128ebf		\func Diagonal {X Y : \Cat} (r : X -> Y)
+diagonal	func	8e5fee0a28a5	d966855aa75b	e6d49626	5ac9381b:Diagonal	\func diagonal {X Y : \Cat} (r : X -> Y) (x : X) : Diagonal r
+diag-fib	func	daf81591472d	5555ff592da1	98a8b995	9306bdd1:diagonal	\func diag-fib {X Y : \Cat} (r : X -> Y) {u v : X} (p : r u = r v) : QEquiv {Fib {X} {Diagonal r} (diagonal r) (u, v, p)} {Fib (pmap r {u} {v}) p}
+truncMap-diagonal	lemma	ecd0ae9b9aae	-	ca90a9a3	9306bdd1:diagonal	\lemma truncMap-diagonal {X Y : \Cat} {r : X -> Y} {k : Nat} : IsTruncMap k (diagonal r) <-> (\Pi {u v : X} -> IsTruncMap k (pmap r {u} {v}))
+(overview)	-	-	-	1459429c		-

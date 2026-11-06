@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Local. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LocalRing	class	a25e064c80b1	-	687d6557	9a558ce6:LocalRing.locality	\class LocalRing \extends Ring, NonZeroRing { | locality : IsLocal }
+LocalCRing	class	01577d841f5a	-	4b700a9f	63bdeff9:LocalRing	\class LocalCRing \extends LocalRing, NonZeroCRing
+LocalRing.locality	field	434501718af0	-	0d0ea7ef		| locality : IsLocal
+LocalRing.sum1=>eitherInv	lemma	f774f2b59dd6	-	1b9dfdac		\lemma sum1=>eitherInv {x y : E} (x+y=1 : x + y = ide) : Inv x || Inv y
+LocalRing.sumInv=>eitherInv	lemma	bfb3dc926060	-	91e7e8e9		\lemma sumInv=>eitherInv {x y : E} (q : Inv (x + y)) : Inv x || Inv y
+LocalRing.sumInvArray	lemma	cd36081373c9	-	78cf0b1f		\lemma sumInvArray (l : Array E) (p : Inv (BigSum l)) : ∃ (j : Fin l.len) (Inv (l j))
+LocalRing.sum1Array	lemma	d6bf1a431d3f	-	8b92ebce		\lemma sum1Array (l : Array E) (p : BigSum l = 1) : ∃ (j : Fin l.len) (Inv (l j))
+LocalRing.connected	lemma	4963bcd706a1	-	4da8f539		\lemma connected : IsConnected
+LocalRing.local=>connected	lemma	064da2d1393a	-	6bb4ae5e	63bdeff9:LocalRing	\lemma local=>connected {R : Ring} (loc : \Pi (a : R) -> Inv a || Inv (a + 1)) : R.IsConnected
+(overview)	-	-	-	503d17f7		-

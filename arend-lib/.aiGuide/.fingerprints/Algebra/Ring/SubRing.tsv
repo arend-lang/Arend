@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.SubRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubPseudoRing	class	359bafc1c385	-	06c612ea		\class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup { \override S : PseudoRing }
+SubRing	class	cc34e5e10fac	-	66520162	4b5192f7:SubPseudoRing	\class SubRing \extends SubPseudoRing, SubSemiring { \override S : Ring }
+SubRing.max	func	a0b666084031	45c5d2cf5519	fd3f8874		\func max {R : Ring} : SubRing
+IPseudoRing	instance	02978c24d45a	-	848b6c9e	4b5192f7:SubPseudoRing	\instance IPseudoRing (S : SubPseudoRing {}) : PseudoRing
+IPseudoCRing	instance	f1094b5ce928	-	7da61a3f		\instance IPseudoCRing {R : PseudoCRing} (S : SubPseudoRing R) : PseudoCRing
+IRing	instance	731af23483f9	-	79a928bf	d0c564eb:SubRing	\instance IRing (S : SubRing {}) : Ring
+ICRing	instance	0ba7eee2cbbe	-	d9bf4c47		\instance ICRing {R : CRing} (S : SubRing R) : CRing
+ImageRing	func	b88f5fcd7ac1	a7590abcba86	edce77c4	d0c564eb:SubRing	\func ImageRing (f : RingHom) : SubRing f.Cod
+ImRing	func	9365be6c09fa	889c0f9a49d1	0e7ea768	25387a5c:IRing 630a8114:ImageRing	\func ImRing (f : RingHom) : Ring
+ImRingLeftHom	func	cfa65e5a0b98	cf1ac571633d	e1ca5a53	74eba9ba:ImRing	\func ImRingLeftHom (f : RingHom) : RingHom f.Dom (ImRing f)
+IRing.corestrict	func	e0c2bf9d60f4	4b872628a678	8546b728	25387a5c:IRing	\func corestrict {R : Ring} (f : RingHom R S.S) (p : \Pi (x : R) -> S (f x)) : RingHom R (IRing S)
+IRing.embed	func	d662ffad42d1	ee8a9feb4ad0	6b981785	25387a5c:IRing	\func embed : RingHom (IRing S) S.S
+(overview)	-	-	-	6126de47		-

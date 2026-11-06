@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Algebra.Module.SubLModule. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubLModule	class	a0ba2ce047f0	-	aa9be1af	6e2a124b:SubLModule.R 3464f5f6:SubLModule.contains_*c	\class SubLModule (R : Ring) \extends SubAddGroup { \override S : LModule R | contains_*c {a : R} {b : S} : contains b -> contains (a *c b) }
+IModule	instance	164f7d7f434e	-	1d53f168	1790d16e:IModule.embed	\instance IModule (S : SubLModule {}) : LModule S.R
+topSubLModule	func	735e796d0845	72484e749a29	56bd5663		\func topSubLModule {R : Ring} (M : LModule R) : SubLModule R M
+OneDimSubmod	func	138acdcefc29	6e44a41db08d	f04e42ad	6e2a124b:SubLModule.R	\func OneDimSubmod {R : Ring} {L : LModule R} (v : L) : SubLModule R L
+SubLModuleSemilattice	instance	c98c6b47e0db	-	9b70ed1d	760238b1:SubLModule 6e2a124b:SubLModule.R 719c4d55:topSubLModule	\instance SubLModuleSemilattice (R : Ring) (M : LModule R) : TopMeetSemilattice (SubLModule { | R => R | S => M })
+KernelLModule	func	61f2ef6298a3	fcfdcd622b49	ee9754a3		\func KernelLModule (f : LinearMap {}) : SubLModule f.R f.Dom
+ImageLModule	func	729fd572f7dd	e8b9b144247c	f48d2905		\func ImageLModule (f : LinearMap {}) : SubLModule f.R f.Cod
+ImLModule	func	b3e177fdfc33	c99444f8a25e	b9f30326	4cd3a42d:IModule 4620fbeb:ImageLModule	\func ImLModule (f : LinearMap {}) : LModule
+ImLModuleLeftHom	func	a357f1274289	e9780288c0e6	3183f74c	3ecbba90:ImLModule	\func ImLModuleLeftHom (f : LinearMap {}) : LinearMap f.Dom (ImLModule f)
+*m	func	ed0bda66361b	e04e9b7e0046	39f98497	6e2a124b:SubLModule.R	\func *m {R : Ring} (I : LIdeal R) {M : LModule R} (S : SubLModule { | R => R | S => M }) : SubLModule { | R => R | S => M }
+(overview)	-	-	-	b22511c7	97a69db3:*m 4cd3a42d:IModule 760238b1:SubLModule 3464f5f6:SubLModule.contains_*c	-

@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Data.Or. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Or	data	491c361b7ab0	-	accff15b		\data \fixr 2 Or (A B : \Cat) | inl A | inr B
+Or.inl	cons	a6b155b7e01a	-	d2e1a43c	3f0343e5:Or	| inl A
+Or.inr	cons	e71fe17a1d52	-	0d235b97	3f0343e5:Or	| inr B
+Or.rec	func	7fa68ac2e372	11464bb5dc29	4f23e574	3f0343e5:Or	\func rec {A B C : \Cat} (f : A -> C) (g : B -> C) (e : Or A B) : C
+Or.map	func	c22613ae9f23	40ecf95ae0f5	d062a79e	3f0343e5:Or	\func map {A B C D : \Cat} (e : Or A B) (f : A -> C) (g : B -> D) : Or C D
+Or.levelProp	func	915b05635063	ac3af84db665	526ae337	3f0343e5:Or	\func levelProp {A B : \Prop} (e : A -> B -> Empty) (x y : Or A B) : x = y
+Or.Or_QEquiv	func	22e5e1e1f9fc	711a85c5ea81	bd329ced	3f0343e5:Or 890f22e7:Or.map	\func Or_QEquiv (e1 e2 : QEquiv) : QEquiv {Or e1.A e2.A} {Or e1.B e2.B}
+uninl	sfunc	0a7758153423	cab64e1dfad0	5def10dc	3f0343e5:Or 05c93fd4:Or.inl	\sfunc uninl {A B : \Cat} {a a' : A} (p : inl a = {Or A B} inl a') : a = a'
+uninr	sfunc	25f0fa1f543d	ac6dba566fc2	9728682e	3f0343e5:Or 6b6126ca:Or.inr	\sfunc uninr {A B : \Cat} {b b' : B} (p : inr b = {Or A B} inr b') : b = b'
+orBool	func	a82b4469f0fd	a5d3bd759494	47b30600	3f0343e5:Or 05c93fd4:Or.inl 6b6126ca:Or.inr	\func orBool {A B : \Type} (o : Or A B) : Bool
+(overview)	-	-	-	27c62f9e	3f0343e5:Or 6e6a74e3:Or.Or_QEquiv 05c93fd4:Or.inl 6b6126ca:Or.inr	-

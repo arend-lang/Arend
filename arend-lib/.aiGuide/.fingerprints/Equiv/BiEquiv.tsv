@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Equiv.BiEquiv. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BiEquiv	record	052ca204053c	-	00802935		\record BiEquiv \extends Section, Retraction
+BiEquiv.fromQEquiv	coerce	bf9eba6894fe	-	69c89352	367975d6:BiEquiv	\use \coerce fromQEquiv (e : QEquiv) : BiEquiv
+BiEquiv.toQEquiv	coerce	fad1b3c00f29	-	69c89352	367975d6:BiEquiv	\use \coerce toQEquiv (e : BiEquiv) : QEquiv
+BiEquiv.equals	func	a2f5f614a16a	5d34566dfdf6	2f9dbe54		\func equals {A B : \Cat} {e e' : BiEquiv {A} {B}} (p : e.f = e'.f) : e = e'
+BiEquiv.levelProp	lemma	690c5f89aa89	-	b3938cda		\lemma levelProp {A B : \Cat} {f : A -> B} : isProp (BiEquiv f)
+BiEquiv~Equiv	func	4ff1924ffb52	42a2bdfe49b6	9b53b098		\func BiEquiv~Equiv {A B : \Cat} : QEquiv {BiEquiv {A} {B}} {Equiv A B}
+(overview)	-	-	-	f9192daa	367975d6:BiEquiv ea755884:BiEquiv.fromQEquiv 47a2bdc4:BiEquiv.levelProp 88a67006:BiEquiv.toQEquiv 527e1406:BiEquiv~Equiv	-

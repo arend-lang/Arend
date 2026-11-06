@@ -1,0 +1,23 @@
+# arend -gc fingerprints v2 for module Topology.TopSpace.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TopSpaceHasProduct	instance	473a670f1303	-	63dac7d1		\instance TopSpaceHasProduct : HasProduct TopSpace.{u}
+ProductTopSpace	instance	2dd082324ff1	-	daeeabb6		\instance ProductTopSpace (X Y : TopSpace) : TopSpace (\Sigma X Y)
+ProductTopSpace.proj1	func	908fb609fce9	8a5a2de51f52	5e281b4b		\func proj1 {X Y : TopSpace} : ContMap (ProductTopSpace X Y) X
+ProductTopSpace.proj2	func	39f22da4c65c	d9a505af2f2c	1dcb4e2b		\func proj2 {X Y : TopSpace} : ContMap (ProductTopSpace X Y) Y
+ProductTopSpace.tuple	func	7e7b81345b22	33b3b67fc938	f5b9c31d		\func tuple {X Y Z : TopSpace} (f : ContMap X Y) (g : ContMap X Z) : ContMap X (ProductTopSpace Y Z)
+ProductTopSpace.prod	func	0e1c878b57b8	fabf71629dd3	ee2afd00	a38267aa:ProductTopSpace.proj1 405b9373:ProductTopSpace.proj2 ff76c7a6:ProductTopSpace.tuple	\func prod {X X' Y Y' : TopSpace} (f : ContMap X Y) (f' : ContMap X' Y') : ContMap (ProductTopSpace X X') (ProductTopSpace Y Y')
+ProductTopSpace.prod.isDense	lemma	7144e7c1e9e3	-	2ed949bd		\lemma isDense {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsDense) (gd : g.IsDense) : ContMap.IsDense {prod f g}
+ProductTopSpace.prod.isWeaklyDense	lemma	2afc85abae7c	-	29c10849		\lemma isWeaklyDense {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsWeaklyDense) (gd : g.IsWeaklyDense) : ContMap.IsWeaklyDense {prod f g}
+ProductTopSpace.prod.isEmbedding	lemma	cbfed955d78e	-	34c9bfb2		\lemma isEmbedding {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsTopEmbedding) (gd : g.IsTopEmbedding) : ContMap.IsTopEmbedding {prod f g}
+ProductTopSpace.prod.isDenseEmbedding	lemma	c5510505b621	-	2f980c8d		\lemma isDenseEmbedding {X X' Y Y' : TopSpace} {f : ContMap X Y} {g : ContMap X' Y'} (fd : f.IsDenseTopEmbedding) (gd : g.IsDenseTopEmbedding) : ContMap.IsDenseTopEmbedding {prod f g}
+Prod-open	lemma	87738cf8feae	-	5f6fc612		\lemma Prod-open {X Y : TopSpace} {U : Set X} (Uo : isOpen U) {V : Set Y} (Vo : isOpen V) : isOpen (Set.Prod U V)
+contAt-tuple	lemma	7f0ea4b0ca3b	-	89c59b52		\lemma contAt-tuple {X Y Z : TopSpace} {f : X -> Y} {g : X -> Z} {x : X} (fc : IsContAt f x) (gc : IsContAt g x) : IsContAt (\lam x => (f x, g x)) x
+limit-tuple	lemma	b6ec945a21a1	-	1e05d156		\lemma limit-tuple {I : DirectedSet} {X Y : TopSpace} {f : I -> X} {x : X} (fl : X.IsLimit f x) {g : I -> Y} {y : Y} (gl : Y.IsLimit g y) : TopSpace.IsLimit (\lam n => (f n, g n)) (x, y)
+cont2-limit	lemma	421981602df9	-	d7ab6938		\lemma cont2-limit {I : DirectedSet} {X Y Z : TopSpace} {f : I -> X} {g : I -> Y} {lx : X} {ly : Y} (px : X.IsLimit f lx) (py : Y.IsLimit g ly) (h : ContMap (ProductTopSpace X Y) Z) : Z.IsLimit (\lam n => h (f n, g n)) (h (lx, ly))
+denseSet_<=	lemma	6bf3f329d38e	-	f662f248		\lemma denseSet_<= {X : TopSpace} {Y : HausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (ProductTopSpace Y Y) Y (\lam s => s.1 ∨ s.2)) {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
+dense_<=	lemma	69c4f87e22d2	-	bfe9e5ce		\lemma dense_<= {X Y : TopSpace} {Z : HausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (ProductTopSpace Z Z) Z (\lam s => s.1 ∨ s.2)) (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
+weaklyDenseSet_<=	lemma	c6967b1c9815	-	843a70f9	6021d8ac:denseSet_<=	\lemma weaklyDenseSet_<= {X : TopSpace} {Y : StronglyHausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (ProductTopSpace Y Y) Y (\lam s => s.1 ∨ s.2)) {S : Set X} (Sd : IsWeaklyDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
+weaklyDense_<=	lemma	8bd8a3945876	-	ee66a62a	69236401:dense_<=	\lemma weaklyDense_<= {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (ProductTopSpace Z Z) Z (\lam s => s.1 ∨ s.2)) (f : ContMap X Y) (fd : f.IsWeaklyDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
+hausdorff-char	lemma	23e8adcf9d7d	-	f7b35731	35a10ab0:ProductTopSpace	\lemma hausdorff-char {X : TopSpace} : (\Pi {x y : X} -> ∀ {U V : isOpen} (U x) (V y) ∃ (U ∧ V) -> x = y) <-> (ProductTopSpace X X).IsClosed (\lam s => s.1 = s.2)
+equalizer-closed	lemma	da16baba1f86	-	ac38ea66		\lemma equalizer-closed {X : TopSpace} {Y : HausdorffTopSpace} (f g : ContMap X Y) : X.IsClosed (\lam x => f x = g x)
+(overview)	-	-	-	153a3029	7cca2e37:ProductTopSpace.prod ff76c7a6:ProductTopSpace.tuple	-

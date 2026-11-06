@@ -1,0 +1,22 @@
+# arend -gc fingerprints v2 for module Arith.Real.Extremes. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsSup	func	1f353fcf11cc	37d53650284a	ddcaec1e		\func IsSup (A : Set Real) (b : Real) : \Prop
+IsSup.isLowest	lemma	fe2507ad510c	-	3f648158		\lemma isLowest {b : Real} (s : IsSup A b) {c : Real} (Ac : ∀ {a : A} (a <= c)) : b <= c
+IsSup.isUnique	lemma	8d85c1cc131f	-	21267256		\lemma isUnique {b b' : Real} (bs : IsSup A b) (b's : IsSup A b') : b = b'
+HasSup	func	a7e428328f8f	f378b18b39dc	b1db06ef	bda9952d:IsSup	\func HasSup (A : Set Real)
+makeSup	func	028a9469062d	330a24418088	286dc902		\func makeSup {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (a < b)) (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : Real
+makeSup.isSup	lemma	88bb8c5d27c0	-	52849705	bda9952d:IsSup 1d9791ce:makeSup	\lemma isSup (Aa0 : A a0) (Ab : ∀ {a : A} (a < b)) (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : IsSup A (makeSup Aa0 Ab As)
+makeSup.conv	lemma	5a20d91d3c66	-	5f960cd3	bda9952d:IsSup	\lemma conv {b : Real} (bs : IsSup A b) {x y : Real} (x<y : x < y) : Given (a : A) (x < a) || ∀ {a : A} (a < y)
+makeSup-pair	lemma	4f13a2f7cf46	-	ce19270f	40c400d4:HasSup 1d9791ce:makeSup 48696d5c:makeSup.isSup	\lemma makeSup-pair {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (a < b)) (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : HasSup A
+makeSupTB	lemma	8446ae2ee801	-	b836947e	40c400d4:HasSup	\lemma makeSupTB {A : Set Real} {a0 : Real} (Aa0 : A a0) (Ac : \Pi {eps : Real} -> 0 < eps -> ∃ (l : Array Real) (∀ (a : l) (A a)) ∀ {x : A} ∃ (y : l) (abs (x - y) < eps)) : HasSup A
+IsInf	func	1f353fcf11cc	9cce61d63661	6847f253		\func IsInf (A : Set Real) (b : Real) : \Prop
+IsInf.isGreatest	lemma	20dede047003	-	a276bb16		\lemma isGreatest {b : Real} (s : IsInf A b) {c : Real} (Ac : ∀ {a : A} (c <= a)) : c <= b
+IsInf.isUnique	lemma	dc88ce361ffa	-	6cf93f1e		\lemma isUnique {b b' : Real} (bs : IsInf A b) (b's : IsInf A b') : b = b'
+HasInf	func	a7e428328f8f	258cdd975e48	9933e629	4bd979b5:IsInf	\func HasInf (A : Set Real)
+makeSupInf	func	0959f439a879	df69e0c0f8cc	ec81d17d		\func makeSupInf {A : Set Real} {b : Real} (bs : IsSup (\lam x => A (negative x)) (negative b)) : IsInf A b
+makeHasSupInf	lemma	2891d9dbf4f9	-	ba9ea750	e9a0fe5f:HasInf 40c400d4:HasSup 1e6a7650:makeSupInf	\lemma makeHasSupInf {A : Set Real} (s : HasSup (\lam x => A (negative x))) : HasInf A
+makeInf	func	08596db3cd5e	4aff7caa746d	7c6e7dba	1d9791ce:makeSup	\func makeInf {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (b < a)) (As : \Pi {x y : Real} -> x < y -> ∀ {a : A} (x < a) || Given (a : A) (a < y)) : Real
+makeInf.isInf	lemma	f050c6cbc68b	-	c276980d	4bd979b5:IsInf fa7272df:makeInf	\lemma isInf : IsInf A (makeInf Aa0 Ab As)
+makeInf.conv	lemma	fc15b298f755	-	a25aeca8	4bd979b5:IsInf	\lemma conv {b : Real} (bs : IsInf A b) {x y : Real} (x<y : x < y) : ∀ {a : A} (x < a) || Given (a : A) (a < y)
+makeInfTB	lemma	45f5aedff234	-	7fa72ac7	e9a0fe5f:HasInf 0120fc76:makeSupTB	\lemma makeInfTB {A : Set Real} {a0 : Real} (Aa0 : A a0) (Ac : \Pi {eps : Real} -> 0 < eps -> ∃ (l : Array Real) (∀ (a : l) (A a)) ∀ {x : A} ∃ (y : l) (abs (x - y) < eps)) : HasInf A
+(overview)	-	-	-	3bdb9668		-

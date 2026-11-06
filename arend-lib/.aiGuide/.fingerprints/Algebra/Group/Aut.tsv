@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Aut. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Aut	instance	9350a610c731	-	95ed4a79		\instance Aut {A : \Type} (a : A) : Group (Trunc0 (a = a))
+End	func	224938e9445b	f2c750a012c1	f55e9334		\func End {C : Precat} (c : C) : Monoid (Hom c c)
+(overview)	-	-	-	7b3db4db	295d1399:Aut f5fd6433:End	-

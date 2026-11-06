@@ -1,0 +1,95 @@
+# arend -gc fingerprints v2 for module Algebra.Linear.Matrix. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Matrix	type	1f4112e7b02c	b9bafd95e676	51774cc6		\type Matrix (R : \Type) (n m : Nat)
+mkMatrix	func	6182fae739e0	59f5c772bb6f	0161c16e		\func mkMatrix {R : \Type} {n m : Nat} (f : Fin n -> Fin m -> R) : Matrix R n m
+makeMatrix	func	2d59091031e1	930665041154	db688846	af12bb97:Matrix	\func makeMatrix {R : \Type} {n m : Nat} (M : Array (Array R m) n) : Matrix R n m
+mkColumn	func	33df66d213db	6cec0f14971f	9f25ecf7		\func mkColumn {R : \Type} (l : Array R) : Matrix R l.len 1
+mkRow	func	e8c313a66eba	bfa77e63daf5	8ebb68ef		\func mkRow {R : \Type} (l : Array R) : Matrix R 1 l.len
+addColumn	func	adcf5a9c54f1	c43eabe4160e	6ee8c11a		\func addColumn {R : \Type} {n m : Nat} (l : Array R n) (M : Matrix R n m) : Matrix R n (suc m)
+addRow	func	4a0b73139e95	dd1a71ca2850	6ee15f11		\func addRow {R : \Type} {n m : Nat} (l : Array R m) (M : Matrix R n m) : Matrix R (suc n) m
+matrixExt	func	43c1a44362c8	1f24942717c4	f41cf98f		\func matrixExt {R : \Type} {n m : Nat} {M N : Matrix R n m} (p : \Pi (i : Fin n) (j : Fin m) -> M i j = N i j) : M = N
+matrixExt'	func	186841c3a256	2e75bab3b5cb	f41cf98f		\func matrixExt' {R : \Type} {n m : Nat} {M N : Matrix R n m} (p : M = {Array (Array R m) n} N) : M = N
+matrix-map	func	249a606486e7	31b6f876675d	317bcb63		\func matrix-map {A B : \Type} (f : A -> B) {n m : Nat} (M : Matrix A n m) : Matrix B n m
+blockMatrix	func	72850d014b51	b4f2294ce080	2fa4a21d		\func blockMatrix {R : AddPointed} {n m n' m' : Nat} (A : Matrix R n m) (B : Matrix R n' m') : Matrix R (n + n') (m + m')
+block21Matrix	func	dad8e9b2a492	9fb7b457c7ac	ecaea552		\func block21Matrix {R : AddPointed} {n m k : Nat} (A : Matrix R n k) (B : Matrix R m k) : Matrix R (n + m) k
+block12Matrix	func	6c9a1e77ff3b	327c3e343af9	eeae0a6c		\func block12Matrix {R : AddPointed} {n m k : Nat} (A : Matrix R k n) (B : Matrix R k m) : Matrix R k (n + m)
+blockMatrix_minor	lemma	74d313dae608	-	583bcbec		\lemma blockMatrix_minor {R : AddPointed} {n m n' m' : Nat} {A : Matrix R (suc n) (suc m)} {B : Matrix R n' m'} (i : Fin (suc n)) (j : Fin (suc m)) : minor (blockMatrix A B) (fin-inc i) (fin-inc j) = blockMatrix (minor A i j) B
+blockMatrix_*	lemma	786e3172cb93	-	c6769839	d6d0a50e:blockMatrix	\lemma blockMatrix_* {R : Ring} {n m n' m' k k' : Nat} (A : Matrix R n m) (B : Matrix R n' m') (C : Matrix R m k) (D : Matrix R m' k') : blockMatrix A B MatrixRing.product blockMatrix C D = blockMatrix (A MatrixRing.product C) (B MatrixRing.product D)
+blockMatrix_*-left	lemma	009c36bd2387	-	c6769839	d6d0a50e:blockMatrix	\lemma blockMatrix_*-left {R : Ring} {n m n' m' k : Nat} {A : Matrix R n m} {B : Matrix R n' m'} {C : Matrix R m k} {D : Matrix R m' k} : blockMatrix A B MatrixRing.product block21Matrix C D = block21Matrix (A MatrixRing.product C) (B MatrixRing.product D)
+blockMatrix_*-right	lemma	dece369a1c43	-	c6769839	d6d0a50e:blockMatrix	\lemma blockMatrix_*-right {R : Ring} {n m n' m' k : Nat} {A : Matrix R n m} {B : Matrix R n' m'} {C : Matrix R k n} {D : Matrix R k n'} : block12Matrix C D MatrixRing.product blockMatrix A B = block12Matrix (C MatrixRing.product A) (D MatrixRing.product B)
+block12_21_*	lemma	b971774e809d	-	d9b5fa6b		\lemma block12_21_* {R : Ring} {n m k k' : Nat} (A : Matrix R k n) (B : Matrix R k m) (C : Matrix R n k') (D : Matrix R m k') : block12Matrix A B MatrixRing.product block21Matrix C D = A MatrixRing.product C + B MatrixRing.product D
+MatrixAbGroup	instance	6686d14a1348	-	6f3f008b	af12bb97:Matrix	\instance MatrixAbGroup (A : AbGroup) (n m : Nat) : AbGroup (Matrix A n m)
+MatrixModule	instance	8e58e6899887	-	5fac1fce	af12bb97:Matrix	\instance MatrixModule (R : Ring) (n m : Nat) : LModule R
+MatrixModule.*c-gen	func	dda8bcba7310	db807bd3a0a3	c70b5b13		\func *c-gen {R : Ring} {M : LModule R} (a : R) {n m : Nat} (A : Matrix M n m) : Matrix M n m
+MatrixRing	instance	8fe70d6ed303	-	787f7692	af12bb97:Matrix	\instance MatrixRing (R : Ring) (n : Nat) : Ring (Matrix R n n)
+MatrixRing.product	func	891b8fd22ee7	5c1cdba4bcf7	b5d5e21c		\func product {R : Ring} {n m k : Nat} (M : Matrix R n m) (N : Matrix R m k) : Matrix R n k
+MatrixRing.product-gen	func	4667a2b2cf73	0ca717d674e8	da1c157f	af12bb97:Matrix	\func product-gen {R : Ring} {L : LModule R} {n m k : Nat} (M : Matrix R n m) (N : Matrix L m k) : Matrix L n k
+MatrixRing.product-assoc	lemma	3171a35ca4da	-	b14ab77a		\lemma product-assoc {R : Ring} {n m k l : Nat} (A : Matrix R n m) (B : Matrix R m k) (C : Matrix R k l) : A product B product C = A product (B product C)
+MatrixRing.product-gen-assoc	lemma	31189b4caeae	-	b14ab77a		\lemma product-gen-assoc {R : Ring} {M : LModule R} {n m k l : Nat} {A : Matrix R n m} {B : Matrix R m k} {C : Matrix M k l} : product-gen (A product B) C = product-gen A (product-gen B C)
+MatrixRing.ide_generates	lemma	1e7444ee7b75	-	a10fd405		\lemma ide_generates {R : Ring} {n : Nat} : LModule.IsGenerated {ArrayLModule n (RingLModule R)} ide
+MatrixRing.ide'	func	634ebac6d9b2	9ba92a9f8168	1fbc8ea7		\func ide' {R : Ring} {n : Nat} : Array (Array R n) n
+MatrixRing.ide=ide'	lemma	70fd18b28087	-	1fbc8ea7		\lemma ide=ide' {R : Ring} {n : Nat} : ide {R} {n} = ide'
+MatrixAlgebra	instance	ec35958ba2e7	-	b929f3b6	af12bb97:Matrix	\instance MatrixAlgebra (R : CRing) (n : Nat) : AAlgebra { | R => R }
+diagonal	func	e0f53de3ad1b	b7636ef1fbe1	e1559584		\func diagonal {R : AddPointed} (l : Array R) : Matrix R l.len l.len
+determinant	func	c17cc7c82875	ffa2c5c0be3a	13eee9e4		\func determinant {R : CRing} {n : Nat} (M : Matrix R n n)
+determinant.minor	func	ae29cde07689	8a87a6ec9bde	00e5037d		\func minor {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : Matrix R n m
+determinant.minorExt	func	f1274f9e5a75	a389ad318a60	2c953b94		\func minorExt {R : \Type} {n m : Nat} {M M' : Array (Array R (suc m)) (suc n)} {i : Fin (suc n)} {j : Fin (suc m)} (p : \Pi {i' : Fin (suc n)} {j' : Fin (suc m)} -> i' /= i -> j' /= j -> M i' j' = M' i' j') : minor M i j = minor M' i j
+determinant.minor'	func	ae29cde07689	400ba21cc3c6	ce3be9c6		\func minor' {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : Matrix R n m
+determinant.minor=minor'	func	566e77b28da7	a269ea0b7f48	ce3be9c6		\func minor=minor' {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : minor M i0 j0 = minor' M i0 j0
+determinant.skip_transpose	func	76b289025bc8	2e372b835745	0e98d65c		\func skip_transpose {R : \Type} {n m : Nat} {M : Array (Array R m) (suc n)} {i : Fin (suc n)} : transpose (skip M i) = map (skip __ i) (transpose M)
+determinant.minor_transpose	func	ee4dcfc383b0	fcf54e7c2882	303c37f5	b75b7164:determinant.minor 0711c745:transpose	\func minor_transpose {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) {i : Fin (suc m)} {j : Fin (suc n)} : minor (transpose M) i j = transpose (minor M j i)
+determinant.multilinear	lemma	74fd9d81f5f6	-	ce82502e		\lemma multilinear {R : CRing} {n : Nat} : isMultiLinear {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinant M)
+determinant.alternating	lemma	5fb9d4525316	-	ce82502e		\lemma alternating {R : CRing} {n : Nat} : isAlternating {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinant M)
+determinant.alternatingT	lemma	6e49c62aae6f	-	ce82502e		\lemma alternatingT {R : CRing} {n : Nat} : isAlternating {R} {n} (\lam M => determinant (transpose M))
+determinant.minor00	func	f14e4f29a408	12c4e94c5137	2a036a96	b75b7164:determinant.minor	\func minor00 {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) : minor M 0 0 = mkMatrix (\lam i j => M (suc i) (suc j))
+determinantN	func	bd4da10a7df6	f83046e0d658	cbdb17da		\func determinantN {R : CRing} {n : Nat} (k : Fin n) (M : Matrix R n n) : R
+determinantN.minor_insert	lemma	25e4ef225053	-	8a95d41f	b75b7164:determinant.minor	\lemma minor_insert {R : CRing} {n m : Nat} {i : Fin (suc n)} {x : Array R (suc m)} {l : Array (Array R (suc m)) n} {j : Fin (suc m)} : minor (insert x l i) i j = (\new (Array (Array R m) n (\lam i => skip (l i) j)))
+determinantN.aux/=	lemma	81813373d7ff	-	8a95d41f	b75b7164:determinant.minor	\lemma aux/= {R : CRing} {n m : Nat} {j i : Fin (suc n)} (p : j /= i) {k : Fin (suc m)} {x : Array R (suc m)} {M : Array (Array R (suc m)) n} : insert {Array R (suc m)} x M j i k = M (newIndex (\lam q => p (inv q))) k
+determinantN.minor_replace	lemma	420e863e539d	-	8a95d41f	b75b7164:determinant.minor	\lemma minor_replace {R : CRing} {n : Nat} {i k : Fin (suc n)} {M : Array (Array R (suc n)) (suc n)} {j : Fin (suc n)} {x : Array R (suc n)} (p : j /= i) : minor (replace M j x) i k = replace (minor M i k) (newIndex p) (skip x k)
+determinantN.multilinear	lemma	d795167d6333	-	e7c3fade	fb055baf:determinantN	\lemma multilinear {R : CRing} {n : Nat} (k : Fin n) : isMultiLinear {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinantN k M)
+determinantN.alternating	lemma	54cc0a4cb54c	-	e7c3fade	fb055baf:determinantN	\lemma alternating {R : CRing} {n : Nat} (k : Fin n) : isAlternating {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinantN k M)
+determinantN.determinantN_ide	lemma	708320df3749	-	57f0aa84	fb055baf:determinantN	\lemma determinantN_ide {R : CRing} {n : Nat} (k : Fin n) : determinantN k (MatrixRing.ide {R} {n}) = 1
+determinantN.=determinant	lemma	94fe2a52adee	-	7b6a81a6	5c2219f3:determinant fb055baf:determinantN	\lemma =determinant {R : CRing} {n : Nat} {k : Fin n} {M : Matrix R n n} : determinantN k M = determinant M
+determinantN.determinant=determinant0	lemma	8bddb19a3f52	-	180fbe3a		\lemma determinant=determinant0 {R : CRing} {n : Nat} {M : Matrix R (suc n) (suc n)} : determinant M = determinantN {R} {suc n} 0 M
+determinant00	lemma	1bf948bcc084	-	b37ea9fd		\lemma determinant00 {R : CRing} (A : Matrix R 0 0) : determinant A = 1
+determinant11	lemma	9383aa206e6e	-	7de5d1f0		\lemma determinant11 {R : CRing} (A : Matrix R 1 1) : determinant A = A 0 0
+determinant22	lemma	79db1b2c9479	-	f4010ee6		\lemma determinant22 {R : CRing} {A : Matrix R 2 2} : determinant A = A 0 0 * A 1 1 - A 1 0 * A 0 1
+determinant_ide	lemma	d23244463ab1	-	7d63d2c4		\lemma determinant_ide {R : CRing} {n : Nat} : determinant (MatrixRing.ide {R} {n}) = 1
+determinant_*	lemma	787244ab2d7e	-	1ee6109a		\lemma determinant_* {R : CRing} {n : Nat} {M N : Matrix R n n} : determinant (M * N) = determinant M * determinant N
+determinant_transpose	lemma	899710c58fa9	-	76f9324b	0711c745:transpose	\lemma determinant_transpose {R : CRing} {n : Nat} (M : Matrix R n n) : determinant (transpose M) = determinant M
+determinant_map	lemma	5b66227ed430	-	f27bf49f	5c2219f3:determinant	\lemma determinant_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : f (determinant A) = determinant (matrix-map f A)
+determinant_block	lemma	b2e98fefb159	-	6e450261	d6d0a50e:blockMatrix	\lemma determinant_block {R : CRing} {n m : Nat} (A : Matrix R n n) (B : Matrix R m m) : determinant (blockMatrix A B) = determinant A * determinant B
+transpose	func	fe676d348ebd	538b4987bf87	f22880bb		\func transpose {R : \Type} {n m : Nat} (M : Matrix R n m) : Matrix R m n
+transpose.isInv	lemma	7f9bf2d66312	-	91d1b29e		\lemma isInv {R : CRing} {n : Nat} (A : Monoid.Inv {MatrixRing R n}) : Monoid.Inv (transpose A.val)
+transpose_*	lemma	1eb7cf1e238d	-	9429e7c4	0711c745:transpose	\lemma transpose_* {R : CRing} {n : Nat} {M M' : Matrix R n n} : transpose (M * M') = transpose M' * transpose M
+adjugate	func	9dfcf2ea4fd6	a5bdf0ee6ea3	81cd6438	b75b7164:determinant.minor	\func adjugate {R : CRing} {n : Nat} (M : Matrix R n n) : Matrix R n n
+adjugate_transpose	lemma	98f5d77d678a	-	4389bcff	575fe4ff:adjugate 0711c745:transpose	\lemma adjugate_transpose {R : CRing} {n : Nat} (M : Matrix R n n) : adjugate (transpose M) = transpose (adjugate M)
+adjugate-left	lemma	1f7f0c3471d1	-	4f3d1f08		\lemma adjugate-left {R : CRing} {n : Nat} {M : Matrix R n n} : adjugate M * M = determinant M *c 1
+adjugate-right	lemma	059339851cee	-	4f3d1f08		\lemma adjugate-right {R : CRing} {n : Nat} {M : Matrix R n n} : M * adjugate M = determinant M *c 1
+adjugate-left.determinant_adjugate_=	lemma	c972baf73381	-	0b84f771		\lemma determinant_adjugate_= {R : CRing} {n : Nat} {M : Matrix R n n} {k : Fin n} : R.BigSum (\lam j => adjugate M k j * M j k) = determinant M
+adjugate-left.adjugate-lem	lemma	d65fc96f691f	-	3ae57a5c		\lemma adjugate-lem {R : CRing} {n : Nat} {M : Matrix R n n} {i i' j : Fin n} (i/=i' : i /= i') (p : \Pi (k : Fin n) -> M k i = M k i') : negative (adjugate M i j) = adjugate M i' j
+adjugate-left.adjugateExt	lemma	cd1abe92aae5	-	3ae57a5c		\lemma adjugateExt {R : CRing} {n : Nat} {M M' : Matrix R n n} {i j : Fin n} (p : \Pi {i' j' : Fin n} -> i' /= i -> j' /= j -> M i' j' = M' i' j') : adjugate M j i = adjugate M' j i
+adjugate-left.determinant_adjugate_/=	lemma	b6d35d336cb8	-	3ae57a5c		\lemma determinant_adjugate_/= {R : CRing} {n : Nat} {M : Matrix R n n} {i k : Fin n} (i/=k : i /= k) : R.BigSum (\lam j => adjugate M i j * M j k) = 0
+determinant-inv	lemma	fee343527afd	-	b722d473		\lemma determinant-inv {R : CRing} {n : Nat} {M : Matrix R n n} : Inv M <-> Inv (determinant M)
+matirx-inv	lemma	6e37cc288c1b	-	d661e02a		\lemma matirx-inv {R : CRing} {n : Nat} {A : Matrix R n n} {B : Matrix R n n} (p : A * B = 1) : Monoid.Inv B
+determinant1_Inv	lemma	208df1c4ff08	-	5d836cd6		\lemma determinant1_Inv {R : CRing} {n : Nat} (A : Matrix R n n) (p : determinant A = 1) : Monoid.Inv A
+blockMatrix_Inv	lemma	d93c69f33700	-	efb1300b	d6d0a50e:blockMatrix	\lemma blockMatrix_Inv {R : CRing} {n m : Nat} {A : Matrix R n n} {B : Matrix R m m} : Inv (blockMatrix A B) <-> (\Sigma (Inv A) (Inv B))
+IsDiagonal	type	cbdf51217dd6	09a59c75d2a8	1a5108aa		\type IsDiagonal {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop
+IsDiagonal.transposed	lemma	a7809dbe70e0	-	74e3ea11		\lemma transposed {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsDiagonal (transpose A)
+IsDiagonal.=>upperTriangular	lemma	a29bb48e7b31	-	74e3ea11		\lemma =>upperTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsUpperTriangular A
+IsDiagonal.=>lowerTriangular	lemma	f647057ed048	-	74e3ea11		\lemma =>lowerTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsLowerTriangular A
+IsUpperTriangular	type	cbdf51217dd6	6fd798945aa7	cbe27847		\type IsUpperTriangular {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop
+IsLowerTriangular	type	cbdf51217dd6	e20694f9039d	5e9f2a27		\type IsLowerTriangular {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop
+*c_IsDiagonal	lemma	ca9f95e0d958	-	67d2bc53		\lemma *c_IsDiagonal {R : Ring} {n m : Nat} {A : Matrix R n m} {a : R} (Ad : IsDiagonal A) : IsDiagonal (a *c A)
+diagonal-isDiagonal	lemma	f795236057da	-	ff60431c	905ac3a9:diagonal	\lemma diagonal-isDiagonal {R : AddPointed} {l : Array R} : IsDiagonal (diagonal l)
+determinant_IsUpperTriangular	lemma	05d37a49d345	-	d685bb55		\lemma determinant_IsUpperTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsUpperTriangular A) : determinant A = R.BigProd (\lam j => A j j)
+determinant_IsLowerTriangular	lemma	27bd53e13264	-	d685bb55		\lemma determinant_IsLowerTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsLowerTriangular A) : determinant A = R.BigProd (\lam j => A j j)
+determinant_IsDiagonal	lemma	d0de878eebc7	-	d685bb55		\lemma determinant_IsDiagonal {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsDiagonal A) : determinant A = R.BigProd (\lam j => A j j)
+determinant_diagonal	lemma	c04f2a1fb07a	-	94e0b00d	905ac3a9:diagonal	\lemma determinant_diagonal {R : CRing} {l : Array R} : determinant (diagonal l) = R.BigProd l
+determinant-nonSquare	lemma	1d1fe2869c02	-	0a286b16		\lemma determinant-nonSquare {R : CRing} {n m : Nat} (m<n : m < n) {A : Matrix R n m} {B : Matrix R m n} : determinant (A MatrixRing.product B) = 0
+determinant-nonSquare.determinant-nonSquare_+	lemma	1009e0fd298c	-	7b6c575d	d8055d89:block12Matrix	\lemma determinant-nonSquare_+ {R : CRing} {n k : Nat} (k/=0 : k /= 0) {A : Matrix R (k + n) n} {B : Matrix R n (k + n)} : determinant (A MatrixRing.product B) = 0
+determinant-nonSquare.determinant_block12	lemma	5f53f9885151	-	7b6c575d	d8055d89:block12Matrix	\lemma determinant_block12 {R : CRing} {n k : Nat} (k/=0 : k /= 0) (A : Matrix R (k + n) n) : determinant (block12Matrix 0 A) = 0
+matrix-split-trivial	lemma	acd85292faad	-	2e49b805		\lemma matrix-split-trivial {R : CRing} {n m : Nat} (m<n : m < n) {A : Matrix R n m} {B : Matrix R m n} (p : A MatrixRing.product B = ide) : 0 = {R} 1
+matrix-split_<=	lemma	cb311b29fb8c	-	970f8c18		\lemma matrix-split_<= {R : NonZeroCRing} {n m : Nat} {A : Matrix R n m} {B : Matrix R m n} (p : A MatrixRing.product B = ide) : n <= m
+equations-determinant	lemma	38cdc9a78249	-	b7ee4290		\lemma equations-determinant {R : CRing} {M : LModule R} {n k : Nat} (A : Matrix R n n) {U : Matrix M n k} (p : product-gen A U = zro) : MatrixModule.*c-gen (determinant A) U = zro
+(overview)	-	-	-	9804d02b	af12bb97:Matrix fb055baf:determinantN	-

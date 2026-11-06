@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Algebra.Pointed.PointedCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PointedCat	instance	4013f1a004ad	-	8c342116		\instance PointedCat : Cat Pointed.{u}
+AddPointedCat	instance	e6aca832e32e	-	a8ceed3a		\instance AddPointedCat : Cat AddPointed.{u}
+(overview)	-	-	-	dfc8cd78		-

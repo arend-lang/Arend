@@ -1,0 +1,201 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Poly. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Poly	data	b10e3fe35527	-	67bdc633	1a676392:Poly.padd e6414ff9:Poly.peq d4f1b28b:Poly.pzero	\data Poly (R : AddPointed) | pzero | padd (Poly R) R | peq : padd pzero 0 = pzero
+Poly.toQPoly	func	9e127bb535bf	1ebb88eaa864	6874319d		\func toQPoly {R : AddPointed} (p : Poly R) : QPoly R
+Poly.fromArray	func	72c276f5561c	30affca6d7ec	7631eb2d		\func fromArray {R : AddPointed} (l : Array R) : Poly R
+Poly.cfunc	func	9f07451582a5	a12788f801f7	36f81502	1d1fa922:Poly.fromArray a4747524:Poly.toQPoly	\func cfunc {R : AddPointed} (l : Array R) : toQPoly (fromArray l) = in~ l
+Poly.gfunc	func	5647dbdd48e9	d9a96282649c	df500b4b	1d1fa922:Poly.fromArray a4747524:Poly.toQPoly	\func gfunc {R : AddPointed} (l : Array R) (p : Poly R) : toQPoly p = in~ l -> p = fromArray l
+Poly.toQPoly-equiv	sfunc	c0702089bfcc	98bfe9b7b6f8	5dd5ff6b	a4747524:Poly.toQPoly	\sfunc toQPoly-equiv {R : AddPointed} : QEquiv toQPoly
+Poly.levelSet	level	6b9350d04f1a	-	1a7684cb	0ada228b:Poly	\use \level levelSet {R : AddPointed} : isSet (Poly R)
+Poly.poly-countable	func	0212a80e3a5b	ba7776eb245f	54d4b323	0ada228b:Poly	\func poly-countable {R : AddPointed} (c : Countable R) : Countable (Poly R)
+Poly.poly-trivial	lemma	c76393a2f355	-	d74cf77b	d4f1b28b:Poly.pzero	\lemma poly-trivial {R : AddPointed} (p : \Pi (x : R) -> x = zro) (p : Poly R) : p = pzero
+polyMap	func	ccb48ceb037b	21e184a9c2eb	cc3f00f2		\func polyMap (f : AddPointedHom) (p : Poly f.Dom) : Poly f.Cod
+polyMap-comp	lemma	8ca8d4f31900	-	f8566728		\lemma polyMap-comp {A B C : AddPointed} (f : AddPointedHom A B) (g : AddPointedHom B C) {p : Poly A} : polyMap g (polyMap f p) = polyMap (g AddPointedHom.∘ f) p
+polyMap-inj	lemma	7036b891e8b2	-	114d7f8f	f78eea66:polyMap	\lemma polyMap-inj {A B : AddPointed} {f : AddPointedHom A B} (inj : IsInj f) {p q : Poly A} (s : polyMap f p = polyMap f q) : p = q
+polyMap_fromArray	lemma	87ae9053a799	-	1e718c32	1d1fa922:Poly.fromArray f78eea66:polyMap	\lemma polyMap_fromArray {f : AddPointedHom} {l : Array f.Dom} : polyMap f (Poly.fromArray l) = Poly.fromArray (map f l)
+polyMapRingHom	func	5987f67335ab	7f972ea7f345	d34487d3	061cf08b:PolyRing f78eea66:polyMap	\func polyMapRingHom (f : RingHom) : RingHom (PolyRing f.Dom) (PolyRing f.Cod)
+polyEval	func	b25924d7ba97	6471437227db	0af58eea	0ada228b:Poly	\func polyEval {R : Ring} (p : Poly R) (a : R) : R
+polyMapEval	func	3a6b0c9b2ec3	485ab5b6a20c	6634f8b2		\func polyMapEval {A : AddPointed} {R : Ring} (f : AddPointedHom A R) (p : Poly A) (a : R) : R
+polyEval_polyMap	lemma	2a3ea1208d32	-	5b49d333	b9c57702:polyEval f78eea66:polyMap	\lemma polyEval_polyMap {f : RingHom} {p : Poly f.Dom} {a : f.Dom} : polyEval (polyMap f p) (f a) = f (polyEval p a)
+polyEval_fromArray	lemma	64412a0c78ef	-	b4dffdb6		\lemma polyEval_fromArray {R : Ring} {l : Array R} {a : R} : polyEval (Poly.fromArray l) a = R.BigSum (\lam j => l j * pow a j)
+polyMapEval_fromArray	lemma	d217688322d3	-	b4dffdb6		\lemma polyMapEval_fromArray {R : AddPointed} {E : Ring} {f : AddPointedHom R E} {l : Array f.Dom} {a : f.Cod} : polyMapEval f (Poly.fromArray l) a = AddMonoid.BigSum (\lam j => f (l j) * pow a j)
+polyEvalRingHom	func	1b125f06651d	726f66fc8400	9737a0c6	061cf08b:PolyRing	\func polyEvalRingHom {R : CRing} (a : R) : RingHom (PolyRing R) R
+polyMapEvalRingHom	func	bbcddee5d223	75e220c4a4a7	651d2a86		\func polyMapEvalRingHom {R : Ring} {S : CRing} (f : RingHom R S) (a : S) : RingHom (PolyRing R) S
+polyMapEval-unique	func	d025875c409e	ca4e54b4c99c	34db19bf	1a676392:Poly.padd 061cf08b:PolyRing	\func polyMapEval-unique {R S : Ring} (f g : RingHom (PolyRing R) S) (p : \Pi (r : R) -> f (padd pzero r) = g (padd pzero r)) (q : f (padd 1 0) = g (padd 1 0)) (x : PolyRing R) : f x = g x
+polyHom	func	00e75d0a85d8	27d0d5a4e5e6	faadb286	061cf08b:PolyRing	\func polyHom {R : Ring} : RingHom R (PolyRing R)
+polyHom_polyMapEval	lemma	dcfc48eda494	-	e672fd7e		\lemma polyHom_polyMapEval {R : Ring} {p : Poly R} : polyMapEval polyHom p (padd 1 0) = p
+factorHom_polyMapEval	lemma	1f58fbb7341e	-	09909a7f		\lemma factorHom_polyMapEval {R : CRing} {I : Ideal (PolyAlgebra R)} {p : Poly R} : polyMapEval (factorHom {I} RingHom.∘ polyHom) p (in~ (padd 1 0)) = in~ p
+polyCoef	func	862e055dd91e	5e2ebf5cda3e	736e8c08		\func polyCoef {R : AddPointed} (p : Poly R) (n : Nat) : R
+polyCoef=0	lemma	ecc4b37c6f13	-	9b5a3391		\lemma polyCoef=0 {R : AddPointed} {r : R} {n : Nat} (n>0 : 0 < n) : polyCoef (padd pzero r) n = 0
+polyCoef_polyMap	lemma	6a985d3c74ba	-	8e3d53a8	14b4b36b:polyCoef f78eea66:polyMap	\lemma polyCoef_polyMap {f : AddPointedHom} {p : Poly f.Dom} {n : Nat} : polyCoef (polyMap f p) n = f (polyCoef p n)
+polyCoef_fromArray	lemma	9f989fa7b286	-	f1dc3438	1d1fa922:Poly.fromArray 14b4b36b:polyCoef	\lemma polyCoef_fromArray {R : AddPointed} {l : Array R} {j : Fin l.len} : polyCoef (Poly.fromArray l) j = l j
+polyCoef_+	lemma	c8ad8d6ea06e	-	1068d909		\lemma polyCoef_+ {R : Ring} {p q : Poly R} {n : Nat} : polyCoef (p + q) n = polyCoef p n + polyCoef q n
+polyCoef_negative	lemma	f701aa6f9b7d	-	1068d909		\lemma polyCoef_negative {R : Ring} {p : Poly R} {n : Nat} : polyCoef (negative p) n = negative (polyCoef p n)
+polyCoef_*c	lemma	bccc0a128607	-	1068d909		\lemma polyCoef_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} : polyCoef (a PolyRing.*c p) n = a * polyCoef p n
+polyCoef_*-right	lemma	2be6b7799aa6	-	1068d909		\lemma polyCoef_*-right {R : Ring} {a : R} {p : Poly R} {n : Nat} : polyCoef (p * padd pzero a) n = polyCoef p n * a
+polyCoef_*	lemma	123d52fb2c52	-	1068d909		\lemma polyCoef_* {R : Ring} {a : R} {p : Poly R} {k n : Nat} : polyCoef (monomial a k * p) (k + n) = a * polyCoef p n
+polyCoef_BigSum	lemma	344e56f4b103	-	195cc109		\lemma polyCoef_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} : polyCoef (AddMonoid.BigSum l) n = AddMonoid.BigSum (map (polyCoef __ n) l)
+polyCoefHom	func	d23a42663965	9fd6b1fed0c9	0546b143	14b4b36b:polyCoef	\func polyCoefHom {R : Ring} {n : Nat} : AddGroupHom (PolyRing R) R
+lastCoef	func	0979e5fbb4ba	e95d304e617d	0207f08a	14b4b36b:polyCoef	\func lastCoef {R : AddPointed} (p : Poly R)
+lastCoef_*	lemma	b33349adbd9e	-	407a534c		\lemma lastCoef_* {R : Ring} {p q : Poly R} : lastCoef (p * q) = lastCoef p * lastCoef q
+lastCoef_pow	lemma	eb7856364657	-	407a534c		\lemma lastCoef_pow {R : Ring} {p : Poly R} {n : Nat} : lastCoef (pow p n) = R.pow (lastCoef p) n
+polyShift	func	354acaf5a36a	b890b3b20b53	a646a89b		\func polyShift {R : AddPointed} (p : Poly R) : Poly R
+monomial	func	00687b9cfce4	691e5c6fa43f	8d7cd2d3	1a676392:Poly.padd d4f1b28b:Poly.pzero	\func monomial {R : AddPointed} (c : R) (n : Nat) : Poly R
+polyCoef_monomial	lemma	631f37723c37	-	e6a17410		\lemma polyCoef_monomial {R : AddPointed} {c : R} {n : Nat} : polyCoef (monomial c n) n = c
+polyMap_monomial	lemma	de1127db93bf	-	e6a17410		\lemma polyMap_monomial {f : AddPointedHom} {c : f.Dom} {n : Nat} : polyMap f (monomial c n) = monomial (f c) n
+polyEval_monomial	lemma	76fb24308495	-	e6a17410		\lemma polyEval_monomial {R : Ring} {c a : R} {n : Nat} : polyEval (monomial c n) a = c * pow a n
+polyMapEval_monomial	lemma	7a81483ace50	-	e6a17410		\lemma polyMapEval_monomial {f : RingHom} {a : f.Cod} {n : Nat} : polyMapEval f (monomial 1 n) a = pow a n
+monomial_zro	lemma	f6114c7c2bdd	-	010575fb	d4f1b28b:Poly.pzero 38528d7a:monomial	\lemma monomial_zro {R : AddPointed} {n : Nat} : monomial R.zro n = pzero
+*c_monomial	lemma	8682359c2fd6	-	ab2caa24	cf3171f5:PolyRing.*c 38528d7a:monomial	\lemma *c_monomial {R : Ring} {a c : R} {n : Nat} : a PolyRing.*c monomial c n = monomial (a * c) n
+poly-monomial-char	lemma	87bd62b0c622	-	80969a1d	1a676392:Poly.padd 38528d7a:monomial	\lemma poly-monomial-char {R : Ring} {n : Nat} {p : Poly R} : monomial 1 n * p = iterr (padd __ 0) n p
+poly-factor-monomial	func	61f85fca8a71	208257eeb693	b543d2ef		\func poly-factor-monomial {R : AddPointed} {D : DecSet R} {p : Poly R} : p /= pzero -> \Sigma (n : Nat) (q : Poly R) (p = iterr (padd __ 0) n q) (lastCoef q /= 0)
+poly-factor-monomial-unique	lemma	46692fe4902e	-	cc3f227d		\lemma poly-factor-monomial-unique {R : AddPointed} {n m : Nat} {q q' : Poly R} (c : iterr (padd __ 0) n q = iterr (padd __ 0) m q') (qc : lastCoef q /= 0) (q'c : lastCoef q' /= 0) : \Sigma (n = m) (q = q')
+monomial_div	lemma	e99bb6d037d0	-	92eb5b34		\lemma monomial_div {R : StrictIntegralDomain} {n : Nat} {p : Poly R} (d : LDiv p (monomial 1 n)) : ∃ (c : R) (c /= 0) (k : Nat) (p = monomial c k)
+monomial_div2	lemma	c7e609738114	-	b4a35aae	38528d7a:monomial	\lemma monomial_div2 {R : Ring} {n : Nat} {c : R} {p : Poly R} (d : LDiv (monomial c (suc n)) p) : lastCoef p = 0
+monomial-factor	lemma	50cd5dd5f797	-	e37e2958	1a676392:Poly.padd	\lemma monomial-factor {R : StrictIntegralDomain} {p q s : Poly R} (t : p * q = padd s 0) : ∃ (r : Poly R) (Or (\Sigma (p = padd r 0) (r * q = s)) (\Sigma (q = padd r 0) (p * r = s)))
+degree<	func	f3b91e7a7bbd	54a631a5a8e5	a1537f38		\func degree< {R : AddPointed} (p : Poly R) (n : Nat)
+degree<=	func	7a307ec0bc26	28200fd5a183	7aef6b85		\func degree<= {R : AddPointed} (p : Poly R) (n : Nat) : \Prop
+degree<0	lemma	817c992cbda5	-	a8dadc4a	d4f1b28b:Poly.pzero 19a24fdb:degree<	\lemma degree<0 {R : AddPointed} {p : Poly R} (d : degree< p 0) : p = pzero
+degree<_padd	lemma	b5f6371845ab	-	d85f8289	1a676392:Poly.padd	\lemma degree<_padd {R : AddPointed} {p : Poly R} {e : R} {n : Nat} (d : degree< p n) : degree< (padd p e) (suc n)
+degree<_padd.conv	lemma	58cba602f96d	-	d85f8289	1a676392:Poly.padd	\lemma conv {R : AddPointed} {p : Poly R} {e : R} {n : Nat} (d : degree< (padd p e) (suc n)) : degree< p n
+degree<_polyMap	lemma	e8169a8278ac	-	1f6664e0		\lemma degree<_polyMap {f : AddPointedHom} {p : Poly f.Dom} {n : Nat} (d : degree< p n) : degree< (polyMap f p) n
+degree<=_polyMap	lemma	75107600f610	-	1f6664e0		\lemma degree<=_polyMap {f : AddPointedHom} {p : Poly f.Dom} {n : Nat} (d : degree<= p n) : degree<= (polyMap f p) n
+degree<=.toCoefs	lemma	25cdd3401fa6	-	5817fb3d		\lemma toCoefs {R : AddPointed} (p : Poly R) (n : Nat) (d : degree<= p n) {k : Nat} (n<k : n < k) : polyCoef p k = 0
+degree<=.fromCoefs	lemma	60a4e8151d68	-	5817fb3d		\lemma fromCoefs {R : AddPointed} (p : Poly R) (n : Nat) (d : \Pi {k : Nat} -> n < k -> polyCoef p k = 0) : degree<= p n
+degree<=.trivialPoly	lemma	bf59ad0930ac	-	c95b3b6c	d4f1b28b:Poly.pzero	\lemma trivialPoly {R : AddPointed} {p : Poly R} (d : \Pi (k : Nat) -> degree<= p k -> polyCoef p k = 0) : p = pzero
+degree<=_degree<	lemma	7d2f89ca7d48	-	d751f7c9		\lemma degree<=_degree< {R : AddPointed} {p : Poly R} {n : Nat} (d : degree<= p n) : degree< p (suc n)
+degree<_degree<=	lemma	a60e794297df	-	d751f7c9		\lemma degree<_degree<= {R : AddPointed} {p : Poly R} {n : Nat} (d : degree< p (suc n)) : degree<= p n
+degree-exists	lemma	010dbc568eec	-	e2ac3a8a		\lemma degree-exists {R : AddPointed} (p : Poly R) : ∃ (n : Nat) (degree<= p n)
+degree<-exists	lemma	41888675cf8d	-	e2ac3a8a		\lemma degree<-exists {R : AddPointed} (p : Poly R) : ∃ (n : Nat) (degree< p n)
+degree<=-trans	lemma	e41fcb4f90da	-	8ccb1797		\lemma degree<=-trans {R : AddPointed} {p : Poly R} {n m : Nat} (d : degree<= p n) (n<=m : n <= m) : degree<= p m
+degree-reduce	lemma	8b9e517149d1	-	809ac23b	4620e994:degree<=	\lemma degree-reduce {R : AddPointed} (p : Poly R) (n : Nat) (d : degree<= p (suc n)) (c : polyCoef p (suc n) = 0) : degree<= p n
+degree<=0	lemma	63411a257d3a	-	717d0721	4620e994:degree<=	\lemma degree<=0 {R : AddPointed} (p : Poly R) (d : degree<= p 0) : p = padd pzero (polyCoef p 0)
+degree<=_monomial	lemma	bc92c164d381	-	e2d9a708	4620e994:degree<= 38528d7a:monomial	\lemma degree<=_monomial {R : AddPointed} {c : R} {n : Nat} : degree<= (monomial c n) n
+fromArray_polyCoef	lemma	1a35ffa1a3e0	-	02f5c0ea	1d1fa922:Poly.fromArray	\lemma fromArray_polyCoef {R : AddPointed} {n : Nat} {p : Poly R} (d : degree< p n) : p = Poly.fromArray (\new (Array R n (\lam j => polyCoef p j)))
+fromArray_degree<	lemma	34d8d1c500f0	-	0542a1d9	1d1fa922:Poly.fromArray	\lemma fromArray_degree< {R : AddPointed} {l : Array R} : degree< (Poly.fromArray l) l.len
+polyEval_polyCoef	lemma	7b8587b24340	-	e998875f		\lemma polyEval_polyCoef {R : Ring} {p : Poly R} {a : R} {n : Nat} (d : degree< p n) : polyEval p a = R.BigSum (\new (Array R n (\lam i => polyCoef p i * R.pow a i)))
+polyMapEval_polyCoef	lemma	7f82d76475c5	-	e998875f		\lemma polyMapEval_polyCoef {f : RingHom} {p : Poly f.Dom} {a : f.Cod} {n : Nat} (d : degree< p n) : polyMapEval f p a = AddMonoid.BigSum (\lam (i : Fin n) => f (polyCoef p i) * pow a i)
+degree<_+	lemma	1a0c0ccc325a	-	61aef889		\lemma degree<_+ {R : Ring} {p q : Poly R} {n : Nat} (dp : degree< p n) (dq : degree< q n) : degree< (p + q) n
+degree<_negative	lemma	c2365fae7704	-	61aef889		\lemma degree<_negative {R : Ring} {p : Poly R} {n : Nat} (dp : degree< p n) : degree< (negative p) n
+degree<=_+	lemma	ed76d49ab8e7	-	f7356baa	4620e994:degree<=	\lemma degree<=_+ {R : Ring} {p q : Poly R} {n : Nat} (dp : degree<= p n) (dq : degree<= q n) : degree<= (p + q) n
+degree<=_negative	lemma	38772f874b1b	-	f7356baa	4620e994:degree<=	\lemma degree<=_negative {R : Ring} {p : Poly R} {n : Nat} (d : degree<= p n) : degree<= (negative p) n
+degree<=_*c	lemma	888fc2876a6a	-	f7356baa	4620e994:degree<=	\lemma degree<=_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree<= p n) : degree<= (a PolyRing.*c p) n
+degree<=_*	lemma	20263aae6198	-	f7356baa	4620e994:degree<=	\lemma degree<=_* {R : Ring} {p q : Poly R} {n m : Nat} (dp : degree<= p n) (dq : degree<= q m) : degree<= (p * q) (n + m)
+degree<=_BigSum	lemma	36410d2ca85c	-	f7356baa	4620e994:degree<=	\lemma degree<=_BigSum {R : Ring} {l : Array (Poly R)} {n : Nat} (d : \Pi (j : Fin l.len) -> degree<= (l j) n) : degree<= (AddMonoid.BigSum l) n
+degree<=_FinSum	lemma	b0c3f2a3b835	-	f7356baa	4620e994:degree<=	\lemma degree<=_FinSum {R : Ring} {J : FinSet} {a : J -> Poly R} {n : Nat} (d : \Pi (j : J) -> degree<= (a j) n) : degree<= (AbMonoid.FinSum a) n
+degree<=_BigProd	lemma	960a2f0a3978	-	f7356baa	4620e994:degree<=	\lemma degree<=_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (p : \Pi (j : Fin l.len) -> degree<= (l j) (d j)) : degree<= (BigProd l) (AddMonoid.BigSum d)
+degree<=_BigProd1	lemma	1a68dfe85239	-	f7356baa	4620e994:degree<=	\lemma degree<=_BigProd1 {R : Ring} {l : Array (Poly R)} (p : \Pi (j : Fin l.len) -> degree<= (l j) 1) : degree<= (BigProd l) l.len
+degree<=_pow	lemma	0cc88325e058	-	f7356baa	4620e994:degree<=	\lemma degree<=_pow {R : Ring} {p : Poly R} {d n : Nat} (pd : degree<= p d) : degree<= (pow p n) (d * n)
+degree<=0_*-conv	lemma	a612103bfa0f	-	a39bbd63	4620e994:degree<=	\lemma degree<=0_*-conv {R : StrictDomain} {p q : Poly R} (d : degree<= (p * q) 0) : degree<= p 0 || degree<= q 0
+degree<-suc	lemma	83d7a4176e09	-	1f20fa53	19a24fdb:degree<	\lemma degree<-suc {R : AddPointed} {p : Poly R} {n : Nat} (d : degree< p n) : degree< p (suc n)
+degree<_*c	lemma	79a6f273d582	-	59c5502b	cf3171f5:PolyRing.*c 19a24fdb:degree<	\lemma degree<_*c {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree< p n) : degree< (a PolyRing.*c p) n
+degree<_padd-tail	lemma	cd0b36ee205e	-	8bd83d73	1a676392:Poly.padd 19a24fdb:degree<	\lemma degree<_padd-tail {R : AddPointed} {p : Poly R} {e : R} {m : Nat} (d : degree< (padd p e) m) : degree< p m
+degree<_*padd1	lemma	79c38016bf78	-	a5e67225	1a676392:Poly.padd 19a24fdb:degree<	\lemma degree<_*padd1 {R : CRing} (a : R) {p : Poly R} {n : Nat} (d : degree< p n) : degree< (p * padd 1 a) (suc n)
+degree<-monic-diff	lemma	9b609f8296c2	-	2e6692a6	19a24fdb:degree<	\lemma degree<-monic-diff {R : Ring} {a b : Poly R} {n : Nat} (da : degree< a (suc n)) (db : degree< b (suc n)) (ma : polyCoef a n = 1) (mb : polyCoef b n = 1) : degree< (a - b) n
+degree-coef/=0	lemma	4ed98fbea1d7	-	8f7daf2f	af768e64:degree	\lemma degree-coef/=0 {R : Ring.Dec} {p : Poly R} {n : Nat} (c : polyCoef p n /= 0) : n <= degree p
+degree-suc/=0	lemma	611258c80fc1	-	6996dd35	af768e64:degree	\lemma degree-suc/=0 {R : Ring.Dec} {p : Poly R} {n : Nat} (dp : degree p = suc n) : p /= 0
+degree-lead/=0	lemma	93c7461e2374	-	c3048b94	14b4b36b:polyCoef	\lemma degree-lead/=0 {K : Ring.Dec} {p : Poly K} (p/=0 : p /= 0) {n : Nat} (dp : degree p = suc n) : polyCoef p (suc n) /= 0
+degree-lead-Inv	lemma	48f4c63685c2	-	a57d6993		\lemma degree-lead-Inv {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) {n : Nat} (dp : degree p = suc n) : Monoid.Inv (polyCoef p (suc n))
+degree0-Inv	lemma	574f665fd0ea	-	a92091a3		\lemma degree0-Inv {K : DiscreteField} {g : Poly K} (dg : degree g = 0) (g/=0 : g /= 0) : Monoid.Inv g
+polyCoef-linear-*	lemma	7259969aedcb	-	334c9e02	1a676392:Poly.padd	\lemma polyCoef-linear-* {R : Ring} (p q : Poly R) (a : R) (n : Nat) : polyCoef (padd q a * p) (suc n) = polyCoef (q * p) n + a * polyCoef p (suc n)
+leadCoef-product	lemma	222b41c3d526	-	ab40add1	14b4b36b:polyCoef	\lemma leadCoef-product {R : Ring} {p q : Poly R} {n m : Nat} (dp : degree<= p n) (dq : degree<= q m) : polyCoef (p * q) (n + m) = polyCoef p n * polyCoef q m
+leadCoef_BigProd	lemma	0158a1c95f16	-	6590a877		\lemma leadCoef_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (ld : \Pi (j : Fin l.len) -> degree<= (l j) (d j)) : polyCoef (BigProd l) (AddMonoid.BigSum d) = R.BigProd (\lam j => polyCoef (l j) (d j))
+leadCoef_BigProd1	lemma	85e13873199b	-	6590a877		\lemma leadCoef_BigProd1 {R : Ring} {l : Array (Poly R)} (ld : \Pi (j : Fin l.len) -> degree<= (l j) 1) (lc : \Pi (j : Fin l.len) -> polyCoef (l j) 1 = 1) : polyCoef (BigProd l) l.len = 1
+leadCoef_pow	lemma	b9ea0813c3b5	-	6590a877		\lemma leadCoef_pow {R : Ring} {p : Poly R} {d n : Nat} (pd : degree<= p d) : polyCoef (pow p n) (d * n) = pow (polyCoef p d) n
+isMonic	func	910a716d5cc7	66c862c814ed	cc347487	4620e994:degree<= 14b4b36b:polyCoef	\func isMonic {R : Ring} (p : Poly R) : \Prop
+polyMap_isMonic	lemma	dadd64b7bd57	-	9a9735ce		\lemma polyMap_isMonic {f : RingHom} {p : Poly f.Dom} (m : isMonic p) : isMonic (polyMap f p)
+monomial-isMonic	lemma	2dde18c8a2bb	-	9a9735ce		\lemma monomial-isMonic {R : Ring} (n : Nat) : isMonic (monomial R.ide n)
+monic/=0	lemma	c92fe5dd6286	-	f5a67127		\lemma monic/=0 {R : Ring} {p : Poly R} (pm : isMonic p) (p=0 : p = pzero) : 0 = {R} 1
+monic-unique	lemma	9dff69757642	-	f5a67127		\lemma monic-unique {R : Ring} {p : Poly R} {n m : Nat} (n/=m : n /= m) (d1 : degree<= p n) (c1 : polyCoef p n = 1) (d2 : degree<= p m) (c2 : polyCoef p m = 1) : 0 = {R} 1
+polyCoef_*padd1	lemma	cb5e640fbdbd	-	6511a745	1a676392:Poly.padd 19a24fdb:degree< 14b4b36b:polyCoef	\lemma polyCoef_*padd1 {R : CRing} (a : R) {p : Poly R} {n : Nat} (d : degree< p (suc n)) : polyCoef (p * padd 1 a) (suc n) = polyCoef p n
+mul_padd1	lemma	fba3c105bb11	-	4a6474d0	1a676392:Poly.padd d4f1b28b:Poly.pzero	\lemma mul_padd1 {R : CRing} (a : R) (p : Poly R) : p * padd 1 a = padd p 0 + p * padd pzero a
+polyCoef_-	lemma	9fc92124334b	-	b7abe178	14b4b36b:polyCoef	\lemma polyCoef_- {R : Ring} {a b : Poly R} {j : Nat} : polyCoef (a - b) j = polyCoef a j - polyCoef b j
+PolyRing	instance	050e81fc546b	-	baaac35c	0ada228b:Poly cf3171f5:PolyRing.*c	\instance PolyRing (R : Ring) : Ring (Poly R)
+PolyRing.*c	func	c78fc2bdc313	ec85963cbbba	e9a3c96f		\func *c {R : Ring} (r : R) (p : Poly R) : Poly R
+PolyRing.zro_*c	lemma	076afbca4955	-	87778d76	cf3171f5:PolyRing.*c	\lemma zro_*c {R : Ring} {p : Poly R} : 0 *c p = pzero
+PolyRing.ide_*c	lemma	7d88bfc14880	-	87778d76	cf3171f5:PolyRing.*c	\lemma ide_*c {R : Ring} {p : Poly R} : 1 *c p = p
+PolyRing.*c-rdistr	lemma	b1758ec4608f	-	87778d76	cf3171f5:PolyRing.*c	\lemma *c-rdistr {R : Ring} {e r : R} {p : Poly R} : (e R.+ r) *c p = e *c p + r *c p
+PolyRing.*c-ldistr	lemma	0c171c02433f	-	87778d76	cf3171f5:PolyRing.*c	\lemma *c-ldistr {R : Ring} {c : R} {p q : Poly R} : c *c (p + q) = c *c p + c *c q
+PolyRing.*c-assoc	lemma	b88cc0039dbd	-	87778d76	cf3171f5:PolyRing.*c	\lemma *c-assoc {R : Ring} {c e : R} {p : Poly R} : c R.* e *c p = c *c (e *c p)
+PolyRing.*c-comm-left	lemma	e852df9743e7	-	87778d76	cf3171f5:PolyRing.*c	\lemma *c-comm-left {R : Ring} {r : R} {p q : Poly R} : r *c (p * q) = (r *c p) * q
+PolyRing.*c_*	lemma	47d6f8e0c0ca	-	87778d76	cf3171f5:PolyRing.*c	\lemma *c_* {R : Ring} {c : R} {p : Poly R} : c *c p = padd pzero c * p
+PolyRing.*c_negative	lemma	667f7be68f3c	-	87778d76	cf3171f5:PolyRing.*c	\lemma *c_negative {R : Ring} {c : R} {p : Poly R} : c *c negative p = negative (c *c p)
+PolyRing.padd0_*-comm	lemma	1c9e4865eeca	-	87778d76	cf3171f5:PolyRing.*c	\lemma padd0_*-comm {R : Ring} {p q : Poly R} : p * padd q 0 = padd (p * q) 0
+padd-expand	lemma	74c463784bba	-	b4d8cfd4	1a676392:Poly.padd	\lemma padd-expand {R : Ring} {p : Poly R} {e : R} : padd p e = p * padd 1 0 + padd 0 e
+PolyAlgebra	instance	c2c8c2d49924	-	63eedbab		\instance PolyAlgebra (R : CRing) : CAlgebra R
+PolyRingWith#	instance	be7c31403104	-	7adb0036		\instance PolyRingWith# (R : Ring.With#) : Ring.With#
+PolyCRingWith#	instance	4152793ee6ec	-	7adb0036		\instance PolyCRingWith# (R : CRing.With#) : CRing.With#
+PolyRingWith#.#0_*c-left	lemma	9fb33597dc72	-	a8012a5d		\lemma #0_*c-left {R : Ring.With#} {e : R} {p : Poly R} (h : #0 (e *c p)) : R.#0 e
+PolyRingWith#.#0_*c-right	lemma	034a2f966144	-	a8012a5d		\lemma #0_*c-right {R : Ring.With#} {e : R} {p : Poly R} (h : #0 (e *c p)) : #0 p
+PolyDomain	instance	2e7e5f2a47bf	-	9118adfd		\instance PolyDomain (R : Domain) : Domain
+PolyIntegralDomain	instance	629c237a66e8	-	9118adfd		\instance PolyIntegralDomain (R : IntegralDomain) : IntegralDomain
+PolyStrictDomain	instance	696a5a217702	-	29730cf4		\instance PolyStrictDomain (R : StrictDomain) : StrictDomain
+PolyStrictIntegralDomain	instance	b4a058edfab7	-	29730cf4		\instance PolyStrictIntegralDomain (R : StrictIntegralDomain) : StrictIntegralDomain
+PolyDecRing	instance	04c19ceb7fee	-	ede2e15d		\instance PolyDecRing (R : Ring.Dec) : Ring.Dec
+PolyDecCRing	instance	81def35a26ea	-	ede2e15d		\instance PolyDecCRing (R : CRing.Dec) : CRing.Dec
+PolyDecDomain	instance	f44ad4006481	-	ede2e15d		\instance PolyDecDomain (R : Domain.Dec) : Domain.Dec
+PolyDecIntegralDomain	instance	82f573392e59	-	ede2e15d		\instance PolyDecIntegralDomain (R : IntegralDomain.Dec) : IntegralDomain.Dec
+padd=pzero	lemma	a89467da1c50	-	f3efd49b	1a676392:Poly.padd d4f1b28b:Poly.pzero	\lemma padd=pzero {R : AddPointed} {p : Poly R} {a : R} (q : padd p a = pzero) : \Sigma (p = pzero) (a = 0)
+poly-root-div	lemma	3dafb5013a6b	-	cd0a8b74	14b4b36b:polyCoef b9c57702:polyEval 8038ff98:polyShift	\lemma poly-root-div {R : CRing} {p : Poly R} {a : R} (q : polyEval p a = 0) : LDiv a (polyCoef p 0) (R.negative (polyEval (polyShift p) a))
+polyDivision	func	b2e2ae14467e	2a833e241c21	83facf5c	cf3171f5:PolyRing.*c 19a24fdb:degree< 14b4b36b:polyCoef	\func polyDivision {R : CRing} (f g : Poly R) (k m n : Nat) (p : suc m = k + n) (df : degree<= f m) (dg : degree<= g n) : \Sigma (q r : Poly R) (pow (polyCoef g n) k *c f = q * g + r) (degree< r n)
+monicPolyDivisionContr	lemma	5146d3e73624	-	b59ed9b1		\lemma monicPolyDivisionContr {R : CRing} (f g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1) : Contr (\Sigma (q r : Poly R) (f = q * g + r) (degree< r n))
+monicPolyDivision-unique	lemma	853952e385a3	-	b59ed9b1		\lemma monicPolyDivision-unique {R : CRing} (f g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1) : isProp (\Sigma (q r : Poly R) (f = q * g + r) (degree< r n))
+monicPolyDivision	lemma	206c32e8d9b6	-	b59ed9b1		\lemma monicPolyDivision {R : CRing} (f g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1) : \level \Sigma (q r : Poly R) (f = q * g + r) (degree< r n) monicPolyDivision-unique f g n dg dm
+monicPolyDivisionContr.aux	lemma	be69912e2763	-	37d6e5cd		\lemma aux {R : Ring} (q g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1) (dqg : degree< (q * g) n) : q = 0
+degree-monic-reduce	lemma	417b66c4b104	-	2127717c		\lemma degree-monic-reduce {R : Ring} (p : Poly R) (a : R) (n : Nat) (d : degree<= (p * padd 1 a) (suc n)) : degree<= p n
+degree-monic-reduce.aux	lemma	6c03f4eb26a1	-	2127717c		\lemma aux {p : Poly R} (a b c : R) (q : p * padd 1 a + padd pzero c = padd pzero b) : \Sigma (p = pzero) (c = b)
+degree1PolyDivision	lemma	979f6691a182	-	bc5b5911	b9c57702:polyEval	\lemma degree1PolyDivision {R : CRing} (f : Poly R) (a : R) : \level \Sigma (q : Poly R) (f = q * padd 1 (negative a) + padd pzero (polyEval f a)) \lam s1 s2 => ext (degree1PolyDivision-unique f a s1.2 s2.2)
+degree1PolyDivision-unique	lemma	996c12f1bfa9	-	bc5b5911	b9c57702:polyEval	\lemma degree1PolyDivision-unique {R : CRing} (f : Poly R) (a : R) {q1 q2 : Poly R} (p1 : f = q1 * padd 1 (negative a) + padd pzero (polyEval f a)) (p2 : f = q2 * padd 1 (negative a) + padd pzero (polyEval f a)) : q1 = q2
+rootDiv	func	f56b18ed8c58	6c666a276d6f	3c63151b	365c2e02:degree1PolyDivision	\func rootDiv {R : CRing} (f : Poly R) (a : R) : Poly R
+rootDiv_*	lemma	e99383fc0ccf	-	bf5240cd	b9c57702:polyEval cfac8cd7:rootDiv	\lemma rootDiv_* {R : CRing} {f : Poly R} {a : R} (p : polyEval f a = 0) : f = rootDiv f a * padd 1 (negative a)
+rootPolyDivision-unique	lemma	657ba12a5079	-	93978b9c		\lemma rootPolyDivision-unique {R : CRing} (f : Poly R) (a : R) (p : polyEval f a = 0) : isProp (LDiv (padd 1 (negative a)) f)
+rootPolyDivision_degree	lemma	96e0a2b95ac0	-	ffa25a9a		\lemma rootPolyDivision_degree {R : IntegralDomain.Dec} {f : Poly R} (f/=0 : f /= 0) {a : R} (p : polyEval f a = 0) {n : Nat} : degree f = suc (degree (rootDiv f a))
+polyInv	lemma	5efc84fbf033	-	c5ea6a6b		\lemma polyInv {R : StrictDomain} {p : Poly R} (pi : Inv p) : ∃ (r : R) (p = padd pzero r) (Inv r)
+polyInv.coefInv	lemma	215c88afb2ce	-	c5ea6a6b		\lemma coefInv {R : StrictDomain} {c : R} {p : Poly R} (q : c PolyRing.*c p = 1) : degree<= p 0
+polyDiv	lemma	627227cfa2b7	-	0727515a		\lemma polyDiv {R : StrictDomain} {p q : Poly R} (p|q : LDiv p q) (q|p : LDiv q p) : (\Sigma (p = 0) (q = 0)) || (\Sigma (a b : R) (p|q.inv = padd pzero a) (q|p.inv = padd pzero b) (a * b = 1) (b * a = 1))
+polyDiv-linear	lemma	bf6cd0808d22	-	d8aad431		\lemma polyDiv-linear {R : StrictIntegralDomain} {p q : Poly R} {l : Array R} (s : p * q = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) : (\Sigma (j : Fin l.len) (polyEval q (l j) = 0)) || Monoid.Inv q
+field-toMonic	lemma	7397b1a10b13	-	34257ed6		\lemma field-toMonic {K : DiscreteField} {p : Poly K} (p/=0 : p /= 0) : isMonic (finv (leadCoef p) *c p)
+deflate	func	01844de17097	316fa9729c8a	792082da		\func deflate {R : Ring} (p : Poly R) (z : R) : Poly R
+deflate-eq	lemma	885942e39c82	-	3fbe78ca	1a676392:Poly.padd d4f1b28b:Poly.pzero ea0f90f1:deflate b9c57702:polyEval	\lemma deflate-eq {R : CRing} {p : Poly R} {z : R} : p = deflate p z * padd 1 (negative z) + padd pzero (polyEval p z)
+deflate_*padd1	lemma	d8e5dbcbe80c	-	4e3d8e9c	1a676392:Poly.padd ea0f90f1:deflate	\lemma deflate_*padd1 {R : CRing} {e : Poly R} {z : R} : deflate (e * padd 1 (negative z)) z = e
+polyEval_padd1	lemma	7e4eb778b0d6	-	4e42567b	1a676392:Poly.padd b9c57702:polyEval	\lemma polyEval_padd1 {R : CRing} {w z : R} : polyEval (padd 1 (negative w)) z = z - w
+polyEval_deflate	lemma	a1e083a0b23a	-	a5d0e679	ea0f90f1:deflate b9c57702:polyEval	\lemma polyEval_deflate {R : CRing} (p : Poly R) (z y : R) : polyEval p y = polyEval (deflate p z) y * (y - z) + polyEval p z
+polyEval_deflate-diff	lemma	4bae9f24ced6	-	7b467f23	ea0f90f1:deflate b9c57702:polyEval	\lemma polyEval_deflate-diff {R : CRing} (p : Poly R) (z y : R) : polyEval p y - polyEval p z = polyEval (deflate p z) y * (y - z)
+deflate-degree	lemma	786aee229a21	-	a7a9b972	ea0f90f1:deflate 19a24fdb:degree<	\lemma deflate-degree {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) (z : R) : degree< (deflate p z) n
+deflate-monic	lemma	f22d50c7cc5f	-	66d1f92b	ea0f90f1:deflate 19a24fdb:degree< 14b4b36b:polyCoef	\lemma deflate-monic {R : CRing} {p : Poly R} {n : Nat} (d : degree< p (suc (suc n))) (monic : polyCoef p (suc n) = 1) (z : R) : polyCoef (deflate p z) n = 1
+polyEval_LDiv	lemma	284794988cd1	-	e73dc56d		\lemma polyEval_LDiv {R : CRing} {q p : Poly R} (d : Monoid.LDiv q p) {z : R} (h : polyEval q z = 0) : polyEval p z = 0
+LDiv/=0	lemma	02f18361a1c1	-	68ec1aa2		\lemma LDiv/=0 {K : Ring} {q p : Poly K} (d : Monoid.LDiv q p) (p/=0 : p /= 0) : \Sigma (q /= 0) (d.inv /= 0)
+degree_LDiv	lemma	cc10c92cfc75	-	dc9ca6c3	af768e64:degree	\lemma degree_LDiv {K : Domain.Dec} {q p : Poly K} (d : Monoid.LDiv q p) (p/=0 : p /= 0) : degree q <= degree p
+polyTranslate	func	1eab70b4a438	2fa9d88da66e	54e785ef	1a676392:Poly.padd 98d88715:polyHom 61308cab:polyMapEval	\func polyTranslate {R : CRing} (a : R) (f : Poly R) : Poly R
+polyTranslate_degree<	lemma	1d719cde9571	-	8b6996b6		\lemma polyTranslate_degree< {R : CRing} (a : R) {f : Poly R} {n : Nat} (d : degree< f n) : degree< (polyTranslate a f) n
+polyTranslate_polyCoef	lemma	ebcf8f6f4b57	-	0e2b30c5	19a24fdb:degree< 14b4b36b:polyCoef e283b7cc:polyTranslate	\lemma polyTranslate_polyCoef {R : CRing} (a : R) {f : Poly R} {n : Nat} (d : degree< f (suc n)) : polyCoef (polyTranslate a f) n = polyCoef f n
+polyEval_polyTranslate	lemma	574e6920688a	-	78f203c8	b9c57702:polyEval e283b7cc:polyTranslate	\lemma polyEval_polyTranslate {R : CRing} (a : R) (f : Poly R) (z : R) : polyEval (polyTranslate a f) z = polyEval f (z + a)
+degree	func	5b9a982f0d8e	e4e16c462a1b	1dc8ab86	d4f1b28b:Poly.pzero	\func degree {R : Ring.Dec} (p : Poly R) : Nat
+degree_degree<	lemma	f6a53d9d3f38	-	ba5beda9		\lemma degree_degree< {R : Ring.Dec} {p : Poly R} {n : Nat} (d : degree p < n) : degree< p n
+degree<_degree	lemma	e35c50544b97	-	ba5beda9		\lemma degree<_degree {R : Ring.Dec} {p : Poly R} {n : Nat} (p/=0 : p /= 0) (d : degree< p n) : degree p < n
+degree_degree<=	lemma	1395f6969db5	-	ba5beda9		\lemma degree_degree<= {R : Ring.Dec} {p : Poly R} {n : Nat} (q : degree p <= n) : degree<= p n
+degree<=_degree	lemma	3dd8388ab4b8	-	ba5beda9		\lemma degree<=_degree {R : Ring.Dec} {p : Poly R} {n : Nat} (d : degree<= p n) : degree p <= n
+degree_polyMap	lemma	3d5bae88bb96	-	fe902cb2	af768e64:degree	\lemma degree_polyMap {R S : Ring.Dec} {f : RingHom R S} (inj : IsInj f) {p : Poly R} : degree (polyMap f p) = degree p
+monic-coef	lemma	b173f9cd94b7	-	1d5e9fb4	af768e64:degree	\lemma monic-coef {R : Ring.Dec} {p : Poly R} (pm : isMonic p) : polyCoef p (degree p) = 1
+leadCoef	func	ca701902f571	47761d66d476	6fb45f8b		\func leadCoef {R : Ring.Dec} (p : Poly R) : R
+leadCoef_polyCoef	lemma	16b504d2dd24	-	3f284767	af768e64:degree 331726b1:leadCoef 14b4b36b:polyCoef	\lemma leadCoef_polyCoef {R : Ring.Dec} {p : Poly R} : leadCoef p = polyCoef p (degree p)
+leadCoef=0-lem	lemma	428f00595edd	-	91187631	331726b1:leadCoef	\lemma leadCoef=0-lem {R : Ring.Dec} {p : Poly R} (s : leadCoef p = 0) : p = 0
+leadCoef_monomial	lemma	956616a1a087	-	05981c28		\lemma leadCoef_monomial {R : Ring.Dec} {a : R} {n : Nat} : leadCoef (monomial a n) = a
+degree_monomial	lemma	fbb800f6ce4a	-	05981c28		\lemma degree_monomial {R : Ring.Dec} {a : R} {n : Nat} (a/=0 : a /= 0) : degree (monomial a n) = n
+degree=0-lem	lemma	669bf86b6a62	-	551bb0da		\lemma degree=0-lem {R : Ring.Dec} {p : Poly R} (dp=0 : degree p = 0) : p = padd pzero (leadCoef p)
+degree_padd	lemma	b3fd4816e3ec	-	0d25e2eb	1a676392:Poly.padd af768e64:degree	\lemma degree_padd {R : Ring.Dec} {p : Poly R} (a : R) (p/=0 : p /= 0) : degree (padd p a) = suc (degree p)
+degree_+	lemma	22c1d7561578	-	8d35793d		\lemma degree_+ {R : Ring.Dec} {p q : Poly R} (q<p : degree q < degree p) : degree (p + q) = degree p
+leadCoef_+	lemma	d04fdee9ef80	-	8d35793d		\lemma leadCoef_+ {R : Ring.Dec} {p q : Poly R} (q<p : degree q < degree p) : leadCoef (p + q) = leadCoef p
+degree_*c	lemma	c46fc150db95	-	9a47d6a6		\lemma degree_*c {R : Domain.Dec} {c : R} {p : Poly R} (c/=0 : c /= 0) : degree (c PolyRing.*c p) = degree p
+degree_*c.*c-nonZero	lemma	fe7a30474da4	-	9a47d6a6		\lemma *c-nonZero (c/=0 : c /= 0) {p : Poly R} (p/=0 : p /= 0) : c PolyRing.*c p /= 0
+degree_*	lemma	5adccf69eb5b	-	94dc30f4		\lemma degree_* {R : Domain.Dec} {p q : Poly R} (p/=0 : p /= 0) (q/=0 : q /= 0) : degree (p * q) = degree p + degree q
+degree_*.degree_<	lemma	227082159063	-	94dc30f4		\lemma degree_< (q/=0 : q /= 0) {a : R} {p : Poly R} (p/=0 : p /= 0) : degree (a PolyRing.*c q) < suc (degree (p * q))
+degree_*_=	lemma	f5c15a4f3a42	-	12fc0cd6		\lemma degree_*_= {R : Domain.Dec} {p q s : Poly R} (s/=0 : s /= 0) (t : s = p * q) : degree s = degree p + degree q
+leadCoef_*c	lemma	77275f5d59fd	-	cd4d8ed1		\lemma leadCoef_*c {R : Domain.Dec} {a : R} {p : Poly R} : leadCoef (a PolyRing.*c p) = a * leadCoef p
+leadCoef_*	lemma	c81538de9622	-	cd4d8ed1		\lemma leadCoef_* {R : Domain.Dec} {p q : Poly R} : leadCoef (p * q) = leadCoef p * leadCoef q
+polyModule	func	980aee25b019	fddaf8df0caa	ba92d87a	061cf08b:PolyRing	\func polyModule {R : Ring} {U : LModule R} (f : LinearMap U U) : LModule (PolyRing R)
+polyModule.poly_func	func	206b8f2eb817	a9a5feaa1943	1dc72150		\func poly_func {R : Ring} {U : LModule R} (p : Poly R) (f : AddPointedHom U U) (u : U) : U
+polyModule.poly_func_zro	lemma	edf907750250	-	47a6413d		\lemma poly_func_zro {R : Ring} {U : LModule R} {p : Poly R} {f : AddPointedHom U U} : poly_func p f 0 = 0
+polyModule.poly_func_poly-*c	lemma	de750d1b316a	-	4634956b		\lemma poly_func_poly-*c {R : Ring} {U : LModule R} {a : R} {p : Poly R} {f : LinearMap U U} {u : U} : poly_func (a PolyRing.*c p) f u = a *c poly_func p f u
+polyModule.finitelyGenerated	lemma	8710b98a67ba	-	1776a967		\lemma finitelyGenerated {R : Ring} {U : LModule R} {f : LinearMap U U} (fg : U.IsFinitelyGenerated) : LModule.IsFinitelyGenerated {polyModule f}
+(overview)	-	-	-	e73d4a80	0ada228b:Poly 1a676392:Poly.padd d4f1b28b:Poly.pzero ad805bb0:polyModule	-

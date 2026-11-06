@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Logic.FirstOrder.Term. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TermSig	class	24a182b84662	-	f6889afb	f18ee3e2:TermSig.Sort 72992a31:TermSig.Symb 21bd8425:TermSig.domain	\class TermSig { \coerce | Sort : \Set | Symb : Sort -> \Set | domain {s : Sort} : Symb s -> Array Sort }
+Term	data	126793dab81a	-	e5638186	af7d322a:TermSig	\data Term {S : TermSig} (V : S -> \Set) (s : S) | var (V s) | apply (f : Symb s) (DArray (\lam j => Term V (domain f j)))
+Term.var	cons	359ce8b1d54b	-	725fa886		| var (V s)
+Term.apply	cons	a3be0fd2a4bf	-	84864481	72992a31:TermSig.Symb 21bd8425:TermSig.domain	| apply (f : Symb s) (DArray (\lam j => Term V (domain f j)))
+subst	func	1881464de953	b96435a9c6a0	c2aa7568	f92fab6d:Term 9263eb03:Term.apply	\func subst {S : TermSig} {U V : S -> \Set} {s : S} (t : Term U s) (rho : \Pi {s : S} -> U s -> Term V s) : Term V s
+subst-assoc	lemma	81557d44debd	-	b1df8643	b1f7f4f9:subst	\lemma subst-assoc {S : TermSig} {U V W : S -> \Set} {s : S} (t : Term U s) {rho : \Pi {s : S} -> U s -> Term V s} {tau : \Pi {s : S} -> V s -> Term W s} : subst (subst t rho) tau = subst t (\lam u => subst (rho u) tau)
+subst_var	lemma	ba1e463fbc2e	-	b10fb77a	ab8dc455:Term.var b1f7f4f9:subst	\lemma subst_var {S : TermSig} {V : S -> \Set} {s : S} (t : Term V s) : subst t var = t
+(overview)	-	-	-	0db5f418	f92fab6d:Term af7d322a:TermSig b1f7f4f9:subst	-

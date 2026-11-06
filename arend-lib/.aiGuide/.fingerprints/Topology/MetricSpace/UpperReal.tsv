@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Topology.MetricSpace.UpperReal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ExUpperRealMetric	instance	1bba0a5fe3d0	-	88914474		\instance ExUpperRealMetric : CompleteExMetricSpace ExUpperReal
+UpperRealMetric	instance	6c8ef792d69d	-	bb69cd3c	c3278abd:ExUpperRealMetric	\instance UpperRealMetric : CompleteExMetricSpace UpperReal
+ExUpperRealMetric.dist-left	lemma	f36fa0ce1e30	-	abd13cbb		\lemma dist-left {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : x <= y + a
+ExUpperRealMetric.dist-right	lemma	f5c4b5f5adfc	-	631dbe49		\lemma dist-right {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : y <= x + a
+ExUpperRealMetric.cfPoint	func	ed2492a7ad1a	4fc52cd75749	244b2ba1		\func cfPoint (F : Set ExUpperReal -> \Prop) : ExUpperReal
+upper-ex-isometry	func	872a84d3b41c	99d33c5189c6	4704b56c	c3278abd:ExUpperRealMetric cc9ae6da:UpperRealMetric	\func upper-ex-isometry : IsometricMap UpperRealMetric ExUpperRealMetric (\lam x => x)
+(overview)	-	-	-	a21826ea	8d656057:ExUpperRealMetric.cfPoint	-

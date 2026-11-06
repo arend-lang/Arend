@@ -1,0 +1,25 @@
+# arend -gc fingerprints v2 for module Homotopy.Join. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Join	func	6131900cd167	5f7a7008ca9d	f76721e8		\func Join (A B : \Type)
+Join.levelProp	lemma	9d79c8c909a6	-	36162d2e		\lemma levelProp {A B : \Prop} : isProp (Join A B)
+Join.from-||	lemma	109179113ac6	-	5484f1cf	4e7a4941:Join 7f84c8b6:Join.levelProp	\lemma from-|| {A B : \Prop} (x : A || B) : \level Join A B levelProp
+jinl	cons	fbffd724948f	50671ebb0e08	c9247f40	4e7a4941:Join	\cons jinl {A B : \Type} (a : A) : Join A B
+jinr	cons	0e66d86725c4	e2d99dae1223	d538de61	4e7a4941:Join	\cons jinr {A B : \Type} (b : B) : Join A B
+jglue	func	45ecc31dc4d8	2e9a2db6bacd	57d2a081	19bdb2d7:jinl 093ab725:jinr	\func jglue {A B : \Type} (a : A) (b : B) : jinl a = jinr b
+Join_Contr	lemma	324412b90262	-	eaf1f534	4e7a4941:Join	\lemma Join_Contr (A : \Type) {B : \Type} (Bc : Contr B) : Contr (Join A B)
+Join_Sphere0	func	b7997741f018	9371170c119a	33acc96e	4e7a4941:Join	\func Join_Sphere0 (A : \Type) : QEquiv {Join (Sphere 0) A} {Susp A}
+Join_Sphere0.joinSusp	func	de1e6574768e	ca728dcc6152	12226169	44e08bdf:jglue	\func joinSusp {A : \Type} (j : Join (Sphere 0) A) : Susp A
+Join_Sphere0.suspJoin	func	525e1a9d2f7a	f8bc1d03ef3a	12226169	44e08bdf:jglue	\func suspJoin {A : \Type} (s : Susp A) : Join (Sphere 0) A
+Join_Sphere0.joinSuspJoin	func	4e9d5429acbb	8679abfe3e87	ee1c1a83		\func joinSuspJoin {A : \Type} (j : Join (Sphere 0) A) : suspJoin (joinSusp j) = j
+Join_Sphere0.suspJoinSusp	func	90b4cd82b594	397f4d3a7a10	ee1c1a83		\func suspJoinSusp {A : \Type} (s : Susp A) : joinSusp (suspJoin s) = s
+Join-sym	func	3f09526b2ebd	fd84accca1fb	aa076f7d	4e7a4941:Join	\func Join-sym (A B : \Type) : QEquiv {Join A B} {Join B A}
+Join-sym.flip	func	5eafb28f8cfe	05bb2797e586	0c0d2ac2	19bdb2d7:jinl 093ab725:jinr	\func flip {A B : \Type} (j : Join A B) : Join B A
+Join-sym.flip-flip	func	dc16e2bf64c7	2f39545557c0	8d5547d5	67b087b5:Join-sym.flip	\func flip-flip {A B : \Type} (j : Join A B) : flip (flip j) = j
+Join-assoc	func	8407dc8c7e8a	50d4b6ab6e94	6e4e2db9	4e7a4941:Join	\func Join-assoc (A B C : \Type) : QEquiv {Join (Join A B) C} {Join A (Join B C)}
+Join-assoc.leftToRight	func	872a011d3359	230c144ac98f	2d93fee9	44e08bdf:jglue	\func leftToRight {A B C : \Type} (j : Join (Join A B) C) : Join A (Join B C)
+Join-assoc.rightToLeft	func	7360f335897a	c498a23ef85d	2d93fee9	44e08bdf:jglue	\func rightToLeft {A B C : \Type} (j : Join A (Join B C)) : Join (Join A B) C
+Join-assoc.leftRightLeft	func	b4f62e6d83da	a68994d6747f	40cbf61c		\func leftRightLeft {A B C : \Type} (j : Join (Join A B) C) : rightToLeft (leftToRight j) = j
+Join-assoc.rightLeftRight	func	c845139f21d3	ec913001262c	40cbf61c		\func rightLeftRight {A B C : \Type} (j : Join A (Join B C)) : leftToRight (rightToLeft j) = j
+Join_Susp	func	6b26a683b64f	3cf2f4aa881e	7c779b42	4e7a4941:Join 8ee2971a:Join_Sphere0	\func Join_Susp (A B : \Type u) : Join (Susp A) B = Susp (Join A B)
+Join_Sphere	func	0be661135ac1	5ec73ca6ee79	9c178bfa	4e7a4941:Join 8ee2971a:Join_Sphere0 eb1ba693:Join_Susp	\func Join_Sphere (A : \Type u) (n : Nat) : Join (Sphere n) A = iterr (Susp __) (suc n) A
+(overview)	-	-	-	15273a73	4e7a4941:Join	-

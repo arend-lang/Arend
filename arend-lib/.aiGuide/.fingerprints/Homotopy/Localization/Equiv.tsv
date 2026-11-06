@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Homotopy.Localization.Equiv. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsLocalEquiv	func	1602ead71f62	af80900054d3	7b377b00		\func IsLocalEquiv {U : Universe.{u}} {A B : \Type u} (f : A -> B)
+Extension.ext	func	fec3126e7543	637d0bce1a30	6e57249f		\func ext {A B C : \Type} (f : A -> B) (g : A -> C)
+Extension.ext-equiv	func	92e663127a2b	6417efefd716	c32673a8	a6a7795f:Extension.ext	\func ext-equiv {A B C : \Type} (f : A -> B) (g : A -> C) : QEquiv {ext f g} {\Pi (b : B) -> \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)}
+Extension.contr-equiv	lemma	1ed45a092853	-	812e75d3		\lemma contr-equiv {A B C : \Type u} (f : A -> B) (p : \Pi (g : A -> C) (b : B) -> Contr (\Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c))) : IsEquiv {B -> C} {A -> C} (-o f)
+connected_isLocalEquiv	lemma	dd0e3ce80708	-	0fe2d13b		\lemma connected_isLocalEquiv {U : Universe.{u}} {A B : \Type u} (f : A -> B) (conn : isConnectedMap f) : IsLocalEquiv f
+localTypesEquiv	lemma	3d9f15f93a42	-	2544455c	4ba53690:IsLocalEquiv	\lemma localTypesEquiv {U : Universe.{u}} {A B : Local.{u}} (f : A -> B) : IsLocalEquiv f = IsEquiv f
+localTypesEquiv.dir	lemma	51061910704f	-	a796a598		\lemma dir {U : Universe.{u}} {A B : Local.{u}} (f : A -> B) (p : IsLocalEquiv f) : IsEquiv f
+localEquivMap	lemma	da1c888d6ea5	-	8790adb4	4ba53690:IsLocalEquiv	\lemma localEquivMap {U : ReflUniverse.{u}} {A B : \Type u} (f : A -> B) : IsLocalEquiv f = IsEquiv (lmap f)
+(overview)	-	-	-	891c7603	9da763e5:Extension	-

@@ -1,0 +1,41 @@
+# arend -gc fingerprints v2 for module Algebra.Semiring. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PseudoSemiring	class	0431a93c5c6a	-	eaff7154	d16c8563:PseudoSemiring.ldistr 9221c1b8:PseudoSemiring.rdistr c9a74cae:PseudoSemiring.zro_*-left d3290f2b:PseudoSemiring.zro_*-right	\class PseudoSemiring \extends AbMonoid, Semigroup { | ldistr {x y z : E} : x * (y + z) = x * y + x * z | rdistr {x y z : E} : (x + y) * z = x * z + y * z | zro_*-left {x : E} : zro * x = zro | zro_*-right {x : E} : x * zro = zro }
+Semiring	class	b2d5ca76cb2c	-	a8e12d4e	433fd3d9:PseudoSemiring efe707ef:Semiring.natCoef 639ec32e:Semiring.natCoefSuc 6c0ab180:Semiring.natCoefZero	\class Semiring \extends PseudoSemiring, Monoid { | natCoef : Nat -> E | natCoef => natCoefImpl | natCoefZero : natCoef 0 = zro | natCoefZero => natCoefZeroImpl | natCoefSuc (n : Nat) : natCoef (suc n) = natCoef n + ide | natCoefSuc => natCoefSucImpl }
+PseudoSemiring.op	func	3c380baeefb1	1f5b12553869	212d6623	d16c8563:PseudoSemiring.ldistr 9221c1b8:PseudoSemiring.rdistr	\func op : PseudoSemiring
+Semiring.op	func	1bb8ec504a07	d86779e58308	0d166086	c833de72:PseudoSemiring.op	\func op : Semiring
+NonZeroSemiring	class	78712140eab6	-	d7909057	1660c1f7:NonZeroSemiring.inv-nonZero 19e79a31:NonZeroSemiring.zro/=ide 4f119372:Semiring	\class NonZeroSemiring \extends Semiring { | zro/=ide : zro /= ide }
+PseudoCSemiring	class	eb2fa5f046fb	-	98762c4c	433fd3d9:PseudoSemiring	\class PseudoCSemiring \extends PseudoSemiring, CSemigroup { | ldistr => *-comm *> rdistr *> pmap2 + *-comm *-comm | rdistr => *-comm *> ldistr *> pmap2 + *-comm *-comm | zro_*-left => *-comm *> zro_*-right | zro_*-right => *-comm *> zro_*-left }
+CSemiring	class	fbac81bdc674	-	52ea0d4c	6891d39b:CSemiring.divQuotient_un0 c687d44b:PseudoCSemiring 4f119372:Semiring	\class CSemiring \extends Semiring, PseudoCSemiring, CMonoid
+NonZeroSemiring.inv-nonZero	lemma	d1671ced2d75	-	5878b58a		\lemma inv-nonZero {a : E} (i : Monoid.Inv a) : a /= zro
+CSemiring.divQuotient_un0	lemma	5dc82fa4ea46	-	65f1d978		\lemma divQuotient_un0 {a : E} (p : in~ a = {DivQuotient \this} in~ 0) : a = 0
+Semiring.zero-div	lemma	dfcfa615af52	-	811452b4		\lemma zero-div {x : E} : LDiv x 0 0
+Semiring.ldiv=0	lemma	e7b5feb89fa4	-	2bcf1c3e		\lemma ldiv=0 {x y : E} (l : LDiv x y) (p : x = 0) : y = 0
+Semiring.ldiv/=0	lemma	28efd8c011d9	-	21a5d879		\lemma ldiv/=0 {x y : E} (y/=0 : y /= 0) (x|y : LDiv x y) : x /= 0
+Semiring.LDiv_+	func	812a0c44bdd2	303720185d26	deb40f85		\func LDiv_+ {a b c : E} (a|b : LDiv a b) (a|c : LDiv a c) : LDiv a (b + c)
+Semiring.LDiv_BigSum	func	7528d0250287	6b7a239886c1	96bc39bf		\func LDiv_BigSum {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> LDiv a (l j)) : LDiv a (BigSum l)
+Semiring.associates0	lemma	938335467784	-	fa4189ba		\lemma associates0 {a b : E} (c : associates a b) (p : a = 0) : b = 0
+Semiring.natCoef_*_*n	lemma	1e572051ad9e	-	3d2b5344	efe707ef:Semiring.natCoef	\lemma natCoef_*_*n {n : Nat} {a : E} : natCoef n * a = n *n a
+Semiring.natCoef_*_*n-right	lemma	3040fbdc99be	-	ae4c67a2	efe707ef:Semiring.natCoef	\lemma natCoef_*_*n-right {n : Nat} {a : E} : a * natCoef n = n *n a
+Semiring.natCoef_*n	lemma	10fad1648d92	-	ca1cde55	efe707ef:Semiring.natCoef	\lemma natCoef_*n {n : Nat} : natCoef n = n *n 1
+Semiring.*n-comm-left	lemma	2246bb77496e	-	b56970e9		\lemma *n-comm-left {n : Nat} {a b : E} : n *n (a * b) = (n *n a) * b
+Semiring.*n-comm-right	lemma	228d4df2ca46	-	6999f280		\lemma *n-comm-right {n : Nat} {a b : E} : n *n (a * b) = a * (n *n b)
+Semiring.natCoef_+	lemma	0e65d750d6d9	-	5c5901c8	efe707ef:Semiring.natCoef	\lemma natCoef_+ {n m : Nat} : natCoef (n Nat.+ m) = natCoef n + natCoef m
+Semiring.natCoef-comm	lemma	8573779890fa	-	ea51fb97	efe707ef:Semiring.natCoef	\lemma natCoef-comm {n : Nat} {a : E} : natCoef n * a = a * natCoef n
+Semiring.natCoef_*	lemma	b950f4bb5e70	-	9bd6b607	efe707ef:Semiring.natCoef	\lemma natCoef_* {n m : Nat} : natCoef (n Nat.* m) = natCoef n * natCoef m
+PseudoSemiring.BigSum-ldistr	lemma	9d8b0675dc83	-	d1376cb0		\lemma BigSum-ldistr {x : E} {l : Array E} : x * BigSum l = BigSum (map (x *) l)
+Semiring.FinSum-ldistr	lemma	c5dfc8cd9e38	-	0447ec44		\lemma FinSum-ldistr {A : FinSet} {x : E} {y : A -> E} : x * FinSum y = FinSum (x * y __)
+PseudoSemiring.BigSum-rdistr	lemma	a6ca4de3a3c6	-	ddb43df0		\lemma BigSum-rdistr {l : Array E} {z : E} : BigSum l * z = BigSum (\lam i => l i * z)
+Semiring.FinSum-rdistr	lemma	be9f3c66a62d	-	566d2c22		\lemma FinSum-rdistr {A : FinSet} {x : E} {y : A -> E} : FinSum y * x = FinSum (y __ * x)
+Semiring.FinSum-distr	lemma	d9679faf3f8b	-	a6581d0a		\lemma FinSum-distr {A B : FinSet} {x : A -> E} {y : B -> E} : FinSum x * FinSum y = FinSum (\lam (s : \Sigma A B) => x s.1 * y s.2)
+Semiring.BigSum_replicate	lemma	57c0a6648ed7	-	11073310	efe707ef:Semiring.natCoef	\lemma BigSum_replicate {x : E} {n : Nat} : BigSum (replicate n x) = natCoef n * x
+Semiring.BigSum_replicate1	lemma	687c6f757214	-	df891567	efe707ef:Semiring.natCoef	\lemma BigSum_replicate1 {n : Nat} : BigSum (replicate n ide) = natCoef n
+Semiring.FinSum_replicate	lemma	ada565ba6275	-	1cbb313a	efe707ef:Semiring.natCoef	\lemma FinSum_replicate {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = natCoef A.card * x
+Semiring.BigProd_zro	lemma	b44ec009fc0a	-	5e605de6		\lemma BigProd_zro {l : Array E} (j : Fin l.len) (p : l j = 0) : BigProd l = 0
+Semiring.pow_0	lemma	f72cfa60ca98	-	a4741598		\lemma pow_0 {n : Nat} (n/=0 : n /= 0) : pow 0 n = 0
+Semiring.powSum	func	e267a31c0044	14ce10e6474f	4cf23108		\func powSum (x : E) (n : Nat) : E
+Semiring.trivial	lemma	a1997085c375	-	676b3f3e		\lemma trivial (p : 0 = {E} 1) {x y : E} : x = y
+Semiring.trivial-char	lemma	794bbfaca50d	-	ae7c3ead		\lemma trivial-char : (zro = ide) <-> Contr E
+Semiring.Inv_zro	lemma	5fc018e014af	-	9331a6cd		\lemma Inv_zro : Monoid.Inv zro <-> (zro = ide)
+Semiring.IsNilpotent	func	ad5ffcad4839	35be6dbddc2d	bc7f5121		\func IsNilpotent (x : E)
+(overview)	-	-	-	eb634f9f	19eef774:CSemiring c687d44b:PseudoCSemiring 433fd3d9:PseudoSemiring 4f119372:Semiring efe707ef:Semiring.natCoef	-

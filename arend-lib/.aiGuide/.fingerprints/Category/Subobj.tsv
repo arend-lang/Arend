@@ -1,0 +1,25 @@
+# arend -gc fingerprints v2 for module Category.Subobj. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Subobj	type	b879873a6a0e	23d6bd469c07	f3ccb454		\type Subobj {C : Precat} (obj : C)
+inso~	func	f31af4d5f9a7	843561dd4cbb	166616bc	40d84939:Subobj	\func inso~ {C : Precat} {obj : C} (m : (Mono {C}) { | cod => obj }) : Subobj m.cod
+SubobjPoset	instance	c3af75272ccf	-	5ca921c0	40d84939:Subobj	\instance SubobjPoset {C : Precat} (obj : C) : Poset (Subobj obj)
+SubobjPoset.extractMap	lemma	cd6746631c72	-	24217459	6bab8c18:inso~	\lemma extractMap {obj : C} {f g : (Mono {C}) { | cod => obj }} (f<=g : inso~ f <= inso~ g) : \Sigma (h : Hom f.dom g.dom) (g.f ∘ h = f)
+~-unsoequiv	lemma	486c8fc0fd12	-	4c0c5341	6bab8c18:inso~	\lemma ~-unsoequiv {C : Precat} {obj : C} {m1 m2 : (Mono {C}) { | cod => obj }} (p : inso~ m1 = inso~ m2) : ∃ (f : Hom m1.dom m2.dom) (m2.f ∘ f = m1.f) (g : Hom m2.dom m1.dom) (m1.f ∘ g = m2.f)
+subobjTop	sfunc	65327e5d13b8	15746c794789	9864fefc		\sfunc subobjTop {C : Precat} {obj : C} : Subobj obj
+SubobjectSemilattice	instance	25f99b3cf8f2	-	b01f2e09	40d84939:Subobj 7407abc7:subobjTop	\instance SubobjectSemilattice {C : PrecatWithPullbacks} (obj : C) : TopMeetSemilattice
+subobjLifts	func	13418a69104d	0bc4092b9812	b67dce75		\func subobjLifts {C : Precat} {x y : C} (f : Hom x y) (s : Subobj y) : \Prop
+subobjLifts_id_top	lemma	219b123f50df	-	d1f57d92	7407abc7:subobjTop	\lemma subobjLifts_id_top {C : Precat} {x : C} {s : Subobj x} : subobjLifts id s <-> (s = subobjTop)
+subobjEq	sfunc	a447697c7a19	8df0f46c11b5	0ded84ec		\sfunc subobjEq {C : PrecatWithBprod} (c : C) : Subobj (Bprod c c)
+subobjEq-lifts	lemma	e5646bb1b5e1	-	30f5aba0	cc223f0c:subobjEq	\lemma subobjEq-lifts {C : PrecatWithBprod} {x c : C} {f g : Hom x c} : subobjLifts (pair f g) (subobjEq c) <-> (f = g)
+subobjPullback	func	f62bf1645325	f632c7e24a8f	9c85caeb		\func subobjPullback {C : PrecatWithPullbacks} {x y : C} (h : Hom x y) (s : Subobj y) : Subobj x
+subobjPullback-char	lemma	9150d39a83cf	-	6c34ca4b	6bab8c18:inso~ e8d74b3a:subobjPullback	\lemma subobjPullback-char {C : PrecatWithPullbacks} {s m : Mono {C}} {sub : Subobj s.cod} (p : sub = inso~ s) {h : Hom m.cod s.cod} (q : subobjPullback h sub = inso~ m) : Contr (Pullback h s.f m.dom m)
+subobjPullback-lifts	lemma	f2f59e92c76d	-	e1d5e53b	e8d74b3a:subobjPullback	\lemma subobjPullback-lifts {C : PrecatWithPullbacks} {x y z : C} {f : Hom x y} {g : Hom y z} {s : Subobj z} : subobjLifts f (subobjPullback g s) <-> subobjLifts (g ∘ f) s
+subobjLifts_top	lemma	e76f757a19d7	-	bd5c68a1	7407abc7:subobjTop	\lemma subobjLifts_top {C : PrecatWithPullbacks} {x y : C} {f : Hom x y} {s : Subobj y} : subobjLifts f s <-> (subobjPullback f s = subobjTop)
+subobjPullback_id	lemma	93543ec599f4	-	39f9293d		\lemma subobjPullback_id {C : PrecatWithPullbacks} {x : C} {s : Subobj x} : subobjPullback id s = s
+subobjPullback_o	lemma	983fe272b4c0	-	6082eec1	e8d74b3a:subobjPullback	\lemma subobjPullback_o {C : PrecatWithPullbacks} {x y z : C} {f : Hom x y} {g : Hom y z} {s : Subobj z} : subobjPullback (g ∘ f) s = subobjPullback f (subobjPullback g s)
+subobjPullback-top	lemma	c7cd18501798	-	0e3c0c0b	6bab8c18:inso~	\lemma subobjPullback-top {C : PrecatWithPullbacks} {x y : C} {f : Hom x y} {s : Subobj y} (p : s = inso~ idIso) : subobjPullback f s = inso~ idIso
+subobjPullback_top	lemma	d516ddeaf0e5	-	3428918a	e8d74b3a:subobjPullback 7407abc7:subobjTop	\lemma subobjPullback_top {C : PrecatWithPullbacks} {x y : C} {f : Hom x y} : subobjPullback f subobjTop = subobjTop
+subobjPullback-self	lemma	1ced3f0e5b24	-	dd1fb918	6bab8c18:inso~	\lemma subobjPullback-self {C : PrecatWithPullbacks} {h : Mono {C}} {s : Subobj h.cod} (p : s = inso~ h) : subobjPullback h.f s = inso~ idIso
+subobjPullback_Iso-equiv	func	7c2363baccba	5e811062d679	d9a6bc81	40d84939:Subobj	\func subobjPullback_Iso-equiv {C : PrecatWithPullbacks} (h : Iso {C}) : QEquiv {Subobj h.cod} {Subobj h.dom}
+subobjPullback_Iso	func	c60bb996729e	62e33044626f	50179070	6bab8c18:inso~	\func subobjPullback_Iso {C : PrecatWithPullbacks} (h : Iso {C}) {s : Subobj h.cod} {m : (Mono {C}) { | cod => h.cod }} (p : s = inso~ m) : subobjPullback h.f s = inso~ (Mono.comp h.reverse m)
+(overview)	-	-	-	e470c223	40d84939:Subobj	-

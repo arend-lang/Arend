@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Equiv.HalfAdjoint. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HAEquiv	record	368c756182ea	-	a2825e2f	d5d5765e:HAEquiv.f_ret_f=f_sec_f	\record HAEquiv \extends QEquiv { | f_ret_f=f_sec_f : \Pi (x : A) -> pmap f (ret_f x) = f_sec (f x) }
+HAEquiv.coh_f_sec	func	3489b5c1e948	461aa3deb023	cc54678d		\func coh_f_sec (s : Section) (r : \Pi (y : s.B) -> s (s.ret y) = y) (y : s.B) : s (s.ret y) = y
+HAEquiv.coh_f_ret_f=f_sec_f	func	ea92b76b1fcb	1b9bf31022bd	555f9281	823ff0a0:HAEquiv.coh_f_sec	\func coh_f_ret_f=f_sec_f (s : Section) (r : \Pi (y : s.B) -> s (s.ret y) = y) (x : s.A) : pmap s (s.ret_f x) = coh_f_sec s r (s x)
+HAEquiv.fromQEquiv	coerce	6f62081b03bf	-	4487c0b0	7d82b46f:HAEquiv 823ff0a0:HAEquiv.coh_f_sec	\use \coerce fromQEquiv (e : QEquiv) : HAEquiv
+HAEquiv.levelProp	lemma	ebdbe9850e88	-	8fc1e9ec	7d82b46f:HAEquiv	\lemma levelProp {A B : \Type u} {f : A -> B} : isProp (HAEquiv f)
+(overview)	-	-	-	9c727a4a	7d82b46f:HAEquiv 823ff0a0:HAEquiv.coh_f_sec	-

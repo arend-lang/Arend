@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Category.CartesianClosed. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CartesianClosedPrecat	class	d3f711e87454	-	00100596	6ef329ef:CartesianClosedPrecat.CHom 7d3904ef:CartesianClosedPrecat.CHom-eval 21ac32e5:CartesianClosedPrecat.CHom-univ	\class CartesianClosedPrecat \extends CartesianPrecat { | CHom : Ob -> Ob -> Ob | CHom-eval {X Y : Ob} : Hom (Bprod (CHom X Y) X) Y | CHom-univ {X Y Z : Ob} : IsEquiv {Hom Z (CHom X Y)} {Hom (Bprod Z X) Y} (\lam g => CHom-eval ∘ prodMap g id) }
+CartesianClosedPrecat.curry	func	f4633dd843fd	a999f70bb78d	56c26e86	6ef329ef:CartesianClosedPrecat.CHom 21ac32e5:CartesianClosedPrecat.CHom-univ	\func curry {X Y Z : Ob} (f : Hom (Bprod Z X) Y) : Hom Z (CHom X Y)
+CartesianClosedPrecat.uncurry	func	a33a5395c871	5de2a956790e	c94f0e86	6ef329ef:CartesianClosedPrecat.CHom 7d3904ef:CartesianClosedPrecat.CHom-eval	\func uncurry {X Y Z : Ob} (g : Hom Z (CHom X Y)) : Hom (Bprod Z X) Y
+CartesianClosedPrecat.curry_uncurry	lemma	1db8a4207824	-	8c7025d9	1e02c3d3:CartesianClosedPrecat.curry b345b0f1:CartesianClosedPrecat.uncurry	\lemma curry_uncurry {X Y Z : Ob} {g : Hom Z (CHom X Y)} : curry (uncurry g) = g
+CartesianClosedPrecat.uncurry_curry	lemma	49d7c14a9e6f	-	2ada1522	1e02c3d3:CartesianClosedPrecat.curry b345b0f1:CartesianClosedPrecat.uncurry	\lemma uncurry_curry {X Y Z : Ob} {f : Hom (Bprod Z X) Y} : uncurry (curry f) = f
+SetCartesianClosed	instance	167d5e63ea45	-	be81935e	6ef329ef:CartesianClosedPrecat.CHom 7d3904ef:CartesianClosedPrecat.CHom-eval 21ac32e5:CartesianClosedPrecat.CHom-univ	\instance SetCartesianClosed : CartesianClosedPrecat (\Set u)
+(overview)	-	-	-	b869ff8d	6ef329ef:CartesianClosedPrecat.CHom 7d3904ef:CartesianClosedPrecat.CHom-eval 1e02c3d3:CartesianClosedPrecat.curry b345b0f1:CartesianClosedPrecat.uncurry	-

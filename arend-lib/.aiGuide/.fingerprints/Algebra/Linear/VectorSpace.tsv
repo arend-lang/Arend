@@ -1,0 +1,28 @@
+# arend -gc fingerprints v2 for module Algebra.Linear.VectorSpace. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+VectorSpace	class	03dad1d91684	-	2c73eeda		\class VectorSpace \extends LModule { \override R : DiscreteField }
+FinVectorSpace	class	1c099efb0a45	-	6868b214	7d850984:VectorSpace	\class FinVectorSpace \extends VectorSpace, FinModule
+rank	func	d8efdf03d868	60a56fbb9893	4f925ee9		\func rank {R : SmithDomain} {n m : Nat} (A : Matrix R n m) : Nat
+rank.firstNonZero	func	8fecd2aa9103	6e6f3d728291	5ad435d8		\func firstNonZero {R : CRing.Dec} (l : Array (DivQuotient R)) : Nat
+rank.firstNonZero_<=	lemma	c59c8a2b1f03	-	52a155b2	f311f7ae:rank.firstNonZero	\lemma firstNonZero_<= {R : CRing.Dec} {l : Array (DivQuotient R)} (c : \Pi {i j : Fin l.len} -> i NatSemiring.<= j -> l i = in~ 0 -> l j = in~ 0) {k : Fin l.len} : firstNonZero l <= k <-> l k = in~ 0
+rank.firstNonZero<=len	lemma	d98b3f6ba23f	-	56307e74	f311f7ae:rank.firstNonZero	\lemma firstNonZero<=len {R : CRing.Dec} {l : Array (DivQuotient R)} : firstNonZero l <= l.len
+rank.rank-array	lemma	a10d7f94d47a	-	ae9267a4		\lemma rank-array {R : SmithDomain} {n m : Nat} (A : Matrix R n m) : \level \Sigma (d : Array (DivQuotient R) (n ∧ m)) (∃ (B : Matrix R n m) (A M~ B) (IsSmith B) ∀ j (d j = in~ (B (fin-inc_<= meet-left j) (fin-inc_<= meet-right j)))) \lam (d, inP (B, A~B, Bs, q)) (d', inP (B', A~B', B's, q')) => ext $ exts (\lam j => q j *> ~-pequiv (smith-unique.smith-div-equiv B's Bs (~-transitive (~-symmetric A~B') A~B) _ _) *> inv (q' j))
+rank.rank-array_M~	lemma	4dc6e1034600	-	737705e8	cb49fce6:rank.rank-array	\lemma rank-array_M~ {R : SmithDomain} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B) : (rank-array A).1 = (rank-array B).1
+rank.rank_M~	lemma	a228f2668035	-	6db96ae9	13be2ee8:rank	\lemma rank_M~ {R : SmithDomain} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B) : rank A = rank B
+rank.rank-array_smith	lemma	ebf294f71e82	-	20d7b33b	cb49fce6:rank.rank-array	\lemma rank-array_smith {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) : (rank-array A).1 = mkArray (\lam (j : Fin (n ∧ m)) => DivQuotient.inD (A (fin-inc_<= meet-left j) (fin-inc_<= meet-right j)))
+rank.rank_smith	lemma	6d1d6af566f0	-	8709a6b7	13be2ee8:rank	\lemma rank_smith {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) : rank A = firstNonZero (\lam (j : Fin (n ∧ m)) => DivQuotient.inD (A (fin-inc_<= meet-left j) (fin-inc_<= meet-right j)))
+rank.rank_transpose	lemma	1de7ae21a540	-	44998911	13be2ee8:rank	\lemma rank_transpose {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank (transpose A) = rank A
+rank.rank_<=	lemma	b170815a7d59	-	38f72e7a	13be2ee8:rank cb49fce6:rank.rank-array	\lemma rank_<= {R : SmithDomain} {n m : Nat} {A : Matrix R n m} {k : Nat} (p : k < n) (q : k < m) : rank A <= k <-> ((rank-array A).1 (toFin k $ <_meet-univ p q) = in~ 0)
+rank.rank_smith_<=	lemma	9c7771ddf626	-	2321be45	13be2ee8:rank	\lemma rank_smith_<= {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) {k : Nat} (p : k < n) (q : k < m) : rank A <= k <-> (A (toFin k p) (toFin k q) = 0)
+rank<=rows	lemma	d0945640c535	-	e504a5c3	13be2ee8:rank	\lemma rank<=rows {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank A <= n
+rank<=columns	lemma	f2055d88582f	-	943cd9b7	13be2ee8:rank	\lemma rank<=columns {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank A <= m
+smith-bases	lemma	99ba14e4f881	-	5c2a248f	13be2ee8:rank	\lemma smith-bases {R : SmithDomain} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V) : ∃ (lu' : Array U lu.len) (U.IsBasis lu') (lv' : Array V lv.len) (bv' : V.IsBasis lv') (d : Array R lu.len) (\Pi (j : Fin lu.len) -> f (lu' j) = d j *c fit V.zro lv' j) (\Pi (j : Fin lu.len) -> (d j = 0) <-> rank (toMatrix lu' bv' f) <= j)
+smith-bases.M~_toLinearMap	lemma	3260df007267	-	8b64a8c9		\lemma M~_toLinearMap {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) {A B : Matrix R lu.len lv.len} (A~B : A M~ B) : ∃ (lu' : Array U lu.len) (lv' : Array V lv.len) (bu' : U.IsBasis lu') (bv' : V.IsBasis lv') (toLinearMap bu lv A = toLinearMap bu' lv' B)
+image-fin	instance	ff3cbf8aec65	-	089b4247		\instance image-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule
+image-fin.basis	lemma	f405e2499211	-	d14aa71b	13be2ee8:rank	\lemma basis {U V : LModule R} (f : LinearMap U V) {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv') : ∃ (l : Array (ImLModule f)) (IsBasis {ImLModule f} l) (l.len = rank (LinearMap.toMatrix lu' bv' f))
+image-fin.dimension_rank	lemma	d1c70d378dcd	-	60e571e2	1d9537f7:image-fin 13be2ee8:rank	\lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) : FinModule.dimension (image-fin f) = rank (LinearMap.toMatrix lu bv f)
+kernel-fin	instance	ff3cbf8aec65	-	6eda31af		\instance kernel-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule
+kernel-fin.filter0	func	37c8b9652a13	6156ff2e4fea	272007a4		\func filter0 {R : AddGroup.Dec} (ds : Array R) : Array (\Sigma (j : Fin ds.len) (ds j = 0))
+kernel-fin.filter0_BigSum	lemma	df3227dc44eb	-	11044fde		\lemma filter0_BigSum {R : AddGroup.Dec} {A : AddMonoid} (ds : Array R) (f : Fin ds.len -> A) (p : \Pi (j : Fin ds.len) -> ds j /= 0 -> f j = 0) : A.BigSum f = A.BigSum (\lam j => f (filter0 ds j).1)
+dependency-dec	func	7d39269cf598	94075efd261d	2bc15784		\func dependency-dec {R : SmithDomain} {U : FinModule R} (l : Array U) : Or (U.IsDependent l) (U.IsIndependent l)
+(overview)	-	-	-	6ba8dbbd	9a56a0a5:FinVectorSpace 7d850984:VectorSpace 13be2ee8:rank	-

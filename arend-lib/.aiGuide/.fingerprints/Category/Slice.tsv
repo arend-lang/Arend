@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Category.Slice. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ObOver	func	cb13d80e2c80	b3a64ff030e5	b78d4d66		\func ObOver {C : Precat} (x : C)
+SlicePrecat	instance	ae428fea175d	-	20af1ded	8d910819:ObOver	\instance SlicePrecat {C : Precat} (x : C) : Precat (ObOver x)
+SlicePrecat.forget	lemma	2f4b7c9c5e49	-	6ed6c82f	d89fa1a5:SlicePrecat	\lemma forget {C : Precat} (x : C) : FaithfulFunctor (SlicePrecat x) C __.1 __.1
+SliceCat	instance	dfb6bd808ef8	-	965b56c7	d89fa1a5:SlicePrecat	\instance SliceCat {C : Cat} (x : C) : Cat
+(overview)	-	-	-	928d103f	43b1ee56:SliceCat d89fa1a5:SlicePrecat	-

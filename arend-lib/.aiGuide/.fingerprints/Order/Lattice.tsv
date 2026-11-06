@@ -1,0 +1,73 @@
+# arend -gc fingerprints v2 for module Order.Lattice. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MeetSemilattice	class	19b3b380858a	-	7e6ae1a7	62b8ffdc:MeetSemilattice.meet e89aa4f8:MeetSemilattice.meet-left 07c98aec:MeetSemilattice.meet-right 0733858b:MeetSemilattice.meet-univ	\class MeetSemilattice \extends Poset, PrecatWithBprod, PrecatWithPullbacks { | meet \alias \infixl 7 ∧ : E -> E -> E | meet-left {x y : E} : x ∧ y <= x | meet-right {x y : E} : x ∧ y <= y | meet-univ {x y z : E} : z <= x -> z <= y -> z <= x ∧ y | Bprod => \lam x y => \new Product { | apex => x ∧ y | proj => \case \elim __ \with { | 0 => meet-left | 1 => meet-right } | tupleMap => \lam f => meet-univ (f 0) (f 1) | tupleBeta => prop-pi | tupleEq => \lam _ => prop-pi } | pullback => \lam {x} {y} f g => \new Pullback { | apex => x ∧ y | pbProj1 => meet-left | pbProj2 => meet-right | pbCoh => prop-pi | pbMap => \lam w<=x w<=y _ => meet-univ w<=x w<=y | pbBeta1 => prop-pi | pbBeta2 => prop-pi | pbEta => \lam _ _ => prop-pi } }
+MeetSemilattice.Big_meet	func	3346f0e5bff6	fdafeba4fff3	3a214c2c		\func Big_meet {n : Nat} (l : Array E (suc n)) : E
+MeetSemilattice.Big_meet-cond	lemma	63306d086d6a	-	a916ed1d	4ba2d1f1:MeetSemilattice.Big_meet	\lemma Big_meet-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : Big_∧ l <= l j
+MeetSemilattice.meet-idemp	lemma	ae9efa8d5091	-	2736e5c3	62b8ffdc:MeetSemilattice.meet	\lemma meet-idemp {x : E} : x ∧ x = x
+MeetSemilattice.meet-comm	lemma	9509029ffa5a	-	2736e5c3	62b8ffdc:MeetSemilattice.meet	\lemma meet-comm {x y : E} : x ∧ y = y ∧ x
+MeetSemilattice.meet-assoc	lemma	d9f001eb1388	-	2736e5c3	62b8ffdc:MeetSemilattice.meet	\lemma meet-assoc {x y z : E} : (x ∧ y) ∧ z = x ∧ (y ∧ z)
+MeetSemilattice.meet-monotone	lemma	ea4a8e4f7e35	-	4e0e0644	62b8ffdc:MeetSemilattice.meet	\lemma meet-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∧ y <= x' ∧ y'
+MeetSemilattice.meet_<=	lemma	2b358c0b144a	-	97429df4	62b8ffdc:MeetSemilattice.meet	\lemma meet_<= {x y : E} (x<=y : x <= y) : x ∧ y = x
+MeetSemilattice.meet_<='	lemma	55165a3ba91e	-	65d1f9b8	62b8ffdc:MeetSemilattice.meet	\lemma meet_<=' {x y : E} (p : x ∧ y = x) : x <= y
+MeetSemilattice.Big_<=_meet0	lemma	e3e9ec16dc8c	-	fe8e36ba		\lemma Big_<=_meet0 {l : Array E} {x : E} : Big ∧ x l <= x
+MeetSemilattice.Big_<=_meet1	lemma	ca5e85392acf	-	fe8e36ba		\lemma Big_<=_meet1 {l : Array E} {x : E} (i : Fin l.len) : Big ∧ x l <= l i
+MeetSemilattice.Big_meet-univ	lemma	17db3279c039	-	673c4ab3		\lemma Big_meet-univ {l : Array E} {x y : E} (p : y <= x) (f : \Pi (i : Fin l.len) -> y <= l i) : y <= Big ∧ x l
+MeetSemilattice.op	func	597f59db43c7	e9f16ae66fb4	e3257c26	4c483fc8:JoinSemilattice 62b8ffdc:JoinSemilattice.join 62b8ffdc:MeetSemilattice.meet	\func op : JoinSemilattice
+MeetSemilattice.Meets	func	56b5a8da96a5	5dff73245e4e	0a88f1a1	3bf66f96:MeetSemilattice.Meets-isProp	\func Meets {E : Poset} (x y : E)
+JoinSemilattice	class	7ac42cc857e1	-	486b6303	62b8ffdc:JoinSemilattice.join 05ca79be:JoinSemilattice.join-left fac6c15d:JoinSemilattice.join-right 1541f962:JoinSemilattice.join-univ	\class JoinSemilattice \extends Poset { | join \alias \infixl 6 ∨ : E -> E -> E | join-left {x y : E} : x <= x ∨ y | join-right {x y : E} : y <= x ∨ y | join-univ {x y z : E} : x <= z -> y <= z -> x ∨ y <= z }
+JoinSemilattice.Big_join	func	3346f0e5bff6	220630ecba89	1cfb4563		\func Big_join {n : Nat} (l : Array E (suc n)) : E
+JoinSemilattice.Big_join-cond	lemma	c5827020b252	-	7269c846	9b3c5120:JoinSemilattice.Big_join	\lemma Big_join-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : l j <= Big_∨ l
+JoinSemilattice.join-monotone	lemma	ede14c202815	-	fbab1b2c	62b8ffdc:JoinSemilattice.join	\lemma join-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∨ y <= x' ∨ y'
+JoinSemilattice.join-idemp	lemma	31450e57e969	-	fbab1b2c	62b8ffdc:JoinSemilattice.join	\lemma join-idemp {x : E} : x ∨ x = x
+JoinSemilattice.join-comm	lemma	bf6dba1c7568	-	fbab1b2c	62b8ffdc:JoinSemilattice.join	\lemma join-comm {x y : E} : x ∨ y = y ∨ x
+JoinSemilattice.join-assoc	lemma	084973356ec9	-	fbab1b2c	62b8ffdc:JoinSemilattice.join	\lemma join-assoc {x y z : E} : (x ∨ y) ∨ z = x ∨ (y ∨ z)
+JoinSemilattice.join_<=	lemma	0cd0068fb2cf	-	ce829212	62b8ffdc:JoinSemilattice.join	\lemma join_<= {x y : E} (x<=y : x <= y) : x ∨ y = y
+JoinSemilattice.join_<='	lemma	0cbd7ec0b1c4	-	ce829212	62b8ffdc:JoinSemilattice.join	\lemma join_<=' {x y : E} (p : x ∨ y = y) : x <= y
+JoinSemilattice.Big_<=_join0	lemma	79661f0df2e5	-	6df079de		\lemma Big_<=_join0 {l : Array E} {x : E} : x <= Big ∨ x l
+JoinSemilattice.Big_<=_join1	lemma	8653a29d84d7	-	6df079de		\lemma Big_<=_join1 {l : Array E} {x : E} (i : Fin l.len) : l i <= Big ∨ x l
+JoinSemilattice.Big_<=_join	lemma	d27f96a0b6b4	-	6df079de		\lemma Big_<=_join {n : Nat} {l : Array E (suc n)} (i : Fin (suc n)) : l i <= Big ∨ (l 0) (tail l)
+JoinSemilattice.Big_join-univ	lemma	950ac27e9355	-	c142c42d		\lemma Big_join-univ {l : Array E} {x y : E} (p : x <= y) (f : \Pi (i : Fin l.len) -> l i <= y) : Big ∨ x l <= y
+JoinSemilattice.op	func	0843728d26a9	60c31cd456c2	300f7e0f	62b8ffdc:JoinSemilattice.join 0ea9a392:MeetSemilattice 62b8ffdc:MeetSemilattice.meet	\func op : MeetSemilattice
+JoinSemilattice.Joins	func	56b5a8da96a5	ec35ae4d5866	f0b66c2c	239f43d6:JoinSemilattice.Joins-isProp	\func Joins {E : Poset} (x y : E)
+Lattice	class	b6921cd7adae	-	6992d7f0	4c483fc8:JoinSemilattice 0ea9a392:MeetSemilattice	\class Lattice \extends MeetSemilattice, JoinSemilattice
+Lattice.ldistr<=	lemma	ad63c85cb687	-	f8768221	62b8ffdc:JoinSemilattice.join 62b8ffdc:MeetSemilattice.meet	\lemma ldistr<= {x y z : E} : (x ∧ y) ∨ (x ∧ z) <= x ∧ (y ∨ z)
+Lattice.op	func	9850b6687126	42b81a12d8a6	9d36f0b3		\func op : Lattice
+DistributiveLattice	class	967341c2ca50	-	3eec572c	bd885a20:DistributiveLattice.ldistr>= 78ace824:Lattice	\class DistributiveLattice \extends Lattice { | ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z) }
+DistributiveLattice.meet-ldistr	lemma	cc028d96f7a6	-	c5ffcae4	62b8ffdc:JoinSemilattice.join 62b8ffdc:MeetSemilattice.meet	\lemma meet-ldistr {x y z : E} : x ∧ (y ∨ z) = (x ∧ y) ∨ (x ∧ z)
+DistributiveLattice.meet-rdistr	lemma	c6ce3d5ed153	-	c5ffcae4	62b8ffdc:JoinSemilattice.join 62b8ffdc:MeetSemilattice.meet	\lemma meet-rdistr {x y z : E} : (y ∨ z) ∧ x = (y ∧ x) ∨ (z ∧ x)
+DistributiveLattice.rdistr>=	lemma	6526e97ce641	-	841a1890		\lemma rdistr>= {x y z : E} : (y ∨ z) ∧ x <= (y ∧ x) ∨ (z ∧ x)
+DistributiveLattice.lcodistr	lemma	5daaa1564ebe	-	c62c3f2a	62b8ffdc:JoinSemilattice.join 62b8ffdc:MeetSemilattice.meet	\lemma lcodistr {x y z : E} : x ∨ (y ∧ z) = (x ∨ y) ∧ (x ∨ z)
+TopMeetSemilattice	class	ad02e0579525	-	1da4371d	0ea9a392:MeetSemilattice 2177db59:TopMeetSemilattice.top	\class TopMeetSemilattice \extends MeetSemilattice, CartesianPrecat { | top : E | top-univ {x : E} : x <= top | terminal => \new Product { | apex => top | proj => \case __ \with {} | tupleMap => \lam _ => top-univ | tupleBeta => \lam {_} {_} {j} => (\case j \with {}) | tupleEq => \lam _ => prop-pi } }
+TopMeetSemilattice.top-left	lemma	9437af70d126	-	7b088c18	62b8ffdc:MeetSemilattice.meet 2177db59:TopMeetSemilattice.top	\lemma top-left {x : E} : top ∧ x = x
+TopMeetSemilattice.top-right	lemma	ce2cbc018b20	-	7b088c18	62b8ffdc:MeetSemilattice.meet 2177db59:TopMeetSemilattice.top	\lemma top-right {x : E} : x ∧ top = x
+TopMeetSemilattice.BigMeet	func	6d1712cba4c3	127ac4ed89be	54f3db6e	2177db59:TopMeetSemilattice.top	\func BigMeet (l : Array E) : E
+TopMeetSemilattice.BigMeet-cond	lemma	ea6462076e77	-	ad8ac07b		\lemma BigMeet-cond {l : Array E} (j : Fin l.len) : BigMeet l <= l j
+TopMeetSemilattice.BigMeet-univ	lemma	d272b75a4da9	-	ad8ac07b		\lemma BigMeet-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> x <= l j) : x <= BigMeet l
+TopMeetSemilattice.op	func	76f04dffa521	1536c9b2e7a1	67f6a250	f6dcd199:BottomJoinSemilattice 2177db59:BottomJoinSemilattice.bottom 2177db59:TopMeetSemilattice.top	\func op : BottomJoinSemilattice
+TopMeetSemilattice.toMonoid	coerce	4dd9d4a58735	-	15217931	62b8ffdc:MeetSemilattice.meet a7d8e5d1:TopMeetSemilattice 2177db59:TopMeetSemilattice.top	\use \coerce toMonoid (L : TopMeetSemilattice) : CMonoid L
+BottomJoinSemilattice	class	3e5172ab9b54	-	48a819ac	2177db59:BottomJoinSemilattice.bottom 4c483fc8:JoinSemilattice 62b8ffdc:JoinSemilattice.join	\class BottomJoinSemilattice \extends JoinSemilattice, DirectedSet { | bottom : E | bottom-univ {x : E} : bottom <= x | isInhabitted => inP bottom | isDirected => \lam x y => inP (x ∨ y, join-left, join-right) }
+BottomJoinSemilattice.bottom-left	lemma	c68123582d36	-	a3321826	62b8ffdc:JoinSemilattice.join	\lemma bottom-left {x : E} : bottom ∨ x = x
+BottomJoinSemilattice.bottom-right	lemma	4576809b5bf9	-	a3321826	62b8ffdc:JoinSemilattice.join	\lemma bottom-right {x : E} : x ∨ bottom = x
+BottomJoinSemilattice.BigJoin	func	6d1712cba4c3	bf02df5ac89e	8ddd6cb4	2177db59:BottomJoinSemilattice.bottom	\func BigJoin (l : Array E) : E
+BottomJoinSemilattice.BigJoin-cond	lemma	8aeea4cace91	-	ad8ac07b		\lemma BigJoin-cond {l : Array E} (j : Fin l.len) : l j <= BigJoin l
+BottomJoinSemilattice.BigJoin-univ	lemma	ef8a7ce7665e	-	ad8ac07b		\lemma BigJoin-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> l j <= x) : BigJoin l <= x
+BottomJoinSemilattice.FinJoin	sfunc	629822df88e3	5f067eae8662	6af3f810		\sfunc FinJoin {J : FinSet} (a : J -> E) : E
+BottomJoinSemilattice.FinJoin-cond	lemma	1a299aea5f26	-	0bee31ce	df51f04b:BottomJoinSemilattice.FinJoin	\lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a
+BottomJoinSemilattice.FinJoin-univ	lemma	f02eac874528	-	0bee31ce	df51f04b:BottomJoinSemilattice.FinJoin	\lemma FinJoin-univ {J : FinSet} {a : J -> E} {x : E} (p : \Pi (j : J) -> a j <= x) : FinJoin a <= x
+BottomJoinSemilattice.FinJoin_Equiv	lemma	58e5e50e511d	-	f2950528	df51f04b:BottomJoinSemilattice.FinJoin	\lemma FinJoin_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinJoin x = FinJoin (\lam a => x (e a))
+BottomJoinSemilattice.FinJoin=BigJoin	lemma	62c2eeca39f5	-	a6e6d0ee	f5ce34fb:BottomJoinSemilattice.BigJoin df51f04b:BottomJoinSemilattice.FinJoin	\lemma FinJoin=BigJoin {n : Nat} {x : Fin n -> E} : FinJoin x = BigJoin x
+BottomJoinSemilattice.BigJoin_EPerm	lemma	dc901d57bf57	-	4b840059	f5ce34fb:BottomJoinSemilattice.BigJoin	\lemma BigJoin_EPerm {l l' : Array E} (e : EPerm l l') : BigJoin l = BigJoin l'
+BottomJoinSemilattice.BigJoin_++	lemma	3ec9d4c60dfe	-	b6b098a4	f5ce34fb:BottomJoinSemilattice.BigJoin 62b8ffdc:JoinSemilattice.join	\lemma BigJoin_++ {l l' : Array E} : BigJoin (l ++ l') = BigJoin l ∨ BigJoin l'
+BottomJoinSemilattice.BigJoin_join	lemma	1b55c611d897	-	750b4455	f5ce34fb:BottomJoinSemilattice.BigJoin	\lemma BigJoin_join {n : Nat} {l l' : Array E n} : BigJoin (\lam i => l i ∨ l' i) = BigJoin l ∨ BigJoin l'
+BottomJoinSemilattice.op	func	2cd2aa1487c9	11438af355a6	8e66f5a6	2177db59:BottomJoinSemilattice.bottom a7d8e5d1:TopMeetSemilattice 2177db59:TopMeetSemilattice.top	\func op : TopMeetSemilattice
+BottomJoinSemilattice.toMonoid	coerce	a7ae3960522f	-	2b3e34cb	f6dcd199:BottomJoinSemilattice 2177db59:BottomJoinSemilattice.bottom 62b8ffdc:JoinSemilattice.join	\use \coerce toMonoid (L : BottomJoinSemilattice) : AbMonoid L
+BoundedLattice	class	6dcb252b94f8	-	dcf2cb39	f6dcd199:BottomJoinSemilattice 78ace824:Lattice a7d8e5d1:TopMeetSemilattice	\class BoundedLattice \extends Lattice, TopMeetSemilattice, BottomJoinSemilattice
+BoundedLattice.op	func	311814219994	f99d6a21e136	4a38ee8b		\func op : BoundedLattice
+BottomDistributiveLattice	class	c9508548af7b	-	e92c1a21	2177db59:BottomJoinSemilattice.bottom ff7ab0ab:DistributiveLattice	\class BottomDistributiveLattice \extends DistributiveLattice, BottomJoinSemilattice
+BottomDistributiveLattice.bottom-ldistr	lemma	def3bf58d342	-	4217f3d7	2177db59:BottomJoinSemilattice.bottom 62b8ffdc:MeetSemilattice.meet	\lemma bottom-ldistr {x : E} : x ∧ bottom = bottom
+BottomDistributiveLattice.bottom-rdistr	lemma	ef71bcdb27db	-	4217f3d7	2177db59:BottomJoinSemilattice.bottom 62b8ffdc:MeetSemilattice.meet	\lemma bottom-rdistr {x : E} : bottom ∧ x = bottom
+BottomDistributiveLattice.BigJoin-ldistr	lemma	06f094d1fb4f	-	2236c250	f5ce34fb:BottomJoinSemilattice.BigJoin	\lemma BigJoin-ldistr {l : Array E} {x : E} : x ∧ BigJoin l = BigJoin (\lam j => x ∧ l j)
+BottomDistributiveLattice.BigJoin-rdistr	lemma	86a567acad52	-	2236c250	f5ce34fb:BottomJoinSemilattice.BigJoin	\lemma BigJoin-rdistr {l : Array E} {x : E} : BigJoin l ∧ x = BigJoin (\lam j => l j ∧ x)
+BoundedDistributiveLattice	class	688cb9d5b853	-	c30b76dd	3b141d93:BottomDistributiveLattice 1180d71d:BoundedLattice	\class BoundedDistributiveLattice \extends BottomDistributiveLattice, BoundedLattice
+BoundedDistributiveLattice.toSemiring	coerce	de83d94e92f6	-	46031c60	2177db59:BottomJoinSemilattice.bottom 62b8ffdc:JoinSemilattice.join 62b8ffdc:MeetSemilattice.meet 2177db59:TopMeetSemilattice.top	\use \coerce toSemiring (L : BoundedDistributiveLattice) : CSemiring L
+(overview)	-	-	-	2b373c85	2177db59:BottomJoinSemilattice.bottom 1d149cf6:MeetSemilattice.op 2177db59:TopMeetSemilattice.top	-

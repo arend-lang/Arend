@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Category.Limit.WidePullback. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+WidePullback	record	72264d8af4c8	-	12ec2686	72ec2809:WidePullback.D f18ee3e2:WidePullback.J 04b0cc7c:WidePullback.Shape 51384a18:WidePullback.diagram 7e0aa58d:WidePullback.maps b5f9d00f:WidePullback.objs b37f75e0:WidePullback.wpbLim 99d372dd:WidePullback.z	\record WidePullback {D : Precat} {J : \Set} {z : D} {objs : J -> D} (maps : \Pi (j : J) -> Hom (objs j) z) { | wpbLim : LimitDiagram { | Diagram => diagram maps } }
+WidePullback.Shape	instance	b021675e5f48	-	815062c5	f18ee3e2:WidePullback.J	\instance Shape (J : \Set) : Graph
+WidePullback.diagram	func	b51ff14b86a2	ccc8c889ac8f	6ad47c5b	72ec2809:WidePullback.D f18ee3e2:WidePullback.J 04b0cc7c:WidePullback.Shape 7e0aa58d:WidePullback.maps b5f9d00f:WidePullback.objs 99d372dd:WidePullback.z	\func diagram {D : Precat} {J : \Set} {z : D} {objs : J -> D} (maps : \Pi (j : J) -> Hom (objs j) z) : Diagram (Shape J) D

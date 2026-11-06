@@ -1,0 +1,58 @@
+# arend -gc fingerprints v2 for module Algebra.Domain.Euclidean. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+EuclideanSemiringData	class	b91869973ccd	-	abd1ad34	49e29846:EuclideanSemiringData.divMod 51cea062:EuclideanSemiringData.euclideanMap d93eed8d:EuclideanSemiringData.summandDiv	\class EuclideanSemiringData \extends CSemiring, DecSet { | euclideanMap : E -> Nat | divMod : E -> E -> \Sigma E E | isDivMod (x y : E) : y * (divMod x y).1 + (divMod x y).2 = x | isEuclideanMap (x y : E) : y /= 0 -> (divMod x y).2 /= 0 -> euclideanMap (divMod x y).2 < euclideanMap y | summandDiv {x y z d : E} (d/=0 : d /= 0) (p : d * x + y = d * z) : LDiv d y }
+EuclideanSemiringData.suc'	func	bf96254df1c3	5403b51fb983	525e7395	51cea062:EuclideanSemiringData.euclideanMap	\func suc' (n : Nat) : Nat
+EuclideanSemiringData.suc'=suc	lemma	25de6fc906b5	-	1a5af9e4	c8de905a:EuclideanSemiringData.suc'	\lemma suc'=suc (n : Nat) : suc' n = suc n
+EuclideanSemiringData.gcd-fueled	func	a276a977fe50	ca085c811d93	a3e46e87	49e29846:EuclideanSemiringData.divMod	\func gcd-fueled (s : Nat) (a b : E) : E
+EuclideanSemiringData.gcd	func	6c5c45d00eff	e6896a9b9da0	01224fde	51cea062:EuclideanSemiringData.euclideanMap 04a03cff:EuclideanSemiringData.gcd-fueled c8de905a:EuclideanSemiringData.suc'	\func gcd (a b : E)
+EuclideanSemiringData.fueled_zro	lemma	63cffee5d16a	-	3a8f25df	04a03cff:EuclideanSemiringData.gcd-fueled	\lemma fueled_zro (s : Nat) (a : E) : gcd-fueled s a 0 = a
+EuclideanSemiringData.gcd_0	lemma	caf19821db1f	-	8e3cd9f9	da9c78c6:EuclideanSemiringData.gcd	\lemma gcd_0 {x : E} : gcd x 0 = x
+EuclideanSemiringData.gcd_0.aux	lemma	5889c501ed89	-	8e3cd9f9	da9c78c6:EuclideanSemiringData.gcd	\lemma aux {s : Nat} {x : E} : gcd-fueled s x 0 = x
+EuclideanSemiringData.gcd-isGCD-fueled	func	a214761895a0	41f78056d4fd	992e5507	04a03cff:EuclideanSemiringData.gcd-fueled	\func gcd-isGCD-fueled (s : Nat) {a b g : E} (g|a : LDiv g a) (g|b : LDiv g b) : LDiv g (gcd-fueled s a b)
+EuclideanSemiringData.gcd-isGCD	func	dce31d978175	3ba52acae9d8	bbed367f	da9c78c6:EuclideanSemiringData.gcd 12b00886:EuclideanSemiringData.reduce	\func gcd-isGCD (a b : E) : GCD a b
+EuclideanSemiringData.reduce-fueled	func	6416f6ac8fe0	4fa6a73661d8	dd041447	04a03cff:EuclideanSemiringData.gcd-fueled	\func reduce-fueled (s : Nat) (a b : E) : \Sigma E E
+EuclideanSemiringData.reduce	func	6c5c45d00eff	d0a9a4eb69fc	e5aa4773	51cea062:EuclideanSemiringData.euclideanMap 31eb5843:EuclideanSemiringData.reduce-fueled c8de905a:EuclideanSemiringData.suc'	\func reduce (a b : E)
+EuclideanSemiringData.reduce_zro	lemma	4c9bd7f5670d	-	91e8ee06	31eb5843:EuclideanSemiringData.reduce-fueled	\lemma reduce_zro (s : Nat) (a : E) : reduce-fueled s a 0 = (1, 0)
+EuclideanSemiringData.reduce*fueled-left	lemma	2a7927a7ea07	-	85cb46fe	04a03cff:EuclideanSemiringData.gcd-fueled 31eb5843:EuclideanSemiringData.reduce-fueled	\lemma reduce*fueled-left (s : Nat) (a b : E) (b<=s : euclideanMap b < s) : (reduce-fueled s a b).1 * gcd-fueled s a b = a
+EuclideanSemiringData.reduce*fueled-right	lemma	9a7b96e4b370	-	85cb46fe	04a03cff:EuclideanSemiringData.gcd-fueled 31eb5843:EuclideanSemiringData.reduce-fueled	\lemma reduce*fueled-right (s : Nat) (a b : E) (b<=s : euclideanMap b < s) : (reduce-fueled s a b).2 * gcd-fueled s a b = b
+EuclideanSemiringData.reduce*gcd-right	lemma	5f62c2a9ca20	-	b1f1abd0	da9c78c6:EuclideanSemiringData.gcd 12b00886:EuclideanSemiringData.reduce	\lemma reduce*gcd-right (a b : E) : (reduce a b).2 * gcd a b = b
+EuclideanSemiringData.isPseudonorm	func	e0f86d66da3d	c23807fb7b89	4df3a7e2	51cea062:EuclideanSemiringData.euclideanMap	\func isPseudonorm {a b : E} (a/=0 : a /= 0) (b|a : LDiv b a)
+EuclideanSemiringData.isPseudonorm.aux	func	39a760fe0a9b	d7c97e7cb67a	4df3a7e2	51cea062:EuclideanSemiringData.euclideanMap	\func aux {a : E} (b : E) (a/=0 : a /= 0) (b|a : LDiv b a) {n : Nat} (p : euclideanMap a < n) : Or (LDiv a b) (\Sigma (b' : E) (LDiv b b') (LDiv b' b) (euclideanMap b' < euclideanMap a))
+EuclideanSemiringData.unit-dec	lemma	b3ca5bf2276d	-	18b04e21	51cea062:EuclideanSemiringData.euclideanMap	\lemma unit-dec (a : E) (f : \Pi {b : E} -> Inv a -> b /= 0 -> euclideanMap a <= euclideanMap b) : Dec (Inv a)
+EuclideanRingData	class	b3264ecc46cb	-	aaaf8f20	e64b16d3:EuclideanSemiringData d93eed8d:EuclideanSemiringData.summandDiv	\class EuclideanRingData \extends EuclideanSemiringData, CRing { | summandDiv => \lam {x} {y} {z} {d} _ p => \new LDiv { | inv => z - x | inv-right => ldistr *> +-comm *> pmap (_ +) (inv p) *> simplify } }
+EuclideanRingData.bezout-fueled	func	6416f6ac8fe0	82574ac21641	1c85688d	04a03cff:EuclideanSemiringData.gcd-fueled	\func bezout-fueled (s : Nat) (a b : E) : \Sigma E E
+EuclideanRingData.bezout	func	6c5c45d00eff	b2f2ce6550c7	3f138d5c	a95315be:EuclideanRingData.bezout-fueled 51cea062:EuclideanSemiringData.euclideanMap c8de905a:EuclideanSemiringData.suc'	\func bezout (a b : E)
+EuclideanRingData.bezoutIdentity-fueled	lemma	98660c765fd1	-	ea9fca82	d55ce022:EuclideanRingData.bezout da9c78c6:EuclideanSemiringData.gcd	\lemma bezoutIdentity-fueled (s : Nat) (a b : E) : (bezout-fueled s a b).1 * a + (bezout-fueled s a b).2 * b = gcd-fueled s a b
+EuclideanRingData.bezoutIdentity	lemma	ca21f4c4d574	-	ea9fca82	d55ce022:EuclideanRingData.bezout da9c78c6:EuclideanSemiringData.gcd	\lemma bezoutIdentity (a b : E) : (bezout a b).1 * a + (bezout a b).2 * b = gcd a b
+EuclideanDomain	class	3d50d36989c3	-	48085a21	e6ee8f1d:EuclideanDomain.isEuclidean e27a53fd:EuclideanRingData 7ef78b64:EuclideanRingData.bezoutIdentity 51cea062:EuclideanSemiringData.euclideanMap	\class EuclideanDomain \extends PID, NoetherianCRing { | isEuclidean : TruncP (EuclideanRingData { | CRing => \this | decideEq => decideEq }) | isBezout => \lam a b => TruncP.map isEuclidean (\lam (d : EuclideanRingData { | CRing => \this }) => ((d.bezout a b).1, (d.bezout a b).2, rewrite d.bezoutIdentity (GCD.res|val1 {d.gcd-isGCD a b}), rewrite d.bezoutIdentity (GCD.res|val2 {d.gcd-isGCD a b}))) | divChain => \lam a c => (\case isEuclidean \with { | inP d => cases (a 0 arg addPath) }) | isNoetherian => bar-ask (\lam a => (\case decideEq a 0 \with { | yes a=0 => bar-stop $ pauses-here $ inP (nil, a=0) | no a/=0 => \case isEuclidean \with { | inP d => isNoetherian-induction {d} _ a/=0 id<suc $ Ideal.closure-superset {_} {Fin 1} {a :: nil} 0 } })) }
+NatEuclidean	instance	1d5f20484cd5	-	175e3e47	e64b16d3:EuclideanSemiringData 49e29846:EuclideanSemiringData.divMod 51cea062:EuclideanSemiringData.euclideanMap d93eed8d:EuclideanSemiringData.summandDiv 3eac29ca:IntEuclidean.mod	\instance NatEuclidean : EuclideanSemiringData
+NatEuclidean.gcd0_	lemma	d08fe29c564d	-	efe135ac		\lemma gcd0_ {x : Nat} : NatEuclidean.gcd 0 x = x
+IntEuclidean	instance	738309aa8ab7	-	ec7b2a28	e27a53fd:EuclideanRingData 49e29846:EuclideanSemiringData.divMod 51cea062:EuclideanSemiringData.euclideanMap	\instance IntEuclidean : EuclideanRingData
+IntEuclidean.modToNat	func	c860eb93d995	324643b2e9ad	1437e151		\func modToNat (m : Int) (p : \Sigma Int Int) : \Sigma Int Nat
+IntEuclidean.natDivMod	func	a9ecbe66300f	ebb29bc8f8cc	144bdef7	49e29846:EuclideanSemiringData.divMod	\func natDivMod (x y : Int) : \Sigma Int Nat
+IntEuclidean.div	func	fc97d77142c4	0017bfce0663	9b807327		\func div (x y : Int) : Int
+IntEuclidean.mod	func	fc4943a94329	414c1161ce7b	9b807327		\func mod (x y : Int) : Nat
+IntEuclidean.intMod<right	lemma	c3cc0e52e261	-	49cfd6f3	49e29846:EuclideanSemiringData.divMod 3eac29ca:IntEuclidean.mod	\lemma intMod<right (x : Int) (n : Nat) : iabs (IntEuclidean.divMod x (suc n)).2 < suc n
+IntEuclidean.natMod<right	lemma	778330cbbe9b	-	49cfd6f3	49e29846:EuclideanSemiringData.divMod 3eac29ca:IntEuclidean.mod	\lemma natMod<right {x : Int} {n : Nat} : x mod suc n < suc n
+IntEuclidean.divModProp	lemma	19e2dccf721d	-	be68b396	8d39e683:IntEuclidean.div 3eac29ca:IntEuclidean.mod	\lemma divModProp (x y : Int) (y/=0 : y /= 0) : y * x div y + x mod y = x
+IntEuclidean.natDivModProp	lemma	bc9e0f0b2a00	-	be68b396	8d39e683:IntEuclidean.div 3eac29ca:IntEuclidean.mod	\lemma natDivModProp (x : Int) (n : Nat) : pos (suc n) * x div suc n + x mod suc n = x
+IntEuclidean.mod-unique	lemma	35236346bac6	-	f4241f8a		\lemma mod-unique {q q' : Int} {n r r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : pos n * q + r = pos n * q' + r') : r = r'
+IntEuclidean.mod-unique.aux	lemma	94f6349e4ec8	-	f4241f8a		\lemma aux (x y x' y' : Int) (p : x + y = negative x' + y') : (x' + x) + y = y'
+IntEuclidean.natMod=mod'	lemma	0a68b940f888	-	00735c81	3eac29ca:IntEuclidean.mod	\lemma natMod=mod' (x n : Nat) : (IntEuclidean.divMod x n).2 = x Nat.mod n
+IntEuclidean.natMod=mod	lemma	0329b101afe2	-	00735c81	3eac29ca:IntEuclidean.mod	\lemma natMod=mod (x n : Nat) : x mod n = x Nat.mod n
+IntDomain	instance	feec0d4c5901	-	d33a2d18	baef5d9b:EuclideanDomain e6ee8f1d:EuclideanDomain.isEuclidean c1dbd213:IntEuclidean	\instance IntDomain : EuclideanDomain
+ldiv_nat_int	lemma	af8deda65cb0	-	87adda6f		\lemma ldiv_nat_int (d : LDiv {NatSemiring}) : LDiv (pos d.val) (pos d.elem) (pos d.inv)
+ldiv_int_nat	lemma	49004c0d7961	-	87adda6f		\lemma ldiv_int_nat (d : LDiv {IntRing}) : LDiv (iabs d.val) (iabs d.elem) (iabs d.inv)
+inv_nat_int	lemma	70fe42069fde	-	914632b2		\lemma inv_nat_int (d : Inv {NatSemiring}) : Inv (pos d.val) (pos d.inv)
+inv_int_nat	lemma	c98660164482	-	914632b2		\lemma inv_int_nat (d : Inv {IntRing}) : Inv (iabs d.val) (iabs d.inv)
+inv_abs	lemma	49c0f39454d0	-	914632b2		\lemma inv_abs {x : Int} (d : Inv (iabs x)) : Inv x
+gcd_nat_int	func	654909f0e065	600014217324	02dc28df		\func gcd_nat_int (g : GCD {NatSemiring}) : GCD (pos g.val1) (pos g.val2) (pos g)
+gcd_int_nat	func	579a8650d350	f90fa9bf3aa1	02dc28df		\func gcd_int_nat (g : GCD {IntRing}) : GCD (iabs g.val1) (iabs g.val2) (iabs g)
+nat_gcd-isUnique	lemma	e6727bbe9f5e	-	8efdf9e5		\lemma nat_gcd-isUnique {n m : Nat} (g g' : GCD n m) : g.res = g'.res
+int_gcd-isUnique	lemma	5ec27474ed90	-	bbdceddf		\lemma int_gcd-isUnique {x y : Int} (g g' : GCD x y) : iabs g = iabs g'
+int_gcd_pos	lemma	1cc7e7abd63e	-	a02de43c	da9c78c6:EuclideanSemiringData.gcd	\lemma int_gcd_pos {n m : Nat} : gcd (pos n) (pos m) = pos (gcd n m)
+int_gcd_pos.aux	lemma	f994bbfb0f03	-	a02de43c	da9c78c6:EuclideanSemiringData.gcd	\lemma aux (s : Nat) {n m : Nat} : gcd-fueled s (pos n) (pos m) = iabs (gcd-fueled s (pos n) (pos m))
+nat_gcd_sum	lemma	75cf8bcbfb50	-	52ae474d	da9c78c6:EuclideanSemiringData.gcd	\lemma nat_gcd_sum (a b d : Nat) : gcd (a + b * d) b = gcd a b
+nat_gcd_*_div	func	c20cd0cf7b40	7a807bab32ee	f6a6e793	da9c78c6:EuclideanSemiringData.gcd	\func nat_gcd_*_div {a b c : Nat} (a|bc : LDiv a (b * c)) (a_b : gcd a b = 1) : LDiv a c
+nat_gcd-comm	lemma	d533cd4a5aca	-	f35328a5	da9c78c6:EuclideanSemiringData.gcd	\lemma nat_gcd-comm {a b : Nat} : gcd a b = gcd b a
+(overview)	-	-	-	454023d3	baef5d9b:EuclideanDomain e27a53fd:EuclideanRingData e64b16d3:EuclideanSemiringData 49e29846:EuclideanSemiringData.divMod 51cea062:EuclideanSemiringData.euclideanMap c8de905a:EuclideanSemiringData.suc'	-

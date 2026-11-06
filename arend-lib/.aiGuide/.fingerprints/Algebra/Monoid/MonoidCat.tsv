@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.MonoidCat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MonoidBicat.modToMonoid	func	86fcb3bf965c	e6a4b415837a	d4c407f1	39e85ad0:MonoidBicat.theory	\func modToMonoid (M : Model theory) : Monoid (M ())
+MonoidBicat.monoidToMod	func	bf9e3526dc2e	5b2ef4321c80	acde0dc6	f83ee966:MonoidBicat.monoidToMod.functor 39e85ad0:MonoidBicat.theory 3eba4dd4:MonoidCat	\func monoidToMod (M : Monoid) : Model theory (\lam _ => M)
+MonoidCat	instance	a6689f55c120	-	aee9f813	db584155:MonoidCat.forget	\instance MonoidCat : Cat Monoid.{u}
+AddMonoidCat	instance	cf3ffad69c6b	-	6594b6d9	6092415d:AddMonoidCat.forget	\instance AddMonoidCat : Cat AddMonoid.{u}
+MonoidBicat	instance	493e5ecb8860	-	9259bb15	c3763a09:LimitMonoid d06d404f:MonoidBicat.catEquiv 39e85ad0:MonoidBicat.theory 3eba4dd4:MonoidCat	\instance MonoidBicat : BicompleteCat.{u}
+MonoidBicat.theory	instance	d4751e3b4b37	-	5ad2c5b9		\instance theory : Theory
+MonoidBicat.catEquiv	func	a9f9af517c87	809bfb8957ce	fb3a70d7	f83ee966:MonoidBicat.monoidToMod.functor 39e85ad0:MonoidBicat.theory 3eba4dd4:MonoidCat	\func catEquiv : CatEquiv MonoidCat.{u} (ModelCat theory)
+LimitMonoid	instance	93d7a0f6df26	-	da59111e	1baacac3:LimitMonoid.inv-char 36ddf194:LimitMonoid.limMap 052faace:LimitMonoid.limProj 3eba4dd4:MonoidCat	\instance LimitMonoid {J : Precat.{u, u}} (F : Functor J MonoidCat.{u}) : Monoid (SetBicat.LimitSet (Comp MonoidCat.forget F))

@@ -1,0 +1,35 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.FormalSeries.Composition. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+fcompose	func	2436dc112a1d	eab711e75b1d	b17658fb		\func fcompose {A : Ring} (a b : FSeries A) : FSeries A
+compose-coef-extend	lemma	4ed61af0a773	-	94c1df49	ff19eef2:FormalSubst.f 53f74524:fcompose	\lemma compose-coef-extend {A : Ring} {f c : FSeries A} (c_0 : c 0 = A.zro) (k j : Nat) (j<=k : j <= k) : fcompose f c j = A.BigSum (\new (Array A (suc k) (\lam m => f m * pow c m j)))
+compose-coef-*	lemma	7d80c9501faa	-	83149749	53f74524:fcompose	\lemma compose-coef-* {A : CRing} {a b c : FSeries A} (c_0 : c 0 = A.zro) (k : Nat) : fcompose (a * b) c k = (fcompose a c * fcompose b c) k
+pow-conv-compose	lemma	c5fd7ab6fd09	-	9c1e354d	53f74524:fcompose	\lemma pow-conv-compose {A : CRing} {b c : FSeries A} (c_0 : c 0 = A.zro) (n k : Nat) : pow (fcompose b c) n k = fcompose (pow b n) c k
+compose-coef-assoc	lemma	ebff4a6ca9ee	-	001b9338		\lemma compose-coef-assoc {A : CRing} {a b c : FSeries A} (b_0 : b 0 = A.zro) (c_0 : c 0 = A.zro) (k : Nat) : fcompose (fcompose a b) c k = fcompose a (fcompose b c) k
+compose-coef_1	lemma	74282fa61df7	-	3de4f69f	53f74524:fcompose	\lemma compose-coef_1 {R : Ring} {s t : FSeries R} : fcompose s t 1 = s 1 R.* t 1
+subst-ide	func	754dec0aa561	52adb606e22e	6dc7cb8b		\func subst-ide {R : Ring} (n : Nat) : R
+pow-subst-ide-diag	lemma	33e4f8603bb8	-	2a49f8b0	a287fc69:subst-ide	\lemma pow-subst-ide-diag {R : Ring} (k : Nat) : pow {FSeriesRing R} subst-ide k k = R.ide
+pow-subst-ide-off	lemma	2c7c6269decf	-	be982620	a287fc69:subst-ide	\lemma pow-subst-ide-off {R : Ring} (n k : Nat) (n/=k : n /= k) : pow {FSeriesRing R} subst-ide n k = R.zro
+compose-coef-subst-ide-right	lemma	671c95a86b26	-	28611886	ff19eef2:FormalSubst.f 53f74524:fcompose a287fc69:subst-ide	\lemma compose-coef-subst-ide-right {R : Ring} (f : FSeries R) (k : Nat) : fcompose f subst-ide k = f k
+compose-coef-subst-ide-left	lemma	f890259b4c4f	-	194985b9	ff19eef2:FormalSubst.f 53f74524:fcompose a287fc69:subst-ide	\lemma compose-coef-subst-ide-left {R : Ring} {f : FSeries R} (f_0 : f 0 = R.zro) (k : Nat) : fcompose subst-ide f k = f k
+FormalSubst	record	a61c57e10b1b	-	0d26709b		\record FormalSubst (R : Ring) (f : FSeries R) (f_0 : f 0 = R.zro)
+subst-compose	func	344dba4ecd17	d4172a64be99	2f8419d8	d5097f8d:FormalSubst	\func subst-compose {R : Ring} (s t : FormalSubst R) : FormalSubst R
+FormalSubstMonoid	instance	d9228e9c2e1c	-	2d767e8e	d5097f8d:FormalSubst 6e2a124b:FormalSubst.R a287fc69:subst-ide	\instance FormalSubstMonoid (R : CRing) : Monoid (FormalSubst R)
+new-coef	func	7b860784c1f8	b9e7c58433ed	c25b9236	ff19eef2:FormalSubst.f	\func new-coef {R : Ring} (f : FSeries R) (finv1 : Monoid.Inv (f 1)) (n : Nat) (prev : FSeries R) : R
+g-prefix	func	108d7d8ed220	a47b607e329f	68c57f44		\func g-prefix {R : Ring} (f : FSeries R) (finv1 : Monoid.Inv (f 1)) (n : Nat) : FSeries R
+subst-rinv	func	d08b361e5440	41b5c7d16236	a76554ba	ff19eef2:FormalSubst.f	\func subst-rinv {R : Ring} (f : FSeries R) (finv1 : Monoid.Inv (f 1)) (k : Nat) : R
+g-prefix-stable	lemma	f4200b599d28	-	82c0e4f3	44b6f4f3:g-prefix	\lemma g-prefix-stable {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n k : Nat) (k<n : k < n) : g-prefix f finv1 (suc n) k = g-prefix f finv1 n k
+subst-rinv-eq-prefix	lemma	6642fee09293	-	94e10ce2	44b6f4f3:g-prefix 7994f376:subst-rinv	\lemma subst-rinv-eq-prefix {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n k : Nat) (k<n : k < n) : subst-rinv f finv1 k = g-prefix f finv1 n k
+g-prefix_0	lemma	7a89ae953adf	-	b9e4d516	44b6f4f3:g-prefix	\lemma g-prefix_0 {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n : Nat) : g-prefix f finv1 n 0 = R.zro
+g-prefix-top-eq	lemma	5671d5e9efc5	-	4013ab18	44b6f4f3:g-prefix 242b05a4:new-coef	\lemma g-prefix-top-eq {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (K : Nat) : g-prefix f finv1 (suc K) K = new-coef f finv1 K (g-prefix f finv1 K)
+g-prefix-vanish-top	lemma	b59ec1ac04ea	-	b4be890e	ff19eef2:FormalSubst.f 44b6f4f3:g-prefix	\lemma g-prefix-vanish-top {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (n k : Nat) (n<=k : n <= k) : g-prefix f finv1 n k = R.zro
+subst-rinv-eq-prefix-up-to	lemma	4bfced17ca0e	-	bcd17551	44b6f4f3:g-prefix 7994f376:subst-rinv	\lemma subst-rinv-eq-prefix-up-to {R : Ring} {f : FSeries R} {finv1 : Monoid.Inv (f 1)} (K k : Nat) (k<=K : k <= K) : subst-rinv f finv1 k = g-prefix f finv1 (suc K) k
+pow-ext	lemma	0ee1ff0f7450	-	57b70b94		\lemma pow-ext {R : Ring} {g g' : FSeries R} (K : Nat) (agree : \Pi (i : Nat) -> i <= K -> g i = g' i) (m K' : Nat) (K'<=K : K' <= K) : pow g m K' = pow g' m K'
+pow-zero-at-zero	lemma	7fc7155b60c9	-	22b8c2a5		\lemma pow-zero-at-zero {R : Ring} {g : FSeries R} (g_0 : g 0 = R.zro) (m' : Nat) : pow g (suc m') 0 = R.zro
+pow-tail-eq	lemma	6b49435cf988	-	87c315db		\lemma pow-tail-eq {R : Ring} {g g' : FSeries R} (g_0 : g 0 = R.zro) (g'_0 : g' 0 = R.zro) (K : Nat) (agree : \Pi (i : Nat) -> i <= K -> g i = g' i) (m'' : Nat) : pow g (suc (suc m'')) (suc K) = pow g' (suc (suc m'')) (suc K)
+subst-rinv-correct	lemma	35b6261a65e9	-	7a20571d	ff19eef2:FormalSubst.f 53f74524:fcompose a287fc69:subst-ide 7994f376:subst-rinv	\lemma subst-rinv-correct {R : Ring} {f : FSeries R} (f_0 : f 0 = R.zro) (finv1 : Monoid.Inv (f 1)) (k : Nat) : fcompose f (subst-rinv f finv1) k = subst-ide k
+FormalLineDiffeomorphism	record	b4fe797af187	-	7b002b9e	d5097f8d:FormalSubst ff19eef2:FormalSubst.f	\record FormalLineDiffeomorphism \extends FormalSubst { | f1-inv : Monoid.Inv (f 1) }
+subst-ide-f1-inv	func	c8e008ca8b60	d2c0bf89f7fd	6a78b854	a287fc69:subst-ide	\func subst-ide-f1-inv {R : Ring} : Monoid.Inv (subst-ide {R} 1)
+subst-compose-inv	func	a9cd157f3926	d9cea380b36e	6c9f3204	02ae95fd:FormalLineDiffeomorphism	\func subst-compose-inv {R : CRing} (s t : FormalLineDiffeomorphism R) : FormalLineDiffeomorphism R
+subst-rinv-inv	func	34b01bb97312	96b561ccaec1	c1791a19	02ae95fd:FormalLineDiffeomorphism 7994f376:subst-rinv	\func subst-rinv-inv {R : Ring} (s : FormalLineDiffeomorphism R) : FormalLineDiffeomorphism R
+FormalLineDiffeomorphismGroup	instance	131529c4975b	-	30e57ef9		\instance FormalLineDiffeomorphismGroup (R : CRing) : Group (FormalLineDiffeomorphism { | R => R })
+(overview)	-	-	-	05b0590f	2928b9bb:FormalLineDiffeomorphismGroup ff19eef2:FormalSubst.f 1bd81f9f:FormalSubstMonoid 53f74524:fcompose 44b6f4f3:g-prefix a287fc69:subst-ide 7994f376:subst-rinv	-

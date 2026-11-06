@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Algebra.Module.FinModule. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FinModule	class	1f775b056e2b	-	a1ac6396	e590cc23:FinModule.isFinModule	\class FinModule \extends LModule { | isFinModule : ∃ (l : Array E) (IsBasis l) }
+FinModule.surj-lift	lemma	f7e8afeebe08	-	e9ecf7fa	13108c78:FinModule	\lemma surj-lift {R : Ring} {F : FinModule R} {U V : LModule R} (f : LinearMap F V) (g : LinearMap U V) (gs : IsSurj g) : ∃ (h : LinearMap F U) ∀ x (g (h x) = f x)
+FinModule.surj-split	lemma	8d495540db22	-	8b80d011	13108c78:FinModule	\lemma surj-split {R : Ring} {U : LModule R} {V : FinModule R} (g : LinearMap U V) (gs : IsSurj g) : ∃ (h : LinearMap V U) ∀ x (g (h x) = x)
+FinModule.basis<=generating	lemma	feb551f198e6	-	d245033d		\lemma basis<=generating {R : NonZeroCRing} {U : LModule R} (l l' : Array U) (lb : U.IsBasis l) (l'g : U.IsGenerated l') : l.len <= l'.len
+FinModule.dimension-pair	lemma	d8b7d068e28e	-	e3dd47b2		\lemma dimension-pair {R : NonZeroCRing} (U : FinModule R) : \level \Sigma (d : Nat) (∃ (l : Array U d) (U.IsBasis l)) \lam s t => ext (\case s.2, t.2 \with { | inP (l, lb), inP (l', l'b) => <=-antisymmetric (basis<=generating l l' lb l'b.2) (basis<=generating l' l l'b lb.2) })
+FinModule.dimension	func	da29d966072d	dd6ad0375611	c8934fce	13108c78:FinModule 546c42f7:FinModule.dimension-pair	\func dimension {R : NonZeroCRing} (U : FinModule R)
+FinModule.dimension-char	lemma	216230b0f311	-	80f93591	cd65a3c9:FinModule.dimension	\lemma dimension-char {R : NonZeroCRing} {U : FinModule R} : ∃ (l : Array U (dimension U)) (U.IsBasis l)
+FinModule.dimension-unique	lemma	819be05209dd	-	632406d9	cd65a3c9:FinModule.dimension	\lemma dimension-unique {R : NonZeroCRing} {U : FinModule R} {l : Array U} (b : U.IsBasis l) : dimension U = l.len
+FinModule.dimension=0	lemma	d060dc5ccd85	-	938e0e4a	cd65a3c9:FinModule.dimension	\lemma dimension=0 {R : NonZeroCRing} {U : FinModule R} : (dimension U = 0) <-> (\Pi (a : U) -> a = 0)
+FinModule.surj-iso	lemma	915b8d85d8ec	-	ad0bd5af	13108c78:FinModule	\lemma surj-iso {R : NonZeroCRing} {U V : FinModule R} (p : dimension U = dimension V) (g : LinearMap U V) (gs : IsSurj g) : ModuleIso g
+FinModule.surj-iso.basis-surj-iso	lemma	5974161bcc96	-	64800965	909d36b8:FinModule.surj-iso	\lemma basis-surj-iso {R : CRing} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (g : LinearMap U V) (gs : IsSurj g) : ModuleIso g
+ArrayFinModule	instance	7c891456b15b	-	5b71ee05	13108c78:FinModule	\instance ArrayFinModule {R : Ring} (n : Nat) : FinModule R (Array R n)
+ArrayFinModule.basis	lemma	6d10b93e735a	-	0a77ff40		\lemma basis {R : Ring} {n : Nat} : (ArrayLModule n (RingLModule R)).IsBasis MatrixRing.ide
+(overview)	-	-	-	643932a9	13108c78:FinModule cd65a3c9:FinModule.dimension	-

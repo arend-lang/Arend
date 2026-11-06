@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Category.Simplex. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+monotone-inj	lemma	cf642f5cacd5	-	2deab0ac		\lemma monotone-inj {P1 : BiorderedSet} {P2 : LinearOrder.Dec} (f : PosetHom P1 P2) (f-inj : IsInj f) : StrictPosetHom P1 P2 (func {f})
+monotone-diagonal-fin	lemma	33960aa40e1c	-	1c184776		\lemma monotone-diagonal-fin {n : Nat} (f : Fin (suc n) -> Fin (suc n)) (mon : \Pi (k : Fin n) -> f k < f (suc k)) {k : Fin (suc n)} : k <= f k
+SimplexCat.fin_monotone_iso_unique	func	2cd09ac23acb	59bdb8ebedac	cedce8da	3b09bc41:monotone-diagonal-fin 1dfd2c2c:monotone-inj	\func fin_monotone_iso_unique {n : Nat} (f : PosetHom (FinOrder (suc n)) (FinOrder (suc n))) (g : PosetHom (FinOrder (suc n)) (FinOrder (suc n))) (fg-comp : f Function.o g = Function.id) (gf-comp : g Function.o f = Function.id) : \Sigma (Function.id = f) (Function.id = g)
+SimplexCat.SimplexPrecat	func	7c3ce6c77bf2	0e3b1c0dd2bb	ae491b7d		\func SimplexPrecat : Precat
+SimplexCat.Simplex_iso	lemma	effbfc7eeea1	-	1c59b213	8628d7ee:SimplexCat.SimplexPrecat	\lemma Simplex_iso {n m : Nat} (iso : Iso {SimplexPrecat} {n} {m}) : n = m
+SimplexCat.iso_iso	func	8fb497c58310	0fa1813cbcf1	77a7bf2f	8628d7ee:SimplexCat.SimplexPrecat 6069fb86:SimplexCat.fin_monotone_iso_unique	\func iso_iso {n : Nat} (f : Iso {SimplexPrecat} {n} {n})
+SimplexCat.iso_isProp	func	116fbe650b92	e7d955890636	def4526b	8628d7ee:SimplexCat.SimplexPrecat 3e8fd903:SimplexCat.iso_iso	\func iso_isProp {n : Nat} : isProp (Iso {SimplexPrecat} {n} {n})
+SimplexCat	instance	eced4f674bb8	-	01591ff4	8628d7ee:SimplexCat.SimplexPrecat 810feb41:SimplexCat.Simplex_iso da2fed82:SimplexCat.iso_isProp	\instance SimplexCat : Cat
+(overview)	-	-	-	171c8a44	3b09bc41:monotone-diagonal-fin	-

@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Topology.TopAbGroup.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProductTopAbGroup	instance	a3f1dbd560ce	-	680e25a5		\instance ProductTopAbGroup (X Y : TopAbGroup) : TopAbGroup (\Sigma X Y)
+TopAbGroupHasProduct	instance	382a054d28df	-	26af14f6	ff791f68:ProductTopAbGroup	\instance TopAbGroupHasProduct : HasProduct TopAbGroup.{u}
+negative-uniform	lemma	a645e8924507	-	4d8e4f1d		\lemma negative-uniform {X : TopAbGroup} : TopAbGroupMap X X negative
++-uniform	lemma	b280827fc67c	-	ccb81267		\lemma +-uniform {X : TopAbGroup} : TopAbGroupMap (ProductTopAbGroup X X) X (\lam s => s.1 + s.2)
+subtract-uniform	lemma	5314951ef60a	-	94b0a394		\lemma subtract-uniform {X : TopAbGroup} : TopAbGroupMap (ProductTopAbGroup X X) X (\lam s => s.1 - s.2)
+*n-uniform	lemma	cd75980c692a	-	31ce9c4a		\lemma *n-uniform {X : TopAbGroup} {n : Nat} : TopAbGroupMap X X (n X.*n)
+*n-uniform.*n-cont	lemma	0d4aff7de073	-	97bde75b		\lemma *n-cont {n : Nat} : ContMap X X (n X.*n)
+*i-uniform	lemma	052c76f7bcfa	-	d0782841		\lemma *i-uniform {X : TopAbGroup} {n : Int} : TopAbGroupMap X X (n X.*i)
+BigSum-cover	lemma	a3be1afd7ccf	-	01721968		\lemma BigSum-cover {X : CoverSpace} {Y : TopAbGroup} (fs : Array (CoverMap X Y)) : CoverMap X Y (\lam x => Y.BigSum (\lam j => fs j x))
+(overview)	-	-	-	8d05c2e1		-

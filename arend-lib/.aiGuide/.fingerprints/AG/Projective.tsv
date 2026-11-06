@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module AG.Projective. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProjCarrier	type	f1b9ba906c95	72227329dcfe	b7365ea4	ba115ccd:Proj	\type ProjCarrier (R : GradedCRing)
+ProjPreorder	instance	9e81f32a1c20	-	f509a39f	64583b95:ProjCarrier	\instance ProjPreorder (R : GradedCRing) : Preorder (ProjCarrier R)
+ProjPreorder.toSpec	func	953699cbc1e9	c299120ddfef	eb51c475	56856a05:ProjPreorder	\func toSpec {R : GradedCRing.{u}} : PreorderHom (ProjPreorder R) (Spec.satSite R)
+Proj	func	60409e60321f	a4b2b60ae58d	b416837d	ea2b4984:Proj.site	\func Proj (R : GradedCRing.{u}) : Scheme
+Proj.SpecStructureSheaf	func	d1291790b47f	256277565c33	0c9f8591	ded550f1:ProjPreorder.toSpec	\func SpecStructureSheaf {R : GradedCRing.{u}} : Functor (ProjPreorder R).op CRingCat
+Proj.StructureSheaf	func	9dae2e72ee49	8edfb8843da9	9fa4ceff	ba115ccd:Proj df89758a:Proj.Func-homogen f52ba33d:Proj.SpecStructureSheaf	\func StructureSheaf {R : GradedCRing.{u}} : Functor (ProjPreorder R).op CRingCat.{u}
+(overview)	-	-	-	56a91a31	ba115ccd:Proj ded550f1:ProjPreorder.toSpec	-

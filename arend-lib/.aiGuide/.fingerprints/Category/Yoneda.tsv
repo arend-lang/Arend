@@ -1,0 +1,21 @@
+# arend -gc fingerprints v2 for module Category.Yoneda. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HomLeft	func	16fec27dd42a	749577f328c7	756e7efe		\func HomLeft {C : Precat.{o, h}} (c : C) : Functor C.op SetCat.{h}
+HomRight	func	918b08815d1d	538693ba800e	c29e0d01		\func HomRight {C : Precat.{o, h}} (c : C) : Functor C SetCat.{h}
+homRight-preservesLimit	lemma	2374226e4706	-	7c9d5fb8	639ae997:HomRight	\lemma homRight-preservesLimit {J : Precat} {C : Precat.{o, h}} (c : C) (F : Functor J C) : PreservesLimit (HomRight c) F
+HomPresheaf	func	e08bb3de7df4	52e60f21117c	439e6380	b29c6278:HomLeft	\func HomPresheaf {C : Precat.{o, h}} (c : C) : Presheaf C
+Yoneda-trans	func	e197d803e92b	014a999d213b	3c1e7da8	b29c6278:HomLeft	\func Yoneda-trans {C : Precat.{o, h}} {a : C} {F : Functor C.op SetCat.{h}} (x : F a) : NatTrans (HomLeft a) F
+Yoneda-lemma	func	85c0adfc165a	79782b9137b7	9127fa73	b29c6278:HomLeft 9a1e8d91:Yoneda-trans 8a1150f0:YonedaLift_Yoneda.nat	\func Yoneda-lemma {C : Precat.{o, h}} {a : C} {F : Functor C.op SetCat.{h}} : QEquiv {NatTrans (HomLeft a) F} {F a}
+Yoneda-apply	lemma	bd5ee0fd9518	-	7de3bc4b	9a1e8d91:Yoneda-trans	\lemma Yoneda-apply {C : Precat.{o, h}} {a : C} (S T : Functor C.op SetCat.{h}) (f : NatTrans S T) {x : S a} : f ∘ Yoneda-trans x = Yoneda-trans (f a x)
+Yoneda-trans_o	lemma	dc0a97dcda08	-	dff3d81a	9a1e8d91:Yoneda-trans	\lemma Yoneda-trans_o {C : Precat.{o, h}} {a b : C} {F : Functor C.op SetCat.{h}} (g : Hom a b) (x : F b) : Yoneda-trans x ∘ Yoneda.Func g = Yoneda-trans (F.Func g x)
+Yoneda	func	10451e386e9b	cd47a7501003	a2ac0a47	b8e71b59:HomPresheaf	\func Yoneda {C : Precat.{o, h}} : FullyFaithfulFunctor C (PresheafCat C)
+presheaf-mono-char	lemma	ff2b2f0f9eda	-	6ab5fba1		\lemma presheaf-mono-char {C : Precat.{o, h}} {S T : Presheaf.{h} C} {f : NatTrans S T} : Mono {PresheafCat.{h} C} f <-> ∀ {a} (IsInj (f a))
+PrecategoryOfElements	instance	a918cbce0f0a	-	9d372e0c		\instance PrecategoryOfElements {C : Precat.{o, h}} (P : Presheaf.{s} C) : Precat
+PrecategoryOfElements.projection	func	88860b8a7b7b	0c5af421c27e	1251e228		\func projection {C : Precat.{o, h}} (P : Presheaf.{s} C) : Functor (PrecategoryOfElements P) C
+PrecategoryOfElements.functorial	func	f15681f40f0d	2a372aa329ca	fd8df750	8a1150f0:YonedaLift_Yoneda.nat	\func functorial {C : Precat.{o, h}} (P F : Presheaf.{s} C) (nat : Hom P F) : Functor (PrecategoryOfElements P) (PrecategoryOfElements F)
+PresheafColimit	func	598d3f1433b1	923eb5159e78	01e00700	131a92ca:PrecategoryOfElements.projection ed519f59:Yoneda	\func PresheafColimit {C : Precat.{o, h}} (P : Presheaf.{h} C) : Colimit (Comp Yoneda (PrecategoryOfElements.projection P)) P
+YonedaLift	func	35efe456ac6f	8e8e1d6f9fcd	52ce1793		\func YonedaLift {C : Precat.{s, s}} {E : CocompletePrecat.{s, o, h}} (A : Functor C E) : Functor (PresheafCat.{s} C) E
+YonedaLift.induced-natural	func	de85776a97ef	d777217c00b8	eb1684f3		\func induced-natural {C : Precat.{s, s}} {E : CocompletePrecat.{s, o, h}} {A : Functor C E} {X Y : Presheaf.{s} C} (f : NatTrans X Y) : NatTrans (Comp (diagram A Y).op (functorial X Y f).op) (diagram A X).op
+YonedaLift.cone-in-induced	func	e3e2cea0aa76	4100b818a4c9	918d704c		\func cone-in-induced {C : Precat.{s, s}} {E : CocompletePrecat.{s, o, h}} {A : Functor C E} {X Y : Presheaf.{s} C} (f : NatTrans X Y)
+YonedaLift_Yoneda	func	9250933d71b6	c31da15c5ef5	30652485	ed519f59:Yoneda 4f663a34:YonedaLift	\func YonedaLift_Yoneda {C : Precat.{s, s}} {E : CocompletePrecat.{s, o, h}} (A : Functor C E) : Iso {FunctorPrecat C E} {A} {Comp (YonedaLift A) Yoneda}
+(overview)	-	-	-	95c3b69f		-

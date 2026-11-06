@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Topology.NormedAbGroup.Real.Compact. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+real-split	func	63a974bb7e88	1ebb23e652f3	a523389f		\func real-split (a b : Real) (n : Nat) : Array Real (suc n)
+real-split.real-approx	lemma	f89e10717769	-	31db6fa0	3dc90c04:real-split	\lemma real-approx (a<b : a < b) (n/=0 : n /= 0) {x : Real} (x>=a : a <= x) (x<=b : x <= b) : ∃ (i : Fin (suc n)) (ldist (real-split a b n i) x < (b - a) * RatField.finv n)
+real-bounded-tb	lemma	c151299bb20e	-	7c833bc7	61ba247b:real-split.real-approx	\lemma real-bounded-tb : BallsTotallyBounded RealNormed
+(overview)	-	-	-	24089cbd	3dc90c04:real-split	-

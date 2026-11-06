@@ -1,0 +1,15 @@
+# arend -gc fingerprints v2 for module Arith.Nat.EulerTotient. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+coPrimes	func	9cbe5e754f75	da2c26f4fd93	d77153b5		\func coPrimes (n : Nat) : FinSet
+EulerTotient	func	bf96254df1c3	37ca95f60ca1	ded27e76	ffcf861c:coPrimes	\func EulerTotient (n : Nat) : Nat
+InvSubMonoid	instance	06b31ef2e9d2	-	51ea61a1		\instance InvSubMonoid (M : Monoid) : SubMonoid M
+InvGroup	instance	5dac130c30a7	-	7c7051cd		\instance InvGroup (M : Monoid) : Group
+coPrimes-eq	func	d81206f824f1	8b322a1f2375	8ff2ea5e	ba9976fa:InvGroup ffcf861c:coPrimes e659c59a:coPrimes-eq.finv-formula	\func coPrimes-eq (n : Nat) (n>0 : 0 NatOrder.< n) : QEquiv {coPrimes n} {InvGroup (FinRing {n})}
+coPrimes-eq.finv-formula	func	1dd50a7e61fb	7dfc284113db	dcd0eb57		\func finv-formula (x : Fin (suc n))
+coPrimes-eq.gcd-inv	lemma	129f84df3dcc	-	d5b31ff0	e659c59a:coPrimes-eq.finv-formula	\lemma gcd-inv {x : Fin (suc n)} (x-coprime : NatEuclidean.gcd (suc n) x = {Nat} 1) : (x NatSemiring.* finv-formula x) Nat.mod suc n = 1 Nat.mod suc n
+Z/nZ=FinRing	lemma	bb10bf51e6af	-	3deceecc	3b122697:Z/nZ=FinRing.factor-lem	\lemma Z/nZ=FinRing {n : Nat} : IsEquiv {FactorRing (Ideal.closure1 (pos (suc n)))} {FinRing {n}} (factor-lift FinRing.intHom factor-lem)
+chinese-map	func	49591c2bbf1d	6dd0b11f6406	5c835698		\func chinese-map {n m : Nat} (x : FinRing {suc n * m + n}) : \Sigma (FinRing {n}) (FinRing {m})
+chinese-map-surj	lemma	b83feabebdd0	-	f00eabb8	9fa787d4:chinese-map	\lemma chinese-map-surj (n m : Nat) (p : IsCoprime (suc n) (suc m)) : IsSurj (chinese-map {n} {m})
+chinese-map-surj.mod-inv	lemma	3d071a9be1cf	-	4f4046f4		\lemma mod-inv {n m : Nat} (p : n /= 0) (x : Nat) : x Nat.mod (n Semigroup.* m) Nat.mod n = x Nat.mod n
+natSemiring-unit	lemma	ef8bfcafd95f	-	0101827c		\lemma natSemiring-unit {n : Nat} (p : Inv {NatSemiring} n) : n = 1
+(overview)	-	-	-	fdd2653f		-

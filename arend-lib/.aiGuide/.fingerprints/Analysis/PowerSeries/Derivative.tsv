@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Analysis.PowerSeries.Derivative. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+derivative-convRadius	lemma	fe885cea7e7f	-	5b35f9b0		\lemma derivative-convRadius {A : RealPreBanachAlgebra} {cs : Nat -> A} : convRadius (deriv cs) = convRadius cs
+(overview)	-	-	-	71a59b2e	cc8ac393:derivative-convRadius	-

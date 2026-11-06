@@ -1,0 +1,21 @@
+# arend -gc fingerprints v2 for module Homotopy.Sphere.Circle. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Sphere1	data	022b299a5da6	-	e5c85501	d4f1b28b:Sphere1.base1 3b89c736:Sphere1.loop	\data Sphere1 | base1 | loop : base1 = base1
+Sphere1.ploop	func	8bd4e46a43a0	9abffa0cf479	65f72bb4	3b89c736:Sphere1.loop	\func ploop
+OmegaS1	func	8bd4e46a43a0	5a61d843c292	f122bdd8	d4f1b28b:Sphere1.base1	\func OmegaS1
+Sphere1-equiv	func	9b38a293817a	f66010ab7e58	28d79b90	315549af:Sphere1	\func Sphere1-equiv : QEquiv {Sphere1} {Sphere 1}
+Sphere1-equiv.CircleSusp	func	30ec07e545a0	487a427a9f21	27b20be3	315549af:Sphere1 d4f1b28b:Sphere1.base1 3b89c736:Sphere1.loop	\func CircleSusp (x : Sphere1) : Sphere 1
+Sphere1-equiv.SuspCircle	func	baa0e9d422f7	ad142f2950e5	77a081f7	315549af:Sphere1 d4f1b28b:Sphere1.base1 3b89c736:Sphere1.loop	\func SuspCircle (x : Sphere 1) : Sphere1
+Sphere1-equiv.CircleSuspCircle	func	25c906a51c22	bfdd0992f264	c508dd2b	315549af:Sphere1 55c48e84:Sphere1-equiv.CircleSusp a4a1275f:Sphere1-equiv.SuspCircle	\func CircleSuspCircle (x : Sphere1) : SuspCircle (CircleSusp x) = x
+Sphere1-equiv.SuspCircleSusp	func	fee390b528e4	072f974c9360	4e2fbb87	55c48e84:Sphere1-equiv.CircleSusp a4a1275f:Sphere1-equiv.SuspCircle	\func SuspCircleSusp (x : Sphere 1) : CircleSusp (SuspCircle x) = x
+code	func	d06e998b78b8	66098eed44ce	f502ee02	315549af:Sphere1 d4f1b28b:Sphere1.base1	\func code (x : Sphere1) : \Set0
+encode	func	1ab11d24697a	1eb90ffc7777	7bf4b533	d4f1b28b:Sphere1.base1 393515ef:code	\func encode (x : Sphere1) (p : base1 = x)
+wind	func	90dba29f5c2a	f6911c5e7356	9836418b	2d00e54a:OmegaS1 3b89c736:Sphere1.loop	\func wind (x : Int) : OmegaS1
+decode	func	f6e52d4ae92b	708971311d5e	56576aca	315549af:Sphere1 d4f1b28b:Sphere1.base1 393515ef:code 58521b42:wind	\func decode (x : Sphere1) : code x -> base1 = x
+decode.wind_loop	func	673bb8f8db98	d8f512b2804a	3e95bc8d	3b89c736:Sphere1.loop 58521b42:wind	\func wind_loop (n : Int) : wind n *> path loop = wind (isuc n)
+decode.decode_loop	func	bea44030177a	7d0efd08a968	9367b218	2e81e31a:decode 1c0efbf4:decode.wind_loop	\func decode_loop : transport (\lam x => code x -> base1 = x) (path loop) wind = wind
+encode_decode	func	efd7b6218c8d	4e724d2ae77a	26b99cd5	2e81e31a:decode fd9bbb81:encode	\func encode_decode {x : Sphere1} (p : base1 = x) : decode x (encode x p) = p
+encode_wind	func	9157aa512f25	435b09d9737e	fbda13c6	d4f1b28b:Sphere1.base1 fd9bbb81:encode 58521b42:wind	\func encode_wind (x : Int) : encode base1 (wind x) = x
+decode_encode	func	28faab191347	7a78ffdc5316	ef0e6e9d	d4f1b28b:Sphere1.base1 2e81e31a:decode fd9bbb81:encode 3a672aab:encode_wind	\func decode_encode (x : Sphere1) (c : code x) : encode x (decode x c) = c
+Loop_S1	func	ae8e13d748eb	5ab40c6556df	4e420450	2d00e54a:OmegaS1 d4f1b28b:Sphere1.base1 fd9bbb81:encode 5b852656:encode_decode 3a672aab:encode_wind 58521b42:wind	\func Loop_S1 : OmegaS1 = Int
+(overview)	-	-	-	183a497c	8d98ecfa:Loop_S1 2d00e54a:OmegaS1 315549af:Sphere1 d4f1b28b:Sphere1.base1 393515ef:code 2e81e31a:decode fd9bbb81:encode	-

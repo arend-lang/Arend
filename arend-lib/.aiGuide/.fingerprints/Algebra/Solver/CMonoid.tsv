@@ -1,0 +1,10 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.CMonoid. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CMonoidSolverModel	func	9c70ea174297	cd02c943c25a	0038f910		\func CMonoidSolverModel (M : CMonoid) : SolverModel M
+AbMonoidSolverModel	func	35612feed4b0	4062838ca518	d5a17744	19a2c29f:CMonoidSolverModel	\func AbMonoidSolverModel (A : AbMonoid) : SolverModel A
+CMonoidSolverModel.sort-consistent	lemma	5ae3af81f268	-	4d589109		\lemma sort-consistent {n : Nat} {env : Fin n -> M} {l : List (Fin n)} : (MonoidSolverModel M).interpretNF env (RedBlack.sort l) = (MonoidSolverModel M).interpretNF env l
+CMonoidSolverModel.perm-consistent	lemma	a6f2e162a707	-	3f02ec6c	e5d12708:CMonoidSolverModel.sort-consistent	\lemma perm-consistent {n : Nat} {env : Fin n -> M} {l l' : List (Fin n)} (p : Sort.Perm l l') : MonoidSolverModel.interpretNF env l = MonoidSolverModel.interpretNF env l'
+CMonoidSolverModel.interpretNF_iterr	lemma	8ce8aa73ace5	-	78d82c33		\lemma interpretNF_iterr {env : Array M} {l : List (Fin env.len)} {v : List (Fin env.len)} {n : Nat} : MonoidSolverModel.interpretNF env (iterr (l ++) n v) = M.pow (MonoidSolverModel.interpretNF env l) n * MonoidSolverModel.interpretNF env v
+CMonoidSolverModel.apply-axiom	lemma	a56d5b9109d8	-	0f5d8334		\lemma apply-axiom (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) (n : Nat) (add : List (Fin env.len)) : MonoidSolverModel.interpretNF env (RedBlack.sort (iterr ((MonoidSolverModel M).normalize t ++) n add)) = MonoidSolverModel.interpretNF env (RedBlack.sort (iterr ((MonoidSolverModel M).normalize s ++) n add))
+AbMonoidSolverModel.apply-axiom	lemma	d35802c8acce	-	c993693d		\lemma apply-axiom (env : Array A) (t s : Term env.len) (p : interpret {AbMonoid.toCMonoid A} env t = interpret {AbMonoid.toCMonoid A} env s) (n : Nat) (add : List (Fin env.len))
+(overview)	-	-	-	9d515534		-

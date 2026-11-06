@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Analysis.Poly. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+lnorm_polyEval-bound	lemma	02071b31e351	-	16596ee2		\lemma lnorm_polyEval-bound {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m) (z : X) : lnorm (polyEval q z) <= RealAbGroup.BigSum (\new (Array Real m (\lam k => lnorm (polyCoef q k) * pow (lnorm z) k)))
+lnorm_polyEval-boundD	lemma	f61b58126770	-	9be641c5		\lemma lnorm_polyEval-boundD {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m) {c : Real} (h : \Pi (k : Fin m) -> lnorm (polyCoef q k) <= c) (z : X) : lnorm (polyEval q z) <= c * RealField.powSum (lnorm z) m
+coefNorms	func	2813f59b0cfd	2f3e24c06be9	294fde77		\func coefNorms {X : PseudoNormedRing} (q : Poly X) (m : Nat) : Array Real m
+coefMax	func	4909c0028d56	b7ba5152bfdc	e3287e23	0681aa3e:coefNorms	\func coefMax {X : PseudoNormedRing} (q : Poly X) (m : Nat) : Real
+coefMax>=0	lemma	846ca9d1837e	-	64d1ff7e	a79db2bb:coefMax	\lemma coefMax>=0 {X : PseudoNormedRing} {q : Poly X} {m : Nat} : 0 <= coefMax q m
+coefMax-cond	lemma	995d185bf378	-	c2276ee5	a79db2bb:coefMax	\lemma coefMax-cond {X : PseudoNormedRing} {q : Poly X} {m : Nat} (k : Fin m) : lnorm (polyCoef q k) <= coefMax q m
+coefMax-cond-all	lemma	ca6d9c127bdc	-	bd1317dd	a79db2bb:coefMax	\lemma coefMax-cond-all {X : PseudoNormedRing} {q : Poly X} {m : Nat} (d : degree< q m) (j : Nat) : lnorm (polyCoef q j) <= coefMax q m
+deflate-coefBound	lemma	a9b9d6292ada	-	397662e9		\lemma deflate-coefBound {X : PseudoNormedRing} {p : Poly X} {m : Nat} (deg : degree< p m) {z : X} {c : Real} (c>=0 : 0 <= c) (h : \Pi (j : Nat) -> lnorm (polyCoef p j) <= c) (k : Nat) : lnorm (polyCoef (deflate p z) k) <= c * RealField.powSum (lnorm z) m
+polyPowerSeriesConv	lemma	4b6fb08d1bf1	-	4431faca		\lemma polyPowerSeriesConv {X : CompleteExNormedRing} {f : Poly X} {m : Nat} (d : degree< f m) : IsPowerSeriesConv (polyCoef f)
+polyEvalCover	func	9b165c3a80c3	d6f413125518	67d85d32		\func polyEvalCover {X : CompleteExNormedRing} {f : Poly X} {m : Nat} (d : degree< f m) : CoverMap X X (polyEval f)
+(overview)	-	-	-	acb2aa24	a79db2bb:coefMax a9c834ba:lnorm_polyEval-bound 2b48c26f:lnorm_polyEval-boundD bea3cc6a:polyEvalCover a3c9e4ed:polyPowerSeriesConv	-

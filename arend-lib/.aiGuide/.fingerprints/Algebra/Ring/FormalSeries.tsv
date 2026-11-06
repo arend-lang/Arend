@@ -1,0 +1,27 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.FormalSeries. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FSeries	type	8f46784a1be9	5468e058a815	b407c6be		\type FSeries (R : \Set)
+fseries-apply	lemma	64ceba48065e	-	d91b4ef5		\lemma fseries-apply {R : \Set} {x y : FSeries R} (p : x = y) {n : Nat} : x n = y n
+FSeriesRing	instance	311eb954a06f	-	545aba6a	1890ff4e:FSeries 00d3bd57:FSeriesRing.PairsFinSet 41587eee:FSeriesRing.coef	\instance FSeriesRing (R : Ring) : Ring (FSeries R)
+FSeriesRing.coef	func	601814f872ac	e03da8f9adc6	634181a0		\func coef {A : AddPointed} (a : A) (n : Nat) : A
+FSeriesRing.coef_/=0	lemma	7623811b7d1d	-	e339bd42	41587eee:FSeriesRing.coef	\lemma coef_/=0 {a : R} {n : Nat} (n/=0 : n /= 0) : coef a n = 0
+FSeriesRing.PairsFinSet	lemma	1afda7c7e17f	-	593f4566		\lemma PairsFinSet (n : Nat) : FinSet (\Sigma (i j : Nat) (\property (i + j = n))) (suc n)
+FSeriesRing.PairsFinSet-ext1	lemma	7bc6f08522fa	-	7102c8e1		\lemma PairsFinSet-ext1 {n : Nat} {x y : \Sigma (s : PairsFinSet n) (PairsFinSet s.1)} (p1 : x.1.1 = y.1.1) (p2 : x.1.2 = y.1.2) (p3 : x.2.1 = y.2.1) (p4 : x.2.2 = y.2.2) : x = y
+FSeriesRing.PairsFinSet-ext2	lemma	de92f6b7dbfd	-	7102c8e1		\lemma PairsFinSet-ext2 {n : Nat} {x y : \Sigma (s : PairsFinSet n) (PairsFinSet s.2)} (p1 : x.1.1 = y.1.1) (p2 : x.1.2 = y.1.2) (p3 : x.2.1 = y.2.1) (p4 : x.2.2 = y.2.2) : x = y
+FSeriesRing.Pairs_zero	lemma	9d5308ddbdf7	-	ffd9f239		\lemma Pairs_zero {f : PairsFinSet 0 -> R} : R.FinSum f = f (0, 0, idp)
+FSeriesRing.Pairs_suc-left	lemma	6a044566d7e6	-	8afca087		\lemma Pairs_suc-left {n : Nat} {f : PairsFinSet (suc n) -> R} : R.FinSum f = f (0, suc n, idp) + R.FinSum (\lam (s : PairsFinSet n) => f (suc s.1, s.2, pmap suc s.3))
+FSeriesAlgebra	instance	c2c8c2d49924	-	8a353538	1890ff4e:FSeries 41587eee:FSeriesRing.coef	\instance FSeriesAlgebra (R : CRing) : CAlgebra R
+FSeriesRingWith#	instance	be7c31403104	-	846aa879		\instance FSeriesRingWith# (R : Ring.With#) : Ring.With#
+FSeriesCRingWith#	instance	4152793ee6ec	-	8ed3d834	a251f717:FSeriesRingWith#	\instance FSeriesCRingWith# (R : CRing.With#) : CRing.With#
+FSeriesDomain	instance	2e7e5f2a47bf	-	918b90a4	1890ff4e:FSeries aa66f80d:FSeriesDomain.aux	\instance FSeriesDomain (R : Domain) : Domain
+FSeriesDomain.aux	lemma	024d7bcbbf0c	-	0451ebe7		\lemma aux {k n m : Nat} (n+m<k : n + m < k) {x y : FSeries R} (xn#0 : #0 (x n)) (ym#0 : #0 (y m)) : ∃ (k : Nat) (#0 ((x * y) k))
+FSeriesIntegralDomain	instance	629c237a66e8	-	1047ac89	1890ff4e:FSeries	\instance FSeriesIntegralDomain (R : IntegralDomain) : IntegralDomain
+poly-FSeries	func	18305a379cb8	1d606835bb68	cfdbedf3	72ac8123:FSeriesRing	\func poly-FSeries {R : Ring} : RingHom (PolyRing R) (FSeriesRing R) (polyCoef __)
+poly-FSeries.*-lem	lemma	d946f87e19d7	-	834b5b80		\lemma *-lem {p q : Poly R} {n : Nat} : polyCoef (p * q) n = (polyCoef p * {FSeriesRing R} polyCoef q) n
+geometric-FSeries	lemma	04133fe1b180	-	185621f9	72ac8123:FSeriesRing	\lemma geometric-FSeries {R : Ring} {a : R} : Monoid.Inv {FSeriesRing R} (pow a) (polyCoef (padd (padd pzero (negative a)) 1))
+alt_pm	func	35b5ed96baf5	a51fa1a95349	ef2caaf5		\func alt_pm {A : Ring} (n : Nat) : A
+alt_pm-suc	lemma	37e5ea8ccae9	-	b81f15fd	7c800a44:alt_pm	\lemma alt_pm-suc {A : Ring} {n : Nat} : alt_pm (suc n) = A.negative (alt_pm n)
+pow-conv-zero-pos	lemma	27df2f23c783	-	014ea3a6	72ac8123:FSeriesRing	\lemma pow-conv-zero-pos {A : Ring} {k : Nat} (k>0 : 0 NatSemiring.< k) : (FSeriesRing A).ide k = 0
+conv_BigSum	lemma	2e03e56ca9ba	-	dcc79050		\lemma conv_BigSum {A : Ring} (a b : FSeries A) (n : Nat) : (FSeriesRing A).* a b n = AddMonoid.BigSum (\new (Array A (suc n) (\lam k => a k * b (n -' k))))
+pow-conv-zero-below	lemma	57e39686b08f	-	b78379ea		\lemma pow-conv-zero-below {A : Ring} {b : FSeries A} (b_0 : b 0 = 0) {n k : Nat} (k<n : k NatSemiring.< n) : pow b n k = 0
+(overview)	-	-	-	60ae56cc	1890ff4e:FSeries 72ac8123:FSeriesRing	-

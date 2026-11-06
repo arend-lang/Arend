@@ -1,0 +1,18 @@
+# arend -gc fingerprints v2 for module Logic.Rewriting.TRS.Examples.LambdaCalculus. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SingularSort	func	8bd4e46a43a0	b8d1230e19d2	8bf2528b		\func SingularSort
+LC-Symbols	data	12b82f0a65a1	-	86646475	d4f1b28b:LC-Symbols.abstraction d4f1b28b:LC-Symbols.application	\data LC-Symbols : \Set | abstraction | application
+LC-FSignature	instance	5f2ebd6181dc	-	610c20a4	d4f1b28b:LC-Symbols.abstraction d4f1b28b:LC-Symbols.application f7ab8ded:SingularSort	\instance LC-FSignature : FSignature SingularSort
+MetaVariables	data	02b0c1a61b0e	-	88b6861d	d4f1b28b:MetaVariables.metavar-a d4f1b28b:MetaVariables.metavar-b	\data MetaVariables | metavar-a | metavar-b
+BetaRedexContext	func	03dd946fefa4	8d98e3e6b389	3cd6be81	d4f1b28b:MetaVariables.metavar-a d4f1b28b:MetaVariables.metavar-b	\func BetaRedexContext : MetaContext SingularSort
+BetaRedex	func	da658f08c92b	eec5d445d891	9a4cf071	0dc3e195:BetaRedexContext db6c0996:LC-FSignature	\func BetaRedex : Term LC-FSignature nil () BetaRedexContext
+BetaResult	func	da658f08c92b	b93be83be356	91eca809	d4f1b28b:MetaVariables.metavar-a d4f1b28b:MetaVariables.metavar-b	\func BetaResult : Term LC-FSignature nil () BetaRedexContext
+beta-reduction	func	7e04d22f87df	7f7ab0ce6ad0	a17bdd2a	73542f4c:BetaRedex 0dc3e195:BetaRedexContext e352fef0:BetaResult	\func beta-reduction : RewriteRule ()
+LC-rules	func	dd54df96d913	b85a57e0f3e7	65ab3508	db6c0996:LC-FSignature c9a04e77:beta-reduction	\func LC-rules : RuleRegistry LC-FSignature
+UntypedLambdaCalculus	instance	e362d60b7d7f	-	8f6ecbc6	db6c0996:LC-FSignature 4aa5823e:LC-rules	\instance UntypedLambdaCalculus : SimpleHigherOrderTermRewritingSystem
+K	func	d4408b18fe37	b4a82f011b46	c9182287		\func K : Term LC-FSignature nil () (EmptyMetaContext {LC-FSignature})
+I	func	d4408b18fe37	29188eef4f7b	c542a26f		\func I : Term LC-FSignature nil () (EmptyMetaContext {LC-FSignature})
+I_I	func	4172f75109ba	020dcacee99d	27292364	8887edc3:I	\func I_I : PureTerm LC-FSignature nil ()
+suitable-substitution	func	2e5214aaa3d1	a1634b988490	9b79e786	8887edc3:I d4f1b28b:MetaVariables.metavar-a d4f1b28b:MetaVariables.metavar-b	\func suitable-substitution : MetaSubstitution LC-FSignature nil BetaRedexContext (EmptyMetaContext {LC-FSignature})
+I_I~>I	func	c5ad21916c2f	1df795dba12e	468f6c43	8887edc3:I c9a04e77:beta-reduction ad49cd3b:suitable-substitution	\func I_I~>I : RewriteRelation LC-rules I_I I
+(overview)	-	-	-	f7056df0	d4f1b28b:LC-Symbols.abstraction d4f1b28b:LC-Symbols.application f7ab8ded:SingularSort	-

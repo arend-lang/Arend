@@ -1,0 +1,24 @@
+# arend -gc fingerprints v2 for module Logic.Unique. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+isProp	func	76b21d8380c9	b32387334bb7	472cd4d3	f8d8661d:Contr.A	\func isProp (A : \Cat)
+isProp.=>isSet	sfunc	b5dab0c6b250	aba1b70db1be	6830cc15	f8d8661d:Contr.A df524ac8:isProp	\sfunc =>isSet {A : \Cat} (p : isProp A) (a a' : A) : isProp (a = a')
+isProp.levelProp	level	df270292c93b	-	ee1b0060	f8d8661d:Contr.A df524ac8:isProp	\use \level levelProp (A : \Cat) (e e' : isProp A) : e = e'
+pi-isProp	func	35f8489be189	8e378465967d	4d53ac8f	f8d8661d:Contr.A	\func pi-isProp {A : \Cat} (B : A -> \Cat) (p : \Pi (a : A) -> isProp (B a)) : isProp (\Pi (a : A) -> B a)
+isSet	func	76b21d8380c9	1952731c8dc9	8f150fcc	f8d8661d:Contr.A	\func isSet (A : \Cat)
+isSet.levelProp	level	b326ac80b31b	-	77aecf6e	f8d8661d:Contr.A b625a97c:isSet	\use \level levelProp {A : \Cat} (e e' : isSet A) : e = e'
+Contr	class	7501c126e4a7	-	9d422733	f8d8661d:Contr.A aa0a893e:Contr.center f00446b2:Contr.contraction	\class Contr (A : \Cat) (center : A) (contraction : \Pi (a' : A) -> center = a')
+Contr.make	func	7ce2ab7de733	cf13d5161eaf	2eec4375	1e389534:Contr	\func make {A : \Cat} (a : A) (p : \Pi (a' : A) -> a = a')
+Contr.toSigma	sfunc	192c37989464	62ab75172577	03c60ee2	1e389534:Contr f8d8661d:Contr.A	\sfunc toSigma : \Sigma (x : A) (\Pi (a : A) -> x = a)
+Contr.levelProp	level	26b4b14a4b8b	-	7ec1b3e6		\use \level levelProp (A : \Cat) (c1 c2 : Contr A) : c1 = c2
+contr-equiv	lemma	4f91eecb84c8	-	2527dfa6		\lemma contr-equiv {A B : \Cat} (Ac : Contr A) (Bc : Contr B) {f : A -> B} : IsEquiv f
+isContr=>isProp	func	8c1f98adab59	136945b45e2b	020d892f		\func isContr=>isProp {A : \Cat} (c : Contr A) : isProp A
+isContr'=>isProp	lemma	cfb2112abecc	-	2d9f3f09	1e389534:Contr f8d8661d:Contr.A	\lemma isContr'=>isProp {A : \Cat} (c : A -> Contr A) : isProp A
+isProp=>isContr	func	d0843752dd48	a4ec313e9472	b29ba448		\func isProp=>isContr {A : \Cat} (p : isProp A) (a : A) : Contr A
+isProp'=>isContr	lemma	f89949518acf	-	73726be4	f8d8661d:Contr.A	\lemma isProp'=>isContr {A : \Cat} (p : isProp A) (a : TruncP A) : Contr A
+isProp=>PathContr	lemma	1327991cf44a	-	3bb91fd5	1e389534:Contr	\lemma isProp=>PathContr (A : \Cat) (p : isProp A) (a a' : A) : Contr (a = a')
+pi-Contr	lemma	094f5a8afd0c	-	90009850		\lemma pi-Contr {A : \Cat} (B : A -> \Cat) (p : \Pi (a : A) -> Contr (B a)) : Contr (\Pi (a : A) -> B a)
+sigma-Contr	lemma	fe5aa222a402	-	fe80ae78		\lemma sigma-Contr (A : Contr) (B : \Pi (a : A) -> Contr) : Contr (\Sigma (a : A) (B a))
+fiber-Contr	lemma	e2368c3688ba	-	6b2e2632	f8d8661d:Contr.A	\lemma fiber-Contr {A : \Cat} (B : A -> \Type) (cA : Contr A) (cT : Contr (\Sigma (a : A) (B a))) (a : A) : Contr (B a)
+contr-pathOver	lemma	7ba3fe5ddb12	-	b99af356		\lemma contr-pathOver {A : \Cat} (C : A -> \Cat) (Cc : \Pi (a : A) -> Contr (C a)) {a a' : A} (q : a = a') (u : C a) (v : C a') : Contr (Path (\lam j => C (q j)) u v)
+isProp-retract	func	3fe8aa84ccc6	56da94445929	751a049f	f8d8661d:Contr.A	\func isProp-retract {A B : \Cat} (f : B -> A) (g : A -> B) (gf : \Pi (b : B) -> g (f b) = b) (p : isProp A) : isProp B
+(overview)	-	-	-	87a6243e	1e389534:Contr df524ac8:isProp b625a97c:isSet	-

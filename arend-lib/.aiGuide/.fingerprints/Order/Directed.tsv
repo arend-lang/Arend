@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Order.Directed. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+DirectedSet	class	5daa8452ce15	-	7aecfbb5	e98619a9:DirectedSet.isDirected b4f75d7c:DirectedSet.isInhabitted	\class DirectedSet \extends Preorder { | isInhabitted : ∃ E | isDirected (x y : E) : ∃ (z : E) (x <= z) (y <= z) }
+ProductDirectedSet	instance	b2fecd1f5bf2	-	3900e524	f688a987:DirectedSet	\instance ProductDirectedSet (X Y : DirectedSet) : DirectedSet (\Sigma X Y)
+DirectedSetHasProduct	instance	3132149d4a25	-	2bc4fd10	f688a987:DirectedSet 7f5f8543:ProductDirectedSet	\instance DirectedSetHasProduct : HasProduct DirectedSet.{u}
+(overview)	-	-	-	793f2031	f688a987:DirectedSet	-

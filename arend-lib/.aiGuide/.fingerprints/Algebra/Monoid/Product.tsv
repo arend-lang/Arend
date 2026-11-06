@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ProductMonoid	instance	1b031cfe5a87	-	32673c89		\instance ProductMonoid (M N : Monoid) : Monoid (\Sigma M N)
+ProductCMonoid	instance	dd027e819e0d	-	311b72d1	14aca613:ProductMonoid	\instance ProductCMonoid (M N : CMonoid) : CMonoid
+ProductAddMonoid	instance	1ea9400d2e10	-	ec0718ce	14aca613:ProductMonoid	\instance ProductAddMonoid (A B : AddMonoid) : AddMonoid (\Sigma A B)
+ProductAbMonoid	instance	0117645aec66	-	87d36d31	2148f9c1:ProductAddMonoid	\instance ProductAbMonoid (A B : AbMonoid) : AbMonoid
+(overview)	-	-	-	b7143370		-

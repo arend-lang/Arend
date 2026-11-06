@@ -1,0 +1,76 @@
+# arend -gc fingerprints v2 for module Analysis.Series. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Series	func	026994b6f7dc	61e06587c4d3	2bc14eae		\func Series (A : \Set)
+partialSum	sfunc	61f476ac62a2	7f08a4336322	f06740f9		\sfunc partialSum {A : AddMonoid} (S : Series A) (n : Nat) : A
+partialSum-empty	lemma	d963d90870af	-	4f57c664	63364a33:partialSum	\lemma partialSum-empty {A : AddMonoid} {S : Series A} : partialSum S 0 = 0
+partialSum_1	lemma	cb1b890e7642	-	d845071e	63364a33:partialSum	\lemma partialSum_1 {A : AddMonoid} {S : Series A} : partialSum S 1 = S 0
+partialSum_suc	lemma	bafed8dc84ba	-	5de462b6	63364a33:partialSum	\lemma partialSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : partialSum S (suc n) = partialSum S n + S n
+partialSum_negative	lemma	d6bd83f42a5f	-	6dd54d89	63364a33:partialSum	\lemma partialSum_negative {A : AbGroup} {f : Series A} {N : Nat} : negative (partialSum f N) = partialSum (\lam n => negative (f n)) N
+partialSum_+	lemma	ebaf860d4fb7	-	8fc33db4	63364a33:partialSum	\lemma partialSum_+ {A : AbMonoid} {f g : Series A} {N : Nat} : partialSum (\lam n => f n + g n) N = partialSum f N + partialSum g N
+partialSum-split-shifted	lemma	6388118c38ff	-	dd406c39	63364a33:partialSum	\lemma partialSum-split-shifted {A : AddMonoid} {S : Series A} {n q : Nat} : partialSum S (n + q) = partialSum S n + partialSum (\lam k => S (n + k)) q
+partialSum-split	lemma	a5a622e7d521	-	6de5033b	e63d37f4:midSum 63364a33:partialSum	\lemma partialSum-split {A : AddMonoid} {S : Series A} {n m : Nat} (p : n <= m) : partialSum S m = partialSum S n + midSum S n m
+partialSum-monotone	lemma	587814482a1a	-	ffb7bb13	63364a33:partialSum	\lemma partialSum-monotone {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) {n m : Nat} (p : n <= m) : partialSum S n <= partialSum S m
+partialSum_norm_<=	lemma	6835426519a4	-	21bed7b6	63364a33:partialSum	\lemma partialSum_norm_<= {A : ExPseudoNormedAbGroup} {S : Series A} {N : Nat} : norm (partialSum S N) ExUpperRealAbMonoid.<= partialSum (\lam k => A.norm (S k)) N
+partialSum_<=	lemma	6dda226ff10c	-	ad4d59bd		\lemma partialSum_<= {A : PosetAddMonoid} {S T : Series A} {n : Nat} (p : \Pi (k : Nat) -> S k <= T k) : partialSum S n <= partialSum T n
+partialSum_hom	lemma	f74df44c8b15	-	31dee3b7	63364a33:partialSum	\lemma partialSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n : Nat} : f (partialSum S n) = partialSum (\lam i => f (S i)) n
+IsConvSeries	func	cce3a447a5fc	3a41bc5bdd4c	792b3d9a		\func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop
+IsSeriesSum	func	a8ff0057eb33	ec729c179728	5f1810e3	63364a33:partialSum	\func IsSeriesSum {A : AddMonoid} {T : TopSpace A} (S : Series A) (l : A) : \Prop
+IsSeriesSum_+	lemma	2fe9d14d51bc	-	528208ec		\lemma IsSeriesSum_+ {A : TopAbGroup} {f g : Series A} {a b : A} (fa : IsSeriesSum f a) (gb : IsSeriesSum g b) : IsSeriesSum (\lam n => f n + g n) (a + b)
+IsSeriesSum_negative	lemma	bca88b23e54f	-	528208ec		\lemma IsSeriesSum_negative {A : TopAbGroup} {f : Series A} {a : A} (fa : IsSeriesSum f a) : IsSeriesSum (\lam n => A.negative (f n)) (A.negative a)
+IsSeriesSum_-	lemma	8fd485e43cb8	-	528208ec		\lemma IsSeriesSum_- {A : TopAbGroup} {f g : Series A} {a b : A} (fa : IsSeriesSum f a) (gb : IsSeriesSum g b) : IsSeriesSum (\lam n => f n - g n) (a - b)
+constSeries-seriesSum	lemma	cadf61fe3b6c	-	e64489ff		\lemma constSeries-seriesSum {A : TopAbGroup} {a : A} : IsSeriesSum (FSeriesRing.coef a) a
+subst-ide-seriesSum	lemma	c70f03d783a2	-	bb7df3ee		\lemma subst-ide-seriesSum {A : TopRing} (x : A) : IsSeriesSum (\lam k => subst-ide k A.* Monoid.pow x k) x
+seriesSum-fin	lemma	5f387d16eee6	-	ae455fa2		\lemma seriesSum-fin {A : AddMonoid} {T : TopSpace A} {S : Series A} (n : Nat) (p : \Pi {j : Nat} -> n <= j -> S j = 0) : IsSeriesSum S (A.BigSum (\new (Array A n (\lam j => S j))))
+seriesSum-conv	lemma	f1e4bfe98bb9	-	982134f7		\lemma seriesSum-conv {A : TopAbGroup} {S : Series A} {l : A} (Sl : IsSeriesSum S l) : IsConvSeries S
+seriesSum	func	fada18a008a1	d32d7c01bbb6	55703076		\func seriesSum {A : CompleteTopAbGroup} (S : Series A) : Partial A
+seriesConv-sum	lemma	d2885add4916	-	35851d03	da48b9e7:seriesSum	\lemma seriesConv-sum {A : CompleteTopAbGroup} {S : Series A} (Sc : IsConvSeries S) : IsSeriesSum S (seriesSum S Sc)
+seriesSum-char	lemma	df538684623a	-	00bec05d	47675314:IsSeriesSum da48b9e7:seriesSum	\lemma seriesSum-char {A : CompleteTopAbGroup} {S : Series A} {l : A} : (seriesSum S = defined l) <-> IsSeriesSum S l
+midSum	func	c06b27839632	1863fe8f31bf	24326453	63364a33:partialSum	\func midSum {A : AddMonoid} (S : Series A) (n m : Nat) : A
+midSum'	func	c06b27839632	0756ebd3885d	68055e7c	63364a33:partialSum	\func midSum' {A : AddMonoid} (S : Series A) (n m : Nat) : A
+midSum'_midSum	lemma	046e3fb377c7	-	ff09c04c		\lemma midSum'_midSum {A : AddMonoid} {S : Series A} {n m : Nat} : midSum' S n m = midSum S n (n + m)
+midSum_midSum'	lemma	8f37f9695365	-	ff09c04c		\lemma midSum_midSum' {A : AddMonoid} {S : Series A} {n m : Nat} : midSum S n m = midSum' S n (m -' n)
+midSum_hom	lemma	d46099d2a721	-	9a389357	e63d37f4:midSum	\lemma midSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n m : Nat} : f (midSum S n m) = midSum (\lam i => f (S i)) n m
+midSum_zro	lemma	aeab1aa4f395	-	91811dd4	e63d37f4:midSum	\lemma midSum_zro {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j = 0) : midSum b n m = 0
+midSum_suc	lemma	dbaf66e169bd	-	61d48b98	e63d37f4:midSum	\lemma midSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : midSum S n (suc n) = S n
+midSum-diff	lemma	de4b7f5a1603	-	e0e92a7a	e63d37f4:midSum 63364a33:partialSum	\lemma midSum-diff {A : AbGroup} {S : Series A} {n m : Nat} (p : n <= m) : midSum S n m = partialSum S m - partialSum S n
+midSum-split	lemma	0688d129e9c9	-	3c5b7e97	e63d37f4:midSum	\lemma midSum-split {A : AddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (q : m <= k) : midSum b n k = midSum b n m + midSum b m k
+midSum-degenerate	lemma	6e9b1eb997f5	-	fbab2115	e63d37f4:midSum	\lemma midSum-degenerate {A : AddMonoid} {b : Series A} {n m : Nat} (m<n : m < n) : midSum b n m = 0
+midSum_<=-left	lemma	faf28989d231	-	4c974da8		\lemma midSum_<=-left {A : PosetAddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (s : \Pi (j : Nat) -> 0 <= b j) : midSum b m k <= midSum b n k
+midSum_<=	lemma	00afcfdaaeff	-	4c974da8		\lemma midSum_<= {A : PosetAddMonoid} {b c : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j <= c j) : midSum b n m <= midSum c n m
+midSum_0	lemma	7973b4d300d6	-	e01a07fb		\lemma midSum_0 {A : AddMonoid} {n m : Nat} : midSum (\lam _ => A.zro) n m = 0
+midSum>=0	lemma	c8d7f7d8d4a4	-	8f7c7db6		\lemma midSum>=0 {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi (j : Nat) -> 0 <= b j) : 0 <= midSum b n m
+midSum_norm	lemma	431837e56152	-	d2cc086e	e63d37f4:midSum	\lemma midSum_norm {A : ExPseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m
+midSum_<=-ldistr	lemma	e9f23faa1fca	-	d332e580	e63d37f4:midSum 40cd9d8b:midSum_<=-ldistr.BigSum_<=-ldistr	\lemma midSum_<=-ldistr {x : ExUpperReal} {b : Series ExUpperReal} (b>=0 : \Pi (j : Nat) -> 0 <= b j) {n m : Nat} : midSum (\lam j => x * b j) n m <= x * midSum b n m
+IsConvUpperSeries	func	a6536e72b80c	22ab95f65f87	571fd75f		\func IsConvUpperSeries (S : Series ExUpperReal) : \Prop
+IsAbsConvSeries	func	925d024864d5	fef768612587	4e106321	0efce82d:IsConvUpperSeries	\func IsAbsConvSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop
+upper-constSeries-conv	lemma	eb240371795e	-	5e0bb8ca		\lemma upper-constSeries-conv {a : ExUpperReal} : IsConvUpperSeries (FSeriesRing.coef a)
+constSeries-abs-conv	lemma	3441aad92dc8	-	5e59408b		\lemma constSeries-abs-conv {A : ExPseudoNormedAbGroup} {a : A} : IsAbsConvSeries (FSeriesRing.coef a)
+absConv-isConv	lemma	fd1f6444595d	-	367050e9		\lemma absConv-isConv {A : ExPseudoNormedAbGroup} {S : Series A} (Sc : IsAbsConvSeries S) : IsConvSeries S
+series-shift-conv	lemma	7aef3794f3f3	-	3d20f1cd		\lemma series-shift-conv {A : TopAbGroup} {S : Series A} : IsConvSeries S <-> IsConvSeries (\lam n => S (suc n))
+upperSeries-shift-conv	lemma	95d0ed0a9d13	-	9dac4fc8		\lemma upperSeries-shift-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) : IsConvUpperSeries S <-> IsConvUpperSeries (\lam n => S (suc n))
+upperSeries-shifts-conv	lemma	722b67056a45	-	9dac4fc8		\lemma upperSeries-shifts-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) (N : Nat) : IsConvUpperSeries S <-> IsConvUpperSeries (\lam n => S (n + N))
+series-shift-absConv	lemma	45c7e1d629c8	-	4095a2af		\lemma series-shift-absConv {A : ExPseudoNormedAbGroup} {S : Series A} : IsAbsConvSeries S <-> IsAbsConvSeries (\lam n => S (suc n))
+series-shifts-absConv	lemma	6da92c61b3ac	-	4095a2af		\lemma series-shifts-absConv {A : ExPseudoNormedAbGroup} {S : Series A} (N : Nat) : IsAbsConvSeries S <-> IsAbsConvSeries (\lam n => S (n + N))
+series-conv	lemma	455ce5da1bf0	-	4198f714	e63d37f4:midSum	\lemma series-conv {A : ExPseudoNormedAbGroup} {S : Series A} : IsConvSeries S <-> ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (midSum S N n)).U eps)
+series-conv-real	lemma	5a789de1bf02	-	a9ffbb9f		\lemma series-conv-real {A : PseudoNormedAbGroup} {S : Series A} : IsConvSeries S <-> ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> A.norm (midSum S N n) < eps)
+seriesSum_defined	lemma	9c50b5c66b10	-	61a1a718	47675314:IsSeriesSum 63364a33:partialSum 1b0c924e:seriesSum_defined.conv	\lemma seriesSum_defined {A : ExPseudoNormedAbGroup} {S : Series A} {a : A} (p : ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (a - partialSum S n)).U eps)) : IsSeriesSum S a
+series-limit	lemma	6ae8857b6fed	-	2480680f		\lemma series-limit {A : TopAbGroup} {S : Series A} (Sc : IsConvSeries S) : A.IsLimit S 0
+zeroSeries-sum	lemma	54121905531d	-	157c90ac		\lemma zeroSeries-sum {A : TopAbGroup} : IsSeriesSum (\lam _ => A.zro) 0
+real-series_<=	lemma	5bed158f7ccd	-	2afbd299		\lemma real-series_<= {b c : Series Real} (b>=0 : \Pi (j : Nat) -> 0 <= b j) (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvSeries c) : IsConvSeries b
+series_<=	lemma	e51380595690	-	2a62fc05		\lemma series_<= {b c : Series ExUpperReal} (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvUpperSeries c) : IsConvUpperSeries b
+IsBoundedUpperSeries	func	a6536e72b80c	7e1415ea3ae0	588aa493	5419f682:IsBoundedUpperSeries.shifted	\func IsBoundedUpperSeries (S : Series ExUpperReal) : \Prop
+upperSeries-bounded_<=	lemma	b1dfbfea307d	-	77bc9706		\lemma upperSeries-bounded_<= {a b : Series ExUpperReal} (a<=b : \Pi (n : Nat) -> a n <= b n) (bB : IsBoundedUpperSeries b) : IsBoundedUpperSeries a
+IsBoundedSeries	func	925d024864d5	4b5cb3517dd9	04676911		\func IsBoundedSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop
+series-lim-bound	lemma	e80f6e0d5035	-	db8db1d7		\lemma series-lim-bound {A : BoundedExPseudoNormedAbGroup} {b : Series A} {l : A} (bl : A.IsLimit b l) : IsBoundedSeries b
+convUpper-bounded	lemma	2df2cf8f3b25	-	625ebb3b	6eaa6e99:IsBoundedUpperSeries	\lemma convUpper-bounded {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (Sb : \Pi (n : Nat) -> (S n).IsBounded) (Sc : IsConvUpperSeries S) : IsBoundedUpperSeries S
+upperSeries-ldistr	lemma	cce318442cad	-	e6e7aec3		\lemma upperSeries-ldistr {c : Series ExUpperReal} (c>=0 : \Pi (n : Nat) -> 0 <= c n) (cc : IsConvUpperSeries c) {a : ExUpperReal} (ab : a.IsBounded) : IsConvUpperSeries (\lam n => a * c n)
+upperSeries-rdistr	lemma	864a07bfa7e0	-	e6e7aec3		\lemma upperSeries-rdistr {c : Series ExUpperReal} (c>=0 : \Pi (n : Nat) -> 0 <= c n) (cc : IsConvUpperSeries c) {a : ExUpperReal} (ab : a.IsBounded) : IsConvUpperSeries (\lam n => c n * a)
+series_*-bounded	lemma	04efaac4e8f6	-	8fd88fa9		\lemma series_*-bounded {b c : Series ExUpperReal} (c>=0 : \Pi (j : Nat) -> 0 <= c j) (bB : IsBoundedUpperSeries b) (cc : IsConvUpperSeries c) : IsConvUpperSeries (\lam n => b n * c n)
+geometric-upper-series-conv	lemma	37a74d24c177	-	3a6eb681	0efce82d:IsConvUpperSeries	\lemma geometric-upper-series-conv {r : ExUpperReal} (r>=0 : 0 <= r) (r<1 : r.U 1) : IsConvUpperSeries (ExUpperRealSemigroup.pow r)
+geometric-series-absConv	lemma	8b35524d6bb4	-	1d76ca19		\lemma geometric-series-absConv {X : ExPseudoNormedRing} {x : X} (|x|<1 : (norm x).U 1) : IsAbsConvSeries (pow x)
+geometric-series-ratio	lemma	26088a73e43b	-	699295f8		\lemma geometric-series-ratio {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : (S 0).IsBounded) {eps : Real} (eps>=0 : 0 <= eps) (b : Series Real) (b>=0 : \Pi (n : Nat) -> 0 <= b n) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n) {l : Real} (l<1 : l * eps < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries (\lam n => S n * ExUpperRealSemigroup.pow eps n)
+upper-ratio-test	lemma	022012a0152e	-	2bf5aaae	9a8b0ee6:upper-ratio-test.iter-bound	\lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : (S 0).IsBounded) (b : Series Real) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n) {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries S
+ratio-test	lemma	e19730644f04	-	4982e284		\lemma ratio-test {X : BoundedExPseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> norm (S (suc n)) <= norm (S n) * b n) {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S
+MTest	lemma	29fc8fc76295	-	29fae838		\lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Series ExUpperReal) (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvUpperSeries M) : IsUniFuncConvergent (\lam n x => partialSum (f __ x) n)
+partialSum-cover	lemma	f8b7aa9296f7	-	04a96134		\lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y (\lam x => partialSum (f __ x) n)
+(overview)	-	-	-	e8086777	a85908c1:IsAbsConvSeries 4c0a02a0:IsConvSeries 6e9215c6:Series e63d37f4:midSum da48b9e7:seriesSum	-

@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Set.SetHom. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SetHom	record	02cf40fd755f	-	498565c3	f3684270:SetHom.Cod f3684270:SetHom.Dom 42de4b4e:SetHom.func	\record SetHom (Dom : BaseSet) (Cod : BaseSet) { \coerce | func : Dom -> Cod }
+(overview)	-	-	-	f6f3bdc8	82e687a5:SetHom 42de4b4e:SetHom.func	-

@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Homotopy.K1. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+K1	data	b60706969466	-	16edd57e	d4f1b28b:K1.base 6413a1e9:K1.loop fb1ba60e:K1.relation	\data K1 (G : Group) : \1-Type | base | loop G : base = base | relation (g g' : G) (i : I) (j : I) \elim i, j { | left, j => base | right, j => loop g' j | i, left => loop g i | i, right => loop (g * g') i }
+K1.loop-comp	lemma	b720db6a9957	-	bf83bec6	6413a1e9:K1.loop fb1ba60e:K1.relation	\lemma loop-comp {G : Group} (g g' : G) : path (loop g) *> path (loop g') = path (loop (g * g'))
+K1.loop-ide	lemma	f735960cddbe	-	a3476ff6	6413a1e9:K1.loop a0efa89f:K1.loop-ide.idp-lemma	\lemma loop-ide {G : Group} : path (loop (ide {G})) = idp
+movePath1	lemma	c7adccd7ad2c	-	7f6df0bc		\lemma movePath1 {A : \1-Type} {a a' a'' : A} {p : a = a'} {q : a' = a''} {r : a = a''} (h : p *> q = r) : p = r *> inv q
+movePath2	lemma	614156e99270	-	747a1331	a34829ed:movePath1	\lemma movePath2 {A : \1-Type} {a a' a'' : A} {p : a = a'} {q : a' = a''} {r : a = a''} (h : p = r *> inv q) : p *> q = r
+leftMulEquiv	func	0b3deea366ce	3b165810d22b	f804b053		\func leftMulEquiv {G : Group} (g : G) : QEquiv (g *)
+rightMulEquiv	func	402c66443c3c	3a752d7c2870	1f1c29d3		\func rightMulEquiv {G : Group} (g : G) : QEquiv (* g)
+rMul-functorial	func	3dc7dffcefc0	c97f95c1ae83	801136cd	5192920c:rightMulEquiv	\func rMul-functorial {G : Group} (g g' : G) : (\lam x => rightMulEquiv g' (rightMulEquiv g x)) = rightMulEquiv (g * g')
+equivPathComposition	lemma	9427fa991269	-	e532a648	fb1ba60e:K1.relation 8d816aa2:code 5192920c:rightMulEquiv	\lemma equivPathComposition {G : Group.{u}} (g g' : G) : QEquiv-to-= (rightMulEquiv g) *> QEquiv-to-= (rightMulEquiv g') = QEquiv-to-= (rightMulEquiv (g * g'))
+code	func	dc94a58d8c67	c3b710f4d0dc	190342c9	febbf107:K1 d4f1b28b:K1.base 6413a1e9:K1.loop fb1ba60e:K1.relation 89511fd6:equivPathComposition 5192920c:rightMulEquiv	\func code {G : Group.{u}} (x : K1 G) : \Set u
+encode	func	d1199fab784a	24f0f3a6ef10	6e98db7e	d4f1b28b:K1.base 8d816aa2:code	\func encode {G : Group.{u}} (x : K1 G) (p : base = x) : code x
+decode	func	54a94721349a	e77cdb756c16	089475af	d4f1b28b:K1.base 6413a1e9:K1.loop 8d816aa2:code 30180d05:decode.decode_loop_homo	\func decode {G : Group.{u}} (x : K1 G) : code x -> base = x
+decode.wind	func	92ae5829550a	9c41ddb31620	d228f1cb	d4f1b28b:K1.base 6413a1e9:K1.loop	\func wind {G : Group} (g : G) : base {G} = base
+decode.decode_loop_homo	func	f2b62ce14826	213c8db0a968	c1b02c22	d4f1b28b:K1.base c745578a:K1.loop-comp 8d816aa2:code 3c9747dd:decode.wind	\func decode_loop_homo {G : Group.{u}} (g : G) : transport (\lam x => code {G} x -> base = x) (wind g) wind = wind
+encode_decode	func	7f0d93846cdd	fbe8e934d7af	986f10ab	e3ac937f:K1.loop-ide 424a2779:decode bf843247:encode	\func encode_decode {G : Group.{u}} {x : K1 G} (p : base = x) : decode x (encode x p) = p
+decode_encode	func	7ec887c21b76	cee1bf52ae2d	ea324f9f	d4f1b28b:K1.base 424a2779:decode bf843247:encode	\func decode_encode {G : Group.{u}} (x : K1 G) (c : code x) : encode x (decode x c) = c
+Loop_K1	func	c8d8642b0014	1035c64a6940	1b5b412c	febbf107:K1 d4f1b28b:K1.base	\func Loop_K1 {G : Group.{u}} : (base {G} = base) = G
+(overview)	-	-	-	84dad139	febbf107:K1 d4f1b28b:K1.base fb1ba60e:K1.relation 271a1be5:Loop_K1 8d816aa2:code 89511fd6:equivPathComposition c397483c:rMul-functorial	-

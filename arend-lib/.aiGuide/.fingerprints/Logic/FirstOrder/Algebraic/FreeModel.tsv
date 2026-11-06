@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Logic.FirstOrder.Algebraic.FreeModel. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FreeStructure	instance	1a799564ae12	-	d73ed81f	98f1914d:FreeStructure.QTerm 5d0b0f58:FreeStructure.QTerm.qapply 91b7d7db:FreeStructure.QTerm.qinj	\instance FreeStructure {T : Theory.{u, u, u}} (X : T -> \Set u) : Structure T
+FreeModel	instance	418f0ef8c151	-	3f862d80	952a780c:FreeStructure 005ec270:FreeStructure.interpretF=substF d2558e8d:FreeStructure.qinj-surj	\instance FreeModel {T : Theory.{u, u, u}} (X : T -> \Set u) : Model T
+FreeStructure.QTerm	data	ff4d83b06a92	-	17002eef	5d0b0f58:FreeStructure.QTerm.qapply 91b7d7db:FreeStructure.QTerm.qinj ff0be658:FreeStructure.QTerm.qmerge 81308b3b:FreeStructure.QTerm.qquot	\data QTerm .{u} {T : Theory.{u, u, u}} (V : T -> \Set u) (s : T) : \Set | qinj (Term V s) | qapply (f : Symb s) (DArray (\lam j => QTerm V (domain f j))) | qquot {t t' : Term V s} (IsTheorem nil (equality t t')) : qinj t = qinj t' | qmerge {f : Symb s} (ds : DArray (\lam j => Term V (domain f j))) : qinj (apply f ds) = qapply f (\new DArray { | at => \lam j => qinj (ds j) })
+FreeStructure.qinj-surj	func	7be2e90ae3aa	92ff48fae32e	040ed52f	98f1914d:FreeStructure.QTerm 91b7d7db:FreeStructure.QTerm.qinj	\func qinj-surj {T : Theory.{u, u, u}} {V : T -> \Set u} {s : T} (q : QTerm V s) : ∃ (t : Term V s) (qinj t = q)
+FreeStructure.qinj-equality	lemma	89a8f2b44962	-	82da7a1e	98f1914d:FreeStructure.QTerm 91b7d7db:FreeStructure.QTerm.qinj	\lemma qinj-equality {T : Theory.{u, u, u}} {V : T -> \Set u} {s : T} {t t' : Term V s} : (qinj t = qinj t') <-> IsTheorem nil (equality t t')
+FreeStructure.qinterpret	func	20a102f42b02	328661e3981d	c35cc315	98f1914d:FreeStructure.QTerm	\func qinterpret {T : Theory.{u, u, u}} {M : Model T} {V : T -> \Set u} (rho : \Pi {s : T} -> V s -> M s) {s : T} (t : QTerm V s) : M s
+(overview)	-	-	-	86acb589		-

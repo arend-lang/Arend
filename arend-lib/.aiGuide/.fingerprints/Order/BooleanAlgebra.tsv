@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Order.BooleanAlgebra. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BooleanAlgebra	class	16c30af67e8d	-	cdacfdee	97b987d0:BooleanAlgebra.compl eb8de231:BooleanAlgebra.compl-join f73e06ef:BooleanAlgebra.compl-meet	\class BooleanAlgebra \extends BoundedDistributiveLattice, HeytingAlebra { | compl : E -> E | compl-meet {a : E} : a ∧ compl a <= bottom | compl-join {a : E} : top <= a ∨ compl a | --> => \lam a b => compl a ∨ b | <=-curry => \lam xa<=b => meet-univ <=-refl top-univ <=∘ meet-monotone <=-refl compl-join <=∘ ldistr>= <=∘ join-comm =<= join-monotone meet-right xa<=b | <=-uncurry => \lam x<=a-->b => meet-monotone x<=a-->b <=-refl <=∘ rdistr>= <=∘ join-univ (meet-comm =<= compl-meet <=∘ bottom-univ) meet-left }
+BooleanAlgebra.compl-adj	lemma	da13d473e708	-	67a096c0	97b987d0:BooleanAlgebra.compl	\lemma compl-adj {a b : E} (ab : a ∧ b <= bottom) : a <= compl b
+BooleanAlgebra.compl-mono	lemma	dd3f421de0da	-	2bac231f	97b987d0:BooleanAlgebra.compl	\lemma compl-mono {a b : E} (a<=b : a <= b) : compl b <= compl a
+BooleanAlgebra.compl_meet	lemma	1f06da113473	-	c93e37bb	97b987d0:BooleanAlgebra.compl	\lemma compl_meet {a b : E} : compl (a ∧ b) = compl a ∨ compl b
+BooleanAlgebra.compl_join	lemma	e2a965ff46c4	-	f1371b4c	97b987d0:BooleanAlgebra.compl	\lemma compl_join {a b : E} : compl (a ∨ b) = compl a ∧ compl b
+BooleanAlgebra.compl-inv	lemma	7d40bf5647aa	-	9f39a011	97b987d0:BooleanAlgebra.compl	\lemma compl-inv {a : E} : compl (compl a) = a
+BooleanAlgebra.symm-diff	func	6c5c45d00eff	96c7f94a7eb1	cf084cf7	97b987d0:BooleanAlgebra.compl	\func symm-diff (a b : E)
+BooleanAlgebra.compl_symm-diff	lemma	b7e549b5e4a1	-	3e0b2ebc	97b987d0:BooleanAlgebra.compl bea330dc:BooleanAlgebra.symm-diff	\lemma compl_symm-diff {a b : E} : compl (symm-diff a b) = a ∧ b ∨ compl a ∧ compl b
+NegatedElem	type	cc041d0ab04f	57e8f96c9e10	0f6e9eb8		\type NegatedElem (R : HeytingAlebra)
+HeytingBooleanAlgebra	instance	da3e40ff11c1	-	869bbe37	02268c7e:BooleanAlgebra b944ac49:NegatedElem	\instance HeytingBooleanAlgebra (R : HeytingAlebra) : BooleanAlgebra (NegatedElem R)
+(overview)	-	-	-	656018d4	97b987d0:BooleanAlgebra.compl 15f8f9be:HeytingBooleanAlgebra	-

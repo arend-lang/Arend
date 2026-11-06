@@ -1,0 +1,60 @@
+# arend -gc fingerprints v2 for module Paths. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+idpe	func	8fb1cab79fce	fe7aa8c578d0	272df08f		\func idpe {A :⁺ \Cat} (a :⁺ A) : a = a
+pmap	func	3ef4f71ac2e5	e6141f8fabde	59d0947e		\func pmap {A B : \Cat} (f : A -> B) {a a' : A} (p : a = a') : f a = f a'
+pmap2	func	22de6dd3bd36	514275b86996	e51338ff		\func pmap2 {A B C : \Cat} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b'
+transport	func	cfbde044976c	eec1b599dc0f	8ca8d87a		\func transport {A : \Cat} (B : A -> \Cat) {a a' : A} (p : a = a') (b : B a) : B a'
+transportInv	func	0c5ae844521f	15214a37aeba	8a3cc858		\func transportInv {A : \Cat} (B : A -> \Cat) {a a' : A} (p : a = a') (b : B a') : B a
+transport2	func	a767bd8a9723	698416675761	ff1a09c4		\func transport2 {A B : \Cat} (C : A -> B -> \Cat) {a a' : A} {b b' : B} (p : a = a') (q : b = b') (c : C a b) : C a' b'
+sym	lemma	7cb92252d0dd	-	326d0bac		\lemma sym {A : \Set} {a a' : A} (p : a = a') : a' = a
+inv	func	3f0cf52154aa	40a606ae78ee	63c9bdd2		\func inv {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') : a' = a
+*>	func	ad6a920e0ee7	72890429c9df	f0350a7e		\func *> {A :⁺ \Cat} {a a' a'' :⁺ A} (p :⁺ a = a') (q :⁺ a' = a'') : a = a''
+<*	func	ad6a920e0ee7	2f295e2848d6	c64db763		\func <* {A :⁺ \Cat} {a a' a'' :⁺ A} (p :⁺ a = a') (q :⁺ a' = a'') : a = a''
+psqueeze	func	be33a3580b56	fbd082b84f40	96af08f7		\func psqueeze {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') (i : I) : a = p i
+Jl	func	a9ae5213b4a5	081f4459e57e	629e3b7b		\func Jl {A : \Cat} {a : A} (B : \Pi (a' : A) -> a = a' -> \Cat) (b : B a idp) {a' : A} (p : a = a') : B a' p
+Jl.Jr	func	95df4267d41b	06f2e9fe22de	fea4d2d2		\func Jr {A : \Cat} {a' : A} (B : \Pi (a : A) -> a = a' -> \Cat) (b : B a' idp) {a : A} (p : a = a') : B a p
+Jl.def	func	a9ae5213b4a5	7d2052ccf54f	333026d6	2dc4b7aa:Jl	\func def {A : \Cat} {a : A} (B : \Pi (a' : A) -> a = a' -> \Cat) (b : B a idp) {a' : A} (p : a = a') : B a' p
+inv_inv	func	6874c7d53449	dcae05ab0dd4	3f98ed5b	8dcca5dc:inv	\func inv_inv {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : inv (inv p) = p
+inv_*>	func	4656604eca28	cd7bf30f1ee5	5c06f3e2	bd78a33f:*> 8dcca5dc:inv	\func inv_*> {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : inv p *> p = idp
+*>_inv	func	ee18c7db5933	39a8de38f0ef	231f7d3b	bd78a33f:*> 8dcca5dc:inv	\func *>_inv {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : p *> inv p = idp
+idp_*>	func	d7020a0e06a8	17fa2fddacb6	243a9b64	bd78a33f:*>	\func idp_*> {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : idp *> p = p
+<*_idp	func	08d7b78c89df	933e7d739216	665bfa51	857ceee0:<*	\func <*_idp {A :⁺ \Cat} {a a' :⁺ A} {p :⁺ a = a'} : p <* idp = p
+<*_*>	func	a6acfbd6e57e	d9db84eaed74	47702577	bd78a33f:*> 857ceee0:<*	\func <*_*> {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a = a'} {q :⁺ a' = a''} : p <* q = p *> q
+*>_inv-comm	func	704168634f8e	6b834efe590d	6d4552ae	bd78a33f:*> 8dcca5dc:inv	\func *>_inv-comm {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a = a'} {q :⁺ a' = a''} : inv (p *> q) = inv q *> inv p
+pmap_inv-comm	func	fafbdc5928c9	5f4f57ef3ce4	91d76242	8dcca5dc:inv 3a344385:pmap	\func pmap_inv-comm {A B : \Cat} {a a' : A} (f : A -> B) (p : a = a') : pmap f (inv p) = inv (pmap f p)
+*>-assoc	func	9386d74137d3	4e2fbfae40fa	7045c7b3	bd78a33f:*>	\func *>-assoc {A :⁺ \Cat} {a1 a2 a3 a4 :⁺ A} {p :⁺ a1 = a2} {q :⁺ a2 = a3} {r :⁺ a3 = a4} : (p *> q) *> r = p *> (q *> r)
+pmap_*>-comm	func	c90a2297dd87	3d01ed67319f	169c1ffb		\func pmap_*>-comm {A B : \Cat} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'') : pmap f (p *> q) = pmap f p *> pmap f q
+pmap_<*-comm	func	91ffd060d423	2667d8dac6bd	169c1ffb		\func pmap_<*-comm {A B : \Cat} (f : A -> B) {a a' a'' : A} (p : a = a') (q : a' = a'') : pmap f (p <* q) = pmap f p <* pmap f q
+pmap2_*>-comm	func	543550e4dcf0	521e786fa8c7	169c1ffb		\func pmap2_*>-comm {A B C : \Cat} (f : A -> B -> C) {a a' a'' : A} (p : a = a') (q : a' = a'') {b b' b'' : B} (s : b = b') (t : b' = b'') : pmap2 f (p *> q) (s *> t) = pmap2 f p s *> pmap2 f q t
+rotatePathLeft	func	1c4e7924b082	98781c61d744	6cd95f74	bd78a33f:*> 8dcca5dc:inv	\func rotatePathLeft {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a' = a} {q :⁺ a' = a''} {r :⁺ a = a''} (t :⁺ q = p *> r) : inv p *> q = r
+rotatePathRight	func	5a920ced42a5	7207a0e7c837	23f0f4a0	bd78a33f:*> 8dcca5dc:inv	\func rotatePathRight {A :⁺ \Cat} {a a' a'' :⁺ A} {p :⁺ a'' = a'} {q :⁺ a = a'} {r :⁺ a = a''} (t :⁺ q = r *> p) : q *> inv p = r
+qed	func	1197088847f3	cb0c33d9eeb0	183945d1		\func qed {A : \Cat} (a : A) : a = a
+>==	func	6f238343ff8b	889de4edce80	80b186c9		\func >== {A : \Cat} {a a' a'' : A} (p : a = a') (q : a' = a'')
+==<	func	d841b16016a6	f6f37254d6a6	6e2da56d		\func ==< {A : \Cat} (a : A) {a' : A} (p : a = a')
+idpOver	func	432ec1ae1ec8	9e50c022f765	f4e9c9a0		\func idpOver (A :⁺ I -> \Cat) (a :⁺ A left) : Path A a (coe A a right)
+pathOver	func	3491f55c4632	2f3fe22926d5	86e70cc4		\func pathOver {A :⁺ I -> \Cat} {a :⁺ A left} {a' :⁺ A right} (p :⁺ coe A a right = a') : Path A a a'
+coe_path	func	4f81564b0c27	a94e9bd86e55	4ef06da8	bd78a33f:*> 8dcca5dc:inv	\func coe_path {A :⁺ \Cat} {a1 a2 a3 a4 :⁺ A} (p :⁺ a2 = a1) (q :⁺ a2 = a3) (r :⁺ a3 = a4) : coe (\lam i => p i = r i) q right = inv p *> q *> r
+coe_path.alt	func	f7a980443e37	eaee66cd601f	7ff92c4d	cf5c6d25:coe_path	\func alt {A :⁺ \Cat} {a1 a2 a3 a4 :⁺ A} (p :⁺ a1 = a2) (q :⁺ a2 = a3) (r :⁺ a4 = a3) : coe (\lam i => p i = r i) (p *> q *> inv r) right = q
+coe_path_pmap	func	51eda0ecbef7	bbee5e177099	d6c4abba	bd78a33f:*>	\func coe_path_pmap {A :⁺ \Cat} {a a' :⁺ A} (p :⁺ a = a') {b b' :⁺ A} (q :⁺ b = b') {s :⁺ a = b} {s' :⁺ a' = b'} (h :⁺ s *> q = p *> s') : coe (\lam i => p i = q i) s right = s'
+path-sym	func	8230c63ad37a	ff7315e9da94	380dc1ae		\func path-sym {A : \Cat u} (a a' : A) : (a = a') = (a' = a)
+homotopy-isNatural	func	63850b32d436	2811ff56325a	3850022e	bd78a33f:*> 3a344385:pmap	\func homotopy-isNatural {A B : \Cat} (f g : A -> B) (h : \Pi (a : A) -> f a = g a) {a a' : A} (p : a = a') : pmap f p *> h a' = h a *> pmap g p
+homotopy_app-comm	func	dd0e9f42f993	b1c6fb0322e0	af523f99	3a344385:pmap	\func homotopy_app-comm {A : \Cat} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) : h (f a) = pmap f (h a)
+pmapd	func	e7a77ecc34cb	9a64885e9345	69e1b7a1	e5668fea:transport	\func pmapd {A : \Cat} {B : A -> \Cat} (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a') : transport B p (f a) = f a'
+pmapd_pathOver	func	fc1622e1885d	c37acbe24632	510f1697	511a792e:pathOver 82f1a814:pmapd	\func pmapd_pathOver {A : \Cat} (B : A -> \Cat) (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a') (s : transport B p (f a) = f a') (t : path (\lam i => f (p @ i)) = {Path (\lam i => B (p @ i)) (f a) (f a')} pathOver s) : pmapd f p = s
+transport_*>	func	674a8ac1f9f9	357354803a8a	87ce93dc	bd78a33f:*> e5668fea:transport	\func transport_*> {A : \Cat} (B : A -> \Cat) {a a' a'' : A} (p : a = a') (q : a' = a'') (x : B a) : transport B (p *> q) x = transport B q (transport B p x)
+transport_pi	func	c7237a628226	25ba2deae6b1	060cc53f		\func transport_pi {A : \Cat} (B C : A -> \Cat) {a a' : A} (p : a = a') (f : B a -> C a) (x : B a') : transport (\lam y => B y -> C y) p f x = transport C p (f (transport B (inv p) x))
+transport_pi2	func	ca58f9beb164	a659b2ffe7bb	300e3e3c		\func transport_pi2 {A : \Cat} (B C : A -> \Cat) {a a' : A} (p : a = a') (f : B a -> C a) (g : B a' -> C a') (t : \Pi (x : B a) -> transport C p (f x) = g (transport B p x)) : transport (\lam y => B y -> C y) p f = g
+transport_depPi	func	2b658e1627e7	01a218fcbf13	d8cb02d1		\func transport_depPi {A B : \Cat} (C : A -> B -> \Cat) {a a' : A} (p : a = a') (f : \Pi (b : B) -> C a b) (x : B) : transport (\lam y => \Pi (b : B) -> C y b) p f x = transport (C __ x) p (f x)
+transport_path-right	func	ef28d02eeb7a	0410485f392a	d24cba8b		\func transport_path-right {A : \Cat} {a0 a b : A} (p : a = b) (q : a0 = a) : transport (a0 =) p q = q *> p
+transport_path-left	func	04d8b55e6574	e4f5f11c7428	e3392633		\func transport_path-left {A : \Cat} {a0 a b : A} (p : a = b) (q : a = a0) : transport (= a0) p q = inv p *> q
+transport_path_pmap	func	6dcd7c7db8f0	6b9b862ce341	b1e73791	bd78a33f:*> 3a344385:pmap	\func transport_path_pmap {A B : \Cat} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : q *> pmap g p = pmap f p *> s) : transport (\lam x => f x = g x) p q = s
+transport_path_pmap.conv	func	0901e349a1e9	ea640a8b3070	44f149ef	3dab25c9:transport_path_pmap	\func conv {A B : \Cat} (f g : A -> B) {a a' : A} (p : a = a') (q : f a = g a) (s : f a' = g a') (h : transport (\lam x => f x = g x) p q = s) : q *> pmap g p = pmap f p *> s
+transport_path_pmap-right	func	9c8e05fd7519	73cda1946411	40038f12		\func transport_path_pmap-right {A B : \Cat} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : q *> pmap g p = s) : transport (\lam x => b = g x) p q = s
+transport_path_pmap-right.conv	func	3819cb67da62	d44d7aedfb3c	05619a55		\func conv {A B : \Cat} (b : B) (g : A -> B) {a a' : A} (p : a = a') (q : b = g a) (s : b = g a') (h : transport (\lam x => b = g x) p q = s) : q *> pmap g p = s
+transport_inv_id	func	0d1beab56b9e	36aa5739a209	fb2b0723	8dcca5dc:inv e5668fea:transport	\func transport_inv_id {A : \Cat} (B : A -> \Cat) {a b : A} (p : a = b) (x : B a) : transport B (inv p) (transport B p x) = x
+transport_id_inv	func	e8ad9e6b89d1	b68a86b48c10	b422f82b	8dcca5dc:inv e5668fea:transport	\func transport_id_inv {A : \Cat} (B : A -> \Cat) {a b : A} (p : a = b) (x : B b) : transport B p (transport B (inv p) x) = x
+transport-rotate	func	8d2b005c7f64	8814d4cdb437	71a34a10	8dcca5dc:inv e5668fea:transport	\func transport-rotate {A : \Cat} (B : A -> \Cat) {a a' : A} (p : a = a') {x : B a} {y : B a'} (t : transport B p x = y) : x = transport B (inv p) y
+transport_inv_func	func	c1fc8d1210ff	be6157255886	8af7e5c5	8dcca5dc:inv e5668fea:transport	\func transport_inv_func {A : \Cat} (B : A -> \Cat) {a a' : A} (p : a = a') (g : B a' -> B a) (gf : \Pi (x : B a) -> g (transport B p x) = x) (b : B a') : transport B (inv p) b = g b
+coe_sigma	func	0b80758bc426	7a508cccb78a	9b83a7b0		\func coe_sigma {A : I -> \Cat} (B : \Pi (i : I) -> A i -> \Cat) (p : \Sigma (a : A left) (B left a)) (j : I) : coe (\lam i => \Sigma (a : A i) (B i a)) p j = (coe A p.1 j, coe (\lam i => B i (coe A p.1 i)) p.2 j)
+coe_pi	func	df249dd63b87	8e5fb093b1ff	9f58e147		\func coe_pi {B C : I -> \Cat} {f : B left -> C left} : coe (\lam i => B i -> C i) f right = (\lam x => coe C (f (coe2 B right x left)) right)
+(overview)	-	-	-	63aeef1e	bd78a33f:*> 857ceee0:<* 95456331:<*_*> 377a63d1:==< 00d20388:>== 2dc4b7aa:Jl 90f13f14:Jl.Jr 3a344385:pmap c54a57e6:qed	-

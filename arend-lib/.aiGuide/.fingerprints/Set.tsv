@@ -1,0 +1,35 @@
+# arend -gc fingerprints v2 for module Set. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Dec	data	cd0323ffac1e	-	8a8de609	f2ef3583:Dec.levelProp 15c9cf1f:Dec.no 6edced04:Dec.yes	\data Dec (E : \Prop) | yes E | no (Not E)
+Dec.rec	func	9e3ae6a6b65a	de221d408175	fb1dbdfa	138bab8d:Dec	\func rec {R : \Type} {E : \Prop} (y : E -> R) (n : Not E -> R) (d : Dec E) : R
+negated-dec	lemma	9c230509b3ad	-	86736733	138bab8d:Dec	\lemma negated-dec (E : \Prop) {P : NegatedProp} (f : Dec E -> P) : P
+dec-separated	lemma	c6b7643d2c7e	-	fdea824f	138bab8d:Dec	\lemma dec-separated {E : \Prop} (d : Dec E) (q : Not (Not E)) : E
+decToBool	func	988f34025642	243610cc20db	5f10f706	138bab8d:Dec	\func decToBool {E : \Prop} (d : Dec E) : Bool
+Decide	class	ae938b64bce0	-	be8a79ff	138bab8d:Dec	\class Decide (E : \Prop) { | decide : Dec E }
+dec_decide	lemma	13a02226ade3	-	a4580200	138bab8d:Dec 3d061063:Decide	\lemma dec_decide {E : \Prop} (d : Dec E) : Decide E
+dec_yes_reduce	lemma	1aa3a965be42	-	bbda100e	138bab8d:Dec 15c9cf1f:Dec.no 6edced04:Dec.yes	\lemma dec_yes_reduce {E : \Prop} {d : Dec E} (e : E) : d = yes e
+dec_no_reduce	lemma	9ce0fb6d7b08	-	bbda100e	138bab8d:Dec 15c9cf1f:Dec.no 6edced04:Dec.yes	\lemma dec_no_reduce {E : \Prop} {d : Dec E} (q : Not E) : d = no q
+Dec_||	lemma	66c2e2bf2596	-	2c9e8083		\lemma Dec_|| {A B : \Prop} (d : Dec A) (e : Dec B) : Dec (A || B)
+SigmaDecide	func	504cd705d4a6	2f2f7e983e17	7ce4dae6		\func SigmaDecide {A : Decide} (B : A -> Decide) : Decide (\Sigma (a : A) (B a))
+ProductDecide	instance	c68da76224af	-	fae1c68d		\instance ProductDecide (A B : Decide) : Decide
+NotDec	lemma	3556d142f69f	-	c070fd21		\lemma NotDec {P : \Prop} (d : Dec P) : Dec (Not P)
+NotDecide	instance	0d6874f8f03d	-	ed0e36cd		\instance NotDecide (A : Decide) : Decide (Not A)
+BaseSet	class	bf100e29875c	-	3ce5efa5		\class BaseSet (E : \Set)
+SeparatedSet	class	f45823cfb689	-	76b9df90	dca12e79:BaseSet 65444d00:SeparatedSet.separatedEq	\class SeparatedSet \extends BaseSet { | separatedEq {x y : E} : Not (Not (x = y)) -> x = y }
+Set#	class	2b028ceffa99	-	c2721791	ba7dd50a:SeparatedSet 65444d00:SeparatedSet.separatedEq	\class Set# \extends SeparatedSet { | \infix 4 # : E -> E -> \Prop | #-irreflexive {x : E} : Not (x # x) | #-symmetric {x y : E} : x # y -> y # x | #-comparison (x y z : E) : x # z -> x # y || y # z | tightness {x y : E} : Not (x # y) -> x = y | separatedEq => \lam {x} ~~x=y => tightness (\lam x#y => ~~x=y (\lam x=y => #-irreflexive (transport (x #) (inv x=y) x#y))) }
+Set#.apartNotEqual	lemma	e0d30b6ed55f	-	e22d157d		\lemma apartNotEqual {x y : E} (x#y : x # y) : x /= y
+DecSet	class	a16f6fff2a3b	-	b9bb01dd	dca12e79:BaseSet 138bab8d:Dec 38e535b7:DecSet.== c334d730:DecSet.decideEq 48535681:Set#	\class DecSet \extends BaseSet, Set# { \field decideEq (x y : E) : Dec (x = y) | nonEqualApart {x y : E} : x /= y -> x # y | \infix 4 == : E -> E -> Bool | == => \lam x y => decToBool (decideEq x y) | # => # | nonEqualApart => nonEqualApartImpl | #-irreflexive => #-irreflexive | #-symmetric => #-symmetric | #-comparison => #-comparison | tightness => tightness }
+SigmaDecSet	func	7a5865e8a8d1	bbe1e73ed9ae	8f6b0809		\func SigmaDecSet {A : DecSet} (B : A -> DecSet) : DecSet (\Sigma (a : A) (B a))
+SubDecSet	func	3e4c22a13508	eca5fdb00513	f7affeae	b3b125ec:DecSet	\func SubDecSet {A : DecSet} {B : A -> \Prop} : DecSet (\Sigma (a : A) (B a))
+DecBool	instance	8b51641e331b	-	9b9a9200	ef0c36a7:DecBool.compare b3b125ec:DecSet	\instance DecBool : DecSet
+ProductDecSet	instance	47d9214a5687	-	4731d06a	b3b125ec:DecSet	\instance ProductDecSet (A B : DecSet) : DecSet (\Sigma A B)
+EqualityDecide	instance	3e204419ebf3	-	c1404a2d	b3b125ec:DecSet 3d061063:Decide	\instance EqualityDecide (A : DecSet) (a a' : A) : Decide (a = a')
+ArrayDec	instance	d90d27dbf0f9	-	1ccb16bd	c6a75673:ArrayDec.aux b3b125ec:DecSet	\instance ArrayDec (A : DecSet) (n : Nat) : DecSet (Array A n)
+decideEq=_reduce	lemma	34b09d9b2968	-	fc286085	6edced04:Dec.yes c334d730:DecSet.decideEq	\lemma decideEq=_reduce {A : DecSet} {x y : A} (p : x = y) : decideEq x y = yes p
+decideEq/=_reduce	lemma	90c09341c46d	-	f9ef7cca	15c9cf1f:Dec.no c334d730:DecSet.decideEq	\lemma decideEq/=_reduce {A : DecSet} {x y : A} (p : x /= y) : decideEq x y = no p
+==_=	lemma	5e66b3a28f46	-	dd632e7e	38e535b7:DecSet.==	\lemma ==_= {A : DecSet} {a a' : A} (so : So (a == a')) : a = a'
+=-dec	lemma	72c0da9a97a9	-	dd632e7e	38e535b7:DecSet.==	\lemma =-dec {A : DecSet} {a a' : A} {so : So (a == a')} : a = a'
+/=-dec	lemma	681e0914a4ec	-	d5ff406d	38e535b7:DecSet.==	\lemma /=-dec {A : DecSet} {a a' : A} {so : So (not (a == a'))} : a /= a'
+Trunc0	data	259304146641	-	da15423c	05c93fd4:Trunc0.in0	\data Trunc0 (A : \Type) : \Set | in0 A
+Trunc0.map	func	c636aea609e5	85bf247343b0	b15cc6e0	aee80c11:Trunc0	\func map {A B : \Type} (t : Trunc0 A) (f : A -> B) : Trunc0 B
+(overview)	-	-	-	4ce27ad5	038135a8:ArrayDec dca12e79:BaseSet 138bab8d:Dec b3b125ec:DecSet 3d061063:Decide 8f5c211e:ProductDecSet ba7dd50a:SeparatedSet 48535681:Set# 470a96a7:SigmaDecide	-

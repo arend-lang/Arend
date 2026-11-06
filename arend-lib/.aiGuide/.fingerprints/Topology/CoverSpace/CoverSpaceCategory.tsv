@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Topology.CoverSpace.CoverSpaceCategory. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PrecoverSpaceCat	instance	33049b9ab757	-	f57c9ad6		\instance PrecoverSpaceCat : Cat PrecoverSpace.{u}
+CoverSpaceCat	instance	b92684a37f05	-	532996cd		\instance CoverSpaceCat : Cat CoverSpace.{u}
+(overview)	-	-	-	0470c13c		-

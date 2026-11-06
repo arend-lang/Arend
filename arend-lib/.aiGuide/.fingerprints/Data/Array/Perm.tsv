@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Data.Array.Perm. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Perm	data	3f1925541ca5	-	86e1d1cb	813e0ea0:Perm.perm-:: d4f1b28b:Perm.perm-nil ae60ba3b:Perm.perm-swap 18dd9517:Perm.perm-trans	\data Perm {A : \Type} {n : Nat} (l1 l2 : Array A n) \elim n, l1, l2 | 0, nil, nil => perm-nil | suc n, :: x l1, :: y l2 => perm-:: (x = y) (Perm l1 l2) | suc suc n, :: x :: x' l1, :: y :: y' l2 => perm-swap (x = y') (x' = y) (l1 = l2) | n, l1, l2 => perm-trans {l : Array A n} (Perm l1 l) (Perm l l2)
+Perm.perm-refl	func	4bf3d89b3a85	02dccb437a84	43dfcd35	5a3cceee:Perm	\func perm-refl {A : \Type} {n : Nat} {l : Array A n} : Perm l l
+Perm.perm-sym	func	a0684a5a9947	deb41ba9a199	7723bb9d		\func perm-sym {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : Perm l' l
+Perm.perm-map	func	dc2a8b141bbb	983f9622033b	fe174568	5a3cceee:Perm	\func perm-map {A B : \Type} (f : A -> B) {n : Nat} {l1 l2 : Array A n} (p : Perm l1 l2) : Perm (map f l1) (map f l2)
+Perm.perm-map.conv	func	c643a0d3fa16	88a3e6535807	be3065f5	002138e2:Perm.perm_equiv	\func conv {A B : \Set} (f : A -> B) (inj : IsInj f) {n : Nat} {l1 l2 : Array A n} (p : Perm (map f l1) (map f l2)) : Perm l1 l2
+Perm.inversions	func	28c1bda66e56	519640d236be	cffd5689	813e0ea0:Perm.perm-:: d4f1b28b:Perm.perm-nil ae60ba3b:Perm.perm-swap 18dd9517:Perm.perm-trans	\func inversions {A : \Type} {n : Nat} {l1 l2 : Array A n} (p : Perm l1 l2) : Nat
+Perm.inversions_perm-::	lemma	4e2a35a59f79	-	9c931eb3	2529084a:Perm.inversions	\lemma inversions_perm-:: {A : \Type} {n : Nat} {x y : A} {l1 l2 : Array A n} {q : x = y} {p : Perm l1 l2} : inversions (perm-:: q p) = inversions p
+Perm.inversions_perm-trans	lemma	9b63ab9119dd	-	9c931eb3	2529084a:Perm.inversions	\lemma inversions_perm-trans {A : \Type} {n : Nat} {l1 l l2 : Array A n} {p1 : Perm l1 l} {p2 : Perm l l2} : inversions (perm-trans p1 p2) = inversions p1 Nat.+ inversions p2
+Perm.inversions_perm-refl	lemma	987916268a32	-	9c931eb3	2529084a:Perm.inversions	\lemma inversions_perm-refl {A : \Type} {n : Nat} {l : Array A n} : inversions (perm-refl {A} {n} {l}) = 0
+Perm.sign	func	0c34ad4deaee	3f5d227bd3d8	68ce3978	2529084a:Perm.inversions	\func sign {R : Ring} {A : \Type} {n : Nat} {l1 l2 : Array A n} (p : Perm l1 l2) : R
+Perm.perm-remove	func	ebf9e831dfc9	f663a7097b90	c08b61d9	5a3cceee:Perm	\func perm-remove {A : DecSet} {n : Nat} (l : Array A (suc n)) (j : Fin (suc n)) : Perm l (l j :: remove1 (l j) l)
+Perm.perm-fin	func	9d14300900fa	782573074de9	51a35595		\func perm-fin {n : Nat} (l : Array (Fin n) n) (l-inj : IsInj l) : Perm l (\lam j => j)
+Perm.perm-fin.aux	func	1fa934ff420e	6da82a86fce2	42fb3037		\func aux {n : Nat} (l : Array (Fin (suc n)) n) (q : \Pi (j : Fin n) -> l j /= 0) (d : Fin n) (r : Perm (map (fpred d) l) (\lam j => j)) : Perm l (\lam j => suc j)
+Perm.perm-fin.aux2	func	6fb3a91a989d	a65dfc698fe2	42fb3037		\func aux2 {n : Nat} (l : Array (Fin (suc n)) (suc n)) (l-inj : IsInj l) (d : Fin n) : Perm l (\lam j => j)
+Perm.equiv_perm	func	3fae6b17e45c	7a42bffd3a5c	eb594c50	5a3cceee:Perm	\func equiv_perm {A : \Type} {n : Nat} {l : Array A n} (e : QEquiv {Fin n} {Fin n}) : Perm l (\lam j => l (e j))
+Perm.perm_equiv	func	4ea4eb64fe7d	8c916ac6b227	6805e48f	5a3cceee:Perm	\func perm_equiv {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))
+Perm.perm_equiv.conv	func	db36cb6f164f	3d8d9dc6c3c4	7d95c8a2	5a3cceee:Perm	\func conv {A : \Type} {n : Nat} {l l' : Array A n} (s : \Sigma (e : QEquiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))) : Perm l l'
+(overview)	-	-	-	5345d690	5a3cceee:Perm	-

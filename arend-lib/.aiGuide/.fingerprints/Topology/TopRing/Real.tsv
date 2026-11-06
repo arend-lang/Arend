@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Topology.TopRing.Real. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RealTopLModule	instance	896327d02d04	-	72cd2d09	233dbd44:RealNearField	\instance RealTopLModule : HausdorffTopLModule RealNearField
+RealNearField	instance	2e06d5569a2a	-	46853df4		\instance RealNearField : NearField Real
+(overview)	-	-	-	75f952ca		-

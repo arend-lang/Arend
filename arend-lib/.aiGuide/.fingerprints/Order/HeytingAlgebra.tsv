@@ -1,0 +1,30 @@
+# arend -gc fingerprints v2 for module Order.HeytingAlgebra. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+HeytingAlebra	class	c579300c3cc2	-	4a7b13ba	62b8ffdc:HeytingAlebra.--> c6538984:HeytingAlebra.<=-curry c1137f30:HeytingAlebra.<=-uncurry e2d99b72:HeytingAlebra.ldistr>= 205304a9:HeytingAlebra.top-univ	\class HeytingAlebra \extends BoundedDistributiveLattice { | \infixr 5 --> : E -> E -> E | <=-curry {x a b : E} : x ∧ a <= b -> x <= a --> b | <=-uncurry {x a b : E} : x <= a --> b -> x ∧ a <= b | top => top-impl | top-univ => top-univ | ldistr>= => ldistr>= }
+HeytingAlebra.-->	field	11de93a9ddee	-	8a0261c1		| --> : E -> E -> E
+HeytingAlebra.toCCC	func	5c1a34e3bc6f	9d571033d07a	c4c5b791	62b8ffdc:HeytingAlebra.--> c6538984:HeytingAlebra.<=-curry 34d6d676:HeytingAlebra.<=-eval	\func toCCC : CartesianClosedPrecat
+HeytingAlebra.<=-eval	lemma	2c8019aa075e	-	2d5efa93	62b8ffdc:HeytingAlebra.-->	\lemma <=-eval {x y : E} : (x --> y) ∧ x <= y
+HeytingAlebra.modus-ponens	lemma	2d4c17b47f24	-	9fd0b965	62b8ffdc:HeytingAlebra.--> 34d6d676:HeytingAlebra.<=-eval	\lemma modus-ponens {x y : E} : x ∧ (x --> y) <= y
+HeytingAlebra.composition-law	lemma	97a859eee0d5	-	b0f6da5b	62b8ffdc:HeytingAlebra.-->	\lemma composition-law {x y z : E} : (x --> y) ∧ (y --> z) <= x --> z
+HeytingAlebra.curry	func	5a44c0cb59ef	f9ebcad7e459	0af48f8e	62b8ffdc:HeytingAlebra.-->	\func curry {x y z : E} : x ∧ y --> z = x --> (y --> z)
+HeytingAlebra.top_exponent	lemma	8a9adf67aa52	-	64d019d4	62b8ffdc:HeytingAlebra.-->	\lemma top_exponent {x y : E} (p : x <= y) : top <= x --> y
+HeytingAlebra.exponent-monotone	lemma	378c1beec300	-	5b9d6cf0	62b8ffdc:HeytingAlebra.-->	\lemma exponent-monotone {x y x' y' : E} (p : x' <= x) (q : y <= y') : x --> y <= x' --> y'
+HeytingAlebra.exponent_meet	lemma	a8eac774161d	-	1d9582b0	62b8ffdc:HeytingAlebra.-->	\lemma exponent_meet {x y z : E} : x --> y ∧ z = (x --> y) ∧ (x --> z)
+HeytingAlebra.exponent_join	lemma	9f8a55e325a3	-	107cc0d4	62b8ffdc:HeytingAlebra.-->	\lemma exponent_join {x y z : E} : x ∨ y --> z = (x --> z) ∧ (y --> z)
+HeytingAlebra.neg	func	ad5ffcad4839	9850364e6653	88d86e9a	62b8ffdc:HeytingAlebra.-->	\func neg (x : E)
+HeytingAlebra.neg-inverse	lemma	18747335be73	-	bc127002	35ff022a:HeytingAlebra.neg	\lemma neg-inverse {x y : E} (p : x <= y) : neg y <= neg x
+HeytingAlebra.neg_bottom	lemma	8782b2df24a1	-	e44acab4	35ff022a:HeytingAlebra.neg	\lemma neg_bottom : neg bottom = top
+HeytingAlebra.neg_top	lemma	71d646834775	-	5c3e943f	35ff022a:HeytingAlebra.neg	\lemma neg_top : neg top = bottom
+HeytingAlebra.id<=neg_neg	lemma	007483e9b34f	-	62b6f05c	35ff022a:HeytingAlebra.neg	\lemma id<=neg_neg {x : E} : x <= neg (neg x)
+HeytingAlebra.neg_join	lemma	ae5def1c3f38	-	424b5c91	35ff022a:HeytingAlebra.neg	\lemma neg_join {x y : E} : neg (x ∨ y) = neg x ∧ neg y
+HeytingAlebra.IsNegated	func	a5925689e217	5e1853f7b813	94b6e944	35ff022a:HeytingAlebra.neg	\func IsNegated (x : E) : \Prop
+HeytingAlebra.bottom-negated	lemma	088f7fdc26f7	-	6aa19a9e		\lemma bottom-negated : IsNegated bottom
+HeytingAlebra.meet-negated	lemma	ddd76eead297	-	a98b1c6f		\lemma meet-negated {x y : E} (xn : IsNegated x) (yn : IsNegated y) : IsNegated (x ∧ y)
+HeytingAlebra.neg-negated	lemma	8578cfac2b99	-	3f3f50eb	35ff022a:HeytingAlebra.neg	\lemma neg-negated {x : E} : IsNegated (neg x)
+HeytingAlebra.continuation	func	874e7d0ccba7	dd115097b9f0	4abb050f	62b8ffdc:HeytingAlebra.-->	\func continuation (y : E) (x : E)
+HeytingAlebra.double-exponent-increasing	lemma	e773764c1d81	-	7da09e96	62b8ffdc:HeytingAlebra.-->	\lemma double-exponent-increasing {x y : E} : x <= (x --> y) --> y
+HeytingAlebra.double-exponent-idempotent	lemma	c3a8d523e4e8	-	10fe21a4	62b8ffdc:HeytingAlebra.-->	\lemma double-exponent-idempotent {x y : E} : (((x --> y) --> y) --> y) --> y <= (x --> y) --> y
+HeytingAlebra.double-exponent-monotone	lemma	4d07ad515c55	-	f1fea40d	55a04daf:HeytingAlebra.continuation	\lemma double-exponent-monotone {x y z : E} (p : y <= z) : continuation x y <= continuation x z
+HeytingAlebra.exponent-unit	lemma	68fa5adcbdd8	-	a9803513	62b8ffdc:HeytingAlebra.-->	\lemma exponent-unit {x y : E} : x <= y --> x ∧ y
+HeytingAlebra.exponent-functor	func	7bf22a4fd8c5	bf7042d5e0d6	be11e513	62b8ffdc:HeytingAlebra.-->	\func exponent-functor (x : E) : Functor \this \this
+(overview)	-	-	-	92cf61d9	62b8ffdc:HeytingAlebra.--> c6538984:HeytingAlebra.<=-curry c1137f30:HeytingAlebra.<=-uncurry 35ff022a:HeytingAlebra.neg a8cfe71c:HeytingAlebra.toCCC	-

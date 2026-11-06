@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Poly.Separable. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsSeparable	type	2f0e8c8638b4	96636a6aa2b1	a7cecf83		\type IsSeparable {R : Ring} (p : Poly R) : \Prop
+IsSeparable_polyMap	lemma	045180a7ceac	-	e94dc7ec		\lemma IsSeparable_polyMap {f : RingHom} {p : Poly f.Dom} (sep : IsSeparable p) : IsSeparable (polyMap f p)
+separable-factor	lemma	4607d15ed5bd	-	cb166d64		\lemma separable-factor {K : DiscreteField} (char0 : \Pi (k : Nat) -> 0 < k -> K.natCoef k /= 0) {p : Poly K} (p/=0 : p /= 0) {n : Nat} (dp : degree p = suc n) : ∃ (q : Poly K) (0 < degree q) (IsSeparable q) (Monoid.LDiv q p)
+(overview)	-	-	-	ede74e22		-

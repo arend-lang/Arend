@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Category.Subobj.RegularSubobj. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IsRegularSubobj	func	bf3764c86440	30699661963d	3f2db21a		\func IsRegularSubobj {C : Precat.{o, h}} {obj : C} (s : Subobj obj) : \Prop
+regularSubobj-meet	lemma	e8f44052c0e7	-	f249a045		\lemma regularSubobj-meet {C : FinCompletePrecat.{o, h}} {obj : C} {s1 s2 : Subobj obj} (r1 : IsRegularSubobj s1) (r2 : IsRegularSubobj s2) : IsRegularSubobj (SubobjectSemilattice.meet s1 s2)
+regularSubobj-meet.pullback-isRegularMono	lemma	5a372697238e	-	d352bd75		\lemma pullback-isRegularMono {C : CartesianPrecat} {P : Pullback {C}} (fm : IsRegularMono P.f) (gm : IsRegularMono P.g) : IsRegularMono (P.f ∘ pbProj1)
+(overview)	-	-	-	f11a641f		-

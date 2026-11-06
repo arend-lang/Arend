@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Nakayama. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+nakayama	lemma	83a1d09e7186	-	69f53514		\lemma nakayama {R : CRing} {M : LModule R} {I : Ideal R} (fg : M.IsFinitelyGenerated) (c : topSubLModule M <= I *m topSubLModule M) : ∃ (e : R) (I (1 - e)) ∀ (m : M) (e *c m = 0)
+nakayama'	lemma	645aaea9e969	-	cdf46d20		\lemma nakayama' {R : CRing} {M : LModule R} {I : Ideal R} (fg : M.IsFinitelyGenerated) (c : topSubLModule M <= I *m topSubLModule M) : ∃ (e : R) (I e) ∀ m (e *c m = m)
+nakayama-ideal	lemma	fc5b6db396d6	-	889928a0		\lemma nakayama-ideal {R : CRing} {I : Ideal R} (Ifg : I.IsFinitelyGenerated) (p : I <= I * I) : ∃ (u : R) (u * u = u) (I.IsGeneratedBy1 u)
+linear-surj-equiv	lemma	4ef8ab49da10	-	dddfae20		\lemma linear-surj-equiv {R : CRing} {U : LModule R} (fg : U.IsFinitelyGenerated) {f : LinearMap U U} (fs : IsSurj f) : IsEquiv f
+(overview)	-	-	-	257cfc6e		-

@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module Algebra.MulOrdered. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+OrderedMonoid	class	02d5e256148a	-	727c7480	1e8aa70c:OrderedMonoid.<=_*-left b5fd141f:OrderedMonoid.<=_*-right	\class OrderedMonoid \extends Poset, Monoid { | <=_*-left (z : E) {x y : E} : x <= y -> x * z <= y * z | <=_*-right (z : E) {x y : E} : x <= y -> z * x <= z * y }
+OrderedCMonoid	class	147eaafe50e6	-	5b34dcc0	bf4c2a43:OrderedMonoid 1e8aa70c:OrderedMonoid.<=_*-left b5fd141f:OrderedMonoid.<=_*-right	\class OrderedCMonoid \extends OrderedMonoid, CMonoid { | <=_*-right => \lam z x<y => transport2 <= *-comm *-comm (<=_*-left z x<y) }
+OrderedMonoid.<=_*	lemma	553ba710baa4	-	b45d5acc		\lemma <=_* {a b c d : E} (p : a <= c) (q : b <= d) : a * b <= c * d
+(overview)	-	-	-	f9ba5b56		-

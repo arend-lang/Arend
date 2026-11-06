@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Category.Fibration.PosetElements. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+PosetElements	func	2623dde740af	e340a85ad4ef	d4a67bb1		\func PosetElements {D : Precat} (F : Functor D PosetCat.{u}) : DPrecat {D} (\lam d => F d)
+PosetElements.proj	func	92246a880325	2534112eb282	0164752e	b5dc7cdc:PosetElements	\func proj {D : Precat} (F : Functor D PosetCat.{v}) : Functor (totalPrecat (PosetElements F)) D
+PosetElements.lift-cocartesian	lemma	97894754c386	-	acf1d29a	d175b9e6:PosetElements.proj	\lemma lift-cocartesian {D : Precat} (F : Functor D PosetCat.{v}) {d d' : D} (f : Hom d d') (x : F d) : IsCocartesianMor (proj F) {(d, x)} {(d', F.Func f x)} (f, <=-refl)
+PosetElements.proj-cocartesian	lemma	b3c0072aad41	-	a300889c	d175b9e6:PosetElements.proj	\lemma proj-cocartesian {D : Precat} (F : Functor D PosetCat.{v}) : IsCocartesianFunctor (proj F)
+(overview)	-	-	-	7d398b93	b5dc7cdc:PosetElements	-

@@ -1,0 +1,22 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.CGroup. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CGroupSolverModel	func	aba8be410611	868f58bf1691	ae5e845a	01d9de8a:CGroupSolverModel.interpretNF 66243607:CGroupSolverModel.normalize	\func CGroupSolverModel (G : CGroup) : SolverModel G
+AbGroupSolverModel	func	862b368c6469	858076370ac5	da34cb85	ebf93987:CGroupSolverModel	\func AbGroupSolverModel (A : AbGroup) : SolverModel A
+CGroupSolverModel.toArray	func	da758208a164	4409c9f0c221	1cc342b6		\func toArray (cs : Array Int) (env : Array G cs.len) : Array G
+CGroupSolverModel.sBigProd	func	678433bf517d	314287aee639	f5d2ed69		\func sBigProd (l : Array G) : G
+CGroupSolverModel.sBigProd_::	lemma	ea799c4ac8bb	-	7c4a07e3	091280fd:CGroupSolverModel.sBigProd	\lemma sBigProd_:: {a : G} {l : Array G} : sBigProd (a :: l) = a * sBigProd l
+CGroupSolverModel.interpretNF	func	ec01e1d8e0fe	f3644b2009b7	e3a16032	091280fd:CGroupSolverModel.sBigProd 5499f6a7:CGroupSolverModel.toArray	\func interpretNF {n : Nat} (env : Fin n -> G) (l : Array Int n) : G
+CGroupSolverModel.interpretNF'	func	7a699a9e649b	98e3bd5a7184	a2cf6d10		\func interpretNF' (l : Array Int) (env : Array G l.len) : G
+CGroupSolverModel.interpretNF-correct	lemma	e9509170a746	-	3a878d96	161be9d3:CGroupSolverModel.interpretNF' 091280fd:CGroupSolverModel.sBigProd 5499f6a7:CGroupSolverModel.toArray	\lemma interpretNF-correct (cs : Array Int) {env : Array G cs.len} : sBigProd (toArray cs env) = interpretNF' cs env
+CGroupSolverModel.normalize	func	7254e7277307	a9f1a7f82027	9b344cb1		\func normalize {n : Nat} (t : Term n) : Array Int n
+CGroupSolverModel.interpretNF-consistent	lemma	ee19b1d48afb	-	8e89b9a1	01d9de8a:CGroupSolverModel.interpretNF 66243607:CGroupSolverModel.normalize	\lemma interpretNF-consistent {n : Nat} {env : Fin n -> G} (t : Term n) : interpretNF env (normalize t) = interpret env t
+CGroupSolverModel.interpretNF-consistent'	lemma	0d5e14b20d23	-	bc00df20	161be9d3:CGroupSolverModel.interpretNF'	\lemma interpretNF-consistent' {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' (normalize t) env = interpret env t
+CGroupSolverModel.apply-axioms'	lemma	db027ce6ad4c	-	5c189ef6	161be9d3:CGroupSolverModel.interpretNF' 66243607:CGroupSolverModel.normalize	\lemma apply-axioms' {n : Nat} (env : Array G n) (l : Array (\Sigma Int (t s : Term n) (interpret env t = interpret env s))) : interpretNF' (mkArray (\lam j => IntRing.BigSum (\lam i => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)))) env = G.ide
+CGroupSolverModel.apply-axioms'.interpretNF_+	lemma	7b957ecddec0	-	a40a4ba3	161be9d3:CGroupSolverModel.interpretNF'	\lemma interpretNF_+ {n : Nat} {env : Array G n} {l l' : Array Int n} : interpretNF' (mkArray (\lam j => l j + l' j)) env = interpretNF' l env * interpretNF' l' env
+CGroupSolverModel.apply-axioms'.interpretNF_negative	lemma	b256e5d13d33	-	7ccd3111	161be9d3:CGroupSolverModel.interpretNF'	\lemma interpretNF_negative {l : Array Int} {env : Array G l.len} : interpretNF' (map negative l) env = inverse (interpretNF' l env)
+CGroupSolverModel.apply-axioms'.interpretNF-coef	lemma	abbc6c8f52da	-	81f52455	161be9d3:CGroupSolverModel.interpretNF'	\lemma interpretNF-coef {n : Nat} {l : Array Int n} {env : Array G l.len} {c : Int} : interpretNF' (map (c *) l) env = G.ipow (interpretNF' l env) c
+CGroupSolverModel.apply-axioms'.interpretNF_BigSum	lemma	962ff7af4882	-	00081395	161be9d3:CGroupSolverModel.interpretNF'	\lemma interpretNF_BigSum {n : Nat} {env : Array G n} (ls : Array (Array Int n)) : interpretNF' (mkArray (\lam j => IntRing.BigSum (ls __ j))) env = G.BigProd (\lam i => interpretNF' (ls i) env)
+AbGroupSolverModel.terms-equality	lemma	3d1bc979bbb0	-	8d26dc44		\lemma terms-equality (env : Array A) (t s : Term env.len) (p : interpretNF {AbGroup.toCGroup A} env (normalize (t :* :inverse s)) = A.zro)
+AbGroupSolverModel.terms-equality-conv	lemma	1574e174bcee	-	b53c5b1d		\lemma terms-equality-conv (env : Array A) (t s : Term env.len) (p : interpret {AbGroup.toCGroup A} env t = interpret {AbGroup.toCGroup A} env s)
+AbGroupSolverModel.apply-axioms	lemma	a7f1f9450a19	-	62ef0673		\lemma apply-axioms {n : Nat} (env : Array A n) (l : Array (\Sigma Int (t s : Term env.len) (interpret {AbGroup.toCGroup A} env t = interpret {AbGroup.toCGroup A} env s))) (right : Array Int env.len)
+(overview)	-	-	-	ccc456cc	535184df:AbGroupSolverModel ebf93987:CGroupSolverModel	-

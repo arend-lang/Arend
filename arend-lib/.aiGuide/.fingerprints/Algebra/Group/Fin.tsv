@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Fin. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+hasFiniteOrder	lemma	fa12ab88f701	-	5b1280fd		\lemma hasFiniteOrder {G : Group} {P : PigeonholeSet G} (g : G) : ∃ (n : Nat) (n > 0) (G.pow g n = 1)
+order	sfunc	5cb85ab0ce19	06a3eea9a4be	4f112447		\sfunc order {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G) : Nat
+order.aux	func	d95340af06a6	e4f26d2fabdc	476f18b3	e7841fe2:hasFiniteOrder af55a058:order	\func aux {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G) : \Sigma (n : Nat) (\Sigma (n > 0) (G.pow g n = 1)) (\Pi (m : Nat) -> \Sigma (m > 0) (G.pow g m = 1) -> n <= m)
+order>0	lemma	eff7f7833e16	-	1c2965f1		\lemma order>0 {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} : order g > 0
+order_pow	lemma	93da5ccc568c	-	1f3e452c	af55a058:order	\lemma order_pow {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} : G.pow g (order g) = 1
+order-min	lemma	4fe35a7ba896	-	9b3bdaf7	af55a058:order d0513388:order>0 84aa62d5:order_pow	\lemma order-min {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {m : Nat} (p : m > 0) (q : G.pow g m = 1) : order g <= m
+(overview)	-	-	-	68888055	af55a058:order	-

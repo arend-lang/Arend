@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module AG.AffineScheme.SpecFunctor. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SpecFunctor	func	1ca10dab365c	2375d2a96f3f	2cb2127a	c158a8a7:SpecFunctor.siteHom	\func SpecFunctor : FullyFaithfulFunctor CRingCat.{u}.op SatSchemeSitePrecat.{u}
+SpecLRLFunctor	func	c112ba7c200b	9fc3fd51a310	a15e0ff0	071f7a84:SpecFunctor	\func SpecLRLFunctor : ReflectiveSubPrecat CRingCat.{u}.op LocallyRingedLocaleCat.{u}
+(overview)	-	-	-	d07c7335	8548756f:SpecLRLFunctor	-

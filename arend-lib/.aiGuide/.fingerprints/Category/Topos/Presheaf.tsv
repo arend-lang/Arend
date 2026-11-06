@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Category.Topos.Presheaf. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+VPresheafComplete	instance	5c271f7afe22	-	47b7f31a	72ec2809:VPresheaf.C 72ec2809:VPresheaf.D 3bb1c67b:VPresheafCat	\instance VPresheafComplete (D : CompleteCat.{u}) (C : Precat) : CompleteCat.{u}
+VPresheaf.functor-at-point	func	4dd5d0eeb3e9	284d56d9daf8	9b5cc597	72ec2809:VPresheaf.C 72ec2809:VPresheaf.D	\func functor-at-point {D : Cat} {C : Precat} {J : Precat} (G : Functor J (VPresheafCat D C)) (c : C) : Functor J D
+VPresheafComplete.limit.L	func	d6098f2f9546	f58e754edab8	8e886ac0	72ec2809:VPresheaf.D 51019ac4:VPresheaf.functor-at-point	\func L (c : C)
+VPresheafComplete.limit.cone	func	2b8be3f4cc0c	c29a5581c323	92b28591	72ec2809:VPresheaf.C 51019ac4:VPresheaf.functor-at-point 48411fde:VPresheafComplete.limit.L	\func cone {X Y : C} (f : Hom Y X) : Cone (VPresheaf.functor-at-point G Y)
+VPresheafComplete.limit.apex	func	cedcdc78a490	8407a8a48da0	893acfe2	48411fde:VPresheafComplete.limit.L 33f71e4f:VPresheafComplete.limit.cone	\func apex : VPresheaf D C
+VPresheafComplete.limit.cone-nat-map	func	c9ead5183fd0	26bb1c1a47d8	a37c8329	a7b5b719:VPresheafComplete.limit.apex	\func cone-nat-map (j : J) : Hom apex (G j)
+VPresheafComplete.limit.cone-at-point	func	3b8a6d377500	4c8a47df8489	d568a318	51019ac4:VPresheaf.functor-at-point	\func cone-at-point (X : C) (H : VPresheaf D C) (z-cone : Cone {J} G H) : Cone (VPresheaf.functor-at-point G X) (H X)
+VPresheafComplete.limit.lim-nat-map	func	73c1cd62c8b4	949b3adf5784	2e45ec99	a7b5b719:VPresheafComplete.limit.apex	\func lim-nat-map {z : VPresheaf D C} (z-cone : Cone G z) : Hom z apex
+VPresheaf	record	3a53a3d6555e	-	3f662740	72ec2809:VPresheaf.C 72ec2809:VPresheaf.D	\record VPresheaf (D : Precat) (C : Precat) (\coerce F : Functor C.op D)
+VPresheaf.toPresheaf	func	0c1ebb3b45bd	6c0351e1b1e3	67d29da5	72ec2809:VPresheaf.D	\func toPresheaf (U : Functor D SetCat.{u}) : Presheaf C
+Presheaf	func	7052ddeb819d	237bd739dbf0	05e7e1a0	787f700c:VPresheaf 72ec2809:VPresheaf.C	\func Presheaf (C : Precat)
+VPresheafCat	instance	f72d3e3d3ce4	-	86206553	72ec2809:VPresheaf.C 72ec2809:VPresheaf.D	\instance VPresheafCat (D : Cat) (C : Precat) : Cat
+PresheafCat	instance	c9c4628885ba	-	bdc4dd5d	72ec2809:VPresheaf.C 3bb1c67b:VPresheafCat	\instance PresheafCat (C : Precat) : Cat
+evalVPresheaf	func	223757e47d9c	088e256d5065	61d22d14	72ec2809:VPresheaf.C 72ec2809:VPresheaf.D 3bb1c67b:VPresheafCat	\func evalVPresheaf {D : Cat} {C : Precat} (c : C) : Functor (VPresheafCat D C) D
+vpresheafCone-fromPointwise	lemma	a787a1fc245f	-	cc7546a2	72ec2809:VPresheaf.C 72ec2809:VPresheaf.D	\lemma vpresheafCone-fromPointwise {D : Cat} {C : Precat} {J : Precat} {G : Functor J (VPresheafCat D C)} (L : Cone G) (p : \Pi (c : C) -> IsLimitCone (Cone.map (evalVPresheaf c) L)) : IsLimitCone L
+evalVPresheaf-preservesLimit	lemma	af0e6b05637c	-	89db62f6	72ec2809:VPresheaf.D	\lemma evalVPresheaf-preservesLimit {D : CompleteCat.{u}} {C : Precat} {J : Precat.{u, u}} (G : Functor J (VPresheafCat D C)) (c : C) : PreservesLimit (evalVPresheaf c) G
+vpresheafLimit-pointwise	func	2622bbb17d08	80523d9b41f7	c5c02145	48411fde:VPresheafComplete.limit.L	\func vpresheafLimit-pointwise {D : CompleteCat.{u}} {C : Precat} {J : Precat.{u, u}} {G : Functor J (VPresheafCat D C)} (L : Limit G) (c : C) : Limit (Comp (evalVPresheaf c) G) (L.apex c)
+(overview)	-	-	-	6e3f0aed	fa2b8953:PresheafCat 72ec2809:VPresheaf.C 72ec2809:VPresheaf.D 3bb1c67b:VPresheafCat	-

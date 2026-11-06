@@ -1,0 +1,19 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.Group. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+GroupSolverModel.Term	data	854ce508b9a5	-	80f9447f	63e001eb:GroupSolverModel.Term.:* d4f1b28b:GroupSolverModel.Term.:ide e0bc2956:GroupSolverModel.Term.:inverse 5fa62920:GroupSolverModel.Term.var	\data Term (n : Nat) | var (Fin n) | :ide | :inverse (Term n) | \infixl 7 :* (t s : Term n)
+GroupSolverModel.inverseNF	func	a43489937e75	9151785d85ff	870a1ab6		\func inverseNF {V : \Set} (l acc : List (\Sigma Bool V)) : List (\Sigma Bool V)
+GroupSolverModel.normalize	func	1fb13a18bc1d	87f226790ac1	37fe96b3	0737ac8d:GroupSolverModel.Term 0ce5368c:GroupSolverModel.inverseNF	\func normalize {n : Nat} (t : Term n) : List (\Sigma Bool (Fin n))
+GroupSolverModel.reduce	func	7066a2ae9c82	ea35cd809076	c64b49b0		\func reduce {n : Nat} (l : List (\Sigma Bool (Fin n))) : List (\Sigma Bool (Fin n))
+GroupSolverModel.interpretNF'	func	7317a0e34fdc	505c114d3fb7	f39ebcea		\func interpretNF' {V : \Set} (env : V -> G) (l : List (\Sigma Bool V)) : G
+GroupSolverModel.interpretNF'.simple	func	c2ca75d6fd0e	61c71aa05673	5b53b0f6		\func simple (env : V -> G) (l : List (\Sigma Bool V)) : G
+GroupSolverModel.interpretNF'.=simple	lemma	a9204726abdd	-	9374a9e0	3c218143:GroupSolverModel.interpretNF' b2beebdd:GroupSolverModel.interpretNF'.simple	\lemma =simple {l : List (\Sigma Bool V)} : interpretNF' env l = simple env l
+GroupSolverModel.interpretNF'_::	lemma	6132a7a34fe3	-	eb03600d		\lemma interpretNF'_:: {V : \Set} {env : V -> G} {x : \Sigma Bool V} {l : List (\Sigma Bool V)} : interpretNF' env (x :: l) = if x.1 (env x.2) (inverse (env x.2)) * interpretNF' env l
+GroupSolverModel.interpretNF'_reduce	lemma	610a75fd127d	-	437c2d14	098eb1d3:GroupSolverModel.interpretNF'_reduce.simple_reduce dba32ed1:GroupSolverModel.reduce	\lemma interpretNF'_reduce {n : Nat} {env : Fin n -> G} {l : List (\Sigma Bool (Fin n))} : interpretNF' env (reduce l) = interpretNF' env l
+GroupSolverModel.interpretNF'_++	lemma	0fd542456335	-	63230123		\lemma interpretNF'_++ {V : \Set} {env : V -> G} {l l' : List (\Sigma Bool V)} : interpretNF' env (l ++ l') = interpretNF' env l * interpretNF' env l'
+GroupSolverModel.interpretNF'_inverseNF	lemma	6a6a634b04c1	-	b548d3f3	0ce5368c:GroupSolverModel.inverseNF	\lemma interpretNF'_inverseNF {V : \Set} {env : V -> G} {l acc : List (\Sigma Bool V)} : interpretNF' env (inverseNF l acc) = inverse (interpretNF' env l) * interpretNF' env acc
+GroupSolverModel.interpretNF'-consistent	lemma	98f9bc7f9fe6	-	549fbd25	3c218143:GroupSolverModel.interpretNF' 4936e0f0:GroupSolverModel.normalize	\lemma interpretNF'-consistent {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' env (normalize t) = interpret env t
+GroupSolverModel.>>=	func	a58536b000c7	0978bee6bfba	81f1b7ff	0ce5368c:GroupSolverModel.inverseNF	\func >>= {U V : \Set} (l : List (\Sigma Bool U)) (k : U -> List (\Sigma Bool V)) : List (\Sigma Bool V)
+GroupSolverModel.interpretNF'_>>=	func	42af2f7b8140	29ade514a499	5d0fd3ef		\func interpretNF'_>>= {m n : Nat} {env : Fin n -> G} {l : List (\Sigma Bool (Fin m))} {k : Fin m -> List (\Sigma Bool (Fin n))} : interpretNF' env (l >>= k) = interpretNF' (\lam v => interpretNF' env (k v)) l
+GroupSolverModel	func	26fd0a0fed46	438108a92795	6e0167ca	342994fc:GroupSolverModel.>>=	\func GroupSolverModel (G : Group) : SubstSolverModel G
+AddGroupSolverModel	func	b2e0145543a0	ef3b438c1145	28c1416a	7ad0cc22:GroupSolverModel	\func AddGroupSolverModel (A : AddGroup) : SubstSolverModel A
+(overview)	-	-	-	7e4ecca3	342994fc:GroupSolverModel.>>= 3c218143:GroupSolverModel.interpretNF' 0ce5368c:GroupSolverModel.inverseNF dba32ed1:GroupSolverModel.reduce	-

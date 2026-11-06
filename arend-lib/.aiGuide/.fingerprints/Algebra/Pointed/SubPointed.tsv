@@ -1,0 +1,22 @@
+# arend -gc fingerprints v2 for module Algebra.Pointed.SubPointed. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubPointed	class	a20c5680a0c1	-	2725d094	25bd6b7b:SubPointed.contains_ide	\class SubPointed \extends SubSet { \override S : Pointed | contains_ide : contains 1 }
+SubPointed.max	func	c398af1194c1	12b98d243837	126756ce	e9b0e4e8:SubPointed	\func max {X : Pointed} : SubPointed
+IPointed	instance	bc3546836dd0	-	839dbe88	e9b0e4e8:SubPointed 25bd6b7b:SubPointed.contains_ide	\instance IPointed (S : SubPointed {}) : Pointed
+DecSubPointed	class	b47d891c1e9b	-	3fffe029	e9b0e4e8:SubPointed	\class DecSubPointed \extends SubPointed, DecSubSet
+SubAddPointed	class	238b93e0dad7	-	57bea927	935c5050:SubAddPointed.contains_zro e9b0e4e8:SubPointed	\class SubAddPointed \extends SubSet { \override S : AddPointed | contains_zro : contains 0 }
+SubAddPointed.max	func	7931c35b9d81	ffad431476d4	0b8b7f9b	b03318f2:SubAddPointed	\func max {A : AddPointed} : SubAddPointed
+IAddPointed	instance	2879b9b082d6	-	0a55ee10	b03318f2:SubAddPointed 935c5050:SubAddPointed.contains_zro	\instance IAddPointed (S : SubAddPointed {}) : AddPointed
+Kernel	func	28bae37ff836	88485e1edd73	d5f23eb1	e9b0e4e8:SubPointed	\func Kernel (f : PointedHom) : SubPointed f.Dom
+IsKernelTrivial	func	7aed57a5e9a6	5fa94a955ce0	fc7406c4	7f42d57e:Kernel	\func IsKernelTrivial (f : PointedHom) : \Prop
+AddKernel	func	b43f77dd2470	b6ddf303cdfa	0ff7743d	b03318f2:SubAddPointed	\func AddKernel (f : AddPointedHom) : SubAddPointed f.Dom
+IsAddKernelTrivial	func	0026942f432c	1e4975316e56	4e3cc623	d090171f:AddKernel	\func IsAddKernelTrivial (f : AddPointedHom) : \Prop
+ImagePointed	func	8e0858dfa663	841a6b937a6f	4457f1dc	e9b0e4e8:SubPointed	\func ImagePointed (f : PointedHom) : SubPointed f.Cod
+ImPointed	func	2231a871c0f4	124c3e5a2c51	60b0070d	9e595a2c:IPointed 799ffebd:ImagePointed	\func ImPointed (f : PointedHom) : Pointed
+ImPointedLeftHom	func	e5aefa3a4935	99d9f5edd552	f11bb7ac	f1e54659:ImPointed	\func ImPointedLeftHom (f : PointedHom) : PointedHom f.Dom (ImPointed f)
+image-surj	lemma	ff695f3542f3	-	e9b1b462	9b61f46a:ImPointedLeftHom	\lemma image-surj {f : PointedHom} : IsSurj (ImPointedLeftHom f)
+ImageAddPointed	func	8970c4e3a4c0	3283abc1842a	768157a8	b03318f2:SubAddPointed	\func ImageAddPointed (f : AddPointedHom) : SubAddPointed f.Cod
+ImAddPointed	func	ab328d510df9	ae4c2be08072	8cb16f5c	bc126cb1:IAddPointed 3d6e4998:ImageAddPointed	\func ImAddPointed (f : AddPointedHom) : AddPointed
+ImAddPointedLeftHom	func	2f5adebf55a9	def02218a400	873ad0b6	c7ed476f:ImAddPointed	\func ImAddPointedLeftHom (f : AddPointedHom) : AddPointedHom f.Dom (ImAddPointed f)
+addImage-surj	lemma	141c54ae9fe2	-	51e4287e	29a2bf9e:ImAddPointedLeftHom	\lemma addImage-surj {f : AddPointedHom} : IsSurj (ImAddPointedLeftHom f)
+(overview)	-	-	-	38a3f48e	a88d4730:DecSubPointed bc126cb1:IAddPointed 9e595a2c:IPointed b03318f2:SubAddPointed e9b0e4e8:SubPointed	-

@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Algebra.Module.BilinearMap. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+BilinearMap	record	88042f19f7ef	-	da994a3b	349a4415:BilinearMap.A 349a4415:BilinearMap.B 349a4415:BilinearMap.C 23ebc628:BilinearMap.linear-left b74e082f:BilinearMap.linear-right	\record BilinearMap {R : Ring} (A : LModule R) (B : LModule R) (C : LModule R) (\coerce func : A -> B -> C) { | linear-left {b : B} : LinearMap A C (func __ b) | linear-right {a : A} : LinearMap B C (func a) }
+*-bilinear	lemma	ab4fa350f833	-	f5d00173	6e2a124b:BilinearMap.R	\lemma *-bilinear {R : CRing} : BilinearMap (RingLModule R) (RingLModule R) (RingLModule R) *
+BilinearMapModule	instance	5906db095f0e	-	88e685b2	c7296e5a:BilinearMap 349a4415:BilinearMap.A 349a4415:BilinearMap.B 349a4415:BilinearMap.C 6e2a124b:BilinearMap.R	\instance BilinearMapModule {R : CRing} (A B C : LModule R) : LModule R (BilinearMap A B C)

@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Domain.IntegrallyClosed. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+IntegrallyClosedDomain	class	08d4e2866583	-	9f444f30	a4aaf6a0:IntegrallyClosedDomain.isIntegrallyClosedDomain	\class IntegrallyClosedDomain \extends IntegralDomain { | isIntegrallyClosedDomain : isIntegrallyClosed (locR {_} {subMonoid}) }
+(overview)	-	-	-	3286b51d		-

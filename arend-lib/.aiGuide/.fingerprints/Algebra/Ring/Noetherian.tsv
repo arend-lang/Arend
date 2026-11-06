@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Noetherian. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+WeaklyNoetherianCRing	class	2ac4b52b696b	-	c7758f70		\class WeaklyNoetherianCRing \extends CRing { | isWeaklyNoetherian (I : Nat -> Ideal \this) : (\Pi (n : Nat) -> (I n).IsFinitelyGenerated) -> Ideal.ChainCondition I }
+WeaklyNoetherianCRing.isWeaklyNoetherian	field	1cfa578d5d04	-	6c661408		| isWeaklyNoetherian (I : Nat -> Ideal \this) : (\Pi (n : Nat) -> (I n).IsFinitelyGenerated) -> Ideal.ChainCondition I
+NoetherianCRing	class	a406d2a8695e	-	b32563bd	d5b678c6:IsNoetherian 073f3560:WeaklyNoetherianCRing e602c12a:WeaklyNoetherianCRing.isWeaklyNoetherian	\class NoetherianCRing \extends WeaklyNoetherianCRing { | isNoetherian : IsNoetherian \this | isWeaklyNoetherian => \lam I Ifg Ic => (\case bar-stream (elemToIdeal isNoetherian) (\lam n => (I (suc n), Ifg (suc n))) \with { | inP (l, p, s) => \case Pauses.toIndex s \with { | inP (j, q) => inP (l.len -' suc j, \lam {a} Ia => Ideal.sclosure-univ (hiding (q, s) $ later (\lam inP (k, lx) => transport (I __ _) (pmap suc NatSemiring.+-comm *> NatSemiring.cancel-left (suc j) (later $ rewriteI NatSemiring.+-assoc $ pmap (suc __ Nat.+ _) (inv drop.ndrop_Fin_+) *> <=_exists {suc (drop.ndrop_Fin k)} (suc_<_<= $ fin_< _) *> inv (<=_exists $ suc_<_<= $ fin_< j))) $ iterate I Ic k $ rewrite (drop.index, IsInvPrefix.toIndex p) in lx)) $ q $ transportInv (\lam s => s.1 a) (IsInvPrefix.toIndex p) Ia) } }) }
+NoetherianCRing.isNoetherian	field	a22c13cc93a0	-	8b45f627	d5b678c6:IsNoetherian	| isNoetherian : IsNoetherian \this
+IsNoetherian	func	208941a921b3	28494f165e64	717f67d7	109ef2b0:PausesElem	\func IsNoetherian (R : CRing) : \Prop
+Pauses	data	641a53c0d95d	-	2be888ee	96420783:Pauses.fromIndex a67b3827:Pauses.isBarMonotone 35098f62:Pauses.toIndex	\data Pauses {A : \Type} (R : A -> Array A -> \Type) (l : Array A) : \Prop \elim l | a :: l => pauses-here (R a l) pauses-there (Pauses R l)
+PausesElem	func	ca1af7f723b9	2e93a5cb83ba	1daad97e	82c60f90:Pauses 9b6b1aa4:PausesElem.lincomb	\func PausesElem {R : CRing} (l : Array R) : \Prop
+PausesIdeal	func	fb9d649aadde	bb5694c43935	95212dd1	82c60f90:Pauses	\func PausesIdeal {R : CRing} (l : Array (\Sigma (I : Ideal R) I.IsFinitelyGenerated)) : \Prop
+idealToElem	lemma	bf7cee364317	-	17674406	109ef2b0:PausesElem b094bf61:PausesIdeal	\lemma idealToElem {R : CRing} {l : Array R} (b : Bar PausesIdeal (map principal l)) : Bar PausesElem l
+elemToIdeal	lemma	74edda701c95	-	d37631a9	109ef2b0:PausesElem b094bf61:PausesIdeal	\lemma elemToIdeal {R : CRing} (b : Bar (PausesElem {R}) nil) : Bar (PausesIdeal {R}) nil
+(overview)	-	-	-	c9c7d6c7		-

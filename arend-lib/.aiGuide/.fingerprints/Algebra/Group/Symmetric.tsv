@@ -1,0 +1,73 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Symmetric. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Sym	type	37387ea5db36	21d07e7f403d	383486e8		\type Sym (n : Nat)
+Sym.fromEquiv	func	7cb007811087	7d5856076d83	874ac160	6b8ee4b3:Sym	\func fromEquiv {n : Nat} (e : QEquiv {Fin n} {Fin n}) : Sym n
+Sym.equals	lemma	bcf2973896f6	-	d0f06a68		\lemma equals {n : Nat} {x y : Sym n} (p : \Pi (j : Fin n) -> x j = y j) : x = y
+Sym.reduce	func	e98835318833	1c69b5923fef	1b61e2fa	6b8ee4b3:Sym	\func reduce {n : Nat} (e : Sym (suc n)) : Sym n
+Sym.reduce_id	lemma	fdbd9665e340	-	7e22efb4	fa821866:Sym.reduce	\lemma reduce_id {n : Nat} : reduce {n} idEquiv = idEquiv
+SymmetricGroup	instance	8d7c54a75444	-	7687879c	6b8ee4b3:Sym	\instance SymmetricGroup (n : Nat) : Group (Sym n)
+Sym.Support	func	90b1cdfa6b9d	e4b03d31e1b8	992489af		\func Support {n : Nat} (e : Sym n) (i : Fin n) : \Prop
+Sym.SupportFin	func	b81ac83d2ada	ba316ce36ca0	1abbd7e8	f7b290d6:Sym.Support	\func SupportFin {n : Nat} (e : Sym n) : FinSet (\Sigma (i : Fin n) (Support e i))
+Sym.Support_inverse	lemma	a48f63e50919	-	4bc9505d		\lemma Support_inverse {n : Nat} {e : Sym n} {i : Fin n} (s : Support e i) : Support (symQEquiv e) i
+Sym.Support_ret	lemma	e02903898c71	-	ff275a26		\lemma Support_ret {n : Nat} {e : Sym n} {i : Fin n} (s : Support e i) : Support e (e.ret i)
+Sym.Support_Not	lemma	19748ab74c9d	-	c601ca08		\lemma Support_Not {n : Nat} {e : Sym n} {i : Fin n} (s : Not (Support e i)) : e i = i
+isCycle	type	948de29bdc79	cd5cf7be8138	2713928e		\type isCycle {n : Nat} (e : Sym n) : \Prop
+independent_*	lemma	550b5aecc738	-	6d4fbf04		\lemma independent_* {n : Nat} {e e' : Sym n} (p : \Pi {i : Fin n} -> Support e i -> Support e' i -> Empty) : e * e' = e' * e
+independent_Support-right	lemma	0751906d6544	-	c3d6419d		\lemma independent_Support-right {n : Nat} {e e' : Sym n} (p : \Pi {i : Fin n} -> Support e i -> Support e' i -> Empty) {i : Fin n} (s : Support e' i) : Support (e * e') i
+independent_Support-left	lemma	8175daf1d2b3	-	c3d6419d		\lemma independent_Support-left {n : Nat} {e e' : Sym n} (p : \Pi {i : Fin n} -> Support e i -> Support e' i -> Empty) {i : Fin n} (s : Support e i) : Support (e * e') i
+independent_Support-conv	lemma	1b52336e736c	-	00abc3cf		\lemma independent_Support-conv {n : Nat} {e e' : Sym n} (p : \Pi {i : Fin n} -> Support e i -> Support e' i -> Empty) {i : Fin n} (s : Support (e * e') i) : Support e i || Support e' i
+independent_Support_BigProd	lemma	8f400e9f72be	-	a25c8d3c		\lemma independent_Support_BigProd {n : Nat} {l : Array (Sym n)} (p : \Pi (i1 i2 : Fin l.len) {i : Fin n} -> Support (l i1) i -> Support (l i2) i -> i1 = i2) {i : Fin n} {j : Fin l.len} (s : Support (l j) i) : Support (Monoid.BigProd l) i
+independent_Support_BigProd.conv	lemma	9d66f5f3a15a	-	a25c8d3c		\lemma conv {n : Nat} {l : Array (Sym n)} (p : \Pi (i1 i2 : Fin l.len) {i : Fin n} -> Support (l i1) i -> Support (l i2) i -> i1 = i2) {i : Fin n} (s : Support (Monoid.BigProd l) i) : ∃ (j : Fin l.len) (Support (l j) i)
+cycle	func	e6be8164b46b	01b821a78417	a83c2c4e		\func cycle {n k : Nat} (l : Array (Fin n) k) (inj : IsInj l) : Sym n
+cycle.func	func	33659283d5bd	e7a816386d30	52a1c2a0	c144de74:cycle	\func func {n k : Nat} (l : Array (Fin n) (suc k)) (j : Fin n) : Fin n
+cycle.step	func	19da18589161	81cf0146ca41	f9925611	c144de74:cycle c9348fe4:transposition.inj	\func step {n k : Nat} {l : Array (Fin n) k} (k>0 : k > 0) (inj : IsInj l) (i : Fin k) : cycle l inj (l i) = l (mod_Fin (suc i) k>0)
+cycle.steps	lemma	68622686a22c	-	151118e3	c144de74:cycle	\lemma steps {n k : Nat} {m : Fin (suc k)} {l : Array (Fin n) (suc k)} {inj : IsInj l} : Monoid.pow {SymmetricGroup n} (IsEquiv.toQEquiv $ PigeonholeSet.isEquiv (func l) (func-inj inj)) m (l 0) = l m
+Support_cycle	func	fc3491f31d29	e7acdbdc05cc	8c1292d8	c144de74:cycle	\func Support_cycle {n k : Nat} {l : Array (Fin n) k} (inj : IsInj l) {i : Fin n} (s : Support (cycle l inj) i) : \Sigma (j : Fin k) (l j = i)
+cycle_Support	lemma	7c855e8fe24b	-	796e9909	c144de74:cycle c9348fe4:transposition.inj	\lemma cycle_Support {n k : Nat} {l : Array (Fin n) k} (k>1 : k > 1) {inj : IsInj l} {j : Fin k} : Support (cycle l inj) (l j)
+cycle-isCycle	lemma	4c85392a4ca4	-	3709e831	c144de74:cycle f9c4fcc8:isCycle c9348fe4:transposition.inj	\lemma cycle-isCycle {n k : Nat} {l : Array (Fin n) k} {inj : IsInj l} (k>1 : k > 1) : isCycle (cycle l inj)
+transposition	sfunc	2f864cddbbd4	ff528dcc4a3d	b90e0bb4	6b8ee4b3:Sym	\sfunc transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n
+transposition.transposition_/=	lemma	2de8b9b976f9	-	fe2d288b		\lemma transposition_/= {i : Fin n} (i/=a : i /= a) (i/=b : i /= b) : transposition a/=b i = i
+transposition.transposition-isInv	lemma	f3fd20611e31	-	571ff154		\lemma transposition-isInv {i : Fin n} : transposition a/=b (transposition a/=b i) = i
+transposition1	func	4269db7f50b2	493b8be89eff	fd4fd287	6b8ee4b3:Sym	\func transposition1 {n : Nat} (a : Fin n) : Sym (suc n)
+transposition1.transposition1-isInv	lemma	d17f2ceee922	-	0461754f		\lemma transposition1-isInv {n : Nat} {a : Fin n} {i : Fin (suc n)} : transposition1 a (transposition1 a i) = i
+symmetric-rec	func	297b6eab67fc	86d5d70c9aeb	b76e5200	6b8ee4b3:Sym fa821866:Sym.reduce	\func symmetric-rec {n : Nat} : QEquiv {Sym (suc n)} {\Sigma (Fin (suc n)) (Sym n)}
+cyclePerm	func	f43ed10c8997	6d06c2e72118	132626d7		\func cyclePerm {n : Nat} (k : Fin n) : QEquiv {Fin n} {Fin n}
+SymFin	instance	8d4861de4d84	-	eca49515		\instance SymFin (n : Nat) : FinSet (Sym n) (fac n)
+SymFin.fin_equiv	func	b227288bf416	674a7968fda9	e3a7c062	6b8ee4b3:Sym 1c4cb30b:symmetric-rec	\func fin_equiv {n : Nat} : QEquiv {Fin (fac n)} {Sym n}
+EquivFin	instance	3deac276342c	-	aab086e4		\instance EquivFin (A B : FinSet) : FinSet (QEquiv {A} {B})
+EquivFin.equiv_fin	sfunc	c8ee5a9b2392	201d6bdeb0e3	a88c3d2c		\sfunc equiv_fin {n m : Nat} : \Sigma (k : Nat) (QEquiv {QEquiv {Fin n} {Fin m}} {Fin k})
+lift	func	097a0cd19e03	cb2a58666170	eb23c496	6b8ee4b3:Sym	\func lift {n : Nat} (e : Sym n) : Sym (suc n)
+lift_ide	lemma	6299f4174598	-	664b0ae7		\lemma lift_ide {n : Nat} : lift {n} ide = 1
+lift_*	lemma	f04be233ca14	-	c2aef09c		\lemma lift_* {n : Nat} {e e' : Sym n} : lift (e * e') = lift e * lift e'
+lift_BigProd	lemma	d7daac9b5c6c	-	20e5f752		\lemma lift_BigProd {n : Nat} {l : Array (Sym n)} : lift (Monoid.BigProd l) = Monoid.BigProd (map lift l)
+lift_cycle	lemma	cea4e8ed1f47	-	6f6b7d46		\lemma lift_cycle {n k : Nat} {l : Array (Fin n) k} {inj : IsInj l} : lift (cycle l inj) = cycle (map fsuc l) (\lam {i} {j} p => inj (unfsuc p))
+lift_transposition	lemma	ceb1e06466e7	-	d6d7d1c1		\lemma lift_transposition {n : Nat} {a b : Fin n} {a/=b : a /= b} : lift (transposition a/=b) = transposition (fsuc/= a/=b)
+lift_transposition1	lemma	522fca2ed044	-	d6d7d1c1		\lemma lift_transposition1 {n : Nat} {a : Fin n} : lift (transposition1 a) = transposition1 (suc a)
+transposition1-decomp	func	c0f4463518e5	6470a9bd88b8	d4a9fa96	6b8ee4b3:Sym 71b156b1:transposition1	\func transposition1-decomp {n : Nat} (e : Sym (suc n)) : \Sigma (l : Array (Fin n)) (e = BigProd (map transposition1 l))
+transposition1-decomp.aux	lemma	e721544bd226	-	c73653a5	fa821866:Sym.reduce 1605e899:lift	\lemma aux {n : Nat} (n>0 : n > 0) {e : Sym (suc n)} : e = lift (reduce e) * BigProd (\new (Array (Sym (suc n)) (e 0) (\lam j => transposition1 (mod_Fin j n>0))))
+transposition1-decomp.aux1	lemma	3a9087b67c9d	-	5e7892d3	71b156b1:transposition1	\lemma aux1 {n : Nat} (n>0 : n > 0) {k : Fin (suc n)} (e : Sym (suc n)) : BigProd (\new (Array (Sym (suc n)) k (\lam j => transposition1 (mod_Fin j n>0)))) 0 = k
+transposition1-decomp.BigProd-fixed	lemma	c76b392b742c	-	0ef367f7		\lemma BigProd-fixed {n : Nat} {l : Array (Sym n)} {i : Fin n} (p : ∀ (e : l) (e i = i)) : BigProd l i = i
+transposition1-decomp.BigProd-unique	lemma	c3de1781052e	-	ae1cf11f		\lemma BigProd-unique {n : Nat} {l : Array (Sym n)} {x : Fin n} (i : Fin l.len) (p : \Pi (j : Fin l.len) -> (j : Nat) < i -> l j x = x) (q : \Pi (j : Fin l.len) -> (i : Nat) < j -> l j (l i x) = l i x) : BigProd l x = l i x
+sign	func	dbdc7ac403d2	e7d725861fcc	f51780fd	8dc06b63:sign.inversions	\func sign {R : Ring} {n : Nat} (e : Sym n) : R
+sign.inversions	func	fa9ca66f5b87	c4d46e4d3c0f	477f2292	fa821866:Sym.reduce	\func inversions {n : Nat} (e : Sym n) : Nat
+sign.inversions_ide	lemma	4acffaea4982	-	5e4845db		\lemma inversions_ide {n : Nat} : inversions {n} idEquiv = 0
+sign.Inversions	func	6bcb433bad77	b88d7c396c3c	2caa1e0e		\func Inversions {n : Nat} (e : Sym n)
+sign.InversionsFin	func	10c875f2da43	ffbc0b00bf1d	b06e0c38	672b604c:sign.InversionsFin.aux 8dc06b63:sign.inversions	\func InversionsFin {n : Nat} (e : Sym n) : FinSet (Inversions e) (inversions e)
+sign.sign_hom	lemma	3f75d7787c6e	-	782ae080		\lemma sign_hom (f : RingHom) {n : Nat} {e : Sym n} : f (sign e) = sign e
+sign_ide	lemma	7c25af6dfb03	-	3f8a251e	8cdd057c:sign	\lemma sign_ide {R : Ring} {n : Nat} : sign {R} {n} ide = ide
+sign_*	lemma	b34bed62e795	-	5c7306d4	8cdd057c:sign	\lemma sign_* {R : Ring} {n : Nat} {e e' : Sym n} : sign (e * e') = sign e R.* sign e'
+sign_*.Inverstions_transposition_>	sfunc	f125683fcd2c	d01a365cb34c	9cac4cc7	71b156b1:transposition1	\sfunc Inverstions_transposition_> {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea<ea+1 : e a < e (suc a)) : QEquiv {Or (Inversions e) (Fin 1)} {Inversions (transposition1 a * e)}
+sign_*.Inverstions_transposition_<	sfunc	82c0fd619cdd	c0acc261c6ce	9cac4cc7	71b156b1:transposition1	\sfunc Inverstions_transposition_< {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea+1<ea : e (suc a) < e a) : QEquiv {Or (Inversions (transposition1 a * e)) (Fin 1)} {Inversions e}
+sign_*.inverstions_transposition_>	lemma	0ff03bd895a8	-	e41c9e80		\lemma inverstions_transposition_> {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea<ea+1 : e a < e (suc a)) : suc (inversions e) = inversions (transposition1 a * e)
+sign_*.inverstions_transposition_<	lemma	1a1502e18361	-	e41c9e80		\lemma inverstions_transposition_< {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea+1<ea : e (suc a) < e a) : suc (inversions (transposition1 a * e)) = inversions e
+sign_*.inversions_transposition	lemma	c0416b0985cc	-	bc4c4714		\lemma inversions_transposition {n : Nat} {e : Sym (suc n)} {a : Fin n} : inversions (transposition1 a * e) mod 2 = suc (inversions e) mod 2
+sign_*.inversions_*	lemma	f621588fc16e	-	70ab69f9		\lemma inversions_* {n : Nat} {e e' : Sym n} : inversions (e * e') mod 2 = (inversions e + inversions e') mod 2
+sign_inverse	lemma	faec06bae063	-	8e8a68f5	8cdd057c:sign	\lemma sign_inverse {R : Ring} {n : Nat} {e : Sym n} : sign (inverse e) = {R} sign e
+signHom	func	45c443d2ef4a	4735c1d04a4c	dff76c26	70448cbb:SymmetricGroup 8cdd057c:sign	\func signHom {R : Ring} {n : Nat} : MonoidHom (SymmetricGroup n) R
+cycle-decomp	sfunc	0cf35ddcb083	c483a0b973fd	8ddcfd0e		\sfunc cycle-decomp {n : Nat} (e : Sym n)
+cycle-decomp.aux	func	4728035d1606	f2efcd24f6d2	290f00da		\func aux {k n : Nat} (e : Sym n) (p : (Sym.SupportFin e).card < k) : \Sigma (l : Array (Sym n)) (∀ (e' : l) (isCycle e')) (\Pi (i1 i2 : Fin l.len) {i : Fin n} -> Support (l i1) i -> Support (l i2) i -> i1 = i2) (e = BigProd l)
+cycle-decomp.pow-lem	lemma	91db201b3a5a	-	e50dd59e		\lemma pow-lem {N M : Nat} {n k : Fin M} {e : Sym N} {x : Fin N} (n<k : n < k) (p : pow e n x = pow e k x) : pow e (k -' n) x = x
+cycle-decomp.pow_mod	lemma	f0406a4feaba	-	5674660f		\lemma pow_mod {n k m : Nat} {e : Sym n} {i : Fin n} (p : pow e m i = i) : pow e (k Nat.mod m) i = pow e k i
+cycle-decomp.fixPoint-iter	lemma	f2b8e2650510	-	80b1ea09		\lemma fixPoint-iter {n k : Nat} {e : Sym n} {i : Fin n} (p : e i = i) : pow e k i = i
+cycle-decomp.pow-rotate	lemma	43b7371a2580	-	85627e00		\lemma pow-rotate {n : Nat} {e : Sym n} {k : Nat} {i : Fin n} : e (pow e k i) = pow e k (e i)
+(overview)	-	-	-	bef26a5d	6b8ee4b3:Sym a94b864e:cycle-decomp 3ca4edbc:sign_* 71b156b1:transposition1	-

@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Topology.UniformSpace.Complete. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CompleteUniformSpace	class	9fbec49e4875	-	307b498b		\class CompleteUniformSpace \extends UniformSpace, CompleteCoverSpace
+dense-uniform-lift	func	730d49299803	0d9e6a1282f5	3c1defb7		\func dense-uniform-lift {X Y : UniformSpace} {Z : CompleteUniformSpace} (f : UniformMap X Y) (fd : f.IsDenseUniformEmbedding) (g : UniformMap X Z) : UniformMap Y Z
+UniformCompletion	instance	79411a585de6	-	6a651550	187e2950:CompleteUniformSpace	\instance UniformCompletion (X : UniformSpace) : CompleteUniformSpace
+UniformCompletion.properUniform	lemma	545e2912467c	-	e6ab6642		\lemma properUniform (Xp : X.IsProperUniform) : (UniformCompletion X).IsProperUniform
+UniformCompletion.makeUniform	lemma	d3865dc5fe7a	-	6e7deb88		\lemma makeUniform {C : Set (Set X)} (Cu : isUniform C) : isUniform {UniformCompletion X} (\lam V => ∃ (U : C) (V = mkSet U))
+mkSet_<=*	lemma	d1f1a13f6b9c	-	588f571d		\lemma mkSet_<=* {X : UniformSpace} {V U : Set X} (p : V <=* U) : mkSet V <=* mkSet U
+uniform-completion	func	672e6dc3f628	a49a283385f0	1e61df53	2c62da41:UniformCompletion	\func uniform-completion {X : UniformSpace} : UniformMap X (UniformCompletion X)
+uniform-completion.isDenseEmbedding	lemma	3ba9c68e5461	-	108c518b	afb0198c:dense-uniform-lift 89bf8e9b:uniform-completion	\lemma isDenseEmbedding : UniformMap.IsDenseUniformEmbedding {uniform-completion {X}}
+cauchyFilter-uniform-char	lemma	15b9ed486fd1	-	2e44950f		\lemma cauchyFilter-uniform-char {X : UniformSpace} {F : SetFilter X} : IsCauchyFilter F <-> ∀ {C : isUniform} ∃ (U : C) (F U)
+regularFilter-uniform-char	lemma	b13f01bee36f	-	914b33be		\lemma regularFilter-uniform-char {X : UniformSpace} {F : CauchyFilter X} : ∀ {U : F.F} ∃ (V : Set X) (V <=< U) (F V) <-> ∀ {U : F.F} ∃ (V : Set X) (V <=* U) (F V)
+(overview)	-	-	-	f67858f6	187e2950:CompleteUniformSpace 2c62da41:UniformCompletion afb0198c:dense-uniform-lift 89bf8e9b:uniform-completion	-

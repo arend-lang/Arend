@@ -1,0 +1,21 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Localization. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RingLocalization	record	735451a771fa	-	98713f17		\record RingLocalization \extends Localization { \override B : CRing \override L : CRing \override inL : RingHom B L }
+RingLocalization.liftHom	func	c680ca85a36c	54db3fa414ee	a391e033		\func liftHom {T : CRing} (f : RingHom B T) (l : \Pi {x : B} -> S x -> Inv (f x)) : RingHom L T
+RingLocalization.fromLocalization	func	3ab2454748dc	0f7789286843	0058fd7f	23b20f2a:RingLocalization	\func fromLocalization {B R : CRing} {f : RingHom B R} (L : (Localization {B}) { | L => R | inL => f }) : RingLocalization
+RingLocalization.liftHom1	func	1d1bae9efd58	a475c05fb97d	c26b8911	ed37f3dd:RingLocalization.liftHom	\func liftHom1 {B R : CRing} {f : RingHom B R} {a : B} (L : Localization (powers a) R f) {T : CRing} (f : RingHom B T) (ai : Inv (f a)) : RingHom R T
+RingLocalization.zro-char	lemma	2a486f91a943	-	3d3a690b		\lemma zro-char {x : B} : (inL x = 0) <-> ∃ (c : B) (S c) (x * c = 0)
+RingLocalization.loc-trivial-char	lemma	9ce703992ecf	-	583f0e12		\lemma loc-trivial-char : (0 = {L} 1) <-> S 0
+RingLocalization.nilpotent-trivial	lemma	00917dc9a202	-	425da2de		\lemma nilpotent-trivial {x : B} (n : Ring.IsNilpotent x) (Sx : S x) : 0 = {L} 1
+RingLocalization.isLocal-char	lemma	93bcdaa47cb6	-	f16d066b		\lemma isLocal-char : Ring.IsLocal {L} <-> ∀ {x} {y} (S (x + y)) ∃ (r : B) (S (x * r) || S (y * r))
+RingLocalization.isEpiHom	lemma	c6484cd14745	-	2820f0ca		\lemma isEpiHom {T : CRing} {g h : RingHom L T} (d : \Pi (a : B) -> g (inL a) = h (inL a)) : g = h
+LocRing	instance	d1884f2073c2	-	5c27fb97		\instance LocRing {R : CRing} (S : SubMonoid R) : CRing
+loc_unequals_domain	lemma	811a641009f1	-	3215d7b2		\lemma loc_unequals_domain {D : IntegralDomain} (S : SubMonoid D) (nz : \Pi (x : D) -> S x -> x /= 0) {a b : \Sigma (x y : D) (S y)} (p : inl~ a = inl~ b) : a.1 * b.2 = b.1 * a.2
+locR	func	e8d02ec39710	230d71854891	6763ebf3	e31ccbfd:LocRing	\func locR {R : CRing} {S : SubMonoid R} : RingHom R (LocRing S)
+locR-isEpi	lemma	3ca424a03560	-	142a565c	e31ccbfd:LocRing 022afe0f:locR	\lemma locR-isEpi {R : CRing} {S : SubMonoid R} {T : CRing} {g h : RingHom (LocRing S) T} (p : g RingHom.∘ locR = h RingHom.∘ locR) : g = h
+localization-zro-char	lemma	a6f2eaa8b4cc	-	61650860		\lemma localization-zro-char {R : CRing} {S : SubMonoid R} {a : \Sigma (x y : R) (S y)} : (inl~ a = 0) <-> ∃ (c : R) (S c) (a.1 * c = 0)
+LocalizationIdeal	func	0f07427976a1	ca8b28a05abb	982441b9		\func LocalizationIdeal (I : Ideal) {R : CRing} (f : RingHom I.S R) {S : SubMonoid I.S} (L : Localization S R f) : Ideal R
+LocalizationIdeal.unit-char	lemma	c605e3f49c12	-	8149f71a		\lemma unit-char (L : Localization S R f) : LocalizationIdeal I f L 1 <-> ∃ (x : I.S) (S x) (I x)
+LocalizationIdeal.sclosure-char	lemma	bc0fd5da2a18	-	65b47408		\lemma sclosure-char {T R : CRing} {U : T -> \Prop} {f : RingHom T R} {S : SubMonoid T} (L : Localization S R f) {x : R} : LocalizationIdeal (Ideal.sclosure U) f L x <-> Ideal.sclosure (SetIm f U) x
+FieldOfQuotients	instance	2b4de6dcb9a1	-	2905f9bd	e31ccbfd:LocRing	\instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField
+(overview)	-	-	-	c7f84ef9	e31ccbfd:LocRing 23b20f2a:RingLocalization 022afe0f:locR	-

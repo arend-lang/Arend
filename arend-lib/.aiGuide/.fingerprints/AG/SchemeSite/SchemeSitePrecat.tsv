@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module AG.SchemeSite.SchemeSitePrecat. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SchemeSitePrehomPrecat	func	d2bdec3682eb	10a917fb9cb8	94c4db99		\func SchemeSitePrehomPrecat : Precat SchemeSite.{u}
+SchemeSitePrecat	instance	8d8fe2f3a42a	-	1df5b620		\instance SchemeSitePrecat : Precat SchemeSite.{u}
+SatSchemeSitePrecat	instance	99bcc0749370	-	1611bb00	686b4aa3:SchemeSitePrecat	\instance SatSchemeSitePrecat : Precat SatSchemeSite.{u}
+(overview)	-	-	-	64005f4a	f7dd60ab:SatSchemeSitePrecat 686b4aa3:SchemeSitePrecat 70310203:SchemeSitePrehomPrecat	-

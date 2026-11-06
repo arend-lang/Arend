@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Solver.CSemigroup. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CSemigroupSolverModel	func	941ee4d6798d	762daf6c5e65	2531069b		\func CSemigroupSolverModel (S : CSemigroup) : SolverModel S
+(overview)	-	-	-	26c0a2ea		-

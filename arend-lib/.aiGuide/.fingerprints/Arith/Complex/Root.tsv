@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Arith.Complex.Root. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+complex-root	lemma	6e442fc39d79	-	02cc5ad5		\lemma complex-root {z : Complex} (rho>0 : 0 < cabs z) {k : Nat} (k>0 : 0 NatOrder.< k) : ∃ (w : Complex) (Monoid.pow w k = z)
+(overview)	-	-	-	7da43f73		-

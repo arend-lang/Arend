@@ -1,0 +1,74 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.GCD. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+GCD	record	055b8c77afd8	-	11f46012	13e6305b:GCD.M 8c02cb60:GCD.res 7641f819:GCD.res-univ 8c02cb60:GCD.val1 8c02cb60:GCD.val2	\record GCD {M : CMonoid} (val1 : M) (val2 : M) (\coerce res : M) (res|val1 : LDiv res val1) (res|val2 : LDiv res val2) (res-univ : \Pi (g : M) -> LDiv g val1 -> LDiv g val2 -> LDiv g res)
+GCD.swap	func	9e064c3d6027	6974583f2983	2b4cdbe4	7140a79f:GCD 8c02cb60:GCD.val1 8c02cb60:GCD.val2	\func swap : GCD val2 val1 res res|val2 res|val1
+GCD.reduce	func	7f342dbc3ea0	d533069502da	e279389d	8c02cb60:GCD.res	\func reduce (p : CMonoid.IsRegularElem res) : GCD res|val1.inv res|val2.inv 1 LDiv.ide-div LDiv.ide-div
+GCD.~-stable	func	76d67f145776	0ee5f339485b	a69de94e	8c02cb60:GCD.res	\func ~-stable {M : CMonoid} {x y z z' : M} (z|z' : LDiv z z') (z'|z : LDiv z' z) (g : GCD x y z) : GCD x y z'
+GCDMonoid	class	dcad34b49a26	-	11eb506c	e5a29385:GCDMonoid.gcd-ldistr 239f6379:GCDMonoid.isGCD	\class GCDMonoid \extends CMonoid { | isGCD (x y : E) : TruncP (GCD x y) | gcd-ldistr (c : E) {x y z : E} : GCD x y z -> TruncP (GCD (c * x) (c * y) (c * z)) }
+GCDMonoid.gcd-rdistr	lemma	f576c30f6a2e	-	df147d42	e5a29385:GCDMonoid.gcd-ldistr	\lemma gcd-rdistr {x y z : E} (c : E) (gcd : GCD x y z) : TruncP (GCD (x * c) (y * c) (z * c))
+GCDMonoid.gcd_*-comm	lemma	6137d82904fa	-	fa100fe2	226a6422:UnitlessGCDMonoid.gcd	\lemma gcd_*-comm {a b c : E} (ab : GCD a b) (a_bc : GCD a (b * c)) : TruncP (GCD a (ab * c) a_bc)
+GCDMonoid.gcd_*_div	lemma	49143905c547	-	e52534fb		\lemma gcd_*_div {a b c : E} (a|bc : LDiv a (b * c)) (ab : GCD a b) : TruncP (LDiv a (ab * c))
+GCDMonoid.coprime_*_div	lemma	c81d93216ef7	-	a5a967cd		\lemma coprime_*_div {a b c : E} (a|bc : LDiv a (b * c)) (a_b : IsCoprime a b) : TruncP (LDiv a c)
+GCDMonoid.gcd_pow_div	lemma	2cfcbfd78077	-	6ffae4ae		\lemma gcd_pow_div {a b : E} {n : Nat} (a|bc : LDiv a (pow b n)) (a_b : IsCoprime a b) : TruncP (LDiv a b)
+GCDMonoid.IsCoprime_*-right	lemma	8a2047772d71	-	23810fb5		\lemma IsCoprime_*-right {a b c : E} (a_b : IsCoprime a b) (a_c : IsCoprime a c) : IsCoprime a (b * c)
+GCDMonoid.IsCoprime_*-left	lemma	baa61cf75119	-	23810fb5		\lemma IsCoprime_*-left {a b c : E} (a_c : IsCoprime a c) (b_c : IsCoprime b c) : IsCoprime (a * b) c
+GCDMonoid.IsCoprime_pow-left	lemma	35e096605875	-	bcbaa5c5		\lemma IsCoprime_pow-left {a b : E} (a_b : IsCoprime a b) {n : Nat} : IsCoprime (Monoid.pow a n) b
+GCDMonoid.IsCoprime_pow-right	lemma	44e005b22fa2	-	bcbaa5c5		\lemma IsCoprime_pow-right {a b : E} (a_b : IsCoprime a b) {n : Nat} : IsCoprime a (Monoid.pow b n)
+GCDMonoid.IsCoprime_BigProd-right	lemma	a3a3375fea4a	-	3f85a7fd		\lemma IsCoprime_BigProd-right {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime a (l j)) : IsCoprime a (Monoid.BigProd l)
+GCDMonoid.IsCoprime_BigProd-left	lemma	5d953731c1da	-	3f85a7fd		\lemma IsCoprime_BigProd-left {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime (l j) a) : IsCoprime (Monoid.BigProd l) a
+GCDMonoid.coprime_*_div-left	lemma	e837ba2c444a	-	22f51e40		\lemma coprime_*_div-left {d e a : E} (d_e : IsCoprime d e) (d|a : LDiv d a) (e|a : LDiv e a) : TruncP (LDiv (d * e) a)
+GCDMonoid.coprime_BigProd_div-left	lemma	7ab0e588e30e	-	e697fe7c		\lemma coprime_BigProd_div-left {l : Array E} {a : E} (p : \Pi (i j : Fin l.len) -> i /= j -> IsCoprime (l i) (l j)) (l|a : \Pi (j : Fin l.len) -> LDiv (l j) a) : TruncP (LDiv (BigProd l) a)
+GCDMonoid.split-equiv	lemma	f005c3e110a9	-	aebac068		\lemma split-equiv {a b c : E} (a|bc : LDiv a (b * c)) : ∃ (a1 a2 : E) (LDiv a (a1 * a2)) (LDiv (a1 * a2) a) (LDiv a1 b) (LDiv a2 c)
+GCDMonoid.split-regular	lemma	32cd63c23b2a	-	ec1761b9		\lemma split-regular {a b c : E} (ar : IsRegularElem a) (a|bc : LDiv a (b * c)) : ∃ (a1 a2 : E) (a = a1 * a2) (LDiv a1 b) (LDiv a2 c)
+GCDMonoid.gcd-ldistr_cancel	func	2a7ab4920cfd	9689fbdc386f	77a77fa9		\func gcd-ldistr_cancel {M : CMonoid} {c x y z : M} (cancel : M.IsRegularElem c) (gcd : GCD x y z) (gcd' : GCD (c * x) (c * y)) : GCD (c * x) (c * y) (c * z)
+CancelGCDMonoid	class	78b600feba06	-	1708b0f6	42cac793:GCDMonoid e5a29385:GCDMonoid.gcd-ldistr 5e48f28a:GCDMonoid.gcd-ldistr_cancel	\class CancelGCDMonoid \extends GCDMonoid, CancelCMonoid { | gcd-ldistr => \lam c {x} {y} {z} (gcd : GCD x y z) => TruncP.map (isGCD (c * x) (c * y)) (GCDMonoid.gcd-ldistr_cancel (cancel_*-left c) gcd) }
+CancelGCDMonoid.gcd_*_div	lemma	2d151a9e1951	-	0cf5351f		\lemma gcd_*_div {a b c : E} (a|bc : LDiv a (b * c)) (ab : GCD a b) : LDiv a (ab * c)
+CancelGCDMonoid.coprime_*_div	lemma	48bca11948e4	-	0cf5351f		\lemma coprime_*_div {a b c : E} (a|bc : LDiv a (b * c)) (a_b : IsCoprime a b) : LDiv a c
+CancelGCDMonoid.gcd_pow_div	lemma	853df8b2b18e	-	0cf5351f		\lemma gcd_pow_div {a b : E} {n : Nat} (a|bc : LDiv a (pow b n)) (a_b : IsCoprime a b) : LDiv a b
+CancelGCDMonoid.div_unit	lemma	94743e41301a	-	a9a8015f		\lemma div_unit : (\Pi (a b : E) -> Dec (LDiv a b)) <-> (\Pi (a : E) -> Dec (Inv a))
+UnitlessMonoid	class	4e3c2387e1b9	-	d5128909	011c580b:UnitlessMonoid.uniqueUnit	\class UnitlessMonoid \extends CancelCMonoid { | uniqueUnit (j : Inv) : j.val = ide }
+UnitlessMonoid.div-eq	lemma	d5d86183a2e8	-	80d2b6fa		\lemma div-eq {x y : E} (d1 : LDiv x y) (d2 : LDiv y x) : x = y
+UnitlessMonoid.GCD-isProp	lemma	1161396487d5	-	fdaaa2ff	7140a79f:GCD	\lemma GCD-isProp (x y : E) : isProp (GCD x y)
+UnitlessMonoid.gcd-isUnique	lemma	e6b9c660759c	-	6a2418a5	8c02cb60:GCD.res	\lemma gcd-isUnique {x y : E} (g g' : GCD x y) : g.res = g'.res
+UnitlessGCDMonoid	class	e28f1c899b2d	-	ceb01519	1f864cad:CancelGCDMonoid 226a6422:UnitlessGCDMonoid.gcd ffcf4e50:UnitlessMonoid	\class UnitlessGCDMonoid \extends UnitlessMonoid, CancelGCDMonoid
+UnitlessGCDMonoid.gcdC	lemma	993596ee11ea	-	aba3533e	7140a79f:GCD	\lemma gcdC (x y : E) : \level GCD x y GCD-isProp x y
+UnitlessGCDMonoid.gcd	func	2fa6a7198785	535a72214a7b	5b34279a		\func gcd (x y : E) : E
+UnitlessGCDMonoid.gcd_~	lemma	31d342ae5473	-	70ecee91	226a6422:UnitlessGCDMonoid.gcd	\lemma gcd_~ {x y : E} (g : GCD x y) : g.res = gcd x y
+UnitlessGCDMonoid.gcd_*-left	lemma	541d250cf9fb	-	50222654	226a6422:UnitlessGCDMonoid.gcd	\lemma gcd_*-left (c a b : E) : c * gcd a b = gcd (c * a) (c * b)
+UnitlessGCDMonoid.gcd_*-right	lemma	9baff3d0e3fc	-	50222654	226a6422:UnitlessGCDMonoid.gcd	\lemma gcd_*-right (a b c : E) : gcd a b * c = gcd (a * c) (b * c)
+UnitlessGCDMonoid.DivLattice	func	3aa994350b01	17c1d8fcb349	b0d8e31d	226a6422:UnitlessGCDMonoid.gcd	\func DivLattice : JoinSemilattice E
+UnitlessGCDMonoid.gcd_*-comm	lemma	fa2b1c54dc77	-	35fbdc95	226a6422:UnitlessGCDMonoid.gcd	\lemma gcd_*-comm (a b c : E) : gcd a (b * c) = gcd a (gcd a b * c)
+DivQuotient	func	5730f6ae28aa	03873776d916	6bcd7526		\func DivQuotient (M : CMonoid)
+DivQuotient.DivPreoder	func	1314d3d92ef7	a05a70f5f5c1	4d35bce9		\func DivPreoder (M : CMonoid) : Preorder M
+DivQuotient.~	func	a4a30e9665e3	e1a60c9d7078	1982c9fc		\func ~ {M : CMonoid}
+DivQuotient.inD	cons	b46601b011a1	a8ff8ca246c8	1c875a59	9f507dfc:DivQuotient 13e6305b:GCD.M	\cons inD {M : CMonoid} (x : M) : DivQuotient M
+DivQuotient.make~	lemma	11e8e484b545	-	2702aa6b	57cefcc8:DivQuotient.inD 07e23f13:DivQuotient.~	\lemma make~ {M : CMonoid} {x y : M} (p : inD x = inD y) : x ~ y
+DivQuotient.regular_equivalent-associates	func	85d88771bd4b	6623e42a1e41	48bbaa74		\func regular_equivalent-associates {M : CMonoid} (x y : M) (xr : M.IsRegularElem x) (x|y : LDiv x y) (y|x : LDiv y x) : associates x y
+DivQuotient.equivalent-associates	lemma	d08e330f0376	-	a8ac9cf7	07e23f13:DivQuotient.~	\lemma equivalent-associates {M : CancelCMonoid} (x y : M) (p : x ~ y) : associates x y
+DivQuotient.DivQuotientMonoid	instance	a6a980f194fc	-	4bf618b1	13e6305b:GCD.M	\instance DivQuotientMonoid (M : CMonoid) : OrderedCMonoid (DivQuotient M)
+DivQuotient.DivQuotientMonoid.*'	func	146b8b1d0c35	f13229508305	59ed5e97	9f507dfc:DivQuotient 13e6305b:GCD.M	\func *' {M : CMonoid} (x y : DivQuotient M) : DivQuotient M
+DivQuotient.inDHom	func	db83ad011d72	46b47c74b331	50157650	d530b6cc:DivQuotient.DivQuotientMonoid 57cefcc8:DivQuotient.inD 13e6305b:GCD.M	\func inDHom (M : CMonoid) : MonoidHom M (DivQuotientMonoid M)
+DivQuotient.inv~ide	lemma	14b5bc36cad7	-	52595352		\lemma inv~ide {M : CMonoid} (i : Inv {M}) : i ~ ide
+DivQuotient.div-to~	func	916a409a1a2f	0e97367ef9de	a0481ca3	13e6305b:GCD.M	\func div-to~ {M : CMonoid} {x y : M} (x|y : LDiv x y) : LDiv (inD x) (inD y)
+DivQuotient.div-from~'	lemma	2b7b1d2a4b2a	-	a0481ca3	13e6305b:GCD.M	\lemma div-from~' {M : CMonoid} {x y : M} (d : LDiv (inD x) (inD y)) : TruncP (LDiv x y)
+DivQuotient.div-from~	lemma	3a2ddf4cd84a	-	a0481ca3	13e6305b:GCD.M	\lemma div-from~ {M : CancelCMonoid} {x y : M} (d : LDiv (inD x) (inD y)) : LDiv x y
+DivQuotient.DivQuotientCancelMonoid	instance	b6bf5bce189b	-	3ce72c60	13e6305b:GCD.M ffcf4e50:UnitlessMonoid	\instance DivQuotientCancelMonoid (M : CancelCMonoid) : UnitlessMonoid
+DivQuotient.map	func	82c2eafba03f	22e470b658f3	b2cf2dd9	13e6305b:GCD.M	\func map {M N : CMonoid} (f : MonoidHom M N) : MonoidHom (DivQuotientMonoid M) (DivQuotientMonoid N)
+DivQuotient.DivQuotientGCDMonoid	instance	076c662839f6	-	7a3e1e9f	1f864cad:CancelGCDMonoid b679a072:UnitlessGCDMonoid	\instance DivQuotientGCDMonoid (M : CancelGCDMonoid) : UnitlessGCDMonoid
+DivQuotient.gcd-to~	func	3692d9eb9cc7	ff4dbc007385	ee439aec	13e6305b:GCD.M	\func gcd-to~ {M : CancelCMonoid} {x y z : M} (g : GCD x y z) : GCD (inD x) (inD y) (inD z)
+DivQuotient.gcd-from~	func	b9b2ad74bb64	8de1988fc29f	ee439aec	13e6305b:GCD.M	\func gcd-from~ {M : CancelCMonoid} {x y z : M} (g : GCD (inD x) (inD y) (inD z)) : GCD x y z
+DivQuotient.elemDivChain	lemma	63bc2c40026a	-	69d9f829	13e6305b:GCD.M	\lemma elemDivChain {M : CMonoid} (c : CMonoid.DivChain {DivQuotientMonoid M}) : M.DivChain
+div_gcd	func	13bffe780410	70f408d6b694	7b065c80		\func div_gcd {M : CMonoid} {a b : M} (a|b : LDiv a b) : GCD a b a
+gcd_reduced=1	func	5a7184030078	b4e77bda7003	5454bbb8		\func gcd_reduced=1 {M : CancelCMonoid} (gcd : GCD {M}) : GCD gcd.res|val1.inv gcd.res|val2.inv 1
+gcd-isUnique	lemma	7e6aa38eff55	-	79a8d43f		\lemma gcd-isUnique {M : CancelCMonoid} {a b : M} (g1 g2 : GCD a b) : associates g1 g2
+IsCoprime	type	72db3aeb52a4	c9a703e3f349	f9378614		\type IsCoprime {M : CMonoid} (x y : M)
+IsCoprime.=>gcd	func	663822e3f759	165b7e167dcd	49ec323b		\func =>gcd {x y : M} (c : IsCoprime x y) : GCD x y ide
+IsCoprime.<=gcdInv	lemma	b73e86efbb53	-	dff84926		\lemma <=gcdInv {x y : M} (g : GCD x y) (gi : Inv g) : IsCoprime x y
+IsCoprime.<=gcd	lemma	69a4e892bc67	-	193331d1		\lemma <=gcd {x y : M} (g : GCD x y ide) : IsCoprime x y
+IsCoprime.factor-left	lemma	44c775323a10	-	d8675405		\lemma factor-left {M : CMonoid} {x y z : M} (d : LDiv x y) (p : IsCoprime y z) : IsCoprime x z
+IsCoprime.factor-right	lemma	4bf7d5d96807	-	d8675405		\lemma factor-right {M : CMonoid} {x y z : M} (d : LDiv y z) (p : IsCoprime x z) : IsCoprime x y
+IsCoprime.swap	lemma	1eb9c881afda	-	c0ecd100		\lemma swap {M : CMonoid} {x y : M} (c : IsCoprime x y) : IsCoprime y x
+IsCoprime.IsCoprime_ide-left	lemma	811a179c1de2	-	97bc5312		\lemma IsCoprime_ide-left {a : M} : IsCoprime 1 a
+IsCoprime.IsCoprime_ide-right	lemma	992651ecceb6	-	97bc5312		\lemma IsCoprime_ide-right {a : M} : IsCoprime a 1
+IsCoprimeArray	type	8aba7be285bd	f4a1b3cd7ac3	63b8c361		\type IsCoprimeArray {M : CMonoid} (l : Array M)
+(overview)	-	-	-	73664004	1f864cad:CancelGCDMonoid 9f507dfc:DivQuotient 42cac793:GCDMonoid b679a072:UnitlessGCDMonoid 226a6422:UnitlessGCDMonoid.gcd ffcf4e50:UnitlessMonoid	-

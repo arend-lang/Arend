@@ -1,0 +1,6 @@
+# arend -gc fingerprints v2 for module AG.AffineScheme. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Spec	func	beb65cf853b1	7b7a583466f9	821595d6	31960daa:Spec.satSite	\func Spec (R : CRing.{u}) : Scheme
+specUnit	func	ed2d185b3af5	2006eaf373aa	ffd42dbc	bc742887:Spec df9bc6fb:specUnit.adjoint	\func specUnit {X : LocallyRingedLocale.{u}} : LocallyRingedLocaleHom X (Spec X.GlobalSections)
+IsAffineScheme-char	lemma	7b1e60cb45c1	-	899ace9a	1dbd37d7:specUnit	\lemma IsAffineScheme-char {X : LocallyRingedLocale.{u}} : X.IsAffineScheme <-> (specUnit {X}).IsIso
+(overview)	-	-	-	d7eae25a	bc742887:Spec 1dbd37d7:specUnit	-

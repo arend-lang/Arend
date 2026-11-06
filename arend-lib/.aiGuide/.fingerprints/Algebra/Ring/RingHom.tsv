@@ -1,0 +1,27 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.RingHom. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+*-addMonoidHom-left	lemma	629a14f3825e	-	a261667d		\lemma *-addMonoidHom-left {R : PseudoSemiring} {a : R} : AddMonoidHom R R (a *)
+*-addMonoidHom-right	lemma	86583ec32838	-	f1cb3365		\lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (* a)
+*-addGroupHom-left	lemma	25a2716d15ec	-	4195417c		\lemma *-addGroupHom-left {R : PseudoRing} {a : R} : AddGroupHom R R (a *)
+*-addGroupHom-right	lemma	40d3f45d9d00	-	958e8a97		\lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (* a)
+SemiringHom	record	31b4c701bb9b	-	aa8b4b9e		\record SemiringHom \extends AddMonoidHom, MonoidHom { \override Dom : Semiring \override Cod : Semiring }
+SemiringHom.func-natCoef	lemma	5b425039963f	-	bdea8884		\lemma func-natCoef {n : Nat} : func (natCoef n) = natCoef n
+PseudoRingHom	record	4733fb2ec1e7	-	b1c9f131		\record PseudoRingHom \extends AddGroupHom, SemigroupHom { \override Dom : PseudoRing \override Cod : PseudoRing }
+RingHom	record	443f2393d941	-	cd64a0e5	610c8a93:PseudoRingHom 9a6ca04a:SemiringHom	\record RingHom \extends PseudoRingHom, SemiringHom { \override Dom : Ring \override Cod : Ring }
+RingHom.Kernel	func	d4e5e7f97d41	205d42c44a27	941fbb9b		\func Kernel : TIdeal Dom
+RingHom.equals	func	e489c834b4a3	c92dcea49aa7	1d887ad4		\func equals {R S : Ring} {f g : RingHom R S} (p : \Pi (x : R) -> f x = g x) : f = g
+RingHom.id	func	fa42a4c0c967	2d700e2e1b57	508e8070	f81881d4:RingHom	\func id {R : Ring} : RingHom R R
+RingHom.compose	func	e3f36114b7d1	07c68b52e20c	a3f67866	f81881d4:RingHom	\func compose {R S T : Ring} (g : RingHom S T) (f : RingHom R S) : RingHom R T
+RingHom.contr-isTerm	lemma	c6dc578ee7de	-	ecfad383	f81881d4:RingHom	\lemma contr-isTerm {R S : Ring} (c : Contr S) : Contr (RingHom R S)
+RingHom.field-isInj	lemma	74d477c1456a	-	dbc05c92		\lemma field-isInj {K : Field} {R : NonZeroRing} {f : RingHom K R} : IsInj f
+RingHom.isAlgebraGenerated	type	c2abba9dcd9d	0916077195bb	c266bfe0	f81881d4:RingHom	\type isAlgebraGenerated {R E : CRing} (f : RingHom R E) (l : Array E) : \Prop
+RingHom.isFiniteAlgebra	type	8493c78ab07c	b724eeca49c9	2841a099		\type isFiniteAlgebra {R E : CRing} (f : RingHom R E) : \Prop
+RingHom.isAlgebraGenerated-comp	lemma	439cb5517df8	-	7139a646		\lemma isAlgebraGenerated-comp {R E S : CRing} {f : RingHom R E} {g : RingHom E S} {a : E} {l : Array S} (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) (gg : isAlgebraGenerated g l) : isAlgebraGenerated (g ∘ f) (g a :: l)
+RingHom.isAlgebraGenerated-poly	lemma	bfbf9d5ad7c0	-	053b427b		\lemma isAlgebraGenerated-poly {R E : CRing} {f : RingHom R E} {a : E} (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) : isAlgebraGenerated f (a :: nil)
+RingHom.KernelC	func	10c88bde1f05	e6a71eb1fa15	91ce7f9a		\func KernelC {R : CRing} {S : Ring} (f : RingHom R S) : Ideal R
+natMap	func	bd5cd9797ba9	721048382d88	08e288b3	9a6ca04a:SemiringHom	\func natMap {R : Semiring} : SemiringHom NatSemiring R
+natComm	lemma	4c0528615d40	-	a7dab9c1	82f7f526:natMap	\lemma natComm {R : Semiring} (n : Nat) (x : R) : natMap n * x = x * natMap n
+intMap	func	ba703fac0b21	90dda8baa337	44cfcc41	f81881d4:RingHom	\func intMap {R : Ring} : RingHom IntRing R
+intMap.intCoef_diff	lemma	30bd0e23e2d7	-	340141ff		\lemma intCoef_diff {R : Ring} (n m : Nat) : R.intCoef (n Nat.- m) = intCoef n - intCoef m
+intComm	lemma	4e9f53facb50	-	14261ca7	55161725:intMap	\lemma intComm {R : Ring} (n : Int) (x : R) : intMap n * x = x * intMap n
+(overview)	-	-	-	d09672ff	610c8a93:PseudoRingHom f81881d4:RingHom d65f5077:RingHom.isAlgebraGenerated 144c8e00:RingHom.isFiniteAlgebra 9a6ca04a:SemiringHom 55161725:intMap 82f7f526:natMap	-

@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Algebra.Group.Representation. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+LinRepres	class	5132d83af6e5	-	4e19f09c		\class LinRepres \extends LModule, GSet { | **-ldistr {g : G} {e e' : E} : g ** (e + e') = g ** e + g ** e' | **_*c {g : G} {e : E} {c : R} : g ** (c *c e) = c *c (g ** e) }
+LinRepres.**-ldistr	field	56ec2b55d2fe	-	dd15ac40		| **-ldistr {g : G} {e e' : E} : g ** (e + e') = g ** e + g ** e'
+LinRepres.**_*c	field	44ea83af9b35	-	0b63532d		| **_*c {g : G} {e : E} {c : R} : g ** (c *c e) = c *c (g ** e)
+LinRepres.**_zro	lemma	b80b6bc89fc9	-	b64bdc55		\lemma **_zro {g : G} : g ** 0 = 0
+LinRepres.**_negative	lemma	7d758b358625	-	86a49a6f		\lemma **_negative {g : G} {e : E} : g ** negative e = negative (g ** e)
+LinRepres.toLinearMap	func	9458c549bf38	1d7378c24120	d824ee90		\func toLinearMap (g : G) : LinearMap \this \this
+LinRepres.toLinearMap_ide	lemma	1ef3c02f73b3	-	62b9dc64	c9d72fd6:LinRepres.toLinearMap	\lemma toLinearMap_ide : toLinearMap ide = LinearMap.id
+TrivialAction	func	bc0e51ee0ab4	39658b7e3a03	60421518		\func TrivialAction {R : Ring} (E : LModule R) (G : Group) : LinRepres R G
+(overview)	-	-	-	0fa476e9	01859329:LinRepres c9d72fd6:LinRepres.toLinearMap	-

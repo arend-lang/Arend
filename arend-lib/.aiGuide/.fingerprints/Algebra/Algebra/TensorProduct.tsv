@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Algebra.Algebra.TensorProduct. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+TensorProductAAlgebra	instance	334fb59d988c	-	6ba69638		\instance TensorProductAAlgebra {R : CRing} (A B : AAlgebra R) : AAlgebra R (TensorProduct A B)
+TensorProductCAlgebra	instance	99f4ce258dcf	-	7e65da79		\instance TensorProductCAlgebra {R : CRing} (A B : CAlgebra R) : CAlgebra R (TensorProduct A B)
+(overview)	-	-	-	16e5a536		-

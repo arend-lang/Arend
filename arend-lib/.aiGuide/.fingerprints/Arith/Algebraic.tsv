@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Arith.Algebraic. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ratToComplex	func	b7c7142aae62	ddbe87a0ffcc	e4eefac1		\func ratToComplex : RingHom RatField ComplexField
+complex-char0	lemma	db5f8c8293d4	-	0d255608		\lemma complex-char0 (k : Nat) (k>0 : 0 < k) : natCoef {ComplexField} k /= 0
+subfield-char0	lemma	f5be9d2673e2	-	064beaa3		\lemma subfield-char0 {R : Ring} (f : RingHom R ComplexField) (k : Nat) (k>0 : 0 < k) : natCoef {R} k /= 0
+IsAlgNumber	type	fecbeefe453b	75e854e46e3b	0bc18894	cddc6380:ratToComplex	\type IsAlgNumber (z : Complex) : \Prop
+AlgNumbersSubring	func	c99c316a0299	12ab61bbd5ee	a27c44f8	cddc6380:ratToComplex	\func AlgNumbersSubring : SubRing ComplexField
+AlgNumbersRing	func	1462404a8d66	4c1a441cad5f	0223a5c9		\func AlgNumbersRing : CRing
+algNumbersToComplex	func	ec05c3d9276b	498095da18a8	361648cf	61ed5f4d:AlgNumbersRing fdc09854:algNumbersToComplex.isInj	\func algNumbersToComplex : RingHom AlgNumbersRing ComplexField
+AlgNumbersImpotent	func	8fad1faa5a91	18a74f0249f0	e304490b		\func AlgNumbersImpotent : ImpotentCRing { | CRing => AlgNumbersRing }
+AlgNumbersField	func	75734e20acab	ad74936cf417	54b6744e		\func AlgNumbersField : DiscreteField { | CRing => AlgNumbersRing }
+algebraic-dec	lemma	13c851b4d2fb	-	8ecbdfe9	401a8a6a:IsAlgNumber	\lemma algebraic-dec {a b : Complex} (ai : IsAlgNumber a) (bi : IsAlgNumber b) : Dec (a = b)
+(overview)	-	-	-	6033d5b9	0f33c68d:AlgNumbersField 61ed5f4d:AlgNumbersRing 582a9c03:AlgNumbersSubring 13b09787:algebraic-dec cddc6380:ratToComplex	-

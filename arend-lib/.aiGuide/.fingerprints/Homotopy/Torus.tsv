@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Homotopy.Torus. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Torus	data	757a7a7a4d04	-	9efdfe48	8d1ba5ef:Torus.face 255a64c0:Torus.line1 255a64c0:Torus.line2 d4f1b28b:Torus.point	\data Torus | point | line1 I { | left => point | right => point } | line2 I { | left => point | right => point } | face I I { | left, i => line2 i | right, i => line2 i | i, left => line1 i | i, right => line1 i }
+TorusSphere-equiv	func	15144f1c6da9	198c3356fb5e	a933eb3b	0025edcb:Torus	\func TorusSphere-equiv : QEquiv {Torus} {\Sigma Sphere1 Sphere1}
+TorusSphere-equiv.SphereTorus	func	7a4de18a3022	bb683e3c8206	487a03e2	0025edcb:Torus 8d1ba5ef:Torus.face 255a64c0:Torus.line1 255a64c0:Torus.line2 d4f1b28b:Torus.point	\func SphereTorus (_ : \Sigma Sphere1 Sphere1) : Torus
+TorusSphere-equiv.TorusSphere	func	f57d74fbf011	55b4ad05d956	f5497a1b	0025edcb:Torus	\func TorusSphere (_ : Torus) : \Sigma Sphere1 Sphere1
+coordinate	func	d1503d29de78	f363560e5582	aa251687	d4f1b28b:Torus.point 3a100659:coordinate.Torus=Sphere	\func coordinate : Path Torus=Sphere point (base1, base1)
+coordinate.Torus=Sphere	func	3e063a392bc2	5430377d9bf2	ef098f5b	0025edcb:Torus 773b60a9:TorusSphere-equiv	\func Torus=Sphere : Torus = (\Sigma Sphere1 Sphere1)
+OmegaTorus	func	8bd4e46a43a0	ec95b0e35721	88c66a96	d4f1b28b:Torus.point	\func OmegaTorus
+Loop_S1^2	func	5b9aa2d18e09	73685ff230e9	38876f1f	d9d8f9bb:OmegaTorus 3a100659:coordinate.Torus=Sphere	\func Loop_S1^2 : OmegaTorus = (\Sigma Int Int)
+(overview)	-	-	-	2b3c06d8	0025edcb:Torus 8d1ba5ef:Torus.face 255a64c0:Torus.line1 255a64c0:Torus.line2	-

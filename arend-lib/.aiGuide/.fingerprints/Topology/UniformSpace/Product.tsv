@@ -1,0 +1,13 @@
+# arend -gc fingerprints v2 for module Topology.UniformSpace.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+RegularPreuniformSpaceHasProduct	instance	df8b7ae7b307	-	987a2396	672ae701:ProductRegularPreuniformSpace	\instance RegularPreuniformSpaceHasProduct : HasProduct RegularPreuniformSpace.{u}
+ProductRegularPreuniformSpace	instance	6a87197409ba	-	389fbb8a		\instance ProductRegularPreuniformSpace (X Y : RegularPreuniformSpace) : RegularPreuniformSpace (\Sigma X Y)
+UniformSpaceHasProduct	instance	4116c82f1a19	-	5faf9c30	94ffa7b2:ProductUniformSpace	\instance UniformSpaceHasProduct : HasProduct UniformSpace.{u}
+ProductUniformSpace	instance	fe33fc0fd588	-	e1521956	672ae701:ProductRegularPreuniformSpace	\instance ProductUniformSpace (X Y : UniformSpace) : UniformSpace (\Sigma X Y)
+ProductUniformSpace.properUniform	lemma	f3927f357e3d	-	f4ca0de7		\lemma properUniform (Xp : X.IsProperUniform) (Yp : Y.IsProperUniform) : (ProductUniformSpace X Y).IsProperUniform
+ProductUniformSpace.proj1	func	260f558cecd8	b6bad13c94ce	903ad968		\func proj1 {X Y : UniformSpace} : UniformMap (ProductUniformSpace X Y) X
+ProductUniformSpace.proj2	func	e475be38ec01	cd6b2a1152d6	4b87959f		\func proj2 {X Y : UniformSpace} : UniformMap (ProductUniformSpace X Y) Y
+ProductUniformSpace.tuple	func	e8615131e9b1	621011d6a018	4e2495fe		\func tuple {X Y Z : UniformSpace} (f : UniformMap Z X) (g : UniformMap Z Y) : UniformMap Z (ProductUniformSpace X Y)
+ProductUniformSpace.prod	func	48da96dc3140	79172f80dd32	bf36fdf5	b0df033a:ProductUniformSpace.proj1 a1babf62:ProductUniformSpace.proj2 0410dd4d:ProductUniformSpace.tuple	\func prod {X X' Y Y' : UniformSpace} (f : UniformMap X Y) (f' : UniformMap X' Y') : UniformMap (ProductUniformSpace X X') (ProductUniformSpace Y Y')
+ProductUniformSpace.prodCover	lemma	cfbb44186cea	-	b932d55a		\lemma prodCover {X Y : UniformSpace} {C : Set (Set X)} (Cu : X.isUniform C) {D : Set (Set Y)} (Du : Y.isUniform D) : isUniform {ProductUniformSpace X Y} (\lam W => ∃ (U : C) (V : D) (W = (\lam s => \Sigma (U s.1) (V s.2))))
+(overview)	-	-	-	b483892c		-

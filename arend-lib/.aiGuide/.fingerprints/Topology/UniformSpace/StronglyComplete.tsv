@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Topology.UniformSpace.StronglyComplete. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+StronglyCompleteUniformSpace	class	0071ace8a878	-	b18e657b		\class StronglyCompleteUniformSpace \extends StronglyRegularUniformSpace, CompleteUniformSpace, StronglyCompleteCoverSpace
+weaklyDense-uniform-lift	func	5bc01b40abfc	264817526340	9174a263		\func weaklyDense-uniform-lift {X : RegularPreuniformSpace} {Y : StronglyRegularUniformSpace} {Z : StronglyCompleteUniformSpace} (f : UniformMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : UniformMap X Z) : UniformMap Y Z
+UniformStrongCompletion	instance	4897c325da1a	-	37d3c8ec	44bc602c:StronglyCompleteUniformSpace	\instance UniformStrongCompletion (X : StronglyRegularUniformSpace) : StronglyCompleteUniformSpace
+UniformStrongCompletion.properUniform	lemma	d76325a9d057	-	f7dc2c48		\lemma properUniform (Xp : X.IsProperUniform) : PreuniformSpace.IsProperUniform {UniformStrongCompletion X}
+UniformStrongCompletion.makeUniform	lemma	df3cb91f0dd7	-	786c485e	aee129de:UniformStrongCompletion	\lemma makeUniform {C : Set (Set X)} (Cu : isUniform C) : isUniform {UniformStrongCompletion X} (\lam V => ∃ (U : C) (V = mkSet U))
+uniform-strongCompletion	func	4f7674611331	332a463dcfcb	340c7c27	aee129de:UniformStrongCompletion	\func uniform-strongCompletion {X : StronglyRegularUniformSpace} : UniformMap X (UniformStrongCompletion X)
+uniform-strongCompletion.isDenseEmbedding	lemma	2d93e0716ae3	-	4bf8910e	41a30ddf:weaklyDense-uniform-lift	\lemma isDenseEmbedding : UniformMap.IsWeaklyDenseUniformEmbedding {uniform-strongCompletion {X}}
+cauchyFilter-uniform-char	lemma	2cba57a2cac7	-	c06537c4		\lemma cauchyFilter-uniform-char {X : PreuniformSpace} {F : SetFilter X} : ∀ {C : isCauchy} ∃ (U : C) (F U) <-> ∀ {C : isUniform} ∃ (U : C) (F U)
+regularFilter-uniform-char	lemma	4354bff77059	-	2e2e972e		\lemma regularFilter-uniform-char {X : RegularPreuniformSpace} {F : CauchyFilter X} : ∀ {U : F.F} ∃ (V : Set X) (V <=< U) (F V) <-> ∀ {U : F.F} ∃ (V : Set X) (V <=* U) (F V)
+(overview)	-	-	-	37d08f36		-

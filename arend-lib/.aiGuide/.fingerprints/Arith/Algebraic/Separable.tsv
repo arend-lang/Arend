@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Arith.Algebraic.Separable. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+separable-deriv-lower	lemma	b99aefae7049	-	4169c37e		\lemma separable-deriv-lower {p : Poly ComplexField} (sep : IsSeparable p) {R : Real} (R>=0 : 0 <= R) : ∃ (delta : Real) (0 < delta) (D : Real) (0 < D) ∀ z (cabs z <= R -> cabs (polyEval p z) <= delta -> (ratio 1 2 : Real) <= D * cabs (polyEval (polyDeriv p) z))
+(overview)	-	-	-	0902db03		-

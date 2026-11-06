@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Arith.Complex. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Complex	record	2a3f2ac9c5de	-	8f8af35e	58c04ce6:Complex.im 58c04ce6:Complex.re	\record Complex (re : Real) (im : Real)
+ComplexField	instance	281780f61f21	-	f46f0dfc	d1c1a79e:Complex 4dbf58ab:ComplexField.ComplexMonoid	\instance ComplexField : Field Complex
+ComplexField.ComplexMonoid	instance	ce487aaf1547	-	b87f628a	d1c1a79e:Complex	\instance ComplexMonoid : CMonoid Complex
+ComplexField.inv-char	lemma	46bd7ffd0a2c	-	dbc7e424		\lemma inv-char {x : Complex} : Inv x <-> Inv x.re || Inv x.im
+fromRealRingHom	func	f30ef8801cf5	38354d78d689	64809f7f	712a9de0:Complex.fromReal f2f10336:ComplexField	\func fromRealRingHom : RingHom RealField ComplexField
+conj	func	9b1cb47245af	7aee37c09c3b	619cf588	58c04ce6:Complex.im 58c04ce6:Complex.re	\func conj (z : Complex) : Complex
+conj_conj	lemma	a41fbc18387d	-	f974413c	8d549b83:conj	\lemma conj_conj {z : Complex} : conj (conj z) = z
+conj_zro	lemma	ceb443a0f71a	-	652a4c85	8d549b83:conj	\lemma conj_zro : conj 0 = (0 : Complex)
+conj_ide	lemma	0cce87b63203	-	652a4c85	8d549b83:conj	\lemma conj_ide : conj 1 = (1 : Complex)
+conj_+	lemma	d0f3ec162cd4	-	96ce40d4	8d549b83:conj	\lemma conj_+ {x y : Complex} : conj (x + y) = conj x + conj y
+conj_*	lemma	c746458b67a9	-	96ce40d4	8d549b83:conj	\lemma conj_* {x y : Complex} : conj (x * y) = conj x * conj y
+conj_i	lemma	8896cd0b2c93	-	9d32fe5d	8d549b83:conj	\lemma conj_i : conj i = negative i
+conj_i_*	lemma	27bdde375788	-	92ed5f23	8d549b83:conj	\lemma conj_i_* {x : Real} : conj (i * x) = negative (i * x)
+conj_fromReal	lemma	946c26864144	-	5bfac47a	712a9de0:Complex.fromReal 8d549b83:conj	\lemma conj_fromReal {x : Real} : conj x = Complex.fromReal x
+conj_pow	lemma	9a90aff5f86e	-	78988c65	8d549b83:conj	\lemma conj_pow {z : Complex} (n : Nat) : conj (Monoid.pow z n) = Monoid.pow (conj z) n
+conjAddHom	func	4adcafe8fea4	eac258ed1465	4753fff1	f2f10336:ComplexField 8d549b83:conj	\func conjAddHom : AddGroupHom ComplexField ComplexField
+complex-ext	meta	67a08463e44b	1a184aeb9892	c9e01ef3	58c04ce6:Complex.im 58c04ce6:Complex.re	\meta complex-ext
+(overview)	-	-	-	1492238a	d1c1a79e:Complex	-

@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Equiv.Univalence.Set. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+=-to-QEquiv	func	b0466a1d1226	6f37bcda0665	f5de0bad		\func =-to-QEquiv {A B : \Set u} (p : A = B) : QEquiv {A} {B}
+QEquiv-to-=	func	62ac4e555e92	4f781a4b0bb7	83cdfb28		\func QEquiv-to-= {A B : \Set u} (e : QEquiv {A} {B}) : A = B
+setUnivalence	lemma	5524650f8fb8	-	c1d57cda	017dbb20:=-to-QEquiv c9c1cf86:QEquiv-to-=	\lemma setUnivalence {X Y : \Set u} : QEquiv {X = Y} {QEquiv {X} {Y}} =-to-QEquiv QEquiv-to-=
+=-to-QEquiv-functorial	lemma	300c340e0156	-	eb02942d	017dbb20:=-to-QEquiv	\lemma =-to-QEquiv-functorial {A B C : \Set u} {p : A = B} {q : B = C} : =-to-QEquiv (p *> q) = =-to-QEquiv p `transQEquiv` =-to-QEquiv q
+QEquiv-to-=-functorial	lemma	3e2ce0badb6d	-	25a59b16	c9c1cf86:QEquiv-to-=	\lemma QEquiv-to-=-functorial {A B C : \Set u} (e1 : QEquiv {A} {B}) (e2 : QEquiv {B} {C}) : QEquiv-to-= e1 *> QEquiv-to-= e2 = QEquiv-to-= (e1 `transQEquiv` e2)

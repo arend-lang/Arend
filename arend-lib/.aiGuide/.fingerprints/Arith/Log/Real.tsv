@@ -1,0 +1,11 @@
+# arend -gc fingerprints v2 for module Arith.Log.Real. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ell	func	1ced6f4a804d	d773679de336	7c2e7260		\func ell (a : Real) (\property a>0 : (0 : Real) < a) (\property a-lt2 : a.U 2) : Real
+ell-add	lemma	87b1ca164b55	-	e59d9ce4	86f79e17:ell	\lemma ell-add (a b : Real) (a-pos : (0 : Real) < a) (a-lt2 : a.U 2) (b-pos : (0 : Real) < b) (b-lt2 : b.U 2) (ab-pos : (0 : Real) < a * b) (ab-lt2 : (a * b).U 2) : ell a a-pos a-lt2 + ell b b-pos b-lt2 = ell (a * b) ab-pos ab-lt2
+exp-ell	lemma	2518bfc8e51a	-	516bb0f4	86f79e17:ell	\lemma exp-ell (a : Real) (a-pos : (0 : Real) < a) (a-lt2 : a.U 2) : exp (ell a a-pos a-lt2) = a
+log2	func	e2e5ad3bf2ca	c0438fdbeada	51f2a17f	86f79e17:ell 83be875b:log2.exp-log2	\func log2 : Real
+ell-double	lemma	b6f9b7a40a2f	-	3e892144	86f79e17:ell d65d9acb:log2	\lemma ell-double (y : Real) (y-pos : (0 : Real) < y) (y-lt1 : y.U 1) : ell (2 * y) linarith (real_<_U.1 (linarith (real_<_U.2 y-lt1))) = ell y y-pos (real_<_U.1 (linarith (real_<_U.2 y-lt1))) + log2
+log-Real	sfunc	275eab5c3dbf	272985d7a3be	1d61c225	86f79e17:ell d65d9acb:log2	\sfunc log-Real (x : Real) (x>0 : (0 : Real) < x) : Real
+exp-log-Real	lemma	58b67712044f	-	929ae066	e3cc8a88:log-Real	\lemma exp-log-Real (x : Real) (x>0 : (0 : Real) < x) : exp (log-Real x x>0) = x
+log-Real-exp	lemma	19096c434103	-	a48af205	e3cc8a88:log-Real	\lemma log-Real-exp (y : Real) : log-Real (exp y) (Real-exp-pos y) = y
+(overview)	-	-	-	75f929ca	86f79e17:ell db025a26:ell-add 4935dacd:ell-double e47d474c:exp-ell e59cd8a5:exp-log-Real e3cc8a88:log-Real 91f68d06:log-Real-exp d65d9acb:log2	-

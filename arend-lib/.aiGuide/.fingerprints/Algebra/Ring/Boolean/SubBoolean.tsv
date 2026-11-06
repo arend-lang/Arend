@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Boolean.SubBoolean. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubBooleanPseudoRing	class	5a3b75cfae0b	-	b9751a93		\class SubBooleanPseudoRing \extends SubPseudoRing { \override S : BooleanRing }
+IBooleanPseudoRing	instance	5f9da9fcd099	-	43e662f2	b05cb57e:SubBooleanPseudoRing	\instance IBooleanPseudoRing (S : SubBooleanPseudoRing {}) : BooleanRing

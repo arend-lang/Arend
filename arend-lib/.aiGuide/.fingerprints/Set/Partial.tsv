@@ -1,0 +1,21 @@
+# arend -gc fingerprints v2 for module Set.Partial. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Partial	record	8cda81215730	-	6e6713a6	f18ee3e2:Partial.E	\record Partial (E : \Set) { | isDefined : \Prop \coerce | value : isDefined -> E }
+Partial.HasValue	func	0638edb3db8c	271d7807fc75	c5901f04		\func HasValue (a : E)
+Partial.make	func	646268174b69	98d9a7e6cda7	b71718eb	85f18072:Partial	\func make {X : \Set} (P : \Prop) (f : P -> X)
+defined	func	668c1b71fb7d	fb83313c2f55	039c00f8		\func defined {X : \Set} (x : X) : Partial X
+undefined	func	4d3f01a0bfb9	38250a28cef8	83b0cbb1		\func undefined {X : \Set} : Partial X
+partial-ext	lemma	512568fc51de	-	72182742		\lemma partial-ext {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) (q : v.isDefined) -> u (\box p) = v (\box q)) : u = v
+partial-ext-left	lemma	66f2fa380902	-	baa7726a	40f3e22d:partial-ext	\lemma partial-ext-left {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) -> u p = v (d.1 p)) : u = v
+partial-ext-right	lemma	3589b3cdbc24	-	5734da1b	40f3e22d:partial-ext	\lemma partial-ext-right {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : v.isDefined) -> u (d.2 p) = v p) : u = v
+defined-ext	lemma	1a88f27bb1ad	-	fc453243	196a2430:defined	\lemma defined-ext {X : \Set} {u : Partial X} {x : X} (d : u.isDefined) (p : u d = x) : u = defined x
+defined-ext.isDefined	lemma	2a90b07554fb	-	d333c5d5	196a2430:defined	\lemma isDefined (p : u = defined x) : u.isDefined
+defined-ext.value	lemma	5d25bdadc3de	-	8d982fd4	196a2430:defined	\lemma value (p : u = defined x) : u (isDefined p) = x
+undefined-ext	lemma	8f32277b5278	-	8b00da5d	a223b236:undefined	\lemma undefined-ext {X : \Set} {u : Partial X} (d : Not u.isDefined) : u = undefined
+partial-defined	lemma	5fc6ef5504ac	-	cd493f66		\lemma partial-defined {X : \Set} {u v : Partial X} (p : u = v) : u.isDefined <-> v.isDefined
+partial-value	lemma	f5a6b2b82607	-	67d958e2		\lemma partial-value {X : \Set} {u v : Partial X} (p : u = v) {d : u.isDefined} {e : v.isDefined} : u d = v e
+defined-inj	lemma	bf7e86f362a7	-	ad8404cb	196a2430:defined	\lemma defined-inj {X : \Set} {x y : X} (p : defined x = {Partial X} defined y) : x = y
+plift	func	724a18efb335	48778cb0a702	69ecf987	85f18072:Partial	\func plift {X Y : \Set} (f : X -> Y) (p : Partial X) : Partial Y
+plift2	func	5d246d6ff4f0	1c4174032ec7	f52e22fe	85f18072:Partial	\func plift2 {X Y Z : \Set} (f : X -> Y -> Z) (p : Partial X) (q : Partial Y) : Partial Z
+PartialAddMonoid	instance	b09e830b522d	-	82d7a195	85f18072:Partial 196a2430:defined 3712cec0:plift2	\instance PartialAddMonoid (X : AddMonoid) : AddMonoid (Partial X)
+(overview)	-	-	-	80cd22ae	85f18072:Partial	-

@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Topology.CStarAlgebra.CompleteStoneCStarAlgebra. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+OrderedC*AlgebraHom	record	cbd4aaa1e17f	-	f7f7a97e	814ccc16:OrderedC*AlgebraHom.IsDense 51909ecc:OrderedC*AlgebraHom.IsIsometric	\record OrderedC*AlgebraHom \extends RingHom, PosetHom { \override Dom : OrderedC*Algebra \override Cod : OrderedC*Algebra }
+StoneC*AlgebraHom	record	c35ddcb3a8e5	-	d84dd87d	21fa0b9e:OrderedC*AlgebraHom	\record StoneC*AlgebraHom \extends OrderedC*AlgebraHom, BoundedLinearMap { \override Dom : StoneC*Algebra \override Cod : StoneC*Algebra | func-<= => \lam inP (a, aa=y-x) => inP (func a, inv func-* *> pmap func aa=y-x *> func-minus) | isBounded => inP (1, idp, \lam x => transportInv (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $ transport2 <= (inv StoneC*Algebra.norm-char) (inv StoneC*Algebra.norm-char) toNormed.func-norm) }
+OrderedC*AlgebraHom.IsDense	func	d143af8bb978	1beeb3da08b3	b2842f44		\func IsDense : \Prop
+OrderedC*AlgebraHom.IsIsometric	func	d143af8bb978	f2cde11d20ac	53d7e796		\func IsIsometric : \Prop
+OrderedC*AlgebraHom.toNormed	lemma	34a9a7089774	-	b6209eb7		\lemma toNormed : NormedAbGroupMap toBanach toBanach func
+OrderedC*AlgebraHom.dense-toNormed	lemma	12f8b1c1d60b	-	535b7c0b	814ccc16:OrderedC*AlgebraHom.IsDense 359d722d:OrderedC*AlgebraHom.toNormed	\lemma dense-toNormed : IsDense <-> toNormed.IsDense
+OrderedC*AlgebraHom.isometry-toNormed	lemma	b57c1cb0aad5	-	f4c9e7f2	51909ecc:OrderedC*AlgebraHom.IsIsometric	\lemma isometry-toNormed : IsIsometric <-> (\Pi {x : Dom} -> toBanach.norm (func x) = toBanach.norm x)
+OrderedC*AlgebraHom.toIsometry	lemma	9ed7e72712e1	-	915962ee	51909ecc:OrderedC*AlgebraHom.IsIsometric	\lemma toIsometry (p : IsIsometric) : NormedIsometricMap toBanach toBanach func
+OrderedC*AlgebraHom.fromNormed	lemma	3f73182ce2cd	-	561013f7	21fa0b9e:OrderedC*AlgebraHom	\lemma fromNormed {X : OrderedC*Algebra} {Y : StoneC*Algebra} (f : RingHom X Y) (fn : \Pi {x : X} -> norm (f x) <= X.toBanach.norm x) : OrderedC*AlgebraHom X Y f
+StoneC*AlgebraHom.fromRingHom	lemma	5ebde305915b	-	dcc3a17b		\lemma fromRingHom {X Y : StoneC*Algebra} (f : RingHom X Y) : StoneC*AlgebraHom X Y f
+dense-c*-lift	sfunc	5512b30a75fc	9e8304cbcecf	0a817ba9	21fa0b9e:OrderedC*AlgebraHom	\sfunc dense-c*-lift {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) : OrderedC*AlgebraHom Y Z
+dense-c*-lift.char	lemma	e4bb24692585	-	de6e77f6	4d4d5b75:dense-c*-lift	\lemma char {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) {x : X} : dense-c*-lift f fd fi g (f x) = g x
+StoneC*AlgebraCompletion	instance	b96bf0877b66	-	26bfe018		\instance StoneC*AlgebraCompletion (X : OrderedC*Algebra) : StoneC*Algebra
+(overview)	-	-	-	faa85e16	4d4d5b75:dense-c*-lift	-

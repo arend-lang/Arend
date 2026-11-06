@@ -1,0 +1,20 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.MonoidHom. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SemigroupHom	record	6ff4a1b1c83d	-	1b82bbbf	ba0b967b:SemigroupHom.func-*	\record SemigroupHom \extends SetHom { \override Dom : Semigroup \override Cod : Semigroup | func-* {x y : Dom} : func (x * y) = func x * func y }
+MonoidHom	record	285fc8110da0	-	fed127b0	9186ee5b:SemigroupHom ba0b967b:SemigroupHom.func-*	\record MonoidHom \extends PointedHom, SemigroupHom { \override Dom : Monoid \override Cod : Monoid }
+MonoidHom.func-pow	lemma	1f43ee7480c7	-	704f926a		\lemma func-pow {x : Dom} {n : Nat} : func (Monoid.pow x n) = Monoid.pow (func x) n
+MonoidHom.func-BigProd	lemma	bf9bbae68382	-	eef70079		\lemma func-BigProd {l : Array Dom} : func (Monoid.BigProd l) = Monoid.BigProd (\lam j => func (l j))
+MonoidHom.func-LDiv	lemma	14af6a5c33f0	-	61748a57		\lemma func-LDiv {a b : Dom} (d : Monoid.LDiv a b) : Monoid.LDiv (func a) (func b) (func d.inv)
+MonoidHom.func-Inv	lemma	a0120be2bc2c	-	ea54180a		\lemma func-Inv {a : Dom} (d : Inv a) : Inv (func a) (func d.inv)
+MonoidHom.equals	func	e6b9ab997fdf	86b27d7b0443	0c04c8a4		\func equals {M N : Monoid} {f g : MonoidHom M N} (p : \Pi (x : M) -> f x = g x) : f = g
+MonoidHom.id	func	825657402fff	75a93298b740	41c5c053	54873e70:MonoidHom	\func id {M : Monoid} : MonoidHom M M
+MonoidHom.func-InvElem	lemma	7d13d6f6304c	-	1381cafe		\lemma func-InvElem (e : Inv {Dom}) (e' : Inv {Cod}) (p : func e = e') : func e.inv = e'.inv
+MonoidHom.equiv-hom	lemma	500a63b02cf6	-	4944c12a	54873e70:MonoidHom	\lemma equiv-hom (e : IsEquiv func) : MonoidHom Cod Dom (IsEquiv.ret e)
+MonoidHom.equiv-Inv	lemma	23a7029c7fa9	-	8588f0df		\lemma equiv-Inv (e : IsEquiv func) {a : Dom} (ai : Inv (func a)) : Inv a
+AddMonoidHom	record	d0ced19f3550	-	4c186579		\record AddMonoidHom \extends AddPointedHom { \override Dom : AddMonoid \override Cod : AddMonoid | func-+ {x y : Dom} : func (x + y) = func x + func y }
+AddMonoidHom.func-BigSum	lemma	9f56c1b14fd1	-	8089e877		\lemma func-BigSum {l : Array Dom} : func (AddMonoid.BigSum l) = AddMonoid.BigSum (\lam j => func (l j))
+AddMonoidHom.func-*n	lemma	9e554722ce56	-	0d7965a1		\lemma func-*n {n : Nat} {x : Dom} : func (n AddMonoid.*n x) = n AddMonoid.*n func x
+AddMonoidHom.toMonoidHom	coerce	d7420bd6f3c8	-	3d5599ee	e275fae5:AddMonoidHom 54873e70:MonoidHom	\use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom
+AddMonoidHom.id	func	7e37ace1dc01	ddf5bcb1b594	27693fd6	e275fae5:AddMonoidHom	\func id {M : AddMonoid} : AddMonoidHom M M
+AddMonoidHom.func-FinSum	lemma	e3270ef2b382	-	0247771c		\lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j))
+(overview)	-	-	-	bce3eda1	e275fae5:AddMonoidHom 54873e70:MonoidHom 9186ee5b:SemigroupHom	-

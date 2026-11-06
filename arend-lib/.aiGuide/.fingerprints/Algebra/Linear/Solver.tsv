@@ -1,0 +1,33 @@
+# arend -gc fingerprints v2 for module Algebra.Linear.Solver. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Operation	data	499ad1119bf8	-	e0f52d57	d4f1b28b:Operation.Equals d4f1b28b:Operation.Less d4f1b28b:Operation.LessOrEquals	\data Operation | Less | LessOrEquals | Equals
+LinearData.isLess	func	1eab2e321d3e	27715075458e	849086bd	d4f1b28b:Operation.Less	\func isLess (o : Operation) : Bool
+LinearData	class	7a9e8601a77d	-	c93c4c91		\class LinearData \extends AlgData { \override R : LinearlyOrderedSemiring }
+LinearSemiringData	class	2e0544bc6ef4	-	b47423e6	87271ade:LinearData	\class LinearSemiringData \extends LinearData, SemiringData
+LinearRingData	class	578bb8e433a9	-	5c02926c	87271ade:LinearData	\class LinearRingData \extends LinearData, RingData { \override R : OrderedRing }
+LinearRatData	class	e94014d63112	-	e5640976		\class LinearRatData \extends LinearData, RatData { \override R : OrderedRing }
+LinearRatAlgebraData	class	048280d5ef5c	-	01d665c2	87271ade:LinearData	\class LinearRatAlgebraData \extends RatAlgebraData, LinearData { \override R : OrderedAAlgebra RatField }
+LinearData.Equation	func	8bd4e46a43a0	2f4ac8ffddf1	9822282a	bced407a:Operation	\func Equation
+LinearData.interpretEq	func	7fb5db7a9778	6d021d4198f8	1bfc66f2	5f765e41:LinearData.Equation	\func interpretEq (e : Equation) : \Prop
+LinearData.interpretEq_<=	lemma	943633e64424	-	cfa54c1d	1e61e530:LinearData.interpretEq	\lemma interpretEq_<= (e : Equation) (h : interpretEq e) : interpret e.1 <= interpret e.3
+LinearData.Problem	func	8bd4e46a43a0	63144452140d	3105bcba	5f765e41:LinearData.Equation	\func Problem
+LinearData.isConst	func	1eb08f684cd2	c05f1a741fdc	f14eeb16		\func isConst (t : RingTerm C V) : Bool
+LinearData.Cert	func	c977946e2aeb	735d458b8902	3252e185		\func Cert (n : Nat)
+LinearData.certSum	func	aa9f4a5ec887	3b1b9576532a	3ab1bb6f		\func certSum (l : Array (RingTerm C V)) (c : Cert l.len)
+LinearData.cert-toTerm	func	819e5289de58	d2bfa5107253	082fcf79		\func cert-toTerm (l : Array (RingTerm C V)) (c : Cert l.len) : RingTerm C V
+LinearData.interpretCert	func	aa9f4a5ec887	a6a0d11c01bf	58ed7d1b		\func interpretCert (l : Array (RingTerm C V)) (c : Cert l.len)
+LinearData.cert-toRingTerm-correct	lemma	acecc26312d6	-	2a6c1c6e	3f6eed4a:LinearData.cert-toTerm b6062440:LinearData.certSum	\lemma cert-toRingTerm-correct (l : Array (RingTerm C V)) (c : Cert l.len) : AlgData.interpret (cert-toTerm l c) = certSum l c
+LinearData.interpretCert_certSum	lemma	92aa1b671e88	-	1542cc4a	b6062440:LinearData.certSum 80347e4d:LinearData.interpretCert	\lemma interpretCert_certSum (l : Array (RingTerm C V)) {c : Cert l.len} : interpretCert l c = certSum l c
+LinearData.isSuc	func	224af1a7118a	ecb6073db737	703d4fdf		\func isSuc (n : Nat) : Bool
+LinearData.hasNegative	func	305fa51e14c6	b618bdcb4588	5a6b56b2	d4f1b28b:Operation.Less	\func hasNegative (p : Problem) (c : Cert p.len) : Bool
+LinearData.hasNegative-correct	func	3961abfd024d	e9f20c9d876e	bbc0d162	11dce72e:LinearData.hasNegative d4f1b28b:Operation.Less	\func hasNegative-correct (p : Problem) (c : Cert p.len) (q : hasNegative p c = true) : ∃ (j : Fin p.len) (0 < c j) ((p j).2 = Less)
+LinearData.CorrectCert	func	67b8740d43e8	5f1a6f310e30	163337cc	11dce72e:LinearData.hasNegative a444987c:LinearData.isSuc	\func CorrectCert (p : Problem)
+LinearData.certToLeq	lemma	70521c929ac1	-	5714a484	1ca919b1:LinearData.CorrectCert b6062440:LinearData.certSum	\lemma certToLeq (p : Problem) (c : CorrectCert p) : certSum (map __.3 p) c.1 <= certSum (map __.1 p) c.1
+LinearData.certToLess	lemma	8d78b84a09c5	-	4dd49692	a444987c:LinearData.isSuc	\lemma certToLess (p : Problem) (c : CorrectCert p) (q : isSuc c.2 = true) : certSum (map __.3 p) c.1 < certSum (map __.1 p) c.1
+LinearData.solveContrProblem	lemma	423e1a563a70	-	c1d43106	1ca919b1:LinearData.CorrectCert 1e61e530:LinearData.interpretEq	\lemma solveContrProblem (p : Problem) (c : CorrectCert p) (h : DArray (\lam j => interpretEq (p j))) : Empty
+LinearData.solveContrProblem.aux_<=	lemma	0abf8d8ed357	-	aa4966c7	b6062440:LinearData.certSum	\lemma aux_<= (p : Problem) (c : Cert p.len) (h : ∀ (e : p) (interpretEq e)) : certSum (map __.1 p) c <= certSum (map __.3 p) c
+LinearData.solveContrProblem.aux	lemma	0d008f61c415	-	c657d6e7	fae1120a:LinearData.solveContrProblem.aux_<= d4f1b28b:Operation.Less	\lemma aux (p : Problem) (c : Cert p.len) (cc : ∃ (j : Fin p.len) (0 < c j) ((p j).2 = Less)) (h : ∀ (e : p) (interpretEq e)) : certSum (map __.1 p) c < certSum (map __.3 p) c
+LinearData.solve<=Problem	lemma	9e8b52413462	-	031ce62d	d4f1b28b:Operation.Less	\lemma solve<=Problem (p : Problem) (t1 t2 : RingTerm C V) (c : CorrectCert (toContr p t1 t2)) (h : DArray (\lam j => interpretEq (p j))) : interpret t1 <= interpret t2
+LinearData.solve=Problem	lemma	c08575a7aed0	-	c3adcb59		\lemma solve=Problem (p : Problem) (t1 t2 : RingTerm C V) (c1 : CorrectCert (toContr1 p t1 t2)) (c2 : CorrectCert (toContr2 p t1 t2)) (h : DArray (\lam j => interpretEq (p j))) : interpret t1 = interpret t2
+LinearData.solve<Problem	lemma	975ddf6241f8	-	d4a8fbe4	d4f1b28b:Operation.LessOrEquals	\lemma solve<Problem (p : Problem) (t1 t2 : RingTerm C V) (c : CorrectCert (toContr p t1 t2)) (h : DArray (\lam j => interpretEq (p j))) : interpret t1 < interpret t2
+(overview)	-	-	-	af4a36e9	d4f1b28b:Operation.Less	-

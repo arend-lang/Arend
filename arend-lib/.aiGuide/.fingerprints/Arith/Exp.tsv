@@ -1,0 +1,12 @@
+# arend -gc fingerprints v2 for module Arith.Exp. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+exp	sfunc	8c7739eddc26	82517880bb5c	059b68f7		\sfunc exp {A : RealBanachAlgebra} (a : A) : A
+expMap	lemma	d6d7b43f3244	-	874c1699	86408d59:exp	\lemma expMap {A : RealBanachAlgebra} : CoverMap A A exp
+exp-1-coef	func	bbab7b083bb9	e21274fd5cfc	23023c75	86408d59:exp	\func exp-1-coef (n : Nat) : Rat
+exp_zro	lemma	c6f47aaa3298	-	25068f28	86408d59:exp	\lemma exp_zro {A : RealBanachAlgebra} : exp 0 = 1
+exp_+-noncomm	lemma	027a9ee35efa	-	fd889935	86408d59:exp	\lemma exp_+-noncomm {A : RealBanachAlgebra} {x y : A} (xy=yx : x * y = y * x) : exp (x + y) = exp x * exp y
+exp_+	lemma	a5c999565e9e	-	ba36932f	86408d59:exp	\lemma exp_+ {A : RealBanachCAlgebra} {x y : A} : exp (x + y) = exp x * exp y
+exp_negative-left	lemma	eda7c71337fe	-	e4766019	86408d59:exp	\lemma exp_negative-left {A : RealBanachAlgebra} {x : A} : exp (negative x) * exp x = 1
+exp_negative-right	lemma	62884a3883c9	-	e4766019	86408d59:exp	\lemma exp_negative-right {A : RealBanachAlgebra} {x : A} : exp x * exp (negative x) = 1
+exp_Inv	lemma	1656629b11c0	-	5a315ca7	86408d59:exp	\lemma exp_Inv {A : RealBanachAlgebra} {x : A} : Monoid.Inv (exp x)
+(overview)	-	-	-	eafae1ea	86408d59:exp f8f319f1:expMap	-

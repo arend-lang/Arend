@@ -1,0 +1,9 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.Localization.Field. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+localization-isField	lemma	6c67d8024a8e	-	a9f072e9		\lemma localization-isField {R : CRing} (S : SubMonoid R) (nt : Not (S zro)) (loc : ∀ {x} {y} (S (x + y)) ∃ (r : R) (S (x * r) || S (y * r))) (fp : ∀ x (∀ r (Not (S (x * r)))) ∃ (s : R) (S s) (x * s = zro)) : Field { | CRing => LocRing S }
+localization-isDiscreteField	func	0be166cb3c38	86e11dc5cddd	6a8bda64		\func localization-isDiscreteField {R : CRing} (S : SubMonoid R) (nt : Not (S zro)) (fp : \Pi (x : R) -> (\Sigma (s : R) (S s) (x * s = zro)) || (\Sigma (r : R) (S (x * r)))) : DiscreteField { | CRing => LocRing S }
+localization-isOrderedField	func	ed9a23478acb	5b6009e876e9	636d0c16	c8137fc4:localization-isField 17287a05:localization-isOrderedField.isPositive	\func localization-isOrderedField (R : OrderedCRing) : OrderedField
+localization-isOrderedField.positiveSubset	func	597f2808fcac	6e76cbcc67e8	38e1ba47		\func positiveSubset (R : OrderedCRing) : SubMonoid R
+localization-isOrderedField.isPositive	func	cceb677eb7e4	c5b16f7ee992	0ca620b2	030fcdc0:localization-isOrderedField.positiveSubset	\func isPositive {R : OrderedCRing} (x : LocType (positiveSubset R)) : \Prop
+localization-isDiscreteOrderedField	func	ee2b9875e0d9	0883de0b4bf8	4282d7a8	c0d81fbc:localization-isDiscreteField 49414d4c:localization-isOrderedField	\func localization-isDiscreteOrderedField (R : OrderedCRing.Dec) : DiscreteOrderedField
+(overview)	-	-	-	f4786177		-

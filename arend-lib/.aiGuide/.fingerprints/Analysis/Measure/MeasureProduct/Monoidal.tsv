@@ -1,0 +1,38 @@
+# arend -gc fingerprints v2 for module Analysis.Measure.MeasureProduct.Monoidal. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+UnitMeasureRing	func	d7bf887ded32	3c9dfc2d3f85	76697df9		\func UnitMeasureRing : MeasureRing Bool
+tensorSwap	func	0e142dd1aa31	7bec688e37c9	ceba7163	c9d5704b:tensorSwap.swapBimorphism	\func tensorSwap {A B : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor A B) (PseudoMeasureRingTensor B A)
+tensorSwap-rect	lemma	0461d12afdef	-	2148e811	373749d4:tensorSwap	\lemma tensorSwap-rect {A B : PseudoMeasureRing} {a : A} {b : B} : tensorSwap (rect a b) = rect b a
+tensorSwap-swap	lemma	b5bebc45fa02	-	904eb098		\lemma tensorSwap-swap {A B : PseudoMeasureRing} (x : SFunc A B) : tensorSwap (tensorSwap x) = x
+tensorSwap-equiv	lemma	a2ef53375139	-	b3142090	373749d4:tensorSwap	\lemma tensorSwap-equiv {A B : PseudoMeasureRing} : IsEquiv (tensorSwap {A} {B})
+unitL	func	0979c176599d	a14eb332fc8c	77f2133f	5261ad4c:unitL.counit 585d9de1:unitL.inverse 7b2dfbe2:unitL.smul	\func unitL {A : PseudoMeasureRing} : MeasureRingHom A (PseudoMeasureRingTensor UnitMeasureRing A)
+unitL-ret	lemma	80951b41a905	-	3e536766	250ee27d:unitL 585d9de1:unitL.inverse	\lemma unitL-ret {A : PseudoMeasureRing} (a : A) : unitL.inverse (unitL a) = a
+unitL-sec	lemma	21f4eb9a9e93	-	3e536766	250ee27d:unitL 585d9de1:unitL.inverse	\lemma unitL-sec {A : PseudoMeasureRing} (y : SFunc UnitMeasureRing A) : unitL (unitL.inverse y) = y
+unitL-equiv	lemma	27e751b55ee1	-	7a9902e8		\lemma unitL-equiv {A : PseudoMeasureRing} : IsEquiv (unitL {A})
+unitL-inverse-equiv	lemma	6948aa7cb730	-	2f968786		\lemma unitL-inverse-equiv {A : PseudoMeasureRing} : IsEquiv (unitL.inverse {A})
+unitR	func	a7e1683cad1b	88434fe537f5	36e5c8af		\func unitR {A : PseudoMeasureRing} : MeasureRingHom A (PseudoMeasureRingTensor A UnitMeasureRing)
+unitR-char	lemma	9bbbf94d70dc	-	f43d5e33	1fcc959e:unitR	\lemma unitR-char {A : PseudoMeasureRing} {a : A} : unitR a = rect a true
+unitR-equiv	lemma	c8e2de128c48	-	7e848bec		\lemma unitR-equiv {A : PseudoMeasureRing} : IsEquiv (unitR {A})
+unitR-inverse	func	c8d47ba703e6	6a6b821fa5fa	9a9ea41d		\func unitR-inverse {A : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor A UnitMeasureRing) A
+unitR-inverse-rect	lemma	c4b7a5fc25ee	-	1c7e66d6	9e30cf0b:unitR-inverse	\lemma unitR-inverse-rect {A : PseudoMeasureRing} {a : A} {e : Bool} : unitR-inverse (rect a e) = unitL.smul e a
+unitR-inverse-equiv	lemma	86957b412865	-	8c02219a		\lemma unitR-inverse-equiv {A : PseudoMeasureRing} : IsEquiv (unitR-inverse {A})
+assocBoolL	func	811583c11183	9b37c62b1a0b	098b205f		\func assocBoolL {A B C : BooleanRing} (c : C) : BoolBimorphism A B (BooleanRingTensor A (BooleanRingTensor B C))
+assocBoolR	func	b36da8e92038	1dcab97f5571	7c007524		\func assocBoolR {A B C : BooleanRing} (a : A) : BoolBimorphism B C (BooleanRingTensor (BooleanRingTensor A B) C)
+assocR	func	0294cf88137b	6dfcdf37bba8	84e167a1	8bbba734:assocBoolL	\func assocR {A B C : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor (PseudoMeasureRingTensor A B) C) (PseudoMeasureRingTensor A (PseudoMeasureRingTensor B C))
+assocR-rect	lemma	01bc786bd130	-	855f6a4e	f30c2558:assocR	\lemma assocR-rect {A B C : PseudoMeasureRing} {a : A} {b : B} {c : C} : assocR (rect (rect a b) c) = rect a (rect b c)
+assocL	func	81d0fd7b0313	7c2b33a2049e	334d13b8	cf4d65b7:assocBoolR	\func assocL {A B C : PseudoMeasureRing} : MeasureRingHom (PseudoMeasureRingTensor A (PseudoMeasureRingTensor B C)) (PseudoMeasureRingTensor (PseudoMeasureRingTensor A B) C)
+assocL-rect	lemma	4464636d0ac8	-	628490f1	bf59895a:assocL	\lemma assocL-rect {A B C : PseudoMeasureRing} {a : A} {b : B} {c : C} : assocL (rect a (rect b c)) = rect (rect a b) c
+assocLR	lemma	a57c4d0f3986	-	d6081b40	bf59895a:assocL f30c2558:assocR	\lemma assocLR {A B C : PseudoMeasureRing} (z : SFunc (PseudoMeasureRingTensor A B) C) : assocL (assocR z) = z
+assocRL	lemma	a80515fe091b	-	d6081b40	bf59895a:assocL f30c2558:assocR	\lemma assocRL {A B C : PseudoMeasureRing} (w : SFunc A (PseudoMeasureRingTensor B C)) : assocR (assocL w) = w
+assocR-equiv	lemma	ecc1915b111b	-	2c9e992b	bf59895a:assocL f30c2558:assocR	\lemma assocR-equiv {A B C : PseudoMeasureRing} : IsEquiv (assocR {A} {B} {C})
+assocL-equiv	lemma	e048815f1688	-	2c9e992b	bf59895a:assocL f30c2558:assocR	\lemma assocL-equiv {A B C : PseudoMeasureRing} : IsEquiv (assocL {A} {B} {C})
+measureTensorSwap	func	f84c0043c851	12867ced3f65	4c5a2fb2	373749d4:tensorSwap	\func measureTensorSwap {A B : PseudoMeasureRing} : MeasureRingHom (CMeasureRingTensor A B) (CMeasureRingTensor B A)
+measureTensorSwap_rect	lemma	7f2f71e5257d	-	8ab8c946	46728721:measureTensorSwap	\lemma measureTensorSwap_rect {A B : PseudoMeasureRing} {a : A} {b : B} : measureTensorSwap (crect a b) = crect b a
+measureTensorSwap-equiv	lemma	3b6bafc5151b	-	e0aeb2b4	46728721:measureTensorSwap	\lemma measureTensorSwap-equiv {A B : PseudoMeasureRing} : IsEquiv (measureTensorSwap {A} {B})
+measureTensorUnit	func	0d022e679654	1d7c86fcabe0	54bf2f5d	250ee27d:unitL	\func measureTensorUnit {A : PseudoMeasureRing} : MeasureRingHom (MeasureRingCompletion A) (CMeasureRingTensor UnitMeasureRing A)
+measureTensorUnit-char	lemma	d1957210070c	-	6a3a73df	15f0a2a1:measureTensorUnit	\lemma measureTensorUnit-char {A : PseudoMeasureRing} {a : A} : measureTensorUnit (measureCompletion a) = crect true a
+measureTensorUnit-equiv	lemma	a5761d7f88c0	-	9509c05b	15f0a2a1:measureTensorUnit	\lemma measureTensorUnit-equiv {A : PseudoMeasureRing} : IsEquiv (measureTensorUnit {A})
+measureTensorAssoc	func	bb20973389a9	a2d9d3b4a291	0be5851a	f30c2558:assocR 6c59a8d7:measureTensorAssoc.inner-equiv	\func measureTensorAssoc {A B C : PseudoMeasureRing} : MeasureRingHom (CMeasureRingTensor (CMeasureRingTensor A B) C) (CMeasureRingTensor A (CMeasureRingTensor B C))
+measureTensorAssoc_rect	lemma	4b398e54050a	-	57a64b57	91ea9ad6:measureTensorAssoc	\lemma measureTensorAssoc_rect {A B C : PseudoMeasureRing} {a : A} {b : B} {c : C} : measureTensorAssoc (crect (crect a b) c) = crect a (crect b c)
+measureTensorAssoc-equiv	lemma	598d160c7016	-	ee166be2	91ea9ad6:measureTensorAssoc	\lemma measureTensorAssoc-equiv {A B C : PseudoMeasureRing} : IsEquiv (measureTensorAssoc {A} {B} {C})
+(overview)	-	-	-	74d8035a	549e4118:UnitMeasureRing 91ea9ad6:measureTensorAssoc 46728721:measureTensorSwap 15f0a2a1:measureTensorUnit	-

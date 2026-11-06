@@ -1,0 +1,5 @@
+# arend -gc fingerprints v2 for module Homotopy.Sphere. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Sphere	func	109d61a313ec	915c15b91aa8	32dfc02a		\func Sphere (n : Nat) : \Type0
+Sphere.pointed	func	c977946e2aeb	d07949350b23	78f79333	e5768378:Sphere	\func pointed (n : Nat)
+(overview)	-	-	-	751dcca7		-

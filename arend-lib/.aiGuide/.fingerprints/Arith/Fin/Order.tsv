@@ -1,0 +1,4 @@
+# arend -gc fingerprints v2 for module Arith.Fin.Order. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FinOrder	instance	f373ef10bad3	-	df6c629c		\instance FinOrder (n : Nat) : LinearOrder.Dec (Fin n)
+(overview)	-	-	-	b6adc46c		-

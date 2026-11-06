@@ -1,0 +1,67 @@
+# arend -gc fingerprints v2 for module Algebra.Ring.MonoidRing. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+MonoidSet	type	a3f0956bfc02	dd31289057ee	114041f1	efe6542c:MonoidSet.~	\type MonoidSet (M : \Set) (R : AddMonoid)
+MonoidSet.~	data	ab3368b966bc	-	ae890c4b		\data \infix 5 ~ {M : \Set} {R : AddMonoid} (l l' : Array (\Sigma R M)) | ~-perm (EPerm l l') | ~-sym (l' ~ l) | ~-zro {m : M} (l = (0, m) :: l') | ~-+ {l'' : Array (\Sigma R M)} (m : M) {a b : R} (l = (a + b, m) :: l'') (l' = (a, m) :: (b, m) :: l'')
+MonoidSet.inMS	func	5f7f259d16f0	167777756a12	182ffd01	08e6f143:MonoidSet	\func inMS {M : \Set} {R : AddMonoid} (l : Array (\Sigma R M)) : MonoidSet M R
+MonoidSet.inMS~	func	0dba0960603a	2d42a73abe19	182ffd01	08e6f143:MonoidSet	\func inMS~ {M : \Set} {R : AddMonoid} (l : Array (\Sigma R M)) : Quotient ~
+MonoidSet.~-msequiv	lemma	a47b238c1b66	-	93d66188	5f9fa5f4:MonoidSet.inMS efe6542c:MonoidSet.~	\lemma ~-msequiv {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (p : l ~ l') : inMS l = inMS l'
+monoidSet-ext	lemma	797d032504da	-	d41d54ce	08e6f143:MonoidSet	\lemma monoidSet-ext {M : \Set} {R : AddMonoid} {x y : Quotient {Array (\Sigma R M)} ~} (p : x = y) : x = {MonoidSet M R} y
+MonoidSet.toClosure	lemma	34434cb2d1c2	-	09571bc3	5f9fa5f4:MonoidSet.inMS efe6542c:MonoidSet.~	\lemma toClosure {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (c : inMS l = inMS l') : Closure ~ l l'
+MonoidSet.fromClosure	lemma	dc74cdca801d	-	09571bc3	5f9fa5f4:MonoidSet.inMS efe6542c:MonoidSet.~	\lemma fromClosure {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (c : Closure ~ l l') : inMS l = inMS l'
+MonoidSet.~_++-left	func	21d9c4ad81f4	8aca9af78fbc	d298b8ba	efe6542c:MonoidSet.~	\func ~_++-left {M : \Set} {R : AddMonoid} {l1 l2 l : Array (\Sigma R M)} (e : l1 ~ l2) : (l1 ++ l) ~ (l2 ++ l)
+MonoidSet.~_++-right	lemma	a4a1d85b70d6	-	d298b8ba	efe6542c:MonoidSet.~	\lemma ~_++-right {M : \Set} {R : AddMonoid} {l l1 l2 : Array (\Sigma R M)} (e : Closure ~ l1 l2) : Closure ~ (l ++ l1) (l ++ l2)
+MonoidSet.~_++	lemma	bf0d01a89fbf	-	d298b8ba	efe6542c:MonoidSet.~	\lemma ~_++ {M : \Set} {R : AddMonoid} {l1 l2 l1' l2' : Array (\Sigma R M)} (e1 : Closure ~ l1 l1') (e2 : Closure ~ l2 l2') : Closure ~ (l1 ++ l2) (l1' ++ l2')
+MonoidSet.~_Big++	lemma	6322d223399b	-	5f388d12	efe6542c:MonoidSet.~	\lemma ~_Big++ {M : \Set} {R : AddMonoid} {n : Nat} {ls ls' : Array (Array (\Sigma R M)) n} (es : \Pi (j : Fin n) -> Closure ~ (ls j) (ls' j)) : Closure ~ (Big ++ nil ls) (Big ++ nil ls')
+MonoidSet.~_map	func	63a573a94b0a	24e5f5ecf052	a8758a2c	efe6542c:MonoidSet.~	\func ~_map {M M' : \Set} (f : AddMonoidHom) (g : M -> M') {l l' : Array (\Sigma f.Dom M)} (e : l ~ l') : map (\lam s => (f s.1, g s.2)) l ~ map (\lam s => (f s.1, g s.2)) l'
+MonoidSet.unique-sum	lemma	82a14154709b	-	ab7dd3f3		\lemma unique-sum {M : \Set} {R : AddMonoid} (m : M) {l : Array (\Sigma R M)} (c : \Pi (j : Fin l.len) -> (l j).2 = m) : Closure ~ l ((R.BigSum (map __.1 l), m) :: nil)
+msMonomial	func	213f06d62a80	23c16869a0bc	b45e24de	08e6f143:MonoidSet	\func msMonomial {M : \Set} {R : AddMonoid} (r : R) (m : M) : MonoidSet M R
+msMonomial_+	lemma	8337d85c3765	-	65a87af7	947cb585:msMonomial	\lemma msMonomial_+ {M : \Set} {R : AddMonoid} {a b : R} {m : M} : msMonomial (a + b) m = msMonomial a m + msMonomial b m
+msMonomial_BigSum	lemma	e8b2bc04f258	-	65a87af7	947cb585:msMonomial	\lemma msMonomial_BigSum {M : \Set} {R : AddMonoid} {l : Array R} {m : M} : msMonomial (R.BigSum l) m = BigSum (map (msMonomial __ m) l)
+msMonomial_0	lemma	ebdd71efac08	-	65a87af7	947cb585:msMonomial	\lemma msMonomial_0 {M : \Set} {R : AddMonoid} {m : M} : msMonomial R.zro m = 0
+msMonomial_*	lemma	8f7f704a1a22	-	eeae85cf		\lemma msMonomial_* {M : Monoid} {R : Semiring} {a b : R} : msMonomial (a * b) M.ide = msMonomial a M.ide * msMonomial b M.ide
+msMonomial_pow	lemma	207bd52dd6de	-	eeae85cf		\lemma msMonomial_pow {M : Monoid} {R : Semiring} {r : R} {m : M} {n : Nat} : Monoid.pow (msMonomial r m) n = msMonomial (Monoid.pow r n) (Monoid.pow m n)
+msMonomial-split	lemma	2c03e00cd662	-	eeae85cf		\lemma msMonomial-split {M : Monoid} {R : Semiring} {a : R} {m : M} : msMonomial a M.ide * msMonomial R.ide m = msMonomial a m
+msMonomial_BigSum-split	lemma	dc8527b4154e	-	deff584d	5f9fa5f4:MonoidSet.inMS	\lemma msMonomial_BigSum-split {M : \Set} {R : AddMonoid} {l : Array (\Sigma R M)} : BigSum (map (\lam s => msMonomial s.1 s.2) l) = inMS l
+msMonomial_BigProd	lemma	5be4f34ff517	-	a36cf5f5		\lemma msMonomial_BigProd {M : Monoid} {R : Semiring} (l : Array (\Sigma R M)) : Monoid.BigProd (map (\lam s => msMonomial s.1 s.2) l) = msMonomial (Monoid.BigProd $ map __.1 l) (Monoid.BigProd $ map __.2 l)
+msMonomial_BigProd_ide	lemma	e0b435ff4308	-	a36cf5f5		\lemma msMonomial_BigProd_ide {M : Monoid} {R : Semiring} {l : Array M} : Monoid.BigProd (map (\lam m => msMonomial R.ide m) l) = msMonomial R.ide (Monoid.BigProd l)
+MonoidAbMonoid	instance	62df1efbd54c	-	c4ba165c	08e6f143:MonoidSet	\instance MonoidAbMonoid (M : \Set) (R : AddMonoid) : AbMonoid (MonoidSet M R)
+MonoidAbGroup	instance	2f5c63b493a2	-	4943ea88		\instance MonoidAbGroup (M : \Set) (R : AddGroup) : AbGroup
+MonoidSemiring	instance	76815a9b8dca	-	ac50e7b2		\instance MonoidSemiring (M : Monoid) (R : Semiring) : Semiring
+MonoidRing	instance	4b7acac88fdd	-	f4663521		\instance MonoidRing (M : Monoid) (R : Ring) : Ring
+MonoidCSemiring	instance	257512ffaaea	-	a1bbd70e		\instance MonoidCSemiring (M : CMonoid) (R : CSemiring) : CSemiring
+MonoidAlgebra	instance	19947605c9a2	-	74feec31	8632f31f:monoidRingHom	\instance MonoidAlgebra (M : CMonoid) (R : CRing) : CAlgebra R
+monoidRingHom	func	486e3fbfa090	f0de261d3e6f	f79001e8	d6725934:MonoidRing	\func monoidRingHom {M : Monoid} {R : Ring} : RingHom R (MonoidRing M R)
+monoidSet-map	func	a9e4e0cfdc96	e0b99a26bb6f	76a3d43f	08e6f143:MonoidSet	\func monoidSet-map {M N : \Set} (f : M -> N) (g : AddMonoidHom) (x : MonoidSet M g.Dom) : MonoidSet N g.Cod
+monoidSet-hom	func	17e20a93bb22	550a2d75f9cf	16ac2f87	e2f17f4a:monoidSet-map	\func monoidSet-hom {M N : \Set} (f : M -> N) (g : AddMonoidHom) : AddMonoidHom (MonoidAbMonoid M g.Dom) (MonoidAbMonoid N g.Cod) (monoidSet-map f g)
+monoidSet-semiringHom	func	f1139a10790d	c3e1dff52b45	16ac2f87	e2f17f4a:monoidSet-map	\func monoidSet-semiringHom (f : MonoidHom) (g : SemiringHom) : SemiringHom (MonoidSemiring f.Dom g.Dom) (MonoidSemiring f.Cod g.Cod)
+monoidSet-ringHom	func	933ce6f5cc6e	8052085f46a7	16ac2f87	e2f17f4a:monoidSet-map	\func monoidSet-ringHom (f : MonoidHom) (g : RingHom) : RingHom (MonoidRing f.Dom g.Dom) (MonoidRing f.Cod g.Cod)
+monoidSet-coefs	func	cee185e42902	153cece7284a	c68fc34b		\func monoidSet-coefs {M : \Set} {R : AbMonoid} {P : M -> \Prop} (d : \Pi (m : M) -> Dec (P m)) (x : MonoidSet M R) : R
+msCoef	func	d1957014543a	a347350698f8	9f99e97f		\func msCoef {M : DecSet} {R : AbMonoid} (p : MonoidSet M R) (m : M) : R
+msCoef_monomial	lemma	7a563a23e3f5	-	403ef72e	0ba63ad2:msCoef 947cb585:msMonomial	\lemma msCoef_monomial {M : DecSet} {R : AbMonoid} {r : R} {m : M} : msCoef (msMonomial r m) m = r
+msCoef_map	lemma	6095f86240cd	-	8d2e104d	e2f17f4a:monoidSet-map	\lemma msCoef_map {M N : DecSet} {f : M -> N} (inj : IsInj f) {R E : AbMonoid} {g : AddMonoidHom R E} {p : MonoidSet M R} {m : M} : msCoef (monoidSet-map f g p) (f m) = g (msCoef p m)
+monoidSet-coefs_+	lemma	b2928ec9e80f	-	1c2df110		\lemma monoidSet-coefs_+ {M : \Set} {R : AbMonoid} {P : M -> \Prop} {d : \Pi (m : M) -> Dec (P m)} {x y : MonoidSet M R} : monoidSet-coefs d (x + y) = monoidSet-coefs d x + monoidSet-coefs d y
+monoidSet-coefs_BigSum	lemma	9e4fc843cfc2	-	1c2df110		\lemma monoidSet-coefs_BigSum {M : \Set} {R : AbMonoid} {P : M -> \Prop} {d : \Pi (m : M) -> Dec (P m)} {l : Array (MonoidSet M R)} : monoidSet-coefs d (BigSum l) = BigSum (map (monoidSet-coefs d) l)
+msCoef-split	lemma	4adbc9350452	-	50ff85b1	0ba63ad2:msCoef 947cb585:msMonomial	\lemma msCoef-split {M : DecSet} {R : AbMonoid} (p : MonoidSet M R) : ∃ (l : Array M) (\Pi {i j : Fin l.len} -> l i = l j -> i = j) (p = BigSum (map (\lam m => msMonomial (msCoef p m) m) l))
+msCoefs-fin	lemma	d53c606add17	-	a3ef7ca9		\lemma msCoefs-fin {M : DecSet} {R : AbMonoid} {Rd : DecSet R} (p : MonoidSet M R) : FinSet (\Sigma (m : M) (msCoef p m /= 0))
+msCoef/=0	lemma	f8d3a7971027	-	d5e2bd2e		\lemma msCoef/=0 {M : DecSet} {R : AbMonoid} {Rd : DecSet R} {p : MonoidSet M R} (p/=0 : p /= 0) : ∃ (m : M) (msCoef p m /= 0)
+msCoef/=0_Index	func	be57240caa83	d426f4884513	9892e635		\func msCoef/=0_Index {M : DecSet} {R : AbMonoid} {l : Array (\Sigma R M)} {m : M} (p : msCoef (inMS l) m /= 0) : Index m (map __.2 l)
+DecMonoidSet	type	63959494a389	4fa44793ba4b	bbb248d0		\type DecMonoidSet (M : \Set) (R : AddPointed)
+DecMonoidSet.Type	func	6048f5d4d5af	bd6594f85c4f	9bcc3e24		\func Type (M : \Set) (R : AddPointed)
+DecMonoidSet.inDMS	func	05a5bc0c06da	e12a79fb8ae9	3c66cc8a		\func inDMS {M : \Set} {R : AddPointed} (s : Type M R) : DecMonoidSet M R
+DecMonoidSet.~-dmsequiv	lemma	43e50a5fb20a	-	3c66cc8a		\lemma ~-dmsequiv {M : \Set} {R : AddPointed} {s t : Type M R} (p : EPerm s.1 t.1) : inDMS s = inDMS t
+DecMonoidSet.unext	lemma	e8517ca8943a	-	3c66cc8a		\lemma unext {M : \Set} {R : AddPointed} {s t : Type M R} (p : inDMS s = inDMS t) : TruncP (EPerm s.1 t.1)
+decToMonoidSet	func	615d445c9757	fa32533fb601	874aafd4	08e6f143:MonoidSet	\func decToMonoidSet {M : \Set} {R : AddMonoid} (p : DecMonoidSet M R) : MonoidSet M R
+monoidSetDec-equiv	lemma	fce9981c2202	-	b1f4fe3f	efe6542c:MonoidSet.~ 7ff4d853:decToMonoidSet 579fe7fa:monoidSetDec-equiv.msNorm 3cde27cd:monoidSetDec-equiv.msNormVars	\lemma monoidSetDec-equiv {M : DecSet} {R : AbMonoid} {Rd : DecSet R} : IsEquiv (decToMonoidSet {M} {R})
+evalMS	func	c4969997962c	d296f1d0da91	e1da8844	08e6f143:MonoidSet	\func evalMS {M : \Set} {R : Semiring} (x : MonoidSet M R) (f : M -> R) : R
+evalMSMonoidHom	func	90dd3d92d700	2cfa97a1024b	0d98774b	f554b9f5:evalMS	\func evalMSMonoidHom {M : \Set} {R : Semiring} (f : M -> R) : AddMonoidHom (MonoidAbMonoid M R) R
+evalMSSemiringHom	func	1dcc2033d446	cb8a0c1546ea	781d2ea4		\func evalMSSemiringHom {M : Monoid} {R : CSemiring} (f : MonoidHom M R) : SemiringHom (MonoidSemiring M R) R
+evalMSRingHom	func	e7667021726d	cd127a9e9029	781d2ea4		\func evalMSRingHom {M : Monoid} {R : CRing} (f : MonoidHom M R) : RingHom (MonoidRing M R) R
+evalMS_monomial	lemma	b45551bf836e	-	55dddd95	f554b9f5:evalMS 947cb585:msMonomial	\lemma evalMS_monomial {M : AddPointed} {R : Semiring} {f : PointedHom M R} {a : R} : evalMS (msMonomial a M.zro) f = a
+evalMS_map	lemma	aa62bf7c7a5f	-	741eb311	e2f17f4a:monoidSet-map	\lemma evalMS_map {M N : Monoid} {R : CRing} {f : M -> N} {x : MonoidSet M R} {g : N -> R} : evalMS (monoidSet-map f RingHom.id x) g = evalMS x (\lam m => g (f m))
+evalMS_map2	lemma	c643533db7da	-	741eb311	e2f17f4a:monoidSet-map	\lemma evalMS_map2 {M : \Set} {R S : Semiring} {x : MonoidSet M R} {f : M -> R} (g : SemiringHom R S) : evalMS (monoidSet-map (\lam y => y) g x) (\lam m => g (f m)) = g (evalMS x f)
+monoidRingHom-unique	lemma	0243691aef70	-	6320ff27	d6725934:MonoidRing	\lemma monoidRingHom-unique {M : Monoid} {R S : CRing} {f g : RingHom (MonoidRing M R) S} (p : \Pi (r : R) -> f (msMonomial r ide) = g (msMonomial r ide)) (q : \Pi (m : M) -> f (msMonomial 1 m) = g (msMonomial 1 m)) (x : MonoidSet M R) : f x = g x
+polyToMonoidSet	func	894cd00f010c	936a836505fd	9e37a319	08e6f143:MonoidSet	\func polyToMonoidSet {M : Monoid} {R : Semiring} (m : M) (p : Poly R) : MonoidSet M R
+polyToMonoidSetHom	func	4a1d7031780c	c67e2460b6cb	075e8b82		\func polyToMonoidSetHom {M : Monoid} {R : Ring} (m : M) : AddMonoidHom (PolyRing R) (MonoidRing M R)
+polyToMonoidSetRingHom	func	b782c2f195d4	c3b10e954342	71de7abf		\func polyToMonoidSetRingHom {M : CMonoid} {R : CRing} (m : M) : RingHom (PolyRing R) (MonoidRing M R)
+polyToMonoidSet-eval	lemma	883425d426e9	-	7b7770d9		\lemma polyToMonoidSet-eval {R : CRing} {M : Monoid} {p : Poly R} {f : MonoidHom M R} {m : M} : evalMS (polyToMonoidSet m p) f = polyEval p (f m)
+(overview)	-	-	-	f447c275	453ba136:DecMonoidSet efe6542c:MonoidSet.~	-

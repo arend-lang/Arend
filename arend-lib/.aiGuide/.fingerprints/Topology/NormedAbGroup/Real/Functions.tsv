@@ -1,0 +1,17 @@
+# arend -gc fingerprints v2 for module Topology.NormedAbGroup.Real.Functions. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+lnorm-metric	lemma	4adee4f45ae9	-	48586038		\lemma lnorm-metric {X : PseudoNormedAbGroup} : MetricMap X RealNormed X.norm
+norm-metric-map	lemma	7bcbba46945b	-	2b819f8b	fe7656df:lnorm-metric	\lemma norm-metric-map {X : ExPseudoNormedAbGroup} : MetricMap X ExUpperRealMetric norm
+bnorm-metric-map	lemma	b58407d80d05	-	e862301a		\lemma bnorm-metric-map {X : BoundedExPseudoNormedAbGroup} : MetricMap X UpperRealMetric bnorm
+dist-uniform-map	lemma	e3f950f75700	-	d5d4597e		\lemma dist-uniform-map {X : ExPseudoMetricSpace} : UniformMap (ProductUniformSpace X X) ExUpperRealMetric (\lam s => dist s.1 s.2)
+ldist-uniform-map	lemma	649558aece00	-	47b2edd0		\lemma ldist-uniform-map {X : PseudoMetricSpace} : UniformMap (ProductUniformSpace X X) RealNormed (\lam s => X.dist s.1 s.2)
+upper-meet-uniform	lemma	c160611528db	-	6deb068f		\lemma upper-meet-uniform : UniformMap (ProductUniformSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric (\lam s => s.1 ∧ s.2)
+real-meet-uniform	lemma	895bb30ce05c	-	2ac7c847		\lemma real-meet-uniform : UniformMap (ProductUniformSpace RealNormed RealNormed) RealNormed (\lam s => s.1 ∧ s.2)
+upper-join-uniform	lemma	2ef0e810966e	-	8f80cde0		\lemma upper-join-uniform : UniformMap (ProductUniformSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric (\lam s => s.1 ∨ s.2)
+real-join-uniform	lemma	dfbf81fc8ca9	-	4ba30037		\lemma real-join-uniform : UniformMap (ProductUniformSpace RealNormed RealNormed) RealNormed (\lam s => s.1 ∨ s.2)
+upper-+-uniform	lemma	b86f204b5a00	-	90557ffc		\lemma upper-+-uniform : MetricMap (ManhattanProductPseudoMetricSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric (\lam s => s.1 + s.2)
+upper-*-left-uniform	lemma	98c56eb54b99	-	f05fe720		\lemma upper-*-left-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (a *)
+upper-*-right-uniform	lemma	3567f279f876	-	99c866a2		\lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (* a)
+upper-*-locally-uniform	lemma	bb058433bc1e	-	f462cabf		\lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2)
+ex-upper-*-locally-uniform	lemma	f8bbc6f5f4f2	-	3ba131aa		\lemma ex-upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
+(overview)	-	-	-	48ab117c		-

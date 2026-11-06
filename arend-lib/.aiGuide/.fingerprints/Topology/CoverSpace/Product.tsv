@@ -1,0 +1,31 @@
+# arend -gc fingerprints v2 for module Topology.CoverSpace.Product. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+CoverSpaceHasProduct	instance	a62f84df5962	-	76173ef8	af75b9b8:ProductCoverSpace	\instance CoverSpaceHasProduct : HasProduct CoverSpace.{u}
+ProductCoverSpace	instance	3a6ac87db2b5	-	de2246b0		\instance ProductCoverSpace (X Y : CoverSpace) : CoverSpace (\Sigma X Y)
+ProductStronglyRegularCoverSpace	instance	b5aec584454d	-	faae55eb		\instance ProductStronglyRegularCoverSpace (X Y : StronglyRegularCoverSpace) : StronglyRegularCoverSpace (\Sigma X Y)
+StronglyRegularCoverSpaceHasProduct	instance	b79ec128a813	-	6c403b1b		\instance StronglyRegularCoverSpaceHasProduct : HasProduct StronglyRegularCoverSpace.{u}
+ProductSeparatedCoverSpace	instance	020b2b561aae	-	25733aa2		\instance ProductSeparatedCoverSpace (X Y : SeparatedCoverSpace) : SeparatedCoverSpace (\Sigma X Y)
+ProductCompleteCoverSpace	instance	a2d34c59767c	-	17150aac		\instance ProductCompleteCoverSpace (X Y : CompleteCoverSpace) : CompleteCoverSpace (\Sigma X Y)
+PrecoverSpaceHasProduct	instance	80a2ee301de3	-	49c86766	f674716f:ProductPrecoverSpace	\instance PrecoverSpaceHasProduct : HasProduct PrecoverSpace.{u}
+ProductPrecoverSpace	instance	7438b6eab51c	-	d317c61d		\instance ProductPrecoverSpace (X Y : PrecoverSpace) : PrecoverSpace (\Sigma X Y)
+ProductCoverSpace.Prod	meta	e7d266f7319c	033a5ae5707a	d5cd9134		\meta Prod X Y
+ProductPrecoverSpace.Prod	meta	e7d266f7319c	fb914e93d195	3bb52d2c		\meta Prod X Y
+ProductCoverSpace.proj1'	func	782aff17c1b5	a04d0d66182d	21402034		\func proj1' {X Y : CoverSpace} : CoverMap (Prod X Y) X
+ProductCoverSpace.proj2'	func	2fade3c16906	01dce3e5cb7f	21402034		\func proj2' {X Y : CoverSpace} : CoverMap (Prod X Y) Y
+ProductPrecoverSpace.proj1	func	0ab65ffc6a8f	c94f2698096e	f6d6ef60		\func proj1 {X Y : PrecoverSpace} : PrecoverMap (Prod X Y) X
+ProductPrecoverSpace.proj2	func	d3438884e9ca	7d65aa615058	f6d6ef60		\func proj2 {X Y : PrecoverSpace} : PrecoverMap (Prod X Y) Y
+ProductCoverSpace.proj1	lemma	6efaf223711e	-	12835147		\lemma proj1 {X Y : CoverSpace} : CoverMap (ProductCoverSpace X Y) X __.1
+ProductCoverSpace.proj2	lemma	4c2c2b6785cc	-	12835147		\lemma proj2 {X Y : CoverSpace} : CoverMap (ProductCoverSpace X Y) Y __.2
+ProductCoverSpace.tuple	func	027d7f75af4c	5516a8e890c9	e89f51c2		\func tuple {X Y Z : CoverSpace} (f : CoverMap Z X) (g : CoverMap Z Y) : CoverMap Z (ProductCoverSpace X Y)
+ProductCoverSpace.tuple.precover	func	3313f7eb8230	90cd9443d265	750e174f		\func precover {Z : PrecoverSpace} {X Y : CoverSpace} (f : PrecoverMap Z X) (g : PrecoverMap Z Y) : PrecoverMap Z (ProductCoverSpace X Y)
+ProductCoverSpace.prod	func	a8ee3be31552	c685f946f125	36631884	e3409290:ProductCoverSpace.tuple	\func prod {X Y X' Y' : CoverSpace} (f : CoverMap X Y) (g : CoverMap X' Y') : CoverMap (ProductCoverSpace X X') (ProductCoverSpace Y Y')
+ProductCoverSpace.prod.isEmbedding	lemma	5fa75b67ec5d	-	efa60bb5	9484918a:ProductCoverSpace.prod	\lemma isEmbedding {X Y X' Y' : CoverSpace} {f : CoverMap X Y} {g : CoverMap X' Y'} (fe : f.IsEmbedding) (ge : g.IsEmbedding) : CoverMap.IsEmbedding {prod f g}
+ProductCoverSpace.prod.isDenseEmbedding	lemma	489c38a62a0e	-	5d660fac	9484918a:ProductCoverSpace.prod	\lemma isDenseEmbedding {X X' Y Y' : CoverSpace} {f : CoverMap X Y} {g : CoverMap X' Y'} (fde : f.IsDenseEmbedding) (gde : g.IsDenseEmbedding) : CoverMap.IsDenseEmbedding {prod f g}
+ProductCoverSpace.prod.isWeaklyDenseEmbedding	lemma	cde9bbdec2d8	-	a38fcc0c	9484918a:ProductCoverSpace.prod	\lemma isWeaklyDenseEmbedding {X X' Y Y' : CoverSpace} {f : CoverMap X Y} {g : CoverMap X' Y'} (fde : f.IsWeaklyDenseEmbedding) (gde : g.IsWeaklyDenseEmbedding) : CoverMap.IsWeaklyDenseEmbedding {prod f g}
+ProductCoverSpace.prodCover'	lemma	5bf858aae33f	-	4614edc6		\lemma prodCover' {X Y : CoverSpace} {C : Set (Set X)} (Cc : X.isCauchy C) {D : Set (Set Y)} (Dc : Y.isCauchy D) : isCauchy {Prod X Y} (\lam W => ∃ (U : C) (V : D) (W = (\lam s => \Sigma (U s.1) (V s.2))))
+ProductCoverSpace.prodCover	lemma	4b4cf490e926	-	ce2ab4cf		\lemma prodCover {X Y : CoverSpace} {C : Set (Set X)} (Cc : X.isCauchy C) {D : Set (Set Y)} (Dc : Y.isCauchy D) : isCauchy {ProductCoverSpace X Y} (\lam W => ∃ (U : C) (V : D) (W = (\lam s => \Sigma (U s.1) (V s.2))))
+ProductPrecoverSpace.prodCover	lemma	b736063e4a12	-	bbb879cc		\lemma prodCover {X Y : PrecoverSpace} {C : Set (Set X)} (Cc : X.isCauchy C) {D : Set (Set Y)} (Dc : Y.isCauchy D) : isCauchy {ProductPrecoverSpace X Y} (\lam W => ∃ (U : C) (V : D) (W = (\lam s => \Sigma (U s.1) (V s.2))))
+ProductCoverSpace.prod-neighborhood'	lemma	62eda4ff372c	-	81252d44		\lemma prod-neighborhood' {X Y : CoverSpace} {x : X} {y : Y} {W : Set (\Sigma X Y)} (xy<=<W : single (x, y) <=< {Prod X Y} W) : ∃ (U : Set X) (V : Set Y) (single x <=< U) (single y <=< V) ∀ {x : U} {y : V} (W (x, y))
+ProductCoverSpace.prod-neighborhood	lemma	a258a17f1260	-	a1fcfd0e		\lemma prod-neighborhood {X Y : CoverSpace} {x : X} {y : Y} {W : Set (\Sigma X Y)} : single (x, y) <=< {ProductCoverSpace X Y} W <-> ∃ (U : Set X) (V : Set Y) (single x <=< U) (single y <=< V) ∀ {x : U} {y : V} (W (x, y))
+prodCF	func	8eef40860ebb	4e91796131fa	7cfd275a		\func prodCF {X Y : CoverSpace} (F : CauchyFilter X) (G : CauchyFilter Y) : CauchyFilter (ProductCoverSpace X Y)
+(overview)	-	-	-	7f533cce	9484918a:ProductCoverSpace.prod e3409290:ProductCoverSpace.tuple	-

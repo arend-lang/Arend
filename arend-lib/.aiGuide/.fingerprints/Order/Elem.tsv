@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Order.Elem. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+ElemStrictPoset	instance	b3f745af9eac	-	ae492e4b		\instance ElemStrictPoset {X : StrictPoset} (U : Set X) : StrictPoset (Elem U)
+ElemPoset	instance	0147fc633286	-	ee10f555		\instance ElemPoset {X : Poset} (U : Set X) : Poset (Elem U)
+ElemBiordered	instance	60080c44b1b7	-	c3600fae	c9b0b5a3:ElemPoset 59b45251:ElemStrictPoset	\instance ElemBiordered {X : BiorderedSet} (U : Set X) : BiorderedSet (Elem U)
+ElemLinearOrder	instance	c7272fd142fc	-	e6cfa7c6	59b45251:ElemStrictPoset	\instance ElemLinearOrder {X : LinearOrder} (U : Set X) : LinearOrder (Elem U)
+(overview)	-	-	-	dd399e96		-

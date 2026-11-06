@@ -1,0 +1,30 @@
+# arend -gc fingerprints v2 for module Order.PartialOrder. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+Preorder	class	7a7c1141dc41	-	111b5ba9	cf355103:Preorder.<=	\class Preorder \extends BaseSet, Precat { | \infix 4 <= : E -> E -> \Prop | <=-refl {x : E} : x <= x | <=-transitive \alias \infixr 9 <=∘ {x y z : E} : x <= y -> y <= z -> x <= z | Ob => E | Hom => <= | id => <=-refl | o => \lam f g => g <=∘ f | id-left => prop-pi | id-right => prop-pi | o-assoc => prop-pi | \infix 4 >= : E -> E -> \Prop | >= => \lam x y => y <= x }
+Preorder.<=	field	6b3a812ffbf1	-	373f9de7		| <= : E -> E -> \Prop
+Preorder.<=-refl	field	0489f253668f	-	da4c3201	cf355103:Preorder.<=	| <=-refl {x : E} : x <= x
+Preorder.<=-transitive	field	9e83175ed3c6	-	b398e92a	cf355103:Preorder.<=	| <=-transitive {x y z : E} : x <= y -> y <= z -> x <= z
+Preorder.>=	field	6b3a812ffbf1	-	b82d67aa	cf355103:Preorder.<=	| >= : E -> E -> \Prop
+Preorder.op	func	d3dce66f9b13	2296872bebb2	9b050ac5	cf355103:Preorder.<=	\func op : Preorder E
+Preorder.EquivRel	func	5b4771f7d183	c7d85017af06	fc3963f3	cf355103:Preorder.<=	\func EquivRel : Equivalence E
+Preorder.PreorderC	func	8bd4e46a43a0	134b7279a1aa	96d66ab7		\func PreorderC
+Preorder.PosetC	instance	18bccf8c18d0	-	d004363b	318a93f7:Preorder.PreorderC	\instance PosetC : Poset PreorderC
+Preorder.PosetC.<=C	func	aaca61779818	5e15ee7eaa98	0e3f9420	cf355103:Preorder.<= 318a93f7:Preorder.PreorderC	\func <=C (x y : PreorderC) : \Prop
+Preorder.PosetC.<=C-reflexive	lemma	87146c5ab3c8	-	42f2826a	d981caec:Preorder.PosetC.<=C	\lemma <=C-reflexive {x : PreorderC} : x <=C x
+Preorder.PosetC.<=C-transitive	lemma	968173d6477b	-	42f2826a	d981caec:Preorder.PosetC.<=C	\lemma <=C-transitive {x y z : PreorderC} (x<=y : x <=C y) (y<=z : y <=C z) : x <=C z
+Preorder.PosetC.<=C-antisymmetric	lemma	bff771375756	-	42f2826a	d981caec:Preorder.PosetC.<=C	\lemma <=C-antisymmetric {x y : PreorderC} (x<=y : x <=C y) (y<=x : y <=C x) : x = y
+Preorder.Is-meet	func	d246f579810f	234c8d1a1e79	46a700d9		\func Is-meet (x y m : E)
+Preorder.IsJoin	func	f6e61c425aa8	91c9d05ed9c5	317e2212		\func IsJoin {J : \Set} (f : J -> E) (a : E)
+Preorder.IsMeet	func	f6e61c425aa8	7f53e14e75d7	f52f7ec3		\func IsMeet {J : \Set} (f : J -> E) (a : E)
+Poset	class	4e37fbb1967f	-	bb1f9c23	f67f9c6c:Poset.<=-antisymmetric e86b6232:Preorder cf355103:Preorder.<=	\class Poset \extends Preorder, Cat { | <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y | univalence => Cat.makeUnivalence (\lam (e : Iso) => (<=-antisymmetric e.f e.hinv, prop-pi)) }
+Poset.<=-antisymmetric	field	3dcd09c34d28	-	c4a4de0e	cf355103:Preorder.<=	| <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y
+Poset.op	func	0a48c2ff8669	07c94f8bb648	61515c4f	8c87b887:Preorder.op	\func op : Poset
+ProductPreorder	instance	af00f603cf56	-	b313ba57		\instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q)
+ProductPoset	instance	76ab3e921237	-	6b2b9114	dc202b17:ProductPreorder	\instance ProductPoset (P Q : Poset) : Poset (\Sigma P Q)
+subPoset	func	a7bcb936cadc	959d5e9cb29c	ff402663		\func subPoset {P : Poset} (S : P -> \Prop) : Poset (\Sigma (x : P) (S x))
+TrivialPoset	instance	02a24dfaa24b	-	a624de1f		\instance TrivialPoset : Poset (\Sigma)
+=_<=	lemma	15e91cbb12ce	-	02ef0e7e	cf355103:Preorder.<=	\lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y
+=<=	lemma	e386660c74e7	-	5f665cc5	cf355103:Preorder.<=	\lemma =<= {E : Preorder} {x y z : E} (p : x = y) (q : y <= z) : x <= z
+PreorderHom	record	5f0228c460bd	-	c166dd20	cf355103:Preorder.<= 18f1b100:PreorderHom.compose b7a85d93:PreorderHom.func-<= 7577a50d:PreorderHom.id	\record PreorderHom \extends SetHom, Functor { \override Dom : Preorder \override Cod : Preorder | func-<= {x y : Dom} : x <= y -> func x <= func y | C => Dom | D => Cod | F => func | Func => func-<= | Func-id => prop-pi | Func-o => prop-pi }
+PosetHom	record	38705ad41bb0	-	4a305411	76d5ca83:PosetHom.compose 00532f05:PosetHom.id be33b91e:PreorderHom	\record PosetHom \extends PreorderHom { \override Dom : Poset \override Cod : Poset }
+(overview)	-	-	-	de699f26	3dc6951b:Poset 4cc06776:Poset.op e86b6232:Preorder cf355103:Preorder.<= b0140ecf:Preorder.Is-meet 6b6aec62:Preorder.IsJoin ed0c6c5f:Preorder.IsMeet 318a93f7:Preorder.PreorderC 8c87b887:Preorder.op	-

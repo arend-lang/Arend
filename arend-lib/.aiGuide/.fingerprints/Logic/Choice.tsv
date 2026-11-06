@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Logic.Choice. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+adchoice	axiom	4ae9cce3a552	-	edc1e5a5		\axiom adchoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0) (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b))) : TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+adchoice.fromChoice	lemma	dfa526328f1a	-	98683513		\lemma fromChoice {A : Nat -> \Set} (R : \Pi {i : Nat} -> A i -> A (suc i) -> \Prop) (a0 : A 0) (total : \Pi (i : Nat) (a : A i) -> TruncP (\Sigma (b : A (suc i)) (R a b))) : TruncP (\Sigma (s : \Pi (i : Nat) -> A i) (\Pi (i : Nat) -> R (s i) (s (suc i))))
+acchoice	axiom	43fa5a6aae40	-	451c5f86		\axiom acchoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+acchoice.fromDepChoice	lemma	15130129f894	-	997b2bd9		\lemma fromDepChoice {A : Nat -> \Set} (h : \Pi (i : Nat) -> TruncP (A i)) : TruncP (\Pi (i : Nat) -> A i)
+(overview)	-	-	-	d5bbb856	a20c9b1f:acchoice 53c2defc:acchoice.fromDepChoice da8f4937:adchoice 6a770031:adchoice.fromChoice	-

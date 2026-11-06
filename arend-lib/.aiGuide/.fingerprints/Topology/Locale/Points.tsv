@@ -1,0 +1,29 @@
+# arend -gc fingerprints v2 for module Topology.Locale.Points. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+OpensFrame	func	c292366a2bd5	0521f782a322	551abd5a		\func OpensFrame (S : TopSpace) : Locale (Given S.isOpen)
+PointsSpace	instance	7e6482d38275	-	f6fa4b32		\instance PointsSpace (L : Locale) : TopSpace (CompleteFilter L)
+PointsSpaceFunctor	func	9dccbbd4ab64	5225dbb960b9	a6b8985e	01a73046:PointsSpace	\func PointsSpaceFunctor : Functor LocaleCat.{u} TopCat.{u}
+points-map	func	2e1d9aaf1e99	67007db42264	0066c5ea		\func points-map {L M : Locale} (f : LocaleHom L M) (x : CompleteFilter L) : CompleteFilter M
+points	func	7957247d722c	d7419e723d0d	595cf2c9	85bf686c:OpensFrame 01a73046:PointsSpace	\func points {L : Locale} : FrameHom L (OpensFrame (PointsSpace L))
+points^*	func	ac0c71ee8297	de4804368932	ef596b9f	55eff8eb:points	\func points^* {L : Locale} (a : L) : Set (CompleteFilter L)
+points^*-mono	lemma	2c6e7aa7fe6d	-	730a45ea	a723a6f4:points^*	\lemma points^*-mono {L : Locale} {a b : L} (p : a <= b) : points^* a ⊆ points^* b
+points^*_top>=	lemma	2c7b01199212	-	08d58ae6	a723a6f4:points^*	\lemma points^*_top>= {L : Locale} : top ⊆ points^* {L} top
+points^*_top	lemma	4c8edd1910a9	-	08d58ae6	a723a6f4:points^*	\lemma points^*_top {L : Locale} : points^* {L} top = top
+points^*_meet>=	lemma	38fd18605fa7	-	6f562d2d	a723a6f4:points^*	\lemma points^*_meet>= {L : Locale} {a b : L} : points^* a ∧ points^* b ⊆ points^* (a ∧ b)
+points^*_meet	lemma	0e3edbb46634	-	6f562d2d	a723a6f4:points^*	\lemma points^*_meet {L : Locale} {a b : L} : points^* (a ∧ b) = points^* a ∧ points^* b
+points_*	func	219ffd7cd306	caa539c4b982	c07e3191	a723a6f4:points^*	\func points_* {L : Locale} (U : Set (CompleteFilter L)) : L
+points_*-mono	lemma	005e59721825	-	bc53bfd3	e34b4ff4:points_*	\lemma points_*-mono {L : Locale} {U V : Set (CompleteFilter L)} (p : U ⊆ V) : points_* U <= points_* V
+points_*_meet>=	lemma	ac89abceef6b	-	5fd2619d	e34b4ff4:points_*	\lemma points_*_meet>= {L : Locale} {U V : Set (CompleteFilter L)} : points_* U ∧ points_* V <= points_* (U ∧ V)
+points_*_meet	lemma	2df01a10113c	-	5fd2619d	e34b4ff4:points_*	\lemma points_*_meet {L : Locale} {U V : Set (CompleteFilter L)} : points_* (U ∧ V) = points_* U ∧ points_* V
+points^*-points_*	lemma	ac5689432f7b	-	569a85d7	a723a6f4:points^* e34b4ff4:points_*	\lemma points^*-points_* {L : Locale} {a : L} {U : Set (CompleteFilter L)} (p : points^* a ⊆ U) : a <= points_* U
+points-unit	lemma	d1a0c0f23ddd	-	3c72f173	a723a6f4:points^* e34b4ff4:points_*	\lemma points-unit {L : Locale} {a : L} : a <= points_* (points^* a)
+points-counit	lemma	994515bcd6f7	-	85e11d73	a723a6f4:points^* e34b4ff4:points_*	\lemma points-counit {L : Locale} {U : Set (CompleteFilter L)} : points^* (points_* U) ⊆ U
+SitePoint	record	89d9564c4d79	-	c482bb10	e067e526:SitePoint.F 83fecb5a:SitePoint.P	\record SitePoint (P : PreorderSite) (\coerce F : P -> \Prop) { | sitePoint-mono {x y : P} : F x -> x <= y -> F y | sitePoint-top : ∃ F | sitePoint-meet {x y : P} : F x -> F y -> ∃ (z : F) (Cover z (single x)) (Cover z (single y)) | sitePoint-cover {x : P} {U : Set P} : isBasicCover x U -> F x -> ∃ (y : U) (F y) }
+site-point	func	487b37cfc2eb	6210e61df78a	1c1bc5d4	1829c8c4:SitePoint 83fecb5a:SitePoint.P	\func site-point {P : PreorderSite} (p : SitePoint P) : CompleteFilter (SiteLocale P)
+HasDensePoints	func	8d475386c6c6	d3e5998a6f3a	3a18e480	e34b4ff4:points_*	\func HasDensePoints (L : Locale) : \Prop
+hasDensePoints-site	lemma	f744ac12568b	-	db618987	1829c8c4:SitePoint 83fecb5a:SitePoint.P	\lemma hasDensePoints-site {P : PreorderSite} (d : \Pi {a : P} -> (\Pi {p : SitePoint P} -> Not (p a)) -> Cover a empty) : HasDensePoints (SiteLocale P)
+hasDensePoints-char	lemma	446817fa4620	-	b53d0697	8d947e0b:HasDensePoints	\lemma hasDensePoints-char {L : Locale} : HasDensePoints L <-> (\Pi {a : L} -> (\Pi {x : CompleteFilter L} -> Not (x a)) -> a <= bottom)
+HasStronglyDensePoints	func	8d475386c6c6	7a44bbf0080e	cc437ded		\func HasStronglyDensePoints (L : Locale) : \Prop
+densePoints_cover	lemma	d99b6aa0a56c	-	85ee3e48	0a34b4f6:HasStronglyDensePoints	\lemma densePoints_cover {L : Locale} (d : HasStronglyDensePoints L) (a : L) : a <= L.pHat (∃ (x : CompleteFilter L) (x a))
+hasStronglyDensePoints-site	lemma	e335a1b53d25	-	5248e374	1829c8c4:SitePoint 83fecb5a:SitePoint.P	\lemma hasStronglyDensePoints-site {P : PreorderSite} (d : \Pi (a : P) -> Cover a (\lam _ => ∃ (p : SitePoint P) (p a))) : HasStronglyDensePoints (SiteLocale P)
+(overview)	-	-	-	0af51863	8d947e0b:HasDensePoints 0a34b4f6:HasStronglyDensePoints 55eff8eb:points e34b4ff4:points_*	-

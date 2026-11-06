@@ -1,0 +1,16 @@
+# arend -gc fingerprints v2 for module Data.Array.Pairs. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+pairs	func	d4b7ee980fad	2e44f62aacca	ccb603cc		\func pairs {A B C : \Type} (f : A -> B -> C) (l : Array A) (l' : Array B) : Array C
+pairs.pairs_nil	func	7e8e13583ba6	8925dd52769a	bb500b0f	ee446f63:pairs	\func pairs_nil {A B C : \Type} {f : A -> B -> C} {l : Array A} : pairs f l nil = nil
+pairs.pairs-flip	func	5af4a788aa79	5f5f8c1c025b	5d135bb7	ee446f63:pairs	\func pairs-flip {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B} : EPerm (pairs f l l') (pairs (\lam b a => f a b) l' l)
+pairs.pairs_++-left	func	bf623e1f1c14	7f524726c846	53dcc07f	ee446f63:pairs	\func pairs_++-left {A B C : \Type} {f : A -> B -> C} {l1 l2 : Array A} {l : Array B} : pairs f (l1 ++ l2) l = pairs f l1 l ++ pairs f l2 l
+pairs.pairs_++-right	func	476117e115f9	7ff75f10e39a	2b8c2eba	ee446f63:pairs	\func pairs_++-right {A B C : \Type} {f : A -> B -> C} {l : Array A} {l1 l2 : Array B} : EPerm (pairs f l (l1 ++ l2)) (pairs f l l1 ++ pairs f l l2)
+pairs.pairs_map-left	func	52ace89b2f82	613f7fd1e376	553db62d	ee446f63:pairs	\func pairs_map-left {A : \Type} {f : A -> A -> A} (p : \Pi {x y z : A} -> f (f x y) z = f x (f y z)) {a : A} {l l' : Array A} : pairs f (map (f a) l) l' = map (f a) (pairs f l l')
+pairs.pairs_map	func	8b947f0104c5	fb6ed9deb9f5	2a693334	ee446f63:pairs	\func pairs_map {A B : \Type} {f1 : A -> A -> A} {f2 : B -> B -> B} (g : A -> B) (p : \Pi {a b : A} -> g (f1 a b) = f2 (g a) (g b)) {l l' : Array A} : map g (pairs f1 l l') = pairs f2 (map g l) (map g l')
+pairs.pairs-assoc	func	3d67a123272f	555ccb647410	4a457752	ee446f63:pairs	\func pairs-assoc {A : \Type} {f : A -> A -> A} (p : \Pi {x y z : A} -> f (f x y) z = f x (f y z)) {l1 l2 l3 : Array A} : pairs f (pairs f l1 l2) l3 = pairs f l1 (pairs f l2 l3)
+pairs.pairs-index	func	b46f8758867b	20b5480c8bfc	16061c30	ee446f63:pairs	\func pairs-index {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B} (i : Fin l.len) (j : Fin l'.len) : \Sigma (k : Fin (DArray.len {pairs f l l'})) (pairs f l l' k = f (l i) (l' j))
+pairs.pairs-index-inj	lemma	082c23b34706	-	49955e20		\lemma pairs-index-inj {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B} {i i' : Fin l.len} {j j' : Fin l'.len} (p : (pairs-index {_} {_} {_} {f} i j).1 = (pairs-index i' j').1) : \Sigma (i = i') (j = j')
+pairs.pairs-index-surj	lemma	0a47ba616cec	-	ecfe7462	ee446f63:pairs	\lemma pairs-index-surj {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B} : IsSurj (\lam (s : \Sigma (Fin l.len) (Fin l'.len)) => (pairs-index {_} {_} {_} {f} s.1 s.2).1)
+pairs.pairs-index-equiv	sfunc	428cee087d1c	159c1273b811	14d6e3f2	ee446f63:pairs	\sfunc pairs-index-equiv {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B} : QEquiv {\Sigma (Fin l.len) (Fin l'.len)} {Fin (DArray.len {pairs f l l'})} (\lam s => (pairs-index s.1 s.2).1)
+pairs.pairs-distr	lemma	946382286d25	-	db003828	ee446f63:pairs	\lemma pairs-distr {A : \Type} {R : Semiring} {f : A -> A -> A} (g : A -> R) {l l' : Array A} (p : \Pi {a b : A} -> g (f a b) = g a R.* g b) : R.BigSum (map g (pairs f l l')) = R.BigSum (map g l) R.* R.BigSum (map g l')
+(overview)	-	-	-	8d0660f0	ee446f63:pairs	-

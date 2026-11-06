@@ -1,0 +1,24 @@
+# arend -gc fingerprints v2 for module Set.Countable. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+natPair-countable	func	1e5304a11fed	534740f02264	1d153fec		\func natPair-countable : QEquiv {Nat} {\Sigma Nat Nat}
+natTuple-countable	func	c960280f3704	a6dc90a3febf	7985de68	939a0dd6:natPair-countable	\func natTuple-countable {n : Nat} : QEquiv {Nat} {Array Nat (suc n)}
+natArray-countable	sfunc	9721f79f77c7	fa2208fe509f	4d4cf913	cc452042:natArray-countable.array-sum	\sfunc natArray-countable : QEquiv {Nat} {Array Nat}
+natArray-countable.array-sum	func	d6837140e449	00ab8a6a5ef5	ba2cbf61		\func array-sum {A : \Type} : QEquiv {Array A} {Maybe (\Sigma (n : Nat) (Array A (suc n)))}
+sum-countable	func	f5fd9535b1cb	4e1c7210e2af	b334cb16		\func sum-countable {B : Nat -> \Type} (e : \Pi {n : Nat} -> QEquiv {B n} {Nat}) : QEquiv {Nat} {\Sigma (n : Nat) (B n)}
+maybe-countable	func	b0632b3b0404	91a8bac0af70	18b54cb0		\func maybe-countable {A : \Type} (e : QEquiv {Nat} {A}) : QEquiv {Nat} {Maybe A}
+Countable	type	86f0efc6d16b	dda279dd7583	dd39d15a		\type Countable (A : \Type)
+fin-countable	func	5d9708248074	e66ced0770ba	47daf69a		\func fin-countable (A : KFinSet) : TruncP (Countable A)
+countable-func	func	41db71613ba8	64edd1a2598b	5ac62d99	a4f5616e:Countable	\func countable-func {A : \Type} (c : Countable A) (n : Nat) : Maybe A
+countable-func-surj	lemma	e99c9f16b484	-	047c53d6		\lemma countable-func-surj {A : \Type} (c : Countable A) : IsSurj (countable-func c)
+func-countable	func	5f26eba337c7	3a74f6682e2b	a7e4d128	a4f5616e:Countable	\func func-countable {A : \Type} (f : Nat -> A) (fs : IsSurj f) : Countable A
+pointed-countable	func	3c1fe2cabb5d	9d8bd323dbeb	a2a857b9	a4f5616e:Countable	\func pointed-countable {A : \Type} (a0 : A) (c : Countable A) (n : Nat) : A
+pointed-countable-surj	func	03399aa5a782	7571f8886eeb	84a1df92	988c603e:pointed-countable	\func pointed-countable-surj {A : \Type} (a0 : A) (c : Countable A) : IsSurj (pointed-countable a0 c)
+surj-countable	func	2bb41ee21b07	b9e71555b77e	7ce375fa		\func surj-countable {A B : \Type} (c : Countable A) {f : A -> B} (fs : IsSurj f) : Countable B
+array-countable	sfunc	2a12f31788e7	38a6436d8b5a	5494f022	30672ab4:array-countable.func-array 922e0466:countable-func 0a119ef6:natArray-countable	\sfunc array-countable {A : \Type} (c : Countable A) : Countable (Array A)
+array-countable.map-surj	func	eafd50ec0fa5	55dfeb2bb457	fc31bab4		\func map-surj {A B : \Type} {f : A -> B} (fs : IsSurj f) : IsSurj (map f)
+array-countable.func-array	func	5782865e8151	68a806cff007	8a61e430		\func func-array {A : \Type} (l : Array (Maybe A)) : Array A
+array-countable.func-array_just	func	2668cb4d195a	6be8533a8038	7ab5c9b2	30672ab4:array-countable.func-array	\func func-array_just {A : \Type} (l : Array A) : func-array (map just l) = l
+array-countable.func-array-surj	lemma	b137e4594c8d	-	b1c50bfc	30672ab4:array-countable.func-array	\lemma func-array-surj {A : \Type} : IsSurj (func-array {A})
+quotient-countable	func	5e2376284b12	ba108fd4d4c2	de12fa33		\func quotient-countable {A : \Type} (c : Countable A) {R : A -> A -> \Type} : Countable (Quotient R)
+factor-countable	func	fadd50bd8ef1	845cdd11d45b	4847bf3a	590e9450:quotient-countable	\func factor-countable {I : Ideal} (c : Countable I.S) : Countable (FactorRing I)
+(overview)	-	-	-	9caed13c	a4f5616e:Countable cea5f7ec:natPair-countable.aux	-

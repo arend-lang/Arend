@@ -1,0 +1,35 @@
+# arend -gc fingerprints v2 for module Algebra.Monoid.SubMonoid. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+SubSemigroup	class	c6c988299fc3	-	f215258d	0d211aec:ISemigroup cb41aaee:SubSemigroup.contains_*	\class SubSemigroup \extends SubSet { \override S : Semigroup | contains_* {x y : S} : contains x -> contains y -> contains (x * y) }
+ISemigroup	instance	c590d3da4815	-	0ddca1cb	d639ba4e:SubSemigroup cb41aaee:SubSemigroup.contains_*	\instance ISemigroup (S : SubSemigroup {}) : Semigroup
+ICSemigroup	instance	6cca634f954b	-	2c0bb9ff		\instance ICSemigroup {A : CSemigroup} (S : SubSemigroup A) : CSemigroup
+SubMonoid	class	b228d9369720	-	a4c3d666	7a380ea8:IMonoid 368abcd0:IMonoid.embed d639ba4e:SubSemigroup	\class SubMonoid \extends SubPointed, SubSemigroup { \override S : Monoid }
+SubMonoid.contains_pow	lemma	7b6b883f8727	-	cbec5f4e		\lemma contains_pow {x : S} (s : contains x) {n : Nat} : contains (Monoid.pow x n)
+SubMonoid.sub-pow	lemma	c9593d430b02	-	bd26e118	7a380ea8:IMonoid	\lemma sub-pow {x : IMonoid \this} {n : Nat} : ((IMonoid \this).pow x n).1 = Monoid.pow x.1 n
+SubMonoid.max	func	059511eb6e43	d63d5eddbba8	401538e1		\func max {X : Monoid} : SubMonoid
+SubMonoid.powers	func	95b46cc6e434	93a45bb4a4e3	e9e671a4		\func powers {M : Monoid} (a : M) : SubMonoid M
+IMonoid	instance	a35a5d3747b7	-	936ef962	368abcd0:IMonoid.embed 32dfaf08:SubMonoid	\instance IMonoid (S : SubMonoid {}) : Monoid
+ICMonoid	instance	8850e8136f8f	-	b88ee633		\instance ICMonoid {A : CMonoid} (S : SubMonoid A) : CMonoid
+KernelMonoid	func	6d92c3ea55e4	5c05d6e500cf	cba0abd2		\func KernelMonoid (f : MonoidHom) : SubMonoid f.Dom
+ImageMonoid	func	8788b48b6c89	c4c6bde16e93	e145ee10		\func ImageMonoid (f : MonoidHom) : SubMonoid f.Cod
+ImMonoid	func	c554b35d23bd	76b0ac76ab61	4db1949b	7a380ea8:IMonoid 24d21001:ImageMonoid	\func ImMonoid (f : MonoidHom) : Monoid
+ImMonoidLeftHom	func	c5fb32ba72ad	d6f8eec66e40	806af903	8460fdd6:ImMonoid	\func ImMonoidLeftHom (f : MonoidHom) : MonoidHom f.Dom (ImMonoid f)
+SubMonoid.closure	func	de201c0a9514	e05b384ac6ca	99897da3	b8b0cfc0:SubMonoid.closure.apl	\func closure {M : Monoid} (S : SubSet M) : SubMonoid M
+SubMonoid.closure.apl	func	97875f5eb01c	658f80eccfef	0baa0ff1		\func apl {M : Monoid} (S : SubSet M) : SubSet M
+SubMonoid.closure.ext	lemma	c377744c2454	-	de51fc91	ba023a22:SubMonoid.closure	\lemma ext {M : Monoid} (S : SubSet M) : S <= closure S
+SubMonoid.closure.univ	lemma	82c006d426c2	-	4616bc0f	ba023a22:SubMonoid.closure	\lemma univ (S' : SubMonoid M) (p : S <= S') (x : M) (q : closure S x) : S' x
+SubMonoid.closure.apl-inc	lemma	f299afedca90	-	1446f5fa	b8b0cfc0:SubMonoid.closure.apl	\lemma apl-inc {n m : Nat} (q : n <= m) (x : M) (p : iterr apl n S x) : iterr apl m S x
+SubMonoid.closure.apl-inc.alt	lemma	9998425afed6	-	8038e5f3		\lemma alt (n m : Nat) (x : M) (p : iterr apl n S x) : iterr apl (n + m) S x
+DecSubMonoid	class	f20039af7dcb	-	bac5f620	32dfaf08:SubMonoid	\class DecSubMonoid \extends SubMonoid, DecSubPointed { \override S : Monoid }
+SubAddMonoid	class	abf5a27f0bfe	-	101f61cc	4e09d8a8:IAddMonoid 37e95f2a:SubAddMonoid.contains_+	\class SubAddMonoid \extends SubAddPointed { \override S : AddMonoid | contains_+ {x y : S} : contains x -> contains y -> contains (x + y) }
+SubAddMonoid.sub-BigSum	lemma	f565d49fe767	-	b4c20537	4e09d8a8:IAddMonoid	\lemma sub-BigSum {l : Array (IAddMonoid \this)} : ((IAddMonoid \this).BigSum l).1 = AddMonoid.BigSum (map __.1 l)
+SubAddMonoid.max	func	d92b5d57177a	83bd4a39f0d3	b00e8f08		\func max {A : AddMonoid} : SubAddMonoid
+SubAddMonoid.contains_*n	lemma	08093d35bdb6	-	3289c5be		\lemma contains_*n {x : S} (c : contains x) {n : Nat} : contains (n AddMonoid.*n x)
+SubAddMonoid.contains_BigSum	lemma	840d3de316e5	-	0fcfe4cd		\lemma contains_BigSum {l : Array S} (p : \Pi (j : Fin l.len) -> contains (l j)) : contains (AddMonoid.BigSum l)
+IAddMonoid	instance	85bfa1ac984f	-	a74d303b	aea0f82c:IAddMonoid.embed 5cec9e87:SubAddMonoid	\instance IAddMonoid (S : SubAddMonoid {}) : AddMonoid
+IAbMonoid	instance	375b6d27c5d8	-	0b00fadb		\instance IAbMonoid {A : AbMonoid} (S : SubAddMonoid A) : AbMonoid
+KernelAddMonoid	func	b59daf57f231	0d916469c040	91c639e9		\func KernelAddMonoid (f : AddMonoidHom) : SubAddMonoid f.Dom
+ImageAddMonoid	func	bad5f84a5305	58d7e3464ed8	15ce6258		\func ImageAddMonoid (f : AddMonoidHom) : SubAddMonoid f.Cod
+ImAddMonoid	func	57b71203ca70	2d62e304d89c	dfa965af	4e09d8a8:IAddMonoid a68adb8e:ImageAddMonoid	\func ImAddMonoid (f : AddMonoidHom) : AddMonoid
+ImAddMonoidLeftHom	func	81d08881bfb8	054ec2927e3a	16772853	ce1451bd:ImAddMonoid	\func ImAddMonoidLeftHom (f : AddMonoidHom) : AddMonoidHom f.Dom (ImAddMonoid f)
+(overview)	-	-	-	661c5604	97c085cd:IAbMonoid c90d3ecf:ICMonoid 5ce99bd6:ICSemigroup ba023a22:SubMonoid.closure b8b0cfc0:SubMonoid.closure.apl	-

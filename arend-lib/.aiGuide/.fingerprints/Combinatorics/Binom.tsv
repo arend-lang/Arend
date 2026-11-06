@@ -1,0 +1,7 @@
+# arend -gc fingerprints v2 for module Combinatorics.Binom. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+binom	func	820d3fa55331	0831763e2a31	764bcb0b		\func binom (n i : Nat) : Nat
+binom.binom_0	lemma	837f4deb4929	-	ecbd8be5	17ab91b1:binom	\lemma binom_0 {n : Nat} : binom n 0 = 1
+binom.binom_<	lemma	acbe71d024c0	-	c98e7e5e	17ab91b1:binom	\lemma binom_< {n m : Nat} (p : n < m) : binom n m = 0
+binom.expansion	lemma	16c3cad99b28	-	8d3b466c	17ab91b1:binom	\lemma expansion {R : CRing} {x y : R} {n : Nat} : pow (x + y) n = BigSum (\new (Array R (suc n) (\lam i => natCoef (binom n i) * (pow x i * pow y (n -' i)))))
+(overview)	-	-	-	3e62dc33	17ab91b1:binom	-

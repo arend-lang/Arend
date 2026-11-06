@@ -1,0 +1,8 @@
+# arend -gc fingerprints v2 for module Equiv.Path. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+pathEquiv	func	b40cbb76822d	a5e8a8d2b3da	9dc9913d		\func pathEquiv {A : \Cat} (R : A -> A -> \Cat) (p : \Pi {a a' : A} -> Retraction {a = a'} {R a a'}) {a a' : A} : QEquiv {a = a'} p
+pathConcatEquiv	func	3305534dea5a	e545c46008e7	6494bd9b		\func pathConcatEquiv {A : \Cat} {a b c : A} (p : a = b) : QEquiv {a = c} {b = c}
+pmapIsEquiv	lemma	1f272abd9cea	-	63225f42		\lemma pmapIsEquiv {A B : \Cat} {f : A -> B} (e : IsEquiv f) {a a' : A} : IsEquiv (pmap f {a} {a'})
+pmapEmbedding	func	155487bf1bca	97f7518ce1c8	3ba533a5	8877554e:pmapIsEquiv	\func pmapEmbedding (e : Embedding) {a a' : e.A} : Embedding {a = a'} (pmap e)
+pmapSection	func	6d79f5486f99	fd436cd61660	80015491		\func pmapSection (s : Section) {a a' : s.A} : Section {a = a'} (pmap s)
+(overview)	-	-	-	02c37e79	fd6617ee:pathEquiv 8877554e:pmapIsEquiv	-

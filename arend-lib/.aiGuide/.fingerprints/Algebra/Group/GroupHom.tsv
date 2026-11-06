@@ -1,0 +1,19 @@
+# arend -gc fingerprints v2 for module Algebra.Group.GroupHom. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+GroupHom	record	cd8eff11c4d1	-	4d5f0224		\record GroupHom \extends MonoidHom { \override Dom : Group \override Cod : Group | func-ide => cancel_*-left (func ide) $ inv func-* *> pmap func ide-left *> inv ide-right }
+GroupHom.func-inverse	lemma	2537a7d4c926	-	392b17c8		\lemma func-inverse {a : Dom} : func (inverse a) = inverse (func a)
+GroupHom.func-conjugate	lemma	69263e7dfae3	-	3a107b37		\lemma func-conjugate {g h : Dom} : func (conjugate g h) = conjugate (func g) (func h)
+GroupHom.func-commutator	lemma	e474cd8f7157	-	771c6b67		\lemma func-commutator {g h : Dom} : func (commutator g h) = commutator (func g) (func h)
+GroupHom.IsIsomorphism	func	d143af8bb978	7093d92676d3	7170fd1c		\func IsIsomorphism : \Prop
+GroupHom.id	func	9eb01da006e4	4b8a32c8c6c3	ac55018e	b30ba16f:GroupHom	\func id {G : Group} : GroupHom G G
+GroupHom.compose	func	563fdf0e6f51	f9fe5a27c798	99cb583a		\func compose {G H K : Group} (g : GroupHom H K) (f : GroupHom G H) : GroupHom G K
+AddGroupHom	record	0f3d5ca03f81	-	62daa694		\record AddGroupHom \extends AddMonoidHom { \override Dom : AddGroup \override Cod : AddGroup | func-zro => AddGroup.cancel-left (func 0) (inv func-+ *> pmap func zro-right *> inv zro-right) }
+AddGroupHom.func-negative	lemma	beca03f273d7	-	69912d02		\lemma func-negative {x : Dom} : func (negative x) = negative (func x)
+AddGroupHom.func-minus	lemma	d1a051694217	-	575aa3ee		\lemma func-minus {x y : Dom} : func (x - y) = func x - func y
+AddGroupHom.injective	lemma	2d4af005842c	-	d45b2f33		\lemma injective (p : \Pi {a : Dom} -> func a = 0 -> a = 0) : IsInj func
+AddGroupHom.func-*i	lemma	c8f555c6c34c	-	4050b183		\lemma func-*i {n : Int} {x : Dom} : func (n AddGroup.*i x) = n AddGroup.*i func x
+AddGroupHom.id	func	950b85bae070	c8683a285574	a4da879d		\func id {G : AddGroup} : AddGroupHom G G
+AddGroupHom.toGroupHom	func	79abcde951a4	55269c50f9b6	e2e3749d	b2359b7e:AddGroupHom b30ba16f:GroupHom	\func toGroupHom {G H : AddGroup} (f : AddGroupHom G H) : GroupHom (AddGroup.toGroup G) (AddGroup.toGroup H)
+AddGroupHom.fromGroupHom	func	9600767d2e91	02fcf9102f50	e93c6cf2	b2359b7e:AddGroupHom b30ba16f:GroupHom	\func fromGroupHom {G H : Group} (f : GroupHom G H) : AddGroupHom (AddGroup.fromGroup G) (AddGroup.fromGroup H)
+conjugateHom	func	16a219c1df8f	043e05657c7f	beeffb4b	b30ba16f:GroupHom	\func conjugateHom {E : Group} (g : E) : GroupHom E E
+(overview)	-	-	-	3b146b19	b2359b7e:AddGroupHom b30ba16f:GroupHom	-

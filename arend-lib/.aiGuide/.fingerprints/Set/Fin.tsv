@@ -1,0 +1,50 @@
+# arend -gc fingerprints v2 for module Set.Fin. Written by `arend -gc stamp`; do not edit.
+# name	kind	sig	def	text	mentions	signature
+FinSet	class	bc585d2277d2	-	6c5f5174	1017afd1:FinSet.finEq	\class FinSet \extends KFinSet, DecSet { | finEq : TruncP (QEquiv {Fin card} {E}) | finSurj => \case finEq \with { | inP e => inP (e, e.isSurj) } | decideEq => \lam x y => (\case finEq \with { | inP e => \case (FinOrder _).decideEq (e.ret x) (e.ret y) \with { | yes q => yes ((symQEquiv e).isInj q) | no q => no (\lam p => q (pmap e.ret p)) } }) | # => /= | nonEqualApart => \lam p => p | #-irreflexive => \lam p => p idp | #-symmetric => /=-sym | #-comparison => \lam x y z x/=z => (\case decideEq x y \with { | yes x=y => byRight (\lam y=z => x/=z (x=y *> y=z)) | no x/=y => byLeft x/=y }) | tightness => \lam {x} {y} x//=y => (\case decideEq x y \with { | yes x=y => x=y | no x/=y => absurd (x//=y x/=y) }) }
+FinSet.choice	lemma	a1ef205e31c5	-	aca254de	1ba843a9:FinSet	\lemma choice {B : E -> \Type} (p : \Pi (x : E) -> TruncP (B x)) : TruncP (\Pi (x : E) -> B x)
+FinSet.liftDepSurj	lemma	53f02d07648d	-	c80c98ee		\lemma liftDepSurj {A B : E -> \Type} {f : \Pi {x : E} -> A x -> B x} (isSur : \Pi {x : E} (y : B x) -> ∃ (a : A x) (f a = y)) (g : \Pi (x : E) -> B x) : ∃ (g' : (\Pi (x : E) -> A x)) ∀ x (f (g' x) = g x)
+FinSet.liftSurj	lemma	f60bf879c5ce	-	abcdfa3d		\lemma liftSurj {A B : \Type} {f : A -> B} (isSur : IsSurj f) (g : E -> B) : ∃ (g' : (E -> A)) ∀ x (f (g' x) = g x)
+FinSet.splitSurj	lemma	534f1d842914	-	e9bbaf0d	1ba843a9:FinSet	\lemma splitSurj {A : \Type} {f : A -> E} (isSur : IsSurj f) : IsSplitSurj f
+finSet	func	7d42cd5d4a06	2c95836afb2c	58f8ce20	1ba843a9:FinSet	\func finSet {A : FinSet}
+FinSet.||-finiteAC	lemma	3869bf080f16	-	9c605cc6		\lemma ||-finiteAC {n : Nat} {A : \Type} {B : Fin n -> \Type} (f : \Pi (i : Fin n) -> A || B i) : A || (\Pi (i : Fin n) -> B i)
+FinSet.finiteAC	lemma	0b3ad3c21d0f	-	01aef234		\lemma finiteAC {n : Nat} {A : Fin n -> \Type} (f : \Pi (i : Fin n) -> TruncP (A i)) : TruncP (\Pi (i : Fin n) -> A i)
+FinSet.searchFin	func	371733d7b126	6789f663c956	02677a2e		\func searchFin {n : Nat} (A : Fin n -> \Prop) (d : \Pi (j : Fin n) -> Dec (A j)) : Or (\Sigma (j0 : Fin n) (A j0) (\Pi (j : Fin n) -> A j -> (j0 : Nat) <= j)) (\Pi (j : Fin n) -> Not (A j))
+FinSet.searchFin-equiv	func	10d0a31ad171	e45b2a1023d2	a84013de	067b2936:FinSet.searchFin	\func searchFin-equiv {B : \Type} {n : Nat} (e : QEquiv {Fin n} {B}) (A : B -> \Prop) (d : \Pi (b : B) -> Dec (A b)) : Or (\Sigma (b : B) (A b)) (\Pi (b : B) -> Not (A b))
+FinSet.searchFin-unique	lemma	c5499cce0afc	-	423c2d75		\lemma searchFin-unique {n : Nat} (A : Fin n -> \Prop) (d : \Pi (j : Fin n) -> Dec (A j)) (c : ∃ (j : Fin n) (A j)) : Contr (\Sigma (j0 : Fin n) (A j0) (\Pi (j : Fin n) -> A j -> (j0 : Nat) <= j))
+FinSet.FinCardBij	lemma	710b3afd27ab	-	6ece22e1		\lemma FinCardBij {n m : Nat} (p : QEquiv {Fin n} {Fin m}) : n = m
+FinSet.FinCardInj	lemma	5b95934de428	-	cff30fa8		\lemma FinCardInj {n m : Nat} (f : Fin n -> Fin m) (f-inj : IsInj f) : n <= m
+FinSet.fromArray	lemma	4cccb1da0615	-	fda44c7e	1ba843a9:FinSet	\lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) (q : \Pi {i j : Fin l.len} -> l i = l j -> i = j) : FinSet A l.len
+card_Equiv	lemma	f4d8fc36cc93	-	bc61afa4		\lemma card_Equiv {A B : FinSet} (e : QEquiv {A} {B}) : A.card = B.card
+card_inj	lemma	041a726770e4	-	84773b98	1ba843a9:FinSet	\lemma card_inj {A B : FinSet} (f : A -> B) (inj : IsInj f) : A.card <= B.card
+FinSet-transport	lemma	2e6cb9c6cbf2	-	41c33666	1ba843a9:FinSet	\lemma FinSet-transport (A : FinSet) {B : \Set} (e : QEquiv {A} {B}) : FinSet B A.card
+FinSet.pred	func	0f25aa1b4df9	44bbeeea8d45	3022e1bd		\func pred {n : Nat} (x : Fin (suc (suc n))) : Fin (suc n)
+FinSet.suc-isInj	lemma	64f9c1fe396a	-	8e4662e0		\lemma suc-isInj {n : Nat} (x y : Fin n) (p : suc x = suc y) : x = y
+FinSet.skip	func	24c797db10db	86db408e0362	154f81c0		\func skip {n : Nat} (x0 x : Fin (suc n)) (d : x0 /= x) : Fin n
+FinSet.skip-isInj	lemma	d5e7a365cda6	-	36b2e444	badbb487:FinSet.skip	\lemma skip-isInj {n : Nat} {x0 x y : Fin (suc n)} {d : x0 /= x} {d' : x0 /= y} (p : skip x0 x d = skip x0 y d') : x = y
+sface	func	a956e29e36d1	1c9e276ab0ef	e45ae7d7		\func sface {n : Nat} (k : Fin (suc n)) (i : Fin n) : Fin (suc n)
+FinSet.sface_skip	lemma	02883144af69	-	5df23f46	badbb487:FinSet.skip 3a8b4610:sface	\lemma sface_skip {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} : sface x0 (skip x0 x d) = x
+FinSet.skip_sface	lemma	609d98dc3795	-	5df23f46	badbb487:FinSet.skip 3a8b4610:sface	\lemma skip_sface {n : Nat} {k : Fin (suc n)} {i : Fin n} {d : k /= sface k i} : skip k (sface k i) d = i
+sface-skip	lemma	93f9589ed8f0	-	d7a1dfee	3a8b4610:sface	\lemma sface-skip {n : Nat} {k : Fin (suc n)} {i : Fin n} : sface k i /= k
+sface-inj	lemma	8c9b2d10a1be	-	0c832e68	3a8b4610:sface	\lemma sface-inj {n : Nat} {k : Fin (suc n)} {i i' : Fin n} (p : sface k i = sface k i') : i = i'
+FinSet.skip_<	lemma	081869d9b8db	-	1b4a2c44	badbb487:FinSet.skip	\lemma skip_< {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : skip x0 x d < skip x0 x' d') : x < x'
+FinSet.<_skip	lemma	df14c04b3f44	-	1b4a2c44	badbb487:FinSet.skip	\lemma <_skip {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : x < x') : skip x0 x d < skip x0 x' d'
+FinSet.skip-left	lemma	53a0036dbd37	-	c1557989	badbb487:FinSet.skip	\lemma skip-left {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} (p : x < x0) : skip x0 x d = {Nat} x
+FinSet.skip-right	lemma	9e7e008097f9	-	c1557989	badbb487:FinSet.skip	\lemma skip-right {n : Nat} {x0 x : Fin (suc n)} {d : x0 /= x} (p : x0 < x) : skip x0 x d = {Nat} pred' x
+fin-inc_<=	func	fa1e37769d40	41724563e6e7	bf45229c		\func fin-inc_<= {n m : Nat} (p : n <= m) (i : Fin n) : Fin m
+fin-inc	func	3f4de68dd7e1	612cc8e5c2cc	a0cf0ba4		\func fin-inc {n m : Nat} (i : Fin n) : Fin (n + m)
+fin-inc-right	func	47c2e1ecad08	67faa27281e4	dacb5a68		\func fin-inc-right {n m : Nat} (i : Fin m) : Fin (n + m)
+fin-raise	func	557b76904cd8	67d8051ca391	0e09e329		\func fin-raise {n k : Nat} (i : Fin n) : Fin (k + n)
+transport_zero	lemma	821db5ddf3d2	-	44ed4b8f		\lemma transport_zero {n m : Nat} (p : n = m) : transport Fin (pmap suc p) 0 = 0
+transport_suc	lemma	f682a521e0d1	-	44ed4b8f		\lemma transport_suc {n m : Nat} (p : n = m) (x : Fin n) : transport Fin (pmap suc p) (suc x) = suc (transport Fin p x)
+fin_transport	lemma	b4cc3e387d47	-	7a0881c7		\lemma fin_transport {n m : Nat} {j : Fin n} {p : n = m} : transport Fin p j = {Nat} j
+EmptyFin	instance	85f2cf87a81a	-	8b44af0c	1ba843a9:FinSet	\instance EmptyFin : FinSet Empty
+UnitFin	instance	7bb34345f26b	-	ffa0204f	1ba843a9:FinSet	\instance UnitFin : FinSet (\Sigma)
+BoolFin	instance	125ebcf2791b	-	413ef937	eb8592b3:BoolFin.equiv 1ba843a9:FinSet	\instance BoolFin : FinSet Bool 2
+FinFin	instance	78c3246223dd	-	e02f78bf	1ba843a9:FinSet	\instance FinFin (n : Nat) : FinSet (Fin n)
+DecFin	func	ede255cd6c35	7ebe2f7d0039	fd52faf3	1ba843a9:FinSet	\func DecFin {P : \Prop} (d : Dec P) : FinSet P
+FinDec	func	1378a1cd0745	35d8a5626446	615fce65	51daed46:FinDec.fin-dec 1ba843a9:FinSet	\func FinDec {A : FinSet} (B : A -> Decide) : Decide (\Pi (a : A) -> B a)
+OrFin	instance	22b3fcc846ac	-	d6c2129f	1ba843a9:FinSet e9ef987c:OrFin.aux 4a223afb:OrFin.ret_inl-lem 4da4918f:OrFin.ret_inr-lem	\instance OrFin (S T : FinSet) : FinSet (Or S T)
+three-consecutive-equals	lemma	dddc5508a405	-	a0919c33		\lemma three-consecutive-equals {n N : Nat} (N>2n : N > 2 * n) (k : Fin (N + 2) -> Fin (suc n)) (monotone : \Pi (j : Fin (suc N)) -> k (suc j) <= {NatSemiring} k j) : ∃ (j : Fin N) (k j = k (suc j)) (k (suc j) = k (suc (suc j)))
+sucPreserving-isId	lemma	0ed33b8d4cda	-	94198dca		\lemma sucPreserving-isId {n : Nat} (f : Fin (suc n) -> Nat) (plus1 : \Pi (x : Fin n) -> f (suc x) = suc (f x)) (f0 : f 0 = 0) (x : Fin (suc n)) : f x = x
+finiteDependentChoice	lemma	46c7e37ad3e3	-	349b7a5a		\lemma finiteDependentChoice {A : \Type} (R : A -> A -> \Type) (a0 : A) (step : \Pi (a : A) -> ∃ (b : A) (R a b)) (n : Nat) : ∃ (f : (Fin (suc n) -> A)) (f 0 = a0) (\Pi (i : Fin n) -> R (f i) (f (suc i)))
+(overview)	-	-	-	394ed306	1ba843a9:FinSet	-
