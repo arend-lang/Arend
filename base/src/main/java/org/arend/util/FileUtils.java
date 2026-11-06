@@ -56,7 +56,9 @@ public class FileUtils {
   private static final String MODULE_NAME_START_SYMBOL_REGEX = "a-zA-Z_";
   private static final Pattern MODULE_NAME_REGEX = Pattern.compile("[" + MODULE_NAME_START_SYMBOL_REGEX + "][" + MODULE_NAME_START_SYMBOL_REGEX + "0-9']*");
   private static final Pattern LIBRARY_NAME_REGEX = Pattern.compile("[" + MODULE_NAME_START_SYMBOL_REGEX + "][" + MODULE_NAME_START_SYMBOL_REGEX + "0-9\\-.']*/?");
-  private static final String DEFINITION_NAME_START_SYMBOL_REGEX = "a-zA-Z\\Q~!@#$%^&*-+=<>?/|:[]_\\E";
+  // START_CHAR of the ID rule in Arend.g4, including its two blocks of mathematical operators
+  // (U+2200-22FF, U+2A00-2AFF), without which names such as `∪`, `⊆` or `Big_∧` are rejected.
+  private static final String DEFINITION_NAME_START_SYMBOL_REGEX = "a-zA-Z\\Q~!@#$%^&*-+=<>?/|:[]_\\E\u2200-\u22FF\u2A00-\u2AFF";
   private static final Pattern DEFINITION_NAME_REGEX = Pattern.compile("[" + DEFINITION_NAME_START_SYMBOL_REGEX + "][" + DEFINITION_NAME_START_SYMBOL_REGEX + "0-9']*");
 
   public static boolean isLibraryName(String name) {
