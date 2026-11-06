@@ -1,20 +1,26 @@
-val baseName = "arend-lib"
-
 plugins {
     java
 }
 
+val libDir = projectDir.parentFile
+
+// cliCheck runs the jar of :cli
+evaluationDependsOn(":cli")
+
 tasks.register<JavaExec>("cliCheck") {
     group = "verification"
-    dependsOn(task(":cli:jarDep"), tasks.named("classes"))
-    mainClass.set("-jar")
-    val jarDepPath = projectDir.resolve("cli/build/libs/cli-1.12.0-full.jar").absolutePath
-    args(jarDepPath, "-tcr")
-    workingDir(baseName)
+    description = "Typechecks arend-lib and its tests with the CLI built from this checkout"
+    dependsOn(tasks.named("classes"))
+    classpath(project(":cli").tasks.named("jarDep"))
+    mainClass = "org.arend.frontend.ConsoleMain"
+    maxHeapSize = "6g"
+    // -t: the tests too, -c: double check, -r: ignore the .arc caches; and no daemon, which would run older code
+    args("--no-daemon", "-tcr")
+    workingDir(libDir)
 }
 
 tasks.register("copyJarDep") {
-    dependsOn(task(":cli:copyJarDep"))
+    dependsOn(":cli:copyJarDep")
 }
 
 repositories {
