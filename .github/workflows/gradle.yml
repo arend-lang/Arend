@@ -3,13 +3,15 @@ on:
   push:
     branches:
       - master
+      - staging
   pull_request:
     branches:
       - master
+      - staging
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # A new push to a PR supersedes its running build; every master commit keeps its own result
+  # A new push to a PR supersedes its running build; every master and staging commit keeps its own result
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   gradle:
