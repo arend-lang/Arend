@@ -24,7 +24,9 @@ import java.util.Set;
  * spec it locates the enclosing module (honoring an optional {@code library::}
  * prefix and warning on ambiguous module paths), then walks the long name into the
  * raw group; a bare name (optionally dotted) is looked up through the per-library
- * symbol indexes by trailing short name and long-name suffix.
+ * symbol indexes by trailing short name and long-name suffix. A definition's
+ * {@code \alias} (e.g. {@code ∪} for {@code union}) is accepted wherever its name is:
+ * as any segment of {@code module:def}, and as the last segment of a bare name.
  *
  * <p>Diagnostics go to {@code System.err} (and an {@code [INFO]} resolution line to
  * {@code System.out} for the bare-name path), matching the tools' other output.
@@ -120,9 +122,14 @@ public final class TargetResolver {
     for (Map.Entry<SourceLibrary, SymbolIndex> e : indexes.entrySet()) {
       for (SymbolIndex.Entry entry : e.getValue().allEntries()) {
         if (kindFilter != null && !kindFilter.contains(entry.kind())) continue;
-        if (!entry.shortName().equals(shortName)) continue;
-        if (userSegments.size() > 1
-            && !endsWith(LongName.fromString(entry.longName()).toList(), userSegments)) continue;
+        String matched = entry.findName(shortName::equals);
+        if (matched == null) continue;
+        if (userSegments.size() > 1) {
+          // Compare the user's segments against the long name as spelled with the name they used.
+          List<String> full = new ArrayList<>(LongName.fromString(entry.longName()).toList());
+          full.set(full.size() - 1, matched);
+          if (!endsWith(full, userSegments)) continue;
+        }
         matches.add(entry);
         libOf.put(entry, e.getKey());
       }
@@ -201,27 +208,32 @@ public final class TargetResolver {
     return result;
   }
 
-  /** The immediate static or dynamic subgroup of {@code group} named {@code name}, or {@code null}. */
+  /** The immediate static or dynamic subgroup of {@code group} named (or aliased) {@code name}, or {@code null}. */
   static @Nullable ConcreteGroup findChildGroup(ConcreteGroup group, String name) {
     for (ConcreteStatement stmt : group.statements()) {
       ConcreteGroup sub = stmt.group();
-      if (sub != null && name.equals(sub.referable().textRepresentation())) {
+      if (sub != null && isNamed(sub.referable(), name)) {
         return sub;
       }
     }
     for (ConcreteGroup dyn : group.dynamicGroups()) {
-      if (name.equals(dyn.referable().textRepresentation())) {
+      if (isNamed(dyn.referable(), name)) {
         return dyn;
       }
     }
     return null;
   }
 
-  /** The internal referable (constructor / field) of {@code group} named {@code name}, or {@code null}. */
+  /** The internal referable (constructor / field) of {@code group} named (or aliased) {@code name}, or {@code null}. */
   static @Nullable LocatedReferable findInternalReferable(ConcreteGroup group, String name) {
     for (LocatedReferable r : group.getInternalReferables()) {
-      if (name.equals(r.textRepresentation())) return r;
+      if (isNamed(r, name)) return r;
     }
     return null;
+  }
+
+  /** Whether {@code name} is {@code ref}'s own name or its {@code \alias}. */
+  private static boolean isNamed(LocatedReferable ref, String name) {
+    return name.equals(ref.textRepresentation()) || name.equals(ref.getAliasName());
   }
 }

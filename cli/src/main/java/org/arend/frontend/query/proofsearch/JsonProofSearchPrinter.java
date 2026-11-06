@@ -27,6 +27,7 @@ final class JsonProofSearchPrinter implements ProofSearchTool.ProofSearchPrinter
           omitLibrary ? null : m.module().getLibraryName(),
           m.module().getModulePath().toString(),
           m.referable().getRefLongName().toString(),
+          null,
           SymbolIndex.kindOf(m.referable(), m.definition()).name(),
           sig, expr, file, lc[0], lc[1]));
     }

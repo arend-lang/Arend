@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
  * Round-trip tests for the on-disk symbol-index format.
  *
  * <p>The format escapes {@code \}, {@code |}, {@code \n} and {@code \r} so an entry always
- * occupies one physical line with seven pipe-separated fields. The reader has to honour that
+ * occupies one physical line with eight pipe-separated fields. The reader has to honour that
  * escaping: an earlier version split on a plain {@code |} and so silently dropped every
  * definition whose name contains one -- in arend-lib that is {@code ||}, {@code ||-search},
  * {@code ||-finiteAC} and the {@code GCD.res|val1} fields, which were findable on a cold
@@ -32,8 +32,12 @@ public class SymbolIndexStoreTest {
   private static final ModulePath MODULE = ModulePath.fromString("Test.Module");
 
   private static SymbolIndex.Entry entry(String shortName, String longName, String signature) {
+    return aliased(shortName, longName, signature, null);
+  }
+
+  private static SymbolIndex.Entry aliased(String shortName, String longName, String signature, String alias) {
     return new SymbolIndex.Entry(shortName, longName, SymbolIndex.Kind.LEMMA, MODULE,
-        "/src/Test/Module.ard", 12, 3, signature);
+        "/src/Test/Module.ard", 12, 3, signature, alias);
   }
 
   /** Writes {@code entries} to a fresh cache file and reads them straight back. */
@@ -95,8 +99,20 @@ public class SymbolIndexStoreTest {
   @Test
   public void pipeInFilePathSurvives() throws IOException {
     SymbolIndex.Entry e = new SymbolIndex.Entry("f", "f", SymbolIndex.Kind.FUNCTION, MODULE,
-        "/src/od|d/Module.ard", 1, 1, "\\func f : Nat");
+        "/src/od|d/Module.ard", 1, 1, "\\func f : Nat", null);
     assertSurvives(e);
+  }
+
+  /** An operator alias -- the reason the field exists -- comes back as written. */
+  @Test
+  public void operatorAliasSurvives() throws IOException {
+    assertSurvives(aliased("union", "union", "\\func union {A : \\Type} (U V : Set A) : Set A", "∪"));
+  }
+
+  /** An alias containing the delimiter must not shift the field layout either. */
+  @Test
+  public void pipeInAliasSurvives() throws IOException {
+    assertSurvives(aliased("or", "Bool.or", "\\func or (a b : Bool) : Bool", "||"));
   }
 
   /** Every entry must survive when written together, and keep its order. */
@@ -107,6 +123,7 @@ public class SymbolIndexStoreTest {
         entry("||-search", "KFinSet.||-search", "\\lemma ||-search : A || B"),
         entry("||", "||", "\\data || (A B : \\Type)"),
         entry("res|val1", "GCD.res|val1", "| res|val1 : LDiv"),
+        aliased("Big_meet", "MeetSemilattice.Big_meet", "\\func Big_meet", "Big_∧"),
         entry("plain", "plain", ""));
     assertEquals(entries, roundTrip(entries));
   }
@@ -115,7 +132,7 @@ public class SymbolIndexStoreTest {
   @Test
   public void foreignHeaderIsRejected() throws IOException {
     Path file = folder.newFolder().toPath().resolve(".arend-symbol-index");
-    Files.writeString(file, "# arend symbol index v4\nlibrary: test-lib\n");
+    Files.writeString(file, "# arend symbol index v5\nlibrary: test-lib\n");
     try {
       SymbolIndexStore.load(file, new LinkedHashMap<>(), new LinkedHashMap<>());
       throw new AssertionError("expected an IOException for a stale header");

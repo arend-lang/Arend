@@ -9,8 +9,8 @@ import java.util.List;
 
 /**
  * Renders a matched {@link SymbolIndex.Entry} for the {@code -ss} text listing: the location
- * header, the {@code [library::]module:LongName [KIND]} line with the query's matched parts
- * wrapped in ANSI green, and the (optionally multi-line) signature. Also exposes
+ * header, the {@code [library::]module:LongName [\alias A] [KIND]} line with the query's matched
+ * parts wrapped in ANSI green, and the (optionally multi-line) signature. Also exposes
  * {@link #prefixSegments} — the entry's enclosing-path segments — which the tool's long-name
  * matcher shares.
  */
@@ -58,9 +58,10 @@ final class SymbolSearchRenderer {
   }
 
   /**
-   * Renders {@code [library::]module:LongName} with every query-matched part wrapped in ANSI
-   * green. For ordinary patterns only the short name's matched span lights up; for a
-   * {@link SymbolPattern.Mode#LONGNAME} pattern every matched segment does (short name plus
+   * Renders {@code [library::]module:LongName}, followed by {@code \alias A} for a definition
+   * that has one, with every query-matched part wrapped in ANSI green. For ordinary patterns
+   * only the matched span of the short name or alias lights up; for a
+   * {@link SymbolPattern.Mode#LONGNAME} pattern every matched segment does (that name plus
    * the enclosing path segments its leading parts matched). Non-JSON path only.
    */
   private static String renderQualifiedName(boolean showLibrary, String libName,
@@ -68,9 +69,11 @@ final class SymbolSearchRenderer {
     String moduleStr = e.modulePath().toString();
     String longNameStr = e.longName();
     String shortName = e.shortName();
+    String alias = e.aliasName();
 
     List<int[]> moduleRanges = new ArrayList<>();
     List<int[]> longNameRanges = new ArrayList<>();
+    List<int[]> aliasRanges = new ArrayList<>();
 
     // Segment offsets are needed only when a LONGNAME pattern is present.
     List<String> moduleSegments = null;
@@ -85,11 +88,16 @@ final class SymbolSearchRenderer {
         }
         List<String> prefix = prefixSegments(e);
         SymbolPattern.LongNameHighlights hl = p.longNameHighlights(prefix, shortName);
-        if (hl == null) continue;   // this OR-ed pattern is not the one that matched
-        // Final segment -> the short name (trailing segment of the long name).
-        int shortOff = shortNameOffset(longNameStr, shortName);
-        if (shortOff >= 0) {
-          for (int[] r : hl.shortNameRanges()) longNameRanges.add(new int[]{shortOff + r[0], shortOff + r[1]});
+        if (hl != null) {
+          // Final segment -> the short name (trailing segment of the long name).
+          int shortOff = shortNameOffset(longNameStr, shortName);
+          if (shortOff >= 0) {
+            for (int[] r : hl.shortNameRanges()) longNameRanges.add(new int[]{shortOff + r[0], shortOff + r[1]});
+          }
+        } else if (alias != null && (hl = p.longNameHighlights(prefix, alias)) != null) {
+          aliasRanges.addAll(hl.shortNameRanges());   // final segment -> the alias
+        } else {
+          continue;   // this OR-ed pattern is not the one that matched
         }
         // Leading segments -> the module path or the long name's leading segments, by index.
         int msz = moduleSegments.size();
@@ -105,14 +113,16 @@ final class SymbolSearchRenderer {
           }
         }
       } else {
+        if (alias != null) aliasRanges.addAll(p.highlightRanges(alias));
         int off = shortNameOffset(longNameStr, shortName);
         if (off < 0) continue;
         for (int[] r : p.highlightRanges(shortName)) longNameRanges.add(new int[]{off + r[0], off + r[1]});
       }
     }
 
-    return QualifiedName.format(showLibrary, libName,
+    String name = QualifiedName.format(showLibrary, libName,
         MatchHighlighter.highlight(moduleStr, moduleRanges), MatchHighlighter.highlight(longNameStr, longNameRanges));
+    return alias == null ? name : name + " \\alias " + MatchHighlighter.highlight(alias, aliasRanges);
   }
 
   /** Position of the trailing short name within its long name (-1 if absent). */

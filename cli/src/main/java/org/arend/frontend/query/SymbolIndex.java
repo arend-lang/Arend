@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * On-disk + in-memory cache of (name, file:line, signature) triples per library.
@@ -45,8 +46,19 @@ public final class SymbolIndex {
       String absoluteFile,       // absolute path to source file, may be empty for generated
       int line,                  // 1-based; 0 when unknown
       int column,                // 1-based; 0 when unknown
-      String signature           // single-line, may be empty
-  ) {}
+      String signature,          // single-line, may be empty
+      @Nullable String aliasName // the \alias name (often an operator, e.g. `∪`), or null
+  ) {
+    /**
+     * Which of this entry's names {@code accept} takes -- its short name, else its alias --
+     * or {@code null} when it takes neither. A definition declared {@code \func union \alias ∪}
+     * is written as either name in source, so a query must find it by either.
+     */
+    public @Nullable String findName(@NotNull Predicate<String> accept) {
+      if (accept.test(shortName)) return shortName;
+      return aliasName != null && accept.test(aliasName) ? aliasName : null;
+    }
+  }
 
   private final String myLibraryName;
   private final Path myCacheFile;
@@ -241,7 +253,7 @@ public final class SymbolIndex {
     String longName = ref.getRefLongName().toString();
     out.add(new Entry(
         ref.textRepresentation(), longName, kindOf(ref, def), mp,
-        absFile, pos[0], pos[1], signature
+        absFile, pos[0], pos[1], signature, ref.getAliasName()
     ));
   }
 
@@ -277,7 +289,8 @@ public final class SymbolIndex {
     String signature = "<generated " + describeKind(k) + " from " + moduleLabel + ">";
     if (ref instanceof MetaReferable) signature = "\\meta " + shortName + "  " + signature;
     int[] pos = SourcePositionUtils.lineColumn(ref);
-    return new Entry(shortName, longName, k, mp == null ? GENERATED_BUCKET : mp, "", pos[0], pos[1], signature);
+    return new Entry(shortName, longName, k, mp == null ? GENERATED_BUCKET : mp, "", pos[0], pos[1], signature,
+        ref.getAliasName());
   }
 
   private static String describeKind(Kind k) {

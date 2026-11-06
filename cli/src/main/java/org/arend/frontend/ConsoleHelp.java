@@ -58,6 +58,10 @@ public final class ConsoleHelp {
       uppercase letter matches uppercase only. So `monoid` finds `Monoid`, while
       `Monoid` skips a lowercase `monoid`.
 
+      ALIASES: every mode also matches a definition's \\alias, so `∪` (and the long
+      name `Set.Set.∪`) finds `\\func union \\alias \\infixl 6 ∪`. The alias is printed
+      after the name.
+
       Multiple patterns are OR'd; whitespace inside one argument also separates, so
       `-ss "Monoid Ring"` is the same as `-ss Monoid -ss Ring`.
 
@@ -83,10 +87,12 @@ public final class ConsoleHelp {
   // TAIL (CLI): OUTPUT with the --json note, and `arend ... -ss` examples.
   private static final String SS_TAIL_CLI = """
       OUTPUT is line-oriented: location, then `[library::]module:LongName [KIND]` (the
-      `library::` prefix appears only when more than one library is in scope), then the
-      one-line signature. With --json output is `{"results":[...],"count":N}` where
-      count is the total match count and results is truncated to `limit`; diagnostics
-      go to a log file (default <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
+      `library::` prefix appears only when more than one library is in scope; an aliased
+      definition reads `module:LongName \\alias A [KIND]`), then the one-line signature.
+      With --json output is `{"results":[...],"count":N}` where count is the total match
+      count and results is truncated to `limit`; a result carries `alias` when the
+      definition has one. Diagnostics go to a log file (default
+      <tmpdir>/arend-symbol-search.log) so stdout stays pure JSON.
 
       EXAMPLES
         arend arend-lib -ss Monoid                    substring
@@ -102,8 +108,8 @@ public final class ConsoleHelp {
   // TAIL (REPL): OUTPUT without JSON, and `:ss` examples (no shell quoting).
   private static final String SS_TAIL_REPL = """
       OUTPUT is line-oriented: location, then `[library::]module:LongName [KIND]` (the
-      `library::` prefix appears only when more than one library is in scope), then the
-      one-line signature.
+      `library::` prefix appears only when more than one library is in scope; an aliased
+      definition reads `module:LongName \\alias A [KIND]`), then the one-line signature.
 
       EXAMPLES
         :ss Monoid                 substring
@@ -220,6 +226,7 @@ public final class ConsoleHelp {
         MODULE_PATH    dotted module path,         e.g. Algebra.Monoid
         GROUP_PATH     dotted in-module path,      e.g. Monoid.equals
                        Reaches class fields, constructors, and \\where members.
+                       A segment may be the definition's \\alias, e.g. Set.Set:∪.
         An optional `<library>::` prefix is accepted and scopes resolution to that
         library, so a candidate line printed on an ambiguous lookup (e.g.
         `arend-lib::Arith.Trig.Real:sin`) can be pasted back verbatim.

@@ -18,7 +18,8 @@ final class JsonSymbolSearchPrinter implements SymbolSearchPrinter {
   /**
    * Emits the ranked hits via {@link ResultJson} as {@code {"results": [...], "count": N}}.
    * Each result carries {@code library} (omitted when a single non-prelude library is in scope),
-   * {@code module}, {@code name}, {@code kind}, {@code signature} (omitted when empty) and a
+   * {@code module}, {@code name}, {@code alias} (the {@code \alias} name; omitted when there is none),
+   * {@code kind}, {@code signature} (omitted when empty) and a
    * {@code location}. {@code results} honours {@code limit}; {@code count} is the pre-truncation total.
    */
   @Override
@@ -35,6 +36,7 @@ final class JsonSymbolSearchPrinter implements SymbolSearchPrinter {
           showLibrary ? h.libName() : null,
           e.modulePath().toString(),
           e.longName(),
+          e.aliasName(),
           e.kind().name(),
           e.signature().isEmpty() ? null : e.signature(),
           null,            // -ss reports a full signature, never an "expression" slice

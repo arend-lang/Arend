@@ -35,10 +35,13 @@ final class SymbolIndexStore {
   // escaped on write and unescaped on read. v4 also split entries on a plain `|`,
   // ignoring its own `\|` escaping and thereby dropping every definition whose name
   // contains a pipe (`||`, `||-search`, `GCD.res|val1`); see #splitUnescaped.
-  private static final String FORMAT_HEADER = "# arend symbol index v5";
+  //
+  // v6 appends the definition's \alias name (empty when it has none), without which an
+  // operator alias such as `∪` (of `union`) or `Big_∧` could not be searched for.
+  private static final String FORMAT_HEADER = "# arend symbol index v6";
 
-  /** Fields per entry line: shortName, longName, kind, file, line, column, signature. */
-  private static final int FIELD_COUNT = 7;
+  /** Fields per entry line: shortName, longName, kind, file, line, column, signature, alias. */
+  private static final int FIELD_COUNT = 8;
 
   // ---- file location ------------------------------------------------------
 
@@ -117,7 +120,8 @@ final class SymbolIndexStore {
         // read restores it.
         w.write("  " + escape(e.shortName()) + "|" + escape(e.longName()) + "|" + e.kind().name() + "|"
             + escape(e.absoluteFile() == null ? "" : e.absoluteFile()) + "|"
-            + e.line() + "|" + e.column() + "|" + escape(e.signature()));
+            + e.line() + "|" + e.column() + "|" + escape(e.signature()) + "|"
+            + escape(e.aliasName() == null ? "" : e.aliasName()));
         w.newLine();
       }
     }
@@ -164,8 +168,9 @@ final class SymbolIndexStore {
       SymbolIndex.Kind k = SymbolIndex.Kind.valueOf(parts.get(2));
       int ln = Integer.parseInt(parts.get(4));
       int col = Integer.parseInt(parts.get(5));
+      String alias = unescape(parts.get(7));
       return new SymbolIndex.Entry(unescape(parts.get(0)), unescape(parts.get(1)), k, mp,
-          unescape(parts.get(3)), ln, col, unescape(parts.get(6)));
+          unescape(parts.get(3)), ln, col, unescape(parts.get(6)), alias.isEmpty() ? null : alias);
     } catch (RuntimeException e) {
       return null;
     }

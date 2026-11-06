@@ -4,6 +4,7 @@ import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.query.SymbolIndex;
 import org.arend.frontend.query.SymbolPattern;
 import org.arend.server.ArendServer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -21,18 +22,21 @@ import java.util.Set;
 final class SymbolSearchEngine {
   private SymbolSearchEngine() {}
 
-  /** One matched index entry together with the library it came from. */
-  record Hit(String libName, SymbolIndex.Entry entry) {}
+  /**
+   * One matched index entry, the library it came from, and the name the query matched:
+   * the entry's short name, or its {@code \alias} when only the alias matched.
+   */
+  record Hit(String libName, SymbolIndex.Entry entry, String matchedName) {}
 
   /** Ranked hits, ranked suggestions (entries matching a query word-part), and those word-parts. */
   record Result(List<Hit> hits, List<Hit> suggestions, LinkedHashSet<String> suggestParts) {}
 
-  // Rank: shortest short-name first, so an exact-length name (the best possible substring match
+  // Rank: shortest matched name first, so an exact-length name (the best possible substring match
   // for any literal query) surfaces above longer names that merely contain the query. Tie-break
   // alphabetically (case-insensitive) for determinism, then by library so equal names group.
   private static final Comparator<Hit> BY_RANK = Comparator
-      .<Hit>comparingInt(h -> h.entry().shortName().length())
-      .thenComparing(h -> h.entry().shortName(), String.CASE_INSENSITIVE_ORDER)
+      .<Hit>comparingInt(h -> h.matchedName().length())
+      .thenComparing(Hit::matchedName, String.CASE_INSENSITIVE_ORDER)
       .thenComparing(Hit::libName);
 
   static Result find(List<SymbolPattern> patterns, EnumSet<SymbolIndex.Kind> kinds,
@@ -46,10 +50,11 @@ final class SymbolSearchEngine {
       SymbolIndex idx = SymbolIndex.refreshLibrary(lib, server, false);
       for (SymbolIndex.Entry e : idx.allEntries()) {
         if (!kinds.contains(e.kind())) continue;
-        if (matchesAny(patterns, e)) {
-          hits.add(new Hit(lib.getLibraryName(), e));
-        } else if (!suggestPatterns.isEmpty() && matchesAny(suggestPatterns, e)) {
-          suggestions.add(new Hit(lib.getLibraryName(), e));
+        String name = matchedName(patterns, e);
+        if (name != null) {
+          hits.add(new Hit(lib.getLibraryName(), e, name));
+        } else if (!suggestPatterns.isEmpty() && (name = matchedName(suggestPatterns, e)) != null) {
+          suggestions.add(new Hit(lib.getLibraryName(), e, name));
         }
       }
     }
@@ -58,13 +63,23 @@ final class SymbolSearchEngine {
     return new Result(hits, suggestions, suggestParts);
   }
 
-  private static boolean matchesAny(List<SymbolPattern> patterns, SymbolIndex.Entry e) {
+  /** The entry's name (short name, else alias) that one of {@code patterns} matches, or {@code null}. */
+  private static @Nullable String matchedName(List<SymbolPattern> patterns, SymbolIndex.Entry e) {
+    return e.findName(name -> matchesAny(patterns, e, name));
+  }
+
+  /**
+   * Whether one of {@code patterns} matches {@code name}, one of {@code e}'s names. A long-name
+   * pattern matches its final segment against {@code name} and its leading segments against the
+   * entry's enclosing path, which an alias shares with the short name it stands for.
+   */
+  private static boolean matchesAny(List<SymbolPattern> patterns, SymbolIndex.Entry e, String name) {
     List<String> prefix = null;   // lazily built; only long-name patterns need it
     for (SymbolPattern p : patterns) {
       if (p.mode() == SymbolPattern.Mode.LONGNAME) {
         if (prefix == null) prefix = SymbolSearchRenderer.prefixSegments(e);
-        if (p.matchesLongName(prefix, e.shortName())) return true;
-      } else if (p.matches(e.shortName())) {
+        if (p.matchesLongName(prefix, name)) return true;
+      } else if (p.matches(name)) {
         return true;
       }
     }

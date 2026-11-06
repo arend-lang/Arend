@@ -22,7 +22,7 @@ final class JsonFindUsagesPrinter implements FindUsagesTool.FindUsagesPrinter {
             // modules (no on-disk path) — the module path still identifies the location.
             String file = PathDisplayUtils.shortenedSourcePath(h.module(), lm);
             rows.add(new ResultJson.Row(target.showLibrary() ? h.module().getLibraryName() : null,
-                    h.module().getModulePath().toString(), h.ambientName(), h.ambientKind(),
+                    h.module().getModulePath().toString(), h.ambientName(), null, h.ambientKind(),
                     null, null, file, h.line(), h.column()));
         }
         ResultJson.write(out, rows, hits.size());

@@ -10,9 +10,9 @@ import java.util.List;
  *
  * <p>Produces a single object {@code {"results": [ ... ], "count": N}} where each
  * element of {@code results} carries {@code library} (optional), {@code module},
- * {@code name}, {@code kind}, at most one of {@code signature}/{@code expression},
- * and a nested {@code location} object {@code {"file", "line", "col"}} (its
- * {@code file} omitted for generated modules). {@code count} is the total number
+ * {@code name}, {@code alias} (optional), {@code kind}, at most one of
+ * {@code signature}/{@code expression}, and a nested {@code location} object
+ * {@code {"file", "line", "col"}} (its {@code file} omitted for generated modules). {@code count} is the total number
  * of matches, which may exceed {@code results.length} when the caller truncated
  * the list (e.g. {@code -ss limit=N}).
  *
@@ -23,14 +23,16 @@ public final class ResultJson {
   private ResultJson() {}
 
   /**
-   * One result row. A {@code null} or empty optional field ({@code library},
+   * One result row. A {@code null} or empty optional field ({@code library}, {@code alias},
    * {@code signature}, {@code expression}, {@code file}) is omitted from the
    * emitted object; {@code line}/{@code col} are always present (0 = unknown).
+   * {@code alias} is the definition's {@code \alias} name, which {@code -ss} also matches.
    */
   public record Row(
       @Nullable String library,
       String module,
       String name,
+      @Nullable String alias,
       String kind,
       @Nullable String signature,
       @Nullable String expression,
@@ -63,6 +65,7 @@ public final class ResultJson {
     if (r.library() != null && !r.library().isEmpty()) first = str(sb, true, "library", r.library());
     first = str(sb, first, "module", r.module());
     first = str(sb, first, "name", r.name());
+    if (r.alias() != null && !r.alias().isEmpty()) first = str(sb, first, "alias", r.alias());
     first = str(sb, first, "kind", r.kind());
     if (r.signature() != null && !r.signature().isEmpty()) first = str(sb, first, "signature", r.signature());
     if (r.expression() != null && !r.expression().isEmpty()) first = str(sb, first, "expression", r.expression());
