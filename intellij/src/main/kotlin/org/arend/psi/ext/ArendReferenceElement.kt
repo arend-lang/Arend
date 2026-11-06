@@ -18,11 +18,11 @@ interface ArendReferenceElement : ArendReferenceContainer, AbstractReference {
     private object ArendReferenceKey : Key<Referable>("AREND_REFERENCE_KEY")
 
     val cachedReferable: Referable?
-        get() = getUserData(ArendReferenceKey)
+        get() = getUserData(ArendReferenceKey)?.takeUnless { (it.abstractReferable as? PsiElement)?.isValid == false }
 
     val cachedOrNull: Referable?
         get() {
-            val cached = getUserData(ArendReferenceKey)
+            val cached = cachedReferable
             return if (cached == TCDefReferable.NULL_REFERABLE) null else cached
         }
 
@@ -38,9 +38,10 @@ interface ArendReferenceElement : ArendReferenceContainer, AbstractReference {
         if (containingFile is ArcFile) return ArcReferences.resolve(this)
 
         val cached = cachedReferable
-        if (cached != null) {
+        if (cached != null && toPsi(cached)?.isValid != false) {
             return if (cached == TCDefReferable.NULL_REFERABLE) null else cached
         }
+        if (cached != null) putUserData(ArendReferenceKey, null)
 
         val module = referenceModule ?: return null
         project.service<ArendServerService>().server.getCheckerFor(listOf(module)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
@@ -48,14 +49,16 @@ interface ArendReferenceElement : ArendReferenceContainer, AbstractReference {
     }
 
     fun resolvePsi(): PsiElement? =
-        if (containingFile is ArcFile) ArcReferences.resolvePsi(this) else when (val ref = resolve()?.abstractReferable) {
+        if (containingFile is ArcFile) ArcReferences.resolvePsi(this) else resolve()?.let { toPsi(it) }
+
+    companion object {
+        private fun toPsi(referable: Referable): PsiElement? = when (val ref = referable.abstractReferable) {
             is PsiElement -> ref
             is PsiModuleReferable -> ref.modules.firstOrNull()
             is DataModuleReferable -> ref.data as? PsiElement
             else -> null
         }
 
-    companion object {
         fun cacheResolved(reference: UnresolvedReference, resolved: Referable) {
             val references = reference.getReferenceList()
             var referable = resolved

@@ -250,6 +250,8 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
             goalEditor = null
             errorEditor?.release()
             errorEditor = null
+            infoEditor?.release()
+            infoEditor = null
         }
     }
 

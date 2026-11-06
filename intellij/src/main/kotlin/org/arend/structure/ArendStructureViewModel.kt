@@ -6,7 +6,6 @@ import com.intellij.ide.structureView.StructureViewTreeElement
 import com.intellij.ide.util.treeView.smartTree.TreeElement
 import com.intellij.navigation.ItemPresentation
 import com.intellij.openapi.editor.Editor
-import com.intellij.pom.Navigatable
 import com.intellij.psi.NavigatablePsiElement
 import org.arend.navigation.getPresentationForStructure
 import org.arend.psi.ArendFile
@@ -39,10 +38,15 @@ class ArendStructureViewModel(editor: Editor?, file: ArendFile)
     }
 }
 
-class ArendStructureViewElement(val psi: ArendCompositeElement)
-    : StructureViewTreeElement, Navigatable by (psi as NavigatablePsiElement) {
+class ArendStructureViewElement(val psi: ArendCompositeElement) : StructureViewTreeElement {
 
     override fun getValue(): Any = psi
+
+    override fun navigate(requestFocus: Boolean) = (psi as NavigatablePsiElement).navigate(requestFocus)
+
+    override fun canNavigate(): Boolean = (psi as NavigatablePsiElement).canNavigate()
+
+    override fun canNavigateToSource(): Boolean = (psi as NavigatablePsiElement).canNavigateToSource()
 
     override fun getPresentation(): ItemPresentation = getPresentationForStructure(psi)
 

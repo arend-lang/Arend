@@ -5,6 +5,7 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.util.Pair;
 import org.arend.naming.binOp.ExpressionBinOpEngine;
 import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.reference.ParameterReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.scope.CachingScope;
@@ -154,6 +155,7 @@ public class ArendExpressionMatcher {
             if (pattern.getUnderlyingReferable() instanceof Referable patternReferable &&
                     matched.getUnderlyingReferable() instanceof Referable matchedReferable) {
                 if (patternReferable.equals(matchedReferable)) return true;
+                if (patternReferable instanceof ParameterReferable parameter && parameter.getOriginalReferable().equals(matchedReferable)) return true;
                 if (patternReferable.getAbstractReferable() == null || matchedReferable.getAbstractReferable() == null) return false;
                 return Objects.equals(patternReferable.getAbstractReferable(), matchedReferable.getAbstractReferable());
             }

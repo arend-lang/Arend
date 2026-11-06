@@ -170,7 +170,12 @@ public class BinaryCacheLoader {
       try {
         binarySource.setKeyRegistry(keyRegistry);
         ModuleDeserialization deser = binarySource.parseProtobuf(myErrorReporter);
-        if (deser != null) {
+        if (deser != null && !deser.hasCurrentVersion()) {
+          if (myLogger != null) {
+            myLogger.accept("Binary cache: skipping " + module + ", written in format version " + deser.getModuleProto().getVersion());
+          }
+          myBinaryCacheLoaded.remove(module);
+        } else if (deser != null) {
           pending.add(new PendingBinaryLoad(module, deser));
         }
       } catch (Exception e) {

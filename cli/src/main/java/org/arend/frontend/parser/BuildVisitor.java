@@ -1241,7 +1241,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         }
         Concrete.CoClauseFunctionDefinition def = new Concrete.CoClauseFunctionDefinition(isDefault ? FunctionKind.CLASS_COCLAUSE : FunctionKind.FUNC_COCLAUSE, reference, enclosingDefinition, fieldRef, parameters, returnType.type, returnType.typeLevel, fBody);
         def.setGroupoidalLevelProof(returnType.isTypeLevelPlus);
-        ConcreteGroup myGroup = new ConcreteGroup(nullDoc(), reference, def, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        ConcreteGroup myGroup = new ConcreteGroup(nullDoc(), reference, def, Collections.emptyList(), Collections.emptyList(), makeParameterReferableList(parentGroup.definition()));
         if (defBody instanceof CoClauseCowithContext) {
           visitCoClauses(getCoClauses(((CoClauseCowithContext) defBody).coClauses()), dynamicGroups, myGroup, reference, enclosingClass, fBody.getCoClauseElements());
         }

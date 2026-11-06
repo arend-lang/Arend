@@ -36,6 +36,15 @@ public class ImportedScope implements Scope {
     }
   }
 
+  public ImportedScope(@NotNull Collection<? extends ModulePath> modules, ModuleScopeProvider provider) {
+    myExpectedNamesTree = new Tree();
+    myProvider = provider;
+    myElementsScope = null;
+    for (ModulePath module : modules) {
+      myExpectedNamesTree.addPath(module.toList());
+    }
+  }
+
   private ImportedScope(Tree tree, ModuleScopeProvider provider, Scope elementsScope) {
     myExpectedNamesTree = tree;
     myProvider = provider;
