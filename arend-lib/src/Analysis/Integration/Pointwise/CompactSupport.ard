@@ -23,14 +23,12 @@
 \import Arith.Real.UpperReal
 \import Data.Array
 \import Data.Bool
-\import Data.Or
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -51,37 +49,23 @@
 \open SFuncRepr (IsReduced)
 
 -- | The radius of a ball containing the cube `[-R,R)ⁿ`.
-\func cubeRad (n : Nat) (R : Rat) : Rat \elim n
-  | 0 => 0
-  | suc n => cubeRad n R + R
+\func cubeRad (n : Nat) (R : Rat) : Rat
+  => RatField.natCoef n * R
 
-\lemma cube-in {n : Nat} {R : Rat} {z : Array Rat n} (h : lebPts n (ratCube n R) z = true) : lnorm (ratPt z) <= cubeRad n R \elim n
-  | 0 => <=-refl
-  | suc n =>
-    \have | (c1,c2,c3) => ratCube-mem.1 h
-          | i : lnorm (ratPt (initA z)) <= cubeRad n R => cube-in {n} {R} {initA z} c1
-          | b : RatField.abs (lastA z) <= R => RatField.join-univ (<=-less c3) linarith
-          | b' : RealAbGroup.abs (Real.fromRat (lastA z)) <= Real.fromRat R => rewrite RealAbGroup.abs-rat (rat_real_<=.1 b)
-          | p : Real.fromRat (cubeRad n R + R) = Real.fromRat (cubeRad n R) RealAbGroup.+ Real.fromRat R => inv RealAbGroup.+-rat
-    \in transportInv (`<= _) (array-lnorm-init {n} {RealNormed} {ratPt z}) $ transportInv (_ <=) p $ RealAbGroup.<=_+ i b'
+\lemma cube-in {n : Nat} {R : Rat} {z : Array Rat n} (h : lebPts n (ratCube n R) z = true) : lnorm {RealN n} (ratPt z) <= cubeRad n R
+  => \have b (j : Fin n) : RealAbGroup.abs (Real.fromRat (z j)) <= Real.fromRat R
+       => \have (c1,c2) => ratCube-char.1 h j
+          \in rewrite RealAbGroup.abs-rat $ rat_real_<=.1 $ RatField.join-univ (<=-less c2) linarith
+     \in RealAbGroup.BigSum_<= {n} {\lam j => RealAbGroup.abs (Real.fromRat (z j))} {replicate n (Real.fromRat R)} b <=∘ =_<= (RealField.BigSum_replicate *> RealField.*-rat)
 
-\lemma cube-out {n : Nat} {R : Rat} {z : Array Rat n} (h : lebPts n (ratCube n R) z = false) : Real.fromRat R <= lnorm {RealN n} (ratPt z) \elim n
-  | 0 => contradiction
-  | suc n =>
-    \have | d1>=0 : 0 <= lnorm {RealN n} (ratPt (initA z)) => lnorm>=0 {RealN n} {ratPt (initA z)}
-          | d2>=0 : 0 <= RealAbGroup.abs (Real.fromRat (lastA z)) => lnorm>=0 {RealNormed}
-          | e : lnorm {RealN (suc n)} (ratPt z) = lnorm {RealN n} (ratPt (initA z)) RealAbGroup.+ RealAbGroup.abs (Real.fromRat (lastA z)) => array-lnorm-init {n} {RealNormed} {ratPt z}
-          | big (b : R <= RatField.abs (lastA z)) : Real.fromRat R <= lnorm {RealN (suc n)} (ratPt z) =>
-            \have b' : Real.fromRat R <= RealAbGroup.abs (Real.fromRat (lastA z)) => rewrite RealAbGroup.abs-rat (rat_real_<=.1 b)
-            \in linarith
-     \in cases (lebPts n (ratCube n R) (initA z) arg addPath) \with {
-      | false, q => \have i : Real.fromRat R <= lnorm {RealN n} (ratPt (initA z)) => cube-out {n} {R} {initA z} q \in hiding (big) linarith
-      | true, q => \case LinearOrder.dec<_<= (lastA z) (negative R), LinearOrder.dec<_<= (lastA z) R \with {
-        | inl p, _ => big (\have a : negative (lastA z) <= RatField.abs (lastA z) => RatField.abs>=neg \in hiding (big) linarith)
-        | _, inr p => big (\have a : lastA z <= RatField.abs (lastA z) => RatField.abs>=id \in hiding (big) linarith)
-        | inr p1, inl p2 => absurd $ \case inv h *> ratCube-mem.2 (q,p1,p2) \with {}
-      }
-    }
+\lemma cube-out {n : Nat} {R : Rat} {z : Array Rat n} (h : lebPts n (ratCube n R) z = false) : Real.fromRat R <= lnorm {RealN n} (ratPt z)
+  => \lam (q : lnorm {RealN n} (ratPt z) < Real.fromRat R) => \case inv h *> ratCube-char.2 (\lam j =>
+      \have | i : RealAbGroup.abs (Real.fromRat (z j)) <= lnorm {RealN n} (ratPt z)
+               => RealAbGroup.BigSum_>=index {\lam j => RealAbGroup.abs (Real.fromRat (z j))} (\lam j => lnorm>=0 {RealNormed}) j
+             | a : RatField.abs (z j) < R => rat_real_<.2 $ transport (`< _) RealAbGroup.abs-rat (i <∘r q)
+             | a1 : z j <= RatField.abs (z j) => RatField.abs>=id
+             | a2 : negative (z j) <= RatField.abs (z j) => RatField.abs>=neg
+      \in (linarith, linarith)) \with {}
 
 -- | Cover maps `ℝⁿ -> ℝ` with compact support.
 \record CompactCoverMap (n : Nat) \extends CoverMap

@@ -33,6 +33,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Fin
 \import Set.Fin.Instances
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.NormedProduct
@@ -149,9 +150,8 @@
   }
 
 -- | The cube `[-R,R)ⁿ`.
-\func ratCube (n : Nat) (R : Rat) : LebesgueRing0 n \elim n
-  | 0 => true
-  | suc n => rect (ratCube n R) (ratIntervals ((negative R, R) :: nil))
+\func ratCube (n : Nat) (R : Rat) : LebesgueRing0 n
+  => ratBoxElem n (replicate {RatInterval} n (negative R, R))
 
 -- | The inclusion of rational points to `ℝⁿ`.
 \func ratPt {n : Nat} (z : Array Rat n) : RealN n
@@ -161,13 +161,11 @@
   : lebPts (suc n) (rect a c) z = true <-> (\Sigma (lebPts n a (initA z) = true) (ratPoints c (lastA z) = true))
   => (\lam p => and.toSigma (inv (lebPts-rect {n} {a} {c} {z}) *> p), \lam s => lebPts-rect {n} {a} {c} {z} *> and.fromSigma s)
 
-\lemma ratCube-mem {n : Nat} {R : Rat} {z : Array Rat (suc n)}
-  : lebPts (suc n) (ratCube (suc n) R) z = true <-> (\Sigma (lebPts n (ratCube n R) (initA z) = true) (negative R <= lastA z) (lastA z < R))
+\lemma ratCube-char {n : Nat} {R : Rat} {z : Array Rat n}
+  : lebPts n (ratCube n R) z = true <-> (\Pi (j : Fin n) -> \Sigma (negative R <= z j) (z j < R))
   => \let c : RatInterval => (negative R, R)
-     \in (\lam p => \have | s => (lebPts-rect-char {n} {ratCube n R} {ratIntervals (c :: nil)} {z}).1 p
-                           | t : \Sigma (c.1 <= lastA z) (lastA z < c.2) => (inRI-char {c} {lastA z}).1 (inv (ratPoints-interval {c} {lastA z}) *> s.2)
-                     \in (s.1, t.1, t.2),
-         \lam s => (lebPts-rect-char {n} {ratCube n R} {ratIntervals (c :: nil)} {z}).2 (s.1, ratPoints-interval {c} {lastA z} *> (inRI-char {c} {lastA z}).2 (s.2, s.3)))
+     \in (\lam p j => (inRI-char {c} {z j}).1 ((inRatBox-char {n} {replicate n c} {z}).1 (inv (lebPts-box (replicate n c) z) *> p) j),
+         \lam f => lebPts-box (replicate n c) z *> (inRatBox-char {n} {replicate n c} {z}).2 (\lam j => (inRI-char {c} {z j}).2 (f j)))
 
 -- | A partition of the cube `[-R,R)ⁿ` into cells of diameter at most {d} with a point near each cell.
 \lemma cubeCells (n : Nat) (R : Rat) {d : Rat} (d>0 : 0 < d) : ∃ (l : Array (\Sigma (RealN n) (LebesgueRing0 n)))
@@ -201,6 +199,14 @@
             })
     }
   \where {
+    \lemma ratCube-mem {n : Nat} {R : Rat} {z : Array Rat (suc n)}
+      : lebPts (suc n) (ratCube (suc n) R) z = true <-> (\Sigma (lebPts n (ratCube n R) (initA z) = true) (negative R <= lastA z) (lastA z < R))
+      => (\lam p => \have s => ratCube-char.1 p \in ((ratCube-char {n} {R} {initA z}).2 (\lam k => s (fin-inc {n} {1} k)), (s (fin-raise {1} {n} 0)).1, (s (fin-raise {1} {n} 0)).2),
+          \lam s => ratCube-char.2 \lam j => \case ++'.split-index {n} {1} j \with {
+            | inl (k,e) => transportInv (\lam i => \Sigma (negative R <= z i) (z i < R)) e (ratCube-char.1 s.1 k)
+            | inr (0,e) => transportInv (\lam i => \Sigma (negative R <= z i) (z i < R)) e (s.2, s.3)
+          })
+
     \func snocPt {n : Nat} (x : RealN n) (a : Real) : RealN (suc n)
       => x ++' (a :: nil)
 

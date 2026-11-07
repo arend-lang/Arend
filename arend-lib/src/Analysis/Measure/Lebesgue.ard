@@ -26,6 +26,7 @@
 \import Data.Array
 \import Data.Bool
 \import Data.Fin (fsuc/=0, unfsuc)
+\import Data.Or
 \import Equiv
 \import Logic
 \import Logic.Meta
@@ -34,6 +35,7 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
+\import Set.Fin
 \open SFunc (inSF)
 \open SFuncRepr (IsReduced, makeReduced)
 
@@ -146,6 +148,14 @@
 \lemma lebPts-box {n : Nat} (b : RatBox n) (z : Array Rat n) : lebPts n (ratBoxElem n b) z = inRatBox b z \elim n
   | 0 => idp
   | suc n => lebPts-rect {n} {ratBoxElem n (initA b)} {ratIntervals (lastA b :: nil)} {z} *> pmap2 (and) (lebPts-box (initA b) (initA z)) ratPoints-interval
+
+\lemma inRatBox-char {n : Nat} {b : RatBox n} {z : Array Rat n} : inRatBox b z = true <-> (\Pi (j : Fin n) -> inRI (b j) (z j) = true) \elim n
+  | 0 => (\lam _ j => \case j \with {}, \lam _ => idp)
+  | suc n => (\lam p j => \have s => and.toSigma p \in \case ++'.split-index {n} {1} j \with {
+                | inl (k,e) => transportInv (\lam i => inRI (b i) (z i) = true) e ((inRatBox-char {n} {initA b} {initA z}).1 s.1 k)
+                | inr (0,e) => transportInv (\lam i => inRI (b i) (z i) = true) e s.2
+              },
+              \lam f => and.fromSigma ((inRatBox-char {n} {initA b} {initA z}).2 (\lam k => f (fin-inc {n} {1} k)), f (fin-raise {1} {n} 0)))
 
 \lemma lebPts-boxes {n : Nat} (l : Array (RatBox n)) (z : Array Rat n) : lebPts n (ratBoxUnion l) z = inRatBoxes l z \elim l
   | nil => lebPts-zro {n} {z}
