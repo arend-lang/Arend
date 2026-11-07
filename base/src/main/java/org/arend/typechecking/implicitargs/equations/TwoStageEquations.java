@@ -208,6 +208,13 @@ public class TwoStageEquations implements Equations {
           cod = ((PiExpression) cod).getCodomain().normalize(NormalizationMode.WHNF);
         }
 
+        // The solution below replaces the codomain with a new variable, so solve cannot detect that the type is infinite.
+        // In this case, the equation for the new variable has the same form as this one, and this would go on forever.
+        if (isConnected(cod, cInf)) {
+          inferenceError(cInf, cType);
+          return true;
+        }
+
         try (var ignore = new Utils.RefContextSaver(myVisitor.getContext(), myVisitor.getLocalExpressionPrettifier())) {
           for (PiExpression pi : pis) {
             for (SingleDependentLink link = pi.getParameters(); link.hasNext(); link = link.getNext()) {
@@ -222,8 +229,11 @@ public class TwoStageEquations implements Equations {
           for (int i = pis.size() - 1; i >= 0; i--) {
             solution = new PiExpression(pis.get(i).getParameters(), solution);
           }
-          solve(cInf, solution, false);
-          return addEquation(cod, newRef, UniverseExpression.OMEGA, cmp, sourceNode, cod.getStuckInferenceVariable(), infVar);
+          return switch (solve(cInf, solution, false)) {
+            case SOLVED -> addEquation(cod, newRef, UniverseExpression.OMEGA, cmp, sourceNode, cod.getStuckInferenceVariable(), infVar);
+            case ERROR -> true;
+            case NOT_SOLVED -> false;
+          };
         }
       }
 
@@ -273,6 +283,31 @@ public class TwoStageEquations implements Equations {
     }
 
     return true;
+  }
+
+  /**
+   * Checks if {@code expr} is a variable which is equal to {@code var} or linked to it by a chain of postponed equations between variables.
+   * Subtyping preserves the shape of a type, so such variables have the same number of \Pi-parameters.
+   */
+  private boolean isConnected(Expression expr, InferenceVariable var) {
+    InferenceVariable start = expr.getInferenceVariable(true);
+    if (start == null) return false;
+
+    Set<InferenceVariable> visited = new HashSet<>();
+    Deque<InferenceVariable> toVisit = new ArrayDeque<>();
+    toVisit.add(start);
+    while (!toVisit.isEmpty()) {
+      InferenceVariable current = toVisit.pop();
+      if (current == var) return true;
+      if (!visited.add(current)) continue;
+      for (Equation equation : myEquations) {
+        InferenceVariable var1 = equation.expr1.getInferenceVariable(true);
+        InferenceVariable var2 = equation.expr2.getInferenceVariable(true);
+        if (var1 == current && var2 != null) toVisit.add(var2);
+        if (var2 == current && var1 != null) toVisit.add(var1);
+      }
+    }
+    return false;
   }
 
   private boolean addLevelEquation(final LevelVariable var1, LevelVariable var2, BigInteger constant, BigInteger maxConstant, Concrete.SourceNode sourceNode) {

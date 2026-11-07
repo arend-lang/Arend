@@ -535,7 +535,7 @@ public class ArendCheckerImpl implements ArendChecker {
             });
 
             myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");
-          } catch (Exception e) {
+          } catch (Exception | StackOverflowError e) {
             dependencyTypechecker.computationInterrupted();
             typechecker.computationInterrupted();
             myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is interrupted");
