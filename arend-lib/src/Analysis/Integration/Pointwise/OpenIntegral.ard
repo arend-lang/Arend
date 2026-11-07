@@ -10,6 +10,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Analysis.Integration.Pointwise.CompactSupport
 \import Analysis.Integration.IntegrationSpace
@@ -263,12 +264,16 @@
   => \Pi (x : RealN n) -> c.fn x <= c'.fn x
 
 -- | The absolute value of a real-valued cover map.
-\func coverAbs {X : CoverSpace} (f : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => RealAbGroup.abs (f x))
+\lemma coverAbs {X : CoverSpace} (f : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => RealAbGroup.abs (f x))
   => cover2 real-join-uniform f (negative-uniform {RealNormed} CoverMap.∘ f)
 
 -- | The value of `∫ ι(f c)`.
-\func cutIntegral {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U) : Real
+\sfunc cutIntegral {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U) : Real
   => integral {LebesgueL1 n} (iota (truncate Uo f c))
+  \where
+    \protected \lemma char {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
+      : cutIntegral Uo f c = integral {LebesgueL1 n} (iota (truncate Uo f c))
+      => \peval cutIntegral Uo f c
 
 -- | {c0} is a witness of convergence of the net `∫ ι(|f| c)` at {eps}.
 \type IsWitness {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (eps : Rat) (c0 : Cutoff U) : \Prop
@@ -310,7 +315,7 @@
                | e1 : iota (CompactCoverMap_abs (CompactCoverMap_+ G' (CompactCoverMap_negative G))) = LatticeAbGroup.abs {LebesgueL1 n} (iota G' - iota G) => iota_abs {n} {CompactCoverMap_+ G' (CompactCoverMap_negative G)} *> pmap (LatticeAbGroup.abs {LebesgueL1 n}) (iota_+ {n} {G'} {CompactCoverMap_negative G} *> pmap (_ +) (iota_negative {n} {G}))
                | e2 : iota (CompactCoverMap_+ H' (CompactCoverMap_negative H)) = iota H' - iota H => iota_+ {n} {H'} {CompactCoverMap_negative H} *> pmap (_ +) (iota_negative {n} {H})
      \in lnorm-ldist {LebesgueL1 n} *> pmap (integral {LebesgueL1 n}) (inv e1 *> pmap iota e *> e2) *> IntegrationSpace.integral_+ {LebesgueL1 n}
-          *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}})
+          *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}}) *> inv (pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char)
 
 \lemma real-join-lt {r a b : Real} (p : r < a ∨ b) : (r < a) || (r < b)
   => \case real_<-rat-char.1 p \with {
@@ -325,7 +330,7 @@
   }
 
 -- | The join of cutoffs.
-\func cutoff-join {n : Nat} {U : Set (RealN n)} (c c' : Cutoff U) : Cutoff U (CompactCoverMap_join c.fn c'.fn) \cowith
+\lemma cutoff-join {n : Nat} {U : Set (RealN n)} (c c' : Cutoff U) : Cutoff U (CompactCoverMap_join c.fn c'.fn) \cowith
   | cut>=0 {x} => c.cut>=0 {x} <=∘ join-left
   | cut<=1 {x} => join-univ (c.cut<=1 {x}) (c'.cut<=1 {x})
   | cut-inside => \case c.cut-inside, c'.cut-inside \with {
@@ -386,8 +391,8 @@
 -- | The increment of the net is the integral of the difference of truncations.
 \lemma cut-diff {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c c' : Cutoff U}
   : cutIntegral Uo k c' - cutIntegral Uo k c = integral {LebesgueL1 n} (iota (CompactCoverMap_+ (truncate Uo k c') (CompactCoverMap_negative (truncate Uo k c))))
-  => inv $ pmap (integral {LebesgueL1 n}) (iota_+ {n} {truncate Uo k c'} {CompactCoverMap_negative (truncate Uo k c)} *> pmap (_ +) (iota_negative {n} {truncate Uo k c}))
-      *> IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}})
+  => pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char *> inv (pmap (integral {LebesgueL1 n}) (iota_+ {n} {truncate Uo k c'} {CompactCoverMap_negative (truncate Uo k c)} *> pmap (_ +) (iota_negative {n} {truncate Uo k c}))
+      *> IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}}))
 
 -- | The increment of a truncation at a point.
 \lemma trunc-inc-pos {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c c' : Cutoff U} (u : Total U)
@@ -440,10 +445,10 @@
                   (p : \Pi (u : Total U) -> g u.1 = k u RealField.* c.fn u.1) (q : \Pi {x : RealN n} -> c.fn x = 0 -> g x = 0) : truncate Uo k c = g
   => CompactCoverMap.ext {n} {truncate Uo k c} {g} \lam x => trunc-unique {n} {U} {Uo} {k} {c} truncate.char (p,q) x
 
-\func coverSum {X : CoverSpace} (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => f x RealAbGroup.+ g x)
+\lemma coverSum {X : CoverSpace} (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => f x RealAbGroup.+ g x)
   => cover2 (+-uniform {RealNormed}) f g
 
-\func coverNegative {X : CoverSpace} (f : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => negative (f x))
+\lemma coverNegative {X : CoverSpace} (f : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => negative (f x))
   => negative-uniform {RealNormed} CoverMap.∘ f
 
 \lemma truncate_+ {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
@@ -469,7 +474,7 @@
   => \lam {eps} e>0 => \case i e>0 \with {
     | inP (c0,w) => inP (c0, \lam c c' p q =>
       \have e (d : Cutoff U) : cutIntegral Uo (coverAbs (coverAbs f)) d = cutIntegral Uo (coverAbs f) d
-              => pmap (\lam g => integral {LebesgueL1 n} (iota g)) (truncate-ext {n} {U} {Uo} {coverAbs (coverAbs f)} {coverAbs f} (\lam u => RealAbGroup.abs_abs))
+              => cutIntegral.char *> pmap (\lam g => integral {LebesgueL1 n} (iota g)) (truncate-ext {n} {U} {Uo} {coverAbs (coverAbs f)} {coverAbs f} (\lam u => RealAbGroup.abs_abs)) *> inv cutIntegral.char
       \in transport (`< _) (inv (pmap2 (\lam a b => a - b) (e c') (e c))) (w c c' p q))
   }
 
@@ -506,8 +511,12 @@
                   | b1 => w c c' (c<=-trans {n} {U} {c0} {cutoff-join c0 c1} {c} (cutoff-join-left {n} {U} {c0} {c1}) p) q
                   | b2 => w' c c' (c<=-trans {n} {U} {c1} {cutoff-join c0 c1} {c} (cutoff-join-right {n} {U} {c0} {c1}) p) q
                   | r : Real.fromRat (eps * ratio 1 2) RealAbGroup.+ Real.fromRat (eps * ratio 1 2) = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-        \in linarith)
+        \in sum-bound m e1 e2 e3 e4 b1 b2 r)
     }
+  \where
+    \lemma sum-bound {R : OrderedRing} {a a' f f' g g' x y u v d e : R} (m : x <= y) (e1 : a' - a = x) (e2 : y = u + v) (e3 : f' - f = u) (e4 : g' - g = v)
+                     (b1 : f' - f < d) (b2 : g' - g < d) (r : d + d = e) : a' - a < e
+      => linarith
 
 -- | The map to `L¹` is additive.
 \lemma integrableL1_+ {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) (j : IsIntegrableOn Uo g)
@@ -529,8 +538,12 @@
                   | sy : ldist {LebesgueL1 n} w v = ldist {LebesgueL1 n} v w => ldist-symm {LebesgueL1 n}
                   | r : Real.fromRat (d * ratio 1 3) RealAbGroup.+ Real.fromRat (d * ratio 1 3) RealAbGroup.+ Real.fromRat (d * ratio 1 3) = Real.fromRat d
                       => pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat *> pmap Real.fromRat linarith
-        \in hiding (h0,h1,h2) linarith
+        \in triangle3 a0 a1 a2 a3 t sy r
     }
+  \where
+    \lemma triangle3 {R : OrderedRing} {uv uw wv vw l1 l2 e d : R} (a0 : uw < e) (a1 : l1 < e) (a2 : l2 < e) (a3 : vw <= l1 + l2)
+                     (t : uv <= uw + wv) (sy : wv = vw) (r : e + e + e = d) : uv < d
+      => linarith
 
 -- | The map to `L¹` preserves the absolute value.
 \lemma integrableL1_abs {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) (k : IsIntegrableOn Uo (coverAbs f))
@@ -550,8 +563,12 @@
                   | t : ldist {LebesgueL1 n} u v <= ldist {LebesgueL1 n} u w RealAbGroup.+ ldist {LebesgueL1 n} w v => ldist-triang {LebesgueL1 n}
                   | sy : ldist {LebesgueL1 n} w v = ldist {LebesgueL1 n} v w => ldist-symm {LebesgueL1 n}
                   | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-        \in hiding (h0,h1) linarith
+        \in triangle2 a0 a1 a2 t sy r
     }
+  \where
+    \lemma triangle2 {R : OrderedRing} {uv uw wv vw l e d : R} (a0 : uw < e) (a1 : l < e) (a2 : vw <= l)
+                     (t : uv <= uw + wv) (sy : wv = vw) (r : e + e = d) : uv < d
+      => linarith
 
 -- | The map to `L¹` preserves negation.
 \lemma integrableL1_negative {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) (k : IsIntegrableOn Uo (coverNegative f))
@@ -571,7 +588,7 @@
                   | t : ldist {LebesgueL1 n} u v <= ldist {LebesgueL1 n} u w RealAbGroup.+ ldist {LebesgueL1 n} w v => ldist-triang {LebesgueL1 n}
                   | sy : ldist {LebesgueL1 n} w v = ldist {LebesgueL1 n} v w => ldist-symm {LebesgueL1 n}
                   | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-        \in hiding (h0,h1) linarith
+        \in integrableL1_abs.triangle2 a0 a1 (=_<= a2) t sy r
     }
 
 -- | The integral on {U} is additive.
@@ -599,7 +616,7 @@
     \have | h' (u : Total U) (l : c0.fn u.1 < 1) : coverAbs f u = 0 => pmap RealAbGroup.abs (h u l) *> RealAbGroup.abs_zro
           | e1 : truncate Uo (coverAbs f) c' = truncate Uo (coverAbs f) c0 => trunc-stable {n} {U} {Uo} {coverAbs f} {c0} {c'} h' (c<=-trans {n} {U} {c0} {c} {c'} p q)
           | e2 : truncate Uo (coverAbs f) c = truncate Uo (coverAbs f) c0 => trunc-stable {n} {U} {Uo} {coverAbs f} {c0} {c} h' p
-          | e : cutIntegral Uo (coverAbs f) c' - cutIntegral Uo (coverAbs f) c = 0 => pmap (\lam g => integral {LebesgueL1 n} (iota g)) (e1 *> inv e2) `pmap-minus` idp
+          | e : cutIntegral Uo (coverAbs f) c' - cutIntegral Uo (coverAbs f) c = 0 => pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char *> (pmap (\lam g => integral {LebesgueL1 n} (iota g)) (e1 *> inv e2) `pmap-minus` idp)
     \in transportInv (`< _) e (rat_real_<.1 eps>0)
   \where
     \lemma \infix 4 pmap-minus {a b : Real} (p : a = b) (q : b = b) : a - b = 0

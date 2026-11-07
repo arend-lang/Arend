@@ -9,6 +9,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Analysis.Integration.IntegrationSpace
 \import Analysis.Integration.MeasureIntegrationSpace
@@ -201,8 +202,11 @@
                 | t : ldist {LebesgueL1 n} u u' <= ldist {LebesgueL1 n} u (stepL1 s) RealAbGroup.+ ldist {LebesgueL1 n} (stepL1 s) u' => ldist-triang {LebesgueL1 n}
                 | sy : ldist {LebesgueL1 n} (stepL1 s) u' = ldist {LebesgueL1 n} u' (stepL1 s) => ldist-symm {LebesgueL1 n}
                 | h : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-          \in linarith
+          \in eps-triangle a em (b <∘r em) t sy h
       }) (ldist>=0 {LebesgueL1 n})
+  \where
+    \lemma eps-triangle {R : OrderedRing} {uv us sv vs m e d : R} (a : us <= m) (em : m < e) (vs<e : vs < e) (t : uv <= us + sv) (sy : sv = vs) (r : e + e = d) : uv < 0 + d
+      => linarith
 
 \sfunc iota-exists {n : Nat} (g : CoverMap (RealN n) RealNormed) {R : Rat} (gR : \Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) : \Sigma (u : LebesgueL1 n) (IsIota g u)
   => (family-limit P Pi Pc, \lam {K'} {e'} {s'} ap' => real_<=-eps \lam {d} d>0 =>
@@ -216,9 +220,12 @@
                     | h : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 4) RealAbGroup.+ Real.fromRat (d * ratio 1 4) = Real.fromRat d
                         => pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat *> pmap Real.fromRat linarith
                     | d4' : 0 < Real.fromRat (d * ratio 1 4) => rat_real_<.1 d4>0
-              \in linarith
+              \in limit-triangle l c em t h d4'
       })
   \where \private {
+    \lemma limit-triangle {R : OrderedRing} {x1 x2 x3 m m' e2 e4 d : R} (l : x2 < e2) (c : x3 <= m + m') (em : m < e4) (t : x1 <= x2 + x3) (h : e2 + e4 + e4 = d) (e4>0 : 0 < e4) : x1 < m' + d
+      => linarith
+
     \type P (a : Rat) (x : LebesgueL1 n) : \Prop
       => ∃ (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g (ratCube n (R + 1)) e s) (e RealField.* meas (ratCube n (R + 1)) < a) (x = stepL1 s)
 
@@ -253,7 +260,7 @@
   }
 
 -- | Pointwise operations on real-valued cover maps.
-\func cover2 {X : CoverSpace} (op : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed) (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => op (f x, g x))
+\lemma cover2 {X : CoverSpace} (op : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed) (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => op (f x, g x))
   => op CoverMap.∘ ProductCoverSpace.tuple f g
 
 \lemma CompactCoverMap_+ {n : Nat} (g h : CompactCoverMap n) : CompactCoverMap n (\lam x => g x RealAbGroup.+ h x) \cowith
@@ -331,7 +338,7 @@
                 | t : ldist {LebesgueL1 n} (iota g) v <= ldist {LebesgueL1 n} (iota g) (stepL1 s) RealAbGroup.+ ldist {LebesgueL1 n} (stepL1 s) v => ldist-triang {LebesgueL1 n}
                 | sy : ldist {LebesgueL1 n} (stepL1 s) v = ldist {LebesgueL1 n} v (stepL1 s) => ldist-symm {LebesgueL1 n}
                 | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-          \in hiding (h) linarith
+          \in iota-unique.eps-triangle a em vs t sy r
       }) (ldist>=0 {LebesgueL1 n})
 
 \lemma CompactCoverMap-common {n : Nat} (g h : CompactCoverMap n) : ∃ (R : Rat) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> h x = 0)
@@ -356,7 +363,14 @@
             | m : (e + e') RealField.* meas (ratCube n (R + 1)) = e RealField.* meas (ratCube n (R + 1)) RealAbGroup.+ e' RealField.* meas (ratCube n (R + 1))
                 => pmap (RealField.* _) (inv RealAbGroup.+-rat) *> RealField.rdistr
             | t1 : ldist {LebesgueL1 n} (iota g + iota h) (stepL1 s + stepL1 t) <= ldist {LebesgueL1 n} (iota g) (stepL1 s) RealAbGroup.+ ldist {LebesgueL1 n} (iota h) (stepL1 t) => ldist_+ {LebesgueL1 n}
-      \in inP (ratCube n (R + 1), e + e', s + t, approx_+ {n} {g} {h} a b, rewrite m linarith, rewrite stepL1_+ linarith)
+      \in inP (ratCube n (R + 1), e + e', s + t, approx_+ {n} {g} {h} a b, rewrite m (sum2 em em' r d4'), rewrite stepL1_+ (sum4 t1 c1 c2 em em' r d4'))
+  \where {
+    \lemma sum2 {R : OrderedRing} {m m' e d : R} (em : m < e) (em' : m' < e) (r : e + e + e + e = d) (e>0 : 0 < e) : m + m' < d
+      => linarith
+
+    \lemma sum4 {R : OrderedRing} {x a b m m' e d : R} (t : x <= a + b) (c1 : a <= m) (c2 : b <= m') (em : m < e) (em' : m' < e) (r : e + e + e + e = d) (e>0 : 0 < e) : x < d
+      => linarith
+  }
 
 -- | {iota} preserves negation.
 \lemma iota_negative {n : Nat} {g : CompactCoverMap n} : iota (CompactCoverMap_negative g) = negative (iota g)
@@ -409,9 +423,13 @@
                       => transportInv (_ <=) (inv (IntegrationSpace.integral_+ {LebesgueL1 n})) $ IntegrationSpace.integral-mono {LebesgueL1 n} $
                           transport (\lam w => LatticeAbGroup.abs {LebesgueL1 n} w <= {LebesgueL1 n} _) (+-assoc {LebesgueL1 n} *> pmap (X +) (negative-left {LebesgueL1 n}) *> zro-right {LebesgueL1 n}) (LatticeAbGroup.abs_+ {LebesgueL1 n})
                   | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-             \in hiding (pt,h) linarith
+             \in bound-eps s1 s2 s3 c c' tr em r
       }
     }
+  \where
+    \lemma bound-eps {R : OrderedRing} {iX iXS iS is it Ma eK lXS e d : R} (s1 : is <= it) (s2 : it = Ma + eK) (s3 : iS = is) (c : lXS <= eK) (c' : lXS = iXS)
+                     (tr : iX <= iXS + iS) (em : eK < e) (r : e + e = d) : iX < Ma + d
+      => linarith
 
 -- | Maps with compact support are uniformly continuous.
 \lemma CompactCoverMap-uniform {n : Nat} (g : CompactCoverMap n) {eps : Rat} (eps>0 : 0 < eps)

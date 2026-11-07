@@ -8,6 +8,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
+\import Algebra.StrictlyOrdered
 \import Analysis.Integration.Pointwise.CompactSupport
 \import Analysis.Integration.Pointwise.OpenIntegral
 \import Analysis.Measure.IntervalRing
@@ -65,11 +66,11 @@
     }
 
 -- | The coordinate of a point of `ℝ¹`.
-\func coord : CoverMap (RealN 1) RealNormed (\lam x => x 0)
+\lemma coord : CoverMap (RealN 1) RealNormed (\lam x => x 0)
   => ArrayUniformSpace.proj {1} {RealNormed} 0
 
 -- | Multiplication by a positive rational number.
-\func real-scale {k : Rat} (k>0 : 0 < k) : UniformMetricMap RealNormed RealNormed (Real.fromRat k RealField.*) \cowith
+\lemma real-scale {k : Rat} (k>0 : 0 < k) : UniformMetricMap RealNormed RealNormed (Real.fromRat k RealField.*) \cowith
   | func-dist-uniform {eps} eps>0 =>
     \have | k'>0 : 0 < RatField.finv k => RatField.finv>0 k>0
           | d>0 : 0 < eps * RatField.finv k => RatField.<_*_positive_positive eps>0 k'>0
@@ -153,7 +154,7 @@
   }
 
 -- | The trapezoid as a cutoff for `(a,b)`.
-\func intervalCutoff (a b : Real) {h : Rat} (h>0 : 0 < h) : Cutoff (OpenInterval a b) (intervalCompactCoverMap a b h>0) \cowith
+\lemma intervalCutoff (a b : Real) {h : Rat} (h>0 : 0 < h) : Cutoff (OpenInterval a b) (intervalCompactCoverMap a b h>0) \cowith
   | cut>=0 => join-left
   | cut<=1 => join-univ (<=-less RealField.zro<ide) meet-left
   | cut-inside => inP (h, h>0, \lam {x} p {y} d =>
@@ -216,7 +217,7 @@
                   | p<a : Real.fromRat p < a => real_<_L.2 pL
                   | b<q : b < Real.fromRat q => real_<_U.2 qU
                   | q<b+h : Real.fromRat q < b RealAbGroup.+ H => real_<_L.2 qL
-        \in inP (intervalCutoff a b h>0, AJ, linarith, \lam z qz Uz =>
+        \in inP (intervalCutoff a b h>0, AJ, meas-bound m1 m2 mm m0 ms, \lam z qz Uz =>
           \let r => lastA z
           \in \have | t1 : a < Real.fromRat r => Uz.1
                     | t2 : Real.fromRat r < b => Uz.2
@@ -235,10 +236,20 @@
                     | lo' : Real.fromRat r <= Real.fromRat q' => rat_real_<=.1 lo
                     | ep : Real.fromRat p' = Real.fromRat p RealAbGroup.+ (H RealAbGroup.+ H RealAbGroup.+ H RealAbGroup.+ H) => four-rat
                     | eq : Real.fromRat q' = Real.fromRat q - (H RealAbGroup.+ H RealAbGroup.+ H RealAbGroup.+ H) => four-rat'
-                    | i1 : H RealAbGroup.+ H <= Real.fromRat r - a => linarith
-                    | i2 : H RealAbGroup.+ H <= b - Real.fromRat r => linarith
+                    | i1 : H RealAbGroup.+ H <= Real.fromRat r - a => left-margin hi' ep a-h<p H>0
+                    | i2 : H RealAbGroup.+ H <= b - Real.fromRat r => right-margin lo' eq q<b+h H>0
           \in trap-high h>0 (meet-univ i1 i2))
     }
+  \where {
+    \lemma meas-bound {R : OrderedRing} {a1 a2 aj am x y e : R} (m1 : a1 = x) (m2 : a2 = y) (mm : a1 + a2 = aj + am) (m0 : 0 <= am) (ms : x + y < e) : aj < e
+      => linarith
+
+    \lemma left-margin {R : OrderedRing} {a p p' r h : R} (hi : p' <= r) (ep : p' = p + (h + h + h + h)) (ap : a - h < p) (h>0 : 0 < h) : h + h <= r - a
+      => linarith
+
+    \lemma right-margin {R : OrderedRing} {b q q' r h : R} (lo : r <= q') (eq : q' = q - (h + h + h + h)) (qb : q < b + h) (h>0 : 0 < h) : h + h <= b - r
+      => linarith
+  }
 
 -- | Bounded cover maps on `(a,b)` are integrable.
 \lemma interval-integrable {a b : Real} {f : CoverMap (OpenCoverSpace {RealN 1} (interval-open a b)) RealNormed} {M : Real}
