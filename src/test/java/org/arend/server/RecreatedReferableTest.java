@@ -12,6 +12,7 @@ import org.arend.frontend.source.PreludeResourceSource;
 import org.arend.library.MemoryLibrary;
 import org.arend.naming.reference.FieldReferableImpl;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.RedirectingReferable;
 import org.arend.prelude.Prelude;
 import org.arend.server.impl.ArendServerImpl;
 import org.arend.server.impl.DefinitionData;
@@ -126,5 +127,100 @@ public class RecreatedReferableTest {
     init("\\import Base\n\\import M\n\\func p : L \\cowith | R => NatMag | e => 0\n\\func q => \\new L { | R => NatMag | e => 0 }\n", null);
     typecheck("A");
     assertEquals(Collections.emptyList(), errors());
+  }
+
+  private static String moduleC(String members) {
+    return "\\func C => 0 \\where {\n" + members + "}\n";
+  }
+
+  private static final String F = "  \\func f => 0\n";
+  private static final String G = "  \\func g => 1\n";
+
+  private void initOpen(String importer) {
+    updateModule("M", moduleC(F));
+    updateModule("A", importer);
+    typecheck("A");
+    assertEquals(Collections.emptyList(), errors());
+  }
+
+  private Referable rawReferable(String module, String name) {
+    Referable[] result = new Referable[1];
+    Objects.requireNonNull(server.getGroupData(moduleLoc(module))).getRawGroup().traverseGroup(group -> {
+      if (group.referable().getRefName().equals(name)) result[0] = group.referable();
+    });
+    assertNotNull(result[0]);
+    return result[0];
+  }
+
+  private Referable referentOfBody(String module, String function) {
+    for (DefinitionData data : Objects.requireNonNull(Objects.requireNonNull(server.getGroupData(moduleLoc(module))).getResolvedDefinitions())) {
+      if (data.definition() instanceof Concrete.FunctionDefinition def && def.getData().getRefName().equals(function)) {
+        return RedirectingReferable.getOriginalReferable(((Concrete.ReferenceExpression) Objects.requireNonNull(def.getBody().getTerm())).getReferent());
+      }
+    }
+    throw new AssertionError("Function " + function + " is not resolved in " + module);
+  }
+
+  private void assertNoErrorsAfterTypechecking() {
+    typecheck("A");
+    assertEquals(Collections.emptyList(), errors());
+  }
+
+  private void assertErrorsAfterTypechecking() {
+    typecheck("A");
+    assertFalse(errors().isEmpty());
+  }
+
+  @Test
+  public void openedNameAfterRecreated() {
+    initOpen("\\import M\n\\open C (f)\n\\func h => f\n");
+    // A new member of C recreates the referables of C and its members
+    updateModule("M", moduleC(F + G));
+    assertNoErrorsAfterTypechecking();
+    assertSame(rawReferable("M", "f"), referentOfBody("A", "h"));
+  }
+
+  @Test
+  public void renamedNameAfterRecreated() {
+    initOpen("\\import M\n\\open C (f \\as f')\n\\func h => f'\n");
+    updateModule("M", moduleC(F + G));
+    assertNoErrorsAfterTypechecking();
+    assertSame(rawReferable("M", "f"), referentOfBody("A", "h"));
+  }
+
+  @Test
+  public void openedNameAfterModuleEmptiedAndRestored() {
+    initOpen("\\import M\n\\open C (f)\n\\func h => f\n");
+    updateModule("M", "");
+    assertErrorsAfterTypechecking();
+    updateModule("M", moduleC(F));
+    assertNoErrorsAfterTypechecking();
+  }
+
+  @Test
+  public void openedNameAddedLater() {
+    updateModule("M", moduleC(G));
+    updateModule("A", "\\import M\n\\open C (f)\n\\func h => f\n");
+    assertErrorsAfterTypechecking();
+    updateModule("M", moduleC(F + G));
+    assertNoErrorsAfterTypechecking();
+  }
+
+  @Test
+  public void openedNameRemovedAndRestored() {
+    initOpen("\\import M\n\\open C (f)\n\\func h => f\n");
+    updateModule("M", moduleC(G));
+    assertErrorsAfterTypechecking();
+    updateModule("M", moduleC(F));
+    assertNoErrorsAfterTypechecking();
+  }
+
+  @Test
+  public void hiddenNameRemovedAndRestored() {
+    initOpen("\\import M\n\\open C \\hiding (f)\n\\func h => 0\n");
+    updateModule("M", moduleC(G));
+    assertErrorsAfterTypechecking();
+    updateModule("M", moduleC(F));
+    assertNoErrorsAfterTypechecking();
   }
 }
