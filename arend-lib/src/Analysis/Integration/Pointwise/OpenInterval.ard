@@ -90,7 +90,7 @@
 \func trapValue (a b : Real) (h : Rat) (t : Real) : Real
   => 0 ∨ (1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)))
 
-\func trapMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CoverMap (RealN 1) RealNormed (\lam x => trapValue a b h x.2)
+\lemma trapMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CoverMap (RealN 1) RealNormed (\lam x => trapValue a b h x.2)
   => \let | t1 => coverSum coord (CoverMap.const (negative a))
           | t2 => coverSum (CoverMap.const b) (coverNegative coord)
           | m => cover2 real-meet-uniform t1 t2
@@ -131,8 +131,8 @@
   }
 
 -- | The trapezoid as a function with compact support.
-\func intervalCompactCoverMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CompactCoverMap 1 \cowith
-  | map => trapMap a b h>0
+\lemma intervalCompactCoverMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CompactCoverMap 1 (\lam x => trapValue a b h x.2) \cowith
+  | CoverMap => trapMap a b h>0
   | support => \case Real.U-inh {RealAbGroup.abs a}, Real.U-inh {RealAbGroup.abs b} \with {
     | inP (Ra,ua), inP (Rb,ub) => inP (Ra ∨ Rb, \lam {x} r =>
       \have | h>0' : 0 < Real.fromRat h => rat_real_<.1 h>0
