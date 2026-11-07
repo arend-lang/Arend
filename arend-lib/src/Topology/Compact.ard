@@ -5,6 +5,7 @@
 \import Arith.Real.UpperReal
 \import Data.Or
 \import Equiv
+\import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -191,6 +192,18 @@
 
 \type BallsTotallyBounded (X : ExPseudoMetricSpace) : \Prop
   => \Pi (x : X) {eps : Rat} -> 0 < eps -> IsTotallyBoundedSet (OBall eps x)
+
+-- | A surjective isometry transfers total boundedness of balls.
+\lemma ballsTB-isometry (f : IsometricMap) (fs : IsSurj f) (Xb : BallsTotallyBounded f.Dom) : BallsTotallyBounded f.Cod
+  => \lam y {B} B>0 => \case \elim y, fs y \with {
+    | y, inP (x,idp) => totallyBoundedSet-metric-char.2 \lam {eps} eps>0 => \case totallyBoundedSet-metric-char.1 (Xb x B>0) eps>0 \with {
+      | inP (D,h) => inP (\new Array f.Cod D.len \lam i => f (D i), \lam {z} d => \case \elim z, fs z, \elim d \with {
+        | z, inP (w,idp), d => \case h {w} (transport (UpperReal.U {__} B) f.func-isometry d) \with {
+          | inP (i,p) => inP (i, transportInv (ExUpperReal.U {__} eps) f.func-isometry p)
+        }
+      })
+    }
+  }
 
 \lemma metric-locallyUniform {X : PseudoMetricSpace} (Xbtb : BallsTotallyBounded X) : IsLocallyUniformSpace X
   => locallyTotallyBounded-locallyUniform (uniform-subset (X.metricUniform RatField.zro<ide) $ later \lam {_} (inP (x,idp)) => Xbtb x RatField.zro<ide) X.metricProperUniform

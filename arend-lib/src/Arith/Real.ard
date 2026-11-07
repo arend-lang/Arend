@@ -72,7 +72,6 @@
 } \where {
   \open DiscreteOrderedField
   \open DiscreteField
-  \open LinearlyOrderedSemiring
 
   \use \coerce fromRat (x : Rat) : Real \cowith
     | InfReal => InfReal.fromRat x
@@ -176,8 +175,6 @@
     }
   }
   \where {
-    \open OrderedSemiring
-
     \sfunc \infixl 6 + (x y : Real) : Real \cowith
       | InfReal => x InfRealAbMonoid.+ y
       | U-inh => \case x.U-inh, y.U-inh \with {
@@ -201,6 +198,10 @@
 
     \lemma +-inf {x y : Real} : x + y = x InfRealAbMonoid.+ y
       => InfReal.real-lower-ext $ +-lower *> {LowerReal} inv {LowerReal} InfRealAbMonoid.+-lower
+
+    \lemma BigSum-upper {l : Array Real} : RealAbGroup.BigSum l = {ExUpperReal} ExUpperRealAbMonoid.BigSum (\lam j => l j) \elim l
+      | nil => idp
+      | a :: l => RealAbGroup.+-upper *> pmap (a ExUpperReal.+) BigSum-upper
 
     \lemma *n-upper {n : Nat} {x : Real} : n RealAbGroup.*n x = n ExUpperRealAbMonoid.*n x \elim n
       | 0 => idp

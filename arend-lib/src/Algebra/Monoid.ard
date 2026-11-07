@@ -23,7 +23,6 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
-\import Set.Fin.BoundedPigeonhole
 \import Set.Fin.Instances
 
 \class Semigroup \extends BaseSet {
@@ -409,6 +408,9 @@
   \lemma BigSum_++' {l : Array E} {n : Nat} {l' : Array E n} : BigSum (l ++' l') = BigSum l + BigSum l' \elim l
     | nil => inv zro-left
     | a :: l => pmap (a +) BigSum_++' *> inv +-assoc
+
+  \lemma BigSum_init {n : Nat} {l : Array E (suc n)} : BigSum l = BigSum (initA l) + lastA l
+    => pmap BigSum (++'-split {_} {n} {1} {l}) *> BigSum_++' {\this} {initA l} {1} {\new Array E 1 \lam j => l (fin-raise j)} *> pmap (_ +) zro-right
 
   \lemma BigSum-split {n m : Nat} {l : Array E (n Nat.+ m)}
     : BigSum l = BigSum (\lam (i : Fin n) => l (fin-inc i)) + BigSum (\lam (j : Fin m) => l (fin-raise j)) \elim n, l

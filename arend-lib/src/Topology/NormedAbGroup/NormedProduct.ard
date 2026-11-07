@@ -2,7 +2,8 @@
 \import Algebra.Meta
 \import Arith.Real
 \import Arith.Real.Field
-\import Logic
+\import Data.Array
+\import Function.Meta
 \import Order.PartialOrder
 \import Paths
 \import Topology.Compact
@@ -45,15 +46,32 @@
   | norm-dist => idp
   | norm-ext _ => idp
 
+-- | The product of `n` copies of a normed group with the sum of the norms.
+\instance ArrayPseudoNormedAbGroup (n : Nat) (A : PseudoNormedAbGroup) : PseudoNormedAbGroup (Array A n)
+  | PseudoMetricSpace => ManhattanArrayMetricSpace n A
+  | AbGroup => ArrayAbGroup n A
+  | norm x => RealAbGroup.BigSum (\lam j => A.norm (x j))
+  | norm-dist => Real.=-upper.1 (RealAbGroup.BigSum-ext \lam j => lnorm-ldist)
+
+-- | The product of `n` copies of a normed group with the sum of the norms.
+\instance ArrayNormedAbGroup (n : Nat) (A : NormedAbGroup) : NormedAbGroup (Array A n)
+  | PseudoNormedAbGroup => ArrayPseudoNormedAbGroup n A
+  | norm-ext {x} p => arrayExt {_} {_} {x} {\lam _ => A.zro} \lam j => A.norm-ext $ Real.=-upper.1 $ RealAbGroup.BigSum_>=0-zero {\lam j => lnorm (x j)} (\lam j => lnorm>=0) ((Real.=-upper {_} {RealAbGroup.zro}).2 p) j
+
+\lemma array-lnorm-init {n : Nat} {A : PseudoNormedAbGroup} {x : Array A (suc n)} : lnorm x = lnorm (initA x) RealAbGroup.+ lnorm (lastA x)
+  => RealAbGroup.BigSum_init {_} {\lam j => A.norm (x j)}
+
+\lemma array-ldist-init {n : Nat} {A : PseudoNormedAbGroup} {x y : Array A (suc n)}
+  : ldist {ArrayPseudoNormedAbGroup (suc n) A} x y = ldist {ArrayPseudoNormedAbGroup n A} (initA x) (initA y) RealAbGroup.+ ldist (lastA x) (lastA y)
+  => RealAbGroup.BigSum_init {_} {\lam j => A.dist (x j) (y j)}
+
 -- | The space `ℝⁿ`.
-\func RealN (n : Nat) : NormedAbGroup.{0} \elim n
-  | 0 => UnitNormedAbGroup
-  | suc n => ProductNormedAbGroup (RealN n) RealNormed
+\func RealN (n : Nat) : NormedAbGroup (Array Real n)
+  => ArrayNormedAbGroup n RealNormed
 
 -- | Balls of `ℝⁿ` are totally bounded.
-\lemma RealN-ballsTB (n : Nat) : BallsTotallyBounded (RealN n) \elim n
-  | 0 => \lam _ _ => totallyBoundedSet-metric-char.2 \lam eps>0 => inP (() :: nil, \lam _ => inP (0, OBall-center {RealN 0} eps>0 {()}))
-  | suc n => manhattan-ballsTB (RealN-ballsTB n) real-bounded-tb
+\lemma RealN-ballsTB (n : Nat) : BallsTotallyBounded (RealN n)
+  => array-ballsTB real-bounded-tb n
 
 -- | Cover maps out of `ℝⁿ` are uniform on bounded sets.
 \lemma RealN-locallyUniform (n : Nat) : IsLocallyUniformSpace (RealN n)

@@ -154,9 +154,8 @@
   | suc n => rect (ratCube n R) (ratIntervals ((negative R, R) :: nil))
 
 -- | The inclusion of rational points to `ℝⁿ`.
-\func ratPt {n : Nat} (z : Array Rat n) : RealN n \elim n
-  | 0 => ()
-  | suc n => (ratPt (initA z), lastA z)
+\func ratPt {n : Nat} (z : Array Rat n) : RealN n
+  => \lam j => Real.fromRat (z j)
 
 \lemma lebPts-rect-char {n : Nat} {a : LebesgueRing0 n} {c : RatIntervalSet} {z : Array Rat (suc n)}
   : lebPts (suc n) (rect a c) z = true <-> (\Sigma (lebPts n a (initA z) = true) (ratPoints c (lastA z) = true))
@@ -175,13 +174,13 @@
     (\Pi {i j : Fin l.len} {z : Array Rat n} -> lebPts n (l i).2 z = true -> lebPts n (l j).2 z = true -> i = j)
     (\Pi {i : Fin l.len} {z : Array Rat n} -> lebPts n (l i).2 z = true -> \Sigma (ldist {RealN n} (l i).1 (ratPt z) < d) (lebPts n (ratCube n R) z = true))
     (\Pi {z : Array Rat n} -> lebPts n (ratCube n R) z = true -> ∃ (i : Fin l.len) (lebPts n (l i).2 z = true)) \elim n
-  | 0 => inP (((),true) :: nil, \lam {i} {j} _ _ => \case \elim i, \elim j \with { | 0, 0 => idp }, \lam {i} {z} _ => \case \elim i \with { | 0 => (rat_real_<.1 d>0, idp) }, \lam {z} p => inP (0, p))
+  | 0 => inP ((nil,true) :: nil, \lam {i} {j} _ _ => \case \elim i, \elim j \with { | 0, 0 => idp }, \lam {i} {z} _ => \case \elim i \with { | 0 => (rat_real_<.1 d>0, idp) }, \lam {z} p => inP (0, p))
   | suc n =>
     \have d2>0 : 0 < d * ratio 1 2 => linarith
     \in \case cubeCells n R d2>0, cells1 R d2>0 \with {
       | inP (l,l1,l2,l3), inP (m,m1,m2,m3) =>
         \let e => ProdFin.prod_equiv {l.len} {m.len}
-        \in inP (mkArray \lam k => (((l (e k).1).1, Real.fromRat (m (e k).2).1), rect (l (e k).1).2 (m (e k).2).2),
+        \in inP (mkArray \lam k => (snocPt (l (e k).1).1 (m (e k).2).1, rect (l (e k).1).2 (m (e k).2).2),
           \lam {i} {j} {z} p q =>
             \have | (p1,p2) => (lebPts-rect-char {n} {(l (e i).1).2} {(m (e i).2).2} {z}).1 p
                   | (q1,q2) => (lebPts-rect-char {n} {(l (e j).1).2} {(m (e j).2).2} {z}).1 q
@@ -193,13 +192,22 @@
                   | s1 : ldist {RealN n} (l (e i).1).1 (ratPt (initA z)) < Real.fromRat (d * ratio 1 2) => a1
                   | s2 : ldist {RealNormed} (Real.fromRat (m (e i).2).1) (Real.fromRat (lastA z)) < Real.fromRat (d * ratio 1 2) => rat-ldist b1
                   | h : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-            \in (linarith, ratCube-mem.2 (a2,b2,b3)),
+                  | u : ldist {RealN n} (l (e i).1).1 (ratPt (initA z)) RealAbGroup.+ ldist {RealNormed} (Real.fromRat (m (e i).2).1) (Real.fromRat (lastA z)) < Real.fromRat d => linarith
+            \in (transportInv (`< _) ldist-snoc u, ratCube-mem.2 (a2,b2,b3)),
           \lam {z} p =>
             \have (c1,c2,c3) => ratCube-mem.1 p
             \in \case l3 c1, m3 c2 c3 \with {
               | inP (i,q1), inP (j,q2) => inP (e.sec (i,j), (lebPts-rect-char {n} {_} {_} {z}).2 (transportInv (\lam (w : \Sigma (Fin l.len) (Fin m.len)) => \Sigma (lebPts n (l w.1).2 (initA z) = true) (ratPoints (m w.2).2 (lastA z) = true)) (e.f_sec (i,j)) (q1,q2)))
             })
     }
+  \where {
+    \func snocPt {n : Nat} (x : RealN n) (a : Real) : RealN (suc n)
+      => x ++' (a :: nil)
+
+    \lemma ldist-snoc {n : Nat} {x : RealN n} {a : Real} {z : Array Rat (suc n)}
+      : ldist {RealN (suc n)} (snocPt x a) (ratPt z) = ldist {RealN n} x (ratPt (initA z)) RealAbGroup.+ ldist {RealNormed} a (Real.fromRat (lastA z))
+      => array-ldist-init {n} {RealNormed} {snocPt x a} {ratPt z} *> pmap2 (\lam u v => ldist {RealN n} u (ratPt (initA z)) RealAbGroup.+ ldist {RealNormed} v (Real.fromRat (lastA z))) initA-snoc lastA-snoc
+  }
 
 -- | A family of pairwise disjoint sets of rational points is reduced.
 \lemma disjoint-reduced {n : Nat} {l : Array (\Sigma RatIntegrationSpace (LebesgueRing0 n))}

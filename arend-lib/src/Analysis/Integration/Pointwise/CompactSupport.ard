@@ -62,14 +62,14 @@
           | b : RatField.abs (lastA z) <= R => RatField.join-univ (<=-less c3) linarith
           | b' : RealAbGroup.abs (Real.fromRat (lastA z)) <= Real.fromRat R => rewrite RealAbGroup.abs-rat (rat_real_<=.1 b)
           | p : Real.fromRat (cubeRad n R + R) = Real.fromRat (cubeRad n R) RealAbGroup.+ Real.fromRat R => inv RealAbGroup.+-rat
-    \in transportInv (_ <=) p $ RealAbGroup.<=_+ i b'
+    \in transportInv (`<= _) (array-lnorm-init {n} {RealNormed} {ratPt z}) $ transportInv (_ <=) p $ RealAbGroup.<=_+ i b'
 
 \lemma cube-out {n : Nat} {R : Rat} {z : Array Rat n} (h : lebPts n (ratCube n R) z = false) : Real.fromRat R <= lnorm {RealN n} (ratPt z) \elim n
   | 0 => contradiction
   | suc n =>
-    \have | d1>=0 : 0 <= lnorm {RealN n} (ratPt (initA z)) => lnorm>=0 {RealN n}
+    \have | d1>=0 : 0 <= lnorm {RealN n} (ratPt (initA z)) => lnorm>=0 {RealN n} {ratPt (initA z)}
           | d2>=0 : 0 <= RealAbGroup.abs (Real.fromRat (lastA z)) => lnorm>=0 {RealNormed}
-          | e : lnorm {RealN (suc n)} (ratPt z) = lnorm {RealN n} (ratPt (initA z)) RealAbGroup.+ RealAbGroup.abs (Real.fromRat (lastA z)) => idp
+          | e : lnorm {RealN (suc n)} (ratPt z) = lnorm {RealN n} (ratPt (initA z)) RealAbGroup.+ RealAbGroup.abs (Real.fromRat (lastA z)) => array-lnorm-init {n} {RealNormed} {ratPt z}
           | big (b : R <= RatField.abs (lastA z)) : Real.fromRat R <= lnorm {RealN (suc n)} (ratPt z) =>
             \have b' : Real.fromRat R <= RealAbGroup.abs (Real.fromRat (lastA z)) => rewrite RealAbGroup.abs-rat (rat_real_<=.1 b)
             \in linarith
@@ -119,11 +119,11 @@
                      \have | (q1,_) => l2 q
                            | se : stepEval z (inSF arr) = (c i).1 => (lebPoint z).evalL-index {_} {arr} ar q
                            | ci : RealAbGroup.abs (g (l i).1 - Real.fromRat (c i).1) < Real.fromRat (e * ratio 1 2) => (c i).2
-                           | z<A : (dist {RealN n} 0 (ratPt z)).U ((cubeRad n R' ∨ 0) + 1) => real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n}) $ cube-in zK <∘r rat_real_<.1 linarith
+                           | z<A : (dist {RealN n} 0 (ratPt z)).U ((cubeRad n R' ∨ 0) + 1) => real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n} {ratPt z}) $ cube-in zK <∘r rat_real_<.1 linarith
                            | cz<1 : (dist (l i).1 (ratPt z)).U 1 => ExUpperReal.U_<= (real_<_U.1 q1) meet-right
                            | cz<d : (dist (l i).1 (ratPt z)).U d => ExUpperReal.U_<= (real_<_U.1 q1) meet-left
                            | gcz : RealAbGroup.abs (g (l i).1 - g (ratPt z)) < Real.fromRat (e * ratio 1 2)
-                               => real_<_U.2 (gu ((RealN n).halving-right z<A cz<1 linarith) (ExUpperReal.U_<= z<A linarith) cz<d)
+                               => real_<_U.2 (gu ((RealN n).halving-right {0} {ratPt z} {(l i).1} z<A cz<1 linarith) (ExUpperReal.U_<= z<A linarith) cz<d)
                      \in rewrite se (real-abs-triangle gcz ci (RealAbGroup.+-rat *> pmap Real.fromRat linarith))
                  }
                  | false, zK =>
@@ -425,7 +425,7 @@
      \in inP (d ∧ 1, dm>0, \lam {x} {y} xy => \case Real.LU-located {lnorm x} {(R ∨ 0) + 1} {(R ∨ 0) + 2} linarith \with {
             | byRight u =>
               \have u' : (dist {RealN n} 0 x).U ((R ∨ 0) + 2) => real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n}) (real_<_U.2 u)
-              \in real_<_U.2 $ gu (ExUpperReal.U_<= u' linarith) ((RealN n).halving u' (ExUpperReal.U_<= xy meet-right) linarith) (ExUpperReal.U_<= xy meet-left)
+              \in real_<_U.2 $ gu (ExUpperReal.U_<= u' linarith) ((RealN n).halving {0} {x} {y} u' (ExUpperReal.U_<= xy meet-right) linarith) (ExUpperReal.U_<= xy meet-left)
             | byLeft l =>
               \have | l' : Real.fromRat ((R ∨ 0) + 1) < lnorm x => real_<_L.2 l
                     | xy1 : ldist {RealN n} x y < 1 => real_<_U.2 (ExUpperReal.U_<= xy meet-right)

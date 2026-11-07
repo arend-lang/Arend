@@ -178,12 +178,6 @@
     | nil => idp
     | a :: x => lastA-++' x
 
-  \func initA-snoc {A : \Type} {n : Nat} {x : Array A n} {a : A} : initA (x ++' (a :: nil)) = {Array A n} x
-    => exts \lam i => ++'.++'_index-left
-
-  \func lastA-snoc {A : \Type} {n : Nat} {x : Array A n} {a : A} : lastA (x ++' (a :: nil)) = a
-    => ++'.++'_index-right
-
   \lemma and-true {a : Bool} : a and true = a => cases a idp
   \lemma and-false {a : Bool} : a and false = false => cases a idp
   \lemma and-or-rdistr {a b c : Bool} : (a and c) or (b and c) = (a or b) and c => cases (a,b,c) idp

@@ -1,5 +1,8 @@
 \import Algebra.Group
+\import Algebra.Monoid
 \import Algebra.Monoid.Product
+\import Algebra.Pointed
+\import Data.Array
 \import Paths
 
 \instance ProductGroup (G H : Group) : Group
@@ -21,3 +24,14 @@
 \instance ProductAbGroup (A B : AbGroup) : AbGroup
   | AddGroup => ProductAddGroup A B
   | AbMonoid => ProductAbMonoid A B
+
+-- | The product of `n` copies of an abelian group.
+\instance ArrayAbGroup (n : Nat) (A : AbGroup) : AbGroup (Array A n)
+  | zro _ => 0
+  | + f g j => f j + g j
+  | zro-left => arrayExt (\lam j => zro-left)
+  | zro-right => arrayExt (\lam j => zro-right)
+  | +-assoc => arrayExt (\lam j => +-assoc)
+  | negative f j => negative (f j)
+  | negative-left => arrayExt (\lam j => negative-left)
+  | +-comm => arrayExt (\lam j => +-comm)

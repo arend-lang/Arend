@@ -235,7 +235,7 @@
     \private \lemma trunc-pair {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U)
       : \Sigma (g : CompactCoverMap n) (IsTrunc Uo f c g)
       \level \lam u v => ext (CompactCoverMap.ext (trunc-unique {n} {U} {Uo} u.2 v.2))
-      => \case openCover-bounded Uo f (ballsTB-totallyBounded (RealN-ballsTB n) (cutoff-bounded c)) (cutoff-<=* c) \with {
+      => \case openCover-bounded {RealN n} Uo f (ballsTB-totallyBounded (RealN-ballsTB n) (cutoff-bounded c)) (cutoff-<=* c) \with {
         | inP (M,M>0,hM) =>
           \let | g => truncPt Uo f c M>0 hM
                | sp : IsTrunc Uo f c g => truncPt.spec {n} {U} {Uo} {f} {c} {M} {M>0} {hM}

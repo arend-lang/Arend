@@ -52,6 +52,12 @@
 \func lastA {A : \Type} {n : Nat} (z : Array A (suc n)) : A
   => z (fin-raise {1} {n} 0)
 
+\sfunc initA-snoc {A : \Type} {n : Nat} {x : Array A n} {a : A} : initA (x ++' (a :: nil)) = {Array A n} x
+  => arrayExt {_} {_} {initA (x ++' (a :: nil))} {x} \lam i => ++'.++'_index-left
+
+\sfunc lastA-snoc {A : \Type} {n : Nat} {x : Array A n} {a : A} : lastA (x ++' (a :: nil)) = a
+  => ++'.++'_index-right
+
 \func \infixr 5 ++' {A : \Type} (xs : Array A) {n : Nat} (ys : Array A n) : Array A (xs.len Nat.+ n) \elim xs
   | nil => ys
   | a :: xs => a :: xs ++' ys
@@ -617,6 +623,12 @@
 \func replace-index {A : \Type} {l : Array A} {i : Fin l.len} {a : A} : replace l i a i = a \elim l, i
   | b :: l, 0 => idp
   | b :: l, suc i => replace-index
+
+\func replace-elim {A : \Type} {l : Array A} {i : Fin l.len} {a : A} {P : Fin l.len -> A -> \Type} (Pl : \Pi (j : Fin l.len) -> P j (l j)) (Pa : P i a) (j : Fin l.len) : P j (replace l i a j) \elim l, i, j
+  | b :: l, 0, 0 => Pa
+  | b :: l, 0, suc j => Pl (suc j)
+  | b :: l, suc i, 0 => Pl 0
+  | b :: l, suc i, suc j => replace-elim {_} {l} {i} {a} {\lam k => P (suc k)} (\lam k => Pl (suc k)) Pa j
 
 \func replace-notIndex {A : \Type} {l : Array A} {i j : Fin l.len} (i/=j : i /= {Nat} j) {a : A} : replace l i a j = l j \elim l, i, j
   | b :: l, 0, 0 => absurd (i/=j idp)
