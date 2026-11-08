@@ -41,7 +41,7 @@ where StubT : ArendNamedStub, StubT : StubElement<*> {
     override val ownAccessModifier: AccessModifier
         get() = stub?.accessModifier
             ?: parent?.childOfType<ArendAccessMod>()?.accessModifier
-            ?: ancestor<ArendStatAccessMod>()?.accessModifier
+            ?: ((parent as? ArendStat)?.parent as? ArendStatAccessMod)?.accessModifier
             ?: AccessModifier.PUBLIC
 
     override fun getAccessModifier() = ownAccessModifier
