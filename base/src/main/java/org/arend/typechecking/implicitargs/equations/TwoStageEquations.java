@@ -21,16 +21,19 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.core.level.LevelSubstitution;
+import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.LocalError;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypecheckerState;
+import org.arend.typechecking.computation.ComputationRunner;
 import org.arend.typechecking.error.local.SolveEquationError;
 import org.arend.typechecking.error.local.SolveEquationsError;
 import org.arend.typechecking.error.local.SolveLevelEquationsError;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
+import org.arend.typechecking.visitor.FindSubexpressionVisitor;
 import org.arend.ext.util.Pair;
 
 import java.math.BigInteger;
@@ -54,11 +57,19 @@ public class TwoStageEquations implements Equations {
 
   @Override
   public Boolean solveInstance(TypeClassInferenceVariable variable, FieldCallExpression fieldCall, Expression expr) {
+    ComputationRunner.checkCanceled();
     ClassDefinition classDef = variable.getClassDefinition();
     if (classDef == null) {
       return null;
     }
     if (classDef.getClassifyingField() == fieldCall.getDefinition() && expr.getStuckInferenceVariable() == null) {
+      // If expr is the classifying field of a partially inferred value of a subclass, then the variable should be solved by this value.
+      // An instance found for the normalized classifying expression might have the same form with new inference variables, and so on.
+      if (expr.getUnderlyingExpression() instanceof FieldCallExpression exprFieldCall && exprFieldCall.getDefinition() == fieldCall.getDefinition() &&
+          exprFieldCall.getArgument().accept(new FindSubexpressionVisitor(sub -> sub instanceof InferenceReferenceExpression infRef && infRef.getVariable() != null ? CoreExpression.FindAction.STOP : CoreExpression.FindAction.CONTINUE), null) &&
+          exprFieldCall.getArgument().getType().normalize(NormalizationMode.WHNF) instanceof ClassCallExpression classCall && classCall.getDefinition().isSubClassOf(classDef)) {
+        return null;
+      }
       Expression result = variable.getInstance(myVisitor.getInstancePool(), expr, null, variable.getSourceNode());
       return result == null ? null : solve(variable, result.normalize(NormalizationMode.WHNF), false) != SolveResult.SOLVED;
     }
