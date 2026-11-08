@@ -1,0 +1,394 @@
+{- | The fundamental theorem of calculus, the other direction.
+ -
+ -   For a cover map {g} on `[a,b]`, the integral `F x = ∫_(a,x) g` (see {primitive}) has a derivative,
+ -   and its derivative is {g} (see {primitive-hasDeriv} and {deriv-primitive}).
+ -
+ -   Proof: `|F y - F x - (y - x) g x| <= ε |y - x|` for close `x` and `y` (see {primitive-est}), which follows from the estimate {primitive-incr};
+ -   this characterizes the derivative by {hasDeriv-uniform-iff}.
+ -   The increment `F y - F x` is the limit of the integrals of the differences of truncations by trapezoids;
+ -   these differences are close to the step function `g x` on `[x,y]` (see {primitive-incr.cut-estimate}).
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.StrictlyOrdered
+\import Analysis.Calculus.FundamentalTheorem
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.Derivative.IntervalDerivative
+\import Analysis.Derivative.UniformDerivative
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.MeasureIntegrationSpace
+\import Analysis.Integration.Pointwise.CompactSupport
+\import Analysis.Integration.Pointwise.OpenIntegral
+\import Analysis.Integration.Pointwise.OpenInterval
+\import Analysis.Measure.Lebesgue
+\import Analysis.Measure.MeasureRing
+\import Analysis.Measure.RatSFunc
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.Subspace
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.TopRing.Real
+
+-- | The restriction of {g} to `(a,c)`.
+\lemma restrictTo {a b : Real} (g : CoverMap (IntervalSpace a b) RealNormed) (c : Set.Total (ClosedInterval a b))
+  : CoverMap (OpenCoverSpace {RealN 1} (interval-open a c.1)) RealNormed (\lam u => g (subInterval <=-refl c.2.2 u))
+  => g CoverMap.∘ subIntervalMap <=-refl c.2.2
+
+-- | A cover map on `[a,b]` is bounded.
+\lemma interval-bounded {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed)
+  : ∃ (M : Rat) (0 < M) (\Pi (x : Set.Total (ClosedInterval a b)) -> RealAbGroup.abs (g x) <= Real.fromRat M)
+  => \let p : CoverMap Plane RealNormed (\lam s => g (clamp a<=b s.1)) => g CoverMap.∘ clampMap a<=b CoverMap.∘ ProductCoverSpace.proj1
+     \in \case square-bounded p a b \with {
+       | inP (M,M>0,h) => inP (M, M>0, \lam x => transport (\lam z => RealAbGroup.abs (g z) <= _) (clamp-in {a} {b} {a<=b} x.2) (h x.2 x.2))
+     }
+
+\lemma restrict-integrable {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed) (c : Set.Total (ClosedInterval a b))
+  : IsIntegrableOn (interval-open a c.1) (restrictTo g c)
+  => \case interval-bounded a<=b g \with {
+    | inP (M,_,h) => interval-integrable (\lam u => h _)
+  }
+
+-- | The integral of {g} over `(a,c)`.
+\func primitive {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed) (c : Set.Total (ClosedInterval a b)) : Real
+  => integralOn (interval-open a c.1) (restrictTo g c) (restrict-integrable a<=b g c)
+
+-- | If {g} is {eps}-close to `g x` on `[x,y]`, then the increment of the primitive is close to `(y - x) g x`.
+\lemma primitive-incr {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {x y : Set.Total (ClosedInterval a b)} (xy : x.1 <= y.1)
+                      {eps : Rat} (hg : \Pi (t : Set.Total (ClosedInterval a b)) -> x.1 <= t.1 -> t.1 <= y.1 -> RealAbGroup.abs (g t - g x) <= Real.fromRat eps)
+  : RealAbGroup.abs (primitive a<=b g y - primitive a<=b g x - (y.1 - x.1) * g x) <= Real.fromRat eps * (y.1 - x.1)
+  => \case interval-bounded a<=b g, Real.U-inh {b - a} \with {
+    | inP (M,M>0,hM), inP (B0,bB) => real_<=-eps \lam {d} d>0 =>
+      \let | K0 : Rat => (B0 + 1 + 1) + (B0 + 1 + 1) + ((M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1)) + (M + M)
+           | K : Rat => K0 + eps + eps
+           | eta : Rat => d * ratio 1 4
+      \in \have | bB' : b - a < Real.fromRat B0 => real_<_U.2 bB
+                | eps>=0 : 0 <= eps => rat_real_<=.2 (RealAbGroup.abs>=0 <=∘ =_<= (pmap RealAbGroup.abs (inv negative-right)) <=∘ hg x <=-refl xy)
+                | B0>0 : 0 < B0 => rat_real_<.2 (usingOnly (bB', x.2.1, x.2.2) linarith)
+                | K>0 : 0 < K => usingOnly (B0>0, M>0, eps>=0) linarith
+                | eta>0 : 0 < eta => usingOnly d>0 linarith
+      \in \case integralOn-trap (restrict-integrable a<=b g y) eta>0, integralOn-trap (restrict-integrable a<=b g x) eta>0 \with {
+        | inP (r1,r1>0,hr1), inP (r2,r2>0,hr2) =>
+          \let h : Rat => ((1 ∧ (r1 * ratio 1 2)) ∧ (r2 * ratio 1 2)) ∧ (d * ratio 1 4 * RatField.finv K)
+          \in \have | h>0 : 0 < h => <_meet-univ (<_meet-univ (<_meet-univ RatField.zro<ide (usingOnly r1>0 linarith)) (usingOnly r2>0 linarith))
+                                       (RatField.<_*_positive_positive (usingOnly d>0 linarith) (RatField.finv>0 K>0))
+                    | h<=1 : h <= 1 => meet-left <=∘ meet-left <=∘ meet-left
+                    | h1 : h + h <= r1 => usingOnly (meet-left <=∘ meet-left <=∘ meet-right : h <= r1 * ratio 1 2) linarith
+                    | h2 : h + h <= r2 => usingOnly (meet-left <=∘ meet-right : h <= r2 * ratio 1 2) linarith
+                    | hK : h * K <= d * ratio 1 4
+                        => RatField.<=_*_positive-left (meet-right : h <= d * ratio 1 4 * RatField.finv K) (<=-less K>0)
+                            <=∘ =_<= (*-assoc *> pmap (_ *) (RatField.finv-left (/=-sym (StrictPoset.<_/= K>0))) *> ide-right)
+                    | H => Real.fromRat h
+                    | H>0 : 0 < H => rat_real_<.1 h>0
+                    | h<=1' : H <= 1 => rat_real_<=.1 h<=1
+          \in \case real_<-rat-char.1 (usingOnly H>0 linarith : x.1 - H < x.1), real_<-rat-char.1 (usingOnly H>0 linarith : y.1 < y.1 + H),
+                    real_<-rat-char.1 (usingOnly H>0 linarith : g x - H < g x) \with {
+            | inP (A,AU,AL), inP (B,BU,BL), inP (q,qU,qL) =>
+              \have | A1 : x.1 - H < Real.fromRat A => real_<_U.2 AU
+                    | A2 : Real.fromRat A < x.1 => real_<_L.2 AL
+                    | B1 : y.1 < Real.fromRat B => real_<_U.2 BU
+                    | B2 : Real.fromRat B < y.1 + H => real_<_L.2 BL
+                    | q1 : g x - H < Real.fromRat q => real_<_U.2 qU
+                    | q2 : Real.fromRat q < g x => real_<_L.2 qL
+                    | AB : A <= B => rat_real_<=.2 (<=-less (usingOnly (A2, B1, xy) linarith))
+                    | hq1 : g x - Real.fromRat q <= H => usingOnly q1 linarith
+                    | hq2 : negative (g x - Real.fromRat q) <= H => usingOnly (q2, H>0) linarith
+                    | hq : RealAbGroup.abs (g x - Real.fromRat q) <= H => RealAbGroup.join-univ hq1 hq2
+                    | eP0 : Real.fromRat (A - h - h) = Real.fromRat A - H - H => inv RealAbGroup.minus-rat *> pmap (`- H) (inv RealAbGroup.minus-rat)
+                    | eP1 : Real.fromRat (A + h + h + h) = Real.fromRat A + H + H + H => inv RealAbGroup.+-rat *> pmap (`+ H) (inv RealAbGroup.+-rat *> pmap (`+ H) (inv RealAbGroup.+-rat))
+                    | eQ1 : Real.fromRat (B - h - h - h) = Real.fromRat B - H - H - H => inv RealAbGroup.minus-rat *> pmap (`- H) (inv RealAbGroup.minus-rat *> pmap (`- H) (inv RealAbGroup.minus-rat))
+                    | t3 => cut-estimate {a} {b} {a<=b} {g} {x} {y} xy hM hg h>0 hq AB (rewrite eP0 (usingOnly A2 linarith)) (rewrite eP1 (usingOnly (A1, H>0) linarith))
+                                (rewrite eQ1 (usingOnly B2 linarith)) B1
+                    | t1 => hr1 h>0 h1
+                    | t2 => hr2 h>0 h2
+                    | eW : Real.fromRat (B - A) = Real.fromRat B - Real.fromRat A => inv RealAbGroup.minus-rat
+                    | fr2 : Real.fromRat (B0 + 1 + 1) = Real.fromRat B0 + 1 + 1 => inv RealAbGroup.+-rat *> pmap (`+ 1) (inv RealAbGroup.+-rat)
+                    | W<= : B - A <= B0 + 1 + 1 => rat_real_<=.2 (transport2 (<=) (inv eW) (inv fr2) (<=-less (usingOnly (A1, B2, h<=1', bB', x.2.1, y.2.2) linarith : Real.fromRat B - Real.fromRat A < Real.fromRat B0 + 1 + 1)))
+                    | t4 : RealAbGroup.abs (Real.fromRat (q * (B - A)) - (y.1 - x.1) * g x) <= Real.fromRat (h * (B - A) + M * (h + h))
+                        => transport2 (\lam u v => RealAbGroup.abs (u - (y.1 - x.1) * g x) <= v) RealField.*-rat
+                             (inv (inv RealAbGroup.+-rat *> pmap2 (+) (inv RealField.*-rat) (inv RealField.*-rat *> pmap (_ *) (inv RealAbGroup.+-rat))))
+                             (prod-bound {g x} {Real.fromRat q} {Real.fromRat (B - A)} {y.1 - x.1} {H} {Real.fromRat M} hq (hM x) (rat_real_<=.1 (usingOnly AB linarith)) (rewrite eW (usingOnly (A2, B1) linarith)) (rewrite eW (usingOnly (A1, B2) linarith)))
+                    | r1 => rat-bound {eps} {h} {A} {B} {M} {B0} h>0 h<=1 W<= (<=-less M>0)
+                    | WD : Real.fromRat (B - A) <= (y.1 - x.1) + (H + H) => rewrite eW (usingOnly (A1, B2) linarith)
+                    | m : Real.fromRat eps * Real.fromRat (B - A) <= Real.fromRat eps * (y.1 - x.1) + Real.fromRat eps * (H + H)
+                        => RealField.<=_*_positive-right (rat_real_<=.1 eps>=0) WD <=∘ =_<= RealField.ldistr
+                    | eK : Real.fromRat eps * (H + H) + Real.fromRat (h * K0) = Real.fromRat (h * K)
+                        => pmap (`+ _) (pmap (_ *) RealAbGroup.+-rat *> RealField.*-rat) *> RealAbGroup.+-rat *> pmap Real.fromRat (equation.cRing : eps * (h + h) + h * K0 = h * (K0 + eps + eps))
+                    | t5 => =_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 r1 <=∘ =_<= (inv RealAbGroup.+-rat *> pmap (`+ _) (inv RealField.*-rat)) <=∘ fin5 m eK
+                    | t6 : Real.fromRat (h * K) + Real.fromRat eta + Real.fromRat eta < Real.fromRat d
+                        => transport (`< _) (inv (pmap (`+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat)) (rat_real_<.1 (usingOnly (hK, d>0) linarith))
+              \in assemble t1 t2 t3 t4 t5 t6
+          }
+      }
+  }
+  \where \private {
+    -- | The truncation of the restriction of {g} to `(a,c)` is the product of {g} and the trapezoid.
+    \lemma restrict-trunc {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {c : Set.Total (ClosedInterval a b)} {h : Rat} (h>0 : 0 < h) (w : RealN 1)
+      : truncate (interval-open a c.1) (restrictTo g c) (intervalCutoff a c.1 h>0) w = g (clamp a<=b (w 0)) * trapValue a c.1 h (w 0)
+      => \let cc => intervalCutoff a c.1 h>0
+         \in RealAbGroup.<=-split separatedEq (cc.cut>=0 {w})
+              (\lam pos => \have Uw => cutoff-in cc pos
+                           \in (truncate.char {1} {_} {_} {restrictTo g c} cc).1 (w,Uw)
+                                *> pmap (\lam z => g z * trapValue a c.1 h (w 0)) (inv (clamp-in {a} {b} {a<=b} (subInterval <=-refl c.2.2 (w,Uw)).2)))
+              (\lam z => (truncate.char cc).2 (inv z) *> inv RealField.zro_*-right *> pmap (_ *) z)
+
+    -- | The truncations of `g` on `(a,y)` and `(a,x)` differ by a function close to the step function `q` on `[A,B)`, where `A ≈ x`, `B ≈ y` and `q ≈ g x`.
+    \lemma cut-estimate {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {x y : Set.Total (ClosedInterval a b)} (xy : x.1 <= y.1)
+                        {M : Rat} (hM : \Pi (t : Set.Total (ClosedInterval a b)) -> RealAbGroup.abs (g t) <= Real.fromRat M)
+                        {eps : Rat} (hg : \Pi (t : Set.Total (ClosedInterval a b)) -> x.1 <= t.1 -> t.1 <= y.1 -> RealAbGroup.abs (g t - g x) <= Real.fromRat eps)
+                        {h : Rat} (h>0 : 0 < h) {q : Rat} (hq : RealAbGroup.abs (g x - Real.fromRat q) <= Real.fromRat h) {A B : Rat} (AB : A <= B)
+                        (hP0 : Real.fromRat (A - h - h) + (Real.fromRat h + Real.fromRat h) <= x.1) (hP1 : x.1 + (Real.fromRat h + Real.fromRat h) <= Real.fromRat (A + h + h + h))
+                        (hQ1 : Real.fromRat (B - h - h - h) + (Real.fromRat h + Real.fromRat h) <= y.1) (hB : y.1 < Real.fromRat B)
+      : RealAbGroup.abs (cutIntegral (interval-open a y.1) (restrictTo g y) (intervalCutoff a y.1 h>0) - cutIntegral (interval-open a x.1) (restrictTo g x) (intervalCutoff a x.1 h>0) - Real.fromRat (q * (B - A)))
+          <= Real.fromRat ((eps + h) * (B - A) + ((M + M + h) * ((A + h + h + h) - (A - h - h)) + (M + M + h) * (B - (B - h - h - h))))
+      => \let | L => M + M + h
+              | Ty => truncate (interval-open a y.1) (restrictTo g y) (intervalCutoff a y.1 h>0)
+              | Tx => truncate (interval-open a x.1) (restrictTo g x) (intervalCutoff a x.1 h>0)
+              | T => CompactCoverMap_+ Ty (CompactCoverMap_negative Tx)
+              | A0 => box1 A B
+              | A1 => box1 (A - h - h) (A + h + h + h)
+              | A2 => box1 (B - h - h - h) B
+              | s => stepChar {1} q A0
+              | t => stepChar {1} (eps + h) A0 + (stepChar {1} L A1 + stepChar {1} L A2)
+         \in \have | et (z : Array Rat 1) : stepEval z t = if (lebPts 1 A0 z) (eps + h) 0 + (if (lebPts 1 A1 z) L 0 + if (lebPts 1 A2 z) L 0)
+                       => stepEval_+ {1} {z} {stepChar {1} (eps + h) A0} {stepChar {1} L A1 + stepChar {1} L A2}
+                           *> pmap2 (+) (stepEval-char {1} {z} {eps + h} {A0}) (stepEval_+ {1} {z} {stepChar {1} L A1} {stepChar {1} L A2} *> pmap2 (+) (stepEval-char {1} {z} {L} {A1}) (stepEval-char {1} {z} {L} {A2}))
+                   | pw (z : Array Rat 1) : RealAbGroup.abs (Ty (ratPt z) RealAbGroup.+ negative (Tx (ratPt z)) - stepEval z s) <= stepEval z t
+                       => rewrite (stepEval-char {1} {z} {q} {A0}, et z, restrict-trunc {a} {b} {a<=b} {g} {y} h>0 (ratPt z), restrict-trunc {a} {b} {a<=b} {g} {x} h>0 (ratPt z))
+                           (pointwise xy hM hg h>0 hq hP0 hP1 hQ1 hB z)
+                   | nI : RealAbGroup.abs (integral (iota T) - integral s) <= integral t => iota-integral-near {1} {T} {s} {t} pw
+                   | eS : integral s = Real.fromRat (q * (B - A)) => integral-stepChar {1} {q} {A0} *> pmap (_ RealField.*) (box-meas AB) *> RealField.*-rat
+                   | m1 : meas {LebesgueRing0 1} A1 = Real.fromRat ((A + h + h + h) - (A - h - h)) => box-meas (usingOnly h>0 linarith)
+                   | m2 : meas {LebesgueRing0 1} A2 = Real.fromRat (B - (B - h - h - h)) => box-meas (usingOnly h>0 linarith)
+                   | eT : integral t = Real.fromRat ((eps + h) * (B - A) + (L * ((A + h + h + h) - (A - h - h)) + L * (B - (B - h - h - h))))
+                       => IntegrationSpace.integral_+ {SFuncIntegrationSpace (LebesgueRing0 1)} {stepChar {1} (eps + h) A0} {stepChar {1} L A1 + stepChar {1} L A2}
+                           *> pmap2 (RealAbGroup.+) (integral-stepChar {1} {eps + h} {A0} *> pmap (_ RealField.*) (box-meas AB) *> RealField.*-rat)
+                                (IntegrationSpace.integral_+ {SFuncIntegrationSpace (LebesgueRing0 1)} {stepChar {1} L A1} {stepChar {1} L A2}
+                                  *> pmap2 (RealAbGroup.+) (integral-stepChar {1} {L} {A1} *> pmap (_ RealField.*) m1 *> RealField.*-rat) (integral-stepChar {1} {L} {A2} *> pmap (_ RealField.*) m2 *> RealField.*-rat)
+                                  *> RealAbGroup.+-rat)
+                           *> RealAbGroup.+-rat
+         \in transport2 (\lam u v => RealAbGroup.abs (u - v) <= _) (inv (cutIntegral-sub {1} {OpenInterval a x.1} {OpenInterval a y.1} {interval-open a x.1} {interval-open a y.1} {restrictTo g x} {restrictTo g y} {intervalCutoff a x.1 h>0} {intervalCutoff a y.1 h>0})) eS (transport (_ <=) eT nI)
+      \where {
+        \lemma pointwise {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {x y : Set.Total (ClosedInterval a b)} (xy : x.1 <= y.1)
+                         {M : Rat} (hM : \Pi (t : Set.Total (ClosedInterval a b)) -> RealAbGroup.abs (g t) <= Real.fromRat M)
+                         {eps : Rat} (hg : \Pi (t : Set.Total (ClosedInterval a b)) -> x.1 <= t.1 -> t.1 <= y.1 -> RealAbGroup.abs (g t - g x) <= Real.fromRat eps)
+                         {h : Rat} (h>0 : 0 < h) {q : Rat} (hq : RealAbGroup.abs (g x - Real.fromRat q) <= Real.fromRat h) {A B : Rat}
+                         (hP0 : Real.fromRat (A - h - h) + (Real.fromRat h + Real.fromRat h) <= x.1) (hP1 : x.1 + (Real.fromRat h + Real.fromRat h) <= Real.fromRat (A + h + h + h))
+                         (hQ1 : Real.fromRat (B - h - h - h) + (Real.fromRat h + Real.fromRat h) <= y.1) (hB : y.1 < Real.fromRat B) (z : Array Rat 1)
+          : RealAbGroup.abs (g (clamp a<=b (Real.fromRat (lastA z))) * trapValue a y.1 h (Real.fromRat (lastA z)) + negative (g (clamp a<=b (Real.fromRat (lastA z))) * trapValue a x.1 h (Real.fromRat (lastA z)))
+                              - Real.fromRat (if (lebPts 1 (box1 A B) z) q 0))
+              <= Real.fromRat (if (lebPts 1 (box1 A B) z) (eps + h) 0 + (if (lebPts 1 (box1 (A - h - h) (A + h + h + h)) z) (M + M + h) 0 + if (lebPts 1 (box1 (B - h - h - h) B) z) (M + M + h) 0))
+          => \let | Z => lastA z
+                  | w => Real.fromRat Z
+                  | G => g (clamp a<=b w)
+                  | H => Real.fromRat h
+             \in \have | H>0 : 0 < H => rat_real_<.1 h>0
+                       | eps>=0 : 0 <= eps => rat_real_<=.2 (RealAbGroup.abs>=0 <=∘ =_<= (pmap RealAbGroup.abs (inv negative-right)) <=∘ hg x <=-refl xy)
+                       | M>=0 : 0 <= M => rat_real_<=.2 (RealAbGroup.abs>=0 <=∘ hM x)
+                       | M>=0' : 0 <= Real.fromRat M => rat_real_<=.1 M>=0
+                       | L>=0 : 0 <= M + M + h => usingOnly (M>=0, h>0) linarith
+                       | E>=0 : 0 <= eps + h => usingOnly (eps>=0, h>0) linarith
+                       | t>=0 {b0 b1 b2 : Bool} : 0 <= Real.fromRat (if b0 (eps + h) 0 + (if b1 (M + M + h) 0 + if b2 (M + M + h) 0))
+                           => rat_real_<=.1 (sum3>=0 (if>=0 E>=0) (if>=0 L>=0) (if>=0 L>=0))
+                       | eL : Real.fromRat (M + M + h) = Real.fromRat M + (Real.fromRat M + H) => inv RealAbGroup.+-rat *> pmap (`+ H) (inv RealAbGroup.+-rat) *> +-assoc
+                       | hq' : RealAbGroup.abs (Real.fromRat q) <= Real.fromRat M + H
+                           => transport (`<= _) (pmap RealAbGroup.abs (equation.abGroup : negative (g x - Real.fromRat q) + g x = Real.fromRat q))
+                                (RealAbGroup.abs_+ <=∘ transport (_ <=) RealAbGroup.+-comm (RealAbGroup.<=_+ (=_<= RealAbGroup.abs_negative <=∘ hq) (hM x)))
+                       | margin {b0 b1 b2 : Bool} (lb : Real.fromRat (M + M + h) <= Real.fromRat (if b0 (eps + h) 0 + (if b1 (M + M + h) 0 + if b2 (M + M + h) 0)))
+                         : RealAbGroup.abs (G * trapValue a y.1 h w + negative (G * trapValue a x.1 h w) - Real.fromRat (if b0 q 0))
+                             <= Real.fromRat (if b0 (eps + h) 0 + (if b1 (M + M + h) 0 + if b2 (M + M + h) 0))
+                           => margin-bound (hM (clamp a<=b w)) trap-range trap-range (if-abs {b0} hq' (<=-less (usingOnly (M>=0', H>0) linarith))) <=∘ =_<= (inv eL) <=∘ lb
+             \in \case LinearOrder.dec<_<= Z (A - h - h) \with {
+               | inl z<P0 =>
+                 \have | w<P0 : w < Real.fromRat (A - h - h) => rat_real_<.1 z<P0
+                       | e : trapValue a y.1 h w = trapValue a x.1 h w => trap-same-left h>0 xy (usingOnly (w<P0, hP0) linarith)
+                 \in rewrite (box-out {A} {B} {z} (byLeft (usingOnly (z<P0, h>0) linarith))) (zero-bound e (t>=0 {false} {lebPts 1 (box1 (A - h - h) (A + h + h + h)) z} {lebPts 1 (box1 (B - h - h - h) B) z}))
+               | inr P0<=z => \case LinearOrder.dec<_<= Z (A + h + h + h) \with {
+                 | inl z<P1 => rewrite (box-mem P0<=z z<P1) (margin {lebPts 1 (box1 A B) z} {true} {lebPts 1 (box1 (B - h - h - h) B) z} (rat_real_<=.1 (sum3-mid (if>=0 E>=0) (if>=0 L>=0))))
+                 | inr P1<=z => \case LinearOrder.dec<_<= Z (B - h - h - h) \with {
+                   | inl z<Q1 =>
+                     \have | P1<=w : Real.fromRat (A + h + h + h) <= w => rat_real_<=.1 P1<=z
+                           | w<Q1 : w < Real.fromRat (B - h - h - h) => rat_real_<.1 z<Q1
+                           | xw : x.1 <= w => usingOnly (hP1, P1<=w, H>0) linarith
+                           | wy : w <= y.1 => usingOnly (w<Q1, hQ1, H>0) linarith
+                           | tr => trap-one-mid {a} {x.1} {y.1} {w} h>0 x.2.1 (usingOnly (hP1, P1<=w) linarith) (usingOnly (w<Q1, hQ1) linarith)
+                     \in \let P : Set.Total (ClosedInterval a b) => (w, (x.2.1 <=∘ xw, wy <=∘ y.2.2))
+                     \in \have | eG : G = g P => pmap g (clamp-in {a} {b} {a<=b} P.2)
+                           | gP : RealAbGroup.abs (G - g x) <= Real.fromRat eps => rewrite eG (hg P xw wy)
+                     \in rewrite (box-mem {A} {B} {z} (usingOnly (P1<=z, h>0) linarith) (usingOnly (z<Q1, h>0) linarith), tr.1, tr.2)
+                           (mid-bound gP hq (=_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 (sum3-first (if>=0 L>=0) (if>=0 L>=0))))
+                   | inr Q1<=z => \case LinearOrder.dec<_<= Z B \with {
+                     | inl z<B => rewrite (box-mem Q1<=z z<B) (margin {lebPts 1 (box1 A B) z} {lebPts 1 (box1 (A - h - h) (A + h + h + h)) z} {true} (rat_real_<=.1 (sum3-last (if>=0 E>=0) (if>=0 L>=0))))
+                     | inr B<=z =>
+                       \have | B<=w : Real.fromRat B <= w => rat_real_<=.1 B<=z
+                             | ey : trapValue a y.1 h w = 0 => trap-zero-right h>0 (usingOnly (B<=w, hB, H>0) linarith)
+                             | ex : trapValue a x.1 h w = 0 => trap-zero-right h>0 (usingOnly (B<=w, hB, H>0, xy) linarith)
+                       \in rewrite (box-out {A} {B} {z} (byRight B<=z)) (zero-bound (ey *> inv ex) (t>=0 {false} {lebPts 1 (box1 (A - h - h) (A + h + h + h)) z} {lebPts 1 (box1 (B - h - h - h) B) z}))
+                   }
+                 }
+               }
+             }
+
+        \lemma if>=0 {b : Bool} {c : Rat} (c>=0 : 0 <= c) : 0 <= if b c 0 \elim b
+          | true => c>=0
+          | false => <=-refl
+
+        \lemma if-abs {b : Bool} {q : Rat} {K : Real} (hq : RealAbGroup.abs (Real.fromRat q) <= K) (K>=0 : 0 <= K) : RealAbGroup.abs (Real.fromRat (if b q 0)) <= K \elim b
+          | true => hq
+          | false => =_<= RealAbGroup.abs_zro <=∘ K>=0
+
+        \lemma sum3>=0 {R : OrderedRing} {u v w : R} (u>=0 : 0 <= u) (v>=0 : 0 <= v) (w>=0 : 0 <= w) : 0 <= u + (v + w)
+          => linarith
+
+        \lemma sum3-mid {R : OrderedRing} {u w L : R} (u>=0 : 0 <= u) (w>=0 : 0 <= w) : L <= u + (L + w)
+          => linarith
+
+        \lemma sum3-last {R : OrderedRing} {u v L : R} (u>=0 : 0 <= u) (v>=0 : 0 <= v) : L <= u + (v + L)
+          => linarith
+
+        \lemma sum3-first {R : OrderedRing} {v w E : R} (v>=0 : 0 <= v) (w>=0 : 0 <= w) : E <= E + (v + w)
+          => linarith
+
+        \lemma zero-bound {G u v W : Real} (e : u = v) (W>=0 : 0 <= W) : RealAbGroup.abs (G * u + negative (G * v) - Real.fromRat 0) <= W
+          => rewrite e $ =_<= (pmap RealAbGroup.abs (equation.cRing : G * v + negative (G * v) - Real.fromRat 0 = 0) *> RealAbGroup.abs_zro) <=∘ W>=0
+
+        \lemma margin-bound {G ty tx S Mr K : Real} (hG : RealAbGroup.abs G <= Mr) (ry : \Sigma (0 <= ty) (ty <= 1)) (rx : \Sigma (0 <= tx) (tx <= 1))
+                            (hS : RealAbGroup.abs S <= K) : RealAbGroup.abs (G * ty + negative (G * tx) - S) <= Mr + K
+          => \have | ry1 => ry.1
+                   | ry2 => ry.2
+                   | rx1 => rx.1
+                   | rx2 => rx.2
+                   | d1 : ty - tx <= 1 => usingOnly (ry2, rx1) linarith
+                   | d2 : negative (ty - tx) <= 1 => usingOnly (ry1, rx2) linarith
+                   | d : RealAbGroup.abs (ty - tx) <= 1 => RealAbGroup.join-univ d1 d2
+                   | p : RealAbGroup.abs (G * (ty - tx)) <= Mr => =_<= RealField.abs_* <=∘ RealField.<=_*_positive-right RealAbGroup.abs>=0 d <=∘ =_<= ide-right <=∘ hG
+             \in rewrite (equation.cRing : G * ty + negative (G * tx) - S = G * (ty - tx) + negative S) $ RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ p (=_<= RealAbGroup.abs_negative <=∘ hS)
+
+        \lemma mid-bound {G gx Q E H W : Real} (gP : RealAbGroup.abs (G - gx) <= E) (hq : RealAbGroup.abs (gx - Q) <= H) (lb : E + H <= W)
+          : RealAbGroup.abs (G * 1 + negative (G * 0) - Q) <= W
+          => rewrite (equation.cRing : G * 1 + negative (G * 0) - Q = (G - gx) + (gx - Q)) $ RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ gP hq <=∘ lb
+      }
+
+    \lemma rat-bound {eps h A B M B0 : Rat} (h>0 : 0 < h) (h<=1 : h <= 1) (W<= : B - A <= B0 + 1 + 1) (M>=0 : 0 <= M)
+      : (eps + h) * (B - A) + ((M + M + h) * ((A + h + h + h) - (A - h - h)) + (M + M + h) * (B - (B - h - h - h))) + (h * (B - A) + M * (h + h))
+          <= eps * (B - A) + h * ((B0 + 1 + 1) + (B0 + 1 + 1) + ((M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1) + (M + M + 1)) + (M + M))
+      => =_<= (equation.cRing : _ = eps * (B - A) + h * ((B - A) + (B - A) + ((M + M + h) + (M + M + h) + (M + M + h) + (M + M + h) + (M + M + h) + (M + M + h) + (M + M + h) + (M + M + h)) + (M + M)))
+          <=∘ RatField.<=_+ <=-refl (RatField.<=_*_positive-right (<=-less h>0) (usingOnly (W<=, h<=1) linarith))
+
+    \lemma fin5 {E W DD HH X Y : Real} (m : E * W <= E * DD + E * HH) (eK : E * HH + X = Y) : E * W + X <= E * DD + Y
+      => linarith
+
+    \lemma assemble {Fy Fx cy cx Q P R S eD T e1 D : Real} (t1 : RealAbGroup.abs (Fy - cy) < e1) (t2 : RealAbGroup.abs (Fx - cx) < e1)
+                     (t3 : RealAbGroup.abs (cy - cx - Q) <= R) (t4 : RealAbGroup.abs (Q - P) <= S) (t5 : R + S <= eD + T) (t6 : T + e1 + e1 < D)
+      : RealAbGroup.abs (Fy - Fx - P) < eD + D
+      => \have | a1 : Fy - cy <= RealAbGroup.abs (Fy - cy) => RealAbGroup.abs>=id
+               | a2 : negative (Fy - cy) <= RealAbGroup.abs (Fy - cy) => RealAbGroup.abs>=neg
+               | b1 : Fx - cx <= RealAbGroup.abs (Fx - cx) => RealAbGroup.abs>=id
+               | b2 : negative (Fx - cx) <= RealAbGroup.abs (Fx - cx) => RealAbGroup.abs>=neg
+               | c1 : cy - cx - Q <= RealAbGroup.abs (cy - cx - Q) => RealAbGroup.abs>=id
+               | c2 : negative (cy - cx - Q) <= RealAbGroup.abs (cy - cx - Q) => RealAbGroup.abs>=neg
+               | d1 : Q - P <= RealAbGroup.abs (Q - P) => RealAbGroup.abs>=id
+               | d2 : negative (Q - P) <= RealAbGroup.abs (Q - P) => RealAbGroup.abs>=neg
+         \in RealAbGroup.abs_-_< linarith linarith
+
+    \lemma prod-bound {gx q Wr D H Mr : Real} (hq : RealAbGroup.abs (gx - q) <= H) (hM : RealAbGroup.abs gx <= Mr) (W>=0 : 0 <= Wr) (d0 : D <= Wr) (d1 : Wr <= D + (H + H))
+      : RealAbGroup.abs (q * Wr - D * gx) <= H * Wr + Mr * (H + H)
+      => \have | e : q * Wr - D * gx = negative (gx - q) * Wr + gx * (Wr - D) => equation.cRing
+               | p1 : RealAbGroup.abs (negative (gx - q) * Wr) <= H * Wr
+                   => =_<= (RealField.abs_* *> pmap2 (*) RealAbGroup.abs_negative (RealAbGroup.abs-ofPos W>=0)) <=∘ RealField.<=_*_positive-left hq W>=0
+               | wd>=0 : 0 <= Wr - D => usingOnly d0 linarith
+               | p2 : RealAbGroup.abs (gx * (Wr - D)) <= Mr * (H + H)
+                   => =_<= (RealField.abs_* *> pmap (_ *) (RealAbGroup.abs-ofPos wd>=0)) <=∘ RealField.<=_*_positive-left hM wd>=0
+                       <=∘ RealField.<=_*_positive-right (RealAbGroup.abs>=0 <=∘ hM) (usingOnly d1 linarith)
+         \in rewrite e (RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ p1 p2)
+  }
+
+-- | A cover map on `[a,b]` is uniformly continuous.
+\lemma interval-uniform {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta) (RealAbGroup.abs (g y - g x) <= Real.fromRat eps)
+  => \let p : CoverMap Plane RealNormed (\lam s => g (clamp a<=b s.1)) => g CoverMap.∘ clampMap a<=b CoverMap.∘ ProductCoverSpace.proj1
+     \in \case square-uniform p a b eps>0 \with {
+       | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} d =>
+         \have | pa : ClosedInterval a b a => (<=-refl, a<=b)
+               | d' : RealAbGroup.abs (y.1 - x.1) RealAbGroup.+ RealAbGroup.abs (a - a) < Real.fromRat delta
+                   => transportInv (`< _) (pmap (_ RealAbGroup.+) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) *> zro-right) d
+         \in <=-less (transport2 (\lam u v => RealAbGroup.abs (g u - g v) < _) (clamp-in {a} {b} {a<=b} y.2) (clamp-in {a} {b} {a<=b} x.2) (hd y.2 pa x.2 pa d')))
+     }
+
+-- | The increments of the primitive are approximated by {g}.
+\lemma primitive-est {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed)
+  : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta)
+      (RealAbGroup.abs (primitive a<=b g y - primitive a<=b g x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1))
+  => \lam {eps} eps>0 => \case interval-uniform a<=b g (linarith : 0 < eps * ratio 1 2) \with {
+    | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} d =>
+      \let | E => Real.fromRat (eps * ratio 1 2)
+           | F => primitive a<=b g
+      \in \have | EE : E + E = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+                | Ee : E <= Real.fromRat eps => rat_real_<=.1 (linarith : eps * ratio 1 2 <= eps)
+                | D>0 : 0 < Real.fromRat delta => rat_real_<.1 delta>0
+      \in LinearOrder.<=-dec-stable LinearOrder.<=-stable {x.1} {y.1}
+        (\lam xy =>
+          \have | yx>=0 : 0 <= y.1 - x.1 => usingOnly xy linarith
+                | a1 : y.1 - x.1 <= RealAbGroup.abs (y.1 - x.1) => RealAbGroup.abs>=id
+                | near (t : Set.Total (ClosedInterval a b)) (xt : x.1 <= t.1) (ty : t.1 <= y.1) : RealAbGroup.abs (t.1 - x.1) < Real.fromRat delta
+                    => RealAbGroup.abs_-_< (usingOnly (ty, a1, d) linarith) (usingOnly (xt, D>0) linarith)
+                | t : RealAbGroup.abs (F y - F x - (y.1 - x.1) * g x) <= E * (y.1 - x.1)
+                    => primitive-incr {a} {b} {a<=b} {g} {x} {y} xy \lam t xt ty => hd (near t xt ty)
+                | ab : RealAbGroup.abs (y.1 - x.1) = y.1 - x.1 => RealAbGroup.abs-ofPos yx>=0
+          \in transportInv (\lam z => _ <= Real.fromRat eps * z) ab (t <=∘ RealField.<=_*_positive-left Ee yx>=0))
+        (\lam yx =>
+          \have | xy>=0 : 0 <= x.1 - y.1 => usingOnly yx linarith
+                | d' : RealAbGroup.abs (x.1 - y.1) < Real.fromRat delta => transport (`< _) RealAbGroup.abs_- d
+                | a1 : x.1 - y.1 <= RealAbGroup.abs (x.1 - y.1) => RealAbGroup.abs>=id
+                | near (t : Set.Total (ClosedInterval a b)) (yt : y.1 <= t.1) (tx : t.1 <= x.1) : RealAbGroup.abs (t.1 - y.1) < Real.fromRat delta
+                    => RealAbGroup.abs_-_< (usingOnly (tx, a1, d') linarith) (usingOnly (yt, D>0) linarith)
+                | t : RealAbGroup.abs (F x - F y - (x.1 - y.1) * g y) <= E * (x.1 - y.1)
+                    => primitive-incr {a} {b} {a<=b} {g} {y} {x} yx \lam t yt tx => hd (near t yt tx)
+                | gxy : RealAbGroup.abs (g x - g y) <= E => hd d'
+                | ab : RealAbGroup.abs (y.1 - x.1) = x.1 - y.1 => RealAbGroup.abs_- *> RealAbGroup.abs-ofPos xy>=0
+                | p2 : RealAbGroup.abs ((x.1 - y.1) * (g x - g y)) <= E * (x.1 - y.1)
+                    => =_<= (RealField.abs_* *> pmap (`* _) (RealAbGroup.abs-ofPos xy>=0) *> RealField.*-comm) <=∘ RealField.<=_*_positive-left gxy xy>=0
+          \in transportInv (\lam z => _ <= Real.fromRat eps * z) ab $ transport (_ <=) (inv RealField.rdistr *> pmap (`* _) EE)
+                (abs-sum-le' (equation.cRing : F y - F x - (y.1 - x.1) * g x = negative (F x - F y - (x.1 - y.1) * g y) + (x.1 - y.1) * (g x - g y))
+                  (=_<= RealAbGroup.abs_negative <=∘ t) p2)))
+  }
+  \where
+    \lemma abs-sum-le' {A B C U V : Real} (e : C = A + B) (pa : RealAbGroup.abs A <= U) (pb : RealAbGroup.abs B <= V) : RealAbGroup.abs C <= U + V
+      => rewrite e $ RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ pa pb
+
+-- | The integral with varying endpoint has a derivative and it equals {g}.
+\lemma primitive-deriv {a b : Real} (a<b : a < b) (g : CoverMap (IntervalSpace a b) RealNormed)
+  : \Sigma (d : HasDeriv (intervalInc a b) (primitive (<=-less a<b) g))
+           (\Pi (x : Set.Total (ClosedInterval a b)) -> deriv (interval-derivDense a<b) (primitive (<=-less a<b) g) d x 1 = g x)
+  => (hasDeriv-uniform-iff a<b {primitive (<=-less a<b) g} {\lam x => g x}).2 (primitive-est (<=-less a<b) g)
+
+-- | The derivative of the integral with varying endpoint exists.
+\lemma primitive-hasDeriv {a b : Real} (a<b : a < b) (g : CoverMap (IntervalSpace a b) RealNormed) : HasDeriv (intervalInc a b) (primitive (<=-less a<b) g)
+  => (primitive-deriv a<b g).1
+
+-- | The fundamental theorem of calculus: the derivative of `x ↦ ∫_(a,x) g` is {g}.
+\lemma deriv-primitive {a b : Real} (a<b : a < b) (g : CoverMap (IntervalSpace a b) RealNormed) (d : HasDeriv (intervalInc a b) (primitive (<=-less a<b) g))
+                       (x : Set.Total (ClosedInterval a b)) : deriv (interval-derivDense a<b) (primitive (<=-less a<b) g) d x 1 = g x
+  => pmap (\lam d' => deriv (interval-derivDense a<b) (primitive (<=-less a<b) g) d' x 1) (prop-isProp d (primitive-deriv a<b g).1) *> (primitive-deriv a<b g).2 x

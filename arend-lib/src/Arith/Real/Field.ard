@@ -311,3 +311,12 @@
         | suc i => linarith (Pk i)
       })
     }
+
+-- | Two reals are equal if their distance is bounded by every positive multiple of a non-negative real.
+\lemma real-scaled-eq-real {x y T : Real} (T>=0 : 0 <= T) (h : \Pi {e : Rat} -> 0 < e -> RealAbGroup.abs (x - y) <= Real.fromRat e * T) : x = y
+  => \case Real.U-inh {T} \with {
+    | inP (K,TK) =>
+      \have | TK' : T < Real.fromRat K => real_<_U.2 TK
+            | K>0 : 0 < K => rat_real_<.2 (T>=0 <∘r TK')
+      \in real-scaled-eq K>0 \lam {e} e>0 => h e>0 <=∘ transport (_ <=) RealField.*-rat (RealField.<=_*_positive-right (rat_real_<=.1 (<=-less e>0)) (<=-less TK'))
+  }

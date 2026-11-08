@@ -36,6 +36,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set
 \import Set.Set
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Subspace
@@ -137,6 +138,31 @@
       \in linarith
   }
 
+-- | The trapezoids of `(a,x)` and `(a,y)` with `x <= y` agree at least `2h` to the left of {x}.
+\lemma trap-same-left {a x y t : Real} {h : Rat} (h>0 : 0 < h) (xy : x <= y) (p : Real.fromRat h RealAbGroup.+ Real.fromRat h <= x - t)
+  : trapValue a y h t = trapValue a x h t
+  => LinearOrder.<=-dec-stable separatedEq {t - a} {x - t}
+      (\lam q => \have | e1 : inner a x t = t - a => RealAbGroup.meet_<= q
+                       | e2 : inner a y t = t - a => RealAbGroup.meet_<= (q <=∘ (linarith : x - t <= y - t))
+                 \in unfold trapValue (pmap (\lam z => 0 ∨ (1 ∧ (Real.fromRat (RatField.finv h) RealField.* (z - Real.fromRat h)))) (e2 *> inv e1)))
+      (\lam q => \have | hx : Real.fromRat h RealAbGroup.+ Real.fromRat h <= inner a x t => meet-univ (p <=∘ q) p
+                       | hy : Real.fromRat h RealAbGroup.+ Real.fromRat h <= inner a y t => meet-univ (p <=∘ q) (p <=∘ (linarith : x - t <= y - t))
+                 \in trap-high h>0 hy *> inv (trap-high h>0 hx))
+
+-- | The trapezoid of `(a,y)` vanishes at most {h} to the left of {y}.
+\lemma trap-zero-right {a y t : Real} {h : Rat} (h>0 : 0 < h) (p : y - t <= Real.fromRat h) : trapValue a y h t = 0
+  => trap-low h>0 (meet-right <=∘ p)
+
+-- | Between `x + 2h` and `y - 2h`, the trapezoid of `(a,y)` is 1 and the trapezoid of `(a,x)` is 0.
+\lemma trap-one-mid {a x y t : Real} {h : Rat} (h>0 : 0 < h) (ax : a <= x) (p : Real.fromRat h RealAbGroup.+ Real.fromRat h <= t - x)
+                    (q : Real.fromRat h RealAbGroup.+ Real.fromRat h <= y - t) : \Sigma (trapValue a y h t = 1) (trapValue a x h t = 0)
+  => \have h>0' : 0 < Real.fromRat h => rat_real_<.1 h>0
+     \in (trap-high h>0 (meet-univ (p <=∘ (linarith : t - x <= t - a)) q), trap-low h>0 (meet-right <=∘ (linarith : x - t <= Real.fromRat h)))
+
+-- | The trapezoid takes values in `[0,1]`.
+\lemma trap-range {a b t : Real} {h : Rat} : \Sigma (0 <= trapValue a b h t) (trapValue a b h t <= 1)
+  => (join-left, join-univ (<=-less RealField.zro<ide) meet-left)
+
 -- | The trapezoid as a function with compact support.
 \lemma intervalCompactCoverMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CompactCoverMap 1 (\lam x => trapValue a b h (x 0)) \cowith
   | CoverMap => trapMap a b h>0
@@ -193,20 +219,6 @@
   => \have d>=0 : 0 <= q - p => linarith
      \in rewrite (\peval box1 p q) $ boxElem-meas {1} ((p,q) :: nil) *> pmap Real.fromRat (ide-left *> <=-antisymmetric (join-univ <=-refl d>=0) join-left)
 
-\lemma or-false {x y : Bool} (p : x or y = false) : \Sigma (x = false) (y = false) \elim x, y
-  | true, _ => \case p \with {}
-  | false, true => \case p \with {}
-  | false, false => (idp, idp)
-
-\lemma sum4 {h : Rat} : Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h = Real.fromRat (h + h + h + h)
-  => pmap (RealAbGroup.+ _) (pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat) *> RealAbGroup.+-rat
-
-\lemma four-rat {p h : Rat} : Real.fromRat (p + h + h + h + h) = Real.fromRat p RealAbGroup.+ (Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h)
-  => inv (pmap (_ RealAbGroup.+) sum4 *> RealAbGroup.+-rat *> pmap Real.fromRat linarith)
-
-\lemma four-rat' {q h : Rat} : Real.fromRat (q - h - h - h - h) = Real.fromRat q - (Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h)
-  => inv (pmap (\lam w => Real.fromRat q RealAbGroup.+ negative w) sum4 *> pmap (_ RealAbGroup.+) RealAbGroup.negative-rat *> RealAbGroup.+-rat *> pmap Real.fromRat linarith)
-
 -- | The interval `(a,b)` has located volume.
 \lemma interval-located (a b : Real) : HasLocatedVolume (interval-open a b)
   => located-content \lam {eps} eps>0 =>
@@ -257,6 +269,20 @@
           \in trap-high h>0 (meet-univ i1 i2))
     }
   \where {
+    \lemma or-false {x y : Bool} (p : x or y = false) : \Sigma (x = false) (y = false) \elim x, y
+      | true, _ => \case p \with {}
+      | false, true => \case p \with {}
+      | false, false => (idp, idp)
+
+    \lemma sum4 {h : Rat} : Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h = Real.fromRat (h + h + h + h)
+      => pmap (RealAbGroup.+ _) (pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat) *> RealAbGroup.+-rat
+
+    \lemma four-rat {p h : Rat} : Real.fromRat (p + h + h + h + h) = Real.fromRat p RealAbGroup.+ (Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h)
+      => inv (pmap (_ RealAbGroup.+) sum4 *> RealAbGroup.+-rat *> pmap Real.fromRat linarith)
+
+    \lemma four-rat' {q h : Rat} : Real.fromRat (q - h - h - h - h) = Real.fromRat q - (Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h RealAbGroup.+ Real.fromRat h)
+      => inv (pmap (\lam w => Real.fromRat q RealAbGroup.+ negative w) sum4 *> pmap (_ RealAbGroup.+) RealAbGroup.negative-rat *> RealAbGroup.+-rat *> pmap Real.fromRat linarith)
+
     \lemma meas-bound {R : OrderedRing} {a1 a2 aj am x y e : R} (m1 : a1 = x) (m2 : a2 = y) (mm : a1 + a2 = aj + am) (m0 : 0 <= am) (ms : x + y < e) : aj < e
       => linarith
 
@@ -276,7 +302,7 @@
 \lemma intervalCutoff-cofinal {a b : Real} (c0 : Cutoff (OpenInterval a b))
   : ∃ (r : Rat) (0 < r) (\Pi {h : Rat} (h>0 : 0 < h) -> h + h <= r -> c0 c<= intervalCutoff a b h>0)
   => \case c0.cut-inside \with {
-    | inP (r,r>0,hr) => inP (r, r>0, \lam {h} h>0 hh x => pos-or-zero real-<=-stable (c0.cut>=0 {x})
+    | inP (r,r>0,hr) => inP (r, r>0, \lam {h} h>0 hh x => RealAbGroup.<=-split LinearOrder.<=-stable c0.cut>=0
         (\lam pos =>
           \let | ya : RealN 1 => a :: nil
                | yb : RealN 1 => b :: nil
@@ -286,7 +312,7 @@
                     | u : Real.fromRat r <= b - x 0 => \lam q => <-irreflexive (hr pos {yb} (near {x} {yb} (RealAbGroup.abs_-_< linarith linarith))).2
                     | hh' : Real.fromRat h RealAbGroup.+ Real.fromRat h <= Real.fromRat r => transportInv (`<= _) RealAbGroup.+-rat (rat_real_<=.1 hh)
               \in transportInv (_ <=) (trap-high h>0 (meet-univ (hh' <=∘ l) (hh' <=∘ u))) (c0.cut<=1 {x}))
-        (\lam z => rewrite z ((intervalCutoff a b h>0).cut>=0 {x})))
+        (\lam z => rewriteI z ((intervalCutoff a b h>0).cut>=0 {x})))
   }
   \where
     \lemma near {x y : RealN 1} {r : Rat} (p : RealAbGroup.abs (x 0 - y 0) < Real.fromRat r) : OBall r x y

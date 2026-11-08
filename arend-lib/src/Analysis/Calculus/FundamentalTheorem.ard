@@ -1,11 +1,13 @@
 {- | The fundamental theorem of calculus.
  -
  -   If {f} has a derivative on `[a,b]`, then its derivative is integrable on `(a,b)` (see {derivOpen-integrable})
- -   and its integral is `f b - f a` (see {fundamental-theorem}).
+ -   and its integral is `f b - f a` (see {integral_deriv}).
  -
  -   Proof: the integral over `(a,b)` is the limit of the integrals of truncations by trapezoids (see {integralOn-trap}).
  -   On a fine rational grid, a truncation is close to a step function whose integral telescopes to an increment of {f}
- -   (see {grid-step} and {fundamental-theorem.trap-estimate}).
+ -   (see {grid-step} and {integral_deriv.trap-estimate}).
+ -
+ -   The other direction, the derivative of `x ↦ ∫_(a,x) g`, is in {Analysis.Calculus.Primitive}.
  -}
 
 \import Algebra.Group
@@ -47,12 +49,19 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.TopRing.Real
 
+-- | A point of `(c,d)` as a point of `[a,b]`, where `a <= c` and `d <= b`.
+\func subInterval {a b c d : Real} (ac : a <= c) (db : d <= b) (u : Set.Total (OpenInterval c d)) : Set.Total (ClosedInterval a b)
+  => (u.1 0, (ac <=∘ <=-less u.2.1, <=-less u.2.2 <=∘ db))
+
+\lemma subIntervalMap {a b c d : Real} (ac : a <= c) (db : d <= b) : CoverMap (OpenCoverSpace {RealN 1} (interval-open c d)) (IntervalSpace a b) (subInterval ac db)
+  => CoverTransfer-univ {OpenCoverSpace {RealN 1} (interval-open c d)} {RealTopLModule} {Set.Total (ClosedInterval a b)} (subInterval ac db) __.1 (coord CoverMap.∘ OpenCoverSpace.func (interval-open c d))
+
 -- | A point of `(a,b)` as a point of `[a,b]`.
 \func openToClosed {a b : Real} (u : Set.Total (OpenInterval a b)) : Set.Total (ClosedInterval a b)
-  => (u.1 0, (<=-less u.2.1, <=-less u.2.2))
+  => subInterval <=-refl <=-refl u
 
 \lemma openToClosedMap (a b : Real) : CoverMap (OpenCoverSpace {RealN 1} (interval-open a b)) (IntervalSpace a b) openToClosed
-  => CoverTransfer-univ {OpenCoverSpace {RealN 1} (interval-open a b)} {RealTopLModule} {Set.Total (ClosedInterval a b)} openToClosed __.1 (coord CoverMap.∘ OpenCoverSpace.func (interval-open a b))
+  => subIntervalMap <=-refl <=-refl
 
 -- | The derivative of {f} on `(a,b)`.
 \lemma derivOpen {a b : Real} (a<b : a < b) (f : Set.Total (ClosedInterval a b) -> Real) (d : HasDeriv (intervalInc a b) f)
@@ -83,7 +92,7 @@
             | cba : Real.fromRat c < b - a => real_<_L.2 cL
             | B>0 : 0 < B => rat_real_<.2 (linarith : (0 : Real) < Real.fromRat B)
             | K>0 : 0 < 1 + B * 3 + M * 14 => linarith
-      \in scaled-eq K>0 \lam {e} e>0 => \case square-uniform (quotPlane a<b f d) a b e>0, integralOn-trap i e>0 \with {
+      \in real-scaled-eq K>0 \lam {e} e>0 => \case square-uniform (quotPlane a<b f d) a b e>0, integralOn-trap i e>0 \with {
         | inP (delta,delta>0,hd), inP (r,r>0,hr) =>
           \let h : Rat => e ∧ ((r * ratio 1 2) ∧ (c * ratio 1 6))
           \in \have | h>0 : 0 < h => <_meet-univ e>0 (<_meet-univ linarith linarith)
@@ -103,14 +112,6 @@
       }
   }
   \where {
-    -- | Two reals are equal if their distance is bounded by every positive multiple of a constant.
-    \lemma scaled-eq {x y : Real} {K : Rat} (K>0 : 0 < K) (h : \Pi {e : Rat} -> 0 < e -> RealAbGroup.abs (x - y) <= Real.fromRat (e * K)) : x = y
-      => \have z : RealAbGroup.abs (x - y) <= 0 => real_<=-eps \lam {d} d>0 =>
-           \have | e>0 : 0 < d * ratio 1 2 * RatField.finv K => RatField.<_*_positive_positive linarith (RatField.finv>0 K>0)
-                 | eK : d * ratio 1 2 * RatField.finv K * K = d * ratio 1 2 => *-assoc *> pmap (_ *) (RatField.finv-left (/=-sym (StrictPoset.<_/= K>0))) *> ide-right
-           \in transportInv (_ <) zro-left (h e>0 <∘r rat_real_<.1 (linarith : d * ratio 1 2 * RatField.finv K * K < d))
-         \in AddGroup.fromZero (RealAbGroup.abs_zro-ext (<=-antisymmetric z RealAbGroup.abs>=0))
-
     \lemma fin-rat {R : OrderedRing} {e x y y' W : R} (t3 : y <= y') (eq : e + (x + y') = W) : e + (x + y) <= W
       => linarith
 
@@ -306,10 +307,9 @@
       : truncate (interval-open a b) (derivOpen a<b f d) (intervalCutoff a b h>0) (ratPt z) = quotPlane a<b f d (Real.fromRat (lastA z), Real.fromRat (lastA z))
       => \have | H>0 : 0 < Real.fromRat h => rat_real_<.1 h>0
                | Uz : OpenInterval a b (ratPt z) => (linarith, linarith)
-               | i1 : Real.fromRat h RealAbGroup.+ Real.fromRat h <= Real.fromRat (lastA z) - a => linarith
-               | i2 : Real.fromRat h RealAbGroup.+ Real.fromRat h <= b - Real.fromRat (lastA z) => linarith
-         \in (truncate.char {1} {OpenInterval a b} {interval-open a b} {derivOpen a<b f d} {intervalCutoff a b h>0}).1 (ratPt z, Uz)
-              *> pmap (_ RealField.*) (trap-high h>0 (meet-univ i1 i2)) *> ide-right *> inv (quot-diag (openToClosed (ratPt z, Uz)).2)
+               | i1 : h RealAbGroup.+ h <= Real.fromRat (lastA z) - a => linarith
+               | i2 : h RealAbGroup.+ h <= b - Real.fromRat (lastA z) => linarith
+         \in (truncate.char (intervalCutoff a b h>0)).1 (ratPt z, Uz) *> pmap (_ *) (trap-high h>0 (meet-univ i1 i2)) *> ide-right *> inv (quot-diag (openToClosed (ratPt z, Uz)).2)
 
     -- | Near the boundary, the truncation of the derivative is bounded by {M} on the margins {A1} and {A2}.
     \lemma trunc-margin {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f} {h : Rat} (h>0 : 0 < h) {M : Rat} (M>0 : 0 < M)
@@ -320,16 +320,16 @@
       => \let | c => intervalCutoff a b h>0
               | g => truncate (interval-open a b) (derivOpen a<b f d) c
          \in \have M>0' : 0 < Real.fromRat M => rat_real_<.1 M>0
-         \in pos-or-zero real-<=-stable (c.cut>=0 {ratPt z})
+         \in RealAbGroup.<=-split LinearOrder.<=-stable (c.cut>=0 {ratPt z})
               (\lam pos =>
                 \have | t : Real.fromRat h < inner a b (Real.fromRat (lastA z)) => trap-pos h>0 pos
                       | t1 : Real.fromRat h < Real.fromRat (lastA z) - a => t <∘l meet-left
                       | t2 : Real.fromRat h < b - Real.fromRat (lastA z) => t <∘l meet-right
                       | tb : RealAbGroup.abs (g (ratPt z)) <= Real.fromRat M RealField.* c.fn (ratPt z)
-                          => trunc-bound {1} {OpenInterval a b} {interval-open a b} {derivOpen a<b f d} {c} {g} truncate.char (<=-less M>0') (\lam {x} _ => derivOpen-bound hM x) (ratPt z)
+                          => trunc-bound (truncate.char c) (<=-less M>0') (\lam {x} _ => derivOpen-bound hM x) (ratPt z)
                       | tc : Real.fromRat M RealField.* c.fn (ratPt z) <= Real.fromRat M => transport (_ <=) ide-right (RealField.<=_*_positive-right (<=-less M>0') (c.cut<=1 {ratPt z}))
                       | m : M <= if (lebPts 1 A1 z) M 0 + if (lebPts 1 A2 z) M 0 => if-sum-ge (<=-less M>0) (inA (usingOnly t1 linarith) (usingOnly t2 linarith))
                 \in tb <=∘ tc <=∘ rat_real_<=.1 m)
-              (\lam zr => transportInv (`<= _) (pmap RealAbGroup.abs ((truncate.char {1} {OpenInterval a b} {interval-open a b} {derivOpen a<b f d} {c}).2 zr) *> RealAbGroup.abs_zro)
+              (\lam zr => transportInv (<= _) (pmap RealAbGroup.abs ((truncate.char c).2 (inv zr)) *> RealAbGroup.abs_zro)
                             (rat_real_<=.1 (if-sum>=0 (<=-less M>0))))
   }

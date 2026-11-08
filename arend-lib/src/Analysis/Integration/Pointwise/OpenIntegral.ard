@@ -33,6 +33,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set
 \import Set.Set
 \import Topology.Compact
 \import Topology.CoverSpace
@@ -73,23 +74,13 @@
     | inP (r,r>0,h) => ball-<=* {RealN n} r>0 h
   }
 
-\lemma real-eq-stable {a b : Real} (nn : Not (Not (a = b))) : a = b
-  => RealAbGroup.<-connectedness (\lam a<b => nn \lam e => <-irreflexive (transport (a <) (inv e) a<b)) (\lam b<a => nn \lam e => <-irreflexive (transport (`< a) (inv e) b<a))
-
-\lemma real-<=-stable {a b : Real} (nn : Not (Not (a <= b))) : a <= b
-  => \lam b<a => nn \lam a<=b => LinearOrder.notLess a<=b b<a
-
--- | A stable proposition can be proved by cases on whether a non-negative real is positive or zero.
-\lemma pos-or-zero {P : \Prop} (stable : Not (Not P) -> P) {t : Real} (t>=0 : 0 <= t) (h1 : 0 < t -> P) (h2 : t = 0 -> P) : P
-  => stable \lam nP => nP (h2 (<=-antisymmetric (\lam p => nP (h1 p)) t>=0))
-
 -- | {g} is the extension by zero of the product of {f} and {c}.
 \type IsTrunc {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U) (g : RealN n -> Real) : \Prop
   => \Sigma (\Pi (x : Total U) -> g x.1 = f x RealField.* c.fn x.1) (\Pi {x : RealN n} -> c.fn x = 0 -> g x = 0)
 
 \lemma trunc-unique {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U} {g g' : RealN n -> Real}
                     (p : IsTrunc Uo f c g) (q : IsTrunc Uo f c g') (x : RealN n) : g x = g' x
-  => pos-or-zero real-eq-stable (c.cut>=0 {x}) (\lam s => \have Ux => cutoff-in c s \in p.1 (x,Ux) *> inv (q.1 (x,Ux))) (\lam s => p.2 s *> inv (q.2 s))
+  => RealAbGroup.<=-split separatedEq (c.cut>=0 {x}) (\lam s => \have Ux => cutoff-in c s \in p.1 (x,Ux) *> inv (q.1 (x,Ux))) (\lam s => p.2 (inv s) *> inv (q.2 (inv s)))
 
 -- | The value of the truncation at a point.
 \func truncPt {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U) {M : Rat} (M>0 : 0 < M)
@@ -175,13 +166,13 @@
 \lemma trunc-bound {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U} {g : RealN n -> Real} (p : IsTrunc Uo f c g)
                    {M : Real} (M>=0 : 0 <= M) (hM : \Pi {x : Total U} -> 0 < c.fn x.1 -> RealAbGroup.abs (f x) <= M) (x : RealN n)
   : RealAbGroup.abs (g x) <= M RealField.* c.fn x
-  => pos-or-zero {RealAbGroup.abs (g x) <= M RealField.* c.fn x} real-<=-stable (c.cut>=0 {x})
+  => RealAbGroup.<=-split LinearOrder.<=-stable c.cut>=0
       (\lam s => \have | Ux => cutoff-in c s
                        | e : RealAbGroup.abs (g x) = RealAbGroup.abs (f (x,Ux)) RealField.* c.fn x
-                           => pmap RealAbGroup.abs (p.1 (x,Ux)) *> RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {x}))
-                 \in transportInv (`<= _) e $ RealField.<=_*_positive-left (hM {(x,Ux)} s) (c.cut>=0 {x}))
-      (\lam s => \have | e : RealAbGroup.abs (g x) = 0 => pmap RealAbGroup.abs (p.2 s) *> RealAbGroup.abs_zro
-                       | e' : M RealField.* c.fn x = 0 => pmap (M RealField.*) s *> RealField.zro_*-right
+                           => pmap RealAbGroup.abs (p.1 (x,Ux)) *> RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos c.cut>=0)
+                 \in transportInv (<= _) e $ RealField.<=_*_positive-left (hM {x,Ux} s) c.cut>=0)
+      (\lam s => \have | e : RealAbGroup.abs (g x) = 0 => pmap RealAbGroup.abs (p.2 (inv s)) *> RealAbGroup.abs_zro
+                       | e' : M RealField.* c.fn x = 0 => pmap (M RealField.*) (inv s) *> RealField.zro_*-right
                  \in =_<= (e *> inv e'))
 
 \lemma trunc-uniform {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U} {g : RealN n -> Real} (p : IsTrunc Uo f c g)
@@ -205,24 +196,24 @@
                             | t : RealAbGroup.abs (g u) <= Real.fromRat M RealField.* c.fn u => trunc-bound {n} {U} {Uo} p (<=-less M>0') hM u
                             | t' : RealAbGroup.abs (g u) <= Real.fromRat e2 => t <=∘ transportInv (\lam w => Real.fromRat M RealField.* w <= _) eu b
                       \in rewrite (gv, AddGroup.minus_zro {RealAbGroup}) $ t' <=∘ <=-less ((rat_real_< {e2} {eps}).1 linarith)
-         \in pos-or-zero {RealAbGroup.abs (g x - g y) <= Real.fromRat eps} real-<=-stable (c.cut>=0 {x})
-             (\lam sx => pos-or-zero {RealAbGroup.abs (g x - g y) <= Real.fromRat eps} real-<=-stable (c.cut>=0 {y})
+         \in RealAbGroup.<=-split LinearOrder.<=-stable c.cut>=0
+             (\lam sx => RealAbGroup.<=-split {RealAbGroup.abs (g x - g y) <= Real.fromRat eps} LinearOrder.<=-stable c.cut>=0
                (\lam sy =>
                  \let | Ux => cutoff-in c sx
                       | Uy => cutoff-in c sy
                       | fx => f (x,Ux)
                       | fy => f (y,Uy)
                  \in \have
-                       | hf : RealAbGroup.abs (fx - fy) < Real.fromRat e2 => real_<_U.2 (h1 {(x,Ux)} {(y,Uy)} sx sy (ExUpperReal.U_<= xy meet-left))
+                       | hf : RealAbGroup.abs (fx - fy) < Real.fromRat e2 => real_<_U.2 (h1 {x,Ux} {y,Uy} sx sy (ExUpperReal.U_<= xy meet-left))
                        | id : g x - g y = fx RealField.* (c.fn x - c.fn y) RealAbGroup.+ (fx - fy) RealField.* c.fn y => rewrite (p.1 (x,Ux), p.1 (y,Uy)) (trunc-identity {_} {_} {_} {_})
                        | a1 : RealAbGroup.abs (fx RealField.* (c.fn x - c.fn y)) <= Real.fromRat e2
-                           => transportInv (`<= _) RealField.abs_* $ RealField.<=_*_positive-left (hM {(x,Ux)} sx) RealAbGroup.abs>=0 <=∘ Mc
+                           => transportInv (`<= _) RealField.abs_* $ RealField.<=_*_positive-left (hM {x,Ux} sx) RealAbGroup.abs>=0 <=∘ Mc
                        | a2 : RealAbGroup.abs ((fx - fy) RealField.* c.fn y) <= Real.fromRat e2
                            => transportInv (`<= _) (RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {y}))) $
                                RealField.<=_*_positive-right RealAbGroup.abs>=0 (c.cut<=1 {y}) <=∘ =_<= ide-right <=∘ <=-less hf
                  \in rewrite id $ RealAbGroup.abs_+ <=∘ transport (_ <=) ee (RealAbGroup.<=_+ a1 a2))
-               (\lam ey => side ey Mc))
-             (\lam ex => transportInv (`<= _) RealAbGroup.abs_- $ side ex (transportInv (\lam w => Real.fromRat M RealField.* w <= _) RealAbGroup.abs_- Mc)))
+               (\lam ey => side (inv ey) Mc))
+             (\lam ex => transportInv (<= _) RealAbGroup.abs_- $ side (inv ex) (transportInv (\lam w => Real.fromRat M RealField.* w <= _) RealAbGroup.abs_- Mc)))
      }
   \where {
     \lemma trunc-identity {a b p q : Real} : a * p - b * q = a * (p - q) + (a - b) * q
@@ -255,7 +246,7 @@
           }, sp)
       }
 
-    \lemma char {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U} : IsTrunc Uo f c (truncate Uo f c)
+    \lemma char {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (c : Cutoff U) : IsTrunc Uo f c (truncate Uo f c)
       => rewrite (\peval truncate Uo f c) (trunc-pair Uo f c).2
   }
 
@@ -285,23 +276,23 @@
 
 \lemma trunc-abs-diff {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c c' : Cutoff U} (cc : c c<= c') (x : RealN n)
   : RealAbGroup.abs (truncate Uo f c' x - truncate Uo f c x) = truncate Uo (coverAbs f) c' x - truncate Uo (coverAbs f) c x
-  => pos-or-zero {RealAbGroup.abs (truncate Uo f c' x - truncate Uo f c x) = truncate Uo (coverAbs f) c' x - truncate Uo (coverAbs f) c x} real-eq-stable (c'.cut>=0 {x})
+  => RealAbGroup.<=-split separatedEq c'.cut>=0
       (\lam s =>
         \let | Ux => cutoff-in c' s
              | u : Total U => (x,Ux)
-        \in \have | e1 : truncate Uo f c' x = f u RealField.* c'.fn x => (truncate.char {n} {U} {Uo} {f} {c'}).1 u
-                  | e2 : truncate Uo f c x = f u RealField.* c.fn x => (truncate.char {n} {U} {Uo} {f} {c}).1 u
-                  | e3 : truncate Uo (coverAbs f) c' x = RealAbGroup.abs (f u) RealField.* c'.fn x => (truncate.char {n} {U} {Uo} {coverAbs f} {c'}).1 u
-                  | e4 : truncate Uo (coverAbs f) c x = RealAbGroup.abs (f u) RealField.* c.fn x => (truncate.char {n} {U} {Uo} {coverAbs f} {c}).1 u
+        \in \have | e1 : truncate Uo f c' x = f u RealField.* c'.fn x => (truncate.char c').1 u
+                  | e2 : truncate Uo f c x = f u RealField.* c.fn x => (truncate.char c).1 u
+                  | e3 : truncate Uo (coverAbs f) c' x = RealAbGroup.abs (f u) RealField.* c'.fn x => (truncate.char c').1 u
+                  | e4 : truncate Uo (coverAbs f) c x = RealAbGroup.abs (f u) RealField.* c.fn x => (truncate.char c).1 u
                   | d>=0 : 0 <= c'.fn x - c.fn x => RealAbGroup.to>=0 (cc x)
         \in pmap2 (\lam p q => RealAbGroup.abs (p - q)) e1 e2 *> pmap RealAbGroup.abs (inv RealField.ldistr_-) *> RealField.abs_*
             *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos d>=0) *> RealField.ldistr_- *> inv (pmap2 (\lam p q => p - q) e3 e4))
       (\lam s =>
-        \have | s0 : c.fn x = 0 => <=-antisymmetric (transport (_ <=) s (cc x)) (c.cut>=0 {x})
-              | e1 : truncate Uo f c' x = 0 => (truncate.char {n} {U} {Uo} {f} {c'}).2 s
-              | e2 : truncate Uo f c x = 0 => (truncate.char {n} {U} {Uo} {f} {c}).2 s0
-              | e3 : truncate Uo (coverAbs f) c' x = 0 => (truncate.char {n} {U} {Uo} {coverAbs f} {c'}).2 s
-              | e4 : truncate Uo (coverAbs f) c x = 0 => (truncate.char {n} {U} {Uo} {coverAbs f} {c}).2 s0
+        \have | s0 : c.fn x = 0 => <=-antisymmetric (transportInv (_ <=) s (cc x)) c.cut>=0
+              | e1 : truncate Uo f c' x = 0 => (truncate.char c').2 (inv s)
+              | e2 : truncate Uo f c x = 0 => (truncate.char c).2 s0
+              | e3 : truncate Uo (coverAbs f) c' x = 0 => (truncate.char c').2 (inv s)
+              | e4 : truncate Uo (coverAbs f) c x = 0 => (truncate.char c).2 s0
         \in pmap2 (\lam p q => RealAbGroup.abs (p - q)) e1 e2 *> pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro *> inv (pmap2 (\lam p q => p - q) e3 e4 *> negative-right))
 
 -- | The distance between truncations is the increment of the net.
@@ -388,21 +379,27 @@
 \func integralOn {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (i : IsIntegrableOn Uo f) : Real
   => integral {LebesgueL1 n} (integrableL1 Uo f i)
 
+-- | The difference of the integrals of truncations is the integral of the difference.
+\lemma cutIntegral-sub {n : Nat} {U U' : Set (RealN n)} {Uo : isOpen {RealN n} U} {Uo' : isOpen {RealN n} U'} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed}
+                       {k' : CoverMap (OpenCoverSpace {RealN n} Uo') RealNormed} {c : Cutoff U} {c' : Cutoff U'}
+  : cutIntegral Uo' k' c' - cutIntegral Uo k c = integral {LebesgueL1 n} (iota (CompactCoverMap_+ (truncate Uo' k' c') (CompactCoverMap_negative (truncate Uo k c))))
+  => pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char *> inv (pmap (integral {LebesgueL1 n}) (iota_+ {n} {truncate Uo' k' c'} {CompactCoverMap_negative (truncate Uo k c)} *> pmap (_ +) (iota_negative {n} {truncate Uo k c}))
+      *> IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}}))
+
 -- | The increment of the net is the integral of the difference of truncations.
 \lemma cut-diff {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c c' : Cutoff U}
   : cutIntegral Uo k c' - cutIntegral Uo k c = integral {LebesgueL1 n} (iota (CompactCoverMap_+ (truncate Uo k c') (CompactCoverMap_negative (truncate Uo k c))))
-  => pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char *> inv (pmap (integral {LebesgueL1 n}) (iota_+ {n} {truncate Uo k c'} {CompactCoverMap_negative (truncate Uo k c)} *> pmap (_ +) (iota_negative {n} {truncate Uo k c}))
-      *> IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}}))
+  => cutIntegral-sub
 
 -- | The increment of a truncation at a point.
 \lemma trunc-inc-pos {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c c' : Cutoff U} (u : Total U)
   : truncate Uo k c' u.1 - truncate Uo k c u.1 = k u RealField.* (c'.fn u.1 - c.fn u.1)
-  => pmap2 (\lam p q => p - q) ((truncate.char {n} {U} {Uo} {k} {c'}).1 u) ((truncate.char {n} {U} {Uo} {k} {c}).1 u) *> inv RealField.ldistr_-
+  => pmap2 (\lam p q => p - q) ((truncate.char c').1 u) ((truncate.char c).1 u) *> inv RealField.ldistr_-
 
 \lemma trunc-inc-zero {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c c' : Cutoff U} (cc : c c<= c') {x : RealN n} (s : c'.fn x = 0)
   : truncate Uo k c' x - truncate Uo k c x = 0
   => \have s0 : c.fn x = 0 => <=-antisymmetric (transport (_ <=) s (cc x)) (c.cut>=0 {x})
-     \in pmap2 (\lam p q => p - q) ((truncate.char {n} {U} {Uo} {k} {c'}).2 s) ((truncate.char {n} {U} {Uo} {k} {c}).2 s0) *> negative-right
+     \in pmap2 (\lam p q => p - q) ((truncate.char c').2 s) ((truncate.char c).2 s0) *> negative-right
 
 -- | Domination.
 \lemma integrable-dominated {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed}
@@ -412,14 +409,14 @@
       \let | F => coverAbs f
            | G => coverAbs g
       \in \have mono : cutIntegral Uo F c' - cutIntegral Uo F c <= cutIntegral Uo G c' - cutIntegral Uo G c
-                => transport2 (<=) (inv (cut-diff {n} {U} {Uo} {F} {c} {c'})) (inv (cut-diff {n} {U} {Uo} {G} {c} {c'})) $
+                => transport2 (<=) (inv cut-diff) (inv cut-diff) $
         CompactCoverMap-integral-mono {n} {CompactCoverMap_+ (truncate Uo F c') (CompactCoverMap_negative (truncate Uo F c))} {CompactCoverMap_+ (truncate Uo G c') (CompactCoverMap_negative (truncate Uo G c))} \lam x =>
-                  pos-or-zero {truncate Uo F c' x - truncate Uo F c x <= truncate Uo G c' x - truncate Uo G c x} real-<=-stable (c'.cut>=0 {x})
+                  RealAbGroup.<=-split LinearOrder.<=-stable c'.cut>=0
                     (\lam s =>
                       \let u : Total U => (x, cutoff-in c' s)
-                      \in transport2 (<=) (inv (trunc-inc-pos {n} {U} {Uo} {F} {c} {c'} u)) (inv (trunc-inc-pos {n} {U} {Uo} {G} {c} {c'} u)) $
+                      \in transport2 (<=) (inv (trunc-inc-pos u)) (inv (trunc-inc-pos u)) $
                           RealField.<=_*_positive-left (h u <=∘ RealAbGroup.abs>=id) (RealAbGroup.to>=0 (q x)))
-                    (\lam s => =_<= (trunc-inc-zero {n} {U} {Uo} {F} q s *> inv (trunc-inc-zero {n} {U} {Uo} {G} q s)))
+                    (\lam s => =_<= (trunc-inc-zero q (inv s) *> inv (trunc-inc-zero q (inv s))))
       \in mono <∘r w c c' p q)
   }
 
@@ -437,13 +434,12 @@
 -- | Truncation depends only on the values of a function.
 \lemma truncate-ext {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (p : \Pi (u : Total U) -> f u = g u) {c : Cutoff U}
   : truncate Uo f c = truncate Uo g c
-  => CompactCoverMap.ext {n} {truncate Uo f c} {truncate Uo g c} \lam x => trunc-unique {n} {U} {Uo} {f} {c}
-      truncate.char (\lam u => (truncate.char {n} {U} {Uo} {g} {c}).1 u *> pmap (RealField.* _) (inv (p u)), (truncate.char {n} {U} {Uo} {g} {c}).2) x
+  => CompactCoverMap.ext {n} \lam x => trunc-unique (truncate.char c) (\lam u => (truncate.char c).1 u *> pmap (RealField.* _) (inv (p u)), (truncate.char c).2) x
 
 -- | Truncation is a pointwise operation.
 \lemma truncate-op {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {c : Cutoff U} (k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (g : CompactCoverMap n)
                   (p : \Pi (u : Total U) -> g u.1 = k u RealField.* c.fn u.1) (q : \Pi {x : RealN n} -> c.fn x = 0 -> g x = 0) : truncate Uo k c = g
-  => CompactCoverMap.ext {n} {truncate Uo k c} {g} \lam x => trunc-unique {n} {U} {Uo} {k} {c} truncate.char (p,q) x
+  => CompactCoverMap.ext {n} \lam x => trunc-unique (truncate.char c) (p,q) x
 
 \lemma coverSum {X : CoverSpace} (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => f x RealAbGroup.+ g x)
   => cover2 (+-uniform {RealNormed}) f g
@@ -454,20 +450,20 @@
 \lemma truncate_+ {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
   : truncate Uo (coverSum f g) c = CompactCoverMap_+ (truncate Uo f c) (truncate Uo g c)
   => truncate-op {n} {U} {Uo} (coverSum f g) (CompactCoverMap_+ (truncate Uo f c) (truncate Uo g c))
-      (\lam u => pmap2 (RealAbGroup.+) ((truncate.char {n} {U} {Uo} {f} {c}).1 u) ((truncate.char {n} {U} {Uo} {g} {c}).1 u) *> inv RealField.rdistr)
-      (\lam s => pmap2 (RealAbGroup.+) ((truncate.char {n} {U} {Uo} {f} {c}).2 s) ((truncate.char {n} {U} {Uo} {g} {c}).2 s) *> RealAbGroup.zro-left)
+      (\lam u => pmap2 (RealAbGroup.+) ((truncate.char c).1 u) ((truncate.char c).1 u) *> inv RealField.rdistr)
+      (\lam s => pmap2 (RealAbGroup.+) ((truncate.char c).2 s) ((truncate.char c).2 s) *> RealAbGroup.zro-left)
 
 \lemma truncate_negative {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
   : truncate Uo (coverNegative f) c = CompactCoverMap_negative (truncate Uo f c)
   => truncate-op {n} {U} {Uo} (coverNegative f) (CompactCoverMap_negative (truncate Uo f c))
-      (\lam u => pmap negative ((truncate.char {n} {U} {Uo} {f} {c}).1 u) *> inv RealField.negative_*-left)
-      (\lam s => pmap negative ((truncate.char {n} {U} {Uo} {f} {c}).2 s) *> RealAbGroup.negative_zro)
+      (\lam u => pmap negative ((truncate.char c).1 u) *> inv RealField.negative_*-left)
+      (\lam s => pmap negative ((truncate.char c).2 s) *> RealAbGroup.negative_zro)
 
 \lemma truncate_abs {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
   : truncate Uo (coverAbs f) c = CompactCoverMap_abs (truncate Uo f c)
   => truncate-op {n} {U} {Uo} (coverAbs f) (CompactCoverMap_abs (truncate Uo f c))
-      (\lam u => pmap RealAbGroup.abs ((truncate.char {n} {U} {Uo} {f} {c}).1 u) *> RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {u.1})))
-      (\lam s => pmap RealAbGroup.abs ((truncate.char {n} {U} {Uo} {f} {c}).2 s) *> RealAbGroup.abs_zro)
+      (\lam u => pmap RealAbGroup.abs ((truncate.char c).1 u) *> RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {u.1})))
+      (\lam s => pmap RealAbGroup.abs ((truncate.char c).2 s) *> RealAbGroup.abs_zro)
 
 -- | The absolute value of an integrable map is integrable.
 \lemma integrable-abs {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) : IsIntegrableOn Uo (coverAbs f)
@@ -496,18 +492,17 @@
              | DF => CompactCoverMap_+ (truncate Uo F c') (CompactCoverMap_negative (truncate Uo F c))
              | DG => CompactCoverMap_+ (truncate Uo G c') (CompactCoverMap_negative (truncate Uo G c))
         \in \have | m : integral {LebesgueL1 n} (iota DA) <= integral {LebesgueL1 n} (iota (CompactCoverMap_+ DF DG)) => CompactCoverMap-integral-mono {n} {DA} {CompactCoverMap_+ DF DG} \lam x =>
-                      pos-or-zero {DA x <= DF x RealAbGroup.+ DG x} real-<=-stable (c'.cut>=0 {x})
+                      RealAbGroup.<=-split LinearOrder.<=-stable c'.cut>=0
                         (\lam s =>
                           \let u : Total U => (x, cutoff-in c' s)
-                          \in transport2 (<=) (inv (trunc-inc-pos {n} {U} {Uo} {A} {c} {c'} u))
-                                (inv (pmap2 (RealAbGroup.+) (trunc-inc-pos {n} {U} {Uo} {F} {c} {c'} u) (trunc-inc-pos {n} {U} {Uo} {G} {c} {c'} u) *> inv RealField.rdistr)) $
+                          \in transport2 (<=) (inv (trunc-inc-pos u)) (inv (pmap2 (RealAbGroup.+) (trunc-inc-pos u) (trunc-inc-pos u) *> inv RealField.rdistr)) $
                               RealField.<=_*_positive-left RealAbGroup.abs_+ (RealAbGroup.to>=0 (q x)))
-                        (\lam s => =_<= (trunc-inc-zero {n} {U} {Uo} {A} q s *> inv (pmap2 (RealAbGroup.+) (trunc-inc-zero {n} {U} {Uo} {F} q s) (trunc-inc-zero {n} {U} {Uo} {G} q s) *> RealAbGroup.zro-left)))
-                  | e1 : cutIntegral Uo A c' - cutIntegral Uo A c = integral {LebesgueL1 n} (iota DA) => cut-diff {n} {U} {Uo} {A} {c} {c'}
+                        (\lam s => =_<= (trunc-inc-zero q (inv s) *> inv (pmap2 (RealAbGroup.+) (trunc-inc-zero q (inv s)) (trunc-inc-zero q (inv s)) *> RealAbGroup.zro-left)))
+                  | e1 : cutIntegral Uo A c' - cutIntegral Uo A c = integral {LebesgueL1 n} (iota DA) => cut-diff
                   | e2 : integral {LebesgueL1 n} (iota (CompactCoverMap_+ DF DG)) = integral {LebesgueL1 n} (iota DF) RealAbGroup.+ integral {LebesgueL1 n} (iota DG)
                       => pmap (integral {LebesgueL1 n}) (iota_+ {n} {DF} {DG}) *> IntegrationSpace.integral_+ {LebesgueL1 n}
-                  | e3 : cutIntegral Uo F c' - cutIntegral Uo F c = integral {LebesgueL1 n} (iota DF) => cut-diff {n} {U} {Uo} {F} {c} {c'}
-                  | e4 : cutIntegral Uo G c' - cutIntegral Uo G c = integral {LebesgueL1 n} (iota DG) => cut-diff {n} {U} {Uo} {G} {c} {c'}
+                  | e3 : cutIntegral Uo F c' - cutIntegral Uo F c = integral {LebesgueL1 n} (iota DF) => cut-diff
+                  | e4 : cutIntegral Uo G c' - cutIntegral Uo G c = integral {LebesgueL1 n} (iota DG) => cut-diff
                   | b1 => w c c' (c<=-trans {n} {U} {c0} {cutoff-join c0 c1} {c} (cutoff-join-left {n} {U} {c0} {c1}) p) q
                   | b2 => w' c c' (c<=-trans {n} {U} {c1} {cutoff-join c0 c1} {c} (cutoff-join-right {n} {U} {c0} {c1}) p) q
                   | r : Real.fromRat (eps * ratio 1 2) RealAbGroup.+ Real.fromRat (eps * ratio 1 2) = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
@@ -598,16 +593,15 @@
 
 \lemma trunc-stable {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c0 c : Cutoff U}
                     (h : \Pi (u : Total U) -> c0.fn u.1 < 1 -> f u = 0) (p : c0 c<= c) : truncate Uo f c = truncate Uo f c0
-  => CompactCoverMap.ext {n} {truncate Uo f c} {truncate Uo f c0} \lam x =>
-    pos-or-zero {truncate Uo f c x = truncate Uo f c0 x} real-eq-stable (c.cut>=0 {x})
+  => CompactCoverMap.ext {n} \lam x => RealAbGroup.<=-split separatedEq c.cut>=0
       (\lam s =>
         \let u : Total U => (x, cutoff-in c s)
-        \in (truncate.char {n} {U} {Uo} {f} {c}).1 u *> real-eq-stable (\lam ne =>
-              \have | n1 : 1 <= c0.fn x => \lam l => ne (pmap (RealField.* _) (h u l) *> RealField.zro_*-left *> inv (RealField.zro_*-left *> idp) *> inv (pmap (RealField.* _) (h u l)))
+        \in (truncate.char c).1 u *> separatedEq (\lam ne =>
+              \have | n1 : 1 <= c0.fn x => \lam l => ne (pmap (* _) (h u l) *> RealField.zro_*-left *> inv (RealField.zro_*-left *> idp) *> inv (pmap (* _) (h u l)))
                     | e0 : c0.fn x = 1 => <=-antisymmetric (c0.cut<=1 {x}) n1
                     | e1 : c.fn x = 1 => <=-antisymmetric (c.cut<=1 {x}) (n1 <=∘ p x)
-              \in ne (pmap (_ RealField.*) (e1 *> inv e0))) *> inv ((truncate.char {n} {U} {Uo} {f} {c0}).1 u))
-      (\lam s => (truncate.char {n} {U} {Uo} {f} {c}).2 s *> inv ((truncate.char {n} {U} {Uo} {f} {c0}).2 (<=-antisymmetric (transport (_ <=) s (p x)) (c0.cut>=0 {x}))))
+              \in ne (pmap (_ *) (e1 *> inv e0))) *> inv ((truncate.char c0).1 u))
+      (\lam s => (truncate.char c).2 (inv s) *> inv ((truncate.char c0).2 (<=-antisymmetric (transportInv (_ <=) s (p x)) c0.cut>=0)))
 
 -- | A map vanishing where the cutoff {c0} is less than 1 has compact support in {U}.
 \lemma compact-witness {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c0 : Cutoff U}
@@ -675,17 +669,17 @@
                 | inc (u : Total U) : D u.1 = c'.fn u.1 - c.fn u.1 => trunc-inc-pos {n} {U} {Uo} {F} {c} {c'} u *> pmap (RealField.* _) one *> ide-left
                 | pt (z : Array Rat n) : RealAbGroup.abs (D (ratPt z)) <= Real.fromRat (if (lebPts n A z) 1 0)
                     => \let x => ratPt z
-                       \in \have zero (s : c'.fn x = 0) : RealAbGroup.abs (D x) = 0 => pmap RealAbGroup.abs (trunc-inc-zero {n} {U} {Uo} {F} q s) *> RealAbGroup.abs_zro
+                       \in \have zero (s : 0 = c'.fn x) : RealAbGroup.abs (D x) = 0 => pmap RealAbGroup.abs (trunc-inc-zero q (inv s)) *> RealAbGroup.abs_zro
                        \in cases (lebPts n A z arg addPath) \with {
-                         | true, qz => pos-or-zero {RealAbGroup.abs (D x) <= 1} real-<=-stable (c'.cut>=0 {x})
+                         | true, qz => RealAbGroup.<=-split {RealAbGroup.abs (D x) <= 1} LinearOrder.<=-stable c'.cut>=0
                            (\lam s =>
                              \have | i => inc (x, cutoff-in c' s)
                                    | d>=0 : 0 <= c'.fn x - c.fn x => RealAbGroup.to>=0 (q x)
-                                   | a1 : c'.fn x <= 1 => c'.cut<=1 {x}
-                                   | a2 : 0 <= c.fn x => c.cut>=0 {x}
+                                   | a1 : c'.fn x <= 1 => c'.cut<=1
+                                   | a2 : 0 <= c.fn x => c.cut>=0
                              \in rewrite (i, RealAbGroup.abs-ofPos d>=0) (hiding (hA,h,inc) linarith))
                            (\lam s => =_<= (zero s) <=∘ <=-less RealField.zro<ide)
-                         | false, qz => pos-or-zero {RealAbGroup.abs (D x) <= 0} real-<=-stable (c'.cut>=0 {x})
+                         | false, qz => RealAbGroup.<=-split LinearOrder.<=-stable c'.cut>=0
                            (\lam s =>
                              \have | Ux => cutoff-in c' s
                                    | e0 : c0.fn x = 1 => hA z qz Ux
@@ -696,7 +690,7 @@
                        }
                 | b : integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (iota D)) <= (1 : Rat) RealField.* meas A => iota-bound {n} {D} {A} {1} pt
                 | b' : integral {LebesgueL1 n} (iota D) <= integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (iota D)) => IntegrationSpace.integral-mono {LebesgueL1 n} (LatticeAbGroup.abs>=id {LebesgueL1 n})
-                | e : cutIntegral Uo F c' - cutIntegral Uo F c = integral {LebesgueL1 n} (iota D) => cut-diff {n} {U} {Uo} {F} {c} {c'}
+                | e : cutIntegral Uo F c' - cutIntegral Uo F c = integral {LebesgueL1 n} (iota D) => cut-diff
                 | m1 : (1 : Rat) RealField.* meas A = meas A => ide-left
       \in hiding (pt,inc,hA,h) linarith)
   }

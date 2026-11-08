@@ -55,6 +55,22 @@
 \lemma clampMap {a b : Real} (a<=b : a <= b) : CoverMap RealNormed (IntervalSpace a b) (clamp a<=b)
   => CoverTransfer-univ (clamp a<=b) __.1 (clampReal a b)
 
+-- | {clamp} does not increase distances.
+\lemma clamp-dist {a b : Real} {a<=b : a <= b} {s t : Real} : RealAbGroup.abs ((clamp a<=b s).1 - (clamp a<=b t).1) <= RealAbGroup.abs (s - t)
+  => RealAbGroup.join-univ (half {a} {b} {a<=b} {s} {t}) (transport2 (<=) (inv (AddGroup.negative_- {RealAbGroup} {(clamp a<=b s).1} {(clamp a<=b t).1})) RealAbGroup.abs_- (half {a} {b} {a<=b} {t} {s}))
+  \where
+    \private \lemma half {a b : Real} {a<=b : a <= b} {s t : Real} : (clamp a<=b s).1 - (clamp a<=b t).1 <= RealAbGroup.abs (s - t)
+      => \let D => RealAbGroup.abs (s - t)
+         \in \have | D>=0 : 0 <= D => RealAbGroup.abs>=0
+                   | sD : s - t <= D => RealAbGroup.abs>=id
+                   | m1 : s ∧ b <= s => meet-left
+                   | m2 : s ∧ b <= b => meet-right
+                   | m : (s ∧ b) - D <= t ∧ b => meet-univ (usingOnly (m1, sD) linarith) (usingOnly (m2, D>=0) linarith)
+                   | j1 : a <= a ∨ (t ∧ b) => join-left
+                   | j2 : t ∧ b <= a ∨ (t ∧ b) => join-right
+                   | j : a ∨ (s ∧ b) <= a ∨ (t ∧ b) + D => join-univ (usingOnly (j1, D>=0) linarith) (usingOnly (m, j2) linarith)
+         \in usingOnly j linarith
+
 -- | The argument `(x',y',y'-x',1)` of the difference quotient, where `x'` and `y'` are the clamped coordinates of a point of the plane.
 \func quotPt {a b : Real} (a<=b : a <= b) (p : \Sigma Real Real) : Set.Total (DerivSet (intervalInc a b))
   => ((clamp a<=b p.1, (clamp a<=b p.2, ((clamp a<=b p.2).1 - (clamp a<=b p.1).1, 1))), unfold DerivSet equation.cRing)

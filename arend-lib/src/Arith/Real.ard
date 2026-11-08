@@ -435,6 +435,14 @@
 \lemma rat_real_abs {a : Rat} : Real.fromRat (RatField.abs a) = RealAbGroup.abs (Real.fromRat a)
   => rat_real_join *> pmap (_ RealAbGroup.∨) (inv RealAbGroup.negative-rat)
 
+-- | Two reals are equal if their distance is bounded by every positive multiple of a constant.
+\lemma real-scaled-eq {x y : Real} {K : Rat} (K>0 : 0 < K) (h : \Pi {e : Rat} -> 0 < e -> RealAbGroup.abs (x - y) <= Real.fromRat (e * K)) : x = y
+  => \have z : RealAbGroup.abs (x - y) <= 0 => real_<=-eps \lam {d} d>0 =>
+            \have | e>0 : 0 < d * ratio 1 2 * RatField.finv K => RatField.<_*_positive_positive linarith (RatField.finv>0 K>0)
+                  | eK : d * ratio 1 2 * RatField.finv K * K = d * ratio 1 2 => *-assoc *> pmap (_ *) (RatField.finv-left (/=-sym (StrictPoset.<_/= K>0))) *> ide-right
+            \in transportInv (_ <) zro-left (h e>0 <∘r rat_real_<.1 (linarith : d * ratio 1 2 * RatField.finv K * K < d))
+     \in AddGroup.fromZero (RealAbGroup.abs_zro-ext (<=-antisymmetric z RealAbGroup.abs>=0))
+
 \instance RealDenseOrder : UnboundedDenseLinearOrder
   | LinearOrder => RealAbGroup
   | isDense x<z => \case real_<-rat-char.1 x<z \with {
