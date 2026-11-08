@@ -1,6 +1,7 @@
 package org.arend.typechecking.order;
 
 import org.arend.core.definition.Definition;
+import org.arend.naming.reference.ParameterReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
@@ -13,6 +14,8 @@ import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.typechecking.order.listener.OrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.CollectDefCallsVisitor;
+import org.arend.typechecking.visitor.WhereVarsCollector;
+import org.arend.typechecking.visitor.WhereVarsFixVisitor;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -135,6 +138,28 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     }
   }
 
+  /**
+   * References to the parameters of enclosing definitions are local, but the used parameters are added to the definition
+   * during typechecking (see {@link WhereVarsFixVisitor}), so it depends on the definitions in their types.
+   */
+  private static void collectInExternalParameters(Concrete.Definition definition, CollectDefCallsVisitor visitor) {
+    Map<TCDefReferable, Integer> lastUsed = new HashMap<>();
+    for (ParameterReferable whereVar : WhereVarsCollector.findWhereVars(Collections.singletonList(definition)).proj1) {
+      lastUsed.merge(whereVar.getDefinition(), whereVar.getIndex(), Math::max);
+    }
+    for (Map.Entry<TCDefReferable, Concrete.ExternalParameters> entry : definition.getExternalParameters().entrySet()) {
+      Integer last = lastUsed.get(entry.getKey());
+      if (last == null) continue;
+      // The types of used parameters may refer to the previous ones, which are added too
+      int index = 0;
+      for (Concrete.Parameter parameter : entry.getValue().parameters()) {
+        if (index > last) break;
+        if (parameter.getType() != null) parameter.getType().accept(visitor, null);
+        index += parameter.getNumberOfParameters();
+      }
+    }
+  }
+
   @Override
   protected boolean forDependencies(Concrete.ResolvableDefinition definition, Consumer<Concrete.ResolvableDefinition> consumer) {
     Set<TCDefReferable> dependencies = new LinkedHashSet<>();
@@ -154,6 +179,9 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       visitor.addDependency(funDef.getUseParent());
     }
     definition.accept(visitor, null);
+    if (definition instanceof Concrete.Definition def && !def.getExternalParameters().isEmpty()) {
+      collectInExternalParameters(def, visitor);
+    }
     if (myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal()) {
       for (TCDefReferable usedDefinition : definition.getUsedDefinitions()) {
         collectInUsedDefinitions(usedDefinition, visitor);
