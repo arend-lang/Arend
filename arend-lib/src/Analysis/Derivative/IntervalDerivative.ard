@@ -1,0 +1,131 @@
+{- | Derivatives of functions on a closed interval `[a,b]`.
+ -
+ -   Points of `ℝ` are moved to `[a,b]` by {clamp}.
+ -   This extends the difference quotient of a function on `[a,b]` to the cover map {quotPlane} on the plane `ℝ × ℝ`.
+ -   Cover maps on the plane are bounded and uniformly continuous on squares `[a,b]²`, see {square-bounded} and {square-uniform}.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Derivative.CoverDerivative
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.Compact
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
+\import Topology.MetricSpace.OpenCover
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Compact
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Product
+\import Topology.TopRing.Real
+\import Topology.TopSpace
+
+-- | The plane `ℝ × ℝ` with the sum of the distances.
+\func Plane : PseudoMetricSpace (\Sigma Real Real)
+  => ManhattanMetricSpace RealNormed RealNormed
+
+-- | The nearest point of `[a,b]`.
+\func clamp {a b : Real} (a<=b : a <= b) (t : Real) : Set.Total (ClosedInterval a b)
+  => (a ∨ (t ∧ b), (join-left, join-univ a<=b meet-right))
+
+\lemma clamp-in {a b : Real} {a<=b : a <= b} {t : Real} (p : ClosedInterval a b t) : clamp a<=b t = (t,p)
+  => ext (pmap (a ∨) (RealAbGroup.meet_<= p.2) *> RealAbGroup.join_<= p.1)
+
+\lemma clampReal (a b : Real) : CoverMap RealNormed RealNormed (\lam t => a ∨ (t ∧ b))
+  => real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const a) (real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const b))
+
+-- | {clamp} is a cover map.
+\lemma clampMap {a b : Real} (a<=b : a <= b) : CoverMap RealNormed (IntervalSpace a b) (clamp a<=b)
+  => CoverTransfer-univ (clamp a<=b) __.1 (clampReal a b)
+
+-- | The argument `(x',y',y'-x',1)` of the difference quotient, where `x'` and `y'` are the clamped coordinates of a point of the plane.
+\func quotPt {a b : Real} (a<=b : a <= b) (p : \Sigma Real Real) : Set.Total (DerivSet (intervalInc a b))
+  => ((clamp a<=b p.1, (clamp a<=b p.2, ((clamp a<=b p.2).1 - (clamp a<=b p.1).1, 1))), unfold DerivSet equation.cRing)
+
+-- | The difference quotient of {f} extended to the plane.
+\lemma quotPlane {a b : Real} (a<b : a < b) (f : Set.Total (ClosedInterval a b) -> Real) (d : HasDeriv (intervalInc a b) f)
+  : CoverMap Plane RealNormed (\lam p => deriv-quot (interval-derivDense a<b) f d (quotPt (<=-less a<b) p))
+  => \let | S => IntervalSpace a b
+          | P => ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace RealNearField RealTopLModule))
+          | a<=b : a <= b => <=-less a<b
+          | x' : CoverMap Plane RealNormed (\lam p => (clamp a<=b p.1).1) => clampReal a b CoverMap.∘ ProductCoverSpace.proj1
+          | y' : CoverMap Plane RealNormed (\lam p => (clamp a<=b p.2).1) => clampReal a b CoverMap.∘ ProductCoverSpace.proj2
+          | h : CoverMap Plane RealNormed (\lam p => (clamp a<=b p.2).1 - (clamp a<=b p.1).1)
+              => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple y' (negative-uniform {RealNormed} CoverMap.∘ x')
+          | t : CoverMap Plane P (\lam p => (clamp a<=b p.1, (clamp a<=b p.2, ((clamp a<=b p.2).1 - (clamp a<=b p.1).1, 1))))
+              => ProductCoverSpace.tuple (clampMap a<=b CoverMap.∘ ProductCoverSpace.proj1) (ProductCoverSpace.tuple (clampMap a<=b CoverMap.∘ ProductCoverSpace.proj2)
+                   (ProductCoverSpace.tuple h (CoverMap.const 1)))
+     \in deriv-quot (interval-derivDense a<b) f d CoverMap.∘ CoverTransfer-univ {Plane} {P} {Set.Total (DerivSet (intervalInc a b))} (quotPt a<=b) __.1 t
+
+-- | The increment of {f} is the increment of the argument times the quotient.
+\lemma quot-incr {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f} (p : \Sigma Real Real)
+  : f (clamp (<=-less a<b) p.2) - f (clamp (<=-less a<b) p.1) = ((clamp (<=-less a<b) p.2).1 - (clamp (<=-less a<b) p.1).1) * quotPlane a<b f d p
+  => inv (deriv-quot.char (quotPt (<=-less a<b) p))
+
+-- | The increment of {f} between points of `[a,b]`.
+\lemma quot-incr-in {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f}
+                    {x y : Real} (px : ClosedInterval a b x) (py : ClosedInterval a b y)
+  : f (y,py) - f (x,px) = (y - x) * quotPlane a<b f d (x,y)
+  => \let | cx => clamp-in {a} {b} {<=-less a<b} px
+          | cy => clamp-in {a} {b} {<=-less a<b} py
+     \in pmap2 (\lam u v => f v - f u) (inv cx) (inv cy) *> quot-incr (x,y) *> pmap (`* _) (pmap2 (\lam u v => v.1 - u.1) cx cy)
+
+-- | On the diagonal, the quotient is the derivative.
+\lemma quot-diag {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f} {t : Real} (p : ClosedInterval a b t)
+  : quotPlane a<b f d (t,t) = deriv (interval-derivDense a<b) f d (t,p) 1
+  => pmap (deriv-quot (interval-derivDense a<b) f d) (ext (ext (clamp-in p, ext (clamp-in p, ext (negative-right, idp)))))
+
+-- | A cover map on the plane is bounded on `[a,b]²`.
+\lemma square-bounded (g : CoverMap Plane RealNormed) (a b : Real)
+  : ∃ (M : Rat) (0 < M) ∀ {x y : Real} (ClosedInterval a b x) (ClosedInterval a b y) (RealAbGroup.abs (g (x,y)) <= M)
+  => \case square-ball a b \with {
+    | inP (R,R>0,sq) => \case openCover-bounded {Plane} {top} (open-top {Plane}) (g CoverMap.∘ OpenCoverSpace.func {Plane} {top} (open-top {Plane}))
+                                 (manhattan-ballsTB real-bounded-tb real-bounded-tb (a,a) R>0) (ball-<=* RatField.zro<ide \lam _ _ => ()) \with {
+      | inP (M,M>0,h) => inP (M, M>0, \lam {x} {y} xa ya => h {((x,y),())} (sq xa ya))
+    }
+  }
+  \where
+    -- | The square `[a,b]²` lies in a ball around `(a,a)`.
+    \lemma square-ball (a b : Real) : ∃ (R : Rat) (0 < R) ∀ {x y : Real} (ClosedInterval a b x) (ClosedInterval a b y) (OBall {Plane} R (a,a) (x,y))
+      => \case Real.U-inh_>0 {(b - a) RealAbGroup.+ (b - a)} \with {
+        | inP (R,Ru,R>0) => inP (R, R>0, \lam {x} {y} xa ya =>
+          \have | R' : (b - a) RealAbGroup.+ (b - a) < Real.fromRat R => real_<_U.2 Ru
+                 | a1 => xa.1
+                 | a2 => xa.2
+                 | a3 => ya.1
+                 | a4 => ya.2
+                 | u1 : a - x <= b - a => linarith
+                 | u2 : negative (a - x) <= b - a => linarith
+                 | v1 : a - y <= b - a => linarith
+                 | v2 : negative (a - y) <= b - a => linarith
+                 | bx : RealAbGroup.abs (a - x) <= b - a => RealAbGroup.join-univ u1 u2
+                 | by : RealAbGroup.abs (a - y) <= b - a => RealAbGroup.join-univ v1 v2
+          \in real_<_U.1 (linarith : RealAbGroup.abs (a - x) RealAbGroup.+ RealAbGroup.abs (a - y) < Real.fromRat R))
+      }
+
+-- | A cover map on the plane is uniformly continuous on `[a,b]²`.
+\lemma square-uniform (g : CoverMap Plane RealNormed) (a b : Real) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (delta : Rat) (0 < delta) ∀ {x y x' y' : Real} (ClosedInterval a b x) (ClosedInterval a b y) (ClosedInterval a b x') (ClosedInterval a b y')
+      (RealAbGroup.abs (x - x') RealAbGroup.+ RealAbGroup.abs (y - y') < delta) (RealAbGroup.abs (g (x,y) - g (x',y')) < eps)
+  => \case square-bounded.square-ball a b \with {
+    | inP (R,R>0,sq) => \case cover-uniform-ball (manhattan-ballsTB real-bounded-tb real-bounded-tb) g (a,a) R>0 eps>0 \with {
+      | inP (d,d>0,h) => inP (d, d>0, \lam xa ya xa' ya' dd => real_<_U.2 (h (sq xa ya) (sq xa' ya') (real_<_U.1 dd)))
+    }
+  }

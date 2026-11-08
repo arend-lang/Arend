@@ -5,15 +5,20 @@
  -}
 
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.StrictlyOrdered
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.MeasureIntegrationSpace
 \import Analysis.Integration.Pointwise.CompactSupport
 \import Analysis.Integration.Pointwise.OpenIntegral
 \import Analysis.Measure.IntervalRing
 \import Analysis.Measure.Lebesgue
 \import Analysis.Measure.MeasureRing
+\import Analysis.Measure.RatSFunc
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
@@ -22,6 +27,8 @@
 \import Data.Or
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Meta
 \import Order.Biordered
 \import Order.Lattice
 \import Order.LinearOrder
@@ -173,6 +180,15 @@
 \lemma box-mem {p q : Rat} {z : Array Rat 1} (l : p <= lastA z) (r : lastA z < q) : lebPts 1 (box1 p q) z = true
   => rewrite (\peval box1 p q) $ lebPts-box ((p,q) :: nil) z *> (inRI-char {p,q}).2 (l,r)
 
+\lemma box-mem-conv {p q : Rat} {z : Array Rat 1} (h : lebPts 1 (box1 p q) z = true) : \Sigma (p <= lastA z) (lastA z < q)
+  => (inRI-char {p,q}).1 (inv (lebPts-box ((p,q) :: nil) z) *> transport (\lam w => lebPts 1 w z = true) (\peval box1 p q) h)
+
+\lemma box-out {p q : Rat} {z : Array Rat 1} (h : (lastA z < p) || (q <= lastA z)) : lebPts 1 (box1 p q) z = false
+  => bool-false \lam e => \have c => box-mem-conv e \in \case h \with {
+    | byLeft l => <-irreflexive (l <∘l c.1)
+    | byRight r => <-irreflexive (c.2 <∘l r)
+  }
+
 \lemma box-meas {p q : Rat} (pq : p <= q) : meas {LebesgueRing0 1} (box1 p q) = Real.fromRat (q - p)
   => \have d>=0 : 0 <= q - p => linarith
      \in rewrite (\peval box1 p q) $ boxElem-meas {1} ((p,q) :: nil) *> pmap Real.fromRat (ide-left *> <=-antisymmetric (join-univ <=-refl d>=0) join-left)
@@ -255,3 +271,108 @@
 \lemma interval-integrable {a b : Real} {f : CoverMap (OpenCoverSpace {RealN 1} (interval-open a b)) RealNormed} {M : Real}
                            (h : \Pi (u : Set.Total (OpenInterval a b)) -> RealAbGroup.abs (f u) <= M) : IsIntegrableOn (interval-open a b) f
   => integrable-bounded (interval-located a b) h
+
+-- | Every cutoff of `(a,b)` lies below the trapezoid cutoffs with small parameters.
+\lemma intervalCutoff-cofinal {a b : Real} (c0 : Cutoff (OpenInterval a b))
+  : ∃ (r : Rat) (0 < r) (\Pi {h : Rat} (h>0 : 0 < h) -> h + h <= r -> c0 c<= intervalCutoff a b h>0)
+  => \case c0.cut-inside \with {
+    | inP (r,r>0,hr) => inP (r, r>0, \lam {h} h>0 hh x => pos-or-zero real-<=-stable (c0.cut>=0 {x})
+        (\lam pos =>
+          \let | ya : RealN 1 => a :: nil
+               | yb : RealN 1 => b :: nil
+          \in \have | (a<x, x<b) => cutoff-in c0 pos
+                    | r>0' : 0 < Real.fromRat r => rat_real_<.1 r>0
+                    | l : Real.fromRat r <= x 0 - a => \lam q => <-irreflexive (hr pos {ya} (near {x} {ya} (RealAbGroup.abs_-_< linarith linarith))).1
+                    | u : Real.fromRat r <= b - x 0 => \lam q => <-irreflexive (hr pos {yb} (near {x} {yb} (RealAbGroup.abs_-_< linarith linarith))).2
+                    | hh' : Real.fromRat h RealAbGroup.+ Real.fromRat h <= Real.fromRat r => transportInv (`<= _) RealAbGroup.+-rat (rat_real_<=.1 hh)
+              \in transportInv (_ <=) (trap-high h>0 (meet-univ (hh' <=∘ l) (hh' <=∘ u))) (c0.cut<=1 {x}))
+        (\lam z => rewrite z ((intervalCutoff a b h>0).cut>=0 {x})))
+  }
+  \where
+    \lemma near {x y : RealN 1} {r : Rat} (p : RealAbGroup.abs (x 0 - y 0) < Real.fromRat r) : OBall r x y
+      => real_<_U.1 (transportInv (`< _) ldist-coord p)
+
+-- | The integral on `(a,b)` is the limit of the integrals of truncations by trapezoids.
+\lemma integralOn-trap {a b : Real} {F : CoverMap (OpenCoverSpace {RealN 1} (interval-open a b)) RealNormed} (i : IsIntegrableOn (interval-open a b) F) {d : Rat} (d>0 : 0 < d)
+  : ∃ (r : Rat) (0 < r) (\Pi {h : Rat} (h>0 : 0 < h) -> h + h <= r -> RealAbGroup.abs (integralOn (interval-open a b) F i - cutIntegral (interval-open a b) F (intervalCutoff a b h>0)) < Real.fromRat d)
+  => \case integrableL1-near i d>0 \with {
+    | inP (c0,hc) => \case intervalCutoff-cofinal c0 \with {
+      | inP (r,r>0,hr) => inP (r, r>0, \lam {h} h>0 hh =>
+        \let | u => integrableL1 (interval-open a b) F i
+             | v => iota (truncate (interval-open a b) F (intervalCutoff a b h>0))
+        \in \have | l : ldist {LebesgueL1 1} u v < Real.fromRat d => hc _ (hr h>0 hh)
+                  | e : integral {LebesgueL1 1} (u - v) = integralOn (interval-open a b) F i - cutIntegral (interval-open a b) F (intervalCutoff a b h>0)
+                      => IntegrationSpace.integral_+ {LebesgueL1 1} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 1}} *> pmap negative (inv cutIntegral.char))
+        \in transport (\lam x => RealAbGroup.abs x < _) e $ IntegrationSpace.integral_abs {LebesgueL1 1} <∘r transport (`< _) (lnorm-ldist {LebesgueL1 1}) l)
+    }
+  }
+
+-- | Step functions on the grid `gridT R d k` with values close to {G} whose integrals approximate the increments of {Phi}.
+\lemma grid-step {R d : Rat} (d>0 : 0 < d) {G : Array Rat 1 -> Real} {Phi : Rat -> Real} {eps : Rat} (eps>0 : 0 < eps) (N : Nat)
+  (h : ∀ {k} (k < N) ∃ (w : Real) (Phi (gridT R d (suc k)) - Phi (gridT R d k) = Real.fromRat d RealField.* w)
+          ∀ z (gridT R d k <= lastA z) (lastA z < gridT R d (suc k)) (RealAbGroup.abs (G z - w) <= Real.fromRat eps))
+  : ∃ (s : SFuncIntegrationSpace (LebesgueRing0 1))
+      (\Pi (z : Array Rat 1) -> gridT R d 0 <= lastA z -> lastA z < gridT R d N -> RealAbGroup.abs (G z - stepEval z s) <= Real.fromRat (eps + eps))
+      (\Pi (z : Array Rat 1) -> (lastA z < gridT R d 0) || (gridT R d N <= lastA z) -> stepEval z s = 0)
+      (RealAbGroup.abs (integral s - (Phi (gridT R d N) - Phi (gridT R d 0))) <= Real.fromRat ((gridT R d N - gridT R d 0) * eps))
+  \elim N
+  | 0 => inP (0, \lam z l u => absurd (<-irreflexive (u <∘l l)), \lam z _ => idp, base {Phi})
+  | suc N => \case grid-step {R} {d} d>0 {G} {Phi} {eps} eps>0 N (\lam k<N => h (k<N <∘ id<suc)), h id<suc \with {
+    | inP (s,sa,sb,sc), inP (w,inc,wz) => \case rat-approx w eps>0 \with {
+      | inP (v,vw) =>
+        \let | p => gridT R d N
+             | B : LebesgueRing0 1 => box1 p (p + d)
+             | s' => s + stepChar {1} v B
+        \in \have | ev (z : Array Rat 1) : stepEval z s' = stepEval z s + if (lebPts 1 B z) v 0 => stepEval_+ {1} {z} {s} {stepChar {1} v B} *> pmap (_ +) (stepEval-char {1} {z} {v} {B})
+                  | e1 (z : Array Rat 1) (zp : lastA z < p) : stepEval z s' = stepEval z s => ev z *> pmap (\lam b => stepEval z s + if b v 0) (box-out (byLeft zp)) *> zro-right
+                  | p0<=p : gridT R d 0 <= p => gridT>= d>0 N
+                  | mB : meas {LebesgueRing0 1} B = Real.fromRat d => box-meas {p} {p + d} (usingOnly d>0 linarith) *> pmap Real.fromRat (usingOnly () linarith)
+        \in inP (s',
+          \lam z l u => \case LinearOrder.dec<_<= (lastA z) p \with {
+            | inl zp => rewrite (e1 z zp) (sa z l zp)
+            | inr pz => rewrite (ev z *> pmap2 (\lam x b => x + if b v 0) (sb z (byRight pz)) (box-mem pz u) *> zro-left) (two-eps (wz z pz u) vw)
+          },
+          \lam z o => \case \elim o \with {
+            | byLeft zl => e1 z (zl <∘l p0<=p) *> sb z (byLeft zl)
+            | byRight r => ev z *> pmap2 (\lam x b => x + if b v 0) (sb z (byRight (usingOnly (r, d>0) linarith))) (box-out (byRight r)) *> zro-left
+          },
+          \have | ei : integral s' = integral s RealAbGroup.+ Real.fromRat v RealField.* meas {LebesgueRing0 1} B
+                     => IntegrationSpace.integral_+ {SFuncIntegrationSpace (LebesgueRing0 1)} {s} {stepChar {1} v B} *> pmap (_ RealAbGroup.+) (integral-stepChar {1} {v} {B})
+                 | n1 : negative (w - Real.fromRat v) <= RealAbGroup.abs (w - Real.fromRat v) => RealAbGroup.abs>=neg
+                 | n2 : w - Real.fromRat v <= RealAbGroup.abs (w - Real.fromRat v) => RealAbGroup.abs>=id
+                 | vw' : RealAbGroup.abs (w - Real.fromRat v) < Real.fromRat eps => vw
+                 | e5 : Real.fromRat v RealField.* meas {LebesgueRing0 1} B - Real.fromRat d RealField.* w = Real.fromRat d RealField.* (Real.fromRat v - w) => rewrite mB equation.cRing
+                 | e6 : Real.fromRat d RealField.* w - Real.fromRat v RealField.* meas {LebesgueRing0 1} B = Real.fromRat d RealField.* (w - Real.fromRat v) => rewrite mB equation.cRing
+                 | v1 => transportInv (`<= _) e5 (scale-bound d>0 (usingOnly (n1, vw') linarith : Real.fromRat v - w <= Real.fromRat eps))
+                 | v2 => transportInv (`<= _) e6 (scale-bound d>0 (usingOnly (n2, vw') linarith : w - Real.fromRat v <= Real.fromRat eps))
+                 | eB : Real.fromRat ((p - gridT R d 0) * eps) RealAbGroup.+ Real.fromRat (d * eps) = Real.fromRat ((p + d - gridT R d 0) * eps)
+                     => RealAbGroup.+-rat *> pmap Real.fromRat equation.cRing
+                 | r => inc-bound ei inc (RealAbGroup.abs>=id <=∘ sc) (RealAbGroup.abs>=neg <=∘ sc) v1 v2 eB
+          \in RealAbGroup.join-univ r.1 r.2)
+      }
+    }
+  \where {
+    \lemma base {Phi : Rat -> Real} {p e : Rat} : RealAbGroup.abs (integral {SFuncIntegrationSpace (LebesgueRing0 1)} 0 - (Phi p - Phi p)) <= Real.fromRat ((p - p) * e)
+      => \have | e0 : integral {SFuncIntegrationSpace (LebesgueRing0 1)} 0 = 0 => AddGroupHom.func-zro {IntegrationSpace.integral-hom {SFuncIntegrationSpace (LebesgueRing0 1)}}
+               | e1 : integral {SFuncIntegrationSpace (LebesgueRing0 1)} 0 - (Phi p - Phi p) = 0 => pmap2 (\lam a b => a - b) e0 negative-right *> negative-right
+               | e2 : (p - p) * e = 0 => pmap (`* e) negative-right *> RatField.zro_*-left
+         \in rewrite (e1, e2) (=_<= RealAbGroup.abs_zro)
+
+    \lemma two-eps {x w : Real} {v e : Rat} (p : RealAbGroup.abs (x - w) <= Real.fromRat e) (q : RealAbGroup.abs (w - Real.fromRat v) < Real.fromRat e)
+      : RealAbGroup.abs (x - Real.fromRat v) <= Real.fromRat (e + e)
+      => \have | a1 : x - w <= RealAbGroup.abs (x - w) => RealAbGroup.abs>=id
+               | a2 : negative (x - w) <= RealAbGroup.abs (x - w) => RealAbGroup.abs>=neg
+               | b1 : w - Real.fromRat v <= RealAbGroup.abs (w - Real.fromRat v) => RealAbGroup.abs>=id
+               | b2 : negative (w - Real.fromRat v) <= RealAbGroup.abs (w - Real.fromRat v) => RealAbGroup.abs>=neg
+               | r : Real.fromRat (e + e) = Real.fromRat e RealAbGroup.+ Real.fromRat e => inv RealAbGroup.+-rat
+               | u : x - Real.fromRat v <= Real.fromRat (e + e) => linarith
+               | u' : negative (x - Real.fromRat v) <= Real.fromRat (e + e) => linarith
+         \in RealAbGroup.join-univ u u'
+
+    \lemma scale-bound {d : Rat} (d>0 : 0 < d) {x : Real} {e : Rat} (p : x <= Real.fromRat e) : Real.fromRat d RealField.* x <= Real.fromRat (d * e)
+      => transport (_ <=) RealField.*-rat (RealField.<=_*_positive-right (<=-less (rat_real_<.1 d>0)) p)
+
+    \lemma inc-bound {R : OrderedRing} {i i' P P' P0 dv dw dE B B' : R} (ei : i' = i + dv) (ep : P' - P = dw) (c : i - (P - P0) <= B) (c' : negative (i - (P - P0)) <= B)
+                     (v1 : dv - dw <= dE) (v2 : dw - dv <= dE) (eB : B + dE = B') : \Sigma (i' - (P' - P0) <= B') (negative (i' - (P' - P0)) <= B')
+      => (linarith, linarith)
+  }

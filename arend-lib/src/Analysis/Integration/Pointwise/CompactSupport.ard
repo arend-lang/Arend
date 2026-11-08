@@ -415,6 +415,43 @@
                      (tr : iX <= iXS + iS) (em : eK < e) (r : e + e = d) : iX < Ma + d
       => linarith
 
+-- | A pointwise bound of `g - s` by a step function {t} bounds the distance from `ι g` to {s}.
+\lemma iota-near {n : Nat} {g : CompactCoverMap n} {s t : SFuncIntegrationSpace (LebesgueRing0 n)}
+                 (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z) - stepEval z s) <= stepEval z t)
+  : ldist (iota g) (stepL1 s) <= integral t
+  => real_<=-eps \lam {d} d>0 =>
+    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \in \case g.support \with {
+      | inP (R,g0) => \case approx-small g g0 d2>0 \with {
+        | inP (e,s',ap,em) =>
+          \let | K => ratCube n (R + 1)
+               | u => stepChar e K + t
+          \in \have | pt (z : Array Rat n) : RatField.abs (stepEval z (s' - s)) <= stepEval z u
+                        => transportInv (\lam x => RatField.abs x <= _) (stepEval_+ *> pmap (_ +) stepEval_negative) $
+                            transportInv (_ <=) (stepEval_+ {n} {z} {stepChar e K} {t} *> pmap (+ _) stepEval-char) (approx-triangle (ap z) (h z))
+                    | b1 : integral (LatticeAbGroup.abs (s' - s)) <= integral u => step-norm-bound {n} {_} {u} pt
+                    | b2 : integral u = e RealField.* meas K RealAbGroup.+ integral t
+                        => IntegrationSpace.integral_+ {SFuncIntegrationSpace (LebesgueRing0 n)} {stepChar e K} {t} *> pmap (RealAbGroup.+ _) integral-stepChar
+                    | c : ldist {LebesgueL1 n} (iota g) (stepL1 s') <= e RealField.* meas K => iota.char {n} {g} ap
+                    | c' : ldist {LebesgueL1 n} (stepL1 s') (stepL1 s) = integral (LatticeAbGroup.abs (s' - s)) => stepL1-dist
+                    | tr : ldist {LebesgueL1 n} (iota g) (stepL1 s) <= ldist {LebesgueL1 n} (iota g) (stepL1 s') RealAbGroup.+ ldist {LebesgueL1 n} (stepL1 s') (stepL1 s) => ldist-triang {LebesgueL1 n}
+                    | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+              \in near-eps tr c c' b1 b2 em r
+      }
+    }
+  \where
+    \lemma near-eps {R : OrderedRing} {x x1 x2 i iu ek it d2 d : R} (tr : x <= x1 + x2) (c : x1 <= ek) (c' : x2 = i) (b1 : i <= iu) (b2 : iu = ek + it)
+                    (em : ek < d2) (r : d2 + d2 = d) : x < it + d
+      => linarith
+
+-- | A pointwise bound of `g - s` by a step function {t} bounds the difference of the integrals.
+\lemma iota-integral-near {n : Nat} {g : CompactCoverMap n} {s t : SFuncIntegrationSpace (LebesgueRing0 n)}
+                          (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z) - stepEval z s) <= stepEval z t)
+  : RealAbGroup.abs (integral (iota g) - integral s) <= integral t
+  => \have e : integral (iota g - stepL1 s) = integral (iota g) - integral s
+              => (LebesgueL1 n).integral_+ *> pmap (_ RealAbGroup.+) ((LebesgueL1 n).integral-hom.func-negative *> pmap negative integrationCompletion.func-integral)
+     \in transport (\lam x => RealAbGroup.abs x <= _) e $ (LebesgueL1 n).integral_abs <=∘ transport (<= _) (lnorm-ldist {LebesgueL1 n}) (iota-near h)
+
 -- | Maps with compact support are uniformly continuous.
 \lemma CompactCoverMap-uniform {n : Nat} (g : CompactCoverMap n) {eps : Rat} (eps>0 : 0 < eps)
   : ∃ (d : Rat) (0 < d) ∀ {x y} ((dist x y).U d) (RealAbGroup.abs (g x - g y) < eps)

@@ -159,6 +159,13 @@
          \in denseSet-lift-unique (IsDerivDense.derivDense-ring D x) (f' ∘ g) (*c-cont ∘ tuple id (const (diag f' a x))) (\lam {t} ti => diag_*c-inv D f' q ti) {r}
   }
 
+-- | The derivative of {f} along {a} as a cover map.
+\lemma deriv-cover {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) (f : S -> Y) (d : HasDeriv i f) (a : X)
+  : CoverMap S Y (\lam x => deriv D f d x a)
+  => \let | P => ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))
+          | t : CoverMap S P (\lam x => (x,(x,(R.zro,a)))) => ProductCoverSpace.tuple CoverMap.id (ProductCoverSpace.tuple CoverMap.id (ProductCoverSpace.tuple (CoverMap.const R.zro) (CoverMap.const a)))
+     \in deriv-quot D f d CoverMap.∘ CoverTransfer-univ {S} {P} {Set.Total (DerivSet i)} (\lam x => ((x,(x,(R.zro,a))), deriv.zro-eq)) __.1 t
+
 -- | Chains with an invertible increment are dense over an open subset.
 \lemma open-derivDense {R : NearSkewField} {X : TopLModule R} {U : Set X} (Uo : isOpen U) : IsDerivDense (OpenCoverSpace.func Uo)
   => \lam {c} {W} (inP (V,Vo,p)) Wc =>
@@ -265,8 +272,16 @@
 \func ClosedInterval (a b : Real) : Set Real
   => \lam x => \Sigma (a <= x) (x <= b)
 
+-- | The closed interval `[a,b]` as a cover space.
+\func IntervalSpace (a b : Real) : CoverSpace (Set.Total (ClosedInterval a b))
+  => CoverTransfer {Set.Total (ClosedInterval a b)} {RealTopLModule} __.1
+
+-- | The inclusion of `[a,b]` into `ℝ`.
+\func intervalInc (a b : Real) : CoverMap (IntervalSpace a b) RealTopLModule __.1
+  => CoverTransfer-map __.1
+
 -- | Arguments with an invertible increment are dense over a non-degenerate closed interval.
-\lemma interval-derivDense {a b : Real} (a<b : a < b) : IsDerivDense (CoverTransfer-map {Set.Total (ClosedInterval a b)} {RealTopLModule} __.1)
+\lemma interval-derivDense {a b : Real} (a<b : a < b) : IsDerivDense (intervalInc a b)
   => convex-derivDense {RealTopLModule} {ClosedInterval a b} (\lam {x} {y} Sx Sy {t} t>=0 t<=1 => (lower Sx.1 Sy.1 t>=0 t<=1, upper Sx.2 Sy.2 t>=0 t<=1))
       {\lam x => \Sigma (a < x) (x < b)} open-interval {RealField.half (a + b)} (linarith, linarith) (\lam s => (<=-less s.1, <=-less s.2))
   \where {

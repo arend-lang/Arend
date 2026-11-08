@@ -114,6 +114,17 @@
       \in inP (N, rewrite (gridT-formula N) linarith)
   }
 
+-- | The grid points are unbounded.
+\lemma gridT-unbounded {R d : Rat} (d>0 : 0 < d) (t : Rat) : ∃ (N : Nat) (t < gridT R d N)
+  => \case (Real.fromRat ((t + R) * RatField.finv d)).natBounded \with {
+    | inP (N,p) =>
+      \have | d/=0 : d /= 0 => /=-sym (StrictPoset.<_/= d>0)
+            | q : (t + R) * RatField.finv d < RatField.natCoef N => p
+            | m : ((t + R) * RatField.finv d) * d < RatField.natCoef N * d => RatField.<_*_positive-left q d>0
+            | e : ((t + R) * RatField.finv d) * d = t + R => *-assoc *> pmap (_ *) (RatField.finv-left d/=0) *> ide-right
+      \in inP (N, rewrite (gridT-formula N) linarith)
+  }
+
 -- | A rational cell of the grid on `[-R,R)`.
 \sfunc gridCell (R d : Rat) (k : Nat) : RatIntervalSet
   => ratIntervals ((gridT R d k, (gridT R d k + d) ∧ R) :: nil)
