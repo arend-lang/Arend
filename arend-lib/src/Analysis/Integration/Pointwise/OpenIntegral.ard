@@ -348,7 +348,7 @@
   => ∃ (c0 c : Cutoff U) (IsWitness Uo f a c0) (c0 c<= c) (x = iota (truncate Uo f c))
 
 -- | The element of `L¹(ℝⁿ)` corresponding to an integrable function.
-\sfunc integrableL1 {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (i : IsIntegrableOn Uo f) : LebesgueL1 n
+\sfunc integrableL1 {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) {fn : Total U -> Real} (\property f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed fn) (\property i : IsIntegrableOn Uo f) : LebesgueL1 n
   => family-limit {LebesgueL1 n} (intFamily Uo f) inh close
   \where {
     \lemma inh {a : Rat} (a>0 : 0 < a) : ∃ (x : LebesgueL1 n) (intFamily Uo f a x)
@@ -372,11 +372,11 @@
       }
 
     \protected \lemma char {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {i : IsIntegrableOn Uo f} : IsFamilyLimit (intFamily Uo f) (integrableL1 Uo f i)
-      => rewrite (\peval integrableL1 Uo f i) (family-limit.char {LebesgueL1 n} {intFamily Uo f} {inh {n} {U} {Uo} {f} {i}} {close {n} {U} {Uo} {f}})
+      => rewrite (\peval integrableL1 Uo f i) (family-limit.char {LebesgueL1 n} {intFamily Uo f} {inh {n} {U} {Uo} {_} {f} {i}} {close {n} {U} {Uo} {_} {f}})
   }
 
 -- | The integral of an integrable cover map on {U}.
-\func integralOn {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (i : IsIntegrableOn Uo f) : Real
+\func integralOn {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) {fn : Total U -> Real} (\property f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed fn) (\property i : IsIntegrableOn Uo f) : Real
   => integral {LebesgueL1 n} (integrableL1 Uo f i)
 
 -- | The difference of the integrals of truncations is the integral of the difference.
@@ -425,7 +425,7 @@
   : ∃ (c0 : Cutoff U) (\Pi (c : Cutoff U) -> c0 c<= c -> ldist {LebesgueL1 n} (integrableL1 Uo f i) (iota (truncate Uo f c)) < Real.fromRat d)
   => \have a>0 : 0 < d * ratio 1 2 => linarith
      \in \case i a>0 \with {
-       | inP (c0,w) => inP (c0, \lam c p => real_<_U.2 (integrableL1.char {n} {U} {Uo} {f} {i} a>0 (inP (c0, c, w, p, idp)) linarith))
+       | inP (c0,w) => inP (c0, \lam c p => real_<_U.2 (integrableL1.char {n} {U} {Uo} {_} {f} {i} a>0 (inP (c0, c, w, p, idp)) linarith))
      }
 
 \lemma L1-eq-eps {n : Nat} {u v : LebesgueL1 n} (h : \Pi {d : Rat} -> 0 < d -> ldist {LebesgueL1 n} u v < Real.fromRat d) : u = v
@@ -694,3 +694,51 @@
                 | m1 : (1 : Rat) RealField.* meas A = meas A => ide-left
       \in hiding (pt,inc,hA,h) linarith)
   }
+
+-- | The truncation is the product of the cutoff and an extension {G} of {f}.
+\lemma trunc-eq {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
+                {G : RealN n -> Real} (hG : \Pi (u : Total U) -> f u = G u.1) (x : RealN n) : truncate Uo f c x = G x * c.fn x
+  => RealAbGroup.<=-split separatedEq (c.cut>=0 {x})
+      (\lam s => (truncate.char c).1 (x, cutoff-in c s) *> pmap (* _) (hG (x, cutoff-in c s)))
+      (\lam s => (truncate.char c).2 (inv s) *> inv (pmap (G x *) (inv s) *> RealField.zro_*-right))
+
+-- | The integral on {U} is the limit of the integrals of truncations.
+\lemma integralOn-near {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) {d : Rat} (d>0 : 0 < d)
+  : ∃ (c0 : Cutoff U) (\Pi (c : Cutoff U) -> c0 c<= c -> RealAbGroup.abs (integralOn Uo f i - cutIntegral Uo f c) < Real.fromRat d)
+  => \case integrableL1-near i d>0 \with {
+    | inP (c0,hc) => inP (c0, \lam c p =>
+      \let | u => integrableL1 Uo f i
+           | v => iota (truncate Uo f c)
+      \in \have e : integral {LebesgueL1 n} (u - v) = integralOn Uo f i - cutIntegral Uo f c
+                  => IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}} *> pmap negative (inv cutIntegral.char))
+      \in transport (\lam x => RealAbGroup.abs x < _) e $ IntegrationSpace.integral_abs {LebesgueL1 n} <∘r transport (`< _) (lnorm-ldist {LebesgueL1 n}) (hc c p))
+  }
+
+-- | The integral on {U} is monotone.
+\lemma integralOn-mono {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed}
+                       (i : IsIntegrableOn Uo f) (j : IsIntegrableOn Uo g) (p : \Pi (u : Total U) -> f u <= g u) : integralOn Uo f i <= integralOn Uo g j
+  => real_<=-eps \lam {d} d>0 => \case integralOn-near i (linarith : 0 < d * ratio 1 2), integralOn-near j (linarith : 0 < d * ratio 1 2) \with {
+    | inP (c1,h1), inP (c2,h2) =>
+      \let c => cutoff-join c1 c2
+      \in \have | t1 => h1 c (cutoff-join-left {n} {U} {c1} {c2})
+                | t2 => h2 c (cutoff-join-right {n} {U} {c1} {c2})
+                | m : cutIntegral Uo f c <= cutIntegral Uo g c => transport2 (<=) (inv cutIntegral.char) (inv cutIntegral.char) (CompactCoverMap-integral-mono {n} {truncate Uo f c} {truncate Uo g c} (trunc-mono {n} {U} {Uo} {f} {g} {c} p))
+                | r : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+      \in mono-eps (RealAbGroup.abs>=id <∘r t1) (RealAbGroup.abs>=neg <∘r t2) m r
+  }
+  \where {
+    \lemma trunc-mono {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
+                      (p : \Pi (u : Total U) -> f u <= g u) (x : RealN n) : truncate Uo f c x <= truncate Uo g c x
+      => RealAbGroup.<=-split LinearOrder.<=-stable (c.cut>=0 {x})
+          (\lam s => \let u : Total U => (x, cutoff-in c s)
+                     \in transport2 (<=) (inv ((truncate.char c).1 u)) (inv ((truncate.char c).1 u)) (RealField.<=_*_positive-left (p u) (c.cut>=0 {x})))
+          (\lam s => =_<= ((truncate.char c).2 (inv s) *> inv ((truncate.char c).2 (inv s))))
+
+    \lemma mono-eps {R : OrderedRing} {If Ig Cf Cg e d : R} (t1 : If - Cf < e) (t2 : negative (Ig - Cg) < e) (m : Cf <= Cg) (r : e + e = d) : If < Ig + d
+      => linarith
+  }
+
+-- | The integral on {U} preserves negation.
+\lemma integralOn_negative {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f)
+                           (k : IsIntegrableOn Uo (coverNegative f)) : integralOn Uo (coverNegative f) k = negative (integralOn Uo f i)
+  => pmap (integral {LebesgueL1 n}) (integrableL1_negative i k) *> AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}}

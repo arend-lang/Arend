@@ -6,6 +6,8 @@
  -   One direction follows from the uniform continuity of the difference quotient on `[a,b]²`.
  -   For the other direction, the difference quotient at `(x,y)` is the limit of the Riemann sums of {g} along the segment from `x` to `y`
  -   (see {hasDeriv-uniform-iff.segMean} and {hasDeriv-uniform-iff.uniformQuot}).
+ -
+ -   A function with zero derivative is constant (see {deriv-zero-const}): the Riemann sums of zero vanish.
  -}
 
 \import Algebra.Group
@@ -46,13 +48,21 @@
           (RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1))
   => (\lam s {eps} eps>0 => deriv-est a<b s.1 s.2 eps>0,
       \lam u => (uniform-hasDeriv a<b u, uniform-deriv a<b u (uniform-hasDeriv a<b u)))
-  \where \private {
+  \where {
+    -- | The Riemann sums of the zero function vanish.
+    \private \lemma segMean-zero {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} : segMean a<=b (\lam _ => 0) n x y = 0
+      => (\peval segMean a<=b (\lam _ => 0) n x y) *> pmap (_ *) (segSum-zero (suc n)) *> RealField.zro_*-right
+      \where
+        \lemma segSum-zero {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} (k : Nat) : segMean.segSum a<=b (\lam _ => 0) n k x y = 0 \elim k
+          | 0 => idp
+          | suc k => pmap (`+ 0) (segSum-zero k) *> zro-left
+
     -- | Points of `[a,b]` with the same coordinate are equal.
-    \lemma interval-ext {a b : Real} {x y : Set.Total (ClosedInterval a b)} (p : RealAbGroup.abs (y.1 - x.1) = 0) : x = y
+    \private \lemma interval-ext {a b : Real} {x y : Set.Total (ClosedInterval a b)} (p : RealAbGroup.abs (y.1 - x.1) = 0) : x = y
       => ext $ inv $ AddGroup.fromZero (RealAbGroup.abs_zro-ext p)
 
     -- | Points of segments with the same parameter are as close as the endpoints.
-    \lemma convex-dist {x y x' y' t : Real} (t>=0 : 0 <= t) (t<=1 : t <= 1)
+    \private \lemma convex-dist {x y x' y' t : Real} (t>=0 : 0 <= t) (t<=1 : t <= 1)
       : RealAbGroup.abs ((x + t * (y - x)) - (x' + t * (y' - x'))) <= RealAbGroup.abs (x - x') + RealAbGroup.abs (y - y')
       => \let | U => RealAbGroup.abs (x - x')
               | V => RealAbGroup.abs (y - y')
@@ -67,20 +77,20 @@
                RealAbGroup.abs_+ <=∘ (=_<= (pmap2 (+) a1 a2) <=∘ =_<= e2 <=∘ usingOnly (p1, p2) linarith)
 
     -- | The triangle inequality for bounds proportional to the same real.
-    \lemma abs-sum-le {A B C u E E' : Real} (e : C = A + B) (pa : RealAbGroup.abs A <= E * u) (pb : RealAbGroup.abs B <= E' * u) : RealAbGroup.abs C <= (E + E') * u
+    \private \lemma abs-sum-le {A B C u E E' : Real} (e : C = A + B) (pa : RealAbGroup.abs A <= E * u) (pb : RealAbGroup.abs B <= E' * u) : RealAbGroup.abs C <= (E + E') * u
       => rewrite e $ RealAbGroup.abs_+ <=∘ transport (_ <=) (inv RealField.rdistr) (RealAbGroup.<=_+ pa pb)
 
     -- | The estimate of the increments of {f} at the scale {delta}.
-    \func Step {a b : Real} (f g : Set.Total (ClosedInterval a b) -> Real) (eps delta : Rat) : \Prop
+    \private \func Step {a b : Real} (f g : Set.Total (ClosedInterval a b) -> Real) (eps delta : Rat) : \Prop
       => \Pi {x y : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta
            -> RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)
 
     -- | The right hand side of {hasDeriv-uniform-iff}.
-    \func UniformEst {a b : Real} (f g : Set.Total (ClosedInterval a b) -> Real) : \Prop
+    \private \func UniformEst {a b : Real} (f g : Set.Total (ClosedInterval a b) -> Real) : \Prop
       => ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) (Step f g eps delta)
 
     -- | The derivative satisfies the estimate since the difference quotient is uniformly continuous on `[a,b]²`.
-    \lemma deriv-est {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+    \private \lemma deriv-est {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
                      (dg : \Pi (x : Set.Total (ClosedInterval a b)) -> deriv (interval-derivDense a<b) f d x 1 = g x) {eps : Rat} (eps>0 : 0 < eps)
       : ∃ (delta : Rat) (0 < delta) (Step f g eps delta)
       => \let | Q => quotPlane a<b f d
@@ -94,7 +104,7 @@
               \in rewrite e $ =_<= (RealField.abs_* *> RealField.*-comm) <=∘ RealField.<=_*_positive-left q RealAbGroup.abs>=0)
 
     -- | If {f} and {g} satisfy the estimate, then {g} is uniformly continuous.
-    \lemma uniformEst-cont {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {eps : Rat} (eps>0 : 0 < eps)
+    \private \lemma uniformEst-cont {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {eps : Rat} (eps>0 : 0 < eps)
       : ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta) (RealAbGroup.abs (g y - g x) <= Real.fromRat eps)
       => \case u (linarith : 0 < eps * ratio 1 2) \with {
         | inP (delta,delta>0,s) => inP (delta, delta>0, \lam {x} {y} d =>
@@ -112,7 +122,7 @@
       }
 
     -- | The Riemann sum of {g} along the segment from {x} to {y} divided into `n+1` parts.
-    \sfunc segMean {a b : Real} (a<=b : a <= b) (g : Set.Total (ClosedInterval a b) -> Real) (n : Nat) (x y : Set.Total (ClosedInterval a b)) : Real
+    \private \sfunc segMean {a b : Real} (a<=b : a <= b) (g : Set.Total (ClosedInterval a b) -> Real) (n : Nat) (x y : Set.Total (ClosedInterval a b)) : Real
       => Real.fromRat (step n) * segSum a<=b g n (suc n) x y
       \where {
         -- | `1/(n+1)`.
@@ -241,7 +251,7 @@
     \open segMean
 
     -- | The difference quotient of {f}: the limit of Riemann sums of {g} along the segment from {x} to {y}.
-    \sfunc uniformQuot {a b : Real} (a<=b : a <= b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) (x y : Set.Total (ClosedInterval a b)) : Real
+    \private \sfunc uniformQuot {a b : Real} (a<=b : a <= b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) (x y : Set.Total (ClosedInterval a b)) : Real
       => family-limit {RealNormed} (quotFamily a<=b f g x y) (inh u) close
       \where {
         \lemma abs-diff-bound {a b : Real} {x y : Set.Total (ClosedInterval a b)} : RealAbGroup.abs (y.1 - x.1) <= b - a
@@ -329,7 +339,7 @@
     \open uniformQuot (fine-est, fine-exists)
 
     -- | The quotient times the increment of the argument is the increment of {f}.
-    \lemma uniformQuot-incr {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x y : Set.Total (ClosedInterval a b)}
+    \private \lemma uniformQuot-incr {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x y : Set.Total (ClosedInterval a b)}
       : (y.1 - x.1) * uniformQuot a<=b u x y = f y - f x
       => \let t => RealAbGroup.abs (y.1 - x.1)
          \in real-scaled-eq-real (transport (`<= _) zro-left (RealAbGroup.<=_+ RealAbGroup.abs>=0 RealAbGroup.abs>=0)) \lam {e} e>0 => \case fine-exists u e>0 \with {
@@ -341,14 +351,14 @@
          }
 
     -- | On the diagonal, the quotient is the value of {g}.
-    \lemma uniformQuot-same {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x : Set.Total (ClosedInterval a b)}
+    \private \lemma uniformQuot-same {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x : Set.Total (ClosedInterval a b)}
       : uniformQuot a<=b u x x = g x
       => real-scaled-eq RatField.zro<ide \lam {e} e>0 => \case fine-exists u e>0 \with {
         | inP (n,F) => transport (\lam z => RealAbGroup.abs (_ - z) <= _) segMean-same (uniformQuot.near e>0 F) <=∘ =_<= (pmap Real.fromRat (inv ide-right))
       }
 
     -- | The difference quotient is uniformly continuous.
-    \lemma uniformQuot-uniform {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {e : Rat} (e>0 : 0 < e)
+    \private \lemma uniformQuot-uniform {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {e : Rat} (e>0 : 0 < e)
       : ∃ (delta : Rat) (0 < delta) ∀ {x y x' y' : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (x.1 - x'.1) + RealAbGroup.abs (y.1 - y'.1) < Real.fromRat delta)
           (RealAbGroup.abs (uniformQuot a<=b u x y - uniformQuot a<=b u x' y') <= Real.fromRat (e + e + e))
       => \case uniformEst-cont u e>0, fine-exists u e>0 \with {
@@ -366,7 +376,7 @@
           => rewrite (equation : X - X' = (X - Y) + (Y - Y') + negative (X' - Y')) (RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ (RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ q1 q2) q3)
 
     -- | The difference quotient on the plane, where the coordinates are clamped to `[a,b]`.
-    \lemma uniformQuotPlane {a b : Real} (a<=b : a <= b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g)
+    \private \lemma uniformQuotPlane {a b : Real} (a<=b : a <= b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g)
       : UniformMetricMap Plane RealNormed (\lam p => uniformQuot a<=b u (clamp a<=b p.1) (clamp a<=b p.2)) \cowith
       | func-dist-uniform {eps} eps>0 => \case uniformQuot-uniform u (linarith : 0 < eps * ratio 1 4) \with {
         | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {p} {p'} dd =>
@@ -377,7 +387,7 @@
       }
 
     -- | The difference quotient of {f} as a cover map.
-    \lemma uniformQuotDeriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g)
+    \private \lemma uniformQuotDeriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g)
       : CoverMap (DerivSpace (intervalInc a b)) RealTopLModule (\lam s => s.1.2.2.2 * uniformQuot (<=-less a<b) u s.1.1 s.1.2.1)
       => \let | a<=b : a <= b => <=-less a<b
               | S => IntervalSpace a b
@@ -391,18 +401,32 @@
               | q => *-locally-uniform {RealValuedRing} CoverMap.∘ ProductCoverSpace.tuple c (uniformQuotPlane a<=b u CoverMap.∘ xy)
          \in transport (CoverMap _ _) (ext \lam s => pmap2 (\lam x y => s.1.2.2.2 * uniformQuot a<=b u x y) (clamp-in {a} {b} {a<=b} s.1.1.2) (clamp-in {a} {b} {a<=b} s.1.2.1.2)) q
 
-    \lemma uniformQuotDeriv-char {a b : Real} {a<b : a < b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g}
+    \private \lemma uniformQuotDeriv-char {a b : Real} {a<b : a < b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g}
       : IsDerivQuot (intervalInc a b) f (uniformQuotDeriv a<b u)
       => \lam s => \have hc : s.1.2.2.1 * s.1.2.2.2 = s.1.2.1.1 - s.1.1.1 => rewrite s.2 equation
                    \in inv *-assoc *> pmap (`* _) hc *> uniformQuot-incr
 
     -- | A function satisfying the estimate has a derivative.
-    \lemma uniform-hasDeriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) : HasDeriv (intervalInc a b) f
+    \private \lemma uniform-hasDeriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) : HasDeriv (intervalInc a b) f
       => inP (uniformQuotDeriv a<b u, uniformQuotDeriv-char)
 
     -- | The derivative of a function {f} satisfying the estimate is {g}.
-    \lemma uniform-deriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) (d : HasDeriv (intervalInc a b) f)
+    \private \lemma uniform-deriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) (d : HasDeriv (intervalInc a b) f)
                          (x : Set.Total (ClosedInterval a b)) : deriv (interval-derivDense a<b) f d x 1 = g x
       => deriv-unique (interval-derivDense a<b) (deriv-quot (interval-derivDense a<b) f d) (uniformQuotDeriv a<b u) deriv-quot.char uniformQuotDeriv-char
            *> ide-left *> uniformQuot-same
+
+    -- | A function satisfying the estimate with zero is constant.
+    \lemma zero-const {a b : Real} {f : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f (\lam _ => 0)) (x y : Set.Total (ClosedInterval a b)) : f x = f y
+      => \have a<=b : a <= b => x.2.1 <=∘ x.2.2
+         \in inv $ real-scaled-eq-real RealAbGroup.abs>=0 \lam {e} e>0 => \case fine-exists {a} {b} {f} {\lam _ => 0} u e>0 \with {
+           | inP (n,F) => =_<= (inv RealAbGroup.abs_negative) <=∘ transport (\lam v => RealAbGroup.abs v <= _)
+                           (pmap (\lam v => (y.1 - x.1) * v - (f y - f x)) segMean-zero *> (equation.cRing : (y.1 - x.1) * 0 - (f y - f x) = negative (f y - f x)))
+                           (fine-est {a} {b} {a<=b} {f} {\lam _ => 0} F {x} {y})
+         }
   }
+
+-- | A function with zero derivative is constant.
+\lemma deriv-zero-const {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                        (z : \Pi (x : Set.Total (ClosedInterval a b)) -> deriv (interval-derivDense a<b) f d x 1 = 0) (x y : Set.Total (ClosedInterval a b)) : f x = f y
+  => hasDeriv-uniform-iff.zero-const ((hasDeriv-uniform-iff a<b {f} {\lam _ => 0}).1 (d, z)) x y
