@@ -95,7 +95,7 @@
   => (t - a) ∧ (b - t)
 
 -- | The value of the trapezoid at `t`, which is 0 if `inner a b t ≤ h` and 1 if `inner a b t ≥ 2h`.
-\func trapValue (a b : Real) (h : Rat) (t : Real) : Real
+\sfunc trapValue (a b : Real) (h : Rat) (t : Real) : Real
   => 0 ∨ (1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)))
 
 \lemma trapMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CoverMap (RealN 1) RealNormed (\lam x => trapValue a b h (x 0))
@@ -104,7 +104,7 @@
           | m => cover2 real-meet-uniform t1 t2
           | s => coverSum m (CoverMap.const (negative (Real.fromRat h)))
           | r => real-scale (RatField.finv>0 h>0) CoverMap.∘ s
-     \in cover2 real-join-uniform (CoverMap.const 0) (cover2 real-meet-uniform (CoverMap.const 1) r)
+     \in transport (CoverMap (RealN 1) RealNormed) (ext \lam x => inv (\peval trapValue a b h (x 0))) (cover2 real-join-uniform (CoverMap.const 0) (cover2 real-meet-uniform (CoverMap.const 1) r))
 
 \lemma inv-mul {h : Rat} (h>0 : 0 < h) : Real.fromRat (RatField.finv h) RealField.* Real.fromRat h = 1
   => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (/=-sym (StrictPoset.<_/= h>0)))
@@ -115,7 +115,7 @@
            | r<=0 : Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h) <= 0
                => transport (_ <=) RealField.zro_*-right (RealField.<=_*_positive-right (<=-less k>0) d<=0)
            | m<=0 : 1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)) <= 0 => meet-right <=∘ r<=0
-     \in <=-antisymmetric (join-univ <=-refl m<=0) join-left
+     \in (\peval trapValue a b h t) *> <=-antisymmetric (join-univ <=-refl m<=0) join-left
 
 \lemma trap-high {a b t : Real} {h : Rat} (h>0 : 0 < h) (p : Real.fromRat h RealAbGroup.+ Real.fromRat h <= inner a b t) : trapValue a b h t = 1
   => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => rat_real_<.1 (RatField.finv>0 h>0)
@@ -124,10 +124,10 @@
                => transport (`<= _) (inv-mul h>0) (RealField.<=_*_positive-right (<=-less k>0) d>=h)
            | m=1 : 1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)) = 1 => RealAbGroup.meet_<= r>=1
            | z : (0 : Real) <= 1 => <=-less RealField.zro<ide
-     \in pmap (0 ∨) m=1 *> RealAbGroup.join_<= z
+     \in (\peval trapValue a b h t) *> pmap (0 ∨) m=1 *> RealAbGroup.join_<= z
 
 \lemma trap-pos {a b t : Real} {h : Rat} (h>0 : 0 < h) (p : 0 < trapValue a b h t) : Real.fromRat h < inner a b t
-  => \case real-join-lt p \with {
+  => \case real-join-lt (transport (0 <) (\peval trapValue a b h t) p) \with {
     | byLeft q => absurd (<-irreflexive q)
     | byRight q =>
       \have | r>0 : 0 < Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h) => q <∘l meet-right
@@ -144,7 +144,7 @@
   => LinearOrder.<=-dec-stable separatedEq {t - a} {x - t}
       (\lam q => \have | e1 : inner a x t = t - a => RealAbGroup.meet_<= q
                        | e2 : inner a y t = t - a => RealAbGroup.meet_<= (q <=∘ (linarith : x - t <= y - t))
-                 \in unfold trapValue (pmap (\lam z => 0 ∨ (1 ∧ (Real.fromRat (RatField.finv h) RealField.* (z - Real.fromRat h)))) (e2 *> inv e1)))
+                 \in (\peval trapValue a y h t) *> pmap (\lam z => 0 ∨ (1 ∧ (Real.fromRat (RatField.finv h) RealField.* (z - Real.fromRat h)))) (e2 *> inv e1) *> inv (\peval trapValue a x h t))
       (\lam q => \have | hx : Real.fromRat h RealAbGroup.+ Real.fromRat h <= inner a x t => meet-univ (p <=∘ q) p
                        | hy : Real.fromRat h RealAbGroup.+ Real.fromRat h <= inner a y t => meet-univ (p <=∘ q) (p <=∘ (linarith : x - t <= y - t))
                  \in trap-high h>0 hy *> inv (trap-high h>0 hx))
@@ -161,7 +161,7 @@
 
 -- | The trapezoid takes values in `[0,1]`.
 \lemma trap-range {a b t : Real} {h : Rat} : \Sigma (0 <= trapValue a b h t) (trapValue a b h t <= 1)
-  => (join-left, join-univ (<=-less RealField.zro<ide) meet-left)
+  => rewrite (\peval trapValue a b h t) (join-left, join-univ (<=-less RealField.zro<ide) meet-left)
 
 -- | The trapezoid as a function with compact support.
 \lemma intervalCompactCoverMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CompactCoverMap 1 (\lam x => trapValue a b h (x 0)) \cowith
@@ -188,8 +188,8 @@
 
 -- | The trapezoid as a cutoff for `(a,b)`.
 \lemma intervalCutoff (a b : Real) {h : Rat} (h>0 : 0 < h) : Cutoff (OpenInterval a b) (intervalCompactCoverMap a b h>0) \cowith
-  | cut>=0 => join-left
-  | cut<=1 => join-univ (<=-less RealField.zro<ide) meet-left
+  | cut>=0 => trap-range.1
+  | cut<=1 => trap-range.2
   | cut-inside => inP (h, h>0, \lam {x} p {y} d =>
     \have | hm : Real.fromRat h < inner a b (x 0) => trap-pos h>0 p
           | h1 : Real.fromRat h < x 0 - a => hm <∘l meet-left
