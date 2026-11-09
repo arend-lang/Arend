@@ -58,8 +58,18 @@
   => restrict-integrable (derivCover a<b f d) (a, (<=-refl, <=-less a<b)) (b, (<=-less a<b, <=-refl))
 
 -- | The integral `∫_(a,c) g`.
-\func primitive {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed) (c : Set.Total (ClosedInterval a b)) : Real
+\sfunc primitive {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed) (c : Set.Total (ClosedInterval a b)) : Real
   => segIntegral g (a, (<=-refl, a<=b)) c
+  \where {
+    \lemma char {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {c : Set.Total (ClosedInterval a b)}
+      : primitive a<=b g c = segIntegral g (a, (<=-refl, a<=b)) c
+      => \peval primitive a<=b g c
+
+    -- | `F y = F x + ∫_(x,y) g`.
+    \lemma additive {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {x y : Set.Total (ClosedInterval a b)} (xy : x.1 <= y.1)
+      : primitive a<=b g y = primitive a<=b g x + segIntegral g x y
+      => char *> segIntegral-additive x.2.1 xy *> pmap (`+ _) (inv char)
+  }
 
 -- | The increments of the primitive are approximated by {g}: `|F y - F x - (y - x) g x| <= ε |y - x|`.
 \lemma primitive-est {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed)
@@ -71,9 +81,9 @@
             | d1 : y.1 - x.1 <= RealAbGroup.abs (y.1 - x.1) => RealAbGroup.abs>=id
             | d2 : negative (y.1 - x.1) <= RealAbGroup.abs (y.1 - x.1) => RealAbGroup.abs>=neg
       \in LinearOrder.<=-dec-stable LinearOrder.<=-stable {x.1} {y.1}
-        (\lam xy => est-up (segIntegral-additive x.2.1 xy)
+        (\lam xy => est-up (primitive.additive xy)
           (segIntegral-near xy \lam t l u => hd {x} {t} (RealAbGroup.abs_-_< (usingOnly (u, d1, d) linarith) (usingOnly (l, D>0) linarith))) (usingOnly xy linarith))
-        (\lam yx => est-down (segIntegral-additive y.2.1 yx)
+        (\lam yx => est-down (primitive.additive yx)
           (segIntegral-near yx \lam t l u => hd {x} {t} (RealAbGroup.abs_-_< (usingOnly (u, D>0) linarith) (usingOnly (l, d2, d) linarith))) equation.abGroup (usingOnly yx linarith)))
   }
   \where {
@@ -115,8 +125,8 @@
           | ef => (hasDeriv-uniform-iff a<b {f} {\lam x => g x}).1 (d, \lam x => idp)
           | (dh,zh) => (hasDeriv-uniform-iff a<b {\lam x => f x - F x} {\lam _ => 0}).2 (est-sub ef (primitive-est (<=-less a<b) g))
           | c : f pa - F pa = f pb - F pb => deriv-zero-const a<b dh zh pa pb
-          | F0 : F pa = 0 => segIntegral-zero {a} {b} {g} {pa}
-          | e : integralOn (interval-open a b) (derivOpen a<b f d) i = F pb => idp
+          | F0 : F pa = 0 => primitive.char *> segIntegral-zero {a} {b} {g} {pa}
+          | e : integralOn (interval-open a b) (derivOpen a<b f d) i = F pb => inv primitive.char
      \in usingOnly (c, F0, e) linarith
   \where {
     -- | The difference of functions satisfying the estimate with the same {g} satisfies it with 0.
