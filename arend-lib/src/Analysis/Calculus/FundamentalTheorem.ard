@@ -35,6 +35,7 @@
 \import Topology.CoverSpace.Subspace
 \import Topology.NormedAbGroup.NormedProduct
 \import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
 \import Topology.TopRing.Real
 
 -- | A point of `(a,b)` as a point of `[a,b]`.

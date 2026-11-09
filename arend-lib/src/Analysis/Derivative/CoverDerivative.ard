@@ -33,6 +33,7 @@
 \import Topology.CoverSpace.Subspace
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
 \import Topology.TopAbGroup
 \import Topology.TopModule
 \import Topology.TopRing
@@ -267,18 +268,6 @@
            | inP (h',hi,(Hh',((A2h',Bz'),(A3h',By')))) => inP (x', h', hi, Hh', Tt.1, Sx', A2h', transport S (cancel ti) (Sc Sz (BS Bz') (<=-less t>0) t<=1), A3h', transport S (cancel ti) (Sc Sy (BS By') (<=-less t>0) t<=1))
          }
   }
-
--- | The closed interval `[a,b]`.
-\func ClosedInterval (a b : Real) : Set Real
-  => \lam x => \Sigma (a <= x) (x <= b)
-
--- | The closed interval `[a,b]` as a cover space.
-\func IntervalSpace (a b : Real) : CoverSpace (Set.Total (ClosedInterval a b))
-  => CoverTransfer {Set.Total (ClosedInterval a b)} {RealTopLModule} __.1
-
--- | The inclusion of `[a,b]` into `ℝ`.
-\func intervalInc (a b : Real) : CoverMap (IntervalSpace a b) RealTopLModule __.1
-  => CoverTransfer-map __.1
 
 -- | Arguments with an invertible increment are dense over a non-degenerate closed interval.
 \lemma interval-derivDense {a b : Real} (a<b : a < b) : IsDerivDense (intervalInc a b)

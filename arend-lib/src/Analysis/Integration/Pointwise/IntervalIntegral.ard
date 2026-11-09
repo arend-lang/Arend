@@ -16,8 +16,6 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Analysis.Derivative.CoverDerivative
-\import Analysis.Derivative.IntervalDerivative
 \import Analysis.Integration.IntegrationSpace
 \import Analysis.Integration.MeasureIntegrationSpace
 \import Analysis.Integration.Pointwise.CompactSupport
@@ -46,10 +44,10 @@
 \import Paths.Meta
 \import Set.Set
 \import Topology.CoverSpace.Complete
-\import Topology.CoverSpace.Product
 \import Topology.CoverSpace.Subspace
 \import Topology.NormedAbGroup.NormedProduct
 \import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
 \import Topology.TopRing.Real
 
 -- | A point of `(c,d)` as a point of `[a,b]`, where `a <= c` and `d <= b`.
@@ -58,26 +56,6 @@
 
 \lemma subIntervalMap {a b c d : Real} (ac : a <= c) (db : d <= b) : CoverMap (OpenCoverSpace {RealN 1} (interval-open c d)) (IntervalSpace a b) (subInterval ac db)
   => CoverTransfer-univ {OpenCoverSpace {RealN 1} (interval-open c d)} {RealTopLModule} {Set.Total (ClosedInterval a b)} (subInterval ac db) __.1 (coord CoverMap.∘ OpenCoverSpace.func (interval-open c d))
-
--- | A cover map on `[a,b]` is bounded.
-\lemma interval-bounded {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed)
-  : ∃ (M : Rat) (0 < M) (\Pi (x : Set.Total (ClosedInterval a b)) -> RealAbGroup.abs (g x) <= Real.fromRat M)
-  => \let p : CoverMap Plane RealNormed (\lam s => g (clamp a<=b s.1)) => g CoverMap.∘ clampMap a<=b CoverMap.∘ ProductCoverSpace.proj1
-     \in \case square-bounded p a b \with {
-       | inP (M,M>0,h) => inP (M, M>0, \lam x => transport (\lam z => RealAbGroup.abs (g z) <= _) (clamp-in {a} {b} {a<=b} x.2) (h x.2 x.2))
-     }
-
--- | A cover map on `[a,b]` is uniformly continuous.
-\lemma interval-uniform {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed) {eps : Rat} (eps>0 : 0 < eps)
-  : ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta) (RealAbGroup.abs (g y - g x) <= Real.fromRat eps)
-  => \let p : CoverMap Plane RealNormed (\lam s => g (clamp a<=b s.1)) => g CoverMap.∘ clampMap a<=b CoverMap.∘ ProductCoverSpace.proj1
-     \in \case square-uniform p a b eps>0 \with {
-       | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} d =>
-         \have | pa : ClosedInterval a b a => (<=-refl, a<=b)
-               | d' : RealAbGroup.abs (y.1 - x.1) RealAbGroup.+ RealAbGroup.abs (a - a) < Real.fromRat delta
-                   => transportInv (`< _) (pmap (_ RealAbGroup.+) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) *> zro-right) d
-         \in <=-less (transport2 (\lam u v => RealAbGroup.abs (g u - g v) < _) (clamp-in {a} {b} {a<=b} y.2) (clamp-in {a} {b} {a<=b} x.2) (hd y.2 pa x.2 pa d')))
-     }
 
 -- | The restriction of {g} to `(x,y)`.
 \lemma restrictTo {a b : Real} (g : CoverMap (IntervalSpace a b) RealNormed) (x y : Set.Total (ClosedInterval a b))

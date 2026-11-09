@@ -374,3 +374,20 @@
 \func MetricTransfer {X : \Set} {Y : MetricSpace} (f : X -> Y) (fi : IsInj f) : MetricSpace X \cowith
   | ExPseudoMetricSpace => ExPseudoMetricTransfer f
   | dist-ext p => fi (dist-ext p)
+
+-- | A map {h} with an ε-δ modulus with respect to the distances in {Y} is a cover map, provided {i} has a retraction {r} such that `i ∘ r` is uniform.
+\lemma retract-coverMap {X : CoverSpace} {Y Z : ExPseudoMetricSpace} (i : CoverMap X Y) (r : Y -> X) (ri : \Pi (x : X) -> r (i x) = x)
+                        (ir : UniformMetricMap Y Y (\lam y => i (r y))) {h : X -> Z}
+                        (hu : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x x' : X} ((dist (i x) (i x')).U delta -> (dist (h x) (h x')).U eps))
+  : CoverMap X Z h
+  => transport (CoverMap X Z) (ext \lam x => pmap h (ri x)) (retractMap ir hu CoverMap.∘ i)
+  \where
+    -- | `h ∘ r` is uniform.
+    \lemma retractMap {X : CoverSpace} {Y Z : ExPseudoMetricSpace} {i : CoverMap X Y} {r : Y -> X} (ir : UniformMetricMap Y Y (\lam y => i (r y))) {h : X -> Z}
+                      (hu : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x x' : X} ((dist (i x) (i x')).U delta -> (dist (h x) (h x')).U eps))
+      : UniformMetricMap Y Z (\lam y => h (r y)) \cowith
+      | func-dist-uniform eps>0 => \case hu eps>0 \with {
+        | inP (delta,delta>0,hd) => \case ir.func-dist-uniform delta>0 \with {
+          | inP (delta',delta'>0,h') => inP (delta', delta'>0, \lam d => hd (h' d))
+        }
+      }
