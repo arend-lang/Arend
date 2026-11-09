@@ -99,10 +99,10 @@
   }
 
 \lemma gridT-formula {R d : Rat} (k : Nat) : gridT R d k = RatField.natCoef k * d - R \elim k
-  | 0 => inv $ pmap (\lam x => x * d - R) RatField.natCoefZero *> pmap (`- R) RatField.zro_*-left *> zro-left
+  | 0 => inv $ pmap (\lam x => x * d - R) RatField.natCoefZero *> pmap (- R) RatField.zro_*-left *> zro-left
   | suc k =>
     \have h : RatField.natCoef (suc k) * d = RatField.natCoef k * d + d => pmap (__ * d) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left
-    \in pmap (`+ d) (gridT-formula k) *> linarith
+    \in pmap (+ d) (gridT-formula k) *> linarith
 
 \lemma gridT-bound {R d : Rat} (d>0 : 0 < d) : ∃ (N : Nat) (R <= gridT R d N)
   => \case (Real.fromRat ((R + R) * RatField.finv d)).natBounded \with {
@@ -191,7 +191,7 @@
                   | s2 : ldist {RealNormed} (Real.fromRat (m (e i).2).1) (Real.fromRat (lastA z)) < Real.fromRat (d * ratio 1 2) => rat-ldist b1
                   | h : Real.fromRat (d * ratio 1 2) RealAbGroup.+ Real.fromRat (d * ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
                   | u : ldist {RealN n} (l (e i).1).1 (ratPt (initA z)) RealAbGroup.+ ldist {RealNormed} (Real.fromRat (m (e i).2).1) (Real.fromRat (lastA z)) < Real.fromRat d => linarith
-            \in (transportInv (`< _) ldist-snoc u, ratCube-mem.2 (a2,b2,b3)),
+            \in (transportInv (< _) ldist-snoc u, ratCube-mem.2 (a2,b2,b3)),
           \lam {z} p =>
             \have (c1,c2,c3) => ratCube-mem.1 p
             \in \case l3 c1, m3 c2 c3 \with {

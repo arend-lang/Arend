@@ -180,6 +180,6 @@
   => \case square-uniform a<=b (g CoverMap.∘ ProductCoverSpace.proj1 {IntervalSpace a b} {IntervalSpace a b}) eps>0 \with {
     | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} d =>
       \have d' : RealAbGroup.abs (y.1 - x.1) + RealAbGroup.abs (x.1 - x.1) < Real.fromRat delta
-            => transportInv (`< _) (pmap (_ +) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) *> zro-right) d
+            => transportInv (< _) (pmap (_ +) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) *> zro-right) d
       \in <=-less (hd {y} {x} {x} {x} d'))
   }

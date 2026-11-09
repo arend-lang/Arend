@@ -66,7 +66,7 @@
   => \case c.fn.support \with {
     | inP (R,g0) => inP (0, R + 1, \lam {x} p =>
         \have q : lnorm x <= Real.fromRat R => \lam R<x => <-irreflexive (transport (0 <) (g0 R<x) p)
-        \in real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n}) $ q <∘r rat_real_<.1 (linarith : R < R + 1))
+        \in real_<_U.1 $ transportInv (< _) (ldist_zro-left {RealN n}) $ q <∘r rat_real_<.1 (linarith : R < R + 1))
   }
 
 \lemma cutoff-<=* {n : Nat} {U : Set (RealN n)} (c : Cutoff U) : (\lam x => 0 < c.fn x) <=* {RealN n} U
@@ -95,7 +95,7 @@
 
     \private \lemma Pi (x : RealN n) {a : Rat} (a>0 : 0 < a) : ∃ (y : Real) (P x a y)
       => \have | a'>0 : 0 < a * RatField.finv M => RatField.<_*_positive_positive a>0 (RatField.finv>0 M>0)
-               | e : M * (a * RatField.finv M) = a => pmap (M *) *-comm *> inv *-assoc *> pmap (`* a) (RatField.finv-right (/=-sym (StrictPoset.<_/= M>0))) *> ide-left
+               | e : M * (a * RatField.finv M) = a => pmap (M *) *-comm *> inv *-assoc *> pmap (* a) (RatField.finv-right (/=-sym (StrictPoset.<_/= M>0))) *> ide-left
          \in \case RealAbGroup.<-comparison (c.fn x) {0} {a * RatField.finv M} (rat_real_<.1 a'>0) \with {
            | byLeft p => inP (_, byLeft (p, idp))
            | byRight q => inP (0, byRight (transport (_ <) (RealField.*-rat *> pmap Real.fromRat e) (RealField.<_*_positive-right (rat_real_<.1 M>0) q), idp))
@@ -151,7 +151,7 @@
                             => pmap (RealField.* _) (pmap Real.fromRat (inv kM) *> inv RealField.*-rat) *> RealField.*-assoc
                         | s4 : Real.fromRat k RealField.* (Real.fromRat M RealField.* c.fn x.1) < Real.fromRat k RealField.* Real.fromRat a => RealField.<_*_positive-right (rat_real_<.1 k>0) q
                         | s5 : Real.fromRat k RealField.* Real.fromRat a = Real.fromRat (a * k) => RealField.*-rat *> pmap Real.fromRat *-comm
-                        | w<ka : RealAbGroup.abs w < Real.fromRat (a * k) => transport (_ <) s5 $ transport (`< _) (inv s1) $ s2 <∘r transportInv (`< _) s3 s4
+                        | w<ka : RealAbGroup.abs w < Real.fromRat (a * k) => transport (_ <) s5 $ transport (< _) (inv s1) $ s2 <∘r transportInv (< _) s3 s4
                         | r1 : (dist {RealNormed} (truncPt Uo f c M>0 hM x.1) y).U (a + a) => lim x.1 {a} {a + a} a>0 (byRight (q,e)) linarith
                         | r2 : RealAbGroup.abs (y - w) < Real.fromRat (a * k) => rewrite (e, zro-left, RealAbGroup.abs_negative) w<ka
                   \in RealNormed.halving r1 (real_<_U.1 r2) linarith
@@ -182,7 +182,7 @@
           | e3 : Rat => e2 * RatField.finv M
      \in \have | e2>0 : 0 < e2 => linarith
                | e3>0 : 0 < e3 => RatField.<_*_positive_positive e2>0 (RatField.finv>0 M>0)
-               | Me : Real.fromRat M RealField.* Real.fromRat e3 = Real.fromRat e2 => RealField.*-rat *> pmap Real.fromRat (pmap (M *) *-comm *> inv *-assoc *> pmap (`* e2) (RatField.finv-right (/=-sym (StrictPoset.<_/= M>0))) *> ide-left)
+               | Me : Real.fromRat M RealField.* Real.fromRat e3 = Real.fromRat e2 => RealField.*-rat *> pmap Real.fromRat (pmap (M *) *-comm *> inv *-assoc *> pmap (* e2) (RatField.finv-right (/=-sym (StrictPoset.<_/= M>0))) *> ide-left)
                | ee : Real.fromRat e2 RealAbGroup.+ Real.fromRat e2 = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
                | M>0' : 0 < Real.fromRat M => rat_real_<.1 M>0
                | e2>0' : 0 < Real.fromRat e2 => rat_real_<.1 e2>0
@@ -207,9 +207,9 @@
                        | hf : RealAbGroup.abs (fx - fy) < Real.fromRat e2 => real_<_U.2 (h1 {x,Ux} {y,Uy} sx sy (ExUpperReal.U_<= xy meet-left))
                        | id : g x - g y = fx RealField.* (c.fn x - c.fn y) RealAbGroup.+ (fx - fy) RealField.* c.fn y => rewrite (p.1 (x,Ux), p.1 (y,Uy)) (trunc-identity {_} {_} {_} {_})
                        | a1 : RealAbGroup.abs (fx RealField.* (c.fn x - c.fn y)) <= Real.fromRat e2
-                           => transportInv (`<= _) RealField.abs_* $ RealField.<=_*_positive-left (hM {x,Ux} sx) RealAbGroup.abs>=0 <=∘ Mc
+                           => transportInv (<= _) RealField.abs_* $ RealField.<=_*_positive-left (hM {x,Ux} sx) RealAbGroup.abs>=0 <=∘ Mc
                        | a2 : RealAbGroup.abs ((fx - fy) RealField.* c.fn y) <= Real.fromRat e2
-                           => transportInv (`<= _) (RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {y}))) $
+                           => transportInv (<= _) (RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {y}))) $
                                RealField.<=_*_positive-right RealAbGroup.abs>=0 (c.cut<=1 {y}) <=∘ =_<= ide-right <=∘ <=-less hf
                  \in rewrite id $ RealAbGroup.abs_+ <=∘ transport (_ <=) ee (RealAbGroup.<=_+ a1 a2))
                (\lam ey => side (inv ey) Mc))
@@ -363,11 +363,11 @@
                | X => iota (truncate Uo f c)
                | Y => iota (truncate Uo f c')
                | J => iota (truncate Uo f j)
-          \in \have | d1 : ldist {LebesgueL1 n} J X < Real.fromRat a => transportInv (`< _) (iota-trunc-diff {n} {U} {Uo} {f} {c} {j} cutoff-join-left) (w c j p cutoff-join-left)
-                    | d2 : ldist {LebesgueL1 n} J Y < Real.fromRat b => transportInv (`< _) (iota-trunc-diff {n} {U} {Uo} {f} {c'} {j} cutoff-join-right) (w' c' j p' cutoff-join-right)
+          \in \have | d1 : ldist {LebesgueL1 n} J X < Real.fromRat a => transportInv (< _) (iota-trunc-diff {n} {U} {Uo} {f} {c} {j} cutoff-join-left) (w c j p cutoff-join-left)
+                    | d2 : ldist {LebesgueL1 n} J Y < Real.fromRat b => transportInv (< _) (iota-trunc-diff {n} {U} {Uo} {f} {c'} {j} cutoff-join-right) (w' c' j p' cutoff-join-right)
                     | t : ldist {LebesgueL1 n} X Y <= ldist {LebesgueL1 n} X J RealAbGroup.+ ldist {LebesgueL1 n} J Y => ldist-triang {LebesgueL1 n}
                     | sy : ldist {LebesgueL1 n} X J = ldist {LebesgueL1 n} J X => ldist-symm {LebesgueL1 n}
-                    | ab : Real.fromRat a RealAbGroup.+ Real.fromRat b < Real.fromRat k => transportInv (`< _) RealAbGroup.+-rat (rat_real_<.1 ab<k)
+                    | ab : Real.fromRat a RealAbGroup.+ Real.fromRat b < Real.fromRat k => transportInv (< _) RealAbGroup.+-rat (rat_real_<.1 ab<k)
           \in real_<_U.1 (linarith : ldist {LebesgueL1 n} X Y < Real.fromRat k)
       }
 
@@ -471,7 +471,7 @@
     | inP (c0,w) => inP (c0, \lam c c' p q =>
       \have e (d : Cutoff U) : cutIntegral Uo (coverAbs (coverAbs f)) d = cutIntegral Uo (coverAbs f) d
               => cutIntegral.char *> pmap (\lam g => integral {LebesgueL1 n} (iota g)) (truncate-ext {n} {U} {Uo} {coverAbs (coverAbs f)} {coverAbs f} (\lam u => RealAbGroup.abs_abs)) *> inv cutIntegral.char
-      \in transport (`< _) (inv (pmap2 (\lam a b => a - b) (e c') (e c))) (w c c' p q))
+      \in transport (< _) (inv (pmap2 (\lam a b => a - b) (e c') (e c))) (w c c' p q))
   }
 
 -- | The negation of an integrable map is integrable.
@@ -611,10 +611,10 @@
           | e1 : truncate Uo (coverAbs f) c' = truncate Uo (coverAbs f) c0 => trunc-stable {n} {U} {Uo} {coverAbs f} {c0} {c'} h' (c<=-trans {n} {U} {c0} {c} {c'} p q)
           | e2 : truncate Uo (coverAbs f) c = truncate Uo (coverAbs f) c0 => trunc-stable {n} {U} {Uo} {coverAbs f} {c0} {c} h' p
           | e : cutIntegral Uo (coverAbs f) c' - cutIntegral Uo (coverAbs f) c = 0 => pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char *> (pmap (\lam g => integral {LebesgueL1 n} (iota g)) (e1 *> inv e2) `pmap-minus` idp)
-    \in transportInv (`< _) e (rat_real_<.1 eps>0)
+    \in transportInv (< _) e (rat_real_<.1 eps>0)
   \where
     \lemma \infix 4 pmap-minus {a b : Real} (p : a = b) (q : b = b) : a - b = 0
-      => pmap (`- b) p *> negative-right
+      => pmap (- b) p *> negative-right
 
 \lemma integrable-compact {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (c0 : Cutoff U)
                           (h : \Pi (u : Total U) -> c0.fn u.1 < 1 -> f u = 0) : IsIntegrableOn Uo f
@@ -637,11 +637,11 @@
   | suc N => constK N RealAbGroup.+ 1
 
 \lemma constK>= (N : Nat) : Real.fromRat (RatField.natCoef N) <= constK N \elim N
-  | 0 => rat_real_<=.1 (<=-less (transportInv (`< _) RatField.natCoefZero RatField.zro<ide))
+  | 0 => rat_real_<=.1 (<=-less (transportInv (< _) RatField.natCoefZero RatField.zro<ide))
   | suc N =>
     \have | e : Real.fromRat (RatField.natCoef (suc N)) = Real.fromRat (RatField.natCoef N) RealAbGroup.+ 1 => pmap Real.fromRat (RatField.natCoefSuc N) *> inv RealAbGroup.+-rat
           | i => constK>= N
-    \in transportInv (`<= _) e (RealAbGroup.<=_+ i (<=-refl {_} {1}))
+    \in transportInv (<= _) e (RealAbGroup.<=_+ i (<=-refl {_} {1}))
 
 \lemma constK>=0 (N : Nat) : 0 <= constK N
   => rat_real_<=.1 fromNat_>=0 <=∘ constK>= N
@@ -683,8 +683,8 @@
                            (\lam s =>
                              \have | Ux => cutoff-in c' s
                                    | e0 : c0.fn x = 1 => hA z qz Ux
-                                   | e1 : c.fn x = 1 => <=-antisymmetric (c.cut<=1 {x}) (transport (`<= _) e0 (p x))
-                                   | e2 : c'.fn x = 1 => <=-antisymmetric (c'.cut<=1 {x}) (transport (`<= _) e1 (q x))
+                                   | e1 : c.fn x = 1 => <=-antisymmetric (c.cut<=1 {x}) (transport (<= _) e0 (p x))
+                                   | e2 : c'.fn x = 1 => <=-antisymmetric (c'.cut<=1 {x}) (transport (<= _) e1 (q x))
                              \in =_<= (pmap RealAbGroup.abs (inc (x,Ux) *> pmap2 (\lam a b => a - b) e2 e1 *> negative-right) *> RealAbGroup.abs_zro))
                            (\lam s => =_<= (zero s))
                        }
@@ -711,7 +711,7 @@
            | v => iota (truncate Uo f c)
       \in \have e : integral {LebesgueL1 n} (u - v) = integralOn Uo f i - cutIntegral Uo f c
                   => IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}} *> pmap negative (inv cutIntegral.char))
-      \in transport (\lam x => RealAbGroup.abs x < _) e $ IntegrationSpace.integral_abs {LebesgueL1 n} <∘r transport (`< _) (lnorm-ldist {LebesgueL1 n}) (hc c p))
+      \in transport (\lam x => RealAbGroup.abs x < _) e $ IntegrationSpace.integral_abs {LebesgueL1 n} <∘r transport (< _) (lnorm-ldist {LebesgueL1 n}) (hc c p))
   }
 
 -- | The integral on {U} is monotone.

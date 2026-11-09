@@ -68,7 +68,7 @@
     -- | `F y = F x + ∫_(x,y) g`.
     \lemma additive {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {x y : Set.Total (ClosedInterval a b)} (xy : x.1 <= y.1)
       : primitive a<=b g y = primitive a<=b g x + segIntegral g x y
-      => char *> segIntegral-additive x.2.1 xy *> pmap (`+ _) (inv char)
+      => char *> segIntegral-additive x.2.1 xy *> pmap (+ _) (inv char)
   }
 
 -- | The increments of the primitive are approximated by {g}: `|F y - F x - (y - x) g x| <= ε |y - x|`.
@@ -147,5 +147,5 @@
       }
 
     \lemma two-est {A B T E1 E2 E : Real} (pa : RealAbGroup.abs A <= E1 * T) (pb : RealAbGroup.abs B <= E2 * T) (eE : E1 + E2 = E) : RealAbGroup.abs (A - B) <= E * T
-      => RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ pa (=_<= RealAbGroup.abs_negative <=∘ pb) <=∘ =_<= (inv RealField.rdistr *> pmap (`* T) eE)
+      => RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ pa (=_<= RealAbGroup.abs_negative <=∘ pb) <=∘ =_<= (inv RealField.rdistr *> pmap (* T) eE)
   }

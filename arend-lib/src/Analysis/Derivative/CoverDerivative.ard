@@ -80,7 +80,7 @@
       => TopTransfer-lift (tuple (proj1 ∘ proj2 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i) (proj2 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i)))) (\lam c => later c.2.2)
 
     \lemma total-eq {R : TopRing} {X : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (c : Set.Total (ChainSet i)) : i c.1.2.2.1 = i c.1.1 + c.1.2.2.2.1 *c (c.1.2.2.2.2.1 + c.1.2.2.2.2.2)
-      => c.2.2 *> pmap (`+ _) c.2.1 *> +-assoc *> inv (pmap (_ +) *c-ldistr)
+      => c.2.2 *> pmap (+ _) c.2.1 *> +-assoc *> inv (pmap (_ +) *c-ldistr)
 
     \func total {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : ContMap (ChainSpace i) (DerivSpace i) (\lam c => ((c.1.1,(c.1.2.2.1,(c.1.2.2.2.1,c.1.2.2.2.2.1 + c.1.2.2.2.2.2))), total-eq c))
       => TopTransfer-lift (tuple (proj1 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i) (+-cont ∘ (proj2 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i))))) (\lam c => later (total-eq c))
@@ -178,10 +178,10 @@
          | g2 : ContMap R X => +-cont ∘ tuple g1 (*c-cont ∘ tuple id (const b))
          | T : Set R => (g1 ^-1 U) ∧ (g2 ^-1 U)
          | To : isOpen T => open-inter (g1.func-cont Uo) (g2.func-cont Uo)
-         | Th : T h => (transport U c.2.1 c.1.2.1.2, transport U (c.2.2 *> pmap (`+ _) c.2.1) c.1.2.2.1.2)
+         | Th : T h => (transport U c.2.1 c.1.2.1.2, transport U (c.2.2 *> pmap (+ _) c.2.1) c.1.2.2.1.2)
          | phi : ContMap (TopSub T) (ProductCoverSpace (OpenCoverSpace Uo) (ProductCoverSpace (OpenCoverSpace Uo) (ProductCoverSpace (OpenCoverSpace Uo) (ProductCoverSpace R (ProductCoverSpace X X)))))
              => tuple (const {TopSub T} {OpenCoverSpace Uo} x) (tuple (TopSub-func g1 (\lam t => later t.1)) (tuple (TopSub-func g2 (\lam t => later t.2)) (tuple TopSub-map (const (a,b)))))
-         | q : phi (h,Th) = c.1 => ext (idp, ext (ext (inv c.2.1), ext (ext (inv (c.2.2 *> pmap (`+ _) c.2.1)), idp)))
+         | q : phi (h,Th) = c.1 => ext (idp, ext (ext (inv c.2.1), ext (ext (inv (c.2.2 *> pmap (+ _) c.2.1)), idp)))
      \in \case phi.func-cont Vo \with {
        | inP (V',V'o,e) =>
          \have Vs : V c.1 => rewrite p in Wc
@@ -198,7 +198,7 @@
          | px : ContMap D (TopSub U) => TopTransfer-lift (proj1 ∘ TopSub-map) (\lam s => later s.2.1)
          | py : ContMap D (TopSub U) => TopTransfer-lift (+-cont ∘ tuple (proj1 ∘ TopSub-map) (*c-cont ∘ tuple (proj1 ∘ proj2 ∘ TopSub-map) (proj2 ∘ proj2 ∘ TopSub-map))) (\lam s => later s.2.2)
          | g : ContMap D (ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))) => tuple (e ∘ px) (tuple (e ∘ py) (proj2 ∘ TopSub-map))
-         | g' : ContMap D (DerivSpace i) => TopTransfer-lift g (\lam s => ip (py s) *> inv (pmap (`+ _) (ip (px s))))
+         | g' : ContMap D (DerivSpace i) => TopTransfer-lift g (\lam s => ip (py s) *> inv (pmap (+ _) (ip (px s))))
      \in inP (f' ∘ g', \lam {x} Ux {h} {a} Ua => q _)
 
 -- | Convex subsets of a real topological vector space.
@@ -222,7 +222,7 @@
   \where {
     \lemma step {R : Ring} {M : LModule R} {x c u : M} {t : R} : (x + u) + t *c (c - (x + u)) = (x + t *c (c - x)) + (1 - t) *c u
       => pmap (_ +) (pmap (t *c) (equation.abGroup : c - (x + u) = (c - x) - u) *> M.*c-ldistr_-)
-          *> equation.abGroup *> pmap (_ +) (pmap (`- _) (inv ide_*c) *> inv M.*c-rdistr_-)
+          *> equation.abGroup *> pmap (_ +) (pmap (- _) (inv ide_*c) *> inv M.*c-rdistr_-)
 
     \lemma cancel {R : Ring} {M : LModule R} {y z : M} {t : R} (ti : Monoid.Inv t) : y + t *c ((y + ti.inv *c (z - y)) - y) = z
       => pmap (\lam w => y + t *c w) (equation.abGroup : (y + ti.inv *c (z - y)) - y = ti.inv *c (z - y))

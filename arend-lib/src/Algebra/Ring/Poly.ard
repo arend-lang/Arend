@@ -1148,7 +1148,7 @@
 
 \private \lemma degree<_*-right {R : Ring} {a : R} {p : Poly R} {n : Nat} (d : degree< p n)
   : degree< (p * padd pzero a) n
-  => \lam s => polyCoef_*-right *> pmap (`* a) (d s) *> zro_*-left
+  => \lam s => polyCoef_*-right *> pmap (* a) (d s) *> zro_*-left
 
 -- | $pX = $ `padd p 0`.
 \private \lemma mul_X {R : Ring} (p : Poly R) : p * padd 1 0 = padd p 0
@@ -1179,7 +1179,7 @@
 -- | Deflation really is division by `X - z` with remainder `p z`.
 \lemma deflate-eq {R : CRing} {p : Poly R} {z : R}
   : p = deflate p z * padd 1 (negative z) + padd pzero (polyEval p z) \elim p
-  | pzero => inv (pmap (`+ padd pzero (polyEval pzero z)) (zro_*-left {_} {padd 1 (negative z)})
+  | pzero => inv (pmap (+ padd pzero (polyEval pzero z)) (zro_*-left {_} {padd 1 (negative z)})
                   *> zro-left *> peq)
   | padd p e =>
     \have | L : padd 1 (negative z) = padd 1 0 - padd pzero z
@@ -1290,7 +1290,7 @@
                      (h : polyEval q z = 0) : polyEval p z = 0
   => pmap (polyEval __ z) (inv d.inv-right)
      *> (polyEvalRingHom z).func-*
-     *> pmap (`* polyEval d.inv z) h
+     *> pmap (* polyEval d.inv z) h
      *> zro_*-left
 
 -- | A divisor of a non-zero polynomial is non-zero, as is its cofactor.
@@ -1315,7 +1315,7 @@
      \in \case eitherZeroOrInv (polyCoef g 0) \with {
        | byLeft c=0 => absurd (g/=0 (g0 *> pmap (padd pzero) c=0 *> peq))
        | byRight ci => Monoid.Inv.rmake (padd pzero ci.inv)
-           (pmap (`* padd pzero ci.inv) g0 *> pmap (padd pzero) (zro-left *> ci.inv-right))
+           (pmap (* padd pzero ci.inv) g0 *> pmap (padd pzero) (zro-left *> ci.inv-right))
      }
 
 -- | The leading coefficient of a non-zero polynomial is non-zero.

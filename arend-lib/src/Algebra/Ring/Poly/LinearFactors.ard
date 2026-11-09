@@ -42,7 +42,7 @@
 -- | Each `r i` is a root of `linProd r`.
 \lemma linProd-root {R : CRing} {n : Nat} (r : Array R n) (i : Fin n) : linProd r (r i) = 0 \elim n, r, i
   | suc n, a :: l, 0 => pmap (linProd l a *) (AddGroup.toZero idp) *> zro_*-right
-  | suc n, a :: l, suc i => pmap (`* (l i - a)) (linProd-root l i) *> zro_*-left
+  | suc n, a :: l, suc i => pmap (* (l i - a)) (linProd-root l i) *> zro_*-left
 
 \lemma prodLin-root {R : CRing} {n : Nat} (r : Array R n) (i : Fin n) : polyEval (prodLin r) (r i) = 0
   => polyEval_prodLin r (r i) *> linProd-root r i
@@ -55,7 +55,7 @@
   | 0, a :: nil, 0 => *-comm {_} {1} {padd {R} 1 (negative a)}
   | suc n, a :: l, 0 => *-comm
   | suc n, a :: l, suc k =>
-    pmap (`* padd {R} 1 (negative a)) (prodLin-skip l k)
+    pmap (* padd {R} 1 (negative a)) (prodLin-skip l k)
     *> *-assoc {_} {padd {R} 1 (negative (l k))} {prodLin (skip l k)}
 
 {- | **The greedy deflation identity.** Removing `r 0` from `r` and `s j` from `s` leaves two
@@ -87,7 +87,7 @@
       : prodLin r = CMonoid.BigProd (\new Array (Poly R) n (\lam i => padd 1 (negative (r i))))
       \elim n, r
       | 0, nil => idp
-      | suc n, a :: l => pmap (`* padd 1 (negative a)) (asBigProd l) *> *-comm
+      | suc n, a :: l => pmap (* padd 1 (negative a)) (asBigProd l) *> *-comm
 
     {- | Reindexing the array of linear factors along `f` is a permutation of it. Both arrays must be
          spelled as explicit `\new Array`s: `map g l` will not unify against them here. -}

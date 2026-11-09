@@ -350,7 +350,7 @@
              | m => pmap (evalPair pc B {ExpCoc pc q}) (funExt+ {ExpCoc pc q} {\lam _ => ExpCocConst pc B} {\lam y => expPost pc q y.2.1} {\lam y => expSec pc y.1} \lam y => y.2.2)
              | v => pmap (preComp (\lam (y :⁺ ExpCoc pc q) => y.1)) (expSec-eval pc)
        \in inv (pmap_*>-comm (preComp h) (inv u) (m *> v)
-               *> pmap (`*> pmap (preComp h) (m *> v)) (pmap_inv-comm (preComp h) u)
+               *> pmap (*> pmap (preComp h) (m *> v)) (pmap_inv-comm (preComp h) u)
                *> pmap (inv (pmap (preComp h) u) *>) (pmap_*>-comm (preComp h) m v))
 
   -- | The paths from `q ∘ eval` to the projection along a functor into {ExpCoc}.

@@ -187,7 +187,7 @@
   \where
     -- | `c + c + c <= e`, transported from `Rat` to `Real` so `linarith` can use it.
     \private \lemma rat-3c {c e : Rat} (h : c + c + c <= e) : (c : Real) + c + c <= e
-      => =_<= (pmap (`+ (c : Real)) RealAbGroup.+-rat *> RealAbGroup.+-rat) <=∘ rat_real_<=.1 h
+      => =_<= (pmap (+ (c : Real)) RealAbGroup.+-rat *> RealAbGroup.+-rat) <=∘ rat_real_<=.1 h
 
 {- | **`spectrum` inverts `prodLin`.** The spectrum of a split polynomial is precisely the multiset
      of its factors — an equality of points of the completion, so multiplicities are included.
@@ -235,7 +235,7 @@
           \in \have hrp : nearFactorSet p dp1 r
                        => \lam j => cabs_-triang {_} {polyCoef q j}
                             <∘r linarith (hr j <∘l meet-left,
-                                          transport (`< dp1 * ratio 1 2)
+                                          transport (< dp1 * ratio 1 2)
                                             (cabs_-comm {polyCoef p j} {polyCoef q j}) (gap j))
           \in real_<_U.2
                 (MetricCompletion.dist-neighborhood {MultisetPseudoMetric {ComplexNormed} n} _ _ a>0
@@ -286,7 +286,7 @@
                          linarith
        \in \let (inP (f, finj, hf)) => rawDist-lt {ComplexNormed} {n} {s} {y} (join-left <∘r sy)
        \in \have | hd : \Pi (i : Fin n) -> cabs (y (f i) - s i) <= (aa : Real)
-                    => \lam i => <=-less (transport (`< (aa : Real))
+                    => \lam i => <=-less (transport (< (aa : Real))
                          (lnorm-ldist {ComplexNormed} {s i} {y (f i)}
                           *> cabs_-comm {s i} {y (f i)})
                          (maxDist-cond {ComplexNormed} {n} {s} {y} {f} i <∘r hf))

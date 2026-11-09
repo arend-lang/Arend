@@ -62,7 +62,7 @@
   => \lam (q : lnorm {RealN n} (ratPt z) < Real.fromRat R) => \case inv h *> ratCube-char.2 (\lam j =>
       \have | i : RealAbGroup.abs (Real.fromRat (z j)) <= lnorm {RealN n} (ratPt z)
                => RealAbGroup.BigSum_>=index {\lam j => RealAbGroup.abs (Real.fromRat (z j))} (\lam j => lnorm>=0 {RealNormed}) j
-             | a : RatField.abs (z j) < R => rat_real_<.2 $ transport (`< _) RealAbGroup.abs-rat (i <∘r q)
+             | a : RatField.abs (z j) < R => rat_real_<.2 $ transport (< _) RealAbGroup.abs-rat (i <∘r q)
              | a1 : z j <= RatField.abs (z j) => RatField.abs>=id
              | a2 : negative (z j) <= RatField.abs (z j) => RatField.abs>=neg
       \in (linarith, linarith)) \with {}
@@ -104,7 +104,7 @@
                      \have | (q1,_) => l2 q
                            | se : stepEval z (inSF arr) = (c i).1 => (lebPoint z).evalL-index {_} {arr} ar q
                            | ci : RealAbGroup.abs (g (l i).1 - Real.fromRat (c i).1) < Real.fromRat (e * ratio 1 2) => (c i).2
-                           | z<A : (dist {RealN n} 0 (ratPt z)).U ((cubeRad n R' ∨ 0) + 1) => real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n} {ratPt z}) $ cube-in zK <∘r rat_real_<.1 linarith
+                           | z<A : (dist {RealN n} 0 (ratPt z)).U ((cubeRad n R' ∨ 0) + 1) => real_<_U.1 $ transportInv (< _) (ldist_zro-left {RealN n} {ratPt z}) $ cube-in zK <∘r rat_real_<.1 linarith
                            | cz<1 : (dist (l i).1 (ratPt z)).U 1 => ExUpperReal.U_<= (real_<_U.1 q1) meet-right
                            | cz<d : (dist (l i).1 (ratPt z)).U d => ExUpperReal.U_<= (real_<_U.1 q1) meet-left
                            | gcz : RealAbGroup.abs (g (l i).1 - g (ratPt z)) < Real.fromRat (e * ratio 1 2)
@@ -222,7 +222,7 @@
       => \lam {c} (ab<c : a + b < c) => \case \elim x, \elim y, Px, Py \with {
         | x, y, inP (e,s,ap,em,idp), inP (e',s',ap',em',idp) => real_<_U.1 $
           \have | t => approx-close {n} {g} ap ap'
-                | h : Real.fromRat a RealAbGroup.+ Real.fromRat b < Real.fromRat c => transportInv (`< _) RealAbGroup.+-rat (rat_real_<.1 ab<c)
+                | h : Real.fromRat a RealAbGroup.+ Real.fromRat b < Real.fromRat c => transportInv (< _) RealAbGroup.+-rat (rat_real_<.1 ab<c)
           \in linarith
       }
   }
@@ -463,7 +463,7 @@
            | dm>0 : 0 < d ∧ 1 => <_meet-univ d>0 RatField.zro<ide
      \in inP (d ∧ 1, dm>0, \lam {x} {y} xy => \case Real.LU-located {lnorm x} {(R ∨ 0) + 1} {(R ∨ 0) + 2} linarith \with {
             | byRight u =>
-              \have u' : (dist {RealN n} 0 x).U ((R ∨ 0) + 2) => real_<_U.1 $ transportInv (`< _) (ldist_zro-left {RealN n}) (real_<_U.2 u)
+              \have u' : (dist {RealN n} 0 x).U ((R ∨ 0) + 2) => real_<_U.1 $ transportInv (< _) (ldist_zro-left {RealN n}) (real_<_U.2 u)
               \in real_<_U.2 $ gu (ExUpperReal.U_<= u' linarith) ((RealN n).halving {0} {x} {y} u' (ExUpperReal.U_<= xy meet-right) linarith) (ExUpperReal.U_<= xy meet-left)
             | byLeft l =>
               \have | l' : Real.fromRat ((R ∨ 0) + 1) < lnorm x => real_<_L.2 l
@@ -473,7 +473,7 @@
                     | rj : Real.fromRat R <= Real.fromRat (R ∨ 0) => rat_real_<=.1 j1
                     | x0 : g x = 0 => g0 (linarith : Real.fromRat R < lnorm x)
                     | y0 : g y = 0 => g0 (linarith : Real.fromRat R < lnorm y)
-              \in rewrite (x0, y0) $ transportInv (`< _) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) (rat_real_<.1 eps>0)
+              \in rewrite (x0, y0) $ transportInv (< _) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) (rat_real_<.1 eps>0)
           })
 
 -- | The integral is monotone on functions with compact support.

@@ -56,7 +56,7 @@
       \where
         \lemma segSum-zero {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} (k : Nat) : segMean.segSum a<=b (\lam _ => 0) n k x y = 0 \elim k
           | 0 => idp
-          | suc k => pmap (`+ 0) (segSum-zero k) *> zro-left
+          | suc k => pmap (+ 0) (segSum-zero k) *> zro-left
 
     -- | Points of `[a,b]` with the same coordinate are equal.
     \private \lemma interval-ext {a b : Real} {x y : Set.Total (ClosedInterval a b)} (p : RealAbGroup.abs (y.1 - x.1) = 0) : x = y
@@ -68,8 +68,8 @@
       => \let | U => RealAbGroup.abs (x - x')
               | V => RealAbGroup.abs (y - y')
          \in \have | t1 : (0 : Real) <= 1 - t => usingOnly t<=1 linarith
-                   | a1 : RealAbGroup.abs ((1 - t) * (x - x')) = (1 - t) * U => RealField.abs_* *> pmap (`* _) (RealAbGroup.abs-ofPos t1)
-                   | a2 : RealAbGroup.abs (t * (y - y')) = t * V => RealField.abs_* *> pmap (`* _) (RealAbGroup.abs-ofPos t>=0)
+                   | a1 : RealAbGroup.abs ((1 - t) * (x - x')) = (1 - t) * U => RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos t1)
+                   | a2 : RealAbGroup.abs (t * (y - y')) = t * V => RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos t>=0)
                    | p1 : 0 <= t * U => RealField.<=_*_positive_positive t>=0 RealAbGroup.abs>=0
                    | p2 : 0 <= (1 - t) * V => RealField.<=_*_positive_positive t1 RealAbGroup.abs>=0
                    | e2 : (1 - t) * U + t * V = U + V - (t * U + (1 - t) * V) => equation.cRing
@@ -113,12 +113,12 @@
                | E => Real.fromRat (eps * ratio 1 2)
           \in \have | tt : RealAbGroup.abs (x.1 - y.1) = t => RealAbGroup.abs_-
                     | s1 : RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= E * t => s d
-                    | s2 : RealAbGroup.abs (f x - f y - (x.1 - y.1) * g y) <= E * t => transport (\lam z => _ <= E * z) tt (s (transportInv (`< _) tt d))
+                    | s2 : RealAbGroup.abs (f x - f y - (x.1 - y.1) * g y) <= E * t => transport (\lam z => _ <= E * z) tt (s (transportInv (< _) tt d))
                     | EE : E RealAbGroup.+ E = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
                     | key : t * RealAbGroup.abs (g y - g x) <= Real.fromRat eps * t
                         => =_<= (inv RealField.abs_*) <=∘ transport (\lam z => _ <= z * t) EE (abs-sum-le equation.ring s1 s2)
           \in RealAbGroup.<=-split LinearOrder.<=-stable RealAbGroup.abs>=0
-                (\lam t>0 => RealField.<=_*-cancel-right t>0 (transport (`<= _) RealField.*-comm key))
+                (\lam t>0 => RealField.<=_*-cancel-right t>0 (transport (<= _) RealField.*-comm key))
                 (\lam t=0 => rewrite (interval-ext (inv t=0), negative-right, RealAbGroup.abs_zro) (rat_real_<=.1 (<=-less eps>0))))
       }
 
@@ -145,7 +145,7 @@
               transport (_ <=) step-mul (RatField.<=_*_positive-left (RatField.natCoef_<= k<=n) (<=-less step>0)))
 
         \lemma frac-suc {n k : Nat} : frac n (suc k) = frac n k + step n
-          => (\peval frac n (suc k)) *> pmap (`* step n) (RatField.natCoefSuc k) *> RatField.rdistr {RatField.natCoef k} {1} {step n} *> pmap (_ +) (RatField.ide-left {step n}) *> inv (pmap (`+ step n) (\peval frac n k))
+          => (\peval frac n (suc k)) *> pmap (* step n) (RatField.natCoefSuc k) *> RatField.rdistr {RatField.natCoef k} {1} {step n} *> pmap (_ +) (RatField.ide-left {step n}) *> inv (pmap (+ step n) (\peval frac n k))
 
         -- | The point `x + (k/(n+1)) (y - x)` of the segment from {x} to {y}.
         \func segPt {a b : Real} (a<=b : a <= b) (n k : Nat) (x y : Set.Total (ClosedInterval a b)) : Set.Total (ClosedInterval a b)
@@ -159,7 +159,7 @@
              \in pmap __.1 (clamp-in {a} {b} {a<=b} (interval-derivDense.lower x.2.1 y.2.1 r0 r1, interval-derivDense.upper x.2.2 y.2.2 r0 r1))
 
         \lemma segPt-zero {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} : segPt a<=b n 0 x y = x
-          => ext $ segPt-val {a} {b} {a<=b} zero<=_ *> pmap (\lam t => x.1 + Real.fromRat t * (y.1 - x.1)) ((\peval frac n 0) *> pmap (`* step n) RatField.natCoefZero *> RatField.zro_*-left {step n}) *> pmap (x.1 +) RealField.zro_*-left *> zro-right
+          => ext $ segPt-val {a} {b} {a<=b} zero<=_ *> pmap (\lam t => x.1 + Real.fromRat t * (y.1 - x.1)) ((\peval frac n 0) *> pmap (* step n) RatField.natCoefZero *> RatField.zro_*-left {step n}) *> pmap (x.1 +) RealField.zro_*-left *> zro-right
 
         \lemma segPt-last {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} : segPt a<=b n (suc n) x y = y
           => ext $ segPt-val {a} {b} {a<=b} <=-refl *> pmap (\lam t => x.1 + Real.fromRat t * (y.1 - x.1)) ((\peval frac n (suc n)) *> step-mul) *> pmap (x.1 +) (RealField.ide-left {y.1 - x.1}) *> equation.abGroup
@@ -181,7 +181,7 @@
                           {n : Nat} {x y : Set.Total (ClosedInterval a b)} (hD : RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) < Real.fromRat delta) {k : Nat} (k<=n : k <= suc n)
           : RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1) * segSum a<=b g n k x y - (f (segPt a<=b n k x y) - f x))
               <= Real.fromRat (RatField.natCoef k * e) * RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) \elim k
-          | 0 => rewrite segPt-zero $ =_<= (pmap RealAbGroup.abs (equation : _ = (0 : Real)) *> RealAbGroup.abs_zro) <=∘ =_<= (inv (pmap (\lam t => Real.fromRat t * _) (pmap (`* e) RatField.natCoefZero *> RatField.zro_*-left) *> RealField.zro_*-left))
+          | 0 => rewrite segPt-zero $ =_<= (pmap RealAbGroup.abs (equation : _ = (0 : Real)) *> RealAbGroup.abs_zro) <=∘ =_<= (inv (pmap (\lam t => Real.fromRat t * _) (pmap (* e) RatField.natCoefZero *> RatField.zro_*-left) *> RealField.zro_*-left))
           | suc k =>
             \let | D => Real.fromRat (step n) * (y.1 - x.1)
                  | p => segPt a<=b n k x y
@@ -190,7 +190,7 @@
                       | dd : p'.1 - p.1 = D => segPt-diff {a} {b} {a<=b} k<=n
                       | st : RealAbGroup.abs (f p' - f p - D * g p) <= Real.fromRat e * RealAbGroup.abs D => transport (\lam z => RealAbGroup.abs (f p' - f p - z * g p) <= Real.fromRat e * RealAbGroup.abs z) dd (s (transportInv (\lam z => RealAbGroup.abs z < _) dd hD))
                       | ec : Real.fromRat (RatField.natCoef (suc k) * e) = Real.fromRat (RatField.natCoef k * e) + Real.fromRat e
-                          => pmap Real.fromRat (pmap (`* e) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left) *> inv RealAbGroup.+-rat
+                          => pmap Real.fromRat (pmap (* e) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left) *> inv RealAbGroup.+-rat
             \in rewrite ec $ step-bound ih st
           \where {
             \lemma step-bound {D S G Fp' Fp Fx B C T : Real} (pX : RealAbGroup.abs (D * S - (Fp - Fx)) <= B * T) (pY : RealAbGroup.abs (Fp' - Fp - D * G) <= C * T)
@@ -200,15 +200,15 @@
 
         \lemma segSum-same {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {n k : Nat} {x : Set.Total (ClosedInterval a b)}
           : segSum a<=b g n k x x = Real.fromRat (RatField.natCoef k) * g x \elim k
-          | 0 => inv (pmap (`* g x) (pmap Real.fromRat RatField.natCoefZero) *> RealField.zro_*-left)
-          | suc k => rewrite (segSum-same, segPt-same) $ inv $ pmap (`* g x) (pmap Real.fromRat (RatField.natCoefSuc k) *> inv RealAbGroup.+-rat) *> RealField.rdistr *> pmap (_ +) RealField.ide-left
+          | 0 => inv (pmap (* g x) (pmap Real.fromRat RatField.natCoefZero) *> RealField.zro_*-left)
+          | suc k => rewrite (segSum-same, segPt-same) $ inv $ pmap (* g x) (pmap Real.fromRat (RatField.natCoefSuc k) *> inv RealAbGroup.+-rat) *> RealField.rdistr *> pmap (_ +) RealField.ide-left
 
         \lemma segSum-uniform {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {e delta : Rat}
                               (hg : \Pi {x y : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta -> RealAbGroup.abs (g y - g x) <= Real.fromRat e)
                               {n : Nat} {x y x' y' : Set.Total (ClosedInterval a b)} (d : RealAbGroup.abs (x.1 - x'.1) + RealAbGroup.abs (y.1 - y'.1) < Real.fromRat delta)
                               {k : Nat} (k<=n : k <= suc n)
           : RealAbGroup.abs (segSum a<=b g n k x y - segSum a<=b g n k x' y') <= Real.fromRat (RatField.natCoef k * e) \elim k
-          | 0 => =_<= (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro *> inv (pmap Real.fromRat (pmap (`* e) RatField.natCoefZero *> RatField.zro_*-left)))
+          | 0 => =_<= (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro *> inv (pmap Real.fromRat (pmap (* e) RatField.natCoefZero *> RatField.zro_*-left)))
           | suc k =>
             \let | p => segPt a<=b n k x y
                  | p' => segPt a<=b n k x' y'
@@ -219,7 +219,7 @@
                                ((convex-dist (rat_real_<=.1 r.1) (rat_real_<=.1 r.2) <=∘ =_<= (pmap2 (+) RealAbGroup.abs_- RealAbGroup.abs_-)) <∘r d)
                       | gd : RealAbGroup.abs (negative (g p' - g p)) <= Real.fromRat e => =_<= RealAbGroup.abs_negative <=∘ hg pd
                       | ec : Real.fromRat (RatField.natCoef k * e) + Real.fromRat e = Real.fromRat (RatField.natCoef (suc k) * e)
-                          => RealAbGroup.+-rat *> pmap Real.fromRat (inv (pmap (`* e) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left))
+                          => RealAbGroup.+-rat *> pmap Real.fromRat (inv (pmap (* e) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left))
             \in rewrite (equation : segSum a<=b g n k x y + g p - (segSum a<=b g n k x' y' + g p') = (segSum a<=b g n k x y - segSum a<=b g n k x' y') + negative (g p' - g p))
                   (RealAbGroup.abs_+ <=∘ transport (_ <=) ec (RealAbGroup.<=_+ ih gd))
 
@@ -230,13 +230,13 @@
           => \have | t => segSum-est {a} {b} {a<=b} {f} {g} s hD {suc n} <=-refl
                    | e1 : (y.1 - x.1) * segMean a<=b g n x y = Real.fromRat (step n) * (y.1 - x.1) * segSum a<=b g n (suc n) x y => rewrite (\peval segMean a<=b g n x y) equation
                    | e2 : Real.fromRat (RatField.natCoef (suc n) * e) * RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) = Real.fromRat e * RealAbGroup.abs (y.1 - x.1)
-                       => pmap (_ *) (RealField.abs_* *> pmap (`* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less step>0)))) *> inv *-assoc
-                           *> pmap (`* _) (RealField.*-rat *> pmap Real.fromRat (*-assoc *> pmap (_ *) *-comm *> inv *-assoc *> pmap (`* e) step-mul *> ide-left))
+                       => pmap (_ *) (RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less step>0)))) *> inv *-assoc
+                           *> pmap (* _) (RealField.*-rat *> pmap Real.fromRat (*-assoc *> pmap (_ *) *-comm *> inv *-assoc *> pmap (* e) step-mul *> ide-left))
              \in rewrite (e1, inv e2) (rewrite segPt-last in t)
 
         -- | On the diagonal, the Riemann sum is the value of {g}.
         \lemma segMean-same {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {n : Nat} {x : Set.Total (ClosedInterval a b)} : segMean a<=b g n x x = g x
-          => (\peval segMean a<=b g n x x) *> pmap (_ *) (segSum-same {a} {b} {a<=b} {g} {n} {suc n}) *> inv *-assoc *> pmap (`* g x) (RealField.*-rat *> pmap Real.fromRat (*-comm *> step-mul)) *> RealField.ide-left
+          => (\peval segMean a<=b g n x x) *> pmap (_ *) (segSum-same {a} {b} {a<=b} {g} {n} {suc n}) *> inv *-assoc *> pmap (* g x) (RealField.*-rat *> pmap Real.fromRat (*-comm *> step-mul)) *> RealField.ide-left
 
         -- | Riemann sums are uniformly continuous with the modulus of {g}.
         \lemma segMean-uniform {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {e delta : Rat}
@@ -246,7 +246,7 @@
           => \have | s>=0 : 0 <= Real.fromRat (step n) => rat_real_<=.1 (<=-less step>0)
                    | t => segSum-uniform {a} {b} {a<=b} {g} hg {n} d {suc n} <=-refl
              \in rewrite (\peval segMean a<=b g n x y, \peval segMean a<=b g n x' y') $ rewrite (inv RealField.ldistr_-, RealField.abs_*, RealAbGroup.abs-ofPos s>=0) $
-                   RealField.<=_*_positive-right s>=0 t <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc *> pmap (`* e) (*-comm *> step-mul) *> ide-left))
+                   RealField.<=_*_positive-right s>=0 t <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc *> pmap (* e) (*-comm *> step-mul) *> ide-left))
       }
 
     \open segMean
@@ -270,10 +270,10 @@
           : RealAbGroup.abs ((y.1 - x.1) * segMean a<=b g n x y - (f y - f x)) <= Real.fromRat e * RealAbGroup.abs (y.1 - x.1) \elim F
           | inP (delta,s,h) =>
             \have | q1 : RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) = Real.fromRat (step n) * RealAbGroup.abs (y.1 - x.1)
-                       => RealField.abs_* *> pmap (`* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less step>0)))
+                       => RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less step>0)))
                   | q2 : Real.fromRat (step n) * RealAbGroup.abs (y.1 - x.1) <= Real.fromRat (step n) * (b - a)
                        => RealField.<=_*_positive-right (rat_real_<=.1 (<=-less step>0)) abs-diff-bound
-                  | q3 : Real.fromRat (step n) * (b - a) < Real.fromRat delta => transport (`< _) *-comm h
+                  | q3 : Real.fromRat (step n) * (b - a) < Real.fromRat delta => transport (< _) *-comm h
             \in segMean-est s ((=_<= q1 <=∘ q2) <∘r q3)
 
         \lemma arch (X : Real) {d : Rat} (d>0 : 0 < d) : ∃ (n : Nat) (X * Real.fromRat (step n) < Real.fromRat d)
@@ -288,7 +288,7 @@
           }
           \where
             \lemma aux {X i K s d : Real} (h : X * i < K) (ks : K * s = 1) (id : i * d = 1) (sd>0 : 0 < s * d) : X * s < d
-              => transport2 (<) ((equation : X * i * (s * d) = X * s * (i * d)) *> pmap (X * s *) id *> ide-right) ((equation : K * (s * d) = (K * s) * d) *> pmap (`* d) ks *> ide-left) (RealField.<_*_positive-left h sd>0)
+              => transport2 (<) ((equation : X * i * (s * d) = X * s * (i * d)) *> pmap (X * s *) id *> ide-right) ((equation : K * (s * d) = (K * s) * d) *> pmap (* d) ks *> ide-left) (RealField.<_*_positive-left h sd>0)
 
         \lemma fine-exists {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {e : Rat} (e>0 : 0 < e) : ∃ (n : Nat) (Fine f g n e)
           => \case u e>0 \with {
@@ -308,7 +308,7 @@
                       | p2 : RealAbGroup.abs (negative ((y.1 - x.1) * segMean a<=b g m x y - (f y - f x))) <= Real.fromRat e' * t => =_<= RealAbGroup.abs_negative <=∘ fine-est {a} {b} {a<=b} F' {x} {y}
                       | key : t * RealAbGroup.abs (segMean a<=b g n x y - segMean a<=b g m x y) <= Real.fromRat (e + e') * t
                           => =_<= (inv RealField.abs_*) <=∘ transport (\lam z => _ <= z * t) RealAbGroup.+-rat (abs-sum-le equation.ring p1 p2)
-                \in RealField.<=_*-cancel-right t>0 (transport (`<= _) RealField.*-comm key))
+                \in RealField.<=_*-cancel-right t>0 (transport (<= _) RealField.*-comm key))
               (\lam t=0 => rewrite (interval-ext (inv t=0), segMean-same, segMean-same, negative-right, RealAbGroup.abs_zro) (rat_real_<=.1 (<=-less (linarith : 0 < e + e'))))
 
         \lemma dist-le {x y : Real} {e : Rat} (p : dist {RealNormed} x y ExUpperReal.<= e) : RealAbGroup.abs (x - y) <= Real.fromRat e
@@ -343,7 +343,7 @@
     \private \lemma uniformQuot-incr {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x y : Set.Total (ClosedInterval a b)}
       : (y.1 - x.1) * uniformQuot a<=b u x y = f y - f x
       => \let t => RealAbGroup.abs (y.1 - x.1)
-         \in real-scaled-eq-real (transport (`<= _) zro-left (RealAbGroup.<=_+ RealAbGroup.abs>=0 RealAbGroup.abs>=0)) \lam {e} e>0 => \case fine-exists u e>0 \with {
+         \in real-scaled-eq-real (transport (<= _) zro-left (RealAbGroup.<=_+ RealAbGroup.abs>=0 RealAbGroup.abs>=0)) \lam {e} e>0 => \case fine-exists u e>0 \with {
            | inP (n,F) =>
              \have | p1 : RealAbGroup.abs ((y.1 - x.1) * (uniformQuot a<=b u x y - segMean a<=b g n x y)) <= Real.fromRat e * t
                        => =_<= (RealField.abs_* *> RealField.*-comm) <=∘ RealField.<=_*_positive-left (uniformQuot.near e>0 F) RealAbGroup.abs>=0
@@ -368,7 +368,7 @@
                 | q2 => segMean-uniform {a} {b} {a<=b} {g} hg {n} d
                 | q3 : RealAbGroup.abs (negative (uniformQuot a<=b u x' y' - segMean a<=b g n x' y')) <= Real.fromRat e
                     => =_<= RealAbGroup.abs_negative <=∘ uniformQuot.near {a} {b} {a<=b} {f} {g} {u} {x'} {y'} e>0 F
-                | ee : Real.fromRat e + Real.fromRat e + Real.fromRat e = Real.fromRat (e + e + e) => pmap (`+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat
+                | ee : Real.fromRat e + Real.fromRat e + Real.fromRat e = Real.fromRat (e + e + e) => pmap (+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat
           \in abs-three q1 q2 q3 <=∘ =_<= ee)
       }
       \where
@@ -399,7 +399,7 @@
     \private \lemma uniformQuotDeriv-char {a b : Real} {a<b : a < b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g}
       : IsDerivQuot (intervalInc a b) f (uniformQuotDeriv a<b u)
       => \lam s => \have hc : s.1.2.2.1 * s.1.2.2.2 = s.1.2.1.1 - s.1.1.1 => rewrite s.2 equation
-                   \in inv *-assoc *> pmap (`* _) hc *> uniformQuot-incr
+                   \in inv *-assoc *> pmap (* _) hc *> uniformQuot-incr
 
     -- | A function satisfying the estimate has a derivative.
     \private \lemma uniform-hasDeriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) : HasDeriv (intervalInc a b) f

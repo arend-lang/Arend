@@ -327,7 +327,7 @@
                           *> split-term (P t0) s t0 t1 (measT (t1 List.:: T) P)
           | inr t1<=s => \have s=t1 : s = t1 => <=-antisymmetric s<=t1 t1<=s
                          \in pmap (\lam x => if (P t0) (x - t0) 0 + (if (P x) (t1 - x) 0 + measT (t1 List.:: T) P)) s=t1
-                              *> pmap (if (P t0) (t1 - t0) 0 +) (pmap (`+ _) (if-zero (P t1) negative-right) *> zro-left)
+                              *> pmap (if (P t0) (t1 - t0) 0 +) (pmap (+ _) (if-zero (P t1) negative-right) *> zro-left)
         }
       }
 
@@ -336,7 +336,7 @@
     | List.nil => idp
     | t0 List.:: T => \case LinearOrder.dec<_<= t0 s \with {
       | inl t0<s => measT-insert-above S (\lam t _ => A t) t0<s
-      | inr s<=t0 => pmap (measT __ P) (insert-ge s<=t0) *> pmap (`+ _) (\case LinearOrder.dec<_<= s t0 \with {
+      | inr s<=t0 => pmap (measT __ P) (insert-ge s<=t0) *> pmap (+ _) (\case LinearOrder.dec<_<= s t0 \with {
           | inl s<t0 => pmap (\lam b => if b (t0 - s) 0) (A s *> snap-below s<t0)
           | inr t0<=s => if-zero (P s) (pmap (t0 -) (<=-antisymmetric s<=t0 t0<=s) *> negative-right)
         }) *> zro-left
@@ -473,12 +473,12 @@
   | zro => in~ nil
   | + => opRISet (xor) idp
   | zro-left => ratPoints-ext \lam t => ratPoints_opRISet (xor) idp *> xor_false-left
-  | +-assoc => ratPoints-ext \lam t => ratPoints_opRISet (xor) idp *> pmap (`xor _) (ratPoints_opRISet (xor) idp) *> xor-assoc *> inv (ratPoints_opRISet (xor) idp *> pmap (_ xor) (ratPoints_opRISet (xor) idp))
+  | +-assoc => ratPoints-ext \lam t => ratPoints_opRISet (xor) idp *> pmap (xor _) (ratPoints_opRISet (xor) idp) *> xor-assoc *> inv (ratPoints_opRISet (xor) idp *> pmap (_ xor) (ratPoints_opRISet (xor) idp))
   | +-comm => ratPoints-ext \lam t => ratPoints_opRISet (xor) idp *> xor-comm *> inv (ratPoints_opRISet (xor) idp)
   | negative u => u
   | negative-left => ratPoints-ext \lam t => ratPoints_opRISet (xor) idp *> xor-self
   | * => opRISet (and) idp
-  | *-assoc => ratPoints-ext \lam t => ratPoints_opRISet (and) idp *> pmap (`and _) (ratPoints_opRISet (and) idp) *> and-assoc *> inv (ratPoints_opRISet (and) idp *> pmap (_ and) (ratPoints_opRISet (and) idp))
+  | *-assoc => ratPoints-ext \lam t => ratPoints_opRISet (and) idp *> pmap (and _) (ratPoints_opRISet (and) idp) *> and-assoc *> inv (ratPoints_opRISet (and) idp *> pmap (_ and) (ratPoints_opRISet (and) idp))
   | ldistr => ratPoints-ext \lam t => ratPoints_opRISet (and) idp *> pmap (_ and) (ratPoints_opRISet (xor) idp) *> and-xor-ldistr *> inv (ratPoints_opRISet (xor) idp *> pmap2 (xor) (ratPoints_opRISet (and) idp) (ratPoints_opRISet (and) idp))
   | *-comm => ratPoints-ext \lam t => ratPoints_opRISet (and) idp *> and-comm *> inv (ratPoints_opRISet (and) idp)
   | isBooleanRing => ratPoints-ext \lam t => ratPoints_opRISet (and) idp *> and-idemp

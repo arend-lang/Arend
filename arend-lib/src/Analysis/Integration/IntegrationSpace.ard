@@ -145,7 +145,7 @@
 }
 
 \class CompleteIntegrationSpace \extends IntegrationSpace, RieszLSpace, CompleteNormedAbGroup {
-  | norm_+_>= {x} {y} x>=0 y>=0 => =_<= {RealAbGroup} $ inv $ pmap integral (abs-ofPos $ transport (`<= _) zro-left $ <=_+ x>=0 y>=0) *> integral_+ *> pmap2 (RealAbGroup.+) (pmap integral $ inv $ abs-ofPos x>=0) (pmap integral $ inv $ abs-ofPos y>=0)
+  | norm_+_>= {x} {y} x>=0 y>=0 => =_<= {RealAbGroup} $ inv $ pmap integral (abs-ofPos $ transport (<= _) zro-left $ <=_+ x>=0 y>=0) *> integral_+ *> pmap2 (RealAbGroup.+) (pmap integral $ inv $ abs-ofPos x>=0) (pmap integral $ inv $ abs-ofPos y>=0)
 
   \func CompleteMeasRing : CompleteMeasureRing \cowith
     | PseudoMeasureRing => MeasRing

@@ -163,7 +163,7 @@
       : ∃ (a : A) (meas (b - f a) < d)
       => \let (inP (delta,delta>0,delta<d)) => real_<-char.1 d>0
          \in \case fd {b} {OBall delta b} OBall-open (OBall-center (rat_real_<.2 delta>0)) \with {
-           | inP (y, inP (a,p), h) => inP (a, transport (`< _) (lnorm-ldist {B} {b} {f a}) (real_<_U.2 (transportInv (OBall delta b) p h)) <∘ delta<d)
+           | inP (y, inP (a,p), h) => inP (a, transport (< _) (lnorm-ldist {B} {b} {f a}) (real_<_U.2 (transportInv (OBall delta b) p h)) <∘ delta<d)
          }
 
     \lemma list-bound {B : PseudoMeasureRing} {n : Nat} {c : Array Rat n} {b b' : Array B n}
@@ -347,9 +347,9 @@
                | inP (z, inP (s,zp), zin) => \case SFunc-char-approx integrationCompletion.inc y.2 s \with {
                  | inP (a,q) =>
                    \have | n : Y.integral (Y.abs (integrationCompletion s - y.1)) < Real.fromRat (eps * ratio 1 4)
-                             => transport (`< _) (lnorm-ldist {Y} {y.1} {integrationCompletion s} *> pmap Y.integral Y.abs_-) $ real_<_U.2 $ transportInv (OBall (eps * ratio 1 4) y.1) zp zin
-                   \in inP (integrationCompletion (SFunc-char a), inP (a, idp), h $ real_<_U.1 $ transportInv (`< _) (lnorm-ldist {Y} {y.1} {integrationCompletion (SFunc-char a)} *> pmap Y.integral Y.abs_-) $
-                          Y.integral-mono q <∘r transportInv (`< _) (Y.integral_+ *> pmap (\lam x => x RealAbGroup.+ _) (Y.integral_+ *> pmap (\lam x => x RealAbGroup.+ _) Y.integral_+)) (linarith : _ < Real.fromRat eps))
+                             => transport (< _) (lnorm-ldist {Y} {y.1} {integrationCompletion s} *> pmap Y.integral Y.abs_-) $ real_<_U.2 $ transportInv (OBall (eps * ratio 1 4) y.1) zp zin
+                   \in inP (integrationCompletion (SFunc-char a), inP (a, idp), h $ real_<_U.1 $ transportInv (< _) (lnorm-ldist {Y} {y.1} {integrationCompletion (SFunc-char a)} *> pmap Y.integral Y.abs_-) $
+                          Y.integral-mono q <∘r transportInv (< _) (Y.integral_+ *> pmap (\lam x => x RealAbGroup.+ _) (Y.integral_+ *> pmap (\lam x => x RealAbGroup.+ _) Y.integral_+)) (linarith : _ < Real.fromRat eps))
                }
              }
          }
@@ -378,10 +378,10 @@
       | ~-perm e => Z.BigSum_EPerm (EPerm.EPerm_map (\lam (s : \Sigma Rat Z.MeasRing) => s.1 Z.*q s.2.1) e)
       | ~-sym r => inv (sum_~ r)
       | ~-trans r r' => sum_~ r *> sum_~ r'
-      | ~-zro-left idp => pmap (`+ _) Z.toRatModule.*c_zro-left *> Z.zro-left
-      | ~-zro-right idp => pmap (`+ _) Z.toRatModule.*c_zro-right *> Z.zro-left
-      | ~-+-left idp idp => inv Z.+-assoc *> pmap (`+ _) (inv Z.toRatModule.*c-rdistr)
-      | ~-+-right {_} {v} {a} {b} idp idp => inv Z.+-assoc *> pmap (`+ _) (inv Z.toRatModule.*c-ldistr *> pmap (v Z.*q) (pmap (`+ _) TruncRieszSpace.BoolRing.join-char *> inv Z.modularity) *> Z.toRatModule.*c-ldistr) *> Z.+-assoc
+      | ~-zro-left idp => pmap (+ _) Z.toRatModule.*c_zro-left *> Z.zro-left
+      | ~-zro-right idp => pmap (+ _) Z.toRatModule.*c_zro-right *> Z.zro-left
+      | ~-+-left idp idp => inv Z.+-assoc *> pmap (+ _) (inv Z.toRatModule.*c-rdistr)
+      | ~-+-right {_} {v} {a} {b} idp idp => inv Z.+-assoc *> pmap (+ _) (inv Z.toRatModule.*c-ldistr *> pmap (v Z.*q) (pmap (+ _) TruncRieszSpace.BoolRing.join-char *> inv Z.modularity) *> Z.toRatModule.*c-ldistr) *> Z.+-assoc
 
     \func hom {Z : IntegrationSpace} : AddGroupHom (SFuncIntegrationSpace Z.MeasRing) Z \cowith
       | func (x : SFunc RatField Z.MeasRing) : Z \with {

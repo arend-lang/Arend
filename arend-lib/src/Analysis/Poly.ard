@@ -108,4 +108,4 @@
                                   (d : degree< f m) (z : X)
       : IsSeriesSum (powerSeries (polyCoef f) z) (polyEval f z)
       => transport (IsSeriesSum (powerSeries (polyCoef f) z)) (inv (polyEval_polyCoef d))
-           (seriesSum-fin m \lam {j} q => pmap (`* pow z j) (d q) *> zro_*-left)
+           (seriesSum-fin m \lam {j} q => pmap (* pow z j) (d q) *> zro_*-left)

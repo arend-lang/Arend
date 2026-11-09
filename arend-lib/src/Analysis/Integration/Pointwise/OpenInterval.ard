@@ -61,7 +61,7 @@
               | e1 : Real.fromRat e < x 0 - a => em <∘l meet-left
               | e2 : Real.fromRat e < b - x 0 => em <∘l meet-right
         \in inP (e, rat_real_<.2 e>0, \lam {y} d =>
-          \have | d' : RealAbGroup.abs (x 0 - y 0) < Real.fromRat e => transport (`< _) ldist-coord (real_<_U.2 d)
+          \have | d' : RealAbGroup.abs (x 0 - y 0) < Real.fromRat e => transport (< _) ldist-coord (real_<_U.2 d)
                 | d1 : x 0 - y 0 <= RealAbGroup.abs (x 0 - y 0) => RealAbGroup.abs>=id
                 | d2 : negative (x 0 - y 0) <= RealAbGroup.abs (x 0 - y 0) => RealAbGroup.abs>=neg
           \in (linarith, linarith))
@@ -76,7 +76,7 @@
   | func-dist-uniform {eps} eps>0 =>
     \have | k'>0 : 0 < RatField.finv k => RatField.finv>0 k>0
           | d>0 : 0 < eps * RatField.finv k => RatField.<_*_positive_positive eps>0 k'>0
-          | e : k * (eps * RatField.finv k) = eps => pmap (k *) *-comm *> inv *-assoc *> pmap (`* eps) (RatField.finv-right (/=-sym (StrictPoset.<_/= k>0))) *> ide-left
+          | e : k * (eps * RatField.finv k) = eps => pmap (k *) *-comm *> inv *-assoc *> pmap (* eps) (RatField.finv-right (/=-sym (StrictPoset.<_/= k>0))) *> ide-left
           | k>0' : 0 < Real.fromRat k => rat_real_<.1 k>0
     \in inP (eps * RatField.finv k, d>0, \lam {x} {y} p =>
       \have | p' : RealAbGroup.abs (x - y) < Real.fromRat (eps * RatField.finv k) => real_<_U.2 p
@@ -115,7 +115,7 @@
   => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => rat_real_<.1 (RatField.finv>0 h>0)
            | d>=h : Real.fromRat h <= inner a b t - Real.fromRat h => linarith
            | r>=1 : 1 <= Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)
-               => transport (`<= _) (inv-mul h>0) (RealField.<=_*_positive-right (<=-less k>0) d>=h)
+               => transport (<= _) (inv-mul h>0) (RealField.<=_*_positive-right (<=-less k>0) d>=h)
            | m=1 : 1 ∧ (Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)) = 1 => RealAbGroup.meet_<= r>=1
            | z : (0 : Real) <= 1 => <=-less RealField.zro<ide
      \in (\peval trapValue a b h t) *> pmap (0 ∨) m=1 *> RealAbGroup.join_<= z
@@ -197,7 +197,7 @@
     \have | hm : Real.fromRat h < inner a b (x 0) => trap-pos h>0 p
           | h1 : Real.fromRat h < x 0 - a => hm <∘l meet-left
           | h2 : Real.fromRat h < b - x 0 => hm <∘l meet-right
-          | d' : RealAbGroup.abs (x 0 - y 0) < Real.fromRat h => transport (`< _) ldist-coord (real_<_U.2 d)
+          | d' : RealAbGroup.abs (x 0 - y 0) < Real.fromRat h => transport (< _) ldist-coord (real_<_U.2 d)
           | d1 : x 0 - y 0 <= RealAbGroup.abs (x 0 - y 0) => RealAbGroup.abs>=id
           | d2 : negative (x 0 - y 0) <= RealAbGroup.abs (x 0 - y 0) => RealAbGroup.abs>=neg
     \in ((linarith : a < y 0), (linarith : y 0 < b)))
@@ -243,7 +243,7 @@
                   | m2 : meas {LebesgueRing0 1} A2 = Real.fromRat (q - q') => box-meas {q'} {q} linarith
                   | mm : meas {LebesgueRing0 1} A1 RealAbGroup.+ meas {LebesgueRing0 1} A2 = meas {LebesgueRing0 1} AJ RealAbGroup.+ meas {LebesgueRing0 1} AM => meas-modular {LebesgueRing0 1} {A1} {A2}
                   | m0 : 0 <= meas {LebesgueRing0 1} AM => meas>=0 {LebesgueRing0 1} {AM}
-                  | ms : Real.fromRat (p' - p) RealAbGroup.+ Real.fromRat (q - q') < Real.fromRat eps => transportInv (`< _) RealAbGroup.+-rat (rat_real_<.1 linarith)
+                  | ms : Real.fromRat (p' - p) RealAbGroup.+ Real.fromRat (q - q') < Real.fromRat eps => transportInv (< _) RealAbGroup.+-rat (rat_real_<.1 linarith)
                   | a-h<p : a - H < Real.fromRat p => real_<_U.2 pU
                   | p<a : Real.fromRat p < a => real_<_L.2 pL
                   | b<q : b < Real.fromRat q => real_<_U.2 qU
@@ -313,13 +313,13 @@
                     | r>0' : 0 < Real.fromRat r => rat_real_<.1 r>0
                     | l : Real.fromRat r <= x 0 - a => \lam q => <-irreflexive (hr pos {ya} (near {x} {ya} (RealAbGroup.abs_-_< linarith linarith))).1
                     | u : Real.fromRat r <= b - x 0 => \lam q => <-irreflexive (hr pos {yb} (near {x} {yb} (RealAbGroup.abs_-_< linarith linarith))).2
-                    | hh' : Real.fromRat h RealAbGroup.+ Real.fromRat h <= Real.fromRat r => transportInv (`<= _) RealAbGroup.+-rat (rat_real_<=.1 hh)
+                    | hh' : Real.fromRat h RealAbGroup.+ Real.fromRat h <= Real.fromRat r => transportInv (<= _) RealAbGroup.+-rat (rat_real_<=.1 hh)
               \in transportInv (_ <=) (trap-high h>0 (meet-univ (hh' <=∘ l) (hh' <=∘ u))) (c0.cut<=1 {x}))
         (\lam z => rewriteI z ((intervalCutoff a b h>0).cut>=0 {x})))
   }
   \where
     \lemma near {x y : RealN 1} {r : Rat} (p : RealAbGroup.abs (x 0 - y 0) < Real.fromRat r) : OBall r x y
-      => real_<_U.1 (transportInv (`< _) ldist-coord p)
+      => real_<_U.1 (transportInv (< _) ldist-coord p)
 
 -- | The integral on `(a,b)` is the limit of the integrals of truncations by trapezoids.
 \lemma integralOn-trap {a b : Real} {F : CoverMap (OpenCoverSpace {RealN 1} (interval-open a b)) RealNormed} (i : IsIntegrableOn (interval-open a b) F) {d : Rat} (d>0 : 0 < d)

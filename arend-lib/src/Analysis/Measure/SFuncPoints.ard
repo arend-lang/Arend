@@ -49,7 +49,7 @@
     | ~-perm e => V.BigSum_EPerm (EPerm.EPerm_map (\lam (s : \Sigma V B) => if (belongs s.2) s.1 0) e)
     | ~-sym r => inv (evalL_~ r)
     | ~-trans r r' => evalL_~ r *> evalL_~ r'
-    | ~-zro-left idp => pmap (`+ _) (if-zro (belongs _)) *> zro-left
+    | ~-zro-left idp => pmap (+ _) (if-zro (belongs _)) *> zro-left
     | ~-zro-right idp => pmap (\lam b => if b _ 0 + _) belongs_zro *> zro-left
     | ~-+-left idp idp => if-plus (belongs _)
     | ~-+-right idp idp => pmap2 (\lam a b => if a _ 0 + (if b _ 0 + _)) belongs_join belongs_meet *> if-join (belongs _) (belongs _)

@@ -48,8 +48,8 @@
     -- | Precomposition with a path is an equivalence.
     \private \func *>-equiv {A : \Cat} {a b c : A} (p : a = b) : QEquiv {b = c} {a = c} (p *>) \cowith
       | ret r => inv p *> r
-      | ret_f r => inv *>-assoc *> pmap (`*> r) inv_*> *> idp_*>
-      | f_sec r => inv *>-assoc *> pmap (`*> r) *>_inv *> idp_*>
+      | ret_f r => inv *>-assoc *> pmap (*> r) inv_*> *> idp_*>
+      | f_sec r => inv *>-assoc *> pmap (*> r) *>_inv *> idp_*>
 
 {- | {op-fiber-equiv} is compatible with postcomposition: the map `(x, p) ↦ (x, pmap+ g p)` from the fibers of {f}
  -   to the fibers of `g ∘ f` corresponds to `(w, r) ↦ (w, OpFunc-comp *> pmap+ (OpFunc g) r)`.

@@ -272,7 +272,7 @@
       : pow s N * A < e
       => (<=_*_positive-right (RealField.pow>=0 s>=0) A<=C
           <=∘ <=_*_positive-left (RealField.pow_<=-monotone s>=0 s<=b) (rat_real_<=.1 C>=0)
-          <=∘ =_<= (pmap (`* (C : Real)) RealField.pow-rat *> RealField.*-rat))
+          <=∘ =_<= (pmap (* (C : Real)) RealField.pow-rat *> RealField.*-rat))
          <∘r rat_real_<.1 h
   }
 

@@ -237,7 +237,7 @@
 
   \lemma lebPts-cons {n : Nat} {s : \Sigma (LebesgueRing0 n) RatIntervalSet} {l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)} {z : Array Rat (suc n)}
     : lebPts (suc n) (inSF (s :: l)) z = (lebPts n s.1 (initA z) and ratPoints s.2 (lastA z)) xor lebPts (suc n) (inSF l) z
-    => pmap (__ z) ((lebPts (suc n)).func-+ {rect s.1 s.2} {inSF l}) *> pmap (`xor _) lebPts-rect
+    => pmap (__ z) ((lebPts (suc n)).func-+ {rect s.1 s.2} {inSF l}) *> pmap (xor _) lebPts-rect
 
   \lemma lebPts-vanish {n : Nat} {l : Array (\Sigma (LebesgueRing0 n) RatIntervalSet)} {z : Array Rat (suc n)}
                        (h : \Pi (k : Fin l.len) -> ratPoints (l k).2 (lastA z) = false) : lebPts (suc n) (inSF l) z = false \elim l
@@ -332,7 +332,7 @@
           (\lam b' c => ext \lam y' => pmap (\lam w => lebPts _ (tensorMap (lebesgueTensor m n) MeasureRingHom.id w) (x ++' y')) assocL-rect
                                       *> pmap (\lam w => lebPts _ w (x ++' y')) (tensorMap-rect {_} {_} {_} {_} {lebesgueTensor m n} {MeasureRingHom.id} {rect a b'} {c}) *> lebPts-rect
                                       *> pmap2 (\lam w t => lebPts (m Nat.+ n) (lebesgueTensor m n (rect a b')) w and ratPoints c t) (initA-++' x) (lastA-++' x)
-                                      *> pmap (`and _) (lebesgueTensor-rect {m} {n} {a} {b'} {x} {initA y'}) *> and-assoc *> inv (pmap (_ and) lebPts-rect)) b)
+                                      *> pmap (and _) (lebesgueTensor-rect {m} {n} {a} {b'} {x} {initA y'}) *> and-assoc *> inv (pmap (_ and) lebPts-rect)) b)
   \where
     \lemma smul-pts {m : Nat} (e : Bool) {a : LebesgueRing0 m} {x : Array Rat m} : lebPts m (unitL.smul e a) x = lebPts m a x and e \elim e
       | true => inv and-true

@@ -479,7 +479,7 @@
                   | prod>0 : (0 : Real) < cabs (b (suc kF)) * pow r (suc kF) => linarith
                   | ak>0 : (0 : Real) < cabs (b (suc kF))
                     => LinearlyOrderedSemiring.<_*_positive-cancel-right (<=-less R>0)
-                         (transportInv (`< cabs (b (suc kF)) * pow r (suc kF)) zro_*-left prod>0)
+                         (transportInv (< cabs (b (suc kF)) * pow r (suc kF)) zro_*-left prod>0)
                   | kF<=m => <_suc_<= (fin_< kF)
                 \in \case opposite-direction a0>0 ak>0 {suc kF} NatOrder.zero<suc r>0 upper \with {
                   | inP (z, cz, key) =>
@@ -544,8 +544,8 @@
             = (c + g (suc p)) + (BigSum (\new Array M p (\lam i => g (suc i)))
                                  + BigSum (\new Array M q (\lam i => g (suc p Nat.+ suc i)))) \elim Neq
           | idp => BigSum-shift g (suc p) (suc q)
-                   *> pmap2 (+) (BigSum-shift g 1 p *> pmap (`+ _) (zro-right *> g0))
-                                (BigSum-shift (\lam j => g (suc p Nat.+ j)) 1 q *> pmap (`+ _) zro-right)
+                   *> pmap2 (+) (BigSum-shift g 1 p *> pmap (+ _) (zro-right *> g0))
+                                (BigSum-shift (\lam j => g (suc p Nat.+ j)) 1 q *> pmap (+ _) zro-right)
                    *> +-exchange
 
         -- | Regroup a sum of two sums: $(x + s) + (y + t) = (x + y) + (s + t)$.
@@ -597,17 +597,17 @@
                   = ComplexField.negative
                       (Complex.fromReal (cabs bk * pow r k * pinv (cabs b0) b0>0) * b0)
                 => pmap (bk *) (CMonoid.pow_*-comm {ComplexField} {Complex.fromReal r} {v} {k}
-                    *> pmap (`* pow v k) (inv (Complex.fromReal_pow {r} {k}))
+                    *> pmap (* pow v k) (inv (Complex.fromReal_pow {r} {k}))
                          *> pmap (Complex.fromReal (pow r k) *) pv)
                     *> cring-pull-neg bku
                          *> neg_fromReal_* equation.cRing
                 | sum-eq : b0 + bk * pow (Complex.fromReal r * v) k
                   = Complex.fromReal (1 - cabs bk * pow r k * pinv (cabs b0) b0>0) * b0
-                => pmap (b0 +) bkzk *> cring-diff *> pmap (`* b0) (inv fromReal_1-)
+                => pmap (b0 +) bkzk *> cring-diff *> pmap (* b0) (inv fromReal_1-)
               \in inP (Complex.fromReal r * v,
                        cabs_* *> pmap2 (*) (cabs_fromReal *> RealField.abs-ofPos (<=-less r>0)) cv *> ide-right,
                        pmap cabs sum-eq *> cabs_* *>
-                                           pmap (`* cabs b0) (cabs_fromReal *> RealField.abs-ofPos (linarith : (0 : Real) <= 1 - cabs bk * pow r k * pinv (cabs b0) b0>0))
+                                           pmap (* cabs b0) (cabs_fromReal *> RealField.abs-ofPos (linarith : (0 : Real) <= 1 - cabs bk * pow r k * pinv (cabs b0) b0>0))
                                              *> pinv-cancel b0>0)
           }
         }
@@ -623,7 +623,7 @@
              \in inP (ComplexField.negative (Complex.fromReal (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0)
               * (b0 * conj bk)),
                       dir-cabs b0 bk (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0) (<=-less t>0)
-                        *> pmap (`* (cabs b0 * cabs bk)) (pinv_* b0>0 bk>0) *> pinv-left _,
+                        *> pmap (* (cabs b0 * cabs bk)) (pinv_* b0>0 bk>0) *> pinv-left _,
                       cring-swap (mul-conj *> pmap Complex.fromReal (inv cabs-square))
                         *> neg_fromReal_* (equation.cRing
                         *> pmap (cabs bk * pinv (cabs b0) b0>0 *) (pinv-left bk>0)
