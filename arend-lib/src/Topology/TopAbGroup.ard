@@ -18,77 +18,66 @@
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace
 
-\class TopAbGroup \extends TopSpace, AbGroup, UniformSpace {
+\class TopAddGroup \extends TopSpace, AddGroup, UniformSpace {
   | +-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 + s.2
   | negative-cont : ContMap \this \this negative
-  | neighborhood-uniform {C : Set (Set E)} : isUniform C <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y)
+  | neighborhood-uniform {C : Set (Set E)} : isUniform C <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (negative x + y)) (U (y - x)) (V y)
   | uniform-cover Cu x => \case neighborhood-uniform.1 Cu \with {
     | inP (U,Uo,U0,h) => \case h x \with {
-      | inP (V,CV,g) => inP (V, CV, g $ transportInv U negative-right U0)
+      | inP (V,CV,g) => inP (V, CV, g (transportInv U negative-left U0) (transportInv U negative-right U0))
     }
   }
-  | uniform-top => neighborhood-uniform.2 $ inP (top, open-top, (), \lam x => inP (top, idp, \lam _ => ()))
+  | uniform-top => neighborhood-uniform.2 $ inP (top, open-top, (), \lam x => inP (top, idp, \lam _ _ => ()))
   | uniform-refine Cu e => \case neighborhood-uniform.1 Cu \with {
     | inP (U,Uo,U0,h) => neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => \case h x \with {
       | inP (V,CV,g) => \case e CV \with {
-        | inP (W,DW,V<=W) => inP (W, DW, \lam u => V<=W $ g u)
+        | inP (W,DW,V<=W) => inP (W, DW, \lam u v => V<=W $ g u v)
       }
     })
   }
   | uniform-inter Cu Du => \case neighborhood-uniform.1 Cu, neighborhood-uniform.1 Du \with {
     | inP (U,Uo,U0,g), inP (V,Vo,V0,h) => neighborhood-uniform.2 $ inP (U ∧ V, open-inter Uo Vo, (U0,V0), \lam x => \case g x, h x \with {
-      | inP (W,CW,f), inP (W',DW',f') => inP (W ∧ W', inP $ later (W, CW, W', DW', idp), \lam (u,u') => (f u, f' u'))
+      | inP (W,CW,f), inP (W',DW',f') => inP (W ∧ W', inP $ later (W, CW, W', DW', idp), \lam (u,u') (v,v') => (f u v, f' u' v'))
     })
   }
   | uniform-star Cu => \case neighborhood-uniform.1 Cu \with {
     | inP (U,Uo,U0,g) => \case shrink' +-cont negative-cont Uo U0 \with {
       | inP (V',V'o,V'0,h') => \case shrink' +-cont negative-cont V'o V'0 \with {
-        | inP (V,Vo,V0,h) => inP (\lam W => ∃ (x : E) (W = \lam y => V (x - y)), neighborhood-uniform.2 $ inP (V, Vo, V0, \lam x => inP (\lam y => V (x - y), inP $ later (x, idp), \lam v => v)),
+        | inP (V,Vo,V0,h) => inP (\lam W => ∃ (x : E) (W = \lam y => \Sigma (V (negative x + y)) (V (y - x))), neighborhood-uniform.2 $ inP (V, Vo, V0, \lam x => inP (_, inP $ later (x, idp), \lam u v => (u,v))),
                                   \lam {_} (inP (x,idp)) => \case g x \with {
-                                    | inP (U',CU',g') => inP (U', CU', \lam {_} (inP (x',idp)) (y,(Wy,W'y)) {z} W'z => g' $ simplify in h' (h Wy W'y) (h V0 W'z))
+                                    | inP (U',CU',g') => inP (U', CU', \lam {_} (inP (x',idp)) (y,((a,b),(a',b'))) {z} (c,d) =>
+                                        g' (simplify in h' (h a a') (h V0 c)) (simplify in h' (h d b') (h V0 b)))
                                   })
       }
     }
   }
 
   \default cauchy-open {S} => (\lam So {x} Sx => uniform-cauchy.2 $ ClosurePrecoverSpace.closure $ neighborhood-uniform.2 \case shrink' +-cont negative-cont ((+-cont ∘ tuple id (const x)).func-cont So) (transportInv S zro-left Sx) \with {
-    | inP (U',U'o,U'0,h') => \case shrink' +-cont negative-cont U'o U'0 \with {
-      | inP (U,Uo,U0,h) => inP (U, Uo, U0, \lam y => inP (\lam z => U (y - z), later \lam Uyx {z} Uyz => simplify in h' (h U0 Uyz) (h U0 Uyx), \lam u => u))
-    }
+    | inP (U,Uo,U0,h) => inP (U, Uo, U0, \lam y => inP (\lam z => \Sigma (U (negative y + z)) (U (z - y)), later \lam (_,Uxy) {z} (_,Uzy) => transport S simplify (h Uzy Uxy), \lam u v => (u,v)))
   }, \lam f => cover-open \lam {x} Sx => \case ClosurePrecoverSpace.closure-filter (NFilter x) (\lam Cu => \case neighborhood-uniform.1 Cu \with {
     | inP (U,Uo,U0,h) => \case h x \with {
-      | inP (V,CV,g) => inP (V, CV, inP (\lam y => U (x - y), (+-cont ∘ prod (const x) negative-cont ∘ tuple id id).func-cont Uo, transportInv U negative-right U0, g __))
+      | inP (V,CV,g) => inP (V, CV, inP (\lam y => \Sigma (U (negative x + y)) (U (y - x)), open-inter ((+-cont ∘ tuple (const (negative x)) id).func-cont Uo) ((+-cont ∘ tuple id (const (negative x))).func-cont Uo),
+                                          (transportInv U negative-left U0, transportInv U negative-right U0), \lam (u,v) => g u v))
     }
   }) $ uniform-cauchy.1 $ f Sx \with {
     | inP (U, e, inP (V,Vo,Vx,V<=U)) => inP (V, Vo, Vx, V<=U <=∘ e (V<=U Vx))
   })
 
-  \default isUniform C : \Prop => ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y)
+  \default isUniform C : \Prop => ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (negative x + y)) (U (y - x)) (V y)
   \default neighborhood-uniform \as neighborhood-uniform-impl {C} : _ <-> _ => <->refl {isUniform C}
 
-  \lemma topAbProperUniform : IsProperUniform
+  \lemma properUniform : IsProperUniform
     => \lam Cu => \case neighborhood-uniform.1 Cu \with {
       | inP (U,Uo,U0,h) => neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => \case h x \with {
-        | inP (V,CV,g) => inP (V, later (CV, inP (x, g $ transportInv U negative-right U0)), g)
+        | inP (V,CV,g) => inP (V, later (CV, inP (x, g (transportInv U negative-left U0) (transportInv U negative-right U0))), g)
       })
     }
 
-  \func topAbUniform {U : Set E} (Uo : isOpen U) (U0 : U 0) : PreuniformSpace.isUniform \lam V => ∃ (x : E) (V = \lam y => U (x - y))
-    => neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => inP (_, inP $ later (x, idp), \lam u => u))
+  \func topAddUniform {U : Set E} (Uo : isOpen U) (U0 : U 0) : PreuniformSpace.isUniform \lam V => ∃ (x : E) (V = \lam y => \Sigma (U (negative x + y)) (U (y - x)))
+    => neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => inP (_, inP $ later (x, idp), \lam u v => (u,v)))
 
-  \lemma shrink {U : Set E} (Uo : isOpen U) (U0 : U 0) : ∃ (V : isOpen) (V 0) (V <=<ta U)
+  \lemma shrink {U : Set E} (Uo : isOpen U) (U0 : U 0) : ∃ (V : isOpen) (V 0) ∀ {x y : V} (U (x - y))
     => shrink' +-cont negative-cont Uo U0
-
-  \func UBall (U : Set E) (x : E) : Set E => \lam x' => U (x - x')
-
-  \lemma UBall-open {U : Set E} (Uo : isOpen U) {x : E} : isOpen (UBall U x)
-    => (+-cont ∘ tuple (const x) negative-cont).func-cont Uo
-
-  \lemma UBall-center {U : Set E} (U0 : U 0) {x : E} : UBall U x x
-    => transportInv U negative-right U0
-
-  \lemma UBall-point {U : Set E} {x : E} (Ux : U x) : UBall U x 0
-    => transportInv U simplify Ux
 
   \lemma subtract-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 - s.2
     => +-cont ∘ prod id negative-cont
@@ -101,6 +90,41 @@
     => \case (+-cont ∘ prod id negative-cont).func-cont Uo {0,0} (transportInv U negative-right U0) \with {
       | inP (V,Vo,V0,W,Wo,W0,h) => inP (V ∧ W, open-inter Vo Wo, (V0,W0), \lam (Vx,_) (_,Wy) => h Vx Wy)
     }
+}
+
+\class TopAbGroup \extends TopAddGroup, AbGroup {
+  \lemma ab-neighborhood-uniform {C : Set (Set E)} : isUniform C <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y)
+    => <->trans neighborhood-uniform (<->sym $ ab-uniform-equiv negative-cont)
+
+  \func topAbUniform {U : Set E} (Uo : isOpen U) (U0 : U 0) : PreuniformSpace.isUniform \lam V => ∃ (x : E) (V = \lam y => U (x - y))
+    => ab-neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => inP (_, inP $ later (x, idp), \lam u => u))
+
+  \func UBall (U : Set E) (x : E) : Set E => \lam x' => U (x - x')
+
+  \lemma UBall-open {U : Set E} (Uo : isOpen U) {x : E} : isOpen (UBall U x)
+    => (+-cont ∘ tuple (const x) negative-cont).func-cont Uo
+
+  \lemma UBall-center {U : Set E} (U0 : U 0) {x : E} : UBall U x x
+    => transportInv U negative-right U0
+
+  \lemma UBall-point {U : Set E} {x : E} (Ux : U x) : UBall U x 0
+    => transportInv U simplify Ux
+} \where {
+  \open ContMap
+  \open ProductTopSpace
+
+  \lemma ab-uniform-trans {X : TopSpace} {A : AbGroup X} (negative-cont : ContMap X X negative) {P : \Prop} {C : Set (Set X)}
+                          (h : P <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y))
+    : P <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (negative x + y)) (U (y - x)) (V y)
+    => <->trans h (ab-uniform-equiv negative-cont)
+
+  \lemma ab-uniform-equiv {X : TopSpace} {A : AbGroup X} (negative-cont : ContMap X X negative) {C : Set (Set X)}
+    : ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y) <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (negative x + y)) (U (y - x)) (V y)
+    => (\lam (inP (U,Uo,U0,h)) => inP (negative ^-1 U, negative-cont.func-cont Uo, transportInv U AddGroup.negative_zro U0, \lam x => \case h x \with {
+      | inP (V,CV,g) => inP (V, CV, \lam _ u => g $ transport U AddGroup.negative_- u)
+    }), \lam (inP (U,Uo,U0,h)) => inP (negative ^-1 U, negative-cont.func-cont Uo, transportInv U AddGroup.negative_zro U0, \lam x => \case h x \with {
+      | inP (V,CV,g) => inP (V, CV, \lam {y} u => \have v : U (y - x) => transport U AddGroup.negative_- u \in g (transport U +-comm v) v)
+    }))
 }
 
 \func \infix 4 <=<ta {X : TopAbGroup} (V U : Set X) : \Prop
@@ -140,7 +164,7 @@
   => transport2 (<=*) (ext \lam x => simplify) (ext \lam x => simplify) $ <=<ta_<=*-shifted {X} {negative ^-1 W} {negative ^-1 V} {negative ^-1 U}
       (negative-cont.func-cont Wo) (simplify W0) (<=<ta_negative {_} {_} {V} p) (<=<ta_negative {_} {_} {U} q) {0}
 
-\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace, SeparatedCoverSpace {
+\class HausdorffTopAbGroup \extends TopAbGroup, SeparatedCoverSpace {
   \lemma equals {x y : E} (p : ∀ {U : isOpen} (U 0) (U (x - y))) : x = y
     => fromZero $ isHausdorff \lam Uo Vo Ud V0 => inP (x - y, (Ud, p Vo V0))
 }
@@ -149,16 +173,16 @@
   \override Dom : TopAbGroup
   \override Cod : TopAbGroup
 
-  \default func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
-    | inP (U,Uo,U0,h) => neighborhood-uniform.2 $ inP (func ^-1 U, func-cont Uo, transportInv U func-zro U0, \lam x => \case h (func x) \with {
+  \default func-uniform Eu => \case ab-neighborhood-uniform.1 Eu \with {
+    | inP (U,Uo,U0,h) => ab-neighborhood-uniform.2 $ inP (func ^-1 U, func-cont Uo, transportInv U func-zro U0, \lam x => \case h (func x) \with {
       | inP (V,EV,g) => inP (func ^-1 V, inP $ later (V, EV, idp), \lam u => g $ transport U func-minus u)
     })
   }
 
   \lemma embedding->uniformEmbedding (e : ContMap.IsDenseTopEmbedding) : UniformMap.IsDenseUniformEmbedding
-    => (e.1, \lam Cu => \case neighborhood-uniform.1 Cu \with {
+    => (e.1, \lam Cu => \case ab-neighborhood-uniform.1 Cu \with {
       | inP (U,Uo,U0,h) => \case e.2 Uo \with {
-        | inP (V,Vo,p) => neighborhood-uniform.2 \case TopAbGroup.shrink Vo $ transport V func-zro $ rewrite p in U0 \with {
+        | inP (V,Vo,p) => ab-neighborhood-uniform.2 \case TopAddGroup.shrink Vo $ transport V func-zro $ rewrite p in U0 \with {
           | inP (V',V'o,V'0,g) => inP (V', V'o, V'0, \lam y => inP (\lam y' => V' (y - y'), \case e.1 (UBall-open V'o {y}) (UBall-center {Cod} {V'} V'0) \with {
             | inP (_, inP (x,idp),V'yfx) => \case h x \with {
               | inP (W,CW,q) => inP $ later (W, CW, \lam {x'} V'yfx' => q $ rewrite p $ transport V (pmap (- _) +-comm *> simplify +-comm *> inv func-minus) $ g V'yfx' V'yfx)

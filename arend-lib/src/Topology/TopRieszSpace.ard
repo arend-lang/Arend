@@ -20,9 +20,9 @@
   | solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U)
 
   \lemma abs-uniform : UniformMap \this \this abs \cowith
-    | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+    | func-uniform Eu => \case ab-neighborhood-uniform.1 Eu \with {
       | inP (V,Vo,V0,h) => \case solid-neighborhood (open-char.1 Vo V0) \with {
-        | inP (U,US,U0,U<=V) => neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (abs x) \with {
+        | inP (U,US,U0,U<=V) => ab-neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (abs x) \with {
           | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ US (<=<_<= Uxy idp) $ abs-univ abs_-left abs_-right))
         })
       }
@@ -36,9 +36,9 @@
     \where {
       \private \lemma *q_<=1-right-uniform {q : Rat} (q>=0 : RatField.zro RatField.<= q) (q<=1 : q RatField.<= 1) : TopAbGroupMap \this \this (q *q) \cowith
         | func-+ => toRatModule.*c-ldistr
-        | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+        | func-uniform Eu => \case ab-neighborhood-uniform.1 Eu \with {
           | inP (V,Vo,V0,h) => \case solid-neighborhood (open-char.1 Vo V0) \with {
-            | inP (U,US,U0,U<=V) => neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (q *q x) \with {
+            | inP (U,US,U0,U<=V) => ab-neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (q *q x) \with {
               | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ transport U toRatModule.*c-ldistr_- $ US (<=<_<= Uxy idp) $ abs_*q>=0 q>=0 =<= <=_*q-left q<=1 abs>=0 <=∘ =_<= ide_*q))
             })
           }

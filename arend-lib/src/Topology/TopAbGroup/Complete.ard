@@ -6,7 +6,6 @@
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Paths
 \import Paths.Meta
 \import Set.Filter
@@ -19,6 +18,7 @@
 \import Topology.TopAbGroup.Product
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
 \open Completion
 
@@ -40,7 +40,7 @@
   | AbGroup => abGroup
   | +-cont => +-cover
   | negative-cont => negative-cover
-  | neighborhood-uniform => (\lam (inP (D,Du,g)) => \case neighborhood-uniform.1 Du \with {
+  | neighborhood-uniform {C} => TopAbGroup.ab-uniform-trans {_} {abGroup} negative-cover {isUniform C} (\lam (inP (D,Du,g)) => \case X.ab-neighborhood-uniform.1 Du \with {
     | inP (U1,U1o,U1_0,h) =>
       \have | (inP (U2,U2o,U2_0,h2)) => X.shrink U1o U1_0
             | (inP (U3,U3o,U3_0,h3)) => X.shrink U2o U2_0

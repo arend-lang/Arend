@@ -4,7 +4,6 @@
 \import Algebra.Pointed
 \import Function.Meta
 \import Logic
-\import Meta
 \import Operations
 \import Paths
 \import Paths.Meta
@@ -43,14 +42,14 @@
       | inP (D,Du,E,Eu,r) => \case neighborhood-uniform.1 Du, neighborhood-uniform.1 Eu \with {
         | inP (U,Uo,U0,f), inP (V,Vo,V0,g) => inP (Set.Prod U V, Prod-open Uo Vo, (U0,V0), \lam (x,y) => \case f x, g y \with {
           | inP (U',DU',h1), inP (V',EV',h2) => \case r $ inP (U',DU',V',EV',idp) \with {
-            | inP (W,CW,p) => inP (W, CW, \lam c => p (h1 c.1, h2 c.2))
+            | inP (W,CW,p) => inP (W, CW, \lam c c' => p (h1 c.1 c'.1, h2 c.2 c'.2))
           }
         })
       }
     }, \case \elim __ \with {
       | inP (W,Wo,W0,h) => \case Wo W0 \with {
-        | inP (U,Uo,U0,V,Vo,V0,g) => inP (_, X.topAbUniform Uo U0, _, Y.topAbUniform Vo V0, \lam {_} (inP (_, inP (x,idp), _, inP (y,idp), idp)) => \case h (x,y) \with {
-          | inP (W',CW',h') => inP (W', CW', \lam {s} (c,d) => h' $ g c d)
+        | inP (U,Uo,U0,V,Vo,V0,g) => inP (_, X.topAddUniform Uo U0, _, Y.topAddUniform Vo V0, \lam {_} (inP (_, inP (x,idp), _, inP (y,idp), idp)) => \case h (x,y) \with {
+          | inP (W',CW',h') => inP (W', CW', \lam {s} ((a1,a2),(b1,b2)) => h' (g a1 b1) (g a2 b2))
         })
       }
     })

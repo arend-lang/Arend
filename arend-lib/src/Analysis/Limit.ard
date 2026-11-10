@@ -16,7 +16,6 @@
 \import Order.Biordered
 \import Order.Directed
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -28,7 +27,6 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Directed
 \import Topology.MetricSpace
-\import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
 \import Topology.TopRing
@@ -122,7 +120,7 @@
     \lam fc Uo U0 => \case fc Uo U0 \with {
       | inP (N,g) => inP (N, \lam p => g <=-refl p)
     },
-    \lam fc => convergent-uniform-char \lam Cu => \case neighborhood-uniform.1 Cu \with {
+    \lam fc => convergent-uniform-char \lam Cu => \case X.ab-neighborhood-uniform.1 Cu \with {
       | inP (U,Uo,U0,h) => \case fc (negative-cont.func-cont Uo) (simplify U0) \with {
         | inP (N,g) => \case h (f N) \with {
           | inP (V,CV,UV) => inP (V, CV, N, \lam p => UV $ simplify in g p)

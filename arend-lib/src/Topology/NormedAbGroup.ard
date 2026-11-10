@@ -50,7 +50,7 @@
   }
   | neighborhood-uniform =>
     \have lem {x} {y} : dist 0 (x - y) = dist x y => norm-dist *> inv norm_negative *> pmap norm simplify *> inv norm-dist
-    \in (\lam Cu => \case dist-uniform.1 Cu \with {
+    \in TopAbGroup.ab-uniform-trans negative-cont (\lam Cu => \case dist-uniform.1 Cu \with {
       | inP (eps,eps>0,h) => inP (OBall eps 0, OBall-open, OBall-center eps>0, \lam x => \case h x \with {
         | inP (U,CU,g) => inP (U, CU, \lam d => g $ transport (ExUpperReal.U {__} eps) lem d
                               )
