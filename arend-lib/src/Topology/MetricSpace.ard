@@ -375,6 +375,16 @@
   | ExPseudoMetricSpace => ExPseudoMetricTransfer f
   | dist-ext p => fi (dist-ext p)
 
+-- | A function into a metric space is a cover map if, for every `ε > 0`, the sets mapped into `ε`-balls form a Cauchy cover.
+\lemma metric-coverMap {X : CoverSpace} {Y : ExPseudoMetricSpace} (f : X -> Y)
+                       (h : \Pi {eps : Rat} -> 0 < eps -> isCauchy \lam U => ∃ (y : Y) ∀ {x : U} ((dist y (f x)).U eps))
+  : CoverMap X Y f \cowith
+  | func-cover Dc => ClosurePrecoverSpace.closure-univ-cover (\lam Cu => \case dist-uniform.1 Cu \with {
+    | inP (eps,eps>0,g) => cauchy-refine (h eps>0) \lam {U} (inP (y,hy)) => \case g y \with {
+      | inP (V,CV,e) => inP (f ^-1 V, inP $ later (V, CV, idp), \lam Ux => e (hy Ux))
+    }
+  }) (uniform-cauchy.1 Dc)
+
 -- | A map {h} with an ε-δ modulus with respect to the distances in {Y} is a cover map, provided {i} has a retraction {r} such that `i ∘ r` is uniform.
 \lemma retract-coverMap {X : CoverSpace} {Y Z : ExPseudoMetricSpace} (i : CoverMap X Y) (r : Y -> X) (ri : \Pi (x : X) -> r (i x) = x)
                         (ir : UniformMetricMap Y Y (\lam y => i (r y))) {h : X -> Z}

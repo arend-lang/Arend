@@ -6,17 +6,22 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.LowerReal
 \import Arith.Real.UpperReal
+\import Data.Or
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ManhattanProduct
@@ -129,11 +134,63 @@
     }
   })
   \where {
-    \open ExUpperReal(<=-rat,+-rat,U_<=,<_<=)
-    \open ExUpperRealAbMonoid(<-rat,<_+,<_+-left)
+    \open ExUpperReal(<=-rat,+-rat,<_<=)
+    \open ExUpperRealAbMonoid(<-rat)
     \open ExUpperRealSemigroup(<=_*,ldistr_<=,rdistr_<=)
   }
 
 \lemma ex-upper-*-locally-uniform
   : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
   => transport (LocallyUniformMap _ _) (ext \lam s => UpperRealSemigroup.*-ex) (upper-ex-isometry LocallyUniformMap.∘l upper-*-locally-uniform)
+
+-- | For a cover map {g} to {Real} and rationals `a < b`, the sets `{a < g}` and `{g < b}` form a Cauchy cover.
+\lemma coverMap-cut {X : PrecoverSpace} (g : PrecoverMap X RealNormed) {a b : Rat} (a<b : a < b)
+  : isCauchy \lam U => (U ⊆ \lam x => (g x).L a) || (U ⊆ \lam x => (g x).U b)
+  => cauchy-refine (g.func-cover $ dense-lift-real-char.makeRealCover (b - a) linarith) \lam {_} (inP (_, inP (c,idp), idp)) => \case LinearOrder.dec<_<= c a \with {
+    | inl c<a => inP (_, byRight <=-refl, \lam {_} s => U-closed s.2 linarith)
+    | inr a<=c => inP (_, byLeft <=-refl, \lam {_} s => LowerReal.L_<= s.1 a<=c)
+  }
+
+-- | A bounded function to {Real} is a cover map if, for all rationals `a < b`, the sets `{a < f}` and `{f < b}` form a Cauchy cover.
+\lemma real-cut-coverMap {X : CoverSpace} (f : X -> Real) {lo hi : Real} (fl : \Pi (x : X) -> lo <= f x) (fu : \Pi (x : X) -> f x <= hi)
+                         (h : \Pi {a b : Rat} -> a < b -> isCauchy \lam U => (U ⊆ \lam x => (f x).L a) || (U ⊆ \lam x => (f x).U b))
+  : CoverMap X RealNormed f
+  => metric-coverMap f \lam {eps} eps>0 => \case lo.L-inh, hi.U-inh \with {
+    | inP (lo',lo'<lo), inP (hi',hi<hi') =>
+      \have | fl' (x : X) : (lo' : Real) <= f x => <=-less (real_<_L.2 lo'<lo) <=∘ fl x
+            | fu' (x : X) : f x <= (hi' : Real) => fu x <=∘ <=-less (real_<_U.2 hi<hi')
+            | (N,N>) => rat_natBound ((hi' - lo') * RatField.finv eps)
+            | bnd>= => bound>= lo' eps N
+            | Neps : hi' - lo' < N RatField.* eps => transport (< _) (*-assoc *> pmap (_ *) (RatField.finv-left $ RatField.>_/= eps>0) *> ide-right) $ <_*_positive-left N> eps>0
+      \in cauchy-subset (steps fl' h eps>0 N) $ later \case __ \with {
+        | byLeft g => inP (Real.fromRat (bound lo' eps N + eps), \lam {x} Ux => close (g Ux) $ real_<_U.1 $ fu' x <∘r rat_real_<.1 (linarith : hi' < bound lo' eps N + eps + eps))
+        | byRight e => e
+      }
+  }
+  \where {
+    \func bound (lo eps : Rat) (n : Nat) : Rat \elim n
+      | 0 => lo - eps
+      | suc n => bound lo eps n + eps
+
+    \lemma bound>= (lo eps : Rat) (n : Nat) : lo - eps + n RatField.* eps <= bound lo eps n \elim n
+      | 0 => linarith
+      | suc n => transportInv (\lam r => lo - eps + r <= _) (RatField.rdistr {n} {1} *> pmap (_ +) ide-left) $ linarith (bound>= lo eps n)
+
+    \lemma close {c eps : Rat} {z : Real} (p : z.L c) (q : z.U (c + eps + eps)) : (dist {RealNormed} (Real.fromRat (c + eps)) z).U eps
+      => \have | p' => real_<_L.2 p
+               | q' => rewriteI (RealAbGroup.+-rat, RealAbGroup.+-rat) in real_<_U.2 q
+         \in real_<_U.1 $ transport (\lam w => RealAbGroup.abs (w - z) < Real.fromRat eps) (RealAbGroup.+-rat {c} {eps}) (RealAbGroup.abs_-_< linarith linarith)
+
+    \lemma steps {X : CoverSpace} {f : X -> Real} {lo : Rat} (fl : \Pi (x : X) -> (lo : Real) <= f x)
+                 (h : \Pi {a b : Rat} -> a < b -> isCauchy \lam U => (U ⊆ \lam x => (f x).L a) || (U ⊆ \lam x => (f x).U b))
+                 {eps : Rat} (eps>0 : (0 : Rat) < eps) (n : Nat)
+      : isCauchy \lam U => (U ⊆ \lam x => (f x).L (bound lo eps n)) || ∃ (y : Real) (\Pi {x : X} -> U x -> (dist {RealNormed} y (f x)).U eps) \elim n
+      | 0 => top-cauchy $ later $ byLeft \lam {x} _ => real_<_L.1 $ rat_real_<.1 (linarith : lo - eps < lo) <∘l fl x
+      | suc n => cauchy-glue* (steps {X} {f} {lo} fl h eps>0 n) \lam {U} => later \case __ \with {
+        | byLeft g => cauchy-subset (h {bound lo eps n + eps} {bound lo eps n + eps + eps} linarith) $ later \case __ \with {
+          | byLeft g' => byLeft \lam {x} s => g' s.2
+          | byRight g' => byRight $ inP (_, \lam {x} s => close (g s.1) (g' s.2))
+        }
+        | byRight e => top-cauchy $ later $ byRight $ TruncP.map e \lam (y,d) => (y, \lam {x} s => d {x} s.1)
+      }
+  }
