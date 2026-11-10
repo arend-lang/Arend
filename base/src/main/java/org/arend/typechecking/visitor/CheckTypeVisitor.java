@@ -3674,12 +3674,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
 
     boolean isNegative = number.signum() < 0;
+    // Negate before narrowing: the absolute value of Integer.MIN_VALUE does not fit in an int.
+    BigInteger absolute = number.abs();
     IntegerExpression resultExpr;
     try {
-      int value = number.intValueExact();
-      resultExpr = new SmallIntegerExpression(isNegative ? -value : value);
+      resultExpr = new SmallIntegerExpression(absolute.intValueExact());
     } catch (ArithmeticException e) {
-      resultExpr = new BigIntegerExpression(isNegative ? number.negate() : number);
+      resultExpr = new BigIntegerExpression(absolute);
     }
 
     TypecheckingResult result;

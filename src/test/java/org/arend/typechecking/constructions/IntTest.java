@@ -38,4 +38,14 @@ public class IntTest extends TypeCheckingTestCase  {
       "\\func test : f -1 = 7 => idp\n" +
       "\\func test2 : f -2 = 2 => idp");
   }
+
+  @Test
+  public void minIntNumeral() {
+    typeCheckModule(
+      "\\func f (x : Int) : Nat\n" +
+      "  | neg (suc n) => suc n\n" +
+      "  | pos n => n\n" +
+      "\\func test : -2147483648 = neg 2147483648 => idp\n" +
+      "\\func test2 : f -2147483648 = 2147483648 => idp");
+  }
 }
