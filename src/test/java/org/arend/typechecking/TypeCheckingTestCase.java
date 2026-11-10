@@ -12,6 +12,7 @@ import org.arend.server.ProgressReporter;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteExpressionFactory;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.doubleChecker.CoreException;
 import org.arend.typechecking.doubleChecker.CoreExpressionChecker;
@@ -28,6 +29,7 @@ import java.util.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class TypeCheckingTestCase extends NameResolverTestCase {
@@ -117,7 +119,31 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
 
 
   protected void typeCheckModule(int errors) {
-    server.getCheckerFor(Collections.singletonList(MODULE)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    typeCheckModule(errors, UnstoppableCancellationIndicator.INSTANCE);
+  }
+
+  /**
+   * Typechecks the module and fails if it takes longer than {@code timeoutMillis}.
+   * Unlike a JUnit timeout, this stops typechecking, so a hanging test does not prevent the test JVM from exiting.
+   */
+  protected void typeCheckModuleWithTimeout(String text, int errors, long timeoutMillis) {
+    resolveNamesModule(text);
+    long deadline = System.nanoTime() + timeoutMillis * 1_000_000;
+    CancellationIndicator indicator = new CancellationIndicator() {
+      @Override
+      public boolean isCanceled() {
+        return System.nanoTime() > deadline;
+      }
+
+      @Override
+      public void cancel() {}
+    };
+    typeCheckModule(errors, indicator);
+  }
+
+  private void typeCheckModule(int errors, CancellationIndicator indicator) {
+    server.getCheckerFor(Collections.singletonList(MODULE)).typecheck(indicator, ProgressReporter.empty());
+    assertFalse("Typechecking was not finished in time", indicator.isCanceled());
     List<GeneralError> errorList = getAllErrors();
     if (errorList.isEmpty()) errorList = new ArrayList<>();
     // the double checker needs lemma bodies, so it does not run when they are cleared (as with -c in the CLI)

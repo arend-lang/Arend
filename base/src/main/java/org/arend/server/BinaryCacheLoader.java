@@ -24,8 +24,11 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
+import java.util.stream.Collectors;
 
 public class BinaryCacheLoader {
+  private static final int MAX_LOGGED_DROPPED = 200;
+
   private final ArendServer myServer;
   private final ErrorReporter myErrorReporter;
   private final Consumer<String> myLogger;
@@ -304,6 +307,12 @@ public class BinaryCacheLoader {
           // defcall before its callee is filled. Reported because this is the path that used to
           // silently produce bogus source-level errors.
           + (boxFixCount > 0 ? ", " + boxFixCount + " deferred box fix(es)" : ""));
+    }
+    if (droppedCount > 0 && myLogger != null) {
+      // The counts above do not say what was typechecked again, which is what a wrong drop has to be traced from
+      myLogger.accept("Binary cache: dropped " + droppedDefinitions.values().stream().flatMap(Set::stream)
+          .limit(MAX_LOGGED_DROPPED).map(ref -> ref.getRefFullName().toString()).collect(Collectors.joining(", "))
+          + (droppedCount > MAX_LOGGED_DROPPED ? ", ..." : ""));
     }
   }
 

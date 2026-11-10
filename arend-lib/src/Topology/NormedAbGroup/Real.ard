@@ -108,6 +108,10 @@
 \func open-rat-int (a b : Rat) : Set Real
   => \lam (x : Real) => \Sigma (x.L a) (x.U b)
 
+-- | The distance between rational numbers in {Real}.
+\lemma rat-ldist {a b c : Rat} (h : RatField.abs (a - b) < c) : ldist {RealNormed} a b < c
+  => real_<_U.2 $ later (transportInv (\lam e => ExUpperReal.U {e} c) rat_real.func-isometry h)
+
 \lemma dense-lift-real-char {X Y : CoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X RealNormed} (y : Y) (a b : Rat)
   : open-rat-int a b (cauchy-lift f fd g y) <-> ∃ (a' b' : Rat) (a < a') (b' < b) (V : Set Y) (f ^-1 V ⊆ g ^-1 open-rat-int a' b') (single y <=< V)
   => (\lam (a<z,z<b) => \case L-rounded a<z, U-rounded z<b \with {

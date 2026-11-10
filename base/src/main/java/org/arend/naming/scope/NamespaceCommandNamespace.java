@@ -30,7 +30,8 @@ public class NamespaceCommandNamespace implements Scope {
   }
 
   private Referable resolve(NamedUnresolvedReference ref, ScopeContext context) {
-    return ref.resolve(new PrivateFilteredScope(myModuleNamespace, true), null, context, null);
+    // The command outlives this scope, so the result must not be cached in its reference: the module namespace may change
+    return ref.copy().resolve(new PrivateFilteredScope(myModuleNamespace, true), null, context, null);
   }
 
   @NotNull

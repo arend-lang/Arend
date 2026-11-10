@@ -54,7 +54,7 @@
 \private \lemma geo-small {d : Real} (d>0 : 0 < d) : ∃ (N : Nat) (geo N < d)
   => \let (inP (N, h)) => pow_<1-decay (linarith : (0 : Real) <= ratio 1 2)
     (linarith : (ratio 1 2 : Real) < 1) 1 d>0
-     \in inP (N, transport (`< d) ide-right h)
+     \in inP (N, transport (< d) ide-right h)
 
 \private \func StepA {m : Nat} (p : Poly ComplexField) (k : Nat) : \Set
   => \Sigma (r : Array Complex (suc m)) (nearFactorSet p (geo k) r) (K : Nat)

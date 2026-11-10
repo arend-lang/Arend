@@ -90,7 +90,7 @@
   \lemma approx-dense (p : \Pi (y : Cod) -> IsApprox y) : IsDense
     => \lam {y} Uo Uy => \case dist_open.1 Uo Uy \with {
       | inP (eps,eps>0,q) => \case p y (rat_real_<.1 eps>0) \with {
-        | inP (x,d) => inP (func x, inP (x, idp), q $ real_<_U.1 $ transportInv (`< _) (lnorm-ldist *> pmap meas (pmap (y +) BooleanRing.negative=id)) d)
+        | inP (x,d) => inP (func x, inP (x, idp), q $ real_<_U.1 $ transportInv (< _) (lnorm-ldist *> pmap meas (pmap (y +) BooleanRing.negative=id)) d)
       }
     }
 
@@ -98,7 +98,7 @@
     => \lam {d} (d>0 : 0 < d) =>
         \let (inP (delta,delta>0,delta<d)) => real_<-char.1 d>0
         \in \case hd {y} {OBall delta y} OBall-open (OBall-center (rat_real_<.2 delta>0)) \with {
-          | inP (z, inP (x,p), q) => inP (x, transport (`< _) (lnorm-ldist *> pmap meas (pmap (y +) BooleanRing.negative=id)) (real_<_U.2 (transportInv (OBall delta y) p q)) <∘ delta<d)
+          | inP (z, inP (x,p), q) => inP (x, transport (< _) (lnorm-ldist *> pmap meas (pmap (y +) BooleanRing.negative=id)) (real_<_U.2 (transportInv (OBall delta y) p q)) <∘ delta<d)
         }
 
   \lemma approx-zro : IsApprox 0

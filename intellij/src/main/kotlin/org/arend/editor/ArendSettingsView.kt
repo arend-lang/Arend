@@ -18,6 +18,9 @@ class ArendSettingsView {
     // Background typechecking
     private val typecheckingMode = JBCheckBox("Enable background typechecking", true)
 
+    // Binary cache
+    private val saveBinaryCacheSwitch = JBCheckBox("Save binary cache (.arc files)", false)
+
     // Other settings
     private val clauseLimitSwitch = JBCheckBox("Limit the maximum number of clauses generated at once: ", true)
     private val checkForUpdatesSwitch = JBCheckBox("Check for updates of arend-lib", true)
@@ -31,6 +34,7 @@ class ArendSettingsView {
     val isModified: Boolean
         get() =
             typecheckingMode.isSelected != arendSettings.isBackgroundTypechecking ||
+            saveBinaryCacheSwitch.isSelected != arendSettings.saveBinaryCache ||
             clauseLimitSwitch.isSelected != arendSettings.withClauseLimit ||
             clauseLimit.number != arendSettings.clauseLimit ||
             checkForUpdatesSwitch.isSelected != arendSettings.checkForUpdates ||
@@ -38,6 +42,7 @@ class ArendSettingsView {
 
     fun apply() {
         arendSettings.isBackgroundTypechecking = typecheckingMode.isSelected
+        arendSettings.saveBinaryCache = saveBinaryCacheSwitch.isSelected
         arendSettings.withClauseLimit = clauseLimitSwitch.isSelected
         arendSettings.clauseLimit = clauseLimit.number
         arendSettings.checkForUpdates = checkForUpdatesSwitch.isSelected
@@ -46,6 +51,7 @@ class ArendSettingsView {
 
     fun reset() {
         typecheckingMode.isSelected = arendSettings.isBackgroundTypechecking
+        saveBinaryCacheSwitch.isSelected = arendSettings.saveBinaryCache
         clauseLimitSwitch.isSelected = arendSettings.withClauseLimit
         clauseLimit.value = arendSettings.clauseLimit
         checkForUpdatesSwitch.isSelected = arendSettings.checkForUpdates
@@ -54,6 +60,7 @@ class ArendSettingsView {
 
     fun createComponent() = panel {
         row { cell(typecheckingMode) }
+        row { cell(saveBinaryCacheSwitch) }
         checked(clauseLimitSwitch, clauseLimit)
         row { cell(checkForUpdatesSwitch) }
         aligned("Path to Arend jar for debugger: ", arendJarTextField)

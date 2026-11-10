@@ -37,6 +37,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -465,6 +466,101 @@ public class StaleBinaryCacheTest {
     assertNull("User.Base calls into Two, whose .arc is stale", typechecked("User", "Base"));
     assertNull("User.Sub extends the dropped User.Base", typechecked("User", "Sub"));
     assertNotNull("User.independent holds nothing dropped", typechecked("User", "independent"));
+  }
+
+  /** Builds the library, makes the .arc of {@code Two} stale, and loads the cache on a new server. */
+  private void buildThenLoadWithStaleTwo(Map<String, String> modules) throws IOException {
+    writeLibrary();
+    writeModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 1\n");
+    for (Map.Entry<String, String> entry : modules.entrySet()) {
+      writeModule(entry.getKey(), entry.getValue());
+    }
+    newServer();
+    pass();
+    assertNoErrors("cold build");
+    editModule("Two", "\\func used : Nat => 0\n\\func other : Nat => 2\n");
+    newServer();
+
+    loadOnly();
+    assertNoBinaryCacheErrors("load with a stale dependency");
+  }
+
+  private void typecheckAll(String... modules) {
+    for (String module : modules) {
+      server.getCheckerFor(Collections.singletonList(moduleLoc(module)))
+          .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    }
+  }
+
+  /**
+   * A class that mentions a dropped class only in the type of an {@code \override} holds it all the same, and must be
+   * dropped too. Kept, it compares the types of its subclasses against a class that the source typechecks again into a
+   * different object, so a correct {@code \override} there fails with a type error absent from the sources. This is
+   * {@code TopAbGroupMap}, with {@code \override Dom : TopAbGroup}, and {@code UniformNormedAbGroupMap} in arend-lib.
+   */
+  @Test
+  public void aClassOverridingAFieldWithADroppedClassIsDropped() throws IOException {
+    buildThenLoadWithStaleTwo(Map.of(
+        "User", """
+            \\import Two
+            \\record Base0
+            \\record Parent (x : Base0)
+            \\record Holder \\extends Parent {
+              \\override x : Base
+            }
+            \\record Base (p : used = used) \\extends Base0
+            \\func independent : Nat => 5
+            """,
+        "Down", """
+            \\import User
+            \\record SubBase \\extends Base
+            \\record Sub \\extends Holder {
+              \\override x : SubBase
+            }
+            """));
+    assertNull("User.Base calls into Two, whose .arc is stale", typechecked("User", "Base"));
+    assertNull("User.Holder overrides a field with the dropped User.Base", typechecked("User", "Holder"));
+    assertNotNull("User.independent holds nothing dropped", typechecked("User", "independent"));
+
+    typecheckAll("Two", "User", "Down");
+    assertNoErrors("typechecking the rest");
+  }
+
+  /** A class holds its {@code \default}s outside any field type or implementation, like its {@code \override}s. */
+  @Test
+  public void aClassWithADefaultCallingADroppedDefinitionIsDropped() throws IOException {
+    buildThenLoadWithStaleTwo(Map.of("User", """
+        \\import Two
+        \\record Parent (n : Nat)
+        \\record Holder \\extends Parent {
+          \\default n \\as n-impl : Nat => dropped
+        }
+        \\func dropped : Nat => used
+        \\func independent : Nat => 5
+        """));
+    assertNull("User.dropped calls into Two, whose .arc is stale", typechecked("User", "dropped"));
+    assertNull("a default of User.Holder calls the dropped User.dropped", typechecked("User", "Holder"));
+    assertNotNull("User.independent holds nothing dropped", typechecked("User", "independent"));
+
+    typecheckAll("Two", "User");
+    assertNoErrors("typechecking the rest");
+  }
+
+  /** Coercing to and from a {@code \type} leaves its definition in the expression, with no call of it. */
+  @Test
+  public void aDefinitionCoercingToADroppedTypeIsDropped() throws IOException {
+    buildThenLoadWithStaleTwo(Map.of("User", """
+        \\import Two
+        \\func holder (x : Nat) : Nat => \\let y : Dropped => x \\in 0
+        \\type Dropped : \\Set => \\let u => used \\in Nat
+        \\func independent : Nat => 5
+        """));
+    assertNull("User.Dropped calls into Two, whose .arc is stale", typechecked("User", "Dropped"));
+    assertNull("User.holder coerces to the dropped User.Dropped", typechecked("User", "holder"));
+    assertNotNull("User.independent holds nothing dropped", typechecked("User", "independent"));
+
+    typecheckAll("Two", "User");
+    assertNoErrors("typechecking the rest");
   }
 
   /**

@@ -93,7 +93,7 @@
         => (equation.cRing : negative t * d = negative (t * d)) *> pmap negative td
       | absim<d : abs u.im < d
         => RealField.square_<-cancel RealAbGroup.abs>=0 (<=-less (denom>0 re>0))
-             (transportInv (`< _) RealField.abs-square (linarith : u.im * u.im < d * d))
+             (transportInv (< _) RealField.abs-square (linarith : u.im * u.im < d * d))
       | cancel-d {s s' : Real} (e : s = s' * d) (b : s < d) : s' < 1
         => <_*_positive-cancel-right (<=-less (denom>0 re>0)) $ transport2 (<) e (inv ide-left) b
      \in <_join-univ (cancel-d (inv td) (RealAbGroup.abs>=id <∘r absim<d))
@@ -149,7 +149,7 @@
                                (eX : X * dd = c) (eF : X * F = T) (eT : T * dd = R * c) : F = R
       => Domain.nonZero-cancel-right (StrictPoset.>_/= c>0) $
            pmap (F *) (inv eX) *> (equation.cRing : F * (X * dd) = (X * F) * dd)
-           *> pmap (`* dd) eF *> eT
+           *> pmap (* dd) eF *> eT
   }
 
 {- | Every point of the unit circle has an argument: $u = e^{i\theta}$.
@@ -217,11 +217,11 @@
   => \let u => Complex.fromReal (pinv (cabs z) rho>0) * z
      \in \have
       | cabs-u=1 : cabs u = 1
-        => cabs_* *> pmap (`* cabs z) (cabs_fromReal *> LatticeAbGroup.abs-ofPos (<=-less (pinv>0 rho>0)))
+        => cabs_* *> pmap (* cabs z) (cabs_fromReal *> LatticeAbGroup.abs-ofPos (<=-less (pinv>0 rho>0)))
            *> pinv-left rho>0
       | z-eq : Complex.fromReal (cabs z) * u = z
         => inv *-assoc
-           *> pmap (`* z) (inv Complex.fromReal_* *> pmap Complex.fromReal (pinv-right rho>0))
+           *> pmap (* z) (inv Complex.fromReal_* *> pmap Complex.fromReal (pinv-right rho>0))
            *> ide-left
      \in \case unit-arg {u} (cabs=1_OnUnitCircle {u} cabs-u=1) \with {
        | inP (theta, u-eq) => inP (theta, inv (pmap (Complex.fromReal (cabs z) *) u-eq *> z-eq))

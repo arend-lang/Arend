@@ -50,7 +50,7 @@
 
 -- | $(e^{ia})^k = e^{i(ka)}$.
 \lemma pow_exp^i* {a : Real} {k : Nat} : pow (exp^i* a) k = exp^i* (k RealField.* a) \elim k
-  | 0 => inv $ pmap exp^i* (pmap (`* a) natCoefZero *> zro_*-left) *> exp^i*_zro
+  | 0 => inv $ pmap exp^i* (pmap (* a) natCoefZero *> zro_*-left) *> exp^i*_zro
   | suc k => pmap (* _) pow_exp^i* *> inv exp^i*_+
              *> pmap exp^i* (inv $ pmap (* a) (natCoefSuc k) *> rdistr *> pmap (_ +) ide-left)
 

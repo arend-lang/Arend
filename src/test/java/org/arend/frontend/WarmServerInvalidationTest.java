@@ -353,6 +353,47 @@ public class WarmServerInvalidationTest {
   }
 
   /**
+   * A dependency that is gone from the source is gone from the graph: rebuilding {@code user} forgets what it depended
+   * on, and typechecking it again records only what it depends on now.
+   */
+  @Test
+  public void aDependentThatStoppedUsingADefinitionIsNotRebuilt() throws IOException {
+    writeModule("Base", "\\func x : Nat => 0\n\\func y : Nat => 1\n");
+    writeModule("User", "\\import Base\n\\func user : Nat => x\n");
+    pass();
+
+    editModule("User", "\\import Base\n\\func user : Nat => y\n");
+    pass();
+    assertNoErrors("after user stopped using x");
+    Definition user = core("User", "user");
+
+    editModule("Base", "\\func x : Nat => 2\n\\func y : Nat => 1\n");
+    pass();
+
+    assertNoErrors("after changing x");
+    assertSame("user no longer uses x, so changing x must not rebuild it", user, core("User", "user"));
+  }
+
+  /** The other side of the above: an edit of a dependent keeps the dependencies it still has. */
+  @Test
+  public void aDependentRebuiltForAnotherReasonStillFollowsItsDependency() throws IOException {
+    writeModule("Base", "\\func x : Nat => 0\n\\func y : Nat => 1\n");
+    writeModule("User", "\\import Base\n\\func user : Nat => x Nat.+ y\n");
+    pass();
+
+    editModule("Base", "\\func x : Nat => 2\n\\func y : Nat => 1\n");
+    pass();
+    assertNoErrors("after changing x");
+    Definition user = core("User", "user");
+
+    editModule("Base", "\\func x : Nat => 2\n\\func y : Nat => 3\n");
+    pass();
+
+    assertNoErrors("after changing y");
+    assertNotSame("user still uses y, the edge from which the update through x must not lose", user, core("User", "user"));
+  }
+
+  /**
    * The meta case: re-typechecking a captured class must also re-bind the meta that captured it,
    * or the meta keeps using a dead {@code ClassDefinition}. See {@link ProbeMeta}.
    */

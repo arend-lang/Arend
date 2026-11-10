@@ -1,17 +1,39 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
 \import Arith.Real.UpperReal
+\import Data.Array
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Set
+\import Topology.Compact
+\import Topology.CoverSpace
 \import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.UniformSpace
 \import Topology.UniformSpace.Product
+
+\instance UnitMetricSpace : CompleteMetricSpace (\Sigma)
+  | dist _ _ => 0
+  | dist-refl => idp
+  | dist-symm => idp
+  | dist-triang => transport (_ ExUpperRealAbMonoid.<=) (inv zro-left) <=-refl
+  | dist-ext _ => idp
+  | isStronglyComplete F => inP ((), \lam {U} p => filter-mono filter-top \lam {x} _ => <=<_<= p idp)
 
 \instance ManhattanProductPseudoMetricSpace (X Y : ExPseudoMetricSpace) : ExPseudoMetricSpace (\Sigma X Y)
   | UniformSpace => ProductUniformSpace X Y
@@ -30,3 +52,84 @@
        \lam {_} (inP (_, inP (x,idp), _, inP (y,idp), idp)) => \case h (x,y) \with {
          | inP (W,CW,g) => inP (W, CW, \lam {s} (d1,d2) => g $ ExUpperReal.+_U_<=.2 $ inP (_, d1, _, d2, linarith))
        }))
+
+-- | The product of metric spaces with the sum of the distances.
+\instance ManhattanMetricSpace (X Y : PseudoMetricSpace) : PseudoMetricSpace (\Sigma X Y)
+  | UniformSpace => ProductUniformSpace X Y
+  | dist s t => X.dist s.1 t.1 RealAbGroup.+ Y.dist s.2 t.2
+  | dist-refl => RealAbGroup.+-upper *> dist-refl {M X Y}
+  | dist-symm => RealAbGroup.+-upper *> dist-symm {M X Y} *> inv RealAbGroup.+-upper
+  | dist-triang {x} {y} {z} => transport2 (ExUpperRealAbMonoid.<=) (inv RealAbGroup.+-upper) (pmap2 (ExUpperReal.+) (inv RealAbGroup.+-upper) (inv RealAbGroup.+-upper)) (dist-triang {M X Y} {x} {y} {z})
+  | dist-uniform {C} => transport (\lam (d : (\Sigma X Y) -> (\Sigma X Y) -> ExUpperReal) => isUniform {M X Y} C <-> ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} ((d x y).U eps -> U y))
+      (ext \lam s t => inv RealAbGroup.+-upper) (dist-uniform {M X Y})
+  \where \private \meta M X Y => ManhattanProductPseudoMetricSpace X Y
+
+-- | Balls of the product are totally bounded if balls of the factors are.
+\lemma manhattan-ballsTB {X Y : PseudoMetricSpace} (Xb : BallsTotallyBounded X) (Yb : BallsTotallyBounded Y) : BallsTotallyBounded (ManhattanMetricSpace X Y)
+  => \lam x {B} B>0 => totallyBoundedSet-metric-char.2 \lam {eps} eps>0 =>
+    \have e>0 : 0 < eps * ratio 1 2 => linarith
+    \in \case totallyBoundedSet-metric-char.1 (Xb x.1 B>0) e>0, totallyBoundedSet-metric-char.1 (Yb x.2 B>0) e>0 \with {
+      | inP (D,hD), inP (E,hE) =>
+        \let e => ProdFin.prod_equiv {D.len} {E.len}
+        \in inP (mkArray \lam k => (D (e k).1, E (e k).2), \lam {y} (d : (dist {ManhattanMetricSpace X Y} x y).U B) =>
+          \have | d' : ldist x.1 y.1 RealAbGroup.+ ldist x.2 y.2 < B => real_<_U.2 d
+                | d1>=0 => ldist>=0 {X} {x.1} {y.1}
+                | d2>=0 => ldist>=0 {Y} {x.2} {y.2}
+                | d1 : ldist x.1 y.1 < B => linarith
+                | d2 : ldist x.2 y.2 < B => linarith
+          \in \case hD {y.1} (real_<_U.1 d1), hE {y.2} (real_<_U.1 d2) \with {
+            | inP (i,p), inP (j,q) => inP (e.ret (i,j), rewrite (e.f_sec (i,j)) $ ExUpperReal.+_U_<=.2 $ inP (_, p, _, q, linarith))
+          })
+    }
+
+-- | A sum of `n` upper reals is less than {eps} if each of them is sufficiently small.
+\lemma BigSum_U-small (n : Nat) {eps : Rat} (eps>0 : 0 < eps) : ∃ (delta : Rat) (0 < delta) ∀ {l : Array ExUpperReal n} ((\Pi (j : Fin n) -> (l j).U delta) -> UpperReal.U {ExUpperRealAbMonoid.BigSum l} eps) \elim n
+  | 0 => inP (eps, eps>0, \lam {l} _ => \case \elim l \with { | nil => eps>0 })
+  | suc n => \have e>0 : 0 < eps * ratio 1 2 => linarith
+             \in \case BigSum_U-small n e>0 \with {
+               | inP (d,d>0,f) => inP (d ∧ (eps * ratio 1 2), <_meet-univ d>0 e>0, \lam {l} => \case \elim l \with {
+                 | a :: l => \lam h => ExUpperReal.+_U_<=.2 $ inP (_, ExUpperReal.U_<= (h 0) meet-right, _, f (\lam j => ExUpperReal.U_<= (h (suc j)) meet-left), linarith)
+               })
+             }
+
+-- | The power of a metric space with the sum of the distances.
+\instance ManhattanArrayPseudoMetricSpace (n : Nat) (X : ExPseudoMetricSpace) : ExPseudoMetricSpace (Array X n)
+  | UniformSpace => ArrayUniformSpace n X
+  | dist x y => ExUpperRealAbMonoid.BigSum (\lam j => dist (x j) (y j))
+  | dist-refl => ExUpperRealAbMonoid.BigSum-ext (\lam j => dist-refl) *> ExUpperRealAbMonoid.BigSum_replicate0
+  | dist-symm => ExUpperRealAbMonoid.BigSum-ext \lam j => dist-symm
+  | dist-triang => transport (_ <=) ExUpperRealAbMonoid.BigSum_+ $ ExUpperRealAbMonoid.BigSum_<= \lam j => dist-triang
+  | dist-uniform {C} => (\lam (inP (D,Du,r)) => \case FinSet.finiteAC {n} {\lam j => \Sigma (eps : Rat) (0 < eps) (∀ x ∃ (U : D j) ∀ {y} ((dist x y).U eps -> U y))} (\lam j => dist-uniform.1 (Du j)) \with {
+    | inP g => inP (MeetSemilattice.Big_∧ {RatField} (1 :: \lam j => (g j).1), RatField.Big_<_meet-univ RatField.zro<ide (\lam j => (g j).2), \lam x =>
+        \case FinSet.finiteAC {n} {\lam j => \Sigma (U : Set X) (D j U) (∀ {y} ((dist (x j) y).U (g j).1 -> U y))} (\lam j => (g j).3 (x j)) \with {
+          | inP f => \case r (inP (\lam j => (f j).1, \lam j => (f j).2, idp)) \with {
+            | inP (W,CW,p) => inP (W, CW, \lam {y} d => p \lam j => (f j).3 $ ExUpperReal.U_<= (ExUpperRealAbMonoid.BigSum_>=index {\lam j => dist (x j) (y j)} (\lam _ => dist>=0) j d) (MeetSemilattice.Big_meet-cond {RatField} {_} {1 :: \lam j => (g j).1} {suc j}))
+          }
+        })
+  }, \lam (inP (eps,eps>0,h)) => \case BigSum_U-small n eps>0 \with {
+    | inP (delta,delta>0,s) => inP (\lam _ U => ∃ (x : X) (U = \lam y => (dist x y).U delta), \lam _ => X.metricUniform delta>0, \lam {_} (inP (U,hU,idp)) =>
+        \case FinSet.finiteAC {n} {\lam j => \Sigma (x : X) (U j = \lam y => (dist x y).U delta)} hU \with {
+          | inP g => \case h (\lam j => (g j).1) \with {
+            | inP (W,CW,q) => inP (W, CW, \lam {y} b => q $ s {\lam j => dist (g j).1 (y j)} \lam j => transport (__ (y j)) (g j).2 (b j))
+          }
+        })
+  })
+
+-- | The power of a metric space with the sum of the distances.
+\instance ManhattanArrayMetricSpace (n : Nat) (X : PseudoMetricSpace) : PseudoMetricSpace (Array X n)
+  | UniformSpace => ArrayUniformSpace n X
+  | dist x y => RealAbGroup.BigSum (\lam j => X.dist (x j) (y j))
+  | dist-refl => RealAbGroup.BigSum-upper *> dist-refl {M n X}
+  | dist-symm => RealAbGroup.BigSum-upper *> dist-symm {M n X} *> inv RealAbGroup.BigSum-upper
+  | dist-triang {x} {y} {z} => transport2 (ExUpperRealAbMonoid.<=) (inv RealAbGroup.BigSum-upper) (pmap2 (ExUpperReal.+) (inv RealAbGroup.BigSum-upper) (inv RealAbGroup.BigSum-upper)) (dist-triang {M n X} {x} {y} {z})
+  | dist-uniform {C} => transport (\lam (d : Array X n -> Array X n -> ExUpperReal) => isUniform {M n X} C <-> ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} ((d x y).U eps -> U y))
+      (ext \lam x y => inv RealAbGroup.BigSum-upper) (dist-uniform {M n X})
+  \where \private \meta M n X => ManhattanArrayPseudoMetricSpace n X
+
+-- | Balls of `Xⁿ` are totally bounded if balls of {X} are.
+\lemma array-ballsTB {X : PseudoMetricSpace} (Xb : BallsTotallyBounded X) (n : Nat) : BallsTotallyBounded (ManhattanArrayMetricSpace n X) \elim n
+  | 0 => \lam _ _ => totallyBoundedSet-metric-char.2 \lam eps>0 => inP (nil :: nil, \lam {y} _ => \case \elim y \with { | nil => inP (0, OBall-center {ManhattanArrayMetricSpace 0 X} eps>0 {nil}) })
+  | suc n => ballsTB-isometry (\new IsometricMap (ManhattanMetricSpace X (ManhattanArrayMetricSpace n X)) (ManhattanArrayMetricSpace (suc n) X) {
+    | func s => s.1 :: s.2
+    | func-isometry => idp
+  }) (\lam y => \case \elim y \with { | a :: l => inP ((a,l), idp) }) (manhattan-ballsTB Xb (array-ballsTB Xb n))

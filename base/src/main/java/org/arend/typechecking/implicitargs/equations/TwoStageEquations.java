@@ -21,16 +21,19 @@ import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.core.level.LevelSubstitution;
+import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.LocalError;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypecheckerState;
+import org.arend.typechecking.computation.ComputationRunner;
 import org.arend.typechecking.error.local.SolveEquationError;
 import org.arend.typechecking.error.local.SolveEquationsError;
 import org.arend.typechecking.error.local.SolveLevelEquationsError;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
+import org.arend.typechecking.visitor.FindSubexpressionVisitor;
 import org.arend.ext.util.Pair;
 
 import java.math.BigInteger;
@@ -54,11 +57,19 @@ public class TwoStageEquations implements Equations {
 
   @Override
   public Boolean solveInstance(TypeClassInferenceVariable variable, FieldCallExpression fieldCall, Expression expr) {
+    ComputationRunner.checkCanceled();
     ClassDefinition classDef = variable.getClassDefinition();
     if (classDef == null) {
       return null;
     }
     if (classDef.getClassifyingField() == fieldCall.getDefinition() && expr.getStuckInferenceVariable() == null) {
+      // If expr is the classifying field of a partially inferred value of a subclass, then the variable should be solved by this value.
+      // An instance found for the normalized classifying expression might have the same form with new inference variables, and so on.
+      if (expr.getUnderlyingExpression() instanceof FieldCallExpression exprFieldCall && exprFieldCall.getDefinition() == fieldCall.getDefinition() &&
+          exprFieldCall.getArgument().accept(new FindSubexpressionVisitor(sub -> sub instanceof InferenceReferenceExpression infRef && infRef.getVariable() != null ? CoreExpression.FindAction.STOP : CoreExpression.FindAction.CONTINUE), null) &&
+          exprFieldCall.getArgument().getType().normalize(NormalizationMode.WHNF) instanceof ClassCallExpression classCall && classCall.getDefinition().isSubClassOf(classDef)) {
+        return null;
+      }
       Expression result = variable.getInstance(myVisitor.getInstancePool(), expr, null, variable.getSourceNode());
       return result == null ? null : solve(variable, result.normalize(NormalizationMode.WHNF), false) != SolveResult.SOLVED;
     }
@@ -208,6 +219,13 @@ public class TwoStageEquations implements Equations {
           cod = ((PiExpression) cod).getCodomain().normalize(NormalizationMode.WHNF);
         }
 
+        // The solution below replaces the codomain with a new variable, so solve cannot detect that the type is infinite.
+        // In this case, the equation for the new variable has the same form as this one, and this would go on forever.
+        if (isConnected(cod, cInf)) {
+          inferenceError(cInf, cType);
+          return true;
+        }
+
         try (var ignore = new Utils.RefContextSaver(myVisitor.getContext(), myVisitor.getLocalExpressionPrettifier())) {
           for (PiExpression pi : pis) {
             for (SingleDependentLink link = pi.getParameters(); link.hasNext(); link = link.getNext()) {
@@ -222,8 +240,11 @@ public class TwoStageEquations implements Equations {
           for (int i = pis.size() - 1; i >= 0; i--) {
             solution = new PiExpression(pis.get(i).getParameters(), solution);
           }
-          solve(cInf, solution, false);
-          return addEquation(cod, newRef, UniverseExpression.OMEGA, cmp, sourceNode, cod.getStuckInferenceVariable(), infVar);
+          return switch (solve(cInf, solution, false)) {
+            case SOLVED -> addEquation(cod, newRef, UniverseExpression.OMEGA, cmp, sourceNode, cod.getStuckInferenceVariable(), infVar);
+            case ERROR -> true;
+            case NOT_SOLVED -> false;
+          };
         }
       }
 
@@ -273,6 +294,31 @@ public class TwoStageEquations implements Equations {
     }
 
     return true;
+  }
+
+  /**
+   * Checks if {@code expr} is a variable which is equal to {@code var} or linked to it by a chain of postponed equations between variables.
+   * Subtyping preserves the shape of a type, so such variables have the same number of \Pi-parameters.
+   */
+  private boolean isConnected(Expression expr, InferenceVariable var) {
+    InferenceVariable start = expr.getInferenceVariable(true);
+    if (start == null) return false;
+
+    Set<InferenceVariable> visited = new HashSet<>();
+    Deque<InferenceVariable> toVisit = new ArrayDeque<>();
+    toVisit.add(start);
+    while (!toVisit.isEmpty()) {
+      InferenceVariable current = toVisit.pop();
+      if (current == var) return true;
+      if (!visited.add(current)) continue;
+      for (Equation equation : myEquations) {
+        InferenceVariable var1 = equation.expr1.getInferenceVariable(true);
+        InferenceVariable var2 = equation.expr2.getInferenceVariable(true);
+        if (var1 == current && var2 != null) toVisit.add(var2);
+        if (var2 == current && var1 != null) toVisit.add(var1);
+      }
+    }
+    return false;
   }
 
   private boolean addLevelEquation(final LevelVariable var1, LevelVariable var2, BigInteger constant, BigInteger maxConstant, Concrete.SourceNode sourceNode) {

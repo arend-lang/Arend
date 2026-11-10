@@ -6,6 +6,7 @@ import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.naming.reference.TCDefReferable
 import org.arend.server.ArendServerService
+import org.arend.settings.ArendSettings
 
 /**
  * When the project is closed, a module whose .arc has what it holds is not saved again: it was loaded whole from the
@@ -38,6 +39,10 @@ class BinaryCacheStateTest : ArendTestBase() {
         assertTrue(cache.isUnchangedSinceCached(location, group))
         cache.invalidate(listOf(module.name))
         assertFalse("reloading the libraries forgets what was cached", cache.isUnchangedSinceCached(location, group))
+    }
+
+    fun `test saving the binary cache is disabled by default`() {
+        assertFalse(ArendSettings().saveBinaryCache)
     }
 
     private fun referable(name: String) =

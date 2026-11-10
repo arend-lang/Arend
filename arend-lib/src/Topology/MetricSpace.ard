@@ -102,6 +102,10 @@
 \func OBall {X : ExPseudoMetricSpace} (eps : Rat) (x : X) : Set X
   => \lam y => (dist x y).U eps
 
+-- | {T} is contained in a ball.
+\type IsBoundedSet {X : ExPseudoMetricSpace} (T : Set X) : \Prop
+  => ∃ (x0 : X) (B : Rat) ∀ {x : T} (OBall B x0 x)
+
 \lemma OBall-center {X : ExPseudoMetricSpace} {eps : Rat} (eps>0 : 0 < eps) {x : X} : OBall eps x x
   => unfold OBall (rewrite dist-refl eps>0)
 
@@ -137,6 +141,9 @@
 
 \lemma OBall_<=* {X : ExPseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x <=* OBall eps x
   => inP (_, metricUniform {_} {(eps - delta) * ratio 1 2} linarith, \lam {w} (inP (_, (inP (y,idp), (z,(xz<delta,yz<e))), yw<e)) => X.halving xz<delta (X.halving1/2 yz<e yw<e) linarith)
+
+\lemma ball-<=* {X : ExPseudoMetricSpace} {T U : Set X} {r : Rat} (r>0 : 0 < r) (h : ∀ {x : T} (OBall r x ⊆ U)) : T <=* U
+  => inP (_, metricUniform {_} {r * ratio 1 2} linarith, \lam {w} (inP (_, (inP (y,idp), (x,(Tx,yx))), yw)) => h Tx (X.halving1/2 yx yw))
 
 \lemma OBall_<=< {X : ExPseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x <=< OBall eps x
   => <=*_<=< (OBall_<=* delta<eps)
@@ -367,3 +374,20 @@
 \func MetricTransfer {X : \Set} {Y : MetricSpace} (f : X -> Y) (fi : IsInj f) : MetricSpace X \cowith
   | ExPseudoMetricSpace => ExPseudoMetricTransfer f
   | dist-ext p => fi (dist-ext p)
+
+-- | A map {h} with an ε-δ modulus with respect to the distances in {Y} is a cover map, provided {i} has a retraction {r} such that `i ∘ r` is uniform.
+\lemma retract-coverMap {X : CoverSpace} {Y Z : ExPseudoMetricSpace} (i : CoverMap X Y) (r : Y -> X) (ri : \Pi (x : X) -> r (i x) = x)
+                        (ir : UniformMetricMap Y Y (\lam y => i (r y))) {h : X -> Z}
+                        (hu : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x x' : X} ((dist (i x) (i x')).U delta -> (dist (h x) (h x')).U eps))
+  : CoverMap X Z h
+  => transport (CoverMap X Z) (ext \lam x => pmap h (ri x)) (retractMap ir hu CoverMap.∘ i)
+  \where
+    -- | `h ∘ r` is uniform.
+    \lemma retractMap {X : CoverSpace} {Y Z : ExPseudoMetricSpace} {i : CoverMap X Y} {r : Y -> X} (ir : UniformMetricMap Y Y (\lam y => i (r y))) {h : X -> Z}
+                      (hu : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x x' : X} ((dist (i x) (i x')).U delta -> (dist (h x) (h x')).U eps))
+      : UniformMetricMap Y Z (\lam y => h (r y)) \cowith
+      | func-dist-uniform eps>0 => \case hu eps>0 \with {
+        | inP (delta,delta>0,hd) => \case ir.func-dist-uniform delta>0 \with {
+          | inP (delta',delta'>0,h') => inP (delta', delta'>0, \lam d => hd (h' d))
+        }
+      }

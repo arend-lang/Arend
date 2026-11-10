@@ -5,7 +5,6 @@ import com.intellij.psi.stubs.*
 import com.intellij.psi.tree.IStubFileElementType
 import org.arend.ArendLanguage
 import org.arend.ext.reference.Precedence
-import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.term.group.AccessModifier
@@ -22,7 +21,7 @@ class ArendFileStub(file: ArendFile?, override val name: String?) : PsiFileStubI
     override fun getType(): Type = Type
 
     object Type : IStubFileElementType<ArendFileStub>(ArendLanguage.INSTANCE) {
-        override fun getStubVersion() = 7
+        override fun getStubVersion() = 8
 
         override fun getBuilder() = object : DefaultStubBuilder() {
             override fun createStubForFile(file: PsiFile): StubElement<*> =
@@ -120,7 +119,7 @@ class ArendCoClauseDefStub(parent: StubElement<*>?, elementType: IStubElementTyp
             ArendCoClauseDefStub(parentStub, this, name, prec, aliasName, accessModifier)
 
         override fun createStub(psi: ArendCoClauseDef, parentStub: StubElement<*>?) =
-            createStub(parentStub, psi.name, (psi as? ArendCoClauseDef)?.parentCoClause?.prec?.let { ReferableBase.calcPrecedence(it) }, (psi as? GlobalReferable)?.aliasName, psi.ownAccessModifier)
+            createStub(parentStub, psi.name, psi.parentCoClause?.prec?.let { ReferableBase.calcPrecedence(it) }, null, psi.ownAccessModifier)
 
         override fun createPsi(stub: ArendCoClauseDefStub) = ArendCoClauseDef(stub, this)
 

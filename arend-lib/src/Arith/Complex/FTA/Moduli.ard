@@ -47,7 +47,7 @@
 \private \lemma cabs_linProd {n : Nat} (r : Array Complex n) (z : Complex) : cabs (linProd r z) = absProd r z
   \elim n, r
   | 0, nil => cabs_ide
-  | suc n, a :: l => cabs_* {linProd l z} {z - a} *> pmap (`* cabs (z - a)) (cabs_linProd l z)
+  | suc n, a :: l => cabs_* {linProd l z} {z - a} *> pmap (* cabs (z - a)) (cabs_linProd l z)
 
 \private \lemma absProd>=0 {n : Nat} (r : Array Complex n) (z : Complex) : 0 <= absProd r z \elim n, r
   | 0, nil => <=-less RealAbGroup.zro<ide
@@ -80,7 +80,7 @@
 -- | At a root of `a`, `|polyEval b z|` equals `|polyEval (a - b) z|`.
 \private \lemma cabs_polyEval-diff-at-root {a b : Poly ComplexField} {z : Complex} (h : polyEval a z = 0)
   : cabs (polyEval b z) = cabs (polyEval (a - b) z)
-  => inv (pmap cabs ((polyEvalRingHom z).func-minus *> pmap (`- polyEval b z) h
+  => inv (pmap cabs ((polyEvalRingHom z).func-minus *> pmap (- polyEval b z) h
                      *> zro-left {ComplexField} {negative (polyEval b z)})
           *> cabs_negative)
 
@@ -196,7 +196,7 @@
   : cabs (polyCoef (prodLin r - prodLin s) k) <= 2 * delta
   => rewrite polyCoef_- $
      cabs_-triang {_} {polyCoef p k}
-     <=∘ linarith (hr k, transport (`< delta)
+     <=∘ linarith (hr k, transport (< delta)
                            (cabs_-comm {polyCoef (prodLin s) k} {polyCoef p k}) (hs k))
 
 {- | **The product of `s` at a root of `r`, bounded by the coefficient gap.** A `delta`-bound on
@@ -252,7 +252,7 @@
      | c>=0 : (0 : Real) <= delta + eta * pow (1 + B) m
                 => linarith (cabs>=0 {polyCoef (prodLin r) 0 - polyCoef (prodLin s) 0} <=∘ hd 0,
                              RealField.<=_*_positive_positive eta>=0 M>=0)
-     | hj' : cabs (s j - r 0) <= eta => transport (`<= eta) (cabs_-comm {r 0} {s j}) hj
+     | hj' : cabs (s j - r 0) <= eta => transport (<= eta) (cabs_-comm {r 0} {s j}) hj
      | degE : degree< (prodLin (skip r 0) - prodLin (skip s j)) m
                 => degree<-monic-diff (prodLin-degree _) (prodLin-degree _)
                                       (prodLin-monic _) (prodLin-monic _)
@@ -299,7 +299,7 @@
                                           (linarith : (0 : Real) < 1 + pow (1 + B) m)
     \in \have | eta>0 : (0 : Real) < e0 ∧ e1 => <_meet-univ e0>0 e1>0
               | e0M' : e0 + e0 * pow (1 + B) m < q
-                 => transport (`< q) (equation.cRing
+                 => transport (< q) (equation.cRing
                       : e0 * (1 + pow (1 + B) m) = e0 + e0 * pow (1 + B) m) e0M
               | loss : (e0 + e0 ∧ e1 * pow (1 + B) m) * RealField.powSum B (suc m) < delta'
                  => (RealField.<=_*_positive-left
@@ -367,7 +367,7 @@
   : cabs (polyCoef (prodLin r - prodLin s) j) <= natCoef n * pow (1 + B + d) n * d
   \elim n, r, s
   | 0, nil, nil => rewrite (AddGroup.toZero (idp {_} {prodLin {ComplexField} {0} nil}), cabs_zro)
-                     (=_<= (inv (pmap (`* d) zro_*-left *> zro_*-left)))
+                     (=_<= (inv (pmap (* d) zro_*-left *> zro_*-left)))
   | suc n, a :: l, b :: l' =>
     \have | M>=1 : (1 : Real) <= 1 + B + d => linarith
           | M>=0 : (0 : Real) <= 1 + B + d => linarith
@@ -376,7 +376,7 @@
              => RealField.<=_*_positive_positive
                   (RealField.<=_*_positive_positive RealField.natCoef>=0 (RealField.pow>=0 M>=0))
                   d>=0
-          | hba => transport (`<= d) (cabs_-comm {a} {b}) (hd 0)
+          | hba => transport (<= d) (cabs_-comm {a} {b}) (hd 0)
           | ha => cabs-shift (hs 0) (hd 0)
           | step : prodLin l * padd 1 (negative a) - prodLin l' * padd 1 (negative b)
                  = (prodLin l - prodLin l') * padd 1 (negative a)
@@ -511,7 +511,7 @@
                | val : polyEval (prodLin s) z = (z - s j) * polyEval (prodLin (skip s j)) z
                   => pmap (polyEval __ z) (prodLin-skip s j)
                      *> (polyEvalRingHom z).func-* {padd 1 (negative (s j))} {prodLin (skip s j)}
-                     *> pmap (`* polyEval (prodLin (skip s j)) z) polyEval_padd1
+                     *> pmap (* polyEval (prodLin (skip s j)) z) polyEval_padd1
                | eq : absProd s z = cabs (z - s j) * cabs (polyEval (prodLin (skip s j)) z)
                   => inv (cabs_linProd s z) *> pmap cabs (inv (polyEval_prodLin s z) *> val)
                      *> cabs_* {z - s j} {polyEval (prodLin (skip s j)) z}

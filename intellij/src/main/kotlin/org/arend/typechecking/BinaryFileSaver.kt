@@ -22,6 +22,7 @@ import org.arend.source.GZIPStreamBinarySource
 import org.arend.typechecking.error.DeduplicatingErrorReporter
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.ArendBundle
+import org.arend.settings.ArendSettings
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
 import java.nio.file.Files
@@ -30,6 +31,7 @@ import java.nio.file.Path
 @Service(Service.Level.PROJECT)
 class BinaryFileSaver(private val project: Project) {
     fun saveAll() {
+        if (!service<ArendSettings>().saveBinaryCache) return
         val application = ApplicationManager.getApplication()
         if (application.isDispatchThread && !application.isUnitTestMode) {
             ProgressManager.getInstance().runProcessWithProgressSynchronously(

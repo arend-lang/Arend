@@ -23,6 +23,7 @@ public class DependencyCollector implements DependencyListener {
     ModuleLocation location = def2.getLocation();
     ArendLibrary library = location == null || myServer == null ? null : myServer.getLibrary(location.getLibraryName());
     if (library == null || !library.isExternalLibrary()) {
+      myDependencies.computeIfAbsent(def1, k -> ConcurrentHashMap.newKeySet()).add(def2);
       myReverseDependencies.computeIfAbsent(def2, k -> ConcurrentHashMap.newKeySet()).add(def1);
     }
   }
@@ -44,7 +45,7 @@ public class DependencyCollector implements DependencyListener {
         for (TCDefReferable dependency : dependencies) {
           Set<TCDefReferable> definitions = myReverseDependencies.get(dependency);
           if (definitions != null) {
-            definitions.remove(definition);
+            definitions.remove(toUpdate);
           }
         }
       }

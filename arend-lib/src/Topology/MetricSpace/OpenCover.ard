@@ -1,0 +1,120 @@
+{- | Cover maps on open subsets of metric spaces.
+ -
+ -   If `T <=* U`, then every Cauchy cover of `U` restricted to `T` extends to a Cauchy cover of the whole space, see {closure-restrict-cauchy}.
+ -   Thus, cover maps out of {OpenCoverSpace} are uniform on every Cauchy-uniform set `T` with `T <=* U`, see {openCover-uniform}.
+ -   This includes all totally bounded sets and, more generally, members of a cover witnessing {IsLocallyUniformSpace}.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Set
+\import Topology.Compact
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.RatherBelow
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\open Set
+\open ClosurePrecoverSpace
+\open OpenCoverSpace (isBasicCover, RegularClosure, regular-closure, regular-closure-extends)
+\open JoinSemilattice (Big_<=_join0, Big_<=_join1)
+
+\lemma <=*-regularClosure {X : UniformSpace} {U : Set X} {D : Set (Set X)} (Dr : RegularClosure (single (single U)) D) {T : Set X} (w : T <=* U) : ∃ (V : D) (T ⊆ V) \elim Dr
+  | regular-closure p => inP (U, rewriteI p idp, <=<_<= (<=*_<=< w))
+  | regular-closure-extends Dr p => \case X.<=*-inter w \with {
+    | inP (T',T<=*T',T'<=*U) => \case <=*-regularClosure Dr T'<=*U \with {
+      | inP (V,DV,T'V) => inP (T, rewrite p $ inP (V, DV, <=<-left (<=*_<=< T<=*T') T'V), <=-refl)
+    }
+  }
+
+-- | A Cauchy cover of an open subset, restricted to a set rather below it, extends to a Cauchy cover of the whole space.
+\lemma closure-restrict-cauchy {X : UniformSpace} {U T : Set X} (w : T <=* U) {C : Set (Set (Total U))} (Cc : Closure (isBasicCover {X} {U}) C)
+  : isCauchy \lam W => ∃ (A : C) ∀ {x : Total U} (T x.1) (W x.1) (A x) \elim Cc
+  | closure (inP (D, byLeft Dc, p)) => cauchy-subset Dc \lam {W} DW => inP $ later (restrict W, rewrite p $ inP (W, DW, idp), \lam _ Wx => Wx)
+  | closure (inP (D, byRight Dr, p)) => \case <=*-regularClosure Dr w \with {
+    | inP (V,DV,TV) => cauchy-subset cauchy-top \lam _ => inP $ later (restrict V, rewrite p $ inP (V, DV, idp), \lam Tx _ => TV Tx)
+  }
+  | closure-top p => cauchy-subset cauchy-top \lam _ => inP $ later (top, rewrite p idp, \lam _ _ => ())
+  | closure-refine Dc e => cauchy-subset (closure-restrict-cauchy w Dc) \lam {W} (inP (A,DA,q)) => \case e DA \with {
+    | inP (B,CB,AB) => inP $ later (B, CB, \lam Tx Wx => AB (q Tx Wx))
+  }
+  | closure-trans {D} Dc {E} Ec idp => cauchy-glue-refine (closure-restrict-cauchy w Dc) \lam {W} (inP (A,DA,q)) =>
+    cauchy-subset (closure-restrict-cauchy w (Ec DA)) \lam {W'} (inP (B,EB,q')) =>
+      inP $ later (W ∧ W', inP (_, inP (A, B, DA, EB, idp), \lam Tx (Wx,W'x) => (q Tx Wx, q' Tx W'x)), <=-refl)
+
+-- | Every Cauchy cover of an open subset has Lebesgue numbers on Cauchy-uniform sets rather below it.
+\lemma closure-lebesgue {X : ExPseudoMetricSpace} {U T : Set X} (Tc : IsCauchyUniformSet T) (w : T <=* U) {C : Set (Set (Total U))} (Cc : Closure (isBasicCover {X} {U}) C)
+  : ∃ (d : Rat) (0 < d) ∀ p ∃ (A : C) ∀ {x : Total U} (T x.1) ((dist p x.1).U d) (A x)
+  => \case dist-uniform.1 (Tc (closure-restrict-cauchy w Cc)) \with {
+    | inP (d,d>0,g) => inP (d, d>0, \lam p => \case g p \with {
+      | inP (V, inP (W, inP (A,CA,q), r), g') => inP (A, CA, \lam {x} Tx dx => q Tx (r (Tx, g' dx)))
+    })
+  }
+
+-- | A cover map on an open subset is uniform on Cauchy-uniform sets rather below it.
+\lemma openCover-uniform {X : ExPseudoMetricSpace} {U : Set X} (Uo : isOpen U) {Y : ExPseudoMetricSpace} (f : CoverMap (OpenCoverSpace Uo) Y)
+                         {T : Set X} (Tc : IsCauchyUniformSet T) (w : T <=* U) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (d : Rat) (0 < d) ∀ p ∃ (t : Y) ∀ {x} (T x.1) ((dist p x.1).U d) ((dist t (f x)).U eps)
+  => \case closure-lebesgue Tc w (f.func-cover (Y.makeCauchy (Y.metricUniform eps>0))) \with {
+    | inP (d,d>0,g) => inP (d, d>0, \lam p => \case g p \with {
+      | inP (_, inP (_, inP (t,idp), idp), q) => inP (t, q)
+    })
+  }
+
+-- | A cover map on an open subset is uniformly continuous on Cauchy-uniform sets rather below it.
+\lemma openCover-uniform-cont {X : ExPseudoMetricSpace} {U : Set X} (Uo : isOpen U) {Y : ExPseudoMetricSpace} (f : CoverMap (OpenCoverSpace Uo) Y)
+                              {T : Set X} (Tc : IsCauchyUniformSet T) (w : T <=* U) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (d : Rat) (0 < d) ∀ {x y} (T x.1) (T y.1) ((dist x.1 y.1).U d) ((dist (f x) (f y)).U eps)
+  => \have e>0 : 0 < eps * ratio 1 2 => linarith
+     \in \case openCover-uniform Uo f Tc w e>0 \with {
+       | inP (d,d>0,g) => inP (d, d>0, \lam {x} {y} Tx Ty xy<d => \case g x.1 \with {
+         | inP (t,q) => Y.halving1/2 (q Tx (OBall-center d>0)) (q Ty xy<d)
+       })
+     }
+
+-- | A real-valued cover map on an open subset is bounded on totally bounded sets rather below it.
+\lemma openCover-bounded {X : PseudoMetricSpace} {U : Set X} (Uo : isOpen U) (f : CoverMap (OpenCoverSpace Uo) RealNormed)
+                         {T : Set X} (Ttb : IsTotallyBoundedSet T) (w : T <=* U)
+  : ∃ (M : Rat) (0 < M) ∀ {x} (T x.1) (RealAbGroup.abs (f x) <= M)
+  => \case openCover-uniform Uo f (totallyBoundedSet-cauchyUniform-metric Ttb) w RatField.zro<ide \with {
+    | inP (d,d>0,g) => \case totallyBoundedSet-metric-char.1 Ttb d>0 \with {
+      | inP (Pn,hP) => \case FinSet.finiteAC (\lam j => g (Pn j)) \with {
+        | inP t => \case FinSet.finiteAC (\lam j => Real.U-inh {RealAbGroup.abs (t j).1}) \with {
+          | inP m =>
+            \let | l : Array Rat Pn.len => mkArray \lam j => (m j).1
+                 | M => Big (∨) 0 l
+                 | M>=0 : 0 <= M => Big_<=_join0
+            \in inP (M + 1, linarith, \lam {x} Tx => \case hP {x.1} Tx \with {
+              | inP (i,di) =>
+                \have | a : RealAbGroup.abs (t i).1 < Real.fromRat (m i).1 => real_<_U.2 (m i).2
+                      | b : RealAbGroup.abs ((t i).1 - f x) < 1 => real_<_U.2 ((t i).2 Tx di)
+                      | c : Real.fromRat (m i).1 <= Real.fromRat M => rat_real_<=.1 (Big_<=_join1 {_} {l} i)
+                      | e : Real.fromRat (M + 1) = Real.fromRat M RealAbGroup.+ 1 => inv RealAbGroup.+-rat
+                      | u : RealAbGroup.abs (f x) <= RealAbGroup.abs (t i).1 RealAbGroup.+ RealAbGroup.abs ((t i).1 - f x)
+                          => transport (\lam w => RealAbGroup.abs w <= _) (equation.abGroup : (t i).1 + negative ((t i).1 - f x) = f x)
+                              (RealAbGroup.abs_+ <=∘ transport (\lam w => _ RealAbGroup.+ w <= _) (inv RealAbGroup.abs_negative) <=-refl)
+                \in linarith
+            })
+        }
+      }
+    }
+  }

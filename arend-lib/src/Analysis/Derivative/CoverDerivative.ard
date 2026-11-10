@@ -1,0 +1,304 @@
+{- | Derivatives with a cover map as the difference quotient.
+ -
+ -   The domain is a cover space {S} over {X}, that is, a cover space with a cover map `i : S -> X`.
+ -   This covers both open subsets, with {OpenCoverSpace}, and closed subsets, with {CoverSub}.
+ -   A difference quotient is defined on the points `(x,y,h,a)` with `i y = i x + h *c a`.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Analysis.Derivative.ContDerivative (HasDeriv \as HasContDeriv, IsDerivQuot \as IsContDerivQuot)
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.TopAbGroup
+\import Topology.TopModule
+\import Topology.TopRing
+\import Topology.TopRing.Real
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open ContMap
+\open ProductTopSpace
+
+-- | The points `(x,y,h,a)` of `S × S × R × X` with `i y = i x + h *c a`.
+\func DerivSet {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : Set (\Sigma S (\Sigma S (\Sigma R X)))
+  => \lam s => i s.2.1 = i s.1 + s.2.2.1 *c s.2.2.2
+
+-- | The cover space of arguments of a difference quotient.
+\func DerivSpace {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : CoverSpace (Set.Total (DerivSet i))
+  => CoverSub {ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))} (DerivSet i)
+
+-- | {f'} is a difference quotient of {f}: `h *c f' (x,y,h,a) = f y - f x`.
+\type IsDerivQuot {R : TopRing} {X : TopLModule R} {Y : TopLModule R} {S : CoverSpace} (i : CoverMap S X) (f : S -> Y) (f' : Set.Total (DerivSet i) -> Y) : \Prop
+  => \Pi (s : Set.Total (DerivSet i)) -> s.1.2.2.1 *c f' s = f s.1.2.1 - f s.1.1
+
+-- | {f} has a difference quotient that is a cover map.
+\type HasDeriv {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} (i : CoverMap S X) (f : S -> Y)
+  => ∃ (f' : CoverMap (DerivSpace i) Y) (IsDerivQuot i f f')
+
+-- | The chains with an invertible increment are dense.
+\func IsDerivDense {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : \Prop
+  => IsDenseSet {ChainSpace i} \lam c => Monoid.Inv c.1.2.2.2.1
+  \where {
+    -- | The chains `(x,z,y,h,a,b)` with `i z = i x + h *c a` and `i y = i z + h *c b`.
+    \func ChainSet {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : Set (\Sigma S (\Sigma S (\Sigma S (\Sigma R (\Sigma X X)))))
+      => \lam c => \Sigma (i c.2.1 = i c.1 + c.2.2.2.1 *c c.2.2.2.2.1) (i c.2.2.1 = i c.2.1 + c.2.2.2.1 *c c.2.2.2.2.2)
+
+    \func ChainSpace {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : CoverSpace (Set.Total (ChainSet i))
+      => CoverSub {ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R (ProductCoverSpace X X))))} (ChainSet i)
+
+    \protected \func proj {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : ContMap (ChainSpace i) (ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R (ProductCoverSpace X X))))) __.1
+      => TopTransfer-map __.1
+
+    \func first {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : ContMap (ChainSpace i) (DerivSpace i) (\lam c => ((c.1.1,(c.1.2.1,(c.1.2.2.2.1,c.1.2.2.2.2.1))), c.2.1))
+      => TopTransfer-lift (tuple (proj1 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i) (proj1 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i)))) (\lam c => later c.2.1)
+
+    \func second {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : ContMap (ChainSpace i) (DerivSpace i) (\lam c => ((c.1.2.1,(c.1.2.2.1,(c.1.2.2.2.1,c.1.2.2.2.2.2))), c.2.2))
+      => TopTransfer-lift (tuple (proj1 ∘ proj2 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i) (proj2 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i)))) (\lam c => later c.2.2)
+
+    \lemma total-eq {R : TopRing} {X : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (c : Set.Total (ChainSet i)) : i c.1.2.2.1 = i c.1.1 + c.1.2.2.2.1 *c (c.1.2.2.2.2.1 + c.1.2.2.2.2.2)
+      => c.2.2 *> pmap (+ _) c.2.1 *> +-assoc *> inv (pmap (_ +) *c-ldistr)
+
+    \func total {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : ContMap (ChainSpace i) (DerivSpace i) (\lam c => ((c.1.1,(c.1.2.2.1,(c.1.2.2.2.1,c.1.2.2.2.2.1 + c.1.2.2.2.2.2))), total-eq c))
+      => TopTransfer-lift (tuple (proj1 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj i) (tuple (proj1 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i) (+-cont ∘ (proj2 ∘ proj2 ∘ proj2 ∘ proj2 ∘ proj i))))) (\lam c => later (total-eq c))
+
+    -- | The chains `(x,x,x,t,0,0)` show that a point of {S} forces invertible elements of {R} to be dense.
+    \lemma derivDense-ring {R : TopRing} {X : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) (x : S)
+      : IsDenseSet {R} \lam t => Monoid.Inv t
+      => \lam {t} {T} To Tt =>
+          \let | e : i x = i x + t *c 0 => inv $ pmap (_ +) X.*c_zro-right *> zro-right
+               | c : Set.Total (IsDerivDense.ChainSet i) => ((x,(x,(x,(t,(0,0))))), (e, e))
+               | p : ContMap (IsDerivDense.ChainSpace i) R => proj1 ∘ proj2 ∘ proj2 ∘ proj2 ∘ IsDerivDense.proj i
+          \in \case D {c} (p.func-cont To) Tt \with {
+            | inP (c',ci,Tc') => inP (c'.1.2.2.2.1, ci, Tc')
+          }
+  }
+
+-- | The arguments of a difference quotient with an invertible increment are dense.
+\lemma derivDense-inv {R : TopRing} {X : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i)
+  : IsDenseSet {DerivSpace i} \lam s => Monoid.Inv s.1.2.2.1
+  => \lam {s} {W} Wo Ws =>
+      \let c : Set.Total (IsDerivDense.ChainSet i) => ((s.1.1,(s.1.2.1,(s.1.2.1,(s.1.2.2.1,(s.1.2.2.2,0))))), (s.2, inv $ pmap (_ +) X.*c_zro-right *> zro-right))
+      \in \case D {c} ((IsDerivDense.first i).func-cont Wo) Ws \with {
+        | inP (c',ci,Wc') => inP (IsDerivDense.first i c', ci, Wc')
+      }
+
+-- | The difference quotient is unique if the chains with an invertible increment are dense.
+\lemma deriv-unique {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) {f : S -> Y}
+                    (f'1 f'2 : CoverMap (DerivSpace i) Y) (q1 : IsDerivQuot i f f'1) (q2 : IsDerivQuot i f f'2) {s : DerivSpace i} : f'1 s = f'2 s
+  => denseSet-lift-unique (derivDense-inv D) f'1 f'2 (\lam {s} si => Y.cancel si (q1 s *> inv (q2 s)))
+
+-- | The unique difference quotient.
+\sfunc deriv-quot {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) (f : S -> Y) (d : HasDeriv i f) : CoverMap (DerivSpace i) Y
+  => (deriv-tuple d).1
+  \where {
+    \private \lemma deriv-tuple (d : HasDeriv i f)
+      : \Sigma (f' : CoverMap (DerivSpace i) Y) (IsDerivQuot i f f')
+        \level \lam u v => ext $ exts \lam s => deriv-unique D u.1 v.1 u.2 v.2 \elim d
+      | inP r => r
+
+    \protected \lemma char : IsDerivQuot i f (deriv-quot D f d)
+      => transportInv {CoverMap (DerivSpace i) Y} (IsDerivQuot i f __) (\peval deriv-quot D f d) (deriv-tuple d).2
+  }
+
+-- | The derivative of {f} at {x}.
+\func deriv {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) (f : S -> Y) (d : HasDeriv i f) (x : S) : LinearMap X Y \cowith
+  | func a => diag (deriv-quot D f d) a x
+  | func-+ => diag_+ D (deriv-quot D f d) deriv-quot.char
+  | func-*c => diag_*c D (deriv-quot D f d) deriv-quot.char
+  \where {
+    -- | The value of a quotient at `(x,x,0,a)`, which is the derivative along {a}.
+    \lemma zro-eq {R : TopRing} {X : TopLModule R} {x a : X} : x = x + (0 : R) *c a
+      => inv $ pmap (_ +) X.*c_zro-left *> zro-right
+
+    \func diag {R : TopRing} {X : TopLModule R} {Y : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (f' : Set.Total (DerivSet i) -> Y) (a : X) (x : S) : Y
+      => f' ((x,(x,(0,a))), zro-eq)
+
+    \lemma diag_+ {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) {f : S -> Y}
+                  (f' : CoverMap (DerivSpace i) Y) (q : IsDerivQuot i f f') {a b : X} {x : S} : diag f' (a + b) x = diag f' a x + diag f' b x
+      => \let c : Set.Total (IsDerivDense.ChainSet i) => ((x,(x,(x,(0,(a,b))))), (zro-eq, zro-eq))
+         \in denseSet-lift-unique {IsDerivDense.ChainSpace i} {Y} D (f' ∘ IsDerivDense.total i) (+-cont ∘ tuple (f' ∘ IsDerivDense.first i) (f' ∘ IsDerivDense.second i))
+              (\lam {c} ci => Y.cancel ci $ q (IsDerivDense.total i c) *> inv (Y.*c-ldistr *> pmap2 (+) (q (IsDerivDense.first i c)) (q (IsDerivDense.second i c)) *> equation.abGroup)) {c}
+
+    \lemma diag_*c-inv {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) {f : S -> Y}
+                       (f' : CoverMap (DerivSpace i) Y) (q : IsDerivQuot i f f') {r : R} (ri : Monoid.Inv r) {a : X} {x : S} : diag f' (r *c a) x = r *c diag f' a x
+      => \let | m : ContMap (DerivSpace i) (ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))) => TopTransfer-map __.1
+              | e (s : Set.Total (DerivSet i)) : i s.1.2.1 = i s.1.1 + (s.1.2.2.1 * r) *c (ri.inv *c s.1.2.2.2)
+                  => s.2 *> pmap (_ +) (pmap (_ *c) (inv (inv *c-assoc *> pmap (*c _) ri.inv-right *> ide_*c)) *> inv *c-assoc)
+              | Phi : ContMap (DerivSpace i) (DerivSpace i)
+                  => TopTransfer-lift (tuple (proj1 ∘ m) (tuple (proj1 ∘ proj2 ∘ m) (tuple (*-cont ∘ tuple (proj1 ∘ proj2 ∘ proj2 ∘ m) (const r)) (*c-cont ∘ tuple (const ri.inv) (proj2 ∘ proj2 ∘ proj2 ∘ m))))) (\lam s => later (e s))
+              | s0 : Set.Total (DerivSet i) => ((x,(x,(0,r *c a))), zro-eq)
+         \in denseSet-lift-unique {DerivSpace i} {Y} (derivDense-inv D) f' (*c-cont ∘ tuple (const r) (f' ∘ Phi)) (\lam {s} si => Y.cancel si $ q s *> inv (q (Phi s)) *> *c-assoc) {s0}
+              *> pmap (\lam s => r *c f' s) (ext (ext (idp, ext (idp, ext (R.zro_*-left, inv *c-assoc *> pmap (*c a) ri.inv-left *> ide_*c)))))
+
+    \lemma diag_*c {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) {f : S -> Y}
+                   (f' : CoverMap (DerivSpace i) Y) (q : IsDerivQuot i f f') {r : R} {a : X} {x : S} : diag f' (r *c a) x = r *c diag f' a x
+      => \let g : ContMap R (DerivSpace i) => TopTransfer-lift (tuple (const x) (tuple (const x) (tuple (const 0) (*c-cont ∘ tuple id (const a))))) (\lam t => zro-eq {R} {X} {i x} {t *c a})
+         \in denseSet-lift-unique (IsDerivDense.derivDense-ring D x) (f' ∘ g) (*c-cont ∘ tuple id (const (diag f' a x))) (\lam {t} ti => diag_*c-inv D f' q ti) {r}
+  }
+
+-- | The derivative of {f} along {a} as a cover map.
+\lemma deriv-cover {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) (f : S -> Y) (d : HasDeriv i f) (a : X)
+  : CoverMap S Y (\lam x => deriv D f d x a)
+  => \let | P => ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))
+          | t : CoverMap S P (\lam x => (x,(x,(R.zro,a)))) => ProductCoverSpace.tuple CoverMap.id (ProductCoverSpace.tuple CoverMap.id (ProductCoverSpace.tuple (CoverMap.const R.zro) (CoverMap.const a)))
+     \in deriv-quot D f d CoverMap.∘ CoverTransfer-univ {S} {P} {Set.Total (DerivSet i)} (\lam x => ((x,(x,(R.zro,a))), deriv.zro-eq)) __.1 t
+
+-- | Chains with an invertible increment are dense over an open subset.
+\lemma open-derivDense {R : NearSkewField} {X : TopLModule R} {U : Set X} (Uo : isOpen U) : IsDerivDense (OpenCoverSpace.func Uo)
+  => \lam {c} {W} (inP (V,Vo,p)) Wc =>
+    \let | x => c.1.1
+         | h => c.1.2.2.2.1
+         | a => c.1.2.2.2.2.1
+         | b => c.1.2.2.2.2.2
+         | g1 : ContMap R X => +-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const a))
+         | g2 : ContMap R X => +-cont ∘ tuple g1 (*c-cont ∘ tuple id (const b))
+         | T : Set R => (g1 ^-1 U) ∧ (g2 ^-1 U)
+         | To : isOpen T => open-inter (g1.func-cont Uo) (g2.func-cont Uo)
+         | Th : T h => (transport U c.2.1 c.1.2.1.2, transport U (c.2.2 *> pmap (+ _) c.2.1) c.1.2.2.1.2)
+         | phi : ContMap (TopSub T) (ProductCoverSpace (OpenCoverSpace Uo) (ProductCoverSpace (OpenCoverSpace Uo) (ProductCoverSpace (OpenCoverSpace Uo) (ProductCoverSpace R (ProductCoverSpace X X)))))
+             => tuple (const {TopSub T} {OpenCoverSpace Uo} x) (tuple (TopSub-func g1 (\lam t => later t.1)) (tuple (TopSub-func g2 (\lam t => later t.2)) (tuple TopSub-map (const (a,b)))))
+         | q : phi (h,Th) = c.1 => ext (idp, ext (ext (inv c.2.1), ext (ext (inv (c.2.2 *> pmap (+ _) c.2.1)), idp)))
+     \in \case phi.func-cont Vo \with {
+       | inP (V',V'o,e) =>
+         \have Vs : V c.1 => rewrite p in Wc
+         \in \case R.inv-dense (open-inter V'o To) (transport (\lam Z => Z (h,Th)) e (transportInv V q Vs), Th) \with {
+           | inP (h',hi,(V'h',Th')) => inP (((x,((g1 h', Th'.1),((g2 h', Th'.2),(h',(a,b))))), (idp, idp)), hi, rewrite p $ transportInv (\lam Z => Z (h',Th')) e V'h')
+         }
+     }
+
+-- | A quotient on a cover space with underlying set `Total U` gives a continuous quotient on {U}.
+\lemma coverDeriv->contDeriv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} {S : CoverSpace (Set.Total U)} (e : ContMap (TopSub U) S \lam x => x)
+                             (i : CoverMap S X) (ip : \Pi (x : Set.Total U) -> i x = x.1) (f : Set.Total U -> Y) (d : HasDeriv i f) : HasContDeriv f \elim d
+  | inP (f',q) =>
+    \let | D => IsContDerivQuot.DerivDom {R} {X} U
+         | px : ContMap D (TopSub U) => TopTransfer-lift (proj1 ∘ TopSub-map) (\lam s => later s.2.1)
+         | py : ContMap D (TopSub U) => TopTransfer-lift (+-cont ∘ tuple (proj1 ∘ TopSub-map) (*c-cont ∘ tuple (proj1 ∘ proj2 ∘ TopSub-map) (proj2 ∘ proj2 ∘ TopSub-map))) (\lam s => later s.2.2)
+         | g : ContMap D (ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))) => tuple (e ∘ px) (tuple (e ∘ py) (proj2 ∘ TopSub-map))
+         | g' : ContMap D (DerivSpace i) => TopTransfer-lift g (\lam s => ip (py s) *> inv (pmap (+ _) (ip (px s))))
+     \in inP (f' ∘ g', \lam {x} Ux {h} {a} Ua => q _)
+
+-- | Convex subsets of a real topological vector space.
+\type IsConvexSet {X : LModule RealField} (S : Set X) : \Prop
+  => \Pi {x y : X} -> S x -> S y -> \Pi {t : Real} -> 0 <= t -> t <= 1 -> S (x + t *c (y - x))
+
+-- | Chains with an invertible increment are dense over a convex subset with an interior point.
+\lemma convex-derivDense {X : TopLModule RealNearField} {S : Set X} (Sc : IsConvexSet S) {B : Set X} (Bo : isOpen B) {c : X} (Bc : B c) (BS : B ⊆ S)
+  : IsDerivDense (CoverTransfer-map {Set.Total S} __.1)
+  => \lam {s} {W} (inP (V,Vo,p)) Ws =>
+    \let | (inP (U1, inP (A1,A1o,e1), U1x, V2, V2o, V2r, g1)) => Vo {s.1} (rewrite p in Ws)
+         | (inP (U2, inP (A2,A2o,e2), U2z, V3, V3o, V3r, g2)) => V2o V2r
+         | (inP (U3, inP (A3,A3o,e3), U3y, V4, V4o, V4r, g3)) => V3o V3r
+         | (inP (H,Ho,Hh,Q,Qo,Qab,g4)) => V4o V4r
+         | (inP (x',h',hi,Hh',A1x',Sx',A2z',Sz',A3y',Sy')) => approx Sc Bo Bc BS s.1.1.2 s.1.2.1.2 s.1.2.2.1.2 s.2.1 s.2.2 A1o A2o A3o
+           (transport (\lam Z => Z s.1.1) e1 U1x) (transport (\lam Z => Z s.1.2.1) e2 U2z) (transport (\lam Z => Z s.1.2.2.1) e3 U3y) Ho Hh
+         | a => s.1.2.2.2.2.1
+         | b => s.1.2.2.2.2.2
+    \in inP ((((x',Sx'),((x' + h' *c a, Sz'),((x' + h' *c a + h' *c b, Sy'),(h',(a,b))))), (idp, idp)), hi,
+             rewrite p $ g1 (transportInv (\lam Z => Z (x',Sx')) e1 A1x') (g2 (transportInv (\lam Z => Z (x' + h' *c a, Sz')) e2 A2z') (g3 (transportInv (\lam Z => Z (x' + h' *c a + h' *c b, Sy')) e3 A3y') (g4 Hh' Qab))))
+  \where {
+    \lemma step {R : Ring} {M : LModule R} {x c u : M} {t : R} : (x + u) + t *c (c - (x + u)) = (x + t *c (c - x)) + (1 - t) *c u
+      => pmap (_ +) (pmap (t *c) (equation.abGroup : c - (x + u) = (c - x) - u) *> M.*c-ldistr_-)
+          *> equation.abGroup *> pmap (_ +) (pmap (- _) (inv ide_*c) *> inv M.*c-rdistr_-)
+
+    \lemma cancel {R : Ring} {M : LModule R} {y z : M} {t : R} (ti : Monoid.Inv t) : y + t *c ((y + ti.inv *c (z - y)) - y) = z
+      => pmap (\lam w => y + t *c w) (equation.abGroup : (y + ti.inv *c (z - y)) - y = ti.inv *c (z - y))
+          *> pmap (y +) (inv *c-assoc *> pmap (*c _) ti.inv-right *> ide_*c) *> equation.abGroup
+
+    \lemma cancel' {R : Ring} {M : LModule R} {y w : M} {t : R} (ti : Monoid.Inv t) : y + ti.inv *c ((y + t *c w) - y) = y + w
+      => pmap (\lam v => y + ti.inv *c v) (equation.abGroup : (y + t *c w) - y = t *c w)
+          *> pmap (y +) (inv *c-assoc *> pmap (*c _) ti.inv-left *> ide_*c)
+
+    \lemma small {t e : Real} (t>0 : 0 < t) (t<e : t < e) : RealAbGroup.abs ((0 : Real) - t) < e
+      => RealAbGroup.abs_-_< linarith linarith
+
+    \lemma approx {X : TopLModule RealNearField} {S : Set X} (Sc : IsConvexSet S) {B : Set X} (Bo : isOpen B) {c : X} (Bc : B c) (BS : B ⊆ S)
+                  {x z y : X} (Sx : S x) (Sz : S z) (Sy : S y) {h : Real} {a b : X} (p1 : z = x + h *c a) (p2 : y = z + h *c b)
+                  {A1 A2 A3 : Set X} (A1o : isOpen A1) (A2o : isOpen A2) (A3o : isOpen A3) (A1x : A1 x) (A2z : A2 z) (A3y : A3 y)
+                  {H : Set Real} (Ho : isOpen {RealNearField} H) (Hh : H h)
+      : ∃ (x' : X) (h' : Real) (Monoid.Inv h') (H h') (A1 x') (S x') (A2 (x' + h' *c a)) (S (x' + h' *c a)) (A3 (x' + h' *c a + h' *c b)) (S (x' + h' *c a + h' *c b))
+      => \let | R => RealNearField
+              | line (w : X) : ContMap R X => +-cont ∘ tuple (const w) (*c-cont ∘ tuple id (const (c - w)))
+              | rho : ContMap R R => *-cont ∘ tuple (+-cont ∘ tuple (const 1) negative-cont) (const h)
+              | z0 {u v : X} : u + (0 : Real) *c v = u => pmap (u +) X.*c_zro-left *> zro-right
+              | rho0 : (1 - (0 : Real)) * h = h => pmap (\lam z => z * h) AddGroup.minus_zro *> ide-left
+              | T0 : ((line x ^-1 A1) ∧ ((line z ^-1 A2) ∧ ((line y ^-1 A3) ∧ (rho ^-1 H)))) 0 => (transportInv A1 z0 A1x, (transportInv A2 z0 A2z, (transportInv A3 z0 A3y, transportInv H rho0 Hh)))
+              | (inP (eps,eps>0,ball)) => (dist_open {RealNormed}).1 (open-inter ((line x).func-cont A1o) (open-inter ((line z).func-cont A2o) (open-inter ((line y).func-cont A3o) (rho.func-cont Ho)))) T0
+              | tq => (eps * ratio 1 2) ∧ 1
+              | tq>0 : 0 < tq => <_meet-univ linarith RatField.zro<ide
+              | tq<eps : tq < eps => meet-left <∘r linarith
+              | t => Real.fromRat tq
+              | t>0 : 0 < t => rat_real_<.1 tq>0
+              | t<=1 : t <= 1 => rat_real_<=.1 meet-right
+              | ti : Monoid.Inv {R} t => RealField.pos#0 t>0
+              | Tt => ball {t} $ real_<_U.1 $ small t>0 (rat_real_<.1 tq<eps)
+              | x' => line x t
+              | Sx' : S x' => Sc Sx (BS Bc) (<=-less t>0) t<=1
+              | m (w : X) : ContMap X X => +-cont ∘ tuple (const w) (*c-cont ∘ tuple (const ti.inv) (+-cont ∘ tuple id (const (negative w))))
+              | g1 : ContMap R X => +-cont ∘ tuple (const x') (*c-cont ∘ tuple id (const a))
+              | g2 : ContMap R X => +-cont ∘ tuple g1 (*c-cont ∘ tuple id (const b))
+              | e1 : g1 (rho t) = line z t => pmap (x' +) *c-assoc *> inv step *> inv (pmap (\lam w => w + t *c (c - w)) p1)
+              | e2 : g2 (rho t) = line y t => pmap (\lam w => w + rho t *c b) e1 *> pmap (line z t +) *c-assoc *> inv step *> inv (pmap (\lam w => w + t *c (c - w)) p2)
+              | Em (w : X) : B (m w (line w t)) => transportInv B (cancel' ti *> equation.abGroup) Bc
+         \in \case R.inv-dense (open-inter {R} Ho (open-inter {R} (g1.func-cont (open-inter A2o ((m z).func-cont Bo))) (g2.func-cont (open-inter A3o ((m y).func-cont Bo)))))
+                     (Tt.2.2.2, ((transportInv A2 e1 Tt.2.1, transportInv (\lam w => B (m z w)) e1 (Em z)), (transportInv A3 e2 Tt.2.2.1, transportInv (\lam w => B (m y w)) e2 (Em y)))) \with {
+           | inP (h',hi,(Hh',((A2h',Bz'),(A3h',By')))) => inP (x', h', hi, Hh', Tt.1, Sx', A2h', transport S (cancel ti) (Sc Sz (BS Bz') (<=-less t>0) t<=1), A3h', transport S (cancel ti) (Sc Sy (BS By') (<=-less t>0) t<=1))
+         }
+  }
+
+-- | Arguments with an invertible increment are dense over a non-degenerate closed interval.
+\lemma interval-derivDense {a b : Real} (a<b : a < b) : IsDerivDense (intervalInc a b)
+  => convex-derivDense {RealTopLModule} {ClosedInterval a b} (\lam {x} {y} Sx Sy {t} t>=0 t<=1 => (lower Sx.1 Sy.1 t>=0 t<=1, upper Sx.2 Sy.2 t>=0 t<=1))
+      {\lam x => \Sigma (a < x) (x < b)} open-interval {RealField.half (a + b)} (linarith, linarith) (\lam s => (<=-less s.1, <=-less s.2))
+  \where {
+    \lemma lower {a x y t : Real} (a<=x : a <= x) (a<=y : a <= y) (t>=0 : 0 <= t) (t<=1 : t <= 1) : a <= x + t * (y - x)
+      => \have | u : 0 <= (1 - t) * (x - a) => RealField.<=_*-positive linarith linarith
+               | v : 0 <= t * (y - a) => RealField.<=_*-positive t>=0 linarith
+               | e : (1 - t) * (x - a) + t * (y - a) = (x + t * (y - x)) - a => equation
+         \in linarith
+
+    \lemma upper {b x y t : Real} (x<=b : x <= b) (y<=b : y <= b) (t>=0 : 0 <= t) (t<=1 : t <= 1) : x + t * (y - x) <= b
+      => \have | u : 0 <= (1 - t) * (b - x) => RealField.<=_*-positive linarith linarith
+               | v : 0 <= t * (b - y) => RealField.<=_*-positive t>=0 linarith
+               | e : (1 - t) * (b - x) + t * (b - y) = b - (x + t * (y - x)) => equation
+         \in linarith
+
+    \lemma open-interval {a b : Real} : isOpen {RealTopLModule} \lam x => \Sigma (a < x) (x < b)
+      => (dist_open {RealNormed}).2 \lam {x} (s : \Sigma (a < x) (x < b)) =>
+        \have | a<x => s.1
+              | x<b => s.2
+              | m>0 : 0 < (x - a) ∧ (b - x) => <_meet-univ linarith linarith
+        \in \case real_<-char.1 m>0 \with {
+          | inP (eps,eps>0,eps<m) =>
+            \have | e1 : Real.fromRat eps < x - a => eps<m <∘l meet-left
+                  | e2 : Real.fromRat eps < b - x => eps<m <∘l meet-right
+            \in inP (eps, rat_real_<.2 eps>0, \lam {y} d =>
+              \have | d' : RealAbGroup.abs (x - y) < eps => real_<_U.2 d
+                    | d1 : x - y <= RealAbGroup.abs (x - y) => RealAbGroup.abs>=id
+                    | d2 : negative (x - y) <= RealAbGroup.abs (x - y) => RealAbGroup.abs>=neg
+              \in (linarith, linarith))
+        }
+  }

@@ -1,3 +1,4 @@
+\import Data.Array
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -5,6 +6,7 @@
 \import Order.Directed
 \import Order.Lattice
 \import Order.PartialOrder
+\import Paths
 \import Paths.Meta
 \import Set.Set
 \import Topology.TopSpace
@@ -115,3 +117,40 @@
 
 \lemma equalizer-closed {X : TopSpace} {Y : HausdorffTopSpace} (f g : ContMap X Y) : X.IsClosed \lam x => f x = g x
   => cont-closed (ProductTopSpace.tuple f g) (hausdorff-char.1 Y.isHausdorff)
+
+-- | The box `∏ⱼ Uⱼ` in `Xⁿ`.
+\func Box {X : \Set} {n : Nat} (U : Array (Set X) n) : Set (Array X n)
+  => \lam x => \Pi (j : Fin n) -> U j (x j)
+
+-- | The boxes with coordinates in the given covers.
+\func Boxes {X : \Set} {n : Nat} (Cs : Array (Set (Set X)) n) : Set (Set (Array X n))
+  => \lam W => ∃ (U : Array (Set X) n) (\Pi (j : Fin n) -> Cs j (U j)) (W = Box U)
+
+-- | The array of sets equal to {U} at {j} and to the whole space elsewhere.
+\func boxAt {X : \Set} {n : Nat} (j : Fin n) (U : Set X) : Array (Set X) n
+  => replace (replicate n (top {SetLattice X})) j U
+
+\lemma boxAt-elim {X : \Set} {n : Nat} {j : Fin n} {U : Set X} {P : Fin n -> Set X -> \Prop} (Pt : \Pi (i : Fin n) -> P i (top {SetLattice X})) (PU : P j U) (i : Fin n) : P i (boxAt j U i)
+  => replace-elim {_} {replicate n (top {SetLattice X})} {j} {U} {P} Pt PU i
+
+\lemma boxAt-index {X : \Set} {n : Nat} {j : Fin n} {U : Set X} : boxAt j U j = U
+  => replace-index {_} {replicate n (top {SetLattice X})} {j} {U}
+
+-- | The product of `n` copies of a space.
+\instance ArrayTopSpace (n : Nat) (X : TopSpace) : TopSpace (Array X n)
+  | isOpen W => ∀ {x : W} ∃ (U : Array (Set X) n) (\Pi (j : Fin n) -> isOpen (U j)) (Box U x) (Box U ⊆ W)
+  | open-top _ => inP (\lam _ => top, \lam _ => open-top, \lam _ => (), \lam _ => ())
+  | open-inter {W} {W'} f g (Wx,W'x) => \case f Wx, g W'x \with {
+    | inP (U,Uo,Ux,h), inP (U',U'o,U'x,h') => inP (\lam j => U j ∧ U' j, \lam j => open-inter (Uo j) (U'o j), \lam j => (Ux j, U'x j), \lam b => (h \lam j => (b j).1, h' \lam j => (b j).2))
+  }
+  | open-Union So (inP (W,SW,Wx)) => \case So SW Wx \with {
+    | inP (U,Uo,Ux,h) => inP (U, Uo, Ux, \lam b => inP (W, SW, h b))
+  }
+  \where {
+    \func proj {n : Nat} {X : TopSpace} (j : Fin n) : ContMap (ArrayTopSpace n X) X (__ j) \cowith
+      | func-cont {U} Uo {x} Ux => inP (boxAt j U, boxAt-elim {_} {_} {_} {_} {\lam _ V => isOpen V} (\lam _ => open-top) Uo, boxAt-elim {_} {_} {_} {_} {\lam i V => V (x i)} (\lam _ => ()) Ux,
+                                        \lam {y} b => transport (__ (y j)) boxAt-index (b j))
+  }
+
+\lemma Box-open {n : Nat} {X : TopSpace} {U : Array (Set X) n} (Uo : \Pi (j : Fin n) -> isOpen (U j)) : isOpen {ArrayTopSpace n X} (Box U)
+  => \lam Ux => inP (U, Uo, Ux, \lam b => b)

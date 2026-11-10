@@ -1,0 +1,151 @@
+{- | The fundamental theorem of calculus, following Bishop and Bridges, Constructive Analysis, Theorem 2.6.8.
+ -
+ -   For a cover map {g} on `[a,b]`, the integral `F x = ∫_(a,x) g` (see {primitive}) has derivative {g}
+ -   (see {primitive-hasDeriv} and {deriv-primitive}), since `F y - F x - g x (y - x) = ∫_(x,y) (g t - g x) dt` (see {primitive-est}).
+ -
+ -   If {f} has a derivative on `[a,b]`, then `f - F` for `g = f'` has zero derivative, so it is constant by {deriv-zero-const}.
+ -   Hence `∫_(a,b) f' = f b - f a` (see {integral_deriv}).
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.Derivative.UniformDerivative
+\import Analysis.Integration.Pointwise.IntervalIntegral
+\import Analysis.Integration.Pointwise.OpenIntegral
+\import Analysis.Integration.Pointwise.OpenInterval
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Subspace
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.TopRing.Real
+
+-- | A point of `(a,b)` as a point of `[a,b]`.
+\func openToClosed {a b : Real} (u : Set.Total (OpenInterval a b)) : Set.Total (ClosedInterval a b)
+  => subInterval <=-refl <=-refl u
+
+-- | The derivative of {f} as a cover map on `[a,b]`.
+\lemma derivCover {a b : Real} (a<b : a < b) (f : Set.Total (ClosedInterval a b) -> Real) (d : HasDeriv (intervalInc a b) f)
+  : CoverMap (IntervalSpace a b) RealNormed (\lam x => deriv (interval-derivDense a<b) f d x 1)
+  => deriv-cover (interval-derivDense a<b) f d 1
+
+-- | The derivative of {f} on `(a,b)`.
+\lemma derivOpen {a b : Real} (a<b : a < b) (f : Set.Total (ClosedInterval a b) -> Real) (d : HasDeriv (intervalInc a b) f)
+  : CoverMap (OpenCoverSpace {RealN 1} (interval-open a b)) RealNormed (\lam u => deriv (interval-derivDense a<b) f d (openToClosed u) 1)
+  => restrictTo (derivCover a<b f d) (a, (<=-refl, <=-less a<b)) (b, (<=-less a<b, <=-refl))
+
+-- | The derivative is integrable on `(a,b)`.
+\lemma derivOpen-integrable {a b : Real} (a<b : a < b) (f : Set.Total (ClosedInterval a b) -> Real) (d : HasDeriv (intervalInc a b) f)
+  : IsIntegrableOn (interval-open a b) (derivOpen a<b f d)
+  => restrict-integrable (derivCover a<b f d) (a, (<=-refl, <=-less a<b)) (b, (<=-less a<b, <=-refl))
+
+-- | The integral `∫_(a,c) g`.
+\sfunc primitive {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed) (c : Set.Total (ClosedInterval a b)) : Real
+  => segIntegral g (a, (<=-refl, a<=b)) c
+  \where {
+    \lemma char {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {c : Set.Total (ClosedInterval a b)}
+      : primitive a<=b g c = segIntegral g (a, (<=-refl, a<=b)) c
+      => \peval primitive a<=b g c
+
+    -- | `F y = F x + ∫_(x,y) g`.
+    \lemma additive {a b : Real} {a<=b : a <= b} {g : CoverMap (IntervalSpace a b) RealNormed} {x y : Set.Total (ClosedInterval a b)} (xy : x.1 <= y.1)
+      : primitive a<=b g y = primitive a<=b g x + segIntegral g x y
+      => char *> segIntegral-additive x.2.1 xy *> pmap (+ _) (inv char)
+  }
+
+-- | The increments of the primitive are approximated by {g}: `|F y - F x - (y - x) g x| <= ε |y - x|`.
+\lemma primitive-est {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed)
+  : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta)
+      (RealAbGroup.abs (primitive a<=b g y - primitive a<=b g x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1))
+  => \lam {eps} eps>0 => \case interval-uniform a<=b g eps>0 \with {
+    | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} d =>
+      \have | D>0 : 0 < Real.fromRat delta => rat_real_<.1 delta>0
+            | d1 : y.1 - x.1 <= RealAbGroup.abs (y.1 - x.1) => RealAbGroup.abs>=id
+            | d2 : negative (y.1 - x.1) <= RealAbGroup.abs (y.1 - x.1) => RealAbGroup.abs>=neg
+      \in LinearOrder.<=-dec-stable LinearOrder.<=-stable {x.1} {y.1}
+        (\lam xy => est-up (primitive.additive xy)
+          (segIntegral-near xy \lam t l u => hd {x} {t} (RealAbGroup.abs_-_< (usingOnly (u, d1, d) linarith) (usingOnly (l, D>0) linarith))) (usingOnly xy linarith))
+        (\lam yx => est-down (primitive.additive yx)
+          (segIntegral-near yx \lam t l u => hd {x} {t} (RealAbGroup.abs_-_< (usingOnly (u, D>0) linarith) (usingOnly (l, d2, d) linarith))) equation.abGroup (usingOnly yx linarith)))
+  }
+  \where {
+    \lemma est-up {Fx Fy I G D E : Real} (add : Fy = Fx + I) (s : RealAbGroup.abs (I - G * D) <= E * D) (D>=0 : 0 <= D)
+      : RealAbGroup.abs (Fy - Fx - D * G) <= E * RealAbGroup.abs D
+      => \have e : Fy - Fx - D * G = I - G * D => rewrite add equation.cRing
+         \in rewrite (RealAbGroup.abs-ofPos D>=0, e) s
+
+    \lemma est-down {Fx Fy I G D D' E : Real} (add : Fx = Fy + I) (s : RealAbGroup.abs (I - G * D') <= E * D') (eD : D' = negative D) (D'>=0 : 0 <= D')
+      : RealAbGroup.abs (Fy - Fx - D * G) <= E * RealAbGroup.abs D
+      => \have | aD : RealAbGroup.abs D = D' => inv RealAbGroup.abs_negative *> pmap RealAbGroup.abs (inv eD) *> RealAbGroup.abs-ofPos D'>=0
+               | e : Fy - Fx - D * G = negative (I - G * D') => rewrite (add, eD) equation.cRing
+         \in rewrite (aD, e, RealAbGroup.abs_negative) s
+  }
+
+-- | The integral with varying endpoint has a derivative and it equals {g}.
+\lemma primitive-deriv {a b : Real} (a<b : a < b) (g : CoverMap (IntervalSpace a b) RealNormed)
+  : \Sigma (d : HasDeriv (intervalInc a b) (primitive (<=-less a<b) g))
+           (\Pi (x : Set.Total (ClosedInterval a b)) -> deriv (interval-derivDense a<b) (primitive (<=-less a<b) g) d x 1 = g x)
+  => (hasDeriv-uniform-iff a<b {primitive (<=-less a<b) g} {\lam x => g x}).2 (primitive-est (<=-less a<b) g)
+
+-- | The derivative of the integral with varying endpoint exists.
+\lemma primitive-hasDeriv {a b : Real} (a<b : a < b) (g : CoverMap (IntervalSpace a b) RealNormed) : HasDeriv (intervalInc a b) (primitive (<=-less a<b) g)
+  => (primitive-deriv a<b g).1
+
+-- | The fundamental theorem of calculus: the derivative of `x ↦ ∫_(a,x) g` is {g}.
+\lemma deriv-primitive {a b : Real} (a<b : a < b) (g : CoverMap (IntervalSpace a b) RealNormed) (d : HasDeriv (intervalInc a b) (primitive (<=-less a<b) g))
+                       (x : Set.Total (ClosedInterval a b)) : deriv (interval-derivDense a<b) (primitive (<=-less a<b) g) d x 1 = g x
+  => pmap (\lam d' => deriv (interval-derivDense a<b) (primitive (<=-less a<b) g) d' x 1) (prop-isProp d (primitive-deriv a<b g).1) *> (primitive-deriv a<b g).2 x
+
+-- | The fundamental theorem of calculus: `∫_(a,b) f' = f b - f a`.
+\lemma integral_deriv {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                      (i : IsIntegrableOn (interval-open a b) (derivOpen a<b f d))
+  : integralOn (interval-open a b) (derivOpen a<b f d) i = f (b, (<=-less a<b, <=-refl)) - f (a, (<=-refl, <=-less a<b))
+  => \let | g => derivCover a<b f d
+          | F => primitive (<=-less a<b) g
+          | pa : Set.Total (ClosedInterval a b) => (a, (<=-refl, <=-less a<b))
+          | pb : Set.Total (ClosedInterval a b) => (b, (<=-less a<b, <=-refl))
+          | ef => (hasDeriv-uniform-iff a<b {f} {\lam x => g x}).1 (d, \lam x => idp)
+          | (dh,zh) => (hasDeriv-uniform-iff a<b {\lam x => f x - F x} {\lam _ => 0}).2 (est-sub ef (primitive-est (<=-less a<b) g))
+          | c : f pa - F pa = f pb - F pb => deriv-zero-const a<b dh zh pa pb
+          | F0 : F pa = 0 => primitive.char *> segIntegral-zero {a} {b} {g} {pa}
+          | e : integralOn (interval-open a b) (derivOpen a<b f d) i = F pb => inv primitive.char
+     \in usingOnly (c, F0, e) linarith
+  \where {
+    -- | The difference of functions satisfying the estimate with the same {g} satisfies it with 0.
+    \lemma est-sub {a b : Real} {f F g : Set.Total (ClosedInterval a b) -> Real}
+                   (ef : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+                     (RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)))
+                   (eF : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+                     (RealAbGroup.abs (F y - F x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)))
+      : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+          (RealAbGroup.abs ((f y - F y) - (f x - F x) - (y.1 - x.1) * 0) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1))
+      => \lam {eps} eps>0 => \case ef (linarith : 0 < eps * ratio 1 2), eF (linarith : 0 < eps * ratio 1 2) \with {
+        | inP (d1,d1>0,h1), inP (d2,d2>0,h2) => inP (d1 ∧ d2, <_meet-univ d1>0 d2>0, \lam {x} {y} dd =>
+          \have | p1 => h1 {x} {y} (dd <∘l rat_real_<=.1 meet-left)
+                | p2 => h2 {x} {y} (dd <∘l rat_real_<=.1 meet-right)
+                | EE : Real.fromRat (eps * ratio 1 2) + Real.fromRat (eps * ratio 1 2) = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+          \in rewrite (equation.cRing : (f y - F y) - (f x - F x) - (y.1 - x.1) * 0 = (f y - f x - (y.1 - x.1) * g x) - (F y - F x - (y.1 - x.1) * g x)) $
+                two-est p1 p2 EE)
+      }
+
+    \lemma two-est {A B T E1 E2 E : Real} (pa : RealAbGroup.abs A <= E1 * T) (pb : RealAbGroup.abs B <= E2 * T) (eE : E1 + E2 = E) : RealAbGroup.abs (A - B) <= E * T
+      => RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ pa (=_<= RealAbGroup.abs_negative <=∘ pb) <=∘ =_<= (inv RealField.rdistr *> pmap (* T) eE)
+  }

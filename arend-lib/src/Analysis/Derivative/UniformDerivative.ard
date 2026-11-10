@@ -1,0 +1,427 @@
+{- | Derivatives on a closed interval via uniform estimates.
+ -
+ -   A function {f} on `[a,b]` has a derivative in the sense of {HasDeriv} and its derivative is {g} if and only if
+ -   `|f y - f x - (y - x) g x| <= ε |y - x|` whenever `|y - x| < δ` (see {hasDeriv-uniform-iff}).
+ -
+ -   One direction follows from the uniform continuity of the difference quotient on `[a,b]²`.
+ -   For the other direction, the difference quotient at `(x,y)` is the limit of the Riemann sums of {g} along the segment from `x` to `y`
+ -   (see {hasDeriv-uniform-iff.segMean} and {hasDeriv-uniform-iff.uniformQuot}).
+ -
+ -   A function with zero derivative is constant (see {deriv-zero-const}): the Riemann sums of zero vanish.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.Derivative.IntervalDerivative
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.NormedRing
+\import Topology.TopRing.Real
+
+-- | {f} has a derivative on `[a,b]` and it equals {g} if and only if `|f y - f x - (y - x) g x| <= ε |y - x|` whenever `|y - x| < δ`.
+\lemma hasDeriv-uniform-iff {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real}
+  : (\Sigma (d : HasDeriv (intervalInc a b) f) (\Pi (x : Set.Total (ClosedInterval a b)) -> deriv (interval-derivDense a<b) f d x 1 = g x))
+    <-> ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y} (RealAbGroup.abs (y.1 - x.1) < delta)
+          (RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1))
+  => (\lam s {eps} eps>0 => deriv-est a<b s.1 s.2 eps>0,
+      \lam u => (uniform-hasDeriv a<b u, uniform-deriv a<b u (uniform-hasDeriv a<b u)))
+  \where {
+    -- | The Riemann sums of the zero function vanish.
+    \private \lemma segMean-zero {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} : segMean a<=b (\lam _ => 0) n x y = 0
+      => (\peval segMean a<=b (\lam _ => 0) n x y) *> pmap (_ *) (segSum-zero (suc n)) *> RealField.zro_*-right
+      \where
+        \lemma segSum-zero {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} (k : Nat) : segMean.segSum a<=b (\lam _ => 0) n k x y = 0 \elim k
+          | 0 => idp
+          | suc k => pmap (+ 0) (segSum-zero k) *> zro-left
+
+    -- | Points of `[a,b]` with the same coordinate are equal.
+    \private \lemma interval-ext {a b : Real} {x y : Set.Total (ClosedInterval a b)} (p : RealAbGroup.abs (y.1 - x.1) = 0) : x = y
+      => ext $ inv $ AddGroup.fromZero (RealAbGroup.abs_zro-ext p)
+
+    -- | Points of segments with the same parameter are as close as the endpoints.
+    \private \lemma convex-dist {x y x' y' t : Real} (t>=0 : 0 <= t) (t<=1 : t <= 1)
+      : RealAbGroup.abs ((x + t * (y - x)) - (x' + t * (y' - x'))) <= RealAbGroup.abs (x - x') + RealAbGroup.abs (y - y')
+      => \let | U => RealAbGroup.abs (x - x')
+              | V => RealAbGroup.abs (y - y')
+         \in \have | t1 : (0 : Real) <= 1 - t => usingOnly t<=1 linarith
+                   | a1 : RealAbGroup.abs ((1 - t) * (x - x')) = (1 - t) * U => RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos t1)
+                   | a2 : RealAbGroup.abs (t * (y - y')) = t * V => RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos t>=0)
+                   | p1 : 0 <= t * U => RealField.<=_*_positive_positive t>=0 RealAbGroup.abs>=0
+                   | p2 : 0 <= (1 - t) * V => RealField.<=_*_positive_positive t1 RealAbGroup.abs>=0
+                   | e2 : (1 - t) * U + t * V = U + V - (t * U + (1 - t) * V) => equation.cRing
+                   | e1 : (x + t * (y - x)) - (x' + t * (y' - x')) = (1 - t) * (x - x') + t * (y - y') => equation.cRing
+         \in rewrite e1 $
+               RealAbGroup.abs_+ <=∘ (=_<= (pmap2 (+) a1 a2) <=∘ =_<= e2 <=∘ usingOnly (p1, p2) linarith)
+
+    -- | The triangle inequality for bounds proportional to the same real.
+    \private \lemma abs-sum-le {A B C u E E' : Real} (e : C = A + B) (pa : RealAbGroup.abs A <= E * u) (pb : RealAbGroup.abs B <= E' * u) : RealAbGroup.abs C <= (E + E') * u
+      => rewrite e $ RealAbGroup.abs_+ <=∘ transport (_ <=) (inv RealField.rdistr) (RealAbGroup.<=_+ pa pb)
+
+    -- | The estimate of the increments of {f} at the scale {delta}.
+    \private \func Step {a b : Real} (f g : Set.Total (ClosedInterval a b) -> Real) (eps delta : Rat) : \Prop
+      => \Pi {x y : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta
+           -> RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)
+
+    -- | The right hand side of {hasDeriv-uniform-iff}.
+    \private \func UniformEst {a b : Real} (f g : Set.Total (ClosedInterval a b) -> Real) : \Prop
+      => ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) (Step f g eps delta)
+
+    -- | The derivative satisfies the estimate since the difference quotient is uniformly continuous on `[a,b]²`.
+    \private \lemma deriv-est {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                     (dg : \Pi (x : Set.Total (ClosedInterval a b)) -> deriv (interval-derivDense a<b) f d x 1 = g x) {eps : Rat} (eps>0 : 0 < eps)
+      : ∃ (delta : Rat) (0 < delta) (Step f g eps delta)
+      => \let | Q => quotSquare a<b f d
+              | (inP (delta,delta>0,h)) => square-uniform (<=-less a<b) Q eps>0
+         \in inP (delta, delta>0, \lam {x} {y} dd =>
+              \have | dd' : RealAbGroup.abs (x.1 - x.1) + RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta
+                        => transportInv (< _) (pmap (\lam z => z RealAbGroup.+ _) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) *> zro-left) dd
+                    | q : RealAbGroup.abs (Q (x,y) - Q (x,x)) <= Real.fromRat eps => <=-less (h {x} {y} {x} {x} dd')
+                    | e : f y - f x - (y.1 - x.1) * g x = (y.1 - x.1) * (Q (x,y) - Q (x,x))
+                        => pmap2 (\lam u v => u - (y.1 - x.1) * v) (quot-incr {a} {b} {a<b} {f} {d} x y) (inv (quot-diag {a} {b} {a<b} {f} {d} x *> dg x)) *> equation.cRing
+              \in rewrite e $ =_<= (RealField.abs_* *> RealField.*-comm) <=∘ RealField.<=_*_positive-left q RealAbGroup.abs>=0)
+
+    -- | If {f} and {g} satisfy the estimate, then {g} is uniformly continuous.
+    \private \lemma uniformEst-cont {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {eps : Rat} (eps>0 : 0 < eps)
+      : ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta) (RealAbGroup.abs (g y - g x) <= Real.fromRat eps)
+      => \case u (linarith : 0 < eps * ratio 1 2) \with {
+        | inP (delta,delta>0,s) => inP (delta, delta>0, \lam {x} {y} d =>
+          \let | t => RealAbGroup.abs (y.1 - x.1)
+               | E => Real.fromRat (eps * ratio 1 2)
+          \in \have | tt : RealAbGroup.abs (x.1 - y.1) = t => RealAbGroup.abs_-
+                    | s1 : RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= E * t => s d
+                    | s2 : RealAbGroup.abs (f x - f y - (x.1 - y.1) * g y) <= E * t => transport (\lam z => _ <= E * z) tt (s (transportInv (< _) tt d))
+                    | EE : E RealAbGroup.+ E = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+                    | key : t * RealAbGroup.abs (g y - g x) <= Real.fromRat eps * t
+                        => =_<= (inv RealField.abs_*) <=∘ transport (\lam z => _ <= z * t) EE (abs-sum-le equation.ring s1 s2)
+          \in RealAbGroup.<=-split LinearOrder.<=-stable RealAbGroup.abs>=0
+                (\lam t>0 => RealField.<=_*-cancel-right t>0 (transport (<= _) RealField.*-comm key))
+                (\lam t=0 => rewrite (interval-ext (inv t=0), negative-right, RealAbGroup.abs_zro) (rat_real_<=.1 (<=-less eps>0))))
+      }
+
+    -- | The Riemann sum of {g} along the segment from {x} to {y} divided into `n+1` parts.
+    \private \sfunc segMean {a b : Real} (a<=b : a <= b) (g : Set.Total (ClosedInterval a b) -> Real) (n : Nat) (x y : Set.Total (ClosedInterval a b)) : Real
+      => Real.fromRat (step n) * segSum a<=b g n (suc n) x y
+      \where {
+        -- | `1/(n+1)`.
+        \sfunc step (n : Nat) : Rat
+          => RatField.finv (RatField.natCoef (suc n))
+
+        \lemma step>0 {n : Nat} : 0 < step n
+          => rewrite (\peval step n) (RatField.finv>0 (RatField.natCoef>0 NatOrder.zero<suc))
+
+        \lemma step-mul {n : Nat} : RatField.natCoef (suc n) * step n = 1
+          => rewrite (\peval step n) $ RatField.finv-right (/=-sym (StrictPoset.<_/= (RatField.natCoef>0 NatOrder.zero<suc)))
+
+        -- | The parameter `k/(n+1)` of the `k`-th point of a segment divided into `n+1` parts.
+        \sfunc frac (n k : Nat) : Rat
+          => RatField.natCoef k * step n
+
+        \lemma frac-range {n k : Nat} (k<=n : k <= suc n) : \Sigma (0 <= frac n k) (frac n k <= 1)
+          => rewrite (\peval frac n k) (RatField.<=_*_positive_positive RatField.natCoef>=0 (<=-less step>0),
+              transport (_ <=) step-mul (RatField.<=_*_positive-left (RatField.natCoef_<= k<=n) (<=-less step>0)))
+
+        \lemma frac-suc {n k : Nat} : frac n (suc k) = frac n k + step n
+          => (\peval frac n (suc k)) *> pmap (* step n) (RatField.natCoefSuc k) *> RatField.rdistr {RatField.natCoef k} {1} {step n} *> pmap (_ +) (RatField.ide-left {step n}) *> inv (pmap (+ step n) (\peval frac n k))
+
+        -- | The point `x + (k/(n+1)) (y - x)` of the segment from {x} to {y}.
+        \func segPt {a b : Real} (a<=b : a <= b) (n k : Nat) (x y : Set.Total (ClosedInterval a b)) : Set.Total (ClosedInterval a b)
+          => clamp a<=b (x.1 + Real.fromRat (frac n k) * (y.1 - x.1))
+
+        \lemma segPt-val {a b : Real} {a<=b : a <= b} {n k : Nat} (k<=n : k <= suc n) {x y : Set.Total (ClosedInterval a b)}
+          : (segPt a<=b n k x y).1 = x.1 + Real.fromRat (frac n k) * (y.1 - x.1)
+          => \have | r => frac-range k<=n
+                   | r0 : 0 <= Real.fromRat (frac n k) => rat_real_<=.1 r.1
+                   | r1 : Real.fromRat (frac n k) <= 1 => rat_real_<=.1 r.2
+             \in pmap __.1 (clamp-in {a} {b} {a<=b} (interval-derivDense.lower x.2.1 y.2.1 r0 r1, interval-derivDense.upper x.2.2 y.2.2 r0 r1))
+
+        \lemma segPt-zero {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} : segPt a<=b n 0 x y = x
+          => ext $ segPt-val {a} {b} {a<=b} zero<=_ *> pmap (\lam t => x.1 + Real.fromRat t * (y.1 - x.1)) ((\peval frac n 0) *> pmap (* step n) RatField.natCoefZero *> RatField.zro_*-left {step n}) *> pmap (x.1 +) RealField.zro_*-left *> zro-right
+
+        \lemma segPt-last {a b : Real} {a<=b : a <= b} {n : Nat} {x y : Set.Total (ClosedInterval a b)} : segPt a<=b n (suc n) x y = y
+          => ext $ segPt-val {a} {b} {a<=b} <=-refl *> pmap (\lam t => x.1 + Real.fromRat t * (y.1 - x.1)) ((\peval frac n (suc n)) *> step-mul) *> pmap (x.1 +) (RealField.ide-left {y.1 - x.1}) *> equation.abGroup
+
+        \lemma segPt-diff {a b : Real} {a<=b : a <= b} {n k : Nat} (k<n : suc k <= suc n) {x y : Set.Total (ClosedInterval a b)}
+          : (segPt a<=b n (suc k) x y).1 - (segPt a<=b n k x y).1 = Real.fromRat (step n) * (y.1 - x.1)
+          => rewrite (segPt-val {a} {b} {a<=b} k<n {x} {y}, segPt-val {a} {b} {a<=b} (<=-less (suc_<=_< k<n)) {x} {y}, frac-suc, inv (RealAbGroup.+-rat {frac n k} {step n})) equation.cRing
+
+        \lemma segPt-same {a b : Real} {a<=b : a <= b} {n k : Nat} {x : Set.Total (ClosedInterval a b)} : segPt a<=b n k x x = x
+          => pmap (clamp a<=b) (pmap (x.1 +) (pmap (_ *) negative-right *> RealField.zro_*-right) *> zro-right) *> clamp-in x.2
+
+        -- | The sum of the values of {g} at the first {k} points of the segment from {x} to {y} divided into `n+1` parts.
+        \func segSum {a b : Real} (a<=b : a <= b) (g : Set.Total (ClosedInterval a b) -> Real) (n k : Nat) (x y : Set.Total (ClosedInterval a b)) : Real \elim k
+          | 0 => 0
+          | suc k => segSum a<=b g n k x y + g (segPt a<=b n k x y)
+
+        -- | The increment of {f} along the first {k} parts of the segment is close to the Riemann sum.
+        \lemma segSum-est {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {e delta : Rat} (s : Step f g e delta)
+                          {n : Nat} {x y : Set.Total (ClosedInterval a b)} (hD : RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) < Real.fromRat delta) {k : Nat} (k<=n : k <= suc n)
+          : RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1) * segSum a<=b g n k x y - (f (segPt a<=b n k x y) - f x))
+              <= Real.fromRat (RatField.natCoef k * e) * RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) \elim k
+          | 0 => rewrite segPt-zero $ =_<= (pmap RealAbGroup.abs (equation : _ = (0 : Real)) *> RealAbGroup.abs_zro) <=∘ =_<= (inv (pmap (\lam t => Real.fromRat t * _) (pmap (* e) RatField.natCoefZero *> RatField.zro_*-left) *> RealField.zro_*-left))
+          | suc k =>
+            \let | D => Real.fromRat (step n) * (y.1 - x.1)
+                 | p => segPt a<=b n k x y
+                 | p' => segPt a<=b n (suc k) x y
+            \in \have | ih => segSum-est s hD (<=-less (suc_<=_< k<=n))
+                      | dd : p'.1 - p.1 = D => segPt-diff {a} {b} {a<=b} k<=n
+                      | st : RealAbGroup.abs (f p' - f p - D * g p) <= Real.fromRat e * RealAbGroup.abs D => transport (\lam z => RealAbGroup.abs (f p' - f p - z * g p) <= Real.fromRat e * RealAbGroup.abs z) dd (s (transportInv (\lam z => RealAbGroup.abs z < _) dd hD))
+                      | ec : Real.fromRat (RatField.natCoef (suc k) * e) = Real.fromRat (RatField.natCoef k * e) + Real.fromRat e
+                          => pmap Real.fromRat (pmap (* e) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left) *> inv RealAbGroup.+-rat
+            \in rewrite ec $ step-bound ih st
+          \where {
+            \lemma step-bound {D S G Fp' Fp Fx B C T : Real} (pX : RealAbGroup.abs (D * S - (Fp - Fx)) <= B * T) (pY : RealAbGroup.abs (Fp' - Fp - D * G) <= C * T)
+              : RealAbGroup.abs (D * (S + G) - (Fp' - Fx)) <= (B + C) * T
+              => rewrite (equation : D * (S + G) - (Fp' - Fx) = (D * S - (Fp - Fx)) - (Fp' - Fp - D * G)) $ RealAbGroup.abs_+ <=∘ transport (_ <=) (inv RealField.rdistr) (RealAbGroup.<=_+ pX (=_<= RealAbGroup.abs_negative <=∘ pY))
+          }
+
+        \lemma segSum-same {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {n k : Nat} {x : Set.Total (ClosedInterval a b)}
+          : segSum a<=b g n k x x = Real.fromRat (RatField.natCoef k) * g x \elim k
+          | 0 => inv (pmap (* g x) (pmap Real.fromRat RatField.natCoefZero) *> RealField.zro_*-left)
+          | suc k => rewrite (segSum-same, segPt-same) $ inv $ pmap (* g x) (pmap Real.fromRat (RatField.natCoefSuc k) *> inv RealAbGroup.+-rat) *> RealField.rdistr *> pmap (_ +) RealField.ide-left
+
+        \lemma segSum-uniform {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {e delta : Rat}
+                              (hg : \Pi {x y : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta -> RealAbGroup.abs (g y - g x) <= Real.fromRat e)
+                              {n : Nat} {x y x' y' : Set.Total (ClosedInterval a b)} (d : RealAbGroup.abs (x.1 - x'.1) + RealAbGroup.abs (y.1 - y'.1) < Real.fromRat delta)
+                              {k : Nat} (k<=n : k <= suc n)
+          : RealAbGroup.abs (segSum a<=b g n k x y - segSum a<=b g n k x' y') <= Real.fromRat (RatField.natCoef k * e) \elim k
+          | 0 => =_<= (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro *> inv (pmap Real.fromRat (pmap (* e) RatField.natCoefZero *> RatField.zro_*-left)))
+          | suc k =>
+            \let | p => segPt a<=b n k x y
+                 | p' => segPt a<=b n k x' y'
+            \in \have | ih => segSum-uniform {a} {b} {a<=b} {g} hg d (<=-less (suc_<=_< k<=n))
+                      | r => frac-range (<=-less (suc_<=_< k<=n))
+                      | pd : RealAbGroup.abs (p'.1 - p.1) < Real.fromRat delta
+                          => rewrite (segPt-val {a} {b} {a<=b} (<=-less (suc_<=_< k<=n)) {x'} {y'}, segPt-val {a} {b} {a<=b} (<=-less (suc_<=_< k<=n)) {x} {y})
+                               ((convex-dist (rat_real_<=.1 r.1) (rat_real_<=.1 r.2) <=∘ =_<= (pmap2 (+) RealAbGroup.abs_- RealAbGroup.abs_-)) <∘r d)
+                      | gd : RealAbGroup.abs (negative (g p' - g p)) <= Real.fromRat e => =_<= RealAbGroup.abs_negative <=∘ hg pd
+                      | ec : Real.fromRat (RatField.natCoef k * e) + Real.fromRat e = Real.fromRat (RatField.natCoef (suc k) * e)
+                          => RealAbGroup.+-rat *> pmap Real.fromRat (inv (pmap (* e) (RatField.natCoefSuc k) *> RatField.rdistr *> pmap (_ +) ide-left))
+            \in rewrite (equation : segSum a<=b g n k x y + g p - (segSum a<=b g n k x' y' + g p') = (segSum a<=b g n k x y - segSum a<=b g n k x' y') + negative (g p' - g p))
+                  (RealAbGroup.abs_+ <=∘ transport (_ <=) ec (RealAbGroup.<=_+ ih gd))
+
+        -- | The Riemann sum approximates the difference quotient.
+        \lemma segMean-est {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {e delta : Rat} (s : Step f g e delta)
+                           {n : Nat} {x y : Set.Total (ClosedInterval a b)} (hD : RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) < Real.fromRat delta)
+          : RealAbGroup.abs ((y.1 - x.1) * segMean a<=b g n x y - (f y - f x)) <= Real.fromRat e * RealAbGroup.abs (y.1 - x.1)
+          => \have | t => segSum-est {a} {b} {a<=b} {f} {g} s hD {suc n} <=-refl
+                   | e1 : (y.1 - x.1) * segMean a<=b g n x y = Real.fromRat (step n) * (y.1 - x.1) * segSum a<=b g n (suc n) x y => rewrite (\peval segMean a<=b g n x y) equation
+                   | e2 : Real.fromRat (RatField.natCoef (suc n) * e) * RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) = Real.fromRat e * RealAbGroup.abs (y.1 - x.1)
+                       => pmap (_ *) (RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less step>0)))) *> inv *-assoc
+                           *> pmap (* _) (RealField.*-rat *> pmap Real.fromRat (*-assoc *> pmap (_ *) *-comm *> inv *-assoc *> pmap (* e) step-mul *> ide-left))
+             \in rewrite (e1, inv e2) (rewrite segPt-last in t)
+
+        -- | On the diagonal, the Riemann sum is the value of {g}.
+        \lemma segMean-same {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {n : Nat} {x : Set.Total (ClosedInterval a b)} : segMean a<=b g n x x = g x
+          => (\peval segMean a<=b g n x x) *> pmap (_ *) (segSum-same {a} {b} {a<=b} {g} {n} {suc n}) *> inv *-assoc *> pmap (* g x) (RealField.*-rat *> pmap Real.fromRat (*-comm *> step-mul)) *> RealField.ide-left
+
+        -- | Riemann sums are uniformly continuous with the modulus of {g}.
+        \lemma segMean-uniform {a b : Real} {a<=b : a <= b} {g : Set.Total (ClosedInterval a b) -> Real} {e delta : Rat}
+                               (hg : \Pi {x y : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta -> RealAbGroup.abs (g y - g x) <= Real.fromRat e)
+                               {n : Nat} {x y x' y' : Set.Total (ClosedInterval a b)} (d : RealAbGroup.abs (x.1 - x'.1) + RealAbGroup.abs (y.1 - y'.1) < Real.fromRat delta)
+          : RealAbGroup.abs (segMean a<=b g n x y - segMean a<=b g n x' y') <= Real.fromRat e
+          => \have | s>=0 : 0 <= Real.fromRat (step n) => rat_real_<=.1 (<=-less step>0)
+                   | t => segSum-uniform {a} {b} {a<=b} {g} hg {n} d {suc n} <=-refl
+             \in rewrite (\peval segMean a<=b g n x y, \peval segMean a<=b g n x' y') $ rewrite (inv RealField.ldistr_-, RealField.abs_*, RealAbGroup.abs-ofPos s>=0) $
+                   RealField.<=_*_positive-right s>=0 t <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc *> pmap (* e) (*-comm *> step-mul) *> ide-left))
+      }
+
+    \open segMean
+
+    -- | The difference quotient of {f}: the limit of Riemann sums of {g} along the segment from {x} to {y}.
+    \private \sfunc uniformQuot {a b : Real} (a<=b : a <= b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) (x y : Set.Total (ClosedInterval a b)) : Real
+      => family-limit {RealNormed} (quotFamily a<=b f g x y) (inh u) close
+      \where {
+        \lemma abs-diff-bound {a b : Real} {x y : Set.Total (ClosedInterval a b)} : RealAbGroup.abs (y.1 - x.1) <= b - a
+          => \have | x1 => x.2.1
+                   | x2 => x.2.2
+                   | y1 => y.2.1
+                   | y2 => y.2.2
+             \in RealAbGroup.join-univ (linarith : y.1 - x.1 <= b - a) (linarith : negative (y.1 - x.1) <= b - a)
+
+        -- | {n} is large enough for the estimate of the increments of {f} with {e}.
+        \func Fine {a b : Real} (f g : Set.Total (ClosedInterval a b) -> Real) (n : Nat) (e : Rat) : \Prop
+          => ∃ (delta : Rat) (Step f g e delta) ((b - a) * Real.fromRat (step n) < Real.fromRat delta)
+
+        \lemma fine-est {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {n : Nat} {e : Rat} (F : Fine f g n e) {x y : Set.Total (ClosedInterval a b)}
+          : RealAbGroup.abs ((y.1 - x.1) * segMean a<=b g n x y - (f y - f x)) <= Real.fromRat e * RealAbGroup.abs (y.1 - x.1) \elim F
+          | inP (delta,s,h) =>
+            \have | q1 : RealAbGroup.abs (Real.fromRat (step n) * (y.1 - x.1)) = Real.fromRat (step n) * RealAbGroup.abs (y.1 - x.1)
+                       => RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less step>0)))
+                  | q2 : Real.fromRat (step n) * RealAbGroup.abs (y.1 - x.1) <= Real.fromRat (step n) * (b - a)
+                       => RealField.<=_*_positive-right (rat_real_<=.1 (<=-less step>0)) abs-diff-bound
+                  | q3 : Real.fromRat (step n) * (b - a) < Real.fromRat delta => transport (< _) *-comm h
+            \in segMean-est s ((=_<= q1 <=∘ q2) <∘r q3)
+
+        \lemma arch (X : Real) {d : Rat} (d>0 : 0 < d) : ∃ (n : Nat) (X * Real.fromRat (step n) < Real.fromRat d)
+          => \case (X * Real.fromRat (RatField.finv d)).natBounded \with {
+            | inP (N,h) =>
+              \have | h' : X * Real.fromRat (RatField.finv d) < Real.fromRat (RatField.natCoef (suc N))
+                        => real_<_U.2 h <∘ rat_real_<.1 (RatField.natCoef_< id<suc)
+                    | sd>0 : 0 < Real.fromRat (step N) * Real.fromRat d => RealField.<_*_positive_positive (rat_real_<.1 step>0) (rat_real_<.1 d>0)
+                    | id : Real.fromRat (RatField.finv d) * Real.fromRat d = 1 => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (/=-sym (StrictPoset.<_/= d>0)))
+                    | ks : Real.fromRat (RatField.natCoef (suc N)) * Real.fromRat (step N) = 1 => RealField.*-rat *> pmap Real.fromRat step-mul
+              \in inP (N, aux h' ks id sd>0)
+          }
+          \where
+            \lemma aux {X i K s d : Real} (h : X * i < K) (ks : K * s = 1) (id : i * d = 1) (sd>0 : 0 < s * d) : X * s < d
+              => transport2 (<) ((equation : X * i * (s * d) = X * s * (i * d)) *> pmap (X * s *) id *> ide-right) ((equation : K * (s * d) = (K * s) * d) *> pmap (* d) ks *> ide-left) (RealField.<_*_positive-left h sd>0)
+
+        \lemma fine-exists {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {e : Rat} (e>0 : 0 < e) : ∃ (n : Nat) (Fine f g n e)
+          => \case u e>0 \with {
+            | inP (delta,delta>0,s) => \case arch (b - a) delta>0 \with {
+              | inP (n,h) => inP (n, inP (delta, s, h))
+            }
+          }
+
+        -- | Riemann sums for large {n} and {m} are close.
+        \lemma segMean-close {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {n m : Nat} {e e' : Rat} (e>0 : 0 < e) (e'>0 : 0 < e')
+                             (F : Fine f g n e) (F' : Fine f g m e') {x y : Set.Total (ClosedInterval a b)}
+          : RealAbGroup.abs (segMean a<=b g n x y - segMean a<=b g m x y) <= Real.fromRat (e + e')
+          => \let t => RealAbGroup.abs (y.1 - x.1)
+             \in RealAbGroup.<=-split LinearOrder.<=-stable RealAbGroup.abs>=0
+              (\lam t>0 =>
+                \have | p1 => fine-est {a} {b} {a<=b} F {x} {y}
+                      | p2 : RealAbGroup.abs (negative ((y.1 - x.1) * segMean a<=b g m x y - (f y - f x))) <= Real.fromRat e' * t => =_<= RealAbGroup.abs_negative <=∘ fine-est {a} {b} {a<=b} F' {x} {y}
+                      | key : t * RealAbGroup.abs (segMean a<=b g n x y - segMean a<=b g m x y) <= Real.fromRat (e + e') * t
+                          => =_<= (inv RealField.abs_*) <=∘ transport (\lam z => _ <= z * t) RealAbGroup.+-rat (abs-sum-le equation.ring p1 p2)
+                \in RealField.<=_*-cancel-right t>0 (transport (<= _) RealField.*-comm key))
+              (\lam t=0 => rewrite (interval-ext (inv t=0), segMean-same, segMean-same, negative-right, RealAbGroup.abs_zro) (rat_real_<=.1 (<=-less (linarith : 0 < e + e'))))
+
+        \lemma dist-le {x y : Real} {e : Rat} (p : dist {RealNormed} x y ExUpperReal.<= e) : RealAbGroup.abs (x - y) <= Real.fromRat e
+          => \lam q => \case real_<-rat-char.1 q \with {
+            | inP (c,cU,cL) => <-irreflexive (real_<_U.2 (p (rat_real_<.2 (real_<_U.2 cU))) <∘ real_<_L.2 cL)
+          }
+
+        -- | The family of Riemann sums along the segment from {x} to {y} for large `n`.
+        \func quotFamily {a b : Real} (a<=b : a <= b) (f g : Set.Total (ClosedInterval a b) -> Real) (x y : Set.Total (ClosedInterval a b)) (e : Rat) (r : Real) : \Prop
+          => ∃ (n : Nat) (Fine f g n e) (segMean a<=b g n x y = r)
+
+        \lemma inh {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {x y : Set.Total (ClosedInterval a b)} {e : Rat} (e>0 : 0 < e)
+          : ∃ (r : Real) (quotFamily a<=b f g x y e r)
+          => \case fine-exists u e>0 \with {
+            | inP (n,F) => inP (segMean a<=b g n x y, inP (n, F, idp))
+          }
+
+        \lemma close {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {x y : Set.Total (ClosedInterval a b)} {e e' : Rat} {r r' : Real}
+                     (e>0 : 0 < e) (e'>0 : 0 < e') (P : quotFamily a<=b f g x y e r) (P' : quotFamily a<=b f g x y e' r') : dist {RealNormed} r r' ExUpperReal.<= e RatField.+ e'
+          => \lam {k} (ek : e + e' < k) => \case \elim r, \elim r', P, P' \with {
+            | r, r', inP (n,F,idp), inP (m,F',idp) => real_<_U.1 (segMean-close e>0 e'>0 F F' <∘r rat_real_<.1 ek)
+          }
+
+        \lemma near {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x y : Set.Total (ClosedInterval a b)} {n : Nat} {e : Rat} (e>0 : 0 < e) (F : Fine f g n e)
+          : RealAbGroup.abs (uniformQuot a<=b u x y - segMean a<=b g n x y) <= Real.fromRat e
+          => rewrite (\peval uniformQuot a<=b u x y) $ dist-le (family-limit.char {RealNormed} {quotFamily a<=b f g x y} {inh u} {close} e>0 (inP (n, F, idp)))
+      }
+
+    \open uniformQuot (fine-est, fine-exists)
+
+    -- | The quotient times the increment of the argument is the increment of {f}.
+    \private \lemma uniformQuot-incr {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x y : Set.Total (ClosedInterval a b)}
+      : (y.1 - x.1) * uniformQuot a<=b u x y = f y - f x
+      => \let t => RealAbGroup.abs (y.1 - x.1)
+         \in real-scaled-eq-real (transport (<= _) zro-left (RealAbGroup.<=_+ RealAbGroup.abs>=0 RealAbGroup.abs>=0)) \lam {e} e>0 => \case fine-exists u e>0 \with {
+           | inP (n,F) =>
+             \have | p1 : RealAbGroup.abs ((y.1 - x.1) * (uniformQuot a<=b u x y - segMean a<=b g n x y)) <= Real.fromRat e * t
+                       => =_<= (RealField.abs_* *> RealField.*-comm) <=∘ RealField.<=_*_positive-left (uniformQuot.near e>0 F) RealAbGroup.abs>=0
+                   | p2 => fine-est {a} {b} {a<=b} F {x} {y}
+             \in transport (_ <=) (RealField.rdistr *> inv RealField.ldistr) (abs-sum-le equation.ring p1 p2)
+         }
+
+    -- | On the diagonal, the quotient is the value of {g}.
+    \private \lemma uniformQuot-same {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g} {x : Set.Total (ClosedInterval a b)}
+      : uniformQuot a<=b u x x = g x
+      => real-scaled-eq RatField.zro<ide \lam {e} e>0 => \case fine-exists u e>0 \with {
+        | inP (n,F) => transport (\lam z => RealAbGroup.abs (_ - z) <= _) segMean-same (uniformQuot.near e>0 F) <=∘ =_<= (pmap Real.fromRat (inv ide-right))
+      }
+
+    -- | The difference quotient is uniformly continuous.
+    \private \lemma uniformQuot-uniform {a b : Real} {a<=b : a <= b} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {e : Rat} (e>0 : 0 < e)
+      : ∃ (delta : Rat) (0 < delta) ∀ {x y x' y' : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (x.1 - x'.1) + RealAbGroup.abs (y.1 - y'.1) < Real.fromRat delta)
+          (RealAbGroup.abs (uniformQuot a<=b u x y - uniformQuot a<=b u x' y') <= Real.fromRat (e + e + e))
+      => \case uniformEst-cont u e>0, fine-exists u e>0 \with {
+        | inP (delta,delta>0,hg), inP (n,F) => inP (delta, delta>0, \lam {x} {y} {x'} {y'} d =>
+          \have | q1 => uniformQuot.near {a} {b} {a<=b} {f} {g} {u} {x} {y} e>0 F
+                | q2 => segMean-uniform {a} {b} {a<=b} {g} hg {n} d
+                | q3 : RealAbGroup.abs (negative (uniformQuot a<=b u x' y' - segMean a<=b g n x' y')) <= Real.fromRat e
+                    => =_<= RealAbGroup.abs_negative <=∘ uniformQuot.near {a} {b} {a<=b} {f} {g} {u} {x'} {y'} e>0 F
+                | ee : Real.fromRat e + Real.fromRat e + Real.fromRat e = Real.fromRat (e + e + e) => pmap (+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat
+          \in abs-three q1 q2 q3 <=∘ =_<= ee)
+      }
+      \where
+        \lemma abs-three {X Y X' Y' : Real} {E1 E2 E3 : Real} (q1 : RealAbGroup.abs (X - Y) <= E1) (q2 : RealAbGroup.abs (Y - Y') <= E2) (q3 : RealAbGroup.abs (negative (X' - Y')) <= E3)
+          : RealAbGroup.abs (X - X') <= E1 + E2 + E3
+          => rewrite (equation : X - X' = (X - Y) + (Y - Y') + negative (X' - Y')) (RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ (RealAbGroup.abs_+ <=∘ RealAbGroup.<=_+ q1 q2) q3)
+
+    -- | The difference quotient on the square `[a,b]²`.
+    \private \lemma uniformQuotSquare {a b : Real} (a<=b : a <= b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g)
+      : CoverMap (SquareSpace a b) RealNormed (\lam p => uniformQuot a<=b u p.1 p.2)
+      => square-map a<=b \lam {eps} eps>0 => \case uniformQuot-uniform u (linarith : 0 < eps * ratio 1 4) \with {
+        | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} {y} {x'} {y'} d =>
+          h {x} {y} {x'} {y'} d <∘r rat_real_<.1 (linarith : eps * ratio 1 4 + eps * ratio 1 4 + eps * ratio 1 4 < eps))
+      }
+
+    -- | The difference quotient of {f} as a cover map.
+    \private \lemma uniformQuotDeriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g)
+      : CoverMap (DerivSpace (intervalInc a b)) RealTopLModule (\lam s => s.1.2.2.2 * uniformQuot (<=-less a<b) u s.1.1 s.1.2.1)
+      => \let | S => IntervalSpace a b
+              | P => ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace RealNearField RealTopLModule))
+              | m : CoverMap (DerivSpace (intervalInc a b)) P __.1 => CoverTransfer-map __.1
+              | xy : CoverMap (DerivSpace (intervalInc a b)) (SquareSpace a b) (\lam s => (s.1.1, s.1.2.1))
+                  => ProductCoverSpace.tuple (ProductCoverSpace.proj1 CoverMap.∘ m) (ProductCoverSpace.proj1 CoverMap.∘ ProductCoverSpace.proj2 CoverMap.∘ m)
+              | c : CoverMap (DerivSpace (intervalInc a b)) RealTopLModule (\lam s => s.1.2.2.2)
+                  => ProductCoverSpace.proj2 CoverMap.∘ ProductCoverSpace.proj2 CoverMap.∘ ProductCoverSpace.proj2 CoverMap.∘ m
+         \in *-locally-uniform {RealValuedRing} CoverMap.∘ ProductCoverSpace.tuple c (uniformQuotSquare (<=-less a<b) u CoverMap.∘ xy)
+
+    \private \lemma uniformQuotDeriv-char {a b : Real} {a<b : a < b} {f g : Set.Total (ClosedInterval a b) -> Real} {u : UniformEst f g}
+      : IsDerivQuot (intervalInc a b) f (uniformQuotDeriv a<b u)
+      => \lam s => \have hc : s.1.2.2.1 * s.1.2.2.2 = s.1.2.1.1 - s.1.1.1 => rewrite s.2 equation
+                   \in inv *-assoc *> pmap (* _) hc *> uniformQuot-incr
+
+    -- | A function satisfying the estimate has a derivative.
+    \private \lemma uniform-hasDeriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) : HasDeriv (intervalInc a b) f
+      => inP (uniformQuotDeriv a<b u, uniformQuotDeriv-char)
+
+    -- | The derivative of a function {f} satisfying the estimate is {g}.
+    \private \lemma uniform-deriv {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) (d : HasDeriv (intervalInc a b) f)
+                         (x : Set.Total (ClosedInterval a b)) : deriv (interval-derivDense a<b) f d x 1 = g x
+      => deriv-unique (interval-derivDense a<b) (deriv-quot (interval-derivDense a<b) f d) (uniformQuotDeriv a<b u) deriv-quot.char uniformQuotDeriv-char
+           *> ide-left *> uniformQuot-same
+
+    -- | A function satisfying the estimate with zero is constant.
+    \lemma zero-const {a b : Real} {f : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f (\lam _ => 0)) (x y : Set.Total (ClosedInterval a b)) : f x = f y
+      => \have a<=b : a <= b => x.2.1 <=∘ x.2.2
+         \in inv $ real-scaled-eq-real RealAbGroup.abs>=0 \lam {e} e>0 => \case fine-exists {a} {b} {f} {\lam _ => 0} u e>0 \with {
+           | inP (n,F) => =_<= (inv RealAbGroup.abs_negative) <=∘ transport (\lam v => RealAbGroup.abs v <= _)
+                           (pmap (\lam v => (y.1 - x.1) * v - (f y - f x)) segMean-zero *> (equation.cRing : (y.1 - x.1) * 0 - (f y - f x) = negative (f y - f x)))
+                           (fine-est {a} {b} {a<=b} {f} {\lam _ => 0} F {x} {y})
+         }
+  }
+
+-- | A function with zero derivative is constant.
+\lemma deriv-zero-const {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                        (z : \Pi (x : Set.Total (ClosedInterval a b)) -> deriv (interval-derivDense a<b) f d x 1 = 0) (x y : Set.Total (ClosedInterval a b)) : f x = f y
+  => hasDeriv-uniform-iff.zero-const ((hasDeriv-uniform-iff a<b {f} {\lam _ => 0}).1 (d, z)) x y

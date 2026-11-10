@@ -108,6 +108,10 @@ configurations.all {
 
 tasks.named<JavaExec>("runIde") {
     jvmArgs = listOf("-Xmx4g")
+    // `./gradlew runIde -ParendServerLogging` logs what the Arend server resolves, invalidates and typechecks to idea.log
+    if (providers.gradleProperty("arendServerLogging").isPresent) {
+        systemProperty("arend.server.logging", "true")
+    }
 }
 
 // `buildSearchableOptions` boots an IDE and runs `TraverseUIStarter`, which instantiates *every*

@@ -1,4 +1,4 @@
-\import Data.Bool
+\import Data.Array
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -8,6 +8,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
+\import Set.Fin
 \import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Product
@@ -83,4 +84,57 @@
       : isUniform {ProductUniformSpace X Y} \lam W => ∃ (U : C) (V : D) (W = \lam s => \Sigma (U s.1) (V s.2))
       => uniform-subset {ProductUniformSpace X Y} (uniform-inter {ProductUniformSpace X Y} (proj1.func-uniform Cu) (proj2.func-uniform Du))
           \lam {_} (inP (_, inP (U,CU,idp), _, inP (V,DV,idp), idp)) => inP $ later (U, CU, V, DV, idp)
+  }
+
+-- | The array of covers equal to {C} at {j} and trivial elsewhere.
+\func coverAt {X : \Set} {n : Nat} (j : Fin n) (C : Set (Set X)) : Array (Set (Set X)) n
+  => replace (replicate n (single top)) j C
+
+\lemma coverAt-uniform {X : PreuniformSpace} {n : Nat} {j : Fin n} {C : Set (Set X)} (Cu : X.isUniform C) (i : Fin n) : X.isUniform (coverAt j C i)
+  => replace-elim {_} {replicate n (single top)} {j} {C} {\lam _ D => X.isUniform D} (\lam _ => uniform-top) Cu i
+
+\lemma coverAt-refines {X : \Set} {n : Nat} {j : Fin n} {C : Set (Set X)} : Refines (Boxes (coverAt j C)) \lam V => ∃ (U : C) (V = (\lam (x : Array X n) => x j) ^-1 U)
+  => \lam {_} (inP (U,h,idp)) => inP (_, inP (U j, transport (__ (U j)) (replace-index {_} {replicate n (single top)} {j} {C}) (h j), idp), \lam b => b j)
+
+-- | The product of `n` copies of a regular preuniform space.
+\instance ArrayRegularPreuniformSpace (n : Nat) (X : RegularPreuniformSpace) : RegularPreuniformSpace (Array X n)
+  | CoverSpace => ArrayCoverSpace n X
+  | isUniform E => ∃ (C : Array (Set (Set X)) n) (\Pi (j : Fin n) -> X.isUniform (C j)) (Refines (Boxes C) E)
+  | uniform-cover {E} (inP (C,Cu,r)) x => \case FinSet.finiteAC {n} {\lam j => \Sigma (U : Set X) (C j U) (U (x j))} (\lam j => uniform-cover (Cu j) (x j)) \with {
+    | inP g => Refines-cover r $ inP (Box (\lam j => (g j).1), inP (\lam j => (g j).1, \lam j => (g j).2, idp), \lam j => (g j).3)
+  }
+  | uniform-top => inP (\lam _ => single top, \lam _ => uniform-top, Refines-single_top)
+  | uniform-refine (inP (C',C'u,r')) r => inP (C', C'u, Refines-trans r' r)
+  | uniform-inter (inP (C1,C1u,r1)) (inP (C2,C2u,r2)) => inP (\lam j => CoverInter (C1 j) (C2 j), \lam j => uniform-inter (C1u j) (C2u j), Refines-trans inter-boxes (Refines-inter r1 r2))
+  | uniform-cauchy => (closure-univ-closure-id $ later \case \elim __ \with {
+    | inP (j,Dc) => closure-refine (closure-univ-closure (\lam (x : Array X n) => x j) (\lam {C} Cu => closure $ inP (coverAt j C, coverAt-uniform Cu, coverAt-refines)) $ uniform-cauchy.1 Dc) \lam (inP (V, inP (W,CW,q), p)) => inP (W, CW, rewrite p q)
+  }, closure-univ-closure-id $ later \lam {E} (inP (C,Cu,r)) => closure-refine (ArrayCoverSpace.boxCover \lam j => X.makeCauchy (Cu j)) r)
+  | uniform-regular {C} (inP (D,Du,r)) => cauchy-subset (ArrayCoverSpace.boxCover {n} {X} {\lam j V => ∃ (U : D j) (V <=* U)} \lam j => uniform-regular (Du j)) $ later \lam {_} (inP (V,h,idp)) =>
+      \case FinSet.finiteAC {n} {\lam j => \Sigma (U : Set X) (D j U) (V j <=* U)} h \with {
+        | inP g => \case r (inP (\lam j => (g j).1, \lam j => (g j).2, idp)) \with {
+          | inP (W,CW,q) => inP (W, CW, inP (Boxes (\lam j T => Given (V j ∧ T) -> T ⊆ (g j).1), inP (\lam j T => Given (V j ∧ T) -> T ⊆ (g j).1, \lam j => <=*-char.1 (g j).3, Refines-refl), \lam {y} (inP (_, (inP (T,hT,idp), (x,(Vx,Tx))), Ty)) => q \lam j => hT j (x j, (Vx j, Tx j)) (Ty j)))
+        }
+      }
+  \where {
+    \private \lemma inter-boxes {X : \Set} {n : Nat} {C D : Array (Set (Set X)) n} : Refines (Boxes (\lam j => CoverInter (C j) (D j))) (CoverInter (Boxes C) (Boxes D))
+      => \lam {_} (inP (U,h,idp)) => \case FinSet.finiteAC {n} {\lam j => \Sigma (A B : Set X) (C j A) (D j B) (U j = A ∧ B)} (\lam j => TruncP.map (h j) \lam (A,CA,B,DB,p) => (A,B,CA,DB,p)) \with {
+        | inP g => inP (_, inP (Box (\lam j => (g j).1), inP (\lam j => (g j).1, \lam j => (g j).3, idp), Box (\lam j => (g j).2), inP (\lam j => (g j).2, \lam j => (g j).4, idp), idp),
+                        \lam {x} b => (\lam j => (transport (__ (x j)) (g j).5 (b j)).1, \lam j => (transport (__ (x j)) (g j).5 (b j)).2))
+      }
+  }
+
+-- | The product of `n` copies of a uniform space.
+\instance ArrayUniformSpace (n : Nat) (X : UniformSpace) : UniformSpace (Array X n)
+  | RegularPreuniformSpace => ArrayRegularPreuniformSpace n X
+  | uniform-star {E} (inP (C,Cu,r)) => \case FinSet.finiteAC {n} {\lam j => \Sigma (D : Set (Set X)) (X.isUniform D) (∀ {V : D} ∃ (U : C j) ∀ {W : D} (Given (V ∧ W) -> W ⊆ U))} (\lam j => uniform-star (Cu j)) \with {
+    | inP g => inP (Boxes (\lam j => (g j).1), inP (\lam j => (g j).1, \lam j => (g j).2, Refines-refl), \lam {_} (inP (V,hV,idp)) =>
+        \case FinSet.finiteAC {n} {\lam j => \Sigma (U : Set X) (C j U) (∀ {W : (g j).1} (Given (V j ∧ W) -> W ⊆ U))} (\lam j => (g j).3 (hV j)) \with {
+          | inP f => \case r (inP (\lam j => (f j).1, \lam j => (f j).2, idp)) \with {
+            | inP (W,EW,p) => inP (W, EW, \lam {_} (inP (T,hT,idp)) (t,(Vt,Tt)) => (\lam {s} b j => (f j).3 (hT j) (t j, (Vt j, Tt j)) (b j)) <=∘ p)
+          }
+        })
+  }
+  \where {
+    \protected \func proj {n : Nat} {X : UniformSpace} (j : Fin n) : UniformMap (ArrayUniformSpace n X) X (__ j) \cowith
+      | func-uniform {D} Du => inP (coverAt j D, coverAt-uniform Du, coverAt-refines)
   }

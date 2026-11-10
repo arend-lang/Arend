@@ -325,6 +325,11 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
     }
 
     Concrete.BaseFunctionDefinition newDef = def.copy(visitParameters(def.getParameters()), newBody);
+    // An unresolved reference caches its resolved referable, so it must be copied as in other places;
+    // otherwise, a copy of the raw definition would keep a field of a previous version of the class
+    if (newDef instanceof Concrete.CoClauseFunctionDefinition coclauseDef) {
+      coclauseDef.setImplementedField(copyRef(coclauseDef.getImplementedField()));
+    }
     if (def.getResultType() != null) {
       newDef.setResultType(def.getResultType().accept(this, null));
     }

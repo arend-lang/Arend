@@ -244,8 +244,8 @@
     : IsEquiv {Fibers g' b} {Fibers g b} (\lam s => (s.1, w s.1 *> s.2))
     => inP \new QEquiv {
          | ret s => (s.1, inv (w s.1) *> s.2)
-         | ret_f s => pmap (\lam r => ((s.1, r) : Fibers g' b)) (inv *>-assoc *> pmap (`*> s.2) inv_*> *> idp_*>)
-         | f_sec s => pmap (\lam r => ((s.1, r) : Fibers g b)) (inv *>-assoc *> pmap (`*> s.2) *>_inv *> idp_*>)
+         | ret_f s => pmap (\lam r => ((s.1, r) : Fibers g' b)) (inv *>-assoc *> pmap (*> s.2) inv_*> *> idp_*>)
+         | f_sec s => pmap (\lam r => ((s.1, r) : Fibers g b)) (inv *>-assoc *> pmap (*> s.2) *>_inv *> idp_*>)
        }
 
   \lemma fib-hequiv.{u} {A A' : \Cat u} {B : \Cat} {p : A ->⁺ B} {p' : A' ->⁺ B} {u : A' ->⁺ A} (ue : IsHEquiv u)

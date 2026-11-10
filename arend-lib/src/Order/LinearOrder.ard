@@ -97,7 +97,7 @@
 }
 
 -- | A linearly ordered set.
-\class LinearOrder \extends BiorderedSet {
+\class LinearOrder \extends BiorderedSet, SeparatedSet {
   | <-comparison (y : E) {x z : E} : x < z -> x < y || y < z
   | <-connectedness {x y : E} : Not (x < y) -> Not (y < x) -> x = y
 
@@ -118,6 +118,12 @@
     | byRight a3<a2 => absurd (a3/<a2 a3<a2)
   }
   | <=-less p => \lam q => <-irreflexive (p <∘ q)
+  | separatedEq p => <-connectedness (\lam x<y => p \lam x=y => <-irreflexive $ transport (< _) x=y x<y)
+                                     (\lam y<x => p \lam x=y => <-irreflexive $ transport (_ <) x=y y<x)
+
+  -- | A stable proposition can be proved by cases on whether an inequality is strict or not.
+  \lemma <=-split {P : \Prop} (stable : Not (Not P) -> P) {a b : E} (a<=b : a <= b) (h1 : a < b -> P) (h2 : a = b -> P) : P
+    => stable \lam nP => nP $ h2 $ <=-antisymmetric a<=b \lam p => nP (h1 p)
 
   \protected \func op : LinearOrder \cowith
     | StrictPoset => StrictPoset.op
@@ -156,6 +162,13 @@
 
   \lemma notLess {A : StrictPoset} {a a' : A} (p : a <= a') (q : a' < a) : Empty
     => p q
+
+  \lemma <=-stable {A : StrictPoset} {a b : A} (nn : Not (Not (a <= b))) : a <= b
+    => \lam b<a => nn \lam a<=b => notLess a<=b b<a
+
+  -- | A stable proposition can be proved by cases on the order of two reals.
+  \lemma <=-dec-stable {A : StrictPoset} {P : \Prop} (stable : Not (Not P) -> P) {u v : A} (h1 : u <= v -> P) (h2 : v <= u -> P) : P
+    => stable \lam nP => nP (h1 \lam v<u => nP (h2 (<_<= v<u)))
 
   -- | A linearly ordered set with decidable inequality.
   \class Dec \extends LinearLattice, DecSet, TotalOrder {

@@ -1,0 +1,127 @@
+{- | Evaluation of simple functions at points of a Boolean ring.
+ -
+ -   A point of a Boolean ring {B} is a map `B -> Bool` preserving zero, meets and joins, and {sfEval} evaluates a simple function at it.
+ -   If points separate {B}, then the order of simple functions is detected pointwise, which is {sfunc>=0}.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.Ring.Boolean
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Rat
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Bool
+\import Data.Fin
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence \hiding (~)
+\open SFunc
+\open SFuncRepr (IsReduced, makeReduced)
+
+-- | A point of a Boolean ring.
+\record BoolPoint (B : BooleanRing) (\coerce belongs : B -> Bool) {
+  | belongs_zro : belongs 0 = false
+  | belongs_meet {a b : B} : belongs (a ∧ b) = belongs a and belongs b
+  | belongs_join {a b : B} : belongs (a ∨ b) = belongs a or belongs b
+
+  -- | Disjoint elements are not both satisfied at a point.
+  \lemma belongs-disjoint {a b : B} (ab : a * b = 0) (h : belongs a = true) : belongs b = false
+    => rewrite h in (inv belongs_meet *> pmap belongs ab *> belongs_zro)
+
+  -- | The value of a finite family at a point.
+  \func evalL {V : AbMonoid} (l : Array (\Sigma V B)) : V
+    => V.BigSum $ map (\lam s => if (belongs s.2) s.1 0) l
+
+  \lemma evalL_~ {V : AbMonoid} {l l' : Array (\Sigma V B)} (r : l ~ l') : evalL l = evalL l' \elim r
+    | ~-perm e => V.BigSum_EPerm (EPerm.EPerm_map (\lam (s : \Sigma V B) => if (belongs s.2) s.1 0) e)
+    | ~-sym r => inv (evalL_~ r)
+    | ~-trans r r' => evalL_~ r *> evalL_~ r'
+    | ~-zro-left idp => pmap (+ _) (if-zro (belongs _)) *> zro-left
+    | ~-zro-right idp => pmap (\lam b => if b _ 0 + _) belongs_zro *> zro-left
+    | ~-+-left idp idp => if-plus (belongs _)
+    | ~-+-right idp idp => pmap2 (\lam a b => if a _ 0 + (if b _ 0 + _)) belongs_join belongs_meet *> if-join (belongs _) (belongs _)
+
+  -- | The value of a simple function at a point.
+  \func sfEval {V : AbMonoid} (x : SFunc V B) : V \elim x
+    | in~ l => evalL l
+    | ~-equiv l l' r => evalL_~ r
+
+  -- | Evaluation at a point is additive.
+  \lemma sfEval_+ {V : AbMonoid} {x y : SFunc V B} : sfEval (x + y) = sfEval x + sfEval y \elim x, y
+    | in~ l, in~ l' => pmap V.BigSum (map_++ (\lam s => if (belongs s.2) s.1 0)) *> V.BigSum_++
+
+  \lemma evalL-false {V : AbMonoid} {l : Array (\Sigma V B)} (h : \Pi (j : Fin l.len) -> belongs (l j).2 = false) : evalL l = 0 \elim l
+    | nil => idp
+    | x :: l => pmap (\lam b => if b x.1 0 + evalL l) (h 0) *> zro-left *> evalL-false \lam j => h (suc j)
+
+  \lemma reduced-rest {V : AbMonoid} {x : \Sigma V B} {l : Array (\Sigma V B)} (r : IsReduced (x :: l)) (h : belongs x.2 = true) (j : Fin l.len) : belongs (l j).2 = false
+    => belongs-disjoint (r {0} {suc j} (/=-sym fsuc/=0)) h
+
+  -- | The value of a reduced family at a point of its {j}-th element is the {j}-th value.
+  \lemma evalL-index {V : AbMonoid} {l : Array (\Sigma V B)} (lr : IsReduced l) {j : Fin l.len} (h : belongs (l j).2 = true) : evalL l = (l j).1 \elim l, j
+    | x :: l, 0 => pmap (\lam b => if b x.1 0 + evalL l) h *> pmap (x.1 +) (evalL-false (reduced-rest lr h)) *> zro-right
+    | x :: l, suc j => pmap (\lam b => if b x.1 0 + evalL l) (belongs-disjoint (lr {suc j} {0} fsuc/=0) h) *> zro-left *> evalL-index (SFuncRepr.reduced-tail lr) h
+
+  -- | A map fixing zero commutes with evaluation of reduced families.
+  \lemma evalL-map {V : AbMonoid} (f : V -> V) (f0 : f 0 = 0) {l : Array (\Sigma V B)} (lr : IsReduced l)
+    : evalL (map (\lam s => (f s.1, s.2)) l) = f (evalL l) \elim l
+    | nil => inv f0
+    | x :: l => cases (belongs x.2 arg addPath) \with {
+      | true, q => pmap (\lam b => if b (f x.1) 0 + _) q *> pmap (f x.1 +) (evalL-false {_} {_} {map (\lam s => (f s.1, s.2)) l} (reduced-rest lr q)) *> zro-right
+                    *> inv (pmap f (pmap (\lam b => if b x.1 0 + evalL l) q *> pmap (x.1 +) (evalL-false (reduced-rest lr q)) *> zro-right))
+      | false, q => pmap (\lam b => if b (f x.1) 0 + _) q *> zro-left *> evalL-map f f0 (SFuncRepr.reduced-tail lr) *> inv (pmap f (pmap (\lam b => if b x.1 0 + evalL l) q *> zro-left))
+    }
+
+  -- | Evaluation commutes with the absolute value.
+  \lemma sfEval_abs {V : RieszSpace} {x : SFunc V B} : sfEval (LatticeAbGroup.abs {SFuncRieszSpace V B} x) = V.abs (sfEval x)
+    => \case makeReduced x \with {
+      | inP (l,lr,e) => rewrite e $ pmap sfEval (SFuncRieszSpace.abs-reduced lr) *> evalL-map V.abs V.abs_zro lr
+    }
+
+  -- | Evaluation at a point preserves negation.
+  \lemma sfEval_negative {V : AbGroup} {x : SFunc V B} : sfEval (negative {SFuncAbGroup V B} x) = V.negative (sfEval x)
+    => V.negative-unique _ (inv sfEval_+ *> pmap sfEval negative-left *> idp) negative-right
+} \where {
+  \lemma if-zro {V : AbMonoid} (b : Bool) : if b (0 : V) 0 = 0 \elim b
+    | true => idp
+    | false => idp
+
+  \lemma if-plus {V : AbMonoid} (b : Bool) {u v M : V} : if b u 0 + (if b v 0 + M) = if b (u + v) 0 + M \elim b
+    | true => inv +-assoc
+    | false => zro-left
+
+  \lemma if-join {V : AbMonoid} (a b : Bool) {v M : V} : if (a or b) v 0 + (if (a and b) v 0 + M) = if a v 0 + (if b v 0 + M) \elim a, b
+    | true, true => idp
+    | true, false => idp
+    | false, true => pmap (_ +) zro-left *> inv zro-left
+    | false, false => idp
+}
+
+-- | If points separate {B}, then simple functions which are non-negative at all points are non-negative.
+\lemma sfunc>=0 {B : BooleanRing} {Z : \Type} (p : Z -> BoolPoint B) (sep : \Pi {b : B} -> (\Pi (z : Z) -> p z b = false) -> b = 0)
+                {x : SFuncPosetQModule RatIntegrationSpace B} (h : \Pi (z : Z) -> (0 : Rat) <= (p z).sfEval x) : 0 <= x
+  => \case makeReduced x \with {
+    | inP (l,lr,e) => rewrite e $ (SFuncPosetQModule.>=0-reduced-char lr).2 \lam j => \case LinearOrder.dec<_<= (l j).1 0 \with {
+      | inr c>=0 => byLeft c>=0
+      | inl c<0 => byRight $ sep \lam z => cases (p z (l j).2 arg addPath) \with {
+        | true, q =>
+          \have | i : (p z).evalL l = (l j).1 => BoolPoint.evalL-index lr q
+                 | g : (0 : Rat) <= (p z).evalL l => transport (\lam y => (0 : Rat) <= (p z).sfEval y) e (h z)
+          \in absurd linarith
+        | false, q => idp
+      }
+    }
+  }

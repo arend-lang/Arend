@@ -1,4 +1,4 @@
-\import Data.Bool
+\import Data.Array
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -9,6 +9,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Filter
+\import Set.Fin
 \import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
@@ -176,4 +177,71 @@
       : isCauchy {ProductPrecoverSpace X Y} \lam W => ∃ (U : C) (V : D) (W = \lam s => \Sigma (U s.1) (V s.2))
       => cauchy-subset {Prod X Y} (cauchy-inter {Prod X Y} (proj1.func-cover Cc) (proj2.func-cover Dc))
           \lam (inP (U, V, inP (U',CU',p1), inP (V',DV',p2), q)) => inP $ later (U', CU', V', DV', q *> pmap2 (∧) p1 p2)
+  }
+
+-- | The product of `n` copies of a cover space.
+\instance ArrayCoverSpace (n : Nat) (X : CoverSpace) : CoverSpace (Array X n)
+  | TopSpace => ArrayTopSpace n X
+  | isCauchy => isCauchy {Pre n X}
+  | cauchy-cover => cauchy-cover {Pre n X}
+  | cauchy-top => cauchy-top {Pre n X}
+  | cauchy-refine => cauchy-refine {Pre n X}
+  | cauchy-glue => cauchy-glue {Pre n X}
+  | isRegular Cc => closure-subset (isRegular {Pre n X} Cc) \lam {V} (inP (U,CU,V<=<U)) => inP (U, CU, unfolds V<=<U)
+  | cauchy-open => (\lam f {x} Sx => \case f Sx \with {
+    | inP (U,Uo,Ux,h) => closure-subset (boxCover' {_} {_} {\lam j V => V (x j) -> V ⊆ U j} \lam j => cauchy-open.1 (Uo j) (Ux j)) \lam {W} (inP (U',cU',p)) => rewrite p \lam b {y} b' => h \lam j => cU' j (b j) (b' j)
+  }, \lam f Sx => \case box-neighborhood' (PrecoverSpace.open-char.1 (later f) Sx) \with {
+    | inP (U,xU,h) => inP (\lam j x => single x <=< U j, \lam j => X.interior {U j}, xU, \lam b => h \lam j => <=<_<= (b j) idp)
+  })
+  \where {
+    \private \func Gen (n : Nat) (X : CoverSpace) (C : Set (Set (Array X n))) : \Prop
+      => ∃ (j : Fin n) (isCauchy {CoverTransfer {Array X n} {X} (__ j)} C)
+
+    \private \func Pre (n : Nat) (X : CoverSpace) : CoverSpace (Array X n)
+      => ClosureCoverSpace (Gen n X) (\lam (inP (j,Cc)) x => cauchy-cover {CoverTransfer {Array X n} {X} (__ j)} Cc x)
+          \lam (inP (j,Cc)) => closure $ inP (j, cauchy-subset {CoverTransfer {Array X n} {X} (__ j)} (isRegular {CoverTransfer {Array X n} {X} (__ j)} Cc) \lam {V} (inP (U,CU,V<=<U)) => inP $ later (U, CU, closure $ inP (j, V<=<U)))
+
+    \private \func proj' {n : Nat} {X : CoverSpace} (j : Fin n) : CoverMap (Pre n X) X (__ j) \cowith
+      | func-cover Dc => closure $ inP (j, func-cover {PrecoverTransfer-map {Array X n} {X} (__ j)} Dc)
+
+    \private \lemma big-top-char {Y : \Set} {l : Array (Set Y)} {y : Y} : Big (MeetSemilattice.meet {SetLattice Y}) (top {SetLattice Y}) l y <-> (\Pi (i : Fin l.len) -> l i y) \elim l
+      | nil => (\lam _ i => \case i \with {}, \lam _ => ())
+      | a :: l => (\lam s i => \case \elim i \with {
+        | 0 => s.1
+        | suc i => big-top-char.1 s.2 i
+      }, \lam f => (f 0, big-top-char.2 \lam i => f (suc i)))
+
+    \private \lemma boxCover' {n : Nat} {X : CoverSpace} {Cs : Array (Set (Set X)) n} (Cc : \Pi (j : Fin n) -> X.isCauchy (Cs j))
+      : isCauchy {Pre n X} (Boxes Cs)
+      => cauchy-subset {Pre n X} (cauchy-array-inter {Pre n X} (mkArray \lam j => later (_, (proj' j).func-cover (Cc j)))) \lam {W} (inP (Us,f,p)) =>
+          \case FinSet.finiteAC {n} {\lam j => \Sigma (V : Set X) (Cs j V) (Us j = (\lam (x : Array X n) => x j) ^-1 V)} f \with {
+            | inP g => inP $ later (\lam j => (g j).1, \lam j => (g j).2, p *> <=-antisymmetric (\lam {x} b j => transport (__ x) (g j).3 (big-top-char.1 b j))
+                                                                                         (\lam {x} b => big-top-char.2 \lam j => transportInv (__ x) (g j).3 (b j)))
+          }
+
+    \private \lemma box-neighborhood' {n : Nat} {X : CoverSpace} {x : Array X n} {W : Set (Array X n)} (x<=<W : single x <=< {Pre n X} W)
+      : ∃ (U : Array (Set X) n) (\Pi (j : Fin n) -> single (x j) <=< U j) (Box U ⊆ W)
+      => \case closure-filter (\new SetFilter {
+                  | F W => ∃ (U : Array (Set X) n) (\Pi (j : Fin n) -> single (x j) <=< U j) (Box U ⊆ W)
+                  | filter-mono (inP (U,xU,q)) p => inP (U, xU, \lam b => p (q b))
+                  | filter-top => inP (\lam _ => top, \lam _ => <=<_top, \lam _ => ())
+                  | filter-meet (inP (U,xU,q)) (inP (U',xU',q')) => inP (\lam j => U j ∧ U' j, \lam j => RatherBelow.<=<_meet-same (xU j) (xU' j), \lam b => (q \lam j => (b j).1, q' \lam j => (b j).2))
+                }) (\case __ \with {
+                      | inP (j,Dc) => \case CoverSpace.cauchy-regular-cover Dc (x j) \with {
+                        | inP (U, inP (W,CW,p), xU) => inP (W, CW, inP (boxAt j U, boxAt-elim {_} {_} {_} {_} {\lam i V => single (x i) <=< V} (\lam _ => <=<_top) xU, \lam {y} b => p (transport (__ (y j)) boxAt-index (b j))))
+                      }
+      }) x<=<W \with {
+        | inP (W, h, inP (U,xU,q)) => inP (U, xU, \lam {y} b => h (x, (idp, q \lam j => <=<_<= (xU j) idp)) (q b))
+      }
+
+    \protected \lemma proj {n : Nat} {X : CoverSpace} (j : Fin n) : CoverMap (ArrayCoverSpace n X) X (__ j)
+      => proj' j
+
+    \lemma box-neighborhood {n : Nat} {X : CoverSpace} {x : Array X n} {W : Set (Array X n)} (x<=<W : single x <=< {ArrayCoverSpace n X} W)
+      : ∃ (U : Array (Set X) n) (\Pi (j : Fin n) -> single (x j) <=< U j) (Box U ⊆ W)
+      => box-neighborhood' $ unfolds x<=<W
+
+    \lemma boxCover {n : Nat} {X : CoverSpace} {Cs : Array (Set (Set X)) n} (Cc : \Pi (j : Fin n) -> X.isCauchy (Cs j))
+      : isCauchy {ArrayCoverSpace n X} (Boxes Cs)
+      => boxCover' Cc
   }

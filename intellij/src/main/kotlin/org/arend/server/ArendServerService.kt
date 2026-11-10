@@ -24,7 +24,7 @@ class ArendServerService(val project: Project) : Disposable {
     private fun initialize(): ArendServer {
         serverField?.let { return it }
         synchronized(this) {
-            val server = ArendServerImpl(ArendServerRequesterImpl(project), true, false, !ApplicationManager.getApplication().isUnitTestMode)
+            val server = ArendServerImpl(ArendServerRequesterImpl(project), true, java.lang.Boolean.getBoolean(SERVER_LOGGING_PROPERTY), !ApplicationManager.getApplication().isUnitTestMode)
             val preludeFileName = Prelude.MODULE_PATH.toString() + FileUtils.EXTENSION
             val preludeText = String(
                 ArendServerService::class.java.getResourceAsStream("/lib/$preludeFileName")!!.readBytes(),
@@ -70,5 +70,10 @@ class ArendServerService(val project: Project) : Disposable {
         val dependencies = library.libraryDependencies.mapNotNull { server.getLibrary(it) }
         val prelude = if (withPrelude) listOfNotNull(server.getLibrary(Prelude.LIBRARY_NAME)) else emptyList()
         return (if (withSelf) listOf(library) else emptyList()) + dependencies + prelude
+    }
+
+    companion object {
+        /** If set to true, the server logs to idea.log what it resolves, invalidates, and typechecks. */
+        const val SERVER_LOGGING_PROPERTY = "arend.server.logging"
     }
 }

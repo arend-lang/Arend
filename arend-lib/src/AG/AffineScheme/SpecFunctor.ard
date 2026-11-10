@@ -18,7 +18,6 @@
 \import Category
 \import Category.Functor
 \import Category.Subcat
-\import Category.Topos.Sheaf
 \import Equiv
 \import Function.Meta
 \import Logic
@@ -136,7 +135,7 @@
           \have ai : Inv (locR (f a.2)) => transport Inv (SchemeSitePrehom.f#-cover_f# (inP $ later ((), cover-refl (), ())) *> SchemeSitePrehom.compose.f#-eval {_} {Spec.site X.GlobalSections} *> later (SchemeSitePrehom.f#-cover_f# ())) c.2
           \in transport Inv lift_inL $ (RingLocalization.liftHom1 LocRing.isLocalization (X.R.F.Func s.1) s.2).func-Inv ai))
         (\lam a => LocRing.isLocalization.isEpiHom {X.R _} \lam x =>
-          path (\lam i => IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin X.R) {LRLSchemeSiteHom.compose-right.matchingFaimly {X} {Spec.satSite X.GlobalSections} {Spec.satSite R} {_} {specUnit.siteHom} a} i (((), f a.2), f<=id a) (locR x))
+          path (\lam i => (LRLSchemeSiteHom.compose-right.glue {X} {Spec.satSite X.GlobalSections} {Spec.satSite R} {_} {specUnit.siteHom} a).2 i (((), f a.2), f<=id a) (locR x))
           *> pmap (lift _ _) lift_inL *> unfold (pmap (lift _ _) (SchemeSitePrehom.f#-cover_f# (inP $ later ((), cover-refl (), ())) *> SchemeSitePrehom.compose.f#-eval {_} {Spec.site X.GlobalSections} *> later (SchemeSitePrehom.f#-cover_f# ())) *> lift_inL) *> inv lift_inL)
 
     \func adjointEquiv.{u} {X : LocallyRingedLocale.{u}} {R : CRing.{u}} : QEquiv {RingHom R X.GlobalSections} {LRLSchemeSiteHom X (Spec.satSite R)} \cowith

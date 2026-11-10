@@ -425,14 +425,7 @@
 
 
 \instance ArrayLModule {R : Ring} (n : Nat) (M : LModule R) : LModule R (Array M n)
-  | zro _ => 0
-  | + f g j => f j + g j
-  | zro-left => arrayExt (\lam j => zro-left)
-  | zro-right => arrayExt (\lam j => zro-right)
-  | +-assoc => arrayExt (\lam j => +-assoc)
-  | negative f j => negative (f j)
-  | negative-left => arrayExt (\lam j => negative-left)
-  | +-comm => arrayExt (\lam j => +-comm)
+  | AbGroup => ArrayAbGroup n M
   | *c r f j => r *c f j
   | *c-assoc => arrayExt (\lam j => *c-assoc)
   | *c-ldistr => arrayExt (\lam j => *c-ldistr)

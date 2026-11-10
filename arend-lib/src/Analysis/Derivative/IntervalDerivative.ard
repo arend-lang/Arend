@@ -1,0 +1,51 @@
+{- | Derivatives of functions on a closed interval `[a,b]`.
+ -
+ -   The difference quotient of a function on `[a,b]` restricted to the arguments `(x,y,y-x,1)` is a cover map {quotSquare} on the square `[a,b]²`.
+ -   It satisfies `f y - f x = (y - x) * quotSquare (x,y)` (see {quot-incr}) and it is the derivative on the diagonal (see {quot-diag}).
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Derivative.CoverDerivative
+\import Arith.Real
+\import Arith.Real.Field
+\import Meta
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.TopAbGroup.Product
+\import Topology.TopRing.Real
+
+-- | The argument `(x,y,y-x,1)` of the difference quotient.
+\func quotPt {a b : Real} (p : \Sigma (Set.Total (ClosedInterval a b)) (Set.Total (ClosedInterval a b))) : Set.Total (DerivSet (intervalInc a b))
+  => ((p.1, (p.2, (p.2.1 - p.1.1, 1))), unfold DerivSet equation.cRing)
+
+-- | The difference quotient of {f} on the square `[a,b]²`.
+\lemma quotSquare {a b : Real} (a<b : a < b) (f : Set.Total (ClosedInterval a b) -> Real) (d : HasDeriv (intervalInc a b) f)
+  : CoverMap (SquareSpace a b) RealNormed (\lam p => deriv-quot (interval-derivDense a<b) f d (quotPt p))
+  => \let | S => IntervalSpace a b
+          | P => ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace RealNearField RealTopLModule))
+          | x' : CoverMap (SquareSpace a b) S __.1 => ProductCoverSpace.proj1 {S} {S}
+          | y' : CoverMap (SquareSpace a b) S __.2 => ProductCoverSpace.proj2 {S} {S}
+          | h : CoverMap (SquareSpace a b) RealNormed (\lam p => p.2.1 - p.1.1)
+              => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (intervalInc a b CoverMap.∘ y') (negative-uniform {RealNormed} CoverMap.∘ intervalInc a b CoverMap.∘ x')
+          | t : CoverMap (SquareSpace a b) P (\lam p => (p.1, (p.2, (p.2.1 - p.1.1, 1))))
+              => ProductCoverSpace.tuple x' (ProductCoverSpace.tuple y' (ProductCoverSpace.tuple h (CoverMap.const 1)))
+     \in deriv-quot (interval-derivDense a<b) f d CoverMap.∘ CoverTransfer-univ {SquareSpace a b} {P} {Set.Total (DerivSet (intervalInc a b))} quotPt __.1 t
+
+-- | The increment of {f} is the increment of the argument times the quotient.
+\lemma quot-incr {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f} (x y : Set.Total (ClosedInterval a b))
+  : f y - f x = (y.1 - x.1) * quotSquare a<b f d (x,y)
+  => inv (deriv-quot.char (quotPt (x,y)))
+
+-- | On the diagonal, the quotient is the derivative.
+\lemma quot-diag {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f} (x : Set.Total (ClosedInterval a b))
+  : quotSquare a<b f d (x,x) = deriv (interval-derivDense a<b) f d x 1
+  => pmap (deriv-quot (interval-derivDense a<b) f d) (ext (ext (idp, ext (idp, ext (negative-right, idp)))))

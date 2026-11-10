@@ -104,10 +104,17 @@ class ArendBinaryCacheService(private val project: Project) {
                 }
 
                 val loader = BinaryCacheLoader(server, reporter) { message -> LOG.info(message) }
-                loader.loadBinaryCache(libraryName, binarySourceProvider, rawTimestampProvider)
+                // A library is loaded at most once between invalidations: a new loader takes every module for one it has
+                // not seen, so a second load could restore a module invalidated since the first from its stale .arc
+                try {
+                    loader.loadBinaryCache(libraryName, binarySourceProvider, rawTimestampProvider)
+                } finally {
+                    loadedLibraries[libraryName] = loader.binaryCacheLoaded
+                }
 
                 // Only the modules deserialized now: one that was in memory before may hold what it was typechecked to since
-                readAction {
+                // Not a suspending read action: cancelling this job must not lose the state of what is loaded already
+                runReadAction {
                     for (module in loader.deserialized) {
                         server.getRawGroup(module)?.let { saved(module, it) }
                     }
@@ -116,7 +123,6 @@ class ArendBinaryCacheService(private val project: Project) {
                     }
                 }
 
-                loadedLibraries[libraryName] = loader.binaryCacheLoaded
                 // A module loaded in part has definitions loaded too, which the editors of its dependents must see
                 loadedAny = loadedAny || loader.deserialized.isNotEmpty() || loader.loadedInPart.isNotEmpty()
             }

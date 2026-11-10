@@ -54,9 +54,9 @@
 
   \lemma abs_*q {q : Rat} {x : E} : abs (q *q x) = RatField.abs q *q abs x
     => \case RatField.totality 0 q \with {
-      | byLeft q>=0 => abs_*q>=0 q>=0 *> pmap (`*q _) (inv (RatField.abs-ofPos q>=0))
-      | byRight q<=0 => pmap abs (inv (pmap (`*q x) RatField.negative-isInv) *> toRatModule.*c_negative-left) *> abs_negative
-          *> abs_*q>=0 (RatField.negative>=0 q<=0) *> pmap (`*q _) (inv (RatField.abs-ofNeg q<=0))
+      | byLeft q>=0 => abs_*q>=0 q>=0 *> pmap (*q _) (inv (RatField.abs-ofPos q>=0))
+      | byRight q<=0 => pmap abs (inv (pmap (*q x) RatField.negative-isInv) *> toRatModule.*c_negative-left) *> abs_negative
+          *> abs_*q>=0 (RatField.negative>=0 q<=0) *> pmap (*q _) (inv (RatField.abs-ofNeg q<=0))
     }
 
   \lemma abs_*q_<=_*n {q : Rat} {x : E} : ∃ (n : Nat) (abs (q *q x) <= n *n abs x)
