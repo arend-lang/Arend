@@ -46,6 +46,7 @@
 \import Topology.NormedAbGroup.NormedProduct
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup
 \import Topology.TopAbGroup.Product
 \import Topology.TopSpace
 \import Topology.UniformSpace

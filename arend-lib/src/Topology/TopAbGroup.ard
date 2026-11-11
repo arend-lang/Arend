@@ -79,6 +79,51 @@
   \lemma shrink {U : Set E} (Uo : isOpen U) (U0 : U 0) : ∃ (V : isOpen) (V 0) ∀ {x y : V} (U (x - y))
     => shrink' +-cont negative-cont Uo U0
 
+  -- | A symmetric neighborhood `V` with `V + V ⊆ U`.
+  \lemma shrink2 {U : Set E} (Uo : isOpen U) (U0 : U 0)
+    : ∃ (V : isOpen) (V 0) (\Pi {x : E} -> V x -> V (negative x)) (\Pi {x y : E} -> V x -> V y -> U (x + y))
+    => \case shrink Uo U0 \with {
+      | inP (V,Vo,V0,h) => inP (\lam x => \Sigma (V x) (V (negative x)), open-inter Vo (negative-cont.func-cont Vo), (V0, transportInv V negative_zro V0),
+                                \lam (a,b) => (b, transportInv V negative-isInv a), \lam (a,_) (_,b) => transport U (pmap (_ +) negative-isInv) (h a b))
+    }
+
+  -- | A symmetric neighborhood `V` with `V + V + V ⊆ U`.
+  \lemma shrink3 {U : Set E} (Uo : isOpen U) (U0 : U 0)
+    : ∃ (V : isOpen) (V 0) (\Pi {x : E} -> V x -> V (negative x)) (\Pi {x y z : E} -> V x -> V y -> V z -> U (x + y + z))
+    => \case shrink2 Uo U0 \with {
+      | inP (W,Wo,W0,_,h) => \case shrink2 Wo W0 \with {
+        | inP (V,Vo,V0,Vs,g) => inP (V, Vo, V0, Vs, \lam Vx Vy Vz => h (g Vx Vy) (transport W zro-left (g V0 Vz)))
+      }
+    }
+
+  -- | The conjugate `a + U - a` of a neighborhood is a neighborhood.
+  \lemma neighborhood-conj (a : E) {U : Set E} (Uo : isOpen U) : isOpen (\lam x => U (a + x - a))
+    => (+-cont ∘ tuple (+-cont ∘ tuple (const a) id) (const (negative a))).func-cont Uo
+
+  \lemma neighborhood-conj' (a : E) {U : Set E} (Uo : isOpen U) : isOpen (\lam x => U (negative a + x + a))
+    => transport isOpen (ext \lam x => pmap (\lam y => U (negative a + x + y)) negative-isInv) (neighborhood-conj (negative a) Uo)
+
+  \lemma neighborhood-conj0 (a : E) {U : Set E} (U0 : U 0) : U (a + 0 - a)
+    => transportInv U (pmap (- a) zro-right *> negative-right) U0
+
+  -- | A finite intersection of neighborhoods.
+  \lemma neighborhood-finite {n : Nat} {U : Fin n -> Set E} (Uo : \Pi (j : Fin n) -> isOpen (U j)) (U0 : \Pi (j : Fin n) -> U j 0)
+    : ∃ (V : isOpen) (V 0) (\Pi {x : E} -> V x -> \Pi (j : Fin n) -> U j x) \elim n
+    | 0 => inP (top, open-top, (), \lam _ j => \case j \with {})
+    | suc n => \case neighborhood-finite (\lam j => Uo (suc j)) (\lam j => U0 (suc j)) \with {
+      | inP (V,Vo,V0,h) => inP (U 0 ∧ V, open-inter (Uo 0) Vo, (U0 0, V0), \lam (u,v) j => \case \elim j \with {
+        | 0 => u
+        | suc j => h v j
+      })
+    }
+
+  -- | A symmetric neighborhood contained in {U}.
+  \lemma neighborhood-sym {U : Set E} (Uo : isOpen U) (U0 : U 0)
+    : ∃ (V : isOpen) (V 0) (\Pi {x : E} -> V x -> V (negative x)) (V ⊆ U)
+    => \case shrink2 Uo U0 \with {
+      | inP (V,Vo,V0,Vs,h) => inP (V, Vo, V0, Vs, \lam Vx => transport U zro-right (h Vx V0))
+    }
+
   -- | Left translation `x +` is uniformly continuous.
   \func leftTranslation (x : E) : UniformMap \this \this (x +) \cowith
     | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
@@ -90,6 +135,31 @@
 
   \lemma subtract-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 - s.2
     => +-cont ∘ prod id negative-cont
+
+  -- | {x} and {y} are {U}-close.
+  \func AreClose (U : Set E) (x y : E) : \Prop
+    => \Sigma (U (negative x + y)) (U (y - x))
+
+  \lemma close-refl {U : Set E} (U0 : U 0) {x : E} : AreClose U x x
+    => (transportInv U negative-left U0, transportInv U negative-right U0)
+
+  \lemma close-symm {U : Set E} (Us : \Pi {x : E} -> U x -> U (negative x)) {x y : E} (c : AreClose U x y) : AreClose U y x
+    => (transport U simplify (Us c.1), transport U simplify (Us c.2))
+
+  \lemma close-mono {U V : Set E} (U<=V : U ⊆ V) {x y : E} (c : AreClose U x y) : AreClose V x y
+    => (U<=V c.1, U<=V c.2)
+
+  -- | Inversion maps points that are close for `-U` to `U`-close points.
+  \lemma close-negative {U : Set E} {x y : E} (c : AreClose (\lam z => U (negative z)) x y) : AreClose U (negative x) (negative y)
+    => (transportInv U simplify c.2, transportInv U simplify c.1)
+
+  -- | Left translation by {a} maps points that are close for {U} and for `-a + U + a` to `U`-close points.
+  \lemma close-left (a : E) {U : Set E} {x y : E} (c : AreClose (\lam z => \Sigma (U z) (U (a + z - a))) x y) : AreClose U (a + x) (a + y)
+    => (transportInv U simplify c.1.1, simplify (transport U equation c.2.2))
+
+  -- | Right translation by {a} maps points that are close for {U} and for `a + U - a` to `U`-close points.
+  \lemma close-right (a : E) {U : Set E} {x y : E} (c : AreClose (\lam z => \Sigma (U z) (U (negative a + z + a))) x y) : AreClose U (x + a) (y + a)
+    => (simplify (transport U equation c.1.2), transportInv U simplify c.2.1)
 } \where {
   \open ContMap
   \open ProductTopSpace
@@ -100,6 +170,13 @@
       | inP (V,Vo,V0,W,Wo,W0,h) => inP (V ∧ W, open-inter Vo Wo, (V0,W0), \lam (Vx,_) (_,Wy) => h Vx Wy)
     }
 }
+
+\lemma negative-uniform {A : TopAddGroup} : UniformMap A A negative \cowith
+  | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+    | inP (U,Uo,U0,h) => neighborhood-uniform.2 $ inP (negative ^-1 U, negative-cont.func-cont Uo, transportInv U A.negative_zro U0, \lam x => \case h (negative x) \with {
+      | inP (V,EV,g) => inP (negative ^-1 V, inP $ later (V,EV,idp), \lam p q => g (transport U equation.addGroup q) (transport U equation.addGroup p))
+    })
+  }
 
 \class TopAbGroup \extends TopAddGroup, AbGroup {
   \lemma ab-neighborhood-uniform {C : Set (Set E)} : isUniform C <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y)

@@ -3,7 +3,9 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Rat
+\import Arith.Real
 \import Arith.Real.UpperReal
+\import Data.Array
 \import Data.Or
 \import Equiv
 \import Function
@@ -29,6 +31,7 @@
 \import Topology.UniformSpace
 \open IsTotallyBounded(IsCover,Cond)
 \open ClosurePrecoverSpace
+\open AddGroup (negative-isInv)
 
 \type IsTotallyBounded (X : CoverSpace) : \Prop
   => Cond X.isCauchy IsCover
@@ -145,6 +148,30 @@
     | inP (D,DU,CD) => inP (D, \lam Vx => DU (V<=U Vx), CD)
   }
 
+\lemma totallyBoundedSet-union {X : CoverSpace} {K L : Set X} (Ktb : IsTotallyBoundedSet K) (Ltb : IsTotallyBoundedSet L)
+  : IsTotallyBoundedSet (\lam x => K x || L x)
+  => (totallyBoundedSet-char {X} {\lam x => K x || L x}).2 \lam Cc => \case totallyBoundedSet-char.1 Ktb Cc, totallyBoundedSet-char.1 Ltb Cc \with {
+    | inP (D,DK,DC), inP (D',DL,D'C) => inP (D ++ D', \case __ \with {
+      | byLeft Kx => \case DK Kx \with {
+        | inP (j,Dx) => inP (++.index-left j, rewrite (++.++_index-left {_} {D} {D'} j) Dx)
+      }
+      | byRight Lx => \case DL Lx \with {
+        | inP (j,Dx) => inP (++.index-right j, rewrite (++.++_index-right {_} {D} {D'} {j}) Dx)
+      }
+    }, \lam j => \case ++.split-index j \with {
+      | inl (i,p) => rewrite (p, ++.++_index-left) (DC i)
+      | inr (i,p) => rewrite (p, ++.++_index-right) (D'C i)
+    })
+  }
+
+\lemma totallyBoundedSet-Union {X : CoverSpace} {n : Nat} {K : Fin n -> Set X} (Ktb : \Pi (j : Fin n) -> IsTotallyBoundedSet (K j))
+  : IsTotallyBoundedSet (\lam x => ∃ (j : Fin n) (K j x)) \elim n
+  | 0 => (totallyBoundedSet-char {X} {\lam x => ∃ (j : Fin 0) (K j x)}).2 \lam _ => inP (nil, \lam (inP ((),_)), \case __)
+  | suc n => totallyBoundedSet-subset {X} {\lam x => K 0 x || ∃ (i : Fin n) (K (suc i) x)} {\lam x => ∃ (j : Fin (suc n)) (K j x)} (\lam {x} e => \case e \with {
+      | inP (0, Kx) => byLeft Kx
+      | inP (suc j, Kx) => byRight (inP (j,Kx))
+    }) $ totallyBoundedSet-union {X} {K 0} {\lam x => ∃ (i : Fin n) (K (suc i) x)} (Ktb 0) (totallyBoundedSet-Union \lam j => Ktb (suc j))
+
 \lemma totallyBoundedSet-image {X Y : CoverSpace} (f : CoverMap X Y) {U : Set X} (Utb : IsTotallyBoundedSet U) : IsTotallyBoundedSet (SetIm f U)
   => totallyBoundedSet-char.2 \lam Cc => \case totallyBoundedSet-char.1 Utb (f.func-cover Cc) \with {
     | inP (D,DU,DC) => \case FinSet.finiteAC DC \with {
@@ -184,6 +211,72 @@
       }
     }
   })
+
+-- Lebesgue numbers
+
+-- | The uniform interior of {E}: the sets of points whose stars with respect to a uniform cover lie in an element of {E}.
+\func UniformInterior {X : PreuniformSpace} (E : Set (Set X)) : Set (Set X)
+  => \lam S => ∃ (D : Set (Set X)) (isUniform D) (W : E) (S = \lam x => \Pi {V : Set X} -> D V -> V x -> V ⊆ W)
+
+\lemma uniformInterior-cauchy {X : UniformSpace} {E : Set (Set X)} (Ec : isCauchy E) : isCauchy (UniformInterior E)
+  => uniform-cauchy.2 $ aux $ uniform-cauchy.1 Ec
+  \where
+    \private \lemma aux {X : UniformSpace} {E : Set (Set X)} (Ec : Closure isUniform E) : Closure isUniform (UniformInterior E) \elim Ec
+      | closure Eu => closure \case uniform-star Eu \with {
+        | inP (D,Du,h) => uniform-refine Du \lam {V} DV => \case h DV \with {
+          | inP (U,EU,g) => inP (_, inP (D, Du, U, EU, idp), \lam {x} Vx {V'} DV' V'x => g DV' (x,(Vx,V'x)))
+        }
+      }
+      | closure-top p => closure-refine (closure-top idp) \lam {U} q => inP (\lam x => \Pi {V : Set X} -> single top V -> V x -> V ⊆ top,
+          inP (single top, uniform-top, top, rewrite p idp, idp), \lam _ _ _ _ => ())
+      | closure-refine Dc r => closure-refine (aux Dc) \lam {_} (inP (D',D'u,W,DW,idp)) => \case r DW \with {
+        | inP (W',EW',W<=W') => inP (_, inP (D', D'u, W', EW', idp), \lam f DV Vx => f DV Vx <=∘ W<=W')
+      }
+      | closure-trans {D} Dc {F} Fc idp => closure-refine (closure-trans (aux Dc)
+          {\lam S T => ∃ (D' : Set (Set X)) (isUniform D') (W : Set X) (D W) (S = \lam x => \Pi {V : Set X} -> D' V -> V x -> V ⊆ W) (UniformInterior (F W) T)}
+          (\lam {_} (inP (D',D'u,W,DW,idp)) => closure-refine (aux (Fc DW)) \lam {T} IT => inP (T, inP (D', D'u, W, DW, idp, IT), <=-refl)) idp)
+          \lam {_} (inP (S, T, _, inP (D1,D1u,W1,DW1,p1,inP (D2,D2u,W2,FW2,p2)), idp)) =>
+            inP (_, inP (_, uniform-inter D1u D2u, W1 ∧ W2, inP (W1, W2, DW1, FW2, idp), idp),
+                 \lam {x} (Sx,Tx) {_} (inP (V1,DV1,V2,DV2,idp)) (V1x,V2x) =>
+                   \have | s1 : \Pi {V : Set X} -> D1 V -> V x -> V ⊆ W1 => transport (__ x) p1 Sx
+                         | s2 : \Pi {V : Set X} -> D2 V -> V x -> V ⊆ W2 => transport (__ x) p2 Tx
+                   \in MeetSemilattice.meet-monotone (s1 DV1 V1x) (s2 DV2 V2x))
+
+-- | Lebesgue number lemma: every Cauchy cover has a uniform Lebesgue cover on a totally bounded set.
+\lemma totallyBounded-lebesgue {X : UniformSpace} {T : Set X} (Ttb : IsTotallyBoundedSet T) {E : Set (Set X)} (Ec : isCauchy E)
+  : ∃ (D : isUniform) ∀ {t : T} ∃ (W : E) ∀ {V : D} (V t -> V ⊆ W)
+  => \case totallyBoundedSet-char.1 Ttb (uniformInterior-cauchy Ec) \with {
+    | inP (S,ST,SI) => \case FinSet.finiteAC SI \with {
+      | inP g => inP (_, X.uniform-inter-big (\lam j => (g j).1) (\lam j => (g j).2), \lam {t} Tt => \case ST Tt \with {
+        | inP (j,Sjt) => inP ((g j).3, (g j).4, \lam {V} DV Vt => \case Refines-inter-big (\lam j => (g j).1) j DV \with {
+          | inP (V',DjV',V<=V') =>
+            \have s : \Pi {V : Set X} -> (g j).1 V -> V t -> V ⊆ (g j).3 => transport (__ t) (g j).5 Sjt
+            \in V<=V' <=∘ s DjV' (V<=V' Vt)
+        })
+      })
+    }
+  }
+
+-- | A cover map which is constant outside a totally bounded set is uniform.
+\lemma totallyBounded-support-uniform {X : UniformSpace} (Xp : X.IsProperUniform) {Y : PseudoMetricSpace} {y0 : Y} {K : Set X} (Ktb : IsTotallyBoundedSet K)
+  (f : CoverMap X Y) (fK : \Pi {x : X} -> Not (K x) -> f x = y0) : UniformMap X Y f \cowith
+  | func-uniform Eu => \case Y.dist-uniform.1 Eu \with {
+    | inP (eps,eps>0,h) => \case totallyBounded-lebesgue Ktb (f.func-cover $ Y.makeCauchy $ Y.metricUniform {eps * ratio 1 4} linarith) \with {
+      | inP (D,Du,g) =>
+        \have | close {U : Set X} (DU : D U) {u z : X} (Uu : U u) (Uz : U z) (Ku : K u) : ldist (f u) (f z) < eps * ratio 1 2
+                 => \case g Ku \with {
+                   | inP (_, inP (_, inP (c,idp), idp), p) => real_<_U.2 $ Y.halving-left (p DU Uu Uu) (p DU Uu Uz) linarith
+                 }
+               | diam {U : Set X} (DU : D U) {u z : X} (Uu : U u) (Uz : U z) : ldist (f u) (f z) <= eps * ratio 1 2
+                 => \lam d => \have | nu : Not (K u) => \lam Ku => <-irreflexive (close DU Uu Uz Ku <∘ d)
+                                     | nz : Not (K z) => \lam Kz => <-irreflexive (rewrite ldist-symm in close DU Uz Uu Kz <∘ d)
+                                     | e : ldist (f u) (f z) = 0 => pmap2 ldist (fK nu) (fK nz) *> ldist-refl
+                               \in <-irreflexive (rat_real_<.1 (linarith : 0 < eps * ratio 1 2) <∘ transport (_ <) e d)
+        \in uniform-refine (Xp Du) \lam {U} (DU, inP (u,Uu)) => \case h (f u) \with {
+          | inP (V,EV,q) => inP (_, inP (V, EV, idp), \lam {z} Uz => q {f z} $ real_<_U.1 $ diam DU Uu Uz <∘r rat_real_<.1 (linarith : eps * ratio 1 2 < eps))
+        }
+    }
+  }
 
 -- Locally uniform spaces
 
@@ -290,3 +383,100 @@
         | inP (U,Utb,x<=<U) => inP (_, A.interior, x<=<U, totallyBoundedSet-subset (<=<_<= __ idp) Utb)
       }, \lam (inP (U,Uo,U0,Utb)) => cauchy-subset (uniform-cauchy.2 $ closure $ A.topAddUniform Uo U0) \lam {_} (inP (x,idp)) =>
           totallyBoundedSet-subset (later \lam {y} (u,_) => inP ((negative x + y, u), simplify)) $ totallyBoundedSet-image (A.leftTranslation x) Utb)
+
+-- Topological groups
+
+-- | A net of a totally bounded set.
+\lemma addGroup-tb-char {A : TopAddGroup} {K : Set A}
+  : IsTotallyBoundedSet K <-> ∀ {U : Set A} (Uo : isOpen U) (U0 : U 0) ∃ (a : Array A) ∀ {x : K} ∃ (j : Fin a.len) (A.AreClose U (a j) x)
+  => (\lam Ktb Uo U0 => \case totallyBoundedSet-uniform-char.1 Ktb (A.topAddUniform Uo U0) \with {
+    | inP (D,DK,DC) => \case FinSet.finiteAC DC \with {
+      | inP g => inP (\lam j => (g j).1, \lam Kx => \case DK Kx \with {
+        | inP (j,Dx) => inP (j, rewrite (g j).2 in Dx)
+      })
+    }
+  }, \lam h => totallyBoundedSet-uniform-char.2 \lam Cu => \case A.neighborhood-uniform.1 Cu \with {
+    | inP (U,Uo,U0,g) => \case h Uo U0 \with {
+      | inP (a,ac) => \case FinSet.finiteAC (\lam j => g (a j)) \with {
+        | inP V => inP (\lam j => (V j).1, \lam Kx => \case ac Kx \with {
+          | inP (j,c) => inP (j, (V j).3 c.1 c.2)
+        }, \lam j => (V j).2)
+      }
+    }
+  })
+
+\lemma addGroup-tb-negative {A : TopAddGroup} {K : Set A} (Ktb : IsTotallyBoundedSet K) : IsTotallyBoundedSet (\lam x => K (negative x))
+  => transport IsTotallyBoundedSet
+      (ext \lam x => ext (SetIm-elim \lam Ka => transportInv K negative-isInv Ka,
+                          \lam K-x => transport (SetIm negative K) negative-isInv (SetIm-con K-x)))
+      (totallyBoundedSet-image negative-uniform Ktb)
+
+\lemma addGroup-tb-left {A : TopAddGroup} (a : A) {K : Set A} (Ktb : IsTotallyBoundedSet K) : IsTotallyBoundedSet (\lam x => K (a + x))
+  => transport IsTotallyBoundedSet
+      (ext \lam x => ext (SetIm-elim \lam {y} Ky => transport K equation.addGroup Ky,
+                          \lam Ka+x => transport (SetIm (negative a +) K) equation.addGroup (SetIm-con Ka+x)))
+      (totallyBoundedSet-image (A.leftTranslation (negative a)) Ktb)
+
+-- | Conjugation by points of a totally bounded set is uniformly continuous at `0`.
+\lemma addGroup-tb-conj {A : TopAddGroup} {K : Set A} (Ktb : IsTotallyBoundedSet K) {V : Set A} (Vo : isOpen V) (V0 : V 0)
+  : ∃ (W : isOpen) (W 0) ∀ {x : K} {w : W} (V (x + w - x))
+  => \case A.shrink3 Vo V0 \with {
+    | inP (U,Uo,U0,Us,h) => \case addGroup-tb-char.1 Ktb Uo U0 \with {
+      | inP (a,ac) => \case A.neighborhood-finite (\lam j => A.neighborhood-conj (a j) Uo) (\lam j => A.neighborhood-conj0 (a j) {U} U0) \with {
+        | inP (W,Wo,W0,g) => inP (W, Wo, W0, \lam {x} Kx {w} Ww => \case ac Kx \with {
+          | inP (j,c) => transport V simplify (h c.2 (g Ww j) (Us c.2))
+        })
+      }
+    }
+  }
+
+-- | Addition is uniformly continuous on products of totally bounded sets.
+\lemma addGroup-tb-+-close {A : TopAddGroup} {K L : Set A} (Ktb : IsTotallyBoundedSet K) (Ltb : IsTotallyBoundedSet L) {V : Set A} (Vo : isOpen V) (V0 : V 0)
+  : ∃ (W : isOpen) (W 0) (\Pi {x : A} -> W x -> W (negative x)) ∀ {x : K} {y : L} {x' y' : A} (A.AreClose W x x') (A.AreClose W y y') (A.AreClose V (x + y) (x' + y'))
+  => \case A.shrink2 Vo V0 \with {
+    | inP (U,Uo,U0,_,h) => \case addGroup-tb-conj Ktb Uo U0, addGroup-tb-conj (addGroup-tb-negative Ltb) Uo U0 \with {
+      | inP (W1,W1o,W10,g1), inP (W2,W2o,W20,g2) => \case A.neighborhood-sym (open-inter Uo (open-inter W1o W2o)) (U0,(W10,W20)) \with {
+        | inP (W,Wo,W0,Ws,W<=) => inP (W, Wo, W0, Ws, \lam {x} Kx {y} Ly {x'} {y'} c1 c2 =>
+            (transport V equation.addGroup (h (g2 (transportInv L negative-isInv Ly) (W<= c1.1).2.2) (W<= c2.1).1),
+             transport V equation.addGroup (h (W<= c1.2).1 (g1 Kx (W<= c2.2).2.1))))
+      }
+    }
+  }
+
+-- | The set `K + L` is totally bounded.
+\lemma addGroup-tb-+ {G : TopAddGroup} {K L : Set G} (Ktb : IsTotallyBoundedSet K) (Ltb : IsTotallyBoundedSet L)
+  : IsTotallyBoundedSet (\lam z => ∃ (x : K) (y : L) (x + y = z))
+  => (addGroup-tb-char {G} {\lam z => ∃ (x : K) (y : L) (x + y = z)}).2 \lam {U} Uo U0 => \case G.neighborhood-sym Uo U0 \with {
+    | inP (V,Vo,V0,Vs,V<=U) => \case addGroup-tb-+-close Ktb Ltb Vo V0 \with {
+      | inP (W,Wo,W0,Ws,h) => \case addGroup-tb-char.1 Ktb Wo W0, addGroup-tb-char.1 Ltb Wo W0 \with {
+        | inP (a,ac), inP (b,bc) => inP (\lam k => a (ProdFin.prod_equiv k).1 + b (ProdFin.prod_equiv k).2, \lam {z} (inP (x,Kx,y,Ly,p)) => \case ac Kx, bc Ly \with {
+          | inP (i,ci), inP (j,cj) => inP (ProdFin.prod_equiv.ret (i,j), rewrite (ProdFin.prod_equiv.f_ret (i,j)) $ rewrite p in
+              G.close-mono V<=U (G.close-symm Vs (h Kx Ly (G.close-symm Ws ci) (G.close-symm Ws cj))))
+        })
+      }
+    }
+  }
+
+-- | One-sided uniform continuity: if `f` vanishes outside a totally bounded set {K} and {W} is its modulus for `eps`, then `V` is a modulus for left and right translations.
+\lemma addGroup-tb-translation-modulus {A : TopAddGroup} {K : Set A} (Ktb : IsTotallyBoundedSet K)
+  {T : Set A} (To : isOpen T) (T0 : T 0) (Ttb : IsTotallyBoundedSet T) {W : Set A} (Wo : isOpen W) (W0 : W 0)
+  : ∃ (V : isOpen) (V 0) (\Pi {v : A} -> V v -> V (negative v)) (V ⊆ T) ∀ {f : A -> Real} {eps : Real}
+      (\Pi {x : A} -> Not (K x) -> f x = 0) (\Pi {x y : A} -> A.AreClose W x y -> RealAbGroup.abs (f x - f y) <= eps)
+      (\Pi (x : A) {v : A} -> V v -> \Sigma (RealAbGroup.abs (f (x + v) - f x) <= eps) (RealAbGroup.abs (f (v + x) - f x) <= eps))
+  => \case addGroup-tb-conj (addGroup-tb-+ Ktb Ttb) Wo W0, addGroup-tb-conj (addGroup-tb-negative (addGroup-tb-+ Ttb Ktb)) Wo W0 \with {
+    | inP (W1,W1o,W10,g1), inP (W2,W2o,W20,g2) => \case A.neighborhood-sym (open-inter Wo (open-inter To (open-inter W1o W2o))) (W0,(T0,(W10,W20))) \with {
+      | inP (V,Vo,V0,Vs,V<=) => inP (V, Vo, V0, Vs, \lam Vv => (V<= Vv).2.1, \lam {f} {eps} fK fW x {v} Vv =>
+        \have | e0 : 0 <= eps => transport (__ <= eps) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) (fW (A.close-refl {W} W0 {x}))
+               | contr {a b : A} (na : Not (K a)) (nb : Not (K b)) (d : eps < RealAbGroup.abs (f b - f a)) : Empty
+                 => \have q : RealAbGroup.abs (f b - f a) = 0 => rewrite (fK na, fK nb) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro)
+                    \in <-irreflexive (e0 <∘r transport (eps <) q d)
+               | c1 {x : A} (KTx : ∃ (a : K) (b : T) (a + b = x)) : A.AreClose W x (x + v)
+                 => (transportInv W simplify (V<= Vv).1, g1 KTx (V<= Vv).2.2.1)
+               | c2 {x : A} (TKx : ∃ (b : T) (a : K) (b + a = x)) : A.AreClose W x (v + x)
+                 => (transport W (simplify equation) (g2 (transportInv (\lam z => ∃ (b : T) (a : K) (b + a = z)) negative-isInv TKx) (V<= Vv).2.2.2), transportInv W simplify (V<= Vv).1)
+        \in (\lam d => contr (\lam Kx => fW (c1 (inP (x, Kx, 0, T0, zro-right))) (rewrite RealAbGroup.abs_- in d))
+                            (\lam Kxv => fW (c1 (inP (x + v, Kxv, negative v, (V<= (Vs Vv)).2.1, simplify))) (rewrite RealAbGroup.abs_- in d)) d,
+              \lam d => contr (\lam Kx => fW (c2 (inP (0, T0, x, Kx, zro-left))) (rewrite RealAbGroup.abs_- in d))
+                            (\lam Kvx => fW (c2 (inP (negative v, (V<= (Vs Vv)).2.1, v + x, Kvx, simplify))) (rewrite RealAbGroup.abs_- in d)) d))
+    }
+  }

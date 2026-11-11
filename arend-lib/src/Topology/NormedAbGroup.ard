@@ -18,10 +18,12 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
+\import Set.Set (^-1)
 \import Topology.CoverSpace
 \import Topology.MetricSpace
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
+\import Topology.TopSpace
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
 
@@ -238,4 +240,25 @@
 
     \private \lemma lem {X : ExPseudoNormedAbGroup} {x1 x2 : X} (d : (norm (x1 - x2)).U 1) : norm x2 <= norm x1 + 1
       => transport (_ <= _ + __) norm_- (pmap norm equation.abGroup =<= norm_+) <=∘ <=_+ <=-refl (<=-less $ <-rat.2 d)
+  }
+
+-- | A modulus of uniform continuity of a uniform map to a metric space.
+\lemma addGroup-uniform-modulus {A : TopAddGroup} {Y : ExPseudoMetricSpace} (f : UniformMap A Y) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (U : isOpen) (U 0) ∀ {x y : A} (A.AreClose U x y) ((dist (f x) (f y)).U eps)
+  => \case A.neighborhood-uniform.1 (f.func-uniform (Y.metricUniform {eps * ratio 1 2} linarith)) \with {
+    | inP (U,Uo,U0,h) => inP (U, Uo, U0, \lam {x} {y} c => \case h x \with {
+      | inP (_, inP (_, inP (r,idp), idp), g) => Y.halving-left (g (A.close-refl {U} U0).1 (A.close-refl {U} U0).2) (g c.1 c.2) linarith
+    })
+  }
+
+-- | A function to a metric space with moduli of uniform continuity is a uniform map.
+\func addGroup-modulus-uniform {A : TopAddGroup} {Y : ExPseudoMetricSpace} (f : A -> Y)
+  (h : ∀ {eps} (0 < eps) ∃ (U : isOpen) (U 0) ∀ {x y : A} (A.AreClose U x y) ((dist (f x) (f y)).U eps))
+  : UniformMap A Y f \cowith
+  | func-uniform Eu => \case Y.dist-uniform.1 Eu \with {
+    | inP (eps,eps>0,g) => \case h eps>0 \with {
+      | inP (U,Uo,U0,m) => A.neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => \case g (f x) \with {
+        | inP (V,EV,gV) => inP (f ^-1 V, inP $ later (V, EV, idp), \lam a b => gV $ m (a,b))
+      })
+    }
   }

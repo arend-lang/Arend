@@ -57,7 +57,7 @@
 \instance TopAbGroupHasProduct.{u} : HasProduct TopAbGroup.{u}
   | Product X Y => ProductTopAbGroup X Y
 
-\lemma negative-uniform {X : TopAbGroup} : TopAbGroupMap X X negative \cowith
+\lemma negative-topAbMap {X : TopAbGroup} : TopAbGroupMap X X negative \cowith
   | func-+ => X.negative_+ *> +-comm
   | func-cont => negative-cont.func-cont
 

@@ -1,7 +1,7 @@
 {- | Completely regular cover spaces and Urysohn functions.
  -
  -   A scale from `V` to `U` is a family of sets `S q`, indexed by rationals, such that `V ⊆ S 0`, `S 1 ⊆ U`,
- -   and `S p s<=< S q` for `0 <= p < q <= 1`. If there is a scale from `V` to `U`, then `V` is completely below `U` ({<=<sc}).
+ -   and `S p s<=< S q` for `0 <= p < q <= 1`. If there is a scale from `V` to `U`, then `V` is completely below `U` ({StronglyRatherBelow.<=<sc}).
  -   A cover space is completely regular ({ScaleRegularCoverSpace}, {IsScaleRegular}) if every Cauchy cover is refined by
  -   the sets completely below its elements.
  -
@@ -13,7 +13,7 @@
  -   A Urysohn function is constructed from a scale as a Dedekind cut: `u x` is the supremum of `1 - q` over `q` with `x ∈ S q`.
  -   Conversely, the sets `{x | (1 - q) / 2 < u x}` form a scale.
  -
- -   Classically, using dependent choice, {StronglyRatherBelow}.`<=<c` implies {<=<sc}. Constructively, we use scales instead.
+ -   Classically, using dependent choice, {StronglyRatherBelow}.`<=<c` implies {StronglyRatherBelow.<=<sc}. Constructively, we use scales instead.
  -}
 
 \import Algebra.Group
@@ -40,29 +40,13 @@
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.RatherBelow
 
--- | {V} is completely below {U} if there is a scale from {V} to {U}.
-\type \infix 4 <=<sc {X : PrecoverSpace} (V U : Set X) : \Prop
-  => ∃ (S : Rat -> Set X) (V ⊆ S 0) (S 1 ⊆ U) (\Pi {p q : Rat} -> 0 <= p -> p < q -> q <= 1 -> S p s<=< S q)
-
-\lemma <=<sc_s<=< {X : PrecoverSpace} {V U : Set X} (p : V <=<sc U) : V s<=< U \elim p
-  | inP (S,VS,SU,h) => <=<-right VS $ <=<-left (h <=-refl RatField.zro<ide <=-refl) SU
-
-\lemma <=<sc-inter {X : PrecoverSpace} {V U : Set X} (p : V <=<sc U) : ∃ (W : Set X) (V <=<sc W) (W <=<sc U) \elim p
-  | inP (S,VS,SU,h) => inP (S (ratio 1 2),
-      inP (\lam q => S (q * ratio 1 2), rewrite (linarith : 0 * ratio 1 2 = 0) VS, rewrite (linarith : 1 * ratio 1 2 = ratio 1 2) <=-refl, \lam p>=0 p<q q<=1 => h linarith linarith linarith),
-      inP (\lam q => S ((q + 1) * ratio 1 2), rewrite (linarith : (0 + 1) * ratio 1 2 = ratio 1 2) <=-refl, rewrite (linarith : (1 + 1) * ratio 1 2 = 1) SU, \lam p>=0 p<q q<=1 => h linarith linarith linarith))
-
--- | {<=<sc} is an interpolative relation contained in {s<=<}.
-\lemma <=<sc_<=<c {X : PrecoverSpace} {V U : Set X} (p : V <=<sc U) : V StronglyRatherBelow.<=<c U
-  => inP (<=<sc, <=<sc_s<=<, <=<sc-inter, p)
-
 -- | A cover space is completely regular if every Cauchy cover is refined by the sets completely below its elements.
 \type IsUrysohnCoverSpace (X : CoverSpace) : \Prop
-  => \Pi {C : Set (Set X)} -> isCauchy C -> isCauchy \lam V => ∃ (U : C) (V <=<sc U)
+  => \Pi {C : Set (Set X)} -> isCauchy C -> isCauchy \lam V => ∃ (U : C) (V StronglyRatherBelow.<=<sc U)
 
 \class UrysohnCoverSpace \extends CompletelyStronglyRegularCoverSpace
-  | isUrysohn {C : Set (Set E)} : isCauchy C -> isCauchy \lam V => ∃ (U : C) (V <=<sc U)
-  | isCompletelyStronglyRegular Cc => cauchy-subset (isUrysohn Cc) \lam (inP (U,CU,p)) => inP $ later (U, CU, <=<sc_<=<c p)
+  | isUrysohn {C : Set (Set E)} : isCauchy C -> isCauchy \lam V => ∃ (U : C) (V StronglyRatherBelow.<=<sc U)
+  | isCompletelyStronglyRegular Cc => cauchy-subset (isUrysohn Cc) \lam (inP (U,CU,p)) => inP $ later (U, CU, RatherBelow.<=<sc_<=<c p)
 
 -- | {u} is a Urysohn function for {V} and {U}: it takes values in `[0,1]`, equals `1` on {V}, and is supported in {U}.
 \type IsUrysohnMap {X : CoverSpace} (V U : Set X) (u : CoverMap X RealNormed) : \Prop
@@ -73,7 +57,7 @@
   => \Pi {C : Set (Set X)} -> isCauchy C -> isCauchy \lam V => ∃ (U : C) (u : CoverMap X RealNormed) (IsUrysohnMap V U u)
 
 -- | {V} is completely below {U} if and only if there is a Urysohn function for {V} and {U}.
-\lemma <=<sc-urysohn {X : CoverSpace} {V U : Set X} : V <=<sc U <-> ∃ (u : CoverMap X RealNormed) (IsUrysohnMap V U u)
+\lemma <=<sc-urysohn {X : CoverSpace} {V U : Set X} : V StronglyRatherBelow.<=<sc U <-> ∃ (u : CoverMap X RealNormed) (IsUrysohnMap V U u)
   => (\lam (inP (S,VS,SU,h)) => scale-urysohn VS SU h, \lam (inP (u,uh)) => urysohn-scale uh)
   \where {
     \lemma scale-urysohn {X : CoverSpace} {V U : Set X} {S : Rat -> Set X} (VS : V ⊆ S 0) (SU : S 1 ⊆ U)
@@ -150,7 +134,7 @@
           }
       }
 
-    \lemma urysohn-scale {X : CoverSpace} {V U : Set X} {u : CoverMap X RealNormed} (uh : IsUrysohnMap V U u) : V <=<sc U
+    \lemma urysohn-scale {X : CoverSpace} {V U : Set X} {u : CoverMap X RealNormed} (uh : IsUrysohnMap V U u) : V StronglyRatherBelow.<=<sc U
       => inP (\lam q x => (u x).L ((1 - q) * ratio 1 2),
               \lam {x} Vx => rewrite (uh.3 Vx) $ real_<_L.1 $ rat_real_<.1 linarith,
               \lam {x} ux => uh.4 $ real_<_L.2 $ LowerReal.L_<= ux linarith,

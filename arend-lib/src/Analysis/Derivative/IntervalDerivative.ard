@@ -20,6 +20,7 @@
 \import Topology.CoverSpace.Product
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Interval
+\import Topology.TopAbGroup
 \import Topology.TopAbGroup.Product
 \import Topology.TopRing.Real
 

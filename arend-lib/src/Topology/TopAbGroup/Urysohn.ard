@@ -1,0 +1,41 @@
+\import Arith.Real
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Set.Set
+\import Topology.Compact
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Urysohn
+\import Topology.NormedAbGroup.Real
+\import Topology.RatherBelow
+\import Topology.TopAbGroup
+\import Topology.UniformSpace
+
+-- | A locally totally bounded topological group which is completely regular as a cover space.
+\class LocallyCompactUrysohnGroup \extends TopAddGroup, UrysohnCoverSpace {
+  | locallyTB : IsLocallyTotallyBounded \this
+
+  -- | A symmetric totally bounded neighborhood of `0`.
+  \lemma tb-neighborhood : ∃ (V : isOpen) (V 0) (\Pi {x : E} -> V x -> V (negative x)) (IsTotallyBoundedSet V)
+    => \case topAddGroup-locallyTB-char.1 locallyTB \with {
+      | inP (U,Uo,U0,Utb) => \case neighborhood-sym Uo U0 \with {
+        | inP (V,Vo,V0,Vs,V<=U) => inP (V, Vo, V0, Vs, totallyBoundedSet-subset V<=U Utb)
+      }
+    }
+
+  -- | Every neighborhood of `0` contains a neighborhood completely below it.
+  \lemma neighborhood-<=<sc {V : Set E} (Vo : isOpen V) (V0 : V 0) : ∃ (W : isOpen) (W 0) (W StronglyRatherBelow.<=<sc V)
+    => \case cauchy-regular-cover (isUrysohn (cauchy-open.1 Vo V0)) 0 \with {
+      | inP (V', inP (U,g,p), c0) => inP (_, interior {_} {V'}, c0, RatherBelow.Scale.<=<-right (\lam c => <=<_<= c idp) $ RatherBelow.Scale.<=<-left p $ g $ s<=<_<= (RatherBelow.<=<sc_<=< p) $ <=<_<= c0 idp)
+    }
+
+  -- | A uniform Urysohn function for a neighborhood of `0` contained in a totally bounded set.
+  \lemma neighborhood-urysohn {V : Set E} (Vo : isOpen V) (V0 : V 0) {T : Set E} (Ttb : IsTotallyBoundedSet T) (V<=T : V ⊆ T)
+    : ∃ (W : isOpen) (W 0) (u : UniformMap \this RealNormed) (IsUrysohnMap W V u)
+    => \case neighborhood-<=<sc Vo V0 \with {
+      | inP (W,Wo,W0,p) => \case <=<sc-urysohn.1 p \with {
+        | inP (u,uh) => inP (W, Wo, W0, totallyBounded-support-uniform properUniform Ttb u \lam {x} nT => \have ux<=0 : u x <= 0 => \lam ux>0 => nT $ V<=T $ uh.4 ux>0 \in <=-antisymmetric ux<=0 (uh.1 x), uh)
+      }
+    }
+}
