@@ -8,7 +8,12 @@ import com.intellij.psi.tree.IElementType
 import com.intellij.psi.util.elementType
 import org.arend.parser.ParserMixin.*
 import org.arend.psi.ArendElementTypes.BLOCK_COMMENT
+import org.arend.psi.ArendElementTypes.DOT
+import org.arend.psi.ArendElementTypes.ID
+import org.arend.psi.ArendElementTypes.LBRACE
 import org.arend.psi.ArendElementTypes.LINE_COMMENT
+import org.arend.psi.ArendElementTypes.RBRACE
+import org.arend.psi.ArendElementTypes.RPAREN
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.childOfType
 import org.arend.psi.childrenWithLeaves
@@ -70,6 +75,8 @@ private fun StringBuilder.processDocCommentElement(
     when {
         elementType == DOC_LBRACKET -> append("[")
         elementType == DOC_RBRACKET -> append("]")
+        elementType == LBRACE || elementType == RBRACE || elementType == DOT || elementType == ID ||
+            elementType == DOC_OPEN_LINK || elementType == RPAREN -> html(docElement.text)
         elementType == DOC_TEXT -> {
             val nextElement = docElements.getOrNull(index + 1)
             val nextElementType = nextElement.elementType
