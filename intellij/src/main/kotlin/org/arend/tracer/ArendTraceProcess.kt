@@ -46,7 +46,10 @@ class ArendTraceProcess(session: XDebugSession, private val tracingData: ArendTr
     private val contextViewPanel = JBUI.Panels.simplePanel()
     private val emptyContextView =
         JBPanelWithEmptyText().withEmptyText(ArendBundle.message("arend.tracer.nothing.to.show"))
-    private lateinit var contextView: ArendTraceContextView
+    // In split debugger mode registerAdditionalContent is not called before
+    // sessionInitialized. The trace context is needed by suspend contexts even
+    // when the legacy debugger tab layouter is skipped.
+    private val contextView = ArendTraceContextView(session.project)
 
     override fun registerAdditionalActions(
         leftToolbar: DefaultActionGroup,
@@ -83,7 +86,6 @@ class ArendTraceProcess(session: XDebugSession, private val tracingData: ArendTr
 
     override fun createTabLayouter(): XDebugTabLayouter = object : XDebugTabLayouter() {
         override fun registerAdditionalContent(ui: RunnerLayoutUi) {
-            contextView = ArendTraceContextView(session.project)
             contextViewPanel.add(contextView.component!!)
             val contextContent = ui.createContent(CONTEXT_CONTENT, contextViewPanel, "Context", null, null)
             ui.addContent(contextContent, 0, PlaceInGrid.center, false)
