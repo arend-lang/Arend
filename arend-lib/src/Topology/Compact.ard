@@ -1,3 +1,4 @@
+\import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -23,11 +24,13 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
+\import Topology.TopAbGroup
+\import Topology.TopSpace
 \import Topology.UniformSpace
 \open IsTotallyBounded(IsCover,Cond)
 \open ClosurePrecoverSpace
 
-\func IsTotallyBounded (X : CoverSpace) : \Prop
+\type IsTotallyBounded (X : CoverSpace) : \Prop
   => Cond X.isCauchy IsCover
   \where {
     \protected \func IsCover {X : \Set} (C : Set (Set X)) => \Pi (x : X) -> ∃ (U : C) (U x)
@@ -107,7 +110,7 @@
       }
   }
 
-\func IsCompact (X : CompleteCoverSpace) : \Prop
+\type IsCompact (X : CompleteCoverSpace) : \Prop
   => IsTotallyBounded X
 
 \lemma makeUniformMapTB {X Y : RegularPreuniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) (f : CoverMap X Y) : UniformMap X Y f \cowith
@@ -142,6 +145,17 @@
     | inP (D,DU,CD) => inP (D, \lam Vx => DU (V<=U Vx), CD)
   }
 
+\lemma totallyBoundedSet-image {X Y : CoverSpace} (f : CoverMap X Y) {U : Set X} (Utb : IsTotallyBoundedSet U) : IsTotallyBoundedSet (SetIm f U)
+  => totallyBoundedSet-char.2 \lam Cc => \case totallyBoundedSet-char.1 Utb (f.func-cover Cc) \with {
+    | inP (D,DU,DC) => \case FinSet.finiteAC DC \with {
+      | inP g => inP (\lam j => (g j).1, \lam {y} (s : SetIm f U y) => \case \elim y, s \with {
+        | _, inP ((x,Ux),idp) => \case DU Ux \with {
+          | inP (j,Dx) => inP (j, rewrite (g j).3 in Dx)
+        }
+      }, \lam j => (g j).2)
+    }
+  }
+
 \lemma totallyBoundedSet-uniform-char {X : RegularPreuniformSpace} {S : Set X}
   : IsTotallyBoundedSet S <-> ∀ {C : isUniform} ∃ (D : Array (Set X)) (∀ {x : S} ∃ (V : D) (V x)) (∀ (V : D) (C V))
   => (\lam tb Cu => totallyBoundedSet-char.1 tb $ uniform-cauchy.2 $ closure Cu,
@@ -171,12 +185,12 @@
     }
   })
 
--- Locally totally bounded spaces
+-- Locally uniform spaces
 
-\func IsLocallyUniform {X : PreuniformSpace} (C : Set (Set X)) (E : Set (Set X)) : \Prop
+\type IsLocallyUniform {X : PreuniformSpace} (C : Set (Set X)) (E : Set (Set X)) : \Prop
   => ∀ {U : C} (isUniform \lam V => ∃ (W : E) (U ∧ V ⊆ W))
 
-\func IsLocallyUniformSpace (X : PreuniformSpace) : \Prop
+\type IsLocallyUniformSpace (X : PreuniformSpace) : \Prop
   => ∃ (C : X.isUniform) ∀ {E : X.isCauchy} (IsLocallyUniform C E)
 
 \lemma locallyUniform-cauchy {X : PreuniformSpace} {C : Set (Set X)} (Cc : isCauchy C) (E : Set (Set X)) (lu : IsLocallyUniform C E) : isCauchy E
@@ -262,3 +276,17 @@
          | inP (V, inP (_, inP (_, inP (t,idp), idp), q), g') => Y.halving1/2 (q (Bx, g' (OBall-center {X} d>0))) (q (By, g' xy<d))
        })
      }
+
+-- Locally totally bounded spaces
+
+\type IsLocallyTotallyBounded (X : CoverSpace) : \Prop
+  => X.isCauchy IsTotallyBoundedSet
+
+\type IsLocallyCompact (X : CompleteCoverSpace) : \Prop
+  => IsLocallyTotallyBounded X
+
+\lemma topAddGroup-locallyTB-char {A : TopAddGroup} : IsLocallyTotallyBounded A <-> ∃ (U : Set A) (isOpen U) (U 0) (IsTotallyBoundedSet U)
+  => (\lam Altb => \case A.cauchy-regular-cover Altb 0 \with {
+        | inP (U,Utb,x<=<U) => inP (_, A.interior, x<=<U, totallyBoundedSet-subset (<=<_<= __ idp) Utb)
+      }, \lam (inP (U,Uo,U0,Utb)) => cauchy-subset (uniform-cauchy.2 $ closure $ A.topAddUniform Uo U0) \lam {_} (inP (x,idp)) =>
+          totallyBoundedSet-subset (later \lam {y} (u,_) => inP ((negative x + y, u), simplify)) $ totallyBoundedSet-image (A.leftTranslation x) Utb)

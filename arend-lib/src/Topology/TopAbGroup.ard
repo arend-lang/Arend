@@ -79,6 +79,15 @@
   \lemma shrink {U : Set E} (Uo : isOpen U) (U0 : U 0) : ∃ (V : isOpen) (V 0) ∀ {x y : V} (U (x - y))
     => shrink' +-cont negative-cont Uo U0
 
+  -- | Left translation `x +` is uniformly continuous.
+  \func leftTranslation (x : E) : UniformMap \this \this (x +) \cowith
+    | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+      | inP (U,Uo,U0,h) => neighborhood-uniform.2 $ inP (U ∧ (\lam z => U (x + z - x)), open-inter Uo $ (+-cont ∘ tuple (+-cont ∘ tuple (const x) id) (const (negative x))).func-cont Uo,
+                                                      (U0, transportInv U simplify U0), \lam y => \case h (x + y) \with {
+        | inP (V,EV,g) => inP (_, inP $ later (V, EV, idp), \lam {z} (u,_) (_,u') => g (transportInv U simplify u) (transportInv U (pmap (x + z +) negative_+ *> equation) u'))
+      })
+    }
+
   \lemma subtract-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 - s.2
     => +-cont ∘ prod id negative-cont
 } \where {

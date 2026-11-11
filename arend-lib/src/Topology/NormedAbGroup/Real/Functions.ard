@@ -104,7 +104,7 @@
     })
   }
 
-\lemma upper-+-uniform : MetricMap (ManhattanProductPseudoMetricSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 + s.2 \cowith
+\lemma upper-+-uniform : MetricMap (ManhattanExMetricSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 + s.2 \cowith
   | func-dist {x} {y} {d} xy<d => \case ExUpperReal.+_U.1 xy<d \with {
     | inP (a,x1y1<a,b,x2y2<b,a+b<d) => inP (a + b, a+b<d, RatField.<=_+-positive (<=-less $ dist>=0 {ExUpperRealMetric} x1y1<a) (<=-less $ dist>=0 {ExUpperRealMetric} x2y2<b),
         ExUpperRealAbMonoid.<=_+ (ExUpperRealMetric.dist-left x1y1<a) (ExUpperRealMetric.dist-left x2y2<b) <=∘ transport (_ <= _ + __) ExUpperReal.+-rat (=_<= equation.abMonoid),
@@ -121,7 +121,7 @@
 \lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (* a)
   => transport (UniformMetricMap ExUpperRealMetric ExUpperRealMetric) (ext \lam b => *-comm) (upper-*-left-uniform aB)
 
-\lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2)
+\lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanExMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2)
   => LocallyUniformMetricMap.makeLocallyUniformMap2 (*) \lam {eps} eps>0 => inP (1, idp, \lam x0 y0 => \case x0.U-inh_>0, y0.U-inh_>0 \with {
     | inP (x0b,x0<x0b,x0b>0), inP (y0b,y0<y0b,y0b>0) => \case ExUpperRealSemigroup.div-lb-rat {(y0b + 1 + 1) + (x0b + 1 + 1)} (inP (1, idp, <=-rat.1 linarith)) $ <-rat.2 (RatField.half>0 eps>0) \with {
       | inP (gamma,gamma>0,gamma-m) => inP (gamma ∧ 1, <_meet-univ gamma>0 zro<ide, \lam {x} {x'} {y} {y'} (inP x0x<1) (inP y0y<1) (inP xx'<gamma) (inP yy'<gamma) =>
@@ -140,7 +140,7 @@
   }
 
 \lemma ex-upper-*-locally-uniform
-  : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
+  : LocallyUniformMap (ManhattanExMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
   => transport (LocallyUniformMap _ _) (ext \lam s => UpperRealSemigroup.*-ex) (upper-ex-isometry LocallyUniformMap.∘l upper-*-locally-uniform)
 
 -- | For a cover map {g} to {Real} and rationals `a < b`, the sets `{a < g}` and `{g < b}` form a Cauchy cover.
