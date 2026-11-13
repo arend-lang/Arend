@@ -36,6 +36,7 @@
 \import Set
 \import Set.Set
 \import Topology.Compact
+\import Topology.Compact.CompactSupport
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Subspace
@@ -53,7 +54,7 @@
 \open Set
 
 -- | A cutoff for {U}.
-\record Cutoff {n : Nat} (U : Set (RealN n)) (fn : CompactCoverMap n)
+\record Cutoff {n : Nat} (U : Set (RealN n)) (fn : CompactCoverMap (RealN n))
   | cut>=0 {x : RealN n} : 0 <= fn x
   | cut<=1 {x : RealN n} : fn x <= 1
   | cut-inside : ∃ (r : Rat) (0 < r) (\Pi {x : RealN n} -> 0 < fn x -> OBall r x ⊆ U)
@@ -64,7 +65,7 @@
   }
 
 \lemma cutoff-bounded {n : Nat} {U : Set (RealN n)} (c : Cutoff U) : IsBoundedSet {RealN n} (\lam x => 0 < c.fn x)
-  => \case c.fn.support \with {
+  => \case ball-support c.fn \with {
     | inP (R,g0) => inP (0, R + 1, \lam {x} p =>
         \have q : lnorm x <= Real.fromRat R => \lam R<x => <-irreflexive (transport (0 <) (g0 R<x) p)
         \in real_<_U.1 $ transportInv (< _) (ldist_zro-left {RealN n}) $ q <∘r rat_real_<.1 (linarith : R < R + 1))
@@ -222,11 +223,11 @@
   }
 
 -- | The product of a cover map on {U} and a cutoff, extended by zero.
-\sfunc truncate {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U) : CompactCoverMap n
+\sfunc truncate {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U) : CompactCoverMap (RealN n)
   => (trunc-pair Uo f c).1
   \where {
     \private \lemma trunc-pair {n : Nat} {U : Set (RealN n)} (Uo : isOpen {RealN n} U) (f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (c : Cutoff U)
-      : \Sigma (g : CompactCoverMap n) (IsTrunc Uo f c g)
+      : \Sigma (g : CompactCoverMap (RealN n)) (IsTrunc Uo f c g)
       \level \lam u v => ext (CompactCoverMap.ext (trunc-unique {n} {U} {Uo} u.2 v.2))
       => \case openCover-bounded {RealN n} Uo f (ballsTB-totallyBounded (RealN-ballsTB n) (cutoff-bounded c)) (cutoff-<=* c) \with {
         | inP (M,M>0,hM) =>
@@ -239,9 +240,9 @@
                      | inP (d,d>0,h) => inP (d, d>0, \lam xy => real_<_U.1 $ h xy <∘r (rat_real_< {eps * ratio 1 2} {eps}).1 linarith)
                    }
                }
-          \in (\new CompactCoverMap n {
+          \in (\new CompactCoverMap (RealN n) {
             | CoverMap => um
-            | support => \case c.fn.support \with {
+            | support => ball-supported \case ball-support c.fn \with {
               | inP (R,g0) => inP (R, \lam r => sp.2 (g0 r))
             }
           }, sp)
@@ -303,9 +304,9 @@
           | G' => truncate Uo f c'
           | H => truncate Uo (coverAbs f) c
           | H' => truncate Uo (coverAbs f) c'
-     \in \have | e : CompactCoverMap_abs (CompactCoverMap_+ G' (CompactCoverMap_negative G)) = CompactCoverMap_+ H' (CompactCoverMap_negative H) => CompactCoverMap.ext {n} {CompactCoverMap_abs (CompactCoverMap_+ G' (CompactCoverMap_negative G))} {CompactCoverMap_+ H' (CompactCoverMap_negative H)} (\lam x => trunc-abs-diff {n} {U} {Uo} {f} cc x)
-               | e1 : iota (CompactCoverMap_abs (CompactCoverMap_+ G' (CompactCoverMap_negative G))) = LatticeAbGroup.abs {LebesgueL1 n} (iota G' - iota G) => iota_abs {n} {CompactCoverMap_+ G' (CompactCoverMap_negative G)} *> pmap (LatticeAbGroup.abs {LebesgueL1 n}) (iota_+ {n} {G'} {CompactCoverMap_negative G} *> pmap (_ +) (iota_negative {n} {G}))
-               | e2 : iota (CompactCoverMap_+ H' (CompactCoverMap_negative H)) = iota H' - iota H => iota_+ {n} {H'} {CompactCoverMap_negative H} *> pmap (_ +) (iota_negative {n} {H})
+     \in \have | e : CompactCoverMap.absolute (G' - G) = H' - H => CompactCoverMap.ext {RealN n} {CompactCoverMap.absolute (G' - G)} {H' - H} (\lam x => trunc-abs-diff {n} {U} {Uo} {f} cc x)
+               | e1 : iota (CompactCoverMap.absolute (G' - G)) = LatticeAbGroup.abs {LebesgueL1 n} (iota G' - iota G) => iota_abs {n} {G' - G} *> pmap (LatticeAbGroup.abs {LebesgueL1 n}) (iota_+ {n} {G'} {negative G} *> pmap (_ +) (iota_negative {n} {G}))
+               | e2 : iota (H' - H) = iota H' - iota H => iota_+ {n} {H'} {negative H} *> pmap (_ +) (iota_negative {n} {H})
      \in lnorm-ldist {LebesgueL1 n} *> pmap (integral {LebesgueL1 n}) (inv e1 *> pmap iota e *> e2) *> IntegrationSpace.integral_+ {LebesgueL1 n}
           *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}}) *> inv (pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char)
 
@@ -322,7 +323,7 @@
   }
 
 -- | The join of cutoffs.
-\lemma cutoff-join {n : Nat} {U : Set (RealN n)} (c c' : Cutoff U) : Cutoff U (CompactCoverMap_join c.fn c'.fn) \cowith
+\lemma cutoff-join {n : Nat} {U : Set (RealN n)} (c c' : Cutoff U) : Cutoff U (CompactCoverMap.join c.fn c'.fn) \cowith
   | cut>=0 {x} => c.cut>=0 {x} <=∘ join-left
   | cut<=1 {x} => join-univ (c.cut<=1 {x}) (c'.cut<=1 {x})
   | cut-inside => \case c.cut-inside, c'.cut-inside \with {
@@ -383,13 +384,13 @@
 -- | The difference of the integrals of truncations is the integral of the difference.
 \lemma cutIntegral-sub {n : Nat} {U U' : Set (RealN n)} {Uo : isOpen {RealN n} U} {Uo' : isOpen {RealN n} U'} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed}
                        {k' : CoverMap (OpenCoverSpace {RealN n} Uo') RealNormed} {c : Cutoff U} {c' : Cutoff U'}
-  : cutIntegral Uo' k' c' - cutIntegral Uo k c = integral {LebesgueL1 n} (iota (CompactCoverMap_+ (truncate Uo' k' c') (CompactCoverMap_negative (truncate Uo k c))))
-  => pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char *> inv (pmap (integral {LebesgueL1 n}) (iota_+ {n} {truncate Uo' k' c'} {CompactCoverMap_negative (truncate Uo k c)} *> pmap (_ +) (iota_negative {n} {truncate Uo k c}))
+  : cutIntegral Uo' k' c' - cutIntegral Uo k c = integral {LebesgueL1 n} (iota (truncate Uo' k' c' - truncate Uo k c))
+  => pmap2 (\lam a b => a - b) cutIntegral.char cutIntegral.char *> inv (pmap (integral {LebesgueL1 n}) (iota_+ {n} {truncate Uo' k' c'} {negative (truncate Uo k c)} *> pmap (_ +) (iota_negative {n} {truncate Uo k c}))
       *> IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}}))
 
 -- | The increment of the net is the integral of the difference of truncations.
 \lemma cut-diff {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c c' : Cutoff U}
-  : cutIntegral Uo k c' - cutIntegral Uo k c = integral {LebesgueL1 n} (iota (CompactCoverMap_+ (truncate Uo k c') (CompactCoverMap_negative (truncate Uo k c))))
+  : cutIntegral Uo k c' - cutIntegral Uo k c = integral {LebesgueL1 n} (iota (truncate Uo k c' - truncate Uo k c))
   => cutIntegral-sub
 
 -- | The increment of a truncation at a point.
@@ -410,8 +411,7 @@
       \let | F => coverAbs f
            | G => coverAbs g
       \in \have mono : cutIntegral Uo F c' - cutIntegral Uo F c <= cutIntegral Uo G c' - cutIntegral Uo G c
-                => transport2 (<=) (inv cut-diff) (inv cut-diff) $
-        CompactCoverMap-integral-mono {n} {CompactCoverMap_+ (truncate Uo F c') (CompactCoverMap_negative (truncate Uo F c))} {CompactCoverMap_+ (truncate Uo G c') (CompactCoverMap_negative (truncate Uo G c))} \lam x =>
+                => transport2 (<=) (inv cut-diff) (inv cut-diff) $ CompactCoverMap-integral-mono \lam x =>
                   RealAbGroup.<=-split LinearOrder.<=-stable c'.cut>=0
                     (\lam s =>
                       \let u : Total U => (x, cutoff-in c' s)
@@ -435,12 +435,12 @@
 -- | Truncation depends only on the values of a function.
 \lemma truncate-ext {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (p : \Pi (u : Total U) -> f u = g u) {c : Cutoff U}
   : truncate Uo f c = truncate Uo g c
-  => CompactCoverMap.ext {n} \lam x => trunc-unique (truncate.char c) (\lam u => (truncate.char c).1 u *> pmap (RealField.* _) (inv (p u)), (truncate.char c).2) x
+  => CompactCoverMap.ext {RealN n} \lam x => trunc-unique (truncate.char c) (\lam u => (truncate.char c).1 u *> pmap (RealField.* _) (inv (p u)), (truncate.char c).2) x
 
 -- | Truncation is a pointwise operation.
-\lemma truncate-op {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {c : Cutoff U} (k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (g : CompactCoverMap n)
+\lemma truncate-op {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {c : Cutoff U} (k : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed) (g : CompactCoverMap (RealN n))
                   (p : \Pi (u : Total U) -> g u.1 = k u RealField.* c.fn u.1) (q : \Pi {x : RealN n} -> c.fn x = 0 -> g x = 0) : truncate Uo k c = g
-  => CompactCoverMap.ext {n} \lam x => trunc-unique (truncate.char c) (p,q) x
+  => CompactCoverMap.ext {RealN n} \lam x => trunc-unique (truncate.char c) (p,q) x
 
 \lemma coverSum {X : CoverSpace} (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => f x RealAbGroup.+ g x)
   => cover2 (+-uniform {RealNormed}) f g
@@ -449,20 +449,20 @@
   => negative-uniform {RealNormed} CoverMap.∘ f
 
 \lemma truncate_+ {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
-  : truncate Uo (coverSum f g) c = CompactCoverMap_+ (truncate Uo f c) (truncate Uo g c)
-  => truncate-op {n} {U} {Uo} (coverSum f g) (CompactCoverMap_+ (truncate Uo f c) (truncate Uo g c))
+  : truncate Uo (coverSum f g) c = truncate Uo f c + truncate Uo g c
+  => truncate-op {n} {U} {Uo} (coverSum f g) (truncate Uo f c + truncate Uo g c)
       (\lam u => pmap2 (RealAbGroup.+) ((truncate.char c).1 u) ((truncate.char c).1 u) *> inv RealField.rdistr)
       (\lam s => pmap2 (RealAbGroup.+) ((truncate.char c).2 s) ((truncate.char c).2 s) *> RealAbGroup.zro-left)
 
 \lemma truncate_negative {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
-  : truncate Uo (coverNegative f) c = CompactCoverMap_negative (truncate Uo f c)
-  => truncate-op {n} {U} {Uo} (coverNegative f) (CompactCoverMap_negative (truncate Uo f c))
+  : truncate Uo (coverNegative f) c = negative (truncate Uo f c)
+  => truncate-op {n} {U} {Uo} (coverNegative f) (negative (truncate Uo f c))
       (\lam u => pmap negative ((truncate.char c).1 u) *> inv RealField.negative_*-left)
       (\lam s => pmap negative ((truncate.char c).2 s) *> RealAbGroup.negative_zro)
 
 \lemma truncate_abs {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c : Cutoff U}
-  : truncate Uo (coverAbs f) c = CompactCoverMap_abs (truncate Uo f c)
-  => truncate-op {n} {U} {Uo} (coverAbs f) (CompactCoverMap_abs (truncate Uo f c))
+  : truncate Uo (coverAbs f) c = CompactCoverMap.absolute (truncate Uo f c)
+  => truncate-op {n} {U} {Uo} (coverAbs f) (CompactCoverMap.absolute (truncate Uo f c))
       (\lam u => pmap RealAbGroup.abs ((truncate.char c).1 u) *> RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {u.1})))
       (\lam s => pmap RealAbGroup.abs ((truncate.char c).2 s) *> RealAbGroup.abs_zro)
 
@@ -489,10 +489,10 @@
         \let | A => coverAbs (coverSum f g)
              | F => coverAbs f
              | G => coverAbs g
-             | DA => CompactCoverMap_+ (truncate Uo A c') (CompactCoverMap_negative (truncate Uo A c))
-             | DF => CompactCoverMap_+ (truncate Uo F c') (CompactCoverMap_negative (truncate Uo F c))
-             | DG => CompactCoverMap_+ (truncate Uo G c') (CompactCoverMap_negative (truncate Uo G c))
-        \in \have | m : integral {LebesgueL1 n} (iota DA) <= integral {LebesgueL1 n} (iota (CompactCoverMap_+ DF DG)) => CompactCoverMap-integral-mono {n} {DA} {CompactCoverMap_+ DF DG} \lam x =>
+             | DA => truncate Uo A c' - truncate Uo A c
+             | DF => truncate Uo F c' - truncate Uo F c
+             | DG => truncate Uo G c' - truncate Uo G c
+        \in \have | m : integral {LebesgueL1 n} (iota DA) <= integral {LebesgueL1 n} (iota (DF + DG)) => CompactCoverMap-integral-mono \lam x =>
                       RealAbGroup.<=-split LinearOrder.<=-stable c'.cut>=0
                         (\lam s =>
                           \let u : Total U => (x, cutoff-in c' s)
@@ -500,7 +500,7 @@
                               RealField.<=_*_positive-left RealAbGroup.abs_+ (RealAbGroup.to>=0 (q x)))
                         (\lam s => =_<= (trunc-inc-zero q (inv s) *> inv (pmap2 (RealAbGroup.+) (trunc-inc-zero q (inv s)) (trunc-inc-zero q (inv s)) *> RealAbGroup.zro-left)))
                   | e1 : cutIntegral Uo A c' - cutIntegral Uo A c = integral {LebesgueL1 n} (iota DA) => cut-diff
-                  | e2 : integral {LebesgueL1 n} (iota (CompactCoverMap_+ DF DG)) = integral {LebesgueL1 n} (iota DF) RealAbGroup.+ integral {LebesgueL1 n} (iota DG)
+                  | e2 : integral {LebesgueL1 n} (iota (DF + DG)) = integral {LebesgueL1 n} (iota DF) RealAbGroup.+ integral {LebesgueL1 n} (iota DG)
                       => pmap (integral {LebesgueL1 n}) (iota_+ {n} {DF} {DG}) *> IntegrationSpace.integral_+ {LebesgueL1 n}
                   | e3 : cutIntegral Uo F c' - cutIntegral Uo F c = integral {LebesgueL1 n} (iota DF) => cut-diff
                   | e4 : cutIntegral Uo G c' - cutIntegral Uo G c = integral {LebesgueL1 n} (iota DG) => cut-diff
@@ -594,7 +594,7 @@
 
 \lemma trunc-stable {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} {c0 c : Cutoff U}
                     (h : \Pi (u : Total U) -> c0.fn u.1 < 1 -> f u = 0) (p : c0 c<= c) : truncate Uo f c = truncate Uo f c0
-  => CompactCoverMap.ext {n} \lam x => RealAbGroup.<=-split separatedEq c.cut>=0
+  => CompactCoverMap.ext {RealN n} \lam x => RealAbGroup.<=-split separatedEq c.cut>=0
       (\lam s =>
         \let u : Total U => (x, cutoff-in c s)
         \in (truncate.char c).1 u *> separatedEq (\lam ne =>
@@ -665,7 +665,7 @@
   => \lam {eps} e>0 => \case h e>0 \with {
     | inP (c0,A,mA,hA) => inP (c0, \lam c c' p q =>
       \let | F => coverAbs (CoverMap.const 1)
-           | D => CompactCoverMap_+ (truncate Uo F c') (CompactCoverMap_negative (truncate Uo F c))
+           | D => truncate Uo F c' - truncate Uo F c
       \in \have | one : RealAbGroup.abs (1 : Real) = 1 => RealAbGroup.abs-ofPos (<=-less RealField.zro<ide)
                 | inc (u : Total U) : D u.1 = c'.fn u.1 - c.fn u.1 => trunc-inc-pos {n} {U} {Uo} {F} {c} {c'} u *> pmap (RealField.* _) one *> ide-left
                 | pt (z : Array Rat n) : RealAbGroup.abs (D (ratPt z)) <= Real.fromRat (if (lebPts n A z) 1 0)

@@ -131,6 +131,8 @@
     => uniform-subset (<=*-regular Cu) \lam {V} (inP (U,CU,p)) => inP $ later (U, CU, <=*_<=< p)
 }
 
+\class CompleteUniformSpace \extends UniformSpace, CompleteCoverSpace
+
 \lemma <=*_<=< {X : PreuniformSpace} {V U : Set X} (p : V <=* U) : V <=< U
   => X.makeCauchy (<=*-char.1 p)
 

@@ -22,7 +22,6 @@
 \import Topology.CoverSpace
 \import Topology.MetricSpace
 \import Topology.TopAbGroup
-\import Topology.TopAbGroup.Complete
 \import Topology.TopSpace
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product

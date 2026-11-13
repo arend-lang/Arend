@@ -43,6 +43,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Set
+\import Topology.Compact.CompactSupport
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Subspace
 \import Topology.NormedAbGroup.NormedProduct
@@ -322,9 +323,9 @@
                | d2 : negative (C1 - C2 - C3) <= RealAbGroup.abs (C1 - C2 - C3) => RealAbGroup.abs>=neg
          \in RealAbGroup.join-univ (linarith : I1 - (I2 + I3) <= W) (linarith : negative (I1 - (I2 + I3)) <= W)
 
-    \lemma iota-sub {u v : CompactCoverMap 1}
-      : integral {LebesgueL1 1} (iota u) - integral {LebesgueL1 1} (iota v) = integral {LebesgueL1 1} (iota (CompactCoverMap_+ u (CompactCoverMap_negative v)))
-      => inv (pmap (integral {LebesgueL1 1}) (iota_+ {1} {u} {CompactCoverMap_negative v} *> pmap (_ +) (iota_negative {1} {v}))
+    \lemma iota-sub {u v : CompactCoverMap (RealN 1)}
+      : integral {LebesgueL1 1} (iota u) - integral {LebesgueL1 1} (iota v) = integral {LebesgueL1 1} (iota (u - v))
+      => inv (pmap (integral {LebesgueL1 1}) (iota_+ {1} {u} {negative v} *> pmap (_ +) (iota_negative {1} {v}))
                *> IntegrationSpace.integral_+ {LebesgueL1 1} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 1}}))
 
     \lemma sum6 {h : Rat} : Real.fromRat (h + h + h + h + h + h) = Real.fromRat h + Real.fromRat h + Real.fromRat h + Real.fromRat h + Real.fromRat h + Real.fromRat h
@@ -342,7 +343,7 @@
               | T1 => truncate (interval-open x.1 z.1) (restrictTo g x z) (intervalCutoff x.1 z.1 h>0)
               | T2 => truncate (interval-open x.1 y.1) (restrictTo g x y) (intervalCutoff x.1 y.1 h>0)
               | T3 => truncate (interval-open y.1 z.1) (restrictTo g y z) (intervalCutoff y.1 z.1 h>0)
-              | D => CompactCoverMap_+ (CompactCoverMap_+ T1 (CompactCoverMap_negative T2)) (CompactCoverMap_negative T3)
+              | D => (T1 - T2) - T3
          \in \have | pw (w : Array Rat 1) : RealAbGroup.abs (D (ratPt w)) <= Real.fromRat (if (lebPts 1 A w) (M + M) 0)
                        => transportInv (\lam v => RealAbGroup.abs v <= _)
                             (pmap2 (\lam u v => u + negative v) (pmap2 (\lam u v => u + negative v) (seg-trunc {a} {b} {g} {x} {z} w) (seg-trunc {a} {b} {g} {x} {y} w)) (seg-trunc {a} {b} {g} {y} {z} w))

@@ -32,6 +32,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Set
+\import Topology.Compact.CompactSupport
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Subspace
 \import Topology.MetricSpace
@@ -167,9 +168,9 @@
   => rewrite (\peval trapValue a b h t) (join-left, join-univ (<=-less RealField.zro<ide) meet-left)
 
 -- | The trapezoid as a function with compact support.
-\lemma intervalCompactCoverMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CompactCoverMap 1 (\lam x => trapValue a b h (x 0)) \cowith
+\lemma intervalCompactCoverMap (a b : Real) {h : Rat} (h>0 : 0 < h) : CompactCoverMap (RealN 1) (\lam x => trapValue a b h (x 0)) \cowith
   | CoverMap => trapMap a b h>0
-  | support => \case Real.U-inh {RealAbGroup.abs a}, Real.U-inh {RealAbGroup.abs b} \with {
+  | support => ball-supported {1} {\lam x => trapValue a b h (x 0)} \case Real.U-inh {RealAbGroup.abs a}, Real.U-inh {RealAbGroup.abs b} \with {
     | inP (Ra,ua), inP (Rb,ub) => inP (Ra ∨ Rb, \lam {x} r =>
       \have | h>0' : 0 < Real.fromRat h => rat_real_<.1 h>0
             | ua' : RealAbGroup.abs a < Real.fromRat Ra => real_<_U.2 ua

@@ -22,8 +22,6 @@
 \import Topology.UniformSpace.Complete
 \open Completion
 
-\class CompleteTopAbGroup \extends TopAbGroup, CompleteUniformSpace
-
 \func dense-topAb-lift {X Y : TopAbGroup} {Z : CompleteTopAbGroup} (f : TopAbGroupMap X Y) (fd : f.IsDenseTopEmbedding) (g : TopAbGroupMap X Z) : TopAbGroupMap Y Z \cowith
   | ContMap => dense-uniform-lift f (f.embedding->uniformEmbedding fd) g
   | func-+ {y} {y'} =>

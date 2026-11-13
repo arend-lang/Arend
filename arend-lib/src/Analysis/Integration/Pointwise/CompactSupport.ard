@@ -34,7 +34,9 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
+\import Set.Set
 \import Topology.Compact
+\import Topology.Compact.CompactSupport
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
@@ -42,9 +44,6 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.NormedProduct
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.Real.Functions
-\import Topology.TopAbGroup
-\import Topology.TopAbGroup.Product
 \import Topology.CoverSpace.Product
 \open SFunc (inSF)
 \open SFuncRepr (IsReduced)
@@ -68,15 +67,23 @@
              | a2 : negative (z j) <= RatField.abs (z j) => RatField.abs>=neg
       \in (linarith, linarith)) \with {}
 
--- | Cover maps `ℝⁿ -> ℝ` with compact support.
-\record CompactCoverMap (n : Nat) \extends CoverMap
-  | Dom => RealN n
-  | Cod => RealNormed
-  | support : ∃ (R : Rat) ∀ {x} (Real.fromRat R < lnorm x) (func x = 0)
-  \where {
-    \protected \lemma ext {n : Nat} {g h : CompactCoverMap n} (p : \Pi (x : RealN n) -> g x = h x) : g = h
-      => Paths.Meta.ext (exts p)
+-- | A function in `C_c(ℝⁿ)` vanishes outside a ball.
+\lemma ball-support {n : Nat} (g : CompactCoverMap (RealN n)) : ∃ (R : Rat) ∀ {x : RealN n} (Real.fromRat R < lnorm x) (g x = 0)
+  => \case g.support \with {
+    | inP (K,Ktb,gK) => \case totallyBoundedSet-bounded Ktb 0 \with {
+      | inP (B,h) => inP (B, \lam {x} r => IsSupported.vanish gK \lam Kx =>
+          <-irreflexive $ r <∘ transport (__ < _) (ldist_zro-left {RealN n}) (real_<_U.2 (h Kx)))
+    }
   }
+
+-- | A function on `ℝⁿ` vanishing outside a ball has totally bounded support.
+\lemma ball-supported {n : Nat} {g : RealN n -> Real} (h : ∃ (R : Rat) ∀ {x : RealN n} (Real.fromRat R < lnorm x) (g x = 0))
+  : ∃ (K : Set (RealN n)) (IsTotallyBoundedSet K) (IsSupported g K) \elim h
+  | inP (R,g0) => inP (OBall {RealN n} (R + 1) 0, ballsTB-totallyBounded (RealN-ballsTB n) (inP (0, R + 1, \lam p => p)), \lam {x} gx>0 =>
+      \case Real.LU-located {lnorm x} {R} {R + 1} linarith \with {
+        | byLeft l => absurd $ <-irreflexive $ transport (\lam y => 0 < RealAbGroup.abs y) (g0 (real_<_L.2 l)) gx>0 <∘l =_<= RealAbGroup.abs_zro
+        | byRight u => real_<_U.1 $ transportInv (< _) (ldist_zro-left {RealN n}) (real_<_U.2 u)
+      })
 
 -- | {s} is {e}-close to {g} at the rational points of {K} and equal to {g} at other rational points.
 \type IsApprox {n : Nat} (g : RealN n -> Real) (K : LebesgueRing0 n) (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) : \Prop
@@ -229,52 +236,24 @@
   }
 
 -- | The embedding `ι : C_c(ℝⁿ) -> L¹(ℝⁿ)`.
-\sfunc iota {n : Nat} (g : CompactCoverMap n) : LebesgueL1 n
+\sfunc iota {n : Nat} (g : CompactCoverMap (RealN n)) : LebesgueL1 n
   => (iota-pair g).1
   \where {
-    \private \lemma iota-pair {n : Nat} (g : CompactCoverMap n) : \Sigma (u : LebesgueL1 n) (IsIota g u)
-      \level \lam u v => \case g.support \with {
+    \private \lemma iota-pair {n : Nat} (g : CompactCoverMap (RealN n)) : \Sigma (u : LebesgueL1 n) (IsIota g u)
+      \level \lam u v => \case ball-support g \with {
         | inP (R,gR) => ext (iota-unique g gR u.2 v.2)
       }
-      => \case g.support \with {
+      => \case ball-support g \with {
         | inP (R,gR) => iota-exists g gR
       }
 
-    \protected \lemma char {n : Nat} {g : CompactCoverMap n} : IsIota g (iota g)
+    \protected \lemma char {n : Nat} {g : CompactCoverMap (RealN n)} : IsIota g (iota g)
       => rewrite (\peval iota g) (iota-pair g).2
   }
 
 -- | Pointwise operations on real-valued cover maps.
 \lemma cover2 {X : CoverSpace} (op : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed) (f g : CoverMap X RealNormed) : CoverMap X RealNormed (\lam x => op (f x, g x))
   => op CoverMap.∘ ProductCoverSpace.tuple f g
-
-\lemma CompactCoverMap_+ {n : Nat} (g h : CompactCoverMap n) : CompactCoverMap n (\lam x => g x RealAbGroup.+ h x) \cowith
-  | func-cover => func-cover {cover2 +-uniform g h}
-  | support => \case g.support, h.support \with {
-    | inP (R1,g0), inP (R2,h0) => inP (R1 ∨ R2, \lam {x} r =>
-      \have | j1 : Real.fromRat R1 <= Real.fromRat (R1 ∨ R2) => rat_real_<=.1 join-left
-            | j2 : Real.fromRat R2 <= Real.fromRat (R1 ∨ R2) => rat_real_<=.1 join-right
-      \in pmap2 (RealAbGroup.+) (g0 (j1 <∘r r)) (h0 (j2 <∘r r)) *> RealAbGroup.zro-left)
-  }
-
-\lemma CompactCoverMap_negative {n : Nat} (g : CompactCoverMap n) : CompactCoverMap n (\lam x => negative (g x)) \cowith
-  | func-cover => func-cover {negative-uniform CoverMap.∘ g}
-  | support => \case g.support \with {
-    | inP (R,g0) => inP (R, \lam r => pmap negative (g0 r) *> RealAbGroup.negative_zro)
-  }
-
-\lemma CompactCoverMap_abs {n : Nat} (g : CompactCoverMap n)
-  : CompactCoverMap n (\lam x => RealAbGroup.abs (g x)) \cowith
-  | func-cover => func-cover {cover2 real-join-uniform g (negative-uniform CoverMap.∘ g)}
-  | support => \case g.support \with {
-    | inP (R,g0) => inP (R, \lam {x} r => pmap RealAbGroup.abs (g0 r) *> RealAbGroup.abs_zro)
-  }
-
-\lemma CompactCoverMap_join {n : Nat} (g h : CompactCoverMap n) : CompactCoverMap n (\lam x => g x ∨ h x) \cowith
-  | CoverMap => cover2 real-join-uniform g h
-  | support => \case CompactCoverMap-common g h \with {
-    | inP (R,g0,h0) => inP (R, \lam {x} r => pmap2 (∨) (g0 r) (h0 r) *> RealAbGroup.join_<= <=-refl)
-  }
 
 \lemma approx_+ {n : Nat} {g h : RealN n -> Real} {K : LebesgueRing0 n} {e e' : Rat} {s t : SFuncIntegrationSpace (LebesgueRing0 n)} (a : IsApprox g K e s) (b : IsApprox h K e' t)
   : IsApprox (\lam x => g x RealAbGroup.+ h x) K (e + e') (s + t)
@@ -312,7 +291,7 @@
   => integrationCompletion.func-join *> pmap (_ ∨) stepL1_negative
 
 -- | A criterion for an element to be equal to the image of a function under {iota}.
-\lemma iota-eq {n : Nat} {g : CompactCoverMap n} {v : LebesgueL1 n}
+\lemma iota-eq {n : Nat} {g : CompactCoverMap (RealN n)} {v : LebesgueL1 n}
                (h : \Pi {d : Rat} -> 0 < d -> ∃ (K : LebesgueRing0 n) (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g K e s) (e RealField.* meas K < d) (ldist {LebesgueL1 n} v (stepL1 s) < d))
   : iota g = v
   => dist-ext {LebesgueL1 n} $ Real.=-upper.1 $ <=-antisymmetric (real_<=-eps \lam {d} d>0 =>
@@ -326,15 +305,15 @@
           \in iota-unique.eps-triangle a em vs t sy r
       }) (ldist>=0 {LebesgueL1 n})
 
-\lemma CompactCoverMap-common {n : Nat} (g h : CompactCoverMap n) : ∃ (R : Rat) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> h x = 0)
-  => \case g.support, h.support \with {
+\lemma CompactCoverMap-common {n : Nat} (g h : CompactCoverMap (RealN n)) : ∃ (R : Rat) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) (\Pi {x : RealN n} -> Real.fromRat R < lnorm x -> h x = 0)
+  => \case ball-support g, ball-support h \with {
     | inP (R1,g0), inP (R2,h0) => inP (R1 ∨ R2,
         \lam r => g0 (rat_real_<=.1 join-left <∘r r),
         \lam r => h0 (rat_real_<=.1 join-right <∘r r))
   }
 
 -- | {iota} is additive.
-\lemma iota_+ {n : Nat} {g h : CompactCoverMap n} : iota (CompactCoverMap_+ g h) = iota g + iota h
+\lemma iota_+ {n : Nat} {g h : CompactCoverMap (RealN n)} : iota (g + h) = iota g + iota h
   => iota-eq \lam {d} d>0 =>
       \have | d4>0 : 0 < d * ratio 1 4 => linarith
             | (inP (R,g0,h0)) => CompactCoverMap-common g h
@@ -358,17 +337,17 @@
   }
 
 -- | {iota} preserves negation.
-\lemma iota_negative {n : Nat} {g : CompactCoverMap n} : iota (CompactCoverMap_negative g) = negative (iota g)
+\lemma iota_negative {n : Nat} {g : CompactCoverMap (RealN n)} : iota (negative g) = negative (iota g)
   => iota-eq \lam {d} d>0 =>
-      \have | (inP (R,g0)) => g.support
+      \have | (inP (R,g0)) => ball-support g
             | (inP (e,s,a,em)) => approx-small g g0 d>0
             | c => iota.char {n} {g} a
             | e' : ldist {LebesgueL1 n} (negative (iota g)) (negative (stepL1 s)) = ldist {LebesgueL1 n} (iota g) (stepL1 s) => ldist_negative {LebesgueL1 n}
       \in inP (ratCube n (R + 1), e, negative s, approx_negative {n} {g} a, em, rewrite stepL1_negative linarith)
 
 -- | {iota} preserves the absolute value.
-\lemma iota_abs {n : Nat} {g : CompactCoverMap n} : iota (CompactCoverMap_abs g) = LatticeAbGroup.abs {LebesgueL1 n} (iota g)
-  => iota-eq \lam {d} d>0 => \case g.support \with {
+\lemma iota_abs {n : Nat} {g : CompactCoverMap (RealN n)} : iota (CompactCoverMap.absolute g) = LatticeAbGroup.abs {LebesgueL1 n} (iota g)
+  => iota-eq \lam {d} d>0 => \case ball-support g \with {
     | inP (R,g0) => \case approx-small g g0 d>0 \with {
       | inP (e,s,a,em) =>
         \have | c => iota.char {n} {g} a
@@ -378,11 +357,11 @@
   }
 
 -- | The bound of `∫ |ι g|` by a bound of `g` at rational points.
-\lemma iota-bound {n : Nat} {g : CompactCoverMap n} {a : LebesgueRing0 n} {M : Rat} (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z)) <= Real.fromRat (if (lebPts n a z) M 0))
+\lemma iota-bound {n : Nat} {g : CompactCoverMap (RealN n)} {a : LebesgueRing0 n} {M : Rat} (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z)) <= Real.fromRat (if (lebPts n a z) M 0))
   : integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (iota g)) <= M RealField.* meas a
   => real_<=-eps \lam {d} d>0 =>
     \have d2>0 : 0 < d * ratio 1 2 => linarith
-    \in \case g.support \with {
+    \in \case ball-support g \with {
       | inP (R,g0) => \case approx-small g g0 d2>0 \with {
         | inP (e,s,ap,em) =>
           \let | K => ratCube n (R + 1)
@@ -417,12 +396,12 @@
       => linarith
 
 -- | A pointwise bound of `g - s` by a step function {t} bounds the distance from `ι g` to {s}.
-\lemma iota-near {n : Nat} {g : CompactCoverMap n} {s t : SFuncIntegrationSpace (LebesgueRing0 n)}
+\lemma iota-near {n : Nat} {g : CompactCoverMap (RealN n)} {s t : SFuncIntegrationSpace (LebesgueRing0 n)}
                  (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z) - stepEval z s) <= stepEval z t)
   : ldist (iota g) (stepL1 s) <= integral t
   => real_<=-eps \lam {d} d>0 =>
     \have d2>0 : 0 < d * ratio 1 2 => linarith
-    \in \case g.support \with {
+    \in \case ball-support g \with {
       | inP (R,g0) => \case approx-small g g0 d2>0 \with {
         | inP (e,s',ap,em) =>
           \let | K => ratCube n (R + 1)
@@ -446,7 +425,7 @@
       => linarith
 
 -- | A pointwise bound of `g - s` by a step function {t} bounds the difference of the integrals.
-\lemma iota-integral-near {n : Nat} {g : CompactCoverMap n} {s t : SFuncIntegrationSpace (LebesgueRing0 n)}
+\lemma iota-integral-near {n : Nat} {g : CompactCoverMap (RealN n)} {s t : SFuncIntegrationSpace (LebesgueRing0 n)}
                           (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z) - stepEval z s) <= stepEval z t)
   : RealAbGroup.abs (integral (iota g) - integral s) <= integral t
   => \have e : integral (iota g - stepL1 s) = integral (iota g) - integral s
@@ -454,9 +433,9 @@
      \in transport (\lam x => RealAbGroup.abs x <= _) e $ (LebesgueL1 n).integral_abs <=∘ transport (<= _) (lnorm-ldist {LebesgueL1 n}) (iota-near h)
 
 -- | Maps with compact support are uniformly continuous.
-\lemma CompactCoverMap-uniform {n : Nat} (g : CompactCoverMap n) {eps : Rat} (eps>0 : 0 < eps)
+\lemma CompactCoverMap-uniform {n : Nat} (g : CompactCoverMap (RealN n)) {eps : Rat} (eps>0 : 0 < eps)
   : ∃ (d : Rat) (0 < d) ∀ {x y} ((dist x y).U d) (RealAbGroup.abs (g x - g y) < eps)
-  => \have | (inP (R,g0)) => g.support
+  => \have | (inP (R,g0)) => ball-support g
            | j0 : 0 <= R ∨ 0 => join-right
            | j1 : R <= R ∨ 0 => join-left
            | B>0 : 0 < (R ∨ 0) + 3 => linarith
@@ -478,12 +457,12 @@
           })
 
 -- | The integral is monotone on functions with compact support.
-\lemma CompactCoverMap-integral-mono {n : Nat} {g h : CompactCoverMap n} (p : \Pi (x : RealN n) -> g x <= h x)
+\lemma CompactCoverMap-integral-mono {n : Nat} {g h : CompactCoverMap (RealN n)} (p : \Pi (x : RealN n) -> g x <= h x)
   : integral {LebesgueL1 n} (iota g) <= integral {LebesgueL1 n} (iota h)
-  => \let d => CompactCoverMap_+ h (CompactCoverMap_negative g)
-     \in \have | e : CompactCoverMap_abs d = d => CompactCoverMap.ext {n} {CompactCoverMap_abs d} {d} (\lam x => RealAbGroup.abs-ofPos (RealAbGroup.to>=0 (p x)))
+  => \let d => h - g
+     \in \have | e : CompactCoverMap.absolute d = d => CompactCoverMap.ext {RealN n} {CompactCoverMap.absolute d} {d} (\lam x => RealAbGroup.abs-ofPos (RealAbGroup.to>=0 (p x)))
                | e1 : iota d = LatticeAbGroup.abs {LebesgueL1 n} (iota d) => inv (pmap iota e) *> iota_abs {n} {d}
-               | e2 : iota d = iota h - iota g => iota_+ {n} {h} {CompactCoverMap_negative g} *> pmap (_ +) (iota_negative {n} {g})
+               | e2 : iota d = iota h - iota g => iota_+ {n} {h} {negative g} *> pmap (_ +) (iota_negative {n} {g})
                | e3 : integral {LebesgueL1 n} (iota d) = integral {LebesgueL1 n} (iota h) - integral {LebesgueL1 n} (iota g)
                    => pmap (integral {LebesgueL1 n}) e2 *> IntegrationSpace.integral_+ {LebesgueL1 n} *> pmap (_ RealAbGroup.+) (AddGroupHom.func-negative {IntegrationSpace.integral-hom {LebesgueL1 n}})
                | pos : 0 <= integral {LebesgueL1 n} (iota d) => transportInv (\lam w => 0 <= integral {LebesgueL1 n} w) e1 (IntegrationSpace.integral>=0 {LebesgueL1 n} (LatticeAbGroup.abs>=0 {LebesgueL1 n}))

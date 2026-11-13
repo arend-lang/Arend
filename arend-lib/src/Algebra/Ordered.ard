@@ -221,6 +221,21 @@
              | ma>=m : abs x ∧ 0 <= (abs x ∧ 0) + abs x => meet-univ (meet-right <=∘ aa>=0) (meet-left <=∘ =_<= (inv zro-left)) <=∘ =_<= (inv meet_+-right)
        \in <=_+-cancel-left _ $ transportInv (<= _) zro-right ma>=m
 
+  \lemma join-lip {a b c d : E} : abs ((a ∨ b) - (c ∨ d)) <= abs (a - c) + abs (b - d)
+    => \have | step {x y u s : E} (y<=u : y <= u) (p : abs (x - y) <= s) : x <= u + s
+               => =_<= equation.abGroup <=∘ <=_+ y<=u (abs>=id <=∘ p)
+             | half {a b c d : E} : (a ∨ b) - (c ∨ d) <= abs (a - c) + abs (b - d)
+               => \have j : a ∨ b <= (c ∨ d) + (abs (a - c) + abs (b - d))
+                        => join-univ (step join-left $ =_<= (inv zro-right) <=∘ <=_+ <=-refl abs>=0)
+                                     (step join-right $ =_<= (inv zro-left) <=∘ <=_+ abs>=0 <=-refl)
+                  \in <=_+ j <=-refl <=∘ =_<= (pmap (__ + negative (c ∨ d)) +-comm *> +-assoc *> pmap (_ +) negative-right *> zro-right)
+       \in abs-univ half $ transport (_ <=) (pmap2 (+) abs_- abs_-) half
+
+  \lemma join-bound {a b : E} : abs (a ∨ b) <= abs a + abs b
+    => \have | e1 : abs ((a ∨ b) - (0 ∨ 0)) = abs (a ∨ b) => pmap abs (pmap (_ -) join-idemp *> minus_zro)
+             | e2 : abs (a - 0) + abs (b - 0) = abs a + abs b => pmap2 (+) (pmap abs minus_zro) (pmap abs minus_zro)
+       \in transport2 (<=) e1 e2 join-lip
+
   \func part+ (x : E) => x ∨ 0
 
   \func part- (x : E) => negative x ∨ 0

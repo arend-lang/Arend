@@ -213,6 +213,8 @@
     }))
 }
 
+\class CompleteTopAbGroup \extends TopAbGroup, CompleteUniformSpace
+
 \func \infix 4 <=<ta {X : TopAbGroup} (V U : Set X) : \Prop
   => ∀ {x y : V} (U (x - y))
 

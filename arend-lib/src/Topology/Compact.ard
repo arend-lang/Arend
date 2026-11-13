@@ -347,6 +347,19 @@
       }
   }
 
+-- | A totally bounded set in a pseudometric space is contained in a ball around any given point.
+\lemma totallyBoundedSet-bounded {X : PseudoMetricSpace} {T : Set X} (Ttb : IsTotallyBoundedSet T) (x0 : X) : ∃ (B : Rat) ∀ {x : T} (OBall B x0 x)
+  => \case totallyBoundedSet-char.1 Ttb (X.makeCauchy (X.metricUniform {1} RatField.zro<ide)) \with {
+    | inP (D,DT,DC) => \case FinSet.finiteAC DC \with {
+      | inP g => \case FinSet.finiteAC (\lam j => Real.U-inh {X.dist x0 (g j).1}) \with {
+        | inP b => inP (RatField.BigSum (\lam j => (b j).1 ∨ 0) + 1, \lam {x} Tx => \case DT Tx \with {
+          | inP (j,Djx) => X.halving (b j).2 (transport (__ x) (g j).2 Djx) $
+              RatField.<=_+ (join-left <=∘ RatField.BigSum_>=index {\lam j => (b j).1 ∨ 0} (\lam _ => join-right) j) <=-refl
+        })
+      }
+    }
+  }
+
 -- | In a space with totally bounded balls, bounded sets are totally bounded.
 \lemma ballsTB-totallyBounded {X : ExPseudoMetricSpace} (Xb : BallsTotallyBounded X) {T : Set X} (Tb : IsBoundedSet T) : IsTotallyBoundedSet T \elim Tb
   | inP (x0,B,h) =>
