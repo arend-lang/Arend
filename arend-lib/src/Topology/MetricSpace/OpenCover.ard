@@ -118,3 +118,13 @@
       }
     }
   }
+
+-- | A cover map whose image lies in a set uniformly rather below an open set {U} factors through {OpenCoverSpace}.
+\func openCover-lift {X : CoverSpace} {Y : UniformSpace} {U T : Set Y} (Uo : isOpen U) (w : T <=* U) (g : CoverMap X Y) (gT : \Pi (x : X) -> T (g x))
+  : CoverMap X (OpenCoverSpace Uo) (\lam x => (g x, <=<_<= (<=*_<=< w) (gT x))) \cowith
+  | func-cover Dc => ClosurePrecoverSpace.closure-univ-cover {_} {isBasicCover} (\lam {C} (inP (D,e,p)) => \case \elim e \with {
+    | byLeft Dc' => cauchy-subset (g.func-cover Dc') \lam {W} (inP (V,DV,q)) => inP $ later (restrict V, rewrite p $ inP (V, DV, idp), q)
+    | byRight Dr => \case <=*-regularClosure Dr w \with {
+      | inP (V,DV,TV) => cauchy-refine cauchy-top \lam _ => inP (_, inP $ later (restrict V, rewrite p $ inP (V, DV, idp), idp), \lam {x} _ => TV (gT x))
+    }
+  }) (unfolds in Dc)

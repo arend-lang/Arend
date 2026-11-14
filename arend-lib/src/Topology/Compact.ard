@@ -471,25 +471,22 @@
   }
 
 -- | One-sided uniform continuity: if `f` vanishes outside a totally bounded set {K} and {W} is its modulus for `eps`, then `V` is a modulus for left and right translations.
-\lemma addGroup-tb-translation-modulus {A : TopAddGroup} {K : Set A} (Ktb : IsTotallyBoundedSet K)
-  {T : Set A} (To : isOpen T) (T0 : T 0) (Ttb : IsTotallyBoundedSet T) {W : Set A} (Wo : isOpen W) (W0 : W 0)
-  : ∃ (V : isOpen) (V 0) (\Pi {v : A} -> V v -> V (negative v)) (V ⊆ T) ∀ {f : A -> Real} {eps : Real}
+\lemma addGroup-tb-translation-modulus {A : TopAddGroup} {K : Set A} (Ktb : IsTotallyBoundedSet K) {W : Set A} (Wo : isOpen W) (W0 : W 0)
+  : ∃ (V : isOpen) (V 0) (\Pi {v : A} -> V v -> V (negative v)) ∀ {f : A -> Real} {eps : Real}
       (\Pi {x : A} -> Not (K x) -> f x = 0) (\Pi {x y : A} -> A.AreClose W x y -> RealAbGroup.abs (f x - f y) <= eps)
       (\Pi (x : A) {v : A} -> V v -> \Sigma (RealAbGroup.abs (f (x + v) - f x) <= eps) (RealAbGroup.abs (f (v + x) - f x) <= eps))
-  => \case addGroup-tb-conj (addGroup-tb-+ Ktb Ttb) Wo W0, addGroup-tb-conj (addGroup-tb-negative (addGroup-tb-+ Ttb Ktb)) Wo W0 \with {
-    | inP (W1,W1o,W10,g1), inP (W2,W2o,W20,g2) => \case A.neighborhood-sym (open-inter Wo (open-inter To (open-inter W1o W2o))) (W0,(T0,(W10,W20))) \with {
-      | inP (V,Vo,V0,Vs,V<=) => inP (V, Vo, V0, Vs, \lam Vv => (V<= Vv).2.1, \lam {f} {eps} fK fW x {v} Vv =>
+  => \case addGroup-tb-conj Ktb Wo W0, addGroup-tb-conj (addGroup-tb-negative Ktb) Wo W0 \with {
+    | inP (W1,W1o,W10,g1), inP (W2,W2o,W20,g2) => \case A.neighborhood-sym (open-inter Wo (open-inter W1o W2o)) (W0,(W10,W20)) \with {
+      | inP (V,Vo,V0,Vs,V<=) => inP (V, Vo, V0, Vs, \lam {f} {eps} fK fW x {v} Vv =>
         \have | e0 : 0 <= eps => transport (__ <= eps) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) (fW (A.close-refl {W} W0 {x}))
                | contr {a b : A} (na : Not (K a)) (nb : Not (K b)) (d : eps < RealAbGroup.abs (f b - f a)) : Empty
                  => \have q : RealAbGroup.abs (f b - f a) = 0 => rewrite (fK na, fK nb) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro)
                     \in <-irreflexive (e0 <∘r transport (eps <) q d)
-               | c1 {x : A} (KTx : ∃ (a : K) (b : T) (a + b = x)) : A.AreClose W x (x + v)
-                 => (transportInv W simplify (V<= Vv).1, g1 KTx (V<= Vv).2.2.1)
-               | c2 {x : A} (TKx : ∃ (b : T) (a : K) (b + a = x)) : A.AreClose W x (v + x)
-                 => (transport W (simplify equation) (g2 (transportInv (\lam z => ∃ (b : T) (a : K) (b + a = z)) negative-isInv TKx) (V<= Vv).2.2.2), transportInv W simplify (V<= Vv).1)
-        \in (\lam d => contr (\lam Kx => fW (c1 (inP (x, Kx, 0, T0, zro-right))) (rewrite RealAbGroup.abs_- in d))
-                            (\lam Kxv => fW (c1 (inP (x + v, Kxv, negative v, (V<= (Vs Vv)).2.1, simplify))) (rewrite RealAbGroup.abs_- in d)) d,
-              \lam d => contr (\lam Kx => fW (c2 (inP (0, T0, x, Kx, zro-left))) (rewrite RealAbGroup.abs_- in d))
-                            (\lam Kvx => fW (c2 (inP (negative v, (V<= (Vs Vv)).2.1, v + x, Kvx, simplify))) (rewrite RealAbGroup.abs_- in d)) d))
+               | c1-left : W (negative x + (x + v)) => transportInv W simplify (V<= Vv).1
+               | c2-right : W (v + x - x) => transportInv W simplify (V<= Vv).1
+        \in (\lam d => contr (\lam Kx => fW (c1-left, g1 Kx (V<= Vv).2.1) (rewrite RealAbGroup.abs_- in d))
+                            (\lam Kxv => fW (c1-left, transport W equation.addGroup (g1 Kxv (V<= Vv).2.1)) (rewrite RealAbGroup.abs_- in d)) d,
+              \lam d => contr (\lam Kx => fW (transport W equation.addGroup (g2 (transportInv K negative-isInv Kx) (V<= Vv).2.2), c2-right) (rewrite RealAbGroup.abs_- in d))
+                            (\lam Kvx => fW (transport W equation.addGroup (g2 (transportInv K negative-isInv Kvx) (V<= Vv).2.2), c2-right) (rewrite RealAbGroup.abs_- in d)) d))
     }
   }

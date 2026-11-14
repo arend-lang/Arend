@@ -1,0 +1,115 @@
+{- | The inverse function on positive reals as a cover map, following cover-spaces.tex.
+ -
+ -   The positive reals carry the cover space structure {OpenCoverSpace} of an open subset of `ℝ`.
+ -   With the induced structure, `x ↦ 1/x` is not a cover map since its domain would complete to `ℝ`.
+ -   With the open-subset structure it is, see {pinv-cover}.
+ -   Consequently, `x ↦ 1/d(x)` is a cover map for every cover map `d` bounded below by a positive constant, see {pinv-coverMap}.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.MetricSpace.OpenCover
+\import Topology.NormedAbGroup.Real
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\open Set
+
+-- | The set of positive reals.
+\func RealPositive : Set Real
+  => \lam x => 0 < x
+
+\lemma positive-open : isOpen RealPositive
+  => (dist_open {RealNormed}).2 \lam {x} x>0 => \case real_<-char.1 x>0 \with {
+    | inP (a,a>0,a<x) => inP (a, rat_real_<.2 a>0, \lam xy => ball-positive a<x <=-refl xy)
+  }
+  \where
+    \lemma ball-positive {a : Rat} {c x y : Real} (a<c : Real.fromRat a < c) (cx : c <= x) (xy : (dist x y).U a) : 0 < y
+      => linarith (RealAbGroup.abs>=id {x - y}, real_<_U.2 xy)
+
+-- | A set bounded below by a positive constant is uniformly rather below {RealPositive}.
+\lemma positive-<=* {c : Real} (c>0 : 0 < c) : (\lam (x : Real) => c <= x) <=* RealPositive
+  => \case real_<-char.1 c>0 \with {
+    | inP (a,a>0,a<c) => ball-<=* (rat_real_<.2 a>0) \lam cx xy => positive-open.ball-positive a<c cx xy
+  }
+
+-- | A set rather below {RealPositive} is bounded away from `0` (cf. cover-spaces.tex).
+\lemma positive-<=<-bound {V : Set Real} (V<=<P : V <=< RealPositive) : ∃ (d : Real) (0 < d) (\Pi (x : Real) -> V x -> 0 < x -> d < x)
+  => \case cauchy-ball (unfolds in V<=<P) 0 \with {
+    | inP (eps,eps>0,W,g,Wb) =>
+      \have e>0 : (0 : Real) < eps => rat_real_<.1 eps>0
+      \in inP (Real.fromRat (eps * ratio 1 2), rat_real_<.1 linarith, \lam x Vx x>0 => \case real-located {x} (rat_real_<.1 linarith : Real.fromRat (eps * ratio 1 2) < eps) \with {
+        | byLeft r => r
+        | byRight x<eps => absurd $ <-irreflexive $ g (x, (Vx, Wb $ real_<_U.1 $ RealAbGroup.abs_-_< linarith linarith)) (Wb $ OBall-center {RealNormed} eps>0)
+      })
+  }
+
+-- | The inverse function on positive reals is a cover map (cf. cover-spaces.tex).
+\func pinv-cover : CoverMap (OpenCoverSpace {RealNormed} positive-open) RealNormed (\lam s => RealField.pinv s.1 s.2)
+  => metric-coverMap {OpenCoverSpace {RealNormed} positive-open} (\lam s => RealField.pinv s.1 s.2) \lam {eps} eps>0 => cauchy-glue-refine
+      (OpenCoverSpace.makeBasicCover $ byRight $ OpenCoverSpace.regular-closure-extends (OpenCoverSpace.regular-closure idp) idp)
+      \lam {U} (inP (V, inP (_, idp, V<=<P), U=V)) => \case positive-<=<-bound V<=<P \with {
+        | inP (d,d>0,Vd) =>
+          \have | e>0 : (0 : Real) < eps => rat_real_<.1 eps>0
+                | m>0 => <_meet-univ (usingOnly d>0 linarith : 0 < d - d * ratio 1 2) (usingOnly (RealField.<_*_positive_positive e>0 (RealField.<_*_positive_positive d>0 d>0)) linarith : 0 < Real.fromRat eps * (d * d) * ratio 1 4)
+          \in \case real_<-char.1 m>0 \with {
+            | inP (r,r>0,r<m) =>
+              \have | rd : Real.fromRat r + r <= d => usingOnly (r<m <∘l meet-left) linarith
+                    | re : Real.fromRat r * 4 <= Real.fromRat eps * (d * d) => usingOnly (r<m <∘l meet-right) linarith
+              \in cauchy-subset {OpenCoverSpace {RealNormed} {RealPositive} positive-open} {_}
+                    {\lam W => ∃ (W' : Set (Total RealPositive)) (∃ (y : Real) ∀ {s : W'} ((dist {RealNormed} y (RealField.pinv s.1 s.2)).U eps)) (U ∧ W ⊆ W')}
+                    (OpenCoverSpace.makeBasicCover $ byLeft $ RealNormed.makeCauchy $ RealNormed.metricUniform $ rat_real_<.2 r>0)
+                  \lam {W} (inP (_, inP (p,idp), W=B)) => \case real-located {p} {0} {d - r} (usingOnly (d>0, rd) linarith) \with {
+                    | byLeft p>0 => inP (U ∧ W, inP (RealField.pinv p p>0, \lam {s : Total RealPositive} (c : \Sigma (U s) (W s)) => \have | Vs => rewrite U=V in c.1 | ps => rewrite W=B in c.2 \in real_<_U.1 $
+                        pinv-estimate d>0 e>0 (Vd _ Vs s.2) (real_<_U.2 ps) rd re s.2 p>0), <=-refl)
+                    | byRight p<d-r => inP (U ∧ W, inP (Real.fromRat 0, \lam {s : Total RealPositive} (c : \Sigma (U s) (W s)) => absurd $
+                        \have | Vs => rewrite U=V in c.1
+                              | ps => rewrite W=B in c.2
+                              | z>d => Vd _ Vs s.2
+                              | pz : RealAbGroup.abs (p - s.1) < r => real_<_U.2 ps
+                        \in usingOnly (z>d, pz, p<d-r, RealAbGroup.abs>=id {s.1 - p} <=∘ =_<= RealAbGroup.abs_-) linarith), <=-refl)
+                  }
+          }
+      }
+  \where {
+    \lemma pinv-estimate {d e r z p : Real} (d>0 : 0 < d) (e>0 : 0 < e) (z>d : d < z) (pz : RealAbGroup.abs (p - z) < r) (rd : r + r <= d) (re : r * 4 <= e * (d * d))
+                         (z>0 : 0 < z) (p>0 : 0 < p)
+      : RealAbGroup.abs (RealField.pinv p p>0 - RealField.pinv z z>0) < e
+      => \have | q>0 : 0 < p * z => RealField.<_*_positive_positive p>0 z>0
+               | id : (RealField.pinv p p>0 - RealField.pinv z z>0) * (p * z) = z - p => equation.cRing {RealField.pinv-left p>0, RealField.pinv-left z>0}
+               | aq : RealAbGroup.abs (RealField.pinv p p>0 - RealField.pinv z z>0) * (p * z) = RealAbGroup.abs (p - z)
+                 => pmap (_ *) (inv $ RealAbGroup.abs-ofPos $ <=-less q>0) *> inv RealField.abs_* *> pmap RealAbGroup.abs id *> RealAbGroup.abs_-
+               | p>d-r : d - r < p => linarith (RealAbGroup.abs>=id {z - p} <=∘ =_<= RealAbGroup.abs_-)
+               | e1 : d * (d - r) = d * d - d * r => equation.cRing
+               | e2 : d * (d - r - r) = d * d - d * r - d * r => equation.cRing
+               | e3 : e * (p * z + p * z) = e * (p * z) + e * (p * z) => equation.cRing
+               | t1 : d * (d - r) < p * z => RealField.<_*_positive-left z>d (linarith : 0 < d - r) <∘ RealField.<_*_positive-right z>0 p>d-r <∘l =_<= *-comm
+               | t2 : 0 <= d * (d - r - r) => RealField.<=_*_positive_positive (<=-less d>0) linarith
+               | t3 : e * (d * d) < e * (p * z + p * z) => RealField.<_*_positive-right e>0 linarith
+               | t4 : 0 < e * (d * d) => RealField.<_*_positive_positive e>0 (RealField.<_*_positive_positive d>0 d>0)
+         \in RealField.<_*_positive-cancel-right {_} {e} (<=-less q>0) $ rewrite aq $ pz <∘l linarith
+  }
+
+-- | `x ↦ 1/d(x)` is a cover map whenever `d` is bounded below by a positive constant.
+\func pinv-coverMap {X : CoverSpace} (d : CoverMap X RealNormed) {c : Real} (c>0 : 0 < c) (dc : \Pi (x : X) -> c <= d x)
+  : CoverMap X RealNormed (\lam x => RealField.pinv (d x) (c>0 <∘l dc x))
+  => pinv-cover CoverMap.∘ openCover-lift {_} {RealNormed} {RealPositive} positive-open (positive-<=* c>0) d dc

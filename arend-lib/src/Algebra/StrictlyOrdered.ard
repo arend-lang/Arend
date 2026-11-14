@@ -16,6 +16,7 @@
 \import Meta
 \import Order.Biordered
 \import Order.LinearOrder
+\import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
@@ -683,6 +684,9 @@
 
   \lemma pinv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < pinv x x>0
     => transport (< _) pinv_ide $ pinv_< x>0 zro<ide x<1
+
+  \lemma pinv<=1 {x : E} (x>0 : 0 < x) (x>=1 : 1 <= x) : pinv x x>0 <= 1
+    => =_<= (inv ide-right) <=∘ <=_*_positive-right (<=-less (pinv>0 x>0)) x>=1 <=∘ =_<= (pinv-left x>0)
 
   \lemma pinv_ide : pinv 1 zro<ide = 1
     => inv ide-left *> pinv-right zro<ide
