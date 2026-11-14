@@ -43,3 +43,7 @@
 \func orBool {A B : \Type} (o : Or A B) : Bool \elim o
   | inl _ => true
   | inr _ => false
+
+\func orChoose {A B C : \Type} (o : Or A B) (x y : C) : C \elim o
+  | inl _ => x
+  | inr _ => y

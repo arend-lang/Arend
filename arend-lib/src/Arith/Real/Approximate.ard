@@ -1,7 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Arith.Int
 \import Arith.Rat
@@ -10,11 +9,11 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Paths.Meta
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
 
@@ -40,3 +39,21 @@
   => \case real-int-approx x \with {
     | inP (n,d) => inP (iabs n, transportInv (RealNormed.dist __ x < 1) (iabs.ofPos $ <_+1_<= $ fromInt_<.conv $ rat_real_<.2 $ transport (_ RealAbGroup.<) (RealAbGroup.+-rat {n} {1}) $ linarith $ RealAbGroup.abs>=neg <∘r d) d)
   }
+
+-- | A real number is between consecutive multiples of a positive real.
+\lemma real-nat-approx-div {a d : Real} (a>=0 : 0 <= a) (d>0 : 0 < d)
+  : ∃ (k : Nat) (RealField.natCoef k * d <= a) (a <= (RealField.natCoef k + 2) * d)
+  => \let x => a * RealField.pinv d d>0
+     \in \have | x>=0 : 0 <= x => RealField.<=_*_positive_positive a>=0 (<=-less (RealField.pinv>0 d>0))
+               | xd : x * d = a => *-assoc *> pmap (a *) (RealField.pinv-left d>0) *> ide-right
+               | (inP (n,p)) => real-nat-approx x>=0
+               | p' : RealAbGroup.abs (Real.fromRat n - x) < 1 => p
+               | t1 => RealAbGroup.abs>=id {Real.fromRat n - x}
+               | t2 : x - Real.fromRat n <= RealAbGroup.abs (Real.fromRat n - x) => RealAbGroup.abs>=_-
+     \in \case \elim n, p', t1, t2 \with {
+       | 0, p', t1, t2 => inP (0, rewrite (RealField.natCoefZero, RealField.zro_*-left) a>=0,
+         rewriteI xd $ RealField.<=_*_positive-left (rewrite RealField.natCoefZero $ linarith) (<=-less d>0))
+       | suc n, p', t1, t2 => inP (n,
+         rewriteI xd $ RealField.<=_*_positive-left (rewriteI RealField.coefMap_natCoef $ linarith (RealField.coefMap_natCoef, RealField.natCoefSuc n)) (<=-less d>0),
+         rewriteI xd $ RealField.<=_*_positive-left (rewriteI RealField.coefMap_natCoef $ linarith (RealField.coefMap_natCoef, RealField.natCoefSuc n)) (<=-less d>0))
+     }
