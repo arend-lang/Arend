@@ -118,7 +118,16 @@
        | t2 : 0 <= C * RealField.pinv D D>0 * (D * lam - 1) => RealField.<=_*_positive_positive CD>=0 (usingOnly Dlam>=1 linarith)
        | e2 : rho * (1 + cover-num f f0 f>=0 f0p + rho) = rho + (cover-num f f0 f>=0 f0p + rho) * rho => equation.cRing
        | dN>=0 : 0 <= delta * Nh => RealField.<=_*_positive_positive delta>=0 Nh>=0
-     \in (D>0, RealField.abs-univ (usingOnly (f<=S, LS<=, e1, t1, t2, eta>=0, e2, dN>=0) linarith) (usingOnly (hc, S<=f, e1, t1, t2, CD<=, e2, dN>=0, eta>=0) linarith))
+     \in (D>0, compare-arith f<=S LS<= e1 t1 t2 hc S<=f CD<= idp e2 eta>=0 dN>=0)
+  \where
+    \lemma compare-arith {Lf LS A Q P R rho eta dN X : Real} (f<=S : Lf <= LS) (LS<= : LS <= A) (e1 : A - Q = P) (t1 : P <= R) (t2 : 0 <= P)
+                         (hc : A <= LS + eta) (S<=f : LS <= Lf + dN) (CD<= : Q <= A) (rho= : rho = eta + dN) (e2 : X = rho + R) (eta>=0 : 0 <= eta) (dN>=0 : 0 <= dN)
+      : abs (Lf - Q) <= X
+      => RealField.abs-univ (usingOnly (f<=S, LS<=, e1, t1, rho=, e2, eta>=0, dN>=0) linarith) (usingOnly (hc, S<=f, e1, t1, t2, CD<=, rho=, e2) linarith)
+
+-- | The error bound of Lemma compare is at most `ρ (2 + N)` when its parameter `r` is at most `ρ ≤ 1`.
+\lemma compare-bound {r rho N : Real} (r<=rho : r <= rho) (r>=0 : 0 <= r) (N>=0 : 0 <= N) (rho<=1 : rho <= 1) (rho>0 : 0 < rho) : r * (1 + N + r) <= rho * (2 + N)
+  => RealField.<=_*_positive-left r<=rho (usingOnly (N>=0, r>=0) linarith) <=∘ RealField.<=_*_positive-right (<=-less rho>0) (usingOnly (r<=rho, rho<=1) linarith)
 
 -- | `Λ_φ` satisfies the hypotheses of Lemma compare.
 \func LambdaCompare {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {phi : CompactCoverMap G} (phip : IsPositiveFun phi) : CompareFun G f0 f0p \cowith
@@ -139,12 +148,12 @@
              | Nh => cover-num h f0 h>=0 f0p
         \in \have | Nf>=0 : 0 <= Nf => cover-num>=0
                   | Nh>=0 : 0 <= Nh => cover-num>=0
-        \in \case split-eps eps>0 (linarith : 0 < 2 + Nf) \with {
+        \in \case split-eps eps>0 (usingOnly Nf>=0 linarith : 0 < 2 + Nf) \with {
           | inP (rho0,rho0>0,rho0e) =>
             \let rho => rho0 ∧ 1
             \in \have | rho>0 : 0 < rho => <_meet-univ rho0>0 RealAbGroup.zro<ide
                       | rho<=1 : rho <= 1 => meet-right
-                      | rhoe : rho * (2 + Nf) <= eps => RealField.<=_*_positive-left meet-left (linarith : 0 <= 2 + Nf) <=∘ <=-less rho0e
+                      | rhoe : rho * (2 + Nf) <= eps => RealField.<=_*_positive-left meet-left (usingOnly Nf>=0 linarith : 0 <= 2 + Nf) <=∘ <=-less rho0e
                       | rho2>0 : 0 < rho * ratio 1 2 => usingOnly rho>0 linarith
             \in \case split-eps rho2>0 (usingOnly Nh>=0 linarith : 0 < Nh + 1) \with {
               | inP (delta,delta>0,deltaN) =>
@@ -167,8 +176,7 @@
                                  | cmp => (compare (LambdaCompare f0p phip) f>=0 h>=0 (<=-less delta>0) psip apf ap0 (<=-less rho2>0) hc hd).2
                                  | r'<=rho : rho * ratio 1 2 + delta * Nh <= rho => usingOnly dN linarith
                                  | r'>=0 : 0 <= rho * ratio 1 2 + delta * Nh => usingOnly (rho>0, RealField.<=_*_positive_positive (<=-less delta>0) Nh>=0) linarith
-                                 | t : (rho * ratio 1 2 + delta * Nh) * (1 + Nf + (rho * ratio 1 2 + delta * Nh)) <= rho * (2 + Nf)
-                                   => RealField.<=_*_positive-left r'<=rho (usingOnly (Nf>=0, r'>=0) linarith) <=∘ RealField.<=_*_positive-right (<=-less rho>0) (usingOnly (r'<=rho, rho<=1) linarith)
+                                 | t : (rho * ratio 1 2 + delta * Nh) * (1 + Nf + (rho * ratio 1 2 + delta * Nh)) <= rho * (2 + Nf) => compare-bound r'<=rho r'>=0 Nf>=0 rho<=1 rho>0
                           \in cmp <=∘ t <=∘ rhoe)
                     }
                 }
@@ -212,24 +220,32 @@
   : ∃ (V : Set G) (isOpen V) (V 0) (\Pi {phi : CompactCoverMap G} (phip : IsPositiveFun phi) -> IsSupported phi V -> abs (haarPos f0p f f>=0 - Lambda f0p phip f f>=0) <= eps)
   => \case real_<-char.1 eps>0 \with {
     | inP (a,a>0,a<eps) =>
-      \have a2>0 : 0 < a * ratio 1 2 => linarith (rat_real_<.2 a>0)
+      \have a2>0 : 0 < a * ratio 1 2 => usingOnly (rat_real_<.2 a>0) linarith
       \in \case HaarSet-inh {G} {f0} {f0p} {f} {f>=0} a2>0 \with {
         | inP (x, Px) => \case Px \with {
           | inP (V,Vo,V0,h) => inP (V, Vo, V0, \lam phip phiV =>
-              \have | t1 => haarPos-char a2>0 Px
-                    | (p1,p2) => abs-diff-bound t1
-                    | (q1,q2) => abs-diff-bound (h phip phiV)
-                    | e : Real.fromRat (a * ratio 1 2) + Real.fromRat (a * ratio 1 2) = Real.fromRat a => RealAbGroup.+-rat *> pmap Real.fromRat linarith
-              \in RealField.abs-univ (usingOnly (p1, q2, e, a<eps) linarith) (usingOnly (p2, q1, e, a<eps) linarith))
+              \have e : Real.fromRat (a * ratio 1 2) + Real.fromRat (a * ratio 1 2) = Real.fromRat a => RealAbGroup.+-rat *> pmap Real.fromRat (usingOnly () linarith)
+              \in approx-arith (haarPos-char a2>0 Px) (h phip phiV) e a<eps)
         }
       }
   }
+  \where
+    \lemma approx-arith {P x L h A eps : Real} (t1 : abs (P - x) <= h) (t2 : abs (L - x) <= h) (e : h + h = A) (a<eps : A < eps) : abs (P - L) <= eps
+      => \have | (p1,p2) => abs-diff-bound t1
+               | (q1,q2) => abs-diff-bound t2
+         \in RealField.abs-univ (usingOnly (p1, q2, e, a<eps) linarith) (usingOnly (p2, q1, e, a<eps) linarith)
 
 \lemma eq-eps {x y : Real} (h : \Pi {e : Rat} -> 0 < e -> abs (x - y) <= Real.fromRat e) : x = y
   => real-scaled-eq RatField.zro<ide \lam e>0 => h e>0 <=∘ =_<= (pmap Real.fromRat (inv RatField.ide-right))
 
 \lemma le-eps {x y : Real} (h : \Pi {e : Rat} -> 0 < e -> x <= y + Real.fromRat e) : x <= y
-  => real_<=-eps \lam {d} d>0 => h (RatField.half>0 d>0) <∘r (linarith (rat_real_<.1 (RatField.half<id d>0)) : y + Real.fromRat (RatField.half d) < y + Real.fromRat d)
+  => real_<=-eps \lam {d} d>0 => h (RatField.half>0 d>0) <∘r (usingOnly (rat_real_<.1 (RatField.half<id d>0)) linarith : y + Real.fromRat (RatField.half d) < y + Real.fromRat d)
+
+-- | `x ≈ u = v ≈ y` with error `e/2` on each side.
+\lemma close-half {x y u v e : Real} (h1 : abs (x - u) <= e * ratio 1 2) (h2 : abs (y - v) <= e * ratio 1 2) (q : u = v) : abs (x - y) <= e
+  => \have | (a1,a2) => abs-diff-bound h1
+           | (b1,b2) => abs-diff-bound h2
+     \in RealField.abs-univ (usingOnly (a1, b2, q) linarith) (usingOnly (a2, b1, q) linarith)
 
 -- | A positive function supported in a given neighborhood of `0`.
 \lemma positive-in {G : LocallyCompactUrysohnGroup} {V : Set G} (Vo : isOpen V) (V0 : V 0) : ∃ (phi : CompactCoverMap G) (IsPositiveFun phi) (IsSupported phi V)
@@ -239,35 +255,37 @@
 
 \lemma haarPos-ext {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x}
                    (p : \Pi (x : G) -> f x = g x) : haarPos f0p f f>=0 = haarPos f0p g g>=0
-  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => linarith (rat_real_<.1 e>0)
+  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => usingOnly (rat_real_<.1 e>0) linarith
      \in \case haarPos-approx {G} {f0} {f0p} {f} {f>=0} e2>0, haarPos-approx {G} {f0} {f0p} {g} {g>=0} e2>0 \with {
        | inP (V1,V1o,V10,h1), inP (V2,V2o,V20,h2) => \case positive-in (open-inter V1o V2o) (V10,V20) \with {
-         | inP (phi,phip,phiV) =>
-           \have | (a1,a2) => abs-diff-bound (h1 phip (IsSupported.mono phiV meet-left))
-                 | (b1,b2) => abs-diff-bound (h2 phip (IsSupported.mono phiV meet-right))
-                 | q : Lambda f0p phip f f>=0 = Lambda f0p phip g g>=0 => Lambda-ext p
-           \in RealField.abs-univ (usingOnly (a1, b2, q) linarith) (usingOnly (a2, b1, q) linarith)
+         | inP (phi,phip,phiV) => close-half (h1 phip (IsSupported.mono phiV meet-left)) (h2 phip (IsSupported.mono phiV meet-right)) (Lambda-ext p)
        }
      }
 
 \lemma haarPos-add {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x}
                    {fg>=0 : \Pi (x : G) -> 0 <= (f + g) x} : haarPos f0p (f + g) fg>=0 = haarPos f0p f f>=0 + haarPos f0p g g>=0
-  => eq-eps \lam {e} e>0 => \have e4>0 : 0 < Real.fromRat e * ratio 1 4 => linarith (rat_real_<.1 e>0)
+  => eq-eps \lam {e} e>0 => \have e4>0 : 0 < Real.fromRat e * ratio 1 4 => usingOnly (rat_real_<.1 e>0) linarith
      \in \case haarPos-approx {G} {f0} {f0p} {f} {f>=0} e4>0, haarPos-approx {G} {f0} {f0p} {g} {g>=0} e4>0, haarPos-approx {G} {f0} {f0p} {f + g} {fg>=0} e4>0,
                superadd f0p (f :: g :: nil) (\lam j x => \case \elim j \with { | 0 => f>=0 x | suc 0 => g>=0 x }) zro<=ide e4>0 \with {
        | inP (V1,V1o,V10,h1), inP (V2,V2o,V20,h2), inP (V3,V3o,V30,h3), inP (V4,V4o,V40,sa) =>
          \case positive-in (open-inter (open-inter V1o V2o) (open-inter V3o V4o)) ((V10,V20),(V30,V40)) \with {
            | inP (phi,phip,phiV) =>
-             \have | (a1,a2) => abs-diff-bound (h1 phip (IsSupported.mono {G} {phi} {(V1 ∧ V2) ∧ (V3 ∧ V4)} {V1} phiV \lam p => p.1.1))
-                   | (b1,b2) => abs-diff-bound (h2 phip (IsSupported.mono {G} {phi} {(V1 ∧ V2) ∧ (V3 ∧ V4)} {V2} phiV \lam p => p.1.2))
-                   | (c1,c2) => abs-diff-bound (h3 phip (IsSupported.mono {G} {phi} {(V1 ∧ V2) ∧ (V3 ∧ V4)} {V3} phiV \lam p => p.2.1))
-                   | sub : Lambda f0p phip (f + g) fg>=0 <= Lambda f0p phip f f>=0 + Lambda f0p phip g g>=0 => Lambda-add
+             \have | sub : Lambda f0p phip (f + g) fg>=0 <= Lambda f0p phip f f>=0 + Lambda f0p phip g g>=0 => Lambda-add
                    | sup : 1 * Lambda f0p phip f f>=0 + (1 * Lambda f0p phip g g>=0 + 0) <= Lambda f0p phip (f + g) fg>=0 + Real.fromRat e * ratio 1 4
                      => sa phip (IsSupported.mono {G} {phi} {(V1 ∧ V2) ∧ (V3 ∧ V4)} {V4} phiV \lam p => p.2.2) {1 :: 1 :: nil} (\lam j => \case \elim j \with { | 0 => zro<=ide | suc 0 => zro<=ide })
                           (\lam j => \case \elim j \with { | 0 => <=-refl | suc 0 => <=-refl }) <=∘ <=_+ (=_<= (Lambda-ext \lam x => pmap2 (+) ide-left (pmap (+ 0) ide-left *> zro-right))) <=-refl
-             \in RealField.abs-univ (usingOnly (a1, a2, b1, b2, c1, c2, sub, sup) linarith) (usingOnly (a1, a2, b1, b2, c1, c2, sub, sup) linarith)
+             \in add-arith (h3 phip (IsSupported.mono {G} {phi} {(V1 ∧ V2) ∧ (V3 ∧ V4)} {V3} phiV \lam p => p.2.1))
+                           (h1 phip (IsSupported.mono {G} {phi} {(V1 ∧ V2) ∧ (V3 ∧ V4)} {V1} phiV \lam p => p.1.1))
+                           (h2 phip (IsSupported.mono {G} {phi} {(V1 ∧ V2) ∧ (V3 ∧ V4)} {V2} phiV \lam p => p.1.2)) sub sup
          }
      }
+  \where
+    \lemma add-arith {z x y w u v e : Real} (h3 : abs (z - w) <= e * ratio 1 4) (h1 : abs (x - u) <= e * ratio 1 4) (h2 : abs (y - v) <= e * ratio 1 4)
+                     (sub : w <= u + v) (sup : 1 * u + (1 * v + 0) <= w + e * ratio 1 4) : abs (z - (x + y)) <= e
+      => \have | (a1,a2) => abs-diff-bound h1
+               | (b1,b2) => abs-diff-bound h2
+               | (c1,c2) => abs-diff-bound h3
+         \in RealField.abs-univ (usingOnly (a1, a2, b2, c1, sub) linarith) (usingOnly (a1, a2, b1, c2, sup) linarith)
 
 -- | Two functions approximated by the same {φ}.
 \lemma approx2 {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x}
@@ -281,28 +299,26 @@
 
 \lemma haarPos-scale {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {a : Real} (a>=0 : 0 <= a)
                      {af>=0 : \Pi (x : G) -> 0 <= CompactCoverMap.scale a f x} : haarPos f0p (CompactCoverMap.scale a f) af>=0 = a * haarPos f0p f f>=0
-  => eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (linarith : 0 < a + 1) \with {
+  => eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (usingOnly a>=0 linarith : 0 < a + 1) \with {
     | inP (eta,eta>0,etaa) => \case approx2 {G} {f0} {f0p} {CompactCoverMap.scale a f} {f} {af>=0} {f>=0} eta>0 \with {
       | inP (phi,phip,h1,h2) =>
-        \have | (a1,a2) => abs-diff-bound h1
-              | t : abs (a * haarPos f0p f f>=0 - a * Lambda f0p phip f f>=0) <= a * eta
-                => rewrite (inv RealField.ldistr_-, RealField.abs_*, RealAbGroup.abs-ofPos a>=0) (RealField.<=_*_positive-right a>=0 h2)
-              | (b1,b2) => abs-diff-bound t
-              | q : Lambda f0p phip (CompactCoverMap.scale a f) af>=0 = a * Lambda f0p phip f f>=0 => Lambda-scale a>=0
-              | e1 : eta * (a + 1) = a * eta + eta => equation.cRing
-        \in RealField.abs-univ (usingOnly (a1, a2, b1, b2, q, e1, etaa) linarith) (usingOnly (a1, a2, b1, b2, q, e1, etaa) linarith)
+        scale-arith a>=0 h1 h2 (Lambda-scale a>=0) etaa
     }
   }
+  \where
+    \lemma scale-arith {x y u v a eta e : Real} (a>=0 : 0 <= a) (h1 : abs (x - u) <= eta) (h2 : abs (y - v) <= eta) (q : u = a * v) (etaa : eta * (a + 1) < e)
+      : abs (x - a * y) <= e
+      => \have | (a1,a2) => abs-diff-bound h1
+               | t : abs (a * y - a * v) <= a * eta => rewrite (inv RealField.ldistr_-, RealField.abs_*, RealAbGroup.abs-ofPos a>=0) (RealField.<=_*_positive-right a>=0 h2)
+               | (b1,b2) => abs-diff-bound t
+               | e1 : eta * (a + 1) = a * eta + eta => equation.cRing
+         \in RealField.abs-univ (usingOnly (a1, b2, q, e1, etaa) linarith) (usingOnly (a2, b1, q, e1, etaa) linarith)
 
 \lemma haarPos-translate {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} (s : G)
   : haarPos f0p (CompactMap-translate s f) (\lam x => f>=0 _) = haarPos f0p f f>=0
-  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => linarith (rat_real_<.1 e>0)
+  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => usingOnly (rat_real_<.1 e>0) linarith
      \in \case approx2 {G} {f0} {f0p} {CompactMap-translate s f} {f} {\lam x => f>=0 _} {f>=0} e2>0 \with {
-       | inP (phi,phip,h1,h2) =>
-         \have | (a1,a2) => abs-diff-bound h1
-               | (b1,b2) => abs-diff-bound h2
-               | q : Lambda f0p phip (CompactMap-translate s f) (\lam x => f>=0 _) = Lambda f0p phip f f>=0 => Lambda-translate s
-         \in RealField.abs-univ (usingOnly (a1, a2, b1, b2, q) linarith) (usingOnly (a1, a2, b1, b2, q) linarith)
+       | inP (phi,phip,h1,h2) => close-half h1 h2 (Lambda-translate s)
      }
 
 \lemma haarPos>=0 {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} : 0 <= haarPos f0p f f>=0
@@ -323,13 +339,15 @@
 
 \lemma haarPos-mono {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x}
                     (p : \Pi (x : G) -> g x <= f x) : haarPos f0p g g>=0 <= haarPos f0p f f>=0
-  => le-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => linarith (rat_real_<.1 e>0)
+  => le-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => usingOnly (rat_real_<.1 e>0) linarith
      \in \case approx2 {G} {f0} {f0p} {f} {g} {f>=0} {g>=0} e2>0 \with {
-       | inP (phi,phip,h1,h2) => \have | (a1,a2) => abs-diff-bound h1
-                                       | (b1,b2) => abs-diff-bound h2
-                                       | q : Lambda f0p phip g g>=0 <= Lambda f0p phip f f>=0 => Lambda-mono p
-                                 \in usingOnly (a2, b1, q) linarith
+       | inP (phi,phip,h1,h2) => mono-arith h1 h2 (Lambda-mono p)
      }
+  \where
+    \lemma mono-arith {x y u v e : Real} (h1 : abs (x - u) <= e * ratio 1 2) (h2 : abs (y - v) <= e * ratio 1 2) (q : v <= u) : y <= x + e
+      => \have | (a1,a2) => abs-diff-bound h1
+               | (b1,b2) => abs-diff-bound h2
+         \in usingOnly (a2, b1, q) linarith
 
 \lemma haarPos-bound {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {g : CompactCoverMap G} {g>=0 : \Pi (x : G) -> 0 <= g x}
   : haarPos f0p g g>=0 <= cover-num g f0 g>=0 f0p
@@ -395,30 +413,45 @@
                                        \in usingOnly (e1, e2) linarith
             | t1 => haarPos-add {G} {f0} {f0p} {p} {part- f} {p>=0} {\lam x => join-right}
             | t2 => haarPos-add {G} {f0} {f0p} {q} {part+ f} {q>=0} {\lam x => join-right}
-     \in unfold haarFun (usingOnly (t, t1, t2) linarith)
+     \in diff-arith t t1 t2
+  \where
+    \lemma diff-arith {X Y a b c d : Real} (t : X = Y) (t1 : X = a + b) (t2 : Y = c + d) : d - b = a - c
+      => usingOnly (t, t1, t2) linarith
 
 \lemma haarFun-pos {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) : haarFun f0p f = haarPos f0p f f>=0
   => haarFun-diff {G} {f0} {f0p} {f} {f} {0} {f>=0} {\lam _ => <=-refl} (\lam x => inv RealAbGroup.minus_zro) *> pmap (_ -) (haarPos-zro {G} {f0} {f0p}) *> RealAbGroup.minus_zro
 
+\lemma haarFun>=0 {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) : 0 <= haarFun f0p f
+  => rewrite (haarFun-pos f>=0) haarPos>=0
+
+\lemma haarFun_+ {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} : haarFun f0p (f + g) = haarFun f0p f + haarFun f0p g
+  => \have | d => haarFun-diff {G} {f0} {f0p} {f + g} {part+ f + part+ g} {part- f + part- g}
+                 {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right} {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right}
+                 (\lam x => \have | e1 => RealAbGroup.parts_- {f x}
+                                  | e2 => RealAbGroup.parts_- {g x}
+                             \in usingOnly (e1, e2) linarith)
+           | a1 => haarPos-add {G} {f0} {f0p} {part+ f} {part+ g} {\lam x => join-right} {\lam x => join-right} {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right}
+           | a2 => haarPos-add {G} {f0} {f0p} {part- f} {part- g} {\lam x => join-right} {\lam x => join-right} {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right}
+     \in sum-arith d a1 a2
+  \where
+    \lemma sum-arith {A P1 P2 a b c d : Real} (dA : A = P1 - P2) (a1 : P1 = a + b) (a2 : P2 = c + d) : A = (a - c) + (b - d)
+      => usingOnly (dA, a1, a2) linarith
+
+\lemma haarFun-invariant {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} (s : G) (f : CompactCoverMap G) : haarFun f0p (CompactMap-translate s f) = haarFun f0p f
+  => haarFun-diff {G} {f0} {f0p} {CompactMap-translate s f} {CompactMap-translate s (part+ f)} {CompactMap-translate s (part- f)}
+       {\lam x => join-right} {\lam x => join-right} (\lam x => inv RealAbGroup.parts_-) *>
+     pmap2 (-) (haarPos-translate s) (haarPos-translate s)
+
+\lemma haarFun-nontrivial {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} : ∃ (f : CompactCoverMap G) (0 < haarFun f0p f)
+  => inP (f0, rewrite (haarFun-pos f0p.1, haarPos-f0) RealAbGroup.zro<ide)
+
 -- | The Haar integral normalized by `I(f₀) = 1` (Theorem existence).
 \func haarIntegral {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) : HaarIntegral G \cowith
   | integral => haarFun f0p
-  | integral>=0 f>=0 => rewrite (haarFun-pos f>=0) haarPos>=0
-  | integral_+ {f} {g} =>
-    \have | d => haarFun-diff {G} {f0} {f0p} {f + g} {part+ f + part+ g} {part- f + part- g}
-                   {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right} {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right}
-                   (\lam x => \have | e1 => RealAbGroup.parts_- {f x}
-                                    | e2 => RealAbGroup.parts_- {g x}
-                               \in usingOnly (e1, e2) linarith)
-           | a1 => haarPos-add {G} {f0} {f0p} {part+ f} {part+ g} {\lam x => join-right} {\lam x => join-right} {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right}
-           | a2 => haarPos-add {G} {f0} {f0p} {part- f} {part- g} {\lam x => join-right} {\lam x => join-right} {\lam x => =_<= (inv zro-left) <=∘ <=_+ join-right join-right}
-           | hf : haarFun f0p f = haarPos f0p (part+ f) (\lam x => join-right) - haarPos f0p (part- f) (\lam x => join-right) => idp
-           | hg : haarFun f0p g = haarPos f0p (part+ g) (\lam x => join-right) - haarPos f0p (part- g) (\lam x => join-right) => idp
-     \in usingOnly (d, a1, a2, hf, hg) linarith
-  | integral-invariant s f => haarFun-diff {G} {f0} {f0p} {CompactMap-translate s f} {CompactMap-translate s (part+ f)} {CompactMap-translate s (part- f)}
-                                {\lam x => join-right} {\lam x => join-right} (\lam x => inv RealAbGroup.parts_-) *>
-                              pmap2 (-) (haarPos-translate s) (haarPos-translate s)
-  | integral-nontrivial => inP (f0, rewrite (haarFun-pos f0p.1, haarPos-f0) RealAbGroup.zro<ide)
+  | integral>=0 => haarFun>=0
+  | integral_+ => haarFun_+
+  | integral-invariant => haarFun-invariant
+  | integral-nontrivial => haarFun-nontrivial
 
 \lemma haarIntegral-f0 {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} : HaarIntegral.integral {haarIntegral f0p} f0 = 1
   => haarFun-pos f0p.1 *> haarPos-f0
@@ -454,7 +487,7 @@
 \lemma J-scale {G : TopAddGroup} (J : HaarIntegral G) {a : Real} (a>=0 : 0 <= a) {g : CompactCoverMap G} (g>=0 : \Pi (x : G) -> 0 <= g x)
   : J.integral (CompactCoverMap.scale a g) = a * J.integral g
   => \have Jg>=0 : 0 <= J.integral g => J.integral>=0 g>=0
-     \in eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (linarith : 0 < 2 * J.integral g + 1) \with {
+     \in eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (usingOnly Jg>=0 linarith : 0 < 2 * J.integral g + 1) \with {
        | inP (d0,d0>0,d0e) => \case real-nat-approx-div (<=-less (RealField.pinv>0 d0>0)) RealAbGroup.zro<ide \with {
          | inP (k,_,kb) =>
            \have | n>0 : 0 < RealField.natCoef (suc (suc k)) => RealField.natCoef>0 NatOrder.zero<suc
@@ -479,10 +512,14 @@
                        => rewrite mm equation.cRing
                      | e2 : RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g <= d0 * J.integral g => RealField.<=_*_positive-left d<=d0 Jg>=0
                      | e3 : d0 * (2 * J.integral g + 1) = 2 * (d0 * J.integral g) + d0 => equation.cRing
-               \in RealField.abs-univ (usingOnly (low, up, low', up', e1, e2, e3, d0e, d0>0) linarith) (usingOnly (low, up, low', up', e1, e2, e3, d0e, d0>0) linarith)
+               \in scale-arith low up low' up' e1 e2 e3 d0e d0>0
            }
        }
      }
+  \where
+    \lemma scale-arith {X Y L U D P d0 E e : Real} (low : L <= X) (up : X <= U) (low' : L <= Y) (up' : Y <= U) (e1 : U = L + 2 * D) (e2 : D <= P)
+                       (e3 : E = 2 * P + d0) (d0e : E < e) (d0>0 : 0 < d0) : abs (X - Y) <= e
+      => RealField.abs-univ (usingOnly (up, low', e1, e2, e3, d0e, d0>0) linarith) (usingOnly (low, up', e1, e2, e3, d0e, d0>0) linarith)
 
 \lemma J-lamSum {G : TopAddGroup} (J : HaarIntegral G) {n : Nat} {c : Array Real n} (c>=0 : \Pi (i : Fin n) -> 0 <= c i) {fs : Array (CompactCoverMap G) n} (fs>=0 : \Pi (i : Fin n) (x : G) -> 0 <= fs i x)
   : J.integral (lamSum c fs) = RealAbGroup.BigSum (\lam i => c i * J.integral (fs i)) \elim n, c, fs
@@ -514,11 +551,28 @@
 \func JCompare {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) : CompareFun G f0 f0p \cowith
   | L f _ => J.integral f * RealField.pinv (J.integral f0) (J-f0>0 J f0p)
   | L-translate s => pmap (* _) (J.integral-invariant s _)
-  | L-scale {f} {f>=0} {a} a>=0 {af>=0} => pmap (* _) (J-scale J a>=0 f>=0) *> *-assoc
-  | L-add => =_<= (pmap (* _) J.integral_+ *> RealField.rdistr)
-  | L-mono p => RealField.<=_*_positive-left (J.integral-mono p) (<=-less (RealField.pinv>0 _))
+  | L-scale {f} {f>=0} a>=0 {_} => scale J f0p {f} {f>=0} a>=0
+  | L-add => add J f0p
+  | L-mono p => mono J f0p p
   | L-f0 => RealField.pinv-right _
-  | L-bound {g} {g>=0} => RealField.<=_*_positive-left (J-cover J f0p g>=0) (<=-less (RealField.pinv>0 _)) <=∘ =_<= (equation.cRing {RealField.pinv-right (J-f0>0 J f0p)})
+  | L-bound {g} {g>=0} => bound J f0p g>=0
+  \where {
+    \lemma scale {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {f : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {a : Real} (a>=0 : 0 <= a)
+      : J.integral (CompactCoverMap.scale a f) * RealField.pinv (J.integral f0) (J-f0>0 J f0p) = a * (J.integral f * RealField.pinv (J.integral f0) (J-f0>0 J f0p))
+      => pmap (* _) (J-scale J a>=0 f>=0) *> *-assoc
+
+    \lemma add {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {f g : CompactCoverMap G}
+      : J.integral (f + g) * RealField.pinv (J.integral f0) (J-f0>0 J f0p) <= J.integral f * RealField.pinv (J.integral f0) (J-f0>0 J f0p) + J.integral g * RealField.pinv (J.integral f0) (J-f0>0 J f0p)
+      => =_<= (pmap (* _) J.integral_+ *> RealField.rdistr)
+
+    \lemma mono {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {f g : CompactCoverMap G} (p : \Pi (x : G) -> g x <= f x)
+      : J.integral g * RealField.pinv (J.integral f0) (J-f0>0 J f0p) <= J.integral f * RealField.pinv (J.integral f0) (J-f0>0 J f0p)
+      => RealField.<=_*_positive-left (J.integral-mono p) (<=-less (RealField.pinv>0 _))
+
+    \lemma bound {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {g : CompactCoverMap G} (g>=0 : \Pi (x : G) -> 0 <= g x)
+      : J.integral g * RealField.pinv (J.integral f0) (J-f0>0 J f0p) <= cover-num g f0 g>=0 f0p
+      => RealField.<=_*_positive-left (J-cover J f0p g>=0) (<=-less (RealField.pinv>0 _)) <=∘ =_<= (equation.cRing {RealField.pinv-right (J-f0>0 J f0p)})
+  }
 
 -- | The normalized Haar integral satisfies the hypotheses of Lemma compare.
 \func ICompare {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) : CompareFun G f0 f0p \cowith
@@ -550,13 +604,13 @@
              | Nh => cover-num h f0 h>=0 f0p
         \in \have | Nf>=0 : 0 <= Nf => cover-num>=0
                   | Nh>=0 : 0 <= Nh => cover-num>=0
-        \in \case split-eps (rat_real_<.1 e>0) (linarith : 0 < 2 * (2 + Nf)) \with {
+        \in \case split-eps (rat_real_<.1 e>0) (usingOnly Nf>=0 linarith : 0 < 2 * (2 + Nf)) \with {
           | inP (rho0,rho0>0,rho0e) =>
             \let rho => rho0 ∧ 1
             \in \have | rho>0 : 0 < rho => <_meet-univ rho0>0 RealAbGroup.zro<ide
                       | rho<=1 : rho <= 1 => meet-right
-                      | rhoe : rho * (2 * (2 + Nf)) <= Real.fromRat e => RealField.<=_*_positive-left meet-left (linarith : 0 <= 2 * (2 + Nf)) <=∘ <=-less rho0e
-            \in \case split-eps rho>0 (linarith : 0 < Nh + 1) \with {
+                      | rhoe : rho * (2 * (2 + Nf)) <= Real.fromRat e => RealField.<=_*_positive-left meet-left (usingOnly Nf>=0 linarith : 0 <= 2 * (2 + Nf)) <=∘ <=-less rho0e
+            \in \case split-eps rho>0 (usingOnly Nh>=0 linarith : 0 < Nh + 1) \with {
               | inP (delta,delta>0,deltaN) =>
                 \have dN : delta * Nh <= rho => \have e1 : delta * (Nh + 1) = delta * Nh + delta => equation.cRing \in usingOnly (e1, deltaN, delta>0) linarith
                 \in \case ap delta>0 \with {
@@ -574,18 +628,20 @@
                         => =_<= (inv (L-transSum-eq {G} {f0} {f0p} LI (\lam {f} {g} {f>=0} {g>=0} {fg>=0} => haarPos-add) {psi} {psip.1} ap0.1 {t}) *> inv zro-right)
                       | cJ => compare LJ f>=0 h>=0 (<=-less delta>0) psip apf ap0 <=-refl hcJ hdJ
                       | cI => compare LI f>=0 h>=0 (<=-less delta>0) psip apf ap0 <=-refl hcI hdI
-                      | (j1,j2) => abs-diff-bound cJ.2
-                      | (i1,i2) => abs-diff-bound cI.2
                       | r'>=0 : 0 <= 0 + delta * Nh => usingOnly (RealField.<=_*_positive_positive (<=-less delta>0) Nh>=0) linarith
-                      | b : (0 + delta * Nh) * (1 + Nf + (0 + delta * Nh)) <= rho * (2 + Nf)
-                        => RealField.<=_*_positive-left (usingOnly dN linarith) (usingOnly (Nf>=0, r'>=0) linarith) <=∘ RealField.<=_*_positive-right (<=-less rho>0) (usingOnly (dN, rho<=1) linarith)
+                      | b : (0 + delta * Nh) * (1 + Nf + (0 + delta * Nh)) <= rho * (2 + Nf) => compare-bound (usingOnly dN linarith) r'>=0 Nf>=0 rho<=1 rho>0
                       | e2 : rho * (2 * (2 + Nf)) = rho * (2 + Nf) + rho * (2 + Nf) => equation.cRing
-                    \in RealField.abs-univ (usingOnly (j1, j2, i1, i2, b, e2, rhoe) linarith) (usingOnly (j1, j2, i1, i2, b, e2, rhoe) linarith)
+                    \in unique-arith cJ.2 cI.2 b e2 rhoe
                 }
             }
         }
     }
   }
+  \where
+    \lemma unique-arith {x y q B R E e : Real} (cJ : abs (x - q) <= B) (cI : abs (y - q) <= B) (b : B <= R) (e2 : E = R + R) (rhoe : E <= e) : abs (x - y) <= e
+      => \have | (j1,j2) => abs-diff-bound cJ
+               | (i1,i2) => abs-diff-bound cI
+         \in RealField.abs-univ (usingOnly (j1, i2, b, e2, rhoe) linarith) (usingOnly (j2, i1, b, e2, rhoe) linarith)
 
 -- | Theorem uniqueness: every left Haar integral {J} satisfies `J(f₀) > 0` and `J = J(f₀) I`, where `I` is the Haar integral normalized by `f₀`.
 \lemma haar-unique-f0 {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0)

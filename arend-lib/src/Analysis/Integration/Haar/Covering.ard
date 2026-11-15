@@ -82,7 +82,7 @@
   : ∃ (gamma : Real) (0 < gamma) (m : Nat) (r : Array G m) ∀ {x : K} (gamma <= RealAbGroup.BigSum (\lam j => phi (negative (r j) + x)))
   => \case phip.2 \with {
     | inP (t,pt) =>
-      \have g>0 : 0 < phi t * ratio 1 2 => linarith
+      \have g>0 : 0 < phi t * ratio 1 2 => usingOnly pt linarith
       \in \case topAdd-translation phi g>0 \with {
         | inP (V,Vo,V0,_,h) => \case addGroup-tb-char.1 Ktb Vo V0 \with {
           | inP (b,bc) => inP (phi t * ratio 1 2, g>0, b.len, \lam j => b j - t, \lam {x} Kx => \case bc Kx \with {
@@ -90,7 +90,7 @@
               \have | e : negative (b j - t) + x = t + (negative (b j) + x) => simplify equation
                      | d : abs (phi (t + (negative (b j) + x)) - phi t) <= phi t * ratio 1 2 => (h t c.1).1
                      | d' => RealAbGroup.abs>=_- {phi (t + (negative (b j) + x))} {phi t}
-                     | q : phi t * ratio 1 2 <= phi (negative (b j - t) + x) => rewrite e linarith
+                     | q : phi t * ratio 1 2 <= phi (negative (b j - t) + x) => rewrite e (usingOnly (d, d') linarith)
               \in q <=∘ RealAbGroup.BigSum_>=index {\lam j => phi (negative (b j - t) + x)} (\lam _ => phip.1 _) j
           })
         }
@@ -130,6 +130,11 @@
     }
   }
 
+-- | The bound produced by {split-eps}.
+\lemma split-bound {x A B e : Real} (h : x * (A + 1) < e) (x>0 : 0 < x) (q : B = x * A) : B <= e
+  => \have t : x * (A + 1) = x * A + x => RealField.ldistr *> pmap (_ +) ide-right
+     \in usingOnly (h, x>0, q, t) linarith
+
 -- | The costs of {phi}-coverings of {f} are located from below.
 \lemma costs-located {G : LocallyCompactUrysohnGroup} {f phi : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) (phip : IsPositiveFun phi) {eps : Real} (eps>0 : 0 < eps)
   : ∃ (c : Real) (Costs f phi c) ∀ {c' : Costs f phi} (c <= c' + eps)
@@ -140,24 +145,23 @@
              | C0 => CompactMap-ta-sup f * RealField.pinv gamma gamma>0
         \in \have | C0>=0 : 0 <= C0 => RealField.<=_*_positive_positive CompactCoverMap.sup>=0 (<=-less (RealField.pinv>0 gamma>0))
                   | B0>=1' : 1 <= B0 => transport (__ <= _) zro-left $ <=_+ (RealAbGroup.BigSum_>=0 \lam _ => C0>=0) <=-refl
-                  | e4>0 : 0 < eps * ratio 1 4 => linarith
+                  | e4>0 : 0 < eps * ratio 1 4 => usingOnly eps>0 linarith
                   | w1>0 : 0 < RealField.natCoef m * (2 * RealField.pinv gamma gamma>0) + 1
-                    => linarith (RealField.<=_*_positive_positive (RealField.natCoef>=0 {m}) (linarith (<=-less (RealField.pinv>0 gamma>0)) : 0 <= 2 * RealField.pinv gamma gamma>0))
+                    => usingOnly (RealField.<=_*_positive_positive (RealField.natCoef>=0 {m}) (usingOnly (RealField.pinv>0 gamma>0) linarith : 0 <= 2 * RealField.pinv gamma gamma>0)) linarith
         \in \case split-eps e4>0 w1>0 \with {
           | inP (xi,xi>0,xiw) =>
             \have | xi-bound : RealField.natCoef m * (2 * xi * RealField.pinv gamma gamma>0) <= eps * ratio 1 4
-                     => \have e : RealField.natCoef m * (2 * xi * RealField.pinv gamma gamma>0) = xi * (RealField.natCoef m * (2 * RealField.pinv gamma gamma>0) + 1) - xi => equation.cRing
-                        \in rewrite e (usingOnly (xiw, xi>0) linarith)
-                   | w2>0 : 0 < 2 * B0 => linarith
+                     => split-bound xiw xi>0 equation.cRing
+                   | w2>0 : 0 < 2 * B0 => usingOnly B0>=1' linarith
             \in \case split-eps xi>0 w2>0 \with {
               | inP (eta,eta>0,etaw) =>
                 \have eta-bound : (eta + eta) * B0 <= xi => rewrite (equation.cRing : (eta + eta) * B0 = eta * (2 * B0)) (<=-less etaw)
                 \in \case topAdd-translation phi eta>0 \with {
                   | inP (V,Vo,V0,_,Vh) => \case addGroup-tb-char.1 (addGroup-tb-+ (totallyBoundedSet-Union \lam j => addGroup-tb-left (negative (r j)) Ltb) (addGroup-tb-negative Ltb)) Vo V0 \with {
                     | inP (xs,xs-net) =>
-                      \have e8>0 : 0 < eps * ratio 1 8 => linarith
-                      \in \case split-eps e8>0 (linarith (RealField.natCoef>=0 {xs.len}) : 0 < RealField.natCoef xs.len + 1) \with {
-                        | inP (d,d>0,dN) => \case real-nat-approx-div (linarith : 0 <= B0) d>0 \with {
+                      \have e8>0 : 0 < eps * ratio 1 8 => usingOnly eps>0 linarith
+                      \in \case split-eps e8>0 (usingOnly (RealField.natCoef>=0 {xs.len}) linarith : 0 < RealField.natCoef xs.len + 1) \with {
+                        | inP (d,d>0,dN) => \case real-nat-approx-div (usingOnly B0>=1' linarith : 0 <= B0) d>0 \with {
                           | inP (k,_,Bk) =>
                             \let D : LocData G f phi => \new LocData {
                               | f>=0 => f>=0
@@ -186,7 +190,7 @@
                               | xs-net => xs-net
                               | d => d
                               | d>0 => d>0
-                              | d-bound => rewrite (equation.cRing : RealField.natCoef xs.len * d = d * (RealField.natCoef xs.len + 1) - d) (usingOnly (dN, d>0) linarith)
+                              | d-bound => split-bound dN d>0 RealField.*-comm
                               | J => suc (suc k)
                               | J-bound => Bk <=∘ =_<= (pmap (* d) (inv (RealField.natCoefSuc (suc k) *> pmap (RealField.+ 1) (RealField.natCoefSuc k) *> RealField.+-assoc *> pmap (RealField.natCoef k RealField.+) (usingOnly () linarith))))
                             }
@@ -207,12 +211,12 @@
 \lemma cover-hasInf {G : LocallyCompactUrysohnGroup} {f phi : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) (phip : IsPositiveFun phi) : HasInf (Costs f phi)
   => \case costs-inhabited f>=0 phip \with {
     | inP (r0,Cr0) =>
-      \have | Ab : ∀ {a : Costs f phi} ((-1 : Real) < a) => \lam Cr => linarith (costs>=0 Cr)
+      \have | Ab : ∀ {a : Costs f phi} ((-1 : Real) < a) => \lam Cr => usingOnly (costs>=0 Cr) linarith
              | As {x y : Real} (x<y : x < y) : ∀ {a : Costs f phi} (x < a) || Given (a : Costs f phi) (a < y) =>
-               \have e>0 : 0 < (y - x) * ratio 1 2 => linarith
+               \have e>0 : 0 < (y - x) * ratio 1 2 => usingOnly x<y linarith
                \in \case costs-located f>=0 phip e>0 \with {
-                 | inP (c,Cc,h) => \case real-located {c} (linarith : x + (y - x) * ratio 1 2 < y) \with {
-                   | byLeft p => byLeft \lam Cc' => linarith (h Cc')
+                 | inP (c,Cc,h) => \case real-located {c} (usingOnly x<y linarith : x + (y - x) * ratio 1 2 < y) \with {
+                   | byLeft p => byLeft \lam Cc' => usingOnly (p, h Cc') linarith
                    | byRight p => byRight (c, Cc, p)
                  }
                }
@@ -247,14 +251,14 @@
   -- | An approximate minimum of a real function on `Fin N -> Fin J`.
   \lemma fun-argmin {N J : Nat} (J>0 : 0 NatOrder.< J) (g : (Fin N -> Fin J) -> Real) {e : Real} (e>0 : 0 < e)
     : ∃ (M0 : Fin N -> Fin J) ∀ (M : Fin N -> Fin J) (g M0 < g M + e) \elim N
-    | 0 => inP (\lam k => \case k \with {}, \lam M => transport (\lam M' => g M' < g M + e) fin0-ext (linarith : g M < g M + e))
+    | 0 => inP (\lam k => \case k \with {}, \lam M => transport (\lam M' => g M' < g M + e) fin0-ext (usingOnly e>0 linarith : g M < g M + e))
     | suc N =>
-      \have e2>0 : 0 < e * ratio 1 2 => linarith
+      \have e2>0 : 0 < e * ratio 1 2 => usingOnly e>0 linarith
       \in \case FinSet.finiteAC (\lam i => fun-argmin {N} J>0 (\lam M => g (consF i M)) e2>0) \with {
         | inP h => \case array-eps-max J>0 e2>0 (\lam i => negative (g (consF i (h i).1))) \with {
           | inP (k,q) => inP (consF k (h k).1, \lam M => \have | q1 => q (M 0)
                                                                  | q2 => (h (M 0)).2 (\lam k => M (suc k))
-                                                            \in transport (\lam M' => g (consF k (h k).1) < g M' + e) (consF-eta M) linarith)
+                                                            \in transport (\lam M' => g (consF k (h k).1) < g M' + e) (consF-eta M) (usingOnly (q1, q2) linarith))
         }
       }
 
@@ -306,6 +310,15 @@
   -- | The set `K_Θ + L⁻¹`, where `K_Θ = ⋃_j (r_j + L)`.
   \func locY {G : TopAddGroup} (L : Set G) {m : Nat} (r : Array G m) : Set G
     => \lam z => ∃ (x : G) (∃ (j : Fin m) (L (negative (r j) + x))) (y : G) (L (negative y)) (x + y = z)
+
+  \lemma cost-arith {X A C P T eps : Real} (t1 : X <= A + 2 * P) (t2 : A <= C) (t3 : P <= eps * ratio 1 8) (t4 : T <= eps * ratio 1 4) : X + T <= C + eps * ratio 1 2
+    => usingOnly (t1, t2, t3, t4) linarith
+
+  \lemma loc-left {c B S eps : Real} (cB : c <= B + eps * ratio 1 4) (q : B < S) (eps>0 : 0 < eps) : c <= S + eps
+    => usingOnly (cB, q, eps>0) linarith
+
+  \lemma loc-right {c g C S eps : Real} (cg : c <= g + eps * ratio 1 4) (gC : g = C) (costC : C <= S + eps * ratio 1 2) (eps>0 : 0 < eps) : c <= S + eps
+    => usingOnly (cg, gC, costC, eps>0) linarith
 
   \func locB0 {G : TopAddGroup} (f : CompactCoverMap G) {gamma : Real} (gamma>0 : 0 < gamma) (m : Nat) : Real
     => RealAbGroup.BigSum (\lam (_ : Fin m) => CompactMap-ta-sup f * RealField.pinv gamma gamma>0) + 1
@@ -364,10 +377,10 @@
       => RealAbGroup.BigSum (coef M) + RealField.natCoef m * tc
 
     \lemma coef>=0 (M : Fin N -> Fin (suc J)) (k : Fin N) : 0 <= coef M k
-      => RealField.<=_*_positive_positive (<=-less d>0) (linarith (RealField.natCoef>=0 {M k}))
+      => RealField.<=_*_positive_positive (<=-less d>0) (usingOnly (RealField.natCoef>=0 {M k}) linarith)
 
     \lemma tc>=0 : 0 <= tc
-      => RealField.<=_*_positive_positive (linarith (<=-less xi>0)) (<=-less (RealField.pinv>0 gamma>0))
+      => RealField.<=_*_positive_positive (usingOnly xi>0 linarith : 0 <= 2 * xi) (<=-less (RealField.pinv>0 gamma>0))
 
     \lemma tc*gamma : tc * gamma = 2 * xi
       => *-assoc *> pmap (2 * xi *) (RealField.pinv-left gamma>0) *> ide-right
@@ -383,7 +396,7 @@
                                 | q1 : 2 * xi <= tc * RealAbGroup.BigSum (\lam j => phi (negative (r j) + x)) => =_<= (inv tc*gamma) <=∘ RealField.<=_*_positive-right tc>=0 (r-cover Kx)
                                 | q2 : f x - S M x <= E M x => join-left
                                 | q3 : E M x <= e M => CompactCoverMap.sup-bound x
-                          \in linarith), RealAbGroup.BigSum_++' *> pmap (_ +) RealField.BigSum_replicate)
+                          \in usingOnly (c', q1, q2, q3, p) linarith), RealAbGroup.BigSum_++' *> pmap (_ +) RealField.BigSum_replicate)
 
     \func Theta : CompactCoverMap G
       => AddMonoid.BigSum {CompactCoverTruncRieszSpace G} (\lam j => CompactMap-translate (r j) phi)
@@ -424,7 +437,8 @@
       => \have | t : abs (phi ((negative (xs k) + s) + (negative s + y)) - phi (negative s + y)) <= eta => V-mod (negative s + y) c.1
                 | e : (negative (xs k) + s) + (negative s + y) = negative (xs k) + y => simplify equation
                 | t' => RealAbGroup.abs>=_- {phi (negative (xs k) + y)} {phi (negative s + y)}
-         \in linarith (rewrite e in t)
+                | t'' => rewrite e in t
+         \in usingOnly (t', t'') linarith
 
     \func wsOr {s : G} (o : Or (mt s < eta * gamma) (\Sigma (k : Fin N) (G.AreClose V (xs k) s))) (c : Real) (k : Fin N) : Real \elim o
       | inl _ => 0
@@ -444,14 +458,14 @@
                         | z : RealAbGroup.BigSum (\lam k => 0 * phi (negative (xs k) + y)) = 0 => RealAbGroup.BigSum_zro \lam _ => RealField.zro_*-left
                         | e1 : (eta + eta) * c = c * eta + c * eta => equation.cRing
                         | e2 : 0 <= c * eta => RealField.<=_*_positive_positive c>=0 (<=-less eta>0)
-                 \in rewrite (z, e1) linarith
+                 \in rewrite (z, e1) (usingOnly (t, e2) linarith)
       | inr (k',cl) => \have | t : c * phi (negative s + y) <= c * (phi (negative (xs k') + y) + eta) => RealField.<=_*_positive-right c>=0 (prune-near cl y)
                               | z : RealAbGroup.BigSum (\lam k => delta k' k c * phi (negative (xs k) + y)) = c * phi (negative (xs k') + y)
                                 => RealAbGroup.BigSum-ext (\lam k => delta_*) *> delta-sum k' (\lam k => c * phi (negative (xs k) + y))
                               | e1 : c * (phi (negative (xs k') + y) + eta) = c * phi (negative (xs k') + y) + c * eta => RealField.ldistr
                               | e2 : 0 <= c * eta => RealField.<=_*_positive_positive c>=0 (<=-less eta>0)
                               | e3 : (eta + eta) * c = c * eta + c * eta => equation.cRing
-                       \in rewrite (z, e3) linarith
+                       \in rewrite (z, e3) (usingOnly (t, e1, e2) linarith)
 
     -- | Every covering is matched by an accepted candidate.
     \lemma matched {n : Nat} {cs : Array Real n} {ss : Array G n} (cov : IsCovering f phi cs ss) (c'<B0 : RealAbGroup.BigSum cs < B0)
@@ -478,7 +492,7 @@
                                            | t4 : a k <= RealAbGroup.BigSum a => RealAbGroup.BigSum_>=index {a} a>=0 k
                                            | t5 : RealField.natCoef (nk k).1 * d <= a k => (nk k).2
                                            | t6 : B0 <= RealField.natCoef J * d => J-bound
-                                    \in usingOnly (t2, t4, t5, t6, sum-a, c'<B0) linarith
+                                    \in <-irreflexive (((((t6 <∘r t2) <∘l t5) <∘l t4) <∘l sum-a) <∘ c'<B0)
               }
               \in \let M (k : Fin N) : Fin (suc J) => toFin (nk k).1 (nk<J k)
               \in \have
@@ -489,9 +503,9 @@
                   => \have | t1 => main-ineq Ky
                             | t2 : RealAbGroup.BigSum (\lam k => a k * phi (negative (xs k) + y)) <= S M y
                               => RealAbGroup.BigSum_<= (\lam k => RealField.<=_*_positive-left (a<=coef k) (phi>=0 _)) <=∘ =_<= (inv (S-apply M y))
-                            | t3 : (eta + eta) * RealAbGroup.BigSum cs <= (eta + eta) * B0 => RealField.<=_*_positive-right (linarith (<=-less eta>0)) (<=-less c'<B0)
+                            | t3 : (eta + eta) * RealAbGroup.BigSum cs <= (eta + eta) * B0 => RealField.<=_*_positive-right (usingOnly eta>0 linarith : 0 <= eta + eta) (<=-less c'<B0)
                             | t4 : (eta + eta) * B0 <= xi => eta-bound
-                     \in usingOnly (t1, t2, t3, t4) linarith
+                     \in t1 <=∘ <=_+ t2 (t3 <=∘ t4)
                 | E-bound (y : G) : f y - S M y <= xi => \lam dd =>
                     \have | S>=0 : 0 <= S M y => rewrite (S-apply M y) (transSum>=0 phi>=0 {_} {coef M} (coef>=0 M) {xs} y)
                            | fy>0 : 0 < f y => usingOnly (S>=0, dd, <=-less xi>0) linarith
@@ -511,7 +525,7 @@
                             | t4 => xi-bound
                             | e1 : RealField.natCoef N * (2 * d) = 2 * (RealField.natCoef N * d) => equation.cRing
                             | t1' => rewrite e1 in t1
-                     \in unfold cM (usingOnly (t1', t2, t3, t4) linarith)
+                     \in cost-arith t1' t2 t3 t4
               \in inP (M, eM, cost)
           }
       }
@@ -533,20 +547,19 @@
             | final (c : Real) (Cc : Costs f phi c) (cB : c <= B0 - 1 + eps * ratio 1 4) (cg : \Pi (M : Fin N -> Fin (suc J)) -> c <= g M + eps * ratio 1 4)
               : ∃ (c : Real) (Costs f phi c) ∀ {c' : Costs f phi} (c <= c' + eps)
               => inP (c, Cc, \lam {c'} (inP (n,cs,ss,cov,p)) => rewriteI p \case real-located {RealAbGroup.BigSum cs} (usingOnly () linarith : B0 - 1 < B0) \with {
-                | byLeft q => usingOnly (cB, q, eps>0) linarith
+                | byLeft q => loc-left cB q eps>0
                 | byRight q => \case matched cov q \with {
                   | inP (M,eM,costM) =>
                     \have gM : g M = cM M => \case dec M \as o \return orChoose o (B0 - 1) (cM M) = cM M \with {
-                      | inl p => absurd (usingOnly (p, eM) linarith)
+                      | inl p => absurd (<-irreflexive (p <∘l eM))
                       | inr _ => idp
                     }
-                    \in \have cgM => cg M
-                    \in usingOnly (cgM, gM, costM, eps>0) linarith
+                    \in loc-right (cg M) gM costM eps>0
                 }
               })
           \in \case fun-argmin {N} {suc J} NatOrder.zero<suc g e4>0 \with {
             | inP (M0,h0) => \case real-located {g M0} (usingOnly e4>0 linarith : B0 - 1 < B0 - 1 + eps * ratio 1 4) \with {
-              | byLeft p => final (B0 - 1) B0-cost (usingOnly e4>0 linarith) (\lam M => \have t => h0 M \in usingOnly (t, p) linarith)
+              | byLeft p => final (B0 - 1) B0-cost (usingOnly e4>0 linarith) (\lam M => <=-less (p <∘ h0 M))
               | byRight q => final (g M0) (gC M0) (<=-less q) (\lam M => <=-less (h0 M))
             }
           }
@@ -575,14 +588,14 @@
 \lemma cover-num-transform {G : LocallyCompactUrysohnGroup} {f phi : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {phip : IsPositiveFun phi} {B : Real} {a : Real} (a>=0 : 0 <= a)
                            (h : \Pi {c : Real} -> Costs f phi c -> B <= a * c) : B <= a * cover-num f phi f>=0 phip
   => \lam d => \have | a+1>0 : 0 < a + 1 => usingOnly a>=0 linarith
-                    | e>0 : 0 < (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0 => RealField.<_*_positive_positive linarith (RealField.pinv>0 a+1>0)
+                    | e>0 : 0 < (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0 => RealField.<_*_positive_positive (usingOnly d linarith) (RealField.pinv>0 a+1>0)
                \in \case cover-num-approx e>0 \with {
                  | inP (c,Cc,c<) =>
                    \have | t1 => h Cc
                          | t2 : a * c <= a * (cover-num f phi f>=0 phip + (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) => RealField.<=_*_positive-right a>=0 (<=-less c<)
                          | t3 : a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) < B - a * cover-num f phi f>=0 phip
-                           => \have | q : a < a + 1 => linarith
-                                    | q' : (B - a * cover-num f phi f>=0 phip) * a < (B - a * cover-num f phi f>=0 phip) * (a + 1) => RealField.<_*_positive-right linarith q
+                           => \have | q : a < a + 1 => usingOnly () linarith
+                                    | q' : (B - a * cover-num f phi f>=0 phip) * a < (B - a * cover-num f phi f>=0 phip) * (a + 1) => RealField.<_*_positive-right (usingOnly d linarith) q
                               \in rewrite (equation.cRing : a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) = (B - a * cover-num f phi f>=0 phip) * a * RealField.pinv (a + 1) a+1>0) $
                                    RealField.<_*_positive-left q' (RealField.pinv>0 a+1>0) <∘l =_<= (*-assoc *> pmap (_ *) (RealField.pinv-right a+1>0) *> ide-right)
                          | t4 : a * (cover-num f phi f>=0 phip + (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) = a * cover-num f phi f>=0 phip + a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) => RealField.ldistr
