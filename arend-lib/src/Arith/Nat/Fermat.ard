@@ -1,0 +1,46 @@
+\import Algebra.Field
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Arith.Fin
+\import Arith.Nat
+\import Arith.Nat.EulerTotient
+\import Arith.Prime (prime-less)
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid (Inv, LDiv)
+
+-- | Fermat's little theorem in `ℤ/p`: `x^(p-1) = 1` for every nonzero `x`.
+\lemma fermat-fin {n : Nat} (p : Prime (suc n)) {x : FinRing {n}} (x/=0 : x /= 0) : (FinRing {n}).pow x n = (FinRing {n}).ide
+  => transport (\lam k => (FinRing {n}).pow x k = (FinRing {n}).ide) (totient-prime p) $ euler (prime-pred>0 p) $ \new Inv {
+    | inv => (FinField {n} {p}).finv x
+    | inv-left => FinRing.*-comm *> (FinField {n} {p}).finv-right x/=0
+    | inv-right => (FinField {n} {p}).finv-right x/=0
+  }
+  \where
+    \lemma prime-pred>0 {n : Nat} (p : Prime (suc n)) : 0 NatOrder.< n
+      => \case (rewrite prime-less in p).1 \with {
+        | NatOrder.suc<suc n>0 => n>0
+      }
+
+-- | Fermat's little theorem in `ℤ/p`: `x^p = x` for every `x`.
+\lemma fermat-fin' {n : Nat} (p : Prime (suc n)) (x : FinRing {n}) : (FinRing {n}).pow x (suc n) = x
+  => \case FinRing.decideEq x 0 \with {
+    | yes x=0 => pmap ((FinRing {n}).pow __ (suc n)) x=0 *> FinRing.zro_*-right {(FinRing {n}).pow 0 n} *> inv x=0
+    | no x/=0 => pmap (FinRing.`* x) (fermat-fin p x/=0) *> FinRing.ide-left
+  }
+
+-- | Fermat's little theorem: `a^(p-1) ≡ 1 (mod p)` if a prime `p` does not divide `a`.
+\lemma fermat {p : Nat} (pp : Prime p) {a : Nat} (p!|a : Not (LDiv p a)) : Monoid.pow a (pred p) Nat.mod p = 1 \elim p
+  | 0 => \case (rewrite prime-less in pp).1
+  | suc n => pmap (\lam (x : Fin (suc n)) => (x : Nat)) (inv FinRing.finMod-pow *> fermat-fin pp (\lam q => p!|a $ mod_div $ pmap (\lam (x : Fin (suc n)) => (x : Nat)) q))
+              *> mod_< (NatOrder.suc<suc $ fermat-fin.prime-pred>0 pp)
+
+-- | Fermat's little theorem: `a^p ≡ a (mod p)` for every prime `p`.
+\lemma fermat' {p : Nat} (pp : Prime p) (a : Nat) : Monoid.pow a p Nat.mod p = a Nat.mod p \elim p
+  | 0 => \case (rewrite prime-less in pp).1
+  | suc n => pmap (\lam (x : Fin (suc n)) => (x : Nat)) (inv (FinRing.finMod-pow {n} {a} {suc n}) *> fermat-fin' pp (finMod a))

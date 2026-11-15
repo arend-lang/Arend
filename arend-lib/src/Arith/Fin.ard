@@ -1,7 +1,6 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Prime
@@ -10,20 +9,18 @@
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
-\import Data.Or
 \import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set \hiding (#)
-\open Nat(div,mod,divModProp)
+\open Nat(div,mod)
 \open AddMonoid
 
 \lemma int_n*_+_mod_n {n r : Nat} {q : Int} (r<=n : r < suc n) : (pos (suc n) * q + r) mod suc n = r
@@ -128,6 +125,11 @@
 
     \lemma intHom {n : Nat} : RingHom IntRing (FinRing {n}) (__ mod suc n Nat.mod suc n)
       => transport (RingHom _ _) (ext (FinRing.intCoef-char n)) intMap
+
+    -- | Reduction modulo `n+1` commutes with powers.
+    \lemma finMod-pow {n a k : Nat} : (FinRing {n}).pow (finMod a) k = finMod (Monoid.pow a k) \elim k
+      | 0 => idp
+      | suc k => pmap (\lam (x : Fin (suc n)) => finMod (x Nat.* finMod {n} a)) finMod-pow *> mod_*-left *> mod_*-right
   }
 
 \instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n))

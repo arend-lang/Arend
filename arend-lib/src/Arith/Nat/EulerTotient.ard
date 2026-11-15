@@ -1,9 +1,8 @@
 \import Algebra.Domain.Bezout
 \import Algebra.Domain.Euclidean
 \import Algebra.Group
-\import Algebra.Group.GroupHom
-\import Algebra.Group.SubGroup
-\import Algebra.Group.Symmetric
+\import Algebra.Group.CyclicSub
+\import Algebra.Monoid.Prime
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
@@ -12,28 +11,22 @@
 \import Algebra.Ring
 \import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
-\import Algebra.Ring.RingCat
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Fin
 \import Arith.Int
 \import Arith.Nat
-\import Category
 \import Equiv
 \import Function (IsSurj)
 \import Function.Meta
 \import Logic
-\import Logic.Meta
 \import Meta
-\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
-\import Set.Fin.Pigeonhole
-\import Set.SetHom
 \open IntEuclidean \hiding (isDivMod,mod-unique)
 \open FinRing
 \open Monoid
@@ -110,6 +103,33 @@
   }
 
 \func EulerTotient (n : Nat) : Nat => (coPrimes n).card
+
+-- | The group of units of `ℤ/(n+1)`; it has `EulerTotient n` elements.
+\func UnitsFinGroup (n : Nat) (n>0 : 0 NatOrder.< n) : FinGroup \cowith
+  | Group => InvGroup (FinRing {n})
+  | FinSet => FinSet-transport (coPrimes n) (coPrimes-eq n n>0)
+
+-- | Euler's theorem: `x^φ(n+1) = 1` for every unit `x` of `ℤ/(n+1)`.
+\lemma euler {n : Nat} (n>0 : 0 NatOrder.< n) {x : FinRing {n}} (xi : Inv x) : (FinRing {n}).pow x (EulerTotient n) = (FinRing {n}).ide
+  => inv (SubMonoid.sub-pow {InvSubMonoid (FinRing {n})} {(x,xi)}) *> pmap __.1 (pow_card {UnitsFinGroup n n>0} (x,xi))
+
+-- | `φ(p) = p - 1` for a prime `p`.
+\lemma totient-prime {n : Nat} (p : Prime (suc n)) : EulerTotient n = n
+  => inv $ card_Equiv {FinFin n} {coPrimes n} \new QEquiv {
+    | f j => (suc j, nat_gcd-comm {suc j} {suc n} *> FinField.gcd=1 p (/=-sym $ NatSemiring.<_/= NatOrder.zero<suc) (NatOrder.suc<suc (fin_< j)))
+    | ret s => \case \elim s \with {
+      | (0, q) => absurd (zero-lem q)
+      | (suc k, _) => k
+    }
+    | ret_f j => idp
+    | f_sec s => \case \elim s \with {
+      | (0, q) => absurd (zero-lem q)
+      | (suc k, _) => ext idp
+    }
+  }
+  \where
+    \lemma zero-lem (q : NatEuclidean.gcd 0 (suc n) = 1) : Empty
+      => p.notInv $ transportInv (\lam x => Inv {NatSemiring} x) (inv NatEuclidean.gcd0_ *> q) Inv.ide-isInv
 
 \func chinese-map {n m : Nat} (x : FinRing {suc n * m + n}) : \Sigma (FinRing {n}) (FinRing {m})
   => (x Nat.mod suc n, x Nat.mod suc m)
