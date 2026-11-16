@@ -48,6 +48,20 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private List<? extends LevelVariable> myLevelParameters;
   private boolean myCheckLevelVariables;
 
+  /**
+   * The types of the arguments of definition calls checked so far in the current definition.
+   * They are reused when the sort of a call depends on the types of its arguments, so that these arguments are not typechecked again.
+   */
+  private final Map<Expression, Expression> myArgumentTypes = new IdentityHashMap<>();
+
+  private final GetTypeVisitor myTypeVisitor = new GetTypeVisitor() {
+    @Override
+    public Expression getArgumentType(Expression argument) {
+      Expression type = myArgumentTypes.get(argument);
+      return type != null ? type : super.getArgumentType(argument);
+    }
+  };
+
   public CoreExpressionChecker(Set<Binding> context, Equations equations, Concrete.SourceNode sourceNode) {
     myContext = context;
     myEquations = equations;
@@ -56,6 +70,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   void clear() {
     if (myContext != null) myContext.clear();
+    myArgumentTypes.clear();
     myLevelParameters = null;
     myCheckLevelVariables = false;
   }
@@ -94,24 +109,27 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private void checkList(List<? extends Expression> args, DependentLink parameters, ExprSubstitution substitution, LevelSubstitution levelSubst, boolean allowCatDomain) {
     for (Expression arg : args) {
       Expression expectedType = parameters.getType().subst(substitution, levelSubst);
+      Expression argType;
       if (parameters.getVariance() == BindingVariance.INVARIANT) {
         try (var ignored = clearCategoricalContext()) {
-          checkArgExpr(arg, expectedType, allowCatDomain);
+          argType = checkArgExpr(arg, expectedType, allowCatDomain);
         }
       } else {
-        checkArgExpr(arg, expectedType, allowCatDomain);
+        argType = checkArgExpr(arg, expectedType, allowCatDomain);
+      }
+      if (argType != null) {
+        myArgumentTypes.put(arg, argType);
       }
       substitution.add(parameters, arg);
       parameters = parameters.getNext();
     }
   }
 
-  private void checkArgExpr(Expression arg, Expression expectedType, boolean allowInf) {
+  private Expression checkArgExpr(Expression arg, Expression expectedType, boolean allowInf) {
     if (allowInf && arg.getUnderlyingExpression() instanceof LamExpression lamExpr) {
-      checkLam(lamExpr, expectedType, null, true);
-      return;
+      return checkLam(lamExpr, expectedType, null, true);
     }
-    arg.accept(this, expectedType);
+    return arg.accept(this, expectedType);
   }
 
   void checkLevels(Levels levels, Expression expr) {
@@ -146,7 +164,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         resultType = expr.getDefinition() == Prelude.MOD ? ExpressionFactory.Fin(arg2) : ExpressionFactory.finDivModType(arg2);
       }
     }
-    return check(expectedType, resultType != null ? resultType : GetTypeVisitor.INSTANCE.visitFunCall(expr, null), expr);
+    return check(expectedType, resultType != null ? resultType : myTypeVisitor.visitFunCall(expr, null), expr);
   }
 
   @Override
@@ -218,7 +236,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     checkLevels(expr.getLevels(), expr);
     checkBoxes(expr);
     checkList(expr.getDefCallArguments(), expr.getDefinition().getParameters(), new ExprSubstitution(), expr.getLevelSubstitution(), true);
-    return check(expectedType, GetTypeVisitor.INSTANCE.visitDataCall(expr, null), expr);
+    return check(expectedType, myTypeVisitor.visitDataCall(expr, null), expr);
   }
 
   @Override
@@ -248,7 +266,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       // The type of an implemented infinite field is the type of its implementation
       Expression impl = argClassCall.getImplementation(expr.getDefinition(), expr.getArgument());
       if (impl != null) {
-        Expression implType = impl.accept(GetTypeVisitor.INSTANCE, null);
+        Expression implType = impl.accept(myTypeVisitor, null);
         if (implType != null && !(implType instanceof ErrorExpression) && CompareVisitor.compare(myEquations, CMP.LE, implType, actualType, UniverseExpression.OMEGA, mySourceNode)) {
           actualType = implType;
         }
@@ -282,7 +300,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
     if (myContext != null) myContext.remove(expr.getThisBinding());
 
-    return check(expectedType, GetTypeVisitor.INSTANCE.visitClassCall(expr, null), expr);
+    return check(expectedType, myTypeVisitor.visitClassCall(expr, null), expr);
   }
 
   @Override
@@ -383,7 +401,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         if (invariant) {
           sort = sort.withoutCat();
         } else if (released && sort.isInfinite()) {
-          Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(link.getType(), first, link);
+          Expression releasedType = myTypeVisitor.getReleasedType(link.getType(), first, link);
           SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
           if (releasedSort != null) {
             sort = releasedSort;
@@ -489,7 +507,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     List<SortExpression> sort1 = checkDependentLinkWithResult(expr.getParameters(), null, expr, false, allowInf);
     SortExpression sort2 = toSort(checkInf(expr.getCodomain(), expectedType == UniverseExpression.INF_OMEGA ? expectedType : null, allowInf));
     if (sort2.isInfinite()) {
-      Expression releasedType = GetTypeVisitor.INSTANCE.getReleasedType(expr.getCodomain(), Collections.singletonList(expr.getParameters()));
+      Expression releasedType = myTypeVisitor.getReleasedType(expr.getCodomain(), Collections.singletonList(expr.getParameters()));
       SortExpression releasedSort = releasedType == null ? null : releasedType.toSortExpression();
       if (releasedSort != null) {
         sort2 = releasedSort;
@@ -1111,7 +1129,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   public Expression visitPathType(PathTypeExpression expr, Expression expectedType) {
     DataDefinition definition = expr.getDefinition();
     checkList(Arrays.asList(expr.getArgumentType(), expr.getLeftArgument(), expr.getRightArgument()), definition.getParameters(), new ExprSubstitution(), Levels.EMPTY.makeSubstitution(definition));
-    return check(expectedType, GetTypeVisitor.INSTANCE.visitPathType(expr, null), expr);
+    return check(expectedType, myTypeVisitor.visitPathType(expr, null), expr);
   }
 
   @Override

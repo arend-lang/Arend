@@ -36,8 +36,16 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     myNormalizing = normalizing;
   }
 
-  GetTypeVisitor() {
+  protected GetTypeVisitor() {
     this(true);
+  }
+
+  /**
+   * Computes the type of an argument of a definition whose sort depends on the types of its arguments (see {@link SortExpression.Var}).
+   * Can be overridden to reuse types that are already known.
+   */
+  public Expression getArgumentType(Expression argument) {
+    return argument.accept(this, null);
   }
 
   /**
