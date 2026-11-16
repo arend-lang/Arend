@@ -1,0 +1,54 @@
+\import Arith.Rat
+\import Arith.Real
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Topology.CoverSpace.Locale
+\import Topology.Locale
+\import Topology.Locale.Points
+\import Topology.Locale.PreorderSite
+\import Topology.Locale.Real
+\open SiteLocale
+
+-- | The value at a point `x` of a continuous real-valued function `f`.
+\func realValue {X : Locale} (x : CompleteFilter X) (f : LocaleHom X RealLocale) : Real \cowith
+  | L q => x (f (upperHalf q))
+  | L-closed xq q'<q => x.filter-mono xq (f.func-<= (upperHalf-mono (<=-less q'<q)))
+  | L-rounded xq => \case x.filter-SJoin (x.filter-mono xq (f.func-<= upperHalf-round <=∘ =_<= f.func-SJoin)) \with {
+    | inP (r,q<r,xr) => inP (r, xr, q<r)
+  }
+  | L-inh => \case x.filter-SJoin (x.filter-mono x.filter-top (top-univ <=∘ f.func-top>= <=∘ f.func-<= upperHalf-top <=∘ =_<= f.func-SJoin)) \with {
+    | inP (r,_,xr) => inP (r,xr)
+  }
+  | U q => x (f (lowerHalf q))
+  | U-closed xq q<q' => x.filter-mono xq (f.func-<= (lowerHalf-mono (<=-less q<q')))
+  | U-rounded xq => \case x.filter-SJoin (x.filter-mono xq (f.func-<= lowerHalf-round <=∘ =_<= f.func-SJoin)) \with {
+    | inP (r,r<q,xr) => inP (r, xr, r<q)
+  }
+  | U-inh => \case x.filter-SJoin (x.filter-mono x.filter-top (top-univ <=∘ f.func-top>= <=∘ f.func-<= lowerHalf-top <=∘ =_<= f.func-SJoin)) \with {
+    | inP (r,_,xr) => inP (r,xr)
+  }
+  | LU-disjoint xl xu => x.isProper $ x.filter-mono (x.filter-meet xl xu) (=_<= (inv f.func-meet) <=∘ f.func-<= halves-disjoint <=∘ =_<= f.func-bottom)
+  | LU-located q<r => \case x.filter-join (x.filter-mono x.filter-top (top-univ <=∘ f.func-top>= <=∘ f.func-<= (halves-cover q<r) <=∘ =_<= f.func-join)) \with {
+    | byLeft xu => byRight xu
+    | byRight xl => byLeft xl
+  }
+
+\lemma realValue-embed {X : Locale} {x : CompleteFilter X} {f : LocaleHom X RealLocale} {I : Interval RatField}
+  : x (f (embed I)) <-> (\Sigma ((realValue x f).L I.1) ((realValue x f).U I.2))
+  => rewrite embed-halves $ rewrite f.func-meet (\lam h => (x.filter-mono h meet-left, x.filter-mono h meet-right), \lam h => x.filter-meet h.1 h.2)
+
+-- | Two continuous real-valued functions on a locale with dense points are equal if they have the same values at all points.
+\lemma real-map-ext {L : Locale} (Ld : HasDensePoints L) {u v : LocaleHom L RealLocale} (p : \Pi (x : CompleteFilter L) -> realValue x u = realValue x v) : u = v
+  => IsEquiv.isInj (LocaleCoverSpaceFunctor-fullyFaithful Ld RealLocale.regular) $ exts \lam x => exts \lam W => propExt (half (p x)) (half (inv (p x)))
+  \where
+    \lemma half {L : Locale} {x : CompleteFilter L} {u v : LocaleHom L RealLocale} (p : realValue x u = realValue x v) {W : RealLocale} (h : x (u W)) : x (v W)
+      => \case x.filter-SJoin (x.filter-mono h (u.func-<= (=_<= element_SJoin) <=∘ =_<= u.func-SJoin)) \with {
+        | inP (I,WI,xI) => x.filter-mono (realValue-embed.2 $ transport (\lam (y : Real) => \Sigma (y.L I.1) (y.U I.2)) p (realValue-embed.1 xI)) (v.func-<= (embed-univ WI))
+      }

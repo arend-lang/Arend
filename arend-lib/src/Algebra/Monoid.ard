@@ -392,6 +392,10 @@
   \lemma *n-assoc {n m : Nat} {a : E} : (n Nat.* m) *n a = n *n (m *n a)
     => pmap (*n a) NatSemiring.*-comm *> *n_pow *> \this.pow_* *> inv *n_pow *> pmap (n *n) (inv *n_pow)
 
+  \lemma *n_zro {n : Nat} : n *n zro = zro \elim n
+    | 0 => idp
+    | suc n => zro-right *> *n_zro
+
   \func BigSum (l : Array E) => Big (+) zro l
 
   \lemma BigSum-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigSum l = BigSum l'

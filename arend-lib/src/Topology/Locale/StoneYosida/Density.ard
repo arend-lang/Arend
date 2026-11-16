@@ -1,0 +1,239 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.RieszSpace.UnitRieszSpace
+\import Algebra.QModule
+\import Arith.Rat
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Set.Fin
+\import Topology.Locale
+\import Topology.Locale.PreorderSite
+\import Topology.Locale.Real
+\import Topology.Locale.Real.Functions
+\import Topology.Locale.StoneYosida
+\open SiteLocale
+\open CompleteLattice
+\open LinearOrder (dec<_<=)
+\open UnitRieszSpace
+\open QModule
+\open PosetAddGroup
+\open PosetQModule
+\open LatticeAbGroup
+\open RieszSpace
+\open JoinSemilattice
+\open JoinSemilatticeAddMonoid
+
+\lemma sembed-bjoin {A : UnitRieszSpace} {b : A} {l : Array A} : sembed (Big (∨) b l) <= {SYSpec A} sembed b ∨ {SYSpec A} IJoin {SYSpec A} (\lam j => sembed (l j)) \elim l
+  | nil => join-left
+  | x :: l => =_<= sembed_join <=∘ join-univ (IJoin-cond {SYSpec A} {Fin (suc l.len)} {\lam j => sembed ((x :: l) j)} 0 <=∘ join-right)
+                (sembed-bjoin <=∘ JoinSemilattice.join-monotone <=-refl (IJoin-univ {SYSpec A} \lam (j : Fin l.len) => IJoin-cond {SYSpec A} {Fin (suc l.len)} {\lam j => sembed ((x :: l) j)} (fsuc j)))
+
+-- | The approximating element: the join of the affine functions `(s_j - e - D) + D h_j` with the base `-B`.
+\func gfun {A : UnitRieszSpace} {n : Nat} (s : Array Rat n) (h : Array A n) (e D B : Rat) : A
+  => Big (∨) (negative (B *q unit)) (\lam j => (s j - e - D) *q unit + D *q h j)
+
+\lemma hsf-sub {A : UnitRieszSpace} {f : RealFun (SYSpec A)} {h : A} {k : Rat} (k>=0 : RatField.zro <= k) {I : Interval RatField}
+               (hsf : sembed h <= {SYSpec A} f (embed I)) : sembed (h - k *q unit) <= {SYSpec A} f (embed I)
+  => sembed-mono (<=_<=s (sub-scal-le k>=0)) <=∘ hsf
+
+\lemma f-lower {A : UnitRieszSpace} {f : RealFun (SYSpec A)} {n : Nat} {s : Array Rat n} {h : Array A n} {e d S k t : Rat}
+               (e>0 : RatField.zro < e) (d>0 : RatField.zro < d) (sS : \Pi (j : Fin n) -> \Sigma (negative S <= s j) (s j <= S)) (k>=0 : RatField.zro <= k)
+               (hsf : \Pi (j : Fin n) -> sembed (h j) <= {SYSpec A} f (embed (symI (s j) e e>0)))
+               (hcov : top <= {SYSpec A} IJoin {SYSpec A} (\lam j => sembed (h j - k *q unit)))
+               (tS : t + d <= negative S - e)
+  : f (embed (symI t d d>0)) <= {SYSpec A} bottom
+  => meet-univ <=-refl (top-univ <=∘ hcov) <=∘ Locale.IJoin-ldistr>= {SYSpec A} <=∘ IJoin-univ {SYSpec A} (\lam j =>
+       MeetSemilattice.meet-monotone {SYSpec A} <=-refl (hsf-sub k>=0 (hsf j)) <=∘ interval-disjoint {SYSpec A} {f} {symI t d d>0} {symI (s j) e e>0} (\have sj => (sS j).1 \in later linarith))
+
+-- | The approximation from above.
+\lemma key-upper {A : UnitRieszSpace} {f : RealFun (SYSpec A)} {n : Nat} {s : Array Rat n} {h : Array A n} {e d S B D k r t : Rat}
+                 (e>0 : RatField.zro < e) (d>0 : RatField.zro < d) (d<=e : d <= e)
+                 (sS : \Pi (j : Fin n) -> \Sigma (negative S <= s j) (s j <= S)) (HB : S <= B) (HD : S + S <= D) (D>0 : RatField.zro < D) (k>=0 : RatField.zro <= k)
+                 (hu : \Pi (j : Fin n) -> h j <= unit)
+                 (hsf : \Pi (j : Fin n) -> sembed (h j) <= {SYSpec A} f (embed (symI (s j) e e>0)))
+                 (hcov : top <= {SYSpec A} IJoin {SYSpec A} (\lam j => sembed (h j - k *q unit)))
+                 (rt : t + e + e + e + d + d + d + d < r)
+  : sembed (cut (gfun s h e D B) (r - d) (r + d)) ∧ {SYSpec A} f (embed (symI t d d>0)) <= {SYSpec A} bottom
+  => \case dec<_<= (negative S - e) (t + d) \with {
+    | inr tS => meet-right {SYSpec A} {sembed (cut (gfun s h e D B) (r - d) (r + d))} <=∘ f-lower e>0 d>0 sS k>=0 hsf hcov tS
+    | inl tS =>
+      \let | y => r - d
+           | gl : Array A n => \lam j => (s j - e - D) *q unit + D *q h j
+      \in \have | base : sembed (negative (B *q unit) - y *q unit) <= {SYSpec A} bottom
+                  => \have yd : y = r - d => idp \in sembed-bottom.2 (=_<= minus-scal <=∘ *q_<=0 (later linarith) unit>=0)
+                | step (j : Fin n) : sembed (gl j - y *q unit) ∧ {SYSpec A} f (embed (symI t d d>0)) <= {SYSpec A} bottom
+                  => \have | sj1 => (sS j).1
+                           | sj2 => (sS j).2
+                           | yd : y = r - d => idp
+                     \in \case dec<_<= y (s j - e) \with {
+                    | inr sy => meet-left <=∘ sembed-bottom.2 (=_<= affine-minus <=∘ affine-le (<=-less D>0) (hu j) <=∘ *q_<=0 (later linarith) unit>=0) <=∘ bottom-univ
+                    | inl ys => MeetSemilattice.meet-monotone {SYSpec A} (sembed-mono (<=s-trans (<=_<=s (=_<= affine-minus <=∘ <=_+ (*q_<=0 (later linarith) unit>=0) <=-refl <=∘ =_<= zro-left)) (<=s_*q D>0)) <=∘ hsf j) <=-refl
+                                 <=∘ =_<= (MeetSemilattice.meet-comm {SYSpec A}) <=∘ interval-disjoint {SYSpec A} {f} {symI t d d>0} {symI (s j) e e>0} (later linarith)
+                  }
+      \in MeetSemilattice.meet-monotone {SYSpec A} (sembed-mono (<=_<=s meet-left) <=∘ =_<= (pmap sembed Big_join_+-right) <=∘ sembed-bjoin) <=-refl
+           <=∘ =_<= (DistributiveLattice.meet-rdistr {SYSpec A})
+           <=∘ join-univ (meet-left <=∘ base) (Locale.IJoin-rdistr>= {SYSpec A} <=∘ IJoin-univ {SYSpec A} step)
+  }
+
+-- | The approximation from below.
+\lemma key-lower {A : UnitRieszSpace} {f : RealFun (SYSpec A)} {n : Nat} {s : Array Rat n} {h : Array A n} {e d B D k r t : Rat}
+                 (e>0 : RatField.zro < e) (d>0 : RatField.zro < d) (D>0 : RatField.zro < D) (k>=0 : RatField.zro <= k) (Hk : D - D * k <= e)
+                 (hsf : \Pi (j : Fin n) -> sembed (h j) <= {SYSpec A} f (embed (symI (s j) e e>0)))
+                 (hcov : top <= {SYSpec A} IJoin {SYSpec A} (\lam j => sembed (h j - k *q unit)))
+                 (rt : r + e + e + e + d + d + d + d < t)
+  : sembed (cut (gfun s h e D B) (r - d) (r + d)) ∧ {SYSpec A} f (embed (symI t d d>0)) <= {SYSpec A} bottom
+  => \let | X => sembed (cut (gfun s h e D B) (r - d) (r + d))
+          | F => f (embed (symI t d d>0))
+     \in meet-univ <=-refl (top-univ <=∘ hcov) <=∘ Locale.IJoin-ldistr>= {SYSpec A} {Fin n} {\lam j => sembed (h j - k *q unit)} {X ∧ {SYSpec A} F} <=∘ IJoin-univ {SYSpec A} (\lam j =>
+       \let | gl : Array A n => \lam j => (s j - e - D) *q unit + D *q h j
+            | Y => sembed (h j - k *q unit)
+       \in \have cutle : sembed (cut (gfun s h e D B) (r - d) (r + d)) <= {SYSpec A} sembed ((r + d) *q unit - gl j)
+                 => sembed-mono (<=_<=s (meet-right <=∘ <=_+ <=-refl (negative_<= (Big_<=_join1 {A} {gl} {negative (B *q unit)} j))))
+       \in \case dec<_<= (s j) (r + d + e + (D - D * k)) \with {
+         | inr big => meet-univ (meet-left {SYSpec A} {X ∧ {SYSpec A} F} {Y} <=∘ meet-left {SYSpec A} {X} {F} <=∘ cutle) (meet-right {SYSpec A} {X ∧ {SYSpec A} F} {Y}) <=∘ =_<= sembed_meet
+                        <=∘ sembed-bottom.2 (<=s_<=0 (<=s-trans (<=s-meet <=s-meet-left (<=s-trans <=s-meet-right (*q_<=s D>0))) meet_<=s_+)
+                                                 (=_<= (affine-lower {A} {s j - e - D} {r + d} {D} {k} {h j}) <=∘ *q_<=0 (later linarith) unit>=0))
+         | inl small => meet-univ (meet-left {SYSpec A} {X ∧ {SYSpec A} F} {Y} <=∘ meet-right {SYSpec A} {X} {F}) (meet-right {SYSpec A} {X ∧ {SYSpec A} F} {Y} <=∘ hsf-sub k>=0 (hsf j))
+                          <=∘ =_<= (MeetSemilattice.meet-comm {SYSpec A}) <=∘ interval-disjoint {SYSpec A} {f} {symI (s j) e e>0} {symI t d d>0} (later linarith)
+       })
+
+\lemma rat-array-bound {n : Nat} (l : Array Rat n) : ∃ (S : Rat) (\Pi (j : Fin n) -> \Sigma (negative S <= l j) (l j <= S)) \elim n, l
+  | 0, nil => inP (0, \case __)
+  | suc n, x :: l => \case rat-array-bound l \with {
+    | inP (S,h) => \have | a1 : x <= RatField.abs x => LatticeAbGroup.abs>=id
+                         | a2 : negative x <= RatField.abs x => LatticeAbGroup.abs>=neg
+                         | a3 : RatField.zro <= RatField.abs x => LatticeAbGroup.abs>=0
+                   \in inP (S RatField.∨ RatField.zro + RatField.abs x, \case \elim __ \with {
+                     | 0 => \have m : RatField.zro <= S RatField.∨ RatField.zro => join-right \in (later linarith, later linarith)
+                     | suc j => \have | m : S <= S RatField.∨ RatField.zro => join-left
+                                      | m' : RatField.zro <= S RatField.∨ RatField.zro => join-right
+                                      | hj1 => (h j).1
+                                      | hj2 => (h j).2
+                                \in (later linarith, later linarith)
+                   })
+  }
+
+-- | Compactness yields a finite family of basic opens on which `f` varies by less than `2e`.
+\lemma compact-cover {A : UnitRieszSpace} (f : RealFun (SYSpec A)) {e : Rat} (e>0 : RatField.zro < e)
+  : ∃ (n : Nat) (c : Array A n) (s : Array Rat n) (\Pi (j : Fin n) -> sembed (c j) <= {SYSpec A} f (embed (symI (s j) e e>0)))
+      (top <= {SYSpec A} IJoin {SYSpec A} (\lam j => sembed (c j)))
+  => \let C (W : SYSpec A) => ∃ (c : A) (m : Rat) (W = sembed c) (sembed c <= {SYSpec A} f (embed (symI m e e>0)))
+     \in \have cov : top <= {SYSpec A} Join {SYSpec A} C
+               => top-univ <=∘ f.func-top>= <=∘ f.func-<= (real-cover-eps e>0) <=∘ =_<= f.func-SJoin
+                   <=∘ SJoin-univ {SYSpec A} {Rat} {\lam m => f (embed (symI m e e>0))} {\lam _ => \Sigma} (\lam {m} _ =>
+                     =_<= (SiteLocale.element_SJoin {SpecSite A} {f (embed (symI m e e>0))}) <=∘ SJoin-univ {SYSpec A} (\lam {x} Ux =>
+                       Join-cond {SYSpec A} {C} {sembed x} (inP (x, m, idp, sembed-univ Ux))))
+     \in \case spec-compact {A} {C} cov \with {
+       | inP (l,lC,tl) => \case FinSet.finiteAC lC \with {
+         | inP g => inP (l.len, \lam j => (g j).1, \lam j => (g j).2, \lam j => (g j).4,
+                         tl <=∘ IJoin-univ {SYSpec A} (\lam j => =_<= (g j).3 <=∘ IJoin-cond {SYSpec A} {Fin l.len} {\lam j => sembed (g j).1} j))
+       }
+     }
+
+\lemma top-unit {A : UnitRieszSpace} {x : A} (p : top <= {SYSpec A} sembed x) : ∃ (K : Nat) (unit <= K AddMonoid.*n LatticeAbGroup.part+ x)
+  => \case spec-cover-char.1 (p {unit} ()) {ratio 1 2} idp \with {
+    | inP (l,lx,q) => unit-ideal $ transport (<=s _) unit-minus $ <=s-trans q $ <=s-trans (<=_<=s (pjoin-const (\lam j => inv (lx j)))) part+-<=s
+  }
+
+-- | The truncated multiples `unit ∧ K c_j` form a partition of unity up to `k`.
+\lemma h-cover {A : UnitRieszSpace} {n : Nat} {c : Array A n} {K : Nat} (Kp : unit <= K AddMonoid.*n LatticeAbGroup.part+ (pjoin c))
+               {k : Rat} (k<1 : k < 1) (k>=0 : RatField.zro <= k)
+  : top <= {SYSpec A} IJoin {SYSpec A} (\lam j => sembed ((unit {A} A.∧ (K AddMonoid.*n c j)) - k *q unit))
+  => \let h : Array A n => \lam j => unit {A} A.∧ (K AddMonoid.*n c j)
+     \in \have | up : unit <= pjoin h => meet-univ <=-refl (Kp <=∘ =_<= (pmap (K AddMonoid.*n) (LatticeAbGroup.part+-ofPos Big_<=_join0) *> pjoin_*n)) <=∘ SpecSite.meet-pjoin
+               | tp : top <= {SYSpec A} sembed (pjoin h - k *q unit)
+                 => =_<= (inv (sembed-top {A} {_} {RatField.ide - k} (later linarith) (=_<= (inv unit-minus) <=∘ <=_+ up <=-refl)))
+     \in tp <=∘ =_<= (pmap sembed Big_join_+-right) <=∘ sembed-bjoin
+          <=∘ join-univ (sembed-bottom.2 (=_<= zro-left <=∘ negative<=0 (unit*q>=0 k>=0)) <=∘ bottom-univ) <=-refl
+
+\lemma theta-facts {e D : Rat} (e>0 : RatField.zro < e) (e<=1 : e <= RatField.ide) (D>1 : RatField.ide < D)
+  : \Sigma (RatField.ide - e * RatField.finv D < RatField.ide) (RatField.zro <= RatField.ide - e * RatField.finv D) (D - D * (RatField.ide - e * RatField.finv D) <= e)
+  => \have | D>0 : RatField.zro < D => linarith
+           | t>0 : RatField.zro < e * RatField.finv D => RatField.<_*_positive_positive e>0 (RatField.finv>0 D>0)
+           | t<=e : e * RatField.finv D <= e * 1 => RatField.<=_*_positive-right (<=-less e>0) (<=-less (RatField.finv<1 D>1))
+           | q1 : D * (RatField.ide - e * RatField.finv D) = D * RatField.ide - D * (e * RatField.finv D) => RatField.ldistr_-
+           | q2 : D * (e * RatField.finv D) = e => inv RatField.*-assoc *> pmap (RatField.* RatField.finv D) RatField.*-comm *> RatField.*-assoc
+                                                  *> pmap (e RatField.*) (RatField.finv-right (RatField.>_/= D>0)) *> RatField.ide-right
+     \in (linarith, linarith, linarith)
+
+\lemma subI-sym {r t d mu : Rat} {d>0 : RatField.zro < d} {mu>0 : RatField.zro < mu} : (subI (symI r d d>0) (symI t d d>0) mu mu>0).2 = r + d - (t - d) + mu
+  => idp
+
+\lemma meet-right-le {L : Locale} {a b c : L} (p : b <= c) : a ∧ b <= c
+  => meet-right <=∘ p
+
+\lemma meet-mono-right {L : Locale} {a b c : L} (p : b <= c) : a ∧ b <= a ∧ c
+  => meet-univ meet-left (meet-right <=∘ p)
+
+\lemma dense-core {A : UnitRieszSpace} (f : RealFun (SYSpec A)) {eta e d S D k : Rat} {n : Nat} {c : Array A n} {s : Array Rat n} {K : Nat}
+                  (e>0 : RatField.zro < e) (d>0 : RatField.zro < d) (d<=e : d <= e) (H3 : e + e + e + d + d + d + d + d + d <= eta)
+                  (cs : \Pi (j : Fin n) -> sembed (c j) <= {SYSpec A} f (embed (symI (s j) e e>0)))
+                  (Kp : unit <= K AddMonoid.*n LatticeAbGroup.part+ (pjoin c))
+                  (sS : \Pi (j : Fin n) -> \Sigma (negative S <= s j) (s j <= S)) (HD : S + S <= D) (D>0 : RatField.zro < D)
+                  (k<1 : k < RatField.ide) (k>=0 : RatField.zro <= k) (Hk : D - D * k <= e)
+  : ∃ (a : A) (LatticeAbGroup.abs {RealFunRiesz (SYSpec A)} (f - yosida a) <= {RealFunRiesz (SYSpec A)} constFun eta)
+  => \let | h : Array A n => \lam j => unit {A} A.∧ (K AddMonoid.*n c j)
+          | g => gfun s h e D S
+          | w1 => fadd (yosida g) (fneg f)
+          | w2 => fadd f (fneg (yosida g))
+          | X (r : Rat) => sembed (cut g (r - d) (r + d))
+          | F (t : Rat) => f (embed (symI t d d>0))
+     \in \have | hu (j : Fin n) : h j <= unit => meet-left
+               | hsf (j : Fin n) : sembed (h j) <= {SYSpec A} f (embed (symI (s j) e e>0)) => sembed-mono (<=s-trans (<=_<=s meet-right) *n_<=s) <=∘ cs j
+               | hcov : top <= {SYSpec A} IJoin {SYSpec A} (\lam j => sembed (h j - k *q unit)) => h-cover Kp k<1 k>=0
+               | cov : top <= {SYSpec A} SJoin {SYSpec A} {\Sigma Rat Rat} (\lam x => sembed (cut g (x.1 - d) (x.1 + d)) ∧ {SYSpec A} f (embed (symI x.2 d d>0))) (\lam _ => \Sigma (\Sigma) (\Sigma))
+                 => meet-univ (spec-partition g d>0) (top-univ <=∘ f.func-top>= <=∘ f.func-<= (real-cover-eps d>0) <=∘ =_<= f.func-SJoin) <=∘ Locale.SJoin-distr>= {SYSpec A}
+               | up : fadd (yosida g) (fneg f) <= {RealFunRiesz (SYSpec A)} constFun eta
+                 => local-le {SYSpec A} {fadd (yosida g) (fneg f)} {eta} {\Sigma Rat Rat} {\lam x => sembed (cut g (x.1 - d) (x.1 + d)) ∧ {SYSpec A} f (embed (symI x.2 d d>0))} {\lam _ => \Sigma (\Sigma) (\Sigma)} cov
+                     \lam {x} _ {c'} c'> => \case dec<_<= (x.2 + e + e + e + d + d + d + d) x.1 \with {
+                   | inl rt => meet-right-le {SYSpec A} {w1 (upperHalf c')} {X x.1 ∧ {SYSpec A} F x.2} {bottom} $ key-upper {A} {f} {n} {s} {h} {e} {d} {S} {S} {D} {k} {x.1} {x.2} e>0 d>0 d<=e sS <=-refl HD D>0 k>=0 hu hsf hcov rt
+                   | inr rt => \have mu>0 : RatField.zro < (c' - eta) * ratio 1 2 => linarith
+                     \in meet-mono-right {SYSpec A} {w1 (upperHalf c')} {X x.1 ∧ {SYSpec A} F x.2} (sub-local {SYSpec A} {yosida g} {f} {X x.1 ∧ {SYSpec A} F x.2} {symI x.1 d d>0} {symI x.2 d d>0} mu>0 (meet-left {SYSpec A} {X x.1} {F x.2} <=∘ =_<= (inv yosida-cut)) (meet-right {SYSpec A} {X x.1} {F x.2}))
+                          <=∘ upper-disjoint {SYSpec A} {fadd (yosida g) (fneg f)} {subI (symI x.1 d d>0) (symI x.2 d d>0) ((c' - eta) * ratio 1 2) mu>0} {c'}
+                               (transportInv (`<= c') (subI-sym {x.1} {x.2} {d} {(c' - eta) * ratio 1 2} {d>0} {mu>0}) linarith)
+                 }
+               | lo : fadd f (fneg (yosida g)) <= {RealFunRiesz (SYSpec A)} constFun eta
+                 => local-le {SYSpec A} {fadd f (fneg (yosida g))} {eta} {\Sigma Rat Rat} {\lam x => sembed (cut g (x.1 - d) (x.1 + d)) ∧ {SYSpec A} f (embed (symI x.2 d d>0))} {\lam _ => \Sigma (\Sigma) (\Sigma)} cov
+                     \lam {x} _ {c'} c'> => \case dec<_<= (x.1 + e + e + e + d + d + d + d) x.2 \with {
+                   | inl rt => meet-right-le {SYSpec A} {w2 (upperHalf c')} {X x.1 ∧ {SYSpec A} F x.2} {bottom} $ key-lower {A} {f} {n} {s} {h} {e} {d} {S} {D} {k} {x.1} {x.2} e>0 d>0 D>0 k>=0 Hk hsf hcov rt
+                   | inr rt => \have mu>0 : RatField.zro < (c' - eta) * ratio 1 2 => linarith
+                     \in meet-mono-right {SYSpec A} {w2 (upperHalf c')} {X x.1 ∧ {SYSpec A} F x.2} (sub-local {SYSpec A} {f} {yosida g} {X x.1 ∧ {SYSpec A} F x.2} {symI x.2 d d>0} {symI x.1 d d>0} mu>0 (meet-right {SYSpec A} {X x.1} {F x.2}) (meet-left {SYSpec A} {X x.1} {F x.2} <=∘ =_<= (inv yosida-cut)))
+                          <=∘ upper-disjoint {SYSpec A} {fadd f (fneg (yosida g))} {subI (symI x.2 d d>0) (symI x.1 d d>0) ((c' - eta) * ratio 1 2) mu>0} {c'}
+                               (transportInv (`<= c') (subI-sym {x.2} {x.1} {d} {(c' - eta) * ratio 1 2} {d>0} {mu>0}) linarith)
+                 }
+     \in inP (g, abs-le-const {SYSpec A} {f} {yosida g} {eta} lo up)
+
+-- | The constructive Stone--Yosida theorem: the image of the Yosida representation is uniformly dense.
+\lemma yosida-dense {A : UnitRieszSpace} (f : RealFun (SYSpec A)) {eta : Rat} (eta>0 : RatField.zro < eta)
+  : ∃ (a : A) (LatticeAbGroup.abs {RealFunRiesz (SYSpec A)} (f - yosida a) <= {RealFunRiesz (SYSpec A)} constFun eta)
+  => \have | et>0 : RatField.zro < eta ∧ 1 => <_meet-univ eta>0 idp
+           | et<= : eta ∧ 1 <= eta => meet-left
+           | et<=1 : eta ∧ 1 <= 1 => meet-right
+           | e>0 : RatField.zro < (eta ∧ 1) * ratio 1 6 => linarith
+           | d>0 : RatField.zro < (eta ∧ 1) * ratio 1 12 => linarith
+     \in \case compact-cover f e>0 \with {
+       | inP (n,c,s,cs,ctop) => \case top-unit (ctop <=∘ IJoin-univ {SYSpec A} (\lam j => sembed-mono (<=_<=s (Big_<=_join1 j)))), rat-array-bound s \with {
+         | inP (K,Kp), inP (S,sS) => \case (S ∨ 0, join-left, join-right) : \Sigma (S0 : Rat) (S <= S0) (RatField.zro <= S0) \with {
+           | (S0, S<=S0, S0>=0) =>
+             \have th => theta-facts {(eta ∧ 1) * ratio 1 6} {S0 + S0 + 2} e>0 linarith linarith
+             \in dense-core {A} f {eta} {(eta ∧ 1) * ratio 1 6} {(eta ∧ 1) * ratio 1 12} {S0} {S0 + S0 + 2} {RatField.ide - (eta ∧ 1) * ratio 1 6 * RatField.finv (S0 + S0 + 2)} {n} {c} {s} {K}
+                   e>0 d>0 linarith linarith cs Kp (\lam j => \have | a1 => (sS j).1 | a2 => (sS j).2 \in (linarith, linarith))
+                   linarith linarith th.1 th.2 th.3
+         }
+       }
+     }

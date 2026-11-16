@@ -1,0 +1,349 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Rat
+\import Arith.Real.InfReal
+\import Arith.Real.LowerReal
+\import Arith.Real.UpperReal
+\import Arith.Real
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.Locale
+\import Topology.Locale.LocaleProduct
+\import Topology.Locale.PreorderSite
+\import Topology.Locale.Real
+\import Topology.Locale.Real.Value
+\import Set.Filter
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\open Cover
+\open SiteLocale
+\open CompleteLattice
+\open ProductLocale
+\open ExtendedLowerReal (L_<=)
+\open ExUpperReal (U_<=)
+\open InfReal (LU-less)
+\open LinearOrder (dec<_<=)
+
+-- | The locale `ℝ²`.
+\func PlaneLocale : Locale
+  => ProductLocale RealLocale RealLocale
+
+-- | The basic open box `J × K` of `ℝ²`.
+\func locBox (J K : Interval RatField) : PlaneLocale
+  => prod {RealLocale} {RealLocale} (embed J) (embed K)
+
+-- | The meet of two basic opens of `ℝ` is the join of the intervals below both.
+\lemma interval_meet {J J' : Interval RatField} : embed J ∧ {RealLocale} embed J' <= {RealLocale} SJoin {RealLocale} embed (\lam (K : Interval RatField) => \Sigma (K <= J) (K <= J'))
+  => \lam {K} (c1,c2) => cover-refl $ later $ inP (embed K, SetIm-con (RealPres.embed-char.1 c1, RealPres.embed-char.1 c2), cover-refl idp)
+
+-- | The meet of two boxes is the join of the boxes below both.
+\lemma locBox_meet {J K J' K' : Interval RatField}
+  : locBox J K ∧ locBox J' K' <= SJoin (\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2) (\lam b => \Sigma (b.1 <= J) (b.1 <= J') (b.2 <= K) (b.2 <= K'))
+  => \lam {s} (c1,c2) => cover-trans* (cover-inter c1 c2) \lam {t} (inP (_,idp,_,idp,t<=1,t<=2)) =>
+      cover-trans* (doubleCover (meet-univ t<=1.1 t<=2.1 <=∘ interval_meet) (meet-univ t<=1.2 t<=2.2 <=∘ interval_meet))
+        \lam {r} (u,v) => \case u, v \with {
+          | inP ((L,(LJ,LJ')),p), inP ((M,(MK,MK')),q) => cover-refl $ later $ inP (locBox L M, SetIm-cone (L,M) (LJ,LJ',MK,MK'), cover-inj (=_<= (inv p), =_<= (inv q)) idp)
+        }
+
+-- | The plane is covered by boxes.
+\lemma locBox-cover : top <= SJoin (\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2) (\lam _ => \Sigma)
+  => \lam {s} _ => cover-trans* (doubleCover (=_<= element_SJoin) (=_<= element_SJoin))
+      \lam {r} (u,v) => \case u, v \with {
+        | inP ((L,_),p), inP ((M,_),q) => cover-refl $ later $ inP (locBox L M, SetIm-cone (L,M) (), cover-inj (=_<= (inv p), =_<= (inv q)) idp)
+      }
+
+\lemma fine-ineq {k x w : Rat} (k>=0 : 0 <= k) (x>0 : 0 < x) (h : (k + 2) * x <= w * ratio 4 3) : (k + 1 + 2) * x <= w + w
+  => rewrite (equation.cRing : (k + 1 + 2) * x = k * x + (x + x + x))
+      \have | kx : 0 <= k * x => RatField.<=_*_positive_positive k>=0 (<=-less x>0)
+            | e2 : (k + 2) * x = k * x + (x + x) => equation.cRing
+      \in linarith
+
+-- | Every interval `J` is covered by subintervals of width at most `2 w / (n + 2)`, where `w` is the width of `J`.
+\lemma fine-cover-site (n : Nat) (J : Interval RatField)
+  : Cover {RealPres RatField} J (\lam J' => \Sigma (J' <= J) ((n RatField.+ 2) * (J'.2 - J'.1) <= (J.2 - J.1) + (J.2 - J.1))) \elim n
+  | 0 => cover-refl (<=-refl, later linarith)
+  | suc n =>
+    \have | j3 => J.3
+          | step {J' P : Interval RatField} (J'<=P : J' <= P) (PJ : P <= J) (Pw : P.2 - P.1 = (J.2 - J.1) * ratio 2 3)
+                 (h : (RatField.natCoef n + 2) * (J'.2 - J'.1) <= (P.2 - P.1) + (P.2 - P.1)) : \Sigma (J' <= J) ((RatField.natCoef (suc n) + 2) * (J'.2 - J'.1) <= (J.2 - J.1) + (J.2 - J.1))
+            => \have | j'3 => J'.3
+                     | nx : RatField.zro <= RatField.natCoef n * (J'.2 - J'.1) => RatField.<=_*_positive_positive RatField.natCoef>=0 (later linarith)
+               \in (J'<=P <=∘ PJ, rewrite (RatField.natCoefSuc n) $ fine-ineq RatField.natCoef>=0 (later linarith) (transport (_ <=) (later linarith) h))
+    \in cover-trans {RealPres RatField} (byLeft (J.1 + (J.2 - J.1) * ratio 1 3, J.1 + (J.2 - J.1) * ratio 2 3, linarith, linarith, linarith, idp)) \lam {t} => \case \elim t, \elim __ \with {
+      | _, byLeft idp => cover-sub (fine-cover-site n _) \lam {J'} (J'<=P, h) => step J'<=P (<=-refl, later linarith) (later linarith) h
+      | _, byRight idp => cover-sub (fine-cover-site n _) \lam {J'} (J'<=P, h) => step J'<=P (later linarith, <=-refl) (later linarith) h
+    }
+
+\lemma plus2-ineq {k d w : Rat} (d>0 : RatField.zro < d) (m : w < k * d) : w < (k + 2) * d
+  => rewrite (equation.cRing : (k + 2) * d = k * d + (d + d)) linarith
+
+\lemma fine-interval {J : Interval RatField} {d : Rat} (d>0 : RatField.zro < d)
+  : embed J <= SJoin embed (\lam J' => \Sigma (J' <= J) (J'.2 - J'.1 < d))
+  => \have | j3 => J.3
+           | (n,q<n) => rat_natBound ((J.2 - J.1 + (J.2 - J.1)) * RatField.finv d)
+           | m : J.2 - J.1 + (J.2 - J.1) < RatField.natCoef n * d => transport (`< _) (RatField.*-assoc *> pmap (_ *) (RatField.finv-left (RatField.>_/= d>0)) *> RatField.ide-right) (RatField.<_*_positive-left q<n d>0)
+           | wd : J.2 - J.1 + (J.2 - J.1) < (RatField.natCoef n + 2) * d => plus2-ineq d>0 m
+     \in embed-univ $ cover-sub (fine-cover-site n J) \lam {J'} (J'<=J, h) => later $ inP (embed J', SetIm-con (J'<=J, \case dec<_<= (J'.2 - J'.1) d \with {
+           | inl p => p
+           | inr d<=x => absurd $ <-irreflexive $ wd <∘l RatField.<=_*_positive-right (later linarith) d<=x <=∘ h
+         }), cover-refl idp)
+
+-- | A box is covered by boxes of width less than `d`.
+\lemma fine-box {J K : Interval RatField} {d : Rat} (d>0 : RatField.zro < d)
+  : locBox J K <= {PlaneLocale} SJoin {PlaneLocale} (\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2)
+                                                  (\lam b => \Sigma (b.1 <= J) (b.2 <= K) (b.1.2 - b.1.1 < d) (b.2.2 - b.2.1 < d))
+  => \let T => SJoin {PlaneLocale} (\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2)
+                                   (\lam b => \Sigma (b.1 <= J) (b.2 <= K) (b.1.2 - b.1.1 < d) (b.2.2 - b.2.1 < d))
+     \in prod-cover1 (fine-interval d>0) <=∘ SJoin-univ (\lam {V} => SetIm-elim {Interval RatField} {RealLocale} {\lam V => prod V (embed K) <= {PlaneLocale} T} {embed} {\lam J' => \Sigma (J' <= J) (J'.2 - J'.1 < d)} \lam {J'} (J'<=J,wJ') =>
+       prod-cover2 (fine-interval d>0) <=∘ SJoin-univ (\lam {W} => SetIm-elim {Interval RatField} {RealLocale} {\lam W => prod (embed J') W <= {PlaneLocale} T} {embed} {\lam K' => \Sigma (K' <= K) (K'.2 - K'.1 < d)} \lam {K'} (K'<=K,wK') =>
+         SJoin-cond {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2}
+                    {\lam b => \Sigma (b.1 <= J) (b.2 <= K) (b.1.2 - b.1.1 < d) (b.2.2 - b.2.1 < d)} {(J',K')} (J'<=J, K'<=K, wJ', wK')))
+
+-- | If `|x - y| < e` and `a < y`, then `a - e < x`.
+\lemma abs-L {x y : Real} {e a : Rat} (h : Real.U {RealAbGroup.abs (x - y)} e) (ya : y.L a) : x.L (a - e)
+  => \case RealAbGroup.+_L.1 (RealAbGroup.negative_U.1 (RealAbGroup.join_U.1 h).2) \with {
+    | inP (l1,xl1,l2,yl2,p) => \have q => LU-less ya (RealAbGroup.negative_L.1 yl2)
+                              \in L_<= xl1 (later linarith)
+  }
+
+-- | If `|x - y| < e` and `y < a`, then `x < a + e`.
+\lemma abs-U {x y : Real} {e a : Rat} (h : Real.U {RealAbGroup.abs (x - y)} e) (ya : y.U a) : x.U (a + e)
+  => \case RealAbGroup.+_U.1 (RealAbGroup.join_U.1 h).1 \with {
+    | inP (u1,xu1,u2,yu2,p) => \have q => LU-less (RealAbGroup.negative_U.1 yu2) ya
+                              \in U_<= xu1 (later linarith)
+  }
+
+-- | Two reals in `(p,q)` are at distance less than `q - p`.
+\lemma interval-dist {x y : Real} {p q : Rat} (xp : x.L p) (xq : x.U q) (yp : y.L p) (yq : y.U q) : Real.U {RealAbGroup.abs (x - y)} (q - p)
+  => \have | r1 : Real.U {x - y} (q - p) => \case y.L-rounded yp \with {
+               | inP (r,yr,p<r) => RealAbGroup.+_U.2 $ inP (q, xq, RatField.negative r, RealAbGroup.negative_U.2 (transportInv y.L RatField.negative-isInv yr), linarith)
+             }
+           | r2 : Real.U {negative (x - y)} (q - p) => RealAbGroup.negative_U.2 \case x.L-rounded xp \with {
+               | inP (r,xr,p<r) => RealAbGroup.+_L.2 $ inP (r, xr, RatField.negative q, RealAbGroup.negative_L.2 (transportInv y.U RatField.negative-isInv yq), linarith)
+             }
+     \in RealAbGroup.join_U.2 (r1, r2)
+
+-- | {phi} maps the open box `J × K` into `I` with some margin.
+\type BoxIn (phi : CoverMap Plane RealNormed) (J K I : Interval RatField) : \Prop
+  => ∃ (eps : Rat) (0 < eps) ∀ {s t : Real} (s.L J.1) (s.U J.2) (t.L K.1) (t.U K.2) Given ((phi (s,t)).L (I.1 + eps)) ((phi (s,t)).U (I.2 - eps))
+
+\lemma abs-LU {x : Real} {M e : Rat} (h : RealAbGroup.abs x <= M) (e>0 : 0 < e) : \Sigma (x.L (negative M - e)) (x.U (M + e))
+  => (L_<= ((RealAbGroup.negative_U {x} {M + e}).1 $ real_<_U.1 $ (RealAbGroup.abs>=neg <=∘ h) <∘r (real_<_U {M + e} {M}).2 (later linarith)) (later linarith),
+      real_<_U.1 $ (RealAbGroup.abs>=id <=∘ h) <∘r (real_<_U {M + e} {M}).2 (later linarith))
+
+\lemma BoxIn-mid {phi : CoverMap Plane RealNormed} {J K : Interval RatField} {p q eps : Rat}
+                 (h : ∀ {s t : Real} (s.L J.1) (s.U J.2) (t.L K.1) (t.U K.2) (\Sigma ((phi (s,t)).L (p + eps)) ((phi (s,t)).U (q - eps))))
+  : p + eps < q - eps
+  => \have | j3 => J.3
+           | k3 => K.3
+           | r => h {(J.1 + J.2) * ratio 1 2} {(K.1 + K.2) * ratio 1 2} (later linarith) (later linarith) (later linarith) (later linarith)
+     \in LU-less r.1 r.2
+
+\lemma BoxIn-bounded (phi : CoverMap Plane RealNormed) (J K : Interval RatField) : ∃ (I : Interval RatField) (BoxIn phi J K I)
+  => \case square-bounded.plane-bounded phi (J.1 ∧ K.1) (J.2 ∨ K.2) \with {
+    | inP (M,M>0,h) => inP ((negative M - 1, M + 1, linarith), inP (ratio 1 2, idp, \lam {s} {t} sJ sJ' tK tK' =>
+        \have b => h (<=-less $ real_<_L.2 $ L_<= sJ meet-left, <=-less $ real_<_U.2 $ U_<= sJ' join-left)
+                      (<=-less $ real_<_L.2 $ L_<= tK meet-right, <=-less $ real_<_U.2 $ U_<= tK' join-right)
+        \in (L_<= (abs-LU {_} {_} {ratio 1 2} b idp).1 (later linarith), U_<= (abs-LU {_} {_} {ratio 1 2} b idp).2 (later linarith))))
+  }
+
+\lemma rat_join+meet {a a' d d' : Rat} : (a ∨ a') + (d ∧ d') <= (a + d) ∨ (a' + d')
+  => \case TotalOrder.join-isMax a a' \with {
+    | byLeft p => rewrite p $ <=_+ <=-refl meet-left <=∘ join-left
+    | byRight p => rewrite p $ <=_+ <=-refl meet-right <=∘ join-right
+  }
+
+\lemma rat_meet-meet {b b' d d' : Rat} : (b - d) ∧ (b' - d') <= (b ∧ b') - (d ∧ d')
+  => \case TotalOrder.meet-isMin b b' \with {
+    | byLeft p => rewrite p $ meet-left <=∘ <=_+ <=-refl (RatField.negative_<= meet-left)
+    | byRight p => rewrite p $ meet-right <=∘ <=_+ <=-refl (RatField.negative_<= meet-right)
+  }
+
+\lemma BoxIn-meet {phi : CoverMap Plane RealNormed} {c b b' : \Sigma (Interval RatField) (Interval RatField)}
+                  (cb1 : c.1 <= b.1) (cb1' : c.1 <= b'.1) (cb2 : c.2 <= b.2) (cb2' : c.2 <= b'.2)
+                  {I I' : Interval RatField} (h : BoxIn phi b.1 b.2 I) (h' : BoxIn phi b'.1 b'.2 I')
+  : ∃ (p : I.1 ∨ I'.1 < I.2 ∧ I'.2) (BoxIn phi c.1 c.2 (I.1 ∨ I'.1, I.2 ∧ I'.2, p)) \elim h, h'
+  | inP (e,e>0,f), inP (e',e'>0,f') =>
+    \have | g {s t : Real} (sc : s.L c.1.1) (sc' : s.U c.1.2) (tc : t.L c.2.1) (tc' : t.U c.2.2)
+              : \Sigma ((phi (s,t)).L (I.1 ∨ I'.1 + e ∧ e')) ((phi (s,t)).U (I.2 ∧ I'.2 - e ∧ e'))
+              => \have | r => f (L_<= sc cb1.1) (U_<= sc' cb1.2) (L_<= tc cb2.1) (U_<= tc' cb2.2)
+                       | r' => f' (L_<= sc cb1'.1) (U_<= sc' cb1'.2) (L_<= tc cb2'.1) (U_<= tc' cb2'.2)
+                 \in (L_<= (real_join_L r.1 r'.1) rat_join+meet, U_<= (real_meet_U r.2 r'.2) rat_meet-meet)
+          | ee>0 : RatField.zro RatField.< e ∧ e' => <_meet-univ e>0 e'>0
+          | m => BoxIn-mid {phi} {c.1} {c.2} {I.1 ∨ I'.1} {I.2 ∧ I'.2} {e ∧ e'} g
+    \in inP (later linarith, inP (e ∧ e', ee>0, g))
+
+-- | The open set of points of `ℝ²` mapped by `φ` into `I`.
+\func liftOpen (phi : CoverMap Plane RealNormed) (I : Interval RatField) : PlaneLocale
+  => SJoin {PlaneLocale} (\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2) (\lam b => BoxIn phi b.1 b.2 I)
+
+\lemma toCI {s : Real} {a b : Rat} (sa : s.L a) (sb : s.U b) : ClosedInterval a b s
+  => (<=-less (real_<_L.2 sa), <=-less (real_<_U.2 sb))
+
+\lemma shrink-box {phi : CoverMap Plane RealNormed} {I : Interval RatField} {bb : \Sigma (Interval RatField) (Interval RatField)} (bi : BoxIn phi bb.1 bb.2 I)
+  : locBox bb.1 bb.2 <= {PlaneLocale} Join {PlaneLocale} (SetIm (liftOpen phi) (\lam (x : Interval RatField) => \Sigma (I.1 < x.1) (x.2 < I.2))) \elim bi
+  | inP (eps,eps>0,f) =>
+    \have m => BoxIn-mid {phi} {bb.1} {bb.2} {I.1} {I.2} {eps} f
+    \in SJoin-cond {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam b => BoxIn phi b.1 b.2 (I.1 + eps * ratio 1 2, I.2 - eps * ratio 1 2, linarith)} {bb}
+          (inP (eps * ratio 1 2, linarith, \lam s1 s2 t1 t2 => \have r => f s1 s2 t1 t2 \in (L_<= r.1 (later linarith), U_<= r.2 (later linarith))))
+        <=∘ Join-cond (SetIm-cone {Interval RatField} {_} {liftOpen phi} {\lam (x : Interval RatField) => \Sigma (I.1 < x.1) (x.2 < I.2)} (I.1 + eps * ratio 1 2, I.2 - eps * ratio 1 2, linarith) (linarith, linarith))
+
+\lemma split-box {phi : CoverMap Plane RealNormed} {I : Interval RatField} {b c : Rat} (I1<b : I.1 < b) (b<c : b < c) (c<I2 : c < I.2)
+                 {bb : \Sigma (Interval RatField) (Interval RatField)} (bi : BoxIn phi bb.1 bb.2 I)
+  : locBox bb.1 bb.2 <= {PlaneLocale} Join {PlaneLocale} (SetIm (liftOpen phi) (\lam (x : Interval RatField) => (x = (I.1, c, I1<b <∘ b<c)) || (x = (b, I.2, b<c <∘ c<I2)))) \elim bi
+  | inP (eps,eps>0,f) =>
+    \let | eta => (c - b) * ratio 1 8
+         | a0 => bb.1.1 ∧ bb.2.1
+         | b0 => bb.1.2 ∨ bb.2.2
+         | T => Join {PlaneLocale} (SetIm (liftOpen phi) (\lam (x : Interval RatField) => (x = (I.1, c, I1<b <∘ b<c)) || (x = (b, I.2, b<c <∘ c<I2))))
+    \in \have | eta>0 : RatField.zro RatField.< eta => linarith
+              | m>0 : RatField.zro RatField.< eta ∧ eps => <_meet-univ eta>0 eps>0
+              | m<=eta : eta ∧ eps <= eta => meet-left
+              | m<=eps : eta ∧ eps <= eps => meet-right
+    \in \case square-uniform.plane-uniform phi a0 b0 eta>0 \with {
+      | inP (delta,delta>0,hd) => fine-box {bb.1} {bb.2} {delta * ratio 1 2} linarith <=∘ SJoin-univ {PlaneLocale} {\Sigma (Interval RatField) (Interval RatField)} {\lam b => locBox b.1 b.2} {\lam b => \Sigma (b.1 <= bb.1) (b.2 <= bb.2) (b.1.2 - b.1.1 < delta * ratio 1 2) (b.2.2 - b.2.1 < delta * ratio 1 2)} (\lam {cc} (c1,c2,w1,w2) =>
+        \let | z1 => (cc.1.1 + cc.1.2) * ratio 1 2
+             | z2 => (cc.2.1 + cc.2.2) * ratio 1 2
+        \in \have | j3 => cc.1.3
+                  | k3 => cc.2.3
+                  | near {s t : Real} (s1 : s.L cc.1.1) (s2 : s.U cc.1.2) (t1 : t.L cc.2.1) (t2 : t.U cc.2.2) : Real.U {RealAbGroup.abs (phi (s,t) - phi (z1,z2))} eta
+                    => \have | zL1 : Real.L {z1} cc.1.1 => later linarith
+                             | zU1 : Real.U {z1} cc.1.2 => later linarith
+                             | zL2 : Real.L {z2} cc.2.1 => later linarith
+                             | zU2 : Real.U {z2} cc.2.2 => later linarith
+                       \in real_<_U.1 $ hd {s} {t} {z1} {z2}
+                            (toCI (L_<= (L_<= s1 c1.1) meet-left) (U_<= s2 (c1.2 <=∘ join-left)))
+                            (toCI (L_<= (L_<= t1 c2.1) meet-right) (U_<= t2 (c2.2 <=∘ join-right)))
+                            (toCI (L_<= (L_<= zL1 c1.1) meet-left) (U_<= zU1 (c1.2 <=∘ join-left)))
+                            (toCI (L_<= (L_<= zL2 c2.1) meet-right) (U_<= zU2 (c2.2 <=∘ join-right)))
+                            (real_<_U.2 $ RealAbGroup.+_U.2 $ inP (cc.1.2 - cc.1.1, interval-dist s1 s2 zL1 zU1, cc.2.2 - cc.2.1, interval-dist t1 t2 zL2 zU2, linarith))
+        \in \case (phi (z1,z2)).LU-located {b + (eta + eta + eta)} {c - (eta + eta + eta)} linarith \with {
+          | byLeft zl => SJoin-cond {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam bb => BoxIn phi bb.1 bb.2 (b, I.2, b<c <∘ c<I2)} {cc}
+              (inP (eta ∧ eps, m>0, \lam s1 s2 t1 t2 => (L_<= (abs-L (near s1 s2 t1 t2) zl) (later linarith), U_<= (f (L_<= s1 c1.1) (U_<= s2 c1.2) (L_<= t1 c2.1) (U_<= t2 c2.2)).2 (later linarith))))
+            <=∘ Join-cond (SetIm-cone {Interval RatField} {_} {liftOpen phi} {\lam (x : Interval RatField) => (x = (I.1, c, I1<b <∘ b<c)) || (x = (b, I.2, b<c <∘ c<I2))} (b, I.2, b<c <∘ c<I2) (byRight idp))
+          | byRight zu => SJoin-cond {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam bb => BoxIn phi bb.1 bb.2 (I.1, c, I1<b <∘ b<c)} {cc}
+              (inP (eta ∧ eps, m>0, \lam s1 s2 t1 t2 => (L_<= (f (L_<= s1 c1.1) (U_<= s2 c1.2) (L_<= t1 c2.1) (U_<= t2 c2.2)).1 (later linarith), U_<= (abs-U (near s1 s2 t1 t2) zu) (later linarith))))
+            <=∘ Join-cond (SetIm-cone {Interval RatField} {_} {liftOpen phi} {\lam (x : Interval RatField) => (x = (I.1, c, I1<b <∘ b<c)) || (x = (b, I.2, b<c <∘ c<I2))} (I.1, c, I1<b <∘ b<c) (byLeft idp))
+        })
+    }
+
+-- | The site map of the lift of {phi}: an interval `I` goes to the union of the boxes mapped into `I`.
+\func liftSite (phi : CoverMap Plane RealNormed) : PreorderSiteHom (RealPres RatField) (LocaleSite PlaneLocale) \cowith
+  | func => liftOpen phi
+  | func-<= {I} {I'} p => SJoin-univ {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam b => BoxIn phi b.1 b.2 I} \lam {b} (inP (eps,eps>0,h)) => SJoin-cond {PlaneLocale} $ later $ inP (eps, eps>0, \lam sJ sJ' tK tK' => \have (l,u) => h sJ sJ' tK tK' \in (L_<= l $ <=_+ p.1 <=-refl, U_<= u $ <=_+ p.2 <=-refl))
+  | func-basicCover {I} {C} => \case \elim C, \elim __ \with {
+    | _, byLeft (b,c,I1<b,b<c,c<I2,idp) => SJoin-univ {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam bb => BoxIn phi bb.1 bb.2 I} \lam {bb} bi => split-box I1<b b<c c<I2 bi
+    | _, byRight idp => SJoin-univ {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam bb => BoxIn phi bb.1 bb.2 I} \lam {bb} bi => shrink-box bi
+  }
+  | func-flat-top {u} => cover-basic $ top-univ <=∘ locBox-cover <=∘ SJoin-univ (\lam {b} _ => \case BoxIn-bounded phi b.1 b.2 \with {
+    | inP (I,bi) => SJoin-cond {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam b => BoxIn phi b.1 b.2 I} bi <=∘ Join-cond (TSetIm-con I)
+  })
+  | func-flat-meet {I} {I'} {u} u<=I u<=I' => cover-basic $ meet-univ u<=I u<=I' <=∘ Locale.SJoin-distr>= {PlaneLocale} {_} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam b => BoxIn phi b.1 b.2 I} {\lam b => BoxIn phi b.1 b.2 I'}
+      <=∘ SJoin-univ {PlaneLocale} {\Sigma (\Sigma (Interval RatField) (Interval RatField)) (\Sigma (Interval RatField) (Interval RatField))} {\lam s => locBox s.1.1 s.1.2 ∧ {PlaneLocale} locBox s.2.1 s.2.2} {\lam s => \Sigma (BoxIn phi s.1.1 s.1.2 I) (BoxIn phi s.2.1 s.2.2 I')} (\lam {bb} (h,h') => locBox_meet {bb.1.1} {bb.1.2} {bb.2.1} {bb.2.2} <=∘ SJoin-univ {PlaneLocale} {\Sigma (Interval RatField) (Interval RatField)} {\lam b => locBox b.1 b.2} {\lam b => \Sigma (b.1 <= bb.1.1) (b.1 <= bb.2.1) (b.2 <= bb.1.2) (b.2 <= bb.2.2)} (\lam {c} (cb1,cb1',cb2,cb2') =>
+      \case BoxIn-meet {phi} {c} {bb.1} {bb.2} cb1 cb1' cb2 cb2' h h' \with {
+        | inP (p,bi) => SJoin-cond {PlaneLocale} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2} {\lam b => BoxIn phi b.1 b.2 (I.1 ∨ I'.1, I.2 ∧ I'.2, p)} bi
+            <=∘ Join-cond (SetIm-cone {Interval RatField} {_} {\lam (I : Interval RatField) => SJoin {PlaneLocale} (\lam (b : \Sigma (Interval RatField) (Interval RatField)) => locBox b.1 b.2) (\lam b => BoxIn phi b.1 b.2 I)} {\lam (K : Interval RatField) => \Sigma (K <= I) (K <= I')} (I.1 ∨ I'.1, I.2 ∧ I'.2, p) ((join-left, meet-left), (join-right, meet-right)))
+      }))
+
+-- | The continuous map `ℝ² → ℝ` of locales induced by `φ`.
+\func liftMap (phi : CoverMap Plane RealNormed) : LocaleHom PlaneLocale RealLocale
+  => LocaleSite.adjointMap (liftSite phi)
+
+\lemma tuple-prod {Z X Y : Locale} {f : LocaleHom Z X} {g : LocaleHom Z Y} {x : X} {y : Y} : tuple f g (prod x y) = f x ∧ g y
+  => <=-antisymmetric (SJoin-univ \lam c => coverMap f g c <=∘ SJoin-univ \lam p => =_<= (pmap2 (∧) (pmap f (inv (pmap __.1 p))) (pmap g (inv (pmap __.2 p)))))
+                      (SJoin-cond {Z} {_} {\lam s => f s.1 ∧ g s.2} {\lam s => Cover {site} s (single (x,y))} {(x,y)} (cover-refl idp))
+
+-- | The frame action of `φ ∘ (f,g)` on a basic open.
+\lemma liftMap-char {Z : Locale} {phi : CoverMap Plane RealNormed} {f g : LocaleHom Z RealLocale} {I : Interval RatField}
+  : (liftMap phi LocaleHom.∘ tuple f g) (embed I) = SJoin {Z} (\lam (b : \Sigma (Interval RatField) (Interval RatField)) => f (embed b.1) ∧ g (embed b.2)) (\lam b => BoxIn phi b.1 b.2 I)
+  => pmap (tuple f g) LocaleSite.adjointMap_embed *> FrameHom.func-SJoin *> pmap (SJoin __ _) (ext \lam b => tuple-prod)
+
+\lemma upperHalf-SJoin {q : Rat} : upperHalf q = SJoin {RealLocale} {Interval RatField} embed (\lam s => q <= s.1)
+  => \peval upperHalf q
+
+-- | The value of `φ ∘ (f,g)` at a point is `φ` applied to the values of `f` and `g`.
+\lemma realValue-lift {X : Locale} {x : CompleteFilter X} {phi : CoverMap Plane RealNormed} {f g : LocaleHom X RealLocale}
+  : realValue x (liftMap phi LocaleHom.∘ tuple f g) = phi (realValue x f, realValue x g)
+  => Real.real-ext \lam {q} => (\lam xq => \case x.filter-SJoin (x.filter-mono xq (FrameHom.func-<= {liftMap phi LocaleHom.∘ tuple f g} (=_<= upperHalf-SJoin) <=∘ =_<= FrameHom.func-SJoin)) \with {
+      | inP (I,q<=I1,xI) => \case x.filter-SJoin (transport (\lam z => x z) liftMap-char xI) \with {
+        | inP (bb, inP (eps,eps>0,h), xb) => \have | vf => realValue-embed.1 (x.filter-mono xb meet-left)
+                                                   | vg => realValue-embed.1 (x.filter-mono xb meet-right)
+                                             \in L_<= (h {realValue x f} {realValue x g} vf.1 vf.2 vg.1 vg.2).1 (later linarith)
+      }
+    }, \lam ql => backward ql)
+  \where {
+    \lemma backward {X : Locale} {x : CompleteFilter X} {phi : CoverMap Plane RealNormed} {f g : LocaleHom X RealLocale} {q : Rat}
+                    (ql : Real.L {phi (realValue x f, realValue x g)} q) : Real.L {realValue x (liftMap phi LocaleHom.∘ tuple f g)} q
+      => \let | vf => realValue x f
+              | vg => realValue x g
+         \in \case (phi (vf,vg)).L-rounded ql, (phi (vf,vg)).U-inh, vf.L-inh, vf.U-inh, vg.L-inh, vg.U-inh \with {
+           | inP (r,rl,q<r), inP (m0,mu), inP (lf,lfL), inP (uf,ufU), inP (lg,lgL), inP (ug,ugU) =>
+             \let | eta => (r - q) * ratio 1 4 ∧ ratio 1 4
+                  | a0 => (lf ∧ lg) - 1
+                  | b0 => (uf ∨ ug) + 1
+             \in \have | eta>0 : RatField.zro RatField.< eta => <_meet-univ (usingOnly q<r linarith) idp
+                       | eta<= : eta <= (r - q) * ratio 1 4 => meet-left
+                       | eta<=' : eta <= ratio 1 4 => meet-right
+                       | r<m0 => LU-less rl mu
+             \in \case square-uniform.plane-uniform phi a0 b0 eta>0 \with {
+               | inP (delta,delta>0,hd) =>
+                 \let d => (delta ∧ 1) * ratio 1 4
+                 \in \have | d>0 : RatField.zro RatField.< d => usingOnly (<_meet-univ delta>0 idp : RatField.zro RatField.< delta ∧ 1) linarith
+                           | d<= : delta ∧ 1 <= delta => meet-left
+                           | d<=' : delta ∧ 1 <= 1 => meet-right
+                 \in \case vf.LU-focus d d>0, vg.LU-focus d d>0 \with {
+                   | inP (l1,l1L,l1U), inP (l2,l2L,l2U) =>
+                     \have | d1>0 : RatField.zro RatField.< delta ∧ 1 => <_meet-univ delta>0 idp
+                           | lfuf => LU-less {vf} {lf} {uf} lfL ufU
+                           | lgug => LU-less {vg} {lg} {ug} lgL ugU
+                           | l1uf => LU-less {vf} {l1} {uf} l1L ufU
+                           | l2ug => LU-less {vg} {l2} {ug} l2L ugU
+                           | J1<=uf : l1 ∨ lf <= uf => join-univ (<=-less l1uf) (<=-less lfuf)
+                           | K1<=ug : l2 ∨ lg <= ug => join-univ (<=-less l2ug) (<=-less lgug)
+                           | lf<=J1 : lf <= l1 ∨ lf => join-right
+                           | l1<=J1 : l1 <= l1 ∨ lf => join-left
+                           | lg<=K1 : lg <= l2 ∨ lg => join-right
+                           | l2<=K1 : l2 <= l2 ∨ lg => join-left
+                           | m1 : lf ∧ lg <= lf => meet-left
+                           | m2 : lf ∧ lg <= lg => meet-right
+                           | j1 : uf <= uf ∨ ug => join-left
+                           | j2 : ug <= uf ∨ ug => join-right
+                     \in \let | J : Interval RatField => (l1 ∨ lf, (l1 ∨ lf) + d, usingOnly d>0 linarith)
+                              | K : Interval RatField => (l2 ∨ lg, (l2 ∨ lg) + d, usingOnly d>0 linarith)
+                              | I : Interval RatField => (q, m0 + 1, usingOnly (q<r, r<m0) linarith)
+                     \in \have | vfJ1 : vf.L J.1 => real_join_L {l1} {lf} {vf} l1L lfL
+                               | vfJ2 : vf.U J.2 => U_<= {vf} l1U (later (usingOnly l1<=J1 linarith))
+                               | vgK1 : vg.L K.1 => real_join_L {l2} {lg} {vg} l2L lgL
+                               | vgK2 : vg.U K.2 => U_<= {vg} l2U (later (usingOnly l2<=K1 linarith))
+                               | bi : BoxIn phi J K I => inP (eta, eta>0, \lam {s} {t} s1 s2 t1 t2 =>
+                                   \have nr : Real.U {RealAbGroup.abs (phi (s,t) - phi (vf,vg))} eta
+                                          => real_<_U.1 $ hd {s} {t} {vf} {vg}
+                                               (toCI (L_<= s1 (later (usingOnly (m1, lf<=J1) linarith))) (U_<= s2 (later (usingOnly (J1<=uf, j1, d<=') linarith))))
+                                               (toCI (L_<= t1 (later (usingOnly (m2, lg<=K1) linarith))) (U_<= t2 (later (usingOnly (K1<=ug, j2, d<=') linarith))))
+                                               (toCI {vf} {a0} {b0} (L_<= {vf} vfJ1 (later (usingOnly (m1, lf<=J1) linarith))) (U_<= {vf} vfJ2 (later (usingOnly (J1<=uf, j1, d<=') linarith))))
+                                               (toCI {vg} {a0} {b0} (L_<= {vg} vgK1 (later (usingOnly (m2, lg<=K1) linarith))) (U_<= {vg} vgK2 (later (usingOnly (K1<=ug, j2, d<=') linarith))))
+                                               (real_<_U.2 $ RealAbGroup.+_U.2 $ inP (d, U_<= (interval-dist {s} {vf} {J.1} {J.2} s1 s2 vfJ1 vfJ2) (later (usingOnly () linarith)), d, U_<= (interval-dist {t} {vg} {K.1} {K.2} t1 t2 vgK1 vgK2) (later (usingOnly () linarith)), usingOnly (d<=, d1>0) linarith))
+                                   \in (L_<= (abs-L nr rl) (later (usingOnly (eta<=, q<r) linarith)), U_<= (abs-U nr mu) (later (usingOnly eta<=' linarith))))
+                     \in x.filter-mono (x.filter-meet (realValue-embed.2 (vfJ1, vfJ2)) (realValue-embed.2 (vgK1, vgK2)))
+                          (SJoin-cond {X} {_} {\lam (b : \Sigma (Interval RatField) (Interval RatField)) => f (embed b.1) ∧ g (embed b.2)} {\lam b => BoxIn phi b.1 b.2 I} {(J,K)} bi
+                            <=∘ =_<= (inv (liftMap-char {X} {phi} {f} {g} {I})) <=∘ FrameHom.func-<= {liftMap phi LocaleHom.∘ tuple f g} (embed-univ {RealPres RatField} {I} {upperHalf q} ((upperHalf.upperHalf-char {q} {I}).2 <=-refl)))
+                 }
+             }
+         }
+  }

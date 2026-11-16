@@ -1,5 +1,4 @@
 \import Category.Functor
-\import Data.Bool
 \import Equiv
 \import Function.Meta
 \import Logic
@@ -150,20 +149,22 @@
 
 \func LocaleCoverSpaceFunctor.{u} : Functor LocaleCat.{u} PrecoverSpaceCat.{u} \cowith
   | F L => LocalePrecoverSpace L
-  | Func f => \new PrecoverMap {
-    | func => points-map f
-    | func-cover c => func-top>= <=∘ f.func-<= c <=∘ f.func-SJoin>= <=∘ SJoin-univ \lam {V} DV => func-Join>= <=∘
-        SJoin-univ \lam {b} p => later $ points^*-points_* (\lam c => unfolds $ unfolds $ p $ later c) <=∘ SJoin-cond (inP $ later (V,DV,idp))
-  }
+  | Func => Func
   | Func-id => idp
   | Func-o => idp
+  \where {
+    \protected \func Func {L M : Locale} (f : LocaleHom L M) : PrecoverMap (LocalePrecoverSpace L) (LocalePrecoverSpace M) \cowith
+      | func => points-map f
+      | func-cover c => func-top>= <=∘ f.func-<= c <=∘ f.func-SJoin>= <=∘ SJoin-univ \lam {V} DV => func-Join>= <=∘
+          SJoin-univ \lam {b} p => later $ points^*-points_* (\lam c => unfolds $ unfolds $ p $ later c) <=∘ SJoin-cond (inP $ later (V,DV,idp))
+  }
 
-\lemma LocaleCoverSpaceFunctor-fullyFaithful.{u} {L M : Locale.{u}} (Ld : HasDensePoints L) (Mr : M.IsRegularLocale) : IsEquiv (LocaleCoverSpaceFunctor.Func {L} {M})
+\lemma LocaleCoverSpaceFunctor-fullyFaithful {L M : Locale} (Ld : HasDensePoints L) (Mr : M.IsRegularLocale) : IsEquiv (LocaleCoverSpaceFunctor.Func {L} {M})
   => IsEquiv.fromInjSurj
       (\have r {f g : FrameHom M L} (p : LocaleCoverSpaceFunctor.Func f = LocaleCoverSpaceFunctor.Func g) {a : M} : f a <= g a
           => f.func-<= (Mr a) <=∘ func-Join>= <=∘ SJoin-univ (later \lam {b} b<=<a => meet-univ <=-refl (top-univ <=∘ func-top>= <=∘ g.func-<= b<=<a <=∘ g.func-join>=) <=∘
               ldistr>= <=∘ join-univ (hasDensePoints-char.1 Ld (\lam {x} c => x.isProper $
-                filter-mono (filter-meet (filter-mono c meet-right) (propExt.dir (pmap {PrecoverMap _ _} (__ x b) p) $ filter-mono c meet-left)) $
+                filter-mono (filter-meet (filter-mono c meet-right) (propExt.dir (path \lam i => p i x b) $ filter-mono c meet-left)) $
                   func-meet>= <=∘ func-<= M.<=-eval <=∘ g.func-bottom>=) <=∘ bottom-univ) meet-right)
        \in \lam p => exts \lam a => <=-antisymmetric (r p) $ r $ inv p)
       (\lam f => inP (frameHom f, exts \lam x => exts \lam a => ext (\case x.filter-SJoin __ \with {

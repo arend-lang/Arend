@@ -9,7 +9,6 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set
 \import Set.Filter
 \import Set.Set
 \import Topology.Locale
@@ -168,6 +167,11 @@
 
 \func HasStronglyDensePoints (L : Locale) : \Prop
   => \Pi (a : L) -> a <= L.pHat (∃ (x : CompleteFilter L) (x a))
+
+\lemma stronglyDense-dense {L : Locale} (d : HasStronglyDensePoints L) : HasDensePoints L
+  => Join-univ \lam {a} p => d a <=∘ Join-univ \lam {b} (inP (x,xa)) => \case p xa \with {
+    | inP (_,e,_) => absurd e
+  }
 
 \lemma densePoints_cover {L : Locale} (d : HasStronglyDensePoints L) (a : L) : a <= L.pHat (∃ (x : CompleteFilter L) (x a))
   => meet-univ <=-refl (d a) <=∘ Join-ldistr>= <=∘ L.SJoin-univ \lam c => Join-cond c

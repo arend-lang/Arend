@@ -1,0 +1,40 @@
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.PartialOrder
+\import Set.Filter
+\import Topology.Locale
+\import Topology.Locale.LocaleProduct
+\import Topology.Locale.Points
+\import Topology.Locale.PreorderSite
+\open Cover
+\open CompleteLattice
+\open ProductLocale
+
+-- | The point of a product of locales given by a pair of points.
+\func prodSitePoint {X Y : Locale} (x : CompleteFilter X) (y : CompleteFilter Y) : SitePoint (site {X} {Y}) \cowith
+  | F s => \Sigma (x s.1) (y s.2)
+  | sitePoint-mono xs s<=s' => (x.filter-mono xs.1 s<=s'.1, y.filter-mono xs.2 s<=s'.2)
+  | sitePoint-top => inP ((top,top), (x.filter-top, y.filter-top))
+  | sitePoint-meet {s} {s'} xs xs' => inP ((s.1 ∧ s'.1, s.2 ∧ s'.2), (x.filter-meet xs.1 xs'.1, y.filter-meet xs.2 xs'.2), cover-inj (meet-left, meet-left) idp, cover-inj (meet-right, meet-right) idp)
+  | sitePoint-cover {s} {U} => \case \elim U, \elim __ \with {
+    | _, byLeft (V,s1<=V,idp) => \lam xs => \case x.filter-Join (x.filter-mono xs.1 s1<=V) \with {
+      | inP (w,Vw,xw) => inP ((w,s.2), SetIm-con Vw, (xw, xs.2))
+    }
+    | _, byRight (V,s2<=V,idp) => \lam xs => \case y.filter-Join (y.filter-mono xs.2 s2<=V) \with {
+      | inP (w,Vw,yw) => inP ((s.1,w), SetIm-con Vw, (xs.1, yw))
+    }
+  }
+
+-- | A product of locales with strongly dense points has strongly dense points.
+\lemma product-stronglyDense {X Y : Locale} (Xd : HasStronglyDensePoints X) (Yd : HasStronglyDensePoints Y) : HasStronglyDensePoints (ProductLocale X Y)
+  => hasStronglyDensePoints-site \lam s =>
+      cover-trans* (cover-basic {site {X} {Y}} {s} $ byLeft (\lam w => \Sigma (w <= s.1) (∃ (x : CompleteFilter X) (x w)), cover-to Xd, idp)) $ SetIm-elim {X} {_} {\lam t => Cover t _} {\lam w => (w, s.2)} {\lam w => \Sigma (w <= s.1) (∃ (x : CompleteFilter X) (x w))} \lam {u} (u<=s1, inP (x,xu)) =>
+        cover-trans* (cover-basic {site {X} {Y}} {(u, s.2)} $ byRight (\lam w => \Sigma (w <= s.2) (∃ (y : CompleteFilter Y) (y w)), cover-to Yd, idp)) $ SetIm-elim {Y} {_} {\lam t => Cover t _} {\lam w => (u, w)} {\lam w => \Sigma (w <= s.2) (∃ (y : CompleteFilter Y) (y w))} \lam {v} (v<=s2, inP (y,yv)) =>
+          cover-refl $ later $ inP (prodSitePoint x y, (x.filter-mono xu u<=s1, y.filter-mono yv v<=s2))
+  \where
+    \lemma cover-to {L : Locale} (d : HasStronglyDensePoints L) {a : L} : a <= Join (\lam w => \Sigma (w <= a) (∃ (x : CompleteFilter L) (x w)))
+      => meet-univ <=-refl (d a) <=∘ Join-ldistr>= <=∘ SJoin-univ (\lam {b} p => meet-left <=∘ Join-cond (<=-refl {L} {a}, p))
