@@ -24,6 +24,8 @@ public class LinearSolverMeta extends BaseAlgebraicMeta {
   @Dependency(name = "OrderedAAlgebra.coef_<")        ArendRef coefMapL;
   @Dependency(name = "OrderedAAlgebra.coef_<=")       ArendRef coefMapLE;
   @Dependency                                         CoreClassDefinition LinearlyOrderedSemiring;
+  @Dependency                                         CoreClassDefinition LinearlyOrderedAbMonoid;
+  @Dependency                                         CoreClassDefinition LinearlyOrderedAbGroup;
   @Dependency                                         CoreClassDefinition OrderedRing;
   @Dependency(name = "OrderedAddGroup.<")             ArendRef addGroupLess;
   @Dependency(name = "LinearOrder.<=")                ArendRef linearOrederLeq;
@@ -34,6 +36,10 @@ public class LinearSolverMeta extends BaseAlgebraicMeta {
   @Dependency                                         ArendRef LinearRatData;
   @Dependency                                         ArendRef LinearSemiringData;
   @Dependency                                         ArendRef LinearRingData;
+  @Dependency                                         ArendRef LinearAbMonoidData;
+  @Dependency                                         ArendRef LinearAbGroupData;
+  @Dependency(name = "LinearData.R")                  ArendRef linearDataCarrier;
+  @Dependency(name = "LinearData.vars")               ArendRef linearDataVars;
   @Dependency(name = "LinearData.solveContrProblem")  ArendRef solveContrProblem;
   @Dependency(name = "LinearData.solve<=Problem")     ArendRef solveLeqProblem;
   @Dependency(name = "LinearData.solve<Problem")      ArendRef solveLessProblem;

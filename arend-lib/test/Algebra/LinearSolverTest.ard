@@ -286,3 +286,41 @@
 \lemma intLessToLeq {x y : Int} (_ : x < y) : isuc x <= y => intarith
 
 \lemma intLessToLeq2 {a b : Nat} (_ : pos a < pos b) : pos (suc a) <= pos b => intarith
+
+-- Tests for linearly ordered abelian groups and monoids
+
+\lemma groupContrTest {G : LinearlyOrderedAbGroup} {a b c : G} (p : a < b) (q : b <= c) (s : c < a) : Empty
+  => linarith
+
+\lemma groupLeqTest {G : LinearlyOrderedAbGroup} {a b c : G} (p : a + b <= c) (q : 0 <= b) : a <= c
+  => linarith
+
+\lemma groupLessTest {G : LinearlyOrderedAbGroup} {a b c : G} (p : a - b < c) (q : b + b <= c - b) : a + b + b < c + c
+  => linarith
+
+\lemma groupEqTest {G : LinearlyOrderedAbGroup} {a b : G} (p : a <= b) (q : b <= a) : a + b = b + a
+  => linarith
+
+\lemma groupNegTest {G : LinearlyOrderedAbGroup} {a b : G} (p : negative a <= b) : 0 <= a + b
+  => linarith
+
+\lemma groupScaleTest {G : LinearlyOrderedAbGroup} {a b : G} (p : a + a + a < b + b + b) : a < b
+  => linarith
+
+\lemma groupMixedTest {G : LinearlyOrderedAbGroup} {a b : G} {x y : Real} (r : x < y) (p : a <= b) (q : b <= a) : a = b
+  => linarith
+
+\lemma groupIgnoreRealTest {G : LinearlyOrderedAbGroup} {a b : G} {x : Real} (r : x < x) (p : a < b) : Empty
+  => linarith
+
+\lemma monoidContrTest {M : LinearlyOrderedAbMonoid} {a b c : M} (p : a + b < c) (q : c <= b + a) : Empty
+  => linarith
+
+\lemma monoidLeqTest {M : LinearlyOrderedAbMonoid} {a b c d : M} (p : a <= b) (q : c < d) : a + c + a < b + d + b
+  => linarith
+
+\lemma monoidEqTest {M : LinearlyOrderedAbMonoid} {a b c : M} (p : a + c <= b + c) (q : b <= a) : a = b
+  => linarith
+
+\lemma ringStillRingTest {R : OrderedRing} {a b : R} (p : 2 * a < b) (q : b <= a + a) : Empty
+  => linarith

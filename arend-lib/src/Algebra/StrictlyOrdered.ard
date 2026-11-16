@@ -64,6 +64,25 @@
   \lemma <=_+-right {a b c d : E} (p : a < c) (q : b <= d) : a + b < c + d
     => <_+-left b p <∘l <=_+ <=-refl q
 
+  \lemma <_+-split {a b c d : E} (p : a + b < c + d) : a < c || b < d
+    => \case <-comparison (c + b) p \with {
+      | byLeft q => byLeft (<_+-cancel-right b q)
+      | byRight q => byRight (<_+-cancel-left c q)
+    }
+
+  \lemma *n_< {n : Nat} (n>0 : 0 NatOrder.< n) {a b : E} (a<b : a < b) : n *n a < n *n b \elim n
+    | suc n => <=_+-left (*n_<= (LinearOrder.<_<= a<b)) a<b
+
+  \lemma *n_>0 {n : Nat} (n>0 : 0 NatOrder.< n) {a : E} (a>0 : 0 < a) : 0 < n *n a
+    => transport (< _) *n_zro (*n_< n>0 a>0)
+
+  \lemma *n_<-cancel {n : Nat} {a b : E} (p : n *n a < n *n b) : a < b \elim n
+    | 0 => absurd (<-irreflexive p)
+    | suc n => \case <_+-split p \with {
+      | byLeft q => *n_<-cancel q
+      | byRight q => q
+    }
+
   \lemma <_+-dec {a b : E} (a+b>0 : 0 < a + b) : 0 < a || 0 < b
     => \case <-comparison a a+b>0 \with {
       | byLeft a>0 => byLeft a>0

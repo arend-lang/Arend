@@ -50,12 +50,24 @@ public class LinearSolver {
   }
 
   private CoreClassDefinition getInstanceClass() {
-    return meta.LinearlyOrderedSemiring;
+    return meta.LinearlyOrderedAbMonoid;
+  }
+
+  /**
+   * An instance is additive if it is not a semiring.
+   * Such instances are solved over Nat (for monoids) or Int (for groups) coefficients without a unit.
+   */
+  private boolean isAdditive(CoreExpression instance) {
+    CoreClassCallExpression classCall = Utils.getClassCall(instance.computeType());
+    return classCall == null || !classCall.getDefinition().isSubClassOf(meta.LinearlyOrderedSemiring);
   }
 
   private CoreExpression findInstance(CoreExpression type, boolean reportError) {
     type = Utils.solveInferenceVariable(type, typechecker);
-    TypedExpression instance = type == null ? null : typechecker.findInstance(getInstanceClass(), type, null, marker);
+    TypedExpression instance = type == null ? null : typechecker.findInstance(meta.LinearlyOrderedSemiring, type, null, marker);
+    if (instance == null && type != null) {
+      instance = typechecker.findInstance(getInstanceClass(), type, null, marker);
+    }
     if (instance == null) {
       if (reportError) errorReporter.report(new InstanceInferenceError(typechecker.getExpressionPrettifier(), getInstanceClass().getRef(), type, marker));
       return null;
@@ -127,22 +139,33 @@ public class LinearSolver {
       CoreExpression instance = relationData.defCall.getDefCallArguments().getFirst();
       TypedExpression typedInstance = instance.computeTyped();
       CoreExpression instanceType = typedInstance.getType().normalize(NormalizationMode.WHNF);
-      if (!(instanceType instanceof CoreClassCallExpression classCall && classCall.getDefinition().isSubClassOf(getInstanceClass()))) {
-        instance = findInstance(instanceType instanceof CoreClassCallExpression classCall ? Utils.getClassifyingExpression(classCall, typedInstance) : null, reportError);
-        if (instance == null) return null;
+      if (!(instanceType instanceof CoreClassCallExpression classCall && classCall.getDefinition().isSubClassOf(meta.LinearlyOrderedSemiring))) {
+        // Prefer a semiring instance on the same carrier; otherwise, use the additive instance itself
+        CoreExpression classifying = instanceType instanceof CoreClassCallExpression classCall ? Utils.getClassifyingExpression(classCall, typedInstance) : null;
+        classifying = classifying == null ? null : Utils.solveInferenceVariable(classifying, typechecker);
+        TypedExpression semiringInstance = classifying == null ? null : typechecker.findInstance(meta.LinearlyOrderedSemiring, classifying, null, marker);
+        if (semiringInstance != null) {
+          instance = semiringInstance.getExpression();
+        } else if (!(instanceType instanceof CoreClassCallExpression classCall && classCall.getDefinition().isSubClassOf(getInstanceClass()))) {
+          instance = findInstance(classifying, reportError);
+          if (instance == null) return null;
+        }
       }
       return new Hypothesis<>(expr, instance, Equation.Operation.LESS, relationData.leftExpr, relationData.rightExpr, BigInteger.ONE);
     }
 
     var pair = instanceCache.computeIfAbsent(relationData.defCall.getDefinition(), def -> {
-      DefImplInstanceSearchParameters parameters = new DefImplInstanceSearchParameters(def) {
-        @Override
-        protected List<CoreClassField> getRelationFields(CoreClassDefinition classDef) {
-          return classDef.isSubClassOf(getInstanceClass()) ? Arrays.asList(meta.less, meta.lessOrEquals) : Collections.emptyList();
-        }
-      };
-      TypedExpression instance = typechecker.findInstance(parameters, null, null, marker);
-      return instance == null ? null : new Pair<>(instance, parameters.getRelationField());
+      for (CoreClassDefinition instanceClass : Arrays.asList(meta.LinearlyOrderedSemiring, getInstanceClass())) {
+        DefImplInstanceSearchParameters parameters = new DefImplInstanceSearchParameters(def) {
+          @Override
+          protected List<CoreClassField> getRelationFields(CoreClassDefinition classDef) {
+            return classDef.isSubClassOf(instanceClass) ? Arrays.asList(meta.less, meta.lessOrEquals) : Collections.emptyList();
+          }
+        };
+        TypedExpression instance = typechecker.findInstance(parameters, null, null, marker);
+        if (instance != null) return new Pair<>(instance, parameters.getRelationField());
+      }
+      return null;
     });
     if (pair == null) {
       if (reportError) reportTypeError(type);
@@ -334,17 +357,27 @@ public class LinearSolver {
     }
   }
 
-  private ConcreteExpression makeData(CoreClassCallExpression classCall, ConcreteExpression instanceArg, RingKind kind, List<CoreExpression> valueList) {
+  private ConcreteExpression makeData(CoreClassCallExpression classCall, ConcreteExpression instanceArg, TermCompiler compiler, List<CoreExpression> valueList) {
+    RingKind kind = compiler.getKind();
     boolean isRing = kind != RingKind.NAT && kind != RingKind.NONE || classCall.getDefinition().isSubClassOf(meta.OrderedRing);
     ConcreteExpression varsArg = factory.ref(typechecker.getPrelude().getEmptyArrayRef());
     for (int i = valueList.size() - 1; i >= 0; i--) {
       varsArg = factory.app(factory.ref(typechecker.getPrelude().getArrayConsRef()), true, valueList.get(i) == null ? factory.ref(meta.zro.getRef()) : factory.core(valueList.get(i).computeTyped()), varsArg);
     }
-    return factory.newExpr(factory.classExt(factory.ref(kind == RingKind.RAT_ALG ? meta.LinearRatAlgebraData : kind == RingKind.RAT ? meta.LinearRatData : isRing ? meta.LinearRingData : meta.LinearSemiringData), Arrays.asList(factory.implementation(meta.RingDataCarrier, instanceArg), factory.implementation(meta.DataFunction, varsArg))));
+    ArendRef dataClass = compiler.isAdditive()
+      ? (compiler.isGroup() ? meta.LinearAbGroupData : meta.LinearAbMonoidData)
+      : kind == RingKind.RAT_ALG ? meta.LinearRatAlgebraData : kind == RingKind.RAT ? meta.LinearRatData : isRing ? meta.LinearRingData : meta.LinearSemiringData;
+    return factory.newExpr(factory.classExt(factory.ref(dataClass), Arrays.asList(factory.implementation(meta.linearDataCarrier, instanceArg), factory.implementation(meta.linearDataVars, varsArg))));
   }
 
-  private Equation<CompiledTerm> makeZeroLessOne(CoreExpression instance) {
-    return new Equation<>(instance, Equation.Operation.LESS, new CompiledTerm(null, Collections.emptyList(), Collections.emptySet()), new CompiledTerm(null, Collections.singletonList(BigInteger.ONE), Collections.emptySet()));
+  /**
+   * The first equation corresponds to the unit coefficient of the certificate.
+   * For additive instances, there is no unit, so we add a trivial equation which is never used.
+   */
+  private Equation<CompiledTerm> makeZeroLessOne(CoreExpression instance, TermCompiler compiler) {
+    return compiler.isAdditive()
+      ? new Equation<>(instance, Equation.Operation.LESS_OR_EQUALS, new CompiledTerm(null, Collections.emptyList(), Collections.emptySet()), new CompiledTerm(null, Collections.emptyList(), Collections.emptySet()))
+      : new Equation<>(instance, Equation.Operation.LESS, new CompiledTerm(null, Collections.emptyList(), Collections.emptySet()), new CompiledTerm(null, Collections.singletonList(BigInteger.ONE), Collections.emptySet()));
   }
 
   private void makeZeroLessVar(CoreExpression instance, TermCompiler compiler, List<Hypothesis<CompiledTerm>> result) {
@@ -454,7 +487,7 @@ public class LinearSolver {
         for (Hypothesis<CoreExpression> rule : rules) {
           if (rule.instance.compare(resultEquation.instance, CMP.EQ)) {
             newRules.add(rule);
-          } else {
+          } else if (!compiler.isAdditive() && !isAdditive(rule.instance)) {
             Hypothesis<CoreExpression> newRule = convertHypothesis(rule, resultEquation.instance, BaseTermCompiler.getTermCompilerKind(rule.instance, meta), compiler.getKind());
             if (newRule != null) {
               newRules.add(newRule);
@@ -467,7 +500,7 @@ public class LinearSolver {
         compileHypotheses(compiler, rules, compiledRules);
         List<List<Equation<CompiledTerm>>> rulesSet = new ArrayList<>(2);
         List<Equation<CompiledTerm>> compiledRules1 = new ArrayList<>();
-        compiledRules1.add(makeZeroLessOne(instance.getExpression()));
+        compiledRules1.add(makeZeroLessOne(instance.getExpression(), compiler));
         rulesSet.add(compiledRules1);
         CompiledTerms compiledResults = compiler.compileTerms(resultEquation.lhsTerm, resultEquation.rhsTerm);
         if (compiler.isNat() || !compiler.positiveVars.isEmpty()) {
@@ -514,7 +547,7 @@ public class LinearSolver {
           newCompiledRules.add(new Hypothesis<>(null, null, null, compiledResults.term1, compiledResults.term2, BigInteger.ONE));
           removeUnusedVariables(newCompiledRules, values);
           ConcreteAppBuilder builder = factory.appBuilder(factory.ref(function))
-            .app(makeData(classCall, factory.core(instance), compiler.getKind(), values), false)
+            .app(makeData(classCall, factory.core(instance), compiler, values), false)
             .app(equationsToConcrete(compiledRules))
             .app(compiledResults.term1.concrete())
             .app(compiledResults.term2.concrete());
@@ -541,7 +574,7 @@ public class LinearSolver {
               newRules.add(rule);
               found = true;
               break;
-            } else if (kind != RingKind.NAT) {
+            } else if (kind != RingKind.NAT && !isAdditive(rule.instance) && !isAdditive(newRules.getFirst().instance)) {
               RingKind newKind = BaseTermCompiler.getTermCompilerKind(newRules.getFirst().instance, meta);
               if (kind == RingKind.NONE && newKind != RingKind.RAT || newKind == RingKind.NONE || kind.ordinal() > newKind.ordinal() && !(newKind == RingKind.RAT && kind == RingKind.NONE)) {
                 found = true;
@@ -581,7 +614,7 @@ public class LinearSolver {
             makeZeroLessVar(instance.getExpression(), compiler, compiledEquations);
           }
           List<Equation<CompiledTerm>> compiledEquations1 = new ArrayList<>(compiledEquations.size() + 1);
-          compiledEquations1.add(makeZeroLessOne(instance.getExpression()));
+          compiledEquations1.add(makeZeroLessOne(instance.getExpression(), compiler));
           compiledEquations1.addAll(compiledEquations);
           List<BigInteger> solution = solveEquations(compiledEquations1, compiler.getNumberOfVariables());
           if (solution != null) {
@@ -593,7 +626,7 @@ public class LinearSolver {
             List<CoreExpression> values = compiler.getValues().getValues();
             removeUnusedVariables(compiledEquations, values);
             return tc.typecheck(factory.appBuilder(factory.ref(meta.solveContrProblem))
-              .app(makeData(classCall, factory.core(instance), compiler.getKind(), values), false)
+              .app(makeData(classCall, factory.core(instance), compiler, values), false)
               .app(equationsToConcrete(compiledEquations))
               .app(certificateToConcrete(solution, compiledEquations1))
               .app(witnessesToConcrete(compiledEquations))
