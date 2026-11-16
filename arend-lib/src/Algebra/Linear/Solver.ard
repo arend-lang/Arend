@@ -56,7 +56,7 @@
  -   Coefficients act on {R} via {act}; {unit} interprets the constant term.
  -}
 \class LinearData \noclassifying {C : Semiring} {R : LinearlyOrderedAbMonoid} (vars : Array R) {
-  \meta V => Fin vars.len
+  \protected \meta V => Fin vars.len
 
   | act : C -> R -> R
   | act-rdistr {c c' : C} {x : R} : act (c + c') x = act c x + act c' x
@@ -70,11 +70,11 @@
   | unit>=0 : 0 <= unit
   | unitPos : Bool
   | unitPos-correct : unitPos = true -> 0 < unit
-  | pnegative : R -> R
+  | lnegative : R -> R
   | negC : C -> C
-  | negC-lem (c : C) (x : R) : pnegative (act c x) = act (negC c) x
-  | pnegative-+ (x y : R) : pnegative (x + y) = pnegative x + pnegative y
-  | pnegative-zro : pnegative 0 = 0
+  | negC-lem (c : C) (x : R) : lnegative (act c x) = act (negC c) x
+  | pnegative-+ (x y : R) : lnegative (x + y) = lnegative x + lnegative y
+  | pnegative-zro : lnegative 0 = 0
   | coefR : C -> R
   | coefR-act (c : C) : coefR c = act c unit
   | mulT : RingTerm C (Fin vars.len) -> RingTerm C (Fin vars.len) -> R -> R -> R
@@ -83,12 +83,12 @@
   | isZeroC : C -> Bool
   | isZeroC-correct {c : C} : isZeroC c = true -> c = 0
 
-  \func interpret (t : RingTerm C V) : R \elim t
+  \protected \func interpret (t : RingTerm C V) : R \elim t
     | coef c => coefR c
     | var x => vars x
     | :zro => 0
     | :ide => unit
-    | :negative t => pnegative (interpret t)
+    | :negative t => lnegative (interpret t)
     | t :_+ s => interpret t + interpret s
     | t :* s => mulT t s (interpret t) (interpret s)
 
@@ -116,7 +116,7 @@
     | var _ => \case p
     | :zro => inv (coefR-act zro *> act-zro)
     | :ide => inv (coefR-act ide *> act-ide)
-    | :negative t => pmap pnegative (constOf-correct t p *> coefR-act _) *> negC-lem _ _ *> inv (coefR-act _)
+    | :negative t => pmap lnegative (constOf-correct t p *> coefR-act _) *> negC-lem _ _ *> inv (coefR-act _)
     | t :_+ s => \have q => and.toSigma p \in pmap2 (+) (constOf-correct t q.1 *> coefR-act _) (constOf-correct s q.2 *> coefR-act _) *> inv act-rdistr *> inv (coefR-act _)
     | t :* s => \have q => and.toSigma p \in mulT-left q.1 (constOf-correct t q.1) *> pmap (act _) (constOf-correct s q.2 *> coefR-act _) *> inv act-assoc *> inv (coefR-act _)
 
@@ -192,7 +192,7 @@
     | lzero l => lzero (lf-negate l)
     | lcons a l => lcons (negC a) (lf-negate l)
 
-  \lemma lf-negate-correct (l : LinForm C) (vs : Array R) : lf-interpret (lf-negate l) vs = pnegative (lf-interpret l vs) \elim l, vs
+  \lemma lf-negate-correct (l : LinForm C) (vs : Array R) : lf-interpret (lf-negate l) vs = lnegative (lf-interpret l vs) \elim l, vs
     | lnil, vs => inv pnegative-zro
     | lzero l, nil => inv pnegative-zro
     | lzero l, v :: vs => lf-negate-correct l vs
@@ -270,7 +270,7 @@
     | var x => inv (lf-unit-correct vars x)
     | :zro => idp
     | :ide => inv (zro-right *> act-ide)
-    | :negative t => pmap pnegative (lin-correct t p) *> inv (lf-negate-correct _ _)
+    | :negative t => pmap lnegative (lin-correct t p) *> inv (lf-negate-correct _ _)
     | t :_+ s => \have q => and.toSigma p \in pmap2 (+) (lin-correct t q.1) (lin-correct s q.2) *> inv (lf-add-correct _ _ _)
     | t :* s => \have | q => and.toSigma p
                       | q' => and.toSigma q.2
@@ -421,8 +421,8 @@
 
 \class LinearSemiringBase \extends LinearData {
   \override R : LinearlyOrderedSemiring
-  | alg : SemiringHom C R
-  | alg-comm (x : C) (y : R) : alg x * y = y * alg x
+  | \protected alg : SemiringHom C R
+  | \protected alg-comm (x : C) (y : R) : alg x * y = y * alg x
   | act c x => alg c * x
   | act-rdistr => pmap (* _) alg.func-+ *> rdistr
   | act-ldistr => ldistr
@@ -446,7 +446,7 @@
   | C => NatSemiring
   | alg => natMap
   | alg-comm => natComm
-  | pnegative x => x
+  | lnegative x => x
   | negC c => c
   | negC-lem c x => idp
   | pnegative-+ x y => idp
@@ -458,7 +458,7 @@
   \override C : Ring
   \override R : OrderedRing
   \override alg : RingHom C R
-  | pnegative => negative
+  | lnegative => negative
   | negC => negative
   | negC-lem c x => inv (pmap (* x) (AddGroupHom.func-negative {alg}) *> Ring.negative_*-left)
   | pnegative-+ x y => AddGroup.negative_+ *> +-comm
@@ -504,7 +504,7 @@
   | unit>=0 => <=-refl
   | unitPos => false
   | unitPos-correct p => \case p
-  | pnegative x => x
+  | lnegative x => x
   | negC c => c
   | negC-lem c x => idp
   | pnegative-+ x y => idp
@@ -533,7 +533,7 @@
   | unit>=0 => <=-refl
   | unitPos => false
   | unitPos-correct p => \case p
-  | pnegative => negative
+  | lnegative => negative
   | negC => IntRing.negative
   | negC-lem c x => LinearData.negative_*i
   | pnegative-+ x y => AddGroup.negative_+ *> +-comm
