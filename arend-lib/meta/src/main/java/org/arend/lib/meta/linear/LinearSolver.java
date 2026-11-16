@@ -314,7 +314,11 @@ public class LinearSolver {
     for (int i = certificate.size() - 1; i >= 1; i--) {
       result = factory.app(factory.ref(typechecker.getPrelude().getArrayConsRef()), true, factory.number(certificate.get(i).multiply(equations.get(i).getLCM())), result);
     }
-    return factory.tuple(result, factory.number(certificate.getFirst()), factory.ref(typechecker.getPrelude().getIdpRef()), factory.app(factory.ref(typechecker.getPrelude().getIdpRef()), factory.arg(factory.ref(meta.Bool), false), factory.arg(factory.ref(meta.true_), false)));
+    return factory.tuple(result, factory.number(certificate.getFirst()), boolIdp(), factory.ref(typechecker.getPrelude().getIdpRef()), boolIdp());
+  }
+
+  private ConcreteExpression boolIdp() {
+    return factory.app(factory.ref(typechecker.getPrelude().getIdpRef()), factory.arg(factory.ref(meta.Bool), false), factory.arg(factory.ref(meta.true_), false));
   }
 
   private <E> void removeUnusedVariables(List<Hypothesis<CompiledTerm>> hypotheses, List<E> values) {
