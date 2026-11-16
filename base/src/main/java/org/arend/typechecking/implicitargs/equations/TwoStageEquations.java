@@ -104,6 +104,24 @@ public class TwoStageEquations implements Equations {
     return new Pair<>(expr, totalSubst);
   }
 
+  /**
+   * Checks if the type of {@code expr} is a universe or {@code Fin n}.
+   * Avoids computing the type when the answer is determined by the shape of {@code expr} since computing the sort might be expensive.
+   */
+  private static boolean hasUniverseOrFinType(Expression expr) {
+    if (expr instanceof DataCallExpression || expr instanceof PathTypeExpression || expr instanceof UniverseExpression) {
+      return true;
+    }
+    if (expr instanceof LamExpression) {
+      return false;
+    }
+    if (expr instanceof FunCallExpression funCall && funCall.getDefinition().status().headerIsOK() && funCall.getDefinition().getResultType() instanceof UniverseExpression) {
+      return true;
+    }
+    Expression type = expr.getType().normalize(NormalizationMode.WHNF);
+    return type instanceof UniverseExpression || type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.FIN;
+  }
+
   @Override
   public boolean addEquation(Expression origExpr1, Expression origExpr2, Expression type, CMP cmp, Concrete.SourceNode sourceNode, InferenceVariable stuckVar1, InferenceVariable stuckVar2, boolean normalize) {
     origExpr1 = origExpr1.accept(new UnfoldVisitor(Collections.emptySet(), null, false, UnfoldVisitor.UnfoldFields.ONLY_PARAMETERS), null);
@@ -198,8 +216,7 @@ public class TwoStageEquations implements Equations {
       if (cmp == CMP.EQ) {
         InferenceReferenceExpression infRef = cType instanceof FieldCallExpression ? ((FieldCallExpression) cType).getArgument().cast(InferenceReferenceExpression.class) : null;
         if (infRef == null || !(infRef.getVariable() instanceof TypeClassInferenceVariable)) {
-          Expression typeType = cType.getType().normalize(NormalizationMode.WHNF);
-          boolean useOrig = !(typeType instanceof UniverseExpression || typeType instanceof DataCallExpression && ((DataCallExpression) typeType).getDefinition() == Prelude.FIN);
+          boolean useOrig = !hasUniverseOrFinType(cType);
           Expression solution = useOrig ? (inf1 != null ? origExpr2 : origExpr1) : cType;
           if (solve(cInf, solution, false, cInf instanceof TypeClassInferenceVariable, true, true) != SolveResult.NOT_SOLVED) {
             return true;
