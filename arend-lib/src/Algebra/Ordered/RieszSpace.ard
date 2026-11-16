@@ -122,6 +122,18 @@
       \protected \sfunc join (a b : A) : A
         => ratio 1 2 A.*q (a + b + (getAbs (a - b)).1)
     }
+
+  -- | A Riesz space structure on a {PosetQModule} in which every `x` has a least upper bound with `0`.
+  \func fromPart+ {A : PosetQModule} (part+ : \Pi (a : A) -> ∃ (b : A) (a <= b) (A.zro <= b) ∀ {c} (a <= c -> A.zro <= c -> b <= c)) : RieszSpace
+    => fromAbs \lam a => TruncP.map (part+ a) \lam s => (s.1 + s.1 - a,
+        A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.to>=0 $ <=_+ s.2 s.2,
+        transport (<= _) zro-left $ <=_+ (A.<=_+-positive s.3 s.3) <=-refl,
+        \lam {c} a<=c -a<=c =>
+          \let d => ratio 1 2 A.*q (a + c)
+          \in \have | dd : d + d = a + c => inv A.*q_*2 *> inv A.*q-assoc *> A.ide_*q
+                    | a<=d : a <= d => A.from>=0 $ A.<=_*n-div {2} (\case __) $ transport (A.zro <=) (equation.abGroup *> pmap (__ - (a + a)) (inv dd) *> equation.abGroup) (A.to>=0 a<=c)
+                    | d>=0 : A.zro <= d => A.<=_*n-div {2} (\case __) $ transport (A.zro <=) (equation.abGroup *> inv dd *> equation.abGroup) (A.to>=0 -a<=c)
+          \in <=_+ (<=_+ (s.4 a<=d d>=0) (s.4 a<=d d>=0)) <=-refl <=∘ =_<= (pmap (- a) dd *> equation.abGroup))
 }
 
 \record RieszSpaceHom \extends AddGroupHom, LatticeHom {

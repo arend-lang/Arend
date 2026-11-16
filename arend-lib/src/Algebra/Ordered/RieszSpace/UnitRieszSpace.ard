@@ -71,14 +71,14 @@
        \in =_<= *q-assoc <=∘ <=_*q-right (later linarith) t <=∘ =_<= (pmap (_ *q) (inv *q_*2) *> inv *q-assoc *> pmap (*q z) idp *> ide_*q)
 
   -- | The Archimedean property with rational bounds.
-  \lemma archimedean {a : E} (p : \Pi {r : Rat} -> 0 < r -> a <= r *q unit) : a <= 0
+  \lemma unit-archimedean-rat {a : E} (p : \Pi {r : Rat} -> 0 < r -> a <= r *q unit) : a <= 0
     => unit-archimedean \case \elim __ \with {
       | 0 => unit>=0
       | suc n => *n_<= {_} {suc n} (p {RatField.finv (suc n)} (RatField.finv>0 {suc n} (later linarith))) <=∘ =_<= (inv (*q_*n {_} {suc n}) *> inv *q-assoc *> pmap (*q unit) (RatField.finv-right $ natRat/=0 {suc n} suc/=0) *> ide_*q)
     }
 
   \lemma archimedean-<=s {a : E} (p : \Pi {r : Rat} -> 0 < r -> a - r *q unit <=s 0) : a <= 0
-    => archimedean \lam r>0 => from>=0 $ negative-to>=0 $ =_<= negative_- <=∘ <=s_<=0 (p r>0) <=-refl
+    => unit-archimedean-rat \lam r>0 => from>=0 $ negative-to>=0 $ =_<= negative_- <=∘ <=s_<=0 (p r>0) <=-refl
 
   -- | Shifting down by a multiple of the unit is compatible with `<=s`.
   \lemma <=s-shift {a b : E} (a<=b : a <=s b) {r : Rat} (r>0 : 0 < r) : ∃ (s : Rat) (0 < s) (a - r *q unit <=s b - s *q unit) \elim a<=b

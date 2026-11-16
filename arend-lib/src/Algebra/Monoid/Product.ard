@@ -15,6 +15,10 @@
   | zro-left => pmap2 (__,__) zro-left zro-left
   | zro-right => pmap2 (__,__) zro-right zro-right
   | +-assoc => pmap2 (__,__) +-assoc +-assoc
+  \where
+    \lemma *n-char {A B : AddMonoid} {n : Nat} {p : \Sigma A B} : n AddMonoid.*n {ProductAddMonoid A B} p = (n A.*n p.1, n B.*n p.2) \elim n
+      | 0 => idp
+      | suc n => pmap (+ {ProductAddMonoid A B} p) *n-char
 
 \instance ProductCMonoid (M N : CMonoid) : CMonoid
   | Monoid => ProductMonoid M N
