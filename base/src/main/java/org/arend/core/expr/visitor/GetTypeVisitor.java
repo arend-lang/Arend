@@ -4,6 +4,7 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.TypedBinding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
+import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.FunctionDefinition;
@@ -146,28 +147,56 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   public Expression getFieldCallType(ClassField field, ClassCallExpression type, Expression argument) {
-    if (type.getDefinition().getOverriddenType(field) != null) {
-      return type.getDefinition().getOverriddenType(field, type.getLevels()).applyExpression(argument);
+    return getFieldCallType(field, type.getDefinition(), type.getLevels(), type.getImplementedHere().keySet(), argument);
+  }
+
+  /**
+   * Computes the type of a field call with argument {@code argument} whose type is a class call to {@code classDef} with levels {@code levels} and implemented fields {@code implemented}.
+   */
+  private static Expression getFieldCallType(ClassField field, ClassDefinition classDef, Levels levels, Set<ClassField> implemented, Expression argument) {
+    if (classDef.getOverriddenType(field) != null) {
+      return classDef.getOverriddenType(field, levels).applyExpression(argument);
     }
-    return type.getFieldType(field, argument);
+    Expression type = classDef.getFieldType(field, levels, argument);
+    Level overrideLevel = classDef.getFieldLevelOverride(field, levels, implemented);
+    return overrideLevel == null ? type : type.replaceInfinityLevel(overrideLevel);
   }
 
   @Override
   public Expression visitFieldCall(FieldCallExpression expr, Void params) {
-    Expression type = expr.getArgument().accept(this, null);
-    if (myNormalizing) {
-      type = type.normalize(NormalizationMode.WHNF);
-    }
-    if (type instanceof ClassCallExpression classCall && classCall.getDefinition().isSubClassOf(expr.getDefinition().getParentClass())) {
-      if (expr.getDefinition().isInfiniteField()) {
-        Expression normExpr = NormalizeVisitor.INSTANCE.evalFieldCall(expr.getDefinition(), expr.getArgument());
-        if (normExpr != null) {
-          return normExpr.accept(this, null);
-        }
+    ClassDefinition classDef;
+    Levels levels;
+    Set<ClassField> implemented;
+    if (expr.getArgument() instanceof FunCallExpression funCall && funCall.getDefinition().status().headerIsOK() && funCall.getDefinition().getResultType() instanceof ClassCallExpression classCall) {
+      // The type of the field call depends only on the class, the levels, and the implemented fields of the type of the argument.
+      // So, we do not need to substitute the arguments of the function call into the implementations of its result type as visitFunCall does.
+      LevelSubstitution levelSubst = funCall.getLevelSubstitution();
+      classDef = classCall.getDefinition();
+      levels = levelSubst.isEmpty() ? classCall.getLevels() : classCall.getLevels().subst(levelSubst);
+      implemented = classCall.getImplementedHere().keySet();
+    } else {
+      Expression type = expr.getArgument().accept(this, null);
+      if (myNormalizing) {
+        type = type.normalize(NormalizationMode.WHNF);
       }
-      return getFieldCallType(expr.getDefinition(), classCall, expr.getArgument());
+      if (!(type instanceof ClassCallExpression classCall)) {
+        return new ErrorExpression();
+      }
+      classDef = classCall.getDefinition();
+      levels = classCall.getLevels();
+      implemented = classCall.getImplementedHere().keySet();
     }
-    return new ErrorExpression();
+
+    if (!classDef.isSubClassOf(expr.getDefinition().getParentClass())) {
+      return new ErrorExpression();
+    }
+    if (expr.getDefinition().isInfiniteField()) {
+      Expression normExpr = NormalizeVisitor.INSTANCE.evalFieldCall(expr.getDefinition(), expr.getArgument());
+      if (normExpr != null) {
+        return normExpr.accept(this, null);
+      }
+    }
+    return getFieldCallType(expr.getDefinition(), classDef, levels, implemented, expr.getArgument());
   }
 
   @Override
