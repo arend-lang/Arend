@@ -225,6 +225,24 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
   }
 
   public SortExpression computeSort(Map<ClassField,Expression> implemented, Binding thisBinding, Levels levels, LevelSubstitution levelSubstitution, boolean ignoreErrors, GetTypeVisitor visitor) {
+    return computeSort(implemented, thisBinding, levels, levelSubstitution, ignoreErrors, visitor, false);
+  }
+
+  /**
+   * Checks if a class call to this class is a proposition.
+   * Equivalent to {@code computeSort(implemented, thisBinding, levels, levelSubstitution, false, GetTypeVisitor.INSTANCE).isProp()}, but stops at the first field whose type is not a proposition.
+   */
+  public boolean isPropClassCall(Map<ClassField,Expression> implemented, Binding thisBinding, Levels levels, LevelSubstitution levelSubstitution) {
+    SortExpression sort = computeSort(implemented, thisBinding, levels, levelSubstitution, false, GetTypeVisitor.INSTANCE, true);
+    return sort != null && sort.isProp();
+  }
+
+  /**
+   * @param onlyProp  if true, returns the sort of the first field that is not a proposition instead of the sort of the class call.
+   *                  This does not change whether the result is a proposition since the maximum of sorts is a proposition if and only if all of them are,
+   *                  and truncation by the use level does not produce a proposition unless the use level is \Prop, which is checked first.
+   */
+  private SortExpression computeSort(Map<ClassField,Expression> implemented, Binding thisBinding, Levels levels, LevelSubstitution levelSubstitution, boolean ignoreErrors, GetTypeVisitor visitor, boolean onlyProp) {
     Levels idLevels = makeIdLevels();
     ReferenceExpression thisExpr1 = new ReferenceExpression(ExpressionFactory.parameter("this", new ClassCallExpression(this, levels, implemented)));
     Expression thisExpr2 = new ReferenceExpression(ExpressionFactory.parameter("this", new ClassCallExpression(this, levels)));
@@ -251,7 +269,13 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
         }
         if (fieldSort != null) {
           fieldSort = fieldSort.withoutCat();
-          sorts.add(levelSubstitution.isEmpty() ? fieldSort : fieldSort.subst(levelSubstitution));
+          if (!levelSubstitution.isEmpty()) {
+            fieldSort = fieldSort.subst(levelSubstitution);
+          }
+          if (onlyProp && !fieldSort.isProp()) {
+            return fieldSort;
+          }
+          sorts.add(fieldSort);
         }
       }
     }

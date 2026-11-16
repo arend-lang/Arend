@@ -161,6 +161,11 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Cor
     return myImplementations;
   }
 
+  @Override
+  public boolean isTypeProp() {
+    return getDefinition().isPropClassCall(myImplementations, myThisBinding, getLevels(), getLevelSubstitution());
+  }
+
   @NotNull
   @Override
   public Collection<? extends Map.Entry<? extends CoreClassField, ? extends CoreExpression>> getImplementations() {
