@@ -31,6 +31,7 @@ import java.util.function.Predicate;
 
 public class ClassDefinition extends TopLevelDefinition implements CoreClassDefinition {
   private final Set<ClassDefinition> mySuperClasses = new LinkedHashSet<>();
+  private volatile Set<ClassDefinition> myAncestors; // this class and all its superclasses (transitively); computed lazily, reset when superclasses change
   private final LinkedHashSet<ClassField> myNotImplementedFields = new LinkedHashSet<>();
   private final List<ClassField> myPersonalFields = new ArrayList<>();
   private final Map<ClassField, AbsExpression> myImplemented = new HashMap<>();
@@ -320,6 +321,30 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
 
   public void addSuperClass(ClassDefinition superClass) {
     mySuperClasses.add(superClass);
+    myAncestors = null;
+  }
+
+  private static void collectAncestors(ClassDefinition classDef, Set<ClassDefinition> result) {
+    if (result.add(classDef)) {
+      for (ClassDefinition superClass : classDef.mySuperClasses) {
+        collectAncestors(superClass, result);
+      }
+    }
+  }
+
+  @Override
+  public boolean isSubClassOf(@NotNull CoreClassDefinition classDefinition) {
+    if (this == classDefinition) {
+      return true;
+    }
+    if (!(classDefinition instanceof ClassDefinition)) return false;
+    Set<ClassDefinition> ancestors = myAncestors;
+    if (ancestors == null) {
+      ancestors = new HashSet<>();
+      collectAncestors(this, ancestors);
+      myAncestors = ancestors;
+    }
+    return ancestors.contains(classDefinition);
   }
 
   @NotNull
@@ -663,6 +688,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
 
   public void clear() {
     mySuperClasses.clear();
+    myAncestors = null;
     myNotImplementedFields.clear();
     myPersonalFields.clear();
     myImplemented.clear();
