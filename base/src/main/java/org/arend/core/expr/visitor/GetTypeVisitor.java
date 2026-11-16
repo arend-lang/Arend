@@ -115,14 +115,20 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       }
     }
 
-    List<DependentLink> defParams = new ArrayList<>();
-    Expression type = definition.getTypeWithParams(defParams, expr.getLevels());
-    assert arguments.size() == defParams.size();
+    if (!definition.status().headerIsOK()) {
+      return new ErrorExpression();
+    }
 
-    if (type instanceof UniverseExpression universe) {
-      return new UniverseExpression(universe.getSortExpression().subst(arguments, LevelSubstitution.EMPTY, this));
+    // Substitute the arguments and the levels into the result type in one pass,
+    // without copying the parameters as getTypeWithParams does.
+    assert arguments.size() == DependentLink.Helper.size(definition.getParameters());
+    LevelSubstitution levelSubst = expr.getLevelSubstitution();
+    Expression resultType = definition.getResultType();
+    if (resultType instanceof UniverseExpression universe) {
+      SortExpression sort = levelSubst.isEmpty() ? universe.getSortExpression() : universe.getSortExpression().subst(levelSubst);
+      return new UniverseExpression(sort.subst(arguments, LevelSubstitution.EMPTY, this));
     } else {
-      return type.subst(DependentLink.Helper.toSubstitution(defParams, arguments));
+      return resultType.subst(DependentLink.Helper.toSubstitution(definition.getParameters(), arguments), levelSubst);
     }
   }
 
