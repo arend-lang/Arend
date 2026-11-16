@@ -142,7 +142,19 @@ public class Level implements CoreLevel {
   }
 
   public Level subst(LevelSubstitution subst) {
-    if (myVars == null || myVars.isEmpty()) {
+    if (myVars == null || myVars.isEmpty() || subst.isEmpty()) {
+      return this;
+    }
+
+    // If no variable is substituted, the result equals this level, so we do not need to make a copy
+    boolean changed = false;
+    for (LevelVariable var : myVars.keySet()) {
+      if (subst.get(var) != null) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) {
       return this;
     }
 
