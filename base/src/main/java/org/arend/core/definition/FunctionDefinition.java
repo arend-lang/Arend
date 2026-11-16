@@ -55,6 +55,7 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
     this.myHasEnclosingClass = other.myHasEnclosingClass;
     this.myStrictParameters = other.myStrictParameters;
     this.myImplementedField = other.myImplementedField;
+    updateHasPropertyParameters();
   }
 
   @Override
@@ -141,6 +142,7 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
 
   public void setParameters(DependentLink parameters) {
     myParameters = parameters;
+    updateHasPropertyParameters();
   }
 
   @Override

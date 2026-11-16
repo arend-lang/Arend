@@ -48,6 +48,10 @@ public abstract class DefCallExpression extends Expression implements CoreDefCal
   }
 
   public void fixBoxes() {
+    if (!myDefinition.hasPropertyParameters()) {
+      return;
+    }
+
     List<Expression> args0 = getDefCallArguments();
     boolean needsBoxing = false;
     DependentLink param0 = myDefinition.getParameters();

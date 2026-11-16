@@ -97,6 +97,7 @@ public class Constructor extends CallableDefinition implements Function, BranchK
   public void setParameters(DependentLink parameters) {
     assert parameters != null;
     myParameters = parameters;
+    updateHasPropertyParameters();
   }
 
   @NotNull
