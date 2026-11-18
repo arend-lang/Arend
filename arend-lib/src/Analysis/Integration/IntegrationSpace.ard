@@ -1,8 +1,10 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
+\import Algebra.Group.SubGroup
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.QModule
@@ -241,7 +243,118 @@
         \lam Vo Vx => TruncP.map (xl Vo Vx) \lam s => (s.1, s.2, s.3)
 }
 
-\class CompleteRegularIntegrationSpace \extends RegularIntegrationSpace, CompleteIntegrationSpace
+\class CompleteRegularIntegrationSpace \extends RegularIntegrationSpace, CompleteIntegrationSpace {
+  -- | The subgroup of bounded elements.
+  \func boundedSub : SubAddGroup \this \cowith
+    | contains => IsBounded
+    | contains_zro => IsBounded_zro
+    | contains_+ => IsBounded_+
+    | contains_negative => IsBounded_negative
+
+  -- | The bounded part `X_b = {a | |a| ≤ M·1 for some M}` as an integration space.
+  \func boundedBase : IntegrationSpace \cowith
+    | AbGroup => IAbGroup boundedSub
+    | <= a b => a.1 <= b.1
+    | <=-refl => <=-refl
+    | <=-transitive => <=-transitive
+    | <=-antisymmetric p q => ext (<=-antisymmetric p q)
+    | <=_+ => <=_+
+    | join a b => (a.1 ∨ b.1, IsBounded_join a.2 b.2)
+    | join-left => join-left
+    | join-right => join-right
+    | join-univ => join-univ
+    | isDivisible a {n} n/=0 => inP ((RatField.finv n *q a.1, IsBounded_*q (RatField.finv>=0 fromNat_>=0) a.2),
+        ext $ AddMonoidHom.func-*n {IAddGroup.embed} *> inv *q_*n *> inv *q-assoc *> pmap (*q a.1) (RatField.finv-right $ natRat/=0 n/=0) *> ide_*q)
+    | trunc a => (trunc a.1, IsBounded_trunc a.2)
+    | trunc_zro>=0 => trunc_zro>=0
+    | trunc-bound => trunc-bound
+    | trunc-assoc => trunc-assoc
+    | integral a => integral a.1
+    | integral>=0 => integral>=0
+    | integral_+ => integral_+
+
+  \func baseInc : IntegrationSpaceHom boundedBase \this \cowith
+    | func a => a.1
+    | func-+ => idp
+    | func-<= p => p
+    | func-join>= => <=-refl
+    | func-trunc => idp
+    | func-integral => idp
+
+  -- | `IsBelow` in {E} lifts to the bounded part.
+  \lemma below-lift {a : boundedBase} {r : Rat} (p : IsBelow a.1 r) : TruncRieszSpace.IsBelow {boundedBase} a r
+    => (p.1, \case p.2 \with {
+      | inP (u,u>=0,uU,au) => inP ((u, IsUnderUnit-bounded u>=0 uU), u>=0, (ext uU : TruncRieszSpace.trunc {boundedBase} (u, IsUnderUnit-bounded u>=0 uU) = (u, IsUnderUnit-bounded u>=0 uU)), au <=∘ =_<= (inv (func-*q {_} {_} {baseInc})))
+    })
+
+  -- | An element whose multiples are all under the unit is non-positive.
+  \lemma infinitesimal<=0 {a : E} (h : \Pi (n : Nat) -> IsUnderUnit (n *n a)) : a <= 0
+    => \have | hp (n : Nat) : IsUnderUnit (n *n part+ a) => pmap trunc (inv part+_*n) *> trunc_join *> pmap2 (∨) (h n) trunc_zro *> part+_*n
+             | below {eta : Rat} (eta>0 : RatField.zro RatField.< eta) : IsBelow (part+ a) eta
+                => \have N/=0 : (rat_natBound (RatField.finv eta)).1 /= 0
+                          => \lam N=0 => RatField.<-irreflexive (RatField.<-transitive RatField.zro<ide (transport (\lam (k : Nat) => 1 RatField.< k RatField.*n eta) N=0 (rat_*n-unbounded eta>0)))
+                   \in IsBelow_*n-div N/=0 $ IsBelow-level (<=-less (rat_*n-unbounded eta>0)) (IsUnderUnit-below (*n_>=0 join-right) (hp _))
+             | small {d : Rat} (d>0 : RatField.zro RatField.< d) : integral (part+ a) RealAbGroup.< Real.fromRat d
+                => \case integral-trunc-small {_} {part+ a} join-right d>0 \with {
+                  | inP (eta,eta>0,h') => transport (\lam z => integral z RealAbGroup.< _) (<=-antisymmetric (truncAt-bound eta>0) (truncAt-greatest eta>0 (below eta>0) <=-refl)) h'
+                }
+             | I=0 : integral (part+ a) = RealAbGroup.zro => RealAbGroup.<=-antisymmetric (real_<=-eps \lam d>0 => transportInv (_ RealAbGroup.<) RealAbGroup.zro-left (small d>0)) (integral>=0 join-right)
+       \in join-left <=∘ =_<= (norm-ext (pmap integral (abs-ofPos join-right) *> I=0))
+
+  -- | The bounded part `X_b` of a complete regular integration space is a bounded integration space.
+  \func boundedSpace : BoundedIntegrationSpace \cowith
+    | IntegrationSpace => boundedBase
+    | trunc-bounded a => \case a.2 \with {
+      | inP (M,aM) => inP (M, below-lift aM)
+    }
+    | trunc-archimedean {a} p => infinitesimal<=0 \lam n => inv (pmap trunc (AddMonoidHom.func-*n {baseInc})) *> pmap __.1 (p n) *> AddMonoidHom.func-*n {baseInc}
+    | integral-trunc-small {f} f>=0 {eps} eps>0 => \case integral-trunc-small {_} {f.1} f>=0 eps>0 \with {
+      | inP (eta,eta>0,h) => inP (eta, eta>0, transportInv (RealAbGroup.< _) (pmap integral (TruncRieszSpaceHom.func-truncAt {baseInc})) h)
+    }
+
+  -- | The inclusion of the bounded part.
+  \func boundedInc : IntegrationSpaceHom boundedSpace \this \cowith
+    | func a => a.1
+    | func-+ => idp
+    | func-<= p => p
+    | func-join>= => <=-refl
+    | func-trunc => idp
+    | func-integral => idp
+
+  -- | A homomorphism from a bounded integration space lands in the bounded part.
+  \func bounded-lift {L : BoundedIntegrationSpace} (f : IntegrationSpaceHom L \this) : IntegrationSpaceHom L boundedSpace \cowith
+    | func x => (f x, f.func-IsBounded (L.trunc-bounded x))
+    | func-+ => ext f.func-+
+    | func-<= p => f.func-<= p
+    | func-join>= => f.func-join>=
+    | func-trunc => ext f.func-trunc
+    | func-integral => f.func-integral
+
+  -- | The bounded part is dense.
+  \lemma boundedInc-dense : boundedInc.IsDense
+    => \lam {y} Uo Uy => \case dist_open.1 Uo Uy \with {
+      | inP (eps,eps>0,sub) => \case integral-trunc-large {_} {part+ y} join-right (half>0 eps>0), integral-trunc-large {_} {part- y} join-right (half>0 eps>0) \with {
+        | inP (T,T>0,h1), inP (T',T'>0,h2) =>
+          \let | t => truncAt T (part+ y)
+               | t' => truncAt T' (part- y)
+          \in \have | le : abs (y - (t - t')) <= (part+ y - t) + (part- y - t')
+                        => =_<= (pmap abs (pmap (__ - _) (inv parts_-) *> equation.abGroup)) <=∘ abs_+ <=∘ =_<= (pmap2 (+) (abs-ofPos (to>=0 (truncAt-bound T>0))) (abs_negative *> abs-ofPos (to>=0 (truncAt-bound T'>0))))
+                    | le' => RealAbGroup.<=-transitive (integral-mono le) (=_<= {RealAbGroup} (integral_+ *> pmap2 (RealAbGroup.+) integral-hom.func-minus integral-hom.func-minus))
+             \in inP (t - t', inP ((t - t', IsBounded_+ (IsBounded-truncAt T>0 join-right) (IsBounded_negative (IsBounded-truncAt T'>0 join-right))), idp),
+                      sub $ real_<_U.1 $ transportInv (RealAbGroup.< _) (lnorm-ldist {\this} {y} {t - t'}) $ dense-arith le' h1 h2)
+      }
+    }
+}
+  \where {
+    \lemma half>0 {eps : Rat} (eps>0 : RatField.zro RatField.< eps) : RatField.zro RatField.< eps * ratio 1 2
+      => linarith
+
+    \lemma dense-arith {d s1 t1 s2 t2 : Real} {eps : Rat} (le : d <= (s1 RealAbGroup.+ RealAbGroup.negative t1) RealAbGroup.+ (s2 RealAbGroup.+ RealAbGroup.negative t2))
+                       (h1 : s1 RealAbGroup.< t1 RealAbGroup.+ Real.fromRat (eps * ratio 1 2)) (h2 : s2 RealAbGroup.< t2 RealAbGroup.+ Real.fromRat (eps * ratio 1 2)) : d RealAbGroup.< Real.fromRat eps
+      => \have e : Real.fromRat eps = Real.fromRat (eps * ratio 1 2) RealAbGroup.+ Real.fromRat (eps * ratio 1 2)
+                => pmap Real.fromRat (RatField.<=-antisymmetric linarith linarith) *> inv RealAbGroup.+-rat
+         \in linarith
+  }
 
 -- | (R1) and (R2) transfer along a dense homomorphism from a regular integration space.
 \func dense-regular {X : RegularIntegrationSpace} {Z : IntegrationSpace} (f : IntegrationSpaceHom X Z) (fd : f.IsDense) : RegularIntegrationSpace \cowith

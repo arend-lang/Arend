@@ -155,6 +155,48 @@
       | inP (u,_,uU,xu) => InUnderUnit_<= (xu <=∘ =_<= ide_*q) uU
     }
 
+  -- | {a} is bounded if `|a| ≤ M·1` for some `M`.
+  \protected \type IsBounded (a : E) : \Prop
+    => ∃ (M : Rat) (IsBelow (abs a) M)
+
+  \lemma IsBounded_<= {a b : E} (ab : abs a <= abs b) (p : IsBounded b) : IsBounded a
+    => \case p \with { | inP (M,bM) => inP (M, IsBelow_<= ab bM) }
+
+  \lemma IsBounded_zro : IsBounded 0
+    => inP (0, transportInv (IsBelow __ 0) abs_zro (IsBelow_zro RatField.<=-refl))
+
+  \lemma IsBounded_+ {a b : E} (p : IsBounded a) (q : IsBounded b) : IsBounded (a + b)
+    => \case p, q \with {
+      | inP (M,aM), inP (N,bN) => inP (M RatField.+ N, IsBelow_<= abs_+ (IsBelow_+ aM bN))
+    }
+
+  \lemma IsBounded_negative {a : E} (p : IsBounded a) : IsBounded (negative a)
+    => IsBounded_<= (=_<= abs_negative) p
+
+  \lemma abs_join<= {a b : E} : abs (a ∨ b) <= abs a + abs b
+    => transport2 (\lam x y => abs x <= y) (pmap (\lam z => a ∨ b - z) join-idemp *> minus_zro) (pmap2 (\lam u v => abs u + abs v) minus_zro minus_zro) (join-lip {_} {a} {b} {0} {0})
+
+  \lemma IsBounded_join {a b : E} (p : IsBounded a) (q : IsBounded b) : IsBounded (a ∨ b)
+    => \case p, q \with {
+      | inP (M,aM), inP (N,bN) => inP (M RatField.+ N, IsBelow_<= abs_join<= (IsBelow_+ aM bN))
+    }
+
+  \lemma IsBounded_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (p : IsBounded a) : IsBounded (q *q a)
+    => \case p \with { | inP (M,aM) => inP (q RatField.* M, transportInv (IsBelow __ _) (abs_*q>=0 q>=0) (IsBelow_*q q>=0 aM)) }
+
+  \lemma abs_trunc<= {a : E} : abs (trunc a) <= abs a
+    => transport2 (\lam x y => abs x <= abs y) (pmap (\lam z => trunc a - z) trunc_zro *> minus_zro) minus_zro (trunc-lipschitz {_} {a} {0})
+
+  \lemma IsBounded_trunc {a : E} (p : IsBounded a) : IsBounded (trunc a)
+    => IsBounded_<= abs_trunc<= p
+
+  \lemma IsUnderUnit-below {u : E} (u>=0 : 0 <= u) (uU : IsUnderUnit u) : IsBelow u 1
+    => (<=-less RatField.zro<ide, inP (u, u>=0, uU, =_<= (inv ide_*q)))
+
+  -- | Positive elements under the unit are bounded.
+  \lemma IsUnderUnit-bounded {u : E} (u>=0 : 0 <= u) (uU : IsUnderUnit u) : IsBounded u
+    => inP (1, transportInv (IsBelow __ 1) (abs-ofPos u>=0) (IsUnderUnit-below u>=0 uU))
+
   -- | Truncation at level `r > 0`: `τ_r x = r τ(x/r)`.
   \func truncAt (r : Rat) (x : E) : E
     => r *q trunc (RatField.finv r *q x)
@@ -164,6 +206,12 @@
 
   \lemma truncAt-below {r : Rat} (r>0 : 0 < r) {x : E} : IsBelow (truncAt r x) r
     => (<=-less r>0, inP (trunc (part+ (RatField.finv r *q x)), trunc-pos join-right, trunc-idemp, <=_*q-right (<=-less r>0) (trunc-mono join-left)))
+
+  \lemma truncAt-pos {r : Rat} (r>0 : 0 < r) {x : E} (x>=0 : 0 <= x) : 0 <= truncAt r x
+    => *q_>=0 (<=-less r>0) (trunc-pos (*q_>=0 (<=-less (RatField.finv>0 r>0)) x>=0))
+
+  \lemma IsBounded-truncAt {r : Rat} (r>0 : 0 < r) {x : E} (x>=0 : 0 <= x) : IsBounded (truncAt r x)
+    => inP (r, transportInv (IsBelow __ r) (abs-ofPos (truncAt-pos r>0 x>=0)) (truncAt-below r>0))
 
   -- | `τ_r x` is the greatest element below `x` and below `r·1`.
   \lemma truncAt-greatest {r : Rat} (r>0 : 0 < r) {x y : E} (p : IsBelow y r) (y<=x : y <= x) : y <= truncAt r x
@@ -336,6 +384,12 @@
 
   \lemma func-truncAt {r : Rat} {x : Dom} : func (TruncRieszSpace.truncAt r x) = TruncRieszSpace.truncAt r (func x)
     => func-*q *> pmap (r QModule.*q) (func-trunc *> pmap TruncRieszSpace.trunc func-*q)
+
+  \lemma func-IsBelow {x : Dom} {r : Rat} (p : TruncRieszSpace.IsBelow x r) : TruncRieszSpace.IsBelow (func x) r
+    => (p.1, TruncP.map p.2 \lam s => (func s.1, transport (__ <= func s.1) func-zro (func-<= s.2), inv func-trunc *> pmap func s.3, func-<= s.4 <=∘ =_<= func-*q))
+
+  \lemma func-IsBounded {x : Dom} (p : TruncRieszSpace.IsBounded x) : TruncRieszSpace.IsBounded (func x)
+    => \case p \with { | inP (M,xM) => inP (M, transport (TruncRieszSpace.IsBelow __ M) func-abs (func-IsBelow xM)) }
 } \where {
   \func id {X : TruncRieszSpace} : TruncRieszSpaceHom X X \cowith
     | RieszSpaceHom => RieszSpaceHom.id
