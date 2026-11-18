@@ -167,3 +167,32 @@
                     <=∘ RealField.<=_*_positive-left rb RealAbGroup.abs>=0)
           }
         }
+
+-- | The restriction of a function with a derivative on `[a,b]` to a subinterval `[x,y]` has the same derivative.
+\lemma hasDeriv-sub {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                    {x y : Set.Total (ClosedInterval a b)} (x<y : x.1 < y.1)
+  : \Sigma (d' : HasDeriv (intervalInc x.1 y.1) (\lam z => f (hasDeriv-sub.subPt z)))
+           (\Pi (z : Set.Total (ClosedInterval x.1 y.1)) -> deriv (interval-derivDense x<y) (\lam z => f (hasDeriv-sub.subPt z)) d' z 1 = deriv (interval-derivDense a<b) f d (hasDeriv-sub.subPt z) 1)
+  => (hasDeriv-uniform-iff x<y).2 \lam {eps} eps>0 => \case (hasDeriv-uniform-iff a<b).1 (d, \lam _ => idp) eps>0 \with {
+    | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {u} {v} => h {subPt u} {subPt v})
+  }
+  \where
+    -- | A point of `[x,y]` as a point of `[a,b]`.
+    \func subPt {a b : Real} {x y : Set.Total (ClosedInterval a b)} (z : Set.Total (ClosedInterval x.1 y.1)) : Set.Total (ClosedInterval a b)
+      => (z.1, (x.2.1 <=∘ z.2.1, z.2.2 <=∘ y.2.2))
+
+-- | The mean value inequality: if `e <= f'` on `[a,b]`, then `e (y - x) <= f y - f x` for `x < y`.
+\lemma mean-value-lower {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                        {e : Real} (f'>=e : \Pi (x : Set.Total (ClosedInterval a b)) -> e <= deriv (interval-derivDense a<b) f d x 1)
+                        {x y : Set.Total (ClosedInterval a b)} (x<y : x.1 < y.1)
+  : e * (y.1 - x.1) <= f y - f x
+  => \lam (p : f y - f x < e * (y.1 - x.1)) =>
+      \have | (d',d'e) => hasDeriv-sub a<b d x<y
+            | yx>0 : 0 < y.1 - x.1 => linarith
+      \in \case mean-value x<y d' (linarith : 0 < e * (y.1 - x.1) - (f y - f x)) \with {
+        | inP (z,q) =>
+          \have | t1 => RealAbGroup.abs>=neg <∘r q
+                | t2 : e * (y.1 - x.1) <= deriv (interval-derivDense x<y) (\lam z => f (hasDeriv-sub.subPt z)) d' z 1 * (y.1 - x.1)
+                    => RealField.<=_*_positive-left (rewrite d'e (f'>=e _)) (<=-less yx>0)
+          \in linarith
+      }

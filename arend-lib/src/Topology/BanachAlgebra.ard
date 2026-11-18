@@ -5,11 +5,9 @@
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.QModule
-\import Algebra.Ring
 \import Analysis.FuncLimit
 \import Analysis.Limit
 \import Arith.Nat
@@ -19,12 +17,9 @@
 \import Arith.Real.Root \using (sqrt \as sqrtR)
 \import Arith.Real.UpperReal
 \import Data.Or
-\import Set.Fin
 \import Function.Meta
 \import Logic
-\import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -44,6 +39,7 @@
 \import Topology.NormedRing
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product
+\import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
@@ -196,7 +192,7 @@
 }
 
 
-\class RealBanachCAlgebra \extends RealBanachAlgebra, CRing
+\class RealBanachCAlgebra \extends RealBanachAlgebra, SeparatedCoverCRing
 
 \instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra
   | BanachSpace => BanachCompletion X

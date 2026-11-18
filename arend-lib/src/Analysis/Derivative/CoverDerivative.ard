@@ -35,6 +35,7 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Interval
 \import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
 \import Topology.TopModule
 \import Topology.TopRing
 \import Topology.TopRing.Real
@@ -50,6 +51,28 @@
 -- | The cover space of arguments of a difference quotient.
 \func DerivSpace {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : CoverSpace (Set.Total (DerivSet i))
   => CoverSub {ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))} (DerivSet i)
+  \where {
+    -- | The projection `(x,y,h,a) ↦ (x,(y,(h,a)))`.
+    \protected \lemma proj {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X)
+      : CoverMap (DerivSpace i) (ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))) __.1
+      => CoverTransfer-map {Set.Total (DerivSet i)} {ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))} __.1
+
+    -- | The projection `(x,y,h,a) ↦ x`.
+    \lemma proj-x {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : CoverMap (DerivSpace i) S __.1.1
+      => ProductCoverSpace.proj1 {S} {ProductCoverSpace S (ProductCoverSpace R X)} CoverMap.∘ proj i
+
+    -- | The projection `(x,y,h,a) ↦ y`.
+    \lemma proj-y {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : CoverMap (DerivSpace i) S __.1.2.1
+      => ProductCoverSpace.proj1 {S} {ProductCoverSpace R X} CoverMap.∘ ProductCoverSpace.proj2 {S} {ProductCoverSpace S (ProductCoverSpace R X)} CoverMap.∘ proj i
+
+    -- | The projection `(x,y,h,a) ↦ h`.
+    \lemma proj-h {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : CoverMap (DerivSpace i) R __.1.2.2.1
+      => ProductCoverSpace.proj1 {R} {X} CoverMap.∘ ProductCoverSpace.proj2 {S} {ProductCoverSpace R X} CoverMap.∘ ProductCoverSpace.proj2 {S} {ProductCoverSpace S (ProductCoverSpace R X)} CoverMap.∘ proj i
+
+    -- | The projection `(x,y,h,a) ↦ a`.
+    \lemma proj-a {R : TopRing} {X : TopLModule R} {S : CoverSpace} (i : CoverMap S X) : CoverMap (DerivSpace i) X __.1.2.2.2
+      => ProductCoverSpace.proj2 {R} {X} CoverMap.∘ ProductCoverSpace.proj2 {S} {ProductCoverSpace R X} CoverMap.∘ ProductCoverSpace.proj2 {S} {ProductCoverSpace S (ProductCoverSpace R X)} CoverMap.∘ proj i
+  }
 
 -- | {f'} is a difference quotient of {f}: `h *c f' (x,y,h,a) = f y - f x`.
 \type IsDerivQuot {R : TopRing} {X : TopLModule R} {Y : TopLModule R} {S : CoverSpace} (i : CoverMap S X) (f : S -> Y) (f' : Set.Total (DerivSet i) -> Y) : \Prop
@@ -166,6 +189,23 @@
   => \let | P => ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))
           | t : CoverMap S P (\lam x => (x,(x,(R.zro,a)))) => ProductCoverSpace.tuple CoverMap.id (ProductCoverSpace.tuple CoverMap.id (ProductCoverSpace.tuple (CoverMap.const R.zro) (CoverMap.const a)))
      \in deriv-quot D f d CoverMap.∘ CoverTransfer-univ {S} {P} {Set.Total (DerivSet i)} (\lam x => ((x,(x,(R.zro,a))), deriv.zro-eq)) __.1 t
+
+-- | The derivative is the value of any difference quotient on the diagonal.
+\lemma deriv-char {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) {f : S -> Y} (d : HasDeriv i f)
+                  (f' : CoverMap (DerivSpace i) Y) (q : IsDerivQuot i f f') (x : S) (a : X) : deriv D f d x a = f' ((x,(x,(0,a))), deriv.zro-eq)
+  => deriv-unique D (deriv-quot D f d) f' deriv-quot.char q
+
+-- | A function with a difference quotient on an inhabited space is a cover map.
+\lemma hasDeriv-cover {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} {f : S -> Y} (d : HasDeriv i f) (x0 : S) : CoverMap S Y f \elim d
+  | inP (f',q) =>
+    \let | P => ProductCoverSpace S (ProductCoverSpace S (ProductCoverSpace R X))
+         | e (y : S) : i y = i x0 + R.ide *c (i y - i x0) => inv $ pmap (_ +) ide_*c *> equation.abGroup
+         | t : CoverMap S P (\lam y => (x0,(y,(R.ide,i y - i x0))))
+             => ProductCoverSpace.tuple (CoverMap.const x0) (ProductCoverSpace.tuple CoverMap.id (ProductCoverSpace.tuple (CoverMap.const R.ide)
+                  (subtract-uniform {X} CoverMap.∘ ProductCoverSpace.tuple i (CoverMap.const (i x0)))))
+         | g : CoverMap S Y (\lam y => f x0 + f' ((x0,(y,(R.ide,i y - i x0))), e y))
+             => +-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (f x0)) (f' CoverMap.∘ CoverTransfer-univ {S} {P} {Set.Total (DerivSet i)} (\lam y => ((x0,(y,(R.ide,i y - i x0))), e y)) __.1 t)
+    \in transport (CoverMap S Y) (ext \lam y => pmap (_ +) (inv ide_*c *> q _) *> equation.abGroup) g
 
 -- | Chains with an invertible increment are dense over an open subset.
 \lemma open-derivDense {R : NearSkewField} {X : TopLModule R} {U : Set X} (Uo : isOpen U) : IsDerivDense (OpenCoverSpace.func Uo)
