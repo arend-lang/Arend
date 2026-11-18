@@ -95,6 +95,14 @@
 \lemma CoverTransfer-univ {X Z : CoverSpace} {Y : \Set} (f : X -> Y) (g : Y -> Z) (fg : CoverMap X Z \lam x => g (f x)) : CoverMap X (CoverTransfer g) f \cowith
   | func-cover => func-cover {PrecoverTransfer-univ fg}
 
+-- | The map `CoverTransfer (g ∘ h) → CoverTransfer g` induced by {h}.
+\lemma CoverTransfer-comp {X Y : \Set} {Z : CoverSpace} (h : X -> Y) (g : Y -> Z) : CoverMap (CoverTransfer \lam x => g (h x)) (CoverTransfer g) h
+  => CoverTransfer-univ h g (CoverTransfer-map _)
+
+-- | {CoverTransfer-comp} is an embedding.
+\lemma CoverTransfer-comp-embedding {X Y : \Set} {Z : CoverSpace} (h : X -> Y) (g : Y -> Z) : CoverMap.IsEmbedding {CoverTransfer-comp h g}
+  => \lam Cc => cauchy-subset Cc \lam {W} (inP (U,CU,p)) => inP $ later (g ^-1 W, inP (U, CU, p), <=-refl)
+
 \lemma CoverTransfer_<=< {X : \Set} {Y : CoverSpace} {f : X -> Y} {x : X} {U : Set X} (x<=<U : single x <=< {CoverTransfer f} U)
   : ∃ (V : Set Y) (f ^-1 V ⊆ U) (single (f x) <=< V)
   => \case CoverSpace.interior {CoverTransfer f} {U} \with {

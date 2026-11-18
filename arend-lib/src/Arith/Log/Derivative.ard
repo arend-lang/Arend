@@ -43,15 +43,15 @@
 
 -- | `log` as a function on the positive reals.
 \func logPos (y : Set.Total RealPositive) : Real
-  => log-Real y.1 y.2
+  => log y.1 y.2
 
 -- | `log` is a section of `exp`.
 \lemma expPos-logPos (y : Set.Total RealPositive) : expPos (logPos y) = y
-  => ext (exp-log-Real y.1 y.2)
+  => ext (exp_log y.1 y.2)
 
 -- | `log` is monotone.
 \lemma logPos-mono {u v : Set.Total RealPositive} (u<=v : u.1 <= v.1) : logPos u <= logPos v
-  => log-Real-mono u.2 v.2 u<=v
+  => log-mono u.2 v.2 u<=v
 
 -- | The derivative of `exp` is locally bounded below by positive constants.
 \lemma exp-locallyPositive : IsLocallyPositive exp-real-hasDeriv
@@ -65,8 +65,8 @@
 
 -- | `log` is strictly monotone.
 \lemma log-Real-strict-mono {x y : Real} (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y) (x<y : x < y)
-  : log-Real x x>0 < log-Real y y>0
-  => Real-exp-reflect-< $ transport2 (<) (inv (exp-log-Real x x>0)) (inv (exp-log-Real y y>0)) x<y
+  : log x x>0 < log y y>0
+  => Real-exp-reflect-< $ transport2 (<) (inv (exp_log x x>0)) (inv (exp_log y y>0)) x<y
 
 -- | The positive reals are locally contained in closed intervals of positive reals.
 \lemma positive-locallyInterval : IsLocallyInterval RealPositive
@@ -86,7 +86,7 @@
 \lemma log-deriv (d : HasDeriv (OpenCoverSpace.func (realTop-open positive-open)) logPos) (y : Set.Total RealPositive)
   : deriv (open-derivDense (realTop-open positive-open)) logPos d y 1 = RealField.pinv y.1 y.2
   => \have e : y.1 RealField.* deriv (open-derivDense (realTop-open positive-open)) logPos d y 1 = RealField.ide
-           => pmap (\lam z => z RealField.* _) (inv (exp-real-deriv exp-real-hasDeriv (logPos y) *> exp-log-Real y.1 y.2))
+           => pmap (\lam z => z RealField.* _) (inv (exp-real-deriv exp-real-hasDeriv (logPos y) *> exp_log y.1 y.2))
               *> inverse-deriv positive-open positive-locallyInterval {expPos} expPos-logPos exp-locallyPositive logPos-mono d y
      \in inv RealField.ide-left *> pmap (\lam z => z RealField.* _) (inv (RealField.pinv-left y.2)) *> RealField.*-assoc *> pmap (RealField.pinv y.1 y.2 RealField.*) e *> RealField.ide-right
 
