@@ -4,6 +4,7 @@
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Extremes
 \import Arith.Real.UpperReal
 \import Data.Array
 \import Data.Or
@@ -26,6 +27,7 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Topology.UniformSpace
@@ -146,6 +148,17 @@
 \lemma totallyBoundedSet-subset {X : CoverSpace} {U V : Set X} (V<=U : V ⊆ U) (Utb : IsTotallyBoundedSet U) : IsTotallyBoundedSet V
   => totallyBoundedSet-char.2 \lam Cc => \case totallyBoundedSet-char.1 Utb Cc \with {
     | inP (D,DU,CD) => inP (D, \lam Vx => DU (V<=U Vx), CD)
+  }
+
+-- | A transferred cover structure is totally bounded if the map lands in a totally bounded set.
+\lemma transfer-totallyBounded {X : \Set} {Y : CoverSpace} {f : X -> Y} {U : Set Y} (Utb : IsTotallyBoundedSet U) (fU : \Pi (x : X) -> U (f x))
+  : IsTotallyBounded (CoverTransfer f)
+  => \lam Cc => \case totallyBoundedSet-char.1 Utb Cc \with {
+    | inP (D,DU,DC) => \case FinSet.finiteAC DC \with {
+      | inP g => inP (\lam j => (g j).1, \lam x => \case DU (fU x) \with {
+        | inP (j,Dfx) => inP (_, inP (j, idp), (g j).3 Dfx)
+      }, \lam j => (g j).2)
+    }
   }
 
 \lemma totallyBoundedSet-union {X : CoverSpace} {K L : Set X} (Ktb : IsTotallyBoundedSet K) (Ltb : IsTotallyBoundedSet L)
@@ -277,6 +290,66 @@
         }
     }
   }
+
+-- Nets of values and suprema
+
+{- | Values of a cover map on a totally bounded subset of a proper uniform space are totally bounded with net points among values:
+ -   for every Cauchy cover {E}, every value on {K} shares an element of {E} with one of finitely many values.
+ -}
+\lemma totallyBoundedSet-net {X : UniformSpace} (Xp : X.IsProperUniform) {K : Set X} (Ktb : IsTotallyBoundedSet K)
+                             {Y : CoverSpace} (f : CoverMap X Y) {E : Set (Set Y)} (Ec : isCauchy E)
+  : ∃ (l : Array X) ∀ {x : K} ∃ (j : Fin l.len) (W : E) (W (f x)) (W (f (l j)))
+  => \case totallyBounded-lebesgue Ktb (f.func-cover Ec) \with {
+    | inP (D,Du,DL) => \case totallyBoundedSet-uniform-char.1 Ktb (Xp Du) \with {
+      | inP (V,VK,VD) => \case FinSet.finiteAC (\lam j => (VD j).2) \with {
+        | inP g => inP (\lam j => (g j).1, \lam {x} Kx => \case VK Kx, DL Kx \with {
+          | inP (j,Vjx), inP (_, inP (W,EW,idp), h) =>
+            \have s => h (VD j).1 Vjx
+            \in inP (j, W, EW, s Vjx, s (g j).2)
+        })
+      }
+    }
+  }
+
+-- | The metric version of {totallyBoundedSet-net}: finite ε-nets of values.
+\lemma totallyBoundedSet-metric-net {X : UniformSpace} (Xp : X.IsProperUniform) {K : Set X} (Ktb : IsTotallyBoundedSet K)
+                                    {Y : ExPseudoMetricSpace} (f : CoverMap X Y) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (l : Array X) ∀ {x : K} ∃ (j : Fin l.len) ((dist (f x) (f (l j))).U eps)
+  => \case totallyBoundedSet-net Xp Ktb f (Y.makeCauchy $ Y.metricUniform {eps * ratio 1 2} linarith) \with {
+    | inP (l,h) => inP (l, \lam Kx => \case h Kx \with {
+      | inP (j, _, inP (c,idp), d1, d2) => inP (j, Y.halving-left d1 d2 linarith)
+    })
+  }
+
+-- | A cover map from an inhabited proper totally bounded uniform space to `ℝ` has a supremum (Bishop–Bridges, Ch. 2, Prop. 4.6).
+\lemma totallyBounded-hasSup {X : UniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) (x0 : X) (f : CoverMap X RealNormed)
+  : HasSup (\lam r => ∃ (x : X) (f x = r))
+  => makeSupTB {\lam r => ∃ (x : X) (f x = r)} {f x0} (inP (x0, idp)) (values-net Xp Xtb f)
+  \where
+    -- | The values of {f} admit finite ε-nets consisting of values.
+    \lemma values-net {X : UniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) (f : CoverMap X RealNormed) {eps : Real} (eps>0 : 0 < eps)
+      : ∃ (l : Array Real) (∀ (r : l) ∃ (x : X) (f x = r)) ∀ {r : \lam r => ∃ (x : X) (f x = r)} ∃ (y : l) (RealAbGroup.abs (r - y) < eps)
+      => \case real_<-char.1 eps>0 \with {
+        | inP (e,e>0,e<eps) => \case totallyBoundedSet-metric-net Xp {top} top-totallyBounded f (rat_real_<.2 e>0) \with {
+          | inP (l,h) => inP (\lam j => f (l j), \lam j => inP (_, idp), \lam {r} => \case \elim r, __ \with {
+            | _, inP (x,idp) => \case h {x} () \with {
+              | inP (j,d) => inP (j, real_<_U.2 d <∘ e<eps)
+            }
+          })
+        }
+      }
+      \where
+        \lemma top-totallyBounded : IsTotallyBoundedSet {X} top
+          => totallyBoundedSet-char.2 \lam Cc => \case Xtb Cc \with {
+            | inP (U,Uc,CU) => inP (U, \lam {x} _ => \case Uc x \with {
+              | inP (_, inP (j,idp), Ux) => inP (j, Ux)
+            }, CU)
+          }
+
+-- | A cover map from an inhabited proper totally bounded uniform space to `ℝ` has an infimum (Bishop–Bridges, Ch. 2, Prop. 4.6).
+\lemma totallyBounded-hasInf {X : UniformSpace} (Xp : X.IsProperUniform) (Xtb : IsTotallyBounded X) (x0 : X) (f : CoverMap X RealNormed)
+  : HasInf (\lam r => ∃ (x : X) (f x = r))
+  => makeInfTB {\lam r => ∃ (x : X) (f x = r)} {f x0} (inP (x0, idp)) (totallyBounded-hasSup.values-net Xp Xtb f)
 
 -- Locally uniform spaces
 

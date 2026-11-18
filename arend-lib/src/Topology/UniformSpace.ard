@@ -311,6 +311,15 @@
     => uniform-subset (s<=*-regular Cu) \lam {V} (inP (U,CU,p)) => inP $ later (U, CU, makeCauchy p)
 }
 
+-- | The map {f} is uniform with respect to the transferred structure.
+\func UniformTransfer-map {X : \Set} {Y : UniformSpace} (f : X -> Y) : UniformMap (UniformTransfer f) Y f \cowith
+  | func-uniform Eu => uniform-subset {Y} Eu \lam {V} EV => inP $ later (_, inP (V, EV, idp), <=-refl)
+
+-- | A uniform retract of a proper uniform space is proper.
+\lemma retract-proper {X Y : RegularPreuniformSpace} (Yp : Y.IsProperUniform) (f : UniformMap X Y) (r : UniformMap Y X) (rf : \Pi (x : X) -> r (f x) = x) : X.IsProperUniform
+  => \lam {C} Cu => uniform-subset (f.func-uniform $ Yp $ r.func-uniform Cu) \lam {_} (inP (_, (inP (U,CU,idp), inP (y,Uy)), idp)) =>
+      transportInv (\lam S => \Sigma (C S) (∃ S)) (ext \lam x => pmap U (rf x)) (CU, inP (r y, Uy))
+
 \func StronglyRegularUniformTransfer {X : \Set} {Y : StronglyRegularUniformSpace} (f : X -> Y) : StronglyRegularUniformSpace X \cowith
   | PreuniformSpace => UniformTransfer f
   | uniform-strongly-star Cu => \case uniform-strongly-star Cu \with {

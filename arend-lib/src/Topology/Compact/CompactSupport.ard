@@ -171,29 +171,20 @@
 
         \lemma hasSup {X : UniformSpace} (Xp : X.IsProperUniform) (f : CompactCoverMap X) : HasSup (Values f)
           => makeSupTB {Values f} (byLeft idp) \lam {eps} eps>0 => \case real_<-char.1 eps>0, f.support \with {
-            | inP (a,a>0,a<eps), inP (K,Ktb,fK) =>
-              \have a>0' : 0 < a => rat_real_<.2 a>0
-              \in \case totallyBoundedSet-uniform-char.1 Ktb (Xp $ (uniform Xp f).func-uniform $ RealNormed.metricUniform {a * ratio 1 2} linarith) \with {
-                | inP (D,DK,DC) => \case FinSet.finiteAC (\lam j => (DC j).2) \with {
-                  | inP g => inP (0 :: (\lam j => f (g j).1), \case \elim __ \with {
-                    | 0 => byLeft idp
-                    | suc j => byRight $ inP ((g j).1, idp)
-                  }, \lam {r} => \case \elim r, __ \with {
-                    | r, byLeft idp => inP (0, rewrite RealAbGroup.minus_zro (=_<= RealAbGroup.abs_zro <∘r eps>0))
-                    | r, byRight (inP (x,idp)) => \case real-located {abs (f x)} eps>0 \with {
-                      | byLeft fx>0 => \case DK (fK fx>0) \with {
-                        | inP (j,Djx) => \case (DC j).1 \with {
-                          | inP (_, inP (c,idp), p) =>
-                            \have | d1 => transport (__ (g j).1) p (g j).2
-                                  | d2 => transport (__ x) p Djx
-                            \in inP (suc j, rewrite RealAbGroup.abs_- $ real_<_U.2 (RealNormed.halving-left d1 d2 linarith) <∘ a<eps)
-                        }
-                      }
-                      | byRight fx<eps => inP (0, rewrite RealAbGroup.minus_zro fx<eps)
-                    }
-                  })
+            | inP (a,a>0,a<eps), inP (K,Ktb,fK) => \case totallyBoundedSet-metric-net Xp Ktb f (rat_real_<.2 a>0) \with {
+              | inP (l,h) => inP (0 :: (\lam j => f (l j)), \case \elim __ \with {
+                | 0 => byLeft idp
+                | suc j => byRight $ inP (l j, idp)
+              }, \lam {r} => \case \elim r, __ \with {
+                | r, byLeft idp => inP (0, rewrite RealAbGroup.minus_zro (=_<= RealAbGroup.abs_zro <∘r eps>0))
+                | r, byRight (inP (x,idp)) => \case real-located {abs (f x)} eps>0 \with {
+                  | byLeft fx>0 => \case h (fK fx>0) \with {
+                    | inP (j,d) => inP (suc j, real_<_U.2 d <∘ a<eps)
+                  }
+                  | byRight fx<eps => inP (0, rewrite RealAbGroup.minus_zro fx<eps)
                 }
-              }
+              })
+            }
           }
       }
 

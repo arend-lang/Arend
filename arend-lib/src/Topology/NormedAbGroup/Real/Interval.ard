@@ -4,7 +4,9 @@
  -   Constructively, a transferred cover structure need not agree with the transferred metric, but for `[a,b]` they agree
  -   since the inclusion has the uniform retraction {clamp}. Thus maps on `[a,b]²` with an ε-δ modulus are cover maps (see {square-map}),
  -   and cover maps on `[a,b]` and `[a,b]²` are bounded and uniformly continuous
- -   (see {interval-bounded}, {interval-uniform}, {square-bounded}, and {square-uniform}).
+ -   (see {interval-bounded}, {interval-uniform}, {square-bounded}, and {square-uniform}),
+ -   and the values of a cover map on `[a,b]` have a supremum and an infimum (see {interval-hasSup} and {interval-hasInf}),
+ -   since `[a,b]` is a proper totally bounded uniform space (see {IntervalUniformSpace}).
  -}
 
 \import Algebra.Group
@@ -13,7 +15,9 @@
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Extremes
 \import Arith.Real.Field
+\import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -37,6 +41,7 @@
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopRing.Real
 \import Topology.TopSpace
+\import Topology.UniformSpace
 
 -- | The closed interval `[a,b]`.
 \func ClosedInterval (a b : Real) : Set Real
@@ -183,3 +188,43 @@
             => transportInv (< _) (pmap (_ +) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) *> zro-right) d
       \in <=-less (hd {y} {x} {x} {x} d'))
   }
+
+-- | The closed interval `[a,b]` as a uniform space; its underlying cover space is {IntervalSpace}.
+\func IntervalUniformSpace (a b : Real) : UniformSpace (Set.Total (ClosedInterval a b))
+  => UniformTransfer {Set.Total (ClosedInterval a b)} {RealNormed} __.1
+
+-- | `[a,b]` is totally bounded.
+\lemma intervalUniform-totallyBounded {a b : Real} : IsTotallyBounded (IntervalUniformSpace a b)
+  => transfer-totallyBounded {_} {_} {__.1} interval-tb __.2
+  \where
+    \lemma interval-tb {a b : Real} : IsTotallyBoundedSet (ClosedInterval a b)
+      => \case Real.U-inh_>0 {b - a} \with {
+        | inP (R,Ru,R>0) => ballsTB-totallyBounded real-bounded-tb $ inP (a, R, \lam {x} (Kx : ClosedInterval a b x) =>
+          \have | x1 => Kx.1
+                | x2 => Kx.2
+                | u1 : a - x <= b - a => linarith
+                | u2 : negative (a - x) <= b - a => linarith
+          \in real_<_U.1 (RealAbGroup.join-univ u1 u2 <∘r real_<_U.2 Ru))
+      }
+
+-- | `[a,b]` is a proper uniform space.
+\lemma intervalUniform-proper {a b : Real} (a<=b : a <= b) : (IntervalUniformSpace a b).IsProperUniform
+  => retract-proper RealNormed.metricProperUniform (UniformTransfer-map __.1) (clampUniform a<=b) \lam x => clamp-in x.2
+  \where {
+    -- | {clamp} is a uniform map.
+    \lemma clampUniform {a b : Real} (a<=b : a <= b) : UniformMap RealNormed (IntervalUniformSpace a b) (clamp a<=b)
+      => UniformMap.lift (UniformTransfer-map __.1) (\lam Cu => Cu) (clampMetric a<=b)
+
+    \lemma clampMetric {a b : Real} (a<=b : a <= b) : UniformMetricMap RealNormed RealNormed (\lam t => (clamp a<=b t).1) \cowith
+      | func-dist-uniform {eps} eps>0 => inP (eps, eps>0, \lam {s} {s'} d => real_<_U.1 (clamp-dist {a} {b} {a<=b} {s} {s'} <∘r real_<_U.2 d))
+  }
+
+-- | The values of a cover map on `[a,b]` have a supremum (Bishop–Bridges, Ch. 2, Prop. 4.6).
+\lemma interval-hasSup {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed)
+  : HasSup (\lam r => ∃ (x : Set.Total (ClosedInterval a b)) (g x = r))
+  => totallyBounded-hasSup {IntervalUniformSpace a b} (intervalUniform-proper a<=b) intervalUniform-totallyBounded (a, (<=-refl, a<=b)) g
+
+-- | The values of a cover map on `[a,b]` have an infimum (Bishop–Bridges, Ch. 2, Prop. 4.6).
+\lemma interval-hasInf {a b : Real} (a<=b : a <= b) (g : CoverMap (IntervalSpace a b) RealNormed)
+  : HasInf (\lam r => ∃ (x : Set.Total (ClosedInterval a b)) (g x = r))
+  => totallyBounded-hasInf {IntervalUniformSpace a b} (intervalUniform-proper a<=b) intervalUniform-totallyBounded (a, (<=-refl, a<=b)) g
