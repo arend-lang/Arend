@@ -250,6 +250,23 @@
              | e2 : abs (a - 0) + abs (b - 0) = abs a + abs b => pmap2 (+) (pmap abs minus_zro) (pmap abs minus_zro)
        \in transport2 (<=) e1 e2 join-lip
 
+  \lemma meet-lip {a b c d : E} : abs ((a ∧ b) - (c ∧ d)) <= abs (a - c) + abs (b - d)
+    => \have neg-minus {x y : E} : negative (x - y) = negative x - negative y => equation.abGroup
+       \in =_<= (inv abs_negative *> pmap abs (neg-minus *> pmap2 (-) meet_negative meet_negative)) <=∘ join-lip
+            <=∘ =_<= (pmap2 (+) (pmap abs (inv neg-minus) *> abs_negative) (pmap abs (inv neg-minus) *> abs_negative))
+
+  -- | The clipping of {b} to `[-s,s]` is bounded by {s}.
+  \lemma clip-abs {b s : E} (s>=0 : 0 <= s) : abs ((b ∧ s) ∨ negative s) <= s
+    => join-univ (join-univ meet-right (negative<=0 s>=0 <=∘ s>=0)) (=_<= join_negative <=∘ meet-right <=∘ =_<= negative-isInv)
+
+  -- | Clipping {b} to `[-s,s]` does not increase its distance to an element {h} with `|h| ≤ s`.
+  \lemma clip-dist {h b s : E} (hs : abs h <= s) : abs (h - ((b ∧ s) ∨ negative s)) <= abs (h - b)
+    => \have | h<=s : h <= s => abs>=id <=∘ hs
+             | -s<=h : negative s <= h => negative_<= (abs>=neg <=∘ hs) <=∘ =_<= negative-isInv
+             | e : h = (h ∧ s) ∨ negative s => inv (pmap (__ ∨ _) (meet_<= h<=s) *> join-comm *> join_<= -s<=h)
+       \in =_<= (pmap (\lam z => abs (z - _)) e) <=∘ join-lip <=∘ <=_+ meet-lip <=-refl
+            <=∘ =_<= (pmap2 (+) (pmap (_ +) (pmap abs negative-right *> abs_zro) *> zro-right) (pmap abs negative-right *> abs_zro) *> zro-right)
+
   \func part+ (x : E) => x ∨ 0
 
   \func part- (x : E) => negative x ∨ 0

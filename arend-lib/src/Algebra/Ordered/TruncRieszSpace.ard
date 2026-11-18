@@ -220,6 +220,10 @@
           <=∘ meet-monotone <=-refl (=_<= (inv uU)) <=∘ trunc-assoc
     }
 
+  -- | `τ_r` is monotone in the level.
+  \lemma truncAt-level-mono {r r' : Rat} (r>0 : 0 < r) (r<=r' : r RatField.<= r') {x : E} : truncAt r x <= truncAt r' x
+    => truncAt-greatest (r>0 <∘l r<=r') (IsBelow-level r<=r' (truncAt-below r>0)) (truncAt-bound r>0)
+
   -- | `τ_r` is 1-Lipschitz.
   \lemma truncAt-lipschitz {r : Rat} (r>0 : 0 < r) {a b : E} : abs (truncAt r a - truncAt r b) <= abs (a - b)
     => =_<= (pmap abs (inv toRatModule.*c-ldistr_-) *> abs_*q>=0 (<=-less r>0)) <=∘ <=_*q-right (<=-less r>0) trunc-lipschitz

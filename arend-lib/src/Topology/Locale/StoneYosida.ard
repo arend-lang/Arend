@@ -26,7 +26,6 @@
 \import Topology.Locale
 \import Topology.Locale.PreorderSite
 \import Topology.Locale.Real
-\import Topology.Locale.Real.Lift
 \import Topology.Locale.Real.Functions
 \import Data.Or
 \open Cover
@@ -174,11 +173,11 @@
   }
 
 -- | The Yosida transform of `a`: a continuous real-valued function on the spectrum.
-\func yosida {A : UnitRieszSpace} (a : A) : LocaleHom (SYSpec A) RealLocale
+\sfunc yosida {A : UnitRieszSpace} (a : A) : LocaleHom (SYSpec A) RealLocale
   => LocaleSite.adjointMap (yosidaSite a)
 
 \lemma yosida_embed {A : UnitRieszSpace} {a : A} {I : Interval RatField} : yosida a (embed I) = sembed (cut a I.1 I.2)
-  => LocaleSite.adjointMap_embed
+  => pmap (\lam (f : LocaleHom (SYSpec A) RealLocale) => f (embed I)) (\peval yosida a) *> LocaleSite.adjointMap_embed
 
 \func gridPt (N d : Rat) (k : Nat) : Rat \elim k
   | 0 => negative N
@@ -224,13 +223,13 @@
 -- | The Yosida transform preserves addition.
 \lemma yosida-add {A : UnitRieszSpace} {a b : A} : yosida (a + b) = fadd (yosida a) (yosida b)
   => SiteLocale.func-equality_ext {RealPres RatField} {SYSpec A} {yosida (a + b)} {fadd (yosida a) (yosida b)} \lam I =>
-      yosida-cut *> <=-antisymmetric {SYSpec A} (le I) ge *> inv (liftMap-char {SYSpec A} {addMap} {yosida a} {yosida b} {I})
+      yosida-cut *> <=-antisymmetric {SYSpec A} (le I) ge *> inv (op2-char {SYSpec A} {addMap} {yosida a} {yosida b} {I})
   \where {
     \func RHS {A : UnitRieszSpace} (a b : A) (I : Interval RatField) : SYSpec A
-      => SJoin {SYSpec A} (\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)) (\lam bb => BoxIn addMap bb.1 bb.2 I)
+      => SJoin {SYSpec A} (\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)) (\lam bb => BoxIn2 addMap bb.1 bb.2 I)
 
     \lemma ge {A : UnitRieszSpace} {a b : A} {I : Interval RatField} : RHS a b I <= {SYSpec A} sembed (cut (a + b) I.1 I.2)
-      => SJoin-univ {SYSpec A} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)} {\lam bb => BoxIn addMap bb.1 bb.2 I} \lam {bb} bi =>\have c => BoxIn-add-char bi
+      => SJoin-univ {SYSpec A} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)} {\lam bb => BoxIn2 addMap bb.1 bb.2 I} \lam {bb} bi =>\have c => BoxIn-add-char bi
           \in =_<= {SYSpec A} (pmap2 (∧) (yosida-cut {A} {a} {bb.1}) (yosida-cut {A} {b} {bb.2}) *> sembed_meet) <=∘ sembed-mono (<=s-trans cut-add (<=_<=s (cut-mono c.1 c.2)))
 
     \lemma le {A : UnitRieszSpace} {a b : A} (I : Interval RatField) : sembed (cut (a + b) I.1 I.2) <= {SYSpec A} RHS a b I
@@ -250,7 +249,7 @@
                    <=∘ SJoin-univ {SYSpec A} {Rat} {\lam s => sembed X ∧ {SYSpec A} sembed (cut a (s - e) (s + e))} {\lam _ => \Sigma} (\lam {s} _ =>
                      =_<= sembed_meet <=∘ sembed-mono cut-sum-split <=∘ =_<= (inv sembed_meet)
                        <=∘ =_<= (inv (pmap2 (∧) (yosida-cut {A} {a} {s - e, s + e, linarith}) (yosida-cut {A} {b} {p - s - e, q - s + e, linarith})))
-                       <=∘ SJoin-cond {SYSpec A} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)} {\lam bb => BoxIn addMap bb.1 bb.2 I}
+                       <=∘ SJoin-cond {SYSpec A} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)} {\lam bb => BoxIn2 addMap bb.1 bb.2 I}
                                       {(s - e, s + e, linarith), (p - s - e, q - s + e, linarith)} (BoxIn-add {s - e, s + e, linarith} {p - s - e, q - s + e, linarith} {I} {r * ratio 1 2} linarith linarith linarith))
           }
   }
@@ -273,13 +272,13 @@
 -- | The Yosida transform preserves joins.
 \lemma yosida-join {A : UnitRieszSpace} {a b : A} : yosida (a ∨ b) = fjoin (yosida a) (yosida b)
   => SiteLocale.func-equality_ext {RealPres RatField} {SYSpec A} {yosida (a ∨ b)} {fjoin (yosida a) (yosida b)} \lam I =>
-      yosida-cut *> <=-antisymmetric {SYSpec A} (le I) ge *> inv (liftMap-char {SYSpec A} {joinMap} {yosida a} {yosida b} {I})
+      yosida-cut *> <=-antisymmetric {SYSpec A} (le I) ge *> inv (op2-char {SYSpec A} {joinMap} {yosida a} {yosida b} {I})
   \where {
     \func RHS {A : UnitRieszSpace} (a b : A) (I : Interval RatField) : SYSpec A
-      => SJoin {SYSpec A} (\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)) (\lam bb => BoxIn joinMap bb.1 bb.2 I)
+      => SJoin {SYSpec A} (\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)) (\lam bb => BoxIn2 joinMap bb.1 bb.2 I)
 
     \lemma ge {A : UnitRieszSpace} {a b : A} {I : Interval RatField} : RHS a b I <= {SYSpec A} sembed (cut (a ∨ b) I.1 I.2)
-      => SJoin-univ {SYSpec A} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)} {\lam bb => BoxIn joinMap bb.1 bb.2 I} \lam {bb} bi =>\have c => BoxIn-join-char bi
+      => SJoin-univ {SYSpec A} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)} {\lam bb => BoxIn2 joinMap bb.1 bb.2 I} \lam {bb} bi =>\have c => BoxIn-join-char bi
           \in =_<= {SYSpec A} (pmap2 (∧) (yosida-cut {A} {a} {bb.1}) (yosida-cut {A} {b} {bb.2}) *> sembed_meet) <=∘ sembed-mono (<=_<=s (cut-join <=∘ cut-mono c.1 c.2))
 
     \lemma le {A : UnitRieszSpace} {a b : A} (I : Interval RatField) : sembed (cut (a ∨ b) I.1 I.2) <= {SYSpec A} RHS a b I
@@ -295,7 +294,7 @@
                    | q => I.2 - r
                    | L => (negative (Na ∨ Nb) - 1) ∧ (p - 1)
                    | f => \lam (bb : \Sigma (Interval RatField) (Interval RatField)) => yosida a (embed bb.1) ∧ {SYSpec A} yosida b (embed bb.2)
-                   | P => \lam (bb : \Sigma (Interval RatField) (Interval RatField)) => BoxIn joinMap bb.1 bb.2 I
+                   | P => \lam (bb : \Sigma (Interval RatField) (Interval RatField)) => BoxIn2 joinMap bb.1 bb.2 I
               \in \have | L<=a : L <= negative Na - 1 => meet-left <=∘ later (<=_+ (RatField.negative_<= join-left) <=-refl)
                         | L<=b : L <= negative Nb - 1 => meet-left <=∘ later (<=_+ (RatField.negative_<= join-right) <=-refl)
                         | L<p : L < p => meet-right <∘r linarith
@@ -347,4 +346,23 @@
                                                | q : (1 : Rat) < I.2 => (ratPoint-embed.1 pq).2
           \in =_<= (inv (sembed-top {A} {_} {(RatField.ide - I.1) ∧ (I.2 - RatField.ide)} (<_meet-univ linarith linarith)
                   (meet-univ (<=_*q-left meet-left unit>=0 <=∘ =_<= (inv unit-minus)) (<=_*q-left meet-right unit>=0 <=∘ =_<= (inv scal-minus-unit)))))
+  }
+
+-- | The Yosida representation sends `r·1` to the constant function `r`.
+\lemma yosida-const {A : UnitRieszSpace} {r : Rat} : yosida (r *q unit {A}) = constFun r
+  => SiteLocale.func-equality_ext {RealPres RatField} {SYSpec A} {yosida (r *q unit)} {constFun r} \lam I =>
+      yosida-cut *> <=-antisymmetric {SYSpec A} (le I) (ge I)
+  \where {
+    \lemma le {A : UnitRieszSpace} {r : Rat} (I : Interval RatField) : sembed (cut (r *q unit {A}) I.1 I.2) <= {SYSpec A} constFun {SYSpec A} r (embed I)
+      => \case dec<_<= I.1 r, dec<_<= r I.2 \with {
+        | inl p, inl q => top-univ <=∘ Join-cond {SYSpec A} {\lam _ => (RealLocale.ratPoint r) (embed I)} {top} (ratPoint-embed.2 (p,q))
+        | inr p, _ => sembed-bottom.2 (meet-left <=∘ =_<= (inv toRatModule.*c-rdistr_-) <=∘ *q_<=0 (later linarith) unit>=0) <=∘ bottom-univ
+        | _, inr q => sembed-bottom.2 (meet-right <=∘ =_<= (inv toRatModule.*c-rdistr_-) <=∘ *q_<=0 (later linarith) unit>=0) <=∘ bottom-univ
+      }
+
+    \lemma ge {A : UnitRieszSpace} {r : Rat} (I : Interval RatField) : constFun {SYSpec A} r (embed I) <= {SYSpec A} sembed (cut (r *q unit {A}) I.1 I.2)
+      => (SYSpec A).pHat-char.2 \lam pq => \have | p : I.1 < r => (ratPoint-embed.1 pq).1
+                                               | q : r < I.2 => (ratPoint-embed.1 pq).2
+          \in =_<= (inv (sembed-top {A} {_} {(r - I.1) ∧ (I.2 - r)} (<_meet-univ linarith linarith)
+                  (meet-univ (<=_*q-left meet-left unit>=0 <=∘ =_<= toRatModule.*c-rdistr_-) (<=_*q-left meet-right unit>=0 <=∘ =_<= toRatModule.*c-rdistr_-))))
   }

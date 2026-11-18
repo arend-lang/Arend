@@ -32,6 +32,12 @@
 \class FullIntegrationSpace \extends BoundedIntegrationSpace, NormedAbGroup
   | unitBall-complete : IsCompleteCoverSpace (UnitBall \this)
 
+-- | The unit ball of a full space is a complete metric space.
+\func UnitBallComplete (L : FullIntegrationSpace) : CompleteMetricSpace (Set.Total (\lam (a : L) => L.IsUnderUnit (L.abs a))) \cowith
+  | PseudoMetricSpace => UnitBall L
+  | dist-ext p => ext (L.dist-ext p)
+  | isStronglyComplete => metric-stronglyComplete L.unitBall-complete
+
 -- | The unit ball is closed in a complete integration space.
 \lemma unitBall-closed {X : CompleteIntegrationSpace} : X.IsClosed (\lam (x : X) => X.IsUnderUnit (X.abs x))
   => \lam xl => equalizer-closed (X.trunc-metric ContMap.∘ X.abs-uniform) X.abs-uniform

@@ -1,0 +1,182 @@
+{- | Continuous functional calculus for real-valued functions on a locale:
+ -   `φ(f₁,…,fₙ)` for a cover map `φ : ℝⁿ → ℝ`. Identities between such expressions are proved at the points of `ℝⁿ`.
+ -}
+
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.QModule
+\import Algebra.Group.GroupHom
+\import Arith.Real.Field
+\import Arith.Rat
+\import Arith.Real
+\import Function.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Arith.Real.Field
+\import Set.Filter
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.Locale
+\import Topology.Locale.Real.Functions
+\import Topology.Locale.Real.Lift
+\import Topology.Locale.Real.RealPower
+\import Topology.Locale.Real.Value
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.LinBounded
+\open QModule (*q)
+
+-- | `φ(f₁,…,fₙ)`.
+\func fapply {Z : Locale} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (f : Array (RealFun Z) n) : RealFun Z
+  => liftMap phi LocaleHom.∘ tupleN f
+
+\lemma realValue-fapply {Z : Locale} {x : CompleteFilter Z} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {f : Array (RealFun Z) n}
+  : realValue x (fapply phi f) = phi (\lam j => realValue x (f j))
+  => realValue-lift
+
+\lemma fapply-comp {Y Z : Locale} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {f : Array (RealFun Z) n} {T : LocaleHom Y Z}
+  : fapply phi f LocaleHom.∘ T = fapply phi (\lam j => f j LocaleHom.∘ T)
+  => pmap (liftMap phi LocaleHom.∘) tupleN-comp
+
+-- | Functions on `ℝⁿ` are determined by their values.
+\lemma rn-ext {n : Nat} {P Q : RealFun (RnLocale n)} (p : \Pi (x : CompleteFilter (RnLocale n)) -> realValue x P = realValue x Q) : P = Q
+  => real-map-ext RnLocale-dense p
+
+\lemma fapply-tuple {Z : Locale} {n : Nat} {P : RealFun (RnLocale n)} {phi : CoverMap (RealN n) RealNormed} (p : liftMap phi = P) {f : Array (RealFun Z) n}
+  : fapply phi f = P LocaleHom.∘ tupleN f
+  => pmap (LocaleHom.∘ tupleN f) p
+
+-- | `(φ + ψ)(f) = φ(f) + ψ(f)`.
+\lemma fapply-add {Z : Locale} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed} (e : \Pi (x : Array Real n) -> chi x = phi x + psi x) {f : Array (RealFun Z) n}
+  : fapply chi f = fadd (fapply phi f) (fapply psi f)
+  => fapply-tuple {Z} {n} {fadd (liftMap phi) (liftMap psi)} (rn-ext \lam x => realValue-liftMap *> e _ *> inv (realValue-fadd {RnLocale n} {x} {liftMap phi} {liftMap psi} *> pmap2 (+) (realValue-liftMap {n} {x} {phi}) (realValue-liftMap {n} {x} {psi})))
+      *> fadd-comp {Z} {RnLocale n} {liftMap phi} {liftMap psi} {tupleN f}
+
+-- | `(φ ∨ ψ)(f) = φ(f) ∨ ψ(f)`.
+\lemma fapply-join {Z : Locale} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed} (e : \Pi (x : Array Real n) -> chi x = phi x ∨ psi x) {f : Array (RealFun Z) n}
+  : fapply chi f = fjoin (fapply phi f) (fapply psi f)
+  => fapply-tuple {Z} {n} {fjoin (liftMap phi) (liftMap psi)} (rn-ext \lam x => realValue-liftMap *> e _ *> inv (realValue-fjoin {RnLocale n} {x} {liftMap phi} {liftMap psi} *> pmap2 (∨) (realValue-liftMap {n} {x} {phi}) (realValue-liftMap {n} {x} {psi})))
+      *> fjoin-comp {Z} {RnLocale n} {liftMap phi} {liftMap psi} {tupleN f}
+
+-- | `(−φ)(f) = −φ(f)`.
+\lemma fapply-neg {Z : Locale} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed} (e : \Pi (x : Array Real n) -> chi x = negative (phi x)) {f : Array (RealFun Z) n}
+  : fapply chi f = fneg (fapply phi f)
+  => fapply-tuple {Z} {n} {fneg (liftMap phi)} (rn-ext \lam x => realValue-liftMap *> e _ *> inv (realValue-fneg {RnLocale n} {x} {liftMap phi} *> pmap negative (realValue-liftMap {n} {x} {phi})))
+      *> fneg-comp {Z} {RnLocale n} {liftMap phi} {tupleN f}
+
+-- | A constant map gives a constant function.
+\lemma fapply-const {Z : Locale} {n : Nat} {chi : CoverMap (RealN n) RealNormed} {c : Rat} (e : \Pi (x : Array Real n) -> chi x = Real.fromRat c) {f : Array (RealFun Z) n}
+  : fapply chi f = constFun c
+  => fapply-tuple {Z} {n} {constFun c} (rn-ext \lam x => realValue-liftMap *> e _ *> inv realValue-const) *> constFun-comp {Z} {RnLocale n} {c} {tupleN f}
+
+-- | `φ ≤ ψ` implies `φ(f) ≤ ψ(f)`.
+\lemma fapply-mono {Z : Locale} {n : Nat} {phi psi : CoverMap (RealN n) RealNormed} (le : \Pi (x : Array Real n) -> phi x <= psi x) {f : Array (RealFun Z) n}
+  : fapply phi f <= {RealFunRiesz Z} fapply psi f
+  => inv (fapply-join {Z} {n} {psi} {phi} {psi} (\lam x => inv (JoinSemilattice.join_<= (le x))))
+
+-- | `xⱼ(f) = fⱼ`.
+\lemma fapply-coord {Z : Locale} {n : Nat} {chi : CoverMap (RealN n) RealNormed} {j : Fin n} (e : \Pi (x : Array Real n) -> chi x = x j) {f : Array (RealFun Z) n}
+  : fapply chi f = f j
+  => fapply-tuple {Z} {n} {projN j} (rn-ext \lam x => realValue-liftMap *> e _) *> projN-tupleN
+
+-- | `(φ ∘ (ψ₁,…,ψₙ))(f) = φ(ψ₁(f),…,ψₙ(f))`.
+\lemma fapply-compose {Z : Locale} {n m : Nat} {chi : CoverMap (RealN m) RealNormed} {phi : CoverMap (RealN n) RealNormed} {psi : Array (CoverMap (RealN m) RealNormed) n}
+                      (e : \Pi (x : Array Real m) -> chi x = phi (\lam j => psi j x)) {f : Array (RealFun Z) m}
+  : fapply chi f = fapply phi (\lam j => fapply (psi j) f)
+  => fapply-tuple {Z} {m} {fapply phi (\lam j => liftMap (psi j))} (rn-ext \lam x => realValue-liftMap *> e _ *> pmap phi (exts \lam j => inv realValue-liftMap) *> inv realValue-fapply)
+       *> fapply-comp
+
+\lemma fneg-const {Z : Locale} {c : Rat} : fneg (constFun {Z} c) = constFun (negative c)
+  => pmap fneg (inv (constFun-comp {Z} {RnLocale 0} {c} {discreteLocale.terminalMap Z})) *> inv fneg-comp
+      *> pmap (LocaleHom.∘ discreteLocale.terminalMap Z) (rn-ext {0} \lam x => realValue-fneg *> pmap negative realValue-const *> RealAbGroup.negative-rat *> inv realValue-const)
+      *> constFun-comp
+
+-- | `(φ ∧ ψ)(f) = φ(f) ∧ ψ(f)`.
+\lemma fapply-meet {Z : Locale} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed} (e : \Pi (x : Array Real n) -> chi x = phi x ∧ psi x) {f : Array (RealFun Z) n}
+  : fapply chi f = MeetSemilattice.meet {RealFunRiesz Z} (fapply phi f) (fapply psi f)
+  => fapply-tuple {Z} {n} {MeetSemilattice.meet {RealFunRiesz (RnLocale n)} (liftMap phi) (liftMap psi)}
+      (rn-ext \lam x => realValue-liftMap *> e _ *> inv (realValue-fneg {RnLocale n} {x} {fjoin (fneg (liftMap phi)) (fneg (liftMap psi))}
+          *> pmap negative (realValue-fjoin {RnLocale n} {x} {fneg (liftMap phi)} {fneg (liftMap psi)}
+            *> pmap2 (∨) (realValue-fneg {RnLocale n} {x} {liftMap phi} *> pmap negative (realValue-liftMap {n} {x} {phi})) (realValue-fneg {RnLocale n} {x} {liftMap psi} *> pmap negative (realValue-liftMap {n} {x} {psi})))
+          *> RealAbGroup.join_negative *> pmap2 (∧) RealAbGroup.negative-isInv RealAbGroup.negative-isInv))
+      *> fneg-comp {Z} {RnLocale n} {fjoin (fneg (liftMap phi)) (fneg (liftMap psi))} {tupleN f}
+      *> pmap fneg (fjoin-comp {Z} {RnLocale n} {fneg (liftMap phi)} {fneg (liftMap psi)} {tupleN f}
+        *> pmap2 fjoin (fneg-comp {Z} {RnLocale n} {liftMap phi} {tupleN f}) (fneg-comp {Z} {RnLocale n} {liftMap psi} {tupleN f}))
+
+-- | Clipping `x ↦ (xⱼ ∧ M) ∨ (−M)`.
+\func clipMap {n : Nat} (M : Rat) (j : Fin n) : CoverMap (RealN n) RealNormed (\lam x => (x j ∧ M) ∨ negative (M : Real))
+  => real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (clipMap.meetPart M j) (CoverMap.const (negative (M : Real)))
+  \where
+    \func meetPart {n : Nat} (M : Rat) (j : Fin n) : CoverMap (RealN n) RealNormed (\lam x => x j ∧ M)
+      => real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple (ArrayCoverSpace.proj {n} {RealNormed} j) (CoverMap.const (M : Real))
+
+-- | A function bounded by `M` is unchanged by clipping at `M`.
+\lemma fapply-clip {Z : Locale} {n : Nat} {M : Rat} {j : Fin n} {f : Array (RealFun Z) n} (fM : LatticeAbGroup.abs {RealFunRiesz Z} (f j) <= {RealFunRiesz Z} constFun M)
+  : fapply (clipMap M j) f = f j
+  => fapply-join {Z} {n} {clipMap M j} {clipMap.meetPart M j} {CoverMap.const (negative (M : Real))} (\lam x => idp)
+      *> pmap2 fjoin (fapply-meet {Z} {n} {clipMap.meetPart M j} {ArrayCoverSpace.proj {n} {RealNormed} j} {CoverMap.const (M : Real)} (\lam x => idp)
+                       *> pmap2 (MeetSemilattice.meet {RealFunRiesz Z}) (fapply-coord (\lam x => idp)) (fapply-const {Z} {n} {CoverMap.const (M : Real)} {M} (\lam x => idp)))
+                     (fapply-const {Z} {n} {CoverMap.const (negative (M : Real))} {negative M} (\lam x => RealAbGroup.negative-rat))
+      *> pmap (fjoin __ (constFun (negative M))) (MeetSemilattice.meet_<= {RealFunRiesz Z} {f j} {constFun M} (upper fM))
+      *> JoinSemilattice.join-comm {RealFunRiesz Z} {f j} {constFun (negative M)} *> JoinSemilattice.join_<= {RealFunRiesz Z} {constFun (negative M)} {f j} (lower fM)
+  \where {
+    \lemma upper {Z : Locale} {g : RealFun Z} {M : Rat} (fM : LatticeAbGroup.abs {RealFunRiesz Z} g <= {RealFunRiesz Z} constFun M) : g <= {RealFunRiesz Z} constFun M
+      => Preorder.<=-transitive {RealFunRiesz Z} {g} {LatticeAbGroup.abs {RealFunRiesz Z} g} {constFun M} (LatticeAbGroup.abs>=id {RealFunRiesz Z} {g}) fM
+
+    \lemma lower {Z : Locale} {g : RealFun Z} {M : Rat} (fM : LatticeAbGroup.abs {RealFunRiesz Z} g <= {RealFunRiesz Z} constFun M) : constFun (negative M) <= {RealFunRiesz Z} g
+      => Preorder.<=-transitive {RealFunRiesz Z} {constFun (negative M)} {fneg (constFun M)} {g} (=_<= {RealFunRiesz Z} (inv fneg-const)) $ Preorder.<=-transitive {RealFunRiesz Z} {fneg (constFun M)} {fneg (fneg g)} {g}
+           (PosetAddGroup.negative_<= {RealFunRiesz Z} {fneg g} {constFun M} (Preorder.<=-transitive {RealFunRiesz Z} {fneg g} {LatticeAbGroup.abs {RealFunRiesz Z} g} {constFun M} (LatticeAbGroup.abs>=neg {RealFunRiesz Z} {g}) fM))
+           (=_<= {RealFunRiesz Z} (AddGroup.negative-isInv {RealFunRiesz Z} {g}))
+  }
+
+-- | Transfer: if `φ ≤ ψ` on the box `[−M,M]ⁿ` and `|fⱼ| ≤ M`, then `φ(f) ≤ ψ(f)`.
+\lemma fapply-transfer {Z : Locale} {n : Nat} {phi psi : CoverMap (RealN n) RealNormed} {M : Rat} (M>=0 : RatField.zro RatField.<= M)
+                       (le : \Pi (x : Array Real n) -> (\Pi (j : Fin n) -> RealAbGroup.abs (x j) <= M) -> phi x <= psi x)
+                       {f : Array (RealFun Z) n} (fM : \Pi (j : Fin n) -> LatticeAbGroup.abs {RealFunRiesz Z} (f j) <= {RealFunRiesz Z} constFun M)
+  : fapply phi f <= {RealFunRiesz Z} fapply psi f
+  => \have | cl {chi : CoverMap (RealN n) RealNormed} : fapply chi f = fapply (chi CoverMap.∘ ArrayCoverSpace.tuple (clipMap M)) f
+              => inv (fapply-compose {Z} {n} {n} {chi CoverMap.∘ ArrayCoverSpace.tuple (clipMap M)} {chi} {clipMap M} (\lam x => idp) *> pmap (fapply chi) (exts \lam j => fapply-clip (fM j)))
+     \in Preorder.<=-transitive {RealFunRiesz Z} (=_<= {RealFunRiesz Z} (cl {phi})) $ Preorder.<=-transitive {RealFunRiesz Z} (fapply-mono {Z} {n} {phi CoverMap.∘ ArrayCoverSpace.tuple (clipMap M)} {psi CoverMap.∘ ArrayCoverSpace.tuple (clipMap M)} (\lam x => le (\lam j => (x j ∧ M) ∨ negative (M : Real)) (\lam j => LatticeAbGroup.clip-abs {RealAbGroup} (rat_real_<=.1 M>=0)))) (=_<= {RealFunRiesz Z} (inv (cl {psi})))
+
+-- | Evaluation at a point is additive.
+\func realValueHom {Z : Locale} (x : CompleteFilter Z) : AddGroupHom (RealFunRiesz Z) RealAbGroup (realValue x) \cowith
+  | func-+ => realValue-fadd
+
+-- | Precomposition is additive.
+\func compHom {Y Z : Locale} (T : LocaleHom Y Z) : AddGroupHom (RealFunRiesz Z) (RealFunRiesz Y) (LocaleHom.∘ T) \cowith
+  | func-+ => fadd-comp
+
+\lemma realValue-*q {Z : Locale} {x : CompleteFilter Z} {q : Rat} {u : RealFun Z} : realValue x (q *q {RealFunRiesz Z} u) = Real.fromRat q RealField.* realValue x u
+  => func-*q {RealFunRiesz Z} {_} {realValueHom x} *> QModule.fromRatModule_*q
+
+-- | Rational multiples of constant functions.
+\lemma constFun-*q {Z : Locale} {q c : Rat} : q *q {RealFunRiesz Z} constFun c = constFun (q RatField.* c)
+  => pmap (q *q {RealFunRiesz Z} __) (inv (constFun-comp {Z} {RnLocale 0} {c} {discreteLocale.terminalMap Z}))
+      *> inv (func-*q {RealFunRiesz (RnLocale 0)} {RealFunRiesz Z} {compHom (discreteLocale.terminalMap Z)})
+      *> pmap (LocaleHom.∘ discreteLocale.terminalMap Z) (rn-ext {0} \lam x => realValue-*q *> pmap (Real.fromRat q RealField.*) realValue-const *> RealField.*-rat *> inv realValue-const)
+      *> constFun-comp
+
+-- | `φ ↦ φ(f)` is a Riesz homomorphism `C₀^lin(ℝⁿ) → C(Z)`.
+\func fapplyHom {Z : Locale} {n : Nat} (f : Array (RealFun Z) n) : RieszSpaceHom (LinBoundedRiesz n) (RealFunRiesz Z) \cowith
+  | func phi => fapply phi f
+  | func-+ => fapply-add (\lam x => idp)
+  | func-<= p => fapply-mono p
+  | func-join => fapply-join (\lam x => idp)
+
+\lemma constFun-add {Z : Locale} {a b : Rat} : fadd (constFun {Z} a) (constFun b) = constFun (a RatField.+ b)
+  => pmap2 fadd (inv (constFun-comp {Z} {RnLocale 0} {a} {discreteLocale.terminalMap Z})) (inv (constFun-comp {Z} {RnLocale 0} {b} {discreteLocale.terminalMap Z})) *> inv (fadd-comp {Z} {RnLocale 0} {constFun a} {constFun b} {discreteLocale.terminalMap Z})
+      *> pmap (LocaleHom.∘ discreteLocale.terminalMap Z) (rn-ext {0} {fadd (constFun a) (constFun b)} {constFun (a RatField.+ b)} \lam x => realValue-fadd {RnLocale 0} {x} {constFun a} {constFun b} *> pmap2 (+) realValue-const realValue-const *> RealAbGroup.+-rat *> inv realValue-const)
+      *> constFun-comp
+
+\lemma constFun-join {Z : Locale} {a b : Rat} : fjoin (constFun {Z} a) (constFun b) = constFun (a RatField.∨ b)
+  => pmap2 fjoin (inv (constFun-comp {Z} {RnLocale 0} {a} {discreteLocale.terminalMap Z})) (inv (constFun-comp {Z} {RnLocale 0} {b} {discreteLocale.terminalMap Z})) *> inv (fjoin-comp {Z} {RnLocale 0} {constFun a} {constFun b} {discreteLocale.terminalMap Z})
+      *> pmap (LocaleHom.∘ discreteLocale.terminalMap Z) (rn-ext {0} {fjoin (constFun a) (constFun b)} {constFun (a RatField.∨ b)} \lam x => realValue-fjoin {RnLocale 0} {x} {constFun a} {constFun b} *> pmap2 (∨) realValue-const realValue-const *> RealAbGroup.join-rat *> inv realValue-const)
+      *> constFun-comp
+
+\lemma constFun-abs {Z : Locale} {r : Rat} : LatticeAbGroup.abs {RealFunRiesz Z} (constFun r) = constFun (RatField.abs r)
+  => pmap (fjoin (constFun r)) fneg-const *> constFun-join

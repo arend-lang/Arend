@@ -1,0 +1,145 @@
+{- | The Yosida representation `a ↦ â` of a bounded truncated Riesz space `L`:
+ -   `â` is the Yosida transform of `(a,0)` in the unitization of `L`, a real-valued function on its spectrum.
+ -   The representation reflects the order, `φ(f̂)` is dominated by some `ŝ`, and dominated functions are approximated by elements of `L`.
+ -}
+
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.RieszSpace.Unitization
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.QModule
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Order.StrictOrder
+\import Order.Biordered
+\import Set.Fin
+\import Topology.NormedAbGroup.Real.LinBounded
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.Locale
+\import Topology.Locale.Real.FunctionalCalculus
+\import Topology.Locale.Real.Functions
+\import Topology.Locale.StoneYosida
+\import Topology.Locale.StoneYosida.Density
+\open LatticeAbGroup
+\open QModule
+\open PosetQModule
+
+-- | The Stone--Yosida spectrum of the unitization of {L}.
+\func ySpec (L : BoundedTruncRieszSpace) : Locale
+  => SYSpec (UnitizationRiesz L)
+
+\func RieszSpaceRC (L : BoundedTruncRieszSpace) => RealFunRiesz (ySpec L)
+
+-- | The Yosida transform `a ↦ (a,0)^` of {L}.
+\func rieszSpaceRC {L : BoundedTruncRieszSpace} : RieszSpaceHom L (RieszSpaceRC L)
+  => yosidaHom (UnitizationRiesz L) RieszSpaceHom.∘ unitization-inc
+
+-- | `(τ a)^ = â ∧ 1`.
+\lemma yhat-trunc {L : BoundedTruncRieszSpace} {a : L} : rieszSpaceRC (L.trunc a) = meet {RieszSpaceRC L} (rieszSpaceRC a) (constFun 1)
+  => pmap (yosida {UnitizationRiesz L}) unitization-trunc *> RieszSpaceHom.func-meet {yosidaHom (UnitizationRiesz L)} *> pmap (meet {RieszSpaceRC L} (rieszSpaceRC a)) yosida-unit
+
+-- | `(τ_η a)^ = â ∧ η`.
+\lemma yhat-truncAt {L : BoundedTruncRieszSpace} {eta : Rat} (eta>0 : RatField.zro RatField.< eta) {x : L}
+  : rieszSpaceRC (L.truncAt eta x) = meet {RieszSpaceRC L} (rieszSpaceRC x) (constFun eta)
+  => func-*q {L} {RieszSpaceRC L} {rieszSpaceRC} *> pmap (eta *q {RieszSpaceRC L}) (yhat-trunc *> pmap (meet {RieszSpaceRC L} __ (constFun 1)) (func-*q {L} {RieszSpaceRC L} {rieszSpaceRC}))
+      *> RieszSpace.meet_*q {RieszSpaceRC L} (RatField.<=-less eta>0)
+      *> pmap2 (meet {RieszSpaceRC L}) (*q-finv-cancel {RieszSpaceRC L} (RatField.>_/= eta>0)) (constFun-*q *> pmap constFun RatField.ide-right)
+
+-- | `x ≤ r·1` in {L} implies `x̂ ≤ r`.
+\lemma yhat-below {L : BoundedTruncRieszSpace} {x : L} {r : Rat} (p : L.IsBelow x r) : rieszSpaceRC x <= {RieszSpaceRC L} constFun r
+  => \case p.2 \with {
+    | inP (u,u>=0,uU,xu) =>
+      \have | uu : unitization-inc u <= {UnitizationRiesz L} (L.zro, 1)
+                 => Preorder.<=-transitive {UnitizationRiesz L} {unitization-inc u} {meet {UnitizationRiesz L} (unitization-inc u) (L.zro, 1)} {L.zro, 1}
+                      (=_<= {UnitizationRiesz L} (pmap unitization-inc (inv uU) *> unitization-trunc)) (meet-right {UnitizationRiesz L} {unitization-inc u} {L.zro, 1})
+            | xr : unitization-inc x <= {UnitizationRiesz L} r *q {UnitizationRiesz L} (L.zro, 1)
+                 => Preorder.<=-transitive {UnitizationRiesz L} {unitization-inc x} {r *q {UnitizationRiesz L} unitization-inc u} {r *q {UnitizationRiesz L} (L.zro, 1)}
+                      (Preorder.<=-transitive {UnitizationRiesz L} {unitization-inc x} {unitization-inc (r *q u)} {r *q {UnitizationRiesz L} unitization-inc u}
+                        (unitization-inc.func-<= xu) (=_<= {UnitizationRiesz L} (func-*q {L} {UnitizationRiesz L} {unitization-inc})))
+                      (<=_*q-right {UnitizationRiesz L} p.1 uu)
+      \in Preorder.<=-transitive {RieszSpaceRC L} (RieszSpaceHom.func-<= {yosidaHom (UnitizationRiesz L)} xr) (=_<= {RieszSpaceRC L} yosida-const)
+  }
+
+-- | The Yosida representation of {L} reflects the order.
+\lemma yhat-reflects {L : BoundedTruncRieszSpace} {a b : L} (p : rieszSpaceRC a <= {RieszSpaceRC L} rieszSpaceRC b) : a <= b
+  => \have q : constFun 0 <= {RieszSpaceRC L} rieszSpaceRC (b - a)
+         => Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (inv (AddGroup.negative-right {RieszSpaceRC L}))) (Preorder.<=-transitive {RieszSpaceRC L} (<=_+ {RieszSpaceRC L} p (<=-refl {RieszSpaceRC L})) (=_<= {RieszSpaceRC L} (inv rieszSpaceRC.func-minus)))
+     \in L.from>=0 $ L.negative-to>=0 $ =_<= (inv L.zro-left) <=∘ L.IsBelow<=0 (yosida-reflects q) (=_<= (RatField.negative-right {RatField.zro}))
+
+\lemma yhat-inj {L : BoundedTruncRieszSpace} {a b : L} (p : rieszSpaceRC a = rieszSpaceRC b) : a = b
+  => <=-antisymmetric (yhat-reflects (=_<= {RieszSpaceRC L} p)) (yhat-reflects (=_<= {RieszSpaceRC L} (inv p)))
+
+-- | `φ(f̂₁,…,f̂ₙ)` is dominated by `ŝ` for some `s ∈ L`.
+\lemma fapply-dominated {L : BoundedTruncRieszSpace} {n : Nat} (phi : LinBoundedMap n) (f : Array L n)
+  : ∃ (s : L) (abs {RieszSpaceRC L} (fapply phi (\lam j => rieszSpaceRC (f j))) <= {RieszSpaceRC L} rieszSpaceRC s)
+  => \case FinSet.finiteAC (\lam j => L.trunc-bounded (f j)) \with {
+    | inP g =>
+      \let | fs : Array (RealFun (ySpec L)) n => \lam j => rieszSpaceRC (f j)
+           | R : Rat => RatField.BigSum (\lam j => (g j).1 RatField.∨ 0)
+      \in \have | R>=0 : RatField.zro RatField.<= R => RatField.BigSum_>=0 \lam j => RatField.join-right
+                | MR (j : Fin n) : (g j).1 RatField.<= R => RatField.join-left <=∘ RatField.BigSum_>=index {\lam j => (g j).1 RatField.∨ 0} (\lam j => RatField.join-right) j
+                | fM (j : Fin n) : abs {RieszSpaceRC L} (fs j) <= {RieszSpaceRC L} constFun R
+                    => Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (inv rieszSpaceRC.func-abs)) (Preorder.<=-transitive {RieszSpaceRC L} (yhat-below (g j).2) (constFun-mono (MR j)))
+      \in \case phi.lin-bound R \with {
+        | inP (C,C>=0,hC) => \case nat-above C \with {
+          | inP (K,CK) =>
+            \let psi : LinBoundedMap n => K AddMonoid.*n {LinBoundedRiesz n} (AddMonoid.BigSum {LinBoundedRiesz n} (\lam j => abs {LinBoundedRiesz n} (LinBoundedMap.coord j)))
+            \in \have | psi-apply (x : Array Real n) : psi x = K AddMonoid.*n l1norm x
+                          => LinBoundedRiesz.LinBounded-*n-apply {n} {K} x *> pmap (K AddMonoid.*n) LinBoundedRiesz.BigSum-apply
+                      | le (x : Array Real n) (xb : \Pi (j : Fin n) -> RealAbGroup.abs (x j) <= R) : abs {LinBoundedRiesz n} phi x <= psi x
+                          => hC x xb <=∘ RealField.<=_*_positive-left CK l1norm>=0 <=∘ =_<= RealField.natCoef_*_*n <=∘ =_<= (inv (psi-apply x))
+                      | eval : fapply psi fs = K AddMonoid.*n {RieszSpaceRC L} AddMonoid.BigSum {RieszSpaceRC L} (\lam j => abs {RieszSpaceRC L} (fs j))
+                          => RieszSpaceHom.func-*n {fapplyHom fs} *> pmap (K AddMonoid.*n {RieszSpaceRC L}) (RieszSpaceHom.func-BigSum {fapplyHom fs}
+                               *> pmap (AddMonoid.BigSum {RieszSpaceRC L}) (exts \lam j => RieszSpaceHom.func-abs {fapplyHom fs} *> pmap (abs {RieszSpaceRC L}) (fapply-coord (\lam x => idp))))
+              \in inP (K AddMonoid.*n L.BigSum (\lam j => abs (f j)),
+                   Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (inv (RieszSpaceHom.func-abs {fapplyHom fs} {phi})))
+                     (Preorder.<=-transitive {RieszSpaceRC L} (fapply-transfer R>=0 le fM)
+                       (=_<= {RieszSpaceRC L} (eval *> pmap (\lam l => K AddMonoid.*n {RieszSpaceRC L} AddMonoid.BigSum {RieszSpaceRC L} l) (exts \lam j => inv rieszSpaceRC.func-abs)
+                          *> inv (rieszSpaceRC.func-*n *> pmap (K AddMonoid.*n {RieszSpaceRC L}) rieszSpaceRC.func-BigSum)))))
+        }
+      }
+  }
+  \where
+    \lemma nat-above (C : Real) : ∃ (K : Nat) (C <= RealField.natCoef K)
+      => \case C.U-inh \with {
+        | inP (q,Cq) => \case rat_natBound q \with {
+          | (K,q<K) => inP (K, <=-less (real_<_U.2 Cq <∘ rat_real_<.1 q<K) <=∘ =_<= RealField.coefMap_natCoef)
+        }
+      }
+
+-- | A function `h` with `|h| ≤ ŝ` is approximated by some `g ∈ L` with `|g| ≤ s`: `|h − ĝ| ≤ τ_η(2s)^`.
+\lemma yhat-approx {L : BoundedTruncRieszSpace} {h : RealFun (ySpec L)} {s : L} (s>=0 : L.zro <= s)
+                   (hs : abs {RieszSpaceRC L} h <= {RieszSpaceRC L} rieszSpaceRC s) {eta : Rat} (eta>0 : RatField.zro RatField.< eta)
+  : ∃ (g : L) (abs g <= s) (abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC g) <= {RieszSpaceRC L} rieszSpaceRC (L.truncAt eta (s + s)))
+  => \case yosida-dense {UnitizationRiesz L} h eta>0 \with {
+    | inP (x, hx) =>
+      \let | A => UnitizationRiesz L
+           | t => unitization-inc s
+           | c : \Sigma L Rat => JoinSemilattice.join {A} (meet {A} x t) (AddGroup.negative {A} t)
+      \in \have | t>=0 : A.zro <= {A} t => unitization-inc.func-<= s>=0
+                | ct : abs {A} c <= {A} t => clip-abs {A} {x} {t} t>=0
+                | gc : unitization-inc c.1 = c => ext (idp, inv (unitization-ideal {L} {c} {t} idp (Preorder.<=-transitive {A} {abs {A} c} {t} {abs {A} t} ct (=_<= {A} (inv (abs-ofPos {A} t>=0))))))
+                | yg : rieszSpaceRC c.1 = JoinSemilattice.join {RieszSpaceRC L} (meet {RieszSpaceRC L} (yosida {A} x) (rieszSpaceRC s)) (AddGroup.negative {RieszSpaceRC L} (rieszSpaceRC s))
+                    => pmap (yosida {A}) gc *> RieszSpaceHom.func-join {yosidaHom A} *> pmap2 (JoinSemilattice.join {RieszSpaceRC L}) (RieszSpaceHom.func-meet {yosidaHom A}) (RieszSpaceHom.func-negative {yosidaHom A})
+                | ys>=0 : constFun 0 <= {RieszSpaceRC L} rieszSpaceRC s => Preorder.<=-transitive {RieszSpaceRC L} (abs>=0 {RieszSpaceRC L} {h}) hs
+                | g-abs : abs {RieszSpaceRC L} (rieszSpaceRC c.1) <= {RieszSpaceRC L} rieszSpaceRC s
+                    => Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (pmap (abs {RieszSpaceRC L}) yg)) (clip-abs {RieszSpaceRC L} ys>=0)
+                | b1 : abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC c.1) <= {RieszSpaceRC L} constFun eta
+                    => Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (pmap (\lam z => abs {RieszSpaceRC L} (h - {RieszSpaceRC L} z)) yg))
+                         (Preorder.<=-transitive {RieszSpaceRC L} (clip-dist {RieszSpaceRC L} hs) hx)
+                | b2 : abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC c.1) <= {RieszSpaceRC L} rieszSpaceRC (s + s)
+                    => Preorder.<=-transitive {RieszSpaceRC L} (abs_+ {RieszSpaceRC L})
+                         (Preorder.<=-transitive {RieszSpaceRC L} (<=_+ {RieszSpaceRC L} hs (Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (abs_negative {RieszSpaceRC L})) g-abs))
+                           (=_<= {RieszSpaceRC L} (inv rieszSpaceRC.func-+)))
+      \in inP (c.1, yhat-reflects (Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} rieszSpaceRC.func-abs) g-abs),
+               Preorder.<=-transitive {RieszSpaceRC L} (meet-univ {RieszSpaceRC L} b2 b1) (=_<= {RieszSpaceRC L} (inv (yhat-truncAt eta>0))))
+  }

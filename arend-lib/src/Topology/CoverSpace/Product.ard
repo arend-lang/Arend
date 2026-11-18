@@ -237,6 +237,15 @@
     \protected \lemma proj {n : Nat} {X : CoverSpace} (j : Fin n) : CoverMap (ArrayCoverSpace n X) X (__ j)
       => proj' j
 
+    -- | The map into `Xⁿ` with given coordinates.
+    \protected \func tuple {Z : CoverSpace} {n : Nat} {X : CoverSpace} (f : Array (CoverMap Z X) n) : CoverMap Z (ArrayCoverSpace n X) \cowith
+      | func => tupleFun f
+      | func-cover Cc => ClosurePrecoverSpace.closure-univ-cover {Array X n} {Gen n X} {Z} {tupleFun f} (\lam {C} (inP (j,Dc)) => cauchy-refine ((f j).func-cover Dc)
+          \lam {_} (inP (V, inP (U,CU,p), idp)) => inP (tupleFun f ^-1 U, inP (U, CU, idp), \lam Vz => p Vz)) Cc
+      \where
+        \func tupleFun {Z X : CoverSpace} {n : Nat} (f : Array (CoverMap Z X) n) (z : Z) : Array X n
+          => \lam j => f j z
+
     \lemma box-neighborhood {n : Nat} {X : CoverSpace} {x : Array X n} {W : Set (Array X n)} (x<=<W : single x <=< {ArrayCoverSpace n X} W)
       : ∃ (U : Array (Set X) n) (\Pi (j : Fin n) -> single (x j) <=< U j) (Box U ⊆ W)
       => box-neighborhood' $ unfolds x<=<W

@@ -15,21 +15,21 @@
 \import Order.Lattice
 \import Order.LinearOrder
 \import Data.Or
+\import Data.Array
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Topology.CoverSpace.Complete
 \import Topology.Locale
-\import Topology.Locale.LocaleProduct
 \import Topology.Locale.Real
 \import Topology.Locale.Real.Lift
+\import Topology.Locale.Real.RealPower
+\import Topology.NormedAbGroup.NormedProduct
 \import Topology.Locale.Real.Value
 \import Topology.Locale.Points
-\import Topology.Locale.ProductPoints
 \import Topology.Locale.PreorderSite
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.Real.Interval
 \import Set.Filter
 \import Order.Lattice.CompleteLattice
 \import Order.Biordered
@@ -42,12 +42,12 @@
 \open RealHelpers
 
 -- | Addition `ℝ² → ℝ`.
-\func addMap : MetricMap Plane RealNormed (\lam s => s.1 + s.2) \cowith
-  | func-dist {s} {t} => Real.<=-upper.1 $ =_<= (pmap RealAbGroup.abs equation.abGroup) <=∘ RealAbGroup.abs_+
+\func addMap : MetricMap (RealN 2) RealNormed (\lam s => s 0 + s 1) \cowith
+  | func-dist {s} {t} => Real.<=-upper.1 $ =_<= (pmap RealAbGroup.abs equation.abGroup) <=∘ RealAbGroup.abs_+ <=∘ =_<= (pmap (_ +) (inv zro-right))
 
 -- | Maximum `ℝ² → ℝ`.
-\func joinMap : MetricMap Plane RealNormed (\lam s => s.1 ∨ s.2) \cowith
-  | func-dist {s} {t} => Real.<=-upper.1 RealAbGroup.join-lip
+\func joinMap : MetricMap (RealN 2) RealNormed (\lam s => s 0 ∨ s 1) \cowith
+  | func-dist {s} {t} => Real.<=-upper.1 $ RealAbGroup.join-lip <=∘ =_<= (pmap (_ +) (inv zro-right))
 
 -- | The constant function with a rational value.
 \func constFun {Z : Locale} (c : Rat) : LocaleHom Z RealLocale
@@ -62,17 +62,33 @@
 
 \func fneg {Z : Locale} (u : RealFun Z) : RealFun Z => op2 negMap u u
 
+\lemma realValue-fadd {Z : Locale} {x : CompleteFilter Z} {u v : RealFun Z} : realValue x (fadd u v) = realValue x u + realValue x v
+  => realValue-op2 {Z} {x} {addMap} {u} {v}
+
+\lemma realValue-fjoin {Z : Locale} {x : CompleteFilter Z} {u v : RealFun Z} : realValue x (fjoin u v) = realValue x u ∨ realValue x v
+  => realValue-op2 {Z} {x} {joinMap} {u} {v}
+
+\lemma realValue-fneg {Z : Locale} {x : CompleteFilter Z} {u : RealFun Z} : realValue x (fneg u) = negative (realValue x u)
+  => realValue-op2 {Z} {x} {negMap} {u} {u}
+
+\lemma realValue-const {Z : Locale} {y : CompleteFilter Z} {c : Rat} : realValue y (constFun {Z} c) = Real.fromRat c
+  => Real.real-ext \lam {q} => <->trans (pHat-filter {Z} {y}) (aux {c} {q})
+  \where
+    \lemma aux {c q : Rat} : (RealLocale.ratPoint c) (upperHalf q) <-> q < c
+      => (\lam (inP (I,uI,(I1c,cI2))) => upperHalf.upperHalf-char.1 uI <∘r I1c,
+          \lam q<c => inP ((q, c + 1, linarith), upperHalf.upperHalf-char.2 <=-refl, (q<c, linarith)))
+
 \private \module RealHelpers \where {
   -- | Negation of the first coordinate.
-  \func negMap : MetricMap Plane RealNormed (\lam s => negative s.1) \cowith
-    | func-dist {s} {t} => Real.<=-upper.1 $ =_<= (pmap RealAbGroup.abs (equation.abGroup : negative s.1 - negative t.1 = negative (s.1 - t.1)) *> RealAbGroup.abs_negative) <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl RealAbGroup.abs>=0
+  \func negMap : MetricMap (RealN 2) RealNormed (\lam s => negative (s 0)) \cowith
+    | func-dist {s} {t} => Real.<=-upper.1 $ =_<= (pmap RealAbGroup.abs (equation.abGroup : negative (s 0) - negative (t 0) = negative (s 0 - t 0)) *> RealAbGroup.abs_negative) <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl RealAbGroup.abs>=0 <=∘ =_<= (pmap (_ +) (inv zro-right))
 
   -- | Multiplication of the first coordinate by a rational `0 ≤ c ≤ 1`.
-  \func scaleMap (c : Rat) (c>=0 : RatField.zro RatField.<= c) (c<=1 : c RatField.<= 1) : MetricMap Plane RealNormed (\lam s => Real.fromRat c RealField.* s.1) \cowith
+  \func scaleMap (c : Rat) (c>=0 : RatField.zro RatField.<= c) (c<=1 : c RatField.<= 1) : MetricMap (RealN 2) RealNormed (\lam s => Real.fromRat c RealField.* s 0) \cowith
     | func-dist {s} {t} => Real.<=-upper.1 $
-        =_<= (pmap RealAbGroup.abs (inv RealField.ldistr_-) *> RealField.abs_* *> pmap (\lam z => z RealField.* RealAbGroup.abs (s.1 - t.1)) (RealAbGroup.abs-ofPos (rat_real_<=.1 c>=0)))
+        =_<= (pmap RealAbGroup.abs (inv RealField.ldistr_-) *> RealField.abs_* *> pmap (\lam z => z RealField.* RealAbGroup.abs (s 0 - t 0)) (RealAbGroup.abs-ofPos (rat_real_<=.1 c>=0)))
         <=∘ RealField.<=_*_positive-left (rat_real_<=.1 c<=1) RealAbGroup.abs>=0 <=∘ =_<= RealField.ide-left
-        <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl RealAbGroup.abs>=0
+        <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl RealAbGroup.abs>=0 <=∘ =_<= (pmap (_ +) (inv zro-right))
 
   -- | The constant map with value a point `x`.
   \func pointMap {Z M : Locale} (x : CompleteFilter M) : LocaleHom Z M \cowith
@@ -90,75 +106,54 @@
   \lemma pHat-filter {Z : Locale} {y : CompleteFilter Z} {P : \Prop} : y (Z.pHat P) <-> P
     => (\lam yP => \case y.filter-Join yP \with { | inP (_,p,_) => p }, \lam p => y.filter-mono y.filter-top (Join-cond p))
 
-  \lemma realValue-const {Z : Locale} {y : CompleteFilter Z} {c : Rat} : realValue y (constFun {Z} c) = Real.fromRat c
-    => Real.real-ext \lam {q} => <->trans (pHat-filter {Z} {y}) (aux {c} {q})
-    \where
-      \lemma aux {c q : Rat} : (RealLocale.ratPoint c) (upperHalf q) <-> q < c
-        => (\lam (inP (I,uI,(I1c,cI2))) => upperHalf.upperHalf-char.1 uI <∘r I1c,
-            \lam q<c => inP ((q, c + 1, linarith), upperHalf.upperHalf-char.2 <=-refl, (q<c, linarith)))
-
-  \lemma tuple-comp {Y Z X X' : Locale} {u : LocaleHom Z X} {v : LocaleHom Z X'} {T : LocaleHom Y Z}
-    : ProductLocale.tuple u v LocaleHom.∘ T = ProductLocale.tuple (u LocaleHom.∘ T) (v LocaleHom.∘ T)
-    => ProductLocale.tupleEq {X} {X'} {Y} {_} {_}
-        (pmap (LocaleHom.∘ T) (ProductLocale.beta1 {X} {X'} {Z} {u} {v}) *> inv (ProductLocale.beta1 {X} {X'} {Y} {u LocaleHom.∘ T} {v LocaleHom.∘ T}))
-        (pmap (LocaleHom.∘ T) (ProductLocale.beta2 {X} {X'} {Z} {u} {v}) *> inv (ProductLocale.beta2 {X} {X'} {Y} {u LocaleHom.∘ T} {v LocaleHom.∘ T}))
-
   -- | A binary operation on real-valued functions induced by a continuous map `ℝ² → ℝ`.
-  \func op2 {Z : Locale} (phi : CoverMap Plane RealNormed) (u v : RealFun Z) : RealFun Z
-    => liftMap phi LocaleHom.∘ ProductLocale.tuple u v
+  \sfunc op2 {Z : Locale} (phi : CoverMap (RealN 2) RealNormed) (u v : RealFun Z) : RealFun Z
+    => liftMap phi LocaleHom.∘ tupleN (u :: v :: nil)
 
-  \lemma op2-comp {Y Z : Locale} {phi : CoverMap Plane RealNormed} {u v : RealFun Z} {T : LocaleHom Y Z}
+  \lemma op2-def {Z : Locale} {phi : CoverMap (RealN 2) RealNormed} {u v : RealFun Z} : op2 phi u v = liftMap phi LocaleHom.∘ tupleN (u :: v :: nil)
+    => \peval op2 phi u v
+
+  \lemma op2-comp {Y Z : Locale} {phi : CoverMap (RealN 2) RealNormed} {u v : RealFun Z} {T : LocaleHom Y Z}
     : op2 phi u v LocaleHom.∘ T = op2 phi (u LocaleHom.∘ T) (v LocaleHom.∘ T)
-    => pmap (liftMap phi LocaleHom.∘) (tuple-comp {Y} {Z} {RealLocale} {RealLocale} {u} {v} {T})
+    => pmap (LocaleHom.∘ T) (op2-def {Z} {phi} {u} {v}) *> pmap (liftMap phi LocaleHom.∘) (tupleN-comp {Y} {Z} {2} {u :: v :: nil} {T} *> pmap tupleN (arrayExt {RealFun Y} {2} {\lam (j : Fin 2) => (DArray.at {u :: v :: nil} j) LocaleHom.∘ T} {(u LocaleHom.∘ T) :: (v LocaleHom.∘ T) :: nil} (\lam (j : Fin 2) => \case \elim j \with { | 0 => idp | 1 => idp }))) *> inv (op2-def {Y} {phi} {u LocaleHom.∘ T} {v LocaleHom.∘ T})
 
-  \lemma realValue-op2 {Z : Locale} {x : CompleteFilter Z} {phi : CoverMap Plane RealNormed} {u v : RealFun Z}
-    : realValue x (op2 phi u v) = phi (realValue x u, realValue x v)
-    => realValue-lift {Z} {x} {phi} {u} {v}
+  \lemma realValue-op2 {Z : Locale} {x : CompleteFilter Z} {phi : CoverMap (RealN 2) RealNormed} {u v : RealFun Z}
+    : realValue x (op2 phi u v) = phi (\lam j => realValue x ((DArray.at {u :: v :: nil} j)))
+    => pmap (realValue x) op2-def *> realValue-lift {Z} {x} {2} {phi} {u :: v :: nil}
 
   -- | The locale `ℝ³`, used to prove identities between operations on real-valued functions.
-  \func R3 : Locale => ProductLocale PlaneLocale RealLocale
+  \func R3 => RnLocale 3
 
   \lemma R3-dense : HasDensePoints R3
-    => stronglyDense-dense (product-stronglyDense (product-stronglyDense RealLocale.hasStronglyDensePoints RealLocale.hasStronglyDensePoints) RealLocale.hasStronglyDensePoints)
+    => RnLocale-dense {3}
 
-  \func X1 : RealFun R3 => ProductLocale.proj1 {RealLocale} {RealLocale} LocaleHom.∘ ProductLocale.proj1 {PlaneLocale} {RealLocale}
+  \func X1 : RealFun R3 => projN {3} 0
 
-  \func X2 : RealFun R3 => ProductLocale.proj2 {RealLocale} {RealLocale} LocaleHom.∘ ProductLocale.proj1 {PlaneLocale} {RealLocale}
+  \func X2 : RealFun R3 => projN {3} 1
 
-  \func X3 : RealFun R3 => ProductLocale.proj2 {PlaneLocale} {RealLocale}
+  \func X3 : RealFun R3 => projN {3} 2
 
-  \func T3 {Z : Locale} (f g h : RealFun Z) : LocaleHom Z R3 => ProductLocale.tuple (ProductLocale.tuple f g) h
+  \func T3 {Z : Locale} (f g h : RealFun Z) : LocaleHom Z R3 => tupleN (f :: g :: h :: nil)
 
   \lemma X1-T3 {Z : Locale} {f g h : RealFun Z} : f = X1 LocaleHom.∘ T3 f g h
-    => inv $ pmap (ProductLocale.proj1 {RealLocale} {RealLocale} LocaleHom.∘) (ProductLocale.beta1 {PlaneLocale} {RealLocale} {Z} {ProductLocale.tuple f g} {h})
-             *> ProductLocale.beta1 {RealLocale} {RealLocale} {Z} {f} {g}
+    => inv (projN-tupleN {Z} {3} {f :: g :: h :: nil} {0})
 
   \lemma X2-T3 {Z : Locale} {f g h : RealFun Z} : g = X2 LocaleHom.∘ T3 f g h
-    => inv $ pmap (ProductLocale.proj2 {RealLocale} {RealLocale} LocaleHom.∘) (ProductLocale.beta1 {PlaneLocale} {RealLocale} {Z} {ProductLocale.tuple f g} {h})
-             *> ProductLocale.beta2 {RealLocale} {RealLocale} {Z} {f} {g}
+    => inv (projN-tupleN {Z} {3} {f :: g :: h :: nil} {1})
 
   \lemma X3-T3 {Z : Locale} {f g h : RealFun Z} : h = X3 LocaleHom.∘ T3 f g h
-    => inv (ProductLocale.beta2 {PlaneLocale} {RealLocale} {Z} {ProductLocale.tuple f g} {h})
+    => inv (projN-tupleN {Z} {3} {f :: g :: h :: nil} {2})
 
   \lemma via3 {Z : Locale} {f g h : RealFun Z} {P Q : RealFun R3} {a b : RealFun Z}
               (pa : P LocaleHom.∘ T3 f g h = a) (pb : Q LocaleHom.∘ T3 f g h = b) (e : P = Q) : a = b
     => inv pa *> pmap (LocaleHom.∘ T3 f g h) e *> pb
 
-  \lemma op2-T3 {Z : Locale} {phi : CoverMap Plane RealNormed} {P Q : RealFun R3} {f g h u v : RealFun Z}
+  \lemma op2-T3 {Z : Locale} {phi : CoverMap (RealN 2) RealNormed} {P Q : RealFun R3} {f g h u v : RealFun Z}
                 (pu : P LocaleHom.∘ T3 f g h = u) (pv : Q LocaleHom.∘ T3 f g h = v) : op2 phi P Q LocaleHom.∘ T3 f g h = op2 phi u v
-    => op2-comp *> pmap2 (op2 phi) pu pv
+    => op2-comp {Z} {R3} {phi} {P} {Q} {T3 f g h} *> pmap2 (op2 phi) pu pv
 
   \lemma const-T3 {Z : Locale} {c : Rat} {f g h : RealFun Z} : constFun {R3} c LocaleHom.∘ T3 f g h = constFun c
-    => pointMap-comp
-
-  \lemma realValue-fadd {Z : Locale} {x : CompleteFilter Z} {u v : RealFun Z} : realValue x (fadd u v) = realValue x u + realValue x v
-    => realValue-op2 {Z} {x} {addMap} {u} {v}
-
-  \lemma realValue-fjoin {Z : Locale} {x : CompleteFilter Z} {u v : RealFun Z} : realValue x (fjoin u v) = realValue x u ∨ realValue x v
-    => realValue-op2 {Z} {x} {joinMap} {u} {v}
-
-  \lemma realValue-fneg {Z : Locale} {x : CompleteFilter Z} {u : RealFun Z} : realValue x (fneg u) = negative (realValue x u)
-    => realValue-op2 {Z} {x} {negMap} {u} {u}
+    => pointMap-comp {Z} {R3} {RealLocale} {RealLocale.ratPoint c} {T3 f g h}
 
   -- Pointwise identities on `ℝ³`.
 
@@ -280,13 +275,13 @@
   \lemma le-const {Z : Locale} {w : RealFun Z} {c : Rat} (h : \Pi {c' : Rat} -> c < c' -> w (upperHalf c') <= {Z} bottom)
     : w <= {RealFunRiesz Z} constFun c
     => SiteLocale.func-equality_ext {RealPres RatField} {Z} {fjoin w (constFun c)} {constFun c} \lam I =>
-        liftMap-char {Z} {joinMap} {w} {constFun c} {I} *> <=-antisymmetric {Z} (le h I) (ge h I)
+        op2-char {Z} {joinMap} {w} {constFun c} {I} *> <=-antisymmetric {Z} (le h I) (ge h I)
     \where {
       \func F {Z : Locale} (w : RealFun Z) (c : Rat) (bb : \Sigma (Interval RatField) (Interval RatField)) : Z
         => w (embed bb.1) ∧ constFun c (embed bb.2)
       \lemma le {Z : Locale} {w : RealFun Z} {c : Rat} (h : \Pi {c' : Rat} -> c < c' -> w (upperHalf c') <= {Z} bottom) (I : Interval RatField)
-        : SJoin {Z} (F w c) (\lam bb => BoxIn joinMap bb.1 bb.2 I) <= {Z} constFun c (embed I)
-        => SJoin-univ {Z} {_} {F w c} {\lam bb => BoxIn joinMap bb.1 bb.2 I} \lam {bb} bi =>
+        : SJoin {Z} (F w c) (\lam bb => BoxIn2 joinMap bb.1 bb.2 I) <= {Z} constFun c (embed I)
+        => SJoin-univ {Z} {_} {F w c} {\lam bb => BoxIn2 joinMap bb.1 bb.2 I} \lam {bb} bi =>
             \have ch => BoxIn-join-char bi
             \in meet-pHat {Z} \lam rp => \have kc => ratPoint-embed.1 rp
                 \in \case LinearOrder.dec<_<= I.1 c \with {
@@ -297,7 +292,7 @@
                   }) <=∘ bottom-univ
                 }
       \lemma ge {Z : Locale} {w : RealFun Z} {c : Rat} (h : \Pi {c' : Rat} -> c < c' -> w (upperHalf c') <= {Z} bottom) (I : Interval RatField)
-        : constFun c (embed I) <= {Z} SJoin {Z} (F w c) (\lam bb => BoxIn joinMap bb.1 bb.2 I)
+        : constFun c (embed I) <= {Z} SJoin {Z} (F w c) (\lam bb => BoxIn2 joinMap bb.1 bb.2 I)
         => Z.pHat-char.2 \lam rp => \have | i1 : I.1 < c => (ratPoint-embed.1 rp).1
                                             | i2 : c < I.2 => (ratPoint-embed.1 rp).2 \in
             \let | k1 => (I.1 + c) * ratio 1 2
@@ -310,7 +305,7 @@
                       | cK : top <= {Z} constFun c (embed K) => Join-cond {Z} {\lam _ => (RealLocale.ratPoint c) (embed K)} {top} (ratPoint-embed.2 (linarith, linarith))
             \in w.func-top>= <=∘ w.func-<= (halves-cover {c} {c2} linarith) <=∘ =_<= w.func-join <=∘ join-univ
                   (w.func-<= (=_<= lowerHalf-SJoin) <=∘ =_<= w.func-SJoin <=∘ SJoin-univ {Z} {Interval RatField} {\lam J => w (embed J)} {\lam s => s.2 <= c2} (\lam {J} J2<=c2 =>
-                    meet-univ <=-refl (top-univ <=∘ cK) <=∘ SJoin-cond {Z} {_} {F w c} {\lam bb => BoxIn joinMap bb.1 bb.2 I} {J, K}
+                    meet-univ <=-refl (top-univ <=∘ cK) <=∘ SJoin-cond {Z} {_} {F w c} {\lam bb => BoxIn2 joinMap bb.1 bb.2 I} {J, K}
                       (BoxIn-join' {J} {K} {I} {m} linarith (later linarith) (later linarith) J2<=c2)))
                   (w.func-<= upperHalf-round <=∘ =_<= w.func-SJoin <=∘ SJoin-univ {Z} {Rat} {\lam c'' => w (upperHalf c'')} {c <} (\lam cc => h cc) <=∘ bottom-univ)
     }
@@ -325,9 +320,67 @@
   \lemma neg-local {Z : Locale} {u : RealFun Z} {U : Z} {K : Interval RatField} {mu : Rat} (mu>0 : RatField.zro RatField.< mu) (h : U <= {Z} u (embed K))
     : U <= {Z} fneg u (embed (negI K mu mu>0))
     => meet-univ h h <=∘ SJoin-cond {Z} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => u (embed bb.1) ∧ u (embed bb.2)}
-         {\lam bb => BoxIn negMap bb.1 bb.2 (negI K mu mu>0)} {K,K}
-         (inP (mu * ratio 1 2, linarith, \lam {s} {t} s1 s2 t1 t2 => (RealAbGroup.negative_L.2 (U_<= s2 (later linarith)), RealAbGroup.negative_U.2 (L_<= s1 (later linarith)))))
-       <=∘ =_<= (inv (liftMap-char {Z} {negMap} {u} {u}))
+         {\lam bb => BoxIn2 negMap bb.1 bb.2 (negI K mu mu>0)} {K,K}
+         (inP (mu * ratio 1 2, linarith, \lam {st} sB => \have | s1 => (sB 0).1 | s2 => (sB 0).2 | t1 => (sB 1).1 | t2 => (sB 1).2 \in (RealAbGroup.negative_L.2 (U_<= s2 (later linarith)), RealAbGroup.negative_U.2 (L_<= s1 (later linarith)))))
+       <=∘ =_<= (inv (op2-char {Z} {negMap} {u} {u}))
+
+  \lemma InBox2 {s t : Real} {J K : Interval RatField} (s1 : s.L J.1) (s2 : s.U J.2) (t1 : t.L K.1) (t2 : t.U K.2) : InBox (s :: t :: nil) (J :: K :: nil)
+    => \case \elim __ \with {
+      | 0 => (s1,s2)
+      | 1 => (t1,t2)
+    }
+
+  -- | `c > q` everywhere if `q < c`.
+  \lemma constFun-upper-top {Z : Locale} {c q : Rat} (q<c : q < c) : top <= {Z} constFun {Z} c (upperHalf q)
+    => Join-cond {Z} {\lam _ => (RealLocale.ratPoint c) (upperHalf q)} {top} (realValue-const.aux.2 q<c)
+
+  -- | `c > q` nowhere if `c ≤ q`.
+  \lemma constFun-upper-bot {Z : Locale} {c q : Rat} (c<=q : c <= q) : constFun {Z} c (upperHalf q) <= {Z} bottom
+    => Z.pHat-char.2 \lam h => absurd (<-irreflexive (realValue-const.aux.1 h <∘l c<=q))
+
+  \lemma BoxIn-join-upper {J K I : Interval RatField} {eps : Rat} (eps>0 : RatField.zro RatField.< eps)
+                          (p : I.1 + eps <= J.1) (q : J.2 ∨ K.2 <= I.2 - eps) : BoxIn2 joinMap J K I
+    => inP (eps, eps>0, \lam {st} sB => (RealAbGroup.join_L.2 (byLeft (L_<= (sB 0).1 p)), RealAbGroup.join_U.2 (U_<= (sB 0).2 (join-left <=∘ q), U_<= (sB 1).2 (join-right <=∘ q))))
+
+  \lemma top-cover {Z : Locale} {u : RealFun Z} : top <= {Z} SJoin {Z} {Interval RatField} (\lam K => u (embed K)) (\lam _ => \Sigma)
+    => u.func-top>= <=∘ u.func-<= (=_<= (SiteLocale.element_SJoin {RealPres RatField} {top})) <=∘ =_<= u.func-SJoin
+
+  -- | `v > q` implies `max(v,u) > q`.
+  \lemma fjoin-upper {Z : Locale} {v u : RealFun Z} {q : Rat} : v (upperHalf q) <= {Z} fjoin v u (upperHalf q)
+    => v.func-<= upperHalf-round <=∘ =_<= v.func-SJoin <=∘ SJoin-univ {Z} {Rat} {\lam q' => v (upperHalf q')} {q <} (\lam {q'} q<q' =>
+         v.func-<= (=_<= upperHalf-SJoin) <=∘ =_<= v.func-SJoin <=∘ SJoin-univ {Z} {Interval RatField} {\lam J => v (embed J)} {\lam s => q' <= s.1} (\lam {J} q'<=J1 =>
+           meet-univ <=-refl (top-univ <=∘ top-cover {Z} {u}) <=∘ Locale.SJoin-ldistr>= {Z} {Interval RatField} {\lam K => u (embed K)} {\lam _ => \Sigma} {v (embed J)}
+             <=∘ SJoin-univ {Z} {Interval RatField} {\lam K => v (embed J) ∧ u (embed K)} {\lam _ => \Sigma} (\lam {K} _ =>
+               \let | eps => (q' - q) ∧ 1
+                    | I : Interval RatField => (q, J.2 ∨ K.2 + 1, \have j3 => J.3 \in linarith (join-left : J.2 <= J.2 ∨ K.2))
+               \in \have | e1 : eps <= q' - q => meet-left
+                         | e2 : eps <= 1 => meet-right
+                         | eps>0 : RatField.zro RatField.< eps => <_meet-univ (usingOnly q<q' linarith) idp
+               \in SJoin-cond {Z} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => v (embed bb.1) ∧ u (embed bb.2)} {\lam bb => BoxIn2 joinMap bb.1 bb.2 I} {(J,K)}
+                     (BoxIn-join-upper {J} {K} {I} {eps} eps>0 (later linarith) (later linarith))
+                   <=∘ =_<= (inv (op2-char {Z} {joinMap} {v} {u} {I})) <=∘ FrameHom.func-<= {fjoin v u} (embed-univ (upperHalf.upperHalf-char.2 <=-refl)))))
+
+  -- | `u > a` and `v > b` imply `u + v > a + b`.
+  \lemma fadd-upper {Z : Locale} {u v : RealFun Z} {a b : Rat} : u (upperHalf a) ∧ v (upperHalf b) <= {Z} fadd u v (upperHalf (a + b))
+    => meet-univ (meet-left <=∘ u.func-<= upperHalf-round <=∘ =_<= u.func-SJoin) (meet-right <=∘ v.func-<= (=_<= upperHalf-SJoin) <=∘ =_<= v.func-SJoin)
+       <=∘ Locale.SJoin-distr>= {Z} {Rat} {Interval RatField} {\lam a' => u (upperHalf a')} {\lam K => v (embed K)} {a <} {\lam s => b <= s.1}
+       <=∘ SJoin-univ {Z} {\Sigma Rat (Interval RatField)} {\lam s => u (upperHalf s.1) ∧ v (embed s.2)} {\lam s => \Sigma (a < s.1) (b <= s.2.1)} (\lam {s} (a<a',b<=K1) =>
+         MeetSemilattice.meet-monotone {Z} (u.func-<= (=_<= upperHalf-SJoin) <=∘ =_<= u.func-SJoin) <=-refl
+           <=∘ Locale.SJoin-rdistr>= {Z} {Interval RatField} {\lam J => u (embed J)} {\lam t => s.1 <= t.1} {v (embed s.2)}
+           <=∘ SJoin-univ {Z} {Interval RatField} {\lam J => u (embed J) ∧ v (embed s.2)} {\lam t => s.1 <= t.1} (\lam {J} a'<=J1 =>
+             \let | K => s.2
+                  | eps => (s.1 - a) ∧ 1
+                  | I : Interval RatField => (a + b, J.2 + K.2 + 1, \have | j3 => J.3 | k3 => K.3 \in linarith)
+             \in \have | e1 : eps <= s.1 - a => meet-left
+                       | e2 : eps <= 1 => meet-right
+                       | eps>0 : RatField.zro RatField.< eps => <_meet-univ (usingOnly a<a' linarith) idp
+             \in SJoin-cond {Z} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => u (embed bb.1) ∧ v (embed bb.2)} {\lam bb => BoxIn2 addMap bb.1 bb.2 I} {(J,K)}
+                   (BoxIn-add {J} {K} {I} {eps} eps>0 (later linarith) (later linarith))
+                 <=∘ =_<= (inv (op2-char {Z} {addMap} {u} {v} {I})) <=∘ FrameHom.func-<= {fadd u v} (embed-univ (upperHalf.upperHalf-char.2 <=-refl))))
+
+  -- | If `w ≤ c`, then `w > q` nowhere for `q ≥ c`.
+  \lemma le-upper-bot {Z : Locale} {w : RealFun Z} {c q : Rat} (p : w <= {RealFunRiesz Z} constFun c) (c<=q : c <= q) : w (upperHalf q) <= {Z} bottom
+    => fjoin-upper <=∘ =_<= (pmap {RealFun Z} (\lam g => FrameHom.func {g} (upperHalf q)) p) <=∘ constFun-upper-bot c<=q
 }
 
 -- | Continuous real-valued functions on a locale form a Riesz space.
@@ -361,15 +414,29 @@
         \in pmap (fjoin (fadd a c)) (inv s2) *> inv (fjoin-assoc {Z} {fadd a c} {fadd b c} {fadd b d}) *> pmap (fjoin __ (fadd b d)) s1 *> s2
   }
 
+-- | {phi} maps the box `J × K` into `I` with some margin.
+\func BoxIn2 (phi : CoverMap (RealN 2) RealNormed) (J K I : Interval RatField) : \Prop
+  => BoxIn phi (J :: K :: nil) I
+
+-- | The frame action of a binary operation on a basic open.
+\lemma op2-char {Z : Locale} {phi : CoverMap (RealN 2) RealNormed} {f g : RealFun Z} {I : Interval RatField}
+  : op2 phi f g (embed I) = SJoin {Z} (\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => f (embed bb.1) ∧ g (embed bb.2)) (\lam bb => BoxIn2 phi bb.1 bb.2 I)
+  => pmap (\lam (h : RealFun Z) => h (embed I)) op2-def *> liftMap-char {Z} {2} {phi} {f :: g :: nil} {I} *> <=-antisymmetric (SJoin-univ {Z} {Array (Interval RatField) 2} {boxOpen (f :: g :: nil)} {\lam B => BoxIn phi B I} \lam {B} bi => le {Z} {phi} {f} {g} {I} {B} bi)
+      (SJoin-univ {Z} {\Sigma (Interval RatField) (Interval RatField)} {\lam bb => f (embed bb.1) ∧ g (embed bb.2)} {\lam bb => BoxIn2 phi bb.1 bb.2 I} \lam {bb} bi => meet-univ meet-left (meet-univ meet-right top-univ) <=∘ SJoin-cond {Z} {_} {boxOpen (f :: g :: nil)} {\lam B => BoxIn phi B I} {bb.1 :: bb.2 :: nil} bi)
+  \where
+    \lemma le {Z : Locale} {phi : CoverMap (RealN 2) RealNormed} {f g : RealFun Z} {I : Interval RatField} {B : Array (Interval RatField) 2} (bi : BoxIn phi B I)
+      : boxOpen (f :: g :: nil) B <= SJoin {Z} (\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => f (embed bb.1) ∧ g (embed bb.2)) (\lam bb => BoxIn2 phi bb.1 bb.2 I) \elim B
+      | J :: K :: nil => meet-univ meet-left (meet-right <=∘ meet-left) <=∘ SJoin-cond {Z} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => f (embed bb.1) ∧ g (embed bb.2)} {\lam bb => BoxIn2 phi bb.1 bb.2 I} {(J,K)} bi
+
 -- | A box `J × K` is mapped by addition into `I` with a margin if `J + K` is strictly inside `I`.
 \lemma BoxIn-add {J K I : Interval RatField} {eps : Rat} (eps>0 : RatField.zro RatField.< eps)
-                 (p : I.1 + eps <= J.1 + K.1) (q : J.2 + K.2 <= I.2 - eps) : BoxIn addMap J K I
-  => inP (eps, eps>0, \lam {s} {t} s1 s2 t1 t2 => \case s.L-rounded s1, s.U-rounded s2 \with {
+                 (p : I.1 + eps <= J.1 + K.1) (q : J.2 + K.2 <= I.2 - eps) : BoxIn2 addMap J K I
+  => inP (eps, eps>0, \lam {st} sB => \have | s1 => (sB 0).1 | s2 => (sB 0).2 | t1 => (sB 1).1 | t2 => (sB 1).2 \in \case (st 0).L-rounded s1, (st 0).U-rounded s2 \with {
     | inP (b,sb,J1<b), inP (c,sc,c<J2) => (RealAbGroup.+_L.2 $ inP (b, sb, K.1, t1, linarith), RealAbGroup.+_U.2 $ inP (c, sc, K.2, t2, linarith))
   })
 
 -- | If addition maps `J × K` into `I`, then `J + K` lies in `I`.
-\lemma BoxIn-add-char {J K I : Interval RatField} (bi : BoxIn addMap J K I) : \Sigma (I.1 <= J.1 + K.1) (J.2 + K.2 <= I.2) \elim bi
+\lemma BoxIn-add-char {J K I : Interval RatField} (bi : BoxIn2 addMap J K I) : \Sigma (I.1 <= J.1 + K.1) (J.2 + K.2 <= I.2) \elim bi
   | inP (eps,eps>0,f) =>
     \have | j3 => J.3
           | k3 => K.3
@@ -380,7 +447,7 @@
                   | m2 : m <= J.2 - J.1 => meet-left <=∘ meet-right
                   | m3 : m <= K.2 - K.1 => meet-right
                   | m>0 : RatField.zro RatField.< m => <_meet-univ (<_meet-univ linarith linarith) linarith
-                  | r => (f {J.1 + m * ratio 1 4} {K.1 + m * ratio 1 4} linarith linarith linarith linarith).1
+                  | r => (f {Real.fromRat (J.1 + m * ratio 1 4) :: Real.fromRat (K.1 + m * ratio 1 4) :: nil} (InBox2 linarith linarith linarith linarith)).1
                   | r' : I.1 + eps < (J.1 + m * ratio 1 4) + (K.1 + m * ratio 1 4) => transport (\lam z => Real.L {z} (I.1 + eps)) RealAbGroup.+-rat r
         \in absurd linarith
       | inr q => q
@@ -391,22 +458,22 @@
                   | m2 : m <= J.2 - J.1 => meet-left <=∘ meet-right
                   | m3 : m <= K.2 - K.1 => meet-right
                   | m>0 : RatField.zro RatField.< m => <_meet-univ (<_meet-univ linarith linarith) linarith
-                  | r => (f {J.2 - m * ratio 1 4} {K.2 - m * ratio 1 4} linarith linarith linarith linarith).2
+                  | r => (f {Real.fromRat (J.2 - m * ratio 1 4) :: Real.fromRat (K.2 - m * ratio 1 4) :: nil} (InBox2 linarith linarith linarith linarith)).2
                   | r' : (J.2 - m * ratio 1 4) + (K.2 - m * ratio 1 4) < I.2 - eps => transport (\lam z => Real.U {z} (I.2 - eps)) RealAbGroup.+-rat r
         \in absurd linarith
       | inr q => q
     })
 
 \lemma BoxIn-join {J K I : Interval RatField} {eps : Rat} (eps>0 : RatField.zro RatField.< eps)
-                  (p : I.1 + eps <= J.1) (q : J.2 <= I.2 - eps) (r : K.2 <= J.2) : BoxIn joinMap J K I
-  => inP (eps, eps>0, \lam {s} {t} s1 s2 t1 t2 => (RealAbGroup.join_L.2 (byLeft (L_<= s1 p)), RealAbGroup.join_U.2 (U_<= s2 q, U_<= t2 (r <=∘ q))))
+                  (p : I.1 + eps <= J.1) (q : J.2 <= I.2 - eps) (r : K.2 <= J.2) : BoxIn2 joinMap J K I
+  => inP (eps, eps>0, \lam {st} sB => \have | s1 => (sB 0).1 | s2 => (sB 0).2 | t1 => (sB 1).1 | t2 => (sB 1).2 \in (RealAbGroup.join_L.2 (byLeft (L_<= s1 p)), RealAbGroup.join_U.2 (U_<= s2 q, U_<= t2 (r <=∘ q))))
 
 \lemma BoxIn-join' {J K I : Interval RatField} {eps : Rat} (eps>0 : RatField.zro RatField.< eps)
-                   (p : I.1 + eps <= K.1) (q : K.2 <= I.2 - eps) (r : J.2 <= K.2) : BoxIn joinMap J K I
-  => inP (eps, eps>0, \lam {s} {t} s1 s2 t1 t2 => (RealAbGroup.join_L.2 (byRight (L_<= t1 p)), RealAbGroup.join_U.2 (U_<= s2 (r <=∘ q), U_<= t2 q)))
+                   (p : I.1 + eps <= K.1) (q : K.2 <= I.2 - eps) (r : J.2 <= K.2) : BoxIn2 joinMap J K I
+  => inP (eps, eps>0, \lam {st} sB => \have | s1 => (sB 0).1 | s2 => (sB 0).2 | t1 => (sB 1).1 | t2 => (sB 1).2 \in (RealAbGroup.join_L.2 (byRight (L_<= t1 p)), RealAbGroup.join_U.2 (U_<= s2 (r <=∘ q), U_<= t2 q)))
 
 -- | If maximum maps `J × K` into `I`, then the componentwise maximum of `J` and `K` lies in `I`.
-\lemma BoxIn-join-char {J K I : Interval RatField} (bi : BoxIn joinMap J K I) : \Sigma (I.1 <= J.1 ∨ K.1) (J.2 ∨ K.2 <= I.2) \elim bi
+\lemma BoxIn-join-char {J K I : Interval RatField} (bi : BoxIn2 joinMap J K I) : \Sigma (I.1 <= J.1 ∨ K.1) (J.2 ∨ K.2 <= I.2) \elim bi
   | inP (eps,eps>0,f) =>
     \have | j3 => J.3
           | k3 => K.3
@@ -417,7 +484,7 @@
                   | m2 : m <= J.2 - J.1 => meet-left <=∘ meet-right
                   | m3 : m <= K.2 - K.1 => meet-right
                   | m>0 : RatField.zro RatField.< m => <_meet-univ (<_meet-univ linarith linarith) linarith
-                  | r => (f {J.1 + m * ratio 1 4} {K.1 + m * ratio 1 4} linarith linarith linarith linarith).1
+                  | r => (f {Real.fromRat (J.1 + m * ratio 1 4) :: Real.fromRat (K.1 + m * ratio 1 4) :: nil} (InBox2 linarith linarith linarith linarith)).1
                   | r' : I.1 + eps < (J.1 + m * ratio 1 4) ∨ (K.1 + m * ratio 1 4) => transport (\lam z => Real.L {z} (I.1 + eps)) RealAbGroup.join-rat r
                   | e : (J.1 + m * ratio 1 4) ∨ (K.1 + m * ratio 1 4) = (J.1 ∨ K.1) + m * ratio 1 4 => inv RatField.join_+-right
         \in absurd linarith
@@ -429,7 +496,7 @@
                   | m2 : m <= J.2 - J.1 => meet-left <=∘ meet-right
                   | m3 : m <= K.2 - K.1 => meet-right
                   | m>0 : RatField.zro RatField.< m => <_meet-univ (<_meet-univ linarith linarith) linarith
-                  | r => (f {J.2 - m * ratio 1 4} {K.2 - m * ratio 1 4} linarith linarith linarith linarith).2
+                  | r => (f {Real.fromRat (J.2 - m * ratio 1 4) :: Real.fromRat (K.2 - m * ratio 1 4) :: nil} (InBox2 linarith linarith linarith linarith)).2
                   | r' : (J.2 - m * ratio 1 4) ∨ (K.2 - m * ratio 1 4) < I.2 - eps => transport (\lam z => Real.U {z} (I.2 - eps)) RealAbGroup.join-rat r
                   | e : (J.2 - m * ratio 1 4) ∨ (K.2 - m * ratio 1 4) = (J.2 ∨ K.2) - m * ratio 1 4 => inv RatField.join_+-right
         \in absurd linarith
@@ -440,7 +507,7 @@
 \lemma fjoin-lower {Z : Locale} {v u : RealFun Z} {q : Rat} : fjoin v u (lowerHalf q) <= {Z} v (lowerHalf q)
   => FrameHom.func-<= {fjoin v u} (=_<= lowerHalf-SJoin) <=∘ =_<= FrameHom.func-SJoin
       <=∘ SJoin-univ {Z} {Interval RatField} {\lam I => fjoin v u (embed I)} {\lam s => s.2 <= q} (\lam {I} I2<=q =>
-        =_<= (liftMap-char {Z} {joinMap} {v} {u} {I}) <=∘ SJoin-univ {Z} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => v (embed bb.1) ∧ u (embed bb.2)} {\lam bb => BoxIn joinMap bb.1 bb.2 I}
+        =_<= (op2-char {Z} {joinMap} {v} {u} {I}) <=∘ SJoin-univ {Z} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => v (embed bb.1) ∧ u (embed bb.2)} {\lam bb => BoxIn2 joinMap bb.1 bb.2 I}
           (\lam {bb} bi => meet-left <=∘ FrameHom.func-<= {v} (embed-univ (lowerHalf.lowerHalf-char.2 (join-left <=∘ (BoxIn-join-char bi).2 <=∘ I2<=q)))))
 
 \lemma constFun-lowerHalf {Z : Locale} {c : Rat} : constFun {Z} c (lowerHalf c) <= {Z} bottom
@@ -482,9 +549,9 @@
   : U <= {Z} fadd u (fneg v) (embed (subI J K mu mu>0))
   => meet-univ hu (neg-local {Z} {v} {U} {K} {mu * ratio 1 2} linarith hv)
        <=∘ SJoin-cond {Z} {_} {\lam (bb : \Sigma (Interval RatField) (Interval RatField)) => u (embed bb.1) ∧ fneg v (embed bb.2)}
-            {\lam bb => BoxIn addMap bb.1 bb.2 (subI J K mu mu>0)} {J, negI K (mu * ratio 1 2) linarith}
+            {\lam bb => BoxIn2 addMap bb.1 bb.2 (subI J K mu mu>0)} {J, negI K (mu * ratio 1 2) linarith}
             (BoxIn-add {J} {negI K (mu * ratio 1 2) linarith} {subI J K mu mu>0} {mu * ratio 1 4} linarith linarith linarith)
-       <=∘ =_<= (inv (liftMap-char {Z} {addMap} {u} {fneg v}))
+       <=∘ =_<= (inv (op2-char {Z} {addMap} {u} {fneg v}))
 
 -- | `|u - v| <= c` follows from the two one-sided bounds.
 \lemma abs-le-const {Z : Locale} {u v : RealFun Z} {c : Rat} (lo : fadd u (fneg v) <= {RealFunRiesz Z} constFun c) (up : fadd v (fneg u) <= {RealFunRiesz Z} constFun c)
@@ -496,3 +563,50 @@
                 (h : \Pi {x : X} -> P x -> \Pi {c' : Rat} -> c < c' -> w (upperHalf c') ∧ Q x <= {Z} bottom)
   : w <= constFun c
   => le-const \lam {c'} c<c' => meet-univ <=-refl (top-univ <=∘ cov) <=∘ Locale.SJoin-ldistr>= {Z} {X} {Q} {P} <=∘ SJoin-univ {Z} {X} {\lam x => w (upperHalf c') ∧ Q x} {P} (\lam Px => h Px c<c')
+
+-- Compatibility with composition.
+
+\lemma fadd-comp {Y Z : Locale} {u v : RealFun Z} {T : LocaleHom Y Z} : fadd u v LocaleHom.∘ T = fadd (u LocaleHom.∘ T) (v LocaleHom.∘ T)
+  => op2-comp
+
+\lemma fjoin-comp {Y Z : Locale} {u v : RealFun Z} {T : LocaleHom Y Z} : fjoin u v LocaleHom.∘ T = fjoin (u LocaleHom.∘ T) (v LocaleHom.∘ T)
+  => op2-comp
+
+\lemma fneg-comp {Y Z : Locale} {u : RealFun Z} {T : LocaleHom Y Z} : fneg u LocaleHom.∘ T = fneg (u LocaleHom.∘ T)
+  => op2-comp
+
+\lemma constFun-comp {Y Z : Locale} {c : Rat} {T : LocaleHom Y Z} : constFun {Z} c LocaleHom.∘ T = constFun {Y} c
+  => pointMap-comp
+
+-- | Precomposition preserves the order of real-valued functions.
+\lemma le-comp {Y Z : Locale} {u v : RealFun Z} (p : u <= {RealFunRiesz Z} v) (T : LocaleHom Y Z) : u LocaleHom.∘ T <= {RealFunRiesz Y} v LocaleHom.∘ T
+  => inv (fjoin-comp {Y} {Z} {u} {v} {T}) *> pmap (LocaleHom.∘ T) p
+
+-- | A function bounded by every positive constant is bounded by `0`.
+\lemma realFun-le-eps {Z : Locale} {h : RealFun Z} (p : \Pi {e : Rat} -> RatField.zro RatField.< e -> h <= {RealFunRiesz Z} constFun e) : h <= {RealFunRiesz Z} constFun 0
+  => le-const \lam {c'} c'>0 => le-upper-bot (p {c' RatField.* ratio 1 2} linarith) linarith
+
+-- | Real-valued functions satisfy the Archimedean property with respect to the constant `1`.
+\lemma realFun-archimedean {Z : Locale} {h : RealFun Z} (p : \Pi (n : Nat) -> n AddMonoid.*n {RealFunRiesz Z} h <= {RealFunRiesz Z} constFun 1)
+  : h <= {RealFunRiesz Z} constFun 0
+  => le-const \lam {c'} c'>0 => \case rat_natBound (RatField.finv c' + RatField.finv c') \with {
+    | (n,q<n) =>
+      \have | e : (RatField.finv c' + RatField.finv c') * c' = 1 + 1 => RatField.rdistr *> pmap2 (+) (RatField.finv-left (RatField.>_/= c'>0)) (RatField.finv-left (RatField.>_/= c'>0))
+             | nc : (1 : Rat) + 1 < RatField.natCoef n * c' => transport (`< _) e (RatField.<_*_positive-left q<n c'>0)
+      \in iter n <=∘ le-upper-bot (p n) (later linarith)
+  }
+  \where
+    \lemma iter {Z : Locale} {h : RealFun Z} {c' : Rat} (k : Nat) : h (upperHalf c') <= {Z} (k AddMonoid.*n {RealFunRiesz Z} h) (upperHalf (RatField.natCoef k * c' - ratio 1 2)) \elim k
+      | 0 => top-univ <=∘ constFun-upper-top (later linarith)
+      | suc k => meet-univ (iter k) <=-refl <=∘ fadd-upper {Z} {k AddMonoid.*n {RealFunRiesz Z} h} {h}
+                   <=∘ =_<= (pmap (\lam t => FrameHom.func {fadd (k AddMonoid.*n {RealFunRiesz Z} h) h} (upperHalf t)) e)
+        \where
+          \lemma e {k : Nat} {c' : Rat} : RatField.natCoef k * c' - ratio 1 2 + c' = RatField.natCoef (suc k) * c' - ratio 1 2
+            => aux *> inv (pmap (\lam t => t * c' - ratio 1 2) (RatField.natCoefSuc k))
+
+          \lemma aux {N c : Rat} : N * c - ratio 1 2 + c = (N + RatField.ide) * c - ratio 1 2
+            => equation.cRing
+
+-- | Constant functions are monotone in the constant.
+\lemma constFun-mono {Z : Locale} {a b : Rat} (a<=b : a <= b) : constFun a <= {RealFunRiesz Z} constFun b
+  => le-const \lam {c'} b<c' => constFun-upper-bot (a<=b <=∘ <=-less b<c')
