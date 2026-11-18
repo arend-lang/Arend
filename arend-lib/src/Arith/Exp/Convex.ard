@@ -1,0 +1,60 @@
+{- | Convexity of the real exponential.
+
+  Since `exp' = exp` is monotone, `exp` is convex (see {exp-convexOn} and {exp-convex}),
+  and its tangent line at `0` gives `1 + x <= exp x` (see {exp>=1+x}).
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Calculus.Convex
+\import Analysis.Derivative.CoverDerivative
+\import Arith.Exp
+\import Arith.Exp.Derivative
+\import Arith.Exp.Real
+\import Arith.Real
+\import Arith.Real.Field
+\import Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.BanachAlgebra
+\import Topology.NormedAbGroup.Real.Interval
+
+-- | {exp} has a derivative on `[a,b]`.
+\lemma exp-interval-hasDeriv (a b : Real) : HasDeriv (intervalInc a b) (\lam (x : Set.Total (ClosedInterval a b)) => exp x.1)
+  => exp-hasDeriv (intervalInc a b)
+
+-- | `exp' = exp` on `[a,b]`.
+\lemma exp-interval-deriv {a b : Real} (a<b : a < b) (d : HasDeriv (intervalInc a b) (\lam (x : Set.Total (ClosedInterval a b)) => exp x.1))
+                          (x : Set.Total (ClosedInterval a b))
+  : deriv (interval-derivDense a<b) (\lam (x : Set.Total (ClosedInterval a b)) => exp x.1) d x 1 = exp x.1
+  => exp-deriv (interval-derivDense a<b) d x 1 *> ide-left
+
+-- | {exp} is convex on `[a,b]`.
+\lemma exp-convexOn {a b : Real} (a<b : a < b) : IsConvexOn (ClosedInterval a b) exp
+  => deriv-mono-convex a<b (exp-interval-hasDeriv a b) \lam {x} {y} x<=y =>
+      rewrite (exp-interval-deriv a<b _ x, exp-interval-deriv a<b _ y) (Real-exp-mono x<=y)
+
+-- | {exp} is convex on `ℝ`.
+\lemma exp-convex : IsConvexOn (\lam _ => \Sigma) exp
+  => \lam {x} {y} _ _ {t} t>=0 t<=1 =>
+      \have | x1 : x <= RealAbGroup.abs x => RealAbGroup.abs>=id
+            | x2 : negative x <= RealAbGroup.abs x => RealAbGroup.abs>=neg
+            | y1 : y <= RealAbGroup.abs y => RealAbGroup.abs>=id
+            | y2 : negative y <= RealAbGroup.abs y => RealAbGroup.abs>=neg
+      \in exp-convexOn {negative (RealAbGroup.abs x + RealAbGroup.abs y) - 1} {RealAbGroup.abs x + RealAbGroup.abs y + 1} linarith
+            (linarith, linarith) (linarith, linarith) t>=0 t<=1
+
+-- | The tangent line of {exp} at `0`: `1 + x <= exp x`.
+\lemma exp>=1+x (x : Real) : 1 + x <= exp x
+  => \have | x1 : x <= RealAbGroup.abs x => RealAbGroup.abs>=id
+           | x2 : negative x <= RealAbGroup.abs x => RealAbGroup.abs>=neg
+           | a<b : negative (RealAbGroup.abs x) - 1 < RealAbGroup.abs x + 1 => linarith
+           | t => deriv-mono-tangent a<b (exp-interval-hasDeriv _ _)
+                    (\lam {u} {v} u<=v => rewrite (exp-interval-deriv a<b _ u, exp-interval-deriv a<b _ v) (Real-exp-mono u<=v))
+                    (zro, (linarith, linarith)) (x, (linarith, linarith))
+     \in linarith (rewrite (exp-interval-deriv a<b, exp_zro) in t)
