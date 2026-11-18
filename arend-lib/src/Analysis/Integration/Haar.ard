@@ -12,6 +12,8 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Semiring
 \import Analysis.Integration.Haar.Approximation
 \import Analysis.Integration.Haar.Covering
@@ -394,6 +396,28 @@
              | t : 0 <= integral (f - g) => integral>=0 \lam x => RealAbGroup.to>=0 (p x)
        \in rewrite e (usingOnly t linarith)
 }
+
+-- | `C_c(G)` with a Haar integral is a bounded integration space.
+\func haarIntegrationSpace {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) : BoundedIntegrationSpace (CompactCoverMap G) \cowith
+  | IntegrationSpace => J.toIntegrationSpace
+  | trunc-bounded => CompactCover-trunc-bounded
+  | trunc-archimedean p => CompactCover-trunc-archimedean p
+  | integral-trunc-small {f} f>=0 {eps} eps>0 => \case f.support \with {
+    | inP (K,Ktb,fK) => \case LocallyCompactUrysohnGroup.bump Ktb \with {
+      | inP (U,_,U0,g,g>=0,_,gK) => IntegrationSpace.integral-trunc-dominated {J.toIntegrationSpace} {f} {g} (\lam eta>0 x => truncAt-dominated f>=0 fK g>=0 (\lam Kx => transport (\lam z => g z = 1) zro-right (gK Kx U0)) eta>0 x) eps>0
+    }
+  }
+  \where {
+    \lemma truncAt-dominated {f g : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) {K : Set G} (fK : IsSupported f K) (g>=0 : \Pi (x : G) -> 0 <= g x)
+                             (gK : \Pi {x : G} -> K x -> g x = 1) {eta : Rat} (eta>0 : RatField.zro RatField.< eta) (x : G)
+      : TruncRieszSpace.truncAt {CompactCoverTruncRieszSpace G} eta f x <= (eta QModule.*q {CompactCoverTruncRieszSpace G} g) x
+      => \have key : (RatField.finv eta RealField.* f x) ∧ 1 <= g x => \lam gx<m =>
+                \have | fx>0 : 0 < f x => (RealField.<_*_positive-dec-right (f>=0 x) (g>=0 x <∘r gx<m <∘l meet-left)).2
+                      | gx=1 : g x = 1 => gK (fK (fx>0 <∘l RealAbGroup.abs>=id))
+                \in <-irreflexive (gx<m <∘l meet-right <=∘ =_<= (inv gx=1))
+         \in =_<= (CompactCover-*q-apply x *> pmap (\lam z => eta RealField.* (z ∧ 1)) (CompactCover-*q-apply x))
+              <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) key <=∘ =_<= (inv (CompactCover-*q-apply x))
+  }
 
 -- Existence
 

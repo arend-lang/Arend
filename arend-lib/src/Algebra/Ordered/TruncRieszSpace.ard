@@ -3,10 +3,11 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
+\import Algebra.QModule
 \import Algebra.Ring.Boolean
 \import Arith.Rat
 \import Data.Array
-\import Data.Fin (fsuc/=, fsuc/=0)
+\import Data.Fin
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -171,6 +172,15 @@
           <=∘ meet-monotone <=-refl (=_<= (inv uU)) <=∘ trunc-assoc
     }
 
+  -- | `τ_r` is 1-Lipschitz.
+  \lemma truncAt-lipschitz {r : Rat} (r>0 : 0 < r) {a b : E} : abs (truncAt r a - truncAt r b) <= abs (a - b)
+    => =_<= (pmap abs (inv toRatModule.*c-ldistr_-) *> abs_*q>=0 (<=-less r>0)) <=∘ <=_*q-right (<=-less r>0) trunc-lipschitz
+        <=∘ =_<= (inv (abs_*q>=0 (<=-less r>0)) *> pmap abs (toRatModule.*c-ldistr_- *> pmap2 (-) (*q-finv-cancel (RatField.>_/= r>0)) (*q-finv-cancel (RatField.>_/= r>0))))
+
+  -- | If `x ≥ 0` and `x/r` is under the unit, then `x ≤ r·1`.
+  \lemma IsBelow-unit {x : E} {r : Rat} (r>0 : 0 < r) (x>=0 : 0 <= x) (p : IsUnderUnit (RatField.finv r *q x)) : IsBelow x r
+    => (<=-less r>0, inP (RatField.finv r *q x, *q_>=0 (<=-less $ RatField.finv>0 r>0) x>=0, p, =_<= (inv (*q-finv-cancel (RatField.>_/= r>0)))))
+
   -- | Fullness: wherever `x` exceeds `τ_r x`, the truncation is full.
   \lemma truncAt-full {r : Rat} (r>0 : 0 < r) {x y : E} (p : IsBelow y r) : (x - truncAt r x) ∧ part+ (y - truncAt r x) = 0
     => \let t => truncAt r x
@@ -323,6 +333,9 @@
   \override Cod : TruncRieszSpace
 
   | func-trunc {x : Dom} : func (trunc x) = trunc (func x)
+
+  \lemma func-truncAt {r : Rat} {x : Dom} : func (TruncRieszSpace.truncAt r x) = TruncRieszSpace.truncAt r (func x)
+    => func-*q *> pmap (r QModule.*q) (func-trunc *> pmap TruncRieszSpace.trunc func-*q)
 } \where {
   \func id {X : TruncRieszSpace} : TruncRieszSpaceHom X X \cowith
     | RieszSpaceHom => RieszSpaceHom.id

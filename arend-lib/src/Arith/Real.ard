@@ -435,6 +435,16 @@
 \lemma rat_real_abs {a : Rat} : Real.fromRat (RatField.abs a) = RealAbGroup.abs (Real.fromRat a)
   => rat_real_join *> pmap (_ RealAbGroup.∨) (inv RealAbGroup.negative-rat)
 
+\lemma rat_real_*n {n : Nat} {q : Rat} : n RealAbGroup.*n Real.fromRat q = Real.fromRat (n RatField.*n q) \elim n
+  | 0 => idp
+  | suc n => pmap (RealAbGroup.+ _) rat_real_*n *> RealAbGroup.+-rat
+
+-- | Archimedean property: if `n a ≤ 1` for all `n`, then `a ≤ 0`.
+\lemma real_archimedean {a : Real} (p : \Pi (n : Nat) -> n RealAbGroup.*n a <= 1) : a <= 0
+  => \lam a>0 => \case real_<-char.1 a>0 \with {
+    | inP (q,q>0,q<a) => <-irreflexive $ rat_real_<.2 q>0 <∘l rat_archimedean (\lam n => rat_real_<=.2 $ =_<= (inv rat_real_*n) <=∘ RealAbGroup.*n_<= (<=-less q<a) <=∘ p n)
+  }
+
 -- | Two reals are equal if their distance is bounded by every positive multiple of a constant.
 \lemma real-scaled-eq {x y : Real} {K : Rat} (K>0 : 0 < K) (h : \Pi {e : Rat} -> 0 < e -> RealAbGroup.abs (x - y) <= Real.fromRat (e * K)) : x = y
   => \have z : RealAbGroup.abs (x - y) <= 0 => real_<=-eps \lam {d} d>0 =>

@@ -15,6 +15,7 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths
@@ -70,6 +71,23 @@
   \lemma integral_*q {q : Rat} {a : E} : integral (q *q a) = q RealField.* integral a
     => func-*q {_} {_} {integral-hom} *> QModule.fromRatModule_*q
 
+  \lemma integral-split {a b : E} : integral a RealAbGroup.<= integral b RealAbGroup.+ integral (abs (a - b))
+    => \have e : integral a = integral b RealAbGroup.+ integral (a - b) => pmap integral (inv (simplify : b + (a - b) = a)) *> integral_+
+       \in rewrite e (RealAbGroup.<=_+ RealAbGroup.<=-refl (integral-mono abs>=id))
+
+  -- | (R1) holds for `f` if `τ_η f ≤ η e` for a fixed `e` and all `η > 0`.
+  \lemma integral-trunc-dominated {f e : E} (h : \Pi {eta : Rat} -> RatField.zro RatField.< eta -> truncAt eta f <= eta *q e)
+    {eps : Rat} (eps>0 : RatField.zro RatField.< eps) : ∃ (eta : Rat) (RatField.zro RatField.< eta) (integral (truncAt eta f) RealAbGroup.< Real.fromRat eps)
+    => \case (integral e).U-inh \with {
+      | inP (M,eM) =>
+        \let | M' => M RatField.∨ 1
+             | eta => RatField.finv M' RatField.* (eps RatField.* ratio 1 2)
+        \in \have | M'>0 : RatField.zro RatField.< M' => RatField.zro<ide <∘l RatField.join-right
+                  | eta>0 : RatField.zro RatField.< eta => RatField.<_*_positive_positive (RatField.finv>0 M'>0) linarith
+                  | e1 : eta RatField.* M' = eps RatField.* ratio 1 2 => RatField.*-comm *> inv RatField.*-assoc *> pmap (RatField.* _) (RatField.finv-right $ RatField.>_/= M'>0) *> RatField.ide-left
+            \in inP (eta, eta>0, dominated-arith (integral-mono (h eta>0)) integral_*q eta>0 (real_<_U.2 eM) e1 eps>0)
+    }
+
   \lemma ldist_abs {a b : E} : ldist (abs a) (abs b) RealAbGroup.<= ldist a b
     => rewrite (lnorm-ldist, lnorm-ldist) $ integral-mono $ abs-univ abs_-left abs_-right
 
@@ -92,25 +110,90 @@
         | func-isometry => norm-dist *> inv MeasRing.norm-dist
     }
 }
+  \where {
+    \lemma dominated-arith {t s i : Real} {eta M eps : Rat} (t<=s : t <= s) (s=ei : s = eta RealField.* i) (eta>0 : RatField.zro RatField.< eta)
+                           (i<M : i RealAbGroup.< M) (e1 : eta * (M ∨ 1) = eps * ratio 1 2) (eps>0 : RatField.zro RatField.< eps) : t RealAbGroup.< eps
+      => \have | ie : i <= Real.fromRat (M ∨ 1) => <=-less i<M <=∘ rat_real_<=.1 join-left
+               | p : Real.fromRat eta RealField.* i <= Real.fromRat eta RealField.* Real.fromRat (M ∨ 1) => RealField.<=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) ie
+         \in (t<=s <=∘ =_<= s=ei <=∘ p <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat e1)) <∘r rat_real_<.1 linarith
+  }
 
-\instance RatIntegrationSpace : IntegrationSpace Rat
-  | PosetAbGroup => RatField
-  | join => RatField.join
-  | join-left => join-left
-  | join-right => join-right
-  | join-univ => join-univ
-  | isDivisible a {n} n/=0 => inP (RatField.finv n * a, inv RatField.natCoef_*_*n *> inv *-assoc *> pmap (* a) (RatField.finv-right $ natRat/=0 n/=0) *> ide-left)
-  | trunc x => x ∧ 1
-  | trunc_zro>=0 => <=-refl
-  | trunc-bound => meet-left
-  | trunc-assoc => meet-univ (RatField.negative_<= join-left <=∘ =_<= RatField.negative-isInv) (RatField.negative_<= join-right <=∘ =_<= RatField.negative-isInv <=∘ meet-right)
+-- | An integration space is regular if `I(τ_η f) → 0` as `η → 0⁺` and `I(τ_T f) → I(f)` as `T → ∞`, for `f ≥ 0`.
+\class RegularIntegrationSpace \extends IntegrationSpace {
+  | integral-trunc-small {f : E} : 0 <= f -> \Pi {eps : Rat} -> RatField.zro RatField.< eps
+    -> ∃ (eta : Rat) (RatField.zro RatField.< eta) (integral (truncAt eta f) RealAbGroup.< Real.fromRat eps)
+  | integral-trunc-large {f : E} : 0 <= f -> \Pi {eps : Rat} -> RatField.zro RatField.< eps
+    -> ∃ (T : Rat) (RatField.zro RatField.< T) (integral f RealAbGroup.< integral (truncAt T f) RealAbGroup.+ Real.fromRat eps)
+}
+
+-- | A regular integration space whose elements are bounded; (R2) holds automatically.
+\class BoundedIntegrationSpace \extends BoundedTruncRieszSpace, RegularIntegrationSpace {
+  | integral-trunc-large {f} f>=0 {eps} eps>0 => \case trunc-bounded f \with {
+    | inP (M,fM) =>
+      \have | T>0 : RatField.zro RatField.< M RatField.∨ 1 => RatField.zro<ide <∘l RatField.join-right
+            | e : truncAt (M RatField.∨ 1) f = f => <=-antisymmetric (truncAt-bound T>0)
+              (truncAt-greatest T>0 (IsBelow-level RatField.join-left (IsBelow_<= (=_<= (inv (abs-ofPos f>=0))) fM)) <=-refl)
+      \in inP (M RatField.∨ 1, T>0, rewrite e $ transport (RealAbGroup.< _) RealAbGroup.zro-right $ RealAbGroup.<_+-right (integral f) (rat_real_<.1 eps>0))
+  }
+}
+
+\instance RatIntegrationSpace : BoundedIntegrationSpace Rat
+  | TruncRieszSpace => RatTrunc
   | integral x => x
   | integral>=0 p => rat_real_<=.1 p
   | integral_+ => inv RealAbGroup.+-rat
+  | trunc-bounded a => inP (RatTrunc.abs a, (RatTrunc.abs>=0, inP (1, <=-less RatField.zro<ide, <=-antisymmetric RatField.meet-left (RatField.meet-univ <=-refl <=-refl), =_<= (inv rat_*q))))
+  | trunc-archimedean p => rat_archimedean \lam n => transport (RatField.<= 1) (p n) RatField.meet-right
+  | integral-trunc-small {f} _ {eps} eps>0 => inP (eps * ratio 1 2, linarith, rat_real_<.1 $ truncAt-le linarith <∘r linarith)
   \where {
-    \lemma rat_*q {c : Rat} : c RatIntegrationSpace.*q 1 = c
-      => func-*q {RatIntegrationSpace} {QModule.fromRatModule (RingLModule RatField)} {\new AddGroupHom { | func x => x | func-+ => idp }}
+    \func RatTrunc : TruncRieszSpace Rat \cowith
+      | PosetAbGroup => RatField
+      | join => RatField.join
+      | join-left => join-left
+      | join-right => join-right
+      | join-univ => join-univ
+      | isDivisible a {n} n/=0 => inP (RatField.finv n * a, inv RatField.natCoef_*_*n *> inv *-assoc *> pmap (* a) (RatField.finv-right $ natRat/=0 n/=0) *> ide-left)
+      | trunc x => x ∧ 1
+      | trunc_zro>=0 => <=-refl
+      | trunc-bound => meet-left
+      | trunc-assoc => meet-univ (RatField.negative_<= join-left <=∘ =_<= RatField.negative-isInv) (RatField.negative_<= join-right <=∘ =_<= RatField.negative-isInv <=∘ meet-right)
+
+    \lemma rat_*q {c : Rat} : c RatTrunc.*q 1 = c
+      => func-*q {RatTrunc} {QModule.fromRatModule (RingLModule RatField)} {\new AddGroupHom { | func x => x | func-+ => idp }}
         *> QModule.fromRatModule_*q *> RatField.ide-right
+
+    \lemma truncAt-le {eta : Rat} (eta>0 : RatField.zro RatField.< eta) {f : Rat} : RatTrunc.truncAt eta f <= eta
+      => RatTrunc.<=_*q-right (<=-less eta>0) meet-right <=∘ =_<= rat_*q
+  }
+
+\instance RealIntegrationSpace : BoundedIntegrationSpace Real
+  | TruncRieszSpace => RealTrunc
+  | integral x => x
+  | integral>=0 p => p
+  | integral_+ => idp
+  | trunc-bounded a => \case (RealTrunc.abs a).U-inh \with {
+    | inP (M,aM) => inP (M, (rat_real_<=.2 $ <=-less $ RealTrunc.abs>=0 <∘r real_<_U.2 aM, inP (1, <=-less RealAbGroup.zro<ide, <=-antisymmetric RealAbGroup.meet-left (RealAbGroup.meet-univ <=-refl <=-refl), <=-less (real_<_U.2 aM) <=∘ =_<= (inv real_*q))))
+  }
+  | trunc-archimedean p => real_archimedean \lam n => transport (RealAbGroup.<= 1) (p n) RealAbGroup.meet-right
+  | integral-trunc-small {f} _ {eps} eps>0 => inP (eps * ratio 1 2, linarith, truncAt-le linarith <∘r rat_real_<.1 linarith)
+  \where {
+    \func RealTrunc : TruncRieszSpace Real \cowith
+      | PosetAbGroup => RealAbGroup
+      | join => RealAbGroup.join
+      | join-left => join-left
+      | join-right => join-right
+      | join-univ => join-univ
+      | isDivisible a {n} n/=0 => inP (RatField.finv n RealField.* a, inv RealField.natCoef_*_*n *> inv RealField.*-assoc *> pmap (RealField.* a) (pmap (RealField.* _) (inv RealField.coefMap_natCoef) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 n/=0)) *> RealField.ide-left)
+      | trunc x => x ∧ 1
+      | trunc_zro>=0 => meet-univ <=-refl (RealAbGroup.<=-less RealAbGroup.zro<ide)
+      | trunc-bound => meet-left
+      | trunc-assoc => meet-univ (RealAbGroup.negative_<= join-left <=∘ =_<= RealAbGroup.negative-isInv) (RealAbGroup.negative_<= join-right <=∘ =_<= RealAbGroup.negative-isInv <=∘ meet-right)
+
+    \lemma real_*q {c : Rat} : c RealTrunc.*q 1 = Real.fromRat c
+      => func-*q {RealTrunc} {_} {\new AddGroupHom RealTrunc RealAbGroup { | func x => x | func-+ => idp }} *> QModule.fromRatModule_*q *> RealField.ide-right
+
+    \lemma truncAt-le {eta : Rat} (eta>0 : RatField.zro RatField.< eta) {f : Real} : RealTrunc.truncAt eta f <= Real.fromRat eta
+      => RealTrunc.<=_*q-right (<=-less eta>0) meet-right <=∘ =_<= real_*q
   }
 
 \record IntegrationSpaceHom \extends TruncRieszSpaceHom, NormedIsometricMap {
@@ -158,20 +241,64 @@
         \lam Vo Vx => TruncP.map (xl Vo Vx) \lam s => (s.1, s.2, s.3)
 }
 
-\instance RealIntegrationSpace : CompleteIntegrationSpace Real
-  | PosetAbGroup => RealAbGroup
-  | join => RealAbGroup.join
-  | join-left => join-left
-  | join-right => join-right
-  | join-univ => join-univ
-  | isDivisible a {n} n/=0 => inP (RatField.finv n RealField.* a, inv RealField.natCoef_*_*n *> inv RealField.*-assoc *> pmap (RealField.* a) (pmap (RealField.* _) (inv RealField.coefMap_natCoef) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 n/=0)) *> RealField.ide-left)
-  | trunc x => x ∧ 1
-  | trunc_zro>=0 => meet-univ <=-refl (RealAbGroup.<=-less RealAbGroup.zro<ide)
-  | trunc-bound => meet-left
-  | trunc-assoc => meet-univ (RealAbGroup.negative_<= join-left <=∘ =_<= RealAbGroup.negative-isInv) (RealAbGroup.negative_<= join-right <=∘ =_<= RealAbGroup.negative-isInv <=∘ meet-right)
-  | integral x => x
-  | integral>=0 p => p
-  | integral_+ => idp
+\class CompleteRegularIntegrationSpace \extends RegularIntegrationSpace, CompleteIntegrationSpace
+
+-- | (R1) and (R2) transfer along a dense homomorphism from a regular integration space.
+\func dense-regular {X : RegularIntegrationSpace} {Z : IntegrationSpace} (f : IntegrationSpaceHom X Z) (fd : f.IsDense) : RegularIntegrationSpace \cowith
+  | IntegrationSpace => Z
+  | integral-trunc-small {F} F>=0 {eps} eps>0 => \case approx fd F>=0 (third>0 eps>0) \with {
+    | inP (x,x>=0,Fx) => \case X.integral-trunc-small x>=0 (third>0 eps>0) \with {
+      | inP (eta,eta>0,h) =>
+        \have | t1 => Z.integral-split {Z.truncAt eta F} {Z.truncAt eta (f x)}
+                | t2 : Z.integral (Z.abs (Z.truncAt eta F - Z.truncAt eta (f x))) RealAbGroup.<= Z.integral (Z.abs (F - f x)) => Z.integral-mono (Z.truncAt-lipschitz eta>0)
+                | t3 : Z.integral (Z.truncAt eta (f x)) = X.integral (X.truncAt eta x) => pmap Z.integral (inv f.func-truncAt) *> f.func-integral
+        \in inP (eta, eta>0, third-arith1 eps>0 t1 t2 (rewrite t3 h) Fx)
+    }
+  }
+  | integral-trunc-large {F} F>=0 {eps} eps>0 => \case approx fd F>=0 (third>0 eps>0) \with {
+    | inP (x,x>=0,Fx) => \case X.integral-trunc-large x>=0 (third>0 eps>0) \with {
+      | inP (T,T>0,h) =>
+        \have | t1 => Z.integral-split {F} {f x}
+                | t2 => Z.integral-split {Z.truncAt T (f x)} {Z.truncAt T F}
+                | t3 : Z.integral (Z.abs (Z.truncAt T (f x) - Z.truncAt T F)) RealAbGroup.<= Z.integral (Z.abs (F - f x)) => Z.integral-mono (Z.truncAt-lipschitz T>0 <=∘ =_<= Z.abs_-)
+                | t4 : Z.integral (Z.truncAt T (f x)) = X.integral (X.truncAt T x) => pmap Z.integral (inv f.func-truncAt) *> f.func-integral
+        \in inP (T, T>0, third-arith2 t1 (transport2 (\lam u v => u RealAbGroup.< v RealAbGroup.+ _) (inv f.func-integral) (inv t4) h) t2 t3 Fx)
+    }
+  }
+  \where {
+    \lemma third>0 {eps : Rat} (eps>0 : RatField.zro RatField.< eps) : RatField.zro RatField.< eps * ratio 1 3
+      => linarith
+
+    -- | A positive element of {Z} is approximated by images of positive elements.
+    \lemma approx {X Z : IntegrationSpace} {f : IntegrationSpaceHom X Z} (fd : f.IsDense) {F : Z} (F>=0 : Z.zro <= F) {d : Rat} (d>0 : RatField.zro RatField.< d)
+      : ∃ (x : X) (X.zro <= x) (Z.integral (Z.abs (F - f x)) RealAbGroup.< Real.fromRat d)
+      => \case fd {F} {OBall d F} OBall-open (OBall-center d>0) \with {
+        | inP (z, inP (y,p), h) =>
+          \have | e : f (X.part+ y) = Z.part+ (f y) => f.func-join *> pmap (_ ∨) f.func-zro
+                  | n : Z.integral (Z.abs (F - f y)) RealAbGroup.< Real.fromRat d => transport (RealAbGroup.< _) (lnorm-ldist {Z} {F} {f y}) $ real_<_U.2 $ transportInv (OBall d F) p h
+                  | l : Z.abs (F - f (X.part+ y)) <= Z.abs (F - f y)
+                      => =_<= (pmap (\lam w => Z.abs (w - _)) (inv (Z.join_<= F>=0) *> Z.join-comm) *> pmap (\lam w => Z.abs (Z.part+ F - w)) e) <=∘ Z.join-lip
+                          <=∘ =_<= (pmap (_ +) (pmap Z.abs Z.negative-right *> Z.abs_zro) *> Z.zro-right)
+          \in inP (X.part+ y, X.join-right, Z.integral-mono l <∘r n)
+      }
+
+    \lemma thirds {eps : Rat} : Real.fromRat eps = Real.fromRat (eps * ratio 1 3) RealAbGroup.+ Real.fromRat (eps * ratio 1 3) RealAbGroup.+ Real.fromRat (eps * ratio 1 3)
+      => pmap Real.fromRat (RatField.<=-antisymmetric linarith linarith) *> inv (pmap (RealAbGroup.+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat)
+
+    \lemma third-arith1 {a b c d : Real} {eps : Rat} (eps>0 : RatField.zro RatField.< eps) (t1 : a RealAbGroup.<= b RealAbGroup.+ c) (t2 : c RealAbGroup.<= d)
+                        (h : b RealAbGroup.< Real.fromRat (eps * ratio 1 3)) (Fx : d RealAbGroup.< Real.fromRat (eps * ratio 1 3)) : a RealAbGroup.< Real.fromRat eps
+      => \have | e => thirds {eps}
+               | p : RealAbGroup.zro RealAbGroup.< Real.fromRat (eps * ratio 1 3) => rat_real_<.1 (third>0 eps>0)
+         \in linarith
+
+    \lemma third-arith2 {a b c d e g : Real} {eps : Rat} (t1 : a RealAbGroup.<= b RealAbGroup.+ c) (h : b RealAbGroup.< d RealAbGroup.+ Real.fromRat (eps * ratio 1 3))
+                        (t2 : d RealAbGroup.<= e RealAbGroup.+ g) (t3 : g RealAbGroup.<= c) (Fx : c RealAbGroup.< Real.fromRat (eps * ratio 1 3)) : a RealAbGroup.< e RealAbGroup.+ Real.fromRat eps
+      => \have e' => thirds {eps}
+         \in linarith
+  }
+
+\instance RealCompleteIntegrationSpace : CompleteRegularIntegrationSpace Real
+  | RegularIntegrationSpace => RealIntegrationSpace
   | norm-ext => RealNormed.norm-ext
   | isStronglyComplete => RealNormed.isStronglyComplete
 
@@ -316,6 +443,12 @@
     \lemma inc-dense : inc.IsDense
       => completion.isDenseEmbedding.1
   }
+
+-- | The completion of a regular integration space is regular.
+\func RegularIntegrationSpaceCompletion (X : RegularIntegrationSpace) : CompleteRegularIntegrationSpace \cowith
+  | CompleteIntegrationSpace => IntegrationSpaceCompletion X
+  | integral-trunc-small => RegularIntegrationSpace.integral-trunc-small {dense-regular integrationCompletion.inc integrationCompletion.inc-dense}
+  | integral-trunc-large => RegularIntegrationSpace.integral-trunc-large {dense-regular integrationCompletion.inc integrationCompletion.inc-dense}
 
 -- | Extension of a homomorphism along a dense homomorphism into a complete integration space.
 \func dense-integration-lift {X Y : IntegrationSpace} {Z : CompleteIntegrationSpace} (f : IntegrationSpaceHom X Y) (fd : f.IsDense) (g : IntegrationSpaceHom X Z) : IntegrationSpaceHom Y Z \cowith

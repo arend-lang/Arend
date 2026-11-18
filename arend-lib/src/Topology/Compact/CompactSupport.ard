@@ -7,6 +7,8 @@
 \import Algebra.Ordered
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
+\import Algebra.Group.GroupHom
+\import Algebra.QModule
 \import Algebra.StrictlyOrdered
 \import Arith.Rat
 \import Arith.Real
@@ -251,6 +253,24 @@
       | nil => idp
       | f :: l => pmap (f x +) BigSum-apply
   }
+
+\lemma CompactCover-*q-apply {X : CoverSpace} {q : Rat} {f : CompactCoverMap X} (x : X) : (q QModule.*q {CompactCoverTruncRieszSpace X} f) x = q RealField.* f x
+  => func-*q {CompactCoverTruncRieszSpace X} {_} {\new AddGroupHom (CompactCoverTruncRieszSpace X) RealAbGroup { | func g => g x | func-+ => idp }} *> QModule.fromRatModule_*q
+
+-- | Elements of `C_c(X)` are bounded.
+\lemma CompactCover-trunc-bounded {X : CoverSpace} (f : CompactCoverMap X) : ∃ (M : Rat) (TruncRieszSpace.IsBelow (abs f) M)
+  => \have | (inP (M,M>=0,fM)) => f.bound
+           | (inP (K,MK)) => M.U-inh
+           | K>0 : 0 < K => rat_real_<.2 (M>=0 <∘r real_<_U.2 MK)
+           | u<=1 (x : X) : RatField.finv K RealField.* abs (f x) <= 1
+                    => RealField.<=_*_positive-right (rat_real_<=.1 $ <=-less $ RatField.finv>0 K>0) (fM x <=∘ <=-less (real_<_U.2 MK))
+                        <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left $ RatField.>_/= K>0))
+     \in inP (K, TruncRieszSpace.IsBelow-unit K>0 (\lam x => RealAbGroup.abs>=0) $ CompactCoverMap.ext \lam x =>
+              \have e => CompactCover-*q-apply x
+              \in <=-antisymmetric meet-left (meet-univ <=-refl (=_<= e <=∘ u<=1 x)))
+
+\lemma CompactCover-trunc-archimedean {X : CoverSpace} {a : CompactCoverMap X} (p : \Pi (n : Nat) -> TruncRieszSpace.IsUnderUnit (n AddMonoid.*n a)) (x : X) : a x <= 0
+  => real_archimedean \lam n => =_<= (inv (CompactCoverTruncRieszSpace.CompactCover-*n-apply x)) <=∘ transport (<= 1) (path \lam i => p n i x) meet-right
 
 -- | Functions with totally bounded support on a topological group are uniform.
 \lemma CompactMap-ta-uniform {A : TopAddGroup} (f : CompactCoverMap A) : UniformMap A RealNormed f

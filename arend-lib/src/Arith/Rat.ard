@@ -436,6 +436,16 @@
 \sfunc rat_natBound (q : Rat) : \Sigma (n : Nat) (q < n)
   => (iabs $ rat_ceiling (q + 1), rewrite iabs=abs $ (linarith : q < q + 1) <∘l rat_ceiling>=id <=∘ fromInt_<= LinearlyOrderedAbGroup.abs>=id)
 
+\lemma rat_*n-unbounded {a : Rat} (a>0 : RatField.zro RatField.< a) : 1 RatField.< (rat_natBound (RatField.finv a)).1 RatField.*n a
+  => transport2 (<) (RatField.finv-left $ RatField.>_/= a>0) RatField.natCoef_*_*n (<_*_positive-left (rat_natBound (RatField.finv a)).2 a>0)
+
+-- | Archimedean property: if `n a ≤ 1` for all `n`, then `a ≤ 0`.
+\lemma rat_archimedean {a : Rat} (p : \Pi (n : Nat) -> n RatField.*n a <= 1) : a <= 0
+  => \case LinearOrder.dec<_<= {RatField} 0 a \with {
+    | inl a>0 => absurd $ <-irreflexive $ rat_*n-unbounded a>0 <∘l p _
+    | inr a<=0 => a<=0
+  }
+
 \sfunc rat_>1_pow-bound {q : Rat} (q>1 : 1 RatField.< q) (B : Rat) : \Sigma (n : Nat) (B < RatField.pow q n)
   => \have | R => rat_natBound $ B * RatField.finv (q - 1)
            | q-1>0 : 0 RatField.< q - 1 => linarith
