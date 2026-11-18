@@ -17,7 +17,6 @@
 \import Topology.BanachAlgebra
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
-\import Topology.StoneCStarAlgebra (RealStoneC*Algebra)
 \import Topology.TopModule
 \import Topology.TopRing
 \import Topology.TopRing.Real

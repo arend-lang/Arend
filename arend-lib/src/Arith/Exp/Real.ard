@@ -29,7 +29,7 @@
 \import Combinatorics.Factorial
 \import Arith.Rat
 \import Arith.Real
-\import Topology.StoneCStarAlgebra
+\import Topology.BanachAlgebra
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Function.Meta
@@ -109,13 +109,13 @@
     -- | The index-1 partial sum of the exp series at `x` is `1`.
     \lemma partialSum_1 {x : Real} : partialSum (powerSeries exp.coef x) 1 = 1
       => partialSum_suc *> pmap (+ _) partialSum-empty *> zro-left
-         *> pmap (* Monoid.pow x 0) (RealStoneC*Algebra_fromRat 1)
+         *> pmap (* Monoid.pow x 0) (RealBanachAlgebra_fromRat 1)
          *> ide-left
 
     -- | All exp-series terms at `x ≥ 0` are non-negative.
     \lemma term>=0 {x : Real} (x>=0 : 0 <= x) (k : Nat) : 0 <= powerSeries exp.coef x k
       => RealField.<=_*_positive_positive
-           (transportInv (0 <=) (RealStoneC*Algebra_fromRat (RatField.finv (pos (fac k))))
+           (transportInv (0 <=) (RealBanachAlgebra_fromRat (RatField.finv (pos (fac k))))
               (rat_real_<=.1 (RatField.finv>=0 (<=_ratNom (pos<=pos zero<=_)))))
            (RealField.pow>=0 x>=0)
   }
@@ -137,14 +137,14 @@
       => partialSum_suc *> pmap2 (+) Real-exp->=1-of-nonneg.partialSum_1 term1_eq
 
     \private \lemma term1_eq {x : Real} : powerSeries exp.coef x 1 = x
-      => pmap (* _) (RealStoneC*Algebra_fromRat 1) *> ide-left *> ide-left
+      => pmap (* _) (RealBanachAlgebra_fromRat 1) *> ide-left *> ide-left
   }
 
 {- | Real {exp} is strictly positive on all of {Real}. Constructive proof:
  -   `exp x` is invertible (via `exp_negative`), so {#0=>eitherPosOrNeg} gives
  -   `0 < exp x` or `exp x < 0`. The latter contradicts `0 <= exp(x/2)^2 = exp x`.
  -}
-\lemma Real-exp-pos (x : Real) : 0 < exp {RealStoneC*Algebra} x
+\lemma Real-exp-pos (x : Real) : 0 < exp x
   => \case RealField.#0=>eitherPosOrNeg exp_Inv \with {
     | byLeft exp-pos => RealField.pos_>0 exp-pos
     | byRight exp-neg => absurd $ exp>=0 (RealField.neg_<0 exp-neg)

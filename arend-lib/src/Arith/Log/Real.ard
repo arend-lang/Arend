@@ -14,29 +14,20 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module
 \import Algebra.Monoid
-\import Algebra.Monoid.MonoidHom
-\import Algebra.Ordered
 \import Algebra.QModule
-\import Algebra.Ring
 \import Algebra.StrictlyOrdered
 \import Algebra.Semiring
-\import Analysis.PowerSeries
-\import Analysis.Series
-\import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Logic.Meta
 \import Topology.BanachAlgebra
-\import Topology.StoneCStarAlgebra
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Arith.Log
 \import Arith.Exp
 \import Arith.Exp.Real
-\import Combinatorics.Factorial
 \import Function.Meta
 \import Logic
 \import Meta
@@ -46,7 +37,6 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
 \open Monoid (pow)
@@ -105,7 +95,7 @@
       (exp_+
        *> pmap2 (*) (exp-ell y y-pos _) log2.exp-log2
        *> *-comm
-       *> pmap (* y) (inv (RealStoneC*Algebra_fromRat 2) *> QAlgebra.fromRat_natCoef))
+       *> pmap (* y) (inv (RealBanachAlgebra_fromRat 2) *> QAlgebra.fromRat_natCoef))
 
 -- | The Real logarithm $\log : \mathbb R_{>0} \to \mathbb R$.
 \sfunc log-Real (x : Real) (x>0 : (0 : Real) < x) : Real
@@ -236,3 +226,14 @@
 -- | $\log(\exp y) = y$ for any $y \in \mathbb R$.
 \lemma log-Real-exp (y : Real) : log-Real (exp y) (Real-exp-pos y) = y
   => Real-exp-inj $ exp-log-Real (exp y) (Real-exp-pos y)
+
+-- | $\log(xy) = \log x + \log y$ for $x, y > 0$.
+\lemma log-Real-* (x y : Real) (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y)
+  : log-Real (x * y) (RealField.<_*_positive_positive x>0 y>0) = log-Real x x>0 + log-Real y y>0
+  => Real-exp-inj $ exp-log-Real (x * y) _
+       *> inv (exp_+ *> pmap2 (*) (exp-log-Real x x>0) (exp-log-Real y y>0))
+
+-- | $\log$ is monotone.
+\lemma log-Real-mono {x y : Real} (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y) (x<=y : x <= y)
+  : log-Real x x>0 <= log-Real y y>0
+  => \lam q => x<=y $ transport2 (<) (exp-log-Real y y>0) (exp-log-Real x x>0) (Real-exp-strict-mono q)

@@ -9,6 +9,8 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.StrictlyOrdered
+\import Algebra.Semiring
 \import Analysis.Calculus.InverseFunction
 \import Analysis.Derivative.CoverDerivative
 \import Arith.Exp
@@ -27,6 +29,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Set
+\import Topology.BanachAlgebra
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Subspace
@@ -48,11 +51,22 @@
 
 -- | `log` is monotone.
 \lemma logPos-mono {u v : Set.Total RealPositive} (u<=v : u.1 <= v.1) : logPos u <= logPos v
-  => \lam q => u<=v $ transport2 (<) (exp-log-Real v.1 v.2) (exp-log-Real u.1 u.2) (Real-exp-strict-mono q)
+  => log-Real-mono u.2 v.2 u<=v
 
 -- | The derivative of `exp` is locally bounded below by positive constants.
 \lemma exp-locallyPositive : IsLocallyPositive exp-real-hasDeriv
   => \lam {a} _ => inP ((expPos a).1, (expPos a).2, \lam {x} a<=x _ => Real-exp-mono a<=x <=∘ =_<= (inv (exp-real-deriv exp-real-hasDeriv x)))
+
+-- | {exp} reflects `<`.
+\lemma Real-exp-reflect-< {a b : Real} (e : exp a < exp b) : a < b
+  => \have q>0 => realQuot>0 exp-locallyPositive a b
+     \in OrderedAddGroup.from>0 $ RealField.<_*_positive-cancel-right (<=-less q>0) $
+          transport2 (<) (inv zro_*-left) (realQuot-incr exp-real-hasDeriv a b) (OrderedAddGroup.to>0 e)
+
+-- | `log` is strictly monotone.
+\lemma log-Real-strict-mono {x y : Real} (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y) (x<y : x < y)
+  : log-Real x x>0 < log-Real y y>0
+  => Real-exp-reflect-< $ transport2 (<) (inv (exp-log-Real x x>0)) (inv (exp-log-Real y y>0)) x<y
 
 -- | The positive reals are locally contained in closed intervals of positive reals.
 \lemma positive-locallyInterval : IsLocallyInterval RealPositive

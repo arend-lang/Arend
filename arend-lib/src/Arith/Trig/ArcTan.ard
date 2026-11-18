@@ -3,11 +3,9 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
-\import Algebra.StrictlyOrdered
 \import Analysis.PowerSeries
 \import Analysis.Series
 \import Arith.Complex
@@ -20,18 +18,12 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Real.Root
 \import Arith.Real.UpperReal
 \import Arith.Trig.Real
-\import Analysis.CauchyProduct
-\import Analysis.Limit
-\import Analysis.SeriesComposition
-\import Combinatorics.Factorial
 \import Data.Or
 \import Function.Meta
 \import Logic
 \import Meta
-\import Set.Partial
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -41,10 +33,8 @@
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedRing (RealValuedRing)
-\import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
-\import Topology.StoneCStarAlgebra()
 \open Monoid (pow)
 \open Complex \using (iunit \as i)
 \open LatticeAbGroup
@@ -109,16 +99,14 @@
 -- | The arctangent $\arctan x$ for $|x| < 1$, as the sum of its Taylor series.
 \sfunc arctan (x : Real) (|x|<1 : abs x < 1) : Real
   => arctan-gen x (real_<_U.1 |x|<1)
-  \where \open Topology.StoneCStarAlgebra
 
 -- | $\sum_n c_n\,x^n = \arctan x$ for $|x| < 1$: the Taylor series sums to $\arctan$.
 \lemma arctan-coef-powerSeries-IsSeriesSum {x : Real} (|x|<1 : abs x < 1)
   : IsSeriesSum (powerSeries arctan-coef x) (arctan x |x|<1)
   => transport2 (\lam c => IsSeriesSum (powerSeries c x))
-      (ext \lam n => RealStoneC*Algebra_fromRat (arctan-coef-Rat n))
+      (ext \lam n => RealBanachAlgebra_fromRat (arctan-coef-Rat n))
       (inv $ (\peval arctan x |x|<1) *> (\peval arctan-gen x _))
       powerSeriesSum-isSum
-  \where \open Topology.StoneCStarAlgebra
 
 -- | Arctan coefficients lifted to $\mathbb{C}$: $c_m$ viewed via `Complex.fromReal`.
 \private \func arctan-coef-C (m : Nat) : Complex

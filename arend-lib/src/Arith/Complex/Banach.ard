@@ -5,39 +5,27 @@
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.QModule
-\import Algebra.Ring
-\import Algebra.Ring.Reduced
 \import Algebra.Semiring
-\import Algebra.StrictlyOrdered
 \import Arith.Complex
 \import Arith.Complex.Norm
-\import Arith.Nat
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.Root
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
-\import Meta
-\import Order.LinearOrder
 \import Order.PartialOrder
-\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Arith.Rat
-\import Order.Lattice
 \import Set.Filter
 \import Set.Set
-\import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.BanachAlgebra
-\import Topology.BanachSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
-\import Topology.StoneCStarAlgebra (RealStoneC*Algebra_fromRat)
-\open Monoid (pow)
 \open AddMonoid (*n)
 \open LatticeAbGroup
 
@@ -138,4 +126,4 @@
   => func-*q {_} {_} {conjAddHom} *> pmap (r QModule.*q) conj_ide
 
 \lemma complexBanach-fromRat {r : Rat} : ComplexBanach.fromRat r = Complex.fromReal (Real.fromRat r)
-  => inv (func-*q {_} {_} {fromRealMap}) *> pmap Complex.fromReal (RealStoneC*Algebra_fromRat r)
+  => inv (func-*q {_} {_} {fromRealMap}) *> pmap Complex.fromReal (RealBanachAlgebra_fromRat r)
