@@ -1,0 +1,169 @@
+{- | Rolle's theorem and the mean value theorem (Bishop–Bridges, Ch. 2, Lemma 5.5 and Thm. 5.6).
+ -
+ -   If {f} has a derivative on `[a,b]` and `f a = f b`, then `|f' x|` is arbitrarily small for some `x` (see {rolle}).
+ -   Proof: if `m = inf |f'|` is positive, then `f'` does not change sign (as in {intermediate-value.no-gap}),
+ -   say `f' <= -m`, and summing the estimates of the increments of {f} over a fine grid gives `f b - f a <= -(m - r)(b - a) < 0`.
+ -
+ -   The mean value theorem (see {mean-value}) follows by applying {rolle} to `(x - a)(f b - f a) - f x (b - a)`.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Analysis.Calculus.FundamentalTheorem
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.Derivative.UniformDerivative
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Approximate
+\import Arith.Real.Field
+\import Arith.Real.IVT.Approximate
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.TopRing.Real
+
+-- | Rolle's theorem (Bishop–Bridges, Ch. 2, Lemma 5.5).
+\lemma rolle {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+             (fab : f (a, (<=-refl, <=-less a<b)) = f (b, (<=-less a<b, <=-refl))) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (x : Set.Total (ClosedInterval a b)) (RealAbGroup.abs (deriv (interval-derivDense a<b) f d x 1) < eps)
+  => \let g => derivCover a<b f d
+     \in core a<b g ((hasDeriv-uniform-iff a<b {f} {\lam x => g x}).1 (d, \lam x => idp)) fab eps>0
+  \where {
+    -- | Rolle's theorem for a function {f} satisfying the estimate of {hasDeriv-uniform-iff} with a cover map {g}.
+    \lemma core {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (g : CoverMap (IntervalSpace a b) RealNormed)
+                (u : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+                  (RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)))
+                (fab : f (a, (<=-refl, <=-less a<b)) = f (b, (<=-less a<b, <=-refl))) {eps : Real} (eps>0 : 0 < eps)
+      : ∃ (x : Set.Total (ClosedInterval a b)) (RealAbGroup.abs (g x) < eps)
+      => \case intermediate-value.approx (<=-less a<b) g {0} eps>0 (\lam {q} {m} {s} q>0 q<m s>0 hu hm => gap a<b g u fab q>0 q<m s>0 hu hm) \with {
+        | inP (x,p) => inP (x, transport (\lam z => RealAbGroup.abs z < eps) simplify p)
+      }
+
+    -- | If `|g| >= m > q` and `g` varies by at most `q` on steps of size `s`, then `f a /= f b`.
+    \lemma gap {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (g : CoverMap (IntervalSpace a b) RealNormed)
+               (u : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+                 (RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)))
+               (fab : f (a, (<=-refl, <=-less a<b)) = f (b, (<=-less a<b, <=-refl)))
+               {q m s : Real} (q>0 : 0 < q) (q<m : q < m) (s>0 : 0 < s)
+               (hu : \Pi {x x' : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (x'.1 - x.1) <= s -> RealAbGroup.abs (g x' - g x) <= q)
+               (hm : \Pi (x : Set.Total (ClosedInterval a b)) -> m <= RealAbGroup.abs (g x - 0)) : Empty
+      => \case real_<-char.1 q<m \with {
+        | inP (r,q<r,r<m) => \case u {r} (rat_real_<.2 (q>0 <∘ q<r)) \with {
+          | inP (delta,delta>0,est) =>
+            \let | s' => s ∧ Real.fromRat (RatField.mid 0 delta)
+                 | pa : Set.Total (ClosedInterval a b) => (a, (<=-refl, <=-less a<b))
+            \in \have | s'>0 : 0 < s' => <_meet-univ s>0 (rat_real_<.1 (RatField.mid>left delta>0))
+                      | s'<delta {t : Real} (ts : t <= s') : t < Real.fromRat delta => ts <∘r (meet-right <∘r rat_real_<.1 (RatField.mid<right delta>0))
+                      | hu' {x x' : Set.Total (ClosedInterval a b)} (dd : RealAbGroup.abs (x'.1 - x.1) <= s') : RealAbGroup.abs (g x' - g x) <= q
+                          => hu (dd <=∘ meet-left)
+                      | hm' (x : Set.Total (ClosedInterval a b)) : m <= RealAbGroup.abs (g x) => transport (m <=) (pmap RealAbGroup.abs simplify) (hm x)
+            \in \case real-located {g pa} (linarith : negative m < m) \with {
+              | byLeft -m<ga => descend a<b {\lam x => negative (f x)} {\lam x => negative (g x)} q>0 q<m r<m s'>0
+                  (\lam {x} {x'} dd => transport (\lam z => RealAbGroup.abs z <= q) (equation.abGroup : negative (g x' - g x) = negative (g x') - negative (g x)) (=_<= RealAbGroup.abs_negative <=∘ hu' dd))
+                  (\lam x => hm' x <=∘ =_<= (inv RealAbGroup.abs_negative))
+                  (\lam {x} {y} dd => transport (\lam z => RealAbGroup.abs z <= _) (equation.cRing : negative (f y - f x - (y.1 - x.1) * g x) = negative (f y) - negative (f x) - (y.1 - x.1) * negative (g x))
+                    (=_<= RealAbGroup.abs_negative <=∘ est (s'<delta dd)))
+                  (linarith (intermediate-value.below (linarith : negative (g pa) < m) (hm' pa <=∘ =_<= (inv RealAbGroup.abs_negative))))
+                  (pmap negative fab)
+              | byRight ga<m => descend a<b {f} {\lam x => g x} q>0 q<m r<m s'>0 hu' hm' (\lam dd => est (s'<delta dd))
+                  (linarith (intermediate-value.below ga<m (hm' pa))) fab
+            }
+        }
+      }
+
+    -- | If `h a <= 0`, `|h| >= m > q`, `h` varies by at most `q` and `F` is `e`-close to `h` with `e < m` on steps of size `s`, then `F a /= F b`.
+    \lemma descend {a b : Real} (a<b : a < b) {F h : Set.Total (ClosedInterval a b) -> Real} {q m e s : Real}
+                   (q>0 : 0 < q) (q<m : q < m) (e<m : e < m) (s>0 : 0 < s)
+                   (hu : \Pi {x x' : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (x'.1 - x.1) <= s -> RealAbGroup.abs (h x' - h x) <= q)
+                   (hm : \Pi (x : Set.Total (ClosedInterval a b)) -> m <= RealAbGroup.abs (h x))
+                   (est : \Pi {x y : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (y.1 - x.1) <= s
+                     -> RealAbGroup.abs (F y - F x - (y.1 - x.1) * h x) <= e * RealAbGroup.abs (y.1 - x.1))
+                   (ha : h (a, (<=-refl, <=-less a<b)) <= 0) (Fab : F (a, (<=-refl, <=-less a<b)) = F (b, (<=-less a<b, <=-refl))) : Empty
+      => \let a<=b => <=-less a<b
+         \in \have | (inP (k,_,bk)) => real-nat-approx-div (usingOnly a<=b linarith : 0 <= b - a) s>0
+               | bt : b <= a + RealField.natCoef (suc (suc k)) * s => rewrite (RealField.natCoefSuc, RealField.natCoefSuc, equation.cRing : (RealField.natCoef k + 1 + 1) * s = (RealField.natCoef k + 2) * s) linarith
+               | end : clamp a<=b (a + RealField.natCoef (suc (suc k)) * s) = (b, (a<=b, <=-refl))
+                   => ext (pmap (a ∨) (RealAbGroup.meet-comm *> RealAbGroup.meet_<= bt) *> RealAbGroup.join_<= a<=b)
+               | t => transport (\lam x => F x + (m - e) * x.1 <= F (a, (<=-refl, a<=b)) + (m - e) * a) end (tele a<b q>0 q<m s>0 hu hm est ha (suc (suc k)))
+               | pos : 0 < (m - e) * (b - a) => RealField.<_*_positive_positive (usingOnly e<m linarith) (usingOnly a<b linarith)
+               | pe : (m - e) * (b - a) = (m - e) * b - (m - e) * a => equation.cRing
+         \in usingOnly (t, pos, pe, Fab) linarith
+      \where
+        -- | `F x + (m - e) x` does not increase along the grid.
+        \lemma tele {a b : Real} (a<b : a < b) {F h : Set.Total (ClosedInterval a b) -> Real} {q m e s : Real}
+                    (q>0 : 0 < q) (q<m : q < m) (s>0 : 0 < s)
+                    (hu : \Pi {x x' : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (x'.1 - x.1) <= s -> RealAbGroup.abs (h x' - h x) <= q)
+                    (hm : \Pi (x : Set.Total (ClosedInterval a b)) -> m <= RealAbGroup.abs (h x))
+                    (est : \Pi {x y : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (y.1 - x.1) <= s
+                      -> RealAbGroup.abs (F y - F x - (y.1 - x.1) * h x) <= e * RealAbGroup.abs (y.1 - x.1))
+                    (ha : h (a, (<=-refl, <=-less a<b)) <= 0) (k : Nat)
+          : F (clamp (<=-less a<b) (a + RealField.natCoef k * s)) + (m - e) * (clamp (<=-less a<b) (a + RealField.natCoef k * s)).1
+              <= F (a, (<=-refl, <=-less a<b)) + (m - e) * a \elim k
+          | 0 => rewrite (RealField.natCoefZero, RealField.zro_*-left, zro-right, clamp-in) <=-refl
+          | suc k =>
+            \let | x => clamp (<=-less a<b) (a + RealField.natCoef k * s)
+                 | y => clamp (<=-less a<b) (a + RealField.natCoef (suc k) * s)
+            \in \have | ih => tele a<b q>0 q<m s>0 hu hm est ha k
+                      | hx : h x <= negative m => intermediate-value.walk (<=-less a<b) h q>0 q<m s>0 hu hm ha k
+                      | e1 : a + RealField.natCoef (suc k) * s - (a + RealField.natCoef k * s) = s => rewrite RealField.natCoefSuc equation.cRing
+                      | xy : x.1 <= y.1 => RealAbGroup.join-monotone <=-refl (RealAbGroup.meet-monotone (usingOnly (e1, s>0) linarith) <=-refl)
+                      | D>=0 : 0 <= y.1 - x.1 => usingOnly xy linarith
+                      | dd : RealAbGroup.abs (y.1 - x.1) <= s => clamp-dist {a} {b} {<=-less a<b} <=∘ =_<= (pmap RealAbGroup.abs e1 *> RealAbGroup.abs-ofPos (<=-less s>0))
+                      | p1 : F y - F x - (y.1 - x.1) * h x <= e * (y.1 - x.1) => RealAbGroup.abs>=id <=∘ est dd <=∘ =_<= (pmap (e *) (RealAbGroup.abs-ofPos D>=0))
+                      | p2 : (y.1 - x.1) * h x <= (y.1 - x.1) * negative m => RealField.<=_*_positive-right D>=0 hx
+                      | e2 : (m - e) * y.1 - (m - e) * x.1 = m * (y.1 - x.1) - e * (y.1 - x.1) => equation.cRing
+                      | e3 : (y.1 - x.1) * negative m = negative (m * (y.1 - x.1)) => equation.cRing
+                \in usingOnly (ih, p1, p2, e2, e3) linarith
+  }
+
+-- | The mean value theorem (Bishop–Bridges, Ch. 2, Thm. 5.6).
+\lemma mean-value {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (x : Set.Total (ClosedInterval a b))
+      (RealAbGroup.abs (f (b, (<=-less a<b, <=-refl)) - f (a, (<=-refl, <=-less a<b)) - deriv (interval-derivDense a<b) f d x 1 * (b - a)) < eps)
+  => \let | pa : Set.Total (ClosedInterval a b) => (a, (<=-refl, <=-less a<b))
+          | pb : Set.Total (ClosedInterval a b) => (b, (<=-less a<b, <=-refl))
+          | C => f pb - f pa
+          | f' x => deriv (interval-derivDense a<b) f d x 1
+          | H x => (x.1 - a) * C - f x * (b - a)
+          | (dH,eH) => (hasDeriv-uniform-iff a<b {H} {\lam x => C - f' x * (b - a)}).2 (est a<b ((hasDeriv-uniform-iff a<b {f} {f'}).1 (d, \lam x => idp)))
+     \in \case rolle a<b dH (equation.cRing : H pa = H pb) eps>0 \with {
+       | inP (x,p) => inP (x, transport (\lam z => RealAbGroup.abs z < eps) (eH x) p)
+     }
+  \where
+    -- | The estimate for `(x - a) C - f x (b - a)` with `C - g x (b - a)`.
+    \lemma est {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} {C : Real}
+               (u : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+                 (RealAbGroup.abs (f y - f x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)))
+      : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+          (RealAbGroup.abs (((y.1 - a) * C - f y * (b - a)) - ((x.1 - a) * C - f x * (b - a)) - (y.1 - x.1) * (C - g x * (b - a)))
+            <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1))
+      => \lam {eps} eps>0 =>
+        \have | ba>0 : 0 < b - a => usingOnly a<b linarith
+              | E>0 : 0 < Real.fromRat eps * RealField.pinv (b - a) ba>0 => RealField.<_*_positive_positive (rat_real_<.1 eps>0) (RealField.pinv>0 ba>0)
+        \in \case real_<-char.1 E>0 \with {
+          | inP (r,r>0,r<E) => \case u {r} (rat_real_<.2 r>0) \with {
+            | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} {y} dd =>
+              \have | rb : Real.fromRat r * (b - a) <= Real.fromRat eps
+                          => RealField.<=_*_positive-left (<=-less r<E) (<=-less ba>0) <=∘ =_<= (*-assoc *> pmap (_ *) (RealField.pinv-left ba>0) *> ide-right)
+                    | e : ((y.1 - a) * C - f y * (b - a)) - ((x.1 - a) * C - f x * (b - a)) - (y.1 - x.1) * (C - g x * (b - a))
+                          = negative ((b - a) * (f y - f x - (y.1 - x.1) * g x)) => equation.cRing
+              \in rewrite e $ =_<= (RealAbGroup.abs_negative *> RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (<=-less ba>0)))
+                    <=∘ RealField.<=_*_positive-right (<=-less ba>0) (h dd)
+                    <=∘ =_<= (inv *-assoc *> pmap (* _) RealField.*-comm)
+                    <=∘ RealField.<=_*_positive-left rb RealAbGroup.abs>=0)
+          }
+        }
