@@ -128,3 +128,16 @@
       | inP (V,DV,TV) => cauchy-refine cauchy-top \lam _ => inP (_, inP $ later (restrict V, rewrite p $ inP (V, DV, idp), idp), \lam {x} _ => TV (gT x))
     }
   }) (unfolds in Dc)
+
+-- | A cover map whose image lies locally (on the members of a Cauchy cover) in sets uniformly rather below an open set {U} factors through {OpenCoverSpace}.
+\func openCover-local-lift {X : CoverSpace} {Y : UniformSpace} {U : Set Y} (Uo : isOpen U) (g : CoverMap X Y) (gU : \Pi (x : X) -> U (g x))
+                           {C : Set (Set X)} (Cc : X.isCauchy C) (CT : ∀ {V : C} ∃ (T : Set Y) (T <=* U) ∀ {x : V} (T (g x)))
+  : CoverMap X (OpenCoverSpace Uo) (\lam x => (g x, gU x)) \cowith
+  | func-cover Dc => ClosurePrecoverSpace.closure-univ-cover {_} {isBasicCover} (\lam {C'} (inP (D,e,p)) => \case \elim e \with {
+    | byLeft Dc' => cauchy-subset (g.func-cover Dc') \lam {W} (inP (V,DV,q)) => inP $ later (restrict V, rewrite p $ inP (V, DV, idp), q)
+    | byRight Dr => cauchy-glue-refine Cc \lam {V} CV => \case CT CV \with {
+      | inP (T,w,VT) => \case <=*-regularClosure Dr w \with {
+        | inP (W,DW,TW) => cauchy-refine cauchy-top \lam {V'} _ => inP (V', inP (_, inP $ later (restrict W, rewrite p $ inP (W, DW, idp), idp), \lam {x} s => TW (VT s.1)), <=-refl)
+      }
+    }
+  }) (unfolds in Dc)

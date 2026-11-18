@@ -1,0 +1,236 @@
+{- | The difference quotient of a power series.
+
+  For a power series `f x = Σ c_n x^n` over a commutative real Banach algebra, the series
+  $$Q(x,y) = \sum_n c_{n+1} \sum_{k \le n} x^k y^{n-k}$$
+  converges on the square of the ball of convergence of `f` (see {quotSum}), satisfies `f y - f x = (y - x) Q(x,y)` (see {quotSum-incr}),
+  and on the diagonal it is the sum of the formal derivative of `f` (see {quotSum-diag}).
+  Consequently, the sum of a power series has a difference quotient (see {powerSeries-hasDeriv})
+  and its derivative is the sum of the formal derivative (see {powerSeries-deriv}).
+  For everywhere convergent power series, see {powerSeriesTotal-hasDeriv} and {powerSeriesTotal-deriv}.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Algebra.Ring.FormalSeries.Derivative \using (deriv \as fderiv)
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.FuncLimit
+\import Analysis.PowerSeries
+\import Analysis.PowerSeries.Derivative
+\import Analysis.Series
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.LowerReal
+\import Arith.Real.UpperReal
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.MetricSpace.OpenBall
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
+\import Topology.TopModule
+\import Topology.TopRing
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedRing
+\open Monoid (pow)
+
+-- | `powQuot x y n = Σ_{k < n} x^k y^(n-1-k)`, the quotient of `y^n - x^n` by `y - x`.
+\func powQuot {R : Ring} (x y : R) (n : Nat) : R \elim n
+  | 0 => 0
+  | suc n => x * powQuot x y n + pow y n
+  \where {
+    \lemma incr {R : CRing} {x y : R} {n : Nat} : (y - x) * powQuot x y n = pow y n - pow x n \elim n
+      | 0 => zro_*-right *> inv negative-right
+      | suc n => equation.cRing {incr {R} {x} {y} {n}}
+
+    \lemma diag {R : CRing} {x : R} {n : Nat} : powQuot x x (suc n) = natCoef (suc n) * pow x n \elim n
+      | 0 => pmap (+ 1) zro_*-right *> zro-left *> inv (pmap (* 1) (natCoefSuc 0 *> pmap (+ 1) natCoefZero *> zro-left) *> ide-left)
+      | suc n => pmap (_ * __ + _) (diag {R} {x} {n}) *> equation.cRing {natCoefSuc (suc n)}
+
+    \lemma norm-bound {X : ExPseudoNormedRing} {x y : X} {r : Rat} (r>=0 : 0 <= r)
+                      (x<=r : norm x <= ExUpperReal.fromRat r) (y<=r : norm y <= ExUpperReal.fromRat r) {n : Nat}
+      : norm (powQuot x y (suc n)) <= ExUpperReal.fromRat (RatField.natCoef (suc n) * RatField.pow r n) \elim n
+      | 0 => transportInv (<= _) (pmap norm (pmap (+ 1) zro_*-right *> zro-left)) norm_ide_<=
+      | suc n => norm_+ <=∘ <=_+ (norm_*_<= <=∘ ExUpperRealSemigroup.<=_* x<=r (norm-bound r>=0 x<=r y<=r))
+                                (X.norm_<=_pow {y} {suc n} <=∘ ExUpperRealSemigroup.pow_<= y<=r {suc n})
+          <=∘ =_<= (pmap2 (+) (ExUpperReal.*-rat r>=0 $ RatField.<=_*-positive RatField.natCoef>=0 $ RatField.pow>=0 r>=0) (ExUpperRealSemigroup.rat-pow r>=0 {suc n})
+                    *> ExUpperReal.+-rat *> pmap ExUpperReal.fromRat step)
+          \where
+            \lemma step {c p r : Rat} : r * (c * p) + p * r = (c + 1) * (p * r) => equation.cRing
+  }
+
+-- | The `n`-th term `c_{n+1} Σ_{k ≤ n} x^k y^{n-k}` of the quotient series.
+\func quotTerm {R : Ring} (cs : Nat -> R) (x y : R) (n : Nat) : R
+  => cs (suc n) * powQuot x y (suc n)
+  \where {
+    -- | `(y - x) Σ_{j < N} quotTerm_j = Σ_{j ≤ N} c_j y^j - Σ_{j ≤ N} c_j x^j`.
+    \lemma incr {A : RealBanachCAlgebra} {cs : Nat -> A} {x y : A} {N : Nat}
+      : (y - x) * partialSum (quotTerm cs x y) N = partialSum (powerSeries cs y) (suc N) - partialSum (powerSeries cs x) (suc N) \elim N
+      | 0 => pmap (_ *) partialSum-empty *> zro_*-right *> inv (pmap2 (-) partialSum_1 partialSum_1 *> negative-right)
+      | suc N => pmap (_ *) partialSum_suc *> ldistr
+          *> pmap2 (+) (incr {A} {cs} {x} {y} {N}) (equation.cRing *> pmap (cs (suc N) *) (powQuot.incr {A} {x} {y} {suc N}))
+          *> equation.cRing *> inv (pmap2 (-) partialSum_suc partialSum_suc)
+
+    -- | On the diagonal, the quotient series is the power series of the formal derivative.
+    \lemma diag {R : CRing} {cs : Nat -> R} {x : R} {n : Nat} : quotTerm cs x x n = fderiv cs n * pow x n
+      => pmap (_ *) powQuot.diag *> equation.cRing
+
+    -- | The terms of the quotient series are dominated by the power series of the formal derivative.
+    \lemma norm-bound {A : RealBanachCAlgebra} {cs : Nat -> A} {x y : A} {r : Rat} (r>=0 : 0 <= r)
+                      (x<=r : norm x <= ExUpperReal.fromRat r) (y<=r : norm y <= ExUpperReal.fromRat r) {n : Nat}
+      : norm (quotTerm cs x y n) <= norm (fderiv cs n) * ExUpperReal.fromRat (RatField.pow r n)
+      => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl (powQuot.norm-bound r>=0 x<=r y<=r)
+          <=∘ =_<= (pmap (_ *) (inv $ ExUpperReal.*-rat RatField.natCoef>=0 (RatField.pow>=0 r>=0)) *> inv ExUpperRealSemigroup.*-assoc *> pmap (* _) ExUpperRealSemigroup.*-comm)
+          <=∘ ExUpperRealSemigroup.<=_* (transportInv (_ <=) (pmap A.norm A.natCoef_*_*n *> A.norm_*n {suc n})
+                (ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 RatField.abs>=id) <=-refl)) <=-refl
+
+    \lemma cover {X : ExPseudoNormedRing} (n : Nat) : CoverMap (ProductCoverSpace X X) X (\lam p => powQuot p.1 p.2 n) \elim n
+      | 0 => CoverMap.const 0
+      | suc n => +-uniform CoverMap.∘ ProductCoverSpace.tuple (*-locally-uniform CoverMap.∘ ProductCoverSpace.tuple ProductCoverSpace.proj1 (cover n)) (X.pow-cover n CoverMap.∘ ProductCoverSpace.proj2)
+  }
+
+-- | The ball of convergence of a power series.
+\func ConvBall {A : RealBanachCAlgebra} (cs : Nat -> A) => OpenBallCoverSpace {A} 0 (convRadius cs)
+
+-- | The domain of the quotient series: the square of the ball of convergence.
+\func ConvSquare {A : RealBanachCAlgebra} (cs : Nat -> A) => ProductCoverSpace (ConvBall cs) (ConvBall cs)
+
+-- | The partial sums of the quotient series converge locally uniformly on {ConvSquare}.
+\lemma quotSum-funcConv {A : RealBanachCAlgebra} (cs : Nat -> A) : IsFuncConvergent {_} {ConvSquare cs} \lam n p => partialSum (quotTerm cs p.1.1 p.2.1) n
+  => funcCovergent-metric-char {_} {ConvSquare cs} {_} {\lam n p => partialSum (quotTerm cs p.1.1 p.2.1) n}
+      (partialSum-cover \lam j => *-locally-uniform CoverMap.∘ tuple (const (cs (suc j))) (quotTerm.cover (suc j) CoverMap.∘ prod func func))
+      \lam eps>0 => cauchy-subset {ProductCoverSpace (ConvBall cs) (ConvBall cs)} (prodCover {ConvBall cs} {ConvBall cs} (makeBasicCover2 {A} {0} {convRadius cs}) (makeBasicCover2 {A} {0} {convRadius cs})) $ later
+        \lam {_} (inP (_, inP (_, inP ((q1,L1),idp), idp), _, inP (_, inP ((q2,L2),idp), idp), idp)) => \case conv-two L1 L2 \with {
+          | inP (r,q1<r,q2<r,c) => \case c eps>0 \with {
+            | inP (N,h) => inP (N, \lam {p} pxy {n} N<=n => rewrite (norm-dist, inv (midSum-diff N<=n)) $ midSum_norm $ midSum_<= {ExUpperRealAbMonoid}
+                (\lam {j} _ _ => quotTerm.norm-bound (<=-less $ dist>=0 pxy.1 <∘ q1<r) (bound pxy.1 q1<r) (bound pxy.2 q2<r)) (h N<=n))
+          }
+        }
+  \where {
+    \open ProductCoverSpace (tuple, prod, prodCover)
+    \open CoverMap (const)
+    \open OpenBallCoverSpace
+
+    \lemma bound {x : A} {q r : Rat} (cx<q : (dist 0 x).U q) (q<r : q < r) : norm x <= ExUpperReal.fromRat r
+      => =_<= norm_dist <=∘ ExUpperReal.<_<= (U-closed cx<q q<r)
+
+    -- | Two points of the ball of convergence lie in a smaller ball on which the formal derivative converges.
+    \lemma conv-two {q1 q2 : Rat} (L1 : (convRadius cs).L q1) (L2 : (convRadius cs).L q2)
+      : ∃ (r : Rat) (q1 < r) (q2 < r) (IsConvUpperSeries \lam j => norm (fderiv cs j) * ExUpperReal.fromRat (RatField.pow r j))
+      => \case LinearOrder.dec<_<= q1 q2 \with {
+        | inl q1<q2 => \case transportInv (\lam (R : LowerReal) => R.L q2) derivative-convRadius L2 \with {
+          | inP (r,q2<r,c) => inP (r, q1<q2 <∘ q2<r, q2<r, c)
+        }
+        | inr q2<=q1 => \case transportInv (\lam (R : LowerReal) => R.L q1) derivative-convRadius L1 \with {
+          | inP (r,q1<r,c) => inP (r, q1<r, q2<=q1 <∘r q1<r, c)
+        }
+      }
+  }
+
+-- | The sum of the quotient series.
+\sfunc quotSum {A : RealBanachCAlgebra} (cs : Nat -> A) (p : ConvSquare cs) : A
+  => seriesSum (quotTerm cs p.1.1 p.2.1) $ funcConv-pointwise {_} {ConvSquare cs} (\lam n p => partialSum (quotTerm cs p.1.1 p.2.1) n) (quotSum-funcConv cs) {p}
+
+-- | {quotSum} is the sum of the quotient series.
+\lemma quotSum-isSum {A : RealBanachCAlgebra} {cs : Nat -> A} {p : ConvSquare cs} : IsSeriesSum (quotTerm cs p.1.1 p.2.1) (quotSum cs p)
+  => transportInv (IsSeriesSum _) (\peval quotSum cs p) (seriesConv-sum _)
+
+-- | {quotSum} is a cover map.
+\lemma quotSum-cover {A : RealBanachCAlgebra} {cs : Nat -> A} : CoverMap (ConvSquare cs) A (quotSum cs)
+  => transportInv (CoverMap _ A) (ext \lam p => \peval quotSum cs p) $
+      funcLimit {_} {ConvSquare cs} (\lam n p => partialSum (quotTerm cs p.1.1 p.2.1) n) (quotSum-funcConv cs)
+
+-- | `f y - f x = (y - x) Q(x,y)`.
+\lemma quotSum-incr {A : RealBanachCAlgebra} {cs : Nat -> A} (p : ConvSquare cs)
+  : powerSeriesSum cs p.2.1 p.2.2 - powerSeriesSum cs p.1.1 p.1.2 = (p.2.1 - p.1.1) * quotSum cs p
+  => A.limit-unique
+      (transport {Nat -> A} (A.IsLimit __ _) (ext \lam N => inv (quotTerm.incr {A} {cs} {p.1.1} {p.2.1} {N})) $
+        cont2-limit (limit-suc powerSeriesSum-isSum) (cont-limit (limit-suc powerSeriesSum-isSum) negative-cont) +-cont)
+      (cont-limit quotSum-isSum (*-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (p.2.1 - p.1.1)) CoverMap.id))
+  \where
+    \lemma limit-suc {X : TopSpace} {f : Nat -> X} {l : X} (fl : X.IsLimit f l) : X.IsLimit (\lam n => f (suc n)) l
+      => \lam Uo Ul => TruncP.map (fl Uo Ul) \lam (N,h) => (N, \lam N<=n => h (N<=n <=∘ id<=suc))
+
+-- | On the diagonal, `Q(x,x)` is the sum of the formal derivative.
+\lemma quotSum-diag {A : RealBanachCAlgebra} {cs : Nat -> A} (x : ConvBall cs)
+  : quotSum cs (x,x) = powerSeriesSum (fderiv cs) x.1 (transportInv (_ <LU __) derivative-convRadius x.2)
+  => A.limit-unique (transport (IsSeriesSum __ _) (ext \lam n => quotTerm.diag {A} {cs}) quotSum-isSum) powerSeriesSum-isSum
+
+-- | The difference quotient `(x,y,h,a) ↦ a Q(x,y)` of a power series as a cover map.
+\lemma powerSeries-quot-cover {A : RealBanachCAlgebra} {cs : Nat -> A} {S : CoverSpace} {i : CoverMap S (RingTopLModule A)} (j : CoverMap S (ConvBall cs))
+  : CoverMap (DerivSpace i) (SeparatedRingTopLModule A) (\lam t => t.1.2.2.2 * quotSum cs (j t.1.1, j t.1.2.1))
+  => A.*-cover CoverMap.∘ ProductCoverSpace.tuple (DerivSpace.proj-a i)
+      (quotSum-cover CoverMap.∘ ProductCoverSpace.tuple (j CoverMap.∘ DerivSpace.proj-x i) (j CoverMap.∘ DerivSpace.proj-y i))
+
+-- | `(x,y,h,a) ↦ a Q(x,y)` is a difference quotient of a power series.
+\lemma powerSeries-isDerivQuot {A : RealBanachCAlgebra} {cs : Nat -> A} {S : CoverSpace} {i : CoverMap S (RingTopLModule A)} (j : S -> ConvBall cs)
+                               (ij : \Pi (s : S) -> (j s).1 = i s)
+  : IsDerivQuot {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => powerSeriesSum cs (j s).1 (j s).2) (\lam t => t.1.2.2.2 * quotSum cs (j t.1.1, j t.1.2.1))
+  => \lam t => inv *-assoc *> pmap (* _) (inv $ pmap2 (-) (ij t.1.2.1) (ij t.1.1) *> pmap (- _) t.2 *> equation.cRing) *> inv (quotSum-incr (j t.1.1, j t.1.2.1))
+
+{- | The sum of a power series has a difference quotient.
+ -   The map {j} lands in the ball of convergence and agrees with {i}.
+ -}
+\lemma powerSeries-hasDeriv {A : RealBanachCAlgebra} {cs : Nat -> A} {S : CoverSpace} {i : CoverMap S (RingTopLModule A)} (j : CoverMap S (ConvBall cs))
+                            (ij : \Pi (s : S) -> (j s).1 = i s)
+  : HasDeriv {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => powerSeriesSum cs (j s).1 (j s).2)
+  => inP (powerSeries-quot-cover j, powerSeries-isDerivQuot j ij)
+
+-- | The derivative of the sum of a power series along {a} is `a` times the sum of the formal derivative.
+\lemma powerSeries-deriv {A : RealBanachCAlgebra} {cs : Nat -> A} {S : CoverSpace} {i : CoverMap S (RingTopLModule A)} (D : IsDerivDense i)
+                         (j : CoverMap S (ConvBall cs)) (ij : \Pi (s : S) -> (j s).1 = i s)
+                         (d : HasDeriv {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => powerSeriesSum cs (j s).1 (j s).2)) (s : S) (a : A)
+  : deriv D (\lam s => powerSeriesSum cs (j s).1 (j s).2) d s a = a * powerSeriesSum (fderiv cs) (j s).1 (transportInv (_ <LU __) derivative-convRadius (j s).2)
+  => deriv-char D d (powerSeries-quot-cover j) (powerSeries-isDerivQuot j ij) s a *> pmap (a *) (quotSum-diag (j s))
+
+-- | The formal derivative of an everywhere convergent power series converges everywhere.
+\lemma powerSeriesConv-fderiv {A : RealBanachCAlgebra} {cs : Nat -> A} (psc : IsPowerSeriesConv cs) : IsPowerSeriesConv (fderiv cs)
+  => IsPowerSeriesConv.char.2 (derivative-convRadius *> IsPowerSeriesConv.char.1 psc)
+
+-- | The total version of {powerSeries-isDerivQuot}.
+\lemma powerSeriesTotal-isDerivQuot {A : RealBanachCAlgebra} {cs : Nat -> A} (psc : IsPowerSeriesConv cs) {S : CoverSpace} {i : CoverMap S (RingTopLModule A)}
+  : IsDerivQuot {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => powerSeriesSum-total cs psc (i s))
+                (\lam t => t.1.2.2.2 * quotSum cs (PowerSeriesTotal.toBall psc (i t.1.1), PowerSeriesTotal.toBall psc (i t.1.2.1)))
+  => \lam t => powerSeries-isDerivQuot (\lam s => PowerSeriesTotal.toBall psc (i s)) (\lam s => idp) t
+                *> inv (pmap2 (-) (\peval powerSeriesSum-total cs psc _) (\peval powerSeriesSum-total cs psc _))
+
+-- | The sum of an everywhere convergent power series has a difference quotient.
+\lemma powerSeriesTotal-hasDeriv {A : RealBanachCAlgebra} {cs : Nat -> A} (psc : IsPowerSeriesConv cs) {S : CoverSpace} (i : CoverMap S (RingTopLModule A))
+  : HasDeriv {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => powerSeriesSum-total cs psc (i s))
+  => inP (powerSeries-quot-cover (PowerSeriesTotal.toBall-cover psc CoverMap.∘ i), powerSeriesTotal-isDerivQuot psc)
+
+-- | The derivative of the sum of an everywhere convergent power series along {a} is `a` times the sum of the formal derivative.
+\lemma powerSeriesTotal-deriv {A : RealBanachCAlgebra} {cs : Nat -> A} (psc : IsPowerSeriesConv cs) {S : CoverSpace} {i : CoverMap S (RingTopLModule A)} (D : IsDerivDense i)
+                              (d : HasDeriv {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => powerSeriesSum-total cs psc (i s))) (s : S) (a : A)
+  : deriv D (\lam s => powerSeriesSum-total cs psc (i s)) d s a = a * powerSeriesSum-total (fderiv cs) (powerSeriesConv-fderiv psc) (i s)
+  => deriv-char D d (powerSeries-quot-cover (PowerSeriesTotal.toBall-cover psc CoverMap.∘ i)) (powerSeriesTotal-isDerivQuot psc) s a
+      *> pmap (a *) (quotSum-diag (PowerSeriesTotal.toBall psc (i s)) *> pmap (powerSeriesSum (fderiv cs) (i s)) prop-pi *> inv (\peval powerSeriesSum-total (fderiv cs) (powerSeriesConv-fderiv psc) (i s)))
+
+\module PowerSeriesTotal \where {
+  -- | The inclusion of {A} into the ball of convergence of an everywhere convergent power series.
+  \func toBall {A : RealBanachCAlgebra} {cs : Nat -> A} (psc : IsPowerSeriesConv cs) (x : A) : ConvBall cs
+    => OpenBallCoverSpace.infinity-inv A.distBounded (IsPowerSeriesConv.char.1 psc) x
+
+  \lemma toBall-cover {A : RealBanachCAlgebra} {cs : Nat -> A} (psc : IsPowerSeriesConv cs) : CoverMap A (ConvBall cs) (toBall psc)
+    => OpenBallCoverSpace.infinity-inv-cover A.distBounded (IsPowerSeriesConv.char.1 psc)
+}

@@ -195,6 +195,11 @@
                   (f' : CoverMap (DerivSpace i) Y) (q : IsDerivQuot i f f') (x : S) (a : X) : deriv D f d x a = f' ((x,(x,(0,a))), deriv.zro-eq)
   => deriv-unique D (deriv-quot D f d) f' deriv-quot.char q
 
+-- | The derivative depends only on the values of the function.
+\lemma deriv-ext {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) {f g : S -> Y}
+                 (p : \Pi (x : S) -> f x = g x) (df : HasDeriv i f) (dg : HasDeriv i g) (x : S) (a : X) : deriv D f df x a = deriv D g dg x a
+  => inv $ deriv-char D dg (deriv-quot D f df) (\lam s => deriv-quot.char s *> pmap2 (-) (p _) (p _)) x a
+
 -- | A function with a difference quotient on an inhabited space is a cover map.
 \lemma hasDeriv-cover {R : TopRing} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} {f : S -> Y} (d : HasDeriv i f) (x0 : S) : CoverMap S Y f \elim d
   | inP (f',q) =>
@@ -228,6 +233,22 @@
          \in \case R.inv-dense (open-inter V'o To) (transport (\lam Z => Z (h,Th)) e (transportInv V q Vs), Th) \with {
            | inP (h',hi,(V'h',Th')) => inP (((x,((g1 h', Th'.1),((g2 h', Th'.2),(h',(a,b))))), (idp, idp)), hi, rewrite p $ transportInv (\lam Z => Z (h',Th')) e V'h')
          }
+     }
+
+-- | Chains with an invertible increment are dense over the whole module.
+\lemma id-derivDense {R : NearSkewField} {X : TopLModule R} : IsDerivDense (CoverMap.id {X})
+  => \lam {c} {W} (inP (V,Vo,p)) Wc =>
+    \let | x => c.1.1
+         | h => c.1.2.2.2.1
+         | a => c.1.2.2.2.2.1
+         | b => c.1.2.2.2.2.2
+         | g1 : ContMap R X => +-cont ∘ tuple (const x) (*c-cont ∘ tuple id (const a))
+         | g2 : ContMap R X => +-cont ∘ tuple g1 (*c-cont ∘ tuple id (const b))
+         | phi : ContMap R (ProductCoverSpace X (ProductCoverSpace X (ProductCoverSpace X (ProductCoverSpace R (ProductCoverSpace X X)))))
+             => tuple (const x) (tuple g1 (tuple g2 (tuple id (const (a,b)))))
+         | q : phi h = c.1 => ext (idp, ext (inv c.2.1, ext (inv (c.2.2 *> pmap (+ _) c.2.1), idp)))
+     \in \case R.inv-dense (phi.func-cont Vo) (transportInv V q (rewrite p in Wc)) \with {
+       | inP (h',hi,Vh') => inP (((x,(g1 h',(g2 h',(h',(a,b))))), (idp, idp)), hi, rewrite p Vh')
      }
 
 -- | A quotient on a cover space with underlying set `Total U` gives a continuous quotient on {U}.

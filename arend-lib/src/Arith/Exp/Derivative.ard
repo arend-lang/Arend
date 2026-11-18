@@ -1,0 +1,49 @@
+{- | The derivative of the exponential.
+
+  The formal derivative of the exponential series is the series itself (see {exp-fderiv-coef}).
+  Hence, by {powerSeriesTotal-deriv}, `exp` has a derivative and `exp' x a = a exp x` in every commutative real Banach algebra (see {exp-deriv}).
+  For real numbers, this gives `exp' = exp` (see {exp-real-deriv}).
+-}
+
+\import Algebra.Monoid
+\import Algebra.Ring.FormalSeries.Derivative \using (deriv \as fderiv)
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.PowerSeries
+\import Analysis.PowerSeries.DerivQuot
+\import Arith.Exp
+\import Arith.Real
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.StoneCStarAlgebra (RealStoneC*Algebra)
+\import Topology.TopModule
+\import Topology.TopRing
+\import Topology.TopRing.Real
+
+-- | The formal derivative of the exponential series is the series itself.
+\lemma exp-fderiv-coef {A : RealBanachAlgebra} {n : Nat} : fderiv (exp.coef {A}) n = exp.coef n
+  => pmap (* _) (inv A.fromRat_natCoef) *> A.fromRat_* *> pmap A.fromRat (exp.deriv-coef-Rat n)
+
+-- | {exp} has a difference quotient on every cover space over a commutative real Banach algebra.
+\lemma exp-hasDeriv {A : RealBanachCAlgebra} {S : CoverSpace} (i : CoverMap S (RingTopLModule A))
+  : HasDeriv {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => exp (i s))
+  => transportInv (HasDeriv i) (ext \lam s => \peval exp (i s)) (powerSeriesTotal-hasDeriv exp.ps-conv i)
+
+-- | The derivative of {exp} along {a} is `a exp x`.
+\lemma exp-deriv {A : RealBanachCAlgebra} {S : CoverSpace} {i : CoverMap S (RingTopLModule A)} (D : IsDerivDense i)
+                 (d : HasDeriv {A} {RingTopLModule A} {SeparatedRingTopLModule A} i (\lam s => exp (i s))) (s : S) (a : A)
+  : deriv D (\lam s => exp (i s)) d s a = a * exp (i s)
+  => deriv-ext D (\lam s => \peval exp (i s)) d (powerSeriesTotal-hasDeriv exp.ps-conv i) s a
+      *> powerSeriesTotal-deriv exp.ps-conv D _ s a
+      *> pmap (a *) (powerSeriesSum-total-ext (\lam n => exp-fderiv-coef) *> inv (\peval exp (i s)))
+
+-- | {exp} has a derivative on `ℝ`.
+\lemma exp-real-hasDeriv : HasDeriv (CoverMap.id {RealTopLModule}) (\lam x => exp x)
+  => exp-hasDeriv CoverMap.id
+
+-- | `exp' = exp` on `ℝ`.
+\lemma exp-real-deriv (d : HasDeriv (CoverMap.id {RealTopLModule}) (\lam x => exp x)) (x : Real)
+  : deriv id-derivDense (\lam x => exp x) d x 1 = exp x
+  => exp-deriv id-derivDense d x 1 *> ide-left

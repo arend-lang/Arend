@@ -1,0 +1,81 @@
+{- | The derivative of the logarithm.
+
+  The logarithm `log : ℝ_{>0} -> ℝ` is a monotone section of `exp`, whose derivative `exp' = exp` is locally bounded below by positive constants.
+  By the inverse function rule {inverse-hasDeriv}, `log` has a derivative on the open set `ℝ_{>0}` (see {log-hasDeriv})
+  and `log' y = 1/y` (see {log-deriv}).
+  In particular, `log` is a cover map on `ℝ_{>0}` (see {log-cover}).
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Analysis.Calculus.InverseFunction
+\import Analysis.Derivative.CoverDerivative
+\import Arith.Exp
+\import Arith.Exp.Derivative
+\import Arith.Exp.Real
+\import Arith.Log.Real
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Subspace
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Inverse
+\import Topology.TopRing.Real
+
+-- | {exp} as a map into the positive reals.
+\func expPos (x : Real) : Set.Total RealPositive
+  => (exp x, Real-exp-pos x)
+
+-- | `log` as a function on the positive reals.
+\func logPos (y : Set.Total RealPositive) : Real
+  => log-Real y.1 y.2
+
+-- | `log` is a section of `exp`.
+\lemma expPos-logPos (y : Set.Total RealPositive) : expPos (logPos y) = y
+  => ext (exp-log-Real y.1 y.2)
+
+-- | `log` is monotone.
+\lemma logPos-mono {u v : Set.Total RealPositive} (u<=v : u.1 <= v.1) : logPos u <= logPos v
+  => \lam q => u<=v $ transport2 (<) (exp-log-Real v.1 v.2) (exp-log-Real u.1 u.2) (Real-exp-strict-mono q)
+
+-- | The derivative of `exp` is locally bounded below by positive constants.
+\lemma exp-locallyPositive : IsLocallyPositive exp-real-hasDeriv
+  => \lam {a} _ => inP ((expPos a).1, (expPos a).2, \lam {x} a<=x _ => Real-exp-mono a<=x <=∘ =_<= (inv (exp-real-deriv exp-real-hasDeriv x)))
+
+-- | The positive reals are locally contained in closed intervals of positive reals.
+\lemma positive-locallyInterval : IsLocallyInterval RealPositive
+  => \lam {V} V<=<P p => \case positive-<=<-bound V<=<P \with {
+    | inP (d,d>0,Vd) => inP (d, d ∨ (p + 1), join-left, \lam dx _ => d>0 <∘l dx, \lam {x} Vx px =>
+        \have | dx => Vd x Vx (<=<_<= V<=<P Vx)
+              | a : negative (p - x) <= RealAbGroup.abs (p - x) => RealAbGroup.abs>=neg
+              | j : p + 1 <= d ∨ (p + 1) => join-right
+        \in (<=-less dx, usingOnly (a, j, px) linarith))
+  }
+
+-- | `log` has a derivative on the positive reals.
+\lemma log-hasDeriv : HasDeriv (OpenCoverSpace.func (realTop-open positive-open)) logPos
+  => inverse-hasDeriv positive-open positive-locallyInterval {expPos} expPos-logPos exp-locallyPositive logPos-mono
+
+-- | `log' y = 1/y`.
+\lemma log-deriv (d : HasDeriv (OpenCoverSpace.func (realTop-open positive-open)) logPos) (y : Set.Total RealPositive)
+  : deriv (open-derivDense (realTop-open positive-open)) logPos d y 1 = RealField.pinv y.1 y.2
+  => \have e : y.1 RealField.* deriv (open-derivDense (realTop-open positive-open)) logPos d y 1 = RealField.ide
+           => pmap (\lam z => z RealField.* _) (inv (exp-real-deriv exp-real-hasDeriv (logPos y) *> exp-log-Real y.1 y.2))
+              *> inverse-deriv positive-open positive-locallyInterval {expPos} expPos-logPos exp-locallyPositive logPos-mono d y
+     \in inv RealField.ide-left *> pmap (\lam z => z RealField.* _) (inv (RealField.pinv-left y.2)) *> RealField.*-assoc *> pmap (RealField.pinv y.1 y.2 RealField.*) e *> RealField.ide-right
+
+-- | `log` is a cover map on the positive reals (with the open-subset cover structure).
+\lemma log-cover : CoverMap (OpenCoverSpace {RealNormed} positive-open) RealNormed logPos
+  => hasDeriv-cover log-hasDeriv (1, RealField.zro<ide)

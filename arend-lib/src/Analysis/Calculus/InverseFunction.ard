@@ -1,0 +1,208 @@
+{- | The inverse function rule for real functions on open sets.
+
+  Let `f : ℝ -> U` have a derivative which is locally bounded below by positive constants (see {IsLocallyPositive}),
+  where `U ⊆ ℝ` is open, and let `g : U -> ℝ` be a monotone section of {f}.
+  Then {g} has a derivative and `f' (g y) * g' y = 1` (see {inverse-hasDeriv} and {inverse-deriv}).
+
+  Proof outline:
+  * The difference quotient of {f} is locally bounded below by positive constants (see {quot-local-lower}),
+    by the mean value theorem on closed intervals.
+  * Hence it lifts to a cover map into the positive reals and its inverse is a cover map (see {quot-inv}).
+  * The section {g} is locally Lipschitz, hence a cover map on {U} (see {section-cover}).
+  * The general inverse function rule {hasDeriv-inverse} applies.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Calculus.DerivativeRules
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.Derivative.CoverDerivativeRules
+\import Analysis.Derivative.IntervalDerivative
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.Subspace
+\import Topology.MetricSpace
+\import Topology.MetricSpace.OpenCover
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.NormedAbGroup.Real.Inverse
+\import Topology.NormedRing
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
+\import Topology.TopRing.Real
+\import Topology.TopSpace
+
+-- | The derivative of a function on `ℝ` at {x}.
+\func realDeriv {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) (x : Real) : Real
+  => deriv id-derivDense f df x 1
+
+-- | The difference quotient of a function on `ℝ` at `(x,y)`.
+\func realQuot {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) (x y : Real) : Real
+  => deriv-quot id-derivDense f df (invPt {RealValuedRing} {RealTopLModule} {CoverMap.id} x y)
+
+-- | `f y - f x = (y - x) * realQuot df x y`.
+\lemma realQuot-incr {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) (x y : Real) : f y - f x = (y - x) * realQuot df x y
+  => inv (deriv-quot.char {_} {_} {_} {_} {_} {id-derivDense} {f} {df} _)
+
+-- | {realQuot} is a cover map.
+\lemma realQuot-cover {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f)
+  : CoverMap (ProductCoverSpace RealTopLModule RealTopLModule) RealTopLModule (\lam p => realQuot df p.1 p.2)
+  => \let | S => ProductCoverSpace RealTopLModule RealTopLModule
+          | P => ProductCoverSpace RealTopLModule (ProductCoverSpace RealTopLModule (ProductCoverSpace RealNearField RealTopLModule))
+          | x' : CoverMap S RealTopLModule __.1 => ProductCoverSpace.proj1
+          | y' : CoverMap S RealTopLModule __.2 => ProductCoverSpace.proj2
+          | h : CoverMap S RealNormed (\lam p => p.2 - p.1) => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple {RealNormed} {RealNormed} {S} y' (negative-uniform {RealNormed} CoverMap.∘ x')
+          | t : CoverMap S P (\lam p => (p.1, (p.2, (p.2 - p.1, 1)))) => ProductCoverSpace.tuple x' (ProductCoverSpace.tuple y' (ProductCoverSpace.tuple h (CoverMap.const 1)))
+     \in deriv-quot id-derivDense f df CoverMap.∘ CoverTransfer-univ {S} {P} {Set.Total (DerivSet (CoverMap.id {RealTopLModule}))}
+            (\lam p => invPt {RealValuedRing} {RealTopLModule} {CoverMap.id} p.1 p.2) __.1 t
+
+-- | The derivative of {f} is bounded below by positive constants on every bounded interval.
+\func IsLocallyPositive {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) : \Prop
+  => \Pi {a b : Real} -> a < b -> ∃ (e : Real) (0 < e) (\Pi {x : Real} -> a <= x -> x <= b -> e <= realDeriv df x)
+
+-- | The difference quotient of a function with a locally positive derivative is bounded below by positive constants on every bounded square.
+\lemma quot-local-lower {f : Real -> Real} {df : HasDeriv (CoverMap.id {RealTopLModule}) f} (fp : IsLocallyPositive df) {a b : Real} (a<b : a < b)
+  : ∃ (m : Real) (0 < m) (\Pi {x y : Real} -> a <= x -> x <= b -> a <= y -> y <= b -> m <= realQuot df x y)
+  => \case fp a<b \with {
+       | inP (e,e>0,fe) => \case quot-lower a<b (restrict-hasDeriv df a b) e>0 (\lam x => fe x.2.1 x.2.2 <=∘ =_<= (inv (restrict-deriv df a<b x))) \with {
+         | inP (m,m>0,Qm) => inP (m, m>0, \lam {x} {y} ax xb ay yb => Qm ((x,(ax,xb)),(y,(ay,yb))) <=∘ =_<= (restrict-quot df a<b _ _))
+       }
+     }
+  \where {
+    \lemma inc-quot (a b : Real) : IsDerivQuot (intervalInc a b) (\lam x => x.1) (\lam t => t.1.2.2.2)
+      => \lam (t : Set.Total (DerivSet (intervalInc a b))) => inv $ pmap (\lam z => z - t.1.1.1) t.2 *> equation.abGroup
+
+    \func restrictQuot {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) (a b : Real)
+      : CoverMap (DerivSpace (intervalInc a b)) RealTopLModule
+      => deriv-quot id-derivDense f df CoverMap.∘ compPt-cover {_} {_} {_} {_} {_} {intervalInc a b} {CoverMap.id {RealTopLModule}} (intervalInc a b) (DerivSpace.proj-a (intervalInc a b)) (inc-quot a b)
+
+    \lemma restrict-isQuot {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) (a b : Real)
+      : IsDerivQuot (intervalInc a b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) (restrictQuot df a b)
+      => isDerivQuot-comp (inc-quot a b) deriv-quot.char
+
+    \lemma restrict-hasDeriv {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) (a b : Real) : HasDeriv (intervalInc a b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1)
+      => inP (restrictQuot df a b, restrict-isQuot df a b)
+
+    \lemma restrict-deriv {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) {a b : Real} (a<b : a < b) (x : Set.Total (ClosedInterval a b))
+      : deriv (interval-derivDense a<b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) (restrict-hasDeriv df a b) x 1 = realDeriv df x.1
+      => deriv-char (interval-derivDense a<b) (restrict-hasDeriv df a b) (restrictQuot df a b) (restrict-isQuot df a b) x 1 *> pmap (deriv-quot id-derivDense f df) (ext idp)
+
+    \lemma restrict-quot {f : Real -> Real} (df : HasDeriv (CoverMap.id {RealTopLModule}) f) {a b : Real} (a<b : a < b) (x y : Set.Total (ClosedInterval a b))
+      : quotSquare a<b (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) (restrict-hasDeriv df a b) (x,y) = realQuot df x.1 y.1
+      => deriv-unique (interval-derivDense a<b) (deriv-quot (interval-derivDense a<b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) (restrict-hasDeriv df a b)) (restrictQuot df a b) deriv-quot.char (restrict-isQuot df a b)
+          *> pmap (deriv-quot id-derivDense f df) (ext idp)
+  }
+
+-- | The difference quotient of a function with a locally positive derivative is positive.
+\lemma realQuot>0 {f : Real -> Real} {df : HasDeriv (CoverMap.id {RealTopLModule}) f} (fp : IsLocallyPositive df) (x y : Real) : 0 < realQuot df x y
+  => \case quot-local-lower fp (linarith (meet-left <=∘ join-left : x ∧ y <= x ∨ y) : (x ∧ y) - 1 < (x ∨ y) + 1) \with {
+    | inP (m,m>0,h) =>
+      \have | l1 : x ∧ y <= x => meet-left
+            | l2 : x ∧ y <= y => meet-right
+            | u1 : x <= x ∨ y => join-left
+            | u2 : y <= x ∨ y => join-right
+      \in m>0 <∘l h linarith linarith linarith linarith
+  }
+
+-- | The inverse of the difference quotient of a function with a locally positive derivative is a cover map.
+\lemma quot-inv {f : Real -> Real} {df : HasDeriv (CoverMap.id {RealTopLModule}) f} (fp : IsLocallyPositive df)
+  : CoverMap (ProductCoverSpace RealTopLModule RealTopLModule) RealNormed (\lam p => RealField.pinv (realQuot df p.1 p.2) (realQuot>0 fp p.1 p.2))
+  => pinv-cover CoverMap.∘ openCover-local-lift {_} {RealNormed} positive-open (realQuot-cover df) (\lam p => realQuot>0 fp p.1 p.2)
+      (ProductCoverSpace.prodCover (RealNormed.makeCauchy $ RealNormed.metricUniform {1} idp) (RealNormed.makeCauchy $ RealNormed.metricUniform {1} idp))
+      \lam {_} (inP (_, inP (c1,idp), _, inP (c2,idp), idp)) => \case quot-local-lower fp (linarith (meet-left <=∘ join-left : c1 ∧ c2 <= c1 ∨ c2) : (c1 ∧ c2) - 1 < (c1 ∨ c2) + 1) \with {
+        | inP (m,m>0,h) => inP (\lam z => m <= z, positive-<=* m>0, \lam {p} s =>
+            \have | d1 : RealAbGroup.abs (c1 - p.1) < 1 => real_<_U.2 s.1
+                  | d2 : RealAbGroup.abs (c2 - p.2) < 1 => real_<_U.2 s.2
+                  | e1 => RealAbGroup.abs>=id {c1 - p.1}
+                  | e2 => RealAbGroup.abs>=neg {c1 - p.1}
+                  | e3 => RealAbGroup.abs>=id {c2 - p.2}
+                  | e4 => RealAbGroup.abs>=neg {c2 - p.2}
+                  | l1 : c1 ∧ c2 <= c1 => meet-left
+                  | l2 : c1 ∧ c2 <= c2 => meet-right
+                  | u1 : c1 <= c1 ∨ c2 => join-left
+                  | u2 : c2 <= c1 ∨ c2 => join-right
+            \in h linarith linarith linarith linarith)
+      }
+
+-- | Every set rather below {U} is locally contained in a closed interval which is contained in {U}.
+\func IsLocallyInterval (U : Set Real) : \Prop
+  => \Pi {V : Set Real} -> (<=<) {RealNormed} V U -> \Pi (p : Real) -> ∃ (c d : Real) (c <= d) (\Pi {x : Real} -> c <= x -> x <= d -> U x)
+                                                                         (\Pi {x : Real} -> V x -> RealAbGroup.abs (p - x) < 1 -> \Sigma (c <= x) (x <= d))
+
+-- | A section {g} of {f} is Lipschitz with constant `1/m` if the difference quotient of {f} is at least `m` at the values of {g}.
+\lemma section-lipschitz {U : Set Real} {f : Real -> Set.Total U} {g : Set.Total U -> Real} (fg : \Pi (y : Set.Total U) -> f (g y) = y)
+                         {df : HasDeriv (CoverMap.id {RealTopLModule}) (\lam x => (f x).1)} {m : Real} {u v : Set.Total U}
+                         (Qm : m <= realQuot df (g v) (g u)) (m>=0 : 0 <= m)
+  : m * RealAbGroup.abs (g u - g v) <= RealAbGroup.abs (u.1 - v.1)
+  => \have e : u.1 - v.1 = (g u - g v) * realQuot df (g v) (g u) => inv (pmap2 (\lam s t => s.1 - t.1) (fg u) (fg v)) *> realQuot-incr df (g v) (g u)
+     \in RealField.<=_*_positive-left Qm RealAbGroup.abs>=0
+          <=∘ =_<= (*-comm *> inv (pmap (_ *) (RealAbGroup.abs-ofPos (m>=0 <=∘ Qm))) *> inv RealField.abs_* *> pmap RealAbGroup.abs (inv e))
+
+-- | A monotone section of a function with a locally positive derivative is a cover map on a locally interval open set.
+\lemma section-cover {U : Set Real} (Uo : isOpen U) (Ui : IsLocallyInterval U) {F : Real -> Set.Total U} {g : Set.Total U -> Real}
+                     (fg : \Pi (y : Set.Total U) -> F (g y) = y) {df : HasDeriv (CoverMap.id {RealTopLModule}) (\lam x => (F x).1)} (fp : IsLocallyPositive df)
+                     (gm : \Pi {u v : Set.Total U} -> u.1 <= v.1 -> g u <= g v)
+  : CoverMap (OpenCoverSpace {RealNormed} Uo) RealNormed g
+  => metric-coverMap {OpenCoverSpace {RealNormed} Uo} g \lam {eps} eps>0 => cauchy-glue* {OpenCoverSpace {RealNormed} Uo}
+      (OpenCoverSpace.makeBasicCover $ byRight $ OpenCoverSpace.regular-closure-extends (OpenCoverSpace.regular-closure idp) idp)
+      \lam {_} (inP (V, inP (_, idp, V<=<U), idp)) => cauchy-glue* {OpenCoverSpace {RealNormed} Uo}
+        (OpenCoverSpace.makeBasicCover $ byLeft $ RealNormed.makeCauchy $ RealNormed.metricUniform {1} idp)
+        \lam {_} (inP (_, inP (p,idp), idp)) => \case Ui V<=<U p \with {
+          | inP (c,d,c<=d,cdU,Vcd) =>
+            \let | cU : Set.Total U => (c, cdU <=-refl c<=d)
+                 | dU : Set.Total U => (d, cdU c<=d <=-refl)
+            \in \case quot-local-lower fp (linarith (gm {cU} {dU} c<=d : g cU <= g dU) : g cU < g dU + 1) \with {
+              | inP (m,m>0,Qm) => \case real_<-char.1 (RealField.<_*_positive_positive (rat_real_<.1 eps>0) m>0) \with {
+                | inP (delta,delta>0,delta<em) => cauchy-subset {OpenCoverSpace {RealNormed} Uo}
+                    (OpenCoverSpace.makeBasicCover $ byLeft $ RealNormed.makeCauchy $ RealNormed.metricUniform (rat_real_<.2 delta>0)) $ later
+                    \lam {_} (inP (_, inP (q,idp), idp)) =>
+                      \let | cq => clamp c<=d q
+                           | qU : Set.Total U => (cq.1, cdU cq.2.1 cq.2.2)
+                      \in inP (g qU, \lam {x} s =>
+                        \have | xcd => Vcd s.1 (real_<_U.2 s.2.1)
+                              | inI {y : Set.Total U} (cy : c <= y.1) (yd : y.1 <= d) : \Sigma (g cU <= g y) (g y <= g dU + 1)
+                                  => (gm cy, linarith (gm {y} {dU} yd))
+                              | lip => section-lipschitz {_} {_} {_} fg {_} {_} {qU} {x} (Qm (inI {x} xcd.1 xcd.2).1 (inI {x} xcd.1 xcd.2).2 (inI {qU} cq.2.1 cq.2.2).1 (inI {qU} cq.2.1 cq.2.2).2) (<=-less m>0)
+                              | cl : RealAbGroup.abs (qU.1 - x.1) < delta
+                                  => transport (\lam z => RealAbGroup.abs (qU.1 - z) <= _) (pmap __.1 (clamp-in {c} {d} {c<=d} xcd)) (clamp-dist {c} {d} {c<=d} {q} {x.1}) <∘r real_<_U.2 s.2.2
+                        \in real_<_U.1 $ RealField.<_*_positive-cancel-left (<=-less m>0) $ lip <∘r cl <∘ delta<em <∘l =_<= *-comm)
+              }
+            }
+        }
+
+-- | An open subset of `ℝ` is open in {RealTopLModule}.
+\lemma realTop-open {U : Set Real} (Uo : isOpen {RealNormed} U) : isOpen {RealTopLModule} U
+  => RealNormed.cauchy-open.1 Uo
+
+-- | The inverse function rule: a monotone section {g} of a function {f} with a locally positive derivative has a derivative.
+\lemma inverse-hasDeriv {U : Set Real} (Uo : isOpen U) (Ui : IsLocallyInterval U) {f : Real -> Set.Total U} {g : Set.Total U -> Real}
+                        (fg : \Pi (y : Set.Total U) -> f (g y) = y) {df : HasDeriv (CoverMap.id {RealTopLModule}) (\lam x => (f x).1)} (fp : IsLocallyPositive df)
+                        (gm : \Pi {u v : Set.Total U} -> u.1 <= v.1 -> g u <= g v)
+  : HasDeriv (OpenCoverSpace.func (realTop-open Uo)) g
+  => hasDeriv-inverse {RealValuedRing} {RealTopLModule} {OpenCoverSpace (realTop-open Uo)} {CoverMap.id} {OpenCoverSpace.func (realTop-open Uo)} {f}
+      (section-cover Uo Ui fg fp gm) fg (deriv-quot id-derivDense (\lam x => (f x).1) df) deriv-quot.char
+      (quot-inv fp) (\lam x y => RealField.pinv-right (realQuot>0 fp x y))
+
+-- | The inverse function rule: `f' (g y) * g' y = 1`.
+\lemma inverse-deriv {U : Set Real} (Uo : isOpen U) (Ui : IsLocallyInterval U) {F : Real -> Set.Total U} {g : Set.Total U -> Real}
+                     (fg : \Pi (y : Set.Total U) -> F (g y) = y) {df : HasDeriv (CoverMap.id {RealTopLModule}) (\lam x => (F x).1)} (fp : IsLocallyPositive df)
+                     (gm : \Pi {u v : Set.Total U} -> u.1 <= v.1 -> g u <= g v) (dg : HasDeriv (OpenCoverSpace.func (realTop-open Uo)) g) (y : Set.Total U)
+  : realDeriv df (g y) * deriv (open-derivDense (realTop-open Uo)) g dg y 1 = 1
+  => deriv-inverse {RealValuedRing} {RealTopLModule} {OpenCoverSpace (realTop-open Uo)} {CoverMap.id} {OpenCoverSpace.func (realTop-open Uo)} id-derivDense (open-derivDense (realTop-open Uo)) {F}
+      (section-cover Uo Ui fg fp gm) fg df (quot-inv fp) (\lam x y => RealField.pinv-right (realQuot>0 fp x y)) dg y

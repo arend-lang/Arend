@@ -12,13 +12,12 @@
   * `Real-exp-strict-mono`   — strict monotonicity from `exp_+` and positivity.
   * `Real-exp-inj`           — strict monotonicity gives injectivity.
 -}
-\import Algebra.Field
+
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.QModule
-\import Algebra.Ring
 \import Algebra.Semiring
 \import Algebra.StrictlyOrdered
 \import Analysis.Limit
@@ -38,17 +37,14 @@
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Algebra.Meta
-\import Topology.BanachAlgebra
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
-\open Monoid (pow)
 
 -- | Real limits are bounded below by any tail lower bound on the sequence.
 \lemma Real-limit->= {f : Nat -> Real} {l : Real} (lim : RealNormed.IsLimit f l)
@@ -176,6 +172,14 @@
               => RealField.<_*_positive-right (Real-exp-pos x)
                    (Real-exp->1-of-pos (OrderedAddGroup.to>0 x<y))
      \in transport2 (<) ide-right (inv exp-y-eq) step
+
+-- | Real {exp} is monotone.
+\lemma Real-exp-mono {x y : Real} (x<=y : x <= y) : exp x <= exp y
+  => \have | y-eq : y = x + (y - x)
+              => inv (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)
+           | step : 1 * exp x <= exp (y - x) * exp x
+              => RealField.<=_*_positive-left (Real-exp->=1-of-nonneg (PosetAddGroup.to>=0 x<=y)) (<=-less (Real-exp-pos x))
+     \in transport2 (<=) ide-left (*-comm *> inv exp_+ *> inv (pmap exp y-eq)) step
 
 -- | Real {exp} is injective. Follows from totality + strict monotonicity.
 \lemma Real-exp-inj {x y : Real} (eq : exp x = exp y) : x = y
