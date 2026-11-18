@@ -1,0 +1,55 @@
+{- | Chebyshev's inequality for real numbers.
+
+  * {chebyshev}: $|x| \wedge y \le y \wedge \varepsilon + \varepsilon^{1-p} |x|^p$ for $\varepsilon > 0$ and $p \ge 1$.
+
+  No sign hypothesis on `y` is needed.
+  If $|x| \wedge y > y \wedge \varepsilon$, then $\varepsilon < y$ and $\varepsilon < |x|$,
+  so $|x| \le \varepsilon^{1-p} |x|^p$ by {chebyshev.rpow-lower}.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Logic
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+
+-- | Chebyshev's inequality: $|x| \wedge y \le y \wedge \varepsilon + \varepsilon^{1-p} |x|^p$ for $\varepsilon > 0$ and $p \ge 1$.
+\lemma chebyshev {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {eps : Real} (eps>0 : (0 : Real) < eps) {a : Real} (a>=0 : 0 <= a) (y : Real)
+  : a ∧ y <= y ∧ eps + rpow-pos eps eps>0 (1 - p) * rpow a a>=0 p p>0
+  => \have K>=0 : (0 : Real) <= rpow-pos eps eps>0 (1 - p) * rpow a a>=0 p p>0
+                 => RealField.<=_*_positive_positive (<=-less rpow-pos>0) rpow>=0
+     \in \lam c =>
+         \have | m<=mK : y ∧ eps <= y ∧ eps + rpow-pos eps eps>0 (1 - p) * rpow a a>=0 p p>0 => linarith
+               | m<y : y ∧ eps < y => m<=mK <∘r c <∘l meet-right
+               | m<a : y ∧ eps < a => m<=mK <∘r c <∘l meet-left
+         \in \case <-comparison eps m<y \with {
+           | byLeft m<eps => <-irreflexive (<_meet-univ m<y m<eps)
+           | byRight eps<y =>
+             \have | me : y ∧ eps = eps => MeetSemilattice.meet-comm *> MeetSemilattice.meet_<= (<=-less eps<y)
+                   | a<=K => rpow-lower p>=1 (transport (__ < a) me m<a)
+                   | ay<=a : a ∧ y <= a => meet-left
+             \in linarith
+         }
+  \where
+    -- | $a \le \varepsilon^{1-p} a^p$ for $0 < \varepsilon < a$ and $p \ge 1$.
+    \lemma rpow-lower {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {eps : Real} {eps>0 : (0 : Real) < eps} {a : Real} {a>=0 : (0 : Real) <= a} (eps<a : eps < a)
+      : a <= rpow-pos eps eps>0 (1 - p) * rpow a a>=0 p p>0
+      => \have | a>0 : (0 : Real) < a => eps>0 <∘ eps<a
+               | e1 : rpow-pos eps eps>0 (1 - p) * rpow-pos eps eps>0 (p - 1) = (1 : Real)
+                   => inv rpow-pos_+ *> pmap (rpow-pos eps eps>0) (equation.cRing : (1 - p) + (p - 1) = (0 : Real)) *> rpow-pos-zero
+               | e2 : rpow a a>=0 p p>0 = a * rpow-pos a a>0 (p - 1)
+                   => rpow-pos-eq a>0 *> pmap (rpow-pos a a>0) (equation.cRing : p = 1 + (p - 1)) *> rpow-pos_+ *> pmap (* _) rpow-pos-one
+               | mono : rpow-pos eps eps>0 (p - 1) <= rpow-pos a a>0 (p - 1) => rpow-pos-mono (linarith : (0 : Real) <= p - 1) (<=-less eps<a)
+         \in =_<= (inv ide-right *> pmap (a *) (inv e1))
+             <=∘ <=_*_positive-right (<=-less a>0) (<=_*_positive-right (<=-less rpow-pos>0) mono)
+             <=∘ =_<= (equation.cRing {e2})
