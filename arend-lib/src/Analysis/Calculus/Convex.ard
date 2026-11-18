@@ -1,0 +1,133 @@
+{- | Convex functions of a real variable.
+ -
+ -   {IsConvexOn} `S f` says that `f (t x + (1 - t) y) <= t f x + (1 - t) f y` for `x, y ∈ S` and `t ∈ [0,1]`.
+ -
+ -   * {deriv-mono-convex}: a function with a non-decreasing derivative on `[a,b]` is convex there.
+ -     It follows from the supporting line estimate {deriv-mono-tangent}, which is proved by the mean value theorem.
+ -   * {jensen2} and {jensen-midpoint}: Jensen's inequality for two points.
+ -   * {convex-superadd}: `f a + f b <= f (a + b)` for `a, b >= 0` if {f} is convex on `[0, a + b]` and `f 0 = 0`.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Analysis.Calculus.MeanValue
+\import Analysis.Derivative.CoverDerivative
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.TopRing.Real
+
+-- | {f} is convex on {S}.
+\type IsConvexOn (S : Set Real) (f : Real -> Real) : \Prop
+  => \Pi {x y : Real} -> S x -> S y -> \Pi {t : Real} -> 0 <= t -> t <= 1 -> f (t * x + (1 - t) * y) <= t * f x + (1 - t) * f y
+
+-- | The supporting line: if `f'` is non-decreasing, then `f w - f z >= f' z (w - z)`.
+\lemma deriv-mono-tangent {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                          (mono : \Pi {x y : Set.Total (ClosedInterval a b)} -> x.1 <= y.1 -> deriv (interval-derivDense a<b) f d x 1 <= deriv (interval-derivDense a<b) f d y 1)
+                          (z w : Set.Total (ClosedInterval a b))
+  : deriv (interval-derivDense a<b) f d z 1 * (w.1 - z.1) <= f w - f z
+  => \lam (p : f w - f z < deriv (interval-derivDense a<b) f d z 1 * (w.1 - z.1)) =>
+      \have c>0 : 0 < deriv (interval-derivDense a<b) f d z 1 * (w.1 - z.1) - (f w - f z) => linarith
+      \in \case near-or-apart a<b d z w c>0 \with {
+        | byLeft q => \have | t => RealAbGroup.abs>=neg <∘r q
+                            | e : (w.1 - z.1) * deriv (interval-derivDense a<b) f d z 1 = deriv (interval-derivDense a<b) f d z 1 * (w.1 - z.1) => RealField.*-comm
+                      \in linarith
+        | byRight (byLeft z<w) => \case mean-value-between a<b d z<w c>0 \with {
+          | inP (u,zu,uw,q) =>
+            \have | t1 => RealAbGroup.abs>=neg <∘r q
+                  | t2 : deriv (interval-derivDense a<b) f d z 1 * (w.1 - z.1) <= deriv (interval-derivDense a<b) f d u 1 * (w.1 - z.1)
+                      => RealField.<=_*_positive-left (mono zu) (linarith : 0 <= w.1 - z.1)
+            \in linarith
+        }
+        | byRight (byRight w<z) => \case mean-value-between.flip a<b d w<z c>0 \with {
+          | inP (u,wu,uz,q) =>
+            \have | t1 => RealAbGroup.abs>=neg <∘r q
+                  | t2 : deriv (interval-derivDense a<b) f d u 1 * (z.1 - w.1) <= deriv (interval-derivDense a<b) f d z 1 * (z.1 - w.1)
+                      => RealField.<=_*_positive-left (mono uz) (linarith : 0 <= z.1 - w.1)
+                  | e1 : deriv (interval-derivDense a<b) f d z 1 * (w.1 - z.1) = negative (deriv (interval-derivDense a<b) f d z 1 * (z.1 - w.1)) => equation.cRing
+                  | e2 : deriv (interval-derivDense a<b) f d u 1 * (w.1 - z.1) = negative (deriv (interval-derivDense a<b) f d u 1 * (z.1 - w.1)) => equation.cRing
+            \in linarith
+        }
+      }
+
+-- | A function with a non-decreasing derivative on `[a,b]` is convex on `[a,b]`.
+\lemma deriv-mono-convex {a b : Real} (a<b : a < b) {f : Real -> Real} (d : HasDeriv (intervalInc a b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1))
+                         (mono : \Pi {x y : Set.Total (ClosedInterval a b)} -> x.1 <= y.1
+                           -> deriv (interval-derivDense a<b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) d x 1 <= deriv (interval-derivDense a<b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) d y 1)
+  : IsConvexOn (ClosedInterval a b) f
+  => \lam {x} {y} Sx Sy {t} t>=0 t<=1 =>
+      \have t'>=0 : 0 <= 1 - t => linarith
+      \in \let | z : Set.Total (ClosedInterval a b) => (t * x + (1 - t) * y, combination-in Sx Sy t>=0 t'>=0)
+               | g => deriv (interval-derivDense a<b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) d z 1
+      \in \have | tx => deriv-mono-tangent a<b d mono z (x,Sx)
+            | ty => deriv-mono-tangent a<b d mono z (y,Sy)
+            | sx : t * (g * (x - z.1)) <= t * (f x - f z.1) => RealField.<=_*_positive-right t>=0 tx
+            | sy : (1 - t) * (g * (y - z.1)) <= (1 - t) * (f y - f z.1) => RealField.<=_*_positive-right t'>=0 ty
+            | e : t * (g * (x - z.1)) + (1 - t) * (g * (y - z.1)) = 0 => equation.cRing
+            | e' : t * (f x - f z.1) + (1 - t) * (f y - f z.1) = t * f x + (1 - t) * f y - f z.1 => equation.cRing
+      \in linarith
+  \where {
+    -- | `s x + t y ∈ [a,b]` for `x, y ∈ [a,b]`, `s, t >= 0`, `s + t = 1`.
+    \lemma combination-in {a b x y s : Real} (Sx : ClosedInterval a b x) (Sy : ClosedInterval a b y) (s>=0 : 0 <= s) (s'>=0 : 0 <= 1 - s)
+      : ClosedInterval a b (s * x + (1 - s) * y)
+      => \have | l1 : s * a <= s * x => RealField.<=_*_positive-right s>=0 Sx.1
+               | l2 : (1 - s) * a <= (1 - s) * y => RealField.<=_*_positive-right s'>=0 Sy.1
+               | u1 : s * x <= s * b => RealField.<=_*_positive-right s>=0 Sx.2
+               | u2 : (1 - s) * y <= (1 - s) * b => RealField.<=_*_positive-right s'>=0 Sy.2
+               | ea : s * a + (1 - s) * a = a => equation.cRing
+               | eb : s * b + (1 - s) * b = b => equation.cRing
+         \in (linarith, linarith)
+  }
+
+-- | Jensen's inequality for two points.
+\lemma jensen2 {S : Set Real} {f : Real -> Real} (c : IsConvexOn S f) {x y : Real} (Sx : S x) (Sy : S y)
+               {s t : Real} (s>=0 : 0 <= s) (t>=0 : 0 <= t) (st : s + t = 1)
+  : f (s * x + t * y) <= s * f x + t * f y
+  => \have t=1-s : t = 1 - s => equation.cRing {st}
+     \in rewrite t=1-s $ c Sx Sy s>=0 (linarith : s <= 1)
+
+-- | Jensen's inequality for the midpoint.
+\lemma jensen-midpoint {S : Set Real} {f : Real -> Real} (c : IsConvexOn S f) {x y : Real} (Sx : S x) (Sy : S y)
+  : f (Real.fromRat (ratio 1 2) * (x + y)) <= Real.fromRat (ratio 1 2) * (f x + f y)
+  => \have h>=0 : 0 <= Real.fromRat (ratio 1 2) => rat_real_<=.1 linarith
+     \in transport2 (<=) (pmap f (inv ldistr)) (inv ldistr) (jensen2 c Sx Sy h>=0 h>=0 (RealAbGroup.+-rat *> pmap Real.fromRat idp))
+
+-- | Superadditivity of convex functions vanishing at `0`.
+\lemma convex-superadd {f : Real -> Real} {a b : Real} (c : IsConvexOn (ClosedInterval 0 (a + b)) f) (f0 : f 0 = 0) (a>=0 : 0 <= a) (b>=0 : 0 <= b)
+  : f a + f b <= f (a + b)
+  => \lam (p : f (a + b) < f a + f b) =>
+      \have ab<=0 : a + b <= 0 => \lam ab>0 => <-irreflexive (p <∘l positive c f0 a>=0 b>=0 ab>0)
+      \in \have | a=0 : a = 0 => <=-antisymmetric (linarith : a <= 0) a>=0
+                | b=0 : b = 0 => <=-antisymmetric (linarith : b <= 0) b>=0
+          \in linarith (rewrite (a=0,b=0,zro-left,f0) p)
+  \where
+    -- | The case `a + b > 0`.
+    \lemma positive {f : Real -> Real} {a b : Real} (c : IsConvexOn (ClosedInterval 0 (a + b)) f) (f0 : f 0 = 0) (a>=0 : 0 <= a) (b>=0 : 0 <= b)
+                    (ab>0 : 0 < a + b) : f a + f b <= f (a + b)
+      => \let t => a * RealField.pinv (a + b) ab>0
+         \in \have | t>=0 : 0 <= t => RealField.<=_*_positive_positive a>=0 (<=-less (RealField.pinv>0 ab>0))
+               | pt : (a + b) * RealField.pinv (a + b) ab>0 = 1 => RealField.pinv-right ab>0
+               | q : 0 <= b * RealField.pinv (a + b) ab>0 => RealField.<=_*_positive_positive b>=0 (<=-less (RealField.pinv>0 ab>0))
+               | e1 : t + b * RealField.pinv (a + b) ab>0 = 1 => inv rdistr *> pt
+               | t<=1 : t <= 1 => linarith
+               | S0 : ClosedInterval 0 (a + b) 0 => (<=-refl, <=-less ab>0)
+               | Sab : ClosedInterval 0 (a + b) (a + b) => (<=-less ab>0, <=-refl)
+               | ea : t * (a + b) + (1 - t) * 0 = a => equation.cRing {pt}
+               | eb : (1 - t) * (a + b) + (1 - (1 - t)) * 0 = b => equation.cRing {pt}
+               | fa : f a <= t * f (a + b) + (1 - t) * f 0 => rewrite ea in c Sab S0 t>=0 t<=1
+               | fb : f b <= (1 - t) * f (a + b) + (1 - (1 - t)) * f 0 => rewrite eb in c Sab S0 (linarith : 0 <= 1 - t) (linarith : 1 - t <= 1)
+               | e : t * f (a + b) + (1 - t) * f 0 + ((1 - t) * f (a + b) + (1 - (1 - t)) * f 0) = f (a + b) => rewrite f0 equation.cRing
+         \in linarith
