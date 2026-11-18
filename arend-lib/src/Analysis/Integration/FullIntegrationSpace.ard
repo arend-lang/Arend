@@ -1,0 +1,158 @@
+\import Algebra.Group
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.QModule
+\import Analysis.Integration.IntegrationSpace
+\import Arith.Rat
+\import Arith.Real
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+
+-- | The unit ball `B₁ = {a | |a| ≤ 1}` of an integration space with the induced metric.
+\func UnitBall (X : IntegrationSpace) : PseudoMetricSpace
+  => PseudoMetricTransfer {Set.Total (\lam (a : X) => X.IsUnderUnit (X.abs a))} __.1
+
+-- | A bounded integration space is full if it is separated (`norm-ext`: `I|a| = 0` implies `a = 0`) and its unit ball is complete.
+\class FullIntegrationSpace \extends BoundedIntegrationSpace, NormedAbGroup
+  | unitBall-complete : IsCompleteCoverSpace (UnitBall \this)
+
+-- | The unit ball is closed in a complete integration space.
+\lemma unitBall-closed {X : CompleteIntegrationSpace} : X.IsClosed (\lam (x : X) => X.IsUnderUnit (X.abs x))
+  => \lam xl => equalizer-closed (X.trunc-metric ContMap.∘ X.abs-uniform) X.abs-uniform
+      \lam Vo Vx => TruncP.map (xl Vo Vx) \lam s => (s.1, s.2, s.3)
+
+-- | The bounded part of a complete regular integration space is full.
+\func boundedFull (X : CompleteRegularIntegrationSpace) : FullIntegrationSpace \cowith
+  | BoundedIntegrationSpace => X.boundedSpace
+  | norm-ext p => ext (X.norm-ext p)
+  | unitBall-complete => isometric-closed-complete ballInc $ transport X.IsClosed (ext \lam y => ext
+      (\lam yU => inP (((y, ball-bounded yU), ball-elem yU), idp), \lam (inP (b,p)) => rewriteI p (pmap __.1 b.2))) unitBall-closed
+  \where {
+    \lemma ball-bounded {X : CompleteRegularIntegrationSpace} {y : X} (yU : X.IsUnderUnit (X.abs y)) : X.IsBounded y
+      => inP (1, X.IsUnderUnit-below X.abs>=0 yU)
+
+    \lemma ball-elem {X : CompleteRegularIntegrationSpace} {y : X} (yU : X.IsUnderUnit (X.abs y))
+      : TruncRieszSpace.IsUnderUnit {X.boundedSpace} (TruncRieszSpace.abs {X.boundedSpace} (y, ball-bounded yU))
+      => unfold TruncRieszSpace.IsUnderUnit (ext yU)
+
+    \func ballInc {X : CompleteRegularIntegrationSpace} : IsometricMap (UnitBall X.boundedSpace) X \cowith
+      | func b => b.1.1
+      | func-isometry => X.norm-dist *> inv (norm-dist {X.boundedSpace})
+  }
+
+-- | The canonical map from a full space to the bounded part of its completion.
+\func fullUnit (L : FullIntegrationSpace) : IntegrationSpaceHom L (boundedFull (RegularIntegrationSpaceCompletion L))
+  => CompleteRegularIntegrationSpace.bounded-lift {RegularIntegrationSpaceCompletion L} integrationCompletion.inc
+
+-- | A full space is isomorphic to the bounded part of its completion.
+\lemma fullUnit-equiv {L : FullIntegrationSpace} : IsEquiv (fullUnit L)
+  => IsEquiv.fromInjSurj (\lam p => isometric-inj integrationCompletion (pmap __.1 p)) \lam (g,gb) => \case gb \with {
+    | inP (M,gM) =>
+      \let | M' => M RatField.∨ 1
+           | gM' => IsBelow-level RatField.join-left gM
+      \in \have M'>0 : RatField.zro RatField.< M' => RatField.zro<ide <∘l RatField.join-right
+      \in \case below-preimage M'>0 join-right (IsBelow_<= part+<=abs gM'), below-preimage M'>0 join-right (IsBelow_<= (join-univ abs>=neg abs>=0) gM') \with {
+        | inP (x,p), inP (y,q) => inP (x - y, ext $ integrationCompletion.inc.func-minus *> pmap2 (-) p q *> parts_-)
+      }
+  }
+  \where {
+    \open LatticeAbGroup
+    \open TruncRieszSpace
+    \open IntegrationSpace
+    \open QModule
+    \open PosetQModule
+
+    \func ballInc (L : FullIntegrationSpace) : IsometricMap (UnitBall L) (IntegrationSpaceCompletion L) \cowith
+      | func b => integrationCompletion b.1
+      | func-isometry => integrationCompletion.func-isometry
+
+    -- | A positive element of the completion under the unit comes from {L}: the image of the unit ball is closed and dense in it.
+    \lemma unit-preimage {L : FullIntegrationSpace} {g : IntegrationSpaceCompletion L} (g>=0 : (IntegrationSpaceCompletion L).zro <= g) (gU : IsUnderUnit g)
+      : ∃ (x : L) (integrationCompletion x = g)
+      => \case isometric-complete-closed L.unitBall-complete (ballInc L) {g} (\lam {V} Vo Vg => \case (dist_open {IntegrationSpaceCompletion L}).1 Vo Vg \with {
+        | inP (eps,eps>0,sub) => \case dense-regular.approx integrationCompletion.inc-dense g>=0 eps>0 \with {
+          | inP (x,x>=0,h) =>
+            \have | t>=0 : L.zro <= L.trunc x => L.trunc-pos x>=0
+                  | le : integral (abs (g - integrationCompletion (L.trunc x))) RealAbGroup.<= integral (abs (g - integrationCompletion x))
+                      => integral-mono $ =_<= (pmap (\lam z => abs (z - _)) (inv gU) *> pmap (\lam z => abs (trunc g - z)) integrationCompletion.func-trunc) <=∘ trunc-lipschitz
+            \in inP (integrationCompletion (L.trunc x), inP ((L.trunc x, transportInv L.IsUnderUnit (abs-ofPos t>=0) L.trunc-idemp), idp),
+                     sub $ real_<_U.1 $ transportInv (RealAbGroup.< _) (lnorm-ldist {_} {g} {_}) (le <∘r h))
+        }
+      }) \with {
+        | inP (b,p) => inP (b.1,p)
+      }
+
+    \lemma below-preimage {L : FullIntegrationSpace} {r : Rat} (r>0 : RatField.zro RatField.< r) {g : IntegrationSpaceCompletion L} (g>=0 : (IntegrationSpaceCompletion L).zro <= g) (gr : IsBelow g r)
+      : ∃ (x : L) (integrationCompletion x = g)
+      => \have | fr>=0 : 0 RatField.<= RatField.finv r => <=-less (RatField.finv>0 r>0)
+               | sU : IsUnderUnit (RatField.finv r *q g) => IsBelow-one $ transport (IsBelow _) (RatField.finv-left $ RatField.>_/= r>0) (IsBelow_*q fr>=0 gr)
+         \in TruncP.map (unit-preimage (*q_>=0 fr>=0 g>=0) sU) \lam s => (r *q s.1, func-*q {_} {_} {integrationCompletion.inc} *> pmap (r *q) s.2 *> *q-finv-cancel (RatField.>_/= r>0))
+  }
+
+-- | The extension of the inclusion of the bounded part to the completion.
+\func boundedCounit (X : CompleteRegularIntegrationSpace) : IntegrationSpaceHom (IntegrationSpaceCompletion (boundedFull X)) X
+  => integrationCompletion-lift X.boundedInc
+
+\lemma boundedCounit-char {X : CompleteRegularIntegrationSpace} {b : boundedFull X} : boundedCounit X (integrationCompletion {boundedFull X} b) = b.1
+  => integrationCompletion-lift.char {boundedFull X} {X} {X.boundedInc} {b}
+
+-- | A complete regular integration space is isomorphic to the completion of its bounded part.
+\lemma boundedCounit-equiv {X : CompleteRegularIntegrationSpace} : IsEquiv (boundedCounit X)
+  => IsEquiv.fromInjSurj (isometric-inj (boundedCounit X)) \lam y => isometric-complete-closed (IntegrationSpaceCompletion (boundedFull X)).isComplete (boundedCounit X)
+      \lam Vo Vy => \case X.boundedInc-dense Vo Vy \with {
+        | inP (z, inP (b,p), Vz) => inP (z, inP (integrationCompletion b, boundedCounit-char *> p), Vz)
+      }
+
+-- | The restriction of a homomorphism to the bounded parts.
+\func boundedMap {X Y : CompleteRegularIntegrationSpace} (f : IntegrationSpaceHom X Y) : IntegrationSpaceHom (boundedFull X) (boundedFull Y)
+  => Y.bounded-lift (f IntegrationSpaceHom.∘ X.boundedInc)
+
+-- | The extension of a homomorphism of the bounded parts.
+\func boundedExtend {X Y : CompleteRegularIntegrationSpace} (g : IntegrationSpaceHom (boundedFull X) (boundedFull Y)) : IntegrationSpaceHom X Y
+  => dense-integration-lift X.boundedInc X.boundedInc-dense (Y.boundedInc IntegrationSpaceHom.∘ g)
+
+\lemma boundedExtend-char {X Y : CompleteRegularIntegrationSpace} {g : IntegrationSpaceHom (boundedFull X) (boundedFull Y)} {b : boundedFull X}
+  : boundedExtend g b.1 = (g b).1
+  => dense-integration-lift.char X.boundedInc X.boundedInc-dense (Y.boundedInc IntegrationSpaceHom.∘ g)
+
+-- | Homomorphisms of complete regular integration spaces are the same as homomorphisms of their bounded parts.
+\func boundedMap-equiv {X Y : CompleteRegularIntegrationSpace} : QEquiv {IntegrationSpaceHom X Y} {IntegrationSpaceHom (boundedFull X) (boundedFull Y)} boundedMap boundedExtend \cowith
+  | ret_f f => exts \lam x => dense-integration-lift.unique X.boundedInc-dense (boundedExtend (boundedMap f)) f (\lam b => boundedExtend-char {X} {Y} {boundedMap f}) x
+  | f_sec g => exts \lam b => ext boundedExtend-char
+
+-- | Naturality of {fullUnit}.
+\lemma fullUnit-natural {L L' : FullIntegrationSpace} (f : IntegrationSpaceHom L L') {x : L}
+  : boundedMap (integrationCompletion-map f) (fullUnit L x) = fullUnit L' (f x)
+  => ext (integrationCompletion-map.char {L} {L'} {f})
+
+-- | Naturality of {boundedCounit}.
+\lemma boundedCounit-natural {X Y : CompleteRegularIntegrationSpace} (f : IntegrationSpaceHom X Y) (F : IntegrationSpaceCompletion (boundedFull X))
+  : boundedCounit Y (integrationCompletion-map (boundedMap f) F) = f (boundedCounit X F)
+  => integrationCompletion-lift.unique (boundedCounit Y IntegrationSpaceHom.∘ integrationCompletion-map (boundedMap f)) (f IntegrationSpaceHom.∘ boundedCounit X)
+      (\lam b => pmap (boundedCounit Y) (integrationCompletion-map.char {boundedFull X} {boundedFull Y} {boundedMap f}) *> boundedCounit-char *> inv (pmap f boundedCounit-char)) F
+
+-- | The first triangle identity.
+\lemma boundedMap-counit-unit {X : CompleteRegularIntegrationSpace} {b : boundedFull X} : boundedMap (boundedCounit X) (fullUnit (boundedFull X) b) = b
+  => ext boundedCounit-char
+
+-- | The second triangle identity.
+\lemma counit-completionMap-unit {L : FullIntegrationSpace} (F : IntegrationSpaceCompletion L)
+  : boundedCounit (RegularIntegrationSpaceCompletion L) (integrationCompletion-map (fullUnit L) F) = F
+  => integrationCompletion-lift.unique (boundedCounit (RegularIntegrationSpaceCompletion L) IntegrationSpaceHom.∘ integrationCompletion-map (fullUnit L)) IntegrationSpaceHom.id
+      (\lam x => pmap (boundedCounit _) (integrationCompletion-map.char {L} {_} {fullUnit L}) *> boundedCounit-char) F
