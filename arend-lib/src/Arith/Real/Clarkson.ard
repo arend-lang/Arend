@@ -1,0 +1,51 @@
+{- | Clarkson's inequality for real numbers.
+
+  * {clarkson}: $|(a+b)/2|^p + |(a-b)/2|^p \le (|a|^p + |b|^p)/2$ for $p \ge 2$.
+
+  With `r = p/2 ≥ 1` and `x = (a+b)/2`, `y = (a-b)/2`, it follows from convexity of `t ↦ |t|^r` ({abs-rpow-convex}):
+  superadditivity {convex-superadd} gives $|x|^p + |y|^p \le (x^2 + y^2)^r$,
+  and Jensen {jensen-midpoint} applied to $x^2 + y^2 = (a^2 + b^2)/2$ gives $(x^2 + y^2)^r \le (|a|^p + |b|^p)/2$.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Analysis.Calculus.Convex
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+
+-- | Clarkson's inequality: $|(a+b)/2|^p + |(a-b)/2|^p \le (|a|^p + |b|^p)/2$ for $p \ge 2$.
+\lemma clarkson {p : Real} {p>0 : (0 : Real) < p} (p>=2 : (2 : Real) <= p) (a b : Real)
+  : rpow (RealAbGroup.abs (Real.fromRat (ratio 1 2) * (a + b))) RealAbGroup.abs>=0 p p>0 + rpow (RealAbGroup.abs (Real.fromRat (ratio 1 2) * (a - b))) RealAbGroup.abs>=0 p p>0
+    <= Real.fromRat (ratio 1 2) * (rpow (RealAbGroup.abs a) RealAbGroup.abs>=0 p p>0 + rpow (RealAbGroup.abs b) RealAbGroup.abs>=0 p p>0)
+  => \let h => Real.fromRat (ratio 1 2)
+     \in \have | hh : h + h = (1 : Real) => RealAbGroup.+-rat *> pmap Real.fromRat idp
+               | h>=0 : (0 : Real) <= h => rat_real_<=.1 linarith
+               | r>=1 : (1 : Real) <= p * h => =_<= (equation.cRing {hh} : (1 : Real) = (2 : Real) * h) <=∘ <=_*_positive-left p>=2 h>=0
+               | r>0 : (0 : Real) < p * h => linarith
+               | rr : p * h + p * h = p => equation.cRing {hh}
+               | conv => abs-rpow-convex {p * h} {r>0} r>=1
+               | sq (z : Real) : rpow (RealAbGroup.abs z) RealAbGroup.abs>=0 p p>0 = rpow (RealAbGroup.abs (z * z)) RealAbGroup.abs>=0 (p * h) r>0
+                   => abs-rpow-sq (inv rr)
+               | e : h * (a + b) * (h * (a + b)) + h * (a - b) * (h * (a - b)) = h * (a * a + b * b) => equation.cRing {hh}
+     \in =_<= (pmap2 (+) (sq _) (sq _))
+         <=∘ convex-superadd (\lam {u} {v} _ _ => conv {u} {v} () ()) (rpow-ext {_} {_} RealAbGroup.abs_zro {RealAbGroup.abs>=0} {<=-refl} idp {r>0} {r>0} *> zero-rpow {<=-refl} {p * h} {r>0}) RealField.square_>=0 RealField.square_>=0
+         <=∘ =_<= (pmap (\lam z => rpow (RealAbGroup.abs z) RealAbGroup.abs>=0 (p * h) r>0) e)
+         <=∘ jensen-midpoint conv () ()
+         <=∘ =_<= (inv (pmap (h *) (pmap2 (+) (sq a) (sq b))))
+  \where
+    -- | $|z|^{r+r} = |z^2|^r$.
+    \lemma abs-rpow-sq {z p r : Real} {p>0 : (0 : Real) < p} {r>0 : (0 : Real) < r} (pr : p = r + r)
+      : rpow (RealAbGroup.abs z) RealAbGroup.abs>=0 p p>0 = rpow (RealAbGroup.abs (z * z)) RealAbGroup.abs>=0 r r>0
+      => \have | z>=0 : (0 : Real) <= RealAbGroup.abs z => RealAbGroup.abs>=0
+               | rr>0 : (0 : Real) < r + r => linarith
+               | zz>=0 : (0 : Real) <= RealAbGroup.abs z * RealAbGroup.abs z => RealField.<=_*_positive_positive z>=0 z>=0
+         \in rpow-ext {_} {_} idp {z>=0} {z>=0} pr {p>0} {rr>0} *> rpow_+ {_} {z>=0} {r} {r} {r>0} {r>0} {rr>0} *> inv (rpow_* {_} {_} {z>=0} {z>=0} {zz>=0} {r} {r>0})
+              *> rpow-ext {_} {_} (RealField.abs-square *> inv (RealAbGroup.abs-ofPos RealField.square_>=0)) {zz>=0} {RealAbGroup.abs>=0} idp {r>0} {r>0}
