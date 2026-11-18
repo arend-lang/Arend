@@ -5,6 +5,11 @@
  -   say `f' <= -m`, and summing the estimates of the increments of {f} over a fine grid gives `f b - f a <= -(m - r)(b - a) < 0`.
  -
  -   The mean value theorem (see {mean-value}) follows by applying {rolle} to `(x - a)(f b - f a) - f x (b - a)`.
+ -
+ -   Corollaries: the Lipschitz bound {mean-value-lipschitz}, monotonicity {mean-value-monotone} and the first-order
+ -   remainder estimate {mean-value-remainder}. Since they are non-strict inequalities, they are proved by contradiction:
+ -   either `x` and `y` are close and the uniform derivative estimate applies, or they are apart and the mean value
+ -   theorem applies on `[x,y]` or `[y,x]` (see {near-or-apart}).
  -}
 
 \import Algebra.Group
@@ -196,3 +201,128 @@
                     => RealField.<=_*_positive-left (rewrite d'e (f'>=e _)) (<=-less yx>0)
           \in linarith
       }
+
+-- | The mean value theorem on a subinterval `[x,y]`: `f y - f x` is arbitrarily close to `f' z (y - x)` for some `z ∈ [x,y]`.
+\lemma mean-value-between {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                          {x y : Set.Total (ClosedInterval a b)} (x<y : x.1 < y.1) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (z : Set.Total (ClosedInterval a b)) (x.1 <= z.1) (z.1 <= y.1) (RealAbGroup.abs (f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1)) < eps)
+  => \have (d',d'e) => hasDeriv-sub a<b d x<y
+     \in \case mean-value x<y d' eps>0 \with {
+       | inP (z,q) => inP (hasDeriv-sub.subPt z, z.2.1, z.2.2, rewrite (inv (d'e z)) q)
+     }
+  \where
+    -- | The same estimate for `y < x` with `z ∈ [y,x]`.
+    \lemma flip {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                {x y : Set.Total (ClosedInterval a b)} (y<x : y.1 < x.1) {eps : Real} (eps>0 : 0 < eps)
+      : ∃ (z : Set.Total (ClosedInterval a b)) (y.1 <= z.1) (z.1 <= x.1) (RealAbGroup.abs (f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1)) < eps)
+      => \case mean-value-between a<b d y<x eps>0 \with {
+        | inP (z,yz,zx,q) => inP (z, yz, zx, rewrite (equation.cRing : f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1)
+                                                                        = negative (f x - f y - deriv (interval-derivDense a<b) f d z 1 * (x.1 - y.1)), RealAbGroup.abs_negative) q)
+      }
+
+-- | Either the first-order remainder `f y - f x - (y - x) f' x` is smaller than {c} or `x` and `y` are apart.
+\lemma near-or-apart {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                     (x y : Set.Total (ClosedInterval a b)) {c : Real} (c>0 : 0 < c)
+  : RealAbGroup.abs (f y - f x - (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1) < c || (x.1 < y.1 || y.1 < x.1)
+  => \have ba>0 : 0 < b - a => linarith
+     \in \case real_<-char.1 (RealField.<_*_positive_positive c>0 (RealField.pinv>0 ba>0)) \with {
+       | inP (r,r>0,r<E) => \case (hasDeriv-uniform-iff a<b {f} {\lam x => deriv (interval-derivDense a<b) f d x 1}).1 (d, \lam x => idp) (rat_real_<.2 r>0) \with {
+         | inP (delta,delta>0,h) =>
+           \have delta>0' : 0 < Real.fromRat delta => rat_real_<.1 delta>0
+           \in \case real-located {y.1} (linarith : x.1 - delta < x.1) \with {
+             | byRight y<x => byRight (byRight y<x)
+             | byLeft x-d<y => \case real-located {y.1} (linarith : x.1 < x.1 + delta) \with {
+               | byLeft x<y => byRight (byLeft x<y)
+               | byRight y<x+d =>
+                 \have | t1 => h (RealAbGroup.abs_-_< {y.1} {x.1} linarith linarith)
+                       | t2 : RealAbGroup.abs (y.1 - x.1) <= b - a => RealAbGroup.abs-univ (usingOnly (x.2.1, x.2.2, y.2.1, y.2.2) linarith) (usingOnly (x.2.1, x.2.2, y.2.1, y.2.2) linarith)
+                       | t3 : Real.fromRat r * RealAbGroup.abs (y.1 - x.1) <= Real.fromRat r * (b - a) => RealField.<=_*_positive-right (<=-less r>0) t2
+                       | t4 : Real.fromRat r * (b - a) < c => RealField.<_*_positive-left r<E ba>0 <∘l =_<= (*-assoc *> pmap (c *) (RealField.pinv-left ba>0) *> ide-right)
+                 \in byLeft (usingOnly (t1, t3, t4) linarith)
+             }
+           }
+       }
+     }
+
+-- | Lipschitz bound: if `|f'| <= M`, then `|f y - f x| <= M |y - x|`.
+\lemma mean-value-lipschitz {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                            {M : Real} (f'<=M : \Pi (x : Set.Total (ClosedInterval a b)) -> RealAbGroup.abs (deriv (interval-derivDense a<b) f d x 1) <= M)
+                            (x y : Set.Total (ClosedInterval a b))
+  : RealAbGroup.abs (f y - f x) <= M * RealAbGroup.abs (y.1 - x.1)
+  => \lam (p : M * RealAbGroup.abs (y.1 - x.1) < RealAbGroup.abs (f y - f x)) =>
+      \have | c>0 : 0 < RealAbGroup.abs (f y - f x) - M * RealAbGroup.abs (y.1 - x.1) => linarith
+            | bound (z : Set.Total (ClosedInterval a b)) : RealAbGroup.abs (deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1)) <= M * RealAbGroup.abs (y.1 - x.1)
+                => =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (f'<=M z) RealAbGroup.abs>=0
+            | between (q : ∃ (z : Set.Total (ClosedInterval a b)) (RealAbGroup.abs (f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1))
+                             < RealAbGroup.abs (f y - f x) - M * RealAbGroup.abs (y.1 - x.1))) : Empty
+                => \case q \with {
+                  | inP (z,q) => \have t => abs-shift (equation.abGroup : f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1) = _) q (bound z)
+                                 \in linarith
+                }
+      \in \case near-or-apart a<b d x y c>0 \with {
+        | byLeft q => \have t => abs-shift (equation.abGroup : f y - f x - (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1 = _) q
+                                   (=_<= (pmap RealAbGroup.abs RealField.*-comm) <=∘ bound x)
+                      \in linarith
+        | byRight (byLeft x<y) => between (TruncP.map (mean-value-between a<b d x<y c>0) \lam s => (s.1, s.4))
+        | byRight (byRight y<x) => between (TruncP.map (mean-value-between.flip a<b d y<x c>0) \lam s => (s.1, s.4))
+      }
+  \where
+    -- | `|U| < c + W` if `|U - V| < c` and `|V| <= W`.
+    \lemma abs-shift {U V U' c W : Real} (e : U - V = U') (q : RealAbGroup.abs U' < c) (w : RealAbGroup.abs V <= W) : RealAbGroup.abs U < c + W
+      => \have | t : RealAbGroup.abs U <= RealAbGroup.abs (U - V) + RealAbGroup.abs V
+                   => =_<= (pmap RealAbGroup.abs (equation.abGroup : U = U - V + V)) <=∘ RealAbGroup.abs_+
+               | q' : RealAbGroup.abs (U - V) < c => rewrite e q
+         \in linarith
+
+-- | Monotonicity: if `f' >= 0`, then {f} is non-decreasing.
+\lemma mean-value-monotone {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                           (f'>=0 : \Pi (x : Set.Total (ClosedInterval a b)) -> 0 <= deriv (interval-derivDense a<b) f d x 1)
+                           {x y : Set.Total (ClosedInterval a b)} (x<=y : x.1 <= y.1)
+  : f x <= f y
+  => \lam (p : f y < f x) => \case near-or-apart a<b d x y (linarith : 0 < f x - f y) \with {
+    | byLeft q =>
+      \have | t1 => RealAbGroup.abs>=neg <∘r q
+            | t2 : 0 <= (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1 => RealField.<=_*_positive_positive (linarith : 0 <= y.1 - x.1) (f'>=0 x)
+      \in linarith
+    | byRight (byLeft x<y) => \have t => mean-value-lower a<b d f'>=0 x<y \in linarith
+    | byRight (byRight y<x) => linarith
+  }
+
+-- | First-order remainder: if `|f' z - f' x| <= η` whenever `|z - x| < δ`, then `|f y - f x - (y - x) f' x| <= η |y - x|` whenever `|y - x| < δ`.
+\lemma mean-value-remainder {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                            {x : Set.Total (ClosedInterval a b)} {eta delta : Real}
+                            (h : \Pi (z : Set.Total (ClosedInterval a b)) -> RealAbGroup.abs (z.1 - x.1) < delta
+                              -> RealAbGroup.abs (deriv (interval-derivDense a<b) f d z 1 - deriv (interval-derivDense a<b) f d x 1) <= eta)
+                            {y : Set.Total (ClosedInterval a b)} (yd : RealAbGroup.abs (y.1 - x.1) < delta)
+  : RealAbGroup.abs (f y - f x - (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1) <= eta * RealAbGroup.abs (y.1 - x.1)
+  => \lam p =>
+      \have | c>0 : 0 < RealAbGroup.abs (f y - f x - (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1) - eta * RealAbGroup.abs (y.1 - x.1) => linarith
+            | between {z : Set.Total (ClosedInterval a b)} (zd : RealAbGroup.abs (z.1 - x.1) <= RealAbGroup.abs (y.1 - x.1))
+                      (q : RealAbGroup.abs (f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1))
+                             < RealAbGroup.abs (f y - f x - (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1) - eta * RealAbGroup.abs (y.1 - x.1)) : Empty
+                => \have t => mean-value-lipschitz.abs-shift
+                                 (equation.cRing : f y - f x - (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1
+                                                     - (deriv (interval-derivDense a<b) f d z 1 - deriv (interval-derivDense a<b) f d x 1) * (y.1 - x.1)
+                                                 = f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1)) q
+                                 (=_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (h z (zd <∘r yd)) RealAbGroup.abs>=0)
+                   \in linarith
+      \in \case near-or-apart a<b d x y c>0 \with {
+        | byLeft q => \have | zd : RealAbGroup.abs (x.1 - x.1) < delta => rewrite (negative-right, RealAbGroup.abs_zro) (RealAbGroup.abs>=0 <∘r yd)
+                            | t1 : 0 <= eta * RealAbGroup.abs (y.1 - x.1) => RealField.<=_*_positive_positive (RealAbGroup.abs>=0 <=∘ h x zd) RealAbGroup.abs>=0
+                      \in linarith
+        | byRight (byLeft x<y) => \case mean-value-between a<b d x<y c>0 \with {
+          | inP (z,xz,zy,q) => between (RealAbGroup.abs-univ (linarith : z.1 - x.1 <= y.1 - x.1) (linarith : x.1 - z.1 <= y.1 - x.1) <=∘ RealAbGroup.abs>=id) q
+        }
+        | byRight (byRight y<x) => \case mean-value-between.flip a<b d y<x c>0 \with {
+          | inP (z,yz,zx,q) => between (RealAbGroup.abs-univ (linarith : z.1 - x.1 <= x.1 - y.1) (linarith : x.1 - z.1 <= x.1 - y.1) <=∘ RealAbGroup.abs>=_-) q
+        }
+      }
+
+-- | The first-order remainder is uniformly small since the derivative is uniformly continuous on `[a,b]`.
+\lemma mean-value-remainder-uniform {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                                    {eta : Rat} (eta>0 : 0 < eta)
+  : ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
+      (RealAbGroup.abs (f y - f x - (y.1 - x.1) * deriv (interval-derivDense a<b) f d x 1) <= Real.fromRat eta * RealAbGroup.abs (y.1 - x.1))
+  => \case interval-uniform (<=-less a<b) (derivCover a<b f d) eta>0 \with {
+    | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} {y} yd => mean-value-remainder a<b d (\lam z zd => h zd) yd)
+  }
