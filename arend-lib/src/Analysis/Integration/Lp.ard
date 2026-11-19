@@ -12,7 +12,6 @@
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Analysis.Integration.FullIntegrationSpace
@@ -40,10 +39,12 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
 \import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Completion
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopAbGroup.Product
 \import Topology.TopRieszSpace
+\import Topology.TopRieszSpace.Completion
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \open JoinSemilattice(join-comm,join_<=)
@@ -72,30 +73,18 @@
   => LpSpace (boundedFull (RegularIntegrationSpaceCompletion Y)) p p>=1
 
 -- | The canonical map `L → Lᵖ`.
-\func lpInc {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) : NormedIsometricMap (LpPreSpace L p p>=1) (LpSpace L p p>=1)
+\func lpInc {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) : TruncRieszSpaceIsometricMap (LpPreSpace L p p>=1) (LpSpace L p p>=1)
   => truncBanachCompletion
   \where {
     \lemma lnorm-char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : lnorm (lpInc p p>=1 f) = pnorm p p>=1 f
-      => truncBanachCompletion.lnorm-char
-
-    \lemma func-join {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f g : L} : lpInc p p>=1 (f ∨ g) = lpInc p p>=1 f ∨ lpInc p p>=1 g
-      => truncBanachCompletion.func-join
-
-    \lemma func-trunc {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : lpInc p p>=1 (L.trunc f) = TruncRieszSpace.trunc {LpSpace L p p>=1} (lpInc p p>=1 f)
-      => truncBanachCompletion.func-trunc {LpPreSpace L p p>=1}
-
-    \lemma func-<= {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f g : L} (f<=g : f <= g) : lpInc p p>=1 f <= lpInc p p>=1 g
-      => truncBanachCompletion.func-<= {LpPreSpace L p p>=1} f<=g
+      => NormedAbGroupCompletion.norm-char
 
     \lemma isDense {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : ContMap.IsDense {lpInc {L} p p>=1}
-      => truncBanachCompletion.isDense {LpPreSpace L p p>=1}
-
-    \lemma isDenseEmbedding {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : CoverMap.IsDenseEmbedding {lpInc {L} p p>=1}
-      => completion.isDenseEmbedding
+      => completion.isDenseEmbedding.1
 
     \lemma isDenseEmbedding2 {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
       : CoverMap.IsDenseEmbedding {ProductCoverSpace.prod (lpInc {L} p p>=1) (lpInc {L} q q>=1)}
-      => ProductCoverSpace.prod.isDenseEmbedding {LpPreSpace L p p>=1} {LpPreSpace L q q>=1} {LpSpace L p p>=1} {LpSpace L q q>=1} {lpInc p p>=1} {lpInc q q>=1} isDenseEmbedding isDenseEmbedding
+      => ProductCoverSpace.prod.isDenseEmbedding {LpPreSpace L p p>=1} {LpPreSpace L q q>=1} {LpSpace L p p>=1} {LpSpace L q q>=1} {lpInc p p>=1} {lpInc q q>=1} completion.isDenseEmbedding completion.isDenseEmbedding
 
     \lemma isDense2 {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
       : ContMap.IsDense {ProductCoverSpace.prod (lpInc {L} p p>=1) (lpInc {L} q q>=1)}
@@ -129,8 +118,8 @@
          \in dense_<= real-join-uniform (ProductCoverSpace.prod (lpInc p p>=1) (lpInc p p>=1)) lpInc.isDense2
               (RealNormed.+-cont ContMap.∘ ProductTopSpace.tuple (lpNormPow.cover CoverMap.∘ subtract-uniform CoverMap.∘ ProductCoverSpace.tuple A B) (lpNormPow.cover CoverMap.∘ B))
               (lpNormPow.cover CoverMap.∘ A)
-              (\lam s => \have | eb : lpInc p p>=1 s.1 ∨ zro = lpInc p p>=1 (s.1 ∨ L.zro) => inv (lpInc.func-join *> pmap (_ ∨) (AddPointedHom.func-zro {lpInc p p>=1}))
-                                | ea : (lpInc p p>=1 s.1 ∨ zro) ∨ lpInc p p>=1 s.2 = lpInc p p>=1 ((s.1 ∨ L.zro) ∨ s.2) => pmap (__ ∨ _) eb *> inv lpInc.func-join
+              (\lam s => \have | eb : lpInc p p>=1 s.1 ∨ zro = lpInc p p>=1 (s.1 ∨ L.zro) => inv (func-join *> pmap (_ ∨) (AddPointedHom.func-zro {lpInc p p>=1}))
+                                | ea : (lpInc p p>=1 s.1 ∨ zro) ∨ lpInc p p>=1 s.2 = lpInc p p>=1 ((s.1 ∨ L.zro) ∨ s.2) => pmap (__ ∨ _) eb *> inv func-join
                                 | ed : ((lpInc p p>=1 s.1 ∨ zro) ∨ lpInc p p>=1 s.2) - (lpInc p p>=1 s.1 ∨ zro) = lpInc p p>=1 (((s.1 ∨ L.zro) ∨ s.2) - (s.1 ∨ L.zro)) => pmap2 (\lam (a b : Y) => a - b) ea eb *> inv (AddGroupHom.func-minus {lpInc p p>=1})
                                 | m => pnormPow-mono {L} p>=1 {s.1 ∨ L.zro} {(s.1 ∨ L.zro) ∨ s.2} L.join-right L.join-left
                                 | m' : pnormPow p p>=1 (((s.1 ∨ L.zro) ∨ s.2) - (s.1 ∨ L.zro)) + pnormPow p p>=1 (s.1 ∨ L.zro) <= pnormPow p p>=1 ((s.1 ∨ L.zro) ∨ s.2) => linarith

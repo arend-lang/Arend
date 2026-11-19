@@ -55,9 +55,9 @@
   => dense-lift-unique (ProductCoverSpace.prod (lpInc 1 RealAbGroup.<=-refl) (lpInc 1 RealAbGroup.<=-refl)) lpInc.isDense2
       (lp1-map CoverMap.∘ TopRieszSpace.join-uniform {LpSpace L 1 RealAbGroup.<=-refl})
       (TopRieszSpace.join-uniform {IntegrationSpaceCompletion L} CoverMap.∘ ProductCoverSpace.prod lp1-map lp1-map)
-      (\lam s => pmap lp1-map (inv lpInc.func-join) *> lp1-map-char *> integrationCompletion.func-join *> inv (pmap2 (IntegrationSpaceCompletion.join-func {L}) lp1-map-char lp1-map-char)) (u,v)
+      (\lam s => pmap lp1-map (inv func-join) *> lp1-map-char *> integrationCompletion.func-join *> inv (pmap2 (IntegrationSpaceCompletion.join-func {L}) lp1-map-char lp1-map-char)) (u,v)
 
 \lemma lp1-map-trunc {L : FullIntegrationSpace} {u : LpSpace L 1 RealAbGroup.<=-refl} : lp1-map (TruncRieszSpace.trunc {LpSpace L 1 RealAbGroup.<=-refl} u) = TruncRieszSpace.trunc {IntegrationSpaceCompletion L} (lp1-map u)
   => dense-lift-unique (lpInc 1 RealAbGroup.<=-refl) lpInc.isDense (lp1-map CoverMap.∘ TruncPreBanachLattice.trunc-lipschitz-map {LpSpace L 1 RealAbGroup.<=-refl})
       ((IntegrationSpaceCompletion L).trunc-metric CoverMap.∘ lp1-map)
-      (\lam f => pmap lp1-map (inv lpInc.func-trunc) *> lp1-map-char *> integrationCompletion.func-trunc *> inv (pmap (TruncRieszSpace.trunc {IntegrationSpaceCompletion L}) lp1-map-char)) u
+      (\lam f => pmap lp1-map (inv func-trunc) *> lp1-map-char *> integrationCompletion.func-trunc *> inv (pmap (TruncRieszSpace.trunc {IntegrationSpaceCompletion L}) lp1-map-char)) u

@@ -18,13 +18,18 @@
     | inP (eps,eps>0,p) => inP (OBall eps 0, \lam |x|<eps |y|<=|x| => transport (ExUpperReal.U {__} eps) norm_dist $ norm_<= |y|<=|x| $ transportInv (ExUpperReal.U {__} eps) norm_dist |x|<eps, OBall-center_<=< eps>0, p)
   }
 
+\record NormedRieszSpaceMap \extends NormedAbGroupMap, TopRieszSpaceMap {
+  \override Dom : ExPseudoNormedRieszSpace
+  \override Cod : ExPseudoNormedRieszSpace
+}
+
 -- | A normed Riesz space which is a real pre-Banach space.
 \class PreBanachLattice \extends ExPseudoNormedRieszSpace, RealPreBanachSpace
 
 \class BanachLattice \extends PreBanachLattice, RealBanachSpace
 
 -- | A pre-Banach lattice with a truncation.
-\class TruncPreBanachLattice \extends PreBanachLattice, TruncRieszSpace, PseudoNormedAbGroup {
+\class TruncPreBanachLattice \extends PreBanachLattice, TopTruncRieszSpace, PseudoNormedAbGroup {
   \lemma lnorm_<= {x y : E} (p : abs x <= abs y) : lnorm x RealAbGroup.<= lnorm y
     => Real.<=-upper.2 (norm_<= p)
 
@@ -33,6 +38,16 @@
 
   \lemma trunc-lipschitz-map : MetricMap \this \this trunc \cowith
     | func-dist => rewrite (norm-dist, norm-dist) $ norm_<= trunc-lipschitz
+}
+
+\record NormedTruncRieszSpaceMap \extends NormedRieszSpaceMap, TopTruncRieszSpaceMap {
+  \override Dom : TruncPreBanachLattice
+  \override Cod : TruncPreBanachLattice
+}
+
+\record TruncRieszSpaceIsometricMap \extends NormedTruncRieszSpaceMap, NormedIsometricMap {
+  \override Dom : TruncPreBanachLattice
+  \override Cod : TruncPreBanachLattice
 }
 
 -- | A Banach lattice with real-valued norms and a truncation.
