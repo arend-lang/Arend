@@ -1,0 +1,202 @@
+{- | Inequalities for the `p`-norms on a full integration space `L`.
+
+  * {pnormPow}, {pnorm}: $\|f\|_p^p = I(|f|^p)$ and $\|f\|_p = I(|f|^p)^{1/p}$.
+  * {holder}, {holder-one}: Hölder's inequality (Lemma `lem:holder`).
+  * {minkowski}: Minkowski's inequality (Lemma `lem:minkowski`).
+  * {pnormPow-mono}: monotone differences (Lemma `lem:mono`).
+
+  The proofs integrate the pointwise inequalities of `FunctionalCalculus.Pointwise` at rescaled arguments $f/a$
+  for rational $a > \|f\|_p$, and then let $a$ approach $\|f\|_p$.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Logic
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\open LatticeAbGroup
+\open QModule (*q)
+\open InequalitiesHelpers
+
+-- | $\|f\|_p^p = I(|f|^p)$.
+\func pnormPow {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (f : L) : Real
+  => L.integral (fpow p p>=1 f)
+
+\lemma pnormPow>=0 {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : (0 : Real) <= pnormPow p p>=1 f
+  => L.integral>=0 fpow>=0
+
+-- | $\|f\|_p = I(|f|^p)^{1/p}$.
+\func pnorm {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (f : L) : Real
+  => rpow (pnormPow p p>=1 f) pnormPow>=0 (RealField.pinv p (fpow.one>0 p>=1)) (RealField.pinv>0 (fpow.one>0 p>=1))
+
+\lemma pnorm>=0 {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : (0 : Real) <= pnorm p p>=1 f
+  => rpow>=0
+
+-- | $\|f\|_p^p = I(|f|^p)$.
+\lemma pnorm-pow {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L}
+  : rpow (pnorm p p>=1 f) pnorm>=0 p (fpow.one>0 p>=1) = pnormPow p p>=1 f
+  => \have | p>0 => fpow.one>0 p>=1
+           | pp>0 : (0 : Real) < RealField.pinv p p>0 * p => RealField.<_*_positive_positive (RealField.pinv>0 p>0) p>0
+     \in rpow-rpow {pnormPow p p>=1 f} {pnormPow>=0} {RealField.pinv p p>0} {p} {RealField.pinv>0 p>0} {p>0} {pnorm>=0} {pp>0}
+          *> rpow-ext {_} {_} idp {pnormPow>=0} {pnormPow>=0} {_} {1} (RealField.pinv-left p>0) {pp>0} {RealField.zro<ide} *> rpow-one {_} {pnormPow>=0} {RealField.zro<ide}
+
+-- | $\|f\|_1 = I|f|$.
+\lemma pnorm-one {L : FullIntegrationSpace} {o : (1 : Real) <= 1} {f : L} : pnorm 1 o f = L.integral (abs f)
+  => rpow-ext (pmap L.integral fpow-one) {_} {L.integral>=0 abs>=0} (inv ide-right *> RealField.pinv-left RealField.zro<ide) {_} {RealField.zro<ide}
+       *> rpow-one {_} {L.integral>=0 abs>=0} {RealField.zro<ide}
+
+-- | $\|f\|_p \le c$ if and only if $\|f\|_p^p \le c^p$.
+\lemma pnorm<=-iff {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} {c : Real} {c>=0 : (0 : Real) <= c}
+  : pnorm p p>=1 f <= c <-> pnormPow p p>=1 f <= rpow c c>=0 p (fpow.one>0 p>=1)
+  => \have | p>0 => fpow.one>0 p>=1
+           | pp>0 : (0 : Real) < p * RealField.pinv p p>0 => RealField.<_*_positive_positive p>0 (RealField.pinv>0 p>0)
+     \in (\lam fc => =_<= (inv pnorm-pow) <=∘ rpow-mono fc,
+          \lam fc => rpow-mono {_} {_} {pnormPow>=0} {rpow>=0} fc
+                       <=∘ =_<= (rpow-rpow {c} {c>=0} {p} {RealField.pinv p p>0} {p>0} {RealField.pinv>0 p>0} {rpow>=0} {pp>0}
+                                  *> rpow-ext {_} {_} idp {c>=0} {c>=0} {_} {1} (RealField.pinv-right p>0) {pp>0} {RealField.zro<ide} *> rpow-one {_} {c>=0} {RealField.zro<ide}))
+
+-- | $\|q f\|_p^p = |q|^p \|f\|_p^p$.
+\lemma pnormPow-*q {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {q : Rat} {f : L}
+  : pnormPow p p>=1 (q *q f) = rpow (RealAbGroup.abs (Real.fromRat q)) RealAbGroup.abs>=0 p (fpow.one>0 p>=1) * pnormPow p p>=1 f
+  => pmap L.integral fpow-*q *> integral-rscale
+
+-- | Hölder's inequality: $I|fg| \le \|f\|_p \|g\|_q$ for $1/p + 1/q = 1$.
+\lemma holder {L : FullIntegrationSpace} {p q : Real} (p>=1 : (1 : Real) <= p) (q>=1 : (1 : Real) <= q)
+              (pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)) {f g : L}
+  : L.integral (abs (fmul f g)) <= pnorm p p>=1 f * pnorm q q>=1 g
+  => inf-prod pnorm>=0 pnorm>=0 \lam {a} {b} fa gb =>
+      \have | a>0 : RatField.zro RatField.< a => rat_real_<.2 (pnorm>=0 <∘r fa)
+            | b>0 : RatField.zro RatField.< b => rat_real_<.2 (pnorm>=0 <∘r gb)
+            | ab'>=0 : RatField.zro RatField.<= RatField.finv a RatField.* RatField.finv b => RatField.<=_*_positive_positive (RatField.<=-less (RatField.finv>0 a>0)) (RatField.<=-less (RatField.finv>0 b>0))
+            | lhs : abs (fmul (RatField.finv a *q f) (RatField.finv b *q g)) = (RatField.finv a RatField.* RatField.finv b) *q abs (fmul f g)
+                => pmap abs (fmul-*q-left *> pmap (_ *q) fmul-*q-right *> inv QModule.*q-assoc) *> L.abs_*q>=0 ab'>=0
+            | y => L.integral-mono (fmul-young p>=1 q>=1 pq {RatField.finv a *q f} {RatField.finv b *q g})
+            | nf : pnormPow p p>=1 (RatField.finv a *q f) <= (1 : Real) => normalize a>0 (<=-less fa)
+            | ng : pnormPow q q>=1 (RatField.finv b *q g) <= (1 : Real) => normalize b>0 (<=-less gb)
+            | ip>=0 : (0 : Real) <= RealField.pinv p (fpow.one>0 p>=1) => <=-less (RealField.pinv>0 (fpow.one>0 p>=1))
+            | iq>=0 : (0 : Real) <= RealField.pinv q (fpow.one>0 q>=1) => <=-less (RealField.pinv>0 (fpow.one>0 q>=1))
+            | r1 : RealField.pinv p (fpow.one>0 p>=1) * pnormPow p p>=1 (RatField.finv a *q f) <= RealField.pinv p (fpow.one>0 p>=1) * 1 => <=_*_positive-right ip>=0 nf
+            | r2 : RealField.pinv q (fpow.one>0 q>=1) * pnormPow q q>=1 (RatField.finv b *q g) <= RealField.pinv q (fpow.one>0 q>=1) * 1 => <=_*_positive-right iq>=0 ng
+            | s : Real.fromRat (RatField.finv a RatField.* RatField.finv b) * L.integral (abs (fmul f g)) <= (1 : Real)
+                => =_<= (inv (pmap L.integral lhs *> L.integral_*q)) <=∘ y <=∘ =_<= (L.integral_+ *> pmap2 (+) integral-rscale integral-rscale)
+                   <=∘ <=_+ r1 r2 <=∘ =_<= (pmap2 (+) ide-right ide-right *> pq)
+            | ab : a RatField.* b RatField.* (RatField.finv a RatField.* RatField.finv b) = 1
+                => equation.cRing {RatField.finv-right (RatField.>_/= a>0), RatField.finv-right (RatField.>_/= b>0)}
+      \in unscale (RatField.<_*_positive_positive a>0 b>0) ab s <=∘ =_<= (inv RealField.*-rat)
+  \where {
+    \lemma unscale {c c' : Rat} (c>0 : RatField.zro RatField.< c) (cc : c RatField.* c' = 1) {x : Real} (s : Real.fromRat c' * x <= (1 : Real))
+      : x <= Real.fromRat c
+      => \have | e : Real.fromRat c * Real.fromRat c' = (1 : Real) => RealField.*-rat *> pmap Real.fromRat cc
+               | m : Real.fromRat c * (Real.fromRat c' * x) <= Real.fromRat c * 1 => <=_*_positive-right (rat_real_<=.1 (RatField.<=-less c>0)) s
+         \in =_<= (inv (inv *-assoc *> pmap (`* x) e *> ide-left)) <=∘ m <=∘ =_<= ide-right
+  }
+
+-- | Hölder's inequality for `p = 1`: $I|fg| \le M \|f\|_1$ if `g` is bounded by `M`.
+\lemma holder-one {L : FullIntegrationSpace} {M : Rat} (M>=0 : RatField.zro RatField.<= M) {f g : L} (gM : L.IsBelow (abs g) M)
+  : L.integral (abs (fmul f g)) <= Real.fromRat M * pnorm 1 RealAbGroup.<=-refl f
+  => =_<= (pmap (\lam x => L.integral (abs x)) (fmul-comm {L} {f} {g})) <=∘ L.integral-mono (fmul-bounded {L} {M} M>=0 {g} {f} gM)
+       <=∘ =_<= (L.integral_*q *> pmap (_ *) (inv (pnorm-one {L} {_} {f})))
+
+-- | Minkowski's inequality: $\|f + g\|_p \le \|f\|_p + \|g\|_p$.
+\lemma minkowski {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {f g : L}
+  : pnorm p p>=1 (f + g) <= pnorm p p>=1 f + pnorm p p>=1 g
+  => inf-sum \lam {a} {b} fa gb =>
+      \let c' => RatField.finv (a RatField.+ b)
+      \in \have | a>0 : RatField.zro RatField.< a => rat_real_<.2 (pnorm>=0 <∘r fa)
+            | b>0 : RatField.zro RatField.< b => rat_real_<.2 (pnorm>=0 <∘r gb)
+            | c>0 : RatField.zro RatField.< a RatField.+ b => linarith
+            | c'>0 : RatField.zro RatField.< c' => RatField.finv>0 c>0
+            | t>=0 : RatField.zro RatField.<= a RatField.* c' => RatField.<=-less (RatField.<_*_positive_positive a>0 c'>0)
+            | s>=0 : RatField.zro RatField.<= b RatField.* c' => RatField.<=-less (RatField.<_*_positive_positive b>0 c'>0)
+            | ts : a RatField.* c' RatField.+ b RatField.* c' = 1 => inv RatField.rdistr *> RatField.finv-right (RatField.>_/= c>0)
+            | ea : a RatField.* c' RatField.* RatField.finv a = c' => equation.cRing {RatField.finv-right (RatField.>_/= a>0)}
+            | eb : b RatField.* c' RatField.* RatField.finv b = c' => equation.cRing {RatField.finv-right (RatField.>_/= b>0)}
+            | arg : (a RatField.* c') *q (RatField.finv a *q f) + (b RatField.* c') *q (RatField.finv b *q g) = c' *q (f + g)
+                => pmap2 (+) (inv QModule.*q-assoc *> pmap (*q f) ea) (inv QModule.*q-assoc *> pmap (*q g) eb) *> inv L.toRatModule.*c-ldistr
+            | cv => L.integral-mono (fpow-convex p>=1 t>=0 s>=0 ts {RatField.finv a *q f} {RatField.finv b *q g})
+            | nf : pnormPow p p>=1 (RatField.finv a *q f) <= (1 : Real) => normalize a>0 (<=-less fa)
+            | ng : pnormPow p p>=1 (RatField.finv b *q g) <= (1 : Real) => normalize b>0 (<=-less gb)
+            | r1 : Real.fromRat (a RatField.* c') * pnormPow p p>=1 (RatField.finv a *q f) <= Real.fromRat (a RatField.* c') * 1 => <=_*_positive-right (rat_real_<=.1 t>=0) nf
+            | r2 : Real.fromRat (b RatField.* c') * pnormPow p p>=1 (RatField.finv b *q g) <= Real.fromRat (b RatField.* c') * 1 => <=_*_positive-right (rat_real_<=.1 s>=0) ng
+            | n1 : pnormPow p p>=1 (c' *q (f + g)) <= (1 : Real)
+                => =_<= (inv (pmap (\lam x => L.integral (fpow p p>=1 x)) arg)) <=∘ cv <=∘ =_<= (L.integral_+ *> pmap2 (+) L.integral_*q L.integral_*q)
+                   <=∘ <=_+ r1 r2 <=∘ =_<= (pmap2 (+) ide-right ide-right *> RealAbGroup.+-rat *> pmap Real.fromRat ts)
+      \in (pnorm<=-iff {L} {p} {p>=1} {f + g} {Real.fromRat (a RatField.+ b)} {rat_real_<=.1 (RatField.<=-less c>0)}).2 (unnormalize c>0 n1)
+          <=∘ =_<= (inv RealAbGroup.+-rat)
+
+-- | Monotone differences: $\|g - f\|_p^p \le \|g\|_p^p - \|f\|_p^p$ for $0 \le f \le g$.
+\lemma pnormPow-mono {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {f g : L} (f>=0 : L.zro <= f) (f<=g : f <= g)
+  : pnormPow p p>=1 (g - f) <= pnormPow p p>=1 g - pnormPow p p>=1 f
+  => \have m : pnormPow p p>=1 (g - f) + pnormPow p p>=1 f <= pnormPow p p>=1 g => =_<= (inv L.integral_+) <=∘ L.integral-mono (fpow-mono p>=1 f>=0 f<=g)
+     \in linarith
+
+\private \lemma rpow-inv-mul {p : Real} {p>0 : (0 : Real) < p} {c : Rat} (c>0 : RatField.zro RatField.< c)
+  : rpow (RealAbGroup.abs (Real.fromRat (RatField.finv c))) RealAbGroup.abs>=0 p p>0 * rpow (Real.fromRat c) (rat_real_<=.1 (RatField.<=-less c>0)) p p>0 = (1 : Real)
+  => \have e : RealAbGroup.abs (Real.fromRat (RatField.finv c)) * Real.fromRat c = (1 : Real)
+         => pmap (`* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (RatField.<=-less (RatField.finv>0 c>0)))) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= c>0))
+     \in inv (rpow_* {_} {_} {RealAbGroup.abs>=0} {rat_real_<=.1 (RatField.<=-less c>0)} {RealField.<=_*_positive_positive RealAbGroup.abs>=0 (rat_real_<=.1 (RatField.<=-less c>0))} {p} {p>0})
+         *> rpow-ext e {_} {RealField.zro<=ide} idp {p>0} {p>0} *> one-rpow {RealField.zro<=ide} {p} {p>0}
+
+\private \module InequalitiesHelpers \where {
+  -- | If $\|f\|_p \le c$, then $\|f/c\|_p^p \le 1$.
+  \lemma normalize {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {c : Rat} (c>0 : RatField.zro RatField.< c) {f : L}
+                   (fc : pnorm p p>=1 f <= Real.fromRat c) : pnormPow p p>=1 (RatField.finv c *q f) <= (1 : Real)
+    => \have | N : pnormPow p p>=1 f <= rpow (Real.fromRat c) (rat_real_<=.1 (RatField.<=-less c>0)) p (fpow.one>0 p>=1) => pnorm<=-iff.1 fc
+       \in =_<= pnormPow-*q <=∘ <=_*_positive-right rpow>=0 N <=∘ =_<= (rpow-inv-mul c>0)
+
+  -- | If $\|f/c\|_p^p \le 1$, then $\|f\|_p^p \le c^p$.
+  \lemma unnormalize {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {c : Rat} (c>0 : RatField.zro RatField.< c) {f : L}
+                     (fc : pnormPow p p>=1 (RatField.finv c *q f) <= (1 : Real)) : pnormPow p p>=1 f <= rpow (Real.fromRat c) (rat_real_<=.1 (RatField.<=-less c>0)) p (fpow.one>0 p>=1)
+    => \have m : rpow (Real.fromRat c) (rat_real_<=.1 (RatField.<=-less c>0)) p (fpow.one>0 p>=1) * pnormPow p p>=1 (RatField.finv c *q f) <= rpow (Real.fromRat c) (rat_real_<=.1 (RatField.<=-less c>0)) p (fpow.one>0 p>=1) * 1
+           => <=_*_positive-right rpow>=0 fc
+       \in =_<= (inv (pmap (_ *) pnormPow-*q *> inv *-assoc *> pmap (`* _) (RealField.*-comm *> rpow-inv-mul c>0) *> ide-left)) <=∘ m <=∘ =_<= ide-right
+
+  -- | If $x \le a + b$ for all rationals $a > \alpha$, $b > \beta$, then $x \le \alpha + \beta$.
+  \lemma inf-sum {x al be : Real} (h : \Pi {a b : Rat} -> al < a -> be < b -> x <= Real.fromRat a + Real.fromRat b) : x <= al + be
+    => real_<=-eps \lam {d} d>0 =>
+        \have d2>0 : (0 : Real) < Real.fromRat (d RatField.* ratio 1 2) => rat_real_<.1 linarith
+        \in \case real_<-char.1 (linarith : al < al + Real.fromRat (d RatField.* ratio 1 2)), real_<-char.1 (linarith : be < be + Real.fromRat (d RatField.* ratio 1 2)) \with {
+          | inP (a,al<a,a<), inP (b,be<b,b<) =>
+            \have | xab => h al<a be<b
+                  | dd : Real.fromRat (d RatField.* ratio 1 2) + Real.fromRat (d RatField.* ratio 1 2) = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+            \in linarith
+        }
+
+  -- | If $x \le ab$ for all rationals $a > \alpha \ge 0$, $b > \beta \ge 0$, then $x \le \alpha\beta$.
+  \lemma inf-prod {x al be : Real} (al>=0 : (0 : Real) <= al) (be>=0 : (0 : Real) <= be)
+                  (h : \Pi {a b : Rat} -> al < a -> be < b -> x <= Real.fromRat a * Real.fromRat b) : x <= al * be
+    => real_<=-eps \lam {d} d>0 => \case (al + be + 1).U-inh \with {
+      | inP (K,KU) =>
+        \let D => 1 RatField.∧ (d RatField.* RatField.finv K)
+        \in \have | K> : al + be + 1 < Real.fromRat K => real_<_U.2 KU
+              | K>0 : RatField.zro RatField.< K => rat_real_<.2 (linarith : (0 : Real) < Real.fromRat K)
+              | D>0 : RatField.zro RatField.< D => RatField.<_meet-univ RatField.zro<ide (RatField.<_*_positive_positive d>0 (RatField.finv>0 K>0))
+              | D<=1 : Real.fromRat D <= (1 : Real) => rat_real_<=.1 RatField.meet-left
+              | DK : Real.fromRat D * Real.fromRat K <= Real.fromRat d
+                  => =_<= RealField.*-rat <=∘ rat_real_<=.1 (RatField.<=_*_positive-left RatField.meet-right (RatField.<=-less K>0) <=∘ =_<= (RatField.*-assoc *> pmap (d RatField.*) (RatField.finv-left (RatField.>_/= K>0)) *> RatField.ide-right))
+              | Dr>0 : (0 : Real) < Real.fromRat D => rat_real_<.1 D>0
+        \in \case real_<-char.1 (linarith : al < al + Real.fromRat D), real_<-char.1 (linarith : be < be + Real.fromRat D) \with {
+          | inP (a,al<a,a<), inP (b,be<b,b<) =>
+            \have | A>=0 : (0 : Real) <= Real.fromRat a => <=-less (al>=0 <∘r al<a)
+                  | f1 => h al<a be<b
+                  | f2 : Real.fromRat a * Real.fromRat b <= Real.fromRat a * (be + Real.fromRat D) => <=_*_positive-right A>=0 (<=-less b<)
+                  | f3 : Real.fromRat a * (be + Real.fromRat D) <= (al + Real.fromRat D) * (be + Real.fromRat D) => <=_*_positive-left (<=-less a<) (linarith : (0 : Real) <= be + Real.fromRat D)
+                  | f4 : (al + Real.fromRat D) * (be + Real.fromRat D) = al * be + Real.fromRat D * (al + be + Real.fromRat D) => equation.cRing
+                  | f5 : Real.fromRat D * (al + be + Real.fromRat D) <= Real.fromRat D * (al + be + 1) => <=_*_positive-right (<=-less Dr>0) (linarith : al + be + Real.fromRat D <= al + be + 1)
+                  | f6 : Real.fromRat D * (al + be + 1) < Real.fromRat D * Real.fromRat K => RealField.<_*_positive-right Dr>0 K>
+            \in linarith
+        }
+    }
+}

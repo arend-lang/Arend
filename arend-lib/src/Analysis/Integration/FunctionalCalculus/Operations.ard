@@ -19,8 +19,10 @@
 \import Analysis.Integration.FunctionalCalculus
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Approximate
 \import Arith.Real.Field
 \import Arith.Real.SignedPow
+\import Logic
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -205,3 +207,34 @@
   : fcalc (LinBoundedMap.comp (LinBoundedMap.clip (Real.fromRat M) (rat_real_<=.1 M>=0)) (a :: nil)) F = x
   => fcalc-op1 _ p *> fcalc-eq-box (x :: nil) M>=0 (\lam (j : Fin 1) => \case \elim j \with { | 0 => xM }) {_} {LinBoundedMap.coord 0}
                         (\lam z zM => clampSym-in (zM 0)) idp (fcalc-var 0)
+
+-- | $I(c f) = c I(f)$ for a real scalar `c`.
+\lemma integral-rscale {L : FullIntegrationSpace} {c : Real} {f : L} : L.integral (rscale c f) = c * L.integral f
+  => \case (L.integral (abs f)).U-inh \with {
+    | inP (M,IM) => real-scaled-eq {_} {_} {2 RatField.* (M RatField.∨ 1)} (linarith (RatField.join-right {M} {1} : (1 : Rat) RatField.<= M RatField.∨ 1)) \lam {e} e>0 =>
+      \case real-rat-approx c (rat_real_<.1 e>0) \with {
+        | inP (q,qc) =>
+          \have | qc' : RealAbGroup.abs (c - Real.fromRat q) <= Real.fromRat e => =_<= RealAbGroup.abs_- <=∘ <=-less qc
+                | d1 : abs (rscale c f - q *q f) <= e *q abs f
+                    => fcalc-le-pt (f :: nil) (\lam z => pt qc')
+                        (fcalc-abs (fcalc-sub (fcalc-rscale (fcalc-var 0)) (fcalc-*q (fcalc-var 0)))) (fcalc-*q (fcalc-abs (fcalc-var 0)))
+                | i1 : RealAbGroup.abs (L.integral (rscale c f) - Real.fromRat q * L.integral f) <= Real.fromRat e * L.integral (abs f)
+                    => =_<= (pmap RealAbGroup.abs (pmap (_ -) (inv L.integral_*q) *> inv L.integral-hom.func-minus))
+                       <=∘ L.integral_abs <=∘ L.integral-mono d1 <=∘ =_<= L.integral_*q
+                | i2 : RealAbGroup.abs (Real.fromRat q * L.integral f - c * L.integral f) <= Real.fromRat e * L.integral (abs f)
+                    => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*)
+                       <=∘ <=_*_positive-left (=_<= RealAbGroup.abs_- <=∘ qc') RealAbGroup.abs>=0 <=∘ <=_*_positive-right (rat_real_<=.1 (<=-less e>0)) L.integral_abs
+                | I>=0 : (0 : Real) <= L.integral (abs f) => L.integral>=0 abs>=0
+                | IM' : L.integral (abs f) <= Real.fromRat (M RatField.∨ 1) => <=-less (real_<_U.2 IM) <=∘ rat_real_<=.1 RatField.join-left
+                | eI : Real.fromRat e * L.integral (abs f) <= Real.fromRat e * Real.fromRat (M RatField.∨ 1) => <=_*_positive-right (rat_real_<=.1 (<=-less e>0)) IM'
+                | eK : Real.fromRat (e RatField.* (2 RatField.* (M RatField.∨ 1))) = Real.fromRat e * Real.fromRat (M RatField.∨ 1) + Real.fromRat e * Real.fromRat (M RatField.∨ 1)
+                    => pmap Real.fromRat (equation.cRing : e RatField.* (2 RatField.* (M RatField.∨ 1)) = e RatField.* (M RatField.∨ 1) RatField.+ e RatField.* (M RatField.∨ 1)) *> inv RealAbGroup.+-rat *> pmap2 (+) (inv RealField.*-rat) (inv RealField.*-rat)
+                | tri : RealAbGroup.abs (L.integral (rscale c f) - c * L.integral f)
+                          <= RealAbGroup.abs (L.integral (rscale c f) - Real.fromRat q * L.integral f) + RealAbGroup.abs (Real.fromRat q * L.integral f - c * L.integral f)
+                    => =_<= (pmap RealAbGroup.abs equation.abGroup) <=∘ RealAbGroup.abs_+
+          \in linarith
+      }
+  }
+  \where
+    \private \lemma pt {c q e x : Real} (qc : RealAbGroup.abs (c - q) <= e) : RealAbGroup.abs (c * x - q * x) <= e * RealAbGroup.abs x
+      => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*) <=∘ <=_*_positive-left qc RealAbGroup.abs>=0

@@ -112,6 +112,10 @@
 
 -- (pow)
 
+-- | $|f|^p \ge 0$.
+\lemma fpow>=0 {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : L.zro <= fpow p p>=1 f
+  => fcalc-le-pt (f :: nil) (\lam z => rpow>=0) fcalc-zro (fcalc-pow (fcalc-var 0))
+
 -- | $|q f|^p = |q|^p |f|^p$.
 \lemma fpow-*q {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {q : Rat} {f : L}
   : fpow p p>=1 (q *q f) = rscale (rpow (RealAbGroup.abs (Real.fromRat q)) RealAbGroup.abs>=0 p (fpow.one>0 p>=1)) (fpow p p>=1 f)
