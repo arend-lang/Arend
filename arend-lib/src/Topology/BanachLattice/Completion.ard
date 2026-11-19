@@ -1,0 +1,176 @@
+{- | The completion of a normed truncated pre-Banach lattice.
+
+  * {NormedTruncBanachLatticeCompletion}: the lattice operations and the truncation extend to the completion,
+    which is a Banach lattice with real-valued norms.
+  * {ntblCompletion}: the canonical isometric map into the completion; it preserves joins, truncations and the order.
+-}
+
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.TruncRieszSpace
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachLattice
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Completion
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Complete
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open LatticeAbGroup(abs)
+
+-- | The completion of a normed truncated pre-Banach lattice.
+\instance TruncBanachLatticeCompletion (X : TruncPreBanachLattice) : TruncBanachLattice (RegularCauchyFilter X)
+  | CompleteNormedAbGroup => NormedAbGroupCompletion X
+  | TruncRieszSpace => lattice
+  | norm_<= {F} {G} p => Real.<=-upper.1 $ =_<= (inv (abs-norm {_} {F}) *> pmap lnorm (inv $ MeetSemilattice.meet_<= {lattice} p)) <=∘ meet-norm {_} {F} {G} <=∘ =_<= (abs-norm {_} {G})
+  | norm-double {F} => transport (__ ExUpperReal.<= _) RealAbGroup.+-upper $ Real.<=-upper.1 $ =_<= $ inv double-norm
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+
+    \type \infix 4 <= (F G : RegularCauchyFilter X) => join-func F G = G
+
+    -- | The lattice operations and the truncation on the completion.
+    \func lattice : TruncRieszSpace (RegularCauchyFilter X) \cowith
+      | AbGroup => TopAbGroupCompletion X
+      | isDivisible a {n} n/=0 => inP (lift1 (X.*q-right-uniform {RatField.finv n}) a, inv *n-cover-char *> unique1 (*n-cover n ∘ lift1 X.*q-right-uniform) id
+          \lam x => pmap (*n-cover n) lift1-char *> *n-cover-point *> pmap pointCF (inv X.*q_*n *> inv X.*q-assoc *> pmap (\lam q => q X.*q x) (RatField.finv-right $ natRat/=0 n/=0) *> X.ide_*q))
+      | <= => <=
+      | <=-refl => join-idemp
+      | <=-transitive => <=-trans
+      | <=-antisymmetric p q => inv q *> join-comm *> p
+      | <=_+ p q => <=-trans (join-+-right *> pmap (+-func __ _) p) (join-+-left *> pmap (+-func _) q)
+      | join => join-func
+      | join-left => inv join-assoc *> pmap (join-func __ _) join-idemp
+      | join-right {F} {G} => inv join-assoc *> pmap (join-func __ _) join-comm *> join-assoc *> pmap (join-func F) join-idemp
+      | join-univ p q => join-assoc *> pmap (join-func _) q *> p
+      | trunc => trunc-cover
+      | trunc_zro>=0 => pmap (join-func _) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc_zro>=0) *> inv trunc-char
+      | trunc-bound => unique1 (join-cover ∘ tuple trunc-cover id) id
+          \lam x => pmap (join-func __ _) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc-bound)
+      | trunc-assoc => unique2 (join-cover ∘ tuple (meet-cover ∘ prod id trunc-cover) (trunc-cover ∘ proj1)) (trunc-cover ∘ proj1)
+          \lam x y => pmap2 join-func (pmap (meet-func _) trunc-char *> meet-char) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc-assoc) *> inv trunc-char
+
+    \sfunc join-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+      => lift2 X.join-uniform
+
+    \func join-func (F G : RegularCauchyFilter X) => join-cover (F,G)
+
+    \lemma join-char {x y : X} : join-cover (pointCF x, pointCF y) = pointCF (x ∨ y)
+      => rewrite (\peval join-cover) lift2-char
+
+    \func meet-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+      => negative-cover ∘ join-cover ∘ prod negative-cover negative-cover
+
+    \func meet-func (F G : RegularCauchyFilter X) => meet-cover (F,G)
+
+    \lemma meet-char {x y : X} : meet-func (pointCF x) (pointCF y) = pointCF (x ∧ y)
+      => pmap negative-cover (pmap2 join-func negative-char negative-char *> join-char) *> negative-char
+
+    \func abs-cover : CoverMap (Completion X) (Completion X)
+      => join-cover ∘ tuple id negative-cover
+
+    \lemma abs-char {x : X} : abs-cover (pointCF x) = pointCF (X.abs x)
+      => pmap (join-func _) negative-char *> join-char
+
+    \sfunc trunc-cover : CoverMap (Completion X) (Completion X)
+      => lift1 X.trunc-lipschitz-map
+
+    \lemma trunc-char {x : X} : trunc-cover (pointCF x) = pointCF (X.trunc x)
+      => rewrite (\peval trunc-cover) lift1-char
+
+    \func *n-cover (n : Nat) : CoverMap (Completion X) (Completion X) \elim n
+      | 0 => const (pointCF X.zro)
+      | suc n => +-cover ∘ tuple (*n-cover n) id
+
+    \lemma *n-cover-char {n : Nat} {F : RegularCauchyFilter X} : *n-cover n F = n AddMonoid.*n {TopAbGroupCompletion X} F \elim n
+      | 0 => idp
+      | suc n => pmap (+-func __ F) *n-cover-char
+
+    \lemma *n-cover-point {n : Nat} {x : X} : *n-cover n (pointCF x) = pointCF (n X.*n x) \elim n
+      | 0 => idp
+      | suc n => pmap (+-func __ _) *n-cover-point *> +-char
+
+    \lemma join-idemp {F : RegularCauchyFilter X} : join-func F F = F
+      => unique1 (join-cover ∘ tuple id id) id \lam x => join-char *> pmap pointCF X.join-idemp
+
+    \lemma join-comm {F G : RegularCauchyFilter X} : join-func F G = join-func G F
+      => unique2 join-cover (join-cover ∘ tuple proj2 proj1) \lam x y => join-char *> pmap pointCF X.join-comm *> inv join-char
+
+    \lemma join-assoc {F G H : RegularCauchyFilter X} : join-func (join-func F G) H = join-func F (join-func G H)
+      => unique3 (join-cover ∘ prod join-cover id) (join-cover ∘ tuple (proj1 ∘ proj1) (join-cover ∘ prod proj2 id))
+          \lam x y z => pmap (join-func __ _) join-char *> join-char *> pmap pointCF X.join-assoc *> inv (pmap (join-func _) join-char *> join-char)
+
+    \lemma join-+-left {F G H : RegularCauchyFilter X} : join-func (+-func F G) (+-func F H) = +-func F (join-func G H)
+      => unique3 (join-cover ∘ tuple (+-cover ∘ proj1) (+-cover ∘ tuple (proj1 ∘ proj1) proj2)) (+-cover ∘ tuple (proj1 ∘ proj1) (join-cover ∘ prod proj2 id))
+          \lam x y z => pmap2 join-func +-char +-char *> join-char *> pmap pointCF (inv X.join_+-left) *> inv (pmap (+-func _) join-char *> +-char)
+
+    \lemma join-+-right {F G H : RegularCauchyFilter X} : join-func (+-func F H) (+-func G H) = +-func (join-func F G) H
+      => unique3 (join-cover ∘ tuple (+-cover ∘ tuple (proj1 ∘ proj1) proj2) (+-cover ∘ tuple (proj2 ∘ proj1) proj2)) (+-cover ∘ prod join-cover id)
+          \lam x y z => pmap2 join-func +-char +-char *> join-char *> pmap pointCF (inv X.join_+-right) *> inv (pmap (+-func __ _) join-char *> +-char)
+
+    \lemma <=-trans {F G H : RegularCauchyFilter X} (p : F <= G) (q : G <= H) : F <= H
+      => pmap (join-func F) (inv q) *> inv join-assoc *> pmap (join-func __ H) p *> q
+
+    -- | `‖|F|‖ = ‖F‖` on the completion.
+    \lemma abs-norm {F : RegularCauchyFilter X} : lnorm {NormedAbGroupCompletion X} (abs-cover F) = lnorm {NormedAbGroupCompletion X} F
+      => dense-lift-unique completion completion.isDenseEmbedding.1 (lnorm-metric {NormedAbGroupCompletion X} ∘ abs-cover) (lnorm-metric {NormedAbGroupCompletion X})
+          (\lam x => pmap (NormedAbGroupCompletion.norm-cover {X}) abs-char *> NormedAbGroupCompletion.norm-char *> X.lnorm_abs *> inv NormedAbGroupCompletion.norm-char) F
+
+    -- | `‖|F| ∧ |G|‖ ≤ ‖|G|‖` on the completion.
+    \lemma meet-norm {F G : RegularCauchyFilter X} : lnorm {NormedAbGroupCompletion X} (meet-func (abs-cover F) (abs-cover G)) RealAbGroup.<= lnorm {NormedAbGroupCompletion X} (abs-cover G)
+      => dense_<= real-join-uniform (prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1)
+          (lnorm-metric {NormedAbGroupCompletion X} ∘ meet-cover ∘ prod abs-cover abs-cover) (lnorm-metric {NormedAbGroupCompletion X} ∘ abs-cover ∘ proj2)
+          (\lam s => =_<= (pmap (NormedAbGroupCompletion.norm-cover {X}) (pmap2 meet-func abs-char abs-char *> meet-char) *> NormedAbGroupCompletion.norm-char)
+            <=∘ X.lnorm_<= (=_<= (X.abs-ofPos (X.meet-univ X.abs>=0 X.abs>=0)) <=∘ X.meet-right <=∘ =_<= (inv (X.abs-ofPos X.abs>=0)))
+            <=∘ =_<= (inv $ pmap (NormedAbGroupCompletion.norm-cover {X}) abs-char *> NormedAbGroupCompletion.norm-char)) (F,G)
+
+    -- | `‖F + F‖ = ‖F‖ + ‖F‖` on the completion.
+    \lemma double-norm {F : RegularCauchyFilter X} : lnorm {NormedAbGroupCompletion X} (+-func F F) = lnorm {NormedAbGroupCompletion X} F RealAbGroup.+ lnorm {NormedAbGroupCompletion X} F
+      => dense-lift-unique completion completion.isDenseEmbedding.1 (lnorm-metric {NormedAbGroupCompletion X} ∘ +-cover ∘ tuple id id)
+          (RealNormed.+-cont ContMap.∘ tuple (lnorm-metric {NormedAbGroupCompletion X}) (lnorm-metric {NormedAbGroupCompletion X}))
+          (\lam x => pmap (NormedAbGroupCompletion.norm-cover {X}) +-char *> NormedAbGroupCompletion.norm-char *> point-double
+                     *> inv (pmap2 (RealAbGroup.+) NormedAbGroupCompletion.norm-char NormedAbGroupCompletion.norm-char)) F
+      \where
+        \lemma point-double {x : X} : lnorm (x + x) = lnorm x RealAbGroup.+ lnorm x
+          => RealAbGroup.<=-antisymmetric lnorm_+ (Real.<=-upper.2 $ transportInv (__ ExUpperReal.<= _) RealAbGroup.+-upper X.norm-double)
+  }
+
+-- | The canonical map into the completion.
+\func truncBanachCompletion {X : TruncPreBanachLattice} : NormedIsometricMap X (TruncBanachLatticeCompletion X)
+  => normedCompletion
+  \where {
+    \lemma func-join {X : TruncPreBanachLattice} {x y : X} : truncBanachCompletion (x ∨ y) = truncBanachCompletion x ∨ truncBanachCompletion y
+      => inv TruncBanachLatticeCompletion.join-char
+
+    \lemma func-meet {X : TruncPreBanachLattice} {x y : X} : truncBanachCompletion (x ∧ y) = truncBanachCompletion x ∧ truncBanachCompletion y
+      => inv TruncBanachLatticeCompletion.meet-char
+
+    \lemma func-abs {X : TruncPreBanachLattice} {x : X} : truncBanachCompletion (abs x) = abs (truncBanachCompletion x)
+      => inv (TruncBanachLatticeCompletion.abs-char {X})
+
+    \lemma func-trunc {X : TruncPreBanachLattice} {x : X} : truncBanachCompletion (X.trunc x) = trunc (truncBanachCompletion x)
+      => inv TruncBanachLatticeCompletion.trunc-char
+
+    \lemma func-<= {X : TruncPreBanachLattice} {x y : X} (x<=y : x <= y) : truncBanachCompletion x <= truncBanachCompletion y
+      => TruncBanachLatticeCompletion.join-char *> pmap pointCF (X.join_<= x<=y)
+
+    \lemma lnorm-char {X : TruncPreBanachLattice} {x : X} : lnorm (truncBanachCompletion x) = lnorm x
+      => NormedAbGroupCompletion.norm-char
+
+    \lemma isDense {X : TruncPreBanachLattice} : ContMap.IsDense {truncBanachCompletion {X}}
+      => completion.isDenseEmbedding.1
+  }

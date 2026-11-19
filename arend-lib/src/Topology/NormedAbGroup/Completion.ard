@@ -1,0 +1,71 @@
+{- | The completion of a pseudo-normed abelian group with real-valued norms.
+
+  * {NormedAbGroupCompletion}: a complete normed abelian group whose norm is the continuous extension of the norm.
+  * {normedCompletion}: the canonical isometric map into the completion.
+-}
+
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace.Complete
+\import Topology.MetricSpace.ExCompletion
+\import Topology.MetricSpace.UpperReal
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.ExCompletion
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Complete
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Complete
+
+-- | The completion of a pseudo-normed abelian group is a complete normed abelian group.
+\instance NormedAbGroupCompletion (X : PseudoNormedAbGroup) : CompleteNormedAbGroup (RegularCauchyFilter X)
+  | NormedAbGroup => normed
+  | isStronglyComplete => metric-stronglyComplete {normed} (Completion X).isComplete
+  \where {
+    \open CoverMap
+
+    \func normed : NormedAbGroup (RegularCauchyFilter X) \cowith
+      | TopAbGroup => TopAbGroupCompletion X
+      | norm F => norm-cover F
+      | norm_zro => inv norm-eq *> (ExNormedAbGroupCompletion X).norm_zro
+      | norm_negative => inv norm-eq *> (ExNormedAbGroupCompletion X).norm_negative *> norm-eq
+      | norm_+ => transport2 (ExUpperReal.<=) norm-eq (pmap2 (ExUpperReal.+) norm-eq norm-eq) (ExNormedAbGroupCompletion X).norm_+
+      | norm-ext p => (ExNormedAbGroupCompletion X).norm-ext (norm-eq *> p)
+      | dist-uniform {C} => transport (\lam (d : RegularCauchyFilter X -> RegularCauchyFilter X -> ExUpperReal) => isUniform {UniformCompletion X} C <-> ∃ (eps : Rat) (0 RatField.< eps) ∀ x ∃ (U : C) ∀ {y} ((d x y).U eps -> U y)) {(ExMetricCompletion X).dist}
+          (ext \lam F G => norm-dist {ExNormedAbGroupCompletion X} *> norm-eq) ((ExMetricCompletion X).dist-uniform {C})
+
+    -- | The continuous extension of the norm.
+    \sfunc norm-cover : CoverMap (Completion X) RealNormed
+      => dense-lift completion completion.isDenseEmbedding lnorm-metric
+
+    \lemma norm-char {x : X} : norm-cover (pointCF x) = X.norm x
+      => rewrite (\peval norm-cover) (dense-lift-char completion.isDenseEmbedding x)
+
+    \lemma norm-cover>=0 {F : RegularCauchyFilter X} : RealAbGroup.abs (norm-cover F) = norm-cover F
+      => dense-lift-unique completion completion.isDenseEmbedding.1 (lnorm-metric {RealNormed} ∘ norm-cover) norm-cover
+          (\lam x => pmap RealAbGroup.abs norm-char *> RealAbGroup.abs-ofPos lnorm>=0 *> inv norm-char) F
+
+    -- | The norm of the completion as an extended normed group agrees with the extension of the norm.
+    \lemma norm-eq {F : RegularCauchyFilter X} : (ExNormedAbGroupCompletion X).norm F = {ExUpperReal} norm-cover F
+      => completion-lift-unique {X} {ExUpperRealMetric} (norm-metric-map {ExNormedAbGroupCompletion X}) (norm-metric-map {RealNormed} ∘ norm-cover)
+          (\lam x => completion-exNormed-isometry.func-norm-isometry *> Real.=-upper.1 (inv $ pmap RealAbGroup.abs norm-char *> RealAbGroup.abs-ofPos lnorm>=0)) F
+        *> Real.=-upper.1 norm-cover>=0
+  }
+
+-- | The canonical isometric map into the completion.
+\func normedCompletion {X : PseudoNormedAbGroup} : NormedIsometricMap X (NormedAbGroupCompletion X) \cowith
+  | UniformMap => uniform-completion
+  | func-+ => inv TopAbGroupCompletion.+-char
+  | func-norm-isometry => Real.=-upper.1 NormedAbGroupCompletion.norm-char
+  \where {
+    \lemma lnorm-char {X : PseudoNormedAbGroup} {x : X} : lnorm (normedCompletion x) = lnorm x
+      => NormedAbGroupCompletion.norm-char
+  }

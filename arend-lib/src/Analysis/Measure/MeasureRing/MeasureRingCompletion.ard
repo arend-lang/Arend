@@ -13,10 +13,10 @@
 \import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
 \import Topology.MetricSpace.Complete
-\import Topology.MetricSpace.ExComplete(ExMetricCompletion)
+\import Topology.MetricSpace.ExCompletion (ExMetricCompletion)
 \import Topology.MetricSpace.UpperReal
 \import Topology.NormedAbGroup
-\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.ExCompletion
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopAbGroup.Complete

@@ -31,8 +31,8 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
-\import Topology.MetricSpace.ExComplete(ExMetricCompletion)
-\import Topology.NormedAbGroup.ExComplete
+\import Topology.MetricSpace.ExCompletion (ExMetricCompletion)
+\import Topology.NormedAbGroup.ExCompletion
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopAbGroup.Complete
 \import Topology.TopSpace

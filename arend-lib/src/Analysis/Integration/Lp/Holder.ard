@@ -1,0 +1,133 @@
+{- | The Hölder product $\mathrm L^p \times \mathrm L^q \to \mathrm L^1$.
+
+  $\mathrm L^1$ is represented by {IntegrationSpaceCompletion} `L` (equivalent to `LpSpace L 1` by {lp1-equiv}),
+  so the product comes with its integral.
+
+  * {lpMul}: the continuous extension of the product {fmul}; {lpMul-holder}: $\|uv\|_1 \le \|u\|_p \|v\|_q$.
+  * {lpMul-+-left}, {lpMul-+-right}, {lpMul-*q-left}, {lpMul-*q-right}: bilinearity.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Inequalities
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.Lp
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Order.PartialOrder
+\import Paths
+\import Topology.BanachLattice.Completion
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Product
+\open QModule (*q)
+
+-- | The product $L \times L \to L$ is locally uniform for $\|\cdot\|_p \times \|\cdot\|_q \to \|\cdot\|_1$ (the norm of `L`).
+\lemma fmul-holder-uniform {L : FullIntegrationSpace} {p q : Real} (p>=1 : (1 : Real) <= p) (q>=1 : (1 : Real) <= q)
+                           (pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real))
+  : LocallyUniformMap (ProductUniformSpace (LpPreSpace L p p>=1) (LpPreSpace L q q>=1)) L (\lam s => fmul s.1 s.2)
+  => bilinear-locally-uniform {LpPreSpace L p p>=1} {LpPreSpace L q q>=1} {L} fmul
+      (\lam {a} {a'} {b} => \have e : fmul (a - a') b + fmul a' b = fmul a b => inv fmul-rdistr *> pmap (fmul __ b) simplify
+                            \in inv (L.+-assoc *> pmap (_ +) L.negative-right *> L.zro-right) *> pmap (__ - fmul a' b) e)
+      (\lam {a} {b} {b'} => \have e : fmul a (b - b') + fmul a b' = fmul a b => inv fmul-ldistr *> pmap (fmul a) simplify
+                            \in inv (L.+-assoc *> pmap (_ +) L.negative-right *> L.zro-right) *> pmap (__ - fmul a b') e)
+      (\lam {x} {y} => transport (_ ExUpperReal.<=) (RealField.*-upper pnorm>=0 pnorm>=0) $ Real.<=-upper.1 (holder p>=1 q>=1 pq))
+
+-- | The Hölder product $\mathrm L^p \times \mathrm L^q \to \mathrm L^1$.
+\sfunc lpMul {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+             (pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real))
+             (u : LpSpace L p p>=1) (v : LpSpace L q q>=1) : IntegrationSpaceCompletion L
+  => cover pq (u,v)
+  \where \protected {
+    \func cover {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                (pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real))
+      : CoverMap (ProductCoverSpace (LpSpace L p p>=1) (LpSpace L q q>=1)) (IntegrationSpaceCompletion L)
+      => dense-lift (ProductCoverSpace.prod (lpInc p p>=1) (lpInc q q>=1)) lpInc.isDenseEmbedding2
+                    (integrationCompletion CoverMap.∘ fmul-holder-uniform p>=1 q>=1 pq)
+
+    \lemma cover-eq {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                    {pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)}
+                    {u : LpSpace L p p>=1} {v : LpSpace L q q>=1} : lpMul pq u v = cover pq (u,v)
+      => \peval lpMul pq u v
+  }
+
+-- | $u v$ extends the product of `L`.
+\lemma lpMul-char {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                  {pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)} {f g : L}
+  : lpMul pq (lpInc p p>=1 f) (lpInc q q>=1 g) = integrationCompletion (fmul f g)
+  => lpMul.cover-eq *> dense-lift-char (lpInc.isDenseEmbedding2 {L} {p} {q} {p>=1} {q>=1}) {integrationCompletion CoverMap.∘ fmul-holder-uniform p>=1 q>=1 pq} (f,g)
+
+-- | Hölder's inequality on `Lᵖ`: $\|uv\|_1 \le \|u\|_p \|v\|_q$.
+\lemma lpMul-holder {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                    {pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)} {u : LpSpace L p p>=1} {v : LpSpace L q q>=1}
+  : lnorm {IntegrationSpaceCompletion L} (lpMul pq u v) <= lnorm u * lnorm v
+  => =_<= (pmap (lnorm {IntegrationSpaceCompletion L}) lpMul.cover-eq) <=∘
+     dense_<= real-join-uniform (ProductCoverSpace.prod (lpInc p p>=1) (lpInc q q>=1)) (lpInc.isDense2 {L} {p} {q} {p>=1} {q>=1})
+      (lnorm-metric {IntegrationSpaceCompletion L} CoverMap.∘ lpMul.cover pq)
+      (RealField.*-cover CoverMap.∘ ProductCoverSpace.prod (lnorm-metric {LpSpace L p p>=1}) (lnorm-metric {LpSpace L q q>=1}))
+      (\lam s => =_<= (pmap (lnorm {IntegrationSpaceCompletion L}) (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char) *> Real.=-upper.2 integrationCompletion.func-norm-isometry) <=∘ holder p>=1 q>=1 pq
+                 <=∘ =_<= (inv (pmap2 (*) lpInc.lnorm-char lpInc.lnorm-char))) (u,v)
+
+-- | $(u + u') v = u v + u' v$.
+\lemma lpMul-+-left {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                    {pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)} {u u' : LpSpace L p p>=1} {v : LpSpace L q q>=1}
+  : lpMul pq (u + u') v = (+) {IntegrationSpaceCompletion L} (lpMul pq u v) (lpMul pq u' v)
+  => lpMul.cover-eq *> dense-lift-unique (ProductCoverSpace.prod (ProductCoverSpace.prod (lpInc p p>=1) (lpInc p p>=1)) (lpInc q q>=1))
+      (ProductTopSpace.prod.isDense {_} {_} {_} {_} {ProductCoverSpace.prod (lpInc p p>=1) (lpInc p p>=1)} {lpInc q q>=1} (lpInc.isDense2 {L} {p} {p} {p>=1} {p>=1}) (lpInc.isDense {L} {q} {q>=1}))
+      (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod (+-uniform {LpSpace L p p>=1}) CoverMap.id)
+      (+-uniform {IntegrationSpaceCompletion L} CoverMap.∘ ProductCoverSpace.tuple (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod ProductCoverSpace.proj1 CoverMap.id)
+                                                                                (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod ProductCoverSpace.proj2 CoverMap.id))
+      (\lam s => pmap (\lam x => lpMul.cover pq (x, _)) (inv (lpInc p p>=1).func-+) *> inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char *> pmap integrationCompletion fmul-rdistr
+                 *> integrationCompletion.func-+ *> inv (pmap2 (+) (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char) (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char))) ((u,u'),v)
+     *> inv (pmap2 (+) lpMul.cover-eq lpMul.cover-eq)
+
+-- | $u (v + v') = u v + u v'$.
+\lemma lpMul-+-right {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                     {pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)} {u : LpSpace L p p>=1} {v v' : LpSpace L q q>=1}
+  : lpMul pq u (v + v') = (+) {IntegrationSpaceCompletion L} (lpMul pq u v) (lpMul pq u v')
+  => lpMul.cover-eq *> dense-lift-unique (ProductCoverSpace.prod (lpInc p p>=1) (ProductCoverSpace.prod (lpInc q q>=1) (lpInc q q>=1)))
+      (ProductTopSpace.prod.isDense {_} {_} {_} {_} {lpInc p p>=1} {ProductCoverSpace.prod (lpInc q q>=1) (lpInc q q>=1)} (lpInc.isDense {L} {p} {p>=1}) (lpInc.isDense2 {L} {q} {q} {q>=1} {q>=1}))
+      (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod CoverMap.id (+-uniform {LpSpace L q q>=1}))
+      (+-uniform {IntegrationSpaceCompletion L} CoverMap.∘ ProductCoverSpace.tuple (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod CoverMap.id ProductCoverSpace.proj1)
+                                                                                (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod CoverMap.id ProductCoverSpace.proj2))
+      (\lam s => pmap (\lam x => lpMul.cover pq (_, x)) (inv (lpInc q q>=1).func-+) *> inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char *> pmap integrationCompletion fmul-ldistr
+                 *> integrationCompletion.func-+ *> inv (pmap2 (+) (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char) (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char))) (u,(v,v'))
+     *> inv (pmap2 (+) lpMul.cover-eq lpMul.cover-eq)
+
+-- | $(c u) v = c (u v)$ for rational `c`.
+\lemma lpMul-*q-left {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                     {pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)} {c : Rat} {u : LpSpace L p p>=1} {v : LpSpace L q q>=1}
+  : lpMul pq (c *q u) v = (*q) {IntegrationSpaceCompletion L} c (lpMul pq u v)
+  => lpMul.cover-eq *> dense-lift-unique (ProductCoverSpace.prod (lpInc p p>=1) (lpInc q q>=1)) (lpInc.isDense2 {L} {p} {q} {p>=1} {q>=1})
+      (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod (LpSpace L p p>=1).*q-right-uniform CoverMap.id)
+      ((IntegrationSpaceCompletion L).*q-right-uniform CoverMap.∘ lpMul.cover pq)
+      (\lam s => pmap (\lam x => lpMul.cover pq (x, _)) (inv (func-*q {LpPreSpace L p p>=1} {LpSpace L p p>=1} {lpInc p p>=1})) *> inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char *> pmap integrationCompletion fmul-*q-left
+                 *> func-*q {L} {IntegrationSpaceCompletion L} {integrationCompletion} *> pmap (c *q) (inv (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char))) (u,v)
+     *> pmap (c *q) (inv lpMul.cover-eq)
+
+-- | $u (c v) = c (u v)$ for rational `c`.
+\lemma lpMul-*q-right {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                      {pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)} {c : Rat} {u : LpSpace L p p>=1} {v : LpSpace L q q>=1}
+  : lpMul pq u (c *q v) = (*q) {IntegrationSpaceCompletion L} c (lpMul pq u v)
+  => lpMul.cover-eq *> dense-lift-unique (ProductCoverSpace.prod (lpInc p p>=1) (lpInc q q>=1)) (lpInc.isDense2 {L} {p} {q} {p>=1} {q>=1})
+      (lpMul.cover pq CoverMap.∘ ProductCoverSpace.prod CoverMap.id (LpSpace L q q>=1).*q-right-uniform)
+      ((IntegrationSpaceCompletion L).*q-right-uniform CoverMap.∘ lpMul.cover pq)
+      (\lam s => pmap (\lam x => lpMul.cover pq (_, x)) (inv (func-*q {LpPreSpace L q q>=1} {LpSpace L q q>=1} {lpInc q q>=1})) *> inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char *> pmap integrationCompletion fmul-*q-right
+                 *> func-*q {L} {IntegrationSpaceCompletion L} {integrationCompletion} *> pmap (c *q) (inv (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char))) (u,v)
+     *> pmap (c *q) (inv lpMul.cover-eq)

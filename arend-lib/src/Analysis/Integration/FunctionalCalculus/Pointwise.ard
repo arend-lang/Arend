@@ -125,6 +125,22 @@
       : rpow (RealAbGroup.abs (c * x)) RealAbGroup.abs>=0 p p>0 = rpow (RealAbGroup.abs c) RealAbGroup.abs>=0 p p>0 * rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0
       => rpow-ext {_} {_} RealField.abs_* {_} {RealField.<=_*_positive_positive RealAbGroup.abs>=0 RealAbGroup.abs>=0} idp {p>0} {p>0} *> rpow_*
 
+-- | $|0|^p = 0$.
+\lemma fpow-zro {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : fpow p p>=1 L.zro = L.zro
+  => fcalc-eq-pt {L} {0} nil (\lam z => rpow-ext (RealAbGroup.abs-ofPos <=-refl) {_} {<=-refl} idp {_} {fpow.one>0 p>=1} *> zero-rpow) (fcalc-pow fcalc-zro) fcalc-zro
+
+-- | $||f||^p = |f|^p$.
+\lemma fpow-abs {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : fpow p p>=1 (abs f) = fpow p p>=1 f
+  => fcalc-eq-pt (f :: nil) (\lam z => rpow-ext (RealAbGroup.abs-ofPos RealAbGroup.abs>=0) idp) (fcalc-pow (fcalc-abs (fcalc-var 0))) (fcalc-pow (fcalc-var 0))
+
+-- | $|-f|^p = |f|^p$.
+\lemma fpow-negative {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : fpow p p>=1 (negative f) = fpow p p>=1 f
+  => inv fpow-abs *> pmap (fpow p p>=1) abs_negative *> fpow-abs
+
+-- | If $|f| \le |g|$, then $|f|^p \le |g|^p$.
+\lemma fpow-abs-mono {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {f g : L} (h : abs f <= abs g) : fpow p p>=1 f <= fpow p p>=1 g
+  => =_<= (inv fpow-abs *> inv zro-left) <=∘ <=_+ fpow>=0 <=-refl <=∘ fpow-mono p>=1 abs>=0 h <=∘ =_<= fpow-abs
+
 -- | $|f|^1 = |f|$.
 \lemma fpow-one {L : FullIntegrationSpace} {f : L} : fpow 1 one>=1 f = abs f
   => fcalc-eq-pt (f :: nil) (\lam z => rpow-one) (fcalc-pow (fcalc-var 0)) (fcalc-abs (fcalc-var 0))

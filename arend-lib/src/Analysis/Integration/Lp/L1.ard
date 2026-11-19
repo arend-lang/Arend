@@ -1,0 +1,63 @@
+{- | $\mathrm L^1$ is the completion of `L` as an integration space.
+
+  * {lp1-map}: the extension of the identity of `L` to $\mathrm L^1 \to$ {IntegrationSpaceCompletion} `L`;
+    {lp1-equiv}: it is an equivalence.
+  * {lp1-map-norm}, {lp1-map-join}, {lp1-map-trunc}: it preserves norms, joins and truncations.
+-}
+
+\import Algebra.Ordered.TruncRieszSpace
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Inequalities
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.Lp
+\import Arith.Real
+\import Equiv
+\import Logic
+\import Order.Lattice
+\import Paths
+\import Topology.BanachLattice
+\import Topology.BanachLattice.Completion
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopRieszSpace
+\import Topology.TopSpace
+
+-- | The extension $\mathrm L^1 \to$ {IntegrationSpaceCompletion} `L` of the identity of `L`.
+\func lp1-map {L : FullIntegrationSpace} : CoverMap (LpSpace L 1 RealAbGroup.<=-refl) (IntegrationSpaceCompletion L)
+  => lift1 pre
+  \where {
+    -- | The identity `L → L` is an isometry from $\|\cdot\|_1$ to the norm of `L`.
+    \protected \func pre {L : FullIntegrationSpace} : NormedIsometricMap (LpPreSpace L 1 RealAbGroup.<=-refl) L \cowith
+      | func x => x
+      | func-+ => idp
+      | func-norm-isometry => Real.=-upper.1 (inv pnorm-one)
+
+    \lemma pre-denseEmbedding {L : FullIntegrationSpace} : CoverMap.IsDenseEmbedding {pre {L}}
+      => (\lam {x} _ Ux => inP (x, inP (x, idp), Ux), pre.embedding->coverEmbedding (pre.dense->uniformEmbedding \lam {x} _ Ux => inP (x, inP (x, idp), Ux)).2)
+  }
+
+-- | {lp1-map} extends the identity.
+\lemma lp1-map-char {L : FullIntegrationSpace} {f : L} : lp1-map (lpInc 1 RealAbGroup.<=-refl f) = integrationCompletion f
+  => lift1-char {LpPreSpace L 1 RealAbGroup.<=-refl} {L} {lp1-map.pre} {f}
+
+-- | $\mathrm L^1$ is equivalent to the completion of `L`.
+\lemma lp1-equiv {L : FullIntegrationSpace} : IsEquiv (lp1-map {L})
+  => lift1-equiv lp1-map.pre-denseEmbedding
+
+\lemma lp1-map-norm {L : FullIntegrationSpace} {u : LpSpace L 1 RealAbGroup.<=-refl} : lnorm {IntegrationSpaceCompletion L} (lp1-map u) = lnorm {LpSpace L 1 RealAbGroup.<=-refl} u
+  => dense-lift-unique (lpInc 1 RealAbGroup.<=-refl) lpInc.isDense (lnorm-metric {IntegrationSpaceCompletion L} CoverMap.∘ lp1-map) (lnorm-metric {LpSpace L 1 RealAbGroup.<=-refl})
+      (\lam f => pmap (lnorm {IntegrationSpaceCompletion L}) lp1-map-char *> Real.=-upper.2 integrationCompletion.func-norm-isometry *> inv pnorm-one *> inv lpInc.lnorm-char) u
+
+\lemma lp1-map-join {L : FullIntegrationSpace} {u v : LpSpace L 1 RealAbGroup.<=-refl} : lp1-map (u ∨ v) = IntegrationSpaceCompletion.join-func {L} (lp1-map u) (lp1-map v)
+  => dense-lift-unique (ProductCoverSpace.prod (lpInc 1 RealAbGroup.<=-refl) (lpInc 1 RealAbGroup.<=-refl)) lpInc.isDense2
+      (lp1-map CoverMap.∘ TopRieszSpace.join-uniform {LpSpace L 1 RealAbGroup.<=-refl})
+      (TopRieszSpace.join-uniform {IntegrationSpaceCompletion L} CoverMap.∘ ProductCoverSpace.prod lp1-map lp1-map)
+      (\lam s => pmap lp1-map (inv lpInc.func-join) *> lp1-map-char *> integrationCompletion.func-join *> inv (pmap2 (IntegrationSpaceCompletion.join-func {L}) lp1-map-char lp1-map-char)) (u,v)
+
+\lemma lp1-map-trunc {L : FullIntegrationSpace} {u : LpSpace L 1 RealAbGroup.<=-refl} : lp1-map (TruncRieszSpace.trunc {LpSpace L 1 RealAbGroup.<=-refl} u) = TruncRieszSpace.trunc {IntegrationSpaceCompletion L} (lp1-map u)
+  => dense-lift-unique (lpInc 1 RealAbGroup.<=-refl) lpInc.isDense (lp1-map CoverMap.∘ TruncPreBanachLattice.trunc-lipschitz-map {LpSpace L 1 RealAbGroup.<=-refl})
+      ((IntegrationSpaceCompletion L).trunc-metric CoverMap.∘ lp1-map)
+      (\lam f => pmap lp1-map (inv lpInc.func-trunc) *> lp1-map-char *> integrationCompletion.func-trunc *> inv (pmap (TruncRieszSpace.trunc {IntegrationSpaceCompletion L}) lp1-map-char)) u

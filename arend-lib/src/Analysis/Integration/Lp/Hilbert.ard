@@ -1,0 +1,92 @@
+{- | $\mathrm L^2$ is a Hilbert space with inner product $\langle u,v\rangle = I(uv)$ (Proposition `prop:Lp`(4)).
+
+  * {L2-parallelogram}: the parallelogram law on $\mathrm L^2$.
+  * {L2Hilbert}: $\mathrm L^2$ as a real Hilbert space.
+  * {L2-inner}: its inner product is $I(uv)$, where `uv` is the Hölder product {lpMul}.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Inequalities
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.Lp
+\import Analysis.Integration.Lp.Holder
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.PowerIneq
+\import Paths
+\import Topology.BanachLattice.Completion
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.HilbertSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\open fmul-polar
+\open L2Helpers
+
+-- | `1/2 + 1/2 = 1`: the exponent 2 is self-conjugate.
+\lemma two-conj : RealField.pinv 2 (fpow.one>0 two>=1) + RealField.pinv 2 (fpow.one>0 two>=1) = (1 : Real)
+  => \have h : RealField.pinv 2 (fpow.one>0 two>=1) * 2 = (1 : Real) => RealField.pinv-left (fpow.one>0 two>=1)
+     \in equation.cRing {h}
+
+-- | The parallelogram law on $\mathrm L^2$.
+\lemma L2-parallelogram {L : FullIntegrationSpace} : IsParallelogram (LpSpace L 2 two>=1)
+  => \lam u v => dense-lift-unique (ProductCoverSpace.prod (lpInc 2 two>=1) (lpInc 2 two>=1)) (lpInc.isDense2 {L} {2} {2} {two>=1} {two>=1})
+      (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (sq-cover CoverMap.∘ +-uniform {LpSpace L 2 two>=1}) (sq-cover CoverMap.∘ subtract-uniform {LpSpace L 2 two>=1}))
+      (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (scale2 CoverMap.∘ sq-cover CoverMap.∘ ProductCoverSpace.proj1) (scale2 CoverMap.∘ sq-cover CoverMap.∘ ProductCoverSpace.proj2))
+      (\lam s => \have | e1 : lnorm (lpInc 2 two>=1 s.1 + lpInc 2 two>=1 s.2) * lnorm (lpInc 2 two>=1 s.1 + lpInc 2 two>=1 s.2) = L.integral (fpow 2 two>=1 (s.1 + s.2))
+                             => pmap (\lam x => lnorm x * lnorm x) (inv (lpInc 2 two>=1).func-+) *> sq-char
+                       | e2 : lnorm (lpInc 2 two>=1 s.1 - lpInc 2 two>=1 s.2) * lnorm (lpInc 2 two>=1 s.1 - lpInc 2 two>=1 s.2) = L.integral (fpow 2 two>=1 (s.1 - s.2))
+                             => pmap (\lam x => lnorm x * lnorm x) (inv (AddGroupHom.func-minus {lpInc 2 two>=1})) *> sq-char
+                       | e3 : lnorm (lpInc 2 two>=1 s.1) * lnorm (lpInc 2 two>=1 s.1) = L.integral (fpow 2 two>=1 s.1) => sq-char
+                       | e4 : lnorm (lpInc 2 two>=1 s.2) * lnorm (lpInc 2 two>=1 s.2) = L.integral (fpow 2 two>=1 s.2) => sq-char
+                       | par : L.integral (fpow 2 two>=1 (s.1 + s.2)) + L.integral (fpow 2 two>=1 (s.1 - s.2)) = Real.fromRat 2 * L.integral (fpow 2 two>=1 s.1) + Real.fromRat 2 * L.integral (fpow 2 two>=1 s.2)
+                             => inv L.integral_+ *> pmap L.integral fpow-parallelogram *> L.integral_+ *> pmap2 (+) L.integral_*q L.integral_*q
+                 \in pmap2 (+) e1 e2 *> par *> inv (pmap2 (+) (pmap (Real.fromRat 2 *) e3) (pmap (Real.fromRat 2 *) e4))) (u,v)
+
+-- | $\mathrm L^2$ is a real Hilbert space.
+\func L2Hilbert (L : FullIntegrationSpace) : RealHilbertSpace \cowith
+  | RealPreHilbertSpace => RealPreHilbertSpace.fromParallelogram (LpSpace L 2 two>=1) L2-parallelogram
+  | isComplete => (LpSpace L 2 two>=1).isComplete
+
+-- | The inner product of $\mathrm L^2$ is $\langle u,v\rangle = I(uv)$.
+\lemma L2-inner {L : FullIntegrationSpace} {u v : LpSpace L 2 two>=1}
+  : RealPreHilbertSpace.inner {L2Hilbert L} u v = integral (lpMul two-conj u v)
+  => dense-lift-unique (ProductCoverSpace.prod (lpInc 2 two>=1) (lpInc 2 two>=1)) (lpInc.isDense2 {L} {2} {2} {two>=1} {two>=1})
+      (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const PreHilbertSpace.fromParallelogram.quarter)
+        (subtract-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (sq-cover CoverMap.∘ +-uniform {LpSpace L 2 two>=1}) (sq-cover CoverMap.∘ subtract-uniform {LpSpace L 2 two>=1})))
+      ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover two-conj)
+      (\lam s => \have | e1 : lnorm (lpInc 2 two>=1 s.1 + lpInc 2 two>=1 s.2) * lnorm (lpInc 2 two>=1 s.1 + lpInc 2 two>=1 s.2) = L.integral (fpow 2 two>=1 (s.1 + s.2))
+                             => pmap (\lam x => lnorm x * lnorm x) (inv (lpInc 2 two>=1).func-+) *> sq-char
+                       | e2 : lnorm (lpInc 2 two>=1 s.1 - lpInc 2 two>=1 s.2) * lnorm (lpInc 2 two>=1 s.1 - lpInc 2 two>=1 s.2) = L.integral (fpow 2 two>=1 (s.1 - s.2))
+                             => pmap (\lam x => lnorm x * lnorm x) (inv (AddGroupHom.func-minus {lpInc 2 two>=1})) *> sq-char
+                       | pol : L.integral (fpow 2 two>=1 (s.1 + s.2)) - L.integral (fpow 2 two>=1 (s.1 - s.2)) = Real.fromRat 4 * L.integral (fmul s.1 s.2)
+                             => inv L.integral-hom.func-minus *> pmap L.integral (inv fmul-polar) *> L.integral_*q
+                       | q4 : PreHilbertSpace.fromParallelogram.quarter * Real.fromRat 4 = (1 : Real)
+                             => RealField.*-comm *> PreHilbertSpace.fromParallelogram.quarter-4
+                       | rhs : integral (lpMul.cover two-conj (lpInc 2 two>=1 s.1, lpInc 2 two>=1 s.2)) = L.integral (fmul s.1 s.2)
+                             => pmap integral (inv (lpMul.cover-eq {L} {2} {2} {two>=1} {two>=1} {two-conj}) *> lpMul-char {L} {2} {2} {two>=1} {two>=1} {two-conj}) *> integrationCompletion.func-integral
+                 \in pmap (PreHilbertSpace.fromParallelogram.quarter *) (pmap2 (-) e1 e2 *> pol) *> inv *-assoc *> pmap (`* _) q4 *> ide-left *> inv rhs) (u,v)
+     *> pmap integral (inv lpMul.cover-eq)
+
+\private \module L2Helpers \where {
+  -- | $u \mapsto \|u\|_2^2$ is continuous.
+  \func sq-cover {L : FullIntegrationSpace} : CoverMap (LpSpace L 2 two>=1) RealNormed (\lam u => lnorm u * lnorm u)
+    => RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (lnorm-metric {LpSpace L 2 two>=1}) (lnorm-metric {LpSpace L 2 two>=1})
+
+  \func scale2 : CoverMap RealNormed RealNormed (\lam x => Real.fromRat 2 * x)
+    => RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (Real.fromRat 2)) CoverMap.id
+
+  -- | $\|f\|_2^2 = I(|f|^2)$ on `L`.
+  \lemma sq-char {L : FullIntegrationSpace} {f : L} : lnorm (lpInc 2 two>=1 f) * lnorm (lpInc 2 two>=1 f) = L.integral (fpow 2 two>=1 f)
+    => pmap2 (*) lpInc.lnorm-char lpInc.lnorm-char *> inv (abs-rpow-two {_} {fpow.one>0 two>=1}) *> rpow-ext (RealAbGroup.abs-ofPos pnorm>=0) {_} {_} idp {_} {fpow.one>0 two>=1} *> pnorm-pow
+}

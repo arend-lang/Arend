@@ -34,7 +34,7 @@
 \import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
-\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.ExCompletion
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing

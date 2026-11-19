@@ -72,6 +72,29 @@
   : pnormPow p p>=1 (q *q f) = rpow (RealAbGroup.abs (Real.fromRat q)) RealAbGroup.abs>=0 p (fpow.one>0 p>=1) * pnormPow p p>=1 f
   => pmap L.integral fpow-*q *> integral-rscale
 
+-- | $\|0\|_p = 0$.
+\lemma pnorm_zro {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : pnorm p p>=1 L.zro = (0 : Real)
+  => rpow-ext (pmap L.integral fpow-zro *> L.integral-hom.func-zro) {_} {<=-refl} idp {_} {RealField.pinv>0 (fpow.one>0 p>=1)} *> zero-rpow
+
+-- | $\|-f\|_p = \|f\|_p$.
+\lemma pnorm-negative {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : pnorm p p>=1 (negative f) = pnorm p p>=1 f
+  => rpow-ext (pmap L.integral fpow-negative) idp
+
+-- | If $|f| \le |g|$, then $\|f\|_p \le \|g\|_p$.
+\lemma pnorm-abs-mono {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f g : L} (h : abs f <= abs g) : pnorm p p>=1 f <= pnorm p p>=1 g
+  => rpow-mono (L.integral-mono (fpow-abs-mono p>=1 h))
+
+-- | $\|q f\|_p = |q| \|f\|_p$.
+\lemma pnorm-*q {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {q : Rat} {f : L}
+  : pnorm p p>=1 (q *q f) = RealAbGroup.abs (Real.fromRat q) * pnorm p p>=1 f
+  => \have | p>0 => fpow.one>0 p>=1
+           | c>=0 : (0 : Real) <= rpow (RealAbGroup.abs (Real.fromRat q)) RealAbGroup.abs>=0 p p>0 => rpow>=0
+           | pp>0 : (0 : Real) < p * RealField.pinv p p>0 => RealField.<_*_positive_positive p>0 (RealField.pinv>0 p>0)
+     \in rpow-ext pnormPow-*q {_} {RealField.<=_*_positive_positive c>=0 pnormPow>=0} idp
+       *> rpow_* {_} {_} {c>=0} {pnormPow>=0}
+       *> pmap (`* _) (rpow-rpow {_} {RealAbGroup.abs>=0} {p} {RealField.pinv p p>0} {p>0} {RealField.pinv>0 p>0} {c>=0} {pp>0}
+                       *> rpow-ext {_} {_} idp {RealAbGroup.abs>=0} {RealAbGroup.abs>=0} {_} {1} (RealField.pinv-right p>0) {pp>0} {RealField.zro<ide} *> rpow-one)
+
 -- | Hölder's inequality: $I|fg| \le \|f\|_p \|g\|_q$ for $1/p + 1/q = 1$.
 \lemma holder {L : FullIntegrationSpace} {p q : Real} (p>=1 : (1 : Real) <= p) (q>=1 : (1 : Real) <= q)
               (pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)) {f g : L}

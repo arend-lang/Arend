@@ -1,0 +1,132 @@
+{- | Dense subspaces of `Lᵖ` (Remark `rem:Lp-Y` of lp-spaces).
+
+  * {lp-dense}: the image of a dense integration space homomorphism `f : X -> L` is dense in `Lᵖ`.
+    An element `g` bounded by `M` is approximated in $\|\cdot\|_1$ by `f x`; the clipping
+    $c_M(x) = \tau_M x^+ - \tau_M x^-$ satisfies $f(c_M(x)) = c_M(f(x))$, $|g - c_M(f(x))| \le 2|g - f(x)|$,
+    and $\|g - c_M(f(x))\|_p^p \le (3M)^{p-1} \|g - c_M(f(x))\|_1$.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.TruncRieszSpace
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Inequalities
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.Lp
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachLattice.Completion
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.TopSpace
+\open LatticeAbGroup
+
+-- | The image of a dense integration space homomorphism into `L` is dense in `Lᵖ`.
+\lemma lp-dense {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {X : IntegrationSpace} (f : IntegrationSpaceHom X L) (fd : f.IsDense)
+  : IsDenseSet {LpSpace L p p>=1} (\lam u => ∃ (x : X) (lpInc p p>=1 (f x) = u))
+  => \lam {u} Uo Uu => \case (dist_open {LpSpace L p p>=1}).1 Uo Uu \with {
+    | inP (eps,eps>0,q) =>
+      \let e2 => eps RatField.* ratio 1 2
+      \in \have | e2>0 : RatField.zro RatField.< e2 => linarith
+                | ee : Real.fromRat e2 + Real.fromRat e2 = Real.fromRat eps => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+      \in \case lpInc.isDense {L} {p} {p>=1} {u} {OBall e2 u} (OBall-open {_} {e2} {u}) (OBall-center {LpSpace L p p>=1} {e2} e2>0 {u}) \with {
+        | inP (y, inP (g,gy), uy) => \case L.trunc-bounded g \with { | inP (M,gM) => \case approx f fd g gM e2>0 \with {
+          | inP (x,gh) =>
+            \have | d1 : lnorm (u - lpInc p p>=1 g) < Real.fromRat e2 => rewrite gy $ real_<_U.2 $ transport (\lam (z : ExUpperReal) => z.U e2) (norm-dist {LpSpace L p p>=1} {u} {y}) uy
+                  | d2 : lnorm (lpInc p p>=1 g - lpInc p p>=1 (f x)) <= Real.fromRat e2
+                      => =_<= (pmap lnorm (inv (AddGroupHom.func-minus {lpInc p p>=1})) *> lpInc.lnorm-char) <=∘ gh
+                  | t : lnorm (u - lpInc p p>=1 (f x)) <= lnorm (u - lpInc p p>=1 g) + lnorm (lpInc p p>=1 g - lpInc p p>=1 (f x))
+                      => =_<= (pmap lnorm (inv (+-assoc {LpSpace L p p>=1} *> pmap (u +) (inv +-assoc *> pmap (__ + _) negative-left *> zro-left)))) <=∘ lnorm_+
+                  | d : lnorm (u - lpInc p p>=1 (f x)) < Real.fromRat eps => linarith
+            \in inP (lpInc p p>=1 (f x), inP (x, idp), q $ transportInv (\lam (z : ExUpperReal) => z.U eps) (norm-dist {LpSpace L p p>=1} {u} {lpInc p p>=1 (f x)}) $ real_<_U.1 d)
+        } }
+      }
+  }
+  \where {
+    -- | Clipping of `a` at level `M`: $c_M(a) = \tau_M a^+ - \tau_M a^-$.
+    \func clip {E : TruncRieszSpace} (M : Rat) (a : E) : E
+      => E.truncAt M (part+ a) - E.truncAt M (part- a)
+
+    \lemma func-clip {f : TruncRieszSpaceHom} {M : Rat} {a : f.Dom} : f (clip M a) = clip M (f a)
+      => f.func-minus *> pmap2 (-) (f.func-truncAt *> pmap (TruncRieszSpace.truncAt M) (f.func-join *> pmap (_ ∨) f.func-zro))
+                                    (f.func-truncAt *> pmap (TruncRieszSpace.truncAt M) (f.func-join *> pmap2 (∨) (f.func-negative {a}) f.func-zro))
+
+    -- | Images of `f` approximate every element of `L` in $\|\cdot\|_1$.
+    \lemma dense-approx {X : IntegrationSpace} {L : FullIntegrationSpace} (f : IntegrationSpaceHom X L) (fd : f.IsDense) (g : L) {d : Rat} (d>0 : RatField.zro RatField.< d)
+      : ∃ (x : X) (L.integral (abs (g - f x)) < Real.fromRat d)
+      => \case fd {g} {OBall d g} OBall-open (OBall-center d>0) \with {
+        | inP (y, inP (x,p), h) => inP (x, transport (< _) (lnorm-ldist {L} {g} {f x}) $ real_<_U.2 $ transportInv (OBall d g) p h)
+      }
+
+    -- | For `g` bounded by `M` there is `x` with $\|g - f(x)\|_p \le e$.
+    \lemma approx {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {X : IntegrationSpace} (f : IntegrationSpaceHom X L) (fd : f.IsDense)
+      (g : L) {M : Rat} (gM : L.IsBelow (abs g) M) {e : Rat} (e>0 : RatField.zro RatField.< e)
+      : ∃ (x : X) (pnorm p p>=1 (g - f x) <= Real.fromRat e)
+      => \let | M' => M RatField.∨ 1
+              | M3 => M' RatField.+ (M' RatField.+ M')
+              | p>0 => fpow.one>0 p>=1
+         \in \have | M'>0 : RatField.zro RatField.< M' => RatField.zro<ide <∘l RatField.join-right
+                  | M3>0 : RatField.zro RatField.< M3 => linarith
+                  | gM' : L.IsBelow (abs g) M' => L.IsBelow-level RatField.join-left gM
+                  | K>0 : (0 : Real) < rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1) => rpow-pos>0
+                  | c>0 : (0 : Real) < rpow (Real.fromRat e) (rat_real_<=.1 (<=-less e>0)) p p>0 => transportInv ((0 : Real) <) (rpow-pos-eq (rat_real_<.1 e>0)) rpow-pos>0
+                  | KK>0 : (0 : Real) < rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1) + rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1) => linarith
+                  | D>0 : (0 : Real) < rpow (Real.fromRat e) (rat_real_<=.1 (<=-less e>0)) p p>0 * RealField.pinv _ KK>0 => RealField.<_*_positive_positive c>0 (RealField.pinv>0 KK>0)
+            \in \case real_<-rat-char.1 D>0 \with {
+              | inP (d,d>0',d<D') => \have | d>0 : RatField.zro RatField.< d => rat_real_<.2 (real_<_U.2 d>0')
+                                          | d<D => real_<_L.2 d<D'
+                \in \case dense-approx f fd g d>0 \with {
+                  | inP (x0,gf) =>
+                    \have | dd => clip-dist2 {L} {M'} M'>0 {g} {f x0} gM'
+                          | hb : abs (clip M' (f x0)) <= L.truncAt M' (part+ (f x0)) + L.truncAt M' (part- (f x0))
+                              => sub <=∘ =_<= (pmap2 (+) (abs-ofPos (L.truncAt-pos M'>0 part+>=0)) (abs-ofPos (L.truncAt-pos M'>0 part+>=0)))
+                          | bnd : L.IsBelow (abs (g - clip M' (f x0))) M3
+                              => L.IsBelow_<= (sub <=∘ <=_+ <=-refl hb) (L.IsBelow_+ gM' (L.IsBelow_+ (L.truncAt-below M'>0) (L.truncAt-below M'>0)))
+                          | fb => fpow-bounded p>=1 M3>0 bnd
+                          | K>=0 => <=-less K>0
+                          | s1 => L.integral-mono fb <=∘ =_<= integral-rscale
+                                    <=∘ RealField.<=_*_positive-right K>=0 (L.integral-mono dd <=∘ =_<= L.integral_+ <=∘ <=_+ (<=-less gf) (<=-less gf))
+                          | s2 : rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1) * (Real.fromRat d + Real.fromRat d)
+                                   = (rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1) + rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1)) * Real.fromRat d => equation.cRing
+                          | s3 => RealField.<=_*_positive-right (<=-less KK>0) (<=-less d<D)
+                          | s4 : (rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1) + rpow-pos (Real.fromRat M3) (rat_real_<.1 M3>0) (p - 1))
+                                   * (rpow (Real.fromRat e) (rat_real_<=.1 (<=-less e>0)) p p>0 * RealField.pinv _ KK>0) = rpow (Real.fromRat e) (rat_real_<=.1 (<=-less e>0)) p p>0
+                              => equation.cRing {RealField.pinv-right KK>0}
+                    \in inP (clip M' x0, transportInv (\lam z => pnorm p p>=1 (g - z) <= Real.fromRat e) func-clip
+                                          ((pnorm<=-iff {L} {p} {p>=1} {_} {Real.fromRat e} {rat_real_<=.1 (<=-less e>0)}).2 (s1 <=∘ =_<= s2 <=∘ s3 <=∘ =_<= s4)))
+                }
+            }
+      \where
+        \lemma sub {L : BoundedTruncRieszSpace} {a b : L} : abs (a - b) <= abs a + abs b
+          => abs_+ <=∘ =_<= (pmap (_ +) abs_negative)
+
+    -- | Clipping at `M` moves an element by at most twice its distance to an element bounded by `M`.
+    \lemma clip-dist2 {L : BoundedTruncRieszSpace} {M : Rat} (M>0 : RatField.zro RatField.< M) {g f : L} (gM : L.IsBelow (abs g) M)
+      : abs (g - clip M f) <= abs (g - f) + abs (g - f)
+      => \have | pg : L.truncAt M (part+ g) = part+ g => <=-antisymmetric (L.truncAt-bound M>0) (L.truncAt-greatest M>0 (L.IsBelow_<= part+<=abs gM) <=-refl)
+               | mg : L.truncAt M (part- g) = part- g
+                   => <=-antisymmetric (L.truncAt-bound M>0) (L.truncAt-greatest M>0 (L.IsBelow_<= (part+<=abs <=∘ =_<= abs_negative) gM) <=-refl)
+               | pl {a b : L} : abs (part+ a - part+ b) <= abs (a - b) => join-lip <=∘ =_<= (pmap (_ +) (pmap abs negative-right *> abs_zro) *> zro-right)
+               | ml : abs (part- g - part- f) <= abs (g - f)
+                   => pl {negative g} {negative f} <=∘ =_<= (pmap abs (equation.abGroup : negative g - negative f = negative (g - f)) *> abs_negative)
+               | e : g - clip M f = (L.truncAt M (part+ g) - L.truncAt M (part+ f)) - (L.truncAt M (part- g) - L.truncAt M (part- f))
+                   => pmap (__ - _) (inv parts_- *> pmap2 (-) (inv pg) (inv mg)) *> equation.abGroup
+         \in =_<= (pmap abs e) <=∘ approx.sub <=∘ <=_+ (L.truncAt-lipschitz M>0 <=∘ pl) (L.truncAt-lipschitz M>0 <=∘ ml)
+  }
