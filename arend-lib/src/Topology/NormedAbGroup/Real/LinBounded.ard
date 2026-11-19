@@ -14,6 +14,8 @@
 \import Logic.Meta
 \import Order.Lattice
 \import Order.PartialOrder
+\import Order.StrictOrder
+\import Order.Biordered
 \import Paths
 \import Paths.Meta
 \import Set.Fin
@@ -22,6 +24,7 @@
 \import Topology.NormedAbGroup.NormedProduct
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.Inverse
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Product
 \import Topology.CoverSpace
@@ -38,6 +41,10 @@
 \lemma abs<=l1norm {n : Nat} {x : Array Real n} (j : Fin n) : abs (x j) <= l1norm x
   => RealAbGroup.BigSum_>=index {\lam j => abs (x j)} (\lam j => RealAbGroup.abs>=0) j
 
+-- | `‖x‖₁ ≤ n (R ∨ 0)` on the box `[-R,R]ⁿ`.
+\lemma l1norm-box {n : Nat} {R : Real} {x : Array Real n} (xR : \Pi (j : Fin n) -> abs (x j) <= R) : l1norm x <= RatField.natCoef n RealField.* (R ∨ 0)
+  => RealAbGroup.BigSum_<= {_} {\lam j => abs (x j)} {replicate n (R ∨ 0)} (\lam j => xR j <=∘ join-left) <=∘ =_<= RealField.BigSum_replicate
+
 -- | Real-valued cover maps on `ℝⁿ` such that `|φ x| ≤ C ‖x‖₁` whenever `|xⱼ| ≤ R` for all `j`, for some `C` depending on `R`.
 \record LinBoundedMap (n : Nat) \extends CoverMap {
   | Dom => RealN n
@@ -47,14 +54,21 @@
     \protected \lemma ext {n : Nat} {f g : LinBoundedMap n} (p : \Pi (x : Array Real n) -> f x = g x) : f = g
       => Paths.Meta.ext (exts p)
 
+    -- | A cover map bounded by `M_R (|f₁| + … + |fₘ|)` on every box `[-R,R]ⁿ` is linearly bounded.
+    \protected \lemma makeLocal {n : Nat} (h : CoverMap (RealN n) RealNormed) {m : Nat} (fs : Array (LinBoundedMap n) m)
+                                (hM : \Pi (R : Real) -> ∃ (M : Real) ((0 : Real) <= M) ∀ (x : Array Real n) (\Pi (j : Fin n) -> abs (x j) <= R)
+                                                          (abs (h x) <= M * RealAbGroup.BigSum (\lam j => abs (fs j x))))
+      : LinBoundedMap n h \cowith
+      | func-cover => h.func-cover
+      | lin-bound R => \case hM R, FinSet.finiteAC (\lam j => (fs j).lin-bound R) \with {
+        | inP (M,M>=0,hR), inP g => inP (M * RealAbGroup.BigSum (\lam j => (g j).1), RealField.<=_*_positive_positive M>=0 (RealAbGroup.BigSum_>=0 \lam j => (g j).2), \lam x xR =>
+            hR x xR <=∘ RealField.<=_*_positive-right M>=0 (RealAbGroup.BigSum_<= (\lam j => (g j).3 x xR) <=∘ =_<= (inv RealField.BigSum-rdistr)) <=∘ =_<= (inv RealField.*-assoc))
+      }
+
     -- | A cover map bounded by `M (|f₁| + … + |fₘ|)` is linearly bounded.
     \protected \lemma make {n : Nat} (h : CoverMap (RealN n) RealNormed) {m : Nat} (fs : Array (LinBoundedMap n) m) {M : Real} (M>=0 : (0 : Real) <= M)
-                           (hM : \Pi (x : Array Real n) -> abs (h x) <= M * RealAbGroup.BigSum (\lam j => abs (fs j x))) : LinBoundedMap n h \cowith
-      | func-cover => h.func-cover
-      | lin-bound R => \case FinSet.finiteAC (\lam j => (fs j).lin-bound R) \with {
-        | inP g => inP (M * RealAbGroup.BigSum (\lam j => (g j).1), RealField.<=_*_positive_positive M>=0 (RealAbGroup.BigSum_>=0 \lam j => (g j).2), \lam x xR =>
-            hM x <=∘ RealField.<=_*_positive-right M>=0 (RealAbGroup.BigSum_<= (\lam j => (g j).3 x xR) <=∘ =_<= (inv RealField.BigSum-rdistr)) <=∘ =_<= (inv RealField.*-assoc))
-      }
+                           (hM : \Pi (x : Array Real n) -> abs (h x) <= M * RealAbGroup.BigSum (\lam j => abs (fs j x))) : LinBoundedMap n h
+      => makeLocal h fs \lam _ => inP (M, M>=0, \lam x _ => hM x)
 
     \protected \lemma make1 {n : Nat} (h : CoverMap (RealN n) RealNormed) (f : LinBoundedMap n) {M : Real} (M>=0 : (0 : Real) <= M)
                             (hM : \Pi (x : Array Real n) -> abs (h x) <= M * abs (f x)) : LinBoundedMap n h
@@ -75,6 +89,18 @@
 
     \protected \lemma join {n : Nat} (f g : LinBoundedMap n) : LinBoundedMap n (\lam x => f x ∨ g x)
       => make2 (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple f g) f g RealField.zro<=ide (\lam x => rewrite RealField.ide-left RealAbGroup.join-bound)
+
+    \protected \lemma meet {n : Nat} (f g : LinBoundedMap n) : LinBoundedMap n (\lam x => f x ∧ g x)
+      => make2 (real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple f g) f g RealField.zro<=ide (\lam x => rewrite RealField.ide-left meet-bound)
+      \where
+        \lemma meet-bound {a b : Real} : abs (a ∧ b) <= abs a + abs b
+          => \have | t1 => RealAbGroup.abs>=id {a}
+                   | t2 : negative a <= abs a => RealAbGroup.abs>=id {negative a} <=∘ =_<= RealAbGroup.abs_negative
+                   | t3 => RealAbGroup.abs>=0 {b}
+                   | t4 : negative b <= abs b => RealAbGroup.abs>=id {negative b} <=∘ =_<= RealAbGroup.abs_negative
+                   | m1 : a ∧ b <= a => meet-left
+                   | u : negative (abs a + abs b) <= a ∧ b => meet-univ (linarith : negative (abs a + abs b) <= a) (linarith : negative (abs a + abs b) <= b)
+             \in transport (__ <= _) (pmap abs RealAbGroup.minus_zro) $ RealField.abs-univ {a ∧ b} {0} (linarith : a ∧ b - 0 <= abs a + abs b) linarith
 
     -- | Multiplication by a real scalar.
     \protected \lemma scale {n : Nat} (c : Real) (f : LinBoundedMap n) : LinBoundedMap n (\lam x => c * f x)
@@ -126,14 +152,40 @@
                     | gK (j : Fin n) : (g j).1 <= K => RealAbGroup.BigSum_>=index {\lam j => (g j).1} (\lam j => (g j).2) j
               \in \case phi.lin-bound B \with {
                 | inP (C,C>=0,hC) => inP (C * K, RealField.<=_*_positive_positive C>=0 K>=0, \lam x xR =>
-                    \have | l1B : l1norm x <= RatField.natCoef m RealField.* (R ∨ 0)
-                                => RealAbGroup.BigSum_<= {_} {\lam j => abs (x j)} {replicate m (R ∨ 0)} (\lam j => xR j <=∘ join-left) <=∘ =_<= RealField.BigSum_replicate
+                    \have | l1B : l1norm x <= RatField.natCoef m RealField.* (R ∨ 0) => l1norm-box xR
                           | psiB (j : Fin n) : abs (psi j x) <= (g j).1 * l1norm x => (g j).3 x xR
                     \in hC (\lam j => psi j x) (\lam j => psiB j <=∘ RealField.<=_*_positive-left (gK j) l1norm>=0 <=∘ RealField.<=_*_positive-right K>=0 l1B)
                           <=∘ RealField.<=_*_positive-right C>=0 (RealAbGroup.BigSum_<= psiB <=∘ =_<= (inv RealField.BigSum-rdistr))
                           <=∘ =_<= (inv RealField.*-assoc))
               }
       }
+
+    -- | A linearly bounded map is bounded on every box `[-R,R]ⁿ`.
+    \protected \lemma local-bound {n : Nat} (f : LinBoundedMap n) (R : Real)
+      : ∃ (M : Real) ∀ (x : Array Real n) (\Pi (j : Fin n) -> abs (x j) <= R) (abs (f x) <= M)
+      => \case f.lin-bound R \with {
+        | inP (C,C>=0,hC) => inP (C * (RatField.natCoef n RealField.* (R ∨ 0)), \lam x xR => hC x xR <=∘ RealField.<=_*_positive-right C>=0 (l1norm-box xR))
+      }
+
+    -- | The product of a cover map bounded on boxes with a linearly bounded map.
+    \protected \lemma mulBounded {n : Nat} (f : CoverMap (RealN n) RealNormed) (fb : \Pi (R : Real) -> ∃ (M : Real) ∀ (x : Array Real n) (\Pi (j : Fin n) -> abs (x j) <= R) (abs (f x) <= M))
+                                 (g : LinBoundedMap n) : LinBoundedMap n (\lam x => f x * g x)
+      => makeLocal (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple f g) (g :: nil) \lam R => \case fb R \with {
+        | inP (M,hM) => inP (M ∨ 0, RealAbGroup.join-right, \lam x xR => transportInv (_ <= (M ∨ 0) * __) zro-right
+            (=_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (hM x xR <=∘ join-left) RealAbGroup.abs>=0))
+      }
+
+    -- | The pointwise product of linearly bounded maps.
+    \protected \lemma mul {n : Nat} (f g : LinBoundedMap n) : LinBoundedMap n (\lam x => f x * g x)
+      => mulBounded f (local-bound f) g
+
+    -- | $x_1 / (x_2 \vee c)$ for $c > 0$; with $c = 1/n$ this is $x_1 \psi_n(x_2)$ for $\psi_n(y) = n \wedge 1/y^+$.
+    \protected \lemma mulInvJoin {c : Real} (c>0 : (0 : Real) < c) : LinBoundedMap 2 (\lam x => x 0 * RealField.pinv (x 1 ∨ c) (c>0 <∘l join-right))
+      => make1 {2} (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (coord {2} 0)
+                 (pinv-coverMap (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (coord 1) (CoverMap.const c)) c>0 (\lam _ => join-right)))
+          (coord {2} 0) (<=-less (RealField.pinv>0 c>0))
+          (\lam x => =_<= (RealField.abs_* *> pmap (_ *) (RealAbGroup.abs-ofPos (<=-less (RealField.pinv>0 _))) *> RealField.*-comm)
+                       <=∘ RealField.<=_*_positive-left (RealField.pinv_<= c>0 _ join-right) RealAbGroup.abs>=0)
   }
 
 -- | `C₀^lin(ℝⁿ)` is a Riesz space under pointwise operations.

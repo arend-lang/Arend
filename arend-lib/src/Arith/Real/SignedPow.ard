@@ -1,0 +1,224 @@
+{- | The signed power $\varphi_r(t) = t|t|^{r-2}$ for $r > 1$ and its linearization near `0`.
+
+  * {signedPow}: $\varphi_r(t) = (t^+)^{r-1} - (t^-)^{r-1}$, so only the exponent $r - 1 > 0$ is used.
+  * {signedPow-abs}, {signedPow-mul}: $|\varphi_r(t)| = |t|^{r-1}$ and $t \varphi_r(t) = |t|^r$.
+  * {signedPow-conj}: $|\varphi_r(t)|^{r'} = |t|^r$ for the conjugate exponent $r'$.
+  * {signedPow-cut}: $\varphi_{r,a}$ agrees with $\varphi_r$ for $|t| \ge a$ ({signedPow-cut-ge})
+    and equals $a^{r-2} t$ for $|t| \le a$ ({signedPow-cut-in}).
+  * {signedPow-cut-bound}: $|\varphi_{r,a}(t)| \le |t|^{r-1}$ for $r \le 2$.
+  * {signedPow-cut-lin}: $|\varphi_{r,a}(t)| \le a^{r-2} |t|$ for $r \le 2$; {signedPow-local-bound}: $|\varphi_r(t)| \le R^{r-1}$ for $|t| \le R$.
+  * {signedPow-cover}, {clampSym-cover}, {signedPow-cut-cover}: these functions are cover maps.
+  * {signedPow-cut-diff}: $|\varphi_{r,a}(t) - \varphi_{r,b}(t)|^{r'} \le 2^{r'} \delta^{r-1} (|t| \wedge \delta)$
+    for $a, b \le \delta$ and $1 < r \le 2$.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Exp.Real
+\import Arith.Log.Real
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Order.Biordered
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
+\open signedPow
+
+-- | $\varphi_r(t) = t|t|^{r-2}$, written as $(t^+)^{r-1} - (t^-)^{r-1}$.
+\func signedPow {r : Real} (r>1 : (1 : Real) < r) (t : Real) : Real
+  => rpow (t ∨ 0) join-right (r - 1) (sub1>0 r>1) - rpow (negative t ∨ 0) join-right (r - 1) (sub1>0 r>1)
+  \where {
+    \lemma sub1>0 {r : Real} (r>1 : (1 : Real) < r) : (0 : Real) < r - 1
+      => linarith
+
+    -- | Proving `x <= y` by cases `u < v` and `v <= u`.
+    \lemma real-cases {u v x y : Real} (lt : u < v -> x <= y) (ge : v <= u -> x <= y) : x <= y
+      => \lam y<x => ge (\lam u<v => lt u<v y<x) y<x
+
+    -- | Proving `x = y` by cases on the sign of `t`.
+    \lemma sign-cases-eq {t x y : Real} (pos : (0 : Real) <= t -> x = y) (neg : t <= 0 -> x = y) : x = y
+      => <=-antisymmetric (real-cases (\lam t<0 => =_<= (neg (<=-less t<0))) (\lam t>=0 => =_<= (pos t>=0)))
+                          (real-cases (\lam t<0 => =_<= (inv (neg (<=-less t<0)))) (\lam t>=0 => =_<= (inv (pos t>=0))))
+
+    -- | {rpow-ext} in the base, with the proof on the right side determined.
+    \lemma rpow-base {x y : Real} (p : x = y) {x>=0 : (0 : Real) <= x} {a : Real} {a>0 : (0 : Real) < a}
+      : rpow x x>=0 a a>0 = rpow y (transport ((0 : Real) <=) p x>=0) a a>0 \elim p
+      | idp => idp
+
+    -- | {rpow-ext} in the exponent, with the proof on the right side determined.
+    \lemma rpow-exp {x : Real} {x>=0 : (0 : Real) <= x} {a b : Real} (q : a = b) {a>0 : (0 : Real) < a}
+      : rpow x x>=0 a a>0 = rpow x x>=0 b (transport ((0 : Real) <) q a>0) \elim q
+      | idp => idp
+
+    \lemma rpow-zero-ext {x : Real} (x=0 : x = 0) {x>=0 : (0 : Real) <= x} {a : Real} {a>0 : (0 : Real) < a} : rpow x x>=0 a a>0 = (0 : Real)
+      => rpow-base x=0 *> zero-rpow
+
+    -- | $\varphi_r(t) = t^{r-1}$ for $t \ge 0$.
+    \lemma nonneg {r : Real} {r>1 : (1 : Real) < r} {t : Real} (t>=0 : (0 : Real) <= t)
+      : signedPow r>1 t = rpow t t>=0 (r - 1) (sub1>0 r>1)
+      => pmap2 (-) (rpow-base (RealAbGroup.join-comm *> RealAbGroup.join_<= t>=0)) (rpow-zero-ext (RealAbGroup.join_<= (linarith : negative t <= 0))) *> RealAbGroup.minus_zro
+
+    -- | $\varphi_r(t) = -(-t)^{r-1}$ for $t \le 0$.
+    \lemma nonpos {r : Real} {r>1 : (1 : Real) < r} {t : Real} (t<=0 : t <= 0) {p : (0 : Real) <= negative t}
+      : signedPow r>1 t = negative (rpow (negative t) p (r - 1) (sub1>0 r>1))
+      => pmap2 (-) (rpow-zero-ext (RealAbGroup.join_<= t<=0)) (rpow-base (RealAbGroup.join-comm *> RealAbGroup.join_<= p)) *> zro-left
+
+    -- | $a^{r-1} = a^{r-2} a$ for $a > 0$.
+    \lemma pow-split {r a : Real} {a>=0 : (0 : Real) <= a} (a>0 : (0 : Real) < a) {r>1 : (0 : Real) < r - 1}
+      : rpow a a>=0 (r - 1) r>1 = rpow-pos a a>0 (r - 2) * a
+      => rpow-pos-eq a>0 *> pmap (rpow-pos a a>0) (equation.cRing : r - 1 = (r - 2) + 1) *> rpow-pos_+ *> pmap (_ *) rpow-pos-one
+  }
+
+-- | $|\varphi_r(t)| = |t|^{r-1}$.
+\lemma signedPow-abs {r : Real} {r>1 : (1 : Real) < r} {t : Real}
+  : RealAbGroup.abs (signedPow r>1 t) = rpow (RealAbGroup.abs t) RealAbGroup.abs>=0 (r - 1) (sub1>0 r>1)
+  => sign-cases-eq {t}
+      (\lam t>=0 => pmap RealAbGroup.abs (signedPow.nonneg t>=0) *> RealAbGroup.abs-ofPos rpow>=0 *> rpow-base (inv (RealAbGroup.abs-ofPos t>=0)))
+      (\lam t<=0 => pmap RealAbGroup.abs (signedPow.nonpos t<=0 {linarith}) *> RealAbGroup.abs_negative *> RealAbGroup.abs-ofPos rpow>=0 *> rpow-base (inv (RealAbGroup.abs-ofNeg t<=0)))
+
+-- | $t \varphi_r(t) = |t|^r$.
+\lemma signedPow-mul {r : Real} {r>1 : (1 : Real) < r} {r>0 : (0 : Real) < r} {t : Real}
+  : t * signedPow r>1 t = rpow (RealAbGroup.abs t) RealAbGroup.abs>=0 r r>0
+  => \have step {s : Real} {s>=0 : (0 : Real) <= s} : s * rpow s s>=0 (r - 1) (sub1>0 r>1) = rpow s s>=0 r r>0
+             => inv (rpow-exp (equation.cRing : r = 1 + (r - 1)) *> rpow_+ {s} {s>=0} {1} {r - 1} {RealField.zro<ide} {sub1>0 r>1} *> pmap (`* _) rpow-one)
+     \in sign-cases-eq {t}
+      (\lam t>=0 => pmap (t *) (signedPow.nonneg t>=0) *> step *> rpow-base (inv (RealAbGroup.abs-ofPos t>=0)))
+      (\lam t<=0 => pmap (t *) (signedPow.nonpos t<=0 {linarith}) *> equation.cRing *> step *> rpow-base (inv (RealAbGroup.abs-ofNeg t<=0)))
+
+-- | $|\varphi_r(t)|^{r'} = |t|^r$ for $1/r + 1/r' = 1$.
+\lemma signedPow-conj {r : Real} {r>1 : (1 : Real) < r} {r>0 : (0 : Real) < r} {q : Real} {q>0 : (0 : Real) < q}
+                      (rq : RealField.pinv r r>0 + RealField.pinv q q>0 = (1 : Real)) {t : Real}
+  : rpow (RealAbGroup.abs (signedPow r>1 t)) RealAbGroup.abs>=0 q q>0 = rpow (RealAbGroup.abs t) RealAbGroup.abs>=0 r r>0
+  => rpow-base signedPow-abs *> rpow-rpow {_} {_} {r - 1} {q} {sub1>0 r>1} {q>0} {_} {RealField.<_*_positive_positive (sub1>0 r>1) q>0} *> rpow-exp (conj-exp rq)
+  \where
+    -- | $(r - 1) r' = r$.
+    \lemma conj-exp {r q : Real} {r>0 : (0 : Real) < r} {q>0 : (0 : Real) < q} (rq : RealField.pinv r r>0 + RealField.pinv q q>0 = (1 : Real))
+      : (r - 1) * q = r
+      => \have | sr : RealField.pinv r r>0 * r = (1 : Real) => RealField.pinv-left r>0
+               | sq : RealField.pinv q q>0 * q = (1 : Real) => RealField.pinv-left q>0
+               | e : r * q = q + r => inv ide-right *> pmap (r * q *) (inv rq)
+                   *> (equation.cRing : r * q * (RealField.pinv r r>0 + RealField.pinv q q>0) = q * (RealField.pinv r r>0 * r) + r * (RealField.pinv q q>0 * q))
+                   *> pmap2 (+) (pmap (q *) sr *> ide-right) (pmap (r *) sq *> ide-right)
+         \in equation.cRing {e}
+
+-- | The clamp $(t \wedge a) \vee (-a)$ of `t` to `[-a,a]`.
+\func clampSym (a t : Real) : Real
+  => (t ∧ a) ∨ negative a
+
+\lemma clampSym-in {a t : Real} (ta : RealAbGroup.abs t <= a) : clampSym a t = t
+  => pmap (`∨ _) (RealAbGroup.meet_<= (RealAbGroup.abs>=id <=∘ ta)) *> RealAbGroup.join-comm *> RealAbGroup.join_<= (linarith (RealAbGroup.abs>=neg {t}) : negative a <= t)
+
+-- | $\varphi_{r,a}(t) = \varphi_r(t) - \varphi_r(c_a(t)) + a^{r-2} c_a(t)$, where $c_a$ is {clampSym}.
+\func signedPow-cut {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a) (t : Real) : Real
+  => signedPow r>1 t - signedPow r>1 (clampSym a t) + rpow-pos a a>0 (r - 2) * clampSym a t
+
+-- | $\varphi_{r,a}(t) = a^{r-2} t$ for $|t| \le a$.
+\lemma signedPow-cut-in {r : Real} {r>1 : (1 : Real) < r} {a : Real} {a>0 : (0 : Real) < a} {t : Real} (ta : RealAbGroup.abs t <= a)
+  : signedPow-cut r>1 a>0 t = rpow-pos a a>0 (r - 2) * t
+  => pmap (\lam c => signedPow r>1 t - signedPow r>1 c + rpow-pos a a>0 (r - 2) * c) (clampSym-in ta) *> equation.cRing
+
+-- | $\varphi_{r,a}(t) = \varphi_r(t)$ for $|t| \ge a$.
+\lemma signedPow-cut-ge {r : Real} {r>1 : (1 : Real) < r} {a : Real} {a>0 : (0 : Real) < a} {t : Real} (at : a <= RealAbGroup.abs t)
+  : signedPow-cut r>1 a>0 t = signedPow r>1 t
+  => \have edge : signedPow r>1 (clampSym a t) = rpow-pos a a>0 (r - 2) * clampSym a t
+                   => sign-cases-eq {t}
+                       (\lam t>=0 => \have | a<=t : a <= t => at <=∘ =_<= (RealAbGroup.abs-ofPos t>=0)
+                                           | c : clampSym a t = a => pmap (`∨ _) (RealAbGroup.meet-comm *> RealAbGroup.meet_<= a<=t) *> RealAbGroup.join-comm *> RealAbGroup.join_<= (linarith : negative a <= a)
+                                     \in pmap (signedPow r>1) c *> signedPow.nonneg (<=-less a>0) *> signedPow.pow-split a>0 *> pmap (_ *) (inv c))
+                       (\lam t<=0 => \have | t<=-a : t <= negative a => linarith (at <=∘ =_<= (RealAbGroup.abs-ofNeg t<=0))
+                                           | c : clampSym a t = negative a => pmap (`∨ _) (RealAbGroup.meet_<= (t<=-a <=∘ linarith)) *> RealAbGroup.join_<= t<=-a
+                                     \in pmap (signedPow r>1) c *> signedPow.nonpos (linarith : negative a <= 0) {rewrite RealAbGroup.negative-isInv (<=-less a>0)}
+                                          *> pmap negative (rpow-base RealAbGroup.negative-isInv *> signedPow.pow-split a>0) *> equation.cRing *> pmap (_ *) (inv c))
+     \in pmap (\lam x => signedPow r>1 t - x + _) edge *> equation.cRing
+
+-- | $|\varphi_{r,a}(t)| \le |t|^{r-1}$ for $r \le 2$.
+\lemma signedPow-cut-bound {r : Real} {r>1 : (1 : Real) < r} (r<=2 : r <= 2) {a : Real} {a>0 : (0 : Real) < a} {t : Real}
+  : RealAbGroup.abs (signedPow-cut r>1 a>0 t) <= rpow (RealAbGroup.abs t) RealAbGroup.abs>=0 (r - 1) (sub1>0 r>1)
+  => real-cases {RealAbGroup.abs t} {a}
+      (\lam t<a => =_<= (pmap RealAbGroup.abs (signedPow-cut-in (<=-less t<a)) *> RealField.abs_* *> pmap (`* _) (RealAbGroup.abs-ofPos (<=-less rpow-pos>0)))
+                    <=∘ real-cases {0} {RealAbGroup.abs t}
+                         (\lam t>0 => <=_*_positive-left (rpow-pos-antitone {_} {_} {_} {t>0} {a>0} (linarith : r - 2 <= 0) (<=-less t<a)) RealAbGroup.abs>=0
+                                       <=∘ =_<= (inv (signedPow.pow-split t>0)))
+                         (\lam t<=0 => =_<= (pmap (_ *) (<=-antisymmetric t<=0 RealAbGroup.abs>=0) *> RealField.zro_*-right) <=∘ rpow>=0))
+      (\lam a<=t => =_<= (pmap RealAbGroup.abs (signedPow-cut-ge a<=t) *> signedPow-abs))
+  \where
+    -- | `x ↦ x^c` is antitone on `(0,∞)` for `c ≤ 0`.
+    \lemma rpow-pos-antitone {x y c : Real} {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} (c<=0 : c <= 0) (x<=y : x <= y)
+      : rpow-pos y y>0 c <= rpow-pos x x>0 c
+      => =_<= rpow-pos-def <=∘ Real-exp-mono (\have | m => <=_*_positive-right (linarith : (0 : Real) <= negative c) (log-mono x>0 y>0 x<=y)
+                                                     | e1 : negative c * log x x>0 = negative (c * log x x>0) => equation.cRing
+                                                     | e2 : negative c * log y y>0 = negative (c * log y y>0) => equation.cRing
+                                              \in linarith) <=∘ =_<= (inv rpow-pos-def)
+
+-- | $|\varphi_{r,a}(t) - \varphi_{r,b}(t)|^{r'} \le 2^{r'} \delta^{r-1} (|t| \wedge \delta)$ for $0 < a, b \le \delta$ and $1 < r \le 2$.
+\lemma signedPow-cut-diff {r : Real} {r>1 : (1 : Real) < r} {r>0 : (0 : Real) < r} (r<=2 : r <= 2)
+                          {q : Real} {q>0 : (0 : Real) < q} (rq : RealField.pinv r r>0 + RealField.pinv q q>0 = (1 : Real))
+                          {d : Real} {d>0 : (0 : Real) < d} {a b : Real} {a>0 : (0 : Real) < a} {b>0 : (0 : Real) < b} (a<=d : a <= d) (b<=d : b <= d) (t : Real)
+  : rpow (RealAbGroup.abs (signedPow-cut r>1 a>0 t - signedPow-cut r>1 b>0 t)) RealAbGroup.abs>=0 q q>0
+      <= rpow 2 (linarith : (0 : Real) <= 2) q q>0 * rpow-pos d d>0 (r - 1) * (RealAbGroup.abs t ∧ d)
+  => \let | m => RealAbGroup.abs t ∧ d
+          | m>=0 : (0 : Real) <= m => meet-univ RealAbGroup.abs>=0 (<=-less d>0)
+          | P => rpow m m>=0 (r - 1) (sub1>0 r>1)
+     \in \have | P>=0 : (0 : Real) <= P => rpow>=0
+               | two-P>=0 : (0 : Real) <= (2 : Real) * P => linarith
+               -- (a) $|D| \le 2 m^{r-1}$
+               | D<= : RealAbGroup.abs (signedPow-cut r>1 a>0 t - signedPow-cut r>1 b>0 t) <= (2 : Real) * P
+                   => real-cases {RealAbGroup.abs t} {d}
+                       (\lam t<d => \have | tm : RealAbGroup.abs t = m => inv (RealAbGroup.meet_<= (<=-less t<d))
+                                          | ba => signedPow-cut-bound r<=2 {a} {a>0} {t}
+                                          | bb => signedPow-cut-bound r<=2 {b} {b>0} {t}
+                                          | e : rpow (RealAbGroup.abs t) RealAbGroup.abs>=0 (r - 1) (sub1>0 r>1) = P => rpow-base tm
+                                          | tri : RealAbGroup.abs (signedPow-cut r>1 a>0 t - signedPow-cut r>1 b>0 t) <= RealAbGroup.abs (signedPow-cut r>1 a>0 t) + RealAbGroup.abs (signedPow-cut r>1 b>0 t)
+                                              => RealAbGroup.abs_+ <=∘ =_<= (pmap (_ +) RealAbGroup.abs_negative)
+                                    \in linarith)
+                       (\lam d<=t => =_<= (pmap RealAbGroup.abs (pmap2 (-) (signedPow-cut-ge (a<=d <=∘ d<=t)) (signedPow-cut-ge (b<=d <=∘ d<=t)) *> RealAbGroup.negative-right) *> RealAbGroup.abs_zro) <=∘ two-P>=0)
+               -- (b) $(2 m^{r-1})^{q} = 2^q m^r$
+               | pow-eq : rpow ((2 : Real) * P) two-P>=0 q q>0 = rpow (2 : Real) (linarith : (0 : Real) <= 2) q q>0 * rpow m m>=0 r r>0
+                   => rpow_* {2} {P} {linarith} {P>=0} {two-P>=0} {q} {q>0}
+                       *> pmap (_ *) (rpow-rpow {m} {m>=0} {r - 1} {q} {sub1>0 r>1} {q>0} {P>=0} {RealField.<_*_positive_positive (sub1>0 r>1) q>0} *> rpow-exp (signedPow-conj.conj-exp rq))
+               -- (c) $m^r = m^{r-1} m \le \delta^{r-1} m$
+               | mr : rpow m m>=0 r r>0 <= rpow-pos d d>0 (r - 1) * m
+                   => =_<= (rpow-exp (equation.cRing : r = (r - 1) + 1) *> rpow_+ {m} {m>=0} {r - 1} {1} {sub1>0 r>1} {RealField.zro<ide} *> pmap (_ *) rpow-one)
+                       <=∘ <=_*_positive-left (rpow-mono {m} {d} {m>=0} {<=-less d>0} {r - 1} {sub1>0 r>1} meet-right <=∘ =_<= (rpow-pos-eq {d} {<=-less d>0} d>0)) m>=0
+     \in rpow-mono D<= <=∘ =_<= pow-eq <=∘ <=_*_positive-right rpow>=0 mr <=∘ =_<= (inv *-assoc)
+
+-- | $|\varphi_{r,a}(t)| \le a^{r-2} |t|$ for $r \le 2$.
+\lemma signedPow-cut-lin {r : Real} {r>1 : (1 : Real) < r} (r<=2 : r <= 2) {a : Real} {a>0 : (0 : Real) < a} {t : Real}
+  : RealAbGroup.abs (signedPow-cut r>1 a>0 t) <= rpow-pos a a>0 (r - 2) * RealAbGroup.abs t
+  => real-cases {RealAbGroup.abs t} {a}
+      (\lam t<a => =_<= (pmap RealAbGroup.abs (signedPow-cut-in (<=-less t<a)) *> RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (<=-less rpow-pos>0))))
+      (\lam a<=t => =_<= (pmap RealAbGroup.abs (signedPow-cut-ge a<=t) *> signedPow-abs *> signedPow.pow-split (a>0 <∘l a<=t))
+                     <=∘ <=_*_positive-left (signedPow-cut-bound.rpow-pos-antitone (linarith : r - 2 <= 0) a<=t) RealAbGroup.abs>=0)
+
+-- | $|\varphi_r(t)| \le (R \vee 0)^{r-1}$ for $|t| \le R$.
+\lemma signedPow-local-bound {r : Real} {r>1 : (1 : Real) < r} {R t : Real} (tR : RealAbGroup.abs t <= R)
+  : RealAbGroup.abs (signedPow r>1 t) <= rpow (R ∨ 0) join-right (r - 1) (sub1>0 r>1)
+  => =_<= signedPow-abs <=∘ rpow-mono (tR <=∘ join-left)
+
+-- | $\varphi_r$ is a cover map.
+\lemma signedPow-cover {r : Real} (r>1 : (1 : Real) < r) : CoverMap RealNormed RealNormed (signedPow r>1)
+  => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple
+      (rpow-coverMap (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const 0)) (\lam _ => join-right) (sub1>0 r>1))
+      (negative-uniform {RealNormed} CoverMap.∘ rpow-coverMap (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (negative-uniform {RealNormed}) (CoverMap.const 0)) (\lam _ => join-right) (sub1>0 r>1))
+
+-- | {clampSym} is a cover map.
+\lemma clampSym-cover (a : Real) : CoverMap RealNormed RealNormed (clampSym a)
+  => real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const a)) (CoverMap.const (negative a))
+
+-- | $\varphi_{r,a}$ is a cover map.
+\lemma signedPow-cut-cover {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a) : CoverMap RealNormed RealNormed (signedPow-cut r>1 a>0)
+  => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple
+      (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (signedPow-cover r>1) (negative-uniform {RealNormed} CoverMap.∘ signedPow-cover r>1 CoverMap.∘ clampSym-cover a))
+      (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (rpow-pos a a>0 (r - 2))) (clampSym-cover a))

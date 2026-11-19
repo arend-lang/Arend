@@ -1,0 +1,181 @@
+{- | Inequalities for real powers used by the pointwise inequalities of the functional calculus.
+
+  * {abs-rpow-two}: $|x|^2 = x x$.
+  * {rpow-superadd}: $a^p + b^p \le (a + b)^p$ for $a, b \ge 0$ and $p \ge 1$.
+  * {rpow-lip}: $|u^p - v^p| \le p M^{p-1} |u - v|$ for $0 \le u, v \le M$ and $p \ge 1$.
+  * {absPow-tangent}: $|x|^p + p \varphi_p(x) (y - x) \le |y|^p$ for $p > 1$.
+  * {absPow-unif-deriv}: $x \mapsto |x|^p$ is uniformly differentiable on $[-R,R]$ with derivative $p \varphi_p$.
+    The tangent inequalities at `x` and at `y` give $0 \le F(y) - F(x) - F'(x)(y - x) \le (F'(y) - F'(x))(y - x)$,
+    so this follows from the uniform continuity of $\varphi_p$ on $[-R,R]$.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Analysis.Calculus.Convex
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.SignedPow
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup.Real
+\import Topology.TopRing.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Arith.Rat
+\import Logic
+\import Logic.Meta
+
+-- | $|x|^2 = x x$.
+\lemma abs-rpow-two {x : Real} {p : (0 : Real) < 2} : rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 2 p = x * x
+  => rpow-nat {_} {_} {2} *> equation.cRing *> RealField.abs-square
+
+-- | Superadditivity: $a^p + b^p \le (a + b)^p$ for $a, b \ge 0$ and $p \ge 1$.
+\lemma rpow-superadd {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {a b : Real} {a>=0 : (0 : Real) <= a} {b>=0 : (0 : Real) <= b} {ab>=0 : (0 : Real) <= a + b}
+  : rpow a a>=0 p p>0 + rpow b b>=0 p p>0 <= rpow (a + b) ab>=0 p p>0
+  => \let F (x : Real) => rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0
+     \in \have | ea : rpow a a>=0 p p>0 = F a => rpow-ext (inv (RealAbGroup.abs-ofPos a>=0)) idp
+               | eb : rpow b b>=0 p p>0 = F b => rpow-ext (inv (RealAbGroup.abs-ofPos b>=0)) idp
+               | eab : F (a + b) = rpow (a + b) ab>=0 p p>0 => rpow-ext (RealAbGroup.abs-ofPos ab>=0) idp
+               | F0 : F 0 = 0 => rpow-ext {_} {_} RealAbGroup.abs_zro {RealAbGroup.abs>=0} {<=-refl} idp {p>0} {p>0} *> zero-rpow {<=-refl} {p} {p>0}
+     \in =_<= (pmap2 (+) ea eb) <=∘ convex-superadd (\lam {u} {v} _ _ => abs-rpow-convex {p} {p>0} p>=1 {u} {v} () ()) F0 a>=0 b>=0 <=∘ =_<= eab
+
+-- | Lipschitz bound: $|u^p - v^p| \le p M^{p-1} |u - v|$ for $0 \le u, v \le M$ and $p \ge 1$.
+\lemma rpow-lip {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {M : Real} (M>0 : (0 : Real) < M)
+                {u v : Real} {u>=0 : (0 : Real) <= u} {v>=0 : (0 : Real) <= v} (u<=M : u <= M) (v<=M : v <= M)
+  : RealAbGroup.abs (rpow u u>=0 p p>0 - rpow v v>=0 p p>0) <= p * rpow-pos M M>0 (p - 1) * RealAbGroup.abs (u - v)
+  => RealField.abs-univ (diff p>=1 M>0 u<=M) (diff p>=1 M>0 v<=M <=∘ =_<= (pmap (_ *) RealAbGroup.abs_-))
+  \where {
+    \lemma K>=0 {p : Real} (p>=1 : (1 : Real) <= p) {M : Real} {M>0 : (0 : Real) < M} {w : Real} : (0 : Real) <= p * rpow-pos M M>0 (p - 1) * RealAbGroup.abs w
+      => RealField.<=_*_positive_positive (RealField.<=_*_positive_positive (linarith : (0 : Real) <= p) (<=-less rpow-pos>0)) RealAbGroup.abs>=0
+
+    -- | $v^p - u^p \le p M^{p-1} |v - u|$ for $0 < u, v$ and $v \le M$.
+    \lemma diff-pos {p : Real} (p>=1 : (1 : Real) <= p) {M : Real} (M>0 : (0 : Real) < M) {u v : Real} {u>0 : (0 : Real) < u} {v>0 : (0 : Real) < v} (v<=M : v <= M)
+      : rpow-pos v v>0 p - rpow-pos u u>0 p <= p * rpow-pos M M>0 (p - 1) * RealAbGroup.abs (v - u)
+      => \let | V => rpow-pos v v>0 (p - 1)
+              | MV => rpow-pos M M>0 (p - 1)
+         \in \have | t : p * (u * V) <= rpow-pos u u>0 p + (p - 1) * rpow-pos v v>0 p => rpow-pos-tangent p>=1
+                   | e : rpow-pos v v>0 p = v * V => pmap (rpow-pos v v>0) (equation.cRing : p = 1 + (p - 1)) *> rpow-pos_+ *> pmap (`* V) rpow-pos-one
+                   | e2 : p * rpow-pos v v>0 p = p * (v * V) => pmap (p *) e
+                   | e3 : p * V * (v - u) = p * (v * V) - p * (u * V) => equation.cRing
+                   | step : rpow-pos v v>0 p - rpow-pos u u>0 p <= p * V * (v - u) => lin t e2 e3
+                   | pV>=0 : (0 : Real) <= p * V => RealField.<=_*_positive_positive (linarith : (0 : Real) <= p) (<=-less rpow-pos>0)
+                   | pVM : p * V <= p * MV => <=_*_positive-right (linarith : (0 : Real) <= p) (rpow-pos-mono (linarith : (0 : Real) <= p - 1) v<=M)
+             \in step <=∘ signedPow.real-cases {v - u} {0}
+                   (\lam vu<0 => \have | n : p * V * (v - u) <= 0 => <=_*_positive-right pV>=0 (<=-less vu<0) <=∘ =_<= RealField.zro_*-right
+                                       | k => K>=0 p>=1 {M} {M>0} {v - u}
+                                 \in linarith)
+                   (\lam vu>=0 => <=_*_positive-left pVM vu>=0 <=∘ <=_*_positive-right (RealField.<=_*_positive_positive (linarith : (0 : Real) <= p) (<=-less rpow-pos>0)) RealAbGroup.abs>=id)
+
+    \lemma lin {W U A B X p : Real} (t : A <= U + (p - 1) * W) (e2 : p * W = B) (e3 : X = B - A) : W - U <= X
+      => \have e : (p - 1) * W = p * W - W => equation.cRing
+         \in linarith
+
+    -- | $v^p - u^p \le p M^{p-1} |v - u|$ for $0 \le u, v \le M$.
+    \lemma diff {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {M : Real} (M>0 : (0 : Real) < M)
+                {u v : Real} {u>=0 : (0 : Real) <= u} {v>=0 : (0 : Real) <= v} (v<=M : v <= M)
+      : rpow v v>=0 p p>0 - rpow u u>=0 p p>0 <= p * rpow-pos M M>0 (p - 1) * RealAbGroup.abs (v - u)
+      => \have k => K>=0 p>=1 {M} {M>0} {v - u}
+         \in signedPow.real-cases {0} {u}
+          (\lam u>0 => signedPow.real-cases {0} {v}
+              (\lam v>0 => =_<= (pmap2 (-) (rpow-pos-eq v>0) (rpow-pos-eq u>0)) <=∘ diff-pos p>=1 M>0 v<=M)
+              (\lam v<=0 => \have | v=0 : v = 0 => <=-antisymmetric v<=0 v>=0
+                                  | r0 : rpow v v>=0 p p>0 = 0 => signedPow.rpow-zero-ext v=0
+                                  | ru => rpow>=0 {u} {u>=0} {p} {p>0}
+                            \in linarith))
+          (\lam u<=0 => \have | u=0 : u = 0 => <=-antisymmetric u<=0 u>=0
+                              | r0 : rpow u u>=0 p p>0 = 0 => signedPow.rpow-zero-ext u=0
+                              | lb : rpow v v>=0 p p>0 <= rpow-pos M M>0 (p - 1) * v => rpow-lin-bound p>=1 M>0 v<=M
+                              | av : RealAbGroup.abs (v - u) = v => pmap RealAbGroup.abs (pmap (v -) u=0 *> RealAbGroup.minus_zro) *> RealAbGroup.abs-ofPos v>=0
+                              | mv>=0 : (0 : Real) <= (p - 1) * (rpow-pos M M>0 (p - 1) * v) => RealField.<=_*_positive_positive (linarith : (0 : Real) <= p - 1) (RealField.<=_*_positive_positive (<=-less rpow-pos>0) v>=0)
+                              | e : p * rpow-pos M M>0 (p - 1) * RealAbGroup.abs (v - u) = (p - 1) * (rpow-pos M M>0 (p - 1) * v) + rpow-pos M M>0 (p - 1) * v => rewrite av equation.cRing
+                        \in linarith)
+  }
+
+-- | The tangent line at `x > 0`: $x^p + p x^{p-1} (a - x) \le a^p$ for $a \ge 0$ and $p \ge 1$.
+\lemma rpow-pos-tangent' {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {x : Real} (x>0 : (0 : Real) < x) {a : Real} (a>=0 : (0 : Real) <= a)
+  : rpow-pos x x>0 p + p * rpow-pos x x>0 (p - 1) * (a - x) <= rpow a a>=0 p p>0
+  => \have | e : rpow-pos x x>0 p = x * rpow-pos x x>0 (p - 1) => pmap (rpow-pos x x>0) (equation.cRing : p = 1 + (p - 1)) *> rpow-pos_+ *> pmap (`* _) rpow-pos-one
+           | Xp>0 => rpow-pos>0 {x} {x>0} {p}
+     \in signedPow.real-cases {0} {a}
+          (\lam a>0 => lin (rpow-pos-tangent {a} {x} {a>0} {x>0} p>=1) e <=∘ =_<= (inv (rpow-pos-eq {a} {a>=0} a>0 {p} {p>0})))
+          (\lam a<=0 => \have | a=0 : a = 0 => <=-antisymmetric a<=0 a>=0
+                              | r0 : rpow a a>=0 p p>0 = 0 => signedPow.rpow-zero-ext a=0
+                              | e2 : p * rpow-pos x x>0 (p - 1) * (a - x) = negative (p * rpow-pos x x>0 p) => rewrite (a=0, e) equation.cRing
+                              | e3 : (p - 1) * rpow-pos x x>0 p = p * rpow-pos x x>0 p - rpow-pos x x>0 p => equation.cRing
+                              | m : (0 : Real) <= (p - 1) * rpow-pos x x>0 p => RealField.<=_*_positive_positive (linarith : (0 : Real) <= p - 1) (<=-less Xp>0)
+                        \in linarith)
+  \where
+    \lemma lin {A X x a p T : Real} (t : p * (a * X) <= T + (p - 1) * A) (e : A = x * X) : A + p * X * (a - x) <= T
+      => \have | e1 : p * X * (a - x) = p * (a * X) - p * (x * X) => equation.cRing
+               | e2 : (p - 1) * A = p * (x * X) - x * X => rewrite e equation.cRing
+         \in linarith
+
+-- | The tangent inequality $|x|^p + p \varphi_p(x) (y - x) \le |y|^p$ for $p > 1$.
+\lemma absPow-tangent {p : Real} {p>0 : (0 : Real) < p} (p>1 : (1 : Real) < p) (x y : Real)
+  : rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 + p * signedPow p>1 x * (y - x) <= rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 p p>0
+  => \have | p>=1 : (1 : Real) <= p => <=-less p>1
+           | pp>=0 : (0 : Real) <= p => <=-less p>0
+     \in signedPow.real-cases {0} {x}
+      (\lam x>0 => \have | ex : rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 = rpow-pos x x>0 p => rpow-ext {_} {_} (RealAbGroup.abs-ofPos (<=-less x>0)) {RealAbGroup.abs>=0} {<=-less x>0} idp {p>0} {p>0} *> rpow-pos-eq {x} {<=-less x>0} x>0 {p} {p>0}
+                         | ephi : signedPow p>1 x = rpow-pos x x>0 (p - 1) => signedPow.nonneg (<=-less x>0) *> rpow-pos-eq x>0
+                         | c>=0 : (0 : Real) <= p * rpow-pos x x>0 (p - 1) => RealField.<=_*_positive_positive pp>=0 (<=-less rpow-pos>0)
+                         | m : p * rpow-pos x x>0 (p - 1) * (y - x) <= p * rpow-pos x x>0 (p - 1) * (RealAbGroup.abs y - x) => <=_*_positive-right c>=0 (<=_+ RealAbGroup.abs>=id <=-refl)
+                   \in =_<= (pmap2 (+) ex (pmap (\lam t => p * t * (y - x)) ephi)) <=∘ <=_+ <=-refl m <=∘ rpow-pos-tangent' p>=1 x>0 RealAbGroup.abs>=0)
+      (\lam x<=0 => signedPow.real-cases {x} {0}
+          (\lam x<0 => \have | x'>0 : (0 : Real) < negative x => linarith
+                             | ex : rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 = rpow-pos (negative x) x'>0 p => rpow-ext {_} {_} (RealAbGroup.abs-ofNeg (<=-less x<0)) {RealAbGroup.abs>=0} {<=-less x'>0} idp {p>0} {p>0} *> rpow-pos-eq {negative x} {<=-less x'>0} x'>0 {p} {p>0}
+                             | ephi : signedPow p>1 x = negative (rpow-pos (negative x) x'>0 (p - 1)) => signedPow.nonpos (<=-less x<0) {<=-less x'>0} *> pmap negative (rpow-pos-eq x'>0)
+                             | c>=0 : (0 : Real) <= p * rpow-pos (negative x) x'>0 (p - 1) => RealField.<=_*_positive_positive pp>=0 (<=-less rpow-pos>0)
+                             | e : p * negative (rpow-pos (negative x) x'>0 (p - 1)) * (y - x) = p * rpow-pos (negative x) x'>0 (p - 1) * (negative y - negative x) => equation.cRing
+                             | m : p * rpow-pos (negative x) x'>0 (p - 1) * (negative y - negative x) <= p * rpow-pos (negative x) x'>0 (p - 1) * (RealAbGroup.abs y - negative x)
+                                 => <=_*_positive-right c>=0 (<=_+ (RealAbGroup.abs>=id <=∘ =_<= RealAbGroup.abs_negative) <=-refl)
+                       \in =_<= (pmap2 (+) ex (pmap (\lam t => p * t * (y - x)) ephi *> e)) <=∘ <=_+ <=-refl m <=∘ rpow-pos-tangent' p>=1 x'>0 RealAbGroup.abs>=0)
+          (\lam x>=0 => \have | x=0 : x = 0 => <=-antisymmetric x<=0 x>=0
+                              | ex : rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 = 0 => signedPow.rpow-zero-ext (pmap RealAbGroup.abs x=0 *> RealAbGroup.abs_zro)
+                              | ephi : signedPow p>1 x = 0 => signedPow.nonneg x>=0 *> signedPow.rpow-zero-ext x=0
+                              | r>=0 : (0 : Real) <= rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 p p>0 => rpow>=0
+                        \in =_<= (pmap2 (+) ex (pmap (\lam t => p * t * (y - x)) ephi *> equation.cRing) *> zro-left) <=∘ r>=0))
+
+{- | Uniform differentiability of $F(x) = |x|^p$ on $[-R,R]$ for $p > 1$:
+ -   $|F(y) - F(x) - p \varphi_p(x) (y - x)| \le \varepsilon |y - x|$ whenever $|y - x| < \delta$.
+ -}
+\lemma absPow-unif-deriv {p : Real} {p>0 : (0 : Real) < p} (p>1 : (1 : Real) < p) {R : Real} (R>=0 : (0 : Real) <= R) {eps : Rat} (eps>0 : RatField.zro RatField.< eps)
+  : ∃ (delta : Rat) (RatField.zro RatField.< delta) ∀ {x y : Real} (RealAbGroup.abs x <= R) (RealAbGroup.abs y <= R) (RealAbGroup.abs (y - x) < Real.fromRat delta)
+      (RealAbGroup.abs (rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 p p>0 - rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 - p * signedPow p>1 x * (y - x))
+        <= Real.fromRat eps * RealAbGroup.abs (y - x))
+  => \case p.U-inh \with {
+    | inP (P,pP) =>
+      \have | p<P : p < Real.fromRat P => real_<_U.2 pP
+             | P>0 : RatField.zro RatField.< P => rat_real_<.2 (p>0 <∘ p<P)
+             | e'>0 : RatField.zro RatField.< eps RatField.* RatField.finv P => RatField.<_*_positive_positive eps>0 (RatField.finv>0 P>0)
+             | Pe : Real.fromRat P * Real.fromRat (eps RatField.* RatField.finv P) = Real.fromRat eps
+                 => RealField.*-rat *> pmap Real.fromRat (equation.cRing {RatField.finv-right (RatField.>_/= P>0)} : P RatField.* (eps RatField.* RatField.finv P) = eps)
+             | g : CoverMap (IntervalSpace (negative R) R) RealNormed (\lam z => signedPow p>1 z.1)
+                 => signedPow-cover p>1 CoverMap.∘ intervalInc (negative R) R
+      \in \case interval-uniform (linarith : negative R <= R) g e'>0 \with {
+        | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} xR yR d =>
+            \have | inI {z : Real} (zR : RealAbGroup.abs z <= R) : ClosedInterval (negative R) R z
+                       => (linarith (RealAbGroup.abs>=neg {z}), RealAbGroup.abs>=id <=∘ zR)
+                   | u<= : RealAbGroup.abs (signedPow p>1 y - signedPow p>1 x) <= Real.fromRat (eps RatField.* RatField.finv P) => hd {x, inI xR} {y, inI yR} d
+                   | t1 => absPow-tangent p>1 x y
+                   | t2 => absPow-tangent p>1 y x
+                   | D>=0 : (0 : Real) <= rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 p p>0 - rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 - p * signedPow p>1 x * (y - x)
+                       => linarith
+                   | e1 : p * signedPow p>1 y * (x - y) = negative (p * signedPow p>1 y * (y - x)) => equation.cRing
+                   | e2 : p * signedPow p>1 y * (y - x) - p * signedPow p>1 x * (y - x) = p * ((signedPow p>1 y - signedPow p>1 x) * (y - x)) => equation.cRing
+                   | uv : (signedPow p>1 y - signedPow p>1 x) * (y - x) <= Real.fromRat (eps RatField.* RatField.finv P) * RealAbGroup.abs (y - x)
+                       => RealAbGroup.abs>=id <=∘ =_<= RealField.abs_* <=∘ <=_*_positive-left u<= RealAbGroup.abs>=0
+                   | k>=0 : (0 : Real) <= Real.fromRat (eps RatField.* RatField.finv P) * RealAbGroup.abs (y - x)
+                       => RealField.<=_*_positive_positive (rat_real_<=.1 (RatField.<=-less e'>0)) RealAbGroup.abs>=0
+                   | m : p * ((signedPow p>1 y - signedPow p>1 x) * (y - x)) <= Real.fromRat eps * RealAbGroup.abs (y - x)
+                       => <=_*_positive-right (<=-less p>0) uv <=∘ <=_*_positive-left (<=-less p<P) k>=0 <=∘ =_<= (inv *-assoc *> pmap (`* _) Pe)
+            \in =_<= (RealAbGroup.abs-ofPos D>=0) <=∘ (linarith : _ <= p * ((signedPow p>1 y - signedPow p>1 x) * (y - x))) <=∘ m)
+      }
+  }

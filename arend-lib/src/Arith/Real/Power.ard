@@ -4,6 +4,9 @@
   For `x ≥ 0` and `a > 0`, {rpow} is the extension of `x ↦ x^a` from `(0,∞)` to `[0,∞)` along the dense inclusion.
 
   * {rpow-mono}: `x ↦ x^a` is monotone on `[0,∞)`.
+  * {rpow-coverMap}: `x ↦ f(x)^a` is a cover map for a non-negative cover map `f`.
+  * {rpow-lin-bound}: $x^p \le R^{p-1} x$ for $0 \le x \le R$ and $p \ge 1$.
+  * {rpow-interp}: the interpolation bound $x^s \le \max(x^p, x^r)$ for $0 < p <= s <= r$ and $x >= 0$.
   * {rpow-pos-tangent}: the tangent line inequality `p x z^{p-1} <= x^p + (p - 1) z^p` for `p ≥ 1`.
   * {rpow-convex}, {abs-rpow-convex}: `x ↦ x^p` is convex on `[0,∞)` and `x ↦ |x|^p` is convex on `ℝ` for `p ≥ 1`.
 -}
@@ -189,6 +192,52 @@
   \where
     \lemma joinMap2 : CoverMap (ProductCoverSpace NonNegSpace NonNegSpace) NonNegSpace (\lam s => (s.1.1 ∨ s.2.1, s.1.2 <=∘ join-left))
       => CoverTransfer-univ _ __.1 (real-join-uniform CoverMap.∘ ProductCoverSpace.prod (CoverTransfer-map __.1) (CoverTransfer-map __.1))
+
+-- | `x ↦ f(x)^a` is a cover map whenever `f` is a non-negative cover map.
+\lemma rpow-coverMap {X : CoverSpace} (f : CoverMap X RealNormed) (f>=0 : \Pi (x : X) -> (0 : Real) <= f x) {a : Real} (a>0 : (0 : Real) < a)
+  : CoverMap X RealNormed (\lam x => rpow (f x) (f>=0 x) a a>0)
+  => rpow-cover a>0 CoverMap.∘ CoverTransfer-univ {X} {RealNormed} {Set.Total NonNeg} (\lam x => (f x, f>=0 x)) __.1 f
+
+-- | The linear bound $x^p \le R^{p-1} x$ for $0 \le x \le R$ and $p \ge 1$.
+\lemma rpow-lin-bound {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {R : Real} (R>0 : (0 : Real) < R)
+                      {x : Real} {x>=0 : (0 : Real) <= x} (x<=R : x <= R)
+  : rpow x x>=0 p p>0 <= rpow-pos R R>0 (p - 1) * x
+  => =_<= (rpow-ext (inv $ RealAbGroup.meet_<= x<=R) idp)
+      <=∘ dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover p>0 CoverMap.∘ meetMap R>0)
+            (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (rpow-pos R R>0 (p - 1))) (CoverTransfer-map __.1 CoverMap.∘ meetMap R>0))
+            (\lam y => \have yR>0 : (0 : Real) < y.1 ∧ R => transport (__ < _) (<=-antisymmetric meet-left (meet-univ <=-refl <=-refl)) (BiorderedLattice.<_meet-monotone y.2 R>0)
+                       \in =_<= (rpow-pos-eq yR>0 *> rpow-pos-ext idp *> pmap (rpow-pos _ yR>0) (equation.cRing : p = (p - 1) + 1) *> rpow-pos_+ *> pmap (_ *) rpow-pos-one)
+                           <=∘ RealField.<=_*_positive-left (rpow-pos-mono (linarith : (0 : Real) <= p - 1) meet-right) (<=-less yR>0)) (x,x>=0)
+      <=∘ =_<= (pmap (_ *) (RealAbGroup.meet_<= x<=R))
+  \where
+    \lemma meetMap {R : Real} (R>0 : (0 : Real) < R) : CoverMap NonNegSpace NonNegSpace (\lam x => (x.1 ∧ R, meet-univ x.2 (<=-less R>0)))
+      => CoverTransfer-univ _ __.1 (real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverTransfer-map __.1) (CoverMap.const R))
+
+-- | Interpolation: $x^s \le \max(x^p, x^r)$ for $p \le s \le r$.
+\lemma rpow-pos-interp {x : Real} {x>0 : (0 : Real) < x} {p s r : Real} (p<=s : p <= s) (s<=r : s <= r)
+  : rpow-pos x x>0 s <= rpow-pos x x>0 p ∨ rpow-pos x x>0 r
+  => \lam c => \have le {q : Real} (h : s * log x x>0 <= q * log x x>0) : rpow-pos x x>0 s <= rpow-pos x x>0 q
+                       => =_<= rpow-pos-def <=∘ Real-exp-mono h <=∘ =_<= (inv rpow-pos-def)
+               \in le {p} (\lam pL<sL => le {r} (\lam rL<sL => contra p<=s s<=r pL<sL rL<sL) (join-right <∘r c)) (join-left <∘r c)
+  \where
+    \lemma contra {p s r L : Real} (p<=s : p <= s) (s<=r : s <= r) (pL<sL : p * L < s * L) (rL<sL : r * L < s * L) : Empty
+      => \have | eA : (s - p) * L = s * L - p * L => equation.cRing
+               | eB : (s - r) * L = s * L - r * L => equation.cRing
+               | A>0 : (0 : Real) < (s - p) * L => linarith
+               | B>0 : (0 : Real) < (s - r) * L => linarith
+               | AB>0 => RealField.<_*_positive_positive A>0 B>0
+               | uv>=0 => RealField.<=_*_positive_positive (linarith : (0 : Real) <= s - p) (linarith : (0 : Real) <= r - s)
+               | m>=0 => RealField.<=_*_positive_positive uv>=0 (RealField.square_>=0 {L})
+               | e : (s - p) * L * ((s - r) * L) = negative ((s - p) * (r - s) * (L * L)) => equation.cRing
+         \in linarith
+
+-- | Interpolation: $x^s \le \max(x^p, x^r)$ on `[0,∞)` for $0 < p \le s \le r$.
+\lemma rpow-interp {x : Real} {x>=0 : (0 : Real) <= x} {p s r : Real} {p>0 : (0 : Real) < p} {s>0 : (0 : Real) < s} {r>0 : (0 : Real) < r}
+                   (p<=s : p <= s) (s<=r : s <= r)
+  : rpow x x>=0 s s>0 <= rpow x x>=0 p p>0 ∨ rpow x x>=0 r r>0
+  => dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover s>0)
+      (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (rpow-cover p>0) (rpow-cover r>0))
+      (\lam y => =_<= (rpow-pos-eq y.2) <=∘ rpow-pos-interp p<=s s<=r <=∘ =_<= (inv (pmap2 (∨) (rpow-pos-eq y.2) (rpow-pos-eq y.2)))) (x,x>=0)
 
 -- | The tangent line of `x ↦ x^p` at `z` for `p ≥ 1`: $p x z^{p-1} \le x^p + (p - 1) z^p$.
 \lemma rpow-pos-tangent {x z : Real} {x>0 : (0 : Real) < x} {z>0 : (0 : Real) < z} {p : Real} (p>=1 : (1 : Real) <= p)
