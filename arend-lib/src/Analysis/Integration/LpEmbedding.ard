@@ -1,0 +1,275 @@
+{- | The embedding of `Lᵖ` into the space `L⁰` of measurable elements.
+
+  * {measGauge-chebyshev}: the Chebyshev bound $d_h(f, 0) \le I(\tau_\varepsilon h) + \varepsilon^{1-p} \|f\|_p^p$ (Lemma `lem:cheb`).
+  * {lpToL0}: the extension $j_p \colon \mathrm L^p \to \mathrm L^0$ of the identity of `L` (Lemma `lem:cheb`).
+  * {psi}, {psiRoot}: $\Psi_h(f) = \||f| \wedge h\|_p^p$ and its `p`-th root; {psiRoot-lip}, {psi-lip}, {psi<=pnormPow}, {psi-abs}
+    are the estimates of Lemma `lem:psi`.
+  * {lpPsiRoot}, {lpPsi}, {l0Psi}: the continuous extensions of $\Psi_h$ to `Lᵖ` and to `L⁰`; {psi-agree}: they agree along $j_p$.
+  * {lpPsiRoot<=lnorm}, {lnorm<=lpPsiRoot}: $\|F\|_p = \sup_h \Psi_h(F)^{1/p}$ (Lemma `lem:psi`).
+  * {lpToL0-inj}, {lp-fatou}: $j_p$ is injective, and the Fatou property (Theorem `thm:embed`).
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Inequalities
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.L0
+\import Analysis.Integration.Lp
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.UpperReal
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Directed
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.NormFamily
+\import Topology.TopAbGroup.Product
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace
+\open LatticeAbGroup
+\open MeetSemilattice
+
+-- | Chebyshev bound: $I(|f| \wedge h) \le I(\tau_\varepsilon h) + \varepsilon^{1-p} \|f\|_p^p$.
+\lemma measGauge-chebyshev {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {eps : Rat} (eps>0 : RatField.zro RatField.< eps) {h f : L}
+  : measGauge h f <= L.integral (L.truncAt eps h) + rpow-pos (Real.fromRat eps) (rat_real_<.1 eps>0) ((1 : Real) - p) * pnormPow p p>=1 f
+  => L.integral-mono (meet-chebyshev p>=1 eps>0) <=∘ =_<= (L.integral_+ *> pmap (_ +) integral-rscale)
+
+-- | The extension $j_p \colon \mathrm L^p \to \mathrm L^0$ of the identity of `L`.
+\func lpToL0 {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) : TopAbGroupMap (LpSpace L p p>=1) (L0Space L)
+  => dense-topAb-lift (lpInc p p>=1) (lpInc.isDense, (lpInc p p>=1).embedding->topEmbedding $ (lpInc p p>=1).embedding->coverEmbedding ((lpInc p p>=1).dense->uniformEmbedding lpInc.isDense).2) (pre {L} {p} {p>=1})
+  \where {
+    -- | $j_p$ on `L`.
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : lpToL0 p p>=1 (lpInc p p>=1 f) = pointCF {L0PreSpace L} f
+      => dense-lift-char {_} {_} {_} {lpInc p p>=1} completion.isDenseEmbedding {pre {L} {p} {p>=1}} f
+
+    -- | The identity `Lᵖ → L⁰` on `L`.
+    \func pre {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : TopAbGroupMap (LpPreSpace L p p>=1) (L0Space L) \cowith
+      | func f => completion-topAb {L0PreSpace L} f
+      | func-+ => completion-topAb.func-+
+      | func-cont Uo => open-transfer p>=1 (completion-topAb.func-cont Uo)
+
+    -- | Every open set of the measure topology is open for $\|\cdot\|_p$.
+    \lemma open-transfer {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {U : Set L} (Uo : isOpen {L0PreSpace L} U) : isOpen {LpPreSpace L p p>=1} U
+      => (dist_open {LpPreSpace L p p>=1}).2 \lam {x} Ux => \case Uo Ux \with {
+        | inP (j,eta,eta>0,g) => \case modulus p>=1 j.2 eta>0 \with {
+          | inP (d,d>0,m) => inP (d, d>0, \lam {y} xy<d => g $ m (x - y) $ (real_<_U {d} {pnorm p p>=1 (x - y)}).2 $ transport (\lam e => ExUpperReal.U {e} d) ((LpPreSpace L p p>=1).norm-dist {x} {y}) xy<d)
+        }
+      }
+
+    -- | Uniform continuity of the identity `Lᵖ → L⁰` at `0`.
+    \lemma modulus {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) {eta : Real} (eta>0 : (0 : Real) < eta)
+      : ∃ (d : Rat) (RatField.zro RatField.< d) ∀ (z : L) (pnorm p p>=1 z < Real.fromRat d -> measGauge h z < eta)
+      => \case real_<-char.1 eta>0 \with {
+        | inP (r,r>0,r<eta) => \case L.integral-trunc-small h>=0 {r RatField.* ratio 1 2} (linarith (rat_real_<.2 r>0)) \with {
+          | inP (e,e>0,small) =>
+            \let | c => rpow-pos (Real.fromRat e) (rat_real_<.1 e>0) ((1 : Real) - p)
+                 | c>0 : (0 : Real) < c => rpow-pos>0
+                 | T => Real.fromRat (r RatField.* ratio 1 2) * RealField.pinv c c>0
+                 | T>0 : (0 : Real) < T => RealField.<_*_positive_positive (rat_real_<.1 (linarith (rat_real_<.2 r>0))) (RealField.pinv>0 c>0)
+                 | p>0 => fpow.one>0 p>=1
+                 | delta => rpow T (<=-less T>0) (RealField.pinv p p>0) (RealField.pinv>0 p>0)
+                 | delta>0 : (0 : Real) < delta => transportInv ((0 : Real) <) (rpow-pos-eq T>0) rpow-pos>0
+            \in \case real_<-char.1 delta>0 \with {
+              | inP (d,d>0,d<delta) => inP (d, rat_real_<.2 d>0, \lam z zd =>
+                \have | le : pnormPow p p>=1 z <= T => (pnorm<=-iff {L} {p} {p>=1} {z} {delta} {<=-less delta>0}).1 (<=-less (zd <∘ d<delta)) <=∘ =_<= root-pow
+                      | m : c * pnormPow p p>=1 z <= c * T => RealField.<=_*_positive-right (<=-less c>0) le
+                      | cT : c * T = Real.fromRat (r RatField.* ratio 1 2) => equation.cRing {RealField.pinv-right c>0}
+                      | rr : Real.fromRat (r RatField.* ratio 1 2) + Real.fromRat (r RatField.* ratio 1 2) = Real.fromRat r => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+                      | ch => measGauge-chebyshev p>=1 e>0 {h} {z}
+                \in linarith)
+            }
+        }
+      }
+
+    \lemma root-pow {x : Real} {x>=0 : (0 : Real) <= x} {p : Real} {p>0 : (0 : Real) < p} {q : (0 : Real) <= rpow x x>=0 (RealField.pinv p p>0) (RealField.pinv>0 p>0)}
+      : rpow (rpow x x>=0 (RealField.pinv p p>0) (RealField.pinv>0 p>0)) q p p>0 = x
+      => \have pp>0 : (0 : Real) < RealField.pinv p p>0 * p => RealField.<_*_positive_positive (RealField.pinv>0 p>0) p>0
+         \in rpow-rpow {x} {x>=0} {RealField.pinv p p>0} {p} {RealField.pinv>0 p>0} {p>0} {q} {pp>0}
+              *> rpow-ext {_} {_} idp {x>=0} {x>=0} {_} {1} (RealField.pinv-left p>0) {pp>0} {RealField.zro<ide} *> rpow-one {_} {x>=0} {RealField.zro<ide}
+  }
+
+-- | $\Psi_h(f) = \||f| \wedge h\|_p^p$.
+\func psi {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (h f : L) : Real
+  => pnormPow p p>=1 (abs f ∧ h)
+
+-- | $\Psi_h(f)^{1/p} = \||f| \wedge h\|_p$.
+\func psiRoot {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (h f : L) : Real
+  => pnorm p p>=1 (abs f ∧ h)
+
+-- | Lemma `lem:psi`(1): $|\Psi_h(f)^{1/p} - \Psi_h(g)^{1/p}| \le \|f - g\|_p$.
+\lemma psiRoot-lip {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) {f g : L}
+  : RealAbGroup.abs (psiRoot p p>=1 h f - psiRoot p p>=1 h g) <= pnorm p p>=1 (f - g)
+  => \have | a => half p>=1 h>=0 {f} {g}
+           | b => half p>=1 h>=0 {g} {f}
+           | e : pnorm p p>=1 (g - f) = pnorm p p>=1 (f - g) => pmap (pnorm p p>=1) (equation.abGroup : g - f = negative (f - g)) *> pnorm-negative
+     \in RealAbGroup.abs-univ linarith linarith
+  \where
+    \lemma half {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) {f g : L}
+      : psiRoot p p>=1 h f <= psiRoot p p>=1 h g + pnorm p p>=1 (f - g)
+      => =_<= (pmap (pnorm p p>=1) (equation.abGroup : abs f ∧ h = abs g ∧ h + (abs f ∧ h - abs g ∧ h))) <=∘ minkowski p>=1
+          <=∘ <=_+ <=-refl (pnorm-abs-mono (meet-abs-lip h>=0 <=∘ meet-left))
+
+-- | Lemma `lem:psi`(2): $|\Psi_h(f) - \Psi_h(g)| \le p M^{p-1} d_h(f,g)$ for `h` bounded by `M`.
+\lemma psi-lip {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {M : Rat} (M>0 : RatField.zro RatField.< M) {h : L} (h>=0 : L.zro <= h) (hM : L.IsBelow (abs h) M) {f g : L}
+  : RealAbGroup.abs (psi p p>=1 h f - psi p p>=1 h g) <= (p * rpow-pos (Real.fromRat M) (rat_real_<.1 M>0) (p - 1)) * measGauge h (f - g)
+  => \have | u>=0 : L.zro <= abs f ∧ h => meet-univ abs>=0 h>=0
+           | v>=0 : L.zro <= abs g ∧ h => meet-univ abs>=0 h>=0
+           | uM => L.IsBelow_<= (=_<= (abs-ofPos u>=0) <=∘ meet-right <=∘ abs>=id) hM
+           | vM => L.IsBelow_<= (=_<= (abs-ofPos v>=0) <=∘ meet-right <=∘ abs>=id) hM
+           | C>=0 : (0 : Real) <= p * rpow-pos (Real.fromRat M) (rat_real_<.1 M>0) (p - 1) => <=-less (RealField.<_*_positive_positive (fpow.one>0 p>=1) rpow-pos>0)
+           | e : psi p p>=1 h f - psi p p>=1 h g = L.integral (fpow p p>=1 (abs f ∧ h) - fpow p p>=1 (abs g ∧ h)) => inv L.integral-hom.func-minus
+     \in rewrite e $ L.integral_abs <=∘ L.integral-mono (fpow-lip p>=1 M>0 u>=0 v>=0 uM vM) <=∘ =_<= integral-rscale
+          <=∘ RealField.<=_*_positive-right C>=0 (L.integral-mono (meet-abs-lip h>=0))
+
+-- | Lemma `lem:psi`(3): $\Psi_h \le \Psi_{h'}$ for $h \le h'$.
+\lemma psi-mono {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') {f : L}
+  : psi p p>=1 h f <= psi p p>=1 h' f
+  => L.integral-mono $ fpow-abs-mono p>=1 $ =_<= (abs-ofPos (meet-univ abs>=0 h>=0)) <=∘ meet-monotone <=-refl h<=h' <=∘ abs>=id
+
+-- | Lemma `lem:psi`(3): $\Psi_h(f) \le \|f\|_p^p$.
+\lemma psi<=pnormPow {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) {f : L}
+  : psi p p>=1 h f <= pnormPow p p>=1 f
+  => L.integral-mono $ fpow-abs-mono p>=1 $ =_<= (abs-ofPos (meet-univ abs>=0 h>=0)) <=∘ meet-left
+
+-- | Lemma `lem:psi`(3): $\Psi_{|f|}(f) = \|f\|_p^p$.
+\lemma psi-abs {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : psi p p>=1 (abs f) f = pnormPow p p>=1 f
+  => pmap (\lam z => L.integral (fpow p p>=1 z)) meet-idemp *> pmap L.integral fpow-abs
+
+-- | The extension of $\Psi_h^{1/p}$ to `Lᵖ`.
+\func lpPsiRoot {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) : CoverMap (LpSpace L p p>=1) RealNormed
+  => dense-lift (lpInc p p>=1) completion.isDenseEmbedding (pre p>=1 h>=0)
+  \where \protected {
+    \func pre {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) : MetricMap (LpPreSpace L p p>=1) RealNormed (psiRoot p p>=1 h) \cowith
+      | func-dist => rewrite ((LpPreSpace L p p>=1).norm-dist, RealNormed.norm-dist) $ Real.<=-upper.1 (psiRoot-lip p>=1 h>=0)
+
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) {f : L} : lpPsiRoot p p>=1 h>=0 (lpInc p p>=1 f) = psiRoot p p>=1 h f
+      => dense-lift-char {_} {_} {_} {lpInc p p>=1} completion.isDenseEmbedding {pre p>=1 h>=0} f
+
+    \lemma nonneg {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) {F : LpSpace L p p>=1} : (0 : Real) <= lpPsiRoot p p>=1 h>=0 F
+      => dense_<= real-join-uniform (lpInc p p>=1) lpInc.isDense (CoverMap.const (0 : Real)) (lpPsiRoot p p>=1 h>=0) (\lam f => rewrite (char h>=0) pnorm>=0) F
+  }
+
+-- | The extension of $\Psi_h$ to `Lᵖ`.
+\func lpPsi {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) (F : LpSpace L p p>=1) : Real
+  => rpow (lpPsiRoot p p>=1 h>=0 F) (lpPsiRoot.nonneg h>=0) p (fpow.one>0 p>=1)
+  \where \protected {
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) {f : L} : lpPsi p p>=1 h>=0 (lpInc p p>=1 f) = psi p p>=1 h f
+      => rpow-ext (lpPsiRoot.char h>=0) idp *> pnorm-pow
+
+    \lemma cover {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) : CoverMap (LpSpace L p p>=1) RealNormed (lpPsi p p>=1 h>=0)
+      => rpow-coverMap (lpPsiRoot p p>=1 h>=0) (\lam _ => lpPsiRoot.nonneg h>=0) (fpow.one>0 p>=1)
+  }
+
+-- | The extension of $\Psi_h$ to `L⁰`.
+\func l0Psi {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) : CoverMap (L0Space L) RealNormed
+  => dense-lift completion completion.isDenseEmbedding (l0Psi.pre p>=1 h>=0)
+  \where \protected {
+    \lemma pre {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) : UniformMap (L0PreSpace L) RealNormed (psi p p>=1 h)
+      => \case L.trunc-bounded h \with {
+        | inP (M,hM) => NormFamilyTopAbGroup.normAt-lip-uniform {L0PreSpace L} {h,h>=0} (psi p p>=1 h)
+                          \lam x y => psi-lip p>=1 (RatField.zro<ide <∘l RatField.join-right) h>=0 (L.IsBelow-level RatField.join-left hM)
+      }
+
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) {f : L} : l0Psi p p>=1 h>=0 (pointCF {L0PreSpace L} f) = psi p p>=1 h f
+      => dense-lift-char completion.isDenseEmbedding {pre p>=1 h>=0} f
+  }
+
+-- | The extensions of $\Psi_h$ agree along $j_p$.
+\lemma psi-agree {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} {h>=0 : L.zro <= h} {F : LpSpace L p p>=1}
+  : lpPsi p p>=1 h>=0 F = l0Psi p p>=1 h>=0 (lpToL0 p p>=1 F)
+  => dense-lift-unique (lpInc p p>=1) lpInc.isDense (lpPsi.cover h>=0) (l0Psi p p>=1 h>=0 ContMap.∘ lpToL0 p p>=1)
+      (\lam f => lpPsi.char h>=0 *> inv (pmap (l0Psi p p>=1 h>=0) lpToL0.char *> l0Psi.char h>=0)) F
+
+-- | $\Psi_h(F)^{1/p} \le \|F\|_p$.
+\lemma lpPsiRoot<=lnorm {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) {F : LpSpace L p p>=1}
+  : lpPsiRoot p p>=1 h>=0 F <= lnorm {LpSpace L p p>=1} F
+  => dense_<= real-join-uniform (lpInc p p>=1) lpInc.isDense (lpPsiRoot p p>=1 h>=0) lnorm-metric
+      (\lam f => rewrite (lpPsiRoot.char h>=0, lpInc.lnorm-char) (pnorm-abs-mono (=_<= (abs-ofPos (meet-univ abs>=0 h>=0)) <=∘ meet-left))) F
+
+-- | $\|F\|_p \le \Psi_{|f|}(F)^{1/p} + 2 \|F - f\|_p$ for $f \in L$.
+\lemma lnorm<=lpPsiRoot {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} (f : L) {F : LpSpace L p p>=1}
+  : lnorm {LpSpace L p p>=1} F <= lpPsiRoot p p>=1 (abs>=0 {L} {f}) F + (lnorm {LpSpace L p p>=1} (F - lpInc p p>=1 f) + lnorm {LpSpace L p p>=1} (F - lpInc p p>=1 f))
+  => \let | Y => LpSpace L p p>=1
+          | D : CoverMap Y RealNormed => lnorm-metric {Y} CoverMap.∘ subtract-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (lpInc p p>=1 f))
+     \in dense_<= real-join-uniform (lpInc p p>=1) lpInc.isDense lnorm-metric
+          (RealNormed.+-cont ContMap.∘ ProductTopSpace.tuple (lpPsiRoot p p>=1 abs>=0) (RealNormed.+-cont ContMap.∘ ProductTopSpace.tuple D D))
+          (\lam g => \have | ed : lnorm {Y} (lpInc p p>=1 g - lpInc p p>=1 f) = pnorm p p>=1 (g - f) => pmap (lnorm {Y}) (inv (AddGroupHom.func-minus {lpInc p p>=1})) *> lpInc.lnorm-char
+                              | m1 : pnorm p p>=1 g <= pnorm p p>=1 f + pnorm p p>=1 (g - f) => =_<= (pmap (pnorm p p>=1) (equation.abGroup : g = f + (g - f))) <=∘ minkowski p>=1
+                              | m2 => psiRoot-lip.half p>=1 (abs>=0 {L} {f}) {f} {g}
+                              | m3 : pnorm p p>=1 f <= psiRoot p p>=1 (abs f) f => pnorm-abs-mono (=_<= (inv (abs-ofPos abs>=0) *> pmap abs (inv meet-idemp)))
+                              | e : pnorm p p>=1 (f - g) = pnorm p p>=1 (g - f) => pmap (pnorm p p>=1) (equation.abGroup : f - g = negative (g - f)) *> pnorm-negative
+                              | m : pnorm p p>=1 g <= psiRoot p p>=1 (abs f) g + (pnorm p p>=1 (g - f) + pnorm p p>=1 (g - f)) => linarith
+                    \in =_<= lpInc.lnorm-char <=∘ m <=∘ =_<= (inv (pmap2 (+) (lpPsiRoot.char {L} {p} {p>=1} {abs f} abs>=0 {g}) (pmap2 (+) ed ed)))) F
+
+-- | if $\Psi_h(F)^{1/p} \le C$ for every $h \ge 0$, then $\|F\|_p \le C$.
+\lemma lnorm<=-psi {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LpSpace L p p>=1} {C : Real}
+                   (b : \Pi {h : L} (h>=0 : L.zro <= h) -> lpPsiRoot p p>=1 h>=0 F <= C)
+  : lnorm {LpSpace L p p>=1} F <= C
+  => real_<=-eps \lam {d} d>0 => \case lpInc.isDense (OBall-open {LpSpace L p p>=1} {d RatField.* ratio 1 3} {F}) (OBall-center {LpSpace L p p>=1} {d RatField.* ratio 1 3} linarith {F}) \with {
+    | inP (_, inP (f,idp), Bf) =>
+      \have | n : lnorm {LpSpace L p p>=1} (F - lpInc p p>=1 f) < Real.fromRat (d RatField.* ratio 1 3)
+                => (real_<_U {_} {lnorm {LpSpace L p p>=1} (F - lpInc p p>=1 f)}).2 $ transport (\lam e => ExUpperReal.U {e} _) ((LpSpace L p p>=1).norm-dist {F} {lpInc p p>=1 f}) Bf
+            | m => lnorm<=lpPsiRoot {L} {p} {p>=1} f {F}
+            | bf => b {abs f} abs>=0
+            | e : Real.fromRat (d RatField.* ratio 1 3) + Real.fromRat (d RatField.* ratio 1 3) < Real.fromRat d
+                => transportInv (`< _) RealAbGroup.+-rat (rat_real_<.1 linarith)
+      \in usingOnly (n, m, bf, e) linarith
+  }
+
+-- | $j_p$ is injective.
+\lemma lpToL0-inj {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : IsInj (lpToL0 {L} p p>=1)
+  => \lam {F G : LpSpace L p p>=1} q =>
+      \have | jE : lpToL0 p p>=1 (F - G) = 0 => AddGroupHom.func-minus {lpToL0 p p>=1} *> pmap (_ - __) (inv q) *> negative-right
+            | le : lnorm {LpSpace L p p>=1} (F - G) <= (0 : Real) => lnorm<=-psi \lam {h} h>=0 =>
+                rpow-mono-inv {_} {_} {lpPsiRoot.nonneg h>=0} {<=-refl} {p} {fpow.one>0 p>=1} $ =_<=
+                  (psi-agree {L} {p} {p>=1} {h} {h>=0} *> pmap (l0Psi p p>=1 h>=0) (jE *> inv completion-topAb.func-zro) *> l0Psi.char h>=0 *> psi-zro h>=0 *> inv zero-rpow)
+      \in AddGroup.fromZero $ (LpSpace L p p>=1).norm-ext $ Real.=-upper.1 $ <=-antisymmetric le (lnorm>=0 {LpSpace L p p>=1})
+  \where
+    \lemma psi-zro {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) : psi p p>=1 h L.zro = (0 : Real)
+      => pmap (\lam z => L.integral (fpow p p>=1 (z ∧ h))) L.abs_zro *> pmap (\lam z => L.integral (fpow p p>=1 z)) (L.meet_<= h>=0)
+          *> pmap L.integral fpow-zro *> L.integral-hom.func-zro
+
+-- | if $\|F_k\|_p \le C$ and $j_p F_k \to j_p F$ in `L⁰`, then $\|F\|_p \le C$.
+\lemma lp-fatou {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {I : DirectedSet} (F : I -> LpSpace L p p>=1) {F0 : LpSpace L p p>=1} {C : Real}
+                (bd : \Pi (k : I) -> lnorm {LpSpace L p p>=1} (F k) <= C)
+                (lim : (L0Space L).IsLimit (\lam k => lpToL0 p p>=1 (F k)) (lpToL0 p p>=1 F0))
+  : lnorm {LpSpace L p p>=1} F0 <= C
+  => \case I.isInhabitted \with {
+    | inP N =>
+      \have C>=0 : (0 : Real) <= C => lnorm>=0 {LpSpace L p p>=1} <=∘ bd N
+      \in lnorm<=-psi \lam {h} h>=0 =>
+        \let c => rpow C C>=0 p (fpow.one>0 p>=1)
+        \in \have | cl : RealNormed.IsClosed (\lam x => x ∨ c = c)
+                  => equalizer-closed (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const c)) (CoverMap.const c)
+              | lk (k : I) : l0Psi p p>=1 h>=0 (lpToL0 p p>=1 (F k)) <= c
+                  => =_<= (inv psi-agree) <=∘ rpow-mono (lpPsiRoot<=lnorm h>=0 <=∘ bd k)
+              | l : l0Psi p p>=1 h>=0 (lpToL0 p p>=1 F0) ∨ c = c
+                  => RealNormed.closed-limit cl (cont-limit lim (l0Psi p p>=1 h>=0)) {N} \lam _ => RealAbGroup.join_<= (lk _)
+        \in rpow-mono-inv {_} {_} {lpPsiRoot.nonneg h>=0} {C>=0} {p} {fpow.one>0 p>=1} $ =_<= psi-agree <=∘ join-left <=∘ =_<= l
+  }

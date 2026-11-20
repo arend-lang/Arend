@@ -23,9 +23,12 @@
 \import Paths.Meta
 \import Set.Set
 \import Topology.CoverSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
 \import Topology.TopRieszSpace
 \import Topology.TopSpace
+\import Topology.UniformSpace
 
 -- | An abelian group with the topology of a directed family of group seminorms.
 \class NormFamilyTopAbGroup \extends TopAbGroup {
@@ -85,6 +88,20 @@
   \lemma NBall-open {j : NormIndex} {eps : Real} {x : E} : isOpen (NBall j eps x)
     => \lam {y} d => inP (j, NormFamilyArith.gap eps (normAt j (x - y)), NormFamilyArith.diff>0 d, \lam {z} d' => NormFamilyArith.diff-triang normAt-diff d')
 
+  -- | The ball $\{y \mid n_j(y) < \varepsilon\}$ around `0` is open.
+  \lemma normAt-ball-open {j : NormIndex} {eps : Real} : isOpen (\lam y => normAt j y < eps)
+    => transport isOpen (ext \lam y => ext (\lam d => transport (`< eps) (pmap (normAt j) zro-left *> normAt-negative) d,
+                                          \lam d => transportInv (`< eps) (pmap (normAt j) zro-left *> normAt-negative) d)) (NBall-open {_} {j} {eps} {0})
+
+  -- | A real-valued map that is Lipschitz for one of the seminorms is uniformly continuous.
+  \func normAt-lip-uniform {j : NormIndex} {C : Real} (phi : E -> Real)
+    (lip : \Pi (x y : E) -> RealAbGroup.abs ((-) {RealAbGroup} (phi x) (phi y)) RealAbGroup.<= C RealField.* normAt j (x - y))
+    : UniformMap \this RealNormed phi
+    => addGroup-modulus-uniform phi \lam {eps} eps>0 =>
+        inP (_, normAt-ball-open {_} {j} {NormFamilyArith.lipRadius C eps}, transportInv (`< _) normAt-zro (NormFamilyArith.lipRadius>0 eps>0),
+             \lam {x} {y} c => real_<_U.1 $ NormFamilyArith.lip-bound normAt>=0 (lip x y)
+                 (transport (`< _) (pmap (normAt j) (equation.abGroup : y - x = negative (x - y)) *> normAt-negative) c.2))
+
   -- | Every neighbourhood of `0` contains a ball around `0`.
   \lemma neighborhood-char {U : Set E} (Uo : isOpen U) (U0 : U 0) : ∃ (j : NormIndex) (eps : Real) (RealAbGroup.zro < eps) ∀ {y} (normAt j y < eps -> U y)
     => \case Uo U0 \with {
@@ -103,11 +120,8 @@
   | normAt-abs-mono {j : NormIndex} {x y : E} : abs x <= abs y -> normAt j x RealAbGroup.<= normAt j y
   | solid-neighborhood p => \case neighborhood-char' p \with {
     | inP (j,eps,eps>0,f) =>
-      \have ball-open : isOpen (\lam y => normAt j y < eps)
-              => transport isOpen (ext \lam y => ext (\lam d => transport (`< eps) (pmap (normAt j) zro-left *> normAt-negative) d,
-                                                         \lam d => transportInv (`< eps) (pmap (normAt j) zro-left *> normAt-negative) d)) (NBall-open {_} {j} {eps} {0})
-      \in inP (\lam y => normAt j y < eps, \lam d q => normAt-abs-mono q <∘r d,
-               open-char.1 ball-open (transportInv (`< eps) normAt-zro eps>0), \lam {y} d => f d)
+      inP (\lam y => normAt j y < eps, \lam d q => normAt-abs-mono q <∘r d,
+           open-char.1 normAt-ball-open (transportInv (`< eps) normAt-zro eps>0), \lam {y} d => f d)
   }
 }
 
@@ -131,4 +145,21 @@
 
   \lemma diff-triang {a b c eps : Real} (p : c <= a + b) (q : b < gap eps a) : c < eps
     => linarith
+
+  \lemma abs+1>0 {C : Real} : (0 : Real) < RealAbGroup.abs C + 1
+    => \have t => RealAbGroup.abs>=0 {C} \in linarith
+
+  -- | The radius $\varepsilon / (|C| + 1)$.
+  \func lipRadius (C : Real) (eps : Rat) : Real
+    => Real.fromRat eps * RealField.pinv (RealAbGroup.abs C + 1) abs+1>0
+
+  \lemma lipRadius>0 {C : Real} {eps : Rat} (eps>0 : RatField.zro RatField.< eps) : (0 : Real) < lipRadius C eps
+    => RealField.<_*_positive_positive (rat_real_<.1 eps>0) (RealField.pinv>0 abs+1>0)
+
+  \lemma lip-bound {C n a : Real} {eps : Rat} (n>=0 : (0 : Real) <= n) (p : a <= C * n) (q : n < lipRadius C eps) : a < Real.fromRat eps
+    => \have | m1 : C * n <= RealAbGroup.abs C * n => RealField.<=_*_positive-left RealAbGroup.abs>=id n>=0
+             | m2 : RealAbGroup.abs C * n <= RealAbGroup.abs C * lipRadius C eps => RealField.<=_*_positive-right RealAbGroup.abs>=0 (<=-less q)
+             | e : RealAbGroup.abs C * lipRadius C eps + lipRadius C eps = Real.fromRat eps
+                 => equation.cRing {RealField.pinv-left (abs+1>0 {C})}
+       \in linarith
 }
