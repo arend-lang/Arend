@@ -67,6 +67,15 @@
 \lemma clip-cover {E : TopRieszSpace} (s : E) : CoverMap E E (E.clip s)
   => E.join-uniform CoverMap.∘ ProductCoverSpace.tuple (E.meet-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const s)) (CoverMap.const (negative s))
 
+-- | The truncation {TruncRieszSpace.truncAt} at level {r} is a cover map.
+\lemma truncAt-cover {E : TopTruncRieszSpace} (r : Rat) : CoverMap E E (E.truncAt r)
+  => E.*q-right-uniform {r} CoverMap.∘ E.trunc-uniform CoverMap.∘ E.*q-right-uniform {RatField.finv r}
+
+-- | The clamping {TruncRieszSpace.bclip} to `[-r,r]` is a cover map.
+\lemma bclip-cover {E : TopTruncRieszSpace} (r : Rat) : CoverMap E E (E.bclip r)
+  => \let A : CoverMap E E => truncAt-cover r CoverMap.∘ E.abs-uniform
+     \in E.join-uniform CoverMap.∘ ProductCoverSpace.tuple (E.meet-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id A) (negative-uniform {E} CoverMap.∘ A)
+
 -- | If clipping by `s n` eventually fixes every element of a dense set, then $\mathrm{clip}_{s_n}(y) \to y$ for every {y}.
 \lemma clip-limit {E : TopRieszSpace} {S : Set E} (Sd : IsDenseSet S) {I : DirectedSet} (s : I -> E)
                   (ev : \Pi {x : E} -> S x -> ∃ (N : I) ∀ {n} (N <= n -> E.clip (s n) x = x)) (y : E)

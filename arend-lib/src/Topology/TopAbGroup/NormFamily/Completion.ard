@@ -1,0 +1,94 @@
+{- | Seminorms on the completion of a topological abelian group whose topology is given by a directed family of seminorms.
+
+  * {normAt-lip}: $|n_j(x) - n_j(y)| \le n_j(x - y)$.
+  * {normAt-lift}: the extension $\bar n_j$ of $n_j$ to the completion.
+  * {completion-neighborhood}: every neighbourhood of `0` in the completion contains a ball $\{G \mid \bar n_j(G) < \varepsilon\}$.
+  * {completion-limit}: a net converges to `x` if $\bar n_j(f_n - x) \to 0$ for every `j`.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Directed
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.Inverse
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.NormFamily
+\import Topology.TopRieszSpace
+\import Topology.TopRieszSpace.Completion()
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open LatticeAbGroup
+
+-- | $|n_j(x) - n_j(y)| \le n_j(x - y)$.
+\lemma normAt-lip {X : NormFamilyTopAbGroup} {j : X.NormIndex} {x y : X} : RealAbGroup.abs (X.normAt j x - X.normAt j y) <= X.normAt j (x - y)
+  => \have | a : X.normAt j x <= X.normAt j (x - y) + X.normAt j y => transportInv (\lam z => X.normAt j z <= _) (equation.abGroup : x = x - y + y) X.normAt-+
+           | b : X.normAt j y <= X.normAt j (x - y) + X.normAt j x
+               => transportInv (\lam z => X.normAt j z <= _) (equation.abGroup : y = negative (x - y) + x) X.normAt-+ <=∘ =_<= (pmap (`+ _) X.normAt-negative)
+     \in RealField.abs-univ linarith linarith
+
+-- | The extension $\bar n_j$ of the seminorm $n_j$ to the completion.
+\func normAt-lift {X : NormFamilyTopAbGroup} (j : X.NormIndex) : CoverMap (TopAbGroupCompletion X) RealNormed
+  => dense-lift completion completion.isDenseEmbedding (X.normAt-lip-uniform {j} {1} (X.normAt j) \lam x y => normAt-lip <=∘ =_<= (inv ide-left))
+  \where
+    \lemma char {X : NormFamilyTopAbGroup} {j : X.NormIndex} {x : X} : normAt-lift j (pointCF x) = X.normAt j x
+      => dense-lift-char completion.isDenseEmbedding x
+
+-- | $|F| \le |G|$ implies $\bar n_j(F) \le \bar n_j(G)$.
+\lemma normAt-lift-abs-mono {X : NormFamilyTruncRieszSpace} {j : X.NormIndex} {F G : TopTruncRieszCompletion X} (p : abs F <= abs G)
+  : normAt-lift j F <= normAt-lift j G
+  => \let | Y => TopTruncRieszCompletion X
+          | A : CoverMap (ProductCoverSpace Y Y) Y => Y.abs-uniform CoverMap.∘ ProductCoverSpace.proj2
+          | C : CoverMap (ProductCoverSpace Y Y) Y => Y.join-uniform CoverMap.∘ ProductCoverSpace.tuple (Y.meet-uniform CoverMap.∘ ProductCoverSpace.tuple ProductCoverSpace.proj1 A) (negative-uniform {Y} CoverMap.∘ A)
+     \in transport (__ <= _) (pmap (normAt-lift j) (Y.clip-id p)) $
+         dense_<= real-join-uniform (ProductCoverSpace.prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1)
+           (normAt-lift j CoverMap.∘ C) (normAt-lift j CoverMap.∘ ProductCoverSpace.proj2)
+           (\lam s => =_<= (pmap (normAt-lift j) (pmap (Y.clip __ _) (inv (RieszSpaceHom.func-abs {topTruncCompletion {X}})) *> inv (topTruncCompletion {X}).func-clip) *> normAt-lift.char)
+                        <=∘ X.normAt-abs-mono (=_<= (X.clip-abs-eq X.abs>=0) <=∘ X.meet-right) <=∘ =_<= (inv normAt-lift.char)) (F,G)
+  \where \open Topology.TopRieszSpace.Completion
+
+-- | Every neighbourhood of `0` in the completion contains a ball $\{G \mid \bar n_j(G) < \varepsilon\}$.
+\lemma completion-neighborhood {X : NormFamilyTopAbGroup} {U : Set (TopAbGroupCompletion X)} (Uo : isOpen U) (U0 : U 0)
+  : ∃ (j : X.NormIndex) (eps : Real) (0 < eps) ∀ {G} (normAt-lift j G < eps -> U G)
+  => \case (TopAbGroupCompletion X).shrink Uo U0 \with {
+    | inP (V,Vo,V0,h) => \case X.neighborhood-char (completion-topAb.func-cont Vo) (transportInv V completion-topAb.func-zro V0) \with {
+      | inP (j,eps,eps>0,f) => inP (j, eps, eps>0, \lam {G} d =>
+          \have Oo : isOpen (\lam G' => \Sigma (V (G' - G)) (normAt-lift j G' < eps))
+                   => open-inter (((TopAbGroupCompletion X).subtract-cont ContMap.∘ ProductTopSpace.tuple ContMap.id (ContMap.const G)).func-cont Vo) ((normAt-lift j).func-cont real-below-open)
+          \in \case completion.isDenseEmbedding.1 Oo (transportInv V negative-right V0, d) \with {
+            | inP (_, inP (y,idp), (Vy,ny)) => transport U (sub-sub {TopAbGroupCompletion X}) $ h (f $ transport (`< eps) normAt-lift.char ny) Vy
+          })
+    }
+  }
+  \where
+    \lemma sub-sub {A : AbGroup} {a b : A} : a - (a - b) = b
+      => equation.abGroup
+
+-- | A net in the completion converges to `x` if $\bar n_j(f_n - x) \to 0$ for every `j`.
+\lemma completion-limit {X : NormFamilyTopAbGroup} {I : DirectedSet} {f : I -> TopAbGroupCompletion X} {x : TopAbGroupCompletion X}
+                        (p : \Pi (j : X.NormIndex) {eps : Real} -> 0 < eps -> ∃ (N : I) ∀ {n} (N <= n -> normAt-lift j (f n - x) < eps))
+  : (TopAbGroupCompletion X).IsLimit f x
+  => \lam {U} Uo Ux => \case completion-neighborhood (((TopAbGroupCompletion X).leftTranslation x).func-cont Uo) (transportInv U zro-right Ux) \with {
+    | inP (j,eps,eps>0,g) => \case p j eps>0 \with {
+      | inP (N,h) => inP (N, \lam q => transport U (add-sub {TopAbGroupCompletion X}) (g (h q)))
+    }
+  }
+  \where
+    \lemma add-sub {A : AbGroup} {a b : A} : a + (b - a) = b
+      => equation.abGroup

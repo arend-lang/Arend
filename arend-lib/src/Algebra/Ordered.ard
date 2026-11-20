@@ -279,6 +279,12 @@
   \lemma clip-id {s a : E} (as : abs a <= s) : clip s a = a
     => pmap (__ ∨ _) (meet_<= (abs>=id <=∘ as)) *> join-comm *> join_<= (negative_<= (abs>=neg <=∘ as) <=∘ =_<= negative-isInv)
 
+  -- | Clipping at $|b| \wedge s$ is clipping at `s`, for $s \ge 0$.
+  \lemma clip-abs-meet {s b : E} (s>=0 : 0 <= s) : clip (abs b ∧ s) b = clip s b
+    => \have | e1 : b ∧ (abs b ∧ s) = b ∧ s => inv meet-assoc *> pmap (__ ∧ s) (meet_<= abs>=id)
+             | m : negative (abs b) <= b ∧ s => meet-univ (negative_<= abs>=neg <=∘ =_<= negative-isInv) (negative<=0 abs>=0 <=∘ s>=0)
+       \in pmap2 (∨) e1 meet_negative *> inv join-assoc *> pmap (__ ∨ negative s) (join-comm *> join_<= m)
+
   -- | $|\mathrm{clip}_s(b)| = |b| \wedge s$ for $s \ge 0$.
   \lemma clip-abs-eq {s b : E} (s>=0 : 0 <= s) : abs (clip s b) = abs b ∧ s
     => <=-antisymmetric

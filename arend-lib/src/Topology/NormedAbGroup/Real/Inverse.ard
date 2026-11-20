@@ -38,6 +38,12 @@
 \func RealPositive : Set Real
   => \lam x => 0 < x
 
+-- | The half-line $\{x \mid x < c\}$ is open.
+\lemma real-below-open {c : Real} : isOpen {RealNormed} (__ < c)
+  => (dist_open {RealNormed}).2 \lam {x} x<c => \case real_<-char.1 (linarith : (0 : Real) < c - x) \with {
+    | inP (a,a>0,a<cx) => inP (a, rat_real_<.2 a>0, \lam {y} xy => linarith (RealAbGroup.abs>=neg {x - y}, real_<_U.2 xy))
+  }
+
 \lemma positive-open : isOpen RealPositive
   => (dist_open {RealNormed}).2 \lam {x} x>0 => \case real_<-char.1 x>0 \with {
     | inP (a,a>0,a<x) => inP (a, rat_real_<.2 a>0, \lam xy => ball-positive a<x <=-refl xy)

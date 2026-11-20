@@ -16,6 +16,7 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Meta
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -114,6 +115,20 @@
       | inP (j,eps,eps>0,f) => inP (j, eps, eps>0, \lam d => <=<_<= (f d) idp)
     }
 }
+
+-- | A map into a group with a seminorm family with moduli of uniform continuity for all seminorms is a uniform map.
+\func normFamily-modulus-uniform {A : TopAddGroup} {B : NormFamilyTopAbGroup} (f : A -> B)
+  (h : ∀ j {eps} (RealAbGroup.zro < eps) ∃ (U : A.isOpen) (U A.zro) ∀ {x y : A} (A.AreClose U x y) (B.normAt j (f x - f y) < eps))
+  : UniformMap A B f \cowith
+  | func-uniform Eu => \case B.ab-neighborhood-uniform.1 Eu \with {
+    | inP (V,Vo,V0,g) => \case B.neighborhood-char Vo V0 \with {
+      | inP (j,eps,eps>0,c) => \case h j eps>0 \with {
+        | inP (U,Uo,U0,m) => A.neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => \case g (f x) \with {
+          | inP (W,EW,gW) => inP (f ^-1 W, inP $ later (W, EW, idp), \lam a b => gW $ c $ m (a,b))
+        })
+      }
+    }
+  }
 
 -- | A Riesz space with the topology of a directed family of seminorms that are monotone in `|x|`.
 \class NormFamilyRieszSpace \extends NormFamilyTopAbGroup, TopRieszSpace {

@@ -1,0 +1,273 @@
+{- | The space `L∞` of bounded measurable elements (Section `L-infinity` of lp-spaces).
+
+  $\mathrm L^\infty(I) = \{F \in \mathrm L^0(I) \mid |F| \le M \text{ for some } M\}$ with the norm
+  $\|F\|_\infty = \inf\{M \mid |F| \le M\}$, an upper real that need not be located.
+
+  * {LInftyElem}: an element of `L⁰` with a bound; {linfNorm}: the upper-real norm.
+  * {linfMul}: the product of Lemma `lem:L0`(2) ({l0BMul}) at any common bound ({linfMul-char}).
+  * {LInfty}: Proposition `prop:Linfty`(1),(2): `L∞` is a commutative ({LInfty-*-comm}) real Banach algebra with unit {l0One}.
+    Completeness: the inclusion `L∞ → L⁰` is uniformly continuous ({l0-small-bounded}), and the bounds
+    $|F_i - F_j| \le \varepsilon$ pass to the limit in `L⁰` since $\{G \mid \tau_\varepsilon|G - F| = |G - F|\}$ is closed.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.L0
+\import Analysis.Integration.L0Product
+\import Analysis.Integration.L0Unit
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace.Complete
+\import Topology.NormedRing
+\import Topology.TopRieszSpace.Completion
+\import Topology.UniformSpace.Complete
+\open LatticeAbGroup
+\open RieszSpace
+\open QModule
+\open AddMonoid
+\open TruncRieszSpace
+
+-- | An element of `L⁰` bounded by some `M`.
+\record LInftyElem (L : FullIntegrationSpace) (el : L0Space L) (bounded : TruncRieszSpace.IsBounded {L0Space L} el)
+
+-- | $\|F\|_\infty = \inf\{M \mid |F| \le M\}$ as an upper real.
+\func linfNorm {L : FullIntegrationSpace} (F : L0Space L) : ExUpperReal \cowith
+  | U b => ∃ (M : Rat) (M RatField.< b) (IsBelow (abs F) M)
+  | U-closed (inP (M,M<b,p)) b<b' => inP (M, M<b <∘ b<b', p)
+  | U-rounded {b} (inP (M,M<b,p)) => inP (RatField.mid M b, inP (M, RatField.mid>left M<b, p), RatField.mid<right M<b)
+
+-- | Two elements of `L∞` have a common positive bound.
+\lemma common-bound {L : FullIntegrationSpace} (F G : LInftyElem L)
+  : ∃ (a : Rat) (a>0 : RatField.zro RatField.< a) (IsBelow (abs F.el) a) (IsBelow (abs G.el) a)
+  => \case F.bounded, G.bounded \with {
+    | inP (b,Fb), inP (c,Gc) => inP ((b RatField.∨ c) RatField.+ 1, linarith (RatField.join-left {b} {c}, Fb.1),
+                                     IsBelow-level (linarith (RatField.join-left {b} {c})) Fb, IsBelow-level (linarith (RatField.join-right {b} {c})) Gc)
+  }
+
+-- | The product of `L∞`: {l0BMul} at a common bound.
+\func linfMul {L : FullIntegrationSpace} (F G : LInftyElem L) : L0Space L
+  => (TruncP.rec-set (common-bound F G) (\lam s => l0BMul s.2 (F.el, G.el)) \lam s t => linfMul.indep s.2 t.2 s.3 s.4 t.3 t.4).1
+  \where
+    \lemma indep {L : FullIntegrationSpace} {F G : L0Space L} {a b : Rat} (a>0 : RatField.zro RatField.< a) (b>0 : RatField.zro RatField.< b)
+                 (Fa : IsBelow (abs F) a) (Ga : IsBelow (abs G) a) (Fb : IsBelow (abs F) b) (Gb : IsBelow (abs G) b)
+      : l0BMul a>0 (F,G) = l0BMul b>0 (F,G)
+      => inv (l0BMul-level a>0 RatField.join-left Fa Ga) *> l0BMul-level b>0 RatField.join-right Fb Gb
+
+-- | {linfMul} is {l0BMul} at any common bound.
+\lemma linfMul-char {L : FullIntegrationSpace} {F G : LInftyElem L} {N : Rat} (N>0 : RatField.zro RatField.< N) (FN : IsBelow (abs F.el) N) (GN : IsBelow (abs G.el) N)
+  : linfMul F G = l0BMul N>0 (F.el, G.el)
+  => \case (TruncP.rec-set (common-bound F G) (\lam s => l0BMul s.2 (F.el, G.el)) \lam s t => linfMul.indep s.2 t.2 s.3 s.4 t.3 t.4).2 \with {
+    | inP (s,p) => inv p *> linfMul.indep s.2 N>0 s.3 s.4 FN GN
+  }
+
+-- | $|FG| \le N^2$ if $|F|, |G| \le N$.
+\lemma linfMul-bounded {L : FullIntegrationSpace} (F G : LInftyElem L) : TruncRieszSpace.IsBounded (linfMul F G)
+  => \case common-bound F G \with {
+    | inP (a,a>0,Fa,Ga) => inP (a RatField.* a, transportInv (\lam z => IsBelow (abs z) _) (linfMul-char a>0 Fa Ga) (l0BMul-bound a>0 a>0 a>0 <=-refl <=-refl Fa Ga))
+  }
+
+-- | Three elements of `L∞` have a common bound `a ≥ 1`.
+\lemma common-bound3 {L : FullIntegrationSpace} (F G H : LInftyElem L)
+  : ∃ (a : Rat) (1 RatField.<= a) (IsBelow (abs F.el) a) (IsBelow (abs G.el) a) (IsBelow (abs H.el) a)
+  => \case common-bound F G, common-bound G H \with {
+    | inP (b,b>0,Fb,Gb), inP (c,c>0,Gc,Hc) => \let a => (b RatField.∨ c) RatField.∨ 1 \in
+        inP (a, RatField.join-right, IsBelow-level (RatField.join-left <=∘ RatField.join-left) Fb, IsBelow-level (RatField.join-left <=∘ RatField.join-left) Gb,
+             IsBelow-level (RatField.join-right <=∘ RatField.join-left) Hc)
+  }
+
+\lemma linfMul-comm {L : FullIntegrationSpace} (F G : LInftyElem L) : linfMul F G = linfMul G F
+  => \case common-bound F G \with {
+    | inP (a,a>0,Fa,Ga) => linfMul-char a>0 Fa Ga *> l0BMul-comm a>0 F.el G.el *> inv (linfMul-char a>0 Ga Fa)
+  }
+
+\lemma linfMul-ldistr {L : FullIntegrationSpace} (F G H : LInftyElem L)
+  : linfMul F (\new LInftyElem L (G.el + H.el) (IsBounded_+ G.bounded H.bounded)) = linfMul F G + linfMul F H
+  => \case common-bound3 F G H \with {
+    | inP (a,a>=1,Fa,Ga,Ha) =>
+      \let N => a RatField.+ a
+      \in \have | a>0 : RatField.zro RatField.< a => RatField.zro<ide <∘l a>=1
+                | a<=N : a RatField.<= N => linarith
+                | N>0 : RatField.zro RatField.< N => linarith
+      \in linfMul-char N>0 (IsBelow-level a<=N Fa) (IsBelow_<= abs_+ (IsBelow_+ Ga Ha))
+          *> l0BMul-ldistr N>0 a>0 <=-refl Fa Ga Ha
+          *> inv (pmap2 (+) (linfMul-char N>0 (IsBelow-level a<=N Fa) (IsBelow-level a<=N Ga)) (linfMul-char N>0 (IsBelow-level a<=N Fa) (IsBelow-level a<=N Ha)))
+  }
+
+-- | `L∞` is a real Banach algebra.
+\instance LInfty (L : FullIntegrationSpace) : RealBanachCAlgebra (LInftyElem L)
+  | AbGroup => LInftyGroup L
+  | ide => linfOne L
+  | * F G => \new LInftyElem L (linfMul F G) (linfMul-bounded F G)
+  | ide-left => ext (linfMul-ide-left _)
+  | ide-right => ext (linfMul-comm _ _ *> linfMul-ide-left _)
+  | *-assoc => ext (linfMul-assoc _ _ _)
+  | ldistr => ext (linfMul-ldistr _ _ _)
+  | rdistr {x} {y} {z} => ext (linfMul-comm _ z *> linfMul-ldistr z x y *> pmap2 (+) (linfMul-comm z x) (linfMul-comm z y))
+  | isDivisible a {n} n/=0 => \case a.bounded \with {
+    | inP (M,p) => inP (\new LInftyElem L (RatField.finv n *q a.el) (inP (RatField.abs (RatField.finv n) RatField.* M, transportInv (IsBelow __ _) abs_*q (IsBelow_*q RatField.abs>=0 p))),
+                       ext (linf-*n {L} {n} *> inv *q_*n *> *q-finv-cancel (natRat/=0 n/=0)))
+  }
+  | *-comm {F} {G} => ext (linfMul-comm F G)
+  | norm F => linfNorm F.el
+  | norm_zro => linfNorm-zro
+  | norm_negative => linfNorm-negative
+  | norm_+ => linfNorm-+
+  | norm-double => linfNorm-double
+  | norm-bounded F => \case F.bounded \with {
+    | inP (M,p) => inP (M RatField.+ 1, inP (M, linarith, p))
+  }
+  | norm-ext p => ext (linfNorm-ext p)
+  | norm_*_<= => linfNorm-mul
+  | norm_ide_<= {b} b>1 => inP (1, b>1, l0One-below)
+  | isCompleteMetric F Fc => linf-complete F Fc
+  \where {
+    -- | The unit of `L∞`.
+    \func linfOne (L : FullIntegrationSpace) : LInftyElem L
+      => \new LInftyElem L (l0One L) (inP (1, l0One-below))
+
+    \lemma linfMul-ide-left {L : FullIntegrationSpace} (F : LInftyElem L) : linfMul (linfOne L) F = F.el
+      => \case common-bound (linfOne L) F \with {
+        | inP (a,a>0,_,Fa) => \let N => a RatField.∨ 1 \in \have N>0 : RatField.zro RatField.< N => RatField.zro<ide <∘l RatField.join-right
+          \in linfMul-char N>0 (IsBelow-level RatField.join-right l0One-below) (IsBelow-level RatField.join-left Fa)
+              *> l0One-mul N>0 a>0 RatField.join-left RatField.join-right Fa
+      }
+
+    \lemma linfMul-assoc {L : FullIntegrationSpace} (F G H : LInftyElem L)
+      : linfMul (\new LInftyElem L (linfMul F G) (linfMul-bounded F G)) H = linfMul F (\new LInftyElem L (linfMul G H) (linfMul-bounded G H))
+      => \case common-bound3 F G H \with {
+        | inP (a,a>=1,Fa,Ga,Ha) =>
+          \let N => a RatField.* a
+          \in \have | a>0 : RatField.zro RatField.< a => RatField.zro<ide <∘l a>=1
+                    | a<=N : a RatField.<= N => =_<= (inv RatField.ide-left) <=∘ RatField.<=_*_positive-left a>=1 (<=-less a>0)
+                    | N>0 : RatField.zro RatField.< N => a>0 <∘l a<=N
+                    | FG : linfMul F G = l0BMul N>0 (F.el, G.el) => linfMul-char N>0 (IsBelow-level a<=N Fa) (IsBelow-level a<=N Ga)
+                    | GH : linfMul G H = l0BMul N>0 (G.el, H.el) => linfMul-char N>0 (IsBelow-level a<=N Ga) (IsBelow-level a<=N Ha)
+                    | FGN : IsBelow (abs (linfMul F G)) N => transportInv (\lam z => IsBelow (abs z) N) (linfMul-char a>0 Fa Ga) (l0BMul-bound a>0 a>0 a>0 <=-refl <=-refl Fa Ga)
+                    | GHN : IsBelow (abs (linfMul G H)) N => transportInv (\lam z => IsBelow (abs z) N) (linfMul-char a>0 Ga Ha) (l0BMul-bound a>0 a>0 a>0 <=-refl <=-refl Ga Ha)
+          \in linfMul-char N>0 FGN (IsBelow-level a<=N Ha) *> pmap (\lam z => l0BMul N>0 (z, H.el)) FG
+              *> l0BMul-assoc N>0 a>0 a<=N <=-refl Fa Ga Ha
+              *> inv (linfMul-char N>0 (IsBelow-level a<=N Fa) GHN *> pmap (\lam z => l0BMul N>0 (F.el, z)) GH)
+      }
+
+    -- | $\|0\|_\infty = 0$.
+    \lemma linfNorm-zro {L : FullIntegrationSpace} : linfNorm (L0Space L).zro = ExUpperRealAbMonoid.zro
+      => <=-antisymmetric (\lam {b} b>0 => inP (0, b>0, transportInv (IsBelow __ 0) abs_zro (IsBelow_zro <=-refl)))
+                          (\lam {b} (inP (M,M<b,p)) => p.1 <∘r M<b)
+
+    \lemma linfNorm-negative {L : FullIntegrationSpace} {F : L0Space L} : linfNorm (negative F) = linfNorm F
+      => pmap linfNorm' abs_negative
+      \where
+        \func linfNorm' {L : FullIntegrationSpace} (A : L0Space L) : ExUpperReal \cowith
+          | U b => ∃ (M : Rat) (M RatField.< b) (IsBelow A M)
+          | U-closed (inP (M,M<b,p)) b<b' => inP (M, M<b <∘ b<b', p)
+          | U-rounded {b} (inP (M,M<b,p)) => inP (RatField.mid M b, inP (M, RatField.mid>left M<b, p), RatField.mid<right M<b)
+
+    \lemma linfNorm-+ {L : FullIntegrationSpace} {F G : L0Space L} : linfNorm (F + G) <= linfNorm F ExUpperReal.+ linfNorm G
+      => \lam {b} u => \case ExUpperReal.+_U.1 u \with {
+        | inP (c, inP (M1,M1<c,p1), d, inP (M2,M2<d,p2), cd<b) => inP (M1 RatField.+ M2, linarith, IsBelow_<= abs_+ (IsBelow_+ p1 p2))
+      }
+
+    \lemma linfNorm-double {L : FullIntegrationSpace} {F : L0Space L} : linfNorm F ExUpperReal.+ linfNorm F <= linfNorm (F + F)
+      => \lam {b} (inP (M,M<b,p)) =>
+          \let | r => M RatField.* ratio 1 2
+               | c => (M RatField.+ b) RatField.* ratio 1 4
+          \in \have | e : (RatField.zro RatField.+ r) RatField.+ r = M => linarith
+                    | pr : IsBelow (abs F) r => IsBelow_*n-div {_} {2} (\case __) (transport2 IsBelow (pmap abs (pmap (`+ F) (inv zro-left)) *> inv (abs_*n {_} {2} {F})) (inv e) p)
+                    | rc : r RatField.< c => linarith
+                    | Uc : (linfNorm F).U c => inP (r, rc, pr)
+          \in ExUpperReal.+_U.2 (inP (c, Uc, c, Uc, (linarith : c RatField.+ c RatField.< b)))
+
+    \lemma linfNorm-ext {L : FullIntegrationSpace} {F : L0Space L} (p : linfNorm F = ExUpperRealAbMonoid.zro) : F = (L0Space L).zro
+      => l0-bounded-zero \lam {e} e>0 => \case transportInv (\lam (x : ExUpperReal) => x.U e) p e>0 \with {
+        | inP (M,M<e,q) => IsBelow-level (<=-less M<e) q
+      }
+
+    -- | $\|FG\|_\infty \le \|F\|_\infty \|G\|_\infty$.
+    \lemma linfNorm-mul {L : FullIntegrationSpace} {F G : LInftyElem L} : linfNorm (linfMul F G) <= linfNorm F.el ExUpperReal.* linfNorm G.el
+      => \lam {q} u => \case ExUpperReal.*_U.1 u \with {
+        | inP (b, inP (M1,M1<b,p1), b>0, c, inP (M2,M2<c,p2), c>0, bc<q) =>
+          \let N => b RatField.∨ c
+          \in \have N>0 : RatField.zro RatField.< N => b>0 <∘l RatField.join-left
+          \in inP (b RatField.* c, bc<q, transportInv (\lam z => IsBelow (abs z) _) (linfMul-char N>0 (IsBelow-level (<=-less M1<b <=∘ RatField.join-left) p1) (IsBelow-level (<=-less M2<c <=∘ RatField.join-right) p2))
+                                          (l0BMul-bound N>0 b>0 c>0 RatField.join-left RatField.join-right (IsBelow-level (<=-less M1<b) p1) (IsBelow-level (<=-less M2<c) p2)))
+      }
+
+    -- | The additive group of `L∞`.
+    \func LInftyGroup (L : FullIntegrationSpace) : AbGroup (LInftyElem L) \cowith
+      | zro => \new LInftyElem L 0 IsBounded_zro
+      | + F G => \new LInftyElem L (F.el + G.el) (IsBounded_+ F.bounded G.bounded)
+      | zro-left => ext zro-left
+      | +-assoc => ext +-assoc
+      | +-comm => ext +-comm
+      | negative F => \new LInftyElem L (negative F.el) (IsBounded_negative F.bounded)
+      | negative-left => ext negative-left
+
+    \lemma linf-*n {L : FullIntegrationSpace} {n : Nat} {F : LInftyElem L} : ((*n) {LInftyGroup L} n F).el = n *n F.el \elim n
+      | 0 => idp
+      | suc n => pmap (`+ F.el) (linf-*n {L} {n} {F})
+
+    -- | Completeness of `L∞`: a Cauchy filter converges.
+    \lemma linf-complete {L : FullIntegrationSpace} (F : ProperFilter (LInftyElem L))
+                         (Fc : \Pi {eps : Rat} -> RatField.zro RatField.< eps -> ∃ (x : LInftyElem L) (F (\lam y => (linfNorm (x.el - y.el)).U eps)))
+      : ∃ (x : LInftyElem L) ∀ {eps} (RatField.zro RatField.< eps) (F (\lam y => (linfNorm (x.el - y.el)).U eps))
+      => \let | G : ProperFilter (L0Space L) => ProperFilter-map (\lam (y : LInftyElem L) => y.el) F
+              | G' : CauchyFilter (L0Space L) => \new CauchyFilter (L0Space L) {
+                  | ProperFilter => G
+                  | isCauchyFilter => (cauchyFilter-uniform-char {L0Space L} {G}).2 \lam Cu => \case (L0Space L).ab-neighborhood-uniform.1 Cu \with {
+                    | inP (V,Vo,V0,h) => \case l0-small-bounded Vo V0 \with {
+                      | inP (e,e>0,g) => \case Fc e>0 \with {
+                        | inP (x,Fx) => \case h x.el \with {
+                          | inP (W,CW,hW) => inP (W, CW, filter-mono Fx \lam {y} (inP (M,M<e,p)) => hW (g (IsBelow-level (<=-less M<e) p)))
+                        }
+                      }
+                    }
+                  }
+                }
+              | ball-below {x : LInftyElem L} {e : Rat} (Fx : F (\lam y => (linfNorm (x.el - y.el)).U e)) : F (\lam y => IsBelow (abs (y.el - x.el)) e)
+                  => filter-mono Fx \lam {y} (inP (M,M<e,p)) => IsBelow-level (<=-less M<e) (transport (IsBelow __ M) abs_- p)
+         \in \case (L0Space L).isComplete (regCF G') \with {
+           | inP (x0,h) =>
+             \have | lim {c : L0Space L} {e : Rat} (e>0 : RatField.zro RatField.< e) (Fc' : F (\lam y => IsBelow (abs (y.el - c)) e)) : IsBelow (abs (x0 - c)) e
+                       => l0-below-closed c e>0 \lam {V} Vo Vx0 => \case isProper (filter-meet (regCF_<= {_} {G'} (h ((L0Space L).open-char.1 Vo Vx0))) Fc') \with {
+                            | inP (y, (Vy,py)) => inP (y.el, py, Vy)
+                          }
+                   | tri {a b c : L0Space L} : abs (a - c) <= abs (a - b) + abs (b - c) => =_<= (pmap abs (sub-split {L0Space L})) <=∘ abs_+
+             \in \case Fc RatField.zro<ide \with {
+               | inP (x1,F1) => \case x1.bounded \with {
+                 | inP (M1,p1) =>
+                   \let X0 => \new LInftyElem L x0 (inP (1 RatField.+ M1, IsBelow_<= (=_<= (pmap abs (inv (sub-add {L0Space L} {x0} {x1.el}))) <=∘ abs_+)
+                                                                                    (IsBelow_+ (lim RatField.zro<ide (ball-below F1)) p1)))
+                   \in inP (X0, \lam {eps} eps>0 =>
+                        \let e2 => eps RatField.* ratio 1 2
+                        \in \have e2>0 : RatField.zro RatField.< e2 => linarith
+                        \in \case Fc e2>0 \with {
+                          | inP (x,Fx) => filter-mono Fx \lam {y} (inP (M,M<e2,p)) =>
+                              inP (e2 RatField.+ M, linarith, IsBelow_<= tri (IsBelow_+ (lim e2>0 (ball-below Fx)) p))
+                        })
+               }
+             }
+         }
+      \where {
+        \lemma sub-split {A : AbGroup} {a b c : A} : a - c = (a - b) + (b - c)
+          => equation.abGroup
+
+        \lemma sub-add {A : AbGroup} {a b : A} : (a - b) + b = a
+          => equation.abGroup
+      }
+  }

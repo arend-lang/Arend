@@ -1,0 +1,210 @@
+{- | Products on the bounded part of `L⁰`.
+
+  For a rational level `M > 0`, the product of clamped elements $(f, g) \mapsto c_M(f) c_M(g)$, where $c_M$ is
+  {TruncRieszSpace.bclip}, is uniformly continuous for the measure uniformity, since
+  $d_h(fg, f'g') \le \max(M,1)(d_h(f,f') + d_h(g,g'))$ for `f, f', g, g'` bounded by `M` ({fmul-meet-lip}).
+
+  * {l0BMul}: its extension $\mathrm L^0 \times \mathrm L^0 \to \mathrm L^0$; {l0BMul.char}, {l0BMul-pt}: the value on `L`.
+  * {l0BMul-level}: on elements bounded by `M`, the product does not depend on the level.
+  * {l0BMul-comm}, {l0BMul-assoc}, {l0BMul-ldistr}, {l0BMul-*q}: the algebra laws on bounded elements, for large enough levels.
+  * {l0BMul-bound}, {l0BMul-abs}: $|FG| \le ab$ and $|FG| \le a|G|$ for $|F| \le a$, $|G| \le b$.
+
+  All identities are proved on `L` and extended by density ({l0-dense2}, {l0-dense3}).
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.L0
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.TopAbGroup.NormFamily
+\import Topology.TopAbGroup.Product
+\import Topology.TopRieszSpace
+\import Topology.TopRieszSpace.Completion
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace
+\open LatticeAbGroup
+\open QModule
+\open TruncRieszSpace
+
+-- | The product on the bounded part of `L⁰`: the extension of $(f, g) \mapsto c_M(f) c_M(g)$.
+\sfunc l0BMul {L : FullIntegrationSpace} {M : Rat} (M>0 : RatField.zro RatField.< M) : CoverMap (ProductCoverSpace (L0Space L) (L0Space L)) (L0Space L)
+  => dense-lift (ProductCoverSpace.prod (completion {L0PreSpace L}) (completion {L0PreSpace L})) l0-dense2-embedding (completion {L0PreSpace L} CoverMap.∘ pre M>0)
+  \where \protected {
+    -- | $(f, g) \mapsto c_M(f) c_M(g)$ is uniformly continuous for the measure uniformity.
+    \func pre {L : FullIntegrationSpace} {M : Rat} (M>0 : RatField.zro RatField.< M)
+      : UniformMap (ProductTopAbGroup (L0PreSpace L) (L0PreSpace L)) (L0PreSpace L) (\lam s => fmul (L.bclip M s.1) (L.bclip M s.2))
+      => normFamily-modulus-uniform {ProductTopAbGroup (L0PreSpace L) (L0PreSpace L)} {L0PreSpace L} _ \lam j {eps} eps>0 =>
+          \let | K => M RatField.∨ 1
+               | d => eps * Real.fromRat (RatField.finv (K RatField.+ K))
+               | B : Set L => \lam y => measGauge j.1 y < d
+          \in \have | K>0 : RatField.zro RatField.< K => RatField.zro<ide <∘l RatField.join-right
+                    | d>0 : (0 : Real) < d => RealField.<_*_positive_positive eps>0 (rat_real_<.1 (RatField.finv>0 linarith))
+                    | Kd : Real.fromRat K * (d + d) = eps
+                        => \have | e1 : Real.fromRat (K RatField.+ K) * Real.fromRat (RatField.finv (K RatField.+ K)) = 1
+                                      => RealField.*-rat *> pmap Real.fromRat (RatField.finv-right (RatField.>_/= linarith))
+                                  | e2 : Real.fromRat (K RatField.+ K) = Real.fromRat K + Real.fromRat K => inv RealAbGroup.+-rat
+                           \in equation.cRing {rewrite e2 in e1}
+                    | Bo : isOpen {L0PreSpace L} B => NormFamilyTopAbGroup.normAt-ball-open {L0PreSpace L} {j} {d}
+                    | B0 : B L.zro => transportInv (`< d) ((L0PreSpace L).normAt-zro {j}) d>0
+          \in inP (Set.Prod B B, Prod-open {L0PreSpace L} {L0PreSpace L} Bo Bo, (B0,B0), \lam {x} {y} c =>
+                \have | bd {z : L} : L.IsBelow (abs (L.bclip M z)) M => L.bclip-below M>0
+                      | m1 : L.integral (abs (L.bclip M x.1 - L.bclip M y.1) ∧ j.1) <= measGauge j.1 (y.1 - x.1)
+                          => L.integral-mono (L.meet-monotone (bclip-lip M>0 <=∘ =_<= L.abs_-) <=-refl)
+                      | m2 : L.integral (abs (L.bclip M x.2 - L.bclip M y.2) ∧ j.1) <= measGauge j.1 (y.2 - x.2)
+                          => L.integral-mono (L.meet-monotone (bclip-lip M>0 <=∘ =_<= L.abs_-) <=-refl)
+                      | s1 : measGauge j.1 (fmul (L.bclip M x.1) (L.bclip M x.2) - fmul (L.bclip M y.1) (L.bclip M y.2))
+                               <= Real.fromRat K * (L.integral (abs (L.bclip M x.1 - L.bclip M y.1) ∧ j.1) + L.integral (abs (L.bclip M x.2 - L.bclip M y.2) ∧ j.1))
+                          => L.integral-mono (fmul-meet-lip (<=-less M>0) bd bd bd bd j.2) <=∘ =_<= (L.integral_*q *> pmap (_ *) L.integral_+)
+                      | Kr>0 : (0 : Real) < Real.fromRat K => rat_real_<.1 K>0
+                      | t : L.integral (abs (L.bclip M x.1 - L.bclip M y.1) ∧ j.1) + L.integral (abs (L.bclip M x.2 - L.bclip M y.2) ∧ j.1) < d + d
+                          => usingOnly (m1, m2, c.2.1, c.2.2) linarith
+                \in s1 <∘r RealField.<_*_positive-right Kr>0 t <∘l =_<= Kd)
+
+    -- | The value of {l0BMul} on `L`.
+    \lemma char {L : FullIntegrationSpace} {M : Rat} (M>0 : RatField.zro RatField.< M) {f g : L}
+      : l0BMul M>0 (pointCF {L0PreSpace L} f, pointCF {L0PreSpace L} g) = pointCF {L0PreSpace L} (fmul (L.bclip M f) (L.bclip M g))
+      => rewrite (\peval l0BMul M>0) $ dense-lift-char (l0-dense2-embedding {L}) {completion {L0PreSpace L} CoverMap.∘ pre M>0} (f,g)
+
+    -- | {l0BMul} on clamped elements of `L`.
+    \lemma bclip-pt {L : FullIntegrationSpace} {N a : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a) (a<=N : a RatField.<= N) {f g : L}
+      : l0BMul N>0 (bclip a (pointCF {L0PreSpace L} f), bclip a (pointCF {L0PreSpace L} g)) = pointCF {L0PreSpace L} (fmul (L.bclip a f) (L.bclip a g))
+      => pmap2 (\lam u v => l0BMul N>0 (u,v)) (inv (l0-bclip {L})) (inv (l0-bclip {L})) *> l0BMul-pt N>0 (L.IsBelow-level a<=N (L.bclip-below a>0)) (L.IsBelow-level a<=N (L.bclip-below a>0))
+
+  }
+
+-- | {l0BMul} does not depend on the level on elements bounded by `M`.
+\lemma l0BMul-level {L : FullIntegrationSpace} {M M' : Rat} (M>0 : RatField.zro RatField.< M) (M<=M' : M RatField.<= M') {F G : L0Space L}
+                    (FM : IsBelow (abs F) M) (GM : IsBelow (abs G) M)
+  : l0BMul (M>0 <∘l M<=M') (F,G) = l0BMul M>0 (F,G)
+  => \let M'>0 => M>0 <∘l M<=M'
+     \in pmap2 (\lam u v => l0BMul M'>0 (u,v)) (inv (bclip-id M>0 FM)) (inv (bclip-id M>0 GM))
+      *> l0-dense2 (l0BMul M'>0 CoverMap.∘ ProductCoverSpace.prod (bclip-cover M) (bclip-cover M)) (l0BMul M>0)
+          (\lam f g => pmap (l0BMul M'>0) (inv (pmap2 (__,__) l0-bclip l0-bclip)) *> l0BMul.char M'>0
+                        *> pmap2 (\lam u v => pointCF {L0PreSpace L} (fmul u v)) (L.bclip-id M'>0 (L.IsBelow-level M<=M' (L.bclip-below M>0))) (L.bclip-id M'>0 (L.IsBelow-level M<=M' (L.bclip-below M>0)))
+                        *> inv (l0BMul.char M>0)) (F,G)
+
+-- | {l0BMul} is commutative.
+\lemma l0BMul-comm {L : FullIntegrationSpace} {M : Rat} (M>0 : RatField.zro RatField.< M) (F G : L0Space L)
+  : l0BMul M>0 (F,G) = l0BMul M>0 (G,F)
+  => l0-dense2 (l0BMul M>0) (l0BMul M>0 CoverMap.∘ ProductCoverSpace.tuple ProductCoverSpace.proj2 ProductCoverSpace.proj1)
+      (\lam f g => l0BMul.char M>0 *> pmap (pointCF {L0PreSpace L}) fmul-comm *> inv (l0BMul.char M>0)) (F,G)
+
+-- | $|FG| \le ab$ if $|F| \le a$, $|G| \le b$ and $a, b \le M$.
+\lemma l0BMul-bound {L : FullIntegrationSpace} {M a b : Rat} (M>0 : RatField.zro RatField.< M) (a>0 : RatField.zro RatField.< a) (b>0 : RatField.zro RatField.< b)
+                    (a<=M : a RatField.<= M) (b<=M : b RatField.<= M) {F G : L0Space L} (Fa : IsBelow (abs F) a) (Gb : IsBelow (abs G) b)
+  : IsBelow (abs (l0BMul M>0 (F,G))) (a RatField.* b)
+  => \have ab>0 : RatField.zro RatField.< a RatField.* b => RatField.<_*_positive_positive a>0 b>0
+     \in transport (\lam z => IsBelow (abs z) (a RatField.* b)) (pmap2 (\lam u v => l0BMul M>0 (u,v)) (bclip-id a>0 Fa) (bclip-id b>0 Gb)) $
+         l0-bound2 (l0BMul M>0 CoverMap.∘ ProductCoverSpace.prod (bclip-cover a) (bclip-cover b)) ab>0
+           (\lam f g => transportInv (\lam z => IsBelow (abs z) (a RatField.* b)) (pmap (l0BMul M>0) (inv (pmap2 (__,__) l0-bclip l0-bclip)) *> l0BMul.char M>0) $
+              transport (IsBelow __ (a RatField.* b)) l0-pt-abs $ (topTruncCompletion {L0PreSpace L}).func-IsBelow $
+              transport (\lam z => L.IsBelow (abs z) (a RatField.* b))
+                (pmap2 fmul (inv (L.bclip-id M>0 (L.IsBelow-level a<=M (L.bclip-below a>0)))) (inv (L.bclip-id M>0 (L.IsBelow-level b<=M (L.bclip-below b>0))))) $
+              L.IsBelow_<= (fmul-bounded (<=-less a>0) (L.bclip-below a>0)) (L.IsBelow_*q (<=-less a>0) (L.bclip-below b>0))) (F,G)
+
+-- | Associativity: $(FG)H = F(GH)$ if `F, G, H` are bounded by `a`, and $a, a^2 \le N$.
+\lemma l0BMul-assoc {L : FullIntegrationSpace} {N a : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a)
+                    (a<=N : a RatField.<= N) (aa<=N : a RatField.* a RatField.<= N) {F G H : L0Space L}
+                    (Fa : IsBelow (abs F) a) (Ga : IsBelow (abs G) a) (Ha : IsBelow (abs H) a)
+  : l0BMul N>0 (l0BMul N>0 (F,G), H) = l0BMul N>0 (F, l0BMul N>0 (G,H))
+  => \let | B => bclip-cover {L0Space L} a
+          | m => l0BMul N>0
+     \in \have | bN {f : L} : L.IsBelow (abs (L.bclip a f)) N => L.IsBelow-level a<=N (L.bclip-below a>0)
+              | mN {f g : L} : L.IsBelow (abs (fmul (L.bclip a f) (L.bclip a g))) N => L.IsBelow-level aa<=N (fmul-below (<=-less a>0) (L.bclip-below a>0) (L.bclip-below a>0))
+     \in pmap2 (\lam u v => m (m (u,v), H)) (inv (bclip-id a>0 Fa)) (inv (bclip-id a>0 Ga)) *> pmap (\lam w => m (m (bclip a F, bclip a G), w)) (inv (bclip-id a>0 Ha))
+      *> l0-dense3 (m CoverMap.∘ ProductCoverSpace.tuple (m CoverMap.∘ ProductCoverSpace.prod B B CoverMap.∘ ProductCoverSpace.proj1) (B CoverMap.∘ ProductCoverSpace.proj2))
+                   (m CoverMap.∘ ProductCoverSpace.tuple (B CoverMap.∘ ProductCoverSpace.proj1 CoverMap.∘ ProductCoverSpace.proj1)
+                                                        (m CoverMap.∘ ProductCoverSpace.tuple (B CoverMap.∘ ProductCoverSpace.proj2 CoverMap.∘ ProductCoverSpace.proj1) (B CoverMap.∘ ProductCoverSpace.proj2)))
+          (\lam f g h => pmap (\lam z => m (z, bclip a (pointCF {L0PreSpace L} h))) (l0BMul.bclip-pt N>0 a>0 a<=N)
+              *> pmap (\lam w => m (pointCF {L0PreSpace L} (fmul (L.bclip a f) (L.bclip a g)), w)) (inv (l0-bclip {L})) *> l0BMul-pt N>0 mN bN *> pmap (pointCF {L0PreSpace L}) fmul-assoc
+              *> inv (pmap (\lam z => m (bclip a (pointCF {L0PreSpace L} f), z)) (l0BMul.bclip-pt N>0 a>0 a<=N)
+                      *> pmap (\lam w => m (w, pointCF {L0PreSpace L} (fmul (L.bclip a g) (L.bclip a h)))) (inv (l0-bclip {L})) *> l0BMul-pt N>0 bN mN)) ((F,G),H)
+      *> pmap (\lam w => m (bclip a F, m (bclip a G, w))) (bclip-id a>0 Ha) *> pmap2 (\lam u v => m (u, m (v, H))) (bclip-id a>0 Fa) (bclip-id a>0 Ga)
+
+-- | Distributivity: $F(G + H) = FG + FH$ if `F, G, H` are bounded by `a`, and $2a \le N$.
+\lemma l0BMul-ldistr {L : FullIntegrationSpace} {N a : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a)
+                     (aa<=N : a RatField.+ a RatField.<= N) {F G H : L0Space L}
+                     (Fa : IsBelow (abs F) a) (Ga : IsBelow (abs G) a) (Ha : IsBelow (abs H) a)
+  : l0BMul N>0 (F, G + H) = l0BMul N>0 (F,G) + l0BMul N>0 (F,H)
+  => \let | B => bclip-cover {L0Space L} a
+          | m => l0BMul N>0
+          | i => topTruncCompletion {L0PreSpace L}
+     \in \have | a<=N : a RatField.<= N => linarith
+              | bN {f : L} : L.IsBelow (abs (L.bclip a f)) N => L.IsBelow-level a<=N (L.bclip-below a>0)
+              | sN {g h : L} : L.IsBelow (abs (L.bclip a g + L.bclip a h)) N
+                  => L.IsBelow-level aa<=N (L.IsBelow_<= L.abs_+ (L.IsBelow_+ (L.bclip-below a>0) (L.bclip-below a>0)))
+     \in pmap (\lam w => m (w, G + H)) (inv (bclip-id a>0 Fa)) *> pmap2 (\lam u v => m (bclip a F, u + v)) (inv (bclip-id a>0 Ga)) (inv (bclip-id a>0 Ha))
+      *> l0-dense3 (m CoverMap.∘ ProductCoverSpace.tuple (B CoverMap.∘ ProductCoverSpace.proj1 CoverMap.∘ ProductCoverSpace.proj1)
+                                                        (+-uniform {L0Space L} CoverMap.∘ ProductCoverSpace.tuple (B CoverMap.∘ ProductCoverSpace.proj2 CoverMap.∘ ProductCoverSpace.proj1) (B CoverMap.∘ ProductCoverSpace.proj2)))
+                   (+-uniform {L0Space L} CoverMap.∘ ProductCoverSpace.tuple
+                     (m CoverMap.∘ ProductCoverSpace.prod B B CoverMap.∘ ProductCoverSpace.proj1)
+                     (m CoverMap.∘ ProductCoverSpace.tuple (B CoverMap.∘ ProductCoverSpace.proj1 CoverMap.∘ ProductCoverSpace.proj1) (B CoverMap.∘ ProductCoverSpace.proj2)))
+          (\lam f g h => pmap2 (\lam u v => m (u,v)) (inv (l0-bclip {L})) (pmap2 (+) (inv (l0-bclip {L})) (inv (l0-bclip {L})) *> inv i.func-+)
+              *> l0BMul-pt N>0 bN sN *> pmap (pointCF {L0PreSpace L}) fmul-ldistr *> i.func-+
+              *> inv (pmap2 (+) (l0BMul.bclip-pt N>0 a>0 a<=N) (l0BMul.bclip-pt N>0 a>0 a<=N))) ((F,G),H)
+      *> pmap2 (\lam u v => m (bclip a F, u) + m (bclip a F, v)) (bclip-id a>0 Ga) (bclip-id a>0 Ha) *> pmap (\lam w => m (w, G) + m (w, H)) (bclip-id a>0 Fa)
+
+-- | $F(qG) = q(FG)$ for rational `q` if `F, G` are bounded by `a`, $a \le N$ and $|q| a \le N$.
+\lemma l0BMul-*q {L : FullIntegrationSpace} {N a q : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a)
+                 (a<=N : a RatField.<= N) (qa<=N : RatField.abs q RatField.* a RatField.<= N) {F G : L0Space L}
+                 (Fa : IsBelow (abs F) a) (Ga : IsBelow (abs G) a)
+  : l0BMul N>0 (F, q *q G) = q *q l0BMul N>0 (F,G)
+  => \let | B => bclip-cover {L0Space L} a
+          | m => l0BMul N>0
+          | i => topTruncCompletion {L0PreSpace L}
+     \in \have | bN {f : L} : L.IsBelow (abs (L.bclip a f)) N => L.IsBelow-level a<=N (L.bclip-below a>0)
+              | qN {g : L} : L.IsBelow (abs (q *q L.bclip a g)) N
+                  => L.IsBelow-level qa<=N (transportInv (L.IsBelow __ _) L.abs_*q (L.IsBelow_*q RatField.abs>=0 (L.bclip-below a>0)))
+     \in pmap2 (\lam u v => m (u, q *q v)) (inv (bclip-id a>0 Fa)) (inv (bclip-id a>0 Ga))
+      *> l0-dense2 (m CoverMap.∘ ProductCoverSpace.prod B ((L0Space L).*q-right-uniform {q} CoverMap.∘ B))
+                   ((L0Space L).*q-right-uniform {q} CoverMap.∘ m CoverMap.∘ ProductCoverSpace.prod B B)
+          (\lam f g => pmap2 (\lam u v => m (u,v)) (inv (l0-bclip {L})) (pmap (q *q) (inv (l0-bclip {L})) *> inv (func-*q {_} {_} {i}))
+              *> l0BMul-pt N>0 bN qN *> pmap (pointCF {L0PreSpace L}) fmul-*q-right *> func-*q {_} {_} {i}
+              *> inv (pmap (q *q) (l0BMul.bclip-pt N>0 a>0 a<=N))) (F,G)
+      *> pmap2 (\lam u v => q *q m (u,v)) (bclip-id a>0 Fa) (bclip-id a>0 Ga)
+
+-- | $|FG| \le a|G|$ if $|F| \le a \le N$ and $|G| \le N$.
+\lemma l0BMul-abs {L : FullIntegrationSpace} {N a : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a) (a<=N : a RatField.<= N)
+                  {F G : L0Space L} (Fa : IsBelow (abs F) a) (GN : IsBelow (abs G) N)
+  : abs (l0BMul N>0 (F,G)) <= a *q abs G
+  => \let | i => topTruncCompletion {L0PreSpace L}
+          | m => l0BMul N>0
+          | Y => L0Space L
+          | R : CoverMap (ProductCoverSpace Y Y) Y => (L0Space L).*q-right-uniform {a} CoverMap.∘ Y.abs-uniform CoverMap.∘ bclip-cover N CoverMap.∘ ProductCoverSpace.proj2
+          | P : CoverMap (ProductCoverSpace Y Y) Y => Y.join-uniform CoverMap.∘ ProductCoverSpace.tuple (Y.abs-uniform CoverMap.∘ m CoverMap.∘ ProductCoverSpace.prod (bclip-cover a) (bclip-cover N)) R
+     \in \have e : P (F,G) = R (F,G) => l0-dense2 P R (\lam f g =>
+                \have | e1 : m (bclip a (pointCF {L0PreSpace L} f), bclip N (pointCF {L0PreSpace L} g)) = pointCF {L0PreSpace L} (fmul (L.bclip a f) (L.bclip N g))
+                          => pmap2 (\lam u v => m (u,v)) (inv (l0-bclip {L})) (inv (l0-bclip {L})) *> l0BMul-pt N>0 (L.IsBelow-level a<=N (L.bclip-below a>0)) (L.bclip-below N>0)
+                      | e2 : abs (bclip N (pointCF {L0PreSpace L} g)) = pointCF {L0PreSpace L} (L.abs (L.bclip N g)) => pmap abs (inv (l0-bclip {L})) *> inv (l0-pt-abs {L})
+                \in pmap2 (\lam x y => abs x ∨ a *q y) e1 e2 *> pmap (`∨ _) (inv (l0-pt-abs {L})) *> pmap (_ ∨) (inv (func-*q {_} {_} {i}))
+                    *> inv i.func-join *> pmap (pointCF {L0PreSpace L}) (L.join_<= (fmul-bounded (<=-less a>0) (L.bclip-below a>0)))
+                    *> func-*q {_} {_} {i} *> pmap (a *q) (inv e2)) (F,G)
+     \in transport2 (\lam x y => abs (m (x,y)) <= a *q abs y) (bclip-id a>0 Fa) (bclip-id N>0 GN) (Y.join-left <=∘ =_<= e)
+
+-- | {l0BMul} on elements of `L` bounded by the level is their product.
+\lemma l0BMul-pt {L : FullIntegrationSpace} {N : Rat} (N>0 : RatField.zro RatField.< N) {u v : L} (uN : L.IsBelow (abs u) N) (vN : L.IsBelow (abs v) N)
+  : l0BMul N>0 (pointCF {L0PreSpace L} u, pointCF {L0PreSpace L} v) = pointCF {L0PreSpace L} (fmul u v)
+  => l0BMul.char N>0 *> pmap2 (\lam x y => pointCF {L0PreSpace L} (fmul x y)) (L.bclip-id N>0 uN) (L.bclip-id N>0 vN)

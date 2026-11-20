@@ -229,6 +229,24 @@
     => =_<= (pmap abs (inv toRatModule.*c-ldistr_-) *> abs_*q>=0 (<=-less r>0)) <=∘ <=_*q-right (<=-less r>0) trunc-lipschitz
         <=∘ =_<= (inv (abs_*q>=0 (<=-less r>0)) *> pmap abs (toRatModule.*c-ldistr_- *> pmap2 (-) (*q-finv-cancel (RatField.>_/= r>0)) (*q-finv-cancel (RatField.>_/= r>0))))
 
+  -- | `x ≤ r·1` if and only if `τ_r x = x`.
+  \lemma IsBelow_truncAt {r : Rat} (r>0 : 0 < r) {x : E} : IsBelow x r <-> truncAt r x = x
+    => (\lam p => <=-antisymmetric (truncAt-bound r>0) (truncAt-greatest r>0 p <=-refl), \lam q => transport (IsBelow __ r) q (truncAt-below r>0))
+
+  -- | The clamping of {x} to `[-r,r]`, that is, the clipping of {x} at $\tau_r |x|$.
+  \func bclip (r : Rat) (x : E) : E
+    => clip (truncAt r (abs x)) x
+
+  \lemma bclip-below {r : Rat} (r>0 : 0 < r) {x : E} : IsBelow (abs (bclip r x)) r
+    => IsBelow_<= (=_<= (clip-abs-eq (truncAt-pos r>0 abs>=0)) <=∘ meet-right) (truncAt-below r>0)
+
+  \lemma bclip-abs {r : Rat} (r>0 : 0 < r) {x : E} : abs (bclip r x) <= abs x
+    => =_<= (clip-abs-eq (truncAt-pos r>0 abs>=0)) <=∘ meet-left
+
+  -- | Clamping does not change an element bounded by `r`.
+  \lemma bclip-id {r : Rat} (r>0 : 0 < r) {x : E} (p : IsBelow (abs x) r) : bclip r x = x
+    => clip-id (=_<= (inv ((IsBelow_truncAt r>0).1 p)))
+
   -- | If `x ≥ 0` and `x/r` is under the unit, then `x ≤ r·1`.
   \lemma IsBelow-unit {x : E} {r : Rat} (r>0 : 0 < r) (x>=0 : 0 <= x) (p : IsUnderUnit (RatField.finv r *q x)) : IsBelow x r
     => (<=-less r>0, inP (RatField.finv r *q x, *q_>=0 (<=-less $ RatField.finv>0 r>0) x>=0, p, =_<= (inv (*q-finv-cancel (RatField.>_/= r>0)))))
@@ -388,6 +406,9 @@
 
   \lemma func-truncAt {r : Rat} {x : Dom} : func (TruncRieszSpace.truncAt r x) = TruncRieszSpace.truncAt r (func x)
     => func-*q *> pmap (r QModule.*q) (func-trunc *> pmap TruncRieszSpace.trunc func-*q)
+
+  \lemma func-bclip {r : Rat} {x : Dom} : func (TruncRieszSpace.bclip r x) = TruncRieszSpace.bclip r (func x)
+    => func-clip *> pmap (LatticeAbGroup.clip __ (func x)) (func-truncAt *> pmap (TruncRieszSpace.truncAt r) func-abs)
 
   \lemma func-IsBelow {x : Dom} {r : Rat} (p : TruncRieszSpace.IsBelow x r) : TruncRieszSpace.IsBelow (func x) r
     => (p.1, TruncP.map p.2 \lam s => (func s.1, transport (__ <= func s.1) func-zro (func-<= s.2), inv func-trunc *> pmap func s.3, func-<= s.4 <=∘ =_<= func-*q))

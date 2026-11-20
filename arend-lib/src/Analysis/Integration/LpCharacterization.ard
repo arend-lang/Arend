@@ -5,7 +5,7 @@
   with $j_p \kappa_h = \mathrm{clip}_h$ ({lpToL0-clip}). Then `F ∈ L⁰` lies in `Lᵖ` iff the net $\kappa_h(F)$ converges in `Lᵖ`
   ({lp-limit-of}, {lp-of-limit}); this replaces the Cauchy filters of the paper.
 
-  * {PosCone}: the positive cone $L^+$ as a directed set (index set of the nets); {IsLp}: `F ∈ L⁰` lies in `Lᵖ`.
+  * {IsLp}: `F ∈ L⁰` lies in `Lᵖ`; the nets are indexed by {PosCone} (`L0.ard`).
   * {pnormPow-dominated}, {lp-dominated}: Lemma `lem:dominated`.
   * {lpClip-normPow}: $\|\kappa_h F\|_p^p = \Psi_h(F)$; {clip-limit-L0}, {clip-limit-Lp}: $\mathrm{clip}_h \to \mathrm{id}$.
   * {lp-char}, {lp-char-sup}: Theorem `thm:char`, for every `F ∈ L⁰` (not only `F ≥ 0`).
@@ -68,18 +68,6 @@
 \open LatticeAbGroup
 \open MeetSemilattice
 \open QModule (*q)
-
--- | An element of the positive cone of `L`.
-\record PosElem (L : FullIntegrationSpace) (el : L) (el>=0 : L.zro <= el)
-
--- | The positive cone of `L`, directed by `∨`; used as the index set of nets.
-\func PosCone (L : FullIntegrationSpace) : DirectedSet \cowith
-  | E => PosElem L
-  | <= h h' => h.el <= h'.el
-  | <=-refl => <=-refl
-  | <=-transitive p q => p <=∘ q
-  | isInhabitted => inP (\new PosElem L L.zro <=-refl)
-  | isDirected h h' => inP (\new PosElem L (h.el ∨ h'.el) (h.el>=0 <=∘ join-left), join-left, join-right)
 
 -- | `F ∈ L⁰` lies in `Lᵖ`.
 \func IsLp {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (F : L0Space L) : \Prop
