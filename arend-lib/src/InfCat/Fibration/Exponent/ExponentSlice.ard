@@ -44,16 +44,16 @@
   | isWeakEq a => isWeakEq (\lam i => (a i).1)
 
 -- | The category of elements of `R (pi t)`.
-\func secFib.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) (t :⁺ T) : \Cat u
+\func secFib.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) (t :⁺ T) : \Cat
   => \Sigma⁺ (k : Q) (R (pi t) k)
 
 -- | The total category of {secFib}.
 \func SecTot.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) : \Cat u
-  => \Sigma⁺ (t : T) (secFib R pi t)
+  => \Sigma⁺ (t : T) (\Sigma⁺ (k : Q) (R (pi t) k))
 
 -- | The vertical arrows of {SecTot} whose `Q`-component is a weak equivalence.
-\func SecWeakEq.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) (W : CatWeakEq Q) : CatWeakEq (SecTot R pi)
-  => TotWeakEq (totalProj (secFib R pi)) (TotalFibWeakEq {T} {secFib R pi} (\lam t => ExpWeakEq W))
+\func SecWeakEq.{u} {Q B T : \Cat u} (R : B ->⁺ Q ->⁺ \Type u) (pi : T ->⁺ B) (W : CatWeakEq Q) : CatWeakEq (SecTot R pi) \cowith
+  | isWeakEq => isWeakEq {TotWeakEq (totalProj (secFib R pi)) (TotalFibWeakEq {T} {secFib R pi} (\lam t => ExpWeakEq W))}
 
 \module ExpSliceHelpers \where {
   -- | The presheaf `(k, c) ↦ R b k` on `Q × Op C`.

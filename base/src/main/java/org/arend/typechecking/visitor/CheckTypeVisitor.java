@@ -2752,7 +2752,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         piExpr = new PiExpression(list.get(i), piExpr);
       }
 
-      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(paramSorts), codomainSort))), expr);
+      SortExpression piSort = SortExpression.makePi(SortExpression.makeMax(paramSorts), codomainSort);
+      if (GetTypeVisitor.isContextDependentPi(list, paramSorts)) {
+        piSort = SortExpression.makeCovariantTop(piSort);
+      }
+      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(piSort)), expr);
     }
   }
 
@@ -2776,7 +2780,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     List<SortExpression> sorts = new ArrayList<>(expr.getParameters().size());
     DependentLink args = visitSigmaParameters(expr.getParameters(), expr.getVariance(), expectedType, sorts);
-    return args == null || !args.hasNext() ? null : checkResult(expectedType, new TypecheckingResult(new SigmaExpression(args), new UniverseExpression(SortExpression.makeMax(sorts))), expr);
+    if (args == null || !args.hasNext()) return null;
+    SortExpression sigmaSort = SortExpression.makeMax(sorts);
+    if (GetTypeVisitor.isContextDependentSigma(args, sorts)) {
+      sigmaSort = SortExpression.makeCovariantTop(sigmaSort);
+    }
+    return checkResult(expectedType, new TypecheckingResult(new SigmaExpression(args), new UniverseExpression(sigmaSort)), expr);
   }
 
   private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, BindingVariance variance, Expression expectedType, List<SortExpression> resultSorts) {
@@ -2803,7 +2812,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       // The type may be released by previous parameters, so its sort is checked against the expected type later
       result = checkType(arg.getType(), expectedType == UniverseExpression.INF_OMEGA ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA);
     } else {
-      result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+      // A component of a \Sigma-type in \Cat u may belong to \Type u, which is not a subtype of \Cat u, so it is not checked against the expected type
+      result = checkType(arg.getType(), expectedType == null || UniverseExpression.isFiniteCatUniverse(expectedType) ? UniverseExpression.OMEGA : expectedType);
     }
     if (result == null) return false;
 

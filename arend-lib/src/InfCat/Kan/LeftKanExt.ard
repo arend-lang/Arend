@@ -122,7 +122,7 @@
 \lemma kanExt-small.{u} {A Q : \Cat u} {B : \Cat (\suc u)} (f : A ->⁺ B) (q : Q ->⁺ A)
                         (fs : \Pi (a : A) (b : B) -> IsSmall.{u} (f a ~> b)) (b : B)
   : IsSmallCat.{u} (KanExt f q b)
-  => localization-small (kanExt-fiber-isLocalization f q b) $ IsSmallCat.fromObjects (smallOb-equiv f q fs b) (smallHom-equiv f q fs b)
+  => localization-small (kanExt-fiber-isLocalization f q b) $ IsSmallCat.fromTypeObjects (smallOb-equiv f q fs b) (smallHom-equiv f q fs b)
   \where \private {
     -- | The small model of `f a ~> b`.
     \sfunc homModel-equiv.{v} {A B : \Cat} (f : A ->⁺ B) (b : B) (fs : \Pi (a : A) -> IsSmall.{v} (f a ~> b)) (a : A)

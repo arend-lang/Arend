@@ -848,7 +848,7 @@ public class TwoStageEquations implements Equations {
         for (UniverseExpression universe : pair.proj2) {
           sorts.add(universe.getSortExpression());
         }
-        solution = SortExpression.makeMax(sorts);
+        solution = SortExpression.makeJoin(sorts);
       }
       solve(pair.proj1, new UniverseExpression(solution), true);
     }

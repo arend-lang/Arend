@@ -63,6 +63,69 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   /**
+   * A type former whose sort is \Cat u for finite u cannot have a covariant component which is a type (not a category) depending on the categorical context.
+   * Indeed, \Cat u is a type, but \Type u is a category, so such a type former would give a covariant map \Type u ->⁺ \Cat u.
+   * The sort of such type formers is the largest universe (see {@link SortExpression#makeCovariantTop}).
+   *
+   * @param type      the type of a covariant component of a type former.
+   * @param sort      the sort of {@code type}.
+   * @param boundHere the parameters of the type former; they do not belong to the categorical context of the type former.
+   * @return true if {@code type} might be a type (not a category) and depends on a covariant variable which does not belong to {@code boundHere}.
+   */
+  public static boolean isContextDependentType(Expression type, SortExpression sort, Collection<? extends Binding> boundHere) {
+    if (!SortExpression.mayBeCategoricalType(sort)) return false;
+    for (Binding binding : FreeVariablesCollector.getFreeVariables(type, true)) {
+      if (binding.getVariance() != BindingVariance.INVARIANT && !boundHere.contains(binding)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param sorts the sorts of typed parameters in {@code parameters}.
+   * @return true if one of the covariant components of the \Sigma-type with parameters {@code parameters} is context dependent (see {@link #isContextDependentType}).
+   */
+  public static boolean isContextDependentSigma(DependentLink parameters, List<SortExpression> sorts) {
+    Set<Binding> boundHere = null;
+    int i = 0;
+    for (DependentLink param = parameters; param.hasNext() && i < sorts.size(); param = param.getNext(), i++) {
+      param = param.getNextTyped(null);
+      if (param.getVariance() != BindingVariance.INVARIANT) {
+        if (boundHere == null) boundHere = getBindings(parameters);
+        if (isContextDependentType(param.getType(), sorts.get(i), boundHere)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param sorts the sorts of {@code parameters}.
+   * @return true if the type of one of the covariant parameters of a \Pi-type is context dependent (see {@link #isContextDependentType}).
+   */
+  public static boolean isContextDependentPi(List<? extends SingleDependentLink> parameters, List<SortExpression> sorts) {
+    Set<Binding> boundHere = new HashSet<>();
+    for (int i = 0; i < parameters.size() && i < sorts.size(); i++) {
+      SingleDependentLink param = parameters.get(i);
+      if (param.getVariance() != BindingVariance.INVARIANT && isContextDependentType(param.getType(), sorts.get(i), boundHere)) {
+        return true;
+      }
+      boundHere.addAll(getBindings(param));
+    }
+    return false;
+  }
+
+  public static Set<Binding> getBindings(DependentLink parameters) {
+    Set<Binding> result = new HashSet<>();
+    for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
+      result.add(link);
+    }
+    return result;
+  }
+
+  /**
    * Path types that depend on the categorical context live in the infinite universe.
    * This is relative to the context: once covariant variables are bound by \Pi- or \Sigma-types, these types do not depend on them anymore.
    * Thus, the sort of such a type can be computed after replacing these variables with invariant ones.
@@ -257,12 +320,16 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       Expression codomainType = getReleasedType(expr.getCodomain(), Collections.singletonList(expr.getParameters()));
       if (codomainType != null) sort2 = codomainType.toSortExpression();
     }
-    return sort1 == null || sort2 == null ? new ErrorExpression() : new UniverseExpression(SortExpression.makePi(sort1, sort2));
+    if (sort1 == null || sort2 == null) return new ErrorExpression();
+    SortExpression result = SortExpression.makePi(sort1, sort2);
+    return new UniverseExpression(expr.getParameters().getVariance() != BindingVariance.INVARIANT && isContextDependentType(expr.getParameters().getType(), sort1, Collections.emptySet()) ? SortExpression.makeCovariantTop(result) : result);
   }
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Void params) {
     List<SortExpression> sorts = new ArrayList<>();
+    boolean contextDependent = false;
+    Set<Binding> boundHere = null;
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
       param = param.getNextTyped(null);
       SortExpression sort = param.getType().accept(this, null).toSortExpression();
@@ -273,9 +340,14 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       if (sort == null) {
         return new ErrorExpression();
       }
+      if (param.getVariance() != BindingVariance.INVARIANT && !contextDependent) {
+        if (boundHere == null) boundHere = getBindings(expr.getParameters());
+        contextDependent = isContextDependentType(param.getType(), sort, boundHere);
+      }
       sorts.add(param.getVariance() == BindingVariance.INVARIANT ? sort.withoutCat() : sort);
     }
-    return new UniverseExpression(SortExpression.makeMax(sorts));
+    SortExpression result = SortExpression.makeMax(sorts);
+    return new UniverseExpression(contextDependent ? SortExpression.makeCovariantTop(result) : result);
   }
 
   @Override

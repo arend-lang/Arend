@@ -260,9 +260,20 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
       \\func Tot.{u} {A B : \\Cat u} {f : A ->⁺ B} (F : P f ->⁺ \\Type u) : \\Cat u => \\Sigma⁺ (b : B) (F (pl b))
       \\func test.{u} (X : \\Type u) (D : \\Cat u) (F : P {\\Sigma⁺ X D} {\\Sigma⁺ X D} (\\lam a => a) ->⁺ \\Type u) => Tot.{u} F
       \\func test2.{u} (X : \\Type u) (D : \\Cat u) : \\Cat u => P {\\Sigma⁺ X D} {\\Sigma⁺ X D} (\\lam a => a)
+      \\func test3.{u} (A : \\Type u) : \\Cat u => \\Sigma⁺ DI A
+      \\func test4.{u} (A : \\Type u) : \\Cat u => \\Sigma⁺ A DI
+      """);
+  }
+
+  // A covariant type component makes \\Sigma⁺ DI A a covariant map \\Type u ->⁺ \\Cat u, so it is not small
+  @Test
+  public void sigmaTypeCovariantComponentSortTest() {
+    typeCheckModule("""
       \\func test3.{u} (A :⁺ \\Type u) : \\Cat u => \\Sigma⁺ DI A
       \\func test4.{u} (A :⁺ \\Type u) : \\Cat u => \\Sigma⁺ A DI
-      """);
+      \\func test5.{u} (A :⁺ \\Type u) : \\Cat => \\Sigma⁺ DI A
+      \\func test6.{u} (A :⁺ \\Type u) : \\Cat => \\Sigma⁺ A DI
+      """, 2);
   }
 
   @Test

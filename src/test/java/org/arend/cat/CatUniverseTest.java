@@ -39,12 +39,12 @@ public class CatUniverseTest extends TypeCheckingTestCase {
 
   @Test
   public void catUniverseTest() {
-    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Cat u");
+    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u");
   }
 
   @Test
   public void catUniverseError() {
-    typeCheckDef("\\func test.{u} : \\Type (\\suc u) => \\Cat u", 1);
+    typeCheckDef("\\func test.{u} : \\Cat (\\suc u) => \\Cat u", 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
@@ -74,13 +74,15 @@ public class CatUniverseTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void typeCatSubtypeTest() {
-    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => A");
+  public void typeCatSubtypeError() {
+    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => A", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
   @Test
-  public void typeSucCatSubtypeTest() {
-    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat (\\suc u) => A");
+  public void typeSucCatSubtypeError() {
+    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat (\\suc u) => A", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
   @Test
@@ -99,8 +101,9 @@ public class CatUniverseTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void sigmaCatSubtypeTest() {
-    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => \\Sigma (a b : A)");
+  public void sigmaCatSubtypeError() {
+    typeCheckDef("\\func test.{u} (A : \\Type u) : \\Cat u => \\Sigma (a b : A)", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
   }
 
   @Test
@@ -163,10 +166,84 @@ public class CatUniverseTest extends TypeCheckingTestCase {
   }
 
   @Test
-  public void dataInferredSortTest() {
+  public void dataInferredSortError() {
     typeCheckModule("""
       \\data D.{u} (A : \\Type u) | d A
       \\func test.{u} (A : \\Type u) : \\Cat u => D A
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void sigmaTypeCatTest() {
+    typeCheckModule("""
+      \\func test1.{u} (X : \\Type u) (D : \\Cat u) : \\Cat u => \\Sigma+ X D
+      \\func test2.{u} (X : \\Type u) (D : \\Cat u) : \\Cat u => \\Sigma+ D X
+      \\func test3.{u} (D : \\Cat u) (F : D ->+ \\Type u) : \\Cat u => \\Sigma+ (d : D) (F d)
       """);
+  }
+
+  // \lam (A :+ \Type u) => \Sigma+ DI A would be a covariant map \Type u ->+ \Cat u
+  @Test
+  public void sigmaCovariantTypeError() {
+    typeCheckDef("\\func test.{u} (A :+ \\Type u) : \\Cat u => \\Sigma+ DI A", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void sigmaCovariantTypeLargeTest() {
+    typeCheckDef("\\func test.{u} (A :+ \\Type u) : \\Cat => \\Sigma+ DI A");
+  }
+
+  @Test
+  public void sigmaCovariantTypeSmallTypeTest() {
+    typeCheckDef("\\func test.{u} (A :+ \\Type u) : \\Type u => \\Sigma+ Nat A");
+  }
+
+  @Test
+  public void sigmaCovariantCatTest() {
+    typeCheckDef("\\func test.{u} {T : \\Cat u} (F : T ->+ \\Cat u) (t :+ T) : \\Cat u => \\Sigma+ DI (F t)");
+  }
+
+  @Test
+  public void sigmaCovariantSetTest() {
+    typeCheckDef("\\func test.{u} {T : \\Cat u} (F : T ->+ \\Set u) (t :+ T) : \\Cat u => \\Sigma+ DI (F t)");
+  }
+
+  @Test
+  public void lamCovariantTypeError() {
+    typeCheckDef("\\func test.{u} {Q T : \\Cat u} (R : T ->+ Q ->+ \\Type u) : T ->+ \\Cat u => \\lam (t :+ T) => \\Sigma+ (k : Q) (R t k)", 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  // The inner \Sigma-type depends on t, which is bound by the outer one
+  @Test
+  public void sigmaReleasedCovariantTypeTest() {
+    typeCheckDef("\\func test.{u} {Q T : \\Cat u} (R : T ->+ Q ->+ \\Type u) : \\Cat u => \\Sigma+ (t : T) (\\Sigma+ (k : Q) (R t k))");
+  }
+
+  @Test
+  public void sigmaFamilyCovariantTypeTest() {
+    typeCheckModule("""
+      \\func fam.{u} {Q T : \\Cat u} (R : T ->+ Q ->+ \\Type u) (t :+ T) : \\Cat => \\Sigma+ (k : Q) (R t k)
+      \\func test.{u} {Q T : \\Cat u} (R : T ->+ Q ->+ \\Type u) : \\Cat => \\Sigma+ (t : T) (fam R t)
+      \\func test2.{u} {Q T : \\Cat u} (R : T ->+ Q ->+ \\Type u) : \\Cat u => \\Sigma+ (t : T) (fam R t)
+      """, 1);
+    assertThatErrorsAre(Matchers.typeMismatchError());
+  }
+
+  @Test
+  public void dataCovariantParameterError() {
+    typeCheckDef("\\data D.{u} {T : \\Cat u} (G : T ->+ \\Type u) (t :+ T) : \\Cat u | d (x :+ G t)", 1);
+  }
+
+  @Test
+  public void dataCovariantParameterInferredError() {
+    typeCheckDef("\\data D.{u} {T : \\Cat u} (G : T ->+ \\Type u) (t :+ T) | d (x :+ G t) (s :+ T)", 1);
+  }
+
+  @Test
+  public void dataCovariantParameterTypeTest() {
+    typeCheckDef("\\data D.{u} {T : \\Cat u} (G : T ->+ \\Type u) (t :+ T) : \\Type u | d (x :+ G t)");
   }
 }

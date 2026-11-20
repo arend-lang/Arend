@@ -66,6 +66,8 @@ import static org.arend.core.expr.ExpressionFactory.*;
 public class DefinitionTypechecker extends BaseDefinitionTypechecker implements ConcreteResolvableDefinitionVisitor<Void, List<ExtElimClause>> {
   protected CheckTypeVisitor typechecker;
   private final Set<TCDefReferable> myRecursiveDefinitions;
+  // The first covariant parameter of a constructor which is a type depending on the categorical context (see GetTypeVisitor.isContextDependentType)
+  private Concrete.Parameter myContextDependentConstructorParameter;
 
   public DefinitionTypechecker(CheckTypeVisitor typechecker, Set<TCDefReferable> recursiveDefinitions) {
     super(typechecker == null ? null : typechecker.getErrorReporter());
@@ -531,6 +533,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             if (paramType != null) {
               paramResults.add(paramType.expression());
               sorts.add(variance == BindingVariance.INVARIANT ? paramType.sort().withoutCat() : paramType.sort());
+              if (variance != BindingVariance.INVARIANT && myContextDependentConstructorParameter == null && GetTypeVisitor.isContextDependentType(paramType.expression(), paramType.sort(), GetTypeVisitor.getBindings(list.getFirst()))) {
+                myContextDependentConstructorParameter = parameter;
+              }
             }
           } else {
             Expression expected = def instanceof Concrete.DataDefinition || def instanceof Concrete.FunctionDefinition ? UniverseExpression.INF_OMEGA : UniverseExpression.OMEGA;
@@ -1710,6 +1715,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Sort userSort = dataDefinition.getSort();
     if (userSort != null && userSort.getPLevel().isInfinity() && userSort.getHLevel().isInfinity()) userSort = null;
     List<SortExpression> inferredSortList = new ArrayList<>();
+    myContextDependentConstructorParameter = null;
 
     boolean dataOk = true;
     List<DependentLink> elimParams = Collections.emptyList();
@@ -1945,9 +1951,16 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           }
         }
       }
-    } else if (countingErrorReporter.getErrorsNumber() == 0 && userSort != null && !inferredSort.withInfLevel().isLessOrEquals(userSort)) {
+    } else if (countingErrorReporter.getErrorsNumber() == 0 && userSort != null && !inferredSort.withInfLevel().isLessOrEqualsNonStrictCat(userSort)) {
+      // The sort of a data type is the sort of a type former, so \Type u fits into \Cat u
       countingErrorReporter.report(new DataUniverseError(inferredSort.withInfLevel(), userSort, def.getUniverse() == null ? def : def.getUniverse()));
     }
+
+    // \Cat u is a type, so a data type in it cannot have a covariant field which is a type depending on covariant parameters (see GetTypeVisitor.isContextDependentType)
+    if (myContextDependentConstructorParameter != null && countingErrorReporter.getErrorsNumber() == 0 && (userSort != null ? userSort.isFiniteCat() : inferredSort instanceof SortExpression.Const(Sort sort) && sort.isFiniteCat())) {
+      countingErrorReporter.report(new TypecheckingError("A data type in \\Cat u (for finite u) cannot have a covariant field which is a type depending on covariant parameters; use the universe \\Cat instead", myContextDependentConstructorParameter));
+    }
+    myContextDependentConstructorParameter = null;
 
     // A data type truncated to level n+1 can be matched only in a data type of level <= n
     if (!truncatedPatternClauses.isEmpty()) {

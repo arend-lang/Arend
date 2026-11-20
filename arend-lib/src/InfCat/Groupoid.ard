@@ -138,3 +138,21 @@
       | ret_f => idpe
       | f_sec => toCatType_fromCatType
   }
+
+{- | A type regarded as a category; it is invariant in {A}.
+ -   It is needed since `\Type u` is not a subtype of `\Cat u`: the latter is a type, while the former is a category.
+ -}
+\data ToCat.{u} (A : \Type u) : \Cat u
+  | toCat A
+
+\func fromCat.{u} {A : \Type u} (x :⁺ ToCat A) : A \elim x
+  | toCat a => a
+
+\func toCat_fromCat.{u} {A : \Type u} {x : ToCat A} : toCat (fromCat x) = x \elim x
+  | toCat a => idp
+
+\func ToCat-equiv.{u} {A : \Type u} : QEquiv {A} {ToCat A} \cowith
+  | f => toCat
+  | ret => fromCat
+  | ret_f => idpe
+  | f_sec x => toCat_fromCat

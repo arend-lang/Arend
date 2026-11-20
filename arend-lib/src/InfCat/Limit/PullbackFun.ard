@@ -108,14 +108,14 @@
   => IsEquiv.trans (DI-sections-ev (\lam i => \Pi (j :⁺ DI) -> Phi i j)) (DI-sections-ev (Phi dleft))
 
 -- | A covariant product of fiberwise equivalences is an equivalence.
-\lemma pi-equiv+.{u} {S : \Cat u} {A B : S ->⁺ \Type u} (h : \Pi (z :⁺ \Sigma⁺ (s : S) (A s)) -> B z.1)
+\lemma pi-equiv+.{u} {S : \Type u} {A B : S ->⁺ \Type u} (h : \Pi (z :⁺ \Sigma⁺ (s : S) (A s)) -> B z.1)
                      (e : \Pi (s : S) -> IsEquiv (\lam a => h (s,a)))
   : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => h (s, f s))
   => \let p => fun-path {S} {A} {B} h e
      \in transport (\lam (q : A ~> B) => IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => q i s) (f s)))
                    p.2 (path-equiv p.1)
   \where
-    \private \lemma path-equiv.{w} {S : \Cat w} {A B : S ->⁺ \Type w} (p : A = B)
+    \private \lemma path-equiv.{w} {S : \Type w} {A B : S ->⁺ \Type w} (p : A = B)
       : IsEquiv {\Pi (s :⁺ S) -> A s} {\Pi (s :⁺ S) -> B s} (\lam f s => ~>_-> (dpath \lam i => (=_~> p) i s) (f s)) \elim p
       | idp => transport IsEquiv (ext \lam f s => inv ~>_->_idd) (inP idEquiv)
 

@@ -67,7 +67,7 @@
                                     | ret_f => idpe
                                     | f_sec => idpe
                                   })
-         \in (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> f a = b))) ==< path (\lam i => \Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> path-sym (f a) b @ i))) >==
+         \in (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> f a = b))) ==< path (\lam i => \Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> path-sym.type (f a) b @ i))) >==
              (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (C f))                                      ==< path (\lam i => \Pi (f : A' -> B) -> nullTypeUniverse.localDesc A (C f) @ i) >==
              (\Pi (f : A' -> B) -> IsEquiv {C f} {A -> C f} (\lam c _ => c))                                ==< <->_=.1 (totalEquiv \lam f c _ => c) >==
              IsEquiv F                                                                                      ==< inv (<->_=.1 (IsEquiv.parallelEquiv eq1 eq2 \lam _ => idp)) >==

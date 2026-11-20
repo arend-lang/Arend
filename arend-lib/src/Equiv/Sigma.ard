@@ -72,7 +72,7 @@
   | ret_f p => ext (e.ret_f p.1, path (\lam i => coe (\lam j => B' (e.f_ret_f=f_sec_f p.1 i j) ) _ right) *> transport_id_inv B' _ _)
   | f_sec p => ext (e.f_sec p.1, transport_id_inv B' _ _)
   \where {
-    \func path-func.{u} {A A' : \Cat u} {B' : A' -> \Cat u} (p : A = A') : (\Sigma (x : A) (B' (coe p x right))) = (\Sigma (x' : A') (B' x'))
+    \func path-func.{u} {A A' : \Type u} {B' : A' -> \Type u} (p : A = A') : (\Sigma (x : A) (B' (coe p x right))) = (\Sigma (x' : A') (B' x'))
       => path \lam i => \Sigma (x : p i) (B' (coe2 p i x right))
   }
 

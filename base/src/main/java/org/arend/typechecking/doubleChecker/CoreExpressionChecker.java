@@ -389,7 +389,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         boolean invariant = isSigma && link.getVariance() == BindingVariance.INVARIANT;
         // The type of a parameter of a covariant \Sigma-type may be released by previous parameters, so its sort is checked against the expected type later
         boolean released = isSigma && !invariant && link != first;
-        Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : released && type != UniverseExpression.INF_OMEGA ? null : type;
+        // A component of a \Sigma-type in \Cat u may belong to \Type u, which is not a subtype of \Cat u, so it is not checked against the expected type
+        Expression checkAgainst = invariant ? UniverseExpression.INF_OMEGA : (released || isSigma && UniverseExpression.isFiniteCatUniverse(type)) && type != UniverseExpression.INF_OMEGA ? null : type;
         if (isSigma && !invariant || allowCatDomain) {
           paramType = link.getType().accept(this, checkAgainst);
         } else {
@@ -514,7 +515,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       }
     }
     freeDependentLink(expr.getParameters());
-    return check(expectedType, new UniverseExpression(SortExpression.makePi(SortExpression.makeMax(sort1), sort2)), expr);
+    SortExpression piSort = SortExpression.makePi(SortExpression.makeMax(sort1), sort2);
+    if (GetTypeVisitor.isContextDependentPi(Collections.singletonList(expr.getParameters()), sort1)) {
+      piSort = SortExpression.makeCovariantTop(piSort);
+    }
+    return check(expectedType, new UniverseExpression(piSort), expr);
   }
 
   @Override
@@ -531,7 +536,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
     List<SortExpression> sorts = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr, true, false);
     freeDependentLink(expr.getParameters());
-    return check(expectedType, new UniverseExpression(SortExpression.makeMax(sorts)), expr);
+    SortExpression sigmaSort = SortExpression.makeMax(sorts);
+    if (GetTypeVisitor.isContextDependentSigma(expr.getParameters(), sorts)) {
+      sigmaSort = SortExpression.makeCovariantTop(sigmaSort);
+    }
+    return check(expectedType, new UniverseExpression(sigmaSort), expr);
   }
 
   private void checkLevel(Level level, Expression expr) {

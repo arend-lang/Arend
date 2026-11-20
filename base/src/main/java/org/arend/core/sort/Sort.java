@@ -57,11 +57,37 @@ public class Sort implements CoreSort {
   }
 
   public Sort succ() {
-    return isProp() ? SET0 : new Sort(getPLevel().add(BigInteger.ONE), getHLevel().succ());
+    if (isProp()) return SET0;
+    // \Cat u is a type when u is finite
+    ConstLevel hLevel = isFiniteCat() ? ConstLevel.INFINITY : myHLevel.succ();
+    return new Sort(getPLevel().add(BigInteger.ONE), hLevel);
+  }
+
+  /**
+   * @return true if this sort is \Cat u for a finite u. Such a universe is a type (a groupoid), not a category.
+   */
+  public boolean isFiniteCat() {
+    return myHLevel.isCat() && !myPLevel.isInfinity();
+  }
+
+  /**
+   * @return true if this sort is \Type u, that is, it is not \Cat and its homotopy level is infinite.
+   *         Its universe is a category whose arrows are functions.
+   */
+  public boolean isCategoricalType() {
+    return myHLevel.isInfinity() && !myHLevel.isCat();
   }
 
   public Sort max(Sort sort) {
     return isProp() ? sort : sort.isProp() ? this : new Sort(myPLevel.max(sort.myPLevel), myHLevel.max(sort.myHLevel));
+  }
+
+  /**
+   * The least upper bound with respect to the subtyping relation.
+   * Unlike {@link #max}, which computes the sort of type formers, it does not put \Type u below \Cat u for finite u.
+   */
+  public Sort join(Sort sort) {
+    return isCategoricalType() && sort.isFiniteCat() || isFiniteCat() && sort.isCategoricalType() ? INFINITY : max(sort);
   }
 
   public static Sort max(List<Sort> sorts) {
@@ -82,9 +108,28 @@ public class Sort implements CoreSort {
     return !myHLevel.isInfinity() && myHLevel.value().equals(BigInteger.ZERO);
   }
 
+  /**
+   * \Type u is not a subtype of \Cat v for finite v since \Cat v is a type and \Type u is a category.
+   * The sort of type formers ({@link #max}) may still be \Cat v when some of the components are in \Type u.
+   */
+  private static boolean isTypeBelowFiniteCat(Sort sort1, Sort sort2) {
+    return sort1.isCategoricalType() && sort2.isFiniteCat();
+  }
+
   public static boolean compare(Sort sort1, Sort sort2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
+    return compare(sort1, sort2, cmp, true, equations, sourceNode);
+  }
+
+  /**
+   * @param strictCat if false, \Type u is a subtype of \Cat v whenever u <= v.
+   *                  This is the order used to check sorts of type formers such as data types.
+   */
+  public static boolean compare(Sort sort1, Sort sort2, CMP cmp, boolean strictCat, Equations equations, Concrete.SourceNode sourceNode) {
     if (sort2.isOmega() && cmp == CMP.LE || sort1.isOmega() && cmp == CMP.GE) {
       return true;
+    }
+    if (strictCat && (cmp != CMP.GE && isTypeBelowFiniteCat(sort1, sort2) || cmp != CMP.LE && isTypeBelowFiniteCat(sort2, sort1))) {
+      return false;
     }
     if (sort1.isProp() && !sort2.getPLevel().hasInferenceVariables()) {
       return cmp == CMP.LE || sort2.isProp();
@@ -97,6 +142,10 @@ public class Sort implements CoreSort {
 
   public boolean isLessOrEquals(Sort other) {
     return compare(this, other, CMP.LE, DummyEquations.getInstance(), null);
+  }
+
+  public boolean isLessOrEqualsNonStrictCat(Sort other) {
+    return compare(this, other, CMP.LE, false, DummyEquations.getInstance(), null);
   }
 
   public Sort subst(LevelSubstitution subst) {

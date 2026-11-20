@@ -394,6 +394,69 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return new Max(newSorts);
   }
 
+  /**
+   * The least upper bound with respect to the subtyping relation (see {@link Sort#join}).
+   * Unlike {@link #makeMax}, which computes the sort of type formers, it never puts \Type u below \Cat v for finite v.
+   * If the result cannot be determined, it returns the largest universe.
+   */
+  static @NotNull SortExpression makeJoin(@NotNull List<SortExpression> sorts) {
+    Sort result = Sort.PROP;
+    boolean hasNonConst = false;
+    for (SortExpression sort : sorts) {
+      if (sort instanceof Const(Sort constSort)) {
+        result = result.join(constSort);
+      } else {
+        hasNonConst = true;
+      }
+    }
+    if (!hasNonConst) return new Const(result);
+    boolean mayBeFiniteCat = false, mayBeType = false;
+    for (SortExpression sort : sorts) {
+      mayBeFiniteCat = mayBeFiniteCat || mayBeFiniteCat(sort);
+      mayBeType = mayBeType || mayBeCategoricalType(sort);
+    }
+    SortExpression max = makeMax(sorts);
+    return mayBeFiniteCat && mayBeType ? makeMax(Arrays.asList(max, new Const(Sort.INFINITY))) : max;
+  }
+
+  /**
+   * @return false if {@code sort} is known not to be \Type u, that is, its homotopy level is finite or it is \Cat.
+   */
+  static boolean mayBeCategoricalType(@NotNull SortExpression sort) {
+    return switch (sort) {
+      case Const(Sort constSort) -> constSort.isCategoricalType();
+      case Max max -> max.getSorts().stream().anyMatch(SortExpression::mayBeCategoricalType);
+      case Pi pi -> mayBeCategoricalType(pi.getCodomain());
+      default -> sort.withInfLevel().isCategoricalType();
+    };
+  }
+
+  /**
+   * @return false if {@code sort} is known not to be \Cat u for a finite u.
+   */
+  static boolean mayBeFiniteCat(@NotNull SortExpression sort) {
+    return switch (sort) {
+      case Const(Sort constSort) -> constSort.isFiniteCat();
+      case Max max -> max.getSorts().stream().anyMatch(SortExpression::mayBeFiniteCat);
+      case Pi pi -> mayBeFiniteCat(pi.getCodomain());
+      default -> sort.withInfLevel().getHLevel().isCat();
+    };
+  }
+
+  /**
+   * The sort of a type former, one of whose covariant components is a type that depends on the categorical context.
+   * Such a type former cannot belong to \Cat u for finite u since this universe is a type, so it belongs to the largest universe.
+   * This is relative to the context: once the covariant variables are bound, the type former may be small again.
+   *
+   * @param sort the sort of the type former computed by {@link #makeMax}.
+   */
+  static @NotNull SortExpression makeCovariantTop(@NotNull SortExpression sort) {
+    if (sort instanceof Const(Sort constSort)) {
+      return constSort.isFiniteCat() ? new Const(Sort.INFINITY) : sort;
+    }
+    return makeMax(Arrays.asList(sort, new Const(new Sort(Level.INFINITY, ConstLevel.INFINITY))));
+  }
+
   static @NotNull SortExpression makePi(@NotNull SortExpression domain, @NotNull SortExpression codomain) {
     if (codomain.isProp()) {
       return codomain;

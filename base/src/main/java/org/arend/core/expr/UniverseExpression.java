@@ -34,6 +34,13 @@ public class UniverseExpression extends Expression implements CoreUniverseExpres
     return mySortExpression instanceof SortExpression.Const(Sort sort) && sort.isOmega();
   }
 
+  /**
+   * @return true if {@code expr} is \Cat u for a finite u.
+   */
+  public static boolean isFiniteCatUniverse(Expression expr) {
+    return expr != null && expr.getUnderlyingExpression() instanceof UniverseExpression universe && universe.mySortExpression instanceof SortExpression.Const(Sort sort) && sort.isFiniteCat();
+  }
+
   public void substSort(LevelSubstitution substitution) {
     if (!substitution.isEmpty()) mySortExpression = mySortExpression.subst(substitution);
   }
