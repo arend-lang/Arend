@@ -4,6 +4,7 @@
   * {rpow-superadd}: $a^p + b^p \le (a + b)^p$ for $a, b \ge 0$ and $p \ge 1$.
   * {rpow-lip}: $|u^p - v^p| \le p M^{p-1} |u - v|$ for $0 \le u, v \le M$ and $p \ge 1$.
   * {absPow-tangent}: $|x|^p + p \varphi_p(x) (y - x) \le |y|^p$ for $p > 1$.
+  * {rpow-tangent-trunc}, {rpow-tangent-optimize}: the tangent bound of $a \mapsto a^q$ with a truncated constant term, and its optimization.
   * {absPow-unif-deriv}: $x \mapsto |x|^p$ is uniformly differentiable on $[-R,R]$ with derivative $p \varphi_p$.
     The tangent inequalities at `x` and at `y` give $0 \le F(y) - F(x) - F'(x)(y - x) \le (F'(y) - F'(x))(y - x)$,
     so this follows from the uniform continuity of $\varphi_p$ on $[-R,R]$.
@@ -19,7 +20,10 @@
 \import Arith.Real.Field
 \import Arith.Real.Power
 \import Arith.Real.SignedPow
+\import Function.Meta
+\import Meta
 \import Order.Biordered
+\import Order.Lattice
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -179,3 +183,60 @@
             \in =_<= (RealAbGroup.abs-ofPos D>=0) <=∘ (linarith : _ <= p * ((signedPow p>1 y - signedPow p>1 x) * (y - x))) <=∘ m)
       }
   }
+
+{- | The tangent line of $a \mapsto a^q$ at $\nu > 0$ with a truncated constant term:
+ -   $q \nu^{q-1} a \le a^q + (q-1) \nu^q \min(n a, 1) + q \nu^{q-1} \min(a, \eta)$ for $a \ge 0$, $q \ge 1$ and $n \eta = 1$.
+ -}
+\lemma rpow-tangent-trunc {q : Real} {q>0 : (0 : Real) < q} (q>=1 : (1 : Real) <= q) {v : Real} (v>0 : (0 : Real) < v)
+                          {n eta : Real} (n>=0 : (0 : Real) <= n) (eta>=0 : (0 : Real) <= eta) (n-eta : n * eta = (1 : Real)) {a : Real} (a>=0 : (0 : Real) <= a)
+  : q * rpow-pos v v>0 (q - 1) * a <= rpow (RealAbGroup.abs a) RealAbGroup.abs>=0 q q>0 + (q - 1) * rpow-pos v v>0 q * ((n * a) ∧ 1) + q * rpow-pos v v>0 (q - 1) * (a ∧ eta)
+  => \have | W>0 => rpow-pos>0 {v} {v>0} {q - 1}
+           | c>=0 : (0 : Real) <= q * rpow-pos v v>0 (q - 1) => <=-less (RealField.<_*_positive_positive q>0 W>0)
+           | c'>=0 : (0 : Real) <= (q - 1) * rpow-pos v v>0 q => RealField.<=_*_positive_positive (linarith : (0 : Real) <= q - 1) (<=-less rpow-pos>0)
+           | ea : rpow (RealAbGroup.abs a) RealAbGroup.abs>=0 q q>0 = rpow a a>=0 q q>0 => rpow-ext (RealAbGroup.abs-ofPos a>=0) idp
+           | R>=0 : (0 : Real) <= rpow a a>=0 q q>0 => rpow>=0
+     \in transportInv (_ <= __ + _ + _) ea $ signedPow.real-cases {a} {eta}
+          (\lam a<eta => \have | em : q * rpow-pos v v>0 (q - 1) * (a ∧ eta) = q * rpow-pos v v>0 (q - 1) * a => pmap (_ *) (RealAbGroup.meet_<= (<=-less a<eta))
+                               | m>=0 : (0 : Real) <= (n * a) ∧ 1 => RealAbGroup.meet-univ (RealField.<=_*_positive_positive n>=0 a>=0) RealField.zro<=ide
+                               | t>=0 : (0 : Real) <= (q - 1) * rpow-pos v v>0 q * ((n * a) ∧ 1) => RealField.<=_*_positive_positive c'>=0 m>=0
+                         \in usingOnly (R>=0, t>=0, em) linarith)
+          (\lam eta<=a => \have | na>=1 : (1 : Real) <= n * a => =_<= (inv n-eta) <=∘ RealField.<=_*_positive-right n>=0 eta<=a
+                                | em : (q - 1) * rpow-pos v v>0 q * ((n * a) ∧ 1) = (q - 1) * rpow-pos v v>0 q
+                                    => pmap (_ *) (RealAbGroup.meet-comm *> RealAbGroup.meet_<= na>=1) *> ide-right
+                                | t>=0 : (0 : Real) <= q * rpow-pos v v>0 (q - 1) * (a ∧ eta) => RealField.<=_*_positive_positive c>=0 (RealAbGroup.meet-univ a>=0 eta>=0)
+                                | tan => rpow-pos-tangent' {q} {q>0} q>=1 v>0 a>=0
+                                | e : rpow-pos v v>0 q = v * rpow-pos v v>0 (q - 1) => pmap (rpow-pos v v>0) (equation.cRing : q = 1 + (q - 1)) *> rpow-pos_+ *> pmap (`* _) rpow-pos-one
+                                | l => lin tan e
+                          \in usingOnly (l, t>=0, em) linarith)
+  \where
+    \private \lemma lin {A W v a q R : Real} (t : A + q * W * (a - v) <= R) (e : A = v * W) : q * W * a <= R + (q - 1) * A
+      => \have | e1 : q * W * (a - v) = q * W * a - q * A => rewrite e equation.cRing
+               | e2 : (q - 1) * A = q * A - A => equation.cRing
+         \in linarith
+
+-- | Optimizing the tangent bound: if $q \nu^{q-1} Y \le X + (q-1) \nu^q c$ for all $\nu > 0$, then $Y^q \le c^{q-1} X$.
+\lemma rpow-tangent-optimize {q : Real} {q>0 : (0 : Real) < q} (q>=1 : (1 : Real) <= q) {c : Real} (c>0 : (0 : Real) < c)
+                             {X Y : Real} (X>=0 : (0 : Real) <= X) (Y>=0 : (0 : Real) <= Y)
+                             (h : \Pi {v : Real} (v>0 : (0 : Real) < v) -> q * rpow-pos v v>0 (q - 1) * Y <= X + (q - 1) * rpow-pos v v>0 q * c)
+  : rpow Y Y>=0 q q>0 <= rpow-pos c c>0 (q - 1) * X
+  => signedPow.real-cases {0} {Y}
+      (\lam Y>0 =>
+        \have | v>0 : (0 : Real) < Y * RealField.pinv c c>0 => RealField.<_*_positive_positive Y>0 (RealField.pinv>0 c>0)
+              | vc : Y * RealField.pinv c c>0 * c = Y => equation.cRing {RealField.pinv-left c>0}
+              | e1 : rpow-pos (Y * RealField.pinv c c>0) v>0 q = Y * RealField.pinv c c>0 * rpow-pos (Y * RealField.pinv c c>0) v>0 (q - 1)
+                  => pmap (rpow-pos _ v>0) (equation.cRing : q = 1 + (q - 1)) *> rpow-pos_+ *> pmap (`* _) rpow-pos-one
+              | e3 : rpow-pos c c>0 (q - 1) * rpow-pos (Y * RealField.pinv c c>0) v>0 (q - 1) = rpow-pos Y Y>0 (q - 1)
+                  => inv (rpow-pos_* {c} {Y * RealField.pinv c c>0} {c>0} {v>0} {q - 1} {RealField.<_*_positive_positive c>0 v>0})
+                     *> rpow-pos-ext (equation.cRing {RealField.pinv-left c>0})
+              | e4 : rpow Y Y>=0 q q>0 = rpow-pos Y Y>0 (q - 1) * Y
+                  => rpow-pos-eq Y>0 *> pmap (rpow-pos Y Y>0) (equation.cRing : q = (q - 1) + 1) *> rpow-pos_+ *> pmap (_ *) rpow-pos-one
+              | hv => h v>0
+              | WY : rpow-pos (Y * RealField.pinv c c>0) v>0 (q - 1) * Y <= X
+                  => lin hv (pmap (\lam t => (q - 1) * t * c) e1 *> equation.cRing *> pmap (\lam t => (q - 1) * (rpow-pos (Y * RealField.pinv c c>0) v>0 (q - 1) * t)) vc)
+        \in =_<= (e4 *> pmap (`* Y) (inv e3) *> *-assoc) <=∘ RealField.<=_*_positive-right (<=-less rpow-pos>0) WY)
+      (\lam Y<=0 => =_<= (signedPow.rpow-zero-ext (<=-antisymmetric Y<=0 Y>=0)) <=∘ RealField.<=_*_positive_positive (<=-less rpow-pos>0) X>=0)
+  \where
+    \private \lemma lin {q W Y X B : Real} (t : q * W * Y <= X + B) (e : B = (q - 1) * (W * Y)) : W * Y <= X
+      => \have | e1 : q * W * Y = q * (W * Y) => equation.cRing
+               | e2 : (q - 1) * (W * Y) = q * (W * Y) - W * Y => equation.cRing
+         \in rewrite e at t $ linarith

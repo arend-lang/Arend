@@ -6,6 +6,7 @@
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Extremes
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Function.Meta
@@ -285,3 +286,44 @@
       : Y.IsLimit {InvDirectedSet So S0} (\lam h => f h.6.1 h.6.2) y <-> ∀ {V : Y.isOpen} (V y) ∃ (U : R.isOpen) (Ua : U 0) ∀ {h : U} (s : \Sigma (Monoid.Inv h) (S h)) (V (f s.1 s.2))
       => SubPointDirectedSet.limit-char (aux So S0) \lam h => f h.2.1 h.2.2
   }
+
+-- | A monotone real net converges to {S} if and only if {S} is the supremum of its values.
+\lemma mono-limit-sup {I : DirectedSet} {f : I -> Real} (fm : \Pi {i j : I} -> i <= j -> f i <= f j) {S : Real}
+  : RealNormed.IsLimit f S <-> IsSup (\lam x => ∃ (i : I) (f i = x)) S
+  => (\lam fl => (\lam {a} Aa => \case \elim a, Aa \with { | _, inP (i,idp) => upper fl i }, \lam {eps} eps>0 => \case limit-metric-real.1 fl eps>0 \with {
+        | inP (N,h) => inP (f N, inP (N,idp), \have | t : S - f N <= RealNormed.dist S (f N) => RealAbGroup.abs>=id
+                                                     | hN : RealNormed.dist S (f N) < eps => h <=-refl
+                                               \in usingOnly (t,hN) linarith)
+      }),
+      \lam s => limit-metric-real.2 \lam {eps} eps>0 => \case s.2 eps>0 \with {
+        | inP (_, inP (N,idp), SN) => inP (N, \lam {n} N<=n =>
+          \have | m : f N <= f n => fm N<=n
+                | u : f n <= S => s.1 (inP (n,idp))
+          \in RealAbGroup.<_join-univ (usingOnly (m,SN) linarith) (usingOnly (u,eps>0) linarith))
+      })
+  \where
+    \protected \lemma upper (fl : RealNormed.IsLimit f S) (i : I) : f i <= S
+      => \lam S<fi => \case limit-metric-real.1 fl (linarith : (0 : Real) < f i - S) \with {
+        | inP (N,h) => \case isDirected N i \with {
+          | inP (n,N<=n,i<=n) => \have | m : f i <= f n => fm i<=n
+                                       | t : negative (S - f n) <= RealNormed.dist S (f n) => RealAbGroup.abs>=neg
+                                       | hn : RealNormed.dist S (f n) < f i - S => h N<=n
+                                 \in usingOnly (m,t,hn) linarith
+        }
+      }
+
+-- | Limits of real nets preserve `<=`.
+\lemma limit_<= {I : DirectedSet} {f g : I -> Real} {a b : Real} (fl : RealNormed.IsLimit f a) (gl : RealNormed.IsLimit g b)
+                (fg : \Pi (n : I) -> f n <= g n) : a <= b
+  => \lam b<a => \have e>0 : (0 : Real) < (a - b) * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive (linarith : (0 : Real) < a - b) (rat_real_<.1 idp)
+                 \in \case limit-metric-real.1 fl e>0, limit-metric-real.1 gl e>0 \with {
+                   | inP (N,h), inP (M,k) => \case isDirected N M \with {
+                     | inP (n,N<=n,M<=n) =>
+                       \have | hn : RealNormed.dist a (f n) < (a - b) * Real.fromRat (ratio 1 2) => h N<=n
+                             | kn : RealNormed.dist b (g n) < (a - b) * Real.fromRat (ratio 1 2) => k M<=n
+                             | t1 : a - f n <= RealNormed.dist a (f n) => RealAbGroup.abs>=id
+                             | t2 : negative (b - g n) <= RealNormed.dist b (g n) => RealAbGroup.abs>=neg
+                             | fgn => fg n
+                       \in usingOnly (hn,kn,t1,t2,fgn) linarith
+                   }
+                 }

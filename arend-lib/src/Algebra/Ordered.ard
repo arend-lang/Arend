@@ -267,6 +267,25 @@
        \in =_<= (pmap (\lam z => abs (z - _)) e) <=∘ join-lip <=∘ <=_+ meet-lip <=-refl
             <=∘ =_<= (pmap2 (+) (pmap (_ +) (pmap abs negative-right *> abs_zro) *> zro-right) (pmap abs negative-right *> abs_zro) *> zro-right)
 
+  -- | The clipping $(b \wedge s) \vee (-s)$ of {b} to `[-s,s]`.
+  \func clip (s b : E) : E => (b ∧ s) ∨ negative s
+
+  -- | Clipping is `1`-Lipschitz.
+  \lemma clip-lip {s a b : E} : abs (clip s a - clip s b) <= abs (a - b)
+    => join-lip <=∘ <=_+ meet-lip <=-refl
+         <=∘ =_<= (pmap2 (+) (pmap (_ +) (pmap abs negative-right *> abs_zro) *> zro-right) (pmap abs negative-right *> abs_zro) *> zro-right)
+
+  -- | Clipping does not change an element {a} with `|a| ≤ s`.
+  \lemma clip-id {s a : E} (as : abs a <= s) : clip s a = a
+    => pmap (__ ∨ _) (meet_<= (abs>=id <=∘ as)) *> join-comm *> join_<= (negative_<= (abs>=neg <=∘ as) <=∘ =_<= negative-isInv)
+
+  -- | $|\mathrm{clip}_s(b)| = |b| \wedge s$ for $s \ge 0$.
+  \lemma clip-abs-eq {s b : E} (s>=0 : 0 <= s) : abs (clip s b) = abs b ∧ s
+    => <=-antisymmetric
+        (meet-univ (=_<= (inv (pmap abs (pmap (_ -) (clip-id (=_<= abs_zro <=∘ s>=0)) *> minus_zro))) <=∘ clip-lip <=∘ =_<= (pmap abs minus_zro)) (clip-abs s>=0))
+        (rdistr>= <=∘ join-univ (join-left <=∘ abs>=id)
+          (meet-univ (meet-left <=∘ join-left) meet-right <=∘ =_<= (inv (join_negative *> pmap2 (∧) meet_negative negative-isInv)) <=∘ abs>=neg))
+
   \func part+ (x : E) => x ∨ 0
 
   \func part- (x : E) => negative x ∨ 0

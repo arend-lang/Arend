@@ -143,6 +143,9 @@
   \lemma func-abs {x : Dom} : func (LatticeAbGroup.abs x) = LatticeAbGroup.abs (func x)
     => func-join *> pmap (func x ∨) func-negative
 
+  \lemma func-clip {s x : Dom} : func (LatticeAbGroup.clip s x) = LatticeAbGroup.clip (func s) (func x)
+    => func-join *> pmap2 (∨) func-meet func-negative
+
   \default func-meet
     => pmap func (inv AddGroup.negative-isInv *> pmap negative LatticeAbGroup.meet_negative) *> func-negative *> pmap negative func-join *> LatticeAbGroup.join_negative
        *> pmap2 (∧) (pmap negative func-negative *> AddGroup.negative-isInv) (pmap negative func-negative *> AddGroup.negative-isInv)
