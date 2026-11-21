@@ -7,7 +7,7 @@
 
   * {IsLp}: `F ∈ L⁰` lies in `Lᵖ`; the nets are indexed by {PosCone} (`L0.ard`).
   * {pnormPow-dominated}, {lp-dominated}: Lemma `lem:dominated`.
-  * {lpClip-normPow}: $\|\kappa_h F\|_p^p = \Psi_h(F)$; {clip-limit-L0}, {clip-limit-Lp}: $\mathrm{clip}_h \to \mathrm{id}$.
+  * {lpClip-normPow}: $\|\kappa_h F\|_p^p = \Psi_h(F)$; {l0Gauge-lnorm}: $d_h(F, 0) = \|\kappa_h F\|_1$; {clip-limit-L0}, {clip-limit-Lp}: $\mathrm{clip}_h \to \mathrm{id}$.
   * {lp-char}, {lp-char-sup}: Theorem `thm:char`, for every `F ∈ L⁰` (not only `F ≥ 0`).
   * {lp-interp}, {lp-interp-norm}: Corollary `cor:interp`(1).
   * {IsUnitElem}: `e` is the unit `1 ∈ L`, i.e. $\tau f = f \wedge e$.
@@ -38,7 +38,7 @@
 \import Arith.Real.Extremes
 \import Arith.Real.Field
 \import Arith.Real.Power
-\import Arith.Real.PowerIneq
+\import Arith.Real.Power.PowerIneq
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
@@ -145,6 +145,13 @@
   => dense-lift-unique completion completion.isDenseEmbedding.1 (lpNormPow.cover CoverMap.∘ lpClip p p>=1 h>=0) (l0Psi p p>=1 h>=0)
       (\lam f => pmap (lpNormPow p p>=1) (lpClip.char h>=0) *> lpNormPow.char
                   *> pmap L.integral (inv fpow-abs *> pmap (fpow p p>=1) (clip-abs-eq h>=0)) *> inv (l0Psi.char h>=0)) F
+
+-- | $d_h(F, 0) = \|\kappa_h(F)\|_1$.
+\lemma l0Gauge-lnorm {L : FullIntegrationSpace} {h : L} (h>=0 : L.zro <= h) (X : L0Space L)
+  : l0Gauge h>=0 X = lnorm {LpSpace L 1 RealAbGroup.<=-refl} (lpClip 1 RealAbGroup.<=-refl h>=0 X)
+  => dense-lift-unique completion completion.isDenseEmbedding.1 (l0Gauge h>=0) (lnorm-metric {LpSpace L 1 RealAbGroup.<=-refl} CoverMap.∘ lpClip 1 RealAbGroup.<=-refl h>=0)
+      (\lam f => l0Gauge.char h>=0 *> pmap L.integral (inv (L.clip-abs-eq h>=0))
+                  *> inv (pmap (lnorm {LpSpace L 1 RealAbGroup.<=-refl}) (lpClip.char h>=0) *> lpInc.lnorm-char *> pnorm-one)) X
 
 -- | $\Psi_h(F) \le \Psi_{h'}(F)$ for $h \le h'$.
 \lemma l0Psi-mono {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') (F : L0Space L)

@@ -19,7 +19,7 @@
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.Power
-\import Arith.Real.SignedPow
+\import Arith.Real.Power.SignedPow
 \import Function.Meta
 \import Meta
 \import Order.Biordered

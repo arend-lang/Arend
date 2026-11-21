@@ -12,6 +12,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Ordered.TruncRieszSpace
 \import Algebra.QModule
 \import Analysis.Integration.FullIntegrationSpace
 \import Analysis.Integration.FunctionalCalculus
@@ -20,8 +21,8 @@
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.Power
-\import Arith.Real.PowerIneq
-\import Arith.Real.SignedPow
+\import Arith.Real.Power.PowerIneq
+\import Arith.Real.Power.SignedPow
 \import Arith.Real.Young
 \import Arith.Real.Chebyshev
 \import Arith.Real.Clarkson
@@ -225,7 +226,7 @@
 
 -- | Young's inequality: $|fg| \le |f|^p/p + |g|^q/q$ for $1/p + 1/q = 1$.
 \lemma fmul-young {L : FullIntegrationSpace} {p q : Real} (p>=1 : (1 : Real) <= p) (q>=1 : (1 : Real) <= q)
-                  (pq : RealField.pinv p (fpow.one>0 p>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)) {f g : L}
+                  (pq : HolderConjugate p q (fpow.one>0 p>=1) (fpow.one>0 q>=1)) {f g : L}
   : abs (fmul f g) <= rscale (RealField.pinv p (fpow.one>0 p>=1)) (fpow p p>=1 f) + rscale (RealField.pinv q (fpow.one>0 q>=1)) (fpow q q>=1 g)
   => fcalc-le-pt (f :: g :: nil) (\lam z => =_<= RealField.abs_* <=∘ young RealAbGroup.abs>=0 RealAbGroup.abs>=0 (fpow.one>0 p>=1) (fpow.one>0 q>=1) pq <=∘ =_<= (pmap2 (+) RealField.*-comm RealField.*-comm))
       (fcalc-abs (fcalc-mul (fcalc-var 0) (fcalc-var 1))) (fcalc-add (fcalc-rscale (fcalc-pow (fcalc-var 0))) (fcalc-rscale (fcalc-pow (fcalc-var 1))))
@@ -383,6 +384,35 @@
           (fcalc-meet (fcalc-abs (fcalc-sub (fcalc-mul eg (fcalc-op1 (LinBoundedMap.meetConst 1 RealField.zro<=ide) (fcalc-add (fcalc-*q ek) ew) *> fcalc-trunc)) eg)) ek)
           (fcalc-truncAt eta>0 ek)
 
+-- | $|g \tau(w) - g| \le |g|$ for $w \ge 0$.
+\lemma fmul-trunc-dev {L : FullIntegrationSpace} {g w : L} (w>=0 : L.zro <= w) : abs (fmul g (L.trunc w) - g) <= abs g
+  => \have | ew => fcalc-pos (fcalc-var {L} {2} {w :: g :: nil} 0) w>=0
+           | eg => fcalc-var {L} {2} {w :: g :: nil} 1
+     \in fcalc-le-pt (w :: g :: nil) (\lam z => pt (meet-univ RealAbGroup.join-right RealField.zro<=ide) meet-right)
+          (fcalc-abs (fcalc-sub (fcalc-mul eg (fcalc-op1 (LinBoundedMap.meetConst 1 RealField.zro<=ide) ew *> fcalc-trunc)) eg)) (fcalc-abs eg)
+  \where
+    \private \lemma pt {x m : Real} (m>=0 : (0 : Real) <= m) (m<=1 : m <= 1) : RealAbGroup.abs (x * m - x) <= RealAbGroup.abs x
+      => =_<= (pmap RealAbGroup.abs (equation.cRing : x * m - x = x * (m - 1)) *> RealField.abs_*)
+          <=∘ RealField.<=_*_positive-right RealAbGroup.abs>=0 (RealField.abs-univ linarith linarith)
+          <=∘ =_<= ide-right
+
+-- | $|f| (f + |f|) = f (f + |f|)$.
+\lemma fmul-abs-pos {L : FullIntegrationSpace} {f : L} : fmul (abs f) (f + abs f) = fmul f (f + abs f)
+  => \have | ef => fcalc-var {L} {1} {f :: nil} 0
+           | es => fcalc-add ef (fcalc-abs ef)
+     \in fcalc-eq-pt (f :: nil) (\lam z => pt) (fcalc-mul (fcalc-abs ef) es) (fcalc-mul ef es)
+  \where
+    \private \lemma pt {x : Real} : RealAbGroup.abs x * (x + RealAbGroup.abs x) = x * (x + RealAbGroup.abs x)
+      => <=-antisymmetric (signedPow.real-cases {x} {0} (\lam x<0 => =_<= (neg x<0)) (\lam x>=0 => =_<= (pos x>=0)))
+                          (signedPow.real-cases {x} {0} (\lam x<0 => =_<= (inv (neg x<0))) (\lam x>=0 => =_<= (inv (pos x>=0))))
+      \where {
+        \lemma neg {x : Real} (x<0 : x < (0 : Real)) : RealAbGroup.abs x * (x + RealAbGroup.abs x) = x * (x + RealAbGroup.abs x)
+          => rewrite (RealAbGroup.abs-ofNeg (<=-less x<0), RealAbGroup.negative-right) (RealField.zro_*-right *> inv RealField.zro_*-right)
+
+        \lemma pos {x : Real} (x>=0 : (0 : Real) <= x) : RealAbGroup.abs x * (x + RealAbGroup.abs x) = x * (x + RealAbGroup.abs x)
+          => rewrite (RealAbGroup.abs-ofPos x>=0) idp
+      }
+
 -- | $|\mathrm{clip}_{h'} f - \mathrm{clip}_h f| \le |f| \wedge h' - |f| \wedge h$ for $0 \le h \le h'$.
 \lemma clip-diff {L : FullIntegrationSpace} {f h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h')
   : abs (L.clip h' f - L.clip h f) <= abs f ∧ h' - abs f ∧ h
@@ -455,18 +485,18 @@
 
 -- | $|\varphi_r(f)|^{r'} = |f|^r$ for `r ≥ 2` and $1/r + 1/r' = 1$.
 \lemma fsignedPow-conj {L : FullIntegrationSpace} {r q : Real} (r>=1 : (1 : Real) <= r) (r>=2 : (2 : Real) <= r) (q>=1 : (1 : Real) <= q)
-                       (rq : RealField.pinv r (fpow.one>0 r>=1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real)) {f : L}
+                       (rq : HolderConjugate r q (fpow.one>0 r>=1) (fpow.one>0 q>=1)) {f : L}
   : fpow q q>=1 (fsignedPow r r>=2 f) = fpow r r>=1 f
   => fcalc-eq-pt (f :: nil) (\lam z => signedPow-conj rq) (fcalc-pow (fcalc-op1 (signedPowLB (fsignedPow.two>1 r>=2) r>=2) (fcalc-var 0))) (fcalc-pow (fcalc-var 0))
 
 -- | $|\varphi_{r,a}(f) - \varphi_{r,b}(f)|^{r'} \le 2^{r'} \delta^{r-1} (|f| \wedge \delta)$ for $0 < a, b \le \delta$ and $1 < r \le 2$.
 \lemma fsignedPowCut-diff {L : FullIntegrationSpace} {r q : Real} (r>1 : (1 : Real) < r) (r<=2 : r <= 2) (q>=1 : (1 : Real) <= q)
-                          (rq : RealField.pinv r (r>1-pos r>1) + RealField.pinv q (fpow.one>0 q>=1) = (1 : Real))
+                          (rq : HolderConjugate r q (r>1-pos r>1) (fpow.one>0 q>=1))
                           {d : Rat} (d>0 : RatField.zro RatField.< d) {a b : Real} (a>0 : (0 : Real) < a) (b>0 : (0 : Real) < b) (a<=d : a <= Real.fromRat d) (b<=d : b <= Real.fromRat d) {f : L}
-  : fpow q q>=1 (fsignedPowCut r>1 r<=2 a>0 f - fsignedPowCut r>1 r<=2 b>0 f)
+  : fpow q q>=1 (fsignedPowCut r>1 a>0 f - fsignedPowCut r>1 b>0 f)
       <= rscale (rpow 2 two>=0 q (fpow.one>0 q>=1) * rpow-pos (Real.fromRat d) (rat_real_<.1 d>0) (r - 1)) (L.truncAt d (abs f))
   => fcalc-le-pt (f :: nil) (\lam z => signedPow-cut-diff r<=2 rq a<=d b<=d (z 0))
-      (fcalc-pow (fcalc-sub (fcalc-op1 (signedPowCutLB r>1 r<=2 a>0) (fcalc-var 0)) (fcalc-op1 (signedPowCutLB r>1 r<=2 b>0) (fcalc-var 0))))
+      (fcalc-pow (fcalc-sub (fcalc-op1 (signedPowCutLB r>1 a>0) (fcalc-var 0)) (fcalc-op1 (signedPowCutLB r>1 b>0) (fcalc-var 0))))
       (fcalc-rscale (fcalc-truncAt d>0 (fcalc-abs (fcalc-var 0))))
   \where \private {
     \lemma r>1-pos {r : Real} (r>1 : (1 : Real) < r) : (0 : Real) < r
@@ -479,12 +509,12 @@
 -- (loc)
 
 -- | The excess $(f - C)^+ = f^+ - f^+ \wedge C$ of `f` over the level `C`.
-\func excess {L : FullIntegrationSpace} (C : Rat) (f : L) : L
-  => part+ f - L.truncAt C (part+ f)
+\func excess {R : TruncRieszSpace} (C : Rat) (f : R) : R
+  => part+ f - R.truncAt C (part+ f)
 
 -- | $(1 \wedge (x/\varepsilon))(w) = \tau(w/\varepsilon)$.
-\func rampAt {L : FullIntegrationSpace} (eps : Rat) (w : L) : L
-  => L.trunc (RatField.finv eps *q w)
+\func rampAt {R : TruncRieszSpace} (eps : Rat) (w : R) : R
+  => R.trunc (RatField.finv eps *q w)
 
 \lemma fcalc-excess {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {C : Rat} (C>0 : RatField.zro RatField.< C) {a : LinBoundedMap n} {x : L} (p : fcalc a F = x)
   : fcalc (LinBoundedMap.add (LinBoundedMap.join a LinBoundedMap.zro)

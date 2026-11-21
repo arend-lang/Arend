@@ -28,7 +28,7 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Real.SignedPow
+\import Arith.Real.Power.SignedPow
 \import Function.Meta
 \import Logic
 \import Meta

@@ -3,12 +3,17 @@
   * {L2-parallelogram}: the parallelogram law on $\mathrm L^2$.
   * {L2Hilbert}: $\mathrm L^2$ as a real Hilbert space.
   * {L2-inner}: its inner product is $I(uv)$, where `uv` is the Hölder product {lpMul}.
+  * {L2-nonpos}, {L2-le}: the order of $\mathrm L^2$ is detected by pairing with $L^+$.
 -}
 
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Meta
 \import Analysis.Integration.FullIntegrationSpace
 \import Analysis.Integration.FunctionalCalculus.Inequalities
 \import Analysis.Integration.FunctionalCalculus.Operations
@@ -19,7 +24,8 @@
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.Power
-\import Arith.Real.PowerIneq
+\import Arith.Real.Power.PowerIneq
+\import Order.PartialOrder
 \import Paths
 \import Topology.BanachLattice.Completion
 \import Topology.CoverSpace.Complete
@@ -29,12 +35,15 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopAbGroup.Product
+\import Topology.TopRieszSpace
 \import Topology.TopSpace
+\import Topology.TopSpace.Product
 \open fmul-polar
 \open L2Helpers
+\open LatticeAbGroup (abs)
 
 -- | `1/2 + 1/2 = 1`: the exponent 2 is self-conjugate.
-\lemma two-conj : RealField.pinv 2 (fpow.one>0 two>=1) + RealField.pinv 2 (fpow.one>0 two>=1) = (1 : Real)
+\lemma two-conj : HolderConjugate 2 2 (fpow.one>0 two>=1) (fpow.one>0 two>=1)
   => \have h : RealField.pinv 2 (fpow.one>0 two>=1) * 2 = (1 : Real) => RealField.pinv-left (fpow.one>0 two>=1)
      \in equation.cRing {h}
 
@@ -90,3 +99,53 @@
   \lemma sq-char {L : FullIntegrationSpace} {f : L} : lnorm (lpInc 2 two>=1 f) * lnorm (lpInc 2 two>=1 f) = L.integral (fpow 2 two>=1 f)
     => pmap2 (*) lpInc.lnorm-char lpInc.lnorm-char *> inv (abs-rpow-two {_} {fpow.one>0 two>=1}) *> rpow-ext (RealAbGroup.abs-ofPos pnorm>=0) {_} {_} idp {_} {fpow.one>0 two>=1} *> pnorm-pow
 }
+
+-- | $z \le 0$ in $\mathrm L^2$ if $I(z u) \le 0$ for all $u \in L^+$ (test with $u \to z + |z|$, so $\|z + |z|\|_2^2 = 2 I(z (z + |z|)) \le 0$).
+\lemma L2-nonpos {L : FullIntegrationSpace} {z : LpSpace L 2 two>=1}
+                 (h : \Pi (u : L) -> L.zro <= u -> integral (lpMul two-conj z (lpInc 2 two>=1 u)) <= (0 : Real))
+  : z <= 0
+  => \let | Y => LpSpace L 2 two>=1
+          | Pc : CoverMap Y Y => +-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple CoverMap.id Y.abs-uniform
+          | s => Pc z
+          | I2 (A B : CoverMap Y Y) : CoverMap Y RealNormed => (IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover two-conj CoverMap.∘ ProductCoverSpace.tuple A B
+     \in \have | q : integral (lpMul two-conj z s) <= (0 : Real)
+                   => =_<= (pmap integral lpMul.cover-eq) <=∘ dense_<= real-join-uniform (lpInc 2 two>=1) lpInc.isDense (I2 (CoverMap.const z) Pc) (CoverMap.const 0)
+                        (\lam u => =_<= (pmap integral (inv lpMul.cover-eq *> pmap (lpMul two-conj z) (pc-char u))) <=∘ h (u + L.abs u) (pos-part>=0 {L} {u})) z
+               | sq : integral (lpMul two-conj s s) = integral (lpMul two-conj z s) + integral (lpMul two-conj z s)
+                   => pmap integral lpMul.cover-eq *> dense-lift-unique (lpInc 2 two>=1) lpInc.isDense (I2 Pc Pc) (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (I2 CoverMap.id Pc) (I2 CoverMap.id Pc))
+                        (\lam f => pmap integral (inv lpMul.cover-eq *> pmap2 (lpMul two-conj) (pc-char f) (pc-char f)) *> int-char
+                                    *> pmap L.integral (fmul-rdistr *> pmap (_ +) fmul-abs-pos) *> L.integral_+
+                                    *> inv (pmap2 (+) (pmap integral (inv lpMul.cover-eq *> pmap (lpMul two-conj _) (pc-char f)) *> int-char)
+                                                      (pmap integral (inv lpMul.cover-eq *> pmap (lpMul two-conj _) (pc-char f)) *> int-char))) z
+                   *> inv (pmap2 (+) (pmap integral lpMul.cover-eq) (pmap integral lpMul.cover-eq))
+               | n : lnorm {Y} s * lnorm {Y} s <= (0 : Real)
+                   => =_<= (RealPreHilbertSpace.norm-sq {L2Hilbert L} {s} *> L2-inner *> sq) <=∘ (linarith : integral (lpMul two-conj z s) + integral (lpMul two-conj z s) <= (0 : Real))
+               | n0 : lnorm {Y} s <= (0 : Real) => \lam pos => n (RealField.<_*_positive_positive pos pos)
+     \in aux (Y.norm-ext (Real.=-upper.1 (<=-antisymmetric n0 (lnorm>=0 {Y}))))
+  \where {
+    \private \lemma aux {E : LatticeAbGroup} {z : E} (e : z + abs z = 0) : z <= 0
+      => transportInv (__ <= 0) (equation.abGroup {e} : z = negative (abs z)) (PosetAddGroup.negative<=0 LatticeAbGroup.abs>=0)
+
+    \lemma pos-part>=0 {E : LatticeAbGroup} {u : E} : 0 <= u + abs u
+      => =_<= (inv negative-left) <=∘ <=_+ LatticeAbGroup.abs>=neg <=-refl <=∘ =_<= +-comm
+
+    \lemma pc-char {L : FullIntegrationSpace} (u : L)
+      : (+) {LpSpace L 2 two>=1} (lpInc 2 two>=1 u) (abs {LpSpace L 2 two>=1} (lpInc 2 two>=1 u)) = lpInc 2 two>=1 (u + L.abs u)
+      => pmap ((+) {LpSpace L 2 two>=1} _) (inv (RieszSpaceHom.func-abs {lpInc 2 two>=1} {u})) *> inv ((lpInc 2 two>=1).func-+ {u} {L.abs u})
+
+    \lemma int-char {L : FullIntegrationSpace} {a b : L} : integral (lpMul two-conj (lpInc 2 two>=1 a) (lpInc 2 two>=1 b)) = L.integral (fmul a b)
+      => pmap integral lpMul-char *> integrationCompletion.func-integral
+  }
+
+-- | $v \le w$ in $\mathrm L^2$ if $I(v u) \le I(w u)$ for all $u \in L^+$.
+\lemma L2-le {L : FullIntegrationSpace} {v w : LpSpace L 2 two>=1}
+             (h : \Pi (u : L) -> L.zro <= u -> integral (lpMul two-conj v (lpInc 2 two>=1 u)) <= integral (lpMul two-conj w (lpInc 2 two>=1 u)))
+  : v <= w
+  => aux (L2-nonpos \lam u u>=0 => =_<= (AddGroupHom.func-minus {pairHom (lpInc 2 two>=1 u)} {v} {w}) <=∘ (usingOnly (h u u>=0) linarith : integral (lpMul two-conj v (lpInc 2 two>=1 u)) - integral (lpMul two-conj w (lpInc 2 two>=1 u)) <= (0 : Real)))
+  \where {
+    \private \lemma aux {E : LatticeAbGroup} {v w : E} (p : v - w <= 0) : v <= w
+      => =_<= (equation.abGroup : v = v - w + w) <=∘ <=_+ p <=-refl <=∘ =_<= zro-left
+
+    \func pairHom {L : FullIntegrationSpace} (U : LpSpace L 2 two>=1) : AddGroupHom (LpSpace L 2 two>=1) RealAbGroup (\lam x => integral (lpMul two-conj x U)) \cowith
+      | func-+ => pmap integral lpMul-+-left *> integral_+
+  }

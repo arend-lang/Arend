@@ -9,7 +9,7 @@
   * {PosCone}: the positive cone $L^+$ as a directed set, the index set of nets.
   * {l0Gauge}: the extension of $d_h(\cdot, 0)$ to `L⁰`; {l0Gauge-below}: $d_h(F, 0) \le I(\tau_\varepsilon h)$ if $|F| \le \varepsilon$.
   * {l0-small-bounded}: elements bounded by a small enough $\varepsilon$ lie in a given neighbourhood of `0`;
-    {l0-bounded-zero}: an element bounded by every $\varepsilon > 0$ is `0`.
+    {l0-bounded-zero}: an element bounded by every $\varepsilon > 0$ is `0`; {l0-gauge-zero}: so is an element with arbitrarily small gauges.
   * {l0-below-closed}: $\{G \mid |G - c| \le \varepsilon\}$ is closed.
   * {l0-pt-abs}, {l0-bclip}: the canonical map `L → L⁰` preserves `|·|` and clamping.
   * {l0-dense2}, {l0-dense3}, {l0-bound2}: identities and bounds of maps $(\mathrm L^0)^n \to \mathrm L^0$ extend from `L`.
@@ -122,6 +122,16 @@
 \lemma l0-bounded-zero {L : FullIntegrationSpace} {F : L0Space L} (p : \Pi {e : Rat} -> RatField.zro RatField.< e -> IsBelow (abs F) e) : F = (L0Space L).zro
   => (L0Space L).isHausdorff \lam {U} {V} Uo Vo UF V0 => \case l0-small-bounded Vo V0 \with {
     | inP (e,e>0,g) => inP (F, (UF, g (p e>0)))
+  }
+
+-- | An element all of whose gauges $d_h(F, 0)$ are arbitrarily small is `0`.
+\lemma l0-gauge-zero {L : FullIntegrationSpace} {F : L0Space L}
+                     (p : \Pi {h : L} (h>=0 : L.zro <= h) {d : Rat} -> RatField.zro RatField.< d -> l0Gauge h>=0 F < Real.fromRat d)
+  : F = (L0Space L).zro
+  => (L0Space L).isHausdorff \lam {U} {V} Uo Vo UF V0 => \case completion-neighborhood {L0PreSpace L} Vo V0 \with {
+    | inP ((h,h>=0),eps,eps>0,f) => \case real_<-char.1 eps>0 \with {
+      | inP (r,r>0,r<eps) => inP (F, (UF, f (p h>=0 (rat_real_<.2 r>0) <∘ r<eps)))
+    }
   }
 
 -- | The canonical map `L → L⁰` preserves clamping.

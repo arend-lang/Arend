@@ -4,11 +4,14 @@
   in `Lᵖ` (Lemma `lem:dominated`); since $j_p$ is injective and reflects the order, $\|F g\|_p \le a \|g\|_p$.
   This Lipschitz additive map extends from `L` to `Lᵖ`.
 
-  * {lpToL0-abs}, {lpToL0-reflects}: $j_p$ preserves `|·|` and reflects the order.
+  * {lpToL0-abs}, {lpToL0-mono}, {lpToL0-reflects}: $j_p$ preserves `|·|`, is monotone and reflects the order;
+    {lpToL0-dominated}: $|G| \le h$ implies $|j_p G| \le h$.
   * {linfInc}: the inclusion `L → L∞`.
   * {linfLpMul}: the product $\mathrm L^\infty \times \mathrm L^p \to \mathrm L^p$, additive in the second argument;
     {linfLpMul-char}: $j_p(F \cdot g) = F g$ for `g ∈ L`; {linfLpMul-norm}: $\|F G\|_p \le a \|G\|_p$ if $|F| \le a$;
-    {linfLpMul-norm-upper}: $\|F G\|_p \le \|F\|_\infty \|G\|_p$.
+    {linfLpMul-norm-upper}: $\|F G\|_p \le \|F\|_\infty \|G\|_p$; {linfLpMul-negative}: $(-F) G = -(F G)$; {linfLpMul-+}: $(F + F') G = F G + F' G$;
+    {linfLpMul-dominated}: $j_p(F \cdot \kappa_h(U)) = F U$ for bounded `U ∈ L⁰` with $|U| \le h$;
+    {linfLpMul-clip}: $F \cdot g = \kappa_{N|g|}(F g)$ for `g ∈ L`.
 -}
 
 \import Algebra.Group
@@ -20,6 +23,7 @@
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
+\import Algebra.Ring
 \import Analysis.Integration.FullIntegrationSpace
 \import Analysis.Integration.FunctionalCalculus.Inequalities
 \import Analysis.Integration.L0
@@ -49,6 +53,8 @@
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.Product
+\import Topology.TopRieszSpace
 \import Topology.TopRieszSpace.Completion
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
@@ -69,6 +75,17 @@
   => \have | j => lpToL0 {L} p p>=1
            | e : abs (v - u) = v - u => lpToL0-inj $ lpToL0-abs (v - u) *> pmap abs j.func-minus *> abs-ofPos (to>=0 uv) *> inv j.func-minus
      \in from>=0 (transport (0 <=) e abs>=0)
+
+-- | $j_p$ is monotone.
+\lemma lpToL0-mono {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {u v : LpSpace L p p>=1} (uv : u <= v)
+  : lpToL0 p p>=1 u <= lpToL0 p p>=1 v
+  => \have j => lpToL0 {L} p p>=1
+     \in from>=0 (transport (0 <=) (inv (lpToL0-abs (v - u)) *> pmap j (abs-ofPos (to>=0 uv)) *> j.func-minus) abs>=0)
+
+-- | $|j_p G| \le h$ if $|G| \le h$ for `h ∈ L`.
+\lemma lpToL0-dominated {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {G : LpSpace L p p>=1} {h : L} (Gh : abs G <= lpInc p p>=1 h)
+  : abs (lpToL0 p p>=1 G) <= pointCF {L0PreSpace L} h
+  => =_<= (inv (lpToL0-abs G)) <=∘ lpToL0-mono Gh <=∘ =_<= lpToL0.char
 
 -- | The inclusion `L → L∞`.
 \func linfInc {L : FullIntegrationSpace} (g : L) : LInftyElem L
@@ -168,3 +185,45 @@
       real_<_U.1 $ linfLpMul-norm b>0 (TruncRieszSpace.IsBelow-level (<=-less M<b) FM) G
         <∘r RealField.<_*_positive-right (rat_real_<.1 b>0) (real_<_U.2 Gc) <∘ (=_<= RealField.*-rat <∘r rat_real_<.1 bc<q)
   }
+
+-- | $(-F) G = -(F G)$.
+\lemma linfLpMul-negative {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L} (G : LpSpace L p p>=1)
+  : linfLpMul {L} {p} {p>=1} (negative {LInfty L} F) G = negative (linfLpMul {L} {p} {p>=1} F G)
+  => dense-lift-unique (lpInc p p>=1) lpInc.isDense (linfLpMul {L} {p} {p>=1} (negative {LInfty L} F)) (negative-uniform {LpSpace L p p>=1} ContMap.∘ linfLpMul {L} {p} {p>=1} F)
+      (\lam g => lpToL0-inj $ linfLpMul-char *> pmap (\lam (z : LInftyElem L) => z.el) (Ring.negative_*-left {LInfty L} {F} {linfInc g})
+                  *> inv ((lpToL0 p p>=1).func-negative *> pmap negative linfLpMul-char)) G
+
+-- | $(F + F') G = F G + F' G$.
+\lemma linfLpMul-+ {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F F' : LInftyElem L} (G : LpSpace L p p>=1)
+  : linfLpMul {L} {p} {p>=1} (F + {LInfty L} F') G = linfLpMul {L} {p} {p>=1} F G + linfLpMul {L} {p} {p>=1} F' G
+  => dense-lift-unique (lpInc p p>=1) lpInc.isDense (linfLpMul {L} {p} {p>=1} (F + {LInfty L} F'))
+      (+-uniform {LpSpace L p p>=1} ContMap.∘ ProductTopSpace.tuple (linfLpMul {L} {p} {p>=1} F) (linfLpMul {L} {p} {p>=1} F'))
+      (\lam g => lpToL0-inj $ linfLpMul-char *> pmap (\lam (z : LInftyElem L) => z.el) (Ring.rdistr {LInfty L} {F} {F'} {linfInc g})
+                  *> inv ((lpToL0 p p>=1).func-+ *> pmap2 (+) linfLpMul-char linfLpMul-char)) G
+
+-- | $j_p(F \cdot \kappa_h(U)) = F U$ for `U ∈ L⁰` with $|U| \le h$ and $|U|, |F| \le N$.
+\lemma linfLpMul-dominated {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L} {N : Rat} (N>0 : 0 < N)
+                           (FN : IsBelow (abs F.el) N) {h : L} (h>=0 : L.zro <= h) {U : L0Space L} (Uh : abs U <= pointCF {L0PreSpace L} h) (UN : IsBelow (abs U) N)
+  : lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 U)) = l0BMul N>0 (F.el, U)
+  => \let | i => topTruncCompletion {L0PreSpace L}
+          | gen : \Pi (X : L0Space L) -> lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 (bclip N X))) = l0BMul N>0 (F.el, clip (i h) (bclip N X))
+            => dense-lift-unique completion completion.isDenseEmbedding.1
+                (lpToL0 p p>=1 ContMap.∘ linfLpMul {L} {p} {p>=1} F ContMap.∘ lpClip p p>=1 h>=0 ContMap.∘ bclip-cover N)
+                (l0BMul N>0 ContMap.∘ ProductCoverSpace.tuple (CoverMap.const F.el) (clip-cover (i h) CoverMap.∘ bclip-cover N))
+                (\lam g => \have yN : L.IsBelow (abs (L.clip h (L.bclip N g))) N => L.IsBelow_<= (=_<= (L.clip-abs-eq h>=0) <=∘ L.meet-left) (L.bclip-below N>0)
+                           \in pmap (\lam z => lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 z))) (inv (l0-bclip {L}))
+                            *> pmap (\lam z => lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F z)) (lpClip.char h>=0)
+                            *> linfLpMul-char *> linfMul-char N>0 FN (transport (IsBelow __ N) (l0-pt-abs {L} {L.clip h (L.bclip N g)}) (i.func-IsBelow yN))
+                            *> pmap (\lam z => l0BMul N>0 (F.el, z)) (RieszSpaceHom.func-clip {i} *> pmap (clip (i h)) (l0-bclip {L})))
+     \in pmap (\lam z => lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 z))) (inv (bclip-id N>0 UN))
+          *> gen U *> pmap (\lam z => l0BMul N>0 (F.el, clip (i h) z)) (bclip-id N>0 UN) *> pmap (\lam z => l0BMul N>0 (F.el, z)) (clip-id Uh)
+
+-- | $F \cdot g = \kappa_{N|g|}(F g)$ in `Lᵖ` for `g ∈ L` and $|F|, |g| \le N$.
+\lemma linfLpMul-clip {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L} {N : Rat} (N>0 : 0 < N)
+                      (FN : IsBelow (abs F.el) N) {g : L} (gN : L.IsBelow (abs g) N)
+  : linfLpMul {L} {p} {p>=1} F (lpInc p p>=1 g) = lpClip p p>=1 (linfLpMul.elem.dom>=0 N>0 {g}) (l0BMul N>0 (F.el, pointCF {L0PreSpace L} g))
+  => \let i => topTruncCompletion {L0PreSpace L}
+     \in \have gN' : IsBelow (abs (linfInc g).el) N => transport (IsBelow __ N) (l0-pt-abs {L} {g}) (i.func-IsBelow gN)
+     \in lpToL0-inj $ linfLpMul-char *> linfMul-char N>0 FN gN'
+          *> inv (lp-dominated (linfLpMul.elem.dom>=0 N>0 {g}) (l0BMul-abs N>0 N>0 <=-refl FN gN'
+                    <=∘ =_<= (pmap (N *q) (inv l0-pt-abs) *> inv (func-*q {_} {_} {i}))))

@@ -1,0 +1,401 @@
+{- | The dual space $E^*$ of a real Banach space `E`.
+
+  * {IsFunctionalBound}: $|\Lambda x| \le C b$ whenever $\|x\| < b$, that is, $|\Lambda x| \le C \|x\|$.
+  * {BoundedFunctional}: an additive bounded map $E \to \mathbb R$; it is real-linear ({functional-*r}) and uniformly
+    continuous ({functionalCover}), so it is determined by its values on a dense subset ({functional-dense-eq}).
+  * {opNorm}: the operator norm $\|\Lambda\| = \inf\{C \mid |\Lambda x| \le C\|x\|\}$, an upper real.
+  * {DualSpace}: $E^*$ is a real Banach space with the norm {opNorm}.
+  * {IsNormable}: $\|\Lambda\|$ is located, i.e. a real number.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Topology.BanachSpace
+\import Topology.MetricSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopSpace
+\open QModule
+\open AddMonoid
+
+-- | $|f x| \le C b$ whenever $\|x\| < b$.
+\type IsFunctionalBound {E : RealBanachSpace} (f : E -> Real) (C : Rat) : \Prop
+  => \Pi {x : E} {b : Rat} -> (norm x).U b -> RealAbGroup.abs (f x) <= Real.fromRat (C * b)
+
+-- | A bounded additive functional $E \to \mathbb R$.
+\record BoundedFunctional (E : RealBanachSpace) (\coerce func : E -> Real) (func-+ : \Pi {x y : E} -> func (x + y) = func x + func y)
+                          (func-bounded : ∃ (C : Rat) (0 <= C) (IsFunctionalBound func C)) {
+  \func toAddGroupHom : AddGroupHom E RealAbGroup \cowith
+    | func => func
+    | func-+ => func-+
+
+  -- | $\Lambda(q x) = q \Lambda(x)$ for rational `q`.
+  \lemma func-*q {q : Rat} {x : E} : func (q *q x) = Real.fromRat q * func x
+    => Algebra.QModule.func-*q {E} {QModule.fromRatModule RealField} {toAddGroupHom} *> QModule.fromRatModule_*q
+}
+
+-- | The operator norm $\|f\| = \inf\{C \ge 0 \mid |f x| \le C\|x\|\}$.
+\func opNorm {E : RealBanachSpace} (f : BoundedFunctional E) : ExUpperReal \cowith
+  | U b => ∃ (C : Rat) (0 <= C) (C < b) (IsFunctionalBound f C)
+  | U-closed (inP (C,C>=0,C<b,p)) b<b' => inP (C, C>=0, C<b <∘ b<b', p)
+  | U-rounded {b} (inP (C,C>=0,C<b,p)) => inP (RatField.mid C b, inP (C, C>=0, RatField.mid>left C<b, p), RatField.mid<right C<b)
+
+-- | {s} is the supremum of $|f u|$ over the open unit ball.
+\type IsFunctionalSup {E : RealBanachSpace} (f : BoundedFunctional E) (s : Real) : \Prop
+  => \Sigma (\Pi {x : E} {b : Rat} -> (norm x).U b -> RealAbGroup.abs (f x) <= s * Real.fromRat b)
+            (∀ {eps} (0 < eps) ∃ (x : E) ((norm x).U 1) (s - Real.fromRat eps < RealAbGroup.abs (f x)))
+
+-- | {f} is normable if $\sup\{|f u| \mid \|u\| < 1\}$ exists as a real number.
+\type IsNormable {E : RealBanachSpace} (f : BoundedFunctional E) : \Prop
+  => ∃ (s : Real) (IsFunctionalSup f s)
+
+-- | The supremum is the operator norm.
+\lemma functionalSup-opNorm {E : RealBanachSpace} {f : BoundedFunctional E} {s : Real} (p : IsFunctionalSup f s) : opNorm f = s
+  => <=-antisymmetric (\lam {b} sb => \case real_<-rat-char.1 (real_<_U.2 sb) \with {
+       | inP (C,sC',Cb') => \have | sC : s < Real.fromRat C => real_<_U.2 sC'
+                                  | Cb : C < b => rat_real_<.2 (real_<_L.2 Cb')
+         \in inP (C, rat_real_<=.2 (functionalSup>=0 p <=∘ <=-less sC), Cb, \lam {x} {b'} xb =>
+           \have b'>0 : 0 < b' => norm>=0 xb
+           \in p.1 xb <=∘ RealField.<=_*_positive-left (<=-less sC) (rat_real_<=.1 (<=-less b'>0)) <=∘ =_<= RealField.*-rat)
+     })
+     (\lam {b} (inP (C,C>=0,Cb,bd)) => real_<_U.1 $ real_<=-eps (\lam {d} d>0 => \case p.2 d>0 \with {
+       | inP (x,x1,sx) => \have t : RealAbGroup.abs (f x) <= Real.fromRat C => bd x1 <=∘ =_<= (pmap Real.fromRat ide-right)
+                          \in linarith
+     }) <∘r rat_real_<.1 Cb)
+  \where
+    \lemma functionalSup>=0 {E : RealBanachSpace} {f : BoundedFunctional E} {s : Real} (p : IsFunctionalSup f s) : (0 : Real) <= s
+      => \have | n0 : (norm {E} 0).U 1 => transportInv (\lam (z : ExUpperReal) => z.U 1) norm_zro RatField.zro<ide
+               | t : RealAbGroup.abs (f 0) <= s * Real.fromRat 1 => p.1 n0
+               | e : RealAbGroup.abs (f 0) = 0 => pmap RealAbGroup.abs f.toAddGroupHom.func-zro *> RealAbGroup.abs_zro
+         \in transport2 (<=) e RealField.ide-right t
+
+-- | If $\|\Lambda\| < C$, then $|\Lambda x| \le C \|x\|$.
+\lemma opNorm-bound {E : RealBanachSpace} {f : BoundedFunctional E} {C : Rat} (p : (opNorm f).U C) : IsFunctionalBound f C \elim p
+  | inP (C',C'>=0,C'<C,bd) => \lam {x} {b} xb => bd xb <=∘ rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C'<C) (<=-less (norm>=0 xb)))
+
+-- | The dual space $E^*$.
+\instance DualSpace (E : RealBanachSpace) : RealBanachSpace (BoundedFunctional E)
+  | AbGroup => DualGroup E
+  | norm => opNorm
+  | norm_zro => opNorm-zro
+  | norm_negative => opNorm-negative
+  | norm_+ => opNorm-+
+  | norm-double => opNorm-double
+  | norm-bounded f => \case f.func-bounded \with {
+    | inP (C,C>=0,p) => inP (C + 1, inP (C, C>=0, linarith, p))
+  }
+  | norm-ext => opNorm-ext
+  | isDivisible f {n} n/=0 => inP (fdiv n f, ext (ext \lam x => dual-*n {E} {n} {fdiv n f} {x} *> div-cancel n/=0))
+  | isCompleteMetric F Fc => dual-complete F (\lam eps>0 => Fc eps>0)
+  \where {
+    \func fzro {E : RealBanachSpace} : BoundedFunctional E \cowith
+      | func _ => 0
+      | func-+ => inv RealAbGroup.zro-left
+      | func-bounded => inP (0, <=-refl, \lam {x} {b} _ => =_<= (RealAbGroup.abs_zro *> pmap Real.fromRat (inv RatField.zro_*-left)))
+
+    \func fadd {E : RealBanachSpace} (f g : BoundedFunctional E) : BoundedFunctional E \cowith
+      | func x => f x + g x
+      | func-+ => pmap2 (+) f.func-+ g.func-+ *> equation.abGroup
+      | func-bounded => \case f.func-bounded, g.func-bounded \with {
+        | inP (C1,C1>=0,p1), inP (C2,C2>=0,p2) => inP (C1 + C2, linarith, bound-+ p1 p2)
+      }
+
+    \lemma bound-+ {E : RealBanachSpace} {f g : E -> Real} {C1 C2 : Rat} (p1 : IsFunctionalBound f C1) (p2 : IsFunctionalBound g C2)
+      : IsFunctionalBound (\lam x => f x + g x) (C1 + C2)
+      => \lam {x} {b} xb => \have | h1 => p1 {x} {b} xb
+                                  | h2 => p2 {x} {b} xb
+                                  | e : Real.fromRat ((C1 + C2) * b) = Real.fromRat (C1 * b) + Real.fromRat (C2 * b)
+                                      => pmap Real.fromRat RatField.rdistr *> inv RealAbGroup.+-rat
+                                  | t : RealAbGroup.abs (f x + g x) <= RealAbGroup.abs (f x) + RealAbGroup.abs (g x) => RealAbGroup.abs_+
+                            \in rewrite e (t <=∘ <=_+ h1 h2)
+
+    \func fneg {E : RealBanachSpace} (f : BoundedFunctional E) : BoundedFunctional E \cowith
+      | func x => negative (f x)
+      | func-+ => pmap negative f.func-+ *> equation.abGroup
+      | func-bounded => \case f.func-bounded \with {
+        | inP (C,C>=0,p) => inP (C, C>=0, \lam xb => =_<= RealAbGroup.abs_negative <=∘ p xb)
+      }
+
+    \lemma opNorm-zro {E : RealBanachSpace} : opNorm (fzro {E}) = ExUpperRealAbMonoid.zro
+      => <=-antisymmetric (\lam {b} b>0 => inP (0, <=-refl, b>0, \lam _ => =_<= (RealAbGroup.abs_zro *> pmap Real.fromRat (inv RatField.zro_*-left))))
+                          (\lam {b} (inP (C,C>=0,C<b,_)) => C>=0 <∘r C<b)
+
+    \lemma opNorm-negative {E : RealBanachSpace} {f : BoundedFunctional E} : opNorm (fneg f) = opNorm f
+      => <=-antisymmetric (\lam {b} (inP (C,C>=0,C<b,p)) => inP (C, C>=0, C<b, \lam xb => =_<= RealAbGroup.abs_negative <=∘ p xb))
+                          (\lam {b} (inP (C,C>=0,C<b,p)) => inP (C, C>=0, C<b, \lam xb => =_<= (inv RealAbGroup.abs_negative) <=∘ p xb))
+
+    \lemma opNorm-+ {E : RealBanachSpace} {f g : BoundedFunctional E} : opNorm (fadd f g) <= opNorm f ExUpperReal.+ opNorm g
+      => \lam {b} u => \case ExUpperReal.+_U.1 u \with {
+        | inP (c, inP (C1,C1>=0,C1<c,p1), d, inP (C2,C2>=0,C2<d,p2), cd<b) => inP (C1 + C2, linarith, linarith, bound-+ p1 p2)
+      }
+
+    \lemma opNorm-double {E : RealBanachSpace} {f : BoundedFunctional E} : opNorm f ExUpperReal.+ opNorm f <= opNorm (fadd f f)
+      => \lam {b} (inP (C,C>=0,C<b,p)) =>
+          \let | r => C * ratio 1 2
+               | c => (C + b) * ratio 1 4
+          \in \have | pr : IsFunctionalBound f r => \lam {x} {b'} xb =>
+                        \have | h : RealAbGroup.abs (f x + f x) <= Real.fromRat (C * b') => p xb
+                              | e1 : RealAbGroup.abs (f x + f x) = RealAbGroup.abs (f x) + RealAbGroup.abs (f x) => abs-double
+                              | rr : r + r = C => linarith
+                              | e2 : Real.fromRat (C * b') = Real.fromRat (r * b') + Real.fromRat (r * b')
+                                  => pmap Real.fromRat (inv (pmap (* b') rr) *> RatField.rdistr) *> inv RealAbGroup.+-rat
+                              | h' : RealAbGroup.abs (f x) + RealAbGroup.abs (f x) <= Real.fromRat (r * b') + Real.fromRat (r * b') => transport2 (<=) e1 e2 h
+                        \in usingOnly h' linarith
+                    | Uc : (opNorm f).U c => inP (r, linarith, linarith, pr)
+          \in ExUpperReal.+_U.2 (inP (c, Uc, c, Uc, (linarith : c + c < b)))
+
+    \lemma opNorm-ext {E : RealBanachSpace} {f : BoundedFunctional E} (p : opNorm f = ExUpperRealAbMonoid.zro) : f = fzro
+      => ext (ext \lam x => \case E.norm-bounded x \with {
+        | inP (b,xb) => \have b>0 : 0 < b => norm>=0 xb
+          \in RealAbGroup.abs_zro-ext $ <=-antisymmetric (real_<=-eps \lam {d} d>0 =>
+                \let e => d * RatField.finv b
+                \in \have | e>0 : 0 < e => RatField.<_*_positive_positive d>0 (RatField.finv>0 b>0)
+                          | eb : e * b = d => *-assoc *> pmap (d *) (RatField.finv-left (RatField.>_/= b>0)) *> ide-right
+                \in \case transportInv (\lam (z : ExUpperReal) => z.U e) p e>0 \with {
+                  | inP (C,C>=0,C<e,q) => \have Cb : C * b < d => transport (_ <) eb (RatField.<_*_positive-left C<e b>0)
+                                          \in q xb <∘r transport (_ <) (inv RealAbGroup.zro-left) (rat_real_<.1 Cb)
+                }) RealAbGroup.abs>=0
+      })
+
+    \lemma abs-double {x : Real} : RealAbGroup.abs (x + x) = RealAbGroup.abs x + RealAbGroup.abs x
+      => \have | e : x + x = Real.fromRat 2 * x => equation.cRing
+               | t : (0 : Real) <= Real.fromRat 2 => rat_real_<=.1 (linarith : 0 RatField.<= 2)
+         \in pmap RealAbGroup.abs e *> RealField.abs_* *> pmap (\lam z => z RealField.* RealAbGroup.abs x) (RealAbGroup.abs-ofPos t) *> equation.cRing
+
+    -- | The additive group of $E^*$.
+    \func DualGroup (E : RealBanachSpace) : AbGroup (BoundedFunctional E) \cowith
+      | zro => fzro
+      | + => fadd
+      | zro-left => ext (ext \lam x => RealAbGroup.zro-left)
+      | +-assoc {f} {g} {h} => ext (ext \lam x => RealAbGroup.+-assoc {f x} {g x} {h x})
+      | +-comm {f} {g} => ext (ext \lam x => RealAbGroup.+-comm {f x} {g x})
+      | negative => fneg
+      | negative-left {f} => ext (ext \lam x => RealAbGroup.negative-left {f x})
+
+    \lemma dual-*n {E : RealBanachSpace} {n : Nat} {f : BoundedFunctional E} {x : E} : ((*n) {DualGroup E} n f).func x = n *n f x \elim n
+      | 0 => idp
+      | suc n => pmap (\lam z => z + f x) (dual-*n {E} {n} {f} {x})
+
+    -- | $f / n$.
+    \func fdiv {E : RealBanachSpace} (n : Nat) (f : BoundedFunctional E) : BoundedFunctional E \cowith
+      | func x => Real.fromRat (RatField.finv n) * f x
+      | func-+ => pmap (_ *) f.func-+ *> RealField.ldistr
+      | func-bounded => \case f.func-bounded \with {
+        | inP (C,C>=0,p) => inP (RatField.finv n * C, RatField.<=_*_positive_positive finv>=0 C>=0, \lam {x} {b} xb =>
+            \have t : (0 : Real) <= Real.fromRat (RatField.finv n) => rat_real_<=.1 finv>=0
+            \in =_<= (RealField.abs_* *> pmap (\lam z => z RealField.* RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos t))
+                <=∘ RealField.<=_*_positive-right t (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
+      }
+      \where
+        \lemma finv>=0 {n : Nat} : 0 <= RatField.finv n
+          => RatField.finv>=0 fromNat_>=0
+
+    \lemma div-cancel {n : Nat} (n/=0 : n /= 0) {a : Real} : n *n (Real.fromRat (RatField.finv n) * a) = a
+      => inv RealField.natCoef_*_*n *> inv *-assoc *> pmap (* a) (pmap (* _) (inv RealField.coefMap_natCoef) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 n/=0)) *> ide-left
+
+    -- | Two reals that are arbitrarily close are equal.
+    \lemma real-eq-eps {a b : Real} (h : \Pi {d : Rat} -> 0 < d -> RealAbGroup.abs (a - b) < Real.fromRat d) : a = b
+      => AddGroup.fromZero $ RealAbGroup.abs_zro-ext $ <=-antisymmetric (real_<=-eps \lam d>0 => transportInv (_ <) RealAbGroup.zro-left (h d>0)) RealAbGroup.abs>=0
+
+    -- | The limit of a real-valued function along a proper filter, if it is Cauchy.
+    \func filterLimit {X : \Set} (F : ProperFilter X) (g : X -> Real)
+                      (Fc : \Pi {a : Rat} -> 0 < a -> ∃ (r : Real) (F (\lam y => RealAbGroup.abs (r - g y) < Real.fromRat a))) : Real
+      => family-limit {RealNormed} (\lam a r => F (\lam y => RealAbGroup.abs (r - g y) < Real.fromRat a)) Fc
+          (\lam {a} {b} {r} {r'} a>0 b>0 Pa Pb => Real.<=-upper.1 $ \case isProper (filter-meet Pa Pb) \with {
+            | inP (y,(ya,yb)) => =_<= (pmap RealAbGroup.abs (sub-split {RealAbGroup} {r} {g y} {r'})) <=∘ RealAbGroup.abs_+ <=∘
+                                 transport (_ <=) RealAbGroup.+-rat (<=-less (RealAbGroup.<_+ ya (transport (__ < _) RealAbGroup.abs_- yb)))
+          })
+      \where
+        \lemma sub-split {A : AbGroup} {a b c : A} : a - c = (a - b) + (b - c)
+          => equation.abGroup
+
+    \lemma filterLimit-char {X : \Set} {F : ProperFilter X} {g : X -> Real}
+                            {Fc : \Pi {a : Rat} -> 0 < a -> ∃ (r : Real) (F (\lam y => RealAbGroup.abs (r - g y) < Real.fromRat a))}
+                            {a : Rat} (a>0 : 0 < a) : F (\lam y => RealAbGroup.abs (filterLimit F g Fc - g y) < Real.fromRat a)
+      => \let a3 => a * ratio 1 3
+         \in \have a3>0 : 0 < a3 => linarith
+         \in \case Fc a3>0 \with {
+           | inP (r,Fr) => filter-mono Fr \lam {y} ry =>
+             \have | l : RealAbGroup.abs (filterLimit F g Fc - r) < Real.fromRat (a3 + a3)
+                       => real_<_U.2 (family-limit.char {RealNormed} {\lam a r => F (\lam y => RealAbGroup.abs (r - g y) < Real.fromRat a)} {Fc} a3>0 Fr (linarith : a3 < a3 + a3))
+                   | e : Real.fromRat (a3 + a3) + Real.fromRat a3 = Real.fromRat a => RealAbGroup.+-rat *> pmap Real.fromRat third
+             \in transport (_ <) e $ (=_<= (pmap RealAbGroup.abs (filterLimit.sub-split {RealAbGroup} {_} {r} {g y})) <=∘ RealAbGroup.abs_+) <∘r RealAbGroup.<_+ l ry
+         }
+
+    \lemma ball-bound {E : RealBanachSpace} {eps : Rat} {x y : BoundedFunctional E} (p : (opNorm (fadd x (fneg y))).U eps)
+      : ∃ (C : Rat) (0 <= C) (C < eps) (\Pi {v : E} {b : Rat} -> (norm v).U b -> RealAbGroup.abs (x v - y v) <= Real.fromRat (C * b))
+      => \case \elim p \with {
+        | inP (C,C>=0,C<eps,bd) => inP (C, C>=0, C<eps, \lam vb => bd vb)
+      }
+
+    \lemma third {d : Rat} : d * ratio 1 3 + d * ratio 1 3 + d * ratio 1 3 = d
+      => linarith
+
+    \lemma abs<-of {x z : Real} (p : x < z) (q : negative x < z) : RealAbGroup.abs x < z
+      => transport (\lam t => RealAbGroup.abs t < z) AddGroup.minus_zro $
+           RealAbGroup.abs_-_< (transportInv (__ < z) AddGroup.minus_zro p) (transportInv (__ < z) RealAbGroup.zro-left q)
+
+    \lemma abs-bounds {x z : Real} (p : RealAbGroup.abs x < z) : \Sigma (x < z) (negative x < z)
+      => (RealAbGroup.abs>=id <∘r p, RealAbGroup.abs>=neg <∘r p)
+
+    \lemma abs-bounds<= {x z : Real} (p : RealAbGroup.abs x <= z) : \Sigma (x <= z) (negative x <= z)
+      => (RealAbGroup.abs>=id <=∘ p, RealAbGroup.abs>=neg <=∘ p)
+
+    -- | Completeness of $E^*$.
+    \lemma dual-complete {E : RealBanachSpace} (F : ProperFilter (BoundedFunctional E))
+                         (Fc : \Pi {eps : Rat} -> 0 < eps -> ∃ (x : BoundedFunctional E) (F (\lam y => (opNorm (fadd x (fneg y))).U eps)))
+      : ∃ (x : BoundedFunctional E) (\Pi {eps : Rat} -> 0 < eps -> F (\lam y => (opNorm (fadd x (fneg y))).U eps))
+      => \case Fc {1} RatField.zro<ide \with {
+        | inP (x1,F1) => \case x1.func-bounded \with {
+          | inP (C1,C1>=0,p1) => inP (limFun F Fc C1>=0 p1 F1, \lam {eps} eps>0 =>
+              \let e3 => eps * ratio 1 3
+              \in \have e3>0 : 0 < e3 => linarith
+              \in \case Fc e3>0 \with {
+                | inP (x,Fx) => filter-mono Fx \lam {y} yx => inP (e3 + e3, linarith, linarith, \lam {v} {b} vb =>
+                    \have b>0 : 0 < b => norm>=0 vb
+                    \in \case ball-bound yx \with {
+                     | inP (C,C>=0,C<e3,bdy) => real_<=-eps \lam {d} d>0 => \case isProper (filter-meet (filterLimit-char {_} {F} {\lam y => y v} {cauchy F Fc v} d>0) Fx) \with {
+                      | inP (z,(zd,zx)) => \case ball-bound zx \with {
+                        | inP (C',C'>=0,C'<e3,bdz) =>
+                          \have | l1 => (abs-bounds zd).1
+                                | l2 => (abs-bounds zd).2
+                                | m1 => (abs-bounds<= (bdz {v} {b} vb)).1
+                                | m2 => (abs-bounds<= (bdz {v} {b} vb)).2
+                                | n1 => (abs-bounds<= (bdy {v} {b} vb)).1
+                                | n2 => (abs-bounds<= (bdy {v} {b} vb)).2
+                                | c1 : Real.fromRat (C' * b) <= Real.fromRat (e3 * b) => rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C'<e3) (<=-less b>0))
+                                | c2 : Real.fromRat (C * b) <= Real.fromRat (e3 * b) => rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C<e3) (<=-less b>0))
+                                | e : Real.fromRat ((e3 + e3) * b) = Real.fromRat (e3 * b) + Real.fromRat (e3 * b)
+                                    => pmap Real.fromRat RatField.rdistr *> inv RealAbGroup.+-rat
+                          \in transportInv (\lam w => _ < w + Real.fromRat d) e (abs<-of linarith linarith)
+                      }
+                    }
+                    })
+              })
+        }
+      }
+      \where {
+        \lemma cauchy {E : RealBanachSpace} (F : ProperFilter (BoundedFunctional E))
+                      (Fc : \Pi {eps : Rat} -> 0 < eps -> ∃ (x : BoundedFunctional E) (F (\lam y => (opNorm (fadd x (fneg y))).U eps)))
+                      (v : E) {a : Rat} (a>0 : 0 < a) : ∃ (r : Real) (F (\lam y => RealAbGroup.abs (r - y v) < Real.fromRat a))
+          => \case E.norm-bounded v \with {
+            | inP (N,vN) =>
+              \have | N>0 : 0 < N => norm>=0 vN
+                    | eps>0 : 0 < a * RatField.finv N => RatField.<_*_positive_positive a>0 (RatField.finv>0 N>0)
+                    | eN : a * RatField.finv N * N = a => *-assoc *> pmap (a *) (RatField.finv-left (RatField.>_/= N>0)) *> ide-right
+              \in \case Fc eps>0 \with {
+                | inP (x,Fx) => inP (x v, filter-mono Fx \lam {y} yx => \case ball-bound yx \with {
+                  | inP (C,_,C<eps,bd) => bd vN <∘r rat_real_<.1 (transport (_ <) eN (RatField.<_*_positive-left C<eps N>0))
+                })
+              }
+          }
+
+        \func limFun {E : RealBanachSpace} (F : ProperFilter (BoundedFunctional E))
+                     (Fc : \Pi {eps : Rat} -> 0 < eps -> ∃ (x : BoundedFunctional E) (F (\lam y => (opNorm (fadd x (fneg y))).U eps)))
+                     {x1 : BoundedFunctional E} {C1 : Rat} (C1>=0 : 0 <= C1) (p1 : IsFunctionalBound x1 C1)
+                     (F1 : F (\lam y => (opNorm (fadd x1 (fneg y))).U 1)) : BoundedFunctional E \cowith
+          | func v => filterLimit F (\lam y => y v) (cauchy F Fc v)
+          | func-+ {v} {w} => real-eq-eps \lam {d} d>0 =>
+            \let d3 => d * ratio 1 3
+            \in \have d3>0 : 0 < d3 => linarith
+            \in \case isProper (filter-meet (filterLimit-char {_} {F} {\lam y => y (v + w)} {cauchy F Fc (v + w)} d3>0)
+                                  (filter-meet (filterLimit-char {_} {F} {\lam y => y v} {cauchy F Fc v} d3>0)
+                                               (filterLimit-char {_} {F} {\lam y => y w} {cauchy F Fc w} d3>0))) \with {
+              | inP (y,(h1,(h2,h3))) =>
+                \have | a1 => (abs-bounds h1).1
+                      | a2 => (abs-bounds h1).2
+                      | b1 => (abs-bounds h2).1
+                      | b2 => (abs-bounds h2).2
+                      | c1 => (abs-bounds h3).1
+                      | c2 => (abs-bounds h3).2
+                      | ey : y (v + w) = y v + y w => y.func-+
+                      | ed : Real.fromRat d3 + Real.fromRat d3 + Real.fromRat d3 = Real.fromRat d => pmap (`+ _) RealAbGroup.+-rat *> RealAbGroup.+-rat *> pmap Real.fromRat third
+                \in abs<-of linarith linarith
+            }
+          | func-bounded => inP (C1 + 1, linarith, \lam {v} {b} vb =>
+            \have | b>0 : 0 < b => norm>=0 vb
+                  | e : Real.fromRat ((C1 + 1) * b) = Real.fromRat (C1 * b) + Real.fromRat b
+                      => pmap Real.fromRat (RatField.rdistr *> pmap (_ +) ide-left) *> inv RealAbGroup.+-rat
+            \in transportInv (_ <=) e $ real_<=-eps \lam {d} d>0 => \case isProper (filter-meet (filterLimit-char {_} {F} {\lam y => y v} {cauchy F Fc v} d>0) F1) \with {
+              | inP (y,(yd,y1)) => \case ball-bound y1 \with {
+                | inP (C,C>=0,C<1,bd) =>
+                  \have | l1 => (abs-bounds yd).1
+                        | l2 => (abs-bounds yd).2
+                        | m1 => (abs-bounds<= (bd {v} {b} vb)).1
+                        | m2 => (abs-bounds<= (bd {v} {b} vb)).2
+                        | n1 => (abs-bounds<= (p1 {v} {b} vb)).1
+                        | n2 => (abs-bounds<= (p1 {v} {b} vb)).2
+                        | cb : Real.fromRat (C * b) <= Real.fromRat b => rat_real_<=.1 (transport (_ <=) ide-left (RatField.<=_*_positive-left (<=-less C<1) (<=-less b>0)))
+                  \in abs<-of linarith linarith
+              }
+            })
+      }
+  }
+
+-- | `c f` for a real `c`.
+\func fscale {E : RealBanachSpace} (c : Real) (f : BoundedFunctional E) : BoundedFunctional E \cowith
+  | func x => c * f x
+  | func-+ => pmap (c *) f.func-+ *> RealField.ldistr
+  | func-bounded => \case f.func-bounded, UpperReal.U-inh_>0 {RealAbGroup.abs c} \with {
+    | inP (C,C>=0,p), inP (K,Ku,K>0) => inP (K * C, RatField.<=_*_positive_positive (<=-less K>0) C>=0, \lam {x} {b} xb =>
+        \have b>0 : 0 < b => norm>=0 xb
+        \in =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (<=-less (real_<_U.2 Ku)) RealAbGroup.abs>=0
+              <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less K>0)) (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
+  }
+
+-- | Scaling the supremum: $\sup |c \Lambda| = c \sup |\Lambda|$ for $c > 0$.
+\lemma functionalSup-scale {E : RealBanachSpace} {f : BoundedFunctional E} {s c : Real} (c>0 : (0 : Real) < c) (fs : IsFunctionalSup f s)
+  : IsFunctionalSup (fscale c f) (c * s)
+  => (\lam {x} {b} xb => =_<= (RealField.abs_* *> pmap (\lam (t : Real) => t * RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos (<=-less c>0))) <=∘ RealField.<=_*_positive-right (<=-less c>0) (fs.1 xb) <=∘ =_<= (inv RealField.*-assoc),
+      \lam {eps} eps>0 => \case real_<-rat-char.1 (RealField.<_*_positive_positive (rat_real_<.1 eps>0) (RealField.pinv>0 c>0)) \with {
+        | inP (e',e'0,e'e) =>
+          \have | e'>0 : 0 < e' => rat_real_<.2 (real_<_U.2 e'0)
+                | ce : c * Real.fromRat e' <= Real.fromRat eps
+                    => RealField.<=_*_positive-right (<=-less c>0) (<=-less (real_<_L.2 e'e)) <=∘ =_<= ((equation.cRing : c * (Real.fromRat eps * RealField.pinv c c>0) = Real.fromRat eps * (c * RealField.pinv c c>0)) *> pmap (_ *) (RealField.pinv-right c>0) *> RealField.ide-right)
+          \in \case fs.2 e'>0 \with {
+            | inP (x,x1,sx) => inP (x, x1,
+                \have | m : c * (s - Real.fromRat e') < c * RealAbGroup.abs (f x) => RealField.<_*_positive-right c>0 sx
+                      | e1 : c * (s - Real.fromRat e') = c * s - c * Real.fromRat e' => equation.cRing
+                      | e2 : RealAbGroup.abs (c * f x) = c * RealAbGroup.abs (f x) => RealField.abs_* *> pmap (\lam (t : Real) => t * RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos (<=-less c>0))
+                \in usingOnly (m, e1, ce) linarith <∘l =_<= (inv e2))
+          }
+      })
+
+-- | A bounded functional is uniformly continuous.
+\func functionalCover {E : RealBanachSpace} (f : BoundedFunctional E) : UniformNormedAbGroupMap E RealNormed \cowith
+  | func => f
+  | func-+ => f.func-+
+  | func-norm-uniform {eps} eps>0 => \case f.func-bounded \with {
+    | inP (C,C>=0,fC) =>
+      \have C1>0 : 0 < C + 1 => linarith
+      \in inP (eps * RatField.finv (C + 1), RatField.<_*_positive_positive eps>0 (RatField.finv>0 C1>0), \lam {x} xd =>
+          \have | d>0 : 0 < eps * RatField.finv (C + 1) => RatField.<_*_positive_positive eps>0 (RatField.finv>0 C1>0)
+                | e : (C + 1) * (eps * RatField.finv (C + 1)) = eps => equation.cRing {RatField.finv-right (RatField.>_/= C1>0)}
+                | lt : C * (eps * RatField.finv (C + 1)) < eps
+                    => transport (_ <) e (RatField.<_*_positive-left (linarith : C < C + 1) d>0)
+          \in real_<_U.1 (fC xd <∘r rat_real_<.1 lt))
+  }
+
+-- | Bounded functionals that agree on a dense subset are equal.
+\lemma functional-dense-eq {X : TopSpace} {E : RealBanachSpace} (i : ContMap X E) (id : i.IsDense) {f g : BoundedFunctional E}
+                           (e : \Pi (x : X) -> f (i x) = g (i x)) (y : E) : f y = g y
+  => dense-lift-unique i id (functionalCover f) (functionalCover g) e y

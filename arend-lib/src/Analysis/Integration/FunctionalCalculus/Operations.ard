@@ -14,6 +14,7 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
 \import Algebra.QModule
 \import Analysis.Integration.FullIntegrationSpace
 \import Analysis.Integration.FunctionalCalculus
@@ -21,7 +22,7 @@
 \import Arith.Real
 \import Arith.Real.Approximate
 \import Arith.Real.Field
-\import Arith.Real.SignedPow
+\import Arith.Real.Power.SignedPow
 \import Logic
 \import Order.Biordered
 \import Order.Lattice
@@ -56,9 +57,13 @@
     \lemma two>1 {r : Real} (r>=2 : (2 : Real) <= r) : (1 : Real) < r
       => linarith
 
--- | $\varphi_{r,a}(f)$ for `1 < r ≤ 2` and `a > 0`.
-\func fsignedPowCut {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) (r<=2 : r <= 2) {a : Real} (a>0 : (0 : Real) < a) (f : L) : L
-  => fcalc (signedPowCutLB r>1 r<=2 a>0) (f :: nil)
+-- | $\varphi_{r,a}(f)$ for `r > 1` and `a > 0`.
+\func fsignedPowCut {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a) (f : L) : L
+  => fcalc (signedPowCutLB r>1 a>0) (f :: nil)
+
+-- | $\varphi^{(a)}(f)$ for `r > 1` and `a > 0` (see `signedPowTail`).
+\func fsignedPowTail {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a) (f : L) : L
+  => fcalc (signedPowTailLB r>1 a>0) (f :: nil)
 
 -- | $(\varphi_r(x_1) x_2)(f,g)$ for `r > 1`.
 \func fsignedPowMul {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) (f g : L) : L

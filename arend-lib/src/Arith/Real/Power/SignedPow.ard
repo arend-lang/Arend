@@ -99,12 +99,12 @@
 
 -- | $|\varphi_r(t)|^{r'} = |t|^r$ for $1/r + 1/r' = 1$.
 \lemma signedPow-conj {r : Real} {r>1 : (1 : Real) < r} {r>0 : (0 : Real) < r} {q : Real} {q>0 : (0 : Real) < q}
-                      (rq : RealField.pinv r r>0 + RealField.pinv q q>0 = (1 : Real)) {t : Real}
+                      (rq : HolderConjugate r q r>0 q>0) {t : Real}
   : rpow (RealAbGroup.abs (signedPow r>1 t)) RealAbGroup.abs>=0 q q>0 = rpow (RealAbGroup.abs t) RealAbGroup.abs>=0 r r>0
   => rpow-base signedPow-abs *> rpow-rpow {_} {_} {r - 1} {q} {sub1>0 r>1} {q>0} {_} {RealField.<_*_positive_positive (sub1>0 r>1) q>0} *> rpow-exp (conj-exp rq)
   \where
     -- | $(r - 1) r' = r$.
-    \lemma conj-exp {r q : Real} {r>0 : (0 : Real) < r} {q>0 : (0 : Real) < q} (rq : RealField.pinv r r>0 + RealField.pinv q q>0 = (1 : Real))
+    \lemma conj-exp {r q : Real} {r>0 : (0 : Real) < r} {q>0 : (0 : Real) < q} (rq : HolderConjugate r q r>0 q>0)
       : (r - 1) * q = r
       => \have | sr : RealField.pinv r r>0 * r = (1 : Real) => RealField.pinv-left r>0
                | sq : RealField.pinv q q>0 * q = (1 : Real) => RealField.pinv-left q>0
@@ -164,7 +164,7 @@
 
 -- | $|\varphi_{r,a}(t) - \varphi_{r,b}(t)|^{r'} \le 2^{r'} \delta^{r-1} (|t| \wedge \delta)$ for $0 < a, b \le \delta$ and $1 < r \le 2$.
 \lemma signedPow-cut-diff {r : Real} {r>1 : (1 : Real) < r} {r>0 : (0 : Real) < r} (r<=2 : r <= 2)
-                          {q : Real} {q>0 : (0 : Real) < q} (rq : RealField.pinv r r>0 + RealField.pinv q q>0 = (1 : Real))
+                          {q : Real} {q>0 : (0 : Real) < q} (rq : HolderConjugate r q r>0 q>0)
                           {d : Real} {d>0 : (0 : Real) < d} {a b : Real} {a>0 : (0 : Real) < a} {b>0 : (0 : Real) < b} (a<=d : a <= d) (b<=d : b <= d) (t : Real)
   : rpow (RealAbGroup.abs (signedPow-cut r>1 a>0 t - signedPow-cut r>1 b>0 t)) RealAbGroup.abs>=0 q q>0
       <= rpow 2 (linarith : (0 : Real) <= 2) q q>0 * rpow-pos d d>0 (r - 1) * (RealAbGroup.abs t ∧ d)
@@ -201,6 +201,27 @@
       (\lam t<a => =_<= (pmap RealAbGroup.abs (signedPow-cut-in (<=-less t<a)) *> RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (<=-less rpow-pos>0))))
       (\lam a<=t => =_<= (pmap RealAbGroup.abs (signedPow-cut-ge a<=t) *> signedPow-abs *> signedPow.pow-split (a>0 <∘l a<=t))
                      <=∘ <=_*_positive-left (signedPow-cut-bound.rpow-pos-antitone (linarith : r - 2 <= 0) a<=t) RealAbGroup.abs>=0)
+
+-- | $s^c \le a^c + b^c$ for $0 < a \le s \le b$ and any real `c`.
+\lemma rpow-pos-between {a s b c : Real} {a>0 : (0 : Real) < a} {s>0 : (0 : Real) < s} {b>0 : (0 : Real) < b} (as : a <= s) (sb : s <= b)
+  : rpow-pos s s>0 c <= rpow-pos a a>0 c + rpow-pos b b>0 c
+  => \have | A>0 : (0 : Real) < rpow-pos a a>0 c => rpow-pos>0
+           | B>0 : (0 : Real) < rpow-pos b b>0 c => rpow-pos>0
+     \in real-cases {c} {0}
+      (\lam c<0 => \have t : rpow-pos s s>0 c <= rpow-pos a a>0 c => signedPow-cut-bound.rpow-pos-antitone (<=-less c<0) as \in linarith)
+      (\lam c>=0 => \have t : rpow-pos s s>0 c <= rpow-pos b b>0 c => rpow-pos-mono c>=0 sb \in linarith)
+
+-- | $|\varphi_{r,a}(t)| \le (a^{r-2} + (R \vee a)^{r-2}) |t|$ for $|t| \le R$ and every $r > 1$.
+\lemma signedPow-cut-lin-gen {r : Real} {r>1 : (1 : Real) < r} {a : Real} {a>0 : (0 : Real) < a} {R t : Real} (tR : RealAbGroup.abs t <= R)
+  : RealAbGroup.abs (signedPow-cut r>1 a>0 t) <= (rpow-pos a a>0 (r - 2) + rpow-pos (R ∨ a) (a>0 <∘l join-right) (r - 2)) * RealAbGroup.abs t
+  => \have | X>0 : (0 : Real) < rpow-pos (R ∨ a) (a>0 <∘l join-right) (r - 2) => rpow-pos>0
+           | A>0 : (0 : Real) < rpow-pos a a>0 (r - 2) => rpow-pos>0
+     \in real-cases {RealAbGroup.abs t} {a}
+      (\lam t<a => =_<= (pmap RealAbGroup.abs (signedPow-cut-in (<=-less t<a)) *> RealField.abs_* *> pmap (\lam u => u * _) (RealAbGroup.abs-ofPos (<=-less A>0)))
+                    <=∘ <=_*_positive-left (linarith : rpow-pos a a>0 (r - 2) <= rpow-pos a a>0 (r - 2) + rpow-pos (R ∨ a) (a>0 <∘l join-right) (r - 2)) RealAbGroup.abs>=0)
+      (\lam a<=t => \have t>0 : (0 : Real) < RealAbGroup.abs t => a>0 <∘l a<=t
+                    \in =_<= (pmap RealAbGroup.abs (signedPow-cut-ge a<=t) *> signedPow-abs *> signedPow.pow-split t>0)
+                         <=∘ <=_*_positive-left (rpow-pos-between a<=t (tR <=∘ join-left)) RealAbGroup.abs>=0)
 
 -- | $|\varphi_r(t)| \le (R \vee 0)^{r-1}$ for $|t| \le R$.
 \lemma signedPow-local-bound {r : Real} {r>1 : (1 : Real) < r} {R t : Real} (tR : RealAbGroup.abs t <= R)

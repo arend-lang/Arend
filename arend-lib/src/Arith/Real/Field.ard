@@ -320,3 +320,7 @@
             | K>0 : 0 < K => rat_real_<.2 (T>=0 <∘r TK')
       \in real-scaled-eq K>0 \lam {e} e>0 => h e>0 <=∘ transport (_ <=) RealField.*-rat (RealField.<=_*_positive-right (rat_real_<=.1 (<=-less e>0)) (<=-less TK'))
   }
+
+-- | `p` and `q` are Hölder conjugate exponents: $1/p + 1/q = 1$.
+\func HolderConjugate (p q : Real) (p>0 : 0 < p) (q>0 : 0 < q) : \Prop
+  => RealField.pinv p p>0 + RealField.pinv q q>0 = 1

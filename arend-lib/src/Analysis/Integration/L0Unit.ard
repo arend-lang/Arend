@@ -5,6 +5,8 @@
 
   * {l0One}: the limit of this net ({l0One.net-conv}); {l0One-below}: $|1| \le 1$.
   * {l0One-mul}: $1 \cdot F = F$ for bounded `F` (by {fmul-trunc-tail}).
+  * {trunc-controlled-conv}, {trunc-controlled-below}: a net `W` on $L^+$ with $|W(n) - W(m)| \le C|\tau(n) - \tau(m)|$ for $m \le n$
+    converges by the same argument, and $|W(n)| \le C\tau(n)$ bounds its limit by `C`.
 -}
 
 \import Algebra.Group
@@ -12,6 +14,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
@@ -122,3 +125,44 @@
                                                     *> inv (AddGroupHom.func-minus {topTruncCompletion {L0PreSpace L}})) *> l0Gauge.char k>=0)
                          <=∘ L.integral-mono (transport (\lam (z : L) => abs (fmul z (L.bclip a f) - L.bclip a f) ∧ k <= L.truncAt eta k) (pmap L.trunc (inv (l0One.split {L} {k} {h.el} {eta})))
                                                (transport (\lam z => abs (z - L.bclip a f) ∧ k <= L.truncAt eta k) fmul-comm (fmul-trunc-tail eta>0 k>=0 (L.to>=0 {_} {h.el} start<=h))))) F
+
+-- | A net {W} on $L^+$ with $|W(n) - W(m)| \le C |\tau(n) - \tau(m)|$ for $m \le n$ converges (as {l0One.net} does).
+\lemma trunc-controlled-conv {L : FullIntegrationSpace} {C : Rat} (C>=1 : 1 RatField.<= C) {W : PosCone L -> L0Space L}
+                             (Wd : \Pi {m n : PosCone L} -> m.el L.<= n.el -> abs (W n - W m) <= pointCF {L0PreSpace L} (C *q abs (L.trunc n.el - L.trunc m.el)))
+  : IsConvergent W
+  => \have C>0 : RatField.zro RatField.< C => RatField.zro<ide <∘l C>=1
+     \in convergent-topAbGroup-char {PosCone L} {L0Space L} {W} 2 0 \lam {U} Uo U0 => \case completion-neighborhood {L0PreSpace L} Uo U0 \with {
+       | inP ((k,k>=0),eps,eps>0,g) => \case l0One.small k>=0 {Real.fromRat (RatField.finv C) * eps} (RealField.<_*_positive_positive (rat_real_<.1 (RatField.finv>0 C>0)) eps>0) \with {
+         | inP (eta,eta>0,s) => inP (l0One.start k>=0 eta>0, \lam {n} start<=n => g $ gauge C>=1 k>=0 eta>0 start<=n (Wd start<=n)
+             <∘r (RealField.<_*_positive-right (rat_real_<.1 C>0) s <∘l =_<= (inv RealField.*-assoc *> pmap (`* eps) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-right (RatField.>_/= C>0))) *> ide-left)))
+       }
+     }
+  \where
+    -- | $d_k(X, 0) \le C I(\tau_\eta k)$ if $|X| \le C |\tau(n) - \tau(k/\eta)|$ and $n \ge k/\eta$.
+    \lemma gauge {L : FullIntegrationSpace} {C : Rat} (C>=1 : 1 RatField.<= C) {k : L} (k>=0 : L.zro <= k) {eta : Rat} (eta>0 : RatField.zro RatField.< eta)
+                 {n : PosCone L} (sn : (l0One.start k>=0 eta>0).el L.<= n.el) {X : L0Space L}
+                 (Xd : abs X <= pointCF {L0PreSpace L} (C *q abs (L.trunc n.el - L.trunc (l0One.start k>=0 eta>0).el)))
+      : l0Gauge k>=0 X <= Real.fromRat C * L.integral (L.truncAt eta k)
+      => \let | i => topTruncCompletion {L0PreSpace L}
+              | D => abs (L.trunc n.el - L.trunc (l0One.start k>=0 eta>0).el)
+         \in \have | C>=0 : RatField.zro RatField.<= C => RatField.zro<=ide <=∘ C>=1
+                   | CD>=0 : L.zro <= C *q D => L.*q_>=0 C>=0 L.abs>=0
+                   | le : abs X <= abs (i (C *q D))
+                       => Xd <=∘ =_<= (inv (abs-ofPos (=_<= (inv i.func-zro) <=∘ i.func-<= CD>=0)))
+                   | kk : k <= C *q k => =_<= (inv ide_*q) <=∘ L.<=_*q-left C>=1 k>=0
+                   | pt : abs (C *q D) ∧ k <= C *q L.truncAt eta k
+                       => =_<= (pmap (__ ∧ k) (L.abs-ofPos CD>=0)) <=∘ L.meet-monotone <=-refl kk <=∘ =_<= (inv (L.meet_*q C>=0))
+                           <=∘ L.<=_*q-right C>=0 (transport (\lam z => abs (L.trunc z - _) ∧ k <= _) (inv l0One.split) (trunc-tail eta>0 k>=0 (L.to>=0 sn)))
+         \in normAt-lift-abs-mono {L0PreSpace L} {k,k>=0} le <=∘ =_<= (l0Gauge.char k>=0) <=∘ L.integral-mono pt <=∘ =_<= L.integral_*q
+
+-- | The limit of a net `W` on $L^+$ with $|W(n)| \le C \tau(n)$ is bounded by `C`.
+\lemma trunc-controlled-below {L : FullIntegrationSpace} {C : Rat} (C>0 : RatField.zro RatField.< C) {W : PosCone L -> L0Space L}
+                              (Wb : \Pi (n : PosCone L) -> abs (W n) <= pointCF {L0PreSpace L} (C *q L.trunc n.el)) {x : L0Space L} (xl : (L0Space L).IsLimit W x)
+  : IsBelow (abs x) C
+  => (IsBelow_truncAt C>0).2 $ (L0Space L).closed-limit0 {_}
+      (equalizer-closed (truncAt-cover C CoverMap.∘ (L0Space L).abs-uniform) (L0Space L).abs-uniform) {PosCone L} {W} xl
+      \lam (n : PosCone L) => (IsBelow_truncAt C>0).1 $ IsBelow_<= (Wb n <=∘ =_<= (func-*q {_} {_} {topTruncCompletion {L0PreSpace L}})) $ transport (\lam z => IsBelow (C *q z) C) (inv l0-pt-abs *> pointCF-abs n) $
+          transport (IsBelow _) RatField.ide-right $ IsBelow_*q (<=-less C>0) $ transport (IsBelow __ 1) l0-pt-abs $ (topTruncCompletion {L0PreSpace L}).func-IsBelow (l0One.trunc-below n)
+  \where
+    \lemma pointCF-abs {L : FullIntegrationSpace} (n : PosCone L) : pointCF {L0PreSpace L} (abs (L.trunc n.el)) = pointCF {L0PreSpace L} (L.trunc n.el)
+      => pmap (pointCF {L0PreSpace L}) (L.abs-ofPos (L.trunc-pos n.el>=0))
