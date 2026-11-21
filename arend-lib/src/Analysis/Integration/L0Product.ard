@@ -8,11 +8,13 @@
   * {l0BMul-level}: on elements bounded by `M`, the product does not depend on the level.
   * {l0BMul-comm}, {l0BMul-assoc}, {l0BMul-ldistr}, {l0BMul-*q}: the algebra laws on bounded elements, for large enough levels.
   * {l0BMul-bound}, {l0BMul-abs}: $|FG| \le ab$ and $|FG| \le a|G|$ for $|F| \le a$, $|G| \le b$.
+  * {l0BMul-square>=0}, {l0BMul-square-below}: $FF \ge 0$, and $|FF| \le q^2$ implies $|F| \le q$.
 
   All identities are proved on `L` and extended by density ({l0-dense2}, {l0-dense3}).
 -}
 
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
@@ -26,6 +28,7 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.SignedPow
 \import Function.Meta
 \import Logic
 \import Meta
@@ -208,3 +211,83 @@
 \lemma l0BMul-pt {L : FullIntegrationSpace} {N : Rat} (N>0 : RatField.zro RatField.< N) {u v : L} (uN : L.IsBelow (abs u) N) (vN : L.IsBelow (abs v) N)
   : l0BMul N>0 (pointCF {L0PreSpace L} u, pointCF {L0PreSpace L} v) = pointCF {L0PreSpace L} (fmul u v)
   => l0BMul.char N>0 *> pmap2 (\lam x y => pointCF {L0PreSpace L} (fmul x y)) (L.bclip-id N>0 uN) (L.bclip-id N>0 vN)
+
+-- | Squares are nonnegative: $0 \le F F$.
+\lemma l0BMul-square>=0 {L : FullIntegrationSpace} {N : Rat} (N>0 : RatField.zro RatField.< N) (F : L0Space L)
+  : 0 <= l0BMul N>0 (F,F)
+  => \let | Y => L0Space L
+          | D : CoverMap Y Y => l0BMul N>0 CoverMap.∘ ProductCoverSpace.tuple CoverMap.id CoverMap.id
+     \in transport (0 <=) (dense-lift-unique completion completion.isDenseEmbedding.1 (Y.abs-uniform CoverMap.∘ D) D
+          (\lam f => pmap abs (l0BMul.char N>0) *> inv (l0-pt-abs {L}) *> pmap (pointCF {L0PreSpace L}) (L.abs-ofPos square>=0)
+                      *> inv (l0BMul.char N>0)) F) abs>=0
+  \where
+    \lemma square>=0 {L : FullIntegrationSpace} {g : L} : L.zro <= fmul g g
+      => transport (L.zro <=) fpow-two fpow>=0
+
+-- | If $|F| \le a \le N$ and $|F F| \le q^2$, then $|F| \le q$.
+\lemma l0BMul-square-below {L : FullIntegrationSpace} {N a q : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a) (a<=N : a RatField.<= N)
+                           (q>0 : RatField.zro RatField.< q) {F : L0Space L} (Fa : IsBelow (abs F) a) (FFq : IsBelow (abs (l0BMul N>0 (F,F))) (q RatField.* q))
+  : IsBelow (abs F) q
+  => \let | i => topTruncCompletion {L0PreSpace L}
+          | m => l0BMul N>0
+          | Y => L0Space L
+          | c => RatField.finv q
+          | qq => q RatField.* q
+          | B : CoverMap Y Y => bclip-cover a
+          | U : CoverMap Y Y => Y.abs-uniform CoverMap.∘ B
+          | W : CoverMap Y Y => Y.abs-uniform CoverMap.∘ m CoverMap.∘ ProductCoverSpace.tuple B B
+          | R : CoverMap Y Y => +-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple (truncAt-cover q CoverMap.∘ U)
+                                  ((L0Space L).*q-right-uniform {c} CoverMap.∘ subtract-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple W (truncAt-cover qq CoverMap.∘ W))
+          | P : CoverMap Y Y => Y.join-uniform CoverMap.∘ ProductCoverSpace.tuple U R
+     \in \have | qq>0 : RatField.zro RatField.< qq => RatField.<_*_positive_positive q>0 q>0
+               | e : P F = R F => dense-lift-unique completion completion.isDenseEmbedding.1 P R (\lam f =>
+                  \let v => L.bclip a f
+                  \in \have | e1 : bclip a (pointCF {L0PreSpace L} f) = pointCF {L0PreSpace L} v => inv (l0-bclip {L})
+                            | e2 : m (bclip a (pointCF {L0PreSpace L} f), bclip a (pointCF {L0PreSpace L} f)) = pointCF {L0PreSpace L} (fmul v v) => l0BMul.bclip-pt N>0 a>0 a<=N
+                            | e3 : R (pointCF {L0PreSpace L} f) = pointCF {L0PreSpace L} (L.truncAt q (abs v) + c *q (abs (fmul v v) - L.truncAt qq (abs (fmul v v))))
+                                => pmap2 (\lam x y => truncAt q (abs x) + c *q (abs y - truncAt qq (abs y))) e1 e2
+                                   *> inv (i.func-+ *> pmap2 (+) (i.func-truncAt *> pmap (truncAt q) (l0-pt-abs {L}))
+                                                                (func-*q {_} {_} {i} *> pmap (c *q) (AddGroupHom.func-minus {i} *> pmap2 (-) (l0-pt-abs {L}) (i.func-truncAt *> pmap (truncAt qq) (l0-pt-abs {L})))))
+                  \in pmap2 (\lam x y => abs x ∨ y) e1 e3 *> pmap (`∨ _) (inv (l0-pt-abs {L})) *> inv i.func-join
+                      *> pmap (pointCF {L0PreSpace L}) (L.join_<= (square-pt q>0)) *> inv e3) F
+               | T : truncAt qq (abs (m (F,F))) = abs (m (F,F)) => (IsBelow_truncAt qq>0).1 FFq
+               | RF : R F = truncAt q (abs F)
+                  => pmap (\lam x => truncAt q (abs x) + c *q (abs (m (x,x)) - truncAt qq (abs (m (x,x))))) (bclip-id a>0 Fa)
+                     *> pmap (\lam z => truncAt q (abs F) + c *q z) (pmap (_ -) T *> negative-right) *> pmap (_ +) toRatModule.*c_zro-right *> zro-right
+               | F<=T : abs F <= truncAt q (abs F)
+                  => =_<= (pmap abs (inv (bclip-id a>0 Fa))) <=∘ join-left {Y} <=∘ =_<= (e *> RF)
+     \in (IsBelow_truncAt q>0).2 (<=-antisymmetric (truncAt-bound q>0) F<=T)
+  \where {
+    -- | $|v| \le \tau_q |v| + q^{-1}(|v v| - \tau_{q^2} |v v|)$ in `L`.
+    \lemma square-pt {L : FullIntegrationSpace} {q : Rat} (q>0 : RatField.zro RatField.< q) {v : L}
+      : abs v <= L.truncAt q (abs v) + RatField.finv q *q (abs (fmul v v) - L.truncAt (q RatField.* q) (abs (fmul v v)))
+      => \have | qq>0 : RatField.zro RatField.< q RatField.* q => RatField.<_*_positive_positive q>0 q>0
+               | w => fcalc-abs (fcalc-mul (fcalc-var {L} {1} {v :: nil} 0) (fcalc-var 0))
+         \in fcalc-le-pt (v :: nil) (\lam z => real-pt q>0) (fcalc-abs (fcalc-var 0))
+              (fcalc-add (fcalc-truncAt q>0 (fcalc-abs (fcalc-var 0))) (fcalc-*q (fcalc-sub w (fcalc-truncAt qq>0 w))))
+
+    \lemma real-pt {q : Rat} (q>0 : RatField.zro RatField.< q) {t : Real}
+      : RealAbGroup.abs t <= (RealAbGroup.abs t ∧ Real.fromRat q) + Real.fromRat (RatField.finv q) * (RealAbGroup.abs (t * t) - (RealAbGroup.abs (t * t) ∧ Real.fromRat (q RatField.* q)))
+      => transport2 (\lam y z => RealAbGroup.abs t <= (RealAbGroup.abs t ∧ Real.fromRat q) + Real.fromRat (RatField.finv q) * (y - (y ∧ z))) (inv RealField.abs_*) RealField.*-rat
+          (real-pt' (rat_real_<.1 q>0) RealAbGroup.abs>=0 (rat_real_<=.1 (<=-less (RatField.finv>0 q>0))) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= q>0))))
+
+    \lemma real-pt' {x r c : Real} (r>0 : (0 : Real) < r) (x>=0 : (0 : Real) <= x) (c>=0 : (0 : Real) <= c) (cr : c * r = 1)
+      : x <= (x ∧ r) + c * (x * x - ((x * x) ∧ (r * r)))
+      => RealAbGroup.join-left <=∘ =_<= (signedPow.sign-cases-eq {x - r} {x ∨ ((x ∧ r) + c * (x * x - ((x * x) ∧ (r * r))))} {(x ∧ r) + c * (x * x - ((x * x) ∧ (r * r)))}
+          (\lam xr>=0 =>
+            \have | r<=x : r <= x => linarith
+                  | m1 : x ∧ r = r => RealAbGroup.meet-comm *> RealAbGroup.meet_<= r<=x
+                  | rr<=xx : r * r <= x * x => <=_*_positive-left r<=x (<=-less r>0) <=∘ <=_*_positive-right x>=0 r<=x
+                  | m2 : (x * x) ∧ (r * r) = r * r => RealAbGroup.meet-comm *> RealAbGroup.meet_<= rr<=xx
+                  | h1 : (x - r) * r <= x * x - r * r => <=_*_positive-right xr>=0 (linarith : r <= x + r) <=∘ =_<= equation.cRing
+                  | h2 : c * ((x - r) * r) = x - r => equation.cRing {cr}
+                  | h3 : c * ((x - r) * r) <= c * (x * x - r * r) => <=_*_positive-right c>=0 h1
+            \in rewrite (m1, m2) $ RealAbGroup.join_<= (linarith : x <= r + c * (x * x - r * r)))
+          (\lam xr<=0 =>
+            \have | x<=r : x <= r => linarith
+                  | m1 : x ∧ r = x => RealAbGroup.meet_<= x<=r
+                  | xx<=rr : x * x <= r * r => <=_*_positive-right x>=0 x<=r <=∘ <=_*_positive-left x<=r (<=-less r>0)
+                  | m2 : (x * x) ∧ (r * r) = x * x => RealAbGroup.meet_<= xx<=rr
+                  | p : x + c * (x * x - x * x) = x => pmap (x +) (pmap (c *) negative-right *> RealField.zro_*-right) *> zro-right
+            \in rewrite (m1, m2) $ pmap (x ∨) p *> RealAbGroup.join-idemp *> inv p))
+  }

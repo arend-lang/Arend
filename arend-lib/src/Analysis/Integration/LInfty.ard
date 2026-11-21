@@ -5,7 +5,9 @@
 
   * {LInftyElem}: an element of `L⁰` with a bound; {linfNorm}: the upper-real norm.
   * {linfMul}: the product of Lemma `lem:L0`(2) ({l0BMul}) at any common bound ({linfMul-char}).
-  * {LInfty}: Proposition `prop:Linfty`(1),(2): `L∞` is a commutative ({LInfty-*-comm}) real Banach algebra with unit {l0One}.
+  * {LInfty}: Proposition `prop:Linfty`(1),(2): `L∞` is a commutative real Banach algebra with unit {l0One}; moreover a
+    Stone C*-algebra: $\|F^2\|_\infty \le \|F^2 + G^2\|_\infty$ ({linfNorm-c*-sum}, since squares are nonnegative) and
+    $\|F\|_\infty^2 \le \|F^2\|_\infty$ ({linfNorm-c*-square}, since $|F^2| \le q^2$ implies $|F| \le q$).
     Completeness: the inclusion `L∞ → L⁰` is uniformly continuous ({l0-small-bounded}), and the bounds
     $|F_i - F_j| \le \varepsilon$ pass to the limit in `L⁰` since $\{G \mid \tau_\varepsilon|G - F| = |G - F|\}$ is closed.
 -}
@@ -23,7 +25,9 @@
 \import Analysis.Integration.L0Product
 \import Analysis.Integration.L0Unit
 \import Arith.Rat
+\import Arith.Real.Root
 \import Arith.Real.UpperReal
+\import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Order.Biordered
@@ -35,6 +39,7 @@
 \import Topology.BanachAlgebra
 \import Topology.CoverSpace.Complete
 \import Topology.NormedRing
+\import Topology.StoneCStarAlgebra
 \import Topology.TopRieszSpace.Completion
 \import Topology.UniformSpace.Complete
 \open LatticeAbGroup
@@ -109,8 +114,8 @@
           *> inv (pmap2 (+) (linfMul-char N>0 (IsBelow-level a<=N Fa) (IsBelow-level a<=N Ga)) (linfMul-char N>0 (IsBelow-level a<=N Fa) (IsBelow-level a<=N Ha)))
   }
 
--- | `L∞` is a real Banach algebra.
-\instance LInfty (L : FullIntegrationSpace) : RealBanachCAlgebra (LInftyElem L)
+-- | `L∞` is a Stone C*-algebra.
+\instance LInfty (L : FullIntegrationSpace) : StoneC*Algebra (LInftyElem L)
   | AbGroup => LInftyGroup L
   | ide => linfOne L
   | * F G => \new LInftyElem L (linfMul F G) (linfMul-bounded F G)
@@ -136,6 +141,8 @@
   | norm_*_<= => linfNorm-mul
   | norm_ide_<= {b} b>1 => inP (1, b>1, l0One-below)
   | isCompleteMetric F Fc => linf-complete F Fc
+  | c*-sum => linfNorm-c*-sum
+  | c*-square => linfNorm-c*-square
   \where {
     -- | The unit of `L∞`.
     \func linfOne (L : FullIntegrationSpace) : LInftyElem L
@@ -206,6 +213,31 @@
           \in \have N>0 : RatField.zro RatField.< N => b>0 <∘l RatField.join-left
           \in inP (b RatField.* c, bc<q, transportInv (\lam z => IsBelow (abs z) _) (linfMul-char N>0 (IsBelow-level (<=-less M1<b <=∘ RatField.join-left) p1) (IsBelow-level (<=-less M2<c <=∘ RatField.join-right) p2))
                                           (l0BMul-bound N>0 b>0 c>0 RatField.join-left RatField.join-right (IsBelow-level (<=-less M1<b) p1) (IsBelow-level (<=-less M2<c) p2)))
+      }
+
+    -- | $\|F F\|_\infty \le \|F F + G G\|_\infty$.
+    \lemma linfNorm-c*-sum {L : FullIntegrationSpace} {F G : LInftyElem L} : linfNorm (linfMul F F) <= linfNorm (linfMul F F + linfMul G G)
+      => \lam {d} (inP (M,M<d,p)) => \case common-bound F G \with {
+        | inP (a,a>0,Fa,Ga) =>
+          \have | cF => linfMul-char a>0 Fa Fa
+                | cG => linfMul-char a>0 Ga Ga
+          \in inP (M, M<d, transportInv (\lam u => IsBelow (abs u) M) cF $ below-sum (l0BMul-square>=0 a>0 F.el) (l0BMul-square>=0 a>0 G.el)
+                                                                                 (transport2 (\lam u v => IsBelow (abs (u + v)) M) cF cG p))
+      }
+      \where
+        \lemma below-sum {L : FullIntegrationSpace} {x y : L0Space L} {M : Rat} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (p : IsBelow (abs (x + y)) M) : IsBelow (abs x) M
+          => IsBelow_<= (=_<= (abs-ofPos x>=0) <=∘ (inv zro-right =<= <=_+ <=-refl y>=0) <=∘ =_<= (inv (abs-ofPos (inv zro-left =<= <=_+ x>=0 y>=0)))) p
+
+    -- | $\|F\|_\infty^2 \le \|F F\|_\infty$.
+    \lemma linfNorm-c*-square {L : FullIntegrationSpace} {F : LInftyElem L} : linfNorm F.el ExUpperReal.* linfNorm F.el <= linfNorm (linfMul F F)
+      => \lam {d} (inP (M,M<d,p)) => \case F.bounded, sqrt-rat p.1 M<d \with {
+        | inP (b,Fb), inP (q,r,q>0,q<r,M<qq,rr<d) =>
+          \let a => b RatField.∨ 1
+          \in \have | a>0 : RatField.zro RatField.< a => RatField.zro<ide <∘l RatField.join-right
+                    | Fa : IsBelow (abs F.el) a => IsBelow-level RatField.join-left Fb
+                    | cF => linfMul-char a>0 Fa Fa
+                    | Ur : (linfNorm F.el).U r => inP (q, q<r, l0BMul-square-below a>0 a>0 <=-refl q>0 Fa (IsBelow-level (<=-less M<qq) (transport (\lam u => IsBelow (abs u) M) cF p)))
+          \in ExUpperReal.*_U.2 (inP (r, Ur, q>0 <∘ q<r, r, Ur, q>0 <∘ q<r, rr<d))
       }
 
     -- | The additive group of `L∞`.
