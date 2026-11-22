@@ -4,6 +4,8 @@
   * {normAt-lift}: the extension $\bar n_j$ of $n_j$ to the completion.
   * {completion-neighborhood}: every neighbourhood of `0` in the completion contains a ball $\{G \mid \bar n_j(G) < \varepsilon\}$.
   * {completion-limit}: a net converges to `x` if $\bar n_j(f_n - x) \to 0$ for every `j`.
+  * {normAt-lift-+}, {normAt-lift-negative}: $\bar n_j$ is a seminorm.
+  * {normFamily-array-locally-uniform}: a criterion for maps $A^n \to \bar X$ to be locally uniform.
 -}
 
 \import Algebra.Group
@@ -30,10 +32,14 @@
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.NormFamily
+\import Topology.TopAbGroup.Product
 \import Topology.TopRieszSpace
 \import Topology.TopRieszSpace.Completion()
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Product
+\import Set.Fin
 \open LatticeAbGroup
 
 -- | $|n_j(x) - n_j(y)| \le n_j(x - y)$.
@@ -92,3 +98,48 @@
   \where
     \lemma add-sub {A : AbGroup} {a b : A} : a + (b - a) = b
       => equation.abGroup
+
+{- | A map $A^n \to \bar X$ is locally uniform if, for every seminorm $\bar n_j$ and $\varepsilon > 0$, there are a seminorm $n_i$ and $\delta > 0$ such that around every $x_0$
+ -   there are $n_{i'}$ and $\gamma > 0$ with $\bar n_j(f(y) - f(x)) < \varepsilon$ whenever $n_i(x_0 - x) < \delta$ and $n_{i'}(y - x) < \gamma$ coordinatewise.
+ -}
+\func normFamily-array-locally-uniform {A X : NormFamilyTopAbGroup} {n : Nat} (f : Array A n -> TopAbGroupCompletion X)
+  (h : \Pi (j : X.NormIndex) {eps : Real} -> 0 < eps -> ∃ (i : A.NormIndex) (delta : Real) (0 < delta) ∀ (x0 : Array A n) ∃ (i' : A.NormIndex) (gamma : Real) (0 < gamma)
+         ∀ {x y : Array A n} ((\Pi (k : Fin n) -> A.normAt i (x0 k - x k) < delta) -> (\Pi (k : Fin n) -> A.normAt i' (y k - x k) < gamma) -> normAt-lift j (f y - f x) < eps))
+  : LocallyUniformMap (ArrayRegularPreuniformSpace n A) (TopAbGroupCompletion X) f \cowith
+  | func-locally-uniform Eu => \case (TopAbGroupCompletion X).ab-neighborhood-uniform.1 Eu \with {
+    | inP (V,Vo,V0,g) => \case completion-neighborhood Vo V0 \with {
+      | inP (j,eps,eps>0,c) => \case h j eps>0 \with {
+        | inP (i,delta,delta>0,g1) => inP (Boxes (\lam _ => balls i delta), inP (\lam _ => balls i delta, \lam _ => balls-uniform delta>0, Refines-refl), \lam {_} (inP (U,hU,idp)) =>
+            \case FinSet.finiteAC {n} {\lam k => \Sigma (a : A) (U k = \lam b => A.normAt i (a - b) < delta)} hU \with {
+              | inP cs => \case g1 (\lam k => (cs k).1) \with {
+                | inP (i',gamma,gamma>0,g2) => inP (\lam _ => balls i' gamma, \lam _ => balls-uniform gamma>0, \lam {_} (inP (W',hW',idp)) =>
+                    \case FinSet.finiteAC {n} {\lam k => \Sigma (a : A) (W' k = \lam b => A.normAt i' (a - b) < gamma)} hW' \with {
+                      | inP ds => \case g (f (\lam k => (ds k).1)) \with {
+                        | inP (W,EW,e) => inP (_, inP (W, EW, \lam {s} (sU,sW) => \have sW' : \Pi (k : Fin n) -> W' k (s k) => sW \in e $ c $ g2 (\lam k => transport (__ (s k)) (cs k).2 (sU k)) (\lam k => transport (__ (s k)) (ds k).2 (sW' k))), <=-refl)
+                      }
+                    })
+              }
+            })
+      }
+    }
+  }
+  \where {
+    \func balls {A : NormFamilyTopAbGroup} (i : A.NormIndex) (d : Real) : Set (Set A)
+      => \lam V => ∃ (a : A) (V = \lam b => A.normAt i (a - b) < d)
+
+    \lemma balls-uniform {A : NormFamilyTopAbGroup} {i : A.NormIndex} {d : Real} (d>0 : 0 < d) : A.isUniform (balls i d)
+      => A.topAbUniform A.normAt-ball-open (transportInv (__ < d) A.normAt-zro d>0)
+  }
+
+-- | $\bar n_j(F + G) \le \bar n_j(F) + \bar n_j(G)$.
+\lemma normAt-lift-+ {X : NormFamilyTopAbGroup} {j : X.NormIndex} {F G : TopAbGroupCompletion X} : normAt-lift j (F + G) <= normAt-lift j F + normAt-lift j G
+  => \let Y => TopAbGroupCompletion X
+     \in dense_<= real-join-uniform (ProductCoverSpace.prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1)
+          (normAt-lift j CoverMap.∘ +-uniform {Y})
+          (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (normAt-lift j CoverMap.∘ ProductCoverSpace.proj1) (normAt-lift j CoverMap.∘ ProductCoverSpace.proj2))
+          (\lam s => =_<= (pmap (normAt-lift j) (inv completion-topAb.func-+) *> normAt-lift.char) <=∘ X.normAt-+ <=∘ =_<= (inv (pmap2 (+) normAt-lift.char normAt-lift.char))) (F,G)
+
+-- | $\bar n_j(-F) = \bar n_j(F)$.
+\lemma normAt-lift-negative {X : NormFamilyTopAbGroup} {j : X.NormIndex} {F : TopAbGroupCompletion X} : normAt-lift j (negative F) = normAt-lift j F
+  => dense-lift-unique completion completion.isDenseEmbedding.1 (normAt-lift j CoverMap.∘ negative-uniform {TopAbGroupCompletion X}) (normAt-lift j)
+      (\lam x => pmap (normAt-lift j) (inv completion-topAb.func-negative) *> normAt-lift.char *> X.normAt-negative *> inv normAt-lift.char) F

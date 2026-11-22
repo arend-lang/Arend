@@ -1,0 +1,736 @@
+{- | The functional calculus on `L⁰` for cover maps $\varphi \colon \mathbb R^n \to \mathbb R$ with $\varphi(0) = 0$ (Theorem `thm:calc0`).
+
+  * {l0calc}: the cover map $\varphi \colon (\mathrm L^0)^n \to \mathrm L^0$.
+  * {l0calc-char}: for $\chi \in C_0$ it extends the functional calculus {fcalc} of `L`; {l0calc-coord}: $x_j(F) = F_j$.
+  * {l0calc-add}, {l0calc-neg}, {l0calc-join}, {l0calc-meet}, {l0calc-*q}: $\varphi \mapsto \varphi(F)$ is a homomorphism of Riesz spaces over `ℚ`.
+  * {l0calc-mono}: transfer; {l0calc-comp}: composition.
+
+  Construction (in `L0CalcHelpers`). For $f \in L^n$, $\varphi(f)$ is the limit in `L⁰` of $\varphi_k(f)$, where
+  $\varphi_k = (\varphi \wedge k\|x\|_1) \vee (-k\|x\|_1) \in C_0$ ({clipApprox}); the net is Cauchy by {gauge-bound} because
+  $\varphi_k \to \varphi$ uniformly on balls and $d_h$ only sees $|\cdot| \wedge h$.
+  The map $f \mapsto \varphi(f)$ is locally uniformly continuous ({l0calc-preLU}): near $f_0$ the tails $(\|f\|_1 - M)^+$ are controlled by
+  $d_h(f - f_0, 0)$, and $\varphi_k$ is uniformly continuous on balls. So it extends to $(\mathrm L^0)^n$.
+  The laws hold on $L^n$ because approximants converging uniformly on balls converge in `L⁰` ({pre-limit}), and extend by density.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.L0
+\import Analysis.Integration.L0Unit
+\import Arith.Int
+\import Analysis.Limit
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power.SignedPow
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Directed
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.LinBounded
+\import Topology.NormedAbGroup.Real.LinBounded.Approx
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.NormFamily.Completion
+\import Topology.TopAbGroup.Product
+\import Topology.TopRieszSpace.Completion
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Product
+\open LatticeAbGroup
+\open QModule
+\open signedPow (real-cases)
+\open L0CalcHelpers
+
+-- | The functional calculus $\varphi \colon (\mathrm L^0)^n \to \mathrm L^0$ for a cover map $\varphi$ with $\varphi(0) = 0$.
+\sfunc l0calc {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = 0)
+  : CoverMap (ArrayCoverSpace n (L0Space L)) (L0Space L)
+  => dense-lift (ArrayCoverSpace.map {n} (completion {L0PreSpace L})) l0-denseN-embedding (l0calc-preLU phi phi0)
+
+-- | On $L^n$ and for $\chi \in C_0$, {l0calc} is the functional calculus of `L`.
+\lemma l0calc-char {L : FullIntegrationSpace} {n : Nat} (chi : LinBoundedMap n) {f : Array L n}
+  : l0calc chi (linBounded-zro chi) (\lam j => pointCF {L0PreSpace L} (f j)) = pointCF {L0PreSpace L} (fcalc chi f)
+  => l0calc-pt *> pre-unique (ballConv-const chi) const-limit
+
+-- | $(x_j)(F) = F_j$.
+\lemma l0calc-coord {L : FullIntegrationSpace} {n : Nat} (j : Fin n) {F : Array (L0Space L) n}
+  : l0calc (LinBoundedMap.coord j) (linBounded-zro (LinBoundedMap.coord j)) F = F j
+  => l0-denseN (l0calc (LinBoundedMap.coord j) (linBounded-zro (LinBoundedMap.coord j))) (ArrayCoverSpace.proj j)
+      (\lam f => l0calc-char (LinBoundedMap.coord j) *> pmap (pointCF {L0PreSpace L}) (fcalc-var j)) F
+
+-- | $(\varphi + \psi)(F) = \varphi(F) + \psi(F)$.
+\lemma l0calc-add {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
+                  {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                  (e : \Pi (x : Array Real n) -> chi x = phi x + psi x) {F : Array (L0Space L) n}
+  : l0calc chi chi0 F = l0calc phi phi0 F + l0calc psi psi0 F
+  => l0-denseN (l0calc chi chi0) (+-uniform {L0Space L} CoverMap.∘ ProductCoverSpace.tuple (l0calc phi phi0) (l0calc psi psi0))
+      (\lam f => l0calc-pt *> pre-binary (+-uniform {L0Space L}) (\lam k => LinBoundedMap.add (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.add (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-add {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
+                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-add idp idp) *> AddGroupHom.func-+ {topTruncCompletion {L0PreSpace L}})
+                  *> inv (pmap2 (+) l0calc-pt l0calc-pt)) F
+
+-- | $(-\varphi)(F) = -\varphi(F)$.
+\lemma l0calc-neg {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
+                  {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)}
+                  (e : \Pi (x : Array Real n) -> chi x = negative (phi x)) {F : Array (L0Space L) n}
+  : l0calc chi chi0 F = negative (l0calc phi phi0 F)
+  => l0-denseN (l0calc chi chi0) (negative-uniform {L0Space L} CoverMap.∘ l0calc phi phi0)
+      (\lam f => l0calc-pt *> pre-unary (negative-uniform {L0Space L}) (\lam k => LinBoundedMap.neg (clipApprox phi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.neg (clipApprox phi k)} (\lam x => inv (e x)) (ballConv-neg {n} {\lam k => clipApprox phi k} (clipApprox-ballConv phi phi0)))
+                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-neg idp) *> AddGroupHom.func-negative {topTruncCompletion {L0PreSpace L}})
+                  *> inv (pmap negative l0calc-pt)) F
+
+-- | $(\varphi \vee \psi)(F) = \varphi(F) \vee \psi(F)$.
+\lemma l0calc-join {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
+                   {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                   (e : \Pi (x : Array Real n) -> chi x = phi x ∨ psi x) {F : Array (L0Space L) n}
+  : l0calc chi chi0 F = l0calc phi phi0 F ∨ l0calc psi psi0 F
+  => l0-denseN (l0calc chi chi0) ((L0Space L).join-uniform CoverMap.∘ ProductCoverSpace.tuple (l0calc phi phi0) (l0calc psi psi0))
+      (\lam f => l0calc-pt *> pre-binary (L0Space L).join-uniform (\lam k => LinBoundedMap.join (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.join (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-join {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
+                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-join idp idp) *> RieszSpaceHom.func-join {topTruncCompletion {L0PreSpace L}})
+                  *> inv (pmap2 (∨) l0calc-pt l0calc-pt)) F
+
+-- | $(\varphi \wedge \psi)(F) = \varphi(F) \wedge \psi(F)$.
+\lemma l0calc-meet {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
+                   {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                   (e : \Pi (x : Array Real n) -> chi x = phi x ∧ psi x) {F : Array (L0Space L) n}
+  : l0calc chi chi0 F = l0calc phi phi0 F ∧ l0calc psi psi0 F
+  => l0-denseN (l0calc chi chi0) ((L0Space L).meet-uniform CoverMap.∘ ProductCoverSpace.tuple (l0calc phi phi0) (l0calc psi psi0))
+      (\lam f => l0calc-pt *> pre-binary (L0Space L).meet-uniform (\lam k => LinBoundedMap.meet (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.meet (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-meet {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
+                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-meet idp idp) *> RieszSpaceHom.func-meet {topTruncCompletion {L0PreSpace L}})
+                  *> inv (pmap2 (∧) l0calc-pt l0calc-pt)) F
+
+-- | $(q\varphi)(F) = q\,\varphi(F)$ for rational `q`.
+\lemma l0calc-*q {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
+                 {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} (q : Rat)
+                 (e : \Pi (x : Array Real n) -> chi x = Real.fromRat q * phi x) {F : Array (L0Space L) n}
+  : l0calc chi chi0 F = q *q l0calc phi phi0 F
+  => l0-denseN (l0calc chi chi0) ((L0Space L).*q-right-uniform {q} CoverMap.∘ l0calc phi phi0)
+      (\lam f => l0calc-pt *> pre-unary ((L0Space L).*q-right-uniform {q}) (\lam k => LinBoundedMap.scale (Real.fromRat q) (clipApprox phi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.scale (Real.fromRat q) (clipApprox phi k)} (\lam x => inv (e x)) (ballConv-scale {n} {\lam k => clipApprox phi k} q (clipApprox-ballConv phi phi0)))
+                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-*q idp) *> func-*q {_} {_} {topTruncCompletion {L0PreSpace L}})
+                  *> inv (pmap (q *q) l0calc-pt)) F
+
+-- | Transfer: $\varphi \le \psi$ implies $\varphi(F) \le \psi(F)$.
+\lemma l0calc-mono {L : FullIntegrationSpace} {n : Nat} {phi psi : CoverMap (RealN n) RealNormed}
+                   {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                   (le : \Pi (x : Array Real n) -> phi x <= psi x) {F : Array (L0Space L) n}
+  : l0calc phi phi0 F <= l0calc psi psi0 F
+  => transport (_ <=) (inv (l0calc-join {L} {n} {psi} {phi} {psi} {psi0} {phi0} {psi0} (\lam x => inv (RealAbGroup.join_<= (le x))) {F})) join-left
+
+-- | Composition: $(\varphi \circ \psi)(F) = \varphi(\psi_1(F), \ldots, \psi_n(F))$.
+\lemma l0calc-comp {L : FullIntegrationSpace} {n m : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)}
+                   {psi : Array (CoverMap (RealN m) RealNormed) n} {psi0 : \Pi (j : Fin n) -> psi j (RealN m).zro = (0 : Real)}
+                   {chi : CoverMap (RealN m) RealNormed} {chi0 : chi (RealN m).zro = (0 : Real)}
+                   (e : \Pi (x : Array Real m) -> chi x = phi (\lam j => psi j x)) {F : Array (L0Space L) m}
+  : l0calc chi chi0 F = l0calc phi phi0 (\lam j => l0calc (psi j) (psi0 j) F)
+  => l0-denseN (l0calc chi chi0) (l0calc phi phi0 CoverMap.∘ ArrayCoverSpace.tuple (\lam j => l0calc (psi j) (psi0 j)))
+      (\lam f => l0calc-pt *> pre-comp {L} {n} {m} {phi} {phi0} {psi} {psi0} {chi} {chi0} e *> pmap (l0calc phi phi0) (exts \lam j => inv l0calc-pt)) F
+
+\private \module L0CalcHelpers \where {
+  {- | If $|\chi| \le \varepsilon$ on $\{\Lambda < d\}$, $\Lambda \ge 0$, and $0 \le h \le K$, then
+   -   $d_h(\chi(F), 0) \le I(\tau_\varepsilon h) + C\, d_h(\Lambda(F), 0)$ with $C = (K/d) \vee 1$.
+   -}
+  \lemma gauge-bound {L : FullIntegrationSpace} {n : Nat} (chi Lam : LinBoundedMap n) {d eps K : Rat}
+                     (d>0 : 0 < d) (eps>0 : 0 < eps) (K>=0 : 0 <= K)
+                     (pt : \Pi (x : Array Real n) -> Lam x < d -> RealAbGroup.abs (chi x) <= eps) (Lam>=0 : \Pi (x : Array Real n) -> (0 : Real) <= Lam x)
+                     {F : Array L n} {h : L} (h>=0 : L.zro <= h) (hK : L.IsBelow (abs h) K)
+    : measGauge h (fcalc chi F) <= L.integral (L.truncAt eps h) + Real.fromRat ((K * RatField.finv d) ∨ 1) * measGauge h (fcalc Lam F)
+    => \let | C => (K * RatField.finv d) ∨ 1
+            | G : Array L (suc n) => h :: F
+            | sh : Array (LinBoundedMap (suc n)) n => \lam j => LinBoundedMap.coord (suc j)
+            | w : LinBoundedMap (suc n) => LinBoundedMap.join (LinBoundedMap.comp (LinBoundedMap.clip (Real.fromRat K) (rat_real_<=.1 K>=0)) (LinBoundedMap.coord {suc n} 0 :: nil)) LinBoundedMap.zro
+       \in \have | wE : fcalc w G = h => fcalc-pos (fcalc-clip K>=0 (fcalc-var {L} {suc n} {G} 0) hK) h>=0
+                 | cE : fcalc (LinBoundedMap.comp chi sh) G = fcalc chi F => fcalc-subst \lam j => fcalc-var (suc j)
+                 | lE : fcalc (LinBoundedMap.comp Lam sh) G = fcalc Lam F => fcalc-subst \lam j => fcalc-var (suc j)
+                 | le : abs (fcalc chi F) ∧ h <= L.truncAt eps h + C *q (abs (fcalc Lam F) ∧ h)
+                     => fcalc-le-pt G (\lam z => gauge-pt d>0 eps>0 K>=0 (pt _) (Lam>=0 _) RealAbGroup.join-right
+                                                   (RealAbGroup.join-univ (RealAbGroup.join-univ RealAbGroup.meet-right (negative-K K>=0)) (rat_real_<=.1 K>=0)))
+                          (fcalc-meet (fcalc-abs cE) wE) (fcalc-add (fcalc-truncAt eps>0 wE) (fcalc-*q (fcalc-meet (fcalc-abs lE) wE)))
+       \in L.integral-mono le <=∘ =_<= (L.integral_+ *> pmap (_ +) L.integral_*q)
+    \where {
+      \lemma negative-K {K : Rat} (K>=0 : 0 <= K) : negative (Real.fromRat K) <= Real.fromRat K
+        => \have k : (0 : Real) <= Real.fromRat K => rat_real_<=.1 K>=0 \in linarith
+
+      -- | The pointwise form of {gauge-bound}.
+      \lemma gauge-pt {d eps K : Rat} (d>0 : 0 < d) (eps>0 : 0 < eps) (K>=0 : 0 <= K)
+                      {a b w : Real} (ab : b < d -> RealAbGroup.abs a <= eps) (b>=0 : (0 : Real) <= b) (w>=0 : (0 : Real) <= w) (wK : w <= K)
+        : RealAbGroup.abs a ∧ w <= (w ∧ eps) + Real.fromRat ((K * RatField.finv d) ∨ 1) * (RealAbGroup.abs b ∧ w)
+        => \let C => (K * RatField.finv d) ∨ 1
+           \in \have | C>=1 : (1 : Real) <= Real.fromRat C => rat_real_<=.1 join-right
+                     | Cd : Real.fromRat K <= Real.fromRat C * Real.fromRat d
+                         => =_<= (pmap Real.fromRat (inv (*-assoc *> pmap (K *) (RatField.finv-left (RatField.>_/= d>0)) *> ide-right)) *> inv RealField.*-rat)
+                              <=∘ RealField.<=_*_positive-left (rat_real_<=.1 join-left) (rat_real_<=.1 (<=-less d>0))
+                     | e0 : (0 : Real) <= w ∧ eps => meet-univ w>=0 (rat_real_<=.1 (<=-less eps>0))
+                     | ab0 : RealAbGroup.abs b = b => RealAbGroup.abs-ofPos b>=0
+                     | m0 : (0 : Real) <= RealAbGroup.abs b ∧ w => meet-univ RealAbGroup.abs>=0 w>=0
+                     | Cm0 : (0 : Real) <= Real.fromRat C * (RealAbGroup.abs b ∧ w) => RealField.<=_*_positive_positive linarith m0
+               \in real-cases {b} {Real.fromRat d}
+                   (\lam b<d => RealAbGroup.meet-monotone (ab b<d) <=-refl <=∘ =_<= RealAbGroup.meet-comm <=∘ (linarith : w ∧ eps <= (w ∧ eps) + Real.fromRat C * (RealAbGroup.abs b ∧ w)))
+                   (\lam d<=b => \have | t : w <= Real.fromRat C * (RealAbGroup.abs b ∧ w)
+                                           => real-cases {b} {w}
+                                               (\lam b<w => \have | e : RealAbGroup.abs b ∧ w = b => pmap (__ ∧ w) ab0 *> RealAbGroup.meet_<= (<=-less b<w)
+                                                                  | m : Real.fromRat C * Real.fromRat d <= Real.fromRat C * b => RealField.<=_*_positive-right linarith d<=b
+                                                            \in wK <=∘ Cd <=∘ m <=∘ =_<= (pmap (_ *) (inv e)))
+                                               (\lam w<=b => \have e : RealAbGroup.abs b ∧ w = w => pmap (__ ∧ w) ab0 *> RealAbGroup.meet-comm *> RealAbGroup.meet_<= w<=b
+                                                             \in =_<= (inv ide-left) <=∘ RealField.<=_*_positive-left C>=1 w>=0 <=∘ =_<= (pmap (_ *) (inv e)))
+                                 \in meet-right <=∘ t <=∘ (linarith : Real.fromRat C * (RealAbGroup.abs b ∧ w) <= (w ∧ eps) + Real.fromRat C * (RealAbGroup.abs b ∧ w)))
+    }
+
+  \func NatDir : DirectedSet Nat \cowith
+    | Preorder => NatSemiring
+    | isInhabitted => inP 0
+    | isDirected x y => inP (x NatSemiring.∨ y, NatSemiring.join-left, NatSemiring.join-right)
+
+  -- | $\|f\|_1 = |f_1| + \ldots + |f_n|$ for $f \in L^n$.
+  \func l1L {L : FullIntegrationSpace} {n : Nat} (f : Array L n) : L
+    => L.BigSum (\lam j => abs (f j))
+    \where {
+      \lemma fcalc-l1 {L : FullIntegrationSpace} {n : Nat} {f : Array L n} : fcalc (l1LB n) f = l1L f
+        => AddMonoidHom.func-BigSum {fcalcHom f} *> pmap L.BigSum (exts \lam j => fcalc-abs (fcalc-var j))
+
+      \lemma nonneg {L : FullIntegrationSpace} {n : Nat} {f : Array L n} : L.zro <= l1L f
+        => L.BigSum_>=0 \lam j => L.abs>=0
+    }
+
+  -- | $d_h(|a|, 0) = d_h(a, 0)$.
+  \lemma measGauge-abs {L : FullIntegrationSpace} {h a : L} : measGauge h (abs a) = measGauge h a
+    => pmap (\lam z => L.integral (z ∧ h)) L.abs_abs
+
+  -- | $d_h(a + b, 0) \le d_h(a, 0) + d_h(b, 0)$.
+  \lemma measGauge-+ {L : FullIntegrationSpace} {h a b : L} (h>=0 : L.zro <= h) : measGauge h (a + b) <= measGauge h a + measGauge h b
+    => (L0PreSpace L).normAt-+ {h,h>=0}
+
+  -- | $d_h$ is monotone in $|a|$.
+  \lemma measGauge-mono {L : FullIntegrationSpace} {h a b : L} (p : abs a <= abs b) : measGauge h a <= measGauge h b
+    => L.integral-mono (L.meet-monotone p <=-refl)
+
+  -- | $d_h(\sum_j a_j, 0) \le \sum_j d_h(a_j, 0)$.
+  \lemma measGauge-BigSum {L : FullIntegrationSpace} {h : L} (h>=0 : L.zro <= h) {l : Array L} : measGauge h (L.BigSum l) <= RealAbGroup.BigSum (\lam j => measGauge h (l j)) \elim l
+    | nil => =_<= ((L0PreSpace L).normAt-zro {h,h>=0})
+    | a :: l => measGauge-+ h>=0 <=∘ <=_+ <=-refl (measGauge-BigSum h>=0)
+
+  -- | $d_h(q a, 0) \le (q \vee 1)\, d_h(a, 0)$ for rational $q \ge 0$.
+  \lemma measGauge-*q {L : FullIntegrationSpace} {h a : L} (h>=0 : L.zro <= h) {q : Rat} (q>=0 : 0 <= q)
+    : measGauge h (q *q a) <= Real.fromRat (q ∨ 1) * measGauge h a
+    => \have | e : abs (q *q a) = abs q *q abs a => L.abs_*q
+              | ea : abs q = q => abs-ofPos q>=0
+       \in L.integral-mono (=_<= (pmap (__ ∧ h) e) <=∘ meet-scale L.abs>=0 h>=0) <=∘ =_<= (L.integral_*q *> pmap (\lam c => Real.fromRat (c ∨ 1) * _) ea)
+
+  -- | $(\|x\|_1 - M)^+ = \|x\|_1 - (\|x\|_1 \wedge M)$.
+  \func tailLB {n : Nat} {M : Rat} (M>0 : 0 < M) : LinBoundedMap n
+    => LinBoundedMap.add (l1LB n) (LinBoundedMap.neg (LinBoundedMap.comp (LinBoundedMap.meetConst (Real.fromRat M) (rat_real_<=.1 (<=-less M>0))) (l1LB n :: nil)))
+    \where {
+      \lemma char {L : FullIntegrationSpace} {n : Nat} {M : Rat} {M>0 : 0 < M} {f : Array L n}
+        : fcalc (tailLB {n} M>0) f = l1L f - L.truncAt M (l1L f)
+        => fcalc-sub l1L.fcalc-l1 (fcalc-truncAt M>0 l1L.fcalc-l1)
+
+      \lemma nonneg {n : Nat} {M : Rat} {M>0 : 0 < M} {x : Array Real n} : 0 <= tailLB {n} M>0 x
+        => \have m : l1LB n x ∧ Real.fromRat M <= l1LB n x => meet-left \in linarith
+
+      \lemma small {n : Nat} {M : Rat} {M>0 : 0 < M} {x : Array Real n} (t : tailLB {n} M>0 x < 1) : l1norm x < Real.fromRat (M + 1)
+        => \have | m : l1LB n x ∧ Real.fromRat M <= Real.fromRat M => meet-right
+                 | e : l1LB n x = l1norm x => l1LB.apply
+                 | e1 : Real.fromRat (M + 1) = Real.fromRat M + 1 => inv RealAbGroup.+-rat
+           \in linarith
+
+      -- | The tail vanishes on elements with $\|f\|_1 \le M$.
+      \lemma zero {L : FullIntegrationSpace} {n : Nat} {M : Rat} (M>0 : 0 < M) {f : Array L n} (fM : L.IsBelow (abs (l1L f)) M)
+        : fcalc (tailLB {n} M>0) f = L.zro
+        => char {L} {n} {M} {M>0} *> pmap (\lam z => l1L f - z) ((L.IsBelow_truncAt M>0).1 (transport (L.IsBelow __ M) (L.abs-ofPos l1L.nonneg) fM)) *> negative-right
+    }
+
+  -- | The approximating net $k \mapsto \varphi_k(f)$ in `L⁰` for $f \in L^n$.
+  \func preNet {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (f : Array L n) (k : NatDir) : L0Space L
+    => pointCF {L0PreSpace L} (fcalc (clipApprox phi k) f)
+
+  -- | The value of {preNet} differences: $d_h(\varphi_m(f) - \varphi_k(f), 0)$.
+  \lemma preNet-gauge {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {f : Array L n} {h : L} (h>=0 : L.zro <= h) {k m : Nat}
+    : l0Gauge h>=0 (preNet phi f m - preNet phi f k) = measGauge h (fcalc (clipApprox phi m) f - fcalc (clipApprox phi k) f)
+    => pmap (l0Gauge h>=0) (inv (AddGroupHom.func-minus {topTruncCompletion {L0PreSpace L}})) *> l0Gauge.char h>=0
+
+  -- | If $a, b \in C_0$ are $\varepsilon$-close to $\varphi$ on $\|x\|_1 < M + 1$, then $d_h(a(f) - b(f), 0) \le I(\tau_{2\varepsilon} h) + C d_h(\mathrm{tail}_M(f), 0)$.
+  \lemma clip-gauge {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) {M eps K : Rat} (M>0 : 0 < M) (eps>0 : 0 < eps)
+                    (K>=0 : 0 <= K) {b a : LinBoundedMap n}
+                    (ck : \Pi {x : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> RealAbGroup.abs (b x - phi x) <= eps)
+                    (cm : \Pi {x : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> RealAbGroup.abs (a x - phi x) <= eps)
+                    {f : Array L n} {h : L} (h>=0 : L.zro <= h) (hK : L.IsBelow (abs h) K)
+    : measGauge h (fcalc a f - fcalc b f)
+      <= L.integral (L.truncAt (eps + eps) h) + Real.fromRat ((K * RatField.finv 1) ∨ 1) * measGauge h (fcalc (tailLB {n} M>0) f)
+    => transport (\lam z => measGauge h z <= _) (fcalc-sub idp idp)
+        (gauge-bound (LinBoundedMap.add a (LinBoundedMap.neg b)) (tailLB M>0) RatField.zro<ide (RatField.<_+ eps>0 eps>0) K>=0
+          (\lam x t => \have | hb => ck (tailLB.small {n} {M} {M>0} t)
+                             | ha => cm (tailLB.small {n} {M} {M>0} t)
+                             | e : Real.fromRat (eps + eps) = Real.fromRat eps + Real.fromRat eps => inv RealAbGroup.+-rat
+                       \in RealField.abs-univ {a x} {b x}
+                             (\have | a1 => RealAbGroup.abs>=id {a x - phi x}
+                                    | b1 => RealAbGroup.abs>=neg {b x - phi x}
+                              \in usingOnly (ha, hb, a1, b1, e) linarith)
+                             (\have | a1 => RealAbGroup.abs>=neg {a x - phi x}
+                                    | b1 => RealAbGroup.abs>=id {b x - phi x}
+                              \in usingOnly (ha, hb, a1, b1, e) linarith))
+          (\lam x => tailLB.nonneg {n} {M} {M>0}) h>=0 hK)
+
+  -- | {preNet} is Cauchy.
+  \lemma preNet-conv {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = (0 : Real)) (f : Array L n)
+    : IsConvergent (preNet {L} phi f)
+    => convergent-topAbGroup-char {NatDir} {L0Space L} {preNet phi f} 1 0 \lam {U} Uo U0 => \case completion-neighborhood {L0PreSpace L} Uo U0 \with {
+      | inP ((h,h>=0),eps,eps>0,g) => \case L.trunc-bounded (l1L f), L.trunc-bounded h, l0One.small h>=0 eps>0 \with {
+        | inP (M0,fM0), inP (K0,hK0), inP (eta,eta>0,s) =>
+          \let | M => M0 ∨ 1
+               | K => K0 ∨ 0
+               | e => eta * ratio 1 2
+          \in \have | M>0 : 0 < M => RatField.zro<ide <∘l join-right
+                    | M1>0 : 0 < M + 1 => linarith
+                    | e>0 : 0 < e => linarith
+                    | ee : e + e = eta => linarith
+                    | fM : L.IsBelow (abs (l1L f)) M => L.IsBelow-level join-left fM0
+                    | hK : L.IsBelow (abs h) K => L.IsBelow-level join-left hK0
+          \in \case clipApprox-close phi phi0 M1>0 e>0 \with {
+            | inP (k0,k0>=0,c) => inP ((rat_natBound k0).1, \lam {k} {m} N<=k k<=m =>
+                \have | ck : k0 <= k => <=-less (rat_natBound k0).2 <=∘ fromInt_<= (pos<=pos N<=k)
+                      | cm : k0 <= m => ck <=∘ fromInt_<= (pos<=pos k<=m)
+                      | b => clip-gauge {L} {n} phi M>0 e>0 join-right (c ck) (c cm) {f} h>=0 hK
+                      | z : measGauge h (fcalc (tailLB {n} M>0) f) = 0 => pmap (measGauge h) (tailLB.zero M>0 fM) *> (L0PreSpace L).normAt-zro {h,h>=0}
+                \in g $ transportInv (__ < eps) (preNet-gauge h>=0) $ b <∘r transport (\lam t => L.integral (L.truncAt t h) + _ < eps) (inv ee)
+                      (transportInv (\lam t => _ + _ * t < eps) z (transportInv (__ < eps) (pmap (_ +) RealField.zro_*-right *> zro-right) s)))
+          }
+      }
+    }
+
+  -- | $\varphi(f) \in \mathrm L^0$ for $f \in L^n$: the limit of $\varphi_k(f)$.
+  \sfunc l0calc-pre {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = (0 : Real)) (f : Array L n) : L0Space L
+    => limit (preNet phi f) (preNet-conv phi phi0 f)
+
+  \lemma l0calc-pre-limit {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)} {f : Array L n}
+    : (L0Space L).IsLimit (preNet phi f) (l0calc-pre phi phi0 f)
+    => rewrite (\peval l0calc-pre phi phi0 f) $ limit-isLimit {NatDir} {L0Space L} {preNet phi f} {preNet-conv phi phi0 f}
+
+  -- | The coordinates `x` of $(x, y) \in \mathbb R^{n+n}$.
+  \func leftC (n : Nat) : Array (LinBoundedMap (n Nat.+ n)) n
+    => \lam j => LinBoundedMap.coord (fin-inc j)
+
+  -- | The coordinates `y` of $(x, y) \in \mathbb R^{n+n}$.
+  \func rightC (n : Nat) : Array (LinBoundedMap (n Nat.+ n)) n
+    => \lam j => LinBoundedMap.coord (fin-raise j)
+
+  -- | The coordinates `x - y` of $(x, y) \in \mathbb R^{n+n}$.
+  \func diffC (n : Nat) : Array (LinBoundedMap (n Nat.+ n)) n
+    => \lam j => LinBoundedMap.add (leftC n j) (LinBoundedMap.neg (rightC n j))
+
+  \lemma fcalc-left {L : FullIntegrationSpace} {n : Nat} {chi : LinBoundedMap n} {f g : Array L n}
+    : fcalc (LinBoundedMap.comp chi (leftC n)) (f ++' g) = fcalc chi f
+    => fcalc-subst \lam j => fcalc-var _ *> ++'.++'_index-left
+
+  \lemma fcalc-right {L : FullIntegrationSpace} {n : Nat} {chi : LinBoundedMap n} {f g : Array L n}
+    : fcalc (LinBoundedMap.comp chi (rightC n)) (f ++' g) = fcalc chi g
+    => fcalc-subst \lam j => fcalc-var _ *> ++'.++'_index-right
+
+  \lemma fcalc-diff {L : FullIntegrationSpace} {n : Nat} {chi : LinBoundedMap n} {f g : Array L n}
+    : fcalc (LinBoundedMap.comp chi (diffC n)) (f ++' g) = fcalc chi (\lam j => f j - g j)
+    => fcalc-subst \lam j => fcalc-sub (fcalc-var _ *> ++'.++'_index-left) (fcalc-var _ *> ++'.++'_index-right)
+
+  -- | $\bigl|\|f\|_1 - \|g\|_1\bigr| \le \|f - g\|_1$ in `L`.
+  \lemma l1L-lip {L : FullIntegrationSpace} {n : Nat} {f g : Array L n} : abs (l1L f - l1L g) <= l1L (\lam j => f j - g j)
+    => fcalc-le-pt (f ++' g) {_} {LinBoundedMap.comp (l1LB n) (diffC n)}
+        (\lam z => =_<= (pmap2 (\lam a b => RealAbGroup.abs (a - b)) l1LB.apply l1LB.apply) <=∘ l1norm-lip {n} {\lam j => z (fin-inc j)} {\lam j => z (fin-raise j)} <=∘ =_<= (inv l1LB.apply))
+        (fcalc-abs (fcalc-sub (fcalc-left *> l1L.fcalc-l1) (fcalc-right *> l1L.fcalc-l1))) (fcalc-diff *> l1L.fcalc-l1)
+
+  -- | $|a - \tau_M a| \le |a - b|$ if $|b| \le M$.
+  \lemma tail-le {L : FullIntegrationSpace} {M : Rat} (M>0 : 0 < M) {a b : L} (bM : L.IsBelow (abs b) M)
+    : abs (a - L.truncAt M a) <= abs (a - b)
+    => \have | M>=0 : 0 <= M => <=-less M>0
+             | eb => fcalc-clip M>=0 (fcalc-var {L} {2} {a :: b :: nil} 1) bM
+       \in fcalc-le-pt (a :: b :: nil) (\lam z => pt (clipAbs M>=0))
+            (fcalc-abs (fcalc-sub (fcalc-var 0) (fcalc-truncAt M>0 (fcalc-var 0)))) (fcalc-abs (fcalc-sub (fcalc-var 0) eb))
+    \where {
+      \lemma clipAbs {M : Rat} (M>=0 : 0 <= M) {s : Real} : RealAbGroup.abs ((s ∧ Real.fromRat M) ∨ negative (Real.fromRat M)) <= Real.fromRat M
+        => \have | m0 : (0 : Real) <= Real.fromRat M => rat_real_<=.1 M>=0
+                 | u : (s ∧ Real.fromRat M) ∨ negative (Real.fromRat M) <= Real.fromRat M => join-univ meet-right linarith
+                 | l : negative (Real.fromRat M) <= (s ∧ Real.fromRat M) ∨ negative (Real.fromRat M) => join-right
+           \in transport (__ <= _) (pmap RealAbGroup.abs RealAbGroup.minus_zro) $ RealField.abs-univ {_} {0} linarith linarith
+
+      \lemma pt {t s : Real} {M : Real} (sM : RealAbGroup.abs s <= M) : RealAbGroup.abs (t - t ∧ M) <= RealAbGroup.abs (t - s)
+        => \have | s1 : s <= RealAbGroup.abs s => RealAbGroup.abs>=id
+                 | t1 : t - s <= RealAbGroup.abs (t - s) => RealAbGroup.abs>=id
+                 | a0 : (0 : Real) <= RealAbGroup.abs (t - s) => RealAbGroup.abs>=0
+                 | m : t ∧ M <= t => meet-left
+                 | b : t - t ∧ M <= RealAbGroup.abs (t - s)
+                     => real-cases {t} {M}
+                         (\lam t<M => \have e : t ∧ M = t => RealAbGroup.meet_<= (<=-less t<M) \in transportInv (\lam z => t - z <= _) e linarith)
+                         (\lam M<=t => \have e : t ∧ M = M => RealAbGroup.meet-comm *> RealAbGroup.meet_<= M<=t \in transportInv (\lam z => t - z <= _) e linarith)
+           \in transport (__ <= _) (pmap RealAbGroup.abs RealAbGroup.minus_zro) $ RealField.abs-univ {t - t ∧ M} {0} linarith linarith
+    }
+
+  -- | $d_h(\mathrm{tail}_M(f), 0) \le \sum_j d_h(f_j - g_j, 0)$ if $\|g\|_1 \le M$.
+  \lemma tail-gauge {L : FullIntegrationSpace} {n : Nat} {M : Rat} (M>0 : 0 < M) {f g : Array L n} (gM : L.IsBelow (abs (l1L g)) M)
+                    {h : L} (h>=0 : L.zro <= h)
+    : measGauge h (fcalc (tailLB {n} M>0) f) <= RealAbGroup.BigSum (\lam j => measGauge h (f j - g j))
+    => =_<= (pmap (measGauge h) (tailLB.char {L} {n} {M} {M>0} {f})) <=∘ measGauge-mono (tail-le M>0 gM <=∘ l1L-lip <=∘ =_<= (inv (L.abs-ofPos (l1L.nonneg {L} {n} {\lam j => f j - g j}))))
+        <=∘ measGauge-BigSum h>=0 <=∘ =_<= (RealAbGroup.BigSum-ext \lam j => measGauge-abs)
+
+  {- | $d_h(\psi(f) - \psi(g), 0) \le I(\tau_\varepsilon h) + C\bigl((1/d \vee 1) \sum_j d_h(f_j - g_j, 0) + d_h(\mathrm{tail}_M(f), 0) + d_h(\mathrm{tail}_M(g), 0)\bigr)$
+   -   if $|\psi(x) - \psi(y)| \le \varepsilon$ whenever $\|x\|_1, \|y\|_1 < M + 1$ and $\|x - y\|_1 < d$.
+   -}
+  \lemma modulus-gauge {L : FullIntegrationSpace} {n : Nat} (psi : LinBoundedMap n) {M e d K : Rat} (M>0 : 0 < M) (e>0 : 0 < e) (d>0 : 0 < d) (K>=0 : 0 <= K)
+                       (u : \Pi {x y : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> l1norm y < Real.fromRat (M + 1)
+                              -> l1norm (\lam j => x j - y j) < d -> abs (psi x - psi y) <= e)
+                       {f g : Array L n} {h : L} (h>=0 : L.zro <= h) (hK : L.IsBelow (abs h) K)
+    : measGauge h (fcalc psi f - fcalc psi g)
+      <= L.integral (L.truncAt e h) + Real.fromRat ((K * RatField.finv 1) ∨ 1) *
+           (Real.fromRat (RatField.finv d ∨ 1) * RealAbGroup.BigSum (\lam j => measGauge h (f j - g j))
+             + (measGauge h (fcalc (tailLB {n} M>0) f) + measGauge h (fcalc (tailLB {n} M>0) g)))
+    => \let | q => RatField.finv d
+            | D => LinBoundedMap.comp (l1LB n) (diffC n)
+            | TL => LinBoundedMap.comp (tailLB {n} M>0) (leftC n)
+            | TR => LinBoundedMap.comp (tailLB {n} M>0) (rightC n)
+            | Lam => LinBoundedMap.add (LinBoundedMap.scale (Real.fromRat q) D) (LinBoundedMap.add TL TR)
+            | chi => LinBoundedMap.add (LinBoundedMap.comp psi (leftC n)) (LinBoundedMap.neg (LinBoundedMap.comp psi (rightC n)))
+       \in \have | q>0 : 0 < q => RatField.finv>0 d>0
+                 | qd : q RealField.* d = 1 => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= d>0))
+                 | gb => gauge-bound {L} {n Nat.+ n} chi Lam {1} {e} {K} RatField.zro<ide e>0 K>=0
+                     (\lam z t => \have | dz : (0 : Real) <= l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) => l1norm>=0 {n} {\lam j => z (fin-inc j) - z (fin-raise j)} <=∘ =_<= (inv l1LB.apply)
+                                        | tl : (0 : Real) <= tailLB {n} M>0 (\lam j => z (fin-inc j)) => tailLB.nonneg {n} {M} {M>0}
+                                        | tr : (0 : Real) <= tailLB {n} M>0 (\lam j => z (fin-raise j)) => tailLB.nonneg {n} {M} {M>0}
+                                        | qdz : (0 : Real) <= Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less q>0)) dz
+                                        | t' : Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) + (tailLB {n} M>0 (\lam j => z (fin-inc j)) + tailLB {n} M>0 (\lam j => z (fin-raise j))) < 1 => t
+                                        | tl1 : tailLB {n} M>0 (\lam j => z (fin-inc j)) < 1 => linarith
+                                        | tr1 : tailLB {n} M>0 (\lam j => z (fin-raise j)) < 1 => linarith
+                                        | qd1 : Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) < 1 => linarith
+                                        | dd : l1norm (\lam j => z (fin-inc j) - z (fin-raise j)) < Real.fromRat d
+                                            => \have | m : Real.fromRat d * (Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j))) < Real.fromRat d * 1
+                                                         => RealField.<_*_positive-right (rat_real_<.1 d>0) qd1
+                                                     | e1 : Real.fromRat d * (Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j))) = l1norm (\lam j => z (fin-inc j) - z (fin-raise j))
+                                                         => inv *-assoc *> pmap (__ * _) (*-comm *> qd) *> ide-left *> l1LB.apply
+                                               \in transport (__ < _) e1 m <∘l =_<= ide-right
+                                  \in u (tailLB.small {n} {M} {M>0} tl1) (tailLB.small {n} {M} {M>0} tr1) dd)
+                     (\lam z => \have | dz : (0 : Real) <= l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) => l1norm>=0 {n} {\lam j => z (fin-inc j) - z (fin-raise j)} <=∘ =_<= (inv l1LB.apply)
+                                      | tl : (0 : Real) <= tailLB {n} M>0 (\lam j => z (fin-inc j)) => tailLB.nonneg {n} {M} {M>0}
+                                      | tr : (0 : Real) <= tailLB {n} M>0 (\lam j => z (fin-raise j)) => tailLB.nonneg {n} {M} {M>0}
+                                      | qdz : (0 : Real) <= Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less q>0)) dz
+                                \in linarith)
+                     {f ++' g} h>=0 hK
+                 | ec : fcalc chi (f ++' g) = fcalc psi f - fcalc psi g => fcalc-sub fcalc-left fcalc-right
+                 | el : fcalc Lam (f ++' g) = q *q l1L (\lam j => f j - g j) + (fcalc (tailLB {n} M>0) f + fcalc (tailLB {n} M>0) g)
+                     => fcalc-add (fcalc-*q (fcalc-diff *> l1L.fcalc-l1 {L} {n} {\lam j => f j - g j})) (fcalc-add fcalc-left fcalc-right)
+                 | m1 : measGauge h (l1L (\lam j => f j - g j)) <= RealAbGroup.BigSum (\lam j => measGauge h (f j - g j))
+                     => measGauge-BigSum h>=0 <=∘ =_<= (RealAbGroup.BigSum-ext \lam j => measGauge-abs)
+                 | m2 : measGauge h (fcalc Lam (f ++' g)) <= Real.fromRat (q ∨ 1) * RealAbGroup.BigSum (\lam j => measGauge h (f j - g j))
+                                                             + (measGauge h (fcalc (tailLB {n} M>0) f) + measGauge h (fcalc (tailLB {n} M>0) g))
+                     => =_<= (pmap (measGauge h) el) <=∘ measGauge-+ h>=0 <=∘ <=_+ (measGauge-*q h>=0 (<=-less q>0) <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less (RatField.zro<ide <∘l join-right))) m1) (measGauge-+ h>=0)
+                 | C>=0 : (0 : Real) <= Real.fromRat ((K * RatField.finv 1) ∨ 1) => rat_real_<=.1 (<=-less (RatField.zro<ide <∘l join-right))
+       \in =_<= (pmap (measGauge h) (inv ec)) <=∘ gb <=∘ <=_+ <=-refl (RealField.<=_*_positive-right C>=0 m2)
+
+  -- | The combined estimate for $d_h(\varphi(y) - \varphi(x), 0)$ near $x_0$ with $\|x_0\|_1 \le M$, given bounds on the distances to $x_0$.
+  \lemma pre-diff-bound {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)}
+                        {h : L} (h>=0 : L.zro <= h) {M e d K : Rat} (M>0 : 0 < M) (e>0 : 0 < e) (d>0 : 0 < d)
+                        (K>=0 : 0 <= K) (hK : L.IsBelow (abs h) K) {x0 : Array L n} (x0M : L.IsBelow (abs (l1L x0)) M) {k : Nat}
+                        (ck : \Pi {m : Nat} -> k <= m -> \Pi {x : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> RealAbGroup.abs (clipApprox phi m x - phi x) <= e)
+                        (u : \Pi {x y : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> l1norm y < Real.fromRat (M + 1)
+                               -> l1norm (\lam j => x j - y j) < Real.fromRat d -> RealAbGroup.abs (clipApprox phi k x - clipApprox phi k y) <= e)
+                        {x y : Array L n} {Sx Sy Syx : Real}
+                        (hx : RealAbGroup.BigSum (\lam j => measGauge h (x j - x0 j)) <= Sx) (hy : RealAbGroup.BigSum (\lam j => measGauge h (y j - x0 j)) <= Sy)
+                        (hyx : RealAbGroup.BigSum (\lam j => measGauge h (y j - x j)) <= Syx)
+    : l0Gauge h>=0 (l0calc-pre phi phi0 y - l0calc-pre phi phi0 x)
+      <= (L.integral (L.truncAt (e + e) h) + L.integral (L.truncAt (e + e) h) + L.integral (L.truncAt (e + e) h))
+         + (Real.fromRat ((K * RatField.finv 1) ∨ 1) * Sy
+            + Real.fromRat ((K * RatField.finv 1) ∨ 1) * (Real.fromRat (RatField.finv d ∨ 1) * Syx + (Sy + Sx))
+            + Real.fromRat ((K * RatField.finv 1) ∨ 1) * Sx)
+    => \let | C => Real.fromRat ((K * RatField.finv 1) ∨ 1)
+            | I => L.integral (L.truncAt (e + e) h)
+            | Y => L0Space L
+       \in \have | C>=0 : (0 : Real) <= C => rat_real_<=.1 (<=-less (RatField.zro<ide <∘l join-right))
+                 | e2>0 : 0 < e + e => RatField.<_+ e>0 e>0
+                 | e<=e2 : Real.fromRat e <= Real.fromRat (e + e) => rat_real_<=.1 (linarith : e <= e + e)
+                 | lim : RealNormed.IsLimit (\lam (m : NatDir) => l0Gauge h>=0 (preNet phi y m - preNet phi x m)) (l0Gauge h>=0 (l0calc-pre phi phi0 y - l0calc-pre phi phi0 x))
+                     => cont-limit {NatDir} {ProductTopSpace Y Y} {RealNormed} {\lam m => (preNet phi y m, preNet phi x m)}
+                          (limit-tuple {NatDir} {Y} {Y} {preNet phi y} (l0calc-pre-limit {L} {n} {phi} {phi0} {y}) {preNet phi x} (l0calc-pre-limit {L} {n} {phi} {phi0} {x}))
+                          (l0Gauge h>=0 CoverMap.∘ subtract-uniform {Y})
+       \in real-limit-<= lim {k} \lam {m} k<=m =>
+            \have | g : l0Gauge h>=0 (preNet phi y m - preNet phi x m) = measGauge h (fcalc (clipApprox phi m) y - fcalc (clipApprox phi m) x)
+                      => pmap (l0Gauge h>=0) (inv (AddGroupHom.func-minus {topTruncCompletion {L0PreSpace L}})) *> l0Gauge.char h>=0
+                  | split : fcalc (clipApprox phi m) y - fcalc (clipApprox phi m) x
+                            = (fcalc (clipApprox phi m) y - fcalc (clipApprox phi k) y) + (fcalc (clipApprox phi k) y - fcalc (clipApprox phi k) x)
+                              + negative (fcalc (clipApprox phi m) x - fcalc (clipApprox phi k) x) => equation.abGroup
+                  | t1 : measGauge h (fcalc (clipApprox phi m) y - fcalc (clipApprox phi k) y) <= I + C * Sy
+                      => clip-gauge phi M>0 e>0 K>=0 (ck <=-refl) (ck k<=m) h>=0 hK <=∘ <=_+ <=-refl (RealField.<=_*_positive-right C>=0 (tail-gauge M>0 x0M h>=0 <=∘ hy))
+                  | t3 : measGauge h (negative (fcalc (clipApprox phi m) x - fcalc (clipApprox phi k) x)) <= I + C * Sx
+                      => =_<= ((L0PreSpace L).normAt-negative {h,h>=0}) <=∘ clip-gauge phi M>0 e>0 K>=0 (ck <=-refl) (ck k<=m) h>=0 hK
+                           <=∘ <=_+ <=-refl (RealField.<=_*_positive-right C>=0 (tail-gauge M>0 x0M h>=0 <=∘ hx))
+                  | t2 : measGauge h (fcalc (clipApprox phi k) y - fcalc (clipApprox phi k) x) <= I + C * (Real.fromRat (RatField.finv d ∨ 1) * Syx + (Sy + Sx))
+                      => modulus-gauge (clipApprox phi k) M>0 e2>0 d>0 K>=0 (\lam a b c => u a b c <=∘ e<=e2) h>=0 hK
+                           <=∘ <=_+ <=-refl (RealField.<=_*_positive-right C>=0 (<=_+ (RealField.<=_*_positive-right (rat_real_<=.1 (<=-less (RatField.zro<ide <∘l join-right))) hyx)
+                                                                                     (<=_+ (tail-gauge M>0 x0M h>=0 <=∘ hy) (tail-gauge M>0 x0M h>=0 <=∘ hx))))
+            \in =_<= g <=∘ =_<= (pmap (measGauge h) split) <=∘ measGauge-+ h>=0 <=∘ <=_+ (measGauge-+ h>=0) <=-refl
+                  <=∘ =_<= (pmap (\lam z => z) idp) <=∘ usingOnly (t1, t2, t3) linarith
+
+  -- | $f \mapsto \varphi(f)$ is locally uniformly continuous from $L^n$ to `L⁰`.
+  \func l0calc-preLU {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = (0 : Real))
+    : LocallyUniformMap (ArrayRegularPreuniformSpace n (L0PreSpace L)) (TopAbGroupCompletion (L0PreSpace L)) (l0calc-pre phi phi0)
+    => normFamily-array-locally-uniform {L0PreSpace L} {L0PreSpace L} {n} (l0calc-pre phi phi0) \lam (h,h>=0) {eps} eps>0 =>
+        \have e8>0 : (0 : Real) < eps * Real.fromRat (ratio 1 8) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+        \in \case L.trunc-bounded h, l0One.small h>=0 e8>0 \with {
+          | inP (K0,hK0), inP (eta,eta>0,s) =>
+            \let | K => K0 ∨ 0
+                 | e => eta * ratio 1 2
+                 | Cr => Real.fromRat ((K * RatField.finv 1) ∨ 1)
+                 | N => RealField.natCoef n
+                 | P => Real.fromRat 16 * (Cr * (N + 1))
+            \in \have | K>=0 : 0 <= K => join-right
+                      | hK : L.IsBelow (abs h) K => L.IsBelow-level join-left hK0
+                      | e>0 : 0 < e => linarith
+                      | ee : e + e = eta => linarith
+                      | Cr>=1 : (1 : Real) <= Cr => rat_real_<=.1 join-right
+                      | N>=0 : (0 : Real) <= N => RealField.natCoef>=0
+                      | P>0 : (0 : Real) < P => RealField.<_*_positive_positive (rat_real_<.1 idp) (RealField.<_*_positive_positive linarith linarith)
+                      | dl>0 : (0 : Real) < eps * RealField.pinv P P>0 => RealField.<_*_positive_positive eps>0 (RealField.pinv>0 P>0)
+            \in inP ((h,h>=0), eps * RealField.pinv P P>0, dl>0, \lam x0 => \case L.trunc-bounded (l1L x0) \with {
+              | inP (M0,x0M0) =>
+                \let | M => M0 ∨ 1
+                     | dl => eps * RealField.pinv P P>0
+                \in \have | M>0 : 0 < M => RatField.zro<ide <∘l join-right
+                          | M1>0 : 0 < M + 1 => linarith
+                          | x0M : L.IsBelow (abs (l1L x0)) M => L.IsBelow-level join-left x0M0
+                \in \case clipApprox-close phi phi0 M1>0 e>0 \with {
+                  | inP (k0,k0>=0,c) =>
+                    \let k => (rat_natBound k0).1
+                    \in \have ck : \Pi {m : Nat} -> k <= m -> \Pi {x : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> RealAbGroup.abs (clipApprox phi m x - phi x) <= Real.fromRat e
+                               => \lam k<=m => c (<=-less (rat_natBound k0).2 <=∘ fromInt_<= (pos<=pos k<=m))
+                    \in \case coverMap-ball-uniform (clipApprox phi k) M1>0 e>0 \with {
+                      | inP (d,d>0,uk) =>
+                        \let | Q => Real.fromRat (RatField.finv d ∨ 1)
+                        \in \have | Q>=1 : (1 : Real) <= Q => rat_real_<=.1 join-right
+                                  | Q>0 : (0 : Real) < Q => linarith
+                                  | ga>0 : (0 : Real) < dl * RealField.pinv Q Q>0 => RealField.<_*_positive_positive dl>0 (RealField.pinv>0 Q>0)
+                                  | u : \Pi {x y : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> l1norm y < Real.fromRat (M + 1)
+                                          -> l1norm (\lam j => x j - y j) < Real.fromRat d -> RealAbGroup.abs (clipApprox phi k x - clipApprox phi k y) <= e
+                                      => \lam xM yM xy => <=-less $ transport (__ < _) (lnorm-ldist {RealNormed}) $
+                                            uk (transportInv (__ < _) ldist0-l1norm xM) (transportInv (__ < _) ldist0-l1norm yM) (transportInv (__ < _) ldist-l1norm xy)
+                        \in inP ((h,h>=0), dl * RealField.pinv Q Q>0, ga>0, \lam {x} {y} xd yd =>
+                          \let ga => dl * RealField.pinv Q Q>0
+                          \in \have | Qga : Q * ga = dl => *-comm *> *-assoc *> pmap (dl *) (RealField.pinv-left Q>0) *> ide-right
+                                    | ga<=dl : ga <= dl => =_<= (inv ide-left) <=∘ RealField.<=_*_positive-left Q>=1 (<=-less ga>0) <=∘ =_<= Qga
+                                    | bx (j : Fin n) : measGauge h (x j - x0 j) <= dl
+                                        => =_<= (inv ((L0PreSpace L).normAt-negative {h,h>=0}) *> pmap (measGauge h) (equation.abGroup : negative (x j - x0 j) = x0 j - x j)) <=∘ <=-less (xd j)
+                                    | byx (j : Fin n) : measGauge h (y j - x j) <= ga => <=-less (yd j)
+                                    | by (j : Fin n) : measGauge h (y j - x0 j) <= ga + dl
+                                        => =_<= (pmap (measGauge h) (equation.abGroup : y j - x0 j = (y j - x j) + (x j - x0 j))) <=∘ measGauge-+ h>=0 <=∘ <=_+ (byx j) (bx j)
+                                    | sum {c : Real} {a : Array Real n} (p : \Pi (j : Fin n) -> a j <= c) : RealAbGroup.BigSum a <= N * c
+                                        => RealAbGroup.BigSum_<= {_} {a} {replicate n c} p <=∘ =_<= RealField.BigSum_replicate
+                                    | hx => sum bx
+                                    | hy => sum by
+                                    | hyx => sum byx
+                                    | b => pre-diff-bound {L} {n} {phi} {phi0} h>=0 M>0 e>0 d>0 K>=0 hK x0M ck u hx hy hyx
+                                    | Ngat : N * ga <= N * dl => RealField.<=_*_positive-right N>=0 ga<=dl
+                                    | QSyx : Q * (N * ga) = N * dl => equation.cRing {Qga}
+                                    | dlP : P * dl = eps => *-comm *> *-assoc *> pmap (eps *) (RealField.pinv-left P>0) *> ide-right
+                                    | CT : Cr * (N * dl) <= eps * Real.fromRat (ratio 1 16)
+                                        => \have m : Cr * (N * dl) <= Cr * ((N + 1) * dl) => RealField.<=_*_positive-right linarith (RealField.<=_*_positive-left (linarith : N <= N + 1) (<=-less dl>0))
+                                           \in m <=∘ =_<= ((equation.cRing {RealField.*-rat {16} {ratio 1 16}} : Cr * ((N + 1) * dl) = P * dl * Real.fromRat (ratio 1 16)) *> pmap (__ * _) dlP)
+                                    | A1 : Cr * (N * (ga + dl)) <= Cr * (N * dl) + Cr * (N * dl)
+                                        => RealField.<=_*_positive-right linarith (=_<= RealField.ldistr <=∘ <=_+ Ngat <=-refl) <=∘ =_<= RealField.ldistr
+                                    | A2 : Cr * (Q * (N * ga) + (N * (ga + dl) + N * dl)) <= Cr * (N * dl) + Cr * (N * dl) + Cr * (N * dl) + Cr * (N * dl)
+                                        => RealField.<=_*_positive-right linarith (transportInv (\lam z => z + (N * (ga + dl) + N * dl) <= N * dl + N * dl + N * dl + N * dl) QSyx
+                                              (=_<= (pmap (_ +) (pmap (__ + _) RealField.ldistr)) <=∘ linarith))
+                                             <=∘ =_<= equation.cRing
+                                    | I8 : L.integral (L.truncAt (e + e) h) < eps * Real.fromRat (ratio 1 8) => transportInv (\lam t => L.integral (L.truncAt t h) < _) ee s
+                                    | e16>0 : (0 : Real) < eps * Real.fromRat (ratio 1 16) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+                                    | b' : normAt-lift {L0PreSpace L} (h,h>=0) (l0calc-pre phi phi0 y - l0calc-pre phi phi0 x) <= _ => b
+                          \in b' <∘r usingOnly (I8, CT, A1, A2, e16>0) linarith)
+                    }
+                }
+            })
+        }
+
+  -- | {l0calc} on $L^n$ is {l0calc-pre}.
+  \lemma l0calc-pt {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)} {f : Array L n}
+    : l0calc phi phi0 (\lam j => pointCF {L0PreSpace L} (f j)) = l0calc-pre phi phi0 f
+    => rewrite (\peval l0calc phi phi0) $ dense-lift-char {_} {_} {_} {ArrayCoverSpace.map {n} (completion {L0PreSpace L})} l0-denseN-embedding f
+
+  -- | For $\chi \in C_0$ that is $\varepsilon$-close to $\varphi$ on $\|x\|_1 < M + 1$, and $\|f\|_1 \le M$: $d_h(\varphi(f) - \chi(f), 0) \le I(\tau_{2\varepsilon} h)$.
+  \lemma pre-approx-lin {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)} {f : Array L n}
+                        {h : L} (h>=0 : L.zro <= h) {M e K : Rat} (M>0 : 0 < M) (e>0 : 0 < e) (K>=0 : 0 <= K)
+                        (hK : L.IsBelow (abs h) K) (fM : L.IsBelow (abs (l1L f)) M) (chi : LinBoundedMap n)
+                        (cc : \Pi {x : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> abs (chi x - phi x) <= e)
+    : l0Gauge h>=0 (l0calc-pre phi phi0 f - pointCF {L0PreSpace L} (fcalc chi f)) <= L.integral (L.truncAt (e + e) h)
+    => \let c => pointCF {L0PreSpace L} (fcalc chi f)
+       \in \case clipApprox-ballConv phi phi0 (linarith : 0 < M + 1) e>0 \with {
+         | inP (k0,g) => real-limit-<= (cont-limit {NatDir} {L0Space L} {RealNormed} {preNet phi f} (l0calc-pre-limit {L} {n} {phi} {phi0} {f})
+                                          (l0Gauge h>=0 CoverMap.∘ subtract-uniform {L0Space L} CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const c)))
+            {k0} \lam {m} k0<=m =>
+              \have | z : measGauge h (fcalc (tailLB {n} M>0) f) = 0 => pmap (measGauge h) (tailLB.zero M>0 fM) *> (L0PreSpace L).normAt-zro {h,h>=0}
+                    | b => clip-gauge phi M>0 e>0 K>=0 cc (g k0<=m) {f} h>=0 hK
+              \in =_<= (pmap (l0Gauge h>=0) (inv (AddGroupHom.func-minus {topTruncCompletion {L0PreSpace L}})) *> l0Gauge.char h>=0)
+                    <=∘ b <=∘ =_<= (pmap (_ +) (pmap (_ *) z *> RealField.zro_*-right) *> zro-right)
+       }
+
+  -- | If $a_k \to \varphi$ uniformly on balls, then $a_k(f) \to \varphi(f)$ in `L⁰`.
+  \lemma pre-limit {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)} {f : Array L n}
+                   {a : Nat -> LinBoundedMap n} (ca : BallConv a phi)
+    : (L0Space L).IsLimit {NatDir} (\lam k => pointCF {L0PreSpace L} (fcalc (a k) f)) (l0calc-pre phi phi0 f)
+    => completion-limit {L0PreSpace L} {NatDir} {\lam k => pointCF {L0PreSpace L} (fcalc (a k) f)} \lam (h,h>=0) {eps} eps>0 => \case L.trunc-bounded h, L.trunc-bounded (l1L f), l0One.small h>=0 eps>0 \with {
+      | inP (K0,hK0), inP (M0,fM0), inP (eta,eta>0,s) =>
+        \let | K => K0 ∨ 0
+             | M => M0 ∨ 1
+             | e => eta * ratio 1 2
+        \in \have | M>0 : 0 < M => RatField.zro<ide <∘l join-right
+                  | e>0 : 0 < e => linarith
+                  | ee : e + e = eta => linarith
+        \in \case ca (linarith : 0 < M + 1) e>0 \with {
+          | inP (k0,g) => inP (k0, \lam {k} k0<=k =>
+              (=_<= (inv (normAt-lift-negative {L0PreSpace L}) *> pmap (normAt-lift {L0PreSpace L} (h,h>=0)) (AddGroup.negative_- {L0Space L}))
+                <=∘ pre-approx-lin h>=0 M>0 e>0 join-right (L.IsBelow-level join-left hK0) (L.IsBelow-level join-left fM0) (a k) (g k0<=k))
+                <∘r transportInv (\lam t => L.integral (L.truncAt t h) < eps) ee s)
+        }
+    }
+
+  \lemma pre-unique {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)} {f : Array L n}
+                    {a : Nat -> LinBoundedMap n} (ca : BallConv a phi) {X : L0Space L}
+                    (l : (L0Space L).IsLimit {NatDir} (\lam k => pointCF {L0PreSpace L} (fcalc (a k) f)) X)
+    : l0calc-pre phi phi0 f = X
+    => (L0Space L).limit-unique {NatDir} {\lam k => pointCF {L0PreSpace L} (fcalc (a k) f)} (pre-limit {L} {n} {phi} {phi0} {f} ca) l
+
+  \lemma pre-binary {L : FullIntegrationSpace} {n : Nat} (op : CoverMap (ProductCoverSpace (L0Space L) (L0Space L)) (L0Space L))
+                    {chi phi psi : CoverMap (RealN n) RealNormed} {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                    {f : Array L n} (c : Nat -> LinBoundedMap n) (cc : BallConv c chi)
+                    (e : \Pi (k : Nat) -> pointCF {L0PreSpace L} (fcalc (c k) f) = op (pointCF {L0PreSpace L} (fcalc (clipApprox phi k) f), pointCF {L0PreSpace L} (fcalc (clipApprox psi k) f)))
+    : l0calc-pre chi chi0 f = op (l0calc-pre phi phi0 f, l0calc-pre psi psi0 f)
+    => \let | u1 => \lam (k : NatDir) => pointCF {L0PreSpace L} (fcalc (clipApprox phi k) f)
+            | u2 => \lam (k : NatDir) => pointCF {L0PreSpace L} (fcalc (clipApprox psi k) f)
+       \in pre-unique cc $ transportInv (\lam (g : NatDir -> L0Space L) => (L0Space L).IsLimit g (op (l0calc-pre phi phi0 f, l0calc-pre psi psi0 f)))
+            {\lam k => pointCF {L0PreSpace L} (fcalc (c k) f)} {\lam k => op (u1 k, u2 k)} (ext e) $
+            cont-limit {NatDir} {ProductTopSpace (L0Space L) (L0Space L)} {L0Space L} {\lam k => (u1 k, u2 k)}
+              (limit-tuple {NatDir} {L0Space L} {L0Space L} {u1} (pre-limit {L} {n} {phi} {phi0} {f} {\lam k => clipApprox phi k} (clipApprox-ballConv phi phi0))
+                                                        {u2} (pre-limit {L} {n} {psi} {psi0} {f} {\lam k => clipApprox psi k} (clipApprox-ballConv psi psi0))) op
+
+  \lemma pre-unary {L : FullIntegrationSpace} {n : Nat} (op : CoverMap (L0Space L) (L0Space L))
+                   {chi phi : CoverMap (RealN n) RealNormed} {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)}
+                   {f : Array L n} (c : Nat -> LinBoundedMap n) (cc : BallConv c chi)
+                   (e : \Pi (k : Nat) -> pointCF {L0PreSpace L} (fcalc (c k) f) = op (pointCF {L0PreSpace L} (fcalc (clipApprox phi k) f)))
+    : l0calc-pre chi chi0 f = op (l0calc-pre phi phi0 f)
+    => \let u1 => \lam (k : NatDir) => pointCF {L0PreSpace L} (fcalc (clipApprox phi k) f)
+       \in pre-unique cc $ transportInv (\lam (g : NatDir -> L0Space L) => (L0Space L).IsLimit g (op (l0calc-pre phi phi0 f)))
+            {\lam k => pointCF {L0PreSpace L} (fcalc (c k) f)} {\lam k => op (u1 k)} (ext e) $
+            cont-limit {NatDir} {L0Space L} {L0Space L} {u1} (pre-limit {L} {n} {phi} {phi0} {f} {\lam k => clipApprox phi k} (clipApprox-ballConv phi phi0)) op
+
+  -- | A net in $X^n$ converges if all its coordinates converge.
+  \lemma array-limit {X : TopSpace} {n : Nat} {g : NatDir -> Array X n} {x : Array X n} (h : \Pi (j : Fin n) -> X.IsLimit {NatDir} (\lam k => g k j) (x j))
+    : (ArrayTopSpace n X).IsLimit {NatDir} g x
+    => \lam {W} Wo Wx => \case Wo Wx \with {
+      | inP (U,Uo,Ux,hU) => \case FinSet.finiteAC (\lam (j : Fin n) => h j (Uo j) (Ux j)) \with {
+        | inP N => inP (natMax (\lam j => (N j).1), \lam {k} Nk => hU \lam j => (N j).2 (natMax.ge j <=∘ Nk))
+      }
+    }
+
+  -- | A bound $|\chi| \le B$ on the box $[-R,R]^n$ gives $|\chi(f)| \le B$ for $|f_j| \le R$.
+  \lemma fcalc-below {L : FullIntegrationSpace} {n : Nat} (chi : LinBoundedMap n) {R B : Rat} (R>=0 : 0 <= R) (B>0 : 0 < B)
+                     (cb : \Pi (x : Array Real n) -> (\Pi (j : Fin n) -> RealAbGroup.abs (x j) <= R) -> RealAbGroup.abs (chi x) <= B)
+                     {f : Array L n} (fR : \Pi (j : Fin n) -> L.IsBelow (abs (f j)) R)
+    : L.IsBelow (abs (fcalc chi f)) B
+    => (L.IsBelow_truncAt B>0).2 $ fcalc-eq-box f R>=0 fR (\lam x xR => RealAbGroup.meet_<= (cb x xR)) (fcalc-truncAt B>0 (fcalc-abs idp)) (fcalc-abs idp)
+
+  -- | $|f_j| \le \|f\|_1$.
+  \lemma abs<=l1L {L : FullIntegrationSpace} {n : Nat} {f : Array L n} (j : Fin n) : abs (f j) <= l1L f
+    => L.BigSum_>=index {\lam j => abs (f j)} (\lam j => L.abs>=0) j
+
+  -- | Composition on $L^m$: $(\varphi \circ \psi)(f) = \varphi(\psi_1(f), \ldots, \psi_n(f))$.
+  \lemma pre-comp {L : FullIntegrationSpace} {n m : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)}
+                  {psi : Array (CoverMap (RealN m) RealNormed) n} {psi0 : \Pi (j : Fin n) -> psi j (RealN m).zro = (0 : Real)}
+                  {chi : CoverMap (RealN m) RealNormed} {chi0 : chi (RealN m).zro = (0 : Real)}
+                  (e : \Pi (x : Array Real m) -> chi x = phi (\lam j => psi j x)) {f : Array L m}
+    : l0calc-pre chi chi0 f = l0calc phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f)
+    => \let | b => \lam (j : Fin n) (k : Nat) => clipApprox (psi j) k
+            | g => \lam (k : NatDir) (j : Fin n) => fcalc (b j k) f
+            | c => \lam (k : Nat) => LinBoundedMap.comp (clipApprox phi k) (\lam j => b j k)
+       \in \have | cb (j : Fin n) : BallConv (b j) (psi j) => clipApprox-ballConv (psi j) (psi0 j)
+                 | cc : BallConv c chi => ballConv-ext {m} {c} (\lam x => inv (e x)) (ballConv-comp phi psi {\lam k => clipApprox phi k} {b} (clipApprox-ballConv phi phi0) cb)
+                 | lA : (ArrayTopSpace n (L0Space L)).IsLimit {NatDir} (\lam k j => pointCF {L0PreSpace L} (g k j)) (\lam j => l0calc-pre (psi j) (psi0 j) f)
+                     => array-limit {L0Space L} {n} {\lam k j => pointCF {L0PreSpace L} (g k j)} \lam j => pre-limit {L} {m} {psi j} {psi0 j} {f} {b j} (cb j)
+                 | lB : (L0Space L).IsLimit {NatDir} (\lam k => l0calc-pre phi phi0 (g k)) (l0calc phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f))
+                     => transport (\lam (q : NatDir -> L0Space L) => (L0Space L).IsLimit q (l0calc phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f))) (ext \lam k => l0calc-pt)
+                         (cont-limit {NatDir} {ArrayTopSpace n (L0Space L)} {L0Space L} {\lam k j => pointCF {L0PreSpace L} (g k j)} lA (l0calc phi phi0))
+                 | lC : (L0Space L).IsLimit {NatDir} (\lam k => l0calc-pre phi phi0 (g k)) (l0calc-pre chi chi0 f)
+                     => completion-limit {L0PreSpace L} {NatDir} {\lam k => l0calc-pre phi phi0 (g k)} \lam (h,h>=0) {eps} eps>0 =>
+                         \have e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+                         \in \case L.trunc-bounded h, L.trunc-bounded (l1L f), l0One.small h>=0 e2>0 \with {
+                           | inP (K0,hK0), inP (Mf0,fM0), inP (eta,eta>0,s) =>
+                             \let | K => K0 ∨ 0
+                                  | Mf => Mf0 ∨ 1
+                                  | ep => eta * ratio 1 2
+                                  | Rf => RatField.natCoef m * Mf + 1
+                             \in \have | K>=0 : 0 <= K => join-right
+                                       | hK : L.IsBelow (abs h) K => L.IsBelow-level join-left hK0
+                                       | Mf>0 : 0 < Mf => RatField.zro<ide <∘l join-right
+                                       | fM : L.IsBelow (abs (l1L f)) Mf => L.IsBelow-level join-left fM0
+                                       | ep>0 : 0 < ep => linarith
+                                       | ee : ep + ep = eta => linarith
+                                       | Rf>0 : 0 < Rf => linarith (RatField.<=_*_positive_positive RatField.natCoef>=0 (<=-less Mf>0) : 0 <= RatField.natCoef m * Mf)
+                                       | fbox (i : Fin m) : L.IsBelow (abs (f i)) Mf => L.IsBelow_<= (abs<=l1L i <=∘ =_<= (inv (L.abs-ofPos l1L.nonneg))) fM
+                                       | boxBall {x : Array Real m} (xb : \Pi (i : Fin m) -> RealAbGroup.abs (x i) <= Mf) : l1norm x < Real.fromRat Rf
+                                           => \have | l : l1norm x <= RatField.natCoef m RealField.* (Real.fromRat Mf ∨ 0) => l1norm-box xb
+                                                    | j0 : Real.fromRat Mf ∨ 0 = Real.fromRat Mf => RealAbGroup.join-comm *> RealAbGroup.join_<= (rat_real_<=.1 (<=-less Mf>0))
+                                                    | e1 : Real.fromRat (RatField.natCoef m) * Real.fromRat Mf = Real.fromRat (RatField.natCoef m * Mf) => RealField.*-rat
+                                                    | e2 : Real.fromRat Rf = Real.fromRat (RatField.natCoef m * Mf) + 1 => inv RealAbGroup.+-rat
+                                              \in (l <=∘ =_<= (pmap (_ *) j0 *> e1)) <∘r (linarith : Real.fromRat (RatField.natCoef m * Mf) < Real.fromRat Rf)
+                             \in \case FinSet.finiteAC (\lam (j : Fin n) => ballConv-bound {m} {b j} {psi j} (cb j) Rf>0) \with {
+                               | inP BB =>
+                                 \let Bsr => RealAbGroup.BigSum (\lam j => Real.fromRat (BB j).1)
+                                 \in \have Bsr>=0 : (0 : Real) <= Bsr => RealAbGroup.BigSum_>=0 {\lam (j : Fin n) => Real.fromRat (BB j).1} \lam j => rat_real_<=.1 (<=-less (BB j).2)
+                                 \in \case Real.U-inh {Bsr} \with {
+                                   | inP (Bs,BsU) =>
+                                     \have | Bsr<Bs : Bsr < Bs => real_<_U.2 BsU
+                                           | Bs>0 : 0 < Bs => rat_real_<.2 (Bsr>=0 <∘r Bsr<Bs)
+                                     \in \case clipApprox-ballConv phi phi0 linarith ep>0, cc linarith ep>0 \with {
+                                       | inP (k2,g2), inP (k3,g3) =>
+                                         \let N => natMax (\lam j => (BB j).3) NatSemiring.∨ (k2 NatSemiring.∨ k3)
+                                         \in inP (N, \lam {k} Nk =>
+                                           \have | k1k (j : Fin n) : (BB j).3 <= k => natMax.ge j <=∘ NatSemiring.join-left <=∘ Nk
+                                                 | k2k : k2 <= k => NatSemiring.join-left <=∘ NatSemiring.join-right <=∘ Nk
+                                                 | k3k : k3 <= k => NatSemiring.join-right <=∘ NatSemiring.join-right <=∘ Nk
+                                                 | gl : fcalc (LinBoundedMap.comp (l1LB n) (\lam j => b j k)) f = l1L (g k) => fcalc-subst {L} {n} {m} {l1LB n} {\lam j => b j k} {f} {g k} (\lam j => idp) *> l1L.fcalc-l1 {L} {n} {g k}
+                                                 | gM : L.IsBelow (abs (l1L (g k))) Bs
+                                                     => transport (\lam z => L.IsBelow (abs z) Bs) gl $ fcalc-below (LinBoundedMap.comp (l1LB n) (\lam j => b j k)) (<=-less Mf>0) Bs>0
+                                                          (\lam x xb => \have | xR => boxBall xb
+                                                                              | bnd : l1norm (\lam j => b j k x) <= Bsr => RealAbGroup.BigSum_<= {_} {\lam j => RealAbGroup.abs (b j k x)} {\lam j => Real.fromRat (BB j).1} (\lam j => (BB j).4 (k1k j) xR)
+                                                                        \in =_<= (pmap RealAbGroup.abs l1LB.apply *> RealAbGroup.abs-ofPos (l1norm>=0 {n} {\lam j => b j k x})) <=∘ bnd <=∘ <=-less Bsr<Bs) fbox
+                                                 | cs : fcalc (c k) f = fcalc (clipApprox phi k) (g k) => fcalc-subst (\lam j => idp)
+                                                 | A : l0Gauge h>=0 (l0calc-pre phi phi0 (g k) - pointCF {L0PreSpace L} (fcalc (clipApprox phi k) (g k))) <= L.integral (L.truncAt (ep + ep) h)
+                                                     => pre-approx-lin h>=0 Bs>0 ep>0 K>=0 hK gM (clipApprox phi k) (g2 k2k)
+                                                 | B : l0Gauge h>=0 (l0calc-pre chi chi0 f - pointCF {L0PreSpace L} (fcalc (clipApprox phi k) (g k))) <= L.integral (L.truncAt (ep + ep) h)
+                                                     => transport (\lam z => l0Gauge h>=0 (l0calc-pre chi chi0 f - pointCF {L0PreSpace L} z) <= _) cs (pre-approx-lin h>=0 Mf>0 ep>0 K>=0 hK fM (c k) (g3 k3k))
+                                                 | X => pointCF {L0PreSpace L} (fcalc (clipApprox phi k) (g k))
+                                                 | sp : l0calc-pre phi phi0 (g k) - l0calc-pre chi chi0 f = (l0calc-pre phi phi0 (g k) - X) + negative (l0calc-pre chi chi0 f - X)
+                                                     => inv (+-assoc {L0Space L} *> pmap (l0calc-pre phi phi0 (g k) +) (inv (+-assoc {L0Space L}) *> pmap (__ + _) (negative-left {L0Space L}) *> zro-left {L0Space L}))
+                                                         *> pmap ((l0calc-pre phi phi0 (g k) - X) +) (inv (AddGroup.negative_- {L0Space L}))
+                                                 | I2 : L.integral (L.truncAt (ep + ep) h) < eps * Real.fromRat (ratio 1 2) => transportInv (\lam t => L.integral (L.truncAt t h) < _) ee s
+                                           \in (=_<= (pmap (normAt-lift {L0PreSpace L} (h,h>=0)) sp) <=∘ normAt-lift-+ {L0PreSpace L} <=∘ <=_+ A (=_<= (normAt-lift-negative {L0PreSpace L}) <=∘ B))
+                                                 <∘r usingOnly I2 linarith)
+                                     }
+                                 }
+                             }
+                         }
+       \in (L0Space L).limit-unique {NatDir} {\lam k => l0calc-pre phi phi0 (g k)} lC lB
+}

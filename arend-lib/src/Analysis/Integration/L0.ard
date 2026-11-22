@@ -12,7 +12,7 @@
     {l0-bounded-zero}: an element bounded by every $\varepsilon > 0$ is `0`; {l0-gauge-zero}: so is an element with arbitrarily small gauges.
   * {l0-below-closed}: $\{G \mid |G - c| \le \varepsilon\}$ is closed.
   * {l0-pt-abs}, {l0-bclip}: the canonical map `L → L⁰` preserves `|·|` and clamping.
-  * {l0-dense2}, {l0-dense3}, {l0-bound2}: identities and bounds of maps $(\mathrm L^0)^n \to \mathrm L^0$ extend from `L`.
+  * {l0-dense2}, {l0-dense3}, {l0-denseN}, {l0-bound2}: identities and bounds of maps $(\mathrm L^0)^n \to \mathrm L^0$ extend from `L`.
 -}
 
 \import Algebra.Group
@@ -167,6 +167,16 @@
   => dense-lift-unique (ProductCoverSpace.prod (ProductCoverSpace.prod (completion {L0PreSpace L}) (completion {L0PreSpace L})) (completion {L0PreSpace L}))
       (ProductTopSpace.prod.isDense {_} {_} {_} {_} {ProductCoverSpace.prod (completion {L0PreSpace L}) (completion {L0PreSpace L})} {completion {L0PreSpace L}} (l0-dense2-embedding {L}).1 completion.isDenseEmbedding.1)
       P Q (\lam t => p t.1.1 t.1.2 t.2) s
+
+-- | $L^n$ is dense in $(\mathrm L^0)^n$.
+\lemma l0-denseN-embedding {L : FullIntegrationSpace} {n : Nat} : CoverMap.IsDenseEmbedding {ArrayCoverSpace.map {n} (completion {L0PreSpace L})}
+  => ArrayCoverSpace.map.isDenseEmbedding completion.isDenseEmbedding
+
+-- | Two maps $(\mathrm L^0)^n \to \mathrm L^0$ that agree on $L^n$ are equal.
+\lemma l0-denseN {L : FullIntegrationSpace} {n : Nat} (P Q : CoverMap (ArrayCoverSpace n (L0Space L)) (L0Space L))
+                  (p : \Pi (f : Array L n) -> P (\lam j => pointCF {L0PreSpace L} (f j)) = Q (\lam j => pointCF {L0PreSpace L} (f j))) (s : Array (L0Space L) n)
+  : P s = Q s
+  => dense-lift-unique (ArrayCoverSpace.map {n} (completion {L0PreSpace L})) (l0-denseN-embedding {L} {n}).1 P Q p s
 
 -- | $\{G \mid |G - c| \le \varepsilon\}$ is closed in `L⁰`.
 \lemma l0-below-closed {L : FullIntegrationSpace} (c : L0Space L) {e : Rat} (e>0 : RatField.zro RatField.< e) : (L0Space L).IsClosed (\lam y => IsBelow (abs (y - c)) e)

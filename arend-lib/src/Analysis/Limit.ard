@@ -327,3 +327,15 @@
                        \in usingOnly (hn,kn,t1,t2,fgn) linarith
                    }
                  }
+
+-- | A real limit of a net that is eventually at most `B` is at most `B`.
+\lemma real-limit-<= {I : DirectedSet} {f : I -> Real} {a B : Real} (fl : RealNormed.IsLimit f a) {N : I} (fB : \Pi {n : I} -> N <= n -> f n <= B) : a <= B
+  => \lam B<a => \have e>0 : (0 : Real) < a - B => linarith
+                 \in \case limit-metric-real.1 fl e>0 \with {
+                   | inP (M,h) => \case isDirected N M \with {
+                     | inP (n,N<=n,M<=n) => \have | hn : RealNormed.dist a (f n) < a - B => h M<=n
+                                                  | t : a - f n <= RealNormed.dist a (f n) => RealAbGroup.abs>=id
+                                                  | b => fB N<=n
+                                            \in usingOnly (hn,t,b) linarith
+                   }
+                 }
