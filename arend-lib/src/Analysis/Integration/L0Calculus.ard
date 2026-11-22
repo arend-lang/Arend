@@ -488,9 +488,9 @@
                                         | tr : (0 : Real) <= tailLB {n} M>0 (\lam j => z (fin-raise j)) => tailLB.nonneg {n} {M} {M>0}
                                         | qdz : (0 : Real) <= Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less q>0)) dz
                                         | t' : Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) + (tailLB {n} M>0 (\lam j => z (fin-inc j)) + tailLB {n} M>0 (\lam j => z (fin-raise j))) < 1 => t
-                                        | tl1 : tailLB {n} M>0 (\lam j => z (fin-inc j)) < 1 => linarith
-                                        | tr1 : tailLB {n} M>0 (\lam j => z (fin-raise j)) < 1 => linarith
-                                        | qd1 : Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) < 1 => linarith
+                                        | tl1 : tailLB {n} M>0 (\lam j => z (fin-inc j)) < 1 => usingOnly (t', tr, qdz) linarith
+                                        | tr1 : tailLB {n} M>0 (\lam j => z (fin-raise j)) < 1 => usingOnly (t', tl, qdz) linarith
+                                        | qd1 : Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) < 1 => usingOnly (t', tl, tr) linarith
                                         | dd : l1norm (\lam j => z (fin-inc j) - z (fin-raise j)) < Real.fromRat d
                                             => \have | m : Real.fromRat d * (Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j))) < Real.fromRat d * 1
                                                          => RealField.<_*_positive-right (rat_real_<.1 d>0) qd1
@@ -502,7 +502,7 @@
                                       | tl : (0 : Real) <= tailLB {n} M>0 (\lam j => z (fin-inc j)) => tailLB.nonneg {n} {M} {M>0}
                                       | tr : (0 : Real) <= tailLB {n} M>0 (\lam j => z (fin-raise j)) => tailLB.nonneg {n} {M} {M>0}
                                       | qdz : (0 : Real) <= Real.fromRat q * l1LB n (\lam j => z (fin-inc j) - z (fin-raise j)) => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less q>0)) dz
-                                \in linarith)
+                                \in usingOnly (qdz, tl, tr) linarith)
                      {f ++' g} h>=0 hK
                  | ec : fcalc chi (f ++' g) = fcalc psi f - fcalc psi g => fcalc-sub fcalc-left fcalc-right
                  | el : fcalc Lam (f ++' g) = q *q l1L (\lam j => f j - g j) + (fcalc (tailLB {n} M>0) f + fcalc (tailLB {n} M>0) g)
@@ -572,18 +572,18 @@
                  | P => Real.fromRat 16 * (Cr * (N + 1))
             \in \have | K>=0 : 0 <= K => join-right
                       | hK : L.IsBelow (abs h) K => L.IsBelow-level join-left hK0
-                      | e>0 : 0 < e => linarith
-                      | ee : e + e = eta => linarith
+                      | e>0 : 0 < e => usingOnly eta>0 linarith
+                      | ee : e + e = eta => usingOnly () linarith
                       | Cr>=1 : (1 : Real) <= Cr => rat_real_<=.1 join-right
                       | N>=0 : (0 : Real) <= N => RealField.natCoef>=0
-                      | P>0 : (0 : Real) < P => RealField.<_*_positive_positive (rat_real_<.1 idp) (RealField.<_*_positive_positive linarith linarith)
+                      | P>0 : (0 : Real) < P => RealField.<_*_positive_positive (rat_real_<.1 idp) (RealField.<_*_positive_positive (usingOnly Cr>=1 linarith) (usingOnly N>=0 linarith))
                       | dl>0 : (0 : Real) < eps * RealField.pinv P P>0 => RealField.<_*_positive_positive eps>0 (RealField.pinv>0 P>0)
             \in inP ((h,h>=0), eps * RealField.pinv P P>0, dl>0, \lam x0 => \case L.trunc-bounded (l1L x0) \with {
               | inP (M0,x0M0) =>
                 \let | M => M0 ∨ 1
                      | dl => eps * RealField.pinv P P>0
                 \in \have | M>0 : 0 < M => RatField.zro<ide <∘l join-right
-                          | M1>0 : 0 < M + 1 => linarith
+                          | M1>0 : 0 < M + 1 => usingOnly M>0 linarith
                           | x0M : L.IsBelow (abs (l1L x0)) M => L.IsBelow-level join-left x0M0
                 \in \case clipApprox-close phi phi0 M1>0 e>0 \with {
                   | inP (k0,k0>=0,c) =>
@@ -594,7 +594,7 @@
                       | inP (d,d>0,uk) =>
                         \let | Q => Real.fromRat (RatField.finv d ∨ 1)
                         \in \have | Q>=1 : (1 : Real) <= Q => rat_real_<=.1 join-right
-                                  | Q>0 : (0 : Real) < Q => linarith
+                                  | Q>0 : (0 : Real) < Q => usingOnly Q>=1 linarith
                                   | ga>0 : (0 : Real) < dl * RealField.pinv Q Q>0 => RealField.<_*_positive_positive dl>0 (RealField.pinv>0 Q>0)
                                   | u : \Pi {x y : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> l1norm y < Real.fromRat (M + 1)
                                           -> l1norm (\lam j => x j - y j) < Real.fromRat d -> RealAbGroup.abs (clipApprox phi k x - clipApprox phi k y) <= e
@@ -619,13 +619,13 @@
                                     | QSyx : Q * (N * ga) = N * dl => equation.cRing {Qga}
                                     | dlP : P * dl = eps => *-comm *> *-assoc *> pmap (eps *) (RealField.pinv-left P>0) *> ide-right
                                     | CT : Cr * (N * dl) <= eps * Real.fromRat (ratio 1 16)
-                                        => \have m : Cr * (N * dl) <= Cr * ((N + 1) * dl) => RealField.<=_*_positive-right linarith (RealField.<=_*_positive-left (linarith : N <= N + 1) (<=-less dl>0))
+                                        => \have m : Cr * (N * dl) <= Cr * ((N + 1) * dl) => RealField.<=_*_positive-right (usingOnly Cr>=1 linarith) (RealField.<=_*_positive-left (usingOnly () linarith : N <= N + 1) (<=-less dl>0))
                                            \in m <=∘ =_<= ((equation.cRing {RealField.*-rat {16} {ratio 1 16}} : Cr * ((N + 1) * dl) = P * dl * Real.fromRat (ratio 1 16)) *> pmap (__ * _) dlP)
                                     | A1 : Cr * (N * (ga + dl)) <= Cr * (N * dl) + Cr * (N * dl)
-                                        => RealField.<=_*_positive-right linarith (=_<= RealField.ldistr <=∘ <=_+ Ngat <=-refl) <=∘ =_<= RealField.ldistr
+                                        => RealField.<=_*_positive-right (usingOnly Cr>=1 linarith) (=_<= RealField.ldistr <=∘ <=_+ Ngat <=-refl) <=∘ =_<= RealField.ldistr
                                     | A2 : Cr * (Q * (N * ga) + (N * (ga + dl) + N * dl)) <= Cr * (N * dl) + Cr * (N * dl) + Cr * (N * dl) + Cr * (N * dl)
-                                        => RealField.<=_*_positive-right linarith (transportInv (\lam z => z + (N * (ga + dl) + N * dl) <= N * dl + N * dl + N * dl + N * dl) QSyx
-                                              (=_<= (pmap (_ +) (pmap (__ + _) RealField.ldistr)) <=∘ linarith))
+                                        => RealField.<=_*_positive-right (usingOnly Cr>=1 linarith) (transportInv (\lam z => z + (N * (ga + dl) + N * dl) <= N * dl + N * dl + N * dl + N * dl) QSyx
+                                              (=_<= (pmap (_ +) (pmap (__ + _) RealField.ldistr)) <=∘ usingOnly Ngat linarith))
                                              <=∘ =_<= equation.cRing
                                     | I8 : L.integral (L.truncAt (e + e) h) < eps * Real.fromRat (ratio 1 8) => transportInv (\lam t => L.integral (L.truncAt t h) < _) ee s
                                     | e16>0 : (0 : Real) < eps * Real.fromRat (ratio 1 16) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)

@@ -128,11 +128,11 @@
         | 0, 1 => \lam _ => idp
         | 1, 0 => \lam _ => idp
         | 1, 1 => \lam p => absurd (p idp)
-      }, inP (determinant1_Inv C (determinant22 {_} {C} *> equation), determinant1_Inv D (determinant22 {_} {D} *> equation), matrixExt \case \elim __, \elim __ \with {
-        | 0, 0 => equation
-        | 0, 1 => equation
-        | 1, 0 => equation
-        | 1, 1 => equation
+      }, inP (determinant1_Inv C (determinant22 {_} {C} *> equation.cRing *> kd), determinant1_Inv D (determinant22 {_} {D} *> equation.cRing *> kd), matrixExt \case \elim __, \elim __ \with {
+        | 0, 0 => equation.cRing {A10=0,kd}
+        | 0, 1 => equation.cRing {A10=0}
+        | 1, 0 => equation.cRing {A10=0}
+        | 1, 1 => equation.cRing {A10=0,kd}
       }))
   ), \lam (bez,diag) {n} {m} => \case \elim n, \elim m \with {
     | 0, m => \lam _ _ A => inP (A, \lam {i} => \case i \with {}, ~-reflexive)
@@ -144,7 +144,7 @@
           | 0, 1 => \lam _ => idp
         }, inP (determinant1_Inv MatrixRing.ide (determinant11 MatrixRing.ide),
                 \let C => makeMatrix ((t, negative u), (s, v))
-                \in determinant1_Inv C (determinant22 {_} {C} *> equation),
+                \in determinant1_Inv C (determinant22 {_} {C} *> equation.cRing *> su+tv=1),
                 matrixExt \case \elim __, \elim __ \with {
                   | 0, 0 => equation
                   | 0, 1 => equation
@@ -152,19 +152,19 @@
     | 2, 2 => \lam _ _ A =>
         \let | (inP (s,t,u,v,p,q)) => bez (A 0 0) (A 1 0)
              | F => makeMatrix ((t, s), (negative u, v))
-             | (inP (B,Bd,A~B)) => diagonalize_normed bez diag (F MatrixRing.product A) equation
+             | (inP (B,Bd,A~B)) => diagonalize_normed bez diag (F MatrixRing.product A) (equation.cRing {p})
              | (inP (s',t',u',v',p',q')) => bez (B 0 0) (B 1 1)
              | C => makeMatrix ((t', s'), (negative u', v'))
              | D => makeMatrix ((ide, negative (s' * u')), (ide, t' * v'))
         \in inP (C MatrixRing.product B MatrixRing.product D, \lam {i} {j} => unfold BigSum \case \elim i, \elim j \with {
           | 0, 0 => \lam p => absurd (p idp)
-          | 0, 1 => \lam _ => rewrite (Bd {0} {1} (\case __), Bd {1} {0} \case __) equation
-          | 1, 0 => \lam _ => rewrite (Bd {0} {1} (\case __), Bd {1} {0} \case __) equation
+          | 0, 1 => \lam _ => rewrite (Bd {0} {1} (\case __), Bd {1} {0} \case __) (sm-e01 p')
+          | 1, 0 => \lam _ => rewrite (Bd {0} {1} (\case __), Bd {1} {0} \case __) (sm-e10 p')
           | 1, 1 => \lam p => absurd (p idp)
-        }, inP (determinant1_Inv F (determinant22 {_} {F} *> equation), Inv.ide-isInv,
+        }, inP (determinant1_Inv F (determinant22 {_} {F} *> sm-det *> q), Inv.ide-isInv,
                 inv MatrixRing.product_ide-right) `~-transitive` A~B `~-transitive`
-                  inP (determinant1_Inv C (determinant22 {_} {C} *> equation),
-                       determinant1_Inv D (determinant22 {_} {D} *> equation),
+                  inP (determinant1_Inv C (determinant22 {_} {C} *> sm-det *> q'),
+                       determinant1_Inv D (determinant22 {_} {D} *> equation.cRing *> q'),
                        idp))
     | _, suc (suc (suc m)) => \lam _ p => absurd linarith
     | 2, 1 => \lam p => absurd linarith
@@ -178,6 +178,17 @@
           }
       }))
   \where \private {
+    \lemma sm-det {R : CRing} {s t u v : R} : t * v - negative u * s = s * u + t * v
+      => equation.cRing
+
+    \lemma sm-e01 {R : CRing} {b00 b11 s t u v : R} (p : b00 * u = b11 * v)
+      : (t * b00 + (s * zro + zro)) * negative (s * u) + ((t * zro + (s * b11 + zro)) * (t * v) + zro) = zro
+      => equation.cRing {p}
+
+    \lemma sm-e10 {R : CRing} {b00 b11 u v : R} (p : b00 * u = b11 * v)
+      : (negative u * b00 + (v * zro + zro)) * ide + ((negative u * zro + (v * b11 + zro)) * ide + zro) = zro
+      => equation.cRing {p}
+
     \lemma transposed {R : CRing} {n m : Nat} {A : Matrix R n m} (p : ∃ (B : Matrix R m n) (IsSmith B) (transpose A M~ B)) : ∃ (B : Matrix R n m) (IsSmith B) (A M~ B) \elim p
       | inP (B,s,e) => inP (transpose B, IsSmith.transposed s, M~.transposed {_} {_} {_} {transpose A} e)
 
@@ -216,16 +227,16 @@
                | D => makeMatrix ((ide, negative (s * u)), (ide, t * v))
           \in inP (C MatrixRing.product B MatrixRing.product D, (\lam {i} {j} => \case \elim i, \elim j \with {
             | 0, 0 => \lam p => absurd (p idp)
-            | 0, 1 => \lam _ => unfold BigSum $ rewrite (Bd {1} {0} \case __ \with {}, Bd {0} {1} \case __) equation
-            | 1, 0 => \lam _ => unfold BigSum $ rewrite (Bd {1} {0} \case __ \with {}, Bd {0} {1} \case __) equation
+            | 0, 1 => \lam _ => unfold BigSum $ rewrite (Bd {1} {0} \case __ \with {}, Bd {0} {1} \case __) (sm-e01 p)
+            | 1, 0 => \lam _ => unfold BigSum $ rewrite (Bd {1} {0} \case __ \with {}, Bd {0} {1} \case __) (sm-e10 p)
             | 1, 1 => \lam p => absurd (p idp)
           }, \case \elim __, \elim __, \elim __ \with {
-            | 0, p, q => inP \new LDiv {
+            | 0, _, _ => inP \new LDiv {
               | inv => u * v
-              | inv-right => unfold BigSum $ rewrite (Bd {1} {0} \case __ \with {}, Bd {0} {1} \case __) equation
+              | inv-right => unfold BigSum $ rewrite (Bd {1} {0} \case __ \with {}, Bd {0} {1} \case __) (equation.cRing {p})
             }
             | suc i, NatOrder.suc<suc (NatOrder.suc<suc ()), _
-          }), ~-transitive A~B $ inP (determinant1_Inv C $ determinant22 {_} {C} *> equation, determinant1_Inv D $ determinant22 {_} {D} *> equation, idp))
+          }), ~-transitive A~B $ inP (determinant1_Inv C $ determinant22 {_} {C} *> sm-det *> q, determinant1_Inv D $ determinant22 {_} {D} *> equation.cRing {q}, idp))
       | suc k, suc (suc (suc m)), suc n =>
         \let | (inP (B, Bs, inP (P1 : Inv, Q1 : Inv, A2~B))) => aux {_} {k} S linarith (mkMatrix \lam i j => A i (suc j))
              | A1 => mkColumn \lam i => A i 0

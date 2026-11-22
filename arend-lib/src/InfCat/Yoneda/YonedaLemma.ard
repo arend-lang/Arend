@@ -83,7 +83,7 @@
               (=_~> (funExt+ \lam u => inv (pmap+ (__ (f x)) OpFunc.char)))
 
     -- | The comparison map, adjoint to {sigma}.
-    \func tau.{u} {A B : \Cat u} (f : A ->⁺ B) (x :⁺ A) : LeftKanExtType (OpFunc f) (yoneda x) ~> yoneda (f x)
+    \sfunc tau.{u} {A B : \Cat u} (f : A ->⁺ B) (x :⁺ A) : LeftKanExtType (OpFunc f) (yoneda x) ~> yoneda (f x)
       => QAdjunction.heta_heps-rl {leftKanAdjunction (OpFunc f)} (sigma f x)
 
     \lemma tau-iso.{u} {A B : \Cat u} (f : A ->⁺ B) (x : A) : IsIso (tau f x)
@@ -109,6 +109,7 @@
                  | r : ~>_-> (dmap evB' (tau f x)) (~>_-> (dmap evA (leftKanExtType-unit (OpFunc f) (yoneda x))) (Op.Hom-idd x)) = X0
                      => inv (~>_->_comp _ _)
                         *> pmap (~>_-> __ (Op.Hom-idd x)) (inv (dmap_comp evA {_} {_} {_} {leftKanExtType-unit (OpFunc f) (yoneda x)} {dmap (\lam G a =>⁺ G (OpFunc f a)) (tau f x)}))
+                        *> pmap (\lam t => ~>_-> (dmap evA (comp (leftKanExtType-unit (OpFunc f) (yoneda x)) (dmap (\lam G a =>⁺ G (OpFunc f a)) t))) (Op.Hom-idd x)) (\peval tau f x)
                         *> pmap (\lam s => ~>_-> (dmap evA s) (Op.Hom-idd x)) (QAdjunction.heta_heps-rlr {leftKanAdjunction (OpFunc f)} {_} {_} {sigma f x})
                         *> pmap (~>_-> __ (Op.Hom-idd x)) (dmap_comp evA)
                         *> ~>_->_comp _ _

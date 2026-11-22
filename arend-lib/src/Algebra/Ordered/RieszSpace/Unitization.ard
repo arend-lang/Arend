@@ -22,6 +22,7 @@
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Ordered.RieszSpace.UnitRieszSpace
 \import Algebra.Ordered.TruncRieszSpace
+\import Algebra.Pointed
 \import Algebra.QModule
 \import Arith.Rat
 \import Function.Meta
@@ -120,20 +121,15 @@
 
 -- | The image of `L`, that is, the elements with `x.2 = 0`, is an ℓ-ideal of `A`.
 \lemma unitization-ideal {L : TruncRieszSpace} : LatticeAbGroup.IsSolid {PreUnitizationRiesz L} \lam x => x.2 = RatField.zro
-  => \lam {y} {x} x0 p => \have | ya => abs-char {L} {y}
-                             | xa => abs-char {L} {x} *> pmap (\lam t => (t RatField.∨ RatField.zro) RatField.+ (RatField.negative t RatField.∨ RatField.zro)) x0
-                             | l => p.1
-                             | yl : RatField.zro RatField.<= y.2 RatField.∨ RatField.zro => RatField.join-right
-                             | yr : RatField.zro RatField.<= RatField.negative y.2 RatField.∨ RatField.zro => RatField.join-right
-                             | yl' : y.2 RatField.<= y.2 RatField.∨ RatField.zro => RatField.join-left
-                             | yr' : RatField.negative y.2 RatField.<= RatField.negative y.2 RatField.∨ RatField.zro => RatField.join-left
-                             | z0 : RatField.zro RatField.∨ RatField.zro = RatField.zro => RatField.join-idemp
-                             | nz : RatField.negative RatField.zro = RatField.zro => RatField.negative_zro
-                       \in linarith
-  \where
+  => \lam {y} {x} x0 p => solid-core p.1 (abs-char {L} {y}) (abs-char {L} {x} *> pmap (\lam t => (t RatField.∨ RatField.zro) RatField.+ (RatField.negative t RatField.∨ RatField.zro)) x0)
+  \where {
+    \lemma solid-core {t a b : Rat} (l : 0 <= b - a) (ya : a = (t ∨ 0) + (negative t ∨ 0)) (xa : b = 0) : t = 0
+      => linarith (join-right {_} {t} {0}, join-right {_} {negative t} {0}, join-left {_} {t} {0}, join-left {_} {negative t} {0})
+
     \lemma abs-char {L : TruncRieszSpace} {z : \Sigma L Rat}
       : (LatticeAbGroup.abs {PreUnitizationRiesz L} z).2 = (z.2 RatField.∨ RatField.zro) RatField.+ (RatField.negative z.2 RatField.∨ RatField.zro)
       => pmap __.2 (inv (LatticeAbGroup.parts_+ {PreUnitizationRiesz L})) *> pmap2 (RatField.+) unitization-point unitization-point
+  }
 
 -- | The truncation of `L` is the meet with the unit `(0,1)`.
 \lemma unitization-trunc {L : TruncRieszSpace} {a : L} : unitization-inc (L.trunc a) = MeetSemilattice.meet {PreUnitizationRiesz L} (unitization-inc a) (L.zro, 1)

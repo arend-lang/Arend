@@ -163,15 +163,15 @@
                  => RealField.*-rat *> pmap Real.fromRat (equation.cRing {RatField.finv-right (RatField.>_/= P>0)} : P RatField.* (eps RatField.* RatField.finv P) = eps)
              | g : CoverMap (IntervalSpace (negative R) R) RealNormed (\lam z => signedPow p>1 z.1)
                  => signedPow-cover p>1 CoverMap.∘ intervalInc (negative R) R
-      \in \case interval-uniform (linarith : negative R <= R) g e'>0 \with {
+      \in \case interval-uniform (usingOnly R>=0 linarith : negative R <= R) g e'>0 \with {
         | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} xR yR d =>
             \have | inI {z : Real} (zR : RealAbGroup.abs z <= R) : ClosedInterval (negative R) R z
-                       => (linarith (RealAbGroup.abs>=neg {z}), RealAbGroup.abs>=id <=∘ zR)
+                       => (usingOnly (RealAbGroup.abs>=neg {z}, zR) linarith, RealAbGroup.abs>=id <=∘ zR)
                    | u<= : RealAbGroup.abs (signedPow p>1 y - signedPow p>1 x) <= Real.fromRat (eps RatField.* RatField.finv P) => hd {x, inI xR} {y, inI yR} d
                    | t1 => absPow-tangent p>1 x y
                    | t2 => absPow-tangent p>1 y x
                    | D>=0 : (0 : Real) <= rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 p p>0 - rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 - p * signedPow p>1 x * (y - x)
-                       => linarith
+                       => usingOnly t1 linarith
                    | e1 : p * signedPow p>1 y * (x - y) = negative (p * signedPow p>1 y * (y - x)) => equation.cRing
                    | e2 : p * signedPow p>1 y * (y - x) - p * signedPow p>1 x * (y - x) = p * ((signedPow p>1 y - signedPow p>1 x) * (y - x)) => equation.cRing
                    | uv : (signedPow p>1 y - signedPow p>1 x) * (y - x) <= Real.fromRat (eps RatField.* RatField.finv P) * RealAbGroup.abs (y - x)
@@ -180,7 +180,7 @@
                        => RealField.<=_*_positive_positive (rat_real_<=.1 (RatField.<=-less e'>0)) RealAbGroup.abs>=0
                    | m : p * ((signedPow p>1 y - signedPow p>1 x) * (y - x)) <= Real.fromRat eps * RealAbGroup.abs (y - x)
                        => <=_*_positive-right (<=-less p>0) uv <=∘ <=_*_positive-left (<=-less p<P) k>=0 <=∘ =_<= (inv *-assoc *> pmap (`* _) Pe)
-            \in =_<= (RealAbGroup.abs-ofPos D>=0) <=∘ (linarith : _ <= p * ((signedPow p>1 y - signedPow p>1 x) * (y - x))) <=∘ m)
+            \in =_<= (RealAbGroup.abs-ofPos D>=0) <=∘ (usingOnly (t2, e1, e2) linarith : _ <= p * ((signedPow p>1 y - signedPow p>1 x) * (y - x))) <=∘ m)
       }
   }
 

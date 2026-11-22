@@ -164,28 +164,28 @@
           | w => u * conj vrot
      \in \have
       | key : 25 * (u.re * u.re) + bv * bv = 10 + 6 * ((2 * u.re + u.im) * (2 * u.re + u.im))
-        => linarith (rewrite unit in
+        => usingOnly (rewrite unit in
              (equation.cRing : 25 * (u.re * u.re) + bv * bv
                              - (10 + 6 * ((2 * u.re + u.im) * (2 * u.re + u.im)))
-                             = 10 * (u.re * u.re + u.im * u.im - 1)))
-      | bound : 25 * (u.re * u.re) + bv * bv >= 10 => linarith (RealField.square_>=0 {2 * u.re + u.im})
+                             = 10 * (u.re * u.re + u.im * u.im - 1))) linarith
+      | bound : 25 * (u.re * u.re) + bv * bv >= 10 => usingOnly (RealField.square_>=0 {2 * u.re + u.im}, key) linarith
       | unit-w : OnUnitCircle w => OnUnitCircle_* unit (OnUnitCircle_conj vrot-unit)
-      | w-re5 : 5 * w.re = bv => linarith
+      | w-re5 : 5 * w.re = bv => usingOnly () linarith
       | u-decomp : u = w * vrot => OnUnitCircle-rotate vrot-unit
-     \in \case real-located {25 * (u.re * u.re)} {4} {5} (linarith : (4 : Real) < 5) \with {
-       | byLeft resq-big => \case RealField.square>0-cancel (linarith : (0 : Real) < u.re * u.re) \with {
+     \in \case real-located {25 * (u.re * u.re)} {4} {5} (usingOnly () linarith : (4 : Real) < 5) \with {
+       | byLeft resq-big => \case RealField.square>0-cancel (usingOnly resq-big linarith : (0 : Real) < u.re * u.re) \with {
          | byLeft re>0 => arg-shift u unit re>0 exp^i*_zro (inv ide-right)
          | byRight re<0 =>
            arg-shift (ComplexField.negative u) (OnUnitCircle_negative {u} unit)
-             (linarith : negative u.re > 0) exp^i*_pi (inv complex-ext)
+             (usingOnly re<0 linarith : negative u.re > 0) exp^i*_pi (inv complex-ext)
        }
        | byRight resq-small =>
          \have v-eq : exp^i* (arg-right vrot-unit vrot-re>0) = vrot => exp^i*_arg-right vrot-unit vrot-re>0
-         \in \case RealField.square>0-cancel (linarith : (0 : Real) < bv * bv) \with {
-           | byLeft bv>0 => arg-shift w unit-w (linarith : w.re > 0) v-eq u-decomp
+         \in \case RealField.square>0-cancel (usingOnly (resq-small, bound) linarith : (0 : Real) < bv * bv) \with {
+           | byLeft bv>0 => arg-shift w unit-w (usingOnly (w-re5, bv>0) linarith : w.re > 0) v-eq u-decomp
            | byRight bv<0 =>
              arg-shift (ComplexField.negative w) (OnUnitCircle_negative {w} unit-w)
-                       (linarith : negative w.re > 0)
+                       (usingOnly (w-re5, bv<0) linarith : negative w.re > 0)
                        (exp^i*_+ *> pmap2 (*) exp^i*_pi v-eq
                         *> (complex-ext : ComplexField.negative 1 * vrot = ComplexField.negative vrot))
                        (u-decomp *> inv complex-ext)

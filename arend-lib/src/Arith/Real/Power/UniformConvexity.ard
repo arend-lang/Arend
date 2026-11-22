@@ -183,7 +183,8 @@
                | e4 : p * pc * (C - G - C) = negative (p * (G * pc)) => equation.cRing
                | g : p * (gapConst p>1 R>=0 * (rpow-pos G G>0 (p - 1) * G)) <= p * (G * (py - pz)) => <=_*_positive-right (<=-less p>0) (signedPow-gap p>1 R>=0 C>=0 G>0 CR)
                | e5 : p * (G * (py - pz)) = p * (G * py) - p * (G * pz) => equation.cRing
-     \in unfold powAbs (linarith)
+               | s => g <=∘ =_<= (e5 *> equation.abGroup *> inv (pmap2 (+) (pmap2 (+) (pmap2 (+) e1 e2) e3) e4))
+     \in linarith
 
 \module AbsPowLemmas \where {
   \lemma absPow>=0 {p : Real} {p>0 : (0 : Real) < p} {x : Real} : (0 : Real) <= powAbs p p>0 x
@@ -198,9 +199,9 @@
                  | t2 => absPow-tangent {p} {p>0} p>1 c b
                  | hh : Real.fromRat (ratio 1 2) + Real.fromRat (ratio 1 2) = (1 : Real) => RealAbGroup.+-rat
                  | e : k * (a - c) + k * (b - c) = (0 : Real) => equation.cRing {hh}
-                 | s : powAbs p p>0 c + powAbs p p>0 c <= powAbs p p>0 a + powAbs p p>0 b => unfold powAbs linarith
-                 | e2 : Real.fromRat (ratio 1 2) * (powAbs p p>0 c + powAbs p p>0 c) = powAbs p p>0 c => equation.cRing {hh}
-       \in =_<= (inv e2) <=∘ <=_*_positive-right (rat_real_<=.1 (linarith : 0 RatField.<= ratio 1 2)) s
+                 | s : powAbs p p>0 c + powAbs p p>0 c <= powAbs p p>0 a + powAbs p p>0 b => linarith
+                 | e2 : Real.fromRat (ratio 1 2) * (powAbs p p>0 c + powAbs p p>0 c) = powAbs p p>0 c => linarith
+       \in =_<= (inv e2) <=∘ <=_*_positive-right (rat_real_<=.1 (usingOnly () linarith : 0 RatField.<= ratio 1 2)) s
 
   -- | $F(c + h) + F(c - h) = F(|c| + |h|) + F(|c| - |h|)$.
   \lemma pair-abs {p : Real} {p>0 : (0 : Real) < p} {c h : Real}
@@ -237,16 +238,16 @@
 \lemma absPow-uniformly-convex {p : Real} {p>0 : (0 : Real) < p} (p>1 : (1 : Real) < p) {eta : Rat} (eta>0 : 0 RatField.< eta)
   : ∃ (K : Rat) (0 RatField.<= K) (\Pi (a b : Real) -> powAbs p p>0 (a - b) <= Real.fromRat eta * (powAbs p p>0 a + powAbs p p>0 b)
       + Real.fromRat K * (Real.fromRat (ratio 1 2) * (powAbs p p>0 a + powAbs p p>0 b) - powAbs p p>0 (Real.fromRat (ratio 1 2) * (a + b))))
-  => \have two>0 : (0 : Real) < 2 => linarith
+  => \have two>0 : (0 : Real) < 2 => usingOnly () linarith
      \in \case UpperReal.U-inh_>0 {rpow-pos 2 two>0 p} \with {
        | inP (Q,Qu,Q>0) =>
          \let | rho => 1 RatField.∧ (eta RatField.* RatField.finv Q)
               | R => 2 RatField.* RatField.finv rho
          \in \have | rho>0 : 0 RatField.< rho => RatField.<_meet-univ RatField.zro<ide (RatField.<_*_positive_positive eta>0 (RatField.finv>0 Q>0))
-                   | R>=0 : (0 : Real) <= Real.fromRat R => rat_real_<=.1 (RatField.<=_*_positive_positive (linarith : 0 RatField.<= 2) (<=-less (RatField.finv>0 rho>0)))
+                   | R>=0 : (0 : Real) <= Real.fromRat R => rat_real_<=.1 (RatField.<=_*_positive_positive (usingOnly () linarith : 0 RatField.<= 2) (<=-less (RatField.finv>0 rho>0)))
                    | m>0 => gapConst.pos p>1 R>=0
                    | pm>0 : (0 : Real) < p * gapConst p>1 R>=0 => RealField.<_*_positive_positive p>0 m>0
-                   | four>0 : (0 : Real) < 4 => linarith
+                   | four>0 : (0 : Real) < 4 => usingOnly () linarith
          \in \case UpperReal.U-inh_>0 {(2 : Real) * rpow-pos 4 four>0 p * RealField.pinv (p * gapConst p>1 R>=0) pm>0} \with {
            | inP (K,Ku,K>0) => inP (K, <=-less K>0, \lam a b =>
              \let | c => Real.fromRat (ratio 1 2) * (a + b)
@@ -254,8 +255,8 @@
                   | S => powAbs p p>0 a + powAbs p p>0 b
                   | D => Real.fromRat (ratio 1 2) * S - powAbs p p>0 c
              \in \have | hh : Real.fromRat (ratio 1 2) + Real.fromRat (ratio 1 2) = (1 : Real) => RealAbGroup.+-rat
-                       | D>=0 : (0 : Real) <= D => linarith (AbsPowLemmas.conv-mid {p} {p>0} p>1 {a} {b})
-                       | S>=0 : (0 : Real) <= S => linarith (AbsPowLemmas.absPow>=0 {p} {p>0} {a}, AbsPowLemmas.absPow>=0 {p} {p>0} {b})
+                       | D>=0 : (0 : Real) <= D => usingOnly (AbsPowLemmas.conv-mid {p} {p>0} p>1 {a} {b}) linarith
+                       | S>=0 : (0 : Real) <= S => usingOnly (AbsPowLemmas.absPow>=0 {p} {p>0} {a}, AbsPowLemmas.absPow>=0 {p} {p>0} {b}) linarith
                        | etaS>=0 : (0 : Real) <= Real.fromRat eta * S => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less eta>0)) S>=0
                        | KD>=0 : (0 : Real) <= Real.fromRat K * D => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less K>0)) D>=0
                        | hh2 : (2 : Real) * Real.fromRat (ratio 1 2) = (1 : Real) => RealField.*-rat *> idp
@@ -267,7 +268,7 @@
                          | C => RealAbGroup.abs c
                     \in \have | rho>0' : (0 : Real) < Real.fromRat rho => rat_real_<.1 rho>0
                               | h>0 : (0 : Real) < RealAbGroup.abs h => RealField.<=_*_positive_positive (<=-less rho>0') RealAbGroup.abs>=0 <∘r lt
-                              | G>0 : (0 : Real) < G => RealField.<_*_positive_positive (rat_real_<.1 (linarith : 0 RatField.< ratio 1 2)) h>0
+                              | G>0 : (0 : Real) < G => RealField.<_*_positive_positive (rat_real_<.1 (usingOnly () linarith : 0 RatField.< ratio 1 2)) h>0
                               | ir : Real.fromRat (RatField.finv rho) * Real.fromRat rho = (1 : Real) => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= rho>0))
                               | eR : Real.fromRat R * G = Real.fromRat (RatField.finv rho) * RealAbGroup.abs h
                                   => pmap (\lam t => t * G) (inv RealField.*-rat) *> equation.cRing {hh2}

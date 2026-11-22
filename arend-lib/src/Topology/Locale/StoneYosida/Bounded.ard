@@ -122,14 +122,13 @@
   : ∃ (g : L) (abs g <= s) (abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC g) <= {RieszSpaceRC L} rieszSpaceRC (L.truncAt eta (s + s)))
   => \case yosida-dense {UnitizationRiesz L} h eta>0 \with {
     | inP (x, hx) =>
-      \let | A => UnitizationRiesz L
-           | t => unitization-inc s
-           | c : \Sigma L Rat => JoinSemilattice.join {A} (meet {A} x t) (AddGroup.negative {A} t)
-      \in \have | t>=0 : A.zro <= {A} t => unitization-inc.func-<= s>=0
-                | ct : abs {A} c <= {A} t => clip-abs {A} {x} {t} t>=0
-                | gc : unitization-inc c.1 = c => ext (idp, inv (unitization-ideal {L} {c} {t} idp (Preorder.<=-transitive {A} {abs {A} c} {t} {abs {A} t} ct (=_<= {A} (inv (abs-ofPos {A} t>=0))))))
-                | yg : rieszSpaceRC c.1 = JoinSemilattice.join {RieszSpaceRC L} (meet {RieszSpaceRC L} (yosida {A} x) (rieszSpaceRC s)) (AddGroup.negative {RieszSpaceRC L} (rieszSpaceRC s))
-                    => pmap (yosida {A}) gc *> RieszSpaceHom.func-join {yosidaHom A} *> pmap2 (JoinSemilattice.join {RieszSpaceRC L}) (RieszSpaceHom.func-meet {yosidaHom A}) (RieszSpaceHom.func-negative {yosidaHom A})
+      \let | t => unitization-inc s
+           | c : \Sigma L Rat => JoinSemilattice.join {UnitizationRiesz L} (meet {UnitizationRiesz L} x t) (AddGroup.negative {UnitizationRiesz L} t)
+      \in \have | t>=0 : (UnitizationRiesz L).zro <= {UnitizationRiesz L} t => unitization-inc.func-<= s>=0
+                | ct : abs {UnitizationRiesz L} c <= {UnitizationRiesz L} t => clip-abs {UnitizationRiesz L} {x} {t} t>=0
+                | gc : unitization-inc c.1 = c => ext (idp, inv (unitization-ideal {L} {c} {t} idp (Preorder.<=-transitive {UnitizationRiesz L} {abs {UnitizationRiesz L} c} {t} {abs {UnitizationRiesz L} t} ct (=_<= {UnitizationRiesz L} (inv (abs-ofPos {UnitizationRiesz L} t>=0))))))
+                | yg : rieszSpaceRC c.1 = JoinSemilattice.join {RieszSpaceRC L} (meet {RieszSpaceRC L} (yosida {UnitizationRiesz L} x) (rieszSpaceRC s)) (AddGroup.negative {RieszSpaceRC L} (rieszSpaceRC s))
+                    => pmap (yosida {UnitizationRiesz L}) gc *> RieszSpaceHom.func-join {yosidaHom (UnitizationRiesz L)} *> pmap2 (JoinSemilattice.join {RieszSpaceRC L}) (RieszSpaceHom.func-meet {yosidaHom (UnitizationRiesz L)}) (RieszSpaceHom.func-negative {yosidaHom (UnitizationRiesz L)})
                 | ys>=0 : constFun 0 <= {RieszSpaceRC L} rieszSpaceRC s => Preorder.<=-transitive {RieszSpaceRC L} (abs>=0 {RieszSpaceRC L} {h}) hs
                 | g-abs : abs {RieszSpaceRC L} (rieszSpaceRC c.1) <= {RieszSpaceRC L} rieszSpaceRC s
                     => Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (pmap (abs {RieszSpaceRC L}) yg)) (clip-abs {RieszSpaceRC L} ys>=0)

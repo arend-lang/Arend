@@ -8,7 +8,6 @@
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
-\import Algebra.Ring
 \import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.RingHom
@@ -149,19 +148,22 @@
       \let
         | B1 => rewrite (fin_mod_id {n} r1) in ldiv-finEq {r mod (suc n * suc m)} {r1} {n} (inP (\new LDiv {
           | inv => p1 - suc m IntRing.* (r div pos (suc n * suc m))
-          | inv-right => rewrite (Ring.ldistr_-, A1, inv (pmap (\lam x => x - r1) (divModProp r (suc n * suc m) (\lam p => \case p)))) equation
+          | inv-right => ldiv-step r1 A1 idp (divModProp r (suc n * suc m) (\lam p => \case p))
         }))
         | B2 => rewrite fin_mod_id in pmap (__ Nat.mod suc n) (mod-inv {suc n} {suc m} (\lam p => \case p) (r mod (suc n * suc m)))
       \in rewrite intCoef-char (B2 *> rewrite fin_mod_id B1),
       \let
         | B1 => rewrite (fin_mod_id {m} r2) in ldiv-finEq {r mod (suc n * suc m)} {r2} {m} (inP (\new LDiv {
           | inv => p2 - suc n IntRing.* (r div pos (suc n * suc m))
-          | inv-right => rewrite (Ring.ldistr_-, A2, inv (pmap (\lam x => x - r2) (divModProp r (suc n * suc m) (\lam p => \case p)))) equation
+          | inv-right => ldiv-step r2 A2 *-comm (divModProp r (suc n * suc m) (\lam p => \case p))
         }))
         | B2 => rewrite (fin_mod_id, *-comm {_} {suc m} {suc n}) in
         pmap (__ Nat.mod suc m) (mod-inv {suc m} {suc n} (\lam p => \case p) (r mod (suc n * suc m)))
       \in rewrite intCoef-char (B2 *> rewrite fin_mod_id B1)))
   }} \where {
+  \lemma ldiv-step {a b c p D M r : Int} (r1 : Int) (A1 : a * p = r - r1) (ab : a * b = c) (dm : c * D + M = r) : a * (p - b * D) = M - r1
+    => rewrite (IntRing.ldistr_-, A1, inv *-assoc, ab, inv dm) equation.cRing
+
   \lemma mod-inv {n m : Nat} (p : n /= 0) (x : Nat) : x Nat.mod (n Semigroup.* m) Nat.mod n = x Nat.mod n =>
     \let A0 => rewriteI NatSemiring.ldistr $ rewrite NatSemiring.*-assoc $
         rewriteI (AddMonoid.+-assoc {_} {n Nat.* m Nat.* x Nat.div (n Nat.* m)}) $

@@ -1,4 +1,3 @@
-\import Algebra.Meta
 \import Category
 \import Category.Functor
 \import Paths
@@ -23,7 +22,7 @@
 
     \func functor {C D E : Precat} (F F' : Functor C E) (G G' : Functor D E) (a : NatTrans F' F) (b : NatTrans G G') : Functor (commaPrecat F G) (commaPrecat F' G') \cowith
       | F (x,y,s) => (x, y, b y ∘ s ∘ a x)
-      | Func (f,g,c) => (f, g, rewriteEq (inv (b.natural g), inv c, a.natural f) equation)
+      | Func (f,g,c) => (f, g, o-assoc *> pmap (_ ∘) (a.natural f) *> inv o-assoc *> pmap (∘ _) (o-assoc *> pmap (_ ∘) c *> inv o-assoc *> pmap (∘ _) (b.natural g) *> o-assoc) *> o-assoc)
       | Func-id => ext (idp, idp)
       | Func-o => ext (idp, idp)
   }
