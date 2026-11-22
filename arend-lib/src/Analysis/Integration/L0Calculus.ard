@@ -1,16 +1,22 @@
-{- | The functional calculus on `L⁰` for cover maps $\varphi \colon \mathbb R^n \to \mathbb R$ with $\varphi(0) = 0$ (Theorem `thm:calc0`).
+{- | The functional calculus on `L⁰` for all cover maps $\varphi \colon \mathbb R^n \to \mathbb R$ (Theorem `thm:calc0`).
 
   * {l0calc}: the cover map $\varphi \colon (\mathrm L^0)^n \to \mathrm L^0$.
-  * {l0calc-char}: for $\chi \in C_0$ it extends the functional calculus {fcalc} of `L`; {l0calc-coord}: $x_j(F) = F_j$.
+  * {l0calc-char}: for $\chi \in C_0$ it extends the functional calculus {fcalc} of `L`; {l0calc-coord}: $x_j(F) = F_j$;
+    {l0calc-const}: a rational constant `q` goes to $q \cdot 1$ ({l0One}).
   * {l0calc-add}, {l0calc-neg}, {l0calc-join}, {l0calc-meet}, {l0calc-*q}: $\varphi \mapsto \varphi(F)$ is a homomorphism of Riesz spaces over `ℚ`.
   * {l0calc-mono}: transfer; {l0calc-comp}: composition.
 
-  Construction (in `L0CalcHelpers`). For $f \in L^n$, $\varphi(f)$ is the limit in `L⁰` of $\varphi_k(f)$, where
-  $\varphi_k = (\varphi \wedge k\|x\|_1) \vee (-k\|x\|_1) \in C_0$ ({clipApprox}); the net is Cauchy by {gauge-bound} because
+  Construction for $\varphi(0) = 0$ (`l0calc0`, in `L0CalcHelpers`). For $f \in L^n$, $\varphi(f)$ is the limit in `L⁰` of $\varphi_k(f)$, where
+  $\varphi_k = (\varphi \wedge k\|x\|_1) \vee (-k\|x\|_1) \in C_0$ ({clipApprox}); the net is Cauchy by `gauge-bound` because
   $\varphi_k \to \varphi$ uniformly on balls and $d_h$ only sees $|\cdot| \wedge h$.
-  The map $f \mapsto \varphi(f)$ is locally uniformly continuous ({l0calc-preLU}): near $f_0$ the tails $(\|f\|_1 - M)^+$ are controlled by
+  The map $f \mapsto \varphi(f)$ is locally uniformly continuous (`l0calc-preLU`): near $f_0$ the tails $(\|f\|_1 - M)^+$ are controlled by
   $d_h(f - f_0, 0)$, and $\varphi_k$ is uniformly continuous on balls. So it extends to $(\mathrm L^0)^n$.
-  The laws hold on $L^n$ because approximants converging uniformly on balls converge in `L⁰` ({pre-limit}), and extend by density.
+  The laws hold on $L^n$ because approximants converging uniformly on balls converge in `L⁰` (`pre-limit`), and extend by density.
+
+  General $\varphi$ (in `L0GenHelpers`): $\varphi(F) = \Psi_\varphi(1, F)$ with $\Psi_\varphi(t, x) = (\varphi(x) - \varphi(0)) + \varphi(0)(t \wedge 1)$
+  (`homog`), which vanishes at `0`. The key fact is locality (`l0calc0-vanish`): if $D(t, x) = 0$ for $t \ge 1$, then $D(1, F) = 0$,
+  since $1 = \lim_h \tau(h)$ and $|D_k(\tau(k/\eta + w), x)| \wedge k \le k \wedge \eta$ pointwise. The laws for $\vee$, $\wedge$ and composition
+  follow because both sides agree for $t \ge 1$ (`l0calc0-local`).
 -}
 
 \import Algebra.Group
@@ -52,6 +58,7 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.NormedProduct
 \import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedAbGroup.Real.LinBounded
 \import Topology.NormedAbGroup.Real.LinBounded.Approx
 \import Topology.TopAbGroup
@@ -67,88 +74,97 @@
 \open QModule
 \open signedPow (real-cases)
 \open L0CalcHelpers
+\open L0GenHelpers
 
--- | The functional calculus $\varphi \colon (\mathrm L^0)^n \to \mathrm L^0$ for a cover map $\varphi$ with $\varphi(0) = 0$.
-\sfunc l0calc {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = 0)
-  : CoverMap (ArrayCoverSpace n (L0Space L)) (L0Space L)
-  => dense-lift (ArrayCoverSpace.map {n} (completion {L0PreSpace L})) l0-denseN-embedding (l0calc-preLU phi phi0)
+{- | The functional calculus $\varphi \colon (\mathrm L^0)^n \to \mathrm L^0$ for a cover map $\varphi$: $\varphi(F) = \Psi_\varphi(1, F)$
+ -   with $\Psi_\varphi(t, x) = (\varphi(x) - \varphi(0)) + \varphi(0)(t \wedge 1)$, using {l0calc0} for $\Psi_\varphi(0) = 0$.
+ -}
+\sfunc l0calc {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) : CoverMap (ArrayCoverSpace n (L0Space L)) (L0Space L)
+  => l0calc0 (homog phi) homog0 CoverMap.∘ prepend (l0One L)
 
 -- | On $L^n$ and for $\chi \in C_0$, {l0calc} is the functional calculus of `L`.
 \lemma l0calc-char {L : FullIntegrationSpace} {n : Nat} (chi : LinBoundedMap n) {f : Array L n}
-  : l0calc chi (linBounded-zro chi) (\lam j => pointCF {L0PreSpace L} (f j)) = pointCF {L0PreSpace L} (fcalc chi f)
-  => l0calc-pt *> pre-unique (ballConv-const chi) const-limit
+  : l0calc chi (\lam j => pointCF {L0PreSpace L} (f j)) = pointCF {L0PreSpace L} (fcalc chi f)
+  => l0calc-old (linBounded-zro chi) *> l0calc0-char chi
 
 -- | $(x_j)(F) = F_j$.
 \lemma l0calc-coord {L : FullIntegrationSpace} {n : Nat} (j : Fin n) {F : Array (L0Space L) n}
-  : l0calc (LinBoundedMap.coord j) (linBounded-zro (LinBoundedMap.coord j)) F = F j
-  => l0-denseN (l0calc (LinBoundedMap.coord j) (linBounded-zro (LinBoundedMap.coord j))) (ArrayCoverSpace.proj j)
-      (\lam f => l0calc-char (LinBoundedMap.coord j) *> pmap (pointCF {L0PreSpace L}) (fcalc-var j)) F
+  : l0calc (LinBoundedMap.coord j) F = F j
+  => l0calc-old (linBounded-zro (LinBoundedMap.coord j)) *> l0calc0-coord j
+
+-- | A rational constant `q` is sent to $q \cdot 1$.
+\lemma l0calc-const {L : FullIntegrationSpace} {n : Nat} (q : Rat) {F : Array (L0Space L) n}
+  : l0calc (CoverMap.const (Real.fromRat q) : CoverMap (RealN n) RealNormed) F = q *q l0One L
+  => \let | mc => LinBoundedMap.meetConst 1 RealField.zro<=ide
+            | M : LinBoundedMap (suc n) => LinBoundedMap.comp mc (LinBoundedMap.coord {suc n} 0 :: nil)
+     \in l0calc-eq *> l0calc0-*q {L} {suc n} {homog (CoverMap.const (Real.fromRat q))} {M} {homog0} {linBounded-zro M} q (\lam y => homog-const q)
+          *> pmap (q *q) (l0calc0-comp {L} {1} {suc n} {mc} {linBounded-zro mc} {LinBoundedMap.coord {suc n} 0 :: nil} {\lam (j : Fin 1) => \case \elim j \with { | 0 => linBounded-zro (LinBoundedMap.coord {suc n} 0) }} {M} {linBounded-zro M} (\lam y => idp)
+                          *> pmap (l0calc0 mc (linBounded-zro mc)) (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => l0calc0-coord {L} {suc n} 0 {l0One L :: F} })
+                          *> l0calc0-trunc-one)
 
 -- | $(\varphi + \psi)(F) = \varphi(F) + \psi(F)$.
 \lemma l0calc-add {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
-                  {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
                   (e : \Pi (x : Array Real n) -> chi x = phi x + psi x) {F : Array (L0Space L) n}
-  : l0calc chi chi0 F = l0calc phi phi0 F + l0calc psi psi0 F
-  => l0-denseN (l0calc chi chi0) (+-uniform {L0Space L} CoverMap.∘ ProductCoverSpace.tuple (l0calc phi phi0) (l0calc psi psi0))
-      (\lam f => l0calc-pt *> pre-binary (+-uniform {L0Space L}) (\lam k => LinBoundedMap.add (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.add (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-add {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
-                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-add idp idp) *> AddGroupHom.func-+ {topTruncCompletion {L0PreSpace L}})
-                  *> inv (pmap2 (+) l0calc-pt l0calc-pt)) F
+  : l0calc chi F = l0calc phi F + l0calc psi F
+  => l0calc-eq *> l0calc0-add {L} {suc n} {homog chi} {homog phi} {homog psi} {homog0} {homog0} {homog0}
+                    (\lam y => homog-add e) *> inv (pmap2 (+) l0calc-eq l0calc-eq)
 
 -- | $(-\varphi)(F) = -\varphi(F)$.
 \lemma l0calc-neg {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
-                  {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)}
                   (e : \Pi (x : Array Real n) -> chi x = negative (phi x)) {F : Array (L0Space L) n}
-  : l0calc chi chi0 F = negative (l0calc phi phi0 F)
-  => l0-denseN (l0calc chi chi0) (negative-uniform {L0Space L} CoverMap.∘ l0calc phi phi0)
-      (\lam f => l0calc-pt *> pre-unary (negative-uniform {L0Space L}) (\lam k => LinBoundedMap.neg (clipApprox phi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.neg (clipApprox phi k)} (\lam x => inv (e x)) (ballConv-neg {n} {\lam k => clipApprox phi k} (clipApprox-ballConv phi phi0)))
-                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-neg idp) *> AddGroupHom.func-negative {topTruncCompletion {L0PreSpace L}})
-                  *> inv (pmap negative l0calc-pt)) F
+  : l0calc chi F = negative (l0calc phi F)
+  => l0calc-eq *> l0calc0-neg {L} {suc n} {homog chi} {homog phi} {homog0} {homog0}
+                    (\lam y => homog-neg e) *> inv (pmap negative l0calc-eq)
 
 -- | $(\varphi \vee \psi)(F) = \varphi(F) \vee \psi(F)$.
 \lemma l0calc-join {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
-                   {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
                    (e : \Pi (x : Array Real n) -> chi x = phi x ∨ psi x) {F : Array (L0Space L) n}
-  : l0calc chi chi0 F = l0calc phi phi0 F ∨ l0calc psi psi0 F
-  => l0-denseN (l0calc chi chi0) ((L0Space L).join-uniform CoverMap.∘ ProductCoverSpace.tuple (l0calc phi phi0) (l0calc psi psi0))
-      (\lam f => l0calc-pt *> pre-binary (L0Space L).join-uniform (\lam k => LinBoundedMap.join (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.join (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-join {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
-                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-join idp idp) *> RieszSpaceHom.func-join {topTruncCompletion {L0PreSpace L}})
-                  *> inv (pmap2 (∨) l0calc-pt l0calc-pt)) F
+  : l0calc chi F = l0calc phi F ∨ l0calc psi F
+  => \let J : CoverMap (RealN (suc n)) RealNormed (\lam y => homog phi y ∨ homog psi y) => real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (homog phi) (homog psi)
+     \in \have J0 : J (RealN (suc n)).zro = (0 : Real) => pmap2 (∨) homog0 homog0 *> RealAbGroup.join_<= <=-refl
+     \in l0calc-eq *> l0calc0-local {L} {n} {homog chi} {J} {homog0} {J0} (\lam t>=1 => homog-top t>=1 *> e _ *> inv (pmap2 (∨) (homog-top t>=1) (homog-top t>=1)))
+          *> l0calc0-join {L} {suc n} {J} {homog phi} {homog psi} {J0} {homog0} {homog0} (\lam y => idp) *> inv (pmap2 (∨) l0calc-eq l0calc-eq)
 
 -- | $(\varphi \wedge \psi)(F) = \varphi(F) \wedge \psi(F)$.
 \lemma l0calc-meet {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
-                   {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
                    (e : \Pi (x : Array Real n) -> chi x = phi x ∧ psi x) {F : Array (L0Space L) n}
-  : l0calc chi chi0 F = l0calc phi phi0 F ∧ l0calc psi psi0 F
-  => l0-denseN (l0calc chi chi0) ((L0Space L).meet-uniform CoverMap.∘ ProductCoverSpace.tuple (l0calc phi phi0) (l0calc psi psi0))
-      (\lam f => l0calc-pt *> pre-binary (L0Space L).meet-uniform (\lam k => LinBoundedMap.meet (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.meet (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-meet {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
-                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-meet idp idp) *> RieszSpaceHom.func-meet {topTruncCompletion {L0PreSpace L}})
-                  *> inv (pmap2 (∧) l0calc-pt l0calc-pt)) F
+  : l0calc chi F = l0calc phi F ∧ l0calc psi F
+  => \let J : CoverMap (RealN (suc n)) RealNormed (\lam y => homog phi y ∧ homog psi y) => real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple (homog phi) (homog psi)
+     \in \have J0 : J (RealN (suc n)).zro = (0 : Real) => pmap2 (∧) homog0 homog0 *> RealAbGroup.meet_<= <=-refl
+     \in l0calc-eq *> l0calc0-local {L} {n} {homog chi} {J} {homog0} {J0} (\lam t>=1 => homog-top t>=1 *> e _ *> inv (pmap2 (∧) (homog-top t>=1) (homog-top t>=1)))
+          *> l0calc0-meet {L} {suc n} {J} {homog phi} {homog psi} {J0} {homog0} {homog0} (\lam y => idp) *> inv (pmap2 (∧) l0calc-eq l0calc-eq)
 
 -- | $(q\varphi)(F) = q\,\varphi(F)$ for rational `q`.
-\lemma l0calc-*q {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
-                 {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} (q : Rat)
+\lemma l0calc-*q {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed} (q : Rat)
                  (e : \Pi (x : Array Real n) -> chi x = Real.fromRat q * phi x) {F : Array (L0Space L) n}
-  : l0calc chi chi0 F = q *q l0calc phi phi0 F
-  => l0-denseN (l0calc chi chi0) ((L0Space L).*q-right-uniform {q} CoverMap.∘ l0calc phi phi0)
-      (\lam f => l0calc-pt *> pre-unary ((L0Space L).*q-right-uniform {q}) (\lam k => LinBoundedMap.scale (Real.fromRat q) (clipApprox phi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.scale (Real.fromRat q) (clipApprox phi k)} (\lam x => inv (e x)) (ballConv-scale {n} {\lam k => clipApprox phi k} q (clipApprox-ballConv phi phi0)))
-                                (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-*q idp) *> func-*q {_} {_} {topTruncCompletion {L0PreSpace L}})
-                  *> inv (pmap (q *q) l0calc-pt)) F
+  : l0calc chi F = q *q l0calc phi F
+  => l0calc-eq *> l0calc0-*q {L} {suc n} {homog chi} {homog phi} {homog0} {homog0} q
+                    (\lam y => homog-*q q e) *> inv (pmap (q *q) l0calc-eq)
 
 -- | Transfer: $\varphi \le \psi$ implies $\varphi(F) \le \psi(F)$.
 \lemma l0calc-mono {L : FullIntegrationSpace} {n : Nat} {phi psi : CoverMap (RealN n) RealNormed}
-                   {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
                    (le : \Pi (x : Array Real n) -> phi x <= psi x) {F : Array (L0Space L) n}
-  : l0calc phi phi0 F <= l0calc psi psi0 F
-  => transport (_ <=) (inv (l0calc-join {L} {n} {psi} {phi} {psi} {psi0} {phi0} {psi0} (\lam x => inv (RealAbGroup.join_<= (le x))) {F})) join-left
+  : l0calc phi F <= l0calc psi F
+  => transport (_ <=) (inv (l0calc-join {L} {n} {psi} {phi} {psi} (\lam x => inv (RealAbGroup.join_<= (le x))) {F})) join-left
 
 -- | Composition: $(\varphi \circ \psi)(F) = \varphi(\psi_1(F), \ldots, \psi_n(F))$.
-\lemma l0calc-comp {L : FullIntegrationSpace} {n m : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)}
-                   {psi : Array (CoverMap (RealN m) RealNormed) n} {psi0 : \Pi (j : Fin n) -> psi j (RealN m).zro = (0 : Real)}
-                   {chi : CoverMap (RealN m) RealNormed} {chi0 : chi (RealN m).zro = (0 : Real)}
+\lemma l0calc-comp {L : FullIntegrationSpace} {n m : Nat} {phi : CoverMap (RealN n) RealNormed}
+                   {psi : Array (CoverMap (RealN m) RealNormed) n} {chi : CoverMap (RealN m) RealNormed}
                    (e : \Pi (x : Array Real m) -> chi x = phi (\lam j => psi j x)) {F : Array (L0Space L) m}
-  : l0calc chi chi0 F = l0calc phi phi0 (\lam j => l0calc (psi j) (psi0 j) F)
-  => l0-denseN (l0calc chi chi0) (l0calc phi phi0 CoverMap.∘ ArrayCoverSpace.tuple (\lam j => l0calc (psi j) (psi0 j)))
-      (\lam f => l0calc-pt *> pre-comp {L} {n} {m} {phi} {phi0} {psi} {psi0} {chi} {chi0} e *> pmap (l0calc phi phi0) (exts \lam j => inv l0calc-pt)) F
+  : l0calc chi F = l0calc phi (\lam j => l0calc (psi j) F)
+  => \let | Th : Array (CoverMap (RealN (suc m)) RealNormed) (suc n) => LinBoundedMap.coord {suc m} 0 :: \lam j => homog (psi j)
+          | Th0 (i : Fin (suc n)) : Th i (RealN (suc m)).zro = (0 : Real) => \case \elim i \with { | 0 => linBounded-zro (LinBoundedMap.coord {suc m} 0) | suc j => homog0 }
+          | C : CoverMap (RealN (suc m)) RealNormed (\lam y => homog phi (\lam i => Th i y)) => homog phi CoverMap.∘ ArrayCoverSpace.tuple {RealN (suc m)} {suc n} {RealNormed} Th
+     \in \have | C0 : C (RealN (suc m)).zro = (0 : Real) => pmap {Array Real (suc n)} (homog phi) {\lam i => Th i (RealN (suc m)).zro} {(RealN (suc n)).zro} (exts Th0) *> homog0
+               | Cv {t : Real} {x : Array Real m} (t>=1 : (1 : Real) <= t) : homog chi (t :: x) = C (t :: x)
+                   => homog-top t>=1 *> e x *> inv (pmap {Array Real (suc n)} (homog phi) {\lam i => Th i (t :: x)} {t :: \lam j => homog (psi j) (t :: x)}
+                                                         (exts \lam (i : Fin (suc n)) => \case \elim i \with { | 0 => idp | suc j => idp })
+                        *> homog-top t>=1 *> pmap {Array Real n} phi {\lam j => homog (psi j) (t :: x)} {\lam j => psi j x} (exts \lam (j : Fin n) => homog-top t>=1))
+     \in l0calc-eq *> l0calc0-local {L} {m} {homog chi} {C} {homog0} {C0} Cv
+          *> l0calc0-comp {L} {suc n} {suc m} {homog phi} {homog0} {Th} {Th0} {C} {C0} (\lam y => idp)
+          *> pmap {Array (L0Space L) (suc n)} (l0calc0 (homog phi) homog0) {\lam i => l0calc0 (Th i) (Th0 i) (l0One L :: F)} {l0One L :: \lam j => l0calc (psi j) F}
+                  (exts \lam (i : Fin (suc n)) => \case \elim i \with { | 0 => l0calc0-coord {L} {suc m} 0 {l0One L :: F} | suc j => inv l0calc-eq })
+          *> inv l0calc-eq
 
 \private \module L0CalcHelpers \where {
   {- | If $|\chi| \le \varepsilon$ on $\{\Lambda < d\}$, $\Lambda \ge 0$, and $0 \le h \le K$, then
@@ -565,10 +581,10 @@
             })
         }
 
-  -- | {l0calc} on $L^n$ is {l0calc-pre}.
+  -- | {l0calc0} on $L^n$ is {l0calc-pre}.
   \lemma l0calc-pt {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)} {f : Array L n}
-    : l0calc phi phi0 (\lam j => pointCF {L0PreSpace L} (f j)) = l0calc-pre phi phi0 f
-    => rewrite (\peval l0calc phi phi0) $ dense-lift-char {_} {_} {_} {ArrayCoverSpace.map {n} (completion {L0PreSpace L})} l0-denseN-embedding f
+    : l0calc0 phi phi0 (\lam j => pointCF {L0PreSpace L} (f j)) = l0calc-pre phi phi0 f
+    => rewrite (\peval l0calc0 phi phi0) $ dense-lift-char {_} {_} {_} {ArrayCoverSpace.map {n} (completion {L0PreSpace L})} l0-denseN-embedding f
 
   -- | For $\chi \in C_0$ that is $\varepsilon$-close to $\varphi$ on $\|x\|_1 < M + 1$, and $\|f\|_1 \le M$: $d_h(\varphi(f) - \chi(f), 0) \le I(\tau_{2\varepsilon} h)$.
   \lemma pre-approx-lin {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)} {f : Array L n}
@@ -661,7 +677,7 @@
                   {psi : Array (CoverMap (RealN m) RealNormed) n} {psi0 : \Pi (j : Fin n) -> psi j (RealN m).zro = (0 : Real)}
                   {chi : CoverMap (RealN m) RealNormed} {chi0 : chi (RealN m).zro = (0 : Real)}
                   (e : \Pi (x : Array Real m) -> chi x = phi (\lam j => psi j x)) {f : Array L m}
-    : l0calc-pre chi chi0 f = l0calc phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f)
+    : l0calc-pre chi chi0 f = l0calc0 phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f)
     => \let | b => \lam (j : Fin n) (k : Nat) => clipApprox (psi j) k
             | g => \lam (k : NatDir) (j : Fin n) => fcalc (b j k) f
             | c => \lam (k : Nat) => LinBoundedMap.comp (clipApprox phi k) (\lam j => b j k)
@@ -669,9 +685,9 @@
                  | cc : BallConv c chi => ballConv-ext {m} {c} (\lam x => inv (e x)) (ballConv-comp phi psi {\lam k => clipApprox phi k} {b} (clipApprox-ballConv phi phi0) cb)
                  | lA : (ArrayTopSpace n (L0Space L)).IsLimit {NatDir} (\lam k j => pointCF {L0PreSpace L} (g k j)) (\lam j => l0calc-pre (psi j) (psi0 j) f)
                      => array-limit {L0Space L} {n} {\lam k j => pointCF {L0PreSpace L} (g k j)} \lam j => pre-limit {L} {m} {psi j} {psi0 j} {f} {b j} (cb j)
-                 | lB : (L0Space L).IsLimit {NatDir} (\lam k => l0calc-pre phi phi0 (g k)) (l0calc phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f))
-                     => transport (\lam (q : NatDir -> L0Space L) => (L0Space L).IsLimit q (l0calc phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f))) (ext \lam k => l0calc-pt)
-                         (cont-limit {NatDir} {ArrayTopSpace n (L0Space L)} {L0Space L} {\lam k j => pointCF {L0PreSpace L} (g k j)} lA (l0calc phi phi0))
+                 | lB : (L0Space L).IsLimit {NatDir} (\lam k => l0calc-pre phi phi0 (g k)) (l0calc0 phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f))
+                     => transport (\lam (q : NatDir -> L0Space L) => (L0Space L).IsLimit q (l0calc0 phi phi0 (\lam j => l0calc-pre (psi j) (psi0 j) f))) (ext \lam k => l0calc-pt)
+                         (cont-limit {NatDir} {ArrayTopSpace n (L0Space L)} {L0Space L} {\lam k j => pointCF {L0PreSpace L} (g k j)} lA (l0calc0 phi phi0))
                  | lC : (L0Space L).IsLimit {NatDir} (\lam k => l0calc-pre phi phi0 (g k)) (l0calc-pre chi chi0 f)
                      => completion-limit {L0PreSpace L} {NatDir} {\lam k => l0calc-pre phi phi0 (g k)} \lam (h,h>=0) {eps} eps>0 =>
                          \have e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
@@ -733,4 +749,265 @@
                              }
                          }
        \in (L0Space L).limit-unique {NatDir} {\lam k => l0calc-pre phi phi0 (g k)} lC lB
+
+  -- | The functional calculus $\varphi \colon (\mathrm L^0)^n \to \mathrm L^0$ for a cover map $\varphi$ with $\varphi(0) = 0$.
+  \sfunc l0calc0 {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = 0)
+    : CoverMap (ArrayCoverSpace n (L0Space L)) (L0Space L)
+    => dense-lift (ArrayCoverSpace.map {n} (completion {L0PreSpace L})) l0-denseN-embedding (l0calc-preLU phi phi0)
+
+  -- | On $L^n$ and for $\chi \in C_0$, {l0calc0} is the functional calculus of `L`.
+  \lemma l0calc0-char {L : FullIntegrationSpace} {n : Nat} (chi : LinBoundedMap n) {f : Array L n}
+    : l0calc0 chi (linBounded-zro chi) (\lam j => pointCF {L0PreSpace L} (f j)) = pointCF {L0PreSpace L} (fcalc chi f)
+    => l0calc-pt *> pre-unique (ballConv-const chi) const-limit
+
+  -- | $(x_j)(F) = F_j$.
+  \lemma l0calc0-coord {L : FullIntegrationSpace} {n : Nat} (j : Fin n) {F : Array (L0Space L) n}
+    : l0calc0 (LinBoundedMap.coord j) (linBounded-zro (LinBoundedMap.coord j)) F = F j
+    => l0-denseN (l0calc0 (LinBoundedMap.coord j) (linBounded-zro (LinBoundedMap.coord j))) (ArrayCoverSpace.proj j)
+        (\lam f => l0calc0-char (LinBoundedMap.coord j) *> pmap (pointCF {L0PreSpace L}) (fcalc-var j)) F
+
+  -- | $(\varphi + \psi)(F) = \varphi(F) + \psi(F)$.
+  \lemma l0calc0-add {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
+                    {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                    (e : \Pi (x : Array Real n) -> chi x = phi x + psi x) {F : Array (L0Space L) n}
+    : l0calc0 chi chi0 F = l0calc0 phi phi0 F + l0calc0 psi psi0 F
+    => l0-denseN (l0calc0 chi chi0) (+-uniform {L0Space L} CoverMap.∘ ProductCoverSpace.tuple (l0calc0 phi phi0) (l0calc0 psi psi0))
+        (\lam f => l0calc-pt *> pre-binary (+-uniform {L0Space L}) (\lam k => LinBoundedMap.add (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.add (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-add {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
+                                  (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-add idp idp) *> AddGroupHom.func-+ {topTruncCompletion {L0PreSpace L}})
+                    *> inv (pmap2 (+) l0calc-pt l0calc-pt)) F
+
+  -- | $(-\varphi)(F) = -\varphi(F)$.
+  \lemma l0calc0-neg {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
+                    {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)}
+                    (e : \Pi (x : Array Real n) -> chi x = negative (phi x)) {F : Array (L0Space L) n}
+    : l0calc0 chi chi0 F = negative (l0calc0 phi phi0 F)
+    => l0-denseN (l0calc0 chi chi0) (negative-uniform {L0Space L} CoverMap.∘ l0calc0 phi phi0)
+        (\lam f => l0calc-pt *> pre-unary (negative-uniform {L0Space L}) (\lam k => LinBoundedMap.neg (clipApprox phi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.neg (clipApprox phi k)} (\lam x => inv (e x)) (ballConv-neg {n} {\lam k => clipApprox phi k} (clipApprox-ballConv phi phi0)))
+                                  (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-neg idp) *> AddGroupHom.func-negative {topTruncCompletion {L0PreSpace L}})
+                    *> inv (pmap negative l0calc-pt)) F
+
+  -- | $(\varphi \vee \psi)(F) = \varphi(F) \vee \psi(F)$.
+  \lemma l0calc0-join {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
+                     {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                     (e : \Pi (x : Array Real n) -> chi x = phi x ∨ psi x) {F : Array (L0Space L) n}
+    : l0calc0 chi chi0 F = l0calc0 phi phi0 F ∨ l0calc0 psi psi0 F
+    => l0-denseN (l0calc0 chi chi0) ((L0Space L).join-uniform CoverMap.∘ ProductCoverSpace.tuple (l0calc0 phi phi0) (l0calc0 psi psi0))
+        (\lam f => l0calc-pt *> pre-binary (L0Space L).join-uniform (\lam k => LinBoundedMap.join (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.join (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-join {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
+                                  (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-join idp idp) *> RieszSpaceHom.func-join {topTruncCompletion {L0PreSpace L}})
+                    *> inv (pmap2 (∨) l0calc-pt l0calc-pt)) F
+
+  -- | $(\varphi \wedge \psi)(F) = \varphi(F) \wedge \psi(F)$.
+  \lemma l0calc0-meet {L : FullIntegrationSpace} {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed}
+                     {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                     (e : \Pi (x : Array Real n) -> chi x = phi x ∧ psi x) {F : Array (L0Space L) n}
+    : l0calc0 chi chi0 F = l0calc0 phi phi0 F ∧ l0calc0 psi psi0 F
+    => l0-denseN (l0calc0 chi chi0) ((L0Space L).meet-uniform CoverMap.∘ ProductCoverSpace.tuple (l0calc0 phi phi0) (l0calc0 psi psi0))
+        (\lam f => l0calc-pt *> pre-binary (L0Space L).meet-uniform (\lam k => LinBoundedMap.meet (clipApprox phi k) (clipApprox psi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.meet (clipApprox phi k) (clipApprox psi k)} (\lam x => inv (e x)) (ballConv-meet {n} {\lam k => clipApprox phi k} {\lam k => clipApprox psi k} (clipApprox-ballConv phi phi0) (clipApprox-ballConv psi psi0)))
+                                  (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-meet idp idp) *> RieszSpaceHom.func-meet {topTruncCompletion {L0PreSpace L}})
+                    *> inv (pmap2 (∧) l0calc-pt l0calc-pt)) F
+
+  -- | $(q\varphi)(F) = q\,\varphi(F)$ for rational `q`.
+  \lemma l0calc0-*q {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
+                   {chi0 : chi (RealN n).zro = (0 : Real)} {phi0 : phi (RealN n).zro = (0 : Real)} (q : Rat)
+                   (e : \Pi (x : Array Real n) -> chi x = Real.fromRat q * phi x) {F : Array (L0Space L) n}
+    : l0calc0 chi chi0 F = q *q l0calc0 phi phi0 F
+    => l0-denseN (l0calc0 chi chi0) ((L0Space L).*q-right-uniform {q} CoverMap.∘ l0calc0 phi phi0)
+        (\lam f => l0calc-pt *> pre-unary ((L0Space L).*q-right-uniform {q}) (\lam k => LinBoundedMap.scale (Real.fromRat q) (clipApprox phi k)) (ballConv-ext {n} {\lam k => LinBoundedMap.scale (Real.fromRat q) (clipApprox phi k)} (\lam x => inv (e x)) (ballConv-scale {n} {\lam k => clipApprox phi k} q (clipApprox-ballConv phi phi0)))
+                                  (\lam k => pmap (pointCF {L0PreSpace L}) (fcalc-*q idp) *> func-*q {_} {_} {topTruncCompletion {L0PreSpace L}})
+                    *> inv (pmap (q *q) l0calc-pt)) F
+
+  -- | Transfer: $\varphi \le \psi$ implies $\varphi(F) \le \psi(F)$.
+  \lemma l0calc0-mono {L : FullIntegrationSpace} {n : Nat} {phi psi : CoverMap (RealN n) RealNormed}
+                     {phi0 : phi (RealN n).zro = (0 : Real)} {psi0 : psi (RealN n).zro = (0 : Real)}
+                     (le : \Pi (x : Array Real n) -> phi x <= psi x) {F : Array (L0Space L) n}
+    : l0calc0 phi phi0 F <= l0calc0 psi psi0 F
+    => transport (_ <=) (inv (l0calc0-join {L} {n} {psi} {phi} {psi} {psi0} {phi0} {psi0} (\lam x => inv (RealAbGroup.join_<= (le x))) {F})) join-left
+
+  -- | Composition: $(\varphi \circ \psi)(F) = \varphi(\psi_1(F), \ldots, \psi_n(F))$.
+  \lemma l0calc0-comp {L : FullIntegrationSpace} {n m : Nat} {phi : CoverMap (RealN n) RealNormed} {phi0 : phi (RealN n).zro = (0 : Real)}
+                     {psi : Array (CoverMap (RealN m) RealNormed) n} {psi0 : \Pi (j : Fin n) -> psi j (RealN m).zro = (0 : Real)}
+                     {chi : CoverMap (RealN m) RealNormed} {chi0 : chi (RealN m).zro = (0 : Real)}
+                     (e : \Pi (x : Array Real m) -> chi x = phi (\lam j => psi j x)) {F : Array (L0Space L) m}
+    : l0calc0 chi chi0 F = l0calc0 phi phi0 (\lam j => l0calc0 (psi j) (psi0 j) F)
+    => l0-denseN (l0calc0 chi chi0) (l0calc0 phi phi0 CoverMap.∘ ArrayCoverSpace.tuple (\lam j => l0calc0 (psi j) (psi0 j)))
+        (\lam f => l0calc-pt *> pre-comp {L} {n} {m} {phi} {phi0} {psi} {psi0} {chi} {chi0} e *> pmap (l0calc0 phi phi0) (exts \lam j => inv l0calc-pt)) F
+}
+
+\private \module L0GenHelpers \where {
+  -- | $F \mapsto c :: F$.
+  \func prepend {L : FullIntegrationSpace} {n : Nat} (c : L0Space L) : CoverMap (ArrayCoverSpace n (L0Space L)) (ArrayCoverSpace (suc n) (L0Space L))
+    => ArrayCoverSpace.tuple (CoverMap.const c :: \lam j => ArrayCoverSpace.proj j)
+
+  \lemma prepend-eq {L : FullIntegrationSpace} {n : Nat} {c : L0Space L} {F : Array (L0Space L) n} : prepend c F = c :: F
+    => exts \lam j => \case \elim j \with { | 0 => idp | suc j => idp }
+
+  -- | $c \mapsto c :: F$.
+  \func consMap {L : FullIntegrationSpace} {n : Nat} (F : Array (L0Space L) n) : CoverMap (L0Space L) (ArrayCoverSpace (suc n) (L0Space L))
+    => ArrayCoverSpace.tuple (CoverMap.id :: \lam j => CoverMap.const (F j))
+
+  \lemma consMap-eq {L : FullIntegrationSpace} {n : Nat} {F : Array (L0Space L) n} {c : L0Space L} : consMap F c = c :: F
+    => exts \lam j => \case \elim j \with { | 0 => idp | suc j => idp }
+
+  -- | The approximants of `D` vanish where `D` does.
+  \lemma clipApprox-vanish {n : Nat} {D : CoverMap (RealN n) RealNormed} {k : Nat} {y : Array Real n} (Dy : D y = (0 : Real))
+    : clipApprox D k y = (0 : Real)
+    => \have | l0 : (0 : Real) <= Real.fromRat k * l1LB n y => RealField.<=_*_positive_positive (rat_real_<=.1 (fromInt_<= (pos<=pos zero<=_))) (l1norm>=0 <=∘ =_<= (inv l1LB.apply))
+             | m : D y ∧ (Real.fromRat k * l1LB n y) = 0 => pmap (__ ∧ _) Dy *> RealAbGroup.meet_<= l0
+       \in pmap (__ ∨ _) m *> RealAbGroup.join-comm *> RealAbGroup.join_<= (linarith : negative (Real.fromRat k * l1LB n y) <= 0)
+
+  -- | $|v| \wedge b^+ \le b^+ \wedge \eta$ if $v = 0$ whenever $(b^+/\eta + c^+) \wedge 1 \ge 1$.
+  \lemma vanish-pt {eta : Rat} (eta>0 : 0 < eta) {b c v : Real}
+                   (hv : (1 : Real) <= (Real.fromRat (RatField.finv eta) * (b ∨ 0) + (c ∨ 0)) ∧ 1 -> v = 0)
+    : (v ∨ negative v) ∧ (b ∨ 0) <= (b ∨ 0) ∧ Real.fromRat eta
+    => \have | B>=0 : (0 : Real) <= b ∨ 0 => join-right
+             | C>=0 : (0 : Real) <= c ∨ 0 => join-right
+             | eta>=0 : (0 : Real) <= Real.fromRat eta => rat_real_<=.1 (<=-less eta>0)
+       \in real-cases {b ∨ 0} {Real.fromRat eta}
+         (\lam B<eta => meet-right <=∘ meet-univ <=-refl (<=-less B<eta))
+         (\lam eta<=B => \have | qe : Real.fromRat (RatField.finv eta) * Real.fromRat eta = 1 => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= eta>0))
+                                | q>=0 : (0 : Real) <= Real.fromRat (RatField.finv eta) => rat_real_<=.1 (<=-less (RatField.finv>0 eta>0))
+                                | qB : (1 : Real) <= Real.fromRat (RatField.finv eta) * (b ∨ 0) => =_<= (inv qe) <=∘ RealField.<=_*_positive-right q>=0 eta<=B
+                                | s1 : (1 : Real) <= (Real.fromRat (RatField.finv eta) * (b ∨ 0) + (c ∨ 0)) ∧ 1 => meet-univ linarith <=-refl
+                                | v0 : v ∨ negative v = 0 => pmap (\lam z => z ∨ negative z) (hv s1) *> pmap (0 ∨) RealAbGroup.negative_zro *> RealAbGroup.join_<= <=-refl
+                          \in meet-left <=∘ =_<= v0 <=∘ meet-univ B>=0 eta>=0)
+
+  -- | On `L`: $d_k(D_m(\tau h :: f), 0) \le I(\tau_\eta k)$ for $h = k/\eta + w$, $w \ge 0$.
+  \lemma vanish-L {L : FullIntegrationSpace} {n : Nat} {D : CoverMap (RealN (suc n)) RealNormed}
+                  (Dv : \Pi {t : Real} {x : Array Real n} -> (1 : Real) <= t -> D (t :: x) = (0 : Real))
+                  {k : L} (k>=0 : L.zro <= k) {eta : Rat} (eta>0 : 0 < eta) {h w : L} (w>=0 : L.zro <= w) (hw : h = RatField.finv eta *q k + w)
+                  (f : Array L n) (m : Nat)
+    : measGauge k (fcalc (clipApprox D m) (L.trunc h :: f)) <= L.integral (L.truncAt eta k)
+    => \let | G : Array L (suc (suc n)) => k :: w :: f
+            | kp : LinBoundedMap (suc (suc n)) => LinBoundedMap.join (LinBoundedMap.coord {suc (suc n)} 0) LinBoundedMap.zro
+            | wp : LinBoundedMap (suc (suc n)) => LinBoundedMap.join (LinBoundedMap.coord {suc (suc n)} 1) LinBoundedMap.zro
+            | T : LinBoundedMap (suc (suc n)) => LinBoundedMap.comp (LinBoundedMap.meetConst 1 RealField.zro<=ide) (LinBoundedMap.add (LinBoundedMap.scale (Real.fromRat (RatField.finv eta)) kp) wp :: nil)
+            | Th : Array (LinBoundedMap (suc (suc n))) (suc n) => T :: \lam j => LinBoundedMap.coord (suc (suc j))
+       \in \have | kE : fcalc kp G = k => fcalc-pos (fcalc-var 0) k>=0
+                 | wE : fcalc wp G = w => fcalc-pos (fcalc-var 1) w>=0
+                 | tE : fcalc T G = L.trunc h => fcalc-op1 (LinBoundedMap.meetConst 1 RealField.zro<=ide) (fcalc-add (fcalc-*q {L} {_} {G} {RatField.finv eta} kE) wE) *> fcalc-trunc *> pmap L.trunc (inv hw)
+                 | vE : fcalc (LinBoundedMap.comp (clipApprox D m) Th) G = fcalc (clipApprox D m) (L.trunc h :: f)
+                     => fcalc-subst {L} {suc n} {suc (suc n)} {clipApprox D m} {Th} {G} {L.trunc h :: f} \lam (j : Fin (suc n)) => \case \elim j \with { | 0 => tE | suc j => fcalc-var (suc (suc j)) }
+                 | le : abs (fcalc (clipApprox D m) (L.trunc h :: f)) ∧ k <= L.truncAt eta k
+                     => fcalc-le-pt G (\lam z => vanish-pt eta>0 {z 0} {z 1} \lam s1 => clipApprox-vanish (pmap D (exts \lam j => \case \elim j \with { | 0 => idp | suc j => idp }) *> Dv {_} {\lam j => z (suc (suc j))} s1))
+                          (fcalc-meet (fcalc-abs vE) kE) (fcalc-truncAt eta>0 kE)
+       \in L.integral-mono le
+
+  -- | $d_k(D(\tau h :: f), 0) \le I(\tau_\eta k)$ in `L⁰` for $h = k/\eta + w$.
+  \lemma vanish-pre {L : FullIntegrationSpace} {n : Nat} {D : CoverMap (RealN (suc n)) RealNormed} {D0 : D (RealN (suc n)).zro = (0 : Real)}
+                    (Dv : \Pi {t : Real} {x : Array Real n} -> (1 : Real) <= t -> D (t :: x) = (0 : Real))
+                    {k : L} (k>=0 : L.zro <= k) {eta : Rat} (eta>0 : 0 < eta) {h w : L} (w>=0 : L.zro <= w) (hw : h = RatField.finv eta *q k + w) (f : Array L n)
+    : l0Gauge k>=0 (l0calc-pre D D0 (L.trunc h :: f)) <= L.integral (L.truncAt eta k)
+    => real-limit-<= (cont-limit {NatDir} {L0Space L} {RealNormed} {preNet D (L.trunc h :: f)} (l0calc-pre-limit {L} {suc n} {D} {D0} {L.trunc h :: f}) (l0Gauge k>=0))
+        {0} \lam {m} _ => =_<= (l0Gauge.char k>=0) <=∘ vanish-L Dv k>=0 eta>0 w>=0 hw f m
+
+  -- | For $h \ge k/\eta$: $d_k(D(\tau h :: F), 0) \le I(\tau_\eta k)$ for all `F`.
+  \lemma vanish-tail {L : FullIntegrationSpace} {n : Nat} {D : CoverMap (RealN (suc n)) RealNormed} {D0 : D (RealN (suc n)).zro = (0 : Real)}
+                     (Dv : \Pi {t : Real} {x : Array Real n} -> (1 : Real) <= t -> D (t :: x) = (0 : Real))
+                     {k : L} (k>=0 : L.zro <= k) {eta : Rat} (eta>0 : 0 < eta) {h : PosCone L} (start<=h : (l0One.start k>=0 eta>0).el L.<= h.el)
+                     (F : Array (L0Space L) n)
+    : l0Gauge k>=0 (l0calc0 D D0 (l0One.net h :: F)) <= L.integral (L.truncAt eta k)
+    => transport (__ <= _) (pmap (\lam z => l0Gauge k>=0 (l0calc0 D D0 z)) prepend-eq) $
+       dense_<= real-join-uniform (ArrayCoverSpace.map {n} (completion {L0PreSpace L})) (l0-denseN-embedding {L} {n}).1
+         (l0Gauge k>=0 CoverMap.∘ l0calc0 D D0 CoverMap.∘ prepend (l0One.net h)) (CoverMap.const (L.integral (L.truncAt eta k)))
+         (\lam f => =_<= (pmap (\lam z => l0Gauge k>=0 (l0calc0 D D0 z)) (exts \lam j => \case \elim j \with { | 0 => idp | suc j => idp }) *> pmap (l0Gauge k>=0) l0calc-pt)
+                      <=∘ vanish-pre {L} {n} {D} {D0} Dv k>=0 eta>0 (L.to>=0 {_} {h.el} start<=h) l0One.split f) F
+
+  -- | Locality: if $D(t :: x) = 0$ for $t \ge 1$, then $D(1 :: F) = 0$.
+  \lemma l0calc0-vanish {L : FullIntegrationSpace} {n : Nat} {D : CoverMap (RealN (suc n)) RealNormed} {D0 : D (RealN (suc n)).zro = (0 : Real)}
+                        (Dv : \Pi {t : Real} {x : Array Real n} -> (1 : Real) <= t -> D (t :: x) = (0 : Real)) {F : Array (L0Space L) n}
+    : l0calc0 D D0 (l0One L :: F) = 0
+    => \have bound {k : L} (k>=0 : L.zro <= k) {eta : Rat} (eta>0 : 0 < eta) : l0Gauge k>=0 (l0calc0 D D0 (l0One L :: F)) <= L.integral (L.truncAt eta k)
+         => real-limit-<= {PosCone L} {\lam h => l0Gauge k>=0 (l0calc0 D D0 (consMap F (l0One.net h)))}
+              (transport (RealNormed.IsLimit _) (pmap (\lam z => l0Gauge k>=0 (l0calc0 D D0 z)) consMap-eq)
+                (cont-limit {PosCone L} {L0Space L} {RealNormed} {l0One.net} l0One.limit-net (l0Gauge k>=0 CoverMap.∘ l0calc0 D D0 CoverMap.∘ consMap F)))
+              {l0One.start k>=0 eta>0} \lam {h} start<=h => =_<= (pmap (\lam z => l0Gauge k>=0 (l0calc0 D D0 z)) consMap-eq) <=∘ vanish-tail Dv k>=0 eta>0 start<=h F
+       \in l0-gauge-zero \lam k>=0 d>0 => \case l0One.small k>=0 (rat_real_<.1 d>0) \with {
+         | inP (eta,eta>0,s) => bound k>=0 eta>0 <∘r s
+       }
+
+  -- | $\Psi_\varphi(t :: x) = (\varphi(x) - \varphi(0)) + \varphi(0)\,(t \wedge 1)$.
+  \func homog {n : Nat} (phi : CoverMap (RealN n) RealNormed)
+    : CoverMap (RealN (suc n)) RealNormed (\lam y => (phi (\lam j => y (suc j)) - phi (RealN n).zro) + phi (RealN n).zro * (y 0 ∧ 1))
+    => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple
+         (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (phi CoverMap.∘ ArrayCoverSpace.tuple {RealN (suc n)} {n} {RealNormed} (\lam j => LinBoundedMap.coord (suc j)))
+                                                                    (CoverMap.const (negative (phi (RealN n).zro))))
+         (LinBoundedMap.scale (phi (RealN n).zro) (LinBoundedMap.comp (LinBoundedMap.meetConst 1 RealField.zro<=ide) (LinBoundedMap.coord {suc n} 0 :: nil)))
+
+  \lemma homog-eq {n : Nat} {phi : CoverMap (RealN n) RealNormed} {y : Array Real (suc n)} {a c : Real}
+                  (ea : phi (\lam j => y (suc j)) = a) (ec : phi (RealN n).zro = c)
+    : homog phi y = (a - c) + c * (y 0 ∧ 1)
+    => pmap2 (\lam a c => (a - c) + c * (y 0 ∧ 1)) ea ec
+
+  \lemma homog-top {n : Nat} {phi : CoverMap (RealN n) RealNormed} {t : Real} {x : Array Real n} (t>=1 : (1 : Real) <= t)
+    : homog phi (t :: x) = phi x
+    => homog-eq {n} {phi} {t :: x} idp idp *> pmap (\lam z => (phi x - phi (RealN n).zro) + phi (RealN n).zro * z) (RealAbGroup.meet-comm *> RealAbGroup.meet_<= t>=1)
+        *> pmap (_ +) ide-right *> equation.abGroup
+
+  \lemma homog0 {n : Nat} {phi : CoverMap (RealN n) RealNormed} : homog phi (RealN (suc n)).zro = (0 : Real)
+    => homog-eq {n} {phi} {(RealN (suc n)).zro} idp idp *> pmap (\lam z => (phi (RealN n).zro - phi (RealN n).zro) + phi (RealN n).zro * z) (RealAbGroup.meet_<= RealField.zro<=ide)
+        *> pmap (_ +) RealField.zro_*-right *> equation.abGroup
+
+  -- | {l0calc} is {l0calc0} of {homog} at $1 :: F$.
+  \lemma l0calc-eq {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} {F : Array (L0Space L) n}
+    : l0calc phi F = l0calc0 (homog phi) homog0 (l0One L :: F)
+    => pmap {CoverMap (ArrayCoverSpace n (L0Space L)) (L0Space L)} (__ F) (\peval l0calc {L} {n} phi) *> pmap (l0calc0 (homog phi) homog0) prepend-eq
+
+  -- | If `A` and `B` agree for $t \ge 1$, then $A(1 :: F) = B(1 :: F)$.
+  \lemma l0calc0-local {L : FullIntegrationSpace} {n : Nat} {A B : CoverMap (RealN (suc n)) RealNormed}
+                       {A0 : A (RealN (suc n)).zro = (0 : Real)} {B0 : B (RealN (suc n)).zro = (0 : Real)}
+                       (e : \Pi {t : Real} {x : Array Real n} -> (1 : Real) <= t -> A (t :: x) = B (t :: x)) {F : Array (L0Space L) n}
+    : l0calc0 A A0 (l0One L :: F) = l0calc0 B B0 (l0One L :: F)
+    => \let D : CoverMap (RealN (suc n)) RealNormed (\lam y => A y + negative (B y)) => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple A (negative-uniform {RealNormed} CoverMap.∘ B)
+       \in \have | D0 : D (RealN (suc n)).zro = (0 : Real) => pmap2 (\lam a b => a + negative b) A0 B0 *> (equation.abGroup : (0 : Real) + negative 0 = 0)
+                 | Dv {t : Real} {x : Array Real n} (t>=1 : (1 : Real) <= t) : D (t :: x) = (0 : Real)
+                     => pmap (\lam z => z + negative (B (t :: x))) (e t>=1) *> negative-right
+       \in l0calc0-add {L} {suc n} {A} {D} {B} {A0} {D0} {B0} (\lam x => (equation.abGroup : A x = (A x + negative (B x)) + B x)) *> pmap (__ + _) (l0calc0-vanish {L} {n} {D} {D0} Dv) *> zro-left
+
+  -- | For $\varphi(0) = 0$, {l0calc} is {l0calc0}.
+  \lemma l0calc-old {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} (phi0 : phi (RealN n).zro = (0 : Real)) {F : Array (L0Space L) n}
+    : l0calc phi F = l0calc0 phi phi0 F
+    => \let | sh : Array (CoverMap (RealN (suc n)) RealNormed) n => \lam j => LinBoundedMap.coord (suc j)
+            | B : CoverMap (RealN (suc n)) RealNormed (\lam y => phi (\lam j => y (suc j))) => phi CoverMap.∘ ArrayCoverSpace.tuple {RealN (suc n)} {n} {RealNormed} sh
+       \in l0calc-eq *> l0calc0-local {L} {n} {homog phi} {B} {homog0} {phi0} (\lam t>=1 => homog-top t>=1)
+            *> l0calc0-comp {L} {n} {suc n} {phi} {phi0} {sh} {\lam j => linBounded-zro (LinBoundedMap.coord (suc j))} {B} {phi0} (\lam y => idp)
+            *> pmap (l0calc0 phi phi0) (exts \lam j => l0calc0-coord (suc j))
+
+  -- | $(1 \wedge 1)$: the truncation map sends `1` to `1`.
+  \lemma l0calc0-trunc-one {L : FullIntegrationSpace}
+    : l0calc0 (LinBoundedMap.meetConst 1 RealField.zro<=ide) (linBounded-zro (LinBoundedMap.meetConst 1 RealField.zro<=ide)) (l0One L :: nil) = l0One L
+    => \let | mc => LinBoundedMap.meetConst 1 RealField.zro<=ide
+            | P => l0calc0 {L} mc (linBounded-zro mc) CoverMap.∘ consMap {L} {0} nil
+            | pt (h : PosCone L) : P (l0One.net h) = l0One.net h
+                => pmap (l0calc0 mc (linBounded-zro mc)) (consMap-eq {L} {0} {nil} *> exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
+                    *> l0calc0-char {L} {1} mc {L.trunc h.el :: nil} *> pmap (pointCF {L0PreSpace L}) (fcalc-trunc *> L.trunc-idemp)
+       \in inv (pmap (l0calc0 mc (linBounded-zro mc)) (consMap-eq {L} {0} {nil}))
+            *> (L0Space L).limit-unique {PosCone L} {\lam h => P (l0One.net h)} (cont-limit {PosCone L} {L0Space L} {L0Space L} {l0One.net} l0One.limit-net P)
+                 (transportInv {PosCone L -> L0Space L} (\lam g => (L0Space L).IsLimit g (l0One L)) {\lam h => P (l0One.net h)} {l0One.net} (ext pt) l0One.limit-net)
+
+  \lemma homog-add {n : Nat} {chi phi psi : CoverMap (RealN n) RealNormed} (e : \Pi (x : Array Real n) -> chi x = phi x + psi x) {y : Array Real (suc n)}
+    : homog chi y = homog phi y + homog psi y
+    => \let | a => phi (\lam j => y (suc j))
+            | b => psi (\lam j => y (suc j))
+            | c => phi (RealN n).zro
+            | d => psi (RealN n).zro
+            | s => y 0 ∧ 1
+       \in homog-eq {n} {chi} {y} (e _) (e _) *> (equation.cRing : ((a + b) - (c + d)) + (c + d) * s = ((a - c) + c * s) + ((b - d) + d * s))
+
+  \lemma homog-neg {n : Nat} {chi phi : CoverMap (RealN n) RealNormed} (e : \Pi (x : Array Real n) -> chi x = negative (phi x)) {y : Array Real (suc n)}
+    : homog chi y = negative (homog phi y)
+    => \let | a => phi (\lam j => y (suc j))
+            | c => phi (RealN n).zro
+            | s => y 0 ∧ 1
+       \in homog-eq {n} {chi} {y} (e _) (e _) *> (equation.cRing : (negative a - negative c) + negative c * s = negative ((a - c) + c * s))
+
+  \lemma homog-*q {n : Nat} {chi phi : CoverMap (RealN n) RealNormed} (q : Rat) (e : \Pi (x : Array Real n) -> chi x = Real.fromRat q * phi x) {y : Array Real (suc n)}
+    : homog chi y = Real.fromRat q * homog phi y
+    => \let | a => phi (\lam j => y (suc j))
+            | c => phi (RealN n).zro
+            | s => y 0 ∧ 1
+       \in homog-eq {n} {chi} {y} (e _) (e _) *> (equation.cRing : (Real.fromRat q * a - Real.fromRat q * c) + Real.fromRat q * c * s = Real.fromRat q * ((a - c) + c * s))
+
+  \lemma homog-const {n : Nat} (q : Rat) {y : Array Real (suc n)}
+    : homog (CoverMap.const (Real.fromRat q) : CoverMap (RealN n) RealNormed) y = Real.fromRat q * (y 0 ∧ 1)
+    => homog-eq {n} {CoverMap.const (Real.fromRat q)} {y} idp idp *> (equation.cRing : (Real.fromRat q - Real.fromRat q) + Real.fromRat q * (y 0 ∧ 1) = Real.fromRat q * (y 0 ∧ 1))
 }
