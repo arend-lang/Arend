@@ -61,10 +61,6 @@
 \func fsignedPowCut {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a) (f : L) : L
   => fcalc (signedPowCutLB r>1 a>0) (f :: nil)
 
--- | $\varphi^{(a)}(f)$ for `r > 1` and `a > 0` (see `signedPowTail`).
-\func fsignedPowTail {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a) (f : L) : L
-  => fcalc (signedPowTailLB r>1 a>0) (f :: nil)
-
 -- | $(\varphi_r(x_1) x_2)(f,g)$ for `r > 1`.
 \func fsignedPowMul {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) (f g : L) : L
   => fcalc (signedPowMul r>1) (f :: g :: nil)

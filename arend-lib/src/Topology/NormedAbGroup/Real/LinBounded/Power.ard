@@ -3,7 +3,6 @@
   * {absPow}: `|x|^p` for `p ≥ 1`.
   * {signedPowLB}: $\varphi_r(t) = t|t|^{r-2}$ for `r ≥ 2`.
   * {signedPowCutLB}: the linearization $\varphi_{r,a}$ of $\varphi_r$ near `0` for `r > 1`.
-  * {signedPowTailLB}: the tail $\varphi^{(a)}$ of $\varphi_r$ (see {signedPowTail}) for `r > 1`.
   * {signedPowMul}: $\varphi_r(x_1) x_2$ for `r > 1`.
 
   The product $x_1 x_2$ is {LinBoundedMap.mul} of two coordinates, and $x_1 \psi_n(x_2)$ is {LinBoundedMap.mulInvJoin}.
@@ -17,7 +16,6 @@
 \import Arith.Real.Field
 \import Arith.Real.Power
 \import Arith.Real.Power.SignedPow
-\import Arith.Real.Power.SignedPowTail
 \import Logic
 \import Order.Biordered
 \import Order.Lattice
@@ -54,15 +52,6 @@
   => LinBoundedMap.makeLocal (signedPow-cut-cover r>1 a>0 CoverMap.∘ LinBoundedMap.coord 0) (LinBoundedMap.coord 0 :: nil) \lam R =>
       inP (rpow-pos a a>0 (r - 2) + rpow-pos (R ∨ a) (a>0 <∘l join-right) (r - 2), <=-less (transport (__ < _) RealAbGroup.zro-left (RealField.<_+ rpow-pos>0 rpow-pos>0)), \lam x xR =>
         signedPow-cut-lin-gen (xR 0) <=∘ =_<= (pmap (_ *) (inv zro-right)))
-
--- | $\varphi^{(a)}(t) = \varphi_r(t) - \varphi_r(c_a(t))$ for `r > 1` and `a > 0`.
-\lemma signedPowTailLB {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a)
-  : LinBoundedMap 1 (\lam x => signedPowTail r>1 a (x 0))
-  => LinBoundedMap.makeLocal (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (signedPow-cover r>1)
-                               (negative-uniform {RealNormed} CoverMap.∘ signedPow-cover r>1 CoverMap.∘ clampSym-cover a) CoverMap.∘ LinBoundedMap.coord 0)
-      (LinBoundedMap.coord 0 :: nil) \lam R =>
-      inP (rpow-pos a a>0 (r - 2) + rpow-pos (R ∨ a) (a>0 <∘l join-right) (r - 2), <=-less (transport (__ < _) RealAbGroup.zro-left (RealField.<_+ rpow-pos>0 rpow-pos>0)), \lam x xR =>
-        signedPowTail-lin {r} {r>1} a>0 (xR 0) <=∘ =_<= (pmap (_ *) (inv zro-right)))
 
 -- | $\varphi_r(x_1) x_2$ for `r > 1`.
 \lemma signedPowMul {r : Real} (r>1 : (1 : Real) < r) : LinBoundedMap 2 (\lam x => signedPow r>1 (x 0) * x 1)

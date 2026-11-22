@@ -1,0 +1,169 @@
+{- | The modulus of continuity of the signed power $\varphi_r(t) = t|t|^{r-2}$, $r > 1$, with conjugate exponent $r'$.
+
+  * {signedPow-homog}: $\varphi_r(\lambda z) = \lambda^{r-1}\varphi_r(z)$.
+  * {signedPow-modulus}: for every $\eta > 0$ there is `C` with $|\varphi_r(x) - \varphi_r(y)|^{r'} \le C |x - y|^r + \eta (|x|^r + |y|^r)$.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.Power.SignedPow
+\import Arith.Real.Power.UniformConvexity
+\import Arith.Real.UpperReal
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\open signedPow
+\open LatticeAbGroup
+
+-- | The conjugate exponent of `r > 1` is `> 1`.
+\lemma conj>1 {r : Real} {r>0 : 0 < r} {q : Real} {q>0 : 0 < q} (r>1 : 1 < r) (rq : HolderConjugate r q r>0 q>0) : 1 < q
+  => \have | pr>0 : 0 < RealField.pinv r r>0 => RealField.pinv>0 r>0
+           | pq<1 : RealField.pinv q q>0 < 1 => linarith
+           | e : q * RealField.pinv q q>0 = 1 => RealField.pinv-right q>0
+           | m : q * RealField.pinv q q>0 < q * 1 => RealField.<_*_positive-right q>0 pq<1
+     \in transport2 (<) e ide-right m
+
+
+-- | $\varphi_r(\lambda z) = \lambda^{r-1} \varphi_r(z)$ for $\lambda > 0$.
+\lemma signedPow-homog {r : Real} {r>1 : 1 < r} {l : Real} (l>0 : 0 < l) {z : Real}
+  : signedPow r>1 (l * z) = rpow-pos l l>0 (r - 1) * signedPow r>1 z
+  => sign-cases-eq {z}
+      (\lam z>=0 => \have lz>=0 : 0 <= l * z => RealField.<=_*_positive_positive (<=-less l>0) z>=0
+                    \in nonneg lz>=0 *> rpow_* {l} {z} {<=-less l>0} {z>=0} *> pmap2 (*) (rpow-pos-eq l>0) (inv (nonneg z>=0)))
+      (\lam z<=0 => \have | s>=0 : 0 <= negative z => linarith
+                          | lz<=0 : l * z <= 0 => transport (_ <=) RealField.zro_*-right (<=_*_positive-right (<=-less l>0) z<=0)
+                          | e : negative (l * z) = l * negative z => equation.cRing
+                          | ls>=0 : 0 <= l * negative z => RealField.<=_*_positive_positive (<=-less l>0) s>=0
+                    \in nonpos lz<=0 {transportInv (0 <=) e ls>=0} *> pmap negative (rpow-base e *> rpow_* {l} {negative z} {<=-less l>0} {s>=0} *> pmap (\lam u => u * _) (rpow-pos-eq l>0))
+                          *> inv (pmap (_ *) (nonpos z<=0 {s>=0}) *> equation.cRing))
+
+\lemma two>0 : 0 RealAbGroup.< 2
+  => linarith
+
+-- | $(|x| + |y|)^r \le 2^r (|x|^r + |y|^r)/2$ for $r \ge 1$.
+\lemma rpow-sum-le {r : Real} {r>0 : 0 < r} (r>1 : 1 < r) {x y : Real} {s>=0 : 0 <= x + y} (x>=0 : 0 <= x) (y>=0 : 0 <= y)
+  : rpow (x + y) s>=0 r r>0 <= rpow-pos 2 two>0 r * (Real.fromRat (ratio 1 2) * (rpow x x>=0 r r>0 + rpow y y>=0 r r>0))
+  => \have | hh2 : (2 : Real) * ratio 1 2 = 1 => RealField.*-rat
+           | e2 : x + y = (2 : Real) * (Real.fromRat (ratio 1 2) * (x + y)) => inv (inv *-assoc *> pmap (\lam t => t * (x + y)) hh2 *> ide-left)
+           | ea {z : Real} (z>=0 : 0 <= z) : powAbs r r>0 z = rpow z z>=0 r r>0 => unfold powAbs (rpow-base (abs-ofPos z>=0))
+           | c => AbsPowLemmas.conv-mid {r} {r>0} r>1 {x} {y}
+     \in =_<= (inv (ea s>=0) *> pmap (powAbs r r>0) e2 *> AbsPowLemmas.scale two>0)
+          <=∘ <=_*_positive-right (<=-less rpow-pos>0) c <=∘ =_<= (pmap (\lam t => _ * (Real.fromRat (ratio 1 2) * t)) (pmap2 (+) (ea x>=0) (ea y>=0)))
+
+-- | $|\varphi_r(x) - \varphi_r(y)|^{r'} \le 2^{r'} (|x| + |y|)^r$.
+\lemma signedPow-diff-far {r : Real} {r>1 : 1 < r} {r>0 : 0 < r} {q : Real} {q>0 : 0 < q}
+                          (rq : HolderConjugate r q r>0 q>0) {x y : Real} {M>=0 : 0 <= abs x + abs y}
+  : rpow (abs (signedPow r>1 x - signedPow r>1 y)) abs>=0 q q>0 <= rpow-pos 2 two>0 q * rpow (abs x + abs y) M>=0 r r>0
+  => \let M => abs x + abs y
+     \in \have | P>=0 : 0 <= rpow M M>=0 (r - 1) (sub1>0 r>1) => rpow>=0
+               | bx : abs (signedPow r>1 x) <= rpow M M>=0 (r - 1) (sub1>0 r>1) => =_<= signedPow-abs <=∘ rpow-mono (linarith (RealAbGroup.abs>=0 {y}))
+               | by' : abs (signedPow r>1 y) <= rpow M M>=0 (r - 1) (sub1>0 r>1) => =_<= signedPow-abs <=∘ rpow-mono (linarith (RealAbGroup.abs>=0 {x}))
+               | d : abs (signedPow r>1 x - signedPow r>1 y) <= (2 : Real) * rpow M M>=0 (r - 1) (sub1>0 r>1)
+                   => abs_+ <=∘ =_<= (pmap (_ +) abs_negative) <=∘ linarith
+               | tP>=0 : (0 : Real) <= (2 : Real) * rpow M M>=0 (r - 1) (sub1>0 r>1) => linarith
+     \in rpow-mono {_} {_} {abs>=0} {tP>=0} d <=∘ =_<= (rpow_* {2} {rpow M M>=0 (r - 1) (sub1>0 r>1)} {<=-less two>0} {P>=0} {tP>=0} {q} {q>0}
+          *> pmap2 (*) (rpow-pos-eq two>0) (rpow-rpow {M} {M>=0} {r - 1} {q} {sub1>0 r>1} {q>0} {P>=0} {RealField.<_*_positive_positive (sub1>0 r>1) q>0} *> rpow-exp (signedPow-conj.conj-exp rq)))
+
+-- | Modulus of continuity of $\varphi_r$: for every $\eta > 0$ there is `C` with $|\varphi_r(x) - \varphi_r(y)|^{r'} \le C |x - y|^r + \eta (|x|^r + |y|^r)$.
+\lemma signedPow-modulus {r : Real} {r>1 : 1 < r} {r>0 : 0 < r} {q : Real} {q>0 : 0 < q}
+                         (rq : HolderConjugate r q r>0 q>0) {eta : Rat} (eta>0 : 0 < eta)
+  : ∃ (C : Rat) (0 <= C) (\Pi (x y : Real) -> rpow (abs (signedPow r>1 x - signedPow r>1 y)) abs>=0 q q>0
+        <= Real.fromRat C * rpow (abs (x - y)) abs>=0 r r>0 + Real.fromRat eta * (rpow (abs x) abs>=0 r r>0 + rpow (abs y) abs>=0 r r>0))
+  => \case UpperReal.U-inh_>0 {rpow-pos 2 two>0 r} \with {
+    | inP (T,Tu,T>0) =>
+      \let eps => 1 RatField.∧ (eta * RatField.finv T)
+      \in \have | eps>0 : 0 < eps => RatField.<_meet-univ RatField.zro<ide (RatField.<_*_positive_positive eta>0 (RatField.finv>0 T>0))
+                | g : CoverMap (IntervalSpace -1 1) RealNormed (\lam z => signedPow r>1 z.1) => signedPow-cover r>1 CoverMap.∘ intervalInc -1 1
+      \in \case interval-uniform (linarith : -1 <= 1) g eps>0 \with {
+        | inP (delta,delta>0,hd) =>
+          \let rho => delta * ratio 1 2
+          \in \have | rho>0 : 0 < rho => linarith
+                    | irho>0 : 0 < Real.fromRat (RatField.finv rho) => rat_real_<.1 (RatField.finv>0 rho>0)
+          \in \case UpperReal.U-inh_>0 {rpow-pos 2 two>0 q * rpow-pos (RatField.finv rho) irho>0 r} \with {
+            | inP (C,Cu,C>0) => inP (C, <=-less C>0, \lam x y =>
+              \let | M => abs x + abs y
+                   | D => rpow (abs (x - y)) abs>=0 r r>0
+                   | S => rpow (abs x) abs>=0 r r>0 + rpow (abs y) abs>=0 r r>0
+              \in \have | M>=0 : 0 <= M => usingOnly (RealAbGroup.abs>=0 {x}, RealAbGroup.abs>=0 {y}) linarith
+                        | CD>=0 : 0 <= Real.fromRat C * D => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less C>0)) rpow>=0
+                        | eS>=0 : 0 <= Real.fromRat eta * S => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less eta>0)) (linarith (rpow>=0 {abs x} {abs>=0} {r} {r>0}, rpow>=0 {abs y} {abs>=0} {r} {r>0}))
+              \in real-cases {Real.fromRat rho * M} {abs (x - y)}
+                   (\lam lt =>
+                     \have | ir : Real.fromRat (RatField.finv rho) * Real.fromRat rho = 1
+                                => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= rho>0))
+                           | ML : M <= Real.fromRat (RatField.finv rho) * abs (x - y)
+                               => =_<= (inv (pmap (\lam t => t * M) ir *> ide-left) *> *-assoc) <=∘ <=_*_positive-right (<=-less irho>0) (<=-less lt)
+                           | IX>=0 : 0 <= Real.fromRat (RatField.finv rho) * abs (x - y)
+                                   => RealField.<=_*_positive_positive (<=-less irho>0) RealAbGroup.abs>=0
+                           | f1 => signedPow-diff-far {r} {r>1} {r>0} {q} {q>0} rq {x} {y} {M>=0}
+                           | f2 : rpow M M>=0 r r>0 <= rpow-pos (RatField.finv rho) irho>0 r * D
+                               => rpow-mono {_} {_} {M>=0} {IX>=0} ML <=∘ =_<= (rpow_* {_} {_} {<=-less irho>0} {abs>=0} *> pmap (\lam t => t * D) (rpow-pos-eq irho>0))
+                           | f3 : rpow-pos 2 two>0 q * rpow M M>=0 r r>0 <= Real.fromRat C * D
+                               => <=_*_positive-right (<=-less rpow-pos>0) f2 <=∘ =_<= (inv *-assoc) <=∘ <=_*_positive-left (<=-less (real_<_U.2 Cu)) rpow>=0
+                     \in f1 <=∘ f3 <=∘ transport (__ <= _) zro-right (<=_+ <=-refl eS>=0))
+                   (\lam ge => real-cases {0} {M}
+                     (\lam M>0 =>
+                       \let | iM => RealField.pinv M M>0
+                            | x' => iM * x
+                            | y' => iM * y
+                            | P => rpow-pos M M>0 (r - 1)
+                       \in \have | iM>0 : 0 < iM => RealField.pinv>0 M>0
+                                 | iMM : iM * M = 1 => RealField.pinv-left M>0
+                                 | small {z : Real} (zM : abs z <= M) : abs (iM * z) <= 1
+                                     => =_<= (RealField.abs_* *> pmap (\lam t => t * _) (abs-ofPos (<=-less iM>0))) <=∘ <=_*_positive-right (<=-less iM>0) zM <=∘ =_<= iMM
+                                 | inI {z : Real} (z1 : abs z <= 1) : ClosedInterval -1 1 z
+                                     => (usingOnly (z1, RealAbGroup.abs>=neg {z}) linarith, abs>=id <=∘ z1)
+                                 | x1 => small (usingOnly (RealAbGroup.abs>=0 {y}) linarith : abs x <= M)
+                                 | y1 => small (usingOnly (RealAbGroup.abs>=0 {x}) linarith : abs y <= M)
+                                 | eyx : y' - x' = iM * (y - x) => equation.cRing
+                                 | dxy : abs (y' - x') < delta
+                                     => (=_<= (pmap abs eyx *> RealField.abs_* *> pmap2 (*) (abs-ofPos (<=-less iM>0)) abs_-)
+                                        <=∘ <=_*_positive-right (<=-less iM>0) ge <=∘ =_<= ((equation.cRing : iM * (Real.fromRat rho * M) = Real.fromRat rho * (iM * M)) *> pmap (Real.fromRat rho *) iMM *> ide-right))
+                                        <∘r rat_real_<.1 (usingOnly delta>0 linarith : rho < delta)
+                                 | u : abs (signedPow r>1 y' - signedPow r>1 x') <= Real.fromRat eps => hd {x', inI x1} {y', inI y1} dxy
+                                 | ex : signedPow r>1 x = P * signedPow r>1 x' => pmap (signedPow r>1) (inv (inv *-assoc *> pmap (\lam t => t * x) (*-comm *> iMM) *> ide-left)) *> signedPow-homog M>0
+                                 | ey : signedPow r>1 y = P * signedPow r>1 y' => pmap (signedPow r>1) (inv (inv *-assoc *> pmap (\lam t => t * y) (*-comm *> iMM) *> ide-left)) *> signedPow-homog M>0
+                                 | eps>0' : 0 < Real.fromRat eps => rat_real_<.1 eps>0
+                                 | d : abs (signedPow r>1 x - signedPow r>1 y) <= Real.fromRat eps * P
+                                     => =_<= (pmap2 (\lam a b => abs (a - b)) ex ey *> pmap abs equation.cRing *> RealField.abs_* *> pmap2 (*) (abs-ofPos (<=-less rpow-pos>0)) abs_- *> *-comm)
+                                        <=∘ <=_*_positive-left u (<=-less rpow-pos>0)
+                                 | eP>=0 : 0 <= Real.fromRat eps * P => RealField.<=_*_positive_positive (<=-less eps>0') (<=-less rpow-pos>0)
+                                 | pw : rpow (Real.fromRat eps * P) eP>=0 q q>0 = rpow-pos eps eps>0' q * rpow M M>=0 r r>0
+                                     => rpow_* {_} {P} {<=-less eps>0'} {<=-less rpow-pos>0} {eP>=0} {q} {q>0} *> pmap2 (*) (rpow-pos-eq eps>0')
+                                          (rpow-base {P} {rpow M M>=0 (r - 1) (sub1>0 r>1)} (inv (rpow-pos-eq M>0)) *> rpow-rpow {M} {M>=0} {r - 1} {q} {sub1>0 r>1} {q>0} {rpow>=0} {RealField.<_*_positive_positive (sub1>0 r>1) q>0} *> rpow-exp (signedPow-conj.conj-exp rq))
+                                 | sp : rpow-pos eps eps>0' q <= eps
+                                     => AbsPowLemmas.small-pow (<=-less (conj>1 r>1 rq)) eps>0' (rat_real_<=.1 RatField.meet-left)
+                                 | Mr : rpow M M>=0 r r>0 <= rpow-pos 2 two>0 r * (Real.fromRat (ratio 1 2) * S) => rpow-sum-le r>1 abs>=0 abs>=0
+                                 | S>=0 : 0 <= S => usingOnly (rpow>=0 {abs x} {RealAbGroup.abs>=0} {r} {r>0}, rpow>=0 {abs y} {abs>=0} {r} {r>0}) linarith
+                                 | hS : Real.fromRat (ratio 1 2) * S <= S => usingOnly S>=0 linarith
+                                 | cT : Real.fromRat eps * rpow-pos 2 two>0 r <= eta
+                                     => <=_*_positive-right (<=-less eps>0') (<=-less (real_<_U.2 Tu)) <=∘ =_<= RealField.*-rat
+                                        <=∘ rat_real_<=.1 (RatField.<=_*_positive-left RatField.meet-right (<=-less T>0) <=∘ =_<= (*-assoc *> pmap (eta *) (RatField.finv-left (RatField.>_/= T>0)) *> ide-right))
+                                 | chain : rpow (abs (signedPow r>1 x - signedPow r>1 y)) abs>=0 q q>0 <= Real.fromRat eta * S
+                                     => rpow-mono {_} {_} {abs>=0} {eP>=0} d <=∘ =_<= pw <=∘ <=_*_positive-left sp rpow>=0
+                                        <=∘ <=_*_positive-right (<=-less eps>0') (Mr <=∘ <=_*_positive-right (<=-less rpow-pos>0) hS)
+                                        <=∘ =_<= (inv *-assoc) <=∘ <=_*_positive-left cT S>=0
+                       \in chain <=∘ transport (__ <= _) zro-left (<=_+ CD>=0 <=-refl))
+                     (\lam M<=0 =>
+                       \have | x0 : x = 0 => abs_zro-ext (<=-antisymmetric (usingOnly (M<=0, RealAbGroup.abs>=0 {y}) linarith) abs>=0)
+                             | y0 : y = 0 => abs_zro-ext (<=-antisymmetric (usingOnly (M<=0, RealAbGroup.abs>=0 {x}) linarith) abs>=0)
+                             | z : rpow (abs (signedPow r>1 x - signedPow r>1 y)) abs>=0 q q>0 = 0
+                                 => rpow-zero-ext (pmap (\lam t => abs (signedPow r>1 x - signedPow r>1 t)) (y0 *> inv x0) *> pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro)
+                       \in =_<= z <=∘ usingOnly (CD>=0, eS>=0) linarith)))
+          }
+      }
+  }

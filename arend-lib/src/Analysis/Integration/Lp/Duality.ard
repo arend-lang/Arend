@@ -40,8 +40,7 @@
 \import Analysis.Integration.Lp.SignedPow
 \import Analysis.Integration.IntegrationSpace
 \import Analysis.Integration.Lp.Holder
-\import Analysis.Integration.Lp.SignedPowMap
-\import Analysis.Integration.Lp.SignedPowLaws
+\import Analysis.Integration.L0SignedPow
 \import Analysis.Integration.Lp.UniformlyConvex
 \import Topology.BanachSpace
 \import Topology.BanachSpace.Dual
