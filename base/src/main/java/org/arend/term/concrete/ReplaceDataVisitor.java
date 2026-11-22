@@ -337,6 +337,9 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
       newDef.setResultTypeLevel(def.getResultTypeLevel().accept(this, null));
     }
     def.copyData(newDef);
+    if (!def.getAttributes().isEmpty()) {
+      newDef.setAttributes(visitReferenceExpressions(def.getAttributes()));
+    }
     return newDef;
   }
 
@@ -356,6 +359,9 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
     Concrete.DataDefinition result = new Concrete.DataDefinition(def.getData(), def.getLevelParameters(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(def.getParameters()), visitReferenceExpressions(def.getEliminatedReferences()), def.isTruncated(), def.getUniverse() == null ? null : visitUniverse(def.getUniverse(), null), clauses);
     def.copyData(result);
+    if (!def.getAttributes().isEmpty()) {
+      result.setAttributes(visitReferenceExpressions(def.getAttributes()));
+    }
     return result;
   }
 
@@ -382,6 +388,9 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
     }
     result.setClassifyingField(def.getClassifyingField(), def.isForcedClassifyingField());
     def.copyData(result);
+    if (!def.getAttributes().isEmpty()) {
+      result.setAttributes(visitReferenceExpressions(def.getAttributes()));
+    }
     return result;
   }
 

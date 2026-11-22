@@ -58,6 +58,12 @@ public class DefinitionSerialization implements ArendSerializer {
       }
     }
 
+    if (definition instanceof TopLevelDefinition topDef) {
+      for (TCDefReferable attribute : topDef.getAttributes()) {
+        out.addAttribute(myCallTargetIndexProvider.getDefIndex(attribute));
+      }
+    }
+
     for (FunctionDefinition axiom : definition.getAxioms()) {
       out.addAxiom(myCallTargetIndexProvider.getDefIndex(axiom));
     }

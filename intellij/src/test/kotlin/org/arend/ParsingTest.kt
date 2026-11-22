@@ -20,4 +20,6 @@ class ParsingTest : ParsingTestCase("org/arend/parser/fixtures", ArendFileTypeIn
     fun testReplTypeCommand() = doTest(true, true)
 
     fun testBareExprCommand() = doTest(true, true)
+
+    fun testAttributes() = doTest(true, true)
 }

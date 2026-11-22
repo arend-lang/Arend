@@ -59,6 +59,23 @@ public class BinaryRoundTripTest extends TypeCheckingTestCase {
   }
 
   @Test
+  public void attributesRoundTrip() {
+    ConcreteGroup group = persistAndReload("""
+        \\func tag => 0
+        \\attr tag \\func f => 1
+        \\func g => 2
+        """);
+    TCDefReferable tag = getDef(group, "tag");
+    TCDefReferable f = getDef(group, "f");
+    TCDefReferable g = getDef(group, "g");
+    assertNotNull(f.getTypechecked());
+    assertEquals(List.of(tag), f.getTypechecked().getAttributes());
+    assertTrue(f.hasAttributes());
+    assertTrue(g.getTypechecked().getAttributes().isEmpty());
+    assertFalse(g.hasAttributes());
+  }
+
+  @Test
   public void dataRoundTrip() {
     ConcreteGroup group = persistAndReload("\\data D | con");
     TCDefReferable d = getDef(group, "D");

@@ -1470,6 +1470,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     if (def.getData().getAccessModifier() == AccessModifier.PROTECTED) {
       myBuilder.append("\\protected ");
     }
+    prettyPrintAttributes(def);
     boolean isUse = def instanceof Concrete.FunctionDefinition && def.getUseParent() != null
         && def.getKind() != FunctionKind.LEVEL && def.getKind() != FunctionKind.COERCE && !def.getKind().isCoclause();
     if (isUse) {
@@ -1559,6 +1560,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     if (def.getData().getAccessModifier() == AccessModifier.PROTECTED) {
       myBuilder.append("\\protected ");
     }
+    prettyPrintAttributes(def);
     myBuilder.append("\\data ");
     prettyPrintNameWithPrecedence(def.getData());
 
@@ -1834,7 +1836,18 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   }
 
   // The order follows the grammar: name, level parameters, \noclassifying, parameter fields, \extends
+  private void prettyPrintAttributes(Concrete.Definition def) {
+    if (def.getAttributes().isEmpty()) return;
+    myBuilder.append("\\attr");
+    for (Concrete.ReferenceExpression attribute : def.getAttributes()) {
+      myBuilder.append(" ");
+      attribute.accept(this, new Precedence(Concrete.Expression.PREC));
+    }
+    myBuilder.append(" ");
+  }
+
   private void prettyPrintClassDefinitionHeader(Concrete.ClassDefinition def) {
+    prettyPrintAttributes(def);
     myBuilder.append(def.isRecord() ? "\\record " : "\\class ").append(declaration(def.getData(), def.getData().textRepresentation()));
 
     if (def.getLevelParameters() != null) {

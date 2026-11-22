@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public final class Abstract {
@@ -265,6 +266,13 @@ public final class Abstract {
     <R> R accept(AbstractDefinitionVisitor<? extends R> visitor);
     @Nullable LevelParameters getLevelParameters();
     boolean withUse();
+
+    /**
+     * @return references to attributes ({@code \attr}) of this definition.
+     */
+    default @NotNull Collection<? extends Reference> getAttributes() {
+      return Collections.emptyList();
+    }
   }
 
   public interface MetaDefinition extends Definition, ParametersHolder {

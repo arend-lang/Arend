@@ -138,6 +138,7 @@ class ArendParserDefinition : ParserDefinition {
         WHERE -> ArendWhere(node)
         WITH_BODY -> ArendWithBody(node)
         ACCESS_MOD -> ArendAccessMod(node)
+        ATTRIBUTES -> ArendAttributes(node)
         STAT_ACCESS_MOD -> ArendStatAccessMod(node)
         ArendExpressionCodeFragmentElementType -> ArendExpr(node)
         ArendLongNameCodeFragmentElementType -> ArendLongName(node)

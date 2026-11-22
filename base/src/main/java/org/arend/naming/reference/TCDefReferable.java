@@ -16,6 +16,14 @@ public interface TCDefReferable extends LocatedReferable, DataContainer {
   Definition getTypechecked();
   void setData(Object data);
 
+  /**
+   * @return true if the definition is marked with attributes ({@code \attr}).
+   *         This is a syntactic property which is available before the definition is resolved.
+   */
+  default boolean hasAttributes() {
+    return false;
+  }
+
   @Override
   @NotNull
   default Precedence getRepresentablePrecedence() {
@@ -28,7 +36,8 @@ public interface TCDefReferable extends LocatedReferable, DataContainer {
       getPrecedence().equals(referable.getPrecedence()) &&
       getAliasPrecedence().equals(referable.getAliasPrecedence()) &&
       Objects.equals(getAliasName(), referable.getAliasName()) &&
-      getKind() == referable.getKind();
+      getKind() == referable.getKind() &&
+      hasAttributes() == referable.hasAttributes();
   }
 
   default void setTypecheckedIfAbsent(@NotNull Definition definition) {

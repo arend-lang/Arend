@@ -141,6 +141,22 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return visitAccessModifier(ctx, AccessModifier.PUBLIC);
   }
 
+  private void visitAttributes(AttributesContext ctx, ConcreteGroup group) {
+    if (ctx == null) return;
+    if (!(group.definition() instanceof Concrete.Definition def)) {
+      myErrorReporter.report(new ParserError(tokenPosition(ctx.start), "Attributes are not allowed here"));
+      return;
+    }
+    List<Concrete.ReferenceExpression> attributes = new ArrayList<>(ctx.longName().size());
+    for (LongNameContext longName : ctx.longName()) {
+      attributes.add(visitLongNameRef(longName, null, null));
+    }
+    def.setAttributes(attributes);
+    if (def.getData() instanceof LocatedReferableImpl referable) {
+      referable.setHasAttributes(true);
+    }
+  }
+
   private List<ConcreteStatement> visitStatement(AccessModifier accessModifier, StatementContext ctx, ConcreteGroup parent, TCDefReferable enclosingClass) {
     switch (ctx) {
       case StatCmdContext statCmdContext -> {
@@ -148,6 +164,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       }
       case StatDefContext statDef -> {
         ConcreteGroup group = visitDefinition(visitAccessModifier(statDef.accessMod(), accessModifier), statDef.definition(), parent, enclosingClass);
+        visitAttributes(statDef.attributes(), group);
         if (statDef.USE() != null && group.definition() instanceof Concrete.Definition def) {
           if (parent.definition() instanceof Concrete.Definition parentDef) {
             def.setUseParent(parentDef.getData());
@@ -815,6 +832,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
               visitInstanceStatement(classFieldOrImplStatContext.classFieldOrImpl(), elements, parentClass);
           case ClassDefinitionStatContext defStat -> {
             ConcreteGroup subgroup = visitDefinition(visitAccessModifier(defStat.accessMod()), defStat.definition(), parent, parentClass.getData());
+            visitAttributes(defStat.attributes(), subgroup);
             if (defStat.USE() != null && subgroup.definition() instanceof Concrete.Definition def) {
               def.setUseParent(parentClass.getData());
               parentClass.addUsedDefinition(def.getData());

@@ -122,6 +122,7 @@ OCT_DIGIT           = [0-8]
     "\\meta"                { return META_KW; }
     "\\coerce"              { return COERCE_KW; }
     "\\use"                 { return USE_KW; }
+    "\\attr"                { return ATTR_KW; }
     "\\field"               { return FIELD_KW; }
     "\\override"            { return OVERRIDE_KW; }
     "\\default"             { return DEFAULT_KW; }

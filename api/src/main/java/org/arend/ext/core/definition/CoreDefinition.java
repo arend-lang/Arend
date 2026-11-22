@@ -7,6 +7,8 @@ import org.arend.ext.variable.Variable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -32,4 +34,11 @@ public interface CoreDefinition extends Variable, UserDataHolder {
   @NotNull Set<? extends CoreDefinition> getRecursiveDefinitions();
 
   @Nullable CoreCoerceData getCoerceData();
+
+  /**
+   * Returns the attributes of this definition, that is, the references listed after {@code \attr}.
+   */
+  default @NotNull List<? extends ArendRef> getAttributes() {
+    return Collections.emptyList();
+  }
 }

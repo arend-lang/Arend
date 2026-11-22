@@ -21,8 +21,10 @@ import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
+import org.arend.ext.typechecking.AttributeChecker;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.naming.reference.GlobalReferable;
+import org.arend.naming.reference.MetaReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.server.ArendServerResolveListener;
@@ -259,6 +261,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     if (ok) {
       CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(errorReporter, null, extension, myResolveListener);
       checkTypeVisitor.setInstancePool(new GlobalInstancePool(getInstances(definition.getData()), checkTypeVisitor, null, usedInstancesOf(definition.getData())));
+      checkTypeVisitor.setAttributedDefinitions(myInstanceScopeProvider.getInstancesFor(definition.getData()).getAttributed());
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
         myDesugaredDefinitions.put(funDef.getData(), funDef);
@@ -399,12 +402,24 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     if (definition instanceof Concrete.ClassDefinition classDef) {
       DefinitionTypechecker.setDefaultDependencies(classDef);
     }
+    for (Definition def : typechecked) {
+      checkAttributes(def);
+    }
     if (extension != null) {
       DefinitionListener listener = extension.getDefinitionListener();
       if (listener != null) {
         for (Definition def : typechecked) {
           listener.typechecked(def);
         }
+      }
+    }
+  }
+
+  private void checkAttributes(Definition definition) {
+    if (!(definition instanceof TopLevelDefinition topDef)) return;
+    for (TCDefReferable attribute : topDef.getAttributes()) {
+      if (attribute instanceof MetaReferable metaRef && metaRef.getDefinition() instanceof AttributeChecker checker) {
+        checker.checkAttributedDefinition(definition, new LocalErrorReporter(definition.getRef(), myErrorReporter));
       }
     }
   }
@@ -470,6 +485,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     CountingErrorReporter countingErrorReporter = new CountingErrorReporter(myErrorReporter);
     CheckTypeVisitor visitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()), myResolveListener);
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
+    visitor.setAttributedDefinitions(myInstanceScopeProvider.getInstancesFor(definition.getData()).getAttributed());
     DesugarVisitor.desugar(definition, myConcreteProvider, visitor.getErrorReporter());
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
     Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(getInstances(definition.getData()), visitor, null, usedInstancesOf(definition.getData())), definition);
@@ -600,6 +616,10 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     // Bodies are cleared only now: the checks above and findAxiomsAndGoals need them
     for (Definition def : newDefs) {
       clearLemma(def);
+    }
+
+    for (Definition def : newDefs) {
+      checkAttributes(def);
     }
 
     for (Pair<Definition, DefinitionListener> pair : listeners) {

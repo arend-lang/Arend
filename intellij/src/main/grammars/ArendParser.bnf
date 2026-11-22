@@ -51,6 +51,7 @@
         STRICT_KW           = '\strict'
         COERCE_KW           = '\coerce'
         USE_KW              = '\use'
+        ATTR_KW             = '\attr'
         ALIAS_KW            = '\alias'
         NON_ASSOC_KW        = '\fix'
         LEFT_ASSOC_KW       = '\fixl'
@@ -117,13 +118,15 @@ private topStatement_recovery ::= topStatement_recover {
     recoverWhile = topStatement_recover
 }
 
-private topStatement_recover ::= !(OPEN_KW | IMPORT_KW | MODULE_KW | FUNC_KW | SFUNC_KW | LEMMA_KW | TYPE_KW | AXIOM_KW | META_KW | USE_KW | LEVEL_KW | COERCE_KW | FIELD_KW | OVERRIDE_KW | DEFAULT_KW | PROPERTY_KW | TRUNCATED_KW | DATA_KW | CONS_KW | RECORD_KW | CLASS_KW | INSTANCE_KW | PRIVATE_KW | PROTECTED_KW | <<eof>>)
+private topStatement_recover ::= !(OPEN_KW | IMPORT_KW | MODULE_KW | FUNC_KW | SFUNC_KW | LEMMA_KW | TYPE_KW | AXIOM_KW | META_KW | USE_KW | ATTR_KW | LEVEL_KW | COERCE_KW | FIELD_KW | OVERRIDE_KW | DEFAULT_KW | PROPERTY_KW | TRUNCATED_KW | DATA_KW | CONS_KW | RECORD_KW | CLASS_KW | INSTANCE_KW | PRIVATE_KW | PROTECTED_KW | <<eof>>)
 
 private statement_recover ::= !(WHERE_KW | RBRACE) & topStatement_recover
 
 accessMod ::= PRIVATE_KW | PROTECTED_KW
 
-stat ::= statCmd | accessMod? USE_KW? definition | accessMod? defModule | statAccessMod | stat_recovery
+attributes ::= ATTR_KW longName+ { pin = 1 }
+
+stat ::= statCmd | accessMod? attributes? USE_KW? definition | accessMod? defModule | statAccessMod | stat_recovery
 
 statAccessMod ::= accessMod statAccessModInternal { pin = 1 }
 
@@ -178,7 +181,7 @@ private classStats ::= LBRACE classStatRecovery classStat* RBRACE | classFieldOr
     recoverWhile = statement_recover
 }
 
-classStat ::= classFieldOrImplement | accessMod? USE_KW? definition | classFieldStat | overriddenField | defaultField | accessMod? defModule { recoverWhile = classStat_recover }
+classStat ::= classFieldOrImplement | accessMod? attributes? USE_KW? definition | classFieldStat | overriddenField | defaultField | accessMod? defModule { recoverWhile = classStat_recover }
 
 private classStatRecovery ::= {
   recoverWhile = classStat_recover

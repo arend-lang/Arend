@@ -27,6 +27,8 @@ message Definition {
     // the instances the typechecker picked; `known` tells "picked none" from "never recorded"
     bool instances_known = 20;
     repeated int32 used_instance = 21;
+    // the attributes (`\attr`) of the definition
+    repeated int32 attribute = 22;
 
     message RefList {
         repeated int32 ref = 1;

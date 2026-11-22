@@ -71,6 +71,7 @@ enum class ArendKeyword(val type: IElementType, val section: ArendKeywordSection
     MODULE(ArendElementTypes.MODULE_KW, MODULE_SECTION),
     INSTANCE(ArendElementTypes.INSTANCE_KW, INSTANCES_SECTION),
     USE(ArendElementTypes.USE_KW, null),
+    ATTR(ArendElementTypes.ATTR_KW, null),
     COERCE(ArendElementTypes.COERCE_KW, null),
     LEVEL(ArendElementTypes.LEVEL_KW, null),
     LEVEL_PLUS(ArendElementTypes.LEVEL_PLUS_KW, null),
@@ -215,7 +216,7 @@ internal fun getArendKeywordHtml(arendKeyword: ArendKeyword?) =
         SIGMA, SIGMA_PLUS -> sigmaHtml
         LET, LETS, HAVE, HAVES, IN -> letHtml
         CASE, SCASE, RETURN -> caseHtml
-        BOX, PRIVATE, PROTECTED, null -> null
+        BOX, PRIVATE, PROTECTED, ATTR, null -> null
     }
 
 internal fun StringBuilder.getDescriptionForKeyword(psiElement: PsiElement) {

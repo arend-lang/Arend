@@ -76,6 +76,18 @@ public class DefinitionDeserialization implements ArendDeserializer {
       }
 
       topDef.setParametersOriginalDefinitions(parametersOriginalDefinitions);
+
+      if (defProto.getAttributeCount() > 0) {
+        List<TCDefReferable> attributes = new ArrayList<>(defProto.getAttributeCount());
+        for (Integer index : defProto.getAttributeList()) {
+          TCDefReferable attribute = myCallTargetProvider.getTCRef(index);
+          attributes.add(attribute);
+        }
+        topDef.setAttributes(attributes);
+        if (def.getRef() instanceof LocatedReferableImpl ref) {
+          ref.setHasAttributes(true);
+        }
+      }
     }
 
     for (Integer index : defProto.getMetaRefList()) {

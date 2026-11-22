@@ -146,6 +146,21 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       }
     }
 
+    if (definition != null && !definition.getAttributes().isEmpty()) {
+      if (concrete instanceof Concrete.Definition def) {
+        List<Concrete.ReferenceExpression> attributes = new ArrayList<>(definition.getAttributes().size());
+        for (Abstract.Reference reference : definition.getAttributes()) {
+          attributes.add(new Concrete.ReferenceExpression(reference.getData(), reference.getReferent()));
+        }
+        def.setAttributes(attributes);
+        if (def.getData() instanceof LocatedReferableImpl ref) {
+          ref.setHasAttributes(true);
+        }
+      } else {
+        errorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Attributes are not allowed here", definition));
+      }
+    }
+
     if (concrete instanceof Concrete.Definition def && enclosingClass != null && !(concrete instanceof Concrete.ClassDefinition)) {
       def.enclosingClass = enclosingClass;
     }

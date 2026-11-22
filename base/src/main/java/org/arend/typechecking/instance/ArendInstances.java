@@ -15,15 +15,20 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Predicate;
 
+/**
+ * Global definitions collected from the scope of a definition: instances and definitions marked with attributes.
+ */
 public class ArendInstances {
   private final @NotNull PersistentList<TCDefReferable> myInstances;
+  private final @NotNull PersistentList<TCDefReferable> myAttributed;
 
-  private ArendInstances(@NotNull PersistentList<TCDefReferable> instances) {
+  private ArendInstances(@NotNull PersistentList<TCDefReferable> instances, @NotNull PersistentList<TCDefReferable> attributed) {
     myInstances = instances;
+    myAttributed = attributed;
   }
 
   public ArendInstances() {
-    this(PersistentList.empty());
+    this(PersistentList.empty(), PersistentList.empty());
   }
 
   public static TCDefReferable getClassRef(Concrete.Expression type, ConcreteProvider concreteProvider) {
@@ -61,11 +66,33 @@ public class ArendInstances {
   }
 
   public @NotNull ArendInstances addInstance(TCDefReferable instance) {
-    return new ArendInstances(new ConsList<>(instance, myInstances));
+    return new ArendInstances(new ConsList<>(instance, myInstances), myAttributed);
   }
 
-  public @NotNull ArendInstances removeFirst(TCDefReferable instance) {
-    return new ArendInstances(myInstances.removeFirst(instance));
+  public @NotNull ArendInstances addAttributed(TCDefReferable definition) {
+    return new ArendInstances(myInstances, new ConsList<>(definition, myAttributed));
+  }
+
+  /**
+   * Adds {@code definition} as an instance and/or as an attributed definition, depending on its properties.
+   */
+  public @NotNull ArendInstances addDefinition(TCDefReferable definition) {
+    ArendInstances result = this;
+    if (definition.getKind() == GlobalReferable.Kind.INSTANCE) {
+      result = result.addInstance(definition);
+    }
+    if (definition.hasAttributes()) {
+      result = result.addAttributed(definition);
+    }
+    return result;
+  }
+
+  public static boolean isAppropriate(TCDefReferable definition) {
+    return definition.getKind() == GlobalReferable.Kind.INSTANCE || definition.hasAttributes();
+  }
+
+  public @NotNull ArendInstances removeFirst(TCDefReferable definition) {
+    return new ArendInstances(myInstances.removeFirst(definition), myAttributed.removeFirst(definition));
   }
 
   public @Nullable TCDefReferable find(@NotNull Predicate<TCDefReferable> predicate) {
@@ -74,6 +101,13 @@ public class ArendInstances {
 
   public @NotNull PersistentList<TCDefReferable> getInstances() {
     return myInstances;
+  }
+
+  /**
+   * @return definitions marked with attributes; the most recently added definitions come first.
+   */
+  public @NotNull PersistentList<TCDefReferable> getAttributed() {
+    return myAttributed;
   }
 
   public @NotNull List<FunctionDefinition> getInstancesList() {
@@ -90,11 +124,11 @@ public class ArendInstances {
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
     ArendInstances that = (ArendInstances) o;
-    return Objects.equals(myInstances, that.myInstances);
+    return Objects.equals(myInstances, that.myInstances) && Objects.equals(myAttributed, that.myAttributed);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(myInstances);
+    return Objects.hash(myInstances, myAttributed);
   }
 }

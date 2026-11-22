@@ -1925,6 +1925,7 @@ public final class Concrete {
     private Map<TCDefReferable, ExternalParameters> myExternalParameters = Collections.emptyMap();
     private List<TCDefReferable> myUsedDefinitions = Collections.emptyList();
     private List<Pair<TCDefReferable,Integer>> myParametersOriginalDefinitions = Collections.emptyList();
+    private List<ReferenceExpression> myAttributes = Collections.emptyList();
 
     public Definition(TCDefReferable referable, LevelParameters pParams) {
       myReferable = referable;
@@ -1945,6 +1946,33 @@ public final class Concrete {
       newDef.myExternalParameters = myExternalParameters;
       newDef.myUsedDefinitions = myUsedDefinitions;
       newDef.myParametersOriginalDefinitions = myParametersOriginalDefinitions;
+      newDef.myAttributes = myAttributes;
+    }
+
+    /**
+     * @return attributes ({@code \attr}) of this definition.
+     *         After name resolution, referents of these expressions are global referables.
+     */
+    public @NotNull List<ReferenceExpression> getAttributes() {
+      return myAttributes;
+    }
+
+    public void setAttributes(@NotNull List<ReferenceExpression> attributes) {
+      myAttributes = attributes;
+    }
+
+    /**
+     * @return resolved attributes of this definition.
+     */
+    public @NotNull List<TCDefReferable> getResolvedAttributes() {
+      if (myAttributes.isEmpty()) return Collections.emptyList();
+      List<TCDefReferable> result = new ArrayList<>(myAttributes.size());
+      for (ReferenceExpression attribute : myAttributes) {
+        if (attribute.getReferent() instanceof TCDefReferable ref) {
+          result.add(ref);
+        }
+      }
+      return result;
     }
 
     @Override
@@ -2162,6 +2190,7 @@ public final class Concrete {
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
+      result.setAttributes(getAttributes());
       result.setNumberOfExternalParameters(myNumberOfExternalParameters);
       result.setGroupoidalLevelProof(isGroupoidalLevelProof());
       return result;
@@ -2559,6 +2588,7 @@ public final class Concrete {
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
+      result.setAttributes(getAttributes());
       result.setGroupoidalLevelProof(isGroupoidalLevelProof());
       return result;
     }

@@ -1,0 +1,7 @@
+\attr positivity \lemma pos : 0 = 0 => idp
+
+\private \attr positivity Meta.gcongr \use \level foo => 0
+
+\record R {
+  \attr gcongr \func f => 0
+}

@@ -530,6 +530,19 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
   }
 
+  private void resolveAttributes(Concrete.Definition def, Scope scope) {
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myLiteralTypechecker, myResolverListener, null);
+    for (Concrete.ReferenceExpression attribute : def.getAttributes()) {
+      exprVisitor.visitReference(attribute, false, false);
+      Referable ref = RedirectingReferable.getOriginalReferable(attribute.getReferent());
+      if (ref instanceof TCDefReferable) {
+        attribute.setReferent(ref);
+      } else if (!(ref instanceof ErrorReference)) {
+        myLocalErrorReporter.report(new NameResolverError("Expected a global definition", attribute));
+      }
+    }
+  }
+
   @Override
   public Void visitClass(Concrete.ClassDefinition def, Scope scope) {
     scope = new PrivateFilteredScope(scope);
@@ -641,7 +654,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
   private ArendInstances addInstances(ArendInstances instances, List<TCDefReferable> list) {
     for (int i = list.size() - 1; i >= 0; i--) {
-      instances = instances.addInstance(list.get(i));
+      instances = instances.addDefinition(list.get(i));
     }
     return instances;
   }
@@ -657,6 +670,9 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     myLocalErrorReporter = localErrorReporter;
     if (def instanceof Concrete.ClassDefinition) {
       resolveSuperClasses((Concrete.ClassDefinition) def, new PrivateFilteredScope(cachedScope), false, false);
+    }
+    if (def instanceof Concrete.Definition definition && !definition.getAttributes().isEmpty()) {
+      resolveAttributes(definition, new PrivateFilteredScope(cachedScope));
     }
 
     for (ParameterReferable parameter : group.externalParameters()) {
@@ -727,7 +743,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         List<TCDefReferable> scopeInstances = new ArrayList<>();
         loop:
         for (Referable element : curScope.getElements()) {
-          if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
+          if (element instanceof TCDefReferable defRef && ArendInstances.isAppropriate(defRef)) {
             for (ConcreteNamespaceCommand.NameHiding hiding : namespaceCommand.hidings()) {
               if (hiding.isStatic() && hiding.reference().getRefName().equals(defRef.getRefName())) continue loop;
             }
@@ -784,7 +800,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         if (!(subgroup.definition() instanceof Concrete.CoClauseFunctionDefinition)) {
           resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
         }
-        if (subgroup.referable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+        if (subgroup.referable() instanceof TCDefReferable defReferable && ArendInstances.isAppropriate(defReferable)) {
           newInstances.add(defReferable);
         }
       }
@@ -810,7 +826,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
       for (ConcreteGroup subgroup : dynamicSubgroups) {
         resolveGroup(subgroup, dynamicScope, addInstances(instances, newInstances), definitionData);
-        if (subgroup.referable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+        if (subgroup.referable() instanceof TCDefReferable defReferable && ArendInstances.isAppropriate(defReferable)) {
           newInstances.add(defReferable);
         }
       }

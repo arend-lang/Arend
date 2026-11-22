@@ -14,6 +14,7 @@ public abstract class TopLevelDefinition extends CallableDefinition {
   private Set<? extends FunctionDefinition> myAxioms = Collections.emptySet();
   private Set<? extends Definition> myGoals = Collections.emptySet();
   private Set<TCDefReferable> myUsedInstances;
+  private List<TCDefReferable> myAttributes = Collections.emptyList();
 
   public TopLevelDefinition(TCDefReferable referable, TypeCheckingStatus status) {
     super(referable, status);
@@ -71,5 +72,14 @@ public abstract class TopLevelDefinition extends CallableDefinition {
 
   public void setUsedInstances(@NotNull Set<TCDefReferable> usedInstances) {
     myUsedInstances = usedInstances;
+  }
+
+  @Override
+  public @NotNull List<TCDefReferable> getAttributes() {
+    return myAttributes;
+  }
+
+  public void setAttributes(@NotNull List<TCDefReferable> attributes) {
+    myAttributes = attributes;
   }
 }

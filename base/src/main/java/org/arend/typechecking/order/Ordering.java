@@ -169,6 +169,12 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     if (definition.getEnclosingClass() != null) {
       visitor.addDependency(definition.getEnclosingClass());
     }
+    if (definition instanceof Concrete.Definition def) {
+      // the meta that checks the attribute must be available when the definition is typechecked
+      for (TCDefReferable attribute : def.getResolvedAttributes()) {
+        visitor.addDependency(attribute);
+      }
+    }
     if (definition instanceof Concrete.CoClauseFunctionDefinition) {
       Referable ref = ((Concrete.CoClauseFunctionDefinition) definition).getImplementedField();
       if (ref instanceof TCDefReferable) {

@@ -36,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
@@ -350,6 +351,22 @@ public interface ExpressionTypechecker extends UserDataHolder {
    * Returns the definitions corresponding to the given reference.
    */
   @Nullable CoreDefinition getCoreDefinition(@Nullable ArendRef ref);
+
+  /**
+   * Returns typechecked definitions marked with the given attribute ({@code \attr attribute}) that are visible
+   * from the definition being typechecked.
+   * Definitions are visible if they are defined in the current module before the current definition
+   * or imported into it (as instances are).
+   * <p>
+   * A definition that refers to {@code attribute} (possibly in the body of a meta, for example, as a {@code @Dependency} of a Java meta)
+   * depends on visible definitions with this attribute, so they are typechecked before it.
+   *
+   * @param attribute   a reference to the attribute, usually the meta that consumes it
+   * @return            the list of definitions; definitions from closer scopes come first
+   */
+  default @NotNull List<? extends CoreDefinition> getAttributedDefinitions(@NotNull ArendRef attribute) {
+    return Collections.emptyList();
+  }
 
   @NotNull ConcreteFactory getFactory();
 

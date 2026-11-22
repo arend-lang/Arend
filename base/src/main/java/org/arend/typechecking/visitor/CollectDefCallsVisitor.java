@@ -1,5 +1,6 @@
 package org.arend.typechecking.visitor;
 
+import org.arend.core.definition.TopLevelDefinition;
 import org.arend.extImpl.DefaultMetaDefinition;
 import org.arend.naming.reference.*;
 import org.arend.term.concrete.Concrete;
@@ -10,6 +11,7 @@ import java.util.*;
 
 public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   private Collection<TCDefReferable> myDependencies;
+  private final Collection<TCDefReferable> myTopDependencies;
   private final Set<TCDefReferable> myInstanceDependencies;
   private final boolean myWithBodies;
   private ArendInstances myInstances;
@@ -21,9 +23,11 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   private Set<TCDefReferable> myExcluded;
   private Set<TCDefReferable> myVisitedClasses;
   private final Set<MetaReferable> myVisitedMetas = new HashSet<>();
+  private Map<TCDefReferable, List<TCDefReferable>> myAttributeMap;
 
   public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, Set<TCDefReferable> instanceDependencies, boolean withBodies, ArendInstances instances, ConcreteProvider concreteProvider, Concrete.ResolvableDefinition definition) {
     myDependencies = dependencies;
+    myTopDependencies = dependencies;
     myInstanceDependencies = instanceDependencies;
     myWithBodies = withBodies;
     myInstances = instances;
@@ -269,8 +273,41 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     return result;
   }
 
+  private List<TCDefReferable> getAttributes(TCDefReferable definition) {
+    if (myConcreteProvider != null && myConcreteProvider.getConcrete(definition) instanceof Concrete.Definition def) {
+      return def.getResolvedAttributes();
+    }
+    return definition.getTypechecked() instanceof TopLevelDefinition def ? def.getAttributes() : Collections.emptyList();
+  }
+
+  /**
+   * A reference to an attribute makes the definition depend on all visible definitions marked with this attribute.
+   * This applies to references in bodies of metas too, so metas that consume attributes should refer to them.
+   */
+  private void addAttributeDependencies(TCDefReferable ref) {
+    if (myInstances == null) return;
+    if (myAttributeMap == null) {
+      myAttributeMap = new HashMap<>();
+      for (TCDefReferable definition : myInstances.getAttributed()) {
+        for (TCDefReferable attribute : getAttributes(definition)) {
+          myAttributeMap.computeIfAbsent(attribute, k -> new ArrayList<>()).add(definition);
+        }
+      }
+    }
+    List<TCDefReferable> definitions = myAttributeMap.get(ref);
+    if (definitions == null) return;
+    if (myTopDependencies != null) {
+      myTopDependencies.addAll(definitions);
+    }
+    if (myInstanceDependencies != null) {
+      myInstanceDependencies.addAll(definitions);
+    }
+  }
+
   private void visitReference(Concrete.ReferenceExpression expr, List<? extends Concrete.Argument> arguments) {
     if (!(expr.getReferent() instanceof TCDefReferable ref)) return;
+
+    addAttributeDependencies(ref);
 
     if (myExcluded == null || !myExcluded.contains(ref)) {
       addDependency(ref);

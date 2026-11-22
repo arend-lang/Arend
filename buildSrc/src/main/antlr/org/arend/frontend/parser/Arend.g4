@@ -31,7 +31,7 @@ grammar Arend;
 
 statements : statement* EOF;
 
-statement : accessMod? USE? definition                                      # statDef
+statement : accessMod? attributes? USE? definition                          # statDef
           | accessMod '{' statement* '}'                                    # statAccessMod
           | nsCmd longName nsUsing? ('\\hiding' '(' scId (',' scId)* ')')?  # statCmd
           ;
@@ -39,6 +39,8 @@ statement : accessMod? USE? definition                                      # st
 nsCmd : '\\open'                        # openCmd
       | '\\import'                      # importCmd
       ;
+
+attributes : '\\attr' longName+;
 
 accessMod : '\\private'   # privateMod
           | '\\protected' # protectedMod
@@ -61,7 +63,7 @@ fieldMod  : '\\field'     # fieldField
           ;
 
 classStat : '|' classFieldOrImpl                        # classFieldOrImplStat
-          | accessMod? USE? definition                  # classDefinitionStat
+          | accessMod? attributes? USE? definition      # classDefinitionStat
           | fieldMod classFieldDef                      # classFieldStat
           | '\\override' longName tele* ':' returnExpr  # classOverrideStat
           | '\\default' coClause                        # classDefaultStat

@@ -116,6 +116,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   private boolean myAllowDeferredMetas = true;
   private Set<Binding> myCovariantContext = new HashSet<>();
   private int myInvariantDepth = 0;
+  private Iterable<? extends TCDefReferable> myAttributedDefinitions = Collections.emptyList();
 
   private record DeferredMeta(MetaDefinition meta, Map<Referable, Binding> context, LocalExpressionPrettifier localPrettifier, ContextDataImpl contextData, InferenceVariable inferenceVar, MyErrorReporter errorReporter, Set<Binding> covariantContext, int invariantDepth) {}
 
@@ -183,7 +184,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         filtered.put(entry.getKey(), entry.getValue());
       }
     }
-    return new TypecheckingContext(filtered, new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, myResolveListener, copyUserData(), myLevelContext);
+    return new TypecheckingContext(filtered, new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, myResolveListener, copyUserData(), myLevelContext, myAttributedDefinitions);
   }
 
   public Definition getDefinition() {
@@ -202,6 +203,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     CheckTypeVisitor visitor = new CheckTypeVisitor(typecheckingContext.localContext(), typecheckingContext.localPrettifier(), errorReporter, null, typecheckingContext.arendExtension(), typecheckingContext.resolveListener(), typecheckingContext.userDataHolder());
     visitor.setInstancePool(typecheckingContext.instancePool().copy(visitor));
     visitor.setLevelContext(typecheckingContext.levelContext());
+    visitor.setAttributedDefinitions(typecheckingContext.attributedDefinitions());
     for (Binding binding : typecheckingContext.localContext().values()) {
       if (binding.getVariance() != BindingVariance.INVARIANT) {
         visitor.myCovariantContext.add(binding);
@@ -282,6 +284,24 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   public GlobalInstancePool getInstancePool() {
     return myInstancePool;
+  }
+
+  public void setAttributedDefinitions(@NotNull Iterable<? extends TCDefReferable> definitions) {
+    myAttributedDefinitions = definitions;
+  }
+
+  @Override
+  public @NotNull List<? extends Definition> getAttributedDefinitions(@NotNull ArendRef attribute) {
+    if (!(attribute instanceof TCDefReferable)) {
+      return Collections.emptyList();
+    }
+    List<Definition> result = new ArrayList<>();
+    for (TCDefReferable ref : myAttributedDefinitions) {
+      if (ref.getTypechecked() instanceof TopLevelDefinition def && !def.status().needsTypeChecking() && def.getAttributes().contains(attribute)) {
+        result.add(def);
+      }
+    }
+    return result;
   }
 
   public void setInstancePool(GlobalInstancePool pool) {
@@ -1131,6 +1151,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         checkTypeVisitor = copy(deferredMeta.context, deferredMeta.localPrettifier, deferredMeta.errorReporter, null, myArendExtension, myResolveListener, this);
         checkTypeVisitor.setInstancePool(myInstancePool.copy(checkTypeVisitor));
         checkTypeVisitor.setLevelContext(myLevelContext);
+        checkTypeVisitor.myAttributedDefinitions = myAttributedDefinitions;
         checkTypeVisitor.myCovariantContext = deferredMeta.covariantContext;
         checkTypeVisitor.myInvariantDepth = deferredMeta.invariantDepth;
       } else {

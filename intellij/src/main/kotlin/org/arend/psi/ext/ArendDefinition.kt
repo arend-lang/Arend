@@ -28,6 +28,11 @@ where StubT : ArendNamedStub, StubT : StubElement<*> {
 
     override fun withUse() = parent?.hasChildOfType(USE_KW) == true
 
+    val attributeList: ArendAttributes?
+        get() = parent?.childOfType()
+
+    override fun getAttributes(): List<ArendLongName> = attributeList?.longNameList ?: emptyList()
+
     protected open val parametersExt: List<Abstract.Parameter>
         get() = emptyList()
 

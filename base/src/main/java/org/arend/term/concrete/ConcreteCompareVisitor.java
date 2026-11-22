@@ -572,6 +572,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
     if ((def instanceof Concrete.CoClauseFunctionDefinition) != (fun2 instanceof Concrete.CoClauseFunctionDefinition)) return false;
     if (!compareTCReferable(def.getData(), fun2.getData())) return false;
+    if (!compareExpressionList(def.getAttributes(), fun2.getAttributes())) return false;
 
     if (def instanceof Concrete.CoClauseFunctionDefinition coClauseDef1) {
       Concrete.CoClauseFunctionDefinition coClauseDef2 = (Concrete.CoClauseFunctionDefinition) fun2;
@@ -621,6 +622,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     }
 
     if (!compareTCReferable(def.getData(), data2.getData())) return false;
+    if (!compareExpressionList(def.getAttributes(), data2.getAttributes())) return false;
     if (!(compareLevelParameters(def, def2) && compareParameters(def.getParameters(), data2.getParameters()) && ((def.getUniverse() == null) == (data2.getUniverse() == null)) && (def.getUniverse() == null || visitUniverse(def.getUniverse(), data2.getUniverse())))) {
       return false;
     }
@@ -689,6 +691,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     }
 
     if (!compareTCReferable(def.getData(), class2.getData())) return false;
+    if (!compareExpressionList(def.getAttributes(), class2.getAttributes())) return false;
     if (def.isRecord() != class2.isRecord() || def.withoutClassifying() != class2.withoutClassifying() || def.isForcedClassifyingField() != class2.isForcedClassifyingField()) return false;
     if (!compareLevelParameters(def, def2) || !compareExpressionList(def.getSuperClasses(), class2.getSuperClasses())) {
       return false;
