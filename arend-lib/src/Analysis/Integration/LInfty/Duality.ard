@@ -168,19 +168,19 @@
       \in \have | N>0 : RatField.zro RatField.< N => RatField.zro<ide <∘l RatField.join-right
                 | FN : IsBelow {L0Space L} (LatticeAbGroup.abs {L0Space L} F.el) N => IsBelow-level {L0Space L} RatField.join-left FM
       \in excess-zero-below C>0
-            (excess-zero C>0 N>0 RatField.join-right FN \lam u _ => RealAbGroup.abs>=id <=∘ l1-bound-lnorm C>0 h u)
-            (excess-zero C>0 N>0 RatField.join-right (linf-negative-below FN) \lam u _ =>
+            (excess-zero C>0 N>0 FN \lam u _ => RealAbGroup.abs>=id <=∘ l1-bound-lnorm C>0 h u)
+            (excess-zero C>0 N>0 (linf-negative-below FN) \lam u _ =>
               =_<= (pmap l1Int (linfLpMul-negative u) *> AddGroupHom.func-negative {l1IntHom}) <=∘ RealAbGroup.abs>=neg <=∘ l1-bound-lnorm C>0 h u)
   }
   \where
     -- | The core of Proposition `prop:dual1-iso`: if $I(F u) \le C \|u\|_1$ for $u \ge 0$, then $(F - C)^+ = 0$.
-    \lemma excess-zero {L : FullIntegrationSpace} {F : LInftyElem L} {C N : Rat} (C>0 : RatField.zro RatField.< C) (N>0 : RatField.zro RatField.< N) (N>=1 : 1 RatField.<= N)
+    \lemma excess-zero {L : FullIntegrationSpace} {F : LInftyElem L} {C N : Rat} (C>0 : RatField.zro RatField.< C) (N>0 : RatField.zro RatField.< N)
                        (FN : IsBelow {L0Space L} (LatticeAbGroup.abs {L0Space L} F.el) N)
                        (hyp : \Pi (u : LpSpace L 1 RealAbGroup.<=-refl) -> (<=) {LpSpace L 1 RealAbGroup.<=-refl} (zro {LpSpace L 1 RealAbGroup.<=-refl}) u -> linfDual F u <= Real.fromRat C * lnorm {LpSpace L 1 RealAbGroup.<=-refl} u)
       : excess {L0Space L} C F.el = (L0Space L).zro
       => l0-gauge-zero \lam {h} h>=0 {d} d>0 => \case L.integral-trunc-small h>=0 d>0 \with {
         | inP (eps,eps>0,small) =>
-          \let | s => excess-parts {L} {F} C>0 N>0 N>=1 eps>0 FN h>=0
+          \let | s => excess-parts {L} {F} C>0 N>0 eps>0 FN h>=0
                | K => 1 RatField.∨ RatField.finv eps
           \in \have | hu : Real.fromRat C * l1Int s.1 + l1Int s.2 <= Real.fromRat C * l1Int s.1
                         => =_<= (inv (pmap l1Int s.5 *> l1IntHom.func-+ *> pmap (`+ _) l1Int-*q)) <=∘ hyp s.1 s.4 <=∘ =_<= (pmap (_ *) (inv (l1Int-pos s.4)))
@@ -230,43 +230,40 @@
     \lemma local {L : FullIntegrationSpace} (F : LInftyElem L) (g h : L)
       : lpDual {L} {2} {2} {fmul-polar.two>=1} {fmul-polar.two>=1} two-conj (linfLpMul {L} {2} {fmul-polar.two>=1} F (lpInc 2 fmul-polar.two>=1 h)) (lpInc 2 fmul-polar.two>=1 g)
           = linfDual F (lpInc 1 RealAbGroup.<=-refl (fmul g h))
-      => \case F.bounded, L.trunc-bounded h, L.trunc-bounded (fmul g h) \with {
-        | inP (M1,FM1), inP (M2,hM2), inP (M3,kM3) =>
-          \let N => ((M1 RatField.∨ M2) RatField.∨ M3) RatField.∨ 1
-          \in \have | N>0 : RatField.zro RatField.< N => RatField.zro<ide <∘l RatField.join-right
-                    | N1 : M1 RatField.<= N => RatField.join-left <=∘ RatField.join-left <=∘ RatField.join-left
-                    | N2 : M2 RatField.<= N => RatField.join-right <=∘ RatField.join-left <=∘ RatField.join-left
-                    | N3 : M3 RatField.<= N => RatField.join-right <=∘ RatField.join-left
-          \in local-at N>0 (IsBelow-level {L0Space L} N1 FM1) (L.IsBelow-level N2 hM2) (L.IsBelow-level N3 kM3)
+      => \case F.bounded \with {
+        | inP (M,FM) =>
+          \let N => M RatField.∨ 1
+          \in \have N>0 : RatField.zro RatField.< N => RatField.zro<ide <∘l RatField.join-right
+          \in local-at N>0 (IsBelow-level {L0Space L} RatField.join-left FM)
       }
 
     \lemma local-at {L : FullIntegrationSpace} {F : LInftyElem L} {N : Rat} (N>0 : RatField.zro RatField.< N)
-                    (FN : IsBelow {L0Space L} (LatticeAbGroup.abs {L0Space L} F.el) N) {g h : L} (hN : L.IsBelow (L.abs h) N) (kN : L.IsBelow (L.abs (fmul g h)) N)
+                    (FN : IsBelow {L0Space L} (LatticeAbGroup.abs {L0Space L} F.el) N) {g h : L}
       : lpDual {L} {2} {2} {fmul-polar.two>=1} {fmul-polar.two>=1} two-conj (linfLpMul {L} {2} {fmul-polar.two>=1} F (lpInc 2 fmul-polar.two>=1 h)) (lpInc 2 fmul-polar.two>=1 g)
           = linfDual F (lpInc 1 RealAbGroup.<=-refl (fmul g h))
-      => pmap (\lam z => integral (lpMul two-conj z (lpInc 2 fmul-polar.two>=1 g))) (linfLpMul-clip N>0 FN hN)
-          *> gen N>0 hN kN F.el
-          *> inv (pmap l1Int (linfLpMul-clip N>0 FN kN))
+      => pmap (\lam z => integral (lpMul two-conj z (lpInc 2 fmul-polar.two>=1 g))) (linfLpMul-clip N>0 FN *> pmap (\lam z => lpClip 2 fmul-polar.two>=1 (linfLpMul.elem.dom>=0 N>0 {h}) (l0Mul (z, pointCF {L0PreSpace L} h))) (inv (bclip-id {L0Space L} N>0 FN)))
+          *> gen N>0 {g} {h} F.el
+          *> inv (pmap l1Int (linfLpMul-clip N>0 FN *> pmap (\lam z => lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {fmul g h}) (l0Mul (z, pointCF {L0PreSpace L} (fmul g h)))) (inv (bclip-id {L0Space L} N>0 FN))))
 
-    -- | The identity of {local-at} with `F` replaced by any `X ∈ L⁰`, by density.
-    \lemma gen {L : FullIntegrationSpace} {N : Rat} (N>0 : RatField.zro RatField.< N) {g h : L} (hN : L.IsBelow (L.abs h) N) (kN : L.IsBelow (L.abs (fmul g h)) N) (X : L0Space L)
-      : integral (lpMul two-conj (lpClip 2 fmul-polar.two>=1 (linfLpMul.elem.dom>=0 N>0 {h}) (l0BMul N>0 (X, pointCF {L0PreSpace L} h))) (lpInc 2 fmul-polar.two>=1 g))
-          = l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {fmul g h}) (l0BMul N>0 (X, pointCF {L0PreSpace L} (fmul g h))))
+    -- | The identity of {local-at} with `F` replaced by the clamping of any `X ∈ L⁰`, by density.
+    \lemma gen {L : FullIntegrationSpace} {N : Rat} (N>0 : RatField.zro RatField.< N) {g h : L} (X : L0Space L)
+      : integral (lpMul two-conj (lpClip 2 fmul-polar.two>=1 (linfLpMul.elem.dom>=0 N>0 {h}) (l0Mul (bclip {L0Space L} N X, pointCF {L0PreSpace L} h))) (lpInc 2 fmul-polar.two>=1 g))
+          = l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {fmul g h}) (l0Mul (bclip {L0Space L} N X, pointCF {L0PreSpace L} (fmul g h))))
       => pmap integral lpMul.cover-eq *> dense-lift-unique (completion {L0PreSpace L}) (completion.isDenseEmbedding {L0PreSpace L}).1
           ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover two-conj CoverMap.∘ ProductCoverSpace.tuple
-            (lpClip 2 fmul-polar.two>=1 (linfLpMul.elem.dom>=0 N>0 {h}) CoverMap.∘ l0BMul N>0 CoverMap.∘ ProductCoverSpace.tuple (CoverMap.id {L0Space L}) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} h)))
+            (lpClip 2 fmul-polar.two>=1 (linfLpMul.elem.dom>=0 N>0 {h}) CoverMap.∘ l0Mul CoverMap.∘ ProductCoverSpace.tuple (bclip-cover {L0Space L} N) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} h)))
             (CoverMap.const (lpInc 2 fmul-polar.two>=1 g)))
           ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lp1-map CoverMap.∘ lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {fmul g h})
-            CoverMap.∘ l0BMul N>0 CoverMap.∘ ProductCoverSpace.tuple (CoverMap.id {L0Space L}) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} (fmul g h))))
+            CoverMap.∘ l0Mul CoverMap.∘ ProductCoverSpace.tuple (bclip-cover {L0Space L} N) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} (fmul g h))))
           (\lam f =>
-            \have b {p : Real} {p>=1 : (1 : Real) <= p} {k : L} (kN' : L.IsBelow (L.abs k) N)
-                   : lpClip p p>=1 (linfLpMul.elem.dom>=0 N>0 {k}) (l0BMul N>0 (pointCF {L0PreSpace L} f, pointCF {L0PreSpace L} k)) = lpInc p p>=1 (fmul (L.bclip N f) k)
-                   => pmap (lpClip p p>=1 (linfLpMul.elem.dom>=0 N>0 {k})) (l0BMul.char N>0 *> pmap (\lam z => pointCF {L0PreSpace L} (fmul (L.bclip N f) z)) (L.bclip-id N>0 kN'))
+            \have b {p : Real} {p>=1 : (1 : Real) <= p} {k : L}
+                   : lpClip p p>=1 (linfLpMul.elem.dom>=0 N>0 {k}) (l0Mul (bclip {L0Space L} N (pointCF {L0PreSpace L} f), pointCF {L0PreSpace L} k)) = lpInc p p>=1 (fmul (L.bclip N f) k)
+                   => pmap (lpClip p p>=1 (linfLpMul.elem.dom>=0 N>0 {k})) (pmap (\lam z => l0Mul (z, pointCF {L0PreSpace L} k)) (inv (l0-bclip {L})) *> l0Mul-char)
                       *> {LpSpace L p p>=1} lpClip.char (linfLpMul.elem.dom>=0 N>0 {k}) *> {LpSpace L p p>=1} pmap (lpInc p p>=1) (L.clip-id (fmul-bounded (<=-less N>0) (L.bclip-below N>0)))
-            \in pmap (\lam z => integral (lpMul.cover two-conj (z, lpInc 2 fmul-polar.two>=1 g))) (b hN)
+            \in pmap (\lam z => integral (lpMul.cover two-conj (z, lpInc 2 fmul-polar.two>=1 g))) b
                 *> pmap integral (inv (lpMul.cover-eq {L} {2} {2} {fmul-polar.two>=1} {fmul-polar.two>=1} {two-conj}) *> lpMul-char {L} {2} {2} {fmul-polar.two>=1} {fmul-polar.two>=1} {two-conj}) *> integrationCompletion.func-integral
                 *> pmap L.integral (fmul-assoc *> pmap (fmul (L.bclip N f)) fmul-comm)
-                *> inv (pmap (\lam z => integral (lp1-map z)) (b kN) *> pmap integral lp1-map-char *> integrationCompletion.func-integral)) X
+                *> inv (pmap (\lam z => integral (lp1-map z)) b *> pmap integral lp1-map-char *> integrationCompletion.func-integral)) X
   }
 
 -- | Theorem `thm:dual1`: every locally normable functional on $\mathrm L^1$ is $T_\infty F$ (unique by {linfDual-inj}).
@@ -355,50 +352,44 @@
     -- | $\Lambda(t) = I(g t)$ for `t ∈ L`.
     \lemma glue-char {L : FullIntegrationSpace} {f : BoundedFunctional (LpSpace L 1 RealAbGroup.<=-refl)} (fn : IsLocallyNormable f) {C : Rat} (C>=1 : 1 RatField.<= C)
                      (fC : IsFunctionalBound {LpSpace L 1 RealAbGroup.<=-refl} f C) (t : L) : f (lpInc 1 RealAbGroup.<=-refl t) = linfDual (glue fn C>=1 fC) (lpInc 1 RealAbGroup.<=-refl t)
-      => \case L.trunc-bounded t \with {
-        | inP (M0,tM0) =>
-          \let | N => C RatField.∨ (M0 RatField.∨ 1)
-               | N>0 : RatField.zro RatField.< N => RatField.zro<ide <∘l C>=1 <=∘ RatField.join-left
-               | J : CoverMap (L0Space L) RealNormed => (IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lp1-map CoverMap.∘ lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t})
-                                                         CoverMap.∘ l0BMul N>0 CoverMap.∘ ProductCoverSpace.tuple (CoverMap.id {L0Space L}) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} t))
-          \in \have | tN : L.IsBelow (L.abs t) N => L.IsBelow-level (RatField.join-left <=∘ RatField.join-right) tM0
-                    | GN : IsBelow {L0Space L} (LatticeAbGroup.abs {L0Space L} (glue fn C>=1 fC).el) N => IsBelow-level {L0Space L} RatField.join-left (glue-below fn C>=1 fC)
-                    | l1 : RealNormed.IsLimit {PosCone L} (\lam n => J (net fn n)) (J (glue fn C>=1 fC).el)
-                        => cont-limit {PosCone L} (limit-isLimit {PosCone L} {L0Space L} {net fn} {net-conv fn C>=1 fC}) J
-          \in inv (RealNormed.limit-unique {PosCone L} (transport (RealNormed.IsLimit {PosCone L} __ (J (glue fn C>=1 fC).el)) (ext \lam n => net-char fn C>=1 fC N>0 RatField.join-left tN n) l1) (tail-limit C>=1 fC t))
-              *> inv (pmap l1Int (linfLpMul-clip N>0 GN tN))
-      }
+      => \let | C>0 : RatField.zro RatField.< C => RatField.zro<ide <∘l C>=1
+              | J : CoverMap (L0Space L) RealNormed => (IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lp1-map CoverMap.∘ lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 C>0 {t})
+                                                        CoverMap.∘ l0Mul CoverMap.∘ ProductCoverSpace.tuple (CoverMap.id {L0Space L}) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} t))
+         \in \have l1 : RealNormed.IsLimit {PosCone L} (\lam n => J (net fn n)) (J (glue fn C>=1 fC).el)
+                       => cont-limit {PosCone L} (limit-isLimit {PosCone L} {L0Space L} {net fn} {net-conv fn C>=1 fC}) J
+         \in inv (RealNormed.limit-unique {PosCone L} (transport (RealNormed.IsLimit {PosCone L} __ (J (glue fn C>=1 fC).el)) (ext \lam n => net-char fn C>=1 fC C>0 <=-refl n) l1) (tail-limit C>=1 fC t))
+             *> inv (pmap l1Int (linfLpMul-clip C>0 (glue-below fn C>=1 fC)))
 
     -- | $I(j_2(v_{\tau(n)}) t) = \Lambda(t \tau(n))$, computed through $\kappa_{N|t|}$.
     \lemma net-char {L : FullIntegrationSpace} {f : BoundedFunctional (LpSpace L 1 RealAbGroup.<=-refl)} (fn : IsLocallyNormable f) {C : Rat} (C>=1 : 1 RatField.<= C)
-                    (fC : IsFunctionalBound {LpSpace L 1 RealAbGroup.<=-refl} f C) {N : Rat} (N>0 : RatField.zro RatField.< N) (CN : C RatField.<= N) {t : L} (tN : L.IsBelow (L.abs t) N) (n : PosCone L)
-      : l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0BMul N>0 (net fn n, pointCF {L0PreSpace L} t))) = f (lpInc 1 RealAbGroup.<=-refl (fmul t (L.trunc n.el)))
+                    (fC : IsFunctionalBound {LpSpace L 1 RealAbGroup.<=-refl} f C) {N : Rat} (N>0 : RatField.zro RatField.< N) (CN : C RatField.<= N) {t : L} (n : PosCone L)
+      : l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0Mul (net fn n, pointCF {L0PreSpace L} t))) = f (lpInc 1 RealAbGroup.<=-refl (fmul t (L.trunc n.el)))
       => \let | C>0 : RatField.zro RatField.< C => RatField.zro<ide <∘l C>=1
               | h>=0 : L.zro <= C *q L.trunc n.el => L.*q_>=0 (<=-less C>0) (L.trunc-pos n.el>=0)
               | b => rep-bound fn C>=1 fC (L.trunc-pos n.el>=0)
          \in \have hN : L.IsBelow (L.abs (C *q L.trunc n.el)) N
                     => transportInv (L.IsBelow __ N) (L.abs-ofPos h>=0) $ L.IsBelow-level (=_<= RatField.ide-right <=∘ CN) $
                         L.IsBelow_*q (<=-less C>0) (transport (L.IsBelow __ 1) (L.abs-ofPos (L.trunc-pos n.el>=0)) (l0One.trunc-below n))
-         \in inv (pmap (\lam z => l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0BMul N>0 (z, pointCF {L0PreSpace L} t)))) (LatticeAbGroup.clip-id {L0Space L} (lpToL0-dominated b)))
-              *> inv (gen2 N>0 h>=0 hN tN (net fn n))
+         \in inv (pmap (\lam z => l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0Mul (z, pointCF {L0PreSpace L} t)))) (LatticeAbGroup.clip-id {L0Space L} (lpToL0-dominated b)))
+              *> inv (gen2 N>0 h>=0 hN (net fn n))
               *> pmap (\lam z => integral (lpMul two-conj z (lpInc 2 fmul-polar.two>=1 t))) (lpClip-lpToL0 h>=0 (rep fn (L.trunc-pos n.el>=0)).1 *> LatticeAbGroup.clip-id {LpSpace L 2 fmul-polar.two>=1} b)
               *> (rep fn (L.trunc-pos n.el>=0)).2 t
 
     -- | $I(\kappa_h(X) t) = I(\kappa_{N|t|}(\mathrm{clip}_h(X) t))$ for `X ∈ L⁰`, by density.
-    \lemma gen2 {L : FullIntegrationSpace} {N : Rat} (N>0 : RatField.zro RatField.< N) {h t : L} (h>=0 : L.zro <= h) (hN : L.IsBelow (L.abs h) N) (tN : L.IsBelow (L.abs t) N) (X : L0Space L)
+    \lemma gen2 {L : FullIntegrationSpace} {N : Rat} (N>0 : RatField.zro RatField.< N) {h t : L} (h>=0 : L.zro <= h) (hN : L.IsBelow (L.abs h) N) (X : L0Space L)
       : integral (lpMul two-conj (lpClip 2 fmul-polar.two>=1 h>=0 X) (lpInc 2 fmul-polar.two>=1 t))
-          = l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0BMul N>0 (LatticeAbGroup.clip {L0Space L} (pointCF {L0PreSpace L} h) X, pointCF {L0PreSpace L} t)))
+          = l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0Mul (LatticeAbGroup.clip {L0Space L} (pointCF {L0PreSpace L} h) X, pointCF {L0PreSpace L} t)))
       => pmap integral lpMul.cover-eq *> dense-lift-unique (completion {L0PreSpace L}) (completion.isDenseEmbedding {L0PreSpace L}).1
           ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover two-conj CoverMap.∘ ProductCoverSpace.tuple (lpClip 2 fmul-polar.two>=1 h>=0) (CoverMap.const (lpInc 2 fmul-polar.two>=1 t)))
           ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lp1-map CoverMap.∘ lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t})
-            CoverMap.∘ l0BMul N>0 CoverMap.∘ ProductCoverSpace.tuple (clip-cover {L0Space L} (pointCF {L0PreSpace L} h)) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} t)))
+            CoverMap.∘ l0Mul CoverMap.∘ ProductCoverSpace.tuple (clip-cover {L0Space L} (pointCF {L0PreSpace L} h)) (CoverMap.const {L0Space L} {L0Space L} (pointCF {L0PreSpace L} t)))
           (\lam g =>
             \have | cN : L.IsBelow (L.abs (L.clip h g)) N => L.IsBelow_<= (=_<= (L.clip-abs-eq h>=0) <=∘ L.meet-right <=∘ =_<= (inv (L.abs-ofPos h>=0))) hN
                    | ci : L.clip (N *q L.abs t) (fmul (L.clip h g) t) = fmul (L.clip h g) t => L.clip-id (fmul-bounded (<=-less N>0) cN)
             \in pmap (\lam z => integral (lpMul.cover two-conj (z, lpInc 2 fmul-polar.two>=1 t))) (lpClip.char h>=0)
                 *> pmap integral (inv (lpMul.cover-eq {L} {2} {2} {fmul-polar.two>=1} {fmul-polar.two>=1} {two-conj}) *> lpMul-char {L} {2} {2} {fmul-polar.two>=1} {fmul-polar.two>=1} {two-conj}) *> integrationCompletion.func-integral
-                *> inv (pmap (\lam z => l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0BMul N>0 (z, pointCF {L0PreSpace L} t)))) (inv (RieszSpaceHom.func-clip {topTruncCompletion {L0PreSpace L}}))
-                        *> pmap (\lam z => l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) z)) (l0BMul-pt N>0 cN tN)
+                *> inv (pmap (\lam z => l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) (l0Mul (z, pointCF {L0PreSpace L} t)))) (inv (RieszSpaceHom.func-clip {topTruncCompletion {L0PreSpace L}}))
+                        *> pmap (\lam z => l1Int (lpClip 1 RealAbGroup.<=-refl (linfLpMul.elem.dom>=0 N>0 {t}) z)) l0Mul-char
                         *> pmap l1Int (lpClip.char (linfLpMul.elem.dom>=0 N>0 {t}) *> pmap (lpInc 1 RealAbGroup.<=-refl) ci) *> l1Int-char)) X
 
     -- | $\Lambda(t \tau(n)) \to \Lambda(t)$, since $\|t \tau(n) - t\|_1 \le I(\tau_\eta |t|)$ for $n \ge |t|/\eta$.

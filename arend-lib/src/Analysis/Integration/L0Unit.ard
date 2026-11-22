@@ -4,7 +4,7 @@
   since $|\tau(h) - \tau(k/\eta)| \wedge k \le \tau_\eta k$ for $h \ge k/\eta$ ({trunc-tail}) and $I(\tau_\eta k) \to 0$ by (R1).
 
   * {l0One}: the limit of this net ({l0One.net-conv}); {l0One-below}: $|1| \le 1$.
-  * {l0One-mul}: $1 \cdot F = F$ for bounded `F` (by {fmul-trunc-tail}).
+  * The unit law $1 \cdot F = F$ is {l0Mul-ide-left} in `L0Product`.
   * {trunc-controlled-conv}, {trunc-controlled-below}: a net `W` on $L^+$ with $|W(n) - W(m)| \le C|\tau(n) - \tau(m)|$ for $m \le n$
     converges by the same argument, and $|W(n)| \le C\tau(n)$ bounds its limit by `C`.
 -}
@@ -14,15 +14,12 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
-\import Algebra.Ordered.RieszSpace
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
 \import Analysis.Integration.FullIntegrationSpace
-\import Analysis.Integration.FunctionalCalculus.Operations
 \import Analysis.Integration.FunctionalCalculus.Pointwise
 \import Analysis.Integration.L0
-\import Analysis.Integration.L0Product
 \import Analysis.Limit
 \import Arith.Rat
 \import Arith.Real
@@ -37,14 +34,10 @@
 \import Paths
 \import Paths.Meta
 \import Topology.CoverSpace.Complete
-\import Topology.CoverSpace.Product
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.Real.Functions
 \import Topology.TopAbGroup.NormFamily.Completion
-\import Topology.TopAbGroup.Product
 \import Topology.TopRieszSpace
 \import Topology.TopRieszSpace.Completion
-\import Topology.TopSpace
 \import Topology.TopSpace.Product
 \open LatticeAbGroup
 \open QModule
@@ -99,32 +92,6 @@
   => (IsBelow_truncAt RatField.zro<ide).2 $ (L0Space L).closed-limit0 {_}
       (equalizer-closed (truncAt-cover 1 CoverMap.∘ (L0Space L).abs-uniform) (L0Space L).abs-uniform) {PosCone L} {l0One.net} l0One.limit-net
       \lam (h : PosCone L) => (IsBelow_truncAt RatField.zro<ide).1 $ transport (IsBelow __ 1) l0-pt-abs $ (topTruncCompletion {L0PreSpace L}).func-IsBelow (l0One.trunc-below h)
-
--- | $1 \cdot F = F$ for `F` bounded by `a`, if $a, 1 \le N$.
-\lemma l0One-mul {L : FullIntegrationSpace} {N a : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a)
-                 (a<=N : a RatField.<= N) (N>=1 : 1 RatField.<= N) {F : L0Space L} (Fa : IsBelow (abs F) a)
-  : l0BMul N>0 (l0One L, F) = F
-  => \let | x => bclip a F
-          | Phi (h : PosCone L) => l0BMul N>0 (l0One.net h, x)
-     \in \have | l1 : (L0Space L).IsLimit Phi (l0BMul N>0 (l0One L, x))
-                   => cont-limit {PosCone L} {L0Space L} {L0Space L} {l0One.net} l0One.limit-net (l0BMul N>0 CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const x))
-               | l2 : (L0Space L).IsLimit Phi x => completion-limit {L0PreSpace L} {PosCone L} \lam (k,k>=0) eps>0 => \case l0One.small k>=0 eps>0 \with {
-                   | inP (eta,eta>0,s) => inP (l0One.start k>=0 eta>0, \lam {h} start<=h => l0One-mul.tail N>0 a>0 a<=N N>=1 k>=0 eta>0 start<=h F <∘r s)
-                 }
-     \in pmap (\lam z => l0BMul N>0 (l0One L, z)) (inv (bclip-id a>0 Fa)) *> (L0Space L).limit-unique l1 l2 *> bclip-id a>0 Fa
-  \where
-    \lemma tail {L : FullIntegrationSpace} {N a : Rat} (N>0 : RatField.zro RatField.< N) (a>0 : RatField.zro RatField.< a) (a<=N : a RatField.<= N) (N>=1 : 1 RatField.<= N)
-                 {k : L} (k>=0 : L.zro <= k) {eta : Rat} (eta>0 : RatField.zro RatField.< eta) {h : PosCone L} (start<=h : (l0One.start k>=0 eta>0).el L.<= h.el) (F : L0Space L)
-      : l0Gauge k>=0 (l0BMul N>0 (l0One.net h, bclip a F) - bclip a F) <= L.integral (L.truncAt eta k)
-      => \have | tN : L.IsBelow (abs (L.trunc h.el)) N => L.IsBelow-level N>=1 (l0One.trunc-below h)
-               | bN {f : L} : L.IsBelow (abs (L.bclip a f)) N => L.IsBelow-level a<=N (L.bclip-below a>0)
-         \in dense_<= real-join-uniform (completion {L0PreSpace L}) completion.isDenseEmbedding.1
-              (l0Gauge k>=0 CoverMap.∘ subtract-uniform {L0Space L} CoverMap.∘ ProductCoverSpace.tuple (l0BMul N>0 CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (l0One.net h)) (bclip-cover a)) (bclip-cover a))
-              (CoverMap.const (L.integral (L.truncAt eta k)))
-              (\lam f => =_<= (pmap (l0Gauge k>=0) (pmap (\lam z => l0BMul N>0 (l0One.net h, z) - z) (inv (l0-bclip {L} {a} {f})) *> pmap (`- _) (l0BMul-pt N>0 tN bN)
-                                                    *> inv (AddGroupHom.func-minus {topTruncCompletion {L0PreSpace L}})) *> l0Gauge.char k>=0)
-                         <=∘ L.integral-mono (transport (\lam (z : L) => abs (fmul z (L.bclip a f) - L.bclip a f) ∧ k <= L.truncAt eta k) (pmap L.trunc (inv (l0One.split {L} {k} {h.el} {eta})))
-                                               (transport (\lam z => abs (z - L.bclip a f) ∧ k <= L.truncAt eta k) fmul-comm (fmul-trunc-tail eta>0 k>=0 (L.to>=0 {_} {h.el} start<=h))))) F
 
 -- | A net {W} on $L^+$ with $|W(n) - W(m)| \le C |\tau(n) - \tau(m)|$ for $m \le n$ converges (as {l0One.net} does).
 \lemma trunc-controlled-conv {L : FullIntegrationSpace} {C : Rat} (C>=1 : 1 RatField.<= C) {W : PosCone L -> L0Space L}

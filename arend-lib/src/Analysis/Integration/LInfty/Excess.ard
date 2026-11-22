@@ -2,7 +2,7 @@
 
   * {excess-hom}, {rampAt-hom}, {excess-cover}, {rampAt-cover}: $w = (x - C)^+$ and $e = (1 \wedge (x/\varepsilon))(w)$
     commute with homomorphisms and are uniformly continuous; elementary bounds {excess>=0}, {excess-abs}, {ramp>=0}, {ramp-below}.
-  * {l0-excess-mul}, {l0-excess-meet}: Corollary `cor:pw`(loc) for bounded elements of `L⁰`, by density from `L`.
+  * {l0-excess-mul}, {l0-excess-meet}: Corollary `cor:pw`(loc) in `L⁰`, by density from `L`.
   * {excess-parts}: the elements of $\mathrm L^1$ in the proof of Proposition `prop:dual1-iso`: $u = \kappa_h(e \wedge h) \ge 0$,
     $F u = C u + w u$, $|\kappa_h(w)| \le \tau_\varepsilon h + \max(1, 1/\varepsilon) w u$ and $d_h(w, 0) = \|\kappa_h(w)\|_1$.
   * {excess-zero-below}: $(G - C)^+ = (-G - C)^+ = 0$ implies $|G| \le C$.
@@ -86,76 +86,57 @@
 \lemma excess-below {R : TruncRieszSpace} {C : Rat} (C>0 : 0 < C) {x : R} (e : excess C x = 0) : IsBelow (part+ x) C
   => (IsBelow_truncAt C>0).2 (inv (AddGroup.fromZero e))
 
--- | Corollary `cor:pw`(loc) for bounded `G ∈ L⁰`: $G u = C u + w u$ with $w = (G - C)^+$, $u = e \wedge h$.
-\lemma l0-excess-mul {L : FullIntegrationSpace} {C eps N : Rat} (C>0 : 0 < C) (eps>0 : 0 < eps) (N>0 : 0 < N) (N>=1 : 1 <= N)
-                     {h : L} (h>=0 : L.zro <= h) {G : L0Space L} (GN : IsBelow (abs G) N)
-  : l0BMul N>0 (G, rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h)
-      = C *q (rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h) + l0BMul N>0 (excess C G, rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h)
+-- | Corollary `cor:pw`(loc) in `L⁰`: $G u = C u + w u$ with $w = (G - C)^+$, $u = e \wedge h$.
+\lemma l0-excess-mul {L : FullIntegrationSpace} {C eps : Rat} (C>0 : 0 < C) (eps>0 : 0 < eps) {h : L} (h>=0 : L.zro <= h) (G : L0Space L)
+  : l0Mul (G, rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h)
+      = C *q (rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h) + l0Mul (excess C G, rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h)
   => \let | Y => L0Space L
           | i => topTruncCompletion {L0PreSpace L}
-          | m => l0BMul N>0
-          | B => bclip-cover {Y} N
           | Wc => excess-cover {Y} C
           | Uc : CoverMap Y Y => Y.meet-uniform CoverMap.∘ ProductCoverSpace.tuple (rampAt-cover eps CoverMap.∘ Wc) (CoverMap.const (i h))
-          | P : CoverMap Y Y => m CoverMap.∘ ProductCoverSpace.tuple B (Uc CoverMap.∘ B)
-          | Q : CoverMap Y Y => +-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple (TopRieszSpace.*q-right-uniform {Y} {C} CoverMap.∘ Uc CoverMap.∘ B) (m CoverMap.∘ ProductCoverSpace.tuple (Wc CoverMap.∘ B) (Uc CoverMap.∘ B))
-     \in transport (\lam z => m (z, rampAt eps (excess C z) ∧ i h) = C *q (rampAt eps (excess C z) ∧ i h) + m (excess C z, rampAt eps (excess C z) ∧ i h)) (bclip-id N>0 GN)
-          (dense-lift-unique completion completion.isDenseEmbedding.1 P Q (\lam g =>
-             \let | f => L.bclip N g
-                  | w => excess C f
-                  | u => rampAt eps w ∧ h
-             \in \have | fN : L.IsBelow (abs f) N => L.bclip-below N>0
-                       | wN : L.IsBelow (abs w) N => L.IsBelow_<= (excess-abs C>0) fN
-                       | uN : L.IsBelow (abs u) N => L.IsBelow-level N>=1 (ramp-below eps>0 (excess>=0 C>0) h>=0)
-                       | pt => l0-pt eps {C} {h} {g}
-             \in pmap2 (\lam a b => m (a, b)) pt.1 pt.3 *> l0BMul-pt N>0 fN uN *> pmap i (excess-mul C>0 h>=0) *> i.func-+
-                  *> pmap2 (+) (func-*q {_} {_} {i}) (inv (l0BMul-pt N>0 wN uN))
-                  *> inv (pmap2 (\lam a b => C *q b + m (a, b)) pt.2 pt.3)) G)
+          | P : CoverMap Y Y => l0Mul CoverMap.∘ ProductCoverSpace.tuple CoverMap.id Uc
+          | Q : CoverMap Y Y => +-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple (TopRieszSpace.*q-right-uniform {Y} {C} CoverMap.∘ Uc) (l0Mul CoverMap.∘ ProductCoverSpace.tuple Wc Uc)
+     \in dense-lift-unique completion completion.isDenseEmbedding.1 P Q (\lam g =>
+           \have pt => l0-pt eps {C} {h} {g}
+           \in pmap (\lam b => l0Mul (i g, b)) pt.2 *> l0Mul-char *> pmap i (excess-mul C>0 h>=0) *> i.func-+
+                *> pmap2 (+) (func-*q {_} {_} {i}) (inv l0Mul-char)
+                *> inv (pmap2 (\lam a b => C *q b + l0Mul (a, b)) pt.1 pt.2)) G
 
--- | Corollary `cor:pw`(loc) for bounded `G ∈ L⁰`: $w \wedge h \le \tau_\varepsilon h + \max(1, 1/\varepsilon) w u$.
-\lemma l0-excess-meet {L : FullIntegrationSpace} {C eps N : Rat} (C>0 : 0 < C) (eps>0 : 0 < eps) (N>0 : 0 < N) (N>=1 : 1 <= N)
-                      {h : L} (h>=0 : L.zro <= h) {G : L0Space L} (GN : IsBelow (abs G) N)
+-- | Corollary `cor:pw`(loc) in `L⁰`: $w \wedge h \le \tau_\varepsilon h + \max(1, 1/\varepsilon) w u$.
+\lemma l0-excess-meet {L : FullIntegrationSpace} {C eps : Rat} (C>0 : 0 < C) (eps>0 : 0 < eps) {h : L} (h>=0 : L.zro <= h) (G : L0Space L)
   : excess C G ∧ pointCF {L0PreSpace L} h
-      <= pointCF {L0PreSpace L} (L.truncAt eps h) + (1 ∨ RatField.finv eps) *q l0BMul N>0 (excess C G, rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h)
+      <= pointCF {L0PreSpace L} (L.truncAt eps h) + (1 ∨ RatField.finv eps) *q l0Mul (excess C G, rampAt eps (excess C G) ∧ pointCF {L0PreSpace L} h)
   => \let | Y => L0Space L
           | i => topTruncCompletion {L0PreSpace L}
-          | m => l0BMul N>0
           | K => 1 ∨ RatField.finv eps
-          | B => bclip-cover {Y} N
           | Wc => excess-cover {Y} C
           | Uc : CoverMap Y Y => Y.meet-uniform CoverMap.∘ ProductCoverSpace.tuple (rampAt-cover eps CoverMap.∘ Wc) (CoverMap.const (i h))
-          | Lc : CoverMap Y Y => Y.meet-uniform CoverMap.∘ ProductCoverSpace.tuple (Wc CoverMap.∘ B) (CoverMap.const (i h))
+          | Lc : CoverMap Y Y => Y.meet-uniform CoverMap.∘ ProductCoverSpace.tuple Wc (CoverMap.const (i h))
           | Rc : CoverMap Y Y => +-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (i (L.truncAt eps h)))
-                                   (TopRieszSpace.*q-right-uniform {Y} {K} CoverMap.∘ m CoverMap.∘ ProductCoverSpace.tuple (Wc CoverMap.∘ B) (Uc CoverMap.∘ B))
+                                   (TopRieszSpace.*q-right-uniform {Y} {K} CoverMap.∘ l0Mul CoverMap.∘ ProductCoverSpace.tuple Wc Uc)
           | P : CoverMap Y Y => Y.meet-uniform CoverMap.∘ ProductCoverSpace.tuple Lc Rc
-     \in meet_<=' $ transport (\lam z => (excess C z ∧ i h) ∧ (i (L.truncAt eps h) + K *q m (excess C z, rampAt eps (excess C z) ∧ i h)) = excess C z ∧ i h) (bclip-id N>0 GN)
-          (dense-lift-unique completion completion.isDenseEmbedding.1 P Lc (\lam g =>
-             \let | f => L.bclip N g
-                  | w => excess C f
-                  | u => rampAt eps w ∧ h
-             \in \have | wN : L.IsBelow (abs w) N => L.IsBelow_<= (excess-abs C>0) (L.bclip-below N>0)
-                       | uN : L.IsBelow (abs u) N => L.IsBelow-level N>=1 (ramp-below eps>0 (excess>=0 C>0) h>=0)
-                       | pt => l0-pt eps {C} {h} {g}
-                       | ew : excess C (bclip N (i g)) ∧ i h = i (w ∧ h) => pmap (`∧ i h) pt.2 *> inv i.func-meet
-                       | er : i (L.truncAt eps h) + K *q m (excess C (bclip N (i g)), rampAt eps (excess C (bclip N (i g))) ∧ i h) = i (L.truncAt eps h + K *q fmul w u)
-                           => pmap2 (\lam a b => i (L.truncAt eps h) + K *q m (a, b)) pt.2 pt.3 *> pmap (\lam z => i (L.truncAt eps h) + K *q z) (l0BMul-pt N>0 wN uN)
-                               *> pmap (_ +) (inv (func-*q {_} {_} {i})) *> inv i.func-+
-             \in pmap2 (∧) ew er *> inv i.func-meet *> pmap i (meet_<= (excess-meet C>0 eps>0 h>=0)) *> inv ew) G)
+     \in meet_<=' $ dense-lift-unique completion completion.isDenseEmbedding.1 P Lc (\lam g =>
+           \let | w => excess C g
+                | u => rampAt eps w ∧ h
+           \in \have | pt => l0-pt eps {C} {h} {g}
+                     | ew : excess C (i g) ∧ i h = i (w ∧ h) => pmap (`∧ i h) pt.1 *> inv i.func-meet
+                     | er : i (L.truncAt eps h) + K *q l0Mul (excess C (i g), rampAt eps (excess C (i g)) ∧ i h) = i (L.truncAt eps h + K *q fmul w u)
+                         => pmap2 (\lam a b => i (L.truncAt eps h) + K *q l0Mul (a, b)) pt.1 pt.2 *> pmap (\lam z => i (L.truncAt eps h) + K *q z) l0Mul-char
+                             *> pmap (_ +) (inv (func-*q {_} {_} {i})) *> inv i.func-+
+           \in pmap2 (∧) ew er *> inv i.func-meet *> pmap i (meet_<= (excess-meet C>0 eps>0 h>=0)) *> inv ew) G
 
--- | The canonical map commutes with the expressions of {l0-excess-mul} on clamped elements.
-\lemma l0-pt {L : FullIntegrationSpace} (eps : Rat) {C : Rat} {h g : L} {N : Rat}
-  : \let | i => topTruncCompletion {L0PreSpace L}
-         | f => L.bclip N g
-    \in \Sigma (bclip N (i g) = i f) (excess C (bclip N (i g)) = i (excess C f)) (rampAt eps (excess C (bclip N (i g))) ∧ i h = i (rampAt eps (excess C f) ∧ h))
+-- | The canonical map commutes with the expressions of {l0-excess-mul}.
+\lemma l0-pt {L : FullIntegrationSpace} (eps : Rat) {C : Rat} {h g : L}
+  : \let i => topTruncCompletion {L0PreSpace L}
+    \in \Sigma (excess C (i g) = i (excess C g)) (rampAt eps (excess C (i g)) ∧ i h = i (rampAt eps (excess C g) ∧ h))
   => \let | i => topTruncCompletion {L0PreSpace L}
-          | e1 : bclip N (i g) = i (L.bclip N g) => inv (l0-bclip {L})
-          | e2 : excess C (bclip N (i g)) = i (excess C (L.bclip N g)) => pmap (excess C) e1 *> inv (excess-hom {i})
-     \in (e1, e2, pmap (\lam z => rampAt eps z ∧ i h) e2 *> pmap (`∧ i h) (inv (rampAt-hom {i})) *> inv i.func-meet)
+          | e : excess C (i g) = i (excess C g) => inv (excess-hom {i})
+     \in (e, pmap (\lam z => rampAt eps z ∧ i h) e *> pmap (`∧ i h) (inv (rampAt-hom {i})) *> inv i.func-meet)
 
-{- | The elements of $\mathrm L^1$ in the proof of Proposition `prop:dual1-iso`, for $|F| \le N$, $N \ge 1$, $h \ge 0$:
+{- | The elements of $\mathrm L^1$ in the proof of Proposition `prop:dual1-iso`, for $|F| \le N$, $h \ge 0$:
  -   with $w = (F - C)^+$, $e = (1 \wedge (x/\varepsilon))(w)$, $u = \kappa_h(e \wedge h)$, $w' = w u$ and $v = \kappa_h(w)$.
  -}
-\func excess-parts {L : FullIntegrationSpace} {F : LInftyElem L} {C N eps : Rat} (C>0 : 0 < C) (N>0 : 0 < N) (N>=1 : 1 <= N)
+\func excess-parts {L : FullIntegrationSpace} {F : LInftyElem L} {C N eps : Rat} (C>0 : 0 < C) (N>0 : 0 < N)
                    (eps>0 : 0 < eps) (FN : IsBelow (abs F.el) N) {h : L} (h>=0 : L.zro <= h)
   : \Sigma (u w' v : LpSpace L 1 <=-refl) (0 <= u) (linfLpMul {L} {1} {<=-refl} F u = C *q u + w')
            (abs v <= lpInc 1 <=-refl (L.truncAt eps h) + (1 ∨ RatField.finv eps) *q w')
@@ -166,15 +147,14 @@
           | W => excess C F.el
           | U => rampAt eps W ∧ i h
           | K => 1 ∨ RatField.finv eps
-          | m => l0BMul N>0
+          | m => l0Mul {L}
           | Nh>=0 : L.zro <= N *q h => L.*q_>=0 (<=-less N>0) h>=0
           | ih>=0 : Y.zro <= i h => =_<= (inv i.func-zro) <=∘ i.func-<= h>=0
           | W>=0 : Y.zro <= W => excess>=0 C>0
           | WN : IsBelow (abs W) N => IsBelow_<= (excess-abs C>0) FN
           | U>=0 : Y.zro <= U => ramp>=0 eps>0 W>=0 ih>=0
           | Uh : abs U <= i h => =_<= (abs-ofPos U>=0) <=∘ meet-right
-          | UN : IsBelow (abs U) N => IsBelow-level N>=1 (ramp-below eps>0 W>=0 ih>=0)
-          | mUh : abs (m (W,U)) <= i (N *q h) => l0BMul-abs N>0 N>0 <=-refl WN UN <=∘ <=_*q-right (<=-less N>0) Uh <=∘ =_<= (inv (func-*q {_} {_} {i}))
+          | mUh : abs (m (W,U)) <= i (N *q h) => l0Mul-abs N>0 WN U <=∘ <=_*q-right (<=-less N>0) Uh <=∘ =_<= (inv (func-*q {_} {_} {i}))
           | u => lpClip 1 <=-refl h>=0 U
           | w' => lpClip 1 <=-refl Nh>=0 (m (W,U))
           | v => lpClip 1 <=-refl h>=0 W
@@ -182,10 +162,10 @@
           | jw : j w' = m (W,U) => lp-dominated Nh>=0 mUh
      \in (u, w', v,
           lpToL0-reflects (=_<= j.func-zro <=∘ U>=0 <=∘ =_<= (inv ju)),
-          lpToL0-inj $ linfLpMul-dominated N>0 FN h>=0 Uh UN *> l0-excess-mul C>0 eps>0 N>0 N>=1 h>=0 FN
+          lpToL0-inj $ linfLpMul-dominated h>=0 Uh *> l0-excess-mul C>0 eps>0 h>=0 F.el
             *> inv (j.func-+ *> pmap2 (+) (func-*q {_} {_} {j} *> pmap (C *q) ju) jw),
           lpToL0-reflects $ =_<= (lpToL0-abs v *> pmap abs (lpToL0-clip h>=0 W) *> clip-abs-eq ih>=0 *> pmap (`∧ i h) (abs-ofPos W>=0))
-            <=∘ l0-excess-meet C>0 eps>0 N>0 N>=1 h>=0 FN <=∘ =_<= (inv (j.func-+ *> pmap2 (+) lpToL0.char (func-*q {_} {_} {j} *> pmap (K *q) jw))),
+            <=∘ l0-excess-meet C>0 eps>0 h>=0 F.el <=∘ =_<= (inv (j.func-+ *> pmap2 (+) lpToL0.char (func-*q {_} {_} {j} *> pmap (K *q) jw))),
           l0Gauge-lnorm h>=0 W)
 
 -- | $(G - C)^+ = (-G - C)^+ = 0$ implies $|G| \le C$.

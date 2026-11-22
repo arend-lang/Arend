@@ -10,7 +10,7 @@
   * {linfLpMul}: the product $\mathrm L^\infty \times \mathrm L^p \to \mathrm L^p$, additive in the second argument;
     {linfLpMul-char}: $j_p(F \cdot g) = F g$ for `g ∈ L`; {linfLpMul-norm}: $\|F G\|_p \le a \|G\|_p$ if $|F| \le a$;
     {linfLpMul-norm-upper}: $\|F G\|_p \le \|F\|_\infty \|G\|_p$; {linfLpMul-negative}: $(-F) G = -(F G)$; {linfLpMul-+}: $(F + F') G = F G + F' G$;
-    {linfLpMul-dominated}: $j_p(F \cdot \kappa_h(U)) = F U$ for bounded `U ∈ L⁰` with $|U| \le h$;
+    {linfLpMul-dominated}: $j_p(F \cdot \kappa_h(U)) = F U$ for `U ∈ L⁰` with $|U| \le h$;
     {linfLpMul-clip}: $F \cdot g = \kappa_{N|g|}(F g)$ for `g ∈ L`.
 -}
 
@@ -102,7 +102,7 @@
     \lemma elem {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} (F : LInftyElem L) (g : L)
       : \Sigma (G : LpSpace L p p>=1) (lpToL0 p p>=1 G = linfMul F (linfInc g))
       => TruncP.rec (level F g) (common-bound F (linfInc g))
-          \lam s => (lpClip p p>=1 (dom>=0 s.2) (linfMul F (linfInc g)), lp-dominated (dom>=0 s.2) (dom-bound s.2 s.3 s.4))
+          \lam s => (lpClip p p>=1 (dom>=0 s.2) (linfMul F (linfInc g)), lp-dominated (dom>=0 s.2) (dom-bound s.2 s.3))
       \where {
         \lemma level {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} (F : LInftyElem L) (g : L)
           : isProp (\Sigma (G : LpSpace L p p>=1) (lpToL0 p p>=1 G = linfMul F (linfInc g)))
@@ -113,9 +113,9 @@
 
         -- | $|F g| \le a|g|$.
         \lemma dom-bound {L : FullIntegrationSpace} {F : LInftyElem L} {g : L} {a : Rat} (a>0 : RatField.zro RatField.< a)
-                         (Fa : IsBelow (abs F.el) a) (ga : IsBelow (abs (linfInc g).el) a)
+                         (Fa : IsBelow (abs F.el) a)
           : abs (linfMul F (linfInc g)) <= pointCF {L0PreSpace L} (a *q abs g)
-          => =_<= (pmap abs (linfMul-char a>0 Fa ga)) <=∘ l0BMul-abs a>0 a>0 <=-refl Fa ga
+          => l0Mul-abs a>0 Fa (linfInc g).el
               <=∘ =_<= (pmap (a *q) (inv l0-pt-abs) *> inv (func-*q {_} {_} {topTruncCompletion {L0PreSpace L}}))
       }
 
@@ -125,28 +125,21 @@
       => \let i => topTruncCompletion {L0PreSpace L}
          \in lpToL0-inj $ (elem {L} {p} {p>=1} F (g + g')).2
               *> pmap (linfMul F) (ext i.func-+ : linfInc (g + g') = \new LInftyElem L ((linfInc g).el + (linfInc g').el) (TruncRieszSpace.IsBounded_+ (linfInc g).bounded (linfInc g').bounded))
-              *> linfMul-ldistr F (linfInc g) (linfInc g') *> inv ((lpToL0 p p>=1).func-+ *> pmap2 (+) (elem {L} {p} {p>=1} F g).2 (elem {L} {p} {p>=1} F g').2)
+              *> l0Mul-ldistr F.el (linfInc g).el (linfInc g').el *> inv ((lpToL0 p p>=1).func-+ *> pmap2 (+) (elem {L} {p} {p>=1} F g).2 (elem {L} {p} {p>=1} F g').2)
 
     -- | $\|F g\|_p \le a \|g\|_p$ if $|F| \le a$.
     \lemma elem-norm {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L} {g : L} {a : Rat} (a>0 : RatField.zro RatField.< a)
                            (Fa : IsBelow (abs F.el) a)
       : lnorm (elem {L} {p} {p>=1} F g).1 <= Real.fromRat a * pnorm p p>=1 g
-      => \case common-bound F (linfInc g) \with {
-        | inP (b,b>0,Fb,gb) =>
-          \let | N => a RatField.∨ b
-               | G => (elem {L} {p} {p>=1} F g).1
-               | i => topTruncCompletion {L0PreSpace L}
-          \in \have | N>0 : RatField.zro RatField.< N => a>0 <∘l RatField.join-left
-                    | h>=0 => elem.dom>=0 {L} a>0 {g}
-                    | jb : abs (lpToL0 p p>=1 G) <= lpToL0 p p>=1 (lpInc p p>=1 (a *q abs g))
-                        => =_<= (pmap abs ((elem F g).2 *> linfMul-char N>0 (TruncRieszSpace.IsBelow-level RatField.join-left Fa) (TruncRieszSpace.IsBelow-level RatField.join-right gb)))
-                            <=∘ l0BMul-abs N>0 a>0 RatField.join-left Fa (TruncRieszSpace.IsBelow-level RatField.join-right gb)
-                            <=∘ =_<= (pmap (a *q) (inv l0-pt-abs) *> inv (func-*q {_} {_} {i}) *> inv lpToL0.char)
-                    | le : abs G <= abs (lpInc p p>=1 (a *q abs g))
-                        => lpToL0-reflects (=_<= (lpToL0-abs G) <=∘ jb) <=∘ =_<= (inv (abs-ofPos (=_<= (inv (lpInc p p>=1).func-zro) <=∘ (lpInc p p>=1).func-<= h>=0)))
-          \in TruncPreBanachLattice.lnorm_<= {LpSpace L p p>=1} le <=∘ =_<= (lpInc.lnorm-char *> pnorm-*q *> pmap (`* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less a>0))))
-              <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less a>0)) (pnorm-abs-mono (=_<= (abs-ofPos abs>=0)))
-      }
+      => \let | G => (elem {L} {p} {p>=1} F g).1
+              | i => topTruncCompletion {L0PreSpace L}
+         \in \have | h>=0 => elem.dom>=0 {L} a>0 {g}
+                   | jb : abs (lpToL0 p p>=1 G) <= lpToL0 p p>=1 (lpInc p p>=1 (a *q abs g))
+                       => =_<= (pmap abs (elem F g).2) <=∘ elem.dom-bound a>0 Fa <=∘ =_<= (inv lpToL0.char)
+                   | le : abs G <= abs (lpInc p p>=1 (a *q abs g))
+                       => lpToL0-reflects (=_<= (lpToL0-abs G) <=∘ jb) <=∘ =_<= (inv (abs-ofPos (=_<= (inv (lpInc p p>=1).func-zro) <=∘ (lpInc p p>=1).func-<= h>=0)))
+         \in TruncPreBanachLattice.lnorm_<= {LpSpace L p p>=1} le <=∘ =_<= (lpInc.lnorm-char *> pnorm-*q *> pmap (`* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less a>0))))
+             <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less a>0)) (pnorm-abs-mono (=_<= (abs-ofPos abs>=0)))
 
     -- | $g \mapsto F g$ is a uniformly continuous additive map $(L, \|\cdot\|_p) \to \mathrm L^p$.
     \func pre {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} (F : LInftyElem L) : UniformNormedAbGroupMap (LpPreSpace L p p>=1) (LpSpace L p p>=1) \cowith
@@ -201,29 +194,20 @@
       (\lam g => lpToL0-inj $ linfLpMul-char *> pmap (\lam (z : LInftyElem L) => z.el) (Ring.rdistr {LInfty L} {F} {F'} {linfInc g})
                   *> inv ((lpToL0 p p>=1).func-+ *> pmap2 (+) linfLpMul-char linfLpMul-char)) G
 
--- | $j_p(F \cdot \kappa_h(U)) = F U$ for `U ∈ L⁰` with $|U| \le h$ and $|U|, |F| \le N$.
-\lemma linfLpMul-dominated {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L} {N : Rat} (N>0 : 0 < N)
-                           (FN : IsBelow (abs F.el) N) {h : L} (h>=0 : L.zro <= h) {U : L0Space L} (Uh : abs U <= pointCF {L0PreSpace L} h) (UN : IsBelow (abs U) N)
-  : lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 U)) = l0BMul N>0 (F.el, U)
-  => \let | i => topTruncCompletion {L0PreSpace L}
-          | gen : \Pi (X : L0Space L) -> lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 (bclip N X))) = l0BMul N>0 (F.el, clip (i h) (bclip N X))
-            => dense-lift-unique completion completion.isDenseEmbedding.1
-                (lpToL0 p p>=1 ContMap.∘ linfLpMul {L} {p} {p>=1} F ContMap.∘ lpClip p p>=1 h>=0 ContMap.∘ bclip-cover N)
-                (l0BMul N>0 ContMap.∘ ProductCoverSpace.tuple (CoverMap.const F.el) (clip-cover (i h) CoverMap.∘ bclip-cover N))
-                (\lam g => \have yN : L.IsBelow (abs (L.clip h (L.bclip N g))) N => L.IsBelow_<= (=_<= (L.clip-abs-eq h>=0) <=∘ L.meet-left) (L.bclip-below N>0)
-                           \in pmap (\lam z => lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 z))) (inv (l0-bclip {L}))
-                            *> pmap (\lam z => lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F z)) (lpClip.char h>=0)
-                            *> linfLpMul-char *> linfMul-char N>0 FN (transport (IsBelow __ N) (l0-pt-abs {L} {L.clip h (L.bclip N g)}) (i.func-IsBelow yN))
-                            *> pmap (\lam z => l0BMul N>0 (F.el, z)) (RieszSpaceHom.func-clip {i} *> pmap (clip (i h)) (l0-bclip {L})))
-     \in pmap (\lam z => lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 z))) (inv (bclip-id N>0 UN))
-          *> gen U *> pmap (\lam z => l0BMul N>0 (F.el, clip (i h) z)) (bclip-id N>0 UN) *> pmap (\lam z => l0BMul N>0 (F.el, z)) (clip-id Uh)
-
--- | $F \cdot g = \kappa_{N|g|}(F g)$ in `Lᵖ` for `g ∈ L` and $|F|, |g| \le N$.
-\lemma linfLpMul-clip {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L} {N : Rat} (N>0 : 0 < N)
-                      (FN : IsBelow (abs F.el) N) {g : L} (gN : L.IsBelow (abs g) N)
-  : linfLpMul {L} {p} {p>=1} F (lpInc p p>=1 g) = lpClip p p>=1 (linfLpMul.elem.dom>=0 N>0 {g}) (l0BMul N>0 (F.el, pointCF {L0PreSpace L} g))
+-- | $j_p(F \cdot \kappa_h(U)) = F U$ for `U ∈ L⁰` with $|U| \le h$.
+\lemma linfLpMul-dominated {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L}
+                           {h : L} (h>=0 : L.zro <= h) {U : L0Space L} (Uh : abs U <= pointCF {L0PreSpace L} h)
+  : lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F (lpClip p p>=1 h>=0 U)) = l0Mul (F.el, U)
   => \let i => topTruncCompletion {L0PreSpace L}
-     \in \have gN' : IsBelow (abs (linfInc g).el) N => transport (IsBelow __ N) (l0-pt-abs {L} {g}) (i.func-IsBelow gN)
-     \in lpToL0-inj $ linfLpMul-char *> linfMul-char N>0 FN gN'
-          *> inv (lp-dominated (linfLpMul.elem.dom>=0 N>0 {g}) (l0BMul-abs N>0 N>0 <=-refl FN gN'
-                    <=∘ =_<= (pmap (N *q) (inv l0-pt-abs) *> inv (func-*q {_} {_} {i}))))
+     \in dense-lift-unique completion completion.isDenseEmbedding.1
+            (lpToL0 p p>=1 ContMap.∘ linfLpMul {L} {p} {p>=1} F ContMap.∘ lpClip p p>=1 h>=0)
+            (l0Mul ContMap.∘ ProductCoverSpace.tuple (CoverMap.const F.el) (clip-cover (i h)))
+            (\lam g => pmap (\lam z => lpToL0 p p>=1 (linfLpMul {L} {p} {p>=1} F z)) (lpClip.char h>=0)
+                        *> linfLpMul-char *> pmap (\lam z => l0Mul (F.el, z)) (RieszSpaceHom.func-clip {i})) U
+          *> pmap (\lam z => l0Mul (F.el, z)) (clip-id Uh)
+
+-- | $F \cdot g = \kappa_{N|g|}(F g)$ in `Lᵖ` for `g ∈ L` and $|F| \le N$.
+\lemma linfLpMul-clip {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : LInftyElem L} {N : Rat} (N>0 : 0 < N)
+                      (FN : IsBelow (abs F.el) N) {g : L}
+  : linfLpMul {L} {p} {p>=1} F (lpInc p p>=1 g) = lpClip p p>=1 (linfLpMul.elem.dom>=0 N>0 {g}) (l0Mul (F.el, pointCF {L0PreSpace L} g))
+  => lpToL0-inj $ linfLpMul-char *> inv (lp-dominated (linfLpMul.elem.dom>=0 N>0 {g}) (linfLpMul.elem.dom-bound N>0 FN))

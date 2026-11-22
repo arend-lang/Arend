@@ -19,13 +19,13 @@
 \import Analysis.Integration.FunctionalCalculus.Pointwise
 \import Analysis.Integration.L0
 \import Analysis.Integration.L0Calculus
+\import Analysis.Integration.L0Product
 \import Analysis.Integration.IntegrationSpace
 \import Analysis.Integration.LInfty.LpAction
 \import Analysis.Integration.Lp.Holder
 \import Analysis.Integration.Lp.L1
 \import Equiv
 \import Topology.NormedAbGroup
-\import Topology.NormedAbGroup.Real.LinBounded
 \import Analysis.Integration.Lp
 \import Analysis.Integration.LpCharacterization
 \import Analysis.Integration.LpEmbedding
@@ -273,15 +273,12 @@
       }
   }
 
--- | The product of $\mathrm L^p \times \mathrm L^q$ is the product of `L⁰`: $j(uv) = (x_0 x_1)(j_p u, j_q v)$.
+-- | The product of $\mathrm L^p \times \mathrm L^q$ is the product {l0Mul} of `L⁰`: $j(uv) = (j_p u)(j_q v)$.
 \lemma lpMul-l0 {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
                 {pq : HolderConjugate p q (fpow.one>0 p>=1) (fpow.one>0 q>=1)} (u : LpSpace L p p>=1) (v : LpSpace L q q>=1)
-  : l1ToL0 (lpMul pq u v) = l0calc (LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)) (lpToL0 p p>=1 u :: lpToL0 q q>=1 v :: nil)
+  : l1ToL0 (lpMul pq u v) = l0Mul (lpToL0 p p>=1 u, lpToL0 q q>=1 v)
   => pmap l1ToL0 (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> dense-lift-unique (ProductCoverSpace.prod (lpInc p p>=1) (lpInc q q>=1)) lpInc.isDense2
       (l1ToL0 CoverMap.∘ lpMul.cover pq)
-      (l0calc (LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)) CoverMap.∘ ArrayCoverSpace.tuple ((lpToL0 p p>=1 CoverMap.∘ ProductCoverSpace.proj1) :: (lpToL0 q q>=1 CoverMap.∘ ProductCoverSpace.proj2) :: nil))
+      (l0Mul CoverMap.∘ ProductCoverSpace.prod (lpToL0 p p>=1) (lpToL0 q q>=1))
       (\lam (s : \Sigma L L) => pmap l1ToL0 (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char {L} {p} {q} {p>=1} {q>=1} {pq}) *> l1ToL0.char
-          *> inv (l0calc-char (LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)) {s.1 :: s.2 :: nil})
-          *> pmap {Array (L0Space L) 2} (l0calc (LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)))
-                  {\lam j => pointCF {L0PreSpace L} ((s.1 :: s.2 :: nil) j)} {lpToL0 p p>=1 (lpInc p p>=1 s.1) :: lpToL0 q q>=1 (lpInc q q>=1 s.2) :: nil}
-                  (exts \lam (j : Fin 2) => \case \elim j \with { | 0 => inv lpToL0.char | 1 => inv lpToL0.char })) (u,v)
+          *> inv l0Mul-char *> pmap2 (\lam a b => l0Mul (a,b)) (inv lpToL0.char) (inv lpToL0.char)) (u,v)

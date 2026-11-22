@@ -17,7 +17,7 @@
 \import Analysis.Integration.FunctionalCalculus.Operations
 \import Analysis.Integration.IntegrationSpace
 \import Analysis.Integration.L0
-\import Analysis.Integration.L0Calculus
+\import Analysis.Integration.L0Product
 \import Analysis.Integration.Lp
 \import Analysis.Integration.Lp.Holder
 \import Analysis.Integration.Lp.Calculus
@@ -40,7 +40,6 @@
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.Real.LinBounded
 \import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Arith.Real.Power.SignedPow
@@ -99,7 +98,7 @@
                        {rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)} (u : LpSpace L r (ge1 r>1))
   : integral (lpMul (conj-swap rq) (lpSignedPow r>1 q>=1 rq u) u) = lpNormPow r (ge1 r>1) u
   => \have e : lpMul (conj-swap rq) (lpSignedPow r>1 q>=1 rq u) u = lp1-map (lpPow r (ge1 r>1) u)
-               => l1ToL0.unique (lpMul-l0 _ u *> pmap (\lam z => l0calc (LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)) (z :: lpToL0 r (ge1 r>1) u :: nil)) lpSignedPow-char
+               => l1ToL0.unique (lpMul-l0 _ u *> pmap (\lam z => l0Mul (z, lpToL0 r (ge1 r>1) u)) lpSignedPow-char
                                   *> l0signedPow-mul *> inv lpPow.char)
      \in pmap integral e *> lp1-integral-pos {L} {lpPow r (ge1 r>1) u} (l0pow>=0 <=∘ =_<= {L0Space L} (inv lpPow.char)) *> lpPow.norm
 
