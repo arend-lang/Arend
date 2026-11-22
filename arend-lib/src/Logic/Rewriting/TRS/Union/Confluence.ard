@@ -428,7 +428,7 @@
          | rho-subst => extend-substitution-left sublist (\lam i => MetaSubstitution.apply (arguments i) sublist rho)
          | sigma-subst => extend-substitution-left sublist (\lam i => MetaSubstitution.apply (arguments i) sublist sigma)
          | inductive i => unify-left gc anti-color (arguments i) sublist rho sigma rho~>sigma
-         | target-reduction => reduction-over-substitution main-reduction.1 (rho m) (sigma m) main-reduction.2 rho-subst sigma-subst (\lam i => extend-substitutuion-left-for-parallel (\lam i => MetaSubstitution.apply (arguments i) sublist rho) (\lam i => MetaSubstitution.apply (arguments i) sublist sigma) inductive sublist i)
+         | target-reduction => reduction-over-substitution main-reduction.1 (rho m) (sigma m) main-reduction.2 rho-subst sigma-subst (\lam i => extend-substitution-left-for-parallel (\lam i => MetaSubstitution.apply (arguments i) sublist rho) (\lam i => MetaSubstitution.apply (arguments i) sublist sigma) inductive sublist i)
     \in target-reduction
   | func f arguments =>
     \let | in-indices i => unify-left gc f.1 (arguments i) (SubList.extend-right-single sublist) rho sigma rho~>sigma
@@ -438,7 +438,7 @@
              in-indices
     \in (someColor, parallelization-f med inrd cwr)
   \where {
-    \func extend-substitutuion-left-for-parallel
+    \func extend-substitution-left-for-parallel
       {tc : TheoremContext} {left-context right-context some-context : List Sort'}
       {gc : Color}
       (subst subst' : Substitution right-context some-context EmptyMetaContext)

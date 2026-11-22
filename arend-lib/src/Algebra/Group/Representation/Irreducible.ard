@@ -1,6 +1,6 @@
 \import Algebra.Group
 \import Algebra.Group.Representation
-\import Algebra.Group.Representation.InterwiningMap
+\import Algebra.Group.Representation.IntertwiningMap
 \import Algebra.Group.Representation.SubLRepres
 \import Algebra.Group.SubGroup
 \import Algebra.Ring
@@ -11,7 +11,7 @@
 \func IsIrreducible {R : Ring} {G : Group} (E : LinRepres R G) : \Prop
   => \Pi (A : SubLRepres R G E) -> A.IsTrivial
 
-\lemma SchurLemma {R : Ring} {G : Group} {A B : LinRepres R G} (p : IsIrreducible A) (q : IsIrreducible B) (f : InterwiningMap A B) : f.IsZero || IsEquiv f
+\lemma SchurLemma {R : Ring} {G : Group} {A B : LinRepres R G} (p : IsIrreducible A) (q : IsIrreducible B) (f : IntertwiningMap A B) : f.IsZero || IsEquiv f
   => \case q (ImageLRepres f) \with {
     | byLeft iz => byLeft \lam x => iz $ inP (x, idp)
     | byRight if => \case p (KernelLRepres f) \with {

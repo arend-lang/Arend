@@ -56,7 +56,7 @@
     | neg n, pos m => ipow_- *> pow-comm2 (inverse-right *> inv inverse-left)
     | neg n, neg m => pow_+
     \where {
-      \open Arith.Int.IntRing(+,+-comm)
+      \open Arith.Int.IntRing(+)
 
       \lemma ipow_- {a : E} {n m : Nat} : ipow a (n Nat.- m) = pow a n * pow (inverse a) m \elim n, m
         | 0, m => inv ide-left
@@ -64,7 +64,7 @@
         | suc n, suc m => equation.monoid {ipow_-, inv (pow-left {_} {inverse a}), inverse-right {_} {a}}
     }
 
-  \lemma ipow_negaitve {a : E} {x : Int} : ipow a (negative x) = inverse (ipow a x) \elim x
+  \lemma ipow_negative {a : E} {x : Int} : ipow a (negative x) = inverse (ipow a x) \elim x
     | pos n => inv inverse_pow
     | neg n => inv inverse-isInv *> pmap inverse inverse_pow
     \where \open Arith.Int.IntRing(negative)

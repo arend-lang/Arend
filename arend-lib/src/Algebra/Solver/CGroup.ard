@@ -3,12 +3,9 @@
 \import Algebra.Monoid
 \import Algebra.Solver
 \import Algebra.Solver.Group
-\import Algebra.Solver.Monoid
 \import Arith.Int
 \import Data.Array
-\import Data.Bool
 \import Function.Meta
-\import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -53,7 +50,7 @@
     \lemma interpretNF-consistent' {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' (normalize t) env = interpret env t \elim t
       | var i => G.BigProd-unique i (\lam j p => later $ rewrite (decideEq/=_reduce p) idp) *> rewrite (decideEq=_reduce idp) ide-left
       | :ide => G.BigProd_replicate1
-      | :inverse t => G.BigProd-ext (\lam i => G.ipow_negaitve) *> inv G.BigProd_inverse *> pmap inverse interpretNF-consistent'
+      | :inverse t => G.BigProd-ext (\lam i => G.ipow_negative) *> inv G.BigProd_inverse *> pmap inverse interpretNF-consistent'
       | t :* s => G.BigProd-ext (\lam i => G.ipow_+) *> G.BigProd_* *> pmap2 (*) interpretNF-consistent' interpretNF-consistent'
 
     \lemma interpretNF-consistent {n : Nat} {env : Fin n -> G} (t : Term n) : interpretNF env (normalize t) = interpret env t
@@ -80,7 +77,7 @@
           => G.BigProd-ext (\lam j => G.ipow_+) *> G.BigProd_*
 
         \lemma interpretNF_negative {l : Array Int} {env : Array G l.len} : interpretNF' (map negative l) env = inverse (interpretNF' l env)
-          => later (G.BigProd-ext {l.len} \lam j => G.ipow_negaitve) *> inv G.BigProd_inverse
+          => later (G.BigProd-ext {l.len} \lam j => G.ipow_negative) *> inv G.BigProd_inverse
 
         \lemma interpretNF-coef {n : Nat} {l : Array Int n} {env : Array G l.len} {c : Int} : interpretNF' (map (c *) l) env = G.ipow (interpretNF' l env) c
           => later (G.BigProd-ext {l.len} \lam i => pmap (G.ipow _) *-comm *> G.ipow_*) *> G.BigProd_ipow

@@ -138,7 +138,7 @@
       *> ext (pmap (\lam z => a L.+ L.negative (L.part+ z L.+ L.negative (L.truncAt (RatField.negative (RatField.zro RatField.+ RatField.negative 1)) (L.part+ z)))) L.minus_zro
                 *> pmap (\lam k => a L.+ L.negative (L.part+ a L.+ L.negative (L.truncAt k (L.part+ a)))) (pmap RatField.negative RatField.zro-left *> RatField.negative-isInv)
                 *> pmap (\lam t => a L.+ L.negative (L.part+ a L.+ L.negative t)) (L.ide_*q *> pmap L.trunc (pmap (L.*q (L.part+ a)) RatField.finv_ide *> L.ide_*q))
-                *> pmap (\lam z => z L.+ L.negative (L.part+ a L.+ L.negative (L.trunc (L.part+ a)))) (inv L.parts_-) *> equation.abGroup *> inv L.trunc-spliit,
+                *> pmap (\lam z => z L.+ L.negative (L.part+ a L.+ L.negative (L.trunc (L.part+ a)))) (inv L.parts_-) *> equation.abGroup *> inv L.trunc-split,
              RatField.negative-right {RatField.zro})
 
 -- | The unitization of a bounded truncated Riesz space is an Archimedean Riesz space with strong unit `(0,1)`.

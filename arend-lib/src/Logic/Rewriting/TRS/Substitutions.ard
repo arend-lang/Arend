@@ -504,7 +504,7 @@
         \elim eq
           | idp => idp
 
-        \func indexing-exteded-list {A : \Type} {a : List A} (i : Index a)
+        \func indexing-extended-list {A : \Type} {a : List A} (i : Index a)
           : (a ++ nil) !! transport (\lam ctx => Index ctx) (inv ++_nil) i = a !! i => unifier i (inv ++_nil)
           \where {
             \func unifier {A : \Type} {a b : List A} (i : Index a) (eq : a = b): b !! transport Index eq i = a !! i \elim eq
@@ -521,7 +521,7 @@
           {env : FSignature} {context new-context : List Sort} {mc : MetaContext Sort}
           {subst : Substitution context new-context mc} (i : Index context)
           : transport (\lam (p0 : List env.Sort) => Substitution p0 (new-context ++ nil) mc) ++_nil (append-context-right subst) i =
-        transport (Term env _ __ mc) (indexing-exteded-list i) (append-context-right subst (transport (\lam ctx => Index ctx) (inv ++_nil) i)) =>
+        transport (Term env _ __ mc) (indexing-extended-list i) (append-context-right subst (transport (\lam ctx => Index ctx) (inv ++_nil) i)) =>
           generic-transport-move i ++_nil _
 
         \func generic-transport-move
@@ -540,13 +540,13 @@
           :
           append-context-right subst (transport (\lam (ctx : List env.Sort) => Index ctx) (inv ++_nil) i)
             =
-          transport (Term env _ __ mc) (inv (indexing-exteded-list i)) (weakening (subst i) SubList.id+right) =>
+          transport (Term env _ __ mc) (inv (indexing-extended-list i)) (weakening (subst i) SubList.id+right) =>
           \let q => partial-fin-induction
               (\lam fin => append-context-right subst fin = weakening (transport (Term env _ __ mc) (indexing-extended-list-2 fin) (subst (transport (\lam ctx => Index ctx) ++_nil fin))) (SubList.extend-right-single SubList.identity))
-              (\lam i1 => rewrite append-context-right.on-begin (pmap (weakening __ _) (unifier _ _ (subst i1) *> inv (untransport subst ++_nil (expand-fin-left i1) i1 (unexpand-fin i1) (inv (indexing-exteded-list i1) *> pmap ((context ++ nil) !!) (unexpand-fin-2 i1)) (indexing-extended-list-2 (expand-fin-left i1))))))
+              (\lam i1 => rewrite append-context-right.on-begin (pmap (weakening __ _) (unifier _ _ (subst i1) *> inv (untransport subst ++_nil (expand-fin-left i1) i1 (unexpand-fin i1) (inv (indexing-extended-list i1) *> pmap ((context ++ nil) !!) (unexpand-fin-2 i1)) (indexing-extended-list-2 (expand-fin-left i1))))))
               (\lam i1 => contradiction)
               (transport (\lam (ctx : List env.Sort) => Index ctx) (inv ++_nil) i)
-          \in q *> rewriteI weakening.over-transport-sort (pmap (weakening __ _) (untransport subst ++_nil (transport (\lam (ctx : List env.Sort) => Index ctx) (inv ++_nil) i) i (rewrite transport_id_inv idp) (inv (indexing-exteded-list _)) (indexing-extended-list-2 (transport (\lam (ctx : List env.Sort) => Index ctx) (inv ++_nil) i))))
+          \in q *> rewriteI weakening.over-transport-sort (pmap (weakening __ _) (untransport subst ++_nil (transport (\lam (ctx : List env.Sort) => Index ctx) (inv ++_nil) i) i (rewrite transport_id_inv idp) (inv (indexing-extended-list _)) (indexing-extended-list-2 (transport (\lam (ctx : List env.Sort) => Index ctx) (inv ++_nil) i))))
           \where {
             \func untransport
               {env : FSignature} {context context' new-context : List Sort} {s : Sort} {mc : MetaContext Sort}

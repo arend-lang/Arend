@@ -51,7 +51,7 @@
         (meet-univ (trunc-mono meet-left) (trunc-mono meet-right))
         (meet-univ (meet-monotone trunc-bound trunc-bound) meet-left <=∘ trunc-assoc)
 
-  \lemma trunc-spliit {a : E} : trunc a = trunc (part+ a) - part- a
+  \lemma trunc-split {a : E} : trunc a = trunc (part+ a) - part- a
     => \let | y => trunc a + part- a
        \in \have
             | ge : trunc (part+ a) - part- a <= trunc a
@@ -81,9 +81,9 @@
         <=-antisymmetric (meet-monotone trunc-bound trunc-bound <=∘ =_<= d) (meet-univ (trunc-pos a>=0) (trunc-pos b>=0)))
 
   \lemma trunc_+-disjoint {a b : E} (d : AreDisjoint a b) : trunc (a + b) = trunc a + trunc b
-    => trunc-spliit *> pmap2 (\lam u v => trunc u - v) (part+_+-disjoint d) (part-_+-disjoint d)
+    => trunc-split *> pmap2 (\lam u v => trunc u - v) (part+_+-disjoint d) (part-_+-disjoint d)
         *> pmap (__ - _) (trunc_+-pos-disjoint join-right join-right $ <=-antisymmetric (meet-monotone part+<=abs part+<=abs <=∘ =_<= d) (meet-univ join-right join-right))
-        *> equation.abGroup *> inv (pmap2 (+) trunc-spliit trunc-spliit)
+        *> equation.abGroup *> inv (pmap2 (+) trunc-split trunc-split)
 
   \lemma trunc_BigSum-disjoint {l : Array E} (d : \Pi {i j : Fin l.len} -> i /= j -> AreDisjoint (l i) (l j)) : trunc (BigSum l) = BigSum (map trunc l) \elim l
     | nil => trunc_zro

@@ -1,6 +1,5 @@
 \import Algebra.Algebra
 \import Algebra.Group
-\import Algebra.Group.GroupHom
 \import Algebra.Group.Symmetric
 \import Algebra.Meta
 \import Algebra.Module
@@ -539,7 +538,7 @@
       })
   \where \open Monoid
 
-\lemma matirx-inv {R : CRing} {n : Nat} {A : Matrix R n n} {B : Matrix R n n} (p : A * B = 1) : Monoid.Inv B
+\lemma matrix-inv {R : CRing} {n : Nat} {A : Matrix R n n} {B : Matrix R n n} (p : A * B = 1) : Monoid.Inv B
   => determinant-inv.2 (Monoid.Inv.lmake (determinant A) $ inv determinant_* *> pmap determinant p *> determinant_ide)
 
 \lemma determinant1_Inv {R : CRing} {n : Nat} (A : Matrix R n n) (p : determinant A = 1) : Monoid.Inv A

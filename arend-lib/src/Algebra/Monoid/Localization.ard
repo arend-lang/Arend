@@ -15,7 +15,6 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set
 \open Monoid
 \open SubMonoid
 
@@ -331,7 +330,7 @@
 \lemma div_loc {M : CMonoid} {S : SubMonoid M} {a b : M} {Sb : S b} (a|b : Monoid.LDiv b a) : inl~ (a,b,Sb) = locM a|b.inv
   => ~-lequiv1 $ ide-right *> inv a|b.inv-right *> *-comm
 
-\lemma localiaztion-inv-char {M : CMonoid} {S : SubMonoid M} {a : \Sigma (x y : M) (S y)} : Inv (inl~ a) <-> ∃ (c : M) (S (a.1 * c))
+\lemma localization-inv-char {M : CMonoid} {S : SubMonoid M} {a : \Sigma (x y : M) (S y)} : Inv (inl~ a) <-> ∃ (c : M) (S (a.1 * c))
   => <->trans (later (\lam ai => Inv.lmake (ai.inv * (L.localization-inv a.3).inv) $ *-assoc *> inv (ai.rotate-inv-left $ (L.localization-inv a.3).rotate-inv-left $ ~-lequiv1 $ simplify *-comm),
                       \lam xi => Inv.lmake (xi.inv * locM a.2) $ *-assoc *> pmap (_ *) (later $ ~-lequiv1 $ simplify *-comm) *> xi.inv-left))
               L.inv-char

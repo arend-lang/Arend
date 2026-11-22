@@ -264,10 +264,10 @@
             *> pmap (\lam r => f.f# d0 (g.f# r x)) prop-pi)) $ (L.R.F.Func meet-left).func-Inv xi) <=∘ SJoin-cond d'b)
     \where {
       \sfunc glue (a : U) : \Sigma (h : RingHom (U.R a) (L.R (SJoin f (g.<=f* a))))
-                                   (MatchingFamily.matchingFamily {L} L.R {Set.Total (g.<=f* a)} (SJoin f (g.<=f* a)) (\lam j => (f j.1, SJoin-cond j.2)) _ h = matchingFaimly a)
-        => (IsEquiv.ret (VSheaf.sheaf-locale_SJoin L.R) (matchingFaimly a), IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R))
+                                   (MatchingFamily.matchingFamily {L} L.R {Set.Total (g.<=f* a)} (SJoin f (g.<=f* a)) (\lam j => (f j.1, SJoin-cond j.2)) _ h = matchingFamily a)
+        => (IsEquiv.ret (VSheaf.sheaf-locale_SJoin L.R) (matchingFamily a), IsEquiv.f_ret (VSheaf.sheaf-locale_SJoin L.R))
 
-      \func matchingFaimly (a : U) : MatchingFamily {L} L.R {Set.Total (g.<=f* a)} (SJoin f (g.<=f* a)) (\lam j => (f j.1, SJoin-cond j.2)) (U.R a) \cowith
+      \func matchingFamily (a : U) : MatchingFamily {L} L.R {Set.Total (g.<=f* a)} (SJoin f (g.<=f* a)) (\lam j => (f j.1, SJoin-cond j.2)) (U.R a) \cowith
         | family j => f.f# j.1 RingHom.∘ g.f# j.2
         | isMatching {j} {j'} {z} {z<=fj} {z<=fj'} _ => SeparatedVPresheaf.separated-locale_<= L.R (meet-univ z<=fj z<=fj' <=∘ f.isLRLSchemeSiteHom-meet) {U.R a} \lam {z'} =>
           SetIm-elim \lam {t} t<=jj' z'<=ft z'<=z => exts \lam x => inv (path \lam i => L.R.F.Func-o i _) *> pmap (L.R.F.Func __ _) prop-pi *> path (\lam i => L.R.F.Func-o i _) *>

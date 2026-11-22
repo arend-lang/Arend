@@ -5,11 +5,9 @@
 \import Algebra.Monoid.Localization
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Ordered
-\import Algebra.Ring.RingHom
 \import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Algebra.Ring.Local
 \import Algebra.Ring.Localization
 \import Algebra.Semiring
 \import Function.Meta
@@ -22,7 +20,6 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\open Monoid
 \open LocRing(isLocalization \as LR)
 
 \lemma localization-isField {R : CRing} (S : SubMonoid R) (nt : Not (S zro))
@@ -31,7 +28,7 @@
   : Field { | CRing => LocRing S } \cowith
   | zro/=ide => \lam p => nt $ LR.loc-trivial-char.1 p
   | locality => LR.isLocal-char.2 loc
-  | #0-tight {in~ x} x-ni => localization-zro-char.2 $ fp x.1 \lam r Sxr => x-ni $ localiaztion-inv-char.2 $ inP (r,Sxr)
+  | #0-tight {in~ x} x-ni => localization-zro-char.2 $ fp x.1 \lam r Sxr => x-ni $ localization-inv-char.2 $ inP (r,Sxr)
 
 \func localization-isDiscreteField {R : CRing} (S : SubMonoid R) (nt : Not (S zro))
                                    (fp : \Pi (x : R) -> (\Sigma (s : R) (S s) (x * s = zro)) || (\Sigma (r : R) (S (x * r))))
@@ -39,7 +36,7 @@
   | zro/=ide => \lam p => nt $ LR.loc-trivial-char.1 p
   | eitherZeroOrInv (in~ x) => \case fp x.1 \with {
     | byLeft r => byLeft $ localization-zro-char.2 (inP r)
-    | byRight r => byRight $ localiaztion-inv-char.2 (inP r)
+    | byRight r => byRight $ localization-inv-char.2 (inP r)
   }
 
 -- | The localization of an ordering commutative ring at the set of positive elements is an ordered field.
@@ -55,8 +52,8 @@
   | <_+-comparison (in~ x) (in~ y) x+y>0 => ||.map (OrderedRing.pos_*-cancel-right __ y.3) (OrderedRing.pos_*-cancel-right __ x.3) (<_+-comparison _ _ x+y>0)
   | <_+-connectedness {in~ x} x/>0 -x/>0 => localization-zro-char.2 $ inP (1, ide>zro, ide-right *> <_+-connectedness x/>0 -x/>0)
   | positive_* {in~ x} {in~ y} => positive_* {_} {x.1} {y.1}
-  | positive=>#0 {in~ x} x>0 => localiaztion-inv-char.2 $ inP (1, transportInv isPos ide-right x>0)
-  | #0=>eitherPosOrNeg {in~ x} => \case localiaztion-inv-char.1 __ \with {
+  | positive=>#0 {in~ x} x>0 => localization-inv-char.2 $ inP (1, transportInv isPos ide-right x>0)
+  | #0=>eitherPosOrNeg {in~ x} => \case localization-inv-char.1 __ \with {
     | inP (c,xc>0) => ||.map __.1 __.1 (positive_*-cancel xc>0)
   }
   | meet (x y : LocType (positiveSubset R)) : LocType (positiveSubset R) \with {

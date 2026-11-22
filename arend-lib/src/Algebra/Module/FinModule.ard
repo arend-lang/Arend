@@ -7,9 +7,7 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Arith.Nat
-\import Category
 \import Data.Array
-\import Equiv
 \import Function \hiding (id, o)
 \import Function.Meta
 \import Logic
@@ -77,7 +75,7 @@
       \where
         \lemma basis-surj-iso {R : CRing} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (g : LinearMap U V) (gs : IsSurj g) : ModuleIso g
           => \case surj-split {R} {U} {\new FinModule { | LModule => V | isFinModule => inP (lv,bv) }} g gs \with {
-            | inP (h,gh=id) => rewriteI ((matrix-equiv bu bv).ret_f g) $ toLinearMapIso bu bv $ matirx-inv {R} {n} {toMatrix lv bu h} {toMatrix lu bv g} $ inv (toMatrix_* {R} {V} h g lv bu bv) *> cong (exts gh=id) *> toMatrix_ide bv
+            | inP (h,gh=id) => rewriteI ((matrix-equiv bu bv).ret_f g) $ toLinearMapIso bu bv $ matrix-inv {R} {n} {toMatrix lv bu h} {toMatrix lu bv g} $ inv (toMatrix_* {R} {V} h g lv bu bv) *> cong (exts gh=id) *> toMatrix_ide bv
           }
   }
 
