@@ -32,7 +32,7 @@
 \open Locale
 \open CompleteLattice
 
-\class Locale \extends CompleteLattice, HeytingAlebra, Site {
+\class Locale \extends CompleteLattice, HeytingAlgebra, Site {
   | join x y => Join \lam z => (z = x) || (z = y)
   | join-left => Join-cond (byLeft idp)
   | join-right => Join-cond (byRight idp)
@@ -162,16 +162,16 @@
   \func IsCoherent => Given IsAlgebraic ∀ {a b : IsCompactOpen} (IsCompactOpen (a ∧ b))
 
   -- | The "rather below" relation: `x <=< y` if and only if the closure of {x} is contained in {y}.
-  \type \infix 4 <=< (x y : E) => top <= HeytingAlebra.neg x ∨ y
+  \type \infix 4 <=< (x y : E) => top <= HeytingAlgebra.neg x ∨ y
 
-  \lemma make<=< {x y : E} (p : top <= HeytingAlebra.neg x ∨ y) : x <=< y
+  \lemma make<=< {x y : E} (p : top <= HeytingAlgebra.neg x ∨ y) : x <=< y
     => p
 
   \lemma compact_<=< (c : IsCompact) {x y : E} (x<=<y : x <=< y) : x << y
-    => \lam {C} y<=C => \have | top<=C' : top <= Join (\lam z => (HeytingAlebra.neg x = z) || C z)
+    => \lam {C} y<=C => \have | top<=C' : top <= Join (\lam z => (HeytingAlgebra.neg x = z) || C z)
                                 => x<=<y <=∘ join-univ (Join-cond $ byLeft idp) (y<=C <=∘ Join-univ \lam Cw => Join-cond $ byRight Cw)
                               | (inP (l,h,top<=l)) => c top<=C'
-                              | (inP (l',Cl',ll')) => chooseRight l {HeytingAlebra.neg x =} {C} h
+                              | (inP (l',Cl',ll')) => chooseRight l {HeytingAlgebra.neg x =} {C} h
                         \in inP (l', Cl', meet-univ <=-refl (top-univ <=∘ top<=l) <=∘ IJoin-ldistr>= <=∘ IJoin-univ \lam j => later \case ll' j \with {
                           | byLeft p => rewriteI p $ meet-comm =<= <=-eval <=∘ bottom-univ
                           | byRight s => rewrite s.2 $ meet-right <=∘ IJoin-cond s.1

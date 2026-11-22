@@ -7,7 +7,7 @@
 \import Order.PartialOrder
 \import Paths
 
-\class HeytingAlebra \extends BoundedDistributiveLattice {
+\class HeytingAlgebra \extends BoundedDistributiveLattice {
   | \infixr 5 --> : E -> E -> E
   | <=-curry {x a b : E} : x ∧ a <= b -> x <= a --> b
   | <=-uncurry {x a b : E} : x <= a --> b -> x ∧ a <= b

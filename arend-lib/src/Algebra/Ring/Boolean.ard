@@ -111,5 +111,5 @@
       | isBooleanRing => meet-idemp
   }
 
-\instance HeytingBooleanRing (R : HeytingAlebra) : UnitalBooleanRing (NegatedElem R)
+\instance HeytingBooleanRing (R : HeytingAlgebra) : UnitalBooleanRing (NegatedElem R)
   => UnitalBooleanRing.fromBooleanAlgebra (HeytingBooleanAlgebra R)
