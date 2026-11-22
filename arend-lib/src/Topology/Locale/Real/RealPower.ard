@@ -1,0 +1,117 @@
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Order.Lattice.CompleteLattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Set
+\import Topology.Locale
+\import Topology.Locale.LocaleProduct
+\import Topology.Locale.Points
+\import Topology.Locale.PreorderSite
+\import Topology.Locale.ProductPoints
+\import Topology.Locale.Real
+\import Arith.Rat
+\open CompleteLattice
+\open SiteLocale
+\open ProductLocale
+
+-- | The locale `ℝⁿ`, built as `ℝ × (ℝ × (… × 1))`.
+\func RnLocale (n : Nat) : Locale.{0} \elim n
+  | 0 => discreteLocale (\Sigma)
+  | suc n => ProductLocale RealLocale (RnLocale n)
+
+-- | The map into `ℝⁿ` with given coordinates.
+\func tupleN {Z : Locale} {n : Nat} (f : Array (LocaleHom Z RealLocale) n) : LocaleHom Z (RnLocale n) \elim n, f
+  | 0, nil => discreteLocale.terminalMap Z
+  | suc n, f0 :: f => tuple f0 (tupleN f)
+
+-- | The `j`-th coordinate projection `ℝⁿ → ℝ`.
+\func projN {n : Nat} (j : Fin n) : LocaleHom (RnLocale n) RealLocale \elim n, j
+  | suc n, 0 => proj1
+  | suc n, suc j => projN j LocaleHom.∘ proj2
+
+\lemma terminalMap-unique {Z : Locale} {f g : LocaleHom Z (RnLocale 0)} : f = g
+  => exts \lam (P : \Sigma -> \Prop) => \have e : P = (RnLocale 0).pHat (P ()) => ext \lam _ => ext (\lam p => inP (_, p, ()), \lam (inP (_,p,_)) => p)
+                                       \in pmap f e *> FrameHom.func-pHat *> inv (pmap g e *> FrameHom.func-pHat)
+
+\lemma projN-tupleN {Z : Locale} {n : Nat} {f : Array (LocaleHom Z RealLocale) n} {j : Fin n} : projN j LocaleHom.∘ tupleN f = f j \elim n, f, j
+  | suc n, f0 :: f, 0 => beta1
+  | suc n, f0 :: f, suc j => pmap (projN j LocaleHom.∘) (beta2 {RealLocale} {RnLocale n} {Z} {f0} {tupleN f}) *> projN-tupleN
+
+-- | Maps into `ℝⁿ` are determined by their coordinates.
+\lemma tupleN-ext {Z : Locale} {n : Nat} {f g : LocaleHom Z (RnLocale n)} (p : \Pi (j : Fin n) -> projN j LocaleHom.∘ f = projN j LocaleHom.∘ g) : f = g \elim n
+  | 0 => terminalMap-unique
+  | suc n => tupleEq (p 0) (tupleN-ext {_} {n} {proj2 LocaleHom.∘ f} {proj2 LocaleHom.∘ g} \lam j => p (suc j))
+
+\lemma tupleN-comp {Y Z : Locale} {n : Nat} {f : Array (LocaleHom Z RealLocale) n} {T : LocaleHom Y Z}
+  : tupleN f LocaleHom.∘ T = tupleN (\lam j => f j LocaleHom.∘ T)
+  => tupleN-ext {Y} {n} {tupleN f LocaleHom.∘ T} {tupleN (\lam j => f j LocaleHom.∘ T)} \lam j => pmap (LocaleHom.∘ T) (projN-tupleN {Z} {n} {f} {j}) *> inv projN-tupleN
+
+\lemma tupleN-proj {n : Nat} : tupleN (projN {n}) = LocaleHom.id
+  => tupleN-ext \lam j => projN-tupleN
+
+-- | The box `∏ⱼ Bⱼ` as a basic open of `ℝⁿ`.
+\func locBoxN {n : Nat} (B : Array (Interval RatField) n) : RnLocale n \elim n, B
+  | 0, nil => top
+  | suc n, J :: B => prod (embed J) (locBoxN B)
+
+-- | The open set where every `fⱼ` lies in `Bⱼ`.
+\func boxOpen {Z : Locale} {n : Nat} (f : Array (LocaleHom Z RealLocale) n) (B : Array (Interval RatField) n) : Z \elim n, f, B
+  | 0, nil, nil => top
+  | suc n, f0 :: f, J :: B => f0 (embed J) ∧ boxOpen f B
+
+\lemma tuple-prod {Z X Y : Locale} {f : LocaleHom Z X} {g : LocaleHom Z Y} {x : X} {y : Y} : tuple f g (prod x y) = f x ∧ g y
+  => <=-antisymmetric (SJoin-univ \lam c => ProductLocale.coverMap f g c <=∘ SJoin-univ \lam p => =_<= (pmap2 (∧) (pmap f (inv (pmap __.1 p))) (pmap g (inv (pmap __.2 p)))))
+                      (SJoin-cond {Z} {_} {\lam s => f s.1 ∧ g s.2} {\lam s => Cover {ProductLocale.site} s (single (x,y))} {x,y} (Cover.cover-refl idp))
+
+\lemma tupleN-box {Z : Locale} {n : Nat} {f : Array (LocaleHom Z RealLocale) n} {B : Array (Interval RatField) n} : FrameHom.func {tupleN {Z} {n} f} (locBoxN {n} B) = boxOpen f B \elim n, f, B
+  | 0, nil, nil => <=-antisymmetric top-univ (top-univ <=∘ FrameHom.func-top>= {discreteLocale.terminalMap Z})
+  | suc n, f0 :: f, J :: B => tuple-prod *> pmap (_ ∧) tupleN-box
+
+-- | Componentwise inclusion of boxes.
+\type boxLe {n : Nat} (C B : Array (Interval RatField) n) : \Prop
+  => \Pi (j : Fin n) -> C j <= B j
+
+\lemma prod_meet {X Y : Locale} {x x' : X} {y y' : Y} : prod x y ∧ prod x' y' <= {ProductLocale X Y} prod (x ∧ x') (y ∧ y')
+  => \lam (c1,c2) => Cover.cover-refine (Cover.cover-inter c1 c2) \lam (inP (_,idp,_,idp,eu,ev)) => inP (_, idp, (meet-univ eu.1 ev.1, meet-univ eu.2 ev.2))
+
+-- | The meet of two basic opens of `ℝ` is the join of the intervals below both.
+\lemma interval_meet {J J' : Interval RatField} : embed J ∧ {RealLocale} embed J' <= {RealLocale} SJoin {RealLocale} embed (\lam (K : Interval RatField) => \Sigma (K <= J) (K <= J'))
+  => \lam {K} (c1,c2) => Cover.cover-refl $ later $ inP (embed K, SetIm-con (RealPres.embed-char.1 c1, RealPres.embed-char.1 c2), Cover.cover-refl idp)
+
+-- | The meet of two boxes is the join of the boxes below both.
+\lemma locBox_meet {n : Nat} {B B' : Array (Interval RatField) n}
+  : locBoxN B ∧ locBoxN B' <= SJoin locBoxN (\lam C => \Sigma (boxLe C B) (boxLe C B')) \elim n, B, B'
+  | 0, nil, nil => <=-transitive {RnLocale 0} (meet-left {RnLocale 0}) $ SJoin-cond {RnLocale 0} {_} {locBoxN {0}} {\lam C => \Sigma (boxLe {0} C nil) (boxLe {0} C nil)} {nil} (\lam j => \case j \with {}, \lam j => \case j \with {})
+  | suc n, J :: B, J' :: B' => prod_meet <=∘ ProductLocale.prod-cover1 interval_meet <=∘ SJoin-univ (\lam {V} => SetIm-elim {_} {_} {\lam V => prod V (locBoxN B ∧ locBoxN B') <= _} {embed} \lam {K} (KJJ : \Sigma (K <= J) (K <= J')) =>
+      ProductLocale.prod-cover2 locBox_meet <=∘ SJoin-univ (\lam {W} => SetIm-elim {_} {_} {\lam W => prod (embed K) W <= _} {locBoxN} \lam {C} (CBB : \Sigma (boxLe C B) (boxLe C B')) =>
+        SJoin-cond {RnLocale (suc n)} {_} {locBoxN} {\lam C => \Sigma (boxLe C (J :: B)) (boxLe C (J' :: B'))} {K :: C}
+          (\case \elim __ \with { | 0 => KJJ.1 | suc j => CBB.1 j }, \case \elim __ \with { | 0 => KJJ.2 | suc j => CBB.2 j })))
+
+-- | `ℝⁿ` is covered by boxes.
+\lemma locBox-cover {n : Nat} : top <= SJoin {RnLocale n} locBoxN (\lam _ => \Sigma) \elim n
+  | 0 => SJoin-cond {RnLocale 0} {_} {locBoxN} {\lam _ => \Sigma} {nil} ()
+  | suc n => \have c : top <= {RnLocale (suc n)} prod top top => top-univ <=∘ \lam _ => Cover.cover-inj (top-univ, top-univ) idp
+             \in c <=∘ ProductLocale.prod-cover1 (=_<= SiteLocale.element_SJoin) <=∘ SJoin-univ (\lam {V} => SetIm-elim {_} {_} {\lam V => prod V top <= _} {embed} \lam {K} _ =>
+                  ProductLocale.prod-cover2 locBox-cover <=∘ SJoin-univ (\lam {W} => SetIm-elim {_} {_} {\lam W => prod (embed K) W <= _} {locBoxN} \lam {C} _ =>
+                    SJoin-cond {RnLocale (suc n)} {_} {locBoxN} {\lam _ => \Sigma} {K :: C} ()))
+
+-- | The unique point of the terminal locale.
+\func terminalPoint : CompleteFilter (RnLocale 0) \cowith
+  | F U => U ()
+  | filter-mono u p => p u
+  | filter-top => ()
+  | filter-meet a b => (a,b)
+  | filter-Join (inP (U,CU,Ux)) => inP (U,CU,Ux)
+
+-- | `ℝⁿ` has strongly dense points.
+\lemma RnLocale-stronglyDense {n : Nat} : HasStronglyDensePoints (RnLocale n) \elim n
+  | 0 => \lam a {u} au => inP (_, inP (terminalPoint, au), ())
+  | suc n => product-stronglyDense RealLocale.hasStronglyDensePoints RnLocale-stronglyDense
+
+\lemma RnLocale-dense {n : Nat} : HasDensePoints (RnLocale n)
+  => stronglyDense-dense RnLocale-stronglyDense

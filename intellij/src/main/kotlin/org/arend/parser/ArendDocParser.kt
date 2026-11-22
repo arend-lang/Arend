@@ -34,7 +34,8 @@ class ArendDocParser : PsiParser, LightPsiParser {
                     DOC_HEADER_1, DOC_HEADER_2,
                     DOC_BLOCKQUOTES -> builder.advanceLexer()
                 DOC_LBRACKET -> parseReferenceText(builder)
-                LBRACE, DOC_OPEN_LINK -> parseReference(builder, builder.mark())
+                LBRACE -> if (hasIdentifier(builder)) parseReference(builder, builder.mark()) else skipPlainText(builder, RBRACE)
+                DOC_OPEN_LINK -> skipPlainText(builder, RPAREN)
                 DOC_CODE_BLOCK_BORDER -> parseCodeBlock(builder)
                 DOC_END -> {
                     builder.advanceLexer()
@@ -58,6 +59,45 @@ class ArendDocParser : PsiParser, LightPsiParser {
             builder.error("Unexpected token: $token")
         }
         builder.advanceLexer()
+    }
+
+    /**
+     * Checks if the reference starting at the current [LBRACE] contains an identifier.
+     * Does not move the builder.
+     */
+    private fun hasIdentifier(builder: PsiBuilder): Boolean {
+        val marker = builder.mark()
+        builder.advanceLexer()
+        var result = false
+        while (!builder.eof()) {
+            when (builder.tokenType) {
+                ID -> {
+                    result = true
+                    break
+                }
+                RBRACE, DOC_END -> break
+                else -> builder.advanceLexer()
+            }
+        }
+        marker.rollbackTo()
+        return result
+    }
+
+    /**
+     * Skips tokens up to [end] (inclusive) without creating elements, so that they are treated as plain text.
+     */
+    private fun skipPlainText(builder: PsiBuilder, end: IElementType) {
+        builder.advanceLexer()
+        while (!builder.eof()) {
+            when (builder.tokenType) {
+                end -> {
+                    builder.advanceLexer()
+                    return
+                }
+                DOC_END -> return
+                else -> builder.advanceLexer()
+            }
+        }
     }
 
     private fun parseCodeBlock(builder: PsiBuilder) {
@@ -96,7 +136,7 @@ class ArendDocParser : PsiParser, LightPsiParser {
                 }
                 DOC_RBRACKET -> {
                     builder.advanceLexer()
-                    if (builder.tokenType == LBRACE) {
+                    if (builder.tokenType == LBRACE && hasIdentifier(builder)) {
                         refTextMarker.done(DOC_REFERENCE_TEXT)
                         parseReference(builder, refMarker)
                         return

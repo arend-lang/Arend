@@ -3,13 +3,10 @@
 \import Category.Limit
 \import Data.Array
 \import Data.Array.EPerm
-\import Data.Bool
 \import Equiv
 \import Function.Meta
 \import Logic.Unique
-\import Homotopy.Fibration
 \import Logic
-\import Meta
 \import Order.Directed
 \import Paths
 \import Order.PartialOrder
@@ -147,6 +144,14 @@
     | nil => p
     | :: a l => join-univ (f 0) (Big_join-univ p (\lam i => f (suc i)))
 
+  \lemma Big_join_++-left {l l' : Array E} {x : E} : Big (∨) x l <= Big (∨) x (l ++ l') \elim l
+    | nil => Big_<=_join0
+    | :: a l => join-monotone <=-refl Big_join_++-left
+
+  \lemma Big_join_++-right {l l' : Array E} {x : E} : Big (∨) x l' <= Big (∨) x (l ++ l') \elim l
+    | nil => <=-refl
+    | :: a l => Big_join_++-right <=∘ join-right
+
   \protected \func op : MeetSemilattice \cowith
     | Poset => Poset.op
     | meet => join
@@ -169,6 +174,32 @@
   \protected \func op : Lattice \cowith
     | MeetSemilattice => JoinSemilattice.op
     | JoinSemilattice => MeetSemilattice.op
+}
+
+\record LatticeHom \extends PosetHom {
+  \override Dom : Lattice
+  \override Cod : Lattice
+  | func-meet {x y : Dom} : func (x ∧ y) = func x ∧ func y
+  | func-meet>= {x y : Dom} : func x ∧ func y <= func (x ∧ y)
+  | func-join {x y : Dom} : func (x ∨ y) = func x ∨ func y
+  | func-join>= {x y : Dom} : func (x ∨ y) <= func x ∨ func y
+
+  \default func-meet>= => =_<= (inv func-meet)
+  \default func-meet => <=-antisymmetric (meet-univ (func-<= meet-left) (func-<= meet-right)) func-meet>=
+  \default func-join>= => =_<= func-join
+  \default func-join => <=-antisymmetric func-join>= (join-univ (func-<= join-left) (func-<= join-right))
+} \where {
+  \func id {L : Lattice} : LatticeHom L L \cowith
+    | func x => x
+    | func-<= p => p
+    | func-meet => idp
+    | func-join => idp
+
+  \func \fixl 8 compose \alias \infixl 8 ∘ {L M K : Lattice} (g : LatticeHom M K) (f : LatticeHom L M) : LatticeHom L K \cowith
+    | func x => g (f x)
+    | func-<= p => func-<= (func-<= p)
+    | func-meet>= => func-meet>= <=∘ func-<= func-meet>=
+    | func-join>= => func-<= func-join>= <=∘ func-join>=
 }
 
 \class DistributiveLattice \extends Lattice {

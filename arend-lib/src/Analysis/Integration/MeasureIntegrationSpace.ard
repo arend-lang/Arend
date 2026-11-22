@@ -41,20 +41,32 @@
 \open SFunc
 \open SFuncRepr
 
-\instance SFuncIntegrationSpace (B : PseudoMeasureRing) : IntegrationSpace (SFunc RatField B)
-  | TruncRieszSpace => SFuncTruncRieszSpace RatIntegrationSpace B
-  | integral (f : SFunc RatField B) : Real \with {
-    | in~ f => sum f
-    | ~-equiv f g r => sum_~ r
+\instance SFuncIntegrationSpace (B : PseudoMeasureRing) : BoundedIntegrationSpace (SFunc RatField B)
+  | IntegrationSpace => base
+  | trunc-bounded a => \case makeReduced a \with {
+    | inP (l,lr,p) => rewrite p $ inP (bound l, (bound>=0, inP (unit l, unit>=0 lr, unit-trunc lr, abs-bound lr)))
   }
-  | integral>=0 {a} => \case \elim a \with {
-    | in~ l => \lam (inP (d,dp,d>=0)) => transportInv (_ RealAbGroup.<=) (pmap integral (inv (AddGroup.minus_zro {_} {inSF l}) *> dp)) $
-        RealAbGroup.BigSum_>=0 {map (\lam s => s.1 RealField.* meas s.2) d} \lam j => RealField.<=_*-positive (rat_real_<=.1 (d>=0 j)) meas>=0
+  | trunc-archimedean {a} p => \case makeReduced a \with {
+    | inP (l,lr,q) => transportInv (\lam y => y <= 0) q $ archimedean-reduced lr \lam n => transport (\lam y => TruncRieszSpace.IsUnderUnit {base} (n base.*n y)) q (p n)
   }
-  | integral_+ {a} {b} => \case \elim a, \elim b \with {
-    | in~ l, in~ l' => pmap RealAbGroup.BigSum (map_++ (\lam s => s.1 RealField.* meas s.2)) *> RealAbGroup.BigSum_++
+  | integral-trunc-small {f} _ {eps} eps>0 => \case makeReduced f \with {
+    | inP (l,lr,q) => rewrite q $ base.integral-trunc-dominated {inSF l} {unit l} (\lam eta>0 => truncAt-dominated lr eta>0) eps>0
   }
   \where {
+    \func base : IntegrationSpace (SFunc RatField B) \cowith
+      | TruncRieszSpace => SFuncTruncRieszSpace RatIntegrationSpace B
+      | integral (f : SFunc RatField B) : Real \with {
+        | in~ f => sum f
+        | ~-equiv f g r => sum_~ r
+      }
+      | integral>=0 {a} => \case \elim a \with {
+        | in~ l => \lam (inP (d,dp,d>=0)) => transportInv (_ RealAbGroup.<=) (pmap integral (inv (AddGroup.minus_zro {_} {inSF l}) *> dp)) $
+            RealAbGroup.BigSum_>=0 {map (\lam s => s.1 RealField.* meas s.2) d} \lam j => RealField.<=_*-positive (rat_real_<=.1 (d>=0 j)) meas>=0
+      }
+      | integral_+ {a} {b} => \case \elim a, \elim b \with {
+        | in~ l, in~ l' => pmap RealAbGroup.BigSum (map_++ (\lam s => s.1 RealField.* meas s.2)) *> RealAbGroup.BigSum_++
+      }
+
     \func sum (l : Array (\Sigma Rat B)) : Real
       => RealAbGroup.BigSum $ map (\lam s => s.1 RealField.* meas s.2) l
 
@@ -66,6 +78,44 @@
       | ~-zro-right idp => pmap (\lam x => _ * x + _) meas_zro *> pmap (+ _) RealField.zro_*-right *> RealAbGroup.zro-left
       | ~-+-left idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.rdistr *> pmap (RealField.* _) RealAbGroup.+-rat)
       | ~-+-right {_} {v} idp idp => inv RealAbGroup.+-assoc *> pmap (+ _) (inv RealField.ldistr *> pmap (v RealField.*) (inv meas-modular) *> RealField.ldistr) *> RealAbGroup.+-assoc
+
+    -- | The indicator of the support of a family.
+    \func unit (l : Array (\Sigma Rat B)) : SFunc RatField B
+      => inSF {RatIntegrationSpace} (map (\lam s => (RatField.ide, s.2)) l)
+
+    \func bound (l : Array (\Sigma Rat B)) : Rat
+      => RatField.BigSum (map (\lam s => RatIntegrationSpace.abs s.1) l)
+
+    \lemma bound>=0 {l : Array (\Sigma Rat B)} : 0 <= bound l
+      => RatField.BigSum_>=0 \lam j => RatIntegrationSpace.abs>=0
+
+    \lemma unit>=0 {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l) : base.zro base.<= unit l
+      => (SFuncPosetQModule.>=0-reduced-char {RatIntegrationSpace} {B} {map (\lam s => (RatField.ide, s.2)) l} lr).2 \lam j => byLeft (RatField.<=-less RatField.zro<ide)
+
+    \lemma unit-trunc {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l) : base.trunc (unit l) = unit l
+      => SFuncTruncRieszSpace.trunc-reduced {RatIntegrationSpace} {B} {map (\lam s => (RatField.ide, s.2)) l} lr *> pmap inSF (exts \lam j => ext (<=-antisymmetric (RatField.meet-left {1} {1}) (RatField.meet-univ <=-refl <=-refl), idp))
+
+    \lemma abs-bound {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l) : base.abs (inSF l) base.<= bound l base.*q unit l
+      => rewrite (SFuncRieszSpace.abs-reduced {RatIntegrationSpace} lr, SFuncQModule.*q-char {RatIntegrationSpace}) $ (SFuncPosetQModule.<=-common-char {RatIntegrationSpace} {B} {map __.2 l} lr {\lam j => RatIntegrationSpace.abs (l j).1} {\lam j => bound l RatIntegrationSpace.*q RatField.ide}).2 \lam j =>
+          byLeft $ RatField.BigSum_>=index {map (\lam s => RatIntegrationSpace.abs s.1) l} (\lam j => RatIntegrationSpace.abs>=0) j <=∘ =_<= (inv RatIntegrationSpace.rat_*q)
+
+    \lemma truncAt-dominated {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l) {eta : Rat} (eta>0 : RatField.zro RatField.< eta) : base.truncAt eta (inSF l) base.<= eta base.*q unit l
+      => =_<= (pmap (eta base.*q) (pmap base.trunc (SFuncQModule.*q-char {RatIntegrationSpace} {B} {RatField.finv eta} {l}) *> SFuncTruncRieszSpace.trunc-reduced {RatIntegrationSpace} {B} {map (\lam s => (RatField.finv eta RatIntegrationSpace.*q s.1, s.2)) l} lr) *> SFuncQModule.*q-char {RatIntegrationSpace})
+          <=∘ (SFuncPosetQModule.<=-common-char {RatIntegrationSpace} {B} {map __.2 l} lr {\lam j => eta RatIntegrationSpace.*q RatIntegrationSpace.trunc (RatField.finv eta RatIntegrationSpace.*q (l j).1)} {\lam j => eta RatIntegrationSpace.*q RatField.ide}).2
+               (\lam j => byLeft $ RatIntegrationSpace.<=_*q-right (<=-less eta>0) (RatField.meet-right {RatField.finv eta RatIntegrationSpace.*q (l j).1} {1}))
+          <=∘ =_<= (inv (SFuncQModule.*q-char {RatIntegrationSpace} {B} {eta} {map (\lam s => (RatField.ide, s.2)) l}))
+
+    \lemma archimedean-reduced {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l) (p : \Pi (n : Nat) -> base.trunc (n base.*n inSF l) = n base.*n inSF l) : inSF l base.<= base.zro
+      => \have h (n : Nat) : \Pi (j : Fin l.len) -> (n RatField.*n (l j).1 <= RatIntegrationSpace.trunc (n RatField.*n (l j).1)) || ((l j).2 = 0)
+                => (SFuncPosetQModule.<=-common-char {RatIntegrationSpace} {B} {map __.2 l} lr {\lam j => n RatField.*n (l j).1} {\lam j => RatIntegrationSpace.trunc (n RatField.*n (l j).1)}).1 $ =_<= $ inv $ inv (pmap base.trunc (SFuncAbMonoid.*n-char {RatIntegrationSpace}) *> SFuncTruncRieszSpace.trunc-reduced {RatIntegrationSpace} {B} {map (\lam s => (n RatField.*n s.1, s.2)) l} lr) *> p n *> SFuncAbMonoid.*n-char {RatIntegrationSpace}
+         \in transport (inSF l <=) (~-sfequiv $ ~-zros-left \lam _ => idp) $ (SFuncPosetQModule.<=-common-char {RatIntegrationSpace} {_} {map __.2 l} lr {map __.1 l} {\lam _ => 0}).2 \lam j =>
+               \case LinearOrder.dec<_<= {RatField} 0 (l j).1 \with {
+                 | inr v<=0 => byLeft v<=0
+                 | inl v>0 => \case h _ j \with {
+                   | byLeft q => absurd $ <-irreflexive $ rat_*n-unbounded v>0 <∘l (q <=∘ RatField.meet-right)
+                   | byRight q => byRight q
+                 }
+               }
   }
 
 -- | `|c [a] - c [b]| = |c| [a + b]`.

@@ -31,6 +31,7 @@ import java.util.function.Predicate;
 
 public class ClassDefinition extends TopLevelDefinition implements CoreClassDefinition {
   private final Set<ClassDefinition> mySuperClasses = new LinkedHashSet<>();
+  private volatile Set<ClassDefinition> myAncestors; // this class and all its superclasses (transitively); computed lazily, reset when superclasses change
   private final LinkedHashSet<ClassField> myNotImplementedFields = new LinkedHashSet<>();
   private final List<ClassField> myPersonalFields = new ArrayList<>();
   private final Map<ClassField, AbsExpression> myImplemented = new HashMap<>();
@@ -224,6 +225,24 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
   }
 
   public SortExpression computeSort(Map<ClassField,Expression> implemented, Binding thisBinding, Levels levels, LevelSubstitution levelSubstitution, boolean ignoreErrors, GetTypeVisitor visitor) {
+    return computeSort(implemented, thisBinding, levels, levelSubstitution, ignoreErrors, visitor, false);
+  }
+
+  /**
+   * Checks if a class call to this class is a proposition.
+   * Equivalent to {@code computeSort(implemented, thisBinding, levels, levelSubstitution, false, GetTypeVisitor.INSTANCE).isProp()}, but stops at the first field whose type is not a proposition.
+   */
+  public boolean isPropClassCall(Map<ClassField,Expression> implemented, Binding thisBinding, Levels levels, LevelSubstitution levelSubstitution) {
+    SortExpression sort = computeSort(implemented, thisBinding, levels, levelSubstitution, false, GetTypeVisitor.INSTANCE, true);
+    return sort != null && sort.isProp();
+  }
+
+  /**
+   * @param onlyProp  if true, returns the sort of the first field that is not a proposition instead of the sort of the class call.
+   *                  This does not change whether the result is a proposition since the maximum of sorts is a proposition if and only if all of them are,
+   *                  and truncation by the use level does not produce a proposition unless the use level is \Prop, which is checked first.
+   */
+  private SortExpression computeSort(Map<ClassField,Expression> implemented, Binding thisBinding, Levels levels, LevelSubstitution levelSubstitution, boolean ignoreErrors, GetTypeVisitor visitor, boolean onlyProp) {
     Levels idLevels = makeIdLevels();
     ReferenceExpression thisExpr1 = new ReferenceExpression(ExpressionFactory.parameter("this", new ClassCallExpression(this, levels, implemented)));
     Expression thisExpr2 = new ReferenceExpression(ExpressionFactory.parameter("this", new ClassCallExpression(this, levels)));
@@ -250,7 +269,13 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
         }
         if (fieldSort != null) {
           fieldSort = fieldSort.withoutCat();
-          sorts.add(levelSubstitution.isEmpty() ? fieldSort : fieldSort.subst(levelSubstitution));
+          if (!levelSubstitution.isEmpty()) {
+            fieldSort = fieldSort.subst(levelSubstitution);
+          }
+          if (onlyProp && !fieldSort.isProp()) {
+            return fieldSort;
+          }
+          sorts.add(fieldSort);
         }
       }
     }
@@ -320,6 +345,30 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
 
   public void addSuperClass(ClassDefinition superClass) {
     mySuperClasses.add(superClass);
+    myAncestors = null;
+  }
+
+  private static void collectAncestors(ClassDefinition classDef, Set<ClassDefinition> result) {
+    if (result.add(classDef)) {
+      for (ClassDefinition superClass : classDef.mySuperClasses) {
+        collectAncestors(superClass, result);
+      }
+    }
+  }
+
+  @Override
+  public boolean isSubClassOf(@NotNull CoreClassDefinition classDefinition) {
+    if (this == classDefinition) {
+      return true;
+    }
+    if (!(classDefinition instanceof ClassDefinition)) return false;
+    Set<ClassDefinition> ancestors = myAncestors;
+    if (ancestors == null) {
+      ancestors = new HashSet<>();
+      collectAncestors(this, ancestors);
+      myAncestors = ancestors;
+    }
+    return ancestors.contains(classDefinition);
   }
 
   @NotNull
@@ -663,6 +712,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
 
   public void clear() {
     mySuperClasses.clear();
+    myAncestors = null;
     myNotImplementedFields.clear();
     myPersonalFields.clear();
     myImplemented.clear();

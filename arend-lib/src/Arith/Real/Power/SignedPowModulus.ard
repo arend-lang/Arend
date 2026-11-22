@@ -1,0 +1,50 @@
+{- | The modulus of continuity of the signed power $\varphi_r(t) = t|t|^{r-2}$, $r > 1$, with conjugate exponent $r'$.
+
+  * {signedPow-homog}: $\varphi_r(\lambda z) = \lambda^{r-1}\varphi_r(z)$.
+  * {signedPow-modulus}: for every $\eta > 0$ there is `C` with $|\varphi_r(x) - \varphi_r(y)|^{r'} \le C |x - y|^r + \eta (|x|^r + |y|^r)$,
+    by homogeneity of degree $r - 1 = r/r'$ ({powModulus1-homog}).
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.Power.PowModulus
+\import Arith.Real.Power.SignedPow
+\import Topology.NormedAbGroup.Real
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\open signedPow
+
+-- | The conjugate exponent of `r > 1` is `> 1`.
+\lemma conj>1 {r : Real} {r>0 : 0 < r} {q : Real} {q>0 : 0 < q} (r>1 : 1 < r) (rq : HolderConjugate r q r>0 q>0) : 1 < q
+  => \have | pr>0 : 0 < RealField.pinv r r>0 => RealField.pinv>0 r>0
+           | pq<1 : RealField.pinv q q>0 < 1 => linarith
+           | e : q * RealField.pinv q q>0 = 1 => RealField.pinv-right q>0
+           | m : q * RealField.pinv q q>0 < q * 1 => RealField.<_*_positive-right q>0 pq<1
+     \in transport2 (<) e ide-right m
+
+
+-- | $\varphi_r(\lambda z) = \lambda^{r-1} \varphi_r(z)$ for $\lambda > 0$.
+\lemma signedPow-homog {r : Real} {r>1 : 1 < r} {l : Real} (l>0 : 0 < l) {z : Real}
+  : signedPow r>1 (l * z) = rpow-pos l l>0 (r - 1) * signedPow r>1 z
+  => sign-cases-eq {z}
+      (\lam z>=0 => \have lz>=0 : 0 <= l * z => RealField.<=_*_positive_positive (<=-less l>0) z>=0
+                    \in nonneg lz>=0 *> rpow_* {l} {z} {<=-less l>0} {z>=0} *> pmap2 (*) (rpow-pos-eq l>0) (inv (nonneg z>=0)))
+      (\lam z<=0 => \have | s>=0 : 0 <= negative z => linarith
+                          | lz<=0 : l * z <= 0 => transport (_ <=) RealField.zro_*-right (<=_*_positive-right (<=-less l>0) z<=0)
+                          | e : negative (l * z) = l * negative z => equation.cRing
+                          | ls>=0 : 0 <= l * negative z => RealField.<=_*_positive_positive (<=-less l>0) s>=0
+                    \in nonpos lz<=0 {transportInv (0 <=) e ls>=0} *> pmap negative (rpow-base e *> rpow_* {l} {negative z} {<=-less l>0} {s>=0} *> pmap (\lam u => u * _) (rpow-pos-eq l>0))
+                          *> inv (pmap (_ *) (nonpos z<=0 {s>=0}) *> equation.cRing))
+
+-- | Modulus of continuity of $\varphi_r$: for every $\eta > 0$ there is `C` with $|\varphi_r(x) - \varphi_r(y)|^{r'} \le C |x - y|^r + \eta (|x|^r + |y|^r)$.
+\lemma signedPow-modulus {r : Real} {r>1 : 1 < r} {r>0 : 0 < r} {q : Real} {q>0 : 0 < q} (rq : HolderConjugate r q r>0 q>0)
+  : PowModulus1 r q r>0 q>0 (signedPow r>1)
+  => powModulus1-homog (<=-less r>1) (<=-less (conj>1 r>1 rq)) (signedPow-conj.conj-exp rq) (signedPow-cover r>1) (\lam l>0 x => signedPow-homog l>0)

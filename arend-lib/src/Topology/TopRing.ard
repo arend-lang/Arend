@@ -2,9 +2,10 @@
 \import Algebra.Monoid
 \import Algebra.Ring
 \import Logic
-\import Logic.Meta
 \import Paths
 \import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
 \import Topology.TopAbGroup
 \import Topology.TopModule
 \import Topology.TopSpace
@@ -27,6 +28,19 @@
   | inv-dense : IsDenseSet \lam (x : E) => Monoid.Inv x
 
 \class NearField \extends NearSkewField, CRing
+
+-- | A topological ring whose multiplication is a cover map.
+\class CoverRing \extends TopRing
+  | *-cover : CoverMap (ProductCoverSpace \this \this) \this \lam s => s.1 * s.2
+
+\class SeparatedCoverRing \extends CoverRing, SeparatedCoverSpace, HausdorffTopAbGroup
+
+\class SeparatedCoverCRing \extends SeparatedCoverRing, CRing
+
+-- | A separated cover ring as a Hausdorff module over itself.
+\func SeparatedRingTopLModule (R : SeparatedCoverRing) : HausdorffTopLModule R R \cowith
+  | TopLModule => RingTopLModule R
+  | isSeparatedCoverSpace => R.isSeparatedCoverSpace
 
 \lemma nearField-map-unique {R : NearSkewField} {Y : HausdorffTopLModule R} {U : Set R} (Uo : isOpen U) (f g : ContMap (TopSub U) Y)
                             (p : \Pi {h : R} (Uh : U h) -> h *c f (h,Uh) = h *c g (h,Uh)) {h : R} (Uh : U h) : f (h,Uh) = g (h,Uh)

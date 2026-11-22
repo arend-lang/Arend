@@ -53,8 +53,8 @@
   => MeasureRingCompletion (LebesgueRing0 n)
 
 -- | The Lebesgue integral `L¹(ℝⁿ) = L¹(B₀⁽ⁿ⁾)`.
-\func LebesgueL1 (n : Nat) : CompleteIntegrationSpace
-  => IntegrationSpaceCompletion (SFuncIntegrationSpace (LebesgueRing0 n))
+\func LebesgueL1 (n : Nat) : CompleteRegularIntegrationSpace
+  => RegularIntegrationSpaceCompletion (SFuncIntegrationSpace (LebesgueRing0 n))
 
 -- | `L¹(ℝⁿ) ≅ L¹(λₙ)`.
 \lemma LebesgueL1-equiv {n : Nat} : IsEquiv (integrationCompletion-map (SFuncHom (measureCompletion {LebesgueRing0 n})))

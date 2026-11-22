@@ -10,7 +10,6 @@
 \import Function.Meta
 \import Logic
 \import Meta
-\import Operations
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -38,8 +37,9 @@
 \lemma lnorm_*_<= {X : PseudoNormedPseudoRing} {x y : X} : lnorm (x * y) <= lnorm x * lnorm y
   => Real.<=-upper.2 $ transportInv (_ ExUpperReal.<=) (RealField.*-upper lnorm>=0 lnorm>=0) X.norm_*_<=
 
-\class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, TopRing {
+\class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, CoverRing {
   | norm_ide_<= : norm 1 <= ExUpperReal.fromRat 1
+  | *-cover => *-locally-uniform
 
   \lemma norm_<=_pow {x : E} {n : Nat} : norm (pow x n) <= ExUpperRealSemigroup.pow (norm x) n \elim n
     | 0 => norm_ide_<=
@@ -50,7 +50,7 @@
     | suc n => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (pow-cover n) CoverMap.id
 }
 
-\class CompleteExNormedRing \extends ExPseudoNormedRing, CompleteExNormedAbGroup
+\class CompleteExNormedRing \extends ExPseudoNormedRing, CompleteExNormedAbGroup, SeparatedCoverRing
 
 \class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
 
@@ -139,7 +139,7 @@
 
 \class CompleteValuedRing \extends PseudoValuedRing, CompleteExNormedRing, CompleteNormedAbGroup
 
-\class CompleteValuedCRing \extends CompleteValuedRing, CRing
+\class CompleteValuedCRing \extends CompleteValuedRing, SeparatedCoverCRing
 
 \instance RealValuedRing : CompleteValuedCRing Real
   | CompleteNormedAbGroup => RealNormed

@@ -42,6 +42,9 @@
 
   \lemma <=_*q-rotate_finv-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= q *q b) : RatField.finv q *q a <= b
     => <=_*q-right (<=-less $ RatField.finv>0 q>0) a<=qb <=∘ =_<= (inv *q-assoc *> pmap (*q b) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q)
+
+  \lemma *q_<=0 {q : Rat} (q<=0 : q RatField.<= RatField.zro) {a : E} (a>=0 : 0 <= a) : q *q a <= 0
+    => <=_*q-left q<=0 a>=0 <=∘ =_<= toRatModule.*c_zro-left
 }
 
 -- | A {RieszSpace} is a divisible {LatticeAbGroup}.
@@ -86,6 +89,22 @@
 
   \lemma part-_+-disjoint {x y : E} (d : AreDisjoint x y) : part- (x + y) = part- x + part- y
     => pmap part+ (equation.abGroup : negative (x + y) = negative x + negative y) *> part+_+-disjoint (pmap2 (∧) abs_negative abs_negative *> d)
+
+  \lemma *q_join {p q : Rat} {a : E} (a>=0 : 0 <= a) : (p RatField.∨ q) *q a = p *q a ∨ q *q a
+    => \case RatField.totality p q \with {
+      | byLeft p<=q => pmap (*q a) (RatField.join_<= p<=q) *> inv (join_<= (<=_*q-left p<=q a>=0))
+      | byRight q<=p => pmap (*q a) (RatField.join-comm *> RatField.join_<= q<=p) *> inv (join-comm *> join_<= (<=_*q-left q<=p a>=0))
+    }
+
+  \lemma part+_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} : part+ (q *q a) = q *q part+ a
+    => pmap (_ ∨) (inv toRatModule.*c_zro-right) *> inv (join_*q q>=0)
+
+  \lemma <=s_*q {q : Rat} (q>0 : 0 < q) {a : E} : q *q a <=s a
+    => \have (n,q<n) => rat_natBound q
+       \in inP (n, =_<= (part+_*q (<=-less q>0)) <=∘ <=_*q-left (<=-less q<n) part+>=0 <=∘ =_<= *q_*n)
+
+  \lemma *q_<=s {q : Rat} (q>0 : 0 < q) {a : E} : a <=s q *q a
+    => transport (<=s _) (inv *q-assoc *> pmap (*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ <=s_*q {_} {RatField.finv q} (RatField.finv>0 q>0)
 } \where {
   \func fromAbs {A : PosetQModule} (abs : \Pi (a : A) -> ∃ (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)) : RieszSpace \cowith
     | PosetQModule => A
@@ -103,31 +122,39 @@
       \protected \sfunc join (a b : A) : A
         => ratio 1 2 A.*q (a + b + (getAbs (a - b)).1)
     }
+
+  -- | A Riesz space structure on a {PosetQModule} in which every `x` has a least upper bound with `0`.
+  \func fromPart+ {A : PosetQModule} (part+ : \Pi (a : A) -> ∃ (b : A) (a <= b) (A.zro <= b) ∀ {c} (a <= c -> A.zro <= c -> b <= c)) : RieszSpace
+    => fromAbs \lam a => TruncP.map (part+ a) \lam s => (s.1 + s.1 - a,
+        A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.to>=0 $ <=_+ s.2 s.2,
+        transport (<= _) zro-left $ <=_+ (A.<=_+-positive s.3 s.3) <=-refl,
+        \lam {c} a<=c -a<=c =>
+          \let d => ratio 1 2 A.*q (a + c)
+          \in \have | dd : d + d = a + c => inv A.*q_*2 *> inv A.*q-assoc *> A.ide_*q
+                    | a<=d : a <= d => A.from>=0 $ A.<=_*n-div {2} (\case __) $ transport (A.zro <=) (equation.abGroup *> pmap (__ - (a + a)) (inv dd) *> equation.abGroup) (A.to>=0 a<=c)
+                    | d>=0 : A.zro <= d => A.<=_*n-div {2} (\case __) $ transport (A.zro <=) (equation.abGroup *> inv dd *> equation.abGroup) (A.to>=0 -a<=c)
+          \in <=_+ (<=_+ (s.4 a<=d d>=0) (s.4 a<=d d>=0)) <=-refl <=∘ =_<= (pmap (- a) dd *> equation.abGroup))
 }
 
-\record RieszSpaceHom \extends AddGroupHom, PosetHom {
+\record RieszSpaceHom \extends AddGroupHom, LatticeHom {
   \override Dom : RieszSpace
   \override Cod : RieszSpace
-
-  | func-join>= {x y : Dom} : func (x ∨ y) <= func x ∨ func y
-
-  \lemma func-join {x y : Dom} : func (x ∨ y) = func x ∨ func y
-    => <=-antisymmetric func-join>= (join-univ (func-<= join-left) (func-<= join-right))
 
   \lemma func-abs {x : Dom} : func (LatticeAbGroup.abs x) = LatticeAbGroup.abs (func x)
     => func-join *> pmap (func x ∨) func-negative
 
-  \lemma func-meet {x y : Dom} : func (x ∧ y) = func x ∧ func y
+  \lemma func-clip {s x : Dom} : func (LatticeAbGroup.clip s x) = LatticeAbGroup.clip (func s) (func x)
+    => func-join *> pmap2 (∨) func-meet func-negative
+
+  \default func-meet
     => pmap func (inv AddGroup.negative-isInv *> pmap negative LatticeAbGroup.meet_negative) *> func-negative *> pmap negative func-join *> LatticeAbGroup.join_negative
        *> pmap2 (∧) (pmap negative func-negative *> AddGroup.negative-isInv) (pmap negative func-negative *> AddGroup.negative-isInv)
 } \where {
   \func id {X : RieszSpace} : RieszSpaceHom X X \cowith
     | AddGroupHom => AddGroupHom.id
-    | PosetHom => PosetHom.id
-    | func-join>= => <=-refl
+    | LatticeHom => LatticeHom.id
 
   \func \fixl 8 compose \alias \infixl 8 ∘ {X Y Z : RieszSpace} (g : RieszSpaceHom Y Z) (f : RieszSpaceHom X Y) : RieszSpaceHom X Z \cowith
     | AddGroupHom => g AddGroupHom.∘ f
-    | PosetHom => g PosetHom.∘ f
-    | func-join>= => func-<= func-join>= <=∘ func-join>=
+    | LatticeHom => g LatticeHom.∘ f
 }

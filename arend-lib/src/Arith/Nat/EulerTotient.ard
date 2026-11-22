@@ -1,39 +1,31 @@
 \import Algebra.Domain.Bezout
 \import Algebra.Domain.Euclidean
 \import Algebra.Group
-\import Algebra.Group.GroupHom
-\import Algebra.Group.SubGroup
-\import Algebra.Group.Symmetric
+\import Algebra.Group.CyclicSub
+\import Algebra.Monoid.Prime
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
-\import Algebra.Ring
 \import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
-\import Algebra.Ring.RingCat
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Fin
 \import Arith.Int
 \import Arith.Nat
-\import Category
 \import Equiv
 \import Function (IsSurj)
 \import Function.Meta
 \import Logic
-\import Logic.Meta
 \import Meta
-\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
 \import Set.Fin.Instances
-\import Set.Fin.Pigeonhole
-\import Set.SetHom
 \open IntEuclidean \hiding (isDivMod,mod-unique)
 \open FinRing
 \open Monoid
@@ -111,6 +103,33 @@
 
 \func EulerTotient (n : Nat) : Nat => (coPrimes n).card
 
+-- | The group of units of `ℤ/(n+1)`; it has `EulerTotient n` elements.
+\func UnitsFinGroup (n : Nat) (n>0 : 0 NatOrder.< n) : FinGroup \cowith
+  | Group => InvGroup (FinRing {n})
+  | FinSet => FinSet-transport (coPrimes n) (coPrimes-eq n n>0)
+
+-- | Euler's theorem: `x^φ(n+1) = 1` for every unit `x` of `ℤ/(n+1)`.
+\lemma euler {n : Nat} (n>0 : 0 NatOrder.< n) {x : FinRing {n}} (xi : Inv x) : (FinRing {n}).pow x (EulerTotient n) = (FinRing {n}).ide
+  => inv (SubMonoid.sub-pow {InvSubMonoid (FinRing {n})} {(x,xi)}) *> pmap __.1 (pow_card {UnitsFinGroup n n>0} (x,xi))
+
+-- | `φ(p) = p - 1` for a prime `p`.
+\lemma totient-prime {n : Nat} (p : Prime (suc n)) : EulerTotient n = n
+  => inv $ card_Equiv {FinFin n} {coPrimes n} \new QEquiv {
+    | f j => (suc j, nat_gcd-comm {suc j} {suc n} *> FinField.gcd=1 p (/=-sym $ NatSemiring.<_/= NatOrder.zero<suc) (NatOrder.suc<suc (fin_< j)))
+    | ret s => \case \elim s \with {
+      | (0, q) => absurd (zero-lem q)
+      | (suc k, _) => k
+    }
+    | ret_f j => idp
+    | f_sec s => \case \elim s \with {
+      | (0, q) => absurd (zero-lem q)
+      | (suc k, _) => ext idp
+    }
+  }
+  \where
+    \lemma zero-lem (q : NatEuclidean.gcd 0 (suc n) = 1) : Empty
+      => p.notInv $ transportInv (\lam x => Inv {NatSemiring} x) (inv NatEuclidean.gcd0_ *> q) Inv.ide-isInv
+
 \func chinese-map {n m : Nat} (x : FinRing {suc n * m + n}) : \Sigma (FinRing {n}) (FinRing {m})
   => (x Nat.mod suc n, x Nat.mod suc m)
 
@@ -129,19 +148,22 @@
       \let
         | B1 => rewrite (fin_mod_id {n} r1) in ldiv-finEq {r mod (suc n * suc m)} {r1} {n} (inP (\new LDiv {
           | inv => p1 - suc m IntRing.* (r div pos (suc n * suc m))
-          | inv-right => rewrite (Ring.ldistr_-, A1, inv (pmap (\lam x => x - r1) (divModProp r (suc n * suc m) (\lam p => \case p)))) equation
+          | inv-right => ldiv-step r1 A1 idp (divModProp r (suc n * suc m) (\lam p => \case p))
         }))
         | B2 => rewrite fin_mod_id in pmap (__ Nat.mod suc n) (mod-inv {suc n} {suc m} (\lam p => \case p) (r mod (suc n * suc m)))
       \in rewrite intCoef-char (B2 *> rewrite fin_mod_id B1),
       \let
         | B1 => rewrite (fin_mod_id {m} r2) in ldiv-finEq {r mod (suc n * suc m)} {r2} {m} (inP (\new LDiv {
           | inv => p2 - suc n IntRing.* (r div pos (suc n * suc m))
-          | inv-right => rewrite (Ring.ldistr_-, A2, inv (pmap (\lam x => x - r2) (divModProp r (suc n * suc m) (\lam p => \case p)))) equation
+          | inv-right => ldiv-step r2 A2 *-comm (divModProp r (suc n * suc m) (\lam p => \case p))
         }))
         | B2 => rewrite (fin_mod_id, *-comm {_} {suc m} {suc n}) in
         pmap (__ Nat.mod suc m) (mod-inv {suc m} {suc n} (\lam p => \case p) (r mod (suc n * suc m)))
       \in rewrite intCoef-char (B2 *> rewrite fin_mod_id B1)))
   }} \where {
+  \lemma ldiv-step {a b c p D M r : Int} (r1 : Int) (A1 : a * p = r - r1) (ab : a * b = c) (dm : c * D + M = r) : a * (p - b * D) = M - r1
+    => rewrite (IntRing.ldistr_-, A1, inv *-assoc, ab, inv dm) equation.cRing
+
   \lemma mod-inv {n m : Nat} (p : n /= 0) (x : Nat) : x Nat.mod (n Semigroup.* m) Nat.mod n = x Nat.mod n =>
     \let A0 => rewriteI NatSemiring.ldistr $ rewrite NatSemiring.*-assoc $
         rewriteI (AddMonoid.+-assoc {_} {n Nat.* m Nat.* x Nat.div (n Nat.* m)}) $

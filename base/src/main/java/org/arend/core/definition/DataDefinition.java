@@ -201,6 +201,7 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
 
   public void setParameters(DependentLink parameters) {
     myParameters = parameters;
+    updateHasPropertyParameters();
   }
 
   @Override

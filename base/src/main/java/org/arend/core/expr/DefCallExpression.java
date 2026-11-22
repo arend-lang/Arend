@@ -48,14 +48,20 @@ public abstract class DefCallExpression extends Expression implements CoreDefCal
   }
 
   public void fixBoxes() {
-    boolean hasProperties = false;
-    for (DependentLink param = myDefinition.getParameters(); param.hasNext(); param = param.getNext()) {
-      if (param.isProperty()) {
-        hasProperties = true;
+    if (!myDefinition.hasPropertyParameters()) {
+      return;
+    }
+
+    List<Expression> args0 = getDefCallArguments();
+    boolean needsBoxing = false;
+    DependentLink param0 = myDefinition.getParameters();
+    for (int i = 0; i < args0.size() && param0.hasNext(); i++, param0 = param0.getNext()) {
+      if (param0.isProperty() && !(args0.get(i) instanceof BoxExpression)) {
+        needsBoxing = true;
         break;
       }
     }
-    if (!hasProperties) {
+    if (!needsBoxing) {
       return;
     }
 
@@ -74,8 +80,8 @@ public abstract class DefCallExpression extends Expression implements CoreDefCal
     for (int i = 0; i < args.size(); i++) {
       if (!param.hasNext()) break;
       Expression arg = args.get(i);
-      if (param.isProperty()) {
-        args.set(i, BoxExpression.make(args.get(i), param.getType().subst(substitution, levelSubst)));
+      if (param.isProperty() && !(arg instanceof BoxExpression)) {
+        args.set(i, BoxExpression.make(arg, param.getType().subst(substitution, levelSubst)));
       }
       substitution.add(param, arg);
       param = param.getNext();

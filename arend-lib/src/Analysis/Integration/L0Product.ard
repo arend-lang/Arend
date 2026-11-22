@@ -1,0 +1,309 @@
+{- | The product of `L⁰` (Lemma `lem:L0`(2)).
+
+  The product is the functional calculus {l0calc} of $x_1 x_2$, that is, $FG = (x_1 x_2)(F, G)$. It is a cover map
+  $\mathrm L^0 \times \mathrm L^0 \to \mathrm L^0$ which extends {fmul} ({l0Mul-char}), and its algebraic laws follow from
+  the corresponding identities of real functions.
+
+  * {l0Mul}: the product; {l0Mul-calc}, {l0Mul-l0calc}: its relation to {l0calc}; {l0Mul-char}: the value on `L`.
+  * {l0Mul-comm}, {l0Mul-assoc}, {l0Mul-ldistr}, {l0Mul-*q}, {l0Mul-ide-left}: the commutative algebra laws with unit {l0One}.
+  * {l0-truncAt}, {l0-IsBelow}: $\tau_q X = X \wedge q$, so $|F| \le q$ means $|F| \le q \cdot 1$.
+  * {l0calc-clip}, {l0calc-mono-bounded}: transfer for arguments bounded by $|F_j| \le a_j$.
+  * {l0Mul-bound}, {l0Mul-abs}: $|FG| \le ab$ and $|FG| \le a|G|$ for $|F| \le a$, $|G| \le b$.
+  * {l0Mul-square>=0}, {l0Mul-square-below}: $FF \ge 0$, and $|FF| \le q^2$ implies $|F| \le q$.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.L0
+\import Analysis.Integration.L0Calculus
+\import Analysis.Integration.L0Unit
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power.SignedPow
+\import Function.Meta
+\import Logic
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.LinBounded
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
+\import Topology.TopRieszSpace
+\import Topology.TopRieszSpace.Completion
+\import Topology.TopSpace
+\open LatticeAbGroup
+\open MeetSemilattice
+\open JoinSemilattice
+\open AddGroup
+\open PosetAddGroup
+\open QModule
+\open TruncRieszSpace
+\open L0ProductHelpers
+
+-- | The product $x_1 x_2$.
+\func mulMap : LinBoundedMap 2
+  => LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)
+
+-- | The product $FG = (x_1 x_2)(F, G)$ of `L⁰`.
+\func l0Mul {L : FullIntegrationSpace} : CoverMap (ProductCoverSpace (L0Space L) (L0Space L)) (L0Space L)
+  => l0calc mulMap CoverMap.∘ pairArr
+
+-- | {l0Mul} as {l0calc}.
+\lemma l0Mul-calc {L : FullIntegrationSpace} {F G : L0Space L} : l0Mul (F,G) = l0calc mulMap (F :: G :: nil)
+  => pmap (l0calc mulMap) (pairArr-eq {L0Space L} {(F,G)})
+
+-- | $\varphi(F) \psi(F) = (\varphi \psi)(F)$.
+\lemma l0Mul-l0calc {L : FullIntegrationSpace} {n : Nat} {phi psi chi : CoverMap (RealN n) RealNormed}
+                    (e : \Pi (x : Array Real n) -> chi x = phi x * psi x) {F : Array (L0Space L) n}
+  : l0Mul (l0calc phi F, l0calc psi F) = l0calc chi F
+  => l0Mul-calc *> inv (l0calc-comp {L} {2} {n} {mulMap} {phi :: psi :: nil} {chi} e {F}
+                        *> pmap {Array (L0Space L) 2} (l0calc mulMap) {\lam j => l0calc ((phi :: psi :: nil : Array (CoverMap (RealN n) RealNormed) 2) j) F} {l0calc phi F :: l0calc psi F :: nil}
+                                (exts \lam (j : Fin 2) => \case \elim j \with { | 0 => idp | 1 => idp }))
+
+-- | On `L`, {l0Mul} is {fmul}.
+\lemma l0Mul-char {L : FullIntegrationSpace} {f g : L}
+  : l0Mul (pointCF {L0PreSpace L} f, pointCF {L0PreSpace L} g) = pointCF {L0PreSpace L} (fmul f g)
+  => l0Mul-calc *> pmap {Array (L0Space L) 2} (l0calc mulMap) {pointCF {L0PreSpace L} f :: pointCF {L0PreSpace L} g :: nil} {\lam j => pointCF {L0PreSpace L} ((f :: g :: nil : Array L 2) j)}
+                                (exts \lam (j : Fin 2) => \case \elim j \with { | 0 => idp | 1 => idp })
+      *> l0calc-char mulMap {f :: g :: nil}
+
+-- | {l0Mul} is commutative.
+\lemma l0Mul-comm {L : FullIntegrationSpace} (F G : L0Space L) : l0Mul (F,G) = l0Mul (G,F)
+  => \let K : Array (L0Space L) 2 => F :: G :: nil
+     \in vars2 {L} {2} {K} 0 1 *> l0Mul-l0calc {L} {2} {xc {2} 0} {xc {2} 1} {cmul (xc {2} 0) (xc {2} 1)} (\lam x => idp)
+      *> l0calc-ext (\lam x => RealField.*-comm)
+      *> inv (vars2 {L} {2} {K} 1 0 *> l0Mul-l0calc {L} {2} {xc {2} 1} {xc {2} 0} {cmul (xc {2} 1) (xc {2} 0)} (\lam x => idp))
+
+-- | {l0Mul} is associative.
+\lemma l0Mul-assoc {L : FullIntegrationSpace} (F G H : L0Space L) : l0Mul (l0Mul (F,G), H) = l0Mul (F, l0Mul (G,H))
+  => \let K : Array (L0Space L) 3 => F :: G :: H :: nil
+     \in pmap2 (\lam u v => l0Mul (u,v)) (vars2 {L} {3} {K} 0 1 *> l0Mul-l0calc {L} {3} {xc {3} 0} {xc {3} 1} {cmul (xc {3} 0) (xc {3} 1)} (\lam x => idp)) (inv (l0calc-coord {L} {3} 2 {K}))
+      *> l0Mul-l0calc {L} {3} {cmul (xc {3} 0) (xc {3} 1)} {xc {3} 2} {cmul (cmul (xc {3} 0) (xc {3} 1)) (xc {3} 2)} (\lam x => idp)
+      *> l0calc-ext (\lam x => RealField.*-assoc)
+      *> inv (pmap2 (\lam u v => l0Mul (u,v)) (inv (l0calc-coord {L} {3} 0 {K})) (vars2 {L} {3} {K} 1 2 *> l0Mul-l0calc {L} {3} {xc {3} 1} {xc {3} 2} {cmul (xc {3} 1) (xc {3} 2)} (\lam x => idp))
+              *> l0Mul-l0calc {L} {3} {xc {3} 0} {cmul (xc {3} 1) (xc {3} 2)} {cmul (xc {3} 0) (cmul (xc {3} 1) (xc {3} 2))} (\lam x => idp))
+
+-- | Distributivity: $F(G + H) = FG + FH$.
+\lemma l0Mul-ldistr {L : FullIntegrationSpace} (F G H : L0Space L) : l0Mul (F, G + H) = l0Mul (F,G) + l0Mul (F,H)
+  => \let K : Array (L0Space L) 3 => F :: G :: H :: nil
+     \in pmap2 (\lam u v => l0Mul (u,v)) (inv (l0calc-coord {L} {3} 0 {K}))
+           (pmap2 (+) (inv (l0calc-coord {L} {3} 1 {K})) (inv (l0calc-coord {L} {3} 2 {K})) *> inv (l0calc-add {L} {3} {cadd (xc {3} 1) (xc {3} 2)} {xc {3} 1} {xc {3} 2} (\lam x => idp)))
+      *> l0Mul-l0calc {L} {3} {xc {3} 0} {cadd (xc {3} 1) (xc {3} 2)} {cmul (xc {3} 0) (cadd (xc {3} 1) (xc {3} 2))} (\lam x => idp)
+      *> l0calc-add {L} {3} {cmul (xc {3} 0) (cadd (xc {3} 1) (xc {3} 2))} {cmul (xc {3} 0) (xc {3} 1)} {cmul (xc {3} 0) (xc {3} 2)} (\lam x => RealField.ldistr)
+      *> inv (pmap2 (+) (vars2 {L} {3} {K} 0 1 *> l0Mul-l0calc (\lam x => idp)) (vars2 {L} {3} {K} 0 2 *> l0Mul-l0calc (\lam x => idp)))
+
+-- | $F(qG) = q(FG)$ for rational `q`.
+\lemma l0Mul-*q {L : FullIntegrationSpace} (q : Rat) (F G : L0Space L) : l0Mul (F, q *q G) = q *q l0Mul (F,G)
+  => \let K : Array (L0Space L) 2 => F :: G :: nil
+     \in pmap2 (\lam u v => l0Mul (u,v)) (inv (l0calc-coord {L} {2} 0 {K}))
+           (pmap (q *q) (inv (l0calc-coord {L} {2} 1 {K})) *> inv (l0calc-*q {L} {2} {cmul (CoverMap.const (Real.fromRat q)) (xc {2} 1)} {xc {2} 1} q (\lam x => idp)))
+      *> l0Mul-l0calc {L} {2} {xc {2} 0} {cmul (CoverMap.const (Real.fromRat q)) (xc {2} 1)} {cmul (xc {2} 0) (cmul (CoverMap.const (Real.fromRat q)) (xc {2} 1))} (\lam x => idp)
+      *> l0calc-*q {L} {2} {cmul (xc {2} 0) (cmul (CoverMap.const (Real.fromRat q)) (xc {2} 1))} {cmul (xc {2} 0) (xc {2} 1)} q (\lam x => equation.cRing)
+      *> inv (pmap (q *q) (vars2 {L} {2} {K} 0 1 *> l0Mul-l0calc (\lam x => idp)))
+
+-- | {l0One} is the unit: $1 \cdot F = F$.
+\lemma l0Mul-ide-left {L : FullIntegrationSpace} (F : L0Space L) : l0Mul (l0One L, F) = F
+  => \let K : Array (L0Space L) 1 => F :: nil
+     \in pmap2 (\lam u v => l0Mul (u,v)) (inv (l0calc-const {L} {1} 1 {K} *> ide_*q)) (inv (l0calc-coord {L} {1} 0 {K}))
+      *> l0Mul-l0calc {L} {1} {CoverMap.const (Real.fromRat 1)} {xc {1} 0} {xc {1} 0} (\lam x => inv RealField.ide-left)
+      *> l0calc-coord 0
+
+-- | $F \cdot 1 = F$.
+\lemma l0Mul-ide-right {L : FullIntegrationSpace} (F : L0Space L) : l0Mul (F, l0One L) = F
+  => l0Mul-comm F (l0One L) *> l0Mul-ide-left F
+
+-- | Squares are nonnegative: $0 \le F F$.
+\lemma l0Mul-square>=0 {L : FullIntegrationSpace} (F : L0Space L) : 0 <= l0Mul (F,F)
+  => \let K : Array (L0Space L) 1 => F :: nil
+     \in transport2 (<=) (l0calc-zro {L} {1} {CoverMap.const 0} (\lam x => idp) {K})
+           (inv (vars2 {L} {1} {K} 0 0 *> l0Mul-l0calc (\lam x => idp)))
+           (l0calc-mono {L} {1} {CoverMap.const 0} {cmul (xc {1} 0) (xc {1} 0)} (\lam x => real-square>=0))
+
+-- | The truncation of `L⁰` is the functional calculus of $x \wedge q$: $\tau_q X = X \wedge q \cdot 1$.
+\lemma l0-truncAt {L : FullIntegrationSpace} {q : Rat} (q>0 : 0 < q) (X : L0Space L) : TruncRieszSpace.truncAt {L0Space L} q X = X ∧ (q *q l0One L)
+  => \let | mc => LinBoundedMap.meetConst (Real.fromRat q) (rat_real_<=.1 (<=-less q>0))
+          | Y => L0Space L
+          | S : CoverMap Y (ArrayCoverSpace 1 Y) => ArrayCoverSpace.tuple (CoverMap.id :: nil)
+     \in dense-lift-unique completion completion.isDenseEmbedding.1 (truncAt-cover q) (l0calc mc CoverMap.∘ S)
+           (\lam f => inv ((topTruncCompletion {L0PreSpace L}).func-truncAt)
+                       *> pmap (pointCF {L0PreSpace L}) (inv (fcalc-ext (\lam y => idp) *> fcalc-truncAt {L} {1} {f :: nil} q>0 (fcalc-var 0)))
+                       *> inv (l0calc-char mc {f :: nil})
+                       *> pmap {Array Y 1} (l0calc mc) {\lam j => pointCF {L0PreSpace L} ((f :: nil : Array L 1) j)} {\lam j => (CoverMap.id :: nil : Array (CoverMap Y Y) 1) j (pointCF {L0PreSpace L} f)}
+                               (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })) X
+         *> pmap {Array Y 1} (l0calc mc) {\lam j => (CoverMap.id :: nil : Array (CoverMap Y Y) 1) j X} {X :: nil} (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
+         *> l0calc-meet {L} {1} {mc} {xc {1} 0} {CoverMap.const (Real.fromRat q)} (\lam x => idp)
+         *> pmap2 (∧) (l0calc-coord 0) (l0calc-const q)
+
+-- | $X$ is bounded by `q` if and only if $X \le q \cdot 1$.
+\lemma l0-IsBelow {L : FullIntegrationSpace} {q : Rat} (q>0 : 0 < q) {X : L0Space L} : IsBelow X q <-> X <= q *q l0One L
+  => (\lam p => =_<= (inv ((IsBelow_truncAt q>0).1 p) *> l0-truncAt q>0 X) <=∘ meet-right,
+      \lam le => (IsBelow_truncAt q>0).2 (l0-truncAt q>0 X *> meet_<= le))
+
+-- | The clipping $(x_j \wedge M) \vee (-M)$ of the `j`-th coordinate.
+\func clipAt {n : Nat} {M : Rat} (M>0 : 0 < M) (j : Fin n) : LinBoundedMap n
+  => LinBoundedMap.comp (LinBoundedMap.clip (Real.fromRat M) (rat_real_<=.1 (<=-less M>0))) (LinBoundedMap.coord j :: nil)
+
+-- | If $|F_j| \le M$, then clipping the `j`-th coordinate at `M` does not change it.
+\lemma l0calc-clip {L : FullIntegrationSpace} {n : Nat} {M : Rat} (M>0 : 0 < M) {F : Array (L0Space L) n} {j : Fin n} (FM : IsBelow (abs (F j)) M)
+  : l0calc (clipAt M>0 j) F = F j
+  => \let | Mr => Real.fromRat M
+          | cl => LinBoundedMap.clip Mr (rat_real_<=.1 (<=-less M>0))
+          | mm : CoverMap (RealN 1) RealNormed (\lam x => x 0 ∧ Mr) => real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple (xc {1} 0) (CoverMap.const Mr)
+          | X => F j
+     \in \have | le : X <= M *q l0One L => abs>=id <=∘ (l0-IsBelow M>0).1 FM
+               | ge : negative (M *q l0One L) <= X => transport (_ <=) negative-isInv (negative_<= (abs>=neg <=∘ (l0-IsBelow M>0).1 FM))
+     \in l0calc-comp {L} {1} {n} {cl} {LinBoundedMap.coord j :: nil} {clipAt M>0 j} (\lam x => idp)
+          *> pmap {Array (L0Space L) 1} (l0calc cl) {\lam k => l0calc ((LinBoundedMap.coord j :: nil : Array (CoverMap (RealN n) RealNormed) 1) k) F} {X :: nil} (exts \lam (k : Fin 1) => \case \elim k \with { | 0 => l0calc-coord j })
+          *> l0calc-join {L} {1} {cl} {mm} {CoverMap.const (negative Mr)} (\lam x => idp)
+          *> pmap2 (∨) (l0calc-meet {L} {1} {mm} {xc {1} 0} {CoverMap.const Mr} (\lam x => idp) *> pmap2 (∧) (l0calc-coord 0) (l0calc-const M))
+                       (l0calc-neg {L} {1} {CoverMap.const (negative Mr)} {CoverMap.const Mr} (\lam x => idp) *> pmap negative (l0calc-const M))
+          *> pmap (`∨ _) (meet_<= le) *> join-comm *> join_<= ge
+
+-- | Transfer for bounded arguments: if $|F_j| \le a_j$ and $\varphi \le \psi$ on $\prod_j [-a_j, a_j]$, then $\varphi(F) \le \psi(F)$.
+\lemma l0calc-mono-bounded {L : FullIntegrationSpace} {n : Nat} {a : Array Rat n} (a>0 : \Pi (j : Fin n) -> 0 < a j)
+                           {F : Array (L0Space L) n} (Fa : \Pi (j : Fin n) -> IsBelow (abs (F j)) (a j))
+                           {phi psi : CoverMap (RealN n) RealNormed}
+                           (le : \Pi (x : Array Real n) -> (\Pi (j : Fin n) -> RealAbGroup.abs (x j) <= Real.fromRat (a j)) -> phi x <= psi x)
+  : l0calc phi F <= l0calc psi F
+  => \let | C : Array (CoverMap (RealN n) RealNormed) n => \lam j => clipAt (a>0 j) j
+          | e : (=) {Array (L0Space L) n} (\lam j => l0calc (C j) F) F => exts \lam j => l0calc-clip (a>0 j) (Fa j)
+     \in transport2 (<=) ((l0calc-comp {L} {n} {n} {phi} {C} {phi CoverMap.∘ ArrayCoverSpace.tuple C} (\lam x => idp)) *> pmap (l0calc phi) e)
+                         ((l0calc-comp {L} {n} {n} {psi} {C} {psi CoverMap.∘ ArrayCoverSpace.tuple C} (\lam x => idp)) *> pmap (l0calc psi) e)
+          (l0calc-mono {L} {n} {phi CoverMap.∘ ArrayCoverSpace.tuple C} {psi CoverMap.∘ ArrayCoverSpace.tuple C} \lam x => le (\lam j => C j x) \lam j => clip-abs' (<=-less (a>0 j)))
+
+-- | $|FG| \le ab$ if $|F| \le a$ and $|G| \le b$.
+\lemma l0Mul-bound {L : FullIntegrationSpace} {a b : Rat} (a>0 : 0 < a) (b>0 : 0 < b) {F G : L0Space L}
+                   (Fa : IsBelow (abs F) a) (Gb : IsBelow (abs G) b)
+  : IsBelow (abs (l0Mul (F,G))) (a * b)
+  => \let | K : Array (L0Space L) 2 => F :: G :: nil
+          | A : Array Rat 2 => a :: b :: nil
+     \in (l0-IsBelow (RatField.<_*_positive_positive a>0 b>0)).2 $
+          transport2 (<=) (l0calc-abs {L} {2} {cabs (cmul (xc {2} 0) (xc {2} 1))} {cmul (xc {2} 0) (xc {2} 1)} (\lam x => idp) {K}
+                             *> pmap abs (inv (vars2 {L} {2} {K} 0 1 *> l0Mul-l0calc (\lam x => idp))))
+                          (l0calc-const (a * b))
+            (l0calc-mono-bounded {L} {2} {A} (\case \elim __ \with { | 0 => a>0 | 1 => b>0 }) {K} (\case \elim __ \with { | 0 => Fa | 1 => Gb })
+               {cabs (cmul (xc {2} 0) (xc {2} 1))} {CoverMap.const (Real.fromRat (a * b))}
+               \lam x xA => =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (xA 0) RealAbGroup.abs>=0
+                             <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less a>0)) (xA 1) <=∘ =_<= RealField.*-rat)
+
+-- | $|FG| \le a|G|$ if $|F| \le a$.
+\lemma l0Mul-abs {L : FullIntegrationSpace} {a : Rat} (a>0 : 0 < a) {F : L0Space L} (Fa : IsBelow (abs F) a) (G : L0Space L)
+  : abs (l0Mul (F,G)) <= a *q abs G
+  => \let | K : Array (L0Space L) 2 => F :: G :: nil
+          | P => cmul (clipAt {2} a>0 0) (xc {2} 1)
+     \in transport2 (<=) (l0calc-abs {L} {2} {cabs P} {P} (\lam x => idp) {K}
+                             *> pmap abs (inv (pmap2 (\lam u v => l0Mul (u,v)) (inv (l0calc-clip {L} {2} a>0 {K} {0} Fa)) (inv (l0calc-coord {L} {2} 1 {K}))
+                                              *> l0Mul-l0calc (\lam x => idp))))
+                          (l0calc-*q {L} {2} {cmul (CoverMap.const (Real.fromRat a)) (cabs (xc {2} 1))} {cabs (xc {2} 1)} a (\lam x => idp)
+                             *> pmap (a *q) (l0calc-abs {L} {2} {cabs (xc {2} 1)} {xc {2} 1} (\lam x => idp) *> pmap abs (l0calc-coord 1)))
+          (l0calc-mono \lam x => =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (clip-abs' (<=-less a>0)) RealAbGroup.abs>=0)
+
+-- | If $|F F| \le q^2$, then $|F| \le q$.
+\lemma l0Mul-square-below {L : FullIntegrationSpace} {q : Rat} (q>0 : 0 < q) {F : L0Space L} (FFq : IsBelow (abs (l0Mul (F,F))) (q * q))
+  : IsBelow (abs F) q
+  => \let | K : Array (L0Space L) 1 => F :: nil
+          | c => RatField.finv q
+          | qq => q * q
+          | A : CoverMap (RealN 1) RealNormed => cabs (xc {1} 0)
+          | S : CoverMap (RealN 1) RealNormed => cabs (cmul (xc {1} 0) (xc {1} 0))
+          | T : CoverMap (RealN 1) RealNormed => cmeet S (CoverMap.const (Real.fromRat qq))
+          | D : CoverMap (RealN 1) RealNormed => cadd S (cneg T)
+          | R : CoverMap (RealN 1) RealNormed => cadd (cmeet A (CoverMap.const (Real.fromRat q))) (cmul (CoverMap.const (Real.fromRat c)) D)
+          | FF => abs (l0Mul (F,F))
+     \in \have | qq>0 : 0 < qq => RatField.<_*_positive_positive q>0 q>0
+               | eA : l0calc A K = abs F => l0calc-abs {L} {1} {A} {xc {1} 0} (\lam x => idp) *> pmap abs (l0calc-coord 0)
+               | eS : l0calc S K = FF => l0calc-abs {L} {1} {S} {cmul (xc {1} 0) (xc {1} 0)} (\lam x => idp) *> pmap abs (inv (vars2 {L} {1} {K} 0 0 *> l0Mul-l0calc (\lam x => idp)))
+               | eT : l0calc T K = FF => l0calc-meet {L} {1} {T} {S} {CoverMap.const (Real.fromRat qq)} (\lam x => idp) *> pmap2 (∧) eS (l0calc-const qq)
+                                          *> meet_<= ((l0-IsBelow qq>0).1 FFq)
+               | eD : l0calc D K = 0 => l0calc-add {L} {1} {D} {S} {cneg T} (\lam x => idp) *> pmap2 (+) eS (l0calc-neg {L} {1} {cneg T} {T} (\lam x => idp) *> pmap negative eT) *> negative-right
+               | eR : l0calc R K = abs F ∧ (q *q l0One L)
+                   => l0calc-add {L} {1} {R} {cmeet A (CoverMap.const (Real.fromRat q))} {cmul (CoverMap.const (Real.fromRat c)) D} (\lam x => idp)
+                      *> pmap2 (+) (l0calc-meet {L} {1} {cmeet A (CoverMap.const (Real.fromRat q))} {A} {CoverMap.const (Real.fromRat q)} (\lam x => idp) *> pmap2 (∧) eA (l0calc-const q))
+                                   (l0calc-*q {L} {1} {cmul (CoverMap.const (Real.fromRat c)) D} {D} c (\lam x => idp) *> pmap (c *q) eD *> toRatModule.*c_zro-right)
+                      *> zro-right
+     \in (l0-IsBelow q>0).2 $ transport2 (<=) eA eR (l0calc-mono {L} {1} {A} {R} (\lam x => real-pt q>0)) <=∘ meet-right
+  \where {
+    -- | $|t| \le (|t| \wedge q) + q^{-1}(|t t| - (|t t| \wedge q^2))$.
+    \lemma real-pt {q : Rat} (q>0 : 0 < q) {t : Real}
+      : RealAbGroup.abs t <= (RealAbGroup.abs t ∧ Real.fromRat q) + Real.fromRat (RatField.finv q) * (RealAbGroup.abs (t * t) - (RealAbGroup.abs (t * t) ∧ Real.fromRat (q * q)))
+      => transport2 (\lam y z => RealAbGroup.abs t <= (RealAbGroup.abs t ∧ Real.fromRat q) + Real.fromRat (RatField.finv q) * (y - (y ∧ z))) (inv RealField.abs_*) RealField.*-rat
+          (real-pt' (rat_real_<.1 q>0) RealAbGroup.abs>=0 (rat_real_<=.1 (<=-less (RatField.finv>0 q>0))) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= q>0))))
+
+    \lemma real-pt' {x r c : Real} (r>0 : (0 : Real) < r) (x>=0 : (0 : Real) <= x) (c>=0 : (0 : Real) <= c) (cr : c * r = 1)
+      : x <= (x ∧ r) + c * (x * x - ((x * x) ∧ (r * r)))
+      => RealAbGroup.join-left <=∘ =_<= (signedPow.sign-cases-eq {x - r} {x ∨ ((x ∧ r) + c * (x * x - ((x * x) ∧ (r * r))))} {(x ∧ r) + c * (x * x - ((x * x) ∧ (r * r)))}
+          (\lam xr>=0 =>
+            \have | r<=x : r <= x => linarith
+                  | m1 : x ∧ r = r => RealAbGroup.meet-comm *> RealAbGroup.meet_<= r<=x
+                  | rr<=xx : r * r <= x * x => <=_*_positive-left r<=x (<=-less r>0) <=∘ <=_*_positive-right x>=0 r<=x
+                  | m2 : (x * x) ∧ (r * r) = r * r => RealAbGroup.meet-comm *> RealAbGroup.meet_<= rr<=xx
+                  | h1 : (x - r) * r <= x * x - r * r => <=_*_positive-right xr>=0 (linarith : r <= x + r) <=∘ =_<= equation.cRing
+                  | h2 : c * ((x - r) * r) = x - r => equation.cRing {cr}
+                  | h3 : c * ((x - r) * r) <= c * (x * x - r * r) => <=_*_positive-right c>=0 h1
+            \in rewrite (m1, m2) $ RealAbGroup.join_<= (linarith : x <= r + c * (x * x - r * r)))
+          (\lam xr<=0 =>
+            \have | x<=r : x <= r => linarith
+                  | m1 : x ∧ r = x => RealAbGroup.meet_<= x<=r
+                  | xx<=rr : x * x <= r * r => <=_*_positive-right x>=0 x<=r <=∘ <=_*_positive-left x<=r (<=-less r>0)
+                  | m2 : (x * x) ∧ (r * r) = x * x => RealAbGroup.meet_<= xx<=rr
+                  | p : x + c * (x * x - x * x) = x => pmap (x +) (pmap (c *) negative-right *> RealField.zro_*-right) *> zro-right
+            \in rewrite (m1, m2) $ pmap (x ∨) p *> RealAbGroup.join-idemp *> inv p))
+  }
+
+\private \module L0ProductHelpers \where {
+  \func pairArr {Y : CoverSpace} : CoverMap (ProductCoverSpace Y Y) (ArrayCoverSpace 2 Y)
+    => ArrayCoverSpace.tuple (ProductCoverSpace.proj1 :: ProductCoverSpace.proj2 :: nil)
+
+  \lemma pairArr-eq {Y : CoverSpace} {s : ProductCoverSpace Y Y} : (=) {Array Y 2} (pairArr s) (s.1 :: s.2 :: nil)
+    => exts \lam (j : Fin 2) => \case \elim j \with { | 0 => idp | 1 => idp }
+
+  \func xc {n : Nat} (j : Fin n) : CoverMap (RealN n) RealNormed => LinBoundedMap.coord j
+
+  \func cmul {n : Nat} (a b : CoverMap (RealN n) RealNormed) : CoverMap (RealN n) RealNormed (\lam x => a x * b x)
+    => RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple a b
+
+  \func cadd {n : Nat} (a b : CoverMap (RealN n) RealNormed) : CoverMap (RealN n) RealNormed (\lam x => a x + b x)
+    => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple a b
+
+  \func cneg {n : Nat} (a : CoverMap (RealN n) RealNormed) : CoverMap (RealN n) RealNormed (\lam x => negative (a x))
+    => negative-uniform {RealNormed} CoverMap.∘ a
+
+  \func cmeet {n : Nat} (a b : CoverMap (RealN n) RealNormed) : CoverMap (RealN n) RealNormed (\lam x => a x ∧ b x)
+    => real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple a b
+
+  \func cabs {n : Nat} (a : CoverMap (RealN n) RealNormed) : CoverMap (RealN n) RealNormed (\lam x => RealAbGroup.abs (a x))
+    => real-join-uniform CoverMap.∘ ProductCoverSpace.tuple a (negative-uniform {RealNormed} CoverMap.∘ a)
+
+  -- | Rewrites $l0Mul(F_i, F_j)$ as $l0Mul(x_i(F), x_j(F))$.
+  \lemma vars2 {L : FullIntegrationSpace} {n : Nat} {K : Array (L0Space L) n} (i j : Fin n)
+    : l0Mul (K i, K j) = l0Mul (l0calc (xc i) K, l0calc (xc j) K)
+    => inv (pmap2 (\lam u v => l0Mul (u,v)) (l0calc-coord i) (l0calc-coord j))
+
+  \lemma real-square>=0 {x : Real} : (0 : Real) <= x * x
+    => signedPow.real-cases {0} {x} (\lam x>0 => RealField.<=_*_positive_positive (<=-less x>0) (<=-less x>0))
+        (\lam x<=0 => \have n>=0 : (0 : Real) <= negative x => linarith
+                      \in RealField.<=_*_positive_positive n>=0 n>=0 <=∘ =_<= equation.cRing)
+
+  \lemma clip-abs' {M : Rat} (M>=0 : 0 <= M) {s : Real} : RealAbGroup.abs ((s ∧ Real.fromRat M) ∨ negative (Real.fromRat M)) <= Real.fromRat M
+    => \have | m0 : (0 : Real) <= Real.fromRat M => rat_real_<=.1 M>=0
+             | u : (s ∧ Real.fromRat M) ∨ negative (Real.fromRat M) <= Real.fromRat M => join-univ meet-right linarith
+             | l : negative (Real.fromRat M) <= (s ∧ Real.fromRat M) ∨ negative (Real.fromRat M) => join-right
+       \in transport (__ <= _) (pmap RealAbGroup.abs RealAbGroup.minus_zro) $ RealField.abs-univ {_} {0} linarith linarith
+}

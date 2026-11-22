@@ -1,0 +1,403 @@
+{- | Real powers `x^a`.
+
+  For `x > 0` and arbitrary `a`, {rpow-pos} is `exp (a log x)`.
+  For `x ≥ 0` and `a > 0`, {rpow} is the extension of `x ↦ x^a` from `(0,∞)` to `[0,∞)` along the dense inclusion.
+
+  * {rpow-mono}, {rpow-mono-inv}: `x ↦ x^a` is monotone on `[0,∞)` and reflects the order.
+  * {rpow-coverMap}: `x ↦ f(x)^a` is a cover map for a non-negative cover map `f`.
+  * {rpow-lin-bound}: $x^p \le R^{p-1} x$ for $0 \le x \le R$ and $p \ge 1$.
+  * {rpow-interp}: the interpolation bound $x^s \le \max(x^p, x^r)$ for $0 < p <= s <= r$ and $x >= 0$.
+  * {rpow-pos-tangent}: the tangent line inequality `p x z^{p-1} <= x^p + (p - 1) z^p` for `p ≥ 1`.
+  * {rpow-convex}, {abs-rpow-convex}: `x ↦ x^p` is convex on `[0,∞)` and `x ↦ |x|^p` is convex on `ℝ` for `p ≥ 1`.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Analysis.Calculus.Convex
+\import Arith.Exp
+\import Arith.Exp.Convex
+\import Arith.Exp.Real
+\import Arith.Log.Derivative
+\import Arith.Log.Real
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.MetricSpace
+\import Topology.MetricSpace.OpenCover
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.Inverse
+\import Topology.NormedRing
+\import Topology.TopAbGroup.Product
+\open RPowHelpers
+
+-- | `x^a = exp (a log x)` for `x > 0`.
+\sfunc rpow-pos (x : Real) (\property x>0 : (0 : Real) < x) (a : Real) : Real
+  => exp (a * log x x>0)
+
+\lemma rpow-pos-def {x : Real} {x>0 : (0 : Real) < x} {a : Real} : rpow-pos x x>0 a = exp (a * log x x>0)
+  => (\peval rpow-pos x x>0 a) *> pmap (\lam t => exp (a * t)) (log-ext idp)
+
+\lemma rpow-pos>0 {x : Real} {x>0 : (0 : Real) < x} {a : Real} : (0 : Real) < rpow-pos x x>0 a
+  => rewrite rpow-pos-def (Real-exp-pos _)
+
+\lemma rpow-pos-ext {x y : Real} (p : x = y) {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} {a : Real} : rpow-pos x x>0 a = rpow-pos y y>0 a \elim p
+  | idp => idp
+
+-- | $\log (x^a) = a \log x$.
+\lemma log-rpow-pos {x : Real} {x>0 : (0 : Real) < x} {a : Real} {p : (0 : Real) < rpow-pos x x>0 a} : log (rpow-pos x x>0 a) p = a * log x x>0
+  => log-ext rpow-pos-def *> log_exp _
+
+-- | $x^{a+b} = x^a x^b$.
+\lemma rpow-pos_+ {x : Real} {x>0 : (0 : Real) < x} {a b : Real} : rpow-pos x x>0 (a + b) = rpow-pos x x>0 a * rpow-pos x x>0 b
+  => rpow-pos-def *> pmap exp rdistr *> exp_+ *> inv (pmap2 (*) rpow-pos-def rpow-pos-def)
+
+-- | $(xy)^a = x^a y^a$.
+\lemma rpow-pos_* {x y : Real} {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} {a : Real} {xy>0 : (0 : Real) < x * y}
+  : rpow-pos (x * y) xy>0 a = rpow-pos x x>0 a * rpow-pos y y>0 a
+  => rpow-pos-def *> pmap (\lam t => exp (a * t)) (pmap (log _) prop-pi *> log_* x y x>0 y>0) *> pmap exp ldistr *> exp_+ *> inv (pmap2 (*) rpow-pos-def rpow-pos-def)
+
+-- | $(x^a)^b = x^{ab}$.
+\lemma rpow-pos-rpow-pos {x : Real} {x>0 : (0 : Real) < x} {a b : Real} {p : (0 : Real) < rpow-pos x x>0 a}
+  : rpow-pos (rpow-pos x x>0 a) p b = rpow-pos x x>0 (a * b)
+  => rpow-pos-def *> pmap (\lam t => exp (b * t)) log-rpow-pos *> pmap exp (inv *-assoc *> pmap (* _) *-comm) *> inv rpow-pos-def
+
+-- | $(x^{1/a})^a = x$.
+\lemma rpow-pos-inv {x : Real} {x>0 : (0 : Real) < x} {a : Real} {a>0 : (0 : Real) < a} {p : (0 : Real) < rpow-pos x x>0 (RealField.pinv a a>0)}
+  : rpow-pos (rpow-pos x x>0 (RealField.pinv a a>0)) p a = x
+  => rpow-pos-rpow-pos *> pmap (rpow-pos x x>0) (RealField.pinv-left a>0) *> rpow-pos-one
+
+-- | $x^0 = 1$.
+\lemma rpow-pos-zero {x : Real} {x>0 : (0 : Real) < x} : rpow-pos x x>0 0 = (1 : Real)
+  => rpow-pos-def *> pmap exp zro_*-left *> exp_zro
+
+-- | $x^1 = x$.
+\lemma rpow-pos-one {x : Real} {x>0 : (0 : Real) < x} : rpow-pos x x>0 1 = x
+  => rpow-pos-def *> pmap exp ide-left *> exp_log x x>0
+
+-- | $1^a = 1$.
+\lemma one-rpow-pos {p : (0 : Real) < 1} {a : Real} : rpow-pos 1 p a = (1 : Real)
+  => rpow-pos-def *> pmap (\lam t => exp (a * t)) log_ide *> pmap exp zro_*-right *> exp_zro
+
+-- | $x^n$ agrees with the power for natural `n`.
+\lemma rpow-pos-nat {x : Real} {x>0 : (0 : Real) < x} {n : Nat} : rpow-pos x x>0 n = Monoid.pow x n \elim n
+  | 0 => rpow-pos-zero
+  | suc n => pmap (rpow-pos x x>0) (inv $ RealAbGroup.+-rat {n} {1}) *> rpow-pos_+ *> pmap2 (*) rpow-pos-nat rpow-pos-one
+
+-- | `x ↦ x^a` is monotone for `a ≥ 0`.
+\lemma rpow-pos-mono {x y : Real} {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} {a : Real} (a>=0 : (0 : Real) <= a) (x<=y : x <= y)
+  : rpow-pos x x>0 a <= rpow-pos y y>0 a
+  => =_<= rpow-pos-def <=∘ Real-exp-mono (<=_*_positive-right a>=0 (log-mono x>0 y>0 x<=y)) <=∘ =_<= (inv rpow-pos-def)
+
+-- | `x^a` for `x ≥ 0` and `a > 0`, extended from `(0,∞)` by density.
+\sfunc rpow (x : Real) (\property x>=0 : (0 : Real) <= x) (a : Real) (\property a>0 : (0 : Real) < a) : Real
+  => cauchy-lift pos-nonneg-map pos-nonneg-denseEmbedding (powPos-cover a>0) (x, x>=0)
+
+-- | {rpow} agrees with {rpow-pos} on positive reals.
+\lemma rpow-pos-eq {x : Real} {x>=0 : (0 : Real) <= x} (x>0 : (0 : Real) < x) {a : Real} {a>0 : (0 : Real) < a} : rpow x x>=0 a a>0 = rpow-pos x x>0 a
+  => (\peval rpow x x>=0 a a>0) *> dense-lift-char pos-nonneg-denseEmbedding (x,x>0) *> rpow-pos-ext idp
+
+\lemma rpow-ext {x y : Real} (p : x = y) {x>=0 : (0 : Real) <= x} {y>=0 : (0 : Real) <= y} {a b : Real} (q : a = b) {a>0 : (0 : Real) < a} {b>0 : (0 : Real) < b}
+  : rpow x x>=0 a a>0 = rpow y y>=0 b b>0 \elim p, q
+  | idp, idp => idp
+
+\lemma rpow>=0 {x : Real} {x>=0 : (0 : Real) <= x} {a : Real} {a>0 : (0 : Real) < a} : (0 : Real) <= rpow x x>=0 a a>0
+  => dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (CoverMap.const (0 : Real)) (rpow-cover a>0) (\lam y => <=-less $ rpow-pos>0 <∘l =_<= (inv $ rpow-pos-eq y.2)) (x,x>=0)
+
+-- | $x^{a+b} = x^a x^b$.
+\lemma rpow_+ {x : Real} {x>=0 : (0 : Real) <= x} {a b : Real} {a>0 : (0 : Real) < a} {b>0 : (0 : Real) < b} {ab>0 : (0 : Real) < a + b}
+  : rpow x x>=0 (a + b) ab>0 = rpow x x>=0 a a>0 * rpow x x>=0 b b>0
+  => dense-lift-unique pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover ab>0) (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (rpow-cover a>0) (rpow-cover b>0))
+      (\lam y => rpow-pos-eq y.2 *> rpow-pos_+ *> inv (pmap2 (*) (rpow-pos-eq y.2) (rpow-pos-eq y.2))) (x,x>=0)
+
+-- | $(xy)^a = x^a y^a$.
+\lemma rpow_* {x y : Real} {x>=0 : (0 : Real) <= x} {y>=0 : (0 : Real) <= y} {xy>=0 : (0 : Real) <= x * y} {a : Real} {a>0 : (0 : Real) < a}
+  : rpow (x * y) xy>=0 a a>0 = rpow x x>=0 a a>0 * rpow y y>=0 a a>0
+  => dense-lift-unique (ProductCoverSpace.prod pos-nonneg-map pos-nonneg-map) (ProductTopSpace.prod.isDense pos-nonneg-denseEmbedding.1 pos-nonneg-denseEmbedding.1)
+      (rpow-cover a>0 CoverMap.∘ mulMap) (RealField.*-cover CoverMap.∘ ProductCoverSpace.prod (rpow-cover a>0) (rpow-cover a>0))
+      (\lam s => rpow-pos-eq (RealField.<_*_positive_positive s.1.2 s.2.2) *> rpow-pos_* *> inv (pmap2 (*) (rpow-pos-eq s.1.2) (rpow-pos-eq s.2.2))) ((x,x>=0),(y,y>=0))
+  \where
+    \lemma mulMap : CoverMap (ProductCoverSpace NonNegSpace NonNegSpace) NonNegSpace (\lam s => (s.1.1 * s.2.1, RealField.<=_*_positive_positive s.1.2 s.2.2))
+      => CoverTransfer-univ _ __.1 (RealField.*-cover CoverMap.∘ ProductCoverSpace.prod (CoverTransfer-map __.1) (CoverTransfer-map __.1))
+
+-- | $(x^a)^b = x^{ab}$.
+\lemma rpow-rpow {x : Real} {x>=0 : (0 : Real) <= x} {a b : Real} {a>0 : (0 : Real) < a} {b>0 : (0 : Real) < b} {p : (0 : Real) <= rpow x x>=0 a a>0} {ab>0 : (0 : Real) < a * b}
+  : rpow (rpow x x>=0 a a>0) p b b>0 = rpow x x>=0 (a * b) ab>0
+  => dense-lift-unique pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover b>0 CoverMap.∘ powMap a>0) (rpow-cover ab>0)
+      (\lam y => rpow-ext {_} {_} (rpow-pos-eq y.2) {_} {<=-less rpow-pos>0} {b} {b} idp {b>0} {b>0} *> rpow-pos-eq {_} {<=-less rpow-pos>0} rpow-pos>0 {b} {b>0} *> rpow-pos-rpow-pos *> inv (rpow-pos-eq y.2)) (x,x>=0)
+  \where
+    \lemma powMap {a : Real} (a>0 : (0 : Real) < a) : CoverMap NonNegSpace NonNegSpace (\lam x => (rpow x.1 x.2 a a>0, rpow>=0))
+      => CoverTransfer-univ _ __.1 (rpow-cover a>0)
+
+-- | $x^1 = x$.
+\lemma rpow-one {x : Real} {x>=0 : (0 : Real) <= x} {p : (0 : Real) < 1} : rpow x x>=0 1 p = x
+  => dense-lift-unique pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover p) (CoverTransfer-map __.1) (\lam y => rpow-pos-eq y.2 *> rpow-pos-one) (x,x>=0)
+
+-- | $1^a = 1$.
+\lemma one-rpow {p : (0 : Real) <= 1} {a : Real} {a>0 : (0 : Real) < a} : rpow 1 p a a>0 = (1 : Real)
+  => rpow-pos-eq RealField.zro<ide *> one-rpow-pos
+
+-- | $x^n$ agrees with the power for natural `n > 0`.
+\lemma rpow-nat {x : Real} {x>=0 : (0 : Real) <= x} {n : Nat} {p : (0 : Real) < n} : rpow x x>=0 n p = Monoid.pow x n
+  => dense-lift-unique pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover p)
+      (powPos-cover.banach-normed CoverMap.∘ ExPseudoNormedRing.pow-cover {RealRealBanachAlgebra} n CoverMap.∘ normed-banach CoverMap.∘ CoverTransfer-map __.1)
+      (\lam y => rpow-pos-eq y.2 *> rpow-pos-nat) (x,x>=0)
+  \where
+    \lemma normed-banach : CoverMap RealNormed RealRealBanachAlgebra (\lam x => x)
+      => CoverMap.id
+
+-- | $0^a = 0$.
+\lemma zero-rpow {p : (0 : Real) <= 0} {a : Real} {a>0 : (0 : Real) < a} : rpow 0 p a a>0 = (0 : Real)
+  => <=-antisymmetric (\lam z>0 => \case real_<-char.1 z>0 \with {
+    | inP (e,e>0,e<z) =>
+      \have | d>0 => rpow-pos>0 {e} {e>0} {RealField.pinv a a>0}
+             | zd : rpow 0 p a a>0 <= rpow-pos (rpow-pos e e>0 (RealField.pinv a a>0)) d>0 a
+                 => dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover a>0) (rpow-cover a>0 CoverMap.∘ joinMap d>0)
+                      (\lam y => =_<= (rpow-pos-eq y.2) <=∘ rpow-pos-mono (<=-less a>0) join-right <=∘ =_<= (inv $ rpow-pos-eq (d>0 <∘l join-left))) (0,p)
+                    <=∘ =_<= (rpow-pos-eq (d>0 <∘l join-left) *> rpow-pos-ext (RealAbGroup.join-comm *> RealAbGroup.join_<= (<=-less d>0)))
+      \in zd (transportInv (< _) rpow-pos-inv e<z)
+  }) rpow>=0
+  \where
+    \lemma joinMap {d : Real} (d>0 : (0 : Real) < d) : CoverMap NonNegSpace NonNegSpace (\lam x => (d ∨ x.1, <=-less d>0 <=∘ join-left))
+      => CoverTransfer-univ _ __.1 (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const d) (CoverTransfer-map __.1))
+
+-- | `x ↦ x^a` is monotone on `[0,∞)`.
+\lemma rpow-mono {x y : Real} {x>=0 : (0 : Real) <= x} {y>=0 : (0 : Real) <= y} {a : Real} {a>0 : (0 : Real) < a} (x<=y : x <= y)
+  : rpow x x>=0 a a>0 <= rpow y y>=0 a a>0
+  => dense_<= real-join-uniform (ProductCoverSpace.prod pos-nonneg-map pos-nonneg-map) (ProductTopSpace.prod.isDense pos-nonneg-denseEmbedding.1 pos-nonneg-denseEmbedding.1)
+      (rpow-cover a>0 CoverMap.∘ ProductCoverSpace.proj1 {NonNegSpace} {NonNegSpace}) (rpow-cover a>0 CoverMap.∘ joinMap2)
+      (\lam s => =_<= (rpow-pos-eq s.1.2) <=∘ rpow-pos-mono {_} {_} {s.1.2} {s.1.2 <∘l join-left} (<=-less a>0) join-left <=∘ =_<= (inv $ rpow-pos-eq (s.1.2 <∘l join-left))) ((x,x>=0),(y,y>=0))
+     <=∘ =_<= (rpow-ext (RealAbGroup.join_<= x<=y) idp)
+  \where
+    \lemma joinMap2 : CoverMap (ProductCoverSpace NonNegSpace NonNegSpace) NonNegSpace (\lam s => (s.1.1 ∨ s.2.1, s.1.2 <=∘ join-left))
+      => CoverTransfer-univ _ __.1 (real-join-uniform CoverMap.∘ ProductCoverSpace.prod (CoverTransfer-map __.1) (CoverTransfer-map __.1))
+
+-- | `x ↦ x^a` reflects the order on `[0,∞)`.
+\lemma rpow-mono-inv {x y : Real} {x>=0 : (0 : Real) <= x} {y>=0 : (0 : Real) <= y} {a : Real} {a>0 : (0 : Real) < a}
+                     (h : rpow x x>=0 a a>0 <= rpow y y>=0 a a>0) : x <= y
+  => \have | b>0 => RealField.pinv>0 a>0
+           | ab>0 : (0 : Real) < a * RealField.pinv a a>0 => RealField.<_*_positive_positive a>0 b>0
+           | back {z : Real} {z>=0 : (0 : Real) <= z} : rpow (rpow z z>=0 a a>0) rpow>=0 (RealField.pinv a a>0) b>0 = z
+               => rpow-rpow {z} {z>=0} {a} {_} {a>0} {b>0} {rpow>=0} {ab>0} *> rpow-ext {_} {_} idp {z>=0} {z>=0} {_} {1} (RealField.pinv-right a>0) {ab>0} {RealField.zro<ide} *> rpow-one
+     \in =_<= (inv back) <=∘ rpow-mono h <=∘ =_<= back
+
+-- | `x ↦ f(x)^a` is a cover map whenever `f` is a non-negative cover map.
+\lemma rpow-coverMap {X : CoverSpace} (f : CoverMap X RealNormed) (f>=0 : \Pi (x : X) -> (0 : Real) <= f x) {a : Real} (a>0 : (0 : Real) < a)
+  : CoverMap X RealNormed (\lam x => rpow (f x) (f>=0 x) a a>0)
+  => rpow-cover a>0 CoverMap.∘ CoverTransfer-univ {X} {RealNormed} {Set.Total NonNeg} (\lam x => (f x, f>=0 x)) __.1 f
+
+-- | The linear bound $x^p \le R^{p-1} x$ for $0 \le x \le R$ and $p \ge 1$.
+\lemma rpow-lin-bound {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {R : Real} (R>0 : (0 : Real) < R)
+                      {x : Real} {x>=0 : (0 : Real) <= x} (x<=R : x <= R)
+  : rpow x x>=0 p p>0 <= rpow-pos R R>0 (p - 1) * x
+  => =_<= (rpow-ext (inv $ RealAbGroup.meet_<= x<=R) idp)
+      <=∘ dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover p>0 CoverMap.∘ meetMap R>0)
+            (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (rpow-pos R R>0 (p - 1))) (CoverTransfer-map __.1 CoverMap.∘ meetMap R>0))
+            (\lam y => \have yR>0 : (0 : Real) < y.1 ∧ R => transport (__ < _) (<=-antisymmetric meet-left (meet-univ <=-refl <=-refl)) (BiorderedLattice.<_meet-monotone y.2 R>0)
+                       \in =_<= (rpow-pos-eq yR>0 *> rpow-pos-ext idp *> pmap (rpow-pos _ yR>0) (equation.cRing : p = (p - 1) + 1) *> rpow-pos_+ *> pmap (_ *) rpow-pos-one)
+                           <=∘ RealField.<=_*_positive-left (rpow-pos-mono (linarith : (0 : Real) <= p - 1) meet-right) (<=-less yR>0)) (x,x>=0)
+      <=∘ =_<= (pmap (_ *) (RealAbGroup.meet_<= x<=R))
+  \where
+    \lemma meetMap {R : Real} (R>0 : (0 : Real) < R) : CoverMap NonNegSpace NonNegSpace (\lam x => (x.1 ∧ R, meet-univ x.2 (<=-less R>0)))
+      => CoverTransfer-univ _ __.1 (real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverTransfer-map __.1) (CoverMap.const R))
+
+-- | Interpolation: $x^s \le \max(x^p, x^r)$ for $p \le s \le r$.
+\lemma rpow-pos-interp {x : Real} {x>0 : (0 : Real) < x} {p s r : Real} (p<=s : p <= s) (s<=r : s <= r)
+  : rpow-pos x x>0 s <= rpow-pos x x>0 p ∨ rpow-pos x x>0 r
+  => \lam c => \have le {q : Real} (h : s * log x x>0 <= q * log x x>0) : rpow-pos x x>0 s <= rpow-pos x x>0 q
+                       => =_<= rpow-pos-def <=∘ Real-exp-mono h <=∘ =_<= (inv rpow-pos-def)
+               \in le {p} (\lam pL<sL => le {r} (\lam rL<sL => contra p<=s s<=r pL<sL rL<sL) (join-right <∘r c)) (join-left <∘r c)
+  \where
+    \lemma contra {p s r L : Real} (p<=s : p <= s) (s<=r : s <= r) (pL<sL : p * L < s * L) (rL<sL : r * L < s * L) : Empty
+      => \have | eA : (s - p) * L = s * L - p * L => equation.cRing
+               | eB : (s - r) * L = s * L - r * L => equation.cRing
+               | A>0 : (0 : Real) < (s - p) * L => linarith
+               | B>0 : (0 : Real) < (s - r) * L => linarith
+               | AB>0 => RealField.<_*_positive_positive A>0 B>0
+               | uv>=0 => RealField.<=_*_positive_positive (linarith : (0 : Real) <= s - p) (linarith : (0 : Real) <= r - s)
+               | m>=0 => RealField.<=_*_positive_positive uv>=0 (RealField.square_>=0 {L})
+               | e : (s - p) * L * ((s - r) * L) = negative ((s - p) * (r - s) * (L * L)) => equation.cRing
+         \in linarith
+
+-- | Interpolation: $x^s \le \max(x^p, x^r)$ on `[0,∞)` for $0 < p \le s \le r$.
+\lemma rpow-interp {x : Real} {x>=0 : (0 : Real) <= x} {p s r : Real} {p>0 : (0 : Real) < p} {s>0 : (0 : Real) < s} {r>0 : (0 : Real) < r}
+                   (p<=s : p <= s) (s<=r : s <= r)
+  : rpow x x>=0 s s>0 <= rpow x x>=0 p p>0 ∨ rpow x x>=0 r r>0
+  => dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover s>0)
+      (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (rpow-cover p>0) (rpow-cover r>0))
+      (\lam y => =_<= (rpow-pos-eq y.2) <=∘ rpow-pos-interp p<=s s<=r <=∘ =_<= (inv (pmap2 (∨) (rpow-pos-eq y.2) (rpow-pos-eq y.2)))) (x,x>=0)
+
+-- | The tangent line of `x ↦ x^p` at `z` for `p ≥ 1`: $p x z^{p-1} \le x^p + (p - 1) z^p$.
+\lemma rpow-pos-tangent {x z : Real} {x>0 : (0 : Real) < x} {z>0 : (0 : Real) < z} {p : Real} (p>=1 : (1 : Real) <= p)
+  : p * (x * rpow-pos z z>0 (p - 1)) <= rpow-pos x x>0 p + (p - 1) * rpow-pos z z>0 p
+  => \have | p>0 : (0 : Real) < p => linarith
+           | sp : RealField.pinv p p>0 * p = (1 : Real) => RealField.pinv-left p>0
+           | s>=0 : (0 : Real) <= RealField.pinv p p>0 => <=-less (RealField.pinv>0 p>0)
+           | s<=1 : RealField.pinv p p>0 <= (1 : Real) => =_<= (inv ide-right) <=∘ <=_*_positive-right s>=0 p>=1 <=∘ =_<= sp
+           | j : x * rpow-pos z z>0 (p - 1) <= RealField.pinv p p>0 * rpow-pos x x>0 p + (1 - RealField.pinv p p>0) * rpow-pos z z>0 p
+              => =_<= (pmap2 (*) (inv (exp_log x x>0)) rpow-pos-def *> inv exp_+ *> pmap exp (equation.cRing {sp}))
+                  <=∘ jensen2 exp-convex {p * log x x>0} {p * log z z>0} () () s>=0 (linarith : (0 : Real) <= 1 - RealField.pinv p p>0) (equation.cRing)
+                  <=∘ =_<= (inv (pmap2 (+) (pmap (_ *) rpow-pos-def) (pmap (_ *) rpow-pos-def)))
+     \in <=_*_positive-right (<=-less p>0) j <=∘ =_<= (equation.cRing {sp})
+
+-- | Convexity of `x ↦ x^p` on `(0,∞)` for `p ≥ 1`.
+\lemma rpow-pos-convex {x y : Real} {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} {p : Real} (p>=1 : (1 : Real) <= p)
+                       {t : Real} (t>=0 : (0 : Real) <= t) (t<=1 : t <= (1 : Real)) {m>0 : (0 : Real) < t * x + (1 - t) * y}
+  : rpow-pos (t * x + (1 - t) * y) m>0 p <= t * rpow-pos x x>0 p + (1 - t) * rpow-pos y y>0 p
+  => \let | c => rpow-pos (t * x + (1 - t) * y) m>0 (p - 1)
+          | M => rpow-pos (t * x + (1 - t) * y) m>0 p
+     \in \have | hx : t * (p * (x * c)) <= t * (rpow-pos x x>0 p + (p - 1) * M) => <=_*_positive-right t>=0 (rpow-pos-tangent p>=1)
+               | hy : (1 - t) * (p * (y * c)) <= (1 - t) * (rpow-pos y y>0 p + (p - 1) * M) => <=_*_positive-right (linarith : (0 : Real) <= 1 - t) (rpow-pos-tangent p>=1)
+               | mc : (t * x + (1 - t) * y) * c = M => pmap (* c) (inv rpow-pos-one) *> inv rpow-pos_+ *> pmap (rpow-pos _ m>0) (equation.cRing : 1 + (p - 1) = p)
+               | e1 : t * (p * (x * c)) + (1 - t) * (p * (y * c)) = p * M => equation.cRing {mc}
+               | e2 : t * (rpow-pos x x>0 p + (p - 1) * M) + (1 - t) * (rpow-pos y y>0 p + (p - 1) * M) = t * rpow-pos x x>0 p + (1 - t) * rpow-pos y y>0 p + p * M - M => equation.cRing
+     \in linarith
+
+-- | Convexity of `x ↦ x^p` on `[0,∞)` for `p ≥ 1`.
+\lemma rpow-convex {x y : Real} {x>=0 : (0 : Real) <= x} {y>=0 : (0 : Real) <= y} {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p)
+                   {t : Real} (t>=0 : (0 : Real) <= t) (t<=1 : t <= (1 : Real)) {m>=0 : (0 : Real) <= t * x + (1 - t) * y}
+  : rpow (t * x + (1 - t) * y) m>=0 p p>0 <= t * rpow x x>=0 p p>0 + (1 - t) * rpow y y>=0 p p>0
+  => dense_<= real-join-uniform (ProductCoverSpace.prod pos-nonneg-map pos-nonneg-map) (ProductTopSpace.prod.isDense pos-nonneg-denseEmbedding.1 pos-nonneg-denseEmbedding.1)
+      (rpow-cover p>0 CoverMap.∘ combMap t>=0 t<=1)
+      (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (scale t CoverMap.∘ rpow-cover p>0 CoverMap.∘ ProductCoverSpace.proj1 {NonNegSpace} {NonNegSpace})
+                                                         (scale (1 - t) CoverMap.∘ rpow-cover p>0 CoverMap.∘ ProductCoverSpace.proj2 {NonNegSpace} {NonNegSpace}))
+      (\lam s => =_<= (rpow-pos-eq (comb>0 s.1.2 s.2.2 t>=0 t<=1)) <=∘ rpow-pos-convex p>=1 t>=0 t<=1
+                  <=∘ =_<= (inv (pmap2 (+) (pmap (t *) (rpow-pos-eq s.1.2)) (pmap ((1 - t) *) (rpow-pos-eq s.2.2))))) ((x,x>=0),(y,y>=0))
+  \where {
+    \lemma scale (c : Real) : CoverMap RealNormed RealNormed (c *)
+      => RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const c) CoverMap.id
+
+    \lemma comb>=0 {a b t : Real} (a>=0 : (0 : Real) <= a) (b>=0 : (0 : Real) <= b) (t>=0 : (0 : Real) <= t) (t<=1 : t <= (1 : Real))
+      : (0 : Real) <= t * a + (1 - t) * b
+      => \have | l1 => RealField.<=_*_positive_positive t>=0 a>=0
+               | l2 => RealField.<=_*_positive_positive (linarith : (0 : Real) <= 1 - t) b>=0
+         \in linarith
+
+    \lemma comb>0 {a b t : Real} (a>0 : (0 : Real) < a) (b>0 : (0 : Real) < b) (t>=0 : (0 : Real) <= t) (t<=1 : t <= (1 : Real))
+      : (0 : Real) < t * a + (1 - t) * b
+      => \have | m>0 : (0 : Real) < a ∧ b => transport (__ < a ∧ b) (RealAbGroup.meet_<= <=-refl) (RealAbGroup.<_meet-monotone a>0 b>0)
+               | l1 : t * (a ∧ b) <= t * a => <=_*_positive-right t>=0 meet-left
+               | l2 : (1 - t) * (a ∧ b) <= (1 - t) * b => <=_*_positive-right (linarith : (0 : Real) <= 1 - t) meet-right
+               | e : t * (a ∧ b) + (1 - t) * (a ∧ b) = a ∧ b => equation.cRing
+         \in linarith
+
+    \lemma combMap {t : Real} (t>=0 : (0 : Real) <= t) (t<=1 : t <= (1 : Real))
+      : CoverMap (ProductCoverSpace NonNegSpace NonNegSpace) NonNegSpace (\lam s => (t * s.1.1 + (1 - t) * s.2.1, comb>=0 s.1.2 s.2.2 t>=0 t<=1))
+      => CoverTransfer-univ _ __.1 (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple
+          (scale t CoverMap.∘ CoverTransfer-map __.1 CoverMap.∘ ProductCoverSpace.proj1 {NonNegSpace} {NonNegSpace})
+          (scale (1 - t) CoverMap.∘ CoverTransfer-map __.1 CoverMap.∘ ProductCoverSpace.proj2 {NonNegSpace} {NonNegSpace}))
+  }
+
+-- | Convexity of `x ↦ |x|^p` on `ℝ` for `p ≥ 1`.
+\lemma abs-rpow-convex {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p)
+  : IsConvexOn (\lam _ => \Sigma) (\lam x => rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0)
+  => \lam {x} {y} _ _ {t} t>=0 t<=1 => rpow-mono {_} {_} {_} {rpow-convex.comb>=0 RealAbGroup.abs>=0 RealAbGroup.abs>=0 t>=0 t<=1} (abs-comb {x} {y} t>=0 t<=1) <=∘ rpow-convex p>=1 t>=0 t<=1
+  \where
+    \lemma abs-comb {x y t : Real} (t>=0 : (0 : Real) <= t) (t<=1 : t <= (1 : Real))
+      : RealAbGroup.abs (t * x + (1 - t) * y) <= t * RealAbGroup.abs x + (1 - t) * RealAbGroup.abs y
+      => RealAbGroup.abs_+ <=∘ =_<= (pmap2 (+) (RealField.abs_* {t} {x} *> pmap (* _) (RealAbGroup.abs-ofPos t>=0)) (RealField.abs_* {1 - t} {y} *> pmap (* _) (RealAbGroup.abs-ofPos (linarith : (0 : Real) <= 1 - t))))
+
+\private \module RPowHelpers \where {
+  -- | The set of non-negative reals.
+  \func NonNeg : Set Real
+    => \lam x => (0 : Real) <= x
+
+  -- | `(0,∞)` with the cover structure induced from `ℝ`.
+  \func PosSpace : CoverSpace (Set.Total RealPositive)
+    => CoverTransfer {Set.Total RealPositive} {RealNormed} __.1
+
+  -- | `[0,∞)` with the cover structure induced from `ℝ`.
+  \func NonNegSpace : CoverSpace (Set.Total NonNeg)
+    => CoverTransfer {Set.Total NonNeg} {RealNormed} __.1
+
+  -- | The inclusion `(0,∞) → [0,∞)`.
+  \func pos-nonneg (x : Set.Total RealPositive) : Set.Total NonNeg
+    => (x.1, <=-less x.2)
+
+  \lemma pos-nonneg-map : CoverMap PosSpace NonNegSpace pos-nonneg
+    => CoverTransfer-comp pos-nonneg __.1
+
+  -- | `(0,∞)` is dense in `[0,∞)`.
+  \lemma pos-nonneg-denseEmbedding : pos-nonneg-map.IsDenseEmbedding
+    => ((dense-char {_} {_} {pos-nonneg-map}).2 \lam {y} {U} y<=<U => \case CoverTransfer_<=< y<=<U \with {
+      | inP (V,q,y<=<V) => \case <=<-ball y<=<V \with {
+        | inP (eps,eps>0,b) =>
+          \have e>0 : (0 : Real) < Real.fromRat (eps * ratio 1 2) => rat_real_<.1 linarith
+                 | e<eps : Real.fromRat (eps * ratio 1 2) < eps => rat_real_<.1 linarith
+          \in inP ((y.1 + Real.fromRat (eps * ratio 1 2), linarith (y.2 : (0 : Real) <= y.1)), q $ b $ real_<_U.1 $ RealAbGroup.abs_-_< linarith linarith)
+      }
+    }, CoverTransfer-comp-embedding pos-nonneg __.1)
+
+  -- | `x ↦ x^a` is a cover map on `(0,∞)` with the induced structure for `a > 0`.
+  \lemma powPos-cover {a : Real} (a>0 : (0 : Real) < a) : CoverMap PosSpace RealNormed (\lam x => rpow-pos x.1 x.2 a)
+    => metric-coverMap {PosSpace} {RealNormed} _ \lam {eps} eps>0 =>
+      \have | e>0 : (0 : Real) < Real.fromRat (eps * ratio 1 2) => rat_real_<.1 linarith
+             | t>0 => rpow-pos>0 {_} {e>0} {RealField.pinv a a>0}
+             | ta : rpow-pos (rpow-pos _ e>0 (RealField.pinv a a>0)) t>0 a = Real.fromRat (eps * ratio 1 2) => rpow-pos-inv
+      \in \case real_<-char.1 t>0 \with {
+        | inP (q,q>0,q<t) =>
+          \have | q>0' : (0 : Rat) < q => rat_real_<.2 q>0
+                 | small {x : Set.Total RealPositive} (xq : x.1 < q) : (dist {RealNormed} 0 (rpow-pos x.1 x.2 a)).U eps
+                     => \have | xa>0 => rpow-pos>0 {x.1} {x.2} {a}
+                               | xa<eps : rpow-pos x.1 x.2 a < eps
+                                   => (rpow-pos-mono (<=-less a>0) (<=-less xq) <=∘ rpow-pos-mono {_} {_} {q>0} {t>0} (<=-less a>0) (<=-less q<t)) <∘r
+                                        (=_<= ta <∘r rat_real_<.1 linarith)
+                       \in real_<_U.1 $ RealAbGroup.abs_-_< linarith linarith
+          \in cauchy-glue-refine {PosSpace} {_} {Small a eps} (coverMap-cut {PosSpace} (CoverTransfer-map {Set.Total RealPositive} {RealNormed} __.1) {q * ratio 1 2} {q} linarith) \lam {U} CU => \case \elim CU \with {
+            | byLeft UL => far eps>0 UL (q * ratio 1 2) (rat_real_<.1 linarith) idp
+            | byRight UU => near (\lam Ux => small $ real_<_U.2 (UU Ux))
+          }
+      }
+    \where {
+      -- | On `[c,∞)`, `x^a` agrees with the cover map `exp (a log (c ∨ x))`.
+      \func psi {a : Real} {c : Real} (c>0 : (0 : Real) < c) : CoverMap PosSpace RealNormed
+        => banach-normed CoverMap.∘ expMap {RealRealBanachAlgebra} CoverMap.∘ (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const a)
+            (log-cover CoverMap.∘ openCover-lift {_} {RealNormed} {RealPositive} positive-open (positive-<=* c>0)
+              (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const c) (CoverTransfer-map {Set.Total RealPositive} {RealNormed} __.1)) (\lam x => join-left)))
+
+      \lemma banach-normed : CoverMap RealRealBanachAlgebra RealNormed (\lam x => x)
+        => CoverMap.id
+
+      \lemma psi-eq {a c : Real} {c>0 : (0 : Real) < c} {x : Set.Total RealPositive} (cx : c <= x.1) : psi {a} c>0 x = rpow-pos x.1 x.2 a
+        => pmap (\lam t => exp (a * t)) (log-ext (RealAbGroup.join_<= cx)) *> inv rpow-pos-def
+
+      \func Small (a : Real) (eps : Rat) : Set (Set (Set.Total RealPositive))
+        => \lam W => ∃ (y : Real) ∀ {x : W} ((dist {RealNormed} y (rpow-pos x.1 x.2 a)).U eps)
+
+      \lemma near {a : Real} {eps : Rat} {U : Set (Set.Total RealPositive)} (h : ∀ {x : U} ((dist {RealNormed} 0 (rpow-pos x.1 x.2 a)).U eps))
+        : isCauchy {PosSpace} \lam V => ∃ (W : Small a eps) (U ∧ V ⊆ W)
+        => cauchy-subset {PosSpace} {single top} {\lam V => ∃ (W : Small a eps) (U ∧ V ⊆ W)} (cauchy-top {PosSpace}) \lam {V} _ => inP (U, inP ((0 : Real), h), meet-left)
+
+      \lemma far {a : Real} {eps : Rat} (eps>0 : (0 : Rat) < eps) {U : Set (Set.Total RealPositive)} {d : Rat} (UL : U ⊆ \lam x => x.1.L d) (c : Real) (c>0 : (0 : Real) < c) (cd : c = Real.fromRat d)
+        : isCauchy {PosSpace} \lam V => ∃ (W : Small a eps) (U ∧ V ⊆ W)
+        => cauchy-subset {PosSpace} {_} {\lam V => ∃ (W : Small a eps) (U ∧ V ⊆ W)} ((psi {a} c>0).func-cover $ RealNormed.makeCauchy $ RealNormed.metricUniform eps>0) \lam {V} (inP (B, DB, Vp)) => \case DB \with { | inP (y, Bp) =>
+            inP (\lam x => \Sigma (U x) (V x), inP (y, \lam {x} (s : \Sigma (U x) (V x)) => transport (\lam z => (dist {RealNormed} y z).U eps) (psi-eq $ rewrite cd $ <=-less $ real_<_L.2 $ UL s.1) $ rewrite Bp in rewrite Vp in s.2), \lam {x} s => s) }
+    }
+
+  -- | `x ↦ x^a` is a cover map on `[0,∞)`.
+  \func rpow-cover {a : Real} (a>0 : (0 : Real) < a) : CoverMap NonNegSpace RealNormed \cowith
+    | func x => rpow x.1 x.2 a a>0
+    | func-cover {D} Dc => transport (\lam (f : Set.Total NonNeg -> Real) => isCauchy {NonNegSpace} \lam U => ∃ (V : D) (U = f ^-1 V))
+                             (ext \lam x => inv (\peval rpow x.1 x.2 a a>0)) ((dense-lift pos-nonneg-map pos-nonneg-denseEmbedding (powPos-cover a>0)).func-cover Dc)
+}

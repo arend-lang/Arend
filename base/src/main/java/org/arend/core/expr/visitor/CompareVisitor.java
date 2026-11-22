@@ -210,6 +210,25 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     return false;
   }
 
+  /**
+   * Checks if {@link #compare(Expression, Expression, Expression, boolean)} returns true without looking at the type.
+   * This should be kept in sync with the beginning of that method.
+   */
+  private static boolean isTriviallyEqual(Expression expr1, Expression expr2) {
+    expr1 = expr1.getUnderlyingExpression();
+    expr2 = expr2.getUnderlyingExpression();
+    if (expr1 == expr2) {
+      return true;
+    }
+    InferenceReferenceExpression infRefExpr1 = expr1.cast(InferenceReferenceExpression.class);
+    InferenceReferenceExpression infRefExpr2 = expr2.cast(InferenceReferenceExpression.class);
+    return infRefExpr1 != null && infRefExpr2 != null && infRefExpr1.getVariable() == infRefExpr2.getVariable();
+  }
+
+  private static Expression getTypeIfNotUniverse(Expression expr) {
+    return expr instanceof ClassCallExpression || expr instanceof DataCallExpression || expr instanceof PiExpression || expr instanceof SigmaExpression || expr instanceof UniverseExpression || expr instanceof PathTypeExpression ? null : expr.getType();
+  }
+
   private boolean initResult(Expression expr1, Expression expr2) {
     if (myNormalCompare && myResult == null && !myOnlySolveVars) {
       expr1 = expr1.copyStrict();
@@ -282,7 +301,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       }
 
       if (!myOnlySolveVars && (normType == null || normType.getStuckInferenceVariable() != null || normType instanceof ClassCallExpression)) {
-        Expression type1 = expr1.getType();
+        // The type of a type former is a universe (or an error), which is neither a proposition nor a class call, so we do not need to compute it
+        Expression type1 = getTypeIfNotUniverse(expr1);
         if (type1 != null && type1.getStuckInferenceVariable() != null) {
           type1 = null;
         }
@@ -295,8 +315,9 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
           }
         }
 
-        if (!myOnlySolveVars && type1 != null) {
-          Expression type2 = expr2.getType();
+        // type2 is used only to check if it is a proposition (when allowProp is true) or to compare class instances (when type1 is a class call)
+        if (!myOnlySolveVars && type1 != null && (allowProp || type1.isInstance(ClassCallExpression.class))) {
+          Expression type2 = getTypeIfNotUniverse(expr2);
           if (type2 != null && type2.getStuckInferenceVariable() != null) {
             type2 = null;
           }
@@ -532,15 +553,21 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     myCMP = CMP.EQ;
-    Expression type1 = fun1.getType();
-    List<SingleDependentLink> params = Collections.emptyList();
-    if (type1 != null) {
-      params = new ArrayList<>();
-      type1.getPiParameters(params, false);
-    }
-
+    // The type of fun1 is computed only when it is needed, that is, when some arguments are not trivially equal
+    List<SingleDependentLink> params = null;
     for (int i = 0; i < args1.size(); i++) {
-      if (!compare(args1.get(i), args2.get(i), i < params.size() ? params.get(i).getType() : null, true)) {
+      Expression paramType = null;
+      if (!isTriviallyEqual(args1.get(i), args2.get(i))) {
+        if (params == null) {
+          params = new ArrayList<>();
+          Expression type1 = fun1.getType();
+          if (type1 != null) {
+            type1.getPiParameters(params, false);
+          }
+        }
+        paramType = i < params.size() ? params.get(i).getType() : null;
+      }
+      if (!compare(args1.get(i), args2.get(i), paramType, true)) {
         if (initResult(args1.get(i), args2.get(i))) {
           List<Pair<Expression, Boolean>> argsExp1 = getArguments(expr1);
           for (int j = 0; j < argsExp1.size(); j++) {
@@ -1080,7 +1107,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         if (type == null) return null;
       }
       TypedSingleDependentLink param = new TypedSingleDependentLink(pair.proj2, pair.proj1.getName(), type, false,
-          pair.proj1 instanceof DependentLink ? ((DependentLink) pair.proj1).getVariance() : BindingVariance.INVARIANT);
+          pair.proj1 instanceof DependentLink ? pair.proj1.getVariance() : BindingVariance.INVARIANT);
       params.add(param);
       paramSubst.add(pair.proj1, new ReferenceExpression(param));
       allowedBindings.add(pair.proj1);

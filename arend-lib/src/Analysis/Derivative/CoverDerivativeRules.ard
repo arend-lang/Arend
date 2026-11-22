@@ -1,0 +1,156 @@
+{- | The chain rule, the product rule and the inverse function rule for derivatives with a cover map as the difference quotient.
+ -
+ -   Each rule is stated on three levels:
+ -   * for difference quotients (see {IsDerivQuot}), without any assumptions on the topology;
+ -   * for the existence of derivatives (see {HasDeriv});
+ -   * as a formula for the derivative (see {deriv}), when the chains with an invertible increment are dense.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.BilinearMap
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Analysis.Derivative.CoverDerivative
+\import Function.Meta
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.TopAbGroup.Product
+\import Topology.TopModule
+\import Topology.TopRing
+
+-- | The argument `(f x, f y, h, f' (x,y,h,a))` of a difference quotient on {T}.
+\func compPt {R : TopRing} {X Y : TopLModule R} {S T : CoverSpace} {i : CoverMap S X} {j : CoverMap T Y} (f : S -> T)
+             {f' : Set.Total (DerivSet i) -> Y} (q : IsDerivQuot i (\lam x => j (f x)) f') (s : Set.Total (DerivSet i)) : Set.Total (DerivSet j)
+  => ((f s.1.1, (f s.1.2.1, (s.1.2.2.1, f' s))), inv $ pmap (_ +) (q s) *> equation.abGroup)
+
+-- | {compPt} is a cover map.
+\lemma compPt-cover {R : TopRing} {X Y : TopLModule R} {S T : CoverSpace} {i : CoverMap S X} {j : CoverMap T Y} (f : CoverMap S T)
+                    (f' : CoverMap (DerivSpace i) Y) (q : IsDerivQuot i (\lam x => j (f x)) f') : CoverMap (DerivSpace i) (DerivSpace j) (compPt f q)
+  => CoverTransfer-univ {DerivSpace i} {ProductCoverSpace T (ProductCoverSpace T (ProductCoverSpace R Y))} {Set.Total (DerivSet j)} (compPt f q) __.1
+      (ProductCoverSpace.tuple (f CoverMap.∘ DerivSpace.proj-x i) (ProductCoverSpace.tuple (f CoverMap.∘ DerivSpace.proj-y i) (ProductCoverSpace.tuple (DerivSpace.proj-h i) f')))
+
+-- | The chain rule for difference quotients.
+\lemma isDerivQuot-comp {R : TopRing} {X Y Z : TopLModule R} {S T : CoverSpace} {i : CoverMap S X} {j : CoverMap T Y} {f : S -> T} {g : T -> Z}
+                        {f' : Set.Total (DerivSet i) -> Y} (q : IsDerivQuot i (\lam x => j (f x)) f') {g' : Set.Total (DerivSet j) -> Z} (q' : IsDerivQuot j g g')
+  : IsDerivQuot i (\lam x => g (f x)) (\lam s => g' (compPt f q s))
+  => \lam s => q' (compPt f q s)
+
+-- | The chain rule: if `j ∘ f` and {g} have derivatives, then so does `g ∘ f`.
+\lemma hasDeriv-comp {R : TopRing} {X : TopLModule R} {Y Z : HausdorffTopLModule R} {S T : CoverSpace} {i : CoverMap S X} {j : CoverMap T Y}
+                     (f : CoverMap S T) {g : T -> Z} (df : HasDeriv i (\lam x => j (f x))) (dg : HasDeriv j g) : HasDeriv i (\lam x => g (f x)) \elim df, dg
+  | inP (f',q), inP (g',q') => inP (g' CoverMap.∘ compPt-cover f f' q, isDerivQuot-comp q q')
+
+-- | The chain rule: the derivative of `g ∘ f` at {x} along {a} is the derivative of {g} at `f x` along the derivative of `j ∘ f` at {x} along {a}.
+\lemma deriv-comp {R : TopRing} {X : TopLModule R} {Y Z : HausdorffTopLModule R} {S T : CoverSpace} {i : CoverMap S X} {j : CoverMap T Y}
+                  (D : IsDerivDense i) (D' : IsDerivDense j) (f : CoverMap S T) {g : T -> Z} (df : HasDeriv i (\lam x => j (f x))) (dg : HasDeriv j g)
+                  (d : HasDeriv i (\lam x => g (f x))) (x : S) (a : X)
+  : deriv D (\lam x => g (f x)) d x a = deriv D' g dg (f x) (deriv D (\lam x => j (f x)) df x a)
+  => \let | f' => deriv-quot D (\lam x => j (f x)) df
+          | g' => deriv-quot D' g dg
+     \in deriv-char D d (g' CoverMap.∘ compPt-cover f f' deriv-quot.char) (isDerivQuot-comp deriv-quot.char deriv-quot.char) x a
+
+-- | The product rule for difference quotients and a bilinear map {b}.
+\lemma isDerivQuot-bilinear {R : TopRing} {X X1 X2 Y : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (b : BilinearMap X1 X2 Y)
+                            {f : S -> X1} {g : S -> X2} {f' : Set.Total (DerivSet i) -> X1} {g' : Set.Total (DerivSet i) -> X2}
+                            (qf : IsDerivQuot i f f') (qg : IsDerivQuot i g g')
+  : IsDerivQuot i (\lam x => b (f x) (g x)) (\lam s => b (f' s) (g s.1.2.1) + b (f s.1.1) (g' s))
+  => \lam s => *c-ldistr *> pmap2 (+) (inv b.linear-left.func-*c *> pmap (b __ _) (qf s) *> b.linear-left.func-minus)
+                                      (inv b.linear-right.func-*c *> pmap (b _) (qg s) *> b.linear-right.func-minus) *> equation.abGroup
+
+-- | The difference quotient of `b (f x) (g x)` as a cover map.
+\lemma bilinearQuot-cover {R : TopRing} {X : TopLModule R} {X1 X2 Y : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (b : BilinearMap X1 X2 Y)
+                          (bc : CoverMap (ProductCoverSpace X1 X2) Y (\lam s => b s.1 s.2)) (f : CoverMap S X1) (g : CoverMap S X2)
+                          (f' : CoverMap (DerivSpace i) X1) (g' : CoverMap (DerivSpace i) X2)
+  : CoverMap (DerivSpace i) Y (\lam s => b (f' s) (g s.1.2.1) + b (f s.1.1) (g' s))
+  => +-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple (bc CoverMap.∘ ProductCoverSpace.tuple f' (g CoverMap.∘ DerivSpace.proj-y i))
+                                                      (bc CoverMap.∘ ProductCoverSpace.tuple (f CoverMap.∘ DerivSpace.proj-x i) g')
+
+-- | The product rule for a bilinear cover map {b}.
+\lemma hasDeriv-bilinear {R : TopRing} {X : TopLModule R} {X1 X2 Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (b : BilinearMap X1 X2 Y)
+                         (bc : CoverMap (ProductCoverSpace X1 X2) Y (\lam s => b s.1 s.2)) (f : CoverMap S X1) (g : CoverMap S X2)
+                         (df : HasDeriv i f) (dg : HasDeriv i g) : HasDeriv i (\lam x => b (f x) (g x)) \elim df, dg
+  | inP (f',qf), inP (g',qg) => inP (bilinearQuot-cover b bc f g f' g', isDerivQuot-bilinear b qf qg)
+
+-- | The product rule: the derivative of `b (f x) (g x)` is `b (f' x a) (g x) + b (f x) (g' x a)`.
+\lemma deriv-bilinear {R : TopRing} {X : TopLModule R} {X1 X2 Y : HausdorffTopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i)
+                      (b : BilinearMap X1 X2 Y) (bc : CoverMap (ProductCoverSpace X1 X2) Y (\lam s => b s.1 s.2)) (f : CoverMap S X1) (g : CoverMap S X2)
+                      (df : HasDeriv i f) (dg : HasDeriv i g) (d : HasDeriv i (\lam x => b (f x) (g x))) (x : S) (a : X)
+  : deriv D (\lam x => b (f x) (g x)) d x a = b (deriv D f df x a) (g x) + b (f x) (deriv D g dg x a)
+  => deriv-char D d (bilinearQuot-cover b bc f g (deriv-quot D f df) (deriv-quot D g dg)) (isDerivQuot-bilinear b deriv-quot.char deriv-quot.char) x a
+
+-- | Multiplication in a commutative ring is bilinear.
+\func mult-bilinear {R : SeparatedCoverCRing} : BilinearMap (SeparatedRingTopLModule R) (SeparatedRingTopLModule R) (SeparatedRingTopLModule R) (*) \cowith
+  | linear-left {b} => \new LinearMap {
+    | func-+ => rdistr
+    | func-*c => *-assoc
+  }
+  | linear-right {a} => \new LinearMap {
+    | func-+ => ldistr
+    | func-*c => equation.cRing
+  }
+
+-- | The product rule for functions with values in a commutative ring.
+\lemma hasDeriv-* {R : SeparatedCoverCRing} {X : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (f g : CoverMap S (SeparatedRingTopLModule R))
+                  (df : HasDeriv {_} {_} {SeparatedRingTopLModule R} i f) (dg : HasDeriv {_} {_} {SeparatedRingTopLModule R} i g) : HasDeriv {_} {_} {SeparatedRingTopLModule R} i (\lam x => f x * g x)
+  => hasDeriv-bilinear {R} {X} {_} {_} {_} {S} {i} mult-bilinear R.*-cover f g df dg
+
+-- | The product rule: `(f g)' = f' g + f g'`.
+\lemma deriv-* {R : SeparatedCoverCRing} {X : TopLModule R} {S : CoverSpace} {i : CoverMap S X} (D : IsDerivDense i) (f g : CoverMap S (SeparatedRingTopLModule R))
+               (df : HasDeriv {_} {_} {SeparatedRingTopLModule R} i f) (dg : HasDeriv {_} {_} {SeparatedRingTopLModule R} i g) (d : HasDeriv {_} {_} {SeparatedRingTopLModule R} i (\lam x => f x * g x)) (x : S) (a : X)
+  : deriv {_} {_} {SeparatedRingTopLModule R} D (\lam x => f x * g x) d x a = deriv {_} {_} {SeparatedRingTopLModule R} D f df x a * g x + f x * deriv {_} {_} {SeparatedRingTopLModule R} D g dg x a
+  => deriv-bilinear {R} {X} {_} {_} {_} {S} {i} D mult-bilinear R.*-cover f g df dg d x a
+
+-- | The argument `(x, y, i y - i x, 1)` of a difference quotient of a function on a cover space over a ring.
+\func invPt {R : TopRing} {S : CoverSpace} {i : CoverMap S R} (x y : S) : Set.Total (DerivSet {_} {RingTopLModule R} i)
+  => ((x, (y, (i y - i x, 1))), inv $ pmap (_ +) ide-right *> equation.abGroup)
+
+{- | The inverse function rule for difference quotients.
+ -
+ -   If {g} is a section of {f} and {finv} is a right inverse of the difference quotient of `j ∘ f` at the points `(x, y, i y - i x, 1)`,
+ -   then `b * finv (g u, g v)` is a difference quotient of `i ∘ g` at `(u, v, h, b)`.
+ -}
+\lemma isDerivQuot-inverse {R : TopRing} {S T : CoverSpace} {i : CoverMap S (RingTopLModule R)} {j : CoverMap T (RingTopLModule R)}
+                           {f : S -> T} {g : T -> S} (fg : \Pi (y : T) -> f (g y) = y)
+                           {f' : Set.Total (DerivSet i) -> R} (q : IsDerivQuot i (\lam x => j (f x)) f')
+                           {finv : \Sigma S S -> R} (finv-right : \Pi (x y : S) -> f' (invPt x y) * finv (x,y) = 1)
+  : IsDerivQuot j (\lam y => i (g y)) (\lam t => t.1.2.2.2 * finv (g t.1.1, g t.1.2.1))
+  => \lam t =>
+      \let | x => g t.1.1
+           | y => g t.1.2.1
+           | e : t.1.2.2.1 * t.1.2.2.2 = (i y - i x) * f' (invPt x y)
+               => inv $ q (invPt x y) *> pmap2 (\lam u v => j u - j v) (fg t.1.2.1) (fg t.1.1) *> pmap (- _) t.2 *> equation.abGroup
+      \in inv *-assoc *> pmap (* _) e *> *-assoc *> pmap (_ *) (finv-right x y) *> ide-right
+
+-- | The difference quotient of `i ∘ g` as a cover map.
+\lemma inverseQuot-cover {R : SeparatedCoverRing} {S T : CoverSpace} {i : CoverMap S (SeparatedRingTopLModule R)} {j : CoverMap T (SeparatedRingTopLModule R)}
+                         (g : CoverMap T S) (finv : CoverMap (ProductCoverSpace S S) (SeparatedRingTopLModule R))
+  : CoverMap (DerivSpace j) (SeparatedRingTopLModule R) (\lam t => t.1.2.2.2 * finv (g t.1.1, g t.1.2.1))
+  => R.*-cover CoverMap.∘ ProductCoverSpace.tuple (DerivSpace.proj-a j) (finv CoverMap.∘ ProductCoverSpace.tuple (g CoverMap.∘ DerivSpace.proj-x j) (g CoverMap.∘ DerivSpace.proj-y j))
+
+-- | The inverse function rule: if `j ∘ f` has a difference quotient with a right inverse on the points `(x, y, i y - i x, 1)`, then `i ∘ g` has a derivative.
+\lemma hasDeriv-inverse {R : SeparatedCoverRing} {S T : CoverSpace} {i : CoverMap S (SeparatedRingTopLModule R)} {j : CoverMap T (SeparatedRingTopLModule R)}
+                        {f : S -> T} (g : CoverMap T S) (fg : \Pi (y : T) -> f (g y) = y)
+                        (f' : CoverMap (DerivSpace i) (SeparatedRingTopLModule R)) (q : IsDerivQuot i (\lam x => j (f x)) f')
+                        (finv : CoverMap (ProductCoverSpace S S) (SeparatedRingTopLModule R)) (finv-right : \Pi (x y : S) -> f' (invPt x y) * finv (x,y) = 1)
+  : HasDeriv j (\lam y => i (g y))
+  => inP (inverseQuot-cover {R} {S} {T} {i} {j} g finv, isDerivQuot-inverse {R} {S} {T} {i} {j} {f} {g} fg q {finv} finv-right)
+
+-- | The inverse function rule: the derivative of `j ∘ f` at `g y` times the derivative of `i ∘ g` at {y} is `1`.
+\lemma deriv-inverse {R : SeparatedCoverRing} {S T : CoverSpace} {i : CoverMap S (SeparatedRingTopLModule R)} {j : CoverMap T (SeparatedRingTopLModule R)}
+                     (D : IsDerivDense i) (D' : IsDerivDense j) {f : S -> T} (g : CoverMap T S) (fg : \Pi (y : T) -> f (g y) = y)
+                     (df : HasDeriv i (\lam x => j (f x))) (finv : CoverMap (ProductCoverSpace S S) (SeparatedRingTopLModule R))
+                     (finv-right : \Pi (x y : S) -> deriv-quot D (\lam x => j (f x)) df (invPt x y) * finv (x,y) = 1)
+                     (d : HasDeriv j (\lam y => i (g y))) (y : T)
+  : deriv D (\lam x => j (f x)) df (g y) 1 * deriv D' (\lam y => i (g y)) d y 1 = 1
+  => pmap2 (*) (pmap (deriv-quot D (\lam x => j (f x)) df) (ext (ext (idp, ext (idp, ext (inv negative-right, idp))))))
+               (deriv-char D' d (inverseQuot-cover {R} {S} {T} {i} {j} g finv) (isDerivQuot-inverse {R} {S} {T} {i} {j} {f} {g} fg (deriv-quot.char {_} {_} {_} {_} {_} {D} {\lam x => j (f x)} {df}) {finv} finv-right) y 1 *> ide-left)
+      *> finv-right (g y) (g y)

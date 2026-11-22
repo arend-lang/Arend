@@ -43,11 +43,24 @@ public class ListLevels implements Levels {
 
   @Override
   public Levels subst(LevelSubstitution substitution) {
-    List<Level> result = new ArrayList<>(myLevels.size());
-    for (Level level : myLevels) {
-      result.add(level.subst(substitution));
+    if (substitution.isEmpty()) {
+      return this;
     }
-    return new ListLevels(result);
+
+    // Level.subst returns the same object if nothing changes, so we make a copy only if some level is changed
+    List<Level> result = null;
+    for (int i = 0; i < myLevels.size(); i++) {
+      Level level = myLevels.get(i);
+      Level newLevel = level.subst(substitution);
+      if (result == null && newLevel != level) {
+        result = new ArrayList<>(myLevels.size());
+        result.addAll(myLevels.subList(0, i));
+      }
+      if (result != null) {
+        result.add(newLevel);
+      }
+    }
+    return result == null ? this : new ListLevels(result);
   }
 
   @Override

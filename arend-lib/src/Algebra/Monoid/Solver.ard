@@ -23,7 +23,7 @@
       | :* t s => aux t (aux s acc)
 
 \class MonoidData \noclassifying {M : Monoid} (vars : Array M) {
-  \meta V => Fin vars.len
+  \protected \meta V => Fin vars.len
 
   \protected \func interpret (t : MonoidTerm V) : M \elim t
     | var x => vars x

@@ -1,5 +1,7 @@
 \import Algebra.Group
+\import Algebra.Monoid
 \import Algebra.Ordered.RieszSpace
+\import Analysis.Integration.FullIntegrationSpace
 \import Analysis.Integration.IntegrationSpace
 \import Analysis.Integration.MeasureIntegrationSpace
 \import Analysis.Measure.MeasureRing
@@ -11,7 +13,10 @@
 \import Category.Meta
 \import Category.Subcat
 \import Equiv
+\import Function.Meta
 \import Logic
+\import Order.Lattice
+\import Order.PartialOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
@@ -40,6 +45,28 @@
                          \lam Cc => cauchy-subset (h1.func-cover Cc) \lam (inP (V,CV,p)) => transportInv C p CV)
     | isOpen U => ext (h2.func-cont, h1.func-cont)
   }
+  \where {
+    -- | The inverse of a bijective homomorphism of integration spaces.
+    \func inverse {X Y : IntegrationSpace} {f : IntegrationSpaceHom X Y} (e : IsEquiv f) : IntegrationSpaceHom Y X \cowith
+      | func => IsEquiv.ret e
+      | func-+ => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-+ *> pmap2 (+) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
+      | func-<= {y} {y'} y<=y' => transport (_ <=) (IsEquiv.isInj e $ f.func-join *> pmap2 (∨) (IsEquiv.f_ret e) (IsEquiv.f_ret e) *> Y.join_<= y<=y' *> inv (IsEquiv.f_ret e)) join-left
+      | func-join>= => =_<= $ IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-join *> pmap2 (∨) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
+      | func-trunc => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (f.func-trunc *> pmap Y.trunc (IsEquiv.f_ret e))
+      | func-integral => inv f.func-integral *> pmap Y.integral (IsEquiv.f_ret e)
+
+    \lemma Iso<->IsEquiv.{u} {X Y : IntegrationSpace.{u}} {f : IntegrationSpaceHom X Y} : Iso {IntegrationSpaceCat} f <-> IsEquiv f
+      => (\lam e => inP \new QEquiv {
+            | ret => e.hinv
+            | ret_f x => pmap (\lam (g : IntegrationSpaceHom X X) => g x) e.hinv_f
+            | f_sec y => pmap (\lam (g : IntegrationSpaceHom Y Y) => g y) e.f_hinv
+          },
+          \lam e => \new Iso {
+            | hinv => inverse e
+            | hinv_f => exts \lam x => IsEquiv.ret_f e
+            | f_hinv => exts \lam y => IsEquiv.f_ret e
+          })
+  }
 
 \instance CompleteIntegrationSpaceCat.{u} : Cat CompleteIntegrationSpace.{u}
   => subCat {IntegrationSpaceCat} \new Embedding {
@@ -54,8 +81,8 @@
   | LAdj : Functor MeasureRingCat.{u} IntegrationSpaceCat.{u} \cowith {
     | F B => SFuncIntegrationSpace B
     | Func => SFuncHom
-    | Func-id => exts \lam (in~ a) => idp
-    | Func-o => exts \lam (in~ a) => idp
+    | Func-id => intHom-ext \lam (in~ a) => idp
+    | Func-o => intHom-ext \lam (in~ a) => idp
   }
   | RAdj : Functor IntegrationSpaceCat.{u} MeasureRingCat.{u} \cowith {
     | F X => X.MeasRing
@@ -69,10 +96,10 @@
   }
   | epsilon {
     | trans X => integrationCounit X
-    | natural f => exts \lam x => integrationCounit-natural f x
+    | natural f => intHom-ext \lam x => integrationCounit-natural f x
   }
   | eta_epsilon-left => exts \lam a => ext integrationCounit-char
-  | eta_epsilon-right => exts \lam x => integrationCounit-unit x
+  | eta_epsilon-right => intHom-ext \lam x => integrationCounit-unit x
   \where {
     -- | The unit of the adjunction between measure rings and integration spaces is an isomorphism.
     \lemma integrationUnit-iso.{u} {B : PseudoMeasureRing.{u}} : Iso (integrationUnit B)
@@ -83,8 +110,8 @@
   | LAdj : Functor CompleteMeasureRingCat.{u} CompleteIntegrationSpaceCat.{u} \cowith {
     | F B => IntegrationSpaceCompletion (SFuncIntegrationSpace B)
     | Func f => integrationCompletion-map (SFuncHom f)
-    | Func-id => exts \lam F => integrationCompletion-lift.unique (integrationCompletion-map (SFuncHom MeasureRingHom.id)) IntegrationSpaceHom.id (\lam (in~ l) => integrationCompletion-map.char) F
-    | Func-o {_} {_} {_} {g} {f} => exts \lam F => integrationCompletion-lift.unique (integrationCompletion-map (SFuncHom (g MeasureRingHom.∘ f))) (integrationCompletion-map (SFuncHom g) ∘ integrationCompletion-map (SFuncHom f))
+    | Func-id => intHom-ext \lam F => integrationCompletion-lift.unique (integrationCompletion-map (SFuncHom MeasureRingHom.id)) IntegrationSpaceHom.id (\lam (in~ l) => integrationCompletion-map.char) F
+    | Func-o {_} {_} {_} {g} {f} => intHom-ext \lam F => integrationCompletion-lift.unique (integrationCompletion-map (SFuncHom (g MeasureRingHom.∘ f))) (integrationCompletion-map (SFuncHom g) ∘ integrationCompletion-map (SFuncHom f))
         (\lam (in~ l) => integrationCompletion-map.char *> inv (pmap (integrationCompletion-map (SFuncHom g)) integrationCompletion-map.char *> integrationCompletion-map.char)) F
   }
   | RAdj : Functor CompleteIntegrationSpaceCat.{u} CompleteMeasureRingCat.{u} \cowith {
@@ -122,3 +149,63 @@
     \lemma completeIntegrationUnit-iso.{u} {B : CompleteMeasureRing.{u}} : Iso (CompleteMeasureIntegrationAdjunction.eta B)
       => CompleteMeasureRingCat.Iso<->IsEquiv.2 completeIntegrationUnit-equiv
   }
+
+\instance FullIntegrationSpaceCat.{u} : Cat FullIntegrationSpace.{u}
+  => subCat {IntegrationSpaceCat} \new Embedding {
+    | f X => X
+    | isEmb X Y => \new Retraction {
+      | sec p => ext FullIntegrationSpace { | IntegrationSpace => p }
+      | f_sec => idpe
+    }
+  }
+
+\instance CompleteRegularIntegrationSpaceCat.{u} : Cat CompleteRegularIntegrationSpace.{u}
+  => subCat {IntegrationSpaceCat} \new Embedding {
+    | f X => X
+    | isEmb X Y => \new Retraction {
+      | sec p => ext CompleteRegularIntegrationSpace { | IntegrationSpace => p }
+      | f_sec => idpe
+    }
+  }
+
+-- | Full integration spaces are equivalent to complete regular integration spaces: the adjunction (completion ⊣ bounded part) has invertible unit and counit.
+\func FullCompleteEquivalence.{u} : Adjunction FullIntegrationSpaceCat.{u} CompleteRegularIntegrationSpaceCat.{u} \cowith
+  | LAdj : Functor FullIntegrationSpaceCat.{u} CompleteRegularIntegrationSpaceCat.{u} \cowith {
+    | F L => RegularIntegrationSpaceCompletion L
+    | Func f => integrationCompletion-map f
+    | Func-id => intHom-ext \lam F => integrationCompletion-lift.unique (integrationCompletion-map IntegrationSpaceHom.id) IntegrationSpaceHom.id (\lam x => integrationCompletion-map.char {_} {_} {IntegrationSpaceHom.id}) F
+    | Func-o {_} {_} {_} {g} {f} => intHom-ext \lam F => integrationCompletion-lift.unique (integrationCompletion-map (g IntegrationSpaceHom.∘ f)) (integrationCompletion-map g IntegrationSpaceHom.∘ integrationCompletion-map f)
+        (\lam x => integrationCompletion-map.char *> inv (pmap (integrationCompletion-map g) integrationCompletion-map.char *> integrationCompletion-map.char)) F
+  }
+  | RAdj : Functor CompleteRegularIntegrationSpaceCat.{u} FullIntegrationSpaceCat.{u} \cowith {
+    | F X => boundedFull X
+    | Func f => boundedMap f
+    | Func-id => idp
+    | Func-o => idp
+  }
+  | eta {
+    | trans L => fullUnit L
+    | natural f => exts \lam x => inv (fullUnit-natural f)
+  }
+  | epsilon {
+    | trans X => boundedCounit X
+    | natural f => intHom-ext \lam F => boundedCounit-natural f F
+  }
+  | eta_epsilon-left => exts \lam b => boundedMap-counit-unit
+  | eta_epsilon-right => intHom-ext \lam F => counit-completionMap-unit F
+  \where {
+    \lemma unit-iso.{u} {L : FullIntegrationSpace.{u}} : Iso (FullCompleteEquivalence.eta L)
+      => subCat-iso.conv (IntegrationSpaceCat.Iso<->IsEquiv.{u}.2 fullUnit-equiv)
+
+    \lemma counit-iso.{u} {X : CompleteRegularIntegrationSpace.{u}} : Iso (FullCompleteEquivalence.epsilon X)
+      => subCat-iso.conv ((IntegrationSpaceCat.Iso<->IsEquiv.{u} {IntegrationSpaceCompletion (boundedFull X)} {X} {boundedCounit X}).2 boundedCounit-equiv)
+  }
+
+-- | Full integration spaces are the same as complete regular integration spaces.
+\func fullComplete-equiv.{u} : QEquiv {FullIntegrationSpace.{u}} {CompleteRegularIntegrationSpace.{u}} (\lam L => RegularIntegrationSpaceCompletion L) (\lam X => boundedFull X) \cowith
+  | ret_f L => inv (Cat.isotoid {FullIntegrationSpaceCat.{u}} (FullCompleteEquivalence.unit-iso {L}))
+  | f_sec X => Cat.isotoid {CompleteRegularIntegrationSpaceCat.{u}} (FullCompleteEquivalence.counit-iso {X})
+
+-- Extensionality for homomorphisms, used in the fields of the functors and adjunctions below (much faster than `exts` inside `\cowith` fields).
+\private \lemma intHom-ext {X Y : IntegrationSpace} {f g : IntegrationSpaceHom X Y} (p : \Pi (x : X) -> f x = g x) : f = g
+  => exts p

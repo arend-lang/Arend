@@ -8,7 +8,6 @@
 \import Arith.Exp.Real
 \import Arith.Log.Real
 \import Order.StrictOrder
-\import Topology.StoneCStarAlgebra
 \import Algebra.Pointed
 \import Analysis.PowerSeries
 \import Analysis.Series
@@ -102,7 +101,7 @@
           => RealField.<=_*_positive_positive (rat_real_<=.1 (exp-1-coef.coef>=0 k)) $ RealField.pow>=0 (rat_real_<=.1 q>=0)
         | iss : IsSeriesSum t-real (exp (q : Real) - 1)
           => transport (IsSeriesSum __ _)
-              (ext \lam k => pmap (* RealField.pow (Real.fromRat q) k) (RealStoneC*Algebra_fromRat (exp-1-coef k)))
+              (ext \lam k => pmap (* RealField.pow (Real.fromRat q) k) (RealBanachAlgebra_fromRat (exp-1-coef k)))
               (exp-1-coef.seriesSum (q : Real))
         | term-eq k : t-rat k = {Real} t-real k
           => inv RealField.*-rat *> pmap (_ *) (inv RealField.pow-rat)

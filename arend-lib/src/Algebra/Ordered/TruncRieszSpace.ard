@@ -3,15 +3,20 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
+\import Algebra.QModule
 \import Algebra.Ring.Boolean
 \import Arith.Rat
 \import Data.Array
-\import Data.Fin (fsuc/=, fsuc/=0)
+\import Data.Fin
+\import Data.Or
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Order.Biordered
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 
@@ -89,6 +94,194 @@
 
   \lemma InUnderUnit_<= {a b : E} (a<=b : a <= b) (tb : IsUnderUnit b) : IsUnderUnit a
     => <=-antisymmetric trunc-bound (meet-univ <=-refl (a<=b <=∘ =_<= (inv tb)) <=∘ trunc-assoc)
+
+  \lemma IsUnderUnit_join {a b : E} (p : IsUnderUnit a) (q : IsUnderUnit b) : IsUnderUnit (a ∨ b)
+    => trunc_join *> pmap2 (∨) p q
+
+  -- | `IsBelow x r` says that `x ≤ r·1` in the unitization: `x ≤ r u` for some `u` in the unit cone and `r ≥ 0`.
+  \type IsBelow (x : E) (r : Rat) : \Prop
+    => Given (RatField.zro RatField.<= r) ∃ (u : E) (0 <= u) (IsUnderUnit u) (x <= r *q u)
+
+  \lemma IsBelow_zro {r : Rat} (r>=0 : RatField.zro RatField.<= r) : IsBelow 0 r
+    => (r>=0, inP (0, <=-refl, trunc_zro, =_<= (inv toRatModule.*c_zro-right)))
+
+  \lemma IsBelow_<= {x y : E} {r : Rat} (y<=x : y <= x) (p : IsBelow x r) : IsBelow y r
+    => (p.1, TruncP.map p.2 \lam s => (s.1, s.2, s.3, y<=x <=∘ s.4))
+
+  \lemma IsBelow-level {x : E} {r s : Rat} (r<=s : r RatField.<= s) (p : IsBelow x r) : IsBelow x s
+    => (RatField.<=-transitive p.1 r<=s, TruncP.map p.2 \lam t => (t.1, t.2, t.3, t.4 <=∘ <=_*q-left r<=s t.2))
+
+  \lemma IsBelow-mono {x y : E} {r s : Rat} (y<=x : y <= x) (r<=s : r RatField.<= s) (p : IsBelow x r) : IsBelow y s
+    => IsBelow-level r<=s (IsBelow_<= y<=x p)
+
+  \lemma IsBelow-nonpos {x : E} {r : Rat} (x<=0 : x <= 0) (r>=0 : RatField.zro RatField.<= r) : IsBelow x r
+    => IsBelow_<= x<=0 (IsBelow_zro r>=0)
+
+  \lemma IsBelow<=0 {x : E} {r : Rat} (p : IsBelow x r) (r<=0 : r RatField.<= RatField.zro) : x <= 0
+    => \case p.2 \with {
+      | inP (u,u>=0,_,xu) => xu <=∘ *q_<=0 r<=0 u>=0
+    }
+
+  \lemma IsBelow_+ {x y : E} {r s : Rat} (p : IsBelow x r) (q : IsBelow y s) : IsBelow (x + y) (r RatField.+ s)
+    => (RatField.<=_+-positive p.1 q.1, \case p.2, q.2 \with {
+      | inP (u,u>=0,uU,xu), inP (v,v>=0,vU,yv) => inP (u ∨ v, u>=0 <=∘ join-left, IsUnderUnit_join uU vU,
+          <=_+ (xu <=∘ <=_*q-right p.1 join-left) (yv <=∘ <=_*q-right q.1 join-right) <=∘ =_<= (inv toRatModule.*c-rdistr))
+    })
+
+  \lemma IsBelow_join {x y : E} {r : Rat} (p : IsBelow x r) (q : IsBelow y r) : IsBelow (x ∨ y) r
+    => (p.1, \case p.2, q.2 \with {
+      | inP (u,u>=0,uU,xu), inP (v,v>=0,vU,yv) => inP (u ∨ v, u>=0 <=∘ join-left, IsUnderUnit_join uU vU,
+          join-univ (xu <=∘ <=_*q-right p.1 join-left) (yv <=∘ <=_*q-right p.1 join-right))
+    })
+
+  \lemma IsBelow-part+ {x : E} {r : Rat} (p : IsBelow x r) : IsBelow (part+ x) r
+    => IsBelow_join p (IsBelow_zro p.1)
+
+  \lemma IsBelow_*q {x : E} {r q : Rat} (q>=0 : RatField.zro RatField.<= q) (p : IsBelow x r) : IsBelow (q *q x) (q RatField.* r)
+    => (RatField.<=_*_positive_positive q>=0 p.1, TruncP.map p.2 \lam s => (s.1, s.2, s.3, <=_*q-right q>=0 s.4 <=∘ =_<= (inv *q-assoc)))
+
+  \lemma IsBelow_*n {n : Nat} {x : E} {r : Rat} (p : IsBelow x r) : IsBelow (n *n x) (n RatField.*n r) \elim n
+    | 0 => IsBelow_zro RatField.<=-refl
+    | suc n => IsBelow_+ (IsBelow_*n p) p
+
+  \lemma IsBelow_*n-div {n : Nat} (n/=0 : n /= 0) {x : E} {r : Rat} (p : IsBelow (n *n x) (n RatField.*n r)) : IsBelow x r
+    => transport2 IsBelow
+        (pmap (_ *q) (inv *q_*n) *> inv *q-assoc *> pmap (*q x) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*q)
+        (pmap (_ RatField.*) (inv RatField.natCoef_*_*n) *> inv RatField.*-assoc *> pmap (RatField.* r) (RatField.finv-left $ natRat/=0 n/=0) *> RatField.ide-left)
+        (IsBelow_*q (RatField.finv>=0 fromNat_>=0) p)
+
+  \lemma IsBelow-one {x : E} (p : IsBelow x 1) : IsUnderUnit x
+    => \case p.2 \with {
+      | inP (u,_,uU,xu) => InUnderUnit_<= (xu <=∘ =_<= ide_*q) uU
+    }
+
+  -- | {a} is bounded if `|a| ≤ M·1` for some `M`.
+  \protected \type IsBounded (a : E) : \Prop
+    => ∃ (M : Rat) (IsBelow (abs a) M)
+
+  \lemma IsBounded_<= {a b : E} (ab : abs a <= abs b) (p : IsBounded b) : IsBounded a
+    => \case p \with { | inP (M,bM) => inP (M, IsBelow_<= ab bM) }
+
+  \lemma IsBounded_zro : IsBounded 0
+    => inP (0, transportInv (IsBelow __ 0) abs_zro (IsBelow_zro RatField.<=-refl))
+
+  \lemma IsBounded_+ {a b : E} (p : IsBounded a) (q : IsBounded b) : IsBounded (a + b)
+    => \case p, q \with {
+      | inP (M,aM), inP (N,bN) => inP (M RatField.+ N, IsBelow_<= abs_+ (IsBelow_+ aM bN))
+    }
+
+  \lemma IsBounded_negative {a : E} (p : IsBounded a) : IsBounded (negative a)
+    => IsBounded_<= (=_<= abs_negative) p
+
+  \lemma abs_join<= {a b : E} : abs (a ∨ b) <= abs a + abs b
+    => transport2 (\lam x y => abs x <= y) (pmap (\lam z => a ∨ b - z) join-idemp *> minus_zro) (pmap2 (\lam u v => abs u + abs v) minus_zro minus_zro) (join-lip {_} {a} {b} {0} {0})
+
+  \lemma IsBounded_join {a b : E} (p : IsBounded a) (q : IsBounded b) : IsBounded (a ∨ b)
+    => \case p, q \with {
+      | inP (M,aM), inP (N,bN) => inP (M RatField.+ N, IsBelow_<= abs_join<= (IsBelow_+ aM bN))
+    }
+
+  \lemma IsBounded_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (p : IsBounded a) : IsBounded (q *q a)
+    => \case p \with { | inP (M,aM) => inP (q RatField.* M, transportInv (IsBelow __ _) (abs_*q>=0 q>=0) (IsBelow_*q q>=0 aM)) }
+
+  \lemma abs_trunc<= {a : E} : abs (trunc a) <= abs a
+    => transport2 (\lam x y => abs x <= abs y) (pmap (\lam z => trunc a - z) trunc_zro *> minus_zro) minus_zro (trunc-lipschitz {_} {a} {0})
+
+  \lemma IsBounded_trunc {a : E} (p : IsBounded a) : IsBounded (trunc a)
+    => IsBounded_<= abs_trunc<= p
+
+  \lemma IsUnderUnit-below {u : E} (u>=0 : 0 <= u) (uU : IsUnderUnit u) : IsBelow u 1
+    => (<=-less RatField.zro<ide, inP (u, u>=0, uU, =_<= (inv ide_*q)))
+
+  -- | Positive elements under the unit are bounded.
+  \lemma IsUnderUnit-bounded {u : E} (u>=0 : 0 <= u) (uU : IsUnderUnit u) : IsBounded u
+    => inP (1, transportInv (IsBelow __ 1) (abs-ofPos u>=0) (IsUnderUnit-below u>=0 uU))
+
+  -- | Truncation at level `r > 0`: `τ_r x = r τ(x/r)`.
+  \func truncAt (r : Rat) (x : E) : E
+    => r *q trunc (RatField.finv r *q x)
+
+  \lemma truncAt-bound {r : Rat} (r>0 : 0 < r) {x : E} : truncAt r x <= x
+    => <=_*q-right (<=-less r>0) trunc-bound <=∘ =_<= (inv *q-assoc *> pmap (*q x) (RatField.finv-right $ RatField.>_/= r>0) *> ide_*q)
+
+  \lemma truncAt-below {r : Rat} (r>0 : 0 < r) {x : E} : IsBelow (truncAt r x) r
+    => (<=-less r>0, inP (trunc (part+ (RatField.finv r *q x)), trunc-pos join-right, trunc-idemp, <=_*q-right (<=-less r>0) (trunc-mono join-left)))
+
+  \lemma truncAt-pos {r : Rat} (r>0 : 0 < r) {x : E} (x>=0 : 0 <= x) : 0 <= truncAt r x
+    => *q_>=0 (<=-less r>0) (trunc-pos (*q_>=0 (<=-less (RatField.finv>0 r>0)) x>=0))
+
+  \lemma IsBounded-truncAt {r : Rat} (r>0 : 0 < r) {x : E} (x>=0 : 0 <= x) : IsBounded (truncAt r x)
+    => inP (r, transportInv (IsBelow __ r) (abs-ofPos (truncAt-pos r>0 x>=0)) (truncAt-below r>0))
+
+  -- | `τ_r x` is the greatest element below `x` and below `r·1`.
+  \lemma truncAt-greatest {r : Rat} (r>0 : 0 < r) {x y : E} (p : IsBelow y r) (y<=x : y <= x) : y <= truncAt r x
+    => \case p.2 \with {
+      | inP (u,_,uU,yu) => <=_*q-rotate-right r>0 $ meet-univ (<=_*q-right (<=-less $ RatField.finv>0 r>0) y<=x) (<=_*q-rotate_finv-left r>0 yu)
+          <=∘ meet-monotone <=-refl (=_<= (inv uU)) <=∘ trunc-assoc
+    }
+
+  -- | `τ_r` is monotone in the level.
+  \lemma truncAt-level-mono {r r' : Rat} (r>0 : 0 < r) (r<=r' : r RatField.<= r') {x : E} : truncAt r x <= truncAt r' x
+    => truncAt-greatest (r>0 <∘l r<=r') (IsBelow-level r<=r' (truncAt-below r>0)) (truncAt-bound r>0)
+
+  -- | `τ_r` is 1-Lipschitz.
+  \lemma truncAt-lipschitz {r : Rat} (r>0 : 0 < r) {a b : E} : abs (truncAt r a - truncAt r b) <= abs (a - b)
+    => =_<= (pmap abs (inv toRatModule.*c-ldistr_-) *> abs_*q>=0 (<=-less r>0)) <=∘ <=_*q-right (<=-less r>0) trunc-lipschitz
+        <=∘ =_<= (inv (abs_*q>=0 (<=-less r>0)) *> pmap abs (toRatModule.*c-ldistr_- *> pmap2 (-) (*q-finv-cancel (RatField.>_/= r>0)) (*q-finv-cancel (RatField.>_/= r>0))))
+
+  -- | `x ≤ r·1` if and only if `τ_r x = x`.
+  \lemma IsBelow_truncAt {r : Rat} (r>0 : 0 < r) {x : E} : IsBelow x r <-> truncAt r x = x
+    => (\lam p => <=-antisymmetric (truncAt-bound r>0) (truncAt-greatest r>0 p <=-refl), \lam q => transport (IsBelow __ r) q (truncAt-below r>0))
+
+  -- | The clamping of {x} to `[-r,r]`, that is, the clipping of {x} at $\tau_r |x|$.
+  \func bclip (r : Rat) (x : E) : E
+    => clip (truncAt r (abs x)) x
+
+  \lemma bclip-below {r : Rat} (r>0 : 0 < r) {x : E} : IsBelow (abs (bclip r x)) r
+    => IsBelow_<= (=_<= (clip-abs-eq (truncAt-pos r>0 abs>=0)) <=∘ meet-right) (truncAt-below r>0)
+
+  \lemma bclip-abs {r : Rat} (r>0 : 0 < r) {x : E} : abs (bclip r x) <= abs x
+    => =_<= (clip-abs-eq (truncAt-pos r>0 abs>=0)) <=∘ meet-left
+
+  -- | Clamping does not change an element bounded by `r`.
+  \lemma bclip-id {r : Rat} (r>0 : 0 < r) {x : E} (p : IsBelow (abs x) r) : bclip r x = x
+    => clip-id (=_<= (inv ((IsBelow_truncAt r>0).1 p)))
+
+  -- | If `x ≥ 0` and `x/r` is under the unit, then `x ≤ r·1`.
+  \lemma IsBelow-unit {x : E} {r : Rat} (r>0 : 0 < r) (x>=0 : 0 <= x) (p : IsUnderUnit (RatField.finv r *q x)) : IsBelow x r
+    => (<=-less r>0, inP (RatField.finv r *q x, *q_>=0 (<=-less $ RatField.finv>0 r>0) x>=0, p, =_<= (inv (*q-finv-cancel (RatField.>_/= r>0)))))
+
+  -- | Fullness: wherever `x` exceeds `τ_r x`, the truncation is full.
+  \lemma truncAt-full {r : Rat} (r>0 : 0 < r) {x y : E} (p : IsBelow y r) : (x - truncAt r x) ∧ part+ (y - truncAt r x) = 0
+    => \let t => truncAt r x
+       \in \have | z>=0 : 0 <= (x - t) ∧ part+ (y - t) => meet-univ (to>=0 (truncAt-bound r>0)) join-right
+                 | tz<=x : t + (x - t) ∧ part+ (y - t) <= x => <=_+ <=-refl meet-left <=∘ =_<= equation.abGroup
+                 | tz<=ty : t + (x - t) ∧ part+ (y - t) <= t ∨ y => <=_+ <=-refl meet-right <=∘ =_<= (join_+-left *> pmap2 (∨) equation.abGroup zro-right *> join-comm)
+       \in <=-antisymmetric (<=_+-cancel-left t $ truncAt-greatest r>0 (IsBelow_<= tz<=ty (IsBelow_join (truncAt-below r>0) p)) tz<=x <=∘ =_<= (inv zro-right)) z>=0
+
+  -- | If `0 ≤ g ≤ (r+t)·1`, then `g - τ_r g ≤ t·1`.
+  \lemma truncAt-peel {r t : Rat} (r>0 : 0 < r) (t>=0 : RatField.zro RatField.<= t) {g : E} (g>=0 : 0 <= g) (p : IsBelow g (r RatField.+ t)) : IsBelow (g - truncAt r g) t
+    => \let | s => r RatField.+ t
+            | l => r RatField.* RatField.finv s
+            | m => t RatField.* RatField.finv s
+       \in \have | s>0 : 0 < s => linarith
+                 | fs>=0 : RatField.zro RatField.<= RatField.finv s => <=-less (RatField.finv>0 s>0)
+                 | lm : l RatField.+ m = 1 => inv RatField.rdistr *> RatField.finv-right (RatField.>_/= s>0)
+                 | ls : l RatField.* s = r => RatField.*-assoc *> pmap (r RatField.*) (RatField.finv-left $ RatField.>_/= s>0) *> RatField.ide-right
+                 | ms : m RatField.* s = t => RatField.*-assoc *> pmap (t RatField.*) (RatField.finv-left $ RatField.>_/= s>0) *> RatField.ide-right
+                 | l>=0 : RatField.zro RatField.<= l => RatField.<=_*_positive_positive (<=-less r>0) fs>=0
+                 | m>=0 : RatField.zro RatField.<= m => RatField.<=_*_positive_positive t>=0 fs>=0
+                 | lg<=g : l *q g <= g => <=_*q-left {_} {l} {1} linarith g>=0 <=∘ =_<= ide_*q
+                 | lg<=tg : l *q g <= truncAt r g => truncAt-greatest r>0 (transport (IsBelow _) ls (IsBelow_*q l>=0 p)) lg<=g
+                 | gm : g - l *q g = m *q g => equation.abGroup *> pmap (\lam z => z - l *q g) (inv ide_*q *> pmap (*q g) (inv lm) *> toRatModule.*c-rdistr) *> equation.abGroup
+       \in IsBelow_<= (<=_+ <=-refl (negative_<= lg<=tg) <=∘ =_<= gm) (transport (IsBelow _) ms (IsBelow_*q m>=0 p))
+
+  -- | The key inequality `h - τ_r f ≤ (h - f)⁺ ∨ (h⁺ - τ_r h⁺)`.
+  \lemma truncAt-key {r : Rat} (r>0 : 0 < r) {h f : E} : h - truncAt r f <= part+ (h - f) ∨ (part+ h - truncAt r (part+ h))
+    => from<=0 $ =_<= minus-join <=∘ meet-monotone
+        (<=_+ <=-refl (negative_<= join-left) <=∘ =_<= equation.abGroup)
+        (=_<= equation.abGroup <=∘ <=_+ (to<=0 join-left) <=-refl <=∘ =_<= zro-left <=∘ join-left)
+        <=∘ =_<= (truncAt-full r>0 {f} {truncAt r (part+ h)} (truncAt-below r>0))
 
   \lemma trunc_*q-boolean_<=1 {q : Rat} (q<=1 : q RatField.<= 1) {e : E} (p : IsBoolean e) : IsUnderUnit (q *q e)
     => InUnderUnit_<= (<=_*q-left q<=1 (IsBoolean>=0 p) <=∘ =_<= ide_*q) (IsBoolean-trunc p)
@@ -210,6 +403,18 @@
   \override Cod : TruncRieszSpace
 
   | func-trunc {x : Dom} : func (trunc x) = trunc (func x)
+
+  \lemma func-truncAt {r : Rat} {x : Dom} : func (TruncRieszSpace.truncAt r x) = TruncRieszSpace.truncAt r (func x)
+    => func-*q *> pmap (r QModule.*q) (func-trunc *> pmap TruncRieszSpace.trunc func-*q)
+
+  \lemma func-bclip {r : Rat} {x : Dom} : func (TruncRieszSpace.bclip r x) = TruncRieszSpace.bclip r (func x)
+    => func-clip *> pmap (LatticeAbGroup.clip __ (func x)) (func-truncAt *> pmap (TruncRieszSpace.truncAt r) func-abs)
+
+  \lemma func-IsBelow {x : Dom} {r : Rat} (p : TruncRieszSpace.IsBelow x r) : TruncRieszSpace.IsBelow (func x) r
+    => (p.1, TruncP.map p.2 \lam s => (func s.1, transport (__ <= func s.1) func-zro (func-<= s.2), inv func-trunc *> pmap func s.3, func-<= s.4 <=∘ =_<= func-*q))
+
+  \lemma func-IsBounded {x : Dom} (p : TruncRieszSpace.IsBounded x) : TruncRieszSpace.IsBounded (func x)
+    => \case p \with { | inP (M,xM) => inP (M, transport (TruncRieszSpace.IsBelow __ M) func-abs (func-IsBelow xM)) }
 } \where {
   \func id {X : TruncRieszSpace} : TruncRieszSpaceHom X X \cowith
     | RieszSpaceHom => RieszSpaceHom.id
@@ -218,4 +423,34 @@
   \func \fixl 8 compose \alias \infixl 8 ∘ {X Y Z : TruncRieszSpace} (g : TruncRieszSpaceHom Y Z) (f : TruncRieszSpaceHom X Y) : TruncRieszSpaceHom X Z \cowith
     | RieszSpaceHom => g RieszSpaceHom.∘ f
     | func-trunc => pmap g func-trunc *> func-trunc
+}
+
+\class BoundedTruncRieszSpace \extends TruncRieszSpace {
+  | trunc-bounded (a : E) : ∃ (M : Rat) (IsBelow (abs a) M)
+  | trunc-archimedean {a : E} : (\Pi (n : Nat) -> IsUnderUnit (n *n a)) -> a <= 0
+
+  \lemma archimedean {a b : E} (p : \Pi (n : Nat) -> n *n a <= b) : a <= 0
+    => \case trunc-bounded b \with {
+      | inP (M,hb) => \have | (N,M<N) => rat_natBound M
+                            | M<=N : M RatField.<= suc N RatField.*n 1 => transport (M RatField.<=) (RatField.natCoef_*n {suc N}) linarith
+                      \in trunc-archimedean \lam k => IsBelow-one $ IsBelow_*n-div {_} {suc N} (\case __) $
+                            IsBelow-level M<=N $ transport (IsBelow __ M) (*n-assoc {_} {suc N} {k} {a}) $ IsBelow_<= (p (suc N Nat.* k) <=∘ abs>=id) hb
+    }
+
+  -- | The set of levels {k} with `x ≤ k·1` is closed: if `n x ≤ (1 + n k)·1` for all `n > 0`, then `x ≤ k·1`.
+  \lemma IsBelow-closed {x : E} {k : Rat} (k>=0 : RatField.zro RatField.<= k)
+                        (p : \Pi (n : Nat) -> IsBelow (suc n *n x) (1 RatField.+ suc n RatField.*n k)) : IsBelow x k
+    => \case LinearOrder.<=-dec k>=0 \with {
+      | inl k>0 => IsBelow_<= (join-left {_} {x} {0}) $ IsBelow_<= (from<=0 $ trunc-archimedean \case \elim __ \with {
+        | 0 => trunc_zro
+        | suc n =>
+          \have eN : suc n RatField.*n RatField.finv (suc n) = 1 => inv RatField.natCoef_*_*n *> RatField.finv-right (natRat/=0 {suc n} (\case __))
+          \in IsBelow-one $ transport (IsBelow _) eN $ IsBelow_*n {_} {suc n} $ truncAt-peel k>0 (RatField.finv>=0 (fromNat_>=0 {suc n})) join-right $
+              IsBelow_*n-div {_} {suc n} (\case __) $ transport2 IsBelow (part+_*n {_} {suc n} {x}) (RatField.+-comm *> pmap (_ RatField.+) (inv eN) *> inv (RatField.*n-ldistr {suc n} {k} {RatField.finv (suc n)})) (IsBelow-part+ (p n))
+      }) (truncAt-below k>0 {part+ x})
+      | inr k=0 => IsBelow-nonpos (join-left {_} {x} {0} <=∘ trunc-archimedean \case \elim __ \with {
+        | 0 => trunc_zro
+        | suc n => IsBelow-one $ transport2 IsBelow (part+_*n {_} {suc n} {x}) (pmap (\lam z => 1 RatField.+ suc n RatField.*n z) (inv k=0) *> pmap (1 RatField.+) (RatField.*n_zro {suc n}) *> RatField.zro-right) (IsBelow-part+ (p n))
+      }) k>=0
+    }
 }

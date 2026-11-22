@@ -15,8 +15,6 @@
 \open ClosurePrecoverSpace
 \open Completion
 
-\class CompleteUniformSpace \extends UniformSpace, CompleteCoverSpace
-
 \func dense-uniform-lift {X Y : UniformSpace} {Z : CompleteUniformSpace} (f : UniformMap X Y) (fd : f.IsDenseUniformEmbedding) (g : UniformMap X Z) : UniformMap Y Z \cowith
   | CoverMap => dense-lift f (fd.1, f.embedding->coverEmbedding fd.2) g
   | func-uniform Dc => uniform-refine (Y.<=<-regular $ fd.2 $ g.func-uniform $ Z.<=<-regular Dc) \lam {V'} (inP (V, inP (U, inP (W', inP (W, DW, W'<=<W), p), q), V'<=<V)) =>

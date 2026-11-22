@@ -16,6 +16,7 @@
 \import Meta
 \import Order.Biordered
 \import Order.LinearOrder
+\import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
@@ -62,6 +63,38 @@
 
   \lemma <=_+-right {a b c d : E} (p : a < c) (q : b <= d) : a + b < c + d
     => <_+-left b p <∘l <=_+ <=-refl q
+
+  \lemma <_+-split {a b c d : E} (p : a + b < c + d) : a < c || b < d
+    => \case <-comparison (c + b) p \with {
+      | byLeft q => byLeft (<_+-cancel-right b q)
+      | byRight q => byRight (<_+-cancel-left c q)
+    }
+
+  \lemma *n_< {n : Nat} (n>0 : 0 NatOrder.< n) {a b : E} (a<b : a < b) : n *n a < n *n b \elim n
+    | suc n => <=_+-left (*n_<= (LinearOrder.<_<= a<b)) a<b
+
+  \lemma *n_>0 {n : Nat} (n>0 : 0 NatOrder.< n) {a : E} (a>0 : 0 < a) : 0 < n *n a
+    => transport (< _) *n_zro (*n_< n>0 a>0)
+
+  \lemma *n_<-cancel {n : Nat} {a b : E} (p : n *n a < n *n b) : a < b \elim n
+    | 0 => absurd (<-irreflexive p)
+    | suc n => \case <_+-split p \with {
+      | byLeft q => *n_<-cancel q
+      | byRight q => q
+    }
+
+  \lemma <_+-dec {a b : E} (a+b>0 : 0 < a + b) : 0 < a || 0 < b
+    => \case <-comparison a a+b>0 \with {
+      | byLeft a>0 => byLeft a>0
+      | byRight a<a+b => byRight $ <_+-cancel-left a $ transportInv (< _) zro-right a<a+b
+    }
+
+  \lemma <_BigSum-dec {l : Array E} (p : 0 < BigSum l) : ∃ (j : Fin l.len) (0 < l j) \elim l
+    | nil => absurd (<-irreflexive p)
+    | a :: l => \case LinearlyOrderedAbMonoid.<_+-dec p \with {
+      | byLeft a>0 => inP (0, a>0)
+      | byRight q => TruncP.map (<_BigSum-dec q) \lam s => (suc s.1, s.2)
+    }
 
   \lemma BigSum_>0 {l : Array E} (q : \Pi (j : Fin l.len) -> 0 <= l j) (p : ∃ (j : Fin l.len) (0 < l j)) : 0 < BigSum l \elim l, p
     | nil, inP ((),_)
@@ -270,6 +303,21 @@
       | byRight (_,r) => r
     }
 
+  \lemma <_*_positive-dec {x y : E} (xy>0 : 0 < x * y) : (\Sigma (0 < x) (0 < y)) || (\Sigma (x < 0) (y < 0))
+    => <_*-cancel-left (transportInv (< _) zro_*-right xy>0)
+
+  \lemma <_*_positive-dec-left {x y : E} (x>=0 : 0 <= x) (xy>0 : 0 < x * y) : \Sigma (0 < x) (0 < y)
+    => \case <_*_positive-dec xy>0 \with {
+      | byLeft r => r
+      | byRight r => absurd (x>=0 r.1)
+    }
+
+  \lemma <_*_positive-dec-right {x y : E} (y>=0 : 0 <= y) (xy>0 : 0 < x * y) : \Sigma (0 < x) (0 < y)
+    => \case <_*_positive-dec xy>0 \with {
+      | byLeft r => r
+      | byRight r => absurd (y>=0 r.2)
+    }
+
   \lemma square_>=0 {x : E} : 0 <= x * x
     => \lam xx<0 => \case <_*-cancel-left (transportInv (_ <) zro_*-right xx<0) \with {
       | byLeft (x>0,x<0) => <-irreflexive (x<0 <∘ x>0)
@@ -315,8 +363,6 @@
   \lemma <=_Inv-cancel-left {x y z : E} (xi : Inv x) (x>=0 : 0 <= x) (p : x * y <= x * z) : y <= z
     => transport2 (<=) (inv *-assoc *> pmap (* y) xi.inv-left *> ide-left) (inv *-assoc *> pmap (* z) xi.inv-left *> ide-left) $ <=_*_positive-right (>=0_Inv xi x>=0) p
 
-  -- | Cancel a positive right factor from a `<=`. Unlike `<=_Inv-cancel-right` this needs only
-  -- positivity of the factor, not an inverse for it.
   \lemma <=_*-cancel-right {x y z : E} (x>0 : 0 < x) (p : y * x <= z * x) : y <= z
     => \lam z<y => <-irreflexive (<_*_positive-left z<y x>0 <∘l p)
 
@@ -657,6 +703,9 @@
 
   \lemma pinv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < pinv x x>0
     => transport (< _) pinv_ide $ pinv_< x>0 zro<ide x<1
+
+  \lemma pinv<=1 {x : E} (x>0 : 0 < x) (x>=1 : 1 <= x) : pinv x x>0 <= 1
+    => =_<= (inv ide-right) <=∘ <=_*_positive-right (<=-less (pinv>0 x>0)) x>=1 <=∘ =_<= (pinv-left x>0)
 
   \lemma pinv_ide : pinv 1 zro<ide = 1
     => inv ide-left *> pinv-right zro<ide

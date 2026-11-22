@@ -24,18 +24,46 @@
       (j -' i, pos<pos.conv $ transportInv (_ <) (-'=- $ <=-less i<j) linarith, cancel_*-right (G.pow g i) $ inv G.pow_+ *> pmap (G.pow g) (unpos $ pmap (+ pos i) (-'=- $ <=-less i<j) *> linarith) *> inv p *> inv ide-left)
 
 \sfunc order {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G) : Nat
-  => (aux g).1
+  => (tuple g).1
   \where {
-    \func aux {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G)
+    \protected \sfunc tuple {G : Group} {P : PigeonholeSet G} {D : DecSet G} (g : G)
       : \Sigma (n : Nat) (\Sigma (n > 0) (G.pow g n = 1)) (\Pi (m : Nat) -> (\Sigma (m > 0) (G.pow g m = 1)) -> n <= m)
       => Contr.center {search _ (\lam n => later \have t => LinearOrder.<-dec 0 n \in decide) $ TruncP.map (hasFiniteOrder g) \lam t => (t.1, (t.2, t.3))}
   }
 
 \lemma order>0 {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} : order g > 0
-  => rewrite (\peval order g) (order.aux g).2.1
+  => rewrite (\peval order g) (order.tuple g).2.1
 
 \lemma order_pow {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} : G.pow g (order g) = 1
-  => rewrite (\peval order g) (order.aux g).2.2
+  => rewrite (\peval order g) (order.tuple g).2.2
 
 \lemma order-min {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {m : Nat} (p : m > 0) (q : G.pow g m = 1) : order g <= m
-  => rewrite (\peval order g) $ (order.aux g).3 m (p,q)
+  => rewrite (\peval order g) $ (order.tuple g).3 m (p,q)
+
+-- | Powers of {g} are periodic with period `order g`.
+\lemma pow_mod-order {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {n : Nat} : G.pow g n = G.pow g (n Nat.mod order g)
+  => pmap (G.pow g) (inv $ Nat.divModProp n (order g)) *> G.pow_+ *> pmap (`* _) (G.pow_* *> pmap (G.pow __ _) order_pow *> G.pow_ide) *> ide-left
+
+-- | If `g^n = 1`, then the order of {g} divides {n}.
+\func order-div {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {n : Nat} (p : G.pow g n = 1) : Monoid.LDiv (order g) n
+  => mod_div $ \case NatSemiring.decideEq (n Nat.mod order g) 0 \with {
+    | yes e => e
+    | no q => absurd $ <-irreflexive $ order-min (nonZero>0 q) (inv pow_mod-order *> p) <∘r mod<right (/=-sym $ NatSemiring.<_/= order>0)
+  }
+
+-- | If the order of {g} divides {n}, then `g^n = 1`.
+\lemma pow_order-mult {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {n : Nat} (d : Monoid.LDiv (order g) n) : G.pow g n = 1
+  => pmap (G.pow g) (inv d.inv-right) *> G.pow_* *> pmap (G.pow __ _) order_pow *> G.pow_ide
+
+-- | Different powers below the order are distinct.
+\lemma pow-inj {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {i j : Nat} (i<o : i < order g) (j<o : j < order g) (p : G.pow g i = G.pow g j) : i = j
+  => \case LinearOrder.trichotomy i j \with {
+    | less i<j => absurd (aux i<j j<o p)
+    | equals i=j => i=j
+    | greater j<i => absurd (aux j<i i<o (inv p))
+  }
+  \where
+    \private \lemma aux {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {i j : Nat} (i<j : i < j) (j<o : j < order g) (p : G.pow g i = G.pow g j) : Empty
+      => \have | e : i + (j -' i) = j => <=_exists (<=-less i<j)
+               | q : G.pow g (j -' i) = 1 => cancel_*-left (G.pow g i) $ inv G.pow_+ *> pmap (G.pow g) e *> inv p *> inv ide-right
+         \in <-irreflexive $ order-min (pos<pos.conv $ transportInv (_ <) (-'=- $ <=-less i<j) linarith) q <∘r (-'<=id <∘r j<o)

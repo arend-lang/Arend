@@ -1,0 +1,170 @@
+{- | The unitization `A = L ⊕ ℚ1` of a truncated Riesz space `L`.
+ -   `(a,r) ≤ (b,s)` means `a - b ≤ (s - r)·1`, that is, {TruncRieszSpace.IsBelow}.
+ -
+ -   Public API:
+ -   * {PreUnitizationRiesz}: `A` is a Riesz space for every truncated Riesz space `L`, with the positive parts
+ -     {unitization-part+-pos}, {unitization-part+-zero}, {unitization-part+-neg};
+ -   * {UnitizationRiesz}: if `L` is a {BoundedTruncRieszSpace}, then `A` is Archimedean with strong unit `(0,1)`;
+ -   * {unitization-inc}: the Riesz embedding `a ↦ (a,0)`; its image is an ℓ-ideal ({unitization-ideal}),
+ -     the kernel of the evaluation at the point at infinity ({unitization-point}),
+ -     and the truncation becomes the meet with the unit ({unitization-trunc}).
+ -
+ -   The lattice structure comes from {TruncRieszSpace.truncAt-key} and {TruncRieszSpace.truncAt-peel},
+ -   the Archimedean property from Ball's axiom (T3) via {BoundedTruncRieszSpace.IsBelow-closed}.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.Product
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.RieszSpace.UnitRieszSpace
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Arith.Rat
+\import Function.Meta
+\import Logic
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+
+\func PreUnitizationRiesz (L : TruncRieszSpace) : RieszSpace (\Sigma L Rat)
+  => RieszSpace.fromPart+ {UnitizationModule L} \lam x => \case RatField.trichotomy RatField.zro x.2 \with {
+    | less r>0 => \have u => part+-pos r>0 \in inP ((L.part+ x.1 - L.truncAt x.2 (L.part- x.1), x.2), u.1, u.2, u.3)
+    | equals r=0 => \have u => part+-zero r=0 \in inP ((L.part+ x.1, x.2), u.1, u.2, u.3)
+    | greater r<0 => \have u => part+-neg r<0 \in inP ((L.part+ x.1 - L.truncAt (RatField.negative x.2) (L.part+ x.1), RatField.zro), u.1, u.2, u.3)
+  }
+  \where {
+    \func UnitizationModule (L : TruncRieszSpace) : PosetQModule (\Sigma L Rat) \cowith
+      | QModule => QModule.fromRatModule (ProductLModule RatField (QModule.toRatModule {L}) (RingLModule RatField))
+      | <= x y => L.IsBelow (x.1 - y.1) (y.2 - x.2)
+      | <=-refl => transport2 L.IsBelow (inv L.negative-right) (inv RatField.negative-right) (L.IsBelow_zro RatField.<=-refl)
+      | <=-transitive p q => transport2 L.IsBelow equation.abGroup equation.cRing (L.IsBelow_+ p q)
+      | <=-antisymmetric {x} {y} p q =>
+        \have | p1 => p.1
+              | q1 => q.1
+        \in ext (L.<=-antisymmetric (L.from<=0 $ L.IsBelow<=0 p linarith) (L.from<=0 $ L.IsBelow<=0 q linarith), linarith)
+      | <=_+ p q => transport2 L.IsBelow equation.abGroup equation.cRing (L.IsBelow_+ p q)
+      | <=_*n-div {n} n/=0 {a} p => L.IsBelow_*n-div n/=0 $ transport2 L.IsBelow
+          (inv $ L.*n-ldistr_- *> pmap (\lam (z : L) => z - n L.*n a.1) (L.*n_zro {n}))
+          (inv $ RatField.*n-ldistr_- {n} {a.2} {RatField.zro} *> pmap (\lam (z : Rat) => n RatField.*n a.2 - z) (RatField.*n_zro {n}))
+          (transport (\lam (z : \Sigma L Rat) => L.IsBelow (L.zro - z.1) (z.2 - RatField.zro)) (ProductAddMonoid.*n-char {L} {RatField} {n} {a}) p)
+
+    \lemma part+-unique {L : TruncRieszSpace} {x b : \Sigma L Rat} (u : IsUpper x b) : LatticeAbGroup.part+ {PreUnitizationRiesz L} x = b
+      => <=-antisymmetric {PreUnitizationRiesz L} (join-univ {PreUnitizationRiesz L} u.1 u.2) (u.3 (join-left {PreUnitizationRiesz L}) (join-right {PreUnitizationRiesz L}))
+
+    \func IsUpper {L : TruncRieszSpace} (x b : \Sigma L Rat) : \Prop
+      => \Sigma (L.IsBelow (x.1 - b.1) (b.2 - x.2)) (L.IsBelow (L.zro - b.1) (b.2 - RatField.zro))
+                (\Pi {c : \Sigma L Rat} -> L.IsBelow (x.1 - c.1) (c.2 - x.2) -> L.IsBelow (L.zro - c.1) (c.2 - RatField.zro) -> L.IsBelow (b.1 - c.1) (c.2 - b.2))
+
+    \lemma part+-pos {L : TruncRieszSpace} {a : L} {r : Rat} (r>0 : (0 : Rat) < r) : IsUpper (a,r) (L.part+ a - L.truncAt r (L.part- a), r)
+      => (L.IsBelow-nonpos (=_<= (pmap (\lam z => z - (L.part+ a - L.truncAt r (L.part- a))) (inv L.parts_-) *> equation.abGroup) <=∘ L.to<=0 (L.truncAt-bound r>0)) linarith,
+          L.IsBelow-mono (=_<= equation.abGroup <=∘ <=_+ (L.negative<=0 L.join-right) <=-refl <=∘ =_<= zro-left) linarith (L.truncAt-below r>0),
+          \lam {c} p1 p2 =>
+            \have hs : L.IsBelow (L.part+ (L.part+ a - c.1)) (r RatField.+ (c.2 - r))
+                    => L.IsBelow-part+ $ transport (L.IsBelow __ _) (inv L.join_+-right) $ L.IsBelow_join (L.IsBelow-level linarith p1) (L.IsBelow-level linarith p2)
+            \in L.IsBelow-mono (=_<= equation.abGroup <=∘ L.truncAt-key r>0 {L.part+ a - c.1} {L.part- a} <=∘ L.join-monotone (=_<= (pmap L.part+ (equation.abGroup *> pmap (\lam (z : L) => z - c.1) L.parts_-))) <=-refl) RatField.<=-refl
+                  (L.IsBelow_join (L.IsBelow-part+ p1) (L.truncAt-peel r>0 p1.1 L.join-right hs)))
+
+    \lemma part+-zero {L : TruncRieszSpace} {a : L} {r : Rat} (r=0 : RatField.zro = r) : IsUpper (a,r) (L.part+ a, r)
+      => (L.IsBelow-nonpos (L.to<=0 L.join-left) linarith,
+          L.IsBelow-nonpos (=_<= zro-left <=∘ L.negative<=0 L.join-right) linarith,
+          \lam {c} p1 p2 => transport (L.IsBelow __ _) (inv L.join_+-right) $ L.IsBelow_join p1 (L.IsBelow-level linarith p2))
+
+    \lemma part+-neg {L : TruncRieszSpace} {a : L} {r : Rat} (r<0 : r < (0 : Rat)) : IsUpper (a,r) (L.part+ a - L.truncAt (RatField.negative r) (L.part+ a), RatField.zro)
+      => \have k>0 : (0 : Rat) < RatField.negative r => linarith
+         \in (L.IsBelow-mono (=_<= equation.abGroup <=∘ <=_+ (L.to<=0 L.join-left) <=-refl <=∘ =_<= zro-left) linarith (L.truncAt-below k>0),
+              L.IsBelow-nonpos (=_<= equation.abGroup <=∘ L.to<=0 (L.truncAt-bound k>0)) linarith,
+              \lam {c} p1 p2 =>
+                \have hs : L.IsBelow (L.part+ (L.part+ a - c.1)) (RatField.negative r RatField.+ (c.2 - RatField.zro))
+                        => L.IsBelow-part+ $ transport (L.IsBelow __ _) (inv L.join_+-right) $ L.IsBelow_join (L.IsBelow-level linarith p1) (L.IsBelow-level linarith p2)
+                \in L.IsBelow-mono (=_<= equation.abGroup <=∘ L.truncAt-key k>0 {L.part+ a - c.1} {L.part+ a} <=∘ L.join-monotone (=_<= (pmap L.part+ equation.abGroup)) <=-refl) RatField.<=-refl
+                      (L.IsBelow_join (L.IsBelow-part+ p2) (L.truncAt-peel k>0 p2.1 L.join-right hs)))
+  }
+
+-- | Positive part of `(a,r)` for `r > 0`: `(a⁺ - τ_r(a⁻), r)`.
+\lemma unitization-part+-pos {L : TruncRieszSpace} {a : L} {r : Rat} (r>0 : (0 : Rat) < r)
+  : LatticeAbGroup.part+ {PreUnitizationRiesz L} (a,r) = (L.part+ a - L.truncAt r (L.part- a), r)
+  => PreUnitizationRiesz.part+-unique (PreUnitizationRiesz.part+-pos r>0)
+
+-- | Positive part of `(a,0)`: `(a⁺, 0)`.
+\lemma unitization-part+-zero {L : TruncRieszSpace} {a : L} {r : Rat} (r=0 : RatField.zro = r)
+  : LatticeAbGroup.part+ {PreUnitizationRiesz L} (a,r) = (L.part+ a, r)
+  => PreUnitizationRiesz.part+-unique (PreUnitizationRiesz.part+-zero r=0)
+
+-- | Positive part of `(a,r)` for `r < 0`: `(a⁺ - τ_{-r}(a⁺), 0)`.
+\lemma unitization-part+-neg {L : TruncRieszSpace} {a : L} {r : Rat} (r<0 : r < (0 : Rat))
+  : LatticeAbGroup.part+ {PreUnitizationRiesz L} (a,r) = (L.part+ a - L.truncAt (RatField.negative r) (L.part+ a), RatField.zro)
+  => PreUnitizationRiesz.part+-unique (PreUnitizationRiesz.part+-neg r<0)
+
+-- | The second coordinate is a Riesz homomorphism `A → ℚ`, the evaluation at the point at infinity.
+\lemma unitization-point {L : TruncRieszSpace} {x : \Sigma L Rat} : (LatticeAbGroup.part+ {PreUnitizationRiesz L} x).2 = x.2 RatField.∨ RatField.zro
+  => \case RatField.trichotomy RatField.zro x.2 \with {
+    | less r>0 => pmap __.2 (unitization-part+-pos r>0) *> inv (RatField.join-comm *> RatField.join_<= (RatField.<=-less r>0))
+    | equals r=0 => pmap __.2 (unitization-part+-zero r=0) *> inv (RatField.join-comm *> RatField.join_<= (=_<= r=0))
+    | greater r<0 => pmap __.2 (unitization-part+-neg r<0) *> inv (RatField.join_<= (RatField.<=-less r<0))
+  }
+
+-- | The embedding `a ↦ (a,0)`.
+\func unitization-inc {L : TruncRieszSpace} : RieszSpaceHom L (PreUnitizationRiesz L) \cowith
+  | func a => (a, RatField.zro)
+  | func-+ => ext (idp, inv RatField.zro-left)
+  | func-<= p => L.IsBelow-nonpos (L.to<=0 p) (=_<= (inv (RatField.negative-right {RatField.zro})))
+  | func-join {a} {b} => ext (L.join_part+, inv RatField.zro-left) *> pmap (\lam z => z AddMonoid.+ {PreUnitizationRiesz L} (b, RatField.zro)) (inv $ unitization-part+-zero (inv (RatField.negative-right {RatField.zro})))
+      *> inv (LatticeAbGroup.join_part+ {PreUnitizationRiesz L})
+
+-- | The image of `L`, that is, the elements with `x.2 = 0`, is an ℓ-ideal of `A`.
+\lemma unitization-ideal {L : TruncRieszSpace} : LatticeAbGroup.IsSolid {PreUnitizationRiesz L} \lam x => x.2 = RatField.zro
+  => \lam {y} {x} x0 p => solid-core p.1 (abs-char {L} {y}) (abs-char {L} {x} *> pmap (\lam t => (t RatField.∨ RatField.zro) RatField.+ (RatField.negative t RatField.∨ RatField.zro)) x0)
+  \where {
+    \lemma solid-core {t a b : Rat} (l : 0 <= b - a) (ya : a = (t ∨ 0) + (negative t ∨ 0)) (xa : b = 0) : t = 0
+      => linarith (join-right {_} {t} {0}, join-right {_} {negative t} {0}, join-left {_} {t} {0}, join-left {_} {negative t} {0})
+
+    \lemma abs-char {L : TruncRieszSpace} {z : \Sigma L Rat}
+      : (LatticeAbGroup.abs {PreUnitizationRiesz L} z).2 = (z.2 RatField.∨ RatField.zro) RatField.+ (RatField.negative z.2 RatField.∨ RatField.zro)
+      => pmap __.2 (inv (LatticeAbGroup.parts_+ {PreUnitizationRiesz L})) *> pmap2 (RatField.+) unitization-point unitization-point
+  }
+
+-- | The truncation of `L` is the meet with the unit `(0,1)`.
+\lemma unitization-trunc {L : TruncRieszSpace} {a : L} : unitization-inc (L.trunc a) = MeetSemilattice.meet {PreUnitizationRiesz L} (unitization-inc a) (L.zro, 1)
+  => inv $ LatticeAbGroup.meet_part+ {PreUnitizationRiesz L} {a, RatField.zro} {L.zro, 1}
+      *> pmap (\lam (z : \Sigma L Rat) => (a, RatField.zro) AddMonoid.+ {PreUnitizationRiesz L} (AddGroup.negative {PreUnitizationRiesz L} z)) (unitization-part+-neg {L} {a L.+ L.negative L.zro} {RatField.zro RatField.+ RatField.negative 1} linarith)
+      *> ext (pmap (\lam z => a L.+ L.negative (L.part+ z L.+ L.negative (L.truncAt (RatField.negative (RatField.zro RatField.+ RatField.negative 1)) (L.part+ z)))) L.minus_zro
+                *> pmap (\lam k => a L.+ L.negative (L.part+ a L.+ L.negative (L.truncAt k (L.part+ a)))) (pmap RatField.negative RatField.zro-left *> RatField.negative-isInv)
+                *> pmap (\lam t => a L.+ L.negative (L.part+ a L.+ L.negative t)) (L.ide_*q *> pmap L.trunc (pmap (L.*q (L.part+ a)) RatField.finv_ide *> L.ide_*q))
+                *> pmap (\lam z => z L.+ L.negative (L.part+ a L.+ L.negative (L.trunc (L.part+ a)))) (inv L.parts_-) *> equation.abGroup *> inv L.trunc-spliit,
+             RatField.negative-right {RatField.zro})
+
+-- | The unitization of a bounded truncated Riesz space is an Archimedean Riesz space with strong unit `(0,1)`.
+\func UnitizationRiesz (L : BoundedTruncRieszSpace) : UnitRieszSpace (\Sigma L Rat) \cowith
+  | RieszSpace => PreUnitizationRiesz L
+  | unit => (L.zro, 1)
+  | unit-strong x => \case L.trunc-bounded x.1 \with {
+    | inP (M,hM) => \have (n,n>M) => rat_natBound (M RatField.+ x.2)
+                    \in inP (n, transportInv (\lam (z : \Sigma L Rat) => L.IsBelow (x.1 L.+ L.negative z.1) (z.2 - x.2)) (ProductAddMonoid.*n-char {L} {RatField} {n} {L.zro, 1})
+                          $ L.IsBelow-mono (=_<= (pmap (\lam t => x.1 L.+ L.negative t) L.*n_zro *> L.minus_zro)) (transport (\lam t => M RatField.<= t - x.2) (RatField.natCoef_*n {n}) (\have e : RatField.natCoef n = (n : Rat) => idp \in linarith)) (L.IsBelow_<= L.abs>=id hM))
+  }
+  | unit-archimedean {x} p =>
+    \have | q (n : Nat) : L.IsBelow (n L.*n x.1) (1 RatField.+ n RatField.*n RatField.negative x.2)
+            => transport2 L.IsBelow L.minus_zro (pmap (1 RatField.+) (inv RatField.*n_negative))
+                (transport (\lam (z : \Sigma L Rat) => L.IsBelow (z.1 L.+ L.negative L.zro) (1 RatField.+ RatField.negative z.2)) (ProductAddMonoid.*n-char {L} {RatField} {n} {x}) (p n))
+          | x2<=0 : x.2 RatField.<= RatField.zro => \case RatField.trichotomy x.2 RatField.zro \with {
+            | less x2<0 => RatField.<=-less x2<0
+            | equals x2=0 => =_<= x2=0
+            | greater x2>0 => absurd $ unit-arch-rat x2>0 \lam n => (q n).1
+          }
+    \in L.IsBelow-mono (=_<= L.minus_zro) (=_<= (inv RatField.zro-left)) $ L.IsBelow-closed {x.1} {RatField.negative x.2} linarith \lam n => q (suc n)
+  \where
+    \lemma unit-arch-rat {r : Rat} (r>0 : RatField.zro RatField.< r) (p : \Pi (n : Nat) -> RatField.zro RatField.<= 1 RatField.+ n RatField.*n RatField.negative r) : Empty
+      => \have | (n,n>r') => rat_natBound (RatField.finv r)
+               | h1 : RatField.finv r RatField.* r RatField.< RatField.natCoef n RatField.* r => RatField.<_*_positive-left n>r' r>0
+               | h2 : RatField.finv r RatField.* r = 1 => RatField.finv-left (RatField.>_/= r>0)
+               | h3 : RatField.zro RatField.<= 1 RatField.+ RatField.negative (RatField.natCoef n RatField.* r)
+                   => transport (\lam t => RatField.zro RatField.<= 1 RatField.+ t) (RatField.*n_negative *> pmap RatField.negative (inv RatField.natCoef_*_*n)) (p n)
+         \in linarith

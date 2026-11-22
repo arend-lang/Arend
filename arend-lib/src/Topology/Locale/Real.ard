@@ -2,11 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Arith.Rat
-\import Category
-\import Data.Array
-\import Data.Bool
 \import Data.Or
-\import Equiv
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -31,6 +27,8 @@
 \open MeetSemilattice
 \open JoinSemilattice
 \open LinearOrder(dec<_<=)
+\open lowerHalf (lowerHalf-char)
+\open upperHalf (upperHalf-char)
 
 \type Interval (Q : StrictPoset) => \Sigma (a b : Q) (a < b)
 
@@ -193,11 +191,20 @@
       => meet-univ <=-refl (top-univ <=∘ halves-cover c1<x) <=∘ ldistr>= <=∘ join-monotone meet-right (meet-comm =<= halves-inter <=-refl b<=c2)
 
     \lemma lowerHalf_embed<=embed {x : Rat} {c : Interval RatField} (c1<x : c.1 < x) : lowerHalf x ∧ embed c <= embed (c.1, x, c1<x)
-      => \lam {y} s => RealPres.embed-char.2 $ later ((RealPres.embed-char.1 s.2).1, lowerHalf.lowerHalf-char.1 s.1)
+      => \lam {y} s => RealPres.embed-char.2 $ later ((RealPres.embed-char.1 s.2).1, lowerHalf-char.1 s.1)
 
     \lemma lowerHalf_embed<=0 {x : Rat} {c : Interval RatField} (x<=c1 : x <= c.1) : lowerHalf x ∧ embed c <= bottom
-      => \lam {y} s => absurd $ x<=c1 $ (RealPres.embed-char.1 s.2).1 <∘r y.3 <∘l lowerHalf.lowerHalf-char.1 s.1
+      => \lam {y} s => absurd $ x<=c1 $ (RealPres.embed-char.1 s.2).1 <∘r y.3 <∘l lowerHalf-char.1 s.1
   }
+
+\lemma lowerHalf-mono {q q' : Rat} (p : q <= q') : lowerHalf q <= lowerHalf q'
+  => \lam {a} h => lowerHalf-char.2 (lowerHalf-char.1 h <=∘ p)
+
+\lemma lowerHalf-round {q : Rat} : lowerHalf q <= SJoin lowerHalf (`< q)
+  => \lam {a} h => cover-trans (byRight idp) \lam {a'} (_, a'2<a2) => cover-refl $ later $ inP (lowerHalf a'.2, SetIm-con (a'2<a2 <∘l lowerHalf-char.1 h), lowerHalf-char.2 <=-refl)
+
+\lemma lowerHalf-top : top <= SJoin lowerHalf (\lam _ => \Sigma)
+  => \lam {a} _ => cover-refl $ later $ inP (lowerHalf a.2, SetIm-con (), lowerHalf-char.2 <=-refl)
 
 \sfunc upperHalf (x : Rat) : RealLocale
   => SJoin {_} {Interval RatField} embed \lam s => x <= s.1
@@ -216,11 +223,26 @@
       => meet-univ <=-refl (top-univ <=∘ halves-cover x<c2) <=∘ ldistr>= <=∘ join-monotone (halves-inter c1<=a <=-refl) meet-right
 
     \lemma upperHalf_embed<=embed {x : Rat} {c : Interval RatField} (x<c2 : x < c.2) : upperHalf x ∧ embed c <= embed (x, c.2, x<c2)
-      => \lam {y} s => RealPres.embed-char.2 $ later (upperHalf.upperHalf-char.1 s.1, (RealPres.embed-char.1 s.2).2)
+      => \lam {y} s => RealPres.embed-char.2 $ later (upperHalf-char.1 s.1, (RealPres.embed-char.1 s.2).2)
 
     \lemma upperHalf_embed<=0 {x : Rat} {c : Interval RatField} (c2<=x : c.2 <= x) : upperHalf x ∧ embed c <= bottom
-      => \lam {y} s => absurd $ c2<=x $ upperHalf.upperHalf-char.1 s.1 <∘r y.3 <∘l (RealPres.embed-char.1 s.2).2
+      => \lam {y} s => absurd $ c2<=x $ upperHalf-char.1 s.1 <∘r y.3 <∘l (RealPres.embed-char.1 s.2).2
   }
+
+\lemma upperHalf-mono {q q' : Rat} (p : q' <= q) : upperHalf q <= upperHalf q'
+  => \lam {a} h => upperHalf-char.2 (p <=∘ upperHalf-char.1 h)
+
+\lemma upperHalf-round {q : Rat} : upperHalf q <= SJoin upperHalf (q <)
+  => \lam {a} h => cover-trans (byRight idp) \lam {a'} (a1<a'1, _) => cover-refl $ later $ inP (upperHalf a'.1, SetIm-con (upperHalf-char.1 h <∘r a1<a'1), upperHalf-char.2 <=-refl)
+
+\lemma upperHalf-top : top <= SJoin upperHalf (\lam _ => \Sigma)
+  => \lam {a} _ => cover-refl $ later $ inP (upperHalf a.1, SetIm-con (), upperHalf-char.2 <=-refl)
+
+\lemma halves-disjoint {q : Rat} : upperHalf q ∧ lowerHalf q <= bottom
+  => \lam {a} (h1,h2) => absurd $ <-irreflexive (upperHalf-char.1 h1 <∘r a.3 <∘l lowerHalf-char.1 h2)
+
+\lemma embed-halves {I : Interval RatField} : embed I = upperHalf I.1 ∧ lowerHalf I.2
+  => <=-antisymmetric (meet-univ (embed-univ (upperHalf-char.2 <=-refl)) (embed-univ (lowerHalf-char.2 <=-refl))) (halves-inter <=-refl <=-refl)
 
 \lemma halves-cover {x y : Rat} (x<y : x < y) : top <= lowerHalf y ∨ upperHalf x
   => rewrite (\peval lowerHalf y, \peval upperHalf x) \lam {z} _ => \case dec<_<= z.1 x, dec<_<= y z.2 \with {
@@ -255,7 +277,7 @@
       }
   }
 
-\func rat_real : LocaleHom (discreteLocale Rat) RealLocale
+\func loc-rat_real : LocaleHom (discreteLocale Rat) RealLocale
   => LocaleSite.adjointMap $ later \new PreorderSiteHom {
     | func p x => \Sigma (p.1 < x) (x < p.2)
     | func-<= x<=y {z} (x1<z,z<x2) => (x<=y.1 <∘r x1<z, z<x2 <∘l x<=y.2)

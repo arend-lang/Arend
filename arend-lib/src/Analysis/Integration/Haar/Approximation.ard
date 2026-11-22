@@ -1,0 +1,597 @@
+{- | Approximate Haar functionals `Λ_φ(f) = (f : φ) / (f₀ : φ)` and the approximation lemmas.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Analysis.Integration.Haar.Covering
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Set
+\import Topology.Compact
+\import Topology.Compact.CompactSupport
+\import Topology.NormedAbGroup.Real
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Urysohn
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\open LatticeAbGroup (abs)
+
+-- | `Λ_φ(f) = (f : φ) / (f₀ : φ)`.
+\func Lambda {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {phi : CompactCoverMap G} (phip : IsPositiveFun phi) (f : CompactCoverMap G) (f>=0 : \Pi (x : G) -> 0 <= f x) : Real
+  => cover-num f phi f>=0 phip * RealField.pinv (cover-num f0 phi f0p.1 phip) (cover-num-pos f0p)
+
+\lemma Lambda>=0 {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x}
+  : 0 <= Lambda f0p phip f f>=0
+  => RealField.<=_*_positive_positive cover-num>=0 (<=-less (RealField.pinv>0 _))
+
+\lemma Lambda-f0 {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} : Lambda f0p phip f0 f0p.1 = 1
+  => RealField.pinv-right _
+
+\lemma Lambda-mono {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f g : CompactCoverMap G}
+                   {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x} (p : \Pi (x : G) -> g x <= f x) : Lambda f0p phip g g>=0 <= Lambda f0p phip f f>=0
+  => RealField.<=_*_positive-left (cover-num-mono p) (<=-less (RealField.pinv>0 _))
+
+\lemma Lambda-translate {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f : CompactCoverMap G}
+                        {f>=0 : \Pi (x : G) -> 0 <= f x} (s : G) : Lambda f0p phip (CompactMap-translate s f) (\lam x => f>=0 _) = Lambda f0p phip f f>=0
+  => pmap (* _) (cover-num-translate s)
+
+\lemma Lambda-scale {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f : CompactCoverMap G}
+                    {f>=0 : \Pi (x : G) -> 0 <= f x} {a : Real} (a>=0 : 0 <= a) {af>=0 : \Pi (x : G) -> 0 <= CompactCoverMap.scale a f x}
+  : Lambda f0p phip (CompactCoverMap.scale a f) af>=0 = a * Lambda f0p phip f f>=0
+  => pmap (* _) (cover-num-scale a>=0) *> *-assoc
+
+\lemma Lambda-add {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f f' : CompactCoverMap G}
+                  {f>=0 : \Pi (x : G) -> 0 <= f x} {f'>=0 : \Pi (x : G) -> 0 <= f' x} {ff'>=0 : \Pi (x : G) -> 0 <= (f + f') x}
+  : Lambda f0p phip (f + f') ff'>=0 <= Lambda f0p phip f f>=0 + Lambda f0p phip f' f'>=0
+  => RealField.<=_*_positive-left cover-num-add (<=-less (RealField.pinv>0 _)) <=∘ =_<= RealField.rdistr
+
+-- | Equation lambda-bounds: `Λ_φ(f) ≤ (f : f₀)`.
+\lemma Lambda-upper {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f : CompactCoverMap G}
+                    {f>=0 : \Pi (x : G) -> 0 <= f x} : Lambda f0p phip f f>=0 <= cover-num f f0 f>=0 f0p
+  => RealField.<=_*_positive-left (cover-num-comp {G} {f} {f0} {phi} {f>=0} {f0p} {phip}) (<=-less (RealField.pinv>0 _)) <=∘
+       =_<= (*-assoc *> pmap (_ *) (RealField.pinv-right _) *> ide-right)
+
+-- | Equation lambda-bounds: `1 / (f₀ : f) ≤ Λ_φ(f)` for `f ∈ P`.
+\lemma Lambda-lower {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f : CompactCoverMap G}
+                    (fp : IsPositiveFun f) : RealField.pinv (cover-num f0 f f0p.1 fp) (cover-num-pos f0p) <= Lambda f0p phip f fp.1
+  => \have | t : cover-num f0 phi f0p.1 phip <= cover-num f0 f f0p.1 fp * cover-num f phi fp.1 phip => cover-num-comp
+           | p1 => RealField.pinv>0 (cover-num-pos {G} {f0} {f} f0p {fp})
+           | p2 => RealField.pinv>0 (cover-num-pos {G} {f0} {phi} f0p {phip})
+     \in =_<= (inv (*-assoc *> pmap (_ *) (RealField.pinv-right (cover-num-pos {G} {f0} {phi} f0p {phip})) *> ide-right)) <=∘
+          RealField.<=_*_positive-left (RealField.<=_*_positive-right (<=-less p1) t) (<=-less p2) <=∘
+          =_<= (pmap (* _) (inv *-assoc *> pmap (* _) (RealField.pinv-left (cover-num-pos {G} {f0} {f} f0p {fp})) *> ide-left))
+
+-- Linear combinations
+
+-- | `∑ λ_j f_j`.
+\func lamSum {G : TopAddGroup} {n : Nat} (lam : Array Real n) (fs : Array (CompactCoverMap G) n) : CompactCoverMap G
+  => AddMonoid.BigSum {CompactCoverTruncRieszSpace G} (\lam j => CompactCoverMap.scale (lam j) (fs j))
+
+\lemma lamSum-apply {G : TopAddGroup} {n : Nat} {lam : Array Real n} {fs : Array (CompactCoverMap G) n} (x : G) : lamSum lam fs x = RealAbGroup.BigSum (\lam j => lam j * fs j x)
+  => CompactCoverTruncRieszSpace.BigSum-apply {G} {\lam j => CompactCoverMap.scale (lam j) (fs j)}
+
+\lemma lamSum>=0 {G : TopAddGroup} {n : Nat} {lam : Array Real n} (lam>=0 : \Pi (j : Fin n) -> 0 <= lam j) {fs : Array (CompactCoverMap G) n} (fs>=0 : \Pi (j : Fin n) (x : G) -> 0 <= fs j x) (x : G)
+  : 0 <= lamSum lam fs x
+  => rewrite (lamSum-apply {G} {n} {lam} {fs} x) $ RealAbGroup.BigSum_>=0 \lam j => RealField.<=_*_positive_positive (lam>=0 j) (fs>=0 j x)
+
+\lemma cover-num_lamSum {G : LocallyCompactUrysohnGroup} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {n : Nat} {lam : Array Real n} (lam>=0 : \Pi (j : Fin n) -> 0 <= lam j)
+                        {fs : Array (CompactCoverMap G) n} (fs>=0 : \Pi (j : Fin n) (x : G) -> 0 <= fs j x)
+  : cover-num (lamSum lam fs) phi (lamSum>=0 lam>=0 fs>=0) phip <= RealAbGroup.BigSum (\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip) \elim n, lam, fs
+  | 0, nil, nil => cover-num_<= {G} {lamSum nil nil} {phi} {lamSum>=0 lam>=0 fs>=0} {phip} $ inP (0, nil, nil, (\lam j => \case j \with {}, \lam x => <=-refl), idp)
+  | suc n, a :: lam, f :: fs => cover-num-add {G} {CompactCoverMap.scale a f} {lamSum lam fs} {phi} {\lam x => RealField.<=_*_positive_positive (lam>=0 0) (fs>=0 0 x)} {lamSum>=0 (\lam j => lam>=0 (suc j)) (\lam j => fs>=0 (suc j))} <=∘
+      <=_+ (=_<= (cover-num-scale (lam>=0 0))) (cover-num_lamSum (\lam j => lam>=0 (suc j)) (\lam j => fs>=0 (suc j)))
+
+-- | If `a ≤ b` whenever `φ > 0`, then `a φ ≤ b φ`.
+\lemma mult-cmp {a b phi : Real} (phi>=0 : 0 <= phi) (h : 0 < phi -> a <= b) : a * phi <= b * phi
+  => \lam d => \have | p : 0 < (a - b) * phi => rewrite RealField.rdistr_- linarith
+                     | q : (a - b) * phi <= abs (a - b) * phi => RealField.<=_*_positive-left RealAbGroup.abs>=id phi>=0
+                     | phi>0 : 0 < phi => RealField.<_*_positive-cancel-left RealAbGroup.abs>=0 $ transportInv (__ < _) RealField.zro_*-right (p <∘l q)
+               \in <-irreflexive (RealField.<=_*_positive-left (h phi>0) phi>=0 <∘r d)
+
+\lemma lamSum-num>=0 {G : LocallyCompactUrysohnGroup} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {n : Nat} {lam : Array Real n} (lam>=0 : \Pi (j : Fin n) -> 0 <= lam j)
+                     {fs : Array (CompactCoverMap G) n} (fs>=0 : \Pi (j : Fin n) (x : G) -> 0 <= fs j x)
+  : 0 <= RealAbGroup.BigSum (\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip)
+  => RealAbGroup.BigSum_>=0 \lam j => RealField.<=_*_positive_positive (lam>=0 j) cover-num>=0
+
+-- | `∑ λ_j c_j ≤ M ∑ c_j` for `0 ≤ λ_j ≤ M` and `c_j ≥ 0`.
+\lemma lamSum-bound {n : Nat} {lam c : Array Real n} {M : Real} (lam<=M : \Pi (j : Fin n) -> lam j <= M) (c>=0 : \Pi (j : Fin n) -> 0 <= c j)
+  : RealAbGroup.BigSum (\lam j => lam j * c j) <= M * RealAbGroup.BigSum c
+  => RealAbGroup.BigSum_<= (\lam j => RealField.<=_*_positive-left (lam<=M j) (c>=0 j)) <=∘ =_<= (inv (RealField.BigSum-ldistr {M} {c}))
+
+-- | The Lipschitz estimate for `h_{λ,j} = f_j / D_λ` in Lemma superadd.
+\lemma superadd-lip {a b Fa Fb ga gb A S M pd : Real} (pd>=0 : 0 <= pd) (M>=0 : 0 <= M) (bS : abs b <= S) (ab : abs (a - b) <= A) (FA : abs (Fa - Fb) <= M * A)
+  {c>0 : 0 < (pd * Fa + ga) ∨ 1} {e>0 : 0 < (pd * Fb + gb) ∨ 1}
+  : abs (pd * a * RealField.pinv ((pd * Fa + ga) ∨ 1) c>0 - pd * b * RealField.pinv ((pd * Fb + gb) ∨ 1) e>0)
+      <= (1 + pd * S) * (pd * (1 + M) + 1) * (A + abs (ga - gb))
+  => \have | A>=0 : 0 <= A => RealAbGroup.abs>=0 <=∘ ab
+           | S>=0 : 0 <= S => RealAbGroup.abs>=0 <=∘ bS
+           | bS' : abs (pd * b) <= pd * S => transportInv (__ <= _) (RealField.abs_* *> pmap (* abs b) (RealAbGroup.abs-ofPos pd>=0)) (RealField.<=_*_positive-right pd>=0 bS)
+           | t1 => div-lip {pd * a} {pd * b} {_} {_} {pd * S} c>0 e>0 join-right join-right bS'
+           | t2 : abs (pd * a - pd * b) <= pd * A => rewrite (inv RealField.ldistr_-, RealField.abs_*, RealAbGroup.abs-ofPos pd>=0) $ RealField.<=_*_positive-right pd>=0 ab
+           | t3 : abs (((pd * Fa + ga) ∨ 1) - ((pd * Fb + gb) ∨ 1)) <= pd * (M * A) + abs (ga - gb)
+             => RealAbGroup.join-lip <=∘ =_<= (pmap (_ +) (pmap abs negative-right *> RealAbGroup.abs_zro) *> zro-right) <=∘
+                  rewrite (equation.cRing : pd * Fa + ga - (pd * Fb + gb) = pd * (Fa - Fb) + (ga - gb)) (RealAbGroup.abs_+ <=∘ <=_+ (rewrite (RealField.abs_*, RealAbGroup.abs-ofPos pd>=0) (RealField.<=_*_positive-right pd>=0 FA)) <=-refl)
+           | t4 : abs (pd * a - pd * b) + abs (((pd * Fa + ga) ∨ 1) - ((pd * Fb + gb) ∨ 1)) <= (pd * (1 + M) + 1) * (A + abs (ga - gb))
+             => \have | e : (pd * (1 + M) + 1) * (A + abs (ga - gb)) = pd * A + (pd * (M * A) + abs (ga - gb)) + (A + pd * (1 + M) * abs (ga - gb)) => equation.cRing
+                      | q0 : 0 <= pd * (1 + M) * abs (ga - gb) => RealField.<=_*_positive_positive (RealField.<=_*_positive_positive pd>=0 (usingOnly M>=0 linarith : 0 <= 1 + M)) RealAbGroup.abs>=0
+                      | q : 0 <= A + pd * (1 + M) * abs (ga - gb) => usingOnly (q0, A>=0) linarith
+                \in rewrite e (usingOnly (t2, t3, q) linarith)
+           | t5 : 0 <= 1 + pd * S => usingOnly (RealField.<=_*_positive_positive pd>=0 S>=0) linarith
+     \in t1 <=∘ RealField.<=_*_positive-right t5 t4 <=∘ =_<= (inv RealField.*-assoc)
+  \where {
+    -- | A Lipschitz estimate for division by reals bounded below by `1`.
+    \lemma div-lip {a b c e M : Real} (c>0 : 0 < c) (e>0 : 0 < e) (c>=1 : 1 <= c) (e>=1 : 1 <= e) (bM : abs b <= M)
+      : abs (a * RealField.pinv c c>0 - b * RealField.pinv e e>0) <= (1 + M) * (abs (a - b) + abs (c - e))
+      => \have | M>=0 : 0 <= M => RealAbGroup.abs>=0 <=∘ bM
+               | pc>0 => RealField.pinv>0 c>0
+               | pe>0 => RealField.pinv>0 e>0
+               | pe<=1 => RealField.pinv<=1 e>0 e>=1
+               | id : a * RealField.pinv c c>0 - b * RealField.pinv e e>0 = (a - b) * RealField.pinv c c>0 + b * (e - c) * (RealField.pinv c c>0 * RealField.pinv e e>0)
+                 => equation.cRing {RealField.pinv-right c>0, RealField.pinv-right e>0}
+               | s1 : abs ((a - b) * RealField.pinv c c>0) <= abs (a - b) => CompactCoverMap.div.div-bound c>0 c>=1
+               | pp<=1 : RealField.pinv c c>0 * RealField.pinv e e>0 <= 1
+                 => RealField.<=_*_positive-left (RealField.pinv<=1 c>0 c>=1) (<=-less pe>0) <=∘ =_<= RealField.ide-left <=∘ pe<=1
+               | pp>=0 : 0 <= RealField.pinv c c>0 * RealField.pinv e e>0 => RealField.<=_*_positive_positive (<=-less pc>0) (<=-less pe>0)
+               | s2 : abs (b * (e - c) * (RealField.pinv c c>0 * RealField.pinv e e>0)) <= M * abs (c - e)
+                 => rewrite (RealField.abs_* {b * (e - c)}, RealField.abs_* {b}, RealAbGroup.abs-ofPos pp>=0, RealAbGroup.abs_- {e} {c}) $
+                      RealField.<=_*_positive-right (RealField.<=_*_positive_positive RealAbGroup.abs>=0 RealAbGroup.abs>=0) pp<=1 <=∘ =_<= RealField.ide-right <=∘
+                      RealField.<=_*_positive-left bM RealAbGroup.abs>=0
+               | e2 : (1 + M) * (abs (a - b) + abs (c - e)) = abs (a - b) + M * abs (c - e) + (abs (c - e) + M * abs (a - b)) => equation.cRing
+               | q1 : 0 <= M * abs (a - b) => RealField.<=_*_positive_positive M>=0 RealAbGroup.abs>=0
+               | q2 => RealAbGroup.abs>=0 {c - e}
+         \in rewrite (id, e2) $ RealAbGroup.abs_+ <=∘ <=_+ s1 s2 <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl (RealField.<=_+-positive q2 q1)
+  }
+
+\lemma superadd-arith {X LF Lg delta C0 MC0 e : Real} (X>=0 : 0 <= X) (X<=1 : X <= 1) (LF>=0 : 0 <= LF) (LF<= : LF <= MC0) (Lg>=0 : 0 <= Lg) (Lg<= : Lg <= C0)
+  (delta>=0 : 0 <= delta) (XM : X * MC0 <= e * ratio 1 2) (dC : delta * C0 = e * ratio 1 4)
+  : (1 + X) * (LF + delta * Lg) <= LF + e
+  => \have | t1 : X * LF <= X * MC0 => RealField.<=_*_positive-right X>=0 LF<=
+           | t2 : (1 + X) * (delta * Lg) <= 2 * (delta * C0) => RealField.<=_*_positive-left (usingOnly X<=1 linarith : 1 + X <= 2) (RealField.<=_*_positive_positive delta>=0 Lg>=0) <=∘
+                    RealField.<=_*_positive-right (usingOnly () linarith : (0 : Real) <= 2) (RealField.<=_*_positive-right delta>=0 Lg<=)
+           | e1 : (1 + X) * (LF + delta * Lg) = LF + X * LF + (1 + X) * (delta * Lg) => equation.cRing
+     \in rewrite e1 (usingOnly (t1, t2, XM, dC) linarith)
+
+\lemma abs-lamSum {n : Nat} {lam a b : Array Real n} (lam>=0 : \Pi (j : Fin n) -> 0 <= lam j)
+  : abs (RealAbGroup.BigSum (\lam j => lam j * a j) - RealAbGroup.BigSum (\lam j => lam j * b j)) <= RealAbGroup.BigSum (\lam j => lam j * abs (a j - b j)) \elim n, lam, a, b
+  | 0, nil, nil, nil => =_<= (pmap abs negative-right *> RealAbGroup.abs_zro)
+  | suc n, l :: lam, x :: a, y :: b =>
+    \have | e : l * x + RealAbGroup.BigSum (\lam j => lam j * a j) - (l * y + RealAbGroup.BigSum (\lam j => lam j * b j))
+                = l * (x - y) + (RealAbGroup.BigSum (\lam j => lam j * a j) - RealAbGroup.BigSum (\lam j => lam j * b j)) => equation.cRing
+           | t : abs (l * (x - y)) = l * abs (x - y) => RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (lam>=0 0))
+    \in rewrite e $ RealAbGroup.abs_+ <=∘ <=_+ (=_<= t) (abs-lamSum \lam j => lam>=0 (suc j))
+
+\lemma D-lip {pd Fa Fb ga gb : Real} (pd>=0 : 0 <= pd) : abs (((pd * Fa + ga) ∨ 1) - ((pd * Fb + gb) ∨ 1)) <= (pd + 1) * (abs (Fa - Fb) + (abs (ga - gb) + 0))
+  => \have | t1 : abs (((pd * Fa + ga) ∨ 1) - ((pd * Fb + gb) ∨ 1)) <= pd * abs (Fa - Fb) + abs (ga - gb)
+             => RealAbGroup.join-lip <=∘ =_<= (pmap (_ +) (pmap abs negative-right *> RealAbGroup.abs_zro) *> zro-right) <=∘
+                  rewrite (equation.cRing : pd * Fa + ga - (pd * Fb + gb) = pd * (Fa - Fb) + (ga - gb)) (RealAbGroup.abs_+ <=∘ =_<= (pmap (+ _) (RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos pd>=0))))
+           | t2 : 0 <= pd * abs (ga - gb) => RealField.<=_*_positive_positive pd>=0 RealAbGroup.abs>=0
+           | t3 => RealAbGroup.abs>=0 {Fa - Fb}
+           | e : (pd + 1) * (abs (Fa - Fb) + (abs (ga - gb) + 0)) = pd * abs (Fa - Fb) + abs (ga - gb) + (pd * abs (ga - gb) + abs (Fa - Fb)) => equation.cRing
+     \in rewrite e (usingOnly (t1, t2, t3) linarith)
+
+-- | Lemma superadd: approximate superadditivity of `Λ_φ` for {φ} concentrated near `0`.
+-- | `a - b ≤ e` implies `a ≤ b + e`; keeps {linarith} away from large atoms.
+\lemma sub-le {a b e : Real} (p : a - b <= e) : a <= b + e
+  => usingOnly p linarith
+
+-- | The choice of `δ` in Lemma superadd.
+\lemma superadd-delta {C0 eps : Real} (C0>=1 : 1 <= C0) (eps>0 : 0 < eps) : ∃ (delta : Real) (0 < delta) (delta * C0 = eps * ratio 1 4)
+  => \have | fourC0>0 : 0 < 4 * C0 => usingOnly C0>=1 linarith
+           | X1 : 4 * (C0 * RealField.pinv (4 * C0) fourC0>0) = 1 => inv *-assoc *> RealField.pinv-right fourC0>0
+           | X2 : C0 * RealField.pinv (4 * C0) fourC0>0 = Real.fromRat (ratio 1 4) => usingOnly X1 linarith
+     \in inP (eps * RealField.pinv (4 * C0) fourC0>0, RealField.<_*_positive_positive eps>0 (RealField.pinv>0 fourC0>0), *-assoc *> pmap (eps *) (RealField.*-comm *> X2))
+
+-- | The choice of `η` in Lemma superadd.
+\lemma superadd-eta {T MC eps : Real} (T>=0 : 0 <= T) (MC>=0 : 0 <= MC) (eps>0 : 0 < eps)
+  : ∃ (eta : Real) (0 < eta) (T * eta <= 1) (T * eta * MC <= eps * ratio 1 2)
+  => \have | e2>0 : 0 < eps * ratio 1 2 => usingOnly eps>0 linarith
+           | TMC>=0 : 0 <= T * MC => RealField.<=_*_positive_positive T>=0 MC>=0
+     \in \case split-eps RealAbGroup.zro<ide (usingOnly T>=0 linarith : 0 < T + 1), split-eps e2>0 (usingOnly TMC>=0 linarith : 0 < T * MC + 1) \with {
+       | inP (eta1,eta1>0,eta1T), inP (eta2,eta2>0,eta2T) =>
+         \have | eta>0 : 0 < eta1 ∧ eta2 => <_meet-univ eta1>0 eta2>0
+                | Teta<=1 : T * (eta1 ∧ eta2) <= 1 => \have q : T * (eta1 ∧ eta2) <= T * eta1 => RealField.<=_*_positive-right T>=0 meet-left
+                                                  \in usingOnly (q, eta1T, eta1>0, (equation.cRing : eta1 * (T + 1) = T * eta1 + eta1)) linarith
+                | TetaM : T * (eta1 ∧ eta2) * MC <= eps * ratio 1 2
+                  => \have | q : T * (eta1 ∧ eta2) * MC <= eta2 * (T * MC) => rewrite (equation.cRing : T * (eta1 ∧ eta2) * MC = (eta1 ∧ eta2) * (T * MC)) $
+                                    RealField.<=_*_positive-left meet-right TMC>=0
+                           | q' : eta2 * (T * MC + 1) = eta2 * (T * MC) + eta2 => equation.cRing
+                     \in usingOnly (q, q', eta2T, eta2>0) linarith
+         \in inP (eta1 ∧ eta2, eta>0, Teta<=1, TetaM)
+     }
+
+\lemma superadd-L>=0 {pd S M : Real} (pd>=0 : 0 <= pd) (S>=0 : 0 <= S) (M>=0 : 0 <= M) : 0 <= (1 + pd * S) * (pd * (1 + M) + 1)
+  => RealField.<=_*_positive_positive (usingOnly (RealField.<=_*_positive_positive pd>=0 S>=0) linarith)
+       (usingOnly (RealField.<=_*_positive_positive pd>=0 (usingOnly M>=0 linarith : 0 <= 1 + M)) linarith)
+
+\lemma superadd {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {n : Nat} (fs : Array (CompactCoverMap G) n) (fs>=0 : \Pi (j : Fin n) (x : G) -> 0 <= fs j x)
+                {M : Real} (M>=0 : 0 <= M) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (V : isOpen) (V 0) (\Pi {phi : CompactCoverMap G} (phip : IsPositiveFun phi) -> IsSupported phi V -> \Pi {lam : Array Real n} (lam>=0 : \Pi (j : Fin n) -> 0 <= lam j) -> (\Pi (j : Fin n) -> lam j <= M) ->
+      RealAbGroup.BigSum (\lam j => lam j * Lambda f0p phip (fs j) (fs>=0 j)) <= Lambda f0p phip (lamSum lam fs) (lamSum>=0 lam>=0 fs>=0) + eps)
+  => \case FinSet.finiteAC (\lam j => (fs j).support) \with {
+    | inP Ks =>
+      \let K x => ∃ (j : Fin n) ((Ks j).1 x)
+      \in \have | Ktb : IsTotallyBoundedSet K => totallyBoundedSet-Union \lam j => (Ks j).2
+                | fK (j : Fin n) : IsSupported (fs j) K => \lam p => inP (j, (Ks j).3 p)
+      \in \case G.bump Ktb \with {
+        | inP (U,Uo,U0,g,g>=0,g<=1,gK') =>
+          \have gK {x : G} (Kx : K x) : g x = 1 => pmap g (inv zro-right) *> gK' Kx U0
+          \in \let | C0 => 1 + RealAbGroup.BigSum (\lam j => cover-num (fs j) f0 (fs>=0 j) f0p) + cover-num g f0 g>=0 f0p
+                    | T => RealField.natCoef n * M
+                    | S => RealAbGroup.BigSum (\lam j => CompactMap-ta-sup (fs j))
+          \in \have | sum>=0 : 0 <= RealAbGroup.BigSum (\lam j => cover-num (fs j) f0 (fs>=0 j) f0p) => RealAbGroup.BigSum_>=0 \lam j => cover-num>=0
+                    | g0 => cover-num>=0 {G} {g} {f0} {g>=0} {f0p}
+                    | C0>=1 : 1 <= C0 => usingOnly (sum>=0, g0) linarith
+                    | T>=0 : 0 <= T => RealField.<=_*_positive_positive RealField.natCoef>=0 M>=0
+                    | S>=0 : 0 <= S => RealAbGroup.BigSum_>=0 \lam j => CompactCoverMap.sup>=0
+                    | fsS (j : Fin n) (x : G) : abs (fs j x) <= S => rewrite (RealAbGroup.abs-ofPos (fs>=0 j x)) $ CompactCoverMap.sup-bound x <=∘
+                        RealAbGroup.BigSum_>=index {\lam j => CompactMap-ta-sup (fs j)} (\lam j => CompactCoverMap.sup>=0) j
+          \in \case superadd-delta C0>=1 eps>0, superadd-eta T>=0 (RealField.<=_*_positive_positive M>=0 (usingOnly C0>=1 linarith)) eps>0 \with {
+            | inP (delta,delta>0,dC), inP (eta,eta>0,Teta<=1,TetaM) =>
+              \have pd>0 => RealField.pinv>0 delta>0
+              \in \let | pd => RealField.pinv delta delta>0
+                        | L => (1 + pd * S) * (pd * (1 + M) + 1)
+                        | us : Array (UniformMap G RealNormed) (suc n) => CompactMap-ta-uniform g :: (\lam j => CompactMap-ta-uniform (fs j))
+              \in \have L>=0 : 0 <= L => superadd-L>=0 (<=-less pd>0) S>=0 M>=0
+              \in \case lipschitz-modulus us L>=0 eta>0 \with {
+                | inP (W,Wo,W0,hW) => \case topAdd-translation-modulus Ktb Wo W0 \with {
+                  | inP (V,Vo,V0,Vs,hV) => inP (V, Vo, V0, \lam {phi} phip phiV {lam} lam>=0 lam<=M =>
+                    \let | F => lamSum lam fs
+                         | Dp : UniformMap G RealNormed => lipschitz-uniform (CompactMap-ta-uniform F :: CompactMap-ta-uniform g :: nil) (usingOnly pd>0 linarith : 0 <= pd + 1) (\lam x => (pd * F x + g x) ∨ 1) (\lam x y => D-lip (<=-less pd>0))
+                         | D>=1 (x : G) : 1 <= Dp x => join-right
+                         | h (j : Fin n) : CompactCoverMap G => CompactCoverMap.div (CompactCoverMap.scale pd (fs j)) Dp D>=1
+                    \in \have
+                      | F>=0 (x : G) : 0 <= F x => lamSum>=0 lam>=0 fs>=0 x
+                      | Fapp (x : G) : F x = RealAbGroup.BigSum (\lam j => lam j * fs j x) => lamSum-apply x
+                      | pD>0 (x : G) => RealField.pinv>0 (zro<ide <∘l D>=1 x)
+                      | h>=0 (j : Fin n) (x : G) : 0 <= h j x => RealField.<=_*_positive_positive (RealField.<=_*_positive_positive (<=-less pd>0) (fs>=0 j x)) (<=-less (pD>0 x))
+                      | hK (j : Fin n) : IsSupported (h j) K => IsSupported.bound_*c {G} {fs j} {h j} (fK j)
+                          (\lam x => CompactCoverMap.div.div-bound (zro<ide <∘l D>=1 x) (D>=1 x) <=∘ =_<= (RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (<=-less pd>0))))
+                      | hlip (j : Fin n) (x y : G) : abs (h j x - h j y) <= L * RealAbGroup.BigSum (\lam i => abs (us i x - us i y))
+                          => superadd-lip {fs j x} {fs j y} {F x} {F y} {g x} {g y} {RealAbGroup.BigSum (\lam i => abs (fs i x - fs i y))} {S} {M} {pd} (<=-less pd>0) M>=0 (fsS j y)
+                               (RealAbGroup.BigSum_>=index {\lam i => abs (fs i x - fs i y)} (\lam i => RealAbGroup.abs>=0) j)
+                               (rewrite (Fapp x, Fapp y) (abs-lamSum {n} {lam} {\lam j => fs j x} {\lam j => fs j y} lam>=0 <=∘ lamSum-bound lam<=M (\lam j => RealAbGroup.abs>=0))) <=∘ =_<= (pmap (L *) +-comm)
+                      | hW' (j : Fin n) {x y : G} (c : G.AreClose W x y) : abs (h j x - h j y) <= eta => <=-less (hW (\lam x y => hlip j x y) c)
+                      | hV' (j : Fin n) (x : G) {v : G} (Vv : V v) : abs (h j (x + v) - h j x) <= eta => (hV (hK j) (\lam c => hW' j c) x Vv).1
+                      | hsum (x : G) : RealAbGroup.BigSum (\lam j => lam j * h j x) <= 1
+                          => \have | e : RealAbGroup.BigSum (\lam j => lam j * h j x) = pd * F x * RealField.pinv (Dp x) (zro<ide <∘l D>=1 x)
+                                      => RealAbGroup.BigSum-ext {n} {\lam j => lam j * h j x} {\lam j => pd * (lam j * fs j x) * RealField.pinv (Dp x) (zro<ide <∘l D>=1 x)} (\lam j => equation.cRing) *>
+                                           inv (RealField.BigSum-rdistr {\lam j => pd * (lam j * fs j x)}) *> pmap (RealField.* RealField.pinv (Dp x) (zro<ide <∘l D>=1 x)) (inv (RealField.BigSum-ldistr {pd} {\lam j => lam j * fs j x}) *> pmap (pd *) (inv (Fapp x)))
+                                    | q : pd * F x <= Dp x => (usingOnly (g>=0 x) linarith : pd * F x <= pd * F x + g x) <=∘ join-left
+                             \in rewrite e $ RealField.<=_*_positive-left q (<=-less (pD>0 x)) <=∘ =_<= (RealField.pinv-right _)
+                      | key (j : Fin n) {k : Nat} {cs : Array Real k} {ss : Array G k} (cov : IsCovering (F + CompactCoverMap.scale delta g) phi cs ss) (x : G)
+                          : fs j x <= transSum phi (\lam i => cs i * (h j (ss i) + eta)) ss x => \lam d =>
+                            \have | R>=0 : 0 <= transSum phi (\lam i => cs i * (h j (ss i) + eta)) ss x
+                                       => transSum>=0 phip.1 {_} {\lam i => cs i * (h j (ss i) + eta)} (\lam i => RealField.<=_*_positive_positive (cov.1 i) (RealField.<=_+-positive (h>=0 j (ss i)) (<=-less eta>0))) {ss} x
+                                   | fx>0 : 0 < fs j x => R>=0 <∘r d
+                                   | Kx : K x => fK j (rewrite (RealAbGroup.abs-ofPos (fs>=0 j x)) fx>0)
+                                   | gx : g x = 1 => gK Kx
+                                   | Dx : Dp x = pd * F x + 1 => <=-antisymmetric (join-univ (=_<= (pmap (_ +) gx)) (usingOnly (RealField.<=_*_positive_positive (<=-less pd>0) (F>=0 x)) linarith)) (=_<= (pmap (_ +) (inv gx)) <=∘ join-left)
+                                   | eq : fs j x = h j x * (F x + delta * g x)
+                                       => \let P => RealField.pinv (Dp x) (zro<ide <∘l D>=1 x)
+                                          \in inv (pmap (\lam z => h j x * (F x + z)) (pmap (delta *) gx *> ide-right) *>
+                                                   (equation.cRing : pd * fs j x * P * (F x + delta) = fs j x * P * (pd * F x + pd * delta)) *>
+                                                   pmap (\lam z => fs j x * P * (pd * F x + z)) (RealField.pinv-left delta>0) *> pmap (fs j x * P *) (inv Dx) *> *-assoc *>
+                                                   pmap (fs j x *) (RealField.pinv-left _) *> ide-right)
+                                   | ineq : h j x * (F x + delta * g x) <= transSum phi (\lam i => cs i * (h j (ss i) + eta)) ss x
+                                       => RealField.<=_*_positive-right (h>=0 j x) (cov.2 x) <=∘ =_<= (transSum.transSum-scale x) <=∘ RealAbGroup.BigSum_<= (\lam i =>
+                                            mult-cmp (phip.1 _) \lam p => \have | t : abs (h j (ss i + (negative (ss i) + x)) - h j (ss i)) <= eta => hV' j (ss i) (phiV (rewrite (RealAbGroup.abs-ofPos (phip.1 _)) p))
+                                                                                 | t' : h j x - h j (ss i) <= eta => rewrite (simplify : ss i + (negative (ss i) + x) = x) in RealAbGroup.abs>=id <=∘ t
+                                                                           \in =_<= RealField.*-comm <=∘ RealField.<=_*_positive-right (cov.1 i) (sub-le t'))
+                            \in <-irreflexive ((=_<= eq <=∘ ineq) <∘r d)
+                      | comb {k : Nat} {cs : Array Real k} {ss : Array G k} (cov : IsCovering (F + CompactCoverMap.scale delta g) phi cs ss)
+                          : RealAbGroup.BigSum (\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip) <= (1 + T * eta) * RealAbGroup.BigSum cs
+                          => \have | numj (j : Fin n) : cover-num (fs j) phi (fs>=0 j) phip <= RealAbGroup.BigSum (\lam i => cs i * (h j (ss i) + eta))
+                                      => cover-num_<= $ inP (k, \lam i => cs i * (h j (ss i) + eta), ss, (\lam i => RealField.<=_*_positive_positive (cov.1 i) (RealField.<=_+-positive (h>=0 j (ss i)) (<=-less eta>0)), key j cov), idp)
+                                    | lamT : RealAbGroup.BigSum lam <= T => RealAbGroup.BigSum_<= {n} {lam} {\lam _ => M} lam<=M <=∘ =_<= RealField.BigSum_replicate
+                                    | per-i (i : Fin k) : RealAbGroup.BigSum (\lam j => lam j * (cs i * (h j (ss i) + eta))) <= cs i * (1 + T * eta)
+                                      => \have | e : RealAbGroup.BigSum (\lam j => lam j * (cs i * (h j (ss i) + eta))) = cs i * (RealAbGroup.BigSum (\lam j => lam j * h j (ss i)) + eta * RealAbGroup.BigSum lam)
+                                                  => RealAbGroup.BigSum-ext {n} {\lam j => lam j * (cs i * (h j (ss i) + eta))} {\lam j => cs i * (lam j * h j (ss i) + eta * lam j)} (\lam j => equation.cRing) *>
+                                                       inv (RealField.BigSum-ldistr {cs i} {\lam j => lam j * h j (ss i) + eta * lam j}) *> pmap (cs i *) (RealAbGroup.BigSum_+ {n} {\lam j => lam j * h j (ss i)} {\lam j => eta * lam j} *> pmap (_ +) (inv (RealField.BigSum-ldistr {eta} {lam})))
+                                                | q1 => hsum (ss i)
+                                                | q2 : eta * RealAbGroup.BigSum lam <= eta * T => RealField.<=_*_positive-right (<=-less eta>0) lamT
+                                                | q3 : eta * T = T * eta => RealField.*-comm
+                                         \in rewrite e $ RealField.<=_*_positive-right (cov.1 i) (usingOnly (q1, q2, q3) linarith)
+                             \in RealAbGroup.BigSum_<= {n} {\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip} {\lam j => lam j * RealAbGroup.BigSum (\lam i => cs i * (h j (ss i) + eta))}
+                                    (\lam j => RealField.<=_*_positive-right (lam>=0 j) (numj j)) <=∘
+                                  =_<= (RealAbGroup.BigSum-ext {n} {\lam j => lam j * RealAbGroup.BigSum (\lam i => cs i * (h j (ss i) + eta))} {\lam j => RealAbGroup.BigSum (\lam i => lam j * (cs i * (h j (ss i) + eta)))}
+                                         (\lam j => RealField.BigSum-ldistr {lam j} {\lam i => cs i * (h j (ss i) + eta)}) *> RealAbGroup.BigSum-transpose (\lam j i => lam j * (cs i * (h j (ss i) + eta)))) <=∘
+                                  RealAbGroup.BigSum_<= per-i <=∘ =_<= (RealAbGroup.BigSum-ext {k} {\lam i => cs i * (1 + T * eta)} {\lam i => (1 + T * eta) * cs i} (\lam i => RealField.*-comm) *> inv (RealField.BigSum-ldistr {1 + T * eta} {cs}))
+                    \in \have
+                      | Fg>=0 (x : G) : 0 <= (F + CompactCoverMap.scale delta g) x => usingOnly (F>=0 x, RealField.<=_*_positive_positive (<=-less delta>0) (g>=0 x)) linarith
+                      | dg>=0 (x : G) : 0 <= CompactCoverMap.scale delta g x => RealField.<=_*_positive_positive (<=-less delta>0) (g>=0 x)
+                      | X>=0 : 0 <= T * eta => RealField.<=_*_positive_positive T>=0 (<=-less eta>0)
+                      | comb' : RealAbGroup.BigSum (\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip) <= (1 + T * eta) * cover-num (F + CompactCoverMap.scale delta g) phi Fg>=0 phip
+                          => cover-num-transform {G} {F + CompactCoverMap.scale delta g} {phi} {Fg>=0} {phip} {RealAbGroup.BigSum (\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip)} {1 + T * eta} (usingOnly X>=0 linarith) \lam (inP (k,cs,ss,cov,q)) => rewriteI q (comb cov)
+                      | numFg : cover-num (F + CompactCoverMap.scale delta g) phi Fg>=0 phip <= cover-num F phi F>=0 phip + delta * cover-num g phi g>=0 phip
+                          => cover-num-add {G} {F} {CompactCoverMap.scale delta g} {phi} {F>=0} {dg>=0} {phip} {Fg>=0} <=∘ <=_+ <=-refl (=_<= (cover-num-scale (<=-less delta>0)))
+                      | P0>0 => RealField.pinv>0 (cover-num-pos {G} {f0} {phi} f0p {phip})
+                      | lhs-eq : RealAbGroup.BigSum (\lam j => lam j * Lambda f0p phip (fs j) (fs>=0 j))
+                                   = RealAbGroup.BigSum (\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip) * RealField.pinv (cover-num f0 phi f0p.1 phip) (cover-num-pos f0p)
+                          => RealAbGroup.BigSum-ext {n} {\lam j => lam j * Lambda f0p phip (fs j) (fs>=0 j)} {\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip * RealField.pinv (cover-num f0 phi f0p.1 phip) (cover-num-pos f0p)} (\lam j => inv RealField.*-assoc) *>
+                               inv (RealField.BigSum-rdistr {\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip})
+                      | step : RealAbGroup.BigSum (\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip) * RealField.pinv (cover-num f0 phi f0p.1 phip) (cover-num-pos f0p)
+                                 <= (1 + T * eta) * (Lambda f0p phip F F>=0 + delta * Lambda f0p phip g g>=0)
+                          => RealField.<=_*_positive-left (comb' <=∘ RealField.<=_*_positive-right (usingOnly X>=0 linarith) numFg) (<=-less P0>0) <=∘ =_<= equation.cRing
+                      | LF<= : Lambda f0p phip F F>=0 <= M * C0
+                          => Lambda-upper <=∘ cover-num_lamSum {G} {f0} {f0p} lam>=0 fs>=0 <=∘ lamSum-bound lam<=M (\lam j => cover-num>=0 {G} {fs j} {f0} {fs>=0 j} {f0p}) <=∘ RealField.<=_*_positive-right M>=0 (usingOnly g0 linarith)
+                      | Lg<= : Lambda f0p phip g g>=0 <= C0 => Lambda-upper <=∘ usingOnly sum>=0 linarith
+                    \in =_<= lhs-eq <=∘ step <=∘ superadd-arith X>=0 Teta<=1 Lambda>=0 LF<= Lambda>=0 Lg<= (<=-less delta>0) TetaM dC)
+                }
+              }
+          }
+      }
+  }
+
+\lemma Lambda-lamSum {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {n : Nat} {lam : Array Real n}
+                     (lam>=0 : \Pi (j : Fin n) -> 0 <= lam j) {fs : Array (CompactCoverMap G) n} (fs>=0 : \Pi (j : Fin n) (x : G) -> 0 <= fs j x)
+  : Lambda f0p phip (lamSum lam fs) (lamSum>=0 lam>=0 fs>=0) <= RealAbGroup.BigSum (\lam j => lam j * Lambda f0p phip (fs j) (fs>=0 j))
+  => RealField.<=_*_positive-left (cover-num_lamSum lam>=0 fs>=0) (<=-less (RealField.pinv>0 _)) <=∘ =_<=
+       (RealField.BigSum-rdistr {\lam j => lam j * cover-num (fs j) phi (fs>=0 j) phip} *> RealAbGroup.BigSum-ext (\lam j => RealField.*-assoc))
+
+\lemma Lambda-ext {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {phi : CompactCoverMap G} {phip : IsPositiveFun phi} {f g : CompactCoverMap G}
+                  {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x} (p : \Pi (x : G) -> f x = g x) : Lambda f0p phip f f>=0 = Lambda f0p phip g g>=0
+  => <=-antisymmetric (Lambda-mono {G} {f0} {f0p} {phi} {phip} {g} {f} {g>=0} {f>=0} \lam x => =_<= (p x)) (Lambda-mono {G} {f0} {f0p} {phi} {phip} {f} {g} {f>=0} {g>=0} \lam x => =_<= (inv (p x)))
+
+-- Approximation by translates
+
+\lemma check-pos {G : TopAddGroup} {g : CompactCoverMap G} (gp : IsPositiveFun g) : IsPositiveFun (CompactMap-reflect g)
+  => (\lam x => gp.1 _, TruncP.map gp.2 \lam s => (negative s.1, transportInv (\lam z => 0 < g z) AddGroup.negative-isInv s.2))
+
+\lemma kern-apply {G : TopAddGroup} {g : CompactCoverMap G} (x s : G) : CompactMap-translate x (CompactMap-reflect g) s = g (negative s + x)
+  => pmap g (AddGroup.negative_+ *> pmap (negative s +) AddGroup.negative-isInv)
+
+-- | The kernel estimate `|f(x) - Λ_ψ(f · (x · ǧ))| ≤ ε` of Lemma translate-approx, with `Λ_ψ` normalized by `ǧ`.
+\lemma kernel-bound {G : LocallyCompactUrysohnGroup} {f : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) {eps : Real} (eps>=0 : 0 <= eps) {W : Set G}
+                    (fW : \Pi (x : G) {w : G} -> W w -> abs (f (x + w) - f x) <= eps) {g : CompactCoverMap G} (gp : IsPositiveFun g) (gW : IsSupported g W)
+                    {psi : CompactCoverMap G} (psip : IsPositiveFun psi) (x : G)
+  : abs (f x - Lambda {G} {CompactMap-reflect g} (check-pos gp) {psi} psip (CompactCoverMap.mul f (CompactMap-translate x (CompactMap-reflect g))) (\lam s => RealField.<=_*_positive_positive (f>=0 s) (gp.1 _))) <= eps
+  => \have | k>=0 (s : G) : 0 <= CompactMap-translate x (CompactMap-reflect g) s => gp.1 _
+            | Lk : Lambda {G} {CompactMap-reflect g} (check-pos gp) {psi} psip (CompactMap-translate x (CompactMap-reflect g)) k>=0 = 1
+              => Lambda-translate {G} {CompactMap-reflect g} {check-pos gp} {psi} {psip} {CompactMap-reflect g} {\lam s => gp.1 _} x *> Lambda-f0 {G} {CompactMap-reflect g} {check-pos gp} {psi} {psip}
+            | near (s : G) (p : 0 < CompactMap-translate x (CompactMap-reflect g) s) : abs (f x - f s) <= eps
+              => \have | Ws : W (negative s + x) => gW (rewrite (RealAbGroup.abs-ofPos (gp.1 _), inv (kern-apply x s)) p)
+                       | t => fW s Ws
+                 \in transport (\lam z => abs (f z - f s) <= eps) (simplify : s + (negative s + x) = x) t
+            | fxe>=0 : 0 <= f x + eps => usingOnly (f>=0 x, eps>=0) linarith
+            | up : Lambda {G} {CompactMap-reflect g} (check-pos gp) {psi} psip (CompactCoverMap.mul f (CompactMap-translate x (CompactMap-reflect g))) (\lam s => RealField.<=_*_positive_positive (f>=0 s) (k>=0 s)) <= f x + eps
+              => Lambda-mono {G} {CompactMap-reflect g} {check-pos gp} {psi} {psip} {CompactCoverMap.scale (f x + eps) (CompactMap-translate x (CompactMap-reflect g))} {CompactCoverMap.mul f (CompactMap-translate x (CompactMap-reflect g))}
+                   {\lam s => RealField.<=_*_positive_positive fxe>=0 (k>=0 s)} (\lam s => mult-cmp {f s} {f x + eps} {CompactMap-translate x (CompactMap-reflect g) s} (k>=0 s) (\lam p => usingOnly (RealAbGroup.abs>=_- {f x} {f s} <=∘ near s p) linarith)) <=∘
+                 =_<= (Lambda-scale {G} {CompactMap-reflect g} {check-pos gp} {psi} {psip} {CompactMap-translate x (CompactMap-reflect g)} {k>=0} fxe>=0 *> pmap ((f x + eps) *) Lk *> ide-right)
+            | low : (f x - eps) ∨ 0 <= Lambda {G} {CompactMap-reflect g} (check-pos gp) {psi} psip (CompactCoverMap.mul f (CompactMap-translate x (CompactMap-reflect g))) (\lam s => RealField.<=_*_positive_positive (f>=0 s) (k>=0 s))
+              => =_<= (inv (pmap (\lam z => ((f x - eps) ∨ 0) * z) Lk *> ide-right) *> inv (Lambda-scale {G} {CompactMap-reflect g} {check-pos gp} {psi} {psip} {CompactMap-translate x (CompactMap-reflect g)} {k>=0} join-right)) <=∘
+                 Lambda-mono {G} {CompactMap-reflect g} {check-pos gp} {psi} {psip} {CompactCoverMap.mul f (CompactMap-translate x (CompactMap-reflect g))} {CompactCoverMap.scale ((f x - eps) ∨ 0) (CompactMap-translate x (CompactMap-reflect g))}
+                   {\lam s => RealField.<=_*_positive_positive (f>=0 s) (k>=0 s)} {\lam s => RealField.<=_*_positive_positive join-right (k>=0 s)}
+                   (\lam s => mult-cmp {(f x - eps) ∨ 0} {f s} {CompactMap-translate x (CompactMap-reflect g) s} (k>=0 s) (\lam p => join-univ (usingOnly (RealAbGroup.abs>=id {f x - f s} <=∘ near s p) linarith) (f>=0 s)))
+     \in kernel-arith low up
+  \where
+    \lemma kernel-arith {y L e : Real} (low : (y - e) ∨ 0 <= L) (up : L <= y + e) : abs (y - L) <= e
+      => RealField.abs-univ (usingOnly (join-left <=∘ low : y - e <= L) linarith) (usingOnly up linarith)
+
+\lemma prod-pos {a b : Real} (a>=0 : 0 <= a) (b>=0 : 0 <= b) (p : 0 < a * b) : \Sigma (0 < a) (0 < b)
+  => (RealField.<_*_positive-cancel-right b>=0 $ transportInv (__ < _) RealField.zro_*-left p,
+      RealField.<_*_positive-cancel-left a>=0 $ transportInv (__ < _) RealField.zro_*-right p)
+
+\lemma abs-diff-bound {a b c : Real} (p : abs (a - b) <= c) : \Sigma (a <= b + c) (b <= a + c)
+  => (usingOnly (RealAbGroup.abs>=id {a - b} <=∘ p) linarith, usingOnly (RealAbGroup.abs>=_- {a} {b} <=∘ p) linarith)
+
+\lemma abs-BigSum {n : Nat} (l : Array Real n) : abs (RealAbGroup.BigSum l) <= RealAbGroup.BigSum (\lam j => abs (l j)) \elim n, l
+  | 0, nil => =_<= RealAbGroup.abs_zro
+  | suc n, a :: l => RealAbGroup.abs_+ <=∘ <=_+ <=-refl (abs-BigSum l)
+
+-- | Lemma translate-approx: a function in `C_c` is uniformly approximated by combinations of translates of {g}.
+\lemma translate-approx {G : LocallyCompactUrysohnGroup} {f : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) {K : Set G} (Ktb : IsTotallyBoundedSet K) (fK : IsSupported f K)
+                        {eps alpha : Real} (eps>0 : 0 < eps) (eps<alpha : eps < alpha) {W : Set G} (fW : \Pi (x : G) {w : G} -> W w -> abs (f (x + w) - f x) <= eps)
+                        {g : CompactCoverMap G} (gp : IsPositiveFun g) (gW : IsSupported g W) {U : Set G} (Uo : isOpen U) (U0 : U 0)
+  : ∃ (n : Nat) (s : Array G n) (c : Array Real n) (\Pi (i : Fin n) -> 0 <= c i) (\Pi (i : Fin n) -> 0 < c i -> ∃ (k : G) (K k) (u : G) (U u) (k + u = s i))
+      (\Pi (x : G) -> abs (f x - transSum g c s x) <= alpha)
+  => \have | gcp => check-pos gp
+           | e4>0 : 0 < (alpha - eps) * ratio 1 4 => usingOnly eps<alpha linarith
+           | e2>0 : 0 < (alpha - eps) * ratio 1 2 => usingOnly eps<alpha linarith
+           | e8>0 : 0 < (alpha - eps) * ratio 1 4 * ratio 1 2 => usingOnly e4>0 linarith
+           | Nf>=0 => cover-num>=0 {G} {f} {CompactMap-reflect g} {f>=0} {gcp}
+     \in \case split-eps e8>0 (usingOnly Nf>=0 linarith : 0 < cover-num f (CompactMap-reflect g) f>=0 gcp + 1) \with {
+       | inP (eta,eta>0,etaN) => \case topAdd-translation (CompactMap-reflect g) eta>0 \with {
+         | inP (V',V'o,V'0,_,hV') => \case G.neighborhood-sym (open-inter V'o Uo) (V'0,U0) \with {
+           | inP (V1,V1o,V10,V1s,V1<=) => \case G.partition Ktb V1o V10 \with {
+             | inP (a,hs,hs>=0,hsV,hs<=1,hsK) =>
+               \let | hf (i : Fin a.len) : CompactCoverMap G => CompactCoverMap.mul (hs i) f
+               \in \have hf>=0 (i : Fin a.len) (s : G) : 0 <= hf i s => RealField.<=_*_positive_positive (hs>=0 i s) (f>=0 s)
+               \in \case superadd gcp hf hf>=0 (CompactCoverMap.sup>=0 {G} {G.properUniform}) e8>0 \with {
+                 | inP (V2,V2o,V20,sa) => \case G.cutoff V2o V20 \with {
+                   | inP (psi,W',W'o,W'0,psi>=0,_,psiW',psiV2) =>
+                     \have psip : IsPositiveFun psi => (psi>=0, inP (0, rewrite (psiW' W'0) RealAbGroup.zro<ide))
+                     \in \let | c (i : Fin a.len) : Real => Lambda {G} {CompactMap-reflect g} gcp {psi} psip (hf i) (hf>=0 i)
+                               | beta (i : Fin a.len) (x : G) : Real => g (negative (a i) + x)
+                               | k (x : G) : CompactCoverMap G => CompactMap-translate x (CompactMap-reflect g)
+                     \in \have
+                       | k>=0 (x s : G) : 0 <= k x s => gp.1 _
+                       | sumhf (s : G) : RealAbGroup.BigSum (\lam i => hf i s) = f s => <=-antisymmetric
+                           (=_<= (inv (RealField.BigSum-rdistr {\lam i => hs i s} {f s})) <=∘ RealField.<=_*_positive-left (hs<=1 s) (f>=0 s) <=∘ =_<= ide-left)
+                           (\lam d => \have | S>=0 : 0 <= RealAbGroup.BigSum (\lam i => hf i s) => RealAbGroup.BigSum_>=0 {\lam i => hf i s} (\lam i => hf>=0 i s)
+                                             | Ks : K s => fK (rewrite (RealAbGroup.abs-ofPos (f>=0 s)) (S>=0 <∘r d))
+                                             | e : RealAbGroup.BigSum (\lam i => hf i s) = f s => inv (RealField.BigSum-rdistr {\lam i => hs i s} {f s}) *> pmap (* f s) (hsK Ks) *> ide-left
+                                       \in <-irreflexive (rewrite e in d))
+                       | close-k (i : Fin a.len) (x s : G) (p : 0 < hs i s) : abs (k x s - beta i x) <= eta
+                           => \have | v1 : V1 (negative (a i) + s) => hsV i (rewrite (RealAbGroup.abs-ofPos (hs>=0 i s)) p)
+                                    | t : abs (CompactMap-reflect g ((negative x + a i) + (negative (a i) + s)) - CompactMap-reflect g (negative x + a i)) <= eta => (hV' (negative x + a i) (V1<= v1).1).1
+                                    | e1 : (negative x + a i) + (negative (a i) + s) = negative x + s => simplify equation
+                                    | e2 : CompactMap-reflect g (negative x + a i) = beta i x => pmap g (AddGroup.negative_+ *> pmap (negative (a i) +) AddGroup.negative-isInv)
+                              \in transport2 (\lam u v => abs (u - v) <= eta) (pmap (CompactMap-reflect g) e1) e2 t
+                       | beta>=0 (i : Fin a.len) (x : G) : 0 <= beta i x => gp.1 _
+                       | P1 (x s : G) : CompactCoverMap.mul f (k x) s <= lamSum (\lam i => beta i x) hf s + eta * f s
+                           => =_<= (pmap (* k x s) (inv (sumhf s)) *> RealField.BigSum-rdistr) <=∘
+                              RealAbGroup.BigSum_<= {a.len} {\lam i => hf i s * k x s} {\lam i => (beta i x + eta) * hf i s} (\lam i => =_<= RealField.*-comm <=∘
+                                mult-cmp {k x s} {beta i x + eta} {hf i s} (hf>=0 i s) (\lam p => (abs-diff-bound (close-k i x s (prod-pos (hs>=0 i s) (f>=0 s) p).1)).1)) <=∘
+                              =_<= (RealAbGroup.BigSum-ext {a.len} {\lam i => (beta i x + eta) * hf i s} {\lam i => beta i x * hf i s + eta * hf i s} (\lam i => RealField.rdistr) *>
+                                    RealAbGroup.BigSum_+ {a.len} {\lam i => beta i x * hf i s} {\lam i => eta * hf i s} *> pmap2 (+) (inv (lamSum-apply {G} {a.len} {\lam i => beta i x} {hf} s)) (inv (RealField.BigSum-ldistr {eta} {\lam i => hf i s}) *> pmap (eta *) (sumhf s)))
+                       | P2 (x s : G) : lamSum (\lam i => beta i x) hf s <= CompactCoverMap.mul f (k x) s + eta * f s
+                           => =_<= (lamSum-apply {G} {a.len} {\lam i => beta i x} {hf} s) <=∘ RealAbGroup.BigSum_<= {a.len} {\lam i => beta i x * hf i s} {\lam i => (k x s + eta) * hf i s} (\lam i =>
+                                mult-cmp {beta i x} {k x s + eta} {hf i s} (hf>=0 i s) (\lam p => (abs-diff-bound (close-k i x s (prod-pos (hs>=0 i s) (f>=0 s) p).1)).2)) <=∘
+                              =_<= (inv (RealField.BigSum-ldistr {k x s + eta} {\lam i => hf i s}) *> pmap ((k x s + eta) *) (sumhf s) *> RealField.rdistr *> pmap (+ _) RealField.*-comm)
+                       | M>=0 => CompactCoverMap.sup>=0
+                       | est (x : G) : abs (f x - RealAbGroup.BigSum (\lam i => beta i x * c i)) <= eps + (alpha - eps) * ratio 1 4
+                           => \have
+                             | mfk>=0 (s : G) : 0 <= CompactCoverMap.mul f (k x) s => RealField.<=_*_positive_positive (f>=0 s) (k>=0 x s)
+                             | ef>=0 (s : G) : 0 <= CompactCoverMap.scale eta f s => RealField.<=_*_positive_positive (<=-less eta>0) (f>=0 s)
+                             | B>=0 (s : G) : 0 <= lamSum (\lam i => beta i x) hf s => lamSum>=0 {G} {a.len} {\lam i => beta i x} (\lam i => beta>=0 i x) {hf} hf>=0 s
+                             | kb : abs (f x - Lambda {G} {CompactMap-reflect g} gcp {psi} psip (CompactCoverMap.mul f (k x)) mfk>=0) <= eps => kernel-bound f>=0 (<=-less eps>0) fW gp gW psip x
+                             | LB<= : Lambda {G} {CompactMap-reflect g} gcp {psi} psip (lamSum (\lam i => beta i x) hf) B>=0 <= RealAbGroup.BigSum (\lam i => beta i x * c i)
+                               => Lambda-lamSum {G} {CompactMap-reflect g} {gcp} {psi} {psip} {a.len} {\lam i => beta i x} (\lam i => beta>=0 i x) {hf} hf>=0
+                             | sa' : RealAbGroup.BigSum (\lam i => beta i x * c i) <= Lambda {G} {CompactMap-reflect g} gcp {psi} psip (lamSum (\lam i => beta i x) hf) B>=0 + (alpha - eps) * ratio 1 4 * ratio 1 2
+                               => sa psip psiV2 {\lam i => beta i x} (\lam i => beta>=0 i x) (\lam i => CompactCoverMap.sup-bound (negative (a i) + x))
+                             | Lf<= : Lambda {G} {CompactMap-reflect g} gcp {psi} psip f f>=0 <= cover-num f (CompactMap-reflect g) f>=0 gcp => Lambda-upper
+                             | up : Lambda {G} {CompactMap-reflect g} gcp {psi} psip (CompactCoverMap.mul f (k x)) mfk>=0
+                                      <= Lambda {G} {CompactMap-reflect g} gcp {psi} psip (lamSum (\lam i => beta i x) hf) B>=0 + eta * Lambda {G} {CompactMap-reflect g} gcp {psi} psip f f>=0
+                               => Lambda-mono {G} {CompactMap-reflect g} {gcp} {psi} {psip} {lamSum (\lam i => beta i x) hf + CompactCoverMap.scale eta f} {CompactCoverMap.mul f (k x)}
+                                    {\lam s => =_<= (inv zro-left) <=∘ <=_+ (B>=0 s) (ef>=0 s)} {mfk>=0} (P1 x) <=∘
+                                  Lambda-add {G} {CompactMap-reflect g} {gcp} {psi} {psip} {lamSum (\lam i => beta i x) hf} {CompactCoverMap.scale eta f} {B>=0} {ef>=0} <=∘
+                                  <=_+ <=-refl (=_<= (Lambda-scale (<=-less eta>0)))
+                             | low : Lambda {G} {CompactMap-reflect g} gcp {psi} psip (lamSum (\lam i => beta i x) hf) B>=0
+                                      <= Lambda {G} {CompactMap-reflect g} gcp {psi} psip (CompactCoverMap.mul f (k x)) mfk>=0 + eta * Lambda {G} {CompactMap-reflect g} gcp {psi} psip f f>=0
+                               => Lambda-mono {G} {CompactMap-reflect g} {gcp} {psi} {psip} {CompactCoverMap.mul f (k x) + CompactCoverMap.scale eta f} {lamSum (\lam i => beta i x) hf}
+                                    {\lam s => =_<= (inv zro-left) <=∘ <=_+ (mfk>=0 s) (ef>=0 s)} {B>=0} (P2 x) <=∘
+                                  Lambda-add {G} {CompactMap-reflect g} {gcp} {psi} {psip} {CompactCoverMap.mul f (k x)} {CompactCoverMap.scale eta f} {mfk>=0} {ef>=0} <=∘
+                                  <=_+ <=-refl (=_<= (Lambda-scale (<=-less eta>0)))
+                             | eNf : eta * Lambda {G} {CompactMap-reflect g} gcp {psi} psip f f>=0 <= eta * cover-num f (CompactMap-reflect g) f>=0 gcp => RealField.<=_*_positive-right (<=-less eta>0) Lf<=
+                           \in est-arith kb LB<= sa' up low eNf etaN eta>0 e4>0
+                     \in \case split-eps e2>0 (usingOnly (RealField.<=_*_positive_positive (RealField.natCoef>=0 {a.len}) M>=0) linarith : 0 < RealField.natCoef a.len * CompactMap-ta-sup g + 1) \with {
+                       | inP (zeta,zeta>0,zetaN) => \case FinSet.finiteAC (\lam i => \case real-located {c i} zeta>0 \with {
+                         | byLeft q => inP (inl q)
+                         | byRight q => inP (inr q)
+                       }) \with {
+                         | inP D =>
+                           \let c' (i : Fin a.len) : Real => orChoose {0 < c i} {c i < zeta} (D i) (c i) 0
+                           \in \have
+                             | c'>=0 (i : Fin a.len) : 0 <= c' i => \case D i \as o \return 0 <= orChoose o (c i) 0 \with {
+                               | inl _ => Lambda>=0
+                               | inr _ => <=-refl
+                             }
+                             | c'-c (i : Fin a.len) : abs (c i - c' i) <= zeta => \case D i \as o \return abs (c i - orChoose o (c i) 0) <= zeta \with {
+                               | inl _ => =_<= (pmap abs negative-right *> RealAbGroup.abs_zro) <=∘ <=-less zeta>0
+                               | inr q => rewrite (RealAbGroup.minus_zro, RealAbGroup.abs-ofPos Lambda>=0) (<=-less q)
+                             }
+                             | c'-pos (i : Fin a.len) : 0 < c' i -> ∃ (k : G) (K k) (u : G) (U u) (k + u = a i)
+                               => \case D i \as o \return (0 < orChoose o (c i) 0 -> ∃ (k : G) (K k) (u : G) (U u) (k + u = a i)) \with {
+                                 | inl q => \lam _ =>
+                                   \have n>0 : 0 < cover-num (hf i) psi (hf>=0 i) psip => RealField.<_*_positive-cancel-right (<=-less (RealField.pinv>0 _)) $ transportInv (__ < _) RealField.zro_*-left q
+                                   \in TruncP.map (cover-num-pos-point n>0) \lam (y,p) =>
+                                     \have | (p1,p2) => prod-pos (hs>=0 i y) (f>=0 y) p
+                                            | v1 : V1 (negative (a i) + y) => hsV i (rewrite (RealAbGroup.abs-ofPos (hs>=0 i y)) p1)
+                                     \in (y, fK (rewrite (RealAbGroup.abs-ofPos (f>=0 y)) p2), negative (negative (a i) + y), (V1<= (V1s v1)).2, simplify)
+                                 | inr _ => \lam p => absurd (<-irreflexive p)
+                               }
+                             | diff (x : G) : abs (RealAbGroup.BigSum (\lam i => beta i x * c i) - transSum g c' (\lam i => a i) x) <= RealField.natCoef a.len * (zeta * CompactMap-ta-sup g)
+                               => =_<= (pmap abs (inv (RealAbGroup.BigSum_- {a.len} {\lam i => beta i x * c i} {\lam i => c' i * beta i x}))) <=∘ abs-BigSum _ <=∘
+                                  RealAbGroup.BigSum_<= {a.len} {_} {\lam _ => zeta * CompactMap-ta-sup g} (\lam i =>
+                                    =_<= (pmap abs (equation.cRing : beta i x * c i - c' i * beta i x = beta i x * (c i - c' i)) *> RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (beta>=0 i x))) <=∘
+                                    RealField.<=_*_positive-right (beta>=0 i x) (c'-c i) <=∘ =_<= RealField.*-comm <=∘ RealField.<=_*_positive-right (<=-less zeta>0) (CompactCoverMap.sup-bound _)) <=∘
+                                  =_<= RealField.BigSum_replicate
+                             | zN : RealField.natCoef a.len * (zeta * CompactMap-ta-sup g) <= (alpha - eps) * ratio 1 2
+                               => \have e : zeta * (RealField.natCoef a.len * CompactMap-ta-sup g + 1) = RealField.natCoef a.len * (zeta * CompactMap-ta-sup g) + zeta => equation.cRing
+                                  \in usingOnly (e, zetaN, zeta>0) linarith
+                           \in inP (a.len, \lam i => a i, c', c'>=0, c'-pos, \lam x =>
+                                  \have | t1 => est x
+                                         | t2 => diff x
+                                         | t3 : abs (f x - transSum g c' (\lam i => a i) x) <= abs (f x - RealAbGroup.BigSum (\lam i => beta i x * c i)) + abs (RealAbGroup.BigSum (\lam i => beta i x * c i) - transSum g c' (\lam i => a i) x)
+                                           => rewrite (equation.cRing : f x - transSum g c' (\lam i => a i) x = f x - RealAbGroup.BigSum (\lam i => beta i x * c i) + (RealAbGroup.BigSum (\lam i => beta i x * c i) - transSum g c' (\lam i => a i) x)) RealAbGroup.abs_+
+                                  \in usingOnly (t1, t2, t3, zN, eps<alpha) linarith)
+                       }
+                     }
+                 }
+               }
+           }
+         }
+       }
+     }
+  \where {
+    \lemma est-arith {fx S LB LmK Lf N eta eps D : Real} (kb : abs (fx - LmK) <= eps) (LB<= : LB <= S) (sa' : S <= LB + D * ratio 1 2)
+                     (up : LmK <= LB + eta * Lf) (low : LB <= LmK + eta * Lf) (eNf : eta * Lf <= eta * N) (etaN : eta * (N + 1) < D * ratio 1 2) (eta>0 : 0 < eta) (D>0 : 0 < D)
+      : abs (fx - S) <= eps + D
+      => \have | (kb1,kb2) => abs-diff-bound kb
+               | etaN' : eta * N + eta = eta * (N + 1) => equation.cRing
+         \in RealField.abs-univ (usingOnly (kb1, LB<=, up, eNf, etaN', etaN, eta>0, D>0) linarith) (usingOnly (kb2, sa', low, eNf, etaN', etaN, eta>0, D>0) linarith)
+  }
+
+-- | `f ≤ ∑ c_i (s_i · φ) ≤ f + δ h`.
+\type IsApprox {G : TopAddGroup} (f h phi : CompactCoverMap G) {n : Nat} (c : Array Real n) (s : Array G n) (delta : Real) : \Prop
+  => \Sigma (\Pi (i : Fin n) -> 0 <= c i) (\Pi (x : G) -> f x <= transSum phi c s x) (\Pi (x : G) -> transSum phi c s x <= f x + delta * h x)
+
+-- | One half of Lemma two-sided.
+\lemma two-sided-one {G : LocallyCompactUrysohnGroup} {f : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) {K : Set G} (fK : IsSupported f K)
+                     {ht : CompactCoverMap G} (ht>=0 : \Pi (x : G) -> 0 <= ht x) (ht<=1 : \Pi (x : G) -> ht x <= 1) (htK : \Pi {x : G} -> K x -> ht x = 1) {K1 : Set G} (K1tb : IsTotallyBoundedSet K1) (htK1 : IsSupported ht K1)
+                     {U : Set G} {h : CompactCoverMap G} (h>=0 : \Pi (x : G) -> 0 <= h x) (hU : \Pi {k u : G} -> K1 k -> U u -> h (k + u) = 1) {U' : Set G} (U'o : isOpen U') (U'0 : U' 0) (U'U : \Pi {u v : G} -> U' u -> U' v -> U (u + v))
+                     {delta : Real} (delta>0 : 0 < delta) {W : Set G} {phi : CompactCoverMap G} (phip : IsPositiveFun phi) (phiW : IsSupported phi (\lam x => \Sigma (W x) (U' x)))
+                     (FW : \Pi (x : G) {w : G} -> W w -> abs ((f + CompactCoverMap.scale (delta * ratio 1 2) ht) (x + w) - (f + CompactCoverMap.scale (delta * ratio 1 2) ht) x) <= delta * ratio 1 8)
+  : ∃ (n : Nat) (c : Array Real n) (s : Array G n) (IsApprox f h phi c s delta)
+  => \let F => f + CompactCoverMap.scale (delta * ratio 1 2) ht
+     \in \have | d2>=0 : 0 <= delta * ratio 1 2 => usingOnly delta>0 linarith
+               | F>=0 (x : G) : 0 <= F x => usingOnly (f>=0 x, RealField.<=_*_positive_positive d2>=0 (ht>=0 x)) linarith
+               | FK1 : IsSupported F K1 => IsSupported.mono {G} {F} {\lam x => K x || K1 x} {K1} (IsSupported.bound_+ {G} {f} {CompactCoverMap.scale (delta * ratio 1 2) ht} {F} fK
+                    (IsSupported.bound_*c htK1 \lam x => =_<= (RealField.abs_* {delta * ratio 1 2} {ht x} *> pmap (* _) (RealAbGroup.abs-ofPos d2>=0)))
+                    (\lam x => RealAbGroup.abs_+)) \lam {x} o => \case o \with {
+                      | byLeft Kx => htK1 (rewrite (htK Kx, RealAbGroup.abs-ofPos (<=-less RealAbGroup.zro<ide)) RealAbGroup.zro<ide)
+                      | byRight K1x => K1x
+                    }
+     \in \case translate-approx {_} {f + CompactCoverMap.scale (delta * ratio 1 2) ht} F>=0 K1tb FK1 (usingOnly delta>0 linarith) (usingOnly delta>0 linarith : delta * ratio 1 8 < delta * ratio 1 4) FW phip (\lam p => (phiW p).1) U'o U'0 \with {
+       | inP (n,s,c,c>=0,cpos,app) => inP (n, c, s, (c>=0, \lam x d =>
+           \have | T>=0 => transSum>=0 phip.1 c>=0 {s} x
+                 | fx>0 : 0 < f x => T>=0 <∘r d
+                 | Kx : K x => fK (rewrite (RealAbGroup.abs-ofPos (f>=0 x)) fx>0)
+                 | Fx : F x = f x + delta * ratio 1 2 => pmap (\lam z => f x + delta * ratio 1 2 * z) (htK Kx) *> pmap (f x +) ide-right
+                 | (a1,a2) => abs-diff-bound (app x)
+           \in usingOnly (Fx, a1, a2, d, delta>0) linarith,
+         \lam x d =>
+           \have | dh>=0 : 0 <= delta * h x => RealField.<=_*_positive_positive (<=-less delta>0) (h>=0 x)
+                 | T>0 : 0 < transSum phi c s x => usingOnly (f>=0 x, dh>=0, d) linarith
+                 | (inP (i,ti)) => LinearlyOrderedAbMonoid.<_BigSum-dec T>0
+                 | (ci>0,pi>0) => prod-pos (c>=0 i) (phip.1 _) ti
+                 | (inP (k,K1k,u,U'u,ku)) => cpos i ci>0
+                 | U'v : U' (negative (s i) + x) => (phiW (rewrite (RealAbGroup.abs-ofPos (phip.1 _)) pi>0)).2
+                 | hx : h x = 1 => pmap h (inv (inv +-assoc *> pmap (+ (negative (s i) + x)) ku *> simplify : k + (u + (negative (s i) + x)) = x)) *> hU K1k (U'U U'u U'v)
+                 | (a1,a2) => abs-diff-bound (app x)
+                 | F<= : F x <= f x + delta * ratio 1 2 => <=_+ <=-refl (RealField.<=_*_positive-right d2>=0 (ht<=1 x) <=∘ =_<= ide-right)
+                 | d' : f x + delta * 1 < transSum phi c s x => transport (\lam z => f x + delta * z < transSum phi c s x) hx d
+           \in usingOnly (d', a2, F<=, delta>0) linarith))
+     }
+
+-- | Lemma two-sided: simultaneous approximation of two functions from above by translates of the same {φ}.
+\lemma two-sided {G : LocallyCompactUrysohnGroup} {f f' : CompactCoverMap G} (f>=0 : \Pi (x : G) -> 0 <= f x) (f'>=0 : \Pi (x : G) -> 0 <= f' x) {K : Set G} (Ktb : IsTotallyBoundedSet K)
+  (fK : IsSupported f K) (f'K : IsSupported f' K)
+  : ∃ (h : CompactCoverMap G) (\Pi (x : G) -> 0 <= h x) ∀ {delta} (0 < delta)
+      ∃ (phi : CompactCoverMap G) (IsPositiveFun phi) (n : Nat) (c : Array Real n) (s : Array G n)
+        (m : Nat) (d : Array Real m) (t : Array G m) (IsApprox f h phi c s delta) (IsApprox f' h phi d t delta)
+  => \have | (inP (U1,U1o,U10,ht,ht>=0,ht<=1,htK')) => G.bump Ktb
+           | htK {x : G} (Kx : K x) : ht x = 1 => pmap ht (inv zro-right) *> htK' Kx U10
+           | (inP (K1,K1tb,htK1)) => ht.support
+           | (inP (U,Uo,U0,h,h>=0,h<=1,hU)) => G.bump K1tb
+     \in inP (h, h>=0, \lam {delta} delta>0 =>
+              \have e8>0 : 0 < delta * ratio 1 8 => usingOnly delta>0 linarith
+              \in \case topAdd-translation (f + CompactCoverMap.scale (delta * ratio 1 2) ht) e8>0, topAdd-translation (f' + CompactCoverMap.scale (delta * ratio 1 2) ht) e8>0, G.shrink2 Uo U0 \with {
+                | inP (W1,W1o,W10,_,hW1), inP (W2,W2o,W20,_,hW2), inP (U',U'o,U'0,_,U'U) =>
+                  \case G.cutoff (open-inter (open-inter W1o W2o) U'o) ((W10,W20),U'0) \with {
+                    | inP (phi,Wp,Wpo,Wp0,phi>=0,_,phiW,phiV) =>
+                      \have phip : IsPositiveFun phi => (phi>=0, inP (0, rewrite (phiW Wp0) RealAbGroup.zro<ide))
+                      \in \case two-sided-one f>=0 fK ht>=0 ht<=1 htK K1tb htK1 h>=0 hU U'o U'0 U'U delta>0 {W1} phip (\lam p => \case phiV p \with { | ((w1,_),u) => (w1,u) }) (\lam x Ww => (hW1 x Ww).1),
+                               two-sided-one f'>=0 f'K ht>=0 ht<=1 htK K1tb htK1 h>=0 hU U'o U'0 U'U delta>0 {W2} phip (\lam p => \case phiV p \with { | ((_,w2),u) => (w2,u) }) (\lam x Ww => (hW2 x Ww).1) \with {
+                        | inP (n,c,s,ap), inP (m,d,t,ap') => inP (phi, phip, n, c, s, m, d, t, ap, ap')
+                      }
+                  }
+              })

@@ -6,7 +6,6 @@
  -}
 
 \import Algebra.Meta
-\import Algebra.Ordered
 \import Category.Functor
 \import Category.Topos.Sheaf.Site
 \import Category.Topos.Sheaf.SiteHom
@@ -296,13 +295,11 @@
     }
 }
 
-\record FrameHom \extends PosetHom {
+\record FrameHom \extends LatticeHom {
   \override Dom : Locale
   \override Cod : Locale
   | func-top : func top = top
   | func-top>= : top <= func top
-  | func-meet {x y : Dom} : func (x ∧ y) = func x ∧ func y
-  | func-meet>= {x y : Dom} : func x ∧ func y <= func (x ∧ y)
   | func-Join {C : Dom -> \Prop} : func (Join C) = SJoin func C
   | func-Join>= {C : Dom -> \Prop} : func (Join C) <= SJoin func C
 
@@ -311,8 +308,10 @@
   \default func-top>= => transportInv (_ <=) func-top <=-refl
   \default func-top => <=-antisymmetric top-univ func-top>=
   \default func-<= x<=y => rewrite (inv (pmap func (meet_<= x<=y)) *> func-meet) meet-right
-  \default func-meet>= => =_<= (inv func-meet)
-  \default func-meet => <=-antisymmetric (meet-univ (func-<= meet-left) (func-<= meet-right)) func-meet>=
+  \default func-join>= => func-Join>= <=∘ SJoin-univ (later \case \elim __ \with {
+    | byLeft p => rewrite p join-left
+    | byRight p => rewrite p join-right
+  })
 
   \lemma func-SJoin>= {A : \Type} {f : A -> Dom} {P : A -> \Prop} : func (SJoin f P) <= SJoin (\lam a => func (f a)) P
     => func-Join>= <=∘ SJoin-univ (SetIm-elim SJoin-cond)
@@ -325,15 +324,6 @@
 
   \lemma func-IJoin {J : \Type} {f : J -> Dom} : func (IJoin f) = IJoin (\lam a => func (f a))
     => <=-antisymmetric func-IJoin>= $ IJoin-univ \lam a => func-<= (IJoin-cond a)
-
-  \lemma func-join>= {x y : Dom} : func (x ∨ y) <= func x ∨ func y
-    => func-Join>= <=∘ SJoin-univ (later \case \elim __ \with {
-      | byLeft p => rewrite p join-left
-      | byRight p => rewrite p join-right
-    })
-
-  \lemma func-join {x y : Dom} : func (x ∨ y) = func x ∨ func y
-    => <=-antisymmetric func-join>= $ join-univ (func-<= join-left) (func-<= join-right)
 
   \lemma func-bottom>= : func bottom <= bottom
     => func-Join>= <=∘ SJoin-univ (later \case __)

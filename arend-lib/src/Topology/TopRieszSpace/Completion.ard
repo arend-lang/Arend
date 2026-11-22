@@ -1,0 +1,156 @@
+{- | The completion of a topological Riesz space with a truncation.
+
+  * {CompleteTruncRieszGroup}: a complete topological abelian group with the structure of a truncated Riesz space.
+  * {TopTruncRieszCompletion}: the lattice operations and the truncation extend to the completion.
+  * {topTruncCompletion}: the canonical map into the completion; it preserves joins, meets, truncations and the order.
+-}
+
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.TruncRieszSpace
+\import Arith.Rat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.TopRieszSpace
+\open LatticeAbGroup(abs)
+
+-- | The completion of a topological Riesz space with a truncation.
+\instance TopTruncRieszCompletion (X : TopTruncRieszSpace) : CompleteTopTruncRieszGroup (RegularCauchyFilter X)
+  | CompleteTopAbGroup => TopAbGroupCompletion X
+  | TruncRieszSpace => lattice
+  | solid-neighborhood {U} U0 => \case <=<-inter U0 \with {
+    | inP (U1,U1o,U1<=<U) => \case X.solid-neighborhood (Completion.pointCF_^-1_<=< {X} {pointCF X.zro} U1o) \with {
+      | inP (W,WS,W0,W<=U1) => inP (\lam G => ∃ (F : RegularCauchyFilter X) (F W) (abs-cover G <= abs-cover F),
+          \lam (inP (F,FW,q)) p => inP (F, FW, <=-trans p q),
+          RegularRatherBelow.<=<-left (Completion.mkSet_<=<-point.2 W0) \lam {F} FW => inP (F, FW, join-idemp),
+          \lam {G} (inP (F,FW,q)) => <=<_<= (transport (single __ <=< U) (clamp-char {X} {G} {F} *> clamp-id {lattice} q) $ clamp-neighborhood {X} {F} {G} U1<=<U FW \lam Wy => W<=U1 $ WS Wy clamp-abs) idp)
+    }
+  }
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+
+    \lemma clamp-abs {E : LatticeAbGroup} {a b : E} : abs (negative (abs b) ∨ (a ∧ abs b)) E.<= abs b
+      => join-univ (join-univ (PosetAddGroup.negative_<= LatticeAbGroup.abs>=0 <=∘ =_<= AddGroup.negative_zro <=∘ LatticeAbGroup.abs>=0) meet-right) (PosetAddGroup.negative_<= join-left <=∘ =_<= AddGroup.negative-isInv)
+
+    \lemma clamp-id {E : LatticeAbGroup} {a b : E} (p : abs a E.<= abs b) : negative (abs b) ∨ (a ∧ abs b) = a
+      => pmap (_ ∨) (MeetSemilattice.meet_<= (join-left <=∘ p)) *> JoinSemilattice.join_<= (PosetAddGroup.negative_<= p <=∘ PosetAddGroup.negative_<= join-right <=∘ =_<= AddGroup.negative-isInv)
+
+    \type \infix 4 <= (F G : RegularCauchyFilter X) => join-func F G = G
+
+    -- | The lattice operations and the truncation on the completion.
+    \func lattice : TruncRieszSpace (RegularCauchyFilter X) \cowith
+      | AbGroup => TopAbGroupCompletion X
+      | isDivisible a {n} n/=0 => inP (lift1 (X.*q-right-uniform {RatField.finv n}) a, inv *n-cover-char *> unique1 (*n-cover n ∘ lift1 X.*q-right-uniform) id
+          \lam x => pmap (*n-cover n) lift1-char *> *n-cover-point *> pmap pointCF (inv X.*q_*n *> inv X.*q-assoc *> pmap (\lam q => q X.*q x) (RatField.finv-right $ natRat/=0 n/=0) *> X.ide_*q))
+      | <= => <=
+      | <=-refl => join-idemp
+      | <=-transitive => <=-trans
+      | <=-antisymmetric p q => inv q *> join-comm *> p
+      | <=_+ p q => <=-trans (join-+-right *> pmap (+-func __ _) p) (join-+-left *> pmap (+-func _) q)
+      | join => join-func
+      | join-left => inv join-assoc *> pmap (join-func __ _) join-idemp
+      | join-right {F} {G} => inv join-assoc *> pmap (join-func __ _) join-comm *> join-assoc *> pmap (join-func F) join-idemp
+      | join-univ p q => join-assoc *> pmap (join-func _) q *> p
+      | trunc => trunc-cover
+      | trunc_zro>=0 => pmap (join-func _) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc_zro>=0) *> inv trunc-char
+      | trunc-bound => unique1 (join-cover ∘ tuple trunc-cover id) id
+          \lam x => pmap (join-func __ _) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc-bound)
+      | trunc-assoc => unique2 (join-cover ∘ tuple (meet-cover ∘ prod id trunc-cover) (trunc-cover ∘ proj1)) (trunc-cover ∘ proj1)
+          \lam x y => pmap2 join-func (pmap (meet-func _) trunc-char *> meet-char) trunc-char *> join-char *> pmap pointCF (X.join_<= X.trunc-assoc) *> inv trunc-char
+
+    \sfunc join-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+      => lift2 X.join-uniform
+
+    \func join-func (F G : RegularCauchyFilter X) => join-cover (F,G)
+
+    \lemma join-char {x y : X} : join-cover (pointCF x, pointCF y) = pointCF (x ∨ y)
+      => rewrite (\peval join-cover) lift2-char
+
+    \func meet-cover : CoverMap (Completion X `ProductCoverSpace` Completion X) (Completion X)
+      => negative-cover ∘ join-cover ∘ prod negative-cover negative-cover
+
+    \func meet-func (F G : RegularCauchyFilter X) => meet-cover (F,G)
+
+    \lemma meet-char {x y : X} : meet-func (pointCF x) (pointCF y) = pointCF (x ∧ y)
+      => pmap negative-cover (pmap2 join-func negative-char negative-char *> join-char) *> negative-char
+
+    \func abs-cover : CoverMap (Completion X) (Completion X)
+      => join-cover ∘ tuple id negative-cover
+
+    \lemma abs-char {x : X} : abs-cover (pointCF x) = pointCF (X.abs x)
+      => pmap (join-func _) negative-char *> join-char
+
+    \sfunc trunc-cover : CoverMap (Completion X) (Completion X)
+      => lift1 X.trunc-uniform
+
+    \lemma trunc-char {x : X} : trunc-cover (pointCF x) = pointCF (X.trunc x)
+      => rewrite (\peval trunc-cover) lift1-char
+
+    \func *n-cover (n : Nat) : CoverMap (Completion X) (Completion X) \elim n
+      | 0 => const (pointCF X.zro)
+      | suc n => +-cover ∘ tuple (*n-cover n) id
+
+    \lemma *n-cover-char {n : Nat} {F : RegularCauchyFilter X} : *n-cover n F = n AddMonoid.*n {TopAbGroupCompletion X} F \elim n
+      | 0 => idp
+      | suc n => pmap (+-func __ F) *n-cover-char
+
+    \lemma *n-cover-point {n : Nat} {x : X} : *n-cover n (pointCF x) = pointCF (n X.*n x) \elim n
+      | 0 => idp
+      | suc n => pmap (+-func __ _) *n-cover-point *> +-char
+
+    \lemma join-idemp {F : RegularCauchyFilter X} : join-func F F = F
+      => unique1 (join-cover ∘ tuple id id) id \lam x => join-char *> pmap pointCF X.join-idemp
+
+    \lemma join-comm {F G : RegularCauchyFilter X} : join-func F G = join-func G F
+      => unique2 join-cover (join-cover ∘ tuple proj2 proj1) \lam x y => join-char *> pmap pointCF X.join-comm *> inv join-char
+
+    \lemma join-assoc {F G H : RegularCauchyFilter X} : join-func (join-func F G) H = join-func F (join-func G H)
+      => unique3 (join-cover ∘ prod join-cover id) (join-cover ∘ tuple (proj1 ∘ proj1) (join-cover ∘ prod proj2 id))
+          \lam x y z => pmap (join-func __ _) join-char *> join-char *> pmap pointCF X.join-assoc *> inv (pmap (join-func _) join-char *> join-char)
+
+    \lemma join-+-left {F G H : RegularCauchyFilter X} : join-func (+-func F G) (+-func F H) = +-func F (join-func G H)
+      => unique3 (join-cover ∘ tuple (+-cover ∘ proj1) (+-cover ∘ tuple (proj1 ∘ proj1) proj2)) (+-cover ∘ tuple (proj1 ∘ proj1) (join-cover ∘ prod proj2 id))
+          \lam x y z => pmap2 join-func +-char +-char *> join-char *> pmap pointCF (inv X.join_+-left) *> inv (pmap (+-func _) join-char *> +-char)
+
+    \lemma join-+-right {F G H : RegularCauchyFilter X} : join-func (+-func F H) (+-func G H) = +-func (join-func F G) H
+      => unique3 (join-cover ∘ tuple (+-cover ∘ tuple (proj1 ∘ proj1) proj2) (+-cover ∘ tuple (proj2 ∘ proj1) proj2)) (+-cover ∘ prod join-cover id)
+          \lam x y z => pmap2 join-func +-char +-char *> join-char *> pmap pointCF (inv X.join_+-right) *> inv (pmap (+-func __ _) join-char *> +-char)
+
+    \func clamp-map : CoverMap (ProductCoverSpace X X) X
+      => X.join-uniform ∘ tuple (negative-uniform ∘ X.abs-uniform ∘ proj2) (X.meet-uniform ∘ tuple proj1 (X.abs-uniform ∘ proj2))
+
+    \lemma clamp-char {F G : RegularCauchyFilter X} : lift2 clamp-map (F,G) = join-func (negative-cover (abs-cover G)) (meet-func F (abs-cover G))
+      => unique2 (lift2 clamp-map) (join-cover ∘ tuple (negative-cover ∘ abs-cover ∘ proj2) (meet-cover ∘ tuple proj1 (abs-cover ∘ proj2)))
+          \lam x y => lift2-char *> inv (pmap2 join-func (pmap negative-cover abs-char *> negative-char) (pmap (meet-func _) abs-char *> meet-char) *> join-char)
+
+    \lemma clamp-neighborhood {F G : RegularCauchyFilter X} {U U1 : Set (RegularCauchyFilter X)} {W : Set X} (U1<=<U : U1 <=< {Completion X} U) (FW : F W)
+                               (h : \Pi {x y : X} -> W y -> U1 (pointCF (clamp-map (x,y)))) : single (lift2 clamp-map (G,F)) <=< {Completion X} U
+      => rewrite (\peval lift2 clamp-map) $ (completion-lift-neighborhood2 {_} {_} {Completion X} (completion ∘ clamp-map) G F U).2 $ inP (U1, U1<=<U, top, filter-top, W, FW, \lam _ => h)
+
+    \lemma <=-trans {F G H : RegularCauchyFilter X} (p : F <= G) (q : G <= H) : F <= H
+      => pmap (join-func F) (inv q) *> inv join-assoc *> pmap (join-func __ H) p *> q
+
+  }
+
+-- | The canonical map into the completion.
+\func topTruncCompletion {X : TopTruncRieszSpace} : TopTruncRieszSpaceMap X (TopTruncRieszCompletion X) \cowith
+  | TopAbGroupMap => completion-topAb
+  | func-<= x<=y => TopTruncRieszCompletion.join-char *> pmap pointCF (X.join_<= x<=y)
+  | func-trunc => inv TopTruncRieszCompletion.trunc-char
+  | func-join => inv TopTruncRieszCompletion.join-char

@@ -540,9 +540,13 @@
           (map (\lam s => (v + v + s.1, (a * b) * s.2)) l ++ map (\lam s => (v + s.1, B.diff ((a ∨ b) * s.2) (a * b))) l) ++
           map (\lam s => (v + s.1, bottom)) l ++ map (\lam s => (s.1, B.diff s.2 (b ∨ a))) l)
           => transport (EPerm _) (
-            cong_:: (pmap (v + v, __) equation.bRing) $ cong_:: idp $ cong_:: (pmap (v,__) equation.bRing) $ pmap2 (++)
-            (pmap (++ _) (exts \lam j => pmap (_ + _, __) equation.bRing))
-            (pmap2 (++) (exts \lam j => pmap (_ + _, __) equation.bRing) (exts \lam j => pmap ((l j).1, __) equation.bRing))) add-double
+            cong_:: (pmap (v + v, __) (pmap (B.diff __ _) join-meet-absorb)) $ cong_:: idp $ cong_:: (pmap (v,__) equation.bRing) $ pmap2 (++)
+            (pmap (++ _) (exts \lam j => pmap (_ + _, __) (pmap (* _) join-meet-absorb)))
+            (pmap2 (++) (exts \lam j => pmap (_ + _, __) equation.bRing) (exts \lam j => pmap ((l j).1, __) (pmap (B.diff _) equation.bRing)))) add-double
+          \where {
+            \lemma join-meet-absorb {a b : B} : (a ∨ b) * (a * b) = a * b
+              => equation.bRing
+          }
 
         \lemma add-modularity_SFRefines {v : V} {a b : B} {l : PFunc} (lr : IsReduced l) : SFRefines (add v a (add v b l)) (add v (a ∨ b) (add v (a * b) l))
           => SFRefines-trans (add_IsReduced $ add_IsReduced lr) (SFRefines_EPerm add-double) $ SFRefines-trans (add_IsReduced $ add_IsReduced lr)

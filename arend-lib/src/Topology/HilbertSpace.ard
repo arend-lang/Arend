@@ -1,0 +1,142 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedRing
+
+\type IsParallelogram (X : PseudoNormedAbGroup) : \Prop
+  => \Pi (x y : X) -> lnorm (x + y) * lnorm (x + y) + lnorm (x - y) * lnorm (x - y) = 2 * (lnorm x * lnorm x) + 2 * (lnorm y * lnorm y)
+
+\class PreHilbertSpace \extends NormedPreBanachSpace {
+  | inner : E -> E -> Real
+  | inner-comm {x y : E} : inner x y = inner y x
+  | inner-+-left {x y z : E} : inner (x + y) z = inner x z RealField.+ inner y z
+  | inner-*q-left {q : Rat} {x y : E} : inner (q *q x) y = Real.fromRat q RealField.* inner x y
+  | inner>=0 {x : E} : RealField.zro <= inner x x
+  | norm-inner {x : E} : norm x = sqrt (inner x x)
+
+  \default norm \as norm-impl x : Real => sqrt (inner x x)
+  \default norm-inner \as norm-inner-impl {x} : norm-impl x = sqrt (inner x x) => idp
+
+  \func innerHom-left (y : E) : AddGroupHom \this RealField \cowith
+    | func x => inner x y
+    | func-+ => inner-+-left
+
+  \lemma inner-+-right {x y z : E} : inner x (y + z) = inner x y RealField.+ inner x z
+    => inner-comm *> inner-+-left *> pmap2 (RealField.+) inner-comm inner-comm
+
+  \lemma inner-*q-right {q : Rat} {x y : E} : inner x (q *q y) = Real.fromRat q RealField.* inner x y
+    => inner-comm *> inner-*q-left *> pmap (_ RealField.*) inner-comm
+
+  \lemma inner_zro-left {y : E} : inner 0 y = RealField.zro
+    => AddGroupHom.func-zro {innerHom-left y}
+
+  \lemma inner_zro-right {x : E} : inner x 0 = RealField.zro
+    => inner-comm *> inner_zro-left
+
+  \lemma inner_negative-left {x y : E} : inner (negative x) y = RealField.negative (inner x y)
+    => AddGroupHom.func-negative {innerHom-left y}
+
+  \lemma inner_negative-right {x y : E} : inner x (negative y) = RealField.negative (inner x y)
+    => inner-comm *> inner_negative-left *> pmap RealField.negative inner-comm
+
+  \lemma inner_--left {x y z : E} : inner (x - y) z = inner x z RealField.+ RealField.negative (inner y z)
+    => inner-+-left *> pmap (_ RealField.+) inner_negative-left
+
+  \lemma inner_--right {x y z : E} : inner x (y - z) = inner x y RealField.+ RealField.negative (inner x z)
+    => inner-+-right *> pmap (_ RealField.+) inner_negative-right
+
+  \lemma norm-sq {x : E} : norm x RealField.* norm x = inner x x
+    => rewrite (norm-inner {_} {x}) (pow_sqrt (inner>=0 {_} {x}))
+
+  \lemma norm_+-self {x : E} : norm (x + x) = norm x RealField.+ norm x
+    => \have | e : inner (x + x) (x + x) = inner x x RealField.+ inner x x RealField.+ (inner x x RealField.+ inner x x)
+                 => inner-+-left *> pmap2 (RealField.+) inner-+-right inner-+-right
+             | h : RealField.zro <= norm x => lnorm>=0
+             | n>=0 : RealField.zro <= norm x RealField.+ norm x => linarith
+       \in norm-inner {_} {x + x} *> pmap sqrt (e *> (rewriteI (norm-sq {_} {x}) equation.cRing : inner x x RealField.+ inner x x RealField.+ (inner x x RealField.+ inner x x) = (norm x RealField.+ norm x) RealField.* (norm x RealField.+ norm x))) *> sqrt_pow n>=0
+
+  \lemma parallelogram : IsParallelogram \this
+    => \lam x y =>
+      \have | e1 : inner (x + y) (x + y) = inner x x RealField.+ inner x y RealField.+ (inner y x RealField.+ inner y y)
+              => inner-+-left *> pmap2 (RealField.+) inner-+-right inner-+-right
+            | e2 : inner (x - y) (x - y) = inner x x RealField.+ RealField.negative (inner x y) RealField.+ RealField.negative (inner y x RealField.+ RealField.negative (inner y y))
+              => inner_--left *> pmap2 (RealField.+) inner_--right (pmap RealField.negative inner_--right)
+      \in pmap2 (RealField.+) (norm-sq {_} {x + y}) (norm-sq {_} {x - y}) *> equation.cRing {e1, e2} *> inv (pmap2 (RealField.+) (pmap (2 RealField.*) (norm-sq {_} {x})) (pmap (2 RealField.*) (norm-sq {_} {y})))
+} \where {
+  \func fromParallelogram {A : RatValue} (X : NormedPreBanachSpace A) (par : IsParallelogram X) : PreHilbertSpace A \cowith
+    | NormedPreBanachSpace => X
+    | inner x y => quarter * diff x y
+    | inner-comm => pmap (quarter *) diff-comm
+    | inner-+-left => pmap (quarter *) (diff-+ par) *> ldistr
+    | inner-*q-left {q} {x} {y} => func-*q {X} {QModule.fromRatModule RealField} {diffHom par y} *> QModule.fromRatModule_*q
+    | inner>=0 => transportInv (0 <=) (diff-sq par) RealField.square_>=0
+    | norm-inner => inv (sqrt_pow lnorm>=0) *> pmap sqrt (inv (diff-sq par))
+    \where {
+      \func diff {X : PseudoNormedAbGroup} (x y : X) : Real
+        => lnorm (x + y) * lnorm (x + y) - lnorm (x - y) * lnorm (x - y)
+
+      \func quarter : Real => Real.fromRat (RatField.finv 4)
+
+      \lemma quarter-4 : 4 * quarter = 1
+        => RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 (suc/=0 {3}))
+
+      \lemma diff-comm {X : PseudoNormedAbGroup} {x y : X} : diff x y = diff y x
+        => pmap2 (\lam a b => a * a - b * b) (pmap lnorm +-comm) lnorm_-
+
+      \lemma diff-negative {X : PseudoNormedAbGroup} {x y : X} : diff (negative x) y = negative (diff x y)
+        => \have | g1 : lnorm (negative x + y) = lnorm (x - y) => pmap lnorm (equation.abGroup : negative x + y = y - x) *> lnorm_-
+                 | g2 : lnorm (negative x - y) = lnorm (x + y) => lnorm_- *> pmap lnorm (equation.abGroup : y - negative x = x + y)
+           \in unfold diff $ rewrite (g1, g2) equation.cRing
+
+      \lemma diff-mid {X : PseudoNormedAbGroup} (par : IsParallelogram X) {x y z : X} : diff (x + y) z + diff (x - y) z = 2 * diff x z
+        => \have | p1 => par (x + z) y
+                 | p2 => par (x - z) y
+           \in unfold diff $ rewrite (pmap lnorm (equation.abGroup : x + y + z = x + z + y), pmap lnorm (equation.abGroup : x + y - z = x - z + y), pmap lnorm (equation.abGroup : x - y + z = x + z - y), pmap lnorm (equation.abGroup : x - y - z = x - z - y)) linarith
+
+      \lemma diff-+ {X : PseudoNormedAbGroup} (par : IsParallelogram X) {x y z : X} : diff (x + y) z = diff x z + diff y z
+        => \have | h1 => diff-mid par {x} {y} {z}
+                 | h2 => diff-mid par {y} {x} {z}
+                 | h3 : diff (y + x) z = diff (x + y) z => pmap (diff __ z) +-comm
+                 | h4 : diff (y - x) z = negative (diff (x - y) z) => pmap (diff __ z) (equation.abGroup : y - x = negative (x - y)) *> diff-negative
+           \in linarith
+
+      \lemma diff-sq {X : PseudoNormedAbGroup} (par : IsParallelogram X) {x : X} : quarter * diff x x = lnorm x * lnorm x
+        => \have | z0 : lnorm (x - x) = 0 => pmap lnorm negative-right *> lnorm_zro
+                 | z1 : lnorm (x - x) * lnorm (x - x) = 0 => pmap (\lam t => t * t) z0 *> zro_*-left
+                 | p => par x x
+                 | d : diff x x = 4 * (lnorm x * lnorm x) => unfold diff linarith
+           \in pmap (quarter *) d *> inv *-assoc *> pmap (* _) (*-comm *> quarter-4) *> ide-left
+
+      \func diffHom {X : NormedPreBanachSpace} (par : IsParallelogram X) (y : X) : AddGroupHom X (QModule.fromRatModule RealField) \cowith
+        | func x => quarter * diff x y
+        | func-+ => pmap (quarter *) (diff-+ par) *> ldistr
+    }
+}
+
+\class HilbertSpace \extends PreHilbertSpace, BanachSpace
+
+\class RealPreHilbertSpace \extends PreHilbertSpace, RealPreBanachSpace {
+  \default norm-double {x} => transport (__ ExUpperReal.<= _) RealAbGroup.+-upper $ Real.<=-upper.1 $ =_<= $ inv $ PreHilbertSpace.norm_+-self {\this} {x}
+} \where {
+  \func fromParallelogram (X : NormedPreBanachSpace RatValuedRing) (par : IsParallelogram X) : RealPreHilbertSpace \cowith
+    | PreHilbertSpace => PreHilbertSpace.fromParallelogram X par
+}
+
+\class RealHilbertSpace \extends RealPreHilbertSpace, HilbertSpace, RealBanachSpace

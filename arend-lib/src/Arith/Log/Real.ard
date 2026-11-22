@@ -14,29 +14,20 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module
 \import Algebra.Monoid
-\import Algebra.Monoid.MonoidHom
-\import Algebra.Ordered
 \import Algebra.QModule
-\import Algebra.Ring
 \import Algebra.StrictlyOrdered
 \import Algebra.Semiring
-\import Analysis.PowerSeries
-\import Analysis.Series
-\import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Logic.Meta
 \import Topology.BanachAlgebra
-\import Topology.StoneCStarAlgebra
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Arith.Log
 \import Arith.Exp
 \import Arith.Exp.Real
-\import Combinatorics.Factorial
 \import Function.Meta
 \import Logic
 \import Meta
@@ -46,7 +37,6 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
 \open Monoid (pow)
@@ -105,16 +95,16 @@
       (exp_+
        *> pmap2 (*) (exp-ell y y-pos _) log2.exp-log2
        *> *-comm
-       *> pmap (* y) (inv (RealStoneC*Algebra_fromRat 2) *> QAlgebra.fromRat_natCoef))
+       *> pmap (* y) (inv (RealBanachAlgebra_fromRat 2) *> QAlgebra.fromRat_natCoef))
 
 -- | The Real logarithm $\log : \mathbb R_{>0} \to \mathbb R$.
-\sfunc log-Real (x : Real) (x>0 : (0 : Real) < x) : Real
+\sfunc log (x : Real) (x>0 : (0 : Real) < x) : Real
   => (TruncP.rec-set (DyadicShift-inh x>0) (log-cand x) log-cand-const).1
   \where {
     \protected \lemma char {x : Real} (x>0 : (0 : Real) < x)
-      : ∃ (a : DyadicShift x) (ell (x * finv (RatField.pow 2 a.1)) a.2 a.3 + a.1 RealField.* log2 = log-Real x x>0)
+      : ∃ (a : DyadicShift x) (ell (x * finv (RatField.pow 2 a.1)) a.2 a.3 + a.1 RealField.* log2 = log x x>0)
       => \case (TruncP.rec-set (DyadicShift-inh x>0) (log-cand x) log-cand-const).2 \with {
-        | inP r => inP (r.1, r.2 *> inv (\peval log-Real x x>0))
+        | inP r => inP (r.1, r.2 *> inv (\peval log x x>0))
       }
 
     -- | Triples $(n,\, 0 < x/2^n,\, x/2^n < 2)$: dyadic shifts placing $x$ in $\ell$'s domain.
@@ -204,12 +194,12 @@
   }
 
 -- ============================================================================
--- log-Real and exp are mutual inverses on the positive reals / all of Real.
+-- log and exp are mutual inverses on the positive reals / all of Real.
 -- ============================================================================
 
 -- | $\exp(\log x) = x$ for any $x > 0$.
-\lemma exp-log-Real (x : Real) (x>0 : (0 : Real) < x) : exp (log-Real x x>0) = x
-  => \case log-Real.char x>0 \with {
+\lemma exp_log (x : Real) (x>0 : (0 : Real) < x) : exp (log x x>0) = x
+  => \case log.char x>0 \with {
     | inP (s, p) => pmap exp (inv p) *> exp-log-cand x s
   }
   \where {
@@ -225,7 +215,7 @@
         \in pmap exp coef-step *> exp_+ *> pmap2 (*) (exp-n*log2 n) log2.exp-log2
 
     -- | Per-representative: $\exp(\mathrm{log-cand}\,x\,p) = x$.
-    \private \lemma exp-log-cand (x : Real) (p : log-Real.DyadicShift x) : exp (log-Real.log-cand x p) = x \elim p
+    \private \lemma exp-log-cand (x : Real) (p : log.DyadicShift x) : exp (log.log-cand x p) = x \elim p
       | (n, p2, p3) => exp_+
         *> pmap2 (*) (exp-ell (x * Real.fromRat (RatField.finv (RatField.pow 2 n))) p2 p3) (exp-n*log2 n)
         *> *-assoc
@@ -234,5 +224,24 @@
   }
 
 -- | $\log(\exp y) = y$ for any $y \in \mathbb R$.
-\lemma log-Real-exp (y : Real) : log-Real (exp y) (Real-exp-pos y) = y
-  => Real-exp-inj $ exp-log-Real (exp y) (Real-exp-pos y)
+\lemma log_exp (y : Real) : log (exp y) (Real-exp-pos y) = y
+  => Real-exp-inj $ exp_log (exp y) (Real-exp-pos y)
+
+-- | $\log(xy) = \log x + \log y$ for $x, y > 0$.
+\lemma log_* (x y : Real) (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y)
+  : log (x * y) (RealField.<_*_positive_positive x>0 y>0) = log x x>0 + log y y>0
+  => Real-exp-inj $ exp_log (x * y) _
+       *> inv (exp_+ *> pmap2 (*) (exp_log x x>0) (exp_log y y>0))
+
+-- | {log} is monotone.
+\lemma log-mono {x y : Real} (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y) (x<=y : x <= y)
+  : log x x>0 <= log y y>0
+  => \lam q => x<=y $ transport2 (<) (exp_log y y>0) (exp_log x x>0) (Real-exp-strict-mono q)
+
+-- | {log} does not depend on the positivity proof.
+\lemma log-ext {x y : Real} (p : x = y) {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} : log x x>0 = log y y>0 \elim p
+  | idp => pmap (log x) prop-pi
+
+-- | $\log 1 = 0$.
+\lemma log_ide {p : (0 : Real) < 1} : log 1 p = (0 : Real)
+  => log-ext (inv exp_zro) *> log_exp 0

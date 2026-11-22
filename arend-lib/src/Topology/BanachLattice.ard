@@ -1,9 +1,12 @@
+\import Algebra.Ordered.TruncRieszSpace
 \import Arith.Real
 \import Arith.Real.UpperReal
 \import Arith.Real.UpperRealLattice
 \import Function.Meta
 \import Logic
+\import Order.PartialOrder
 \import Paths
+\import Paths.Meta
 \import Topology.BanachSpace
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
@@ -15,7 +18,40 @@
     | inP (eps,eps>0,p) => inP (OBall eps 0, \lam |x|<eps |y|<=|x| => transport (ExUpperReal.U {__} eps) norm_dist $ norm_<= |y|<=|x| $ transportInv (ExUpperReal.U {__} eps) norm_dist |x|<eps, OBall-center_<=< eps>0, p)
   }
 
-\class BanachLattice \extends ExPseudoNormedRieszSpace, RealBanachSpace
+\record NormedRieszSpaceMap \extends NormedAbGroupMap, TopRieszSpaceMap {
+  \override Dom : ExPseudoNormedRieszSpace
+  \override Cod : ExPseudoNormedRieszSpace
+}
+
+-- | A normed Riesz space which is a real pre-Banach space.
+\class PreBanachLattice \extends ExPseudoNormedRieszSpace, RealPreBanachSpace
+
+\class BanachLattice \extends PreBanachLattice, RealBanachSpace
+
+-- | A pre-Banach lattice with a truncation.
+\class TruncPreBanachLattice \extends PreBanachLattice, TopTruncRieszSpace, PseudoNormedAbGroup {
+  \lemma lnorm_<= {x y : E} (p : abs x <= abs y) : lnorm x RealAbGroup.<= lnorm y
+    => Real.<=-upper.2 (norm_<= p)
+
+  \lemma lnorm_abs {x : E} : lnorm (abs x) = lnorm x
+    => RealAbGroup.<=-antisymmetric (lnorm_<= $ =_<= $ abs-ofPos abs>=0) (lnorm_<= $ =_<= $ inv $ abs-ofPos abs>=0)
+
+  \lemma trunc-lipschitz-map : MetricMap \this \this trunc \cowith
+    | func-dist => rewrite (norm-dist, norm-dist) $ norm_<= trunc-lipschitz
+}
+
+\record NormedTruncRieszSpaceMap \extends NormedRieszSpaceMap, TopTruncRieszSpaceMap {
+  \override Dom : TruncPreBanachLattice
+  \override Cod : TruncPreBanachLattice
+}
+
+\record TruncRieszSpaceIsometricMap \extends NormedTruncRieszSpaceMap, NormedIsometricMap {
+  \override Dom : TruncPreBanachLattice
+  \override Cod : TruncPreBanachLattice
+}
+
+-- | A Banach lattice with real-valued norms and a truncation.
+\class TruncBanachLattice \extends TruncPreBanachLattice, BanachLattice, CompleteNormedAbGroup, NormedPreBanachSpace
 
 \class RieszLSpace \extends BanachLattice, PseudoNormedAbGroup
   | norm_+_>= {x y : E} : 0 <= x -> 0 <= y -> norm x RealAbGroup.+ norm y RealAbGroup.<= norm (x + y)

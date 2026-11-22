@@ -4,6 +4,7 @@
 \import Order.Lattice
 \import Order.Lattice.CompleteLattice
 \import Order.PartialOrder
+\import Paths
 \import Paths.Meta
 \import Set.Set
 
@@ -31,6 +32,12 @@
   \lemma filter-IJoin {I : \Type} {f : I -> A} (FJ : F (CompleteLattice.IJoin f)) : ∃ (i : I) (F (f i))
     => \case filter-Join FJ \with {
       | inP (_, inP (i,idp), Ffi) => inP (i,Ffi)
+    }
+
+  \lemma filter-join {a b : A} (p : F (a ∨ b)) : F a || F b
+    => \case filter-Join {_} {\lam c => (c = a) || (c = b)} (filter-mono p (join-univ (Join-cond (byLeft idp)) (Join-cond (byRight idp)))) \with {
+      | inP (w, byLeft q, xw) => byLeft (transport F q xw)
+      | inP (w, byRight q, xw) => byRight (transport F q xw)
     }
 
   \lemma isProper (p : F CompleteLattice.bottom) : Empty

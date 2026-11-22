@@ -5,11 +5,9 @@
 \import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.QModule
-\import Algebra.Ring
 \import Analysis.FuncLimit
 \import Analysis.Limit
 \import Arith.Nat
@@ -19,13 +17,11 @@
 \import Arith.Real.Root \using (sqrt \as sqrtR)
 \import Arith.Real.UpperReal
 \import Data.Or
-\import Set.Fin
 \import Function.Meta
 \import Logic
-\import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Biordered
+\import Order.Lattice
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -38,12 +34,13 @@
 \import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
-\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.ExCompletion
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product
+\import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
@@ -196,7 +193,33 @@
 }
 
 
-\class RealBanachCAlgebra \extends RealBanachAlgebra, CRing
+\class RealBanachCAlgebra \extends RealBanachAlgebra, SeparatedCoverCRing
+
+\instance RealRealBanachAlgebra : RealBanachCAlgebra Real
+  | CompleteExNormedAbGroup => RealValuedRing
+  | CRing => RealField
+  | isDivisible a {n} n/=0 => inP (RatField.finv n RealField.* a, inv RealField.natCoef_*_*n *> inv *-assoc *> pmap (* a) (pmap (* _) (inv RealField.coefMap_natCoef) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 n/=0)) *> ide-left)
+  | norm_*_<= => transportInv (<= _) (RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) <=-refl
+  | norm_ide_<= => Real.<=-upper.1 $ join-univ <=-refl $ RealAbGroup.negative<=0 (<=-less RealAbGroup.zro<ide) <=∘ <=-less RealAbGroup.zro<ide
+  | norm_*n {n} {x} => pmap RealAbGroup.abs (inv RealField.natCoef_*_*n) *> RealField.abs_* *> pmap (RealField.* _) (pmap RealAbGroup.abs (inv RealField.coefMap_natCoef) *> RealAbGroup.abs-rat) *> RealField.*-upper (rat_real_<=.1 $ RatField.abs>=0 {n}) RealAbGroup.abs>=0
+
+{- | On `Real`, the Banach-algebra `fromRat` (defined as $q *_q 1$) agrees with
+     the canonical `Real.fromRat`. Strategy: multiply both sides by `ratDenom q`
+     and apply `QModule.*q-cancel`; both sides reduce to `Real.fromRat (ratNom q)`. -}
+\lemma RealBanachAlgebra_fromRat (q : Rat) : RealRealBanachAlgebra.fromRat q = Real.fromRat q
+  => QModule.*q-cancel (natRat/=0 ratDenom/=0) $
+       inv QModule.*q-assoc
+       *> pmap (QModule.*q _) rat*denom-left
+       *> QModule.*q_*i
+       *> int*i_ide
+       *> pmap Real.fromRat (inv rat*denom-left *> RatField.natCoef_*_*n)
+       *> rat-real-hom.func-*n
+       *> inv QModule.*q_*n
+  \where {
+    \private \lemma int*i_ide {z : Int} : z AbGroup.*i (1 : Real) = Real.fromRat z \elim z
+      | pos n => inv RealField.natCoef_*n
+      | neg m => AddGroup.*n_negative *> pmap negative (inv RealField.natCoef_*n) *> RealAbGroup.negative-rat
+  }
 
 \instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra
   | BanachSpace => BanachCompletion X

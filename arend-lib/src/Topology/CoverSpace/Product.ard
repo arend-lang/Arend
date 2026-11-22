@@ -14,6 +14,7 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
+\import Topology.TopSpace
 \import Topology.TopSpace.Product
 \open CoverMap
 \open ClosurePrecoverSpace \hiding (closure-univ)
@@ -237,6 +238,15 @@
     \protected \lemma proj {n : Nat} {X : CoverSpace} (j : Fin n) : CoverMap (ArrayCoverSpace n X) X (__ j)
       => proj' j
 
+    -- | The map into `Xⁿ` with given coordinates.
+    \protected \func tuple {Z : CoverSpace} {n : Nat} {X : CoverSpace} (f : Array (CoverMap Z X) n) : CoverMap Z (ArrayCoverSpace n X) \cowith
+      | func => tupleFun f
+      | func-cover Cc => ClosurePrecoverSpace.closure-univ-cover {Array X n} {Gen n X} {Z} {tupleFun f} (\lam {C} (inP (j,Dc)) => cauchy-refine ((f j).func-cover Dc)
+          \lam {_} (inP (V, inP (U,CU,p), idp)) => inP (tupleFun f ^-1 U, inP (U, CU, idp), \lam Vz => p Vz)) Cc
+      \where
+        \func tupleFun {Z X : CoverSpace} {n : Nat} (f : Array (CoverMap Z X) n) (z : Z) : Array X n
+          => \lam j => f j z
+
     \lemma box-neighborhood {n : Nat} {X : CoverSpace} {x : Array X n} {W : Set (Array X n)} (x<=<W : single x <=< {ArrayCoverSpace n X} W)
       : ∃ (U : Array (Set X) n) (\Pi (j : Fin n) -> single (x j) <=< U j) (Box U ⊆ W)
       => box-neighborhood' $ unfolds x<=<W
@@ -244,4 +254,25 @@
     \lemma boxCover {n : Nat} {X : CoverSpace} {Cs : Array (Set (Set X)) n} (Cc : \Pi (j : Fin n) -> X.isCauchy (Cs j))
       : isCauchy {ArrayCoverSpace n X} (Boxes Cs)
       => boxCover' Cc
+
+    -- | The componentwise map `Xⁿ → Yⁿ`.
+    \protected \func map {n : Nat} {X Y : CoverSpace} (f : CoverMap X Y) : CoverMap (ArrayCoverSpace n X) (ArrayCoverSpace n Y)
+      => ArrayCoverSpace.tuple (\lam j => f ∘ ArrayCoverSpace.proj j)
+      \where {
+        \lemma isEmbedding {n : Nat} {X Y : CoverSpace} {f : CoverMap X Y} (fe : f.IsEmbedding) : CoverMap.IsEmbedding {ArrayCoverSpace.map {n} f}
+          => closure-embedding (\lam c => c) (ArrayCoverSpace.map {n} f) \lam {C} (inP (j,Dc)) =>
+              cauchy-subset ((ArrayCoverSpace.proj {n} {Y} j).func-cover (fe Dc)) \lam {_} (inP (W, inP (V, inP (U,CU,q), p), idp)) => inP $ later (U, CU, \lam c => q (p c))
+
+        \lemma isDense {n : Nat} {X Y : CoverSpace} {f : CoverMap X Y} (fd : f.IsDense) : (ArrayCoverSpace.map {n} f).IsDense
+          => \lam {y} {W} Wo Wy => \case Wo Wy \with {
+            | inP (U,Uo,Uy,h) => \case FinSet.finiteAC {n} {\lam j => \Sigma (x : X) (U j (f x))} (\lam j => \case fd (Uo j) (Uy j) \with {
+              | inP (_, inP (x,idp), Ufx) => inP (x, Ufx)
+            }) \with {
+              | inP g => inP (_, inP (\lam j => (g j).1, idp), h \lam j => (g j).2)
+            }
+          }
+
+        \lemma isDenseEmbedding {n : Nat} {X Y : CoverSpace} {f : CoverMap X Y} (fde : f.IsDenseEmbedding) : CoverMap.IsDenseEmbedding {ArrayCoverSpace.map {n} f}
+          => (isDense {n} fde.1, isEmbedding {n} fde.2)
+      }
   }

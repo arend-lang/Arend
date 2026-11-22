@@ -1,0 +1,150 @@
+{- | The spaces `Lᵖ` of a full integration space `L`.
+
+  * {LpPreSpace}: `L` with the seminorm $\|f\|_p = I(|f|^p)^{1/p}$, a normed truncated pre-Banach lattice.
+  * {LpSpace}: its separated completion (Definition 4.1), a Banach lattice to which the lattice operations
+    and the truncation extend); {lpInc} is the canonical map `L → Lᵖ`.
+  * {LpOf}: `Lᵖ(Y)` for a regular integration space `Y`.
+  * {lpNormPow}: $\|u\|_p^p$.
+  * {lp-mono-diff}, {lp-monotone-convergence}: monotone differences and monotone convergence (Proposition `prop:Lp`(2)).
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Inequalities
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Limit
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Directed
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachLattice
+\import Topology.BanachLattice.Completion
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Completion
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Product
+\import Topology.TopRieszSpace
+\import Topology.TopRieszSpace.Completion
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open JoinSemilattice(join-comm,join_<=)
+
+-- | `L` with the seminorm $\|f\|_p$.
+\func LpPreSpace (L : FullIntegrationSpace) (p : Real) (p>=1 : (1 : Real) <= p) : TruncPreBanachLattice L \cowith
+  | TruncRieszSpace => L
+  | norm => pnorm p p>=1
+  | norm_zro => Real.=-upper.1 pnorm_zro
+  | norm_negative => Real.=-upper.1 pnorm-negative
+  | norm_+ => transport (_ ExUpperReal.<=) RealAbGroup.+-upper $ Real.<=-upper.1 (minkowski p>=1)
+  | norm_<= h => Real.<=-upper.1 (pnorm-abs-mono h)
+  | norm-double {f} => transport (__ ExUpperReal.<= _) RealAbGroup.+-upper $ Real.<=-upper.1 $
+      \have | e : pnorm p p>=1 (f + f) = RealAbGroup.abs (Real.fromRat 2) * pnorm p p>=1 f
+                => pmap (pnorm p p>=1) (inv (pmap (\lam y => y + f) zro-left) *> inv (L.*q_*n {2} {f})) *> pnorm-*q
+            | a2 : RealAbGroup.abs (Real.fromRat 2) = (2 : Real) => RealAbGroup.abs-ofPos (rat_real_<=.1 (RatField.<=-less idp))
+            | t : (2 : Real) * pnorm p p>=1 f = pnorm p p>=1 f + pnorm p p>=1 f => equation.cRing
+      \in =_<= (inv (e *> pmap (`* _) a2 *> t))
+
+-- | The space `Lᵖ`: the separated completion of `L` with respect to $\|\cdot\|_p$.
+\func LpSpace (L : FullIntegrationSpace) (p : Real) (p>=1 : (1 : Real) <= p) : TruncBanachLattice
+  => TruncBanachLatticeCompletion (LpPreSpace L p p>=1)
+
+-- | `Lᵖ(Y)` for a regular integration space `Y`: `Lᵖ` of the bounded part of the completion of `Y`.
+\func LpOf (Y : RegularIntegrationSpace) (p : Real) (p>=1 : (1 : Real) <= p) : TruncBanachLattice
+  => LpSpace (boundedFull (RegularIntegrationSpaceCompletion Y)) p p>=1
+
+-- | The canonical map `L → Lᵖ`.
+\func lpInc {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) : TruncRieszSpaceIsometricMap (LpPreSpace L p p>=1) (LpSpace L p p>=1)
+  => truncBanachCompletion
+  \where {
+    \lemma lnorm-char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : lnorm (lpInc p p>=1 f) = pnorm p p>=1 f
+      => NormedAbGroupCompletion.norm-char
+
+    \lemma isDense {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : ContMap.IsDense {lpInc {L} p p>=1}
+      => completion.isDenseEmbedding.1
+
+    \lemma isDenseEmbedding2 {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+      : CoverMap.IsDenseEmbedding {ProductCoverSpace.prod (lpInc {L} p p>=1) (lpInc {L} q q>=1)}
+      => ProductCoverSpace.prod.isDenseEmbedding {LpPreSpace L p p>=1} {LpPreSpace L q q>=1} {LpSpace L p p>=1} {LpSpace L q q>=1} {lpInc p p>=1} {lpInc q q>=1} completion.isDenseEmbedding completion.isDenseEmbedding
+
+    \lemma isDense2 {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+      : ContMap.IsDense {ProductCoverSpace.prod (lpInc {L} p p>=1) (lpInc {L} q q>=1)}
+      => ProductTopSpace.prod.isDense {LpPreSpace L p p>=1} {LpPreSpace L q q>=1} {LpSpace L p p>=1} {LpSpace L q q>=1} {lpInc p p>=1} {lpInc q q>=1} isDense isDense
+  }
+
+-- | $\|u\|_p^p$.
+\func lpNormPow {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (u : LpSpace L p p>=1) : Real
+  => rpow (lnorm u) lnorm>=0 p (fpow.one>0 p>=1)
+  \where {
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L} : lpNormPow p p>=1 (lpInc p p>=1 f) = pnormPow p p>=1 f
+      => rpow-ext lpInc.lnorm-char idp *> pnorm-pow
+
+    \lemma cover {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : CoverMap (LpSpace L p p>=1) RealNormed (lpNormPow p p>=1)
+      => rpow-coverMap (lnorm-metric {LpSpace L p p>=1}) (\lam _ => lnorm>=0) (fpow.one>0 p>=1)
+  }
+
+-- | Monotone differences: $\|v - u\|_p^p \le \|v\|_p^p - \|u\|_p^p$ for $0 \le u \le v$ in `Lᵖ`.
+\lemma lp-mono-diff {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {u v : LpSpace L p p>=1} (u>=0 : zro <= u) (u<=v : u <= v)
+  : lpNormPow p p>=1 (v - u) <= lpNormPow p p>=1 v - lpNormPow p p>=1 u
+  => \have | e1 : u ∨ zro = u => join-comm *> join_<= u>=0
+           | e2 : (u ∨ zro) ∨ v = v => pmap (__ ∨ v) e1 *> join_<= u<=v
+           | m => rewrite (e2,e1) in lp-mono-diff.pos-join {L} {p} {p>=1} {u} {v}
+     \in linarith
+  \where
+    \lemma pos-join {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {u v : LpSpace L p p>=1}
+      : lpNormPow p p>=1 (((u ∨ zro) ∨ v) - (u ∨ zro)) + lpNormPow p p>=1 (u ∨ zro) <= lpNormPow p p>=1 ((u ∨ zro) ∨ v)
+      => \let | Y => LpSpace L p p>=1
+              | B : CoverMap (ProductCoverSpace Y Y) Y => TopRieszSpace.join-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple ProductCoverSpace.proj1 (CoverMap.const zro)
+              | A : CoverMap (ProductCoverSpace Y Y) Y => TopRieszSpace.join-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple B ProductCoverSpace.proj2
+         \in dense_<= real-join-uniform (ProductCoverSpace.prod (lpInc p p>=1) (lpInc p p>=1)) lpInc.isDense2
+              (RealNormed.+-cont ContMap.∘ ProductTopSpace.tuple (lpNormPow.cover CoverMap.∘ subtract-uniform CoverMap.∘ ProductCoverSpace.tuple A B) (lpNormPow.cover CoverMap.∘ B))
+              (lpNormPow.cover CoverMap.∘ A)
+              (\lam s => \have | eb : lpInc p p>=1 s.1 ∨ zro = lpInc p p>=1 (s.1 ∨ L.zro) => inv (func-join *> pmap (_ ∨) (AddPointedHom.func-zro {lpInc p p>=1}))
+                                | ea : (lpInc p p>=1 s.1 ∨ zro) ∨ lpInc p p>=1 s.2 = lpInc p p>=1 ((s.1 ∨ L.zro) ∨ s.2) => pmap (__ ∨ _) eb *> inv func-join
+                                | ed : ((lpInc p p>=1 s.1 ∨ zro) ∨ lpInc p p>=1 s.2) - (lpInc p p>=1 s.1 ∨ zro) = lpInc p p>=1 (((s.1 ∨ L.zro) ∨ s.2) - (s.1 ∨ L.zro)) => pmap2 (\lam (a b : Y) => a - b) ea eb *> inv (AddGroupHom.func-minus {lpInc p p>=1})
+                                | m => pnormPow-mono {L} p>=1 {s.1 ∨ L.zro} {(s.1 ∨ L.zro) ∨ s.2} L.join-right L.join-left
+                                | m' : pnormPow p p>=1 (((s.1 ∨ L.zro) ∨ s.2) - (s.1 ∨ L.zro)) + pnormPow p p>=1 (s.1 ∨ L.zro) <= pnormPow p p>=1 ((s.1 ∨ L.zro) ∨ s.2) => linarith
+                          \in =_<= (pmap2 (+) (pmap (lpNormPow p p>=1) ed *> lpNormPow.char) (pmap (lpNormPow p p>=1) eb *> lpNormPow.char)) <=∘ m'
+                               <=∘ =_<= (inv (pmap (lpNormPow p p>=1) ea *> lpNormPow.char)))
+              (u,v)
+
+-- | Monotone convergence: an increasing net in the positive cone of `Lᵖ` converges if and only if its norms converge.
+\lemma lp-monotone-convergence {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {I : DirectedSet} (u : I -> LpSpace L p p>=1)
+                               (u>=0 : \Pi (i : I) -> zro <= u i) (u-mono : \Pi {i j : I} -> i <= j -> u i <= u j)
+  : IsConvergent u <-> IsConvergent {I} {RealNormed} (\lam i => lnorm (u i))
+  => (\lam uc => convergent-compose uc (lnorm-metric {LpSpace L p p>=1}), \lam nc =>
+      \have | p>0 => fpow.one>0 p>=1
+            | rc : IsConvergent {I} {RealNormed} (\lam i => lpNormPow p p>=1 (u i))
+                => transport (IsConvergent {I} {RealNormed}) (ext \lam i => rpow-ext (RealAbGroup.join-comm *> RealAbGroup.join_<= lnorm>=0) idp)
+                     (convergent-compose nc (rpow-coverMap (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (0 : Real))) (\lam x => RealAbGroup.join-right) p>0))
+      \in convergent-metric-real.2 \lam {eps} eps>0 =>
+        \have | e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+              | e2<eps : eps * Real.fromRat (ratio 1 2) < eps => linarith
+              | d>0 : (0 : Real) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) p p>0 => transportInv ((0 : Real) <) (rpow-pos-eq e2>0) rpow-pos>0
+        \in \case convergent-metric-real.1 rc d>0 \with {
+          | inP (N,h) => inP (N, \lam {n} N<=n =>
+            \have | m => lp-mono-diff (u>=0 N) (u-mono N<=n)
+                  | a : lpNormPow p p>=1 (u n) - lpNormPow p p>=1 (u N) <= RealNormed.dist (lpNormPow p p>=1 (u n)) (lpNormPow p p>=1 (u N)) => RealAbGroup.abs>=id
+                  | hn => h {n} N<=n
+                  | q : lpNormPow p p>=1 (u n - u N) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) p p>0 => (m <=∘ a) <∘r hn
+            \in rpow-mono-inv (<=-less q) <∘r e2<eps)
+        })

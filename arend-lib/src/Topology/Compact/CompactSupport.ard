@@ -1,0 +1,343 @@
+{- | Real-valued cover maps with totally bounded support.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.TruncRieszSpace
+\import Algebra.Pointed
+\import Algebra.Group.GroupHom
+\import Algebra.QModule
+\import Algebra.StrictlyOrdered
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Extremes
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Set
+\import Topology.Compact
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.Inverse
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\open LatticeAbGroup (abs)
+
+-- | {f} is supported in {K}: `f x # 0` implies `x ∈ K`.
+\type IsSupported {X : \Set} (f : X -> Real) (K : Set X) : \Prop
+  => \Pi {x : X} -> 0 < abs (f x) -> K x
+  \where {
+    -- | If `|h| ≤ |f| + |g|`, then {h} is supported in the union of supports.
+    \lemma bound_+ {X : \Set} {f g h : X -> Real} {K L : Set X} (fK : IsSupported f K) (gL : IsSupported g L)
+                   (p : \Pi (x : X) -> abs (h x) <= abs (f x) + abs (g x)) : IsSupported h (\lam x => K x || L x)
+      => \lam {x} hx>0 => \case LinearlyOrderedAbMonoid.<_+-dec (hx>0 <∘l p x) \with {
+        | byLeft q => byLeft (fK q)
+        | byRight q => byRight (gL q)
+      }
+
+    -- | If `|h| ≤ c |f|`, then {h} is supported in the support of {f}.
+    \lemma bound_*c {X : \Set} {f h : X -> Real} {K : Set X} (fK : IsSupported f K) {c : Real}
+                    (p : \Pi (x : X) -> abs (h x) <= c * abs (f x)) : IsSupported h K
+      => \lam {x} hx>0 => fK $ (RealField.<_*_positive-dec-right RealAbGroup.abs>=0 (hx>0 <∘l p x)).2
+
+    \protected \lemma mono {X : \Set} {f : X -> Real} {K L : Set X} (fK : IsSupported f K) (K<=L : K ⊆ L) : IsSupported f L
+      => \lam p => K<=L (fK p)
+
+    -- | A supported function vanishes outside its support.
+    \lemma vanish {X : \Set} {f : X -> Real} {K : Set X} (fK : IsSupported f K) {x : X} (nK : Not (K x)) : f x = 0
+      => RealAbGroup.abs_zro-ext $ <=-antisymmetric (\lam p => nK (fK p)) RealAbGroup.abs>=0
+  }
+
+-- | Cover maps `X -> ℝ` supported in a totally bounded set.
+\record CompactCoverMap \extends CoverMap {
+  | Cod => RealNormed
+  | support : ∃ (K : Set Dom) (IsTotallyBoundedSet K) (IsSupported func K)
+
+  -- | Functions with totally bounded support are bounded.
+  \lemma bound : ∃ (M : Real) (0 <= M) ∀ (x : Dom) (abs (func x) <= M)
+    => \case support \with {
+      | inP (K,Ktb,fK) => \case totallyBoundedSet-bounded (totallyBoundedSet-image \this Ktb) (0 : RealNormed) \with {
+        | inP (B,h) => inP (Real.fromRat (B ∨ 0), rat_real_<=.1 join-right, \lam x d =>
+            \have | fx>0 : 0 < abs (func x) => rat_real_<=.1 join-right <∘r d
+                  | t : ldist {RealNormed} 0 (func x) < Real.fromRat B => real_<_U.2 (h (inP ((x, fK fx>0), idp)))
+                  | s : Real.fromRat B < abs (func x) => rat_real_<=.1 join-left <∘r d
+            \in <-irreflexive (transport (__ < _) (ldist_zro-left {RealNormed}) t <∘ s))
+      }
+    }
+} \where {
+    \protected \lemma ext {X : CoverSpace} {f g : CompactCoverMap X} (p : \Pi (x : X) -> f x = g x) : f = g
+      => Paths.Meta.ext (exts p)
+
+    -- | A cover map bounded by a multiple of `|f₁| + … + |fₘ|` has totally bounded support.
+    \protected \lemma make {X : CoverSpace} (h : CoverMap X RealNormed)
+      {m : Nat} (fs : Array (CompactCoverMap X) m) {M : Real} (hM : \Pi (x : X) -> abs (h x) <= M * RealAbGroup.BigSum (\lam j => abs (fs j x))) : CompactCoverMap X h \cowith
+      | func-cover => h.func-cover
+      | support => \case FinSet.finiteAC (\lam j => (fs j).support) \with {
+        | inP K => inP (\lam x => ∃ (j : Fin m) ((K j).1 x), totallyBoundedSet-Union \lam j => (K j).2, \lam {x} hx>0 =>
+            \case RealAbGroup.<_BigSum-dec (RealField.<_*_positive-dec-right (RealAbGroup.BigSum_>=0 \lam j => RealAbGroup.abs>=0) (hx>0 <∘l hM x)).2 \with {
+              | inP (j,p) => inP (j, (K j).3 p)
+            })
+      }
+
+    -- | A cover map bounded by a multiple of `|f|`.
+    \protected \lemma make1 {X : CoverSpace} (h : CoverMap X RealNormed) (f : CompactCoverMap X) {L : Real}
+      (hM : \Pi (x : X) -> abs (h x) <= L * abs (f x)) : CompactCoverMap X h
+      => make h (f :: nil) (\lam x => transportInv (_ <= L * __) zro-right (hM x))
+
+    -- | A cover map bounded by a multiple of `|f| + |g|`.
+    \protected \lemma make2 {X : CoverSpace} (h : CoverMap X RealNormed) (f g : CompactCoverMap X) {L : Real}
+      (hM : \Pi (x : X) -> abs (h x) <= L * (abs (f x) + abs (g x))) : CompactCoverMap X h
+      => make h (f :: g :: nil) (\lam x => transportInv (_ <= L * (_ + __)) zro-right (hM x))
+
+    \protected \lemma zro {X : CoverSpace} : CompactCoverMap X (\lam _ => 0)
+      => make (CoverMap.const 0) nil (\lam _ => =_<= $ RealAbGroup.abs_zro *> inv RealField.zro_*-left)
+
+    \protected \lemma add {X : CoverSpace} (f g : CompactCoverMap X) : CompactCoverMap X (\lam x => f x + g x)
+      => make2 (+-uniform CoverMap.∘ ProductCoverSpace.tuple f g) f g (\lam x => rewrite RealField.ide-left RealAbGroup.abs_+)
+
+    \protected \lemma neg {X : CoverSpace} (f : CompactCoverMap X) : CompactCoverMap X (\lam x => negative (f x))
+      => make1 (negative-uniform CoverMap.∘ f) f (\lam x => rewrite (RealField.ide-left, RealAbGroup.abs_negative) <=-refl)
+
+    -- | The absolute value `|f|`.
+    \lemma absolute {X : CoverSpace} (f : CompactCoverMap X) : CompactCoverMap X (\lam x => abs (f x))
+      => make1 (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple f (negative-uniform CoverMap.∘ f)) f
+               (\lam x => rewrite (RealField.ide-left, RealAbGroup.abs-ofPos RealAbGroup.abs>=0) <=-refl)
+
+    \lemma join {X : CoverSpace} (f g : CompactCoverMap X) : CompactCoverMap X (\lam x => f x ∨ g x)
+      => make2 (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple f g) f g (\lam x => rewrite RealField.ide-left RealAbGroup.join-bound)
+
+    -- | Multiplication by a real scalar.
+    \lemma scale {X : CoverSpace} (c : Real) (f : CompactCoverMap X) : CompactCoverMap X (\lam x => c * f x)
+      => make1 (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const c) f) f (\lam x => =_<= RealField.abs_*)
+
+    \lemma meet-bound {a : Real} : abs (a ∧ 1) <= abs a
+      => \have | t1 => RealAbGroup.abs>=id {a}
+               | t2 : negative a <= abs a => RealAbGroup.abs>=id {negative a} <=∘ =_<= RealAbGroup.abs_negative
+               | a0 => RealAbGroup.abs>=0 {a}
+               | u : negative (abs a) <= a ∧ 1 => meet-univ (linarith : negative (abs a) <= a) linarith
+         \in transport (__ <= _) (pmap abs RealAbGroup.minus_zro) $ RealField.abs-univ {a ∧ 1} {0} (linarith (meet-left : a ∧ 1 <= a)) linarith
+
+    -- | The truncation `f ∧ 1`.
+    \lemma trunc {X : CoverSpace} (f : CompactCoverMap X) : CompactCoverMap X (\lam x => f x ∧ 1)
+      => make1 (real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple f (CoverMap.const 1)) f (\lam x => rewrite RealField.ide-left meet-bound)
+
+    -- | Products of functions with totally bounded support.
+    \protected \lemma mul {X : CoverSpace} (f g : CompactCoverMap X) : CompactCoverMap X (\lam x => f x * g x) \cowith
+      | func-cover => func-cover {RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple f g}
+      | support => \case f.bound, g.support \with {
+        | inP (M,M>=0,fM), inP (K,Ktb,gK) => inP (K, Ktb, IsSupported.bound_*c gK \lam x => =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (fM x) RealAbGroup.abs>=0)
+      }
+
+    -- | Division by a cover map bounded below by `1`.
+    \protected \lemma div {X : CoverSpace} (f : CompactCoverMap X) (d : CoverMap X RealNormed) (d>=1 : \Pi (x : X) -> 1 <= d x)
+      : CompactCoverMap X (\lam x => f x * RealField.pinv (d x) (zro<ide <∘l d>=1 x))
+      => make1 (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple f (pinv-coverMap d zro<ide d>=1)) f
+               (\lam x => div-bound (zro<ide <∘l d>=1 x) (d>=1 x) <=∘ =_<= (inv RealField.ide-left))
+      \where
+        \lemma div-bound {a c : Real} (c>0 : 0 < c) (c>=1 : 1 <= c) : abs (a * RealField.pinv c c>0) <= abs a
+          => rewrite (RealField.abs_* {a}, RealAbGroup.abs-ofPos (<=-less (RealField.pinv>0 c>0))) $
+               RealField.<=_*_positive-right RealAbGroup.abs>=0 (RealField.pinv<=1 c>0 c>=1) <=∘ =_<= RealField.ide-right
+
+    -- | On a proper uniform space, functions with totally bounded support are uniform.
+    \lemma uniform {X : UniformSpace} (Xp : X.IsProperUniform) (f : CompactCoverMap X) : UniformMap X RealNormed f
+      => \case f.support \with {
+        | inP (K,Ktb,fK) => totallyBounded-support-uniform Xp Ktb f (IsSupported.vanish fK)
+      }
+
+    -- | The supremum of the positive part of a function with totally bounded support on a proper uniform space.
+    \func sup {X : UniformSpace} (Xp : X.IsProperUniform) (f : CompactCoverMap X) : Real
+      => (hasSup Xp f).1
+      \where {
+        \func Values {X : \Set} (f : X -> Real) : Set Real
+          => \lam r => (r = 0) || ∃ (x : X) (f x = r)
+
+        \lemma hasSup {X : UniformSpace} (Xp : X.IsProperUniform) (f : CompactCoverMap X) : HasSup (Values f)
+          => makeSupTB {Values f} (byLeft idp) \lam {eps} eps>0 => \case real_<-char.1 eps>0, f.support \with {
+            | inP (a,a>0,a<eps), inP (K,Ktb,fK) => \case totallyBoundedSet-metric-net Xp Ktb f (rat_real_<.2 a>0) \with {
+              | inP (l,h) => inP (0 :: (\lam j => f (l j)), \case \elim __ \with {
+                | 0 => byLeft idp
+                | suc j => byRight $ inP (l j, idp)
+              }, \lam {r} => \case \elim r, __ \with {
+                | r, byLeft idp => inP (0, rewrite RealAbGroup.minus_zro (=_<= RealAbGroup.abs_zro <∘r eps>0))
+                | r, byRight (inP (x,idp)) => \case real-located {abs (f x)} eps>0 \with {
+                  | byLeft fx>0 => \case h (fK fx>0) \with {
+                    | inP (j,d) => inP (suc j, real_<_U.2 d <∘ a<eps)
+                  }
+                  | byRight fx<eps => inP (0, rewrite RealAbGroup.minus_zro fx<eps)
+                }
+              })
+            }
+          }
+      }
+
+    \lemma sup-bound {X : UniformSpace} {Xp : X.IsProperUniform} {f : CompactCoverMap X} (x : X) : f x <= sup Xp f
+      => (sup.hasSup Xp f).2.1 (byRight (inP (x, idp)))
+
+    \lemma sup>=0 {X : UniformSpace} {Xp : X.IsProperUniform} {f : CompactCoverMap X} : 0 <= sup Xp f
+      => (sup.hasSup Xp f).2.1 (byLeft idp)
+
+    \lemma sup-approx {X : UniformSpace} {Xp : X.IsProperUniform} {f : CompactCoverMap X} (f>=0 : ∃ (x : X) (0 <= f x)) {eps : Real} (eps>0 : 0 < eps)
+      : ∃ (x : X) (sup Xp f - eps < f x)
+      => \case (sup.hasSup Xp f).2.2 eps>0, f>=0 \with {
+        | inP (r, byLeft p, q), inP (x,fx>=0) => inP (x, linarith (rewrite p in q))
+        | inP (r, byRight (inP (x,p)), q), _ => inP (x, linarith (rewriteI p in q))
+      }
+
+    -- | If the supremum is positive, then the function is positive somewhere.
+    \lemma sup>0 {X : UniformSpace} {Xp : X.IsProperUniform} {f : CompactCoverMap X} (p : 0 < sup Xp f) : ∃ (x : X) (0 < f x)
+      => \case (sup.hasSup Xp f).2.2 p \with {
+        | inP (r, byLeft q, s) => absurd (linarith (rewrite q in s))
+        | inP (r, byRight (inP (x,q)), s) => inP (x, linarith (rewriteI q in s))
+      }
+  }
+
+\instance CompactCoverTruncRieszSpace (X : CoverSpace) : TruncRieszSpace (CompactCoverMap X)
+  | AbGroup => CompactCoverAbGroup X
+  | <= f g => \Pi (x : X) -> f x <= g x
+  | <=-refl _ => <=-refl
+  | <=-transitive p q x => p x <=∘ q x
+  | <=-antisymmetric p q => CompactCoverMap.ext \lam x => <=-antisymmetric (p x) (q x)
+  | <=_+ p q x => <=_+ (p x) (q x)
+  | join => CompactCoverMap.join
+  | join-left _ => join-left
+  | join-right _ => join-right
+  | join-univ p q x => join-univ (p x) (q x)
+  | isDivisible f {n} n/=0 => inP (CompactCoverMap.scale (RatField.finv n) f, CompactCoverMap.ext \lam x => CompactCover-*n-apply {X} {n} {CompactCoverMap.scale (RatField.finv n) f} x *>
+      inv RealField.natCoef_*_*n *> inv RealField.*-assoc *> pmap (RealField.* f x) (pmap (RealField.* _) (inv RealField.coefMap_natCoef) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 n/=0)) *> RealField.ide-left)
+  | trunc => CompactCoverMap.trunc
+  | trunc_zro>=0 _ => meet-univ <=-refl zro<=ide
+  | trunc-bound _ => meet-left
+  | trunc-assoc _ => meet-univ (RealAbGroup.negative_<= join-left <=∘ =_<= RealAbGroup.negative-isInv) (RealAbGroup.negative_<= join-right <=∘ =_<= RealAbGroup.negative-isInv <=∘ meet-right)
+  \where {
+    \func CompactCoverAbGroup (X : CoverSpace) : AbGroup (CompactCoverMap X) \cowith
+      | zro => CompactCoverMap.zro
+      | + => CompactCoverMap.add
+      | zro-left => CompactCoverMap.ext \lam x => zro-left
+      | +-assoc => CompactCoverMap.ext \lam x => +-assoc
+      | +-comm => CompactCoverMap.ext \lam x => +-comm
+      | negative => CompactCoverMap.neg
+      | negative-left => CompactCoverMap.ext \lam x => negative-left
+
+    \lemma CompactCover-*n-apply {X : CoverSpace} {n : Nat} {f : CompactCoverMap X} (x : X) : (n AddMonoid.*n {CompactCoverAbGroup X} f) x = n AddMonoid.*n (f x) \elim n
+      | 0 => idp
+      | suc n => pmap (+ f x) (CompactCover-*n-apply {X} {n} {f} x)
+
+    \lemma BigSum-apply {X : CoverSpace} {l : Array (CompactCoverMap X)} {x : X} : (CompactCoverAbGroup X).BigSum l x = RealAbGroup.BigSum (\lam j => l j x) \elim l
+      | nil => idp
+      | f :: l => pmap (f x +) BigSum-apply
+  }
+
+\lemma CompactCover-*q-apply {X : CoverSpace} {q : Rat} {f : CompactCoverMap X} (x : X) : (q QModule.*q {CompactCoverTruncRieszSpace X} f) x = q RealField.* f x
+  => func-*q {CompactCoverTruncRieszSpace X} {_} {\new AddGroupHom (CompactCoverTruncRieszSpace X) RealAbGroup { | func g => g x | func-+ => idp }} *> QModule.fromRatModule_*q
+
+-- | Elements of `C_c(X)` are bounded.
+\lemma CompactCover-trunc-bounded {X : CoverSpace} (f : CompactCoverMap X) : ∃ (M : Rat) (TruncRieszSpace.IsBelow (abs f) M)
+  => \have | (inP (M,M>=0,fM)) => f.bound
+           | (inP (K,MK)) => M.U-inh
+           | K>0 : 0 < K => rat_real_<.2 (M>=0 <∘r real_<_U.2 MK)
+           | u<=1 (x : X) : RatField.finv K RealField.* abs (f x) <= 1
+                    => RealField.<=_*_positive-right (rat_real_<=.1 $ <=-less $ RatField.finv>0 K>0) (fM x <=∘ <=-less (real_<_U.2 MK))
+                        <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left $ RatField.>_/= K>0))
+     \in inP (K, TruncRieszSpace.IsBelow-unit K>0 (\lam x => RealAbGroup.abs>=0) $ CompactCoverMap.ext \lam x =>
+              \have e => CompactCover-*q-apply x
+              \in <=-antisymmetric meet-left (meet-univ <=-refl (=_<= e <=∘ u<=1 x)))
+
+\lemma CompactCover-trunc-archimedean {X : CoverSpace} {a : CompactCoverMap X} (p : \Pi (n : Nat) -> TruncRieszSpace.IsUnderUnit (n AddMonoid.*n a)) (x : X) : a x <= 0
+  => real_archimedean \lam n => =_<= (inv (CompactCoverTruncRieszSpace.CompactCover-*n-apply x)) <=∘ transport (<= 1) (path \lam i => p n i x) meet-right
+
+-- | Functions with totally bounded support on a topological group are uniform.
+\lemma CompactMap-ta-uniform {A : TopAddGroup} (f : CompactCoverMap A) : UniformMap A RealNormed f
+  => CompactCoverMap.uniform A.properUniform f
+
+-- | Left translation `(s · f)(x) = f(-s + x)`.
+\lemma CompactMap-translate {A : TopAddGroup} (s : A) (f : CompactCoverMap A) : CompactCoverMap A (\lam x => f (negative s + x)) \cowith
+  | CoverMap => addGroup-modulus-uniform (\lam x => f (negative s + x)) \lam eps>0 => \case addGroup-uniform-modulus (CompactMap-ta-uniform f) eps>0 \with {
+    | inP (U,Uo,U0,h) => inP (_, open-inter Uo (A.neighborhood-conj (negative s) Uo), (U0, A.neighborhood-conj0 (negative s) {U} U0), \lam c => h (A.close-left (negative s) {U} c))
+  }
+  | support => \case f.support \with {
+    | inP (K,Ktb,fK) => inP (_, addGroup-tb-left (negative s) Ktb, \lam p => fK p)
+  }
+
+-- | The function `x ↦ f(-x)`.
+\lemma CompactMap-reflect {A : TopAddGroup} (f : CompactCoverMap A) : CompactCoverMap A (\lam x => f (negative x)) \cowith
+  | CoverMap => addGroup-modulus-uniform (\lam x => f (negative x)) \lam eps>0 => \case addGroup-uniform-modulus (CompactMap-ta-uniform f) eps>0 \with {
+    | inP (U,Uo,U0,h) => inP (_, negative-cont.func-cont Uo, transportInv U A.negative_zro U0, \lam c => h (A.close-negative {U} c))
+  }
+  | support => \case f.support \with {
+    | inP (K,Ktb,fK) => inP (_, addGroup-tb-negative Ktb, \lam p => fK p)
+  }
+
+-- | A modulus of uniform continuity of a uniform map to the reals for a real {eps}.
+\lemma real-modulus {A : TopAddGroup} (f : UniformMap A RealNormed) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (U : isOpen) (U 0) ∀ {x y : A} (A.AreClose U x y) (abs (f x - f y) < eps)
+  => \case real_<-char.1 eps>0 \with {
+    | inP (a,a>0,a<eps) => \case addGroup-uniform-modulus f (rat_real_<.2 a>0) \with {
+      | inP (U,Uo,U0,h) => inP (U, Uo, U0, \lam c => real_<_U.2 (h c) <∘ a<eps)
+    }
+  }
+
+-- | A common modulus for finitely many uniform maps.
+\lemma finite-modulus {A : TopAddGroup} (fs : Array (UniformMap A RealNormed)) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (U : isOpen) (U 0) ∀ {x y : A} (A.AreClose U x y) (j : Fin fs.len) (abs (fs j x - fs j y) < eps)
+  => \case FinSet.finiteAC (\lam j => real-modulus (fs j) eps>0) \with {
+    | inP g => \case A.neighborhood-finite (\lam j => (g j).2) (\lam j => (g j).3) \with {
+      | inP (U,Uo,U0,h) => inP (U, Uo, U0, \lam c j => (g j).4 (A.close-mono {U} {(g j).1} (\lam {z} Uz => h Uz j) c))
+    }
+  }
+
+-- | A uniform modulus for all functions which are Lipschitz with respect to finitely many uniform maps.
+\lemma lipschitz-modulus {A : TopAddGroup} {n : Nat} (fs : Array (UniformMap A RealNormed) n) {L : Real} (L>=0 : 0 <= L) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (U : isOpen) (U 0) ∀ {h : A -> Real} (\Pi (x y : A) -> abs (h x - h y) <= L * RealAbGroup.BigSum (\lam j => abs (fs j x - fs j y)))
+      ∀ {x y : A} (A.AreClose U x y) (abs (h x - h y) < eps)
+  => \have | w>0 : 0 < L * n + 1 => linarith (RealField.<=_*_positive_positive L>=0 (RealField.natCoef>=0 {n}))
+           | (inP (d,d>0,dw<eps)) => split-eps eps>0 w>0
+     \in \case finite-modulus fs d>0 \with {
+       | inP (U,Uo,U0,g) => inP (U, Uo, U0, \lam {h} hL {x} {y} c =>
+           \have | s : RealAbGroup.BigSum (\lam j => abs (fs j x - fs j y)) <= n RealField.* d
+                     => RealAbGroup.BigSum_<= (\lam j => <=-less (g c j)) <=∘ =_<= RealField.BigSum_replicate
+                 | t : L * (n RealField.* d) = d * (L * n + 1) - d => equation.cRing
+           \in (hL x y <=∘ RealField.<=_*_positive-right L>=0 s) <∘r transportInv (__ < eps) t (linarith : d * (L * n + 1) - d < eps))
+     }
+
+-- | A function which is Lipschitz with respect to finitely many uniform maps is uniform.
+\func lipschitz-uniform {A : TopAddGroup} {n : Nat} (fs : Array (UniformMap A RealNormed) n) {L : Real} (L>=0 : 0 <= L) (h : A -> Real)
+  (hL : \Pi (x y : A) -> abs (h x - h y) <= L * RealAbGroup.BigSum (\lam j => abs (fs j x - fs j y))) : UniformMap A RealNormed h
+  => addGroup-modulus-uniform h \lam {eps} eps>0 => \case lipschitz-modulus fs L>=0 (rat_real_<.1 eps>0) \with {
+    | inP (U,Uo,U0,g) => inP (U, Uo, U0, \lam c => real_<_U.1 (g hL c))
+  }
+
+-- | One-sided uniform continuity for all functions with a common support and a common modulus.
+\lemma topAdd-translation-modulus {A : TopAddGroup} {K : Set A} (Ktb : IsTotallyBoundedSet K) {W : Set A} (Wo : isOpen W) (W0 : W 0)
+  : ∃ (V : isOpen) (V 0) (\Pi {v : A} -> V v -> V (negative v)) ∀ {f : A -> Real} {eps : Real} (IsSupported f K)
+      (\Pi {x y : A} -> A.AreClose W x y -> abs (f x - f y) <= eps)
+      (\Pi (x : A) {v : A} -> V v -> \Sigma (abs (f (x + v) - f x) <= eps) (abs (f (v + x) - f x) <= eps))
+  => \case addGroup-tb-translation-modulus Ktb Wo W0 \with {
+    | inP (V,Vo,V0,Vs,h) => inP (V, Vo, V0, Vs, \lam fK => h (IsSupported.vanish fK))
+  }
+
+-- | A neighborhood `V` such that `|f(x + v) - f(x)| ≤ eps` and `|f(v + x) - f(x)| ≤ eps`.
+\lemma topAdd-translation {A : TopAddGroup} (f : CompactCoverMap A) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (V : isOpen) (V 0) (\Pi {v : A} -> V v -> V (negative v)) ∀ (x : A) {v : V} (\Sigma (abs (f (x + v) - f x) <= eps) (abs (f (v + x) - f x) <= eps))
+  => \case f.support, real-modulus (CompactMap-ta-uniform f) eps>0 \with {
+    | inP (K,Ktb,fK), inP (W,Wo,W0,h) => \case topAdd-translation-modulus Ktb Wo W0 \with {
+      | inP (V,Vo,V0,Vs,g) => inP (V, Vo, V0, Vs, g fK (\lam c => <=-less (h c)))
+    }
+  }

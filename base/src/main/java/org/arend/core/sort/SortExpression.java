@@ -176,7 +176,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
 
       for (ClassField field : fields) {
         arg = arg.normalize(NormalizationMode.WHNF);
-        Expression argType = arg.accept(visitor, null).normalize(NormalizationMode.WHNF);
+        Expression argType = visitor.getArgumentType(arg).normalize(NormalizationMode.WHNF);
         while (argType instanceof PiExpression piExpr) {
           for (SingleDependentLink param = piExpr.getParameters(); param.hasNext(); param = param.getNext()) {
             arg = AppExpression.make(arg, new ReferenceExpression(param), param.isExplicit());
@@ -191,7 +191,7 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
         arg = impl != null ? impl : FieldCallExpression.make(field, arg);
       }
 
-      arg = arg.normalize(NormalizationMode.WHNF).accept(visitor, null).normalize(NormalizationMode.WHNF);
+      arg = visitor.getArgumentType(arg.normalize(NormalizationMode.WHNF)).normalize(NormalizationMode.WHNF);
       while (arg instanceof PiExpression piExpr) {
         arg = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
       }

@@ -22,8 +22,8 @@ val baseName = "intellij-arend"
 plugins {
     idea
     kotlin("jvm") version "2.4.10"
-    id("org.jetbrains.intellij.platform") version "2.18.1"
-    id("org.jetbrains.intellij.platform.grammarkit") version "2.18.1"
+    id("org.jetbrains.intellij.platform") version "2.20.1"
+    id("org.jetbrains.intellij.platform.grammarkit") version "2.20.1"
 }
 
 repositories {
@@ -47,7 +47,7 @@ dependencies {
 
     intellijPlatform {
         create(IntelliJPlatformType.IntellijIdea, "2026.2")
-        bundledPlugins("com.intellij.modules.json", "org.jetbrains.plugins.yaml", "com.intellij.java", "com.intellij.modules.jcef")
+        bundledPlugins("com.intellij.modules.json", "org.jetbrains.plugins.yaml", "com.intellij.java", "com.intellij.modules.jcef", "intellij.testRunner.plugin")
         testBundledModules("intellij.platform.navbar", "intellij.platform.navbar.backend")
         plugins("IdeaVIM:2.48.1", "com.jetbrains.edu:2026.6-2026.2-98")
         testFramework(TestFrameworkType.Platform)

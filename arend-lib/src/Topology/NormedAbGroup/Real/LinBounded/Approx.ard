@@ -1,0 +1,365 @@
+{- | Approximation of cover maps $\varphi \colon \mathbb R^n \to \mathbb R$ with $\varphi(0) = 0$ by linearly bounded maps.
+
+  * {coverMap-ball-uniform}, {coverMap-ball-bound}: a cover map is uniformly continuous and bounded on balls.
+  * {l1LB}: the norm $\|x\|_1$ as a linearly bounded map.
+  * {clampLB}: the clamp $(\varphi \wedge \ell) \vee (-\ell)$ of a cover map by a linearly bounded map $\ell$.
+  * {clipApprox}: $\varphi_k = (\varphi \wedge k\|x\|_1) \vee (-k\|x\|_1)$; {clipApprox-close}: $\varphi_k \to \varphi$ uniformly on balls.
+  * {BallConv}: uniform convergence on balls; {clipApprox-ballConv}, {ballConv-const}, {ballConv-add}, {ballConv-neg}, {ballConv-join}, {ballConv-meet}, {ballConv-scale}, {ballConv-comp}, {ballConv-bound}.
+  * {linBounded-zro}: every $\chi \in C_0$ vanishes at `0`.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power.SignedPow
+\import Data.Array (replicate)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Set.Fin
+\import Set.Set
+\import Topology.Compact
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.LinBounded
+\import Topology.TopAbGroup
+\open LatticeAbGroup (abs)
+\open signedPow (real-cases)
+
+-- | A cover map $\mathbb R^n \to \mathbb R$ is uniformly continuous on the ball of radius `R` around `0`.
+\lemma coverMap-ball-uniform {n : Nat} (phi : CoverMap (RealN n) RealNormed) {R : Rat} (R>0 : 0 < R) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (d : Rat) (0 < d) ∀ {x y : Array Real n} (ldist {RealN n} (RealN n).zro x < R) (ldist {RealN n} (RealN n).zro y < R) (ldist {RealN n} x y < d) (ldist (phi x) (phi y) < eps)
+  => \let | e2 => eps * ratio 1 2
+          | T : Set (Array Real n) => OBall {RealN n} R (RealN n).zro
+     \in \have | e2>0 : 0 < e2 => linarith
+               | Ec => phi.func-cover (RealNormed.makeCauchy (RealNormed.metricUniform e2>0))
+               | Tc => totallyBoundedSet-cauchyUniform-metric {RealN n} {T} (RealN-ballsTB n (RealN n).zro R>0) Ec
+     \in \case (RealN n).dist-uniform.1 Tc \with {
+       | inP (d,d>0,h) => inP (d, d>0, \lam {x} {y} x<R y<R xy<d => \case h x \with {
+         | inP (U, inP (W, inP (V, inP (c, idp), idp), p), q) =>
+           \have | ux : U x => q (real_<_U.1 (transportInv (__ < Real.fromRat d) (ldist-refl {RealN n}) (rat_real_<.1 d>0)))
+                 | uy : U y => q (real_<_U.1 xy<d)
+                 | cx : ldist c (phi x) < e2 => real_<_U.2 (p (real_<_U.1 x<R, ux))
+                 | cy : ldist c (phi y) < e2 => real_<_U.2 (p (real_<_U.1 y<R, uy))
+                 | tr : ldist (phi x) (phi y) <= ldist c (phi x) + ldist c (phi y) => ldist-triang {RealNormed} <=∘ =_<= (pmap (__ + _) (ldist-symm {RealNormed}))
+           | ee : Real.fromRat e2 = Real.fromRat eps * Real.fromRat (ratio 1 2) => inv RealField.*-rat
+           \in tr <∘r usingOnly (cx, cy, ee) linarith
+       })
+     }
+
+-- | A cover map $\mathbb R^n \to \mathbb R$ is bounded on the ball of radius `R` around `0`.
+\lemma coverMap-ball-bound {n : Nat} (phi : CoverMap (RealN n) RealNormed) {R : Rat} (R>0 : 0 < R)
+  : ∃ (S : Real) ((0 : Real) <= S) ∀ {x : Array Real n} (ldist {RealN n} (RealN n).zro x < R) (abs (phi x) <= S)
+  => \case totallyBoundedSet-metric-char.1 (totallyBoundedSet-image phi (RealN-ballsTB n (RealN n).zro R>0)) RatField.zro<ide \with {
+    | inP (D,g) => inP (RealAbGroup.BigSum (\lam j => abs (D j)) + 1, \have b0 : (0 : Real) <= RealAbGroup.BigSum (\lam j => abs (D j)) => RealAbGroup.BigSum_>=0 (\lam j => RealAbGroup.abs>=0) \in linarith, \lam {x} x<R =>
+        \case g (inP ((x, real_<_U.1 x<R), idp)) \with {
+          | inP (j, d) => \have | dj : ldist (D j) (phi x) < 1 => real_<_U.2 d
+                                | t1 : abs (phi x) - abs (D j) <= abs (D j - phi x) => RealAbGroup.abs_-right
+                                | t2 : ldist (D j) (phi x) = abs (D j - phi x) => lnorm-ldist {RealNormed}
+                                | s : abs (D j) <= RealAbGroup.BigSum (\lam j => abs (D j)) => RealAbGroup.BigSum_>=index {\lam j => abs (D j)} (\lam j => RealAbGroup.abs>=0) j
+                          \in usingOnly (t1, t2, s, dj) linarith
+        })
+  }
+
+-- | The distance to `0` in $\mathbb R^n$ is $\|x\|_1$.
+\lemma ldist0-l1norm {n : Nat} {x : Array Real n} : ldist {RealN n} (RealN n).zro x = l1norm x
+  => ldist-symm {RealN n} {(RealN n).zro} {x} *> lnorm-ldist {RealN n} {x} {(RealN n).zro} *> pmap (lnorm {RealN n}) (AddGroup.minus_zro {RealN n}) *> idp
+
+-- | $\|x\|_1$ as a linearly bounded map.
+\func l1LB (n : Nat) : LinBoundedMap n
+  => (LinBoundedRiesz.LinBoundedAbGroup n).BigSum (terms n)
+  \where {
+    \func terms (n : Nat) : Array (LinBoundedMap n) n
+      => \lam j => LinBoundedMap.join (LinBoundedMap.coord j) (LinBoundedMap.neg (LinBoundedMap.coord j))
+
+    \lemma apply {n : Nat} {x : Array Real n} : l1LB n x = l1norm x
+      => LinBoundedRiesz.BigSum-apply {n} {terms n} {x}
+  }
+
+-- | The clamp $(g \wedge \ell) \vee (-\ell)$ of a cover map `g` by a linearly bounded map $\ell$.
+\func clampLB {n : Nat} (g : CoverMap (RealN n) RealNormed) (l : LinBoundedMap n) : LinBoundedMap n \cowith
+  | func x => clampLB.mid (g x) (l x)
+  | func-cover => func-cover {clampLB.cover g l}
+  | lin-bound R => LinBoundedMap.lin-bound {LinBoundedMap.makeLocal (clampLB.cover g l) (l :: nil) \lam R => inP (1, RealField.zro<=ide, \lam x _ => clampLB.mid-abs <=∘ =_<= (inv (ide-left *> zro-right)))} R
+  \where {
+    -- | $(a \wedge b) \vee (-b)$.
+    \func mid (a b : Real) : Real => (a ∧ b) ∨ negative b
+
+    \func cover {n : Nat} (g : CoverMap (RealN n) RealNormed) (l : LinBoundedMap n) : CoverMap (RealN n) RealNormed
+      => real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (real-meet-uniform CoverMap.∘ ProductCoverSpace.tuple g l) (negative-uniform CoverMap.∘ l)
+
+    -- | $|(a \wedge b) \vee (-b)| \le |b|$.
+    \lemma mid-abs {a b : Real} : abs (mid a b) <= abs b
+      => \have | t1 : b <= abs b => RealAbGroup.abs>=id
+               | t2 : negative b <= abs b => RealAbGroup.abs>=id {negative b} <=∘ =_<= RealAbGroup.abs_negative
+               | u : (a ∧ b) ∨ negative b <= abs b => join-univ (meet-right <=∘ t1) t2
+               | l : negative b <= (a ∧ b) ∨ negative b => join-right
+         \in transport (__ <= _) (pmap abs RealAbGroup.minus_zro) $ RealField.abs-univ {(a ∧ b) ∨ negative b} {0} (linarith : (a ∧ b) ∨ negative b - 0 <= abs b) linarith
+
+    -- | $(a \wedge b) \vee (-b) = a$ if $|a| \le b$.
+    \lemma mid-id {a b : Real} (ab : abs a <= b) : mid a b = a
+      => \have | t1 : a <= abs a => RealAbGroup.abs>=id
+               | t2 : negative a <= abs a => RealAbGroup.abs>=id {negative a} <=∘ =_<= RealAbGroup.abs_negative
+               | m : a ∧ b = a => RealAbGroup.meet_<= (t1 <=∘ ab)
+         \in pmap (__ ∨ _) m *> RealAbGroup.join-comm *> RealAbGroup.join_<= (linarith : negative b <= a)
+
+    -- | $|((a \wedge b) \vee (-b)) - a| \le |a|$ if $b \ge 0$.
+    \lemma mid-dev {a b : Real} (b>=0 : (0 : Real) <= b) : abs (mid a b - a) <= abs a
+      => \have | t1 : a <= abs a => RealAbGroup.abs>=id
+               | t2 : negative a <= abs a => RealAbGroup.abs>=id {negative a} <=∘ =_<= RealAbGroup.abs_negative
+               | j1 : a ∧ b <= (a ∧ b) ∨ negative b => join-left
+               | j2 : (a ∧ b) ∨ negative b <= a RealAbGroup.∨ 0 => join-univ (meet-left <=∘ RealAbGroup.join-left) (linarith <=∘ RealAbGroup.join-right)
+         \in real-cases {a} {0}
+             (\lam a<0 => \have | l : a <= a ∧ b => meet-univ <=-refl (linarith : a <= b)
+                                 | u : a RealAbGroup.∨ 0 <= 0 => RealAbGroup.join-univ (<=-less a<0) RealAbGroup.<=-refl
+                           \in RealField.abs-univ {_} {a} linarith linarith)
+             (\lam a>=0 => \have | l : (0 : Real) <= a ∧ b => meet-univ a>=0 b>=0
+                                  | u : a RealAbGroup.∨ 0 <= a => RealAbGroup.join-univ <=-refl a>=0
+                            \in RealField.abs-univ {_} {a} linarith linarith)
+  }
+
+-- | $\varphi_k = (\varphi \wedge k\|x\|_1) \vee (-k\|x\|_1)$.
+\func clipApprox {n : Nat} (phi : CoverMap (RealN n) RealNormed) (k : Rat) : LinBoundedMap n
+  => clampLB phi (scaleL1 k)
+  \where
+    -- | $k\|x\|_1$.
+    \func scaleL1 {n : Nat} (k : Rat) : LinBoundedMap n \cowith
+      | func x => Real.fromRat k * l1LB n x
+      | func-cover => func-cover {RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (Real.fromRat k)) (l1LB n)}
+      | lin-bound R => LinBoundedMap.lin-bound {LinBoundedMap.scale (Real.fromRat k) (l1LB n)} R
+
+-- | $\varphi_k \to \varphi$ uniformly on the ball $\|x\|_1 < R$ if $\varphi(0) = 0$.
+\lemma clipApprox-close {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = (0 : Real)) {R : Rat} (R>0 : 0 < R)
+                        {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (k0 : Rat) (0 <= k0) ∀ {k : Rat} (k0 <= k) {x : Array Real n} (l1norm x < R) (abs (clipApprox phi k x - phi x) <= eps)
+  => \case coverMap-ball-uniform phi R>0 eps>0, coverMap-ball-bound phi R>0 \with {
+    | inP (d,d>0,u), inP (S,S>=0,b) => \case Real.U-inh {S} \with {
+      | inP (q,Sq) =>
+        \have | S<q : S < q => real_<_U.2 Sq
+              | q>0 : 0 < q => rat_real_<.2 (S>=0 <∘r S<q)
+              | d/=0 : d /= 0 => RatField.>_/= d>0
+              | k0>=0 : 0 <= q * RatField.finv d => RatField.<=_*_positive_positive (<=-less q>0) (<=-less (RatField.finv>0 d>0))
+              | k0d : Real.fromRat (q * RatField.finv d) * Real.fromRat d = Real.fromRat q
+                  => RealField.*-rat *> pmap Real.fromRat (*-assoc *> pmap (q *) (RatField.finv-left d/=0) *> ide-right)
+        \in inP (q * RatField.finv d, k0>=0, \lam {k} k0<=k {x} x<R =>
+          \let l => Real.fromRat k * l1norm x
+          \in \have | e : clipApprox phi k x = clampLB.mid (phi x) l => pmap (\lam z => clampLB.mid (phi x) (Real.fromRat k * z)) (l1LB.apply {n} {x})
+                    | k>=0 : (0 : Real) <= Real.fromRat k => rat_real_<=.1 (k0>=0 <=∘ k0<=k)
+                    | l1>=0 : (0 : Real) <= l1norm x => l1norm>=0
+                    | l>=0 : (0 : Real) <= l => RealField.<=_*_positive_positive k>=0 l1>=0
+                    | xR : ldist {RealN n} (RealN n).zro x < R => transportInv (__ < _) ldist0-l1norm x<R
+              \in transportInv (\lam z => abs (z - phi x) <= eps) e $ real-cases {l1norm x} {d}
+                  (\lam x<d => \have | zR : ldist {RealN n} (RealN n).zro (RealN n).zro < R => transportInv (__ < _) (ldist-refl {RealN n} {(RealN n).zro}) (rat_real_<.1 R>0)
+                                     | v : ldist (phi (RealN n).zro) (phi x) < eps => u zR xR (transportInv (__ < _) ldist0-l1norm x<d)
+                                     | w : abs (phi x) < eps => transport (__ < _) (lnorm-ldist {RealNormed} *> pmap abs (pmap (\lam z => z - phi x) phi0 *> zro-left {RealAbGroup}) *> RealAbGroup.abs_negative) v
+                               \in clampLB.mid-dev l>=0 <=∘ <=-less w)
+                  (\lam d<=x => \have | m1 : Real.fromRat (q * RatField.finv d) * Real.fromRat d <= Real.fromRat k * Real.fromRat d
+                                          => RealField.<=_*_positive-left (rat_real_<=.1 k0<=k) (rat_real_<=.1 (<=-less d>0))
+                                      | m2 : Real.fromRat k * Real.fromRat d <= l => RealField.<=_*_positive-right k>=0 d<=x
+                                      | ql : abs (phi x) <= l => b xR <=∘ <=-less S<q <=∘ =_<= (inv k0d) <=∘ m1 <=∘ m2
+                                \in =_<= (pmap abs (pmap (__ - _) (clampLB.mid-id ql) *> negative-right) *> RealAbGroup.abs_zro) <=∘ rat_real_<=.1 (<=-less eps>0)))
+      }
+    }
+
+
+
+-- | $\bigl|\|x\|_1 - \|y\|_1\bigr| \le \|x - y\|_1$.
+\lemma l1norm-lip {n : Nat} {x y : Array Real n} : abs (l1norm x - l1norm y) <= l1norm (\lam j => x j - y j)
+  => lnorm_-_abs {RealN n} {x} {y}
+
+-- | $\|x - y\|_1 = d(x, y)$ in $\mathbb R^n$.
+\lemma ldist-l1norm {n : Nat} {x y : Array Real n} : ldist {RealN n} x y = l1norm (\lam j => x j - y j)
+  => lnorm-ldist {RealN n} {x} {y}
+
+-- | $a_k \to \varphi$ uniformly on every ball $\|x\|_1 < R$.
+\type BallConv {n : Nat} (a : Nat -> LinBoundedMap n) (phi : Array Real n -> Real) : \Prop
+  => ∀ {R : Rat} (0 < R) {e : Rat} (0 < e) ∃ (k0 : Nat) ∀ {k : Nat} (k0 <= k) {x : Array Real n} (l1norm x < R) (abs (a k x - phi x) <= e)
+
+-- | $\varphi_k \to \varphi$ uniformly on balls.
+\lemma clipApprox-ballConv {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = (0 : Real))
+  : BallConv (\lam k => clipApprox phi k) phi
+  => \lam R>0 e>0 => \case clipApprox-close phi phi0 R>0 e>0 \with {
+    | inP (k0,_,c) => inP ((rat_natBound k0).1, \lam k0<=k xR => c (<=-less (rat_natBound k0).2 <=∘ fromInt_<= (pos<=pos k0<=k)) xR)
+  }
+
+-- | A constant sequence converges.
+\lemma ballConv-const {n : Nat} (chi : LinBoundedMap n) : BallConv (\lam _ => chi) chi
+  => \lam _ e>0 => inP (0, \lam _ _ => =_<= (pmap abs negative-right *> RealAbGroup.abs_zro) <=∘ rat_real_<=.1 (<=-less e>0))
+
+-- | {BallConv} only depends on the values of the limit.
+\lemma ballConv-ext {n : Nat} {a : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (p : \Pi (x : Array Real n) -> phi x = psi x) (c : BallConv a phi) : BallConv a psi
+  => \lam R>0 e>0 => TruncP.map (c R>0 e>0) \lam (k0,g) => (k0, \lam k0<=k xR => transport (\lam z => abs (_ - z) <= _) (p _) (g k0<=k xR))
+
+\lemma ballConv-add {n : Nat} {a b : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (ca : BallConv a phi) (cb : BallConv b psi)
+  : BallConv (\lam k => LinBoundedMap.add (a k) (b k)) (\lam x => phi x + psi x)
+  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => linarith \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
+    | inP (k1,g1), inP (k2,g2) => inP (k1 NatSemiring.∨ k2, \lam k0<=k xR =>
+        \have | t1 => g1 (NatSemiring.join-left <=∘ k0<=k) xR
+              | t2 => g2 (NatSemiring.join-right <=∘ k0<=k) xR
+              | h : Real.fromRat (e * ratio 1 2) = Real.fromRat e * Real.fromRat (ratio 1 2) => inv RealField.*-rat
+              | s : abs (a _ _ + b _ _ - (phi _ + psi _)) <= abs (a _ _ - phi _) + abs (b _ _ - psi _)
+                  => =_<= (pmap abs (equation.abGroup : a _ _ + b _ _ - (phi _ + psi _) = (a _ _ - phi _) + (b _ _ - psi _))) <=∘ RealAbGroup.abs_+
+        \in s <=∘ usingOnly (t1, t2, h) linarith)
+  }
+
+\lemma ballConv-neg {n : Nat} {a : Nat -> LinBoundedMap n} {phi : Array Real n -> Real} (ca : BallConv a phi)
+  : BallConv (\lam k => LinBoundedMap.neg (a k)) (\lam x => negative (phi x))
+  => \lam R>0 e>0 => TruncP.map (ca R>0 e>0) \lam (k0,g) => (k0, \lam k0<=k xR =>
+      =_<= (pmap abs (equation.abGroup : negative (a _ _) - negative (phi _) = negative (a _ _ - phi _)) *> RealAbGroup.abs_negative) <=∘ g k0<=k xR)
+
+\lemma ballConv-join {n : Nat} {a b : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (ca : BallConv a phi) (cb : BallConv b psi)
+  : BallConv (\lam k => LinBoundedMap.join (a k) (b k)) (\lam x => phi x ∨ psi x)
+  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => linarith \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
+    | inP (k1,g1), inP (k2,g2) => inP (k1 NatSemiring.∨ k2, \lam k0<=k xR =>
+        \have | t1 => g1 (NatSemiring.join-left <=∘ k0<=k) xR
+              | t2 => g2 (NatSemiring.join-right <=∘ k0<=k) xR
+              | h : Real.fromRat (e * ratio 1 2) = Real.fromRat e * Real.fromRat (ratio 1 2) => inv RealField.*-rat
+        \in RealAbGroup.join-lip <=∘ usingOnly (t1, t2, h) linarith)
+  }
+
+\lemma ballConv-meet {n : Nat} {a b : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (ca : BallConv a phi) (cb : BallConv b psi)
+  : BallConv (\lam k => LinBoundedMap.meet (a k) (b k)) (\lam x => phi x ∧ psi x)
+  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => linarith \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
+    | inP (k1,g1), inP (k2,g2) => inP (k1 NatSemiring.∨ k2, \lam k0<=k xR =>
+        \have | t1 => g1 (NatSemiring.join-left <=∘ k0<=k) xR
+              | t2 => g2 (NatSemiring.join-right <=∘ k0<=k) xR
+              | h : Real.fromRat (e * ratio 1 2) = Real.fromRat e * Real.fromRat (ratio 1 2) => inv RealField.*-rat
+        \in RealAbGroup.meet-lip <=∘ usingOnly (t1, t2, h) linarith)
+  }
+
+\lemma ballConv-scale {n : Nat} {a : Nat -> LinBoundedMap n} {phi : Array Real n -> Real} (q : Rat) (ca : BallConv a phi)
+  : BallConv (\lam k => LinBoundedMap.scale (Real.fromRat q) (a k)) (\lam x => Real.fromRat q * phi x)
+  => \lam {R} R>0 {e} e>0 =>
+      \let | Q => RatField.abs q + 1
+           | e' => e * RatField.finv Q
+      \in \have | Q>0 : 0 < Q => linarith (RatField.abs>=0 {q})
+                | e'>0 : 0 < e' => RatField.<_*_positive_positive e>0 (RatField.finv>0 Q>0)
+                | Qe : abs q * e' <= e
+                    => RatField.<=_*_positive-left (linarith : abs q <= Q) (<=-less e'>0)
+                         <=∘ =_<= (inv *-assoc *> pmap (* _) *-comm *> *-assoc *> pmap (e *) (RatField.finv-right (RatField.>_/= Q>0)) *> ide-right)
+      \in TruncP.map (ca R>0 e'>0) \lam (k0,g) => (k0, \lam k0<=k xR =>
+          =_<= (pmap abs (inv RealField.ldistr_-) *> RealField.abs_* *> pmap (_ *) idp *> pmap (__ * _) (inv rat_real_abs))
+            <=∘ RealField.<=_*_positive-right (rat_real_<=.1 RatField.abs>=0) (g k0<=k xR) <=∘ =_<= RealField.*-rat <=∘ rat_real_<=.1 Qe)
+
+-- | The maximum of finitely many natural numbers.
+\func natMax {n : Nat} (k : Fin n -> Nat) : Nat \elim n
+  | 0 => 0
+  | suc n => k 0 NatSemiring.∨ natMax (\lam j => k (suc j))
+  \where
+    \lemma ge {n : Nat} {k : Fin n -> Nat} (j : Fin n) : k j <= natMax k \elim n, j
+      | suc n, 0 => NatSemiring.join-left
+      | suc n, suc j => ge j <=∘ NatSemiring.join-right
+
+-- | If $|y_j - z_j| \le c$ for all `j`, then $\|y - z\|_1 \le n c$.
+\lemma l1norm-coord-bound {n : Nat} {y z : Array Real n} {c : Real} (p : \Pi (j : Fin n) -> abs (y j - z j) <= c)
+  : l1norm (\lam j => y j - z j) <= RealField.natCoef n * c
+  => RealAbGroup.BigSum_<= {_} {\lam j => abs (y j - z j)} {replicate n c} p <=∘ =_<= RealField.BigSum_replicate
+
+-- | If $a_k \to \varphi$ and $b_{j,k} \to \psi_j$ uniformly on balls, then $a_k \circ (b_{j,k})_j \to \varphi \circ (\psi_j)_j$ uniformly on balls.
+\lemma ballConv-comp {n m : Nat} (phi : CoverMap (RealN n) RealNormed) (psi : Array (CoverMap (RealN m) RealNormed) n)
+                     {a : Nat -> LinBoundedMap n} {b : Fin n -> Nat -> LinBoundedMap m} (ca : BallConv a phi) (cb : \Pi (j : Fin n) -> BallConv (b j) (psi j))
+  : BallConv (\lam k => LinBoundedMap.comp (a k) (\lam j => b j k)) (\lam x => phi (\lam j => psi j x))
+  => \lam {R} R>0 {e} e>0 =>
+      \let e2 => e * ratio 1 2
+      \in \have e2>0 : 0 < e2 => linarith
+      \in \case FinSet.finiteAC (\lam (j : Fin n) => coverMap-ball-bound (psi j) R>0) \with {
+        | inP S =>
+          \let | N => RealField.natCoef n
+               | T => RealAbGroup.BigSum (\lam j => (S j).1 + 1)
+          \in \have | N>=0 : (0 : Real) <= N => RealField.natCoef>=0
+                    | T>=0 : (0 : Real) <= T => RealAbGroup.BigSum_>=0 \lam j => \have s0 => (S j).2 \in (linarith : (0 : Real) <= (S j).1 + 1)
+          \in \case Real.U-inh {T} \with {
+            | inP (R',TR') =>
+              \have | T<R' : T < R' => real_<_U.2 TR'
+                    | R'>0 : 0 < R' => rat_real_<.2 (T>=0 <∘r T<R')
+              \in \case coverMap-ball-uniform phi R'>0 e2>0 \with {
+                | inP (d,d>0,u) =>
+                  \have | N1>0 : (0 : Real) < N + 1 => linarith
+                        | dp>0 : (0 : Real) < Real.fromRat d * RealField.pinv (N + 1) N1>0 => RealField.<_*_positive_positive (rat_real_<.1 d>0) (RealField.pinv>0 N1>0)
+                  \in \case real_<-char.1 dp>0 \with {
+                    | inP (r,r>0',r<dp) =>
+                      \let e1 => r ∧ 1
+                      \in \have | r>0 : 0 < r => rat_real_<.2 r>0'
+                                | e1>0 : 0 < e1 => RatField.<_meet-univ r>0 RatField.zro<ide
+                      \in \case FinSet.finiteAC (\lam (j : Fin n) => cb j R>0 e1>0), ca R'>0 e2>0 \with {
+                        | inP kb, inP (ka,ga) => inP (ka NatSemiring.∨ natMax (\lam j => (kb j).1), \lam {k} k0<=k {x} xR =>
+                            \let | y => \lam (j : Fin n) => b j k x
+                                 | z => \lam (j : Fin n) => psi j x
+                            \in \have | xR' : ldist {RealN m} (RealN m).zro x < R => transportInv (__ < _) ldist0-l1norm xR
+                                      | e1<=1 : Real.fromRat e1 <= 1 => rat_real_<=.1 meet-right
+                                      | e1<=r : Real.fromRat e1 <= Real.fromRat r => rat_real_<=.1 meet-left
+                                      | hyz (j : Fin n) : abs (y j - z j) <= Real.fromRat e1
+                                          => (kb j).2 (natMax.ge j <=∘ NatSemiring.join-right <=∘ k0<=k) xR
+                                      | hz (j : Fin n) : abs (z j) <= (S j).1 => (S j).3 xR'
+                                      | hy (j : Fin n) : abs (y j) <= (S j).1 + 1
+                                          => =_<= (pmap abs (equation.abGroup : y j = (y j - z j) + z j)) <=∘ RealAbGroup.abs_+ <=∘ (\have | a1 => hyz j | a2 => hz j \in linarith)
+                                      | ly : l1norm y < R' => RealAbGroup.BigSum_<= {_} {\lam j => abs (y j)} {\lam j => (S j).1 + 1} hy <∘r T<R'
+                                      | lz : l1norm z < R' => RealAbGroup.BigSum_<= {_} {\lam j => abs (z j)} {\lam j => (S j).1 + 1} (\lam j => hz j <=∘ (linarith : (S j).1 <= (S j).1 + 1)) <∘r T<R'
+                                      | pN : (N + 1) * RealField.pinv (N + 1) N1>0 = (1 : Real) => RealField.pinv-right N1>0
+                                      | lyz : l1norm (\lam j => y j - z j) < Real.fromRat d
+                                          => \have | b1 : l1norm (\lam j => y j - z j) <= N * Real.fromRat e1 => l1norm-coord-bound {n} {y} {z} hyz
+                                                   | b2 : N * Real.fromRat e1 <= N * (Real.fromRat d * RealField.pinv (N + 1) N1>0)
+                                                       => RealField.<=_*_positive-right N>=0 (e1<=r <=∘ <=-less r<dp)
+                                                   | b3 : N * (Real.fromRat d * RealField.pinv (N + 1) N1>0) = Real.fromRat d - Real.fromRat d * RealField.pinv (N + 1) N1>0
+                                                       => equation.cRing {pN}
+                                             \in (b1 <=∘ b2) <∘r transport (< Real.fromRat d) (inv b3) (linarith : Real.fromRat d - Real.fromRat d * RealField.pinv (N + 1) N1>0 < Real.fromRat d)
+                                      | t1 : ldist (phi y) (phi z) < Real.fromRat e2
+                                          => u (transportInv (__ < _) (ldist0-l1norm {n} {y}) ly) (transportInv (__ < _) (ldist0-l1norm {n} {z}) lz) (transportInv (__ < _) (ldist-l1norm {n} {y} {z}) lyz)
+                                      | t1' : abs (phi y - phi z) < Real.fromRat e2 => transport (__ < _) (lnorm-ldist {RealNormed}) t1
+                                      | t2 : abs (a k y - phi y) <= Real.fromRat e2 => ga (NatSemiring.join-left <=∘ k0<=k) ly
+                                      | ee : Real.fromRat e2 = Real.fromRat e * Real.fromRat (ratio 1 2) => inv RealField.*-rat
+                                      | tri : abs (a k y - phi z) <= abs (a k y - phi y) + abs (phi y - phi z)
+                                          => =_<= (pmap abs (equation.abGroup : a k y - phi z = (a k y - phi y) + (phi y - phi z))) <=∘ RealAbGroup.abs_+
+                            \in tri <=∘ usingOnly (t1', t2, ee) linarith)
+                      }
+                  }
+              }
+          }
+      }
+
+-- | If $b_k \to \psi$ uniformly on balls, then the $b_k$ are eventually uniformly bounded on every ball.
+\lemma ballConv-bound {m : Nat} {b : Nat -> LinBoundedMap m} {psi : CoverMap (RealN m) RealNormed} (cb : BallConv b psi) {R : Rat} (R>0 : 0 < R)
+  : ∃ (B : Rat) (0 < B) (k1 : Nat) ∀ {k : Nat} (k1 <= k) {x : Array Real m} (l1norm x < Real.fromRat R) (abs (b k x) <= Real.fromRat B)
+  => \case coverMap-ball-bound psi R>0, cb R>0 RatField.zro<ide \with {
+    | inP (S,S>=0,hS), inP (k1,g) => \case Real.U-inh {S} \with {
+      | inP (q,Sq) =>
+        \have | S<q : S < q => real_<_U.2 Sq
+              | q>0 : 0 < q => rat_real_<.2 (S>=0 <∘r S<q)
+        \in inP (q + 1, linarith, k1, \lam {k} k1<=k {x} xR =>
+              \have | t1 => g k1<=k xR
+                    | t2 : abs (psi x) <= S => hS (transportInv (__ < _) ldist0-l1norm xR)
+                    | t3 : abs (b k x) <= abs (b k x - psi x) + abs (psi x) => =_<= (pmap abs (equation.abGroup : b k x = (b k x - psi x) + psi x)) <=∘ RealAbGroup.abs_+
+                    | e1 : Real.fromRat (q + 1) = Real.fromRat q + 1 => inv RealAbGroup.+-rat
+              \in t3 <=∘ usingOnly (t1, t2, e1, S<q) linarith)
+    }
+  }
+
+-- | Every $\chi \in C_0$ vanishes at `0`.
+\lemma linBounded-zro {n : Nat} (chi : LinBoundedMap n) : chi (RealN n).zro = (0 : Real)
+  => \case chi.lin-bound 0 \with {
+    | inP (C,C>=0,hC) => \have | b : abs (chi (RealN n).zro) <= C * l1norm {n} (RealN n).zro => hC _ (\lam j => =_<= RealAbGroup.abs_zro)
+                               | l0 : l1norm {n} (RealN n).zro = (0 : Real) => inv (ldist0-l1norm {n} {(RealN n).zro}) *> ldist-refl {RealN n} {(RealN n).zro}
+                               | a0 : abs (chi (RealN n).zro) <= (0 : Real) => b <=∘ =_<= (pmap (C *) l0 *> RealField.zro_*-right)
+                               | t1 : chi (RealN n).zro <= abs (chi (RealN n).zro) => RealAbGroup.abs>=id
+                               | t2 : negative (chi (RealN n).zro) <= abs (chi (RealN n).zro) => RealAbGroup.abs>=neg
+                         \in linarith
+  }

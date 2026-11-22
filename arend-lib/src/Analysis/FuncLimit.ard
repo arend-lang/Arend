@@ -3,12 +3,10 @@
 \import Algebra.Pointed
 \import Analysis.Limit
 \import Arith.Rat
-\import Arith.Real
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
-\import Operations
 \import Order.Directed
 \import Order.Lattice
 \import Order.PartialOrder
@@ -106,7 +104,7 @@
 \lemma funcCovergent-topAb-char {I : DirectedSet} {X : CoverSpace} {Y : TopAbGroup} (f : I -> CoverMap X Y)
                                 (fc : ∀ {U : Y.isOpen} (U 0) (X.isCauchy \lam V => ∃ (N : I) ∀ {x : V} ∀ {n} (N <= n -> U (f n x - f N x))))
   : IsFuncConvergent (\lam n => f n)
-  => funcConvergent-uniform-char f \lam Eu => \case neighborhood-uniform.1 Eu \with {
+  => funcConvergent-uniform-char f \lam Eu => \case Y.ab-neighborhood-uniform.1 Eu \with {
     | inP (U,Uo,U0,h) => cauchy-subset (fc (negative-cont.func-cont Uo) $ simplify U0) \lam {V} (inP (N,g)) => inP $ later (N, \lam {x} Vx => \case h (f N x) \with {
       | inP (W,EW,dW) => inP (W, EW, \lam p => dW $ simplify in g Vx p)
     })

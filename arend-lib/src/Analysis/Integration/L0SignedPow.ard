@@ -1,0 +1,55 @@
+{- | The signed power $\varphi_r(t) = t|t|^{r-2}$ on `L⁰`, by the functional calculus {l0calc}.
+
+  * {l0signedPow}: $\varphi_r(F)$; {l0signedPow-conj}: $|\varphi_r(F)|^{r'} = |F|^r$; {l0signedPow-mul}: $\varphi_r(F) F = |F|^r$.
+-}
+
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.L0
+\import Analysis.Integration.L0Calculus
+\import Analysis.Integration.L0Product
+\import Analysis.Integration.LpCalculus
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power.SignedPow
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Order.Biordered
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.LinBounded
+\import Topology.NormedAbGroup.Real.LinBounded.Power
+
+-- | $r > 1$ implies $r \ge 1$.
+\lemma ge1 {r : Real} (r>1 : 1 < r) : 1 <= r
+  => <=-less r>1
+
+-- | $\varphi_r$ as a cover map $\mathbb R^1 \to \mathbb R$.
+\func signedPowMap {r : Real} (r>1 : 1 < r) : CoverMap (RealN 1) RealNormed (\lam x => signedPow r>1 (x 0))
+  => signedPow-cover r>1 CoverMap.∘ LinBoundedMap.coord {1} 0
+
+-- | $\varphi_r(F)$ for `F ∈ L⁰`.
+\func l0signedPow {L : FullIntegrationSpace} {r : Real} (r>1 : 1 < r) (F : L0Space L) : L0Space L
+  => l0calc (signedPowMap r>1) (F :: nil)
+
+-- | $|\varphi_r(F)|^{r'} = |F|^r$.
+\lemma l0signedPow-conj {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
+                        (rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)) {F : L0Space L}
+  : l0pow q q>=1 (l0signedPow r>1 F) = l0pow r (ge1 r>1) F
+  => l0pow-eq *> pmap {Array (L0Space L) 1} (l0calc (absPow (fpow.one>0 q>=1) q>=1)) {l0signedPow r>1 F :: nil}
+                       {\lam j => l0calc ((signedPowMap r>1 :: nil : Array (CoverMap (RealN 1) RealNormed) 1) j) (F :: nil)} (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
+      *> inv (l0calc-comp {L} {1} {1} {absPow (fpow.one>0 q>=1) q>=1} {signedPowMap r>1 :: nil} {absPow (fpow.one>0 (ge1 r>1)) (ge1 r>1)}
+                (\lam x => inv (signedPow-conj rq)) {F :: nil})
+      *> inv l0pow-eq
+
+-- | $\varphi_r(F) F = |F|^r$.
+\lemma l0signedPow-mul {L : FullIntegrationSpace} {r : Real} {r>1 : 1 < r} {F : L0Space L}
+  : l0Mul (l0signedPow r>1 F, F) = l0pow r (ge1 r>1) F
+  => pmap (\lam z => l0Mul (l0signedPow r>1 F, z)) (inv (l0calc-coord {L} {1} 0 {F :: nil}))
+      *> l0Mul-l0calc {L} {1} {signedPowMap r>1} {LinBoundedMap.coord 0} {absPow (fpow.one>0 (ge1 r>1)) (ge1 r>1)} (\lam x => inv signedPow-mul *> *-comm)
+      *> inv l0pow-eq

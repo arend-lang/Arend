@@ -1,7 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.FormalSeries
@@ -26,7 +25,6 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set.Set
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Directed
@@ -35,11 +33,8 @@
 \import Topology.MetricSpace.OpenBall
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
-\import Topology.TopAbGroup.Product
 \import Topology.TopSpace
-\import Topology.UniformSpace
 \open Monoid(pow)
 
 \func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (x : X) (n : Nat)
@@ -171,6 +166,12 @@
   : IsSeriesSum (powerSeries cs x) (powerSeriesSum-total cs psc x)
   => transportInv (IsSeriesSum _) (\peval powerSeriesSum-total cs psc x) powerSeriesSum-isSum
 
+
+-- | {powerSeriesSum-total} depends only on the values of the coefficients.
+\lemma powerSeriesSum-total-ext {X : CompleteExNormedRing} {cs cs' : Nat -> X} (p : \Pi (n : Nat) -> cs n = cs' n)
+                                {psc : IsPowerSeriesConv cs} {psc' : IsPowerSeriesConv cs'} {x : X}
+  : powerSeriesSum-total cs psc x = powerSeriesSum-total cs' psc' x
+  => X.limit-unique (transport (IsSeriesSum __ _) (ext \lam n => pmap (* _) (p n)) powerSeriesSum-total-isSum) powerSeriesSum-total-isSum
 
 \lemma powerSeries-unbounded-conv {X : ExPseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs x)) : IsPowerSeriesConv cs
   => \lam {a} a>=0 => \case Real.natBounded {a} \with {

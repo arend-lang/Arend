@@ -1,0 +1,66 @@
+{- | The completion of a normed truncated pre-Banach lattice.
+
+  * {NormedTruncBanachLatticeCompletion}: the lattice operations and the truncation extend to the completion,
+    which is a Banach lattice with real-valued norms.
+  * {truncBanachCompletion}: the canonical isometric map into the completion; it preserves joins, truncations and the order.
+-}
+
+\import Algebra.Monoid
+\import Arith.Real
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Topology.BanachLattice
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Completion
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Complete
+\import Topology.TopRieszSpace.Completion
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+
+-- | The completion of a normed truncated pre-Banach lattice.
+\instance TruncBanachLatticeCompletion (X : TruncPreBanachLattice) : TruncBanachLattice (RegularCauchyFilter X)
+  | CompleteNormedAbGroup => NormedAbGroupCompletion X
+  | TruncRieszSpace => TopTruncRieszCompletion.lattice {X}
+  | norm_<= {F} {G} p => Real.<=-upper.1 $ =_<= (inv (abs-norm {_} {F}) *> pmap lnorm (inv $ MeetSemilattice.meet_<= {lattice} p)) <=∘ meet-norm {_} {F} {G} <=∘ =_<= (abs-norm {_} {G})
+  | norm-double {F} => transport (__ ExUpperReal.<= _) RealAbGroup.+-upper $ Real.<=-upper.1 $ =_<= $ inv double-norm
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+    \open TopTruncRieszCompletion
+
+    -- | `‖|F|‖ = ‖F‖` on the completion.
+    \lemma abs-norm {F : RegularCauchyFilter X} : lnorm {NormedAbGroupCompletion X} (abs-cover F) = lnorm {NormedAbGroupCompletion X} F
+      => dense-lift-unique completion completion.isDenseEmbedding.1 (lnorm-metric {NormedAbGroupCompletion X} ∘ abs-cover) (lnorm-metric {NormedAbGroupCompletion X})
+          (\lam x => pmap (NormedAbGroupCompletion.norm-cover {X}) abs-char *> NormedAbGroupCompletion.norm-char *> X.lnorm_abs *> inv NormedAbGroupCompletion.norm-char) F
+
+    -- | `‖|F| ∧ |G|‖ ≤ ‖|G|‖` on the completion.
+    \lemma meet-norm {F G : RegularCauchyFilter X} : lnorm {NormedAbGroupCompletion X} (meet-func (abs-cover F) (abs-cover G)) RealAbGroup.<= lnorm {NormedAbGroupCompletion X} (abs-cover G)
+      => dense_<= real-join-uniform (prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1)
+          (lnorm-metric {NormedAbGroupCompletion X} ∘ meet-cover ∘ prod abs-cover abs-cover) (lnorm-metric {NormedAbGroupCompletion X} ∘ abs-cover ∘ proj2)
+          (\lam s => =_<= (pmap (NormedAbGroupCompletion.norm-cover {X}) (pmap2 meet-func abs-char abs-char *> meet-char) *> NormedAbGroupCompletion.norm-char)
+            <=∘ X.lnorm_<= (=_<= (X.abs-ofPos (X.meet-univ X.abs>=0 X.abs>=0)) <=∘ X.meet-right <=∘ =_<= (inv (X.abs-ofPos X.abs>=0)))
+            <=∘ =_<= (inv $ pmap (NormedAbGroupCompletion.norm-cover {X}) abs-char *> NormedAbGroupCompletion.norm-char)) (F,G)
+
+    -- | `‖F + F‖ = ‖F‖ + ‖F‖` on the completion.
+    \lemma double-norm {F : RegularCauchyFilter X} : lnorm {NormedAbGroupCompletion X} (+-func F F) = lnorm {NormedAbGroupCompletion X} F RealAbGroup.+ lnorm {NormedAbGroupCompletion X} F
+      => dense-lift-unique completion completion.isDenseEmbedding.1 (lnorm-metric {NormedAbGroupCompletion X} ∘ +-cover ∘ tuple id id)
+          (RealNormed.+-cont ContMap.∘ tuple (lnorm-metric {NormedAbGroupCompletion X}) (lnorm-metric {NormedAbGroupCompletion X}))
+          (\lam x => pmap (NormedAbGroupCompletion.norm-cover {X}) +-char *> NormedAbGroupCompletion.norm-char *> point-double
+                     *> inv (pmap2 (RealAbGroup.+) NormedAbGroupCompletion.norm-char NormedAbGroupCompletion.norm-char)) F
+      \where
+        \lemma point-double {x : X} : lnorm (x + x) = lnorm x RealAbGroup.+ lnorm x
+          => RealAbGroup.<=-antisymmetric lnorm_+ (Real.<=-upper.2 $ transportInv (__ ExUpperReal.<= _) RealAbGroup.+-upper X.norm-double)
+  }
+
+-- | The canonical map into the completion.
+\func truncBanachCompletion {X : TruncPreBanachLattice} : TruncRieszSpaceIsometricMap X (TruncBanachLatticeCompletion X) \cowith
+  | NormedIsometricMap => normedCompletion
+  | TruncRieszSpaceHom => topTruncCompletion

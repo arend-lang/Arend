@@ -1,0 +1,109 @@
+{- | The intermediate value theorem (Bishop–Bridges, Ch. 2, Thm. 4.8).
+ -
+ -   A continuous function on `[a,b]` with `f a <= y <= f b` takes values arbitrarily close to `y`
+ -   (see {intermediate-value}, and {intermediate-value-dec} for `f b <= y <= f a`).
+ -
+ -   Proof: `m = inf |f x - y|` exists by {interval-hasInf}. If `m > 0`, take a modulus `delta` of uniform continuity
+ -   for some `q < m` and walk from `a` to `b` in steps of size less than `delta`; since `|f - y| >= m` everywhere,
+ -   `f - y` stays `<= -m` along the way (see {intermediate-value.no-gap}), which contradicts `f b - y >= 0`.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Approximate
+\import Arith.Real.Extremes
+\import Arith.Real.Field
+\import Arith.Real.LowerReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.TopAbGroup.Product
+
+-- | Intermediate value theorem (Bishop–Bridges, Ch. 2, Thm. 4.8).
+\lemma intermediate-value {a b : Real} (a<=b : a <= b) (f : CoverMap (IntervalSpace a b) RealNormed) {y : Real}
+                          (fa<=y : f (a, (<=-refl, a<=b)) <= y) (y<=fb : y <= f (b, (a<=b, <=-refl))) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (x : Set.Total (ClosedInterval a b)) (RealAbGroup.abs (f x - y) < eps)
+  => approx a<=b f eps>0 \lam q>0 q<m s>0 hu hm => no-gap a<=b (\lam x => f x - y) q>0 q<m s>0
+      (\lam d => transportInv (\lam z => RealAbGroup.abs z <= _) equation.abGroup (hu d)) hm linarith linarith
+  \where {
+    -- | If `|h| >= m` and consecutive values of `h` on steps of size `s` differ by at most `q < m`, then `h` cannot change sign.
+    \lemma no-gap {a b : Real} (a<=b : a <= b) (h : Set.Total (ClosedInterval a b) -> Real) {q m s : Real} (q>0 : 0 < q) (q<m : q < m) (s>0 : 0 < s)
+                  (hu : \Pi {x x' : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (x'.1 - x.1) <= s -> RealAbGroup.abs (h x' - h x) <= q)
+                  (hm : \Pi (x : Set.Total (ClosedInterval a b)) -> m <= RealAbGroup.abs (h x))
+                  (ha : h (a, (<=-refl, a<=b)) <= 0) (hb : 0 <= h (b, (a<=b, <=-refl))) : Empty
+      => \have | (inP (k,_,bk)) => real-nat-approx-div (usingOnly a<=b linarith : 0 <= b - a) s>0
+               | bt : b <= a + RealField.natCoef (suc (suc k)) * s => rewrite (RealField.natCoefSuc, RealField.natCoefSuc, equation.cRing : (RealField.natCoef k + 1 + 1) * s = (RealField.natCoef k + 2) * s) linarith
+               | end : clamp a<=b (a + RealField.natCoef (suc (suc k)) * s) = (b, (a<=b, <=-refl))
+                   => ext (pmap (a ∨) (RealAbGroup.meet-comm *> RealAbGroup.meet_<= bt) *> RealAbGroup.join_<= a<=b)
+               | hb' => transport (\lam x => h x <= negative m) end (walk a<=b h q>0 q<m s>0 hu hm ha (suc (suc k)))
+         \in linarith
+
+    -- | Walking from `a` in steps of size `s`, `h` stays `<= -m`.
+    \lemma walk {a b : Real} (a<=b : a <= b) (h : Set.Total (ClosedInterval a b) -> Real) {q m s : Real} (q>0 : 0 < q) (q<m : q < m) (s>0 : 0 < s)
+                 (hu : \Pi {x x' : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (x'.1 - x.1) <= s -> RealAbGroup.abs (h x' - h x) <= q)
+                 (hm : \Pi (x : Set.Total (ClosedInterval a b)) -> m <= RealAbGroup.abs (h x))
+                 (ha : h (a, (<=-refl, a<=b)) <= 0) (k : Nat) : h (clamp a<=b (a + RealField.natCoef k * s)) <= negative m \elim k
+      | 0 => rewrite (RealField.natCoefZero, RealField.zro_*-left, zro-right, clamp-in) $ below linarith (hm _)
+      | suc k => \have | ih => walk a<=b h q>0 q<m s>0 hu hm ha k
+                       | e : a + RealField.natCoef (suc k) * s - (a + RealField.natCoef k * s) = s => rewrite RealField.natCoefSuc equation.cRing
+                       | d : RealAbGroup.abs ((clamp a<=b (a + RealField.natCoef (suc k) * s)).1 - (clamp a<=b (a + RealField.natCoef k * s)).1) <= s
+                         => clamp-dist {a} {b} {a<=b} <=∘ =_<= (pmap RealAbGroup.abs e *> RealAbGroup.abs-ofPos (<=-less s>0))
+                       | t => RealAbGroup.abs>=id <=∘ hu d
+                 \in below linarith (hm _)
+
+    -- | `z < m` and `m <= |z|` imply `z <= -m`.
+    \lemma below {z m : Real} (z<m : z < m) (mz : m <= RealAbGroup.abs z) : z <= negative m
+      => \lam -m<z => mz $ transport (\lam w => RealAbGroup.abs w < m) simplify $ RealAbGroup.abs_-_< {z} {0} linarith linarith
+
+    {- | The common part of {intermediate-value} and {intermediate-value-dec}: the infimum of `|f x - y|` is less than `eps`
+     -   unless it is positive, and a positive infimum is excluded by {no-gap}.
+     -}
+    \lemma approx {a b : Real} (a<=b : a <= b) (f : CoverMap (IntervalSpace a b) RealNormed) {y eps : Real} (eps>0 : 0 < eps)
+                  (gap : \Pi {q m s : Real} -> 0 < q -> q < m -> 0 < s
+                    -> (\Pi {x x' : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (x'.1 - x.1) <= s -> RealAbGroup.abs (f x' - f x) <= q)
+                    -> (\Pi (x : Set.Total (ClosedInterval a b)) -> m <= RealAbGroup.abs (f x - y)) -> Empty)
+      : ∃ (x : Set.Total (ClosedInterval a b)) (RealAbGroup.abs (f x - y) < eps)
+      => \let g : CoverMap (IntervalSpace a b) RealNormed (\lam x => RealAbGroup.abs (f x - y))
+                => lnorm-metric {RealNormed} CoverMap.∘ +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple f (CoverMap.const (negative y))
+         \in \case interval-hasInf a<=b g \with {
+           | (m, isInf) => \case real-located {m} eps>0 \with {
+             | byLeft m>0 => \case L-rounded (real_<_L.1 m>0) \with {
+               | inP (q,qm,q>0) => \case interval-uniform a<=b f q>0 \with {
+                 | inP (delta,delta>0,hd) => absurd $ gap {q} {m} {Real.fromRat (RatField.mid 0 delta)} (rat_real_<.1 q>0) (real_<_L.2 qm) (rat_real_<.1 (RatField.mid>left delta>0))
+                     (\lam d => hd (d <∘r rat_real_<.1 (RatField.mid<right delta>0))) (\lam x => isInf.1 (inP (x, idp)))
+               }
+             }
+             | byRight m<eps => \case isInf.2 {eps - m} linarith \with {
+               | inP (r, inP (x, gx=r), r<) => inP (x, rewrite gx=r linarith)
+             }
+           }
+         }
+  }
+
+-- | The intermediate value theorem for `f b <= y <= f a`.
+\lemma intermediate-value-dec {a b : Real} (a<=b : a <= b) (f : CoverMap (IntervalSpace a b) RealNormed) {y : Real}
+                              (fb<=y : f (b, (a<=b, <=-refl)) <= y) (y<=fa : y <= f (a, (<=-refl, a<=b))) {eps : Real} (eps>0 : 0 < eps)
+  : ∃ (x : Set.Total (ClosedInterval a b)) (RealAbGroup.abs (f x - y) < eps)
+  => intermediate-value.approx a<=b f eps>0 \lam q>0 q<m s>0 hu hm => intermediate-value.no-gap a<=b (\lam x => y - f x) q>0 q<m s>0
+      (\lam {x} {x'} d => transportInv (\lam z => RealAbGroup.abs z <= _) (equation.abGroup : y - f x' - (y - f x) = f x - f x') (transport (<= _) RealAbGroup.abs_- (hu d)))
+      (\lam x => transport (_ <=) RealAbGroup.abs_- (hm x)) linarith linarith

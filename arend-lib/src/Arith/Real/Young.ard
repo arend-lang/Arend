@@ -1,0 +1,63 @@
+{- | Young's inequality and the weighted AM-GM inequality for two variables.
+
+  Both follow from convexity of {exp} (see {exp-convex}) via two-point Jensen {jensen2}.
+
+  * {weighted-amgm-pos}: `x^s y^t <= s x + t y` for `x, y > 0`, `s, t >= 0`, `s + t = 1`.
+  * {young-pos}: `a b <= a^p / p + b^q / q` for `a, b > 0` and conjugate exponents `p, q > 0`.
+  * {young} and {weighted-amgm}: the same for non-negative arguments, using {rpow}.
+-}
+
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.StrictlyOrdered
+\import Analysis.Calculus.Convex
+\import Arith.Exp
+\import Arith.Exp.Convex
+\import Arith.Log.Real
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Function.Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\open OrderedField
+
+-- | Weighted AM-GM: $x^s y^t \le s x + t y$ for $x, y > 0$, $s, t \ge 0$, $s + t = 1$.
+\lemma weighted-amgm-pos {x y : Real} (x>0 : 0 < x) (y>0 : 0 < y) {s t : Real} (s>=0 : 0 <= s) (t>=0 : 0 <= t) (st : s + t = 1)
+  : rpow-pos x x>0 s * rpow-pos y y>0 t <= s * x + t * y
+  => =_<= (pmap2 (*) rpow-pos-def rpow-pos-def *> inv exp_+) <=∘ jensen2 exp-convex () () s>=0 t>=0 st
+      <=∘ =_<= (pmap2 (+) (pmap (s *) (exp_log x x>0)) (pmap (t *) (exp_log y y>0)))
+
+-- | Young's inequality: $a b \le a^p / p + b^q / q$ for $a, b > 0$ and $1/p + 1/q = 1$.
+\lemma young-pos {a b : Real} (a>0 : 0 < a) (b>0 : 0 < b) {p q : Real} (p>0 : 0 < p) (q>0 : 0 < q) (pq : HolderConjugate p q p>0 q>0)
+  : a * b <= rpow-pos a a>0 p * pinv p p>0 + rpow-pos b b>0 q * pinv q q>0
+  => =_<= (inv (pmap2 (*) (rpow-pos-root p>0) (rpow-pos-root q>0)))
+      <=∘ weighted-amgm-pos rpow-pos>0 rpow-pos>0 (<=-less (pinv>0 p>0)) (<=-less (pinv>0 q>0)) pq
+      <=∘ =_<= (pmap2 (+) *-comm *-comm)
+  \where
+    \lemma rpow-pos-root {a : Real} {a>0 : 0 < a} {p : Real} (p>0 : 0 < p) {r : 0 < rpow-pos a a>0 p}
+      : rpow-pos (rpow-pos a a>0 p) r (pinv p p>0) = a
+      => rpow-pos-rpow-pos *> pmap (rpow-pos a a>0) (pinv-right p>0) *> rpow-pos-one
+
+-- | Young's inequality: $a b \le a^p / p + b^q / q$ for $a, b \ge 0$ and $1/p + 1/q = 1$.
+\lemma young {a b : Real} (a>=0 : 0 <= a) (b>=0 : 0 <= b) {p q : Real} (p>0 : 0 < p) (q>0 : 0 < q) (pq : HolderConjugate p q p>0 q>0)
+  : a * b <= rpow a a>=0 p p>0 * pinv p p>0 + rpow b b>=0 q q>0 * pinv q q>0
+  => \lam c =>
+      \have | u>=0 : 0 <= rpow a a>=0 p p>0 * pinv p p>0 => RealField.<=_*_positive_positive rpow>=0 (<=-less (pinv>0 p>0))
+            | v>=0 : 0 <= rpow b b>=0 q q>0 * pinv q q>0 => RealField.<=_*_positive_positive rpow>=0 (<=-less (pinv>0 q>0))
+            | ab>0 : 0 < a * b => linarith
+            | (a>0, b>0) => RealField.<_*_positive-dec-left a>=0 ab>0
+      \in young-pos a>0 b>0 p>0 q>0 pq $ transport (__ < a * b) (pmap2 (+) (pmap (* _) (rpow-pos-eq a>0)) (pmap (* _) (rpow-pos-eq b>0))) c
+
+-- | Weighted AM-GM: $x^s y^t \le s x + t y$ for $x, y \ge 0$, $s, t > 0$, $s + t = 1$.
+\lemma weighted-amgm {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {s t : Real} (s>0 : 0 < s) (t>0 : 0 < t) (st : s + t = 1)
+  : rpow x x>=0 s s>0 * rpow y y>=0 t t>0 <= s * x + t * y
+  => young rpow>=0 rpow>=0 (pinv>0 s>0) (pinv>0 t>0) (pmap2 (+) (pinv_pos-inv s>0) (pinv_pos-inv t>0) *> st)
+      <=∘ =_<= (pmap2 (+) (pmap2 (*) (rpow-root s>0) (pinv_pos-inv s>0) *> *-comm) (pmap2 (*) (rpow-root t>0) (pinv_pos-inv t>0) *> *-comm))
+  \where
+    \lemma rpow-root {x : Real} {x>=0 : 0 <= x} {s : Real} (s>0 : 0 < s) {r : 0 <= rpow x x>=0 s s>0}
+      : rpow (rpow x x>=0 s s>0) r (pinv s s>0) (pinv>0 s>0) = x
+      => rpow-rpow {_} {_} {_} {_} {_} {_} {_} {RealField.<_*_positive_positive s>0 (pinv>0 s>0)} *> rpow-ext idp {_} {x>=0} (pinv-right s>0) {_} {RealField.zro<ide} *> rpow-one

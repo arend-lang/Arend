@@ -12,7 +12,6 @@
 \import Topology.CoverSpace.StronglyComplete
 \import Topology.RatherBelow
 \import Topology.UniformSpace
-\import Topology.UniformSpace.Complete (CompleteUniformSpace)
 \open ClosurePrecoverSpace
 \open StrongCompletion
 

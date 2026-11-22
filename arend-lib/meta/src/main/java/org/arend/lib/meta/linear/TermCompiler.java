@@ -22,12 +22,34 @@ import java.math.BigInteger;
 import java.util.*;
 
 public class TermCompiler extends BaseTermCompiler {
+  private final boolean isAdditive;
+  private final boolean isGroup;
+
   private TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
     super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, kind, meta, typechecker, marker, values, positiveVars, toInt, toRat);
+    isAdditive = false;
+    isGroup = false;
   }
 
   public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker) {
-    super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, meta, typechecker, marker, new Values<>(typechecker, marker));
+    super(classCall, isNegatable(classCall, meta), false, instance, meta, typechecker, marker, new Values<>(typechecker, marker));
+    isAdditive = !classCall.getDefinition().isSubClassOf(meta.LinearlyOrderedSemiring);
+    isGroup = isAdditive && classCall.getDefinition().isSubClassOf(meta.LinearlyOrderedAbGroup);
+  }
+
+  private static boolean isNegatable(CoreClassCallExpression classCall, LinearSolverMeta meta) {
+    return classCall.getDefinition().isSubClassOf(meta.OrderedRing) || !classCall.getDefinition().isSubClassOf(meta.LinearlyOrderedSemiring) && classCall.getDefinition().isSubClassOf(meta.LinearlyOrderedAbGroup);
+  }
+
+  /**
+   * @return true if the instance is not a semiring; such terms are built only from 0, +, negative (for groups), and variables.
+   */
+  public boolean isAdditive() {
+    return isAdditive;
+  }
+
+  public boolean isGroup() {
+    return isGroup;
   }
 
   @Override
@@ -238,6 +260,16 @@ public class TermCompiler extends BaseTermCompiler {
     List<CoreExpression> addArgs = addMatcher.match(expr);
     if (addArgs != null) {
       return computePlus(addArgs.get(addArgs.size() - 2), addArgs.getLast(), coefficients, freeCoef, vars);
+    }
+
+    if (isAdditive) {
+      if (negativeMatcher != null) {
+        List<CoreExpression> negativeArgs = negativeMatcher.match(expr);
+        if (negativeArgs != null) {
+          return computeNegative(negativeArgs.getFirst(), coefficients, freeCoef, vars);
+        }
+      }
+      return computeVal(expr, coefficients, vars);
     }
 
     if (ideMatcher.match(expr) != null) {

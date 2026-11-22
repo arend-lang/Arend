@@ -1,9 +1,16 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Module
 \import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Solver
 \import Algebra.Semiring
+\import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
 \import Data.Array
@@ -17,11 +24,73 @@
 \import Order.StrictOrder
 \import Paths
 \open LinearlyOrderedAbMonoid
+\open AddMonoid(*n,*n_zro,*n-rdistr,*n-assoc)
+\open AbMonoid(*n-ldistr)
+\open AddGroup(*i,*i-rdistr,*i-assoc)
+\open AbGroup(*i-ldistr)
+\open PosetAddMonoid(*n_<=,*n_>=0)
 
 \data Operation | Less | LessOrEquals | Equals
 
-\class LinearData \extends AlgData {
-  \override R : LinearlyOrderedSemiring
+\data LinForm (C : \Type) | lnil | lzero (LinForm C) | lcons C (LinForm C)
+
+\func isConst {C V : \Type} (t : RingTerm C V) : Bool \elim t
+  | coef c => true
+  | var v => false
+  | :zro => true
+  | :ide => true
+  | :negative t => isConst t
+  | t :_+ t1 => isConst t and isConst t1
+  | t :* t1 => isConst t and isConst t1
+
+\func constOf {C : Semiring} {V : \Type} (negC : C -> C) (t : RingTerm C V) : C \elim t
+  | coef c => c
+  | var _ => zro
+  | :zro => zro
+  | :ide => ide
+  | :negative t => negC (constOf negC t)
+  | t :_+ s => constOf negC t + constOf negC s
+  | t :* s => constOf negC t * constOf negC s
+
+{- | Data for the linear solver over a linearly ordered abelian monoid {R} with coefficients in {C}.
+ -   Coefficients act on {R} via {act}; {unit} interprets the constant term.
+ -}
+\class LinearData \noclassifying {C : Semiring} {R : LinearlyOrderedAbMonoid} (vars : Array R) {
+  \protected \meta V => Fin vars.len
+
+  | act : C -> R -> R
+  | act-rdistr {c c' : C} {x : R} : act (c + c') x = act c x + act c' x
+  | act-ldistr {c : C} {x y : R} : act c (x + y) = act c x + act c y
+  | act-assoc {c c' : C} {x : R} : act (c * c') x = act c (act c' x)
+  | act-assoc-right {c c' : C} {x : R} : act (c * c') x = act c' (act c x)
+  | act-ide {x : R} : act ide x = x
+  | act-zro {x : R} : act zro x = 0
+  | act-zro-right {c : C} : act c 0 = 0
+  | unit : R
+  | unit>=0 : 0 <= unit
+  | unitPos : Bool
+  | unitPos-correct : unitPos = true -> 0 < unit
+  | lnegative : R -> R
+  | negC : C -> C
+  | negC-lem (c : C) (x : R) : lnegative (act c x) = act (negC c) x
+  | pnegative-+ (x y : R) : lnegative (x + y) = lnegative x + lnegative y
+  | pnegative-zro : lnegative 0 = 0
+  | coefR : C -> R
+  | coefR-act (c : C) : coefR c = act c unit
+  | mulT : RingTerm C (Fin vars.len) -> RingTerm C (Fin vars.len) -> R -> R -> R
+  | mulT-left {t s : RingTerm C (Fin vars.len)} {x y : R} : isConst t = true -> x = coefR (constOf negC t) -> mulT t s x y = act (constOf negC t) y
+  | mulT-right {t s : RingTerm C (Fin vars.len)} {x y : R} : isConst s = true -> y = coefR (constOf negC s) -> mulT t s x y = act (constOf negC s) x
+  | isZeroC : C -> Bool
+  | isZeroC-correct {c : C} : isZeroC c = true -> c = 0
+
+  \protected \func interpret (t : RingTerm C V) : R \elim t
+    | coef c => coefR c
+    | var x => vars x
+    | :zro => 0
+    | :ide => unit
+    | :negative t => lnegative (interpret t)
+    | t :_+ s => interpret t + interpret s
+    | t :* s => mulT t s (interpret t) (interpret s)
 
   \func Equation => \Sigma (RingTerm C V) Operation (RingTerm C V)
 
@@ -37,33 +106,202 @@
 
   \func Problem => Array Equation
 
-  \func isConst (t : RingTerm C V) : Bool \elim t
-    | coef c => true
-    | var v => false
-    | :zro => true
-    | :ide => true
-    | :negative t => isConst t
-    | t :_+ t1 => isConst t and isConst t1
-    | t :* t1 => isConst t and isConst t1
-
   \func Cert (n : Nat) => Array Nat n
 
   \func certSum (l : Array (RingTerm C V)) (c : Cert l.len)
-    => R.BigSum (\lam j => R.natCoef (c j) * interpret (l j))
+    => R.BigSum (\lam j => c j *n interpret (l j))
 
-  \func cert-toTerm (l : Array (RingTerm C V)) (c : Cert l.len) : RingTerm C V \elim l, c
-    | nil, nil => :zro
-    | t :: l, k :: c => coef (natCoef k) :* t :_+ cert-toTerm l c
+  \lemma constOf-correct (t : RingTerm C V) (p : isConst t = true) : interpret t = coefR (constOf negC t) \elim t
+    | coef c => idp
+    | var _ => \case p
+    | :zro => inv (coefR-act zro *> act-zro)
+    | :ide => inv (coefR-act ide *> act-ide)
+    | :negative t => pmap lnegative (constOf-correct t p *> coefR-act _) *> negC-lem _ _ *> inv (coefR-act _)
+    | t :_+ s => \have q => and.toSigma p \in pmap2 (+) (constOf-correct t q.1 *> coefR-act _) (constOf-correct s q.2 *> coefR-act _) *> inv act-rdistr *> inv (coefR-act _)
+    | t :* s => \have q => and.toSigma p \in mulT-left q.1 (constOf-correct t q.1) *> pmap (act _) (constOf-correct s q.2 *> coefR-act _) *> inv act-assoc *> inv (coefR-act _)
 
-  \func interpretCert (l : Array (RingTerm C V)) (c : Cert l.len)
-    => interpretRingNF (normalize (cert-toTerm l c))
+  \lemma act-natCoef {k : Nat} {x : R} : act (natCoef k) x = k *n x \elim k
+    | 0 => pmap (act __ x) natCoefZero *> act-zro
+    | suc k => pmap (act __ x) (natCoefSuc k) *> act-rdistr *> pmap2 (+) act-natCoef act-ide
 
-  \lemma cert-toRingTerm-correct (l : Array (RingTerm C V)) (c : Cert l.len) : AlgData.interpret (cert-toTerm l c) = certSum l c \elim l, c
+  \func lf-interpret (l : LinForm C) (vs : Array R) : R \elim l, vs
+    | lnil, _ => 0
+    | lzero l, nil => 0
+    | lzero l, v :: vs => lf-interpret l vs
+    | lcons c l, nil => 0
+    | lcons c l, v :: vs => act c v + lf-interpret l vs
+
+  \func lf-add (l l' : LinForm C) : LinForm C \elim l, l'
+    | lnil, l' => l'
+    | lzero l, lnil => lzero l
+    | lcons c l, lnil => lcons c l
+    | lzero l, lzero l' => lzero (lf-add l l')
+    | lzero l, lcons c' l' => lcons c' (lf-add l l')
+    | lcons c l, lzero l' => lcons c (lf-add l l')
+    | lcons c l, lcons c' l' => lcons (c + c') (lf-add l l')
+
+  \lemma lf-add-correct (l l' : LinForm C) (vs : Array R) : lf-interpret (lf-add l l') vs = lf-interpret l vs + lf-interpret l' vs \elim l, l', vs
+    | lnil, l', vs => inv zro-left
+    | lzero l, lnil, vs => inv zro-right
+    | lcons c l, lnil, vs => inv zro-right
+    | lzero l, lzero l', nil => inv zro-left
+    | lzero l, lcons c' l', nil => inv zro-left
+    | lcons c l, lzero l', nil => inv zro-left
+    | lcons c l, lcons c' l', nil => inv zro-left
+    | lzero l, lzero l', v :: vs => lf-add-correct l l' vs
+    | lzero l, lcons c' l', v :: vs => pmap (_ +) (lf-add-correct l l' vs) *> inv +-assoc *> pmap (+ _) +-comm *> +-assoc
+    | lcons c l, lzero l', v :: vs => pmap (_ +) (lf-add-correct l l' vs) *> inv +-assoc
+    | lcons c l, lcons c' l', v :: vs => pmap2 (+) act-rdistr (lf-add-correct l l' vs) *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (+ _) +-comm *> +-assoc) *> inv +-assoc
+
+  \func lf-scale (c : C) (l : LinForm C) : LinForm C \elim l
+    | lnil => lnil
+    | lzero l => lzero (lf-scale c l)
+    | lcons a l => lcons (c * a) (lf-scale c l)
+
+  \lemma lf-scale-correct (c : C) (l : LinForm C) (vs : Array R) : lf-interpret (lf-scale c l) vs = act c (lf-interpret l vs) \elim l, vs
+    | lnil, vs => inv act-zro-right
+    | lzero l, nil => inv act-zro-right
+    | lzero l, v :: vs => lf-scale-correct c l vs
+    | lcons a l, nil => inv act-zro-right
+    | lcons a l, v :: vs => pmap2 (+) act-assoc (lf-scale-correct c l vs) *> inv act-ldistr
+
+  \func lf-scaleR (l : LinForm C) (c : C) : LinForm C \elim l
+    | lnil => lnil
+    | lzero l => lzero (lf-scaleR l c)
+    | lcons a l => lcons (a * c) (lf-scaleR l c)
+
+  \lemma lf-scaleR-correct (l : LinForm C) (c : C) (vs : Array R) : lf-interpret (lf-scaleR l c) vs = act c (lf-interpret l vs) \elim l, vs
+    | lnil, vs => inv act-zro-right
+    | lzero l, nil => inv act-zro-right
+    | lzero l, v :: vs => lf-scaleR-correct l c vs
+    | lcons a l, nil => inv act-zro-right
+    | lcons a l, v :: vs => pmap2 (+) act-assoc-right (lf-scaleR-correct l c vs) *> inv act-ldistr
+
+  \func lf-scaleN (k : Nat) (l : LinForm C) : LinForm C \elim k
+    | 0 => lnil
+    | 1 => l
+    | suc (suc k) => lf-scale (natCoef (suc (suc k))) l
+
+  \lemma lf-scaleN-correct (k : Nat) (l : LinForm C) (vs : Array R) : lf-interpret (lf-scaleN k l) vs = k *n lf-interpret l vs \elim k
+    | 0 => idp
+    | 1 => inv zro-left
+    | suc (suc k) => lf-scale-correct _ l vs *> act-natCoef
+
+  \func lf-negate (l : LinForm C) : LinForm C \elim l
+    | lnil => lnil
+    | lzero l => lzero (lf-negate l)
+    | lcons a l => lcons (negC a) (lf-negate l)
+
+  \lemma lf-negate-correct (l : LinForm C) (vs : Array R) : lf-interpret (lf-negate l) vs = lnegative (lf-interpret l vs) \elim l, vs
+    | lnil, vs => inv pnegative-zro
+    | lzero l, nil => inv pnegative-zro
+    | lzero l, v :: vs => lf-negate-correct l vs
+    | lcons a l, nil => inv pnegative-zro
+    | lcons a l, v :: vs => pmap2 (+) (inv (negC-lem a v)) (lf-negate-correct l vs) *> inv (pnegative-+ _ _)
+
+  \func lf-unit (i : Nat) : LinForm C
+    | 0 => lcons ide lnil
+    | suc i => lzero (lf-unit i)
+
+  \lemma lf-unit-correct (vs : Array R) (i : Fin vs.len) : lf-interpret (lf-unit i) vs = vs i \elim vs, i
+    | v :: vs, 0 => zro-right *> act-ide
+    | v :: vs, suc i => lf-unit-correct vs i
+
+  -- Canonical form: no coefficients that are recognized as zero and no trailing zeros
+  \func lf-canon (l : LinForm C) : LinForm C \elim l
+    | lnil => lnil
+    | lzero l => mkZero (lf-canon l)
+    | lcons a l => canonCons (isZeroC a) a (lf-canon l)
+    \where {
+      \func mkZero (l : LinForm C) : LinForm C \elim l
+        | lnil => lnil
+        | lzero l => lzero (lzero l)
+        | lcons c l => lzero (lcons c l)
+
+      \func canonCons (b : Bool) (a : C) (l : LinForm C) : LinForm C \elim b
+        | true => mkZero l
+        | false => lcons a l
+    }
+
+  \lemma lf-canon-correct (l : LinForm C) (vs : Array R) : lf-interpret (lf-canon l) vs = lf-interpret l vs \elim l
+    | lnil => idp
+    | lzero l => mkZero-correct (lf-canon l) vs *> \case \elim vs \with {
+      | nil => idp
+      | v :: vs => lf-canon-correct l vs
+    }
+    | lcons a l => cons-correct (isZeroC a) idp (lf-canon l) vs *> \case \elim vs \with {
+      | nil => idp
+      | v :: vs => pmap (_ +) (lf-canon-correct l vs)
+    }
+    \where {
+      \lemma mkZero-correct (l : LinForm C) (vs : Array R) : lf-interpret (lf-canon.mkZero l) vs = lf-interpret (lzero l) vs \elim l, vs
+        | lnil, nil => idp
+        | lnil, v :: vs => idp
+        | lzero l, _ => idp
+        | lcons c l, _ => idp
+
+      \lemma cons-correct {a : C} (b : Bool) (p : isZeroC a = b) (l : LinForm C) (vs : Array R) : lf-interpret (lf-canon.canonCons b a l) vs = lf-interpret (lcons a l) vs \elim b, vs
+        | true, nil => mkZero-correct l nil
+        | true, v :: vs => mkZero-correct l (v :: vs) *> inv (pmap (\lam x => act x v + _) (isZeroC-correct p) *> pmap (+ _) act-zro *> zro-left)
+        | false, _ => idp
+    }
+
+  \func linOk (t : RingTerm C V) : Bool \elim t
+    | :negative t => linOk t
+    | t :_+ s => linOk t and linOk s
+    | t :* s => (isConst t or isConst s) and (linOk t and linOk s)
+    | _ => true
+
+  \func lin (t : RingTerm C V) : LinForm C \elim t
+    | coef c => lcons c lnil
+    | var x => lzero (lf-unit x)
+    | :zro => lnil
+    | :ide => lcons ide lnil
+    | :negative t => lf-negate (lin t)
+    | t :_+ s => lf-add (lin t) (lin s)
+    | t :* s => lin-mul (isConst t) t s
+
+  \func lin-mul (b : Bool) (t s : RingTerm C V) : LinForm C \elim b
+    | true => lf-scale (constOf negC t) (lin s)
+    | false => lf-scaleR (lin t) (constOf negC s)
+
+  \lemma lin-correct (t : RingTerm C V) (p : linOk t = true) : interpret t = lf-interpret (lin t) (unit :: vars) \elim t
+    | coef c => coefR-act c *> inv zro-right
+    | var x => inv (lf-unit-correct vars x)
+    | :zro => idp
+    | :ide => inv (zro-right *> act-ide)
+    | :negative t => pmap lnegative (lin-correct t p) *> inv (lf-negate-correct _ _)
+    | t :_+ s => \have q => and.toSigma p \in pmap2 (+) (lin-correct t q.1) (lin-correct s q.2) *> inv (lf-add-correct _ _ _)
+    | t :* s => \have | q => and.toSigma p
+                      | q' => and.toSigma q.2
+                \in lin-mul-correct (isConst t) t s idp q.1 (lin-correct t q'.1) (lin-correct s q'.2)
+
+  \lemma lin-mul-correct (b : Bool) (t s : RingTerm C V) (e : isConst t = b) (h : isConst t or isConst s = true)
+                         (it : interpret t = lf-interpret (lin t) (unit :: vars)) (is : interpret s = lf-interpret (lin s) (unit :: vars))
+    : mulT t s (interpret t) (interpret s) = lf-interpret (lin-mul b t s) (unit :: vars) \elim b
+    | true => mulT-left e (constOf-correct t e) *> pmap (act _) is *> inv (lf-scale-correct _ _ _)
+    | false => \case or.toOr h \with {
+      | byLeft r => \case inv r *> e
+      | byRight r => mulT-right r (constOf-correct s r) *> pmap (act _) it *> inv (lf-scaleR-correct _ _ _)
+    }
+
+  \func allLin (l : Array (RingTerm C V)) : Bool \elim l
+    | nil => true
+    | t :: l => linOk t and allLin l
+
+  \func certLF (l : Array (RingTerm C V)) (c : Cert l.len) : LinForm C \elim l, c
+    | nil, nil => lnil
+    | t :: l, k :: c => lf-add (lf-scaleN k (lin t)) (certLF l c)
+
+  \lemma certLF-correct (l : Array (RingTerm C V)) (c : Cert l.len) (h : allLin l = true) : lf-interpret (certLF l c) (unit :: vars) = certSum l c \elim l, c
     | nil, nil => idp
-    | t :: l, k :: c => pmap2 (+) (pmap (* _) alg.func-natCoef) (cert-toRingTerm-correct l c)
+    | t :: l, k :: c => \have q => and.toSigma h
+                        \in lf-add-correct _ _ _ *> pmap2 (+) (lf-scaleN-correct k _ _ *> pmap (k *n) (inv (lin-correct t q.1))) (certLF-correct l c q.2)
 
-  \lemma interpretCert_certSum (l : Array (RingTerm C V)) {c : Cert l.len} : interpretCert l c = certSum l c
-    => inv (normalize-consistent (cert-toTerm l c)) *> cert-toRingTerm-correct l c
+  \lemma certLF-eq (l l' : Array (RingTerm C V)) (c : Cert l.len) (c' : Cert l'.len) (h : allLin l and allLin l' = true)
+                   (p : lf-canon (certLF l c) = lf-canon (certLF l' c')) : certSum l c = certSum l' c'
+    => \have q => and.toSigma h
+       \in inv (certLF-correct l c q.1) *> inv (lf-canon-correct _ _) *> pmap (lf-interpret __ (unit :: vars)) p *> lf-canon-correct _ _ *> certLF-correct l' c' q.2
 
   \func isLess (o : Operation) : Bool
     | Less => true
@@ -94,17 +332,18 @@
                       \in inP (suc t.1, t.2, t.3)
     }
 
-  \func CorrectCert (p : Problem) => \Sigma (c : Cert p.len) (f : Nat) (interpretCert (map __.1 p) c = interpretCert (:ide :: map __.3 p) (f :: c)) (hasNegative p c or isSuc f = true)
+  \func CorrectCert (p : Problem) => \Sigma (c : Cert p.len) (f : Nat) (allLin (map __.1 p) and allLin (:ide :: map __.3 p) = true) (lf-canon (certLF (map __.1 p) c) = lf-canon (certLF (:ide :: map __.3 p) (f :: c))) (hasNegative p c or (unitPos and isSuc f) = true)
 
   \lemma certToLeq (p : Problem) (c : CorrectCert p) : certSum (map __.3 p) c.1 <= certSum (map __.1 p) c.1
-    => transport2 (<=) zro-left (inv aux) $ <=_+ (transport (<= _) ide-right $ <=_*_positive-left natCoef>=0 (LinearOrder.<_<= zro<ide)) <=-refl
-    \where \lemma aux => inv (interpretCert_certSum (map __.1 p)) *> c.3 *> interpretCert_certSum (:ide :: map __.3 p) {c.2 :: c.1}
+    => transport2 (<=) zro-left (inv aux) $ <=_+ (*n_>=0 unit>=0) <=-refl
+    \where \lemma aux => certLF-eq (map __.1 p) (:ide :: map __.3 p) c.1 (c.2 :: c.1) c.3 c.4
 
-  \lemma certToLess (p : Problem) (c : CorrectCert p) (q : isSuc c.2 = true) : certSum (map __.3 p) c.1 < certSum (map __.1 p) c.1
-    => transport2 (<) zro-left (inv certToLeq.aux) $ LinearlyOrderedAbMonoid.<=_+-right (transport (< _) ide-right $ <_*_positive-left (natCoef>0 (isSuc.correct q)) zro<ide) <=-refl
+  \lemma certToLess (p : Problem) (c : CorrectCert p) (q : unitPos and isSuc c.2 = true) : certSum (map __.3 p) c.1 < certSum (map __.1 p) c.1
+    => \have q' => and.toSigma q
+       \in transport2 (<) zro-left (inv certToLeq.aux) $ <=_+-right (*n_>0 (isSuc.correct q'.2) (unitPos-correct q'.1)) <=-refl
 
   \lemma solveContrProblem (p : Problem) (c : CorrectCert p) (h : DArray (\lam j => interpretEq (p j))) : Empty
-    => \case or.toOr c.4 \with {
+    => \case or.toOr c.5 \with {
       | byLeft q => certToLeq p c (aux p c.1 (hasNegative-correct p c.1 q) h)
       | byRight q => <-irreflexive $ certToLess p c q <∘l aux_<= p c.1 h
     }
@@ -112,13 +351,13 @@
       \lemma aux_<= (p : Problem) (c : Cert p.len) (h : ∀ (e : p) (interpretEq e))
         : certSum (map __.1 p) c <= certSum (map __.3 p) c \elim p, c
         | nil, nil => <=-refl
-        | e :: p, k :: c => <=_+ (<=_*_positive-right natCoef>=0 (interpretEq_<= e (h 0))) (aux_<= p c (\lam j => h (suc j)))
+        | e :: p, k :: c => <=_+ (*n_<= (interpretEq_<= e (h 0))) (aux_<= p c (\lam j => h (suc j)))
 
       \lemma aux (p : Problem) (c : Cert p.len) (cc : ∃ (j : Fin p.len) (0 < c j) ((p j).2 = Less)) (h : ∀ (e : p) (interpretEq e))
         : certSum (map __.1 p) c < certSum (map __.3 p) c \elim p, c, cc
         | nil, nil, inP ((),_,_)
-        | e :: p, k :: c, inP (0, k>0, p0=less) => <=_+-right (<_*_positive-right (transport (< _) natCoefZero $ OrderedSemiring.natCoef_< k>0) (transport (\lam r => interpretEq (e.1,r,e.3)) p0=less (h 0))) (aux_<= p c (\lam j => h (suc j)))
-        | e :: p, k :: c, inP (suc j, cj>0, pj=less) => <=_+-left (<=_*_positive-right natCoef>=0 (interpretEq_<= e (h 0))) (aux p c (inP (j, cj>0, pj=less)) (\lam j => h (suc j)))
+        | e :: p, k :: c, inP (0, k>0, p0=less) => <=_+-right (*n_< k>0 (transport (\lam r => interpretEq (e.1,r,e.3)) p0=less (h 0))) (aux_<= p c (\lam j => h (suc j)))
+        | e :: p, k :: c, inP (suc j, cj>0, pj=less) => <=_+-left (*n_<= (interpretEq_<= e (h 0))) (aux p c (inP (j, cj>0, pj=less)) (\lam j => h (suc j)))
     }
 
   \lemma solve<=Problem (p : Problem) (t1 t2 : RingTerm C V) (c : CorrectCert (toContr p t1 t2))
@@ -142,30 +381,168 @@
 
   \lemma solve<Problem (p : Problem) (t1 t2 : RingTerm C V) (c : CorrectCert (toContr p t1 t2))
                        (h : DArray (\lam j => interpretEq (p j))) : interpret t1 < interpret t2
-    => \case <_*-cancel-left (\case or.toOr c.4 \with {
+    => *n_<-cancel \case or.toOr c.5 \with {
         | byLeft q => <_+-invert-right (certToLeq (toContr p t1 t2) c) $ solveContrProblem.aux p (\lam j => c.1 (suc j)) (hasNegative-correct p _ q) h
         | byRight q => <_+-invert-left (certToLess (toContr p t1 t2) c q) (solveContrProblem.aux_<= p (taild c.1) h)
-      }) \with {
-         | byLeft r => r.2
-         | byRight r => absurd $ <-irreflexive $ r.1 <∘l natCoef>=0
-       }
+      }
     \where
       \func toContr (p : Problem) (t1 t2 : RingTerm C V) : Problem => (t2,LessOrEquals,t1) :: p
 } \where {
-  \open PosetSemiring
-  \open LinearlyOrderedSemiring
+  \func natIsZero (n : Nat) : Bool
+    | 0 => true
+    | suc _ => false
+
+  \lemma natIsZero-correct {n : Nat} (p : natIsZero n = true) : n = 0 \elim n
+    | 0 => idp
+
+  \func intIsZero (n : Int) : Bool
+    | pos 0 => true
+    | pos (suc _) => false
+    | neg (suc _) => false
+
+  \lemma intIsZero-correct {n : Int} (p : intIsZero n = true) : n = 0 \elim n
+    | pos 0 => idp
+    | pos (suc _) => \case p
+    | neg (suc _) => \case p
+
+  \func ratIsZero (x : Rat) : Bool
+    | rat n _ _ _ => intIsZero n
+
+  \lemma ratIsZero-correct {x : Rat} (p : ratIsZero x = true) : x = 0 \elim x
+    | rat n d d/=0 r => RatField.ratNom=0 (intIsZero-correct p)
+
+  \lemma *i_zro {G : AbGroup} {c : Int} : c G.*i 0 = 0 \elim c
+    | pos n => *n_zro
+    | neg n => pmap (n *n) AddGroup.negative_zro *> *n_zro
+
+  \lemma negative_*i {G : AbGroup} {c : Int} {x : G} : negative (c *i x) = IntRing.negative c *i x
+    => AddGroup.negative-unique (c *i x) negative-left (inv *i-rdistr *> pmap (*i x) IntRing.negative-right)
 }
 
-\class LinearSemiringData \extends LinearData, SemiringData
+\class LinearSemiringBase \extends LinearData {
+  \override R : LinearlyOrderedSemiring
+  | \protected alg : SemiringHom C R
+  | \protected alg-comm (x : C) (y : R) : alg x * y = y * alg x
+  | act c x => alg c * x
+  | act-rdistr => pmap (* _) alg.func-+ *> rdistr
+  | act-ldistr => ldistr
+  | act-assoc => pmap (* _) alg.func-* *> *-assoc
+  | act-assoc-right {c} {c'} {x} => pmap (* x) (alg.func-* *> alg-comm c (alg c')) *> *-assoc
+  | act-ide => pmap (* _) alg.func-ide *> ide-left
+  | act-zro => pmap (* _) alg.func-zro *> zro_*-left
+  | act-zro-right => zro_*-right
+  | unit => ide
+  | unit>=0 => LinearOrder.<_<= zro<ide
+  | unitPos => true
+  | unitPos-correct _ => zro<ide
+  | coefR c => alg c
+  | coefR-act c => inv ide-right
+  | mulT _ _ x y => x * y
+  | mulT-left _ p => pmap (* _) p
+  | mulT-right _ p => pmap (_ *) p *> inv (alg-comm _ _)
+}
 
-\class LinearRingData \extends LinearData, RingData {
+\class LinearSemiringData \extends LinearSemiringBase
+  | C => NatSemiring
+  | alg => natMap
+  | alg-comm => natComm
+  | lnegative x => x
+  | negC c => c
+  | negC-lem c x => idp
+  | pnegative-+ x y => idp
+  | pnegative-zro => idp
+  | isZeroC => LinearData.natIsZero
+  | isZeroC-correct => LinearData.natIsZero-correct
+
+\class LinearBaseRingData \extends LinearSemiringBase {
+  \override C : Ring
   \override R : OrderedRing
+  \override alg : RingHom C R
+  | lnegative => negative
+  | negC => negative
+  | negC-lem c x => inv (pmap (* x) (AddGroupHom.func-negative {alg}) *> Ring.negative_*-left)
+  | pnegative-+ x y => AddGroup.negative_+ *> +-comm
+  | pnegative-zro => AddGroup.negative_zro
 }
 
-\class LinearRatData \extends LinearData, RatData {
-  \override R : OrderedRing
-}
+\class LinearRingData \extends LinearBaseRingData
+  | C => IntRing
+  | alg => intMap
+  | alg-comm => intComm
+  | isZeroC => LinearData.intIsZero
+  | isZeroC-correct => LinearData.intIsZero-correct
 
-\class LinearRatAlgebraData \extends RatAlgebraData, LinearData {
+\class LinearRatData \extends LinearBaseRingData
+  | C => RatField
+  | R => RatField
+  | alg => RingHom.id
+  | alg-comm x y => RatField.*-comm
+  | isZeroC => LinearData.ratIsZero
+  | isZeroC-correct => LinearData.ratIsZero-correct
+
+\class LinearRatAlgebraData \extends LinearBaseRingData {
+  | C => RatField
   \override R : OrderedAAlgebra RatField
+  | alg => AAlgebra.coefHom {R}
+  | alg-comm x y => pmap (* _) coefMap_*c *> inv *c-comm-left *> pmap (x *c) (ide-left *> inv ide-right) *> *c-comm-right *> inv (pmap (y *) coefMap_*c)
+  | isZeroC => LinearData.ratIsZero
+  | isZeroC-correct => LinearData.ratIsZero-correct
+}
+
+-- | Linear solver data for linearly ordered abelian monoids; coefficients are natural numbers acting via {*n}
+\class LinearAbMonoidData \extends LinearData
+  | C => NatSemiring
+  | act n x => n *n x
+  | act-rdistr => *n-rdistr
+  | act-ldistr => *n-ldistr
+  | act-assoc => *n-assoc
+  | act-assoc-right => pmap (*n _) NatSemiring.*-comm *> *n-assoc
+  | act-ide => zro-left
+  | act-zro => idp
+  | act-zro-right => *n_zro
+  | unit => 0
+  | unit>=0 => <=-refl
+  | unitPos => false
+  | unitPos-correct p => \case p
+  | lnegative x => x
+  | negC c => c
+  | negC-lem c x => idp
+  | pnegative-+ x y => idp
+  | pnegative-zro => idp
+  | coefR _ => 0
+  | coefR-act c => inv *n_zro
+  | mulT t s x y => constOf negC t *n y + constOf negC s *n x
+  | mulT-left _ p => pmap (_ + _ *n __) p *> pmap (_ +) *n_zro *> zro-right
+  | mulT-right _ p => pmap (_ *n __ + _) p *> pmap (+ _) *n_zro *> zro-left
+  | isZeroC => LinearData.natIsZero
+  | isZeroC-correct => LinearData.natIsZero-correct
+
+-- | Linear solver data for linearly ordered abelian groups; coefficients are integers acting via {*i}
+\class LinearAbGroupData \extends LinearData {
+  \override R : LinearlyOrderedAbGroup
+  | C => IntRing
+  | act n x => n *i x
+  | act-rdistr => *i-rdistr
+  | act-ldistr => *i-ldistr
+  | act-assoc => *i-assoc
+  | act-assoc-right => pmap (*i _) IntRing.*-comm *> *i-assoc
+  | act-ide => zro-left
+  | act-zro => idp
+  | act-zro-right => LinearData.*i_zro
+  | unit => 0
+  | unit>=0 => <=-refl
+  | unitPos => false
+  | unitPos-correct p => \case p
+  | lnegative => negative
+  | negC => IntRing.negative
+  | negC-lem c x => LinearData.negative_*i
+  | pnegative-+ x y => AddGroup.negative_+ *> +-comm
+  | pnegative-zro => AddGroup.negative_zro
+  | coefR _ => 0
+  | coefR-act c => inv LinearData.*i_zro
+  | mulT t s x y => constOf negC t *i y + constOf negC s *i x
+  | mulT-left _ p => pmap (_ + _ *i __) p *> pmap (_ +) LinearData.*i_zro *> zro-right
+  | mulT-right _ p => pmap (_ *i __ + _) p *> pmap (+ _) LinearData.*i_zro *> zro-left
+  | isZeroC => LinearData.intIsZero
+  | isZeroC-correct => LinearData.intIsZero-correct
 }

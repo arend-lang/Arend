@@ -1,0 +1,440 @@
+{- | Functional calculus between `Lᵖ` spaces.
+
+  A cover map $\varphi \colon \mathbb R^n \to \mathbb R$ with $\varphi(0) = 0$ and the power modulus {PowModulus}
+  ($|\varphi(x) - \varphi(y)|^q \le C \|x - y\|^p + \eta (\|x\|^p + \|y\|^p)$) acts as a cover map $(\mathrm L^p)^n \to \mathrm L^q$.
+
+  * {lp-solid}: `Lᵖ` is solid in `L⁰`: $|G| \le |F|$ and `F ∈ Lᵖ` imply `G ∈ Lᵖ` (the nets $\kappa_h(G)$ are Cauchy by {l0clip-diff-mono}).
+  * {l0calc-modulus}: the power modulus transferred to `L⁰`.
+  * {lpCalc-isLp}: $\varphi(U) \in \mathrm L^q$, since $|\varphi(U)|^q \le (C + 1) |\sum_j |U_j||^p$ and {lp-solid};
+    {lpCalc-modulus}: $\|\varphi(U) - \varphi(V)\|_q^q \le C \|U - V\|^p + \eta (\|U\|^p + \|V\|^p)$.
+  * {modulus-locallyUniform}: maps between normed groups with a power modulus are locally uniformly continuous.
+  * {lpCalc}, {lpCalc-char}: the cover map $(\mathrm L^p)^n \to \mathrm L^q$ (sum norm on $(\mathrm L^p)^n$);
+    {lpCalc1}, {lpCalc1-char}: the unary case $\mathrm L^p \to \mathrm L^q$ for {PowModulus1}.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.L0
+\import Analysis.Integration.L0Calculus
+\import Analysis.Integration.LInfty.LpAction
+\import Analysis.Integration.Lp
+\import Analysis.Integration.LpCalculus
+\import Analysis.Integration.LpCharacterization
+\import Analysis.Integration.LpEmbedding
+\import Analysis.Limit
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.Power.PowModulus
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Topology.BanachLattice
+\import Topology.BanachSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedAbGroup.Real.LinBounded
+\import Topology.NormedAbGroup.Real.LinBounded.Power
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
+\import Topology.TopRieszSpace
+\import Topology.TopRieszSpace.Completion
+\import Topology.TopSpace
+\open LatticeAbGroup
+\open MeetSemilattice
+\open JoinSemilattice
+\open QModule (*q)
+
+-- | $|x| \wedge t - |x| \wedge s$ is monotone in $|x|$ for $s \le t$.
+\lemma meet-diff-mono {E : LatticeAbGroup} {x y s t : E} (xy : x <= y) (st : s <= t) : x ∧ t - x ∧ s <= y ∧ t - y ∧ s
+  => \have e {z : E} : z ∧ t - z ∧ s = part+ (z ∧ t - s)
+             => pmap (_ -) (inv (meet-assoc *> pmap (z ∧) (meet-comm *> meet_<= st))) *> inv part+_diff_meet
+     \in =_<= e <=∘ join-monotone (<=_+ (meet-monotone xy <=-refl) <=-refl) <=-refl <=∘ =_<= (inv e)
+
+-- | $|\mathrm{clip}_{h'} F - \mathrm{clip}_h F| \le |F| \wedge h' - |F| \wedge h$ in `L⁰` for $0 \le h \le h'$.
+\lemma l0clip-diff {L : FullIntegrationSpace} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') (F : L0Space L)
+  : abs (clip (pointCF {L0PreSpace L} h') F - clip (pointCF {L0PreSpace L} h) F)
+      <= abs F ∧ pointCF {L0PreSpace L} h' - abs F ∧ pointCF {L0PreSpace L} h
+  => \let | E => L0Space L
+          | j => topTruncCompletion {L0PreSpace L}
+          | H => pointCF {L0PreSpace L} h
+          | H' => pointCF {L0PreSpace L} h'
+          | P : CoverMap E E (\lam a => abs (clip H' a - clip H a))
+              => E.abs-uniform CoverMap.∘ subtract-uniform {E} CoverMap.∘ ProductCoverSpace.tuple (clip-cover H') (clip-cover H)
+          | M (c : E) : CoverMap E E (\lam a => abs a ∧ c) => E.meet-uniform CoverMap.∘ ProductCoverSpace.tuple E.abs-uniform (CoverMap.const c)
+          | Q : CoverMap E E (\lam a => abs a ∧ H' - abs a ∧ H) => subtract-uniform {E} CoverMap.∘ ProductCoverSpace.tuple (M H') (M H)
+          | J : CoverMap E E (\lam a => P a ∨ Q a) => E.join-uniform CoverMap.∘ ProductCoverSpace.tuple P Q
+     \in transport (_ <=) (dense-lift-unique completion completion.isDenseEmbedding.1 J Q (\lam f =>
+          \have | eP : P (pointCF {L0PreSpace L} f) = pointCF {L0PreSpace L} (abs (L.clip h' f - L.clip h f))
+                    => inv (RieszSpaceHom.func-abs {j} *> pmap abs (AddGroupHom.func-minus {j} *> pmap2 (-) (RieszSpaceHom.func-clip {j}) (RieszSpaceHom.func-clip {j})))
+                | eQ : Q (pointCF {L0PreSpace L} f) = pointCF {L0PreSpace L} (abs f ∧ h' - abs f ∧ h)
+                    => inv (AddGroupHom.func-minus {j} *> pmap2 (-) (RieszSpaceHom.func-meet {j} *> pmap (∧ _) (RieszSpaceHom.func-abs {j}))
+                                                                   (RieszSpaceHom.func-meet {j} *> pmap (∧ _) (RieszSpaceHom.func-abs {j})))
+          \in pmap2 (∨) eP eQ *> inv (RieszSpaceHom.func-join {j}) *> pmap (pointCF {L0PreSpace L}) (join_<= (clip-diff h>=0 h<=h')) *> inv eQ) F) join-left
+
+-- | $|\mathrm{clip}_{h'} G - \mathrm{clip}_h G| \le |\mathrm{clip}_{h'} F - \mathrm{clip}_h F|$ in `L⁰` for $|G| \le |F|$ and $0 \le h \le h'$.
+\lemma l0clip-diff-mono {L : FullIntegrationSpace} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') {F G : L0Space L} (GF : abs G <= abs F)
+  : abs (clip (pointCF {L0PreSpace L} h') G - clip (pointCF {L0PreSpace L} h) G)
+      <= abs (clip (pointCF {L0PreSpace L} h') F - clip (pointCF {L0PreSpace L} h) F)
+  => \let | j => topTruncCompletion {L0PreSpace L}
+          | H => pointCF {L0PreSpace L} h
+          | H' => pointCF {L0PreSpace L} h'
+     \in \have | H>=0 : 0 <= H => =_<= (inv (AddGroupHom.func-zro {j})) <=∘ RieszSpaceHom.func-<= {j} h>=0
+               | HH' : H <= H' => RieszSpaceHom.func-<= {j} h<=h'
+     \in l0clip-diff h>=0 h<=h' G <=∘ meet-diff-mono GF HH'
+          <=∘ =_<= (inv (pmap2 (-) (clip-abs-eq (H>=0 <=∘ HH')) (clip-abs-eq H>=0))) <=∘ abs_-left
+
+-- | `Lᵖ` is solid in `L⁰`: $|G| \le |F|$ and `F ∈ Lᵖ` imply `G ∈ Lᵖ`.
+\lemma lp-solid {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F G : L0Space L} (Fp : IsLp p p>=1 F) (GF : abs G <= abs F)
+  : IsLp p p>=1 G \elim Fp
+  | inP (U,UF) =>
+    \let | Y => LpSpace L p p>=1
+         | jp => lpToL0 {L} p p>=1
+         | k (h : PosCone L) : Y => lpClip p p>=1 h.el>=0 G
+         | kF (h : PosCone L) : Y => lpClip p p>=1 h.el>=0 F
+    \in \have | bound {h h' : PosCone L} (hh : h.el <= h'.el) : lnorm {Y} (k h' - k h) <= lnorm {Y} (kF h' - kF h)
+                  => \have | e {X : L0Space L} : jp (lpClip p p>=1 h'.el>=0 X - lpClip p p>=1 h.el>=0 X)
+                                                   = clip (pointCF {L0PreSpace L} h'.el) X - clip (pointCF {L0PreSpace L} h.el) X
+                                 => jp.func-minus *> pmap2 (-) (lpToL0-clip h'.el>=0 X) (lpToL0-clip h.el>=0 X)
+                           | le : abs (k h' - k h) <= abs (kF h' - kF h)
+                                 => lpToL0-reflects (=_<= (lpToL0-abs _ *> pmap abs e) <=∘ l0clip-diff-mono h.el>=0 hh GF <=∘ =_<= (inv (lpToL0-abs _ *> pmap abs e)))
+                     \in TruncPreBanachLattice.lnorm_<= {Y} le
+              | uc : IsConvergent {PosCone L} k => (convergent-metric-real {PosCone L} {Y}).2 \lam {eps} eps>0 =>
+                  \case (convergent-metric-real {PosCone L} {Y}).1 (limit-conv (lp-limit-of UF)) eps>0 \with {
+                    | inP (N,hN) => inP (N, \lam {n} N<=n => bound {N} {n} N<=n <∘r hN N<=n)
+                  }
+    \in inP (limit k uc, lp-of-limit limit-isLimit)
+
+-- | $\sum_j |F_j|$ in `L⁰`.
+\func l0sumAbs {L : FullIntegrationSpace} {n : Nat} (F : Array (L0Space L) n) : L0Space L
+  => (L0Space L).BigSum (\lam j => abs (F j))
+
+{- | The modulus in `L⁰`: a pointwise bound $|\varphi(x) - \varphi(y)|^q \le C \|x - y\|^p + \eta (\|x\|^p + \|y\|^p)$ transfers to
+ -   $|\varphi(F) - \varphi(G)|^q \le C |\sum_j |F_j - G_j||^p + \eta (|\sum_j |F_j||^p + |\sum_j |G_j||^p)$.
+ -}
+\lemma l0calc-modulus {L : FullIntegrationSpace} {n : Nat} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q} {phi : CoverMap (RealN n) RealNormed} {C eta : Rat}
+  (h : \Pi (x y : Array Real n) -> rpow (RealAbGroup.abs (phi x - phi y)) RealAbGroup.abs>=0 q (fpow.one>0 q>=1)
+         <= Real.fromRat C * normPow p (fpow.one>0 p>=1) (x - y) + Real.fromRat eta * (normPow p (fpow.one>0 p>=1) x + normPow p (fpow.one>0 p>=1) y))
+  (F G : Array (L0Space L) n)
+  : l0pow q q>=1 (l0calc phi F - l0calc phi G)
+      <= C *q l0pow p p>=1 (l0sumAbs (\lam j => F j - G j)) + eta *q (l0pow p p>=1 (l0sumAbs F) + l0pow p p>=1 (l0sumAbs G))
+  => \let | m => n Nat.+ n
+          | X : Array (L0Space L) m => F ++' G
+          | a : Array (CoverMap (RealN m) RealNormed) n => \lam j => LinBoundedMap.coord {m} (fin-inc j)
+          | b : Array (CoverMap (RealN m) RealNormed) n => \lam j => LinBoundedMap.coord {m} (fin-raise j)
+          | phi1 => phi CoverMap.∘ ArrayCoverSpace.tuple {RealN m} {n} {RealNormed} a
+          | phi2 => phi CoverMap.∘ ArrayCoverSpace.tuple {RealN m} {n} {RealNormed} b
+          | D : CoverMap (RealN m) RealNormed (\lam x => phi1 x - phi2 x) => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple phi1 (negative-uniform {RealNormed} CoverMap.∘ phi2)
+          | Pq => absPow (fpow.one>0 q>=1) q>=1
+          | Pp => absPow (fpow.one>0 p>=1) p>=1
+          | Phi => Pq CoverMap.∘ ArrayCoverSpace.tuple {RealN m} {1} {RealNormed} (D :: nil)
+          | dj : Array (CoverMap (RealN m) RealNormed) n => \lam j => absMap (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (a j) (negative-uniform {RealNormed} CoverMap.∘ b j))
+          | SD => sumMap dj
+          | S1 => sumMap (\lam j => absMap (a j))
+          | S2 => sumMap (\lam j => absMap (b j))
+          | PS (S : CoverMap (RealN m) RealNormed) => Pp CoverMap.∘ ArrayCoverSpace.tuple {RealN m} {1} {RealNormed} (S :: nil)
+          | Q1 => scaleMap (Real.fromRat C) (PS SD)
+          | Q2 => scaleMap (Real.fromRat eta) (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (PS S1) (PS S2))
+          | Psi => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple Q1 Q2
+     \in \have | eA (j : Fin n) : l0calc (a j) X = F j => l0calc-coord {L} {m} (fin-inc j) *> ++'.++'_index-left
+               | eB (j : Fin n) : l0calc (b j) X = G j => l0calc-coord {L} {m} (fin-raise j) *> ++'.++'_index-right
+               | e1 : l0calc phi1 X = l0calc phi F => l0calc-comp {L} {n} {m} {phi} {a} {phi1} (\lam x => idp) *> pmap (l0calc phi) (exts eA)
+               | e2 : l0calc phi2 X = l0calc phi G => l0calc-comp {L} {n} {m} {phi} {b} {phi2} (\lam x => idp) *> pmap (l0calc phi) (exts eB)
+               | eD : l0calc D X = l0calc phi F - l0calc phi G
+                   => l0calc-add {L} {m} {D} {phi1} {negative-uniform {RealNormed} CoverMap.∘ phi2} (\lam x => idp)
+                        *> pmap2 (+) e1 (l0calc-neg {L} {m} {negative-uniform {RealNormed} CoverMap.∘ phi2} {phi2} (\lam x => idp) *> pmap negative e2)
+               | ePhi : l0calc Phi X = l0pow q q>=1 (l0calc phi F - l0calc phi G)
+                   => l0calc-comp1 *> pmap (\lam z => l0calc Pq (z :: nil)) eD *> inv l0pow-eq
+               | eSD : l0calc SD X = l0sumAbs (\lam j => F j - G j)
+                   => l0calc-sum.aux *> pmap (L0Space L).BigSum (exts \lam j => l0calc-abs (\lam x => idp)
+                        *> pmap abs (l0calc-add {L} {m} {+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (a j) (negative-uniform {RealNormed} CoverMap.∘ b j)} {a j} {negative-uniform {RealNormed} CoverMap.∘ b j} (\lam x => idp)
+                                       *> pmap2 (+) (eA j) (l0calc-neg {L} {m} {negative-uniform {RealNormed} CoverMap.∘ b j} {b j} (\lam x => idp) *> pmap negative (eB j))))
+               | eS1 : l0calc S1 X = l0sumAbs F => l0calc-sum.aux *> pmap (L0Space L).BigSum (exts \lam j => l0calc-abs (\lam x => idp) *> pmap abs (eA j))
+               | eS2 : l0calc S2 X = l0sumAbs G => l0calc-sum.aux *> pmap (L0Space L).BigSum (exts \lam j => l0calc-abs (\lam x => idp) *> pmap abs (eB j))
+               | ePS {S : CoverMap (RealN m) RealNormed} {Y : L0Space L} (e : l0calc S X = Y) : l0calc (PS S) X = l0pow p p>=1 Y
+                   => l0calc-comp1 *> pmap (\lam z => l0calc Pp (z :: nil)) e *> inv l0pow-eq
+               | eSc {c : Rat} {S : CoverMap (RealN m) RealNormed} : l0calc (scaleMap (Real.fromRat c) S) X = c *q l0calc S X
+                   => l0calc-*q c (\lam x => idp)
+               | ePsi : l0calc Psi X = C *q l0pow p p>=1 (l0sumAbs (\lam j => F j - G j)) + eta *q (l0pow p p>=1 (l0sumAbs F) + l0pow p p>=1 (l0sumAbs G))
+                   => l0calc-add {L} {m} {Psi} {Q1} {Q2} (\lam x => idp) *> pmap2 (+) (eSc {C} {PS SD} *> pmap (C *q) (ePS eSD))
+                        (eSc {eta} {+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (PS S1) (PS S2)} *> pmap (eta *q) (l0calc-add {L} {m} {+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (PS S1) (PS S2)} {PS S1} {PS S2} (\lam x => idp) *> pmap2 (+) (ePS eS1) (ePS eS2)))
+               | pt (x : Array Real m) : Phi x <= Psi x
+                   => \have | x1 : Array Real n => \lam j => x (fin-inc j)
+                            | x2 : Array Real n => \lam j => x (fin-raise j)
+                            | ns {S : CoverMap (RealN m) RealNormed} {z : Array Real n} (e : S x = lnorm {RealN n} z)
+                                : rpow (RealAbGroup.abs (S x)) RealAbGroup.abs>=0 p (fpow.one>0 p>=1) = normPow p (fpow.one>0 p>=1) z
+                                => rpow-ext (pmap RealAbGroup.abs e *> RealAbGroup.abs-ofPos (lnorm>=0 {RealN n} {z})) idp
+                   \in h x1 x2 <=∘ =_<= (pmap2 (\lam u v => Real.fromRat C * u + Real.fromRat eta * v)
+                                          (inv (ns {SD} {(-) {RealN n} x1 x2} sumMap.char))
+                                          (pmap2 (+) (inv (ns {S1} {x1} sumMap.char)) (inv (ns {S2} {x2} sumMap.char))))
+     \in =_<= (inv ePhi) <=∘ l0calc-mono pt <=∘ =_<= ePsi
+  \where {
+    -- | $|\varphi|$ as a cover map.
+    \func absMap {m : Nat} (c : CoverMap (RealN m) RealNormed) : CoverMap (RealN m) RealNormed (\lam x => RealAbGroup.abs (c x))
+      => real-join-uniform CoverMap.∘ ProductCoverSpace.tuple c (negative-uniform {RealNormed} CoverMap.∘ c)
+
+    -- | $c \varphi$ as a cover map.
+    \func scaleMap {m : Nat} (c : Real) (S : CoverMap (RealN m) RealNormed) : CoverMap (RealN m) RealNormed (\lam x => c * S x)
+      => RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const c) S
+  }
+
+-- | A map between normed groups with a power modulus
+--   $\|f(x) - f(x')\|^q \le C \|x - x'\|^r + \eta (\|x\|^r + \|x'\|^r)$ (for every $\eta > 0$ some `C`) is locally uniformly continuous.
+\lemma modulus-locallyUniform {X Y : PseudoNormedAbGroup} {r q : Real} {r>0 : 0 < r} {q>0 : 0 < q} (f : X -> Y)
+  (hM : \Pi {eta : Rat} -> 0 < eta -> ∃ (C : Rat) (0 <= C) (\Pi (x x' : X) -> rpow (lnorm (f x - f x')) lnorm>=0 q q>0
+          <= Real.fromRat C * rpow (lnorm (x - x')) lnorm>=0 r r>0 + Real.fromRat eta * (rpow (lnorm x) lnorm>=0 r r>0 + rpow (lnorm x') lnorm>=0 r r>0)))
+  : LocallyUniformMetricMap X Y f \cowith
+  | func-dist-locally-uniform {eps} eps>0 => inP (1, RatField.zro<ide, \lam x0 =>
+    \let | e2 => eps * ratio 1 2
+    \in \have | e2>0 : 0 < e2 => linarith
+              | e2>0' : 0 < Real.fromRat e2 => rat_real_<.1 e2>0
+              | E>0 : 0 < rpow-pos e2 e2>0' q => rpow-pos>0
+    \in \case UpperReal.U-inh_>0 {lnorm {X} x0} \with {
+      | inP (N0,N0u,N0>0) =>
+        \let N => N0 + 2
+        \in \have | N>0' : 0 < Real.fromRat N => rat_real_<.1 (linarith : 0 < N)
+                  | Rn>0 : 0 < rpow-pos N N>0' r => rpow-pos>0
+                  | R2>0 : 0 < (2 : Real) * rpow-pos N N>0' r => RealField.<_*_positive_positive (rat_real_<.1 idp) Rn>0
+        \in \case rat-below (RealField.<_*_positive_positive (RealField.<_*_positive_positive E>0 (rat_real_<.1 idp)) (RealField.pinv>0 R2>0)) \with {
+          | inP (eta,eta>0,etab) => \case hM eta>0 \with {
+            | inP (C,C>=0,hC) =>
+              \have | C1>0 : 0 < Real.fromRat C + 1 => usingOnly (rat_real_<=.1 C>=0) linarith
+                    | T>0 : 0 < rpow-pos e2 e2>0' q * ratio 1 2 * RealField.pinv (Real.fromRat C + 1) C1>0
+                        => RealField.<_*_positive_positive (RealField.<_*_positive_positive E>0 (rat_real_<.1 idp)) (RealField.pinv>0 C1>0)
+              \in \case small-rpow r>0 T>0 \with {
+                | inP (ag,ag>0,hg) =>
+                  \let gamma => ag RatField.∧ 1
+                  \in \have gamma>0 : 0 < gamma => RatField.<_meet-univ ag>0 RatField.zro<ide
+                  \in inP (gamma, gamma>0, \lam {x} {x'} d0 d1 =>
+                    \have | dx : lnorm {X} (x0 - x) < 1 => transport (__ < _) (lnorm-ldist {X} {x0} {x}) (real_<_U.2 d0)
+                          | dxx : lnorm {X} (x - x') < gamma => transport (__ < _) (lnorm-ldist {X} {x} {x'}) (real_<_U.2 d1)
+                          | g<=1 : gamma RealAbGroup.<= 1 => rat_real_<=.1 RatField.meet-right
+                          | xN0 : lnorm {X} x < Real.fromRat N0 + 1 => norm-near {X} (real_<_U.2 N0u) dx
+                          | x'N0 : lnorm {X} x' < Real.fromRat N0 + 1 + gamma => norm-near {X} xN0 dxx
+                          | eN : Real.fromRat N = Real.fromRat N0 + 1 + 1 => inv (pmap (+ 1) RealAbGroup.+-rat *> RealAbGroup.+-rat *> pmap Real.fromRat (linarith : N0 + 1 + 1 = N))
+                          | xN : lnorm {X} x <= N => transportInv (_ <=) eN (usingOnly xN0 linarith)
+                          | x'N : lnorm {X} x' <= N => transportInv (_ <=) eN (usingOnly (x'N0, g<=1) linarith)
+                          | Px : rpow (lnorm x) lnorm>=0 r r>0 <= rpow-pos N N>0' r => rpow-mono {_} {_} {lnorm>=0 {X}} {<=-less N>0'} xN <=∘ =_<= (rpow-pos-eq {_} {<=-less N>0'} N>0')
+                          | Px' : rpow (lnorm x') lnorm>=0 r r>0 <= rpow-pos N N>0' r => rpow-mono {_} {_} {lnorm>=0 {X}} {<=-less N>0'} x'N <=∘ =_<= (rpow-pos-eq {_} {<=-less N>0'} N>0')
+                          | gm>0 : 0 < Real.fromRat gamma => rat_real_<.1 gamma>0
+                          | P : rpow (lnorm (x - x')) lnorm>=0 r r>0 <= rpow-pos e2 e2>0' q * ratio 1 2 * RealField.pinv (Real.fromRat C + 1) C1>0
+                              => rpow-mono {_} {_} {lnorm>=0 {X}} {<=-less gm>0} (<=-less dxx) <=∘ =_<= (rpow-pos-eq {_} {<=-less gm>0} gm>0) <=∘ hg gamma>0 RatField.meet-left
+                          | h1 : Real.fromRat C * rpow (lnorm (x - x')) lnorm>=0 r r>0 <= rpow-pos e2 e2>0' q * ratio 1 2
+                              => <=_*_positive-right (rat_real_<=.1 C>=0) P
+                                 <=∘ <=_*_positive-left (usingOnly () linarith : Real.fromRat C <= Real.fromRat C + 1) (<=-less T>0)
+                                 <=∘ =_<= (pinv-cancel C1>0)
+                          | h2 : Real.fromRat eta * (rpow (lnorm x) lnorm>=0 r r>0 + rpow (lnorm x') lnorm>=0 r r>0) <= rpow-pos e2 e2>0' q * ratio 1 2
+                              => <=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) (<=_+ Px Px' <=∘ =_<= (equation.cRing : rpow-pos N N>0' r + rpow-pos N N>0' r = (2 : Real) * rpow-pos N N>0' r))
+                                 <=∘ <=_*_positive-left (<=-less etab) (<=-less R2>0)
+                                 <=∘ =_<= (*-comm *> pinv-cancel R2>0)
+                          | Q : rpow (lnorm (f x - f x')) lnorm>=0 q q>0 <= rpow-pos e2 e2>0' q
+                              => hC x x' <=∘ usingOnly (h1, h2) linarith
+                          | n : lnorm {Y} (f x - f x') <= e2
+                              => rpow-mono-inv {_} {_} {lnorm>=0 {Y}} {<=-less e2>0'} {q} {q>0} (Q <=∘ =_<= (inv (rpow-pos-eq e2>0')))
+                    \in real_<_U.1 (transportInv (__ < _) (lnorm-ldist {Y}) (n <∘r rat_real_<.1 (linarith : e2 < eps))))
+              }
+          }
+        }
+    })
+  \where {
+    -- | A positive rational below a positive real.
+    \lemma rat-below {x : Real} (x>0 : 0 < x) : ∃ (a : Rat) (0 < a) (a RealAbGroup.< x)
+      => \case real_<-rat-char.1 x>0 \with {
+        | inP (a,a0,ax) => inP (a, rat_real_<.2 (real_<_U.2 a0), real_<_L.2 ax)
+      }
+
+    -- | For $s, t > 0$ there is `a > 0` with $d^s \le t$ for all $0 < d \le a$.
+    \lemma small-rpow {s : Real} (s>0 : 0 < s) {t : Real} (t>0 : 0 < t)
+      : ∃ (a : Rat) (0 < a) (\Pi {d : Rat} (d>0 : 0 < d) -> d <= a -> rpow-pos d (rat_real_<.1 d>0) s <= t)
+      => \case rat-below (rpow-pos>0 {t} {t>0} {RealField.pinv s s>0}) \with {
+        | inP (a,a>0,as) => inP (a, a>0, \lam {d} d>0 d<=a => rpow-pos-mono {_} {_} {rat_real_<.1 d>0} {rpow-pos>0} (<=-less s>0) (rat_real_<=.1 d<=a <=∘ <=-less as)
+                                                      <=∘ =_<= (rpow-pos-rpow-pos *> pmap (rpow-pos t t>0) (RealField.pinv-left s>0) *> rpow-pos-one))
+      }
+
+    \lemma pinv-cancel {E W : Real} (W>0 : 0 < W) : W * (E * RealField.pinv W W>0) = E
+      => equation.cRing *> pmap (E *) (RealField.pinv-right W>0) *> ide-right
+
+    -- | $\|x\| < N$ and $\|x - y\| < \delta$ imply $\|y\| < N + \delta$.
+    \lemma norm-near {X : PseudoNormedAbGroup} {x y : X} {N d : Real} (xN : lnorm x < N) (xy : lnorm (x - y) < d) : lnorm y < N + d
+      => \have | t : lnorm y <= lnorm x + lnorm (y - x) => =_<= (pmap lnorm (equation.abGroup : y = x + (y - x))) <=∘ lnorm_+
+               | e : lnorm (y - x) = lnorm (x - y) => lnorm_-
+         \in usingOnly (t, e, xN, xy) linarith
+  }
+
+
+-- | $\sum_j |U_j|$ in `Lᵖ`.
+\func lpSumAbs {L : FullIntegrationSpace} (p : Real) (p>=1 : 1 <= p) {n : Nat} (U : Array (LpSpace L p p>=1) n) : LpSpace L p p>=1
+  => (LpSpace L p p>=1).BigSum (\lam j => abs (U j))
+  \where {
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {n : Nat} {U : Array (LpSpace L p p>=1) n}
+      : lpToL0 p p>=1 (lpSumAbs p p>=1 U) = l0sumAbs (\lam j => lpToL0 p p>=1 (U j))
+      => AddMonoidHom.func-BigSum {lpToL0 p p>=1} *> pmap (L0Space L).BigSum (exts \lam j => lpToL0-abs (U j))
+
+    -- | $\|\sum_j |U_j|\|_p \le \sum_j \|U_j\|_p$.
+    \lemma norm {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {n : Nat} {U : Array (LpSpace L p p>=1) n}
+      : lnorm {LpSpace L p p>=1} (lpSumAbs p p>=1 U) <= lnorm {ArrayNormedAbGroup n (LpSpace L p p>=1)} U
+      => lnorm_BigSum {LpSpace L p p>=1} {\lam j => abs (U j)} <=∘ =_<= (pmap RealAbGroup.BigSum (exts \lam j => TruncPreBanachLattice.lnorm_abs {LpSpace L p p>=1} {U j}))
+  }
+
+-- | $\|c x\| = c \|x\|$ for rational $c \ge 0$.
+\lemma lnorm-*q {Y : TruncBanachLattice} {c : Rat} (c>=0 : 0 <= c) {x : Y} : lnorm (c *q x) = Real.fromRat c * lnorm x
+  => Real.=-upper.2 (RealBanachSpace.norm_*q-ofPos {Y} c>=0 *> inv (RealField.*-upper (rat_real_<=.1 c>=0) (lnorm>=0 {Y})))
+
+-- | $\|W\|_1 = \|G\|_p^p$ for $W = |G|^p$.
+\lemma lnorm-lpPow {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1}
+  : lnorm {LpSpace L 1 <=-refl} (lpPow p p>=1 G) = lpNormPow p p>=1 G
+  => inv (rpow-one {_} {lnorm>=0 {LpSpace L 1 <=-refl}} {RealField.zro<ide}) *> lpPow.norm
+
+-- | $|G|^p \ge 0$.
+\lemma lpPow>=0 {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1} : (<=) {LpSpace L 1 <=-refl} 0 (lpPow p p>=1 G)
+  => lpToL0-pos (l0pow>=0 <=∘ =_<= {L0Space L} (inv lpPow.char))
+
+-- | $j_1 |G|^p = |j_p G|^p$, with the sum of absolute values.
+\lemma lpPow-sumAbs {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {n : Nat} {U : Array (LpSpace L p p>=1) n}
+  : lpToL0 1 <=-refl (lpPow p p>=1 (lpSumAbs p p>=1 U)) = l0pow p p>=1 (l0sumAbs (\lam j => lpToL0 p p>=1 (U j)))
+  => lpPow.char *> pmap (l0pow p p>=1) lpSumAbs.char
+
+-- | $\varphi(U) \in \mathrm L^q$ for $U \in (\mathrm L^p)^n$, if $\varphi(0) = 0$ and $\varphi$ has the power modulus.
+\lemma lpCalc-isLp {L : FullIntegrationSpace} {n : Nat} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q} {phi : CoverMap (RealN n) RealNormed}
+                   (phi0 : phi (RealN n).zro = 0) (hM : PowModulus p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi) (U : Array (LpSpace L p p>=1) n)
+  : IsLp q q>=1 (l0calc phi (\lam j => lpToL0 p p>=1 (U j)))
+  => \case hM {1} idp \with {
+    | inP (C,C>=0,h) =>
+      \let | jp => lpToL0 {L} p p>=1
+           | j1 => lpToL0 {L} 1 <=-refl
+           | Y1 => LpSpace L 1 <=-refl
+           | F : Array (L0Space L) n => \lam j => jp (U j)
+           | Z : Array (L0Space L) n => \lam j => 0
+           | U0 : Array (LpSpace L p p>=1) n => \lam j => 0
+           | A : Y1 => lpPow p p>=1 (lpSumAbs p p>=1 U)
+           | B : Y1 => lpPow p p>=1 (lpSumAbs p p>=1 U0)
+           | W : Y1 => C *q A + 1 *q (A + B)
+      \in \have | eZ : Z = {Array (L0Space L) n} (\lam j => jp (U0 j)) => exts \lam j => inv jp.func-zro
+                | eRHS : C *q l0pow p p>=1 (l0sumAbs (\lam j => F j - Z j)) + 1 *q (l0pow p p>=1 (l0sumAbs F) + l0pow p p>=1 (l0sumAbs Z)) = j1 W
+                    => \have eA : l0pow p p>=1 (l0sumAbs (\lam j => F j - Z j)) = j1 A
+                                => pmap {Array (L0Space L) n} (\lam z => l0pow p p>=1 (l0sumAbs z)) {\lam j => F j - Z j} {F} (exts \lam j => AddGroup.minus_zro {L0Space L} {F j}) *> inv (lpPow-sumAbs {L} {p} {p>=1} {n} {U})
+                       \in inv (j1.func-+ *> pmap2 (+) (func-*q {Y1} {L0Space L} {j1} *> pmap (C *q) (inv eA))
+                                                         (func-*q {Y1} {L0Space L} {j1} *> pmap (1 *q) (j1.func-+ *> pmap2 (+) (lpPow-sumAbs {L} {p} {p>=1} {n} {U}) (lpPow-sumAbs {L} {p} {p>=1} {n} {U0} *> pmap (\lam (z : Array (L0Space L) n) => l0pow p p>=1 (l0sumAbs z)) (inv eZ)))))
+                | le : l0pow q q>=1 (l0calc phi F) <= j1 W
+                    => =_<= (pmap (l0pow q q>=1) (inv (pmap (_ -) (l0calc-zro-arg phi0) *> AddGroup.minus_zro)))
+                       <=∘ l0calc-modulus h F Z <=∘ =_<= eRHS
+                | pos : 0 <= l0pow q q>=1 (l0calc phi F) => l0pow>=0
+      \in lp-pow.2 (lp-solid {L} {1} {<=-refl} {j1 W} (inP (W, idp)) (=_<= (abs-ofPos pos) <=∘ le <=∘ =_<= (inv (abs-ofPos (pos <=∘ le)))))
+  }
+
+-- | $\varphi(U) \in \mathrm L^q$ for $U \in (\mathrm L^p)^n$.
+\func lpCalcFun {L : FullIntegrationSpace} {n : Nat} {p q : Real} (p>=1 : 1 <= p) (q>=1 : 1 <= q) (phi : CoverMap (RealN n) RealNormed)
+                (phi0 : phi (RealN n).zro = 0) (hM : PowModulus p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi) (U : Array (LpSpace L p p>=1) n)
+  : LpSpace L q q>=1
+  => (lpOf (lpCalc-isLp phi0 hM U)).1
+  \where
+    \lemma char {L : FullIntegrationSpace} {n : Nat} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q} {phi : CoverMap (RealN n) RealNormed}
+                {phi0 : phi (RealN n).zro = 0} {hM : PowModulus p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi} {U : Array (LpSpace L p p>=1) n}
+      : lpToL0 q q>=1 (lpCalcFun p>=1 q>=1 phi phi0 hM U) = l0calc phi (\lam j => lpToL0 p p>=1 (U j))
+      => (lpOf (lpCalc-isLp phi0 hM U)).2
+
+-- | The modulus in `Lᵖ`: $\|\varphi(U) - \varphi(V)\|_q^q \le C \|U - V\|^p + \eta (\|U\|^p + \|V\|^p)$, where $\|U\| = \sum_j \|U_j\|_p$.
+\lemma lpCalc-modulus {L : FullIntegrationSpace} {n : Nat} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q} {phi : CoverMap (RealN n) RealNormed}
+                      {phi0 : phi (RealN n).zro = 0} (hM : PowModulus p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi) {eta : Rat} (eta>0 : 0 < eta)
+  : ∃ (C : Rat) (0 <= C) (\Pi (U V : Array (LpSpace L p p>=1) n) ->
+      lpNormPow q q>=1 (lpCalcFun p>=1 q>=1 phi phi0 hM U - lpCalcFun p>=1 q>=1 phi phi0 hM V)
+        <= Real.fromRat C * rpow (lnorm {ArrayNormedAbGroup n (LpSpace L p p>=1)} (U - V)) (lnorm>=0 {ArrayNormedAbGroup n (LpSpace L p p>=1)} {U - V}) p (fpow.one>0 p>=1)
+           + Real.fromRat eta * (rpow (lnorm {ArrayNormedAbGroup n (LpSpace L p p>=1)} U) (lnorm>=0 {ArrayNormedAbGroup n (LpSpace L p p>=1)} {U}) p (fpow.one>0 p>=1)
+                                 + rpow (lnorm {ArrayNormedAbGroup n (LpSpace L p p>=1)} V) (lnorm>=0 {ArrayNormedAbGroup n (LpSpace L p p>=1)} {V}) p (fpow.one>0 p>=1)))
+  => \case hM eta>0 \with {
+    | inP (C,C>=0,h) => inP (C, C>=0, \lam U V =>
+      \let | X => ArrayNormedAbGroup n (LpSpace L p p>=1)
+           | Y1 => LpSpace L 1 <=-refl
+           | j1 => lpToL0 {L} 1 <=-refl
+           | jp => lpToL0 {L} p p>=1
+           | f => lpCalcFun {L} p>=1 q>=1 phi phi0 hM
+           | F : Array (L0Space L) n => \lam j => jp (U j)
+           | G : Array (L0Space L) n => \lam j => jp (V j)
+           | W1 => lpPow q q>=1 (f U - f V)
+           | W2 => lpPow p p>=1 (lpSumAbs p p>=1 (U - V))
+           | W3 => lpPow p p>=1 (lpSumAbs p p>=1 U)
+           | W4 => lpPow p p>=1 (lpSumAbs p p>=1 V)
+           | Wr : Y1 => C *q W2 + eta *q (W3 + W4)
+      \in \have | e1 : j1 W1 = l0pow q q>=1 (l0calc phi F - l0calc phi G)
+                    => lpPow.char *> pmap (l0pow q q>=1) ((lpToL0 q q>=1).func-minus *> pmap2 (-) lpCalcFun.char lpCalcFun.char)
+                | e2 : j1 W2 = l0pow p p>=1 (l0sumAbs (\lam j => F j - G j))
+                    => lpPow-sumAbs {L} {p} {p>=1} {n} {U - V} *> pmap {Array (L0Space L) n} (\lam z => l0pow p p>=1 (l0sumAbs z)) {\lam j => jp ((U - V) j)} {\lam j => F j - G j} (exts \lam j => jp.func-minus {U j} {V j})
+                | er : j1 Wr = C *q l0pow p p>=1 (l0sumAbs (\lam j => F j - G j)) + eta *q (l0pow p p>=1 (l0sumAbs F) + l0pow p p>=1 (l0sumAbs G))
+                    => j1.func-+ *> pmap2 (+) (func-*q {Y1} {L0Space L} {j1} *> pmap (C *q) e2)
+                                              (func-*q {Y1} {L0Space L} {j1} *> pmap (eta *q) (j1.func-+ *> pmap2 (+) (lpPow-sumAbs {L} {p} {p>=1} {n} {U}) (lpPow-sumAbs {L} {p} {p>=1} {n} {V})))
+                | le0 : (<=) {L0Space L} (j1 W1) (j1 Wr) => =_<= {L0Space L} e1 <=∘ l0calc-modulus h F G <=∘ =_<= {L0Space L} (inv er)
+                | le1 : W1 <= Wr => lpToL0-reflects le0
+                | W1>=0 : 0 <= W1 => lpPow>=0
+                | n1 : lnorm {Y1} W1 <= lnorm {Y1} Wr => TruncPreBanachLattice.lnorm_<= {Y1} (=_<= (abs-ofPos W1>=0) <=∘ le1 <=∘ =_<= (inv (abs-ofPos (W1>=0 <=∘ le1))))
+                | n2 : lnorm {Y1} Wr <= Real.fromRat C * lnorm {Y1} W2 + Real.fromRat eta * (lnorm {Y1} W3 + lnorm {Y1} W4)
+                    => lnorm_+ {Y1} {C *q W2} {eta *q (W3 + W4)} <=∘ =_<= (pmap2 (+) (lnorm-*q {Y1} C>=0 {W2}) (lnorm-*q {Y1} (<=-less eta>0) {W3 + W4}))
+                         <=∘ <=_+ <=-refl (<=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) (lnorm_+ {Y1} {W3} {W4}))
+                | sa {Z : Array (LpSpace L p p>=1) n} : lnorm {Y1} (lpPow p p>=1 (lpSumAbs p p>=1 Z)) <= rpow (lnorm {X} Z) (lnorm>=0 {X} {Z}) p (fpow.one>0 p>=1)
+                    => =_<= lnorm-lpPow <=∘ rpow-mono lpSumAbs.norm
+                | e>=0 : 0 <= Real.fromRat eta => rat_real_<=.1 (<=-less eta>0)
+      \in =_<= (inv lnorm-lpPow) <=∘ n1 <=∘ n2 <=∘ <=_+ (<=_*_positive-right (rat_real_<=.1 C>=0) (sa {U - V})) (<=_*_positive-right e>=0 (<=_+ (sa {U}) (sa {V}))))
+  }
+
+{- | Theorem `thm:Lp-calc`: a cover map $\varphi \colon \mathbb R^n \to \mathbb R$ with $\varphi(0) = 0$ and the power modulus induces
+ -   a cover map $(\mathrm L^p)^n \to \mathrm L^q$ (the sum norm on $(\mathrm L^p)^n$).
+ -}
+\sfunc lpCalc {L : FullIntegrationSpace} {n : Nat} {p q : Real} (p>=1 : 1 <= p) (q>=1 : 1 <= q) (phi : CoverMap (RealN n) RealNormed)
+              (\property phi0 : phi (RealN n).zro = 0) (\property hM : PowModulus p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi)
+  : CoverMap (ArrayNormedAbGroup n (LpSpace L p p>=1)) (LpSpace L q q>=1)
+  => modulus-locallyUniform {ArrayNormedAbGroup n (LpSpace L p p>=1)} {LpSpace L q q>=1} {p} {q} {fpow.one>0 p>=1} {fpow.one>0 q>=1}
+      (lpCalcFun p>=1 q>=1 phi phi0 hM) (lpCalc-modulus {L} {n} {p} {q} {p>=1} {q>=1} {phi} {phi0} hM)
+
+-- | {lpCalc} is {l0calc} on `L⁰`.
+\lemma lpCalc-char {L : FullIntegrationSpace} {n : Nat} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q} {phi : CoverMap (RealN n) RealNormed}
+                   {phi0 : phi (RealN n).zro = 0} {hM : PowModulus p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi} {U : Array (LpSpace L p p>=1) n}
+  : lpToL0 q q>=1 (lpCalc p>=1 q>=1 phi phi0 hM U) = l0calc phi (\lam j => lpToL0 p p>=1 (U j))
+  => pmap (\lam (g : CoverMap (ArrayNormedAbGroup n (LpSpace L p p>=1)) (LpSpace L q q>=1)) => lpToL0 q q>=1 (g U)) (\peval lpCalc p>=1 q>=1 phi phi0 hM)
+      *> lpCalcFun.char
+
+{- | The unary case: a cover map $\varphi \colon \mathbb R \to \mathbb R$ with $\varphi(0) = 0$ and the power modulus induces a cover map
+ -   $\mathrm L^p \to \mathrm L^q$.
+ -}
+\sfunc lpCalc1 {L : FullIntegrationSpace} {p q : Real} (p>=1 : 1 <= p) (q>=1 : 1 <= q) (phi : CoverMap RealNormed RealNormed)
+               (\property phi0 : phi 0 = 0) (\property hM : PowModulus1 p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi)
+  : CoverMap (LpSpace L p p>=1) (LpSpace L q q>=1)
+  => modulus-locallyUniform {LpSpace L p p>=1} {LpSpace L q q>=1} {p} {q} {fpow.one>0 p>=1} {fpow.one>0 q>=1}
+      (\lam u => lpCalcFun p>=1 q>=1 (phi1 phi) phi0 (powModulus1 hM) (u :: nil))
+      (\lam {eta} eta>0 => \case lpCalc-modulus {L} {1} {p} {q} {p>=1} {q>=1} {phi1 phi} {phi0} (powModulus1 hM) eta>0 \with {
+        | inP (C,C>=0,h) => inP (C, C>=0, \lam u v => h (u :: nil) (v :: nil) <=∘ =_<= (pmap2 (\lam a b => Real.fromRat C * a + Real.fromRat eta * b)
+            (rpow-ext zro-right idp) (pmap2 (+) (rpow-ext zro-right idp) (rpow-ext zro-right idp))))
+      })
+  \where
+    \func phi1 (phi : CoverMap RealNormed RealNormed) : CoverMap (RealN 1) RealNormed (\lam x => phi (x 0))
+      => phi CoverMap.∘ LinBoundedMap.coord {1} 0
+
+-- | {lpCalc1} is {l0calc} on `L⁰`.
+\lemma lpCalc1-char {L : FullIntegrationSpace} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q} {phi : CoverMap RealNormed RealNormed}
+                    {phi0 : phi 0 = 0} {hM : PowModulus1 p q (fpow.one>0 p>=1) (fpow.one>0 q>=1) phi} {u : LpSpace L p p>=1}
+  : lpToL0 q q>=1 (lpCalc1 p>=1 q>=1 phi phi0 hM u) = l0calc (lpCalc1.phi1 phi) (lpToL0 p p>=1 u :: nil)
+  => pmap (\lam (g : CoverMap (LpSpace L p p>=1) (LpSpace L q q>=1)) => lpToL0 q q>=1 (g u)) (\peval lpCalc1 p>=1 q>=1 phi phi0 hM)
+      *> lpCalcFun.char *> pmap (l0calc (lpCalc1.phi1 phi)) (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })

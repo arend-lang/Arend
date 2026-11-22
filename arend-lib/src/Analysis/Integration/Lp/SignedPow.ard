@@ -1,0 +1,133 @@
+{- | The signed power $\varphi_r(u) = u|u|^{r-2}$ as a map $\mathrm L^r \to \mathrm L^{r'}$, $1 < r < \infty$.
+
+  $\varphi_r$ is a cover map $\mathbb R \to \mathbb R$ with $\varphi_r(0) = 0$, homogeneous of degree $r - 1 = r/r'$, so it has the power modulus
+  ({signedPow-modulus}) and the functional calculus {lpCalc1} gives a cover map $\mathrm L^r \to \mathrm L^{r'}$.
+
+  * {lpSignedPow}: the map $\mathrm L^r \to \mathrm L^{r'}$; {lpSignedPow-char}: it is $\varphi_r$ on `L⁰` ({l0signedPow}).
+  * {lpSignedPow-conj}: $\|\varphi_r(u)\|_{r'}^{r'} = \|u\|_r^r$; {lpSignedPow-mul}: $I(\varphi_r(u)\, u) = \|u\|_r^r$.
+  * {lpSignedPow-tangent}: $\|u\|_r^r + r\,I(\varphi_r(u)(v - u)) \le \|v\|_r^r$, by Hölder and Young.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.L0
+\import Analysis.Integration.L0Product
+\import Analysis.Integration.Lp
+\import Analysis.Integration.Lp.Holder
+\import Analysis.Integration.Lp.Calculus
+\import Analysis.Integration.Lp.L1
+\import Analysis.Integration.LpCalculus
+\import Analysis.Integration.L0SignedPow
+\import Analysis.Integration.LpEmbedding
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Young
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopAbGroup
+\import Topology.TopSpace
+\import Arith.Real.Power.SignedPow
+\import Arith.Real.Power.SignedPowModulus
+\open LatticeAbGroup
+
+\lemma conj-swap {r q : Real} {r>0 : 0 < r} {q>0 : 0 < q} (rq : HolderConjugate r q r>0 q>0)
+  : HolderConjugate q r q>0 r>0
+  => RealAbGroup.+-comm *> rq
+
+-- | If `G` is continuous at `z` and `z` is approximated by points `y` with $G(y) \le c + \varepsilon$, then $G(z) \le c$.
+\lemma limit-le {X : PseudoMetricSpace} (G : CoverMap X RealNormed) {z : X} {c : Real}
+                (h : \Pi {eps delta : Rat} -> 0 < eps -> 0 < delta -> ∃ (y : X) (X.dist z y < delta) (G y <= c + eps))
+  : G z <= c
+  => real_<=-eps \lam {d} d>0 =>
+    \let d2 => d * ratio 1 2
+    \in \have d2>0 : 0 < d2 => linarith
+    \in \case metric-contAt-char.1 (cont-char.1 G z) d2>0 \with {
+      | inP (delta,delta>0,hd) => \case h d2>0 delta>0 \with {
+        | inP (y,zy,Gy) =>
+          \have | g : abs (G z - G y) < d2 => transport (__ < _) (Real.=-upper.2 RealNormed.norm-dist) (real_<_U.2 (hd (real_<_U.1 zy)))
+                | e : d2 RealAbGroup.+ d2 = Real.fromRat d => RealAbGroup.+-rat *> pmap Real.fromRat linarith
+          \in usingOnly (abs>=id <∘r g, Gy, e) linarith
+      }
+    }
+
+-- | The dual of {limit-le}.
+\lemma limit-ge {X : PseudoMetricSpace} (G : CoverMap X RealNormed) {z : X} {c : Real}
+                (h : \Pi {eps delta : Rat} -> 0 < eps -> 0 < delta -> ∃ (y : X) (X.dist z y < delta) (c <= G y + eps))
+  : c <= G z
+  => \have t => limit-le (negative-uniform CoverMap.∘ G) {z} {negative c} \lam eps>0 delta>0 => \case h eps>0 delta>0 \with {
+       | inP (y,zy,cy) => inP (y, zy, usingOnly cy linarith)
+     }
+     \in usingOnly t linarith
+
+-- | The signed power $\varphi_r \colon \mathrm L^r \to \mathrm L^{r'}$, by the functional calculus {lpCalc1}: $\varphi_r$ is homogeneous of degree $r - 1 = r/r'$.
+\sfunc lpSignedPow {L : FullIntegrationSpace} {r q : Real} (r>1 : 1 < r) (q>=1 : 1 <= q)
+                   (\property rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1))
+  : CoverMap (LpSpace L r (ge1 r>1)) (LpSpace L q q>=1)
+  => lpCalc1 (ge1 r>1) q>=1 (signedPow-cover r>1) signedPow-zro (signedPow-modulus rq)
+
+-- | {lpSignedPow} is $\varphi_r$ on `L⁰`.
+\lemma lpSignedPow-char {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
+                        {rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)} {u : LpSpace L r (ge1 r>1)}
+  : lpToL0 q q>=1 (lpSignedPow r>1 q>=1 rq u) = l0signedPow r>1 (lpToL0 r (ge1 r>1) u)
+  => pmap (\lam (f : CoverMap (LpSpace L r (ge1 r>1)) (LpSpace L q q>=1)) => lpToL0 q q>=1 (f u)) (\peval lpSignedPow r>1 q>=1 rq) *> lpCalc1-char
+
+-- | $\|\varphi_r(u)\|_{r'}^{r'} = \|u\|_r^r$.
+\lemma lpSignedPow-conj {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
+                        {rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)} (u : LpSpace L r (ge1 r>1))
+  : lpNormPow q q>=1 (lpSignedPow r>1 q>=1 rq u) = lpNormPow r (ge1 r>1) u
+  => inv (lp-pow-norm (lpPow.char *> inv (l0signedPow-conj rq) *> pmap (l0pow q q>=1) (inv lpSignedPow-char))) *> lpPow.norm
+
+-- | $I(\varphi_r(u)\, u) = \|u\|_r^r$.
+\lemma lpSignedPow-mul {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
+                       {rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)} (u : LpSpace L r (ge1 r>1))
+  : integral (lpMul (conj-swap rq) (lpSignedPow r>1 q>=1 rq u) u) = lpNormPow r (ge1 r>1) u
+  => \have e : lpMul (conj-swap rq) (lpSignedPow r>1 q>=1 rq u) u = lp1-map (lpPow r (ge1 r>1) u)
+               => l1ToL0.unique (lpMul-l0 _ u *> pmap (\lam z => l0Mul (z, lpToL0 r (ge1 r>1) u)) lpSignedPow-char
+                                  *> l0signedPow-mul *> inv lpPow.char)
+     \in pmap integral e *> lp1-integral-pos {L} {lpPow r (ge1 r>1) u} (l0pow>=0 <=∘ =_<= {L0Space L} (inv lpPow.char)) *> lpPow.norm
+
+-- | The tangent inequality $\|u\|_r^r + r\,I(\varphi_r(u)(v - u)) \le \|v\|_r^r$, from {lpSignedPow-mul}, Hölder and Young.
+\lemma lpSignedPow-tangent {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
+                           {rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)} (u v : LpSpace L r (ge1 r>1))
+  : lpNormPow r (ge1 r>1) u + r * integral (lpMul (conj-swap rq) (lpSignedPow r>1 q>=1 rq u) ((-) {LpSpace L r (ge1 r>1)} v u)) <= lpNormPow r (ge1 r>1) v
+  => \let | X => LpSpace L r (ge1 r>1)
+          | g => lpSignedPow r>1 q>=1 rq u
+          | r>0 : 0 < r => fpow.one>0 (ge1 r>1)
+          | q>0 : 0 < q => fpow.one>0 q>=1
+          | A => lpNormPow r (ge1 r>1) u
+          | B => lpNormPow r (ge1 r>1) v
+          | J => integral (lpMul (conj-swap rq) g (v - u))
+          | Iv => integral (lpMul (conj-swap rq) g v)
+     \in \have | eI : Iv = J + A
+                   => pmap (\lam z => integral (lpMul (conj-swap rq) g z)) (inv (+-assoc {X} *> pmap ((+) {X} v) (negative-left {X}) *> zro-right {X}) : v = (+) {X} ((-) {X} v u) u)
+                      *> pmap integral lpMul-+-right *> IntegrationSpace.integral_+ {IntegrationSpaceCompletion L} *> pmap (J +) (lpSignedPow-mul u)
+               | hI : Iv <= lnorm {LpSpace L q q>=1} g * lnorm {X} v
+                   => abs>=id <=∘ IntegrationSpace.integral_abs {IntegrationSpaceCompletion L} <=∘ lpMul-holder
+               | hY : lnorm {LpSpace L q q>=1} g * lnorm {X} v <= A * RealField.pinv q q>0 + B * RealField.pinv r r>0
+                   => young (lnorm>=0 {LpSpace L q q>=1}) (lnorm>=0 {X}) q>0 r>0 (conj-swap rq)
+                      <=∘ =_<= (pmap (\lam t => t * RealField.pinv q q>0 + B * RealField.pinv r r>0) (lpSignedPow-conj u))
+               | ri : r * RealField.pinv r r>0 = 1 => RealField.pinv-right r>0
+               | qi : RealField.pinv q q>0 = 1 - RealField.pinv r r>0 => usingOnly rq linarith
+               | k : r * (A * RealField.pinv q q>0 + B * RealField.pinv r r>0) = r * A - A + B
+                   => pmap (\lam t => r * (A * t + B * RealField.pinv r r>0)) qi
+                      *> (equation.cRing : r * (A * (1 - RealField.pinv r r>0) + B * RealField.pinv r r>0) = r * A - A * (r * RealField.pinv r r>0) + B * (r * RealField.pinv r r>0))
+                      *> pmap (\lam t => r * A - A * t + B * t) ri *> equation.cRing
+               | m : r * Iv <= r * A - A + B => <=_*_positive-right (<=-less r>0) (hI <=∘ hY) <=∘ =_<= k
+               | e3 : r * J = r * Iv - r * A => pmap (r *) (equation.abGroup *> pmap (__ - A) (inv eI) : J = Iv - A) *> equation.cRing
+     \in usingOnly (m, e3) linarith

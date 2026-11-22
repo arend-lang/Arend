@@ -1,0 +1,410 @@
+{- | Duality for $\mathrm L^p$, $1 < p < \infty$.
+
+  * {lpDual}: $T_q g \colon u \mapsto I(g u)$, a bounded functional on $\mathrm L^p$ for $g \in \mathrm L^q$ (Hölder).
+  * {lpDual-sup}: $\sup_{\|u\|_p < 1} |I(g u)| = \|g\|_q$; so $T_q g$ is normable and $\|T_q g\| = \|g\|_q$ ({lpDual-norm}).
+  * {lpDual-surj}: every normable $\Lambda \in (\mathrm L^p)^*$ is $T_q g$ for a unique `g`.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus.Operations
+\import Analysis.Integration.FunctionalCalculus.Pointwise
+\import Analysis.Integration.Lp
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.Power.SignedPow
+\import Arith.Real.UpperReal
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\import Analysis.Integration.Lp.SignedPow
+\import Analysis.Integration.IntegrationSpace
+\import Analysis.Integration.Lp.Holder
+\import Analysis.Integration.L0SignedPow
+\import Analysis.Integration.Lp.UniformlyConvex
+\import Topology.BanachSpace
+\import Topology.BanachSpace.Dual
+\import Topology.BanachSpace.UniformlyConvex
+\open QModule
+
+-- | $T_q g \colon u \mapsto I(g u)$.
+\func lpDual {L : FullIntegrationSpace} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q}
+             (qp : HolderConjugate q p (fpow.one>0 q>=1) (fpow.one>0 p>=1)) (g : LpSpace L q q>=1)
+  : BoundedFunctional (LpSpace L p p>=1) \cowith
+  | func u => integral (lpMul qp g u)
+  | func-+ => pmap integral lpMul-+-right *> integral_+
+  | func-bounded => \case UpperReal.U-inh_>0 {lnorm {LpSpace L q q>=1} g} \with {
+    | inP (C,Cu,C>0) => inP (C, <=-less C>0, \lam {u} {b} ub =>
+        \have | b>0 : 0 RatField.< b => norm>=0 {LpSpace L p p>=1} ub
+              | t1 : RealAbGroup.abs (integral (lpMul qp g u)) <= lnorm {IntegrationSpaceCompletion L} (lpMul qp g u) => IntegrationSpace.integral_abs {IntegrationSpaceCompletion L}
+              | t2 => lpMul-holder {L} {q} {p} {q>=1} {p>=1} {qp} {g} {u}
+              | t3 : lnorm {LpSpace L q q>=1} g * lnorm {LpSpace L p p>=1} u <= Real.fromRat C * Real.fromRat b
+                  => RealField.<=_*_positive-left (<=-less (real_<_U.2 Cu)) (lnorm>=0 {LpSpace L p p>=1}) <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less C>0)) (<=-less (real_<_U.2 ub))
+        \in t1 <=∘ t2 <=∘ t3 <=∘ =_<= RealField.*-rat)
+  }
+
+-- | $I(u v) = I(v u)$.
+\lemma lpPair-comm {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                   {pq : HolderConjugate p q (fpow.one>0 p>=1) (fpow.one>0 q>=1)} (u : LpSpace L p p>=1) (v : LpSpace L q q>=1)
+  : integral (lpMul pq u v) = integral (lpMul (conj-swap pq) v u)
+  => pmap integral lpMul.cover-eq *> dense-lift-unique (ProductCoverSpace.prod (lpInc p p>=1) (lpInc q q>=1)) lpInc.isDense2
+      ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover pq)
+      ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover (conj-swap pq) CoverMap.∘ ProductCoverSpace.tuple ProductCoverSpace.proj2 ProductCoverSpace.proj1)
+      (\lam (s : \Sigma L L) => pmap integral (inv (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> lpMul-char {L} {p} {q} {p>=1} {q>=1} {pq}) *> integrationCompletion.func-integral *> pmap L.integral fmul-comm
+                               *> inv (pmap integral (inv (lpMul.cover-eq {L} {q} {p} {q>=1} {p>=1} {conj-swap pq}) *> lpMul-char {L} {q} {p} {q>=1} {p>=1} {conj-swap pq}) *> integrationCompletion.func-integral)) (u,v)
+      *> pmap integral (inv lpMul.cover-eq)
+
+-- | If $\Psi^p = G^q$ with $1/p + 1/q = 1$, then $G \Psi = G^q$.
+\lemma norm-relation {p q G P : Real} {p>0 : (0 : Real) < p} {q>0 : (0 : Real) < q} (q>1 : (1 : Real) < q) (pq : HolderConjugate p q p>0 q>0)
+                     {G>=0 : (0 : Real) <= G} {P>=0 : (0 : Real) <= P} (h : rpow P P>=0 p p>0 = rpow G G>=0 q q>0)
+  : G * P = rpow G G>=0 q q>0
+  => \have | ip>0 : (0 : Real) < RealField.pinv p p>0 => RealField.pinv>0 p>0
+           | pp : p * RealField.pinv p p>0 = (1 : Real) => RealField.pinv-right p>0
+           | qq : q * RealField.pinv q q>0 = (1 : Real) => RealField.pinv-right q>0
+           | eq1 : q * RealField.pinv p p>0 = q - 1 => (equation.cRing : q * RealField.pinv p p>0 = q * (RealField.pinv p p>0 + RealField.pinv q q>0) - q * RealField.pinv q q>0)
+                                                     *> pmap2 (\lam a b => q * a - b) pq qq *> equation.cRing
+           | q1>0 : (0 : Real) < q - 1 => usingOnly q>1 linarith
+           | eP : P = rpow G G>=0 (q - 1) q1>0
+               => inv (signedPow.rpow-exp pp *> rpow-one) *> inv (rpow-rpow {P} {P>=0} {p} {RealField.pinv p p>0} {p>0} {ip>0} {rpow>=0} {transportInv ((0 : Real) <) pp RealField.zro<ide})
+                  *> signedPow.rpow-base h *> rpow-rpow {G} {G>=0} {q} {RealField.pinv p p>0} {q>0} {ip>0} {rpow>=0} {RealField.<_*_positive_positive q>0 ip>0} *> signedPow.rpow-exp eq1
+     \in pmap (G *) eP *> inv (signedPow.rpow-exp (equation.cRing : q = (1 : Real) + (q - 1)) *> rpow_+ {G} {G>=0} {1} {q - 1} {RealField.zro<ide} {q1>0} *> pmap (\lam t => t * _) rpow-one)
+
+\lemma norm-root {p q G P : Real} {p>0 : (0 : Real) < p} {q>0 : (0 : Real) < q} (q>1 : (1 : Real) < q) (pq : HolderConjugate p q p>0 q>0)
+                 {G>=0 : (0 : Real) <= G} {P>=0 : (0 : Real) <= P} (h : rpow P P>=0 p p>0 = rpow G G>=0 q q>0)
+  : P = rpow G G>=0 (q - 1) (signedPow.sub1>0 q>1)
+  => \have | ip>0 : (0 : Real) < RealField.pinv p p>0 => RealField.pinv>0 p>0
+           | pp : p * RealField.pinv p p>0 = (1 : Real) => RealField.pinv-right p>0
+           | qq : q * RealField.pinv q q>0 = (1 : Real) => RealField.pinv-right q>0
+           | eq1 : q * RealField.pinv p p>0 = q - 1 => (equation.cRing : q * RealField.pinv p p>0 = q * (RealField.pinv p p>0 + RealField.pinv q q>0) - q * RealField.pinv q q>0)
+                                                     *> pmap2 (\lam a b => q * a - b) pq qq *> equation.cRing
+     \in inv (signedPow.rpow-exp pp *> rpow-one) *> inv (rpow-rpow {P} {P>=0} {p} {RealField.pinv p p>0} {p>0} {ip>0} {rpow>=0} {transportInv ((0 : Real) <) pp RealField.zro<ide})
+         *> signedPow.rpow-base h *> rpow-rpow {G} {G>=0} {q} {RealField.pinv p p>0} {q>0} {ip>0} {rpow>=0} {RealField.<_*_positive_positive q>0 ip>0} *> signedPow.rpow-exp eq1
+
+-- | $\sup_{\|u\|_p < 1} |I(g u)| = \|g\|_q$ (the isometry of Theorem `thm:dual`(1)).
+\lemma lpDual-sup {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                  (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1))) (g : LpSpace L q (ge1 q>1))
+  : IsFunctionalSup (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g) (lnorm {LpSpace L q (ge1 q>1)} g)
+  => (\lam {u} {b} ub => IntegrationSpace.integral_abs {IntegrationSpaceCompletion L} <=∘ lpMul-holder {L} {q} {p} {ge1 q>1} {ge1 p>1} {conj-swap pq} {g} {u}
+                         <=∘ RealField.<=_*_positive-right (lnorm>=0 {LpSpace L q (ge1 q>1)}) (<=-less (real_<_U.2 ub)),
+      \lam {eps} eps>0 => \case RealAbGroup.<-comparison (lnorm {LpSpace L q (ge1 q>1)} g) {Real.fromRat (eps RatField.* ratio 1 2)} {Real.fromRat eps} (rat_real_<.1 (linarith : eps RatField.* ratio 1 2 RatField.< eps)) \with {
+        | byRight G<e => inP ((LpSpace L p (ge1 p>1)).zro, transportInv (\lam (z : ExUpperReal) => z.U 1) (norm_zro {LpSpace L p (ge1 p>1)}) RatField.zro<ide,
+                              usingOnly (G<e, RealAbGroup.abs>=0 {lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g (LpSpace L p (ge1 p>1)).zro}) linarith)
+        | byLeft e<G => sup-witness p>1 q>1 pq g eps>0 e<G
+      })
+
+  \where
+    \lemma sup-witness {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                       (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1))) (g : LpSpace L q (ge1 q>1))
+                       {eps : Rat} (eps>0 : 0 RatField.< eps) (e<G : Real.fromRat (eps RatField.* ratio 1 2) < lnorm {LpSpace L q (ge1 q>1)} g)
+      : ∃ (x : LpSpace L p (ge1 p>1)) ((norm {LpSpace L p (ge1 p>1)} x).U 1) (lnorm {LpSpace L q (ge1 q>1)} g - Real.fromRat eps < RealAbGroup.abs (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g x))
+      => \let | Y => LpSpace L p (ge1 p>1)
+              | G => lnorm {LpSpace L q (ge1 q>1)} g
+              | e2 => Real.fromRat (eps RatField.* ratio 1 2)
+         \in \have | e2>0 : (0 : Real) < e2 => rat_real_<.1 (linarith : 0 RatField.< eps RatField.* ratio 1 2)
+                   | G>0 : (0 : Real) < G => e2>0 <∘ e<G
+         \in \let psi => lpSignedPow {L} {q} {p} q>1 (ge1 p>1) (conj-swap pq) g
+         \in \have | hc : lpNormPow p (ge1 p>1) psi = lpNormPow q (ge1 q>1) g => lpSignedPow-conj {L} {q} {p} {q>1} {ge1 p>1} {conj-swap pq} g
+                   | Pe : lnorm {Y} psi = rpow G (lnorm>=0 {LpSpace L q (ge1 q>1)}) (q - 1) (signedPow.sub1>0 q>1) => norm-root q>1 pq hc
+                   | P>0 : (0 : Real) < lnorm {Y} psi => transportInv ((0 : Real) <) (Pe *> rpow-pos-eq G>0) rpow-pos>0
+                   | GP : G * lnorm {Y} psi = rpow G (lnorm>=0 {LpSpace L q (ge1 q>1)}) q (fpow.one>0 (ge1 q>1)) => norm-relation q>1 pq hc
+                   | Tpsi : lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g psi = G * lnorm {Y} psi
+                       => lpPair-comm g psi *> lpSignedPow-mul {L} {q} {p} {q>1} {ge1 p>1} {conj-swap pq} g *> inv GP
+                   | iP>0 : (0 : Real) < RealField.pinv (lnorm {Y} psi) P>0 => RealField.pinv>0 P>0
+                   | iG>0 : (0 : Real) < RealField.pinv G G>0 => RealField.pinv>0 G>0
+                   | eG : e2 * RealField.pinv G G>0 < (1 : Real)
+                       => RealField.<_*_positive-left e<G iG>0 <∘l =_<= (RealField.pinv-right G>0)
+                   | eG>0 : (0 : Real) < e2 * RealField.pinv G G>0 => RealField.<_*_positive_positive e2>0 iG>0
+                   | lohi : ((1 : Real) - e2 * RealField.pinv G G>0) * RealField.pinv (lnorm {Y} psi) P>0 < (1 : Real) * RealField.pinv (lnorm {Y} psi) P>0
+                       => RealField.<_*_positive-left (usingOnly eG>0 linarith) iP>0
+         \in \case real_<-rat-char.1 (lohi <∘l =_<= RealField.ide-left) \with {
+           | inP (l,lo',hi') =>
+             \have | lo : ((1 : Real) - e2 * RealField.pinv G G>0) * RealField.pinv (lnorm {Y} psi) P>0 < Real.fromRat l => real_<_U.2 lo'
+                   | hi : Real.fromRat l < RealField.pinv (lnorm {Y} psi) P>0 => real_<_L.2 hi'
+                   | l>0' : (0 : Real) < Real.fromRat l => RealField.<=_*_positive_positive (usingOnly eG linarith) (<=-less iP>0) <∘r lo
+                   | l>=0 : 0 RatField.<= l => <=-less (rat_real_<.2 l>0')
+                   | nl : lnorm {Y} (l *q psi) = Real.fromRat l * lnorm {Y} psi
+                       => Real.=-upper.2 (RealBanachSpace.norm_*q-ofPos {Y} l>=0 *> inv (RealField.*-upper (<=-less l>0') (lnorm>=0 {Y})))
+                   | n1 : Real.fromRat l * lnorm {Y} psi < (1 : Real)
+                       => RealField.<_*_positive-left hi P>0 <∘l =_<= (RealField.pinv-left P>0)
+                   | lb : (1 : Real) - e2 * RealField.pinv G G>0 < Real.fromRat l * lnorm {Y} psi
+                       => =_<= (inv (RealField.*-assoc *> pmap (_ *) (RealField.pinv-left P>0) *> RealField.ide-right)) <∘r RealField.<_*_positive-left lo P>0
+                   | Tl : lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g (l *q psi) = G * (Real.fromRat l * lnorm {Y} psi)
+                       => (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g).func-*q *> pmap (Real.fromRat l *) Tpsi *> equation.cRing
+                   | m : G * ((1 : Real) - e2 * RealField.pinv G G>0) < G * (Real.fromRat l * lnorm {Y} psi) => RealField.<_*_positive-right G>0 lb
+                   | em : G * ((1 : Real) - e2 * RealField.pinv G G>0) = G - e2
+                       => (equation.cRing : G * ((1 : Real) - e2 * RealField.pinv G G>0) = G - e2 * (G * RealField.pinv G G>0)) *> pmap (\lam t => G - e2 * t) (RealField.pinv-right G>0) *> pmap (G -) RealField.ide-right
+                   | ee : e2 < Real.fromRat eps => rat_real_<.1 (linarith : eps RatField.* ratio 1 2 RatField.< eps)
+             \in inP (l *q psi, real_<_U.1 (=_<= nl <∘r n1),
+                      usingOnly (m, em, ee) linarith <∘l =_<= (inv Tl) <=∘ RealAbGroup.abs>=id)
+         }
+
+-- | $T_q$ is additive in `g`.
+\func lpDual-hom {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                 (qp : HolderConjugate q p (fpow.one>0 q>=1) (fpow.one>0 p>=1)) (u : LpSpace L p p>=1)
+  : AddGroupHom (LpSpace L q q>=1) RealAbGroup \cowith
+  | func g => lpDual {L} {p} {q} {p>=1} {q>=1} qp g u
+  | func-+ => pmap integral lpMul-+-left *> integral_+
+
+-- | $\|T_q g\| = \|g\|_q$.
+\lemma lpDual-norm {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                   (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1))) (g : LpSpace L q (ge1 q>1))
+  : opNorm (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g) = {ExUpperReal} lnorm {LpSpace L q (ge1 q>1)} g
+  => functionalSup-opNorm {LpSpace L p (ge1 p>1)} {lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g} (lpDual-sup p>1 q>1 pq g)
+
+-- | $T_q g$ is normable.
+\lemma lpDual-normable {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                       (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1))) (g : LpSpace L q (ge1 q>1))
+  : IsNormable (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g)
+  => inP (_, lpDual-sup p>1 q>1 pq g)
+
+-- | $T_q$ is injective.
+\lemma lpDual-inj {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                  (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1))) {g g' : LpSpace L q (ge1 q>1)}
+                  (e : \Pi (u : LpSpace L p (ge1 p>1)) -> lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g u = lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g' u)
+  : g = g'
+  => \let | Y => LpSpace L q (ge1 q>1)
+          | d => (-) {Y} g g'
+     \in \have | z : \Pi (u : LpSpace L p (ge1 p>1)) -> lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) d u = (0 : Real)
+                   => \lam u => AddGroupHom.func-minus {lpDual-hom {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) u} *> pmap (\lam t => t - _) (e u) *> RealAbGroup.negative-right
+               | n0 : lnorm {Y} d <= (0 : Real) => real_<=-eps \lam {eps} eps>0 => \case (lpDual-sup p>1 q>1 pq d).2 eps>0 \with {
+                   | inP (x,_,h) => \have h' : lnorm {Y} d - Real.fromRat eps < (0 : Real) => transport (_ <) (pmap RealAbGroup.abs (z x) *> RealAbGroup.abs_zro) h
+                                    \in usingOnly h' linarith
+                 }
+     \in AddGroup.fromZero (Y.norm-ext (Real.=-upper.1 (<=-antisymmetric n0 (lnorm>=0 {Y}))))
+
+-- | A functional with $\sup_{\|u\|_p < 1} |\Lambda u| = 1$ is $T_q g$ for some `g`.
+\lemma lpDual-represent1 {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                         (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1)))
+                         {f : BoundedFunctional (LpSpace L p (ge1 p>1))} (fs : IsFunctionalSup f (1 : Real))
+  : ∃ (g : LpSpace L q (ge1 q>1)) (\Pi (w : LpSpace L p (ge1 p>1)) -> f w = lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g w)
+  => \case normable-attained {LpSpace L p (ge1 p>1)} (lp-uniformlyConvex {L} p>1) fs \with {
+    | inP (u0,n0,fu0) =>
+      \let | Y => LpSpace L p (ge1 p>1)
+           | g => lpSignedPow {L} {p} {q} p>1 (ge1 q>1) pq u0
+      \in \have | u0<=1 : lnorm {Y} u0 <= (1 : Real) => lp-uniformlyConvex.le-of-upper \lam c1 => real_<_U.2 (n0 c1)
+                | le (w : Y) : f w <= lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g w =>
+                  \let G : CoverMap RealNormed RealNormed
+                        => (IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover (conj-swap pq) CoverMap.∘ ProductCoverSpace.tuple
+                             (lpSignedPow {L} {p} {q} p>1 (ge1 q>1) pq CoverMap.∘ (+-uniform {Y} CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const u0)
+                                (RealBanachSpace.*r-cover {Y} CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const w))))
+                             (CoverMap.const w)
+                  \in \have | Gt (t : Rat) : G (Real.fromRat t) = integral (lpMul (conj-swap pq) (lpSignedPow {L} {p} {q} p>1 (ge1 q>1) pq ((+) {Y} u0 (t *q w))) w)
+                                => pmap integral (inv lpMul.cover-eq) *> pmap (\lam z => integral (lpMul (conj-swap pq) (lpSignedPow {L} {p} {q} p>1 (ge1 q>1) pq ((+) {Y} u0 z)) w)) RealBanachSpace.*r_*q
+                            | G0 : G 0 = lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g w
+                                => Gt 0 *> pmap (\lam z => integral (lpMul (conj-swap pq) (lpSignedPow {L} {p} {q} p>1 (ge1 q>1) pq z) w)) (pmap ((+) {Y} u0) (QModule.*q_*n {Y} {0} {w}) *> zro-right)
+                  \in transport (_ <=) G0 (limit-ge {RealNormed} G {0} {f w} \lam {eps} {delta} eps>0 delta>0 =>
+                        \case UpperReal.U-inh_>0 {RealAbGroup.abs (f w)} \with {
+                          | inP (K,Ku,K>0) =>
+                            \let t => (delta RatField.* ratio 1 2) RatField.∧ RatField.finv (K RatField.+ K)
+                            \in \have | t>0 : 0 RatField.< t => RatField.<_meet-univ (linarith : 0 RatField.< delta RatField.* ratio 1 2) (RatField.finv>0 (linarith : 0 RatField.< K RatField.+ K))
+                                      | tK : t RatField.* K RatField.< 1
+                                          => RatField.<=_*_positive-left RatField.meet-right (<=-less K>0) <∘r
+                                             (=_<= (pmap (RatField.finv (K RatField.+ K) RatField.*) (linarith : K = (K RatField.+ K) RatField.* ratio 1 2) *> inv RatField.*-assoc
+                                                    *> pmap (RatField.* ratio 1 2) (RatField.finv-left (RatField.>_/= (linarith : 0 RatField.< K RatField.+ K))) *> RatField.ide-left) <∘r (idp : ratio 1 2 RatField.< 1))
+                                      | small : Real.fromRat t * RealAbGroup.abs (f w) < (1 : Real)
+                                          => RealField.<_*_positive-right (rat_real_<.1 t>0) (real_<_U.2 Ku) <∘l =_<= RealField.*-rat <∘l rat_real_<=.1 (<=-less tK)
+                                      | dt : RealNormed.dist 0 (Real.fromRat t) < Real.fromRat delta
+                                          => =_<= (inv (Real.=-upper.2 RealNormed.norm-dist) *> pmap RealAbGroup.abs zro-left *> RealAbGroup.abs_negative *> RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less t>0)))
+                                             <∘r rat_real_<.1 (RatField.meet-left <∘r (linarith : delta RatField.* ratio 1 2 RatField.< delta))
+                            \in inP (Real.fromRat t, dt, tangent-step p>1 q>1 pq fs u0<=1 fu0 w t>0 small <=∘ =_<= (inv (Gt t)) <=∘ usingOnly (rat_real_<.1 eps>0) linarith)
+                        })
+      \in inP (g, \lam w => <=-antisymmetric (le w)
+                  (\have t' : negative (f w) <= negative (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g w)
+                              => transport2 (<=) f.toAddGroupHom.func-negative (lpDual (conj-swap pq) g).toAddGroupHom.func-negative (le (negative w))
+                   \in usingOnly t' linarith))
+  }
+  \where \private {
+    \lemma sub-add-self {A : AbGroup} {a b : A} : a - (a + b) = negative b
+      => equation.abGroup
+
+    \lemma le-cancel {c x y : Real} (c>0 : (0 : Real) < c) (h : c * x <= c * y) : x <= y
+      => \lam y<x => h (RealField.<_*_positive-right c>0 y<x)
+
+    -- | If $\sup_{\|u\| < 1} |\Lambda u| = 1$, then $|\Lambda x| \le \|x\|$.
+    \lemma sup-bound {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : BoundedFunctional (LpSpace L p p>=1)} (fs : IsFunctionalSup f (1 : Real))
+                     (x : LpSpace L p p>=1) : RealAbGroup.abs (f x) <= lnorm {LpSpace L p p>=1} x
+      => \lam lt => \case real_<-rat-char.1 lt \with {
+        | inP (b,xb,bf) => <-irreflexive (real_<_L.2 bf <∘l (fs.1 (real_<_U.1 (real_<_U.2 xb)) <=∘ =_<= RealField.ide-left))
+      }
+
+    -- | The key inequality: $\Lambda w \le I(\varphi_p(u_0 + t w)\, w)$ for small rational $t > 0$.
+    \lemma tangent-step {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                        (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1)))
+                        {f : BoundedFunctional (LpSpace L p (ge1 p>1))} (fs : IsFunctionalSup f (1 : Real))
+                        {u0 : LpSpace L p (ge1 p>1)} (u0<=1 : lnorm {LpSpace L p (ge1 p>1)} u0 <= (1 : Real)) (fu0 : f u0 = (1 : Real))
+                        (w : LpSpace L p (ge1 p>1)) {t : Rat} (t>0 : 0 RatField.< t) (small : Real.fromRat t * RealAbGroup.abs (f w) < (1 : Real))
+      : f w <= integral (lpMul (conj-swap pq) (lpSignedPow {L} {p} {q} p>1 (ge1 q>1) pq ((+) {LpSpace L p (ge1 p>1)} u0 (t *q w))) w)
+      => \let | Y => LpSpace L p (ge1 p>1)
+              | x => (+) {Y} u0 (t *q w)
+              | ph => lpSignedPow {L} {p} {q} p>1 (ge1 q>1) pq x
+              | I => integral (lpMul (conj-swap pq) ph w)
+              | A => f w
+              | T => Real.fromRat t
+         \in \have | t>0' : (0 : Real) < T => rat_real_<.1 t>0
+                   | p>0 : (0 : Real) < p => fpow.one>0 (ge1 p>1)
+                   | hom : AddGroupHom Y RealAbGroup (\lam v => integral (lpMul (conj-swap pq) ph v)) => \new AddGroupHom {
+                       | func-+ => pmap integral lpMul-+-right *> integral_+
+                     }
+                   | eux : (-) {Y} u0 x = negative (t *q w) => sub-add-self
+                   | eI : integral (lpMul (conj-swap pq) ph ((-) {Y} u0 x)) = negative (T * I)
+                       => pmap (\lam v => integral (lpMul (conj-swap pq) ph v)) eux *> AddGroupHom.func-negative {hom}
+                          *> pmap negative (pmap integral lpMul-*q-right *> IntegrationSpace.integral_*q {IntegrationSpaceCompletion L})
+                   | tg : lpNormPow p (ge1 p>1) x + p * negative (T * I) <= lpNormPow p (ge1 p>1) u0
+                       => transport (\lam z => lpNormPow p (ge1 p>1) x + p * z <= lpNormPow p (ge1 p>1) u0) eI (lpSignedPow-tangent {L} {p} {q} {p>1} {ge1 q>1} {pq} x u0)
+                   | Nu0 : lpNormPow p (ge1 p>1) u0 <= (1 : Real) => lp-uniformlyConvex.npow-le1 u0<=1
+                   | efx : f x = (1 : Real) + T * A => f.func-+ *> pmap2 (+) fu0 f.func-*q
+                   | tA : negative (T * RealAbGroup.abs A) <= T * A
+                       => =_<= (equation.cRing : negative (T * RealAbGroup.abs A) = T * negative (RealAbGroup.abs A)) <=∘ RealField.<=_*_positive-right (<=-less t>0')
+                            (transport (_ <=) RealAbGroup.negative-isInv (RealAbGroup.negative_<= RealAbGroup.abs>=neg))
+                   | pos : (0 : Real) < (1 : Real) + T * A => usingOnly (small, tA) linarith
+                   | b1 : (1 : Real) + T * A <= lnorm {Y} x => =_<= (inv efx) <=∘ RealAbGroup.abs>=id <=∘ sup-bound fs x
+                   | b2 : rpow ((1 : Real) + T * A) (<=-less pos) p p>0 <= lpNormPow p (ge1 p>1) x => rpow-mono {_} {_} {<=-less pos} {lnorm>=0 {Y}} b1
+                   | b3 => lp-uniformlyConvex.bernoulli {p} (ge1 p>1) pos {p>0}
+                   | e1 : (1 : Real) - p * ((1 : Real) - ((1 : Real) + T * A)) = (1 : Real) + p * (T * A) => equation.cRing
+                   | e2 : p * negative (T * I) = negative (p * (T * I)) => equation.cRing
+                   | m : p * (T * A) <= p * (T * I) => usingOnly (b2, b3, e1, tg, e2, Nu0) linarith
+                   | m' : (p * T) * A <= (p * T) * I => =_<= RealField.*-assoc <=∘ m <=∘ =_<= (inv RealField.*-assoc)
+         \in le-cancel (RealField.<_*_positive_positive p>0 t>0') m'
+  }
+
+-- | $T_q(c g) = c\, T_q g$ for real `c`.
+\lemma lpDual-*r {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+                 {qp : HolderConjugate q p (fpow.one>0 q>=1) (fpow.one>0 p>=1)} {c : Real} {g : LpSpace L q q>=1} {u : LpSpace L p p>=1}
+  : lpDual {L} {p} {q} {p>=1} {q>=1} qp (c RealBanachSpace.*r {LpSpace L q q>=1} g) u = c * lpDual {L} {p} {q} {p>=1} {q>=1} qp g u
+  => pmap integral (lpMul.cover-eq {L} {q} {p} {q>=1} {p>=1} {qp}) *> RealField.unique1
+      ((IntegrationSpaceCompletion L).integral-metric CoverMap.∘ lpMul.cover qp CoverMap.∘ ProductCoverSpace.tuple (RealBanachSpace.*r-cover {LpSpace L q q>=1} CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const g)) (CoverMap.const u))
+      (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (lpDual {L} {p} {q} {p>=1} {q>=1} qp g u)))
+      (\lam (c' : Rat) => pmap integral (inv lpMul.cover-eq) *> pmap (\lam z => integral (lpMul qp z u)) RealBanachSpace.*r_*q
+                          *> pmap integral lpMul-*q-left *> IntegrationSpace.integral_*q {IntegrationSpaceCompletion L})
+
+-- | A functional with positive supremum `s` is $T_q g$.
+\lemma lpDual-represent-pos {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                            (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1)))
+                            {f : BoundedFunctional (LpSpace L p (ge1 p>1))} {s : Real} (s>0 : (0 : Real) < s) (fs : IsFunctionalSup f s)
+  : ∃ (g : LpSpace L q (ge1 q>1)) (\Pi (w : LpSpace L p (ge1 p>1)) -> f w = lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g w)
+  => \have fs' : IsFunctionalSup (fscale (RealField.pinv s s>0) f) (1 : Real)
+         => transport (IsFunctionalSup (fscale (RealField.pinv s s>0) f)) (RealField.pinv-left s>0) (functionalSup-scale (RealField.pinv>0 s>0) fs)
+     \in \case lpDual-represent1 p>1 q>1 pq {fscale (RealField.pinv s s>0) f} fs' \with {
+       | inP (g,h) => inP (s RealBanachSpace.*r {LpSpace L q (ge1 q>1)} g, \lam w =>
+           inv (pmap (\lam t => t * f w) (RealField.pinv-right s>0) *> RealField.ide-left) *> RealField.*-assoc
+           *> pmap (s *) (h w) *> inv lpDual-*r)
+     }
+
+-- | Theorem `thm:dual`(2): every normable functional on $\mathrm L^p$ is $T_q g$ (unique by {lpDual-inj}).
+\lemma lpDual-surj {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+                   (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1)))
+                   {f : BoundedFunctional (LpSpace L p (ge1 p>1))} (fn : IsNormable f)
+  : ∃ (g : LpSpace L q (ge1 q>1)) (\Pi (u : LpSpace L p (ge1 p>1)) -> f u = lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g u)
+  => \case \elim fn \with {
+    | inP (s,fs) =>
+      \let | Yq => LpSpace L q (ge1 q>1)
+           | T => lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq)
+           | ginf => family-limit {Yq} (P p>1 q>1 pq f) (\lam a>0 => Pi p>1 q>1 pq fs a>0)
+                       (\lam a>0 b>0 Pg Pg' => Real.<=-upper.1 (=_<= (Real.=-upper.2 Yq.norm-dist) <=∘ Pc p>1 q>1 pq Pg Pg'))
+      \in inP (ginf, \lam u => DualSpace.real-eq-eps \lam {d} d>0 => \case UpperReal.U-inh_>0 {lnorm {LpSpace L p (ge1 p>1)} u} \with {
+            | inP (N,Nu,N>0) =>
+              \let a => d RatField.* ratio 1 4 RatField.* RatField.finv N
+              \in \have | a>0 : 0 RatField.< a => RatField.<_*_positive_positive (linarith : 0 RatField.< d RatField.* ratio 1 4) (RatField.finv>0 N>0)
+                        | aN : a RatField.* N RatField.+ a RatField.* N RatField.< d
+                            => \have e : a RatField.* N = d RatField.* ratio 1 4
+                                   => RatField.*-assoc *> pmap (d RatField.* ratio 1 4 RatField.*) (RatField.finv-left (RatField.>_/= N>0)) *> RatField.ide-right
+                               \in rewrite e (linarith : d RatField.* ratio 1 4 RatField.+ d RatField.* ratio 1 4 RatField.< d)
+                        | uN : (norm {LpSpace L p (ge1 p>1)} u).U N => real_<_U.1 (real_<_U.2 Nu)
+              \in \case Pi p>1 q>1 pq fs a>0 \with {
+                | inP (ga, Pga) =>
+                  \have | ch => family-limit.char {Yq} {P p>1 q>1 pq f} {\lam a>0 => Pi p>1 q>1 pq fs a>0}
+                                 {\lam a>0 b>0 Pg Pg' => Real.<=-upper.1 (=_<= (Real.=-upper.2 Yq.norm-dist) <=∘ Pc p>1 q>1 pq Pg Pg')} a>0 Pga
+                        | dn : lnorm {Yq} ((-) {Yq} ginf ga) <= Real.fromRat a => =_<= (Real.=-upper.2 (inv Yq.norm-dist)) <=∘ (Real.<=-upper {_} {Real.fromRat a}).2 ch
+                        | t1 : RealAbGroup.abs (T ((-) {Yq} ginf ga) u) <= Real.fromRat a * Real.fromRat N
+                            => (lpDual-sup p>1 q>1 pq ((-) {Yq} ginf ga)).1 uN <=∘ RealField.<=_*_positive-left dn (rat_real_<=.1 (<=-less N>0))
+                        | e1 : T ((-) {Yq} ginf ga) u = T ginf u - T ga u => AddGroupHom.func-minus {lpDual-hom {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) u}
+                        | t2 : RealAbGroup.abs (T ga u - f u) <= Real.fromRat (a RatField.* N) => \case \elim Pga \with {
+                            | inP (C,C>=0,C<a,h) => h uN <=∘ rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C<a) (<=-less N>0))
+                          }
+                        | ee : Real.fromRat a * Real.fromRat N + Real.fromRat (a RatField.* N) < Real.fromRat d
+                            => =_<= (pmap (\lam t => t + _) RealField.*-rat *> RealAbGroup.+-rat) <∘r rat_real_<.1 aN
+                        | i1 => RealAbGroup.abs>=id {T ((-) {Yq} ginf ga) u}
+                        | i2 => RealAbGroup.abs>=neg {T ((-) {Yq} ginf ga) u}
+                        | j1 => RealAbGroup.abs>=id {T ga u - f u}
+                        | j2 => RealAbGroup.abs>=neg {T ga u - f u}
+                  \in DualSpace.abs<-of (usingOnly (e1, t1, t2, ee, i1, i2, j1, j2) linarith) (usingOnly (e1, t1, t2, ee, i1, i2, j1, j2) linarith)
+              }
+          })
+  }
+  \where \private {
+    -- | A supremum is below every bound.
+    \lemma sup-le-bound {E : RealBanachSpace} {F : BoundedFunctional E} {s C : Real} (fs : IsFunctionalSup F s)
+                        (bd : \Pi {x : E} {b : Rat} -> (norm x).U b -> RealAbGroup.abs (F x) <= C * Real.fromRat b) : s <= C
+      => real_<=-eps \lam {d} d>0 => \case fs.2 d>0 \with {
+        | inP (x,x1,sx) => \have t : RealAbGroup.abs (F x) <= C => bd x1 <=∘ =_<= RealField.ide-right
+                           \in usingOnly (sx, t) linarith
+      }
+
+    -- | `g` represents `f` up to $a$: $\|T_q g - \Lambda\| < a$.
+    \func P {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+            (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1)))
+            (f : BoundedFunctional (LpSpace L p (ge1 p>1))) (a : Rat) (g : LpSpace L q (ge1 q>1)) : \Prop
+      => ∃ (C : Rat) (0 RatField.<= C) (C RatField.< a)
+           (\Pi {x : LpSpace L p (ge1 p>1)} {b : Rat} -> (norm {LpSpace L p (ge1 p>1)} x).U b -> RealAbGroup.abs (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g x - f x) <= Real.fromRat (C RatField.* b))
+
+    \lemma Pi {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+              (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1)))
+              {f : BoundedFunctional (LpSpace L p (ge1 p>1))} {s : Real} (fs : IsFunctionalSup f s) {a : Rat} (a>0 : 0 RatField.< a)
+      : ∃ (g : LpSpace L q (ge1 q>1)) (P p>1 q>1 pq f a g)
+      => \case RealAbGroup.<-comparison s {Real.fromRat (a RatField.* ratio 1 2)} {Real.fromRat a} (rat_real_<.1 (linarith : a RatField.* ratio 1 2 RatField.< a)) \with {
+        | byRight s<a => \case real_<-rat-char.1 s<a \with {
+          | inP (C,sC',Ca') =>
+            \have | sC : s < Real.fromRat C => real_<_U.2 sC'
+                  | s>=0 : (0 : Real) <= s => functionalSup-opNorm.functionalSup>=0 fs
+                  | z (x : LpSpace L p (ge1 p>1)) : lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) (LpSpace L q (ge1 q>1)).zro x = (0 : Real)
+                      => AddGroupHom.func-zro {lpDual-hom {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) x}
+            \in inP ((LpSpace L q (ge1 q>1)).zro, inP (C, rat_real_<=.2 (s>=0 <=∘ <=-less sC), rat_real_<.2 (real_<_L.2 Ca'), \lam {x} {b} xb =>
+                  \have b>0 : (0 : Real) < Real.fromRat b => rat_real_<.1 (norm>=0 {LpSpace L p (ge1 p>1)} xb)
+                  \in =_<= (pmap (\lam t => RealAbGroup.abs (t - f x)) (z x) *> pmap RealAbGroup.abs zro-left *> RealAbGroup.abs_negative)
+                       <=∘ fs.1 xb <=∘ RealField.<=_*_positive-left (<=-less sC) (<=-less b>0) <=∘ =_<= RealField.*-rat))
+        }
+        | byLeft a<s => \case lpDual-represent-pos p>1 q>1 pq (rat_real_<.1 (linarith : 0 RatField.< a RatField.* ratio 1 2) <∘ a<s) fs \with {
+          | inP (g,h) => inP (g, inP (0, <=-refl, a>0, \lam {x} {b} _ =>
+              =_<= (pmap (\lam t => RealAbGroup.abs (t - f x)) (inv (h x)) *> pmap RealAbGroup.abs RealAbGroup.negative-right *> RealAbGroup.abs_zro *> inv (pmap Real.fromRat RatField.zro_*-left))))
+        }
+      }
+
+    \lemma Pc {L : FullIntegrationSpace} {p q : Real} (p>1 : (1 : Real) < p) (q>1 : (1 : Real) < q)
+              (pq : HolderConjugate p q (fpow.one>0 (ge1 p>1)) (fpow.one>0 (ge1 q>1)))
+              {f : BoundedFunctional (LpSpace L p (ge1 p>1))} {a b : Rat} {g g' : LpSpace L q (ge1 q>1)} (Pg : P p>1 q>1 pq f a g) (Pg' : P p>1 q>1 pq f b g')
+      : lnorm {LpSpace L q (ge1 q>1)} ((-) {LpSpace L q (ge1 q>1)} g g') <= Real.fromRat (a RatField.+ b) \elim Pg, Pg'
+      | inP (C1,C1>=0,C1<a,h1), inP (C2,C2>=0,C2<b,h2) =>
+        sup-le-bound {LpSpace L p (ge1 p>1)} {lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) ((-) {LpSpace L q (ge1 q>1)} g g')} (lpDual-sup p>1 q>1 pq ((-) {LpSpace L q (ge1 q>1)} g g')) (\lam {x} {c} xc =>
+          \have | e : lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) ((-) {LpSpace L q (ge1 q>1)} g g') x
+                      = (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g x - f x) - (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g' x - f x)
+                    => AddGroupHom.func-minus {lpDual-hom {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) x} *> equation.abGroup
+                | t1 => h1 xc
+                | t2 => h2 xc
+                | tri : RealAbGroup.abs ((lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g x - f x) - (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g' x - f x))
+                          <= RealAbGroup.abs (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g x - f x) + RealAbGroup.abs (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g' x - f x)
+                    => RealAbGroup.abs_+ <=∘ =_<= (pmap (_ +) RealAbGroup.abs_negative)
+                | c>0 : 0 RatField.< c => norm>=0 {LpSpace L p (ge1 p>1)} xc
+                | ee : Real.fromRat (C1 RatField.* c) + Real.fromRat (C2 RatField.* c) <= Real.fromRat (a RatField.+ b) * Real.fromRat c
+                    => =_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 (=_<= (inv RatField.rdistr) <=∘ RatField.<=_*_positive-left (linarith : C1 RatField.+ C2 RatField.<= a RatField.+ b) (<=-less c>0)) <=∘ =_<= (inv RealField.*-rat)
+          \in =_<= (pmap RealAbGroup.abs e) <=∘ tri <=∘ <=_+ t1 t2 <=∘ ee)
+  }

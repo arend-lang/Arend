@@ -1,0 +1,241 @@
+{- | Operations on a full integration space `L` defined by the functional calculus {fcalc}, and evaluation lemmas.
+
+  * {fmul}: the product `fg = (x₁x₂)(f,g)`; {fpow}: `|f|^p = (|x|^p)(f)` for `p ≥ 1`; {rscale}: `c·f = (c x)(f)` for real `c`.
+  * {fsignedPow}, {fsignedPowCut}, {fsignedPowMul}, {fmulInvJoin}: $\varphi_r(f)$, $\varphi_{r,a}(f)$, $(\varphi_r(x_1)x_2)(f,g)$, $(x_1/(x_2 \vee c))(f,h)$.
+  * Evaluation lemmas `fcalc-*`: given `fcalc a F = x` and `fcalc b F = y`, they compute `fcalc` of the pointwise combination of `a` and `b`,
+    e.g. {fcalc-add}, {fcalc-mul}, {fcalc-truncAt}.
+    With them, an expression in elements of `L` is rewritten as a single `fcalc Φ F`,
+    and an inequality between two such expressions follows from the pointwise inequality of the maps by {fcalc-transfer}.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.FunctionalCalculus
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Approximate
+\import Arith.Real.Field
+\import Arith.Real.Power.SignedPow
+\import Logic
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.NormedAbGroup.Real.LinBounded
+\import Topology.NormedAbGroup.Real.LinBounded.Power
+\open LatticeAbGroup
+\open QModule (*q)
+
+-- | The product `fg = (x₁x₂)(f,g)`.
+\func fmul {L : FullIntegrationSpace} (f g : L) : L
+  => fcalc (LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)) (f :: g :: nil)
+
+-- | `|f|^p = (|x|^p)(f)` for `p ≥ 1`.
+\func fpow {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (f : L) : L
+  => fcalc (absPow (one>0 p>=1) p>=1) (f :: nil)
+  \where
+    \lemma one>0 {p : Real} (p>=1 : (1 : Real) <= p) : (0 : Real) < p
+      => linarith
+
+-- | `c·f = (c x)(f)` for a real scalar `c`.
+\func rscale {L : FullIntegrationSpace} (c : Real) (f : L) : L
+  => fcalc (LinBoundedMap.scale c (LinBoundedMap.coord 0)) (f :: nil)
+
+-- | $\varphi_r(f)$ for `r ≥ 2`, where $\varphi_r(t) = t|t|^{r-2}$.
+\func fsignedPow {L : FullIntegrationSpace} (r : Real) (r>=2 : (2 : Real) <= r) (f : L) : L
+  => fcalc (signedPowLB (two>1 r>=2) r>=2) (f :: nil)
+  \where
+    \lemma two>1 {r : Real} (r>=2 : (2 : Real) <= r) : (1 : Real) < r
+      => linarith
+
+-- | $\varphi_{r,a}(f)$ for `r > 1` and `a > 0`.
+\func fsignedPowCut {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) {a : Real} (a>0 : (0 : Real) < a) (f : L) : L
+  => fcalc (signedPowCutLB r>1 a>0) (f :: nil)
+
+-- | $(\varphi_r(x_1) x_2)(f,g)$ for `r > 1`.
+\func fsignedPowMul {L : FullIntegrationSpace} {r : Real} (r>1 : (1 : Real) < r) (f g : L) : L
+  => fcalc (signedPowMul r>1) (f :: g :: nil)
+
+-- | $(x_1/(x_2 \vee c))(f,h)$ for `c > 0`; for `c = 1/n` this is $f\psi_n(h)$ with $\psi_n(y) = n \wedge 1/y^+$.
+\func fmulInvJoin {L : FullIntegrationSpace} {c : Real} (c>0 : (0 : Real) < c) (f h : L) : L
+  => fcalc (LinBoundedMap.mulInvJoin c>0) (f :: h :: nil)
+
+-- | Evaluation at a point is additive.
+\func evalHom {n : Nat} (x : Array Real n) : AddGroupHom (LinBoundedRiesz n) RealAbGroup (__ x) \cowith
+  | func-+ => idp
+
+-- | $(q \varphi)(x) = q \varphi(x)$.
+\lemma linBounded-*q {n : Nat} {q : Rat} {phi : LinBoundedMap n} {x : Array Real n} : (q *q {LinBoundedRiesz n} phi) x = Real.fromRat q * phi x
+  => func-*q {LinBoundedRiesz n} {_} {evalHom x} *> QModule.fromRatModule_*q
+
+-- | Pointwise equal maps give equal elements.
+\lemma fcalc-ext {L : FullIntegrationSpace} {n : Nat} {phi psi : LinBoundedMap n} (p : \Pi (x : Array Real n) -> phi x = psi x) {F : Array L n}
+  : fcalc phi F = fcalc psi F
+  => pmap (fcalc __ F) (LinBoundedMap.ext p)
+
+-- | Maps equal on `[−M,M]ⁿ` give equal elements on arguments bounded by `M`.
+\lemma fcalc-ext-box {L : FullIntegrationSpace} {n : Nat} {phi psi : LinBoundedMap n} {M : Rat} (M>=0 : RatField.zro RatField.<= M)
+                     (p : \Pi (x : Array Real n) -> (\Pi (j : Fin n) -> RealAbGroup.abs (x j) <= M) -> phi x = psi x)
+                     {F : Array L n} (FM : \Pi (j : Fin n) -> L.IsBelow (abs (F j)) M)
+  : fcalc phi F = fcalc psi F
+  => <=-antisymmetric (fcalc-transfer M>=0 (\lam x xM => =_<= (p x xM)) FM) (fcalc-transfer M>=0 (\lam x xM => =_<= (inv (p x xM))) FM)
+
+-- | Substitution: `φ(g) = (φ ∘ ψ)(F)` if `gⱼ = ψⱼ(F)`.
+\lemma fcalc-subst {L : FullIntegrationSpace} {n m : Nat} {phi : LinBoundedMap n} {psi : Array (LinBoundedMap m) n} {F : Array L m} {g : Array L n}
+                   (e : \Pi (j : Fin n) -> fcalc (psi j) F = g j)
+  : fcalc (LinBoundedMap.comp phi psi) F = fcalc phi g
+  => fcalc-comp *> pmap (fcalc phi) (exts e)
+
+\lemma fcalc-var {L : FullIntegrationSpace} {n : Nat} {F : Array L n} (j : Fin n) : fcalc (LinBoundedMap.coord j) F = F j
+  => fcalc-coord
+
+\lemma fcalc-zro {L : FullIntegrationSpace} {n : Nat} {F : Array L n} : fcalc LinBoundedMap.zro F = L.zro
+  => RieszSpaceHom.func-zro {fcalcHom F}
+
+\lemma fcalc-add {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a b : LinBoundedMap n} {x y : L} (p : fcalc a F = x) (q : fcalc b F = y)
+  : fcalc (LinBoundedMap.add a b) F = x + y
+  => RieszSpaceHom.func-+ {fcalcHom F} *> pmap2 (+) p q
+
+\lemma fcalc-neg {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a : LinBoundedMap n} {x : L} (p : fcalc a F = x)
+  : fcalc (LinBoundedMap.neg a) F = negative x
+  => RieszSpaceHom.func-negative {fcalcHom F} *> pmap negative p
+
+\lemma fcalc-sub {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a b : LinBoundedMap n} {x y : L} (p : fcalc a F = x) (q : fcalc b F = y)
+  : fcalc (LinBoundedMap.add a (LinBoundedMap.neg b)) F = x - y
+  => fcalc-add p (fcalc-neg q)
+
+\lemma fcalc-join {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a b : LinBoundedMap n} {x y : L} (p : fcalc a F = x) (q : fcalc b F = y)
+  : fcalc (LinBoundedMap.join a b) F = x ∨ y
+  => RieszSpaceHom.func-join {fcalcHom F} *> pmap2 (∨) p q
+
+\lemma fcalc-meet {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a b : LinBoundedMap n} {x y : L} (p : fcalc a F = x) (q : fcalc b F = y)
+  : fcalc (LinBoundedMap.meet a b) F = x ∧ y
+  => fcalc-ext {L} {n} {LinBoundedMap.meet a b} {a ∧ {LinBoundedRiesz n} b} (\lam y => inv meet-apply) *> RieszSpaceHom.func-meet {fcalcHom F} *> pmap2 (∧) p q
+  \where {
+    \lemma meet-negative {E : LatticeAbGroup} {a b : E} : a ∧ b = negative (negative a ∨ negative b)
+      => inv (join_negative *> pmap2 (∧) AddGroup.negative-isInv AddGroup.negative-isInv)
+
+    \lemma meet-apply {n : Nat} {a b : LinBoundedMap n} {y : Array Real n} : (a ∧ {LinBoundedRiesz n} b) y = a y ∧ b y
+      => pmap (\lam (phi : LinBoundedMap n) => phi y) (meet-negative {LinBoundedRiesz n} {a} {b}) *> inv meet-negative
+  }
+
+\lemma fcalc-abs {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a : LinBoundedMap n} {x : L} (p : fcalc a F = x)
+  : fcalc (LinBoundedMap.join a (LinBoundedMap.neg a)) F = abs x
+  => fcalc-join p (fcalc-neg p)
+
+-- | For `x ≥ 0`, the map `a⁺` also evaluates to `x`.
+\lemma fcalc-pos {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a : LinBoundedMap n} {x : L} (p : fcalc a F = x) (x>=0 : L.zro <= x)
+  : fcalc (LinBoundedMap.join a LinBoundedMap.zro) F = x
+  => fcalc-join p fcalc-zro *> JoinSemilattice.join-comm *> JoinSemilattice.join_<= x>=0
+
+\lemma fcalc-*q {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {q : Rat} {a : LinBoundedMap n} {x : L} (p : fcalc a F = x)
+  : fcalc (LinBoundedMap.scale (Real.fromRat q) a) F = q *q x
+  => fcalc-ext (\lam y => inv (linBounded-*q {n} {q} {a})) *> func-*q {LinBoundedRiesz n} {L} {fcalcHom F} *> pmap (q *q) p
+
+\lemma fcalc-rscale {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {c : Real} {a : LinBoundedMap n} {x : L} (p : fcalc a F = x)
+  : fcalc (LinBoundedMap.scale c a) F = rscale c x
+  => fcalc-ext (\lam y => idp) *> fcalc-op1 (LinBoundedMap.scale c (LinBoundedMap.coord 0)) p
+
+-- | Evaluation of a unary operation.
+\lemma fcalc-op1 {L : FullIntegrationSpace} {n : Nat} {F : Array L n} (phi : LinBoundedMap 1) {a : LinBoundedMap n} {x : L} (p : fcalc a F = x)
+  : fcalc (LinBoundedMap.comp phi (a :: nil)) F = fcalc phi (x :: nil)
+  => fcalc-subst \lam (j : Fin 1) => \case \elim j \with { | 0 => p }
+
+-- | Evaluation of a binary operation.
+\lemma fcalc-op2 {L : FullIntegrationSpace} {n : Nat} {F : Array L n} (phi : LinBoundedMap 2) {a b : LinBoundedMap n} {x y : L} (p : fcalc a F = x) (q : fcalc b F = y)
+  : fcalc (LinBoundedMap.comp phi (a :: b :: nil)) F = fcalc phi (x :: y :: nil)
+  => fcalc-subst \lam (j : Fin 2) => \case \elim j \with { | 0 => p | 1 => q }
+
+\lemma fcalc-mul {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {a b : LinBoundedMap n} {x y : L} (p : fcalc a F = x) (q : fcalc b F = y)
+  : fcalc (LinBoundedMap.mul a b) F = fmul x y
+  => fcalc-ext (\lam y => idp) *> fcalc-op2 (LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)) p q
+
+\lemma fcalc-pow {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {p : Real} {p>=1 : (1 : Real) <= p} {a : LinBoundedMap n} {x : L} (e : fcalc a F = x)
+  : fcalc (LinBoundedMap.comp (absPow (fpow.one>0 p>=1) p>=1) (a :: nil)) F = fpow p p>=1 x
+  => fcalc-op1 _ e
+
+-- | `τ_q x = (x ∧ q)(x)` for rational `q > 0`.
+\lemma fcalc-truncAt {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {q : Rat} (q>0 : RatField.zro RatField.< q) {a : LinBoundedMap n} {x : L} (p : fcalc a F = x)
+  : fcalc (LinBoundedMap.comp (LinBoundedMap.meetConst (Real.fromRat q) (rat_real_<=.1 (<=-less q>0))) (a :: nil)) F = L.truncAt q x
+  => fcalc-ext {L} {n} {_} {LinBoundedMap.scale (Real.fromRat q) (LinBoundedMap.comp (LinBoundedMap.meetConst 1 RealField.zro<=ide) (LinBoundedMap.scale (Real.fromRat (RatField.finv q)) a :: nil))}
+       (\lam y => inv (scale-meet (rat_real_<.1 q>0) *> pmap2 (RealAbGroup.∧) (inv *-assoc *> pmap (`* _) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-right (RatField.>_/= q>0))) *> ide-left) ide-right))
+      *> fcalc-*q {L} {n} {F} {q} (fcalc-ext (\lam y => idp) *> fcalc-op1 (LinBoundedMap.meetConst 1 RealField.zro<=ide) (fcalc-*q {L} {n} {F} {RatField.finv q} p) *> fcalc-trunc)
+  \where
+    -- | $c (u \wedge v) = c u \wedge c v$ for $c > 0$.
+    \lemma scale-meet {c u v : Real} (c>0 : (0 : Real) < c) : c * (u RealAbGroup.∧ v) = (c * u) RealAbGroup.∧ (c * v)
+      => \have | c>=0 => <=-less c>0
+               | ci>0 => RealField.pinv>0 c>0
+               | e {w : Real} : c * (RealField.pinv c c>0 * w) = w => inv *-assoc *> pmap (`* w) (RealField.pinv-right c>0) *> ide-left
+               | f {w : Real} : RealField.pinv c c>0 * (c * w) = w => inv *-assoc *> pmap (`* w) (RealField.pinv-left c>0) *> ide-left
+         \in <=-antisymmetric (RealAbGroup.meet-univ (<=_*_positive-right c>=0 RealAbGroup.meet-left) (<=_*_positive-right c>=0 RealAbGroup.meet-right))
+               (=_<= (inv e) <=∘ <=_*_positive-right c>=0 (RealAbGroup.meet-univ (<=_*_positive-right (<=-less ci>0) RealAbGroup.meet-left <=∘ =_<= f)
+                                                                                (<=_*_positive-right (<=-less ci>0) RealAbGroup.meet-right <=∘ =_<= f)))
+
+-- | If `x = φ(F)` and `y = ψ(F)` with `φ = ψ` pointwise, then `x = y`.
+\lemma fcalc-eq-pt {L : FullIntegrationSpace} {n : Nat} (F : Array L n) {phi psi : LinBoundedMap n} {x y : L}
+                   (pt : \Pi (z : Array Real n) -> phi z = psi z) (p : fcalc phi F = x) (q : fcalc psi F = y) : x = y
+  => inv p *> fcalc-ext pt *> q
+
+-- | If `x = φ(F)` and `y = ψ(F)` with `φ ≤ ψ` pointwise, then `x ≤ y`.
+\lemma fcalc-le-pt {L : FullIntegrationSpace} {n : Nat} (F : Array L n) {phi psi : LinBoundedMap n} {x y : L}
+                   (pt : \Pi (z : Array Real n) -> phi z <= psi z) (p : fcalc phi F = x) (q : fcalc psi F = y) : x <= y
+  => =_<= (inv p) <=∘ fcalc-transfer-unbounded pt <=∘ =_<= q
+
+-- | {fcalc-eq-pt} on the box `[−M,M]ⁿ`.
+\lemma fcalc-eq-box {L : FullIntegrationSpace} {n : Nat} (F : Array L n) {M : Rat} (M>=0 : RatField.zro RatField.<= M) (FM : \Pi (j : Fin n) -> L.IsBelow (abs (F j)) M)
+                    {phi psi : LinBoundedMap n} {x y : L}
+                    (pt : \Pi (z : Array Real n) -> (\Pi (j : Fin n) -> RealAbGroup.abs (z j) <= M) -> phi z = psi z) (p : fcalc phi F = x) (q : fcalc psi F = y) : x = y
+  => inv p *> fcalc-ext-box M>=0 pt FM *> q
+
+-- | {fcalc-le-pt} on the box `[−M,M]ⁿ`.
+\lemma fcalc-le-box {L : FullIntegrationSpace} {n : Nat} (F : Array L n) {M : Rat} (M>=0 : RatField.zro RatField.<= M) (FM : \Pi (j : Fin n) -> L.IsBelow (abs (F j)) M)
+                    {phi psi : LinBoundedMap n} {x y : L}
+                    (pt : \Pi (z : Array Real n) -> (\Pi (j : Fin n) -> RealAbGroup.abs (z j) <= M) -> phi z <= psi z) (p : fcalc phi F = x) (q : fcalc psi F = y) : x <= y
+  => =_<= (inv p) <=∘ fcalc-transfer M>=0 pt FM <=∘ =_<= q
+
+-- | Clipping at `M` does not change an element bounded by `M`.
+\lemma fcalc-clip {L : FullIntegrationSpace} {n : Nat} {F : Array L n} {M : Rat} (M>=0 : RatField.zro RatField.<= M) {a : LinBoundedMap n} {x : L}
+                  (p : fcalc a F = x) (xM : L.IsBelow (abs x) M)
+  : fcalc (LinBoundedMap.comp (LinBoundedMap.clip (Real.fromRat M) (rat_real_<=.1 M>=0)) (a :: nil)) F = x
+  => fcalc-op1 _ p *> fcalc-eq-box (x :: nil) M>=0 (\lam (j : Fin 1) => \case \elim j \with { | 0 => xM }) {_} {LinBoundedMap.coord 0}
+                        (\lam z zM => clampSym-in (zM 0)) idp (fcalc-var 0)
+
+-- | $I(c f) = c I(f)$ for a real scalar `c`.
+\lemma integral-rscale {L : FullIntegrationSpace} {c : Real} {f : L} : L.integral (rscale c f) = c * L.integral f
+  => \case (L.integral (abs f)).U-inh \with {
+    | inP (M,IM) => real-scaled-eq {_} {_} {2 RatField.* (M RatField.∨ 1)} (linarith (RatField.join-right {M} {1} : (1 : Rat) RatField.<= M RatField.∨ 1)) \lam {e} e>0 =>
+      \case real-rat-approx c (rat_real_<.1 e>0) \with {
+        | inP (q,qc) =>
+          \have | qc' : RealAbGroup.abs (c - Real.fromRat q) <= Real.fromRat e => =_<= RealAbGroup.abs_- <=∘ <=-less qc
+                | d1 : abs (rscale c f - q *q f) <= e *q abs f
+                    => fcalc-le-pt (f :: nil) (\lam z => pt qc')
+                        (fcalc-abs (fcalc-sub (fcalc-rscale (fcalc-var 0)) (fcalc-*q (fcalc-var 0)))) (fcalc-*q (fcalc-abs (fcalc-var 0)))
+                | i1 : RealAbGroup.abs (L.integral (rscale c f) - Real.fromRat q * L.integral f) <= Real.fromRat e * L.integral (abs f)
+                    => =_<= (pmap RealAbGroup.abs (pmap (_ -) (inv L.integral_*q) *> inv L.integral-hom.func-minus))
+                       <=∘ L.integral_abs <=∘ L.integral-mono d1 <=∘ =_<= L.integral_*q
+                | i2 : RealAbGroup.abs (Real.fromRat q * L.integral f - c * L.integral f) <= Real.fromRat e * L.integral (abs f)
+                    => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*)
+                       <=∘ <=_*_positive-left (=_<= RealAbGroup.abs_- <=∘ qc') RealAbGroup.abs>=0 <=∘ <=_*_positive-right (rat_real_<=.1 (<=-less e>0)) L.integral_abs
+                | I>=0 : (0 : Real) <= L.integral (abs f) => L.integral>=0 abs>=0
+                | IM' : L.integral (abs f) <= Real.fromRat (M RatField.∨ 1) => <=-less (real_<_U.2 IM) <=∘ rat_real_<=.1 RatField.join-left
+                | eI : Real.fromRat e * L.integral (abs f) <= Real.fromRat e * Real.fromRat (M RatField.∨ 1) => <=_*_positive-right (rat_real_<=.1 (<=-less e>0)) IM'
+                | eK : Real.fromRat (e RatField.* (2 RatField.* (M RatField.∨ 1))) = Real.fromRat e * Real.fromRat (M RatField.∨ 1) + Real.fromRat e * Real.fromRat (M RatField.∨ 1)
+                    => pmap Real.fromRat (equation.cRing : e RatField.* (2 RatField.* (M RatField.∨ 1)) = e RatField.* (M RatField.∨ 1) RatField.+ e RatField.* (M RatField.∨ 1)) *> inv RealAbGroup.+-rat *> pmap2 (+) (inv RealField.*-rat) (inv RealField.*-rat)
+                | tri : RealAbGroup.abs (L.integral (rscale c f) - c * L.integral f)
+                          <= RealAbGroup.abs (L.integral (rscale c f) - Real.fromRat q * L.integral f) + RealAbGroup.abs (Real.fromRat q * L.integral f - c * L.integral f)
+                    => =_<= (pmap RealAbGroup.abs equation.abGroup) <=∘ RealAbGroup.abs_+
+          \in linarith
+      }
+  }
+  \where
+    \private \lemma pt {c q e x : Real} (qc : RealAbGroup.abs (c - q) <= e) : RealAbGroup.abs (c * x - q * x) <= e * RealAbGroup.abs x
+      => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*) <=∘ <=_*_positive-left qc RealAbGroup.abs>=0

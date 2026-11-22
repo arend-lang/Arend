@@ -174,7 +174,7 @@
          *> path (\lam i => ~>_-> (dmap (__ b) (unit f G)) (coe+-level {ga __ b} i))
 
     -- | The endomorphism of {Small} given by {psi} applied to the counit; its components are identities ({kappa-component}).
-    \func kappa.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : Small f T ~> Small f T
+    \sfunc kappa.{u} {A B : \Cat u} (f : A ->⁺ B) (T : A ->⁺ \Type u) : Small f T ~> Small f T
       => psi f (counit f T)
 
     -- | {psi} after composition with the counit is postcomposition with {kappa}.
@@ -185,6 +185,7 @@
              ((path (\lam j => ~>_-> (dmap_comp (Large f __ s.1) {_} {_} {_} {dmap (\lam G a =>⁺ G (f a)) ga} j) (~>_-> (dmap (__ s.1) (unit f R)) s.2))
                *> ~>_->_comp _ _
                *> path \lam j => ~>_-> (dmap (Large f __ s.1) (counit f T)) (unit-natural f ga j)) i))
+           *> inv (path \lam i => ~>_-> (dmap (__ s.1) ((\peval kappa f T) i)) (~>_-> (dmap (__ s.1) ga) s.2))
            *> inv (~>_->_comp (dmap (__ s.1) ga) (dmap (__ s.1) (kappa f T)))
            *> path (\lam i => ~>_-> (inv (dmap_comp (\lam (H : B ->⁺ \Type u) => H s.1)) i) s.2)
 

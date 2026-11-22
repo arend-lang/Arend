@@ -104,7 +104,7 @@
         (\lam b => inP (\lam x => ∃ (c : X.L) (cb : c <= b) (X.IsPrincipalOpenAt (cb <=∘ top-univ) x.2), <=-antisymmetric
           (ta.3 top-univ <=∘ Join-univ \lam {c} (cb, inP (x,cp)) => Join-cond (later (top-univ, cp.1)) <=∘ X.L.SJoin-conde ((), x) (inP $ later (c, cb, cp)))
           (X.L.SJoin-univ $ later \lam {x} (inP (c,cb,cp)) => Join-univ \lam xi => cp.2 xi.1 xi.2 <=∘ cb)))
-        \lam x => Localization.localizations-equiv1 LocRing.isLocalization (X.principal-localization ta specUnit-principal) {specUnit.siteHom.f# x} (\lam y => lift_inL) $ inP (1, inP (1, simplify)),
+        \lam x => Localization.localizations-equiv1 LocRing.isLocalization (X.principal-localization ta specUnit-principal) {specUnit.siteHom.f# x} (\lam y => lift_inL) $ inP (1, inP (1, ide-left *> inv ide-right)),
       \lam XA => LocallyRingedLocaleCat.iso-affine specUnit XA Spec.isAffineScheme)
   \where {
     \open LocaleSite

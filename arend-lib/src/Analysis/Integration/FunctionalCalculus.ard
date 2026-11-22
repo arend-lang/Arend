@@ -1,0 +1,202 @@
+{- | The functional calculus of a full integration space:
+ -   `φ(f₁,…,fₙ) ∈ L` for `fⱼ ∈ L` and `φ ∈ C₀^lin(ℝⁿ)`.
+ -   It is the element whose Yosida transform is `φ(f̂₁,…,f̂ₙ)`; such an element exists because `L` is full ({yhat-surj}).
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.QModule
+\import Analysis.Integration.FullIntegrationSpace
+\import Analysis.Integration.IntegrationSpace
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Topology.CoverSpace.Complete (CoverMap)
+\import Topology.Locale.Real.FunctionalCalculus
+\import Topology.Locale.Real.Functions
+\import Topology.Locale.StoneYosida.Bounded
+\import Topology.MetricSpace
+\import Topology.MetricSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real.LinBounded
+\open LatticeAbGroup
+\open QModule (*q)
+\open PosetQModule
+
+-- | A function on the spectrum dominated by some `ŝ` is the Yosida transform of an element of a full space.
+\lemma yhat-surj {L : FullIntegrationSpace} {h : RealFun (ySpec L)} {s : L} (hs : abs {RieszSpaceRC L} h <= {RieszSpaceRC L} rieszSpaceRC s)
+  : ∃ (g : L) (rieszSpaceRC g = h)
+  => \case L.trunc-bounded s \with {
+    | inP (M,sM) =>
+      \let | r => M RatField.∨ 1
+           | k => RatField.finv r
+      \in \have | r>0 : RatField.zro RatField.< r => RatField.zro<ide <∘l RatField.join-right
+                | k>=0 : RatField.zro RatField.<= k => RatField.<=-less (RatField.finv>0 r>0)
+                | t>=0 : L.zro <= k *q abs s => *q_>=0 k>=0 abs>=0
+                | tU : L.IsUnderUnit (k *q abs s) => L.IsBelow-one $ transport (L.IsBelow _) (RatField.finv-left $ RatField.>_/= r>0) (L.IsBelow_*q k>=0 (L.IsBelow-level RatField.join-left sM))
+                | ht : abs {RieszSpaceRC L} (k *q {RieszSpaceRC L} h) <= {RieszSpaceRC L} rieszSpaceRC (k *q abs s)
+                    => Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (RieszSpace.abs_*q>=0 {RieszSpaceRC L} k>=0))
+                         (Preorder.<=-transitive {RieszSpaceRC L} (<=_*q-right {RieszSpaceRC L} k>=0 (Preorder.<=-transitive {RieszSpaceRC L} hs (rieszSpaceRC.func-<= abs>=id)))
+                           (=_<= {RieszSpaceRC L} (inv (func-*q {L} {RieszSpaceRC L} {rieszSpaceRC}))))
+      \in TruncP.map (unit-surj t>=0 tU ht) \lam q => (r *q q.1, func-*q {L} {RieszSpaceRC L} {rieszSpaceRC} *> pmap (r *q {RieszSpaceRC L}) q.2 *> QModule.*q-finv-cancel {RieszSpaceRC L} (RatField.>_/= r>0))
+  }
+  \where {
+    -- | `x` is `a`-close to `h`: `|h − x̂| ≤ τ_η(2s)^` for some `η ≤ a` with `I τ_η(2s) < a/2`.
+    \func Approx {L : FullIntegrationSpace} (h : RealFun (ySpec L)) (s : L) (a : Rat) (x : UnitBallComplete L) : \Prop
+      => ∃ (eta : Rat) (RatField.zro RatField.< eta) (eta RatField.<= a) (L.integral (L.truncAt eta (s + s)) RealAbGroup.< Real.fromRat (a RatField.* ratio 1 2))
+           (abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC x.1) <= {RieszSpaceRC L} rieszSpaceRC (L.truncAt eta (s + s)))
+
+    \lemma approx-inh {L : FullIntegrationSpace} {h : RealFun (ySpec L)} {s : L} (s>=0 : L.zro <= s) (sU : L.IsUnderUnit s)
+                      (hs : abs {RieszSpaceRC L} h <= {RieszSpaceRC L} rieszSpaceRC s) {a : Rat} (a>0 : RatField.zro RatField.< a)
+      : ∃ (x : UnitBallComplete L) (Approx h s a x)
+      => \have ss>=0 : L.zro <= s + s => =_<= (inv L.zro-left) <=∘ <=_+ s>=0 s>=0
+         \in \case L.integral-trunc-small ss>=0 {a RatField.* ratio 1 2} linarith \with {
+           | inP (eta0,eta0>0,I0) =>
+             \have eta>0 : RatField.zro RatField.< eta0 RatField.∧ a => RatField.<_meet-univ eta0>0 a>0
+             \in \case yhat-approx s>=0 hs eta>0 \with {
+               | inP (g,gs,hg) => inP ((g, L.InUnderUnit_<= gs sU), inP (eta0 RatField.∧ a, eta>0, RatField.meet-right,
+                   L.integral-mono (L.truncAt-level-mono eta>0 RatField.meet-left) <∘r I0, hg))
+             }
+         }
+
+    -- | Two approximations are close in `L`.
+    \lemma approx-close {L : FullIntegrationSpace} {h : RealFun (ySpec L)} {s : L} {x y : L} {e e' : Rat}
+                        (hx : abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC x) <= {RieszSpaceRC L} rieszSpaceRC (L.truncAt e (s + s)))
+                        (hy : abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC y) <= {RieszSpaceRC L} rieszSpaceRC (L.truncAt e' (s + s)))
+      : abs (x - y) <= L.truncAt e (s + s) + L.truncAt e' (s + s)
+      => yhat-reflects $ Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (rieszSpaceRC.func-abs *> pmap (abs {RieszSpaceRC L}) rieszSpaceRC.func-minus))
+           (Preorder.<=-transitive {RieszSpaceRC L} (tri {RieszSpaceRC L}) (Preorder.<=-transitive {RieszSpaceRC L} (<=_+ {RieszSpaceRC L} hx hy) (=_<= {RieszSpaceRC L} (inv rieszSpaceRC.func-+))))
+
+    \lemma tri {E : LatticeAbGroup} {h u v : E} : abs (u - v) <= abs (h - u) + abs (h - v)
+      => =_<= (pmap abs (equation.abGroup : u - v = negative (h - u) + (h - v))) <=∘ abs_+ <=∘ <=_+ (=_<= abs_negative) <=-refl
+
+    \lemma tri' {E : LatticeAbGroup} {x y z : E} : abs (x - z) <= abs (x - y) + abs (z - y)
+      => =_<= (pmap abs (equation.abGroup : x - z = (x - y) + negative (z - y))) <=∘ abs_+ <=∘ <=_+ <=-refl (=_<= abs_negative)
+
+    -- | A positive element with arbitrarily small integral vanishes.
+    \lemma small-zero {L : FullIntegrationSpace} {u : L} (u>=0 : L.zro <= u) (p : \Pi {d : Rat} -> RatField.zro RatField.< d -> L.integral u RealAbGroup.< Real.fromRat d) : u = L.zro
+      => \have | i<=0 : L.integral u RealAbGroup.<= RealAbGroup.zro => real_<=-eps \lam d>0 => transportInv (_ RealAbGroup.<) RealAbGroup.zro-left (p d>0)
+               | i=0 : L.integral (abs u) = RealAbGroup.zro => pmap L.integral (abs-ofPos u>=0) *> RealAbGroup.<=-antisymmetric i<=0 (L.integral>=0 u>=0)
+         \in L.norm-ext (Real.=-upper.1 i=0)
+
+    \lemma sub-le {E : LatticeAbGroup} {a b c : E} (p : a <= b + c) : a - b <= c
+      => <=_+ p <=-refl <=∘ =_<= equation.abGroup
+
+    -- | The core case: `s ≥ 0` is under the unit.
+    \lemma unit-surj {L : FullIntegrationSpace} {h : RealFun (ySpec L)} {s : L} (s>=0 : L.zro <= s) (sU : L.IsUnderUnit s)
+                     (hs : abs {RieszSpaceRC L} h <= {RieszSpaceRC L} rieszSpaceRC s)
+      : ∃ (g : L) (rieszSpaceRC g = h)
+      => \let z => family-limit {UnitBallComplete L} (Approx h s) (approx-inh s>=0 sU hs) (\lam {a} {b} {x} {y} a>0 b>0 Pa Pb {c} lt => real_<_U.1 (pc a>0 b>0 Pa Pb <∘r rat_real_<.1 lt))
+         \in inP (z.1, inv $ AddGroup.fromZero {RieszSpaceRC L} $ abs_zro-ext {RieszSpaceRC L} $ <=-antisymmetric {RieszSpaceRC L} (realFun-le-eps \lam {c} c>0 =>
+               \case approx-inh s>=0 sU hs {c RatField.* ratio 1 4} linarith \with {
+                 | inP (x, Px) => \case Px \with {
+                   | inP (eta,eta>0,eta<=a,_,hx) => Preorder.<=-transitive {RieszSpaceRC L} (tri' {RieszSpaceRC L} {h} {rieszSpaceRC x.1} {rieszSpaceRC z.1})
+                       (Preorder.<=-transitive {RieszSpaceRC L} (<=_+ {RieszSpaceRC L} hx (Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (inv (rieszSpaceRC.func-abs *> pmap (abs {RieszSpaceRC L}) rieszSpaceRC.func-minus)))
+                           (rieszSpaceRC.func-<= (limit-close family-limit.char hx))))
+                         (Preorder.<=-transitive {RieszSpaceRC L} (<=_+ {RieszSpaceRC L} (yhat-below (L.truncAt-below eta>0)) (yhat-below (L.truncAt-below eta>0)))
+                           (Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} constFun-add) (constFun-mono (later linarith)))))
+                 }
+               }) (abs>=0 {RieszSpaceRC L}))
+      \where {
+        \lemma ss>=0 : L.zro <= s + s
+          => =_<= (inv L.zro-left) <=∘ <=_+ s>=0 s>=0
+
+        \lemma pc {a b : Rat} {x y : UnitBallComplete L} (a>0 : RatField.zro RatField.< a) (b>0 : RatField.zro RatField.< b) (Pa : Approx h s a x) (Pb : Approx h s b y)
+          : dist {UnitBallComplete L} x y <= Real.fromRat (a RatField.+ b) \elim Pa, Pb
+          | inP (e,_,_,Ie,hx), inP (e',_,_,Ie',hy) =>
+            \have | i0 : dist {UnitBallComplete L} x y = L.integral (abs (x.1 - y.1)) => lnorm-ldist {L} {x.1} {y.1}
+                  | i1 : L.integral (abs (x.1 - y.1)) RealAbGroup.<= L.integral (L.truncAt e (s + s)) RealAbGroup.+ L.integral (L.truncAt e' (s + s))
+                      => L.integral-mono (approx-close hx hy) <=∘ =_<= L.integral_+
+                  | i2 : Real.fromRat (a RatField.* ratio 1 2) RealAbGroup.+ Real.fromRat (b RatField.* ratio 1 2) RealAbGroup.<= Real.fromRat (a RatField.+ b)
+                      => =_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 linarith
+            \in rewrite i0 linarith
+
+        -- | Every approximation is pointwise close to the limit.
+        \lemma limit-close {z x : UnitBallComplete L} (zl : IsFamilyLimit (Approx h s) z) {eta : Rat}
+                            (hx : abs {RieszSpaceRC L} (h - {RieszSpaceRC L} rieszSpaceRC x.1) <= {RieszSpaceRC L} rieszSpaceRC (L.truncAt eta (s + s)))
+          : abs (z.1 - x.1) <= L.truncAt eta (s + s)
+          => PosetAddGroup.from<=0 $ join-left <=∘ =_<= (small-zero join-right \lam {d} d>0 => \case approx-inh s>=0 sU hs {d RatField.* ratio 1 4} linarith \with {
+               | inP (y, Py) => \case Py \with {
+                 | inP (e',e'>0,_,Ie',hy) =>
+                   \have | le : part+ (abs (z.1 - x.1) - L.truncAt eta (s + s)) <= L.truncAt e' (s + s) + abs (z.1 - y.1)
+                             => join-univ (sub-le (tri' <=∘ <=_+ <=-refl (approx-close hx hy) <=∘ =_<= equation.abGroup))
+                                          (=_<= (inv L.zro-left) <=∘ <=_+ (L.truncAt-pos e'>0 ss>=0) abs>=0)
+                         | i1 => L.integral-mono le <=∘ =_<= L.integral_+
+                         | dz : L.integral (abs (z.1 - y.1)) RealAbGroup.< Real.fromRat (d RatField.* ratio 1 2)
+                             => transport (\lam t => t RealAbGroup.< Real.fromRat (d RatField.* ratio 1 2)) (lnorm-ldist {L} {z.1} {y.1}) (real_<_U.2 (zl (later linarith) Py {d RatField.* ratio 1 2} (later linarith)))
+                         | i2 : Real.fromRat (d RatField.* ratio 1 4 RatField.* ratio 1 2) RealAbGroup.+ Real.fromRat (d RatField.* ratio 1 2) RealAbGroup.<= Real.fromRat d
+                             => =_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 linarith
+                   \in linarith
+               }
+             })
+      }
+  }
+
+-- | The element of a full space whose Yosida transform is a given dominated function.
+\lemma yhat-preimage {L : FullIntegrationSpace} {h : RealFun (ySpec L)} (p : ∃ (s : L) (abs {RieszSpaceRC L} h <= {RieszSpaceRC L} rieszSpaceRC s))
+  : \Sigma (g : L) (rieszSpaceRC g = h)
+  => TruncP.remove (\lam t t' => ext (yhat-inj (t.2 *> inv t'.2))) (\case p \return TruncP (\Sigma (g : L) (rieszSpaceRC g = h)) \with { | inP (s,hs) => yhat-surj hs })
+
+-- | `φ(f₁,…,fₙ) ∈ L` for `φ ∈ C₀^lin(ℝⁿ)` (Theorem `thm:calc`).
+\sfunc fcalc {L : FullIntegrationSpace} {n : Nat} (phi : LinBoundedMap n) (f : Array L n) : L
+  => (yhat-preimage (fapply-dominated phi f)).1
+
+-- | `φ(f)^ = φ(f̂)`.
+\lemma fcalc-char {L : FullIntegrationSpace} {n : Nat} {phi : LinBoundedMap n} {f : Array L n} : rieszSpaceRC (fcalc phi f) = fapply phi (\lam j => rieszSpaceRC (f j))
+  => pmap rieszSpaceRC (\peval fcalc phi f) *> (yhat-preimage (fapply-dominated phi f)).2
+
+-- | (a) For fixed `f`, `φ ↦ φ(f)` is a Riesz homomorphism.
+\func fcalcHom {L : FullIntegrationSpace} {n : Nat} (f : Array L n) : RieszSpaceHom (LinBoundedRiesz n) L \cowith
+  | func phi => fcalc phi f
+  | func-+ => yhat-inj $ fcalc-char *> RieszSpaceHom.func-+ {fapplyHom _} *> inv (rieszSpaceRC.func-+ *> pmap2 (+ {RieszSpaceRC L}) fcalc-char fcalc-char)
+  | func-<= p => yhat-reflects $ Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} fcalc-char)
+                   (Preorder.<=-transitive {RieszSpaceRC L} (RieszSpaceHom.func-<= {fapplyHom _} p) (=_<= {RieszSpaceRC L} (inv fcalc-char)))
+  | func-join => yhat-inj $ fcalc-char *> RieszSpaceHom.func-join {fapplyHom _} *> inv (rieszSpaceRC.func-join *> pmap2 (JoinSemilattice.join {RieszSpaceRC L}) fcalc-char fcalc-char)
+
+-- | (b) `xⱼ(f) = fⱼ`.
+\lemma fcalc-coord {L : FullIntegrationSpace} {n : Nat} {f : Array L n} {j : Fin n} : fcalc (LinBoundedMap.coord j) f = f j
+  => yhat-inj $ fcalc-char *> fapply-coord (\lam x => idp)
+
+-- | (b) `(x ∧ 1)(f) = τ f`.
+\lemma fcalc-trunc {L : FullIntegrationSpace} {f : L} : fcalc (LinBoundedMap.meetConst 1 RealField.zro<=ide) (f :: nil) = L.trunc f
+  => yhat-inj $ fcalc-char
+      *> fapply-meet {ySpec L} {1} {LinBoundedMap.meetConst 1 RealField.zro<=ide} {LinBoundedMap.coord 0} {CoverMap.const (1 : Real)} (\lam x => idp) {rieszSpaceRC f :: nil}
+      *> pmap2 (MeetSemilattice.meet {RieszSpaceRC L}) (fapply-coord {ySpec L} {1} {LinBoundedMap.coord 0} {0} (\lam x => idp) {rieszSpaceRC f :: nil})
+                                                      (fapply-const {ySpec L} {1} {CoverMap.const (1 : Real)} {1} (\lam x => idp) {rieszSpaceRC f :: nil})
+      *> inv yhat-trunc
+
+-- | (c) `(φ ∘ (ψ₁,…,ψₙ))(f) = φ(ψ₁(f),…,ψₙ(f))`.
+\lemma fcalc-comp {L : FullIntegrationSpace} {n m : Nat} {phi : LinBoundedMap n} {psi : Array (LinBoundedMap m) n} {f : Array L m}
+  : fcalc (LinBoundedMap.comp phi psi) f = fcalc phi (\lam j => fcalc (psi j) f)
+  => yhat-inj $ fcalc-char *> fapply-compose {ySpec L} {n} {m} {LinBoundedMap.comp phi psi} {phi} {\lam j => psi j} (\lam x => idp)
+      *> pmap (fapply phi) (exts \lam j => inv fcalc-char) *> inv fcalc-char
+
+-- | If `φ ≤ ψ` on `[−M,M]ⁿ` and each `fⱼ` is bounded by `M`, then `φ(f) ≤ ψ(f)`.
+\lemma fcalc-transfer {L : FullIntegrationSpace} {n : Nat} {phi psi : LinBoundedMap n} {M : Rat} (M>=0 : RatField.zro RatField.<= M)
+                      (le : \Pi (x : Array Real n) -> (\Pi (j : Fin n) -> RealAbGroup.abs (x j) <= M) -> phi x <= psi x)
+                      {f : Array L n} (fM : \Pi (j : Fin n) -> L.IsBelow (abs (f j)) M)
+  : fcalc phi f <= fcalc psi f
+  => yhat-reflects $ Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} fcalc-char)
+      (Preorder.<=-transitive {RieszSpaceRC L} (fapply-transfer M>=0 le \lam j => Preorder.<=-transitive {RieszSpaceRC L} (=_<= {RieszSpaceRC L} (inv rieszSpaceRC.func-abs)) (yhat-below (fM j)))
+        (=_<= {RieszSpaceRC L} (inv fcalc-char)))
+
+\lemma fcalc-transfer-unbounded {L : FullIntegrationSpace} {n : Nat} {phi psi : LinBoundedMap n} (le : \Pi (x : Array Real n) -> phi x <= psi x) {f : Array L n}
+  : fcalc phi f <= fcalc psi f
+  => \case FinSet.finiteAC (\lam j => L.trunc-bounded (f j)) \with {
+    | inP h => fcalc-transfer {L} {n} {phi} {psi} {Big (∨) RatField.zro (\lam j => (h j).1)} RatField.Big_<=_join0 (\lam j _ => le j)
+                \lam j => L.IsBelow-level (RatField.Big_<=_join1 j) (h j).2
+  }

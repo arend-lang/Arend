@@ -1,0 +1,174 @@
+{- | The chain rule, the product rule and the inverse function rule for functions on closed intervals.
+ -
+ -   These are the general rules of {Analysis.Derivative.CoverDerivativeRules} specialized to `[a,b] ⊆ ℝ`.
+ -   For the inverse function rule, the derivative of {f} is bounded below by `e > 0`.
+ -   Then the mean value theorem bounds the difference quotient of {f} below by a positive constant,
+ -   so its inverse is a cover map and the inverse function {g} is Lipschitz.
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Calculus.MeanValue
+\import Analysis.Derivative.CoverDerivative
+\import Analysis.Derivative.CoverDerivativeRules
+\import Analysis.Derivative.IntervalDerivative
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Set
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Interval
+\import Topology.NormedAbGroup.Real.Inverse
+\import Topology.NormedRing
+\import Topology.TopRing.Real
+
+-- | A function on `[a,b]` with a derivative is a cover map.
+\lemma interval-hasDeriv-cover {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+  : CoverMap (IntervalSpace a b) RealNormed f
+  => hasDeriv-cover d (a, (<=-refl, <=-less a<b))
+
+-- | A map `[a,b] -> [c,d]` is a cover map if it has a derivative as a function to `ℝ`.
+\lemma intervalMap-cover {a b c d : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)}
+                         (df : HasDeriv (intervalInc a b) (\lam x => (f x).1)) : CoverMap (IntervalSpace a b) (IntervalSpace c d) f
+  => CoverTransfer-univ {IntervalSpace a b} {RealTopLModule} {Set.Total (ClosedInterval c d)} f __.1 (hasDeriv-cover df (a, (<=-refl, <=-less a<b)))
+
+-- | The chain rule on closed intervals.
+\lemma interval-hasDeriv-comp {a b c d : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)} {g : Set.Total (ClosedInterval c d) -> Real}
+                              (df : HasDeriv (intervalInc a b) (\lam x => (f x).1)) (dg : HasDeriv (intervalInc c d) g)
+  : HasDeriv (intervalInc a b) (\lam x => g (f x))
+  => hasDeriv-comp (intervalMap-cover a<b df) df dg
+
+-- | The chain rule on closed intervals: `(g ∘ f)' x = g' (f x) * f' x`.
+\lemma interval-deriv-comp {a b c d : Real} (a<b : a < b) (c<d : c < d) {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)} {g : Set.Total (ClosedInterval c d) -> Real}
+                           (df : HasDeriv (intervalInc a b) (\lam x => (f x).1)) (dg : HasDeriv (intervalInc c d) g) (dgf : HasDeriv (intervalInc a b) (\lam x => g (f x)))
+                           (x : Set.Total (ClosedInterval a b))
+  : deriv (interval-derivDense a<b) (\lam x => g (f x)) dgf x 1 = deriv (interval-derivDense c<d) g dg (f x) 1 * deriv (interval-derivDense a<b) (\lam x => (f x).1) df x 1
+  => deriv-comp (interval-derivDense a<b) (interval-derivDense c<d) (intervalMap-cover a<b df) df dg dgf x 1
+      *> pmap (deriv (interval-derivDense c<d) g dg (f x)) (inv ide-right) *> LinearMap.func-*c {deriv (interval-derivDense c<d) g dg (f x)} *> *-comm
+
+-- | The product rule on closed intervals.
+\lemma interval-hasDeriv-* {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (df : HasDeriv (intervalInc a b) f) (dg : HasDeriv (intervalInc a b) g)
+  : HasDeriv (intervalInc a b) (\lam x => f x * g x)
+  => hasDeriv-* {RealValuedRing} {RealTopLModule} {IntervalSpace a b} {intervalInc a b} (interval-hasDeriv-cover a<b df) (interval-hasDeriv-cover a<b dg) df dg
+
+-- | The product rule on closed intervals: `(f g)' x = f' x * g x + f x * g' x`.
+\lemma interval-deriv-* {a b : Real} (a<b : a < b) {f g : Set.Total (ClosedInterval a b) -> Real} (df : HasDeriv (intervalInc a b) f) (dg : HasDeriv (intervalInc a b) g)
+                        (d : HasDeriv (intervalInc a b) (\lam x => f x * g x)) (x : Set.Total (ClosedInterval a b))
+  : deriv (interval-derivDense a<b) (\lam x => f x * g x) d x 1 = deriv (interval-derivDense a<b) f df x 1 * g x + f x * deriv (interval-derivDense a<b) g dg x 1
+  => deriv-* {RealValuedRing} {RealTopLModule} {IntervalSpace a b} {intervalInc a b} (interval-derivDense a<b) (interval-hasDeriv-cover a<b df) (interval-hasDeriv-cover a<b dg) df dg d x 1
+
+-- | If `e <= f'` on `[a,b]` with `e > 0`, then the difference quotient of {f} is bounded below by a positive constant.
+\lemma quot-lower {a b : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Real} (d : HasDeriv (intervalInc a b) f)
+                  {e : Real} (e>0 : 0 < e) (f'>=e : \Pi (x : Set.Total (ClosedInterval a b)) -> e <= deriv (interval-derivDense a<b) f d x 1)
+  : ∃ (m : Real) (0 < m) (\Pi (p : \Sigma (Set.Total (ClosedInterval a b)) (Set.Total (ClosedInterval a b))) -> m <= quotSquare a<b f d p)
+  => \case real_<-char.1 e>0 \with {
+    | inP (r,r>0,r<e) => \case square-uniform (<=-less a<b) (quotSquare a<b f d) (rat_real_<.2 r>0) \with {
+      | inP (delta,delta>0,h) => inP (e - r, linarith, \lam p =>
+          \have | delta>0' : (0 : Real) < delta => rat_real_<.1 delta>0
+                 | r<e' : Real.fromRat r < e => r<e
+          \in \case real-located {p.2.1} {p.1.1} {p.1.1 + delta} linarith \with {
+            | byLeft x<y => <=-less (linarith : e - r < e) <=∘ (off-lower f'>=e x<y).1
+            | byRight y<x+d => \case real-located {p.2.1} {p.1.1 - delta} {p.1.1} linarith \with {
+              | byRight y<x => <=-less (linarith : e - r < e) <=∘ (off-lower f'>=e y<x).2
+              | byLeft x-d<y => near h x-d<y y<x+d (f'>=e p.1)
+            }
+          })
+    }
+  }
+  \where {
+    -- | Near the diagonal the quotient is close to the derivative.
+    \lemma near {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f} {e : Real} {r delta : Rat}
+                 (h : \Pi {x y x' y' : Set.Total (ClosedInterval a b)} -> RealAbGroup.abs (x.1 - x'.1) + RealAbGroup.abs (y.1 - y'.1) < Real.fromRat delta
+                        -> RealAbGroup.abs (quotSquare a<b f d (x,y) - quotSquare a<b f d (x',y')) < Real.fromRat r)
+                 {x y : Set.Total (ClosedInterval a b)} (x-d<y : x.1 - delta < y.1) (y<x+d : y.1 < x.1 + delta)
+                 (f'>=e : e <= deriv (interval-derivDense a<b) f d x 1)
+      : e - r <= quotSquare a<b f d (x,y)
+      => \have | t1 : RealAbGroup.abs (x.1 - x.1) + RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta
+                     => transportInv (< _) (pmap (+ _) (pmap RealAbGroup.abs negative-right *> RealAbGroup.abs_zro) *> zro-left)
+                          (RealAbGroup.abs_-_< {y.1} {x.1} linarith linarith)
+                | t2 => RealAbGroup.abs>=neg <∘r h {x} {y} {x} {x} t1
+                | t3 : quotSquare a<b f d (x,x) = deriv (interval-derivDense a<b) f d x 1 => quot-diag x
+         \in <=-less linarith
+
+    -- | Off the diagonal the quotient is bounded below by {e}.
+    \lemma off-lower {a b : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Real} {d : HasDeriv (intervalInc a b) f}
+                     {e : Real} (f'>=e : \Pi (x : Set.Total (ClosedInterval a b)) -> e <= deriv (interval-derivDense a<b) f d x 1)
+                     {x y : Set.Total (ClosedInterval a b)} (x<y : x.1 < y.1)
+      : \Sigma (e <= quotSquare a<b f d (x,y)) (e <= quotSquare a<b f d (y,x))
+      => \have | m => mean-value-lower a<b d f'>=e x<y
+               | q1 : f y - f x = (y.1 - x.1) * quotSquare a<b f d (x,y) => quot-incr x y
+               | q2 : f x - f y = (x.1 - y.1) * quotSquare a<b f d (y,x) => quot-incr y x
+               | yx>0 : 0 < y.1 - x.1 => linarith
+               | q2' : f y - f x = (y.1 - x.1) * quotSquare a<b f d (y,x) => (equation.cRing : f y - f x = negative (f x - f y)) *> pmap negative q2
+                     *> (equation.cRing : negative ((x.1 - y.1) * quotSquare a<b f d (y,x)) = (y.1 - x.1) * quotSquare a<b f d (y,x))
+         \in (\lam Q<e => \have t : (y.1 - x.1) * quotSquare a<b f d (x,y) < e * (y.1 - x.1) => RealField.<_*_positive-right yx>0 Q<e <∘l =_<= *-comm \in linarith,
+              \lam Q<e => \have t : (y.1 - x.1) * quotSquare a<b f d (y,x) < e * (y.1 - x.1) => RealField.<_*_positive-right yx>0 Q<e <∘l =_<= *-comm \in linarith)
+  }
+
+-- | A section {g} of {f} is Lipschitz if the difference quotient of {f} is bounded below by `m > 0`.
+\lemma inverse-lipschitz {a b c d : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)}
+                         {g : Set.Total (ClosedInterval c d) -> Set.Total (ClosedInterval a b)} (fg : \Pi (y : Set.Total (ClosedInterval c d)) -> f (g y) = y)
+                         {df : HasDeriv (intervalInc a b) (\lam x => (f x).1)} {m : Real} (m>0 : 0 < m)
+                         (Qm : \Pi (p : \Sigma (Set.Total (ClosedInterval a b)) (Set.Total (ClosedInterval a b))) -> m <= quotSquare a<b (\lam x => (f x).1) df p)
+                         (u v : Set.Total (ClosedInterval c d))
+  : m * RealAbGroup.abs ((g u).1 - (g v).1) <= RealAbGroup.abs (u.1 - v.1)
+  => \let | Q => quotSquare a<b (\lam x => (f x).1) df (g v, g u)
+          | e : u.1 - v.1 = ((g u).1 - (g v).1) * Q => inv (pmap2 (\lam s t => s.1 - t.1) (fg u) (fg v)) *> quot-incr (g v) (g u)
+     \in RealField.<=_*_positive-left (Qm (g v, g u)) RealAbGroup.abs>=0
+          <=∘ =_<= (*-comm *> inv (pmap (_ *) (RealAbGroup.abs-ofPos (<=-less m>0 <=∘ Qm (g v, g u)))) *> inv RealField.abs_* *> pmap RealAbGroup.abs (inv e))
+
+-- | A section {g} of {f} is a cover map if the difference quotient of {f} is bounded below by `m > 0`.
+\lemma inverse-cover {a b c d : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)}
+                     {g : Set.Total (ClosedInterval c d) -> Set.Total (ClosedInterval a b)} (fg : \Pi (y : Set.Total (ClosedInterval c d)) -> f (g y) = y)
+                     {df : HasDeriv (intervalInc a b) (\lam x => (f x).1)} {m : Real} (m>0 : 0 < m)
+                     (Qm : \Pi (p : \Sigma (Set.Total (ClosedInterval a b)) (Set.Total (ClosedInterval a b))) -> m <= quotSquare a<b (\lam x => (f x).1) df p)
+  : CoverMap (IntervalSpace c d) (IntervalSpace a b) g
+  => \let | fa => (f (a, (<=-refl, <=-less a<b))).2
+          | c<=d : c <= d => fa.1 <=∘ fa.2
+          | G : UniformMetricMap RealNormed RealNormed (\lam t => (g (clamp c<=d t)).1) => \new UniformMetricMap {
+            | func-dist-uniform {eps} eps>0 => \case real_<-char.1 (RealField.<_*_positive_positive (rat_real_<.1 eps>0) m>0) \with {
+              | inP (delta,delta>0,delta<em) => inP (delta, rat_real_<.2 delta>0, \lam {s} {t} st => real_<_U.1 $
+                  RealField.<_*_positive-cancel-left (<=-less m>0) $ inverse-lipschitz fg m>0 Qm (clamp c<=d s) (clamp c<=d t)
+                    <∘r clamp-dist {c} {d} {c<=d} <∘r real_<_U.2 st <∘ delta<em <∘l =_<= *-comm)
+            }
+          }
+     \in CoverTransfer-univ {IntervalSpace c d} {RealTopLModule} {Set.Total (ClosedInterval a b)} g __.1
+          (transport (CoverMap (IntervalSpace c d) RealNormed) (ext \lam u => pmap (\lam z => (g z).1) (clamp-in u.2)) (G CoverMap.∘ intervalInc c d))
+
+-- | The inverse function rule on closed intervals: if `f' >= e > 0` and {g} is a section of {f}, then {g} has a derivative.
+\lemma interval-hasDeriv-inverse {a b c d : Real} (a<b : a < b) {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)}
+                                 {g : Set.Total (ClosedInterval c d) -> Set.Total (ClosedInterval a b)} (fg : \Pi (y : Set.Total (ClosedInterval c d)) -> f (g y) = y)
+                                 (df : HasDeriv (intervalInc a b) (\lam x => (f x).1)) {e : Real} (e>0 : 0 < e)
+                                 (f'>=e : \Pi (x : Set.Total (ClosedInterval a b)) -> e <= deriv (interval-derivDense a<b) (\lam x => (f x).1) df x 1)
+  : HasDeriv (intervalInc c d) (\lam y => (g y).1)
+  => \case quot-lower a<b df e>0 f'>=e \with {
+    | inP (m,m>0,Qm) => hasDeriv-inverse {RealValuedRing} {IntervalSpace a b} {IntervalSpace c d} {intervalInc a b} {intervalInc c d} {f}
+                         (inverse-cover fg m>0 Qm) fg (deriv-quot (interval-derivDense a<b) (\lam x => (f x).1) df) deriv-quot.char
+                         (pinv-coverMap (quotSquare a<b (\lam x => (f x).1) df) m>0 Qm) (\lam x y => RealField.pinv-right (m>0 <∘l Qm (x,y)))
+  }
+
+-- | The inverse function rule on closed intervals: `f' (g y) * g' y = 1`.
+\lemma interval-deriv-inverse {a b c d : Real} (a<b : a < b) (c<d : c < d) {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)}
+                              {g : Set.Total (ClosedInterval c d) -> Set.Total (ClosedInterval a b)} (fg : \Pi (y : Set.Total (ClosedInterval c d)) -> f (g y) = y)
+                              (df : HasDeriv (intervalInc a b) (\lam x => (f x).1)) {e : Real} (e>0 : 0 < e)
+                              (f'>=e : \Pi (x : Set.Total (ClosedInterval a b)) -> e <= deriv (interval-derivDense a<b) (\lam x => (f x).1) df x 1)
+                              (dg : HasDeriv (intervalInc c d) (\lam y => (g y).1)) (y : Set.Total (ClosedInterval c d))
+  : deriv (interval-derivDense a<b) (\lam x => (f x).1) df (g y) 1 * deriv (interval-derivDense c<d) (\lam y => (g y).1) dg y 1 = 1
+  => \case quot-lower a<b df e>0 f'>=e \with {
+    | inP (m,m>0,Qm) => deriv-inverse {RealValuedRing} {IntervalSpace a b} {IntervalSpace c d} {intervalInc a b} {intervalInc c d}
+                         (interval-derivDense a<b) (interval-derivDense c<d) {f} (inverse-cover fg m>0 Qm) fg df
+                         (pinv-coverMap (quotSquare a<b (\lam x => (f x).1) df) m>0 Qm) (\lam x y => RealField.pinv-right (m>0 <∘l Qm (x,y))) dg y
+  }
