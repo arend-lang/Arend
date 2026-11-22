@@ -166,6 +166,61 @@
                   (exts \lam (i : Fin (suc n)) => \case \elim i \with { | 0 => l0calc0-coord {L} {suc m} 0 {l0One L :: F} | suc j => inv l0calc-eq })
           *> inv l0calc-eq
 
+-- | {l0calc} depends only on the function: $\chi = \varphi$ pointwise implies $\chi(F) = \varphi(F)$.
+\lemma l0calc-ext {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
+                  (e : \Pi (x : Array Real n) -> chi x = phi x) {F : Array (L0Space L) n}
+  : l0calc chi F = l0calc phi F
+  => <=-antisymmetric (l0calc-mono (\lam x => =_<= (e x))) (l0calc-mono (\lam x => =_<= (inv (e x))))
+
+-- | $0(F) = 0$.
+\lemma l0calc-zro {L : FullIntegrationSpace} {n : Nat} {chi : CoverMap (RealN n) RealNormed}
+                  (e : \Pi (x : Array Real n) -> chi x = 0) {F : Array (L0Space L) n}
+  : l0calc chi F = 0
+  => l0calc-*q {L} {n} {chi} {chi} 0 (\lam x => e x *> inv RealField.zro_*-left) *> QModule.*q_*n {_} {0}
+
+-- | $|\varphi|(F) = |\varphi(F)|$.
+\lemma l0calc-abs {L : FullIntegrationSpace} {n : Nat} {chi phi : CoverMap (RealN n) RealNormed}
+                  (e : \Pi (x : Array Real n) -> chi x = RealAbGroup.abs (phi x)) {F : Array (L0Space L) n}
+  : l0calc chi F = abs (l0calc phi F)
+  => l0calc-join {L} {n} {chi} {phi} {negative-uniform {RealNormed} CoverMap.∘ phi} e *> pmap (_ ∨) (l0calc-neg (\lam x => idp))
+
+-- | $\varphi(0, \ldots, 0) = 0$ if $\varphi(0) = 0$.
+\lemma l0calc-zro-arg {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN n) RealNormed} (phi0 : phi (RealN n).zro = 0)
+  : l0calc phi (\lam (j : Fin n) => (0 : L0Space L)) = 0
+  => \let F : Array (L0Space L) n => \lam j => 0
+     \in inv (pmap (l0calc phi) (exts \lam j => l0calc-zro {L} {n} {CoverMap.const 0} (\lam x => idp) {F}))
+         *> inv (l0calc-comp {L} {n} {n} {phi} {\lam j => CoverMap.const 0} {CoverMap.const 0} (\lam x => inv phi0) {F})
+         *> l0calc-zro (\lam x => idp)
+
+-- | The sum $\sum_i \psi_i$ of cover maps $\mathbb R^m \to \mathbb R$.
+\func sumMap {m k : Nat} (psi : Array (CoverMap (RealN m) RealNormed) k) : CoverMap (RealN m) RealNormed \elim k
+  | 0 => CoverMap.const 0
+  | suc k => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (psi 0) (sumMap (\lam i => psi (suc i)))
+  \where {
+    \lemma char {m k : Nat} {psi : Array (CoverMap (RealN m) RealNormed) k} {x : Array Real m}
+      : sumMap psi x = RealAbGroup.BigSum (\lam i => psi i x) \elim k
+      | 0 => idp
+      | suc k => pmap (_ +) char
+  }
+
+-- | $(\sum_i \psi_i)(F) = \sum_i \psi_i(F)$.
+\lemma l0calc-sum {L : FullIntegrationSpace} {m k : Nat} {chi : CoverMap (RealN m) RealNormed} {psi : Array (CoverMap (RealN m) RealNormed) k}
+                  (e : \Pi (x : Array Real m) -> chi x = RealAbGroup.BigSum (\lam i => psi i x)) {F : Array (L0Space L) m}
+  : l0calc chi F = (L0Space L).BigSum (\lam i => l0calc (psi i) F)
+  => l0calc-ext {L} {m} {chi} {sumMap psi} (\lam x => e x *> inv (sumMap.char {m} {k} {psi} {x})) *> aux
+  \where
+    \lemma aux {L : FullIntegrationSpace} {m k : Nat} {psi : Array (CoverMap (RealN m) RealNormed) k} {F : Array (L0Space L) m}
+      : l0calc (sumMap psi) F = (L0Space L).BigSum (\lam i => l0calc (psi i) F) \elim k
+      | 0 => l0calc-zro {L} {m} {sumMap {m} {0} psi} (\lam x => idp)
+      | suc k => l0calc-add {L} {m} {sumMap psi} {psi 0} {sumMap (\lam i => psi (suc i))} (\lam x => idp) *> pmap (_ +) (aux {L} {m} {k} {\lam i => psi (suc i)} {F})
+
+-- | $(\varphi \circ \psi)(F) = \varphi(\psi(F))$ for $\varphi \colon \mathbb R \to \mathbb R$.
+\lemma l0calc-comp1 {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN 1) RealNormed} {psi : CoverMap (RealN n) RealNormed} {F : Array (L0Space L) n}
+  : l0calc (phi CoverMap.∘ ArrayCoverSpace.tuple {RealN n} {1} {RealNormed} (psi :: nil)) F = l0calc phi (l0calc psi F :: nil)
+  => l0calc-comp {L} {1} {n} {phi} {psi :: nil} {phi CoverMap.∘ ArrayCoverSpace.tuple {RealN n} {1} {RealNormed} (psi :: nil)} (\lam x => idp)
+      *> pmap {Array (L0Space L) 1} (l0calc phi) {\lam j => l0calc ((psi :: nil : Array (CoverMap (RealN n) RealNormed) 1) j) F} {l0calc psi F :: nil}
+              (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
+
 \private \module L0CalcHelpers \where {
   {- | If $|\chi| \le \varepsilon$ on $\{\Lambda < d\}$, $\Lambda \ge 0$, and $0 \le h \le K$, then
    -   $d_h(\chi(F), 0) \le I(\tau_\varepsilon h) + C\, d_h(\Lambda(F), 0)$ with $C = (K/d) \vee 1$.

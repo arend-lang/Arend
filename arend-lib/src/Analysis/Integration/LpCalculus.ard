@@ -68,6 +68,13 @@
           *> l0calc-char (absPow (fpow.one>0 p>=1) p>=1) {f :: nil}
   }
 
+-- | {l0pow} as {l0calc} on a one-element array.
+\lemma l0pow-eq {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L}
+  : l0pow p p>=1 F = l0calc (absPow (fpow.one>0 p>=1) p>=1) (F :: nil)
+  => pmap {Array (L0Space L) 1} (l0calc (absPow (fpow.one>0 p>=1) p>=1))
+          {ArrayCoverSpace.tuple {L0Space L} {1} {L0Space L} (CoverMap.id :: nil) F} {F :: nil}
+          (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
+
 -- | $(a \wedge b)^p = a^p \wedge b^p$ for $a, b \ge 0$.
 \lemma rpow-meet {a b : Real} {a>=0 : (0 : Real) <= a} {b>=0 : (0 : Real) <= b} {ab>=0 : (0 : Real) <= a ∧ b} {p : Real} {p>0 : (0 : Real) < p}
   : rpow (a ∧ b) ab>=0 p p>0 = rpow a a>=0 p p>0 ∧ rpow b b>=0 p p>0

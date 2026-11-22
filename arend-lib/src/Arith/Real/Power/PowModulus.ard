@@ -1,0 +1,320 @@
+{- | The power modulus of a function $\varphi \colon \mathbb R^n \to \mathbb R$, used for functional calculus between `Lᵖ` spaces.
+
+  * {PowModulus}: for every $\eta > 0$ there is `C` with
+    $|\varphi(x) - \varphi(y)|^q \le C \|x - y\|^p + \eta (\|x\|^p + \|y\|^p)$, where $\|x\| = \sum_j |x_j|$;
+    {PowModulus1} is the unary version and {powModulus1} converts it.
+  * {powModulus-lipschitz}: Lipschitz maps for `p = q`.
+  * {powModulus-homog}: cover maps homogeneous of degree $p/q$, i.e. $\varphi(\lambda x) = \lambda^{p/q} \varphi(x)$ for $\lambda > 0$.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Power
+\import Arith.Real.Power.UniformConvexity
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.Compact
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.NormedProduct
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.LinBounded
+\open LatticeAbGroup
+
+-- | $\|x\|^p$ in `ℝⁿ`.
+\func normPow {n : Nat} (p : Real) (p>0 : 0 < p) (x : Array Real n) : Real
+  => rpow (lnorm {RealN n} x) (lnorm>=0 {RealN n}) p p>0
+
+-- | The power modulus: for every $\eta > 0$ there is `C` with $|\varphi(x) - \varphi(y)|^q \le C \|x - y\|^p + \eta (\|x\|^p + \|y\|^p)$.
+\type PowModulus {n : Nat} (p q : Real) (p>0 : 0 < p) (q>0 : 0 < q) (phi : Array Real n -> Real) : \Prop
+  => \Pi {eta : Rat} -> 0 < eta -> ∃ (C : Rat) (0 <= C) (\Pi (x y : Array Real n) ->
+      rpow (abs (phi x - phi y)) abs>=0 q q>0 <= Real.fromRat C * normPow p p>0 (x - y) + Real.fromRat eta * (normPow p p>0 x + normPow p p>0 y))
+
+-- | The power modulus of a function $\mathbb R \to \mathbb R$.
+\type PowModulus1 (p q : Real) (p>0 : 0 < p) (q>0 : 0 < q) (phi : Real -> Real) : \Prop
+  => \Pi {eta : Rat} -> 0 < eta -> ∃ (C : Rat) (0 <= C) (\Pi (x y : Real) ->
+      rpow (abs (phi x - phi y)) abs>=0 q q>0 <= Real.fromRat C * rpow (abs (x - y)) abs>=0 p p>0
+                                                 + Real.fromRat eta * (rpow (abs x) abs>=0 p p>0 + rpow (abs y) abs>=0 p p>0))
+
+-- | $\|x\| = |x_0|$ in $\mathbb R^1$.
+\lemma lnorm-RealN1 {x : Array Real 1} : lnorm {RealN 1} x = abs (x 0)
+  => zro-right
+
+\lemma normPow1 {p : Real} {p>0 : 0 < p} {x : Array Real 1} : normPow p p>0 x = rpow (abs (x 0)) abs>=0 p p>0
+  => rpow-ext lnorm-RealN1 idp
+
+-- | {PowModulus1} is {PowModulus} for `n = 1`.
+\lemma powModulus1 {p q : Real} {p>0 : 0 < p} {q>0 : 0 < q} {phi : Real -> Real} (h : PowModulus1 p q p>0 q>0 phi)
+  : PowModulus {1} p q p>0 q>0 (\lam x => phi (x 0))
+  => \lam {eta} eta>0 => \case h eta>0 \with {
+    | inP (C,C>=0,g) => inP (C, C>=0, \lam x y => g (x 0) (y 0) <=∘ =_<= (inv (pmap2 (\lam a b => Real.fromRat C * a + Real.fromRat eta * b)
+        (normPow1 {p} {p>0} {x - y}) (pmap2 (+) (normPow1 {p} {p>0} {x}) (normPow1 {p} {p>0} {y})))))
+  }
+
+-- | A rational upper bound for a real number.
+\lemma rat-above (x : Real) : ∃ (C : Rat) (0 < C) (x < C)
+  => \case x.U-inh_>0 \with {
+    | inP (C,Cu,C>0) => inP (C, C>0, real_<_U.2 Cu)
+  }
+
+-- | Lipschitz maps have the power modulus for `p = q`.
+\lemma powModulus-lipschitz {n : Nat} {p : Real} {p>0 : 0 < p} {phi : Array Real n -> Real} {K : Real} (K>=0 : 0 <= K)
+                            (lip : \Pi (x y : Array Real n) -> abs (phi x - phi y) <= K * lnorm {RealN n} (x - y))
+  : PowModulus p p p>0 p>0 phi
+  => \lam {eta} eta>0 => \case rat-above (rpow K K>=0 p p>0) \with {
+    | inP (C,C>0,KC) => inP (C, <=-less C>0, \lam x y =>
+      \have | KN>=0 : 0 <= K * lnorm {RealN n} (x - y) => RealField.<=_*_positive_positive K>=0 (lnorm>=0 {RealN n} {x - y})
+            | S>=0 : 0 <= Real.fromRat eta * (normPow p p>0 x + normPow p p>0 y)
+                => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less eta>0)) (linarith (rpow>=0 {lnorm {RealN n} x} {lnorm>=0 {RealN n}} {p} {p>0}, rpow>=0 {lnorm {RealN n} y} {lnorm>=0 {RealN n}} {p} {p>0}))
+      \in rpow-mono {_} {_} {abs>=0} {KN>=0} (lip x y) <=∘ =_<= rpow_* <=∘ <=_*_positive-left (<=-less KC) rpow>=0
+           <=∘ transport (__ <= _) zro-right (<=_+ <=-refl S>=0))
+  }
+
+-- | $\lambda x$ in `ℝⁿ`.
+\func scaleN {n : Nat} (l : Real) (x : Array Real n) : Array Real n
+  => \lam j => l * x j
+
+-- | $\|\lambda x\| = \lambda \|x\|$ for $\lambda \ge 0$.
+\lemma lnorm-scaleN {n : Nat} {l : Real} (l>=0 : 0 <= l) {x : Array Real n} : lnorm {RealN n} (scaleN l x) = l * lnorm {RealN n} x
+  => pmap RealAbGroup.BigSum (exts \lam j => RealField.abs_* *> pmap (\lam t => t * abs (x j)) (abs-ofPos l>=0)) *> inv RealField.BigSum-ldistr
+
+-- | $\lambda x - \lambda y = \lambda (x - y)$.
+\lemma scaleN-minus {n : Nat} {l : Real} {x y : Array Real n} : (-) {RealN n} (scaleN l x) (scaleN l y) = scaleN l ((-) {RealN n} x y)
+  => exts \lam j => equation.cRing
+
+-- | $\lambda (\lambda^{-1} x) = x$.
+\lemma scaleN-inv {n : Nat} {l : Real} (l>0 : 0 < l) {x : Array Real n} : scaleN l (scaleN (RealField.pinv l l>0) x) = x
+  => exts \lam j => inv *-assoc *> pmap (\lam t => t * x j) (RealField.pinv-right l>0) *> ide-left
+
+-- | $\lambda^{-1} (\lambda x) = x$.
+\lemma scaleN-inv' {n : Nat} {l : Real} (l>0 : 0 < l) {x : Array Real n} : scaleN (RealField.pinv l l>0) (scaleN l x) = x
+  => exts \lam j => inv *-assoc *> pmap (\lam t => t * x j) (RealField.pinv-left l>0) *> ide-left
+
+-- | Uniform continuity of a cover map on the unit ball of `ℝⁿ`.
+\lemma ball-uc {n : Nat} (phi : CoverMap (RealN n) RealNormed) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (d : Rat) (0 < d) (\Pi {x y : Array Real n} -> lnorm {RealN n} x <= 1 -> lnorm {RealN n} y <= 1 -> lnorm {RealN n} ((-) {RealN n} x y) < Real.fromRat d
+      -> abs (phi x - phi y) < Real.fromRat eps)
+  => \case cover-uniform-ball (RealN-ballsTB n) phi (RealN n).zro {2} {eps} idp eps>0 \with {
+    | inP (d,d>0,h) => inP (d, d>0, \lam {x} {y} x1 y1 xy =>
+      \have | inB {z : Array Real n} (z1 : lnorm {RealN n} z <= 1) : OBall 2 (RealN n).zro z
+                => real_<_U.1 (transportInv (__ < _) (ldist_zro-left {RealN n}) (z1 <∘r (linarith : (1 : Real) < 2)))
+            | u => h (inB x1) (inB y1) (real_<_U.1 (transportInv (__ < _) (lnorm-ldist {RealN n}) xy))
+      \in transport (__ < _) (lnorm-ldist {RealNormed}) (real_<_U.2 u))
+  }
+
+-- | A map homogeneous of degree `s`: $\varphi(\lambda x) = \lambda^s \varphi(x)$ for $\lambda > 0$.
+\type IsHomogeneous {n : Nat} (s : Real) (phi : Array Real n -> Real) : \Prop
+  => \Pi {l : Real} (l>0 : 0 < l) (x : Array Real n) -> phi (scaleN l x) = rpow-pos l l>0 s * phi x
+
+-- | A homogeneous cover map is bounded on the unit ball.
+\lemma homog-bound {n : Nat} {s : Real} (phi : CoverMap (RealN n) RealNormed) (hom : IsHomogeneous s phi)
+  : ∃ (B : Real) (0 <= B) (\Pi {z : Array Real n} -> lnorm {RealN n} z <= 1 -> abs (phi z) <= B)
+  => \case ball-uc phi {1} idp \with {
+    | inP (d,d>0,h) =>
+      \let | l => d * ratio 1 2 ∧ 1
+           | l>0 : 0 < l => RatField.<_meet-univ linarith idp
+           | l>0' : 0 < Real.fromRat l => rat_real_<.1 l>0
+           | li => RealField.pinv (Real.fromRat l) l>0'
+           | li>0 : 0 < li => RealField.pinv>0 l>0'
+           | r => rpow-pos li li>0 s
+      \in inP (r * (abs (phi (RealN n).zro) + 1), RealField.<=_*_positive_positive (<=-less rpow-pos>0) (linarith (RealAbGroup.abs>=0 {phi (RealN n).zro})), \lam {z} z1 =>
+        \have | l<=1 : Real.fromRat l <= 1 => rat_real_<=.1 RatField.meet-right
+              | l<d : Real.fromRat l < d => rat_real_<.1 (RatField.meet-left <∘r (linarith : d * ratio 1 2 < d))
+              | nlz : lnorm {RealN n} (scaleN (Real.fromRat l) z) <= Real.fromRat l
+                  => =_<= (lnorm-scaleN (<=-less l>0')) <=∘ <=_*_positive-right (<=-less l>0') z1 <=∘ =_<= ide-right
+              | n0 : lnorm {RealN n} (RealN n).zro <= 1 => =_<= (lnorm_zro {RealN n}) <=∘ linarith
+              | nd : lnorm {RealN n} ((-) {RealN n} (scaleN (Real.fromRat l) z) (RealN n).zro) < d
+                  => (=_<= (pmap (lnorm {RealN n}) (AddGroup.minus_zro {RealN n} {scaleN (Real.fromRat l) z})) <=∘ nlz) <∘r l<d
+              | u : abs (phi (scaleN (Real.fromRat l) z) - phi (RealN n).zro) < 1 => h {scaleN (Real.fromRat l) z} {(RealN n).zro} (nlz <=∘ l<=1) n0 nd
+              | b : abs (phi (scaleN (Real.fromRat l) z)) <= abs (phi (RealN n).zro) + 1
+                  => =_<= (pmap abs (equation.abGroup : phi (scaleN (Real.fromRat l) z) = (phi (scaleN (Real.fromRat l) z) - phi (RealN n).zro) + phi (RealN n).zro))
+                     <=∘ abs_+ <=∘ <=_+ (<=-less u) <=-refl <=∘ =_<= +-comm
+              | e : phi z = r * phi (scaleN (Real.fromRat l) z)
+                  => pmap phi (inv (scaleN-inv' l>0')) *> hom li>0 _
+        \in =_<= (pmap abs e *> RealField.abs_* *> pmap (\lam t => t * abs (phi (scaleN (Real.fromRat l) z))) (abs-ofPos (<=-less rpow-pos>0))) <=∘ <=_*_positive-right (<=-less rpow-pos>0) b)
+  }
+
+-- | $\|x - y\| \le \|x\| + \|y\|$ in `ℝⁿ`.
+\lemma lnorm-diff {n : Nat} {x y : Array Real n} : lnorm {RealN n} ((-) {RealN n} x y) <= lnorm {RealN n} x + lnorm {RealN n} y
+  => =_<= (inv (lnorm-ldist {RealN n})) <=∘ ldist-triang {RealN n} {x} {(RealN n).zro} {y}
+      <=∘ =_<= (pmap2 (+) (ldist-symm {RealN n} {x} {(RealN n).zro} *> ldist_zro-left {RealN n}) (ldist_zro-left {RealN n}))
+
+-- | $\|x\|^p$ for $\|x\| \le M$, $M > 0$: $x = M z$ with $\|z\| \le 1$, so $\varphi(x) = M^s \varphi(z)$.
+\func homog-normalize {n : Nat} {s : Real} {phi : Array Real n -> Real} (hom : IsHomogeneous s phi) {M : Real} (M>0 : 0 < M)
+                       {x : Array Real n} (xM : lnorm {RealN n} x <= M)
+  : \Sigma (z : Array Real n) (lnorm {RealN n} z <= 1) (phi x = rpow-pos M M>0 s * phi z) (scaleN (RealField.pinv M M>0) x = z)
+  => \let | iM => RealField.pinv M M>0
+          | iM>0 : 0 < iM => RealField.pinv>0 M>0
+     \in (scaleN iM x, =_<= (lnorm-scaleN (<=-less iM>0)) <=∘ <=_*_positive-right (<=-less iM>0) xM <=∘ =_<= (RealField.pinv-left M>0),
+          pmap phi (inv (scaleN-inv M>0)) *> hom M>0 _, idp)
+
+-- | Cover maps homogeneous of degree $s = p/q$ have the power modulus.
+\lemma powModulus-homog {n : Nat} {p q s : Real} {p>0 : 0 < p} {q>0 : 0 < q} (p>=1 : 1 <= p) (q>=1 : 1 <= q) (sq : s * q = p)
+                        (phi : CoverMap (RealN n) RealNormed) (hom : IsHomogeneous s phi)
+  : PowModulus p q p>0 q>0 phi
+  => \lam {eta} eta>0 => \case homog-bound phi hom \with {
+    | inP (B,B>=0,hB) => \case rat-above (rpow 2 two>=0 p p>0) \with {
+    | inP (T,T>0,TT) =>
+      \let | eps => 1 ∧ (eta * RatField.finv T)
+           | eps>0 : 0 < eps => RatField.<_meet-univ RatField.zro<ide (RatField.<_*_positive_positive eta>0 (RatField.finv>0 T>0))
+           | epsT : eps * T <= eta => RatField.<=_*_positive-left (RatField.meet-right {1} {eta * RatField.finv T}) (<=-less T>0)
+                                       <=∘ =_<= (*-assoc *> pmap (eta *) (RatField.finv-left (RatField.>_/= T>0)) *> ide-right)
+      \in \case ball-uc phi eps>0 \with {
+        | inP (delta,delta>0,hd) =>
+          \let | rho => (delta ∧ 1) * ratio 1 2
+               | rho>0 : 0 < rho => RatField.<_*_positive_positive (RatField.<_meet-univ delta>0 RatField.zro<ide) idp
+               | rho<delta : rho < delta => linarith (RatField.meet-left : delta ∧ 1 <= delta)
+               | rho>0' : 0 < Real.fromRat rho => rat_real_<.1 rho>0
+               | irho>0 : 0 < RealField.pinv (Real.fromRat rho) rho>0' => RealField.pinv>0 rho>0'
+               | B2>=0 : 0 <= 2 * B => linarith
+          \in \case rat-above (rpow (2 * B) B2>=0 q q>0 * rpow-pos (RealField.pinv (Real.fromRat rho) rho>0') irho>0 p) \with {
+            | inP (C,C>0,CC) => inP (C, <=-less C>0, \lam x y =>
+              \let | N (z : Array Real n) => lnorm {RealN n} z
+                   | M => N x + N y
+                   | D => normPow p p>0 ((-) {RealN n} x y)
+                   | S => normPow p p>0 x + normPow p p>0 y
+              \in \have | Nx>=0 : 0 <= N x => lnorm>=0 {RealN n}
+                        | Ny>=0 : 0 <= N y => lnorm>=0 {RealN n}
+                        | M>=0 : 0 <= M => linarith
+                        | nxy : N ((-) {RealN n} x y) <= M => lnorm-diff
+                        | CD>=0 : 0 <= Real.fromRat C * D => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less C>0)) rpow>=0
+                        | S>=0 : 0 <= S => linarith (rpow>=0 {N x} {Nx>=0} {p} {p>0}, rpow>=0 {N y} {Ny>=0} {p} {p>0})
+                        | eS>=0 : 0 <= Real.fromRat eta * S => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less eta>0)) S>=0
+                        | D>=0 : 0 <= D => rpow>=0
+              \in real-cases {Real.fromRat rho * M} {N ((-) {RealN n} x y)}
+                   (\lam lt => far hom B>=0 hB B2>=0 sq rho>0' irho>0 lt
+                                <=∘ <=_*_positive-left (<=-less CC) D>=0 <=∘ transport (__ <= _) zro-right (<=_+ <=-refl eS>=0))
+                   (\lam ge => real-cases {0} {M}
+                     (\lam M>0 =>
+                       \have | small : N ((-) {RealN n} x y) < Real.fromRat delta * M
+                                 => ge <∘r RealField.<_*_positive-left (rat_real_<.1 rho<delta) M>0
+                             | eps>0' : 0 < Real.fromRat eps => rat_real_<.1 eps>0
+                             | T2S : rpow 2 two>=0 p p>0 * S <= Real.fromRat T * S => <=_*_positive-left (<=-less TT) S>=0
+                             | eT : Real.fromRat eps * (Real.fromRat T * S) <= Real.fromRat eta * S
+                                 => =_<= (inv *-assoc *> pmap (\lam t => t * S) RealField.*-rat) <=∘ <=_*_positive-left (rat_real_<=.1 epsT) S>=0
+                       \in near hom hd eps>0' (rat_real_<=.1 (RatField.meet-left {1} {eta * RatField.finv T})) p>=1 q>=1 sq M>0 small
+                            <=∘ <=_*_positive-right (<=-less eps>0') T2S <=∘ eT <=∘ transport (__ <= _) zro-left (<=_+ CD>=0 <=-refl))
+                     (\lam M<=0 =>
+                       \have | e0 : N ((-) {RealN n} x y) = 0 => <=-antisymmetric (nxy <=∘ M<=0) (lnorm>=0 {RealN n} {(-) {RealN n} x y})
+                             | xy : x = y => AddGroup.fromZero {RealN n} ((RealN n).norm-ext (Real.=-upper.1 e0))
+                             | L0 : rpow (abs (phi x - phi y)) abs>=0 q q>0 = 0
+                                 => rpow-ext {abs (phi x - phi y)} {0} (pmap (\lam t => abs (phi x - phi t)) (inv xy) *> pmap RealAbGroup.abs (negative-right {RealAbGroup} {phi x}) *> RealAbGroup.abs_zro) {abs>=0} {<=-refl} {q} {q} idp {q>0} {q>0} *> zero-rpow
+                       \in =_<= L0 <=∘ linarith)))
+          }
+        }
+      }
+    }
+  \where {
+    \lemma real-cases {u v x y : Real} (lt : u < v -> x <= y) (ge : v <= u -> x <= y) : x <= y
+      => \lam y<x => ge (\lam u<v => lt u<v y<x) y<x
+
+    -- | $|\varphi(x) - \varphi(y)|^q \le (2B)^q r^{-p} \|x - y\|^p$ if $r (\|x\| + \|y\|) < \|x - y\|$.
+    \lemma far {n : Nat} {s p q : Real} {p>0 : 0 < p} {q>0 : 0 < q} {phi : Array Real n -> Real} (hom : IsHomogeneous s phi)
+               {B : Real} (B>=0 : 0 <= B) (hB : \Pi {z : Array Real n} -> lnorm {RealN n} z <= 1 -> abs (phi z) <= B) (B2>=0 : 0 <= 2 * B)
+               (sq : s * q = p) {r : Real} (r>0 : 0 < r) (ir>0 : 0 < RealField.pinv r r>0) {x y : Array Real n}
+               (lt : r * (lnorm {RealN n} x + lnorm {RealN n} y) < lnorm {RealN n} ((-) {RealN n} x y))
+      : rpow (abs (phi x - phi y)) abs>=0 q q>0 <= rpow (2 * B) B2>=0 q q>0 * rpow-pos (RealField.pinv r r>0) ir>0 p * normPow p p>0 ((-) {RealN n} x y)
+      => \let | N (z : Array Real n) => lnorm {RealN n} z
+              | M => N x + N y
+              | ir => RealField.pinv r r>0
+         \in \have | Nx>=0 : 0 <= N x => lnorm>=0 {RealN n}
+                   | Ny>=0 : 0 <= N y => lnorm>=0 {RealN n}
+                   | M>=0 : 0 <= M => linarith
+                   | rM>=0 : 0 <= r * M => RealField.<=_*_positive_positive (<=-less r>0) M>=0
+                   | nxy : N ((-) {RealN n} x y) <= M => lnorm-diff
+                   | M>0 : 0 < M => linarith
+                   | P>0 : 0 < rpow-pos M M>0 s => rpow-pos>0
+                   | b {z : Array Real n} (zM : N z <= M) : abs (phi z) <= rpow-pos M M>0 s * B
+                       => \have h => homog-normalize hom M>0 zM
+                          \in =_<= (pmap abs h.3 *> RealField.abs_* *> pmap (\lam t => t * abs (phi h.1)) (abs-ofPos (<=-less P>0)))
+                              <=∘ <=_*_positive-right (<=-less P>0) (hB h.2)
+                   | d : abs (phi x - phi y) <= 2 * B * rpow-pos M M>0 s
+                       => abs_+ <=∘ =_<= (pmap (_ +) abs_negative) <=∘ <=_+ (b (linarith : N x <= M)) (b (linarith : N y <= M)) <=∘ =_<= equation.cRing
+                   | BP>=0 : 0 <= 2 * B * rpow-pos M M>0 s => RealField.<=_*_positive_positive B2>=0 (<=-less P>0)
+                   | pw : rpow (2 * B * rpow-pos M M>0 s) BP>=0 q q>0 = rpow (2 * B) B2>=0 q q>0 * rpow-pos M M>0 p
+                       => rpow_* {2 * B} {rpow-pos M M>0 s} {B2>=0} {<=-less P>0} *> pmap (_ *) (rpow-pos-eq P>0 *> rpow-pos-rpow-pos *> pmap (rpow-pos M M>0) sq)
+                   | ML : M <= ir * N ((-) {RealN n} x y)
+                       => =_<= (inv (inv *-assoc *> pmap (\lam t => t * M) (RealField.pinv-left r>0) *> ide-left)) <=∘ <=_*_positive-right (<=-less ir>0) (<=-less lt)
+                   | IN>=0 : 0 <= ir * N ((-) {RealN n} x y) => RealField.<=_*_positive_positive (<=-less ir>0) (lnorm>=0 {RealN n} {(-) {RealN n} x y})
+                   | Mp : rpow-pos M M>0 p <= rpow-pos ir ir>0 p * normPow p p>0 ((-) {RealN n} x y)
+                       => =_<= (inv (rpow-pos-eq M>0)) <=∘ rpow-mono {_} {_} {M>=0} {IN>=0} ML
+                          <=∘ =_<= (rpow_* {ir} {N ((-) {RealN n} x y)} {<=-less ir>0} {lnorm>=0 {RealN n}} *> pmap (\lam t => t * _) (rpow-pos-eq ir>0))
+         \in rpow-mono {_} {_} {abs>=0} {BP>=0} d <=∘ =_<= pw <=∘ <=_*_positive-right rpow>=0 Mp <=∘ =_<= (inv *-assoc)
+
+    -- | $|\varphi(x) - \varphi(y)|^q \le \varepsilon\, 2^p (\|x\|^p + \|y\|^p)$ if $\|x - y\| < \delta (\|x\| + \|y\|)$.
+    \lemma near {n : Nat} {s p q : Real} {p>0 : 0 < p} {q>0 : 0 < q} {phi : Array Real n -> Real} (hom : IsHomogeneous s phi) {eps delta : Rat}
+                (hd : \Pi {x y : Array Real n} -> lnorm {RealN n} x <= 1 -> lnorm {RealN n} y <= 1 -> lnorm {RealN n} ((-) {RealN n} x y) < Real.fromRat delta
+                        -> abs (phi x - phi y) < Real.fromRat eps)
+                (eps>0 : 0 < Real.fromRat eps) (eps<=1 : Real.fromRat eps <= 1) (p>=1 : 1 <= p) (q>=1 : 1 <= q) (sq : s * q = p) {x y : Array Real n}
+                (M>0 : 0 < lnorm {RealN n} x + lnorm {RealN n} y) (small : lnorm {RealN n} ((-) {RealN n} x y) < Real.fromRat delta * (lnorm {RealN n} x + lnorm {RealN n} y))
+      : rpow (abs (phi x - phi y)) abs>=0 q q>0 <= Real.fromRat eps * (rpow 2 two>=0 p p>0 * (normPow p p>0 x + normPow p p>0 y))
+      => \let | N (z : Array Real n) => lnorm {RealN n} z
+              | M => N x + N y
+              | iM => RealField.pinv M M>0
+              | P => rpow-pos M M>0 s
+         \in \have | Nx>=0 : 0 <= N x => lnorm>=0 {RealN n}
+                   | Ny>=0 : 0 <= N y => lnorm>=0 {RealN n}
+                   | M>=0 : 0 <= M => linarith
+                   | iM>0 : 0 < iM => RealField.pinv>0 M>0
+                   | P>0 : 0 < P => rpow-pos>0
+                   | hx => homog-normalize hom M>0 (linarith : N x <= M)
+                   | hy => homog-normalize hom M>0 (linarith : N y <= M)
+                   | zw : N ((-) {RealN n} hx.1 hy.1) < Real.fromRat delta
+                       => =_<= (pmap N (pmap2 ((-) {RealN n}) (inv hx.4) (inv hy.4) *> scaleN-minus) *> lnorm-scaleN (<=-less iM>0) {(-) {RealN n} x y})
+                          <∘r RealField.<_*_positive-right iM>0 small <∘l =_<= ((equation.cRing : iM * (Real.fromRat delta * M) = Real.fromRat delta * (iM * M)) *> pmap (_ *) (RealField.pinv-left M>0) *> ide-right)
+                   | u : abs (phi hx.1 - phi hy.1) < Real.fromRat eps => hd hx.2 hy.2 zw
+                   | e : phi x - phi y = P * (phi hx.1 - phi hy.1) => pmap2 (\lam (a b : Real) => a - b) hx.3 hy.3 *> equation.cRing
+                   | d : abs (phi x - phi y) <= Real.fromRat eps * P
+                       => =_<= (pmap abs e *> RealField.abs_* *> pmap (\lam t => t * _) (abs-ofPos (<=-less P>0))) <=∘ <=_*_positive-right (<=-less P>0) (<=-less u) <=∘ =_<= *-comm
+                   | eP>=0 : 0 <= Real.fromRat eps * P => RealField.<=_*_positive_positive (<=-less eps>0) (<=-less P>0)
+                   | pw : rpow (Real.fromRat eps * P) eP>=0 q q>0 = rpow-pos (Real.fromRat eps) eps>0 q * rpow-pos M M>0 p
+                       => rpow_* {_} {P} {<=-less eps>0} {<=-less P>0} *> pmap2 (*) (rpow-pos-eq eps>0) (rpow-pos-eq P>0 *> rpow-pos-rpow-pos *> pmap (rpow-pos M M>0) sq)
+                   | sp : rpow-pos (Real.fromRat eps) eps>0 q <= Real.fromRat eps => AbsPowLemmas.small-pow q>=1 eps>0 eps<=1
+                   | t>=0 : 0 <= Real.fromRat (ratio 1 2) => rat_real_<=.1 (<=-less idp)
+                   | t<=1 : Real.fromRat (ratio 1 2) <= 1 => rat_real_<=.1 (<=-less idp)
+                   | m>=0 : 0 <= Real.fromRat (ratio 1 2) * N x + (1 - Real.fromRat (ratio 1 2)) * N y => linarith
+                   | eM : M = 2 * (Real.fromRat (ratio 1 2) * N x + (1 - Real.fromRat (ratio 1 2)) * N y)
+                       => \have h2 : (2 : Real) * Real.fromRat (ratio 1 2) = 1 => RealField.*-rat
+                          \in equation.cRing {h2}
+                   | Mp : rpow-pos M M>0 p <= rpow 2 two>=0 p p>0 * (normPow p p>0 x + normPow p p>0 y)
+                       => =_<= (inv (rpow-pos-eq {M} {M>=0} M>0 {p} {p>0}) *> rpow-ext {M} {2 * _} eM {M>=0} {RealField.<=_*_positive_positive two>=0 m>=0} idp {p>0} {p>0} *> rpow_* {2} {_} {two>=0} {m>=0})
+                          <=∘ <=_*_positive-right rpow>=0 (rpow-convex {N x} {N y} {Nx>=0} {Ny>=0} p>=1 t>=0 t<=1
+                                <=∘ linarith (rpow>=0 {N x} {Nx>=0} {p} {p>0}, rpow>=0 {N y} {Ny>=0} {p} {p>0}))
+         \in rpow-mono {_} {_} {abs>=0} {eP>=0} d <=∘ =_<= pw <=∘ <=_*_positive-left sp (<=-less rpow-pos>0) <=∘ <=_*_positive-right (<=-less eps>0) Mp
+
+    \lemma two>=0 : 0 <= (2 : Real) => linarith
+  }
+
+-- | {PowModulus} for `n = 1` is {PowModulus1}.
+\lemma powModulus1-inv {p q : Real} {p>0 : 0 < p} {q>0 : 0 < q} {phi : Real -> Real} (h : PowModulus {1} p q p>0 q>0 (\lam x => phi (x 0)))
+  : PowModulus1 p q p>0 q>0 phi
+  => \lam {eta} eta>0 => \case h eta>0 \with {
+    | inP (C,C>=0,g) => inP (C, C>=0, \lam x y => g (x :: nil) (y :: nil) <=∘ =_<= (pmap2 (\lam a b => Real.fromRat C * a + Real.fromRat eta * b)
+        (normPow1 {p} {p>0} {(-) {RealN 1} (x :: nil) (y :: nil)}) (pmap2 (+) (normPow1 {p} {p>0} {x :: nil}) (normPow1 {p} {p>0} {y :: nil}))))
+  }
+
+-- | Lipschitz maps $\mathbb R \to \mathbb R$ have the power modulus for `p = q`.
+\lemma powModulus1-lipschitz {p : Real} {p>0 : 0 < p} {phi : Real -> Real} {K : Real} (K>=0 : 0 <= K)
+                             (lip : \Pi (x y : Real) -> abs (phi x - phi y) <= K * abs (x - y))
+  : PowModulus1 p p p>0 p>0 phi
+  => powModulus1-inv (powModulus-lipschitz K>=0 \lam x y => lip (x 0) (y 0) <=∘ =_<= (pmap (K *) (inv (lnorm-RealN1 {(-) {RealN 1} x y}))))
+
+-- | Cover maps $\mathbb R \to \mathbb R$ homogeneous of degree $s = p/q$ have the power modulus.
+\lemma powModulus1-homog {p q s : Real} {p>0 : 0 < p} {q>0 : 0 < q} (p>=1 : 1 <= p) (q>=1 : 1 <= q) (sq : s * q = p)
+                         (phi : CoverMap RealNormed RealNormed) (hom : \Pi {l : Real} (l>0 : 0 < l) (x : Real) -> phi (l * x) = rpow-pos l l>0 s * phi x)
+  : PowModulus1 p q p>0 q>0 phi
+  => powModulus1-inv (powModulus-homog p>=1 q>=1 sq (phi CoverMap.∘ LinBoundedMap.coord {1} 0) \lam l>0 x => hom l>0 (x 0))

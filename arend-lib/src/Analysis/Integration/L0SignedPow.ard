@@ -1,38 +1,28 @@
 {- | The signed power $\varphi_r(t) = t|t|^{r-2}$ on `L⁰`, by the functional calculus {l0calc}.
 
   * {l0signedPow}: $\varphi_r(F)$; {l0signedPow-conj}: $|\varphi_r(F)|^{r'} = |F|^r$; {l0signedPow-mul}: $\varphi_r(F) F = |F|^r$.
-  * {l0signedPow-modulus}: the modulus of continuity {signedPow-modulus} transferred to `L⁰`.
 -}
 
-\import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Pointed
-\import Algebra.QModule
 \import Analysis.Integration.FullIntegrationSpace
 \import Analysis.Integration.FunctionalCalculus.Operations
 \import Analysis.Integration.L0
 \import Analysis.Integration.L0Calculus
 \import Analysis.Integration.LpCalculus
-\import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Real.Power
 \import Arith.Real.Power.SignedPow
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Order.Biordered
-\import Topology.TopRieszSpace.Completion
 \import Paths
 \import Paths.Meta
 \import Topology.CoverSpace.Complete
-\import Topology.CoverSpace.Product
 \import Topology.NormedAbGroup.NormedProduct
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.LinBounded
 \import Topology.NormedAbGroup.Real.LinBounded.Power
-\import Topology.TopAbGroup
-\import Topology.TopAbGroup.Product
-\open QModule
 
 -- | $r > 1$ implies $r \ge 1$.
 \lemma ge1 {r : Real} (r>1 : 1 < r) : 1 <= r
@@ -45,13 +35,6 @@
 -- | $\varphi_r(F)$ for `F ∈ L⁰`.
 \func l0signedPow {L : FullIntegrationSpace} {r : Real} (r>1 : 1 < r) (F : L0Space L) : L0Space L
   => l0calc (signedPowMap r>1) (F :: nil)
-
--- | {l0pow} as {l0calc} on a one-element array.
-\lemma l0pow-eq {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L}
-  : l0pow p p>=1 F = l0calc (absPow (fpow.one>0 p>=1) p>=1) (F :: nil)
-  => pmap {Array (L0Space L) 1} (l0calc (absPow (fpow.one>0 p>=1) p>=1))
-          {ArrayCoverSpace.tuple {L0Space L} {1} {L0Space L} (CoverMap.id :: nil) F} {F :: nil}
-          (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
 
 -- | $|\varphi_r(F)|^{r'} = |F|^r$.
 \lemma l0signedPow-conj {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
@@ -72,55 +55,3 @@
       *> inv (l0calc-comp {L} {2} {1} {LinBoundedMap.mul (LinBoundedMap.coord {2} 0) (LinBoundedMap.coord 1)} {signedPowMap r>1 :: LinBoundedMap.coord {1} 0 :: nil}
                 {absPow (fpow.one>0 (ge1 r>1)) (ge1 r>1)} (\lam x => inv signedPow-mul *> *-comm) {F :: nil})
       *> inv l0pow-eq
-
--- | $(\varphi \circ \psi)(F) = \varphi(\psi(F))$ for $\varphi \colon \mathbb R \to \mathbb R$.
-\lemma l0calc-comp1 {L : FullIntegrationSpace} {n : Nat} {phi : CoverMap (RealN 1) RealNormed} {psi : CoverMap (RealN n) RealNormed} {F : Array (L0Space L) n}
-  : l0calc (phi CoverMap.∘ ArrayCoverSpace.tuple {RealN n} {1} {RealNormed} (psi :: nil)) F = l0calc phi (l0calc psi F :: nil)
-  => l0calc-comp {L} {1} {n} {phi} {psi :: nil} {phi CoverMap.∘ ArrayCoverSpace.tuple {RealN n} {1} {RealNormed} (psi :: nil)} (\lam x => idp)
-      *> pmap {Array (L0Space L) 1} (l0calc phi) {\lam j => l0calc ((psi :: nil : Array (CoverMap (RealN n) RealNormed) 1) j) F} {l0calc psi F :: nil}
-              (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
-
--- | The modulus of continuity of $\varphi_r$ in `L⁰` (see `signedPow-modulus`).
-\lemma l0signedPow-modulus {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q} {C eta : Rat}
-           (h : \Pi (x y : Real) -> rpow (RealAbGroup.abs (signedPow r>1 x - signedPow r>1 y)) RealAbGroup.abs>=0 q (fpow.one>0 q>=1)
-                  <= Real.fromRat C * rpow (RealAbGroup.abs (x - y)) RealAbGroup.abs>=0 r (fpow.one>0 (ge1 r>1))
-                     + Real.fromRat eta * (rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 r (fpow.one>0 (ge1 r>1)) + rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 r (fpow.one>0 (ge1 r>1))))
-           {L : FullIntegrationSpace} {A B : L0Space L}
-  : (<=) {L0Space L} (l0pow q q>=1 (l0signedPow r>1 A - l0signedPow r>1 B)) ((+) {L0Space L} ((*q) {L0Space L} C (l0pow r (ge1 r>1) (A - B))) ((*q) {L0Space L} eta (l0pow r (ge1 r>1) A + l0pow r (ge1 r>1) B)))
-  => \let | F : Array (L0Space L) 2 => A :: B :: nil
-          | c0 => LinBoundedMap.coord {2} 0
-          | c1 => LinBoundedMap.coord {2} 1
-          | Pq => absPow (fpow.one>0 q>=1) q>=1
-          | Pr => absPow (fpow.one>0 (ge1 r>1)) (ge1 r>1)
-          | S0 => signedPowMap r>1 CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (c0 :: nil)
-          | S1 => signedPowMap r>1 CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (c1 :: nil)
-          | NS1 : CoverMap (RealN 2) RealNormed (\lam x => negative (signedPow r>1 (x 1))) => negative-uniform {RealNormed} CoverMap.∘ S1
-          | D : CoverMap (RealN 2) RealNormed (\lam x => signedPow r>1 (x 0) - signedPow r>1 (x 1)) => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple S0 NS1
-          | Phi => Pq CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (D :: nil)
-          | Dx => LinBoundedMap.add c0 (LinBoundedMap.neg c1)
-          | P0 => Pr CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (Dx :: nil)
-          | Pa => Pr CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (c0 :: nil)
-          | Pb => Pr CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (c1 :: nil)
-          | Pab : CoverMap (RealN 2) RealNormed (\lam x => Pa x + Pb x) => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple Pa Pb
-          | sC => LinBoundedMap.scale (Real.fromRat C) (LinBoundedMap.coord {1} 0)
-          | sE => LinBoundedMap.scale (Real.fromRat eta) (LinBoundedMap.coord {1} 0)
-          | Q1 => sC CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (P0 :: nil)
-          | Q2 => sE CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (Pab :: nil)
-          | Psi : CoverMap (RealN 2) RealNormed (\lam x => Q1 x + Q2 x) => +-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple Q1 Q2
-     \in \have | eS0 : l0calc S0 F = l0signedPow r>1 A => l0calc-comp1 *> pmap (\lam z => l0calc (signedPowMap r>1) (z :: nil)) (l0calc-coord {L} {2} 0 {F})
-               | eS1 : l0calc S1 F = l0signedPow r>1 B => l0calc-comp1 *> pmap (\lam z => l0calc (signedPowMap r>1) (z :: nil)) (l0calc-coord {L} {2} 1 {F})
-               | eD : l0calc D F = (-) {L0Space L} (l0signedPow r>1 A) (l0signedPow r>1 B)
-                   => l0calc-add {L} {2} {D} {S0} {NS1} (\lam x => idp) *> pmap2 (+) eS0 (l0calc-neg {L} {2} {NS1} {S1} (\lam x => idp) *> pmap negative eS1)
-               | eDx : l0calc Dx F = (-) {L0Space L} A B
-                   => l0calc-add {L} {2} {Dx} {c0} {LinBoundedMap.neg c1} (\lam x => idp) *> pmap2 (+) (l0calc-coord {L} {2} 0 {F}) (l0calc-neg {L} {2} {LinBoundedMap.neg c1} {c1} (\lam x => idp) *> pmap negative (l0calc-coord {L} {2} 1 {F}))
-               | eS {c : Rat} {X : L0Space L} : l0calc (LinBoundedMap.scale (Real.fromRat c) (LinBoundedMap.coord {1} 0)) (X :: nil) = (*q) {L0Space L} c X
-                   => l0calc-*q {L} {1} {LinBoundedMap.scale (Real.fromRat c) (LinBoundedMap.coord {1} 0)} {LinBoundedMap.coord {1} 0} c (\lam x => idp) *> pmap (c *q) (l0calc-coord 0)
-               | ePhi : l0calc Phi F = l0pow q q>=1 ((-) {L0Space L} (l0signedPow r>1 A) (l0signedPow r>1 B))
-                   => l0calc-comp1 *> pmap (\lam z => l0calc Pq (z :: nil)) eD *> inv l0pow-eq
-               | eP {G : CoverMap (RealN 2) RealNormed} {X : L0Space L} (e : l0calc G F = X) : l0calc (Pr CoverMap.∘ ArrayCoverSpace.tuple {RealN 2} {1} {RealNormed} (G :: nil)) F = l0pow r (ge1 r>1) X
-                   => l0calc-comp1 *> pmap (\lam z => l0calc Pr (z :: nil)) e *> inv l0pow-eq
-               | ePsi : l0calc Psi F = (+) {L0Space L} ((*q) {L0Space L} C (l0pow r (ge1 r>1) (A - B))) ((*q) {L0Space L} eta (l0pow r (ge1 r>1) A + l0pow r (ge1 r>1) B))
-                   => l0calc-add {L} {2} {Psi} {Q1} {Q2} (\lam x => idp)
-                       *> pmap2 (+) (l0calc-comp1 *> pmap (\lam z => l0calc sC (z :: nil)) (eP eDx) *> eS)
-                                    (l0calc-comp1 *> pmap (\lam z => l0calc sE (z :: nil)) (l0calc-add {L} {2} {Pab} {Pa} {Pb} (\lam x => idp) *> pmap2 (+) (eP (l0calc-coord {L} {2} 0 {F})) (eP (l0calc-coord {L} {2} 1 {F}))) *> eS)
-     \in =_<= {L0Space L} (inv ePhi) <=∘ l0calc-mono {L} {2} {Phi} {Psi} (\lam x => h (x 0) (x 1)) {F} <=∘ =_<= {L0Space L} ePsi

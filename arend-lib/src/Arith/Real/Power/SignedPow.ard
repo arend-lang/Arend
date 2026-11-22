@@ -88,6 +88,10 @@
       (\lam t>=0 => pmap RealAbGroup.abs (signedPow.nonneg t>=0) *> RealAbGroup.abs-ofPos rpow>=0 *> rpow-base (inv (RealAbGroup.abs-ofPos t>=0)))
       (\lam t<=0 => pmap RealAbGroup.abs (signedPow.nonpos t<=0 {linarith}) *> RealAbGroup.abs_negative *> RealAbGroup.abs-ofPos rpow>=0 *> rpow-base (inv (RealAbGroup.abs-ofNeg t<=0)))
 
+-- | $\varphi_r(0) = 0$.
+\lemma signedPow-zro {r : Real} {r>1 : (1 : Real) < r} : signedPow r>1 0 = 0
+  => RealAbGroup.abs_zro-ext (signedPow-abs *> rpow-ext {_} {0} RealAbGroup.abs_zro {_} {<=-refl} {r - 1} {r - 1} idp {sub1>0 r>1} {sub1>0 r>1} *> zero-rpow)
+
 -- | $t \varphi_r(t) = |t|^r$.
 \lemma signedPow-mul {r : Real} {r>1 : (1 : Real) < r} {r>0 : (0 : Real) < r} {t : Real}
   : t * signedPow r>1 t = rpow (RealAbGroup.abs t) RealAbGroup.abs>=0 r r>0

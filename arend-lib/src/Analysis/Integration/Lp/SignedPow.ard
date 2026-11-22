@@ -1,13 +1,11 @@
 {- | The signed power $\varphi_r(u) = u|u|^{r-2}$ as a map $\mathrm L^r \to \mathrm L^{r'}$, $1 < r < \infty$.
 
-  $\varphi_r$ is a cover map $\mathbb R \to \mathbb R$, so it acts on `L⁰` by the functional calculus {l0calc} ({l0signedPow}).
-  For `u ∈ Lʳ`, $|\varphi_r(u)|^{r'} = |u|^r \in \mathrm L^1$, so $\varphi_r(u) \in \mathrm L^{r'}$ by {lp-pow}.
+  $\varphi_r$ is a cover map $\mathbb R \to \mathbb R$ with $\varphi_r(0) = 0$, homogeneous of degree $r - 1 = r/r'$, so it has the power modulus
+  ({signedPow-modulus}) and the functional calculus {lpCalc1} gives a cover map $\mathrm L^r \to \mathrm L^{r'}$.
 
-  * {lpSignedPow}: the map $\mathrm L^r \to \mathrm L^{r'}$; {lpSignedPow-char}: it is $\varphi_r$ on `L⁰`.
+  * {lpSignedPow}: the map $\mathrm L^r \to \mathrm L^{r'}$; {lpSignedPow-char}: it is $\varphi_r$ on `L⁰` ({l0signedPow}).
   * {lpSignedPow-conj}: $\|\varphi_r(u)\|_{r'}^{r'} = \|u\|_r^r$; {lpSignedPow-mul}: $I(\varphi_r(u)\, u) = \|u\|_r^r$.
   * {lpSignedPow-tangent}: $\|u\|_r^r + r\,I(\varphi_r(u)(v - u)) \le \|v\|_r^r$, by Hölder and Young.
-  * {lpSignedPow-modulus}: $\|\varphi_r(u) - \varphi_r(v)\|_{r'}^{r'} \le C \|u - v\|_r^r + \eta (\|u\|_r^r + \|v\|_r^r)$, from {signedPow-modulus};
-    it makes {lpSignedPow} locally uniformly continuous.
 -}
 
 \import Algebra.Group
@@ -15,7 +13,6 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.QModule
 \import Analysis.Integration.FullIntegrationSpace
 \import Analysis.Integration.FunctionalCalculus.Operations
 \import Analysis.Integration.IntegrationSpace
@@ -23,17 +20,15 @@
 \import Analysis.Integration.L0Calculus
 \import Analysis.Integration.Lp
 \import Analysis.Integration.Lp.Holder
+\import Analysis.Integration.Lp.Calculus
 \import Analysis.Integration.Lp.L1
 \import Analysis.Integration.LpCalculus
 \import Analysis.Integration.L0SignedPow
-\import Analysis.Integration.LpCharacterization
 \import Analysis.Integration.LpEmbedding
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
-\import Arith.Real.Power
 \import Arith.Real.Young
-\import Arith.Real.UpperReal
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -48,12 +43,9 @@
 \import Topology.NormedAbGroup.Real.LinBounded
 \import Topology.TopAbGroup
 \import Topology.TopSpace
-\import Topology.BanachSpace
-\import Topology.BanachLattice
-\import Analysis.Integration.LInfty.LpAction
+\import Arith.Real.Power.SignedPow
 \import Arith.Real.Power.SignedPowModulus
 \open LatticeAbGroup
-\open QModule
 
 \lemma conj-swap {r q : Real} {r>0 : 0 < r} {q>0 : 0 < q} (rq : HolderConjugate r q r>0 q>0)
   : HolderConjugate q r q>0 r>0
@@ -84,164 +76,17 @@
      }
      \in usingOnly t linarith
 
--- | $\varphi_r(u) \in \mathrm L^{r'}$ for `u ∈ Lʳ`.
-\lemma signedPow-isLp {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
-                      (rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)) (u : LpSpace L r (ge1 r>1))
-  : IsLp q q>=1 (l0signedPow r>1 (lpToL0 r (ge1 r>1) u))
-  => lp-pow.2 (inP (lpPow r (ge1 r>1) u, lpPow.char *> inv (l0signedPow-conj rq)))
-
--- | $\varphi_r(u)$ for `u ∈ Lʳ`.
-\func lpSignedPowFun {L : FullIntegrationSpace} {r q : Real} (r>1 : 1 < r) (q>=1 : 1 <= q)
-                     (rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)) (u : LpSpace L r (ge1 r>1)) : LpSpace L q q>=1
-  => (lpOf (signedPow-isLp rq u)).1
-
-\lemma lpSignedPowFun-char {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
-                           {rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)} {u : LpSpace L r (ge1 r>1)}
-  : lpToL0 q q>=1 (lpSignedPowFun r>1 q>=1 rq u) = l0signedPow r>1 (lpToL0 r (ge1 r>1) u)
-  => (lpOf (signedPow-isLp rq u)).2
-
--- | $\|c x\| = c \|x\|$ for rational $c \ge 0$.
-\lemma lnorm-*q {Y : TruncBanachLattice} {c : Rat} (c>=0 : 0 <= c) {x : Y} : lnorm (c *q x) = Real.fromRat c * lnorm x
-  => Real.=-upper.2 (RealBanachSpace.norm_*q-ofPos {Y} c>=0 *> inv (RealField.*-upper (rat_real_<=.1 c>=0) (lnorm>=0 {Y})))
-
--- | $\|W\|_1 = \|G\|_p^p$ for $W = |G|^p$.
-\lemma lnorm-lpPow {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1}
-  : lnorm {LpSpace L 1 <=-refl} (lpPow p p>=1 G) = lpNormPow p p>=1 G
-  => inv (rpow-one {_} {lnorm>=0 {LpSpace L 1 <=-refl}} {RealField.zro<ide}) *> lpPow.norm
-
--- | $|G|^p \ge 0$.
-\lemma lpPow>=0 {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1} : (<=) {LpSpace L 1 <=-refl} 0 (lpPow p p>=1 G)
-  => lpToL0-pos (l0pow>=0 <=∘ =_<= {L0Space L} (inv lpPow.char))
-
--- | The modulus of continuity: $\|\varphi_r(u) - \varphi_r(v)\|_{r'}^{r'} \le C \|u - v\|_r^r + \eta (\|u\|_r^r + \|v\|_r^r)$.
-\lemma lpSignedPow-modulus {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
-                           (rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)) {eta : Rat} (eta>0 : 0 < eta)
-  : ∃ (C : Rat) (0 <= C) (\Pi (u v : LpSpace L r (ge1 r>1)) -> lpNormPow q q>=1 (lpSignedPowFun r>1 q>=1 rq u - lpSignedPowFun r>1 q>=1 rq v)
-      <= Real.fromRat C * lpNormPow r (ge1 r>1) (u - v) + Real.fromRat eta * (lpNormPow r (ge1 r>1) u + lpNormPow r (ge1 r>1) v))
-  => \case signedPow-modulus {r} {r>1} {fpow.one>0 (ge1 r>1)} {q} {fpow.one>0 q>=1} rq eta>0 \with {
-    | inP (C,C>=0,h) => inP (C, C>=0, \lam u v =>
-      \let | Y1 => LpSpace L 1 <=-refl
-           | j1 => lpToL0 {L} 1 <=-refl
-           | A => lpToL0 r (ge1 r>1) u
-           | B => lpToL0 r (ge1 r>1) v
-           | W1 => lpPow q q>=1 (lpSignedPowFun r>1 q>=1 rq u - lpSignedPowFun r>1 q>=1 rq v)
-           | W2 => lpPow r (ge1 r>1) (u - v)
-           | W3 => lpPow r (ge1 r>1) u
-           | W4 => lpPow r (ge1 r>1) v
-           | Wr : Y1 => C *q W2 + eta *q (W3 + W4)
-      \in \have | e1 : j1 W1 = l0pow q q>=1 ((-) {L0Space L} (l0signedPow r>1 A) (l0signedPow r>1 B))
-                    => lpPow.char *> pmap (l0pow q q>=1) ((lpToL0 q q>=1).func-minus *> pmap2 ((-) {L0Space L}) lpSignedPowFun-char lpSignedPowFun-char)
-                | er : j1 Wr = (+) {L0Space L} ((*q) {L0Space L} C (l0pow r (ge1 r>1) ((-) {L0Space L} A B))) ((*q) {L0Space L} eta ((+) {L0Space L} (l0pow r (ge1 r>1) A) (l0pow r (ge1 r>1) B)))
-                    => j1.func-+ *> pmap2 (+) (func-*q {Y1} {L0Space L} {j1} *> pmap (C *q) (lpPow.char *> pmap (l0pow r (ge1 r>1)) (lpToL0 r (ge1 r>1)).func-minus))
-                                              (func-*q {Y1} {L0Space L} {j1} *> pmap (eta *q) (j1.func-+ *> pmap2 (+) lpPow.char lpPow.char))
-                | le0 : (<=) {L0Space L} (j1 W1) (j1 Wr) => =_<= {L0Space L} e1 <=∘ l0signedPow-modulus h {L} {A} {B} <=∘ =_<= {L0Space L} (inv er)
-                | le1 : W1 <= Wr => lpToL0-reflects le0
-                | W1>=0 : 0 <= W1 => lpPow>=0
-                | n1 : lnorm {Y1} W1 <= lnorm {Y1} Wr => TruncPreBanachLattice.lnorm_<= {Y1} (=_<= (abs-ofPos W1>=0) <=∘ le1 <=∘ =_<= (inv (abs-ofPos (W1>=0 <=∘ le1))))
-                | n2 : lnorm {Y1} Wr <= Real.fromRat C * lnorm {Y1} W2 + Real.fromRat eta * (lnorm {Y1} W3 + lnorm {Y1} W4)
-                    => lnorm_+ {Y1} {C *q W2} {eta *q (W3 + W4)} <=∘ =_<= (pmap2 (+) (lnorm-*q {Y1} C>=0 {W2}) (lnorm-*q {Y1} (<=-less eta>0) {W3 + W4}))
-                         <=∘ <=_+ <=-refl (<=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) (lnorm_+ {Y1} {W3} {W4}))
-      \in =_<= (inv lnorm-lpPow) <=∘ n1 <=∘ n2 <=∘ =_<= (pmap2 (\lam a b => Real.fromRat C * a + Real.fromRat eta * b) lnorm-lpPow (pmap2 (+) lnorm-lpPow lnorm-lpPow)))
-  }
-
--- | A positive rational below a positive real.
-\lemma rat-below {x : Real} (x>0 : 0 < x) : ∃ (a : Rat) (0 < a) (a RealAbGroup.< x)
-  => \case real_<-rat-char.1 x>0 \with {
-    | inP (a,a0,ax) => inP (a, rat_real_<.2 (real_<_U.2 a0), real_<_L.2 ax)
-  }
-
--- | For $s, t > 0$ there is `a > 0` with $d^s \le t$ for all $0 < d \le a$.
-\lemma small-rpow {s : Real} (s>0 : 0 < s) {t : Real} (t>0 : 0 < t)
-  : ∃ (a : Rat) (0 < a) (\Pi {d : Rat} (d>0 : 0 < d) -> d <= a -> rpow-pos d (rat_real_<.1 d>0) s <= t)
-  => \case rat-below (rpow-pos>0 {t} {t>0} {RealField.pinv s s>0}) \with {
-    | inP (a,a>0,as) => inP (a, a>0, \lam {d} d>0 d<=a => rpow-pos-mono {_} {_} {rat_real_<.1 d>0} {rpow-pos>0} (<=-less s>0) (rat_real_<=.1 d<=a <=∘ <=-less as)
-                                                  <=∘ =_<= (rpow-pos-rpow-pos *> pmap (rpow-pos t t>0) (RealField.pinv-left s>0) *> rpow-pos-one))
-  }
-
--- | {lpSignedPowFun} is locally uniformly continuous.
-\lemma lpSignedPowLU {L : FullIntegrationSpace} {r q : Real} (r>1 : 1 < r) (q>=1 : 1 <= q)
-                    (rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1))
-  : LocallyUniformMetricMap (LpSpace L r (ge1 r>1)) (LpSpace L q q>=1) (lpSignedPowFun r>1 q>=1 rq) \cowith
-  | func-dist-locally-uniform {eps} eps>0 => inP (1, RatField.zro<ide, \lam x0 =>
-    \let | r>=1 => ge1 r>1
-         | X => LpSpace L r r>=1
-         | Y => LpSpace L q q>=1
-         | f => lpSignedPowFun {L} r>1 q>=1 rq
-         | e2 => eps * ratio 1 2
-    \in \have | e2>0 : 0 < e2 => linarith
-              | e2>0' : 0 < Real.fromRat e2 => rat_real_<.1 e2>0
-              | q>0 : 0 < q => fpow.one>0 q>=1
-              | r>0 : 0 < r => fpow.one>0 r>=1
-              | E>0 : 0 < rpow-pos e2 e2>0' q => rpow-pos>0
-    \in \case UpperReal.U-inh_>0 {lnorm {X} x0} \with {
-      | inP (N0,N0u,N0>0) =>
-        \let N => N0 + 2
-        \in \have | N>0' : 0 < Real.fromRat N => rat_real_<.1 (linarith : 0 < N)
-                  | Rn>0 : 0 < rpow-pos N N>0' r => rpow-pos>0
-                  | R2>0 : 0 < (2 : Real) * rpow-pos N N>0' r => RealField.<_*_positive_positive (rat_real_<.1 idp) Rn>0
-        \in \case rat-below (RealField.<_*_positive_positive (RealField.<_*_positive_positive E>0 (rat_real_<.1 idp)) (RealField.pinv>0 R2>0)) \with {
-          | inP (eta,eta>0,etab) => \case lpSignedPow-modulus {L} {r} {q} {r>1} {q>=1} rq eta>0 \with {
-            | inP (C,C>=0,hC) =>
-              \have | C1>0 : 0 < Real.fromRat C + 1 => usingOnly (rat_real_<=.1 C>=0) linarith
-                    | T>0 : 0 < rpow-pos e2 e2>0' q * ratio 1 2 * RealField.pinv (Real.fromRat C + 1) C1>0
-                        => RealField.<_*_positive_positive (RealField.<_*_positive_positive E>0 (rat_real_<.1 idp)) (RealField.pinv>0 C1>0)
-              \in \case small-rpow r>0 T>0 \with {
-                | inP (ag,ag>0,hg) =>
-                  \let gamma => ag RatField.∧ 1
-                  \in \have gamma>0 : 0 < gamma => RatField.<_meet-univ ag>0 RatField.zro<ide
-                  \in inP (gamma, gamma>0, \lam {x} {x'} d0 d1 =>
-                    \have | dx : lnorm {X} (x0 - x) < 1 => transport (__ < _) (lnorm-ldist {X} {x0} {x}) (real_<_U.2 d0)
-                          | dxx : lnorm {X} (x - x') < gamma => transport (__ < _) (lnorm-ldist {X} {x} {x'}) (real_<_U.2 d1)
-                          | g<=1 : gamma RealAbGroup.<= 1 => rat_real_<=.1 RatField.meet-right
-                          | xN0 : lnorm {X} x < Real.fromRat N0 + 1 => norm-near {X} (real_<_U.2 N0u) dx
-                          | x'N0 : lnorm {X} x' < Real.fromRat N0 + 1 + gamma => norm-near {X} xN0 dxx
-                          | eN : Real.fromRat N = Real.fromRat N0 + 1 + 1 => inv (pmap (+ 1) RealAbGroup.+-rat *> RealAbGroup.+-rat *> pmap Real.fromRat (linarith : N0 + 1 + 1 = N))
-                          | xN : lnorm {X} x <= N => transportInv (_ <=) eN (usingOnly xN0 linarith)
-                          | x'N : lnorm {X} x' <= N => transportInv (_ <=) eN (usingOnly (x'N0, g<=1) linarith)
-                          | Px : lpNormPow r r>=1 x <= rpow-pos N N>0' r => rpow-mono {_} {_} {lnorm>=0 {X}} {<=-less N>0'} xN <=∘ =_<= (rpow-pos-eq {_} {<=-less N>0'} N>0')
-                          | Px' : lpNormPow r r>=1 x' <= rpow-pos N N>0' r => rpow-mono {_} {_} {lnorm>=0 {X}} {<=-less N>0'} x'N <=∘ =_<= (rpow-pos-eq {_} {<=-less N>0'} N>0')
-                          | gm>0 : 0 < Real.fromRat gamma => rat_real_<.1 gamma>0
-                          | P : lpNormPow r r>=1 (x - x') <= rpow-pos e2 e2>0' q * ratio 1 2 * RealField.pinv (Real.fromRat C + 1) C1>0
-                              => rpow-mono {_} {_} {lnorm>=0 {X}} {<=-less gm>0} (<=-less dxx) <=∘ =_<= (rpow-pos-eq {_} {<=-less gm>0} gm>0) <=∘ hg gamma>0 RatField.meet-left
-                          | h1 : Real.fromRat C * lpNormPow r r>=1 (x - x') <= rpow-pos e2 e2>0' q * ratio 1 2
-                              => <=_*_positive-right (rat_real_<=.1 C>=0) P
-                                 <=∘ <=_*_positive-left (usingOnly () linarith : Real.fromRat C <= Real.fromRat C + 1) (<=-less T>0)
-                                 <=∘ =_<= (pinv-cancel C1>0)
-                          | h2 : Real.fromRat eta * (lpNormPow r r>=1 x + lpNormPow r r>=1 x') <= rpow-pos e2 e2>0' q * ratio 1 2
-                              => <=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) (<=_+ Px Px' <=∘ =_<= (equation.cRing : rpow-pos N N>0' r + rpow-pos N N>0' r = (2 : Real) * rpow-pos N N>0' r))
-                                 <=∘ <=_*_positive-left (<=-less etab) (<=-less R2>0)
-                                 <=∘ =_<= (*-comm *> pinv-cancel R2>0)
-                          | Q : lpNormPow q q>=1 (f x - f x') <= rpow-pos e2 e2>0' q
-                              => hC x x' <=∘ usingOnly (h1, h2) linarith
-                          | n : lnorm {Y} (f x - f x') <= e2
-                              => rpow-mono-inv {_} {_} {lnorm>=0 {Y}} {<=-less e2>0'} {q} {q>0} (Q <=∘ =_<= (inv (rpow-pos-eq e2>0')))
-                    \in real_<_U.1 (transportInv (__ < _) (lnorm-ldist {Y}) (n <∘r rat_real_<.1 (linarith : e2 < eps))))
-              }
-          }
-        }
-    })
-  \where {
-    \lemma pinv-cancel {E W : Real} (W>0 : 0 < W) : W * (E * RealField.pinv W W>0) = E
-      => equation.cRing *> pmap (E *) (RealField.pinv-right W>0) *> ide-right
-
-    -- | $\|x\| < N$ and $\|x - y\| < \delta$ imply $\|y\| < N + \delta$.
-    \lemma norm-near {X : PseudoNormedAbGroup} {x y : X} {N d : Real} (xN : lnorm x < N) (xy : lnorm (x - y) < d) : lnorm y < N + d
-      => \have | t : lnorm y <= lnorm x + lnorm (y - x) => =_<= (pmap lnorm (equation.abGroup : y = x + (y - x))) <=∘ lnorm_+
-               | e : lnorm (y - x) = lnorm (x - y) => lnorm_-
-         \in usingOnly (t, e, xN, xy) linarith
-  }
-
--- | The signed power $\varphi_r \colon \mathrm L^r \to \mathrm L^{r'}$.
+-- | The signed power $\varphi_r \colon \mathrm L^r \to \mathrm L^{r'}$, by the functional calculus {lpCalc1}: $\varphi_r$ is homogeneous of degree $r - 1 = r/r'$.
 \sfunc lpSignedPow {L : FullIntegrationSpace} {r q : Real} (r>1 : 1 < r) (q>=1 : 1 <= q)
                    (\property rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1))
   : CoverMap (LpSpace L r (ge1 r>1)) (LpSpace L q q>=1)
-  => lpSignedPowLU r>1 q>=1 rq
+  => lpCalc1 (ge1 r>1) q>=1 (signedPow-cover r>1) signedPow-zro (signedPow-modulus rq)
 
 -- | {lpSignedPow} is $\varphi_r$ on `L⁰`.
 \lemma lpSignedPow-char {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
                         {rq : HolderConjugate r q (fpow.one>0 (ge1 r>1)) (fpow.one>0 q>=1)} {u : LpSpace L r (ge1 r>1)}
   : lpToL0 q q>=1 (lpSignedPow r>1 q>=1 rq u) = l0signedPow r>1 (lpToL0 r (ge1 r>1) u)
-  => pmap (\lam (f : CoverMap (LpSpace L r (ge1 r>1)) (LpSpace L q q>=1)) => lpToL0 q q>=1 (f u)) (\peval lpSignedPow r>1 q>=1 rq) *> lpSignedPowFun-char
+  => pmap (\lam (f : CoverMap (LpSpace L r (ge1 r>1)) (LpSpace L q q>=1)) => lpToL0 q q>=1 (f u)) (\peval lpSignedPow r>1 q>=1 rq) *> lpCalc1-char
 
 -- | $\|\varphi_r(u)\|_{r'}^{r'} = \|u\|_r^r$.
 \lemma lpSignedPow-conj {L : FullIntegrationSpace} {r q : Real} {r>1 : 1 < r} {q>=1 : 1 <= q}
