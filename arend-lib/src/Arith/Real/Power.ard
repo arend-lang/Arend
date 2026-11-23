@@ -59,6 +59,7 @@
 \lemma rpow-pos-def {x : Real} {x>0 : (0 : Real) < x} {a : Real} : rpow-pos x x>0 a = exp (a * log x x>0)
   => (\peval rpow-pos x x>0 a) *> pmap (\lam t => exp (a * t)) (log-ext idp)
 
+\attr positivity
 \lemma rpow-pos>0 {x : Real} {x>0 : (0 : Real) < x} {a : Real} : (0 : Real) < rpow-pos x x>0 a
   => rewrite rpow-pos-def (Real-exp-pos _)
 
@@ -122,6 +123,7 @@
   : rpow x x>=0 a a>0 = rpow y y>=0 b b>0 \elim p, q
   | idp, idp => idp
 
+\attr positivity
 \lemma rpow>=0 {x : Real} {x>=0 : (0 : Real) <= x} {a : Real} {a>0 : (0 : Real) < a} : (0 : Real) <= rpow x x>=0 a a>0
   => dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (CoverMap.const (0 : Real)) (rpow-cover a>0) (\lam y => <=-less $ rpow-pos>0 <∘l =_<= (inv $ rpow-pos-eq y.2)) (x,x>=0)
 

@@ -144,6 +144,7 @@
  -   `exp x` is invertible (via `exp_negative`), so {#0=>eitherPosOrNeg} gives
  -   `0 < exp x` or `exp x < 0`. The latter contradicts `0 <= exp(x/2)^2 = exp x`.
  -}
+\attr positivity
 \lemma Real-exp-pos (x : Real) : 0 < exp x
   => \case RealField.#0=>eitherPosOrNeg exp_Inv \with {
     | byLeft exp-pos => RealField.pos_>0 exp-pos

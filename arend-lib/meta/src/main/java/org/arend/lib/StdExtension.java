@@ -39,6 +39,8 @@ import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
 import org.arend.lib.meta.linear.LinearSolverMeta;
+import org.arend.lib.meta.positivity.PositivityDeferredMeta;
+import org.arend.lib.meta.positivity.PositivityMeta;
 import org.arend.lib.meta.arith.IntArithMeta;
 import org.arend.lib.meta.arith.NatArithMeta;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
@@ -291,6 +293,10 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getStrictOrderModule());
     contributor.declare(algebra, Names.getPathsModule());
     contributor.declare(algebra, Names.getSetModule());
+    contributor.declare(algebra, Names.getLogicModule());
+    contributor.declare(algebra, Names.getBiorderedModule());
+    contributor.declare(algebra, new ModulePath("Algebra", "Ordered"));
+    contributor.declare(algebra, new ModulePath("Algebra", "Domain"));
     ConcreteMetaDefinition equation = makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(new EquationMeta(this), true)));
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
@@ -543,6 +549,20 @@ public class StdExtension implements ArendExtension {
         For example, if `p : a = b + c`, `q : b + b * c = c`, and the goal is `a * b = c`, then `bRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "bRing", new DependencyMetaTypechecker(BooleanRingEquationMeta.class, () -> new DeferredMetaDefinition(new BooleanRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
+    MetaRef[] positivityRef = new MetaRef[1];
+    positivityRef[0] = factory.metaRef(factory.moduleRef(algebra), "positivity", Precedence.DEFAULT, null, null, null,
+        new DependencyMetaTypechecker(PositivityMeta.class, () -> new PositivityDeferredMeta(new PositivityMeta(() -> positivityRef[0]))));
+    contributor.declare(multiline("""
+        Proves goals of the form `0 < e`, `0 <= e`, and `e /= 0` by recursion on the structure of `e`.
+
+        The goal is proved by hypotheses from the context (including `c < e` and `c <= e` for closed `c`), by numerals,
+        and by lemmas whose conclusion unifies with the goal; the explicit premises of such a lemma are proved recursively.
+        Lemmas about the algebraic operations are built in; other lemmas are added with `\\attr positivity`.
+        Such a lemma should conclude `0 < e`, `0 <= e`, or `e /= 0`, and it is visible in the same module after its declaration
+        and in modules that import its module directly.
+        A proof of `0 < e` is weakened to `0 <= e` and `e /= 0` when needed.
+        An optional argument `using`, `usingOnly`, or `hiding` controls the context.
+        """), makeDef(positivityRef[0]));
     contributor.declare(text("Like linarith, but additionally synthesizes hypotheses about div, mod, and truncated minus (-') subterms for Nat"),
         makeDef(algebra, "natarith", new DependencyMetaTypechecker(NatArithMeta.class, () -> new DeferredMetaDefinition(new NatArithMeta(), true))));
     contributor.declare(text("Like linarith, but additionally converts strict Int inequalities x < y into isuc x <= y"),

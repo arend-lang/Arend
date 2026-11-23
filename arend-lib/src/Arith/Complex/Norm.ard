@@ -31,6 +31,7 @@
 \func cabs2 (z : Complex) : Real
   => z.re * z.re + z.im * z.im
 
+\attr positivity
 \lemma cabs2>=0 {z : Complex} : (0 : Real) <= cabs2 z
   => linarith (RealField.square_>=0 {z.re}, RealField.square_>=0 {z.im})
 
@@ -69,6 +70,7 @@
 \func cabs (z : Complex) : Real
   => sqrt (cabs2 z)
 
+\attr positivity
 \lemma cabs>=0 {z : Complex} : 0 <= cabs z
   => sqrt>=0
 

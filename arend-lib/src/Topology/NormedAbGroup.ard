@@ -97,6 +97,7 @@
     }
 }
 
+\attr positivity
 \lemma norm>=0 {X : ExPseudoNormedAbGroup} {x : X} : 0 <= norm x
   => rewrite norm_dist dist>=0
 
@@ -140,6 +141,7 @@
 \func lnorm {X : PseudoNormedAbGroup} (x : X) : Real
   => X.norm x
 
+\attr positivity
 \lemma lnorm>=0 {X : PseudoNormedAbGroup} {x : X} : 0 <= X.norm x
   => Real.<=-upper.2 (later norm>=0)
 

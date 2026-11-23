@@ -28,6 +28,9 @@
 
   \lemma <_+ {a b c d : E} (p : a < c) (q : b < d) : a + b < c + d
     => <_+-left b p <∘ <_+-right c q
+
+  \lemma <_+-positive {a b : E} (a>0 : 0 < a) (b>0 : 0 < b) : 0 < a + b
+    => transport (< _) zro-left (<_+ a>0 b>0)
 }
 
 \class OrderedAbMonoid \extends OrderedAddMonoid, AbMonoid
@@ -63,6 +66,12 @@
 
   \lemma <=_+-right {a b c d : E} (p : a < c) (q : b <= d) : a + b < c + d
     => <_+-left b p <∘l <=_+ <=-refl q
+
+  \lemma <_+-positive-left {a b : E} (a>0 : 0 < a) (b>=0 : 0 <= b) : 0 < a + b
+    => transport (< _) zro-left (<=_+-right a>0 b>=0)
+
+  \lemma <_+-positive-right {a b : E} (a>=0 : 0 <= a) (b>0 : 0 < b) : 0 < a + b
+    => transport (< _) zro-left (<=_+-left a>=0 b>0)
 
   \lemma <_+-split {a b c d : E} (p : a + b < c + d) : a < c || b < d
     => \case <-comparison (c + b) p \with {

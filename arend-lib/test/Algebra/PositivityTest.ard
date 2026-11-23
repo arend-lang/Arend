@@ -1,0 +1,150 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Arith.Exp
+\import Arith.Exp.Real
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Topology.BanachAlgebra
+\open Monoid(pow)
+\open LatticeAbGroup(abs)
+
+-- Numerals
+
+\lemma test-ide {R : OrderedSemiring} : 0 < (1 : R)
+  => positivity
+
+\lemma test-two {R : LinearlyOrderedSemiring} : 0 < (2 : R)
+  => positivity
+
+\lemma test-zero {R : LinearlyOrderedSemiring} : 0 <= (0 : R)
+  => positivity
+
+\lemma test-nat {n : Nat} : 0 < n + 3
+  => positivity
+
+\lemma test-nat-nonneg {n m : Nat} : 0 <= n * m
+  => positivity
+
+-- Hypotheses
+
+\lemma test-hyp {R : OrderedSemiring} {x : R} (p : 0 < x) : 0 < x
+  => positivity
+
+\lemma test-hyp-weaken {R : LinearlyOrderedSemiring} {x : R} (p : 0 < x) : 0 <= x
+  => positivity
+
+\lemma test-hyp-nonzero {R : OrderedRing} {x : R} (p : 0 < x) : x /= 0
+  => positivity
+
+\lemma test-hyp-gt {R : OrderedSemiring} {x : R} (p : x > 0) : x > 0
+  => positivity
+
+\lemma test-hyp-bound {R : LinearlyOrderedSemiring} {x : R} (p : 1 <= x) : 0 < x
+  => positivity
+
+\lemma test-hyp-bound2 {R : LinearlyOrderedSemiring} {x : R} (p : 2 < x) : 0 < x
+  => positivity
+
+\lemma test-using {R : LinearlyOrderedSemiring} {x : R} (p : 0 < x) : 0 < x * x
+  => positivity (usingOnly p)
+
+-- Operations
+
+\lemma test-add {R : LinearlyOrderedSemiring} {x y : R} (p : 0 < x) (q : 0 <= y) : 0 < x + y
+  => positivity
+
+\lemma test-add-nonneg {R : LinearlyOrderedSemiring} {x y : R} (p : 0 <= x) (q : 0 <= y) : 0 <= x + y
+  => positivity
+
+\lemma test-mul {R : LinearlyOrderedSemiring} {x y : R} (p : 0 < x) (q : 0 <= y) : 0 <= x * y
+  => positivity
+
+\lemma test-square {R : LinearlyOrderedSemiring} {x : R} : 0 <= x * x
+  => positivity
+
+\lemma test-square-plus-one {R : LinearlyOrderedSemiring} {x : R} : 0 < x * x + 1
+  => positivity
+
+\lemma test-pow {R : LinearlyOrderedSemiring} {x : R} {n : Nat} (p : 0 < x) : 0 < pow x n
+  => positivity
+
+\lemma test-nested {R : LinearlyOrderedSemiring} {x y z : R} (p : 0 < x) (q : 0 <= y) : 0 < x * (y + 1) + z * z
+  => positivity
+
+\lemma test-abs {R : OrderedRing} {x y : R} : 0 <= abs x + abs y
+  => positivity
+
+\lemma test-join {R : OrderedRing} {x y : R} (p : 0 < x) : 0 < x ∨ y
+  => positivity
+
+\lemma test-meet {R : OrderedRing} {x y : R} (p : 0 < x) (q : 0 < y) : 0 < x ∧ y
+  => positivity
+
+\lemma test-finv {F : DiscreteOrderedField} {x : F} (p : 0 < x) : 0 < finv x * 2
+  => positivity
+
+\lemma test-nonzero-mul {R : OrderedRing} {x y : R} (p : x /= 0) (q : 0 < y) : x * y /= 0
+  => positivity
+
+\lemma test-natCoef {R : LinearlyOrderedSemiring} {x : R} (p : 0 <= x) : 0 <= 3 * x
+  => positivity
+
+-- Concrete instances
+
+\lemma test-rat {x : Rat} (p : 0 < x) : 0 < x * x + x
+  => positivity
+
+\lemma test-real {x y : Real} (p : 0 < x) : 0 < x * (y * y + 1)
+  => positivity
+
+\lemma test-real-nonzero {x : Real} (p : 0 < x) : x * x /= 0
+  => positivity
+
+\lemma test-int {n : Int} : 0 <= n * n + 1
+  => positivity
+
+-- Lemmas marked with \attr positivity
+
+\lemma test-exp {x y : Real} : 0 < exp x * (sqrt y + 1)
+  => positivity
+
+\lemma test-sqrt {x y : Real} (p : 0 < x) : 0 < sqrt x + sqrt y
+  => positivity
+
+\lemma test-exp-nonzero {x : Real} : exp x /= 0
+  => positivity
+
+\func double (x : Nat) : Nat => x + x
+
+\attr positivity
+\lemma double>0 {x : Nat} (p : 0 < x) : 0 < double x
+  => OrderedAddMonoid.<_+-positive p p
+
+\lemma test-local {x : Nat} : 0 < double (x + 1) * 2
+  => positivity
+
+-- Failures
+
+\lemma test-fail-sub {R : OrderedRing} {x y : R} (p : 0 < x) (q : 0 < y)
+  => fails {0 < x - y} positivity
+
+\lemma test-fail-var {R : LinearlyOrderedSemiring} {x : R}
+  => fails {0 <= x} positivity
+
+\lemma test-fail-shape {R : LinearlyOrderedSemiring} {x : R}
+  => fails {x <= 1} positivity

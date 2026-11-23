@@ -1,3 +1,4 @@
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
@@ -40,6 +41,7 @@
         (\lam {v} v>=0 => inP (0, v ∨ 1, zro<ide <∘l join-right, \lam p _ => p, transportInv (<= v) (Semiring.pow_0 n/=0) v>=0, join-left <=∘ RealField.pow>=id join-right n/=0))
   }
 
+\attr positivity
 \lemma root>=0 {n : Nat} {x : Real} : 0 <= root n x \elim n
   | 0 => transportInv (0 <=) (\peval root 0 x) <=-refl
   | suc n => transportInv (0 <=) (\peval root (suc n) x) $ (IsEquiv.ret (root.rootEquiv {suc n} suc/=0) (x ∨ 0, join-right)).2
@@ -62,6 +64,7 @@
 \lemma root-monotone {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : root n x < root n y
   => real-cont_<-inv-mono {pow __ n} (\lam p => RealField.pow_<=-monotone root>=0 $ <=-less p) (cont-char.1 TopMonoid.pow-cont _) $ transport2 (<) (inv $ pow_root n/=0 x>=0) (inv $ pow_root n/=0 $ x>=0 <=∘ <=-less x<y) x<y
 
+\attr positivity
 \lemma root>0 {n : Nat} (n/=0 : n /= 0) {x : Real} (x>0 : 0 < x) : 0 < root n x
   => transport (< _) root_zro (root-monotone n/=0 <=-refl x>0)
 
@@ -75,6 +78,7 @@
 
 \sfunc sqrt (x : Real) => root 2 x
 
+\attr positivity
 \lemma sqrt>=0 {x : Real} : 0 <= sqrt x
   => transportInv (0 <=) (\peval sqrt x) root>=0
 
@@ -96,6 +100,7 @@
 \lemma sqrt-monotone {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : sqrt x < sqrt y
   => transport2 (<) (inv \peval sqrt x) (inv \peval sqrt y) $ root-monotone suc/=0 x>=0 x<y
 
+\attr positivity
 \lemma sqrt>0 {x : Real} (x>0 : 0 < x) : 0 < sqrt x
   => transportInv (0 <) (\peval sqrt x) (root>0 suc/=0 x>0)
 

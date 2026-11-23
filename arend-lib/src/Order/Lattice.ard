@@ -109,6 +109,12 @@
   \lemma join-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∨ y <= x' ∨ y'
     => join-univ (p <=∘ join-left) (q <=∘ join-right)
 
+  \lemma <=_join-left {x y z : E} (p : z <= x) : z <= x ∨ y
+    => p <=∘ join-left
+
+  \lemma <=_join-right {x y z : E} (p : z <= y) : z <= x ∨ y
+    => p <=∘ join-right
+
   \lemma join-idemp {x : E} : x ∨ x = x =>
     <=-antisymmetric (join-univ <=-refl <=-refl) join-left
 
