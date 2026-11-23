@@ -12,6 +12,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.QModule
 \import Analysis.Integration.FullIntegrationSpace
@@ -129,7 +130,7 @@
 \lemma fmul-meet-lip {L : FullIntegrationSpace} {M : Rat} (M>=0 : RatField.zro RatField.<= M) {f f' g g' h : L}
                      (fM : L.IsBelow (abs f) M) (f'M : L.IsBelow (abs f') M) (gM : L.IsBelow (abs g) M) (g'M : L.IsBelow (abs g') M) (h>=0 : L.zro <= h)
   : abs (fmul f g - fmul f' g') ∧ h <= (M RatField.∨ 1) *q (abs (f - f') ∧ h + abs (g - g') ∧ h)
-  => \have | s>=0 : L.zro <= abs (f - f') + abs (g - g') => =_<= (inv L.zro-left) <=∘ L.<=_+ abs>=0 abs>=0
+  => \have | s>=0 : L.zro <= abs (f - f') + abs (g - g') => positivity
            | aM : RatField.abs M = M => RatField.abs-ofPos M>=0
      \in L.meet-monotone (fmul-lip M>=0 fM f'M gM g'M <=∘ =_<= (pmap (*q _) (inv aM))) <=-refl <=∘ meet-scale s>=0 h>=0
           <=∘ L.<=_*q-right (RatField.<=-transitive RatField.zro<=ide RatField.join-right) (meet-add abs>=0 abs>=0 h>=0) <=∘ =_<= (pmap (\lam c => (c RatField.∨ 1) *q _) aM)
@@ -147,7 +148,7 @@
   \where
     \private \lemma pt {p : Real} {p>0 : (0 : Real) < p} {c x : Real}
       : rpow (RealAbGroup.abs (c * x)) RealAbGroup.abs>=0 p p>0 = rpow (RealAbGroup.abs c) RealAbGroup.abs>=0 p p>0 * rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0
-      => rpow-ext {_} {_} RealField.abs_* {_} {RealField.<=_*_positive_positive RealAbGroup.abs>=0 RealAbGroup.abs>=0} idp {p>0} {p>0} *> rpow_*
+      => rpow-ext {_} {_} RealField.abs_* {_} {positivity} idp {p>0} {p>0} *> rpow_*
 
 -- | $|0|^p = 0$.
 \lemma fpow-zro {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} : fpow p p>=1 L.zro = L.zro
@@ -255,7 +256,7 @@
   \where
     \lemma superadd {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {a b : Real} (a>=0 : (0 : Real) <= a) (b>=0 : (0 : Real) <= b)
       : rpow (RealAbGroup.abs b) RealAbGroup.abs>=0 p p>0 + rpow (RealAbGroup.abs a) RealAbGroup.abs>=0 p p>0 <= rpow (RealAbGroup.abs (a + b)) RealAbGroup.abs>=0 p p>0
-      => \have | ab>=0 : (0 : Real) <= a + b => linarith
+      => \have | ab>=0 : 0 <= a + b => positivity
                | ea : rpow (RealAbGroup.abs a) RealAbGroup.abs>=0 p p>0 = rpow a a>=0 p p>0 => rpow-ext (RealAbGroup.abs-ofPos a>=0) idp
                | eb : rpow (RealAbGroup.abs b) RealAbGroup.abs>=0 p p>0 = rpow b b>=0 p p>0 => rpow-ext (RealAbGroup.abs-ofPos b>=0) idp
                | eab : rpow (RealAbGroup.abs (a + b)) RealAbGroup.abs>=0 p p>0 = rpow (a + b) ab>=0 p p>0 => rpow-ext (RealAbGroup.abs-ofPos ab>=0) idp
@@ -340,8 +341,8 @@
       => \have | l1 : RealAbGroup.abs (RealAbGroup.abs x ∧ c - RealAbGroup.abs y ∧ c) <= RealAbGroup.abs (x - y)
                    => RealAbGroup.meet-lip <=∘ =_<= (pmap (_ +) (pmap RealAbGroup.abs RealAbGroup.negative-right *> RealAbGroup.abs_zro) *> zro-right)
                       <=∘ RealField.abs-univ RealAbGroup.abs_-left RealAbGroup.abs_-right
-               | ax : (0 : Real) <= RealAbGroup.abs x ∧ c => meet-univ RealAbGroup.abs>=0 c>=0
-               | ay : (0 : Real) <= RealAbGroup.abs y ∧ c => meet-univ RealAbGroup.abs>=0 c>=0
+               | ax : 0 <= RealAbGroup.abs x ∧ c => positivity
+               | ay : 0 <= RealAbGroup.abs y ∧ c => positivity
                | cx : RealAbGroup.abs x ∧ c <= c => meet-right
                | cy : RealAbGroup.abs y ∧ c <= c => meet-right
          \in meet-univ l1 (RealField.abs-univ linarith linarith)
@@ -366,7 +367,7 @@
           (\lam cK<1 => \have | m : e * (c * K) <= e * 1 => RealField.<=_*_positive-right (<=-less e>0) (<=-less cK<1)
                               | Ke : K <= e => transport (__ <= _) (equation.cRing {ce}) (m <=∘ =_<= ide-right)
                         \in meet-univ meet-right (meet-right <=∘ Ke))
-          (\lam cK>=1 => meet-left <=∘ X1 cK>=1 <=∘ meet-univ K>=0 (<=-less e>0))
+          (\lam cK>=1 => meet-left <=∘ X1 cK>=1 <=∘ positivity)
 
     -- | $(cK + W) \wedge 1 = 1$ if $cK \ge 1$ and $W \ge 0$.
     \lemma one {c K W : Real} (cK>=1 : (1 : Real) <= c * K) (W>=0 : (0 : Real) <= W) : (c * K + W) ∧ 1 = (1 : Real)
@@ -453,7 +454,7 @@
       <= fpow q q>=1 g + rscale ((q - 1) * rpow-pos v v>0 q) (L.trunc (RatField.finv eta *q g)) + rscale (q * rpow-pos v v>0 (q - 1)) (L.truncAt eta g)
   => \have eg => fcalc-pos (fcalc-var {L} {1} {g :: nil} 0) g>=0
      \in fcalc-le-pt (g :: nil)
-          (\lam z => rpow-tangent-trunc q>=1 v>0 (rat_real_<=.1 (RatField.<=-less (RatField.finv>0 eta>0))) (rat_real_<=.1 (RatField.<=-less eta>0))
+          (\lam z => rpow-tangent-trunc q>=1 v>0 (rat_real_<=.1 positivity) (rat_real_<=.1 (RatField.<=-less eta>0))
                        (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= eta>0))) RealAbGroup.join-right)
           (fcalc-rscale eg)
           (fcalc-add (fcalc-add (fcalc-pow eg) (fcalc-rscale (fcalc-op1 (LinBoundedMap.meetConst 1 RealField.zro<=ide) (fcalc-*q eg) *> fcalc-trunc)))
@@ -464,7 +465,7 @@
   : fpow q q>=1 (fpow p p>=1 f) = fpow r r>=1 f
   => fcalc-eq-pt (f :: nil)
       (\lam z => rpow-ext (RealAbGroup.abs-ofPos rpow>=0) idp
-                 *> rpow-rpow {_} {RealAbGroup.abs>=0} {p} {q} {fpow.one>0 p>=1} {fpow.one>0 q>=1} {rpow>=0} {RealField.<_*_positive_positive (fpow.one>0 p>=1) (fpow.one>0 q>=1)}
+                 *> rpow-rpow {_} {RealAbGroup.abs>=0} {p} {q} {fpow.one>0 p>=1} {fpow.one>0 q>=1} {rpow>=0} {positivity}
                  *> rpow-ext idp pq)
       (fcalc-pow (fcalc-pow (fcalc-var 0))) (fcalc-pow (fcalc-var 0))
 
@@ -551,7 +552,7 @@
   => \have | ew => fcalc-excess C>0 (fcalc-var {L} {2} {f :: h :: nil} 0)
            | eh => fcalc-pos (fcalc-var {L} {2} {f :: h :: nil} 1) h>=0
            | ie : Real.fromRat (RatField.finv eps) * Real.fromRat eps = (1 : Real) => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= eps>0))
-     \in fcalc-le-pt (f :: h :: nil) (\lam z => pt (rat_real_<.1 eps>0) ie (rat_real_<=.1 (RatField.<=-less (RatField.finv>0 eps>0))) (rat_real_<=.1 RatField.join-left) (rat_real_<=.1 RatField.join-right) (excess-pos (rat_real_<.1 C>0)) RealAbGroup.join-right)
+     \in fcalc-le-pt (f :: h :: nil) (\lam z => pt (rat_real_<.1 eps>0) ie (rat_real_<=.1 positivity) (rat_real_<=.1 RatField.join-left) (rat_real_<=.1 RatField.join-right) (excess-pos (rat_real_<.1 C>0)) RealAbGroup.join-right)
           (fcalc-meet ew eh) (fcalc-add (fcalc-truncAt eps>0 eh) (fcalc-*q (fcalc-mul ew (fcalc-meet (fcalc-rampAt ew) eh))))
   \where {
     \lemma excess-pos {C x : Real} (C>0 : (0 : Real) < C) : (0 : Real) <= (x ∨ 0) - ((x ∨ 0) ∧ C)
@@ -559,10 +560,10 @@
 
     \private \lemma pt {e i K W y : Real} (e>0 : (0 : Real) < e) (ie : i * e = (1 : Real)) (i>=0 : (0 : Real) <= i) (K>=1 : (1 : Real) <= K) (i<=K : i <= K) (W>=0 : (0 : Real) <= W) (y>=0 : (0 : Real) <= y)
       : W ∧ y <= y ∧ e + K * (W * (((i * W) ∧ 1) ∧ y))
-      => \have | m>=0 : (0 : Real) <= ((i * W) ∧ 1) ∧ y => meet-univ (meet-univ (RealField.<=_*_positive_positive i>=0 W>=0) RealField.zro<=ide) y>=0
-               | K>=0 : (0 : Real) <= K => linarith
-               | T>=0 : (0 : Real) <= K * (W * (((i * W) ∧ 1) ∧ y)) => RealField.<=_*_positive_positive K>=0 (RealField.<=_*_positive_positive W>=0 m>=0)
-               | ye>=0 : (0 : Real) <= y ∧ e => meet-univ y>=0 (<=-less e>0)
+      => \have | m>=0 : 0 <= ((i * W) ∧ 1) ∧ y => positivity
+               | K>=0 : 0 <= K => positivity
+               | T>=0 : 0 <= K * (W * (((i * W) ∧ 1) ∧ y)) => positivity
+               | ye>=0 : 0 <= y ∧ e => positivity
          \in signedPow.real-cases {e} {W}
               (\lam e<W => \have | iW>=1 : (1 : Real) <= i * W => =_<= (inv ie) <=∘ <=_*_positive-right i>=0 (<=-less e<W)
                                  | KW>=1 : (1 : Real) <= K * W => iW>=1 <=∘ <=_*_positive-left i<=K W>=0
@@ -645,10 +646,9 @@
           | M1 => M RatField.+ 1
      \in \have | Mr>=0 : (0 : Real) <= Mr => rat_real_<=.1 M>=0
                | M1>0 : RatField.zro RatField.< M1 => linarith
-     \in \case absPow-unif-deriv {p} {fpow.one>0 (<=-less p>1)} p>1 {Mr + Mr} (linarith : (0 : Real) <= Mr + Mr) eps>0 \with {
+     \in \case absPow-unif-deriv {p} {fpow.one>0 (<=-less p>1)} p>1 {Mr + Mr} (positivity : 0 <= Mr + Mr) eps>0 \with {
        | inP (d0,d0>0,hd) =>
-         \have dd>0 : RatField.zro RatField.< d0 RatField.* RatField.finv M1 => RatField.<_*_positive_positive d0>0 (RatField.finv>0 M1>0)
-         \in inP (1 RatField.∧ (d0 RatField.* RatField.finv M1), RatField.<_meet-univ RatField.zro<ide dd>0, \lam t tD =>
+         inP (1 RatField.∧ (d0 RatField.* RatField.finv M1), positivity, \lam t tD =>
            \have | t<1 : RatField.abs t RatField.< 1 => tD <∘l RatField.meet-left
                  | tM : RatField.abs t RatField.* M1 RatField.< d0
                      => transport (_ RatField.<) (RatField.*-assoc *> pmap (d0 RatField.*) (RatField.finv-left (RatField.>_/= M1>0)) *> RatField.ide-right)

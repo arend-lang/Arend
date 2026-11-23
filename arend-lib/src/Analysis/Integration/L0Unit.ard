@@ -71,7 +71,7 @@
 
     -- | The level `k/η` beyond which {trunc-tail} applies.
     \func start {L : FullIntegrationSpace} {k : L} (k>=0 : L.zro <= k) {eta : Rat} (eta>0 : RatField.zro RatField.< eta) : PosCone L
-      => \new PosElem L (RatField.finv eta *q k) (L.*q_>=0 (<=-less (RatField.finv>0 eta>0)) k>=0)
+      => \new PosElem L (RatField.finv eta *q k) (L.*q_>=0 positivity k>=0)
 
     -- | For every $d_k$ and $\varepsilon$ there is $\eta$ with $I(\tau_\eta k) < \varepsilon$.
     \lemma small {L : FullIntegrationSpace} {k : L} (k>=0 : L.zro <= k) {eps : Real} (eps>0 : (0 : Real) < eps)

@@ -2,7 +2,6 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.QModule
 \import Algebra.Ring
@@ -16,8 +15,6 @@
 \import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
-\import Arith.Real
-\import Arith.Real.Field
 \import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
@@ -181,7 +178,7 @@
              | finv-sucN0>0 : 0 < RatField.finv (suc N0)
                 => RatField.finv>0 sucN0-pos
              | eps/k>0 : 0 < eps * ratio 1 3 * RatField.finv (suc N0)
-                => RatField.<_*_positive_positive (RatField.<_*_positive_positive eps>0 linarith) finv-sucN0>0
+                => positivity
              | per-k (k : Fin N0) : ∃ (Mk : Nat) ∀ {N'} (Mk <= N') ((dist (L k) (F k N')).U (eps * ratio 1 3 * RatField.finv (suc N0)))
                 => limit-metric-char.1 (F-conv k) eps/k>0
              | (inP allM) => FinSet.finiteAC per-k

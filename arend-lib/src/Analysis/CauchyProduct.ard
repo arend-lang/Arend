@@ -1,4 +1,3 @@
-\import Algebra.Algebra
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
@@ -9,13 +8,9 @@
 \import Algebra.Semiring
 \import Algebra.Ring.FormalSeries
 \import Analysis.Series
-\import Equiv
 \import Arith.Nat
 \import Arith.Rat
-\import Arith.Real
-\import Arith.Real.Field
 \import Arith.Real.UpperReal
-\import Data.Array
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -33,12 +28,9 @@
 \import Topology.BanachAlgebra
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
-\import Topology.TopAbGroup
-\import Topology.TopSpace
-\open AddMonoid (BigSum)
 \open AbMonoid
 \open ExUpperRealSemigroup (*_>=0)
-\open FSeriesRing (PairsFinSet)
+\open FSeriesRing
 
 {- | Convolution of two series in a ring:
  - $(a \star b)_n = \sum_{k=0}^{n} a_k \cdot b_{n - k}$.
@@ -160,8 +152,8 @@
            | (inP (Bb, hb)) => partialSum-uniform-bound b>=0 bB bc
            | Ba>0 : 0 < Ba => rewrite partialSum-empty in ha 0
            | Bb>0 : 0 < Bb => rewrite partialSum-empty in hb 0
-           | D>0 : 0 < Ba + Bb + 1 => linarith
-           | epsR>0 : 0 < eps * finv (Ba + Bb + 1) => RatField.<_*_positive_positive eps>0 (RatField.finv>0 D>0)
+           | D>0 : 0 < Ba + Bb + 1 => positivity
+           | epsR>0 : 0 < eps * finv (Ba + Bb + 1) => positivity
            | epsR*D=eps : (eps * finv (Ba + Bb + 1)) * (Ba + Bb + 1) = eps
               => *-assoc *> pmap (eps *) (RatField.finv-left $ RatField.>_/= D>0) *> ide-right
            | epsR*D-expand : (eps * finv (Ba + Bb + 1)) * (Ba + Bb + 1)
@@ -350,7 +342,7 @@
                         => FinSum-bound eps2 (Bsb + Sb) M<=n M+Nb<=n gb sb-Bm-bnd
                            $ ExUpperReal.+_U_<=.2 $ inP
                               (eps2 * Sa, ExUpperRealSemigroup.<_*_U-right eps2>0 Sa>0 (hSa M),
-                               (Bsb + Sb) * eps2, ExUpperRealSemigroup.<_*_U-right (linarith : 0 < Bsb + Sb) eps2>0 (gm M<=n),
+                               (Bsb + Sb) * eps2, ExUpperRealSemigroup.<_*_U-right (positivity : 0 < Bsb + Sb) eps2>0 (gm M<=n),
                                <=-refl)
                     | termSumU : (norm ((sa - partialSum a n) * sb + FinSum (\lam (k : Fin n) => a k * (sb - partialSum b (n -' k))))).U eps
                         => ExUpperReal.U_<= (norm_+ $ ExUpperReal.+_U_<=.2 (inP (_, term1U, _, normFinSumU, <=-refl))) sum-bound

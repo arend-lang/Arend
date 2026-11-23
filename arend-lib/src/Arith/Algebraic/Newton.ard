@@ -134,7 +134,7 @@
                      => =_<= (pmap cabs hs *> cabs_negative {v * dinv} *> cabs_* {v} {dinv})
                         <=∘ <=_*_positive-left hv (cabs>=0 {dinv})
              \in <=_*_positive-left dz (cabs>=0 {s})
-                 <=∘ <=_*_positive-right (<=_*_positive_positive e>=0 (cabs>=0 {dinv})) dz
+                 <=∘ <=_*_positive-right positivity dz
        | t2 : cabs (w - v - b * s) <= quarter * e
           => rem
              <=∘ <=_*_positive-right C>=0 sq
@@ -198,10 +198,7 @@
       | quad' : C * (cabs dinv * cabs dinv) * (pow half k * e0) <= quarter
          => =_<= (equation.cRing : C * (cabs dinv * cabs dinv) * (pow half k * e0)
                                  = C * (cabs dinv * cabs dinv) * e0 * pow half k)
-            <=∘ <=_*_positive-right
-                  (<=_*_positive_positive
-                     (<=_*_positive_positive C>=0 (<=_*_positive_positive d>=0 d>=0)) e0>=0)
-                  (pow<=1 half>=0 half<=1)
+            <=∘ <=_*_positive-right positivity (pow<=1 half>=0 half<=1)
             <=∘ =_<= ide-right
             <=∘ quad
     \in (part1,

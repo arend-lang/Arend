@@ -143,7 +143,7 @@
         \in inP (b', x<=b $ RatField.mid>left bp, b'>0, c', y<=c $ RatField.mid>left cp, c>0 <∘ RatField.mid>left cp, transport2 (<) *-comm (*-assoc *> pmap (a RatField.*) (RatField.finv-left $ RatField.>_/= b'>0) *> ide-right) $ RatField.<_*_positive-left (RatField.mid<right cp) b'>0)
       | inr c<=0 =>
         \let | c' => RatField.half (a RatField.* RatField.finv (b RatField.+ 1))
-             | b'>0 : 0 < b RatField.+ 1 => linarith
+             | b'>0 : 0 < b RatField.+ 1 => positivity
              | c'2>0 => RatField.<_*_positive_positive (transport (< a) (pmap (b RatField.*) (<=-antisymmetric c<=0 c>=0) *> RatField.zro_*-right) bc<a) (RatField.finv>0 b'>0)
         \in inP (b RatField.+ 1, x<=b linarith, b'>0, c', y<=c $ c<=0 <∘r RatField.half>0 c'2>0, RatField.half>0 c'2>0, transport (< _) *-comm $ RatField.<_rotate-right-conv b'>0 $ RatField.half<id c'2>0)
     })

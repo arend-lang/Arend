@@ -157,7 +157,7 @@
         \have | S<q : S < q => real_<_U.2 Sq
               | q>0 : 0 < q => rat_real_<.2 (S>=0 <∘r S<q)
               | d/=0 : d /= 0 => RatField.>_/= d>0
-              | k0>=0 : 0 <= q * RatField.finv d => RatField.<=_*_positive_positive (<=-less q>0) (<=-less (RatField.finv>0 d>0))
+              | k0>=0 : 0 <= q * RatField.finv d => positivity
               | k0d : Real.fromRat (q * RatField.finv d) * Real.fromRat d = Real.fromRat q
                   => RealField.*-rat *> pmap Real.fromRat (*-assoc *> pmap (q *) (RatField.finv-left d/=0) *> ide-right)
         \in inP (q * RatField.finv d, k0>=0, \lam {k} k0<=k {x} x<R =>

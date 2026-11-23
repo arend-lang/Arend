@@ -4,7 +4,6 @@
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Algebra.Ring.Reduced
 \import Algebra.Semiring
 \import Arith.Complex
 \import Arith.Real
@@ -96,7 +95,7 @@
      $|xy|^2 = (|x| \cdot |y|)^2$ and use that both sides are nonneg square roots of the
      same value. -}
 \lemma cabs_* {x y : Complex} : cabs (x * y) = cabs x * cabs y
-  => sqrt-cancel (cabs>=0 {x * y}) (RealField.<=_*_positive_positive cabs>=0 cabs>=0) $ cabs-square {x * y}
+  => sqrt-cancel (cabs>=0 {x * y}) positivity $ cabs-square {x * y}
       *> cabs2_*
       *> pmap2 (*) (inv cabs-square) (inv cabs-square)
       *> {Real} equation.cRing
@@ -105,7 +104,7 @@
      Goes through $|s|$ (real abs of the inner product), which has
      $|s|^2 = s^2 \leq (|x| \cdot |y|)^2$, then sqrt-cancels. -}
 \private \lemma CS-linear {x y : Complex} : x.re * y.re + x.im * y.im <= cabs x * cabs y
-  => \have | t>=0 : 0 <= cabs x * cabs y => RealField.<=_*_positive_positive cabs>=0 cabs>=0
+  => \have | t>=0 : 0 <= cabs x * cabs y => positivity
            | abs_s_sq : RealField.abs (x.re * y.re + x.im * y.im) * RealField.abs (x.re * y.re + x.im * y.im)
                           = (x.re * y.re + x.im * y.im) * (x.re * y.re + x.im * y.im)
               => inv RealField.abs_* *> RealField.abs-ofPos RealField.square_>=0
@@ -122,7 +121,7 @@
      $$|x+y|^2 = |x|^2 + 2(\Re x \cdot \Re y + \Im x \cdot \Im y) + |y|^2
        \leq |x|^2 + 2|x||y| + |y|^2 = (|x|+|y|)^2.$$ -}
 \lemma cabs_+ {x y : Complex} : cabs (x + y) <= cabs x + cabs y
-  => \have | sum>=0 : 0 <= cabs x + cabs y => linarith (cabs>=0 {x}, cabs>=0 {y})
+  => \have | sum>=0 : 0 <= cabs x + cabs y => positivity
            | lhs_sq : cabs (x + y) * cabs (x + y) = cabs2 x + cabs2 y + 2 * (x.re * y.re + x.im * y.im)
               => cabs-square {x + y} *> {Real} equation.cRing
            | rhs_sq : (cabs x + cabs y) * (cabs x + cabs y) = cabs2 x + cabs2 y + 2 * (cabs x * cabs y)

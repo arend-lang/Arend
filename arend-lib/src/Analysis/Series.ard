@@ -4,12 +4,10 @@
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.Ring
 \import Algebra.Ring.FormalSeries
 \import Algebra.Ring.FormalSeries.Composition
 \import Algebra.Semiring
 \import Analysis.FuncLimit
-\import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
@@ -39,7 +37,6 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
 \import Topology.TopAbGroup
-\import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product
 \import Topology.TopRing
 \import Topology.TopSpace
@@ -370,11 +367,11 @@
   | inP (B, bB) =>
     \let | B1 => B ∨ 1
          | B1>0 : 0 < B1 => RatField.zro<ide <∘l join-right
-    \in \lam {eps} eps>0 => \case cc {RatField.finv B1 * eps} $ RatField.<_*_positive_positive (RatField.finv>0 $ RatField.zro<ide <∘l join-right) eps>0 \with {
+    \in \lam {eps} eps>0 => \case cc {RatField.finv B1 * eps} positivity \with {
       | inP (N,h) => inP (N, \lam {n} N<=n =>
         \have t : midSum (\lam k => b k * c k) N n <= B1 ExUpperReal.* midSum c N n
                 => midSum_<= (\lam {j} jp _ => ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= $ ExUpperReal.U_<= (bB j) join-left) <=-refl) <=∘ midSum_<=-ldistr c>=0
-        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*_U-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) (h N<=n))
+        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*_U-right B1>0 positivity (h N<=n))
     }
 
 \lemma upperSeries-ldistr {c : Series ExUpperReal} (c>=0 : \Pi (n : Nat) -> 0 <= c n) (cc : IsConvUpperSeries c) {a : ExUpperReal} (ab : a.IsBounded)

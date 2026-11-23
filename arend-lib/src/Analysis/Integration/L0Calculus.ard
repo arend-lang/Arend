@@ -257,7 +257,7 @@
                               <=∘ RealField.<=_*_positive-left (rat_real_<=.1 join-left) (rat_real_<=.1 (<=-less d>0))
                      | e0 : (0 : Real) <= w ∧ eps => meet-univ w>=0 (rat_real_<=.1 (<=-less eps>0))
                      | ab0 : RealAbGroup.abs b = b => RealAbGroup.abs-ofPos b>=0
-                     | m0 : (0 : Real) <= RealAbGroup.abs b ∧ w => meet-univ RealAbGroup.abs>=0 w>=0
+                     | m0 : 0 <= RealAbGroup.abs b ∧ w => positivity
                      | Cm0 : (0 : Real) <= Real.fromRat C * (RealAbGroup.abs b ∧ w) => RealField.<=_*_positive_positive linarith m0
                \in real-cases {b} {Real.fromRat d}
                    (\lam b<d => RealAbGroup.meet-monotone (ab b<d) <=-refl <=∘ =_<= RealAbGroup.meet-comm <=∘ (linarith : w ∧ eps <= (w ∧ eps) + Real.fromRat C * (RealAbGroup.abs b ∧ w)))
@@ -574,16 +574,16 @@
                       | hK : L.IsBelow (abs h) K => L.IsBelow-level join-left hK0
                       | e>0 : 0 < e => usingOnly eta>0 linarith
                       | ee : e + e = eta => usingOnly () linarith
-                      | Cr>=1 : (1 : Real) <= Cr => rat_real_<=.1 join-right
-                      | N>=0 : (0 : Real) <= N => RealField.natCoef>=0
-                      | P>0 : (0 : Real) < P => RealField.<_*_positive_positive (rat_real_<.1 idp) (RealField.<_*_positive_positive (usingOnly Cr>=1 linarith) (usingOnly N>=0 linarith))
-                      | dl>0 : (0 : Real) < eps * RealField.pinv P P>0 => RealField.<_*_positive_positive eps>0 (RealField.pinv>0 P>0)
+                      | Cr>=1 : 1 <= Cr => rat_real_<=.1 join-right
+                      | N>=0 : 0 <= N => RealField.natCoef>=0
+                      | P>0 : 0 < P => RealField.<_*_positive_positive (rat_real_<.1 idp) positivity
+                      | dl>0 : 0 < eps * RealField.pinv P P>0 => positivity
             \in inP ((h,h>=0), eps * RealField.pinv P P>0, dl>0, \lam x0 => \case L.trunc-bounded (l1L x0) \with {
               | inP (M0,x0M0) =>
                 \let | M => M0 ∨ 1
                      | dl => eps * RealField.pinv P P>0
                 \in \have | M>0 : 0 < M => RatField.zro<ide <∘l join-right
-                          | M1>0 : 0 < M + 1 => usingOnly M>0 linarith
+                          | M1>0 : 0 < M + 1 => positivity
                           | x0M : L.IsBelow (abs (l1L x0)) M => L.IsBelow-level join-left x0M0
                 \in \case clipApprox-close phi phi0 M1>0 e>0 \with {
                   | inP (k0,k0>=0,c) =>
@@ -593,9 +593,9 @@
                     \in \case coverMap-ball-uniform (clipApprox phi k) M1>0 e>0 \with {
                       | inP (d,d>0,uk) =>
                         \let | Q => Real.fromRat (RatField.finv d ∨ 1)
-                        \in \have | Q>=1 : (1 : Real) <= Q => rat_real_<=.1 join-right
-                                  | Q>0 : (0 : Real) < Q => usingOnly Q>=1 linarith
-                                  | ga>0 : (0 : Real) < dl * RealField.pinv Q Q>0 => RealField.<_*_positive_positive dl>0 (RealField.pinv>0 Q>0)
+                        \in \have | Q>=1 : 1 <= Q => rat_real_<=.1 join-right
+                                  | Q>0 : 0 < Q => positivity
+                                  | ga>0 : 0 < dl * RealField.pinv Q Q>0 => positivity
                                   | u : \Pi {x y : Array Real n} -> l1norm x < Real.fromRat (M + 1) -> l1norm y < Real.fromRat (M + 1)
                                           -> l1norm (\lam j => x j - y j) < Real.fromRat d -> RealAbGroup.abs (clipApprox phi k x - clipApprox phi k y) <= e
                                       => \lam xM yM xy => <=-less $ transport (__ < _) (lnorm-ldist {RealNormed}) $
@@ -758,7 +758,7 @@
                                        | fM : L.IsBelow (abs (l1L f)) Mf => L.IsBelow-level join-left fM0
                                        | ep>0 : 0 < ep => linarith
                                        | ee : ep + ep = eta => linarith
-                                       | Rf>0 : 0 < Rf => linarith (RatField.<=_*_positive_positive RatField.natCoef>=0 (<=-less Mf>0) : 0 <= RatField.natCoef m * Mf)
+                                       | Rf>0 : 0 < Rf => linarith (positivity : 0 <= RatField.natCoef m * Mf)
                                        | fbox (i : Fin m) : L.IsBelow (abs (f i)) Mf => L.IsBelow_<= (abs<=l1L i <=∘ =_<= (inv (L.abs-ofPos l1L.nonneg))) fM
                                        | boxBall {x : Array Real m} (xb : \Pi (i : Fin m) -> RealAbGroup.abs (x i) <= Mf) : l1norm x < Real.fromRat Rf
                                            => \have | l : l1norm x <= RatField.natCoef m RealField.* (Real.fromRat Mf ∨ 0) => l1norm-box xb
@@ -920,7 +920,7 @@
        \in real-cases {b ∨ 0} {Real.fromRat eta}
          (\lam B<eta => meet-right <=∘ meet-univ <=-refl (<=-less B<eta))
          (\lam eta<=B => \have | qe : Real.fromRat (RatField.finv eta) * Real.fromRat eta = 1 => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= eta>0))
-                                | q>=0 : (0 : Real) <= Real.fromRat (RatField.finv eta) => rat_real_<=.1 (<=-less (RatField.finv>0 eta>0))
+                                | q>=0 : (0 : Real) <= Real.fromRat (RatField.finv eta) => rat_real_<=.1 positivity
                                 | qB : (1 : Real) <= Real.fromRat (RatField.finv eta) * (b ∨ 0) => =_<= (inv qe) <=∘ RealField.<=_*_positive-right q>=0 eta<=B
                                 | s1 : (1 : Real) <= (Real.fromRat (RatField.finv eta) * (b ∨ 0) + (c ∨ 0)) ∧ 1 => meet-univ linarith <=-refl
                                 | v0 : v ∨ negative v = 0 => pmap (\lam z => z ∨ negative z) (hv s1) *> pmap (0 ∨) RealAbGroup.negative_zro *> RealAbGroup.join_<= <=-refl

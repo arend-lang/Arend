@@ -104,9 +104,7 @@
               * RealField.powSum R (suc (suc m)) * RealField.powSum R (suc (suc m)) * ((D + D) * (D + D)) * e0
               <= (ratio 1 4 : Real))
       : ∃ (z : Complex) (polyEval q z = 0)
-      => \let | (inP (z0, hz0)) => fta-approx-eps NatOrder.zero<suc q1 deg1 monic
-                                     (<_meet-univ (<_*_positive_positive g>0 e0>0)
-                                                  (linarith : (0 : Real) < 1))
+      => \let | (inP (z0, hz0)) => fta-approx-eps NatOrder.zero<suc q1 deg1 monic (positivity : 0 < cabs gamma * e0 ∧ 1)
               | b0 => polyEval (polyDeriv q) z0
          \in \have
            | scale : cabs (polyEval q1 z0) = cabs gamma * cabs (polyEval q z0)
@@ -142,13 +140,9 @@
       : ∃ (B : Real) (0 < B) (B < 1) (e0 : Real) (0 < e0) (e0 <= delta)
           (e0 * Dd + e0 * Dd <= B) (Lc * B * Dd <= (ratio 1 4 : Real))
           (Cc * (Dd * Dd) * e0 <= (ratio 1 4 : Real))
-      => \let | CD>=0 => <=_*_positive_positive Cc>=0 (<=_*_positive_positive Dd>=0 Dd>=0)
-              | (inP (B, B>0, hd)) =>
-                  split-eps (linarith : (0 : Real) < ratio 1 4)
-                    (linarith (<=_*_positive_positive Lc>=0 Dd>=0) : (0 : Real) < Lc * Dd + 1)
-              | (inP (e1, e1>0, he)) =>
-                  split-eps B>0
-                    (linarith : (0 : Real) < Dd + Dd + Cc * (Dd * Dd) + 1)
+      => \let | CD>=0 : 0 <= Cc * (Dd * Dd) => positivity
+              | (inP (B, B>0, hd)) => split-eps (linarith : (0 : Real) < ratio 1 4) (positivity : 0 < Lc * Dd + 1)
+              | (inP (e1, e1>0, he)) => split-eps B>0 (positivity : 0 < Dd + Dd + Cc * (Dd * Dd) + 1)
          \in \have
            | BL>=0 : (0 : Real) <= B * (Lc * Dd)
               => <=_*_positive_positive (<=-less B>0) (<=_*_positive_positive Lc>=0 Dd>=0)
@@ -179,17 +173,16 @@
         (R0 : Real) (R0>=0 : 0 <= R0)
         (hR0 : \Pi (z : Complex) -> cabs (polyEval q1 z) <= 1 -> cabs z <= R0)
       : ∃ (z : Complex) (polyEval q z = 0)
-      => \let | (inP (delta, delta>0, D, D>0, bound)) =>
-                  separable-deriv-lower sep (linarith : (0 : Real) <= R0 + 1)
+      => \let | (inP (delta, delta>0, D, D>0, bound)) => separable-deriv-lower sep (positivity : 0 <= R0 + 1)
               | P>=0 : (0 : Real) <= RealField.powSum (R0 + 1) (suc (suc m))
-                 => RealField.powSum>=0 (linarith : (0 : Real) <= R0 + 1) (suc (suc m))
+                     => RealField.powSum>=0 (positivity : 0 <= R0 + 1) (suc (suc m))
               | (inP (B, B>0, B<1, e0, e0>0, e0<=delta, hB, hL, hC)) =>
                   choose-constants
                     (<=_*_positive_positive (<=_*_positive_positive
                        (coefMax>=0 {ComplexValuedRing} {polyDeriv q} {suc (suc m)}) P>=0) P>=0)
                     (<=_*_positive_positive (<=_*_positive_positive (<=_*_positive_positive
                        (coefMax>=0 {ComplexValuedRing} {q} {suc (suc m)}) P>=0) P>=0) P>=0)
-                    (linarith (<=-less D>0) : (0 : Real) <= D + D) delta>0
+                    (positivity : 0 <= D + D) delta>0
          \in separable-root-aux deg deg1 monic g>0 hq1 hR0 idp D>0 bound
                B>0 B<1 e0>0 e0<=delta hB hL hC
   }

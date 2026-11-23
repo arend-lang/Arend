@@ -96,7 +96,7 @@
       => rewrite (RealField.abs_*, RealAbGroup.abs-ofPos (<=-less p)) $ RealField.<=_*_positive-left (hM {x, cutoff-in c p} p) (<=-less p)
 
     \private \lemma Pi (x : RealN n) {a : Rat} (a>0 : 0 < a) : ∃ (y : Real) (P x a y)
-      => \have | a'>0 : 0 < a * RatField.finv M => RatField.<_*_positive_positive a>0 (RatField.finv>0 M>0)
+      => \have | a'>0 : 0 < a * RatField.finv M => positivity
                | e : M * (a * RatField.finv M) = a => pmap (M *) *-comm *> inv *-assoc *> pmap (* a) (RatField.finv-right (/=-sym (StrictPoset.<_/= M>0))) *> ide-left
          \in \case RealAbGroup.<-comparison (c.fn x) {0} {a * RatField.finv M} (rat_real_<.1 a'>0) \with {
            | byLeft p => inP (_, byLeft (p, idp))

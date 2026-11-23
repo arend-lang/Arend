@@ -34,14 +34,12 @@
      as equivalent (within a factor of 2), which is the load-bearing fact for
      any cover-space equivalence between $\mathbb{C}$ and $\mathbb{R} \times \mathbb{R}$. -}
 \lemma cabs_<=_re_+_im {c : Complex} : cabs c <= abs c.re + abs c.im
-  => \have | sum>=0 : 0 <= abs c.re + abs c.im
-              => linarith (abs>=0 {_} {c.re}, abs>=0 {_} {c.im})
+  => \have | sum>=0 : 0 <= abs c.re + abs c.im => positivity
            | abs_re_sq : abs c.re * abs c.re = c.re * c.re
               => inv RealField.abs_* *> abs-ofPos RealField.square_>=0
            | abs_im_sq : abs c.im * abs c.im = c.im * c.im
               => inv RealField.abs_* *> abs-ofPos RealField.square_>=0
-           | cross>=0 : 0 <= abs c.re * abs c.im
-              => RealField.<=_*_positive_positive abs>=0 abs>=0
+           | cross>=0 : 0 <= abs c.re * abs c.im => positivity
            | rhs-expand : (abs c.re + abs c.im) * (abs c.re + abs c.im)
                         = abs c.re * abs c.re + 2 * (abs c.re * abs c.im) + abs c.im * abs c.im
               => equation.cRing
@@ -94,7 +92,7 @@
               => equation.cRing *> {Real} pmap (4 *) (cabs-square {c})
            | rhs-sq : cabs (c + c) * cabs (c + c) = 4 * cabs2 c
               => cabs-square {c + c} *> abs2-cc
-     \in sqrt-cancel (linarith (cabs>=0 {c})) (cabs>=0 {c + c}) (lhs-sq *> inv rhs-sq)
+     \in sqrt-cancel positivity (cabs>=0 {c + c}) (lhs-sq *> inv rhs-sq)
 
 {- | $\mathbb{C}$ as a real Banach algebra. Caps the Step-2 chain:
      `ComplexCompleteRing` plus `isDivisible` (componentwise via

@@ -20,6 +20,7 @@
 \import Arith.Real.Power.UniformConvexity
 \import Logic
 \import Logic.Meta
+\import Meta
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -180,7 +181,7 @@
                | rho<delta : rho < delta => linarith (RatField.meet-left : delta ∧ 1 <= delta)
                | rho>0' : 0 < Real.fromRat rho => rat_real_<.1 rho>0
                | irho>0 : 0 < RealField.pinv (Real.fromRat rho) rho>0' => RealField.pinv>0 rho>0'
-               | B2>=0 : 0 <= 2 * B => linarith
+               | B2>=0 : 0 <= 2 * B => positivity
           \in \case rat-above (rpow (2 * B) B2>=0 q q>0 * rpow-pos (RealField.pinv (Real.fromRat rho) rho>0') irho>0 p) \with {
             | inP (C,C>0,CC) => inP (C, <=-less C>0, \lam x y =>
               \let | N (z : Array Real n) => lnorm {RealN n} z
@@ -193,7 +194,7 @@
                         | nxy : N ((-) {RealN n} x y) <= M => lnorm-diff
                         | CD>=0 : 0 <= Real.fromRat C * D => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less C>0)) rpow>=0
                         | S>=0 : 0 <= S => linarith (rpow>=0 {N x} {Nx>=0} {p} {p>0}, rpow>=0 {N y} {Ny>=0} {p} {p>0})
-                        | eS>=0 : 0 <= Real.fromRat eta * S => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less eta>0)) S>=0
+                        | eS>=0 : 0 <= Real.fromRat eta * S => positivity (using (rat_real_<.1 eta>0))
                         | D>=0 : 0 <= D => rpow>=0
               \in real-cases {Real.fromRat rho * M} {N ((-) {RealN n} x y)}
                    (\lam lt => far hom B>=0 hB B2>=0 sq rho>0' irho>0 lt

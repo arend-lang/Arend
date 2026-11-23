@@ -1,7 +1,6 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.LinearFactors
@@ -142,7 +141,7 @@
           (minDist {ComplexNormed} r z < eta)
       => \let | (inP (d, d>0, hd)) => sregCF_<= (h eta>0)
               | (inP (r, hr)) => approx-factor p deg monic
-                  (<_meet-univ d>0 (<_meet-univ delta>0 RealAbGroup.zro<ide) : 0 < d ∧ (delta ∧ 1))
+                  (positivity : 0 < d ∧ (delta ∧ 1))
          \in inP (r, \lam j => hr j <∘l (meet-right <=∘ meet-left),
                   \lam j => hr j <∘l (meet-right <=∘ meet-right),
                   hd (\lam j => hr j <∘l meet-left))
@@ -258,8 +257,8 @@
                   => RealField.<=_*_positive_positive RealField.natCoef>=0
                        (RealField.pow>=0 (linarith : (0 : Real) <= 1 + B + 1))
      \in \let | (inP (dd, dd>0, ddK)) => split-eps (linarith : (0 : Real) < eps * ratio 1 4)
-                   (linarith : (0 : Real) < natCoef n * pow (1 + B + 1) n + 1)
-              | (inP (aa, aa>0, aaR)) => rat-below (<_meet-univ dd>0 (linarith : (0 : Real) < 1))
+                   (positivity : 0 < natCoef n * pow (1 + B + 1) n + 1)
+              | (inP (aa, aa>0, aaR)) => rat-below (positivity : 0 < dd ∧ 1)
      \in \have | aa>=0 : (0 : Real) <= aa => <=-less (rat_real_<.1 aa>0)
                | aa<1 : (aa : Real) <= 1 => <=-less (aaR <∘l meet-right)
                | small : natCoef n * pow (1 + B + 1) n * aa < eps * ratio 1 4

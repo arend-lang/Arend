@@ -86,7 +86,7 @@
 -- | $(|f| \wedge h)^p = |f|^p \wedge h^p$ for $h \ge 0$.
 \lemma fpow-meet {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f h : L} (h>=0 : L.zro <= h)
   : fpow p p>=1 (abs f ∧ h) = fpow p p>=1 f ∧ fpow p p>=1 h
-  => fcalc-eq-pt (f :: h :: nil) (\lam z => \have m : (0 : Real) <= RealAbGroup.abs (z 0) ∧ (z 1 ∨ 0) => meet-univ RealAbGroup.abs>=0 join-right
+  => fcalc-eq-pt (f :: h :: nil) (\lam z => \have m : 0 <= RealAbGroup.abs (z 0) ∧ (z 1 ∨ 0) => positivity
                                      \in rpow-ext (RealAbGroup.abs-ofPos m) {_} {m} idp
                                      *> rpow-meet {_} {_} {RealAbGroup.abs>=0} {join-right} {m}
                                      *> pmap (_ ∧) (rpow-ext (inv (RealAbGroup.abs-ofPos join-right)) idp))
@@ -95,7 +95,7 @@
 
 -- | $\Psi^1_k(g) = I(|g| \wedge k)$.
 \lemma psi-one {L : FullIntegrationSpace} {o : (1 : Real) <= 1} {k g : L} (k>=0 : L.zro <= k) : psi 1 o k g = L.integral (abs g ∧ k)
-  => pmap L.integral (fpow-one *> abs-ofPos (meet-univ abs>=0 k>=0))
+  => pmap L.integral (fpow-one *> abs-ofPos positivity)
 
 -- | $\Psi^p_h(F) = \Psi^1_{h^p}(|F|^p)$.
 \lemma psi-pow {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) (F : L0Space L)

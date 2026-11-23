@@ -75,7 +75,7 @@
                    (\lam vu<0 => \have | n : p * V * (v - u) <= 0 => <=_*_positive-right pV>=0 (<=-less vu<0) <=∘ =_<= RealField.zro_*-right
                                        | k => K>=0 p>=1 {M} {M>0} {v - u}
                                  \in linarith)
-                   (\lam vu>=0 => <=_*_positive-left pVM vu>=0 <=∘ <=_*_positive-right (RealField.<=_*_positive_positive (linarith : (0 : Real) <= p) (<=-less rpow-pos>0)) RealAbGroup.abs>=id)
+                   (\lam vu>=0 => <=_*_positive-left pVM vu>=0 <=∘ <=_*_positive-right positivity RealAbGroup.abs>=id)
 
     \lemma lin {W U A B X p : Real} (t : A <= U + (p - 1) * W) (e2 : p * W = B) (e3 : X = B - A) : W - U <= X
       => \have e : (p - 1) * W = p * W - W => equation.cRing
@@ -150,34 +150,34 @@
 {- | Uniform differentiability of $F(x) = |x|^p$ on $[-R,R]$ for $p > 1$:
  -   $|F(y) - F(x) - p \varphi_p(x) (y - x)| \le \varepsilon |y - x|$ whenever $|y - x| < \delta$.
  -}
-\lemma absPow-unif-deriv {p : Real} {p>0 : (0 : Real) < p} (p>1 : (1 : Real) < p) {R : Real} (R>=0 : (0 : Real) <= R) {eps : Rat} (eps>0 : RatField.zro RatField.< eps)
-  : ∃ (delta : Rat) (RatField.zro RatField.< delta) ∀ {x y : Real} (RealAbGroup.abs x <= R) (RealAbGroup.abs y <= R) (RealAbGroup.abs (y - x) < Real.fromRat delta)
+\lemma absPow-unif-deriv {p : Real} {p>0 : (0 : Real) < p} (p>1 : (1 : Real) < p) {R : Real} (R>=0 : (0 : Real) <= R) {eps : Rat} (eps>0 : 0 < eps)
+  : ∃ (delta : Rat) (0 < delta) ∀ {x y : Real} (RealAbGroup.abs x <= R) (RealAbGroup.abs y <= R) (RealAbGroup.abs (y - x) < Real.fromRat delta)
       (RealAbGroup.abs (rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 p p>0 - rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 - p * signedPow p>1 x * (y - x))
         <= Real.fromRat eps * RealAbGroup.abs (y - x))
   => \case p.U-inh \with {
     | inP (P,pP) =>
       \have | p<P : p < Real.fromRat P => real_<_U.2 pP
-             | P>0 : RatField.zro RatField.< P => rat_real_<.2 (p>0 <∘ p<P)
-             | e'>0 : RatField.zro RatField.< eps RatField.* RatField.finv P => RatField.<_*_positive_positive eps>0 (RatField.finv>0 P>0)
-             | Pe : Real.fromRat P * Real.fromRat (eps RatField.* RatField.finv P) = Real.fromRat eps
-                 => RealField.*-rat *> pmap Real.fromRat (equation.cRing {RatField.finv-right (RatField.>_/= P>0)} : P RatField.* (eps RatField.* RatField.finv P) = eps)
+             | P>0 : 0 < P => rat_real_<.2 (p>0 <∘ p<P)
+             | e'>0 : 0 < eps * RatField.finv P => positivity
+             | Pe : Real.fromRat P * Real.fromRat (eps * RatField.finv P) = Real.fromRat eps
+                 => RealField.*-rat *> pmap Real.fromRat (equation.cRing {RatField.finv-right (RatField.>_/= P>0)} : P * (eps * RatField.finv P) = eps)
              | g : CoverMap (IntervalSpace (negative R) R) RealNormed (\lam z => signedPow p>1 z.1)
                  => signedPow-cover p>1 CoverMap.∘ intervalInc (negative R) R
       \in \case interval-uniform (usingOnly R>=0 linarith : negative R <= R) g e'>0 \with {
         | inP (delta,delta>0,hd) => inP (delta, delta>0, \lam {x} {y} xR yR d =>
             \have | inI {z : Real} (zR : RealAbGroup.abs z <= R) : ClosedInterval (negative R) R z
                        => (usingOnly (RealAbGroup.abs>=neg {z}, zR) linarith, RealAbGroup.abs>=id <=∘ zR)
-                   | u<= : RealAbGroup.abs (signedPow p>1 y - signedPow p>1 x) <= Real.fromRat (eps RatField.* RatField.finv P) => hd {x, inI xR} {y, inI yR} d
+                   | u<= : RealAbGroup.abs (signedPow p>1 y - signedPow p>1 x) <= Real.fromRat (eps * RatField.finv P) => hd {x, inI xR} {y, inI yR} d
                    | t1 => absPow-tangent p>1 x y
                    | t2 => absPow-tangent p>1 y x
                    | D>=0 : (0 : Real) <= rpow (RealAbGroup.abs y) RealAbGroup.abs>=0 p p>0 - rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 - p * signedPow p>1 x * (y - x)
                        => usingOnly t1 linarith
                    | e1 : p * signedPow p>1 y * (x - y) = negative (p * signedPow p>1 y * (y - x)) => equation.cRing
                    | e2 : p * signedPow p>1 y * (y - x) - p * signedPow p>1 x * (y - x) = p * ((signedPow p>1 y - signedPow p>1 x) * (y - x)) => equation.cRing
-                   | uv : (signedPow p>1 y - signedPow p>1 x) * (y - x) <= Real.fromRat (eps RatField.* RatField.finv P) * RealAbGroup.abs (y - x)
+                   | uv : (signedPow p>1 y - signedPow p>1 x) * (y - x) <= Real.fromRat (eps * RatField.finv P) * RealAbGroup.abs (y - x)
                        => RealAbGroup.abs>=id <=∘ =_<= RealField.abs_* <=∘ <=_*_positive-left u<= RealAbGroup.abs>=0
-                   | k>=0 : (0 : Real) <= Real.fromRat (eps RatField.* RatField.finv P) * RealAbGroup.abs (y - x)
-                       => RealField.<=_*_positive_positive (rat_real_<=.1 (RatField.<=-less e'>0)) RealAbGroup.abs>=0
+                   | k>=0 : (0 : Real) <= Real.fromRat (eps * RatField.finv P) * RealAbGroup.abs (y - x)
+                       => RealField.<=_*_positive_positive (rat_real_<=.1 (<=-less e'>0)) RealAbGroup.abs>=0
                    | m : p * ((signedPow p>1 y - signedPow p>1 x) * (y - x)) <= Real.fromRat eps * RealAbGroup.abs (y - x)
                        => <=_*_positive-right (<=-less p>0) uv <=∘ <=_*_positive-left (<=-less p<P) k>=0 <=∘ =_<= (inv *-assoc *> pmap (`* _) Pe)
             \in =_<= (RealAbGroup.abs-ofPos D>=0) <=∘ (usingOnly (t2, e1, e2) linarith : _ <= p * ((signedPow p>1 y - signedPow p>1 x) * (y - x))) <=∘ m)
@@ -234,7 +234,7 @@
               | WY : rpow-pos (Y * RealField.pinv c c>0) v>0 (q - 1) * Y <= X
                   => lin hv (pmap (\lam t => (q - 1) * t * c) e1 *> equation.cRing *> pmap (\lam t => (q - 1) * (rpow-pos (Y * RealField.pinv c c>0) v>0 (q - 1) * t)) vc)
         \in =_<= (e4 *> pmap (`* Y) (inv e3) *> *-assoc) <=∘ RealField.<=_*_positive-right (<=-less rpow-pos>0) WY)
-      (\lam Y<=0 => =_<= (signedPow.rpow-zero-ext (<=-antisymmetric Y<=0 Y>=0)) <=∘ RealField.<=_*_positive_positive (<=-less rpow-pos>0) X>=0)
+      (\lam Y<=0 => =_<= (signedPow.rpow-zero-ext (<=-antisymmetric Y<=0 Y>=0)) <=∘ positivity)
   \where
     \private \lemma lin {q W Y X B : Real} (t : q * W * Y <= X + B) (e : B = (q - 1) * (W * Y)) : W * Y <= X
       => \have | e1 : q * W * Y = q * (W * Y) => equation.cRing

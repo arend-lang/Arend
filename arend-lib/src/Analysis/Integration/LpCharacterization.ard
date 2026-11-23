@@ -96,7 +96,7 @@
         | inP (M0,hM0) => \let M => M0 RatField.∨ 1 \in
           \have | M>0 : RatField.zro RatField.< M => RatField.zro<ide <∘l RatField.join-right
                 | hM : L.IsBelow (abs h) M => L.IsBelow-level RatField.join-left hM0
-                | h2>=0 : L.zro <= h + h => =_<= (inv zro-left) <=∘ <=_+ h>=0 h>=0
+                | h2>=0 : L.zro <= h + h => positivity
           \in addGroup-modulus-uniform {L0PreSpace L} {LpPreSpace L p p>=1} (L.clip h) \lam {eps} eps>0 => \case modulus {L} p>=1 {rpow-pos (Real.fromRat (M RatField.+ M)) (rat_real_<.1 linarith) (p - 1)} rpow-pos>0 eps>0 \with {
             | inP (d,d>0,m) => inP (\lam z => measGauge (h + h) z < d, NormFamilyTopAbGroup.normAt-ball-open {L0PreSpace L} {(h + h, h2>=0)},
                                    transportInv (`< d) ((L0PreSpace L).normAt-zro {(h + h, h2>=0)}) d>0, \lam {x} {y} c =>
@@ -339,7 +339,7 @@
                      {e : L} (eu : IsUnitElem e) {c : Real} (c>0 : (0 : Real) < c) (ec : L.integral e <= c) {f : L}
   : rpow (pnormPow p p>=1 f) pnormPow>=0 q (fpow.one>0 q>=1) <= rpow-pos c c>0 (q - 1) * pnormPow r r>=1 f
   => rpow-tangent-optimize q>=1 c>0 pnormPow>=0 pnormPow>=0 \lam {v} v>0 => real_<=-eps \lam {d} d>0 =>
-      \have | C>0 : (0 : Real) < q * rpow-pos v v>0 (q - 1) => RealField.<_*_positive_positive (fpow.one>0 q>=1) rpow-pos>0
+      \have | C>0 : 0 < q * rpow-pos v v>0 (q - 1) => positivity
             | c'>=0 : (0 : Real) <= (q - 1) * rpow-pos v v>0 q => RealField.<=_*_positive_positive (linarith : (0 : Real) <= q - 1) (<=-less rpow-pos>0)
             | g>=0 : L.zro <= fpow p p>=1 f => fpow>=0
             | dC>0 : (0 : Real) < Real.fromRat d * RealField.pinv (q * rpow-pos v v>0 (q - 1)) C>0 => RealField.<_*_positive_positive (rat_real_<.1 d>0) (RealField.pinv>0 C>0)
@@ -379,11 +379,10 @@
            | qr' : (r * RealField.pinv p p>0 - 1) * RealField.pinv r r>0 = RealField.pinv p p>0 - RealField.pinv r r>0 => equation.cRing {RealField.pinv-right r>0}
            | K>0 => rpow-pos>0 {c} {c>0} {r * RealField.pinv p p>0 - 1}
            | m => pnormPow-unit {L} {p} {r * RealField.pinv p p>0} {r} {p>=1} q>=1 {r>=1} pq eu c>0 ec {f}
-           | mono => rpow-mono {_} {_} {rpow>=0} {RealField.<=_*_positive_positive (<=-less K>0) pnormPow>=0} {RealField.pinv r r>0} {ir>0} m
+           | mono => rpow-mono {_} {_} {rpow>=0} {positivity} {RealField.pinv r r>0} {ir>0} m
            | lhs : rpow (rpow (pnormPow p p>=1 f) pnormPow>=0 (r * RealField.pinv p p>0) (fpow.one>0 q>=1)) rpow>=0 (RealField.pinv r r>0) ir>0 = pnorm p p>=1 f
-               => rpow-rpow {_} {pnormPow>=0} {r * RealField.pinv p p>0} {RealField.pinv r r>0} {fpow.one>0 q>=1} {ir>0} {rpow>=0}
-                    {RealField.<_*_positive_positive (fpow.one>0 q>=1) ir>0} *> rpow-ext idp qr
-           | rhs : rpow (rpow-pos c c>0 (r * RealField.pinv p p>0 - 1) * pnormPow r r>=1 f) (RealField.<=_*_positive_positive (<=-less K>0) pnormPow>=0) (RealField.pinv r r>0) ir>0
+               => rpow-rpow {_} {pnormPow>=0} {r * RealField.pinv p p>0} {RealField.pinv r r>0} {fpow.one>0 q>=1} {ir>0} {rpow>=0} {positivity} *> rpow-ext idp qr
+           | rhs : rpow (rpow-pos c c>0 (r * RealField.pinv p p>0 - 1) * pnormPow r r>=1 f) positivity (RealField.pinv r r>0) ir>0
                    = rpow-pos c c>0 (RealField.pinv p p>0 - RealField.pinv r r>0) * pnorm r r>=1 f
                => rpow_* {_} {_} {<=-less K>0} {pnormPow>=0} *> pmap (`* rpow (pnormPow r r>=1 f) pnormPow>=0 (RealField.pinv r r>0) ir>0) (rpow-pos-eq K>0 *> rpow-pos-rpow-pos *> pmap (rpow-pos c c>0) qr')
      \in =_<= (inv lhs) <=∘ mono <=∘ =_<= rhs

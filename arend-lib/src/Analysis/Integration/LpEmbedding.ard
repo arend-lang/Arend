@@ -109,7 +109,7 @@
 
     \lemma root-pow {x : Real} {x>=0 : (0 : Real) <= x} {p : Real} {p>0 : (0 : Real) < p} {q : (0 : Real) <= rpow x x>=0 (RealField.pinv p p>0) (RealField.pinv>0 p>0)}
       : rpow (rpow x x>=0 (RealField.pinv p p>0) (RealField.pinv>0 p>0)) q p p>0 = x
-      => \have pp>0 : (0 : Real) < RealField.pinv p p>0 * p => RealField.<_*_positive_positive (RealField.pinv>0 p>0) p>0
+      => \have pp>0 : 0 < RealField.pinv p p>0 * p => positivity
          \in rpow-rpow {x} {x>=0} {RealField.pinv p p>0} {p} {RealField.pinv>0 p>0} {p>0} {q} {pp>0}
               *> rpow-ext {_} {_} idp {x>=0} {x>=0} {_} {1} (RealField.pinv-left p>0) {pp>0} {RealField.zro<ide} *> rpow-one {_} {x>=0} {RealField.zro<ide}
   }
@@ -138,11 +138,11 @@
 -- | Lemma `lem:psi`(2): $|\Psi_h(f) - \Psi_h(g)| \le p M^{p-1} d_h(f,g)$ for `h` bounded by `M`.
 \lemma psi-lip {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {M : Rat} (M>0 : RatField.zro RatField.< M) {h : L} (h>=0 : L.zro <= h) (hM : L.IsBelow (abs h) M) {f g : L}
   : RealAbGroup.abs (psi p p>=1 h f - psi p p>=1 h g) <= (p * rpow-pos (Real.fromRat M) (rat_real_<.1 M>0) (p - 1)) * measGauge h (f - g)
-  => \have | u>=0 : L.zro <= abs f ∧ h => meet-univ abs>=0 h>=0
-           | v>=0 : L.zro <= abs g ∧ h => meet-univ abs>=0 h>=0
+  => \have | u>=0 : L.zro <= abs f ∧ h => positivity
+           | v>=0 : L.zro <= abs g ∧ h => positivity
            | uM => L.IsBelow_<= (=_<= (abs-ofPos u>=0) <=∘ meet-right <=∘ abs>=id) hM
            | vM => L.IsBelow_<= (=_<= (abs-ofPos v>=0) <=∘ meet-right <=∘ abs>=id) hM
-           | C>=0 : (0 : Real) <= p * rpow-pos (Real.fromRat M) (rat_real_<.1 M>0) (p - 1) => <=-less (RealField.<_*_positive_positive (fpow.one>0 p>=1) rpow-pos>0)
+           | C>=0 : 0 <= p * rpow-pos (Real.fromRat M) (rat_real_<.1 M>0) (p - 1) => positivity
            | e : psi p p>=1 h f - psi p p>=1 h g = L.integral (fpow p p>=1 (abs f ∧ h) - fpow p p>=1 (abs g ∧ h)) => inv L.integral-hom.func-minus
      \in rewrite e $ L.integral_abs <=∘ L.integral-mono (fpow-lip p>=1 M>0 u>=0 v>=0 uM vM) <=∘ =_<= integral-rscale
           <=∘ RealField.<=_*_positive-right C>=0 (L.integral-mono (meet-abs-lip h>=0))
@@ -150,7 +150,7 @@
 -- | Lemma `lem:psi`(3): $\Psi_h \le \Psi_{h'}$ for $h \le h'$.
 \lemma psi-mono {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') {f : L}
   : psi p p>=1 h f <= psi p p>=1 h' f
-  => L.integral-mono $ fpow-abs-mono p>=1 $ =_<= (abs-ofPos (meet-univ abs>=0 h>=0)) <=∘ meet-monotone <=-refl h<=h' <=∘ abs>=id
+  => L.integral-mono $ fpow-abs-mono p>=1 $ =_<= (abs-ofPos positivity) <=∘ meet-monotone <=-refl h<=h' <=∘ abs>=id
 
 -- | Lemma `lem:psi`(3): $\Psi_h(f) \le \|f\|_p^p$.
 \lemma psi<=pnormPow {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) {f : L}

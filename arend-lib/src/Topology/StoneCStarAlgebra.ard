@@ -30,14 +30,10 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\import Set
 \import Topology.BanachAlgebra
-\import Topology.BanachSpace
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
-\import Topology.TopSpace
-\import Topology.TopSpace.Product
 
 \class OrderedC*Algebra \extends QAlgebra, PosetQModule, CRing {
   | c*-archimedean (a : E) : ∃ (B : Nat) (a <= natCoef B)
@@ -207,7 +203,7 @@
     => \case X.norm-bounded x, X.norm-bounded y \with {
       | inP (a,|x|<a), inP (b,|y|<b) =>
         \let | ab => (a ∨ b ∨ 1) * (a ∨ b ∨ 1)
-             | ab>0 => RatField.<_*_positive_positive (RatField.zro<ide <∘l join-right) (RatField.zro<ide <∘l join-right)
+             | ab>0 : 0 < (a ∨ b ∨ 1) * (a ∨ b ∨ 1) => positivity
              | ab' => RatField.finv ab
              | ab'>=0 => <=-less (RatField.finv>0 ab>0)
              | ab_<= : a ∨ b ∨ 1 RatField.<= ab => inv ide-left =<= RatField.<=_*_positive-left join-right (<=-less RatField.zro<ide <=∘ join-right)

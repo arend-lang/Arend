@@ -261,7 +261,7 @@
     -- | Rational geometric decay against a positive constant.
     \lemma rat-pow-decay {b : Rat} (b<1 : b < 1) (C : Rat) (C>0 : 0 < C) {e : Rat} (e>0 : 0 < e)
       : ∃ (N : Nat) (pow b N * C < e)
-      => \let (N, p) => rat_<1_pow-bound b<1 (RatField.<_*_positive_positive e>0 (RatField.finv>0 C>0))
+      => \let (N, p) => rat_<1_pow-bound b<1 (positivity : 0 < e * finv C)
          \in inP (N, <_*_positive-left p C>0 <∘l =_<=
                        (*-assoc *> pmap (e *) (*-comm *> finv-right (RatField.>_/= C>0)) *> ide-right))
 

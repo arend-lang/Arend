@@ -76,7 +76,7 @@
       \lam {U} (inP (V, inP (_, idp, V<=<P), U=V)) => \case positive-<=<-bound V<=<P \with {
         | inP (d,d>0,Vd) =>
           \have | e>0 : (0 : Real) < eps => rat_real_<.1 eps>0
-                | m>0 => <_meet-univ (usingOnly d>0 linarith : 0 < d - d * ratio 1 2) (usingOnly (RealField.<_*_positive_positive e>0 (RealField.<_*_positive_positive d>0 d>0)) linarith : 0 < Real.fromRat eps * (d * d) * ratio 1 4)
+                | m>0 => <_meet-univ (usingOnly d>0 linarith : 0 < d - d * ratio 1 2) (usingOnly (positivity : 0 < Real.fromRat eps * (d * d)) linarith : 0 < Real.fromRat eps * (d * d) * ratio 1 4)
           \in \case real_<-char.1 m>0 \with {
             | inP (r,r>0,r<m) =>
               \have | rd : Real.fromRat r + r <= d => usingOnly (r<m <∘l meet-left) linarith
@@ -111,7 +111,7 @@
                | t1 : d * (d - r) < p * z => RealField.<_*_positive-left z>d (linarith : 0 < d - r) <∘ RealField.<_*_positive-right z>0 p>d-r <∘l =_<= *-comm
                | t2 : 0 <= d * (d - r - r) => RealField.<=_*_positive_positive (<=-less d>0) linarith
                | t3 : e * (d * d) < e * (p * z + p * z) => RealField.<_*_positive-right e>0 linarith
-               | t4 : 0 < e * (d * d) => RealField.<_*_positive_positive e>0 (RealField.<_*_positive_positive d>0 d>0)
+               | t4 : 0 < e * (d * d) => positivity
          \in RealField.<_*_positive-cancel-right {_} {e} (<=-less q>0) $ rewrite aq $ pz <∘l linarith
   }
 

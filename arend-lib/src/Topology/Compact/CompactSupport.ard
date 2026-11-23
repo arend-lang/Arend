@@ -307,7 +307,7 @@
 \lemma lipschitz-modulus {A : TopAddGroup} {n : Nat} (fs : Array (UniformMap A RealNormed) n) {L : Real} (L>=0 : 0 <= L) {eps : Real} (eps>0 : 0 < eps)
   : ∃ (U : isOpen) (U 0) ∀ {h : A -> Real} (\Pi (x y : A) -> abs (h x - h y) <= L * RealAbGroup.BigSum (\lam j => abs (fs j x - fs j y)))
       ∀ {x y : A} (A.AreClose U x y) (abs (h x - h y) < eps)
-  => \have | w>0 : 0 < L * n + 1 => linarith (RealField.<=_*_positive_positive L>=0 (RealField.natCoef>=0 {n}))
+  => \have | w>0 : 0 < L * n + 1 => positivity
            | (inP (d,d>0,dw<eps)) => split-eps eps>0 w>0
      \in \case finite-modulus fs d>0 \with {
        | inP (U,Uo,U0,g) => inP (U, Uo, U0, \lam {h} hL {x} {y} c =>

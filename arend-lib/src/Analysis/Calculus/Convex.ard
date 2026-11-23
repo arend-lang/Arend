@@ -120,7 +120,7 @@
       => \let t => a * RealField.pinv (a + b) ab>0
          \in \have | t>=0 : 0 <= t => RealField.<=_*_positive_positive a>=0 (<=-less (RealField.pinv>0 ab>0))
                | pt : (a + b) * RealField.pinv (a + b) ab>0 = 1 => RealField.pinv-right ab>0
-               | q : 0 <= b * RealField.pinv (a + b) ab>0 => RealField.<=_*_positive_positive b>=0 (<=-less (RealField.pinv>0 ab>0))
+               | q : 0 <= b * RealField.pinv (a + b) ab>0 => positivity
                | e1 : t + b * RealField.pinv (a + b) ab>0 = 1 => inv rdistr *> pt
                | t<=1 : t <= 1 => linarith
                | S0 : ClosedInterval 0 (a + b) 0 => (<=-refl, <=-less ab>0)

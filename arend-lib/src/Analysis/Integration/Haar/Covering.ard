@@ -147,12 +147,12 @@
                   | B0>=1' : 1 <= B0 => transport (__ <= _) zro-left $ <=_+ (RealAbGroup.BigSum_>=0 \lam _ => C0>=0) <=-refl
                   | e4>0 : 0 < eps * ratio 1 4 => usingOnly eps>0 linarith
                   | w1>0 : 0 < RealField.natCoef m * (2 * RealField.pinv gamma gamma>0) + 1
-                    => usingOnly (RealField.<=_*_positive_positive (RealField.natCoef>=0 {m}) (usingOnly (RealField.pinv>0 gamma>0) linarith : 0 <= 2 * RealField.pinv gamma gamma>0)) linarith
+                    => positivity
         \in \case split-eps e4>0 w1>0 \with {
           | inP (xi,xi>0,xiw) =>
             \have | xi-bound : RealField.natCoef m * (2 * xi * RealField.pinv gamma gamma>0) <= eps * ratio 1 4
                      => split-bound xiw xi>0 equation.cRing
-                   | w2>0 : 0 < 2 * B0 => usingOnly B0>=1' linarith
+                   | w2>0 : 0 < 2 * B0 => positivity
             \in \case split-eps xi>0 w2>0 \with {
               | inP (eta,eta>0,etaw) =>
                 \have eta-bound : (eta + eta) * B0 <= xi => rewrite (equation.cRing : (eta + eta) * B0 = eta * (2 * B0)) (<=-less etaw)
@@ -160,8 +160,8 @@
                   | inP (V,Vo,V0,_,Vh) => \case addGroup-tb-char.1 (addGroup-tb-+ (totallyBoundedSet-Union \lam j => addGroup-tb-left (negative (r j)) Ltb) (addGroup-tb-negative Ltb)) Vo V0 \with {
                     | inP (xs,xs-net) =>
                       \have e8>0 : 0 < eps * ratio 1 8 => usingOnly eps>0 linarith
-                      \in \case split-eps e8>0 (usingOnly (RealField.natCoef>=0 {xs.len}) linarith : 0 < RealField.natCoef xs.len + 1) \with {
-                        | inP (d,d>0,dN) => \case real-nat-approx-div (usingOnly B0>=1' linarith : 0 <= B0) d>0 \with {
+                      \in \case split-eps e8>0 (positivity : 0 < RealField.natCoef xs.len + 1) \with {
+                        | inP (d,d>0,dN) => \case real-nat-approx-div (positivity : 0 <= B0) d>0 \with {
                           | inP (k,_,Bk) =>
                             \let D : LocData G f phi => \new LocData {
                               | f>=0 => f>=0
@@ -377,10 +377,10 @@
       => RealAbGroup.BigSum (coef M) + RealField.natCoef m * tc
 
     \lemma coef>=0 (M : Fin N -> Fin (suc J)) (k : Fin N) : 0 <= coef M k
-      => RealField.<=_*_positive_positive (<=-less d>0) (usingOnly (RealField.natCoef>=0 {M k}) linarith)
+      => unfold coef (using d>0 positivity)
 
     \lemma tc>=0 : 0 <= tc
-      => RealField.<=_*_positive_positive (usingOnly xi>0 linarith : 0 <= 2 * xi) (<=-less (RealField.pinv>0 gamma>0))
+      => unfold tc (using (xi>0, gamma>0) positivity)
 
     \lemma tc*gamma : tc * gamma = 2 * xi
       => *-assoc *> pmap (2 * xi *) (RealField.pinv-left gamma>0) *> ide-right
@@ -587,20 +587,19 @@
 -- | If every cost of {f} bounds {B} after a monotone transformation, then so does the covering number.
 \lemma cover-num-transform {G : LocallyCompactUrysohnGroup} {f phi : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {phip : IsPositiveFun phi} {B : Real} {a : Real} (a>=0 : 0 <= a)
                            (h : \Pi {c : Real} -> Costs f phi c -> B <= a * c) : B <= a * cover-num f phi f>=0 phip
-  => \lam d => \have | a+1>0 : 0 < a + 1 => usingOnly a>=0 linarith
-                    | e>0 : 0 < (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0 => RealField.<_*_positive_positive (usingOnly d linarith) (RealField.pinv>0 a+1>0)
-               \in \case cover-num-approx e>0 \with {
-                 | inP (c,Cc,c<) =>
-                   \have | t1 => h Cc
-                         | t2 : a * c <= a * (cover-num f phi f>=0 phip + (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) => RealField.<=_*_positive-right a>=0 (<=-less c<)
-                         | t3 : a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) < B - a * cover-num f phi f>=0 phip
-                           => \have | q : a < a + 1 => usingOnly () linarith
-                                    | q' : (B - a * cover-num f phi f>=0 phip) * a < (B - a * cover-num f phi f>=0 phip) * (a + 1) => RealField.<_*_positive-right (usingOnly d linarith) q
-                              \in rewrite (equation.cRing : a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) = (B - a * cover-num f phi f>=0 phip) * a * RealField.pinv (a + 1) a+1>0) $
-                                   RealField.<_*_positive-left q' (RealField.pinv>0 a+1>0) <∘l =_<= (*-assoc *> pmap (_ *) (RealField.pinv-right a+1>0) *> ide-right)
-                         | t4 : a * (cover-num f phi f>=0 phip + (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) = a * cover-num f phi f>=0 phip + a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) => RealField.ldistr
-                   \in usingOnly (t1, t2, t3, t4) linarith
-               }
+  => \lam d =>
+      \have | a+1>0 : 0 < a + 1 => positivity
+            | e>0 : 0 < (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0 => RealField.<_*_positive_positive (usingOnly d linarith) (RealField.pinv>0 a+1>0)
+            | (inP (c,Cc,c<)) => cover-num-approx e>0
+            | t1 => h Cc
+            | t2 : a * c <= a * (cover-num f phi f>=0 phip + (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) => RealField.<=_*_positive-right a>=0 (<=-less c<)
+            | t3 : a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) < B - a * cover-num f phi f>=0 phip
+                 => \have | q : a < a + 1 => usingOnly () linarith
+                          | q' : (B - a * cover-num f phi f>=0 phip) * a < (B - a * cover-num f phi f>=0 phip) * (a + 1) => RealField.<_*_positive-right (usingOnly d linarith) q
+                    \in rewrite (equation.cRing : a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) = (B - a * cover-num f phi f>=0 phip) * a * RealField.pinv (a + 1) a+1>0) $
+                                RealField.<_*_positive-left q' (RealField.pinv>0 a+1>0) <∘l =_<= (*-assoc *> pmap (_ *) (RealField.pinv-right a+1>0) *> ide-right)
+            | t4 : a * (cover-num f phi f>=0 phip + (B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) = a * cover-num f phi f>=0 phip + a * ((B - a * cover-num f phi f>=0 phip) * RealField.pinv (a + 1) a+1>0) => RealField.ldistr
+      \in usingOnly (t1, t2, t3, t4) linarith
 
 -- | If `g(x) ≤ f(-s + x)`, then `(g : φ) ≤ (f : φ)`.
 \lemma cover-num-translate-le {G : LocallyCompactUrysohnGroup} {f g phi : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x} {phip : IsPositiveFun phi}

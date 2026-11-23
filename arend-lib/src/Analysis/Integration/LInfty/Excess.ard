@@ -9,6 +9,7 @@
 -}
 
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
@@ -76,10 +77,10 @@
 
 -- | $0 \le e \wedge h \le 1$ for $e = (1 \wedge (w/\varepsilon))$, $w, h \ge 0$.
 \lemma ramp>=0 {R : TruncRieszSpace} {eps : Rat} (eps>0 : 0 < eps) {w h : R} (w>=0 : 0 <= w) (h>=0 : 0 <= h) : 0 <= rampAt eps w ∧ h
-  => meet-univ (trunc-pos (*q_>=0 (<=-less (RatField.finv>0 eps>0)) w>=0)) h>=0
+  => meet-univ (trunc-pos (*q_>=0 positivity w>=0)) h>=0
 
 \lemma ramp-below {R : TruncRieszSpace} {eps : Rat} (eps>0 : 0 < eps) {w h : R} (w>=0 : 0 <= w) (h>=0 : 0 <= h) : IsBelow (abs (rampAt eps w ∧ h)) 1
-  => \have t>=0 : 0 <= rampAt eps w => trunc-pos (*q_>=0 (<=-less (RatField.finv>0 eps>0)) w>=0)
+  => \have t>=0 : 0 <= rampAt eps w => trunc-pos (*q_>=0 positivity w>=0)
      \in IsBelow_<= (=_<= (abs-ofPos (ramp>=0 eps>0 w>=0 h>=0)) <=∘ meet-left) (IsUnderUnit-below t>=0 trunc-idemp)
 
 -- | $(x - C)^+ = 0$ implies $x^+ \le C$.

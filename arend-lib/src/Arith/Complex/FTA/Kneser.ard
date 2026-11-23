@@ -1,6 +1,8 @@
--- The exposition presented here follows Herman Geuvers, Freek Wiedijk, Jan Zwanenburg paper
--- "A Constructive Proof of the Fundamental Theorem of Algebra without using the Rationals"
--- see https://www.cs.ru.nl/~herman/PUBS/Types00-GeuversWiedijkZwanenburg.pdf
+{- | The exposition presented here follows Herman Geuvers, Freek Wiedijk, Jan Zwanenburg paper
+ -   "A Constructive Proof of the Fundamental Theorem of Algebra without using the Rationals"
+ -   see https://www.cs.ru.nl/~herman/PUBS/Types00-GeuversWiedijkZwanenburg.pdf
+ -}
+
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -33,11 +35,10 @@
 \import Paths
 \import Paths.Meta
 \import Set.Fin
-\open Monoid (pow)
-\open AddMonoid (BigSum, BigSum_suc, BigSum-ext, BigSum-split)
-\open LinearlyOrderedAbGroup
-\open OrderedField (pinv, pinv-left, pinv-right, pinv>0, pinv_*)
-\open OrderedSemiring (<_*_positive-left, <_*_positive-right, <_*_positive_positive)
+\open Monoid
+\open AddMonoid
+\open OrderedField
+\open OrderedSemiring
 
 \private \meta one/3 => (ratio 1 3 : Real)
 
@@ -300,8 +301,7 @@
                                 OrderedAddMonoid.<_+-right _ (OrderedAddGroup.negative_< (<_*_positive-right eps>0 ((PosetSemiring.pow<=id one/3>=0 (usingOnly () linarith) {suc i} (\case __)) <∘r linarith))) <∘l,
                                 (rewrite PseudoRing.rdistr_- in <=_*_positive-left (<=-less (IA (suc i) (usingOnly () linarith))) (PosetSemiring.pow>=0 {_} {one/3} {suc i} one/3>=0)) <=∘,
                                 rewriteI {2} (*-assoc {_} {a (suc kj)}),
-                                <=_*_positive-right (PosetSemiring.<=_*_positive_positive (ai>=0 (suc kj)) (PosetSemiring.pow>=0 {_} {_} {suc kj}
-                                  (PosetSemiring.<=_*_positive_positive (<=-less r0>0) ( PosetSemiring.pow>=0 one/3>=0)))),
+                                <=_*_positive-right (positivity (using (ai>=0 (suc kj), one/3>0))),
                                 PosetSemiring.pow_<=-degree one/3>=0 (usingOnly () linarith) {suc kj} {suc i} (suc<=suc (NatSemiring.<=-less kj<i))
                               },
                               i-term-eps<kj-term-eps/2 <∘,
@@ -613,21 +613,16 @@
         }
       \where {
         {- | The unit complex number pointing opposite to $b_0/b_k$: there is a $u$ with $|u| = 1$ and
-        $b_k u = -\,(|b_k|/|b_0|)\,b_0$. Concretely $u = -\,b_0\overline{b_k}/(|b_0|\,|b_k|)$,
-        which works because $b_k \overline{b_k} = |b_k|^2$ is real. -}
+             $b_k u = -\,(|b_k|/|b_0|)\,b_0$. Concretely $u = -\,b_0\overline{b_k}/(|b_0|\,|b_k|)$,
+             which works because $b_k \overline{b_k} = |b_k|^2$ is real. -}
         \lemma unit-dir {b0 bk : Complex} (b0>0 : 0 < cabs b0) (bk>0 : 0 < cabs bk)
-          : ∃ (u : Complex) (cabs u = 1)
-        (bk * u = ComplexField.negative (Complex.fromReal (cabs bk * pinv (cabs b0) b0>0) * b0))
-          => \have | t>0 : 0 < pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0
-          => <_*_positive_positive (pinv>0 b0>0) (pinv>0 bk>0)
-             \in inP (ComplexField.negative (Complex.fromReal (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0)
-              * (b0 * conj bk)),
-                      dir-cabs b0 bk (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0) (<=-less t>0)
-                        *> pmap (* (cabs b0 * cabs bk)) (pinv_* b0>0 bk>0) *> pinv-left _,
-                      cring-swap (mul-conj *> pmap Complex.fromReal (inv cabs-square))
-                        *> neg_fromReal_* (equation.cRing
-                        *> pmap (cabs bk * pinv (cabs b0) b0>0 *) (pinv-left bk>0)
-                             *> ide-right))
+          : ∃ (u : Complex) (cabs u = 1) (bk * u = ComplexField.negative (Complex.fromReal (cabs bk * pinv (cabs b0) b0>0) * b0))
+          => inP (ComplexField.negative (Complex.fromReal (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0) * (b0 * conj bk)),
+                  dir-cabs b0 bk (pinv (cabs b0) b0>0 * pinv (cabs bk) bk>0) positivity
+                    *> pmap (* (cabs b0 * cabs bk)) (pinv_* b0>0 bk>0) *> pinv-left _,
+                  cring-swap (mul-conj *> pmap Complex.fromReal (inv cabs-square))
+                    *> neg_fromReal_* (equation.cRing
+                    *> pmap (cabs bk * pinv (cabs b0) b0>0 *) (pinv-left bk>0) *> ide-right))
           \where {
             {- | Modulus of the direction vector $-\,t\,b_0\overline{b_k}$ for a nonnegative real scale
             $t$. The scale is a parameter rather than an inlined expression: with a concrete

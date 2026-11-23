@@ -22,7 +22,6 @@
 \import Logic.Meta
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -154,8 +153,7 @@
              bound>=1 C>=0 (suc m), root-bound p deg monic C>=0 hC) \where {
 
   \private \lemma bound>=1 {C : Real} (_ : 0 <= C) (m : Nat) : 1 <= 2 + (C + 1) * natCoef m
-    => linarith (RealField.<=_*_positive_positive (linarith : (0 : Real) <= C + 1)
-                                                  (RealField.natCoef>=0 {m}))
+    => linarith (positivity : 0 <= (C + 1) * natCoef m)
 
   {- | The root bound, with the coefficient bound `C` of `p - X^{m+1}` abstracted: a near
        factorisation of `p` cannot have an entry above `2 + (C + 1)(m + 1)`. -}
@@ -469,8 +467,7 @@
        \in \have | B>=0 : (0 : Real) <= B => linarith
                  | P>=0 : 0 <= RealField.powSum (cabs z) (suc m) => RealField.powSum>=0 cabs>=0 (suc m)
                  | Q>=0 : 0 <= pow (1 + B) m * RealField.powSum (cabs z) (suc m)
-                    => RealField.<=_*_positive_positive
-                         (RealField.pow>=0 (linarith : (0 : Real) <= 1 + B)) P>=0
+                    => positivity
        \in \let | (inP (delta, delta>0, dP)) => split-eps (linarith : (0 : Real) < c * ratio 1 2)
                      (linarith : (0 : Real) < RealField.powSum (cabs z) (suc m) + 1)
                 | (inP (eta, eta>0, dQ)) => split-eps (linarith : (0 : Real) < c * ratio 1 2)

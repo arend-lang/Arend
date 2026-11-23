@@ -70,7 +70,7 @@
     | inl a<0, _ => convRadius>=0 a<0
     | inr a>=0, inP (c,a<c,c<=|x|) => \case isDense a<c \with {
       | inP (b,a<b,b<c) =>
-        \have bc'>=0 => <=-less $ RatField.<_*_positive_positive (a>=0 <∘r a<b) $ RatField.finv>0 (a>=0 <∘r a<c)
+        \have bc'>=0 : 0 <= b * RatField.finv c => positivity
         \in inP (b, a<b, transport IsConvUpperSeries {\lam j => norm (cs j) * pow c j * ExUpperRealSemigroup.pow (b * RatField.finv c) j}
                 (later $ ext \lam n => *-assoc *> pmap (_ *) (pmap (_ *) (ExUpperRealSemigroup.rat-pow bc'>=0) *> ExUpperReal.*-rat (<=-less $ RatField.pow>0 $ a>=0 <∘r a<c) (RatField.pow>=0 bc'>=0) *> pmap ExUpperReal.fromRat (inv RatField.pow_*-comm *> pmap (pow __ n) (*-comm *> *-assoc *> pmap (b *) (RatField.finv-left $ RatField.>_/= $ a>=0 <∘r a<c) *> ide-right))))
                 (series_*-bounded (\lam j => ExUpperRealSemigroup.pow_>=0) (upperSeries-bounded_<= {_} {\lam n => norm (cs n * pow x n)}

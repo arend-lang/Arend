@@ -309,7 +309,7 @@
                       | key : t * RealAbGroup.abs (segMean a<=b g n x y - segMean a<=b g m x y) <= Real.fromRat (e + e') * t
                           => =_<= (inv RealField.abs_*) <=∘ transport (\lam z => _ <= z * t) RealAbGroup.+-rat (abs-sum-le equation.ring p1 p2)
                 \in RealField.<=_*-cancel-right t>0 (transport (<= _) RealField.*-comm key))
-              (\lam t=0 => rewrite (interval-ext (inv t=0), segMean-same, segMean-same, negative-right, RealAbGroup.abs_zro) (rat_real_<=.1 (<=-less (linarith : 0 < e + e'))))
+              (\lam t=0 => rewrite (interval-ext (inv t=0), segMean-same, segMean-same, negative-right, RealAbGroup.abs_zro) (rat_real_<=.1 positivity))
 
         \lemma dist-le {x y : Real} {e : Rat} (p : dist {RealNormed} x y ExUpperReal.<= e) : RealAbGroup.abs (x - y) <= Real.fromRat e
           => \lam q => \case real_<-rat-char.1 q \with {

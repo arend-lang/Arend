@@ -244,7 +244,7 @@
     \lemma real-pt {q : Rat} (q>0 : 0 < q) {t : Real}
       : RealAbGroup.abs t <= (RealAbGroup.abs t ∧ Real.fromRat q) + Real.fromRat (RatField.finv q) * (RealAbGroup.abs (t * t) - (RealAbGroup.abs (t * t) ∧ Real.fromRat (q * q)))
       => transport2 (\lam y z => RealAbGroup.abs t <= (RealAbGroup.abs t ∧ Real.fromRat q) + Real.fromRat (RatField.finv q) * (y - (y ∧ z))) (inv RealField.abs_*) RealField.*-rat
-          (real-pt' (rat_real_<.1 q>0) RealAbGroup.abs>=0 (rat_real_<=.1 (<=-less (RatField.finv>0 q>0))) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= q>0))))
+          (real-pt' (rat_real_<.1 q>0) RealAbGroup.abs>=0 (rat_real_<=.1 positivity) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= q>0))))
 
     \lemma real-pt' {x r c : Real} (r>0 : (0 : Real) < r) (x>=0 : (0 : Real) <= x) (c>=0 : (0 : Real) <= c) (cr : c * r = 1)
       : x <= (x ∧ r) + c * (x * x - ((x * x) ∧ (r * r)))
@@ -296,10 +296,8 @@
     : l0Mul (K i, K j) = l0Mul (l0calc (xc i) K, l0calc (xc j) K)
     => inv (pmap2 (\lam u v => l0Mul (u,v)) (l0calc-coord i) (l0calc-coord j))
 
-  \lemma real-square>=0 {x : Real} : (0 : Real) <= x * x
-    => signedPow.real-cases {0} {x} (\lam x>0 => RealField.<=_*_positive_positive (<=-less x>0) (<=-less x>0))
-        (\lam x<=0 => \have n>=0 : (0 : Real) <= negative x => linarith
-                      \in RealField.<=_*_positive_positive n>=0 n>=0 <=∘ =_<= equation.cRing)
+  \lemma real-square>=0 {x : Real} : 0 <= x * x
+    => positivity
 
   \lemma clip-abs' {M : Rat} (M>=0 : 0 <= M) {s : Real} : RealAbGroup.abs ((s ∧ Real.fromRat M) ∨ negative (Real.fromRat M)) <= Real.fromRat M
     => \have | m0 : (0 : Real) <= Real.fromRat M => rat_real_<=.1 M>=0

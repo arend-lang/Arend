@@ -200,7 +200,7 @@
       | func x => Real.fromRat (RatField.finv n) * f x
       | func-+ => pmap (_ *) f.func-+ *> RealField.ldistr
       | func-bounded => \case f.func-bounded \with {
-        | inP (C,C>=0,p) => inP (RatField.finv n * C, RatField.<=_*_positive_positive finv>=0 C>=0, \lam {x} {b} xb =>
+        | inP (C,C>=0,p) => inP (RatField.finv n * C, positivity, \lam {x} {b} xb =>
             \have t : (0 : Real) <= Real.fromRat (RatField.finv n) => rat_real_<=.1 finv>=0
             \in =_<= (RealField.abs_* *> pmap (\lam z => z RealField.* RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos t))
                 <=∘ RealField.<=_*_positive-right t (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
@@ -300,7 +300,7 @@
           => \case E.norm-bounded v \with {
             | inP (N,vN) =>
               \have | N>0 : 0 < N => norm>=0 vN
-                    | eps>0 : 0 < a * RatField.finv N => RatField.<_*_positive_positive a>0 (RatField.finv>0 N>0)
+                    | eps>0 : 0 < a * RatField.finv N => positivity
                     | eN : a * RatField.finv N * N = a => *-assoc *> pmap (a *) (RatField.finv-left (RatField.>_/= N>0)) *> ide-right
               \in \case Fc eps>0 \with {
                 | inP (x,Fx) => inP (x v, filter-mono Fx \lam {y} yx => \case ball-bound yx \with {
@@ -386,9 +386,9 @@
   | func-+ => f.func-+
   | func-norm-uniform {eps} eps>0 => \case f.func-bounded \with {
     | inP (C,C>=0,fC) =>
-      \have C1>0 : 0 < C + 1 => linarith
-      \in inP (eps * RatField.finv (C + 1), RatField.<_*_positive_positive eps>0 (RatField.finv>0 C1>0), \lam {x} xd =>
-          \have | d>0 : 0 < eps * RatField.finv (C + 1) => RatField.<_*_positive_positive eps>0 (RatField.finv>0 C1>0)
+      \have C1>0 : 0 < C + 1 => positivity
+      \in inP (eps * RatField.finv (C + 1), positivity, \lam {x} xd =>
+          \have | d>0 : 0 < eps * RatField.finv (C + 1) => positivity
                 | e : (C + 1) * (eps * RatField.finv (C + 1)) = eps => equation.cRing {RatField.finv-right (RatField.>_/= C1>0)}
                 | lt : C * (eps * RatField.finv (C + 1)) < eps
                     => transport (_ <) e (RatField.<_*_positive-left (linarith : C < C + 1) d>0)

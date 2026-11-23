@@ -129,7 +129,7 @@
 
 -- | The error bound of Lemma compare is at most `ρ (2 + N)` when its parameter `r` is at most `ρ ≤ 1`.
 \lemma compare-bound {r rho N : Real} (r<=rho : r <= rho) (r>=0 : 0 <= r) (N>=0 : 0 <= N) (rho<=1 : rho <= 1) (rho>0 : 0 < rho) : r * (1 + N + r) <= rho * (2 + N)
-  => RealField.<=_*_positive-left r<=rho (usingOnly (N>=0, r>=0) linarith) <=∘ RealField.<=_*_positive-right (<=-less rho>0) (usingOnly (r<=rho, rho<=1) linarith)
+  => RealField.<=_*_positive-left r<=rho positivity <=∘ RealField.<=_*_positive-right (<=-less rho>0) (usingOnly (r<=rho, rho<=1) linarith)
 
 -- | `Λ_φ` satisfies the hypotheses of Lemma compare.
 \func LambdaCompare {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} (f0p : IsPositiveFun f0) {phi : CompactCoverMap G} (phip : IsPositiveFun phi) : CompareFun G f0 f0p \cowith
@@ -150,14 +150,14 @@
              | Nh => cover-num h f0 h>=0 f0p
         \in \have | Nf>=0 : 0 <= Nf => cover-num>=0
                   | Nh>=0 : 0 <= Nh => cover-num>=0
-        \in \case split-eps eps>0 (usingOnly Nf>=0 linarith : 0 < 2 + Nf) \with {
+        \in \case split-eps eps>0 (positivity : 0 < 2 + Nf) \with {
           | inP (rho0,rho0>0,rho0e) =>
             \let rho => rho0 ∧ 1
             \in \have | rho>0 : 0 < rho => <_meet-univ rho0>0 RealAbGroup.zro<ide
                       | rho<=1 : rho <= 1 => meet-right
-                      | rhoe : rho * (2 + Nf) <= eps => RealField.<=_*_positive-left meet-left (usingOnly Nf>=0 linarith : 0 <= 2 + Nf) <=∘ <=-less rho0e
+                      | rhoe : rho * (2 + Nf) <= eps => RealField.<=_*_positive-left meet-left (positivity : 0 <= 2 + Nf) <=∘ <=-less rho0e
                       | rho2>0 : 0 < rho * ratio 1 2 => usingOnly rho>0 linarith
-            \in \case split-eps rho2>0 (usingOnly Nh>=0 linarith : 0 < Nh + 1) \with {
+            \in \case split-eps rho2>0 (positivity : 0 < Nh + 1) \with {
               | inP (delta,delta>0,deltaN) =>
                 \have dN : delta * Nh <= rho * ratio 1 2 => \have e : delta * (Nh + 1) = delta * Nh + delta => equation.cRing \in usingOnly (e, deltaN, delta>0) linarith
                 \in \case ap delta>0 \with {
@@ -177,7 +177,7 @@
                                         sa2 phip (IsSupported.mono phiV meet-right) ap0.1 (\lam i => RealAbGroup.BigSum_>=index {d} ap0.1 i)
                                  | cmp => (compare (LambdaCompare f0p phip) f>=0 h>=0 (<=-less delta>0) psip apf ap0 (<=-less rho2>0) hc hd).2
                                  | r'<=rho : rho * ratio 1 2 + delta * Nh <= rho => usingOnly dN linarith
-                                 | r'>=0 : 0 <= rho * ratio 1 2 + delta * Nh => usingOnly (rho>0, RealField.<=_*_positive_positive (<=-less delta>0) Nh>=0) linarith
+                                 | r'>=0 : 0 <= rho * ratio 1 2 + delta * Nh => positivity
                                  | t : (rho * ratio 1 2 + delta * Nh) * (1 + Nf + (rho * ratio 1 2 + delta * Nh)) <= rho * (2 + Nf) => compare-bound r'<=rho r'>=0 Nf>=0 rho<=1 rho>0
                           \in cmp <=∘ t <=∘ rhoe)
                     }
@@ -301,7 +301,7 @@
 
 \lemma haarPos-scale {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {a : Real} (a>=0 : 0 <= a)
                      {af>=0 : \Pi (x : G) -> 0 <= CompactCoverMap.scale a f x} : haarPos f0p (CompactCoverMap.scale a f) af>=0 = a * haarPos f0p f f>=0
-  => eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (usingOnly a>=0 linarith : 0 < a + 1) \with {
+  => eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (positivity : 0 < a + 1) \with {
     | inP (eta,eta>0,etaa) => \case approx2 {G} {f0} {f0p} {CompactCoverMap.scale a f} {f} {af>=0} {f>=0} eta>0 \with {
       | inP (phi,phip,h1,h2) =>
         scale-arith a>=0 h1 h2 (Lambda-scale a>=0) etaa
@@ -511,7 +511,7 @@
 \lemma J-scale {G : TopAddGroup} (J : HaarIntegral G) {a : Real} (a>=0 : 0 <= a) {g : CompactCoverMap G} (g>=0 : \Pi (x : G) -> 0 <= g x)
   : J.integral (CompactCoverMap.scale a g) = a * J.integral g
   => \have Jg>=0 : 0 <= J.integral g => J.integral>=0 g>=0
-     \in eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (usingOnly Jg>=0 linarith : 0 < 2 * J.integral g + 1) \with {
+     \in eq-eps \lam {e} e>0 => \case split-eps (rat_real_<.1 e>0) (positivity : 0 < 2 * J.integral g + 1) \with {
        | inP (d0,d0>0,d0e) => \case real-nat-approx-div (<=-less (RealField.pinv>0 d0>0)) RealAbGroup.zro<ide \with {
          | inP (k,_,kb) =>
            \have | n>0 : 0 < RealField.natCoef (suc (suc k)) => RealField.natCoef>0 NatOrder.zero<suc
@@ -628,13 +628,13 @@
              | Nh => cover-num h f0 h>=0 f0p
         \in \have | Nf>=0 : 0 <= Nf => cover-num>=0
                   | Nh>=0 : 0 <= Nh => cover-num>=0
-        \in \case split-eps (rat_real_<.1 e>0) (usingOnly Nf>=0 linarith : 0 < 2 * (2 + Nf)) \with {
+        \in \case split-eps (rat_real_<.1 e>0) (positivity : 0 < 2 * (2 + Nf)) \with {
           | inP (rho0,rho0>0,rho0e) =>
             \let rho => rho0 ∧ 1
             \in \have | rho>0 : 0 < rho => <_meet-univ rho0>0 RealAbGroup.zro<ide
                       | rho<=1 : rho <= 1 => meet-right
-                      | rhoe : rho * (2 * (2 + Nf)) <= Real.fromRat e => RealField.<=_*_positive-left meet-left (usingOnly Nf>=0 linarith : 0 <= 2 * (2 + Nf)) <=∘ <=-less rho0e
-            \in \case split-eps rho>0 (usingOnly Nh>=0 linarith : 0 < Nh + 1) \with {
+                      | rhoe : rho * (2 * (2 + Nf)) <= Real.fromRat e => RealField.<=_*_positive-left meet-left (positivity : 0 <= 2 * (2 + Nf)) <=∘ <=-less rho0e
+            \in \case split-eps rho>0 (positivity : 0 < Nh + 1) \with {
               | inP (delta,delta>0,deltaN) =>
                 \have dN : delta * Nh <= rho => \have e1 : delta * (Nh + 1) = delta * Nh + delta => equation.cRing \in usingOnly (e1, deltaN, delta>0) linarith
                 \in \case ap delta>0 \with {
@@ -652,7 +652,7 @@
                         => =_<= (inv (L-transSum-eq {G} {f0} {f0p} LI (\lam {f} {g} {f>=0} {g>=0} {fg>=0} => haarPos-add) {psi} {psip.1} ap0.1 {t}) *> inv zro-right)
                       | cJ => compare LJ f>=0 h>=0 (<=-less delta>0) psip apf ap0 <=-refl hcJ hdJ
                       | cI => compare LI f>=0 h>=0 (<=-less delta>0) psip apf ap0 <=-refl hcI hdI
-                      | r'>=0 : 0 <= 0 + delta * Nh => usingOnly (RealField.<=_*_positive_positive (<=-less delta>0) Nh>=0) linarith
+                      | r'>=0 : 0 <= 0 + delta * Nh => positivity
                       | b : (0 + delta * Nh) * (1 + Nf + (0 + delta * Nh)) <= rho * (2 + Nf) => compare-bound (usingOnly dN linarith) r'>=0 Nf>=0 rho<=1 rho>0
                       | e2 : rho * (2 * (2 + Nf)) = rho * (2 + Nf) + rho * (2 + Nf) => equation.cRing
                     \in unique-arith cJ.2 cI.2 b e2 rhoe
@@ -683,7 +683,7 @@
     | inP (f0,f0p,_) =>
       \have | (J>0,Jf) => haar-unique-f0 J f0p
             | (J'>0,J'f) => haar-unique-f0 J' f0p
-      \in inP (J'.integral f0 * RealField.pinv (J.integral f0) J>0, RealField.<_*_positive_positive J'>0 (RealField.pinv>0 J>0), \lam f =>
+      \in inP (J'.integral f0 * RealField.pinv (J.integral f0) J>0, positivity, \lam f =>
             J'f f *> inv (pmap (_ *) (Jf f) *> equation.cRing {RealField.pinv-left J>0}))
   }
 

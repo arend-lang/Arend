@@ -173,7 +173,7 @@
   : ∃ (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g (ratCube n (R + 1)) e s) (e RealField.* meas (ratCube n (R + 1)) < d)
   => \case Real.U-inh_>0 {meas (ratCube n (R + 1))} \with {
     | inP (V,mV,V>0) =>
-      \have | e>0 : 0 < d * RatField.finv V => RatField.<_*_positive_positive d>0 (RatField.finv>0 V>0)
+      \have | e>0 : 0 < d * RatField.finv V => positivity
             | ee : (d * RatField.finv V) * V = d => *-assoc *> pmap (d *) (RatField.finv-left (/=-sym (StrictPoset.<_/= V>0))) *> ide-right
       \in \case approx-exists g gR e>0 \with {
         | inP (s,a) => inP (d * RatField.finv V, s, a, transport (_ <) (RealField.*-rat *> pmap Real.fromRat ee) $ RealField.<_*_positive-right (rat_real_<.1 e>0) (real_<_U.2 mV))
