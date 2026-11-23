@@ -63,7 +63,8 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
   }
 
   /**
-   * The instances the typechecker picked while checking this definition, recorded as it picked them.
+   * The instances the typechecker picked while checking this definition, recorded as it picked them,
+   * together with the attributed definitions that metas were offered while checking it.
    *
    * @return {@code null} for a definition that was never typechecked in this session and never
    *         read from a binary that carried the set -- which is not the same as having used none.

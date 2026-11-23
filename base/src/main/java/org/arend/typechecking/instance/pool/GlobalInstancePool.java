@@ -41,13 +41,24 @@ public class GlobalInstancePool implements InstancePool {
    * @param usedInstances   if given, every instance this pool hands out is added to it. This is
    *                        the only place an instance is knowingly chosen, and so the only place
    *                        the choice can be recorded; the elaborated term need not keep a call
-   *                        to it.
+   *                        to it. Attributed definitions consumed by metas are added to it as well
+   *                        (see {@link #recordUsed}).
    */
   public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool, Set<TCDefReferable> usedInstances) {
     myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
     myInstancePool = instancePool;
     myUsedInstances = usedInstances;
+  }
+
+  /**
+   * Records that {@param definition} contributed to the definition being typechecked: either an
+   * instance this pool handed out, or an attributed definition a meta consumed.
+   */
+  public void recordUsed(TCDefReferable definition) {
+    if (myUsedInstances != null) {
+      myUsedInstances.add(definition);
+    }
   }
 
   public void setInstancePool(LocalInstancePool instancePool) {
@@ -241,9 +252,7 @@ public class GlobalInstancePool implements InstancePool {
     if (!parameters.testGlobalInstance(instanceExpr)) {
       return null;
     }
-    if (myUsedInstances != null) {
-      myUsedInstances.add(instance.getRef());
-    }
+    recordUsed(instance.getRef());
     return new Pair<>(instanceExpr, actualClass);
   }
 

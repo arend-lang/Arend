@@ -2,7 +2,6 @@ package org.arend.server.imports;
 
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
-import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.ModuleReferable;
 import org.arend.naming.reference.ParameterReferable;
 import org.arend.naming.reference.RedirectingReferable;
@@ -12,6 +11,7 @@ import org.arend.naming.scope.*;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
+import org.arend.typechecking.instance.ArendInstances;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -303,6 +303,7 @@ final class TracingLexicalScope implements TracingScope {
 
   /**
    * Charges whatever put {@param instance} into the instance pool this group is typechecked with.
+   * The pool also holds attributed definitions, which are charged the same way when a meta used them.
    *
    * <p>The pool is not the scope: {@code DefinitionResolveNameVisitor.resolveGroup} fills it from
    * the elements of each command regardless of whether their names are shadowed, so an instance
@@ -355,7 +356,7 @@ final class TracingLexicalScope implements TracingScope {
   }
 
   private static void addIfInstance(Referable referable, Set<TCDefReferable> result) {
-    if (referable instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
+    if (referable instanceof TCDefReferable defRef && ArendInstances.isAppropriate(defRef)) {
       result.add(defRef);
     }
   }
@@ -368,7 +369,7 @@ final class TracingLexicalScope implements TracingScope {
         CommandNamespace command = myCommands.get(i);
         for (Referable element : command.namespace().getElements(ScopeContext.STATIC)) {
           Referable original = RedirectingReferable.getOriginalReferable(element);
-          if (original instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
+          if (original instanceof TCDefReferable defRef && ArendInstances.isAppropriate(defRef)) {
             myPooledInstances.putIfAbsent(defRef, ImportUsageData.partOf(command.command(), element.getRefName()));
           }
         }

@@ -30,6 +30,20 @@ import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.typechecking.visitor.FindDefCallVisitor;
 import org.junit.Test;
+import org.arend.ext.prettyprinting.doc.DocFactory;
+import org.arend.ext.reference.Precedence;
+import org.arend.ext.typechecking.ContextData;
+import org.arend.ext.typechecking.ExpressionTypechecker;
+import org.arend.ext.typechecking.MetaDefinition;
+import org.arend.ext.typechecking.TypedExpression;
+import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
+import org.arend.naming.reference.FullModuleReferable;
+import org.arend.naming.reference.MetaReferable;
+import org.arend.term.concrete.Concrete;
+import org.arend.term.group.AccessModifier;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import java.math.BigInteger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -546,6 +560,64 @@ public class UnusedImportsTest {
         \\func p : Nat => t
         """);
     assertEquals("\\open M", unused("Main"));
+  }
+
+  // ------------------------------------------------------------------ attributed definitions keep their import
+
+  /** {@code count} returns the number of visible definitions marked with {@code \\attr count}. */
+  private static class CountMeta implements MetaDefinition {
+    MetaReferable ref;
+
+    @Override
+    public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
+      int count = typechecker.getAttributedDefinitions(ref).size();
+      return typechecker.checkNumber(BigInteger.valueOf(count), contextData.getExpectedType(), contextData.getMarker());
+    }
+  }
+
+  private void addCountMeta() {
+    if (server == null) server = createServer(false);
+    CountMeta meta = new CountMeta();
+    ModuleLocation module = new ModuleLocation(LIB_NAME, ModuleLocation.LocationKind.GENERATED, new ModulePath("Meta"));
+    FullModuleReferable moduleRef = new FullModuleReferable(module);
+    meta.ref = new MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "count", new TrivialMetaTypechecker(meta), null, moduleRef);
+    List<ConcreteStatement> statements = List.of(new ConcreteStatement(new ConcreteGroup(DocFactory.nullDoc(), meta.ref,
+      new Concrete.MetaDefinition(meta.ref, null, Collections.emptyList(), null), Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), null));
+    server.addReadOnlyModule(module, () -> new ConcreteGroup(DocFactory.nullDoc(), moduleRef, null, statements, Collections.emptyList(), Collections.emptyList()));
+  }
+
+  private static final String RULES_MODULE = "\\import Meta\n\n\\attr count \\func rule => 0";
+
+  @Test
+  public void anImportOfAttributedDefinitionsConsumedByAMetaIsKept() {
+    addCountMeta();
+    addModule("Rules", RULES_MODULE);
+    addModule("Main", "\\import Meta\n\\import Rules\n\n\\func p : Nat => count");
+    assertEquals("", unused("Main"));
+  }
+
+  /** Attributed definitions that are merely available are not a use. */
+  @Test
+  public void anImportOfAttributedDefinitionsNoMetaConsumesIsReported() {
+    addCountMeta();
+    addModule("Rules", RULES_MODULE);
+    addModule("Main", "\\import Meta\n\\import Rules\n\n\\func p : Nat => 0");
+    assertEquals("\\import Meta, \\import Rules", unused("Main"));
+  }
+
+  @Test
+  public void anImportUsedOnlyByAnAttributeIsKept() {
+    addCountMeta();
+    addModule("Main", "\\import Meta\n\n\\attr count \\func rule => 0");
+    assertEquals("", unused("Main"));
+  }
+
+  @Test
+  public void anAttributedDefinitionOfTheModuleItselfNeedsNoImport() {
+    addCountMeta();
+    addModule("Rules", RULES_MODULE);
+    addModule("Main", "\\import Meta\n\\import Rules\n\n\\attr count \\func own => 0\n\n\\func p : Nat => count");
+    assertEquals("", unused("Main"));
   }
 
   // ------------------------------------------------------------------ what a lemma hides

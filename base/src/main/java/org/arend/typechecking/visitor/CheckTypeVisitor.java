@@ -299,6 +299,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     for (TCDefReferable ref : myAttributedDefinitions) {
       if (ref.getTypechecked() instanceof TopLevelDefinition def && !def.status().needsTypeChecking() && def.getAttributes().contains(attribute)) {
         result.add(def);
+        // whatever a meta is offered counts as used: the import that made it visible must stay
+        if (myInstancePool != null) myInstancePool.recordUsed(ref);
       }
     }
     return result;
