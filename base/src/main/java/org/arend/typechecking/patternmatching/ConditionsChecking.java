@@ -14,6 +14,7 @@ import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.pattern.*;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.error.ListErrorReporter;
@@ -220,6 +221,16 @@ public class ConditionsChecking {
     return ok;
   }
 
+  /**
+   * Unlike {@link Expression#subst}, does not remove substituted bindings from the bounds of unsolved inference variables.
+   * Clause bodies are checked before deferred metas are invoked, so they may contain such variables.
+   * Inlined \have clauses are not an actual substitution of the body, so the bounds must stay intact:
+   * the substitution also renames bindings of nested \case expressions, which would remove them from the bounds.
+   */
+  private static Expression substKeepingInferenceVariables(Expression expr, ExprSubstitution substitution) {
+    return substitution.isEmpty() ? expr : expr.accept(new SubstVisitor(substitution, LevelSubstitution.EMPTY, false), null);
+  }
+
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   private boolean checkClause(ExtElimClause clause, Concrete.SourceNode sourceNode, ElimBody elimBody, CallableDefinition definition) {
     if (clause.getExpression() == null) {
@@ -237,7 +248,8 @@ public class ConditionsChecking {
             substitution.add(letClause, letClause.getExpression());
           }
         }
-        expr = ((LetExpression) expr).getExpression().subst(substitution);
+        // The result is used only for checking, so inference variables of the original expression must not be affected
+        expr = substKeepingInferenceVariables(((LetExpression) expr).getExpression(), substitution);
       } else {
         expr = ((LamExpression) expr).getBody();
       }

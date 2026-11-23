@@ -154,8 +154,12 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
   }
 
   private void addDeferredMeta() {
+    addDeferredMeta(true);
+  }
+
+  private void addDeferredMeta(boolean afterLevels) {
     ModuleLocation module = new ModuleLocation(MemoryLibrary.INSTANCE.getLibraryName(), ModuleLocation.LocationKind.GENERATED, new ModulePath("Meta"));
-    MetaDefinition meta = new DeferredMetaDefinition(new IdMeta(), false, true);
+    MetaDefinition meta = new DeferredMetaDefinition(new IdMeta(), false, afterLevels);
     MetaReferable metaRef = new MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "defer", new TrivialMetaTypechecker(meta), null, MODULE_REF);
     metaRef.setDefinition(meta);
     ConcreteStatement statement = new ConcreteStatement(new ConcreteGroup(DocFactory.nullDoc(), metaRef, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), null);
@@ -177,6 +181,27 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\import Meta
       \\func test (n : Nat) : defer n = n => idp
+      """);
+  }
+
+  /**
+   * Conditions checking of the outer \case inlines the \have clause into a copy of the clause body.
+   * This copy must not remove bindings of the inner \case from the bounds of the unsolved variable {@code ?n},
+   * which is solved only later, by the deferred meta.
+   */
+  @Test
+  public void conditionsCheckingKeepsInferenceBoundsTest() {
+    addDeferredMeta(false);
+    typeCheckModule("""
+      \\import Meta
+      \\truncated \\data Tr (A : \\Type) : \\Prop | inP A
+      \\func use {n : Nat} (p : n = n) : \\Sigma => ()
+      \\func test (b : Tr Nat) (e : Tr (\\Sigma (m : Nat) (m = m))) : \\Sigma
+        => \\case b \\with {
+          | inP k => \\have h : k = k => idp \\in \\case e \\with {
+            | inP (m, q) => use (defer q)
+          }
+        }
       """);
   }
 

@@ -263,7 +263,7 @@
                             (linarith : natCoef n * pow (1 + B + 1) n
                                      <= natCoef n * pow (1 + B + 1) n + 1))
                      <∘r ddK
-     \in sregCF-metric {_} {specFilter p deg monic} positivity \lam x (inP (d0, d0>0, hd0)) {y} hxy =>
+     \in sregCF-metric {_} {specFilter p deg monic} (positivity : 0 < aa * ratio 1 2) \lam x (inP (d0, d0>0, hd0)) {y} hxy =>
        \let (inP (s, hs)) => approx-factor p deg monic (<_meet-univ d0>0 (<_meet-univ RealAbGroup.zro<ide positivity))
        \in \have | hsB => hB s (\lam j => hs j <∘l (meet-right <=∘ meet-left))
                  | hse : nearFactorSet p (eps * ratio 1 2) s
