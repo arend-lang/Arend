@@ -104,7 +104,7 @@
       | inP (a,a0,aT) =>
         \have | a>0 : 0 < a => rat_real_<.2 (real_<_U.2 a0)
               | aT' : Real.fromRat a < rpow-pos e2 e2>0 p => real_<_L.2 aT
-              | eta>0 : 0 < a * ratio 1 4 => usingOnly a>0 linarith
+              | eta>0 : 0 < a * ratio 1 4 => positivity
         \in \case lpNormPow-uniformly-convex {L} p>1 eta>0, UpperReal.U-inh_>0 {p} \with {
           | inP (K,K>=0,h), inP (P,pP,P>0) =>
             \let | KP1 => K * P + 1
@@ -130,7 +130,7 @@
                                       | r : a * ratio 1 4 * 2 + K * (P * delta) <= a => usingOnly (r1, r2, r3) linarith
                                \in =_<= (pmap2 (+) RealField.*-rat (pmap (_ *) RealField.*-rat *> RealField.*-rat) *> RealAbGroup.+-rat) <=∘ rat_real_<=.1 r
                         | t : lpNormPow p p>=1 (u - v) <= a
-                            => bound (h u v) Nu1 Nv1 rpow>=0 rpow>=0 (rat_real_<=.1 (usingOnly () linarith : 0 <= ratio 1 2)) RealAbGroup.+-rat Nm (rat_real_<=.1 K>=0) positivity (<=-less (real_<_U.2 pP)) d' KPd
+                            => bound (h u v) Nu1 Nv1 rpow>=0 rpow>=0 positivity RealAbGroup.+-rat Nm (rat_real_<=.1 K>=0) positivity (<=-less (real_<_U.2 pP)) d' KPd
                         | t' : lnorm {LpSpace L p p>=1} (u - v) <= e2 => rpow-mono-inv {_} {_} {lnorm>=0 {LpSpace L p p>=1}} {<=-less e2>0} {p} {p>0} (t <=∘ <=-less aT' <=∘ =_<= (inv (rpow-pos-eq e2>0)))
               \in real_<_U.1 (t' <∘r rat_real_<.1 (usingOnly eps>0 linarith : e2 < eps)))
         }

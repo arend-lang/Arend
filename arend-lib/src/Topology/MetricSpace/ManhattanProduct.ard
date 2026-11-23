@@ -83,7 +83,7 @@
 -- | A sum of `n` upper reals is less than {eps} if each of them is sufficiently small.
 \lemma BigSum_U-small (n : Nat) {eps : Rat} (eps>0 : 0 < eps) : ∃ (delta : Rat) (0 < delta) ∀ {l : Array ExUpperReal n} ((\Pi (j : Fin n) -> (l j).U delta) -> UpperReal.U {ExUpperRealAbMonoid.BigSum l} eps) \elim n
   | 0 => inP (eps, eps>0, \lam {l} _ => \case \elim l \with { | nil => eps>0 })
-  | suc n => \have e>0 : 0 < eps * ratio 1 2 => linarith
+  | suc n => \have e>0 : 0 < eps * ratio 1 2 => positivity
              \in \case BigSum_U-small n e>0 \with {
                | inP (d,d>0,f) => inP (d ∧ (eps * ratio 1 2), <_meet-univ d>0 e>0, \lam {l} => \case \elim l \with {
                  | a :: l => \lam h => ExUpperReal.+_U_<=.2 $ inP (_, ExUpperReal.U_<= (h 0) meet-right, _, f (\lam j => ExUpperReal.U_<= (h (suc j)) meet-left), linarith)

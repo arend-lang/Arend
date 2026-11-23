@@ -284,7 +284,7 @@
                    | pw : rpow (Real.fromRat eps * P) eP>=0 q q>0 = rpow-pos (Real.fromRat eps) eps>0 q * rpow-pos M M>0 p
                        => rpow_* {_} {P} {<=-less eps>0} {<=-less P>0} *> pmap2 (*) (rpow-pos-eq eps>0) (rpow-pos-eq P>0 *> rpow-pos-rpow-pos *> pmap (rpow-pos M M>0) sq)
                    | sp : rpow-pos (Real.fromRat eps) eps>0 q <= Real.fromRat eps => AbsPowLemmas.small-pow q>=1 eps>0 eps<=1
-                   | t>=0 : 0 <= Real.fromRat (ratio 1 2) => rat_real_<=.1 (<=-less idp)
+                   | t>=0 : 0 <= Real.fromRat (ratio 1 2) => positivity
                    | t<=1 : Real.fromRat (ratio 1 2) <= 1 => rat_real_<=.1 (<=-less idp)
                    | m>=0 : 0 <= Real.fromRat (ratio 1 2) * N x + (1 - Real.fromRat (ratio 1 2)) * N y => linarith
                    | eM : M = 2 * (Real.fromRat (ratio 1 2) * N x + (1 - Real.fromRat (ratio 1 2)) * N y)

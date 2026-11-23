@@ -42,6 +42,9 @@ public class PositivityMeta extends BaseMetaDefinition {
   @Dependency(name = "BiorderedSet.<-transitive-right")     public ArendRef lessTransRight;
   @Dependency(name = "Preorder.<=-transitive")              public ArendRef leTrans;
   @Dependency(name = "NatOrder.zero<suc")                   public ArendRef zeroLessSuc;
+  @Dependency(name = "Rat.rat")                             public ArendRef ratCon;
+  @Dependency(name = "rat_<-dec")                           public ArendRef ratLessDec;
+  @Dependency(name = "rat_<=-dec")                          public ArendRef ratLessOrEqualsDec;
 
   // Builtin rules: 0 < t
   @Dependency(name = "OrderedSemiring.zro<ide")                     public ArendRef zroLessIde;
@@ -57,6 +60,7 @@ public class PositivityMeta extends BaseMetaDefinition {
   @Dependency(name = "BiorderedLattice.<_join-left")                public ArendRef joinPosLeft;
   @Dependency(name = "BiorderedLattice.<_join-right")               public ArendRef joinPosRight;
   @Dependency(name = "BiorderedLattice.<_meet-univ")                public ArendRef meetPos;
+  @Dependency(name = "OrderedAAlgebra.coef>0")                      public ArendRef coefPos;
 
   // Builtin rules: 0 <= t
   @Dependency(name = "Preorder.<=-refl")                            public ArendRef leRefl;
@@ -74,6 +78,7 @@ public class PositivityMeta extends BaseMetaDefinition {
   @Dependency(name = "JoinSemilattice.<=_join-left")                public ArendRef joinNonnegLeft;
   @Dependency(name = "JoinSemilattice.<=_join-right")               public ArendRef joinNonnegRight;
   @Dependency(name = "MeetSemilattice.meet-univ")                   public ArendRef meetNonneg;
+  @Dependency(name = "OrderedAAlgebra.coef>=0")                     public ArendRef coefNonneg;
 
   // Builtin rules: t /= 0
   @Dependency(name = "Domain.nonZero_*")                            public ArendRef mulNonzero;
@@ -103,8 +108,8 @@ public class PositivityMeta extends BaseMetaDefinition {
 
   private List<ArendRef> getBuiltinRuleRefs() {
     return Arrays.asList(
-      zroLessIde, natCoefPos, addPos, addPosLeft, addPosRight, mulPos, powPos, natMulPos, pinvPos, finvPos, joinPosLeft, joinPosRight, meetPos,
-      leRefl, natNonneg, intPosNonneg, natCoefNonneg, addNonneg, squareNonneg, mulNonneg, powNonneg, natMulNonneg, finvNonneg, absNonneg, partNonneg, joinNonnegLeft, joinNonnegRight, meetNonneg,
+      zroLessIde, natCoefPos, addPos, addPosLeft, addPosRight, mulPos, powPos, natMulPos, pinvPos, finvPos, joinPosLeft, joinPosRight, meetPos, coefPos,
+      leRefl, natNonneg, intPosNonneg, natCoefNonneg, addNonneg, squareNonneg, mulNonneg, powNonneg, natMulNonneg, finvNonneg, absNonneg, partNonneg, joinNonnegLeft, joinNonnegRight, meetNonneg, coefNonneg,
       mulNonzero, finvNonzero);
   }
 

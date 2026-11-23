@@ -164,8 +164,7 @@
                          (F-conv : \Pi (n : Nat) -> A.IsLimit (\lam N => F n N) (L n))
   : A.IsLimit (\lam N => partialSum (\lam n => F n N) N) sL
   => limit-metric-char.2 \lam {eps} eps>0 =>
-       \have | eps/3>0 : (0 : Rat) < eps * ratio 1 3
-                => RatField.<_*_positive_positive eps>0 linarith
+       \have | eps/3>0 : (0 : Rat) < eps * ratio 1 3 => positivity
              | (inP (N0_D, hD)) => D-conv eps/3>0
              | (inP (N*, hL)) => limit-metric-char.1 sL-sum eps/3>0
        \in \let N0 => N0_D ∨ N* \in

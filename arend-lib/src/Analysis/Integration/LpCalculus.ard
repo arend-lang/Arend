@@ -57,10 +57,10 @@
 \open QModule
 
 -- | $|F|^p$ for `F ∈ L⁰`.
-\func l0pow {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) : CoverMap (L0Space L) (L0Space L)
+\func l0pow {L : FullIntegrationSpace} (p : Real) (p>=1 : 1 <= p) : CoverMap (L0Space L) (L0Space L)
   => l0calc (absPow (fpow.one>0 p>=1) p>=1) CoverMap.∘ ArrayCoverSpace.tuple (CoverMap.id :: nil)
   \where \protected {
-    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : L}
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {f : L}
       : l0pow p p>=1 (pointCF {L0PreSpace L} f) = pointCF {L0PreSpace L} (fpow p p>=1 f)
       => pmap {Array (L0Space L) 1} (l0calc (absPow (fpow.one>0 p>=1) p>=1))
               {ArrayCoverSpace.tuple {L0Space L} {1} {L0Space L} (CoverMap.id :: nil) (pointCF {L0PreSpace L} f)} {\lam j => pointCF {L0PreSpace L} ((f :: nil) j)}
@@ -76,7 +76,7 @@
           (exts \lam (j : Fin 1) => \case \elim j \with { | 0 => idp })
 
 -- | $(a \wedge b)^p = a^p \wedge b^p$ for $a, b \ge 0$.
-\lemma rpow-meet {a b : Real} {a>=0 : (0 : Real) <= a} {b>=0 : (0 : Real) <= b} {ab>=0 : (0 : Real) <= a ∧ b} {p : Real} {p>0 : (0 : Real) < p}
+\lemma rpow-meet {a b : Real} {a>=0 : 0 <= a} {b>=0 : 0 <= b} {ab>=0 : 0 <= a ∧ b} {p : Real} {p>0 : 0 < p}
   : rpow (a ∧ b) ab>=0 p p>0 = rpow a a>=0 p p>0 ∧ rpow b b>=0 p p>0
   => <=-antisymmetric (meet-univ (rpow-mono meet-left) (rpow-mono meet-right)) \lam h =>
       \have | na : Not (a <= a ∧ b) => \lam ac => <-irreflexive (h <∘l (meet-left <=∘ rpow-mono ac))
@@ -84,35 +84,35 @@
       \in na \lam ca => nb \lam cb => <-irreflexive (<_meet-univ ca cb)
 
 -- | $(|f| \wedge h)^p = |f|^p \wedge h^p$ for $h \ge 0$.
-\lemma fpow-meet {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f h : L} (h>=0 : L.zro <= h)
+\lemma fpow-meet {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {f h : L} (h>=0 : L.zro <= h)
   : fpow p p>=1 (abs f ∧ h) = fpow p p>=1 f ∧ fpow p p>=1 h
-  => fcalc-eq-pt (f :: h :: nil) (\lam z => \have m : 0 <= RealAbGroup.abs (z 0) ∧ (z 1 ∨ 0) => positivity
-                                     \in rpow-ext (RealAbGroup.abs-ofPos m) {_} {m} idp
-                                     *> rpow-meet {_} {_} {RealAbGroup.abs>=0} {join-right} {m}
-                                     *> pmap (_ ∧) (rpow-ext (inv (RealAbGroup.abs-ofPos join-right)) idp))
+  => fcalc-eq-pt (f :: h :: nil) (\lam z => \have m : 0 <= abs (z 0) ∧ (z 1 ∨ 0) => positivity
+                                     \in rpow-ext (abs-ofPos m) {_} {m} idp
+                                     *> rpow-meet {_} {_} {abs>=0} {join-right} {m}
+                                     *> pmap (_ ∧) (rpow-ext (inv (abs-ofPos join-right)) idp))
       (fcalc-pow (fcalc-meet (fcalc-abs (fcalc-var 0)) (fcalc-pos (fcalc-var 1) h>=0)))
       (fcalc-meet (fcalc-pow (fcalc-var 0)) (fcalc-pow (fcalc-pos (fcalc-var 1) h>=0)))
 
 -- | $\Psi^1_k(g) = I(|g| \wedge k)$.
-\lemma psi-one {L : FullIntegrationSpace} {o : (1 : Real) <= 1} {k g : L} (k>=0 : L.zro <= k) : psi 1 o k g = L.integral (abs g ∧ k)
+\lemma psi-one {L : FullIntegrationSpace} {k g : L} (k>=0 : L.zro <= k) : psi 1 <=-refl k g = L.integral (abs g ∧ k)
   => pmap L.integral (fpow-one *> abs-ofPos positivity)
 
 -- | $\Psi^p_h(F) = \Psi^1_{h^p}(|F|^p)$.
-\lemma psi-pow {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) (F : L0Space L)
+\lemma psi-pow {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h : L} (h>=0 : L.zro <= h) (F : L0Space L)
   : l0Psi p p>=1 h>=0 F = l0Psi 1 <=-refl (fpow>=0 {L} {p} {p>=1} {h}) (l0pow p p>=1 F)
   => dense-lift-unique completion completion.isDenseEmbedding.1 (l0Psi p p>=1 h>=0) (l0Psi 1 <=-refl fpow>=0 CoverMap.∘ l0pow p p>=1)
       (\lam f => l0Psi.char h>=0 *> pmap L.integral (fpow-meet h>=0) *> inv (psi-one fpow>=0 *> pmap (\lam x => L.integral (x ∧ _)) (abs-ofPos fpow>=0))
                   *> inv (pmap (l0Psi 1 <=-refl fpow>=0) l0pow.char *> l0Psi.char fpow>=0)) F
 
 -- | For $a, k \ge 0$, $\delta > 0$, $K \ge 1$ and $K \delta \ge 2$: $a \wedge k \le a \wedge (Kk)^p + k \wedge \delta$.
-\lemma cofinal-pt {p : Real} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) {a k d K : Real} (a>=0 : (0 : Real) <= a) (k>=0 : (0 : Real) <= k)
-                  (d>0 : (0 : Real) < d) (K>=1 : (1 : Real) <= K) (Kd : (1 : Real) <= K * (d * ratio 1 2)) {Kk>=0 : (0 : Real) <= K * k}
+\lemma cofinal-pt {p : Real} {p>0 : 0 < p} (p>=1 : 1 <= p) {a k d K : Real} (a>=0 : 0 <= a) (k>=0 : 0 <= k)
+                  (d>0 : 0 < d) (K>=1 : 1 <= K) (Kd : 1 <= K * (d * ratio 1 2)) {Kk>=0 : 0 <= K * k}
   : a ∧ k <= a ∧ rpow (K * k) Kk>=0 p p>0 + k ∧ d
   => \case RealAbGroup.<-comparison k {d * ratio 1 2} {d} linarith \with {
     | byRight k<d => meet-right <=∘ =_<= (inv (meet_<= (<=-less k<d))) <=∘ =_<= (inv zro-left) <=∘ <=_+ (meet-univ a>=0 rpow>=0) <=-refl
     | byLeft d2<k =>
-      \have | K>=0 : (0 : Real) <= K => linarith
-            | Kk>=1 : (1 : Real) <= K * k => Kd <=∘ <=_*_positive-right K>=0 (<=-less d2<k)
+      \have | K>=0 : 0 <= K => linarith
+            | Kk>=1 : 1 <= K * k => Kd <=∘ <=_*_positive-right K>=0 (<=-less d2<k)
             | k<=Kk : k <= K * k => =_<= (inv ide-left) <=∘ <=_*_positive-left K>=1 k>=0
             | Kk<=pow : K * k <= rpow (K * k) Kk>=0 p p>0 => =_<= (inv (rpow-one {_} {Kk>=0} {RealField.zro<ide})) <=∘ rpow-exp-mono p>=1 Kk>=1
       \in meet-monotone <=-refl (k<=Kk <=∘ Kk<=pow) <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl (meet-univ k>=0 (<=-less d>0))
@@ -122,51 +122,51 @@
       => <=-antisymmetric meet-left (meet-univ <=-refl xy)
 
     -- | $x^1 \le x^p$ for $x \ge 1$, $p \ge 1$.
-    \lemma rpow-exp-mono {x p : Real} {x>=0 : (0 : Real) <= x} {o : (0 : Real) < 1} {p>0 : (0 : Real) < p} (p>=1 : (1 : Real) <= p) (x>=1 : (1 : Real) <= x)
-      : rpow x x>=0 1 o <= rpow x x>=0 p p>0
-      => \have x>0 : (0 : Real) < x => RealField.zro<ide <∘l x>=1
-         \in =_<= (rpow-pos-eq x>0 *> inv ide-right) <=∘ <=_*_positive-right (<=-less rpow-pos>0) (=_<= (inv (one-rpow-pos {RealField.zro<ide} {p - 1})) <=∘ rpow-pos-mono (linarith : (0 : Real) <= p - 1) x>=1)
+    \lemma rpow-exp-mono {x p : Real} {x>=0 : 0 <= x} {p>0 : 0 < p} (p>=1 : 1 <= p) (x>=1 : 1 <= x)
+      : rpow x x>=0 1 RealAbGroup.zro<ide <= rpow x x>=0 p p>0
+      => \have x>0 : 0 < x => RealField.zro<ide <∘l x>=1
+         \in =_<= (rpow-pos-eq x>0 *> inv ide-right) <=∘ <=_*_positive-right (<=-less rpow-pos>0) (=_<= (inv (one-rpow-pos {RealField.zro<ide} {p - 1})) <=∘ rpow-pos-mono (linarith : 0 <= p - 1) x>=1)
               <=∘ =_<= (inv rpow-pos_+ *> rpow-pos-ext idp *> pmap (rpow-pos x x>0) (equation.abGroup : 1 + (p - 1) = p) *> inv (rpow-pos-eq x>0))
   }
 
 -- | Cofinality of $h \mapsto h^p$: $\Psi^1_k(X) \le \Psi^1_{(Kk)^p}(X) + I(k \wedge \delta)$ for $K = 1 + 2/\delta$.
-\lemma psi-cofinal {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {k : L} (k>=0 : L.zro <= k) {d : Rat} (d>0 : 0 RatField.< d) (X : L0Space L)
+\lemma psi-cofinal {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {k : L} (k>=0 : L.zro <= k) {d : Rat} (d>0 : 0 < d) (X : L0Space L)
   : l0Psi 1 <=-refl k>=0 X <= l0Psi 1 <=-refl (fpow>=0 {L} {p} {p>=1} {cofinal-K d *q k}) X + L.integral (L.truncAt d k)
   => dense_<= real-join-uniform completion completion.isDenseEmbedding.1 (l0Psi 1 <=-refl k>=0)
-      (+-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (l0Psi 1 <=-refl (fpow>=0 {L} {p} {p>=1} {cofinal-K d *q k})) (CoverMap.const (L.integral (L.truncAt d k))))
+      (+-uniform CoverMap.∘ ProductCoverSpace.tuple (l0Psi 1 <=-refl (fpow>=0 {L} {p} {p>=1} {cofinal-K d *q k})) (CoverMap.const (L.integral (L.truncAt d k))))
       (\lam g => =_<= (l0Psi.char k>=0 *> psi-one k>=0) <=∘ L.integral-mono
           (fcalc-le-pt (g :: k :: nil)
-            (\lam z => \have | kz>=0 : (0 : Real) <= z 1 ∨ 0 => join-right
-                             | Kk>=0 : (0 : Real) <= Real.fromRat (cofinal-K d) * (z 1 ∨ 0) => RealField.<=_*_positive_positive (<=-less (RealField.zro<ide <∘l K>=1 d>0)) kz>=0
-                       \in cofinal-pt {p} {fpow.one>0 p>=1} p>=1 RealAbGroup.abs>=0 kz>=0 (rat_real_<.1 d>0) (K>=1 d>0) (Kd d>0) {Kk>=0}
-                            <=∘ =_<= (pmap (\lam t => RealAbGroup.abs (z 0) ∧ t + (z 1 ∨ 0) ∧ Real.fromRat d) (rpow-ext (inv (RealAbGroup.abs-ofPos Kk>=0)) idp)))
+            (\lam z => \have | kz>=0 : 0 <= z 1 ∨ 0 => join-right
+                             | Kk>=0 : 0 <= Real.fromRat (cofinal-K d) * (z 1 ∨ 0) => RealField.<=_*_positive_positive (<=-less (RealField.zro<ide <∘l K>=1 d>0)) kz>=0
+                       \in cofinal-pt {p} {fpow.one>0 p>=1} p>=1 abs>=0 kz>=0 (rat_real_<.1 d>0) (K>=1 d>0) (Kd d>0) {Kk>=0}
+                            <=∘ =_<= (pmap (\lam t => abs (z 0) ∧ t + (z 1 ∨ 0) ∧ d) (rpow-ext (inv (abs-ofPos Kk>=0)) idp)))
             (fcalc-meet (fcalc-abs (fcalc-var 0)) (fcalc-pos (fcalc-var 1) k>=0))
             (fcalc-add (fcalc-meet (fcalc-abs (fcalc-var 0)) (fcalc-pow {L} {2} {g :: k :: nil} {p} {p>=1} (fcalc-*q (fcalc-pos (fcalc-var 1) k>=0)))) (fcalc-truncAt d>0 (fcalc-pos (fcalc-var 1) k>=0))))
-          <=∘ =_<= (L.integral_+ *> pmap (_ +) idp *> inv (pmap2 (+) (l0Psi.char (fpow>=0 {L} {p} {p>=1} {cofinal-K d *q k}) *> psi-one {L} {<=-refl} (fpow>=0 {L} {p} {p>=1} {cofinal-K d *q k})) idp))) X
+          <=∘ =_<= (L.integral_+ *> pmap (_ +) idp *> inv (pmap2 (+) (l0Psi.char (fpow>=0 {L} {p} {p>=1} {cofinal-K d *q k}) *> psi-one {L} (fpow>=0 {L} {p} {p>=1} {cofinal-K d *q k})) idp))) X
   \where {
-    \func cofinal-K (d : Rat) : Rat => 1 RatField.+ RatField.finv (d RatField.* ratio 1 2)
+    \func cofinal-K (d : Rat) : Rat => 1 + RatField.finv (d * ratio 1 2)
 
-    \lemma K>=1 {d : Rat} (d>0 : 0 RatField.< d) : (1 : Real) <= Real.fromRat (cofinal-K d)
-      => rat_real_<=.1 (linarith (RatField.finv>0 (linarith : 0 RatField.< d RatField.* ratio 1 2)))
+    \lemma K>=1 {d : Rat} (d>0 : 0 < d) : 1 <= Real.fromRat (cofinal-K d)
+      => rat_real_<=.1 (linarith (RatField.finv>0 (positivity : 0 < d * ratio 1 2)))
 
-    \lemma Kd {d : Rat} (d>0 : 0 RatField.< d) : (1 : Real) <= Real.fromRat (cofinal-K d) * (Real.fromRat d * ratio 1 2)
-      => \have | x>0 : 0 RatField.< d RatField.* ratio 1 2 => linarith
-               | e : (1 RatField.+ RatField.finv (d RatField.* ratio 1 2)) RatField.* (d RatField.* ratio 1 2) = d RatField.* ratio 1 2 RatField.+ RatField.finv (d RatField.* ratio 1 2) RatField.* (d RatField.* ratio 1 2) => equation.cRing
-               | f : RatField.finv (d RatField.* ratio 1 2) RatField.* (d RatField.* ratio 1 2) = 1 => RatField.finv-left (RatField.>_/= x>0)
-         \in rat_real_<=.1 (usingOnly (x>0, e, f) linarith : 1 RatField.<= cofinal-K d RatField.* (d RatField.* ratio 1 2))
+    \lemma Kd {d : Rat} (d>0 : 0 < d) : 1 <= Real.fromRat (cofinal-K d) * (Real.fromRat d * ratio 1 2)
+      => \have | x>0 : 0 < d * ratio 1 2 => positivity
+               | e : (1 + RatField.finv (d * ratio 1 2)) * (d * ratio 1 2) = d * ratio 1 2 + RatField.finv (d * ratio 1 2) * (d * ratio 1 2) => equation.cRing
+               | f : RatField.finv (d * ratio 1 2) * (d * ratio 1 2) = 1 => RatField.finv-left (RatField.>_/= x>0)
+         \in rat_real_<=.1 (usingOnly (x>0, e, f) linarith : 1 <= cofinal-K d * (d * ratio 1 2))
           <=∘ =_<= (inv (pmap (_ *) RealField.*-rat *> RealField.*-rat))
   }
 
 -- | A positive rational below a positive real.
-\lemma pos-rat-below {x : Real} (x>0 : (0 : Real) < x) : ∃ (a : Rat) (0 RatField.< a) (Real.fromRat a < x)
+\lemma pos-rat-below {x : Real} (x>0 : 0 < x) : ∃ (a : Rat) (0 < a) (Real.fromRat a < x)
   => \case real_<-rat-char.1 x>0 \with {
     | inP (a,a0,ax) => inP (a, rat_real_<.2 (real_<_U.2 a0), real_<_L.2 ax)
   }
 
 -- | $\Psi^p_h(F) = \Psi^1_{h^p}(|F|^p)$ and cofinality: $\sup_h \Psi^p_h(F) = \sup_k \Psi^1_k(|F|^p)$.
-\lemma pow-sup {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : L0Space L} {S : Real}
+\lemma pow-sup {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L} {S : Real}
   : IsSup (psiValues p p>=1 F) S <-> IsSup (psiValues 1 <=-refl (l0pow p p>=1 F)) S
-  => (\lam s => (\lam {x} (inP (k,kx)) Sx => \case pos-rat-below (linarith : (0 : Real) < x - S) \with {
+  => (\lam s => (\lam {x} (inP (k,kx)) Sx => \case pos-rat-below (linarith : 0 < x - S) \with {
                    | inP (a,a>0,ax) => \case L.integral-trunc-small k.el>=0 a>0 \with {
                      | inP (d,d>0,Id) =>
                        \have | Kk>=0 : L.zro <= psi-cofinal.cofinal-K d *q k.el => PosetQModule.*q_>=0 (<=-less (cofinal-K>0 d>0)) k.el>=0
@@ -191,49 +191,49 @@
                   }
                 }))
   \where {
-    \lemma half>0 {eps : Real} (eps>0 : (0 : Real) < eps) : (0 : Real) < eps * ratio 1 2
-      => linarith
+    \lemma half>0 {eps : Real} (eps>0 : 0 < eps) : 0 < eps * ratio 1 2
+      => positivity
 
-    \lemma cofinal-K>0 {d : Rat} (d>0 : 0 RatField.< d) : 0 RatField.< psi-cofinal.cofinal-K d
+    \lemma cofinal-K>0 {d : Rat} (d>0 : 0 < d) : 0 < psi-cofinal.cofinal-K d
       => rat_real_<.2 (RealField.zro<ide <∘l psi-cofinal.K>=1 d>0)
   }
 
 -- | The element of `Lᵖ` representing `F` (unique by {lpToL0-inj}).
-\lemma lpOf {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : L0Space L} (h : IsLp p p>=1 F)
+\lemma lpOf {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L} (h : IsLp p p>=1 F)
   : \Sigma (G : LpSpace L p p>=1) (lpToL0 p p>=1 G = F) \level \lam s1 s2 => ext (lpToL0-inj (s1.2 *> inv s2.2))
   => \case h \with { | inP x => x }
 
 -- | `F ∈ Lᵖ` if and only if $|F|^p \in \mathrm L^1$.
-\lemma lp-pow {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : L0Space L}
+\lemma lp-pow {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L}
   : IsLp p p>=1 F <-> IsLp 1 <=-refl (l0pow p p>=1 F)
   => (\lam h => \case lp-char.1 h \with { | inP (S,s) => lp-char.2 (inP (S, pow-sup.1 s)) },
       \lam h => \case lp-char.1 h \with { | inP (S,s) => lp-char.2 (inP (S, pow-sup.2 s)) })
 
 -- | $\|G\|_p^p = \|W\|_1$ if $j_1 W = |j_p G|^p$.
-\lemma lp-pow-norm {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {G : LpSpace L p p>=1} {W : LpSpace L 1 <=-refl}
+\lemma lp-pow-norm {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1} {W : LpSpace L 1 <=-refl}
                    (e : lpToL0 1 <=-refl W = l0pow p p>=1 (lpToL0 p p>=1 G))
   : lpNormPow 1 <=-refl W = lpNormPow p p>=1 G
   => IsSup.isUnique (lp-char-sup e) (pow-sup.1 (lp-char-sup idp))
 
 -- | $|G|^p$ for `G ∈ Lᵖ`, as an element of $\mathrm L^1$.
-\func lpPow {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (G : LpSpace L p p>=1) : LpSpace L 1 <=-refl
+\func lpPow {L : FullIntegrationSpace} (p : Real) (p>=1 : 1 <= p) (G : LpSpace L p p>=1) : LpSpace L 1 <=-refl
   => (lpOf (lp-pow.1 (inP (G, idp) : IsLp p p>=1 (lpToL0 p p>=1 G)))).1
   \where \protected {
-    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {G : LpSpace L p p>=1}
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1}
       : lpToL0 1 <=-refl (lpPow p p>=1 G) = l0pow p p>=1 (lpToL0 p p>=1 G)
       => (lpOf (lp-pow.1 (inP (G, idp) : IsLp p p>=1 (lpToL0 p p>=1 G)))).2
 
-    \lemma norm {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {G : LpSpace L p p>=1}
+    \lemma norm {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1}
       : lpNormPow 1 <=-refl (lpPow p p>=1 G) = lpNormPow p p>=1 G
       => lp-pow-norm char
   }
 
 -- | $|F|^p \ge 0$.
-\lemma l0pow>=0 {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : L0Space L} : 0 <= l0pow p p>=1 F
+\lemma l0pow>=0 {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L} : 0 <= l0pow p p>=1 F
   => =_<= (inv (l0calc-const {L} {1} 0 *> QModule.*q_*n {L0Space L} {0})) <=∘ l0calc-mono {L} {1} {CoverMap.const (Real.fromRat 0)} {absPow (fpow.one>0 p>=1) p>=1} (\lam x => rpow>=0)
 
 -- | `W ≥ 0` in $\mathrm L^p$ if $j_p W \ge 0$.
-\lemma lpToL0-pos {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {W : LpSpace L p p>=1} (W>=0 : 0 <= lpToL0 p p>=1 W) : 0 <= W
+\lemma lpToL0-pos {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {W : LpSpace L p p>=1} (W>=0 : 0 <= lpToL0 p p>=1 W) : 0 <= W
   => lpToL0-reflects (=_<= (lpToL0 p p>=1).func-zro <=∘ W>=0)
 
 -- | $I(|W|) = \|W\|_1$ for $W \in \mathrm L^1$.
@@ -274,7 +274,7 @@
   }
 
 -- | The product of $\mathrm L^p \times \mathrm L^q$ is the product {l0Mul} of `L⁰`: $j(uv) = (j_p u)(j_q v)$.
-\lemma lpMul-l0 {L : FullIntegrationSpace} {p q : Real} {p>=1 : (1 : Real) <= p} {q>=1 : (1 : Real) <= q}
+\lemma lpMul-l0 {L : FullIntegrationSpace} {p q : Real} {p>=1 : 1 <= p} {q>=1 : 1 <= q}
                 {pq : HolderConjugate p q (fpow.one>0 p>=1) (fpow.one>0 q>=1)} (u : LpSpace L p p>=1) (v : LpSpace L q q>=1)
   : l1ToL0 (lpMul pq u v) = l0Mul (lpToL0 p p>=1 u, lpToL0 q q>=1 v)
   => pmap l1ToL0 (lpMul.cover-eq {L} {p} {q} {p>=1} {q>=1} {pq}) *> dense-lift-unique (ProductCoverSpace.prod (lpInc p p>=1) (lpInc q q>=1)) lpInc.isDense2

@@ -38,7 +38,7 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Urysohn
-\open LatticeAbGroup (abs)
+\open LatticeAbGroup
 \open CoveringHelpers
 \open transSum
 
@@ -82,7 +82,7 @@
   : ∃ (gamma : Real) (0 < gamma) (m : Nat) (r : Array G m) ∀ {x : K} (gamma <= RealAbGroup.BigSum (\lam j => phi (negative (r j) + x)))
   => \case phip.2 \with {
     | inP (t,pt) =>
-      \have g>0 : 0 < phi t * ratio 1 2 => usingOnly pt linarith
+      \have g>0 : 0 < phi t * ratio 1 2 => positivity
       \in \case topAdd-translation phi g>0 \with {
         | inP (V,Vo,V0,_,h) => \case addGroup-tb-char.1 Ktb Vo V0 \with {
           | inP (b,bc) => inP (phi t * ratio 1 2, g>0, b.len, \lam j => b j - t, \lam {x} Kx => \case bc Kx \with {
@@ -145,7 +145,7 @@
              | C0 => CompactMap-ta-sup f * RealField.pinv gamma gamma>0
         \in \have | C0>=0 : 0 <= C0 => RealField.<=_*_positive_positive CompactCoverMap.sup>=0 (<=-less (RealField.pinv>0 gamma>0))
                   | B0>=1' : 1 <= B0 => transport (__ <= _) zro-left $ <=_+ (RealAbGroup.BigSum_>=0 \lam _ => C0>=0) <=-refl
-                  | e4>0 : 0 < eps * ratio 1 4 => usingOnly eps>0 linarith
+                  | e4>0 : 0 < eps * ratio 1 4 => positivity
                   | w1>0 : 0 < RealField.natCoef m * (2 * RealField.pinv gamma gamma>0) + 1
                     => positivity
         \in \case split-eps e4>0 w1>0 \with {
@@ -159,7 +159,7 @@
                 \in \case topAdd-translation phi eta>0 \with {
                   | inP (V,Vo,V0,_,Vh) => \case addGroup-tb-char.1 (addGroup-tb-+ (totallyBoundedSet-Union \lam j => addGroup-tb-left (negative (r j)) Ltb) (addGroup-tb-negative Ltb)) Vo V0 \with {
                     | inP (xs,xs-net) =>
-                      \have e8>0 : 0 < eps * ratio 1 8 => usingOnly eps>0 linarith
+                      \have e8>0 : 0 < eps * ratio 1 8 => positivity
                       \in \case split-eps e8>0 (positivity : 0 < RealField.natCoef xs.len + 1) \with {
                         | inP (d,d>0,dN) => \case real-nat-approx-div (positivity : 0 <= B0) d>0 \with {
                           | inP (k,_,Bk) =>
@@ -253,7 +253,7 @@
     : ∃ (M0 : Fin N -> Fin J) ∀ (M : Fin N -> Fin J) (g M0 < g M + e) \elim N
     | 0 => inP (\lam k => \case k \with {}, \lam M => transport (\lam M' => g M' < g M + e) fin0-ext (usingOnly e>0 linarith : g M < g M + e))
     | suc N =>
-      \have e2>0 : 0 < e * ratio 1 2 => usingOnly e>0 linarith
+      \have e2>0 : 0 < e * ratio 1 2 => positivity
       \in \case FinSet.finiteAC (\lam i => fun-argmin {N} J>0 (\lam M => g (consF i M)) e2>0) \with {
         | inP h => \case array-eps-max J>0 e2>0 (\lam i => negative (g (consF i (h i).1))) \with {
           | inP (k,q) => inP (consF k (h k).1, \lam M => \have | q1 => q (M 0)
@@ -368,7 +368,7 @@
       => CompactCoverTruncRieszSpace.BigSum-apply {G} {\lam k => CompactCoverMap.scale (coef M k) (CompactMap-translate (xs k) phi)}
 
     \func E (M : Fin N -> Fin (suc J)) : CompactCoverMap G
-      => LatticeAbGroup.part+ (f - S M)
+      => part+ (f - S M)
 
     \func e (M : Fin N -> Fin (suc J)) : Real
       => CompactMap-ta-sup (E M)
@@ -376,7 +376,7 @@
     \func cM (M : Fin N -> Fin (suc J)) : Real
       => RealAbGroup.BigSum (coef M) + RealField.natCoef m * tc
 
-    \lemma coef>=0 (M : Fin N -> Fin (suc J)) (k : Fin N) : 0 <= coef M k
+    \protected \lemma coef>=0 (M : Fin N -> Fin (suc J)) (k : Fin N) : 0 <= coef M k
       => unfold coef (using d>0 positivity)
 
     \lemma tc>=0 : 0 <= tc

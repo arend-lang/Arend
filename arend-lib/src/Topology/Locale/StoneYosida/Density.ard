@@ -220,8 +220,8 @@
   => \have | et>0 : 0 < eta ∧ 1 => <_meet-univ eta>0 idp
            | et<= : eta ∧ 1 <= eta => meet-left
            | et<=1 : eta ∧ 1 <= 1 => meet-right
-           | e>0 : 0 < (eta ∧ 1) * ratio 1 6 => linarith
-           | d>0 : 0 < (eta ∧ 1) * ratio 1 12 => linarith
+           | e>0 : 0 < (eta ∧ 1) * ratio 1 6 => positivity
+           | d>0 : 0 < (eta ∧ 1) * ratio 1 12 => positivity
      \in \case compact-cover f e>0 \with {
        | inP (n,c,s,cs,ctop) => \case top-unit (ctop <=∘ IJoin-univ {SYSpec A} (\lam j => sembed-mono (<=_<=s (Big_<=_join1 j)))), rat-array-bound s \with {
          | inP (K,Kp), inP (S,sS) => \case (S ∨ 0, join-left, join-right) : \Sigma (S0 : Rat) (S <= S0) (0 <= S0) \with {

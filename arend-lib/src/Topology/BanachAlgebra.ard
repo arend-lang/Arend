@@ -164,7 +164,7 @@
 
   \lemma rfunc>=0 {n : Nat} : 0 <= rfunc n \elim n
     | 0 => rewrite (\peval rfunc 0) <=-refl
-    | suc n => rewrite (\peval rfunc (suc n)) $ RatField.<=_*-positive rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*-positive rfunc>=0 rfunc>=0
+    | suc n => rewrite (\peval rfunc (suc n)) positivity
 
   \lemma rfunc<=1 {n : Nat} : rfunc n <= 1 \elim n
     | 0 => rewrite (\peval rfunc 0) rat_<=-dec
@@ -174,7 +174,7 @@
     | 0 => rewrite (\peval rfunc 0) rfunc>=0
     | suc n => rewrite (\peval rfunc (suc (suc n))) $ RatField.from>=0 $ transport (0 <=) {ratio 1 2 * ((1 - rfunc (suc n)) * (1 - rfunc (suc n)))}
       (later $ rewrite (RatField.ldistr_-, RatField.rdistr_-, RatField.rdistr_-) linarith) -- TODO: equation.ring should work here, but it doesn't support rational coefficients yet
-      $ RatField.<=_*-positive rat_<=-dec RatField.square_>=0
+      positivity
 
   \lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n))
     => rewrite (\peval rfunc (suc (suc n)), \peval rfunc (suc n)) equation.cRing

@@ -160,7 +160,7 @@
               }
           },
           \lam {x} e => real-eq-eps \lam {d} d>0 =>
-            \have | a>0 : 0 < d * ratio 1 2 => linarith
+            \have | a>0 : 0 < d * ratio 1 2 => positivity
                   | q : Real.fromRat M RealField.* c.fn x < Real.fromRat (d * ratio 1 2) => rewrite (e, RealField.zro_*-right) (rat_real_<.1 a>0)
             \in lim x a>0 (byRight (q, idp)) linarith)
   }
@@ -235,7 +235,7 @@
                | sp : IsTrunc Uo f c g => truncPt.spec {n} {U} {Uo} {f} {c} {M} {M>0} {hM}
                | um : UniformMetricMap (RealN n) RealNormed g => \new UniformMetricMap {
                  | func-dist-uniform {eps} eps>0 =>
-                   \have e>0 : 0 < eps * ratio 1 2 => linarith
+                   \have e>0 : 0 < eps * ratio 1 2 => positivity
                    \in \case trunc-uniform {n} {U} {Uo} sp M>0 hM e>0 \with {
                      | inP (d,d>0,h) => inP (d, d>0, \lam xy => real_<_U.1 $ h xy <∘r (rat_real_< {eps * ratio 1 2} {eps}).1 linarith)
                    }
@@ -424,7 +424,7 @@
 -- | The element of `L¹` corresponding to an integrable map is approximated by truncations.
 \lemma integrableL1-near {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) {d : Rat} (d>0 : 0 < d)
   : ∃ (c0 : Cutoff U) (\Pi (c : Cutoff U) -> c0 c<= c -> ldist {LebesgueL1 n} (integrableL1 Uo f i) (iota (truncate Uo f c)) < Real.fromRat d)
-  => \have a>0 : 0 < d * ratio 1 2 => linarith
+  => \have a>0 : 0 < d * ratio 1 2 => positivity
      \in \case i a>0 \with {
        | inP (c0,w) => inP (c0, \lam c p => real_<_U.2 (integrableL1.char {n} {U} {Uo} {_} {f} {i} a>0 (inP (c0, c, w, p, idp)) linarith))
      }
@@ -483,7 +483,7 @@
 \lemma integrable_+ {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) (j : IsIntegrableOn Uo g)
   : IsIntegrableOn Uo (coverSum f g)
   => \lam {eps} eps>0 =>
-    \have e>0 : 0 < eps * ratio 1 2 => linarith
+    \have e>0 : 0 < eps * ratio 1 2 => positivity
     \in \case i e>0, j e>0 \with {
       | inP (c0,w), inP (c1,w') => inP (cutoff-join c0 c1, \lam c c' p q =>
         \let | A => coverAbs (coverSum f g)
@@ -518,7 +518,7 @@
 \lemma integrableL1_+ {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) (j : IsIntegrableOn Uo g)
                       (k : IsIntegrableOn Uo (coverSum f g)) : integrableL1 Uo (coverSum f g) k = integrableL1 Uo f i + integrableL1 Uo g j
   => L1-eq-eps \lam {d} d>0 =>
-    \have d3>0 : 0 < d * ratio 1 3 => linarith
+    \have d3>0 : 0 < d * ratio 1 3 => positivity
     \in \case integrableL1-near k d3>0, integrableL1-near i d3>0, integrableL1-near j d3>0 \with {
       | inP (c0,h0), inP (c1,h1), inP (c2,h2) =>
         \let | c => cutoff-join c0 (cutoff-join c1 c2)
@@ -545,7 +545,7 @@
 \lemma integrableL1_abs {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) (k : IsIntegrableOn Uo (coverAbs f))
   : integrableL1 Uo (coverAbs f) k = LatticeAbGroup.abs {LebesgueL1 n} (integrableL1 Uo f i)
   => L1-eq-eps \lam {d} d>0 =>
-    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \have d2>0 : 0 < d * ratio 1 2 => positivity
     \in \case integrableL1-near k d2>0, integrableL1-near i d2>0 \with {
       | inP (c0,h0), inP (c1,h1) =>
         \let | c => cutoff-join c0 c1
@@ -570,7 +570,7 @@
 \lemma integrableL1_negative {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed} (i : IsIntegrableOn Uo f) (k : IsIntegrableOn Uo (coverNegative f))
   : integrableL1 Uo (coverNegative f) k = negative (integrableL1 Uo f i)
   => L1-eq-eps \lam {d} d>0 =>
-    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \have d2>0 : 0 < d * ratio 1 2 => positivity
     \in \case integrableL1-near k d2>0, integrableL1-near i d2>0 \with {
       | inP (c0,h0), inP (c1,h1) =>
         \let | c => cutoff-join c0 c1
@@ -718,7 +718,7 @@
 -- | The integral on {U} is monotone.
 \lemma integralOn-mono {n : Nat} {U : Set (RealN n)} {Uo : isOpen {RealN n} U} {f g : CoverMap (OpenCoverSpace {RealN n} Uo) RealNormed}
                        (i : IsIntegrableOn Uo f) (j : IsIntegrableOn Uo g) (p : \Pi (u : Total U) -> f u <= g u) : integralOn Uo f i <= integralOn Uo g j
-  => real_<=-eps \lam {d} d>0 => \case integralOn-near i (linarith : 0 < d * ratio 1 2), integralOn-near j (linarith : 0 < d * ratio 1 2) \with {
+  => real_<=-eps \lam {d} d>0 => \case integralOn-near i (positivity : 0 < d * ratio 1 2), integralOn-near j (positivity : 0 < d * ratio 1 2) \with {
     | inP (c1,h1), inP (c2,h2) =>
       \let c => cutoff-join c1 c2
       \in \have | t1 => h1 c (cutoff-join-left {n} {U} {c1} {c2})

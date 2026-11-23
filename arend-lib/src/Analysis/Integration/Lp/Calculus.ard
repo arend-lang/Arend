@@ -226,7 +226,7 @@
             | inP (C,C>=0,hC) =>
               \have | C1>0 : 0 < Real.fromRat C + 1 => usingOnly (rat_real_<=.1 C>=0) positivity
                     | T>0 : 0 < rpow-pos e2 e2>0' q * ratio 1 2 * RealField.pinv (Real.fromRat C + 1) C1>0
-                        => RealField.<_*_positive_positive (RealField.<_*_positive_positive E>0 (rat_real_<.1 idp)) (RealField.pinv>0 C1>0)
+                        => positivity
               \in \case small-rpow r>0 T>0 \with {
                 | inP (ag,ag>0,hg) =>
                   \let gamma => ag RatField.∧ 1

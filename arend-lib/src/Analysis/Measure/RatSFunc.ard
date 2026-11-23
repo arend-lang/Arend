@@ -174,7 +174,7 @@
     (\Pi {z : Array Rat n} -> lebPts n (ratCube n R) z = true -> ∃ (i : Fin l.len) (lebPts n (l i).2 z = true)) \elim n
   | 0 => inP ((nil,true) :: nil, \lam {i} {j} _ _ => \case \elim i, \elim j \with { | 0, 0 => idp }, \lam {i} {z} _ => \case \elim i \with { | 0 => (rat_real_<.1 d>0, idp) }, \lam {z} p => inP (0, p))
   | suc n =>
-    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \have d2>0 : 0 < d * ratio 1 2 => positivity
     \in \case cubeCells n R d2>0, cells1 R d2>0 \with {
       | inP (l,l1,l2,l3), inP (m,m1,m2,m3) =>
         \let e => ProdFin.prod_equiv {l.len} {m.len}

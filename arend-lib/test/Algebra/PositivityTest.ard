@@ -1,3 +1,4 @@
+\import Algebra.Algebra
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
@@ -144,6 +145,44 @@
 \lemma test-fromRat-mixed {e : Rat} {x : Real} (p : 0 < e) (q : 0 < x) : 0 < Real.fromRat e * x
   => positivity
 
+-- Rational constants
+
+\lemma test-ratio : 0 < ratio 1 2
+  => positivity
+
+\lemma test-ratio-nonneg : 0 <= ratio 1 3
+  => positivity
+
+\lemma test-ratio-zero : 0 <= ratio 0 1
+  => positivity
+
+\lemma test-ratio-nonzero : ratio 2 3 /= 0
+  => positivity
+
+\lemma test-ratio-expr : 0 < (3 : Rat) * ratio 1 2 + 1
+  => positivity
+
+\lemma test-ratio-real {x : Real} (p : 0 < x) : 0 < x * ratio 1 2
+  => positivity
+
+\lemma test-ratio-real-nonneg {x : Real} : 0 <= x * x * ratio 1 4
+  => positivity
+
+\lemma test-ratio-algebra {A : OrderedAAlgebra RatField} {x : A} (p : 0 < x) : 0 < x * coefMap (ratio 1 3)
+  => positivity
+
+\lemma test-ratio-algebra-nonneg {A : OrderedAAlgebra RatField} {x : A} (p : 0 <= x) : 0 <= coefMap (ratio 1 3) * x
+  => positivity
+
+\lemma test-annotated-zero {x : Real} (p : 0 < x) : (0 : Real) < x * x
+  => positivity
+
+\lemma test-annotated-zero-ratio {x : Real} (p : (0 : Real) < x) : (0 : Real) < x * Real.fromRat (ratio 1 2)
+  => positivity
+
+\lemma test-defeq-zero {x : Real} (p : Real.fromRat 0 < x) : Real.fromRat 0 < x * x
+  => positivity
+
 -- Failures
 
 \lemma test-fail-sub {R : OrderedRing} {x y : R} (p : 0 < x) (q : 0 < y)
@@ -154,3 +193,6 @@
 
 \lemma test-fail-shape {R : LinearlyOrderedSemiring} {x : R}
   => fails {x <= 1} positivity
+
+\lemma test-fail-ratio-neg
+  => fails {0 < ratio -1 2} positivity

@@ -562,7 +562,7 @@
   \func l0calc-preLU {L : FullIntegrationSpace} {n : Nat} (phi : CoverMap (RealN n) RealNormed) (phi0 : phi (RealN n).zro = (0 : Real))
     : LocallyUniformMap (ArrayRegularPreuniformSpace n (L0PreSpace L)) (TopAbGroupCompletion (L0PreSpace L)) (l0calc-pre phi phi0)
     => normFamily-array-locally-uniform {L0PreSpace L} {L0PreSpace L} {n} (l0calc-pre phi phi0) \lam (h,h>=0) {eps} eps>0 =>
-        \have e8>0 : (0 : Real) < eps * Real.fromRat (ratio 1 8) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+        \have e8>0 : (0 : Real) < eps * Real.fromRat (ratio 1 8) => positivity
         \in \case L.trunc-bounded h, l0One.small h>=0 e8>0 \with {
           | inP (K0,hK0), inP (eta,eta>0,s) =>
             \let | K => K0 ∨ 0
@@ -628,7 +628,7 @@
                                               (=_<= (pmap (_ +) (pmap (__ + _) RealField.ldistr)) <=∘ usingOnly Ngat linarith))
                                              <=∘ =_<= equation.cRing
                                     | I8 : L.integral (L.truncAt (e + e) h) < eps * Real.fromRat (ratio 1 8) => transportInv (\lam t => L.integral (L.truncAt t h) < _) ee s
-                                    | e16>0 : (0 : Real) < eps * Real.fromRat (ratio 1 16) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+                                    | e16>0 : (0 : Real) < eps * Real.fromRat (ratio 1 16) => positivity
                                     | b' : normAt-lift {L0PreSpace L} (h,h>=0) (l0calc-pre phi phi0 y - l0calc-pre phi phi0 x) <= _ => b
                           \in b' <∘r usingOnly (I8, CT, A1, A2, e16>0) linarith)
                     }
@@ -745,7 +745,7 @@
                          (cont-limit {NatDir} {ArrayTopSpace n (L0Space L)} {L0Space L} {\lam k j => pointCF {L0PreSpace L} (g k j)} lA (l0calc0 phi phi0))
                  | lC : (L0Space L).IsLimit {NatDir} (\lam k => l0calc-pre phi phi0 (g k)) (l0calc-pre chi chi0 f)
                      => completion-limit {L0PreSpace L} {NatDir} {\lam k => l0calc-pre phi phi0 (g k)} \lam (h,h>=0) {eps} eps>0 =>
-                         \have e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+                         \have e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => positivity
                          \in \case L.trunc-bounded h, L.trunc-bounded (l1L f), l0One.small h>=0 e2>0 \with {
                            | inP (K0,hK0), inP (Mf0,fM0), inP (eta,eta>0,s) =>
                              \let | K => K0 ∨ 0

@@ -120,7 +120,7 @@
       => \let | Y => LpSpace L p (ge1 p>1)
               | G => lnorm {LpSpace L q (ge1 q>1)} g
               | e2 => Real.fromRat (eps * ratio 1 2)
-         \in \have | e2>0 : (0 : Real) < e2 => rat_real_<.1 (linarith : 0 < eps * ratio 1 2)
+         \in \have | e2>0 : (0 : Real) < e2 => rat_real_<.1 (positivity : 0 < eps * ratio 1 2)
                    | G>0 : (0 : Real) < G => e2>0 <∘ e<G
          \in \let psi => lpSignedPow {L} {q} {p} q>1 (ge1 p>1) (conj-swap pq) g
          \in \have | hc : lpNormPow p (ge1 p>1) psi = lpNormPow q (ge1 q>1) g => lpSignedPow-conj {L} {q} {p} {q>1} {ge1 p>1} {conj-swap pq} g
@@ -216,7 +216,7 @@
                         \case UpperReal.U-inh_>0 {RealAbGroup.abs (f w)} \with {
                           | inP (K,Ku,K>0) =>
                             \let t => (delta * ratio 1 2) RatField.∧ RatField.finv (K + K)
-                            \in \have | t>0 : 0 < t => RatField.<_meet-univ (linarith : 0 < delta * ratio 1 2) positivity
+                            \in \have | t>0 : 0 < t => RatField.<_meet-univ (positivity : 0 < delta * ratio 1 2) positivity
                                       | tK : t * K < 1
                                           => RatField.<=_*_positive-left RatField.meet-right (<=-less K>0) <∘r
                                              (=_<= (pmap (RatField.finv (K + K) *) (linarith : K = (K + K) * ratio 1 2) *> inv *-assoc
@@ -324,7 +324,7 @@
       \in inP (ginf, \lam u => DualSpace.real-eq-eps \lam {d} d>0 => \case UpperReal.U-inh_>0 {lnorm {LpSpace L p (ge1 p>1)} u} \with {
             | inP (N,Nu,N>0) =>
               \let a => d * ratio 1 4 * RatField.finv N
-              \in \have | a>0 : 0 < a => RatField.<_*_positive_positive (linarith : 0 < d * ratio 1 4) (RatField.finv>0 N>0)
+              \in \have | a>0 : 0 < a => RatField.<_*_positive_positive (positivity : 0 < d * ratio 1 4) (RatField.finv>0 N>0)
                         | aN : a * N + a * N < d
                             => \have e : a * N = d * ratio 1 4
                                    => *-assoc *> pmap (d * ratio 1 4 *) (RatField.finv-left (RatField.>_/= N>0)) *> ide-right
@@ -382,7 +382,7 @@
                   \in =_<= (pmap (\lam t => RealAbGroup.abs (t - f x)) (z x) *> pmap RealAbGroup.abs zro-left *> RealAbGroup.abs_negative)
                        <=∘ fs.1 xb <=∘ RealField.<=_*_positive-left (<=-less sC) (<=-less b>0) <=∘ =_<= RealField.*-rat))
         }
-        | byLeft a<s => \case lpDual-represent-pos p>1 q>1 pq (rat_real_<.1 (linarith : 0 < a * ratio 1 2) <∘ a<s) fs \with {
+        | byLeft a<s => \case lpDual-represent-pos p>1 q>1 pq (rat_real_<.1 (positivity : 0 < a * ratio 1 2) <∘ a<s) fs \with {
           | inP (g,h) => inP (g, inP (0, <=-refl, a>0, \lam {x} {b} _ =>
               =_<= (pmap (\lam t => RealAbGroup.abs (t - f x)) (inv (h x)) *> pmap RealAbGroup.abs RealAbGroup.negative-right *> RealAbGroup.abs_zro *> inv (pmap Real.fromRat RatField.zro_*-left))))
         }

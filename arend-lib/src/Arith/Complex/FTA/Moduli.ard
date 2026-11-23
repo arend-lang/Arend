@@ -466,34 +466,28 @@
        \let (inP (B, B>=1, hB)) => nearFactor-bound p deg monic
        \in \have | B>=0 : (0 : Real) <= B => linarith
                  | P>=0 : 0 <= RealField.powSum (cabs z) (suc m) => RealField.powSum>=0 cabs>=0 (suc m)
-                 | Q>=0 : 0 <= pow (1 + B) m * RealField.powSum (cabs z) (suc m)
-                    => positivity
-       \in \let | (inP (delta, delta>0, dP)) => split-eps (linarith : (0 : Real) < c * ratio 1 2)
-                     (linarith : (0 : Real) < RealField.powSum (cabs z) (suc m) + 1)
-                | (inP (eta, eta>0, dQ)) => split-eps (linarith : (0 : Real) < c * ratio 1 2)
-                     (linarith : (0 : Real) < pow (1 + B) m * RealField.powSum (cabs z) (suc m) + 1)
-                | (inP (r, hr, hr1, hd)) => h delta>0 (linarith : (0 : Real) < eta * ratio 1 2)
+                 | Q>=0 : 0 <= pow (1 + B) m * RealField.powSum (cabs z) (suc m) => positivity
+       \in \let | (inP (delta, delta>0, dP)) => split-eps (positivity : 0 < c * ratio 1 2)
+                     (linarith : 0 < RealField.powSum (cabs z) (suc m) + 1)
+                | (inP (eta, eta>0, dQ)) => split-eps (positivity : 0 < c * ratio 1 2)
+                     (linarith : 0 < pow (1 + B) m * RealField.powSum (cabs z) (suc m) + 1)
+                | (inP (r, hr, hr1, hd)) => h delta>0 (positivity : 0 < eta * ratio 1 2)
                 | (inP (j, hj)) => minDist-index {ComplexNormed} r z linarith
           \in \have
               | bound1 : cabs (polyEval (p - prodLin r) z) < c * ratio 1 2
                  => lnorm_polyEval-boundD {ComplexValuedRing}
                       (degree<-monic-diff deg (prodLin-degree r) monic (prodLin-monic r))
                       (\lam k => coefs-minus p r hr k) z
-                    <∘r (RealField.<=_*_positive-right (<=-less delta>0)
-                           (linarith : RealField.powSum (cabs z) (suc m) <= RealField.powSum (cabs z) (suc m) + 1)
+                    <∘r (RealField.<=_*_positive-right (<=-less delta>0) linarith
                          <∘r dP)
               | bound2 : cabs (polyEval (prodLin r) z) < c * ratio 1 2
                  => =_<= (pmap cabs (polyEval_prodLin r z) *> cabs_linProd r z)
                     <∘r (absProd-factor r z j B>=0 (hB r hr1)
                          <∘r ((RealField.<=_*_positive-left (<=-less hj) Q>=0
-                               <=∘ RealField.<=_*_positive-right (<=-less eta>0)
-                                     (linarith : pow (1 + B) m * RealField.powSum (cabs z) (suc m)
-                                              <= pow (1 + B) m * RealField.powSum (cabs z) (suc m) + 1))
+                               <=∘ RealField.<=_*_positive-right (<=-less eta>0) linarith)
                               <∘r dQ))
-              | total : cabs (polyEval p z)
-                     <= cabs (polyEval (p - prodLin r) z) + cabs (polyEval (prodLin r) z)
-                 => rewrite (pmap (polyEval __ z) (inv AddGroup.minus_+)
-                             *> (polyEvalRingHom z).func-+) cabs_+
+              | total : cabs (polyEval p z) <= cabs (polyEval (p - prodLin r) z) + cabs (polyEval (prodLin r) z)
+                 => rewrite (pmap (polyEval __ z) (inv AddGroup.minus_+) *> (polyEvalRingHom z).func-+) cabs_+
               \in linarith
   \where
     \private \lemma absProd-factor {m : Nat} (s : Array Complex (suc m)) (z : Complex) (j : Fin (suc m))

@@ -156,7 +156,7 @@
             \in \have | rho>0 : 0 < rho => <_meet-univ rho0>0 RealAbGroup.zro<ide
                       | rho<=1 : rho <= 1 => meet-right
                       | rhoe : rho * (2 + Nf) <= eps => RealField.<=_*_positive-left meet-left (positivity : 0 <= 2 + Nf) <=∘ <=-less rho0e
-                      | rho2>0 : 0 < rho * ratio 1 2 => usingOnly rho>0 linarith
+                      | rho2>0 : 0 < rho * ratio 1 2 => positivity
             \in \case split-eps rho2>0 (positivity : 0 < Nh + 1) \with {
               | inP (delta,delta>0,deltaN) =>
                 \have dN : delta * Nh <= rho * ratio 1 2 => \have e : delta * (Nh + 1) = delta * Nh + delta => equation.cRing \in usingOnly (e, deltaN, delta>0) linarith
@@ -257,7 +257,7 @@
 
 \lemma haarPos-ext {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x}
                    (p : \Pi (x : G) -> f x = g x) : haarPos f0p f f>=0 = haarPos f0p g g>=0
-  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => usingOnly (rat_real_<.1 e>0) linarith
+  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => positivity
      \in \case haarPos-approx {G} {f0} {f0p} {f} {f>=0} e2>0, haarPos-approx {G} {f0} {f0p} {g} {g>=0} e2>0 \with {
        | inP (V1,V1o,V10,h1), inP (V2,V2o,V20,h2) => \case positive-in (open-inter V1o V2o) (V10,V20) \with {
          | inP (phi,phip,phiV) => close-half (h1 phip (IsSupported.mono phiV meet-left)) (h2 phip (IsSupported.mono phiV meet-right)) (Lambda-ext p)
@@ -266,7 +266,7 @@
 
 \lemma haarPos-add {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x}
                    {fg>=0 : \Pi (x : G) -> 0 <= (f + g) x} : haarPos f0p (f + g) fg>=0 = haarPos f0p f f>=0 + haarPos f0p g g>=0
-  => eq-eps \lam {e} e>0 => \have e4>0 : 0 < Real.fromRat e * ratio 1 4 => usingOnly (rat_real_<.1 e>0) linarith
+  => eq-eps \lam {e} e>0 => \have e4>0 : 0 < Real.fromRat e * ratio 1 4 => positivity
      \in \case haarPos-approx {G} {f0} {f0p} {f} {f>=0} e4>0, haarPos-approx {G} {f0} {f0p} {g} {g>=0} e4>0, haarPos-approx {G} {f0} {f0p} {f + g} {fg>=0} e4>0,
                superadd f0p (f :: g :: nil) (\lam j x => \case \elim j \with { | 0 => f>=0 x | suc 0 => g>=0 x }) zro<=ide e4>0 \with {
        | inP (V1,V1o,V10,h1), inP (V2,V2o,V20,h2), inP (V3,V3o,V30,h3), inP (V4,V4o,V40,sa) =>
@@ -318,7 +318,7 @@
 
 \lemma haarPos-translate {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} (s : G)
   : haarPos f0p (CompactMap-translate s f) (\lam x => f>=0 _) = haarPos f0p f f>=0
-  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => usingOnly (rat_real_<.1 e>0) linarith
+  => eq-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => positivity
      \in \case approx2 {G} {f0} {f0p} {CompactMap-translate s f} {f} {\lam x => f>=0 _} {f>=0} e2>0 \with {
        | inP (phi,phip,h1,h2) => close-half h1 h2 (Lambda-translate s)
      }
@@ -341,7 +341,7 @@
 
 \lemma haarPos-mono {G : LocallyCompactUrysohnGroup} {f0 : CompactCoverMap G} {f0p : IsPositiveFun f0} {f g : CompactCoverMap G} {f>=0 : \Pi (x : G) -> 0 <= f x} {g>=0 : \Pi (x : G) -> 0 <= g x}
                     (p : \Pi (x : G) -> g x <= f x) : haarPos f0p g g>=0 <= haarPos f0p f f>=0
-  => le-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => usingOnly (rat_real_<.1 e>0) linarith
+  => le-eps \lam {e} e>0 => \have e2>0 : 0 < Real.fromRat e * ratio 1 2 => positivity
      \in \case approx2 {G} {f0} {f0p} {f} {g} {f>=0} {g>=0} e2>0 \with {
        | inP (phi,phip,h1,h2) => mono-arith h1 h2 (Lambda-mono p)
      }

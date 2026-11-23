@@ -211,7 +211,7 @@
 
 \lemma ballConv-add {n : Nat} {a b : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (ca : BallConv a phi) (cb : BallConv b psi)
   : BallConv (\lam k => LinBoundedMap.add (a k) (b k)) (\lam x => phi x + psi x)
-  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => linarith \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
+  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => positivity \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
     | inP (k1,g1), inP (k2,g2) => inP (k1 NatSemiring.∨ k2, \lam k0<=k xR =>
         \have | t1 => g1 (NatSemiring.join-left <=∘ k0<=k) xR
               | t2 => g2 (NatSemiring.join-right <=∘ k0<=k) xR
@@ -228,7 +228,7 @@
 
 \lemma ballConv-join {n : Nat} {a b : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (ca : BallConv a phi) (cb : BallConv b psi)
   : BallConv (\lam k => LinBoundedMap.join (a k) (b k)) (\lam x => phi x ∨ psi x)
-  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => linarith \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
+  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => positivity \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
     | inP (k1,g1), inP (k2,g2) => inP (k1 NatSemiring.∨ k2, \lam k0<=k xR =>
         \have | t1 => g1 (NatSemiring.join-left <=∘ k0<=k) xR
               | t2 => g2 (NatSemiring.join-right <=∘ k0<=k) xR
@@ -238,7 +238,7 @@
 
 \lemma ballConv-meet {n : Nat} {a b : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (ca : BallConv a phi) (cb : BallConv b psi)
   : BallConv (\lam k => LinBoundedMap.meet (a k) (b k)) (\lam x => phi x ∧ psi x)
-  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => linarith \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
+  => \lam {R} R>0 {e} e>0 => \have e2>0 : 0 < e * ratio 1 2 => positivity \in \case ca R>0 e2>0, cb R>0 e2>0 \with {
     | inP (k1,g1), inP (k2,g2) => inP (k1 NatSemiring.∨ k2, \lam k0<=k xR =>
         \have | t1 => g1 (NatSemiring.join-left <=∘ k0<=k) xR
               | t2 => g2 (NatSemiring.join-right <=∘ k0<=k) xR

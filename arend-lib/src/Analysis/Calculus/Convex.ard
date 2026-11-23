@@ -102,7 +102,7 @@
 -- | Jensen's inequality for the midpoint.
 \lemma jensen-midpoint {S : Set Real} {f : Real -> Real} (c : IsConvexOn S f) {x y : Real} (Sx : S x) (Sy : S y)
   : f (Real.fromRat (ratio 1 2) * (x + y)) <= Real.fromRat (ratio 1 2) * (f x + f y)
-  => \have h>=0 : 0 <= Real.fromRat (ratio 1 2) => rat_real_<=.1 linarith
+  => \have h>=0 : 0 <= Real.fromRat (ratio 1 2) => positivity
      \in transport2 (<=) (pmap f (inv ldistr)) (inv ldistr) (jensen2 c Sx Sy h>=0 h>=0 (RealAbGroup.+-rat *> pmap Real.fromRat idp))
 
 -- | Superadditivity of convex functions vanishing at `0`.

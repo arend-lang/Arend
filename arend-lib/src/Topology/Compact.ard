@@ -284,7 +284,7 @@
                  => \lam d => \have | nu : Not (K u) => \lam Ku => <-irreflexive (close DU Uu Uz Ku <∘ d)
                                      | nz : Not (K z) => \lam Kz => <-irreflexive (rewrite ldist-symm in close DU Uz Uu Kz <∘ d)
                                      | e : ldist (f u) (f z) = 0 => pmap2 ldist (fK nu) (fK nz) *> ldist-refl
-                               \in <-irreflexive (rat_real_<.1 (linarith : 0 < eps * ratio 1 2) <∘ transport (_ <) e d)
+                               \in <-irreflexive (rat_real_<.1 positivity <∘ transport (_ <) e d)
         \in uniform-refine (Xp Du) \lam {U} (DU, inP (u,Uu)) => \case h (f u) \with {
           | inP (V,EV,q) => inP (_, inP (V, EV, idp), \lam {z} Uz => q {f z} $ real_<_U.1 $ diam DU Uu Uz <∘r rat_real_<.1 (linarith : eps * ratio 1 2 < eps))
         }
@@ -447,7 +447,7 @@
 -- | A cover map from a space with totally bounded balls is uniform on balls.
 \lemma cover-uniform-ball {X : PseudoMetricSpace} {Y : ExPseudoMetricSpace} (Xb : BallsTotallyBounded X) (g : CoverMap X Y) (x0 : X) {R eps : Rat} (R>0 : 0 < R) (eps>0 : 0 < eps)
   : ∃ (d : Rat) (0 < d) ∀ {x y : X} (OBall R x0 x) (OBall R x0 y) ((dist x y).U d -> (dist (g x) (g y)).U eps)
-  => \have | e>0 : 0 < eps * ratio 1 2 => linarith
+  => \have | e>0 : 0 < eps * ratio 1 2 => positivity
            | Ec => g.func-cover (Y.makeCauchy (Y.metricUniform e>0))
            | lu => locallyUniform-cover-char {X} {\lam U => U = OBall R x0} (\lam p => rewrite p (Xb x0 R>0)) (\lam p => rewrite p $ inP (x0, OBall-center R>0)) Ec idp
      \in \case dist-uniform.1 lu \with {

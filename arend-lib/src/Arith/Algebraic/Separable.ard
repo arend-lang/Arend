@@ -6,7 +6,7 @@
 \import Algebra.Ring.Poly.Derivative
 \import Algebra.Ring.Poly.Separable
 \import Algebra.Semiring
-\import Analysis.Poly (coefMax, coefMax-cond, coefMax>=0, lnorm_polyEval-boundD)
+\import Analysis.Poly
 \import Arith.Complex
 \import Arith.Complex.Norm
 \import Arith.Rat
@@ -19,7 +19,7 @@
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
-\open PosetSemiring (<=_*_positive_positive)
+\open PosetSemiring
 
 {- | **A separable complex polynomial has its derivative bounded below wherever it is small.**
 
@@ -39,7 +39,7 @@
           | (inP (mv, dv)) => degree<-exists v
           | Bu>=0 => bound>=0 {u} {mu} {R} R>=0
           | (inP (delta, delta>0, hd)) =>
-              split-eps (linarith : (0 : Real) < ratio 1 2)
+              split-eps (positivity : (0 : Real) < ratio 1 2)
                 (linarith : (0 : Real) < coefMax {ComplexValuedRing} u mu * RealField.powSum R mu + 1)
      \in inP (delta, delta>0, coefMax {ComplexValuedRing} v mv * RealField.powSum R mv + 1,
               linarith (bound>=0 {v} {mv} {R} R>=0),

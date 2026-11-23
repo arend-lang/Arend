@@ -95,14 +95,11 @@
   \elim n
   | 0 => inP (nil, \lam j => \case \elim j \with {
       | 0 => rewrite (AddGroup.toZero (inv monic), cabs_zro) eps>0
-      | suc k => rewrite (AddGroup.toZero (inv (deg (suc<=suc zero<=_))),
-                          cabs_zro) eps>0
+      | suc k => rewrite (AddGroup.toZero (inv (deg (suc<=suc zero<=_))), cabs_zro) eps>0
     })
   | suc m =>
-    \let | (inP (z, hz)) => fta-approx-eps NatOrder.zero<suc p deg monic
-                              (linarith : (0 : Real) < eps * ratio 1 2)
-         | (inP (d, d>0, dw)) => split-eps (linarith : (0 : Real) < eps * ratio 1 2)
-                                   (linarith (cabs>=0 {z}) : (0 : Real) < 1 + cabs z)
+    \let | (inP (z, hz)) => fta-approx-eps NatOrder.zero<suc p deg monic (positivity : 0 < eps * ratio 1 2)
+         | (inP (d, d>0, dw)) => split-eps (positivity : 0 < eps * ratio 1 2) (linarith (cabs>=0 {z}) : 0 < 1 + cabs z)
          | (inP (r', hr')) => approx-factor (deflate p z) (deflate-degree deg z)
                                 (deflate-monic deg monic z) d>0
     \in inP (z :: r', \lam j =>

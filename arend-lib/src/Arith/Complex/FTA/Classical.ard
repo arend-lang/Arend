@@ -43,16 +43,16 @@
 
 \private \func geo (k : Nat) : Real => pow (ratio 1 2 : Real) k
 
-\private \lemma geo>0 (k : Nat) : 0 < geo k => RealField.pow>0 (linarith : (0 : Real) < ratio 1 2) {k}
+\private \lemma geo>0 (k : Nat) : 0 < geo k => RealField.pow>0 positivity {k}
 
 \private \lemma geo-mono {a b : Nat} (a<=b : a <= b) : geo b <= geo a
-  => RealField.pow_<=-degree (linarith : (0 : Real) <= ratio 1 2)
+  => RealField.pow_<=-degree positivity
     (linarith : (ratio 1 2 : Real) <= 1) a<=b
 
 \private \lemma geo<=1 (k : Nat) : geo k <= 1 => geo-mono (zero<=_ : 0 <= k)
 
 \private \lemma geo-small {d : Real} (d>0 : 0 < d) : ∃ (N : Nat) (geo N < d)
-  => \let (inP (N, h)) => pow_<1-decay (linarith : (0 : Real) <= ratio 1 2)
+  => \let (inP (N, h)) => pow_<1-decay positivity
     (linarith : (ratio 1 2 : Real) < 1) 1 d>0
      \in inP (N, transport (< d) ide-right h)
 
@@ -149,7 +149,7 @@
 
 -- | The thread converges.
 \private \lemma thread-conv (A : Threading) : IsConvergent (thread A)
-  => nat-convergent-metric (linarith : (0 : Real) <= ratio 1 2)
+  => nat-convergent-metric positivity
     (linarith : (ratio 1 2 : Real) < 1) (thread A) (thread-incr A)
 
 \lemma FTA {m : Nat} (p : Poly ComplexField) (deg : degree< p (suc (suc m)))

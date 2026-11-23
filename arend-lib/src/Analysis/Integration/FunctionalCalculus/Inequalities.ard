@@ -190,7 +190,7 @@
   -- | If $x \le a + b$ for all rationals $a > \alpha$, $b > \beta$, then $x \le \alpha + \beta$.
   \lemma inf-sum {x al be : Real} (h : \Pi {a b : Rat} -> al < a -> be < b -> x <= a RealAbGroup.+ b) : x <= al + be
     => real_<=-eps \lam {d} d>0 =>
-        \have d2>0 : 0 RealAbGroup.< d * ratio 1 2 => rat_real_<.1 linarith
+        \have d2>0 : 0 RealAbGroup.< d * ratio 1 2 => positivity
         \in \case real_<-char.1 (linarith : al < al + d * ratio 1 2), real_<-char.1 (linarith : be < be + d * ratio 1 2) \with {
           | inP (a,al<a,a<), inP (b,be<b,b<) =>
             \have | xab => h al<a be<b

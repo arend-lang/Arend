@@ -107,7 +107,7 @@
     -- | If {f} and {g} satisfy the estimate, then {g} is uniformly continuous.
     \private \lemma uniformEst-cont {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {eps : Rat} (eps>0 : 0 < eps)
       : ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < Real.fromRat delta) (RealAbGroup.abs (g y - g x) <= Real.fromRat eps)
-      => \case u (linarith : 0 < eps * ratio 1 2) \with {
+      => \case u (positivity : 0 < eps * ratio 1 2) \with {
         | inP (delta,delta>0,s) => inP (delta, delta>0, \lam {x} {y} d =>
           \let | t => RealAbGroup.abs (y.1 - x.1)
                | E => Real.fromRat (eps * ratio 1 2)
@@ -379,7 +379,7 @@
     -- | The difference quotient on the square `[a,b]²`.
     \private \lemma uniformQuotSquare {a b : Real} (a<=b : a <= b) {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g)
       : CoverMap (SquareSpace a b) RealNormed (\lam p => uniformQuot a<=b u p.1 p.2)
-      => square-map a<=b \lam {eps} eps>0 => \case uniformQuot-uniform u (linarith : 0 < eps * ratio 1 4) \with {
+      => square-map a<=b \lam {eps} eps>0 => \case uniformQuot-uniform u (positivity : 0 < eps * ratio 1 4) \with {
         | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} {y} {x'} {y'} d =>
           h {x} {y} {x'} {y'} d <∘r rat_real_<.1 (linarith : eps * ratio 1 4 + eps * ratio 1 4 + eps * ratio 1 4 < eps))
       }

@@ -158,7 +158,7 @@
         | inP (a,a<x,b,b<y,q<a+b), inP (c,x<c,d,y<d,c+d<q) => linarith (x.LU-less a<x x<c, y.LU-less b<y y<d)
       }
       | LU-focus-bound B {eps} eps>0 =>
-        \have eps/4>0 : 0 RatField.< eps * ratio 1 4 => linarith
+        \have eps/4>0 : 0 RatField.< eps * ratio 1 4 => positivity
         \in \case x.LU-focus-bound 1 eps/4>0, y.LU-focus-bound B eps/4>0 \with {
           | byLeft x>1, byLeft y>B => byLeft $ LowerRealAbMonoid.+_L.2 $ inP (1, x>1, B, y>B, linarith)
           | byLeft _, byRight (y',y'<y,y<y'+eps/4) => \case x.LU-focus-bound (B - y' RatField.+ 1) eps/4>0 \with {

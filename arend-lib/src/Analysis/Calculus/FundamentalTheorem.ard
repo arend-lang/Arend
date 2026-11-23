@@ -137,7 +137,7 @@
                      (RealAbGroup.abs (F y - F x - (y.1 - x.1) * g x) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1)))
       : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x y : Set.Total (ClosedInterval a b)} (RealAbGroup.abs (y.1 - x.1) < delta)
           (RealAbGroup.abs ((f y - F y) - (f x - F x) - (y.1 - x.1) * 0) <= Real.fromRat eps * RealAbGroup.abs (y.1 - x.1))
-      => \lam {eps} eps>0 => \case ef (linarith : 0 < eps * ratio 1 2), eF (linarith : 0 < eps * ratio 1 2) \with {
+      => \lam {eps} eps>0 => \case ef (positivity : 0 < eps * ratio 1 2), eF (positivity : 0 < eps * ratio 1 2) \with {
         | inP (d1,d1>0,h1), inP (d2,d2>0,h2) => inP (d1 ∧ d2, <_meet-univ d1>0 d2>0, \lam {x} {y} dd =>
           \have | p1 => h1 {x} {y} (dd <∘l rat_real_<=.1 meet-left)
                 | p2 => h2 {x} {y} (dd <∘l rat_real_<=.1 meet-right)

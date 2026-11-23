@@ -142,7 +142,7 @@
               }
          \in \case Xc (regCF F) \with {
            | inP (x0,x0F) => inP (x0, metric-ext \lam {eps} eps>0 => \case regCF_<= {X} {F} $ x0F $ OBall-center_<=< {X} {eps * ratio 1 2} linarith \with {
-             | inP (delta,delta>0,h) => \case near (<_meet-univ delta>0 (linarith : 0 < eps * ratio 1 2)) \with {
+             | inP (delta,delta>0,h) => \case near (<_meet-univ delta>0 (positivity : 0 < eps * ratio 1 2)) \with {
                | inP (x,d) => Y.halving-right (transport (\lam e => ExUpperReal.U {e} (eps * ratio 1 2)) (inv (func-isometry {f} {x0} {x})) $ h $ ExUpperReal.U_<= d meet-left) (ExUpperReal.U_<= d meet-right) linarith
              }
            })
@@ -206,7 +206,7 @@
         | inP (x,Px) => inP (x, q e>0 <=-refl Px)
       }
       | isCauchyFilter => (cauchyFilter-metric-char {X} {limitSetFilter P Pi}).2 \lam {eps} eps>0 =>
-        \have e>0 : 0 < eps * ratio 1 4 => linarith
+        \have e>0 : 0 < eps * ratio 1 4 => positivity
         \in \case Pi e>0 \with {
           | inP (x,Px) => inP (x, inP (eps * ratio 1 4, e>0, \lam {b} {y} b>0 b<=e Py => Pc e>0 b>0 Px Py linarith))
         }
@@ -230,7 +230,7 @@
 -- | The limit of a family of inhabited sets is unique.
 \lemma family-limit-unique {X : ExMetricSpace} {P : Rat -> Set X} (Pi : \Pi {a : Rat} -> 0 < a -> ∃ (x : X) (P a x)) {z z' : X} (l : IsFamilyLimit P z) (l' : IsFamilyLimit P z') : z = z'
   => dist-ext $ <=-antisymmetric (\lam {c} c>0 =>
-      \have a>0 : 0 < c * ratio 1 4 => linarith
+      \have a>0 : 0 < c * ratio 1 4 => positivity
       \in \case Pi a>0 \with {
         | inP (x,Px) => X.halving-right (l a>0 Px {c * ratio 1 2} linarith) (l' a>0 Px {c * ratio 1 2} linarith) linarith
       }) dist>=0

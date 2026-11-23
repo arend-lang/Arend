@@ -97,7 +97,7 @@
      \in \have | j1 : cubeRad n R' <= cubeRad n R' ∨ 0 => join-left
                | j2 : 0 <= cubeRad n R' ∨ 0 => join-right
                | M>0 : 0 < M => linarith
-               | e2>0 : 0 < e * ratio 1 2 => linarith
+               | e2>0 : 0 < e * ratio 1 2 => positivity
      \in \case cover-uniform-ball (RealN-ballsTB n) g 0 M>0 e2>0 \with {
        | inP (d,d>0,gu) =>
          \have d'>0 : 0 < d ∧ 1 => <_meet-univ d>0 RatField.zro<ide
@@ -186,7 +186,7 @@
 
 \lemma iota-unique {n : Nat} (g : CoverMap (RealN n) RealNormed) {R : Rat} (gR : \Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) {u u' : LebesgueL1 n} (p : IsIota g u) (q : IsIota g u') : u = u'
   => dist-ext {LebesgueL1 n} $ Real.=-upper.1 $ <=-antisymmetric (real_<=-eps \lam {d} d>0 =>
-      \have d2>0 : 0 < d * ratio 1 2 => linarith
+      \have d2>0 : 0 < d * ratio 1 2 => positivity
       \in \case approx-small g gR d2>0 \with {
         | inP (e,s,ap,em) =>
           \have | a => p ap
@@ -202,7 +202,7 @@
 
 \sfunc iota-exists {n : Nat} (g : CoverMap (RealN n) RealNormed) {R : Rat} (gR : \Pi {x : RealN n} -> Real.fromRat R < lnorm x -> g x = 0) : \Sigma (u : LebesgueL1 n) (IsIota g u)
   => (family-limit P Pi Pc, \lam {K'} {e'} {s'} ap' => real_<=-eps \lam {d} d>0 =>
-      \have d4>0 : 0 < d * ratio 1 4 => linarith
+      \have d4>0 : 0 < d * ratio 1 4 => positivity
       \in \case approx-small g gR d4>0 \with {
         | inP (e,s,ap,em) =>
           \let L => family-limit P Pi Pc
@@ -295,7 +295,7 @@
                (h : \Pi {d : Rat} -> 0 < d -> ∃ (K : LebesgueRing0 n) (e : Rat) (s : SFuncIntegrationSpace (LebesgueRing0 n)) (IsApprox g K e s) (e RealField.* meas K < d) (ldist {LebesgueL1 n} v (stepL1 s) < d))
   : iota g = v
   => dist-ext {LebesgueL1 n} $ Real.=-upper.1 $ <=-antisymmetric (real_<=-eps \lam {d} d>0 =>
-      \have d2>0 : 0 < d * ratio 1 2 => linarith
+      \have d2>0 : 0 < d * ratio 1 2 => positivity
       \in \case h d2>0 \with {
         | inP (K,e,s,ap,em,vs) =>
           \have | a => iota.char {n} {g} ap
@@ -315,7 +315,7 @@
 -- | {iota} is additive.
 \lemma iota_+ {n : Nat} {g h : CompactCoverMap (RealN n)} : iota (g + h) = iota g + iota h
   => iota-eq \lam {d} d>0 =>
-      \have | d4>0 : 0 < d * ratio 1 4 => linarith
+      \have | d4>0 : 0 < d * ratio 1 4 => positivity
             | (inP (R,g0,h0)) => CompactCoverMap-common g h
             | (inP (e,s,a,em)) => approx-small g g0 d4>0
             | (inP (e',t,b,em')) => approx-small h h0 d4>0
@@ -360,7 +360,7 @@
 \lemma iota-bound {n : Nat} {g : CompactCoverMap (RealN n)} {a : LebesgueRing0 n} {M : Rat} (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z)) <= Real.fromRat (if (lebPts n a z) M 0))
   : integral {LebesgueL1 n} (LatticeAbGroup.abs {LebesgueL1 n} (iota g)) <= M RealField.* meas a
   => real_<=-eps \lam {d} d>0 =>
-    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \have d2>0 : 0 < d * ratio 1 2 => positivity
     \in \case ball-support g \with {
       | inP (R,g0) => \case approx-small g g0 d2>0 \with {
         | inP (e,s,ap,em) =>
@@ -400,7 +400,7 @@
                  (h : \Pi (z : Array Rat n) -> RealAbGroup.abs (g (ratPt z) - stepEval z s) <= stepEval z t)
   : ldist (iota g) (stepL1 s) <= integral t
   => real_<=-eps \lam {d} d>0 =>
-    \have d2>0 : 0 < d * ratio 1 2 => linarith
+    \have d2>0 : 0 < d * ratio 1 2 => positivity
     \in \case ball-support g \with {
       | inP (R,g0) => \case approx-small g g0 d2>0 \with {
         | inP (e,s',ap,em) =>

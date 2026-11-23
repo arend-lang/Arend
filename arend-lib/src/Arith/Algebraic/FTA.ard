@@ -36,7 +36,6 @@
 \import Paths
 \import Paths.Meta
 \open PosetSemiring (<=_*_positive_positive)
-\open OrderedSemiring (<_*_positive_positive)
 \open LinearlyOrderedSemiring (<=_*-cancel-right)
 
 {- | **The fundamental theorem of algebra without choice**: for separable complex polynomials, and
@@ -141,7 +140,7 @@
           (e0 * Dd + e0 * Dd <= B) (Lc * B * Dd <= (ratio 1 4 : Real))
           (Cc * (Dd * Dd) * e0 <= (ratio 1 4 : Real))
       => \let | CD>=0 : 0 <= Cc * (Dd * Dd) => positivity
-              | (inP (B, B>0, hd)) => split-eps (linarith : (0 : Real) < ratio 1 4) (positivity : 0 < Lc * Dd + 1)
+              | (inP (B, B>0, hd)) => split-eps (positivity : (0 : Real) < ratio 1 4) (positivity : 0 < Lc * Dd + 1)
               | (inP (e1, e1>0, he)) => split-eps B>0 (positivity : 0 < Dd + Dd + Cc * (Dd * Dd) + 1)
          \in \have
            | BL>=0 : (0 : Real) <= B * (Lc * Dd)

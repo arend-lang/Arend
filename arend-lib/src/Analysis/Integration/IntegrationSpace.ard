@@ -347,7 +347,7 @@
 }
   \where {
     \lemma half>0 {eps : Rat} (eps>0 : RatField.zro RatField.< eps) : RatField.zro RatField.< eps * ratio 1 2
-      => linarith
+      => positivity
 
     \lemma dense-arith {d s1 t1 s2 t2 : Real} {eps : Rat} (le : d <= (s1 RealAbGroup.+ RealAbGroup.negative t1) RealAbGroup.+ (s2 RealAbGroup.+ RealAbGroup.negative t2))
                        (h1 : s1 RealAbGroup.< t1 RealAbGroup.+ Real.fromRat (eps * ratio 1 2)) (h2 : s2 RealAbGroup.< t2 RealAbGroup.+ Real.fromRat (eps * ratio 1 2)) : d RealAbGroup.< Real.fromRat eps

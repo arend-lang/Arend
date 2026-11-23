@@ -794,6 +794,12 @@
 
   \lemma coef_<= {x y : R} (p : x <= {R} y) : coefMap x <= coefMap y
     => \lam q => p (coef_<-inv q)
+
+  \lemma coef>0 {x : R} (p : 0 < {R} x) : 0 < coefMap x
+    => transport (__ < _) coefHom.func-zro (coef_< p)
+
+  \lemma coef>=0 {x : R} (p : 0 <= {R} x) : 0 <= coefMap x
+    => transport (__ <= _) coefHom.func-zro (coef_<= p)
 }
 
 \class OrderedCAlgebra \extends OrderedAAlgebra, CAlgebra, OrderedCRing {

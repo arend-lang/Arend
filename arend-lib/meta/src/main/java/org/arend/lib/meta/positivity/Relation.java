@@ -23,11 +23,11 @@ public record Relation(Strictness kind, CoreExpression left, CoreExpression righ
     return kind == Strictness.NONZERO ? right : left;
   }
 
+  /**
+   * Strips solved inference variables and type annotations such as {@code (0 : Real)}.
+   */
   public static CoreExpression deref(CoreExpression expr) {
-    while (expr instanceof CoreInferenceReferenceExpression infRef && infRef.getSubstExpression() != null) {
-      expr = infRef.getSubstExpression();
-    }
-    return expr;
+    return expr.getUnderlyingExpression();
   }
 
   /**

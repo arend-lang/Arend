@@ -137,7 +137,7 @@
                 => transport (IsConvergent {I} {RealNormed}) (ext \lam i => rpow-ext (RealAbGroup.join-comm *> RealAbGroup.join_<= lnorm>=0) idp)
                      (convergent-compose nc (rpow-coverMap (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (0 : Real))) (\lam x => RealAbGroup.join-right) p>0))
       \in convergent-metric-real.2 \lam {eps} eps>0 =>
-        \have | e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+        \have | e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => positivity
               | e2<eps : eps * Real.fromRat (ratio 1 2) < eps => linarith
               | d>0 : (0 : Real) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) p p>0 => transportInv ((0 : Real) <) (rpow-pos-eq e2>0) rpow-pos>0
         \in \case convergent-metric-real.1 rc d>0 \with {

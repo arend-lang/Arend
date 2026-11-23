@@ -145,7 +145,7 @@
 
 \private \module NormFamilyArith \where {
   \lemma half>0 {eps : Real} (eps>0 : (0 : Real) < eps) : (0 : Real) < eps * Real.fromRat (ratio 1 2)
-    => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+    => positivity
 
   \lemma half-sum {a b eps : Real} (p : a < eps * Real.fromRat (ratio 1 2)) (q : b < eps * Real.fromRat (ratio 1 2)) : a + b < eps
     => linarith

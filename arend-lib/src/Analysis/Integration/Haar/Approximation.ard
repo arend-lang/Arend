@@ -202,7 +202,7 @@
 -- | The choice of `η` in Lemma superadd.
 \lemma superadd-eta {T MC eps : Real} (T>=0 : 0 <= T) (MC>=0 : 0 <= MC) (eps>0 : 0 < eps)
   : ∃ (eta : Real) (0 < eta) (T * eta <= 1) (T * eta * MC <= eps * ratio 1 2)
-  => \have | e2>0 : 0 < eps * ratio 1 2 => usingOnly eps>0 linarith
+  => \have | e2>0 : 0 < eps * ratio 1 2 => positivity
            | TMC>=0 : 0 <= T * MC => RealField.<=_*_positive_positive T>=0 MC>=0
      \in \case split-eps RealAbGroup.zro<ide (positivity : 0 < T + 1), split-eps e2>0 (positivity : 0 < T * MC + 1) \with {
        | inP (eta1,eta1>0,eta1T), inP (eta2,eta2>0,eta2T) =>
@@ -404,7 +404,7 @@
   => \have | gcp => check-pos gp
            | e4>0 : 0 < (alpha - eps) * ratio 1 4 => usingOnly eps<alpha linarith
            | e2>0 : 0 < (alpha - eps) * ratio 1 2 => usingOnly eps<alpha linarith
-           | e8>0 : 0 < (alpha - eps) * ratio 1 4 * ratio 1 2 => usingOnly e4>0 linarith
+           | e8>0 : 0 < (alpha - eps) * ratio 1 4 * ratio 1 2 => positivity
            | Nf>=0 => cover-num>=0 {G} {f} {CompactMap-reflect g} {f>=0} {gcp}
      \in \case split-eps e8>0 (positivity : 0 < cover-num f (CompactMap-reflect g) f>=0 gcp + 1) \with {
        | inP (eta,eta>0,etaN) => \case topAdd-translation (CompactMap-reflect g) eta>0 \with {
@@ -541,7 +541,7 @@
                      (FW : \Pi (x : G) {w : G} -> W w -> abs ((f + CompactCoverMap.scale (delta * ratio 1 2) ht) (x + w) - (f + CompactCoverMap.scale (delta * ratio 1 2) ht) x) <= delta * ratio 1 8)
   : ∃ (n : Nat) (c : Array Real n) (s : Array G n) (IsApprox f h phi c s delta)
   => \let F => f + CompactCoverMap.scale (delta * ratio 1 2) ht
-     \in \have | d2>=0 : 0 <= delta * ratio 1 2 => usingOnly delta>0 linarith
+     \in \have | d2>=0 : 0 <= delta * ratio 1 2 => positivity
                | F>=0 (x : G) : 0 <= F x => usingOnly (f>=0 x, RealField.<=_*_positive_positive d2>=0 (ht>=0 x)) linarith
                | FK1 : IsSupported F K1 => IsSupported.mono {G} {F} {\lam x => K x || K1 x} {K1} (IsSupported.bound_+ {G} {f} {CompactCoverMap.scale (delta * ratio 1 2) ht} {F} fK
                     (IsSupported.bound_*c htK1 \lam x => =_<= (RealField.abs_* {delta * ratio 1 2} {ht x} *> pmap (* _) (RealAbGroup.abs-ofPos d2>=0)))
@@ -582,7 +582,7 @@
            | (inP (K1,K1tb,htK1)) => ht.support
            | (inP (U,Uo,U0,h,h>=0,h<=1,hU)) => G.bump K1tb
      \in inP (h, h>=0, \lam {delta} delta>0 =>
-              \have e8>0 : 0 < delta * ratio 1 8 => usingOnly delta>0 linarith
+              \have e8>0 : 0 < delta * ratio 1 8 => positivity
               \in \case topAdd-translation (f + CompactCoverMap.scale (delta * ratio 1 2) ht) e8>0, topAdd-translation (f' + CompactCoverMap.scale (delta * ratio 1 2) ht) e8>0, G.shrink2 Uo U0 \with {
                 | inP (W1,W1o,W10,_,hW1), inP (W2,W2o,W20,_,hW2), inP (U',U'o,U'0,_,U'U) =>
                   \case G.cutoff (open-inter (open-inter W1o W2o) U'o) ((W10,W20),U'0) \with {

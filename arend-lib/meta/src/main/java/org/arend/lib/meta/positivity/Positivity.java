@@ -61,7 +61,7 @@ public class Positivity {
     for (CoreBinding binding : bindings) {
       Relation relation = Relation.parse(binding.getType(), meta, getNatInstance());
       if (relation != null) {
-        hypotheses.add(new Hypothesis(binding, relation, isZero(relation.other())));
+        hypotheses.add(new Hypothesis(binding, relation, isZero(relation.other(), relation.instance())));
       }
     }
   }
@@ -76,10 +76,26 @@ public class Positivity {
 
   public @Nullable Goal makeGoal(CoreExpression type) {
     Relation relation = Relation.parse(type, meta, getNatInstance());
-    return relation == null || !isZero(relation.other()) ? null : new Goal(relation.kind(), type, relation.term(), relation.other(), relation.instance(), relation.linear());
+    return relation == null || !isZero(relation.other(), relation.instance()) ? null : new Goal(relation.kind(), type, relation.term(), relation.other(), relation.instance(), relation.linear());
   }
 
-  private boolean isZero(CoreExpression expr) {
+  /**
+   * Checks if {@code expr} is zero: syntactically, or definitionally equal to {@code zro} of {@code instance}.
+   * The latter covers elaborations such as {@code fromRat (fromInt (pos 0))} of {@code (0 : Real)}.
+   */
+  private boolean isZero(CoreExpression expr, @Nullable CoreExpression instance) {
+    if (isZeroSyntactically(expr)) return true;
+    if (instance == null) return false;
+    CoreExpression zeroExpr = expr;
+    return Boolean.TRUE.equals(Utils.tryTypecheck(typechecker, tc -> {
+      TypedExpression zero = tc.typecheck(factory.app(factory.ref(meta.zro.getRef()), factory.arg(core(instance), false)), null);
+      boolean ok = zero != null && tc.compare(zeroExpr, zero.getExpression(), CMP.EQ, marker, false, true, false);
+      tc.loadSavedState();
+      return ok ? true : null;
+    }));
+  }
+
+  private boolean isZeroSyntactically(CoreExpression expr) {
     for (int i = 0; i < 2; i++) {
       expr = Relation.deref(expr);
       if (expr instanceof CoreIntegerExpression intExpr) return intExpr.getBigInteger().equals(BigInteger.ZERO);
@@ -320,15 +336,40 @@ public class Positivity {
   }
 
   /**
-   * Proves {@code 0 < n} for a positive numeral {@code n} of type Nat.
+   * Proves {@code 0 < n} for a positive numeral {@code n} of type Nat,
+   * and {@code 0 < q} or {@code 0 <= q} for a rational constant {@code q} such as {@code ratio 1 2}.
    */
   private @Nullable TypedExpression proveNumber(Goal goal) {
-    if (goal.strictness != Strictness.POSITIVE) return null;
+    if (goal.strictness == Strictness.NONZERO) return null;
     CoreExpression term = goal.term.normalize(NormalizationMode.WHNF);
+    if (term instanceof CoreConCallExpression conCall && conCall.getDefinition().getRef().equals(meta.ratCon) && conCall.getDefCallArguments().size() >= 2) {
+      BigInteger nom = getInt(conCall.getDefCallArguments().get(0));
+      if (nom == null || getInt(conCall.getDefCallArguments().get(1)) == null) return null;
+      int sign = nom.signum();
+      if (goal.strictness == Strictness.POSITIVE ? sign <= 0 : sign < 0) return null;
+      ArendRef lemma = goal.strictness == Strictness.POSITIVE ? meta.ratLessDec : meta.ratLessOrEqualsDec;
+      // Pass both sides explicitly so that the implicit {so} argument is solved immediately rather than after unification with the goal
+      return attempt(tc -> check(tc, factory.app(factory.ref(lemma), factory.arg(core(goal.zero), false), factory.arg(core(term), false)), goal.type));
+    }
+    if (goal.strictness != Strictness.POSITIVE) return null;
     if (term instanceof CoreIntegerExpression intExpr && intExpr.getBigInteger().signum() > 0 || term instanceof CoreConCallExpression conCall && conCall.getDefinition() == typechecker.getPrelude().getSuc()) {
       return attempt(tc -> check(tc, factory.ref(meta.zeroLessSuc), goal.type));
     }
     return null;
+  }
+
+  /**
+   * Returns the value of an integer literal of type Nat or Int, or {@code null} if {@code expr} is not a literal.
+   */
+  private @Nullable BigInteger getInt(CoreExpression expr) {
+    expr = expr.normalize(NormalizationMode.WHNF);
+    boolean negative = false;
+    if (expr instanceof CoreConCallExpression conCall && (conCall.getDefinition() == typechecker.getPrelude().getPos() || conCall.getDefinition() == typechecker.getPrelude().getNeg())) {
+      negative = conCall.getDefinition() == typechecker.getPrelude().getNeg();
+      expr = conCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
+    }
+    if (!(expr instanceof CoreIntegerExpression intExpr)) return null;
+    return negative ? intExpr.getBigInteger().negate() : intExpr.getBigInteger();
   }
 
   private @Nullable TypedExpression applyRule(PositivityRule rule, Goal goal) {
@@ -375,7 +416,7 @@ public class Positivity {
   private @Nullable TypedExpression provePremise(CoreExpression type) {
     // The subgoal is rebuilt from the instantiated term, so that it does not refer to inference variables of the rule
     Relation relation = Relation.parse(type, meta, getNatInstance());
-    Goal subgoal = relation == null || !isZero(relation.other()) ? null : makeGoal(relation.kind(), Relation.deref(relation.term()), Relation.deref(relation.other()), relation.instance() == null ? null : Relation.deref(relation.instance()), relation.linear());
+    Goal subgoal = relation == null || !isZero(relation.other(), relation.instance()) ? null : makeGoal(relation.kind(), Relation.deref(relation.term()), Relation.deref(relation.other()), relation.instance() == null ? null : Relation.deref(relation.instance()), relation.linear());
     if (subgoal != null) {
       TypedExpression proof = prove(subgoal);
       if (proof != null) return proof;

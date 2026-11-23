@@ -201,7 +201,7 @@
                  | e : k * (a - c) + k * (b - c) = (0 : Real) => equation.cRing {hh}
                  | s : powAbs p p>0 c + powAbs p p>0 c <= powAbs p p>0 a + powAbs p p>0 b => linarith
                  | e2 : Real.fromRat (ratio 1 2) * (powAbs p p>0 c + powAbs p p>0 c) = powAbs p p>0 c => linarith
-       \in =_<= (inv e2) <=∘ <=_*_positive-right (rat_real_<=.1 (usingOnly () linarith : 0 RatField.<= ratio 1 2)) s
+       \in =_<= (inv e2) <=∘ <=_*_positive-right positivity s
 
   -- | $F(c + h) + F(c - h) = F(|c| + |h|) + F(|c| - |h|)$.
   \lemma pair-abs {p : Real} {p>0 : (0 : Real) < p} {c h : Real}

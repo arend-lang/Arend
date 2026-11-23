@@ -84,7 +84,7 @@
 \lemma openCover-uniform-cont {X : ExPseudoMetricSpace} {U : Set X} (Uo : isOpen U) {Y : ExPseudoMetricSpace} (f : CoverMap (OpenCoverSpace Uo) Y)
                               {T : Set X} (Tc : IsCauchyUniformSet T) (w : T <=* U) {eps : Rat} (eps>0 : 0 < eps)
   : ∃ (d : Rat) (0 < d) ∀ {x y} (T x.1) (T y.1) ((dist x.1 y.1).U d) ((dist (f x) (f y)).U eps)
-  => \have e>0 : 0 < eps * ratio 1 2 => linarith
+  => \have e>0 : 0 < eps * ratio 1 2 => positivity
      \in \case openCover-uniform Uo f Tc w e>0 \with {
        | inP (d,d>0,g) => inP (d, d>0, \lam {x} {y} Tx Ty xy<d => \case g x.1 \with {
          | inP (t,q) => Y.halving1/2 (q Tx (OBall-center d>0)) (q Ty xy<d)

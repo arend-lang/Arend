@@ -389,7 +389,7 @@
       => \let Y => IntegrationSpaceCompletion (SFuncIntegrationSpace B)
          \in \lam {V} Vo Vy => \case (dist_open {Y} {V}).1 Vo Vy \with {
            | inP (eps,eps>0,h) =>
-             \have | delta>0 : 0 < eps * ratio 1 4 => linarith
+             \have | delta>0 : 0 < eps * ratio 1 4 => positivity
                    | t : Real.fromRat (eps * ratio 1 4) RealAbGroup.+ Real.fromRat (eps * ratio 1 4) RealAbGroup.+ Real.fromRat (eps * ratio 1 4) RealAbGroup.+ Real.fromRat (eps * ratio 1 4) = Real.fromRat eps
                        => pmap (\lam x => x RealAbGroup.+ Real.fromRat (eps * ratio 1 4)) (pmap (\lam x => x RealAbGroup.+ Real.fromRat (eps * ratio 1 4)) RealAbGroup.+-rat *> RealAbGroup.+-rat) *> RealAbGroup.+-rat
                            *> pmap Real.fromRat (RatField.<=-antisymmetric linarith linarith)

@@ -70,77 +70,77 @@
 \open QModule (*q)
 
 -- | `F ∈ L⁰` lies in `Lᵖ`.
-\func IsLp {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (F : L0Space L) : \Prop
+\func IsLp {L : FullIntegrationSpace} (p : Real) (p>=1 : 1 <= p) (F : L0Space L) : \Prop
   => ∃ (G : LpSpace L p p>=1) (lpToL0 p p>=1 G = F)
 
 -- | Lemma `lem:dominated`: $\|f - g\|_p^p \le (2M)^{p-1} d_{2h}(f, g)$ for $|f|, |g| \le h$ and `h` bounded by `M`.
-\lemma pnormPow-dominated {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {M : Rat} (M>0 : RatField.zro RatField.< M)
+\lemma pnormPow-dominated {L : FullIntegrationSpace} {p : Real} (p>=1 : 1 <= p) {M : Rat} (M>0 : 0 < M)
                           {h : L} (hM : L.IsBelow (abs h) M) {f g : L} (fh : abs f <= h) (gh : abs g <= h)
-  : pnormPow p p>=1 (f - g) <= rpow-pos (Real.fromRat (M RatField.+ M)) (rat_real_<.1 linarith) (p - 1) * measGauge (h + h) (f - g)
+  : pnormPow p p>=1 (f - g) <= rpow-pos (M + M) (rat_real_<.1 linarith) (p - 1) * measGauge (h + h) (f - g)
   => \have | le : abs (f - g) <= h + h => abs_+ <=∘ <=_+ fh (=_<= abs_negative <=∘ gh)
-           | b : L.IsBelow (abs (f - g)) (M RatField.+ M) => L.IsBelow_<= (le <=∘ <=_+ abs>=id abs>=id) (L.IsBelow_+ hM hM)
+           | b : L.IsBelow (abs (f - g)) (M + M) => L.IsBelow_<= (le <=∘ <=_+ abs>=id abs>=id) (L.IsBelow_+ hM hM)
      \in L.integral-mono (fpow-bounded p>=1 linarith b) <=∘ =_<= (integral-rscale *> pmap (_ * L.integral __) (inv (meet_<= le)))
 
 -- | The extension $\kappa_h \colon \mathrm L^0 \to \mathrm L^p$ of the clipping by `h`.
-\sfunc lpClip {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h) : CoverMap (L0Space L) (LpSpace L p p>=1)
+\sfunc lpClip {L : FullIntegrationSpace} (p : Real) (p>=1 : 1 <= p) {h : L} (h>=0 : L.zro <= h) : CoverMap (L0Space L) (LpSpace L p p>=1)
   => dense-lift completion completion.isDenseEmbedding (lpInc p p>=1 CoverMap.∘ pre p>=1 h>=0)
   \where \protected {
-    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) {f : L}
+    \lemma char {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h : L} (h>=0 : L.zro <= h) {f : L}
       : lpClip p p>=1 h>=0 (pointCF {L0PreSpace L} f) = lpInc p p>=1 (L.clip h f)
       => rewrite (\peval lpClip p p>=1 h>=0) $ dense-lift-char completion.isDenseEmbedding {lpInc p p>=1 CoverMap.∘ pre p>=1 h>=0} f
 
     -- | The clipping $f \mapsto (f \wedge h) \vee (-h)$ is uniformly continuous from the measure uniformity to $\|\cdot\|_p$.
-    \lemma pre {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {h : L} (h>=0 : L.zro <= h)
+    \lemma pre {L : FullIntegrationSpace} {p : Real} (p>=1 : 1 <= p) {h : L} (h>=0 : L.zro <= h)
       : UniformMap (L0PreSpace L) (LpPreSpace L p p>=1) (L.clip h)
       => \case L.trunc-bounded h \with {
-        | inP (M0,hM0) => \let M => M0 RatField.∨ 1 \in
-          \have | M>0 : RatField.zro RatField.< M => RatField.zro<ide <∘l RatField.join-right
-                | hM : L.IsBelow (abs h) M => L.IsBelow-level RatField.join-left hM0
+        | inP (M0,hM0) => \let M => M0 ∨ 1 \in
+          \have | M>0 : 0 < M => RatField.zro<ide <∘l join-right
+                | hM : L.IsBelow (abs h) M => L.IsBelow-level join-left hM0
                 | h2>=0 : L.zro <= h + h => positivity
-          \in addGroup-modulus-uniform {L0PreSpace L} {LpPreSpace L p p>=1} (L.clip h) \lam {eps} eps>0 => \case modulus {L} p>=1 {rpow-pos (Real.fromRat (M RatField.+ M)) (rat_real_<.1 linarith) (p - 1)} rpow-pos>0 eps>0 \with {
+          \in addGroup-modulus-uniform {L0PreSpace L} {LpPreSpace L p p>=1} (L.clip h) \lam {eps} eps>0 => \case modulus {L} p>=1 {rpow-pos (M + M) (rat_real_<.1 linarith) (p - 1)} rpow-pos>0 eps>0 \with {
             | inP (d,d>0,m) => inP (\lam z => measGauge (h + h) z < d, NormFamilyTopAbGroup.normAt-ball-open {L0PreSpace L} {(h + h, h2>=0)},
                                    transportInv (`< d) ((L0PreSpace L).normAt-zro {(h + h, h2>=0)}) d>0, \lam {x} {y} c =>
                 \have | dom => pnormPow-dominated p>=1 M>0 hM {L.clip h x} {L.clip h y} (clip-abs h>=0) (clip-abs h>=0)
                       | lip : measGauge (h + h) (L.clip h x - L.clip h y) <= measGauge (h + h) (y - x)
                           => (L0PreSpace L).normAt-abs-mono {(h + h, h2>=0)} (clip-lip <=∘ =_<= abs_-)
-                      | C>=0 : (0 : Real) <= rpow-pos (Real.fromRat (M RatField.+ M)) (rat_real_<.1 linarith) (p - 1) => <=-less rpow-pos>0
+                      | C>=0 : 0 <= rpow-pos (M + M) (rat_real_<.1 linarith) (p - 1) => <=-less rpow-pos>0
                 \in transportInv (\lam e => ExUpperReal.U {e} eps) (LpPreSpace L p p>=1).norm-dist $ real_<_U.1 $ m (dom <=∘ RealField.<=_*_positive-right C>=0 lip) c.2)
           }
       }
       \where
-        \lemma modulus {L : FullIntegrationSpace} {p : Real} (p>=1 : (1 : Real) <= p) {C : Real} (C>0 : (0 : Real) < C) {eps : Rat} (eps>0 : RatField.zro RatField.< eps)
-          : ∃ (d : Real) ((0 : Real) < d) ∀ {w : L} {m : Real} (pnormPow p p>=1 w <= C * m -> m < d -> pnorm p p>=1 w < Real.fromRat eps)
-          => \have e2>0 : (0 : Real) < Real.fromRat (eps RatField.* ratio 1 2) => rat_real_<.1 linarith
-             \in inP (rpow-pos (Real.fromRat (eps RatField.* ratio 1 2)) e2>0 p * RealField.pinv C C>0,
+        \lemma modulus {L : FullIntegrationSpace} {p : Real} (p>=1 : 1 <= p) {C : Real} (C>0 : 0 < C) {eps : Rat} (eps>0 : 0 < eps)
+          : ∃ (d : Real) (0 < d) ∀ {w : L} {m : Real} (pnormPow p p>=1 w <= C * m -> m < d -> pnorm p p>=1 w < eps)
+          => \have e2>0 : 0 < Real.fromRat (eps * ratio 1 2) => positivity
+             \in inP (rpow-pos (eps * ratio 1 2) e2>0 p * RealField.pinv C C>0,
                       RealField.<_*_positive_positive rpow-pos>0 (RealField.pinv>0 C>0), \lam {w} {m} wm md =>
-              \have | Cm : C * m < C * (rpow-pos (Real.fromRat (eps RatField.* ratio 1 2)) e2>0 p * RealField.pinv C C>0) => RealField.<_*_positive-right C>0 md
-                    | Cd : C * (rpow-pos (Real.fromRat (eps RatField.* ratio 1 2)) e2>0 p * RealField.pinv C C>0) = rpow-pos (Real.fromRat (eps RatField.* ratio 1 2)) e2>0 p
+              \have | Cm : C * m < C * (rpow-pos (eps * ratio 1 2) e2>0 p * RealField.pinv C C>0) => RealField.<_*_positive-right C>0 md
+                    | Cd : C * (rpow-pos (eps * ratio 1 2) e2>0 p * RealField.pinv C C>0) = rpow-pos (eps * ratio 1 2) e2>0 p
                         => equation.cRing {RealField.pinv-right C>0}
-                    | le : pnormPow p p>=1 w <= rpow (Real.fromRat (eps RatField.* ratio 1 2)) (<=-less e2>0) p (fpow.one>0 p>=1)
+                    | le : pnormPow p p>=1 w <= rpow (eps * ratio 1 2) (<=-less e2>0) p (fpow.one>0 p>=1)
                         => wm <=∘ <=-less Cm <=∘ =_<= (Cd *> inv (rpow-pos-eq e2>0))
               \in (pnorm<=-iff {L} {p} {p>=1} {w} {_} {<=-less e2>0}).2 le <∘r rat_real_<.1 linarith)
   }
 
 -- | $j_p \kappa_h(F) = \mathrm{clip}_h(F)$.
-\lemma lpToL0-clip {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) (F : L0Space L)
+\lemma lpToL0-clip {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h : L} (h>=0 : L.zro <= h) (F : L0Space L)
   : lpToL0 p p>=1 (lpClip p p>=1 h>=0 F) = clip (pointCF {L0PreSpace L} h) F
   => dense-lift-unique completion completion.isDenseEmbedding.1 (lpToL0 p p>=1 ContMap.∘ lpClip p p>=1 h>=0) (clip-cover (pointCF {L0PreSpace L} h))
       (\lam f => pmap (lpToL0 p p>=1) (lpClip.char h>=0) *> lpToL0.char *> RieszSpaceHom.func-clip {topTruncCompletion {L0PreSpace L}}) F
 
 -- | Lemma `lem:dominated`: every `F ∈ L⁰` with $|F| \le h$ lies in `Lᵖ`, namely $F = j_p \kappa_h(F)$.
-\lemma lp-dominated {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) {F : L0Space L}
+\lemma lp-dominated {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h : L} (h>=0 : L.zro <= h) {F : L0Space L}
                     (Fh : abs F <= pointCF {L0PreSpace L} h)
   : lpToL0 p p>=1 (lpClip p p>=1 h>=0 F) = F
   => lpToL0-clip h>=0 F *> clip-id Fh
 
 -- | $\kappa_h(j_p G) = \mathrm{clip}_h(G)$ in `Lᵖ`.
-\lemma lpClip-lpToL0 {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) (G : LpSpace L p p>=1)
+\lemma lpClip-lpToL0 {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h : L} (h>=0 : L.zro <= h) (G : LpSpace L p p>=1)
   : lpClip p p>=1 h>=0 (lpToL0 p p>=1 G) = clip (lpInc p p>=1 h) G
   => dense-lift-unique (lpInc p p>=1) lpInc.isDense (lpClip p p>=1 h>=0 ContMap.∘ lpToL0 p p>=1) (clip-cover (lpInc p p>=1 h))
       (\lam f => pmap (lpClip p p>=1 h>=0) lpToL0.char *> lpClip.char h>=0 *> RieszSpaceHom.func-clip {lpInc p p>=1}) G
 
 -- | $\|\kappa_h(F)\|_p^p = \Psi_h(F)$.
-\lemma lpClip-normPow {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h : L} (h>=0 : L.zro <= h) (F : L0Space L)
+\lemma lpClip-normPow {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h : L} (h>=0 : L.zro <= h) (F : L0Space L)
   : lpNormPow p p>=1 (lpClip p p>=1 h>=0 F) = l0Psi p p>=1 h>=0 F
   => dense-lift-unique completion completion.isDenseEmbedding.1 (lpNormPow.cover CoverMap.∘ lpClip p p>=1 h>=0) (l0Psi p p>=1 h>=0)
       (\lam f => pmap (lpNormPow p p>=1) (lpClip.char h>=0) *> lpNormPow.char
@@ -148,13 +148,13 @@
 
 -- | $d_h(F, 0) = \|\kappa_h(F)\|_1$.
 \lemma l0Gauge-lnorm {L : FullIntegrationSpace} {h : L} (h>=0 : L.zro <= h) (X : L0Space L)
-  : l0Gauge h>=0 X = lnorm {LpSpace L 1 RealAbGroup.<=-refl} (lpClip 1 RealAbGroup.<=-refl h>=0 X)
-  => dense-lift-unique completion completion.isDenseEmbedding.1 (l0Gauge h>=0) (lnorm-metric {LpSpace L 1 RealAbGroup.<=-refl} CoverMap.∘ lpClip 1 RealAbGroup.<=-refl h>=0)
+  : l0Gauge h>=0 X = lnorm {LpSpace L 1 <=-refl} (lpClip 1 <=-refl h>=0 X)
+  => dense-lift-unique completion completion.isDenseEmbedding.1 (l0Gauge h>=0) (lnorm-metric {LpSpace L 1 <=-refl} CoverMap.∘ lpClip 1 <=-refl h>=0)
       (\lam f => l0Gauge.char h>=0 *> pmap L.integral (inv (L.clip-abs-eq h>=0))
-                  *> inv (pmap (lnorm {LpSpace L 1 RealAbGroup.<=-refl}) (lpClip.char h>=0) *> lpInc.lnorm-char *> pnorm-one)) X
+                  *> inv (pmap (lnorm {LpSpace L 1 <=-refl}) (lpClip.char h>=0) *> lpInc.lnorm-char *> pnorm-one)) X
 
 -- | $\Psi_h(F) \le \Psi_{h'}(F)$ for $h \le h'$.
-\lemma l0Psi-mono {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') (F : L0Space L)
+\lemma l0Psi-mono {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') (F : L0Space L)
   : l0Psi p p>=1 h>=0 F <= l0Psi p p>=1 (h>=0 <=∘ h<=h') F
   => dense_<= real-join-uniform completion completion.isDenseEmbedding.1 (l0Psi p p>=1 h>=0) (l0Psi p p>=1 (h>=0 <=∘ h<=h'))
       (\lam f => =_<= (l0Psi.char h>=0) <=∘ psi-mono p>=1 h>=0 h<=h' <=∘ =_<= (inv (l0Psi.char _))) F
@@ -168,7 +168,7 @@
       }) F
 
 -- | $\kappa_h(j_p G) \to G$ in `Lᵖ` as `h` increases.
-\lemma clip-limit-Lp {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} (G : LpSpace L p p>=1)
+\lemma clip-limit-Lp {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} (G : LpSpace L p p>=1)
   : (LpSpace L p p>=1).IsLimit {PosCone L} (\lam h => lpClip p p>=1 h.el>=0 (lpToL0 p p>=1 G)) G
   => transportInv (\lam u => (LpSpace L p p>=1).IsLimit {PosCone L} u G) (ext \lam h => lpClip-lpToL0 h.el>=0 G) $
       clip-limit {LpSpace L p p>=1} lpInc.isDense {PosCone L} (\lam (h : PosCone L) => lpInc p p>=1 h.el)
@@ -177,35 +177,35 @@
         }) G
 
 -- | $\kappa_h(F) \to G$ in `Lᵖ` if $F = j_p G$.
-\lemma lp-limit-of {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {G : LpSpace L p p>=1} {F : L0Space L} (GF : lpToL0 p p>=1 G = F)
+\lemma lp-limit-of {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1} {F : L0Space L} (GF : lpToL0 p p>=1 G = F)
   : (LpSpace L p p>=1).IsLimit {PosCone L} (\lam h => lpClip p p>=1 h.el>=0 F) G \elim GF
   | idp => clip-limit-Lp G
 
 -- | If $\kappa_h(F) \to G$ in `Lᵖ`, then $j_p G = F$.
-\lemma lp-of-limit {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : L0Space L} {G : LpSpace L p p>=1}
+\lemma lp-of-limit {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L} {G : LpSpace L p p>=1}
                    (Gl : (LpSpace L p p>=1).IsLimit {PosCone L} (\lam h => lpClip p p>=1 h.el>=0 F) G)
   : lpToL0 p p>=1 G = F
   => (L0Space L).limit-unique {PosCone L} (transport (\lam u => (L0Space L).IsLimit {PosCone L} u (lpToL0 p p>=1 G)) (ext \lam (h : PosCone L) => lpToL0-clip {L} {p} {p>=1} h.el>=0 F) (cont-limit {PosCone L} Gl (lpToL0 p p>=1)))
       (clip-limit-L0 F)
 
 -- | The values $\Psi_h(F)$, $h \in L^+$.
-\func psiValues {L : FullIntegrationSpace} (p : Real) (p>=1 : (1 : Real) <= p) (F : L0Space L) : Set Real
+\func psiValues {L : FullIntegrationSpace} (p : Real) (p>=1 : 1 <= p) (F : L0Space L) : Set Real
   => \lam x => ∃ (h : PosCone L) (l0Psi p p>=1 h.el>=0 F = x)
 
 -- | Theorem `thm:char`: if $F = j_p G$, then $\|G\|_p^p = \sup_h \Psi_h(F)$.
-\lemma lp-char-sup {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {G : LpSpace L p p>=1} {F : L0Space L} (GF : lpToL0 p p>=1 G = F)
+\lemma lp-char-sup {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {G : LpSpace L p p>=1} {F : L0Space L} (GF : lpToL0 p p>=1 G = F)
   : IsSup (psiValues p p>=1 F) (lpNormPow p p>=1 G) \elim GF
   | idp => (mono-limit-sup {PosCone L} (\lam {h} {h'} hh' => l0Psi-mono h.el>=0 hh' (lpToL0 p p>=1 G))).1 (psi-limit G)
   \where {
     -- | The net $\Psi_h(F)$ converges to $\|G\|_p^p$ if $F = j_p G$.
-    \lemma psi-limit {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} (G : LpSpace L p p>=1)
+    \lemma psi-limit {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} (G : LpSpace L p p>=1)
       : RealNormed.IsLimit {PosCone L} (\lam h => l0Psi p p>=1 h.el>=0 (lpToL0 p p>=1 G)) (lpNormPow p p>=1 G)
       => transport (\lam u => RealNormed.IsLimit {PosCone L} u (lpNormPow p p>=1 G)) (ext \lam (h : PosCone L) => lpClip-normPow {L} {p} {p>=1} h.el>=0 (lpToL0 p p>=1 G))
           (cont-limit {PosCone L} (clip-limit-Lp G) lpNormPow.cover)
   }
 
 -- | Theorem `thm:char`: `F ∈ L⁰` lies in `Lᵖ` if and only if $\sup_h \Psi_h(F)$ exists as a real number.
-\lemma lp-char {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : L0Space L}
+\lemma lp-char {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L}
   : IsLp p p>=1 F <-> ∃ (S : Real) (IsSup (psiValues p p>=1 F) S)
   => (\case __ \with {
         | inP (G,GF) => inP (lpNormPow p p>=1 G, lp-char-sup GF)
@@ -214,31 +214,31 @@
                                      => cauchy ((mono-limit-sup {PosCone L} (\lam {h} {h'} hh' => l0Psi-mono h.el>=0 hh' F)).2 s) s.1
                            \in inP (limit _ uc, lp-of-limit limit-isLimit))
   \where {
-    \lemma cauchy {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {F : L0Space L} {S : Real}
+    \lemma cauchy {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {F : L0Space L} {S : Real}
                   (l : RealNormed.IsLimit {PosCone L} (\lam h => l0Psi p p>=1 h.el>=0 F) S) (up : ∀ {x : psiValues p p>=1 F} (x <= S))
       : IsConvergent {PosCone L} (\lam h => lpClip p p>=1 h.el>=0 F)
       => (convergent-metric-real {PosCone L} {LpSpace L p p>=1}).2 \lam {eps} eps>0 =>
           \have | p>0 => fpow.one>0 p>=1
-                | e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
-                | e2<eps : eps * Real.fromRat (ratio 1 2) < eps => linarith
-                | d>0 : (0 : Real) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) p p>0 => transportInv ((0 : Real) <) (rpow-pos-eq e2>0) rpow-pos>0
+                | e2>0 : (0 : Real) < eps * ratio 1 2 => positivity
+                | e2<eps : eps * ratio 1 2 < eps => linarith
+                | d>0 : 0 < rpow (eps * ratio 1 2) (<=-less e2>0) p p>0 => transportInv (0 <) (rpow-pos-eq e2>0) rpow-pos>0
           \in \case limit-metric-real.1 l d>0 \with {
             | inP (N,h) => inP (N, \lam {n} N<=n =>
               \have | c => lpClip-cauchy N.el>=0 N<=n F
-                    | hN : RealNormed.dist S (l0Psi p p>=1 N.el>=0 F) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) p p>0 => h <=-refl
-                    | a : S - l0Psi p p>=1 N.el>=0 F <= RealNormed.dist S (l0Psi p p>=1 N.el>=0 F) => RealAbGroup.abs>=id
+                    | hN : RealNormed.dist S (l0Psi p p>=1 N.el>=0 F) < rpow (eps * ratio 1 2) (<=-less e2>0) p p>0 => h <=-refl
+                    | a : S - l0Psi p p>=1 N.el>=0 F <= RealNormed.dist S (l0Psi p p>=1 N.el>=0 F) => abs>=id
                     | un : l0Psi p p>=1 n.el>=0 F <= S => up (inP (n,idp))
-                    | q : lpNormPow p p>=1 (lpClip p p>=1 n.el>=0 F - lpClip p p>=1 N.el>=0 F) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) p p>0
+                    | q : lpNormPow p p>=1 (lpClip p p>=1 n.el>=0 F - lpClip p p>=1 N.el>=0 F) < rpow (eps * ratio 1 2) (<=-less e2>0) p p>0
                         => usingOnly (c,hN,a,un) linarith
               \in rpow-mono-inv (<=-less q) <∘r e2<eps)
           }
 
     -- | $\|\kappa_{h'}(F) - \kappa_h(F)\|_p^p \le \Psi_{h'}(F) - \Psi_h(F)$ for $0 \le h \le h'$.
-    \lemma lpClip-cauchy {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') (F : L0Space L)
+    \lemma lpClip-cauchy {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') (F : L0Space L)
       : lpNormPow p p>=1 (lpClip p p>=1 (h>=0 <=∘ h<=h') F - lpClip p p>=1 h>=0 F) <= l0Psi p p>=1 (h>=0 <=∘ h<=h') F - l0Psi p p>=1 h>=0 F
       => dense_<= real-join-uniform completion completion.isDenseEmbedding.1
           (lpNormPow.cover CoverMap.∘ subtract-uniform CoverMap.∘ ProductCoverSpace.tuple (lpClip p p>=1 (h>=0 <=∘ h<=h')) (lpClip p p>=1 h>=0))
-          (subtract-uniform {RealNormed} CoverMap.∘ ProductCoverSpace.tuple (l0Psi p p>=1 (h>=0 <=∘ h<=h')) (l0Psi p p>=1 h>=0))
+          (subtract-uniform CoverMap.∘ ProductCoverSpace.tuple (l0Psi p p>=1 (h>=0 <=∘ h<=h')) (l0Psi p p>=1 h>=0))
           (\lam f =>
             \have | ul : abs f ∧ h <= abs f ∧ h' => meet-monotone <=-refl h<=h'
                   | e : lpClip p p>=1 (h>=0 <=∘ h<=h') (pointCF {L0PreSpace L} f) - lpClip p p>=1 h>=0 (pointCF {L0PreSpace L} f) = lpInc p p>=1 (L.clip h' f - L.clip h f)
@@ -250,7 +250,7 @@
   }
 
 -- | Corollary `cor:interp`(1): $\mathrm L^p \cap \mathrm L^r \subseteq \mathrm L^s$ for $p \le s \le r$.
-\lemma lp-interp {L : FullIntegrationSpace} {p s r : Real} {p>=1 : (1 : Real) <= p} {s>=1 : (1 : Real) <= s} {r>=1 : (1 : Real) <= r}
+\lemma lp-interp {L : FullIntegrationSpace} {p s r : Real} {p>=1 : 1 <= p} {s>=1 : 1 <= s} {r>=1 : 1 <= r}
                  (p<=s : p <= s) (s<=r : s <= r) {F : L0Space L} (Fp : IsLp p p>=1 F) (Fr : IsLp r r>=1 F)
   : IsLp s s>=1 F
   => \case Fp, Fr \with {
@@ -259,17 +259,17 @@
             | rc : IsConvergent {PosCone L} (\lam h => lpClip r r>=1 h.el>=0 F) => limit-conv (lp-limit-of er)
             | sc : IsConvergent {PosCone L} (\lam h => lpClip s s>=1 h.el>=0 F) => (convergent-metric-real {PosCone L} {LpSpace L s s>=1}).2 \lam {eps} eps>0 =>
               \have | s>0 => fpow.one>0 s>=1
-                    | e2>0 : (0 : Real) < eps * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive eps>0 (rat_real_<.1 idp)
-                    | e2<eps : eps * Real.fromRat (ratio 1 2) < eps => linarith
-                    | T>0 : (0 : Real) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) s s>0 => transportInv ((0 : Real) <) (rpow-pos-eq e2>0) rpow-pos>0
-                    | T2>0 : (0 : Real) < rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) s s>0 * Real.fromRat (ratio 1 2) => RealField.<_*_positive_positive T>0 (rat_real_<.1 idp)
+                    | e2>0 : 0 < eps * ratio 1 2 => positivity
+                    | e2<eps : eps * ratio 1 2 < eps => linarith
+                    | T>0 : 0 < rpow (eps * ratio 1 2) (<=-less e2>0) s s>0 => transportInv (0 <) (rpow-pos-eq e2>0) rpow-pos>0
+                    | T2>0 : 0 < rpow (eps * ratio 1 2) (<=-less e2>0) s s>0 * ratio 1 2 => positivity
               \in \case lpNormPow-cauchy {L} {p} {p>=1} {PosCone L} pc T2>0, lpNormPow-cauchy {L} {r} {r>=1} {PosCone L} rc T2>0 \with {
                 | inP (N1,g1), inP (N2,g2) => \case isDirected {PosCone L} N1 N2 \with {
                   | inP (N,N1<=N,N2<=N) => inP (N, \lam {n} N<=n =>
                     \have | c => lpClip-interp p<=s s<=r n.el>=0 N.el>=0 F
                           | a => g1 (N1<=N <=∘ N<=n) N1<=N
                           | b => g2 (N2<=N <=∘ N<=n) N2<=N
-                          | q : lpNormPow s s>=1 (lpClip s s>=1 n.el>=0 F - lpClip s s>=1 N.el>=0 F) <= rpow (eps * Real.fromRat (ratio 1 2)) (<=-less e2>0) s s>0
+                          | q : lpNormPow s s>=1 (lpClip s s>=1 n.el>=0 F - lpClip s s>=1 N.el>=0 F) <= rpow (eps * ratio 1 2) (<=-less e2>0) s s>0
                               => usingOnly (c,a,b) linarith
                     \in rpow-mono-inv q <∘r e2<eps)
                 }
@@ -278,23 +278,23 @@
   }
   \where {
     -- | A convergent net in `Lᵖ` is Cauchy for $\|\cdot\|_p^p$.
-    \lemma lpNormPow-cauchy {L : FullIntegrationSpace} {q : Real} {q>=1 : (1 : Real) <= q} {I : DirectedSet} {u : I -> LpSpace L q q>=1}
-                            (uc : IsConvergent u) {T : Real} (T>0 : (0 : Real) < T)
+    \lemma lpNormPow-cauchy {L : FullIntegrationSpace} {q : Real} {q>=1 : 1 <= q} {I : DirectedSet} {u : I -> LpSpace L q q>=1}
+                            (uc : IsConvergent u) {T : Real} (T>0 : 0 < T)
       : ∃ (N : I) ∀ {n m : I} (N <= n -> N <= m -> lpNormPow q q>=1 (u n - u m) <= T)
       => \have | q>0 => fpow.one>0 q>=1
-               | d>0 : (0 : Real) < rpow T (<=-less T>0) (RealField.pinv q q>0) (RealField.pinv>0 q>0) => transportInv ((0 : Real) <) (rpow-pos-eq T>0) rpow-pos>0
+               | d>0 : 0 < rpow T (<=-less T>0) (RealField.pinv q q>0) (RealField.pinv>0 q>0) => transportInv (0 <) (rpow-pos-eq T>0) rpow-pos>0
          \in \case real_<-char.1 d>0 \with {
            | inP (e,e>0,e<d) => \case convergent-metric-char.double uc (rat_real_<.2 e>0) \with {
              | inP (N,g) => inP (N, \lam {n} {m} N<=n N<=m =>
-                 \have l : lnorm {LpSpace L q q>=1} (u n - u m) < Real.fromRat e
+                 \have l : lnorm {LpSpace L q q>=1} (u n - u m) < e
                          => (real_<_U {_} {lnorm {LpSpace L q q>=1} (u n - u m)}).2 $ transport (\lam x => ExUpperReal.U {x} e) ((LpSpace L q q>=1).norm-dist {u n} {u m}) (g N<=n N<=m)
                  \in rpow-mono {_} {_} {lnorm>=0} {<=-less d>0} (<=-less (l <∘ e<d)) <=∘ =_<= (lpToL0.root-pow {T} {<=-less T>0} {q} {q>0} {<=-less d>0}))
            }
          }
 
     -- | $\|\kappa^s_h F - \kappa^s_{h'} F\|_s^s \le \|\kappa^p_h F - \kappa^p_{h'} F\|_p^p + \|\kappa^r_h F - \kappa^r_{h'} F\|_r^r$.
-    \lemma lpClip-interp {L : FullIntegrationSpace} {p s r : Real} {p>=1 : (1 : Real) <= p} {s>=1 : (1 : Real) <= s} {r>=1 : (1 : Real) <= r}
-                         (p<=s : p <= s) (s<=r : s <= r) {h h' : L} (h>=0 : L.zro <= h) (h'>=0 : L.zro <= h') (F : L0Space L)
+    \lemma lpClip-interp {L : FullIntegrationSpace} {p s r : Real} {p>=1 : 1 <= p} {s>=1 : 1 <= s} {r>=1 : 1 <= r}
+                         (p<=s : p <= s) (s<=r : s <= r) {h h' : L} (h>=0 : 0 <= h) (h'>=0 : 0 <= h') (F : L0Space L)
       : lpNormPow s s>=1 (lpClip s s>=1 h>=0 F - lpClip s s>=1 h'>=0 F)
           <= lpNormPow p p>=1 (lpClip p p>=1 h>=0 F - lpClip p p>=1 h'>=0 F) + lpNormPow r r>=1 (lpClip r r>=1 h>=0 F - lpClip r r>=1 h'>=0 F)
       => dense_<= real-join-uniform completion completion.isDenseEmbedding.1 (D s>=1)
@@ -302,17 +302,17 @@
           (\lam f => =_<= (e s>=1) <=∘ L.integral-mono (fpow-interp p>=1 p<=s s<=r) <=∘ =_<= L.integral_+
                        <=∘ =_<= (inv (pmap2 (+) (e p>=1) (e r>=1)))) F
       \where {
-        \func D {q : Real} (q>=1 : (1 : Real) <= q) : CoverMap (L0Space L) RealNormed
+        \func D {q : Real} (q>=1 : 1 <= q) : CoverMap (L0Space L) RealNormed
           => lpNormPow.cover {L} {q} {q>=1} CoverMap.∘ subtract-uniform CoverMap.∘ ProductCoverSpace.tuple (lpClip q q>=1 h>=0) (lpClip q q>=1 h'>=0)
 
-        \lemma e {q : Real} (q>=1 : (1 : Real) <= q) {f : L}
+        \lemma e {q : Real} (q>=1 : 1 <= q) {f : L}
           : lpNormPow q q>=1 (lpClip q q>=1 h>=0 (pointCF {L0PreSpace L} f) - lpClip q q>=1 h'>=0 (pointCF {L0PreSpace L} f)) = pnormPow q q>=1 (L.clip h f - L.clip h' f)
           => pmap (lpNormPow q q>=1) (pmap2 (-) (lpClip.char h>=0 {f}) (lpClip.char h'>=0 {f}) *> inv (AddGroupHom.func-minus {lpInc q q>=1})) *> lpNormPow.char
       }
   }
 
 -- | Corollary `cor:interp`(1): $\|F\|_s^s \le \|F\|_p^p + \|F\|_r^r$.
-\lemma lp-interp-norm {L : FullIntegrationSpace} {p s r : Real} {p>=1 : (1 : Real) <= p} {s>=1 : (1 : Real) <= s} {r>=1 : (1 : Real) <= r}
+\lemma lp-interp-norm {L : FullIntegrationSpace} {p s r : Real} {p>=1 : 1 <= p} {s>=1 : 1 <= s} {r>=1 : 1 <= r}
                       (p<=s : p <= s) (s<=r : s <= r) {F : L0Space L} {Gp : LpSpace L p p>=1} {Gs : LpSpace L s s>=1} {Gr : LpSpace L r r>=1}
                       (ep : lpToL0 p p>=1 Gp = F) (es : lpToL0 s s>=1 Gs = F) (er : lpToL0 r r>=1 Gr = F)
   : lpNormPow s s>=1 Gs <= lpNormPow p p>=1 Gp + lpNormPow r r>=1 Gr
@@ -321,7 +321,7 @@
   }
   \where {
     -- | $\Psi^s_h \le \Psi^p_h + \Psi^r_h$ on `L⁰` for $p \le s \le r$.
-    \lemma l0Psi-interp {L : FullIntegrationSpace} {p s r : Real} {p>=1 : (1 : Real) <= p} {s>=1 : (1 : Real) <= s} {r>=1 : (1 : Real) <= r}
+    \lemma l0Psi-interp {L : FullIntegrationSpace} {p s r : Real} {p>=1 : 1 <= p} {s>=1 : 1 <= s} {r>=1 : 1 <= r}
                         (p<=s : p <= s) (s<=r : s <= r) {h : L} (h>=0 : L.zro <= h) (F : L0Space L)
       : l0Psi s s>=1 h>=0 F <= l0Psi p p>=1 h>=0 F + l0Psi r r>=1 h>=0 F
       => dense_<= real-join-uniform completion completion.isDenseEmbedding.1 (l0Psi s s>=1 h>=0)
@@ -335,14 +335,14 @@
   => \Pi (f : L) -> L.trunc f = f ∧ e
 
 -- | Corollary `cor:interp`(2) on `L`: $(\|f\|_p^p)^q \le c^{q-1} \|f\|_r^r$ for $r = p q$, $q \ge 1$ and $I(1) \le c$.
-\lemma pnormPow-unit {L : FullIntegrationSpace} {p q r : Real} {p>=1 : (1 : Real) <= p} (q>=1 : (1 : Real) <= q) {r>=1 : (1 : Real) <= r} (pq : p * q = r)
-                     {e : L} (eu : IsUnitElem e) {c : Real} (c>0 : (0 : Real) < c) (ec : L.integral e <= c) {f : L}
+\lemma pnormPow-unit {L : FullIntegrationSpace} {p q r : Real} {p>=1 : 1 <= p} (q>=1 : 1 <= q) {r>=1 : 1 <= r} (pq : p * q = r)
+                     {e : L} (eu : IsUnitElem e) {c : Real} (c>0 : 0 < c) (ec : L.integral e <= c) {f : L}
   : rpow (pnormPow p p>=1 f) pnormPow>=0 q (fpow.one>0 q>=1) <= rpow-pos c c>0 (q - 1) * pnormPow r r>=1 f
   => rpow-tangent-optimize q>=1 c>0 pnormPow>=0 pnormPow>=0 \lam {v} v>0 => real_<=-eps \lam {d} d>0 =>
       \have | C>0 : 0 < q * rpow-pos v v>0 (q - 1) => positivity
-            | c'>=0 : (0 : Real) <= (q - 1) * rpow-pos v v>0 q => RealField.<=_*_positive_positive (linarith : (0 : Real) <= q - 1) (<=-less rpow-pos>0)
-            | g>=0 : L.zro <= fpow p p>=1 f => fpow>=0
-            | dC>0 : (0 : Real) < Real.fromRat d * RealField.pinv (q * rpow-pos v v>0 (q - 1)) C>0 => RealField.<_*_positive_positive (rat_real_<.1 d>0) (RealField.pinv>0 C>0)
+            | c'>=0 : 0 <= (q - 1) * rpow-pos v v>0 q => RealField.<=_*_positive_positive (linarith : 0 <= q - 1) (<=-less rpow-pos>0)
+            | g>=0 : 0 <= fpow p p>=1 f => fpow>=0
+            | dC>0 : 0 < Real.fromRat d * RealField.pinv (q * rpow-pos v v>0 (q - 1)) C>0 => RealField.<_*_positive_positive (rat_real_<.1 d>0) (RealField.pinv>0 C>0)
       \in \case real_<-char.1 dC>0 \with {
         | inP (eps,eps>0,eps<dC) => \case L.integral-trunc-small g>=0 (rat_real_<.2 eps>0) \with {
           | inP (eta,eta>0,small) =>
@@ -356,9 +356,9 @@
                   | tr : L.integral (L.trunc (RatField.finv eta *q fpow p p>=1 f)) <= c => L.integral-mono (=_<= (eu _) <=∘ meet-right) <=∘ ec
                   | m1 : (q - 1) * rpow-pos v v>0 q * L.integral (L.trunc (RatField.finv eta *q fpow p p>=1 f)) <= (q - 1) * rpow-pos v v>0 q * c
                       => RealField.<=_*_positive-right c'>=0 tr
-                  | m2 : q * rpow-pos v v>0 (q - 1) * L.integral (L.truncAt eta (fpow p p>=1 f)) < q * rpow-pos v v>0 (q - 1) * Real.fromRat eps
+                  | m2 : q * rpow-pos v v>0 (q - 1) * L.integral (L.truncAt eta (fpow p p>=1 f)) < q * rpow-pos v v>0 (q - 1) * eps
                       => RealField.<_*_positive-right C>0 small
-                  | m3 : q * rpow-pos v v>0 (q - 1) * Real.fromRat eps < Real.fromRat d
+                  | m3 : q * rpow-pos v v>0 (q - 1) * eps < d
                       => RealField.<_*_positive-right C>0 eps<dC <∘l =_<= (equation.cRing {RealField.pinv-right C>0})
                   | tt : q * rpow-pos v v>0 (q - 1) * pnormPow p p>=1 f <= _ => =_<= (inv e1) <=∘ t <=∘ =_<= e2
             \in usingOnly (tt, m1, m2, m3) linarith
@@ -366,14 +366,14 @@
       }
 
 -- | Corollary `cor:interp`(2) on `L`: $\|f\|_p \le c^{1/p - 1/r} \|f\|_r$ for $p \le r$ and $I(1) \le c$.
-\lemma pnorm-unit {L : FullIntegrationSpace} {p r : Real} {p>=1 : (1 : Real) <= p} {r>=1 : (1 : Real) <= r} (p<=r : p <= r)
-                  {e : L} (eu : IsUnitElem e) {c : Real} (c>0 : (0 : Real) < c) (ec : L.integral e <= c) {f : L}
+\lemma pnorm-unit {L : FullIntegrationSpace} {p r : Real} {p>=1 : 1 <= p} {r>=1 : 1 <= r} (p<=r : p <= r)
+                  {e : L} (eu : IsUnitElem e) {c : Real} (c>0 : 0 < c) (ec : L.integral e <= c) {f : L}
   : pnorm p p>=1 f <= rpow-pos c c>0 (RealField.pinv p (fpow.one>0 p>=1) - RealField.pinv r (fpow.one>0 r>=1)) * pnorm r r>=1 f
   => \have | p>0 => fpow.one>0 p>=1
            | r>0 => fpow.one>0 r>=1
            | ip>0 => RealField.pinv>0 p>0
            | ir>0 => RealField.pinv>0 r>0
-           | q>=1 : (1 : Real) <= r * RealField.pinv p p>0 => =_<= (inv (RealField.pinv-right p>0)) <=∘ RealField.<=_*_positive-left p<=r (<=-less ip>0)
+           | q>=1 : 1 <= r * RealField.pinv p p>0 => =_<= (inv (RealField.pinv-right p>0)) <=∘ RealField.<=_*_positive-left p<=r (<=-less ip>0)
            | pq : p * (r * RealField.pinv p p>0) = r => equation.cRing {RealField.pinv-right p>0}
            | qr : r * RealField.pinv p p>0 * RealField.pinv r r>0 = RealField.pinv p p>0 => equation.cRing {RealField.pinv-right r>0}
            | qr' : (r * RealField.pinv p p>0 - 1) * RealField.pinv r r>0 = RealField.pinv p p>0 - RealField.pinv r r>0 => equation.cRing {RealField.pinv-right r>0}
@@ -388,52 +388,52 @@
      \in =_<= (inv lhs) <=∘ mono <=∘ =_<= rhs
 
 -- | The extension $\mathrm L^r \to \mathrm L^p$ of the identity of `L` for $p \le r$, if `L` has a unit (Corollary `cor:interp`(2)).
-\sfunc lpComp {L : FullIntegrationSpace} {p r : Real} (p>=1 : (1 : Real) <= p) (r>=1 : (1 : Real) <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
+\sfunc lpComp {L : FullIntegrationSpace} {p r : Real} (p>=1 : 1 <= p) (r>=1 : 1 <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
   : CoverMap (LpSpace L r r>=1) (LpSpace L p p>=1)
   => dense-lift (lpInc r r>=1) completion.isDenseEmbedding (lpInc p p>=1 CoverMap.∘ pre p>=1 r>=1 p<=r eu)
   \where \protected {
     -- | The identity `Lʳ → Lᵖ` on `L` is uniformly continuous.
-    \lemma pre {L : FullIntegrationSpace} {p r : Real} (p>=1 : (1 : Real) <= p) (r>=1 : (1 : Real) <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
+    \lemma pre {L : FullIntegrationSpace} {p r : Real} (p>=1 : 1 <= p) (r>=1 : 1 <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
       : UniformMetricMap (LpPreSpace L r r>=1) (LpPreSpace L p p>=1) (\lam f => f) \cowith
       | func-dist-uniform {eps} eps>0 =>
-        \let | c>0 : (0 : Real) < L.integral e ∨ 1 => RealField.zro<ide <∘l RealAbGroup.join-right
+        \let | c>0 : 0 < L.integral e ∨ 1 => RealField.zro<ide <∘l join-right
              | K => rpow-pos (L.integral e ∨ 1) c>0 (RealField.pinv p (fpow.one>0 p>=1) - RealField.pinv r (fpow.one>0 r>=1))
-        \in \have | K>0 : (0 : Real) < K => rpow-pos>0
-              | K1>0 : (0 : Real) < K + 1 => linarith
-              | d>0 : (0 : Real) < Real.fromRat eps * RealField.pinv (K + 1) K1>0 => RealField.<_*_positive_positive (rat_real_<.1 eps>0) (RealField.pinv>0 K1>0)
+        \in \have | K>0 : 0 < K => rpow-pos>0
+              | K1>0 : 0 < K + 1 => linarith
+              | d>0 : 0 < Real.fromRat eps * RealField.pinv (K + 1) K1>0 => RealField.<_*_positive_positive (rat_real_<.1 eps>0) (RealField.pinv>0 K1>0)
         \in \case real_<-char.1 d>0 \with {
           | inP (d,d>0',dK) => inP (d, rat_real_<.2 d>0', \lam {x} {x'} xd =>
-            \have | n : pnorm r r>=1 (x - x') < Real.fromRat d
+            \have | n : pnorm r r>=1 (x - x') < d
                       => (real_<_U {_} {pnorm r r>=1 (x - x')}).2 $ transport (\lam t => ExUpperReal.U {t} d) ((LpPreSpace L r r>=1).norm-dist {x} {x'}) xd
-                  | b : pnorm p p>=1 (x - x') <= K * pnorm r r>=1 (x - x') => pnorm-unit p<=r eu c>0 RealAbGroup.join-left
-                  | m : K * pnorm r r>=1 (x - x') <= K * Real.fromRat d => RealField.<=_*_positive-right (<=-less K>0) (<=-less n)
-                  | m' : (K + 1) * Real.fromRat d < Real.fromRat eps
+                  | b : pnorm p p>=1 (x - x') <= K * pnorm r r>=1 (x - x') => pnorm-unit p<=r eu c>0 join-left
+                  | m : K * pnorm r r>=1 (x - x') <= K * d => RealField.<=_*_positive-right (<=-less K>0) (<=-less n)
+                  | m' : (K + 1) * d < eps
                       => RealField.<_*_positive-right K1>0 dK <∘l =_<= (equation.cRing {RealField.pinv-right K1>0})
-                  | e1 : (K + 1) * Real.fromRat d = K * Real.fromRat d + Real.fromRat d => equation.cRing
-                  | lt : pnorm p p>=1 (x - x') < Real.fromRat eps => usingOnly (b, m, m', e1, d>0') linarith
+                  | e1 : (K + 1) * d = K * d + d => equation.cRing
+                  | lt : pnorm p p>=1 (x - x') < eps => usingOnly (b, m, m', e1, d>0') linarith
             \in transportInv (\lam t => ExUpperReal.U {t} eps) ((LpPreSpace L p p>=1).norm-dist {x} {x'}) (real_<_U.1 lt))
         }
 
-    \lemma char {L : FullIntegrationSpace} {p r : Real} {p>=1 : (1 : Real) <= p} {r>=1 : (1 : Real) <= r} (p<=r : p <= r) {e : L} (eu : IsUnitElem e) {f : L}
+    \lemma char {L : FullIntegrationSpace} {p r : Real} {p>=1 : 1 <= p} {r>=1 : 1 <= r} (p<=r : p <= r) {e : L} (eu : IsUnitElem e) {f : L}
       : lpComp p>=1 r>=1 p<=r eu (lpInc r r>=1 f) = lpInc p p>=1 f
       => rewrite (\peval lpComp p>=1 r>=1 p<=r eu) $ dense-lift-char completion.isDenseEmbedding {lpInc p p>=1 CoverMap.∘ pre p>=1 r>=1 p<=r eu} f
   }
 
 -- | Corollary `cor:interp`(2): the map `Lʳ → Lᵖ` is compatible with the embeddings into `L⁰`.
-\lemma lpToL0-comp {L : FullIntegrationSpace} {p r : Real} (p>=1 : (1 : Real) <= p) (r>=1 : (1 : Real) <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
+\lemma lpToL0-comp {L : FullIntegrationSpace} {p r : Real} (p>=1 : 1 <= p) (r>=1 : 1 <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
                    (G : LpSpace L r r>=1)
   : lpToL0 p p>=1 (lpComp p>=1 r>=1 p<=r eu G) = lpToL0 r r>=1 G
   => dense-lift-unique (lpInc r r>=1) lpInc.isDense (lpToL0 p p>=1 ContMap.∘ lpComp p>=1 r>=1 p<=r eu) (lpToL0 r r>=1)
       (\lam f => pmap (lpToL0 p p>=1) (lpComp.char p<=r eu) *> lpToL0.char *> inv lpToL0.char) G
 
 -- | Corollary `cor:interp`(2): $\mathrm L^r \subseteq \mathrm L^p$ for $p \le r$ if `L` has a unit.
-\lemma lp-finite {L : FullIntegrationSpace} {p r : Real} (p>=1 : (1 : Real) <= p) (r>=1 : (1 : Real) <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
+\lemma lp-finite {L : FullIntegrationSpace} {p r : Real} (p>=1 : 1 <= p) (r>=1 : 1 <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
                  {F : L0Space L} (Fr : IsLp r r>=1 F) : IsLp p p>=1 F
   => TruncP.map Fr \lam s => (lpComp p>=1 r>=1 p<=r eu s.1, lpToL0-comp p>=1 r>=1 p<=r eu s.1 *> s.2)
 
 -- | Corollary `cor:interp`(2): $\|G\|_p \le c^{1/p - 1/r} \|G\|_r$ for $c \ge I(1)$, $c > 0$.
-\lemma lpComp-norm {L : FullIntegrationSpace} {p r : Real} (p>=1 : (1 : Real) <= p) (r>=1 : (1 : Real) <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
-                   {c : Real} (c>0 : (0 : Real) < c) (ec : L.integral e <= c) (G : LpSpace L r r>=1)
+\lemma lpComp-norm {L : FullIntegrationSpace} {p r : Real} (p>=1 : 1 <= p) (r>=1 : 1 <= r) (p<=r : p <= r) {e : L} (eu : IsUnitElem e)
+                   {c : Real} (c>0 : 0 < c) (ec : L.integral e <= c) (G : LpSpace L r r>=1)
   : lnorm {LpSpace L p p>=1} (lpComp p>=1 r>=1 p<=r eu G) <= rpow-pos c c>0 (RealField.pinv p (fpow.one>0 p>=1) - RealField.pinv r (fpow.one>0 r>=1)) * lnorm {LpSpace L r r>=1} G
   => dense_<= real-join-uniform (lpInc r r>=1) lpInc.isDense (lnorm-metric CoverMap.∘ lpComp p>=1 r>=1 p<=r eu)
       (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const _) lnorm-metric)
