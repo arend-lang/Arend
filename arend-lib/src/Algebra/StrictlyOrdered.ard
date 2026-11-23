@@ -179,6 +179,15 @@
   \lemma negative_<-inv {x y : E} (p : negative x < negative y) : y < x
     => transport2 (<) negative-isInv negative-isInv (negative_< p)
 
+  \lemma <_--left (z : E) {x y : E} (x<y : x < y) : x - z < y - z
+    => <_+-left (negative z) x<y
+
+  \lemma <_--right (z : E) {x y : E} (x<y : x < y) : z - y < z - x
+    => <_+-right z (negative_< x<y)
+
+  \lemma <_- {a b c d : E} (a<b : a < b) (d<c : d < c) : a - c < b - d
+    => <_+ a<b (negative_< d<c)
+
   \lemma negative_<-left {x y : E} (p : negative x < y) : negative y < x
     => transport (_ <) negative-isInv (negative_< p)
 

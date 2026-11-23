@@ -132,6 +132,9 @@
   \lemma negative_<=-conv {x y : E} (p : negative y <= negative x) : x <= y
     => transport2 (<=) negative-isInv negative-isInv (negative_<= p)
 
+  \lemma <=_- {a b c d : E} (a<=b : a <= b) (d<=c : d <= c) : a - c <= b - d
+    => <=_+ a<=b (negative_<= d<=c)
+
   \lemma negative>=0 {x : E} (x<=0 : x <= 0) : 0 <= negative x
     => transport (<= _) negative_zro (negative_<= x<=0)
 
@@ -534,6 +537,9 @@
 
   \lemma natCoef_<= {n m : Nat} (p : n NatSemiring.<= m) : natCoef n <= natCoef m
     => rewrite (inv (<=_exists p), natCoef_+) $ transport (<= _) zro-right $ <=_+ <=-refl natCoef>=0
+
+  \lemma <=_*-monotone {a b c d : E} (a<=b : a <= b) (c<=d : c <= d) (c>=0 : 0 <= c) (b>=0 : 0 <= b) : a * c <= b * d
+    => <=_*_positive-left a<=b c>=0 <=∘ <=_*_positive-right b>=0 c<=d
 
   \lemma pow>=0 {a : E} {k : Nat} (a>=0 : 0 <= a) : 0 <= pow a k \elim k
     | 0 => zro<=ide

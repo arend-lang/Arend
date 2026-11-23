@@ -107,6 +107,7 @@
   | suc n => pmap (rpow-pos x x>0) (inv $ RealAbGroup.+-rat {n} {1}) *> rpow-pos_+ *> pmap2 (*) rpow-pos-nat rpow-pos-one
 
 -- | `x ↦ x^a` is monotone for `a ≥ 0`.
+\attr gcongr
 \lemma rpow-pos-mono {x y : Real} {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} {a : Real} (a>=0 : (0 : Real) <= a) (x<=y : x <= y)
   : rpow-pos x x>0 a <= rpow-pos y y>0 a
   => =_<= rpow-pos-def <=∘ Real-exp-mono (<=_*_positive-right a>=0 (log-mono x>0 y>0 x<=y)) <=∘ =_<= (inv rpow-pos-def)
@@ -185,6 +186,7 @@
       => CoverTransfer-univ _ __.1 (real-join-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const d) (CoverTransfer-map __.1))
 
 -- | `x ↦ x^a` is monotone on `[0,∞)`.
+\attr gcongr
 \lemma rpow-mono {x y : Real} {x>=0 : (0 : Real) <= x} {y>=0 : (0 : Real) <= y} {a : Real} {a>0 : (0 : Real) < a} (x<=y : x <= y)
   : rpow x x>=0 a a>0 <= rpow y y>=0 a a>0
   => dense_<= real-join-uniform (ProductCoverSpace.prod pos-nonneg-map pos-nonneg-map) (ProductTopSpace.prod.isDense pos-nonneg-denseEmbedding.1 pos-nonneg-denseEmbedding.1)

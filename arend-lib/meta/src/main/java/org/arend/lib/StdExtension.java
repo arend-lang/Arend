@@ -39,6 +39,8 @@ import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
 import org.arend.lib.meta.linear.LinearSolverMeta;
+import org.arend.lib.meta.gcongr.GcongrDeferredMeta;
+import org.arend.lib.meta.gcongr.GcongrMeta;
 import org.arend.lib.meta.positivity.PositivityDeferredMeta;
 import org.arend.lib.meta.positivity.PositivityMeta;
 import org.arend.lib.meta.arith.IntArithMeta;
@@ -563,6 +565,22 @@ public class StdExtension implements ArendExtension {
         A proof of `0 < e` is weakened to `0 <= e` and `e /= 0` when needed.
         An optional argument `using`, `usingOnly`, or `hiding` controls the context.
         """), makeDef(positivityRef[0]));
+    MetaRef[] gcongrRef = new MetaRef[1];
+    gcongrRef[0] = factory.metaRef(factory.moduleRef(algebra), "gcongr", Precedence.DEFAULT, null, null, null,
+        new DependencyMetaTypechecker(GcongrMeta.class, () -> new GcongrDeferredMeta(new GcongrMeta(() -> gcongrRef[0]))));
+    contributor.declare(multiline("""
+        Proves goals of the form `f a_1 ... a_n < f b_1 ... b_n` and `f a_1 ... a_n <= f b_1 ... b_n` by monotonicity of `f` in the arguments in which the two sides differ.
+
+        The goal is reduced by monotonicity lemmas whose conclusion unifies with it: their main premises, which relate `a_i` and `b_i`, are proved recursively,
+        and their side conditions are proved by `positivity` or by hypotheses from the context.
+        A goal `a R b` is also closed by a hypothesis (`a < b` proves `a <= b`) and, if `a` and `b` coincide, by reflexivity.
+        For example, if `p : a <= b` and `q : c < d`, then `gcongr` proves `a * x + c < b * x + d` when `positivity` proves `0 <= x`.
+        Lemmas about the algebraic operations are built in; other lemmas are added with `\\attr gcongr`.
+
+        If some subgoals cannot be proved, they should be proved by the argument of `gcongr`, which is a tuple of proofs of these subgoals
+        (or just a proof if there is only one subgoal).
+        For example, the expected type of the argument of `gcongr {?}` shows the remaining subgoals.
+        """), makeDef(gcongrRef[0]));
     contributor.declare(text("Like linarith, but additionally synthesizes hypotheses about div, mod, and truncated minus (-') subterms for Nat"),
         makeDef(algebra, "natarith", new DependencyMetaTypechecker(NatArithMeta.class, () -> new DeferredMetaDefinition(new NatArithMeta(), true))));
     contributor.declare(text("Like linarith, but additionally converts strict Int inequalities x < y into isuc x <= y"),

@@ -1,14 +1,10 @@
 package org.arend.lib.meta.positivity;
 
-import org.arend.ext.concrete.ConcreteFactory;
-import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreInferenceVariable;
-import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.definition.CoreClassDefinition;
-import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
@@ -29,21 +25,14 @@ import java.util.*;
  * and, for {@code 0 <= t} and {@code t /= 0}, by weakening a proof of {@code 0 < t}.
  * Every attempt is made in a saved typechecker state which is restored if the attempt fails.
  */
-public class Positivity {
+public class Positivity extends OrderSearch {
   private static final int MAX_DEPTH = 32;
   private static final int MAX_PARAMETERS = 16;
 
-  private final ExpressionTypechecker typechecker;
-  private final ConcreteFactory factory;
-  private final ConcreteExpression marker;
-  private final PositivityMeta meta;
   private final List<PositivityRule> rules;
-  private final List<CoreBinding> bindings;
   private final List<Hypothesis> hypotheses = new ArrayList<>();
   private final List<MemoEntry> memo = new ArrayList<>();
   private final List<CoreExpression> inProgress = new ArrayList<>();
-  private CoreExpression natInstance;
-  private final Map<List<Object>, Object> implementationHeads = new HashMap<>();
 
   public record Goal(Strictness strictness, CoreExpression type, CoreExpression term, CoreExpression zero, @Nullable CoreExpression instance, boolean linear) {}
 
@@ -52,30 +41,18 @@ public class Positivity {
   private record MemoEntry(CoreExpression type, @Nullable TypedExpression proof) {}
 
   public Positivity(ExpressionTypechecker typechecker, ConcreteExpression marker, PositivityMeta meta, List<PositivityRule> rules, List<CoreBinding> bindings) {
-    this.typechecker = typechecker;
-    this.factory = typechecker.getFactory().withData(marker);
-    this.marker = marker;
-    this.meta = meta;
+    super(typechecker, marker, meta, bindings);
     this.rules = rules;
-    this.bindings = bindings;
     for (CoreBinding binding : bindings) {
-      Relation relation = Relation.parse(binding.getType(), meta, getNatInstance());
+      Relation relation = parseRelation(binding.getType());
       if (relation != null) {
         hypotheses.add(new Hypothesis(binding, relation, isZero(relation.other(), relation.instance())));
       }
     }
   }
 
-  private CoreExpression getNatInstance() {
-    if (natInstance == null) {
-      TypedExpression result = typechecker.typecheck(factory.ref(meta.NatSemiring.getRef()), null);
-      natInstance = result == null ? null : result.getExpression();
-    }
-    return natInstance;
-  }
-
   public @Nullable Goal makeGoal(CoreExpression type) {
-    Relation relation = Relation.parse(type, meta, getNatInstance());
+    Relation relation = parseRelation(type);
     return relation == null || !isZero(relation.other(), relation.instance()) ? null : new Goal(relation.kind(), type, relation.term(), relation.other(), relation.instance(), relation.linear());
   }
 
@@ -86,10 +63,9 @@ public class Positivity {
   private boolean isZero(CoreExpression expr, @Nullable CoreExpression instance) {
     if (isZeroSyntactically(expr)) return true;
     if (instance == null) return false;
-    CoreExpression zeroExpr = expr;
     return Boolean.TRUE.equals(Utils.tryTypecheck(typechecker, tc -> {
       TypedExpression zero = tc.typecheck(factory.app(factory.ref(meta.zro.getRef()), factory.arg(core(instance), false)), null);
-      boolean ok = zero != null && tc.compare(zeroExpr, zero.getExpression(), CMP.EQ, marker, false, true, false);
+      boolean ok = zero != null && tc.compare(expr, zero.getExpression(), CMP.EQ, marker, false, true, false);
       tc.loadSavedState();
       return ok ? true : null;
     }));
@@ -98,11 +74,18 @@ public class Positivity {
   private boolean isZeroSyntactically(CoreExpression expr) {
     for (int i = 0; i < 2; i++) {
       expr = Relation.deref(expr);
-      if (expr instanceof CoreIntegerExpression intExpr) return intExpr.getBigInteger().equals(BigInteger.ZERO);
-      if (expr instanceof CoreFieldCallExpression fieldCall && fieldCall.getDefinition() == meta.zro) return true;
-      if (expr instanceof CoreConCallExpression conCall && conCall.getDefinition().getRef().equals(meta.posRef) && conCall.getDefCallArguments().size() == 1) {
-        expr = conCall.getDefCallArguments().getFirst();
-        continue;
+      switch (expr) {
+        case CoreIntegerExpression intExpr -> {
+          return intExpr.getBigInteger().equals(BigInteger.ZERO);
+        }
+        case CoreFieldCallExpression fieldCall when fieldCall.getDefinition() == meta.zro -> {
+          return true;
+        }
+        case CoreConCallExpression conCall when conCall.getDefinition().getRef().equals(meta.posRef) && conCall.getDefCallArguments().size() == 1 -> {
+          expr = conCall.getDefCallArguments().getFirst();
+          continue;
+        }
+        default -> {}
       }
       CoreExpression normExpr = expr.normalize(NormalizationMode.WHNF);
       if (normExpr == expr) return false;
@@ -111,44 +94,19 @@ public class Positivity {
     return false;
   }
 
-  private boolean compareTerms(CoreExpression expr1, CoreExpression expr2) {
-    return Boolean.TRUE.equals(Utils.tryTypecheck(typechecker, tc -> {
-      boolean ok = tc.compare(expr1, expr2, CMP.EQ, marker, false, false, false);
-      tc.loadSavedState();
-      return ok ? true : null;
-    }));
-  }
-
-  private interface Attempt {
-    @Nullable TypedExpression run(ExpressionTypechecker tc);
+  @Override
+  protected int mark() {
+    return memo.size();
   }
 
   /**
-   * Runs {@code attempt} in a saved state; restores the state and the memo table if it fails.
+   * Proofs found during a failed attempt may refer to its inference variables; failures remain valid.
    */
-  private @Nullable TypedExpression attempt(Attempt attempt) {
-    int memoSize = memo.size();
-    TypedExpression result = Utils.tryTypecheck(typechecker, tc -> {
-      TypedExpression res = attempt.run(tc);
-      if (res == null) tc.loadSavedState();
-      return res;
-    });
-    if (result == null) {
-      // Proofs found during a failed attempt may refer to its inference variables; failures remain valid
-      for (int i = memo.size() - 1; i >= memoSize; i--) {
-        if (memo.get(i).proof != null) memo.remove(i);
-      }
+  @Override
+  protected void rollback(int memoSize) {
+    for (int i = memo.size() - 1; i >= memoSize; i--) {
+      if (memo.get(i).proof != null) memo.remove(i);
     }
-    return result;
-  }
-
-  private @Nullable TypedExpression check(ExpressionTypechecker tc, ConcreteExpression expr, CoreExpression type) {
-    TypedExpression result = tc.typecheck(expr, type);
-    return result == null || result.getExpression() instanceof CoreErrorExpression ? null : result;
-  }
-
-  private ConcreteExpression core(CoreExpression expr) {
-    return factory.core(expr.computeTyped());
   }
 
   /**
@@ -179,38 +137,6 @@ public class Positivity {
       TypedExpression result = check(tc, factory.app(rel, factory.arg(factory.core(typedInstance), false), factory.arg(factory.core(zero), true), factory.arg(core(term), true)), null);
       return result == null ? null : new Goal(strictness, result.getExpression(), term, zeroExpr, typedInstance.getExpression(), isLinear);
     });
-  }
-
-  private @Nullable ConcreteExpression instanceOf(CoreClassDefinition instanceClass, CoreExpression term, @Nullable CoreExpression instance) {
-    if (instance != null) {
-      CoreClassCallExpression classCall = Utils.getClassCall(instance.computeType());
-      if (classCall != null && classCall.getDefinition().isSubClassOf(instanceClass)) {
-        return core(instance);
-      }
-    }
-    CoreExpression carrier = term.computeType().normalize(NormalizationMode.WHNF);
-    return Utils.tryTypecheck(typechecker, tc -> tc.findInstance(instanceClass, carrier, marker));
-  }
-
-  /**
-   * Applies a dynamic lemma of {@code lemmaClass} to {@code args}; {@code instance} is passed explicitly if it is an instance of this class.
-   */
-  private ConcreteExpression appWithInstance(ArendRef lemma, CoreClassDefinition lemmaClass, @Nullable CoreExpression instance, ConcreteExpression... args) {
-    List<ConcreteArgument> arguments = new ArrayList<>(args.length + 1);
-    if (instance != null) {
-      CoreClassCallExpression classCall = Utils.getClassCall(instance.computeType());
-      if (classCall != null && classCall.getDefinition().isSubClassOf(lemmaClass)) {
-        arguments.add(factory.arg(core(instance), false));
-      }
-    }
-    for (ConcreteExpression arg : args) {
-      arguments.add(factory.arg(arg, true));
-    }
-    return factory.app(factory.ref(lemma), arguments);
-  }
-
-  private static boolean isGround(CoreExpression expr) {
-    return !expr.processSubexpression(e -> e instanceof CoreInferenceReferenceExpression ? CoreExpression.FindAction.STOP : CoreExpression.FindAction.CONTINUE);
   }
 
   public @Nullable TypedExpression prove(Goal goal) {
@@ -248,7 +174,7 @@ public class Positivity {
 
     Object head = Relation.head(goal.term);
     for (PositivityRule rule : rules) {
-      if (rule.strictness() == goal.strictness && matchesHead(rule, head, goal)) {
+      if (rule.strictness() == goal.strictness && matchesHead(rule.head(), head, goal.term, goal.instance)) {
         result = applyRule(rule, goal);
         if (result != null) return result;
       }
@@ -258,39 +184,6 @@ public class Positivity {
       return proveByWeakening(goal);
     }
     return null;
-  }
-
-  /**
-   * Checks if the head of the conclusion of {@code rule} can match {@code termHead}.
-   * A field can match a function if the function is its implementation in the instance of the goal.
-   */
-  private boolean matchesHead(PositivityRule rule, @Nullable Object termHead, Goal goal) {
-    Object ruleHead = rule.head();
-    if (ruleHead == null || ruleHead.equals(termHead)) return true;
-    if (!(ruleHead instanceof CoreClassField field) || termHead instanceof CoreClassField) return false;
-    if (termHead == null) return false;
-    return termHead.equals(getImplementationHead(field, goal));
-  }
-
-  private @Nullable Object getImplementationHead(CoreClassField field, Goal goal) {
-    Object instanceHead = goal.instance == null ? goal.term.computeType() : Relation.head(goal.instance);
-    List<Object> key = List.of(field, instanceHead == null ? goal.term.computeType() : instanceHead);
-    if (implementationHeads.containsKey(key)) return implementationHeads.get(key);
-    Object result = Utils.tryTypecheck(typechecker, tc -> {
-      ConcreteExpression instance = instanceOf(field.getParentClass(), goal.term, goal.instance);
-      if (instance == null) return null;
-      TypedExpression typed = check(tc, factory.app(factory.ref(field.getRef()), factory.arg(instance, false)), null);
-      if (typed == null) return null;
-      CoreExpression expr = typed.getExpression().normalize(NormalizationMode.WHNF);
-      while (expr instanceof CoreLamExpression lamExpr) {
-        expr = lamExpr.getBody();
-      }
-      Object head = Relation.head(expr);
-      tc.loadSavedState();
-      return head;
-    });
-    implementationHeads.put(key, result);
-    return result;
   }
 
   private @Nullable TypedExpression proveByHypothesis(Goal goal) {
@@ -382,28 +275,12 @@ public class Positivity {
       }
 
       // Instantiate parameters: implicit ones with holes and explicit ones (premises) with inference variables
-      TypedExpression typed = tc.typecheck(fun, null);
-      List<CoreInferenceReferenceExpression> premises = new ArrayList<>();
-      for (int i = 0; typed != null && !(typed.getExpression() instanceof CoreErrorExpression) && i < MAX_PARAMETERS; i++) {
-        CoreExpression type = Relation.deref(typed.getType());
-        if (Relation.parseSyntactically(type, meta, getNatInstance()) != null) break;
-        if (!(type instanceof CorePiExpression)) type = type.normalize(NormalizationMode.WHNF);
-        if (!(type instanceof CorePiExpression piType)) break;
-        CoreParameter parameter = piType.getParameters();
-        ConcreteExpression arg;
-        if (parameter.isExplicit()) {
-          CoreInferenceReferenceExpression premise = tc.generateNewInferenceVariable("p" + (premises.size() + 1), parameter.getType(), marker, false);
-          premises.add(premise);
-          arg = factory.core(premise.computeTyped());
-        } else {
-          arg = factory.hole();
-        }
-        typed = tc.typecheck(factory.app(factory.core(typed), factory.arg(arg, parameter.isExplicit())), null);
-      }
-      if (typed == null || typed.getExpression() instanceof CoreErrorExpression) return null;
+      Instance inst = instantiate(tc, fun, MAX_PARAMETERS, (i, parameter, type) -> parameter.isExplicit() ? ArgumentMode.PREMISE : ArgumentMode.HOLE);
+      if (inst == null) return null;
+      TypedExpression typed = inst.typed();
       if (!tc.compare(typed.getType(), goal.type, CMP.LE, marker, true, true, false)) return null;
 
-      for (CoreInferenceReferenceExpression premise : premises) {
+      for (CoreInferenceReferenceExpression premise : inst.premises()) {
         CoreInferenceVariable variable = premise.getVariable();
         if (variable == null) return null;
         TypedExpression proof = provePremise(premise.computeType());
@@ -415,7 +292,7 @@ public class Positivity {
 
   private @Nullable TypedExpression provePremise(CoreExpression type) {
     // The subgoal is rebuilt from the instantiated term, so that it does not refer to inference variables of the rule
-    Relation relation = Relation.parse(type, meta, getNatInstance());
+    Relation relation = parseRelation(type);
     Goal subgoal = relation == null || !isZero(relation.other(), relation.instance()) ? null : makeGoal(relation.kind(), Relation.deref(relation.term()), Relation.deref(relation.other()), relation.instance() == null ? null : Relation.deref(relation.instance()), relation.linear());
     if (subgoal != null) {
       TypedExpression proof = prove(subgoal);

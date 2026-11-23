@@ -64,6 +64,7 @@
           transport2 (<) (inv zro_*-left) (realQuot-incr exp-real-hasDeriv a b) (OrderedAddGroup.to>0 e)
 
 -- | `log` is strictly monotone.
+\attr gcongr
 \lemma log-Real-strict-mono {x y : Real} (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y) (x<y : x < y)
   : log x x>0 < log y y>0
   => Real-exp-reflect-< $ transport2 (<) (inv (exp_log x x>0)) (inv (exp_log y y>0)) x<y

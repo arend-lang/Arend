@@ -61,6 +61,7 @@
 \lemma root_ide {n : Nat} (n/=0 : n /= 0) : root n 1 = 1
   => pmap (root n) (inv Monoid.pow_ide) *> root_pow n/=0 (<=-less zro<ide)
 
+\attr gcongr
 \lemma root-monotone {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : root n x < root n y
   => real-cont_<-inv-mono {pow __ n} (\lam p => RealField.pow_<=-monotone root>=0 $ <=-less p) (cont-char.1 TopMonoid.pow-cont _) $ transport2 (<) (inv $ pow_root n/=0 x>=0) (inv $ pow_root n/=0 $ x>=0 <=∘ <=-less x<y) x<y
 
@@ -97,6 +98,7 @@
 \lemma sqrt_ide : sqrt 1 = 1
   => (\peval sqrt 1) *> root_ide suc/=0
 
+\attr gcongr
 \lemma sqrt-monotone {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : sqrt x < sqrt y
   => transport2 (<) (inv \peval sqrt x) (inv \peval sqrt y) $ root-monotone suc/=0 x>=0 x<y
 

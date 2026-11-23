@@ -234,6 +234,7 @@
        *> inv (exp_+ *> pmap2 (*) (exp_log x x>0) (exp_log y y>0))
 
 -- | {log} is monotone.
+\attr gcongr
 \lemma log-mono {x y : Real} (x>0 : (0 : Real) < x) (y>0 : (0 : Real) < y) (x<=y : x <= y)
   : log x x>0 <= log y y>0
   => \lam q => x<=y $ transport2 (<) (exp_log y y>0) (exp_log x x>0) (Real-exp-strict-mono q)

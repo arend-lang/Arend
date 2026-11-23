@@ -164,6 +164,7 @@
   }
 
 -- | Real {exp} is strictly monotone increasing.
+\attr gcongr
 \lemma Real-exp-strict-mono {x y : Real} (x<y : x < y) : exp x < exp y
   => \have | y-eq : y = x + (y - x)
               => inv (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)
@@ -175,6 +176,7 @@
      \in transport2 (<) ide-right (inv exp-y-eq) step
 
 -- | Real {exp} is monotone.
+\attr gcongr
 \lemma Real-exp-mono {x y : Real} (x<=y : x <= y) : exp x <= exp y
   => \have | y-eq : y = x + (y - x)
               => inv (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)

@@ -1,0 +1,141 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.StrictlyOrdered
+\import Arith.Exp
+\import Arith.Exp.Real
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\open Monoid(pow)
+\open AddMonoid(BigSum)
+
+-- Addition
+
+\lemma test-add {E : PosetAddMonoid} {a b c d : E} (p : a <= b) (q : c <= d) : a + c <= b + d
+  => gcongr
+
+\lemma test-add-left {E : PosetAddMonoid} {a b c : E} (p : a <= b) : a + c <= b + c
+  => gcongr
+
+\lemma test-add-less {E : OrderedAddMonoid} {a b c d : E} (p : a < b) (q : c < d) : a + c < b + d
+  => gcongr
+
+\lemma test-add-less-left {E : OrderedAddMonoid} {a b c : E} (p : a < b) : a + c < b + c
+  => gcongr
+
+\lemma test-add-less-right {E : OrderedAddMonoid} {a b c : E} (p : a < b) : c + a < c + b
+  => gcongr
+
+\lemma test-add-mixed {E : LinearlyOrderedAbMonoid} {a b c d : E} (p : a <= b) (q : c < d) : a + c < b + d
+  => gcongr
+
+\lemma test-weaken {E : LinearlyOrderedAbMonoid} {a b c : E} (p : a < b) : a + c <= b + c
+  => gcongr
+
+\lemma test-greater {E : OrderedAddMonoid} {a b c : E} (p : a < b) : b + c > a + c
+  => gcongr
+
+-- Negation and subtraction
+
+\lemma test-negative {E : PosetAddGroup} {a b : E} (p : a <= b) : negative b <= negative a
+  => gcongr
+
+\lemma test-sub {E : OrderedAddGroup} {a b c d : E} (p : a < b) (q : d < c) : a - c < b - d
+  => gcongr
+
+\lemma test-sub-le {E : PosetAddGroup} {a b c : E} (p : a <= b) : c - b <= c - a
+  => gcongr
+
+-- Multiplication
+
+\lemma test-mul {R : LinearlyOrderedSemiring} {a b c : R} (p : a <= b) : a * (c * c) <= b * (c * c)
+  => gcongr
+
+\lemma test-mul-less {R : OrderedSemiring} {a b c : R} (p : a < b) (c>0 : 0 < c) : c * a < c * b
+  => gcongr
+
+\lemma test-mul-both {R : LinearlyOrderedSemiring} {a b c d : R} (p : a <= b) (q : c <= d) (a>=0 : 0 <= a) (c>=0 : 0 <= c) : a * c <= b * d
+  => gcongr
+
+\lemma test-nested {R : LinearlyOrderedSemiring} {a b c d x : R} (p : a <= b) (q : c < d) : a * (x * x) + c < b * (x * x) + d
+  => gcongr
+
+\lemma test-pow {R : LinearlyOrderedSemiring} {a b : R} {n : Nat} (p : a <= b) (a>=0 : 0 <= a) : pow a n <= pow b n
+  => gcongr
+
+-- Inverses
+
+\lemma test-finv {F : DiscreteOrderedField} {a b : F} (a>0 : 0 < a) (p : a <= b) : finv b <= finv a
+  => gcongr
+
+-- Lattices
+
+\lemma test-join {L : JoinSemilattice} {a b c d : L} (p : a <= b) (q : c <= d) : a ∨ c <= b ∨ d
+  => gcongr
+
+-- Nat and Real
+
+\lemma test-nat {n m k : Nat} (p : n <= m) : n + k <= m + k
+  => gcongr
+
+\lemma test-real {x y z : Real} (p : x < y) : x + z < y + z
+  => gcongr
+
+\lemma test-real-mul {x y z : Real} (p : x <= y) (z>=0 : 0 <= z) : x * z <= y * z
+  => gcongr
+
+\lemma test-exp {x y z : Real} (p : x <= y) : exp x + z <= exp y + z
+  => gcongr
+
+\lemma test-exp-strict {x y : Real} (p : x < y) : exp (x + 1) < exp (y + 1)
+  => gcongr
+
+\lemma test-sqrt {x y : Real} (x>=0 : 0 <= x) (p : x < y) : sqrt (x + 1) < sqrt (y + 1)
+  => gcongr
+
+\lemma test-int {n m : Nat} (p : n <= m) : pos n <= pos m
+  => gcongr
+
+\lemma test-nat-mul {n m k : Nat} (p : n <= m) : n * k <= m * k
+  => gcongr
+
+-- More operations
+
+\lemma test-mul-less-both {R : OrderedSemiring} {a b c d : R} (a>0 : 0 < a) (c>0 : 0 < c) (p : a < b) (q : c < d) : a * c < b * d
+  => gcongr
+
+\lemma test-meet-less {L : BiorderedLattice} {a b c d : L} (p : a < b) (q : c < d) : a ∧ c < b ∧ d
+  => gcongr
+
+\lemma test-part {L : LatticeAbGroup} {a b : L} (p : a <= b) : LatticeAbGroup.part+ a <= LatticeAbGroup.part+ b
+  => gcongr
+
+\lemma test-pinv {F : OrderedField} {a b : F} (a>0 : 0 < a) (b>0 : 0 < b) (p : a < b) : OrderedField.pinv b b>0 < OrderedField.pinv a a>0
+  => gcongr
+
+\lemma test-bigSum {E : PosetAddMonoid} {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> l j <= l' j) : BigSum l <= BigSum l'
+  => gcongr
+
+\lemma test-bigSum-arg {E : PosetAddMonoid} {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> l j <= l' j) (c : E) : BigSum l + c <= BigSum l' + c
+  => gcongr
+
+\lemma test-refl {E : PosetAddMonoid} {a b : E} : a + b <= a + b
+  => gcongr
+
+-- Subgoals
+
+\lemma test-subgoal1 {E : PosetAddMonoid} {a b c d : E} (h : \Sigma (a <= b) (c <= d)) : a + c <= b + d
+  => gcongr h
+
+\lemma test-subgoal2 {E : PosetAddMonoid} {a b c d : E} (p : \Pi (x : Nat) -> a <= b) (q : c <= d) : a + c <= b + d
+  => gcongr (p 0)
