@@ -154,7 +154,7 @@
       \where
         \lemma div-bound {a c : Real} (c>0 : 0 < c) (c>=1 : 1 <= c) : abs (a * RealField.pinv c c>0) <= abs a
           => rewrite (RealField.abs_* {a}, RealAbGroup.abs-ofPos (<=-less (RealField.pinv>0 c>0))) $
-               RealField.<=_*_positive-right RealAbGroup.abs>=0 (RealField.pinv<=1 c>0 c>=1) <=∘ =_<= RealField.ide-right
+               gcongr (RealField.pinv<=1 c>0 c>=1) <=∘ =_<= RealField.ide-right
 
     -- | On a proper uniform space, functions with totally bounded support are uniform.
     \lemma uniform {X : UniformSpace} (Xp : X.IsProperUniform) (f : CompactCoverMap X) : UniformMap X RealNormed f
@@ -314,7 +314,7 @@
            \have | s : RealAbGroup.BigSum (\lam j => abs (fs j x - fs j y)) <= n RealField.* d
                      => RealAbGroup.BigSum_<= (\lam j => <=-less (g c j)) <=∘ =_<= RealField.BigSum_replicate
                  | t : L * (n RealField.* d) = d * (L * n + 1) - d => equation.cRing
-           \in (hL x y <=∘ RealField.<=_*_positive-right L>=0 s) <∘r transportInv (__ < eps) t (linarith : d * (L * n + 1) - d < eps))
+           \in (hL x y <=∘ gcongr s) <∘r transportInv (__ < eps) t (linarith : d * (L * n + 1) - d < eps))
      }
 
 -- | A function which is Lipschitz with respect to finitely many uniform maps is uniform.

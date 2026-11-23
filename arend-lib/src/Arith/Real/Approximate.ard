@@ -52,8 +52,8 @@
                | t2 : x - Real.fromRat n <= RealAbGroup.abs (Real.fromRat n - x) => RealAbGroup.abs>=_-
      \in \case \elim n, p', t1, t2 \with {
        | 0, p', t1, t2 => inP (0, rewrite (RealField.natCoefZero, RealField.zro_*-left) a>=0,
-         rewriteI xd $ RealField.<=_*_positive-left (rewrite RealField.natCoefZero $ linarith) (<=-less d>0))
+         rewriteI xd $ gcongr (rewrite RealField.natCoefZero $ linarith))
        | suc n, p', t1, t2 => inP (n,
-         rewriteI xd $ RealField.<=_*_positive-left (rewriteI RealField.coefMap_natCoef $ linarith (RealField.coefMap_natCoef, RealField.natCoefSuc n)) (<=-less d>0),
-         rewriteI xd $ RealField.<=_*_positive-left (rewriteI RealField.coefMap_natCoef $ linarith (RealField.coefMap_natCoef, RealField.natCoefSuc n)) (<=-less d>0))
+         rewriteI xd $ gcongr (rewriteI RealField.coefMap_natCoef $ linarith (RealField.coefMap_natCoef, RealField.natCoefSuc n)),
+         rewriteI xd $ gcongr (rewriteI RealField.coefMap_natCoef $ linarith (RealField.coefMap_natCoef, RealField.natCoefSuc n)))
      }

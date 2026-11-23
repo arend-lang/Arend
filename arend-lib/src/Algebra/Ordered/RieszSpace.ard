@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.QModule
 \import Arith.Int
 \import Arith.Rat
@@ -47,6 +48,16 @@
     => <=_*q-left q<=0 a>=0 <=∘ =_<= toRatModule.*c_zro-left
 }
 
+-- | A top-level version of {PosetQModule.<=_*q-left} for {gcongr}.
+\attr gcongr
+\lemma <=_*q-left_gcongr {E : PosetQModule} {q r : Rat} (q<=r : q <= r) {a : E} (a>=0 : 0 <= a) : q E.*q a <= r E.*q a
+  => E.<=_*q-left q<=r a>=0
+
+-- | A top-level version of {PosetQModule.<=_*q-right} for {gcongr}.
+\attr gcongr
+\lemma <=_*q-right_gcongr {E : PosetQModule} {q : Rat} (q>=0 : 0 <= q) {a b : E} (a<=b : a <= b) : q E.*q a <= q E.*q b
+  => E.<=_*q-right q>=0 a<=b
+
 -- | A {RieszSpace} is a divisible {LatticeAbGroup}.
 \class RieszSpace \extends PosetQModule, LatticeAbGroup.FromJoin {
   \lemma join_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x y : E} : q *q (x ∨ y) = (q *q x) ∨ (q *q y)
@@ -64,7 +75,7 @@
 
   \lemma abs_*q_<=_*n {q : Rat} {x : E} : ∃ (n : Nat) (abs (q *q x) <= n *n abs x)
     => \have (n,|q|<n) => rat_natBound (RatField.abs q)
-       \in inP (n, =_<= abs_*q <=∘ <=_*q-left (<=-less |q|<n) abs>=0 <=∘ =_<= *q_*n)
+       \in inP (n, =_<= abs_*q <=∘ gcongr <=∘ =_<= *q_*n)
 
   \lemma disjoint_*q {q r : Rat} {x y : E} (d : AreDisjoint x y) : AreDisjoint (q *q x) (r *q y)
     => \case abs_*q_<=_*n {\this} {q} {x}, abs_*q_<=_*n {\this} {r} {y} \with {
@@ -101,7 +112,7 @@
 
   \lemma <=s_*q {q : Rat} (q>0 : 0 < q) {a : E} : q *q a <=s a
     => \have (n,q<n) => rat_natBound q
-       \in inP (n, =_<= (part+_*q (<=-less q>0)) <=∘ <=_*q-left (<=-less q<n) part+>=0 <=∘ =_<= *q_*n)
+       \in inP (n, =_<= (part+_*q (<=-less q>0)) <=∘ gcongr <=∘ =_<= *q_*n)
 
   \lemma *q_<=s {q : Rat} (q>0 : 0 < q) {a : E} : a <=s q *q a
     => transport (<=s _) (inv *q-assoc *> pmap (*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ <=s_*q {_} {RatField.finv q} (RatField.finv>0 q>0)
@@ -133,7 +144,7 @@
           \in \have | dd : d + d = a + c => inv A.*q_*2 *> inv A.*q-assoc *> A.ide_*q
                     | a<=d : a <= d => A.from>=0 $ A.<=_*n-div {2} (\case __) $ transport (A.zro <=) (equation.abGroup *> pmap (__ - (a + a)) (inv dd) *> equation.abGroup) (A.to>=0 a<=c)
                     | d>=0 : A.zro <= d => A.<=_*n-div {2} (\case __) $ transport (A.zro <=) (equation.abGroup *> inv dd *> equation.abGroup) (A.to>=0 -a<=c)
-          \in <=_+ (<=_+ (s.4 a<=d d>=0) (s.4 a<=d d>=0)) <=-refl <=∘ =_<= (pmap (- a) dd *> equation.abGroup))
+          \in gcongr (s.4 a<=d d>=0, s.4 a<=d d>=0) <=∘ =_<= (pmap (- a) dd *> equation.abGroup))
 }
 
 \record RieszSpaceHom \extends AddGroupHom, LatticeHom {

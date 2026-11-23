@@ -14,6 +14,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
 \import Algebra.Ordered.TruncRieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
@@ -116,10 +117,10 @@
                    | CD>=0 : L.zro <= C *q D => L.*q_>=0 C>=0 L.abs>=0
                    | le : abs X <= abs (i (C *q D))
                        => Xd <=∘ =_<= (inv (abs-ofPos (=_<= (inv i.func-zro) <=∘ i.func-<= CD>=0)))
-                   | kk : k <= C *q k => =_<= (inv ide_*q) <=∘ L.<=_*q-left C>=1 k>=0
+                   | kk : k <= C *q k => =_<= (inv ide_*q) <=∘ gcongr C>=1
                    | pt : abs (C *q D) ∧ k <= C *q L.truncAt eta k
                        => =_<= (pmap (__ ∧ k) (L.abs-ofPos CD>=0)) <=∘ L.meet-monotone <=-refl kk <=∘ =_<= (inv (L.meet_*q C>=0))
-                           <=∘ L.<=_*q-right C>=0 (transport (\lam z => abs (L.trunc z - _) ∧ k <= _) (inv l0One.split) (trunc-tail eta>0 k>=0 (L.to>=0 sn)))
+                           <=∘ gcongr (transport (\lam z => abs (L.trunc z - _) ∧ k <= _) (inv l0One.split) (trunc-tail eta>0 k>=0 (L.to>=0 sn)))
          \in normAt-lift-abs-mono {L0PreSpace L} {k,k>=0} le <=∘ =_<= (l0Gauge.char k>=0) <=∘ L.integral-mono pt <=∘ =_<= L.integral_*q
 
 -- | The limit of a net `W` on $L^+$ with $|W(n)| \le C \tau(n)$ is bounded by `C`.

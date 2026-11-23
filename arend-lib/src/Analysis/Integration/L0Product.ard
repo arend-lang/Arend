@@ -184,8 +184,8 @@
   : l0calc phi F <= l0calc psi F
   => \let | C : Array (CoverMap (RealN n) RealNormed) n => \lam j => clipAt (a>0 j) j
           | e : (=) {Array (L0Space L) n} (\lam j => l0calc (C j) F) F => exts \lam j => l0calc-clip (a>0 j) (Fa j)
-     \in transport2 (<=) ((l0calc-comp {L} {n} {n} {phi} {C} {phi CoverMap.∘ ArrayCoverSpace.tuple C} (\lam x => idp)) *> pmap (l0calc phi) e)
-                         ((l0calc-comp {L} {n} {n} {psi} {C} {psi CoverMap.∘ ArrayCoverSpace.tuple C} (\lam x => idp)) *> pmap (l0calc psi) e)
+     \in transport2 (<=) (l0calc-comp {L} {n} {n} {phi} {C} {phi CoverMap.∘ ArrayCoverSpace.tuple C} (\lam x => idp) *> pmap (l0calc phi) e)
+                         (l0calc-comp {L} {n} {n} {psi} {C} {psi CoverMap.∘ ArrayCoverSpace.tuple C} (\lam x => idp) *> pmap (l0calc psi) e)
           (l0calc-mono {L} {n} {phi CoverMap.∘ ArrayCoverSpace.tuple C} {psi CoverMap.∘ ArrayCoverSpace.tuple C} \lam x => le (\lam j => C j x) \lam j => clip-abs' (<=-less (a>0 j)))
 
 -- | $|FG| \le ab$ if $|F| \le a$ and $|G| \le b$.
@@ -252,16 +252,16 @@
           (\lam xr>=0 =>
             \have | r<=x : r <= x => linarith
                   | m1 : x ∧ r = r => RealAbGroup.meet-comm *> RealAbGroup.meet_<= r<=x
-                  | rr<=xx : r * r <= x * x => <=_*_positive-left r<=x (<=-less r>0) <=∘ <=_*_positive-right x>=0 r<=x
+                  | rr<=xx : r * r <= x * x => gcongr
                   | m2 : (x * x) ∧ (r * r) = r * r => RealAbGroup.meet-comm *> RealAbGroup.meet_<= rr<=xx
                   | h1 : (x - r) * r <= x * x - r * r => <=_*_positive-right xr>=0 (linarith : r <= x + r) <=∘ =_<= equation.cRing
                   | h2 : c * ((x - r) * r) = x - r => equation.cRing {cr}
-                  | h3 : c * ((x - r) * r) <= c * (x * x - r * r) => <=_*_positive-right c>=0 h1
+                  | h3 : c * ((x - r) * r) <= c * (x * x - r * r) => gcongr
             \in rewrite (m1, m2) $ RealAbGroup.join_<= (linarith : x <= r + c * (x * x - r * r)))
           (\lam xr<=0 =>
             \have | x<=r : x <= r => linarith
                   | m1 : x ∧ r = x => RealAbGroup.meet_<= x<=r
-                  | xx<=rr : x * x <= r * r => <=_*_positive-right x>=0 x<=r <=∘ <=_*_positive-left x<=r (<=-less r>0)
+                  | xx<=rr : x * x <= r * r => gcongr
                   | m2 : (x * x) ∧ (r * r) = x * x => RealAbGroup.meet_<= xx<=rr
                   | p : x + c * (x * x - x * x) = x => pmap (x +) (pmap (c *) negative-right *> RealField.zro_*-right) *> zro-right
             \in rewrite (m1, m2) $ pmap (x ∨) p *> RealAbGroup.join-idemp *> inv p))

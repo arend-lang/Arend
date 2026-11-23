@@ -129,7 +129,7 @@
                       | D>=0 : 0 <= y.1 - x.1 => usingOnly xy linarith
                       | dd : RealAbGroup.abs (y.1 - x.1) <= s => clamp-dist {a} {b} {<=-less a<b} <=∘ =_<= (pmap RealAbGroup.abs e1 *> RealAbGroup.abs-ofPos (<=-less s>0))
                       | p1 : F y - F x - (y.1 - x.1) * h x <= e * (y.1 - x.1) => RealAbGroup.abs>=id <=∘ est dd <=∘ =_<= (pmap (e *) (RealAbGroup.abs-ofPos D>=0))
-                      | p2 : (y.1 - x.1) * h x <= (y.1 - x.1) * negative m => RealField.<=_*_positive-right D>=0 hx
+                      | p2 : (y.1 - x.1) * h x <= (y.1 - x.1) * negative m => gcongr
                       | e2 : (m - e) * y.1 - (m - e) * x.1 = m * (y.1 - x.1) - e * (y.1 - x.1) => equation.cRing
                       | e3 : (y.1 - x.1) * negative m = negative (m * (y.1 - x.1)) => equation.cRing
                 \in usingOnly (ih, p1, p2, e2, e3) linarith
@@ -163,13 +163,13 @@
           | inP (r,r>0,r<E) => \case u {r} (rat_real_<.2 r>0) \with {
             | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} {y} dd =>
               \have | rb : Real.fromRat r * (b - a) <= Real.fromRat eps
-                          => RealField.<=_*_positive-left (<=-less r<E) (<=-less ba>0) <=∘ =_<= (*-assoc *> pmap (_ *) (RealField.pinv-left ba>0) *> ide-right)
+                          => gcongr (<=-less r<E) <=∘ =_<= (*-assoc *> pmap (_ *) (RealField.pinv-left ba>0) *> ide-right)
                     | e : ((y.1 - a) * C - f y * (b - a)) - ((x.1 - a) * C - f x * (b - a)) - (y.1 - x.1) * (C - g x * (b - a))
                           = negative ((b - a) * (f y - f x - (y.1 - x.1) * g x)) => equation.cRing
               \in rewrite e $ =_<= (RealAbGroup.abs_negative *> RealField.abs_* *> pmap (* _) (RealAbGroup.abs-ofPos (<=-less ba>0)))
                     <=∘ RealField.<=_*_positive-right (<=-less ba>0) (h dd)
                     <=∘ =_<= (inv *-assoc *> pmap (* _) RealField.*-comm)
-                    <=∘ RealField.<=_*_positive-left rb RealAbGroup.abs>=0)
+                    <=∘ gcongr rb)
           }
         }
 
@@ -198,7 +198,7 @@
         | inP (z,q) =>
           \have | t1 => RealAbGroup.abs>=neg <∘r q
                 | t2 : e * (y.1 - x.1) <= deriv (interval-derivDense x<y) (\lam z => f (hasDeriv-sub.subPt z)) d' z 1 * (y.1 - x.1)
-                    => RealField.<=_*_positive-left (rewrite d'e (f'>=e _)) (<=-less yx>0)
+                    => gcongr (rewrite d'e (f'>=e _))
           \in linarith
       }
 
@@ -236,7 +236,7 @@
                | byRight y<x+d =>
                  \have | t1 => h (RealAbGroup.abs_-_< {y.1} {x.1} linarith linarith)
                        | t2 : RealAbGroup.abs (y.1 - x.1) <= b - a => RealAbGroup.abs-univ (usingOnly (x.2.1, x.2.2, y.2.1, y.2.2) linarith) (usingOnly (x.2.1, x.2.2, y.2.1, y.2.2) linarith)
-                       | t3 : Real.fromRat r * RealAbGroup.abs (y.1 - x.1) <= Real.fromRat r * (b - a) => RealField.<=_*_positive-right (<=-less r>0) t2
+                       | t3 : Real.fromRat r * RealAbGroup.abs (y.1 - x.1) <= Real.fromRat r * (b - a) => gcongr
                        | t4 : Real.fromRat r * (b - a) < c => RealField.<_*_positive-left r<E ba>0 <∘l =_<= (*-assoc *> pmap (c *) (RealField.pinv-left ba>0) *> ide-right)
                  \in byLeft (usingOnly (t1, t3, t4) linarith)
              }
@@ -252,7 +252,7 @@
   => \lam (p : M * RealAbGroup.abs (y.1 - x.1) < RealAbGroup.abs (f y - f x)) =>
       \have | c>0 : 0 < RealAbGroup.abs (f y - f x) - M * RealAbGroup.abs (y.1 - x.1) => linarith
             | bound (z : Set.Total (ClosedInterval a b)) : RealAbGroup.abs (deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1)) <= M * RealAbGroup.abs (y.1 - x.1)
-                => =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (f'<=M z) RealAbGroup.abs>=0
+                => =_<= RealField.abs_* <=∘ gcongr (f'<=M z)
             | between (q : ∃ (z : Set.Total (ClosedInterval a b)) (RealAbGroup.abs (f y - f x - deriv (interval-derivDense a<b) f d z 1 * (y.1 - x.1))
                              < RealAbGroup.abs (f y - f x) - M * RealAbGroup.abs (y.1 - x.1))) : Empty
                 => \case q \with {

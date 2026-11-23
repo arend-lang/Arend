@@ -264,10 +264,10 @@
                    (\lam d<=b => \have | t : w <= Real.fromRat C * (RealAbGroup.abs b ∧ w)
                                            => real-cases {b} {w}
                                                (\lam b<w => \have | e : RealAbGroup.abs b ∧ w = b => pmap (__ ∧ w) ab0 *> RealAbGroup.meet_<= (<=-less b<w)
-                                                                  | m : Real.fromRat C * Real.fromRat d <= Real.fromRat C * b => RealField.<=_*_positive-right linarith d<=b
+                                                                  | m : Real.fromRat C * Real.fromRat d <= Real.fromRat C * b => gcongr
                                                             \in wK <=∘ Cd <=∘ m <=∘ =_<= (pmap (_ *) (inv e)))
                                                (\lam w<=b => \have e : RealAbGroup.abs b ∧ w = w => pmap (__ ∧ w) ab0 *> RealAbGroup.meet-comm *> RealAbGroup.meet_<= w<=b
-                                                             \in =_<= (inv ide-left) <=∘ RealField.<=_*_positive-left C>=1 w>=0 <=∘ =_<= (pmap (_ *) (inv e)))
+                                                             \in =_<= (inv ide-left) <=∘ gcongr <=∘ =_<= (pmap (_ *) (inv e)))
                                  \in meet-right <=∘ t <=∘ (linarith : Real.fromRat C * (RealAbGroup.abs b ∧ w) <= (w ∧ eps) + Real.fromRat C * (RealAbGroup.abs b ∧ w)))
     }
 
@@ -615,7 +615,7 @@
                                     | hy => sum by
                                     | hyx => sum byx
                                     | b => pre-diff-bound {L} {n} {phi} {phi0} h>=0 M>0 e>0 d>0 K>=0 hK x0M ck u hx hy hyx
-                                    | Ngat : N * ga <= N * dl => RealField.<=_*_positive-right N>=0 ga<=dl
+                                    | Ngat : N * ga <= N * dl => gcongr
                                     | QSyx : Q * (N * ga) = N * dl => equation.cRing {Qga}
                                     | dlP : P * dl = eps => *-comm *> *-assoc *> pmap (eps *) (RealField.pinv-left P>0) *> ide-right
                                     | CT : Cr * (N * dl) <= eps * Real.fromRat (ratio 1 16)
@@ -921,7 +921,7 @@
          (\lam B<eta => meet-right <=∘ meet-univ <=-refl (<=-less B<eta))
          (\lam eta<=B => \have | qe : Real.fromRat (RatField.finv eta) * Real.fromRat eta = 1 => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= eta>0))
                                 | q>=0 : (0 : Real) <= Real.fromRat (RatField.finv eta) => rat_real_<=.1 positivity
-                                | qB : (1 : Real) <= Real.fromRat (RatField.finv eta) * (b ∨ 0) => =_<= (inv qe) <=∘ RealField.<=_*_positive-right q>=0 eta<=B
+                                | qB : (1 : Real) <= Real.fromRat (RatField.finv eta) * (b ∨ 0) => =_<= (inv qe) <=∘ gcongr
                                 | s1 : (1 : Real) <= (Real.fromRat (RatField.finv eta) * (b ∨ 0) + (c ∨ 0)) ∧ 1 => meet-univ linarith <=-refl
                                 | v0 : v ∨ negative v = 0 => pmap (\lam z => z ∨ negative z) (hv s1) *> pmap (0 ∨) RealAbGroup.negative_zro *> RealAbGroup.join_<= <=-refl
                           \in meet-left <=∘ =_<= v0 <=∘ meet-univ B>=0 eta>=0)

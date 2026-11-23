@@ -2,22 +2,31 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Ordered.TruncRieszSpace
+\import Analysis.Integration.IntegrationSpace
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Semiring
 \import Algebra.StrictlyOrdered
 \import Arith.Exp
 \import Arith.Exp.Real
 \import Arith.Int
+\import Arith.Rat
 \import Arith.Nat
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.Root
+\import Arith.Real.UpperReal
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
 \import Order.StrictOrder
-\open Monoid(pow)
-\open AddMonoid(BigSum)
+\open Monoid
+\open AddMonoid
+\open Semiring
+\open QModule
 
 -- Addition
 
@@ -139,3 +148,29 @@
 
 \lemma test-subgoal2 {E : PosetAddMonoid} {a b c d : E} (p : \Pi (x : Nat) -> a <= b) (q : c <= d) : a + c <= b + d
   => gcongr (p 0)
+
+-- Tagged lemmas
+
+\lemma test-upper-mul {x x' y : ExUpperReal} (p : x <= x') : x * y + y <= x' * y + y
+  => gcongr
+
+\lemma test-upper-pow {x y z : ExUpperReal} {n : Nat} (p : x <= y) : ExUpperRealSemigroup.pow x n * z <= ExUpperRealSemigroup.pow y n * z
+  => gcongr
+
+\lemma test-upper-less {x x' y y' : ExUpperReal} (p : x < x') (q : y < y') : x + y < x' + y'
+  => gcongr
+
+\lemma test-qmodule {E : PosetQModule} {a b : E} {q : Rat} (q>=0 : 0 RatField.<= q) (p : a <= b) : q *q a <= q *q b
+  => gcongr
+
+\lemma test-trunc {E : TruncRieszSpace} {a b c : E} (p : a <= b) : E.trunc (a + c) <= E.trunc (b + c)
+  => gcongr
+
+\lemma test-integral {L : IntegrationSpace} {a b c : L} (p : a <= b) : L.integral (a ∨ c) <= L.integral (b ∨ c)
+  => gcongr
+
+\lemma test-trunc-sub {n m k : Nat} (p : n < m) (q : k < m) : n -' k < m -' k
+  => gcongr
+
+\lemma test-powSum {R : PosetSemiring} {a b c : R} {n : Nat} (a>=0 : 0 <= a) (p : a <= b) : powSum a n + c <= powSum b n + c
+  => gcongr

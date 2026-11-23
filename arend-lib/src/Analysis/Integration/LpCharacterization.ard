@@ -104,7 +104,7 @@
                       | lip : measGauge (h + h) (L.clip h x - L.clip h y) <= measGauge (h + h) (y - x)
                           => (L0PreSpace L).normAt-abs-mono {(h + h, h2>=0)} (clip-lip <=∘ =_<= abs_-)
                       | C>=0 : 0 <= rpow-pos (M + M) (rat_real_<.1 linarith) (p - 1) => <=-less rpow-pos>0
-                \in transportInv (\lam e => ExUpperReal.U {e} eps) (LpPreSpace L p p>=1).norm-dist $ real_<_U.1 $ m (dom <=∘ RealField.<=_*_positive-right C>=0 lip) c.2)
+                \in transportInv (\lam e => ExUpperReal.U {e} eps) (LpPreSpace L p p>=1).norm-dist $ real_<_U.1 $ m (dom <=∘ gcongr lip) c.2)
           }
       }
       \where
@@ -113,7 +113,7 @@
           => \have e2>0 : 0 < Real.fromRat (eps * ratio 1 2) => positivity
              \in inP (rpow-pos (eps * ratio 1 2) e2>0 p * RealField.pinv C C>0,
                       RealField.<_*_positive_positive rpow-pos>0 (RealField.pinv>0 C>0), \lam {w} {m} wm md =>
-              \have | Cm : C * m < C * (rpow-pos (eps * ratio 1 2) e2>0 p * RealField.pinv C C>0) => RealField.<_*_positive-right C>0 md
+              \have | Cm : C * m < C * (rpow-pos (eps * ratio 1 2) e2>0 p * RealField.pinv C C>0) => gcongr md
                     | Cd : C * (rpow-pos (eps * ratio 1 2) e2>0 p * RealField.pinv C C>0) = rpow-pos (eps * ratio 1 2) e2>0 p
                         => equation.cRing {RealField.pinv-right C>0}
                     | le : pnormPow p p>=1 w <= rpow (eps * ratio 1 2) (<=-less e2>0) p (fpow.one>0 p>=1)
@@ -355,9 +355,9 @@
                       => L.integral_+ *> pmap2 (+) (L.integral_+ *> pmap2 (+) (pmap L.integral (fpow-fpow pq)) integral-rscale) integral-rscale
                   | tr : L.integral (L.trunc (RatField.finv eta *q fpow p p>=1 f)) <= c => L.integral-mono (=_<= (eu _) <=∘ meet-right) <=∘ ec
                   | m1 : (q - 1) * rpow-pos v v>0 q * L.integral (L.trunc (RatField.finv eta *q fpow p p>=1 f)) <= (q - 1) * rpow-pos v v>0 q * c
-                      => RealField.<=_*_positive-right c'>=0 tr
+                      => gcongr
                   | m2 : q * rpow-pos v v>0 (q - 1) * L.integral (L.truncAt eta (fpow p p>=1 f)) < q * rpow-pos v v>0 (q - 1) * eps
-                      => RealField.<_*_positive-right C>0 small
+                      => gcongr
                   | m3 : q * rpow-pos v v>0 (q - 1) * eps < d
                       => RealField.<_*_positive-right C>0 eps<dC <∘l =_<= (equation.cRing {RealField.pinv-right C>0})
                   | tt : q * rpow-pos v v>0 (q - 1) * pnormPow p p>=1 f <= _ => =_<= (inv e1) <=∘ t <=∘ =_<= e2
@@ -373,7 +373,7 @@
            | r>0 => fpow.one>0 r>=1
            | ip>0 => RealField.pinv>0 p>0
            | ir>0 => RealField.pinv>0 r>0
-           | q>=1 : 1 <= r * RealField.pinv p p>0 => =_<= (inv (RealField.pinv-right p>0)) <=∘ RealField.<=_*_positive-left p<=r (<=-less ip>0)
+           | q>=1 : 1 <= r * RealField.pinv p p>0 => =_<= (inv (RealField.pinv-right p>0)) <=∘ gcongr
            | pq : p * (r * RealField.pinv p p>0) = r => equation.cRing {RealField.pinv-right p>0}
            | qr : r * RealField.pinv p p>0 * RealField.pinv r r>0 = RealField.pinv p p>0 => equation.cRing {RealField.pinv-right r>0}
            | qr' : (r * RealField.pinv p p>0 - 1) * RealField.pinv r r>0 = RealField.pinv p p>0 - RealField.pinv r r>0 => equation.cRing {RealField.pinv-right r>0}
@@ -406,7 +406,7 @@
             \have | n : pnorm r r>=1 (x - x') < d
                       => (real_<_U {_} {pnorm r r>=1 (x - x')}).2 $ transport (\lam t => ExUpperReal.U {t} d) ((LpPreSpace L r r>=1).norm-dist {x} {x'}) xd
                   | b : pnorm p p>=1 (x - x') <= K * pnorm r r>=1 (x - x') => pnorm-unit p<=r eu c>0 join-left
-                  | m : K * pnorm r r>=1 (x - x') <= K * d => RealField.<=_*_positive-right (<=-less K>0) (<=-less n)
+                  | m : K * pnorm r r>=1 (x - x') <= K * d => gcongr
                   | m' : (K + 1) * d < eps
                       => RealField.<_*_positive-right K1>0 dK <∘l =_<= (equation.cRing {RealField.pinv-right K1>0})
                   | e1 : (K + 1) * d = K * d + d => equation.cRing

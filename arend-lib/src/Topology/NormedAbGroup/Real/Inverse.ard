@@ -110,7 +110,7 @@
                | e3 : e * (p * z + p * z) = e * (p * z) + e * (p * z) => equation.cRing
                | t1 : d * (d - r) < p * z => RealField.<_*_positive-left z>d (linarith : 0 < d - r) <∘ RealField.<_*_positive-right z>0 p>d-r <∘l =_<= *-comm
                | t2 : 0 <= d * (d - r - r) => RealField.<=_*_positive_positive (<=-less d>0) linarith
-               | t3 : e * (d * d) < e * (p * z + p * z) => RealField.<_*_positive-right e>0 linarith
+               | t3 : e * (d * d) < e * (p * z + p * z) => gcongr linarith
                | t4 : 0 < e * (d * d) => positivity
          \in RealField.<_*_positive-cancel-right {_} {e} (<=-less q>0) $ rewrite aq $ pz <∘l linarith
   }

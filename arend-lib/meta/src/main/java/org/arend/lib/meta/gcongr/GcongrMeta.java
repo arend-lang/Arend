@@ -83,11 +83,13 @@ public class GcongrMeta extends PositivityMeta {
   // sums
   @Dependency(name = "PosetAddMonoid.BigSum_<=")                    public ArendRef bigSumLe;
   @Dependency(name = "PosetAbMonoid.FinSum_<=")                     public ArendRef finSumLe;
+  @Dependency(name = "PosetSemiring.powSum-mono")                   public ArendRef powSumLe;
 
   // Nat, Int, Rat
   @Dependency(name = "suc<=suc")                                    public ArendRef sucLe;
   @Dependency(name = "-'-monotone-left")                            public ArendRef truncSubLeLeft;
   @Dependency(name = "-'-monotone-right")                           public ArendRef truncSubLeRight;
+  @Dependency(name = "-'_<-monotone-left")                          public ArendRef truncSubLessLeft;
   @Dependency(name = "div-monotone")                                public ArendRef divLe;
   @Dependency(name = "pos<=pos")                                    public ArendRef posLe;
   @Dependency(name = "pos<pos")                                     public ArendRef posLess;
@@ -112,8 +114,8 @@ public class GcongrMeta extends PositivityMeta {
       powLe, powLess, natMulLe, natMulLess, natCoefLe, natCoefLess, coefLe, coefLess,
       pinvLe, pinvLess, finvLe, finvLess,
       joinLe, meetLe, joinLess, meetLess, partLe,
-      bigSumLe, finSumLe,
-      sucLe, truncSubLeLeft, truncSubLeRight, divLe, posLe, posLess, negLe, negLess, fromIntLe, fromIntLess);
+      bigSumLe, finSumLe, powSumLe,
+      sucLe, truncSubLeLeft, truncSubLeRight, truncSubLessLeft, divLe, posLe, posLess, negLe, negLess, fromIntLe, fromIntLess);
   }
 
   synchronized List<GcongrRule> getBuiltinGcongrRules(ExpressionTypechecker typechecker) {

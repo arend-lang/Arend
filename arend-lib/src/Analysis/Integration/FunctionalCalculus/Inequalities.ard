@@ -112,8 +112,8 @@
             | ng : pnormPow q q>=1 (RatField.finv b *q g) <= 1 => normalize b>0 (<=-less gb)
             | ip>=0 : 0 <= RealField.pinv p (fpow.one>0 p>=1) => positivity
             | iq>=0 : 0 <= RealField.pinv q (fpow.one>0 q>=1) => positivity
-            | r1 : RealField.pinv p (fpow.one>0 p>=1) * pnormPow p p>=1 (RatField.finv a *q f) <= RealField.pinv p (fpow.one>0 p>=1) * 1 => <=_*_positive-right ip>=0 nf
-            | r2 : RealField.pinv q (fpow.one>0 q>=1) * pnormPow q q>=1 (RatField.finv b *q g) <= RealField.pinv q (fpow.one>0 q>=1) * 1 => <=_*_positive-right iq>=0 ng
+            | r1 : RealField.pinv p (fpow.one>0 p>=1) * pnormPow p p>=1 (RatField.finv a *q f) <= RealField.pinv p (fpow.one>0 p>=1) * 1 => gcongr
+            | r2 : RealField.pinv q (fpow.one>0 q>=1) * pnormPow q q>=1 (RatField.finv b *q g) <= RealField.pinv q (fpow.one>0 q>=1) * 1 => gcongr
             | s : Real.fromRat (RatField.finv a * RatField.finv b) * L.integral (abs (fmul f g)) <= 1
                 => =_<= (inv (pmap L.integral lhs *> L.integral_*q)) <=∘ y <=∘ =_<= (L.integral_+ *> pmap2 (+) integral-rscale integral-rscale)
                    <=∘ <=_+ r1 r2 <=∘ =_<= (pmap2 (+) ide-right ide-right *> pq)
@@ -123,7 +123,7 @@
   \where {
     \lemma unscale {c c' : Rat} (c>0 : 0 < c) (cc : c * c' = 1) {x : Real} (s : Real.fromRat c' * x <= 1) : x <= c
       => \have | e : Real.fromRat c * Real.fromRat c' = 1 => RealField.*-rat *> pmap Real.fromRat cc
-               | m : Real.fromRat c * (Real.fromRat c' * x) <= Real.fromRat c * 1 => <=_*_positive-right positivity s
+               | m : Real.fromRat c * (Real.fromRat c' * x) <= Real.fromRat c * 1 => gcongr
          \in =_<= (inv (inv *-assoc *> pmap (`* x) e *> ide-left)) <=∘ m <=∘ =_<= ide-right
   }
 
@@ -152,8 +152,8 @@
             | cv => L.integral-mono (fpow-convex p>=1 t>=0 s>=0 ts {RatField.finv a *q f} {RatField.finv b *q g})
             | nf : pnormPow p p>=1 (RatField.finv a *q f) <= 1 => normalize a>0 (<=-less fa)
             | ng : pnormPow p p>=1 (RatField.finv b *q g) <= 1 => normalize b>0 (<=-less gb)
-            | r1 : Real.fromRat (a * c') * pnormPow p p>=1 (RatField.finv a *q f) <= Real.fromRat (a * c') * 1 => <=_*_positive-right (rat_real_<=.1 t>=0) nf
-            | r2 : Real.fromRat (b * c') * pnormPow p p>=1 (RatField.finv b *q g) <= Real.fromRat (b * c') * 1 => <=_*_positive-right (rat_real_<=.1 s>=0) ng
+            | r1 : Real.fromRat (a * c') * pnormPow p p>=1 (RatField.finv a *q f) <= Real.fromRat (a * c') * 1 => gcongr
+            | r2 : Real.fromRat (b * c') * pnormPow p p>=1 (RatField.finv b *q g) <= Real.fromRat (b * c') * 1 => gcongr
             | n1 : pnormPow p p>=1 (c' *q (f + g)) <= 1
                 => =_<= (inv (pmap (\lam x => L.integral (fpow p p>=1 x)) arg)) <=∘ cv <=∘ =_<= (L.integral_+ *> pmap2 (+) L.integral_*q L.integral_*q)
                    <=∘ <=_+ r1 r2 <=∘ =_<= (pmap2 (+) ide-right ide-right *> RealAbGroup.+-rat *> pmap Real.fromRat ts)
@@ -178,13 +178,13 @@
   \lemma normalize {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {c : Rat} (c>0 : 0 < c) {f : L}
                    (fc : pnorm p p>=1 f <= c) : pnormPow p p>=1 (RatField.finv c *q f) <= 1
     => \have | N : pnormPow p p>=1 f <= rpow c positivity p (fpow.one>0 p>=1) => pnorm<=-iff.1 fc
-       \in =_<= pnormPow-*q <=∘ <=_*_positive-right rpow>=0 N <=∘ =_<= (rpow-inv-mul c>0)
+       \in =_<= pnormPow-*q <=∘ gcongr N <=∘ =_<= (rpow-inv-mul c>0)
 
   -- | If $\|f/c\|_p^p \le 1$, then $\|f\|_p^p \le c^p$.
   \lemma unnormalize {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {c : Rat} (c>0 : 0 < c) {f : L}
                      (fc : pnormPow p p>=1 (RatField.finv c *q f) <= 1) : pnormPow p p>=1 f <= rpow c positivity p (fpow.one>0 p>=1)
     => \have m : rpow c positivity p (fpow.one>0 p>=1) * pnormPow p p>=1 (RatField.finv c *q f) <= rpow c positivity p (fpow.one>0 p>=1) * 1
-           => <=_*_positive-right rpow>=0 fc
+           => gcongr
        \in =_<= (inv (pmap (_ *) pnormPow-*q *> inv *-assoc *> pmap (`* _) (RealField.*-comm *> rpow-inv-mul c>0) *> ide-left)) <=∘ m <=∘ =_<= ide-right
 
   -- | If $x \le a + b$ for all rationals $a > \alpha$, $b > \beta$, then $x \le \alpha + \beta$.
@@ -210,17 +210,17 @@
               | D>0 : 0 < D => RatField.<_meet-univ RatField.zro<ide (RatField.<_*_positive_positive d>0 (RatField.finv>0 K>0))
               | D<=1 : D RealAbGroup.<= 1 => rat_real_<=.1 RatField.meet-left
               | DK : D RealField.* K <= d
-                  => =_<= RealField.*-rat <=∘ rat_real_<=.1 (RatField.<=_*_positive-left RatField.meet-right (<=-less K>0) <=∘ =_<= (*-assoc *> pmap (d *) (RatField.finv-left (RatField.>_/= K>0)) *> ide-right))
+                  => =_<= RealField.*-rat <=∘ rat_real_<=.1 (gcongr RatField.meet-right <=∘ =_<= (*-assoc *> pmap (d *) (RatField.finv-left (RatField.>_/= K>0)) *> ide-right))
               | Dr>0 : 0 RealAbGroup.< D => rat_real_<.1 D>0
         \in \case real_<-char.1 (linarith : al < al + D), real_<-char.1 (linarith : be < be + D) \with {
           | inP (a,al<a,a<), inP (b,be<b,b<) =>
             \have | A>=0 : 0 RealAbGroup.<= a => <=-less (al>=0 <∘r al<a)
                   | f1 => h al<a be<b
-                  | f2 : a RealField.* b <= a RealField.* (be + D) => <=_*_positive-right A>=0 (<=-less b<)
-                  | f3 : a RealField.* (be + D) <= (al + D) * (be + D) => <=_*_positive-left (<=-less a<) (positivity : 0 <= be + D)
+                  | f2 : a RealField.* b <= a RealField.* (be + D) => gcongr
+                  | f3 : a RealField.* (be + D) <= (al + D) * (be + D) => gcongr
                   | f4 : (al + D) * (be + D) = al * be + D RealField.* (al + be + D) => equation.cRing
-                  | f5 : D RealField.* (al + be + D) <= D RealField.* (al + be + 1) => <=_*_positive-right (<=-less Dr>0) linarith
-                  | f6 : D RealField.* (al + be + 1) < D RealField.* K => RealField.<_*_positive-right Dr>0 K>
+                  | f5 : D RealField.* (al + be + D) <= D RealField.* (al + be + 1) => gcongr
+                  | f6 : D RealField.* (al + be + 1) < D RealField.* K => gcongr
             \in linarith
         }
     }

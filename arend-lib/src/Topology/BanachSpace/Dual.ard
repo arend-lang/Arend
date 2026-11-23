@@ -75,7 +75,7 @@
                                   | Cb : C < b => rat_real_<.2 (real_<_L.2 Cb')
          \in inP (C, rat_real_<=.2 (functionalSup>=0 p <=∘ <=-less sC), Cb, \lam {x} {b'} xb =>
            \have b'>0 : 0 < b' => norm>=0 xb
-           \in p.1 xb <=∘ RealField.<=_*_positive-left (<=-less sC) positivity <=∘ =_<= RealField.*-rat)
+           \in p.1 xb <=∘ gcongr <=∘ =_<= RealField.*-rat)
      })
      (\lam {b} (inP (C,C>=0,Cb,bd)) => real_<_U.1 $ real_<=-eps (\lam {d} d>0 => \case p.2 d>0 \with {
        | inP (x,x1,sx) => \have t : RealAbGroup.abs (f x) <= Real.fromRat C => bd x1 <=∘ =_<= (pmap Real.fromRat ide-right)
@@ -171,7 +171,7 @@
                 \in \have | e>0 : 0 < e => RatField.<_*_positive_positive d>0 (RatField.finv>0 b>0)
                           | eb : e * b = d => *-assoc *> pmap (d *) (RatField.finv-left (RatField.>_/= b>0)) *> ide-right
                 \in \case transportInv (\lam (z : ExUpperReal) => z.U e) p e>0 \with {
-                  | inP (C,C>=0,C<e,q) => \have Cb : C * b < d => transport (_ <) eb (RatField.<_*_positive-left C<e b>0)
+                  | inP (C,C>=0,C<e,q) => \have Cb : C * b < d => transport (_ <) eb (gcongr C<e)
                                           \in q xb <∘r transport (_ <) (inv RealAbGroup.zro-left) (rat_real_<.1 Cb)
                 }) RealAbGroup.abs>=0
       })
@@ -203,7 +203,7 @@
         | inP (C,C>=0,p) => inP (RatField.finv n * C, positivity, \lam {x} {b} xb =>
             \have t : (0 : Real) <= Real.fromRat (RatField.finv n) => rat_real_<=.1 finv>=0
             \in =_<= (RealField.abs_* *> pmap (\lam z => z RealField.* RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos t))
-                <=∘ RealField.<=_*_positive-right t (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
+                <=∘ gcongr (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
       }
       \where
         \lemma finv>=0 {n : Nat} : 0 <= RatField.finv n
@@ -282,8 +282,8 @@
                                 | m2 => (abs-bounds<= (bdz {v} {b} vb)).2
                                 | n1 => (abs-bounds<= (bdy {v} {b} vb)).1
                                 | n2 => (abs-bounds<= (bdy {v} {b} vb)).2
-                                | c1 : Real.fromRat (C' * b) <= Real.fromRat (e3 * b) => rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C'<e3) (<=-less b>0))
-                                | c2 : Real.fromRat (C * b) <= Real.fromRat (e3 * b) => rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C<e3) (<=-less b>0))
+                                | c1 : Real.fromRat (C' * b) <= Real.fromRat (e3 * b) => rat_real_<=.1 (gcongr (<=-less C'<e3))
+                                | c2 : Real.fromRat (C * b) <= Real.fromRat (e3 * b) => rat_real_<=.1 (gcongr (<=-less C<e3))
                                 | e : Real.fromRat ((e3 + e3) * b) = Real.fromRat (e3 * b) + Real.fromRat (e3 * b)
                                     => pmap Real.fromRat RatField.rdistr *> inv RealAbGroup.+-rat
                           \in transportInv (\lam w => _ < w + Real.fromRat d) e (abs<-of linarith linarith)
@@ -304,7 +304,7 @@
                     | eN : a * RatField.finv N * N = a => *-assoc *> pmap (a *) (RatField.finv-left (RatField.>_/= N>0)) *> ide-right
               \in \case Fc eps>0 \with {
                 | inP (x,Fx) => inP (x v, filter-mono Fx \lam {y} yx => \case ball-bound yx \with {
-                  | inP (C,_,C<eps,bd) => bd vN <∘r rat_real_<.1 (transport (_ <) eN (RatField.<_*_positive-left C<eps N>0))
+                  | inP (C,_,C<eps,bd) => bd vN <∘r rat_real_<.1 (transport (_ <) eN (gcongr C<eps))
                 })
               }
           }
@@ -344,7 +344,7 @@
                         | m2 => (abs-bounds<= (bd {v} {b} vb)).2
                         | n1 => (abs-bounds<= (p1 {v} {b} vb)).1
                         | n2 => (abs-bounds<= (p1 {v} {b} vb)).2
-                        | cb : Real.fromRat (C * b) <= Real.fromRat b => rat_real_<=.1 (transport (_ <=) ide-left (RatField.<=_*_positive-left (<=-less C<1) (<=-less b>0)))
+                        | cb : Real.fromRat (C * b) <= Real.fromRat b => rat_real_<=.1 (transport (_ <=) ide-left (gcongr (<=-less C<1)))
                   \in abs<-of linarith linarith
               }
             })
@@ -358,22 +358,22 @@
   | func-bounded => \case f.func-bounded, UpperReal.U-inh_>0 {RealAbGroup.abs c} \with {
     | inP (C,C>=0,p), inP (K,Ku,K>0) => inP (K * C, RatField.<=_*_positive_positive (<=-less K>0) C>=0, \lam {x} {b} xb =>
         \have b>0 : 0 < b => norm>=0 xb
-        \in =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (<=-less (real_<_U.2 Ku)) RealAbGroup.abs>=0
+        \in =_<= RealField.abs_* <=∘ gcongr (<=-less (real_<_U.2 Ku))
               <=∘ RealField.<=_*_positive-right positivity (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
   }
 
 -- | Scaling the supremum: $\sup |c \Lambda| = c \sup |\Lambda|$ for $c > 0$.
 \lemma functionalSup-scale {E : RealBanachSpace} {f : BoundedFunctional E} {s c : Real} (c>0 : (0 : Real) < c) (fs : IsFunctionalSup f s)
   : IsFunctionalSup (fscale c f) (c * s)
-  => (\lam {x} {b} xb => =_<= (RealField.abs_* *> pmap (\lam (t : Real) => t * RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos (<=-less c>0))) <=∘ RealField.<=_*_positive-right (<=-less c>0) (fs.1 xb) <=∘ =_<= (inv RealField.*-assoc),
+  => (\lam {x} {b} xb => =_<= (RealField.abs_* *> pmap (\lam (t : Real) => t * RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos (<=-less c>0))) <=∘ gcongr (fs.1 xb) <=∘ =_<= (inv RealField.*-assoc),
       \lam {eps} eps>0 => \case real_<-rat-char.1 (RealField.<_*_positive_positive (rat_real_<.1 eps>0) (RealField.pinv>0 c>0)) \with {
         | inP (e',e'0,e'e) =>
           \have | e'>0 : 0 < e' => rat_real_<.2 (real_<_U.2 e'0)
                 | ce : c * Real.fromRat e' <= Real.fromRat eps
-                    => RealField.<=_*_positive-right (<=-less c>0) (<=-less (real_<_L.2 e'e)) <=∘ =_<= ((equation.cRing : c * (Real.fromRat eps * RealField.pinv c c>0) = Real.fromRat eps * (c * RealField.pinv c c>0)) *> pmap (_ *) (RealField.pinv-right c>0) *> RealField.ide-right)
+                    => gcongr (<=-less (real_<_L.2 e'e)) <=∘ =_<= ((equation.cRing : c * (Real.fromRat eps * RealField.pinv c c>0) = Real.fromRat eps * (c * RealField.pinv c c>0)) *> pmap (_ *) (RealField.pinv-right c>0) *> RealField.ide-right)
           \in \case fs.2 e'>0 \with {
             | inP (x,x1,sx) => inP (x, x1,
-                \have | m : c * (s - Real.fromRat e') < c * RealAbGroup.abs (f x) => RealField.<_*_positive-right c>0 sx
+                \have | m : c * (s - Real.fromRat e') < c * RealAbGroup.abs (f x) => gcongr
                       | e1 : c * (s - Real.fromRat e') = c * s - c * Real.fromRat e' => equation.cRing
                       | e2 : RealAbGroup.abs (c * f x) = c * RealAbGroup.abs (f x) => RealField.abs_* *> pmap (\lam (t : Real) => t * RealAbGroup.abs (f x)) (RealAbGroup.abs-ofPos (<=-less c>0))
                 \in usingOnly (m, e1, ce) linarith <∘l =_<= (inv e2))
@@ -391,7 +391,7 @@
           \have | d>0 : 0 < eps * RatField.finv (C + 1) => positivity
                 | e : (C + 1) * (eps * RatField.finv (C + 1)) = eps => equation.cRing {RatField.finv-right (RatField.>_/= C1>0)}
                 | lt : C * (eps * RatField.finv (C + 1)) < eps
-                    => transport (_ <) e (RatField.<_*_positive-left (linarith : C < C + 1) d>0)
+                    => transport (_ <) e (gcongr (linarith : C < C + 1))
           \in real_<_U.1 (fC xd <∘r rat_real_<.1 lt))
   }
 

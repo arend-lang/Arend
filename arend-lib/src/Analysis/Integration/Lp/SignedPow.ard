@@ -128,6 +128,6 @@
                    => pmap (\lam t => r * (A * t + B * RealField.pinv r r>0)) qi
                       *> (equation.cRing : r * (A * (1 - RealField.pinv r r>0) + B * RealField.pinv r r>0) = r * A - A * (r * RealField.pinv r r>0) + B * (r * RealField.pinv r r>0))
                       *> pmap (\lam t => r * A - A * t + B * t) ri *> equation.cRing
-               | m : r * Iv <= r * A - A + B => <=_*_positive-right (<=-less r>0) (hI <=∘ hY) <=∘ =_<= k
+               | m : r * Iv <= r * A - A + B => gcongr (hI <=∘ hY) <=∘ =_<= k
                | e3 : r * J = r * Iv - r * A => pmap (r *) (equation.abGroup *> pmap (__ - A) (inv eI) : J = Iv - A) *> equation.cRing
      \in usingOnly (m, e3) linarith

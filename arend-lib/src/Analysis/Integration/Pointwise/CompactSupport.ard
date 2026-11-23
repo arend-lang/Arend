@@ -176,7 +176,7 @@
       \have | e>0 : 0 < d * RatField.finv V => positivity
             | ee : (d * RatField.finv V) * V = d => *-assoc *> pmap (d *) (RatField.finv-left (/=-sym (StrictPoset.<_/= V>0))) *> ide-right
       \in \case approx-exists g gR e>0 \with {
-        | inP (s,a) => inP (d * RatField.finv V, s, a, transport (_ <) (RealField.*-rat *> pmap Real.fromRat ee) $ RealField.<_*_positive-right (rat_real_<.1 e>0) (real_<_U.2 mV))
+        | inP (s,a) => inP (d * RatField.finv V, s, a, transport (_ <) (RealField.*-rat *> pmap Real.fromRat ee) $ gcongr (real_<_U.2 mV))
       }
   }
 

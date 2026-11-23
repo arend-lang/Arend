@@ -47,7 +47,7 @@
         | func-uniform Eu => \case ab-neighborhood-uniform.1 Eu \with {
           | inP (V,Vo,V0,h) => \case solid-neighborhood (open-char.1 Vo V0) \with {
             | inP (U,US,U0,U<=V) => ab-neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (q *q x) \with {
-              | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ transport U toRatModule.*c-ldistr_- $ US (<=<_<= Uxy idp) $ abs_*q>=0 q>=0 =<= <=_*q-left q<=1 abs>=0 <=∘ =_<= ide_*q))
+              | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ transport U toRatModule.*c-ldistr_- $ US (<=<_<= Uxy idp) $ abs_*q>=0 q>=0 =<= gcongr <=∘ =_<= ide_*q))
             })
           }
         }

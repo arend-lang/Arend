@@ -7,7 +7,6 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -18,7 +17,6 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
-\import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ExCompletion
 \import Topology.MetricSpace.UpperReal
@@ -88,8 +86,8 @@
   | norm (a : Quot X) : ExUpperReal \with {
     | in~ x => X.norm x
     | ~-equiv x y r => <=-antisymmetric
-      (transport2 (X.norm __ <= __) {x - y X.+ y} simplify zro-left $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (=_<= r) <=-refl)
-      (transport2 (X.norm __ <= __) {y - x X.+ x} simplify zro-left $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (=_<= $ norm_- *> r) <=-refl)
+      (transport2 (X.norm __ <= __) {x - y X.+ y} simplify zro-left $ norm_+ <=∘ gcongr (=_<= r))
+      (transport2 (X.norm __ <= __) {y - x X.+ x} simplify zro-left $ norm_+ <=∘ gcongr (=_<= $ norm_- *> r))
   }
   | norm_zro => norm_zro
   | norm_negative {x} => \case \elim x \with {

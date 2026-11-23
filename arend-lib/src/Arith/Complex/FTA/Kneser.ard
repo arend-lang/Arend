@@ -468,8 +468,7 @@
           | inP (eps, eps>0, cond1, cond2) =>
             \have
               | scale<=1 : pow one/3 (2 * n * n) * cabs (b 0) <= cabs (b 0)
-                => PosetSemiring.<=_*_positive-left (PosetSemiring.pow<=1 one/3>=0 (<=-less one/3<1) {2 * n * n})
-                     (<=-less a0>0) <=∘ =_<= ide-left
+                => gcongr (PosetSemiring.pow<=1 one/3>=0 (<=-less one/3<1) {2 * n * n}) <=∘ =_<= ide-left
               | a0>eps : cabs (b 0) > eps => usingOnly (cond1, scale<=1, eps>0) linarith
             \in \case MainLemma n>0 eps>0 (\lam i => cabs (b i)) a0>eps
                         (\lam i => cabs>=0) (pmap cabs bn=1 *> cabs_ide) \with {
@@ -497,8 +496,7 @@
                                = pow one/3 (2 * n * n + n) * cabs (b 0) - 2 * (pow one/3 n * eps)
                         => rewrite (Monoid.pow_+ {RealField} {one/3} {2 * n * n} {n}) equation.cRing
                       | eps-third : pow one/3 n * eps <= one/3 * eps
-                        => PosetSemiring.<=_*_positive-left
-                             (pow1/3-monotone {n} {1} (suc_<_<= n>0) <=∘ =_<= ide-left) (<=-less eps>0)
+                        => gcongr (pow1/3-monotone {n} {1} (suc_<_<= n>0) <=∘ =_<= ide-left)
                       | cond2' : pow 3 n * eps + eps
                                    < c - cabs (b 0) - pow one/3 (2 * n * n + n) * c
                                      + pow one/3 (2 * n * n + n) * cabs (b 0)
@@ -522,8 +520,7 @@
               | (inP (d2, d2>0, d2B)) => split-eps B>0 D>0
          \in inP (d1 ∧ d2, <_meet-univ d1>0 d2>0,
                   linarith (RealAbGroup.meet-left {d1} {d2}),
-                  <=_*_positive-right (<=-less D>0) (RealAbGroup.meet-right {d1} {d2})
-                    <∘r (=_<= *-comm <∘r d2B))
+                  gcongr (RealAbGroup.meet-right {d1} {d2}) <∘r (=_<= *-comm <∘r d2B))
 
     {- | Triangle-inequality bound for a split polynomial value: the modulus is at most the modulus
          of the two distinguished terms together, plus the sums of the moduli of the rest. -}
@@ -592,7 +589,7 @@
                     root_ide suc/=0
                 }
                 | s<1 : cabs bk * pow r k * pinv (cabs b0) b0>0 < 1
-                => <_*_positive-left small (pinv>0 b0>0) <∘l =_<= (pinv-right b0>0)
+                => gcongr <∘l =_<= (pinv-right b0>0)
                 | bkzk : bk * pow (Complex.fromReal r * v) k
                   = ComplexField.negative
                       (Complex.fromReal (cabs bk * pow r k * pinv (cabs b0) b0>0) * b0)

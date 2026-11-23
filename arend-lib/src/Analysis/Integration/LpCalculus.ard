@@ -112,8 +112,8 @@
     | byRight k<d => meet-right <=∘ =_<= (inv (meet_<= (<=-less k<d))) <=∘ =_<= (inv zro-left) <=∘ <=_+ (meet-univ a>=0 rpow>=0) <=-refl
     | byLeft d2<k =>
       \have | K>=0 : 0 <= K => linarith
-            | Kk>=1 : 1 <= K * k => Kd <=∘ <=_*_positive-right K>=0 (<=-less d2<k)
-            | k<=Kk : k <= K * k => =_<= (inv ide-left) <=∘ <=_*_positive-left K>=1 k>=0
+            | Kk>=1 : 1 <= K * k => Kd <=∘ gcongr
+            | k<=Kk : k <= K * k => =_<= (inv ide-left) <=∘ gcongr
             | Kk<=pow : K * k <= rpow (K * k) Kk>=0 p p>0 => =_<= (inv (rpow-one {_} {Kk>=0} {RealField.zro<ide})) <=∘ rpow-exp-mono p>=1 Kk>=1
       \in meet-monotone <=-refl (k<=Kk <=∘ Kk<=pow) <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl (meet-univ k>=0 (<=-less d>0))
   }
@@ -125,7 +125,7 @@
     \lemma rpow-exp-mono {x p : Real} {x>=0 : 0 <= x} {p>0 : 0 < p} (p>=1 : 1 <= p) (x>=1 : 1 <= x)
       : rpow x x>=0 1 RealAbGroup.zro<ide <= rpow x x>=0 p p>0
       => \have x>0 : 0 < x => RealField.zro<ide <∘l x>=1
-         \in =_<= (rpow-pos-eq x>0 *> inv ide-right) <=∘ <=_*_positive-right (<=-less rpow-pos>0) (=_<= (inv (one-rpow-pos {RealField.zro<ide} {p - 1})) <=∘ rpow-pos-mono (linarith : 0 <= p - 1) x>=1)
+         \in =_<= (rpow-pos-eq x>0 *> inv ide-right) <=∘ gcongr (=_<= (inv (one-rpow-pos {RealField.zro<ide} {p - 1})) <=∘ rpow-pos-mono (linarith : 0 <= p - 1) x>=1)
               <=∘ =_<= (inv rpow-pos_+ *> rpow-pos-ext idp *> pmap (rpow-pos x x>0) (equation.abGroup : 1 + (p - 1) = p) *> inv (rpow-pos-eq x>0))
   }
 

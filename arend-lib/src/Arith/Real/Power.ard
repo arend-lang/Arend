@@ -110,7 +110,7 @@
 \attr gcongr
 \lemma rpow-pos-mono {x y : Real} {x>0 : (0 : Real) < x} {y>0 : (0 : Real) < y} {a : Real} (a>=0 : (0 : Real) <= a) (x<=y : x <= y)
   : rpow-pos x x>0 a <= rpow-pos y y>0 a
-  => =_<= rpow-pos-def <=∘ Real-exp-mono (<=_*_positive-right a>=0 (log-mono x>0 y>0 x<=y)) <=∘ =_<= (inv rpow-pos-def)
+  => =_<= rpow-pos-def <=∘ gcongr <=∘ =_<= (inv rpow-pos-def)
 
 -- | `x^a` for `x ≥ 0` and `a > 0`, extended from `(0,∞)` by density.
 \sfunc rpow (x : Real) (\property x>=0 : (0 : Real) <= x) (a : Real) (\property a>0 : (0 : Real) < a) : Real
@@ -177,7 +177,7 @@
       \have | d>0 => rpow-pos>0 {e} {e>0} {RealField.pinv a a>0}
              | zd : rpow 0 p a a>0 <= rpow-pos (rpow-pos e e>0 (RealField.pinv a a>0)) d>0 a
                  => dense_<= real-join-uniform pos-nonneg-map pos-nonneg-denseEmbedding.1 (rpow-cover a>0) (rpow-cover a>0 CoverMap.∘ joinMap d>0)
-                      (\lam y => =_<= (rpow-pos-eq y.2) <=∘ rpow-pos-mono (<=-less a>0) join-right <=∘ =_<= (inv $ rpow-pos-eq (d>0 <∘l join-left))) (0,p)
+                      (\lam y => =_<= (rpow-pos-eq y.2) <=∘ gcongr join-right <=∘ =_<= (inv $ rpow-pos-eq (d>0 <∘l join-left))) (0,p)
                     <=∘ =_<= (rpow-pos-eq (d>0 <∘l join-left) *> rpow-pos-ext (RealAbGroup.join-comm *> RealAbGroup.join_<= (<=-less d>0)))
       \in zd (transportInv (< _) rpow-pos-inv e<z)
   }) rpow>=0
@@ -191,7 +191,7 @@
   : rpow x x>=0 a a>0 <= rpow y y>=0 a a>0
   => dense_<= real-join-uniform (ProductCoverSpace.prod pos-nonneg-map pos-nonneg-map) (ProductTopSpace.prod.isDense pos-nonneg-denseEmbedding.1 pos-nonneg-denseEmbedding.1)
       (rpow-cover a>0 CoverMap.∘ ProductCoverSpace.proj1 {NonNegSpace} {NonNegSpace}) (rpow-cover a>0 CoverMap.∘ joinMap2)
-      (\lam s => =_<= (rpow-pos-eq s.1.2) <=∘ rpow-pos-mono {_} {_} {s.1.2} {s.1.2 <∘l join-left} (<=-less a>0) join-left <=∘ =_<= (inv $ rpow-pos-eq (s.1.2 <∘l join-left))) ((x,x>=0),(y,y>=0))
+      (\lam s => =_<= (rpow-pos-eq s.1.2) <=∘ gcongr join-left <=∘ =_<= (inv $ rpow-pos-eq (s.1.2 <∘l join-left))) ((x,x>=0),(y,y>=0))
      <=∘ =_<= (rpow-ext (RealAbGroup.join_<= x<=y) idp)
   \where
     \lemma joinMap2 : CoverMap (ProductCoverSpace NonNegSpace NonNegSpace) NonNegSpace (\lam s => (s.1.1 ∨ s.2.1, s.1.2 <=∘ join-left))
@@ -258,7 +258,7 @@
   => \have | p>0 : (0 : Real) < p => linarith
            | sp : RealField.pinv p p>0 * p = (1 : Real) => RealField.pinv-left p>0
            | s>=0 : (0 : Real) <= RealField.pinv p p>0 => <=-less (RealField.pinv>0 p>0)
-           | s<=1 : RealField.pinv p p>0 <= (1 : Real) => =_<= (inv ide-right) <=∘ <=_*_positive-right s>=0 p>=1 <=∘ =_<= sp
+           | s<=1 : RealField.pinv p p>0 <= (1 : Real) => =_<= (inv ide-right) <=∘ gcongr <=∘ =_<= sp
            | j : x * rpow-pos z z>0 (p - 1) <= RealField.pinv p p>0 * rpow-pos x x>0 p + (1 - RealField.pinv p p>0) * rpow-pos z z>0 p
               => =_<= (pmap2 (*) (inv (exp_log x x>0)) rpow-pos-def *> inv exp_+ *> pmap exp (equation.cRing {sp}))
                   <=∘ jensen2 exp-convex {p * log x x>0} {p * log z z>0} () () s>=0 (linarith : (0 : Real) <= 1 - RealField.pinv p p>0) (equation.cRing)
@@ -271,7 +271,7 @@
   : rpow-pos (t * x + (1 - t) * y) m>0 p <= t * rpow-pos x x>0 p + (1 - t) * rpow-pos y y>0 p
   => \let | c => rpow-pos (t * x + (1 - t) * y) m>0 (p - 1)
           | M => rpow-pos (t * x + (1 - t) * y) m>0 p
-     \in \have | hx : t * (p * (x * c)) <= t * (rpow-pos x x>0 p + (p - 1) * M) => <=_*_positive-right t>=0 (rpow-pos-tangent p>=1)
+     \in \have | hx : t * (p * (x * c)) <= t * (rpow-pos x x>0 p + (p - 1) * M) => gcongr (rpow-pos-tangent p>=1)
                | hy : (1 - t) * (p * (y * c)) <= (1 - t) * (rpow-pos y y>0 p + (p - 1) * M) => <=_*_positive-right (linarith : (0 : Real) <= 1 - t) (rpow-pos-tangent p>=1)
                | mc : (t * x + (1 - t) * y) * c = M => pmap (* c) (inv rpow-pos-one) *> inv rpow-pos_+ *> pmap (rpow-pos _ m>0) (equation.cRing : 1 + (p - 1) = p)
                | e1 : t * (p * (x * c)) + (1 - t) * (p * (y * c)) = p * M => equation.cRing {mc}
@@ -301,7 +301,7 @@
     \lemma comb>0 {a b t : Real} (a>0 : (0 : Real) < a) (b>0 : (0 : Real) < b) (t>=0 : (0 : Real) <= t) (t<=1 : t <= (1 : Real))
       : (0 : Real) < t * a + (1 - t) * b
       => \have | m>0 : (0 : Real) < a ∧ b => transport (__ < a ∧ b) (RealAbGroup.meet_<= <=-refl) (RealAbGroup.<_meet-monotone a>0 b>0)
-               | l1 : t * (a ∧ b) <= t * a => <=_*_positive-right t>=0 meet-left
+               | l1 : t * (a ∧ b) <= t * a => gcongr meet-left
                | l2 : (1 - t) * (a ∧ b) <= (1 - t) * b => <=_*_positive-right (linarith : (0 : Real) <= 1 - t) meet-right
                | e : t * (a ∧ b) + (1 - t) * (a ∧ b) = a ∧ b => equation.cRing
          \in linarith

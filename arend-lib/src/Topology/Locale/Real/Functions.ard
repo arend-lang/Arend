@@ -87,7 +87,7 @@
   \func scaleMap (c : Rat) (c>=0 : RatField.zro RatField.<= c) (c<=1 : c RatField.<= 1) : MetricMap (RealN 2) RealNormed (\lam s => Real.fromRat c RealField.* s 0) \cowith
     | func-dist {s} {t} => Real.<=-upper.1 $
         =_<= (pmap RealAbGroup.abs (inv RealField.ldistr_-) *> RealField.abs_* *> pmap (\lam z => z RealField.* RealAbGroup.abs (s 0 - t 0)) (RealAbGroup.abs-ofPos (rat_real_<=.1 c>=0)))
-        <=∘ RealField.<=_*_positive-left (rat_real_<=.1 c<=1) RealAbGroup.abs>=0 <=∘ =_<= RealField.ide-left
+        <=∘ gcongr (rat_real_<=.1 c<=1) <=∘ =_<= RealField.ide-left
         <=∘ =_<= (inv zro-right) <=∘ <=_+ <=-refl RealAbGroup.abs>=0 <=∘ =_<= (pmap (_ +) (inv zro-right))
 
   -- | The constant map with value a point `x`.
@@ -118,7 +118,7 @@
     => pmap (LocaleHom.∘ T) (op2-def {Z} {phi} {u} {v}) *> pmap (liftMap phi LocaleHom.∘) (tupleN-comp {Y} {Z} {2} {u :: v :: nil} {T} *> pmap tupleN (arrayExt {RealFun Y} {2} {\lam (j : Fin 2) => (DArray.at {u :: v :: nil} j) LocaleHom.∘ T} {(u LocaleHom.∘ T) :: (v LocaleHom.∘ T) :: nil} (\lam (j : Fin 2) => \case \elim j \with { | 0 => idp | 1 => idp }))) *> inv (op2-def {Y} {phi} {u LocaleHom.∘ T} {v LocaleHom.∘ T})
 
   \lemma realValue-op2 {Z : Locale} {x : CompleteFilter Z} {phi : CoverMap (RealN 2) RealNormed} {u v : RealFun Z}
-    : realValue x (op2 phi u v) = phi (\lam j => realValue x ((DArray.at {u :: v :: nil} j)))
+    : realValue x (op2 phi u v) = phi (\lam j => realValue x (DArray.at {u :: v :: nil} j))
     => pmap (realValue x) op2-def *> realValue-lift {Z} {x} {2} {phi} {u :: v :: nil}
 
   -- | The locale `ℝ³`, used to prove identities between operations on real-valued functions.
@@ -592,7 +592,7 @@
   => le-const \lam {c'} c'>0 => \case rat_natBound (RatField.finv c' + RatField.finv c') \with {
     | (n,q<n) =>
       \have | e : (RatField.finv c' + RatField.finv c') * c' = 1 + 1 => RatField.rdistr *> pmap2 (+) (RatField.finv-left (RatField.>_/= c'>0)) (RatField.finv-left (RatField.>_/= c'>0))
-             | nc : (1 : Rat) + 1 < RatField.natCoef n * c' => transport (`< _) e (RatField.<_*_positive-left q<n c'>0)
+            | nc : 2 RatField.< RatField.natCoef n * c' => transport (< _) e (gcongr q<n)
       \in iter n <=∘ le-upper-bot (p n) (later linarith)
   }
   \where

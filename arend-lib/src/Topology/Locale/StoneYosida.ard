@@ -213,7 +213,7 @@
                        <=∘ SJoin-cond {SYSpec A} {Rat} {\lam s => sembed (cut a (s - d) (s + d))} {\lam _ => \Sigma} {s} ()
                 | base : top <= {SYSpec A} S (negative N) => =_<= (inv (sembed-top {A} {_} {d} d>0 (lower-top lo)))
                 | (k, q<k) => rat_natBound ((N + N) * RatField.finv d)
-                | kd : N + N < RatField.natCoef k * d => transport (`< _) (RatField.*-assoc *> pmap (_ *) (RatField.finv-left (RatField.>_/= d>0)) *> RatField.ide-right) (RatField.<_*_positive-left q<k d>0)
+                | kd : N + N < RatField.natCoef k * d => transport (`< _) (RatField.*-assoc *> pmap (_ *) (RatField.finv-left (RatField.>_/= d>0)) *> RatField.ide-right) (gcongr q<k)
       \in grid-iter {SYSpec A} {T} {S} {N} {d} base step k <=∘ join-univ <=-refl (final _ (rewrite gridPt-char linarith))
   }
 

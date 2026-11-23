@@ -187,8 +187,13 @@ public abstract class OrderSearch {
    */
   protected @Nullable Instance instantiate(ExpressionTypechecker tc, ConcreteExpression fun, int maxParameters, ModeChooser mode) {
     TypedExpression typed = tc.typecheck(fun, null);
+    if (typed == null || typed.getExpression() instanceof CoreErrorExpression) return null;
+    // Typechecking a reference may insert leading implicit arguments
+    // (for example, all of them if the first one is an instance parameter), so we skip the corresponding parameters
+    int start = maxParameters - countParameters(typed.getType());
+    if (start < 0) return null;
     List<CoreInferenceReferenceExpression> premises = new ArrayList<>();
-    for (int i = 0; typed != null && !(typed.getExpression() instanceof CoreErrorExpression) && i < maxParameters; i++) {
+    for (int i = start; typed != null && !(typed.getExpression() instanceof CoreErrorExpression) && i < maxParameters; i++) {
       CoreExpression type = Relation.deref(typed.getType());
       if (!(type instanceof CorePiExpression) && Relation.parseSyntactically(type, meta, getNatInstance()) != null) break;
       if (!(type instanceof CorePiExpression)) type = type.normalize(NormalizationMode.WHNF);
@@ -208,6 +213,23 @@ public abstract class OrderSearch {
     }
     if (typed == null || typed.getExpression() instanceof CoreErrorExpression) return null;
     return new Instance(typed, premises);
+  }
+
+  /**
+   * Counts the parameters of {@code type} before its conclusion, which is a relation.
+   */
+  private int countParameters(CoreExpression type) {
+    int count = 0;
+    while (true) {
+      type = Relation.deref(type);
+      if (!(type instanceof CorePiExpression) && Relation.parseSyntactically(type, meta, getNatInstance()) != null) return count;
+      if (!(type instanceof CorePiExpression)) type = type.normalize(NormalizationMode.WHNF);
+      if (!(type instanceof CorePiExpression piType)) return count;
+      for (CoreParameter param = piType.getParameters(); param.hasNext(); param = param.getNext()) {
+        count++;
+      }
+      type = piType.getCodomain();
+    }
   }
 
   protected interface ModeChooser {

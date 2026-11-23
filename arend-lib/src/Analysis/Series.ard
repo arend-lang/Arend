@@ -58,6 +58,7 @@
 \lemma partialSum_1 {A : AddMonoid} {S : Series A} : partialSum S 1 = S 0
   => (\peval partialSum S 1) *> zro-right
 
+\attr gcongr
 \lemma partialSum_<= {A : PosetAddMonoid} {S T : Series A} {n : Nat} (p : \Pi (k : Nat) -> S k <= T k) : partialSum S n <= partialSum T n
   => transport2 (<=) (inv \peval partialSum S n) (inv \peval partialSum T n) (A.BigSum_<= \lam j => p j)
 
@@ -256,6 +257,7 @@
     | inr m<=k => transport2 (<=) zro-left (inv $ midSum-split p m<=k) $ <=_+ (midSum>=0 s) <=-refl
   }
 
+\attr gcongr
 \lemma midSum_<= {A : PosetAddMonoid} {b c : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j <= c j) : midSum b n m <= midSum c n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) $ A.BigSum_<= \lam j => s zero<=_ (fin_< j)
   | suc n, 0 => <=-refl

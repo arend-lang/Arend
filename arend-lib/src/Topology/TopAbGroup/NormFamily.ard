@@ -172,8 +172,8 @@
     => RealField.<_*_positive_positive (rat_real_<.1 eps>0) (RealField.pinv>0 abs+1>0)
 
   \lemma lip-bound {C n a : Real} {eps : Rat} (n>=0 : (0 : Real) <= n) (p : a <= C * n) (q : n < lipRadius C eps) : a < Real.fromRat eps
-    => \have | m1 : C * n <= RealAbGroup.abs C * n => RealField.<=_*_positive-left RealAbGroup.abs>=id n>=0
-             | m2 : RealAbGroup.abs C * n <= RealAbGroup.abs C * lipRadius C eps => RealField.<=_*_positive-right RealAbGroup.abs>=0 (<=-less q)
+    => \have | m1 : C * n <= RealAbGroup.abs C * n => gcongr RealAbGroup.abs>=id
+             | m2 : RealAbGroup.abs C * n <= RealAbGroup.abs C * lipRadius C eps => gcongr
              | e : RealAbGroup.abs C * lipRadius C eps + lipRadius C eps = Real.fromRat eps
                  => equation.cRing {RealField.pinv-left (abs+1>0 {C})}
        \in linarith

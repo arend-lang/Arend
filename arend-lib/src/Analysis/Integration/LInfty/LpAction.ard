@@ -139,7 +139,7 @@
                    | le : abs G <= abs (lpInc p p>=1 (a *q abs g))
                        => lpToL0-reflects (=_<= (lpToL0-abs G) <=∘ jb) <=∘ =_<= (inv (abs-ofPos (=_<= (inv (lpInc p p>=1).func-zro) <=∘ (lpInc p p>=1).func-<= h>=0)))
          \in TruncPreBanachLattice.lnorm_<= {LpSpace L p p>=1} le <=∘ =_<= (lpInc.lnorm-char *> pnorm-*q *> pmap (`* _) (RealAbGroup.abs-ofPos positivity))
-             <=∘ RealField.<=_*_positive-right positivity (pnorm-abs-mono (=_<= (abs-ofPos abs>=0)))
+             <=∘ gcongr (pnorm-abs-mono (=_<= (abs-ofPos abs>=0)))
 
     -- | $g \mapsto F g$ is a uniformly continuous additive map $(L, \|\cdot\|_p) \to \mathrm L^p$.
     \func pre {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} (F : LInftyElem L) : UniformNormedAbGroupMap (LpPreSpace L p p>=1) (LpSpace L p p>=1) \cowith

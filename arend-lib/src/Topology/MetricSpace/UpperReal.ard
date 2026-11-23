@@ -14,10 +14,7 @@
 \import Paths.Meta
 \import Set.Filter
 \import Set.Set
-\import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
-\import Topology.TopAbGroup
-\import Topology.UniformSpace
 
 \instance ExUpperRealMetric : CompleteExMetricSpace ExUpperReal
   | dist (x y : ExUpperReal) : ExUpperReal \cowith {
@@ -31,8 +28,8 @@
   | dist-triang {x} {y} {z} {d} xy+yz<d => \case ExUpperReal.+_U.1 xy+yz<d \with {
     | inP (a, inP (a',a'<a,a'>=0,x<=y+a',y<=x+a'), b, inP (b',b'<b,b'>=0,y<=z+b',z<=y+b'), a+b<d) =>
       inP (a' + b', RatField.<_+ a'<a b'<b <∘ a+b<d, RatField.<=_+-positive a'>=0 b'>=0,
-           transport (_ <=) (+-assoc *> pmap (z +) (+-comm *> ExUpperReal.+-rat)) $ x<=y+a' <=∘ ExUpperRealAbMonoid.<=_+ y<=z+b' ExUpperRealAbMonoid.<=-refl,
-           transport (_ <=) (+-assoc *> pmap (x +) ExUpperReal.+-rat) $ z<=y+b' <=∘ ExUpperRealAbMonoid.<=_+ y<=x+a' ExUpperRealAbMonoid.<=-refl)
+           transport (_ <=) (+-assoc *> pmap (z +) (+-comm *> ExUpperReal.+-rat)) $ x<=y+a' <=∘ gcongr,
+           transport (_ <=) (+-assoc *> pmap (x +) ExUpperReal.+-rat) $ z<=y+b' <=∘ gcongr)
   }
   | dist-ext {x} {y} xy=0 => <=-antisymmetric
     (\lam {b} y<b => \case U-rounded y<b \with {
@@ -60,10 +57,10 @@
     \open ExUpperRealAbMonoid(<-rat,<_+)
 
     \lemma dist-left {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : x <= y + a \elim xy<a
-      | inP (b,b<a,_,p,_) => p <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
+      | inP (b,b<a,_,p,_) => p <=∘ gcongr (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
 
     \lemma dist-right {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : y <= x + a \elim xy<a
-      | inP (b,b<a,_,_,p) => p <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
+      | inP (b,b<a,_,_,p) => p <=∘ gcongr (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
 
     \func cfPoint (F : Set ExUpperReal -> \Prop) : ExUpperReal \cowith
       | U q => ∃ (a : < q) (U : F) ∀ {x : U} (x < a)

@@ -1,3 +1,4 @@
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -82,10 +83,10 @@
   }
 
 \lemma norm_ide-left {X : ExPseudoNormedRing} {x : X} : X.norm 1 * norm x = norm x
-  => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $ ExUpperRealSemigroup.<=_* norm_ide_<= <=-refl) (transport (norm __ <= _) ide-left norm_*_<=)
+  => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $ gcongr norm_ide_<=) (transport (norm __ <= _) ide-left norm_*_<=)
 
 \lemma norm_ide-right {X : ExPseudoNormedRing} {x : X} : X.norm x * X.norm 1 = norm x
-  => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-right norm>=0) $ ExUpperRealSemigroup.<=_* <=-refl norm_ide_<=) (transport (norm __ <= _) ide-right norm_*_<=)
+  => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-right norm>=0) $ gcongr norm_ide_<=) (transport (norm __ <= _) ide-right norm_*_<=)
 
 -- | The norm of 1 is either 0 or 1.
 \lemma norm_zro_ide {X : PseudoNormedRing} : (X.norm 1 = (0 : Real)) || (X.norm 1 = (1 : Real))

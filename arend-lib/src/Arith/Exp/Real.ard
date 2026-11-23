@@ -181,7 +181,7 @@
   => \have | y-eq : y = x + (y - x)
               => inv (inv +-assoc *> pmap (+ _) +-comm *> +-assoc *> pmap (y +) negative-right *> zro-right)
            | step : 1 * exp x <= exp (y - x) * exp x
-              => RealField.<=_*_positive-left (Real-exp->=1-of-nonneg (PosetAddGroup.to>=0 x<=y)) (<=-less (Real-exp-pos x))
+              => gcongr (Real-exp->=1-of-nonneg (PosetAddGroup.to>=0 x<=y))
      \in transport2 (<=) ide-left (*-comm *> inv exp_+ *> inv (pmap exp y-eq)) step
 
 -- | Real {exp} is injective. Follows from totality + strict monotonicity.

@@ -93,7 +93,7 @@
        | C>=0 : 0 <= C => RealAbGroup.BigSum_>=0 ap.1
        | Nh>=0 : 0 <= Nh => cover-num>=0
        | dh>=0 (x : G) : 0 <= CompactCoverMap.scale delta h x => RealField.<=_*_positive_positive delta>=0 (h>=0 x)
-       | Lh : Lam.L (CompactCoverMap.scale delta h) dh>=0 <= delta * Nh => =_<= (Lam.L-scale delta>=0) <=∘ RealField.<=_*_positive-right delta>=0 Lam.L-bound
+       | Lh : Lam.L (CompactCoverMap.scale delta h) dh>=0 <= delta * Nh => =_<= (Lam.L-scale delta>=0) <=∘ gcongr Lam.L-bound
        | LS<= : Lam.L (lamSum c (\lam i => CompactMap-translate (s i) psi)) (lamSum>=0 {G} {n} {c} ap.1 {\lam i => CompactMap-translate (s i) psi} (\lam i x => psip.1 _)) <= C * lam => Lam.L-transSum {psi} {psip.1} ap.1 {s}
        | LS0<= : Lam.L (lamSum d (\lam i => CompactMap-translate (t i) psi)) (lamSum>=0 {G} {m} {d} ap0.1 {\lam i => CompactMap-translate (t i) psi} (\lam i x => psip.1 _)) <= D * lam => Lam.L-transSum {psi} {psip.1} ap0.1 {t}
        | f<=S : Lam.L f f>=0 <= Lam.L (lamSum c (\lam i => CompactMap-translate (s i) psi)) (lamSum>=0 {G} {n} {c} ap.1 {\lam i => CompactMap-translate (s i) psi} (\lam i x => psip.1 _))
@@ -112,11 +112,11 @@
        | pD>0 => RealField.pinv>0 D>0
        | CD>=0 : 0 <= C * RealField.pinv D D>0 => RealField.<=_*_positive_positive C>=0 (<=-less pD>0)
        | CD<= : C * RealField.pinv D D>0 <= C * lam
-         => =_<= (inv ide-right) <=∘ RealField.<=_*_positive-right CD>=0 Dlam>=1 <=∘ =_<= (equation.cRing {RealField.pinv-left D>0} : C * RealField.pinv D D>0 * (D * lam) = C * lam)
+         => =_<= (inv ide-right) <=∘ gcongr <=∘ =_<= (equation.cRing {RealField.pinv-left D>0} : C * RealField.pinv D D>0 * (D * lam) = C * lam)
        | e1 : C * lam - C * RealField.pinv D D>0 = C * RealField.pinv D D>0 * (D * lam - 1) => equation.cRing {RealField.pinv-left D>0}
        | Clam<= : C * lam <= cover-num f f0 f>=0 f0p + rho => usingOnly (hc, S<=f, Lam.L-bound {f} {f>=0}) linarith
        | t1 : C * RealField.pinv D D>0 * (D * lam - 1) <= (cover-num f f0 f>=0 f0p + rho) * rho
-         => RealField.<=_*_positive-right CD>=0 (usingOnly Dlam<= linarith) <=∘ RealField.<=_*_positive-left (CD<= <=∘ Clam<=) (usingOnly (eta>=0, RealField.<=_*_positive_positive delta>=0 Nh>=0) linarith)
+         => gcongr (usingOnly Dlam<= linarith) <=∘ RealField.<=_*_positive-left (CD<= <=∘ Clam<=) (usingOnly (eta>=0, RealField.<=_*_positive_positive delta>=0 Nh>=0) linarith)
        | t2 : 0 <= C * RealField.pinv D D>0 * (D * lam - 1) => RealField.<=_*_positive_positive CD>=0 (usingOnly Dlam>=1 linarith)
        | e2 : rho * (1 + cover-num f f0 f>=0 f0p + rho) = rho + (cover-num f f0 f>=0 f0p + rho) * rho => equation.cRing
        | dN>=0 : 0 <= delta * Nh => RealField.<=_*_positive_positive delta>=0 Nh>=0
@@ -155,7 +155,7 @@
             \let rho => rho0 ∧ 1
             \in \have | rho>0 : 0 < rho => <_meet-univ rho0>0 RealAbGroup.zro<ide
                       | rho<=1 : rho <= 1 => meet-right
-                      | rhoe : rho * (2 + Nf) <= eps => RealField.<=_*_positive-left meet-left (positivity : 0 <= 2 + Nf) <=∘ <=-less rho0e
+                      | rhoe : rho * (2 + Nf) <= eps => gcongr meet-left <=∘ <=-less rho0e
                       | rho2>0 : 0 < rho * ratio 1 2 => positivity
             \in \case split-eps rho2>0 (positivity : 0 < Nh + 1) \with {
               | inP (delta,delta>0,deltaN) =>
@@ -311,7 +311,7 @@
     \lemma scale-arith {x y u v a eta e : Real} (a>=0 : 0 <= a) (h1 : abs (x - u) <= eta) (h2 : abs (y - v) <= eta) (q : u = a * v) (etaa : eta * (a + 1) < e)
       : abs (x - a * y) <= e
       => \have | (a1,a2) => abs-diff-bound h1
-               | t : abs (a * y - a * v) <= a * eta => rewrite (inv RealField.ldistr_-, RealField.abs_*, RealAbGroup.abs-ofPos a>=0) (RealField.<=_*_positive-right a>=0 h2)
+               | t : abs (a * y - a * v) <= a * eta => rewrite (inv RealField.ldistr_-, RealField.abs_*, RealAbGroup.abs-ofPos a>=0) (gcongr h2)
                | (b1,b2) => abs-diff-bound t
                | e1 : eta * (a + 1) = a * eta + eta => equation.cRing
          \in RealField.abs-univ (usingOnly (a1, b2, q, e1, etaa) linarith) (usingOnly (a2, b1, q, e1, etaa) linarith)
@@ -396,6 +396,11 @@
              | t : 0 <= integral (f - g) => integral>=0 \lam x => RealAbGroup.to>=0 (p x)
        \in rewrite e (usingOnly t linarith)
 }
+
+-- | A top-level version of {HaarIntegral.integral-mono} for {gcongr}.
+\attr gcongr
+\lemma haar-integral-mono_gcongr {G : TopAddGroup} {J : HaarIntegral G} {f g : CompactCoverMap G} (p : \Pi (x : G) -> g x <= f x) : J.integral g <= J.integral f
+  => J.integral-mono p
 
 -- | `C_c(G)` with a Haar integral is a bounded integration space.
 \func haarIntegrationSpace {G : LocallyCompactUrysohnGroup} (J : HaarIntegral G) : BoundedIntegrationSpace (CompactCoverMap G) \cowith
@@ -528,13 +533,13 @@
                        => =_<= (inv (J-rat J m n>0 g)) <=∘ J.integral-mono (\lam x => RealField.<=_*_positive-left ml (g>=0 x))
                      | up : J.integral (CompactCoverMap.scale a g) <= RealField.natCoef (suc (suc m)) * RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g
                        => J.integral-mono (\lam x => RealField.<=_*_positive-left (mu <=∘ =_<= (pmap (* _) (inv mm))) (g>=0 x)) <=∘ =_<= (J-rat J (suc (suc m)) n>0 g)
-                     | low' : RealField.natCoef m * RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g <= a * J.integral g => RealField.<=_*_positive-left ml Jg>=0
+                     | low' : RealField.natCoef m * RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g <= a * J.integral g => gcongr ml
                      | up' : a * J.integral g <= RealField.natCoef (suc (suc m)) * RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g
-                       => RealField.<=_*_positive-left (mu <=∘ =_<= (pmap (* _) (inv mm))) Jg>=0
+                       => gcongr (mu <=∘ =_<= (pmap (* _) (inv mm)))
                      | e1 : RealField.natCoef (suc (suc m)) * RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g
                               = RealField.natCoef m * RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g + 2 * (RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g)
                        => rewrite mm equation.cRing
-                     | e2 : RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g <= d0 * J.integral g => RealField.<=_*_positive-left d<=d0 Jg>=0
+                     | e2 : RealField.pinv (RealField.natCoef (suc (suc k))) n>0 * J.integral g <= d0 * J.integral g => gcongr d<=d0
                      | e3 : d0 * (2 * J.integral g + 1) = 2 * (d0 * J.integral g) + d0 => equation.cRing
                \in scale-arith low up low' up' e1 e2 e3 d0e d0>0
            }
@@ -633,7 +638,7 @@
             \let rho => rho0 ∧ 1
             \in \have | rho>0 : 0 < rho => <_meet-univ rho0>0 RealAbGroup.zro<ide
                       | rho<=1 : rho <= 1 => meet-right
-                      | rhoe : rho * (2 * (2 + Nf)) <= Real.fromRat e => RealField.<=_*_positive-left meet-left (positivity : 0 <= 2 * (2 + Nf)) <=∘ <=-less rho0e
+                      | rhoe : rho * (2 * (2 + Nf)) <= Real.fromRat e => gcongr meet-left <=∘ <=-less rho0e
             \in \case split-eps rho>0 (positivity : 0 < Nh + 1) \with {
               | inP (delta,delta>0,deltaN) =>
                 \have dN : delta * Nh <= rho => \have e1 : delta * (Nh + 1) = delta * Nh + delta => equation.cRing \in usingOnly (e1, deltaN, delta>0) linarith

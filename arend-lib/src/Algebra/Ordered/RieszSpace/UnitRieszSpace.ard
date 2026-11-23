@@ -177,6 +177,6 @@
 
   \lemma cut-join {a b : E} {J1 J2 K1 K2 : Rat} : cut a J1 J2 ∧ cut b K1 K2 <= cut (a ∨ b) (J1 RatField.∨ K1) (J2 RatField.∨ K2)
     => meet-univ
-        (meet-monotone meet-left meet-left <=∘ meet-monotone (<=_+ join-left <=-refl) (<=_+ join-right <=-refl) <=∘ =_<= (inv (pmap ((a ∨ b) -) (*q_join unit>=0) *> minus-join)))
+        (meet-monotone meet-left meet-left <=∘ gcongr (join-left, join-right) <=∘ =_<= (inv (pmap ((a ∨ b) -) (*q_join unit>=0) *> minus-join)))
         (meet-monotone meet-right meet-right <=∘ meet-monotone (<=_+ (<=_*q-left RatField.join-left unit>=0) <=-refl) (<=_+ (<=_*q-left RatField.join-right unit>=0) <=-refl) <=∘ =_<= (inv minus-join))
 }

@@ -135,17 +135,17 @@
         \have | l<=1 : Real.fromRat l <= 1 => rat_real_<=.1 RatField.meet-right
               | l<d : Real.fromRat l < d => rat_real_<.1 (RatField.meet-left <∘r (linarith : d * ratio 1 2 < d))
               | nlz : lnorm {RealN n} (scaleN (Real.fromRat l) z) <= Real.fromRat l
-                  => =_<= (lnorm-scaleN (<=-less l>0')) <=∘ <=_*_positive-right (<=-less l>0') z1 <=∘ =_<= ide-right
+                  => =_<= (lnorm-scaleN (<=-less l>0')) <=∘ gcongr <=∘ =_<= ide-right
               | n0 : lnorm {RealN n} (RealN n).zro <= 1 => =_<= (lnorm_zro {RealN n}) <=∘ linarith
               | nd : lnorm {RealN n} ((-) {RealN n} (scaleN (Real.fromRat l) z) (RealN n).zro) < d
                   => (=_<= (pmap (lnorm {RealN n}) (AddGroup.minus_zro {RealN n} {scaleN (Real.fromRat l) z})) <=∘ nlz) <∘r l<d
               | u : abs (phi (scaleN (Real.fromRat l) z) - phi (RealN n).zro) < 1 => h {scaleN (Real.fromRat l) z} {(RealN n).zro} (nlz <=∘ l<=1) n0 nd
               | b : abs (phi (scaleN (Real.fromRat l) z)) <= abs (phi (RealN n).zro) + 1
                   => =_<= (pmap abs (equation.abGroup : phi (scaleN (Real.fromRat l) z) = (phi (scaleN (Real.fromRat l) z) - phi (RealN n).zro) + phi (RealN n).zro))
-                     <=∘ abs_+ <=∘ <=_+ (<=-less u) <=-refl <=∘ =_<= +-comm
+                     <=∘ abs_+ <=∘ gcongr <=∘ =_<= +-comm
               | e : phi z = r * phi (scaleN (Real.fromRat l) z)
                   => pmap phi (inv (scaleN-inv' l>0')) *> hom li>0 _
-        \in =_<= (pmap abs e *> RealField.abs_* *> pmap (\lam t => t * abs (phi (scaleN (Real.fromRat l) z))) (abs-ofPos (<=-less rpow-pos>0))) <=∘ <=_*_positive-right (<=-less rpow-pos>0) b)
+        \in =_<= (pmap abs e *> RealField.abs_* *> pmap (\lam t => t * abs (phi (scaleN (Real.fromRat l) z))) (abs-ofPos (<=-less rpow-pos>0))) <=∘ gcongr)
   }
 
 -- | $\|x - y\| \le \|x\| + \|y\|$ in `ℝⁿ`.
@@ -159,7 +159,7 @@
   : \Sigma (z : Array Real n) (lnorm {RealN n} z <= 1) (phi x = rpow-pos M M>0 s * phi z) (scaleN (RealField.pinv M M>0) x = z)
   => \let | iM => RealField.pinv M M>0
           | iM>0 : 0 < iM => RealField.pinv>0 M>0
-     \in (scaleN iM x, =_<= (lnorm-scaleN (<=-less iM>0)) <=∘ <=_*_positive-right (<=-less iM>0) xM <=∘ =_<= (RealField.pinv-left M>0),
+     \in (scaleN iM x, =_<= (lnorm-scaleN (<=-less iM>0)) <=∘ gcongr <=∘ =_<= (RealField.pinv-left M>0),
           pmap phi (inv (scaleN-inv M>0)) *> hom M>0 _, idp)
 
 -- | Cover maps homogeneous of degree $s = p/q$ have the power modulus.
@@ -171,7 +171,7 @@
     | inP (T,T>0,TT) =>
       \let | eps => 1 ∧ (eta * RatField.finv T)
            | eps>0 : 0 < eps => RatField.<_meet-univ RatField.zro<ide (RatField.<_*_positive_positive eta>0 (RatField.finv>0 T>0))
-           | epsT : eps * T <= eta => RatField.<=_*_positive-left (RatField.meet-right {1} {eta * RatField.finv T}) (<=-less T>0)
+           | epsT : eps * T <= eta => gcongr (RatField.meet-right {1} {eta * RatField.finv T})
                                        <=∘ =_<= (*-assoc *> pmap (eta *) (RatField.finv-left (RatField.>_/= T>0)) *> ide-right)
       \in \case ball-uc phi eps>0 \with {
         | inP (delta,delta>0,hd) =>
@@ -201,11 +201,11 @@
                    (\lam ge => real-cases {0} {M}
                      (\lam M>0 =>
                        \have | small : N ((-) {RealN n} x y) < Real.fromRat delta * M
-                                 => ge <∘r RealField.<_*_positive-left (rat_real_<.1 rho<delta) M>0
+                                 => ge <∘r gcongr
                              | eps>0' : 0 < Real.fromRat eps => rat_real_<.1 eps>0
                              | T2S : rpow 2 two>=0 p p>0 * S <= Real.fromRat T * S => <=_*_positive-left (<=-less TT) S>=0
                              | eT : Real.fromRat eps * (Real.fromRat T * S) <= Real.fromRat eta * S
-                                 => =_<= (inv *-assoc *> pmap (\lam t => t * S) RealField.*-rat) <=∘ <=_*_positive-left (rat_real_<=.1 epsT) S>=0
+                                 => =_<= (inv *-assoc *> pmap (\lam t => t * S) RealField.*-rat) <=∘ gcongr
                        \in near hom hd eps>0' (rat_real_<=.1 (RatField.meet-left {1} {eta * RatField.finv T})) p>=1 q>=1 sq M>0 small
                             <=∘ <=_*_positive-right (<=-less eps>0') T2S <=∘ eT <=∘ transport (__ <= _) zro-left (<=_+ CD>=0 <=-refl))
                      (\lam M<=0 =>
@@ -240,8 +240,7 @@
                    | P>0 : 0 < rpow-pos M M>0 s => rpow-pos>0
                    | b {z : Array Real n} (zM : N z <= M) : abs (phi z) <= rpow-pos M M>0 s * B
                        => \have h => homog-normalize hom M>0 zM
-                          \in =_<= (pmap abs h.3 *> RealField.abs_* *> pmap (\lam t => t * abs (phi h.1)) (abs-ofPos (<=-less P>0)))
-                              <=∘ <=_*_positive-right (<=-less P>0) (hB h.2)
+                          \in =_<= (pmap abs h.3 *> RealField.abs_* *> pmap (\lam t => t * abs (phi h.1)) (abs-ofPos (<=-less P>0))) <=∘ gcongr (hB h.2)
                    | d : abs (phi x - phi y) <= 2 * B * rpow-pos M M>0 s
                        => abs_+ <=∘ =_<= (pmap (_ +) abs_negative) <=∘ <=_+ (b (linarith : N x <= M)) (b (linarith : N y <= M)) <=∘ =_<= equation.cRing
                    | BP>=0 : 0 <= 2 * B * rpow-pos M M>0 s => RealField.<=_*_positive_positive B2>=0 (<=-less P>0)
@@ -279,7 +278,7 @@
                    | u : abs (phi hx.1 - phi hy.1) < Real.fromRat eps => hd hx.2 hy.2 zw
                    | e : phi x - phi y = P * (phi hx.1 - phi hy.1) => pmap2 (\lam (a b : Real) => a - b) hx.3 hy.3 *> equation.cRing
                    | d : abs (phi x - phi y) <= Real.fromRat eps * P
-                       => =_<= (pmap abs e *> RealField.abs_* *> pmap (\lam t => t * _) (abs-ofPos (<=-less P>0))) <=∘ <=_*_positive-right (<=-less P>0) (<=-less u) <=∘ =_<= *-comm
+                       => =_<= (pmap abs e *> RealField.abs_* *> pmap (\lam t => t * _) (abs-ofPos (<=-less P>0))) <=∘ gcongr <=∘ =_<= *-comm
                    | eP>=0 : 0 <= Real.fromRat eps * P => RealField.<=_*_positive_positive (<=-less eps>0) (<=-less P>0)
                    | pw : rpow (Real.fromRat eps * P) eP>=0 q q>0 = rpow-pos (Real.fromRat eps) eps>0 q * rpow-pos M M>0 p
                        => rpow_* {_} {P} {<=-less eps>0} {<=-less P>0} *> pmap2 (*) (rpow-pos-eq eps>0) (rpow-pos-eq P>0 *> rpow-pos-rpow-pos *> pmap (rpow-pos M M>0) sq)
@@ -292,7 +291,7 @@
                           \in equation.cRing {h2}
                    | Mp : rpow-pos M M>0 p <= rpow 2 two>=0 p p>0 * (normPow p p>0 x + normPow p p>0 y)
                        => =_<= (inv (rpow-pos-eq {M} {M>=0} M>0 {p} {p>0}) *> rpow-ext {M} {2 * _} eM {M>=0} {RealField.<=_*_positive_positive two>=0 m>=0} idp {p>0} {p>0} *> rpow_* {2} {_} {two>=0} {m>=0})
-                          <=∘ <=_*_positive-right rpow>=0 (rpow-convex {N x} {N y} {Nx>=0} {Ny>=0} p>=1 t>=0 t<=1
+                          <=∘ gcongr (rpow-convex {N x} {N y} {Nx>=0} {Ny>=0} p>=1 t>=0 t<=1
                                 <=∘ linarith (rpow>=0 {N x} {Nx>=0} {p} {p>0}, rpow>=0 {N y} {Ny>=0} {p} {p>0}))
          \in rpow-mono {_} {_} {abs>=0} {eP>=0} d <=∘ =_<= pw <=∘ <=_*_positive-left sp (<=-less rpow-pos>0) <=∘ <=_*_positive-right (<=-less eps>0) Mp
 

@@ -284,7 +284,7 @@
           | d>0 : (0 : Real) < eps * RatField.finv B
              => RealField.<_*_positive_positive eps>0 (rat_real_<.1 (RatField.finv>0 B>0))
      \in inP (eps * RatField.finv B, d>0,
-              <_*_positive-right d>0 w<B <∘l =_<=
+              gcongr <∘l =_<=
                 (*-assoc *> pmap (eps *) (RealField.*-rat *> pmap Real.fromRat
                    (*-comm *> finv-right (RatField.>_/= B>0))) *> ide-right))
 

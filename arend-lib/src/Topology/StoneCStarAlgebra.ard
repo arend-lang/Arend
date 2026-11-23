@@ -209,8 +209,8 @@
              | ab_<= : a ∨ b ∨ 1 RatField.<= ab => inv ide-left =<= RatField.<=_*_positive-left join-right (<=-less RatField.zro<ide <=∘ join-right)
              | ab'-square => RatField.finv-square $ inP (_,idp)
         \in \case square-sum1 c*-sum
-                    (X.norm_*q-ofPos ab'>=0 =<= ExUpperRealSemigroup.<=_* <=-refl (ExUpperReal.<_<= |x|<a) <=∘ transportInv (ExUpperReal.<= _) (ExUpperReal.*-rat ab'>=0 $ <=-less $ norm>=0 |x|<a) (ExUpperReal.<=-rat.1 $ RatField.<=_*_positive-left (RatField.finv_<= (norm>=0 |x|<a) $ join-left <=∘ join-left <=∘ ab_<=) (<=-less $ norm>=0 |x|<a) <=∘ =_<= (RatField.finv-left $ RatField.>_/= $ norm>=0 |x|<a)))
-                    (X.norm_*q-ofPos ab'>=0 =<= ExUpperRealSemigroup.<=_* <=-refl (ExUpperReal.<_<= |y|<b) <=∘ transportInv (ExUpperReal.<= _) (ExUpperReal.*-rat ab'>=0 $ <=-less $ norm>=0 |y|<b) (ExUpperReal.<=-rat.1 $ RatField.<=_*_positive-left (RatField.finv_<= (norm>=0 |y|<b) $ join-right <=∘ join-left <=∘ ab_<=) (<=-less $ norm>=0 |y|<b) <=∘ =_<= (RatField.finv-left $ RatField.>_/= $ norm>=0 |y|<b)))
+                    (X.norm_*q-ofPos ab'>=0 =<= gcongr (ExUpperReal.<_<= |x|<a) <=∘ transportInv (ExUpperReal.<= _) (ExUpperReal.*-rat ab'>=0 $ <=-less $ norm>=0 |x|<a) (ExUpperReal.<=-rat.1 $ RatField.<=_*_positive-left (RatField.finv_<= (norm>=0 |x|<a) $ join-left <=∘ join-left <=∘ ab_<=) (<=-less $ norm>=0 |x|<a) <=∘ =_<= (RatField.finv-left $ RatField.>_/= $ norm>=0 |x|<a)))
+                    (X.norm_*q-ofPos ab'>=0 =<= gcongr (ExUpperReal.<_<= |y|<b) <=∘ transportInv (ExUpperReal.<= _) (ExUpperReal.*-rat ab'>=0 $ <=-less $ norm>=0 |y|<b) (ExUpperReal.<=-rat.1 $ RatField.<=_*_positive-left (RatField.finv_<= (norm>=0 |y|<b) $ join-right <=∘ join-left <=∘ ab_<=) (<=-less $ norm>=0 |y|<b) <=∘ =_<= (RatField.finv-left $ RatField.>_/= $ norm>=0 |y|<b)))
                     (X.*q-square ab'-square px)
                     (X.*q-square ab'-square py)
         \with {

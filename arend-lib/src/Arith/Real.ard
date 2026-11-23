@@ -313,7 +313,7 @@
     \lemma *'-char {x y : Real} {a : Rat} {b : Rat} (b<x : x.L b) {c : Rat} (c<y : y.L c) (b>=0 : 0 <= b) (c>=0 : 0 <= c) (a<=bc : a <= b * c)
       : ∃ (b : x.L) (c : y.L) (0 < b) (0 < c) (a < b * c)
       => \case x.L-rounded b<x, y.L-rounded c<y \with {
-        | inP (b',b'<x,b<b'), inP (c',c'<y,c<c') => inP (b', b'<x, c', c'<y, b>=0 <∘r b<b', c>=0 <∘r c<c', a<=bc <∘r RatField.<=_*_positive-left (<_<= b<b') c>=0 <∘r <_*_positive-right (b>=0 <∘r b<b') c<c')
+        | inP (b',b'<x,b<b'), inP (c',c'<y,c<c') => inP (b', b'<x, c', c'<y, b>=0 <∘r b<b', c>=0 <∘r c<c', a<=bc <∘r gcongr)
       }
 
     \func \infixl 7 *' {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) : Real \cowith
@@ -321,7 +321,7 @@
       | L-inh => inP (0, *'-char x>0 y>0 <=-refl <=-refl <=-refl)
       | L-closed (inP (a,a<x,b,b<y,a>0,b>0,q<ab)) q'<q => inP (a, a<x, b, b<y, a>0, b>0, q'<q <∘ q<ab)
       | L-rounded (inP (a,a<x,b,b<y,a>0,b>0,q<ab)) => \case x.L-rounded a<x, y.L-rounded b<y \with {
-        | inP (a',a'<x,a<a'), inP (b',b'<y,b<b') => inP (a' * b', *'-char a'<x b'<y (<_<= a>0 <=∘ <_<= a<a') (<_<= b>0 <=∘ <_<= b<b') <=-refl, q<ab <∘ RatField.<_*_positive-left a<a' b>0 <∘ <_*_positive-right (a>0 <∘ a<a') b<b')
+        | inP (a',a'<x,a<a'), inP (b',b'<y,b<b') => inP (a' * b', *'-char a'<x b'<y (<_<= a>0 <=∘ <_<= a<a') (<_<= b>0 <=∘ <_<= b<b') <=-refl, q<ab <∘ gcongr)
       }
       | U a => ∃ (b : x.U) (c : y.U) (b * c < a)
       | U-inh => \case x.U-inh, y.U-inh \with {

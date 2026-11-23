@@ -102,7 +102,7 @@
                     | q : RealAbGroup.abs (Q (x,y) - Q (x,x)) <= Real.fromRat eps => <=-less (h {x} {y} {x} {x} dd')
                     | e : f y - f x - (y.1 - x.1) * g x = (y.1 - x.1) * (Q (x,y) - Q (x,x))
                         => pmap2 (\lam u v => u - (y.1 - x.1) * v) (quot-incr {a} {b} {a<b} {f} {d} x y) (inv (quot-diag {a} {b} {a<b} {f} {d} x *> dg x)) *> equation.cRing
-              \in rewrite e $ =_<= (RealField.abs_* *> RealField.*-comm) <=∘ RealField.<=_*_positive-left q RealAbGroup.abs>=0)
+              \in rewrite e $ =_<= (RealField.abs_* *> RealField.*-comm) <=∘ gcongr q)
 
     -- | If {f} and {g} satisfy the estimate, then {g} is uniformly continuous.
     \private \lemma uniformEst-cont {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {eps : Rat} (eps>0 : 0 < eps)
@@ -288,7 +288,7 @@
           }
           \where
             \lemma aux {X i K s d : Real} (h : X * i < K) (ks : K * s = 1) (id : i * d = 1) (sd>0 : 0 < s * d) : X * s < d
-              => transport2 (<) ((equation : X * i * (s * d) = X * s * (i * d)) *> pmap (X * s *) id *> ide-right) ((equation : K * (s * d) = (K * s) * d) *> pmap (* d) ks *> ide-left) (RealField.<_*_positive-left h sd>0)
+              => transport2 (<) ((equation.cMonoid : X * i * (s * d) = X * s * (i * d)) *> pmap (X * s *) id *> ide-right) (inv *-assoc *> pmap (* d) ks *> ide-left) gcongr
 
         \lemma fine-exists {a b : Real} {f g : Set.Total (ClosedInterval a b) -> Real} (u : UniformEst f g) {e : Rat} (e>0 : 0 < e) : ∃ (n : Nat) (Fine f g n e)
           => \case u e>0 \with {
@@ -346,7 +346,7 @@
          \in real-scaled-eq-real (transport (<= _) zro-left (RealAbGroup.<=_+ RealAbGroup.abs>=0 RealAbGroup.abs>=0)) \lam {e} e>0 => \case fine-exists u e>0 \with {
            | inP (n,F) =>
              \have | p1 : RealAbGroup.abs ((y.1 - x.1) * (uniformQuot a<=b u x y - segMean a<=b g n x y)) <= Real.fromRat e * t
-                       => =_<= (RealField.abs_* *> RealField.*-comm) <=∘ RealField.<=_*_positive-left (uniformQuot.near e>0 F) RealAbGroup.abs>=0
+                       => =_<= (RealField.abs_* *> RealField.*-comm) <=∘ gcongr (uniformQuot.near e>0 F)
                    | p2 => fine-est {a} {b} {a<=b} F {x} {y}
              \in transport (_ <=) (RealField.rdistr *> inv RealField.ldistr) (abs-sum-le equation.ring p1 p2)
          }

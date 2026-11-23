@@ -166,7 +166,7 @@
   : \Sigma (1 - e * RatField.finv D < 1) (0 <= 1 - e * RatField.finv D) (D - D * (1 - e * RatField.finv D) <= e)
   => \have | D>0 : 0 < D => positivity
            | t>0 : 0 < e * RatField.finv D => positivity
-           | t<=e : e * RatField.finv D <= e * 1 => RatField.<=_*_positive-right (<=-less e>0) (<=-less (RatField.finv<1 D>1))
+           | t<=e : e * RatField.finv D <= e * 1 => gcongr (<=-less (RatField.finv<1 D>1))
            | q1 : D * (1 - e * RatField.finv D) = D * 1 - D * (e * RatField.finv D) => RatField.ldistr_-
            | q2 : D * (e * RatField.finv D) = e => inv *-assoc *> pmap (* RatField.finv D) *-comm *> *-assoc
                                                   *> pmap (e *) (RatField.finv-right (RatField.>_/= D>0)) *> ide-right

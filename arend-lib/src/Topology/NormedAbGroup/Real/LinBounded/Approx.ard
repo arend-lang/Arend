@@ -173,7 +173,7 @@
                                      | w : abs (phi x) < eps => transport (__ < _) (lnorm-ldist {RealNormed} *> pmap abs (pmap (\lam z => z - phi x) phi0 *> zro-left {RealAbGroup}) *> RealAbGroup.abs_negative) v
                                \in clampLB.mid-dev l>=0 <=∘ <=-less w)
                   (\lam d<=x => \have | m1 : Real.fromRat (q * RatField.finv d) * Real.fromRat d <= Real.fromRat k * Real.fromRat d
-                                          => RealField.<=_*_positive-left (rat_real_<=.1 k0<=k) positivity
+                                          => gcongr
                                       | m2 : Real.fromRat k * Real.fromRat d <= l => RealField.<=_*_positive-right k>=0 d<=x
                                       | ql : abs (phi x) <= l => b xR <=∘ <=-less S<q <=∘ =_<= (inv k0d) <=∘ m1 <=∘ m2
                                 \in =_<= (pmap abs (pmap (__ - _) (clampLB.mid-id ql) *> negative-right) *> RealAbGroup.abs_zro) <=∘ positivity))
@@ -254,11 +254,10 @@
       \in \have | Q>0 : 0 < Q => linarith (RatField.abs>=0 {q})
                 | e'>0 : 0 < e' => RatField.<_*_positive_positive e>0 (RatField.finv>0 Q>0)
                 | Qe : abs q * e' <= e
-                    => RatField.<=_*_positive-left (linarith : abs q <= Q) (<=-less e'>0)
-                         <=∘ =_<= (inv *-assoc *> pmap (* _) *-comm *> *-assoc *> pmap (e *) (RatField.finv-right (RatField.>_/= Q>0)) *> ide-right)
+                     => gcongr linarith <=∘ =_<= (inv *-assoc *> pmap (* _) *-comm *> *-assoc *> pmap (e *) (RatField.finv-right (RatField.>_/= Q>0)) *> ide-right)
       \in TruncP.map (ca R>0 e'>0) \lam (k0,g) => (k0, \lam k0<=k xR =>
           =_<= (pmap abs (inv RealField.ldistr_-) *> RealField.abs_* *> pmap (_ *) idp *> pmap (__ * _) (inv rat_real_abs))
-            <=∘ RealField.<=_*_positive-right (rat_real_<=.1 RatField.abs>=0) (g k0<=k xR) <=∘ =_<= RealField.*-rat <=∘ rat_real_<=.1 Qe)
+            <=∘ gcongr (g k0<=k xR) <=∘ =_<= RealField.*-rat <=∘ rat_real_<=.1 Qe)
 
 -- | The maximum of finitely many natural numbers.
 \func natMax {n : Nat} (k : Fin n -> Nat) : Nat \elim n
@@ -318,7 +317,7 @@
                                       | lyz : l1norm (\lam j => y j - z j) < Real.fromRat d
                                           => \have | b1 : l1norm (\lam j => y j - z j) <= N * Real.fromRat e1 => l1norm-coord-bound {n} {y} {z} hyz
                                                    | b2 : N * Real.fromRat e1 <= N * (Real.fromRat d * RealField.pinv (N + 1) N1>0)
-                                                       => RealField.<=_*_positive-right N>=0 (e1<=r <=∘ <=-less r<dp)
+                                                       => gcongr (e1<=r <=∘ <=-less r<dp)
                                                    | b3 : N * (Real.fromRat d * RealField.pinv (N + 1) N1>0) = Real.fromRat d - Real.fromRat d * RealField.pinv (N + 1) N1>0
                                                        => equation.cRing {pN}
                                              \in (b1 <=∘ b2) <∘r transport (< Real.fromRat d) (inv b3) (linarith : Real.fromRat d - Real.fromRat d * RealField.pinv (N + 1) N1>0 < Real.fromRat d)

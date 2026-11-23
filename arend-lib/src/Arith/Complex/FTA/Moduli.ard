@@ -128,16 +128,11 @@
        | byRight w<2 => <=-less (w<2 <∘l linarith)
        | byLeft w>1 =>
          \have | w>=1 : 1 <= cabs z => <=-less w>1
-               | big : (1 : Real) <= natCoef (suc m) * pow (cabs z) m
+               | big : 1 <= natCoef (suc m) * pow (cabs z) m
                   => RealField.pow>=1 w>=1
                      <=∘ =_<= (inv ide-left)
-                     <=∘ RealField.<=_*_positive-left
-                           (linarith (RealField.natCoefSuc m, RealField.natCoef>=0 {m})
-                              : (1 : Real) <= natCoef (suc m))
-                           (RealField.pow>=0 (linarith : (0 : Real) <= cabs z))
-         \in cabs-large-bound p deg monic C>=0 hC z w>=1
-               (hz <=∘ =_<= (inv ide-right) <=∘ RealField.<=_*_positive-right K>=0 big)
-             <=∘ linarith
+                     <=∘ gcongr (linarith (RealField.natCoefSuc m, RealField.natCoef>=0 {m}))
+         \in cabs-large-bound p deg monic C>=0 hC z w>=1 (hz <=∘ =_<= (inv ide-right) <=∘ gcongr) <=∘ linarith
      }
 
 \lemma nearFactor-bound {n : Nat} (p : Poly ComplexField) (deg : degree< p (suc n))
@@ -231,7 +226,7 @@
      \in inP (d, d>0, \lam r s hrB hd i =>
            minDist-small s (r i) eta>0
              (absProd-bound r s hrB (\lam k => <=-less (rewrite polyCoef_- (hd k))) i
-              <∘r (RealField.<=_*_positive-right (<=-less d>0) linarith <∘r dS)))
+              <∘r (gcongr linarith <∘r dS)))
 
 {- | **The deflation estimate.** If the two products are `delta`-close and `r 0` is matched to `s j`
      within `eta`, then after removing both entries the products are still close, with the loss
@@ -407,7 +402,7 @@
           (cabs_+ {polyCoef ((prodLin l - prodLin l') * padd 1 (negative a)) j}
                   {polyCoef (prodLin l' * padd pzero (b - a)) j}
            <=∘ RealAbGroup.<=_+ hb1 hb2
-           <=∘ RealAbGroup.<=_+ amp (RealField.<=_*_positive-left grow d>=0)
+           <=∘ gcongr
            <=∘ =_<= final)
   \where {
     -- | `(X - a) - (X - b) = b - a`.
@@ -445,9 +440,7 @@
             <=∘ lnorm_polyEval-boundD {ComplexValuedRing}
                   (degree<-monic-diff deg (prodLin-degree r) monic (prodLin-monic r))
                   (\lam k => coefs-minus p r hr k) z)
-           <∘r (RealField.<=_*_positive-right (<=-less d>0)
-                  (linarith : RealField.powSum (cabs z) (suc m) <= RealField.powSum (cabs z) (suc m) + 1)
-                <∘r dP))
+           <∘r gcongr linarith <∘r dP)
 
 -- | A near factorisation bounds the coefficients of `p - prodLin r`.
 \private \lemma coefs-minus {n : Nat} (p : Poly ComplexField) (r : Array Complex n) {delta : Real}
@@ -478,8 +471,7 @@
                  => lnorm_polyEval-boundD {ComplexValuedRing}
                       (degree<-monic-diff deg (prodLin-degree r) monic (prodLin-monic r))
                       (\lam k => coefs-minus p r hr k) z
-                    <∘r (RealField.<=_*_positive-right (<=-less delta>0) linarith
-                         <∘r dP)
+                    <∘r (gcongr linarith <∘r dP)
               | bound2 : cabs (polyEval (prodLin r) z) < c * ratio 1 2
                  => =_<= (pmap cabs (polyEval_prodLin r z) *> cabs_linProd r z)
                     <∘r (absProd-factor r z j B>=0 (hB r hr1)

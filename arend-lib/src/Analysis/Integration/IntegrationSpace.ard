@@ -65,7 +65,7 @@
   \lemma integral-mono {a b : E} (a<=b : a <= b) : integral a RealAbGroup.<= integral b
     => transport2 (RealAbGroup.<=) RealAbGroup.zro-right
         (inv integral_+ *> pmap integral (simplify : a + (b - a) = b))
-        (RealAbGroup.<=_+ RealAbGroup.<=-refl $ integral>=0 $ to>=0 a<=b)
+        (gcongr (integral>=0 $ to>=0 a<=b))
 
   \lemma integral_abs {a : E} : RealAbGroup.abs (integral a) RealAbGroup.<= integral (abs a)
     => RealAbGroup.join-univ (integral-mono abs>=id) $ transport (RealAbGroup.<= _) integral-hom.func-negative $ integral-mono abs>=neg
@@ -75,7 +75,7 @@
 
   \lemma integral-split {a b : E} : integral a RealAbGroup.<= integral b RealAbGroup.+ integral (abs (a - b))
     => \have e : integral a = integral b RealAbGroup.+ integral (a - b) => pmap integral (inv (simplify : b + (a - b) = a)) *> integral_+
-       \in rewrite e (RealAbGroup.<=_+ RealAbGroup.<=-refl (integral-mono abs>=id))
+       \in rewrite e (gcongr (integral-mono abs>=id))
 
   -- | (R1) holds for `f` if `τ_η f ≤ η e` for a fixed `e` and all `η > 0`.
   \lemma integral-trunc-dominated {f e : E} (h : \Pi {eta : Rat} -> RatField.zro RatField.< eta -> truncAt eta f <= eta *q e)
@@ -116,9 +116,14 @@
     \lemma dominated-arith {t s i : Real} {eta M eps : Rat} (t<=s : t <= s) (s=ei : s = eta RealField.* i) (eta>0 : RatField.zro RatField.< eta)
                            (i<M : i RealAbGroup.< M) (e1 : eta * (M ∨ 1) = eps * ratio 1 2) (eps>0 : RatField.zro RatField.< eps) : t RealAbGroup.< eps
       => \have | ie : i <= Real.fromRat (M ∨ 1) => <=-less i<M <=∘ rat_real_<=.1 join-left
-               | p : Real.fromRat eta RealField.* i <= Real.fromRat eta RealField.* Real.fromRat (M ∨ 1) => RealField.<=_*_positive-right positivity ie
+               | p : Real.fromRat eta RealField.* i <= Real.fromRat eta RealField.* Real.fromRat (M ∨ 1) => gcongr
          \in (t<=s <=∘ =_<= s=ei <=∘ p <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat e1)) <∘r rat_real_<.1 linarith
   }
+
+-- | A top-level version of {IntegrationSpace.integral-mono} for {gcongr}.
+\attr gcongr
+\lemma integral-mono_gcongr {E : IntegrationSpace} {a b : E} (a<=b : a <= b) : E.integral a RealAbGroup.<= E.integral b
+  => E.integral-mono a<=b
 
 -- | An integration space is regular if `I(τ_η f) → 0` as `η → 0⁺` and `I(τ_T f) → I(f)` as `T → ∞`, for `f ≥ 0`.
 \class RegularIntegrationSpace \extends IntegrationSpace {

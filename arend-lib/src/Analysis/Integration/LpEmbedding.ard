@@ -98,7 +98,7 @@
             \in \case real_<-char.1 delta>0 \with {
               | inP (d,d>0,d<delta) => inP (d, rat_real_<.2 d>0, \lam z zd =>
                 \have | le : pnormPow p p>=1 z <= T => (pnorm<=-iff {L} {p} {p>=1} {z} {delta} {<=-less delta>0}).1 (<=-less (zd <∘ d<delta)) <=∘ =_<= root-pow
-                      | m : c * pnormPow p p>=1 z <= c * T => RealField.<=_*_positive-right (<=-less c>0) le
+                      | m : c * pnormPow p p>=1 z <= c * T => gcongr
                       | cT : c * T = Real.fromRat (r RatField.* ratio 1 2) => equation.cRing {RealField.pinv-right c>0}
                       | rr : Real.fromRat (r RatField.* ratio 1 2) + Real.fromRat (r RatField.* ratio 1 2) = Real.fromRat r => RealAbGroup.+-rat *> pmap Real.fromRat linarith
                       | ch => measGauge-chebyshev p>=1 e>0 {h} {z}

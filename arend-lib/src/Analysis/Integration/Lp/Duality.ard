@@ -132,10 +132,10 @@
                    | iP>0 : (0 : Real) < RealField.pinv (lnorm {Y} psi) P>0 => RealField.pinv>0 P>0
                    | iG>0 : (0 : Real) < RealField.pinv G G>0 => RealField.pinv>0 G>0
                    | eG : e2 * RealField.pinv G G>0 < (1 : Real)
-                       => RealField.<_*_positive-left e<G iG>0 <∘l =_<= (RealField.pinv-right G>0)
+                       => gcongr e<G <∘l =_<= (RealField.pinv-right G>0)
                    | eG>0 : (0 : Real) < e2 * RealField.pinv G G>0 => RealField.<_*_positive_positive e2>0 iG>0
                    | lohi : ((1 : Real) - e2 * RealField.pinv G G>0) * RealField.pinv (lnorm {Y} psi) P>0 < (1 : Real) * RealField.pinv (lnorm {Y} psi) P>0
-                       => RealField.<_*_positive-left (usingOnly eG>0 linarith) iP>0
+                       => gcongr (usingOnly eG>0 linarith)
          \in \case real_<-rat-char.1 (lohi <∘l =_<= RealField.ide-left) \with {
            | inP (l,lo',hi') =>
              \have | lo : ((1 : Real) - e2 * RealField.pinv G G>0) * RealField.pinv (lnorm {Y} psi) P>0 < Real.fromRat l => real_<_U.2 lo'
@@ -145,12 +145,12 @@
                    | nl : lnorm {Y} (l *q psi) = Real.fromRat l * lnorm {Y} psi
                        => Real.=-upper.2 (RealBanachSpace.norm_*q-ofPos {Y} l>=0 *> inv (RealField.*-upper (<=-less l>0') (lnorm>=0 {Y})))
                    | n1 : Real.fromRat l * lnorm {Y} psi < (1 : Real)
-                       => RealField.<_*_positive-left hi P>0 <∘l =_<= (RealField.pinv-left P>0)
+                       => gcongr hi <∘l =_<= (RealField.pinv-left P>0)
                    | lb : (1 : Real) - e2 * RealField.pinv G G>0 < Real.fromRat l * lnorm {Y} psi
-                       => =_<= (inv (RealField.*-assoc *> pmap (_ *) (RealField.pinv-left P>0) *> RealField.ide-right)) <∘r RealField.<_*_positive-left lo P>0
+                       => =_<= (inv (RealField.*-assoc *> pmap (_ *) (RealField.pinv-left P>0) *> RealField.ide-right)) <∘r gcongr lo
                    | Tl : lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g (l *q psi) = G * (Real.fromRat l * lnorm {Y} psi)
                        => (lpDual {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) g).func-*q *> pmap (Real.fromRat l *) Tpsi *> equation.cRing
-                   | m : G * ((1 : Real) - e2 * RealField.pinv G G>0) < G * (Real.fromRat l * lnorm {Y} psi) => RealField.<_*_positive-right G>0 lb
+                   | m : G * ((1 : Real) - e2 * RealField.pinv G G>0) < G * (Real.fromRat l * lnorm {Y} psi) => gcongr lb
                    | em : G * ((1 : Real) - e2 * RealField.pinv G G>0) = G - e2
                        => (equation.cRing : G * ((1 : Real) - e2 * RealField.pinv G G>0) = G - e2 * (G * RealField.pinv G G>0)) *> pmap (\lam t => G - e2 * t) (RealField.pinv-right G>0) *> pmap (G -) RealField.ide-right
                    | ee : e2 < Real.fromRat eps => rat_real_<.1 (linarith : eps * ratio 1 2 < eps)
@@ -218,11 +218,11 @@
                             \let t => (delta * ratio 1 2) RatField.∧ RatField.finv (K + K)
                             \in \have | t>0 : 0 < t => RatField.<_meet-univ (positivity : 0 < delta * ratio 1 2) positivity
                                       | tK : t * K < 1
-                                          => RatField.<=_*_positive-left RatField.meet-right (<=-less K>0) <∘r
+                                          => gcongr RatField.meet-right <∘r
                                              (=_<= (pmap (RatField.finv (K + K) *) (linarith : K = (K + K) * ratio 1 2) *> inv *-assoc
                                                     *> pmap (* ratio 1 2) (RatField.finv-left (RatField.>_/= (linarith : 0 < K + K))) *> ide-left) <∘r (idp : ratio 1 2 < 1))
                                       | small : Real.fromRat t * RealAbGroup.abs (f w) < (1 : Real)
-                                          => RealField.<_*_positive-right (rat_real_<.1 t>0) (real_<_U.2 Ku) <∘l =_<= RealField.*-rat <∘l rat_real_<=.1 (<=-less tK)
+                                          => gcongr (real_<_U.2 Ku) <∘l =_<= RealField.*-rat <∘l rat_real_<=.1 (<=-less tK)
                                       | dt : RealNormed.dist 0 (Real.fromRat t) < Real.fromRat delta
                                           => =_<= (inv (Real.=-upper.2 RealNormed.norm-dist) *> pmap RealAbGroup.abs zro-left *> RealAbGroup.abs_negative *> RealAbGroup.abs-ofPos positivity)
                                              <∘r rat_real_<.1 (RatField.meet-left <∘r (linarith : delta * ratio 1 2 < delta))
@@ -238,7 +238,7 @@
       => equation.abGroup
 
     \lemma le-cancel {c x y : Real} (c>0 : (0 : Real) < c) (h : c * x <= c * y) : x <= y
-      => \lam y<x => h (RealField.<_*_positive-right c>0 y<x)
+      => \lam y<x => h gcongr
 
     -- | If $\sup_{\|u\| < 1} |\Lambda u| = 1$, then $|\Lambda x| \le \|x\|$.
     \lemma sup-bound {L : FullIntegrationSpace} {p : Real} {p>=1 : (1 : Real) <= p} {f : BoundedFunctional (LpSpace L p p>=1)} (fs : IsFunctionalSup f (1 : Real))
@@ -274,8 +274,8 @@
                    | Nu0 : lpNormPow p (ge1 p>1) u0 <= (1 : Real) => lp-uniformlyConvex.npow-le1 u0<=1
                    | efx : f x = (1 : Real) + T * A => f.func-+ *> pmap2 (+) fu0 f.func-*q
                    | tA : negative (T * RealAbGroup.abs A) <= T * A
-                       => =_<= (equation.cRing : negative (T * RealAbGroup.abs A) = T * negative (RealAbGroup.abs A)) <=∘ RealField.<=_*_positive-right (<=-less t>0')
-                            (transport (_ <=) RealAbGroup.negative-isInv (RealAbGroup.negative_<= RealAbGroup.abs>=neg))
+                       => =_<= (equation.cRing : negative (T * RealAbGroup.abs A) = T * negative (RealAbGroup.abs A))
+                          <=∘ gcongr (transport (_ <=) RealAbGroup.negative-isInv (RealAbGroup.negative_<= RealAbGroup.abs>=neg))
                    | pos : (0 : Real) < (1 : Real) + T * A => usingOnly (small, tA) linarith
                    | b1 : (1 : Real) + T * A <= lnorm {Y} x => =_<= (inv efx) <=∘ RealAbGroup.abs>=id <=∘ sup-bound fs x
                    | b2 : rpow ((1 : Real) + T * A) (<=-less pos) p p>0 <= lpNormPow p (ge1 p>1) x => rpow-mono {_} {_} {<=-less pos} {lnorm>=0 {Y}} b1
@@ -335,10 +335,10 @@
                   \have | ch => family-limit.char {Yq} a>0 Pga
                         | dn : lnorm (ginf - ga) <= Real.fromRat a => =_<= (Real.=-upper.2 (inv Yq.norm-dist)) <=∘ (Real.<=-upper {_} {Real.fromRat a}).2 ch
                         | t1 : RealAbGroup.abs (T (ginf - ga) u) <= Real.fromRat a * Real.fromRat N
-                            => (lpDual-sup p>1 q>1 pq (ginf - ga)).1 uN <=∘ RealField.<=_*_positive-left dn positivity
+                            => (lpDual-sup p>1 q>1 pq (ginf - ga)).1 uN <=∘ gcongr
                         | e1 : T ((-) {Yq} ginf ga) u = T ginf u - T ga u => AddGroupHom.func-minus {lpDual-hom {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) u}
                         | t2 : RealAbGroup.abs (T ga u - f u) <= Real.fromRat (a * N) => \case \elim Pga \with {
-                                 | inP (C,C>=0,C<a,h) => h uN <=∘ rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C<a) (<=-less N>0))
+                                 | inP (C,C>=0,C<a,h) => h uN <=∘ rat_real_<=.1 (gcongr (<=-less C<a))
                                }
                         | ee : Real.fromRat a * Real.fromRat N + Real.fromRat (a * N) < Real.fromRat d
                             => =_<= (pmap (\lam t => t + _) RealField.*-rat *> RealAbGroup.+-rat) <∘r rat_real_<.1 aN
@@ -380,7 +380,7 @@
             \in inP ((LpSpace L q (ge1 q>1)).zro, inP (C, rat_real_<=.2 (s>=0 <=∘ <=-less sC), rat_real_<.2 (real_<_L.2 Ca'), \lam {x} {b} xb =>
                   \have b>0 : (0 : Real) < Real.fromRat b => rat_real_<.1 (norm>=0 {LpSpace L p (ge1 p>1)} xb)
                   \in =_<= (pmap (\lam t => RealAbGroup.abs (t - f x)) (z x) *> pmap RealAbGroup.abs zro-left *> RealAbGroup.abs_negative)
-                       <=∘ fs.1 xb <=∘ RealField.<=_*_positive-left (<=-less sC) (<=-less b>0) <=∘ =_<= RealField.*-rat))
+                       <=∘ fs.1 xb <=∘ gcongr <=∘ =_<= RealField.*-rat))
         }
         | byLeft a<s => \case lpDual-represent-pos p>1 q>1 pq (rat_real_<.1 (positivity : 0 < a * ratio 1 2) <∘ a<s) fs \with {
           | inP (g,h) => inP (g, inP (0, <=-refl, a>0, \lam {x} {b} _ =>
@@ -404,6 +404,6 @@
                     => RealAbGroup.abs_+ <=∘ =_<= (pmap (_ +) RealAbGroup.abs_negative)
                 | c>0 : 0 < c => norm>=0 {LpSpace L p (ge1 p>1)} xc
                 | ee : Real.fromRat (C1 * c) + Real.fromRat (C2 * c) <= Real.fromRat (a + b) * Real.fromRat c
-                    => =_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 (=_<= (inv RatField.rdistr) <=∘ RatField.<=_*_positive-left (linarith : C1 + C2 <= a + b) (<=-less c>0)) <=∘ =_<= (inv RealField.*-rat)
+                    => =_<= RealAbGroup.+-rat <=∘ rat_real_<=.1 (=_<= (inv RatField.rdistr) <=∘ gcongr) <=∘ =_<= (inv RealField.*-rat)
           \in =_<= (pmap RealAbGroup.abs e) <=∘ tri <=∘ <=_+ t1 t2 <=∘ ee)
   }

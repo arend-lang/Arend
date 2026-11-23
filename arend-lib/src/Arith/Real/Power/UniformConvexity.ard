@@ -45,7 +45,7 @@
       (\lam z<=0 => \have | z=0 : z = (0 : Real) => <=-antisymmetric z<=0 z>=0
                           | e0 : rpow z z>=0 r r>0 = (0 : Real) => rpow-zero-ext z=0
                           | m : (r ∧ 1) * rpow y y>=0 r r>0 * y <= rpow y y>=0 r r>0 * y
-                              => <=_*_positive-left (<=_*_positive-left m<=1 Y>=0 <=∘ =_<= RealField.ide-left) y>=0
+                              => gcongr (<=_*_positive-left m<=1 Y>=0 <=∘ =_<= RealField.ide-left)
                     \in transport2 (<=) (pmap (\lam t => (r ∧ 1) * rpow y y>=0 r r>0 * (y - t)) (inv z=0) *> idp)
                                         (equation.cRing *> pmap (\lam t => y * (rpow y y>=0 r r>0 - t)) (inv e0))
                                         (=_<= (pmap ((r ∧ 1) * rpow y y>=0 r r>0 *) RealAbGroup.minus_zro) <=∘ m))
@@ -57,15 +57,15 @@
                    (conc : Zr <= r * z * Y1 + ((1 : Real) - r) * (y * Y1))
       : (r ∧ 1) * (y * Y1) * (y - z) <= y * (y * Y1 - Zr)
       => \have | e : r * (y * Y1) * (y - z) = y * (y * Y1 - (r * z * Y1 + ((1 : Real) - r) * (y * Y1))) => equation.cRing
-               | m : y * (y * Y1 - (r * z * Y1 + ((1 : Real) - r) * (y * Y1))) <= y * (y * Y1 - Zr) => <=_*_positive-right (<=-less y>0) (<=_+ <=-refl (RealAbGroup.negative_<= conc))
+               | m : y * (y * Y1 - (r * z * Y1 + ((1 : Real) - r) * (y * Y1))) <= y * (y * Y1 - Zr) => gcongr
                | c : (r ∧ 1) * (y * Y1) * (y - z) <= r * (y * Y1) * (y - z)
-                   => <=_*_positive-left (<=_*_positive-left m<=r (<=-less (RealField.<_*_positive_positive y>0 Y1>0))) (linarith : (0 : Real) <= y - z)
+                   => gcongr linarith
          \in c <=∘ =_<= e <=∘ m
 
     \lemma core-ge {r y z Y1 Z1 : Real} (m<=1 : r ∧ 1 <= (1 : Real)) (y>0 : (0 : Real) < y) (z>0 : (0 : Real) < z) (z<=y : z <= y) (Y1>0 : (0 : Real) < Y1) (ZY : Z1 <= Y1)
       : (r ∧ 1) * (y * Y1) * (y - z) <= y * (y * Y1 - z * Z1)
-      => \have | m1 : z * Z1 <= z * Y1 => <=_*_positive-right (<=-less z>0) ZY
-               | m2 : y * (y * Y1 - z * Y1) <= y * (y * Y1 - z * Z1) => <=_*_positive-right (<=-less y>0) (<=_+ <=-refl (RealAbGroup.negative_<= m1))
+      => \have | m1 : z * Z1 <= z * Y1 => gcongr
+               | m2 : y * (y * Y1 - z * Y1) <= y * (y * Y1 - z * Z1) => gcongr
                | e : (1 : Real) * (y * Y1) * (y - z) = y * (y * Y1 - z * Y1) => equation.cRing
                | c : (r ∧ 1) * (y * Y1) * (y - z) <= (1 : Real) * (y * Y1) * (y - z)
                    => <=_*_positive-left (<=_*_positive-left m<=1 (<=-less (RealField.<_*_positive_positive y>0 Y1>0))) (linarith : (0 : Real) <= y - z)
@@ -93,7 +93,7 @@
                    (t : P * (Zr * A) <= z + (P - 1) * y)
           : Zr <= r * z * Y1 + ((1 : Real) - r) * (y * Y1)
           => \have | c>=0 : (0 : Real) <= r * Y1 => RealField.<=_*_positive_positive r>=0 Y1>=0
-                   | m : r * Y1 * (P * (Zr * A)) <= r * Y1 * (z + (P - 1) * y) => <=_*_positive-right c>=0 t
+                   | m : r * Y1 * (P * (Zr * A)) <= r * Y1 * (z + (P - 1) * y) => gcongr
                    | e1 : r * Y1 * (P * (Zr * A)) = Zr => equation.cRing {rP, AY}
                    | e2 : r * Y1 * (z + (P - 1) * y) = r * z * Y1 + ((1 : Real) - r) * (y * Y1) => equation.cRing {rP}
              \in transport2 (<=) e1 e2 m
@@ -138,8 +138,8 @@
   \where {
     \lemma case2 {G m Gr Y Z : Real} (G>0 : (0 : Real) < G) (m<=1 : m <= (1 : Real)) (Gr>0 : (0 : Real) < Gr) (YG : Gr <= Y) (Z>=0 : (0 : Real) <= Z)
       : m * (Gr * G) <= G * (Y - negative Z)
-      => \have | a : m * (Gr * G) <= (1 : Real) * (Gr * G) => <=_*_positive-left m<=1 (<=-less (RealField.<_*_positive_positive Gr>0 G>0))
-               | b : Gr * G <= Y * G => <=_*_positive-left YG (<=-less G>0)
+      => \have | a : m * (Gr * G) <= (1 : Real) * (Gr * G) => gcongr
+               | b : Gr * G <= Y * G => gcongr
                | c : (0 : Real) <= Z * G => RealField.<=_*_positive_positive Z>=0 (<=-less G>0)
                | e : G * (Y - negative Z) = Y * G + Z * G => equation.cRing
          \in transportInv (_ <=) e (transport (_ <=) RealField.ide-left a <=∘ b <=∘ transport (__ <= _) zro-right (<=_+ <=-refl c))
@@ -153,11 +153,11 @@
                    | P>=0 : (0 : Real) <= P => <=-less (RealField.pinv>0 _)
                    | PR : P * (R + 1) = (1 : Real) => RealField.pinv-left _
                    | YZ>=0 : (0 : Real) <= Y - Z => linarith
-                   | s1 : (k * P ∧ 1) * (Gr * G) <= k * P * (Gr * G) => <=_*_positive-left meet-left (<=-less (RealField.<_*_positive_positive Gr>0 G>0))
+                   | s1 : (k * P ∧ 1) * (Gr * G) <= k * P * (Gr * G) => gcongr meet-left
                    | s2 : k * (Gr * G) <= k * Y * (y - z) => <=_*_positive-right k>=0 (<=_*_positive-left YG (<=-less G>0) <=∘ <=_*_positive-right (<=-less Gr>0 <=∘ YG) Gz) <=∘ =_<= (inv *-assoc)
-                   | s3 : y * (Y - Z) <= (R + 1) * G * (Y - Z) => <=_*_positive-left yR YZ>=0
+                   | s3 : y * (Y - Z) <= (R + 1) * G * (Y - Z) => gcongr
                    | s4 : k * (Gr * G) <= (R + 1) * G * (Y - Z) => s2 <=∘ g <=∘ s3
-                   | s5 : P * (k * (Gr * G)) <= P * ((R + 1) * G * (Y - Z)) => <=_*_positive-right P>=0 s4
+                   | s5 : P * (k * (Gr * G)) <= P * ((R + 1) * G * (Y - Z)) => gcongr
                    | e1 : k * P * (Gr * G) = P * (k * (Gr * G)) => equation.cRing
                    | e2 : P * ((R + 1) * G * (Y - Z)) = G * (Y - Z) => equation.cRing {PR}
          \in s1 <=∘ =_<= e1 <=∘ s5 <=∘ =_<= e2
@@ -201,7 +201,7 @@
                  | e : k * (a - c) + k * (b - c) = (0 : Real) => equation.cRing {hh}
                  | s : powAbs p p>0 c + powAbs p p>0 c <= powAbs p p>0 a + powAbs p p>0 b => linarith
                  | e2 : Real.fromRat (ratio 1 2) * (powAbs p p>0 c + powAbs p p>0 c) = powAbs p p>0 c => linarith
-       \in =_<= (inv e2) <=∘ <=_*_positive-right positivity s
+       \in =_<= (inv e2) <=∘ gcongr
 
   -- | $F(c + h) + F(c - h) = F(|c| + |h|) + F(|c| - |h|)$.
   \lemma pair-abs {p : Real} {p>0 : (0 : Real) < p} {c h : Real}
@@ -296,7 +296,7 @@
                                               => unfold powAbs (rpow-mono {_} {_} {_} {RealAbGroup.abs>=0} (ge <=∘ =_<= (inv (RealField.abs_* *> pmap (\lam u => u * _) (RealAbGroup.abs-ofPos (<=-less rho>0'))))))
                                                  <=∘ =_<= (AbsPowLemmas.scale rho>0') <=∘ <=_*_positive-left (AbsPowLemmas.small-pow (<=-less p>1) rho>0' (rat_real_<=.1 RatField.meet-left)) AbsPowLemmas.absPow>=0
                                           | Qrho : Real.fromRat Q * Real.fromRat rho <= Real.fromRat eta
-                                              => =_<= RealField.*-rat <=∘ rat_real_<=.1 (=_<= RatField.*-comm <=∘ RatField.<=_*_positive-left RatField.meet-right (<=-less Q>0)
+                                              => =_<= RealField.*-rat <=∘ rat_real_<=.1 (=_<= RatField.*-comm <=∘ gcongr RatField.meet-right
                                                    <=∘ =_<= (RatField.*-assoc *> pmap (eta RatField.*) (RatField.finv-left (RatField.>_/= Q>0)) *> RatField.ide-right))
                                     \in =_<= Fab <=∘ chainA (<=-less (real_<_U.2 Qu)) (<=-less rpow-pos>0) AbsPowLemmas.absPow>=0 Fh (AbsPowLemmas.conv-mid p>1)
                                                     Qrho (rat_real_<=.1 (linarith : ratio 1 2 RatField.<= 1)) (rat_real_<=.1 (<=-less rho>0)) S>=0 AbsPowLemmas.absPow>=0
@@ -309,11 +309,11 @@
                   (Qre : Qr * rr <= e) (half<=1 : half <= (1 : Real)) (rr>=0 : (0 : Real) <= rr) (S>=0 : (0 : Real) <= S) (Fc>=0 : (0 : Real) <= Fc)
       : P2 * Fh <= e * S
       => \have | Qr>=0 : (0 : Real) <= Qr => P2>=0 <=∘ P2Q
-               | s1 : P2 * Fh <= Qr * Fh => <=_*_positive-left P2Q Fh>=0
-               | s2 : Qr * Fh <= Qr * (rr * Fc) => <=_*_positive-right Qr>=0 Fhr
-               | s3 : rr * Fc <= rr * S => <=_*_positive-right rr>=0 (Fch <=∘ <=_*_positive-left half<=1 S>=0 <=∘ =_<= RealField.ide-left)
-               | s4 : Qr * (rr * Fc) <= Qr * (rr * S) => <=_*_positive-right Qr>=0 s3
-               | s5 : Qr * rr * S <= e * S => <=_*_positive-left Qre S>=0
+               | s1 : P2 * Fh <= Qr * Fh => gcongr
+               | s2 : Qr * Fh <= Qr * (rr * Fc) => gcongr
+               | s3 : rr * Fc <= rr * S => gcongr (Fch <=∘ <=_*_positive-left half<=1 S>=0 <=∘ =_<= RealField.ide-left)
+               | s4 : Qr * (rr * Fc) <= Qr * (rr * S) => gcongr
+               | s5 : Qr * rr * S <= e * S => gcongr
          \in s1 <=∘ s2 <=∘ s4 <=∘ =_<= (inv RealField.*-assoc) <=∘ s5
 
     \lemma chainB {pm F4 X D K : Real} (pm>0 : (0 : Real) < pm) (F4>=0 : (0 : Real) <= F4) (pmX : pm * X <= (2 : Real) * D)
@@ -321,7 +321,7 @@
       : F4 * X <= K * D
       => \have | iP : RealField.pinv pm pm>0 * pm = (1 : Real) => RealField.pinv-left pm>0
                | P>=0 : (0 : Real) <= RealField.pinv pm pm>0 => <=-less (RealField.pinv>0 pm>0)
-               | s1 : X <= RealField.pinv pm pm>0 * ((2 : Real) * D) => =_<= (equation.cRing {iP} : X = RealField.pinv pm pm>0 * (pm * X)) <=∘ <=_*_positive-right P>=0 pmX
+               | s1 : X <= RealField.pinv pm pm>0 * ((2 : Real) * D) => =_<= (equation.cRing {iP} : X = RealField.pinv pm pm>0 * (pm * X)) <=∘ gcongr
                | s2 : F4 * X <= F4 * (RealField.pinv pm pm>0 * ((2 : Real) * D)) => <=_*_positive-right F4>=0 s1
                | e : F4 * (RealField.pinv pm pm>0 * ((2 : Real) * D)) = (2 : Real) * F4 * RealField.pinv pm pm>0 * D => equation.cRing
          \in s2 <=∘ =_<= e <=∘ <=_*_positive-left (<=-less TK) D>=0

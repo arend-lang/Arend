@@ -133,14 +133,13 @@
           => \have dz : cabs s <= e * cabs dinv
                      => =_<= (pmap cabs hs *> cabs_negative {v * dinv} *> cabs_* {v} {dinv})
                         <=∘ <=_*_positive-left hv (cabs>=0 {dinv})
-             \in <=_*_positive-left dz (cabs>=0 {s})
-                 <=∘ <=_*_positive-right positivity dz
+             \in gcongr
        | t2 : cabs (w - v - b * s) <= quarter * e
           => rem
-             <=∘ <=_*_positive-right C>=0 sq
+             <=∘ gcongr
              <=∘ =_<= (equation.cRing : C * (e * cabs dinv * (e * cabs dinv))
                                       = C * (cabs dinv * cabs dinv) * e * e)
-             <=∘ <=_*_positive-left quad e>=0
+             <=∘ gcongr
      \in =_<= (pmap cabs (newton-step-eq v b dinv w s hs))
          <=∘ cabs_+ {v * (1 - b * dinv)} {w - v - b * s}
          <=∘ <=_+ t1 t2
@@ -184,7 +183,7 @@
       | dz : cabs (zk1 - zk) <= pow half k * (e0 * cabs dinv)
          => =_<= (pmap cabs incr *> cabs_negative {polyEval p zk * dinv}
                   *> cabs_* {polyEval p zk} {dinv})
-            <=∘ <=_*_positive-left ih.2 d>=0
+            <=∘ gcongr ih.2
             <=∘ =_<= *-assoc
       | scaled : pow half k * (e0 * cabs dinv) + pow half k * half * B <= pow half k * B
          => =_<= (equation.cRing : pow half k * (e0 * cabs dinv) + pow half k * half * B
@@ -219,7 +218,7 @@
        \in inP (N, \lam {n} N<=n =>
              (=_<= (pmap cabs (zro-left {_} {negative (f n)}) *> cabs_negative {f n})
               <=∘ hf n
-              <=∘ <=_*_positive-left (pow_<=-degree half>=0 half<=1 N<=n) e0>=0)
+              <=∘ gcongr (pow_<=-degree half>=0 half<=1 N<=n))
              <∘r hN)
 
 {- | **Newton's method delivers an exact root.** The increments are dominated by a ratio-$1/2$
@@ -297,17 +296,11 @@
                    (<=_*_positive_positive (coefMax>=0 {ComplexValuedRing} {p} {M}) P>=0) P>=0) P>=0
      \in newton-root-bounds dp bd e0>=0 C>=0 hv0
            (linarith (<=_*_positive-right e0>=0 hdinv))
-           (<=_*_positive-left
-              (<=_*_positive-right C>=0 (<=_*_positive-left hdinv (cabs>=0 {dinv})
-                                         <=∘ <=_*_positive-right Dd>=0 hdinv)) e0>=0
-            <=∘ hC)
+           (gcongr <=∘ hC)
            (\lam z hz =>
-              <=_*_positive-left
-                (polyEval-diff-bound dp' (coefMax>=0 {ComplexValuedRing})
-                   (coefMax-cond-all {ComplexValuedRing} dp') (ball z hz) hz0R
-                 <=∘ <=_*_positive-right L>=0 (=_<= (cabs_-comm {z0} {z}) <=∘ hz))
-                (cabs>=0 {dinv})
-              <=∘ <=_*_positive-right (<=_*_positive_positive L>=0 B>=0) hdinv
+              gcongr (polyEval-diff-bound dp' (coefMax>=0 {ComplexValuedRing})
+                        (coefMax-cond-all {ComplexValuedRing} dp') (ball z hz) hz0R
+                      <=∘ <=_*_positive-right L>=0 (=_<= (cabs_-comm {z0} {z}) <=∘ hz))
               <=∘ hL)
            (\lam z y hz hy =>
               polyEval-remainder-bound dp (coefMax>=0 {ComplexValuedRing}) (coefMax-cond-all dp)

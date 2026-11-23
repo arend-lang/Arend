@@ -93,7 +93,7 @@
       => (\Sigma (p : 0 < c.fn x) (y = f (x, cutoff-in c p) RealField.* c.fn x)) || (\Sigma (Real.fromRat M RealField.* c.fn x < Real.fromRat a) (y = 0))
 
     \private \lemma bound {x : RealN n} (p : 0 < c.fn x) : RealAbGroup.abs (f (x, cutoff-in c p) RealField.* c.fn x) <= Real.fromRat M RealField.* c.fn x
-      => rewrite (RealField.abs_*, RealAbGroup.abs-ofPos (<=-less p)) $ RealField.<=_*_positive-left (hM {x, cutoff-in c p} p) (<=-less p)
+      => rewrite (RealField.abs_*, RealAbGroup.abs-ofPos (<=-less p)) $ gcongr (hM {x, cutoff-in c p} p)
 
     \private \lemma Pi (x : RealN n) {a : Rat} (a>0 : 0 < a) : ∃ (y : Real) (P x a y)
       => \have | a'>0 : 0 < a * RatField.finv M => positivity
@@ -151,7 +151,7 @@
                         | s2 : RealAbGroup.abs (f x) RealField.* c.fn x.1 <= Real.fromRat F RealField.* c.fn x.1 => RealField.<=_*_positive-left (<=-less Fu') c.cut>=0
                         | s3 : Real.fromRat F RealField.* c.fn x.1 = Real.fromRat k RealField.* (Real.fromRat M RealField.* c.fn x.1)
                             => pmap (RealField.* _) (pmap Real.fromRat (inv kM) *> inv RealField.*-rat) *> RealField.*-assoc
-                        | s4 : Real.fromRat k RealField.* (Real.fromRat M RealField.* c.fn x.1) < Real.fromRat k RealField.* Real.fromRat a => RealField.<_*_positive-right (rat_real_<.1 k>0) q
+                        | s4 : Real.fromRat k RealField.* (Real.fromRat M RealField.* c.fn x.1) < Real.fromRat k RealField.* Real.fromRat a => gcongr
                         | s5 : Real.fromRat k RealField.* Real.fromRat a = Real.fromRat (a * k) => RealField.*-rat *> pmap Real.fromRat *-comm
                         | w<ka : RealAbGroup.abs w < Real.fromRat (a * k) => transport (_ <) s5 $ transport (< _) (inv s1) $ s2 <∘r transportInv (< _) s3 s4
                         | r1 : (dist {RealNormed} (truncPt Uo f c M>0 hM x.1) y).U (a + a) => lim x.1 {a} {a + a} a>0 (byRight (q,e)) linarith
@@ -209,10 +209,10 @@
                        | hf : RealAbGroup.abs (fx - fy) < Real.fromRat e2 => real_<_U.2 (h1 {x,Ux} {y,Uy} sx sy (ExUpperReal.U_<= xy meet-left))
                        | id : g x - g y = fx RealField.* (c.fn x - c.fn y) RealAbGroup.+ (fx - fy) RealField.* c.fn y => rewrite (p.1 (x,Ux), p.1 (y,Uy)) (trunc-identity {_} {_} {_} {_})
                        | a1 : RealAbGroup.abs (fx RealField.* (c.fn x - c.fn y)) <= Real.fromRat e2
-                           => transportInv (<= _) RealField.abs_* $ RealField.<=_*_positive-left (hM {x,Ux} sx) RealAbGroup.abs>=0 <=∘ Mc
+                           => transportInv (<= _) RealField.abs_* $ gcongr (hM {x,Ux} sx) <=∘ Mc
                        | a2 : RealAbGroup.abs ((fx - fy) RealField.* c.fn y) <= Real.fromRat e2
                            => transportInv (<= _) (RealField.abs_* *> pmap (_ RealField.*) (RealAbGroup.abs-ofPos (c.cut>=0 {y}))) $
-                               RealField.<=_*_positive-right RealAbGroup.abs>=0 (c.cut<=1 {y}) <=∘ =_<= ide-right <=∘ <=-less hf
+                               gcongr (c.cut<=1 {y}) <=∘ =_<= ide-right <=∘ <=-less hf
                  \in rewrite id $ RealAbGroup.abs_+ <=∘ transport (_ <=) ee (RealAbGroup.<=_+ a1 a2))
                (\lam ey => side (inv ey) Mc))
              (\lam ex => transportInv (<= _) RealAbGroup.abs_- $ side (inv ex) (transportInv (\lam w => Real.fromRat M RealField.* w <= _) RealAbGroup.abs_- Mc)))

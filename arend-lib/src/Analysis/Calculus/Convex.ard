@@ -74,8 +74,8 @@
                | g => deriv (interval-derivDense a<b) (\lam (x : Set.Total (ClosedInterval a b)) => f x.1) d z 1
       \in \have | tx => deriv-mono-tangent a<b d mono z (x,Sx)
             | ty => deriv-mono-tangent a<b d mono z (y,Sy)
-            | sx : t * (g * (x - z.1)) <= t * (f x - f z.1) => RealField.<=_*_positive-right t>=0 tx
-            | sy : (1 - t) * (g * (y - z.1)) <= (1 - t) * (f y - f z.1) => RealField.<=_*_positive-right t'>=0 ty
+            | sx : t * (g * (x - z.1)) <= t * (f x - f z.1) => gcongr tx
+            | sy : (1 - t) * (g * (y - z.1)) <= (1 - t) * (f y - f z.1) => gcongr ty
             | e : t * (g * (x - z.1)) + (1 - t) * (g * (y - z.1)) = 0 => equation.cRing
             | e' : t * (f x - f z.1) + (1 - t) * (f y - f z.1) = t * f x + (1 - t) * f y - f z.1 => equation.cRing
       \in linarith
@@ -83,10 +83,10 @@
     -- | `s x + t y ∈ [a,b]` for `x, y ∈ [a,b]`, `s, t >= 0`, `s + t = 1`.
     \lemma combination-in {a b x y s : Real} (Sx : ClosedInterval a b x) (Sy : ClosedInterval a b y) (s>=0 : 0 <= s) (s'>=0 : 0 <= 1 - s)
       : ClosedInterval a b (s * x + (1 - s) * y)
-      => \have | l1 : s * a <= s * x => RealField.<=_*_positive-right s>=0 Sx.1
-               | l2 : (1 - s) * a <= (1 - s) * y => RealField.<=_*_positive-right s'>=0 Sy.1
-               | u1 : s * x <= s * b => RealField.<=_*_positive-right s>=0 Sx.2
-               | u2 : (1 - s) * y <= (1 - s) * b => RealField.<=_*_positive-right s'>=0 Sy.2
+      => \have | l1 : s * a <= s * x => gcongr Sx.1
+               | l2 : (1 - s) * a <= (1 - s) * y => gcongr Sy.1
+               | u1 : s * x <= s * b => gcongr Sx.2
+               | u2 : (1 - s) * y <= (1 - s) * b => gcongr Sy.2
                | ea : s * a + (1 - s) * a = a => equation.cRing
                | eb : s * b + (1 - s) * b = b => equation.cRing
          \in (linarith, linarith)

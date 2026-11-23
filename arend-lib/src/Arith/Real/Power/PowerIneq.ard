@@ -130,7 +130,7 @@
       (\lam x>0 => \have | ex : rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 = rpow-pos x x>0 p => rpow-ext {_} {_} (RealAbGroup.abs-ofPos (<=-less x>0)) {RealAbGroup.abs>=0} {<=-less x>0} idp {p>0} {p>0} *> rpow-pos-eq {x} {<=-less x>0} x>0 {p} {p>0}
                          | ephi : signedPow p>1 x = rpow-pos x x>0 (p - 1) => signedPow.nonneg (<=-less x>0) *> rpow-pos-eq x>0
                          | c>=0 : (0 : Real) <= p * rpow-pos x x>0 (p - 1) => RealField.<=_*_positive_positive pp>=0 (<=-less rpow-pos>0)
-                         | m : p * rpow-pos x x>0 (p - 1) * (y - x) <= p * rpow-pos x x>0 (p - 1) * (RealAbGroup.abs y - x) => <=_*_positive-right c>=0 (<=_+ RealAbGroup.abs>=id <=-refl)
+                         | m : p * rpow-pos x x>0 (p - 1) * (y - x) <= p * rpow-pos x x>0 (p - 1) * (RealAbGroup.abs y - x) => gcongr RealAbGroup.abs>=id
                    \in =_<= (pmap2 (+) ex (pmap (\lam t => p * t * (y - x)) ephi)) <=∘ <=_+ <=-refl m <=∘ rpow-pos-tangent' p>=1 x>0 RealAbGroup.abs>=0)
       (\lam x<=0 => signedPow.real-cases {x} {0}
           (\lam x<0 => \have | x'>0 : (0 : Real) < negative x => linarith
@@ -139,7 +139,7 @@
                              | c>=0 : (0 : Real) <= p * rpow-pos (negative x) x'>0 (p - 1) => RealField.<=_*_positive_positive pp>=0 (<=-less rpow-pos>0)
                              | e : p * negative (rpow-pos (negative x) x'>0 (p - 1)) * (y - x) = p * rpow-pos (negative x) x'>0 (p - 1) * (negative y - negative x) => equation.cRing
                              | m : p * rpow-pos (negative x) x'>0 (p - 1) * (negative y - negative x) <= p * rpow-pos (negative x) x'>0 (p - 1) * (RealAbGroup.abs y - negative x)
-                                 => <=_*_positive-right c>=0 (<=_+ (RealAbGroup.abs>=id <=∘ =_<= RealAbGroup.abs_negative) <=-refl)
+                                 => gcongr (RealAbGroup.abs>=id <=∘ =_<= RealAbGroup.abs_negative)
                        \in =_<= (pmap2 (+) ex (pmap (\lam t => p * t * (y - x)) ephi *> e)) <=∘ <=_+ <=-refl m <=∘ rpow-pos-tangent' p>=1 x'>0 RealAbGroup.abs>=0)
           (\lam x>=0 => \have | x=0 : x = 0 => <=-antisymmetric x<=0 x>=0
                               | ex : rpow (RealAbGroup.abs x) RealAbGroup.abs>=0 p p>0 = 0 => signedPow.rpow-zero-ext (pmap RealAbGroup.abs x=0 *> RealAbGroup.abs_zro)
@@ -200,7 +200,7 @@
                                | m>=0 : (0 : Real) <= (n * a) ∧ 1 => RealAbGroup.meet-univ (RealField.<=_*_positive_positive n>=0 a>=0) RealField.zro<=ide
                                | t>=0 : (0 : Real) <= (q - 1) * rpow-pos v v>0 q * ((n * a) ∧ 1) => RealField.<=_*_positive_positive c'>=0 m>=0
                          \in usingOnly (R>=0, t>=0, em) linarith)
-          (\lam eta<=a => \have | na>=1 : (1 : Real) <= n * a => =_<= (inv n-eta) <=∘ RealField.<=_*_positive-right n>=0 eta<=a
+          (\lam eta<=a => \have | na>=1 : (1 : Real) <= n * a => =_<= (inv n-eta) <=∘ gcongr
                                 | em : (q - 1) * rpow-pos v v>0 q * ((n * a) ∧ 1) = (q - 1) * rpow-pos v v>0 q
                                     => pmap (_ *) (RealAbGroup.meet-comm *> RealAbGroup.meet_<= na>=1) *> ide-right
                                 | t>=0 : (0 : Real) <= q * rpow-pos v v>0 (q - 1) * (a ∧ eta) => RealField.<=_*_positive_positive c>=0 (RealAbGroup.meet-univ a>=0 eta>=0)

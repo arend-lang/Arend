@@ -161,7 +161,7 @@
             | fu' (x : X) : f x <= (hi' : Real) => fu x <=∘ <=-less (real_<_U.2 hi<hi')
             | (N,N>) => rat_natBound ((hi' - lo') * RatField.finv eps)
             | bnd>= => bound>= lo' eps N
-            | Neps : hi' - lo' < N RatField.* eps => transport (< _) (*-assoc *> pmap (_ *) (RatField.finv-left $ RatField.>_/= eps>0) *> ide-right) $ <_*_positive-left N> eps>0
+            | Neps : hi' - lo' < N RatField.* eps => transport (< _) (*-assoc *> pmap (_ *) (RatField.finv-left $ RatField.>_/= eps>0) *> ide-right) $ gcongr N>
       \in cauchy-subset (steps fl' h eps>0 N) $ later \case __ \with {
         | byLeft g => inP (Real.fromRat (bound lo' eps N + eps), \lam {x} Ux => close (g Ux) $ real_<_U.1 $ fu' x <∘r rat_real_<.1 (linarith : hi' < bound lo' eps N + eps + eps))
         | byRight e => e

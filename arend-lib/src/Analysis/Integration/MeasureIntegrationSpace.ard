@@ -102,7 +102,7 @@
     \lemma truncAt-dominated {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l) {eta : Rat} (eta>0 : RatField.zro RatField.< eta) : base.truncAt eta (inSF l) base.<= eta base.*q unit l
       => =_<= (pmap (eta base.*q) (pmap base.trunc (SFuncQModule.*q-char {RatIntegrationSpace} {B} {RatField.finv eta} {l}) *> SFuncTruncRieszSpace.trunc-reduced {RatIntegrationSpace} {B} {map (\lam s => (RatField.finv eta RatIntegrationSpace.*q s.1, s.2)) l} lr) *> SFuncQModule.*q-char {RatIntegrationSpace})
           <=∘ (SFuncPosetQModule.<=-common-char {RatIntegrationSpace} {B} {map __.2 l} lr {\lam j => eta RatIntegrationSpace.*q RatIntegrationSpace.trunc (RatField.finv eta RatIntegrationSpace.*q (l j).1)} {\lam j => eta RatIntegrationSpace.*q RatField.ide}).2
-               (\lam j => byLeft $ RatIntegrationSpace.<=_*q-right (<=-less eta>0) (RatField.meet-right {RatField.finv eta RatIntegrationSpace.*q (l j).1} {1}))
+               (\lam j => byLeft $ gcongr (RatField.meet-right {RatField.finv eta RatIntegrationSpace.*q (l j).1} {1}))
           <=∘ =_<= (inv (SFuncQModule.*q-char {RatIntegrationSpace} {B} {eta} {map (\lam s => (RatField.ide, s.2)) l}))
 
     \lemma archimedean-reduced {l : Array (\Sigma Rat B)} (lr : IsReduced {RatIntegrationSpace} l) (p : \Pi (n : Nat) -> base.trunc (n base.*n inSF l) = n base.*n inSF l) : inSF l base.<= base.zro
@@ -244,7 +244,7 @@
            | inP h => inP (\lam j => ((l j).1, (h j).1),
                (=_<= (lnorm-ldist {SFuncIntegrationSpace B} {inSF l} {inSF (\lam j => ((l j).1, f (h j).1))})
                <=∘ list-bound {B} {l.len} {\lam j => (l j).1} {\lam j => (l j).2} {\lam j => f (h j).1}
-               <=∘ RealAbGroup.BigSum_<= {_} {\lam j => RealAbGroup.abs (l j).1 RealField.* meas ((l j).2 - f (h j).1)} {\lam j => RealAbGroup.abs (l j).1 RealField.* d} (\lam j => <=_*_positive-right RealAbGroup.abs>=0 (<=-less (h j).2))
+               <=∘ RealAbGroup.BigSum_<= {_} {\lam j => RealAbGroup.abs (l j).1 RealField.* meas ((l j).2 - f (h j).1)} {\lam j => RealAbGroup.abs (l j).1 RealField.* d} (\lam j => gcongr (<=-less (h j).2))
                <=∘ =_<= (inv (RealField.BigSum-rdistr {map (\lam s => RealAbGroup.abs s.1) l} {d}) *> *-comm))
                <∘r (<_*_positive-right d>0 (linarith : S < S + 1) <∘ dS<eps))
          }

@@ -213,7 +213,7 @@
            | B>0 : (0 : Real) < rpow-pos b b>0 c => rpow-pos>0
      \in real-cases {c} {0}
       (\lam c<0 => \have t : rpow-pos s s>0 c <= rpow-pos a a>0 c => signedPow-cut-bound.rpow-pos-antitone (<=-less c<0) as \in linarith)
-      (\lam c>=0 => \have t : rpow-pos s s>0 c <= rpow-pos b b>0 c => rpow-pos-mono c>=0 sb \in linarith)
+      (\lam c>=0 => \have t : rpow-pos s s>0 c <= rpow-pos b b>0 c => gcongr \in linarith)
 
 -- | $|\varphi_{r,a}(t)| \le (a^{r-2} + (R \vee a)^{r-2}) |t|$ for $|t| \le R$ and every $r > 1$.
 \lemma signedPow-cut-lin-gen {r : Real} {r>1 : (1 : Real) < r} {a : Real} {a>0 : (0 : Real) < a} {R t : Real} (tR : RealAbGroup.abs t <= R)
@@ -222,10 +222,10 @@
            | A>0 : (0 : Real) < rpow-pos a a>0 (r - 2) => rpow-pos>0
      \in real-cases {RealAbGroup.abs t} {a}
       (\lam t<a => =_<= (pmap RealAbGroup.abs (signedPow-cut-in (<=-less t<a)) *> RealField.abs_* *> pmap (\lam u => u * _) (RealAbGroup.abs-ofPos (<=-less A>0)))
-                    <=∘ <=_*_positive-left (linarith : rpow-pos a a>0 (r - 2) <= rpow-pos a a>0 (r - 2) + rpow-pos (R ∨ a) (a>0 <∘l join-right) (r - 2)) RealAbGroup.abs>=0)
+                    <=∘ gcongr linarith)
       (\lam a<=t => \have t>0 : (0 : Real) < RealAbGroup.abs t => a>0 <∘l a<=t
                     \in =_<= (pmap RealAbGroup.abs (signedPow-cut-ge a<=t) *> signedPow-abs *> signedPow.pow-split t>0)
-                         <=∘ <=_*_positive-left (rpow-pos-between a<=t (tR <=∘ join-left)) RealAbGroup.abs>=0)
+                         <=∘ gcongr (rpow-pos-between a<=t (tR <=∘ join-left)))
 
 -- | $|\varphi_r(t)| \le (R \vee 0)^{r-1}$ for $|t| \le R$.
 \lemma signedPow-local-bound {r : Real} {r>1 : (1 : Real) < r} {R t : Real} (tR : RealAbGroup.abs t <= R)

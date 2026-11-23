@@ -62,7 +62,7 @@
       | func-cover => h.func-cover
       | lin-bound R => \case hM R, FinSet.finiteAC (\lam j => (fs j).lin-bound R) \with {
         | inP (M,M>=0,hR), inP g => inP (M * RealAbGroup.BigSum (\lam j => (g j).1), RealField.<=_*_positive_positive M>=0 (RealAbGroup.BigSum_>=0 \lam j => (g j).2), \lam x xR =>
-            hR x xR <=∘ RealField.<=_*_positive-right M>=0 (RealAbGroup.BigSum_<= (\lam j => (g j).3 x xR) <=∘ =_<= (inv RealField.BigSum-rdistr)) <=∘ =_<= (inv RealField.*-assoc))
+            hR x xR <=∘ gcongr (RealAbGroup.BigSum_<= (\lam j => (g j).3 x xR) <=∘ =_<= (inv RealField.BigSum-rdistr)) <=∘ =_<= (inv RealField.*-assoc))
       }
 
     -- | A cover map bounded by `M (|f₁| + … + |fₘ|)` is linearly bounded.
@@ -155,7 +155,7 @@
                     \have | l1B : l1norm x <= RatField.natCoef m RealField.* (R ∨ 0) => l1norm-box xR
                           | psiB (j : Fin n) : abs (psi j x) <= (g j).1 * l1norm x => (g j).3 x xR
                     \in hC (\lam j => psi j x) (\lam j => psiB j <=∘ RealField.<=_*_positive-left (gK j) l1norm>=0 <=∘ RealField.<=_*_positive-right K>=0 l1B)
-                          <=∘ RealField.<=_*_positive-right C>=0 (RealAbGroup.BigSum_<= psiB <=∘ =_<= (inv RealField.BigSum-rdistr))
+                          <=∘ gcongr (RealAbGroup.BigSum_<= psiB <=∘ =_<= (inv RealField.BigSum-rdistr))
                           <=∘ =_<= (inv RealField.*-assoc))
               }
       }
@@ -164,7 +164,7 @@
     \protected \lemma local-bound {n : Nat} (f : LinBoundedMap n) (R : Real)
       : ∃ (M : Real) ∀ (x : Array Real n) (\Pi (j : Fin n) -> abs (x j) <= R) (abs (f x) <= M)
       => \case f.lin-bound R \with {
-        | inP (C,C>=0,hC) => inP (C * (RatField.natCoef n RealField.* (R ∨ 0)), \lam x xR => hC x xR <=∘ RealField.<=_*_positive-right C>=0 (l1norm-box xR))
+        | inP (C,C>=0,hC) => inP (C * (RatField.natCoef n RealField.* (R ∨ 0)), \lam x xR => hC x xR <=∘ gcongr (l1norm-box xR))
       }
 
     -- | The product of a cover map bounded on boxes with a linearly bounded map.
@@ -172,7 +172,7 @@
                                  (g : LinBoundedMap n) : LinBoundedMap n (\lam x => f x * g x)
       => makeLocal (RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple f g) (g :: nil) \lam R => \case fb R \with {
         | inP (M,hM) => inP (M ∨ 0, RealAbGroup.join-right, \lam x xR => transportInv (_ <= (M ∨ 0) * __) zro-right
-            (=_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (hM x xR <=∘ join-left) RealAbGroup.abs>=0))
+            (=_<= RealField.abs_* <=∘ gcongr (hM x xR <=∘ join-left)))
       }
 
     -- | The pointwise product of linearly bounded maps.

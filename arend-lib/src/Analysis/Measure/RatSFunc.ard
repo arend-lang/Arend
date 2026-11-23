@@ -109,7 +109,7 @@
     | inP (N,p) =>
       \have | d/=0 : d /= 0 => /=-sym (StrictPoset.<_/= d>0)
             | q : (R + R) * RatField.finv d < RatField.natCoef N => p
-            | m : ((R + R) * RatField.finv d) * d < RatField.natCoef N * d => RatField.<_*_positive-left q d>0
+            | m : ((R + R) * RatField.finv d) * d < RatField.natCoef N * d => gcongr q
             | e : ((R + R) * RatField.finv d) * d = R + R => *-assoc *> pmap (_ *) (RatField.finv-left d/=0) *> ide-right
       \in inP (N, rewrite (gridT-formula N) linarith)
   }

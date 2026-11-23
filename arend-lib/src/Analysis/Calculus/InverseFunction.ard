@@ -151,8 +151,7 @@
                          (Qm : m <= realQuot df (g v) (g u)) (m>=0 : 0 <= m)
   : m * RealAbGroup.abs (g u - g v) <= RealAbGroup.abs (u.1 - v.1)
   => \have e : u.1 - v.1 = (g u - g v) * realQuot df (g v) (g u) => inv (pmap2 (\lam s t => s.1 - t.1) (fg u) (fg v)) *> realQuot-incr df (g v) (g u)
-     \in RealField.<=_*_positive-left Qm RealAbGroup.abs>=0
-          <=∘ =_<= (*-comm *> inv (pmap (_ *) (RealAbGroup.abs-ofPos (m>=0 <=∘ Qm))) *> inv RealField.abs_* *> pmap RealAbGroup.abs (inv e))
+     \in gcongr <=∘ =_<= (*-comm *> inv (pmap (_ *) (RealAbGroup.abs-ofPos (m>=0 <=∘ Qm))) *> inv RealField.abs_* *> pmap RealAbGroup.abs (inv e))
 
 -- | A monotone section of a function with a locally positive derivative is a cover map on a locally interval open set.
 \lemma section-cover {U : Set Real} (Uo : isOpen U) (Ui : IsLocallyInterval U) {F : Real -> Set.Total U} {g : Set.Total U -> Real}

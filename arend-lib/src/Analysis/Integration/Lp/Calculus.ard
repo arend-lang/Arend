@@ -74,7 +74,7 @@
 \lemma meet-diff-mono {E : LatticeAbGroup} {x y s t : E} (xy : x <= y) (st : s <= t) : x ∧ t - x ∧ s <= y ∧ t - y ∧ s
   => \have e {z : E} : z ∧ t - z ∧ s = part+ (z ∧ t - s)
              => pmap (_ -) (inv (meet-assoc *> pmap (z ∧) (meet-comm *> meet_<= st))) *> inv part+_diff_meet
-     \in =_<= e <=∘ join-monotone (<=_+ (meet-monotone xy <=-refl) <=-refl) <=-refl <=∘ =_<= (inv e)
+     \in =_<= e <=∘ gcongr <=∘ =_<= (inv e)
 
 -- | $|\mathrm{clip}_{h'} F - \mathrm{clip}_h F| \le |F| \wedge h' - |F| \wedge h$ in `L⁰` for $0 \le h \le h'$.
 \lemma l0clip-diff {L : FullIntegrationSpace} {h h' : L} (h>=0 : L.zro <= h) (h<=h' : h <= h') (F : L0Space L)
@@ -247,11 +247,11 @@
                               => rpow-mono {_} {_} {lnorm>=0 {X}} {<=-less gm>0} (<=-less dxx) <=∘ =_<= (rpow-pos-eq {_} {<=-less gm>0} gm>0) <=∘ hg gamma>0 RatField.meet-left
                           | h1 : Real.fromRat C * rpow (lnorm (x - x')) lnorm>=0 r r>0 <= rpow-pos e2 e2>0' q * ratio 1 2
                               => <=_*_positive-right (rat_real_<=.1 C>=0) P
-                                 <=∘ <=_*_positive-left (usingOnly () linarith : Real.fromRat C <= Real.fromRat C + 1) (<=-less T>0)
+                                 <=∘ gcongr (usingOnly () linarith)
                                  <=∘ =_<= (pinv-cancel C1>0)
                           | h2 : Real.fromRat eta * (rpow (lnorm x) lnorm>=0 r r>0 + rpow (lnorm x') lnorm>=0 r r>0) <= rpow-pos e2 e2>0' q * ratio 1 2
                               => <=_*_positive-right positivity (<=_+ Px Px' <=∘ =_<= (equation.cRing : rpow-pos N N>0' r + rpow-pos N N>0' r = (2 : Real) * rpow-pos N N>0' r))
-                                 <=∘ <=_*_positive-left (<=-less etab) (<=-less R2>0)
+                                 <=∘ gcongr (<=-less etab)
                                  <=∘ =_<= (*-comm *> pinv-cancel R2>0)
                           | Q : rpow (lnorm (f x - f x')) lnorm>=0 q q>0 <= rpow-pos e2 e2>0' q
                               => hC x x' <=∘ usingOnly (h1, h2) linarith
@@ -394,11 +394,11 @@
                 | n1 : lnorm {Y1} W1 <= lnorm {Y1} Wr => TruncPreBanachLattice.lnorm_<= {Y1} (=_<= (abs-ofPos W1>=0) <=∘ le1 <=∘ =_<= (inv (abs-ofPos (W1>=0 <=∘ le1))))
                 | n2 : lnorm {Y1} Wr <= Real.fromRat C * lnorm {Y1} W2 + Real.fromRat eta * (lnorm {Y1} W3 + lnorm {Y1} W4)
                     => lnorm_+ {Y1} {C *q W2} {eta *q (W3 + W4)} <=∘ =_<= (pmap2 (+) (lnorm-*q {Y1} C>=0 {W2}) (lnorm-*q {Y1} (<=-less eta>0) {W3 + W4}))
-                         <=∘ <=_+ <=-refl (<=_*_positive-right positivity (lnorm_+ {Y1} {W3} {W4}))
+                         <=∘ gcongr (lnorm_+ {Y1} {W3} {W4})
                 | sa {Z : Array (LpSpace L p p>=1) n} : lnorm {Y1} (lpPow p p>=1 (lpSumAbs p p>=1 Z)) <= rpow (lnorm {X} Z) (lnorm>=0 {X} {Z}) p (fpow.one>0 p>=1)
                     => =_<= lnorm-lpPow <=∘ rpow-mono lpSumAbs.norm
                 | e>=0 : 0 <= Real.fromRat eta => positivity
-      \in =_<= (inv lnorm-lpPow) <=∘ n1 <=∘ n2 <=∘ <=_+ (<=_*_positive-right (rat_real_<=.1 C>=0) (sa {U - V})) (<=_*_positive-right e>=0 (<=_+ (sa {U}) (sa {V}))))
+      \in =_<= (inv lnorm-lpPow) <=∘ n1 <=∘ n2 <=∘ gcongr (sa {U - V}, sa {U}, sa {V}))
   }
 
 {- | Theorem `thm:Lp-calc`: a cover map $\varphi \colon \mathbb R^n \to \mathbb R$ with $\varphi(0) = 0$ and the power modulus induces

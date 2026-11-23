@@ -114,8 +114,8 @@
                | yx>0 : 0 < y.1 - x.1 => linarith
                | q2' : f y - f x = (y.1 - x.1) * quotSquare a<b f d (y,x) => (equation.cRing : f y - f x = negative (f x - f y)) *> pmap negative q2
                      *> (equation.cRing : negative ((x.1 - y.1) * quotSquare a<b f d (y,x)) = (y.1 - x.1) * quotSquare a<b f d (y,x))
-         \in (\lam Q<e => \have t : (y.1 - x.1) * quotSquare a<b f d (x,y) < e * (y.1 - x.1) => RealField.<_*_positive-right yx>0 Q<e <∘l =_<= *-comm \in linarith,
-              \lam Q<e => \have t : (y.1 - x.1) * quotSquare a<b f d (y,x) < e * (y.1 - x.1) => RealField.<_*_positive-right yx>0 Q<e <∘l =_<= *-comm \in linarith)
+         \in (\lam Q<e => \have t : (y.1 - x.1) * quotSquare a<b f d (x,y) < e * (y.1 - x.1) => gcongr <∘l =_<= *-comm \in linarith,
+              \lam Q<e => \have t : (y.1 - x.1) * quotSquare a<b f d (y,x) < e * (y.1 - x.1) => gcongr <∘l =_<= *-comm \in linarith)
   }
 
 -- | A section {g} of {f} is Lipschitz if the difference quotient of {f} is bounded below by `m > 0`.
@@ -127,8 +127,7 @@
   : m * RealAbGroup.abs ((g u).1 - (g v).1) <= RealAbGroup.abs (u.1 - v.1)
   => \let | Q => quotSquare a<b (\lam x => (f x).1) df (g v, g u)
           | e : u.1 - v.1 = ((g u).1 - (g v).1) * Q => inv (pmap2 (\lam s t => s.1 - t.1) (fg u) (fg v)) *> quot-incr (g v) (g u)
-     \in RealField.<=_*_positive-left (Qm (g v, g u)) RealAbGroup.abs>=0
-          <=∘ =_<= (*-comm *> inv (pmap (_ *) (RealAbGroup.abs-ofPos (<=-less m>0 <=∘ Qm (g v, g u)))) *> inv RealField.abs_* *> pmap RealAbGroup.abs (inv e))
+     \in gcongr (Qm (g v, g u)) <=∘ =_<= (*-comm *> inv (pmap (_ *) (RealAbGroup.abs-ofPos (<=-less m>0 <=∘ Qm (g v, g u)))) *> inv RealField.abs_* *> pmap RealAbGroup.abs (inv e))
 
 -- | A section {g} of {f} is a cover map if the difference quotient of {f} is bounded below by `m > 0`.
 \lemma inverse-cover {a b c d : Real} {a<b : a < b} {f : Set.Total (ClosedInterval a b) -> Set.Total (ClosedInterval c d)}

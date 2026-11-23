@@ -226,7 +226,7 @@
 
   -- | `τ_r` is 1-Lipschitz.
   \lemma truncAt-lipschitz {r : Rat} (r>0 : 0 < r) {a b : E} : abs (truncAt r a - truncAt r b) <= abs (a - b)
-    => =_<= (pmap abs (inv toRatModule.*c-ldistr_-) *> abs_*q>=0 (<=-less r>0)) <=∘ <=_*q-right (<=-less r>0) trunc-lipschitz
+    => =_<= (pmap abs (inv toRatModule.*c-ldistr_-) *> abs_*q>=0 (<=-less r>0)) <=∘ gcongr trunc-lipschitz
         <=∘ =_<= (inv (abs_*q>=0 (<=-less r>0)) *> pmap abs (toRatModule.*c-ldistr_- *> pmap2 (-) (*q-finv-cancel (RatField.>_/= r>0)) (*q-finv-cancel (RatField.>_/= r>0))))
 
   -- | `x ≤ r·1` if and only if `τ_r x = x`.
@@ -274,7 +274,7 @@
                  | lg<=g : l *q g <= g => <=_*q-left {_} {l} {1} linarith g>=0 <=∘ =_<= ide_*q
                  | lg<=tg : l *q g <= truncAt r g => truncAt-greatest r>0 (transport (IsBelow _) ls (IsBelow_*q l>=0 p)) lg<=g
                  | gm : g - l *q g = m *q g => equation.abGroup *> pmap (\lam z => z - l *q g) (inv ide_*q *> pmap (*q g) (inv lm) *> toRatModule.*c-rdistr) *> equation.abGroup
-       \in IsBelow_<= (<=_+ <=-refl (negative_<= lg<=tg) <=∘ =_<= gm) (transport (IsBelow _) ms (IsBelow_*q m>=0 p))
+       \in IsBelow_<= (gcongr <=∘ =_<= gm) (transport (IsBelow _) ms (IsBelow_*q m>=0 p))
 
   -- | The key inequality `h - τ_r f ≤ (h - f)⁺ ∨ (h⁺ - τ_r h⁺)`.
   \lemma truncAt-key {r : Rat} (r>0 : 0 < r) {h f : E} : h - truncAt r f <= part+ (h - f) ∨ (part+ h - truncAt r (part+ h))
@@ -289,10 +289,10 @@
   \lemma trunc_*q-boolean_>=1 {q : Rat} (q>=1 : 1 RatField.<= q) {e : E} (p : IsBoolean e) : trunc (q *q e) = e
     => \let | e>=0 => IsBoolean>=0 p
             | y => trunc (q *q e) - e
-            | y>=0 : 0 <= y => to>=0 $ =_<= (inv (IsBoolean-trunc p)) <=∘ trunc-mono (=_<= (inv ide_*q) <=∘ <=_*q-left q>=1 e>=0)
+            | y>=0 : 0 <= y => to>=0 $ =_<= (inv (IsBoolean-trunc p)) <=∘ trunc-mono (=_<= (inv ide_*q) <=∘ gcongr)
             | ye : y ∧ e = 0 => meet-comm *> pmap (e ∧) (inv (part+-ofPos y>=0)) *> IsBoolean-orth p trunc-idemp
             | (n,q<n) => rat_natBound q
-            | y<=ne : y <= n *n e => <=_+ trunc-bound (negative<=0 e>=0) <=∘ =_<= zro-right <=∘ <=_*q-left (<=-less q<n) e>=0 <=∘ =_<= *q_*n
+            | y<=ne : y <= n *n e => <=_+ trunc-bound (negative<=0 e>=0) <=∘ =_<= zro-right <=∘ gcongr (<=-less q<n) <=∘ =_<= *q_*n
        \in AddGroup.fromZero $ <=-antisymmetric (meet-univ <=-refl y<=ne <=∘ =_<= (meet_*n-zro y>=0 e>=0 ye)) y>=0
 
   \lemma trunc_*q-boolean {q : Rat} {e : E} (p : IsBoolean e) : trunc (q *q e) = (q RatField.∧ 1) *q e
@@ -397,6 +397,11 @@
               *> pmap (\lam u => u + a.1 ∧ b.1 - (0 + 0)) (abs-formula *> pmap (\lam v => v - (a.1 ∧ b.1 + a.1 ∧ b.1)) modularity) *> equation.abGroup
     }
 }
+
+-- | A top-level version of {TruncRieszSpace.trunc-mono} for {gcongr}.
+\attr gcongr
+\lemma trunc-mono_gcongr {E : TruncRieszSpace} {a b : E} (a<=b : a <= b) : E.trunc a <= E.trunc b
+  => E.trunc-mono a<=b
 
 \record TruncRieszSpaceHom \extends RieszSpaceHom {
   \override Dom : TruncRieszSpace

@@ -113,8 +113,8 @@
     \lemma mul-lip {a a' b b' M : Real} (aM : RealAbGroup.abs a <= M) (b'M : RealAbGroup.abs b' <= M)
       : RealAbGroup.abs (a * b - a' * b') <= M * (RealAbGroup.abs (a - a') + RealAbGroup.abs (b - b'))
       => \have | e : a * b - a' * b' = a * (b - b') + (a - a') * b' => equation.cRing
-               | t1 : RealAbGroup.abs (a * (b - b')) <= M * RealAbGroup.abs (b - b') => =_<= RealField.abs_* <=∘ <=_*_positive-left aM RealAbGroup.abs>=0
-               | t2 : RealAbGroup.abs ((a - a') * b') <= M * RealAbGroup.abs (a - a') => =_<= (RealField.abs_* *> RealField.*-comm) <=∘ <=_*_positive-left b'M RealAbGroup.abs>=0
+               | t1 : RealAbGroup.abs (a * (b - b')) <= M * RealAbGroup.abs (b - b') => =_<= RealField.abs_* <=∘ gcongr aM
+               | t2 : RealAbGroup.abs ((a - a') * b') <= M * RealAbGroup.abs (a - a') => =_<= (RealField.abs_* *> RealField.*-comm) <=∘ gcongr b'M
          \in =_<= (pmap RealAbGroup.abs e) <=∘ RealAbGroup.abs_+ <=∘ <=_+ t1 t2 <=∘ =_<= (inv RealField.ldistr *> pmap (M *) RealAbGroup.+-comm)
 
 -- | Clamping to `[-M,M]` is `1`-Lipschitz.
@@ -323,10 +323,10 @@
       : (k * a) ∧ b <= K * (a ∧ b)
       => signedPow.real-cases {a} {b}
           (\lam a<b => \have | ea : a ∧ b = a => RealAbGroup.meet_<= (<=-less a<b)
-                             | m : k * a <= K * a => <=_*_positive-left k<=K a>=0
+                             | m : k * a <= K * a => gcongr
                        \in meet-left <=∘ m <=∘ =_<= (pmap (K *) (inv ea)))
           (\lam b<=a => \have | eb : a ∧ b = b => RealAbGroup.meet-comm *> RealAbGroup.meet_<= b<=a
-                              | m : b <= K * b => =_<= (inv ide-left) <=∘ <=_*_positive-left K>=1 b>=0
+                              | m : b <= K * b => =_<= (inv ide-left) <=∘ gcongr
                         \in meet-right <=∘ m <=∘ =_<= (pmap (K *) (inv eb)))
 
 -- | $\bigl||f| \wedge h - |g| \wedge h\bigr| \le |f - g| \wedge h$ for $h \ge 0$.
@@ -364,7 +364,7 @@
     \lemma pt {c e K X : Real} (ce : c * e = (1 : Real)) (e>0 : (0 : Real) < e) (K>=0 : (0 : Real) <= K) (X1 : (1 : Real) <= c * K -> X <= 0)
       : X ∧ K <= K ∧ e
       => signedPow.real-cases {c * K} {1}
-          (\lam cK<1 => \have | m : e * (c * K) <= e * 1 => RealField.<=_*_positive-right (<=-less e>0) (<=-less cK<1)
+          (\lam cK<1 => \have | m : e * (c * K) <= e * 1 => gcongr
                               | Ke : K <= e => transport (__ <= _) (equation.cRing {ce}) (m <=∘ =_<= ide-right)
                         \in meet-univ meet-right (meet-right <=∘ Ke))
           (\lam cK>=1 => meet-left <=∘ X1 cK>=1 <=∘ positivity)
@@ -394,7 +394,7 @@
   \where
     \private \lemma pt {x m : Real} (m>=0 : (0 : Real) <= m) (m<=1 : m <= 1) : RealAbGroup.abs (x * m - x) <= RealAbGroup.abs x
       => =_<= (pmap RealAbGroup.abs (equation.cRing : x * m - x = x * (m - 1)) *> RealField.abs_*)
-          <=∘ RealField.<=_*_positive-right RealAbGroup.abs>=0 (RealField.abs-univ linarith linarith)
+          <=∘ gcongr (RealField.abs-univ linarith linarith)
           <=∘ =_<= ide-right
 
 -- | $|f| (f + |f|) = f (f + |f|)$.
@@ -429,7 +429,7 @@
       => signedPow.real-cases {x} {0}
           (\lam x<0 => \have | ea : x ∧ a = x => RealAbGroup.meet_<= (<=-less x<0 <=∘ a>=0)
                               | eb : x ∧ b = x => RealAbGroup.meet_<= (<=-less x<0 <=∘ a>=0 <=∘ a<=b)
-                              | m : x ∨ negative b <= x ∨ negative a => RealAbGroup.join-monotone <=-refl (RealAbGroup.negative_<= a<=b)
+                              | m : x ∨ negative b <= x ∨ negative a => gcongr
                               | d : (0 : Real) <= (x ∨ negative a) - (x ∨ negative b) => usingOnly m linarith
                               | l : RealAbGroup.abs (((x ∧ b) ∨ negative b) - ((x ∧ a) ∨ negative a)) = (x ∨ negative a) - (x ∨ negative b)
                                   => pmap2 (\lam u v => RealAbGroup.abs ((u ∨ negative b) - (v ∨ negative a))) eb ea *> RealAbGroup.abs_- *> RealAbGroup.abs-ofPos d
@@ -440,7 +440,7 @@
                         \in =_<= (l *> equation.abGroup *> inv r))
           (\lam x>=0 => \have | ea : (x ∧ a) ∨ negative a = x ∧ a => RealAbGroup.join-comm *> RealAbGroup.join_<= (RealAbGroup.negative<=0 a>=0 <=∘ RealAbGroup.meet-univ x>=0 a>=0)
                                | eb : (x ∧ b) ∨ negative b = x ∧ b => RealAbGroup.join-comm *> RealAbGroup.join_<= (RealAbGroup.negative<=0 (a>=0 <=∘ a<=b) <=∘ RealAbGroup.meet-univ x>=0 (a>=0 <=∘ a<=b))
-                               | m : x ∧ a <= x ∧ b => RealAbGroup.meet-monotone <=-refl a<=b
+                               | m : x ∧ a <= x ∧ b => gcongr
                                | d : (0 : Real) <= x ∧ b - x ∧ a => usingOnly m linarith
                          \in =_<= (pmap2 (\lam u v => RealAbGroup.abs (u - v)) eb ea *> RealAbGroup.abs-ofPos d
                                     *> inv (pmap (\lam t => t ∧ b - t ∧ a) (RealAbGroup.abs-ofPos x>=0))))
@@ -565,15 +565,15 @@
                | T>=0 : 0 <= K * (W * (((i * W) ∧ 1) ∧ y)) => positivity
                | ye>=0 : 0 <= y ∧ e => positivity
          \in signedPow.real-cases {e} {W}
-              (\lam e<W => \have | iW>=1 : (1 : Real) <= i * W => =_<= (inv ie) <=∘ <=_*_positive-right i>=0 (<=-less e<W)
-                                 | KW>=1 : (1 : Real) <= K * W => iW>=1 <=∘ <=_*_positive-left i<=K W>=0
+              (\lam e<W => \have | iW>=1 : (1 : Real) <= i * W => =_<= (inv ie) <=∘ gcongr
+                                 | KW>=1 : (1 : Real) <= K * W => iW>=1 <=∘ gcongr
                            \in signedPow.real-cases {y} {1}
                                 (\lam y<1 => \have | ym : y <= ((i * W) ∧ 1) ∧ y => meet-univ (meet-univ (<=-less y<1 <=∘ iW>=1) (<=-less y<1)) <=-refl
-                                                   | t : y <= K * (W * (((i * W) ∧ 1) ∧ y)) => =_<= (inv ide-left) <=∘ <=_*_positive-left KW>=1 y>=0 <=∘ =_<= *-assoc <=∘ <=_*_positive-right K>=0 (<=_*_positive-right W>=0 ym)
+                                                   | t : y <= K * (W * (((i * W) ∧ 1) ∧ y)) => =_<= (inv ide-left) <=∘ <=_*_positive-left KW>=1 y>=0 <=∘ =_<= *-assoc <=∘ gcongr
                                                    | l : W ∧ y <= y => meet-right
                                              \in linarith)
                                 (\lam y>=1 => \have | m1 : (1 : Real) <= ((i * W) ∧ 1) ∧ y => meet-univ (meet-univ iW>=1 (RealAbGroup.<=-refl {1})) y>=1
-                                                    | t : W <= K * (W * (((i * W) ∧ 1) ∧ y)) => =_<= (inv ide-left) <=∘ <=_*_positive-left K>=1 W>=0 <=∘ <=_*_positive-right K>=0 (=_<= (inv ide-right) <=∘ <=_*_positive-right W>=0 m1)
+                                                    | t : W <= K * (W * (((i * W) ∧ 1) ∧ y)) => =_<= (inv ide-left) <=∘ <=_*_positive-left K>=1 W>=0 <=∘ gcongr (=_<= (inv ide-right) <=∘ gcongr)
                                                     | l : W ∧ y <= W => meet-left
                                               \in linarith))
               (\lam W<=e => \have l : W ∧ y <= y ∧ e => meet-univ meet-right (meet-left <=∘ W<=e) \in linarith)
@@ -673,8 +673,8 @@
           <= e * RealAbGroup.abs T * RealAbGroup.abs z
       => \have | yx : x + T * z - x = T * z => equation.cRing
                | aTz : RealAbGroup.abs (T * z) = RealAbGroup.abs T * RealAbGroup.abs z => RealField.abs_*
-               | Tz<= : RealAbGroup.abs T * RealAbGroup.abs z <= RealAbGroup.abs T * Mr => <=_*_positive-right RealAbGroup.abs>=0 zM
-               | TMr : RealAbGroup.abs T * Mr <= Mr => <=_*_positive-left (<=-less T<1) Mr>=0 <=∘ =_<= ide-left
+               | Tz<= : RealAbGroup.abs T * RealAbGroup.abs z <= RealAbGroup.abs T * Mr => gcongr
+               | TMr : RealAbGroup.abs T * Mr <= Mr => gcongr <=∘ =_<= ide-left
                | TM1 : RealAbGroup.abs T * (Mr + 1) = RealAbGroup.abs T * Mr + RealAbGroup.abs T => equation.cRing
                | T>=0 => RealAbGroup.abs>=0 {T}
                | yM : RealAbGroup.abs (x + T * z) <= Mr + Mr => RealAbGroup.abs_+ <=∘ <=_+ xM (=_<= aTz <=∘ Tz<= <=∘ TMr)

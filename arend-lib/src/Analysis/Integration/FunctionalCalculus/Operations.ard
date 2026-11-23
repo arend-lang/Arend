@@ -176,8 +176,8 @@
                | ci>0 => RealField.pinv>0 c>0
                | e {w : Real} : c * (RealField.pinv c c>0 * w) = w => inv *-assoc *> pmap (`* w) (RealField.pinv-right c>0) *> ide-left
                | f {w : Real} : RealField.pinv c c>0 * (c * w) = w => inv *-assoc *> pmap (`* w) (RealField.pinv-left c>0) *> ide-left
-         \in <=-antisymmetric (RealAbGroup.meet-univ (<=_*_positive-right c>=0 RealAbGroup.meet-left) (<=_*_positive-right c>=0 RealAbGroup.meet-right))
-               (=_<= (inv e) <=∘ <=_*_positive-right c>=0 (RealAbGroup.meet-univ (<=_*_positive-right (<=-less ci>0) RealAbGroup.meet-left <=∘ =_<= f)
+         \in <=-antisymmetric (RealAbGroup.meet-univ (gcongr RealAbGroup.meet-left) (gcongr RealAbGroup.meet-right))
+               (=_<= (inv e) <=∘ gcongr (RealAbGroup.meet-univ (<=_*_positive-right (<=-less ci>0) RealAbGroup.meet-left <=∘ =_<= f)
                                                                                 (<=_*_positive-right (<=-less ci>0) RealAbGroup.meet-right <=∘ =_<= f)))
 
 -- | If `x = φ(F)` and `y = ψ(F)` with `φ = ψ` pointwise, then `x = y`.
@@ -224,10 +224,10 @@
                        <=∘ L.integral_abs <=∘ L.integral-mono d1 <=∘ =_<= L.integral_*q
                 | i2 : RealAbGroup.abs (Real.fromRat q * L.integral f - c * L.integral f) <= Real.fromRat e * L.integral (abs f)
                     => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*)
-                       <=∘ <=_*_positive-left (=_<= RealAbGroup.abs_- <=∘ qc') RealAbGroup.abs>=0 <=∘ <=_*_positive-right positivity L.integral_abs
+                       <=∘ <=_*_positive-left (=_<= RealAbGroup.abs_- <=∘ qc') RealAbGroup.abs>=0 <=∘ gcongr L.integral_abs
                 | I>=0 : (0 : Real) <= L.integral (abs f) => L.integral>=0 abs>=0
                 | IM' : L.integral (abs f) <= Real.fromRat (M RatField.∨ 1) => <=-less (real_<_U.2 IM) <=∘ rat_real_<=.1 RatField.join-left
-                | eI : Real.fromRat e * L.integral (abs f) <= Real.fromRat e * Real.fromRat (M RatField.∨ 1) => <=_*_positive-right positivity IM'
+                | eI : Real.fromRat e * L.integral (abs f) <= Real.fromRat e * Real.fromRat (M RatField.∨ 1) => gcongr
                 | eK : Real.fromRat (e RatField.* (2 RatField.* (M RatField.∨ 1))) = Real.fromRat e * Real.fromRat (M RatField.∨ 1) + Real.fromRat e * Real.fromRat (M RatField.∨ 1)
                     => pmap Real.fromRat (equation.cRing : e RatField.* (2 RatField.* (M RatField.∨ 1)) = e RatField.* (M RatField.∨ 1) RatField.+ e RatField.* (M RatField.∨ 1)) *> inv RealAbGroup.+-rat *> pmap2 (+) (inv RealField.*-rat) (inv RealField.*-rat)
                 | tri : RealAbGroup.abs (L.integral (rscale c f) - c * L.integral f)
@@ -238,4 +238,4 @@
   }
   \where
     \private \lemma pt {c q e x : Real} (qc : RealAbGroup.abs (c - q) <= e) : RealAbGroup.abs (c * x - q * x) <= e * RealAbGroup.abs x
-      => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*) <=∘ <=_*_positive-left qc RealAbGroup.abs>=0
+      => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*) <=∘ gcongr qc

@@ -16,7 +16,6 @@
 \import Function.Meta
 \import Logic
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -52,8 +51,8 @@
   }
   \where {
     \lemma small-prod {x y d e : Real} (x>=0 : 0 <= x) (y<d : y < d) (d>0 : 0 < d) (de : d * (x + 1) < e) : x * y < e
-      => \have | h1 : x * y <= x * d => RealField.<=_*_positive-right x>=0 (LinearOrder.<_<= y<d)
-               | h2 : d * (x + 1) = x * d + d => equation
+      => \have | h1 : x * y <= x * d => gcongr
+               | h2 : d * (x + 1) = x * d + d => equation.cRing
          \in linarith
   }
 

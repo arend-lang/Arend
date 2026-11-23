@@ -95,11 +95,11 @@
   : embed J <= SJoin embed (\lam J' => \Sigma (J' <= J) (J'.2 - J'.1 < d))
   => \have | j3 => J.3
            | (n,q<n) => rat_natBound ((J.2 - J.1 + (J.2 - J.1)) * RatField.finv d)
-           | m : J.2 - J.1 + (J.2 - J.1) < RatField.natCoef n * d => transport (`< _) (RatField.*-assoc *> pmap (_ *) (RatField.finv-left (RatField.>_/= d>0)) *> RatField.ide-right) (RatField.<_*_positive-left q<n d>0)
+           | m : J.2 - J.1 + (J.2 - J.1) < RatField.natCoef n * d => transport (< _) (RatField.*-assoc *> pmap (_ *) (RatField.finv-left (RatField.>_/= d>0)) *> RatField.ide-right) (gcongr q<n)
            | wd : J.2 - J.1 + (J.2 - J.1) < (RatField.natCoef n + 2) * d => plus2-ineq d>0 m
      \in embed-univ $ cover-sub (fine-cover-site n J) \lam {J'} (J'<=J, h) => later $ inP (embed J', SetIm-con (J'<=J, \case dec<_<= (J'.2 - J'.1) d \with {
            | inl p => p
-           | inr d<=x => absurd $ <-irreflexive $ wd <∘l RatField.<=_*_positive-right (later linarith) d<=x <=∘ h
+           | inr d<=x => absurd $ <-irreflexive $ wd <∘l gcongr d<=x <=∘ h
          }), cover-refl idp)
 
 -- | A box is covered by subboxes of width less than `d`.

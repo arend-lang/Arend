@@ -10,7 +10,6 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Analysis.Calculus.Convex
 \import Arith.Rat
@@ -28,7 +27,7 @@
   => \let h => Real.fromRat (ratio 1 2)
      \in \have | hh : h + h = (1 : Real) => RealAbGroup.+-rat *> pmap Real.fromRat idp
                | h>=0 : (0 : Real) <= h => rat_real_<=.1 linarith
-               | r>=1 : (1 : Real) <= p * h => =_<= (equation.cRing {hh} : (1 : Real) = (2 : Real) * h) <=∘ <=_*_positive-left p>=2 h>=0
+               | r>=1 : (1 : Real) <= p * h => =_<= (equation.cRing {hh} : (1 : Real) = (2 : Real) * h) <=∘ gcongr
                | r>0 : (0 : Real) < p * h => linarith
                | rr : p * h + p * h = p => equation.cRing {hh}
                | conv => abs-rpow-convex {p * h} {r>0} r>=1

@@ -129,7 +129,7 @@
     => (\lam xy<a => \case *_U.1 xy<a \with {
       | inP (b,x<b,b>0,c,y<c,c>0,bc<a) => inP (b, x<b, b>0, c, y<c, c>0, <=-less bc<a)
     }, \lam (inP (b,x<b,b>0,c,y<c,c>0,bc<=a)) => \case U-rounded x<b \with {
-      | inP (b',x<b',b'<b) => *_U.2 $ inP (b' ∨ RatField.mid 0 b, ExUpperReal.U_<= x<b' join-left, RatField.mid>left b>0 <∘l join-right, c, y<c, c>0, <_*_positive-left (<_join-univ b'<b $ RatField.mid<right b>0) c>0 <∘l bc<=a)
+      | inP (b',x<b',b'<b) => *_U.2 $ inP (b' ∨ RatField.mid 0 b, ExUpperReal.U_<= x<b' join-left, RatField.mid>left b>0 <∘l join-right, c, y<c, c>0, gcongr (<_join-univ b'<b $ RatField.mid<right b>0) <∘l bc<=a)
     })
 
   \lemma *_U_< {x y : ExUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : Rat) (x <= b) (0 RatField.<= b) (c : Rat) (y <= c) (0 RatField.<= c) (b RatField.* c < a)
@@ -297,7 +297,7 @@
       | 1 => rewrite zro-left (\lam x<q => inP (q, x<q, =_<= ide-left), \lam (inP (r,x<r,r<=q)) => x.U_<= x<r $ rewrite RatField.ide-left in r<=q)
       | suc (suc n) => (\lam c => \case +_U_<=.1 c \with {
         | inP (a,ap,b,x<b,a+b<=q) => \case (*n_U {suc n} suc/=0).1 ap \with {
-          | inP (r,x<r,rp) => inP (b ∧ r, real_meet_U x<b x<r, RatField.rdistr {suc n} =<= <=_+ (RatField.<=_*_positive-right rat_<=-dec meet-right <=∘ rp) (ide-left =<= meet-left) <=∘ a+b<=q)
+          | inP (r,x<r,rp) => inP (b ∧ r, real_meet_U x<b x<r, RatField.rdistr {suc n} =<= <=_+ (gcongr meet-right <=∘ rp) (ide-left =<= meet-left) <=∘ a+b<=q)
         }
       }, \lam (inP (r,x<r,rp)) => +_U_<=.2 $ inP (suc n RatField.* r, (*n_U {suc n} suc/=0 {x} {suc n RatField.* r}).2 $ inP (r,x<r,<=-refl), r, x<r, inv (RatField.rdistr *> pmap (_ RatField.+) ide-left) =<= rp))
 
@@ -306,6 +306,11 @@
         \lam (inP (r,x<r,nr<=q)) => x.U_<= x<r $ (inv (pmap (RatField.* r) (RatField.finv-left $ natRat/=0 n/=0) *> ide-left) *> *-assoc) =<= RatField.<=_*_positive-right (RatField.finv>=0 fromNat_>=0) nr<=q,
         \lam x<q/n => inP (_, x<q/n, =_<= $ inv *-assoc *> pmap (RatField.* q) (RatField.finv-right $ natRat/=0 n/=0) *> ide-left))
   }
+
+-- | A top-level version of {ExUpperRealAbMonoid.<_+} for {gcongr}.
+\attr gcongr
+\lemma ExUpperReal_<_+ {x y x' y' : ExUpperReal} (x<x' : x < x') (y<y' : y < y') : x + y < x' + y'
+  => ExUpperRealAbMonoid.<_+ x<x' y<y'
 
 \lemma rat-upperReal : AddMonoidHom RatField ExUpperRealAbMonoid ExUpperReal.fromRat \cowith
   | func-zro => idp
@@ -319,7 +324,7 @@
     }
   }) (\lam {d} xyz<d => \case *_U.1 xyz<d \with {
     | inP (a',xy<a',_,c,z<c,c>0,a'c<d) => \case *_U.1 xy<a' \with {
-      | inP (a,x<a,a>0,b,y<b,b>0,ab<a') => *_U.2 $ inP (a, x<a, a>0, b RatField.* c, *_U_<=.2 $ inP (b,y<b,b>0,c,z<c,c>0,<=-refl), RatField.<_*_positive_positive b>0 c>0, transport (RatField.< _) *-assoc $ RatField.<_*_positive-left ab<a' c>0 <∘ a'c<d)
+      | inP (a,x<a,a>0,b,y<b,b>0,ab<a') => *_U.2 $ inP (a, x<a, a>0, b RatField.* c, *_U_<=.2 $ inP (b,y<b,b>0,c,z<c,c>0,<=-refl), RatField.<_*_positive_positive b>0 c>0, transport (RatField.< _) *-assoc $ gcongr <∘ a'c<d)
     }
   })
   | *-comm => \have lem {x} {y} : x * y <= y * x => \lam {d} yx<d => \case *_U.1 yx<d \with {
@@ -392,7 +397,7 @@
         | inP (b',xy<b',c',xz<c',b'+c'<d) => \case *_U.1 xy<b', *_U.1 xz<c' \with {
           | inP (a1,x<a1,a1>0,b,y<b,b>0,a1b<b'), inP (a2,x<a2,a2>0,c,z<c,c>0,a2c<c') => *_U.2 $ inP (
               a1 ∧ a2, real_meet_U x<a1 x<a2, <_meet-univ a1>0 a2>0, b RatField.+ c, +_U_<=.2 $ inP (b,y<b,c,z<c,<=-refl), linarith,
-              transportInv (RatField.< _) RatField.ldistr (RatField.<_+ (RatField.<=_*_positive-left meet-left (<=-less b>0) <∘r a1b<b') (RatField.<=_*_positive-left meet-right (<=-less c>0) <∘r a2c<c')) <∘ b'+c'<d)
+              transportInv (RatField.< _) RatField.ldistr (RatField.<_+ (gcongr meet-left <∘r a1b<b') (gcongr meet-right <∘r a2c<c')) <∘ b'+c'<d)
         }
       }
 
@@ -553,6 +558,21 @@
         | no n/=0 => inP (n RatField.* q, (*n_U n/=0).2 $ inP (q,x<q,<=-refl))
       }
   }
+
+-- | A top-level version of {ExUpperRealSemigroup.<=_*} for {gcongr}.
+\attr gcongr
+\lemma ExUpperReal_<=_* {x x' y y' : ExUpperReal} (x<=x' : x <= x') (y<=y' : y <= y') : x * y <= x' * y'
+  => ExUpperRealSemigroup.<=_* x<=x' y<=y'
+
+-- | A top-level version of {ExUpperRealSemigroup.<_*} for {gcongr}.
+\attr gcongr
+\lemma ExUpperReal_<_* {x x' y y' : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (x<x' : x < x') (y<y' : y < y') : x * y < x' * y'
+  => ExUpperRealSemigroup.<_* x>=0 y>=0 x<x' y<y'
+
+-- | A top-level version of {ExUpperRealSemigroup.pow_<=} for {gcongr}.
+\attr gcongr
+\lemma ExUpperReal_pow_<= {x y : ExUpperReal} (x<=y : x <= y) {n : Nat} : ExUpperRealSemigroup.pow x n <= ExUpperRealSemigroup.pow y n
+  => ExUpperRealSemigroup.pow_<= x<=y
 
 \record UpperReal \extends ExUpperReal {
   | U-inh : ∃ U
