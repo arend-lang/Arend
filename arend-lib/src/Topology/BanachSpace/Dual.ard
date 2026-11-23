@@ -75,7 +75,7 @@
                                   | Cb : C < b => rat_real_<.2 (real_<_L.2 Cb')
          \in inP (C, rat_real_<=.2 (functionalSup>=0 p <=∘ <=-less sC), Cb, \lam {x} {b'} xb =>
            \have b'>0 : 0 < b' => norm>=0 xb
-           \in p.1 xb <=∘ RealField.<=_*_positive-left (<=-less sC) (rat_real_<=.1 (<=-less b'>0)) <=∘ =_<= RealField.*-rat)
+           \in p.1 xb <=∘ RealField.<=_*_positive-left (<=-less sC) positivity <=∘ =_<= RealField.*-rat)
      })
      (\lam {b} (inP (C,C>=0,Cb,bd)) => real_<_U.1 $ real_<=-eps (\lam {d} d>0 => \case p.2 d>0 \with {
        | inP (x,x1,sx) => \have t : RealAbGroup.abs (f x) <= Real.fromRat C => bd x1 <=∘ =_<= (pmap Real.fromRat ide-right)
@@ -359,7 +359,7 @@
     | inP (C,C>=0,p), inP (K,Ku,K>0) => inP (K * C, RatField.<=_*_positive_positive (<=-less K>0) C>=0, \lam {x} {b} xb =>
         \have b>0 : 0 < b => norm>=0 xb
         \in =_<= RealField.abs_* <=∘ RealField.<=_*_positive-left (<=-less (real_<_U.2 Ku)) RealAbGroup.abs>=0
-              <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less K>0)) (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
+              <=∘ RealField.<=_*_positive-right positivity (p xb) <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat (inv *-assoc)))
   }
 
 -- | Scaling the supremum: $\sup |c \Lambda| = c \sup |\Lambda|$ for $c > 0$.

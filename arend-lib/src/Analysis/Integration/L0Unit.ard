@@ -99,7 +99,7 @@
   : IsConvergent W
   => \have C>0 : RatField.zro RatField.< C => RatField.zro<ide <∘l C>=1
      \in convergent-topAbGroup-char {PosCone L} {L0Space L} {W} 2 0 \lam {U} Uo U0 => \case completion-neighborhood {L0PreSpace L} Uo U0 \with {
-       | inP ((k,k>=0),eps,eps>0,g) => \case l0One.small k>=0 {Real.fromRat (RatField.finv C) * eps} (RealField.<_*_positive_positive (rat_real_<.1 (RatField.finv>0 C>0)) eps>0) \with {
+       | inP ((k,k>=0),eps,eps>0,g) => \case l0One.small k>=0 {Real.fromRat (RatField.finv C) * eps} positivity \with {
          | inP (eta,eta>0,s) => inP (l0One.start k>=0 eta>0, \lam {n} start<=n => g $ gauge C>=1 k>=0 eta>0 start<=n (Wd start<=n)
              <∘r (RealField.<_*_positive-right (rat_real_<.1 C>0) s <∘l =_<= (inv RealField.*-assoc *> pmap (`* eps) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-right (RatField.>_/= C>0))) *> ide-left)))
        }

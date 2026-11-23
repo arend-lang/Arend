@@ -123,7 +123,7 @@
   => \have bc {a : LinBoundedMap 2} {x : L} (e : fcalc a (f :: g :: nil) = x)
            => fcalc-join (fcalc-meet e (fcalc-truncAt M>0 (fcalc-abs e))) (fcalc-neg (fcalc-truncAt M>0 (fcalc-abs e)))
      \in fcalc-le-pt (f :: g :: nil)
-          (\lam z => =_<= (pmap2 (\lam u v => RealAbGroup.abs (u - v)) (RealAbGroup.clip-abs-meet (rat_real_<=.1 (<=-less M>0))) (RealAbGroup.clip-abs-meet (rat_real_<=.1 (<=-less M>0)))) <=∘ RealAbGroup.clip-lip)
+          (\lam z => =_<= (pmap2 (\lam u v => RealAbGroup.abs (u - v)) (RealAbGroup.clip-abs-meet positivity) (RealAbGroup.clip-abs-meet positivity)) <=∘ RealAbGroup.clip-lip)
           (fcalc-abs (fcalc-sub (bc (fcalc-var 0)) (bc (fcalc-var 1)))) (fcalc-abs (fcalc-sub (fcalc-var 0) (fcalc-var 1)))
 
 -- | $|fg - f'g'| \wedge h \le \max(M,1)(|f-f'| \wedge h + |g-g'| \wedge h)$ if {f}, {f'}, {g}, {g'} are bounded by {M}.
@@ -454,7 +454,7 @@
       <= fpow q q>=1 g + rscale ((q - 1) * rpow-pos v v>0 q) (L.trunc (RatField.finv eta *q g)) + rscale (q * rpow-pos v v>0 (q - 1)) (L.truncAt eta g)
   => \have eg => fcalc-pos (fcalc-var {L} {1} {g :: nil} 0) g>=0
      \in fcalc-le-pt (g :: nil)
-          (\lam z => rpow-tangent-trunc q>=1 v>0 (rat_real_<=.1 positivity) (rat_real_<=.1 (RatField.<=-less eta>0))
+          (\lam z => rpow-tangent-trunc q>=1 v>0 positivity positivity
                        (RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= eta>0))) RealAbGroup.join-right)
           (fcalc-rscale eg)
           (fcalc-add (fcalc-add (fcalc-pow eg) (fcalc-rscale (fcalc-op1 (LinBoundedMap.meetConst 1 RealField.zro<=ide) (fcalc-*q eg) *> fcalc-trunc)))
@@ -552,7 +552,7 @@
   => \have | ew => fcalc-excess C>0 (fcalc-var {L} {2} {f :: h :: nil} 0)
            | eh => fcalc-pos (fcalc-var {L} {2} {f :: h :: nil} 1) h>=0
            | ie : Real.fromRat (RatField.finv eps) * Real.fromRat eps = (1 : Real) => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= eps>0))
-     \in fcalc-le-pt (f :: h :: nil) (\lam z => pt (rat_real_<.1 eps>0) ie (rat_real_<=.1 positivity) (rat_real_<=.1 RatField.join-left) (rat_real_<=.1 RatField.join-right) (excess-pos (rat_real_<.1 C>0)) RealAbGroup.join-right)
+     \in fcalc-le-pt (f :: h :: nil) (\lam z => pt (rat_real_<.1 eps>0) ie positivity (rat_real_<=.1 RatField.join-left) (rat_real_<=.1 RatField.join-right) (excess-pos (rat_real_<.1 C>0)) RealAbGroup.join-right)
           (fcalc-meet ew eh) (fcalc-add (fcalc-truncAt eps>0 eh) (fcalc-*q (fcalc-mul ew (fcalc-meet (fcalc-rampAt ew) eh))))
   \where {
     \lemma excess-pos {C x : Real} (C>0 : (0 : Real) < C) : (0 : Real) <= (x ∨ 0) - ((x ∨ 0) ∧ C)
@@ -588,7 +588,7 @@
   => \have | eh => fcalc-pos (fcalc-var {L} {2} {f :: h :: nil} 1) h>=0
            | ef => fcalc-join (fcalc-meet (fcalc-var {L} {2} {f :: h :: nil} 0) (fcalc-*q {L} {2} {f :: h :: nil} {C} eh)) (fcalc-neg (fcalc-*q eh)) *> clamp-eq fC
            | ez => fcalc-abs (fcalc-op2 (LinBoundedMap.mulInvJoin (rat_real_<.1 c>0)) ef eh)
-     \in transport (L.IsBelow __ C) (fcalc-eq-pt (f :: h :: nil) (\lam z => pt (rat_real_<=.1 (RatField.<=-less C>0)) RealAbGroup.join-right) (fcalc-truncAt C>0 ez) ez) (L.truncAt-below C>0)
+     \in transport (L.IsBelow __ C) (fcalc-eq-pt (f :: h :: nil) (\lam z => pt positivity RealAbGroup.join-right) (fcalc-truncAt C>0 ez) ez) (L.truncAt-below C>0)
   \where {
     \lemma clamp-eq {E : LatticeAbGroup} {f s : E} (fs : abs f <= s) : (f ∧ s) ∨ negative s = f
       => pmap (`∨ _) (MeetSemilattice.meet_<= (abs>=id <=∘ fs)) *> JoinSemilattice.join-comm *> JoinSemilattice.join_<= (PosetAddGroup.negative_<= fs <=∘ abs>=neg')

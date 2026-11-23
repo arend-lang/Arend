@@ -113,7 +113,7 @@
                       | delta>0 : 0 < delta => RatField.<_meet-univ (idp : 0 < ratio 1 2) (RatField.<_*_positive_positive (RatField.<_*_positive_positive a>0 (RatField.finv>0 KP1>0)) (idp : 0 < ratio 1 2))
             \in inP (delta, delta>0, \lam {u} {v} u1 v1 m1 =>
               \let | mid => ratio 1 2 *q (u + v)
-              \in \have | d' : 0 <= Real.fromRat delta => rat_real_<=.1 (<=-less delta>0)
+              \in \have | d' : 0 <= Real.fromRat delta => positivity
                         | Nu1 : lpNormPow p p>=1 u <= 1 => npow-le1 {L} {p} {p>=1} {u} (le-of-upper \lam c1 => real_<_U.2 (u1 c1))
                         | Nv1 : lpNormPow p p>=1 v <= 1 => npow-le1 {L} {p} {p>=1} {v} (le-of-upper \lam c1 => real_<_U.2 (v1 c1))
                         | lm : Real.fromRat (1 - delta) <= lnorm {LpSpace L p p>=1} mid => ge-of-upper \lam mc => m1 (real_<_U.1 mc)
@@ -130,7 +130,7 @@
                                       | r : a * ratio 1 4 * 2 + K * (P * delta) <= a => usingOnly (r1, r2, r3) linarith
                                \in =_<= (pmap2 (+) RealField.*-rat (pmap (_ *) RealField.*-rat *> RealField.*-rat) *> RealAbGroup.+-rat) <=∘ rat_real_<=.1 r
                         | t : lpNormPow p p>=1 (u - v) <= a
-                            => bound (h u v) Nu1 Nv1 rpow>=0 rpow>=0 (rat_real_<=.1 (usingOnly () linarith : 0 <= ratio 1 2)) RealAbGroup.+-rat Nm (rat_real_<=.1 K>=0) (rat_real_<=.1 (<=-less eta>0)) (<=-less (real_<_U.2 pP)) d' KPd
+                            => bound (h u v) Nu1 Nv1 rpow>=0 rpow>=0 (rat_real_<=.1 (usingOnly () linarith : 0 <= ratio 1 2)) RealAbGroup.+-rat Nm (rat_real_<=.1 K>=0) positivity (<=-less (real_<_U.2 pP)) d' KPd
                         | t' : lnorm {LpSpace L p p>=1} (u - v) <= e2 => rpow-mono-inv {_} {_} {lnorm>=0 {LpSpace L p p>=1}} {<=-less e2>0} {p} {p>0} (t <=∘ <=-less aT' <=∘ =_<= (inv (rpow-pos-eq e2>0)))
               \in real_<_U.1 (t' <∘r rat_real_<.1 (usingOnly eps>0 linarith : e2 < eps)))
         }

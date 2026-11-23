@@ -203,8 +203,9 @@
       => RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const c) S
   }
 
--- | A map between normed groups with a power modulus
---   $\|f(x) - f(x')\|^q \le C \|x - x'\|^r + \eta (\|x\|^r + \|x'\|^r)$ (for every $\eta > 0$ some `C`) is locally uniformly continuous.
+{- | A map between normed groups with a power modulus
+ -   $\|f(x) - f(x')\|^q \le C \|x - x'\|^r + \eta (\|x\|^r + \|x'\|^r)$ (for every $\eta > 0$ some `C`) is locally uniformly continuous.
+ -}
 \lemma modulus-locallyUniform {X Y : PseudoNormedAbGroup} {r q : Real} {r>0 : 0 < r} {q>0 : 0 < q} (f : X -> Y)
   (hM : \Pi {eta : Rat} -> 0 < eta -> ∃ (C : Rat) (0 <= C) (\Pi (x x' : X) -> rpow (lnorm (f x - f x')) lnorm>=0 q q>0
           <= Real.fromRat C * rpow (lnorm (x - x')) lnorm>=0 r r>0 + Real.fromRat eta * (rpow (lnorm x) lnorm>=0 r r>0 + rpow (lnorm x') lnorm>=0 r r>0)))
@@ -249,7 +250,7 @@
                                  <=∘ <=_*_positive-left (usingOnly () linarith : Real.fromRat C <= Real.fromRat C + 1) (<=-less T>0)
                                  <=∘ =_<= (pinv-cancel C1>0)
                           | h2 : Real.fromRat eta * (rpow (lnorm x) lnorm>=0 r r>0 + rpow (lnorm x') lnorm>=0 r r>0) <= rpow-pos e2 e2>0' q * ratio 1 2
-                              => <=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) (<=_+ Px Px' <=∘ =_<= (equation.cRing : rpow-pos N N>0' r + rpow-pos N N>0' r = (2 : Real) * rpow-pos N N>0' r))
+                              => <=_*_positive-right positivity (<=_+ Px Px' <=∘ =_<= (equation.cRing : rpow-pos N N>0' r + rpow-pos N N>0' r = (2 : Real) * rpow-pos N N>0' r))
                                  <=∘ <=_*_positive-left (<=-less etab) (<=-less R2>0)
                                  <=∘ =_<= (*-comm *> pinv-cancel R2>0)
                           | Q : rpow (lnorm (f x - f x')) lnorm>=0 q q>0 <= rpow-pos e2 e2>0' q
@@ -393,10 +394,10 @@
                 | n1 : lnorm {Y1} W1 <= lnorm {Y1} Wr => TruncPreBanachLattice.lnorm_<= {Y1} (=_<= (abs-ofPos W1>=0) <=∘ le1 <=∘ =_<= (inv (abs-ofPos (W1>=0 <=∘ le1))))
                 | n2 : lnorm {Y1} Wr <= Real.fromRat C * lnorm {Y1} W2 + Real.fromRat eta * (lnorm {Y1} W3 + lnorm {Y1} W4)
                     => lnorm_+ {Y1} {C *q W2} {eta *q (W3 + W4)} <=∘ =_<= (pmap2 (+) (lnorm-*q {Y1} C>=0 {W2}) (lnorm-*q {Y1} (<=-less eta>0) {W3 + W4}))
-                         <=∘ <=_+ <=-refl (<=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) (lnorm_+ {Y1} {W3} {W4}))
+                         <=∘ <=_+ <=-refl (<=_*_positive-right positivity (lnorm_+ {Y1} {W3} {W4}))
                 | sa {Z : Array (LpSpace L p p>=1) n} : lnorm {Y1} (lpPow p p>=1 (lpSumAbs p p>=1 Z)) <= rpow (lnorm {X} Z) (lnorm>=0 {X} {Z}) p (fpow.one>0 p>=1)
                     => =_<= lnorm-lpPow <=∘ rpow-mono lpSumAbs.norm
-                | e>=0 : 0 <= Real.fromRat eta => rat_real_<=.1 (<=-less eta>0)
+                | e>=0 : 0 <= Real.fromRat eta => positivity
       \in =_<= (inv lnorm-lpPow) <=∘ n1 <=∘ n2 <=∘ <=_+ (<=_*_positive-right (rat_real_<=.1 C>=0) (sa {U - V})) (<=_*_positive-right e>=0 (<=_+ (sa {U}) (sa {V}))))
   }
 

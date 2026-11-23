@@ -138,6 +138,12 @@
 \lemma test-local {x : Nat} : 0 < double (x + 1) * 2
   => positivity
 
+\lemma test-fromRat {e K : Rat} (p : 0 < e) (q : 0 < K) : 0 < Real.fromRat (e * K)
+  => positivity
+
+\lemma test-fromRat-mixed {e : Rat} {x : Real} (p : 0 < e) (q : 0 < x) : 0 < Real.fromRat e * x
+  => positivity
+
 -- Failures
 
 \lemma test-fail-sub {R : OrderedRing} {x y : R} (p : 0 < x) (q : 0 < y)

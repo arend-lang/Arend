@@ -116,7 +116,7 @@
     \lemma dominated-arith {t s i : Real} {eta M eps : Rat} (t<=s : t <= s) (s=ei : s = eta RealField.* i) (eta>0 : RatField.zro RatField.< eta)
                            (i<M : i RealAbGroup.< M) (e1 : eta * (M ∨ 1) = eps * ratio 1 2) (eps>0 : RatField.zro RatField.< eps) : t RealAbGroup.< eps
       => \have | ie : i <= Real.fromRat (M ∨ 1) => <=-less i<M <=∘ rat_real_<=.1 join-left
-               | p : Real.fromRat eta RealField.* i <= Real.fromRat eta RealField.* Real.fromRat (M ∨ 1) => RealField.<=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) ie
+               | p : Real.fromRat eta RealField.* i <= Real.fromRat eta RealField.* Real.fromRat (M ∨ 1) => RealField.<=_*_positive-right positivity ie
          \in (t<=s <=∘ =_<= s=ei <=∘ p <=∘ =_<= (RealField.*-rat *> pmap Real.fromRat e1)) <∘r rat_real_<.1 linarith
   }
 

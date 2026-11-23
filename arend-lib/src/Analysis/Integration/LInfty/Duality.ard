@@ -88,14 +88,14 @@
       \let a => M RatField.∨ 1
       \in \have a>0 : RatField.zro RatField.< a => RatField.zro<ide <∘l RatField.join-right
       \in inP (a, <=-less a>0, \lam {u} {b} ub => l1Int-abs <=∘ linfLpMul-norm {L} {1} {RealAbGroup.<=-refl} {F} a>0 (IsBelow-level RatField.join-left FM) u
-                                <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less a>0)) (<=-less (real_<_U.2 ub)) <=∘ =_<= RealField.*-rat)
+                                <=∘ RealField.<=_*_positive-right positivity (<=-less (real_<_U.2 ub)) <=∘ =_<= RealField.*-rat)
   }
 
 -- | $|T_\infty F u| \le a \|u\|_1$ for $|F| \le a$.
 \lemma linfDual-bound-at {L : FullIntegrationSpace} {F : LInftyElem L} {a : Rat} (a>0 : RatField.zro RatField.< a) (Fa : IsBelow {L0Space L} (LatticeAbGroup.abs {L0Space L} F.el) a)
   : IsFunctionalBound {LpSpace L 1 RealAbGroup.<=-refl} (linfDual F) a
   => \lam {u} {b} ub => l1Int-abs <=∘ linfLpMul-norm {L} {1} {RealAbGroup.<=-refl} {F} a>0 Fa u
-                        <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less a>0)) (<=-less (real_<_U.2 ub)) <=∘ =_<= RealField.*-rat
+                        <=∘ RealField.<=_*_positive-right positivity (<=-less (real_<_U.2 ub)) <=∘ =_<= RealField.*-rat
 
 -- | $\|T_\infty F\| \le \|F\|_\infty$.
 \lemma linfDual-bound {L : FullIntegrationSpace} {F : LInftyElem L} : opNorm (linfDual F) <= linfNorm F.el
@@ -398,7 +398,7 @@
       : RealNormed.IsLimit {PosCone L} (\lam n => f (lpInc 1 RealAbGroup.<=-refl (fmul t (L.trunc n.el)))) (f (lpInc 1 RealAbGroup.<=-refl t))
       => \have | C>0 : RatField.zro RatField.< C => RatField.zro<ide <∘l C>=1
                | t>=0 : L.zro <= L.abs t => L.abs>=0
-         \in limit-metric-real.2 \lam {eps} eps>0 => \case l0One.small t>=0 {Real.fromRat (RatField.finv C) * eps} (RealField.<_*_positive_positive (rat_real_<.1 (RatField.finv>0 C>0)) eps>0) \with {
+         \in limit-metric-real.2 \lam {eps} eps>0 => \case l0One.small t>=0 {Real.fromRat (RatField.finv C) * eps} positivity \with {
            | inP (eta,eta>0,s) => inP (l0One.start t>=0 eta>0, \lam {n : PosCone L} sn =>
                \have | ab : L.abs (t - fmul t (L.trunc n.el)) <= L.truncAt eta (L.abs t)
                           => =_<= (L.abs_- *> inv (L.meet_<= (fmul-trunc-dev n.el>=0)))
@@ -406,7 +406,7 @@
                       | ln : lnorm {LpSpace L 1 RealAbGroup.<=-refl} (lpInc 1 RealAbGroup.<=-refl (t - fmul t (L.trunc n.el))) = L.integral (L.abs (t - fmul t (L.trunc n.el)))
                           => inv l1Int-abs-eq *> pmap l1Int (inv (RieszSpaceHom.func-abs {lpInc 1 RealAbGroup.<=-refl})) *> l1Int-char
                \in (=_<= (pmap RealAbGroup.abs (inv f.toAddGroupHom.func-minus *> pmap f (inv (AddGroupHom.func-minus {lpInc 1 RealAbGroup.<=-refl}))))
-                    <=∘ l1-bound-lnorm C>0 fC _ <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less C>0)) (=_<= ln <=∘ L.integral-mono ab))
+                    <=∘ l1-bound-lnorm C>0 fC _ <=∘ RealField.<=_*_positive-right positivity (=_<= ln <=∘ L.integral-mono ab))
                     <∘r (RealField.<_*_positive-right (rat_real_<.1 C>0) s <∘l =_<= (inv RealField.*-assoc *> pmap (`* eps) (RealField.*-rat *> pmap Real.fromRat (RatField.finv-right (RatField.>_/= C>0))) *> ide-left)))
          }
   }

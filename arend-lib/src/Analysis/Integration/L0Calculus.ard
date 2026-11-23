@@ -254,8 +254,8 @@
            \in \have | C>=1 : (1 : Real) <= Real.fromRat C => rat_real_<=.1 join-right
                      | Cd : Real.fromRat K <= Real.fromRat C * Real.fromRat d
                          => =_<= (pmap Real.fromRat (inv (*-assoc *> pmap (K *) (RatField.finv-left (RatField.>_/= d>0)) *> ide-right)) *> inv RealField.*-rat)
-                              <=∘ RealField.<=_*_positive-left (rat_real_<=.1 join-left) (rat_real_<=.1 (<=-less d>0))
-                     | e0 : (0 : Real) <= w ∧ eps => meet-univ w>=0 (rat_real_<=.1 (<=-less eps>0))
+                              <=∘ RealField.<=_*_positive-left (rat_real_<=.1 join-left) positivity
+                     | e0 : (0 : Real) <= w ∧ eps => meet-univ w>=0 positivity
                      | ab0 : RealAbGroup.abs b = b => RealAbGroup.abs-ofPos b>=0
                      | m0 : 0 <= RealAbGroup.abs b ∧ w => positivity
                      | Cm0 : (0 : Real) <= Real.fromRat C * (RealAbGroup.abs b ∧ w) => RealField.<=_*_positive_positive linarith m0
@@ -762,7 +762,7 @@
                                        | fbox (i : Fin m) : L.IsBelow (abs (f i)) Mf => L.IsBelow_<= (abs<=l1L i <=∘ =_<= (inv (L.abs-ofPos l1L.nonneg))) fM
                                        | boxBall {x : Array Real m} (xb : \Pi (i : Fin m) -> RealAbGroup.abs (x i) <= Mf) : l1norm x < Real.fromRat Rf
                                            => \have | l : l1norm x <= RatField.natCoef m RealField.* (Real.fromRat Mf ∨ 0) => l1norm-box xb
-                                                    | j0 : Real.fromRat Mf ∨ 0 = Real.fromRat Mf => RealAbGroup.join-comm *> RealAbGroup.join_<= (rat_real_<=.1 (<=-less Mf>0))
+                                                    | j0 : Real.fromRat Mf ∨ 0 = Real.fromRat Mf => RealAbGroup.join-comm *> RealAbGroup.join_<= positivity
                                                     | e1 : Real.fromRat (RatField.natCoef m) * Real.fromRat Mf = Real.fromRat (RatField.natCoef m * Mf) => RealField.*-rat
                                                     | e2 : Real.fromRat Rf = Real.fromRat (RatField.natCoef m * Mf) + 1 => inv RealAbGroup.+-rat
                                               \in (l <=∘ =_<= (pmap (_ *) j0 *> e1)) <∘r (linarith : Real.fromRat (RatField.natCoef m * Mf) < Real.fromRat Rf)

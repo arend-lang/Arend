@@ -59,7 +59,7 @@
               | t1 : RealAbGroup.abs (integral (lpMul qp g u)) <= lnorm {IntegrationSpaceCompletion L} (lpMul qp g u) => IntegrationSpace.integral_abs {IntegrationSpaceCompletion L}
               | t2 => lpMul-holder {L} {q} {p} {q>=1} {p>=1} {qp} {g} {u}
               | t3 : lnorm {LpSpace L q q>=1} g * lnorm {LpSpace L p p>=1} u <= Real.fromRat C * Real.fromRat b
-                  => RealField.<=_*_positive-left (<=-less (real_<_U.2 Cu)) (lnorm>=0 {LpSpace L p p>=1}) <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less C>0)) (<=-less (real_<_U.2 ub))
+                  => RealField.<=_*_positive-left (<=-less (real_<_U.2 Cu)) (lnorm>=0 {LpSpace L p p>=1}) <=∘ RealField.<=_*_positive-right positivity (<=-less (real_<_U.2 ub))
         \in t1 <=∘ t2 <=∘ t3 <=∘ =_<= RealField.*-rat)
   }
 
@@ -224,7 +224,7 @@
                                       | small : Real.fromRat t * RealAbGroup.abs (f w) < (1 : Real)
                                           => RealField.<_*_positive-right (rat_real_<.1 t>0) (real_<_U.2 Ku) <∘l =_<= RealField.*-rat <∘l rat_real_<=.1 (<=-less tK)
                                       | dt : RealNormed.dist 0 (Real.fromRat t) < Real.fromRat delta
-                                          => =_<= (inv (Real.=-upper.2 RealNormed.norm-dist) *> pmap RealAbGroup.abs zro-left *> RealAbGroup.abs_negative *> RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less t>0)))
+                                          => =_<= (inv (Real.=-upper.2 RealNormed.norm-dist) *> pmap RealAbGroup.abs zro-left *> RealAbGroup.abs_negative *> RealAbGroup.abs-ofPos positivity)
                                              <∘r rat_real_<.1 (RatField.meet-left <∘r (linarith : delta * ratio 1 2 < delta))
                             \in inP (Real.fromRat t, dt, tangent-step p>1 q>1 pq fs u0<=1 fu0 w t>0 small <=∘ =_<= (inv (Gt t)) <=∘ usingOnly (rat_real_<.1 eps>0) linarith)
                         })
@@ -332,15 +332,14 @@
                         | uN : (norm {LpSpace L p (ge1 p>1)} u).U N => real_<_U.1 (real_<_U.2 Nu)
               \in \case Pi p>1 q>1 pq fs a>0 \with {
                 | inP (ga, Pga) =>
-                  \have | ch => family-limit.char {Yq} {P p>1 q>1 pq f} {\lam a>0 => Pi p>1 q>1 pq fs a>0}
-                                 {\lam a>0 b>0 Pg Pg' => Real.<=-upper.1 (=_<= (Real.=-upper.2 Yq.norm-dist) <=∘ Pc p>1 q>1 pq Pg Pg')} a>0 Pga
-                        | dn : lnorm {Yq} ((-) {Yq} ginf ga) <= Real.fromRat a => =_<= (Real.=-upper.2 (inv Yq.norm-dist)) <=∘ (Real.<=-upper {_} {Real.fromRat a}).2 ch
-                        | t1 : RealAbGroup.abs (T ((-) {Yq} ginf ga) u) <= Real.fromRat a * Real.fromRat N
-                            => (lpDual-sup p>1 q>1 pq ((-) {Yq} ginf ga)).1 uN <=∘ RealField.<=_*_positive-left dn (rat_real_<=.1 (<=-less N>0))
+                  \have | ch => family-limit.char {Yq} a>0 Pga
+                        | dn : lnorm (ginf - ga) <= Real.fromRat a => =_<= (Real.=-upper.2 (inv Yq.norm-dist)) <=∘ (Real.<=-upper {_} {Real.fromRat a}).2 ch
+                        | t1 : RealAbGroup.abs (T (ginf - ga) u) <= Real.fromRat a * Real.fromRat N
+                            => (lpDual-sup p>1 q>1 pq (ginf - ga)).1 uN <=∘ RealField.<=_*_positive-left dn positivity
                         | e1 : T ((-) {Yq} ginf ga) u = T ginf u - T ga u => AddGroupHom.func-minus {lpDual-hom {L} {p} {q} {ge1 p>1} {ge1 q>1} (conj-swap pq) u}
                         | t2 : RealAbGroup.abs (T ga u - f u) <= Real.fromRat (a * N) => \case \elim Pga \with {
-                            | inP (C,C>=0,C<a,h) => h uN <=∘ rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C<a) (<=-less N>0))
-                          }
+                                 | inP (C,C>=0,C<a,h) => h uN <=∘ rat_real_<=.1 (RatField.<=_*_positive-left (<=-less C<a) (<=-less N>0))
+                               }
                         | ee : Real.fromRat a * Real.fromRat N + Real.fromRat (a * N) < Real.fromRat d
                             => =_<= (pmap (\lam t => t + _) RealField.*-rat *> RealAbGroup.+-rat) <∘r rat_real_<.1 aN
                         | i1 => RealAbGroup.abs>=id {T ((-) {Yq} ginf ga) u}

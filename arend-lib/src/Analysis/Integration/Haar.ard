@@ -416,7 +416,7 @@
                       | gx=1 : g x = 1 => gK (fK (fx>0 <∘l RealAbGroup.abs>=id))
                 \in <-irreflexive (gx<m <∘l meet-right <=∘ =_<= (inv gx=1))
          \in =_<= (CompactCover-*q-apply x *> pmap (\lam z => eta RealField.* (z ∧ 1)) (CompactCover-*q-apply x))
-              <=∘ RealField.<=_*_positive-right (rat_real_<=.1 (<=-less eta>0)) key <=∘ =_<= (inv (CompactCover-*q-apply x))
+              <=∘ RealField.<=_*_positive-right positivity key <=∘ =_<= (inv (CompactCover-*q-apply x))
   }
 
 -- Existence

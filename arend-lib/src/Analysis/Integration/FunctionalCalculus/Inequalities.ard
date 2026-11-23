@@ -123,7 +123,7 @@
   \where {
     \lemma unscale {c c' : Rat} (c>0 : 0 < c) (cc : c * c' = 1) {x : Real} (s : Real.fromRat c' * x <= 1) : x <= c
       => \have | e : Real.fromRat c * Real.fromRat c' = 1 => RealField.*-rat *> pmap Real.fromRat cc
-               | m : Real.fromRat c * (Real.fromRat c' * x) <= Real.fromRat c * 1 => <=_*_positive-right (rat_real_<=.1 (<=-less c>0)) s
+               | m : Real.fromRat c * (Real.fromRat c' * x) <= Real.fromRat c * 1 => <=_*_positive-right positivity s
          \in =_<= (inv (inv *-assoc *> pmap (`* x) e *> ide-left)) <=∘ m <=∘ =_<= ide-right
   }
 
@@ -157,7 +157,7 @@
             | n1 : pnormPow p p>=1 (c' *q (f + g)) <= 1
                 => =_<= (inv (pmap (\lam x => L.integral (fpow p p>=1 x)) arg)) <=∘ cv <=∘ =_<= (L.integral_+ *> pmap2 (+) L.integral_*q L.integral_*q)
                    <=∘ <=_+ r1 r2 <=∘ =_<= (pmap2 (+) ide-right ide-right *> RealAbGroup.+-rat *> pmap Real.fromRat ts)
-      \in (pnorm<=-iff {L} {p} {p>=1} {f + g} {Real.fromRat (a + b)} {rat_real_<=.1 (<=-less c>0)}).2 (unnormalize c>0 n1)
+      \in (pnorm<=-iff {L} {p} {p>=1} {f + g} {Real.fromRat (a + b)} {positivity}).2 (unnormalize c>0 n1)
           <=∘ =_<= (inv RealAbGroup.+-rat)
 
 -- | Monotone differences: $\|g - f\|_p^p \le \|g\|_p^p - \|f\|_p^p$ for $0 \le f \le g$.
@@ -167,23 +167,23 @@
      \in linarith
 
 \private \lemma rpow-inv-mul {p : Real} {p>0 : 0 < p} {c : Rat} (c>0 : 0 < c)
-  : rpow (RealAbGroup.abs (RatField.finv c)) RealAbGroup.abs>=0 p p>0 * rpow c (rat_real_<=.1 (<=-less c>0)) p p>0 = 1
+  : rpow (RealAbGroup.abs (RatField.finv c)) RealAbGroup.abs>=0 p p>0 * rpow c positivity p p>0 = 1
   => \have e : RealAbGroup.abs (RatField.finv c) * c = 1
          => pmap (`* _) (RealAbGroup.abs-ofPos (rat_real_<=.1 (<=-less (RatField.finv>0 c>0)))) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (RatField.>_/= c>0))
-     \in inv (rpow_* {_} {_} {RealAbGroup.abs>=0} {rat_real_<=.1 (<=-less c>0)} {RealField.<=_*_positive_positive RealAbGroup.abs>=0 (rat_real_<=.1 (<=-less c>0))} {p} {p>0})
+     \in inv (rpow_* {_} {_} {RealAbGroup.abs>=0} {positivity} {positivity} {p} {p>0})
          *> rpow-ext e {_} {RealField.zro<=ide} idp {p>0} {p>0} *> one-rpow {RealField.zro<=ide} {p} {p>0}
 
 \private \module InequalitiesHelpers \where {
   -- | If $\|f\|_p \le c$, then $\|f/c\|_p^p \le 1$.
   \lemma normalize {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {c : Rat} (c>0 : 0 < c) {f : L}
                    (fc : pnorm p p>=1 f <= c) : pnormPow p p>=1 (RatField.finv c *q f) <= 1
-    => \have | N : pnormPow p p>=1 f <= rpow c (rat_real_<=.1 (<=-less c>0)) p (fpow.one>0 p>=1) => pnorm<=-iff.1 fc
+    => \have | N : pnormPow p p>=1 f <= rpow c positivity p (fpow.one>0 p>=1) => pnorm<=-iff.1 fc
        \in =_<= pnormPow-*q <=∘ <=_*_positive-right rpow>=0 N <=∘ =_<= (rpow-inv-mul c>0)
 
   -- | If $\|f/c\|_p^p \le 1$, then $\|f\|_p^p \le c^p$.
   \lemma unnormalize {L : FullIntegrationSpace} {p : Real} {p>=1 : 1 <= p} {c : Rat} (c>0 : 0 < c) {f : L}
-                     (fc : pnormPow p p>=1 (RatField.finv c *q f) <= 1) : pnormPow p p>=1 f <= rpow c (rat_real_<=.1 (<=-less c>0)) p (fpow.one>0 p>=1)
-    => \have m : rpow c (rat_real_<=.1 (<=-less c>0)) p (fpow.one>0 p>=1) * pnormPow p p>=1 (RatField.finv c *q f) <= rpow c (rat_real_<=.1 (<=-less c>0)) p (fpow.one>0 p>=1) * 1
+                     (fc : pnormPow p p>=1 (RatField.finv c *q f) <= 1) : pnormPow p p>=1 f <= rpow c positivity p (fpow.one>0 p>=1)
+    => \have m : rpow c positivity p (fpow.one>0 p>=1) * pnormPow p p>=1 (RatField.finv c *q f) <= rpow c positivity p (fpow.one>0 p>=1) * 1
            => <=_*_positive-right rpow>=0 fc
        \in =_<= (inv (pmap (_ *) pnormPow-*q *> inv *-assoc *> pmap (`* _) (RealField.*-comm *> rpow-inv-mul c>0) *> ide-left)) <=∘ m <=∘ =_<= ide-right
 

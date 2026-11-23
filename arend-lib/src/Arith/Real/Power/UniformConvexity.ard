@@ -273,7 +273,7 @@
                               | eR : Real.fromRat R * G = Real.fromRat (RatField.finv rho) * RealAbGroup.abs h
                                   => pmap (\lam t => t * G) (inv RealField.*-rat) *> equation.cRing {hh2}
                               | CR : C <= Real.fromRat R * G
-                                  => =_<= (inv (pmap (\lam t => t * C) ir *> RealField.ide-left) *> RealField.*-assoc) <=∘ <=_*_positive-right (rat_real_<=.1 (<=-less (RatField.finv>0 rho>0))) (<=-less lt) <=∘ =_<= (inv eR)
+                                  => =_<= (inv (pmap (\lam t => t * C) ir *> RealField.ide-left) *> RealField.*-assoc) <=∘ <=_*_positive-right positivity (<=-less lt) <=∘ =_<= (inv eR)
                               | dft => absPow-mid-defect {p} {p>0} p>1 R>=0 RealAbGroup.abs>=0 G>0 CR
                               | eq1 : C + G + G = RealAbGroup.abs c + RealAbGroup.abs h => equation.cRing {hh}
                               | eq2 : C - G - G = RealAbGroup.abs c - RealAbGroup.abs h => equation.cRing {hh}

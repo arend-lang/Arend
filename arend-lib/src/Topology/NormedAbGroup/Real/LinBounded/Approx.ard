@@ -173,10 +173,10 @@
                                      | w : abs (phi x) < eps => transport (__ < _) (lnorm-ldist {RealNormed} *> pmap abs (pmap (\lam z => z - phi x) phi0 *> zro-left {RealAbGroup}) *> RealAbGroup.abs_negative) v
                                \in clampLB.mid-dev l>=0 <=∘ <=-less w)
                   (\lam d<=x => \have | m1 : Real.fromRat (q * RatField.finv d) * Real.fromRat d <= Real.fromRat k * Real.fromRat d
-                                          => RealField.<=_*_positive-left (rat_real_<=.1 k0<=k) (rat_real_<=.1 (<=-less d>0))
+                                          => RealField.<=_*_positive-left (rat_real_<=.1 k0<=k) positivity
                                       | m2 : Real.fromRat k * Real.fromRat d <= l => RealField.<=_*_positive-right k>=0 d<=x
                                       | ql : abs (phi x) <= l => b xR <=∘ <=-less S<q <=∘ =_<= (inv k0d) <=∘ m1 <=∘ m2
-                                \in =_<= (pmap abs (pmap (__ - _) (clampLB.mid-id ql) *> negative-right) *> RealAbGroup.abs_zro) <=∘ rat_real_<=.1 (<=-less eps>0)))
+                                \in =_<= (pmap abs (pmap (__ - _) (clampLB.mid-id ql) *> negative-right) *> RealAbGroup.abs_zro) <=∘ positivity))
       }
     }
 
@@ -203,7 +203,7 @@
 
 -- | A constant sequence converges.
 \lemma ballConv-const {n : Nat} (chi : LinBoundedMap n) : BallConv (\lam _ => chi) chi
-  => \lam _ e>0 => inP (0, \lam _ _ => =_<= (pmap abs negative-right *> RealAbGroup.abs_zro) <=∘ rat_real_<=.1 (<=-less e>0))
+  => \lam _ e>0 => inP (0, \lam _ _ => =_<= (pmap abs negative-right *> RealAbGroup.abs_zro) <=∘ positivity)
 
 -- | {BallConv} only depends on the values of the limit.
 \lemma ballConv-ext {n : Nat} {a : Nat -> LinBoundedMap n} {phi psi : Array Real n -> Real} (p : \Pi (x : Array Real n) -> phi x = psi x) (c : BallConv a phi) : BallConv a psi

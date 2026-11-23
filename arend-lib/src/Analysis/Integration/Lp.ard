@@ -60,7 +60,7 @@
   | norm-double {f} => transport (__ ExUpperReal.<= _) RealAbGroup.+-upper $ Real.<=-upper.1 $
       \have | e : pnorm p p>=1 (f + f) = RealAbGroup.abs (Real.fromRat 2) * pnorm p p>=1 f
                 => pmap (pnorm p p>=1) (inv (pmap (\lam y => y + f) zro-left) *> inv (L.*q_*n {2} {f})) *> pnorm-*q
-            | a2 : RealAbGroup.abs (Real.fromRat 2) = (2 : Real) => RealAbGroup.abs-ofPos (rat_real_<=.1 (RatField.<=-less idp))
+            | a2 : RealAbGroup.abs (Real.fromRat 2) = (2 : Real) => RealAbGroup.abs-ofPos positivity
             | t : (2 : Real) * pnorm p p>=1 f = pnorm p p>=1 f + pnorm p p>=1 f => equation.cRing
       \in =_<= (inv (e *> pmap (`* _) a2 *> t))
 

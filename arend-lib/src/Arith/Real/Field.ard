@@ -318,7 +318,7 @@
     | inP (K,TK) =>
       \have | TK' : T < Real.fromRat K => real_<_U.2 TK
             | K>0 : 0 < K => rat_real_<.2 (T>=0 <∘r TK')
-      \in real-scaled-eq K>0 \lam {e} e>0 => h e>0 <=∘ transport (_ <=) RealField.*-rat (RealField.<=_*_positive-right (rat_real_<=.1 (<=-less e>0)) (<=-less TK'))
+      \in real-scaled-eq K>0 \lam {e} e>0 => h e>0 <=∘ transport (_ <=) RealField.*-rat (RealField.<=_*_positive-right positivity (<=-less TK'))
   }
 
 -- | `p` and `q` are Hölder conjugate exponents: $1/p + 1/q = 1$.

@@ -262,7 +262,7 @@
                                    (\lam j => RealField.<=_*-positive (rat_real_<=.1 RatField.abs>=0) meas>=0)
                                    (inv (pmap (integral {SFuncIntegrationSpace B}) (SFuncRieszSpace.abs-reduced lr)) *> pmap (lnorm {SFuncIntegrationSpace B}) (inv q) *> p)
                           \in q *> ~-sfequiv (~-zero-terms \lam j => \case LinearOrder.dec<_<= 0 (RatField.abs (l j).1) \with {
-                            | inl |c|>0 => byRight $ Bext $ RealAbGroup.<=-antisymmetric (\lam m>0 => RealAbGroup.<-irreflexive $ transport (0 <) (t j) $ RealField.<_*_positive_positive (rat_real_<.1 |c|>0) m>0) meas>=0
+                            | inl |c|>0 => byRight $ Bext $ RealAbGroup.<=-antisymmetric (\lam m>0 => RealAbGroup.<-irreflexive $ transport (0 <) (t j) $ positivity) meas>=0
                             | inr |c|<=0 => byLeft $ RatField.abs_zro-ext $ <=-antisymmetric |c|<=0 RatField.abs>=0
                           })
   }

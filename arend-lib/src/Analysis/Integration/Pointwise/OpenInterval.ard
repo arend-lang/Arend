@@ -105,7 +105,7 @@
   => RealField.*-rat *> pmap Real.fromRat (RatField.finv-left (/=-sym (StrictPoset.<_/= h>0)))
 
 \lemma trap-low {a b t : Real} {h : Rat} (h>0 : 0 < h) (p : inner a b t <= Real.fromRat h) : trapValue a b h t = 0
-  => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => rat_real_<.1 (RatField.finv>0 h>0)
+  => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => positivity
            | d<=0 : inner a b t - Real.fromRat h <= 0 => linarith
            | r<=0 : Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h) <= 0
                => transport (_ <=) RealField.zro_*-right (RealField.<=_*_positive-right (<=-less k>0) d<=0)
@@ -113,7 +113,7 @@
      \in (\peval trapValue a b h t) *> <=-antisymmetric (join-univ <=-refl m<=0) join-left
 
 \lemma trap-high {a b t : Real} {h : Rat} (h>0 : 0 < h) (p : Real.fromRat h RealAbGroup.+ Real.fromRat h <= inner a b t) : trapValue a b h t = 1
-  => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => rat_real_<.1 (RatField.finv>0 h>0)
+  => \have | k>0 : 0 < Real.fromRat (RatField.finv h) => positivity
            | d>=h : Real.fromRat h <= inner a b t - Real.fromRat h => linarith
            | r>=1 : 1 <= Real.fromRat (RatField.finv h) RealField.* (inner a b t - Real.fromRat h)
                => transport (<= _) (inv-mul h>0) (RealField.<=_*_positive-right (<=-less k>0) d>=h)

@@ -224,10 +224,10 @@
                        <=∘ L.integral_abs <=∘ L.integral-mono d1 <=∘ =_<= L.integral_*q
                 | i2 : RealAbGroup.abs (Real.fromRat q * L.integral f - c * L.integral f) <= Real.fromRat e * L.integral (abs f)
                     => =_<= (pmap RealAbGroup.abs (inv RealField.rdistr_-) *> RealField.abs_*)
-                       <=∘ <=_*_positive-left (=_<= RealAbGroup.abs_- <=∘ qc') RealAbGroup.abs>=0 <=∘ <=_*_positive-right (rat_real_<=.1 (<=-less e>0)) L.integral_abs
+                       <=∘ <=_*_positive-left (=_<= RealAbGroup.abs_- <=∘ qc') RealAbGroup.abs>=0 <=∘ <=_*_positive-right positivity L.integral_abs
                 | I>=0 : (0 : Real) <= L.integral (abs f) => L.integral>=0 abs>=0
                 | IM' : L.integral (abs f) <= Real.fromRat (M RatField.∨ 1) => <=-less (real_<_U.2 IM) <=∘ rat_real_<=.1 RatField.join-left
-                | eI : Real.fromRat e * L.integral (abs f) <= Real.fromRat e * Real.fromRat (M RatField.∨ 1) => <=_*_positive-right (rat_real_<=.1 (<=-less e>0)) IM'
+                | eI : Real.fromRat e * L.integral (abs f) <= Real.fromRat e * Real.fromRat (M RatField.∨ 1) => <=_*_positive-right positivity IM'
                 | eK : Real.fromRat (e RatField.* (2 RatField.* (M RatField.∨ 1))) = Real.fromRat e * Real.fromRat (M RatField.∨ 1) + Real.fromRat e * Real.fromRat (M RatField.∨ 1)
                     => pmap Real.fromRat (equation.cRing : e RatField.* (2 RatField.* (M RatField.∨ 1)) = e RatField.* (M RatField.∨ 1) RatField.+ e RatField.* (M RatField.∨ 1)) *> inv RealAbGroup.+-rat *> pmap2 (+) (inv RealField.*-rat) (inv RealField.*-rat)
                 | tri : RealAbGroup.abs (L.integral (rscale c f) - c * L.integral f)
