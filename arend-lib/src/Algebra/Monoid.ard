@@ -504,6 +504,35 @@
   \lemma BigProd_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_Perm {AbMonoid.fromCMonoid \this} p
 
+  -- | The product over a finite set (multiplicative {AbMonoid.FinSum}).
+  \func FinProd {A : FinSet} (x : A -> E) : E
+    => AbMonoid.FinSum {AbMonoid.fromCMonoid \this} x
+
+  \lemma FinProd=BigProd {n : Nat} {x : Fin n -> E} : FinProd x = BigProd x
+    => AbMonoid.FinSum=BigSum {AbMonoid.fromCMonoid \this}
+
+  \lemma FinProd_ide {J : FinSet} {x : J -> E} (p : \Pi (j : J) -> x j = ide) : FinProd x = ide
+    => AbMonoid.FinSum_zro {AbMonoid.fromCMonoid \this} p
+
+  \lemma FinProd_* {J : FinSet} {x y : J -> E} : FinProd (\lam j => x j * y j) = FinProd x * FinProd y
+    => AbMonoid.FinSum_+ {AbMonoid.fromCMonoid \this}
+
+  \lemma FinProd_Equiv {A B : FinSet} (e : QEquiv {A} {B}) {x : B -> E} : FinProd x = FinProd (\lam a => x (e a))
+    => AbMonoid.FinSum_Equiv {AbMonoid.fromCMonoid \this} e
+
+  \lemma FinProd-double {A B : FinSet} {x : A -> B -> E}
+    : FinProd (\lam a => FinProd (\lam b => x a b)) = FinProd (\lam (p : \Sigma A B) => x p.1 p.2)
+    => AbMonoid.FinSum-double {AbMonoid.fromCMonoid \this}
+
+  \lemma FinProd-comm {A B : FinSet} {x : A -> B -> E}
+    : FinProd (\lam a => FinProd (\lam b => x a b)) = FinProd (\lam b => FinProd (\lam a => x a b))
+    => AbMonoid.FinSum-comm {AbMonoid.fromCMonoid \this}
+
+  \lemma FinProd_pow {A : FinSet} {x : A -> E} {n : Nat} : FinProd (\lam a => pow (x a) n) = pow (FinProd x) n
+    => \case AbMonoid.FinSum_char {AbMonoid.fromCMonoid \this} x \with {
+      | inP (e,q) => AbMonoid.FinSum_char2 {AbMonoid.fromCMonoid \this} e *> BigProd_pow *> pmap (pow __ n) (inv q)
+    }
+
   \func LDiv_BigProd {l : Array E} (j : Fin l.len) : LDiv (l j) (BigProd l) \elim l, j
     | a :: l, 0 => LDiv.factor-left LDiv.id-div
     | a :: l, suc j => LDiv.trans (LDiv_BigProd j) (LDiv.factor-right LDiv.id-div)
@@ -627,6 +656,10 @@
   \lemma FinSum-double {A B : FinSet} {x : A -> B -> E}
     : FinSum (\lam a => FinSum (\lam b => x a b)) = FinSum (\lam (p : \Sigma A B) => x p.1 p.2)
     => FinSum-double-dep (\lam _ => B) *> pmap {FinSet (\Sigma A B)} (FinSum {_} {__} _) prop-pi
+
+  \lemma FinSum-comm {A B : FinSet} {x : A -> B -> E}
+    : FinSum (\lam a => FinSum (\lam b => x a b)) = FinSum (\lam b => FinSum (\lam a => x a b))
+    => FinSum-double *> FinSum_Equiv sigma-swap *> inv FinSum-double
 
   \lemma FinSum=BigSum {n : Nat} {x : Fin n -> E} : FinSum x = BigSum x
     => FinSum_char2 idEquiv

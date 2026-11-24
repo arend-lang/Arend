@@ -251,3 +251,29 @@
   : IsEquiv {\Sigma (a : A) (Q a)} {\Sigma (a' : A') (R a')} (\lam s => (f s.1, fq s.2))
   => IsEquiv.fromEmbSurj (leftEmbedding (Embedding.projection R) (transEmbedding (Embedding.projection Q) (Embedding.fromIsEquiv fe)))
        \lam s => inP ((IsEquiv.ret fe s.1, rq (transportInv R (IsEquiv.f_ret fe) s.2)), ext (IsEquiv.f_ret fe))
+
+\func sigma-swap {A B : \Cat} : QEquiv {\Sigma A B} {\Sigma B A} (\lam s => (s.2, s.1)) (\lam s => (s.2, s.1)) \cowith
+  | ret_f _ => idp
+  | f_sec _ => idp
+
+-- | Fiberwise equivalences induce an equivalence of dependent function types.
+\func pi-right {A : \Cat} {B B' : A -> \Cat} (q : \Pi (a : A) -> QEquiv {B a} {B' a})
+  : QEquiv {\Pi (a : A) -> B a} {\Pi (a : A) -> B' a} (\lam g a => q a (g a)) (\lam g a => (q a).ret (g a)) \cowith
+  | ret_f g => ext \lam a => (q a).ret_f (g a)
+  | f_sec g => ext \lam a => (q a).f_ret (g a)
+
+-- | Reindexing a dependent function type along an equivalence of the domain.
+\func pi-left {A A' : \Cat} {B' : A' -> \Cat} (e : HAEquiv {A} {A'})
+  : QEquiv {\Pi (a' : A') -> B' a'} {\Pi (a : A) -> B' (e a)} (\lam g a => g (e a)) \cowith
+  | ret h a' => transport B' (e.f_sec a') (h (e.ret a'))
+  | ret_f g => ext \lam a' => pmapd g (e.f_sec a')
+  | f_sec h => ext \lam a => pmap (transport B' __ (h (e.ret (e a)))) (inv (e.f_ret_f=f_sec_f a)) *> transport-pmap {_} {_} {B'} {e} (e.ret_f a) *> pmapd h (e.ret_f a)
+  \where {
+    \func transport-pmap {A A' : \Cat} {B' : A' -> \Cat} {f : A -> A'} {a a' : A} (p : a = a') {b : B' (f a)}
+      : transport B' (pmap f p) b = transport (\lam x => B' (f x)) p b \elim p
+      | idp => idp
+  }
+
+\sfunc qpi-left {A A' : \Cat} {B' : A' -> \Cat} (e : QEquiv {A} {A'})
+  : QEquiv {\Pi (a' : A') -> B' a'} {\Pi (a : A) -> B' (e a)} (\lam g a => g (e a))
+  => pi-left e

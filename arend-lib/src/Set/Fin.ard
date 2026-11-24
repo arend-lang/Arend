@@ -1,4 +1,3 @@
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Arith.Fin.Order
@@ -200,6 +199,18 @@
 \lemma card_inj {A B : FinSet} (f : A -> B) (inj : IsInj f) : A.card <= B.card
   => \case A.finEq, B.finEq \with {
     | inP e1, inP e2 => FinSet.FinCardInj (\lam x => e2.ret (f (e1 x))) \lam p => e1.isInj $ inj $ (symQEquiv e2).isInj p
+  }
+
+\lemma card=0-empty {A : FinSet} (p : A.card = 0) (a : A) : Empty
+  => \case A.finEq \with {
+    | inP e => \case transport Fin p (e.ret a) \with {}
+  }
+
+-- | A nonempty finite set has an element.
+\lemma card/=0-inhabited {A : FinSet} (c : A.card /= 0) : TruncP A
+  => \case A.card \as n, c : n /= 0, A.finEq : TruncP (QEquiv {Fin n} {A}) \with {
+    | 0, c, _ => absurd (c idp)
+    | suc n, _, inP e => inP (e 0)
   }
 
 \lemma FinSet-transport (A : FinSet) {B : \Set} (e : QEquiv {A} {B}) : FinSet B A.card \cowith

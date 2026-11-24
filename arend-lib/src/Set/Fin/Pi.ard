@@ -1,0 +1,50 @@
+{- | Finite sets of (dependent) functions.
+ -   * {PiFin}: `\Pi (i : S) -> Q i` is finite with the product of the cardinalities.
+ -   * {FunFin}: `A -> B` is finite with cardinality `B.card ^ A.card`.
+ -}
+
+\import Algebra.Monoid
+\import Arith.Nat
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Fin.Instances
+
+\lemma PiFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Pi (i : S) -> Q i) (NatSemiring.FinProd (\lam i => (Q i).card))
+  => \case AbMonoid.FinSum_char {AbMonoid.fromCMonoid NatSemiring} (\lam i => (Q i).card) \with {
+    | inP p => rewrite p.2 \new FinSet {
+      | finEq => \case FinSet.finiteAC (\lam i => (Q (p.1 i)).finEq) \with {
+        | inP d => inP $ aux `transQEquiv` pi-right d `transQEquiv` symQEquiv (qpi-left p.1)
+      }
+    }
+  }
+  \where {
+    \private \func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (NatSemiring.BigProd Q)} {\Pi (i : Fin n) -> Fin (Q i)} \elim n
+      | 0 => \new QEquiv {
+        | f _ => \case __
+        | ret _ => 0
+        | ret_f (0) => idp
+        | f_sec _ => ext \case __
+      }
+      | suc n => ProdFin.prod_equiv `transQEquiv` sigma-right (\lam _ => aux) `transQEquiv` pi-fin-suc
+
+    \func pi-fin-suc {n : Nat} {B : Fin (suc n) -> \Type}
+      : QEquiv {\Sigma (B 0) (\Pi (i : Fin n) -> B (suc i))} {\Pi (i : Fin (suc n)) -> B i} \cowith
+      | f s i => \case \elim i \with {
+        | 0 => s.1
+        | suc i => s.2 i
+      }
+      | ret h => (h 0, \lam i => h (suc i))
+      | ret_f _ => idp
+      | f_sec h => ext \case \elim __ \with {
+        | 0 => idp
+        | suc i => idp
+      }
+  }
+
+\instance FunFin (A B : FinSet) : FinSet (A -> B) (Monoid.pow {NatSemiring} B.card A.card)
+  => transport (FinSet _) (AbMonoid.FinSum-const {AbMonoid.fromCMonoid NatSemiring} *> NatSemiring.BigProd_replicate) $ PiFin A (\lam _ => B)
