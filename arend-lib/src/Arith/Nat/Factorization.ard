@@ -1,0 +1,68 @@
+{- | Multiplicities of primes in natural numbers.
+ -}
+
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid
+\open Nat(div,mod)
+
+-- # Multiplicity
+
+-- | The multiplicity of `p` in `n`: the largest `k` with `p ^ k | n` (meaningful for `1 < p`; `0` for `n = 0`).
+\func nat-multiplicity (p n : Nat) : Nat => fueled p n n
+  \where
+    \protected \func fueled (p n fuel : Nat) : Nat \elim fuel
+      | 0 => 0
+      | suc f => \case NatSemiring.decideEq (n mod p) 0 \with {
+        | yes _ => suc (fueled p (n div p) f)
+        | no _ => 0
+      }
+
+\func multiplicity-spec {p n : Nat} (p>1 : 1 < p) (n/=0 : n /= 0)
+  : \Sigma (LDiv (pow p (nat-multiplicity p n)) n) (Not (LDiv (pow p (suc (nat-multiplicity p n))) n))
+  => aux-spec p>1 n/=0 <=-refl
+  \where \private {
+    \func aux-spec {p n fuel : Nat} (p>1 : 1 < p) (n/=0 : n /= 0) (b : n <= fuel)
+      : \Sigma (LDiv (pow p (nat-multiplicity.fueled p n fuel)) n) (Not (LDiv (pow p (suc (nat-multiplicity.fueled p n fuel))) n)) \elim fuel
+      | 0 => absurd $ n/=0 $ <=-antisymmetric b zero<=_
+      | suc f => \case NatSemiring.decideEq (n mod p) 0 \as d, idp : NatSemiring.decideEq (n mod p) 0 = d \with {
+        | yes e, r => rewrite r (
+          \let | hq : p * (n div p) = n => pmap (p * (n div p) +) (inv e) *> Nat.divModProp n p
+               | q/=0 : n div p /= 0 => \lam q=0 => n/=0 $ inv hq *> pmap (p *) q=0
+               | q<n : n div p < n => transport2 (<) NatSemiring.ide-right (NatSemiring.*-comm *> hq) (NatSemiring.<_*_positive-right (nonZero>0 q/=0) p>1)
+               | s => aux-spec {p} {n div p} {f} p>1 q/=0 (<_suc_<= (q<n <∘l b))
+          \in (\new LDiv (pow p (suc (nat-multiplicity.fueled p (n div p) f))) n s.1.inv (lem1 s.1.inv-right hq),
+               \lam (t : LDiv) => s.2 (\new LDiv (pow p (suc (nat-multiplicity.fueled p (n div p) f))) (n div p) t.inv
+                                            (NatSemiring.cancel_*-left (NatSemiring.>_/= (NatSemiring.zro<ide <∘ p>1)) (lem2 t.inv-right hq)))))
+        | no ne, r => rewrite r (\new LDiv (pow p 0) n n NatSemiring.ide-left, \lam (t : LDiv) => ne $ div_mod $ ldiv-pow1 t)
+      }
+
+    \lemma lem1 {P p x q n : Nat} (h : P * x = q) (hq : p * q = n) : (P * p) * x = n
+      => NatSemiring.*-assoc *> pmap (P *) NatSemiring.*-comm *> inv NatSemiring.*-assoc *> pmap (`* p) h *> NatSemiring.*-comm *> hq
+
+    \lemma lem2 {P p y q n : Nat} (h : (P * p) * p * y = n) (hq : p * q = n) : p * ((P * p) * y) = p * q
+      => inv NatSemiring.*-assoc *> pmap (`* y) NatSemiring.*-comm *> h *> inv hq
+
+    \lemma ldiv-pow1 {p n : Nat} (t : LDiv (pow p 1) n) : LDiv p n t.inv \cowith
+      | inv-right => pmap (* t.inv) (inv NatSemiring.ide-left) *> t.inv-right
+  }
+
+-- | The multiplicity is characterized by `p ^ k | n` and `Not (p ^ (k + 1) | n)`.
+\lemma multiplicity-unique {p n k : Nat} (p>1 : 1 < p) (n/=0 : n /= 0) (d : LDiv (pow p k) n) (nd : Not (LDiv (pow p (suc k)) n))
+  : nat-multiplicity p n = k
+  => \have s => multiplicity-spec p>1 n/=0
+     \in \case LinearOrder.trichotomy (nat-multiplicity p n) k \with {
+       | less m<k => absurd $ s.2 $ LDiv.trans (pow-ldiv (suc_<_<= m<k)) d
+       | equals e => e
+       | greater k<m => absurd $ nd $ LDiv.trans (pow-ldiv (suc_<_<= k<m)) s.1
+     }

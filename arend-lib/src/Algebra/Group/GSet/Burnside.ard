@@ -1,0 +1,97 @@
+{- | Counting fixed points: the fixed-point congruence for actions of groups of prime order.
+
+     Public API: {fixedPointsFin}, {nonFixedPointsFin}, {card-fixedPoints-split}, {card-mod-fixedPoints}.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.Orbit
+\import Algebra.Group.GSet.SubGSet
+\import Algebra.Group.SubGroup
+\import Algebra.Monoid
+\import Arith.Nat
+\import Arith.Prime
+\import Algebra.Monoid.Prime
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+
+-- | For a finite group, being a fixed point is decidable.
+\lemma isFixed-dec {G : FinGroup} {X : GSet G} {D : DecSet X} (x : X) : Dec (IsFixed x)
+  => KFinSet.forall-dec {G} (\lam g => g ** x = x) (\lam g => decideEq _ _)
+
+-- | The finite set of fixed points.
+\func fixedPointsFin {G : FinGroup} {X : GSet G} (F : FinSet X) : FinSet (\Sigma (x : X) (IsFixed x))
+  => SigmaFin F \lam x => DecFin (isFixed-dec x)
+
+-- | The finite G-set of non-fixed points.
+\func nonFixedPointsFin {G : FinGroup} {X : GSet G} (F : FinSet X) : FinSet (IGSet (nonFixedPoints X))
+  => FinSet-transport (SigmaFin F \lam x => DecFin (NotDec (isFixed-dec x))) {IGSet (nonFixedPoints X)} \new QEquiv {
+    | f s => s
+    | ret s => s
+    | ret_f s => idp
+    | f_sec s => idp
+  }
+
+-- | `|X| = |X^G| + |X \ X^G|`.
+\lemma card-fixedPoints-split {G : FinGroup} {X : GSet G} (F : FinSet X)
+  : F.card = (fixedPointsFin F).card Nat.+ (nonFixedPointsFin F).card
+  => card_Equiv {F} {OrFin (fixedPointsFin F) (nonFixedPointsFin F)} \new QEquiv {
+    | f x => split x (isFixed-dec x)
+    | ret => \case __ \with {
+      | inl s => s.1
+      | inr s => s.1
+    }
+    | ret_f x => cases (isFixed-dec x) \with {
+      | yes _ => idp
+      | no _ => idp
+    }
+    | f_sec => \case \elim __ \with {
+      | inl s => rewrite (prop-pi : isFixed-dec s.1 = yes s.2) idp
+      | inr s => rewrite (prop-pi : isFixed-dec s.1 = no s.2) idp
+    }
+  }
+  \where
+    \func split {G : Group} {X : GSet G} (x : X) (d : Dec (IsFixed x)) : Or (\Sigma (x : X) (IsFixed x)) (IGSet (nonFixedPoints X)) \elim d
+      | yes f => inl (x, f)
+      | no n => inr (x, n)
+
+-- | Orbits consisting of non-fixed points have more than one element.
+\lemma nonFixed-orbit-card/=1 {G : FinGroup} {X : GSet G} (F : FinSet (IGSet (nonFixedPoints X))) (O : Orbits (IGSet (nonFixedPoints X)))
+  : (orbitFiber F O).card /= 1 \elim O
+  | in~ y => \lam c => y.2 \lam g => pmap (\lam s => s.1.1) $ card=1-eq {orbitFiber F (in~ y)} c (g ** y, ~-pequiv (inP (inverse g, GSet.**-inverse-left))) (y, idp)
+  \where
+    -- | All elements of a finite set of cardinality 1 are equal.
+    \lemma card=1-eq {A : FinSet} (p : A.card = 1) (a b : A) : a = b
+      => \case A.finEq \with {
+        | inP e => inv (e.f_ret a) *> pmap e (fin1 p (e.ret a) (e.ret b)) *> e.f_ret b
+      }
+
+    \lemma fin1 {n : Nat} (p : n = 1) (i j : Fin n) : i = j \elim p
+      | idp => \case \elim i, \elim j \with {
+        | 0, 0 => idp
+      }
+
+-- | If a group of prime order `p` acts on a finite set `X`, then `|X| ≡ |X^G| (mod p)`.
+\lemma card-mod-fixedPoints {G : FinGroup} {p : Nat} (pp : Prime p) (c : G.card = p) {X : GSet G} (F : FinSet X)
+  : F.card Nat.mod p = (fixedPointsFin F).card Nat.mod p
+  => pmap (\lam n => n Nat.mod p) (card-fixedPoints-split F *> pmap (_ Nat.+) (card-orbits-const {G} (nonFixedPointsFin F) (orbit-p pp c F)) *> NatSemiring.+-comm *> pmap (Nat.+ _) NatSemiring.*-comm) *> n*_+_mod_n=mod.nat {p}
+  \where
+    \lemma orbit-p {G : FinGroup} {p : Nat} (pp : Prime p) (c : G.card = p) {X : GSet G} (F : FinSet X) (O : Orbits (IGSet (nonFixedPoints X)))
+      : (orbitFiber {G} (nonFixedPointsFin F) O).card = p \elim O
+      | in~ y => \case prime-div.dir pp (\new Monoid.LDiv {NatSemiring} (orbitFiber {G} (nonFixedPointsFin F) (in~ y)).card p {
+        | inv => (IFinGroup (FinStabilizer {G} {IGSet (nonFixedPoints X)} {nonFixedPointsFin F} y)).card
+        | inv-right => NatSemiring.*-comm *> card-orbit-stabilizer-fiber {G} (nonFixedPointsFin F) idp *> c
+      }) \with {
+        | byLeft e => e
+        | byRight e => absurd (nonFixed-orbit-card/=1 (nonFixedPointsFin F) (in~ y) e)
+      }

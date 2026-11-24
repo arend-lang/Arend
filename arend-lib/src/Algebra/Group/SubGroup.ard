@@ -225,6 +225,9 @@
 {- | A decidable subgroup of a finite group. -}
 \class FinSubGroup \extends DecSubGroup {
   \override S : FinGroup
+} \where {
+  \protected \lemma ext {G : FinGroup} {H K : FinSubGroup G} (p : \Pi (x : G) -> H x <-> K x) : H = K
+    => exts \lam x => Paths.Meta.ext (p x)
 }
 
 \instance IFinGroup (S : FinSubGroup {}) : FinGroup

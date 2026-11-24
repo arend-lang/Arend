@@ -31,6 +31,13 @@
       s `qed
 
   \func choosePoint (e : E) => ActionBySubgroup (Stabilizer e)
+
+  \lemma **-inverse-left {g : G} {e : E} : inverse g ** (g ** e) = e
+    => inv **-assoc *> pmap (__ ** e) inverse-left *> **_ide
+
+  -- | The action of a group element is injective.
+  \lemma **-cancel {g : G} {e e' : E} (p : g ** e = g ** e') : e = e'
+    => inv **-inverse-left *> pmap (inverse g **) p *> **-inverse-left
 }
 
 \class TransitiveGroupAction \extends GSet

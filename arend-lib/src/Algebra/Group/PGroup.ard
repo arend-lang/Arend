@@ -1,0 +1,111 @@
+{- | `p`-groups.
+
+     * {IsPGroup}: every element has order a power of `p`; for finite groups this means that the order of the group
+       is a power of `p` ({IsPGroup.iff-card}).
+     * {IsPGroup.sub}, {IsPGroup.ofSurj}: subgroups and quotients of `p`-groups are `p`-groups.
+     * {card-mod-fixedPoints-pow}: if a group of order `p^n` acts on a finite set `X`, then `|X| ≡ |X^G| (mod p)`.
+     * {center-nontrivial}: a nontrivial finite `p`-group has a nontrivial center.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.Cauchy
+\import Algebra.Group.Center
+\import Algebra.Group.CyclicSub
+\import Algebra.Group.Fin
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.Burnside
+\import Algebra.Group.GSet.ExampleActions
+\import Algebra.Group.GSet.Orbit
+\import Algebra.Group.GSet.SubGSet
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Index
+\import Algebra.Group.SubGroup
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Arith.Nat
+\import Arith.Nat.Factorization
+\import Arith.Prime
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.KFin
+\open Monoid(pow,LDiv)
+
+-- | A group is a `p`-group if the order of every element is a power of `p`.
+\type IsPGroup (p : Nat) (G : Group) : \Prop
+  => ∀ (g : G) ∃ (k : Nat) (pow g (pow p k) = 1)
+  \where {
+    -- | A finite group of order `p^n` is a `p`-group.
+    \lemma ofCard {G : FinGroup} {p n : Nat} (pp : Prime p) (c : G.card = pow p n) : IsPGroup p G
+      => \lam g => TruncP.map (ldiv-prime-pow pp (transport (LDiv _) c (order-div-card g))) \lam s => (s.1, transport (\lam m => pow g m = 1) s.3 order_pow)
+
+    -- | The order of a finite `p`-group is a power of `p`.
+    \lemma card {G : FinGroup} {p : Nat} (pp : Prime p) (h : IsPGroup p G) : ∃ (n : Nat) (G.card = pow p n)
+      => \have | s => multiplicity-spec (prime>1 pp) (index.card/=0 G)
+               | r=1 : s.1.inv = 1 => \case NatSemiring.decideEq s.1.inv 1 \with {
+                 | yes e => e
+                 | no r/=1 => \let t => exists-prime-divisor r/=1 \in \case cauchy t.2 (LDiv.trans t.3 (\new LDiv s.1.inv G.card (pow p (nat-multiplicity p G.card)) (NatSemiring.*-comm *> s.1.inv-right))) \with {
+                   | inP (g, og) => \case h g \with {
+                     | inP (k, q) => absurd $ s.2 $ transport (LDiv _) s.1.inv-right $ LDiv.product-left (pow p (nat-multiplicity p G.card))
+                         $ transport (LDiv __ _) (prime-ldiv-pow pp t.2 (transport (LDiv __ _) og (order-div q))) t.3
+                   }
+                 }
+               }
+         \in inP (nat-multiplicity p G.card, inv s.1.inv-right *> pmap (_ Nat.*) r=1)
+
+    -- | A finite group is a `p`-group iff its order is a power of `p`.
+    \lemma iff-card {G : FinGroup} {p : Nat} (pp : Prime p) : IsPGroup p G <-> ∃ (n : Nat) (G.card = pow p n)
+      => (card pp, \lam (inP (n,c)) => ofCard pp c)
+
+    -- | Subgroups of `p`-groups are `p`-groups.
+    \lemma sub {G : Group} {p : Nat} (H : SubGroup G) (h : IsPGroup p G) : IsPGroup p (IGroup H)
+      => \lam x => TruncP.map (h x.1) \lam s => (s.1, ext $ IGroup.embed.func-pow *> s.2)
+
+    -- | Images of `p`-groups under surjective homomorphisms (e.g. quotients) are `p`-groups.
+    \lemma ofSurj {p : Nat} (f : GroupHom) (fs : IsSurj f) (h : IsPGroup p f.Dom) : IsPGroup p f.Cod
+      => \lam y => \case fs y \with {
+        | inP (x, fx=y) => TruncP.map (h x) \lam s => (s.1, inv (pmap (pow __ _) fx=y) *> inv f.func-pow *> pmap f s.2 *> f.func-ide)
+      }
+  }
+
+-- | If a group of order `p^n` acts on a finite set `X`, then `|X| ≡ |X^G| (mod p)`.
+\lemma card-mod-fixedPoints-pow {G : FinGroup} {p n : Nat} (pp : Prime p) (c : G.card = pow p n) {X : GSet G} (F : FinSet X)
+  : F.card Nat.mod p = (fixedPointsFin F).card Nat.mod p
+  => pmap (\lam m => m Nat.mod p) (card-fixedPoints-split F *> pmap (_ Nat.+) (card-orbitSum {G} (nonFixedPointsFin F) *> FinSum-ldiv (orbit-mod pp c F)) *> NatSemiring.+-comm)
+       *> n*_+_mod_n=mod.nat {p}
+  \where {
+    \lemma orbit-mod {G : FinGroup} {p n : Nat} (pp : Prime p) (c : G.card = pow p n) {X : GSet G} (F : FinSet X) (O : Orbits (IGSet (nonFixedPoints X)))
+      : (orbitFiber {G} (nonFixedPointsFin F) O).card Nat.mod p = 0 \elim O
+      | in~ y => div_mod $ ldiv-pow-ldiv pp (\new LDiv (orbitFiber {G} (nonFixedPointsFin F) (in~ y)).card (pow p n) {
+        | inv => (IFinGroup (FinStabilizer {G} {IGSet (nonFixedPoints X)} {nonFixedPointsFin F} y)).card
+        | inv-right => NatSemiring.*-comm *> card-orbit-stabilizer-fiber {G} (nonFixedPointsFin F) idp *> c
+      }) (nonFixed-orbit-card/=1 (nonFixedPointsFin F) (in~ y))
+
+    \lemma FinSum-ldiv {A : FinSet} {p : Nat} {x : A -> Nat} (d : \Pi (a : A) -> x a Nat.mod p = 0)
+      : AbMonoid.FinSum x = p Nat.* AbMonoid.FinSum (\lam a => x a Nat.div p)
+      => AbMonoid.FinSum-ext (\lam a => inv (Nat.divModProp (x a) p) *> pmap (_ Nat.+) (d a)) *> inv NatSemiring.FinSum-ldistr
+  }
+
+-- | A finite group of order `p^(n+1)` has a nontrivial center.
+\lemma center-nontrivial {G : FinGroup} {p n : Nat} (pp : Prime p) (c : G.card = pow p (suc n)) : ∃ (z : G) (Center G z) (z /= 1)
+  => \let Fix => fixedPointsFin {G} {conjAction G} G
+     \in \have | p|Fix : Fix.card Nat.mod p = 0 => inv (card-mod-fixedPoints-pow {G} {p} {suc n} pp c G) *> div_mod (transportInv (LDiv p) c (\new LDiv p (pow p (suc n)) (pow p n) NatSemiring.*-comm))
+               | one-fixed : IsFixed {G} {conjAction G} 1 => \lam g => pmap (\lam x => x * inverse g) ide-right *> inverse-right
+     \in \case KFinSet.search {Fix} (\lam s => s.1 /= 1) (\lam s => NotDec (decideEq _ _)) \with {
+       | yes (inP (s, s/=1)) => inP (s.1, \lam g => fixed-center (s.2 g), s/=1)
+       | no q => absurd $ <-irreflexive $ prime>1 pp <∘l ldiv_<= (\lam e => card=0-empty {Fix} e (1, one-fixed)) (mod_div p|Fix)
+                          <=∘ card_inj {Fix} {UnitFin} (\lam _ => ()) (\lam {s} {s'} _ => ext $ tightness (\lam ne => q (inP (s, ne))) *> inv (tightness (\lam ne => q (inP (s', ne)))))
+     }
+  \where
+    \lemma fixed-center {G : Group} {g z : G} (f : conjugate g z = z) : g * z = z * g
+      => inv ide-right *> pmap (_ *) (inv inverse-left) *> inv *-assoc *> pmap (\lam x => x * g) f

@@ -1,0 +1,68 @@
+{- | The index of a subgroup of a finite group.
+
+     * {index}: the number of left cosets; {index.card-mul}: $|H| \cdot [G : H] = |G|$;
+       {index.tower}: $[G : K] = [H : K] \cdot [G : H]$ for $K \subseteq H$;
+       {FinQuot.card-index}: the index of a normal subgroup is the order of the quotient {FinQuot}.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.Lagrange
+\import Algebra.Group.QuotientProperties
+\import Algebra.Group.SubGroup
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Nat
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+-- | The index $[G : H]$ of a subgroup of a finite group: the number of left cosets.
+\sfunc index (H : FinSubGroup) : Nat
+  => FinSet.card {lagrange.Cosets-fin H H.S}
+  \where {
+    -- | Lagrange's theorem: $|H| \cdot [G : H] = |G|$.
+    \lemma card-mul (H : FinSubGroup) : (IFinGroup H).card * index H = FinSet.card {H.S}
+      => pmap (_ *) (\peval index H) *> (lagrange H).inv-right
+
+    -- | A finite group has positive order.
+    \lemma card/=0 (G : FinGroup) : G.card /= 0
+      => \lam p => card=0-empty p 1
+
+    -- | A subgroup `K` contained in `H`, viewed as a subgroup of `H`.
+    \func restrict {G : FinGroup} {H K : FinSubGroup G} (p : \Pi {x : G} -> K x -> H x) : FinSubGroup (IFinGroup H) \cowith
+      | contains y => K y.1
+      | contains_ide => K.contains_ide
+      | contains_* => K.contains_*
+      | contains_inverse => K.contains_inverse
+      | isDec y => K.isDec y.1
+
+    \lemma restrict-card {G : FinGroup} {H K : FinSubGroup G} (p : \Pi {x : G} -> K x -> H x)
+      : (IFinGroup (restrict p)).card = (IFinGroup K).card
+      => card_Equiv {IFinGroup (restrict p)} {IFinGroup K} \new QEquiv {
+        | f y => (y.1.1, y.2)
+        | ret x => ((x.1, p x.2), x.2)
+        | ret_f y => ext (ext idp)
+        | f_sec x => idp
+      }
+
+    -- | The tower law: $[G : K] = [H : K] \cdot [G : H]$ for $K \subseteq H$.
+    \lemma tower {G : FinGroup} {H K : FinSubGroup G} (p : \Pi {x : G} -> K x -> H x)
+      : index K = index (restrict p) * index H
+      => NatSemiring.cancel_*-left (card/=0 (IFinGroup K)) $ card-mul K *> inv (card-mul H) *> pmap (* index H) (inv (card-mul (restrict p)))
+           *> pmap (\lam c => c * index (restrict p) * index H) (restrict-card p) *> *-assoc
+  }
+
+-- | The quotient of a finite group by a decidable normal subgroup is a finite group.
+\func FinQuot {G : FinGroup} (N : NormalSubGroup G) (d : \Pi (x : G) -> Dec (N x)) : FinGroup \cowith
+  | Group => G // N
+  | FinSet => lagrange.Cosets-fin (\new DecSubGroup { | SubGroup => N | isDec => d }) G
+  \where {
+    -- | The index of a normal subgroup is the order of the quotient group.
+    \lemma card-index {G : FinGroup} (N : NormalSubGroup G) (d : \Pi (x : G) -> Dec (N x))
+      : (FinQuot N d).card = index (\new FinSubGroup { | SubGroup => N | isDec => d })
+      => inv \peval index _
+  }

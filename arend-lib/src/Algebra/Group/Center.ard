@@ -1,0 +1,49 @@
+{- | Center and normalizers of a group.
+
+     * {Center} is a normal subgroup.
+     * {Normalizer} of a subgroup; {Normalizer.<=normalizer}: a subgroup is contained in its normalizer.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.SubGroup
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Function.Meta
+\import Logic
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+-- | The center of a group: elements commuting with every element.
+\func Center (G : Group) : NormalSubGroup G \cowith
+  | contains z => \Pi (g : G) -> g * z = z * g
+  | contains_ide g => ide-right *> inv ide-left
+  | contains_* p q g => comm-* (p g) (q g)
+  | contains_inverse p g => comm-inverse (p g)
+  | isNormal g c => transportInv (\lam z => \Pi (g' : G) -> g' * z = z * g') (comm_conjugate $ commutator=ide<->comm.2 (c g)) c
+  \where {
+    \lemma comm-* {G : Group} {g x y : G} (p : g * x = x * g) (q : g * y = y * g) : g * (x * y) = (x * y) * g
+      => inv *-assoc *> pmap (* y) p *> *-assoc *> pmap (x *) q *> inv *-assoc
+
+    \lemma comm-inverse {G : Group} {g x : G} (p : g * x = x * g) : g * inverse x = inverse x * g
+      => commutator=ide<->comm.1 $ comm_inverse-right $ commutator=ide<->comm.2 p
+  }
+
+-- | The normalizer of a subgroup: elements whose conjugation preserves the subgroup.
+\func Normalizer {G : Group} (H : SubGroup G) : SubGroup G \cowith
+  | contains g => \Pi (h : G) -> H h <-> H (conjugate g h)
+  | contains_ide h => (transportInv H conjugate-via-id, transport H conjugate-via-id)
+  | contains_* {g} {g'} p q h => <->trans (q h) $ <->trans (p (conjugate g' h)) $ rewrite conj-* <->refl
+  | contains_inverse {g} p h => <->sym $ <->trans (p (conjugate (inverse g) h)) $ rewrite conj-inv <->refl
+  \where {
+    \lemma conj-* {G : Group} {g g' h : G} : conjugate g (conjugate g' h) = conjugate (g * g') h
+      => equation.group
+
+    \lemma conj-inv {G : Group} {g h : G} : conjugate g (conjugate (inverse g) h) = h
+      => equation.group
+
+    -- | A subgroup is contained in its normalizer.
+    \lemma <=normalizer {G : Group} {H : SubGroup G} : H <= Normalizer H
+      => \lam {g} c h => (\lam d => H.contains_* (H.contains_* c d) (H.contains_inverse c),
+                          \lam d => transport H equation.group $ H.contains_* (H.contains_* (H.contains_inverse c) d) c)
+  }

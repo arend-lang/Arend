@@ -1,0 +1,151 @@
+{- | Cauchy's theorem: if a prime `p` divides the order of a finite group `G`, then `G` has an element of order `p`.
+
+     McKay's proof: the cyclic group `ℤ/p` ({CycGroup}) acts on `p`-tuples by rotation ({TupleAction}), preserving the
+     tuples with product `1` ({prodOne}). There are `|G|^(p-1)` such tuples, so their number is divisible by `p`;
+     by {card-mod-fixedPoints} so is the number of fixed points, which are the constant tuples `(g, ..., g)` with `g^p = 1`.
+     Since `(1, ..., 1)` is one of them, there is another one, and its entry has order `p`.
+
+     Public API: {CycGroup}, {TupleAction}, {prodOne}, {cauchy}.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.Fin
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.Burnside
+\import Algebra.Group.GSet.Orbit
+\import Algebra.Group.GSet.SubGSet
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Arith.Fin
+\import Arith.Nat
+\import Arith.Prime
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+\import Set.Fin.Pi
+
+-- | The cyclic group `ℤ/(k+1)` as a finite group.
+\func CycGroup (k : Nat) : FinGroup (Fin (suc k)) \cowith
+  | Group => AddGroup.toGroup (FinRing {k})
+  | FinSet => FinFin (suc k)
+
+-- | `ℤ/(k+1)` acts on `(k+1)`-tuples by rotation: `(j a) i = a (i + j)`.
+\func TupleAction (k : Nat) (G : Group) : GSet (CycGroup k) \cowith
+  | E => Fin (suc k) -> G
+  | ** j a i => a (i FinRing.+ j)
+  | **_ide {a} => ext \lam i => pmap a zro-right
+  | **-assoc {m} {n} {a} => ext \lam i => pmap a (inv +-assoc)
+
+-- | Tuples with product `1` form a sub-G-set.
+\func prodOne (k : Nat) (G : Group) : SubGSet (CycGroup k) (TupleAction k G) \cowith
+  | contains a => Monoid.BigProd a = 1
+  | contains_** {j} {a} c => transport (\lam x => Monoid.BigProd ((TupleAction k G).** x a) = 1) (gen-pow j) (pow-closed {k} {G} {a} c {j})
+  \where \protected {
+    \func gen {k : Nat} : CycGroup k => ide {FinRing {k}}
+
+    \lemma gen-pow {k : Nat} (j : Fin (suc k)) : Monoid.pow {CycGroup k} gen j = j
+      => inv (AddMonoid.*n_pow {FinRing {k}}) *> inv (Semiring.natCoef_*n {FinRing {k}}) *> fin_mod_id j
+
+    \lemma inv-unique {G : Group} {x y : G} (p : x * y = 1) : x = inverse y
+      => inv ide-right *> pmap (x *) (inv inverse-right) *> inv *-assoc *> pmap (__ * inverse y) p *> ide-left
+
+    \lemma swap {G : Group} {x y : G} (p : x * y = 1) : y * x = 1
+      => pmap (y *) (inv-unique p) *> inverse-right
+
+    -- | Rotation by one preserves tuples with product `1`.
+    \lemma gen-closed {k : Nat} {G : Group} {a : Fin (suc k) -> G} (c : Monoid.BigProd a = 1) : Monoid.BigProd ((TupleAction k G).** gen a) = 1 \elim k
+      | 0 => c
+      | suc k => Monoid.BigProd_suc {G} {suc k} {(TupleAction (suc k) G).** gen a} *> pmap2 (*) (Monoid.BigProd-ext {G} {suc k} {\lam (i : Fin (suc k)) => (TupleAction (suc k) G).** gen a i} {\lam i => a (suc i)} \lam i => pmap a $ fin_nat-inj $ mod_< $ NatOrder.suc<suc $ fin_< i)
+          (pmap a $ fin_nat-inj $ pmap (\lam x => (x Nat.+ 1) Nat.mod suc (suc k)) (mod_< id<suc) *> id_mod) *> swap c
+
+    \lemma pow-closed {k : Nat} {G : Group} {a : Fin (suc k) -> G} (c : Monoid.BigProd a = 1) {m : Nat} : Monoid.BigProd ((TupleAction k G).** (Monoid.pow {CycGroup k} gen m) a) = 1 \elim m
+      | 0 => pmap (\lam (b : Fin (suc k) -> G) => Monoid.BigProd b) (GSet.**_ide {TupleAction k G} {a}) *> c
+      | suc m => pmap (\lam (b : Fin (suc k) -> G) => Monoid.BigProd b) (GSet.**-assoc {TupleAction k G} {Monoid.pow {CycGroup k} gen m} {gen} {a}) *> pow-closed {k} {G} {(TupleAction k G).** gen a} (gen-closed {k} {G} {a} c) {m}
+  }
+
+-- | Cauchy's theorem.
+\lemma cauchy {G : FinGroup} {p : Nat} (pp : Prime p) (d : Monoid.LDiv p G.card) : ∃ (g : G) (order g = p)
+  => \case \elim p, \elim pp, \elim d, prime>1 {p} pp \with {
+    | 0, _, _, ()
+    | 1, _, _, NatOrder.suc<suc ()
+    | suc (suc k), pp, d, _ => aux pp d
+  }
+  \where \private {
+    \func X {G : Group} (k : Nat) => IGSet (prodOne (suc k) G)
+
+    \func XFin {G : FinGroup} (k : Nat) : FinSet (X {G} k)
+      => FinSet-transport (SigmaFin (FunFin (FinFin (suc (suc k))) G) \lam a => DecFin (decideEq (Monoid.BigProd a) 1)) {X {G} k} \new QEquiv {
+        | f s => s
+        | ret s => s
+        | ret_f s => idp
+        | f_sec s => idp
+      }
+
+    -- | Tuples with product `1` are determined by their last `p - 1` entries.
+    \lemma card-X {G : FinGroup} {k : Nat} : (XFin {G} k).card = Monoid.pow {NatSemiring} G.card (suc k)
+      => card_Equiv {XFin {G} k} {FunFin (FinFin (suc k)) G} \new QEquiv {
+        | f s i => s.1 (suc i)
+        | ret b => (inverse (Monoid.BigProd b) :: b, inverse-left)
+        | ret_f s => ext $ ext \lam (i : Fin (suc (suc k))) => \case \elim i \with {
+          | 0 => inv (prodOne.inv-unique s.2)
+          | suc i => idp
+        }
+        | f_sec b => idp
+      }
+
+    \func const1 {G : FinGroup} {k : Nat} : X {G} k
+      => (\lam _ => 1, Monoid.BigProd_ide {G} {\new Array G (suc (suc k)) (\lam _ => 1)} \lam _ => idp)
+
+    \lemma fixed-const {G : FinGroup} {k : Nat} {s : X {G} k} (f : IsFixed {CycGroup (suc k)} {X {G} k} s) (j : Fin (suc (suc k))) : s.1 j = s.1 0
+      => pmap s.1 (inv (fin_mod_id j)) *> pmap (\lam t => t.1 0) (f j)
+
+    \lemma ldiv<= {m n : Nat} (d : Monoid.LDiv m n) (p : 0 NatSemiring.< n) : m <= n
+      => \case d.inv \as q, idp : d.inv = q \with {
+        | 0, s => absurd $ NatSemiring.<_/= p $ inv $ inv d.inv-right *> pmap (m Nat.*) s
+        | suc q, s => rewrite (inv d.inv-right, s) (linarith : m <= m Nat.* q Nat.+ m)
+      }
+
+    \lemma aux {G : FinGroup} {k : Nat} (pp : Prime (suc (suc k))) (d : Monoid.LDiv (suc (suc k)) G.card) : ∃ (g : G) (order g = suc (suc k))
+      => \let | F => XFin {G} k
+              | Fix => fixedPointsFin {CycGroup (suc k)} F
+         \in \have
+           | dX : Monoid.LDiv (suc (suc k)) F.card => rewrite card-X \new Monoid.LDiv {
+             | inv => Monoid.pow {NatSemiring} G.card k Nat.* d.inv
+             | inv-right => rewrite (inv d.inv-right) $ inv NatSemiring.*-assoc *> pmap (Nat.* _) NatSemiring.*-comm *> NatSemiring.*-assoc
+           }
+           | dFix : Monoid.LDiv (suc (suc k)) Fix.card => mod_div $ inv (card-mod-fixedPoints pp idp F) *> div_mod dX
+           | c1-fixed : IsFixed {CycGroup (suc k)} {X {G} k} (const1 {G} {k}) => \lam j => ext idp
+           | p<=Fix : suc (suc k) <= Fix.card => ldiv<= dFix $ nonZero>0 \lam c => card=0-empty {Fix} c (const1 {G} {k}, c1-fixed)
+         \in \case KFinSet.search {Fix} (\lam s => s.1.1 /= (const1 {G} {k}).1) (\lam s => NotDec (decideEq {FunFin (FinFin (suc (suc k))) G} _ _)) \with {
+           | yes (inP (s, s/=1)) => inP (s.1.1 0, order-p pp s/=1 (fixed-const s.2) (fixed-pow s.1.2 (fixed-const s.2)))
+           | no q => absurd $ NatSemiring.<-irreflexive $ NatOrder.suc<suc NatOrder.zero<suc <∘l p<=Fix <=∘ card_inj {Fix} {UnitFin} (\lam _ => ()) (\lam {s} {s'} _ => all-c1 q s *> inv (all-c1 q s'))
+         }
+      \where {
+        \lemma all-c1 {G : FinGroup} {k : Nat} (q : Not (∃ (s : \Sigma (x : X {G} k) (IsFixed {CycGroup (suc k)} x)) (s.1.1 /= (const1 {G} {k}).1))) (s : \Sigma (x : X {G} k) (IsFixed {CycGroup (suc k)} x)) : s = (const1 {G} {k}, \lam j => ext idp)
+          => ext $ ext $ tightness {FunFin (FinFin (suc (suc k))) G} \lam ne => q (inP (s, ne))
+
+        \lemma fixed-pow {G : FinGroup} {k : Nat} {a : Fin (suc (suc k)) -> G} (c : Monoid.BigProd a = 1) (f : \Pi (j : Fin (suc (suc k))) -> a j = a 0)
+          : G.pow (a 0) (suc (suc k)) = 1
+          => inv (Monoid.BigProd_replicate {G} {a 0} {suc (suc k)}) *> inv (Monoid.BigProd-ext {G} {suc (suc k)} {a} {\lam _ => a 0} f) *> c
+
+        \lemma order-p {G : FinGroup} {k : Nat} (pp : Prime (suc (suc k))) {a : Fin (suc (suc k)) -> G} (a/=1 : a /= (\lam _ => 1)) (f : \Pi (j : Fin (suc (suc k))) -> a j = a 0)
+                       (q : G.pow (a 0) (suc (suc k)) = 1) : order (a 0) = suc (suc k)
+          => \case prime-div.dir pp (order-div q) \with {
+            | byLeft e => e
+            | byRight e => absurd $ a/=1 $ ext \lam j => f j *> inv ide-left *> (rewrite e in order_pow {G} {G} {G} {a 0})
+          }
+      }
+  }

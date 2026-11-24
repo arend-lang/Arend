@@ -6,7 +6,10 @@
 \import Arith.Int
 \import Arith.Nat
 \import Data.Bool
+\import Data.Or
+\import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Order.Biordered
 \import Order.LinearOrder
@@ -80,7 +83,7 @@
 
 -- A primality test
 
-\func isPrime (n : Nat) : Bool
+\func testPrime (n : Nat) : Bool
   | 0 => false
   | 1 => false
   | 2 => true
@@ -100,9 +103,9 @@
       | suc c => n < j * j or isPositive (n mod j) and rec n c (suc (suc j))
   }
 
-\open isPrime \hiding (<)
+\open testPrime \hiding (<)
 
-\lemma isPrime=>prime {n : Nat} (p : isPrime n = true) : Prime n \elim n, p
+\lemma isPrime=>prime {n : Nat} (p : testPrime n = true) : Prime n \elim n, p
   | 2, _ => prime-less.conv (suc<suc zero<suc) (\lam {k} k<2 k|2 => \case \elim k, k<2, k|2 \with {
     | 0, _, q : LDiv => \case *-comm *> q.inv-right
     | 1, _, _ => idp
@@ -178,7 +181,7 @@
       })
   }
 
-\lemma prime=>isPrime {n : Nat} (p : Prime n) : isPrime n = true \elim n
+\lemma prime=>isPrime {n : Nat} (p : Prime n) : testPrime n = true \elim n
   | 0 => \case p.isCancelable-left {0} {1} idp
   | 1 => absurd (p.notInv Inv.ide-isInv)
   | 2 => idp
@@ -192,7 +195,7 @@
         | suc _, _ => idp
       }
 
-    \lemma <-lem {n m : Nat} (n<m : n < m) : n isPrime.< m = true => unfold (isPrime.<) (mcases {_} {arg addPath} \with {
+    \lemma <-lem {n m : Nat} (n<m : n < m) : n testPrime.< m = true => unfold (testPrime.<) (mcases {_} {arg addPath} \with {
       | 0, p => absurd (<-irreflexive (transportInv (n <) (triEquals p) n<m))
       | pos (suc k), p => absurd (<-irreflexive (<-transitive n<m (triGreater p)))
       | neg (suc k), _ => idp
@@ -211,7 +214,103 @@
   }
 
 \func prime-isDec {n : Nat} : Dec (Prime n)
-  => \case isPrime n \as b, idp : isPrime n = b \with {
+  => \case testPrime n \as b, idp : testPrime n = b \with {
        | true, p => yes (isPrime=>prime p)
        | false, p => no (\lam c => \case inv (prime=>isPrime c) *> p)
      }
+
+\lemma prime>1 {p : Nat} (pp : Prime p) : 1 < p
+  => (transport (\lam P => P) prime-less pp).1
+
+-- # The least prime divisor
+
+-- | The least divisor `>= 2` of `n`, with `nat-minFac 0 = 2` and `nat-minFac 1 = 1`.
+\func nat-minFac (n : Nat) : Nat
+  => aux n (suc n) 2
+  \where {
+    \private \func aux (n fuel k : Nat) : Nat \elim fuel
+      | 0 => n
+      | suc fuel => \case NatSemiring.decideEq (n mod k) 0 \with {
+        | yes _ => k
+        | no _ => aux n fuel (suc k)
+      }
+
+    \private \func aux-spec {n fuel k : Nat} (n>1 : 1 < n) (k>1 : 1 < k) (below : \Pi {j : Nat} -> 1 < j -> j < k -> Not (LDiv j n)) (b : n <= k + fuel)
+      : \Sigma (1 < aux n fuel k) (LDiv (aux n fuel k) n) (\Pi {j : Nat} -> 1 < j -> j < aux n fuel k -> Not (LDiv j n)) \elim fuel
+      | 0 => (n>1, LDiv.id-div, \lam j>1 j<n => below j>1 (j<n <∘l b))
+      | suc fuel => \case NatSemiring.decideEq (n mod k) 0 \as d, idp : NatSemiring.decideEq (n mod k) 0 = d \with {
+        | yes e, p => rewrite p (k>1, mod_div e, below)
+        | no ne, p => rewrite p (aux-spec n>1 (k>1 <∘ id<suc)
+            (\lam {j} j>1 j<sk j|n => \case LinearOrder.dec<_<= j k \with {
+              | inl j<k => below j>1 j<k j|n
+              | inr k<=j => ne $ div_mod $ transport (LDiv __ n) (<=-antisymmetric (<_suc_<= j<sk) k<=j) j|n
+            })
+            (transport (n <=) (inv $ NatSemiring.+-comm {suc k} {fuel} *> pmap suc (NatSemiring.+-comm {fuel} {k})) b))
+      }
+
+    \sfunc spec {n : Nat} (n>1 : 1 < n)
+      : \Sigma (1 < nat-minFac n) (LDiv (nat-minFac n) n) (\Pi {j : Nat} -> 1 < j -> j < nat-minFac n -> Not (LDiv j n))
+      => aux-spec n>1 (suc<suc zero<suc) (\lam j>1 j<2 => absurd $ <-irreflexive $ j>1 <∘l <_suc_<= j<2)
+                  (transport (`<= _) NatSemiring.zro-left $ <=_+ {NatSemiring} {0} {2} zero<=_ id<=suc)
+  }
+
+\func minFac-ldiv {n : Nat} : LDiv (nat-minFac n) n \elim n
+  | 0 => \new LDiv { | inv => 0 | inv-right => idp }
+  | 1 => LDiv.id-div
+  | suc (suc n) => (nat-minFac.spec (suc<suc zero<suc)).2
+
+\lemma minFac<= {n : Nat} (n/=0 : n /= 0) : nat-minFac n <= n
+  => ldiv_<= n/=0 minFac-ldiv
+
+\lemma minFac-least {n k : Nat} (k>1 : 1 < k) (k|n : LDiv k n) : nat-minFac n <= k \elim n
+  | 0 => suc_<_<= k>1
+  | 1 => absurd $ <-irreflexive $ transport (1 <) (natUnit (NatSemiring.*-comm *> k|n.inv-right)) k>1
+  | suc (suc n) => \lam k<r => (nat-minFac.spec (suc<suc zero<suc)).3 k>1 k<r k|n
+
+\lemma minFac-prime {n : Nat} (n/=1 : n /= 1) : Prime (nat-minFac n) \elim n
+  | 0 => isPrime=>prime idp
+  | 1 => absurd (n/=1 idp)
+  | suc (suc n) => \have s => nat-minFac.spec {suc (suc n)} (suc<suc zero<suc) \in prime-less.conv s.1 \lam {k} k<r k|r => \case LinearOrder.dec<_<= 1 k \with {
+    | inl k>1 => absurd (s.3 k>1 k<r (LDiv.trans k|r s.2))
+    | inr k<=1 => \case \elim k, k<=1, k|r \with {
+      | 0, _, k|r => \case transport (1 <) (inv k|r.inv-right *> NatSemiring.zro_*-left) s.1
+      | 1, _, _ => idp
+      | suc (suc k), k<=1, _ => absurd (k<=1 (suc<suc zero<suc))
+    }
+  }
+
+\func exists-prime-divisor {n : Nat} (n/=1 : n /= 1) : \Sigma (p : Nat) (Prime p) (LDiv p n)
+  => (nat-minFac n, minFac-prime n/=1, minFac-ldiv)
+
+-- # Divisors of prime powers
+
+-- | A prime dividing a power of a prime `p` is `p`.
+\lemma prime-ldiv-pow {p q n : Nat} (pp : Prime p) (qp : Prime q) (d : LDiv q (pow p n)) : q = p \elim n
+  | 0 => absurd $ <-irreflexive $ transport (1 <) (natUnit (NatSemiring.*-comm *> d.inv-right)) (prime>1 qp)
+  | suc n => \case qp.isPrime d \with {
+    | byLeft q|pn => prime-ldiv-pow pp qp q|pn
+    | byRight q|p => \case prime-div.dir pp q|p \with {
+      | byLeft e => e
+      | byRight e => absurd $ <-irreflexive $ transport (1 <) e (prime>1 qp)
+    }
+  }
+
+-- | A divisor `d /= 1` of a power of a prime `p` is divisible by `p`.
+\sfunc ldiv-pow-ldiv {p d n : Nat} (pp : Prime p) (d|pn : LDiv d (pow p n)) (d/=1 : d /= 1) : LDiv p d
+  => \let s => exists-prime-divisor d/=1
+     \in transport (LDiv __ d) (prime-ldiv-pow pp s.2 (LDiv.trans s.3 d|pn)) s.3
+
+-- | The divisors of a prime power `p^n` are the powers `p^k` with `k <= n`.
+\lemma ldiv-prime-pow {p d n : Nat} (pp : Prime p) (d|pn : LDiv d (pow p n)) : ∃ (k : Nat) (k <= n) (d = pow p k) \elim n
+  | 0 => inP (0, <=-refl, natUnit (NatSemiring.*-comm *> d|pn.inv-right))
+  | suc n => \case NatSemiring.decideEq d 1 \with {
+    | yes d=1 => inP (0, zero<=_, d=1)
+    | no d/=1 =>
+      \let | p|d => ldiv-pow-ldiv {p} {d} {suc n} pp d|pn d/=1
+           | p/=0 : p /= 0 => \lam p=0 => <-irreflexive $ transport (1 <) p=0 (prime>1 pp) <∘ zero<suc
+           | e|pn : LDiv p|d.inv (pow p n) => \new LDiv {
+             | inv => d|pn.inv
+             | inv-right => NatSemiring.cancel_*-left p/=0 $ inv NatSemiring.*-assoc *> pmap (Nat.* d|pn.inv) p|d.inv-right *> d|pn.inv-right *> NatSemiring.*-comm
+           }
+      \in TruncP.map (ldiv-prime-pow pp e|pn) \lam s => (suc s.1, suc<=suc s.2, inv p|d.inv-right *> pmap (p Nat.*) s.3 *> NatSemiring.*-comm)
+  }

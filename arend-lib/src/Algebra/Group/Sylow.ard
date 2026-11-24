@@ -1,0 +1,429 @@
+{- | Sylow theorems.
+
+     * {IsSylow}: a `p`-subgroup whose index is not divisible by `p`; {IsSylow.card}: its order is `p^m`,
+       where `m` is the multiplicity of `p` in `|G|`.
+     * {index-mod-normalizer}: `[G : H] ≡ [N(H) : H] (mod p)` for `|H| = p^k`; {conjSubGroup}, {FinNormalizer}, {restrictAction}.
+     * Sylow I: {exists-le-card-pow} (every subgroup of order `p^k` is contained in a subgroup of order `p^n`
+       for every `p^n` dividing `|G|`, `k <= n`), {exists-subgroup-card-pow}, {exists-sylow}, {exists-le-sylow}.
+     * Sylow II: {sylow-le-conj} (every `p`-subgroup is contained in a conjugate of a Sylow subgroup),
+       {sylow-conjugate} (Sylow subgroups are conjugate).
+     * Sylow III: {SylowFin} (the finite set of Sylow subgroups, acted on by conjugation via {SylowAction}),
+       {sylow-stab} (the stabilizer of `P` is `N(P)`), {card-sylow-mul} (`n_p * |N(P)| = |G|`),
+       {card-sylow-ldiv-index} (`n_p` divides `[G : P]`), {card-sylow-ldiv-card}, {card-sylow-mod} (`n_p ≡ 1 (mod p)`),
+       {sylow-normalized-eq} (a Sylow subgroup normalizing another one equals it).
+-}
+
+\import Algebra.Group
+\import Algebra.Group.Cauchy
+\import Algebra.Group.Center
+\import Algebra.Group.CyclicSub
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.Burnside
+\import Algebra.Group.GSet.Orbit
+\import Algebra.Group.Index
+\import Algebra.Group.Lagrange
+\import Algebra.Group.PGroup
+\import Algebra.Group.SubGroup
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Arith.Nat
+\import Arith.Nat.Factorization
+\import Arith.Prime
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.KFin
+\import Set.Fin.Pigeonhole
+\open Monoid(pow,LDiv)
+
+-- # Subgroups of finite groups
+
+-- | A subgroup contained in a finite subgroup of at most the same order is equal to it.
+\lemma eq-of-card {G : FinGroup} {H K : FinSubGroup G} (s : \Pi {x : G} -> K x -> H x) (c : (IFinGroup H).card <= (IFinGroup K).card) : K = H
+  => FinSubGroup.ext \lam x => (s, \lam hx => \case (IFinGroup H).finEq, (IFinGroup K).finEq \with {
+    | inP eh, inP ek =>
+      \let | ek' : QEquiv {Fin (IFinGroup H).card} {IFinGroup K} => transport (\lam n => QEquiv {Fin n} {IFinGroup K}) (inv $ <=-antisymmetric c (card_inj {IFinGroup K} {IFinGroup H} (\lam y => (y.1, s y.2)) (\lam q => ext (pmap __.1 q)))) ek
+           | f (y : IFinGroup H) : IFinGroup H => ((ek' (eh.ret y)).1, s (ek' (eh.ret y)).2)
+           | e => IsEquiv.toQEquiv (PigeonholeSet.isEquiv {IFinGroup H} f \lam {y} {y'} q => (symQEquiv eh).isInj $ ek'.isInj $ ext (pmap __.1 q))
+      \in transport K (pmap __.1 (e.f_sec (x,hx))) (ek' (eh.ret (e.ret (x,hx)))).2
+  })
+
+-- | The action of a subgroup on a G-set by restriction.
+\func restrictAction {G : FinGroup} (H : FinSubGroup G) (X : GSet G) : GSet (IFinGroup H) \cowith
+  | E => X
+  | ** h x => h.1 ** x
+  | **_ide => **_ide
+  | **-assoc => **-assoc
+
+-- | The conjugate subgroup $g H g^{-1}$.
+\func conjSubGroup {G : FinGroup} (g : G) (H : FinSubGroup G) : FinSubGroup G \cowith
+  | contains x => H (conjugate (inverse g) x)
+  | contains_ide => transportInv H equation.group H.contains_ide
+  | contains_* p q => transportInv H equation.group (H.contains_* p q)
+  | contains_inverse p => transportInv H equation.group (H.contains_inverse p)
+  | isDec x => H.isDec _
+  \where \protected {
+    -- | Conjugation does not change the order of a subgroup.
+    \lemma card {G : FinGroup} (g : G) (H : FinSubGroup G) : (IFinGroup (conjSubGroup g H)).card = (IFinGroup H).card
+      => card_Equiv {IFinGroup (conjSubGroup g H)} {IFinGroup H} \new QEquiv {
+        | f x => (conjugate (inverse g) x.1, x.2)
+        | ret y => (conjugate g y.1, transportInv H equation.group y.2)
+        | ret_f x => ext equation.group
+        | f_sec y => ext equation.group
+      }
+
+    \lemma ide {G : FinGroup} (H : FinSubGroup G) : conjSubGroup 1 H = H
+      => FinSubGroup.ext {G} {conjSubGroup 1 H} {H} \lam x => (transport H equation.group, transportInv H equation.group)
+
+    \lemma comp {G : FinGroup} (g g' : G) (H : FinSubGroup G) : conjSubGroup (g * g') H = conjSubGroup g (conjSubGroup g' H)
+      => FinSubGroup.ext {G} {conjSubGroup (g * g') H} {conjSubGroup g (conjSubGroup g' H)} \lam x => (transport H equation.group, transportInv H equation.group)
+  }
+
+-- # Normalizers
+
+-- | The normalizer of a finite subgroup, as a finite subgroup.
+\func FinNormalizer {G : FinGroup} (H : FinSubGroup G) : FinSubGroup G \cowith
+  | SubGroup => Normalizer H
+  | isDec g => KFinSet.forall-dec {G} (\lam h => H h <-> H (conjugate g h)) (\lam h => iff-dec (H.isDec h) (H.isDec _))
+  \where {
+    \func iff-dec {A B : \Prop} (a : Dec A) (b : Dec B) : Dec (A <-> B) \elim a, b
+      | yes a, yes b => yes (\lam _ => b, \lam _ => a)
+      | yes a, no b => no \lam f => b (f.1 a)
+      | no a, yes b => no \lam f => a (f.2 b)
+      | no a, no b => yes (\lam a' => absurd (a a'), \lam b' => absurd (b b'))
+
+    \lemma <=normalizer {G : FinGroup} {H : FinSubGroup G} {x : G} (h : H x) : FinNormalizer H x
+      => Normalizer.<=normalizer h
+  }
+
+-- | A finite subgroup `H` as a (normal) subgroup of its normalizer.
+\func NormalIn {G : FinGroup} (H : FinSubGroup G) : FinSubGroup (IFinGroup (FinNormalizer H))
+  => index.restrict {G} {FinNormalizer H} {H} FinNormalizer.<=normalizer
+  \where {
+    \func normal {G : FinGroup} (H : FinSubGroup G) : NormalSubGroup (IFinGroup (FinNormalizer H)) \cowith
+      | SubGroup => NormalIn H
+      | isNormal g c => (g.2 _).1 c
+
+    \lemma card {G : FinGroup} (H : FinSubGroup G) : (IFinGroup (NormalIn H)).card = (IFinGroup H).card
+      => index.restrict-card {G} {FinNormalizer H} {H} FinNormalizer.<=normalizer
+  }
+
+-- | `[G : H] ≡ [N(H) : H] (mod p)` for a subgroup `H` of order `p^k`.
+\lemma index-mod-normalizer {G : FinGroup} {p k : Nat} (pp : Prime p) (H : FinSubGroup G) (c : (IFinGroup H).card = pow p k)
+  : index H Nat.mod p = index (NormalIn H) Nat.mod p
+  => pmap (Nat.mod p) (\peval index H) *> card-mod-fixedPoints-pow {IFinGroup H} {p} {k} pp c {restrictAction H (ActionBySubgroup {G} H)} (lagrange.Cosets-fin H G) *> pmap (\lam m => m Nat.mod p) (card-fixed-normalizer H)
+  \where {
+    -- | A coset `gH` is fixed by `H` iff `g` normalizes `H`.
+    \lemma fixed-normalizer {G : FinGroup} (H : FinSubGroup G) (g : G)
+      : IsFixed {IFinGroup H} {restrictAction H (ActionBySubgroup {G} H)} (in~ g) <-> FinNormalizer H g
+      => (\lam f =>
+            \have conj-in {x : G} (hx : H x) : H (conjugate (inverse g) x)
+              => transport H equation.group $ Quotient.equalityEquiv SubGroup.equivalence (f (inverse x, H.contains_inverse hx))
+            \in \lam h => (\lam hh => \case IsEquiv.toQEquiv (PigeonholeSet.isEquiv {IFinGroup H} (\lam y => (conjugate (inverse g) y.1, conj-in y.2))
+                                         (\lam {y} {y'} q => ext $ conj-inj (pmap __.1 q))) \with {
+                             | e => transport H (inv Normalizer.conj-inv *> pmap (conjugate g) (pmap __.1 (e.f_sec (h,hh)))) (e.ret (h,hh)).2
+                           },
+                           \lam hc => transport H conj-inv-left (conj-in hc)),
+          \lam n h => ~-pequiv $ transportInv H equation.group (((FinNormalizer H).contains_inverse n (inverse h.1)).1 (H.contains_inverse h.2)))
+      \where {
+        \lemma conj-inj {G : Group} {g x y : G} (p : conjugate g x = conjugate g y) : x = y
+          => inv conj-inv-left *> pmap (conjugate (inverse g)) p *> conj-inv-left
+
+        \lemma conj-inv-left {G : Group} {g x : G} : conjugate (inverse g) (conjugate g x) = x
+          => equation.group
+      }
+
+    -- | The fixed points of the action of `H` on `G/H` are the cosets of `H` in its normalizer.
+    \lemma card-fixed-normalizer {G : FinGroup} (H : FinSubGroup G)
+      : (fixedPointsFin {IFinGroup H} {restrictAction H (ActionBySubgroup {G} H)} (lagrange.Cosets-fin H G)).card = index (NormalIn H)
+      => inv $ (\peval index _) *> card_Equiv {lagrange.Cosets-fin (NormalIn H) (IFinGroup (FinNormalizer H))} {fixedPointsFin {IFinGroup H} {restrictAction H (ActionBySubgroup {G} H)} (lagrange.Cosets-fin H G)}
+           (IsEquiv.toQEquiv $ IsEquiv.fromInjSurj {_} {_} {fixMap H}
+             (\lam {c} {c'} => \case \elim c, \elim c' \with {
+               | in~ a, in~ b => \lam q => ~-pequiv $ Quotient.equalityEquiv SubGroup.equivalence (pmap __.1 q)
+             })
+             (\lam s => \case \elim s \with {
+               | (c, fc) => \case \elim c, \elim fc \with {
+                 | in~ g, fc => inP (in~ (g, (fixed-normalizer H g).1 fc), ext idp)
+               }
+             }))
+      \where
+        \func fixMap {G : FinGroup} (H : FinSubGroup G) (c : (NormalIn H).Cosets) : \Sigma (c : H.Cosets) (IsFixed {IFinGroup H} {restrictAction H (ActionBySubgroup {G} H)} c) \elim c
+          | in~ n => (in~ n.1, (fixed-normalizer H n.1).2 n.2)
+          | ~-equiv a b r => ext (~-pequiv r)
+  }
+
+-- # Sylow I
+
+-- | Sylow I: if `|H| = p^k` and `p^n` divides `|G|` with `k <= n`, then `H` is contained in a subgroup of order `p^n`.
+\lemma exists-le-card-pow {G : FinGroup} {p : Nat} (pp : Prime p) (H : FinSubGroup G) {k n : Nat} (c : (IFinGroup H).card = pow p k) (k<=n : k <= n) (d : LDiv (pow p n) G.card)
+  : ∃ (K : FinSubGroup G) (\Pi {x : G} -> H x -> K x) ((IFinGroup K).card = pow p n)
+  => transport (\lam m => ∃ (K : FinSubGroup G) (\Pi {x : G} -> H x -> K x) ((IFinGroup K).card = pow p m)) (<=_exists k<=n)
+       (aux pp (n -' k) H c (transportInv (\lam m => LDiv (pow p m) G.card) (<=_exists k<=n) d))
+  \where {
+    \private \lemma aux {G : FinGroup} {p : Nat} (pp : Prime p) (j : Nat) (H : FinSubGroup G) {k : Nat} (c : (IFinGroup H).card = pow p k) (d : LDiv (pow p (k Nat.+ j)) G.card)
+      : ∃ (K : FinSubGroup G) (\Pi {x : G} -> H x -> K x) ((IFinGroup K).card = pow p (k Nat.+ j)) \elim j
+      | 0 => inP (H, \lam h => h, c)
+      | suc j => \case sylow-step pp H c (p|index pp c d) \with {
+        | inP (K1, s1, c1) => \have e : suc k Nat.+ j = k Nat.+ suc j => linarith
+                              \in TruncP.map (aux pp j K1 {suc k} c1 (transportInv (\lam m => LDiv (pow p m) G.card) e d)) \lam t => (t.1, \lam h => t.2 (s1 h), t.3 *> pmap (pow p) e)
+      }
+
+    \lemma pow/=0 {p k : Nat} (p>1 : 1 < p) : pow p k /= 0
+      => \lam e => <-irreflexive $ transport (0 <) e $ NatSemiring.pow>0 (NatOrder.zero<suc <∘ p>1)
+
+    \func p|index {G : FinGroup} {p k j : Nat} (pp : Prime p) {H : FinSubGroup G} (c : (IFinGroup H).card = pow p k) (d : LDiv (pow p (k Nat.+ suc j)) G.card) : LDiv p (index H)
+      => \have e : pow p (suc j) Nat.* d.inv = index H
+           => NatSemiring.cancel_*-left (pow/=0 {p} {k} (prime>1 pp)) $ inv NatSemiring.*-assoc *> pmap (Nat.* d.inv) (inv (NatSemiring.pow_+ {p} {k} {suc j})) *> d.inv-right *> inv (index.card-mul H) *> pmap (Nat.* index H) c
+         \in \new LDiv p (index H) (pow p j Nat.* d.inv) (inv NatSemiring.*-assoc *> pmap (Nat.* d.inv) NatSemiring.*-comm *> e)
+
+    -- | A finite subgroup of a finite subgroup `N`, viewed as a finite subgroup of the ambient group.
+    \func liftSub {G : FinGroup} (N : FinSubGroup G) (K : FinSubGroup (IFinGroup N)) : FinSubGroup G \cowith
+      | contains g => \Sigma (n : N g) (K (g, n))
+      | contains_ide => (N.contains_ide, K.contains_ide)
+      | contains_* p q => (N.contains_* p.1 q.1, K.contains_* p.2 q.2)
+      | contains_inverse p => (N.contains_inverse p.1, K.contains_inverse p.2)
+      | isDec g => \case N.isDec g \with {
+        | yes n => \case K.isDec (g, n) \with {
+          | yes k => yes (n, k)
+          | no k => no \lam s => k (transport (\lam n' => K (g, n')) prop-pi s.2)
+        }
+        | no n => no \lam s => n s.1
+      }
+      \where
+        \lemma card {G : FinGroup} (N : FinSubGroup G) (K : FinSubGroup (IFinGroup N)) : (IFinGroup (liftSub N K)).card = (IFinGroup K).card
+          => card_Equiv {IFinGroup (liftSub N K)} {IFinGroup K} \new QEquiv {
+            | f x => ((x.1, x.2.1), x.2.2)
+            | ret y => (y.1.1, (y.1.2, y.2))
+            | ret_f x => idp
+            | f_sec y => idp
+          }
+
+    -- | The quotient $N(H)/H$.
+    \func NQuot {G : FinGroup} (H : FinSubGroup G) : FinGroup
+      => FinQuot (NormalIn.normal H) (\lam y => H.isDec y.1)
+
+    -- | The preimage in $N(H)$ of a subgroup of $N(H)/H$.
+    \func NPreimage {G : FinGroup} (H : FinSubGroup G) (C : FinSubGroup (NQuot H)) : FinSubGroup (IFinGroup (FinNormalizer H)) \cowith
+      | contains y => C (in~ y)
+      | contains_ide => C.contains_ide
+      | contains_* => C.contains_*
+      | contains_inverse => C.contains_inverse
+      | isDec y => C.isDec (in~ y)
+      \where {
+        \lemma ker-in {G : FinGroup} (H : FinSubGroup G) (C : FinSubGroup (NQuot H)) {y : IFinGroup (FinNormalizer H)} (hy : NormalIn H y) : NPreimage H C y
+          => transport C (~-pequiv ((SubGroup.contains_~ {NormalIn.normal H}).1 hy)) C.contains_ide
+
+        \func cosetMap {G : FinGroup} (H : FinSubGroup G) (C : FinSubGroup (NQuot H))
+                       (c : (index.restrict {IFinGroup (FinNormalizer H)} {NPreimage H C} {NormalIn H} (ker-in H C)).Cosets) : IFinGroup C \elim c
+          | in~ k => (in~ k.1, k.2)
+          | ~-equiv a b r => ext (~-pequiv r)
+
+        -- | `|preimage of C| = |H| * |C|`.
+        \lemma card {G : FinGroup} (H : FinSubGroup G) (C : FinSubGroup (NQuot H))
+          : (IFinGroup (NPreimage H C)).card = (IFinGroup H).card Nat.* (IFinGroup C).card
+          => \let Hr => index.restrict {IFinGroup (FinNormalizer H)} {NPreimage H C} {NormalIn H} (ker-in H C)
+             \in inv (index.card-mul Hr) *> pmap (_ *) (\peval index Hr) *> pmap2 (Nat.*) (index.restrict-card {IFinGroup (FinNormalizer H)} {NPreimage H C} {NormalIn H} (ker-in H C) *> NormalIn.card H)
+                  (card_Equiv {lagrange.Cosets-fin Hr (IFinGroup (NPreimage H C))} {IFinGroup C} $ IsEquiv.toQEquiv $ IsEquiv.fromInjSurj {_} {_} {cosetMap H C}
+                    (\lam {c} {c'} => \case \elim c, \elim c' \with {
+                      | in~ a, in~ b => \lam q => ~-pequiv $ Quotient.equalityEquiv SubGroup.equivalence (pmap __.1 q)
+                    })
+                    (\lam s => \case \elim s \with {
+                      | (q, cq) => \case \elim q, \elim cq \with {
+                        | in~ z, cq => inP (in~ (z, cq), ext idp)
+                      }
+                    }))
+      }
+
+    -- | If `|H| = p^k` and `p` divides `[G : H]`, then `H` is contained in a subgroup of order `p^(k+1)`.
+    \lemma sylow-step {G : FinGroup} {p k : Nat} (pp : Prime p) (H : FinSubGroup G) (c : (IFinGroup H).card = pow p k) (d : LDiv p (index H))
+      : ∃ (K : FinSubGroup G) (\Pi {x : G} -> H x -> K x) ((IFinGroup K).card = pow p (suc k))
+      => \case cauchy {NQuot H} pp (mod_div $ inv (index-mod-normalizer pp H c *> pmap (Nat.mod p) (\peval index _)) *> div_mod d) \with {
+        | inP (x, ox) => inP (liftSub (FinNormalizer H) (NPreimage H (cyclicSubGroup x)),
+                             \lam hx => (FinNormalizer.<=normalizer hx, NPreimage.ker-in H (cyclicSubGroup x) hx),
+                             liftSub.card (FinNormalizer H) (NPreimage H (cyclicSubGroup x)) *> NPreimage.card H (cyclicSubGroup x) *> pmap2 (Nat.*) c (cyclicSubGroup-card x *> ox))
+      }
+  }
+
+-- | The trivial subgroup of a finite group.
+\func trivialFin {G : FinGroup} : FinSubGroup G \cowith
+  | contains x => x = 1
+  | contains_ide => idp
+  | contains_* p q => pmap2 (*) p q *> ide-left
+  | contains_inverse p => pmap inverse p *> Group.inverse_ide
+  | isDec x => decideEq x 1
+  \where
+    \lemma card {G : FinGroup} : (IFinGroup (trivialFin {G})).card = 1
+      => card_Equiv {IFinGroup (trivialFin {G})} {UnitFin} \new QEquiv {
+        | f _ => ()
+        | ret _ => (1, idp)
+        | ret_f x => ext (inv x.2)
+        | f_sec _ => idp
+      }
+
+-- | If `p^n` divides `|G|`, then `G` has a subgroup of order `p^n`.
+\lemma exists-subgroup-card-pow {G : FinGroup} {p n : Nat} (pp : Prime p) (d : LDiv (pow p n) G.card) : ∃ (K : FinSubGroup G) ((IFinGroup K).card = pow p n)
+  => TruncP.map (exists-le-card-pow pp trivialFin {0} trivialFin.card zero<=_ d) \lam t => (t.1, t.3)
+
+-- # Sylow subgroups
+
+-- | A Sylow `p`-subgroup: a subgroup of order a power of `p` whose index is not divisible by `p`.
+\type IsSylow {G : FinGroup} (p : Nat) (P : FinSubGroup G) : \Prop
+  => \Sigma (∃ (n : Nat) ((IFinGroup P).card = pow p n)) (Not (LDiv p (index P)))
+  \where {
+    -- | The order of a Sylow `p`-subgroup is `p^m`, where `m` is the multiplicity of `p` in `|G|`.
+    \lemma card {G : FinGroup} {p : Nat} (pp : Prime p) {P : FinSubGroup G} (s : IsSylow p P) : (IFinGroup P).card = pow p (nat-multiplicity p G.card)
+      => \case s.1 \with {
+        | inP (n, c) => c *> pmap (pow p) (inv $ multiplicity-unique (prime>1 pp) (index.card/=0 G)
+            (\new LDiv (pow p n) G.card (index P) (pmap (Nat.* index P) (inv c) *> index.card-mul P))
+            (\lam (t : LDiv) => s.2 (\new LDiv p (index P) t.inv (NatSemiring.cancel_*-left (exists-le-card-pow.pow/=0 {p} {n} (prime>1 pp)) $ inv NatSemiring.*-assoc *> t.inv-right *> inv (index.card-mul P) *> pmap (Nat.* index P) c))))
+      }
+
+    -- | A subgroup of order `p^m`, where `m` is the multiplicity of `p` in `|G|`, is a Sylow `p`-subgroup.
+    \lemma ofCard {G : FinGroup} {p : Nat} (pp : Prime p) {P : FinSubGroup G} (c : (IFinGroup P).card = pow p (nat-multiplicity p G.card)) : IsSylow p P
+      => (inP (_, c), \lam (d : LDiv) => (multiplicity-spec (prime>1 pp) (index.card/=0 G)).2 $
+            \new LDiv (pow p (suc (nat-multiplicity p G.card))) G.card d.inv (NatSemiring.*-assoc *> pmap (_ Nat.*) d.inv-right *> pmap (Nat.* index P) (inv c) *> index.card-mul P))
+
+    -- | Sylow subgroups are `p`-groups.
+    \lemma isPGroup {G : FinGroup} {p : Nat} (pp : Prime p) {P : FinSubGroup G} (s : IsSylow p P) : IsPGroup p (IFinGroup P)
+      => IsPGroup.ofCard pp (card pp s)
+
+    -- | Conjugates of Sylow subgroups are Sylow subgroups.
+    \lemma conj {G : FinGroup} {p : Nat} (pp : Prime p) (g : G) {P : FinSubGroup G} (s : IsSylow p P) : IsSylow p (conjSubGroup g P)
+      => ofCard pp (conjSubGroup.card g P *> card pp s)
+  }
+
+-- | Sylow subgroups exist.
+\lemma exists-sylow {G : FinGroup} {p : Nat} (pp : Prime p) : ∃ (P : FinSubGroup G) (IsSylow p P)
+  => TruncP.map (exists-subgroup-card-pow pp (multiplicity-spec (prime>1 pp) (index.card/=0 G)).1) \lam t => (t.1, IsSylow.ofCard pp t.2)
+
+-- | Every subgroup of order `p^k` is contained in a Sylow `p`-subgroup.
+\lemma exists-le-sylow {G : FinGroup} {p : Nat} (pp : Prime p) (Q : FinSubGroup G) {k : Nat} (c : (IFinGroup Q).card = pow p k)
+  : ∃ (P : FinSubGroup G) (\Pi {x : G} -> Q x -> P x) (IsSylow p P)
+  => \let s => multiplicity-spec (prime>1 pp) (index.card/=0 G)
+     \in TruncP.map (exists-le-card-pow pp Q c (\lam m<k => s.2 $ LDiv.trans (Monoid.pow-ldiv (suc_<_<= m<k)) (transport (LDiv __ G.card) c (lagrange Q))) s.1)
+                    \lam t => (t.1, t.2, IsSylow.ofCard pp t.3)
+
+-- # Sylow II
+
+-- | Every `p`-subgroup is contained in a conjugate of a Sylow `p`-subgroup.
+\lemma sylow-le-conj {G : FinGroup} {p : Nat} (pp : Prime p) {P : FinSubGroup G} (sP : IsSylow p P) (Q : FinSubGroup G) {k : Nat} (c : (IFinGroup Q).card = pow p k)
+  : ∃ (g : G) (\Pi {x : G} -> Q x -> conjSubGroup g P x)
+  => \let | X => restrictAction Q (ActionBySubgroup {G} P)
+          | F => fixedPointsFin {IFinGroup Q} {X} (lagrange.Cosets-fin P G)
+     \in \have m => card-mod-fixedPoints-pow {IFinGroup Q} {p} {k} pp c {X} (lagrange.Cosets-fin P G)
+     \in \case card/=0-inhabited {F} (\lam e => sP.2 $ mod_div $ pmap (Nat.mod p) (\peval index P) *> m *> pmap (\lam n => n Nat.mod p) e) \with {
+       | inP (cs, f) => \case \elim cs, \elim f \with {
+         | in~ g, f => inP (g, \lam {x} qx => transport P equation.group $ Quotient.equalityEquiv SubGroup.equivalence (f (inverse x, Q.contains_inverse qx)))
+       }
+     }
+
+-- | Sylow II: any two Sylow `p`-subgroups are conjugate.
+\lemma sylow-conjugate {G : FinGroup} {p : Nat} (pp : Prime p) {P Q : FinSubGroup G} (sP : IsSylow p P) (sQ : IsSylow p Q)
+  : ∃ (g : G) (Q = conjSubGroup g P)
+  => TruncP.map (sylow-le-conj pp sP Q (IsSylow.card pp sQ)) \lam t =>
+      (t.1, eq-of-card t.2 $ transport2 (<=) (inv (conjSubGroup.card t.1 P *> IsSylow.card pp sP)) (inv (IsSylow.card pp sQ)) <=-refl)
+
+-- # Sylow III
+
+-- | The set of Sylow `p`-subgroups.
+\type Sylow (p : Nat) (G : FinGroup) : \Set
+  => \Sigma (P : FinSubGroup G) (IsSylow p P)
+
+\instance SylowDec {p : Nat} {G : FinGroup} : DecSet (Sylow p G)
+  | decideEq P Q => \case KFinSet.forall-dec {G} (\lam x => P.1 x <-> Q.1 x) (\lam x => FinNormalizer.iff-dec (P.1.isDec x) (Q.1.isDec x)) \with {
+    | yes f => yes (ext (FinSubGroup.ext f))
+    | no q => no \lam e => q \lam x => transport (\lam (R : Sylow p G) => P.1 x <-> R.1 x) e <->refl
+  }
+
+-- | The action of `G` on its Sylow `p`-subgroups by conjugation.
+\func SylowAction {p : Nat} (pp : Prime p) (G : FinGroup) : GSet G \cowith
+  | E => Sylow p G
+  | ** g P => (conjSubGroup g P.1, IsSylow.conj pp g P.2)
+  | **_ide {P} => ext (conjSubGroup.ide P.1)
+  | **-assoc {m} {n} {P} => ext (conjSubGroup.comp m n P.1)
+
+-- | `g` fixes a Sylow subgroup `P` under conjugation iff it normalizes `P`.
+\lemma sylow-stab {G : FinGroup} {p : Nat} (pp : Prime p) (P : Sylow p G) (g : G) : ((SylowAction pp G).** g P = P) <-> FinNormalizer P.1 g
+  => (\lam e h => \have f x : P.1 (conjugate (inverse g) x) <-> P.1 x => transport (\lam (R : Sylow p G) => P.1 (conjugate (inverse g) x) <-> R.1 x) e <->refl
+                  \in (\lam ph => (f (conjugate g h)).1 (transportInv P.1 index-mod-normalizer.fixed-normalizer.conj-inv-left ph),
+                       \lam pc => transport P.1 index-mod-normalizer.fixed-normalizer.conj-inv-left ((f (conjugate g h)).2 pc)),
+      \lam n => ext $ FinSubGroup.ext {G} {conjSubGroup g P.1} {P.1} \lam x =>
+        (\lam c => transport P.1 Normalizer.conj-inv ((n (conjugate (inverse g) x)).1 c),
+         \lam c => (n (conjugate (inverse g) x)).2 (transportInv P.1 Normalizer.conj-inv c)))
+
+-- | The finite set of Sylow `p`-subgroups.
+\func SylowFin {G : FinGroup} {p : Nat} (pp : Prime p) : FinSet (Sylow p G)
+  => KFinSet.KFin+Dec=>Fin (\new KFinSet (Sylow p G) G.card {
+    | finSurj => \case exists-sylow {G} pp, G.finEq \with {
+      | inP (P, sP), inP e => inP (\lam i => (SylowAction pp G).** (e i) (P,sP), \lam Q => \case sylow-conjugate pp sP Q.2 \with {
+        | inP (g, q) => inP (e.ret g, ext $ pmap (conjSubGroup __ P) (e.f_sec g) *> inv q)
+      })
+    }
+  })
+
+-- | `n_p * |N(P)| = |G|`.
+\lemma card-sylow-mul {G : FinGroup} {p : Nat} (pp : Prime p) {P : FinSubGroup G} (sP : IsSylow p P)
+  : (SylowFin {G} pp).card Nat.* (IFinGroup (FinNormalizer P)).card = G.card
+  => \let x : Sylow p G => (P, sP)
+     \in pmap2 (Nat.*) (inv $ card_Equiv {orbitFin {G} {SylowAction pp G} x} {SylowFin {G} pp} \new QEquiv {
+           | f s => s.1
+           | ret Q => (Q, \case sylow-conjugate pp sP Q.2 \with {
+             | inP (g, q) => inP (g, ext (inv q))
+           })
+           | ret_f s => ext idp
+           | f_sec Q => idp
+         }) (inv $ card_Equiv {IFinGroup (FinStabilizer {G} {SylowAction pp G} x)} {IFinGroup (FinNormalizer P)} \new QEquiv {
+           | f s => (s.1, (sylow-stab pp x s.1).1 s.2)
+           | ret s => (s.1, (sylow-stab pp x s.1).2 s.2)
+           | ret_f s => ext idp
+           | f_sec s => ext idp
+         }) *> NatSemiring.*-comm *> card-orbit-stabilizer {G} {SylowAction pp G} x
+
+-- | The number of Sylow `p`-subgroups divides the index of a Sylow `p`-subgroup.
+\func card-sylow-ldiv-index {G : FinGroup} {p : Nat} (pp : Prime p) {P : FinSubGroup G} (sP : IsSylow p P) : LDiv (SylowFin {G} pp).card (index P) \cowith
+  | inv => index (NormalIn P)
+  | inv-right => NatSemiring.cancel_*-left (index.card/=0 (IFinGroup P)) $
+      inv NatSemiring.*-assoc *> pmap (Nat.* index (NormalIn P)) NatSemiring.*-comm *> NatSemiring.*-assoc
+        *> pmap (_ Nat.*) (pmap (Nat.* index (NormalIn P)) (inv (NormalIn.card P)) *> index.card-mul (NormalIn P))
+        *> card-sylow-mul pp sP *> inv (index.card-mul P)
+
+-- | The number of Sylow `p`-subgroups divides `|G|`.
+\func card-sylow-ldiv-card {G : FinGroup} {p : Nat} (pp : Prime p) : LDiv (SylowFin {G} pp).card G.card
+  => mod_div \case exists-sylow {G} pp \with {
+    | inP s => div_mod (\new LDiv (SylowFin {G} pp).card G.card _ (card-sylow-mul pp s.2))
+  }
+
+-- | A Sylow subgroup normalized by a Sylow subgroup `P` equals `P`.
+\lemma sylow-normalized-eq {G : FinGroup} {p : Nat} (pp : Prime p) {P Q : FinSubGroup G} (sP : IsSylow p P) (sQ : IsSylow p Q)
+  (n : \Pi {x : G} -> P x -> FinNormalizer Q x) : P = Q
+  => \let | M => IFinGroup (FinNormalizer Q)
+          | P' => index.restrict {G} {FinNormalizer Q} {P} n
+          | sQ' : IsSylow p (NormalIn Q) => (inP (_, NormalIn.card Q *> IsSylow.card pp sQ), \lam d => sQ.2 $
+              transportInv (LDiv p) (index.tower {G} {FinNormalizer Q} {Q} FinNormalizer.<=normalizer) (LDiv.factor-left d))
+     \in \case sylow-le-conj {M} pp sQ' P' (index.restrict-card n *> IsSylow.card pp sP) \with {
+       | inP (m, s) => eq-of-card {G} {Q} {P} (\lam {x} px => transport Q Normalizer.conj-inv ((m.2 _).1 (s {x, n px} px)))
+                         (transport2 (<=) (inv (IsSylow.card pp sQ)) (inv (IsSylow.card pp sP)) <=-refl)
+     }
+
+-- | The number of Sylow `p`-subgroups is `1` modulo `p`.
+\lemma card-sylow-mod {G : FinGroup} {p : Nat} (pp : Prime p) : (SylowFin {G} pp).card Nat.mod p = 1
+  => \case exists-sylow {G} pp \with {
+    | inP (P, sP) => card-mod-fixedPoints-pow {IFinGroup P} {p} {nat-multiplicity p G.card} pp (IsSylow.card pp sP) {restrictAction P (SylowAction pp G)} (SylowFin pp)
+        *> pmap (\lam n => n Nat.mod p) (card_Equiv {fixedPointsFin {IFinGroup P} {restrictAction P (SylowAction pp G)} (SylowFin pp)} {UnitFin} \new QEquiv {
+          | f _ => ()
+          | ret _ => ((P, sP), \lam x => (sylow-stab pp (P, sP) x.1).2 (Normalizer.<=normalizer x.2))
+          | ret_f s => ext $ ext $ sylow-normalized-eq {G} {p} pp {P} {s.1.1} sP s.1.2 \lam px => (sylow-stab pp s.1 _).1 (s.2 (_, px))
+          | f_sec _ => idp
+        })
+        *> mod_< (prime>1 pp)
+  }

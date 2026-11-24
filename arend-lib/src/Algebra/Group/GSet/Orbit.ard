@@ -1,0 +1,135 @@
+{- | Orbits, fixed points and the orbit–stabilizer theorem.
+
+     Public API:
+     * {orbitRel}, {Orbits}, {orbit} (as a sub-G-set), {IsFixed}, {fixedPoints}, {nonFixedPoints};
+     * {orbitMap} and {orbit-stabilizer}: `G / Stab x ≃ orbit x`;
+     * finite case: {FinStabilizer}, {orbitFin}, {card-orbit-stabilizer}, {OrbitsFin},
+       {card-orbitSum} (the cardinality of `X` is the sum of the cardinalities of its orbits),
+       {card-orbit-stabilizer-fiber}.
+-}
+
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.SubGSet
+\import Algebra.Group.Lagrange
+\import Algebra.Group.SubGroup
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Nat
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+
+-- | Two points are related if they lie in the same orbit.
+\func orbitRel {G : Group} (X : GSet G) : Equivalence X \cowith
+  | ~ x y => ∃ (g : G) (g ** x = y)
+  | ~-reflexive => inP (1, **_ide)
+  | ~-symmetric (inP (g,p)) => inP (inverse g, pmap (inverse g **) (inv p) *> inv **-assoc *> pmap (__ ** _) inverse-left *> **_ide)
+  | ~-transitive (inP (g,p)) (inP (h,q)) => inP (h * g, **-assoc *> pmap (h **) p *> q)
+
+-- | The set of orbits.
+\func Orbits {G : Group} (X : GSet G)
+  => Quotient (orbitRel X).~
+
+-- | The orbit of a point as a sub-G-set.
+\func orbit {G : Group} {X : GSet G} (x : X) : SubGSet G X \cowith
+  | contains y => (orbitRel X).~ x y
+  | contains_** {g} (inP (h,p)) => inP (g * h, **-assoc *> pmap (g **) p)
+
+-- | A point fixed by every element of the group.
+\func IsFixed {G : Group} {X : GSet G} (x : X) : \Prop
+  => \Pi (g : G) -> g ** x = x
+
+\func fixedPoints {G : Group} (X : GSet G) : SubGSet G X \cowith
+  | contains => IsFixed
+  | contains_** {g} {x} f h => pmap (h **) (f g) *> f h *> inv (f g)
+
+-- | Points that are not fixed by the whole group; this is also a sub-G-set.
+\func nonFixedPoints {G : Group} (X : GSet G) : SubGSet G X \cowith
+  | contains x => Not (IsFixed x)
+  | contains_** {g} {x} nf f => nf \lam h => GSet.**-cancel {X} {g} (inv **-assoc *> pmap (__ ** x) (conj-lem h) *> **-assoc *> f _)
+  \where
+    \lemma conj-lem {G : Group} {g : G} (h : G) : g * h = g * h * inverse g * g
+      => inv $ *-assoc *> pmap (_ *) inverse-left *> ide-right
+
+-- | The map `G / Stab x -> orbit x`, `g ↦ g x`.
+\func orbitMap {G : Group} {X : GSet G} (x : X) (c : (GSet.Stabilizer x).Cosets) : (orbit x).Total \elim c
+  | in~ g => (g ** x, inP (g, idp))
+  | ~-equiv a b r => ext (stab-lem r)
+  \where
+    \lemma stab-lem {G : Group} {X : GSet G} {x : X} {a b : G} (r : (inverse a * b) ** x = x) : a ** x = b ** x
+      => pmap (a **) (inv r) *> inv **-assoc *> pmap (__ ** x) (inv *-assoc *> pmap (__ * b) inverse-right *> ide-left)
+
+-- | Orbit–stabilizer theorem.
+\lemma orbit-stabilizer {G : Group} {X : GSet G} (x : X) : IsEquiv (orbitMap x)
+  => IsEquiv.fromInjSurj (\lam {c} {c'} => \case \elim c, \elim c' \with {
+    | in~ a, in~ b => \lam p => ~-pequiv $ **-assoc *> pmap (inverse a **) (inv (pmap __.1 p)) *> GSet.**-inverse-left
+  }) \lam y => \case y.2 \with {
+    | inP (g,p) => inP (in~ g, ext p)
+  }
+
+-- | The stabilizer of a point as a finite subgroup.
+\func FinStabilizer {G : FinGroup} {X : GSet G} {D : DecSet X} (x : X) : FinSubGroup G \cowith
+  | contains g => g ** x = x
+  | contains_ide => **_ide
+  | contains_* => (GSet.Stabilizer x).contains_*
+  | contains_inverse => (GSet.Stabilizer x).contains_inverse
+  | isDec g => decideEq (g ** x) x
+
+-- | The orbit of a point is finite.
+\func orbitFin {G : FinGroup} {X : GSet G} {D : DecSet X} (x : X) : FinSet (orbit x).Total (lagrange.Cosets-fin (FinStabilizer x) G).card
+  => FinSet-transport (lagrange.Cosets-fin (FinStabilizer x) G) (IsEquiv.toQEquiv (orbit-stabilizer x))
+
+-- | `|Stab x| * |orbit x| = |G|`.
+\lemma card-orbit-stabilizer {G : FinGroup} {X : GSet G} {D : DecSet X} (x : X) : (IFinGroup (FinStabilizer x)).card Nat.* (orbitFin x).card = G.card
+  => (lagrange (FinStabilizer x)).inv-right
+
+-- | For a finite group, being in the same orbit is decidable.
+\lemma orbitRel-dec {G : FinGroup} {X : GSet G} {D : DecSet X} (x y : X) : Dec ((orbitRel X).~ x y)
+  => KFinSet.search {G} (\lam g => g ** x = y) (\lam g => decideEq _ _)
+
+-- | A finite G-set has finitely many orbits.
+\func OrbitsFin {G : FinGroup} {X : GSet G} (F : FinSet X) : FinSet (Orbits X)
+  => KFinSet.KFin+Dec=>Fin (QuotientKFin {F}) {QuotientDec \lam x y => orbitRel-dec x y}
+
+-- | The points of a given orbit, as a finite set.
+\func orbitFiber {G : FinGroup} {X : GSet G} (F : FinSet X) (O : Orbits X) : FinSet (\Sigma (x : X) (in~ x = {Orbits X} O))
+  => SigmaFin F \lam x => DecFin (decideEq {OrbitsFin F} (in~ x) O)
+
+-- | A finite G-set is the disjoint union of its orbits.
+\func orbitDecomposition {G : Group} (X : GSet G) : QEquiv {X} {\Sigma (O : Orbits X) (\Sigma (x : X) (in~ x = {Orbits X} O))} \cowith
+  | f x => (in~ x, (x, idp))
+  | ret s => s.2.1
+  | ret_f x => idp
+  | f_sec s => \case \elim s \with {
+    | (O, (x, p)) => \case \elim O, \elim p \with {
+      | _, idp => idp
+    }
+  }
+
+-- | `|X| = Σ_O |O|`.
+\lemma card-orbitSum {G : FinGroup} {X : GSet G} (F : FinSet X) : F.card = AbMonoid.FinSum {_} {OrbitsFin F} (\lam O => (orbitFiber F O).card)
+  => card_Equiv {F} {SigmaFin (OrbitsFin F) (orbitFiber F)} (orbitDecomposition X)
+
+-- | `|Stab y| * |O| = |G|` for every point `y` of an orbit `O`.
+\lemma card-orbit-stabilizer-fiber {G : FinGroup} {X : GSet G} (F : FinSet X) {O : Orbits X} {y : X} (p : in~ y = O)
+  : (IFinGroup (FinStabilizer y)).card Nat.* (orbitFiber F O).card = G.card \elim p
+  | idp => pmap ((IFinGroup (FinStabilizer y)).card Nat.*) (inv $ card_Equiv {orbitFin y} {orbitFiber F (in~ y)} \new QEquiv {
+    | f s => (s.1, inv $ ~-pequiv s.2)
+    | ret s => (s.1, (orbitRel X).~-symmetric $ Quotient.equalityEquiv (orbitRel X) s.2)
+    | ret_f s => ext idp
+    | f_sec s => ext idp
+  }) *> card-orbit-stabilizer y
+
+-- | If all orbits of a finite G-set have `c` elements, then `|X| = c * #orbits`.
+\lemma card-orbits-const {G : FinGroup} {X : GSet G} (F : FinSet X) {c : Nat} (p : \Pi (O : Orbits X) -> (orbitFiber F O).card = c)
+  : F.card = (OrbitsFin F).card Nat.* c
+  => card-orbitSum F *> AbMonoid.FinSum-ext p *> NatSemiring.FinSum_replicate
