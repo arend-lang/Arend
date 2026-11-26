@@ -488,4 +488,48 @@ public class AccessModifiersTest extends TypeCheckingTestCase {
       \\func test (s : S) => s.field.foo
       """);
   }
+
+  @Test
+  public void coclauseFunctionProtected() {
+    resolveNamesModule("""
+      \\record R (g : Nat -> Nat)
+      \\func inst : R \\cowith
+        | g \\as h (n : Nat) : Nat => n
+      \\open inst
+      \\func test => h
+      """, 1);
+    assertThatErrorsAre(notInScope("h"));
+  }
+
+  @Test
+  public void coclauseFunctionQualified() {
+    typeCheckModule("""
+      \\record R (g : Nat -> Nat)
+      \\func inst : R \\cowith
+        | g \\as h (n : Nat) : Nat => n
+      \\func test : inst.h 0 = 0 => idp
+      """);
+  }
+
+  @Test
+  public void coclauseFunctionOpenExplicit() {
+    resolveNamesModule("""
+      \\record R (g : Nat -> Nat)
+      \\func inst : R \\cowith
+        | g \\as h (n : Nat) : Nat => n
+      \\open inst (h)
+      \\func test => h
+      """);
+  }
+
+  @Test
+  public void coclauseFunctionOpenUsing() {
+    resolveNamesModule("""
+      \\record R (g : Nat -> Nat)
+      \\func inst : R \\cowith
+        | g \\as h (n : Nat) : Nat => n
+      \\open inst \\using (h)
+      \\func test => h
+      """);
+  }
 }

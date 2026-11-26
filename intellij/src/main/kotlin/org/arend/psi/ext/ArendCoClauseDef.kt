@@ -28,7 +28,7 @@ class ArendCoClauseDef : ArendFunctionDefinition<ArendCoClauseDefStub>, Abstract
         get() = parentCoClause?.parent is ArendClassStat
 
     override val ownAccessModifier: AccessModifier
-        get() = stub?.accessModifier ?: if (isDefault) AccessModifier.PROTECTED else AccessModifier.PUBLIC
+        get() = stub?.accessModifier ?: AccessModifier.PROTECTED
 
     override fun getAccessModifier() = ownAccessModifier
 

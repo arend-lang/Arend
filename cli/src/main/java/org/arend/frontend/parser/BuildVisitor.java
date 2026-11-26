@@ -1233,7 +1233,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
           term = Concrete.PatternLamExpression.make(pos, parameters, patterns, BindingVariance.INVARIANT, term);
         }
       } else {
-        LocatedReferableImpl reference = makeReferable(position, isDefault ? AccessModifier.PROTECTED : AccessModifier.PUBLIC, id != null ? id.getText() : path.getLast(), visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.referable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
+        LocatedReferableImpl reference = makeReferable(position, AccessModifier.PROTECTED, id != null ? id.getText() : path.getLast(), visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.referable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
         ReturnType returnType = visitReturnExpr(returnCtx);
         Referable fieldRef = LongUnresolvedReference.make(position, path);
         Concrete.FunctionBody fBody;

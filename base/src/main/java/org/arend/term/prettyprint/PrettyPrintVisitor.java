@@ -1467,7 +1467,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   @Override
   public Void visitFunction(final Concrete.BaseFunctionDefinition def, Void ignored) {
     printIndent();
-    if (def.getData().getAccessModifier() == AccessModifier.PROTECTED) {
+    if (def.getData().getAccessModifier() == AccessModifier.PROTECTED && !def.getKind().isCoclause()) {
       myBuilder.append("\\protected ");
     }
     prettyPrintAttributes(def);
