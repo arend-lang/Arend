@@ -1,0 +1,56 @@
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Terminal
+\import Logic
+\import InfCat.Opposite
+\import Paths
+
+\class PointedHCat \extends HCatWithTerminal, HCatWithInitial {
+  | initial => terminal
+
+  \sfunc zeroMap {x y : C} : x ~> y
+    => comp (terminal-isTerminal x).center (initial-isInitial y).center
+
+  \type IsZeroMap {x y : C} (f : x ~> y) : \Prop
+    => TruncP (f = zeroMap)
+
+  -- | The zero object is a zero object.
+  \lemma terminal-isZero : IsZeroObj terminal
+    => (initial-isInitial, terminal-isTerminal)
+
+  -- | An object is a zero object if and only if it is terminal.
+  \lemma isZero-terminal {x : C} : IsZeroObj x <-> IsTerminal x
+    => (__.2, \lam xt => transportInv IsZeroObj (terminal-unique xt terminal-isTerminal) terminal-isZero)
+}
+
+-- | An object which is both initial and terminal.
+\type IsZeroObj {C : \Cat} (x : C) : \Prop
+  => \Sigma (IsInitial x) (IsTerminal x)
+  \where {
+    -- | Zero objects of {C} are zero objects of `Op C`.
+    \protected \lemma op.{u} {C : \Cat u} {x : C} : IsZeroObj x <-> IsZeroObj (Op.toOp x)
+      => (\lam z => (terminal-op.1 z.2, initial-op.1 z.1), \lam z => (initial-op.2 z.2, terminal-op.2 z.1))
+  }
+
+-- | The opposite of a pointed ∞-category is pointed.
+\func opPointed.{u} {C : \Cat u} (P : PointedHCat C) : PointedHCat (Op C) \cowith
+  | terminal => Op.toOp P.terminal
+  | terminal-isTerminal => (IsZeroObj.op.1 P.terminal-isZero).2
+  | initial-isInitial => (IsZeroObj.op.1 P.terminal-isZero).1
+
+-- | If `Op C` is pointed, then so is {C}.
+\func unopPointed.{u} {C : \Cat u} (P : PointedHCat (Op C)) : PointedHCat C
+  => \have z : IsZeroObj (IsEquiv.ret Op.toOp-equiv P.terminal)
+       => IsZeroObj.op.2 (transportInv IsZeroObj (IsEquiv.f_ret Op.toOp-equiv) P.terminal-isZero)
+     \in \new PointedHCat C {
+       | terminal => IsEquiv.ret Op.toOp-equiv P.terminal
+       | terminal-isTerminal => z.2
+       | initial-isInitial => z.1
+     }
+
+-- | The coslice under a terminal object is pointed: `(terminal, idd)` is both initial and terminal.
+\func CoslicePointed (C : HCatWithTerminal) : PointedHCat (\Sigma⁺ (y : C) (C.terminal ~> y)) \cowith
+  | terminal => (C.terminal, idd)
+  | terminal-isTerminal => sigma-terminal-hom (\lam y => y) C.terminal-isTerminal (C.terminal-isTerminal C.terminal) idd
+  | initial-isInitial => coslice-initial C.terminal

@@ -5,11 +5,14 @@
  -}
 
 \import Equiv
+\import Function.Meta
 \import InfCat.Basics
 \import InfCat.Coslice
+\import InfCat.Limit.Initial
 \import InfCat.Rezk
 \import Logic
 \import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -60,4 +63,13 @@
     \lemma cones-unique {C : \Cat} {x y : C} : isProp (\Sigma (b : \Sigma (c : CosliceCat x) (y ~> c.1)) (IsCoproduct b.1.2 b.2))
       => \lam b b' => \have r => unique (b.1.1.1, b.1.1.2, b.1.2, b.2) (b'.1.1.1, b'.1.1.2, b'.1.2, b'.2)
                       \in path \lam i => ((((r i).1, (r i).2), (r i).3), (r i).4)
+
+    -- | An identity and an arrow out of an initial object form a coproduct.
+    \lemma idd-initial {C : \Cat} {x t : C} (ti : IsInitial t) (i2 : t ~> x) : IsCoproduct (idd {C} {x}) i2
+      => \lam r => transport IsEquiv (ext \lam h => ext (inv comp_idd-left, idp)) $ inP $ later \new QEquiv {x ~> r} {\Sigma (x ~> r) (t ~> r)} {
+           | f h => (h, comp i2 h)
+           | ret s => s.1
+           | ret_f h => idp
+           | f_sec s => ext (idp, isContr=>isProp (ti r) _ _)
+         }
   }

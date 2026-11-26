@@ -14,6 +14,7 @@
  -   in the first variable of {Op.Hom} and {AlgR} through transports in the second one, the base computation needs the interchange
  -   coherence {Kcoh}, proven by Yoneda in the second variable ({K'}) from the case of the identity ({K-base}).
  -
+ -   All of this works for a fixed test object, so the dualities hold pointwise ({opSquare-pushoutAt}, {opSquare-pullbackAt}).
  -   Consequently, pushouts in {C} correspond to pullbacks in `Op C` ({spanOf-op}, {opPushouts}, {unopPullbacks}).
  -}
 
@@ -64,6 +65,14 @@
 -- | A square is a pullback square if and only if its opposite is a pushout square.
 \lemma opSquare-pullback.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsPullbackSquare phi <-> IsPushoutSquare (opSquare phi)
   => transportInv (\lam (s : DI ->⁺ DI ->⁺ Op C) => IsPullbackSquare phi <-> IsPushoutSquare s) (opSquare=opSq phi) (opSq-pullback phi)
+
+-- | A square is a pushout square with respect to {r} if and only if its opposite is a pullback square with respect to `toOp r`.
+\lemma opSquare-pushoutAt.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsPushoutAt phi r <-> IsPullbackAt (opSquare phi) (Op.toOp r)
+  => transportInv (\lam (s : DI ->⁺ DI ->⁺ Op C) => IsPushoutAt phi r <-> IsPullbackAt s (Op.toOp r)) (opSquare=opSq phi) (opSq-pushoutAt phi r)
+
+-- | A square is a pullback square with respect to {r} if and only if its opposite is a pushout square with respect to `toOp r`.
+\lemma opSquare-pullbackAt.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsPullbackAt phi r <-> IsPushoutAt (opSquare phi) (Op.toOp r)
+  => transportInv (\lam (s : DI ->⁺ DI ->⁺ Op C) => IsPullbackAt phi r <-> IsPushoutAt s (Op.toOp r)) (opSquare=opSq phi) (opSq-pullbackAt phi r)
 
 -- | Pushout squares of {C} correspond to pullback squares of `Op C`, and spans of {C} to cospans of `Op C`.
 \lemma spanOf-op.{u} {C : \Cat u}
@@ -613,8 +622,13 @@
 
   -- | A square is a pushout square if and only if {opSq} of it is a pullback square.
   \lemma opSq-char.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsPushoutSquare phi <-> IsPullbackSquare (opSq.{u} phi)
-    => (\lam po => (opPullback-char.{u} (opSq.{u} phi)).2 \lam r => (eB phi r).2 ((eq phi r).1 ((eC phi r).1 ((pushout-char phi).1 po r))),
-        \lam pb => (pushout-char phi).2 \lam r => (eC phi r).2 ((eq phi r).2 ((eB phi r).1 ((opPullback-char.{u} (opSq.{u} phi)).1 pb r))))
+    => (\lam po => (opPullback-char.{u} (opSq.{u} phi)).2 \lam r => (opPullbackAt-char.{u} (opSq.{u} phi) r).1 ((opSq-pushoutAt.{u} phi r).1 (po r)),
+        \lam pb r => (opSq-pushoutAt.{u} phi r).2 (pb (Op.toOp r)))
+
+  -- | A square is a pushout square with respect to {r} if and only if {opSq} of it is a pullback square with respect to `toOp r`.
+  \lemma opSq-pushoutAt.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsPushoutAt phi r <-> IsPullbackAt (opSq.{u} phi) (Op.toOp r)
+    => (\lam po => (opPullbackAt-char.{u} (opSq.{u} phi) r).2 ((eB phi r).2 ((eq phi r).1 ((eC phi r).1 ((pushoutAt-char phi r).1 po)))),
+        \lam pb => (pushoutAt-char phi r).2 ((eC phi r).2 ((eq phi r).2 ((eB phi r).1 ((opPullbackAt-char.{u} (opSq.{u} phi) r).1 pb)))))
     \where \private {
       \lemma eC {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
         : IsEquiv (cocone phi {r}) <-> IsEquiv (\lam (k : phi dright dright ~> r) => coconeAlg phi (cocone phi k).1 (cocone phi k).2.1 (cocone phi k).2.2)
@@ -993,8 +1007,13 @@
 
   -- | A square is a pullback square if and only if {opSq} of it is a pushout square.
   \lemma opSq-pullback.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsPullbackSquare phi <-> IsPushoutSquare (opSq.{u} phi)
-    => (\lam pb => (pushout-char (opSq.{u} phi)).2 \lam y => (eC phi y).2 ((eM phi y).2 ((eq phi y).2 ((eB phi y).1 ((reprPullback-char phi).1 pb y)))),
-        \lam po => (reprPullback-char phi).2 \lam y => (eB phi y).2 ((eq phi y).1 ((eM phi y).1 ((eC phi y).1 ((pushout-char (opSq.{u} phi)).1 po y)))))
+    => (\lam pb y => transport (\lam y => IsPushoutAt (opSq.{u} phi) y) (IsEquiv.f_ret Op.toOp-equiv) ((opSq-pullbackAt.{u} phi _).1 (pb _)),
+        \lam po r => (opSq-pullbackAt.{u} phi r).2 (po (Op.toOp r)))
+
+  -- | A square is a pullback square with respect to {r} if and only if {opSq} of it is a pushout square with respect to `toOp r`.
+  \lemma opSq-pullbackAt.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsPullbackAt phi r <-> IsPushoutAt (opSq.{u} phi) (Op.toOp r)
+    => (\lam pb => (pushoutAt-char (opSq.{u} phi) (Op.toOp r)).2 ((eC phi _).2 ((eM phi _).2 ((eq phi _).2 ((eB phi _).1 ((reprPullbackAt-char phi r).1 pb))))),
+        \lam po => (reprPullbackAt-char phi r).2 ((eB phi _).2 ((eq phi _).1 ((eM phi _).1 ((eC phi _).1 ((pushoutAt-char (opSq.{u} phi) (Op.toOp r)).1 po))))))
     \where \private {
       \lemma eC.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (y : Op C) : IsEquiv (cocone (opSq.{v} phi) {y})
           <-> IsEquiv (\lam (k : opSq.{v} phi dright dright ~> y) => coconeAlg (opSq.{v} phi) (cocone (opSq.{v} phi) k).1 (cocone (opSq.{v} phi) k).2.1 (cocone (opSq.{v} phi) k).2.2)

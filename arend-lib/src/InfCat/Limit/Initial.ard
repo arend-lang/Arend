@@ -4,8 +4,12 @@
 \import InfCat.Basics
 \import InfCat.Fibration.Covariant.LeftFib
 \import InfCat.Functor.Adjunction
+\import InfCat.Limit.BaseHCat
 \import InfCat.Rezk
+\import InfCat.Square
+\import Logic
 \import Logic.Unique
+\import Meta
 
 \type IsInitial {C : \Cat} (x : C) : \Prop
   => \Pi (y : C) -> Contr (x ~> y)
@@ -38,3 +42,20 @@
   => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv (\lam _ d => b0 ~> F d))) $
        Contr.Contr_QEquiv (symQEquiv (contr-left (init q.1))) $
          Contr.Contr_QEquiv (symQEquiv (comp-equiv.flipped {B} {_} {_} {_} {k0} {dmap F (init q.1).center})) (isProp=>PathContr _ (isContr=>isProp (Kc q.1)) _ _)
+
+-- | If the source of {f} is initial, arrows out of {f} are determined by their target components.
+\lemma initial-ev1-equiv {C : \Cat} {f g : DI ->⁺ C} (fi : IsInitial (f dleft))
+  : IsEquiv {f ~> g} {f dright ~> g dright} (dmap \lam (F : DI ->⁺ C) => F dright)
+  => IsEquiv.trans (inP $ later \new QEquiv {f ~> g} {\Sigma (b : f dright ~> g dright) (\Sigma (a : f dleft ~> g dleft) (DPath (\lam k => f k ~> g k) a b))} {
+        | f N => (dpath \lam l => N l dright, (dpath \lam l => N l dleft, dpath \lam k => dpath \lam l => N l k))
+        | ret t => dpath \lam l k => t.2.2 k l
+        | ret_f N => idp
+        | f_sec t => idp
+      })
+      (inP $ contr-right \lam b => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam a => square-equiv (dpath f) (dpath g) {b} {a})
+                                    (sigma-Contr (fi (g dleft)) \lam a => isProp=>PathContr _ (isContr=>isProp (fi (g dright))) (comp (dpath f) b) (comp a (dpath g))))
+
+-- | An ∞-category with an initial object.
+\class HCatWithInitial \extends BaseHCat
+  | initial : C
+  | initial-isInitial : IsInitial initial

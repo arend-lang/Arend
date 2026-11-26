@@ -201,6 +201,20 @@
        | f_sec _ => idp
      }) (inP $ contr-right \lam b => IsEquiv=>contrFibers e (g b))
 
+-- | If the first leg {f} of a pullback is an equivalence, then the projection to the first factor is an equivalence if and only if the second leg is.
+\lemma pullback-proj-left-equiv {A B C : \Cat} {f : A -> C} {g : B -> C} (e : IsEquiv f)
+  : IsEquiv {\Sigma (a : A) (\Sigma (b : B) (f a = g b))} {A} (\lam t => t.1) <-> IsEquiv g
+  => (\lam pe => IsEquiv.rightFactor (pullback-proj-right e) {g}
+                   (transport IsEquiv (ext \lam t => t.2.2) (IsEquiv.trans pe e)),
+      pullback-proj-left)
+
+-- | If the second leg {g} of a pullback is an equivalence, then the projection to the second factor is an equivalence if and only if the first leg is.
+\lemma pullback-proj-right-equiv {A B C : \Cat} {f : A -> C} {g : B -> C} (e : IsEquiv g)
+  : IsEquiv {\Sigma (a : A) (\Sigma (b : B) (f a = g b))} {B} (\lam t => t.2.1) <-> IsEquiv f
+  => (\lam pe => IsEquiv.rightFactor (pullback-proj-left e) {f}
+                   (transport IsEquiv (ext \lam t => inv t.2.2) (IsEquiv.trans pe e)),
+      pullback-proj-right)
+
 -- | Pullbacks of cospans related by equivalences of the legs and an embedding of the corners are equivalent.
 \lemma pullback-equiv {A B C A' B' C' : \Cat} {f : A -> C} {g : B -> C} {f' : A' -> C'} {g' : B' -> C'}
                       {eA : A -> A'} {eB : B -> B'} {eC : C -> C'} (eAe : IsEquiv eA) (eBe : IsEquiv eB)

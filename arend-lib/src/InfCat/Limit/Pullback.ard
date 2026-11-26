@@ -12,6 +12,8 @@
  -
  -   Equivalently, a square is a pullback square if arrows from every test object into its top left corner are cones over its
  -   bottom and right sides ({IsPullbackSquare.pullback-char}), where the cones are read off sections of hom-types ({IsPullbackSquare.homSq}).
+ -   For a single test object `r`, this characterizes pullback squares with respect to `r` ({IsPullbackAt}, {IsPullbackSquare.pullbackAt-char});
+ -   every square is a pullback square with respect to an initial object ({IsPullbackAt.initial}).
  -}
 
 \import Equiv
@@ -23,6 +25,7 @@
 \import InfCat.Fibration.Contravariant.CartesianMap
 \import InfCat.Interval
 \import InfCat.Limit.BaseHCat
+\import InfCat.Limit.Initial
 \import InfCat.Limit.Product
 \import InfCat.Limit.Terminal
 \import InfCat.Slice
@@ -65,6 +68,24 @@
       }
   }
 
+-- | A square is a pullback square with respect to the test object {r}: it is cartesian for the target functor at `const r`.
+\type IsPullbackAt {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : \Prop
+  => IsCartesianArrowAt (\lam w => w dright) (dpath phi) (const r)
+  \where {
+    -- | Every square is a pullback square with respect to an initial object.
+    \lemma initial {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} (ri : IsInitial r) : IsPullbackAt phi r
+      => \have ci : IsInitial {DI ->⁺ C} (const r)
+           => \lam g => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (initial-ev1-equiv {C} {const r} {g} ri))) (ri (g dright))
+         \in \lam w => contr-equiv (cotri-contr (dpath phi) w ci) (cotri-contr (dpath \lam i => phi i dright) (dmap (\lam (w : DI ->⁺ C) => w dright) w) ri)
+                                  {cotriangle-map (\lam (w : DI ->⁺ C) => w dright) (dpath phi) w}
+
+    -- | Cotriangles out of an initial object are contractible.
+    \lemma cotri-contr {E : \Cat} {e e' x : E} (u : e ~> e') (w : x ~> e') (xi : IsInitial x)
+      : Contr (\Sigma (k : x ~> e) (DPath (\lam i => k i ~> w i) idd u))
+      => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam k => square-equiv k w {u} {idd})
+           (sigma-Contr (xi e) \lam k => isProp=>PathContr _ (isContr=>isProp (xi e')) (comp k u) (comp idd w))
+  }
+
 -- | A square is a pullback square if it is cartesian for the target functor with respect to constant arrows.
 \type IsPullbackSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
   => \Pi (r : C) -> IsCartesianArrowAt (\lam w => w dright) (dpath phi) (const r)
@@ -72,6 +93,10 @@
     -- | Identity squares are pullback squares.
     \lemma isPullback-idd {C : \Cat} (u : DI ->⁺ C) : IsPullbackSquare (idd {DI ->⁺ C} {u})
       => \lam r => idd-cartesian
+
+    -- | A square whose arrows in the second direction are identities is a pullback square.
+    \lemma isPullback-const {C : \Cat} (w : DI ->⁺ C) : IsPullbackSquare (\lam i _ => w i)
+      => (product-char (\lam i _ => w i)).2 (IsProduct.idd-terminal SliceCat.terminal-contr _)
 
     -- | Pasting of pullback squares.
     \protected \lemma paste {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (fp : IsPullbackSquare f) (gp : IsPullbackSquare g)
@@ -150,17 +175,14 @@
     \func boundary {Phi :⁺ DI ->⁺ DI ->⁺ \Cat} (L :⁺ \Pi (i j :⁺ DI) -> Phi i j) : Boundary Phi
       => (L dright dleft, L dleft dright, L dright dright, dpath (L dright), dpath \lam i => L i dright)
 
-    {- | A square is a pullback square if and only if, for every test object `r`, arrows into the top left corner are
-     -   cones over the bottom and right sides: the restriction of {homSq} to these sides is an equivalence.
-     -}
-    \lemma pullback-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
-      : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k)))
-      => \let | ctm (r : C) (w : const r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
-              | eqr (r : C) : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
-                              <-> IsEquiv (totalEquiv.total (ctm r))
+    -- | A square is a pullback square with respect to {r} if and only if arrows from {r} into its top left corner are cones.
+    \lemma pullbackAt-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+      : IsPullbackAt phi r <-> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k))
+      => \let | ctm (w : const r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
+              | eqr : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
+                      <-> IsEquiv (totalEquiv.total ctm)
                 => IsEquiv.parallelEquiv (sec-equiv phi r) (inP (cone-equiv phi r)) (\lam k => idp)
-         \in (\lam pb r => (eqr r).2 ((totalEquiv (ctm r)).1 (pb r)),
-             \lam ce r w => (totalEquiv (ctm r)).2 ((eqr r).1 (ce r)) w)
+         \in (\lam pb => eqr.2 ((totalEquiv ctm).1 pb), \lam ce w => (totalEquiv ctm).2 (eqr.1 ce) w)
       \where \private {
         -- | The factorization of {homSq} through the square.
         \func sec {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) (k : r ~> phi dleft dleft)
@@ -184,6 +206,13 @@
           | ret_f _ => idp
           | f_sec _ => idp
       }
+
+    {- | A square is a pullback square if and only if, for every test object `r`, arrows into the top left corner are
+     -   cones over the bottom and right sides: the restriction of {homSq} to these sides is an equivalence.
+     -}
+    \lemma pullback-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+      : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k)))
+      => (\lam pb r => (pullbackAt-char phi r).1 (pb r), \lam ce r => (pullbackAt-char phi r).2 (ce r))
 
     -- | A square in {C} as a square in the slice over its bottom right corner.
     \func sliceSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (l j :⁺ DI) : SliceCat (phi dright dright)

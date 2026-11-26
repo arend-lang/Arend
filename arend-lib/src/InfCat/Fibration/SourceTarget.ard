@@ -1,0 +1,70 @@
+{- | The source and target functors of an arrow category.
+ -
+ -   Every arrow {X} has a canonical arrow {toConst} into the constant arrow on its target.
+ -   It is cartesian for the source functor at every test object ({toConst-cartesian}):
+ -   arrows into constant arrows on `r` are functors into the slice over `r`, and {toConst} becomes an arrow
+ -   into the terminal object `(r, idd)` of the slice, so arrows into it are determined by their source components.
+ -   Dually, the canonical arrow {fromConst} from the constant arrow on the source is cocartesian for the target functor
+ -   ({fromConst-cocartesian}): arrows out of constant arrows on `a` are functors into the coslice under `a`.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Coslice
+\import InfCat.Fibration.Contravariant.CartesianMap
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.TestObject
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Terminal
+\import InfCat.Slice
+\import Logic
+
+-- | The arrow from {X} to the constant arrow on its target.
+\func toConst {C : \Cat} (X :⁺ DI ->⁺ C) : X ~> {DI ->⁺ C} const (X dright)
+  => dpath \lam m j => conn-left (dpath X) m j
+
+-- | The arrow from the constant arrow on the source of {X} to {X}.
+\func fromConst {C : \Cat} (X :⁺ DI ->⁺ C) : const (X dleft) ~> {DI ->⁺ C} X
+  => dpath \lam m j => conn-right (dpath X) m j
+
+-- | {toConst} is cartesian for the source functor: it is an arrow into the terminal object of the slice over the target.
+\lemma toConst-cartesian {C : \Cat} (X z : DI ->⁺ C) : IsCartesianArrowAt (\lam (F : DI ->⁺ C) => F dleft) (toConst X) z
+  => (cartesianArrowAt-slice {DI ->⁺ C} {C} {\lam F => F dleft} {z} {X} {const (X dright)} {toConst X}).2 \lam k =>
+       \let | r => X dright
+            | zs : DI ->⁺ SliceCat r => \lam j => (z j, dpath \lam n => k n j)
+            | Xs : DI ->⁺ SliceCat r => \lam j => (X j, dpath \lam n => toConst X n j)
+            | tr (s : \Sigma (h : z ~> X) (DPath (\lam i => h i ~> const r) k (toConst X))) : zs ~> Xs
+              => dpath \lam m j => (s.1 m j, dpath \lam n => s.2 m n j)
+            | tr-equiv : IsEquiv tr
+              => inP \new QEquiv {
+                   | ret N => (dpath \lam m j => (N m j).1, dpath \lam i => dpath \lam n j => (N i j).2 n)
+                   | ret_f s => idp
+                   | f_sec N => idp
+                 }
+       \in IsEquiv.trans tr-equiv (IsEquiv.trans (terminal-ev0-equiv {SliceCat r} {zs} {Xs} SliceCat.terminal-contr)
+                                                (inP (dpath-sigma-equiv (\lam _ (c : C) => c ~> r))))
+
+-- | {fromConst} is cocartesian for the target functor: it is an arrow out of the initial object of the coslice under the source.
+\lemma fromConst-cocartesian {C : \Cat} (z X : DI ->⁺ C) : IsCocartesianArrowAt (\lam (F : DI ->⁺ C) => F dright) (fromConst z) X
+  => \lam w =>
+       \let | a => z dleft
+            | zs : DI ->⁺ CosliceCat a => \lam j => (z j, dpath \lam n => fromConst z n j)
+            | Xs : DI ->⁺ CosliceCat a => \lam j => (X j, dpath \lam n => w n j)
+            | flipE : QEquiv {\Sigma (v : z ~> X) (DPath (\lam i => fromConst z i ~> w i) idd v)} {\Sigma (v : z ~> X) (DPath (\lam i => const a ~> v i) (fromConst z) w)}
+              => sigma-right \lam v => flipQEquiv {DI ->⁺ C} {const a} {z} {const a} {X} {fromConst z} {v} {idd} {w}
+            | tr (s : \Sigma (v : z ~> X) (DPath (\lam i => const a ~> v i) (fromConst z) w)) : zs ~> Xs
+              => dpath \lam m j => (s.1 m j, dpath \lam n => s.2 m n j)
+            | tr-equiv : IsEquiv tr
+              => inP \new QEquiv {
+                   | ret N => (dpath \lam m j => (N m j).1, dpath \lam i => dpath \lam n j => (N i j).2 n)
+                   | ret_f s => idp
+                   | f_sec N => idp
+                 }
+            | flipA : QEquiv {\Sigma (g : z dright ~> X dright) (DPath (\lam i => a ~> g i) (dpath \lam n => fromConst z n dright) (dpath \lam n => w n dright))}
+                             {\Sigma (g : z dright ~> X dright) (DPath (\lam i => fromConst z i dright ~> w i dright) idd g)}
+              => sigma-right \lam g => flipQEquiv {C} {a} {a} {z dright} {X dright} {idd} {dpath \lam n => w n dright} {dpath \lam n => fromConst z n dright} {g}
+       \in IsEquiv.trans (inP flipE) $ IsEquiv.trans tr-equiv $
+             IsEquiv.trans (initial-ev1-equiv {CosliceCat a} {zs} {Xs} CosliceCat.initial-contr) $
+               IsEquiv.trans (inP (dpath-sigma-equiv (\lam _ (c : C) => a ~> c))) (inP flipA)

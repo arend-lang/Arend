@@ -2,10 +2,11 @@
  -
  -   Arrows from `toOp r` into an object `y` of `Op C` are elements of `Op.Hom y r` ({opYoneda}), so a square {psi} of `Op C`
  -   is a pullback square if and only if, for every `r`, the square of types `Op.Hom (psi i j) r` has its sections determined
- -   by their values on the bottom and right sides ({opPullback-char}).
+ -   by their values on the bottom and right sides ({opPullback-char}); for a single `r`, this characterizes pullback squares
+ -   with respect to `toOp r` ({opPullbackAt-char}).
  -   Sections of a square of types are given by transport of their values at the top left corner ({trSec}).
  -   Dually, a square {phi} of {C} is a pullback square if and only if, for every `y : Op C`, the square of types `Op.Hom y (phi i j)`
- -   has this property ({reprPullback-char}).
+ -   has this property ({reprPullback-char}), and pointwise for `y = toOp r` ({reprPullbackAt-char}).
  -}
 
 \import Equiv
@@ -83,44 +84,54 @@
  -}
 \lemma opPullback-char.{u} {C : \Cat u} (psi : DI ->⁺ DI ->⁺ Op C)
   : IsPullbackSquare psi <-> (\Pi (r : C) -> IsEquiv (\lam (s : Op.Hom (psi dleft dleft) r) => boundary {\lam i j => Op.Hom (psi i j) r} (trSec s)))
+  => (\lam pb r => (opPullbackAt-char psi r).1 (pb (Op.toOp r)),
+      \lam h x => transport (IsPullbackAt psi) (IsEquiv.f_ret Op.toOp-equiv) ((opPullbackAt-char psi _).2 (h _)))
+
+{- | A square {psi} of `Op C` is a pullback square with respect to `toOp r` if and only if
+ -   sections of the square of types `Op.Hom (psi i j) r` are determined by their values on the bottom and right sides.
+ -}
+\lemma opPullbackAt-char.{u} {C : \Cat u} (psi : DI ->⁺ DI ->⁺ Op C) (r : C)
+  : IsPullbackAt psi (Op.toOp r) <-> IsEquiv (\lam (s : Op.Hom (psi dleft dleft) r) => boundary {\lam i j => Op.Hom (psi i j) r} (trSec s))
   => \have
-       | e (r : C) : IsEquiv (\lam (k : Op.toOp r ~> psi dleft dleft) => boundary {\lam i j => Op.toOp r ~> psi i j} (homSq psi k))
+       | e : IsEquiv (\lam (k : Op.toOp r ~> psi dleft dleft) => boundary {\lam i j => Op.toOp r ~> psi i j} (homSq psi k))
                      <-> IsEquiv (\lam (s : Op.Hom (psi dleft dleft) r) => boundary {\lam i j => Op.Hom (psi i j) r} (trSec s))
          => IsEquiv.parallelEquiv opYoneda-equiv
               (boundary-map-equiv {\lam i j => Op.toOp r ~> psi i j} {\lam i j => Op.Hom (psi i j) r} (\lam i j a => opYoneda a) (\lam (i j : DI) => opYoneda-equiv {C} {r} {psi i j})
                  (leftFib-pullback (\lam j => psi dright j) (hom-leftFib (Op.toOp r))) (leftFib-pullback (\lam i => psi i dright) (hom-leftFib (Op.toOp r)))
                  (leftFib-pullback (\lam j => Op.Hom (psi dright j) r) universe-leftFib) (leftFib-pullback (\lam i => Op.Hom (psi i dright) r) universe-leftFib))
               (\lam k => pmap (boundary {\lam i j => Op.Hom (psi i j) r}) (sec-path psi k))
-       | pb-toOp (h : \Pi (r : C) -> IsEquiv (\lam (k : Op.toOp r ~> psi dleft dleft) => boundary {\lam i j => Op.toOp r ~> psi i j} (homSq psi k))) (x : Op C)
-         : IsEquiv (\lam (k : x ~> psi dleft dleft) => boundary {\lam i j => x ~> psi i j} (homSq psi k))
-         => transport (\lam y => IsEquiv (\lam (k : y ~> psi dleft dleft) => boundary {\lam i j => y ~> psi i j} (homSq psi k))) (IsEquiv.f_ret Op.toOp-equiv) (h _)
-     \in (\lam pb r => (e r).1 ((pullback-char psi).1 pb (Op.toOp r)),
-          \lam h => (pullback-char psi).2 (pb-toOp \lam r => (e r).2 (h r)))
+     \in (\lam pb => e.1 ((pullbackAt-char psi (Op.toOp r)).1 pb), \lam h => (pullbackAt-char psi (Op.toOp r)).2 (e.2 h))
   \where {
     -- | {opYoneda} sends {homSq} to {trSec}.
     \sfunc sec-path.{v} {C : \Cat v} (psi : DI ->⁺ DI ->⁺ Op C) {r : C} (k : Op.toOp r ~> psi dleft dleft)
       : (\lam i j => opYoneda (homSq psi k i j)) = {\Pi (i j :⁺ DI) -> Op.Hom (psi i j) r} trSec {\lam i j => Op.Hom (psi i j) r} (opYoneda k)
       => IsEquiv.isInj (square-sections-ev (\lam i j => Op.Hom (psi i j) r)) (pmap opYoneda comp_idd-right *> inv ~>_->_idd)
   }
+
 {- | A square {phi} of {C} is a pullback square if and only if, for every `y : Op C`,
  -   sections of the square of types `Op.Hom y (phi i j)` are determined by their values on the bottom and right sides.
  -}
 \lemma reprPullback-char.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
   : IsPullbackSquare phi <-> (\Pi (y : Op C) -> IsEquiv (\lam (s : Op.Hom y (phi dleft dleft)) => boundary {\lam i j => Op.Hom y (phi i j)} (trSec s)))
+  => (\lam pb y => transport (\lam y => IsEquiv (\lam (s : Op.Hom y (phi dleft dleft)) => boundary {\lam i j => Op.Hom y (phi i j)} (trSec s)))
+                             (IsEquiv.f_ret Op.toOp-equiv) ((reprPullbackAt-char phi _).1 (pb _)),
+      \lam h r => (reprPullbackAt-char phi r).2 (h (Op.toOp r)))
+
+{- | A square {phi} of {C} is a pullback square with respect to {r} if and only if
+ -   sections of the square of types `Op.Hom (toOp r) (phi i j)` are determined by their values on the bottom and right sides.
+ -}
+\lemma reprPullbackAt-char.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+  : IsPullbackAt phi r <-> IsEquiv (\lam (s : Op.Hom (Op.toOp r) (phi dleft dleft)) => boundary {\lam i j => Op.Hom (Op.toOp r) (phi i j)} (trSec s))
   => \have
-       | e (r : C) : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
-                     <-> IsEquiv (\lam (s : Op.Hom (Op.toOp r) (phi dleft dleft)) => boundary {\lam i j => Op.Hom (Op.toOp r) (phi i j)} (trSec s))
+       | e : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
+             <-> IsEquiv (\lam (s : Op.Hom (Op.toOp r) (phi dleft dleft)) => boundary {\lam i j => Op.Hom (Op.toOp r) (phi i j)} (trSec s))
          => IsEquiv.parallelEquiv (inP (symQEquiv Straight.equiv))
               (boundary-map-equiv {\lam i j => r ~> phi i j} {\lam i j => Op.Hom (Op.toOp r) (phi i j)} (\lam i j a => Straight.toStraight a)
                  (\lam (i j : DI) => inP (symQEquiv Straight.equiv))
                  (leftFib-pullback (\lam j => phi dright j) (hom-leftFib r)) (leftFib-pullback (\lam i => phi i dright) (hom-leftFib r))
                  (leftFib-pullback (\lam j => Op.Hom (Op.toOp r) (phi dright j)) universe-leftFib) (leftFib-pullback (\lam i => Op.Hom (Op.toOp r) (phi i dright)) universe-leftFib))
               (\lam k => pmap (boundary {\lam i j => Op.Hom (Op.toOp r) (phi i j)}) (sec-path phi k))
-       | ext-toOp (h : \Pi (r : C) -> IsEquiv (\lam (s : Op.Hom (Op.toOp r) (phi dleft dleft)) => boundary {\lam i j => Op.Hom (Op.toOp r) (phi i j)} (trSec s))) (y : Op C)
-         : IsEquiv (\lam (s : Op.Hom y (phi dleft dleft)) => boundary {\lam i j => Op.Hom y (phi i j)} (trSec s))
-         => transport (\lam y => IsEquiv (\lam (s : Op.Hom y (phi dleft dleft)) => boundary {\lam i j => Op.Hom y (phi i j)} (trSec s))) (IsEquiv.f_ret Op.toOp-equiv) (h _)
-     \in (\lam pb => ext-toOp \lam r => (e r).1 ((pullback-char phi).1 pb r),
-          \lam h => (pullback-char phi).2 \lam r => (e r).2 (h (Op.toOp r)))
+     \in (\lam pb => e.1 ((pullbackAt-char phi r).1 pb), \lam h => (pullbackAt-char phi r).2 (e.2 h))
   \where {
     -- | {Straight.toStraight} sends {homSq} to {trSec}.
     \sfunc sec-path.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) {r : C} (k : r ~> phi dleft dleft)

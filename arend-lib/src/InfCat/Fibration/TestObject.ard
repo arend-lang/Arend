@@ -1,0 +1,442 @@
+{- | Changing the test object of (co)cartesian arrows.
+ -
+ -   An arrow `u : e ~> e'` is {p}-cocartesian at a test object `x` if factorizations through `u` of arrows into `x`
+ -   are factorizations in the base. If the base hom-types out of `p e'` into `p x` are invisible to `u`,
+ -   this means that precomposition with `u` is an equivalence ({cocartesianArrowAt-equiv-char}).
+ -
+ -   Postcomposition with a {p}-cartesian arrow `c : x' ~> x` is an equivalence on the fibers of {p}
+ -   ({cartesianArrowAt-fiber}). Hence cocartesianness at `x'` is cocartesianness at `x` if `c` is cartesian
+ -   at the endpoints of `u` and postcomposition with `dmap p c` is an equivalence on arrows out of `p e'`
+ -   ({cocartesianArrowAt-transfer}): squares from `u` into `x'` are squares into `x` together with
+ -   a lift of their base side along `c`.
+ -   Dually, cartesianness can be transferred along cocartesian arrows ({cocartesianArrowAt-fiber}, {cartesianArrowAt-transfer}).
+ -
+ -   Cartesian arrows also classify factorizations given by squares into a fixed target, that is, arrows of slices
+ -   ({cartesianArrowAt-slice}); this is the dual of {cocartesianArrow-square}.
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Fibration
+\import InfCat.Basics
+\import InfCat.Fibration.Contravariant.CartesianMap
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Square
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+
+-- | If precomposition with `dmap p u` is an equivalence on base arrows into `p x`, then {u} is cocartesian at {x} if and only if precomposition with {u} is an equivalence.
+\lemma cocartesianArrowAt-equiv-char {E A : \Cat} {p : E ->⁺ A} {e e' x : E} {u : e ~> e'}
+                                     (be : IsEquiv (\lam (g : p e' ~> p x) => comp (dmap p u) g))
+  : IsCocartesianArrowAt p u x <-> IsEquiv (\lam (v : e' ~> x) => comp u v)
+  => \have | dom (w : e ~> x) : QEquiv {\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> w i) idd v)} {Fib (\lam (v : e' ~> x) => comp u v) w}
+             => sigma-right \lam v => comp-equiv {E} {e} {e'} {x} {u} {v} {w}
+           | cod (w : e ~> x) : Contr (\Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> p (w i)) idd g))
+             => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam g => comp-equiv {A} {p e} {p e'} {p x} {dmap p u} {g} {dmap p w})) (IsEquiv=>contrFibers be (dmap p w))
+     \in (\lam uc => contrFibers=>IsEquiv \lam w => Contr.Contr_QEquiv (dom w) (Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (uc w))) (cod w)),
+         \lam ue w => contr-equiv (Contr.Contr_QEquiv (symQEquiv (dom w)) (IsEquiv=>contrFibers ue w)) (cod w))
+
+-- | If postcomposition with `dmap p c` is an equivalence on base arrows out of `p z`, then {c} is cartesian at {z} if and only if postcomposition with {c} is an equivalence.
+\lemma cartesianArrowAt-equiv-char {E A : \Cat} {p : E ->⁺ A} {z x' x : E} {c : x' ~> x}
+                                   (be : IsEquiv (\lam (g : p z ~> p x') => comp g (dmap p c)))
+  : IsCartesianArrowAt p c z <-> IsEquiv (\lam (h : z ~> x') => comp h c)
+  => \have | dom (k : z ~> x) : QEquiv {\Sigma (h : z ~> x') (DPath (\lam i => h i ~> k i) idd c)} {Fib (\lam (h : z ~> x') => comp h c) k}
+             => sigma-right \lam h => comp-equiv {E} {z} {x'} {x} {h} {c} {k}
+           | cod (k : z ~> x) : Contr (\Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> p (k i)) idd (dmap p c)))
+             => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam g => comp-equiv {A} {p z} {p x'} {p x} {g} {dmap p c} {dmap p k})) (IsEquiv=>contrFibers be (dmap p k))
+     \in (\lam cc => contrFibers=>IsEquiv \lam k => Contr.Contr_QEquiv (dom k) (Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (cc k))) (cod k)),
+         \lam ce k => contr-equiv (Contr.Contr_QEquiv (symQEquiv (dom k)) (IsEquiv=>contrFibers ce k)) (cod k))
+
+{- | Postcomposition with a cartesian arrow {c} is an equivalence on the fibers of {p}:
+ -   arrows over `g` are arrows over `comp g (dmap p c)`.
+ -}
+\lemma cartesianArrowAt-fiber {E A : \Cat} {p : E ->⁺ A} {z x' x : E} {c : x' ~> x} (cc : IsCartesianArrowAt p c z) (g : p z ~> p x')
+  : IsEquiv {\Sigma (h : z ~> x') (dmap p h = g)} {\Sigma (k : z ~> x) (dmap p k = comp g (dmap p c))}
+            (\lam t => (comp t.1 c, dmap_comp p {z} {x'} {x} {t.1} {c} *> pmap (comp __ (dmap p c)) t.2))
+  => (totalEquiv (\lam (g : p z ~> p x') (t : \Sigma (h : z ~> x') (dmap p h = g)) => ((comp t.1 c, dmap_comp p {z} {x'} {x} {t.1} {c} *> pmap (comp __ (dmap p c)) t.2)
+                                                                                    : \Sigma (k : z ~> x) (dmap p k = comp g (dmap p c))))).2
+       (transport IsEquiv (ext \lam t => \case \elim t \with { | (g, (h, idp)) => idp })
+         (IsEquiv.trans (proj-equiv {E} {A} {p} {z} {x'}) (IsEquiv.trans (gap-equiv cc) (inP (swap {E} {A} {p} {z} {x'} {x} {c})))))
+       g
+  \where {
+    \func Gap {E A : \Cat} {p : E ->⁺ A} {z x' x : E} (c : x' ~> x)
+      => \Sigma (k : z ~> x) (\Sigma (g : p z ~> p x') (dmap p k = comp g (dmap p c)))
+
+    -- | The comparison map of {c} at {z}.
+    \func gap {E A : \Cat} {p : E ->⁺ A} {z x' x : E} (c : x' ~> x) (h : z ~> x') : Gap {E} {A} {p} {z} c
+      => (comp h c, (dmap p h, dmap_comp p {z} {x'} {x} {h} {c}))
+
+    -- | The comparison map is an equivalence if {c} is cartesian at {z}: it is {cotriangle-map} on the canonical fillers of composites.
+    \lemma gap-equiv {E A : \Cat} {p : E ->⁺ A} {z x' x : E} {c : x' ~> x} (cc : IsCartesianArrowAt p c z) : IsEquiv (gap {E} {A} {p} {z} c)
+      => \let | sec (h : z ~> x') : \Sigma (k : z ~> x) (\Sigma (h : z ~> x') (DPath (\lam i => h i ~> k i) idd c))
+                => (comp h c, (h, dpath \lam i => dpath (fill2 h c i)))
+              | sec-equiv : IsEquiv sec
+                => IsEquiv.leftFactor {_} {_} {_} {sec} {\lam s => s.2.1}
+                     (IsEquiv.trans (inP \new QEquiv {\Sigma (k : z ~> x) (\Sigma (h : z ~> x') (DPath (\lam i => h i ~> k i) idd c))}
+                                                    {\Sigma (h : z ~> x') (\Sigma (k : z ~> x) (DPath (\lam i => h i ~> k i) idd c))} {
+                                       | f s => (s.2.1, (s.1, s.2.2))
+                                       | ret s => (s.2.1, (s.1, s.2.2))
+                                       | ret_f s => idp
+                                       | f_sec s => idp
+                                     })
+                                    (inP (contr-right \lam h => segal-contr h c)))
+                     (inP idEquiv)
+              | cod-equiv : IsEquiv {\Sigma (k : z ~> x) (\Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> p (k i)) idd (dmap p c)))}
+                                    {Gap {E} {A} {p} {z} c}
+                                    (\lam s => (s.1, (s.2.1, inv (comp-char s.2.2))))
+                => IsSigma-right {z ~> x} {\lam k => \Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> p (k i)) idd (dmap p c))}
+                                 {\lam k => \Sigma (g : p z ~> p x') (dmap p k = comp g (dmap p c))}
+                                 (\lam k s => (s.1, inv (comp-char s.2))) \lam k =>
+                     IsSigma-right {p z ~> p x'} {\lam g => DPath (\lam i => g i ~> p (k i)) idd (dmap p c)} {\lam g => dmap p k = comp g (dmap p c)}
+                                   (\lam g s => inv (comp-char s)) \lam g =>
+                       IsEquiv.trans (inP (comp-equiv {A} {p z} {p x'} {p x} {g} {dmap p c} {dmap p k})) (inP inv-equiv)
+         \in transport IsEquiv (ext \lam h => pmap (\lam (q : dmap p (comp h c) = comp (dmap p h) (dmap p c)) => ((comp h c, (dmap p h, q)) : Gap {E} {A} {p} {z} c))
+                                                   (inv (\peval dmap_comp p {z} {x'} {x} {h} {c})))
+               (IsEquiv.trans sec-equiv (IsEquiv.trans ((totalEquiv (cotriangle-map p c)).1 cc) cod-equiv))
+
+    -- | Arrows into `x'` as their fibers over arrows in the base.
+    \lemma proj-equiv {E A : \Cat} {p : E ->⁺ A} {z x' : E}
+      : IsEquiv {\Sigma (g : p z ~> p x') (\Sigma (h : z ~> x') (dmap p h = g))} {z ~> x'} (\lam s => s.2.1)
+      => IsEquiv.trans (inP \new QEquiv {\Sigma (g : p z ~> p x') (\Sigma (h : z ~> x') (dmap p h = g))}
+                                        {\Sigma (h : z ~> x') (\Sigma (g : p z ~> p x') (dmap p h = g))} {
+                         | f s => (s.2.1, (s.1, s.2.2))
+                         | ret s => (s.2.1, (s.1, s.2.2))
+                         | ret_f s => idp
+                         | f_sec s => idp
+                       })
+                       (inP (contr-right \lam h => lsigma (dmap p h)))
+
+    \func swap {E A : \Cat} {p : E ->⁺ A} {z x' x : E} {c : x' ~> x}
+      : QEquiv {Gap {E} {A} {p} {z} c} {\Sigma (g : p z ~> p x') (\Sigma (k : z ~> x) (dmap p k = comp g (dmap p c)))} \cowith
+      | f s => (s.2.1, (s.1, s.2.2))
+      | ret s => (s.2.1, (s.1, s.2.2))
+      | ret_f s => idp
+      | f_sec s => idp
+  }
+
+{- | Precomposition with a cocartesian arrow {u} is an equivalence on the fibers of {p}:
+ -   arrows over `g` are arrows over `comp (dmap p u) g`.
+ -}
+\lemma cocartesianArrowAt-fiber {E A : \Cat} {p : E ->⁺ A} {e e' x : E} {u : e ~> e'} (uc : IsCocartesianArrowAt p u x) (g : p e' ~> p x)
+  : IsEquiv {\Sigma (h : e' ~> x) (dmap p h = g)} {\Sigma (k : e ~> x) (dmap p k = comp (dmap p u) g)}
+            (\lam t => (comp u t.1, dmap_comp p {e} {e'} {x} {u} {t.1} *> pmap (comp (dmap p u) __) t.2))
+  => (totalEquiv (\lam (g : p e' ~> p x) (t : \Sigma (h : e' ~> x) (dmap p h = g)) => ((comp u t.1, dmap_comp p {e} {e'} {x} {u} {t.1} *> pmap (comp (dmap p u) __) t.2)
+                                                                                    : \Sigma (k : e ~> x) (dmap p k = comp (dmap p u) g)))).2
+       (transport IsEquiv (ext \lam t => \case \elim t \with { | (g, (h, idp)) => idp })
+         (IsEquiv.trans (cartesianArrowAt-fiber.proj-equiv {E} {A} {p} {e'} {x}) (IsEquiv.trans (gap-equiv uc) (inP (swap {E} {A} {p} {e} {e'} {x} {u})))))
+       g
+  \where \private {
+    \func Gap {E A : \Cat} {p : E ->⁺ A} {e e' x : E} (u : e ~> e')
+      => \Sigma (k : e ~> x) (\Sigma (g : p e' ~> p x) (dmap p k = comp (dmap p u) g))
+
+    -- | The comparison map of {u} at {x}.
+    \func gap {E A : \Cat} {p : E ->⁺ A} {e e' x : E} (u : e ~> e') (h : e' ~> x) : Gap {E} {A} {p} {e} {e'} {x} u
+      => (comp u h, (dmap p h, dmap_comp p {e} {e'} {x} {u} {h}))
+
+    -- | The comparison map is an equivalence if {u} is cocartesian at {x}: it is {triangle-map} on the canonical fillers of composites.
+    \lemma gap-equiv {E A : \Cat} {p : E ->⁺ A} {e e' x : E} {u : e ~> e'} (uc : IsCocartesianArrowAt p u x) : IsEquiv (gap {E} {A} {p} {e} {e'} {x} u)
+      => \let | sec (h : e' ~> x) : \Sigma (w : e ~> x) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> w i) idd v))
+                => (comp u h, (h, dpath \lam i => dpath (fill2 u h i)))
+              | sec-equiv : IsEquiv sec
+                => IsEquiv.leftFactor {_} {_} {_} {sec} {\lam s => s.2.1}
+                     (IsEquiv.trans (inP \new QEquiv {\Sigma (w : e ~> x) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> w i) idd v))}
+                                                    {\Sigma (v : e' ~> x) (\Sigma (w : e ~> x) (DPath (\lam i => u i ~> w i) idd v))} {
+                                       | f s => (s.2.1, (s.1, s.2.2))
+                                       | ret s => (s.2.1, (s.1, s.2.2))
+                                       | ret_f s => idp
+                                       | f_sec s => idp
+                                     })
+                                    (inP (contr-right \lam v => segal-contr u v)))
+                     (inP idEquiv)
+              | cod-equiv : IsEquiv {\Sigma (w : e ~> x) (\Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> p (w i)) idd g))}
+                                    {Gap {E} {A} {p} {e} {e'} {x} u}
+                                    (\lam s => (s.1, (s.2.1, inv (comp-char s.2.2))))
+                => IsSigma-right {e ~> x} {\lam w => \Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> p (w i)) idd g)}
+                                 {\lam w => \Sigma (g : p e' ~> p x) (dmap p w = comp (dmap p u) g)}
+                                 (\lam w s => (s.1, inv (comp-char s.2))) \lam w =>
+                     IsSigma-right {p e' ~> p x} {\lam g => DPath (\lam i => p (u i) ~> p (w i)) idd g} {\lam g => dmap p w = comp (dmap p u) g}
+                                   (\lam g s => inv (comp-char s)) \lam g =>
+                       IsEquiv.trans (inP (comp-equiv {A} {p e} {p e'} {p x} {dmap p u} {g} {dmap p w})) (inP inv-equiv)
+         \in transport IsEquiv (ext \lam h => pmap (\lam (q : dmap p (comp u h) = comp (dmap p u) (dmap p h)) => ((comp u h, (dmap p h, q)) : Gap {E} {A} {p} {e} {e'} {x} u))
+                                                   (inv (\peval dmap_comp p {e} {e'} {x} {u} {h})))
+               (IsEquiv.trans sec-equiv (IsEquiv.trans ((totalEquiv (triangle-map p u)).1 uc) cod-equiv))
+
+    \func swap {E A : \Cat} {p : E ->⁺ A} {e e' x : E} {u : e ~> e'}
+      : QEquiv {Gap {E} {A} {p} {e} {e'} {x} u} {\Sigma (g : p e' ~> p x) (\Sigma (k : e ~> x) (dmap p k = comp (dmap p u) g))} \cowith
+      | f s => (s.2.1, (s.1, s.2.2))
+      | ret s => (s.2.1, (s.1, s.2.2))
+      | ret_f s => idp
+      | f_sec s => idp
+  }
+
+{- | Cocartesianness can be transferred along a cartesian arrow {c} of test objects:
+ -   if {c} is cartesian at the endpoints of {u} and postcomposition with `dmap p c` is an equivalence on arrows out of `p e'`,
+ -   then {u} is cocartesian at `x'` if and only if it is cocartesian at `x`.
+ -
+ -   Cocartesianness at `X` is the equivalence {gamma} from squares into `X` to their images in the base ({gamma-char}).
+ -   Postcomposition with {c} commutes with {gamma} and is an equivalence on both sides:
+ -   squares into `x'` are their right sides ({postS-equiv}), and their images are fibered over the base right sides,
+ -   with fibers the fibers of {p} over their left sides ({postT-equiv}).
+ -}
+\lemma cocartesianArrowAt-transfer {E A : \Cat} {p : E ->⁺ A} {e e' x' x : E} {u : e ~> e'} {c : x' ~> x}
+                                   (ce : IsCartesianArrowAt p c e) (ce' : IsCartesianArrowAt p c e')
+                                   (be : IsEquiv (\lam (g : p e' ~> p x') => comp g (dmap p c)))
+  : IsCocartesianArrowAt p u x' <-> IsCocartesianArrowAt p u x
+  => \have comm (t : Sq u x') : gamma {E} {A} {p} u x (postS c t) = postT {E} {A} {p} c (gamma {E} {A} {p} u x' t)
+             => path \lam l => (comp t.1 c, ((dmap_comp p {e} {x'} {x} {t.1} {c} @ l, psqueeze (dmap_comp p {e} {x'} {x} {t.1} {c}) l),
+                                             (dmap_comp p {e'} {x'} {x} {t.2.1} {c} @ l, dpath \lam i => dmap_comp p {u i} {x'} {x} {t.2.2 i} {c} @ l)))
+     \in (\lam uc => (gamma-char {E} {A} {p} u x).2 $ IsEquiv.rightFactor (postS-equiv ce' be) $
+                       transport IsEquiv (inv (ext comm)) (IsEquiv.trans ((gamma-char {E} {A} {p} u x').1 uc) (postT-equiv ce be)),
+         \lam uc => (gamma-char {E} {A} {p} u x').2 $ IsEquiv.leftFactor (postT-equiv ce be) $
+                       transport IsEquiv (ext comm) (IsEquiv.trans (postS-equiv ce' be) ((gamma-char {E} {A} {p} u x).1 uc)))
+  \where \private {
+    -- | Squares from {u} into {X}.
+    \func Sq {E : \Cat} {e e' : E} (u : e ~> e') (X : E)
+      => \Sigma (w : e ~> X) (\Sigma (v : e' ~> X) (DPath (\lam i => u i ~> X) w v))
+
+    -- | Arrows out of `e` into {X} together with a square in the base from `dmap p u` into `p X` whose left side is the image of the arrow.
+    \func SqA {E A : \Cat} {p : E ->⁺ A} {e e' : E} (u : e ~> e') (X : E)
+      => \Sigma (w : e ~> X) (\Sigma (aq : \Sigma (a : p e ~> p X) (dmap p w = a)) (\Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) aq.1 g)))
+
+    -- | The image of a square under {p}.
+    \func gamma {E A : \Cat} {p : E ->⁺ A} {e e' : E} (u : e ~> e') (X : E) (t : Sq u X) : SqA {E} {A} {p} u X
+      => (t.1, ((dmap p t.1, idp), (dmap p t.2.1, dpath \lam i => dmap p (t.2.2 i))))
+
+    -- | {u} is cocartesian at {X} if and only if {gamma} is an equivalence.
+    \lemma gamma-char {E A : \Cat} {p : E ->⁺ A} {e e' : E} (u : e ~> e') (X : E) : IsCocartesianArrowAt p u X <-> IsEquiv (gamma {E} {A} {p} u X)
+      => \let | th (s : \Sigma (w : e ~> X) (\Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) (dmap p w) g))) : SqA {E} {A} {p} u X
+                => (s.1, ((dmap p s.1, idp), s.2))
+              | th-equiv : IsEquiv th
+                => IsSigma-right {e ~> X} {\lam w => \Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) (dmap p w) g)}
+                                 {\lam w => \Sigma (aq : \Sigma (a : p e ~> p X) (dmap p w = a)) (\Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) aq.1 g))}
+                                 (\lam w r => ((dmap p w, idp), r))
+                                 (\lam w => contr-point-equiv (lsigma (dmap p w)) {\lam aq => \Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) aq.1 g)} (dmap p w, idp))
+         \in (\lam uc => IsEquiv.trans {_} {_} {_} {totalEquiv.total (sqmap p u)} ((totalEquiv (sqmap p u)).1 (cocartesianArrow-square uc)) {th} th-equiv,
+              \lam ge => cocartesianArrow-square.conv ((totalEquiv (sqmap p u)).2 (IsEquiv.leftFactor th-equiv ge)))
+
+    -- | Postcomposition of squares with {c}.
+    \func postS {E : \Cat} {e e' x' x : E} {u : e ~> e'} (c : x' ~> x) (t : Sq u x') : Sq u x
+      => (comp t.1 c, (comp t.2.1 c, dpath \lam i => comp (t.2.2 i) c))
+
+    -- | Postcomposition with {c} and `dmap p c`.
+    \func postT {E A : \Cat} {p : E ->⁺ A} {e e' x' x : E} {u : e ~> e'} (c : x' ~> x) (t : SqA {E} {A} {p} u x') : SqA {E} {A} {p} u x
+      => (comp t.1 c, ((comp t.2.1.1 (dmap p c), dmap_comp p {e} {x'} {x} {t.1} {c} *> pmap (comp __ (dmap p c)) t.2.1.2),
+                       (comp t.2.2.1 (dmap p c), dpath \lam i => comp (t.2.2.2 i) (dmap p c))))
+
+    -- | Squares are determined by their right sides, so {postS} is postcomposition of the right sides with {c}.
+    \lemma postS-equiv {E A : \Cat} {p : E ->⁺ A} {e e' x' x : E} {u : e ~> e'} {c : x' ~> x}
+                       (ce' : IsCartesianArrowAt p c e') (be : IsEquiv (\lam (g : p e' ~> p x') => comp g (dmap p c)))
+      : IsEquiv (postS {E} {e} {e'} {x'} {x} {u} c)
+      => IsEquiv.leftFactor {_} {_} {_} {postS c} {\lam t => t.2.1} (cocartesianArrow-square.sq-split-equiv.proj1-equiv {E} {e} {e'} {x} u)
+           (IsEquiv.trans (cocartesianArrow-square.sq-split-equiv.proj1-equiv {E} {e} {e'} {x'} u) ((cartesianArrowAt-equiv-char be).1 ce'))
+
+    -- | Squares in the base from `dmap p u` with a fixed right side are contractible.
+    \lemma sqA-contr {A : \Cat} {a a' X : A} (u : a ~> a') (g : a' ~> X) : Contr (\Sigma (b : a ~> X) (DPath (\lam i => u i ~> X) b g))
+      => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam b => square-equiv u (idd {A} {X}) {g} {b} `transQEquiv` inv-equiv `transQEquiv` pathEquiv-right (comp_idd-right {A} {a} {X} {b}))
+           (rsigma (comp u g))
+
+    -- | {SqA} fibered over the base right sides.
+    \func R {E A : \Cat} {p : E ->⁺ A} {e e' : E} (u : e ~> e') (X : E)
+      => \Sigma (g : p e' ~> p X) (\Sigma (aR : \Sigma (a : p e ~> p X) (DPath (\lam i => p (u i) ~> p X) a g)) (\Sigma (w : e ~> X) (dmap p w = aR.1)))
+
+    \func rho {E A : \Cat} {p : E ->⁺ A} {e e' : E} {u : e ~> e'} {X : E} : QEquiv {SqA {E} {A} {p} u X} {R {E} {A} {p} u X} \cowith
+      | f t => (t.2.2.1, ((t.2.1.1, t.2.2.2), (t.1, t.2.1.2)))
+      | ret r => (r.2.2.1, ((r.2.1.1, r.2.2.2), (r.1, r.2.1.2)))
+      | ret_f t => idp
+      | f_sec r => idp
+
+    -- | Over a base right side, {postT} is the equivalence of contractible squares in the base together with {cartesianArrowAt-fiber}.
+    \lemma postT-equiv {E A : \Cat} {p : E ->⁺ A} {e e' x' x : E} {u : e ~> e'} {c : x' ~> x}
+                       (ce : IsCartesianArrowAt p c e) (be : IsEquiv (\lam (g : p e' ~> p x') => comp g (dmap p c)))
+      : IsEquiv (postT {E} {A} {p} {e} {e'} {x'} {x} {u} c)
+      => \let | F (X : E) (g : p e' ~> p X) => \Sigma (aR : \Sigma (a : p e ~> p X) (DPath (\lam i => p (u i) ~> p X) a g)) (\Sigma (w : e ~> X) (dmap p w = aR.1))
+              | base (g : p e' ~> p x') (aR : \Sigma (a : p e ~> p x') (DPath (\lam i => p (u i) ~> p x') a g))
+                  : \Sigma (a : p e ~> p x) (DPath (\lam i => p (u i) ~> p x) a (comp g (dmap p c)))
+                => (comp aR.1 (dmap p c), dpath \lam i => comp (aR.2 i) (dmap p c))
+              | fib (g : p e' ~> p x') (r : F x' g) : F x (comp g (dmap p c))
+                => (base g r.1, (comp r.2.1 c, dmap_comp p {e} {x'} {x} {r.2.1} {c} *> pmap (comp __ (dmap p c)) r.2.2))
+              | fib-equiv (g : p e' ~> p x') : IsEquiv (fib g)
+                => IsEquiv.trans
+                     (IsSigma-right {\Sigma (a : p e ~> p x') (DPath (\lam i => p (u i) ~> p x') a g)} {\lam aR => \Sigma (w : e ~> x') (dmap p w = aR.1)} {\lam aR => \Sigma (w : e ~> x) (dmap p w = comp aR.1 (dmap p c))}
+                                    (\lam aR r => (comp r.1 c, dmap_comp p {e} {x'} {x} {r.1} {c} *> pmap (comp __ (dmap p c)) r.2))
+                                    (\lam aR => cartesianArrowAt-fiber ce aR.1))
+                     (inP (qsigma-left {_} {\Sigma (a : p e ~> p x) (DPath (\lam i => p (u i) ~> p x) a (comp g (dmap p c)))} {\lam aR => \Sigma (w : e ~> x) (dmap p w = aR.1)}
+                            (IsEquiv.toQEquiv (contr-equiv (sqA-contr (dmap p u) g) (sqA-contr (dmap p u) (comp g (dmap p c))) {base g}))))
+              | Psi-equiv : IsEquiv {R {E} {A} {p} u x'} {R {E} {A} {p} u x} (\lam r => (comp r.1 (dmap p c), fib r.1 r.2))
+                => IsEquiv.trans (IsSigma-right fib fib-equiv) (inP (qsigma-left {_} {_} {F x} (IsEquiv.toQEquiv be)))
+         \in IsEquiv.leftFactor {_} {_} {_} {postT {E} {A} {p} c} (inP (rho {E} {A} {p} {e} {e'} {u} {x})) (IsEquiv.trans (inP (rho {E} {A} {p} {e} {e'} {u} {x'})) Psi-equiv)
+  }
+
+{- | Dually, cartesianness can be transferred along a cocartesian arrow {c} of test objects:
+ -   if {c} is cocartesian at the endpoints of {v} and precomposition with `dmap p c` is an equivalence on arrows into `p f`,
+ -   then {v} is cartesian at `z` if and only if it is cartesian at `z'`.
+ -   Here squares are squares from a fixed source into {v}, which are flipped cotriangles.
+ -}
+\lemma cartesianArrowAt-transfer {E A : \Cat} {p : E ->⁺ A} {f f' z' z : E} {v : f ~> f'} {c : z' ~> z}
+                                 (cf : IsCocartesianArrowAt p c f) (cf' : IsCocartesianArrowAt p c f')
+                                 (be : IsEquiv (\lam (g : p z ~> p f) => comp (dmap p c) g))
+  : IsCartesianArrowAt p v z <-> IsCartesianArrowAt p v z'
+  => \have comm (t : Sq v z) : gamma {E} {A} {p} v z' (preS c t) = preT {E} {A} {p} c (gamma {E} {A} {p} v z t)
+             => path \lam l => (comp c t.1, ((dmap_comp p {z'} {z} {f'} {c} {t.1} @ l, psqueeze (dmap_comp p {z'} {z} {f'} {c} {t.1}) l),
+                                             (dmap_comp p {z'} {z} {f} {c} {t.2.1} @ l, dpath \lam i => dmap_comp p {z'} {z} {v i} {c} {t.2.2 i} @ l)))
+     \in (\lam vc => (gamma-char {E} {A} {p} v z').2 $ IsEquiv.rightFactor (preS-equiv cf be) $
+                       transport IsEquiv (inv (ext comm)) (IsEquiv.trans ((gamma-char {E} {A} {p} v z).1 vc) (preT-equiv cf' be)),
+         \lam vc => (gamma-char {E} {A} {p} v z).2 $ IsEquiv.leftFactor (preT-equiv cf' be) $
+                       transport IsEquiv (ext comm) (IsEquiv.trans (preS-equiv cf be) ((gamma-char {E} {A} {p} v z').1 vc)))
+  \where \private {
+    -- | Squares from {Z} into {v}.
+    \func Sq {E : \Cat} {f f' : E} (v : f ~> f') (Z : E)
+      => \Sigma (w : Z ~> f') (\Sigma (k : Z ~> f) (DPath (\lam i => Z ~> v i) k w))
+
+    -- | Arrows from {Z} into `f'` together with a square in the base from `p Z` into `dmap p v` whose right side is the image of the arrow.
+    \func SqA {E A : \Cat} {p : E ->⁺ A} {f f' : E} (v : f ~> f') (Z : E)
+      => \Sigma (w : Z ~> f') (\Sigma (aq : \Sigma (a : p Z ~> p f') (dmap p w = a)) (\Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g aq.1)))
+
+    -- | The image of a square under {p}.
+    \func gamma {E A : \Cat} {p : E ->⁺ A} {f f' : E} (v : f ~> f') (Z : E) (t : Sq v Z) : SqA {E} {A} {p} v Z
+      => (t.1, ((dmap p t.1, idp), (dmap p t.2.1, dpath \lam i => dmap p (t.2.2 i))))
+
+    -- | {v} is cartesian at {Z} if and only if {gamma} is an equivalence.
+    \lemma gamma-char {E A : \Cat} {p : E ->⁺ A} {f f' : E} (v : f ~> f') (Z : E) : IsCartesianArrowAt p v Z <-> IsEquiv (gamma {E} {A} {p} v Z)
+      => \let | cosq (w : Z ~> f') (s : \Sigma (k : Z ~> f) (DPath (\lam i => Z ~> v i) k w)) : \Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g (dmap p w))
+                => (dmap p s.1, dpath \lam i => dmap p (s.2 i))
+              | flip-char (w : Z ~> f') : IsEquiv (cotriangle-map p v w) <-> IsEquiv (cosq w)
+                => IsEquiv.parallelEquiv (IsSigma-right {Z ~> f} {\lam k => DPath (\lam i => k i ~> w i) idd v} {\lam k => DPath (\lam i => Z ~> v i) k w}
+                                                        (\lam k => flipQEquiv {E} {Z} {f} {Z} {f'} {k} {v} {idd} {w}) \lam k => inP flipQEquiv)
+                                         (IsSigma-right {p Z ~> p f} {\lam g => DPath (\lam i => g i ~> p (w i)) idd (dmap p v)} {\lam g => DPath (\lam i => p Z ~> p (v i)) g (dmap p w)}
+                                                        (\lam g => flipQEquiv {A} {p Z} {p f} {p Z} {p f'} {g} {dmap p v} {idd} {dmap p w}) \lam g => inP flipQEquiv)
+                                         (\lam s => idp)
+              | th (s : \Sigma (w : Z ~> f') (\Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g (dmap p w)))) : SqA {E} {A} {p} v Z
+                => (s.1, ((dmap p s.1, idp), s.2))
+              | th-equiv : IsEquiv th
+                => IsSigma-right {Z ~> f'} {\lam w => \Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g (dmap p w))}
+                                 {\lam w => \Sigma (aq : \Sigma (a : p Z ~> p f') (dmap p w = a)) (\Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g aq.1))}
+                                 (\lam w r => ((dmap p w, idp), r))
+                                 (\lam w => contr-point-equiv (lsigma (dmap p w)) {\lam aq => \Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g aq.1)} (dmap p w, idp))
+         \in (\lam vc => IsEquiv.trans {_} {_} {_} {totalEquiv.total cosq} ((totalEquiv cosq).1 \lam w => (flip-char w).1 (vc w)) {th} th-equiv,
+              \lam ge w => (flip-char w).2 ((totalEquiv cosq).2 (IsEquiv.leftFactor th-equiv ge) w))
+
+    -- | Precomposition of squares with {c}.
+    \func preS {E : \Cat} {f f' z' z : E} {v : f ~> f'} (c : z' ~> z) (t : Sq v z) : Sq v z'
+      => (comp c t.1, (comp c t.2.1, dpath \lam i => comp c (t.2.2 i)))
+
+    -- | Precomposition with {c} and `dmap p c`.
+    \func preT {E A : \Cat} {p : E ->⁺ A} {f f' z' z : E} {v : f ~> f'} (c : z' ~> z) (t : SqA {E} {A} {p} v z) : SqA {E} {A} {p} v z'
+      => (comp c t.1, ((comp (dmap p c) t.2.1.1, dmap_comp p {z'} {z} {f'} {c} {t.1} *> pmap (comp (dmap p c) __) t.2.1.2),
+                       (comp (dmap p c) t.2.2.1, dpath \lam i => comp (dmap p c) (t.2.2.2 i))))
+
+    -- | Squares are determined by their left sides, so {preS} is precomposition of the left sides with {c}.
+    \lemma preS-equiv {E A : \Cat} {p : E ->⁺ A} {f f' z' z : E} {v : f ~> f'} {c : z' ~> z}
+                      (cf : IsCocartesianArrowAt p c f) (be : IsEquiv (\lam (g : p z ~> p f) => comp (dmap p c) g))
+      : IsEquiv (preS {E} {f} {f'} {z'} {z} {v} c)
+      => IsEquiv.leftFactor {_} {_} {_} {preS c} {\lam t => t.2.1} (proj-equiv v z') (IsEquiv.trans (proj-equiv v z) ((cocartesianArrowAt-equiv-char be).1 cf))
+      \where
+        \lemma proj-equiv {E : \Cat} {f f' : E} (v : f ~> f') (Z : E) : IsEquiv {Sq v Z} {Z ~> f} (\lam t => t.2.1)
+          => IsEquiv.trans (inP \new QEquiv {Sq v Z} {\Sigma (k : Z ~> f) (\Sigma (w : Z ~> f') (DPath (\lam i => Z ~> v i) k w))} {
+                             | f t => (t.2.1, (t.1, t.2.2))
+                             | ret t => (t.2.1, (t.1, t.2.2))
+                             | ret_f t => idp
+                             | f_sec t => idp
+                           })
+                           (inP (contr-right \lam k => segal-contr.flipped k v))
+
+    -- | {SqA} fibered over the base left sides.
+    \func R {E A : \Cat} {p : E ->⁺ A} {f f' : E} (v : f ~> f') (Z : E)
+      => \Sigma (g : p Z ~> p f) (\Sigma (aR : \Sigma (a : p Z ~> p f') (DPath (\lam i => p Z ~> p (v i)) g a)) (\Sigma (w : Z ~> f') (dmap p w = aR.1)))
+
+    \func rho {E A : \Cat} {p : E ->⁺ A} {f f' : E} {v : f ~> f'} {Z : E} : QEquiv {SqA {E} {A} {p} v Z} {R {E} {A} {p} v Z} \cowith
+      | f t => (t.2.2.1, ((t.2.1.1, t.2.2.2), (t.1, t.2.1.2)))
+      | ret r => (r.2.2.1, ((r.2.1.1, r.2.2.2), (r.1, r.2.1.2)))
+      | ret_f t => idp
+      | f_sec r => idp
+
+    -- | Over a base left side, {preT} is the equivalence of contractible squares in the base together with {cocartesianArrowAt-fiber}.
+    \lemma preT-equiv {E A : \Cat} {p : E ->⁺ A} {f f' z' z : E} {v : f ~> f'} {c : z' ~> z}
+                      (cf' : IsCocartesianArrowAt p c f') (be : IsEquiv (\lam (g : p z ~> p f) => comp (dmap p c) g))
+      : IsEquiv (preT {E} {A} {p} {f} {f'} {z'} {z} {v} c)
+      => \let | F (Z : E) (g : p Z ~> p f) => \Sigma (aR : \Sigma (a : p Z ~> p f') (DPath (\lam i => p Z ~> p (v i)) g a)) (\Sigma (w : Z ~> f') (dmap p w = aR.1))
+              | base (g : p z ~> p f) (aR : \Sigma (a : p z ~> p f') (DPath (\lam i => p z ~> p (v i)) g a))
+                  : \Sigma (a : p z' ~> p f') (DPath (\lam i => p z' ~> p (v i)) (comp (dmap p c) g) a)
+                => (comp (dmap p c) aR.1, dpath \lam i => comp (dmap p c) (aR.2 i))
+              | fib (g : p z ~> p f) (r : F z g) : F z' (comp (dmap p c) g)
+                => (base g r.1, (comp c r.2.1, dmap_comp p {z'} {z} {f'} {c} {r.2.1} *> pmap (comp (dmap p c) __) r.2.2))
+              | fib-equiv (g : p z ~> p f) : IsEquiv (fib g)
+                => IsEquiv.trans
+                     (IsSigma-right {\Sigma (a : p z ~> p f') (DPath (\lam i => p z ~> p (v i)) g a)} {\lam aR => \Sigma (w : z ~> f') (dmap p w = aR.1)}
+                                    {\lam aR => \Sigma (w : z' ~> f') (dmap p w = comp (dmap p c) aR.1)}
+                                    (\lam aR r => (comp c r.1, dmap_comp p {z'} {z} {f'} {c} {r.1} *> pmap (comp (dmap p c) __) r.2))
+                                    (\lam aR => cocartesianArrowAt-fiber cf' aR.1))
+                     (inP (qsigma-left {_} {\Sigma (a : p z' ~> p f') (DPath (\lam i => p z' ~> p (v i)) (comp (dmap p c) g) a)} {\lam aR => \Sigma (w : z' ~> f') (dmap p w = aR.1)}
+                            (IsEquiv.toQEquiv (contr-equiv (segal-contr.flipped g (dmap p v)) (segal-contr.flipped (comp (dmap p c) g) (dmap p v)) {base g}))))
+              | Psi-equiv : IsEquiv {R {E} {A} {p} v z} {R {E} {A} {p} v z'} (\lam r => (comp (dmap p c) r.1, fib r.1 r.2))
+                => IsEquiv.trans (IsSigma-right fib fib-equiv) (inP (qsigma-left {_} {_} {F z'} (IsEquiv.toQEquiv be)))
+         \in IsEquiv.leftFactor {_} {_} {_} {preT {E} {A} {p} c} (inP (rho {E} {A} {p} {f} {f'} {v} {z'})) (IsEquiv.trans (inP (rho {E} {A} {p} {f} {f'} {v} {z})) Psi-equiv)
+  }
+
+-- | The image under {p} of squares into {x} with left side {k} and right side {c}.
+\func slicemap {E A : \Cat} (p : E ->⁺ A) {z x' x : E} (c : x' ~> x) (k : z ~> x) (s : \Sigma (h : z ~> x') (DPath (\lam i => h i ~> x) k c))
+  : \Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> p x) (dmap p k) (dmap p c))
+  => (dmap p s.1, dpath \lam i => dmap p (s.2 i))
+
+{- | Cartesian arrows classify factorizations given by squares into a fixed target, that is, arrows of the slice over {x}.
+ -   A square splits into its diagonal and two triangles; the second triangle is a factorization through {c}.
+ -   This is the dual of {cocartesianArrow-square}.
+ -}
+\lemma cartesianArrowAt-slice {E A : \Cat} {p : E ->⁺ A} {z x' x : E} {c : x' ~> x}
+  : IsCartesianArrowAt p c z <-> (\Pi (k : z ~> x) -> IsEquiv (slicemap p c k))
+  => (\lam cc k => IsEquiv.leftFactor (split-equiv (dmap p c) (dmap p k)) (IsEquiv.trans (split-equiv c k) ((m-equiv {E} {A} {p} {z} {x'} {x} {c} k).1 (\lam dd => cc dd.1))),
+      \lam sc k => (m-equiv {E} {A} {p} {z} {x'} {x} {c} k).2 (IsEquiv.rightFactor (split-equiv c k) (IsEquiv.trans (sc k) (split-equiv (dmap p c) (dmap p k))))
+                     (k, dpath \lam i => idd {E} {k i}))
+  \where {
+    -- | A square into {x} as its diagonal with the two triangles.
+    \func split {E : \Cat} {z x' x : E} (c : x' ~> x) (k : z ~> x) (s : \Sigma (h : z ~> x') (DPath (\lam i => h i ~> x) k c))
+      : \Sigma (dd : \Sigma (d : z ~> x) (DPath (\lam i => k i ~> d i) idd idd)) (\Sigma (h : z ~> x') (DPath (\lam i => h i ~> dd.1 i) idd c))
+      => ((sqDiag {E} {_} {_} {_} {_} {s.1} {idd {E} {x}} {k} {c} s.2, sqTri2 {E} {_} {_} {_} {_} {s.1} {idd {E} {x}} {k} {c} s.2),
+          (s.1, sqTri1 {E} {_} {_} {_} {_} {s.1} {idd {E} {x}} {k} {c} s.2))
+
+    -- | {split} is an equivalence: for a fixed first side it is a fiber of {cocartesianArrow-square.sq-split}.
+    \lemma split-equiv {E : \Cat} {z x' x : E} (c : x' ~> x) (k : z ~> x) : IsEquiv (split c k)
+      => \let | D => \Sigma (d : z ~> x) (DPath (\lam i => k i ~> d i) idd idd)
+              | sp (h : z ~> x') (v : x' ~> x) (Q : DPath (\lam i => h i ~> x) k v) : \Sigma (dd : D) (DPath (\lam i => h i ~> dd.1 i) idd v)
+                => ((sqDiag {E} {_} {_} {_} {_} {h} {idd {E} {x}} {k} {v} Q, sqTri2 {E} {_} {_} {_} {_} {h} {idd {E} {x}} {k} {v} Q),
+                    sqTri1 {E} {_} {_} {_} {_} {h} {idd {E} {x}} {k} {v} Q)
+              | sw1 (h : z ~> x') (t : \Sigma (dd : D) (\Sigma (v : x' ~> x) (DPath (\lam i => h i ~> dd.1 i) idd v)))
+                  : \Sigma (v : x' ~> x) (\Sigma (dd : D) (DPath (\lam i => h i ~> dd.1 i) idd v))
+                => (t.2.1, (t.1, t.2.2))
+              | sw1-equiv (h : z ~> x') : IsEquiv (sw1 h)
+                => inP \new QEquiv {
+                     | ret t => (t.2.1, (t.1, t.2.2))
+                     | ret_f t => idp
+                     | f_sec t => idp
+                   }
+              | fib-equiv (h : z ~> x') : IsEquiv (sp h c)
+                => (totalEquiv (sp h)).2 (IsEquiv.trans {_} {_} {_} {cocartesianArrow-square.sq-split h k} (cocartesianArrow-square.sq-split-equiv h k) {sw1 h} (sw1-equiv h)) c
+              | sw2 (t : \Sigma (h : z ~> x') (\Sigma (dd : D) (DPath (\lam i => h i ~> dd.1 i) idd c)))
+                  : \Sigma (dd : D) (\Sigma (h : z ~> x') (DPath (\lam i => h i ~> dd.1 i) idd c))
+                => (t.2.1, (t.1, t.2.2))
+              | sw2-equiv : IsEquiv sw2
+                => inP \new QEquiv {
+                     | ret t => (t.2.1, (t.1, t.2.2))
+                     | ret_f t => idp
+                     | f_sec t => idp
+                   }
+         \in IsEquiv.trans (IsSigma-right {z ~> x'} {\lam h => DPath (\lam i => h i ~> x) k c} {\lam h => \Sigma (dd : D) (DPath (\lam i => h i ~> dd.1 i) idd c)}
+                                          (\lam h => sp h c) fib-equiv) {sw2} sw2-equiv
+
+    -- | On split squares, {slicemap} is {cotriangle-map} over the image of the diagonal.
+    \lemma m-equiv {E A : \Cat} {p : E ->⁺ A} {z x' x : E} {c : x' ~> x} (k : z ~> x)
+      : (\Pi (dd : \Sigma (d : z ~> x) (DPath (\lam i => k i ~> d i) idd idd)) -> IsEquiv (cotriangle-map p c dd.1))
+          <-> IsEquiv {\Sigma (dd : \Sigma (d : z ~> x) (DPath (\lam i => k i ~> d i) idd idd)) (\Sigma (h : z ~> x') (DPath (\lam i => h i ~> dd.1 i) idd c))}
+                      {\Sigma (dd : \Sigma (d : p z ~> p x) (DPath (\lam i => p (k i) ~> d i) idd idd)) (\Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> dd.1 i) idd (dmap p c)))}
+                      (\lam t => ((dmap p t.1.1, dpath \lam i => dmap p (t.1.2 i)), cotriangle-map p c t.1.1 t.2))
+      => \have base-equiv => contr-equiv (segal-contr k idd) (segal-contr (dmap p k) idd)
+                               {\lam (dd : \Sigma (d : z ~> x) (DPath (\lam i => k i ~> d i) idd idd)) => ((dmap p dd.1, dpath \lam i => dmap p (dd.2 i))
+                                 : \Sigma (d : p z ~> p x) (DPath (\lam i => p (k i) ~> d i) idd idd))}
+         \in (\lam cc => IsEquiv.trans (IsSigma-right (\lam dd => cotriangle-map p c dd.1) cc)
+                                       (inP (qsigma-left {_} {_} {\lam dd => \Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> dd.1 i) idd (dmap p c))} (IsEquiv.toQEquiv base-equiv))),
+              \lam me => fiberwiseEquiv base-equiv (\lam dd => cotriangle-map p c dd.1) me)
+  }

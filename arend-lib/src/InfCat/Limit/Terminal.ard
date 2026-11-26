@@ -1,10 +1,58 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
 \import InfCat.Limit.BaseHCat
+\import InfCat.Limit.Initial
+\import InfCat.Opposite
+\import InfCat.Rezk
+\import InfCat.Square
+\import Logic
 \import Logic.Unique
+\import Meta
+\import Paths
 
 \type IsTerminal {C : \Cat} (t : C) : \Prop
   => \Pi (y : C) -> Contr (y ~> t)
 
--- | An ∞-category with a terminal object and binary products.
+-- | Terminal objects of {C} are initial objects of `Op C`.
+\lemma terminal-op.{u} {C : \Cat u} {x : C} : IsTerminal x <-> IsInitial (Op.toOp x)
+  => (\lam xt z => transport (\lam w => Contr (Op.toOp x ~> w)) (IsEquiv.f_ret (Op.toOp-equiv {C}))
+                     (Contr.Contr_QEquiv (IsEquiv.toQEquiv opArr-equiv) (xt (IsEquiv.ret (Op.toOp-equiv {C}) z))),
+      \lam xi y => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv opArr-equiv)) (xi (Op.toOp y)))
+
+-- | Initial objects of {C} are terminal objects of `Op C`.
+\lemma initial-op.{u} {C : \Cat u} {x : C} : IsInitial x <-> IsTerminal (Op.toOp x)
+  => (\lam xi z => transport (\lam w => Contr (w ~> Op.toOp x)) (IsEquiv.f_ret (Op.toOp-equiv {C}))
+                     (Contr.Contr_QEquiv (IsEquiv.toQEquiv opArr-equiv) (xi (IsEquiv.ret (Op.toOp-equiv {C}) z))),
+      \lam xt y => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv opArr-equiv)) (xt (Op.toOp y)))
+
+-- | Terminal objects of a category are equal.
+\sfunc terminal-unique {C : \Cat} {x y : C} (xt : IsTerminal x) (yt : IsTerminal y) : x = y
+  => (iso_= (yt x).center (xt y).center (isContr=>isProp (xt x) _ _) (isContr=>isProp (yt y) _ _)).1
+
+-- | If {d1} is terminal and `b0 ~> F d1` is contractible, then any arrow `b0 ~> F d1` is terminal in the comma category `b0 ↓ F`.
+\lemma sigma-terminal-hom {D B : \Cat} (F : D ->⁺ B) {d1 : D} (term : IsTerminal d1) {b0 : B}
+                          (Kc : Contr (b0 ~> F d1)) (k1 : b0 ~> F d1)
+  : IsTerminal {\Sigma⁺ (d : D) (b0 ~> F d)} (d1, k1)
+  => \lam q => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv (\lam _ d => b0 ~> F d))) $
+       Contr.Contr_QEquiv (symQEquiv (contr-left (term q.1))) $
+         Contr.Contr_QEquiv (symQEquiv (comp-equiv.flipped {B} {_} {_} {_} {q.2} {dmap F (term q.1).center}))
+           (isProp=>PathContr _ (isContr=>isProp Kc) _ _)
+
+-- | If the target of {g} is terminal, arrows into {g} are determined by their source components.
+\lemma terminal-ev0-equiv {C : \Cat} {f g : DI ->⁺ C} (gt : IsTerminal (g dright))
+  : IsEquiv {f ~> g} {f dleft ~> g dleft} (dmap \lam (F : DI ->⁺ C) => F dleft)
+  => IsEquiv.trans (inP $ later \new QEquiv {f ~> g} {\Sigma (a : f dleft ~> g dleft) (\Sigma (b : f dright ~> g dright) (DPath (\lam k => f k ~> g k) a b))} {
+        | f N => (dpath \lam l => N l dleft, (dpath \lam l => N l dright, dpath \lam k => dpath \lam l => N l k))
+        | ret t => dpath \lam l k => t.2.2 k l
+        | ret_f N => idp
+        | f_sec t => idp
+      })
+      (inP $ contr-right \lam a => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam b => square-equiv (dpath f) (dpath g) {b} {a})
+                                    (sigma-Contr (gt (f dright)) \lam b => isProp=>PathContr _ (isContr=>isProp (gt (f dleft))) (comp (dpath f) b) (comp a (dpath g))))
+
+-- | An ∞-category with a terminal object.
 \class HCatWithTerminal \extends BaseHCat
   | terminal : C
   | terminal-isTerminal : IsTerminal terminal

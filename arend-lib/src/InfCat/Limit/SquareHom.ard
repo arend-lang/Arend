@@ -1,0 +1,95 @@
+{- | Arrows between squares as a pullback, and the universal properties of their corners.
+ -
+ -   Arrows between squares {s} and {t} are arrows of arrows in `DI ->⁺ C`: pairs of arrows between their columns
+ -   together with a commutative square, that is, the pullback of postcomposition with {t} and precomposition with {s}
+ -   ({sqHom}, {sqHom-equiv}).
+ -
+ -   A square {s} is a pushout square with respect to the target of an arrow {X} if and only if it is cocartesian
+ -   for the source functor with respect to {X}, provided {X} is invisible to the bottom left corner of {s} ({pushoutAt-arrow}).
+ -   This is a change of test objects along the source-cartesian arrow {toConst} ({cocartesianArrowAt-transfer}).
+ -   Dually for pullback squares ({pullbackAt-arrow}).
+ -
+ -   If the off-diagonal corners of {s} are initial and those of {t} are terminal, then the legs of the pullback
+ -   are the relative universal maps of {s} and {t}, and its projections are the evaluations at the top left
+ -   and bottom right corners. Hence, if {t} is a pullback square with respect to the top left corner of {s},
+ -   arrows from {s} to {t} are determined by their top left components if and only if {s} is a pushout square
+ -   with respect to the bottom right corner of {t} ({pushoutAt-corner-char}), and dually ({pullbackAt-corner-char}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Contravariant.CartesianMap
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Fibration.SourceTarget
+\import InfCat.Fibration.TestObject
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Pullback
+\import InfCat.Limit.Pushout
+\import InfCat.Limit.Terminal
+\import InfCat.Square
+\import Logic
+\import Logic.Unique
+\import Paths
+
+-- | An arrow between squares as its two column arrows with the commutative square they form.
+\func sqHom {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (N : s ~> t)
+  : \Sigma (a : s dleft ~> t dleft) (\Sigma (b : s dright ~> t dright) (comp a (dpath t) = comp (dpath s) b))
+  => (dpath \lam m => N m dleft, (dpath \lam m => N m dright,
+      inv ((square-equiv (dpath s) (dpath t) {dpath \lam m => N m dright} {dpath \lam m => N m dleft}).f (dpath \lam k => dpath \lam m => N m k))))
+
+-- | Arrows between squares are pairs of arrows between their columns with a commutative square.
+\lemma sqHom-equiv {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} : IsEquiv (sqHom {C} {s} {t})
+  => inP $ \new QEquiv {s ~> t} {\Sigma (a : s dleft ~> t dleft) (\Sigma (b : s dright ~> t dright) (DPath (\lam k => s k ~> t k) a b))} {
+       | f N => (dpath \lam m => N m dleft, (dpath \lam m => N m dright, dpath \lam k => dpath \lam m => N m k))
+       | ret r => dpath \lam m k => r.2.2 k m
+       | ret_f N => idp
+       | f_sec r => idp
+     } `transQEquiv` sigma-right (\lam a => sigma-right \lam b => square-equiv (dpath s) (dpath t) {b} {a} `transQEquiv` inv-equiv)
+
+-- | If {X} is invisible to the bottom left corner of {s}, then {s} is a pushout square with respect to the target of {X} if and only if it is cocartesian for the source functor with respect to {X}.
+\lemma pushoutAt-arrow {C : \Cat} (s : DI ->⁺ DI ->⁺ C) (X : DI ->⁺ C) (e : IsEquiv (\lam (g : s dright dleft ~> X dleft) => comp g (dpath X)))
+  : IsPushoutAt s (X dright) <-> IsCocartesianArrowAt (\lam (F : DI ->⁺ C) => F dleft) (dpath s) X
+  => \have tr => cocartesianArrowAt-transfer {DI ->⁺ C} {C} {\lam F => F dleft} {s dleft} {s dright} {X} {const (X dright)} {dpath s} {toConst X}
+              (toConst-cartesian X (s dleft)) (toConst-cartesian X (s dright)) e
+     \in (\lam po => tr.2 po, \lam c => tr.1 c)
+
+-- | If {Z} is invisible to the top right corner of {t}, then {t} is a pullback square with respect to the source of {Z} if and only if it is cartesian for the target functor with respect to {Z}.
+\lemma pullbackAt-arrow {C : \Cat} (t : DI ->⁺ DI ->⁺ C) (Z : DI ->⁺ C) (e : IsEquiv (\lam (g : Z dright ~> t dleft dright) => comp (dpath Z) g))
+  : IsPullbackAt t (Z dleft) <-> IsCartesianArrowAt (\lam (F : DI ->⁺ C) => F dright) (dpath t) Z
+  => \have tr => cartesianArrowAt-transfer {DI ->⁺ C} {C} {\lam F => F dright} {t dleft} {t dright} {const (Z dleft)} {Z} {dpath t} {fromConst Z}
+              (fromConst-cocartesian Z (t dleft)) (fromConst-cocartesian Z (t dright)) e
+     \in (\lam pb => tr.2 pb, \lam c => tr.1 c)
+
+-- | If the bottom left corners of {s} and {t} are initial and terminal, then {s} is a pushout square with respect to the bottom right corner of {t} if and only if precomposition with {s} is an equivalence on arrows into the right column of {t}.
+\lemma pushoutAt-column {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (si : IsInitial (s dright dleft)) (tt : IsTerminal (t dright dleft))
+  : IsPushoutAt s (t dright dright) <-> IsEquiv (\lam (b : s dright ~> t dright) => comp (dpath s) b)
+  => pushoutAt-arrow s (t dright) (contr-equiv (si _) (si _)) `<->trans` cocartesianArrowAt-equiv-char (contr-equiv (si _) (tt _))
+
+-- | If the top right corners of {s} and {t} are initial and terminal, then {t} is a pullback square with respect to the top left corner of {s} if and only if postcomposition with {t} is an equivalence on arrows from the left column of {s}.
+\lemma pullbackAt-column {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (si : IsInitial (s dleft dright)) (tt : IsTerminal (t dleft dright))
+  : IsPullbackAt t (s dleft dleft) <-> IsEquiv (\lam (a : s dleft ~> t dleft) => comp a (dpath t))
+  => pullbackAt-arrow t (s dleft) (contr-equiv (tt _) (tt _)) `<->trans` cartesianArrowAt-equiv-char (contr-equiv (si _) (si _))
+
+{- | Let the off-diagonal corners of {s} be initial and those of {t} terminal, and let {t} be a pullback square with respect to the top left corner of {s}.
+ -   Then arrows from {s} to {t} are determined by their top left components if and only if {s} is a pushout square with respect to the bottom right corner of {t}.
+ -}
+\lemma pushoutAt-corner-char {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (si1 : IsInitial (s dright dleft)) (si2 : IsInitial (s dleft dright))
+                             (tt1 : IsTerminal (t dright dleft)) (tt2 : IsTerminal (t dleft dright)) (pb : IsPullbackAt t (s dleft dleft))
+  : IsEquiv {s ~> t} {s dleft dleft ~> t dleft dleft} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft) <-> IsPushoutAt s (t dright dright)
+  => \have | te => terminal-ev0-equiv {C} {s dleft} {t dleft} tt2
+           | proj-char => pullback-proj-left-equiv ((pullbackAt-column {C} {s} {t} si2 tt2).1 pb)
+     \in (\lam ee => (pushoutAt-column {C} {s} {t} si1 tt1).2 $ proj-char.1 $ IsEquiv.rightFactor sqHom-equiv $ IsEquiv.leftFactor te ee,
+         \lam po => IsEquiv.trans (IsEquiv.trans sqHom-equiv (proj-char.2 ((pushoutAt-column {C} {s} {t} si1 tt1).1 po))) te)
+
+{- | Let the off-diagonal corners of {s} be initial and those of {t} terminal, and let {s} be a pushout square with respect to the bottom right corner of {t}.
+ -   Then arrows from {s} to {t} are determined by their bottom right components if and only if {t} is a pullback square with respect to the top left corner of {s}.
+ -}
+\lemma pullbackAt-corner-char {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (si1 : IsInitial (s dright dleft)) (si2 : IsInitial (s dleft dright))
+                              (tt1 : IsTerminal (t dright dleft)) (tt2 : IsTerminal (t dleft dright)) (po : IsPushoutAt s (t dright dright))
+  : IsEquiv {s ~> t} {s dright dright ~> t dright dright} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dright dright) <-> IsPullbackAt t (s dleft dleft)
+  => \have | ie => initial-ev1-equiv {C} {s dright} {t dright} si1
+           | proj-char => pullback-proj-right-equiv ((pushoutAt-column {C} {s} {t} si1 tt1).1 po)
+     \in (\lam ee => (pullbackAt-column {C} {s} {t} si2 tt2).2 $ proj-char.1 $ IsEquiv.rightFactor sqHom-equiv $ IsEquiv.leftFactor ie ee,
+         \lam pb => IsEquiv.trans (IsEquiv.trans sqHom-equiv (proj-char.2 ((pullbackAt-column {C} {s} {t} si2 tt2).1 pb))) ie)

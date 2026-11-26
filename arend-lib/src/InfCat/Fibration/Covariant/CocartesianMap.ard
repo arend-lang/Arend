@@ -402,3 +402,77 @@
     \private \sfunc fiber-path {E A : \Cat} {p : E ->⁺ A} {a :⁺ A} {e :⁺ E} (q :⁺ p e = a)
       : ((a, (e, q)) : \Sigma⁺ (a : A) (Fibers p a)) = (p e, (e, idp)) \elim q
       | idp => idp
+
+-- | Commutative squares `u ; v = w` into a fixed target and their images under {p}.
+\func sqmap {E A : \Cat} (p : E ->⁺ A) {e e' x : E} (u : e ~> e') (w : e ~> x)
+            (s : \Sigma (v : e' ~> x) (DPath (\lam i => u i ~> x) w v))
+  : \Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> p x) (dmap p w) g)
+  => (dmap p s.1, dpath \lam i => dmap p (s.2 i))
+
+-- | Cocartesian arrows also classify factorizations given by squares into a fixed target.
+\lemma cocartesianArrow-square {E A : \Cat} {p : E ->⁺ A} {e e' x : E} {u : e ~> e'} (uc : IsCocartesianArrowAt p u x) (w : e ~> x)
+  : IsEquiv (sqmap p u w)
+  => IsEquiv.leftFactor (sq-split-equiv (dmap p u) (dmap p w)) $
+       IsEquiv.trans {_} {_} {_} {sq-split u w} (sq-split-equiv u w) {split-map p u w}
+         (IsEquiv.trans (IsSigma-right (\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => triangle-map p u dd.1) \lam dd => uc dd.1)
+           (inP $ qsigma-left {_} {_} {\lam (dd : \Sigma (d : p e ~> p x) (DPath (\lam i => p (w i) ~> d i) idd idd)) => \Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> dd.1 i) idd g)} $
+              IsEquiv.toQEquiv $ contr-equiv (segal-contr w idd) (segal-contr (dmap p w) idd) {\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => ((dmap p dd.1, dpath \lam i => dmap p (dd.2 i)) : \Sigma (d : p e ~> p x) (DPath (\lam i => p (w i) ~> d i) idd idd))}))
+  \where {
+    -- | Conversely, if {p} classifies factorizations given by squares into {x}, then {u} is {p}-cocartesian at {x}.
+    \lemma conv {E A : \Cat} {p : E ->⁺ A} {e e' x : E} {u : e ~> e'} (h : \Pi (w : e ~> x) -> IsEquiv (sqmap p u w))
+      : IsCocartesianArrowAt p u x
+      => \lam w => \have
+           | S1 : IsEquiv (split-map p u w)
+             => IsEquiv.rightFactor (sq-split-equiv u w) {split-map p u w} (IsEquiv.trans (h w) (sq-split-equiv (dmap p u) (dmap p w)))
+           | S2 => IsEquiv.leftFactor {_} {_} {_} {totalEquiv.total (\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => triangle-map p u dd.1)}
+                     (inP $ qsigma-left {_} {_} {\lam (dd : \Sigma (d : p e ~> p x) (DPath (\lam i => p (w i) ~> d i) idd idd)) => \Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> dd.1 i) idd g)} $
+                     IsEquiv.toQEquiv $ contr-equiv (segal-contr w idd) (segal-contr (dmap p w) idd) {\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => ((dmap p dd.1, dpath \lam i => dmap p (dd.2 i)) : \Sigma (d : p e ~> p x) (DPath (\lam i => p (w i) ~> d i) idd idd))})
+                     S1
+         \in (totalEquiv (\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => triangle-map p u dd.1)).2 S2 (w, dpath \lam i => idd {E} {w i})
+
+    -- | A square `u ; v = w` into a fixed target as its diagonal with the two triangles.
+    \func sq-split {E : \Cat} {e e' x : E} (u : e ~> e') (w : e ~> x) (s : \Sigma (v : e' ~> x) (DPath (\lam i => u i ~> x) w v))
+      : \Sigma (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> dd.1 i) idd v))
+      => ((sqDiag {E} {_} {_} {_} {_} {u} {idd} {w} {s.1} s.2, sqTri2 {E} {_} {_} {_} {_} {u} {idd} {w} {s.1} s.2),
+          (s.1, sqTri1 {E} {_} {_} {_} {_} {u} {idd} {w} {s.1} s.2))
+
+    -- | {sq-split} is an equivalence: over a fixed `v`, both sides are contractible.
+    \lemma sq-split-equiv {E : \Cat} {e e' x : E} (u : e ~> e') (w : e ~> x) : IsEquiv (sq-split u w)
+      => (totalEquiv (sq-split u)).2 (IsEquiv.leftFactor {_} {_} {_} {totalEquiv.total (sq-split u)} {\lam t => t.2.2.1} (proj2-equiv u) (proj1-equiv u)) w
+      \where {
+        -- | Squares with a fixed right side `v` are contractible.
+        \lemma proj1-equiv {E : \Cat} {e e' x : E} (u : e ~> e')
+          : IsEquiv {\Sigma (w : e ~> x) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> x) w v))} {e' ~> x} (\lam t => t.2.1)
+          => inP $ later \new QEquiv {\Sigma (w : e ~> x) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> x) w v))}
+                                     {\Sigma (v : e' ~> x) (\Sigma (w : e ~> x) (DPath (\lam i => u i ~> x) w v))} {
+               | f t => (t.2.1, (t.1, t.2.2))
+               | ret t => (t.2.1, (t.1, t.2.2))
+               | ret_f t => idp
+               | f_sec t => idp
+             } `transQEquiv` contr-right \lam v => Contr.Contr_QEquiv
+                  (symQEquiv $ sigma-right \lam w => square-equiv u (idd {E} {x}) {v} {w} `transQEquiv` inv-equiv `transQEquiv` pathEquiv-right (comp_idd-right {E} {e} {x} {w}))
+                  (rsigma (comp u v))
+
+        -- | Pairs of triangles with a fixed right side `v` are contractible.
+        \lemma proj2-equiv {E : \Cat} {e e' x : E} (u : e ~> e')
+          : IsEquiv {\Sigma (w : e ~> x) (\Sigma (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> dd.1 i) idd v)))}
+                    {e' ~> x} (\lam t => t.2.2.1)
+          => inP $ later \new QEquiv {\Sigma (w : e ~> x) (\Sigma (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> dd.1 i) idd v)))}
+                                     {\Sigma (v : e' ~> x) (\Sigma (dt : \Sigma (d : e ~> x) (DPath (\lam i => u i ~> d i) idd v)) (\Sigma (w : e ~> x) (DPath (\lam i => w i ~> dt.1 i) idd idd)))} {
+               | f t => (t.2.2.1, ((t.2.1.1, t.2.2.2), (t.1, t.2.1.2)))
+               | ret t => (t.2.2.1, ((t.2.1.1, t.2.2.2), (t.1, t.2.1.2)))
+               | ret_f t => idp
+               | f_sec t => idp
+             } `transQEquiv` contr-right \lam v => sigma-Contr (segal-contr u v) \lam dt => idd-factor-contr dt.1
+
+        -- | Factorizations of {d} through an identity are contractible.
+        \lemma idd-factor-contr {E : \Cat} {e x : E} (d : e ~> x) : Contr (\Sigma (w : e ~> x) (DPath (\lam i => w i ~> d i) idd idd))
+          => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam w => comp-equiv `transQEquiv` pathEquiv-right (comp_idd-right {E} {e} {x} {w})) (rsigma d)
+      }
+
+    -- | The image of {sq-split} under {p}, with {triangle-map} on the second triangle.
+    \func split-map {E A : \Cat} (p : E ->⁺ A) {e e' x : E} (u : e ~> e') (w : e ~> x)
+                    (t : \Sigma (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> dd.1 i) idd v)))
+      : \Sigma (dd : \Sigma (d : p e ~> p x) (DPath (\lam i => p (w i) ~> d i) idd idd)) (\Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> dd.1 i) idd g))
+      => ((dmap p t.1.1, dpath \lam i => dmap p (t.1.2 i)), triangle-map p u t.1.1 t.2)
+  }

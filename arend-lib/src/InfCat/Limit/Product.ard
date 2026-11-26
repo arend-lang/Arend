@@ -61,6 +61,15 @@
       => \lam b b' => \have r => unique (b.1.1.1, b.1.1.2, b.1.2, b.2) (b'.1.1.1, b'.1.1.2, b'.1.2, b'.2)
                       \in path \lam i => ((((r i).1, (r i).2), (r i).3), (r i).4)
 
+    -- | An identity and an arrow into a terminal object form a product.
+    \lemma idd-terminal {C : \Cat} {x t : C} (tt : IsTerminal t) (p2 : x ~> t) : IsProduct (idd {C} {x}) p2
+      => \lam r => transport IsEquiv (ext \lam h => ext (inv comp_idd-right, idp)) $ inP $ later \new QEquiv {r ~> x} {\Sigma (r ~> x) (r ~> t)} {
+           | f h => (h, comp h p2)
+           | ret s => s.1
+           | ret_f h => idp
+           | f_sec s => ext (idp, isContr=>isProp (tt r) _ _)
+         }
+
     -- | Equivalences of ∞-categories preserve products.
     \lemma equiv-preserve {C D : \Cat} {f : C ->⁺ D} (e : IsHEquiv f) {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2)
       : IsProduct (dmap f p1) (dmap f p2)

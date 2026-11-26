@@ -10,8 +10,9 @@
  -   Consequently, pushout squares with a fixed left side embed into the coslice under its source via their top sides
  -   ({IsPushoutSquare.top-emb}), and this is an equivalence if pushouts exist ({IsPushoutSquare.top-equiv}).
  -
- -   A square is a pushout square if and only if, for every test object `r`, arrows out of its bottom right corner are cocones
- -   ({IsPushoutSquare.pushout-char}). The duality with pullback squares of `Op C` is in {InfCat.Limit.PushoutOp}.
+ -   A square is a pushout square with respect to a test object `r` ({IsPushoutAt}) if and only if arrows from its bottom right corner
+ -   to `r` are cocones ({IsPushoutSquare.pushoutAt-char}); it is a pushout square if this holds for every `r` ({IsPushoutSquare.pushout-char}).
+ -   Every square is a pushout square with respect to a terminal object ({IsPushoutAt.terminal}). The duality with pullback squares of `Op C` is in {InfCat.Limit.PushoutOp}.
  -}
 
 \import Equiv
@@ -25,6 +26,7 @@
 \import InfCat.Limit.BaseHCat
 \import InfCat.Limit.Coproduct
 \import InfCat.Limit.Initial
+\import InfCat.Limit.Terminal
 \import InfCat.Slice
 \import InfCat.Square
 \import Logic
@@ -65,6 +67,24 @@
       }
   }
 
+-- | A square is a pushout square with respect to the test object {r}: it is cocartesian for the source functor at `const r`.
+\type IsPushoutAt {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : \Prop
+  => IsCocartesianArrowAt (\lam w => w dleft) (dpath phi) (const r)
+  \where {
+    -- | Every square is a pushout square with respect to a terminal object.
+    \lemma terminal {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} (rt : IsTerminal r) : IsPushoutAt phi r
+      => \have ct : IsTerminal {DI ->⁺ C} (const r)
+           => \lam f => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (terminal-ev0-equiv {C} {f} {const r} rt))) (rt (f dleft))
+         \in \lam w => contr-equiv (tri-contr (dpath phi) w ct) (tri-contr (dpath \lam i => phi i dleft) (dmap (\lam (w : DI ->⁺ C) => w dleft) w) rt)
+                                  {triangle-map (\lam (w : DI ->⁺ C) => w dleft) (dpath phi) w}
+
+    -- | Triangles into a terminal object are contractible.
+    \lemma tri-contr {E : \Cat} {e e' x : E} (u : e ~> e') (w : e ~> x) (xt : IsTerminal x)
+      : Contr (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> w i) idd v))
+      => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam v => square-equiv u w {v} {idd})
+           (sigma-Contr (xt e') \lam v => isProp=>PathContr _ (isContr=>isProp (xt e)) (comp u v) (comp idd w))
+  }
+
 -- | A square is a pushout square if it is cocartesian for the source functor with respect to constant arrows.
 \type IsPushoutSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
   => \Pi (r : C) -> IsCocartesianArrowAt (\lam w => w dleft) (dpath phi) (const r)
@@ -72,6 +92,10 @@
     -- | Identity squares are pushout squares.
     \lemma isPushout-idd {C : \Cat} (u : DI ->⁺ C) : IsPushoutSquare (idd {DI ->⁺ C} {u})
       => \lam r w => idd-cocartesian {DI ->⁺ C} {C} {\lam w => w dleft} w
+
+    -- | A square whose arrows in the second direction are identities is a pushout square.
+    \lemma isPushout-const {C : \Cat} (w : DI ->⁺ C) : IsPushoutSquare (\lam i _ => w i)
+      => (coproduct-char (\lam i _ => w i)).2 (IsCoproduct.idd-initial CosliceCat.initial-contr _)
 
     -- | The cube of composites of the arrows `phi l j ~> phi dright dright` with {k}; the last coordinate runs along the composite.
     \func coSq {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (k :⁺ phi dright dright ~> r) (l j m :⁺ DI) : C
@@ -86,13 +110,16 @@
       => (dpath \lam l => \lam j => coSq phi k l j l,
           (dpath \lam m => coSq phi k dright dleft m, dpath \lam l => dpath \lam m => coSq phi k l dleft (dmin l m)))
 
+    -- | A square is a pushout square with respect to {r} if and only if arrows from its bottom right corner to {r} are cocones.
+    \lemma pushoutAt-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsPushoutAt phi r <-> IsEquiv (cocone phi {r})
+      => \let | tm (w : phi dleft ~> const r) => triangle-map (\lam w => w dleft) (dpath phi) w
+              | eqr : IsEquiv (cocone phi {r}) <-> IsEquiv (totalEquiv.total tm)
+                => IsEquiv.parallelEquiv (pushout-char.cosec-equiv phi r) (inP idEquiv) (\lam k => idp)
+         \in (\lam po => eqr.2 ((totalEquiv tm).1 po), \lam ce w => (totalEquiv tm).2 (eqr.1 ce) w)
+
     -- | A square is a pushout square if and only if, for every test object `r`, arrows out of the bottom right corner are cocones.
     \lemma pushout-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : IsPushoutSquare phi <-> (\Pi (r : C) -> IsEquiv (cocone phi {r}))
-      => \let | tm (r : C) (w : phi dleft ~> const r) => triangle-map (\lam w => w dleft) (dpath phi) w
-              | eqr (r : C) : IsEquiv (cocone phi {r}) <-> IsEquiv (totalEquiv.total (tm r))
-                => IsEquiv.parallelEquiv (cosec-equiv phi r) (inP idEquiv) (\lam k => idp)
-         \in (\lam po r => (eqr r).2 ((totalEquiv (tm r)).1 (po r)),
-             \lam ce r w => (totalEquiv (tm r)).2 ((eqr r).1 (ce r)) w)
+      => (\lam po r => (pushoutAt-char phi r).1 (po r), \lam ce r => (pushoutAt-char phi r).2 (ce r))
       \where {
         -- | The factorization of {cocone} through the square.
         \func cosec {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) (k : phi dright dright ~> r)
