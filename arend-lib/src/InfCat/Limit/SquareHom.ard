@@ -14,6 +14,9 @@
  -   and bottom right corners. Hence, if {t} is a pullback square with respect to the top left corner of {s},
  -   arrows from {s} to {t} are determined by their top left components if and only if {s} is a pushout square
  -   with respect to the bottom right corner of {t} ({pushoutAt-corner-char}), and dually ({pullbackAt-corner-char}).
+ -   With a single initial corner of {s} and terminal corner of {t}, arrows into a pullback square are determined by their right columns
+ -   ({pullbackAt-right-equiv}), and arrows into a square with constant rows are determined by their top rows if and only if
+ -   the transpose of {s} is a pushout square ({pushoutAt-top-char}).
  -}
 
 \import Equiv
@@ -32,6 +35,7 @@
 \import Logic
 \import Logic.Unique
 \import Paths
+\import Paths.Meta
 
 -- | An arrow between squares as its two column arrows with the commutative square they form.
 \func sqHom {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (N : s ~> t)
@@ -93,3 +97,27 @@
            | proj-char => pullback-proj-right-equiv ((pushoutAt-column {C} {s} {t} si1 tt1).1 po)
      \in (\lam ee => (pullbackAt-column {C} {s} {t} si2 tt2).2 $ proj-char.1 $ IsEquiv.rightFactor sqHom-equiv $ IsEquiv.leftFactor ie ee,
          \lam pb => IsEquiv.trans (IsEquiv.trans sqHom-equiv (proj-char.2 ((pullbackAt-column {C} {s} {t} si2 tt2).1 pb))) ie)
+
+-- | If the top right corners of {s} and {t} are initial and terminal and {t} is a pullback square with respect to the top left corner of {s}, then arrows from {s} to {t} are determined by their right columns.
+\lemma pullbackAt-right-equiv {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (si : IsInitial (s dleft dright)) (tt : IsTerminal (t dleft dright)) (pb : IsPullbackAt t (s dleft dleft))
+  : IsEquiv {s ~> t} {s dright ~> t dright} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dright)
+  => IsEquiv.trans sqHom-equiv (pullback-proj-right ((pullbackAt-column {C} {s} {t} si tt).1 pb))
+
+{- | Let the top right corner of {s} be initial and the source of {a} be terminal.
+ -   Then arrows from {s} to the square with constant rows {a} are determined by their top rows if and only if the transpose of {s} is a pushout square with respect to the target of {a}.
+ -}
+\lemma pushoutAt-top-char {C : \Cat} {s : DI ->⁺ DI ->⁺ C} (a : DI ->⁺ C) (si : IsInitial (s dleft dright)) (at : IsTerminal (a dleft))
+  : IsEquiv {s ~> (\lam i _ => a i)} {(\lam l =>⁺ s l dleft) ~> a} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => \lam l =>⁺ S l dleft)
+  <-> IsPushoutAt (\lam i j => s j i) (a dright)
+  => \have | tr : IsEquiv {s ~> (\lam i _ => a i)} {(\lam i j => s j i) ~> {DI ->⁺ DI ->⁺ C} (\lam _ j => a j)} (\lam N => dpath \lam m i j => N m j i)
+             => inP \new QEquiv {
+                  | ret N => dpath \lam m i j => N m j i
+                  | ret_f _ => idp
+                  | f_sec _ => idp
+                }
+           | e1 => IsEquiv.trans tr (sqHom-equiv {C} {\lam i j => s j i} {\lam _ j => a j})
+           | fe : IsEquiv (\lam (x : (\lam l =>⁺ s l dleft) ~> a) => comp x (idd {_} {a}))
+             => transport IsEquiv (ext \lam (x : (\lam l =>⁺ s l dleft) ~> a) => inv comp_idd-right) (inP idEquiv)
+           | pc => pullback-proj-left-equiv fe
+           | col => pushoutAt-column {C} {\lam i j => s j i} {\lam _ j => a j} si at
+     \in (\lam e => col.2 (pc.1 (IsEquiv.rightFactor e1 e)), \lam po => IsEquiv.trans e1 (pc.2 (col.1 po)))

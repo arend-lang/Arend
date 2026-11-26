@@ -2,7 +2,7 @@
  -
  -   A square, viewed as an arrow of `DI ->⁺ C`, is a pullback square if it is cartesian for the target functor
  -   with respect to constant arrows ({IsPullbackSquare}).
- -   Pullback squares can be pasted ({IsPullbackSquare.paste}) and cancelled ({IsPullbackSquare.cancel}).
+ -   Pullback squares can be pasted ({IsPullbackSquare.paste}), cancelled ({IsPullbackSquare.cancel}) and transposed ({IsPullbackSquare.pullback-transpose}).
  -
  -   A square is a pullback square if and only if its left and top sides form a product in the slice over its bottom right corner
  -   ({IsPullbackSquare.product-char}): in the slice the corner is terminal ({IsPullbackSquare.slice-char}),
@@ -282,6 +282,10 @@
       => \have | sc => slice-char phi
                | tp => terminal-product (sliceSquare phi) SliceCat.terminal-contr
          \in (\lam pb => tp.1 (sc.1 pb), \lam pp => sc.2 (tp.2 pp))
+
+    -- | Transposing a pullback square gives a pullback square.
+    \lemma pullback-transpose {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare phi) : IsPullbackSquare (\lam i j => phi j i)
+      => (product-char (\lam i j => phi j i)).2 (IsProduct.swap ((product-char phi).1 pb))
 
     -- | The bottom side of a square into {sig} as an object of the slice over the target of {sig}.
     \func bottom {C : \Cat} {sig : DI ->⁺ C} (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2)) : SliceCat (sig dright)

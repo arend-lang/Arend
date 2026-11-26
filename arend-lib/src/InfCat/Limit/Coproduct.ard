@@ -64,6 +64,15 @@
       => \lam b b' => \have r => unique (b.1.1.1, b.1.1.2, b.1.2, b.2) (b'.1.1.1, b'.1.1.2, b'.1.2, b'.2)
                       \in path \lam i => ((((r i).1, (r i).2), (r i).3), (r i).4)
 
+    -- | Coproducts are symmetric.
+    \lemma swap {C : \Cat} {x y p : C} {i1 : x ~> p} {i2 : y ~> p} (pp : IsCoproduct i1 i2) : IsCoproduct i2 i1
+      => \lam r => IsEquiv.trans (pp r) (inP \new QEquiv {\Sigma (x ~> r) (y ~> r)} {\Sigma (y ~> r) (x ~> r)} {
+           | f s => (s.2, s.1)
+           | ret s => (s.2, s.1)
+           | ret_f _ => idp
+           | f_sec _ => idp
+         })
+
     -- | An identity and an arrow out of an initial object form a coproduct.
     \lemma idd-initial {C : \Cat} {x t : C} (ti : IsInitial t) (i2 : t ~> x) : IsCoproduct (idd {C} {x}) i2
       => \lam r => transport IsEquiv (ext \lam h => ext (inv comp_idd-left, idp)) $ inP $ later \new QEquiv {x ~> r} {\Sigma (x ~> r) (t ~> r)} {

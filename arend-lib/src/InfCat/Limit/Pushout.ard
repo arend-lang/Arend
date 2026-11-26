@@ -2,7 +2,8 @@
  -
  -   A square, viewed as an arrow of `DI ->⁺ C`, is a pushout square if it is cocartesian for the source functor
  -   with respect to constant arrows ({IsPushoutSquare}); this is dual to {IsPullbackSquare}.
- -   Pushout squares can be pasted ({IsPushoutSquare.paste}) and cancelled ({IsPushoutSquare.cancel}).
+ -   Pushout squares can be pasted ({IsPushoutSquare.paste}) and cancelled ({IsPushoutSquare.cancel}), and transposed ({IsPushoutSquare.pushout-transpose});
+ -   isomorphisms of arrows are pushout squares ({IsPushoutSquare.isPushout-iso}).
  -
  -   A square is a pushout square if and only if its right and bottom sides form a coproduct in the coslice under its top left corner
  -   ({IsPushoutSquare.coproduct-char}): in the coslice the corner is initial ({IsPushoutSquare.coslice-char}),
@@ -27,6 +28,7 @@
 \import InfCat.Limit.Coproduct
 \import InfCat.Limit.Initial
 \import InfCat.Limit.Terminal
+\import InfCat.Rezk
 \import InfCat.Slice
 \import InfCat.Square
 \import Logic
@@ -96,6 +98,13 @@
     -- | A square whose arrows in the second direction are identities is a pushout square.
     \lemma isPushout-const {C : \Cat} (w : DI ->⁺ C) : IsPushoutSquare (\lam i _ => w i)
       => (coproduct-char (\lam i _ => w i)).2 (IsCoproduct.idd-initial CosliceCat.initial-contr _)
+
+    -- | An isomorphism of arrows is a pushout square.
+    \lemma isPushout-iso {C : \Cat} {u v : DI ->⁺ C} {p : u ~> v} (pi : IsIso p) : IsPushoutSquare p
+      => \have r => IsIso_= pi \in transport (\lam q => IsPushoutSquare q) r.2 (aux r.1)
+      \where
+        \private \lemma aux {C : \Cat} {u v : DI ->⁺ C} (P : u = v) : IsPushoutSquare (=_~> P) \elim P
+          | idp => isPushout-idd u
 
     -- | The cube of composites of the arrows `phi l j ~> phi dright dright` with {k}; the last coordinate runs along the composite.
     \func coSq {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (k :⁺ phi dright dright ~> r) (l j m :⁺ DI) : C
@@ -256,6 +265,10 @@
       => \have | cc => coslice-char phi
                | ic => initial-coproduct (cosliceSquare phi) CosliceCat.initial-contr
          \in (\lam po => ic.1 (cc.1 po), \lam cp => cc.2 (ic.2 cp))
+
+    -- | Transposing a pushout square gives a pushout square.
+    \lemma pushout-transpose {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (po : IsPushoutSquare phi) : IsPushoutSquare (\lam i j => phi j i)
+      => (coproduct-char (\lam i j => phi j i)).2 (IsCoproduct.swap ((coproduct-char phi).1 po))
 
     -- | The top side of a square out of {sig} as an object of the coslice under the source of {sig}.
     \func top {C : \Cat} {sig : DI ->⁺ C} (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2)) : CosliceCat (sig dleft)

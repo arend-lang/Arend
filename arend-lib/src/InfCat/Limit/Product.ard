@@ -61,6 +61,15 @@
       => \lam b b' => \have r => unique (b.1.1.1, b.1.1.2, b.1.2, b.2) (b'.1.1.1, b'.1.1.2, b'.1.2, b'.2)
                       \in path \lam i => ((((r i).1, (r i).2), (r i).3), (r i).4)
 
+    -- | Products are symmetric.
+    \lemma swap {C : \Cat} {x y p : C} {p1 : p ~> x} {p2 : p ~> y} (pp : IsProduct p1 p2) : IsProduct p2 p1
+      => \lam r => IsEquiv.trans (pp r) (inP \new QEquiv {\Sigma (r ~> x) (r ~> y)} {\Sigma (r ~> y) (r ~> x)} {
+           | f s => (s.2, s.1)
+           | ret s => (s.2, s.1)
+           | ret_f _ => idp
+           | f_sec _ => idp
+         })
+
     -- | An identity and an arrow into a terminal object form a product.
     \lemma idd-terminal {C : \Cat} {x t : C} (tt : IsTerminal t) (p2 : x ~> t) : IsProduct (idd {C} {x}) p2
       => \lam r => transport IsEquiv (ext \lam h => ext (inv comp_idd-right, idp)) $ inP $ later \new QEquiv {r ~> x} {\Sigma (r ~> x) (r ~> t)} {

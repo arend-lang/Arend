@@ -4,6 +4,8 @@
 \import InfCat.Limit.Terminal
 \import Logic
 \import InfCat.Opposite
+\import InfCat.Rezk
+\import Logic.Unique
 \import Paths
 
 \class PointedHCat \extends HCatWithTerminal, HCatWithInitial {
@@ -31,6 +33,10 @@
     -- | Zero objects of {C} are zero objects of `Op C`.
     \protected \lemma op.{u} {C : \Cat u} {x : C} : IsZeroObj x <-> IsZeroObj (Op.toOp x)
       => (\lam z => (terminal-op.1 z.2, initial-op.1 z.1), \lam z => (initial-op.2 z.2, terminal-op.2 z.1))
+
+    -- | An arrow between zero objects is an isomorphism.
+    \lemma arrow-iso {C : \Cat} {x y : C} (zx : IsZeroObj x) (zy : IsZeroObj y) {f : x ~> y} : IsIso f
+      => inP ((zx.2 y).center, isContr=>isProp (zy.1 y) _ _, isContr=>isProp (zx.1 x) _ _)
   }
 
 -- | The opposite of a pointed ∞-category is pointed.
