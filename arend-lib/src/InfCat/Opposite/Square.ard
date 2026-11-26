@@ -132,13 +132,17 @@
       | f_sec t => pmap (\lam e => ((t.1, e) : \Sigma (x : Frame C) (Comm x))) (comp-equiv.flipped.f_sec t.2)
 
     -- | The opposite of a frame.
-    \func frameOp.{v} {C : \Cat v} : QEquiv {Frame C} {Frame (Op C)}
-      => sigma-equiv (\new QEquiv {\Sigma C C C C} {\Sigma (Op C) (Op C) (Op C) (Op C)} {
+    \func frameOp.{v} {C : \Cat v} (x : Frame C) : Frame (Op C)
+      => ((Op.toOp x.1.4, Op.toOp x.1.3, Op.toOp x.1.2, Op.toOp x.1.1), (opArr x.2.4, opArr x.2.3, opArr x.2.2, opArr x.2.1))
+
+    -- | {frameOp} is an equivalence.
+    \lemma frameOp-equiv.{v} {C : \Cat v} : IsEquiv (frameOp {C})
+      => inP (sigma-equiv (\new QEquiv {\Sigma C C C C} {\Sigma (Op C) (Op C) (Op C) (Op C)} {
            | f k => (Op.toOp k.4, Op.toOp k.3, Op.toOp k.2, Op.toOp k.1)
            | ret k => (IsEquiv.ret Op.toOp-equiv k.4, IsEquiv.ret Op.toOp-equiv k.3, IsEquiv.ret Op.toOp-equiv k.2, IsEquiv.ret Op.toOp-equiv k.1)
            | ret_f k => ext (IsEquiv.ret_f Op.toOp-equiv, IsEquiv.ret_f Op.toOp-equiv, IsEquiv.ret_f Op.toOp-equiv, IsEquiv.ret_f Op.toOp-equiv)
            | f_sec k => ext (IsEquiv.f_ret Op.toOp-equiv, IsEquiv.f_ret Op.toOp-equiv, IsEquiv.f_ret Op.toOp-equiv, IsEquiv.f_ret Op.toOp-equiv)
-         }) (arrOp {C})
+         }) (arrOp {C}))
 
     -- | The opposites of the sides of a square.
     \func arrOp.{v} {C : \Cat v} (k : \Sigma C C C C)
@@ -171,7 +175,7 @@
 
     -- | {opSquare.opData} is an equivalence.
     \lemma opData-equiv.{v} {C : \Cat v} : IsEquiv (opSquare.opData {C})
-      => IsEquiv.trans (inP toComm) $ IsEquiv.trans (inP (sigma-equiv (frameOp {C}) \lam x => IsEquiv.toQEquiv (commOp {C} x))) (inP (symQEquiv toComm))
+      => IsEquiv.trans (inP toComm) $ IsEquiv.trans (inP (sigma-equiv (IsEquiv.toQEquiv (frameOp-equiv {C})) \lam x => IsEquiv.toQEquiv (commOp {C} x))) (inP (symQEquiv toComm))
   }
 
 -- | To prove a property of all squares of `Op C`, it suffices to prove it for opposites of squares of {C}.
