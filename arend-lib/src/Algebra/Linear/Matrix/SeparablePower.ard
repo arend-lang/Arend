@@ -1,0 +1,74 @@
+{- | **Separable matrices in characteristic `p`** (Mines–Richman–Ruitenburg, proof of Theorem VI.6.2).
+
+     If `B` is a separable matrix over a discrete field `k` and `q` is a characteristic exponent of `k`, then `B` is a
+     polynomial in $B^q$ (`separable-polyIn-pow`). Following the book: over a splitting field the matrix `B` is
+     diagonalizable; $x \mapsto x^q$ is one-to-one (`charExp-inj`), so equal diagonal entries of $B^q$ come from equal
+     diagonal entries of `B`, and by V.3.3 (`jordan-diagonal-poly`) the diagonal form of `B` is a polynomial in that of
+     $B^q$. This descends to `k` by `polyIn-descent`. Here $B^q$ is written `matPolyEval (monomial 1 q) B`.
+-}
+
+\import Algebra.Field
+\import Algebra.Field.FieldOfDefinition
+\import Algebra.Field.Splitting
+\import Algebra.Field.SubField
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Diagonalizable
+\import Algebra.Linear.Matrix.FieldExtension
+\import Algebra.Linear.Matrix.JordanMatrix
+\import Algebra.Linear.Matrix.MinPoly
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Linear.Matrix.PrimitiveElement
+\import Algebra.Linear.Matrix.Separable
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Characteristic
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Data.Array
+\import Data.Bool
+\import Logic
+\import Logic.Meta
+\import Paths
+
+-- | A diagonal matrix `D` is a polynomial in $D^q$ for a characteristic exponent `q`.
+\lemma diagonal-polyIn-pow {F : DiscreteField} {n : Nat} (d : Array F n) {q : Nat} (c : IsCharExponent F q)
+  : ∃ (r : Poly F) (matPolyEval r (matPolyEval (monomial 1 q) (diagonal d)) = diagonal d)
+  => \let mu : Array F n => map (polyEval (monomial 1 q)) d
+     \in \case jordan-diagonal-poly mu (\lam _ => false) (\lam _ ff => absurd (true/=false (inv ff))) d
+                 (\lam {i} {j} e => charExp-inj c (inv (polyEval_monomial *> ide-left) *> e *> polyEval_monomial *> ide-left)) \with {
+       | inP (r, re) => inP (r, pmap (matPolyEval r) (matPolyEval_diagonal {F} {monomial 1 q} {d} *> primitive-diagonal.diagonal-jordan mu) *> re)
+     }
+
+-- | **Theorem VI.6.2, matrix form.** A separable matrix `B` is a polynomial in $B^q$ for every characteristic exponent `q`.
+\lemma separable-polyIn-pow {k : DiscreteField} {n : Nat} {B : Matrix k n n} (Bs : IsSeparableMatrix B) {q : Nat} (c : IsCharExponent k q)
+  : ∃ (r : Poly k) (matPolyEval r (matPolyEval (monomial 1 q) B) = B)
+  => \case fieldOfDefinition-matrix (B :: nil) \with {
+    | inP (S, cS, Ms0, e) =>
+      \let | i => SubField.embed S
+           | B0 => Ms0 0
+           | (p0, m0) => matMinPoly B0
+           | (F, _, f1, sf1) => countableSplittingField {IDiscreteField S} cS {p0}
+      \in \have | eB : matrix-map i B0 = B => e 0
+                | cF : IsCharExponent F q => IsCharExponent_map f1 (IsCharExponent_reflect i (RingHom.field-isInj {IDiscreteField S} {k} {i}) c)
+      \in \case splitting-diagonalizable m0 (separable<->diagonalizable.separable-descent i eB m0 Bs) sf1 \with {
+        | inP (P, Pd) =>
+          \let | B1 => matrix-map f1 B0
+               | D => P.val * B1 * P.inv
+          \in \have Dd : D = diagonal (mkArray \lam j => D j j) => diagonalizable-annihilator.isDiagonal-diagonal Pd
+          \in \case diagonal-polyIn-pow (mkArray \lam j => D j j) cF \with {
+            | inP (r, re) =>
+              \have r1 : matPolyEval r (matPolyEval (monomial 1 q) B1) = B1
+                => primitive-split.conj-cancel P (inv (matPolyEval_conj P) *> pmap (matPolyEval r) (inv (matPolyEval_conj P) *> pmap (matPolyEval (monomial 1 q)) Dd) *> re *> inv Dd)
+              \in \case polyIn-descent f1 {n} {matPolyEval (monomial 1 q) B0} {B0} (inP (r, pmap (matPolyEval r) (map-pow f1) *> r1)) \with {
+                | inP (r0, r0e) => inP (polyMap i r0, pmap (\lam M => matPolyEval (polyMap i r0) (matPolyEval (monomial 1 q) M)) (inv eB)
+                                                        *> pmap (matPolyEval (polyMap i r0)) (inv (map-pow i)) *> inv (matPolyEval_map i) *> pmap (matrix-map i) r0e *> eB)
+              }
+          }
+      }
+  }
+  \where
+    -- | $B^q$ commutes with mapping entries.
+    \lemma map-pow {R S : CRing} (g : RingHom R S) {n q : Nat} {T : Matrix R n n}
+      : matrix-map g (matPolyEval (monomial 1 q) T) = matPolyEval (monomial 1 q) (matrix-map g T)
+      => matPolyEval_map g *> pmap (matPolyEval __ _) (polyMap_monomial *> pmap (monomial __ q) g.func-ide)

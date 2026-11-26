@@ -1,0 +1,82 @@
+{- | **Lemma VI.6.5** (Mines–Richman–Ruitenburg): factors of $X^q - a$ in characteristic `p`.
+
+     Let `p` be a prime that is zero in a commutative ring `R`, let `q` be a positive power of `p`, and let `a ∈ R`.
+     If $X^q - a = f g$ with `f`, `g` monic and strongly relatively prime, then `f = 1` or `g = 1`.
+
+     Proof (book): $f'g + fg' = 0$ and $sf + tg = 1$ give $f \mid f'$, so $f' = 0$ since `f` is monic; likewise $g' = 0$.
+     By Theorem VI.6.1, $f = f_1(X^p)$ and $g = g_1(X^p)$, so $X^{q/p} - a = f_1 g_1$, and $f_1$, $g_1$ are strongly
+     relatively prime (take the parts of `s` and `t` of degrees divisible by `p`, i.e. contract). Induct on `q`.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module.Primary
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Ring.Poly.Expand
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Prime
+\import Function.Meta
+\import Logic
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open Monoid
+
+-- | **Lemma VI.6.5.** $X^{p^{e+1}} - a$ has no factorization into strongly relatively prime monic polynomials other than the trivial one.
+\lemma pure-power-coprime {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) (e : Nat) (a : R) {f g : Poly R}
+  (fm : isMonic f) (gm : isMonic g) (fg : monomial 1 (pow p (suc e)) - padd pzero a = f * g) (c : IsStronglyCoprime f g)
+  : (f = 1) || (g = 1)
+  => aux pp pz (suc e) a fm gm (pmap (+ _) ide-left *> fg) c
+  \where {
+    -- | The statement for $X^{p^e} - a$, written as the expansion of $X - a$, by induction on `e`.
+    \private \lemma aux {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) (e : Nat) (a : R) {f g : Poly R}
+      (fm : isMonic f) (gm : isMonic g) (fg : polyExpand (pow p e) (padd 1 (negative a)) = f * g) (c : IsStronglyCoprime f g)
+      : (f = 1) || (g = 1) \elim e
+      | 0 => base fm gm $ rewriteI fg $ degree<=_expand {R} {1} {padd 1 (negative a)} {1} idp
+      | suc e =>
+        \have | p>0 : 0 < p => NatOrder.zero<suc <∘ prime>1 pp
+              | qz : R.natCoef (pow p (suc e)) = 0 => Semiring.natCoef_* *> pmap (_ *) pz *> zro_*-right
+              | fgd : polyDeriv f * g + f * polyDeriv g = 0 => inv polyDeriv_* *> pmap polyDeriv (inv fg) *> polyDeriv_expand qz {padd 1 (negative a)}
+              | gfd : polyDeriv g * f + g * polyDeriv f = 0 => +-comm *> pmap2 (+) *-comm *-comm *> fgd
+        \in \case (deriv-zero<->expand pp pz).1 (deriv-zero fm c fgd), (deriv-zero<->expand pp pz).1 (deriv-zero gm (IsStronglyCoprime.sym c) gfd), c \with {
+          | inP (f1, fe), inP (g1, ge), inP (s, t, st) =>
+            \have | f1g1 : polyExpand (pow p e) (padd 1 (negative a)) = f1 * g1
+                     => polyExpand-inj p>0 $ polyExpand-expand {R} {p} {pow p e} {padd 1 (negative a)} *> fg *> pmap2 (*) fe ge *> inv (polyExpandHom p).func-*
+                  | c1 : IsStronglyCoprime f1 g1 => inP (polyContract p s, polyContract p t,
+                     inv (pmap2 (+) (polyContract_*-expand p>0) (polyContract_*-expand p>0)) *> inv (polyContract_+ p>0)
+                       *> pmap (polyContract p) (pmap2 (\lam x y => s * x + t * y) (inv fe) (inv ge) *> st) *> polyContract_ide p>0)
+            \in \case aux pp pz e a (isMonic_unexpand p>0 $ transport isMonic fe fm) (isMonic_unexpand p>0 $ transport isMonic ge gm) f1g1 c1 \with {
+              | byLeft f1=1 => byLeft $ fe *> pmap (polyExpand p) f1=1 *> (polyExpandHom p).func-ide
+              | byRight g1=1 => byRight $ ge *> pmap (polyExpand p) g1=1 *> (polyExpandHom p).func-ide
+            }
+        }
+
+    -- | A factorization of a polynomial of degree at most 1 into monic polynomials is trivial.
+    \lemma base {R : CRing} {f g : Poly R} (fm : isMonic f) (gm : isMonic g) (d : degree<= (f * g) 1) : (f = 1) || (g = 1) \elim fm, gm
+      | inP (0, df, cf), _ => byLeft $ degree<=0 f df *> pmap (padd pzero) cf
+      | _, inP (0, dg, cg) => byRight $ degree<=0 g dg *> pmap (padd pzero) cg
+      | inP (suc n, df, cf), inP (suc m, dg, cg) =>
+        \have | t : 0 = {R} 1 => inv (degree<=.toCoefs (f * g) 1 d {suc n Nat.+ suc m} (NatOrder.suc<suc $ transport (0 <) (NatSemiring.+-comm {m} {suc n}) (NatOrder.zero<suc {m Nat.+ n})))
+                                *> leadCoef-product df dg *> pmap2 (*) cf cg *> ide-left
+              | triv {x : R} : x = 0 => inv ide-right *> pmap (x *) (inv t) *> zro_*-right
+        \in byLeft $ Poly.poly-trivial (\lam _ => triv) f *> inv (Poly.poly-trivial (\lam _ => triv) 1)
+
+    -- | If `f` is monic and strongly coprime to `g`, and $f'g + fg' = 0$, then $f' = 0$.
+    \lemma deriv-zero {R : CRing} {f g : Poly R} (fm : isMonic f) (c : IsStronglyCoprime f g) (d : polyDeriv f * g + f * polyDeriv g = 0)
+      : polyDeriv f = 0 \elim fm, c
+      | inP (n, df, cf), inP (s, t, st) =>
+        \have | h : polyDeriv f = (s * polyDeriv f - t * polyDeriv g) * f => alg st d
+              | h0 => monicPolyDivisionContr.aux (s * polyDeriv f - t * polyDeriv g) f n df cf $ rewriteI h $ degree<_polyDeriv (degree<=_degree< df)
+        \in h *> pmap (* f) h0 *> zro_*-left {PolyRing R} {f}
+
+    -- | If $sf + tg = 1$ and $xg + fy = 0$, then $x = (sx - ty) f$.
+    \lemma alg {A : CRing} {x y s t f g : A} (st : s * f + t * g = 1) (d : x * g + f * y = 0) : x = (s * x - t * y) * f
+      => inv ide-right *> pmap (x *) (inv st) *> (equation.cRing : x * (s * f + t * g) = s * x * f + t * (x * g + f * y) - t * y * f)
+          *> pmap (\lam z => s * x * f + t * z - t * y * f) d *> equation.cRing
+  }

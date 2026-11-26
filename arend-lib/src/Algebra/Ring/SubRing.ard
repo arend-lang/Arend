@@ -4,6 +4,7 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring.SubSemiring
+\import Paths
 \import Paths.Meta
 
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
@@ -75,3 +76,12 @@
 \func ImRingLeftHom (f : RingHom) : RingHom f.Dom (ImRing f) \cowith
   | SemiringHom => ImSemiringLeftHom f
   | AddGroupHom => ImAddGroupLeftHom f
+
+-- | The preimage of a subring under a ring homomorphism.
+\func PreimageRing (f : RingHom) (S : SubRing f.Cod) : SubRing f.Dom \cowith
+  | contains x => S (f x)
+  | contains_zro => transportInv S f.func-zro S.contains_zro
+  | contains_+ a b => transportInv S f.func-+ (S.contains_+ a b)
+  | contains_ide => transportInv S f.func-ide S.contains_ide
+  | contains_* a b => transportInv S f.func-* (S.contains_* a b)
+  | contains_negative a => transportInv S f.func-negative (S.contains_negative a)

@@ -77,6 +77,14 @@
       => pmap (padd (a * q) 0 +) zro_*c *> zro-right
   }
 
+-- | The derivative commutes with negation.
+\lemma polyDeriv_negative {R : Ring} {p : Poly R} : polyDeriv (negative p) = negative (polyDeriv p)
+  => AddGroup.negative-unique (polyDeriv p) (inv polyDeriv_+ *> pmap polyDeriv negative-left) negative-right
+
+-- | $X' = 1$.
+\lemma polyDeriv_X {R : Ring} : polyDeriv (padd 1 0) = {Poly R} 1
+  => pmap (1 +) (pmap (padd __ 0) (path peq) *> path peq) *> zro-right
+
 -- | Differentiating drops the degree bound by one.
 \lemma degree<_polyDeriv {R : Ring} {p : Poly R} {n : Nat} (d : degree< p (suc n)) : degree< (polyDeriv p) n
   => \lam {k} n<=k => polyCoef_polyDeriv *> pmap (natCoef (suc k) *) (d (suc<=suc n<=k)) *> R.zro_*-right
@@ -125,4 +133,11 @@
         {p : Poly K} {n : Nat} (lead : polyCoef p (suc n) /= 0)
       : polyCoef (polyDeriv p) n /= 0
       => rewrite polyCoef_polyDeriv (Domain.nonZero_* (char0 (suc n) NatOrder.zero<suc) lead)
+  }
+
+-- | A non-zero derivative has smaller degree.
+\lemma degree_polyDeriv< {R : Ring.Dec} {p : Poly R} (d : polyDeriv p /= 0) : degree (polyDeriv p) < degree p
+  => \case degree p \as n, idp : degree p = n \with {
+    | 0, dp => absurd $ d $ degree<0 $ degree<_polyDeriv {R} {p} {0} $ degree_degree< {R} {p} {1} (rewrite dp NatOrder.zero<suc)
+    | suc n, dp => rewrite dp $ degree<_degree d (degree<_polyDeriv {R} {p} {suc n} (degree_degree< {R} {p} {suc (suc n)} (rewrite dp id<suc)))
   }
