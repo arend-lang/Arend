@@ -1,5 +1,7 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
+\import Algebra.Field.Splitting
+\import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -7,8 +9,14 @@
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.Derivative
 \import Algebra.Ring.Poly.Euclidean()
+\import Algebra.Ring.Poly.LinearFactors
 \import Algebra.Ring.RingHom
+\import Algebra.Semiring
 \import Arith.Nat
+\import Data.Array
+\import Data.Fin
+\import Function.Meta
+\import Function
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -16,8 +24,11 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\open EuclideanSemiringData (gcd, gcd-isGCD)
-\open EuclideanRingData (bezout, bezoutIdentity)
+\import Set
+\import Set.Fin
+\open EuclideanSemiringData
+\open EuclideanRingData
+\open PolyRing (*c, *c_*)
 
 {- | **Separability of a polynomial, as a Bezout identity.**
 
@@ -43,6 +54,236 @@
               *> pmap (polyMap f) h
               *> (polyMapRingHom f).func-ide)
 
+-- # Factors
+
+{- | **A factor of a separable polynomial is separable** (MRR VI.4.1(iii)): from
+     $u\,pq + v\,(pq)' = 1$ and the Leibniz rule, $(uq + vq')\,p + (vq)\,p' = 1$. -}
+\lemma separable_*-left {R : CRing} {p q : Poly R} (s : IsSeparable (p * q)) : IsSeparable p
+  => \let (inP (u, v, h)) => s
+     \in inP (u * q + v * polyDeriv q, v * q,
+              equation.cRing *> pmap (\lam t => u * (p * q) + v * t) (inv polyDeriv_*) *> h)
+
+-- | The other factor is separable too.
+\lemma separable_*-right {R : CRing} {p q : Poly R} (s : IsSeparable (p * q)) : IsSeparable q
+  => separable_*-left (transport IsSeparable (*-comm {_} {p} {q}) s)
+
+-- | A divisor of a separable polynomial is separable.
+\lemma separable_LDiv {R : CRing} {p q : Poly R} (d : Monoid.LDiv p q) (s : IsSeparable q) : IsSeparable p
+  => separable_*-left (transportInv IsSeparable d.inv-right s)
+
+-- | Scaling by a unit preserves separability.
+\lemma separable_*c {R : CRing} {c : R} (ci : Monoid.Inv c) {p : Poly R} (s : IsSeparable p)
+  : IsSeparable (c *c p)
+  => \let | (inP (u, v, h)) => s
+          | C => padd pzero c
+          | D => padd pzero ci.inv
+     \in inP (D * u, D * v,
+              pmap2 (+) (pmap (_ *) *c_*) (pmap (_ *) (polyDeriv_*c *> *c_*))
+              *> alg {R} {C} {D} {u} {v} {p} {polyDeriv p} *> pmap2 (*) (inv polyHom.func-* *> pmap polyHom ci.inv-right) h *> ide-left)
+  \where
+    \lemma alg {R : CRing} {C D u v p p' : Poly R} : D * u * (C * p) + D * v * (C * p') = (C * D) * (u * p + v * p')
+      => equation.cRing
+
+-- | Conversely, if `c *c p` is separable then so is `p`.
+\lemma separable_*c-conv {R : CRing} {c : R} {p : Poly R} (s : IsSeparable (c *c p)) : IsSeparable p
+  => separable_*-right {R} {padd pzero c} (transport IsSeparable (*c_* {R} {c} {p}) s)
+
+-- # Roots
+
+{- | **A separable polynomial has no multiple roots**: a common root of `p` and `p'` forces the ring
+     to be trivial — evaluate the Bezout identity at it. -}
+\lemma separable-root {R : CRing} {p : Poly R} (s : IsSeparable p) {a : R}
+                      (r : polyEval p a = 0) (r' : polyEval (polyDeriv p) a = 0) : 0 = {R} 1
+  => \let (inP (u, v, h)) => s
+     \in inv (pmap2 (+) zro_*-right zro_*-right *> zro-left)
+         *> pmap2 (\lam x y => polyEval u a * x + polyEval v a * y) (inv r) (inv r')
+         *> inv ((polyEvalRingHom a).func-+ *> pmap2 (+) (polyEvalRingHom a).func-* (polyEvalRingHom a).func-*)
+         *> pmap (polyEvalRingHom a) h *> (polyEvalRingHom a).func-ide
+
+-- | Over a nontrivial ring a separable polynomial is non-zero.
+\lemma separable/=0 {R : Ring} {p : Poly R} (s : IsSeparable p) (nt : 0 /= {R} 1) : p /= 0
+  => \lam p=0 => \case s \with {
+    | inP (u, v, h) => nt $ pmap (polyCoef __ 0) $
+        inv (pmap2 (+) (pmap (u *) p=0 *> zro_*-right) (pmap (\lam t => v * polyDeriv t) p=0 *> zro_*-right) *> zro-left) *> h
+  }
+
+-- | Over a discrete field a separable polynomial is non-zero.
+\lemma separable/=0-field {K : DiscreteField} {p : Poly K} (s : IsSeparable p) : p /= 0
+  => separable/=0 s K.zro/=ide
+
+{- | **Normalizing a separable polynomial to a monic one** keeps it separable; see `field-toMonic`
+     for monicity and {polyMapEval-toMonic} for the roots. -}
+\lemma separable-toMonic {K : DiscreteField} {p : Poly K} (s : IsSeparable p)
+  : IsSeparable (finv (leadCoef p) *c p)
+  => separable_*c (K.nonZero-Inv (K.finv/=0 \lam c=0 => separable/=0-field s (leadCoef=0-lem c=0))) s
+
+-- | Scaling by a unit does not change the roots.
+\lemma polyMapEval_*c-root {R : Ring} {S : CRing} (f : RingHom R S) {c : R} (ci : Monoid.Inv c)
+                           {p : Poly R} {a : S}
+  : polyMapEval f (c *c p) a = 0 <-> polyMapEval f p a = 0
+  => (\lam e => inv ide-left *> pmap (* _) (inv (pmap f ci.inv-left *> f.func-ide) *> f.func-*) *> *-assoc
+                *> pmap (_ *) (inv polyMapEvalRingHom.polyMapEval_*c *> e) *> zro_*-right,
+      \lam e => polyMapEvalRingHom.polyMapEval_*c *> pmap (_ *) e *> zro_*-right)
+
+-- | The monic normalization of a non-zero polynomial over a discrete field has the same roots.
+\lemma polyMapEval-toMonic {k : DiscreteField} {S : CRing} (f : RingHom k S) {p : Poly k} (p/=0 : p /= 0) {a : S}
+  : polyMapEval f (finv (leadCoef p) *c p) a = 0 <-> polyMapEval f p a = 0
+  => polyMapEval_*c-root f (k.nonZero-Inv (k.finv/=0 \lam c=0 => p/=0 (leadCoef=0-lem c=0)))
+
+-- # Distinct roots
+
+{- | **A product of coprime separable polynomials is separable.** If $p$, $q$ are separable then
+     $p^2$ and $q^2$ lie in the ideal $(pq, (pq)')$, and $1 = (sp + tq)^2$ does too. -}
+\lemma separable_*-coprime {R : CRing} {p q : Poly R} (sp : IsSeparable p) (sq : IsSeparable q)
+                           (c : ∃ (s t : Poly R) (s * p + t * q = 1)) : IsSeparable (p * q)
+  => \case \elim sp, \elim sq, \elim c \with {
+    | inP (u1, v1, h1), inP (u2, v2, h2), inP (s, t, h) =>
+      inP (s * s * (u2 * p - v2 * polyDeriv p) + (s * t + s * t) + t * t * (u1 * q - v1 * polyDeriv q),
+           s * s * (v2 * p) + t * t * (v1 * q),
+           pmap (_ +) (pmap (_ *) polyDeriv_*) *> alg
+           *> pmap2 (\lam x y => s * s * (p * p) * x + (s * t + s * t) * (p * q) + t * t * (q * q) * y) h2 h1
+           *> alg2 *> pmap2 (*) h h *> ide-left)
+  }
+  \where {
+    \lemma alg {R : CRing} {s t p q u1 v1 u2 v2 p' q' : Poly R}
+      : (s * s * (u2 * p - v2 * p') + (s * t + s * t) + t * t * (u1 * q - v1 * q')) * (p * q)
+        + (s * s * (v2 * p) + t * t * (v1 * q)) * (p' * q + p * q')
+      = s * s * (p * p) * (u2 * q + v2 * q') + (s * t + s * t) * (p * q) + t * t * (q * q) * (u1 * p + v1 * p')
+      => equation.cRing
+
+    \lemma alg2 {R : CRing} {s t p q : Poly R}
+      : s * s * (p * p) * 1 + (s * t + s * t) * (p * q) + t * t * (q * q) * 1 = (s * p + t * q) * (s * p + t * q)
+      => equation.cRing
+  }
+
+-- | A linear polynomial `X - a` is separable: its derivative is `1`.
+\lemma separable-linear {R : CRing} (a : R) : IsSeparable (padd 1 (negative a))
+  => inP (0, 1, rewrite (deriv1 {R}) simplify)
+  \where
+    -- | The derivative of `1`, as it reduces.
+    \lemma deriv1 {R : Ring} : pzero + padd pzero R.zro = {Poly R} 0
+      => zro-left *> peq
+
+{- | **Products of linear factors with unit differences of roots are separable** (MRR VI.4.2). Over a
+     discrete field the hypothesis says the roots are distinct, see {prodLin-separable-field}. -}
+\lemma prodLin-separable {R : CRing} {n : Nat} (r : Array R n)
+                         (d : \Pi (i j : Fin n) -> i /= j -> Monoid.Inv (r i - r j))
+  : IsSeparable (prodLin r) \elim n, r
+  | 0, nil => inP (1, 0, rewrite (separable-linear.deriv1 {R}) simplify)
+  | suc n, a :: l => separable_*-coprime (prodLin-separable l \lam i j q => d (suc i) (suc j) (fsuc/= q))
+                       (separable-linear a) (coprime l (linProd-Inv l \lam i => d 0 (suc i) (\case __)))
+  \where {
+    \lemma linProd-Inv {R : CRing} {n : Nat} (r : Array R n) {z : R}
+                       (h : \Pi (i : Fin n) -> Monoid.Inv (z - r i)) : Monoid.Inv (linProd r z) \elim n, r
+      | 0, nil => Monoid.Inv.ide-isInv
+      | suc n, a :: l => Monoid.Inv.product (linProd-Inv l \lam i => h (suc i)) (h 0)
+
+    -- | `prodLin r` is coprime to `X - a` when its value at `a` is a unit: divide by `X - a`.
+    \lemma coprime {R : CRing} {n : Nat} (r : Array R n) {a : R} (i : Monoid.Inv (linProd r a))
+      : ∃ (s t : Poly R) (s * prodLin r + t * padd 1 (negative a) = 1)
+      => \let | D => deflate (prodLin r) a
+              | L => padd 1 (negative a)
+              | Ci => padd pzero i.inv
+         \in inP (Ci, negative (Ci * D),
+                  pmap (\lam x => Ci * x + negative (Ci * D) * L)
+                       (deflate-eq *> pmap (\lam x => D * L + padd pzero x) (polyEval_prodLin r a))
+                  *> alg {R} {Ci} {D} {L} {padd pzero (linProd r a)}
+                  *> inv polyHom.func-* *> pmap polyHom i.inv-left)
+      \where
+        \lemma alg {R : CRing} {Ci D L C : Poly R} : Ci * (D * L + C) + negative (Ci * D) * L = Ci * C
+          => equation.cRing
+  }
+
+-- | Over a discrete field, a product of distinct linear factors is separable.
+\lemma prodLin-separable-field {K : DiscreteField} {n : Nat} (r : Array K n) (r-inj : IsInj r)
+  : IsSeparable (prodLin r)
+  => prodLin-separable r \lam i j q => K.nonZero-Inv \lam s => q (r-inj (AddGroup.fromZero s))
+
+{- | **The roots of a separable product of linear factors are distinct** (MRR VI.4.2), over any
+     nontrivial commutative ring: a repeated root of `prodLin r` is a root of its derivative. -}
+\lemma prodLin-separable-inj {R : CRing} {n : Nat} {r : Array R n} (s : IsSeparable (prodLin r))
+                             (nt : 0 /= {R} 1) : IsInj r
+  \elim n
+  | 0 => \lam {i} => \case i \with {}
+  | suc n => \lam {i} {j} e => \case decideEq j i \with {
+    | yes j=i => inv j=i
+    | no j/=i => absurd $ nt $ separable-root s (prodLin-root r i) $
+        pmap (\lam t => polyEval (polyDeriv t) (r i)) (prodLin-skip r i)
+        *> deriv-root {R} {padd 1 (negative (r i))} {prodLin (skip r i)} (polyEval_padd1 *> negative-right)
+             (inv (pmap (polyEval (prodLin (skip r i))) (skip-index *> inv e)) *> prodLin-root (skip r i) (skip.newIndex j/=i))
+  }
+  \where
+    -- | A common root of two factors is a root of the derivative of their product.
+    \lemma deriv-root {R : CRing} {L Q : Poly R} {a : R} (hL : polyEval L a = 0) (hQ : polyEval Q a = 0)
+      : polyEval (polyDeriv (L * Q)) a = 0
+      => pmap (polyEval __ a) polyDeriv_*
+         *> (polyEvalRingHom a).func-+
+         *> pmap2 (+) ((polyEvalRingHom a).func-* *> pmap (_ *) hQ *> zro_*-right)
+                      ((polyEvalRingHom a).func-* *> pmap (* _) hL *> zro_*-left)
+         *> zro-left
+
+-- # Descent and splitting
+
+{- | **Separability descends along field homomorphisms.** The image of $g = \gcd(p, p')$ divides
+     `polyMap f p` and its derivative, which are coprime, so it is a unit; hence it has degree `0`,
+     and so does `g` since `f` is injective. -}
+\lemma IsSeparable_polyMap-conv {k K : DiscreteField} (f : RingHom k K) {p : Poly k}
+                                (s : IsSeparable (polyMap f p)) : IsSeparable p
+  => \let | g => gcd p (polyDeriv p)
+          | g|p : Monoid.LDiv g p => (gcd-isGCD p (polyDeriv p)).res|val1
+          | g|p' : Monoid.LDiv g (polyDeriv p) => (gcd-isGCD p (polyDeriv p)).res|val2
+          | gi : Monoid.Inv (polyMap f g) => \case \elim s \with {
+              | inP (u, v, h) => Monoid.Inv.rmake (u * polyMap f g|p.inv + v * polyMap f g|p'.inv) $
+                  equation.cRing
+                  *> pmap2 (\lam x y => u * x + v * y)
+                       (inv (polyMapRingHom f).func-* *> pmap (polyMap f) g|p.inv-right)
+                       (inv (polyMapRingHom f).func-* *> pmap (polyMap f) g|p'.inv-right *> inv polyDeriv_polyMap)
+                  *> h
+            }
+          | g/=0 : g /= 0 => (LDiv/=0 g|p \lam p=0 => separable/=0-field s (pmap (polyMap f) p=0)).1
+          | dg : degree (polyMap f g) <= 0 => degree_LDiv (\new Monoid.LDiv { | inv => gi.inv | inv-right => gi.inv-right })
+                                                          (\lam c => K.zro/=ide $ inv $ pmap (polyCoef __ 0) c)
+     \in separable-fromGcd (degree0-Inv (inv (degree_polyMap (RingHom.field-isInj {k} {K} {f})) *> <=-antisymmetric dg zero<=_) g/=0)
+  \where \open Algebra.Ring.Poly.Euclidean
+
+{- | **The roots of a separable polynomial in a splitting field are distinct**: if `polyMap f p`
+     factors as $c\prod_i(X - l_i)$ then `l` is injective. -}
+\lemma separable-split-inj {k : Ring} {K : DiscreteField} {p : Poly k} (s : IsSeparable p) {f : RingHom k K}
+                           {l : Array K} {c : K}
+                           (e : polyMap f p = c *c Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))
+  : IsInj l
+  => prodLin-separable-inj (separable_*c-conv $ transport IsSeparable (e *> pmap (c *c) (prodLin_BigProd {K} {l.len} (\lam j => l j)))
+                                                  (IsSeparable_polyMap s)) K.zro/=ide
+
+-- | A separable polynomial splits into distinct linear factors in its splitting field.
+\lemma separable-splitting {k K : DiscreteField} {p : Poly k} (s : IsSeparable p) {f : RingHom k K}
+                           (sf : IsSplittingField p f)
+  : ∃ (l : Array K) (c : K) (RingHom.isAlgebraGenerated f l)
+      (polyMap f p = c *c Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) (IsInj l)
+  => \case \elim sf \with {
+    | inP (l, c, lg, e) => inP (l, c, lg, e, separable-split-inj s e)
+  }
+
+-- | The monic version of {separable-splitting}, refining `splitting-monic`.
+\lemma separable-splitting-monic {k K : DiscreteField} {p : Poly k} (pm : isMonic p) (s : IsSeparable p)
+                                 {f : RingHom k K} (sf : IsSplittingField p f)
+  : ∃ (l : Array K) (RingHom.isAlgebraGenerated f l)
+      (polyMap f p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) (IsInj l)
+  => \case splitting-monic pm sf \with {
+    | inP (l, lg, e) => inP (l, lg, e, separable-split-inj s (e *> inv PolyRing.ide_*c))
+  }
+
+{- | If $\gcd(p, p')$ is a unit then `p` is separable: rescale the Bezout identity produced by the
+     Euclidean algorithm by the inverse of the gcd. -}
+\lemma separable-fromGcd {K : DiscreteField} {p : Poly K}
+    (i : Monoid.Inv (gcd p (polyDeriv p))) : IsSeparable p
+  => \let (b1, b2) => bezout p (polyDeriv p)
+     \in inP (i.inv * b1, i.inv * b2,
+              equation.cRing
+              *> pmap (i.inv *) (bezoutIdentity p (polyDeriv p))
+              *> i.inv-left)
+  \where \open Algebra.Ring.Poly.Euclidean
+
 {- | **Every nonconstant polynomial over a discrete field of characteristic zero has a nonconstant
      separable factor.** Recurse on the degree: if $\gcd(p, p')$ is a unit then `p` is already
      separable; otherwise the gcd is a nonconstant factor of strictly smaller degree. Characteristic
@@ -54,16 +295,6 @@
   => separable-factor-fueled char0 n p/=0 dp <=-refl
   \where \private {
     \open Algebra.Ring.Poly.Euclidean
-
-    {- | If $\gcd(p, p')$ is a unit then `p` is separable: rescale the Bezout identity produced by the
-         Euclidean algorithm by the inverse of the gcd. -}
-    \lemma separable-fromGcd {K : DiscreteField} {p : Poly K}
-        (i : Monoid.Inv (gcd p (polyDeriv p))) : IsSeparable p
-      => \let (b1, b2) => bezout p (polyDeriv p)
-         \in inP (i.inv * b1, i.inv * b2,
-                  equation.cRing
-                  *> pmap (i.inv *) (bezoutIdentity p (polyDeriv p))
-                  *> i.inv-left)
 
     -- | $\gcd(p, p')$ divides $p'$, whose degree is one less than $p$'s — so the gcd's degree drops.
     \lemma gcd-degree<= {K : DiscreteField}

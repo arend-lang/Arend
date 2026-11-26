@@ -1,0 +1,205 @@
+{- | **Algebraic elements as commuting matrices** (Mines–Richman–Ruitenburg, Lemma VI.4.4).
+
+     Let `emb : RingHom k E` with `k`, `E` commutative and let `e : Array E N`. A square matrix `C`
+     over `k` *represents* `th ∈ E` (`MatRepresents emb e C th`) if $\sum_i emb(C_{ij})\,e_i = th\,e_j$
+     for every column `j`, i.e. the $k$-linear map $L : k^N \to E$, $L(v) = \sum_i emb(v_i) e_i$
+     (on column vectors) satisfies $L(C v) = th L(v)$.
+
+     Representation is closed under `0`, `1`, scalars, `+` and `*` (`rep-zro`, `rep-ide`,
+     `rep-coef`, `rep-+`, `rep-*`), hence under polynomials (`rep-poly`). If moreover
+     $1 = L(v)$ for some `v`, then $q(C) = 0$ implies $q(th) = 0$ (`rep-transfer`).
+
+     For monic `f` with $f(α) = 0$, the companion matrix of `f` represents `α` with respect to the
+     powers of `α` (`companion-represents`). Kronecker products combine two such representations
+     (`rep-kron-left`, `rep-kron-right`). This gives Lemma VI.4.4 in the form
+     `algebraic-pair-matrices` (with `A = kron (companion f) 1`, `B = kron 1 (companion g)`) and its
+     consequence `algebraic-pair-transfer` for `α + β` and `α * β`. -}
+
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Companion
+\import Algebra.Linear.Matrix.Kronecker
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Set
+\open Monoid
+
+-- | `C` represents `th` with respect to the family `e` (column convention).
+\type MatRepresents {k E : CRing} (emb : RingHom k E) {N : Nat} (e : Array E N) (C : Matrix k N N) (th : E) : \Prop
+  => \Pi (j : Fin N) -> E.BigSum (\lam i => emb (C i j) * e i) = th * e j
+
+\lemma rep-zro {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} : MatRepresents emb e 0 0
+  => \lam j => E.BigSum_zro (\lam i => pmap (* e i) emb.func-zro *> zro_*-left) *> inv zro_*-left
+
+\lemma rep-ide {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} : MatRepresents emb e 1 1
+  => \lam j => E.BigSum-unique j (\lam i j/=i => pmap (* e i) (pmap emb (ide-offdiag \lam p => j/=i (inv p)) *> emb.func-zro) *> zro_*-left)
+                *> pmap (* e j) (pmap emb ide-diag *> emb.func-ide)
+
+\lemma rep-*c {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} {C : Matrix k N N} {th : E} (r : MatRepresents emb e C th) (c : k)
+  : MatRepresents emb e (c *c C) (emb c * th)
+  => \lam j => E.BigSum-ext (\lam i => pmap (* e i) emb.func-* *> *-assoc) *> inv E.BigSum-ldistr *> pmap (emb c *) (r j) *> inv *-assoc
+
+\lemma rep-coef {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} (c : k)
+  : MatRepresents emb e (CAlgebra.coefHom {MatrixAlgebra k N} c) (emb c)
+  => transport (MatRepresents emb e (c *c 1)) ide-right (rep-*c {k} {E} {emb} {N} {e} {1} {1} rep-ide c)
+
+\lemma rep-+ {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} {C D : Matrix k N N} {th ph : E}
+  (r : MatRepresents emb e C th) (s : MatRepresents emb e D ph) : MatRepresents emb e (C + D) (th + ph)
+  => \lam j => E.BigSum-ext (\lam i => pmap (* e i) emb.func-+ *> rdistr) *> E.BigSum_+ *> pmap2 (+) (r j) (s j) *> inv rdistr
+
+\lemma rep-* {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} {C D : Matrix k N N} {th ph : E}
+  (r : MatRepresents emb e C th) (s : MatRepresents emb e D ph) : MatRepresents emb e (C * D) (th * ph)
+  => \lam j =>
+    \have | e1 : E.BigSum (\lam i => emb ((C * D) i j) * e i) = E.BigSum (\lam i => E.BigSum (\lam l => emb (C i l * D l j) * e i))
+              => E.BigSum-ext (\lam i => pmap (* e i) (AddMonoidHom.func-BigSum {emb}) *> E.BigSum-rdistr)
+          | e2 : E.BigSum (\lam l => E.BigSum (\lam i => emb (C i l * D l j) * e i)) = E.BigSum (\lam l => th * (emb (D l j) * e l))
+              => E.BigSum-ext (\lam l => E.BigSum-ext {N} {\lam i => emb (C i l * D l j) * e i} {\lam i => emb (D l j) * (emb (C i l) * e i)} (\lam i => pmap (* e i) emb.func-* *> equation.cRing)
+                    *> inv E.BigSum-ldistr *> pmap (emb (D l j) *) (r l) *> equation.cRing)
+     \in e1 *> E.BigSum-transpose _ *> e2 *> inv E.BigSum-ldistr *> pmap (th *) (s j) *> inv *-assoc
+
+-- | Polynomials in a representing matrix represent the corresponding polynomials.
+\lemma rep-poly {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} {C : Matrix k N N} {th : E} (r : MatRepresents emb e C th) {q : Poly k}
+  : MatRepresents emb e (matPolyEval q C) (polyMapEval emb q th) \elim q
+  | pzero => rep-zro
+  | padd q a => rep-+ {k} {E} {emb} {N} {e} {matPolyEval q C * C} {CAlgebra.coefHom {MatrixAlgebra k N} a} (rep-* (rep-poly r) r) (rep-coef a)
+
+-- | If `1` is a combination of `e`, then representation transfers polynomial identities.
+\lemma rep-transfer {k E : CRing} {emb : RingHom k E} {N : Nat} {e : Array E N} (v : Array k N) (ve : E.BigSum (\lam i => emb (v i) * e i) = 1)
+  {C : Matrix k N N} {th : E} (r : MatRepresents emb e C th) {q : Poly k} (qC : matPolyEval q C = 0)
+  : polyMapEval emb q th = 0
+  => \let | x => polyMapEval emb q th
+          | s : MatRepresents emb e 0 x => transport (MatRepresents emb e __ x) qC (rep-poly r)
+     \in inv ide-right *> pmap (x *) (inv ve) *> E.BigSum-ldistr
+          *> E.BigSum_zro (\lam i => equation.cRing {inv (s i) *> E.BigSum_zro (\lam l => pmap (* e l) emb.func-zro *> zro_*-left)})
+
+-- | The companion matrix of `f` represents a root `a` of `f` with respect to the powers of `a`.
+\lemma companion-represents {k E : CRing} (emb : RingHom k E) {n : Nat} {c : Array k n} {a : E} (root : polyMapEval emb (monicPoly c) a = 0)
+  : MatRepresents emb (\lam i => pow a i) (companion c) a
+  => \lam j => \case decideEq {NatSemiring} (suc j) n \with {
+    | yes p =>
+      \have | e1 : E.BigSum (\lam i => emb (companion c i j) * pow a i) = negative (E.BigSum (\lam i => emb (c i) * pow a i))
+                => E.BigSum-ext (\lam i => pmap (\lam x => emb x * pow a i) (companion-last p) *> pmap (* pow a i) emb.func-negative *> E.negative_*-left) *> inv E.BigSum_negative
+            | e2 : negative (E.BigSum (\lam i => emb (c i) * pow a i)) = pow a n
+                => inv zro-right *> pmap (_ +) (inv (inv (polyMapEval_monicPoly emb) *> root)) *> inv +-assoc *> pmap (+ _) negative-left *> zro-left
+      \in e1 *> e2 *> pmap (pow a) (inv p) *> *-comm
+    | no q =>
+      \have | q' : suc j < n => LinearOrder.<=_/= {NatSemiring} (suc_<_<= (fin_< j)) q
+            | e1 : E.BigSum (\lam i => emb (companion c i j) * pow a i) = E.BigSum (\lam (i : Fin n) => pow a i * natDelta i (suc j))
+                => E.BigSum-ext (\lam i => pmap (\lam x => emb x * pow a i) (companion-col q) *> pmap (* pow a i) (natDelta_map emb) *> *-comm)
+      \in e1 *> BigSum-natDelta _ (suc j) q' *> pmap (pow a) toFin=id *> *-comm
+  }
+
+-- | `1` is a combination of the powers of a root of a monic polynomial.
+\lemma companion-unit {k E : CRing} (emb : RingHom k E) {n : Nat} {c : Array k n} {a : E} (root : polyMapEval emb (monicPoly c) a = 0)
+  : E.BigSum (\lam (i : Fin n) => emb (natDelta i 0) * pow a i) = 1 \elim n, c
+  | 0, nil => inv (inv emb.func-ide *> inv zro-left *> pmap (+ _) (inv zro_*-left) *> root)
+  | suc n, c => E.BigSum-ext {suc n} {\lam i => emb (natDelta i 0) * pow a i} {\lam i => pow a i * natDelta i 0} (\lam i => pmap (* pow a i) (natDelta_map emb) *> *-comm)
+                  *> BigSum-natDelta (\lam i => pow a i) 0 NatOrder.zero<suc
+
+-- | The family $e_i e'_{i'}$ indexed by `Fin (n * n')` along `kronIdx`.
+\func kron-family {E : Ring} {n n' : Nat} (e : Array E n) (e' : Array E n') : Array E (n Nat.* n')
+  => \lam I => e (kronIdx I).1 * e' (kronIdx I).2
+
+\lemma kron-family-unit {k E : CRing} {emb : RingHom k E} {n n' : Nat} {e : Array E n} {e' : Array E n'} {v : Array k n} {v' : Array k n'}
+  (ve : E.BigSum (\lam i => emb (v i) * e i) = 1) (ve' : E.BigSum (\lam i => emb (v' i) * e' i) = 1)
+  : E.BigSum (\lam I => emb (kron-family v v' I) * kron-family e e' I) = 1
+  => kron-BigSum _ *> E.BigSum-ext (\lam a => E.BigSum-ext {n'} {\lam b => emb (kron-family v v' (kronIdx.ret (a,b))) * kron-family e e' (kronIdx.ret (a,b))}
+                                                             {\lam b => emb (v a) * e a * (emb (v' b) * e' b)}
+         \lam b => pmap (\lam s => emb (v s.1 * v' s.2) * (e s.1 * e' s.2)) (kronIdx.f_sec (a,b)) *> pmap (* _) emb.func-* *> equation.cRing)
+     *> kron_*.BigSum-mul (\lam a => emb (v a) * e a) (\lam b => emb (v' b) * e' b) *> pmap2 (*) ve ve' *> ide-left
+
+-- | `kron C 1` represents what `C` represents.
+\lemma rep-kron-left {k E : CRing} {emb : RingHom k E} {n n' : Nat} {e : Array E n} {e' : Array E n'} {C : Matrix k n n} {th : E}
+  (r : MatRepresents emb e C th) : MatRepresents emb (kron-family e e') (kron C (1 : Matrix k n' n')) th
+  => \lam J => kron-BigSum _ *> E.BigSum-ext (\lam a => E.BigSum-ext {n'} {\lam b => emb (kron C 1 (kronIdx.ret (a,b)) J) * kron-family e e' (kronIdx.ret (a,b))}
+                                                                    {\lam b => emb (C a (kronIdx J).1) * e a * (emb ((1 : Matrix k n' n') b (kronIdx J).2) * e' b)}
+        \lam b => pmap (\lam s => emb (C s.1 (kronIdx J).1 * (1 : Matrix k n' n') s.2 (kronIdx J).2) * (e s.1 * e' s.2)) (kronIdx.f_sec (a,b)) *> pmap (* _) emb.func-* *> equation.cRing)
+     *> kron_*.BigSum-mul (\lam a => emb (C a (kronIdx J).1) * e a) (\lam b => emb ((1 : Matrix k n' n') b (kronIdx J).2) * e' b)
+     *> pmap2 (*) (r (kronIdx J).1) (rep-ide {k} {E} {emb} {n'} {e'} (kronIdx J).2) *> equation.cRing
+
+-- | `kron 1 D` represents what `D` represents.
+\lemma rep-kron-right {k E : CRing} {emb : RingHom k E} {n n' : Nat} {e : Array E n} {e' : Array E n'} {D : Matrix k n' n'} {th : E}
+  (r : MatRepresents emb e' D th) : MatRepresents emb (kron-family e e') (kron (1 : Matrix k n n) D) th
+  => \lam J => kron-BigSum _ *> E.BigSum-ext (\lam a => E.BigSum-ext {n'} {\lam b => emb (kron 1 D (kronIdx.ret (a,b)) J) * kron-family e e' (kronIdx.ret (a,b))}
+                                                                    {\lam b => emb ((1 : Matrix k n n) a (kronIdx J).1) * e a * (emb (D b (kronIdx J).2) * e' b)}
+        \lam b => pmap (\lam s => emb ((1 : Matrix k n n) s.1 (kronIdx J).1 * D s.2 (kronIdx J).2) * (e s.1 * e' s.2)) (kronIdx.f_sec (a,b)) *> pmap (* _) emb.func-* *> equation.cRing)
+     *> kron_*.BigSum-mul (\lam a => emb ((1 : Matrix k n n) a (kronIdx J).1) * e a) (\lam b => emb (D b (kronIdx J).2) * e' b)
+     *> pmap2 (*) (rep-ide {k} {E} {emb} {n} {e} (kronIdx J).1) (r (kronIdx J).2) *> equation.cRing
+
+{- | The data of Lemma VI.4.4: commuting matrices `A`, `B` over `k` annihilated by `f` and `g`,
+     representing `a` and `b` with respect to a family `family` in `E` some combination of which is `1`. -}
+\record MatrixPair {k E : CRing} (emb : RingHom k E) (f g : Poly k) (a b : E)
+  | N : Nat
+  | A : Matrix k N N
+  | B : Matrix k N N
+  | family : Array E N
+  | unitVec : Array k N
+  | unit-eval : E.BigSum (\lam i => emb (unitVec i) * family i) = 1
+  | comm : A * B = B * A
+  | f-A : matPolyEval f A = 0
+  | g-B : matPolyEval g B = 0
+  | rep-A : MatRepresents emb family A a
+  | rep-B : MatRepresents emb family B b
+  \where {
+    -- | Polynomial identities of `A + B` hold for `a + b`.
+    \lemma transfer-+ {k E : CRing} {emb : RingHom k E} {f g : Poly k} {a b : E} (P : MatrixPair emb f g a b) {q : Poly k}
+      (qC : matPolyEval q (P.A + P.B) = 0) : polyMapEval emb q (a + b) = 0
+      => rep-transfer P.unitVec P.unit-eval (rep-+ P.rep-A P.rep-B) qC
+
+    -- | Polynomial identities of `A * B` hold for `a * b`.
+    \lemma transfer-* {k E : CRing} {emb : RingHom k E} {f g : Poly k} {a b : E} (P : MatrixPair emb f g a b) {q : Poly k}
+      (qC : matPolyEval q (P.A * P.B) = 0) : polyMapEval emb q (a * b) = 0
+      => rep-transfer P.unitVec P.unit-eval (rep-* P.rep-A P.rep-B) qC
+  }
+
+-- | Lemma VI.4.4 for monic polynomials given by their lower coefficients: `A = kron (companion c) 1`, `B = kron 1 (companion d)`.
+\func algebraicPair {k E : CRing} (emb : RingHom k E) {n m : Nat} (c : Array k n) (d : Array k m) {a b : E}
+  (fa : polyMapEval emb (monicPoly c) a = 0) (gb : polyMapEval emb (monicPoly d) b = 0)
+  : MatrixPair emb (monicPoly c) (monicPoly d) a b \cowith
+  | N => n Nat.* m
+  | A => kron (companion c) 1
+  | B => kron 1 (companion d)
+  | family => kron-family (\lam i => pow a i) (\lam i => pow b i)
+  | unitVec => kron-family (\lam i => natDelta i 0) (\lam i => natDelta i 0)
+  | unit-eval => kron-family-unit {k} {E} {emb} {n} {m} {\lam i => pow a i} {\lam i => pow b i} {\lam i => natDelta i 0} {\lam i => natDelta i 0}
+                   (companion-unit emb fa) (companion-unit emb gb)
+  | comm => kron-comm {k} {n} {m} {companion c} {companion d}
+  | f-A => matPolyEval_kron-left *> pmap (kron __ 1) companion-annihilates *> kron_zro-left {k} {n} {n} {m} {m} {1}
+  | g-B => matPolyEval_kron-right *> pmap (kron 1) companion-annihilates *> kron_zro-right {k} {n} {n} {m} {m} {1}
+  | rep-A => rep-kron-left {k} {E} {emb} {n} {m} {\lam i => pow a i} {\lam i => pow b i} {companion c} {a} (companion-represents emb fa)
+  | rep-B => rep-kron-right {k} {E} {emb} {n} {m} {\lam i => pow a i} {\lam i => pow b i} {companion d} {b} (companion-represents emb gb)
+
+-- | **MRR Lemma VI.4.4.** Roots of monic polynomials are represented by commuting matrices annihilated by the same polynomials.
+\lemma algebraic-pair-matrices {k E : CRing} (emb : RingHom k E) {f g : Poly k} (fm : isMonic f) (gm : isMonic g) {a b : E}
+  (fa : polyMapEval emb f a = 0) (gb : polyMapEval emb g b = 0) : TruncP (MatrixPair emb f g a b) \elim fm, gm
+  | inP (n, fd, fc), inP (m, gd, gc) =>
+    \have | fe => monicPoly-polyCoef fd fc
+          | ge => monicPoly-polyCoef gd gc
+    \in inP $ transport2 (MatrixPair emb __ __ a b) (inv fe) (inv ge)
+                (algebraicPair emb _ _ (transport (\lam p => polyMapEval emb p a = 0) fe fa) (transport (\lam p => polyMapEval emb p b = 0) ge gb))
+
+-- | Lemma VI.4.4 in the form used for Theorem VI.4.5: sums and products of roots of monic polynomials.
+\lemma algebraic-pair-transfer {k E : CRing} (emb : RingHom k E) {f g : Poly k} (fm : isMonic f) (gm : isMonic g) {a b : E}
+  (fa : polyMapEval emb f a = 0) (gb : polyMapEval emb g b = 0)
+  : ∃ (N : Nat) (A B : Matrix k N N) (A * B = B * A) (matPolyEval f A = 0) (matPolyEval g B = 0)
+      (\Pi (q : Poly k) -> matPolyEval q (A + B) = 0 -> polyMapEval emb q (a + b) = 0)
+      (\Pi (q : Poly k) -> matPolyEval q (A * B) = 0 -> polyMapEval emb q (a * b) = 0)
+  => \case algebraic-pair-matrices emb fm gm fa gb \with {
+    | inP P => inP (P.N, P.A, P.B, P.comm, P.f-A, P.g-B, \lam q => MatrixPair.transfer-+ P, \lam q => MatrixPair.transfer-* P)
+  }

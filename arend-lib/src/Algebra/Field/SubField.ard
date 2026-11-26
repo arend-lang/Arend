@@ -1,0 +1,89 @@
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Semiring
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Countable
+\open DiscreteField (finv_*, finv_ide, finv_finv)
+\open PseudoRing (negative_*-left)
+
+-- | A subfield of a discrete field: a subring closed under inverses.
+\class SubField \extends SubRing {
+  \override S : DiscreteField
+  | contains_finv {x : S} : contains x -> contains (finv x)
+} \where {
+  -- | The inclusion of a subfield into the ambient field.
+  \func embed (S : SubField {}) : RingHom (IDiscreteField S) S.S
+    => IRing.embed {S}
+
+  -- | An element of a subfield.
+  \func elem (S : SubField {}) {x : S.S} (p : S x) : IDiscreteField S
+    => (x, p)
+
+  -- | The corestriction of a homomorphism whose image lies in a subfield.
+  \func corestrict {R : Ring} (S : SubField {}) (f : RingHom R S.S) (p : \Pi (x : R) -> S (f x)) : RingHom R (IDiscreteField S)
+    => IRing.corestrict {S} f p
+}
+
+-- | A subfield as a discrete field in its own right.
+\instance IDiscreteField (S : SubField {}) : DiscreteField
+  | CRing => ICRing S
+  | zro/=ide p => zro/=ide (pmap __.1 p)
+  | finv x => (finv x.1, S.contains_finv x.2)
+  | finv_zro => ext finv_zro
+  | finv-right x/=0 => ext (finv-right \lam p => x/=0 (ext p))
+  | decideEq x y => \case decideEq x.1 y.1 \with {
+    | yes p => yes (ext p)
+    | no q => no \lam p => q (pmap __.1 p)
+  }
+
+{- | The *fraction image* of a ring homomorphism $\varphi : R \to k$ into a discrete field: the elements
+     $\varphi(a) \cdot \varphi(b)^{ -1}$ with $\varphi(b) \neq 0$. It is the smallest subfield of $k$
+     containing the image of $\varphi$. -}
+\func FracImage {R : Ring} {k : DiscreteField} (phi : RingHom R k) : SubField k \cowith
+  | contains x => ∃ (a b : R) (phi b /= 0) (x = phi a * finv (phi b))
+  | contains_zro => inP (0, 1, phi-ide/=0, inv $ pmap (* _) phi.func-zro *> zro_*-left)
+  | contains_+ {x} {y} (inP (a,b,b/=0,p)) (inP (c,d,d/=0,q)) => inP (a * d + c * b, b * d, mul/=0 b/=0 d/=0,
+      rewrite (p, q, phi.func-+, phi.func-*, phi.func-*, phi.func-*, finv_*) (equation {usingOnly (finv-right b/=0, finv-right d/=0)}))
+  | contains_negative {x} (inP (a,b,b/=0,p)) => inP (negative a, b, b/=0,
+      rewrite (p, phi.func-negative) (inv negative_*-left))
+  | contains_ide => inP (1, 1, phi-ide/=0, rewrite (phi.func-ide, finv_ide) (inv ide-left))
+  | contains_* {x} {y} (inP (a,b,b/=0,p)) (inP (c,d,d/=0,q)) => inP (a * c, b * d, mul/=0 b/=0 d/=0,
+      rewrite (p, q, phi.func-*, phi.func-*, finv_*) equation)
+  | contains_finv {x} (inP (a,b,b/=0,p)) => \case decideEq (phi a) 0 \with {
+    | yes a=0 => inP (0, 1, phi-ide/=0, rewrite (p, a=0, zro_*-left, finv_zro, phi.func-zro) (inv zro_*-left))
+    | no a/=0 => inP (b, a, a/=0, rewrite (p, finv_*, finv_finv) idp)
+  }
+  \where {
+    \lemma phi-ide/=0 {R : Ring} {k : DiscreteField} {phi : RingHom R k} : phi 1 /= 0
+      => \lam p => zro/=ide (inv p *> phi.func-ide)
+
+    \lemma mul/=0 {R : Ring} {k : DiscreteField} {phi : RingHom R k} {b d : R} (b/=0 : phi b /= 0) (d/=0 : phi d /= 0) : phi (b * d) /= 0
+      => rewrite phi.func-* (Domain.nonZero_* b/=0 d/=0)
+
+    -- | The fraction image contains the image of $\varphi$.
+    \lemma contains_image {R : Ring} {k : DiscreteField} {phi : RingHom R k} (a : R) : FracImage phi (phi a)
+      => inP (a, 1, phi-ide/=0, rewrite (phi.func-ide, finv_ide) (inv ide-right))
+
+    -- | The fraction image of a countable ring is countable.
+    \func countable {R : Ring} (c : Countable R) {k : DiscreteField} (phi : RingHom R k) : Countable (IDiscreteField (FracImage phi))
+      => surj-countable (prod-countable c c) {frac} \lam (x, inP (a,b,b/=0,p)) => inP ((a,b), unfold frac $ rewrite (decideEq/=_reduce b/=0) (ext (inv p)))
+      \where
+        \func frac (s : \Sigma R R) : IDiscreteField (FracImage phi)
+          => \case decideEq (phi s.2) 0 \with {
+            | yes _ => \let S => FracImage phi \in SubField.elem S S.contains_zro
+            | no b/=0 => (phi s.1 * finv (phi s.2), inP (s.1, s.2, b/=0, idp))
+          }
+  }

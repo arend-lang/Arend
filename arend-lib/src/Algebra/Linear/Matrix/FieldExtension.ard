@@ -1,0 +1,141 @@
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Linear.Matrix
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin.Instances
+\open MatrixRing (product, product-assoc, product_ide-right, product_zro-left)
+
+{- | **Matrices under a change of scalars.**
+
+     `matrix-map f` along a ring homomorphism is multiplicative and preserves invertibility.
+     The main result is `independent-map`: vectors linearly independent over a discrete field `k`
+     stay independent over `K` after mapping along any field homomorphism `k -> K`.
+     Proof: bring the matrix of the vectors to Smith normal form `B = C W D` over `k`
+     (`independent-map.diag-nonzero`: every row of `B` has a nonzero diagonal entry), then map
+     everything to `K`. -}
+
+-- | `matrix-map` along a ring homomorphism preserves products.
+\lemma matrix-map_product {R S : Ring} (f : RingHom R S) {n m k : Nat} {A : Matrix R n m} {B : Matrix R m k}
+  : matrix-map f (A product B) = matrix-map f A product matrix-map f B
+  => matrixExt \lam i j => f.func-BigSum *> pmap S.BigSum (exts \lam t => f.func-*)
+
+-- | `matrix-map` along a ring homomorphism preserves the identity matrix.
+\lemma matrix-map_ide {R S : Ring} (f : RingHom R S) {n : Nat} : matrix-map f (MatrixRing.ide {R} {n}) = 1
+  => matrixExt \lam i j => cases (decideEq i j) \with {
+    | yes _ => f.func-ide
+    | no _ => f.func-zro
+  }
+
+-- | `matrix-map` along an additive homomorphism preserves the zero matrix.
+\lemma matrix-map_zro {R S : AbGroup} (f : AddGroupHom R S) {n m : Nat}
+  : matrix-map f (0 : Matrix R n m) = 0
+  => matrixExt \lam i j => f.func-zro
+
+-- | `matrix-map` along an additive homomorphism preserves sums.
+\lemma matrix-map_+ {R S : AbGroup} (f : AddGroupHom R S) {n m : Nat} {A B : Matrix R n m}
+  : matrix-map f (A + B) = matrix-map f A + matrix-map f B
+  => matrixExt \lam i j => f.func-+
+
+-- | `matrix-map` along an injective map is injective.
+\lemma matrix-map-inj {R S : \Set} {f : R -> S} (inj : IsInj f) {n m : Nat} {A B : Matrix R n m}
+  (p : matrix-map f A = matrix-map f B) : A = B
+  => matrixExt \lam i j => inj (pmap (\lam M => M i j) p)
+
+-- | `matrix-map` along a ring homomorphism preserves invertible matrices.
+\func matrix-map_Inv {R S : Ring} (f : RingHom R S) {n : Nat} (C : Monoid.Inv {MatrixRing R n})
+  : Monoid.Inv {MatrixRing S n} (matrix-map f C.val) \cowith
+  | inv => matrix-map f C.inv
+  | inv-left => inv (matrix-map_product f) *> pmap (matrix-map f) C.inv-left *> matrix-map_ide f
+  | inv-right => inv (matrix-map_product f) *> pmap (matrix-map f) C.inv-right *> matrix-map_ide f
+
+-- | Linear independence over a discrete field is preserved by field homomorphisms.
+\lemma independent-map {k K : DiscreteField} (f : RingHom k K) {N d : Nat} (v : Array (Array k N) d)
+  (ind : \Pi (c : Array k d) -> (\Pi (i : Fin N) -> k.BigSum (\lam t => c t * v t i) = 0) -> \Pi (t : Fin d) -> c t = 0)
+  (c : Array K d) (h : \Pi (i : Fin N) -> K.BigSum (\lam t => c t * f (v t i)) = 0) (t : Fin d) : c t = 0
+  => \case k.toSmith v \with {
+    | inP (B, Bs, inP (C, D, p)) =>
+      \let | W' : Matrix K d N => matrix-map f v
+           | C' => matrix-map_Inv f C
+           | D' => matrix-map_Inv f D
+           | r : Matrix K 1 d => mkRow c
+           | y => r product C'.inv
+      \in \have | p' : matrix-map f B = C'.val product W' product D'.val
+                  => pmap (matrix-map f) p *> matrix-map_product f {d} {N} {N} {C.val product v} {D.val} *> pmap (product D'.val) (matrix-map_product f {d} {d} {N} {C.val} {v})
+                | hr : r product W' = 0 => matrixExt \lam (0) i => h i
+                | hy : y product matrix-map f B = 0
+                  => pmap (y product) p' *> inv (product-assoc y (C'.val product W') D'.val) *> pmap (product D'.val) (inv (product-assoc y C'.val W') *> pmap (product W') (product-assoc r C'.inv C'.val *> pmap {Matrix K d d} {Matrix K 1 d} (r product) C'.inv-left *> product_ide-right {K} {1} {d} {r}) *> hr) *> product_zro-left D'.val
+                | y=0 : y = 0 => matrixExt \lam (0) s =>
+                    \have | (j, s=j, Bsj/=0) => diag-nonzero {k} {d} {N} {v} {B} C D p Bs.1 (\lam r rv => matrixExt \lam (0) s => ind (r 0) (\lam i => path (\lam i' => rv i' 0 i)) s) s
+                    \in Domain.nonZero-right (\lam q => Bsj/=0 $ RingHom.field-isInj $ q *> inv f.func-zro) $
+                        inv (K.BigSum-unique {\new Array K d (\lam s' => y 0 s' * f (B s' j))} s \lam s' s/=s' => pmap (_ *) (pmap f (Bs.1 \lam q => s/=s' $ fin_nat-inj $ s=j *> inv q) *> f.func-zro) *> zro_*-right) *> path (\lam i => hy i 0 j)
+                | r=0 : r = 0 => inv (product-assoc r C'.inv C'.val *> pmap (r product) C'.inv-left *> product_ide-right) *> pmap (product C'.val) y=0 *> product_zro-left C'.val
+      \in path (\lam i => r=0 i 0 t)
+  }
+  \where {
+    -- | After Smith reduction `B = C W D` of a matrix `W` with independent rows, every row of `B` has a nonzero diagonal entry.
+    \func diag-nonzero {k : DiscreteField} {d N : Nat} {W B : Matrix k d N} (C : Monoid.Inv {MatrixRing k d}) (D : Monoid.Inv {MatrixRing k N})
+                        (p : B = C.val product W product D.val) (Bd : IsDiagonal B)
+                        (ind : \Pi (r : Matrix k 1 d) -> r product W = 0 -> r = 0) (t : Fin d)
+      : \Sigma (j : Fin N) (t = {Nat} j) (B t j /= 0)
+      => \case LinearOrder.dec<_<= {NatSemiring} t N \with {
+        | inl t<N => \case decideEq (B t (toFin t t<N)) 0 \with {
+          | yes e => absurd $ rowZero C D p ind t \lam j => \case decideEq {NatSemiring} t j \with {
+            | yes q => transport (\lam j' => B t j' = 0) (fin_nat-inj $ toFin=id *> q) e
+            | no q => Bd q
+          }
+          | no ne => (toFin t t<N, inv toFin=id, ne)
+        }
+        | inr N<=t => absurd $ rowZero C D p ind t \lam j => Bd \lam q => linarith (fin_< j)
+      }
+
+    \lemma rowZero {k : DiscreteField} {d N : Nat} {W B : Matrix k d N} (C : Monoid.Inv {MatrixRing k d}) (D : Monoid.Inv {MatrixRing k N})
+                   (p : B = C.val product W product D.val) (ind : \Pi (r : Matrix k 1 d) -> r product W = 0 -> r = 0) (t : Fin d)
+                   (z : \Pi (j : Fin N) -> B t j = 0) : Empty
+      => \let | e : Matrix k 1 d => mkRow (MatrixRing.ide {k} {d} t)
+              | eC => e product C.val
+         \in \have | eB : e product B = 0 => matrixExt \lam (0) j =>
+                       k.BigSum-unique {\new Array k d (\lam s => MatrixRing.ide {k} {d} t s * B s j)} t (\lam s t/=s => later $ rewrite (decideEq/=_reduce t/=s) zro_*-left) *> rewrite (decideEq=_reduce idp) (ide-left *> z j)
+                   | eCW : eC product W = 0 => inv (product-assoc (eC product W) D.val D.inv *> pmap ((eC product W) product) D.inv-right *> product_ide-right) *>
+                       pmap (product D.inv) (product-assoc eC W D.val *> product-assoc e C.val (W product D.val) *> pmap (e product) (inv (product-assoc C.val W D.val) *> inv p) *> eB) *> product_zro-left D.inv
+                   | e=0 : e = 0 => inv (product-assoc e C.val C.inv *> pmap (e product) C.inv-right *> product_ide-right) *> pmap (product C.inv) (ind eC eCW) *> product_zro-left C.inv
+             \in zro/=ide $ inv (path (\lam i => e=0 i 0 t)) *> rewrite (decideEq=_reduce idp) idp
+  }
+
+-- | `matrix-map` along a ring homomorphism commutes with powers.
+\lemma matrix-map_pow {R S : Ring} (f : RingHom R S) {n : Nat} {A : Matrix R n n} {t : Nat}
+  : matrix-map f (Monoid.pow {MatrixRing R n} A t) = Monoid.pow {MatrixRing S n} (matrix-map f A) t \elim t
+  | 0 => matrix-map_ide f
+  | suc t => matrix-map_product f *> pmap (product (matrix-map f A)) (matrix-map_pow f)
+
+-- | A matrix as a vector, via the standard bijection `Fin (n * m) = Fin n × Fin m`.
+\func matFlatten {A : \Type} {n m : Nat} (M : Matrix A n m) : Array A (n Nat.* m)
+  => \lam J => M (ProdFin.prod_equiv J).1 (ProdFin.prod_equiv J).2
+  \where
+    -- | A property of all index pairs follows from its flattened form.
+    \lemma all {n m : Nat} {P : Fin n -> Fin m -> \Prop} (h : \Pi (J : Fin (n Nat.* m)) -> P (ProdFin.prod_equiv J).1 (ProdFin.prod_equiv J).2)
+               (i : Fin n) (j : Fin m) : P i j
+      => transport (\lam (x : \Sigma (Fin n) (Fin m)) => P x.1 x.2) (ProdFin.prod_equiv.f_ret (i,j)) (h (ProdFin.prod_equiv.ret (i,j)))
+
+-- | `independent-map` for families of matrices.
+\lemma mat-independent-map {k K : DiscreteField} (f : RingHom k K) {n m d : Nat} (M : Array (Matrix k n m) d)
+  (ind : \Pi (c : Array k d) -> (\Pi (i : Fin n) (j : Fin m) -> k.BigSum (\lam t => c t * M t i j) = 0) -> \Pi (t : Fin d) -> c t = 0)
+  (c : Array K d) (h : \Pi (i : Fin n) (j : Fin m) -> K.BigSum (\lam t => c t * f (M t i j)) = 0) (t : Fin d) : c t = 0
+  => independent-map f (\lam t => matFlatten (M t)) (\lam c' h' => ind c' (matFlatten.all {n} {m} {\lam i j => k.BigSum (\lam t => c' t * M t i j) = 0} h')) c (\lam J => h _ _) t

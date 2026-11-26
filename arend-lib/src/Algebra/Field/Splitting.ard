@@ -6,16 +6,18 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
+\import Algebra.Ring
 \import Algebra.Ring.Integral
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Factor
+\import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.Euclidean
 \import Algebra.Semiring
 \import Arith.Nat
-\import Category
 \import Data.Array
+\import Function (IsSurj)
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -26,7 +28,6 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Countable
-\open Monoid
 
 \type IsSplittingField {k K : DiscreteField} (p : Poly k) (f : RingHom k K)
   => ∃ (l : Array K) (c : K) (RingHom.isAlgebraGenerated f l) (polyMap f p = c PolyRing.*c Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))
@@ -45,63 +46,137 @@
       | greater q => absurd $ K.zro/=ide $ pmap (polyCoef __ n) {pzero} (inv $ lq *> pmap (PolyRing.*c _) (inv pc2 *> degree<=.toCoefs _ _ (degree<=_polyMap pd) q) *> PolyRing.zro_*c) *> pc1
     }) *> PolyRing.ide_*c)
 
-\sfunc countableSplittingField.{u} {k : DiscreteField.{u}} (c : Countable k) {p : Poly k} : \Sigma (K : DiscreteField.{u}) (Countable K) (f : RingHom k K) (IsSplittingField p f)
-  => CountableSplittingFieldData.makeSplittingField c ()
+{- | A splitting field of a polynomial over a countable discrete field, presented as a quotient of `MPoly (Fin (degree p)) k` by a maximal ideal.
+ -   Unlike {countableSplittingField}, the resulting field `FactorField Mm` lives in the same universe as {k}.
+ -}
+\sfunc countableSplittingIdeal {k : DiscreteField} (c : Countable k) (p : Poly k)
+  : \Sigma (M : Ideal (MPoly (Fin (degree p)) k)) (Mm : M.IsMaximal) (IsSplittingField {k} {FactorField Mm} p (countableSplittingIdeal.quotHom Mm))
+  => \let t => splittingIdeal c {p} idp
+     \in (t.1, t.2, \case t.3 \with {
+       | inP s => inP (roots t.2, s.1, roots-generated {k} {_} {t.1} {t.2}, s.2)
+     })
   \where \protected {
-    \record RootFieldData.{u} (P : DiscreteField.{u} -> \Set u) (k : DiscreteField.{u}) (p : Poly k)
-      | RootField : DiscreteField.{u}
-      | RootFieldP : P RootField
-      | rootFieldHom : RingHom k RootField
-      | root : RootField
-      | isRoot : polyMapEval rootFieldHom p root = 0
-      | RootField-gen (x : RootField) : ∃ (q : Poly k) (polyMapEval rootFieldHom q root = x)
+    \func roots {k : DiscreteField} {n : Nat} {M : Ideal (MPoly (Fin n) k)} (Mm : M.IsMaximal) : Array (FactorField Mm) n
+      => mkArray \lam j => factorHom (mVar j)
 
-    \class SplittingFieldData.{u} \noclassifying
-      (P : DiscreteField.{u} -> \Set u) (S : \Pi {K : DiscreteField.{u}} -> Poly K -> \Prop)
-      (S-hom : \Pi {K K' : DiscreteField.{u}} (f : RingHom K K') {p : Poly K} -> S p -> S (polyMap f p))
-      (S-factor : \Pi {K : DiscreteField.{u}} {p q : Poly K} -> S (p * q) -> S p)
-      (nextField : \Pi {K : DiscreteField.{u}} {p : Poly K} -> P K -> p /= 0 -> Not (Inv p) -> RootFieldData.{u} P K p) {
+    -- | The image of {p} in the quotient of `MPoly (Fin n) k` by {M} splits with the variables as roots.
+    \func SplitEq {k : DiscreteField} {n : Nat} (p : Poly k) {M : Ideal (MPoly (Fin n) k)} (Mm : M.IsMaximal) : \Prop
+      => ∃ (c : FactorField Mm) (polyMap (quotHom Mm) p = c PolyRing.*c Monoid.BigProd (map (linFactor {FactorField Mm}) (roots Mm)))
 
-      \func makeSplittingField {k : DiscreteField.{u}} (Pk : P k) {p : Poly k} (Sp : S p) : \Sigma (K : DiscreteField.{u}) (P K) (f : RingHom k K) (IsSplittingField p f)
-        => aux Pk idp Sp
-        \where
-          \func aux {k : DiscreteField.{u}} (Pk : P k) {p : Poly k} {n : Nat} (d : degree p = n) (Sp : S p) : \Sigma (K : DiscreteField.{u}) (P K) (f : RingHom k K) (IsSplittingField p f) \elim n
-            | 0 => (k, Pk, RingHom.id, inP (nil, polyCoef p 0, \lam x => inP (mConst x, simplify), rewrite {1} (degree=0-lem d) $ pmap (padd pzero) $ leadCoef_polyCoef *> pmap (polyCoef p) d *> inv ide-right))
-            | suc n => \let | p/=0 : p /= 0 => \case rewrite __ in d
-                            | rfd : RootFieldData P k p => nextField Pk p/=0 \lam pi => \case polyInv pi \with {
-                                                             | inP (r,q,_) => \case rewrite q in d
-                                                           }
-                            | (K,PK,f,Ks) => aux rfd.RootFieldP {_} {n} (splitting-degree d p/=0 rfd.rootFieldHom rfd.isRoot) $ S-factor $ transport S (rootDiv_* rfd.isRoot) (S-hom rfd.rootFieldHom Sp)
-                       \in (K, PK, f RingHom.∘ rfd.rootFieldHom, splitting-step rfd f Ks)
-    }
+    \func quotHom {k : DiscreteField} {J : \Set} {M : Ideal (MPoly J k)} (Mm : M.IsMaximal) : RingHom k (FactorField Mm)
+      => factorHom RingHom.∘ mPolyHom
+
+    \lemma roots-generated {k : DiscreteField} {n : Nat} {M : Ideal (MPoly (Fin n) k)} {Mm : M.IsMaximal} : RingHom.isAlgebraGenerated (quotHom Mm) (roots Mm)
+      => \case \elim __ \with {
+        | in~ q => inP (q, mPolyRingHom-unique factorHom (mPolyMapEvalRingHom (quotHom Mm) (roots Mm)) (\lam r => inv $ zro-right *> ide-right) (\lam j => inv (mPolyMapEval-var (quotHom Mm) (roots Mm) j)) q)
+      }
+
+    \func splittingIdeal {k : DiscreteField} (c : Countable k) {p : Poly k} {n : Nat} (d : degree p = n)
+      : \Sigma (M : Ideal (MPoly (Fin n) k)) (Mm : M.IsMaximal) (SplitEq p Mm) \elim n
+      | 0 => \let Mm : Ideal.IsMaximal {RingHom.KernelC {MPoly (Fin 0) k} constHom} => kernel-maximal {MPoly (Fin 0) k} constHom constHom-surj
+             \in (RingHom.KernelC {MPoly (Fin 0) k} constHom, Mm, inP (quotHom Mm (polyCoef p 0),
+                   rewrite {1} (degree=0-lem d) $ pmap (padd pzero) $ pmap (quotHom Mm) (leadCoef_polyCoef *> pmap (polyCoef p) d) *> inv ide-right))
+      | suc n => \let | p/=0 : p /= 0 => \case rewrite __ in d
+                      | pc : Not (Monoid.Inv p) => \lam pi => \case polyInv pi \with {
+                        | inP (r,q,_) => \case rewrite q in d
+                      }
+                      | (M1, Mm1, M1p) => poly-maximal-ideal c p pc
+                      | (M', Mm', s') => splittingIdeal {FactorField Mm1} (factor-countable (Poly.poly-countable c)) (splitting-degree d p/=0 (rootHom Mm1) (rootHom-isRoot Mm1 M1p))
+                 \in splitting-step Mm1 M1p Mm' s'
+      \where {
+        \func constHom {k : CRing} : RingHom (MPoly (Fin 0) k) k
+          => mPolyEval \lam (j : Fin 0) => \case j \with { () }
+
+        \lemma constHom-surj {k : CRing} : IsSurj (constHom {k})
+          => \lam a => inP (mConst a, zro-right *> ide-right)
+      }
+
+    \func rootHom {k : DiscreteField} {M1 : Ideal (PolyAlgebra k)} (Mm1 : M1.IsMaximal) : RingHom k (FactorField Mm1)
+      => factorHom RingHom.∘ polyHom
+
+    \lemma rootHom-isRoot {k : DiscreteField} {M1 : Ideal (PolyAlgebra k)} (Mm1 : M1.IsMaximal) {p : Poly k} (M1p : M1 p)
+      : polyMapEval (rootHom Mm1) p (factorHom (padd 1 0)) = 0
+      => factorHom_polyMapEval *> FactorRing.fequiv0 M1p
 
     \lemma splitting-degree {K L : DiscreteField} {p : Poly K} {n : Nat} (d : degree p = suc n) (p/=0 : p /= 0) (g : RingHom K L) {r : L} (isRoot : polyMapEval g p r = 0)
       : degree (rootDiv (polyMap g p) r) = n
       => pmap pred (inv (rewrite (decideEq/=_reduce $ /=-sym zro/=ide) in inv (degree_polyMap RingHom.field-isInj) *> degree_*_= (\lam q => p/=0 $ polyMap-inj RingHom.field-isInj q) (rootDiv_* isRoot)) *> d)
 
-    \lemma splitting-step.{u} {P : DiscreteField.{u} -> \Set u} {k : DiscreteField.{u}} {p : Poly k} (rfd : RootFieldData P k p) {K : DiscreteField.{u}} (f : RingHom rfd.RootField K)
-                          (Ks : IsSplittingField (rootDiv (polyMap rfd.rootFieldHom p) rfd.root) f) : IsSplittingField p (f RingHom.∘ rfd.rootFieldHom)
-      => TruncP.map Ks \lam (l,c,fl,q) => later
-          (f rfd.root :: l, c, RingHom.isAlgebraGenerated-comp rfd.RootField-gen fl,
-           inv (polyMap-comp rfd.rootFieldHom f) *> pmap (polyMap f) (rootDiv_* rfd.isRoot) *> (polyMapRingHom f).func-* *> pmap (* _) q *> inv PolyRing.*c-comm-left *>
-           pmap (c PolyRing.*c) (pmap (_ *) (pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative) *> *-comm {_} {_} {padd 1 (negative (f rfd.root))}))
+    -- | Sends the first variable to the root of {M1} and shifts the others.
+    \func shiftHom {k : DiscreteField} {n : Nat} {M1 : Ideal (PolyAlgebra k)} (Mm1 : M1.IsMaximal) : RingHom (MPoly (Fin (suc n)) k) (MPoly (Fin n) (FactorField Mm1))
+      => mPoly-mapHom (factorHom : RingHom (PolyAlgebra k) (FactorField Mm1)) RingHom.∘ (MPoly_Fin-suc'.fHom : RingHom (MPoly (Fin (suc n)) k) (MPoly (Fin n) (PolyAlgebra k)))
 
-    \func CountableSplittingFieldData.{u} : SplittingFieldData.{u} \cowith
-      | P K => Countable K
-      | S _ => \Sigma
-      | S-hom _ _ => ()
-      | S-factor _ => ()
-      | nextField {k} {p} c p/=0 pc => \new RootFieldData {
-        | RootField => FactorField {(poly-maximal-ideal c p pc).1} (poly-maximal-ideal c p pc).2
-        | RootFieldP => factor-countable (Poly.poly-countable c)
-        | rootFieldHom => factorHom RingHom.∘ polyHom
-        | root => in~ (padd 1 0)
-        | isRoot => pmap (polyEval __ _) (inv (polyMap-comp polyHom factorHom)) *> polyEval_polyMap *>
-                                                                                   FactorRing.fequiv0 (transportInv (poly-maximal-ideal c p pc).1 poly-eval (poly-maximal-ideal c p pc).3)
-        | RootField-gen (in~ q) => inP (q, pmap (polyEval __ _) (inv (later $ polyMap-comp _ _)) *> polyEval_polyMap *> pmap FactorRing.inF poly-eval)
+    \lemma shiftHom-surj {k : DiscreteField} {n : Nat} {M1 : Ideal (PolyAlgebra k)} {Mm1 : M1.IsMaximal} : IsSurj (shiftHom {k} {n} Mm1)
+      => \lam y => TruncP.map (MPoly-surj (factorHom : RingHom (PolyAlgebra k) (FactorField Mm1)) (\case \elim __ \with { | in~ a => inP (a, idp) }) y) \lam t =>
+          (MPoly_Fin-suc'.ret t.1, pmap (mPoly-map (factorHom : RingHom (PolyAlgebra k) (FactorField Mm1))) (MPoly_Fin-suc'.f_sec t.1) *> t.2)
+
+    \func stepHom {k : DiscreteField} {n : Nat} {M1 : Ideal (PolyAlgebra k)} (Mm1 : M1.IsMaximal) {M' : Ideal (MPoly (Fin n) (FactorField Mm1))} (Mm' : M'.IsMaximal)
+      : RingHom (MPoly (Fin (suc n)) k) (FactorField Mm')
+      => factorHom RingHom.∘ shiftHom Mm1
+
+    \lemma stepHom-surj {k : DiscreteField} {n : Nat} {M1 : Ideal (PolyAlgebra k)} {Mm1 : M1.IsMaximal} {M' : Ideal (MPoly (Fin n) (FactorField Mm1))} {Mm' : M'.IsMaximal}
+      : IsSurj (stepHom Mm1 Mm')
+      => \case \elim __ \with {
+        | in~ y => TruncP.map (shiftHom-surj {k} {n} {M1} {Mm1} y) \lam t => (t.1, pmap (factorHom {M'}) t.2)
       }
 
-      \lemma poly-eval {K : DiscreteField} {p : Poly K} : polyMapEval polyHom p (padd 1 0) = p \elim p
-        | pzero => idp
-        | padd p e => unfold polyMapEval $ rewrite poly-eval $ inv padd-expand
+    \func splitting-step {k : DiscreteField} {n : Nat} {M1 : Ideal (PolyAlgebra k)} (Mm1 : M1.IsMaximal) {p : Poly k} (M1p : M1 p)
+                          {M' : Ideal (MPoly (Fin n) (FactorField Mm1))} (Mm' : M'.IsMaximal) (s' : SplitEq (rootDiv (polyMap (rootHom Mm1) p) (factorHom (padd 1 0))) Mm')
+      : \Sigma (M : Ideal (MPoly (Fin (suc n)) k)) (Mm : M.IsMaximal) (SplitEq p Mm)
+      => \let Mm : Ideal.IsMaximal {RingHom.KernelC {MPoly (Fin (suc n)) k} (stepHom Mm1 Mm')}
+                => kernel-maximal {MPoly (Fin (suc n)) k} {FactorField Mm'} (stepHom Mm1 Mm') (stepHom-surj {k} {n} {M1} {Mm1} {M'} {Mm'})
+         \in (RingHom.KernelC {MPoly (Fin (suc n)) k} (stepHom Mm1 Mm'), Mm, \case \elim s' \with {
+           | inP (c', e') => TruncP.map (stepHom-surj {k} {n} {M1} {Mm1} {M'} {Mm'} c') \lam t => (factorHom t.1,
+               polyMap-inj (RingHom.field-isInj {FactorField Mm} {FactorField Mm'} {stepLift Mm1 Mm' Mm}) (step-eq Mm1 M1p Mm' Mm e' (factorHom t.1) t.2))
+         })
+
+    \func stepLift {k : DiscreteField} {n : Nat} {M1 : Ideal (PolyAlgebra k)} (Mm1 : M1.IsMaximal) {M' : Ideal (MPoly (Fin n) (FactorField Mm1))} (Mm' : M'.IsMaximal)
+                   (Mm : Ideal.IsMaximal {RingHom.KernelC {MPoly (Fin (suc n)) k} (stepHom Mm1 Mm')}) : RingHom (FactorField Mm) (FactorField Mm')
+      => factor-lift (stepHom Mm1 Mm') \lam a => a
+
+    \lemma step-eq {k : DiscreteField} {n : Nat} {M1 : Ideal (PolyAlgebra k)} (Mm1 : M1.IsMaximal) {p : Poly k} (M1p : M1 p)
+                   {M' : Ideal (MPoly (Fin n) (FactorField Mm1))} (Mm' : M'.IsMaximal) (Mm : Ideal.IsMaximal {RingHom.KernelC {MPoly (Fin (suc n)) k} (stepHom Mm1 Mm')})
+                   {c' : FactorField Mm'} (e' : polyMap (quotHom Mm') (rootDiv (polyMap (rootHom Mm1) p) (factorHom (padd 1 0))) = c' PolyRing.*c Monoid.BigProd (map (linFactor {FactorField Mm'}) (roots Mm')))
+                   (c : FactorField Mm) (hc : stepLift Mm1 Mm' Mm c = c')
+      : polyMap (stepLift Mm1 Mm' Mm) (polyMap (quotHom Mm) p) = polyMap (stepLift Mm1 Mm' Mm) (c PolyRing.*c Monoid.BigProd (map (linFactor {FactorField Mm}) (roots Mm)))
+      => polyMap-comp (quotHom Mm) (stepLift Mm1 Mm' Mm) *>
+         polyMap-ext {k} {FactorField Mm'} {stepLift Mm1 Mm' Mm AddPointedHom.∘ quotHom Mm} {quotHom Mm' AddPointedHom.∘ rootHom Mm1} const-eq *>
+         inv (polyMap-comp (rootHom Mm1) (quotHom Mm')) *>
+         pmap (polyMap (quotHom Mm')) (rootDiv_* (rootHom-isRoot Mm1 M1p)) *>
+         (polyMapRingHom (quotHom Mm')).func-* *>
+         pmap2 (*) e' (polyMap-linFactor {FactorField Mm1} {FactorField Mm'} (quotHom Mm') (factorHom (padd 1 0))) *>
+         inv PolyRing.*c-comm-left *> pmap (c' PolyRing.*c) *-comm *>
+         inv (polyMapRingHom.polyMap_*c *> pmap2 (PolyRing.*c) hc (
+           (polyMapRingHom (stepLift Mm1 Mm' Mm)).func-BigProd {map (linFactor {FactorField Mm}) (roots Mm)} *>
+           pmap (Monoid.BigProd {PolyRing (FactorField Mm')})
+             {mkArray \lam j => polyMap (stepLift Mm1 Mm' Mm) (linFactor {FactorField Mm} (roots Mm j))}
+             {map (linFactor {FactorField Mm'}) (quotHom Mm' (factorHom (padd 1 0)) :: roots Mm')}
+             (exts \lam j => polyMap-linFactor {FactorField Mm} {FactorField Mm'} (stepLift Mm1 Mm' Mm) (roots Mm j) *> pmap (linFactor {FactorField Mm'}) (roots-eq j))))
+      \where {
+        \func fH : RingHom (PolyAlgebra k) (FactorField Mm1) => factorHom
+
+        \func vars : Array (MPoly (Fin n) (PolyAlgebra k)) (suc n) => mConst (padd 1 0) :: mkArray \lam i => mVar i
+
+        \lemma var-eq (j : Fin (suc n)) => mPolyMapEval-var {Fin (suc n)} {k} {MPoly (Fin n) (PolyAlgebra k)} (mPolyHom RingHom.∘ polyHom) vars j
+
+        \lemma const-eq' (a : k) : mPolyMapEvalRingHom {Fin (suc n)} {k} {MPoly (Fin n) (PolyAlgebra k)} (mPolyHom RingHom.∘ polyHom) vars (mConst a) = mConst (polyHom a)
+          => simplify
+
+        \lemma const-eq (a : k) : stepLift Mm1 Mm' Mm (quotHom Mm a) = quotHom Mm' (rootHom Mm1 a)
+          => pmap (\lam x => factorHom {M'} (mPoly-map fH x)) (const-eq' a)
+
+        \lemma roots-eq (j : Fin (suc n)) : stepLift Mm1 Mm' Mm (roots Mm j) = (quotHom Mm' (factorHom (padd 1 0)) :: roots Mm') j \elim j
+          | 0 => pmap (\lam x => factorHom {M'} (mPoly-map fH x)) (var-eq 0)
+          | suc j => pmap (\lam x => factorHom {M'} (mPoly-map fH x)) (var-eq (suc j))
+      }
+
+    \func linFactor {K : DiscreteField} (a : K) : Poly K
+      => padd (padd pzero 1) (negative a)
+
+    \lemma polyMap-linFactor {R S : DiscreteField} (f : RingHom R S) (a : R) : polyMap f (linFactor a) = linFactor (f a)
+      => pmap2 (\lam x y => padd (padd pzero x) y) f.func-ide AddGroupHom.func-negative
   }
+
+\sfunc countableSplittingField {k : DiscreteField} (c : Countable k) {p : Poly k} : \Sigma (K : DiscreteField) (Countable K) (f : RingHom k K) (IsSplittingField p f)
+  => \let t => countableSplittingIdeal c p
+     \in (FactorField t.2, factor-countable (mPoly-countable c), countableSplittingIdeal.quotHom t.2, t.3)

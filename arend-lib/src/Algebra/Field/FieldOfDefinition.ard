@@ -1,0 +1,69 @@
+\import Algebra.Field
+\import Algebra.Field.SubField
+\import Algebra.Linear.Matrix
+\import Algebra.Meta
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set.Countable
+\import Set.Fin
+\import Set.Fin.Instances
+
+{- | **The countable field of definition of finitely many elements** (Mines–Richman–Ruitenburg):
+     finitely many elements of a discrete field $k$ lie in a countable subfield of $k$.
+
+     The subfield is built one element at a time: start from the fraction image of $\mathbb{Z}$ and, at each
+     step, take the fraction image of $S[X] \to k$, $X \mapsto a$. -}
+\lemma fieldOfDefinition {k : DiscreteField} (l : Array k)
+  : ∃ (S : SubField k) (Countable (IDiscreteField S)) (\Pi (j : Fin l.len) -> S (l j)) \elim l
+  | nil => inP (FracImage (intMap {k}), FracImage.countable int-countable intMap, \case __ \with { () })
+  | a :: l => \case fieldOfDefinition l \with {
+    | inP (S, c, s) => inP (FracImage (polyMapEvalRingHom (SubField.embed S) a), FracImage.countable (Poly.poly-countable c) _, \case \elim __ \with {
+      | 0 => transport (FracImage _) var-eval (FracImage.contains_image (padd 1 0))
+      | suc j => transport (FracImage _) const-eval (FracImage.contains_image (padd pzero (SubField.elem S (s j))))
+    })
+  }
+  \where {
+    \lemma var-eval {k0 : Ring} {k : CRing} {i0 : RingHom k0 k} {a : k} : polyMapEval i0 (padd 1 0) a = a
+      => unfold polyMapEval $ rewrite (i0.func-ide, i0.func-zro) simplify
+
+    \lemma const-eval {k0 : Ring} {k : CRing} {i0 : RingHom k0 k} {a : k} {c : k0} : polyMapEval i0 (padd pzero c) a = i0 c
+      => unfold polyMapEval simplify
+  }
+
+-- | The version of `fieldOfDefinition` for a family of elements indexed by a finite set.
+\lemma fieldOfDefinition-fin {k : DiscreteField} {J : FinSet} (l : J -> k)
+  : ∃ (S : SubField k) (Countable (IDiscreteField S)) (\Pi (j : J) -> S (l j))
+  => \case J.finEq \with {
+    | inP e => \case fieldOfDefinition (\new Array k J.card \lam m => l (e m)) \with {
+      | inP (S, c, s) => inP (S, c, \lam j => transport S (pmap l (e.f_sec j)) (s (e.ret j)))
+    }
+  }
+
+-- | The version of `fieldOfDefinition` for polynomials: their coefficients lie in a countable subfield.
+\lemma fieldOfDefinition-poly {k : DiscreteField} (ps : Array (Poly k))
+  : ∃ (S : SubField k) (Countable (IDiscreteField S)) (ps0 : Array (Poly (IDiscreteField S)) ps.len)
+      (\Pi (j : Fin ps.len) -> polyMap (SubField.embed S) (ps0 j) = ps j)
+  => \case FinSet.finiteAC (\lam j => degree<-exists (ps j)) \with {
+    | inP d => \case fieldOfDefinition-fin {k} {SigmaFin (FinFin ps.len) (\lam j => FinFin (d j).1)} (\lam t => polyCoef (ps t.1) t.2) \with {
+      | inP (S, c, s) => inP (S, c, \lam j => Poly.fromArray (\new Array (IDiscreteField S) (d j).1 \lam a => (polyCoef (ps j) a, s (j,a))),
+          \lam j => polyMap_fromArray *> inv (fromArray_polyCoef (d j).2))
+    }
+  }
+
+-- | The version of `fieldOfDefinition` for matrices: their entries lie in a countable subfield.
+\lemma fieldOfDefinition-matrix {k : DiscreteField} {n m : Nat} (Ms : Array (Matrix k n m))
+  : ∃ (S : SubField k) (Countable (IDiscreteField S)) (Ms0 : Array (Matrix (IDiscreteField S) n m) Ms.len)
+      (\Pi (j : Fin Ms.len) -> matrix-map (SubField.embed S) (Ms0 j) = Ms j)
+  => \case fieldOfDefinition-fin {k} {ProdFin (FinFin Ms.len) (ProdFin (FinFin n) (FinFin m))} (\lam t => Ms t.1 t.2.1 t.2.2) \with {
+    | inP (S, c, s) => inP (S, c, \lam j => mkMatrix \lam a b => (Ms j a b, s (j,(a,b))), \lam j => matrixExt \lam a b => idp)
+  }

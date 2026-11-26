@@ -1,0 +1,152 @@
+{- | **Evaluating a polynomial at a square matrix.**
+
+     `matPolyEval p A` is $p(A)$, computed in the matrix algebra `MatrixAlgebra R n` with scalars
+     embedded along `coefHom`. This is the same expression as in `cayley-hamilton`, given a name so
+     that the matrix minimal polynomial, diagonalization and separability files can share it. -}
+
+\import Algebra.Algebra
+\import Data.Array
+\import Algebra.Linear.Matrix
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Function.Meta
+\import Arith.Fin.Order
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func matPolyEval {R : CRing} {n : Nat} (p : Poly R) (A : Matrix R n n) : Matrix R n n
+  => polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) p A
+
+\lemma matPolyEval_+ {R : CRing} {n : Nat} {p q : Poly R} {A : Matrix R n n}
+  : matPolyEval (p + q) A = matPolyEval p A + matPolyEval q A
+  => pmap (polyEval __ A) (polyMapRingHom (CAlgebra.coefHom {MatrixAlgebra R n})).func-+ *> polyEval_+
+
+\lemma matPolyEval_* {R : CRing} {n : Nat} {p q : Poly R} {A : Matrix R n n}
+  : matPolyEval (p * q) A = matPolyEval p A * matPolyEval q A
+  => pmap (polyEval __ A) (polyMapRingHom (CAlgebra.coefHom {MatrixAlgebra R n})).func-* *> polyEval_*-comm (matPolyEval-comm idp)
+
+\lemma matPolyEval_ide {R : CRing} {n : Nat} {A : Matrix R n n} : matPolyEval 1 A = 1
+  => pmap2 (+) zro_*-left (CAlgebra.coefHom {MatrixAlgebra R n}).func-ide *> zro-left
+
+\lemma matPolyEval_const {R : CRing} {n : Nat} {c : R} {A : Matrix R n n}
+  : matPolyEval (padd 0 c) A = CAlgebra.coefHom {MatrixAlgebra R n} c
+  => pmap (+ CAlgebra.coefHom {MatrixAlgebra R n} c) zro_*-left *> zro-left
+
+\lemma matPolyEval_X {R : CRing} {n : Nat} {A : Matrix R n n} : matPolyEval (padd 1 0) A = A
+  => pmap2 {Matrix R n n} (+) (pmap (* A) (matPolyEval_ide {R} {n} {A}) *> ide-left) (CAlgebra.coefHom {MatrixAlgebra R n}).func-zro *> zro-right
+
+-- | $p \mapsto p(A)$ as a ring homomorphism (its image is commutative even though the matrix ring is not).
+\func matPolyEvalHom {R : CRing} {n : Nat} (A : Matrix R n n) : RingHom (PolyRing R) (MatrixRing R n) \cowith
+  | func p => matPolyEval p A
+  | func-+ => matPolyEval_+
+  | func-ide => matPolyEval_ide
+  | func-* => matPolyEval_*
+
+-- | A matrix commuting with `A` commutes with every $p(A)$.
+\lemma matPolyEval-comm {R : CRing} {n : Nat} {p : Poly R} {A B : Matrix R n n} (c : A * B = B * A)
+  : matPolyEval p A * B = B * matPolyEval p A
+  => polyEval-comm c \lam k => pmap (* B) (polyCoef_polyMap {CAlgebra.coefHom {MatrixAlgebra R n}} {p} {k}) *> matCoef-central (polyCoef p k) B *> pmap (B *) (inv (polyCoef_polyMap {CAlgebra.coefHom {MatrixAlgebra R n}} {p} {k}))
+
+-- | Polynomials in the same matrix commute.
+\lemma matPolyEval-comm2 {R : CRing} {n : Nat} {p q : Poly R} {A : Matrix R n n}
+  : matPolyEval p A * matPolyEval q A = matPolyEval q A * matPolyEval p A
+  => matPolyEval-comm (inv (matPolyEval-comm idp))
+
+-- | Evaluation commutes with mapping coefficients and entries along a ring homomorphism.
+\lemma matPolyEval_map {R S : CRing} (f : RingHom R S) {n : Nat} {p : Poly R} {A : Matrix R n n}
+  : matrix-map f (matPolyEval p A) = matPolyEval (polyMap f p) (matrix-map f A)
+  \elim p
+  | pzero => matrixExt \lam i j => f.func-zro
+  | padd p e =>
+    \have t : matrix-map f (matPolyEval p A * A) = matrix-map f (matPolyEval p A) * matrix-map f A
+      => matrixExt \lam i j => f.func-BigSum *> pmap S.BigSum (exts \lam k => f.func-*)
+    \in matrixExt (\lam i j => f.func-+) *> pmap2 {Matrix S n n} (+) (t *> pmap (* matrix-map f A) (matPolyEval_map f {n} {p} {A})) (matrix-map_coef f)
+  \where
+    \lemma matrix-map_coef {R S : CRing} (f : RingHom R S) {n : Nat} {c : R}
+      : matrix-map f (CAlgebra.coefHom {MatrixAlgebra R n} c) = CAlgebra.coefHom {MatrixAlgebra S n} (f c)
+      => matrixExt \lam i j => cases (decideEq i j) \with {
+        | yes _ => f.func-* *> pmap (_ *) f.func-ide
+        | no _ => f.func-* *> pmap (_ *) f.func-zro
+      }
+
+-- | Evaluation commutes with conjugation by an invertible matrix.
+\lemma matPolyEval_conj {R : CRing} {n : Nat} {p : Poly R} {A : Matrix R n n} (P : Monoid.Inv {MatrixRing R n})
+  : matPolyEval p (P.val * A * P.inv) = P.val * matPolyEval p A * P.inv
+  \elim p
+  | pzero => inv (pmap (* _) zro_*-right *> zro_*-left)
+  | padd p e => pmap (+ CAlgebra.coefHom {MatrixAlgebra R n} e) (pmap (* (P.val * A * P.inv)) (matPolyEval_conj {R} {n} {p} {A} P)) *> conj-step {MatrixRing R n} {_} {_} {_} {_} {CAlgebra.coefHom {MatrixAlgebra R n} e} P.inv-left P.inv-right (matCoef-central e P.val)
+  \where
+    \lemma conj-step {R : Ring} {u v x y c : R} (vu : v * u = 1) (uv : u * v = 1) (cu : c * u = u * c)
+      : u * x * v * (u * y * v) + c = u * (x * y + c) * v
+      => \have | h1 : u * x * v * (u * y * v) = u * (x * y) * v => equation.monoid *> pmap (\lam t => u * x * t * y * v) vu *> equation.monoid
+               | h2 : c = u * c * v => inv (pmap (* v) (inv cu) *> *-assoc *> pmap (c *) uv *> ide-right)
+         \in pmap2 (+) h1 h2 *> inv (pmap (* v) ldistr *> rdistr)
+
+-- | At a diagonal matrix, evaluation is entrywise on the diagonal.
+\lemma matPolyEval_diagonal {R : CRing} {p : Poly R} {l : Array R}
+  : matPolyEval p (diagonal l) = diagonal (map (polyEval p) l)
+  \elim p
+  | pzero => matrixExt \lam i j => cases (decideEq i j) \with {
+    | yes _ => idp
+    | no _ => idp
+  }
+  | padd p e => matrixExt \lam i j => pmap2 (+) (path (\lam t => (pmap (* diagonal l) (matPolyEval_diagonal {R} {p} {l}) *> diagonal_* {R} {l} {\lam i => polyEval p (l i)}) t i j)) idp *> cases (decideEq i j) \with {
+    | yes _ => pmap (_ +) ide-right
+    | no _ => zro-left *> zro_*-right
+  }
+  \where
+    \lemma diagonal_* {R : Ring} {g : Array R} {f : Fin g.len -> R}
+      : diagonal (\new Array R g.len f) * diagonal g = diagonal (\new Array R g.len (\lam i => f i * g i))
+      => matrixExt \lam i j => R.BigSum-unique {\new Array R g.len (\lam k => diagonal (\new Array R g.len f) i k * diagonal g k j)} i (\lam k i/=k => later $ rewrite (decideEq/=_reduce i/=k) zro_*-left) *> rewrite (decideEq=_reduce idp) (cases (decideEq i j) \with {
+        | yes _ => idp
+        | no _ => zro_*-right
+      })
+
+-- | Evaluation of polynomials is additive in any ring.
+\lemma polyEval_+ {R : Ring} {p q : Poly R} {a : R} : polyEval (p + q) a = polyEval p a + polyEval q a \elim p, q
+  | pzero, q => inv zro-left
+  | padd p x, pzero => inv zro-right
+  | padd p x, padd q y => rewrite polyEval_+ equation
+
+-- | An element commuting with `a` and with all coefficients of `p` commutes with $p(a)$.
+\lemma polyEval-comm {R : Ring} {p : Poly R} {a b : R} (ab : a * b = b * a) (cb : \Pi (k : Nat) -> polyCoef p k * b = b * polyCoef p k)
+  : polyEval p a * b = b * polyEval p a \elim p
+  | pzero => zro_*-left *> inv zro_*-right
+  | padd p e => rdistr *> pmap2 (+) (*-assoc *> pmap (_ *) ab *> inv *-assoc *> pmap (* a) (polyEval-comm ab \lam k => cb (suc k)) *> *-assoc) (cb 0) *> inv ldistr
+
+-- | Evaluation is multiplicative in any ring, provided $q(a)$ commutes with `a`.
+\lemma polyEval_*-comm {R : Ring} {p q : Poly R} {a : R} (c : polyEval q a * a = a * polyEval q a)
+  : polyEval (p * q) a = polyEval p a * polyEval q a \elim p
+  | pzero => inv zro_*-left
+  | padd p e => polyEval_+ *> pmap2 (+) (zro-right *> pmap (* a) (polyEval_*-comm c) *> *-assoc *> pmap (_ *) c *> inv *-assoc) polyEvalRingHom.polyEval_*c *> inv rdistr
+
+-- | Scalar matrices are central.
+\lemma matCoef-central {R : CRing} {n : Nat} (c : R) (B : Matrix R n n)
+  : CAlgebra.coefHom {MatrixAlgebra R n} c * B = B * CAlgebra.coefHom {MatrixAlgebra R n} c
+  => inv (MatrixAlgebra.product_*c-comm-left 1) *> pmap (c *c) (ide-left {MatrixRing R n} *> inv (ide-right {MatrixRing R n})) *> MatrixAlgebra.product_*c-comm-right {R} {n} {n} {n} {c} {B} {1}
+
+-- | Multiplication by a scalar matrix is scalar multiplication.
+\lemma matCoef-*c {R : CRing} {n : Nat} (c : R) (B : Matrix R n n)
+  : CAlgebra.coefHom {MatrixAlgebra R n} c * B = c *c B
+  => inv (MatrixAlgebra.product_*c-comm-left 1) *> pmap (c *c) (ide-left {MatrixRing R n})
+
+-- | Entries of a finite sum of matrices.
+\lemma matrix-BigSum {R : Ring} {n m : Nat} {l : Array (Matrix R n m)} (i : Fin n) (j : Fin m)
+  : AddMonoid.BigSum {MatrixAbGroup R n m} l i j = R.BigSum (\lam t => l t i j) \elim l
+  | nil => idp
+  | a :: l => pmap (_ +) (matrix-BigSum i j)
+
+-- | Entries of $p(A)$ for a polynomial given by its coefficient array.
+\lemma matPolyEval_fromArray {R : CRing} {n : Nat} {c : Array R} {A : Matrix R n n} (i j : Fin n)
+  : matPolyEval (Poly.fromArray c) A i j = R.BigSum (\lam t => c t * Monoid.pow {MatrixRing R n} A t i j)
+  => path (\lam i' => polyMapEval_fromArray {R} {MatrixRing R n} {CAlgebra.coefHom {MatrixAlgebra R n}} {c} {A} i' i j) *>
+     matrix-BigSum {R} {n} {n} {\lam t => CAlgebra.coefHom {MatrixAlgebra R n} (c t) * Monoid.pow {MatrixRing R n} A t} i j *>
+     pmap R.BigSum (exts \lam t => path (\lam i' => matCoef-*c (c t) (Monoid.pow {MatrixRing R n} A t) i' i j))

@@ -1,3 +1,4 @@
+\import Algebra.Domain
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -7,7 +8,8 @@
 \import Algebra.Semiring
 \import Data.Array
 \import Data.Array.Perm
-\import Function (IsInj)
+\import Data.Fin
+\import Function
 \import Paths
 
 {- | **Products of monic linear factors**: $\prod_{i<n}(X - r_i)$ for a finite array of roots `r`,
@@ -25,6 +27,12 @@
 \lemma prodLin-monic {R : CRing} {n : Nat} (r : Array R n) : polyCoef (prodLin r) n = 1 \elim n, r
   | 0, nil => idp
   | suc n, a :: l => polyCoef_*padd1 (negative a) (prodLin-degree l) *> prodLin-monic l
+
+-- | `prodLin` agrees with the product of the array of linear factors, the form used in `IsSplittingField`.
+\lemma prodLin_BigProd {R : CRing} {n : Nat} (l : Array R n)
+  : Monoid.BigProd (map (\lam a => padd 1 (negative a)) l) = prodLin l \elim n, l
+  | 0, nil => idp
+  | suc n, a :: l => pmap (_ *) (prodLin_BigProd l) *> *-comm
 
 -- # The value of the product
 
@@ -97,3 +105,20 @@
       => Perm.perm-map (\lam i => padd 1 (negative (s i)))
            (Perm.perm-fin (\new Array (Fin n) n f) finj)
   }
+
+-- # Counting roots
+
+{- | **A polynomial of degree `< n` with `n` distinct roots vanishes**, over any integral domain.
+     Divide by `X - r 0`: the quotient has degree `< n - 1` and, since `r i - r 0` is non-zero and
+     cancellable, it vanishes at the remaining roots. -}
+\lemma degree<-roots=0 {R : IntegralDomain} {n : Nat} {p : Poly R} (d : degree< p n)
+                       (r : Array R n) (r-inj : IsInj r) (root : \Pi (i : Fin n) -> polyEval p (r i) = 0)
+  : p = 0 \elim n, r
+  | 0, nil => degree<0 d
+  | suc n, a :: l =>
+    \have q=0 => degree<-roots=0 (deflate-degree d a) l (\lam e => unfsuc (r-inj e)) \lam i =>
+                 Domain.nonZero-cancel-right (\lam s => fsuc/=0 (r-inj (AddGroup.fromZero s)))
+                   (inv (polyEval_deflate p a (l i) *> pmap (_ +) (root 0) *> zro-right) *> root (suc i)
+                    *> inv zro_*-left)
+    \in deflate-eq *> pmap2 (\lam x y => x * padd 1 (negative a) + padd pzero y) q=0 (root 0)
+        *> zro-left *> peq

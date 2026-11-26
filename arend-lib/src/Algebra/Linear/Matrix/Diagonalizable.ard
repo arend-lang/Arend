@@ -1,0 +1,401 @@
+{- | **Diagonalizable matrices over a discrete field** (Mines–Richman–Ruitenburg, Theorems V.4.3 and V.4.4).
+
+     Public API:
+     * `IsDiagonalizable A` — some conjugate `P A P⁻¹` is diagonal;
+     * `basis-of-sums` — if every vector is a finite sum of vectors with a property `Q`, then there is a basis of
+       vectors with property `Q` (greedy extraction; this is the linear algebra behind everything else);
+     * `common-eigen-diagonalization` — if every vector of `K^n` is a sum of common eigenvectors of a family of matrices,
+       one invertible matrix diagonalizes all of them;
+     * `simultaneous-diagonalization` — the same from a decomposition of the identity `∑ E_l = 1` with `A_t E_l = a_{t l} E_l`;
+     * `lagrange-decomposition` — for distinct `r_i` with `∏(A - r_i) = 0` there are polynomials `p_i` with
+       `∑ p_i(A) = 1` and `A p_i(A) = r_i p_i(A)`;
+     * `diagonalizable<->prodLin` (V.4.3) — `A` is diagonalizable iff it is killed by a product of distinct linear factors;
+     * `simultaneously-diagonalizable` (V.4.4) — commuting diagonalizable matrices are simultaneously diagonalizable;
+     * corollaries `diagonalizable-annihilator`, `diagonalizable_+`, `diagonalizable_*`.
+
+     Vectors are arrays `Array K n` (with the module structure `ArrayLModule`) and act via `mulVec`. -}
+
+\import Algebra.Algebra
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Linear.VectorSpace
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Algebra.Semiring
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+-- | Some conjugate $P A P⁻¹$ of `A` is diagonal.
+\type IsDiagonalizable {K : DiscreteField} {n : Nat} (A : Matrix K n n) : \Prop
+  => ∃ (P : Monoid.Inv {MatrixRing K n}) (IsDiagonal (P.val * A * P.inv))
+
+-- # Sums of elements with a property
+
+-- | `x` is a finite sum of elements satisfying `Q`.
+\func SumOf {M : AddMonoid} (Q : M -> \Prop) (x : M) : \Prop
+  => ∃ (w : Array M) (\Pi (k : Fin w.len) -> Q (w k)) (x = M.BigSum w)
+  \where {
+    \lemma single {M : AddMonoid} {Q : M -> \Prop} {x : M} (q : Q x) : SumOf Q x
+      => inP (x :: nil, \case \elim __ \with { | 0 => q }, inv zro-right)
+
+    \lemma sum {M : AddMonoid} {Q : M -> \Prop} {x y : M} (sx : SumOf Q x) (sy : SumOf Q y) : SumOf Q (x + y) \elim sx
+      | inP (w, wQ, x=w) => rewrite x=w (aux Q sy w wQ)
+      \where
+        \lemma aux {M : AddMonoid} (Q : M -> \Prop) {y : M} (sy : SumOf Q y) (w : Array M) (wQ : \Pi (k : Fin w.len) -> Q (w k))
+          : SumOf Q (M.BigSum w + y) \elim w
+          | nil => rewrite zro-left sy
+          | a :: w => \case aux Q sy w (\lam k => wQ (suc k)) \with {
+            | inP (v, vQ, p) => inP (a :: v, \case \elim __ \with { | 0 => wQ 0 | suc k => vQ k }, +-assoc *> pmap (a +) p)
+          }
+
+    \lemma sum-BigSum {M : AddMonoid} {Q : M -> \Prop} (l : Array M) (h : \Pi (j : Fin l.len) -> SumOf Q (l j)) : SumOf Q (M.BigSum l) \elim l
+      | nil => inP (nil, (\case __), idp)
+      | a :: l => sum {M} {Q} (h 0) (sum-BigSum {M} {Q} l \lam j => h (suc j))
+  }
+
+-- # Extracting a basis
+
+-- | `x` is a linear combination of `S`.
+\func InSpan {R : Ring} {U : LModule R} (S : Array U) (x : U) : \Prop
+  => ∃ (c : Array R S.len) (x = U.BigSum (\lam i => c i *c S i))
+  \where {
+    \lemma self {R : Ring} {U : LModule R} (S : Array U) (k : Fin S.len) : InSpan S (S k)
+      => inP (\lam i => \case decideEq k i \with { | yes _ => 1 | no _ => 0 },
+              inv $ U.BigSum-unique {\lam i => (\case decideEq k i \with { | yes _ => 1 | no _ => 0 }) *c S i} k (\lam i k/=i => rewrite (decideEq/=_reduce k/=i) U.*c_zro-left) *> rewrite (decideEq=_reduce idp) U.ide_*c)
+
+    \lemma sum {R : Ring} {U : LModule R} (w : Array U) : InSpan w (U.BigSum w)
+      => inP (\lam _ => 1, pmap U.BigSum (exts \lam i => inv U.ide_*c))
+
+    \lemma trans {R : Ring} {U : LModule R} {S S' : Array U} (h : \Pi (k : Fin S.len) -> InSpan S' (S k)) {x : U} (xs : InSpan S x) : InSpan S' x
+      => \case FinSet.finiteAC h, xs \with {
+        | inP d, inP (c, x=cS) => inP (\lam i => R.BigSum (\lam k => c k * (d k).1 i),
+            x=cS *> pmap U.BigSum (exts \lam k => pmap (c k *c) (d k).2 *> U.*c_BigSum-ldistr *> pmap U.BigSum (exts \lam i => inv U.*c-assoc)) *>
+            U.BigSum-transpose (\lam k i => (c k * (d k).1 i) *c S' i) *> pmap U.BigSum (exts \lam i => inv U.*c_BigSum-rdistr))
+      }
+
+    -- | If `S` is independent and `a :: S` is not, then `a` is in the span of `S`.
+    \lemma dependent {K : DiscreteField} {U : LModule K} {a : U} {S : Array U} (dep : U.IsDependent (a :: S)) (ind : U.IsIndependent S) : InSpan S a \elim dep
+      | inP (c, p, j, cj/=0) => \case decideEq (c 0) 0 \with {
+        | yes c0=0 => absurd $ cj/=0 $ \case \elim j \with {
+          | 0 => c0=0
+          | suc j => \have s : U.BigSum (\lam (i : Fin S.len) => c (suc i) *c S i) = 0 => inv (pmap (\lam z => z + _) (pmap (\lam r => r *c a) c0=0 *> U.*c_zro-left) *> zro-left) *> p
+                     \in ind (\lam (i : Fin S.len) => c (suc i)) s j
+        }
+        | no c0/=0 => inP (\lam i => negative (finv (c 0) * c (suc i)),
+            inv U.ide_*c *> pmap (\lam r => r *c a) (inv (*-comm *> finv-right c0/=0)) *> U.*c-assoc *>
+            pmap (finv (c 0) *c) (U.negative-unique _ p negative-right) *>
+            U.*c_negative-right *> pmap negative U.*c_BigSum-ldistr *> U.BigSum_negative *>
+            pmap U.BigSum (exts \lam i => pmap negative (inv U.*c-assoc) *> inv U.*c_negative-left))
+      }
+  }
+
+{- | **Greedy basis extraction.** If every vector of a finite-dimensional space over a discrete field is a finite sum
+     of vectors satisfying `Q`, then the space has a basis of vectors satisfying `Q`. -}
+\lemma basis-of-sums {K : DiscreteField} {U : FinModule K} (Q : U -> \Prop) (h : \Pi (x : U) -> SumOf Q x)
+  : ∃ (l : Array U) (U.IsBasis l) (\Pi (k : Fin l.len) -> Q (l k))
+  => \case U.isFinModule \with {
+    | inP (b, bb) => \case extend-many {K} {U} {Q} nil (\lam _ _ => \case __) (\case __) b (\lam j => h (b j)) \with {
+      | inP (S, Si, SQ, _, bS) => inP (S, (Si, \lam x => InSpan.trans bS (bb.2 x)), SQ)
+    }
+  }
+  \where {
+    -- | Extend an independent family `S` of `Q`-vectors to one that also spans the vectors `w`.
+    \lemma extend {K : DiscreteField} {U : FinModule K} {Q : U -> \Prop} (S : Array U) (Si : U.IsIndependent S) (SQ : \Pi (k : Fin S.len) -> Q (S k))
+                  (w : Array U) (wQ : \Pi (k : Fin w.len) -> Q (w k))
+      : ∃ (S' : Array U) (U.IsIndependent S') (\Pi (k : Fin S'.len) -> Q (S' k)) (\Pi (k : Fin S.len) -> InSpan S' (S k)) (\Pi (k : Fin w.len) -> InSpan S' (w k)) \elim w
+      | nil => inP (S, Si, SQ, InSpan.self S, \case __)
+      | a :: w => \case dependency-dec {K} {U} (a :: S) \with {
+        | inl dep => \case extend {K} {U} {Q} S Si SQ w (\lam k => wQ (suc k)) \with {
+          | inP (S', S'i, S'Q, SS', wS') => inP (S', S'i, S'Q, SS', \case \elim __ \with {
+            | 0 => InSpan.trans SS' (InSpan.dependent dep Si)
+            | suc k => wS' k
+          })
+        }
+        | inr ind => \case extend {K} {U} {Q} (a :: S) ind (\case \elim __ \with { | 0 => wQ 0 | suc k => SQ k }) w (\lam k => wQ (suc k)) \with {
+          | inP (S', S'i, S'Q, SS', wS') => inP (S', S'i, S'Q, \lam k => SS' (suc k), \case \elim __ \with {
+            | 0 => SS' 0
+            | suc k => wS' k
+          })
+        }
+      }
+
+    -- | Extend an independent family `S` of `Q`-vectors to one that also spans the vectors `bs`, each a sum of `Q`-vectors.
+    \lemma extend-many {K : DiscreteField} {U : FinModule K} {Q : U -> \Prop} (S : Array U) (Si : U.IsIndependent S) (SQ : \Pi (k : Fin S.len) -> Q (S k))
+                       (bs : Array U) (h : \Pi (j : Fin bs.len) -> SumOf Q (bs j))
+      : ∃ (S' : Array U) (U.IsIndependent S') (\Pi (k : Fin S'.len) -> Q (S' k)) (\Pi (k : Fin S.len) -> InSpan S' (S k)) (\Pi (j : Fin bs.len) -> InSpan S' (bs j)) \elim bs
+      | nil => inP (S, Si, SQ, InSpan.self S, \case __)
+      | b :: bs => \case h 0 \with {
+        | inP (w, wQ, b=w) => \case extend {K} {U} {Q} S Si SQ w wQ \with {
+          | inP (S1, S1i, S1Q, SS1, wS1) => \case extend-many {K} {U} {Q} S1 S1i S1Q bs (\lam j => h (suc j)) \with {
+            | inP (S', S'i, S'Q, S1S', bsS') => inP (S', S'i, S'Q, \lam k => InSpan.trans S1S' (SS1 k), \case \elim __ \with {
+              | 0 => InSpan.trans S1S' $ InSpan.trans wS1 $ rewrite b=w (InSpan.sum w)
+              | suc j => bsS' j
+            })
+          }
+        }
+      }
+  }
+
+-- # Matrices acting on vectors
+
+-- | The vector $A x$.
+\func mulVec {R : Ring} {n m : Nat} (A : Matrix R n m) (x : Array R m) : Array R n
+  => \lam i => R.BigSum (\lam j => A i j * x j)
+  \where {
+    \lemma comp {R : Ring} {n : Nat} {A B : Matrix R n n} {x : Array R n} : mulVec (A * B) x = mulVec A (mulVec B x)
+      => exts \lam i => pmap R.BigSum (exts \lam k => R.BigSum-rdistr *> pmap R.BigSum (exts \lam j => *-assoc)) *>
+          R.BigSum-transpose (\lam k j => A i j * (B j k * x k)) *> pmap R.BigSum (exts \lam j => inv R.BigSum-ldistr)
+
+    \lemma ide {R : Ring} {n : Nat} {x : Array R n} : mulVec 1 x = x
+      => exts \lam i => R.BigSum-unique i (\lam k i/=k => later $ rewrite (decideEq/=_reduce i/=k) zro_*-left) *> rewrite (decideEq=_reduce idp) ide-left
+
+    \lemma scale {R : CRing} {n : Nat} {c : R} {A : Matrix R n n} {x : Array R n} : mulVec (c *c A) x = c *c {ArrayLModule n (RingLModule R)} mulVec A x
+      => exts \lam i => pmap R.BigSum (exts \lam j => *-assoc) *> inv R.BigSum-ldistr
+
+    \lemma sum {R : Ring} {n : Nat} (E : Array (Matrix R n n)) {x : Array R n}
+      : mulVec (AddMonoid.BigSum E) x = AddMonoid.BigSum {ArrayLModule n (RingLModule R)} (\lam l => mulVec (E l) x) \elim E
+      | nil => exts \lam i => R.BigSum_zro \lam j => zro_*-left
+      | M :: E => exts \lam i => pmap R.BigSum (exts \lam j => rdistr) *> R.BigSum_+ *> pmap (_ +) (path (\lam i' => sum E i' i))
+
+    -- | If $A M = c M$, then every $M x$ is an eigenvector of `A` with eigenvalue `c`.
+    \lemma eigen {R : CRing} {n : Nat} {A M : Matrix R n n} {c : R} (h : A * M = c *c M) (x : Array R n)
+      : mulVec A (mulVec M x) = c *c {ArrayLModule n (RingLModule R)} mulVec M x
+      => inv comp *> pmap (mulVec __ x) h *> scale
+  }
+
+-- | `x` is an eigenvector (possibly zero) of every matrix `A t`.
+\func IsCommonEigen {R : Ring} {n r : Nat} (A : Array (Matrix R n n) r) (x : Array R n) : \Prop
+  => \Pi (t : Fin r) -> ∃ (c : R) (mulVec (A t) x = c *c {ArrayLModule n (RingLModule R)} x)
+
+-- | If `∑ M_l = 1` and every `M_l y` is a sum of `Q`-vectors, then so is `y`.
+\lemma sum-decomposition {R : Ring} {n s : Nat} {Q : Array R n -> \Prop} (M : Array (Matrix R n n) s) (Msum : AddMonoid.BigSum M = 1)
+                         (y : Array R n) (h : \Pi (l : Fin s) -> SumOf Q (mulVec (M l) y)) : SumOf Q y
+  => transport (SumOf Q) (inv (mulVec.sum M) *> pmap (mulVec __ y) Msum *> mulVec.ide) (SumOf.sum-BigSum {_} {Q} _ h)
+
+-- # Diagonalization
+
+{- | **Simultaneous diagonalization from common eigenvectors.** If every vector of $K^n$ is a sum of common
+     eigenvectors of the matrices `A t`, then a single invertible `P` makes every $P A_t P⁻¹$ diagonal. -}
+\lemma common-eigen-diagonalization {K : DiscreteField} {n r : Nat} (A : Array (Matrix K n n) r)
+                                    (h : \Pi (x : Array K n) -> SumOf (IsCommonEigen A) x)
+  : ∃ (P : Monoid.Inv {MatrixRing K n}) (\Pi (t : Fin r) -> IsDiagonal (P.val * A t * P.inv))
+  => \case basis-of-sums {K} {ArrayFinModule n} (IsCommonEigen A) h \with {
+    | inP (l, lb, lQ) =>
+      \let t => transport (\lam m => \Sigma (l : Array (Array K n) m) (LModule.IsBasis {ArrayLModule n (RingLModule K)} l) (\Pi (k : Fin m) -> IsCommonEigen A (l k)))
+                          (inv (FinModule.dimension-unique lb) *> FinModule.dimension-unique {K} {ArrayFinModule n} ArrayFinModule.basis) (\new l, lb, lQ)
+      \in from-basis A t.1 t.2 t.3
+  }
+  \where {
+    \open LModule (basis-split, basis-split-char)
+
+    \lemma right-inverse {M : Monoid} {a b : M} (J : Monoid.Inv a) (ba : b * a = 1) : a * b = 1
+      => inv ide-right *> pmap (a * b *) (inv J.inv-right) *> inv *-assoc *> pmap (* J.inv) (*-assoc *> pmap (a *) ba *> ide-right) *> J.inv-right
+
+    \lemma from-basis {K : DiscreteField} {n r : Nat} (A : Array (Matrix K n n) r) (l : Array (Array K n) n)
+                      (lb : LModule.IsBasis {ArrayLModule n (RingLModule K)} l) (lQ : \Pi (k : Fin n) -> IsCommonEigen A (l k))
+      : ∃ (P : Monoid.Inv {MatrixRing K n}) (\Pi (t : Fin r) -> IsDiagonal (P.val * A t * P.inv))
+      => \let | Q : Matrix K n n => mkMatrix \lam i k => l k i
+              | C : Matrix K n n => mkMatrix \lam k j => basis-split {ArrayLModule n (RingLModule K)} lb (\lam i => MatrixRing.ide {K} {n} i j) k
+              | QC : Q * C = 1 => matrixExt \lam i j => inv $
+                  path (\lam i' => basis-split-char {ArrayLModule n (RingLModule K)} {l} {lb} {\lam i => MatrixRing.ide {K} {n} i j} i' i) *>
+                  ArrayLModule.BigSum-index *> pmap K.BigSum (exts \lam k => *-comm)
+              | CQ : C * Q = 1 => right-inverse {MatrixRing K n} {C} {Q} (matrix-inv {K} {n} {Q} {C} QC) QC
+              | P : Monoid.Inv {MatrixRing K n} => \new Monoid.Inv { | val => C | inv => Q | inv-left => QC | inv-right => CQ }
+         \in inP (P, \lam t {i} {k} i/=k => \case lQ k t \with {
+           | inP (c, ev) => pmap (__ i k) (*-assoc {MatrixRing K n} {C} {A t} {Q}) *>
+               pmap K.BigSum (exts \lam j => pmap (C i j *) (path (\lam i' => ev i' j)) *> equation.cRing) *>
+               inv K.BigSum-ldistr *> pmap (c *) (path (\lam i' => CQ i' i k) *> rewrite (decideEq/=_reduce \lam (p : i = k) => i/=k p) idp) *> zro_*-right
+         })
+  }
+
+{- | **Simultaneous diagonalization from a decomposition of the identity.** If `∑ E_l = 1` and
+     $A_t E_l = a_{t l} E_l$ for all `t` and `l`, a single invertible `P` makes every $P A_t P⁻¹$ diagonal.
+     (No idempotency or orthogonality of the `E_l` is needed.) -}
+\lemma simultaneous-diagonalization {K : DiscreteField} {n s r : Nat} (E : Array (Matrix K n n) s) (Esum : AddMonoid.BigSum E = 1)
+                                    (A : Array (Matrix K n n) r) (a : Fin r -> Fin s -> K) (AE : \Pi (t : Fin r) (l : Fin s) -> A t * E l = a t l *c E l)
+  : ∃ (P : Monoid.Inv {MatrixRing K n}) (\Pi (t : Fin r) -> IsDiagonal (P.val * A t * P.inv))
+  => common-eigen-diagonalization A \lam x => sum-decomposition {_} {_} {_} {IsCommonEigen A} E Esum x \lam l => SumOf.single {_} {IsCommonEigen A} \lam t => inP (a t l, mulVec.eigen (AE t l) x)
+
+-- # Lagrange decomposition
+
+{- | **Lagrange decomposition.** If `A` is killed by $\prod_i (X - r_i)$ with distinct `r_i`, there are polynomials `p_i`
+     with $\sum_i p_i(A) = 1$ and $A\,p_i(A) = r_i\,p_i(A)$. -}
+\lemma lagrange-decomposition {K : DiscreteField} {n m : Nat} {A : Matrix K n n} (r : Array K m) (inj : IsInj r) (ann : matPolyEval (prodLin r) A = 0)
+  : ∃ (p : Array (Poly K) m) (AddMonoid.BigSum (\lam i => matPolyEval (p i) A) = 1) (\Pi (i : Fin m) -> A * matPolyEval (p i) A = r i *c matPolyEval (p i) A)
+  => \case polys r inj \with {
+    | inP (p, s, q, ps, pq) => inP (p,
+        inv (AddMonoidHom.func-BigSum {matPolyEvalHom A} {p}) *> pmap (matPolyEval __ A) ps *> matPolyEval_+ {K} {n} {1} {s * prodLin r} {A} *>
+          pmap2 (+) (matPolyEval_ide {K} {n} {A}) (matPolyEval_* {K} {n} {s} {prodLin r} {A} *> pmap (_ *) ann *> zro_*-right {MatrixRing K n}) *> zro-right {MatrixRing K n},
+        \lam i => linear-factor (inv (matPolyEval_* {K} {n} {padd 1 (negative (r i))} {p i} {A}) *> pmap (matPolyEval __ A) (pq i) *>
+                                  matPolyEval_* {K} {n} {q i} {prodLin r} {A} *> pmap (_ *) ann *> zro_*-right {MatrixRing K n}))
+  }
+  \where {
+    -- | The polynomial identities behind the decomposition: $\sum_i p_i \equiv 1$ and $(X - r_i) p_i \equiv 0$ modulo $\prod_i (X - r_i)$.
+    \lemma polys {K : DiscreteField} {m : Nat} (r : Array K m) (inj : IsInj r)
+      : ∃ (p : Array (Poly K) m) (s : Poly K) (q : Array (Poly K) m)
+          (AddMonoid.BigSum p = 1 + s * prodLin r)
+          (\Pi (i : Fin m) -> padd 1 (negative (r i)) * p i = q i * prodLin r) \elim m, r
+      | 0, nil => inP (nil, negative 1, nil, base {PolyAlgebra K}, \case __)
+      | suc m, a :: l => \case polys l (\lam e => unfsuc (inj e)) \with {
+        | inP (p', s', q', ps, pq) =>
+          \let | Q => prodLin l
+               | L : Poly K => padd 1 (negative a)
+               | d => degree1PolyDivision Q a
+               | Ci : Poly K => padd pzero (finv (polyEval Q a))
+               | c/=0 : polyEval Q a /= 0 => rewrite (polyEval_prodLin l a) $ linProd/=0 l a \lam j e => \case inj {0} {suc j} e \with {}
+               | ci : Ci * padd pzero (polyEval Q a) = 1 => inv (RingHom.func-* {polyHom {K}}) *> pmap (padd pzero) (*-comm *> finv-right c/=0)
+          \in inP (Ci * Q :: map (negative (Ci * d.1 * L) *) p', negative (Ci * d.1 * s'), Ci :: map (\lam qj => negative (Ci * d.1 * qj)) q',
+                   pmap (Ci * Q +) (inv (PolyRing K).BigSum-ldistr) *> step-sum {PolyAlgebra K} {Q} {L} {d.1} {padd pzero (polyEval Q a)} {Ci} {s'} {AddMonoid.BigSum p'} d.2 ci ps,
+                   \case \elim __ \with {
+                     | 0 => step-0 {PolyAlgebra K} {L} {Ci} {Q}
+                     | suc j => step-suc {PolyAlgebra K} {padd 1 (negative (l j))} {p' j} {q' j} {Q} {L} {Ci} {d.1} (pq j)
+                   })
+      }
+
+    \lemma linProd/=0 {K : DiscreteField} {m : Nat} (l : Array K m) (a : K) (h : \Pi (j : Fin m) -> a /= l j) : linProd l a /= 0 \elim m, l
+      | 0, nil => \lam p => zro/=ide (inv p)
+      | suc m, b :: l => K.nonZero_* (linProd/=0 l a \lam j => h (suc j)) \lam e => h 0 (K.fromZero e)
+
+    \lemma base {R : CRing} : (0 : R) = 1 + negative 1 * 1
+      => equation.cRing
+
+    \lemma step-sum {R : CRing} {Q L h C Ci s' S : R} (div : Q = h * L + C) (ci : Ci * C = 1) (ps : S = 1 + s' * Q)
+      : Ci * Q + negative (Ci * h * L) * S = 1 + negative (Ci * h * s') * (Q * L)
+      => rewrite ps $ (equation.cRing : Ci * Q + negative (Ci * h * L) * (1 + s' * Q) = Ci * (Q - h * L) + negative (Ci * h * s') * (Q * L)) *>
+          pmap (\lam z => Ci * z + negative (Ci * h * s') * (Q * L)) (rewrite div equation.cRing : Q - h * L = C) *> pmap (+ _) ci
+
+    \lemma step-0 {R : CRing} {L Ci Q : R} : L * (Ci * Q) = Ci * (Q * L)
+      => equation.cRing
+
+    \lemma step-suc {R : CRing} {Lj P Qj Q L Ci h : R} (e : Lj * P = Qj * Q) : Lj * (negative (Ci * h * L) * P) = negative (Ci * h * Qj) * (Q * L)
+      => equation.cRing *> pmap (negative (Ci * h * L) *) e *> equation.cRing
+
+    -- | $(X - c)(A) = A - c$.
+    \lemma linear-eval {K : CRing} {n : Nat} {A : Matrix K n n} {c : K} : matPolyEval (padd 1 (negative c)) A = A + negative c *c 1
+      => pmap (matPolyEval __ A) (padd-expand {K} {1} {negative c}) *> matPolyEval_+ {K} {n} {1 * padd 1 0} {padd 0 (negative c)} {A} *>
+          pmap2 (+) (matPolyEval_* {K} {n} {1} {padd 1 0} {A} *> pmap2 (*) (matPolyEval_ide {K} {n} {A}) (matPolyEval_X {K} {n} {A}) *> ide-left {MatrixRing K n})
+                    (matPolyEval_const {K} {n} {negative c} {A} *> AAlgebra.coefMap_*c {MatrixAlgebra K n})
+
+    \lemma linear-factor {K : CRing} {n : Nat} {A E : Matrix K n n} {c : K} (h : matPolyEval (padd 1 (negative c)) A * E = 0) : A * E = c *c E
+      => AddGroup.fromZero {MatrixRing K n} $ pmap (A * E +) (inv (LModule.*c_negative-left {MatrixModule K n n} {c} {E}) *>
+            pmap (negative c *c) (inv (ide-left {MatrixRing K n} {E})) *> AAlgebra.*c-comm-left {MatrixAlgebra K n} {negative c} {1} {E}) *>
+          inv (rdistr {MatrixRing K n} {A} {negative c *c 1} {E}) *> pmap (* E) (inv linear-eval) *> h
+  }
+
+-- # Theorem V.4.3
+
+-- | A matrix whose conjugate $P A P⁻¹$ is diagonal is killed by $\prod_i (X - r_i)$, the `r_i` being the distinct diagonal entries.
+\lemma diagonalizable-annihilator {K : DiscreteField} {n : Nat} {A : Matrix K n n} (P : Monoid.Inv {MatrixRing K n}) (d : IsDiagonal (P.val * A * P.inv))
+  : matPolyEval (prodLin (\new nub (mkArray \lam (j : Fin n) => (P.val * A * P.inv) j j))) A = 0
+  => conj-zero P $ inv (matPolyEval_conj P) *> pmap (matPolyEval _) (isDiagonal-diagonal d) *> matPolyEval_diagonal *>
+      diagonal-zero (\lam j => \have t => nub-isSurj (mkArray \lam (j : Fin n) => (P.val * A * P.inv) j j) j
+                              \in transport (\lam z => polyEval _ z = 0) t.2 (prodLin-root _ t.1))
+  \where {
+    \lemma conj-zero {M : Ring} (P : Monoid.Inv {M}) {X : M} (h : P.val * X * P.inv = 0) : X = 0
+      => conj-inv P *> pmap (\lam z => P.inv * z * P.val) h *> pmap (* P.val) zro_*-right *> zro_*-left
+
+    \lemma conj-inv {M : Monoid} (P : Monoid.Inv {M}) {X : M} : X = P.inv * (P.val * X * P.inv) * P.val
+      => inv (pmap2 (\lam u v => u * X * v) P.inv-left P.inv-left *> pmap (* 1) ide-left *> ide-right) *> equation.monoid
+
+    \lemma isDiagonal-diagonal {R : AddPointed} {n : Nat} {D : Matrix R n n} (d : IsDiagonal D) : D = diagonal (mkArray \lam j => D j j)
+      => matrixExt \lam i j => mcases \with {
+        | yes e => rewrite e idp
+        | no q => d \lam p => q (fin_nat-inj p)
+      }
+
+    \lemma diagonal-zero {R : AbGroup} {l : Array R} (h : \Pi (j : Fin l.len) -> l j = 0) : diagonal l = 0
+      => matrixExt \lam i j => mcases \with {
+        | yes _ => h i
+        | no _ => idp
+      }
+  }
+
+{- | **Theorem V.4.3.** A matrix over a discrete field is diagonalizable if and only if it is killed by a product
+     $\prod_i (X - r_i)$ of distinct linear factors. -}
+\lemma diagonalizable<->prodLin {K : DiscreteField} {n : Nat} {A : Matrix K n n}
+  : IsDiagonalizable A <-> ∃ (m : Nat) (r : Array K m) (IsInj r) (matPolyEval (prodLin r) A = 0)
+  => (\case __ \with {
+        | inP (P, d) => inP (_, _, nub-isInj, diagonalizable-annihilator P d)
+      },
+      \case __ \with {
+        | inP (m, r, inj, ann) => \case lagrange-decomposition r inj ann \with {
+          | inP (p, psum, peig) => \case simultaneous-diagonalization _ psum (A :: nil) (\lam _ => r) (\case \elim __ \with { | 0 => peig }) \with {
+            | inP (P, d) => inP (P, d 0)
+          }
+        }
+      })
+
+-- # Theorem V.4.4
+
+-- | **Theorem V.4.4.** Commuting diagonalizable matrices are simultaneously diagonalizable.
+\lemma simultaneously-diagonalizable {K : DiscreteField} {n : Nat} {A B : Matrix K n n} (c : A * B = B * A)
+                                     (Ad : IsDiagonalizable A) (Bd : IsDiagonalizable B)
+  : ∃ (P : Monoid.Inv {MatrixRing K n}) (IsDiagonal (P.val * A * P.inv)) (IsDiagonal (P.val * B * P.inv))
+  => \case diagonalizable<->prodLin.1 Ad, diagonalizable<->prodLin.1 Bd \with {
+    | inP (_, r, rinj, rann), inP (_, s, sinj, sann) => \case lagrange-decomposition r rinj rann, lagrange-decomposition s sinj sann \with {
+      | inP (p, psum, peig), inP (q, qsum, qeig) =>
+        \case common-eigen-diagonalization (A :: B :: nil) (\lam x =>
+          sum-decomposition {_} {_} {_} {IsCommonEigen (A :: B :: nil)} _ psum x \lam i =>
+          sum-decomposition {_} {_} {_} {IsCommonEigen (A :: B :: nil)} _ qsum _ \lam j =>
+          SumOf.single {_} {IsCommonEigen (A :: B :: nil)} \case \elim __ \with {
+            | 0 => inP (r i, transport (\lam (y : Array K n) => mulVec A y = r i *c {ArrayLModule n (RingLModule K)} y)
+                     (mulVec.comp {K} {n} {matPolyEval (q j) B} {matPolyEval (p i) A} {x}) $
+                     mulVec.eigen {K} {n} {A} {matPolyEval (q j) B * matPolyEval (p i) A} {r i}
+                       (comm-eigen (inv (matPolyEval-comm {K} {n} {q j} {B} {A} (inv c))) (peig i)) x)
+            | 1 => inP (s j, mulVec.eigen {K} {n} {B} {matPolyEval (q j) B} {s j} (qeig j) (mulVec (matPolyEval (p i) A) x))
+          }) \with {
+          | inP (P, d) => inP (P, d 0, d 1)
+        }
+    }
+  }
+  \where
+    \lemma comm-eigen {R : CRing} {n : Nat} {A F E : Matrix R n n} {c : R} (AF : A * F = F * A) (AE : A * E = c *c E) : A * (F * E) = c *c (F * E)
+      => inv (*-assoc {MatrixRing R n} {A} {F} {E}) *> pmap (* E) AF *> *-assoc {MatrixRing R n} {F} {A} {E} *> pmap (F *) AE *>
+          inv (AAlgebra.*c-comm-right {MatrixAlgebra R n} {c} {F} {E})
+
+-- | If commuting `A` and `B` are diagonalizable, so is `A + B`.
+\lemma diagonalizable_+ {K : DiscreteField} {n : Nat} {A B : Matrix K n n} (c : A * B = B * A) (Ad : IsDiagonalizable A) (Bd : IsDiagonalizable B)
+  : IsDiagonalizable (A + B)
+  => \case simultaneously-diagonalizable c Ad Bd \with {
+    | inP (P, dA, dB) => inP (P, transport IsDiagonal (inv (pmap (* P.inv) (ldistr {MatrixRing K n} {P.val} {A} {B}) *> rdistr {MatrixRing K n} {P.val * A} {P.val * B} {P.inv})) \lam i/=j => pmap2 (+) (dA i/=j) (dB i/=j) *> zro-left)
+  }
+
+-- | If commuting `A` and `B` are diagonalizable, so is `A * B`.
+\lemma diagonalizable_* {K : DiscreteField} {n : Nat} {A B : Matrix K n n} (c : A * B = B * A) (Ad : IsDiagonalizable A) (Bd : IsDiagonalizable B)
+  : IsDiagonalizable (A * B)
+  => \case simultaneously-diagonalizable c Ad Bd \with {
+    | inP (P, dA, dB) => inP (P, transport IsDiagonal
+(inv (conj-* P)) (isDiagonal_* dA dB))
+  }
+  \where {
+    \lemma conj-* {M : Monoid} (P : Monoid.Inv {M}) {a b : M} : P.val * (a * b) * P.inv = P.val * a * P.inv * (P.val * b * P.inv)
+      => inv $ (equation.monoid : P.val * a * P.inv * (P.val * b * P.inv) = P.val * a * (P.inv * P.val) * b * P.inv) *>
+          pmap (\lam z => P.val * a * z * b * P.inv) P.inv-left *> equation.monoid
+
+    \lemma isDiagonal_* {R : Ring} {n : Nat} {D D' : Matrix R n n} (d : IsDiagonal D) (d' : IsDiagonal D') : IsDiagonal (D * D')
+      => \lam {i} {k} i/=k => R.BigSum_zro \lam j => \case decideEq (i : Nat) (j : Nat) \with {
+        | yes e => pmap (_ *) (d' \lam p => i/=k (e *> p)) *> zro_*-right
+        | no q => pmap (* _) (d q) *> zro_*-left
+      }
+  }

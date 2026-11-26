@@ -1,0 +1,130 @@
+{- | **The minimal polynomial of a square matrix over a discrete field.**
+
+     Public API: `IsMatMinPoly` (with `IsMatMinPoly.unique`, `IsMatMinPoly.low`, `IsMatMinPoly.fromLow`),
+     existence `matMinPoly`, and invariance under field extension `matMinPoly_map` / `matMinPoly-LDiv-map`.
+
+     Existence searches for a nonzero annihilator of least degree; the search is decidable since linear
+     dependence of $I, A, \ldots, A^{m-1}$ (flattened to vectors) is decidable (`dependency-dec`), and it
+     terminates by Cayley–Hamilton. Invariance: the minimal polynomial is characterized by having no nonzero
+     annihilator of smaller degree (`IsMatMinPoly.fromLow`), and $I, A, \ldots, A^{d-1}$ stay independent
+     after extending scalars (`mat-independent-map`). -}
+
+\import Algebra.Algebra
+\import Algebra.Field
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.CayleyHamilton
+\import Algebra.Linear.Matrix.CharPoly
+\import Algebra.Linear.Matrix.FieldExtension
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Linear.VectorSpace
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.Integral.MinPoly
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin.Instances
+
+-- | `p` is the minimal polynomial of `A`: monic, annihilates `A`, and divides every annihilator of `A`.
+\type IsMatMinPoly {K : DiscreteField} {n : Nat} (A : Matrix K n n) (p : Poly K) : \Prop
+  => \Sigma (isMonic p) (matPolyEval p A = 0) (\Pi {q : Poly K} -> matPolyEval q A = 0 -> TruncP (Monoid.LDiv p q))
+  \where {
+    \lemma unique {K : DiscreteField} {n : Nat} {A : Matrix K n n} {p q : Poly K} (pm : IsMatMinPoly A p) (qm : IsMatMinPoly A q) : p = q
+      => isMonicMinPoly.unique {K} {CAlgebra.coefHom {MatrixAlgebra K n}} {A} (pm.1, (pm.2, pm.3)) (qm.1, (qm.2, qm.3))
+
+    -- | An annihilator of degree less than that of the minimal polynomial vanishes.
+    \lemma low {K : DiscreteField} {n : Nat} {A : Matrix K n n} {p : Poly K} (m : IsMatMinPoly A p)
+               {s : Poly K} (sd : degree< s (degree p)) (se : matPolyEval s A = 0) : s = 0
+      => \case m.3 se \with {
+        | inP (d : Monoid.LDiv) =>
+          \have d=0 => monicPolyDivisionContr.aux d.inv p (degree p) (degree_degree<= <=-refl) (monic-coef m.1) $
+                         transport (degree< __ (degree p)) (inv (*-comm *> d.inv-right)) sd
+          \in inv d.inv-right *> pmap (p *) d=0 *> zro_*-right
+      }
+
+    -- | A monic annihilator of degree `D` such that every annihilator of degree less than `D` vanishes is the minimal polynomial.
+    \lemma fromLow {K : DiscreteField} {n : Nat} {A : Matrix K n n} {p : Poly K} {D : Nat} (dp : degree<= p D) (cp : polyCoef p D = 1)
+                   (pe : matPolyEval p A = 0) (low : \Pi {s : Poly K} -> degree< s D -> matPolyEval s A = 0 -> s = 0) : IsMatMinPoly A p
+      => (inP (D, dp, cp), pe, \lam {q} qe =>
+          \let | (d, r, q=dp+r, r<D) => monicPolyDivision q p D dp cp
+               | re : matPolyEval r A = 0 => inv (pmap (+ matPolyEval r A) (matPolyEval_* *> pmap (_ *) pe *> zro_*-right) *> zro-left) *> inv matPolyEval_+ *> pmap (matPolyEval __ A) (inv q=dp+r) *> qe
+          \in inP $ Monoid.LDiv.make d $ *-comm *> inv zro-right *> pmap (_ +) (inv (low r<D re)) *> inv q=dp+r)
+  }
+
+-- | Every square matrix over a discrete field has a (unique) minimal polynomial.
+\lemma matMinPoly {K : DiscreteField} {n : Nat} (A : Matrix K n n) : \Sigma (p : Poly K) (IsMatMinPoly A p)
+  \level \lam s t => ext (IsMatMinPoly.unique s.2 t.2)
+  => \case minDegree A \with {
+    | inP (p, p/=0, pe, md) =>
+      \have l/=0 : leadCoef p /= 0 => \lam q => p/=0 (leadCoef=0-lem q)
+      \in (finv (leadCoef p) PolyRing.*c p, IsMatMinPoly.fromLow {K} {n} {A} {finv (leadCoef p) PolyRing.*c p} {degree p}
+            (degree<=_*c (degree_degree<= <=-refl))
+            (polyCoef_*c *> pmap (_ *) (inv leadCoef_polyCoef) *> K.finv-left l/=0)
+            (pmap (matPolyEval __ A) PolyRing.*c_* *> matPolyEval_* {K} {n} {padd pzero (finv (leadCoef p))} {p} {A} *> pmap (matPolyEval (padd pzero (finv (leadCoef p))) A *) pe *> zro_*-right {MatrixRing K n} {matPolyEval (padd pzero (finv (leadCoef p))) A})
+            \lam {s} sd se => \case decideEq s 0 \with {
+              | yes s=0 => s=0
+              | no s/=0 => absurd $ <-irreflexive (md s/=0 se <∘r degree<_degree s/=0 sd)
+            })
+  }
+  \where {
+    \lemma minDegree {K : DiscreteField} {n : Nat} (A : Matrix K n n)
+      : ∃ (p : Poly K) (p /= 0) (matPolyEval p A = 0) ∀ {q : Poly K} (q /= 0 -> matPolyEval q A = 0 -> degree p <= degree q)
+      => \case degree<-exists (charPoly A) \with {
+        | inP (m, d) => minimize A (charPoly A) (\lam e => zro/=ide $ inv (pmap (polyCoef __ n) e) *> charPoly-monic A) (cayley-hamilton A) m d
+      }
+
+    \lemma poly-dec {K : DiscreteField} {n : Nat} (A : Matrix K n n) (m : Nat) : Dec (∃ (p : Poly K) (p /= 0) (degree< p m) (matPolyEval p A = 0))
+      => \case dependency-dec {K} {ArrayFinModule (n Nat.* n)} (mkArray \lam (t : Fin m) => matFlatten (Monoid.pow {MatrixRing K n} A t)) \with {
+        | inl (inP (c, s, j, cj/=0)) => yes $ inP (Poly.fromArray c, \lam c=0 => cj/=0 $ inv polyCoef_fromArray *> pmap (polyCoef __ j) c=0, fromArray_degree<,
+            matrixExt $ matFlatten.all {n} {n} {\lam i k => matPolyEval (Poly.fromArray c) A i k = 0} \lam J =>
+              matPolyEval_fromArray _ _ *> inv ArrayLModule.BigSum-index *> path (\lam i' => s i' J))
+        | inr g => no \lam (inP (p, p/=0, p<m, pe)) => p/=0 $ fromArray_polyCoef p<m *> pmap Poly.fromArray (exts $ g (\lam j => polyCoef p j) $ exts \lam J =>
+            ArrayLModule.BigSum-index *> inv (matPolyEval_fromArray (ProdFin.prod_equiv J).1 (ProdFin.prod_equiv J).2) *>
+            path (\lam i' => (pmap (matPolyEval __ A) (inv (fromArray_polyCoef p<m)) *> pe) i' (ProdFin.prod_equiv J).1 (ProdFin.prod_equiv J).2)) *> fromArray_polyCoef.fromArray0 {_} {m}
+      }
+
+    \lemma minimize {K : DiscreteField} {n : Nat} (A : Matrix K n n) (p : Poly K) (p/=0 : p /= 0) (pe : matPolyEval p A = 0) (m : Nat) (d : degree< p m)
+      : ∃ (p : Poly K) (p /= 0) (matPolyEval p A = 0) ∀ {q : Poly K} (q /= 0 -> matPolyEval q A = 0 -> degree p <= degree q) \elim m
+      | 0 => absurd $ p/=0 (degree<0 d)
+      | suc m => \case poly-dec A m \with {
+        | yes (inP (q, q/=0, q<m, qe)) => minimize A q q/=0 qe m q<m
+        | no r => inP (p, p/=0, pe, \lam {q} q/=0 qe => \case LinearOrder.dec<_<= (degree q) m \with {
+          | inl q<m => absurd $ r $ inP (q, q/=0, degree_degree< q<m, qe)
+          | inr m<=q => degree<=_degree (degree<_degree<= d) <=∘ m<=q
+        })
+      }
+  }
+
+-- | The minimal polynomial is invariant under extension of the base field.
+\lemma matMinPoly_map {k K : DiscreteField} (f : RingHom k K) {n : Nat} {A : Matrix k n n} {p : Poly k} (m : IsMatMinPoly A p)
+  : IsMatMinPoly (matrix-map f A) (polyMap f p)
+  => IsMatMinPoly.fromLow {K} {n} {matrix-map f A} {polyMap f p} {degree p} (degree<=_polyMap (degree_degree<= <=-refl))
+      (polyCoef_polyMap *> pmap f (monic-coef m.1) *> f.func-ide)
+      (inv (matPolyEval_map f) *> pmap (matrix-map f) m.2 *> matrixExt (\lam i j => f.func-zro))
+      \lam {s} sd se => fromArray_polyCoef sd *> pmap Poly.fromArray (exts \lam t =>
+        mat-independent-map f (mkArray \lam (t : Fin (degree p)) => Monoid.pow {MatrixRing k n} A t)
+          (\lam c h t => inv polyCoef_fromArray *> pmap (polyCoef __ t) (IsMatMinPoly.low m fromArray_degree< $ matrixExt \lam i j => matPolyEval_fromArray i j *> h i j))
+          (\lam t => polyCoef s t)
+          (\lam i j => pmap K.BigSum (exts \lam t => pmap (_ *) (path (\lam i' => matrix-map_pow f {n} {A} {t} i' i j))) *> inv (matPolyEval_fromArray i j) *>
+                        path (\lam i' => (pmap (matPolyEval __ (matrix-map f A)) (inv (fromArray_polyCoef sd)) *> se) i' i j)) t) *>
+        fromArray_polyCoef.fromArray0 {_} {degree p}
+
+-- | Over an extension field, the image of the minimal polynomial divides every annihilator of the extended matrix.
+\lemma matMinPoly-LDiv-map {k K : DiscreteField} (f : RingHom k K) {n : Nat} {A : Matrix k n n} {p : Poly k} (m : IsMatMinPoly A p)
+                           {q : Poly K} (qe : matPolyEval q (matrix-map f A) = 0) : TruncP (Monoid.LDiv (polyMap f p) q)
+  => (matMinPoly_map f m).3 qe

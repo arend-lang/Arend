@@ -1,0 +1,110 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Ring.MPoly
+\import Algebra.Ring.MonoidRing
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Arith.Nat
+\import Function (IsInj, IsSurj)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Data.Fin
+\import Data.Or
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Set.Fin
+\open RingHom (∘)
+
+-- | Renaming of the variables of a polynomial along a function.
+\func mPoly-rename {I J : \Set} {R : CRing} (f : I -> J) : RingHom (MPoly I R) (MPoly J R)
+  => mPolyMapEvalRingHom mPolyHom \lam i => mVar (f i)
+  \where {
+    \lemma on-const {I J : \Set} {R : CRing} {f : I -> J} {r : R} : mPoly-rename f (mConst r) = mConst r
+      => AddMonoid.zro-right {MPoly J R} *> Monoid.ide-right {MPoly J R}
+
+    \lemma on-var {I J : \Set} {R : CRing} {f : I -> J} {i : I} : mPoly-rename {I} {J} {R} f (mVar i) = mVar (f i)
+      => mPolyMapEval-var (mPolyHom {J} {R}) (\lam i => mVar (f i)) i
+
+    -- | Renaming along `f` and then along `g` is renaming along a function that agrees with `g ∘ f`.
+    \lemma comp {I J L : \Set} {R : CRing} {f : I -> J} {g : J -> L} {h : I -> L} (e : \Pi (i : I) -> g (f i) = h i) (x : MPoly I R)
+      : mPoly-rename g (mPoly-rename f x) = mPoly-rename h x
+      => mPolyRingHom-unique (mPoly-rename g ∘ mPoly-rename f) (mPoly-rename h) (\lam r => pmap (mPoly-rename g) (on-const {I} {J} {R} {f}) *> on-const {J} {L} {R} {g} *> inv (on-const {I} {L} {R} {h}))
+          (\lam i => pmap (mPoly-rename g) (on-var {I} {J} {R} {f}) *> on-var {J} {L} {R} {g} *> pmap mVar (e i) *> inv (on-var {I} {L} {R} {h})) x
+  }
+
+-- | The inclusion of the polynomials in the first `N` variables into the polynomials in variables indexed by {Nat}.
+\func finVars {R : CRing} {N : Nat} : RingHom (MPoly (Fin N) R) (MPoly Nat R)
+  => mPoly-rename \lam (j : Fin N) => (j : Nat)
+  \where {
+    \lemma on-const {R : CRing} {N : Nat} {r : R} : finVars {R} {N} (mConst r) = mConst r
+      => mPoly-rename.on-const {Fin N} {Nat} {R} {\lam (j : Fin N) => (j : Nat)}
+
+    \lemma on-var {R : CRing} {N : Nat} {j : Fin N} : finVars {R} {N} (mVar j) = mVar {Nat} {R} j
+      => mPoly-rename.on-var {Fin N} {Nat} {R} {\lam (j : Fin N) => (j : Nat)}
+
+    -- | A retraction of {finVars}: the variables outside of the first `N` go to `0`.
+    \func trunc {R : CRing} {N : Nat} : RingHom (MPoly Nat R) (MPoly (Fin N) R)
+      => mPolyMapEvalRingHom mPolyHom (truncVar N)
+
+    \func truncVar {R : CRing} (N i : Nat) : MPoly (Fin N) R
+      => \case LinearOrder.dec<_<= i N \with {
+        | inl p => mVar (toFin i p)
+        | inr _ => 0
+      }
+
+    \lemma truncVar-fin {R : CRing} {N : Nat} (j : Fin N) : truncVar {R} N j = mVar j
+      => unfold truncVar $ rewrite (LinearOrder.dec<_reduce (fin_< j)) $ pmap mVar (nat_fin_= toFin=id)
+
+    \lemma trunc-finVars {R : CRing} {N : Nat} (x : MPoly (Fin N) R) : trunc (finVars x) = x
+      => mPolyRingHom-unique (trunc RingHom.∘ finVars) RingHom.id
+          (\lam r => pmap trunc (on-const {R} {N}) *> AddMonoid.zro-right {MPoly (Fin N) R} *> Monoid.ide-right {MPoly (Fin N) R})
+          (\lam j => pmap trunc (on-var {R} {N} {j}) *> mPolyMapEval-var {Nat} {R} {MPoly (Fin N) R} (mPolyHom {Fin N} {R}) (truncVar N) j *> truncVar-fin j) x
+
+    \lemma inj {R : CRing} {N : Nat} : IsInj (finVars {R} {N})
+      => \lam {x} {y} p => inv (trunc-finVars x) *> pmap trunc p *> trunc-finVars y
+
+    \lemma rename {R : CRing} {N M : Nat} {f : Fin N -> Fin M} (e : \Pi (j : Fin N) -> f j = {Nat} j) (x : MPoly (Fin N) R)
+      : finVars (mPoly-rename f x) = finVars x
+      => mPoly-rename.comp e x
+  }
+
+-- | A subring of `MPoly J R` that contains all constants and variables is everything.
+\lemma mPoly-ind {J : \Set} {R : CRing} (T : SubRing (MPoly J R)) (c : \Pi (r : R) -> T (mConst r)) (v : \Pi (j : J) -> T (mVar j)) (x : MPoly J R) : T x
+  => \let | h => IRing.corestrict {T} (mPolyHom {J} {R}) c
+          | a (j : J) : ICRing T => (mVar {J} {R} j, v j)
+          | g : RingHom (MPoly J R) (ICRing T) => mPolyMapEvalRingHom h a
+     \in transport T (mPolyRingHom-unique (IRing.embed ∘ g) RingHom.id (\lam r => AddMonoid.zro-right {MPoly J R} *> Monoid.ide-right {MPoly J R}) (\lam j => pmap __.1 (mPolyMapEval-var h a j)) x) (g x).2
+
+-- | A homomorphism into `MPoly J R` whose image contains all constants and variables is surjective.
+\lemma mPoly-gen-surj {A : Ring} {J : \Set} {R : CRing} (g : RingHom A (MPoly J R))
+                      (c : \Pi (r : R) -> ∃ (a : A) (g a = mConst r)) (v : \Pi (j : J) -> ∃ (a : A) (g a = mVar j)) : IsSurj g
+  => mPoly-ind (ImageRing g) c v
+
+-- | Every polynomial in variables indexed by {Nat} involves only finitely many of them.
+\lemma mPoly-finVars {R : CRing} (x : MPoly Nat R) : ∃ (N : Nat) (y : MPoly (Fin N) R) (finVars {R} {N} y = x)
+  => mPoly-ind (\new SubRing {
+       | S => MPoly Nat R
+       | contains x => ∃ (N : Nat) (y : MPoly (Fin N) R) (finVars {R} {N} y = x)
+       | contains_zro => inP (0, 0, func-zro)
+       | contains_+ (inP (N,y,p)) (inP (M,z,q)) => inP (N + M, inc {R} {N} {M} y + inc' {R} {N} {M} z, func-+ *> pmap2 (+) (finVars.rename (\lam j => fin-inc.char) y *> p) (finVars.rename (\lam j => toFin=id {j} {N + M} {fin_< j NatSemiring.<∘l <=_+ zero<=_ <=-refl}) z *> q))
+       | contains_ide => inP (0, 1, func-ide)
+       | contains_* (inP (N,y,p)) (inP (M,z,q)) => inP (N + M, inc {R} {N} {M} y * inc' {R} {N} {M} z, func-* *> pmap2 (*) (finVars.rename (\lam j => fin-inc.char) y *> p) (finVars.rename (\lam j => toFin=id {j} {N + M} {fin_< j NatSemiring.<∘l <=_+ zero<=_ <=-refl}) z *> q))
+       | contains_negative (inP (N,y,p)) => inP (N, negative y, AddGroupHom.func-negative *> pmap negative p)
+     }) (\lam r => inP (0, mConst r, finVars.on-const {R} {0})) (\lam j => inP (suc j, mVar (toFin j id<suc), finVars.on-var {R} {suc j} {toFin j id<suc} *> pmap mVar (toFin=id {j} {suc j} {id<suc}))) x
+  \where {
+    \func inc {R : CRing} {N M : Nat} (y : MPoly (Fin N) R) : MPoly (Fin (N + M)) R
+      => mPoly-rename fin-inc y
+
+    \func inc' {R : CRing} {N M : Nat} (y : MPoly (Fin M) R) : MPoly (Fin (N + M)) R
+      => mPoly-rename fin-inc-right y
+  }

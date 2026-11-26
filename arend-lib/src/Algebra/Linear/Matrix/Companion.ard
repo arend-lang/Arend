@@ -1,0 +1,167 @@
+{- | **Companion matrices.**
+
+     A monic polynomial of degree `n` is given by its lower coefficients `c : Array R n`:
+     `monicPoly c` $= X^n + \sum_{i<n} c_i X^i$ (`monicPoly-polyCoef` recovers this form from
+     `degree<=` and a leading coefficient `1`).
+
+     `companion c` is the matrix of multiplication by $X$ on $R[X]/(\mathrm{monicPoly}\,c)$ in the
+     basis $1, X, \ldots, X^{n-1}$, acting on **column** vectors: column `j` is the unit vector
+     `suc j` if `suc j < n`, and the last column is $-c$.
+
+     Main result: `companion-annihilates`, $\mathrm{monicPoly}\,c\,(\mathrm{companion}\,c) = 0$,
+     proved by the cyclic-vector argument: column `0` of $C^j$ is the unit vector `j`
+     ({companion-annihilates.pow-col0}), so column `0` of $f(C)$ vanishes, and then every column
+     does since $f(C)$ commutes with the powers of $C$. -}
+
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Kronecker
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid
+
+-- | The monic polynomial $X^n + \sum_{i<n} c_i X^i$.
+\func monicPoly {R : Ring} {n : Nat} (c : Array R n) : Poly R \elim n, c
+  | 0, nil => padd pzero 1
+  | suc n, a :: c => padd (monicPoly c) a
+
+\lemma monicPoly-degree {R : Ring} {n : Nat} {c : Array R n} : degree<= (monicPoly c) n \elim n, c
+  | 0, nil => idp
+  | suc n, a :: c => monicPoly-degree
+
+\lemma monicPoly-lead {R : Ring} {n : Nat} {c : Array R n} : polyCoef (monicPoly c) n = 1 \elim n, c
+  | 0, nil => idp
+  | suc n, a :: c => monicPoly-lead
+
+\lemma monicPoly-isMonic {R : Ring} {n : Nat} {c : Array R n} : isMonic (monicPoly c)
+  => inP (n, monicPoly-degree, monicPoly-lead)
+
+-- | Every monic polynomial of degree `n` is `monicPoly` of its lower coefficients.
+\lemma monicPoly-polyCoef {R : Ring} {p : Poly R} {n : Nat} (d : degree<= p n) (q : polyCoef p n = 1)
+  : p = monicPoly (\new Array R n (\lam j => polyCoef p j))
+  => fromArray_polyCoef (degree<=_degree< d) *> aux (polyCoef p) q
+  \where
+    \lemma aux {R : Ring} {n : Nat} (g : Nat -> R) (q : g n = 1) : Poly.fromArray (\new Array R (suc n) (\lam j => g j)) = monicPoly (\new Array R n (\lam j => g j)) \elim n
+      | 0 => pmap (padd pzero) q
+      | suc n => pmap (padd __ (g 0)) (aux (\lam k => g (suc k)) q)
+
+-- | Evaluation of `monicPoly c` along a ring homomorphism.
+\lemma polyMapEval_monicPoly {R E : Ring} (f : RingHom R E) {n : Nat} {c : Array R n} {a : E}
+  : polyMapEval f (monicPoly c) a = E.BigSum (\lam i => f (c i) * pow a i) + pow a n \elim n, c
+  | 0, nil => pmap (+ _) (zro_*-left {E} {a}) *> zro-left *> f.func-ide *> inv zro-left
+  | suc n, x :: c => pmap (\lam t => t * a + f x) (polyMapEval_monicPoly f {n} {c} {a}) *> pmap (+ f x) rdistr
+      *> pmap (\lam t => t + pow a n * a + f x) (E.BigSum-rdistr *> E.BigSum-ext \lam j => *-assoc) *> equation
+
+-- | The Kronecker delta on natural numbers.
+\func natDelta {R : Ring} (a b : Nat) : R \elim a, b
+  | a, b => \case decideEq a b \with {
+    | yes _ => 1
+    | no _ => 0
+  }
+
+\lemma natDelta-yes {R : Ring} {a b : Nat} (p : a = b) : natDelta {R} a b = 1
+  => rewrite (decideEq=_reduce p) idp
+
+\lemma natDelta-no {R : Ring} {a b : Nat} (p : a /= b) : natDelta {R} a b = 0
+  => rewrite (decideEq/=_reduce p) idp
+
+\lemma natDelta-sym {R : Ring} {a b : Nat} : natDelta {R} a b = natDelta b a
+  => \case decideEq a b \with {
+    | yes p => natDelta-yes p *> inv (natDelta-yes (inv p))
+    | no q => natDelta-no q *> inv (natDelta-no \lam p => q (inv p))
+  }
+
+\lemma natDelta_map (f : RingHom) {a b : Nat} : f (natDelta a b) = natDelta a b
+  => \case decideEq a b \with {
+    | yes p => pmap f (natDelta-yes p) *> f.func-ide *> inv (natDelta-yes p)
+    | no q => pmap f (natDelta-no q) *> f.func-zro *> inv (natDelta-no q)
+  }
+
+-- | Summing against a Kronecker delta picks out one term.
+\lemma BigSum-natDelta {R : Ring} {n : Nat} (x : Fin n -> R) (k : Nat) (q : k < n) : R.BigSum (\lam i => x i * natDelta i k) = x (toFin k q)
+  => R.BigSum-unique (toFin k q) (\lam i k/=i => pmap (_ *) (natDelta-no \lam p => k/=i (fin_nat-inj (toFin=id *> inv p))) *> zro_*-right)
+      *> pmap (_ *) (natDelta-yes toFin=id) *> ide-right
+
+-- | The entries of the identity matrix are Kronecker deltas.
+\lemma ide-natDelta {R : Ring} {n : Nat} {i j : Fin n} : ide {MatrixRing R n} i j = natDelta i j
+  => \case decideEq i j \with {
+    | yes p => rewrite p $ ide-diag *> inv (natDelta-yes idp)
+    | no q => ide-offdiag q *> inv (natDelta-no \lam p => q (fin_nat-inj p))
+  }
+
+-- | The companion matrix of `monicPoly c`.
+\func companion {R : Ring} {n : Nat} (c : Array R n) : Matrix R n n
+  => mkMatrix \lam i j => \case decideEq {NatSemiring} (suc j) n \with {
+    | yes _ => negative (c i)
+    | no _ => natDelta i (suc j)
+  }
+
+\lemma companion-last {R : Ring} {n : Nat} {c : Array R n} {i j : Fin n} (p : suc j = {Nat} n) : companion c i j = negative (c i)
+  => rewrite (decideEq=_reduce p) idp
+
+\lemma companion-col {R : Ring} {n : Nat} {c : Array R n} {i j : Fin n} (p : suc j /= {Nat} n) : companion c i j = natDelta i (suc j)
+  => rewrite (decideEq/=_reduce p) idp
+
+-- | The companion matrix is annihilated by its polynomial.
+\lemma companion-annihilates {R : CRing} {n : Nat} {c : Array R n} : matPolyEval (monicPoly c) (companion c) = 0 \elim n
+  | 0 => matrixExt \lam i => \case i \with {}
+  | suc m => matrixExt \lam l j =>
+    \let P => matPolyEval (monicPoly c) (companion c)
+    \in \have | e1 : P l j = R.BigSum (\lam t => P l t * pow (companion c) j t 0)
+              => inv (pmap (P l) toFin=fin) *> inv (sum-col0 (P l) j (fin_< j))
+          | e2 : (P * pow (companion c) j) l 0 = (pow (companion c) j * P) l 0
+              => pmap (__ l 0) (matPolyEval-comm {R} {suc m} {monicPoly c} {companion c} {pow (companion c) j} (pow-left {MatrixRing R (suc m)} {companion c} {j}))
+    \in e1 *> e2 *> R.BigSum_zro {\new Array R (suc m) (\lam t => pow (companion c) j l t * P t 0)} (\lam t => pmap (pow (companion c) j l t *) (col0-zero {R} {m} {c} t) *> zro_*-right)
+  \where {
+    \lemma pow-col0 {R : CRing} {m : Nat} {c : Array R (suc m)} (j : Nat) (p : j < suc m) (l : Fin (suc m))
+      : pow (companion c) j l 0 = natDelta l j \elim j
+      | 0 => ide-natDelta
+      | suc j =>
+        \have | q : j < suc m => linarith
+              | e1 : pow (companion c) (suc j) l 0 = (companion c * pow (companion c) j) l 0
+                  => pmap (__ l 0) (inv (pow-left {MatrixRing R (suc m)} {companion c} {j}))
+              | e2 : (companion c * pow (companion c) j) l 0 = R.BigSum (\lam t => companion c l t * natDelta t j)
+                  => R.BigSum-ext {suc m} {\lam t => companion c l t * pow (companion c) j t 0} {\lam t => companion c l t * natDelta t j} (\lam t => pmap (companion c l t *) (pow-col0 {R} {m} {c} j q t))
+              | e3 : suc (toFin j q) /= {Nat} suc m => \lam e => linarith (toFin=id {j} {suc m} {q})
+        \in e1 *> e2 *> BigSum-natDelta (companion c l) j q *> companion-col {R} {suc m} {c} {l} {toFin j q} e3 *> pmap (natDelta l) (pmap suc toFin=id)
+
+    \lemma sum-col0 {R : CRing} {m : Nat} {c : Array R (suc m)} (x : Fin (suc m) -> R) (j : Nat) (p : j < suc m)
+      : R.BigSum (\lam t => x t * pow (companion c) j t 0) = x (toFin j p)
+      => R.BigSum-ext {suc m} {\lam t => x t * pow (companion c) j t 0} {\lam t => x t * natDelta t j} (\lam t => pmap (x t *) (pow-col0 j p t)) *> BigSum-natDelta x j p
+
+    \lemma matrix-BigSum-entry {R : AbGroup} {n m : Nat} (L : Array (Matrix R n m)) (i : Fin n) (j : Fin m)
+      : AbGroup.BigSum {MatrixAbGroup R n m} L i j = R.BigSum (\lam t => L t i j) \elim L
+      | nil => idp
+      | a :: L => pmap (a i j +) (matrix-BigSum-entry L i j)
+
+    \lemma coef-entry {R : CRing} {n : Nat} {a : R} {M : Matrix R n n} (i j : Fin n)
+      : (CAlgebra.coefHom {MatrixAlgebra R n} a * M) i j = a * M i j
+      => pmap (__ i j) (inv (MatrixAlgebra.product_*c-comm-left 1) *> pmap (a *c) MatrixRing.product_ide-left)
+
+    \lemma col0-zero {R : CRing} {m : Nat} {c : Array R (suc m)} (t : Fin (suc m)) : matPolyEval (monicPoly c) (companion c) t 0 = 0
+      => \have | e0 : matPolyEval (monicPoly c) (companion c) t 0 = AbGroup.BigSum {MatrixAbGroup R (suc m) (suc m)} (\lam i => CAlgebra.coefHom {MatrixAlgebra R (suc m)} (c i) * pow (companion c) i) t 0 + pow (companion c) (suc m) t 0
+                   => pmap (__ t 0) (polyMapEval_monicPoly (CAlgebra.coefHom {MatrixAlgebra R (suc m)}) {suc m} {c} {companion c})
+               | e1 : AbGroup.BigSum {MatrixAbGroup R (suc m) (suc m)} (\lam i => CAlgebra.coefHom {MatrixAlgebra R (suc m)} (c i) * pow (companion c) i) t 0 = c t
+                   => matrix-BigSum-entry (\lam i => CAlgebra.coefHom {MatrixAlgebra R (suc m)} (c i) * pow (companion c) i) t 0 
+                        *> R.BigSum-ext {suc m} {\lam i => (CAlgebra.coefHom {MatrixAlgebra R (suc m)} (c i) * pow (companion c) i) t 0} {\lam i => c i * natDelta i t}
+                             (\lam i => coef-entry t 0 *> pmap (c i *) (pow-col0 {R} {m} {c} i (fin_< i) t *> natDelta-sym))
+                        *> BigSum-natDelta c t (fin_< t) *> pmap c toFin=fin
+               | e2 : pow (companion c) (suc m) t 0 = negative (c t)
+                   => pmap (__ t 0) (inv (pow-left {MatrixRing R (suc m)} {companion c} {m})) *> sum-col0 (companion c t) m id<suc *> companion-last {R} {suc m} {c} {t} {toFin m id<suc} (pmap suc toFin=id)
+         \in e0 *> pmap2 (+) e1 e2 *> negative-right
+  }

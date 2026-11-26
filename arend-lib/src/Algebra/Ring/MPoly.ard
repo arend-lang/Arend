@@ -1,5 +1,4 @@
 \import Algebra.Algebra
-\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
@@ -10,7 +9,6 @@
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.MonoidRing
 \import Algebra.Ring.Poly
-\import Algebra.Semiring
 \import Arith.Nat
 \import Data.Array
 \import Data.Array.EPerm
@@ -24,16 +22,16 @@
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
+\import Set.Countable
 \import Set.Fin
 \open MonoidSet \hiding (~)
-\open Monoid(pow)
-\open RingHom \hiding (equals)
+\open Monoid
+\open RingHom (id, ∘)
 
 \func MPoly (J : \Set) (R : CRing) => MonoidAlgebra (PermSetMonoid J) R
 
@@ -205,6 +203,10 @@
         })
       }))
   }
+
+\func mPoly-countable {R : CRing} (c : Countable R) {n : Nat} : Countable (MPoly (Fin n) R) \elim n
+  | 0 => surj-countable c (symQEquiv (MPoly_Empty {Fin 0} {R} \case __)).isSurj
+  | suc n => surj-countable (Poly.poly-countable (mPoly-countable c)) (symQEquiv MPoly_Fin-suc).isSurj
 
 \lemma MPoly-surj {J : \Set} {R S : CRing} (f : AddMonoidHom R S) (fs : IsSurj f) : IsSurj (mPoly-map {J} f)
   => \case \elim __ \with {

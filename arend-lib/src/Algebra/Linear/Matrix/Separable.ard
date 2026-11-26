@@ -1,0 +1,149 @@
+\import Algebra.Field
+\import Algebra.Field.Splitting
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Diagonalizable
+\import Algebra.Linear.Matrix.FieldExtension
+\import Algebra.Linear.Matrix.MinPoly
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Ring.RingHom
+\import Algebra.Field.FieldOfDefinition
+\import Algebra.Field.SubField
+\import Logic
+\import Logic.Meta
+\import Paths
+\open MatrixRing (product)
+
+{- | **Separable matrices** (Mines–Richman–Ruitenburg, §VI.4).
+
+     A square matrix over a discrete field is *separable* if it satisfies a separable polynomial.
+     Lemma VI.4.3 characterizes these as the matrices that become diagonalizable over a splitting
+     field of their field of definition, and the matrix form of Theorem VI.4.5 shows that sums and
+     products of commuting separable matrices are separable. -}
+
+\type IsSeparableMatrix {k : DiscreteField} {n : Nat} (A : Matrix k n n) : \Prop
+  => ∃ (p : Poly k) (IsSeparable p) (matPolyEval p A = 0)
+
+-- | Separability is preserved by extending the field of coefficients.
+\lemma IsSeparableMatrix_map {k K : DiscreteField} (f : RingHom k K) {n : Nat} {A : Matrix k n n}
+  (s : IsSeparableMatrix A) : IsSeparableMatrix (matrix-map f A) \elim s
+  | inP (p, ps, pe) => inP (polyMap f p, IsSeparable_polyMap ps,
+                            inv (matPolyEval_map f) *> pmap (matrix-map f) pe *> matrix-map_zro f)
+
+-- | A matrix is separable exactly when its minimal polynomial is.
+\lemma separable<->minPoly {k : DiscreteField} {n : Nat} {A : Matrix k n n} {p : Poly k} (m : IsMatMinPoly A p)
+  : IsSeparableMatrix A <-> IsSeparable p
+  => (\lam (inP (q, qs, qe)) => \case m.3 qe \with {
+        | inP d => separable_LDiv d qs
+      },
+      \lam ps => inP (p, ps, m.2))
+
+-- | Diagonalizability is preserved by extending the field of coefficients.
+\lemma IsDiagonalizable_map {K L : DiscreteField} (f : RingHom K L) {n : Nat} {A : Matrix K n n}
+  (d : IsDiagonalizable A) : IsDiagonalizable (matrix-map f A) \elim d
+  | inP (P, Pd) => inP (matrix-map_Inv f P, \lam {i} {j} i/=j =>
+      pmap (\lam M => M i j) (inv (matrix-map_product f {n} {n} {n} {P.val product A} {P.inv} *> pmap (\lam M => M product matrix-map f P.inv) (matrix-map_product f {n} {n} {n} {P.val} {A})))
+      *> pmap f (Pd i/=j) *> f.func-zro)
+
+{- | **A matrix that is diagonalizable over some extension field is separable.** The minimal
+     polynomial over `k` maps to the minimal polynomial over `K` (`matMinPoly-LDiv-map`), which divides
+     a product of distinct linear factors (V.4.3), hence is separable; separability descends to `k`. -}
+\lemma diagonalizable-separable {k K : DiscreteField} (f : RingHom k K) {n : Nat} {A : Matrix k n n}
+  (d : IsDiagonalizable (matrix-map f A)) : IsSeparableMatrix A
+  => \let (p, m) => matMinPoly A
+     \in \case diagonalizable<->prodLin.1 d \with {
+       | inP (_, r, inj, ann) => \case matMinPoly-LDiv-map f m ann \with {
+         | inP dv => inP (p, IsSeparable_polyMap-conv f (separable_LDiv dv (prodLin-separable-field r inj)), m.2)
+       }
+     }
+
+{- | **A matrix becomes diagonalizable over a splitting field of its separable minimal polynomial**,
+     since there the minimal polynomial is a product of distinct linear factors (V.4.3). -}
+\lemma splitting-diagonalizable {k F : DiscreteField} {n : Nat} {A : Matrix k n n} {p : Poly k}
+  (m : IsMatMinPoly A p) (s : IsSeparable p) {f : RingHom k F} (sf : IsSplittingField p f)
+  : IsDiagonalizable (matrix-map f A)
+  => \case separable-splitting-monic m.1 s sf \with {
+    | inP (l, _, e, inj) => diagonalizable<->prodLin.2 (inP (l.len, \lam j => l j, inj,
+        pmap (matPolyEval __ (matrix-map f A)) (inv (prodLin_BigProd {F} {l.len} (\lam j => l j)) *> inv e)
+        *> inv (matPolyEval_map f) *> pmap (matrix-map f) m.2 *> matrix-map_zro f))
+  }
+
+{- | **Lemma VI.4.3.** Let `k0 -> k` be a field of definition of a matrix `A` (so `A` comes from a
+     matrix `A0` over `k0`), and let `F` be a splitting field of the minimal polynomial of `A0`. Then
+     `A` is separable if and only if `A0` becomes diagonalizable over `F`. Splitting fields need not
+     exist over arbitrary discrete fields, but they do over countable fields of definition
+     (`fieldOfDefinition-matrix`, `countableSplittingField`). -}
+\lemma separable<->diagonalizable {k0 k F : DiscreteField} (i : RingHom k0 k) {n : Nat}
+  {A0 : Matrix k0 n n} {A : Matrix k n n} (e : matrix-map i A0 = A)
+  {p0 : Poly k0} (m0 : IsMatMinPoly A0 p0) {f : RingHom k0 F} (sf : IsSplittingField p0 f)
+  : IsSeparableMatrix A <-> IsDiagonalizable (matrix-map f A0)
+  => (\lam s => splitting-diagonalizable m0 (separable-descent i e m0 s) sf,
+      \lam d => transport IsSeparableMatrix e (IsSeparableMatrix_map i (diagonalizable-separable f d)))
+  \where
+    -- | The minimal polynomial of a separable matrix is separable over any field of definition.
+    \lemma separable-descent {k0 k : DiscreteField} (i : RingHom k0 k) {n : Nat} {A0 : Matrix k0 n n} {A : Matrix k n n}
+      (e : matrix-map i A0 = A) {p0 : Poly k0} (m0 : IsMatMinPoly A0 p0) (s : IsSeparableMatrix A) : IsSeparable p0
+      => IsSeparable_polyMap-conv i ((separable<->minPoly (transport (IsMatMinPoly __ (polyMap i p0)) e (matMinPoly_map i m0))).1 s)
+
+{- | **Separable matrices are simultaneously diagonalizable over a splitting tower.** Let `A` and `B`
+     be separable matrices coming from `A0` and `B0` over a field of definition `k0 -> k`. If `F1` is a
+     splitting field of the minimal polynomial of `A0` and `F2` is a splitting field of the minimal
+     polynomial of `B0` over `F1`, then `A0` and `B0` are both diagonalizable over `F2`. -}
+\lemma separable-diagonalization {k0 k F1 F2 : DiscreteField} (i : RingHom k0 k) {n : Nat}
+  {A0 B0 : Matrix k0 n n} {A B : Matrix k n n} (ea : matrix-map i A0 = A) (eb : matrix-map i B0 = B)
+  (As : IsSeparableMatrix A) (Bs : IsSeparableMatrix B) {p0 q0 : Poly k0} (m0 : IsMatMinPoly A0 p0) (n0 : IsMatMinPoly B0 q0)
+  {f1 : RingHom k0 F1} (sf1 : IsSplittingField p0 f1) {f2 : RingHom F1 F2} (sf2 : IsSplittingField (polyMap f1 q0) f2)
+  : \Sigma (IsDiagonalizable (matrix-map (f2 RingHom.∘ f1) A0)) (IsDiagonalizable (matrix-map (f2 RingHom.∘ f1) B0))
+  => (IsDiagonalizable_map f2 (splitting-diagonalizable m0 (separable<->diagonalizable.separable-descent i ea m0 As) sf1),
+      splitting-diagonalizable (matMinPoly_map f1 n0) (IsSeparable_polyMap (separable<->diagonalizable.separable-descent i eb n0 Bs)) sf2)
+
+{- | **Theorem VI.4.5, matrix form: sums of commuting separable matrices are separable.** Over a
+     countable field of definition of `A` and `B`, split both minimal polynomials; there `A` and `B`
+     are simultaneously diagonalizable (V.4.4), hence so is `A + B`. -}
+\lemma separableMatrix_+ {k : DiscreteField} {n : Nat} {A B : Matrix k n n} (c : A * B = B * A)
+  (As : IsSeparableMatrix A) (Bs : IsSeparableMatrix B) : IsSeparableMatrix (A + B)
+  => (closure c As Bs).1
+  \where {
+    {- | Sums and products at once: over a countable field of definition, split the minimal
+         polynomial of `A`, then that of `B` over the result, and apply `separable-diagonalization`. -}
+    \lemma closure {k : DiscreteField} {n : Nat} {A B : Matrix k n n} (c : A * B = B * A)
+      (As : IsSeparableMatrix A) (Bs : IsSeparableMatrix B) : \Sigma (IsSeparableMatrix (A + B)) (IsSeparableMatrix (A * B))
+      => \case fieldOfDefinition-matrix (A :: B :: nil) \with {
+        | inP (S, cS, Ms0, e) =>
+          \let | i => SubField.embed S
+               | (p0, m0) => matMinPoly (Ms0 0)
+               | (q0, n0) => matMinPoly (Ms0 1)
+               | (F1, c1, f1, sf1) => countableSplittingField {IDiscreteField S} cS {p0}
+               | (F2, _, f2, sf2) => countableSplittingField c1 {polyMap f1 q0}
+               | g => f2 RingHom.∘ f1
+               | d => separable-diagonalization i (e 0) (e 1) As Bs m0 n0 sf1 sf2
+               | c0 => comm-map g (comm-descent i (e 0) (e 1) c)
+          \in (transport IsSeparableMatrix (matrix-map_+ i *> pmap2 (+) (e 0) (e 1))
+                 (IsSeparableMatrix_map i {n} {Ms0 0 + Ms0 1} (diagonalizable-separable g {n} {Ms0 0 + Ms0 1}
+                   (transport IsDiagonalizable (inv (matrix-map_+ g)) (diagonalizable_+ c0 d.1 d.2)))),
+               transport IsSeparableMatrix (matrix-map_product i *> pmap2 (\lam X Y => X product Y) (e 0) (e 1))
+                 (IsSeparableMatrix_map i {n} {Ms0 0 * Ms0 1} (diagonalizable-separable g {n} {Ms0 0 * Ms0 1}
+                   (transport IsDiagonalizable (inv (matrix-map_product g)) (diagonalizable_* c0 d.1 d.2)))))
+      }
+
+    -- | Commutation descends along a field homomorphism.
+    \lemma comm-descent {k0 k : DiscreteField} (i : RingHom k0 k) {n : Nat} {A0 B0 : Matrix k0 n n} {A B : Matrix k n n}
+      (ea : matrix-map i A0 = A) (eb : matrix-map i B0 = B) (c : A * B = B * A) : A0 * B0 = B0 * A0
+      => matrix-map-inj (RingHom.field-isInj {k0} {k} {i}) (matrix-map_product i *> pmap2 (\lam X Y => X product Y) ea eb *> c
+                                             *> inv (pmap2 (\lam X Y => X product Y) eb ea) *> inv (matrix-map_product i))
+
+    -- | Commutation is preserved by `matrix-map`.
+    \lemma comm-map {R S : Ring} (g : RingHom R S) {n : Nat} {A B : Matrix R n n} (c : A * B = B * A)
+      : matrix-map g A * matrix-map g B = matrix-map g B * matrix-map g A
+      => inv (matrix-map_product g) *> pmap (matrix-map g) c *> matrix-map_product g
+  }
+
+-- | **Theorem VI.4.5, matrix form: products of commuting separable matrices are separable.**
+\lemma separableMatrix_* {k : DiscreteField} {n : Nat} {A B : Matrix k n n} (c : A * B = B * A)
+  (As : IsSeparableMatrix A) (Bs : IsSeparableMatrix B) : IsSeparableMatrix (A * B)
+  => (separableMatrix_+.closure c As Bs).2

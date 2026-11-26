@@ -175,3 +175,24 @@
 
 \func factor-countable {I : Ideal} (c : Countable I.S) : Countable (FactorRing I)
   => surj-countable {_} {FactorRing I} (quotient-countable c {\lam a b => I (a - b)}) {\lam x => x} \lam x => inP (x, idp)
+
+-- | A product of countable types is countable.
+\func prod-countable {A B : \Type} (ca : Countable A) (cb : Countable B) : Countable (\Sigma A B)
+  => (\lam n => pair (ca.1 (natPair-countable n).1) (cb.1 (natPair-countable n).2), \lam s => \case ca.2 s.1, cb.2 s.2 \with {
+       | inP (n,p), inP (m,q) => inP (natPair-countable.ret (n,m), rewrite (natPair-countable.f_sec (n,m), p, q) idp)
+     })
+  \where
+    \func pair {A B : \Type} (a : Maybe A) (b : Maybe B) : Maybe (\Sigma A B) \elim a, b
+      | just a, just b => just (a,b)
+      | _, _ => nothing
+
+-- | The integers are countable.
+\func int-countable : Countable Int
+  => func-countable (\lam n => int-of (natPair-countable n)) \case \elim __ \with {
+       | pos n => inP (natPair-countable.ret (suc n, 0), rewrite (natPair-countable.f_sec (suc n, 0)) idp)
+       | neg (suc m) => inP (natPair-countable.ret (0, m), rewrite (natPair-countable.f_sec (0, m)) idp)
+     }
+  \where
+    \func int-of (s : \Sigma Nat Nat) : Int
+      | (0, m) => neg (suc m)
+      | (suc n, _) => pos n

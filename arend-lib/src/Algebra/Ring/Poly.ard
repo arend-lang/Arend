@@ -105,6 +105,10 @@
   | pzero => idp
   | padd p e => pmap (padd __ _) (polyMap-comp f g)
 
+\lemma polyMap-ext {A B : AddPointed} {f g : AddPointedHom A B} (e : \Pi (a : A) -> f a = g a) {p : Poly A} : polyMap f p = polyMap g p \elim p
+  | pzero => idp
+  | padd p a => pmap2 padd (polyMap-ext e) (e a)
+
 \lemma polyMap-inj {A B : AddPointed} {f : AddPointedHom A B} (inj : IsInj f) {p q : Poly A} (s : polyMap f p = polyMap f q) : p = q \elim p, q
   | pzero, pzero => idp
   | pzero, padd q b => inv peq *> pmap2 padd (polyMap-inj {_} {_} {f} inj $ pmap polyShift s) (inj $ func-zro *> pmap (polyCoef __ 0) s)

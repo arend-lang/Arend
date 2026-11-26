@@ -1,0 +1,74 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Linear.Matrix.AlgebraicPair
+\import Algebra.Linear.Matrix.Separable
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Logic
+\import Logic.Meta
+\import Paths
+
+{- | **Separable elements form a ring** (Mines–Richman–Ruitenburg, Theorem VI.4.5).
+
+     Let `E` be a commutative ring containing a discrete field `k` (along a ring homomorphism
+     `f : k -> E`). An element of `E` is *separable over `k`* if it is a root of a separable polynomial
+     over `k`. Following the book: Lemma VI.4.4 (`algebraic-pair-transfer`) turns two separable
+     elements into commuting matrices over `k` killed by the same separable polynomials, and the
+     matrix form of the theorem (`separableMatrix_+`, `separableMatrix_*`, proved by simultaneous
+     diagonalization over a splitting field of a field of definition) gives a separable polynomial for
+     the sum and the product. -}
+
+\type IsSeparableElement {k : DiscreteField} {E : CRing} (f : RingHom k E) (a : E) : \Prop
+  => ∃ (p : Poly k) (IsSeparable p) (polyMapEval f p a = 0)
+
+-- | A separable element is a root of a *monic* separable polynomial.
+\lemma separableElement-monic {k : DiscreteField} {E : CRing} {f : RingHom k E} {a : E} (s : IsSeparableElement f a)
+  : ∃ (p : Poly k) (isMonic p) (IsSeparable p) (polyMapEval f p a = 0) \elim s
+  | inP (p, ps, pa) => \have p/=0 => separable/=0-field ps
+                       \in inP (_, field-toMonic p/=0, separable-toMonic ps, (polyMapEval-toMonic f p/=0).2 pa)
+
+-- | Elements of `k` are separable over `k`: `f c` is a root of `X - c`.
+\lemma separableElement-const {k : DiscreteField} {E : CRing} (f : RingHom k E) (c : k) : IsSeparableElement f (f c)
+  => inP (padd 1 (negative c), separable-linear c,
+          polyEval_polyMap {f} {padd 1 (negative c)} {c} *> pmap f (equation : polyEval (padd 1 (negative c)) c = 0) *> f.func-zro)
+
+{- | **Theorem VI.4.5 for sums.** Represent `a` and `b` by commuting matrices `A`, `B` killed by the
+     same monic separable polynomials (Lemma VI.4.4); `A + B` is separable (matrix form of VI.4.5),
+     and every polynomial killing `A + B` kills `a + b`. -}
+\lemma separableElement_+ {k : DiscreteField} {E : CRing} {f : RingHom k E} {a b : E}
+  (as : IsSeparableElement f a) (bs : IsSeparableElement f b) : IsSeparableElement f (a + b)
+  => \case separableElement-monic as, separableElement-monic bs \with {
+    | inP (p, pm, ps, pa), inP (q, qm, qs, qb) => \case algebraic-pair-transfer f pm qm pa qb \with {
+      | inP (N, A, B, c, pA, qB, t+, _) => \case separableMatrix_+ c (inP (p, ps, pA)) (inP (q, qs, qB)) \with {
+        | inP (r, rs, rAB) => inP (r, rs, t+ r rAB)
+      }
+    }
+  }
+
+-- | **Theorem VI.4.5 for products**, as for sums.
+\lemma separableElement_* {k : DiscreteField} {E : CRing} {f : RingHom k E} {a b : E}
+  (as : IsSeparableElement f a) (bs : IsSeparableElement f b) : IsSeparableElement f (a * b)
+  => \case separableElement-monic as, separableElement-monic bs \with {
+    | inP (p, pm, ps, pa), inP (q, qm, qs, qb) => \case algebraic-pair-transfer f pm qm pa qb \with {
+      | inP (N, A, B, c, pA, qB, _, t*) => \case separableMatrix_* c (inP (p, ps, pA)) (inP (q, qs, qB)) \with {
+        | inP (r, rs, rAB) => inP (r, rs, t* r rAB)
+      }
+    }
+  }
+
+{- | **Theorem VI.4.5.** If `E` is a commutative ring containing a discrete field `k`, then the elements
+     of `E` that are separable over `k` form a subring. -}
+\func separableSubring {k : DiscreteField} {E : CRing} (f : RingHom k E) : SubRing E \cowith
+  | contains => IsSeparableElement f
+  | contains_zro => transport (IsSeparableElement f) f.func-zro (separableElement-const f 0)
+  | contains_ide => transport (IsSeparableElement f) f.func-ide (separableElement-const f 1)
+  | contains_+ => separableElement_+
+  | contains_* => separableElement_*
+  | contains_negative {a} s => transport (IsSeparableElement f) (pmap (`* a) (f.func-negative *> pmap negative f.func-ide) *> E.negative_ide-left)
+                                 (separableElement_* (separableElement-const f -1) s)

@@ -1,0 +1,129 @@
+\import Algebra.Algebra
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\open MatrixRing (product, product_ide-left, product_ide-right)
+
+{- | **Kronecker products of matrices.**
+
+     Indices of `Fin (n * m)` are identified with pairs `\Sigma (Fin n) (Fin m)` along `kronIdx`
+     (the particular enumeration does not matter: everything is stated through `kronIdx` and
+     `kron-BigSum`). Then `kron A B` has entry `A i j * B i' j'` at row `(i,i')` and column `(j,j')`.
+
+     Main facts: the mixed-product property `kron_*`, `kron_ide`, bilinearity, compatibility with
+     `matrix-map`, and evaluation of polynomials at `kron A 1` and `kron 1 B`. -}
+
+-- | The identification of `Fin (n * m)` with pairs of indices.
+\func kronIdx {n m : Nat} : QEquiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
+  => ProdFin.prod_equiv
+
+-- | A sum over `Fin (n * m)` is a double sum over the pairs of indices.
+\lemma kron-BigSum {E : AbMonoid} {n m : Nat} (x : Fin (n Nat.* m) -> E)
+  : E.BigSum x = E.BigSum (\lam i => E.BigSum (\lam j => x (kronIdx.ret (i,j))))
+  => inv E.FinSum=BigSum *> E.FinSum-ext (\lam k => inv $ pmap x (kronIdx.ret_f k)) *> inv (E.FinSum_Equiv kronIdx {\lam s => x (kronIdx.ret s)})
+      *> inv E.FinSum-double *> E.FinSum-ext (\lam i => E.FinSum=BigSum) *> E.FinSum=BigSum
+
+-- | The Kronecker product: entry `A i j * B i' j'` at row `kronIdx.ret (i,i')`, column `kronIdx.ret (j,j')`.
+\func kron {R : Ring} {n m n' m' : Nat} (A : Matrix R n m) (B : Matrix R n' m') : Matrix R (n Nat.* n') (m Nat.* m')
+  => mkMatrix \lam I J => A (kronIdx I).1 (kronIdx J).1 * B (kronIdx I).2 (kronIdx J).2
+
+-- | The entries of a Kronecker product.
+\lemma kron-entry {R : Ring} {n m n' m' : Nat} {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n) (i' : Fin n') (j : Fin m) (j' : Fin m')
+  : kron A B (kronIdx.ret (i,i')) (kronIdx.ret (j,j')) = A i j * B i' j'
+  => pmap2 (\lam s t => A s.1 t.1 * B s.2 t.2) (kronIdx.f_sec (i,i')) (kronIdx.f_sec (j,j'))
+
+-- | The mixed-product property.
+\lemma kron_* {R : CRing} {n m k n' m' k' : Nat} (A : Matrix R n m) (B : Matrix R n' m') (C : Matrix R m k) (D : Matrix R m' k')
+  : kron A B product kron C D = kron (A product C) (B product D)
+  => matrixExt \lam I J => kron-BigSum _ *> R.BigSum-ext (\lam a => R.BigSum-ext \lam b =>
+       pmap (\lam s => A (kronIdx I).1 s.1 * B (kronIdx I).2 s.2 * (C s.1 (kronIdx J).1 * D s.2 (kronIdx J).2)) (kronIdx.f_sec (a,b)) *> equation.cRing)
+     *> BigSum-mul (\lam a => A (kronIdx I).1 a * C a (kronIdx J).1) (\lam b => B (kronIdx I).2 b * D b (kronIdx J).2)
+  \where
+    \lemma BigSum-mul {R : Semiring} {n m : Nat} (a : Fin n -> R) (b : Fin m -> R)
+      : R.BigSum (\lam i => R.BigSum (\lam j => a i * b j)) = R.BigSum a * R.BigSum b
+      => R.BigSum-ext (\lam i => inv R.BigSum-ldistr) *> inv R.BigSum-rdistr
+
+-- | Diagonal entries of the identity matrix.
+\lemma ide-diag {R : Ring} {n : Nat} {i : Fin n} : ide {MatrixRing R n} i i = 1
+  => rewrite (decideEq=_reduce idp) idp
+
+-- | Off-diagonal entries of the identity matrix.
+\lemma ide-offdiag {R : Ring} {n : Nat} {i j : Fin n} (p : i /= j) : ide {MatrixRing R n} i j = 0
+  => rewrite (decideEq/=_reduce p) idp
+
+\lemma kron_ide {R : Ring} {n n' : Nat} : kron (ide {MatrixRing R n}) (ide {MatrixRing R n'}) = ide
+  => matrixExt \lam I J => \case decideEq I J \with {
+    | yes p => rewrite p $ pmap2 (*) ide-diag ide-diag *> ide-left *> inv ide-diag
+    | no q => (\case decideEq (kronIdx I).1 (kronIdx J).1, decideEq (kronIdx I).2 (kronIdx J).2 \with {
+      | no q1, _ => pmap (* _) (ide-offdiag q1) *> zro_*-left
+      | yes _, no q2 => pmap (_ *) (ide-offdiag q2) *> zro_*-right
+      | yes p1, yes p2 => absurd $ q $ kronIdx.isInj (ext (p1,p2))
+    }) *> inv (ide-offdiag q)
+  }
+
+\lemma kron_zro-left {R : Ring} {n m n' m' : Nat} {B : Matrix R n' m'} : kron (zro {MatrixAbGroup R n m}) B = zro
+  => matrixExt \lam I J => zro_*-left
+
+\lemma kron_zro-right {R : Ring} {n m n' m' : Nat} {A : Matrix R n m} : kron A (zro {MatrixAbGroup R n' m'}) = zro
+  => matrixExt \lam I J => zro_*-right
+
+\lemma kron_+-left {R : Ring} {n m n' m' : Nat} {A A' : Matrix R n m} {B : Matrix R n' m'} : kron (A + A') B = kron A B + kron A' B
+  => matrixExt \lam I J => rdistr
+
+\lemma kron_+-right {R : Ring} {n m n' m' : Nat} {A : Matrix R n m} {B B' : Matrix R n' m'} : kron A (B + B') = kron A B + kron A B'
+  => matrixExt \lam I J => ldistr
+
+\lemma kron_*c-left {R : Ring} {n m n' m' : Nat} {c : R} {A : Matrix R n m} {B : Matrix R n' m'} : kron (c *c A) B = c *c kron A B
+  => matrixExt \lam I J => *-assoc
+
+\lemma kron_*c-right {R : CRing} {n m n' m' : Nat} {c : R} {A : Matrix R n m} {B : Matrix R n' m'} : kron A (c *c B) = c *c kron A B
+  => matrixExt \lam I J => equation.cRing
+
+\lemma kron_map {R S : Ring} (f : RingHom R S) {n m n' m' : Nat} {A : Matrix R n m} {B : Matrix R n' m'}
+  : matrix-map f (kron A B) = kron (matrix-map f A) (matrix-map f B)
+  => matrixExt \lam I J => f.func-*
+
+-- | `kron A 1` and `kron 1 B` commute (both products are `kron A B`).
+\lemma kron-comm {R : CRing} {n n' : Nat} {A : Matrix R n n} {B : Matrix R n' n'}
+  : kron A 1 * kron 1 B = kron 1 B * kron A 1
+  => kron_* A 1 1 B *> pmap2 kron (product_ide-right *> inv product_ide-left) (product_ide-left *> inv product_ide-right) *> inv (kron_* 1 B A 1)
+
+-- | Scalar matrices are Kronecker products of scalar matrices.
+\lemma kron_coef {R : CRing} {n n' : Nat} {c : R}
+  : CAlgebra.coefHom {MatrixAlgebra R (n Nat.* n')} c = kron (CAlgebra.coefHom {MatrixAlgebra R n} c) 1
+  => pmap (c *c) (inv kron_ide) *> inv (kron_*c-left {R} {n} {n} {n'} {n'} {c} {1} {1})
+
+-- | Evaluating a polynomial at `kron A 1`.
+\lemma matPolyEval_kron-left {R : CRing} {n n' : Nat} {p : Poly R} {A : Matrix R n n}
+  : matPolyEval p (kron A (1 : Matrix R n' n')) = kron (matPolyEval p A) 1 \elim p
+  | pzero => inv (kron_zro-left {R} {n} {n} {n'} {n'} {1})
+  | padd p e => pmap2 (+) (pmap (* kron A 1) (matPolyEval_kron-left {R} {n} {n'} {p} {A}) *> kron_* (matPolyEval p A) 1 A 1
+                             *> pmap (kron (matPolyEval p A * A)) (product_ide-left {R} {n'} {n'} {1})) kron_coef
+                *> inv (kron_+-left {R} {n} {n} {n'} {n'} {matPolyEval p A * A} {CAlgebra.coefHom {MatrixAlgebra R n} e} {1})
+
+-- | Evaluating a polynomial at `kron 1 B`.
+\lemma matPolyEval_kron-right {R : CRing} {n n' : Nat} {p : Poly R} {B : Matrix R n' n'}
+  : matPolyEval p (kron (1 : Matrix R n n) B) = kron 1 (matPolyEval p B) \elim p
+  | pzero => inv (kron_zro-right {R} {n} {n} {n'} {n'} {1})
+  | padd p e => pmap2 (+) (pmap (* kron 1 B) (matPolyEval_kron-right {R} {n} {n'} {p} {B}) *> kron_* 1 (matPolyEval p B) 1 B
+                             *> pmap (kron __ (matPolyEval p B * B)) (product_ide-left {R} {n} {n} {1})) kron_coef'
+                *> inv (kron_+-right {R} {n} {n} {n'} {n'} {1} {matPolyEval p B * B} {CAlgebra.coefHom {MatrixAlgebra R n'} e})
+  \where
+    \lemma kron_coef' {R : CRing} {n n' : Nat} {c : R}
+      : CAlgebra.coefHom {MatrixAlgebra R (n Nat.* n')} c = kron 1 (CAlgebra.coefHom {MatrixAlgebra R n'} c)
+      => pmap (c *c) (inv kron_ide) *> inv (kron_*c-right {R} {n} {n} {n'} {n'} {c} {1} {1})

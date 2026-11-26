@@ -3,20 +3,29 @@
 \import Algebra.Field.Splitting
 \import Algebra.Group
 \import Algebra.Group.GroupHom
-\import Algebra.LatticeColimit
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.SubMonoid
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
+\import Algebra.Pointed.SubPointed
 \import Algebra.Ring
-\import Algebra.Ring.RingCat
 \import Algebra.Ring.RingHom
+\import Algebra.Ring.Factor
+\import Algebra.Ring.Ideal
 \import Algebra.Ring.Integral
+\import Algebra.Ring.MPoly
+\import Algebra.Ring.MPoly.Rename
+\import Algebra.Ring.MonoidRing
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
+\import Algebra.Ordered
 \import Arith.Nat
-\import Category.Functor
 \import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Function (IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -26,10 +35,11 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
-\import Set.SetCategory
-\import Set.SetHom
 \import Set.Countable
-\open RingHom (id, ∘)
+\import Order.PartialOrder
+\import Set.Fin
+\open RingHom (∘)
+\open countableSplittingIdeal (quotHom)
 
 -- | A ring {K} is algebraically closed if every monic polynomial over {K} of non-zero degree has a root.
 \type IsAlgebraicallyClosed (K : Ring)
@@ -101,33 +111,244 @@
     }
   }, fi)
 
--- | Every countable discrete field has an algebraic closure.
-\sfunc countableAlgebraicClosure.{u} {k : DiscreteField.{u}} (c : Countable k) : \Sigma (K : DiscreteField.{u}) (f : RingHom k K) (IsAlgebraicClosure f)
-  => \let | ps n => pointed-countable zro (Poly.poly-countable c) n
-          | S => sequence c ps
-          | sf n => countableSplittingField (S n).2 {polyMap (S n).3 (ps n)}
-          | F => NatFunctor (\lam n => (S n).1) \lam {n} => (sf n).3
-          | E => DiscreteFieldLatticeColimit {NatBSemilattice} F \lam n => (S n).1
-          | h n => RingLatticeColimit.inMap {_} {Comp CRingCat.forgetToRing F} n
-     \in (E, h 0, algebraicClosure-split {_} {E} _ (later \lam (in~ (n,a)) =>
-        \let t => integral_image-comp (RingLatticeColimit.inMap {_} {Comp CRingCat.forgetToRing F} n) ((S n).4 a)
-        \in transportInv {RingHom k E} (isIntegral __ _) (later $ exts \lam a => SetColimit.~-cequiv zero<=_ $ pmap (NatFunctor.natHom {CRingCat} __ _) (NatFunctor.sigma-isProp _ _) *> sequence3) t)
-            \lam {p} pm => \case pointed-countable-surj zro (Poly.poly-countable c) p \with {
-              | inP (n,q) => \case splitting-monic {_} {_} {polyMap (S n).3 (ps n)} (rewrite q $ polyMap_isMonic pm) (sf n).4 \with {
-                | inP (l,_,lq) => inP (map (h (suc n)) l, later rewrite q (
-                    pmap {RingHom (F 0) (CRingLatticeColimit F)} (polyMap __ p) {h 0} {h (suc n) ∘ ((sf n).3 ∘ (S n).3)} (exts \lam a => SetColimit.~-cequiv zero<=_ $ pmap (sf n).3 $ pmap (NatFunctor.natHom {CRingCat} __ a) (NatFunctor.sigma-isProp _ _) *> sequence3)
-                      *> inv (polyMap-comp (_ RingHom.∘ _) (h _)) *> pmap (polyMap _) (inv (later $ polyMap-comp _ _))) *> pmap (polyMapRingHom _) lq *> (polyMapRingHom (h (suc n))).func-BigProd  *> pmap Monoid.BigProd (exts \lam j => pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative))
-              }
-            })
+-- | An algebraic closure of a countable discrete field {k}, presented as a quotient of `MPoly Nat k` by a maximal ideal.
+\sfunc countableClosureIdeal {k : DiscreteField} (c : Countable k)
+  : \Sigma (M : Ideal (MPoly Nat k)) (Mm : M.IsMaximal) (IsAlgebraicClosure (quotHom Mm))
+  => (union c, union-maximal c, union-closure c)
   \where \private {
-    \func sequence.{u} {k : DiscreteField.{u}} (kc : Countable k) (f : Nat -> Poly k) (n : Nat) : \Sigma (K : DiscreteField.{u}) (Countable K) (g : RingHom k K) (isIntegralExt g) \elim n
-      | 0 => (k, kc, id, integralExt_id)
-      | suc n => \let | (K,Kc,g,gi) => sequence kc f n
-                      | t => countableSplittingField Kc {polyMap g (f n)}
-                 \in (t.1, t.2, t.3 ∘ g, integralExt-comp _ _ gi $ splitting-integral (countableSplittingField Kc).4)
+    -- | A stage of the construction: a field presented as a quotient of the polynomials in the first `d` variables.
+    \func Stage (k : DiscreteField) => \Sigma (d : Nat) (M : Ideal (MPoly (Fin d) k)) (Ideal.IsMaximal {M})
 
-    \lemma sequence3.{u} {k : DiscreteField.{u}} {kc : Countable k} {f : Nat -> Poly k} {n : Nat} {a : k}
-      : NatFunctor.natHom {CRingCat.{u}} {_} {\lam {n} => (countableSplittingField (sequence kc f n).2 {polyMap (sequence kc f n).3 (f n)}).3} {0} (n,idp) a = (sequence kc f n).3 a \elim n
-      | 0 => idp
-      | suc n => pmap (countableSplittingField (sequence kc f n).2).3 sequence3
+    \func evalHom (k : DiscreteField) : RingHom (MPoly (Fin 0) k) k
+      => mPolyEval \lam (j : Fin 0) => \case j \with { () }
+
+    \lemma evalHom-surj (k : DiscreteField) : IsSurj (evalHom k)
+      => \lam a => inP (mConst a, AddMonoid.zro-right {k} *> Monoid.ide-right {k})
+
+    \func base (k : DiscreteField) : Stage k
+      => (0, RingHom.KernelC {MPoly (Fin 0) k} (evalHom k), kernel-maximal {MPoly (Fin 0) k} (evalHom k) (evalHom-surj k))
+
+    \lemma base-surj (k : DiscreteField) : IsSurj (quotHom (base k).3)
+      => \case \elim __ \with {
+        | in~ q => inP (evalHom k q, pmap (factorHom {(base k).2}) $ mPolyRingHom-unique (mPolyHom {Fin 0} {k} RingHom.∘ evalHom k) RingHom.id
+                     (\lam r => pmap (mPolyHom {Fin 0} {k}) (AddMonoid.zro-right {k} *> Monoid.ide-right {k})) (\lam j => \case j \with { () }) q)
+      }
+
+    -- | The images of the variables under {theta}: the old variables go to constants, the next one to `0`, and the rest to the variables.
+    \func vals {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) : Array (MPoly (Fin e) (FactorField Mm)) (d + suc e)
+      => mkArray (\lam (j : Fin d) => mConst {Fin e} {FactorField Mm} (factorHom (mVar j))) ++' (0 :: mkArray (\lam (j : Fin e) => mVar j))
+
+    \func theta {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) : RingHom (MPoly (Fin (d + suc e)) k) (MPoly (Fin e) (FactorField Mm))
+      => mPolyMapEvalRingHom (mPolyHom {Fin e} {FactorField Mm} RingHom.∘ quotHom Mm) (vals Mm)
+
+    \lemma theta-const {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) (r : k)
+      : theta {k} {d} {e} Mm (mConst r) = mConst (quotHom Mm r)
+      => AddMonoid.zro-right {MPoly (Fin e) (FactorField Mm)} *> Monoid.ide-right {MPoly (Fin e) (FactorField Mm)}
+
+    \lemma theta-var {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) (i : Fin (d + suc e))
+      : theta {k} {d} {e} Mm (mVar i) = vals Mm i
+      => mPolyMapEval-var (mPolyHom {Fin e} {FactorField Mm} RingHom.∘ quotHom Mm) (vals Mm) i
+
+    \func ren {k : DiscreteField} {d e : Nat} : RingHom (MPoly (Fin d) k) (MPoly (Fin (d + suc e)) k)
+      => mPoly-rename (fin-inc {d} {suc e})
+
+    \lemma ren-const {k : DiscreteField} {d e : Nat} {r : k} : ren {k} {d} {e} (mConst r) = mConst r
+      => mPoly-rename.on-const {Fin d} {Fin (d + suc e)} {k} {fin-inc {d} {suc e}}
+
+    \lemma ren-var {k : DiscreteField} {d e : Nat} {j : Fin d} : ren {k} {d} {e} (mVar j) = mVar (fin-inc j)
+      => mPoly-rename.on-var {Fin d} {Fin (d + suc e)} {k} {fin-inc {d} {suc e}} {j}
+
+    \lemma finVars-ren {k : DiscreteField} {d e : Nat} (y : MPoly (Fin d) k) : finVars (ren {k} {d} {e} y) = finVars y
+      => finVars.rename {k} {d} {d + suc e} {fin-inc {d} {suc e}} (\lam j => fin-inc.char) y
+
+    \lemma theta-ren {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) (x : MPoly (Fin d) k)
+      : theta {k} {d} {e} Mm (ren x) = mConst (factorHom x)
+      => mPolyRingHom-unique (theta {k} {d} {e} Mm RingHom.∘ ren) (mPolyHom RingHom.∘ factorHom)
+          (\lam r => pmap (theta {k} {d} {e} Mm) ren-const *> theta-const Mm r)
+          (\lam j => pmap (theta {k} {d} {e} Mm) ren-var *> theta-var {k} {d} {e} Mm (fin-inc {d} {suc e} j) *> ++'.++'_index-left) x
+
+    \lemma theta-surj {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} {Mm : M.IsMaximal} : IsSurj (theta {k} {d} {e} Mm)
+      => mPoly-gen-surj (theta Mm) (\case \elim __ \with {
+        | in~ q => inP (ren q, theta-ren Mm q)
+      }) (\lam j => inP (mVar (fin-raise {suc e} {d} (fsuc j)), theta-var {k} {d} {e} Mm (fin-raise {suc e} {d} (fsuc j)) *> ++'.++'_index-right))
+
+    \func stepHom {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+      : RingHom (MPoly (Fin (d + suc e)) k) (FactorField Mm')
+      => factorHom RingHom.∘ theta Mm
+
+    \lemma stepHom-surj {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} {Mm : M.IsMaximal} {M' : Ideal (MPoly (Fin e) (FactorField Mm))} {Mm' : M'.IsMaximal}
+      : IsSurj (stepHom Mm Mm')
+      => \case \elim __ \with {
+        | in~ r => TruncP.map (theta-surj {k} {d} {e} {M} {Mm} r) \lam t => (t.1, pmap (factorHom {M'}) t.2)
+      }
+
+    \func nextIdeal {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+      : Ideal (MPoly (Fin (d + suc e)) k)
+      => RingHom.KernelC {MPoly (Fin (d + suc e)) k} (stepHom Mm Mm')
+
+    \lemma nextMax {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+      : Ideal.IsMaximal {nextIdeal Mm Mm'}
+      => kernel-maximal {MPoly (Fin (d + suc e)) k} {FactorField Mm'} (stepHom Mm Mm') (stepHom-surj {k} {d} {e} {M} {Mm} {M'} {Mm'})
+
+    \lemma ren-next {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+                    {a : MPoly (Fin d) k} (Ma : M a) : nextIdeal Mm Mm' (ren a)
+      => pmap (factorHom {M'}) (theta-ren {k} {d} {e} Mm a) *> pmap (\lam z => factorHom {M'} (mPolyHom z)) (FactorRing.fequiv0 Ma) *> RingHom.func-zro {factorHom RingHom.∘ mPolyHom}
+
+    -- | The embedding of the previous stage into the next one.
+    \func tau {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+      : RingHom (FactorField Mm) (FactorField (nextMax Mm Mm'))
+      => factor-lift {M} (factorHom RingHom.∘ ren) \lam Ma => FactorRing.fequiv0 (ren-next Mm Mm' Ma)
+
+    \func chi' {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+      : RingHom (MPoly (Fin e) (FactorField Mm)) (FactorField (nextMax Mm Mm'))
+      => mPolyMapEvalRingHom (tau Mm Mm') \lam j => factorHom (mVar (fin-raise {suc e} {d} (fsuc j)))
+
+    \lemma chi'-const {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+                      (x : FactorField Mm) : chi' Mm Mm' (mConst x) = tau Mm Mm' x
+      => AddMonoid.zro-right {FactorField (nextMax Mm Mm')} *> Monoid.ide-right {FactorField (nextMax Mm Mm')}
+
+    \lemma chi'-var {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+                    (j : Fin e) : chi' Mm Mm' (mVar j) = factorHom (mVar (fin-raise {suc e} {d} (fsuc j)))
+      => mPolyMapEval-var (tau Mm Mm') (\lam j => factorHom {nextIdeal Mm Mm'} (mVar (fin-raise {suc e} {d} (fsuc j)))) j
+
+    \lemma chi'-theta {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+                      (s : MPoly (Fin (d + suc e)) k) : chi' Mm Mm' (theta Mm s) = factorHom s
+      => mPolyRingHom-unique (chi' Mm Mm' RingHom.∘ theta Mm) factorHom
+          (\lam r => pmap (chi' Mm Mm') (theta-const Mm r) *> chi'-const Mm Mm' (quotHom Mm r) *> pmap (factorHom {nextIdeal Mm Mm'}) ren-const)
+          (\lam i => \case split-index {d} {suc e} i \with {
+            | inl (j,p) => rewrite p $ pmap (chi' Mm Mm') (theta-var {k} {d} {e} Mm (fin-inc {d} {suc e} j) *> ++'.++'_index-left) *> chi'-const Mm Mm' (factorHom (mVar j)) *> pmap (factorHom {nextIdeal Mm Mm'}) ren-var
+            | inr (0,p) => rewrite p $ pmap (chi' Mm Mm') (theta-var {k} {d} {e} Mm (fin-raise {suc e} {d} 0) *> ++'.++'_index-right) *> func-zro
+                             *> inv (FactorRing.fequiv0 $ pmap (factorHom {M'}) (theta-var {k} {d} {e} Mm (fin-raise {suc e} {d} 0) *> ++'.++'_index-right) *> func-zro)
+            | inr (suc j, p) => rewrite p $ pmap (chi' Mm Mm') (theta-var {k} {d} {e} Mm (fin-raise {suc e} {d} (fsuc j)) *> ++'.++'_index-right) *> chi'-var Mm Mm' j
+          }) s
+      \where \open Data.Array.++' (split-index)
+
+    -- | The isomorphism between the splitting field over the previous stage and the next stage.
+    \func chi {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+      : RingHom (FactorField Mm') (FactorField (nextMax Mm Mm'))
+      => factor-lift {M'} (chi' Mm Mm') \lam {r} Mr => \case theta-surj {k} {d} {e} {M} {Mm} r \with {
+        | inP (s,ts) => inv (pmap (chi' Mm Mm') ts) *> chi'-theta Mm Mm' s *> FactorRing.fequiv0 (pmap (factorHom {M'}) ts *> FactorRing.fequiv0 Mr)
+      }
+
+    \lemma chi-quot {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) {M' : Ideal (MPoly (Fin e) (FactorField Mm))} (Mm' : M'.IsMaximal)
+                    (a : k) : chi Mm Mm' (quotHom Mm' (quotHom Mm a)) = quotHom (nextMax Mm Mm') a
+      => chi'-const Mm Mm' (quotHom Mm a) *> pmap (factorHom {nextIdeal Mm Mm'}) ren-const
+
+    \lemma step-integral {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} {Mm : M.IsMaximal} {M' : Ideal (MPoly (Fin e) (FactorField Mm))} {Mm' : M'.IsMaximal}
+                         (fi : isIntegralExt (quotHom Mm)) {p : Poly (FactorField Mm)} (s : IsSplittingField {FactorField Mm} {FactorField Mm'} p (quotHom Mm'))
+      : isIntegralExt (quotHom (nextMax Mm Mm'))
+      => \case \elim __ \with {
+        | in~ t => transport (\lam (f : RingHom k (FactorField (nextMax Mm Mm'))) => isIntegral f (factorHom t)) (exts (chi-quot Mm Mm')) $ transport (isIntegral ((chi Mm Mm' ∘ quotHom Mm') ∘ quotHom Mm)) (chi'-theta Mm Mm' t) $
+                     integral-comp fi $ integral_image-comp (chi Mm Mm') (splitting-integral s (factorHom (theta Mm t)))
+      }
+
+    \func lin {K : CRing} (a : K) : Poly K
+      => padd 1 (negative a)
+
+    \lemma lin-map {K L : CRing} (h : RingHom K L) (l : Array K)
+      : polyMap h (Monoid.BigProd (map lin l)) = Monoid.BigProd (map lin (map h l))
+      => (polyMapRingHom h).func-BigProd *> pmap Monoid.BigProd (exts \lam j => pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative)
+
+    \lemma step-split {k : DiscreteField} {d e : Nat} {M : Ideal (MPoly (Fin d) k)} {Mm : M.IsMaximal} {M' : Ideal (MPoly (Fin e) (FactorField Mm))} {Mm' : M'.IsMaximal}
+                      {p : Poly k} (pm : isMonic p) (s : IsSplittingField {FactorField Mm} {FactorField Mm'} (polyMap (quotHom Mm) p) (quotHom Mm'))
+      : ∃ (l : Array (FactorField (nextMax Mm Mm'))) (polyMap (quotHom (nextMax Mm Mm')) p = Monoid.BigProd (map (lin {FactorField (nextMax Mm Mm')}) l))
+      => \case splitting-monic (polyMap_isMonic pm) s \with {
+        | inP (l,_,lq) => inP (map (chi Mm Mm') l, polyMap-ext {_} {_} {quotHom (nextMax Mm Mm')} {chi Mm Mm' AddPointedHom.∘ (quotHom Mm' AddPointedHom.∘ quotHom Mm)} (\lam a => inv (chi-quot Mm Mm' a)) *> inv (polyMap-comp _ (chi Mm Mm'))
+                                                  *> pmap (polyMap (chi Mm Mm')) (inv (polyMap-comp (quotHom Mm) (quotHom Mm')) *> lq) *> lin-map (chi Mm Mm') l)
+      }
+
+    \func splitData {k : DiscreteField} (c : Countable k) {d : Nat} {M : Ideal (MPoly (Fin d) k)} (Mm : M.IsMaximal) (p : Poly k)
+      => countableSplittingIdeal {FactorField Mm} (factor-countable (mPoly-countable c)) (polyMap (quotHom Mm) p)
+
+    \func ps {k : DiscreteField} (c : Countable k) (n : Nat) : Poly k
+      => pointed-countable zro (Poly.poly-countable c) n
+
+    \func stage {k : DiscreteField} (c : Countable k) (n : Nat) : Stage k \elim n
+      | 0 => base k
+      | suc n => (_, nextIdeal (stage c n).3 (splitData c (stage c n).3 (ps c n)).2, nextMax (stage c n).3 (splitData c (stage c n).3 (ps c n)).2)
+
+    \lemma stage-integral {k : DiscreteField} (c : Countable k) (n : Nat) : isIntegralExt (quotHom (stage c n).3) \elim n
+      | 0 => integralExt-surj _ (base-surj k)
+      | suc n => step-integral (stage-integral c n) (splitData c (stage c n).3 (ps c n)).3
+
+    \lemma stage-grows {k : DiscreteField} (c : Countable k) (n : Nat) : n <= (stage c n).1 \elim n
+      | 0 => zero<=_
+      | suc n => <=_+ (stage-grows c n) (suc<=suc zero<=_)
+
+    \func InM {k : DiscreteField} (c : Countable k) (n : Nat) (x : MPoly Nat k) : \Prop
+      => ∃ (y : MPoly (Fin (stage c n).1) k) ((stage c n).2 y) (finVars y = x)
+
+    \func InS {k : DiscreteField} (c : Countable k) (n : Nat) (x : MPoly Nat k) : \Prop
+      => ∃ (y : MPoly (Fin (stage c n).1) k) (finVars y = x)
+
+    \lemma InM-suc {k : DiscreteField} {c : Countable k} {n : Nat} {x : MPoly Nat k} (h : InM c n x) : InM c (suc n) x \elim h
+      | inP (y,My,e) => inP (ren y, ren-next (stage c n).3 (splitData c (stage c n).3 (ps c n)).2 My, finVars-ren y *> e)
+
+    \lemma InS-suc {k : DiscreteField} {c : Countable k} {n : Nat} {x : MPoly Nat k} (h : InS c n x) : InS c (suc n) x \elim h
+      | inP (y,e) => inP (ren y, finVars-ren y *> e)
+
+    \lemma InM-lift {k : DiscreteField} {c : Countable k} {n m : Nat} {x : MPoly Nat k} (h : InM c n x) : InM c (n + m) x \elim m
+      | 0 => h
+      | suc m => InM-suc (InM-lift h)
+
+    \lemma InS-lift {k : DiscreteField} {c : Countable k} {n m : Nat} {x : MPoly Nat k} (h : InS c n x) : InS c (n + m) x \elim m
+      | 0 => h
+      | suc m => InS-suc (InS-lift h)
+
+    \lemma InS-from {k : DiscreteField} (c : Countable k) {N : Nat} {x : MPoly Nat k} (y : MPoly (Fin N) k) (e : finVars y = x) : InS c N x
+      => inP (mPoly-rename (fin-inc_<= (stage-grows c N)) y, finVars.rename (\lam j => toFin=id {j} {(stage c N).1} {fin_< j NatSemiring.<∘l stage-grows c N}) y *> e)
+
+    \lemma InM-add {k : DiscreteField} {c : Countable k} {n : Nat} {x y : MPoly Nat k} (h : InM c n x) (h' : InM c n y) : InM c n (x + y) \elim h, h'
+      | inP (a,Ma,ea), inP (b,Mb,eb) => inP (a + b, contains_+ Ma Mb, func-+ *> pmap2 (+) ea eb)
+
+    \lemma InSM-mul {k : DiscreteField} {c : Countable k} {n : Nat} {x y : MPoly Nat k} (h : InS c n x) (h' : InM c n y) : InM c n (x * y) \elim h, h'
+      | inP (a,ea), inP (b,Mb,eb) => inP (a * b, ideal-left Mb, func-* *> pmap2 (*) ea eb)
+
+    -- | The union of the stages, as an ideal of `MPoly Nat k`.
+    \func union {k : DiscreteField} (c : Countable k) : Ideal (MPoly Nat k) \cowith
+      | contains x => ∃ (n : Nat) (InM c n x)
+      | contains_zro => inP (0, inP (0, contains_zro {(stage c 0).2}, func-zro {finVars {k} {(stage c 0).1}}))
+      | contains_+ (inP (n,a)) (inP (m,b)) => inP (n + m, InM-add (InM-lift a) (transport (InM c __ _) +-comm (InM-lift b)))
+      | ideal-left {r} (inP (n,h)) => \case mPoly-finVars r \with {
+        | inP (N,y,e) => inP (N + n, InSM-mul (InS-lift (InS-from c y e)) (transport (InM c __ _) +-comm (InM-lift h)))
+      }
+
+    \lemma union-maximal {k : DiscreteField} (c : Countable k) : Ideal.IsMaximal {union c}
+      => (\lam (inP (n, inP (y,My,e))) => (stage c n).3.1 $ transport (stage c n).2 (finVars.inj $ e *> inv func-ide) My,
+          \lam x => \case mPoly-finVars x \with {
+            | inP (N,y,e) => \case InS-from c y e \with {
+              | inP (z,ez) => \case (stage c N).3.2 z \with {
+                | byLeft Mz => byLeft $ inP (N, inP (z, Mz, ez))
+                | byRight (w,Mw) => byRight (finVars w, inP (N, inP (_, Mw, func-+ {finVars {k} {(stage c N).1}} *> pmap2 (+) (func-ide {finVars {k} {(stage c N).1}}) (AddGroupHom.func-negative {finVars {k} {(stage c N).1}} *> pmap negative (func-* {finVars {k} {(stage c N).1}} *> pmap (_ *) ez)))))
+              }
+            }
+          })
+
+    -- | The embedding of a stage into the union.
+    \func phi {k : DiscreteField} (c : Countable k) (n : Nat) : RingHom (FactorField (stage c n).3) (FactorField (union-maximal c))
+      => factor-lift {(stage c n).2} (factorHom RingHom.∘ finVars) \lam {a} Ma => FactorRing.fequiv0 {union c} {finVars a} $ inP (n, inP (a, Ma, idp))
+
+    \lemma phi-quot {k : DiscreteField} (c : Countable k) (n : Nat) (a : k) : phi c n (quotHom (stage c n).3 a) = quotHom (union-maximal c) a
+      => pmap factorHom (finVars.on-const {k} {(stage c n).1})
+
+    \lemma union-closure {k : DiscreteField} (c : Countable k) : IsAlgebraicClosure (quotHom (union-maximal c))
+      => algebraicClosure-split {k} {FactorField (union-maximal c)} (quotHom (union-maximal c)) (\case \elim __ \with {
+        | in~ q => \case mPoly-finVars q \with {
+          | inP (N,y,e) => \case InS-from c y e \with {
+            | inP (z,ez) => transport (\lam w => isIntegral (quotHom (union-maximal c)) (factorHom w)) ez $
+                transport (\lam (f : RingHom k (FactorField (union-maximal c))) => isIntegral f (factorHom (finVars z))) (exts (phi-quot c N)) $ integral_image-comp (phi c N) (stage-integral c N (factorHom z))
+          }
+        }
+      }) \lam {p} pm => \case pointed-countable-surj zro (Poly.poly-countable c) p \with {
+        | inP (n,q) => \case step-split (transportInv isMonic q pm) (splitData c (stage c n).3 (ps c n)).3 \with {
+          | inP (l,lq) => inP (map (phi c (suc n)) l, pmap (polyMap (quotHom (union-maximal c))) (inv q) *> polyMap-ext {_} {_} {quotHom (union-maximal c)} {phi c (suc n) AddPointedHom.∘ quotHom (stage c (suc n)).3} (\lam a => inv (phi-quot c (suc n) a))
+                                                       *> inv (polyMap-comp _ (phi c (suc n))) *> pmap (polyMap (phi c (suc n))) lq *> lin-map (phi c (suc n)) l)
+        }
+      }
   }
+
+-- | Every countable discrete field has an algebraic closure.
+\sfunc countableAlgebraicClosure {k : DiscreteField} (c : Countable k)
+  : \Sigma (K : DiscreteField) (f : RingHom k K) (IsAlgebraicClosure f)
+  => \let t => countableClosureIdeal c
+     \in (FactorField t.2, quotHom t.2, t.3)

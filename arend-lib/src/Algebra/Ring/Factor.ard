@@ -1,6 +1,7 @@
 \import Algebra.Domain.Bezout
 \import Algebra.Field
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Prime
@@ -11,6 +12,7 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
+\import Function (IsSurj)
 \import Function.Meta
 \import Logic
 \import Meta
@@ -148,6 +150,15 @@
         | byRight (in~ y, s, _) => byRight $ (y, unfequiv $ inv s)
       })
   }
+
+-- | The kernel of a surjective homomorphism onto a discrete field is a maximal ideal.
+\lemma kernel-maximal {R : CRing} {K : DiscreteField} (g : RingHom R K) (gs : IsSurj g) : Ideal.IsMaximal {RingHom.KernelC g}
+  => (\lam (p : g 1 = 0) => K.zro/=ide $ inv p *> g.func-ide, \lam x => \case K.eitherZeroOrInv (g x) \with {
+    | byLeft r => byLeft r
+    | byRight (xi : Inv) => \case gs xi.inv \with {
+      | inP (y,gy) => byRight (y, g.func-+ *> pmap2 (+) g.func-ide (AddGroupHom.func-negative *> pmap negative (g.func-* *> pmap (* _) gy *> xi.inv-left)) *> negative-right)
+    }
+  })
 
 \instance FactorIrrField (R : BezoutRing) (p : Irr {R}) : DiscreteField
   | CRing => FactorRing (Ideal.closure1 p)
