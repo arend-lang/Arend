@@ -1,0 +1,77 @@
+{- | Coslices of ∞-categories.
+ -
+ -   The coslice under {a} has objects `c` with an arrow `a ~> c` ({CosliceCat}); this is dual to {SliceCat}.
+ -   Arrows into an object `(r, rho)` summed over `rho` are arrows into `r` ({CosliceCat.cod-equiv}),
+ -   `(a, idd)` is initial ({CosliceCat.initial-contr}), and every arrow of the coslice is cocartesian for the forgetful functor
+ -   ({CosliceCat.forget-cocartesian}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Limit.Initial
+\import Logic
+\import Logic.Unique
+\import Meta
+
+-- | The coslice of {C} under {a}.
+\func CosliceCat {C : \Cat} (a :⁺ C) : \Cat
+  => \Sigma⁺ (c : C) (a ~> c)
+  \where {
+    -- | Triangles under {k} starting at {a} are determined by {a} and {k}.
+    \lemma triangle-contr {C : \Cat} {x c d : C} (a : x ~> c) (k : c ~> d)
+      : Contr (\Sigma (b : x ~> d) (DPath (\lam i => x ~> k i) a b))
+      => segal-contr.flipped a k
+
+    -- | Arrows from {y} to objects under {r} are arrows from the underlying object of {y} to {r}.
+    \lemma cod-equiv {C : \Cat} {x : C} (r : C) (y : CosliceCat x)
+      : IsEquiv {\Sigma (rho : x ~> r) (y ~> {CosliceCat x} (r,rho))} {y.1 ~> r} (\lam a => dpath \lam i => (a.2 i).1)
+      => inP $ later \new QEquiv {
+           | f a => (dpath \lam i => (a.2 i).1, (a.1, dpath \lam i => (a.2 i).2))
+           | ret t => (t.2.1, dpath \lam i => (t.1 i, t.2.2 i))
+           | ret_f a => idp
+           | f_sec t => idp
+         } `transQEquiv` contr-right (triangle-contr y.2 __)
+
+    -- | {x} with the identity arrow is an initial object of the coslice.
+    \lemma initial-contr {C : \Cat} {x : C} : IsInitial {CosliceCat x} (x, idd)
+      => coslice-initial x
+
+    -- | The forgetful functor of a coslice.
+    \func forget {C : \Cat} {X : C} (s :⁺ CosliceCat X) : C
+      => s.1
+
+    {- | Every arrow of the coslice is cocartesian for {forget}.
+     -   Summing over the arrows out of the source, both sides of {triangle-map} are arrows out of the target of {b}.
+     -}
+    \lemma forget-cocartesian {C : \Cat} {X : C} {y z : CosliceCat X} (b : y ~> z) : IsCocartesianArrow forget b
+      => \lam {r} w => fiberwiseEquiv (cod-equiv r.1 y)
+                         (\lam a => triangle-map forget b a.2)
+                         (IsEquiv.leftFactor proj-equiv (IsEquiv.trans total-equiv (cod-equiv r.1 z)))
+                         (r.2, w)
+      \where {
+        \lemma proj-equiv {r : C} : IsEquiv {\Sigma (w' : y.1 ~> r) (\Sigma (g : z.1 ~> r) (DPath (\lam i => (b i).1 ~> w' i) idd g))} {z.1 ~> r} (\lam t => t.2.1)
+          => inP $ later (\new QEquiv {\Sigma (w' : y.1 ~> r) (\Sigma (g : z.1 ~> r) (DPath (\lam i => (b i).1 ~> w' i) idd g))}
+                                      {\Sigma (g : z.1 ~> r) (\Sigma (w' : y.1 ~> r) (DPath (\lam i => (b i).1 ~> w' i) idd g))} {
+               | f t => (t.2.1, (t.1, t.2.2))
+               | ret t => (t.2.1, (t.1, t.2.2))
+               | ret_f t => idp
+               | f_sec t => idp
+             }) `transQEquiv` contr-right (\lam g => segal-contr (dmap forget b) g)
+
+        \lemma total-equiv {r : C}
+          : IsEquiv {\Sigma (a : \Sigma (rho : X ~> r) (y ~> {CosliceCat X} (r,rho)))
+                            (\Sigma (v : z ~> {CosliceCat X} (r,a.1)) (DPath (\lam i => b i ~> a.2 i) idd v))}
+                    {\Sigma (rho : X ~> r) (z ~> {CosliceCat X} (r,rho))}
+                    (\lam s => (s.1.1, s.2.1))
+          => inP $ later (\new QEquiv {\Sigma (a : \Sigma (rho : X ~> r) (y ~> {CosliceCat X} (r,rho))) (\Sigma (v : z ~> {CosliceCat X} (r,a.1)) (DPath (\lam i => b i ~> a.2 i) idd v))}
+                                      {\Sigma (s : \Sigma (rho : X ~> r) (z ~> {CosliceCat X} (r,rho))) (\Sigma (w : y ~> {CosliceCat X} (r,s.1)) (DPath (\lam i => b i ~> w i) idd s.2))} {
+               | f s => ((s.1.1, s.2.1), (s.1.2, s.2.2))
+               | ret t => ((t.1.1, t.2.1), (t.1.2, t.2.2))
+               | ret_f s => idp
+               | f_sec t => idp
+             }) `transQEquiv` contr-right (\lam (s : \Sigma (rho : X ~> r) (z ~> {CosliceCat X} (r,rho))) => segal-contr {CosliceCat X} b s.2)
+      }
+  }

@@ -1,0 +1,88 @@
+{- | Transport in families of types along 2-simplices.
+ -
+ -   Transport along the canonical lift is trivial ({coe+-dpath-canon}). Transporting an element along the columns of a
+ -   2-simplex of types gives a path over its last side whose {coe+-dpath} is determined by {comp-char} of the 2-simplex and
+ -   {~>_->_comp} ({tri-transport}). With an identity on the right, {~>_->_comp} and {dmap_comp} reduce to {comp_idd-right}
+ -   ({~>_->_comp-idd}, {dmap_comp-idd}).
+ -}
+
+\import Equiv
+\import InfCat.Basics
+\import InfCat.Fibration.Covariant.CovariantLift
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Limit.PullbackFun
+\import InfCat.Paths
+\import InfCat.Square
+\import Logic.Unique
+\import Paths
+
+-- | {coe+-dpath} of the canonical path over {A} starting at {a} is trivial.
+\sfunc coe+-dpath-canon.{u} {A : DI ->⁺ \Type u} {a : A dleft} : coe+-dpath {A} {a} (dpath (coe+ A a)) = idp
+  => \let | d : CovLiftData {\Type u} (\lam X => X) => (A dleft, A dright, dpath A, a)
+          | c : CovLift {\Type u} (\lam X => X) d => (coe+ A a dright, dpath (coe+ A a))
+          | loop : c = c => leftFib-lift-unique {\Type u} {\lam X => X} universe-leftFib {d} {c} {c}
+     \in (\peval leftFib-dpath {\Type u} {\lam X => X} universe-leftFib {d} c {coe+ A a dright} (dpath (coe+ A a)))
+         *> pmap (pmap+ (\lam (l :⁺ CovLift {\Type u} (\lam X => X) d) => l.1))
+              (isContr=>isProp (isProp=>PathContr _ (isContr=>isProp (universe-leftFib d)) c c) loop idp)
+
+-- | Transport along the columns of the canonical filler of {f} and {g} is inverse to {~>_->_comp}.
+\sfunc tri-transport-canon.{u} {A B D : \Type u} (f : A ~> B) (g : B ~> D) (e : A)
+  : coe+-dpath {\lam j => g j} {~>_-> f e} {~>_-> (comp f g) e} (dpath \lam j => coe+ (\lam i => fill2 f g i j) e dright) = inv (~>_->_comp f g)
+  => \let | R (S : \Pi (i j :⁺ DI) -> fill2 f g i j) =>
+              pmap (~>_-> g) (coe+-dpath {\lam i => f i} (dpath \lam i => S i dleft)) *> coe+-dpath {\lam j => g j} (dpath (S dright))
+              = inv (~>_->_comp f g) *> pmap (~>_-> (comp f g)) (inv ~>_->_idd *> coe+-dpath {\lam j => A} (dpath (S dleft)))
+                *> coe+-dpath {\lam i => comp f g i} (dpath \lam i => S i dright)
+          | Srow : \Pi (i j :⁺ DI) -> fill2 f g i j => \lam i j => coe+ (\lam j' => fill2 f g i j') (coe+ (\lam i' => f i') e i) j
+          | Scol : \Pi (i j :⁺ DI) -> fill2 f g i j => \lam i j => coe+ (\lam i' => fill2 f g i' j) e i
+          | P : Srow = Scol => IsEquiv.isInj (square-sections-ev (\lam i j => fill2 f g i j)) idp
+          | Rrow : R Srow =>
+              pmap2 (\lam a b => pmap (~>_-> g) a *> b) coe+-dpath-canon coe+-dpath-canon
+              *> inv (pmap (\lam c => inv (~>_->_comp f g) *> pmap (~>_-> (comp f g)) (inv ~>_->_idd *> c)
+                                        *> coe+-dpath {\lam i => comp f g i} (dpath \lam i => Srow i dright)) coe+-dpath-canon
+                      *> pmap (\lam z => inv z *> pmap (~>_-> (comp f g)) (inv ~>_->_idd) *> coe+-dpath {\lam i => comp f g i} (dpath \lam i => Srow i dright))
+                              (\peval ~>_->_comp f g {e})
+                      *> inv_*>)
+          | Rcol : R Scol => transport R P Rrow
+     \in inv idp_*> *> pmap (\lam z => pmap (~>_-> g) z *> coe+-dpath {\lam j => g j} (dpath (Scol dright))) (inv coe+-dpath-canon) *> Rcol
+         *> pmap2 (\lam u v => inv (~>_->_comp f g) *> pmap (~>_-> (comp f g)) u *> v) (pmap (inv ~>_->_idd *>) coe+-dpath-const *> inv_*>) coe+-dpath-canon
+
+-- | {coe+-dpath} of a constant path over a constant family is {~>_->_idd}.
+\sfunc coe+-dpath-const.{u} {A : \Type u} {a : A} : coe+-dpath {\lam j => A} {a} {a} (dpath \lam _ => a) = ~>_->_idd {A} {a}
+  => inv (\peval ~>_->_idd {A} {a})
+
+{- | Transporting {e} along the columns of a 2-simplex {sigma} of types gives a path over its last side
+ -   whose {coe+-dpath} is {~>_->_comp} followed by the image of {comp-char}.
+ -}
+\sfunc tri-transport.{u} {A B D : \Type u} {f : A ~> B} {g : B ~> D} {h : A ~> D} (sigma : DPath (\lam j => A ~> g j) f h) (e : A)
+  : coe+-dpath {\lam j => g j} {~>_-> f e} {~>_-> h e} (dpath \lam j => ~>_-> (sigma j) e)
+    = inv (~>_->_comp f g) *> pmap (\lam p => ~>_-> p e) (comp-char {\Type u} {A} {B} {D} {f} {g} {h} (dpath \lam i => dpath \lam j => sigma j i))
+  => \let | X => \Sigma (h' : A ~> D) (DPath (\lam j => A ~> g j) f h')
+          | S (x : X) => coe+-dpath {\lam j => g j} {~>_-> f e} {~>_-> x.1 e} (dpath \lam j => ~>_-> (x.2 j) e)
+                         = inv (~>_->_comp f g) *> pmap (\lam p => ~>_-> p e) (comp-char {\Type u} {A} {B} {D} {f} {g} {x.1} (dpath \lam i => dpath \lam j => x.2 j i))
+          | c0 : X => (comp f g, dpath \lam j => dpath \lam i => fill2 f g i j)
+     \in transport S (isContr=>isProp (segal-contr.flipped f g) c0 (h, sigma))
+          (tri-transport-canon f g e *> inv (pmap (\lam c => inv (~>_->_comp f g) *> pmap (\lam p => ~>_-> p e) c) (comp-char-canon {\Type u} {A} {B} {D} {f} {g})))
+
+-- | {~>_->_comp} with an identity on the right is determined by {comp_idd-right}.
+\sfunc ~>_->_comp-idd.{u} {A B : \Type u} (p : A ~> B) {e : A}
+  : ~>_->_comp p idd {e} = pmap (\lam q => ~>_-> q e) comp_idd-right *> inv ~>_->_idd
+  => \let t : ~>_->_idd {B} {~>_-> p e} = inv (~>_->_comp p idd) *> pmap (\lam q => ~>_-> q e) comp_idd-right
+           => inv coe+-dpath-const *> tri-transport {A} {B} {B} {p} {idd} {p} (dpath \lam j => p) e
+              *> pmap (\lam c => inv (~>_->_comp p idd) *> pmap (\lam q => ~>_-> q e) c) (inv (\peval comp_idd-right {\Type u} {A} {B} {p}))
+     \in solveL t
+  \where
+    \func solveL {X : \Cat} {a b c : X} {D : a = b} {P : a = c} {r : b = c} (e : r = inv D *> P) : D = P *> inv r \elim D, e
+      | idp, idp => inv (pmap (P *>) (pmap inv idp_*>) *> *>_inv)
+
+-- | {dmap_comp} with an identity on the right is determined by {comp_idd-right}.
+\sfunc dmap_comp-idd {C D : \Cat} (F : C ->⁺ D) {a b : C} {f : a ~> b}
+  : dmap_comp F {a} {b} {b} {f} {idd} = pmap (dmap F) comp_idd-right *> inv comp_idd-right
+  => ~>_->_comp-idd.solveL
+       ((\peval comp_idd-right {D} {F a} {F b} {dmap F f}) *> dmap-comp-char F {a} {b} {b} {f} {idd} {f} (dpath \lam i => idd)
+        *> pmap (\lam c => inv (dmap_comp F {a} {b} {b} {f} {idd}) *> pmap (dmap F) c) (inv (\peval comp_idd-right {C} {a} {b} {f})))
+
+-- | {coe+-dpath} over a constant family of the image of a directed path of types.
+\func coe+-dpath-fun.{u} {X Y : \Type u} (g : X ->⁺ Y) {a b : X} (q : a ~> b)
+  : coe+-dpath {\lam _ => Y} {g a} {g b} (dpath \lam i => g (q i)) = ~>_->_idd *> pmap (\lam x => g x) (~>_= q) \elim q
+  | idd => coe+-dpath-const {Y} {g a}

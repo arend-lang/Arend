@@ -1,0 +1,1019 @@
+{- | Pushout squares and the opposite category.
+ -
+ -   A square {phi} is a pushout square if and only if its opposite ({opSquare}) is a pullback square of `Op C` ({opSquare-char}).
+ -   Cocones under {phi} with vertex `r` ({IsPushoutSquare.pushout-char}) and boundaries of the square of types
+ -   `Op.Hom (opSq phi i j) r` ({opPullback-char}) both map covariantly in `r` into the left fibration {AlgCo} of algebraic cocones,
+ -   by fiberwise equivalences ({coconeAlg-equiv}, {boundaryAlg-equiv}). The two maps agree on the identity of the bottom right corner
+ -   ({cocone-base}, {boundary-base}), hence everywhere by transport along the coslice ({cocone-boundary}).
+ -   The base computations reduce reparametrizations of the triangles of {phi} to the poset `\Sigma⁺ (i : DI) DI` ({sqHom-contr}).
+ -
+ -   Dually, a square {phi} is a pullback square if and only if its opposite is a pushout square of `Op C` ({opSquare-pullback}).
+ -   Now the boundaries of the square of types `Op.Hom y (phi i j)` ({reprPullback-char}) and the cocones under `opSq phi`
+ -   with vertex `y : Op C`, read through {opYoneda}, map covariantly in `y` into the left fibration {AlgR} ({boundaryAlgR-equiv}, {opAlg-equiv}),
+ -   and the two maps agree on the identity ({boundaryR-base}, {cocone-boundaryR}). Since {opArr-comp} is defined through transports
+ -   in the first variable of {Op.Hom} and {AlgR} through transports in the second one, the base computation needs the interchange
+ -   coherence {Kcoh}, proven by Yoneda in the second variable ({K'}) from the case of the identity ({K-base}).
+ -
+ -   Consequently, pushouts in {C} correspond to pullbacks in `Op C` ({spanOf-op}, {opPushouts}, {unopPullbacks}).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Coslice
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Fibration.Univalence.TransportTriangle
+\import InfCat.Interval
+\import InfCat.Limit.OpPullback
+\import InfCat.Limit.Pullback
+\import InfCat.Limit.Pushout
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Opposite.Square
+\import InfCat.Slice
+\import InfCat.Square
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Logic.Unique
+\import Equiv.Path
+\import Equiv.Sigma
+\import Paths
+\import Paths.Meta
+\open IsPushoutSquare
+\open IsPullbackSquare
+\open PushoutOpHelpers
+
+-- | The coslice under {x} is the slice of `Op C` over `toOp x`.
+\lemma coslice-op-equiv.{u} {C : \Cat u} (x : C) : IsEquiv {CosliceCat x} {SliceCat (Op.toOp x)} (\lam t => (Op.toOp t.1, opArr t.2))
+  => IsEquiv.trans {_} {_} {_} {\lam (t : CosliceCat x) => ((t.1, t.2) : \Sigma (y : C) (x ~> y))} (inP \new QEquiv { | ret t => (t.1, t.2) | ret_f _ => idp | f_sec _ => idp }) $
+     IsEquiv.trans (inP (sigma-equiv {_} {_} {_} {\lam y => y ~> Op.toOp x} (IsEquiv.toQEquiv Op.toOp-equiv) \lam y => IsEquiv.toQEquiv (opArr-equiv {C} {x} {y})))
+                   (inP \new QEquiv {\Sigma (y : Op C) (y ~> Op.toOp x)} {SliceCat (Op.toOp x)} { | f t => (t.1, t.2) | ret t => (t.1, t.2) | ret_f _ => idp | f_sec _ => idp })
+
+-- | The slice over {x} is the coslice of `Op C` under `toOp x`.
+\lemma slice-op-equiv.{u} {C : \Cat u} (x : C) : IsEquiv {SliceCat x} {CosliceCat (Op.toOp x)} (\lam t => (Op.toOp t.1, opArr t.2))
+  => IsEquiv.trans {_} {_} {_} {\lam (t : SliceCat x) => ((t.1, t.2) : \Sigma (y : C) (y ~> x))} (inP \new QEquiv { | ret t => (t.1, t.2) | ret_f _ => idp | f_sec _ => idp }) $
+     IsEquiv.trans (inP (sigma-equiv {_} {_} {_} {\lam y => Op.toOp x ~> y} (IsEquiv.toQEquiv Op.toOp-equiv) \lam y => IsEquiv.toQEquiv (opArr-equiv {C} {y} {x})))
+                   (inP \new QEquiv {\Sigma (y : Op C) (Op.toOp x ~> y)} {CosliceCat (Op.toOp x)} { | f t => (t.1, t.2) | ret t => (t.1, t.2) | ret_f _ => idp | f_sec _ => idp })
+
+-- | A square is a pushout square if and only if its opposite is a pullback square.
+\lemma opSquare-pushout.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsPushoutSquare phi <-> IsPullbackSquare (opSquare phi)
+  => transportInv (\lam (s : DI ->⁺ DI ->⁺ Op C) => IsPushoutSquare phi <-> IsPullbackSquare s) (opSquare=opSq phi) (opSq-char phi)
+
+-- | A square is a pullback square if and only if its opposite is a pushout square.
+\lemma opSquare-pullback.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsPullbackSquare phi <-> IsPushoutSquare (opSquare phi)
+  => transportInv (\lam (s : DI ->⁺ DI ->⁺ Op C) => IsPullbackSquare phi <-> IsPushoutSquare s) (opSquare=opSq phi) (opSq-pullback phi)
+
+-- | Pushout squares of {C} correspond to pullback squares of `Op C`, and spans of {C} to cospans of `Op C`.
+\lemma spanOf-op.{u} {C : \Cat u}
+  : IsEquiv (spanOf {C}) <-> IsEquiv (IsPullbackSquare.cospanOf {Op C})
+  => IsEquiv.parallelEquiv sq-equiv span-equiv (\lam _ => idp)
+  \where {
+    -- | {opSquare} pushout squares.
+    \lemma sq-equiv.{v} {C : \Cat v}
+      : IsEquiv {\Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPushoutSquare phi)} {\Sigma (psi : DI ->⁺ DI ->⁺ Op C) (IsPullbackSquare psi)}
+                (\lam s => (opSq s.1, transport IsPullbackSquare (opSquare=opSq s.1) ((opSquare-pushout s.1).1 s.2)))
+      => subtype-equiv opSq-equiv (\lam {phi} po => transport IsPullbackSquare (opSquare=opSq phi) ((opSquare-pushout phi).1 po))
+                                 (\lam {phi} pb => (opSquare-pushout phi).2 (transportInv IsPullbackSquare (opSquare=opSq phi) pb))
+
+    -- | Spans of {C} are cospans of `Op C`.
+    \lemma span-equiv.{v} {C : \Cat v}
+      : IsEquiv {\Sigma (sig : DI ->⁺ C) (CosliceCat (sig dleft))} {\Sigma (sig : DI ->⁺ Op C) (SliceCat (sig dright))}
+                (\lam p => (\lam i => opArr (dpath p.1) i, (Op.toOp p.2.1, opArr p.2.2)))
+      => inP (sigma-equiv (IsEquiv.toQEquiv opArrow-equiv) \lam sig => IsEquiv.toQEquiv (coslice-op-equiv {C} (sig dleft)))
+  }
+
+-- | Pullback squares of {C} correspond to pushout squares of `Op C`, and cospans of {C} to spans of `Op C`.
+\lemma cospanOf-op.{u} {C : \Cat u}
+  : IsEquiv (IsPullbackSquare.cospanOf {C}) <-> IsEquiv (spanOf {Op C})
+  => IsEquiv.parallelEquiv sq-equiv cospan-equiv (\lam _ => idp)
+  \where {
+    -- | {opSquare} on pullback squares.
+    \lemma sq-equiv.{v} {C : \Cat v}
+      : IsEquiv {\Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPullbackSquare phi)} {\Sigma (psi : DI ->⁺ DI ->⁺ Op C) (IsPushoutSquare psi)}
+                (\lam s => (opSq s.1, transport IsPushoutSquare (opSquare=opSq s.1) ((opSquare-pullback s.1).1 s.2)))
+      => subtype-equiv opSq-equiv (\lam {phi} pb => transport IsPushoutSquare (opSquare=opSq phi) ((opSquare-pullback phi).1 pb))
+                                 (\lam {phi} po => (opSquare-pullback phi).2 (transportInv IsPushoutSquare (opSquare=opSq phi) po))
+
+    -- | Cospans of {C} are spans of `Op C`.
+    \lemma cospan-equiv.{v} {C : \Cat v}
+      : IsEquiv {\Sigma (sig : DI ->⁺ C) (SliceCat (sig dright))} {\Sigma (sig : DI ->⁺ Op C) (CosliceCat (sig dleft))}
+                (\lam p => (\lam i => opArr (dpath p.1) i, (Op.toOp p.2.1, opArr p.2.2)))
+      => inP (sigma-equiv (IsEquiv.toQEquiv opArrow-equiv) \lam sig => IsEquiv.toQEquiv (slice-op-equiv {C} (sig dright)))
+  }
+
+-- | If {C} has pullbacks, then `Op C` has pushouts.
+\func opPushouts.{u} {C : \Cat u} (H : HCatWithPullbacks C) : HCatWithPushouts (Op C)
+  => HCatWithPushouts.fromSurj ((IsPushoutSquare.spanOf-equiv {Op C}).2 (cospanOf-op.1 ((IsPullbackSquare.cospanOf-equiv {C}).1 \lam sig => IsEquiv.isSurj (IsPullbackSquare.bottom-equiv {H} sig))))
+
+-- | If `Op C` has pullbacks, then {C} has pushouts.
+\func unopPushouts.{u} {C : \Cat u} (H : HCatWithPullbacks (Op C)) : HCatWithPushouts C
+  => HCatWithPushouts.fromSurj ((IsPushoutSquare.spanOf-equiv {C}).2 (spanOf-op.2 ((IsPullbackSquare.cospanOf-equiv {Op C}).1 \lam sig => IsEquiv.isSurj (IsPullbackSquare.bottom-equiv {H} sig))))
+
+-- | If {C} has pushouts, then `Op C` has pullbacks.
+\func opPullbacks.{u} {C : \Cat u} (H : HCatWithPushouts C) : HCatWithPullbacks (Op C)
+  => HCatWithPullbacks.fromSurj ((IsPullbackSquare.cospanOf-equiv {Op C}).2 (spanOf-op.1 ((IsPushoutSquare.spanOf-equiv {C}).1 \lam sig => IsEquiv.isSurj (IsPushoutSquare.top-equiv {H} sig))))
+
+-- | If `Op C` has pushouts, then {C} has pullbacks.
+\func unopPullbacks.{u} {C : \Cat u} (H : HCatWithPushouts (Op C)) : HCatWithPullbacks C
+  => HCatWithPullbacks.fromSurj ((IsPullbackSquare.cospanOf-equiv {C}).2 (cospanOf-op.2 ((IsPushoutSquare.spanOf-equiv {Op C}).1 \lam sig => IsEquiv.isSurj (IsPushoutSquare.top-equiv {H} sig))))
+
+\private \module PushoutOpHelpers \where {
+  -- | The square {opSq} as a dependent path, kept opaque so that terms mentioning {opSq} stay small.
+  \sfunc opSqC.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : DPath (\lam i => opArr (dpath \lam i => phi i dright) i ~> opArr (dpath \lam i => phi i dleft) i)
+                             (opArr (dpath (phi dright))) (opArr (dpath (phi dleft)))
+    => square-char.backward (opSquare.opData (square-char C phi)).9
+
+  -- | {opSquare} with definitional sides: they are the opposites of the sides of {phi}.
+  \func opSq.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : DI ->⁺ DI ->⁺ Op C
+    => \lam i j => opSqC.{u} phi i j
+
+  \sfunc opSquare=opSq.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : opSquare phi = opSq.{u} phi
+    => (\peval opSquare phi) *> pmap+ (\lam (c :⁺ DPath (\lam i => opArr (dpath \lam i => phi i dright) i ~> opArr (dpath \lam i => phi i dleft) i)
+                                                 (opArr (dpath (phi dright))) (opArr (dpath (phi dleft)))) =>
+                                          (\lam i j => c i j : DI ->⁺ DI ->⁺ Op C)) (inv (\peval opSqC phi))
+
+  \lemma opSq-equiv.{u} {C : \Cat u} : IsEquiv (opSq {C})
+    => transport (\lam (f : (DI ->⁺ DI ->⁺ C) -> DI ->⁺ DI ->⁺ Op C) => IsEquiv f) (path \lam i phi => opSquare=opSq phi i) opSquare-equiv
+
+  -- | Algebraic cocones under the left and top sides of {phi} with vertex {r}.
+  \func AlgCo {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r :⁺ C) : \Cat
+    => \Sigma⁺ (x : phi dright dleft ~> r) (\Sigma⁺ (y : phi dleft dright ~> r) (comp (dpath \lam i => phi i dleft) x = comp (dpath (phi dleft)) y))
+
+  \lemma AlgCo-leftFib {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : IsLeftFib (AlgCo phi)
+    => \let | Z1 => \Sigma⁺ (r : C) (phi dright dleft ~> r)
+            | Z2 => \Sigma⁺ (s : Z1) (phi dleft dright ~> s.1)
+       \in leftFib-sigma {C} {\lam r => phi dright dleft ~> r} (hom-leftFib (phi dright dleft))
+            {\lam (s :⁺ Z1) => \Sigma⁺ (y : phi dleft dright ~> s.1) (comp (dpath \lam i => phi i dleft) s.2 = comp (dpath (phi dleft)) y)}
+            (leftFib-sigma {Z1} {\lam (s :⁺ Z1) => phi dleft dright ~> s.1} (leftFib-pullback (\lam (s :⁺ Z1) => s.1) (hom-leftFib (phi dleft dright)))
+              {\lam (s :⁺ Z2) => comp (dpath \lam i => phi i dleft) s.1.2 = comp (dpath (phi dleft)) s.2}
+              (leftFib-path {Z2} {\lam (s :⁺ Z2) => phi dleft dleft ~> s.1.1} (leftFib-pullback (\lam (s :⁺ Z2) => s.1.1) (hom-leftFib (phi dleft dleft)))
+                            (\lam s => comp (dpath \lam i => phi i dleft) s.1.2) (\lam s => comp (dpath (phi dleft)) s.2)))
+
+  -- | The algebraic cocone of a cocone.
+  \func coconeAlg {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (w :⁺ phi dleft ~> const r) (g :⁺ phi dright dleft ~> r)
+                  (t :⁺ DPath (\lam i => phi i dleft ~> w i dleft) idd g) : AlgCo phi r
+    => (g, (dpath \lam m => w m dright, path phi w g t))
+    \where
+      \protected \sfunc path {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (w :⁺ phi dleft ~> const r) (g :⁺ phi dright dleft ~> r)
+                            (t :⁺ DPath (\lam i => phi i dleft ~> w i dleft) idd g)
+        : comp (dpath \lam i => phi i dleft) g = comp (dpath (phi dleft)) (dpath \lam m => w m dright)
+        => comp-char {C} {phi dleft dleft} {phi dright dleft} {r} {dpath \lam i => phi i dleft} {g} {dpath \lam m => w m dleft} t
+           *> inv comp_idd-right *> comp-char {_} {_} {_} {_} {_} {_} {wdiag w} (wtri2 w) *> inv (comp-char {_} {_} {_} {_} {_} {_} {wdiag w} (wtri1 w))
+
+  -- | The diagonal of an arrow into a constant arrow.
+  \func wdiag {C : \Cat} {u :⁺ DI ->⁺ C} {r :⁺ C} (w :⁺ u ~> const {C} {DI} r) : u dleft ~> r
+    => dpath \lam i => w i i
+
+  -- | The upper triangle of an arrow into a constant arrow.
+  \func wtri1 {C : \Cat} {u :⁺ DI ->⁺ C} {r :⁺ C} (w :⁺ u ~> const {C} {DI} r)
+    : DPath (\lam i => (dpath u) i ~> wdiag w i) idd (dpath \lam m => w m dright)
+    => dpath \lam i => dpath \lam j => w (dmin i j) i
+
+  -- | The lower triangle of an arrow into a constant arrow.
+  \func wtri2 {C : \Cat} {u :⁺ DI ->⁺ C} {r :⁺ C} (w :⁺ u ~> const {C} {DI} r)
+    : DPath (\lam i => (dpath \lam m => w m dleft) i ~> wdiag w i) idd (idd {C} {r})
+    => dpath \lam i => dpath \lam k => w i (dmin i k)
+
+  -- | The square of types `Op.Hom (opSq.{u} phi i j) r`.
+  \func Tsq.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (r :⁺ C) (i j :⁺ DI) : \Type u
+    => Op.Hom (opSq.{u} phi i j) r
+
+  -- | The algebraic cocone of a boundary of {Tsq}.
+  \func boundaryAlg.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (b :⁺ Boundary (Tsq phi r)) : AlgCo phi r
+    => (Straight.fromStraight b.2, (Straight.fromStraight b.1, pmap+ (\lam q => Straight.fromStraight q) (path phi b)))
+    \where
+      \protected \sfunc path.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (b :⁺ Boundary (Tsq phi r))
+        : Straight.toStraight (comp (dpath \lam i => phi i dleft) (Straight.fromStraight b.2))
+          = Straight.toStraight (comp (dpath (phi dleft)) (Straight.fromStraight b.1))
+        => inv (opArr-tr (dpath \lam i => phi i dleft) (r, Straight.fromStraight b.2))
+           *> pmap+ (\lam q => ~>_-> (dmap (Op.Hom __ r) (opArr (dpath \lam i => phi i dleft))) q) (Straight.toStraight_fromStraight b.2)
+           *> (coe+-dpath b.5 *> inv (coe+-dpath b.4))
+           *> inv (pmap+ (\lam q => ~>_-> (dmap (Op.Hom __ r) (opArr (dpath (phi dleft)))) q) (Straight.toStraight_fromStraight b.1))
+           *> opArr-tr (dpath (phi dleft)) (r, Straight.fromStraight b.1)
+
+  -- | The boundary of the section of {Tsq} given by an arrow out of the bottom right corner.
+  \func Bk.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (k :⁺ phi dright dright ~> r) : Boundary (Tsq phi r)
+    => boundary {Tsq phi r} (trSec {Tsq phi r} (Straight.toStraight k))
+
+
+  -- | The 2-cell of {phi}.
+  \sfunc sqCell {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+    : comp (dpath \lam i => phi i dleft) (dpath (phi dright)) = comp (dpath (phi dleft)) (dpath \lam i => phi i dright)
+    => square-equiv (dpath \lam i => phi i dleft) (dpath \lam i => phi i dright) {dpath (phi dright)} {dpath (phi dleft)} (dpath \lam i => dpath \lam j => phi i j)
+
+  -- | {sqCell} is given by the two diagonal triangles of the square.
+  \sfunc sqCell-diag {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+    : sqCell phi = comp-char {C} {_} {_} {_} {dpath \lam i => phi i dleft} {dpath (phi dright)} {sqDiag {C} {_} {_} {_} {_} {dpath \lam i => phi i dleft} {dpath \lam i => phi i dright} {dpath (phi dleft)} {dpath (phi dright)} (dpath \lam i => dpath \lam j => phi i j)} (sqTri1 {C} {_} {_} {_} {_} {dpath \lam i => phi i dleft} {dpath \lam i => phi i dright} {dpath (phi dleft)} {dpath (phi dright)} (dpath \lam i => dpath \lam j => phi i j))
+                   *> inv (comp-char {C} {_} {_} {_} {dpath (phi dleft)} {dpath \lam i => phi i dright} {sqDiag {C} {_} {_} {_} {_} {dpath \lam i => phi i dleft} {dpath \lam i => phi i dright} {dpath (phi dleft)} {dpath (phi dright)} (dpath \lam i => dpath \lam j => phi i j)} (sqTri2 {C} {_} {_} {_} {_} {dpath \lam i => phi i dleft} {dpath \lam i => phi i dright} {dpath (phi dleft)} {dpath (phi dright)} (dpath \lam i => dpath \lam j => phi i j)))
+    => (\peval sqCell phi) *> square-equiv-diag (dpath \lam i => dpath \lam j => phi i j)
+
+  -- | The arrow of `\Sigma⁺ (i : DI) DI` from the top left to the bottom right corner is unique.
+  \lemma sqHom-contr : Contr ((dleft, dleft) ~> {\Sigma⁺ (i : DI) DI} (dright, dright))
+    => Contr.Contr_QEquiv (symQEquiv (dpath-sigma-equiv (\lam _ _ => DI))) (sigma-Contr DI-hom-lr-contr (\lam _ => DI-hom-lr-contr))
+
+  -- | The base cocone: the cube of {pushout-char.cosec} built from {phi} itself.
+  \func cosec0 {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+    : \Sigma (w : phi dleft ~> const (phi dright dright)) (\Sigma (v : phi dright ~> const (phi dright dright)) (DPath (\lam i => phi i ~> w i) idd v))
+    => (dpath \lam l => \lam j => phi l (dmax l j),
+        (dpath \lam m => \lam j => phi dright (dmax m j), dpath \lam l => dpath \lam m => \lam j => phi l (dmax (dmin l m) j)))
+
+  \sfunc cosec-base {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : pushout-char.cosec phi (phi dright dright) idd = cosec0 phi
+    => IsEquiv.isInj (initial-coproduct.tri-equiv1 (phi dright dright) (dpath phi)) comp_idd-left
+
+  \sfunc alg-tri {X : \Cat} {P1 Q1 P2 Q2 c diag : X} (D1 : Q1 = P1) (D2 : Q2 = P2) (A : Q1 = c) (B : Q1 = diag) (C : Q2 = diag) (E : Q2 = c)
+                 (s : inv A *> B *> inv C = inv E)
+    : inv (inv D1 *> A) *> (inv D1 *> B) *> inv (inv D2 *> C) = inv (inv D2 *> E) \elim D1, D2
+    | idp, idp => rewrite (idp_*> {_} {_} {_} {A}, idp_*> {_} {_} {_} {B}, idp_*> {_} {_} {_} {C}, idp_*> {_} {_} {_} {E}) s
+
+  -- | The triangles of {cosec0} compose to the lower triangle of {phi}.
+  \sfunc w0-tri {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+    : inv (comp_idd-right {C} {_} {_} {dpath \lam i => phi i i})
+      *> comp-char {_} {_} {_} {_} {_} {_} {wdiag (cosec0 phi).1} (wtri2 (cosec0 phi).1)
+      *> inv (comp-char {_} {_} {_} {_} {_} {_} {wdiag (cosec0 phi).1} (wtri1 (cosec0 phi).1))
+      = inv (comp-char {_} {_} {_} {_} {dpath (phi dleft)} {dpath \lam i => phi i dright} {dpath \lam i => phi i i}
+                       (sqTri2 {C} {_} {_} {_} {_} {dpath \lam i => phi i dleft} {dpath \lam i => phi i dright} {dpath (phi dleft)} {dpath (phi dright)}
+                               (dpath \lam i => dpath \lam j => phi i j)))
+    => \let | F : \Sigma⁺ (i : DI) DI ->⁺ C => \lam z => phi z.1 z.2
+            | ll : \Sigma⁺ (i : DI) DI => (dleft, dleft)
+            | rr : \Sigma⁺ (i : DI) DI => (dright, dright)
+            | dS : ll ~> rr => dpath \lam i => (i, i)
+            | d'S : ll ~> rr => dpath \lam i => (i, dmax i i)
+            | acS : ll ~> {\Sigma⁺ (i : DI) DI} (dleft, dright) => dpath \lam j => (dleft, j)
+            | cdS : (dleft, dright) ~> {\Sigma⁺ (i : DI) DI} rr => dpath \lam j => (j, dright)
+            | ti : DPath (\lam i => dS i ~> dS i) idd (idd {_} {rr}) => dpath \lam i => idd
+            | t2 : DPath (\lam i => dS i ~> d'S i) idd (idd {_} {rr}) => dpath \lam i => dpath \lam k => (i, dmax i (dmin i k))
+            | t1 : DPath (\lam i => acS i ~> d'S i) idd cdS => dpath \lam i => dpath \lam j => (dmin i j, dmax (dmin i j) i)
+            | t3 : DPath (\lam i => acS i ~> dS i) idd cdS => dpath \lam i => dpath \lam k => (dmin i k, i)
+            | ci => comp-char {_} {ll} {rr} {rr} {dS} {idd} {dS} ti
+            | c2 => comp-char {_} {ll} {rr} {rr} {dS} {idd} {d'S} t2
+            | c1 => comp-char {_} {ll} {_} {rr} {acS} {cdS} {d'S} t1
+            | c3 => comp-char {_} {ll} {_} {rr} {acS} {cdS} {dS} t3
+            | sqS : inv ci *> c2 *> inv c1 = inv c3
+              => isContr=>isProp (isProp=>PathContr _ (isContr=>isProp sqHom-contr) _ _) _ _
+            | s : inv (pmap (dmap F) ci) *> pmap (dmap F) c2 *> inv (pmap (dmap F) c1) = inv (pmap (dmap F) c3)
+              => inv (pmap-3 (dmap F) _ _ _) *> pmap (pmap (dmap F)) sqS *> pmap_inv-comm (dmap F) _
+       \in pmap (\lam a => inv a *> comp-char {_} {_} {_} {_} {_} {_} {wdiag (cosec0 phi).1} (wtri2 (cosec0 phi).1)
+                                   *> inv (comp-char {_} {_} {_} {_} {_} {_} {wdiag (cosec0 phi).1} (wtri1 (cosec0 phi).1)))
+                ((\peval comp_idd-right {C} {_} {_} {dpath \lam i => phi i i}) *> dmap-comp-char F ti)
+           *> pmap (\lam b => inv (inv (dmap_comp F) *> pmap (dmap F) (comp-char ti)) *> b
+                              *> inv (comp-char {_} {_} {_} {_} {_} {_} {wdiag (cosec0 phi).1} (wtri1 (cosec0 phi).1)))
+                   (dmap-comp-char F t2)
+           *> pmap (\lam c => inv (inv (dmap_comp F) *> pmap (dmap F) ci) *> (inv (dmap_comp F) *> pmap (dmap F) c2) *> inv c)
+                   (dmap-comp-char F t1)
+           *> alg-tri (dmap_comp F) (dmap_comp F) _ _ _ _ s
+           *> pmap inv (inv (dmap-comp-char F t3))
+
+  \sfunc pmap-3 {A B : \Cat} (f : A -> B) {x y z w : A} (a : x = y) (b : x = z) (c : w = z)
+    : pmap f (inv a *> b *> inv c) = inv (pmap f a) *> pmap f b *> inv (pmap f c) \elim a, b, c
+    | idp, idp, idp => idp
+
+  -- | The algebraic cocone of the cocone given by an element of the domain of {pushout-char.cosec}.
+  \func cosecAlg {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C}
+                 (a : \Sigma (w : phi dleft ~> const r) (\Sigma (v : phi dright ~> const r) (DPath (\lam i => phi i ~> w i) idd v))) : AlgCo phi r
+    => coconeAlg phi a.1 (dpath \lam m => a.2.1 m dleft) (dpath \lam l => dpath \lam m => a.2.2 l m dleft)
+
+  -- | The algebraic cocone of the cocone of the identity is given by the sides and the 2-cell of {phi}.
+  \sfunc cocone-base {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+    : cosecAlg phi (pushout-char.cosec phi (phi dright dright) idd) = (dpath (phi dright), (dpath \lam i => phi i dright, sqCell phi))
+    => pmap (cosecAlg phi) (cosec-base phi)
+       *> pmap (\lam P => ((dpath (phi dright), (dpath \lam i => phi i dright, P)) : AlgCo phi (phi dright dright)))
+               (\peval coconeAlg.path phi (cosec0 phi).1 (dpath \lam m => (cosec0 phi).2.1 m dleft) (dpath \lam l => dpath \lam m => (cosec0 phi).2.2 l m dleft))
+       *> path (\lam t => ((dpath (phi dright), (dpath \lam i => phi i dright,
+           (pmap (comp-char {_} {_} {_} {_} {_} {_} {dpath \lam i => phi i i} (sqTri1 {C} {_} {_} {_} {_} {dpath \lam i => phi i dleft} {dpath \lam i => phi i dright} {dpath (phi dleft)} {dpath (phi dright)} (dpath \lam i => dpath \lam j => phi i j)) *>) (w0-tri phi)
+            *> inv (sqCell-diag phi)) @ t)) : AlgCo phi (phi dright dright)))
+
+  -- | {sqCell} is {comp-equiv.flipped} of the stored 2-cell of {square-char}.
+  \sfunc sqCell-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : sqCell phi = comp-equiv.flipped (square-char.forward (dpath \lam i => dpath \lam j => phi i j))
+    => (\peval sqCell phi) *> pmap (\lam (e : QEquiv {DPath (\lam i => (dpath \lam i => phi i dleft) i ~> (dpath \lam i => phi i dright) i) (dpath (phi dleft)) (dpath (phi dright))}
+                              {comp (dpath \lam i => phi i dleft) (dpath (phi dright)) = comp (dpath (phi dleft)) (dpath \lam i => phi i dright)}) =>
+               e.f (dpath \lam i => dpath \lam j => phi i j))
+            (\peval square-equiv (dpath \lam i => phi i dleft) (dpath \lam i => phi i dright) {dpath (phi dright)} {dpath (phi dleft)})
+
+  -- | The 2-cell of {opSq} is the opposite of the 2-cell of {phi}.
+  \sfunc sqCell-opSq.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : sqCell (opSq.{u} phi) = inv opArr-comp *> pmap opArr (inv (sqCell phi)) *> opArr-comp
+    => sqCell-char (opSq.{u} phi)
+           *> pmap (comp-equiv.flipped {Op.{u} C} {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath (phi dleft))}
+                                       {comp (opArr (dpath (phi dright))) (opArr (dpath \lam i => phi i dleft))})
+                   (pmap+ (\lam (c :⁺ DPath (\lam i => opArr (dpath \lam i => phi i dright) i ~> opArr (dpath \lam i => phi i dleft) i)
+                             (opArr (dpath (phi dright))) (opArr (dpath (phi dleft)))) => square-char.forward c) (\peval opSqC phi)
+                    *> square-char.forward_backward (opSquare.opData (square-char C phi)).9)
+           *> QEquiv.f_sec {comp-equiv.flipped {Op.{u} C} {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath (phi dleft))}
+                                       {comp (opArr (dpath (phi dright))) (opArr (dpath \lam i => phi i dleft))}} _
+           *> pmap (\lam c => inv opArr-comp *> pmap opArr (inv c) *> opArr-comp) (inv (sqCell-char phi))
+
+  \sfunc alg-A3 {X Y : \Cat} (ev : X -> Y) {u1 u2 h : X} {w1 w2 : Y} (P1 : u1 = h) (P2 : u2 = h) (K1 : ev u1 = w1) (K2 : ev u2 = w2)
+    : (inv K2 *> pmap ev P2) *> inv (inv K1 *> pmap ev P1) = inv K2 *> pmap ev (P2 *> inv P1) *> K1 \elim P1, P2, K1, K2
+    | idp, idp, idp, idp => idp
+
+  -- | The transport of the base section of {Tsq} along the bottom side.
+  \sfunc base-coe4.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : coe+-dpath (Bk phi idd).4
+      = inv (~>_->_comp (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath \lam i => phi i dright))) (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath (phi dleft)))))
+        *> pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright)))
+                (inv (dmap_comp (Op.Hom __ (phi dright dright)) {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath (phi dleft))})
+                 *> pmap (dmap (Op.Hom __ (phi dright dright)))
+                         (comp-char {_} {_} {_} {_} {_} {_} {dpath \lam i => opSq.{u} phi i i} (sqTri1 {Op.{u} C} {_} {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath \lam i => phi i dleft)} {opArr (dpath (phi dright))} {opArr (dpath (phi dleft))} (dpath \lam i => dpath \lam j => opSq.{u} phi i j))))
+    => tri-transport {_} {_} {_} {_} {_} {dmap (Op.Hom __ (phi dright dright)) (dpath \lam i => opSq.{u} phi i i)}
+                     (dpath \lam j => dmap (Op.Hom __ (phi dright dright)) (dpath \lam m => opSq.{u} phi m (dmin m j))) (Op.Hom-idd (phi dright dright))
+       *> pmap (inv (~>_->_comp _ _) *>) (pmap (pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))))
+            (dmap-comp-char (Op.Hom __ (phi dright dright)) {_} {_} {_} {_} {_} {dpath \lam i => opSq.{u} phi i i} (sqTri1 {Op.{u} C} {_} {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath \lam i => phi i dleft)} {opArr (dpath (phi dright))} {opArr (dpath (phi dleft))} (dpath \lam i => dpath \lam j => opSq.{u} phi i j))))
+
+  -- | The transport of the base section of {Tsq} along the right side.
+  \sfunc base-coe5.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : coe+-dpath (Bk phi idd).5
+      = inv (~>_->_comp (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath (phi dright)))) (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath \lam i => phi i dleft))))
+        *> pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright)))
+                (inv (dmap_comp (Op.Hom __ (phi dright dright)) {_} {_} {_} {opArr (dpath (phi dright))} {opArr (dpath \lam i => phi i dleft)})
+                 *> pmap (dmap (Op.Hom __ (phi dright dright)))
+                         (comp-char {_} {_} {_} {_} {_} {_} {dpath \lam i => opSq.{u} phi i i} (sqTri2 {Op.{u} C} {_} {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath \lam i => phi i dleft)} {opArr (dpath (phi dright))} {opArr (dpath (phi dleft))} (dpath \lam i => dpath \lam j => opSq.{u} phi i j))))
+    => tri-transport {_} {_} {_} {_} {_} {dmap (Op.Hom __ (phi dright dright)) (dpath \lam i => opSq.{u} phi i i)}
+                     (dpath \lam i => dmap (Op.Hom __ (phi dright dright)) (dpath \lam m => opSq.{u} phi (dmin m i) m)) (Op.Hom-idd (phi dright dright))
+       *> pmap (inv (~>_->_comp _ _) *>) (pmap (pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))))
+            (dmap-comp-char (Op.Hom __ (phi dright dright)) {_} {_} {_} {_} {_} {dpath \lam i => opSq.{u} phi i i} (sqTri2 {Op.{u} C} {_} {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath \lam i => phi i dleft)} {opArr (dpath (phi dright))} {opArr (dpath (phi dleft))} (dpath \lam i => dpath \lam j => opSq.{u} phi i j))))
+
+  \sfunc inv-conj {X : \Cat} {a b c : X} (p : a = b) (q : c = b) : inv (p *> inv q) = q *> inv p \elim p, q
+    | idp, idp => idp
+
+  \sfunc inv-conj3 {X : \Cat} {a b c d : X} (p : b = a) (q : b = c) (r : c = d) : inv (inv p *> q *> r) = inv r *> inv q *> p \elim p, q, r
+    | idp, idp, idp => idp
+
+  -- | The transport square of the base section of {Tsq} in terms of the 2-cell of {opSq}.
+  \sfunc base-T1.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : coe+-dpath (Bk phi idd).5 *> inv (coe+-dpath (Bk phi idd).4)
+      = inv (~>_->_comp (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath (phi dright)))) (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath \lam i => phi i dleft))))
+        *> pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright)))
+                (inv (dmap_comp (Op.Hom __ (phi dright dright)) {_} {_} {_} {opArr (dpath (phi dright))} {opArr (dpath \lam i => phi i dleft)})
+                 *> pmap (dmap (Op.Hom __ (phi dright dright))) (inv (sqCell (opSq.{u} phi)))
+                 *> dmap_comp (Op.Hom __ (phi dright dright)) {_} {_} {_} {opArr (dpath \lam i => phi i dright)} {opArr (dpath (phi dleft))})
+        *> ~>_->_comp (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath \lam i => phi i dright))) (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath (phi dleft))))
+    => pmap2 (\lam a b => a *> inv b) (base-coe5 phi) (base-coe4 phi)
+       *> alg-A3 (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) _ _ _ _
+       *> pmap (\lam P => inv (~>_->_comp _ _) *> pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) P *> ~>_->_comp _ _)
+               (alg-A3 (dmap (Op.Hom __ (phi dright dright))) _ _ _ _
+                *> pmap (\lam c => inv (dmap_comp _) *> pmap (dmap (Op.Hom __ (phi dright dright))) c *> dmap_comp _)
+                        (inv (inv-conj _ _) *> pmap inv (inv (sqCell-diag (opSq.{u} phi)))))
+
+  \sfunc segL {X : \Cat} {p q s t u v : X} (A : p = q) (K : q = s) (R : s = t) (O : u = v) (T : v = t)
+    : inv K *> inv A *> inv (O *> T *> inv (A *> K *> R)) = R *> inv T *> inv O \elim A, K, R, O, T
+    | idp, idp, idp, idp, idp => idp
+
+  \sfunc segR {X : \Cat} {p q s t u v : X} (A : p = q) (K : q = s) (R : s = t) (O : u = v) (T : v = t)
+    : (O *> T *> inv (A *> K *> R)) *> A *> K = O *> T *> inv R \elim A, K, R, O, T
+    | idp, idp, idp, idp, idp => idp
+
+  \sfunc dist5 {X Y Z W : \Cat} (ev : Y -> W) (dF : X -> Y) (g : Z -> X) {y0 y3 : Y} {x0 x3 : X} {z1 z2 : Z}
+               (D2 : dF x0 = y0) (OC2 : g z1 = x0) (S : z1 = z2) (OC1 : g z2 = x3) (D1 : dF x3 = y3)
+    : pmap ev (inv D2 *> pmap dF (inv OC2 *> pmap g S *> OC1) *> D1)
+      = inv (pmap ev D2) *> inv (pmap (\lam x => ev (dF x)) OC2) *> pmap (\lam z => ev (dF (g z))) S *> pmap (\lam x => ev (dF x)) OC1 *> pmap ev D1
+    \elim D2, OC2, S, OC1, D1
+    | idp, idp, idp, idp, idp => idp
+
+  \sfunc reassoc {X : \Cat} {a0 a1 a2 a3 a4 a5 a6 a7 : X} (K : a1 = a0) (p : a1 = a2) (q : a2 = a3) (m : a3 = a4) (r : a4 = a5) (t : a5 = a6) (K' : a6 = a7)
+    : inv K *> (p *> q *> m *> r *> t) *> K' = (inv K *> p *> q) *> m *> (r *> t *> K') \elim K, p, q, m, r, t, K'
+    | idp, idp, idp, idp, idp, idp, idp => idp
+
+  \sfunc fam-nat {X Y : \Cat} {A B : X -> Y} (h : \Pi (x : X) -> A x = B x) {x x' : X} (q : x = x')
+    : inv (h x) *> pmap A q *> h x' = pmap B q \elim q
+    | idp => pmap (inv (h x) *>) idp_*> *> inv_*>
+
+  \sfunc hom-nat {X Y : \Cat} {A B : X -> Y} (h : \Pi (x : X) -> A x = B x) {x x' : X} (q : x = x')
+    : h x *> pmap B q = pmap A q *> h x' \elim q
+    | idp => inv idp_*>
+
+  -- | The transport square of the base section of {Tsq}, after unfolding {opArr-comp}.
+  \sfunc base-T1'.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : coe+-dpath (Bk phi idd).5 *> inv (coe+-dpath (Bk phi idd).4)
+      = (( pmap (~>_-> (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath \lam i => phi i dleft)))) (opArr-tr (dpath (phi dright)) (phi dright dright, idd))
+           *> opArr-tr (dpath \lam i => phi i dleft) (phi dright dright, comp (dpath (phi dright)) idd))
+         *> inv (pmap Straight.toStraight (comp_idd-right *> inv (pmap (comp (dpath \lam i => phi i dleft)) comp_idd-right)))
+         *> inv (opArr-tr (comp (dpath \lam i => phi i dleft) (dpath (phi dright))) (phi dright dright, idd)))
+        *> pmap (\lam h => opYoneda (opArr h)) (sqCell phi)
+        *> (opArr-tr (comp (dpath (phi dleft)) (dpath \lam i => phi i dright)) (phi dright dright, idd)
+            *> pmap Straight.toStraight (comp_idd-right *> inv (pmap (comp (dpath (phi dleft))) comp_idd-right))
+            *> inv (pmap (~>_-> (dmap (Op.Hom __ (phi dright dright)) (opArr (dpath (phi dleft))))) (opArr-tr (dpath \lam i => phi i dright) (phi dright dright, idd))
+                    *> opArr-tr (dpath (phi dleft)) (phi dright dright, comp (dpath \lam i => phi i dright) idd)))
+    => base-T1 phi
+       *> pmap (\lam P => inv (~>_->_comp _ _) *> pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) (inv (dmap_comp _) *> pmap (dmap (Op.Hom __ (phi dright dright))) P *> dmap_comp _) *> ~>_->_comp _ _)
+               (pmap inv (sqCell-opSq.{u} phi) *> inv-conj3 _ _ _ *> pmap (\lam z => inv opArr-comp *> z *> opArr-comp) (pmap inv (pmap_inv-comm opArr (sqCell phi)) *> inv_inv))
+       *> pmap (\lam P => inv (~>_->_comp _ _) *> P *> ~>_->_comp _ _)
+               (dist5 (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) (dmap (Op.Hom __ (phi dright dright))) opArr _ _ _ _ _
+                *> pmap2 (\lam a b => inv (pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) (dmap_comp _)) *> inv a *> pmap (\lam h => opYoneda (opArr h)) (sqCell phi) *> b
+                                      *> pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) (dmap_comp _))
+                         (opYoneda-opArr-comp *> \peval opArr-comp.Pi _ _) (opYoneda-opArr-comp *> \peval opArr-comp.Pi _ _))
+       *> reassoc _ _ _ _ _ _ _
+       *> pmap2 (\lam a b => a *> pmap (\lam h => opYoneda (opArr h)) (sqCell phi) *> b)
+                (pmap (\lam R => inv (~>_->_comp _ _) *> inv (pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) (dmap_comp _)) *> inv (_ *> _ *> inv R)) (\peval opArr-comp.Rest _ _)
+                 *> segL _ _ _ _ _)
+                (pmap (\lam R => (_ *> _ *> inv R) *> pmap (\lam p => ~>_-> p (Op.Hom-idd (phi dright dright))) (dmap_comp _) *> ~>_->_comp _ _) (\peval opArr-comp.Rest _ _)
+                 *> segR _ _ _ _ _)
+
+  \sfunc pmap5 {X W : \Cat} (G : X -> W) {a0 a1 a2 a3 a4 a5 : X} (A1 : a0 = a1) (A2 : a2 = a1) (A3 : a2 = a3) (A4 : a3 = a4) (A5 : a5 = a4)
+    : pmap G (A1 *> inv A2 *> A3 *> A4 *> inv A5) = pmap G A1 *> inv (pmap G A2) *> pmap G A3 *> pmap G A4 *> inv (pmap G A5) \elim A1, A2, A3, A4, A5
+    | idp, idp, idp, idp, idp => idp
+
+  \sfunc fin-alg {X : \Cat} {p0 p1 p2 p3 p4 p5 p6 p7 : X} (PX : p0 = p1) (cab : p1 = p2) (c1 : p3 = p2) (S : p2 = p4) (c2 : p5 = p4) (cac : p6 = p4) (PY : p7 = p6)
+    : PX *> inv (c1 *> inv cab) *> (c1 *> S *> inv c2) *> (c2 *> inv cac) *> inv PY = (PX *> cab) *> S *> inv (PY *> cac)
+    \elim PX, cab, c1, S, c2, cac, PY
+    | idp, idp, idp, idp, idp, idp, idp => idp
+
+  \sfunc ci-mid {X : \Cat} {u v u' v' : X} (c1 : u' = u) (c2 : v' = v) (S : u = v) (M : u' = v') (e : inv c1 *> M *> c2 = S) : M = c1 *> S *> inv c2 \elim c1, c2, e
+    | idp, idp, idp => inv (idp_*> *> idp_*>)
+
+  \sfunc main-path.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : boundaryAlg.path phi (Bk phi idd)
+      = pmap Straight.toStraight
+          ((pmap (comp (dpath \lam i => phi i dleft)) (pmap (\lam q => Straight.fromStraight q) (opArr-tr (dpath (phi dright)) (phi dright dright, idd))) *> pmap (comp (dpath \lam i => phi i dleft)) comp_idd-right)
+           *> sqCell phi
+           *> inv (pmap (comp (dpath (phi dleft))) (pmap (\lam q => Straight.fromStraight q) (opArr-tr (dpath \lam i => phi i dright) (phi dright dright, idd))) *> pmap (comp (dpath (phi dleft))) comp_idd-right))
+    => (\peval boundaryAlg.path phi (Bk phi idd)) *> (\let | d => phi dright dright
+            | ab : phi dleft dleft ~> phi dright dleft => dpath \lam i => phi i dleft
+            | ac : phi dleft dleft ~> phi dleft dright => dpath (phi dleft)
+            | bd : phi dright dleft ~> d => dpath (phi dright)
+            | cd : phi dleft dright ~> d => dpath \lam i => phi i dright
+            | b => Bk phi idd
+            | xi => pmap (\lam q => Straight.fromStraight q) (opArr-tr bd (d, idd))
+            | xi' => pmap (\lam q => Straight.fromStraight q) (opArr-tr cd (d, idd))
+            | pre : inv (opArr-tr ab (d, Straight.fromStraight b.2)) *> pmap+ (\lam q => ~>_-> (dmap (Op.Hom __ d) (opArr ab)) q) (Straight.toStraight_fromStraight b.2)
+                    *> (pmap (~>_-> (dmap (Op.Hom __ d) (opArr ab))) (opArr-tr bd (d, idd)) *> opArr-tr ab (d, comp bd idd))
+                    = pmap (\lam w => Straight.toStraight (comp ab w)) xi
+              => pmap (inv (opArr-tr ab (d, Straight.fromStraight b.2)) *>)
+                      (inv *>-assoc
+                       *> pmap (__ *> opArr-tr ab (d, comp bd idd))
+                               (inv (pmap_*>-comm (~>_-> (dmap (Op.Hom __ d) (opArr ab))) _ _)
+                                *> pmap (pmap (~>_-> (dmap (Op.Hom __ d) (opArr ab)))) (hom-nat (\lam q => Straight.toStraight_fromStraight q) (opArr-tr bd (d, idd)))))
+                 *> fam-nat (\lam w => opArr-tr ab (d, w)) xi
+            | suf : inv (pmap (~>_-> (dmap (Op.Hom __ d) (opArr ac))) (opArr-tr cd (d, idd)) *> opArr-tr ac (d, comp cd idd))
+                    *> inv (pmap+ (\lam q => ~>_-> (dmap (Op.Hom __ d) (opArr ac)) q) (Straight.toStraight_fromStraight b.1))
+                    *> opArr-tr ac (d, Straight.fromStraight b.1)
+                    = inv (pmap (\lam w => Straight.toStraight (comp ac w)) xi')
+              => inv (inv-conj3 _ _ _) *> pmap inv
+                   (pmap (inv (opArr-tr ac (d, Straight.fromStraight b.1)) *>)
+                      (inv *>-assoc
+                       *> pmap (__ *> opArr-tr ac (d, comp cd idd))
+                               (inv (pmap_*>-comm (~>_-> (dmap (Op.Hom __ d) (opArr ac))) _ _)
+                                *> pmap (pmap (~>_-> (dmap (Op.Hom __ d) (opArr ac)))) (hom-nat (\lam q => Straight.toStraight_fromStraight q) (opArr-tr cd (d, idd)))))
+                    *> fam-nat (\lam w => opArr-tr ac (d, w)) xi')
+            | mid : inv (opArr-tr (comp ab bd) (d, idd)) *> pmap (\lam h => opYoneda (opArr h)) (sqCell phi) *> opArr-tr (comp ac cd) (d, idd)
+                    = pmap (\lam h => Straight.toStraight (comp h idd)) (sqCell phi)
+              => fam-nat (\lam h => opArr-tr h (d, idd)) (sqCell phi)
+       \in pmap (\lam T => inv (opArr-tr ab (d, Straight.fromStraight b.2)) *> pmap+ (\lam q => ~>_-> (dmap (Op.Hom __ d) (opArr ab)) q) (Straight.toStraight_fromStraight b.2)
+                            *> T *> inv (pmap+ (\lam q => ~>_-> (dmap (Op.Hom __ d) (opArr ac)) q) (Straight.toStraight_fromStraight b.1)) *> opArr-tr ac (d, Straight.fromStraight b.1))
+                (base-T1' phi)
+           *> regroup _ _ _ _ _ _ _ _ _ _ _
+           *> pmap2 (\lam P Q => P *> inv (pmap Straight.toStraight (comp_idd-right *> inv (pmap (comp ab) comp_idd-right))) *> Q)
+                    pre (pmap2 (\lam M R => M *> pmap Straight.toStraight (comp_idd-right *> inv (pmap (comp ac) comp_idd-right)) *> R) mid suf)
+           *> inv (pmap5 Straight.toStraight _ _ _ _ _)
+           *> pmap (pmap Straight.toStraight)
+                (pmap (\lam M => pmap (comp ab) xi *> inv (comp_idd-right *> inv (pmap (comp ab) comp_idd-right)) *> M
+                                  *> (comp_idd-right *> inv (pmap (comp ac) comp_idd-right)) *> inv (pmap (comp ac) xi'))
+                      (ci-mid comp_idd-right comp_idd-right (sqCell phi) _ (fam-nat (\lam f => comp_idd-right {C} {_} {_} {f}) (sqCell phi)))
+                 *> fin-alg _ _ _ _ _ _ _))
+
+
+  \sfunc regroup {X : \Cat} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 : X} (o : a0 = a1) (pp : a1 = a2) (r2 : a2 = a3) (it2 : a3 = a4) (io2 : a4 = a5)
+                 (m : a5 = a6) (o1 : a6 = a7) (t1 : a7 = a8) (ir1 : a8 = a9) (pq : a9 = a10) (oq : a10 = a11)
+    : o *> pp *> ((r2 *> it2 *> io2) *> m *> (o1 *> t1 *> ir1)) *> pq *> oq = (o *> pp *> r2) *> it2 *> (io2 *> m *> o1) *> t1 *> (ir1 *> pq *> oq)
+    \elim o, pp, r2, it2, io2, m, o1, t1, ir1, pq, oq
+    | idp, idp, idp, idp, idp, idp, idp, idp, idp, idp, idp => idp
+
+  \sfunc AlgCo-ext {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} {x x' : phi dright dleft ~> r} {y y' : phi dleft dright ~> r} (X : x = x') (Y : y = y')
+                   {P : comp (dpath \lam i => phi i dleft) x = comp (dpath (phi dleft)) y} {P' : comp (dpath \lam i => phi i dleft) x' = comp (dpath (phi dleft)) y'}
+                   (e : P = pmap (comp (dpath \lam i => phi i dleft)) X *> P' *> inv (pmap (comp (dpath (phi dleft))) Y))
+    : ((x, (y, P)) : AlgCo phi r) = (x', (y', P')) \elim X, Y
+    | idp, idp => path \lam t => (x, (y, (e *> idp_*>) @ t))
+
+  -- | The algebraic cocone of the base boundary of {Tsq} is given by the sides and the 2-cell of {phi}.
+  \sfunc boundary-base.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : boundaryAlg phi (Bk phi idd) = (dpath (phi dright), (dpath \lam i => phi i dright, sqCell phi))
+    => AlgCo-ext phi (pmap (\lam q => Straight.fromStraight q) (opArr-tr (dpath (phi dright)) (phi dright dright, idd)) *> comp_idd-right)
+                     (pmap (\lam q => Straight.fromStraight q) (opArr-tr (dpath \lam i => phi i dright) (phi dright dright, idd)) *> comp_idd-right)
+         (pmap (pmap+ (\lam q => Straight.fromStraight q)) (main-path phi)
+          *> pmap2 (\lam a b => a *> sqCell phi *> inv b)
+                   (inv (pmap_*>-comm (comp (dpath \lam i => phi i dleft)) (pmap (\lam q => Straight.fromStraight q) (opArr-tr (dpath (phi dright)) (phi dright dright, idd))) comp_idd-right))
+                   (inv (pmap_*>-comm (comp (dpath (phi dleft))) (pmap (\lam q => Straight.fromStraight q) (opArr-tr (dpath \lam i => phi i dright) (phi dright dright, idd))) comp_idd-right)))
+
+  -- | Cocones under {phi} with vertex {r} are algebraic cocones.
+  \lemma coconeAlg-equiv {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+    : IsEquiv {Cocone phi r} {AlgCo phi r} (\lam c => coconeAlg phi c.1 c.2.1 c.2.2)
+    => transport (IsEquiv {Cocone phi r} {AlgCo phi r})
+         (ext \lam c => pmap (\lam P => ((c.2.1, (dpath \lam m => c.1 m dright, P)) : AlgCo phi r)) (inv (\peval coconeAlg.path phi c.1 c.2.1 c.2.2))) $
+       \let | Y => \Sigma (y : phi dleft dright ~> r) (\Sigma (c' : phi dleft dleft ~> r) (c' = comp (dpath (phi dleft)) y))
+            | Wd (w : phi dleft ~> const r) : Y
+              => (dpath \lam m => w m dright, (dpath \lam m => w m dleft,
+                    inv comp_idd-right *> comp-char {_} {_} {_} {_} {_} {_} {wdiag w} (wtri2 w) *> inv (comp-char {_} {_} {_} {_} {_} {_} {wdiag w} (wtri1 w))))
+            | Wd-equiv : IsEquiv Wd
+              => IsEquiv.leftFactor (inP (contr-right (\lam (y : phi dleft dright ~> r) => rsigma (comp (dpath (phi dleft)) y)))) (const-ev1-equiv r (phi dleft))
+       \in IsEquiv.trans (inP (sigma-right (\lam (w : phi dleft ~> const r) => sigma-right (\lam (g : phi dright dleft ~> r) =>
+                                comp-equiv {C} {_} {_} {_} {dpath \lam i => phi i dleft} {g} {dpath \lam m => w m dleft}))))
+             {\lam (s : \Sigma (w : phi dleft ~> const r) (\Sigma (g : phi dright dleft ~> r) (comp (dpath \lam i => phi i dleft) g = dpath \lam m => w m dleft)))
+                  => ((s.2.1, ((Wd s.1).1, s.2.2 *> (Wd s.1).2.2)) : AlgCo phi r)}
+             (IsEquiv.trans {_} {_} {_}
+                {\lam (s : \Sigma (w : phi dleft ~> const r) (\Sigma (g : phi dright dleft ~> r) (comp (dpath \lam i => phi i dleft) g = dpath \lam m => w m dleft)))
+                     => ((Wd s.1, s.2) : \Sigma (q : Y) (\Sigma (g : phi dright dleft ~> r) (comp (dpath \lam i => phi i dleft) g = q.2.1)))}
+                (inP (sigma-equiv {_} {_} {\lam w => \Sigma (g : phi dright dleft ~> r) (comp (dpath \lam i => phi i dleft) g = dpath \lam m => w m dleft)}
+                                              {\lam (q : Y) => \Sigma (g : phi dright dleft ~> r) (comp (dpath \lam i => phi i dleft) g = q.2.1)}
+                                              (IsEquiv.toQEquiv Wd-equiv) (\lam _ => idEquiv)))
+                            {\lam s => coconeAlg-equiv.contr phi r s} (inP (coconeAlg-equiv.contr phi r)))
+    \where {
+      \func contr {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+        : QEquiv {\Sigma (q : \Sigma (y : phi dleft dright ~> r) (\Sigma (c' : phi dleft dleft ~> r) (c' = comp (dpath (phi dleft)) y)))
+                         (\Sigma (g : phi dright dleft ~> r) (comp (dpath \lam i => phi i dleft) g = q.2.1))}
+                 {AlgCo phi r} \cowith
+        | f s => (s.2.1, (s.1.1, s.2.2 *> s.1.2.2))
+        | ret t => ((t.2.1, (comp (dpath (phi dleft)) t.2.1, idp)), (t.1, t.2.2))
+        | ret_f s => aux s.1.2.2
+        | f_sec t => idp
+        \where
+          \func aux {y : phi dleft dright ~> r} {c' : phi dleft dleft ~> r} {g : phi dright dleft ~> r} {e : comp (dpath \lam i => phi i dleft) g = c'}
+                    (P : c' = comp (dpath (phi dleft)) y)
+            : ((y, (comp (dpath (phi dleft)) y, idp)), (g, e *> P))
+              = {\Sigma (q : \Sigma (y : phi dleft dright ~> r) (\Sigma (c' : phi dleft dleft ~> r) (c' = comp (dpath (phi dleft)) y)))
+                        (\Sigma (g : phi dright dleft ~> r) (comp (dpath \lam i => phi i dleft) g = q.2.1))}
+                ((y, (c', P)), (g, e)) \elim P
+            | idp => idp
+    }
+
+  \lemma conj4-equiv {X : \Cat} {a0 a1 a2 a3 a4 a5 : X} (p1 : a0 = a1) (p2 : a1 = a2) (q1 : a3 = a4) (q2 : a4 = a5)
+    : IsEquiv (\lam (E : a2 = a3) => p1 *> p2 *> E *> q1 *> q2) \elim p1, p2, q1, q2
+    | idp, idp, idp, idp => transport IsEquiv (ext \lam E => inv (idp_*> *> idp_*>)) (inP idEquiv)
+
+  -- | Boundaries of {Tsq} are algebraic cocones.
+  \lemma boundaryAlg-equiv.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsEquiv (boundaryAlg phi {r})
+    => transport (IsEquiv {Boundary (Tsq phi r)} {AlgCo phi r})
+         (ext \lam b => pmap (\lam P => ((Straight.fromStraight b.2, (Straight.fromStraight b.1, pmap+ (\lam q => Straight.fromStraight q) P)) : AlgCo phi r))
+                             (inv (\peval boundaryAlg.path phi b))) $
+       \let | T => Tsq phi r
+            | trab => ~>_-> (dmap (Op.Hom __ r) (opArr (dpath \lam i => phi i dleft)))
+            | trac => ~>_-> (dmap (Op.Hom __ r) (opArr (dpath (phi dleft))))
+            | S1 => \Sigma (g : T dleft dright) (\Sigma (b : T dright dleft) (\Sigma (c : T dright dright) (\Sigma (trab g = c) (trac b = c))))
+            | S2 => \Sigma (g : T dleft dright) (\Sigma (b : T dright dleft) (trab g = trac b))
+            | S3 => \Sigma (x : phi dright dleft ~> r) (\Sigma (y : phi dleft dright ~> r) (comp (dpath \lam i => phi i dleft) x = comp (dpath (phi dleft)) y))
+            | Fb (g : T dleft dright) (b : T dright dleft) (E : trab g = trac b)
+                : comp (dpath \lam i => phi i dleft) (Straight.fromStraight g) = comp (dpath (phi dleft)) (Straight.fromStraight b)
+                => pmap+ (\lam q => Straight.fromStraight q)
+                     (inv (opArr-tr (dpath \lam i => phi i dleft) (r, Straight.fromStraight g)) *> pmap+ (\lam q => trab q) (Straight.toStraight_fromStraight g)
+                      *> E *> inv (pmap+ (\lam q => trac q) (Straight.toStraight_fromStraight b)) *> opArr-tr (dpath (phi dleft)) (r, Straight.fromStraight b))
+       \in IsEquiv.trans {_} {S1} {AlgCo phi r} {\lam (bd : Boundary T) => ((bd.2, (bd.1, (bd.3, (coe+-dpath bd.5, coe+-dpath bd.4)))) : S1)}
+             (IsEquiv.trans {_} {_} {S1} {\lam (bd : Boundary T) => boundaryAlg-equiv.reshape phi r bd} (inP (boundaryAlg-equiv.reshape phi r))
+                {\lam s => ((s.1, (s.2.1, (s.2.2.1, (coe+-dpath s.2.2.2.1, coe+-dpath s.2.2.2.2)))) : S1)}
+                (inP (sigma-right \lam g => sigma-right \lam b => sigma-right \lam c =>
+                        sigma-equiv {_} {_} {\lam _ => DPath (\lam j => T dright j) b c} {\lam _ => trac b = c}
+                                    (IsEquiv.toQEquiv (coe+-dpath-equiv (\lam i => T i dright) g c)) \lam _ => IsEquiv.toQEquiv (coe+-dpath-equiv (\lam j => T dright j) b c))))
+             {\lam (s : S1) => ((Straight.fromStraight s.1, (Straight.fromStraight s.2.1, Fb s.1 s.2.1 (s.2.2.2.1 *> inv s.2.2.2.2))) : AlgCo phi r)}
+             (IsEquiv.trans {S1} {S2} {AlgCo phi r} {\lam (s : S1) => ((s.1, (s.2.1, s.2.2.2.1 *> inv s.2.2.2.2)) : S2)}
+                (inP (sigma-right \lam g => sigma-right \lam b => boundaryAlg-equiv.contr (trab g) (trac b)))
+                {\lam (s : S2) => ((Straight.fromStraight s.1, (Straight.fromStraight s.2.1, Fb s.1 s.2.1 s.2.2)) : AlgCo phi r)}
+                (IsEquiv.trans {S2} {S3} {AlgCo phi r} {\lam (s : S2) => ((Straight.fromStraight s.1, (Straight.fromStraight s.2.1, Fb s.1 s.2.1 s.2.2)) : S3)}
+                   (inP (sigma-equiv Straight.equiv \lam g => sigma-equiv Straight.equiv \lam b => IsEquiv.toQEquiv
+                           (IsEquiv.trans (conj4-equiv (inv (opArr-tr (dpath \lam i => phi i dleft) (r, Straight.fromStraight g))) (pmap+ (\lam q => trab q) (Straight.toStraight_fromStraight g))
+                                                         (inv (pmap+ (\lam q => trac q) (Straight.toStraight_fromStraight b))) (opArr-tr (dpath (phi dleft)) (r, Straight.fromStraight b)))
+                                          (pmapIsEquiv (inP Straight.equiv)))))
+                   {\lam (t : S3) => boundaryAlg-equiv.toAlg phi r t} (inP (boundaryAlg-equiv.toAlg phi r))))
+    \where {
+      \func reshape.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+        : QEquiv {Boundary (Tsq phi r)}
+                 {\Sigma (g : Tsq phi r dleft dright) (\Sigma (b : Tsq phi r dright dleft) (\Sigma (c : Tsq phi r dright dright)
+                    (\Sigma (DPath (\lam i => Tsq phi r i dright) g c) (DPath (\lam j => Tsq phi r dright j) b c))))} \cowith
+        | f bd => (bd.2, (bd.1, (bd.3, (bd.5, bd.4))))
+        | ret s => (s.2.1, s.1, s.2.2.1, s.2.2.2.2, s.2.2.2.1)
+        | ret_f _ => idp
+        | f_sec _ => idp
+
+      \func toAlg {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+        : QEquiv {\Sigma (x : phi dright dleft ~> r) (\Sigma (y : phi dleft dright ~> r) (comp (dpath \lam i => phi i dleft) x = comp (dpath (phi dleft)) y))}
+                 {AlgCo phi r} \cowith
+        | f t => (t.1, (t.2.1, t.2.2))
+        | ret t => (t.1, (t.2.1, t.2.2))
+        | ret_f _ => idp
+        | f_sec _ => idp
+
+      \func contr {X : \Cat} (u v : X) : QEquiv {\Sigma (c : X) (\Sigma (u = c) (v = c))} {u = v} \cowith
+        | f s => s.2.1 *> inv s.2.2
+        | ret E => (v, (E, idp))
+        | ret_f s => aux s.2.2
+        | f_sec E => idp
+        \where
+          \func aux {X : \Cat} {u v c : X} {e1 : u = c} (e2 : v = c) : ((v, (e1 *> inv e2, idp)) : \Sigma (c : X) (\Sigma (u = c) (v = c))) = (c, (e1, e2)) \elim e2
+            | idp => idp
+    }
+
+  -- | The algebraic cocones of the cocone and of the boundary given by an arrow out of the bottom right corner agree.
+  \sfunc cocone-boundary.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {r : C} (k : phi dright dright ~> r)
+    : coconeAlg phi (cocone phi k).1 (cocone phi k).2.1 (cocone phi k).2.2 = boundaryAlg phi (Bk phi k)
+    => leftFib-tr (leftFib-path {\Sigma⁺ (r : C) (phi dright dright ~> r)} {\lam z => AlgCo phi z.1}
+                                (leftFib-pullback (\lam (z :⁺ \Sigma⁺ (r : C) (phi dright dright ~> r)) => z.1) (AlgCo-leftFib phi))
+                                (\lam z => coconeAlg phi (dpath \lam l => \lam j => coSq phi z.2 l j l) (dpath \lam m => coSq phi z.2 dright dleft m)
+                                                         (dpath \lam l => dpath \lam m => coSq phi z.2 l dleft (dmin l m)))
+                                (\lam z => boundaryAlg phi (Bk phi z.2)))
+                  (coslice-arrow (r, k)) (cocone-base phi *> inv (boundary-base phi))
+
+  -- | A square is a pushout square if and only if {opSq} of it is a pullback square.
+  \lemma opSq-char.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsPushoutSquare phi <-> IsPullbackSquare (opSq.{u} phi)
+    => (\lam po => (opPullback-char.{u} (opSq.{u} phi)).2 \lam r => (eB phi r).2 ((eq phi r).1 ((eC phi r).1 ((pushout-char phi).1 po r))),
+        \lam pb => (pushout-char phi).2 \lam r => (eC phi r).2 ((eq phi r).2 ((eB phi r).1 ((opPullback-char.{u} (opSq.{u} phi)).1 pb r))))
+    \where \private {
+      \lemma eC {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+        : IsEquiv (cocone phi {r}) <-> IsEquiv (\lam (k : phi dright dright ~> r) => coconeAlg phi (cocone phi k).1 (cocone phi k).2.1 (cocone phi k).2.2)
+        => (\lam e => IsEquiv.trans e (coconeAlg-equiv phi r), \lam e => IsEquiv.leftFactor (coconeAlg-equiv phi r) e)
+
+      \lemma eB.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+        : IsEquiv (\lam (s : Op.Hom (opSq.{v} phi dleft dleft) r) => boundary {Tsq.{v} phi r} (trSec {Tsq.{v} phi r} s))
+          <-> IsEquiv (\lam (k : phi dright dright ~> r) => boundaryAlg.{v} phi (Bk.{v} phi k))
+        => (\lam e => IsEquiv.trans (IsEquiv.trans (inP (symQEquiv Straight.equiv)) e) (boundaryAlg-equiv.{v} phi r),
+            \lam e => IsEquiv.rightFactor (inP (symQEquiv Straight.equiv)) (IsEquiv.leftFactor (boundaryAlg-equiv.{v} phi r) e))
+
+      \lemma eq.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+        : IsEquiv (\lam (k : phi dright dright ~> r) => coconeAlg phi (cocone phi k).1 (cocone phi k).2.1 (cocone phi k).2.2)
+          <-> IsEquiv (\lam (k : phi dright dright ~> r) => boundaryAlg.{v} phi (Bk.{v} phi k))
+        => (transport IsEquiv (ext (cocone-boundary.{v} phi)), transportInv IsEquiv (ext (cocone-boundary.{v} phi)))
+    }
+  -- | The base element `opYoneda idd` of `Op.Hom (toOp x) x`.
+  \func s0.{u} {C : \Cat u} (x : C) : Op.Hom (Op.toOp x) x
+    => opYoneda {C} {x} {Op.toOp x} idd
+
+  -- | Transport of the base element along {w} in the second variable is {opYoneda} of `opArr w`.
+  \func natN.{u} {C : \Cat u} {x c : C} (w : x ~> c)
+    : ~>_-> (dmap (Op.Hom (Op.toOp x)) w) (s0 x) = opYoneda {C} {c} {Op.toOp x} (opArr w)
+    => pmap+ {Op.Hom (Op.toOp x) x} (\lam q => ~>_-> (dmap (Op.Hom (Op.toOp x)) w) q) ~>_->_idd *> inv (reprTr (c, w)) *> inv (opArr-tr w (c, idd))
+
+  -- | Transport of the base element along two arrows in the second variable.
+  \func natL.{u} {C : \Cat u} {x c : C} {d :⁺ C} (u : x ~> c) (v :⁺ c ~> d)
+    : ~>_-> (dmap (Op.Hom (Op.toOp x)) v) (~>_-> (dmap (Op.Hom (Op.toOp x)) u) (s0 x)) = ~>_-> (dmap (Op.Hom (Op.toOp x)) (comp u v)) (s0 x)
+    => inv (~>_->_comp (dmap (Op.Hom (Op.toOp x)) u) (dmap (Op.Hom (Op.toOp x)) v))
+       *> pmap+ {Op.Hom (Op.toOp x) x ~> Op.Hom (Op.toOp x) d} (\lam p => ~>_-> p (s0 x)) (inv (dmap_comp (Op.Hom (Op.toOp x)) {_} {_} {_} {u} {v}))
+
+  -- | The left side of the interchange coherence {Kcoh}, covariantly in `(d, v)`.
+  \func KL.{u} {C : \Cat u} {x c : C} (u : x ~> c) (z :⁺ \Sigma⁺ (d : C) (c ~> d))
+    : ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (~>_-> (dmap (Op.Hom (Op.toOp x)) u) (s0 x))
+      = ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (opYoneda {C} {c} {Op.toOp x} (opArr u))
+    => natL u z.2
+       *> pmap+ {Op.Hom (Op.toOp x) x} (\lam q => ~>_-> (dmap (Op.Hom (Op.toOp x)) (comp u z.2)) q) ~>_->_idd
+       *> inv (reprTr {C} {x} (z.1, comp u z.2))
+       *> pmap+ {x ~> z.1} {ReprFunctor x z.1} (\lam w => Straight.toStraight w) (comp_idd-right *> inv (pmap+ {c ~> z.1} (\lam w => comp u w) comp_idd-right))
+       *> inv (opArr-tr u (z.1, comp z.2 idd))
+       *> pmap+ {ReprFunctor c z.1} (\lam q => ~>_-> (dmap (Op.Hom __ z.1) (opArr u)) q) (reprTr {C} {c} z)
+       *> opHom-interchange z.2 (opArr u) (Op.Hom-idd c)
+
+  -- | The right side of the interchange coherence {Kcoh}, covariantly in `(d, v)`.
+  \func KR.{u} {C : \Cat u} {x c : C} (u : x ~> c) (z :⁺ \Sigma⁺ (d : C) (c ~> d))
+    : ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (~>_-> (dmap (Op.Hom (Op.toOp x)) u) (s0 x))
+      = ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (opYoneda {C} {c} {Op.toOp x} (opArr u))
+    => pmap+ {Op.Hom (Op.toOp x) c} (\lam q => ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) q) (natN u)
+
+  -- | The interchange coherence: {KL} and {KR} agree, by Yoneda in `(d, v)` from the case `v = idd`.
+  \sfunc K'.{u} {C : \Cat u} {x c : C} (u : x ~> c) (z : \Sigma⁺ (d : C) (c ~> d)) : KL u z = KR u z
+    => leftFib-tr (leftFib-path {\Sigma⁺ (d : C) (c ~> d)}
+                    {\lam z => ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (~>_-> (dmap (Op.Hom (Op.toOp x)) u) (s0 x))
+                                = ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (opYoneda {C} {c} {Op.toOp x} (opArr u))}
+                    (leftFib-path {\Sigma⁺ (d : C) (c ~> d)} {\lam z => Op.Hom (Op.toOp x) z.1}
+                       (leftFib-pullback (\lam (z :⁺ \Sigma⁺ (d : C) (c ~> d)) => Op.Hom (Op.toOp x) z.1) universe-leftFib)
+                       (\lam z => ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (~>_-> (dmap (Op.Hom (Op.toOp x)) u) (s0 x)))
+                       (\lam z => ~>_-> (dmap (Op.Hom (Op.toOp x)) z.2) (opYoneda {C} {c} {Op.toOp x} (opArr u))))
+                    (\lam z => KL.{u} u z) (\lam z => KR.{u} u z))
+                  (coslice-arrow z) (K-base.{u} u)
+
+  \sfunc K-base.{u} {C : \Cat u} {x c : C} (u : x ~> c) : KL u (c, idd) = KR u (c, idd)
+    => \let | F => Op.Hom (Op.toOp x)
+            | h0 => Op.Hom-idd x
+            | tr1 => ~>_-> (dmap (Op.Hom __ c) (opArr u))
+            | ts (w : x ~> c) : ReprFunctor x c => Straight.toStraight w
+            | rho-u : comp u idd = u => comp_idd-right
+            | rho-i : comp (idd {C} {c}) idd = idd => comp_idd-right
+            | Rs => pmap (\lam w => ~>_-> (dmap F w) (s0 x)) rho-u
+            | Rh => pmap (\lam w => ~>_-> (dmap F w) h0) rho-u
+            | Rts => pmap (\lam w => ts (comp w idd)) rho-u
+            | S => pmap (\lam (w : c ~> c) => ts (comp u w)) rho-i
+            | T => pmap (\lam (w : c ~> c) => tr1 (Straight.toStraight w)) rho-i
+            | eL : natL u idd = ~>_->_idd *> inv Rs
+              => pmap2 (\lam a b => inv a *> pmap+ {Op.Hom (Op.toOp x) x ~> Op.Hom (Op.toOp x) c} (\lam p => ~>_-> p (s0 x)) (inv b))
+                       (~>_->_comp-idd (dmap F u)) (dmap_comp-idd F {x} {c} {u})
+                 *> alg-eL (\lam p => ~>_-> p (s0 x)) comp_idd-right (pmap (dmap F) rho-u) ~>_->_idd
+            | e1 : pmap+ {Op.Hom (Op.toOp x) x} (\lam q => ~>_-> (dmap F (comp u idd)) q) ~>_->_idd = Rs *> pmap+ {Op.Hom (Op.toOp x) x} (\lam q => ~>_-> (dmap F u) q) ~>_->_idd *> inv Rh
+              => solveL2 (hom-nat {_} {_} {\lam w => ~>_-> (dmap F w) (s0 x)} {\lam w => ~>_-> (dmap F w) h0}
+                                  (\lam w => pmap+ {Op.Hom (Op.toOp x) x} (\lam q => ~>_-> (dmap F w) q) ~>_->_idd) rho-u)
+            | e2 : inv (reprTr (c, comp u idd)) = Rh *> inv (reprTr (c, u)) *> inv Rts
+              => solveInv (hom-nat {_} {_} {\lam w => ts (comp w idd)} {\lam w => ~>_-> (dmap F w) h0} (\lam w => reprTr (c, w)) rho-u)
+            | e3 : pmap+ {x ~> c} {ReprFunctor x c} (\lam w => Straight.toStraight w) (comp_idd-right *> inv (pmap+ {c ~> c} (\lam w => comp u w) rho-i)) = Rts *> inv S
+              => pmap_*>-comm ts _ _ *> pmap2 (\lam a b => a *> b) (pmap (pmap ts) (hself (\lam (w : x ~> c) => comp_idd-right {C} {x} {c} {w}) u)) (pmap_inv-comm ts _)
+            | e4 : inv (opArr-tr u (c, comp idd idd)) = S *> inv (opArr-tr u (c, idd)) *> inv T
+              => solveInv (hom-nat {_} {_} {\lam (w : c ~> c) => tr1 (Straight.toStraight w)} {\lam (w : c ~> c) => ts (comp u w)} (\lam w => opArr-tr u (c, w)) rho-i)
+            | e56 : pmap+ {ReprFunctor c c} (\lam q => tr1 q) (reprTr {C} {c} (c, idd)) *> opHom-interchange idd (opArr u) (Op.Hom-idd c) = T *> inv ~>_->_idd
+              => pmap (\lam a => pmap+ {ReprFunctor c c} (\lam q => tr1 q) a *> opHom-interchange idd (opArr u) (Op.Hom-idd c)) reprTr-idd
+                 *> pmap (__ *> opHom-interchange idd (opArr u) (Op.Hom-idd c))
+                         (pmap_*>-comm (\lam q => tr1 q) (pmap Straight.toStraight rho-i) (inv ~>_->_idd) *> pmap (T *>) (pmap_inv-comm (\lam q => tr1 q) ~>_->_idd))
+                 *> pmap ((T *> inv (pmap (\lam q => tr1 q) ~>_->_idd)) *>) (opHom-interchange-idd (opArr u) (Op.Hom-idd c))
+                 *> cancel-mid T _ _
+     \in base-alg ~>_->_idd Rs Rh (pmap+ {Op.Hom (Op.toOp x) x} (\lam q => ~>_-> (dmap F u) q) ~>_->_idd) (reprTr (c, u)) Rts S (opArr-tr u (c, idd)) T ~>_->_idd
+                  eL e1 e2 e3 e4 e56
+         *> inv (iota-nat (natN u))
+
+  -- | The tail of {KL} is {natN} followed by {opArr-comp.Pi} and `opYoneda-comp`.
+  \sfunc E-char.{u} {C : \Cat u} {x c d : C} (u : x ~> c) (v : c ~> d)
+    : pmap+ {Op.Hom (Op.toOp x) x} (\lam q => ~>_-> (dmap (Op.Hom (Op.toOp x)) (comp u v)) q) ~>_->_idd
+       *> inv (reprTr {C} {x} (d, comp u v))
+       *> pmap+ {x ~> d} {ReprFunctor x d} (\lam w => Straight.toStraight w) (comp_idd-right *> inv (pmap+ {c ~> d} (\lam w => comp u w) comp_idd-right))
+       *> inv (opArr-tr u (d, comp v idd))
+       *> pmap+ {ReprFunctor c d} (\lam q => ~>_-> (dmap (Op.Hom __ d) (opArr u)) q) (reprTr {C} {c} (d, v))
+       *> opHom-interchange v (opArr u) (Op.Hom-idd c)
+      = natN (comp u v) *> opArr-comp.Pi u v *> opYoneda-comp v (opArr u)
+    => inv (alg-E (\lam q => ~>_-> (dmap (Op.Hom __ d) (opArr u)) q) _ _ _ _ _ _ _ _ _ _)
+       *> inv (pmap2 (\lam P R => natN (comp u v) *> P *> R)
+                     ((\peval opArr-comp.Pi u v) *> pmap (\lam R => opArr-tr (comp u v) (d, idd) *> pmap Straight.toStraight (comp_idd-right *> inv (pmap (comp u) comp_idd-right)) *> inv R)
+                                                        (\peval opArr-comp.Rest u v))
+                     (\peval opYoneda-comp v (opArr u)))
+
+  \sfunc alg-E {X Y : \Cat} (f : X -> Y) {y0 y1 y2 y3 y4 y5 y6 y7 : Y} {x0 x1 x2 : X}
+               (a : y0 = y1) (b : y1 = y2) (o : y3 = y2) (p : y2 = y4) (D : y5 = y6) (CC : y6 = f x0) (Xp : x0 = x1) (Yp : f x1 = y4) (Z : x1 = x2) (W : f x2 = y7)
+    : (a *> b *> inv o) *> (o *> p *> inv (D *> CC *> pmap f Xp *> Yp)) *> (D *> CC *> pmap f (Xp *> Z) *> W) = a *> b *> p *> inv Yp *> pmap f Z *> W
+    \elim a, b, o, p, D, CC, Xp, Yp, Z, W
+    | idp, idp, idp, idp, idp, idp, idp, idp, idp, idp => idp
+
+  -- | The interchange coherence: {natL} is {natN} composed with the inverses of {opYoneda-comp}, {opArr-comp.Pi} and {natN}.
+  \sfunc Kcoh.{u} {C : \Cat u} {x c d : C} (u : x ~> c) (v : c ~> d)
+    : pmap+ {Op.Hom (Op.toOp x) c} (\lam q => ~>_-> (dmap (Op.Hom (Op.toOp x)) v) q) (natN u) *> inv (opYoneda-comp v (opArr u)) *> inv (opArr-comp.Pi u v) *> inv (natN (comp u v))
+      = natL u v
+    => Kcoh-alg (K'.{u} u (d, v)) (E-char.{u} u v)
+
+  \sfunc Kcoh-alg {X : \Cat} {a b c d e : X} {L : a = b} {E : b = c} {R : a = c} {N : b = d} {P : d = e} {Q : e = c}
+                  (k : L *> E = R) (ec : E = N *> P *> Q) : R *> inv Q *> inv P *> inv N = L \elim k, ec
+    | idp, idp => alg Q P N
+    \where
+      \sfunc alg {X : \Cat} {a b d e c : X} {L : a = b} (Q : e = c) (P : d = e) (N : b = d) : (L *> N *> P *> Q) *> inv Q *> inv P *> inv N = L \elim Q, P, N
+        | idp, idp, idp => idp
+
+  \sfunc base-alg {X : \Cat} {q0 q1 q2 q3 q4 q5 q7 m1 m2 m3 m5 : X}
+                  (i1 : q0 = m1) (Rs : q1 = m1) (Rh : q2 = m2) (Iu : m1 = m2) (RT : m3 = m2) (Rts : q3 = m3) (S : q4 = m3) (OT : m5 = m3) (T : q5 = m5) (i2 : q7 = m5)
+                  {nL : q0 = q1} (eL : nL = i1 *> inv Rs) {P1 : q1 = q2} (e1 : P1 = Rs *> Iu *> inv Rh) {P2 : q2 = q3} (e2 : P2 = Rh *> inv RT *> inv Rts)
+                  {P3 : q3 = q4} (e3 : P3 = Rts *> inv S) {P4 : q4 = q5} (e4 : P4 = S *> inv OT *> inv T) {P56 : q5 = q7} (e56 : P56 = T *> inv i2)
+    : nL *> P1 *> P2 *> P3 *> P4 *> P56 = i1 *> (Iu *> inv RT *> inv OT) *> inv i2
+    \elim i1, Rs, Rh, Iu, RT, Rts, S, OT, T, i2, eL, e1, e2, e3, e4, e56
+    | idp, idp, idp, idp, idp, idp, idp, idp, idp, idp, idp, idp, idp, idp, idp, idp => idp
+
+  \sfunc alg-eL {X Y : \Cat} (ev : X -> Y) {p q r : X} {w : Y} (R1 : p = q) (R2 : r = q) (I : w = ev q)
+    : inv (pmap ev R1 *> inv I) *> pmap ev (inv (R2 *> inv R1)) = I *> inv (pmap ev R2) \elim R1, R2, I
+    | idp, idp, idp => idp
+
+  \sfunc solveL2 {X : \Cat} {a b c d : X} {p : a = b} {q : b = c} {r : a = d} {s : d = c} (e : p *> q = r *> s) : p = r *> s *> inv q \elim q, e
+    | idp, idp => idp
+
+  \sfunc solveR {X : \Cat} {a b c d : X} {p : a = b} {q : b = c} {r : a = d} {s : d = c} (e : p *> q = r *> s) : r = p *> q *> inv s \elim s, e
+    | idp, idp => idp
+
+  \sfunc solveInv {X : \Cat} {a b c d : X} {p : a = b} {q : b = c} {r : a = d} {s : d = c} (e : p *> q = r *> s) : inv p = q *> inv s *> inv r \elim q, r, s, e
+    | idp, idp, idp, idp => idp
+
+  \sfunc cancel-mid {X : \Cat} {a b c d : X} (T : a = b) (P : c = b) (Q : b = d) : (T *> inv P) *> P *> Q = T *> Q \elim P, Q
+    | idp, idp => idp
+
+  \sfunc cancelR {X : \Cat} {a b c : X} {r r' : a = b} (p : b = c) (e : r *> p = r' *> p) : r = r' \elim p
+    | idp => e
+
+  -- | A homotopy {H} from {f} to the identity satisfies `H (f x) = pmap f (H x)`.
+  \sfunc hself {X : \Cat} {f : X -> X} (H : \Pi (x : X) -> f x = x) (x : X) : H (f x) = pmap f (H x)
+    => cancelR (H x) (hom-nat {X} {X} {f} {\lam y => y} H (H x))
+
+  -- | {~>_->} along the identity is conjugation by {~>_->_idd}.
+  \sfunc iota-nat.{u} {A : \Type u} {a b : A} (X : a = b) : pmap+ {A} (\lam q => ~>_-> idd q) X = ~>_->_idd *> X *> inv ~>_->_idd
+    => solveR (hom-nat {A} {A} {\lam q => ~>_-> idd q} {\lam q => q} (\lam q => ~>_->_idd) X)
+
+  -- | {reprTr} at the identity.
+  \sfunc reprTr-idd.{u} {C : \Cat u} {c : C} : reprTr {C} {c} (c, idd) = pmap Straight.toStraight comp_idd-right *> inv ~>_->_idd
+    => (\peval reprTr {C} {c} (c, idd))
+       *> pmap+ {(c, idd) ~> {\Sigma⁺ (d : C) (c ~> d)} (c, idd)} (\lam p => leftFib-tr (leftFib-path {\Sigma⁺ (d : C) (c ~> d)} {\lam z => ReprFunctor c z.1}
+                              (leftFib-pullback (\lam (z :⁺ \Sigma⁺ (d : C) (c ~> d)) => z.1) straighten-leftFib)
+                              (\lam z => Straight.toStraight (comp z.2 idd))
+                              (\lam z => ~>_-> (dmap (ReprFunctor c) z.2) (Straight.toStraight idd))) p
+                              (pmap Straight.toStraight comp_idd-right *> inv ~>_->_idd)) coslice-arrow.idd-path
+       *> leftFib-tr_idd _
+
+  -- | {opHom-interchange} along the identity in the second variable, by Yoneda in the first.
+  \sfunc opHom-interchange-idd.{u} {C : \Cat u} {c : C} {y y' : Op C} (a : y ~> y') (s : Op.Hom y c)
+    : opHom-interchange idd a s = pmap+ {Op.Hom y c} (\lam q => ~>_-> (dmap (Op.Hom __ c) a) q) ~>_->_idd *> inv ~>_->_idd
+    => leftFib-tr (leftFib-path {\Sigma⁺ (y' : Op C) (y ~> y')}
+                    {\lam z => ~>_-> (dmap (Op.Hom __ c) z.2) (~>_-> idd s) = ~>_-> idd (~>_-> (dmap (Op.Hom __ c) z.2) s)}
+                    (leftFib-path {\Sigma⁺ (y' : Op C) (y ~> y')} {\lam z => Op.Hom z.1 c}
+                       (leftFib-pullback (\lam (z :⁺ \Sigma⁺ (y' : Op C) (y ~> y')) => Op.Hom z.1 c) universe-leftFib)
+                       (\lam z => ~>_-> (dmap (Op.Hom __ c) z.2) (~>_-> idd s)) (\lam z => ~>_-> idd (~>_-> (dmap (Op.Hom __ c) z.2) s)))
+                    (\lam z => opHom-interchange idd z.2 s)
+                    (\lam z => pmap+ {Op.Hom y c} (\lam q => ~>_-> (dmap (Op.Hom __ c) z.2) q) ~>_->_idd *> inv ~>_->_idd))
+                  (coslice-arrow (y', a)) (opHom-interchange-base s)
+
+  \sfunc opHom-interchange-base.{u} {C : \Cat u} {c : C} {y : Op C} (s : Op.Hom y c)
+    : opHom-interchange idd (idd {Op C} {y}) s = pmap+ {Op.Hom y c} (\lam q => ~>_-> idd q) ~>_->_idd *> inv ~>_->_idd
+    => \let | X => Op.Hom y c
+            | q : s ~> ~>_-> idd s => dpath (coe+ (\lam _ => X) s)
+            | E : ~>_= q = inv ~>_->_idd
+              => inv (pmap-idf (~>_= q)) *> inv (solveR' (inv (coe+-dpath-fun (\lam z => z) q) *> coe+-dpath-canon))
+       \in (\peval opHom-interchange idd (idd {Op C} {y}) s)
+           *> coe+-dpath-fun (\lam z => ~>_-> idd z) q
+           *> pmap (\lam e => ~>_->_idd *> pmap (\lam z => ~>_-> idd z) e) E
+           *> pmap (~>_->_idd *>) (pmap_inv-comm (\lam z => ~>_-> idd z) ~>_->_idd *> pmap inv (inv (hself (\lam (z : X) => ~>_->_idd {X} {z}) s)))
+           *> pmap (__ *> inv ~>_->_idd) (hself (\lam (z : X) => ~>_->_idd {X} {z}) s)
+    \where
+      \sfunc pmap-idf {X : \Cat} {a b : X} (p : a = b) : pmap (\lam z => z) p = p \elim p
+        | idp => idp
+
+      \sfunc solveR' {X : \Cat} {a b : X} {i : a = b} {E : b = a} (e : i *> E = idp) : inv i = E \elim i
+        | idp => inv (inv idp_*> *> e)
+
+
+  -- | The square of types `Op.Hom y (phi i j)`.
+  \func TyR.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (y :⁺ Op C) (i j :⁺ DI) : \Type u
+    => Op.Hom y (phi i j)
+
+  -- | Algebraic cocones under the left and top sides of `opSq phi` with vertex {y}, read through {opYoneda}.
+  \func AlgR.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (y :⁺ Op C) : \Cat
+    => \Sigma⁺ (x : Op.Hom y (phi dleft dright)) (\Sigma⁺ (x' : Op.Hom y (phi dright dleft))
+         (~>_-> (dmap (Op.Hom y) (dpath \lam i => phi i dright)) x = ~>_-> (dmap (Op.Hom y) (dpath (phi dright))) x'))
+
+  \lemma AlgR-leftFib.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsLeftFib (AlgR phi)
+    => \let | Z1 => \Sigma⁺ (y : Op C) (Op.Hom y (phi dleft dright))
+            | Z2 => \Sigma⁺ (s : Z1) (Op.Hom s.1 (phi dright dleft))
+       \in leftFib-sigma {Op C} {\lam y => Op.Hom y (phi dleft dright)} (leftFib-pullback (\lam (y :⁺ Op C) => Op.Hom y (phi dleft dright)) universe-leftFib)
+            {\lam (s :⁺ Z1) => \Sigma⁺ (x' : Op.Hom s.1 (phi dright dleft))
+                (~>_-> (dmap (Op.Hom s.1) (dpath \lam i => phi i dright)) s.2 = ~>_-> (dmap (Op.Hom s.1) (dpath (phi dright))) x')}
+            (leftFib-sigma {Z1} {\lam (s :⁺ Z1) => Op.Hom s.1 (phi dright dleft)} (leftFib-pullback (\lam (s :⁺ Z1) => Op.Hom s.1 (phi dright dleft)) universe-leftFib)
+              {\lam (s :⁺ Z2) => ~>_-> (dmap (Op.Hom s.1.1) (dpath \lam i => phi i dright)) s.1.2 = ~>_-> (dmap (Op.Hom s.1.1) (dpath (phi dright))) s.2}
+              (leftFib-path {Z2} {\lam (s :⁺ Z2) => Op.Hom s.1.1 (phi dright dright)} (leftFib-pullback (\lam (s :⁺ Z2) => Op.Hom s.1.1 (phi dright dright)) universe-leftFib)
+                            (\lam s => ~>_-> (dmap (Op.Hom s.1.1) (dpath \lam i => phi i dright)) s.1.2) (\lam s => ~>_-> (dmap (Op.Hom s.1.1) (dpath (phi dright))) s.2)))
+
+  -- | The algebraic cocone of a boundary of {TyR}.
+  \func boundaryAlgR.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {y :⁺ Op C} (b :⁺ Boundary (TyR phi y)) : AlgR phi y
+    => (b.2, (b.1, coe+-dpath b.5 *> inv (coe+-dpath b.4)))
+
+  \lemma boundaryAlgR-equiv.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (y : Op C) : IsEquiv (boundaryAlgR phi {y})
+    => \let | T => TyR phi y
+            | tr1 => ~>_-> (dmap (Op.Hom y) (dpath \lam i => phi i dright))
+            | tr2 => ~>_-> (dmap (Op.Hom y) (dpath (phi dright)))
+            | S1 => \Sigma (g : T dleft dright) (\Sigma (b : T dright dleft) (\Sigma (c : T dright dright) (\Sigma (tr1 g = c) (tr2 b = c))))
+            | S2 => \Sigma (g : T dleft dright) (\Sigma (b : T dright dleft) (tr1 g = tr2 b))
+       \in IsEquiv.trans {_} {S1} {AlgR phi y} {\lam (bd : Boundary T) => ((bd.2, (bd.1, (bd.3, (coe+-dpath bd.5, coe+-dpath bd.4)))) : S1)}
+             (IsEquiv.trans {_} {_} {S1} {\lam (bd : Boundary T) => boundaryAlgR-equiv.reshape {T} bd} (inP (boundaryAlgR-equiv.reshape {T}))
+                {\lam s => ((s.1, (s.2.1, (s.2.2.1, (coe+-dpath s.2.2.2.1, coe+-dpath s.2.2.2.2)))) : S1)}
+                (inP (sigma-right \lam g => sigma-right \lam b => sigma-right \lam c =>
+                        sigma-equiv {_} {_} {\lam _ => DPath (\lam j => T dright j) b c} {\lam _ => tr2 b = c}
+                                    (IsEquiv.toQEquiv (coe+-dpath-equiv (\lam i => T i dright) g c)) \lam _ => IsEquiv.toQEquiv (coe+-dpath-equiv (\lam j => T dright j) b c))))
+             {\lam (s : S1) => ((s.1, (s.2.1, s.2.2.2.1 *> inv s.2.2.2.2)) : AlgR phi y)}
+             (IsEquiv.trans {S1} {S2} {AlgR phi y} {\lam (s : S1) => ((s.1, (s.2.1, s.2.2.2.1 *> inv s.2.2.2.2)) : S2)}
+                (inP (sigma-right \lam g => sigma-right \lam b => boundaryAlg-equiv.contr (tr1 g) (tr2 b)))
+                {\lam (s : S2) => ((s.1, (s.2.1, s.2.2)) : AlgR phi y)} (inP (boundaryAlgR-equiv.toAlgR phi y)))
+    \where {
+      \func reshape {Phi : DI ->⁺ DI ->⁺ \Cat}
+        : QEquiv {Boundary Phi}
+                 {\Sigma (g : Phi dleft dright) (\Sigma (b : Phi dright dleft) (\Sigma (c : Phi dright dright)
+                    (\Sigma (DPath (\lam i => Phi i dright) g c) (DPath (\lam j => Phi dright j) b c))))} \cowith
+        | f bd => (bd.2, (bd.1, (bd.3, (bd.5, bd.4))))
+        | ret s => (s.2.1, s.1, s.2.2.1, s.2.2.2.2, s.2.2.2.1)
+        | ret_f _ => idp
+        | f_sec _ => idp
+
+      \func toAlgR.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (y : Op C)
+        : QEquiv {\Sigma (g : Op.Hom y (phi dleft dright)) (\Sigma (b : Op.Hom y (phi dright dleft))
+                    (~>_-> (dmap (Op.Hom y) (dpath \lam i => phi i dright)) g = ~>_-> (dmap (Op.Hom y) (dpath (phi dright))) b))}
+                 {AlgR phi y} \cowith
+        | f t => (t.1, (t.2.1, t.2.2))
+        | ret t => (t.1, (t.2.1, t.2.2))
+        | ret_f _ => idp
+        | f_sec _ => idp
+    }
+
+  -- | Algebraic cocones of `opSq phi` read through {opYoneda}.
+  \func opAlg.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {y :⁺ Op C} (t :⁺ AlgCo (opSq.{u} phi) y) : AlgR phi y
+    => (opYoneda t.1, (opYoneda t.2.1, inv (opYoneda-comp (dpath \lam i => phi i dright) t.1)
+                                       *> pmap+ {Op.toOp (phi dright dright) ~> y} (\lam a => opYoneda a) t.2.2
+                                       *> opYoneda-comp (dpath (phi dright)) t.2.1))
+
+  \lemma opAlg-equiv.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) (y : Op C) : IsEquiv (opAlg phi {y})
+    => \let | cd : phi dleft dright ~> phi dright dright => dpath \lam i => phi i dright
+            | bd : phi dright dleft ~> phi dright dright => dpath (phi dright)
+            | S => \Sigma (x : Op.toOp (phi dleft dright) ~> y) (\Sigma (x' : Op.toOp (phi dright dleft) ~> y) (comp (opArr cd) x = comp (opArr bd) x'))
+            | S' => \Sigma (g : Op.Hom y (phi dleft dright)) (\Sigma (b : Op.Hom y (phi dright dleft))
+                       (~>_-> (dmap (Op.Hom y) cd) g = ~>_-> (dmap (Op.Hom y) bd) b))
+       \in IsEquiv.trans {_} {S} {AlgR phi y} {\lam (t : AlgCo (opSq.{u} phi) y) => ((t.1, (t.2.1, t.2.2)) : S)}
+             (inP \new QEquiv { | ret t => (t.1, (t.2.1, t.2.2)) | ret_f _ => idp | f_sec _ => idp })
+             {\lam (t : S) => opAlg phi (t.1, (t.2.1, t.2.2))}
+             (IsEquiv.trans {S} {S'} {AlgR phi y}
+                {\lam (t : S) => ((opYoneda t.1, (opYoneda t.2.1, inv (opYoneda-comp cd t.1) *> pmap opYoneda t.2.2 *> opYoneda-comp bd t.2.1)) : S')}
+                (inP (sigma-equiv (IsEquiv.toQEquiv opYoneda-equiv) \lam x => sigma-equiv (IsEquiv.toQEquiv opYoneda-equiv) \lam x' => IsEquiv.toQEquiv
+                        (IsEquiv.trans (pmapIsEquiv (opYoneda-equiv {C} {phi dright dright} {y}) {comp (opArr cd) x} {comp (opArr bd) x'}) (opSquare-equiv.conj-equiv (opYoneda-comp cd x) (opYoneda-comp bd x')))))
+                {\lam (t : S') => ((t.1, (t.2.1, t.2.2)) : AlgR phi y)} (inP (boundaryAlgR-equiv.toAlgR phi y)))
+
+  -- | The boundary of the section of {TyR} given by an arrow out of the bottom right corner of `opSq phi`.
+  \func BkR.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {y :⁺ Op C} (k :⁺ opSq.{u} phi dright dright ~> y) : Boundary (TyR phi y)
+    => boundary {TyR phi y} (trSec {TyR phi y} (opYoneda k))
+
+  -- | The base computation: the boundary of the identity is the image of the sides and the 2-cell of `opSq phi`.
+  \sfunc boundaryR-base.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C)
+    : boundaryAlgR phi {Op.toOp (phi dleft dleft)} (BkR phi idd) = opAlg phi (dpath (opSq.{u} phi dright), (dpath \lam i => opSq.{u} phi i dright, sqCell (opSq.{u} phi)))
+    => \let | x => phi dleft dleft
+            | F => Op.Hom (Op.toOp x)
+            | ab : x ~> phi dright dleft => dpath \lam i => phi i dleft
+            | ac : x ~> phi dleft dright => dpath (phi dleft)
+            | bd : phi dright dleft ~> phi dright dright => dpath (phi dright)
+            | cd : phi dleft dright ~> phi dright dright => dpath \lam i => phi i dright
+            | Q : DPath (\lam i => ab i ~> cd i) ac bd => dpath \lam i => dpath \lam j => phi i j
+            | dg => sqDiag {C} {_} {_} {_} {_} {ab} {cd} {ac} {bd} Q
+            | tri1 => sqTri1 {C} {_} {_} {_} {_} {ab} {cd} {ac} {bd} Q
+            | tri2 => sqTri2 {C} {_} {_} {_} {_} {ab} {cd} {ac} {bd} Q
+            | c1 => comp-char {C} {_} {_} {_} {ab} {bd} {dg} tri1
+            | c2 => comp-char {C} {_} {_} {_} {ac} {cd} {dg} tri2
+            | A (w : x ~> phi dright dright) => ~>_-> (dmap F w) (s0 x)
+            | b => BkR phi {Op.toOp x} idd
+            | lhs4 : coe+-dpath b.4 = natL ab bd *> pmap A c1
+              => tri-transport {_} {_} {_} {dmap F ab} {dmap F bd} {dmap F dg} (dpath \lam j => dpath \lam m => F (phi m (dmin m j))) (s0 x)
+                 *> pmap (\lam c => inv (~>_->_comp (dmap F ab) (dmap F bd)) *> pmap (\lam p => ~>_-> p (s0 x)) c) (dmap-comp-char F tri1)
+                 *> pd (\lam p => ~>_-> p (s0 x)) (dmap F) (~>_->_comp (dmap F ab) (dmap F bd)) (dmap_comp F) c1
+            | lhs5 : coe+-dpath b.5 = natL ac cd *> pmap A c2
+              => tri-transport {_} {_} {_} {dmap F ac} {dmap F cd} {dmap F dg} (dpath \lam j => dpath \lam m => F (phi (dmin m j) m)) (s0 x)
+                 *> pmap (\lam c => inv (~>_->_comp (dmap F ac) (dmap F cd)) *> pmap (\lam p => ~>_-> p (s0 x)) c) (dmap-comp-char F tri2)
+                 *> pd (\lam p => ~>_-> p (s0 x)) (dmap F) (~>_->_comp (dmap F ac) (dmap F cd)) (dmap_comp F) c2
+            | lhs : coe+-dpath b.5 *> inv (coe+-dpath b.4) = natL ac cd *> pmap A (inv (sqCell phi)) *> inv (natL ab bd)
+              => pmap2 (\lam a b => a *> inv b) lhs5 lhs4 *> alg-lhs A c1 c2 (natL ac cd) (natL ab bd)
+                 *> pmap (\lam c => natL ac cd *> pmap A (inv c) *> inv (natL ab bd)) (inv (sqCell-diag phi))
+            | R1 : pmap+ {Op.toOp (phi dright dright) ~> Op.toOp x} (\lam a => opYoneda a) (sqCell (opSq.{u} phi))
+                   = inv (opArr-comp.Pi ac cd) *> pmap (\lam w => opYoneda (opArr w)) (inv (sqCell phi)) *> opArr-comp.Pi ab bd
+              => pmap (pmap (\lam a => opYoneda a)) (sqCell-opSq.{u} phi)
+                 *> pmap-3' (\lam a => opYoneda a) opArr-comp (pmap opArr (inv (sqCell phi))) opArr-comp
+                 *> pmap2 (\lam a b => inv a *> pmap (\lam w => opYoneda (opArr w)) (inv (sqCell phi)) *> b) opYoneda-opArr-comp opYoneda-opArr-comp
+            | R2 : pmap (\lam w => opYoneda (opArr w)) (inv (sqCell phi)) = inv (natN (comp ac cd)) *> pmap A (inv (sqCell phi)) *> natN (comp ab bd)
+              => inv (fam-nat (\lam w => natN w) (inv (sqCell phi)))
+            | rhs : pmap (\lam q => ~>_-> (dmap F cd) q) (natN ac)
+                    *> (inv (opYoneda-comp cd (opArr ac)) *> pmap+ {Op.toOp (phi dright dright) ~> Op.toOp x} (\lam a => opYoneda a) (sqCell (opSq.{u} phi)) *> opYoneda-comp bd (opArr ab))
+                    *> inv (pmap (\lam q => ~>_-> (dmap F bd) q) (natN ab))
+                    = natL ac cd *> pmap A (inv (sqCell phi)) *> inv (natL ab bd)
+              => pmap (\lam M => pmap (\lam q => ~>_-> (dmap F cd) q) (natN ac) *> (inv (opYoneda-comp cd (opArr ac)) *> M *> opYoneda-comp bd (opArr ab))
+                                 *> inv (pmap (\lam q => ~>_-> (dmap F bd) q) (natN ab)))
+                      (R1 *> pmap (\lam Y => inv (opArr-comp.Pi ac cd) *> Y *> opArr-comp.Pi ab bd) R2)
+                 *> alg-R (Kcoh ac cd) (Kcoh ab bd)
+       \in AlgR-ext phi {Op.toOp x} (natN ac) (natN ab) (lhs *> inv rhs)
+
+  \sfunc AlgR-ext.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {y : Op C} {x x0 : Op.Hom y (phi dleft dright)} {x' x0' : Op.Hom y (phi dright dleft)} (X : x = x0) (X' : x' = x0')
+                   {P : ~>_-> (dmap (Op.Hom y) (dpath \lam i => phi i dright)) x = ~>_-> (dmap (Op.Hom y) (dpath (phi dright))) x'}
+                   {P0 : ~>_-> (dmap (Op.Hom y) (dpath \lam i => phi i dright)) x0 = ~>_-> (dmap (Op.Hom y) (dpath (phi dright))) x0'}
+                   (e : P = pmap (\lam q => ~>_-> (dmap (Op.Hom y) (dpath \lam i => phi i dright)) q) X *> P0
+                            *> inv (pmap (\lam q => ~>_-> (dmap (Op.Hom y) (dpath (phi dright))) q) X'))
+    : ((x, (x', P)) : AlgR phi y) = (x0, (x0', P0)) \elim X, X'
+    | idp, idp => path \lam t => (x, (x', (e *> idp_*>) @ t))
+
+  \sfunc pd {X Y Z : \Cat} (ev : Y -> Z) (dF : X -> Y) {y1 : Y} {x0 x1 : X} {z : Z} (CC : ev y1 = z) (D : dF x0 = y1) (c : x0 = x1)
+    : inv CC *> pmap ev (inv D *> pmap dF c) = (inv CC *> pmap ev (inv D)) *> pmap (\lam w => ev (dF w)) c \elim CC, D, c
+    | idp, idp, idp => idp
+
+  \sfunc alg-lhs {X Y : \Cat} (A : X -> Y) {w0 w1 w2 : X} {s1 s2 : Y} (c1 : w2 = w0) (c2 : w1 = w0) (L1 : s1 = A w1) (L2 : s2 = A w2)
+    : (L1 *> pmap A c2) *> inv (L2 *> pmap A c1) = L1 *> pmap A (inv (c1 *> inv c2)) *> inv L2 \elim c1, c2, L2
+    | idp, idp, idp => idp
+
+  \sfunc pmap-3' {A B : \Cat} (f : A -> B) {x y z w : A} (a : y = x) (b : y = z) (c : z = w)
+    : pmap f (inv a *> b *> c) = inv (pmap f a) *> pmap f b *> pmap f c \elim a, b, c
+    | idp, idp, idp => idp
+
+  \sfunc alg-R {X : \Cat} {a b c d e e' d' c' b' a' : X} {t1 : a = b} {q1 : c = b} {p1 : d = c} {n1 : e = d} {M : e = e'} {n2 : e' = d'} {p2 : d' = c'} {q2 : c' = b'} {t2 : a' = b'}
+               {L1 : a = e} {L2 : a' = e'} (k1 : t1 *> inv q1 *> inv p1 *> inv n1 = L1) (k2 : t2 *> inv q2 *> inv p2 *> inv n2 = L2)
+    : t1 *> (inv q1 *> (inv p1 *> (inv n1 *> M *> n2) *> p2) *> q2) *> inv t2 = L1 *> M *> inv L2 \elim k1, k2
+    | idp, idp => aux t1 q1 p1 n1 M n2 p2 q2 t2
+    \where
+      \sfunc aux {X : \Cat} {a b c d e e' d' c' b' a' : X} (t1 : a = b) (q1 : c = b) (p1 : d = c) (n1 : e = d) (M : e = e') (n2 : e' = d') (p2 : d' = c') (q2 : c' = b') (t2 : a' = b')
+        : t1 *> (inv q1 *> (inv p1 *> (inv n1 *> M *> n2) *> p2) *> q2) *> inv t2 = (t1 *> inv q1 *> inv p1 *> inv n1) *> M *> inv (t2 *> inv q2 *> inv p2 *> inv n2)
+        \elim t1, q1, p1, n1, M, n2, p2, q2, t2
+        | idp, idp, idp, idp, idp, idp, idp, idp, idp => idp
+
+  -- | The algebraic cocones of the cocone under `opSq phi` and of the boundary given by an arrow out of the bottom right corner agree.
+  \sfunc cocone-boundaryR.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) {y : Op C} (k : opSq.{u} phi dright dright ~> y)
+    : opAlg phi (coconeAlg (opSq.{u} phi) (cocone (opSq.{u} phi) k).1 (cocone (opSq.{u} phi) k).2.1 (cocone (opSq.{u} phi) k).2.2) = boundaryAlgR phi (BkR phi k)
+    => leftFib-tr (leftFib-path {\Sigma⁺ (y : Op C) (opSq.{u} phi dright dright ~> y)} {\lam z => AlgR phi z.1}
+                                (leftFib-pullback (\lam (z :⁺ \Sigma⁺ (y : Op C) (opSq.{u} phi dright dright ~> y)) => z.1) (AlgR-leftFib phi))
+                                (\lam z => opAlg phi (coconeAlg (opSq.{u} phi) (dpath \lam l => \lam j => coSq (opSq.{u} phi) z.2 l j l) (dpath \lam m => coSq (opSq.{u} phi) z.2 dright dleft m)
+                                                                (dpath \lam l => dpath \lam m => coSq (opSq.{u} phi) z.2 l dleft (dmin l m))))
+                                (\lam z => boundaryAlgR phi (BkR phi z.2)))
+                  (coslice-arrow (y, k)) (pmap (opAlg phi) (cocone-base (opSq.{u} phi)) *> inv (boundaryR-base phi))
+
+  -- | A square is a pullback square if and only if {opSq} of it is a pushout square.
+  \lemma opSq-pullback.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : IsPullbackSquare phi <-> IsPushoutSquare (opSq.{u} phi)
+    => (\lam pb => (pushout-char (opSq.{u} phi)).2 \lam y => (eC phi y).2 ((eM phi y).2 ((eq phi y).2 ((eB phi y).1 ((reprPullback-char phi).1 pb y)))),
+        \lam po => (reprPullback-char phi).2 \lam y => (eB phi y).2 ((eq phi y).1 ((eM phi y).1 ((eC phi y).1 ((pushout-char (opSq.{u} phi)).1 po y)))))
+    \where \private {
+      \lemma eC.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (y : Op C) : IsEquiv (cocone (opSq.{v} phi) {y})
+          <-> IsEquiv (\lam (k : opSq.{v} phi dright dright ~> y) => coconeAlg (opSq.{v} phi) (cocone (opSq.{v} phi) k).1 (cocone (opSq.{v} phi) k).2.1 (cocone (opSq.{v} phi) k).2.2)
+        => (\lam e => IsEquiv.trans e (coconeAlg-equiv (opSq.{v} phi) y), \lam e => IsEquiv.leftFactor (coconeAlg-equiv (opSq.{v} phi) y) e)
+
+      \lemma eM.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (y : Op C)
+        : IsEquiv (\lam (k : opSq.{v} phi dright dright ~> y) => coconeAlg (opSq.{v} phi) (cocone (opSq.{v} phi) k).1 (cocone (opSq.{v} phi) k).2.1 (cocone (opSq.{v} phi) k).2.2)
+          <-> IsEquiv (\lam (k : opSq.{v} phi dright dright ~> y) => opAlg.{v} phi (coconeAlg (opSq.{v} phi) (cocone (opSq.{v} phi) k).1 (cocone (opSq.{v} phi) k).2.1 (cocone (opSq.{v} phi) k).2.2))
+        => (\lam e => IsEquiv.trans e (opAlg-equiv.{v} phi y), \lam e => IsEquiv.leftFactor (opAlg-equiv.{v} phi y) e)
+
+      \lemma eq.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (y : Op C)
+        : IsEquiv (\lam (k : opSq.{v} phi dright dright ~> y) => opAlg.{v} phi (coconeAlg (opSq.{v} phi) (cocone (opSq.{v} phi) k).1 (cocone (opSq.{v} phi) k).2.1 (cocone (opSq.{v} phi) k).2.2))
+          <-> IsEquiv (\lam (k : opSq.{v} phi dright dright ~> y) => boundaryAlgR.{v} phi (BkR.{v} phi k))
+        => (transport IsEquiv (ext (cocone-boundaryR.{v} phi)), transportInv IsEquiv (ext (cocone-boundaryR.{v} phi)))
+
+      \lemma eB.{v} {C : \Cat v} (phi : DI ->⁺ DI ->⁺ C) (y : Op C)
+        : IsEquiv (\lam (s : Op.Hom y (phi dleft dleft)) => boundary {\lam i j => Op.Hom y (phi i j)} (trSec s))
+          <-> IsEquiv (\lam (k : opSq.{v} phi dright dright ~> y) => boundaryAlgR.{v} phi (BkR.{v} phi k))
+        => (\lam e => IsEquiv.trans (IsEquiv.trans opYoneda-equiv e) (boundaryAlgR-equiv.{v} phi y),
+            \lam e => IsEquiv.rightFactor opYoneda-equiv (IsEquiv.leftFactor (boundaryAlgR-equiv.{v} phi y) e))
+    }
+}

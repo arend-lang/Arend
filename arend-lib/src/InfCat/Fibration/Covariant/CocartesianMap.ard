@@ -29,6 +29,10 @@
 \type IsCocartesianArrow {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') : \Prop
   => \Pi {e'' : E} (w : e ~> e'') -> IsEquiv (triangle-map p u w)
 
+-- | An arrow {u} is {p}-cocartesian at {x} if factorizations through {u} of arrows into {x} are factorizations in the base.
+\type IsCocartesianArrowAt {E A : \Cat} (p : E ->⁺ A) {e e' : E} (u : e ~> e') (x : E) : \Prop
+  => \Pi (w : e ~> x) -> IsEquiv (triangle-map p u w)
+
 -- | {p} is a cocartesian fibration if every arrow in the base out of the image of an object has a cocartesian lift.
 \type IsCocartesianMap {E A : \Cat} (p : E ->⁺ A) : \Prop
   => \Pi {e : E} {a' : A} (f : p e ~> a') -> ∃ (e' : E) (u : e ~> e') (s : p e' = a') (comp (dmap p u) (=_~> s) = f) (IsCocartesianArrow p u)
@@ -232,16 +236,22 @@
 -- | Composition of cocartesian arrows: if {u} is {p}-cocartesian, then {v} is {p}-cocartesian if and only if `comp u v` is.
 \lemma cocartesianArrow-comp {E A : \Cat} {p : E ->⁺ A} {e e' e'' : E} {u : e ~> e'} (uc : IsCocartesianArrow p u) {v : e' ~> e''}
   : IsCocartesianArrow p v <-> IsCocartesianArrow p (comp u v)
+  => (\lam vc {x} => (cocartesianArrowAt-comp {E} {A} {p} (\lam w => uc w)).1 (\lam w => vc w),
+      \lam gc {x} => (cocartesianArrowAt-comp {E} {A} {p} (\lam w => uc w)).2 (\lam w => gc w))
+
+-- | Composition of cocartesian arrows at {x}: if {u} is {p}-cocartesian at {x}, then {v} is {p}-cocartesian at {x} if and only if `comp u v` is.
+\lemma cocartesianArrowAt-comp {E A : \Cat} {p : E ->⁺ A} {e e' e'' : E} {u : e ~> e'} {v : e' ~> e''} {x : E} (uc : IsCocartesianArrowAt p u x)
+  : IsCocartesianArrowAt p v x <-> IsCocartesianArrowAt p (comp u v) x
   => \let | t0 => dpath \lam i => dpath (fill2 u v i)
-          | mid-map {x : E} (w : e ~> x) (m : paste-face.PasteMid u v w) : paste-face.PasteMid (dmap p u) (dmap p v) (dmap p w)
+          | mid-map (w : e ~> x) (m : paste-face.PasteMid u v w) : paste-face.PasteMid (dmap p u) (dmap p v) (dmap p w)
             => (triangle-map p u w m.1, triangle-map p v m.1.1 m.2)
-          | mid-equiv {x : E} (w : e ~> x) : IsEquiv (mid-map w) <-> IsEquiv (triangle-map p (comp u v) w)
+          | mid-equiv (w : e ~> x) : IsEquiv (mid-map w) <-> IsEquiv (triangle-map p (comp u v) w)
             => IsEquiv.parallelEquiv (paste-face.isEquiv (comp u v) t0 w) (paste-face.isEquiv (dmap p (comp u v)) (dpath \lam i => dmap p (t0 i)) (dmap p w))
                 \lam m => path \lam l => (dmap p m.2.1, inv (simplex3-face.natural p t0 m.2.2 m.1.2) l)
-     \in (\lam vc {x} w => (mid-equiv w).1 $
+     \in (\lam vc w => (mid-equiv w).1 $
             IsEquiv.trans (IsSigma-right {\Sigma (r : e' ~> x) (DPath (\lam i => u i ~> w i) idd r)} (\lam s => triangle-map p v s.1) (\lam s => vc s.1))
                           (inP (qsigma-left (IsEquiv.toQEquiv (uc w)))),
-          \lam gc {x} r => fiberwiseEquiv (uc (comp u r)) (\lam s => triangle-map p v s.1)
+          \lam gc r => fiberwiseEquiv (uc (comp u r)) (\lam s => triangle-map p v s.1)
                             ((mid-equiv (comp u r)).2 (gc (comp u r)))
                             (r, dpath \lam i => dpath (fill2 u r i)))
 

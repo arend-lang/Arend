@@ -1,0 +1,196 @@
+{- | Squares in the opposite category.
+ -
+ -   {opArr} reverses composition ({opArr-comp}), so a square in {C} gives a square in `Op C` with reversed corners
+ -   ({opSquare}): the top left corner of `opSquare phi` is the bottom right corner of {phi} and vice versa.
+ -   Every square of `Op C` is of this form ({opSquare-equiv}).
+ -   Under {opYoneda}, precomposition with `opArr v` is transport along {v} in the second variable of {Op.Hom} ({opYoneda-comp}),
+ -   since transports in the two variables commute ({opHom-interchange}).
+ -}
+
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import InfCat.Functor.Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Fibration.Covariant.LeftFib
+\import InfCat.Fibration.Univalence.DirectedUnivalence
+\import InfCat.Fibration.Univalence.Straightening
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Square
+\import InfCat.Yoneda.CovariantYoneda
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | {opArr} preserves identities.
+\sfunc opArr-idd.{u} {C : \Cat u} {x : C} : opArr (idd {C} {x}) = idd
+  => IsEquiv.isInj (unop-equiv {C} {x} {x}) (opArr.unop *> inv yonedaEmbCov.fun_idd)
+
+-- | Arrows of `Op C` from `toOp r` into {y} are elements of `Op.Hom y r`: transport the identity in the first variable of {Op.Hom}.
+\func opYoneda.{u} {C : \Cat u} {r : C} {y :⁺ Op C} (a :⁺ Op.toOp r ~> y) : Op.Hom y r
+  => ~>_-> (dpath \lam m => Op.Hom (a m) r) (Op.Hom-idd r)
+
+\lemma opYoneda-equiv.{u} {C : \Cat u} {r : C} {y : Op C} : IsEquiv (opYoneda {C} {r} {y})
+  => IsEquiv.trans (Op.Hom-ff (Op.toOp r) y) (yonedaCov r (Op.Hom y))
+
+-- | Transport in the first variable of {Op.Hom} along `opArr v` is precomposition with {v}, covariantly in the second variable.
+\sfunc opArr-tr.{u} {C : \Cat u} {x' x : C} (v : x' ~> x) (z :⁺ \Sigma⁺ (r : C) (x ~> r))
+  : ~>_-> (dmap (Op.Hom __ z.1) (opArr v)) (Straight.toStraight z.2) = Straight.toStraight (comp v z.2)
+  => leftFib-tr (leftFib-path {\Sigma⁺ (r : C) (x ~> r)} {\lam z => ReprFunctor x' z.1}
+                              (leftFib-pullback (\lam (z :⁺ \Sigma⁺ (r : C) (x ~> r)) => z.1) straighten-leftFib)
+                              (\lam z => ~>_-> (dmap (Op.Hom __ z.1) (opArr v)) (Straight.toStraight z.2))
+                              (\lam z => Straight.toStraight (comp v z.2)))
+                (coslice-arrow z) (opArr-transport v idd)
+
+{- | {opArr} reverses composition.
+ -   The path is chosen through {opYoneda}: both sides transport the identity of `z` to `comp f (comp g idd)` ({opArr-comp.Pi}).
+ -}
+\sfunc opArr-comp.{u} {C : \Cat u} {x y z : C} {f : x ~> y} {g : y ~> z} : opArr (comp f g) = comp (opArr g) (opArr f)
+  => IsEquiv.isInj (opYoneda-equiv {C} {z} {Op.toOp x}) (Pi f g)
+  \where \protected {
+    \sfunc Pi.{v} {C : \Cat v} {x y z : C} (f : x ~> y) (g : y ~> z) : opYoneda (opArr (comp f g)) = opYoneda (comp (opArr g) (opArr f))
+      => opArr-tr (comp f g) (z, idd) *> pmap Straight.toStraight (comp_idd-right *> inv (pmap (comp f) comp_idd-right)) *> inv (Rest f g)
+
+    -- | Transport of the identity along `comp (opArr g) (opArr f)`, one arrow at a time.
+    \sfunc Rest.{v} {C : \Cat v} {x y z : C} (f : x ~> y) (g : y ~> z)
+      : opYoneda (comp (opArr g) (opArr f)) = Straight.toStraight (comp f (comp g idd))
+      => pmap (\lam q => ~>_-> q (Op.Hom-idd z)) (dmap_comp (Op.Hom __ z) {_} {_} {_} {opArr g} {opArr f})
+         *> ~>_->_comp (dmap (Op.Hom __ z) (opArr g)) (dmap (Op.Hom __ z) (opArr f))
+         *> pmap (~>_-> (dmap (Op.Hom __ z) (opArr f))) (opArr-tr g (z, idd))
+         *> opArr-tr f (z, comp g idd)
+  }
+
+-- | The image of {opArr-comp} under {opYoneda} is {opArr-comp.Pi}.
+\sfunc opYoneda-opArr-comp.{u} {C : \Cat u} {x y z : C} {f : x ~> y} {g : y ~> z}
+  : pmap opYoneda (opArr-comp {C} {x} {y} {z} {f} {g}) = opArr-comp.Pi f g
+  => pmap (pmap opYoneda) (\peval opArr-comp {C} {x} {y} {z} {f} {g}) *> pmap-isInj opYoneda-equiv (opArr-comp.Pi f g)
+
+-- | Transport of the identity of {c} along {v} in {ReprFunctor}, covariantly in `(d, v)`.
+\sfunc reprTr.{u} {C : \Cat u} {c : C} (z :⁺ \Sigma⁺ (d : C) (c ~> d))
+  : Straight.toStraight (comp z.2 idd) = ~>_-> (dmap (ReprFunctor c) z.2) (Straight.toStraight idd)
+  => leftFib-tr (leftFib-path {\Sigma⁺ (d : C) (c ~> d)} {\lam z => ReprFunctor c z.1}
+                              (leftFib-pullback (\lam (z :⁺ \Sigma⁺ (d : C) (c ~> d)) => z.1) straighten-leftFib)
+                              (\lam z => Straight.toStraight (comp z.2 idd))
+                              (\lam z => ~>_-> (dmap (ReprFunctor c) z.2) (Straight.toStraight idd)))
+                (coslice-arrow z) (pmap Straight.toStraight comp_idd-right *> inv ~>_->_idd)
+
+-- | Transports in the two variables of {Op.Hom} commute.
+\sfunc opHom-interchange.{u} {C : \Cat u} {c d :⁺ C} (v :⁺ c ~> d) {y y' :⁺ Op C} (a :⁺ y ~> y') (s :⁺ Op.Hom y c)
+  : ~>_-> (dmap (Op.Hom __ d) a) (~>_-> (dmap (Op.Hom y) v) s) = ~>_-> (dmap (Op.Hom y') v) (~>_-> (dmap (Op.Hom __ c) a) s)
+  => coe+-dpath (dpath \lam i => ~>_-> (dmap (Op.Hom (a i)) v) (coe+ (\lam j => Op.Hom (a j) c) s i))
+
+-- | {opYoneda} turns precomposition with `opArr v` into transport along {v} in the second variable of {Op.Hom}.
+\sfunc opYoneda-comp.{u} {C : \Cat u} {c d : C} (v : c ~> d) {y :⁺ Op C} (a :⁺ Op.toOp c ~> y)
+  : opYoneda (comp (opArr v) a) = ~>_-> (dmap (Op.Hom y) v) (opYoneda a)
+  => pmap+ {Op.Hom (Op.toOp d) d ~> Op.Hom y d} (\lam p => ~>_-> p (Op.Hom-idd d)) (dmap_comp (Op.Hom __ d) {_} {_} {_} {opArr v} {a})
+     *> ~>_->_comp (dmap (Op.Hom __ d) (opArr v)) (dmap (Op.Hom __ d) a)
+     *> pmap+ {Op.Hom (Op.toOp c) d} (\lam q => ~>_-> (dmap (Op.Hom __ d) a) q) (opArr-tr v (d, idd) *> reprTr (d, v))
+     *> opHom-interchange v a (Op.Hom-idd c)
+
+-- | {pmap} of an injectivity witness of an equivalence is the original path.
+\sfunc pmap-isInj {A B : \Cat} {f : A -> B} (e : IsEquiv f) {a a' : A} (p : f a = f a') : pmap f (IsEquiv.isInj e p) = p
+  => \let pe => pmapIsEquiv e {a} {a'}
+     \in transport (\lam p' => pmap f (IsEquiv.isInj e p') = p') (IsEquiv.f_ret pe) (pmap (pmap f) (left (IsEquiv.ret pe p)))
+  \where
+    \protected \sfunc left {A B : \Cat} {f : A -> B} {e : IsEquiv f} {a a' : A} (q : a = a') : IsEquiv.isInj e (pmap f q) = q \elim q
+      | idp => pmap (inv (IsEquiv.ret_f e) *>) idp_*> *> inv_*>
+
+-- | The inverse of {opArr}.
+\lemma unop-equiv.{u} {C : \Cat u} {x y : C} : IsEquiv (\lam (a : Op.toOp y ~> Op.toOp x) => yonedaEmbCov.fun (dmap Op.Hom a))
+  => IsEquiv.trans (Op.Hom-ff (Op.toOp y) (Op.toOp x)) yonedaEmbCov
+
+{- | The square of `Op C` opposite to {phi}: its corners are `toOp (phi dright dright)`, `toOp (phi dleft dright)`,
+ -   `toOp (phi dright dleft)`, `toOp (phi dleft dleft)` and its sides are the opposites of the sides of {phi}.
+ -}
+\sfunc opSquare.{u} {C : \Cat u} (phi : DI ->⁺ DI ->⁺ C) : DI ->⁺ DI ->⁺ Op C
+  => (square-char (Op C)).finv (opData (square-char C phi))
+  \where {
+    -- | The algebraic data of a square of `Op C` opposite to the algebraic data of a square of {C}.
+    \func opData.{v} {C : \Cat v} (s : (square-char C).D) : (square-char (Op C)).D
+      => (Op.toOp s.4, Op.toOp s.3, Op.toOp s.2, Op.toOp s.1, opArr s.8, opArr s.7, opArr s.6, opArr s.5,
+          comp-equiv.flipped.ret (inv opArr-comp *> pmap opArr (inv (comp-equiv.flipped s.9)) *> opArr-comp))
+  }
+
+-- | Every square of `Op C` is the opposite of a unique square of {C}.
+\lemma opSquare-equiv.{u} {C : \Cat u} : IsEquiv (opSquare {C})
+  => transport (\lam (f : (DI ->⁺ DI ->⁺ C) -> DI ->⁺ DI ->⁺ Op C) => IsEquiv f) (path \lam i phi => inv (\peval opSquare phi) @ i) $ IsEquiv.trans (inP (HQEquiv.toQEquiv (square-char C))) $
+       IsEquiv.trans (opData-equiv {C}) (inP (symQEquiv (HQEquiv.toQEquiv (square-char (Op C)))))
+  \where {
+    -- | The corners and sides of a square.
+    \func Frame.{v} (C : \Cat v) => \Sigma (k : \Sigma C C C C) (\Sigma (k.1 ~> k.2) (k.2 ~> k.4) (k.1 ~> k.3) (k.3 ~> k.4))
+
+    -- | The commutativity of a square.
+    \func Comm.{v} {C : \Cat v} (x : Frame C) => comp x.2.1 x.2.2 = comp x.2.3 x.2.4
+
+    -- | Square data as a frame with a commutativity proof.
+    \func toComm.{v} {C : \Cat v} : QEquiv {(square-char C).D} {\Sigma (x : Frame C) (Comm x)} \cowith
+      | f s => (((s.1, s.2, s.3, s.4), (s.5, s.6, s.7, s.8)), comp-equiv.flipped s.9)
+      | ret t => (t.1.1.1, t.1.1.2, t.1.1.3, t.1.1.4, t.1.2.1, t.1.2.2, t.1.2.3, t.1.2.4, comp-equiv.flipped.ret t.2)
+      | ret_f s => pmap (\lam p => ((s.1, s.2, s.3, s.4, s.5, s.6, s.7, s.8, p) : (square-char C).D)) (comp-equiv.flipped.ret_f s.9)
+      | f_sec t => pmap (\lam e => ((t.1, e) : \Sigma (x : Frame C) (Comm x))) (comp-equiv.flipped.f_sec t.2)
+
+    -- | The opposite of a frame.
+    \func frameOp.{v} {C : \Cat v} : QEquiv {Frame C} {Frame (Op C)}
+      => sigma-equiv (\new QEquiv {\Sigma C C C C} {\Sigma (Op C) (Op C) (Op C) (Op C)} {
+           | f k => (Op.toOp k.4, Op.toOp k.3, Op.toOp k.2, Op.toOp k.1)
+           | ret k => (IsEquiv.ret Op.toOp-equiv k.4, IsEquiv.ret Op.toOp-equiv k.3, IsEquiv.ret Op.toOp-equiv k.2, IsEquiv.ret Op.toOp-equiv k.1)
+           | ret_f k => ext (IsEquiv.ret_f Op.toOp-equiv, IsEquiv.ret_f Op.toOp-equiv, IsEquiv.ret_f Op.toOp-equiv, IsEquiv.ret_f Op.toOp-equiv)
+           | f_sec k => ext (IsEquiv.f_ret Op.toOp-equiv, IsEquiv.f_ret Op.toOp-equiv, IsEquiv.f_ret Op.toOp-equiv, IsEquiv.f_ret Op.toOp-equiv)
+         }) (arrOp {C})
+
+    -- | The opposites of the sides of a square.
+    \func arrOp.{v} {C : \Cat v} (k : \Sigma C C C C)
+      : QEquiv {\Sigma (k.1 ~> k.2) (k.2 ~> k.4) (k.1 ~> k.3) (k.3 ~> k.4)}
+               {\Sigma (Op.toOp k.4 ~> Op.toOp k.3) (Op.toOp k.3 ~> Op.toOp k.1) (Op.toOp k.4 ~> Op.toOp k.2) (Op.toOp k.2 ~> Op.toOp k.1)} \cowith
+      | f a => (opArr a.4, opArr a.3, opArr a.2, opArr a.1)
+      | ret a => (IsEquiv.ret (opArr-equiv {C} {k.1} {k.2}) a.4, IsEquiv.ret (opArr-equiv {C} {k.2} {k.4}) a.3,
+                  IsEquiv.ret (opArr-equiv {C} {k.1} {k.3}) a.2, IsEquiv.ret (opArr-equiv {C} {k.3} {k.4}) a.1)
+      | ret_f a => ext (IsEquiv.ret_f opArr-equiv, IsEquiv.ret_f opArr-equiv, IsEquiv.ret_f opArr-equiv, IsEquiv.ret_f opArr-equiv)
+      | f_sec a => ext (IsEquiv.f_ret opArr-equiv, IsEquiv.f_ret opArr-equiv, IsEquiv.f_ret opArr-equiv, IsEquiv.f_ret opArr-equiv)
+
+    -- | The opposite of a commutativity proof.
+    \lemma commOp.{v} {C : \Cat v} (x : Frame C)
+      : IsEquiv {Comm x} {Comm (frameOp x)} (\lam e => inv opArr-comp *> pmap opArr (inv e) *> opArr-comp)
+      => IsEquiv.trans (inP (\new QEquiv {Comm x} {comp x.2.3 x.2.4 = comp x.2.1 x.2.2} {
+           | f => inv
+           | ret => inv
+           | ret_f _ => inv_inv
+           | f_sec _ => inv_inv
+         })) $ IsEquiv.trans (pmapIsEquiv opArr-equiv) (conj-equiv opArr-comp opArr-comp)
+
+    -- | Conjugation by paths is an equivalence.
+    \lemma conj-equiv {A : \Cat} {a b c d : A} (p : a = b) (q : c = d) : IsEquiv (\lam (r : a = c) => inv p *> r *> q) \elim p, q
+      | idp, idp => inP \new QEquiv {a = c} {a = c} {
+        | f r => idp *> r
+        | ret r => r
+        | ret_f r => idp_*>
+        | f_sec r => idp_*>
+      }
+
+    -- | {opSquare.opData} is an equivalence.
+    \lemma opData-equiv.{v} {C : \Cat v} : IsEquiv (opSquare.opData {C})
+      => IsEquiv.trans (inP toComm) $ IsEquiv.trans (inP (sigma-equiv (frameOp {C}) \lam x => IsEquiv.toQEquiv (commOp {C} x))) (inP (symQEquiv toComm))
+  }
+
+-- | To prove a property of all squares of `Op C`, it suffices to prove it for opposites of squares of {C}.
+\lemma opSquare-ind.{u} {C : \Cat u} {P : (DI ->⁺ DI ->⁺ Op C) -> \Prop} (h : \Pi (psi : DI ->⁺ DI ->⁺ C) -> P (opSquare psi))
+                       (phi : DI ->⁺ DI ->⁺ Op C) : P phi
+  => transport P (IsEquiv.f_ret opSquare-equiv) (h (IsEquiv.ret opSquare-equiv phi))
+
+-- | The top left corner of `opSquare phi` is the opposite of the bottom right corner of {phi}.
+\sfunc opSquare-ll.{u} {C : \Cat u} {phi : DI ->⁺ DI ->⁺ C} : opSquare phi dleft dleft = Op.toOp (phi dright dright)
+  => pmap (\lam (s : DI ->⁺ DI ->⁺ Op C) => s dleft dleft) (\peval opSquare phi)
+
+-- | The bottom right corner of `opSquare phi` is the opposite of the top left corner of {phi}.
+\sfunc opSquare-rr.{u} {C : \Cat u} {phi : DI ->⁺ DI ->⁺ C} : opSquare phi dright dright = Op.toOp (phi dleft dleft)
+  => pmap (\lam (s : DI ->⁺ DI ->⁺ Op C) => s dright dright) (\peval opSquare phi) *> pmap __.4 ((square-char (Op C)).f_finv (opSquare.opData (square-char C phi)))
+
+-- | The corner `(dright, dleft)` of `opSquare phi` is the opposite of the corner `(dleft, dright)` of {phi}.
+\sfunc opSquare-rl.{u} {C : \Cat u} {phi : DI ->⁺ DI ->⁺ C} : opSquare phi dright dleft = Op.toOp (phi dleft dright)
+  => pmap (\lam (s : DI ->⁺ DI ->⁺ Op C) => s dright dleft) (\peval opSquare phi)
+
+-- | The corner `(dleft, dright)` of `opSquare phi` is the opposite of the corner `(dright, dleft)` of {phi}.
+\sfunc opSquare-lr.{u} {C : \Cat u} {phi : DI ->⁺ DI ->⁺ C} : opSquare phi dleft dright = Op.toOp (phi dright dleft)
+  => pmap (\lam (s : DI ->⁺ DI ->⁺ Op C) => s dleft dright) (\peval opSquare phi) *> pmap __.3 ((square-char (Op C)).f_finv (opSquare.opData (square-char C phi)))

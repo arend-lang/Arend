@@ -143,12 +143,16 @@
   }
 
 -- | The arrow of `Op C` opposite to {b}.
-\func opArr.{u} {C : \Cat u} {x y : C} (b : x ~> y) : Op.toOp y ~> Op.toOp x
+\sfunc opArr.{u} {C : \Cat u} {x y : C} (b : x ~> y) : Op.toOp y ~> Op.toOp x
   => IsEquiv.ret (Op.Hom-ff (Op.toOp y) (Op.toOp x)) (IsEquiv.ret yonedaEmbCov b)
   \where {
     -- | The natural transformation of representable functors induced by {opArr} corresponds to {b}.
     \sfunc unop.{u} {C : \Cat u} {x y : C} {b : x ~> y} : yonedaEmbCov.fun (dmap Op.Hom (opArr b)) = b
-      => pmap yonedaEmbCov.fun (IsEquiv.f_ret (Op.Hom-ff _ _)) *> IsEquiv.f_ret yonedaEmbCov
+      => pmap yonedaEmbCov.fun hom *> IsEquiv.f_ret yonedaEmbCov
+
+    -- | The image of {opArr} under {Op.Hom}.
+    \sfunc hom.{u} {C : \Cat u} {x y : C} {b : x ~> y} : dmap Op.Hom (opArr b) = IsEquiv.ret yonedaEmbCov b
+      => pmap (dmap Op.Hom) (\peval opArr b) *> IsEquiv.f_ret (Op.Hom-ff _ _)
 
     -- | {opArr} preserves and reflects isomorphisms.
     \lemma isIso.{u} {C : \Cat u} {x y : C} {b : x ~> y} : IsIso (opArr b) <-> IsIso b
@@ -167,7 +171,7 @@
 
 -- | {opArr} is an equivalence.
 \lemma opArr-equiv.{u} {X : \Cat u} {x y : X} : IsEquiv (opArr {X} {x} {y})
-  => IsEquiv.trans (IsEquiv.ret-equiv yonedaEmbCov) (IsEquiv.ret-equiv (Op.Hom-ff (Op.toOp y) (Op.toOp x)))
+  => transport IsEquiv (path \lam i (b : x ~> y) => inv (\peval opArr b) @ i) (IsEquiv.trans (IsEquiv.ret-equiv yonedaEmbCov) (IsEquiv.ret-equiv (Op.Hom-ff (Op.toOp y) (Op.toOp x))))
 
 -- | Arrows of `Op X` are the opposites of arrows of {X}.
 \lemma opArrow-equiv.{u} {X : \Cat u} : IsEquiv {DI ->⁺ X} {DI ->⁺ Op X} (\lam b i => opArr (dpath b) i)
@@ -189,8 +193,8 @@
        *> pmap (comp __ _) (~>-natural \lam w => =_~> (OpFunc.char {C} {D} {f} {w}))
        *> inv comp-assoc
        *> pmap (\lam t => comp (=_~> OpFunc.char) (comp (dmap (LeftKanExtType f) t) (LeftKanExtType-repr f x)))
-               (IsEquiv.f_ret (Op.Hom-ff (Op.toOp y) (Op.toOp x)))
-       *> pmap (comp _) (LeftKanExtType-repr-natural {C} {D} {f} b *> pmap (comp _) (inv (IsEquiv.f_ret (Op.Hom-ff (Op.toOp (f y)) (Op.toOp (f x))))))
+               opArr.hom
+       *> pmap (comp _) (LeftKanExtType-repr-natural {C} {D} {f} b *> pmap (comp _) (inv opArr.hom))
        *> comp-assoc *> pmap (comp __ _) (inv OpFunc_toOp.toOp-arr) *> inv (dmap_comp Op.Hom)
   \where
     -- | A conjugate of {g} by paths is {h} if the corresponding square commutes.
