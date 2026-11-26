@@ -60,8 +60,6 @@
     | suc<suc p => p
 }
 
-\open NatOrder
-
 \lemma -'_< {n m : Nat} (p : 0 < n -' m) : m < n \elim n, m, p
   | suc n, 0, _ => zero<suc
   | suc n, suc m, p => suc<suc (-'_< p)
@@ -190,8 +188,6 @@
   | natCoefZero => idp
   | natCoefSuc n => idp
   \where {
-    \open LinearOrder
-
     \lemma triEquals {n m : Nat} (p : n - m = 0) : n = m \elim n, m
       | 0, 0 => idp
       | suc n, suc m => pmap suc (triEquals p)
@@ -339,8 +335,6 @@
   | suc n, 0 => absurd (p zero<suc)
   | suc n, suc m => -'=0 (\lam q => p (suc<suc q))
 
-\open LinearlyOrderedSemiring \hiding (Dec)
-
 \lemma <=_* {n m k l : Nat} (n<=m : n <= m) (k<=l : k <= l) : n * k <= m * l
   => <=-transitive (<=_*_positive-right zero<=_ k<=l) (<=_*_positive-left n<=m zero<=_)
 
@@ -377,7 +371,7 @@
   | 0 => idp
   | suc q => absurd (notLess (<=-transitive (<=_+ zero<=_ <=-refl) (<=_+ <=-refl zero<=_)) p)
 
-\open NatSemiring \hiding (<_*_positive-left, <_+-left)
+\open NatSemiring \using (+-assoc, +-comm, *-assoc, *-comm, <-irreflexive) \hiding (<_*_positive-left, <_+-left)
 
 \lemma mod-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : n * q + r = n * q' + r') : r = r' \elim q, q'
   | 0, 0 => p

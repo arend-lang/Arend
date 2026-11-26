@@ -1,0 +1,341 @@
+{- | **Jordan canonical form** (Mines–Richman–Ruitenburg, Theorem V.4.2).
+
+     Let `A` be a square matrix over a discrete field `k` whose characteristic polynomial is a product of linear
+     factors. Following the book, we view $k^n$ as a $k[X]$-module (`matPolyModule A`), which is finitely
+     presented by Lemma V.4.1. By Theorem V.3.3 it is the direct sum of its primary components $V_{X - \lambda}$
+     (the projections are polynomials in `A`), and by Theorem V.3.4 each $V_{X - \lambda}$ is a direct sum of
+     cyclic modules $k[X]/((X - \lambda)^m)$. The bases $1, (X - \lambda), \dots, (X - \lambda)^{m-1}$ of these
+     modules are Jordan chains (`jordan-chains`); together they form a basis of $k^n$ (`jordan-basis`), relative to
+     which `A` is in Jordan canonical form, and the diagonal of this form is a polynomial in it (`jordan-form`).
+
+     Auxiliary facts: `X - a` is prime in `k[X]` (`linear-prime`), and `X - a`, `X - b` are strongly relatively
+     prime for `a ≠ b` (`linear-coprime`).
+-}
+
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Group.SubGroup
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.CayleyHamilton
+\import Algebra.Linear.Matrix.CharPoly
+\import Algebra.Linear.Matrix.Diagonalizable (mulVec)
+\import Algebra.Linear.Matrix.JordanChains
+\import Algebra.Linear.Matrix.JordanMatrix
+\import Algebra.Linear.Matrix.Kronecker (ide-diag, ide-offdiag)
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Linear.Matrix.PolyModule
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Module.Presentation
+\import Algebra.Module.Primary
+\import Algebra.Module.SubLModule
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Pointed.SubPointed
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Euclidean
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Bool
+\import Data.Fin
+\import Data.Or
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Order.PartialOrder
+\import Order.Biordered
+\open Monoid
+
+-- | `X - a` is prime in `k[X]`.
+\func linear-prime {K : DiscreteField} (a : K) : Prime {PolyEuclideanDomain K} \cowith
+  | e => padd 1 (negative a)
+  | notInv (j : Inv) => zro/=ide $ inv (K.zro_*-left {polyEval j.inv a}) *> pmap (`* polyEval j.inv a) (inv lin-root)
+                          *> inv ((polyEvalRingHom a).func-* {padd 1 (negative a)} {j.inv}) *> pmap (polyEval __ a) j.inv-right *> (polyEvalRingHom a).func-ide
+  | isCancelable-left p => IntegralDomain.nonZero-cancel-left {PolyEuclideanDomain K} {padd 1 (negative a)} (\lam q => zro/=ide (inv (pmap {Poly K} (polyCoef __ 1) q))) p
+  | isPrime {x} {y} (d : LDiv) => \have xy0 : polyEval x a * polyEval y a = 0
+                                     => inv ((polyEvalRingHom a).func-* {x} {y}) *> pmap (polyEval __ a) (inv d.inv-right)
+                                          *> (polyEvalRingHom a).func-* {padd 1 (negative a)} {d.inv} *> pmap (`* _) lin-root *> K.zro_*-left
+                                 \in \case decideEq (polyEval x a) 0 \with {
+                                   | yes x0 => byLeft (LDiv.make (rootDiv x a) (*-comm *> inv (rootDiv_* x0)))
+                                   | no x/=0 => byRight (LDiv.make (rootDiv y a) (*-comm *> inv (rootDiv_* (K.nonZero-cancel-left x/=0 (xy0 *> inv K.zro_*-right)))))
+                                 }
+  \where
+    \lemma lin-root {K : DiscreteField} {a : K} : polyEval (padd 1 (negative a)) a = 0
+      => polyEval_padd1 {K} {a} {a} *> negative-right
+
+-- | `X - a` and `X - b` are strongly relatively prime if `a ≠ b`.
+\lemma linear-coprime {K : DiscreteField} {a b : K} (q : a /= b) : IsStronglyCoprime {PolyEuclideanDomain K} (padd 1 (negative a)) (padd 1 (negative b))
+  => \have | ba/=0 : b - a /= 0 => \lam p => q (inv (AddGroup.fromZero p))
+          | diff : padd 1 (negative a) - padd 1 (negative b) = {Poly K} padd 0 (b - a)
+              => pmap2 (\lam u v => u - v) (padd-expand {K} {1} {negative a}) (padd-expand {K} {1} {negative b}) *> cancel-alg {PolyRing K} {1 * padd 1 0} {padd 0 (negative a)} {padd 0 (negative b)}
+                   *> pmap (padd 0 (negative a) +) (inv (AddGroupHom.func-negative {polyHom {K}} {negative b})) *> inv ((polyHom {K}).func-+ {negative a} {negative (negative b)})
+                   *> pmap (padd 0) equation.abGroup
+     \in inP (padd 0 (finv (b - a)), negative (padd 0 (finv (b - a))),
+             coprime-alg {PolyEuclideanDomain K} {padd 0 (finv (b - a))} {padd 1 (negative a)} {padd 1 (negative b)} *> pmap (padd 0 (finv (b - a)) *) diff *> inv ((polyHom {K}).func-* {finv (b - a)} {b - a}) *> pmap (padd 0) (K.finv-left ba/=0))
+  \where {
+    \lemma cancel-alg {G : AbGroup} {x u v : G} : (x + u) - (x + v) = u - v
+      => equation.abGroup
+
+    \lemma coprime-alg {R : CRing} {s x y : R} : s * x + negative s * y = s * (x - y)
+      => equation.cRing
+  }
+
+-- | The distinct values of an array over a set with decidable equality, and the class of each entry.
+\lemma distinct-values {A : DecSet} {N : Nat} (mu : Array A N)
+  : ∃ (t : Nat) (nu : Array A t) (IsInj nu) (cls : Fin N -> Fin t) (\Pi (p : Fin N) -> mu p = nu (cls p)) \elim N, mu
+  | 0, nil => inP (0, nil, \lam {i} _ => \case i \with {}, \lam (p : Fin 0) => \case p \with {}, \lam (p : Fin 0) => \case p \with {})
+  | suc N, a :: mu => \case distinct-values mu \with {
+    | inP (t, nu, inj, cls, mc) => \case FinSet.searchFin (\lam j => a = nu j) (\lam j => decideEq a (nu j)) \with {
+      | inl (j, aj, _) => inP (t, nu, inj, \case \elim __ \with { | 0 => j | suc p => cls p }, \case \elim __ \with { | 0 => aj | suc p => mc p })
+      | inr na => inP (suc t, a :: nu, \lam {i} {ii} => \case \elim i, \elim ii \with {
+          | 0, 0 => \lam _ => idp
+          | 0, suc ii => \lam e => absurd (na ii e)
+          | suc i, 0 => \lam e => absurd (na i (inv e))
+          | suc i, suc ii => \lam e => pmap fsuc (inj e)
+        }, \case \elim __ \with { | 0 => 0 | suc p => suc (cls p) }, \case \elim __ \with { | 0 => idp | suc p => mc p })
+    }
+  }
+
+{- | **Jordan chains** (proof of Theorem V.4.2). If `A` is killed by a product of linear factors (for example, by
+     its characteristic polynomial, if that is a product of linear factors), there are Jordan chains for `A` such that every vector is a polynomial combination of their start
+     vectors, and no nontrivial combination $\sum_c g_c(A) y_c$ with $\deg g_c$ less than the length of `c`
+     vanishes. -}
+\lemma jordan-chains {K : DiscreteField} {n : Nat} (A : Matrix K n n) {l : Nat} (rt : Array K l) (e : matPolyEval (prodLin rt) A = 0)
+  : ∃ (cs : Array (Chain K n)) (ChainAnn A cs)
+      (\Pi (v : Array K n) -> ∃ (r : Array (Poly K) cs.len) (v = LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (r c) A) (cs c).3)))
+      (\Pi (g : Array (Poly K) cs.len) -> (\Pi (c : Fin cs.len) -> degree< (g c) (cs c).4)
+         -> LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (g c) A) (cs c).3) = \new Array K n (\lam _ => 0)
+         -> \Pi (c : Fin cs.len) -> g c = 0)
+  => \case structure-theorem {PolyEuclideanDomain K} {matPolyModule A} {n} {n} {stdVec} {presentationMatrix A} (matPolyModule-presentation A), distinct-values rt \with {
+    | inP (y, d, _, gen, rel), inP (t, nu, nuInj, cls, rc) =>
+      \let | V => matPolyModule A
+           | p : Array (Poly K) t => \lam j => padd 1 (negative (nu j))
+      \in \have | pc {i j : Fin t} (q : i /= j) : IsStronglyCoprime {PolyEuclideanDomain K} (p i) (p j) => linear-coprime (\lam e => q (nuInj e))
+                | bnd (v : Array K n) : Monoid.pow (Monoid.BigProd {PolyEuclideanDomain K} p) l *c {V} v = LModule.zro {V} => bound A rt e nu cls rc v
+                | d/=0 (i : Fin n) : d i /= 0 => \lam di0 => \case single-rel {PolyEuclideanDomain K} {V} {n} {y} {d} rel (chi-kills A rt e (y i)) \with {
+                    | inP dv => prodLin/=0 rt (inv dv.inv-right *> pmap (`* dv.inv) di0 *> Semiring.zro_*-left {PolyEuclideanDomain K} {dv.inv})
+                  }
+      \in \case primary-decomposition {PolyEuclideanDomain K} {V} p pc l \with {
+        | inP (pr, dec) => \case FinSet.finiteAC (\lam j => primary-piece y d d/=0 gen rel (nu j) (pr j)
+                                     (\lam v vc => (primary-projection-component {PolyEuclideanDomain K} {V} {t} {p} pc (dec (bnd v)).1 (dec (bnd v)).2 vc).1)
+                                     (\lam v => (dec (bnd v)).2 j)) \with {
+          | inP f =>
+            \let | pe => ProdFin.prod_equiv {t} {n}
+                 | y2 (j : Fin t) : Array V n => (f j).1
+                 | ex (j : Fin t) : Array Nat n => (f j).2
+                 | cs : Array (Chain K n) (t Nat.* n) => \lam L => (nu (pe L).1, 0, y2 (pe L).1 (pe L).2, ex (pe L).1 (pe L).2)
+            \in inP (cs,
+                     \lam L => inv (single-sum {PolyEuclideanDomain K} {V} (y2 (pe L).1) (pe L).2 (Monoid.pow (p (pe L).1) (ex (pe L).1 (pe L).2)))
+                                 *> ((f (pe L).1).5 (\lam ii => MatrixRing.ide {PolyEuclideanDomain K} {n} (pe L).2 ii * Monoid.pow (p (pe L).1) (ex (pe L).1 (pe L).2))).2 (\lam ii => single-div (pe L).2 ii (Monoid.pow (p (pe L).1) (ex (pe L).1 ii)) (\lam e => transport (\lam z => LDiv (Monoid.pow (p (pe L).1) (ex (pe L).1 z)) (Monoid.pow (p (pe L).1) (ex (pe L).1 (pe L).2))) e (LDiv.make 1 ide-right))),
+                     \lam v => \case FinSet.finiteAC (\lam j => (f j).4 (pr j *c {V} v) ((dec (bnd v)).2 j)) \with {
+                       | inP R => inP (\lam L => (R (pe L).1).1 (pe L).2,
+                                       inv (dec (bnd v)).1 *> pmap (LModule.BigSum {V}) (exts \lam j => (R j).2)
+                                         *> inv (double-sum {V} (\lam j i => (R j).1 i *c {V} y2 j i)))
+                     },
+                     \lam g gd gs L =>
+                       \have | gz (j : Fin t) : LModule.BigSum {V} (\lam i => g (pe.ret (j, i)) *c {V} y2 j i) = LModule.zro {V}
+                                 => components-independent {PolyEuclideanDomain K} {V} p pc (\lam j => LModule.BigSum {V} (\lam i => g (pe.ret (j, i)) *c {V} y2 j i))
+                                      (\lam j => comb-in {PolyEuclideanDomain K} {V} {component V (p j)} (\lam i => g (pe.ret (j, i))) (y2 j) (f j).3)
+                                      (inv (double-sum {V} (\lam j i => g (pe.ret (j, i)) *c {V} y2 j i))
+                                        *> pmap (LModule.BigSum {V}) (exts \lam LL1 => pmap (\lam LL2 => g LL2 *c {V} (cs LL1).3) (pe.ret_f LL1)) *> gs) j
+                             | g0 (j : Fin t) (i : Fin n) : g (pe.ret (j, i)) = 0
+                                 => \case (((f j).5 (\lam i => g (pe.ret (j, i)))).1 (gz j)) i \with {
+                                   | inP dv => pow-div-degree dv (transport (\lam (ji : \Sigma (Fin t) (Fin n)) => degree< (g (pe.ret (j, i))) (ex ji.1 ji.2)) (QEquiv.f_ret {pe} (j, i)) (gd (pe.ret (j, i))))
+                                 }
+                       \in pmap g (inv (pe.ret_f L)) *> g0 (pe L).1 (pe L).2)
+        }
+      }
+  }
+  \where {
+    -- | `p^e` divides $\delta_{ij} p^{e'}$ when `e ≤ e'` at the diagonal.
+    \lemma single-div {R : CRing} {n : Nat} (i ii : Fin n) (x : R) {c : R} (cx : i = ii -> LDiv x c) : TruncP (LDiv x (MatrixRing.ide {R} {n} i ii * c))
+      => \case decideEq i ii \with {
+        | yes e => inP (transportInv (LDiv x) (pmap (`* c) (matPolyModule-presentation.ide-eq e) *> ide-left) (cx e))
+        | no q => inP (transportInv (LDiv x) (pmap (`* c) (ide-offdiag q) *> zro_*-left) R.zero-div)
+      }
+
+    -- | A combination of elements of a submodule lies in it.
+    \lemma comb-in {R : Ring} {M : LModule R} {S : SubLModule R M} {n : Nat} (r : Array R n) (y : Array M n) (yS : \Pi (i : Fin n) -> S (y i))
+      : S (M.BigSum (\lam i => r i *c y i)) \elim n, r, y
+      | 0, nil, nil => SubAddPointed.contains_zro {S}
+      | suc n, a :: r, b :: y => SubAddMonoid.contains_+ {S} (SubLModule.contains_*c {S} (yS 0)) (comb-in r y \lam i => yS (suc i))
+
+    -- | A single relation: if `c y_i = 0`, then `d_i` divides `c`.
+    \lemma single-rel {R : CRing} {M : LModule R} {n : Nat} {y : Array M n} {d : Array R n}
+      (rel : \Pi (r : Array R n) -> (M.BigSum (\lam j => r j *c y j) = 0) <-> (\Pi (j : Fin n) -> TruncP (LDiv (d j) (r j))))
+      {i : Fin n} {c : R} (cy : c *c y i = 0) : TruncP (LDiv (d i) c)
+      => transport (\lam z => TruncP (LDiv (d i) z)) (pmap (`* c) ide-diag *> ide-left)
+           ((rel (\lam j => MatrixRing.ide {R} {n} i j * c)).1 (single-sum y i c *> cy) i)
+
+    -- | $\sum_j (\delta_{ij} c) y_j = c y_i$.
+    \lemma single-sum {R : Ring} {M : LModule R} {n : Nat} (y : Array M n) (i : Fin n) (c : R)
+      : M.BigSum (\lam j => (MatrixRing.ide {R} {n} i j * c) *c y j) = c *c y i
+      => M.BigSum-unique i (\lam j ij => pmap (`*c y j) (pmap (`* c) (ide-offdiag ij) *> zro_*-left) *> M.*c_zro-left)
+           *> pmap (`*c y i) (pmap (`* c) ide-diag *> ide-left)
+
+    \lemma mulVec-zero {R : Ring} {n m : Nat} (v : Array R m) : mulVec (0 : Matrix R n m) v = \new Array R n (\lam _ => 0)
+      => exts \lam i => R.BigSum_zro \lam j => zro_*-left
+
+    -- | The characteristic polynomial kills $k^n$ (Cayley–Hamilton).
+    \lemma chi-kills {K : DiscreteField} {n : Nat} (A : Matrix K n n) {l : Nat} (rt : Array K l) (e : matPolyEval (prodLin rt) A = 0) (v : Array K n)
+      : prodLin rt *c {matPolyModule A} v = LModule.zro {matPolyModule A}
+      => pmap (mulVec __ v) e *> mulVec-zero v
+
+    \lemma prodLin/=0 {K : DiscreteField} {l : Nat} (rt : Array K l) : prodLin rt /= 0
+      => \lam q => zro/=ide (inv (pmap (polyCoef __ l) q) *> prodLin-monic rt)
+
+    \func elem-div-BigProd {M : CMonoid} (l : Array M) (j : Fin l.len) : LDiv (l j) (Monoid.BigProd l) \elim l, j
+      | a :: l, 0 => LDiv.make (Monoid.BigProd l) idp
+      | a :: l, suc j => LDiv.make (a * LDiv.inv {elem-div-BigProd l j}) (equation.cMonoid {LDiv.inv-right {elem-div-BigProd l j}})
+
+    -- | The characteristic polynomial divides a power of the product of the distinct linear factors.
+    \func prodLin-div {K : DiscreteField} {l t : Nat} (rt : Array K l) (nu : Array K t) (cls : Fin l -> Fin t) (rc : \Pi (i : Fin l) -> rt i = nu (cls i))
+      : LDiv {PolyEuclideanDomain K} (prodLin rt) (Monoid.pow (Monoid.BigProd {PolyEuclideanDomain K} (\lam j => padd 1 (negative (nu j)))) l) \elim l, rt
+      | 0, nil => LDiv.make 1 ide-left
+      | suc l, a :: rt =>
+        \have | d1 => prodLin-div rt nu (\lam i => cls (suc i)) (\lam i => rc (suc i))
+              | d2 : LDiv {PolyEuclideanDomain K} (padd 1 (negative a)) (Monoid.BigProd {PolyEuclideanDomain K} (\lam j => padd 1 (negative (nu j))))
+                  => transportInv (\lam z => LDiv {PolyEuclideanDomain K} (padd 1 (negative z)) _) (rc 0) (elem-div-BigProd {PolyEuclideanDomain K} (\lam j => padd 1 (negative (nu j))) (cls 0))
+        \in LDiv.make (d1.inv * d2.inv) (mul-alg {PolyEuclideanDomain K} d1.inv-right d2.inv-right)
+
+    \lemma mul-alg {M : CMonoid} {a b c d x y : M} (p : a * c = x) (q : b * d = y) : a * b * (c * d) = x * y
+      => equation.cMonoid *> pmap2 (*) p q
+
+    -- | A power of the product of the distinct linear factors kills $k^n$.
+    \lemma bound {K : DiscreteField} {n : Nat} (A : Matrix K n n) {l : Nat} (rt : Array K l) (e : matPolyEval (prodLin rt) A = 0) {t : Nat}
+      (nu : Array K t) (cls : Fin l -> Fin t) (rc : \Pi (i : Fin l) -> rt i = nu (cls i)) (v : Array K n)
+      : Monoid.pow (Monoid.BigProd {PolyEuclideanDomain K} (\lam j => padd 1 (negative (nu j)))) l *c {matPolyModule A} v = LModule.zro {matPolyModule A}
+      => \have D => prodLin-div rt nu cls rc
+         \in pmap (`*c {matPolyModule A} v) (inv D.inv-right *> *-comm) *> LModule.*c-assoc {matPolyModule A}
+               *> pmap (D.inv *c {matPolyModule A}) (chi-kills A rt e v) *> LModule.*c_zro-right {matPolyModule A}
+
+    -- | Reindexing a sum over `Fin (t * n)` as a double sum.
+    \lemma double-sum {M : AbMonoid} {t n : Nat} (F : Fin t -> Fin n -> M)
+      : M.BigSum (\lam L => F (ProdFin.prod_equiv {t} {n} L).1 (ProdFin.prod_equiv {t} {n} L).2) = M.BigSum (\lam j => M.BigSum (\lam i => F j i))
+      => inv M.FinSum=BigSum *> inv (M.FinSum_Equiv {FinFin (t Nat.* n)} {SigmaFin (FinFin t) (\lam _ => FinFin n)} ProdFin.prod_equiv) *> inv (M.FinSum-double-dep' {FinFin t} (\lam _ => FinFin n) {F})
+           *> M.FinSum=BigSum *> pmap M.BigSum (exts \lam j => M.FinSum=BigSum)
+
+    -- | The degree of $(X - a)^m$ is `m`.
+    \lemma pow-lin-degree {K : DiscreteField} {a : K} (m : Nat) : \Sigma (Monoid.pow (padd 1 (negative a)) m /= {Poly K} 0) (degree (Monoid.pow (padd 1 (negative a)) m) = m) \elim m
+      | 0 => (\lam q => zro/=ide (inv (pmap (polyCoef __ 0) q)), idp)
+      | suc m => \have | ih => pow-lin-degree {K} {a} m
+                       | lin/=0 : padd 1 (negative a) /= {Poly K} 0 => \lam q => zro/=ide (inv (pmap (polyCoef __ 1) q))
+                 \in (Domain.nonZero_* {PolyEuclideanDomain K} ih.1 lin/=0, degree_* ih.1 lin/=0 *> pmap2 (+) ih.2 (degree_padd {K} {1} (negative a) (\lam q => zro/=ide (inv (pmap (polyCoef __ 0) q))) *> pmap suc (degree-one {K})))
+
+    \lemma degree-one {K : DiscreteField} : degree (1 : Poly K) = 0
+      => idp
+
+    -- | A multiple of $(X - a)^m$ of degree less than `m` is zero.
+    \lemma pow-div-degree {K : DiscreteField} {a : K} {m : Nat} {g : Poly K} (dv : LDiv {PolyEuclideanDomain K} (Monoid.pow (padd 1 (negative a)) m) g) (dg : degree< g m) : g = 0
+      => \case decideEq g 0 \with {
+        | yes g0 => g0
+        | no g/=0 => absurd (NatSemiring.<-irreflexive (transport (`<= degree g) (pow-lin-degree m).2 (degree_LDiv dv g/=0) <∘r degree<_degree g/=0 dg))
+      }
+
+    -- | **Theorem V.3.4 applied to a primary component.** If `y` presents `M` as $\bigoplus R/(d_i)$ and `pr` projects onto the component of `X - a`, this component is a direct sum of modules $k[X]/((X - a)^{e_i})$.
+    \lemma primary-piece {K : DiscreteField} {M : LModule (PolyEuclideanDomain K)} {n : Nat} (y : Array M n) (d : Array (Poly K) n) (d/=0 : \Pi (i : Fin n) -> d i /= 0)
+      (gen : M.IsGenerated y) (rel : \Pi (r : Array (Poly K) n) -> (M.BigSum (\lam j => r j *c y j) = 0) <-> (\Pi (j : Fin n) -> TruncP (LDiv (d j) (r j))))
+      (a : K) (pr : Poly K) (prp : \Pi (v : M) -> component M (padd 1 (negative a)) v -> pr *c v = v) (prc : \Pi (v : M) -> component M (padd 1 (negative a)) (pr *c v))
+      : ∃ (y2 : Array M n) (ex : Array Nat n) (\Pi (i : Fin n) -> component M (padd 1 (negative a)) (y2 i))
+               (\Pi (v : M) -> component M (padd 1 (negative a)) v -> ∃ (r : Array (Poly K) n) (v = M.BigSum (\lam i => r i *c y2 i)))
+               (\Pi (r : Array (Poly K) n) -> (M.BigSum (\lam i => r i *c y2 i) = 0) <-> (\Pi (i : Fin n) -> TruncP (LDiv (Monoid.pow (padd 1 (negative a)) (ex i)) (r i))))
+      => \case FinSet.finiteAC (\lam i => colon-principal {PolyEuclideanDomain K} {d i} {pr} (d/=0 i)) \with {
+        | inP G =>
+          \let | S => component M (padd 1 (negative a))
+               | w (i : Fin n) : IModule S => (pr *c y i, prc (y i))
+               | g : Array (Poly K) n => \lam i => (G i).1
+          \in \have | wsum (r : Array (Poly K) n) : elt (LModule.BigSum {IModule S} (\lam i => r i *c {IModule S} w i)) = M.BigSum (\lam i => (r i * pr) *c y i)
+                        => fst-BigSum (\lam i => r i *c {IModule S} w i) *> pmap M.BigSum (exts \lam i => inv *c-assoc)
+                    | P : IsPresentation {PolyEuclideanDomain K} {IModule S} w (diagonal g)
+                        => (\lam v => \case gen (elt v) \with {
+                              | inP (c, vc) => inP (c, elt-inj (inv (prp (elt v) (elt-in v)) *> pmap (pr *c) vc *> M.*c_BigSum-ldistr
+                                                             *> pmap M.BigSum (exts \lam i => inv *c-assoc *> pmap (`*c y i) *-comm) *> inv (wsum c)))
+                            },
+                            \lam r => <->trans
+                                        (\lam q => (rel (\lam i => r i * pr)).1 (inv (wsum r) *> pmap elt q),
+                                         \lam q => elt-inj (wsum r *> (rel (\lam i => r i * pr)).2 q))
+                                        (<->trans (\lam (q : \Pi (i : Fin n) -> TruncP (LDiv (d i) (r i * pr))) i => ((G i).2 (r i)).1 (q i), \lam (q : \Pi (i : Fin n) -> TruncP (LDiv (g i) (r i))) i => ((G i).2 (r i)).2 (q i)) (<->sym (diag-relations g r))))
+          \in \case primary-structure {PolyEuclideanDomain K} {IModule S} {n} {n} {w} {diagonal g} P (linear-prime a) (\lam z => \case elt-in z \with {
+                | inP (h, hz) => inP (h, elt-inj hz)
+              }) \with {
+            | inP (y3, ex, gen3, rel3) =>
+              inP (\lam i => elt (y3 i), ex, \lam i => elt-in (y3 i),
+                   \lam v vc => \case gen3 (v, vc) \with {
+                     | inP (r, vr) => inP (r, pmap elt vr *> fst-BigSum (\lam i => r i *c {IModule S} y3 i))
+                   },
+                   \lam r => <->trans (\lam q => elt-inj (fst-BigSum (\lam i => r i *c {IModule S} y3 i) *> q),
+                                       \lam q => inv (fst-BigSum (\lam i => r i *c {IModule S} y3 i)) *> pmap elt q) (rel3 r))
+          }
+      }
+
+    \func elt {R : Ring} {S : SubLModule R} (z : IModule S) : S.S => z.1
+
+    \lemma elt-in {R : Ring} {S : SubLModule R} (z : IModule S) : S (elt z) => z.2
+
+    \lemma elt-inj {R : Ring} {S : SubLModule R} {z z' : IModule S} (p : elt z = elt z') : z = z' => ext p
+
+    -- | Relations of a square diagonal presentation matrix.
+    \lemma diag-relations {R : CRing} {n : Nat} (g r : Array R n)
+      : ∃ (s : Array R n) (r = rowComb s (diagonal g)) <-> (\Pi (j : Fin n) -> TruncP (LDiv (g j) (r j)))
+      => (\lam (inP (s, q)) j => inP (LDiv.make (s j) (*-comm *> inv (pmap (\lam (v : Array R n) => v j) q *> rowComb-diag g s j))),
+          \lam h => \case FinSet.finiteAC h \with {
+            | inP u => inP (\lam j => LDiv.inv {u j}, exts \lam j => inv (LDiv.inv-right {u j}) *> *-comm *> inv (rowComb-diag g (\lam j => LDiv.inv {u j}) j))
+          })
+
+    \lemma rowComb-diag {R : Ring} {n : Nat} (g s : Array R n) (j : Fin n) : rowComb s (diagonal g) j = s j * g j
+      => R.BigSum-unique j (\lam i ji => pmap (s i *) (diagonal-isDiagonal {R} {g} (\lam (e : (i : Nat) = j) => ji (inv (fin_nat-inj e)))) *> zro_*-right) *> pmap (s j *) (diagonal-diag g j)
+
+    \lemma diagonal-diag {R : AddPointed} {n : Nat} (g : Array R n) (j : Fin n) : diagonal g j j = g j
+      => rewrite (decideEq=_reduce idp) idp
+
+    -- | The underlying element of a sum in a submodule.
+    \lemma fst-BigSum {R : Ring} {S : SubLModule R} (l : Array (IModule S)) : (LModule.BigSum {IModule S} l).1 = LModule.BigSum {S.S} (\lam i => (l i).1)
+      => AddMonoidHom.func-BigSum {IAddGroup.embed {S}} {l}
+
+  }
+
+-- | **Jordan basis.** Under the hypothesis of Theorem V.4.2, $k^n$ has a basis of Jordan chains for `A`.
+\lemma jordan-basis {K : DiscreteField} {n : Nat} (A : Matrix K n n) {l : Nat} (rt : Array K l) (e : charPoly A = prodLin rt)
+  : ∃ (b : Array (Array K n) n) (mu : Array K n) (s : Array Bool n) (LModule.IsBasis {ArrayLModule n (RingLModule K)} b)
+      (JordanCompat mu s) (IsJordanFamily A b mu s)
+  => \case jordan-chains A rt (inv (pmap (matPolyEval __ A) e) *> cayley-hamilton A) \with {
+    | inP (cs, ann, span, ind) =>
+      \have | bb : LModule.IsBasis {ArrayLModule n (RingLModule K)} (chainFamily A cs)
+                => (chain-independent ind, \lam v => \case span v \with {
+                      | inP (r, vr) => \case chain-span ann r \with {
+                        | inP (a, ra) => inP (a, vr *> ra)
+                      }
+                    })
+            | len : chainLen cs = n => inv (FinModule.dimension-unique bb) *> FinModule.dimension-unique {K} {ArrayFinModule n} ArrayFinModule.basis
+      \in inP (transport (\lam m => \Sigma (b : Array (Array K n) m) (mu : Array K m) (s : Array Bool m) (LModule.IsBasis {ArrayLModule n (RingLModule K)} b)
+                                                 (JordanCompat mu s) (IsJordanFamily A b mu s)) len
+                                 (chainFamily A cs, chainEig cs, chainS cs, bb, chain-compat-eig cs, chain-jordan ann))
+  }
+
+{- | **Theorem V.4.2 (Jordan canonical form).** If the characteristic polynomial of `A` is a product of linear
+     factors, then there is an invertible `P` such that $P A P^{ -1}$ is in Jordan canonical form, and the diagonal
+     of $P A P^{ -1}$ is a polynomial in it. -}
+\lemma jordan-form {K : DiscreteField} {n : Nat} (A : Matrix K n n) {l : Nat} (rt : Array K l) (e : charPoly A = prodLin rt)
+  : ∃ (P : Inv {MatrixRing K n}) (mu : Array K n) (s : Array Bool n) (JordanCompat mu s) (P.val * A * P.inv = jordanMatrix mu s)
+      (∃ (q : Poly K) (matPolyEval q (P.val * A * P.inv) = diagonal mu))
+  => \case jordan-basis A rt e \with {
+    | inP (b, mu, s, bb, c, jf) => \case basis-conj b bb \with {
+      | inP (P, conj) => \have J => conj A (jordanMatrix mu s) (\lam k => jf k *> inv (jordanMatrix-column c b k))
+                         \in inP (P, mu, s, c, J, transportInv (\lam M => ∃ (q : Poly K) (matPolyEval q M = diagonal mu)) J (jordan-diagonal-poly mu s c mu (\lam p => p)))
+    }
+  }

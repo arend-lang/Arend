@@ -70,6 +70,10 @@
   \lemma pow-left {a : E} {n : Nat} : a * pow a n = pow a n * a
     => inv (pow-comm1 idp)
 
+  -- | If `a^d = 1`, then the powers of {a} are periodic with period {d}.
+  \lemma pow_mod {a : E} {d : Nat} (p : pow a d = ide) {m : Nat} : pow a m = pow a (m Nat.mod d)
+    => pmap (pow a) (inv $ Nat.divModProp m d) *> pow_+ *> pmap (* _) (pow_* *> pmap (pow __ _) p *> pow_ide) *> ide-left
+
   \lemma pow-ldiv {a : E} {n m : Nat} (n<=m : n <= m) : LDiv (pow a n) (pow a m) (pow a (m -' n)) \cowith
     | inv-right => inv pow_+ *> pmap (pow a) (<=_exists n<=m)
 

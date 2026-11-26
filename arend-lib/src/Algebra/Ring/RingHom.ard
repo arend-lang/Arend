@@ -80,6 +80,11 @@
   \override Dom : Ring
   \override Cod : Ring
 
+  -- | Ring homomorphisms commute with the canonical maps from `ℤ`.
+  \lemma func-intMap (r : Int) : func (intMap r) = intMap r \elim r
+    | pos n => func-natCoef
+    | neg n => rewrite (Ring.intCoef_neg, Ring.intCoef_neg) $ AddGroupHom.func-negative *> pmap negative func-natCoef
+
   \protected \func Kernel : TIdeal Dom \cowith
     | SubAddGroup => KernelAddGroup \this
     | ideal-left A0 => rewrite (func-*, A0, zro_*-right) idp

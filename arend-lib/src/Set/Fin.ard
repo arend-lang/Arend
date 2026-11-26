@@ -213,6 +213,37 @@
     | suc n, _, inP e => inP (e 0)
   }
 
+-- | An injective map between finite sets is surjective if the codomain is not larger than the domain.
+\lemma card_inj-surj {A B : FinSet} (f : A -> B) (inj : IsInj f) (c : B.card <= A.card) : IsSurj f
+  => \lam b => \case A.finEq, B.finEq \with {
+    | inP e1, inP e2 => \case FinSet.searchFin-equiv e1 (\lam a => f a = b) (\lam a => decideEq (f a) b) \with {
+      | inl r => inP r
+      | inr q => absurd (aux inj c e1 e2 b q)
+    }
+  }
+  \where
+    \private \lemma aux {n m : Nat} {A B : \Set} {f : A -> B} (inj : IsInj f) (c : m <= n) (e1 : QEquiv {Fin n} {A}) (e2 : QEquiv {Fin m} {B})
+                        (b : B) (q : \Pi (a : A) -> Not (f a = b)) : Empty \elim m
+      | 0 => \case e2.ret b
+      | suc m => <-irreflexive $ FinSet.FinCardInj (\lam j => FinSet.skip (e2.ret b) (e2.ret (f (e1 j))) \lam p => q (e1 j) $ inv (e2.f_ret _) *> pmap e2 (inv p) *> e2.f_ret b)
+                                                   (\lam p => e1.isInj $ inj $ (symQEquiv e2).isInj (FinSet.skip-isInj p)) <∘r (id<suc <∘l c)
+
+-- | A function on a nonempty finite set into a decidable linear order attains its maximum.
+\lemma exists-max {A : FinSet} {L : LinearOrder.Dec} (a0 : A) (f : A -> L) : ∃ (a : A) ∀ (b : A) (f b <= f a)
+  => \case A.card \as n, A.finEq : TruncP (QEquiv {Fin n} {A}) \with {
+    | 0, inP e => \case e.ret a0 \with {}
+    | suc n, inP e => \have t => fin-max (\lam j => f (e j))
+                      \in inP (e t.1, \lam b => transport (\lam x => f x <= _) (e.f_ret b) (t.2 (e.ret b)))
+  }
+  \where
+    \func fin-max {L : LinearOrder.Dec} {n : Nat} (f : Fin (suc n) -> L) : \Sigma (i : Fin (suc n)) (\Pi (j : Fin (suc n)) -> f j <= f i) \elim n
+      | 0 => (0, \case \elim __ \with { | 0 => <=-refl })
+      | suc n => \have t => fin-max (\lam j => f (suc j))
+                 \in \case LinearOrder.dec<_<= (f 0) (f (suc t.1)) \with {
+                   | inl f0<fi => (suc t.1, \case \elim __ \with { | 0 => <=-less f0<fi | suc j => t.2 j })
+                   | inr fi<=f0 => (0, \case \elim __ \with { | 0 => <=-refl | suc j => t.2 j <=∘ fi<=f0 })
+                 }
+
 \lemma FinSet-transport (A : FinSet) {B : \Set} (e : QEquiv {A} {B}) : FinSet B A.card \cowith
   | finEq => \case A.finEq \with {
     | inP e' => inP (transQEquiv e' e)

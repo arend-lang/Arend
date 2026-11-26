@@ -1,15 +1,9 @@
-\import Algebra.Group
 \import Algebra.Group.SubGroup
 \import Algebra.Monoid
 \import Algebra.Monoid.SubMonoid
-\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring.SubSemiring
-\import Logic.Unique
-\import Logic
-\import Logic.Meta
-\import Paths
 \import Paths.Meta
 
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
@@ -56,6 +50,19 @@
 \instance ICRing {R : CRing} (S : SubRing R) : CRing
   | Ring => IRing S
   | PseudoCRing => IPseudoCRing S
+  \where {
+    \func corestrict {R' : Ring} (f : RingHom R' R) (p : \Pi (x : R') -> S (f x)) : RingHom R' (ICRing S) \cowith
+      | func x => (f x, p x)
+      | func-+ => ext f.func-+
+      | func-ide => ext f.func-ide
+      | func-* => ext f.func-*
+
+    \func embed : RingHom (ICRing S) R \cowith
+      | func => __.1
+      | func-+ => idp
+      | func-ide => idp
+      | func-* => idp
+  }
 
 
 \func ImageRing (f : RingHom) : SubRing f.Cod \cowith

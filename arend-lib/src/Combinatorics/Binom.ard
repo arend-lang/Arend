@@ -9,6 +9,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Fin
 \open Monoid (pow)
 \open AddMonoid (BigSum)
 
@@ -20,6 +21,10 @@
     \lemma binom_0 {n : Nat} : binom n 0 = 1 \elim n
       | 0 => idp
       | suc n => idp
+
+    \lemma binom_1 {n : Nat} : binom n 1 = n \elim n
+      | 0 => idp
+      | suc n => pmap2 (+) binom_0 binom_1 *> NatSemiring.+-comm {1} {n}
 
     \lemma binom_< {n m : Nat} (p : n < m) : binom n m = 0 \elim n, m, p
       | 0, suc m, _ => idp
@@ -77,3 +82,16 @@
       : pow (x + y) n = BigSum (\new Array R (suc n) (\lam i => natCoef (binom n i) * (pow x i * pow y (n -' i))))
       => expansion-noncomm *-comm
   }
+
+-- | The pairs `(i, j)` of elements of `Fin n` with `i < j`: first the pairs `(0, j + 1)`, then the shifted pairs of `Fin (n - 1)`.
+\func binomPairs (n : Nat) : Array (\Sigma (Fin n) (Fin n)) (binom n 2) \elim n
+  | 0 => nil
+  | suc n => (\new Array (\Sigma (Fin (suc n)) (Fin (suc n))) (binom n 1) (\lam i => (0, suc (transport Fin binom.binom_1 i))))
+               ++' map (\lam s => (suc s.1, suc s.2)) (binomPairs n)
+
+-- | Every pair `i < j` occurs in `binomPairs`.
+\func binomPairs-surj {n : Nat} {i j : Fin n} (i<j : i NatSemiring.< j) : \Sigma (m : Fin (binom n 2)) (binomPairs n m = (i,j)) \elim n, i, j, i<j
+  | suc n, 0, suc j, _ => (fin-inc (transport Fin (inv binom.binom_1) j),
+                           ++'.++'_index-left *> pmap {Fin n} {\Sigma (Fin (suc n)) (Fin (suc n))} (\lam j => (0, suc j)) (transport_id_inv Fin binom.binom_1 j))
+  | suc n, suc i, suc j, NatOrder.suc<suc i<j => (fin-raise (binomPairs-surj i<j).1,
+                                                 ++'.++'_index-right *> pmap (\lam s => (suc s.1, suc s.2)) (binomPairs-surj i<j).2)

@@ -1,6 +1,7 @@
 \import Algebra.Domain
 \import Algebra.Domain.Euclidean
 \import Algebra.Monoid
+\import Algebra.Monoid.GCD
 \import Algebra.Monoid.Prime
 \import Algebra.Ordered
 \import Arith.Int
@@ -19,6 +20,7 @@
 \import Paths.Meta
 \import Set
 \open Nat(mod,-)
+\open EuclideanSemiringData
 \open Monoid
 \open NatOrder \hiding (<)
 
@@ -111,10 +113,8 @@
     | 1, _, _ => idp
     | suc (suc _), suc<suc (suc<suc ()), _
   })
-  | suc (suc (suc _)) \as n, p => prime-lem (suc<suc zero<suc) (mod_div-lem (and.toSigma p).1) (rec-lem {n} {n} {3} (and.toSigma p).2 () (<_+-left n {0} {3} zero<suc))
+  | suc (suc (suc _)) \as n, p => prime-lem (suc<suc zero<suc) (mod_div-lem (and.toSigma p).1) (rec-lem {n} {n} {3} (and.toSigma p).2 () (NatSemiring.<_+-left n {0} {3} zero<suc))
   \where {
-    \open NatSemiring
-
     \lemma mod_div-lem {k n : Nat} (p : isPositive (n mod k) = true) : Not (LDiv k n)
       => \lam k|n => \case rewrite (div_mod k|n) in p
 
@@ -144,7 +144,7 @@
       | suc c => \case or.toOr p \with {
         | byLeft t => mcases {_} {arg addPath} t _ \with {
           | pos _, _, t' => \case t'
-          | neg (suc n1), q, _ => <-irreflexive (triLess q <∘l <=_* j<=k j<=k <∘l k*k<=n)
+          | neg (suc n1), q, _ => <-irreflexive (NatSemiring.triLess q <∘l <=_* j<=k j<=k <∘l k*k<=n)
         }
         | byRight t => \case decideEq j k \with {
           | yes j=k => mod_div-lem (and.toSigma t).1 (transportInv (LDiv __ n) j=k k|n)
@@ -187,8 +187,6 @@
   | 2 => idp
   | suc (suc (suc _)) \as n => and.fromSigma (mod-lem p (suc<suc (suc<suc zero<suc)) (\case __), rec-lem {n} {n} p (suc<suc zero<suc))
   \where {
-    \open NatSemiring
-
     \lemma mod-lem {k n : Nat} (p : Prime n) (k<n : k < n) (k/=1 : k /= 1) : isPositive (n mod k) = true
       => mcases {isPositive} {arg addPath} \with {
         | 0, q => absurd (k/=1 (prime-less.dir p k<n (mod_div q)))
@@ -196,14 +194,14 @@
       }
 
     \lemma <-lem {n m : Nat} (n<m : n < m) : n testPrime.< m = true => unfold (testPrime.<) (mcases {_} {arg addPath} \with {
-      | 0, p => absurd (<-irreflexive (transportInv (n <) (triEquals p) n<m))
-      | pos (suc k), p => absurd (<-irreflexive (<-transitive n<m (triGreater p)))
+      | 0, p => absurd (<-irreflexive (transportInv (n <) (NatSemiring.triEquals p) n<m))
+      | pos (suc k), p => absurd (<-irreflexive (<-transitive n<m (NatSemiring.triGreater p)))
       | neg (suc k), _ => idp
     })
 
     \lemma square_<-lem {j : Nat} (j>1 : j > 1) : suc j < j * j \elim j, j>1
       | 1, suc<suc ()
-      | suc (suc j), _ => <_+-left (j + 3) zero<suc
+      | suc (suc j), _ => NatSemiring.<_+-left (j + 3) zero<suc
 
     \lemma rec-lem {n c j : Nat} (p : Prime n) (j>1 : j > 1) : rec n c j = true \elim c
       | 0 => idp
@@ -221,6 +219,13 @@
 
 \lemma prime>1 {p : Nat} (pp : Prime p) : 1 < p
   => (transport (\lam P => P) prime-less pp).1
+
+-- | A prime `p` not dividing `a` is coprime to `a`.
+\lemma prime-coprime {p a : Nat} (pp : Prime p) (p/|a : Not (LDiv p a)) : gcd p a = 1
+  => \case prime-div.dir pp (GCD.res|val1 {gcd-isGCD p a}) \with {
+    | byLeft g=p => absurd $ p/|a $ transport (LDiv __ a) g=p (GCD.res|val2 {gcd-isGCD p a})
+    | byRight g=1 => g=1
+  }
 
 -- # The least prime divisor
 

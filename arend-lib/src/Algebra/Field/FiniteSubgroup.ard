@@ -1,0 +1,76 @@
+{- | **Finite multiplicative subgroups of a discrete field are cyclic**
+     (Mines–Richman–Ruitenburg, *A Course in Constructive Algebra*, Lemma VI.5.3).
+
+     {finSubgroup-cyclic}: if a finite group `G` embeds into the multiplicative monoid of a discrete field `k`,
+     then `G` consists of the powers of a single element. Following the book:
+     * `G` is commutative, since `k` is ({finSubgroup-cyclic.comm});
+     * elements of orders `m` and `n` give an element of order `lcm(m,n)` ({order-lcm}, via the coprime splitting
+       {lcm-split} of `lcm(m,n)`);
+     * hence, if `g` is an element of maximal order `N`, then `x^N = 1` for every `x` ({finSubgroup-cyclic.pow-max});
+     * the polynomial `X^N - 1` has at most `N` roots in `k` (II.4.5, {roots-length<=}), so `G` has at most `N` elements
+       ({finSubgroup-cyclic.card<=}), and the `N` distinct powers of `g` exhaust `G`.
+ -}
+
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.Fin
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Nat.Lcm
+\import Data.Fin
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Set.Fin
+\open Monoid
+
+-- | **MRR VI.5.3.** A finite group embedded into the multiplicative monoid of a discrete field is cyclic.
+\lemma finSubgroup-cyclic {k : DiscreteField} {G : FinGroup} (f : MonoidHom G k) (fi : IsInj f)
+  : ∃ (g : G) ∀ (x : G) ∃ (n : Nat) (G.pow g n = x)
+  => \case exists-max {G} {NatSemiring} 1 order \with {
+    | inP (g, gmax) => inP (g, \lam x => TruncP.map
+        (card_inj-surj {FinFin (order g)} {G} (\lam i => G.pow g i) (\lam p => nat_fin_= $ pow-inj (fin_< _) (fin_< _) p)
+                       (card<= f fi (order>0 {G} {_} {_} {g}) (pow-max fi gmax)) x)
+        \lam s => (s.1, s.2))
+  }
+  \where {
+    -- | `G` is commutative, since it embeds into a commutative monoid.
+    \protected \lemma comm {k : DiscreteField} {G : FinGroup} {f : MonoidHom G k} (fi : IsInj f) (x y : G) : x * y = y * x
+      => fi $ f.func-* *> *-comm *> inv f.func-*
+
+    -- | If `g` has maximal order, then `x^(order g) = 1` for every `x`.
+    \lemma pow-max {k : DiscreteField} {G : FinGroup} {f : MonoidHom G k} (fi : IsInj f) {g : G} (gmax : \Pi (y : G) -> order y <= order g)
+                   (x : G) : G.pow x (order g) = 1
+      => \case order-lcm (comm fi x g) \with {
+        | inP (z, oz) =>
+          \have | lcm/=0 : nat-lcm (order x) (order g) /= 0 => \lam q => /=-sym (NatSemiring.<_/= order>0) (oz *> q)
+                | lcm=N : nat-lcm (order x) (order g) = order g => <=-antisymmetric (transport (<= _) oz (gmax z)) (ldiv_<= lcm/=0 lcm-right)
+          \in pow_order-mult (transport (LDiv (order x)) lcm=N lcm-left)
+      }
+
+    -- | A finite group embedded into `k` in which `x^N = 1` for all `x` has at most `N` elements (the roots of `X^N - 1`).
+    \lemma card<= {k : DiscreteField} {G : FinGroup} (f : MonoidHom G k) (fi : IsInj f) {N : Nat} (N>0 : 0 < N)
+                  (xN : \Pi (x : G) -> G.pow x N = 1) : G.card <= N
+      => \case G.finEq \with {
+        | inP e =>
+          \have | ev (a : k) : polyEval (monomial 1 N - 1) a = Monoid.pow a N - 1
+                    => (polyEvalRingHom a).func-+ *> pmap2 (+) (polyEval_monomial *> ide-left)
+                                                                ((polyEvalRingHom a).func-negative {1} *> pmap negative (polyEvalRingHom a).func-ide)
+                | p/=0 : monomial 1 N - 1 /= 0 => \lam p=0 =>
+                    \have q : 0 = negative 1 => pmap (polyEval __ 0) (inv p=0) *> ev 0 *> pmap (- 1) (Semiring.pow_0 (/=-sym (NatSemiring.<_/= N>0))) *> zro-left
+                    \in zro/=ide $ inv AddGroup.negative_zro *> pmap negative q *> AddGroup.negative-isInv
+          \in roots-length<= p/=0 (degree<_+ (degree<=_degree< degree<=_monomial) (degree<_negative (degree<_padd {k} {pzero} {1} {N} \lam _ => idp)))
+                             (\lam i => f (e i)) (\lam q => e.isInj (fi q))
+                             (\lam i => ev _ *> pmap (- 1) (inv f.func-pow *> pmap f (xN _) *> f.func-ide) *> negative-right)
+      }
+  }

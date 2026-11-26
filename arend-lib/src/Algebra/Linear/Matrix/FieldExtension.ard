@@ -3,20 +3,26 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.PolyEval
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
+\import Algebra.Ring.Poly
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Fin.Order
 \import Arith.Nat
+\import Data.Array
 \import Data.Or
 \import Function
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set
@@ -30,7 +36,9 @@
      stay independent over `K` after mapping along any field homomorphism `k -> K`.
      Proof: bring the matrix of the vectors to Smith normal form `B = C W D` over `k`
      (`independent-map.diag-nonzero`: every row of `B` has a nonzero diagonal entry), then map
-     everything to `K`. -}
+     everything to `K`. The same reduction gives `linear-system-descent` (a linear system over `k`
+     solvable over `K` is solvable over `k`, see `linear-system-descent.diag-solve`), and from it
+     `polyIn-descent`: a matrix over `k` that is a polynomial in `T` over `K` is one over `k`. -}
 
 -- | `matrix-map` along a ring homomorphism preserves products.
 \lemma matrix-map_product {R S : Ring} (f : RingHom R S) {n m k : Nat} {A : Matrix R n m} {B : Matrix R m k}
@@ -139,3 +147,71 @@
   (ind : \Pi (c : Array k d) -> (\Pi (i : Fin n) (j : Fin m) -> k.BigSum (\lam t => c t * M t i j) = 0) -> \Pi (t : Fin d) -> c t = 0)
   (c : Array K d) (h : \Pi (i : Fin n) (j : Fin m) -> K.BigSum (\lam t => c t * f (M t i j)) = 0) (t : Fin d) : c t = 0
   => independent-map f (\lam t => matFlatten (M t)) (\lam c' h' => ind c' (matFlatten.all {n} {m} {\lam i j => k.BigSum (\lam t => c' t * M t i j) = 0} h')) c (\lam J => h _ _) t
+
+-- | A linear system over `k` that is solvable over an extension field `K` is solvable over `k`.
+\lemma linear-system-descent {k K : DiscreteField} (f : RingHom k K) {N d : Nat} (v : Array (Array k N) d) (b : Array k N)
+  (h : ∃ (c : Array K d) (\Pi (i : Fin N) -> K.BigSum (\lam t => c t * f (v t i)) = f (b i)))
+  : ∃ (c : Array k d) (\Pi (i : Fin N) -> k.BigSum (\lam t => c t * v t i) = b i)
+  => \case k.toSmith v, h \with {
+    | inP (B, Bs, inP (C, D, p)), inP (c, hc) =>
+      \let | W' : Matrix K d N => matrix-map f v
+           | C' => matrix-map_Inv f C
+           | D' => matrix-map_Inv f D
+           | r : Matrix K 1 d => mkRow c
+           | y => r product C'.inv
+           | bD : Matrix k 1 N => mkRow b product D.val
+      \in \have | p' : matrix-map f B = C'.val product W' product D'.val
+                  => pmap (matrix-map f) p *> matrix-map_product f {d} {N} {N} {C.val product v} {D.val} *> pmap (product D'.val) (matrix-map_product f {d} {d} {N} {C.val} {v})
+                | hr : r product W' = matrix-map f (mkRow b) => matrixExt \lam (0) i => hc i
+                | hy : y product matrix-map f B = matrix-map f bD
+                  => pmap (y product) p' *> inv (product-assoc y (C'.val product W') D'.val) *> pmap (product D'.val) (inv (product-assoc y C'.val W') *> pmap (product W') (product-assoc r C'.inv C'.val *> pmap {Matrix K d d} {Matrix K 1 d} (r product) C'.inv-left *> product_ide-right {K} {1} {d} {r}) *> hr) *> inv (matrix-map_product f {1} {N} {N} {mkRow b} {D.val})
+                | (z, zB) => diag-solve f Bs.1 y hy
+                | zCvD : z product C.val product v product D.val = bD
+                  => product-assoc (z product C.val) v D.val *> product-assoc z C.val (v product D.val) *> pmap (z product) (inv (product-assoc C.val v D.val) *> inv p) *> zB
+                | zCv : z product C.val product v = mkRow b
+                  => inv (product-assoc (z product C.val product v) D.val D.inv *> pmap ((z product C.val product v) product) D.inv-right *> product_ide-right) *> pmap (product D.inv) zCvD *>
+                     product-assoc (mkRow b) D.val D.inv *> pmap (mkRow b product) D.inv-right *> product_ide-right
+      \in inP ((z product C.val) 0, \lam i => path (\lam i' => zCv i' 0 i))
+  }
+  \where {
+    -- | A diagonal system `z B = w` over `k` that is solvable over `K` is solvable over `k`.
+    \func diag-solve {k K : DiscreteField} (f : RingHom k K) {d N : Nat} {B : Matrix k d N} (Bd : IsDiagonal B) {w : Matrix k 1 N}
+                      (y : Matrix K 1 d) (hy : y product matrix-map f B = matrix-map f w)
+      : \Sigma (z : Matrix k 1 d) (z product B = w)
+      => \let a : Array k N => \lam j => w 0 j * finv (fit 0 {N} (\new Array k d (\lam i => B i j)) j)
+         \in (mkRow (fit 0 {d} a), matrixExt \lam (0) j =>
+           \have | Bd' : IsDiagonal (matrix-map f B) => \lam q => pmap f (Bd q) *> f.func-zro
+                  | fw : f (w 0 j) = K.BigSum (\lam s => y 0 s * f (B s j)) => inv (path (\lam i => hy i 0 j))
+           \in \case LinearOrder.dec<_<= (j : Nat) d \with {
+             | inl p => column-lt Bd (fit 0 {d} a) p *> pmap (* B (toFin j p) j) (fit_<' a p *> pmap (\lam x => w 0 j * finv x) (fit_< (\new Array k d (\lam i => B i j)) p)) *>
+                 (\case decideEq (B (toFin j p) j) 0 \with {
+                   | yes e => pmap (_ *) e *> zro_*-right *> inv (RingHom.field-isInj $ fw *> column-lt Bd' (y 0) p *> pmap (_ *) (pmap f e *> f.func-zro) *> zro_*-right *> inv f.func-zro)
+                   | no ne => *-assoc *> pmap (w 0 j *) (DiscreteField.finv-left ne) *> ide-right
+                 })
+             | inr p => column-ge Bd (fit 0 {d} a) p *> inv (RingHom.field-isInj $ fw *> column-ge Bd' (y 0) p *> inv f.func-zro)
+           })
+
+    \lemma column-lt {R : Ring} {m n : Nat} {B : Matrix R m n} (Bd : IsDiagonal B) (s : Array R m) {j : Fin n} (p : (j : Nat) < m)
+      : R.BigSum (\lam l => s l * B l j) = s (toFin j p) * B (toFin j p) j
+      => R.BigSum-unique (toFin j p) (\lam l q => pmap (s l *) (Bd \lam e => q (fin_nat-inj (toFin=id *> inv e))) *> zro_*-right)
+
+    \lemma column-ge {R : Ring} {m n : Nat} {B : Matrix R m n} (Bd : IsDiagonal B) (s : Array R m) {j : Fin n} (p : m <= (j : Nat))
+      : R.BigSum (\lam l => s l * B l j) = 0
+      => R.BigSum_zro \lam l => pmap (s l *) (Bd \lam e => linarith (fin_< l)) *> zro_*-right
+  }
+
+-- | If `B` is a polynomial in `T` over an extension field, it is a polynomial in `T` over `k`.
+\lemma polyIn-descent {k K : DiscreteField} (f : RingHom k K) {n : Nat} {T B : Matrix k n n}
+  (h : ∃ (q : Poly K) (matPolyEval q (matrix-map f T) = matrix-map f B)) : ∃ (q : Poly k) (matPolyEval q T = B)
+  => \case h \with {
+    | inP (q, e) => \case degree<-exists q \with {
+      | inP (D, dq) =>
+        \let c : Array K D => \lam t => polyCoef q t
+        \in \case linear-system-descent f (\lam t => matFlatten (Monoid.pow {MatrixRing k n} T t)) (matFlatten B)
+                   (inP (c, \lam J => pmap K.BigSum (exts \lam t => pmap (c t *) (path (\lam i' => matrix-map_pow f {n} {T} {t} i' _ _))) *>
+                     inv (matPolyEval_fromArray _ _) *> path (\lam i' => (pmap (matPolyEval __ (matrix-map f T)) (inv (fromArray_polyCoef dq)) *> e) i' _ _))) \with {
+          | inP (c', hc') => inP (Poly.fromArray c', matrixExt \lam i j => matPolyEval_fromArray i j *>
+              matFlatten.all {n} {n} {\lam i j => k.BigSum (\lam t => c' t * Monoid.pow {MatrixRing k n} T t i j) = B i j} hc' i j)
+        }
+    }
+  }

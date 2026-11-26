@@ -534,7 +534,7 @@
   }
   \where {
     \open PolyRing
-    \open PolyRingWith#
+    \open PolyRingWith# \using (#0, #0-*-right)
   }
 
 \instance PolyIntegralDomain (R : IntegralDomain) : IntegralDomain
@@ -1005,7 +1005,7 @@
       | no n => byRight (R.nonZeroApart n)
     }
   }
-  \where \open PolyRingWith#
+  \where \open PolyRingWith# \using (#0)
 
 \instance PolyDecIntegralDomain (R : IntegralDomain.Dec) : IntegralDomain.Dec
   | Domain.Dec => PolyDecDomain R

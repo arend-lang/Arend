@@ -1,0 +1,183 @@
+{- | **Primitive elements over a finite field** (Mines–Richman–Ruitenburg, proof of Corollary VI.5.5).
+
+     If `k` is finite and `a`, `b` in a discrete field `E` are roots of monic polynomials over `k`, then $k[a, b]$ is
+     a finite subring of `E`, hence a field, and its multiplicative group is cyclic by Lemma VI.5.3. A generator is a
+     primitive element of $k[a, b]$ (`finite-primitive`).
+
+     Finiteness: reducing modulo the two monic polynomials ({finite-primitive.reduce}), every element of $k[a, b]$
+     has the form $\sum_{j < m} \sum_{i < n} f(d_{ji}) a^i b^j$ ({finite-primitive.adjoin-phi}); conversely these
+     elements lie in $k[a, b]$ ({finite-primitive.phi-adjoin}). The nonzero elements of a finite multiplicatively closed
+     subset of a discrete field containing `1` form a finite group ({finite-primitive.unitGroup}), since multiplication
+     by a nonzero element is injective, hence surjective.
+-}
+
+\import Algebra.Field
+\import Algebra.Field.PrimitiveElement
+\import Algebra.Field.FiniteSubgroup
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Pointed.SubPointed
+\import Algebra.Ring
+\import Algebra.Ring.Integral
+\import Algebra.Ring.MPoly
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+\import Set.Fin.Pi
+\open Monoid
+\open KFinSet
+
+{- | If `k` is finite, every two roots `a`, `b` of monic polynomials over `k` (in a discrete field `E`) have a
+     primitive element. -}
+\lemma finite-primitive {k E : DiscreteField} (f : RingHom k E) (kfin : ∃ (l : Array k) ∀ (x : k) ∃ (i : Fin l.len) (l i = x))
+  {a b : E} {n m : Nat} {p q : Poly k} (pd : degree<= p n) (pc : polyCoef p n = 1) (pa : polyMapEval f p a = 0)
+  (qd : degree<= q m) (qc : polyCoef q m = 1) (qb : polyMapEval f q b = 0)
+  : ∃ (t : ICRing (mPolyImage f (a :: b :: nil))) (IsPrimitiveElement (adjoinHom f (a :: b :: nil)) t)
+  => \case kfin \with {
+    | inP (l, lc) =>
+      \let | kF : FinSet k => KFin+Dec=>Fin (KFinSet.fromArray l lc)
+           | FF : FinSet (Fin m -> Fin n -> k) => FunFin (FinFin m) (FunFin (FinFin n) kF)
+      \in \case KFinSet.toArray FF \with {
+        | inP (L, Lc) =>
+          \let | SD : DecSet (\Sigma (x : E) (mPolyImage f (a :: b :: nil) x)) => \new DecSet {
+                   | decideEq s t => \case decideEq s.1 t.1 \with {
+                     | yes e => yes (ext e)
+                     | no ne => no \lam e => ne (pmap __.1 e)
+                   }
+                 }
+               | S : FinSet (\Sigma (x : E) (mPolyImage f (a :: b :: nil) x)) => KFin+Dec=>Fin {_}
+                   (KFinSet.fromArray (\lam i => elem f (L i))
+                     \lam s => \case adjoin-phi f pd pc pa qd qc qb s.2 \with {
+                       | inP (d, dx) => TruncP.map (Lc d) \lam r => (r.1, ext (pmap (phi f a b) r.2 *> dx))
+                     }) {SD}
+               | h => unitGroupHom (mPolyImage f (a :: b :: nil)) S (contains_ide {mPolyImage f (a :: b :: nil)}) contains_*
+          \in \case finSubgroup-cyclic h (unitGroupHom-inj (mPolyImage f (a :: b :: nil)) S (contains_ide {mPolyImage f (a :: b :: nil)}) contains_*) \with {
+            | inP (g, gen) =>
+              \have power {x : E} (ax : mPolyImage f (a :: b :: nil) x) : polyImage f g.1.1 x => \case decideEq x 0 \with {
+                | yes x=0 => inP (0, inv x=0)
+                | no x/=0 => \case gen ((x, ax), x/=0) \with {
+                  | inP (e, ge) => inP (monomial 1 e, polyMapEval_monomial *> inv h.func-pow *> pmap (\lam z => z.1.1) ge)
+                }
+              }
+              \in inP (g.1, primitive-generators f (a :: b :: nil) g.1.2 \lam j => power (mPolyImage-element f (a :: b :: nil) j))
+          }
+      }
+  }
+  \where \private {
+    -- | The element $\sum_{j < m} \sum_{i < n} f(d_{ji}) a^i b^j$.
+    \func phi {k E : CRing} (f : RingHom k E) (a b : E) {n m : Nat} (d : Fin m -> Fin n -> k) : E
+      => E.BigSum (\lam (j : Fin m) => E.BigSum (\lam (i : Fin n) => f (d j i) * pow a i) * pow b j)
+
+    -- | `phi f a b d` as an element of $k[a, b]$.
+    \func elem {k E : CRing} (f : RingHom k E) {a b : E} {n m : Nat} (d : Fin m -> Fin n -> k) : \Sigma (x : E) (mPolyImage f (a :: b :: nil) x)
+      => (phi f a b d, phi-adjoin f d)
+
+    -- | Evaluation of a constant multivariate polynomial.
+    \lemma mconst-eval {J : \Set} {R S : CRing} (h : RingHom R S) (v : J -> S) (r : R) : mPolyMapEvalRingHom h v (mConst r) = h r
+      => simplify
+
+    -- | Evaluation of a constant polynomial.
+    \lemma const-eval {R S : Ring} (h : AddPointedHom R S) (r : R) {s : S} : polyMapEval h (padd pzero r) s = h r
+      => pmap (__ + _) zro_*-left *> zro-left
+
+    -- | `phi f a b d` lies in $k[a, b]$.
+    \lemma phi-adjoin {k E : CRing} (f : RingHom k E) {a b : E} {n m : Nat} (d : Fin m -> Fin n -> k) : mPolyImage f (a :: b :: nil) (phi f a b d)
+      => \let | H => mPolyMapEvalRingHom f (a :: b :: nil)
+              | M => MPoly (Fin 2) k
+         \in inP (M.BigSum (\lam (j : Fin m) => M.BigSum (\lam (i : Fin n) => mConst (d j i) M.* M.pow (mVar {Fin 2} {k} 0) i) M.* M.pow (mVar {Fin 2} {k} 1) j),
+                  H.func-BigSum *> pmap AddMonoid.BigSum (exts \lam j => H.func-* *> pmap2 (*)
+                    (H.func-BigSum *> pmap AddMonoid.BigSum (exts \lam i => H.func-* *> pmap2 (*) (mconst-eval f (a :: b :: nil) (d j i)) (H.func-pow *> pmap (pow __ i) (mPolyMapEval-var {Fin 2} f (a :: b :: nil) 0))))
+                    (H.func-pow *> pmap (pow __ j) (mPolyMapEval-var {Fin 2} f (a :: b :: nil) 1))))
+
+    -- | Reduction modulo a monic polynomial with root `a`: every polynomial in `a` is a combination of $1, a, \ldots, a^{n-1}$.
+    \func reduce {R S : CRing} (h : RingHom R S) {p : Poly R} {n : Nat} (pd : degree<= p n) (pc : polyCoef p n = 1) {a : S}
+                 (pa : polyMapEval h p a = 0) (u : Poly R)
+      : \Sigma (c : Array R n) (polyMapEval h u a = S.BigSum (\lam (i : Fin n) => h (c i) * pow a i))
+      => \let s => Contr.center {monicPolyDivisionContr u p n pd pc}
+         \in (\lam i => polyCoef s.2 i, pmap (polyMapEval h __ a) s.3 *> (polyMapEvalRingHom h a).func-+ *>
+               pmap (__ + _) ((polyMapEvalRingHom h a).func-* *> pmap (_ *) pa *> zro_*-right) *> zro-left *> polyMapEval_polyCoef s.4)
+
+    -- | Every element of $k[a, b]$ is `phi f a b d` for some `d`: write it as a polynomial in `b` over $k[a]$ and reduce twice.
+    \lemma adjoin-phi {k E : CRing} (f : RingHom k E) {a b : E} {n m : Nat} {p q : Poly k} (pd : degree<= p n) (pc : polyCoef p n = 1) (pa : polyMapEval f p a = 0)
+                      (qd : degree<= q m) (qc : polyCoef q m = 1) (qb : polyMapEval f q b = 0) {x : E} (ax : mPolyImage f (a :: b :: nil) x)
+      : ∃ (d : Fin m -> Fin n -> k) (phi f a b d = x) \elim ax
+      | inP (w, wx) =>
+        \let | g : RingHom (PolyAlgebra k) E => polyMapEvalRingHom f a
+             | X1 : Poly k => padd 1 0
+             | X2 : Poly (PolyRing k) => padd 1 0
+             | c0 : RingHom k (PolyAlgebra (PolyAlgebra k)) => polyHom RingHom.∘ polyHom
+             | vs : Fin 2 -> PolyAlgebra (PolyAlgebra k) => polyHom X1 :: X2 :: nil
+             | K => mPolyMapEvalRingHom {Fin 2} {k} {PolyAlgebra (PolyAlgebra k)} c0 vs
+             | C => reduce g (degree<=_polyMap qd) (polyCoef_polyMap *> pmap polyHom qc *> (polyHom {k}).func-ide)
+                           (pmap (polyEval __ b) (polyMap-comp polyHom g *> polyMap-ext (\lam r => const-eval f r)) *> qb) (K w)
+             | two-eval : polyMapEval g (K w) b = mPolyEval (a :: b :: nil) (mPoly-map f w)
+                 => mPolyRingHom-unique (polyMapEvalRingHom g b RingHom.∘ K) (mPolyMapEvalRingHom f (a :: b :: nil))
+                      (\lam r => pmap (polyMapEval g __ b) (mconst-eval {Fin 2} {k} {PolyAlgebra (PolyAlgebra k)} c0 vs r) *> const-eval g (polyHom r) {b} *> const-eval f r {a} *> inv (mconst-eval f (a :: b :: nil) r))
+                      (\lam j => pmap (polyMapEval g __ b) (mPolyMapEval-var {Fin 2} {k} {PolyAlgebra (PolyAlgebra k)} c0 vs j) *>
+                        (\case j \as j \return polyMapEval g (vs j) b = (a :: b :: nil) j \with {
+                          | 0 => const-eval g X1 *> X-eval f
+                          | 1 => X-eval g
+                        }) *> inv (mPolyMapEval-var f (a :: b :: nil) j)) w
+        \in inP (\lam j => (reduce f pd pc pa (C.1 j)).1,
+                 inv (C.2 *> pmap E.BigSum (exts \lam j => pmap (* pow b j) (reduce f pd pc pa (C.1 j)).2)) *> two-eval *> wx)
+        \where {
+          \lemma X-eval {R S : Ring} (h : RingHom R S) {s : S} : polyMapEval h (padd 1 0) s = s
+            => polyMapEval_monomial {h} {s} {1} *> ide-left
+        }
+
+    -- | The nonzero elements of a finite subset of `K` closed under multiplication and containing `1`.
+    \func unitGroup {K : DiscreteField} (P : K -> \Prop) (S : FinSet (\Sigma (x : K) (P x))) (P1 : P 1)
+                    (P* : \Pi {x y : K} -> P x -> P y -> P (x * y)) : FinGroup (\Sigma (s : S) (s.1 /= 0)) \cowith
+      | card => (carrierFin P S).card
+      | finEq => (carrierFin P S).finEq
+      | decideEq => (carrierFin P S).decideEq
+      | ide => ((1, P1), \lam e => zro/=ide (inv e))
+      | * x y => ((x.1.1 * y.1.1, P* x.1.2 y.1.2), K.nonZero_* x.2 y.2)
+      | ide-left => ext (ext ide-left)
+      | ide-right => ext (ext ide-right)
+      | *-assoc => ext (ext *-assoc)
+      | inverse x => ((finv x.1.1, inverse-closed P S P1 P* x.1 x.2), \lam e => zro/=ide (inv zro_*-right *> pmap (x.1.1 *) (inv e) *> K.finv-right x.2))
+      | inverse-left {x} => ext (ext (K.finv-left x.2))
+      \where {
+        \func carrierFin {K : DiscreteField} (P : K -> \Prop) (S : FinSet (\Sigma (x : K) (P x))) : FinSet (\Sigma (s : S) (s.1 /= 0))
+          => SigmaFin S \lam s => DecFin {s.1 /= 0} (\case K.decideEq s.1 0 \with {
+               | yes e => no \lam ne => ne e
+               | no ne => yes ne
+             })
+
+        \lemma inverse-closed {K : DiscreteField} (P : K -> \Prop) (S : FinSet (\Sigma (x : K) (P x))) (P1 : P 1)
+                              (P* : \Pi {x y : K} -> P x -> P y -> P (x * y)) (s : S) (s/=0 : s.1 /= 0) : P (finv s.1)
+          => \case card_inj-surj {S} {S} (\lam t => (s.1 * t.1, P* s.2 t.2)) (\lam e => ext (K.nonZero-cancel-left s/=0 (pmap __.1 e))) <=-refl (1, P1) \with {
+            | inP (t, e) => transport P (inv ide-left *> pmap (* t.1) (inv (K.finv-left s/=0)) *> *-assoc *> pmap (_ *) (pmap __.1 e) *> ide-right) t.2
+          }
+      }
+
+    -- | The inclusion of {unitGroup} into `K`.
+    \func unitGroupHom {K : DiscreteField} (P : K -> \Prop) (S : FinSet (\Sigma (x : K) (P x))) (P1 : P 1)
+                       (P* : \Pi {x y : K} -> P x -> P y -> P (x * y)) : MonoidHom (unitGroup P S P1 P*) K \cowith
+      | func x => x.1.1
+      | func-ide => idp
+      | func-* => idp
+
+    \lemma unitGroupHom-inj {K : DiscreteField} (P : K -> \Prop) (S : FinSet (\Sigma (x : K) (P x))) (P1 : P 1)
+                            (P* : \Pi {x y : K} -> P x -> P y -> P (x * y)) : IsInj (unitGroupHom P S P1 P*)
+      => \lam e => ext (ext e)
+  }

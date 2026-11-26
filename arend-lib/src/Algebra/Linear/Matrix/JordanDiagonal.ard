@@ -1,0 +1,241 @@
+{- | **Jordan chains compatible with a commuting diagonal matrix** (Mines–Richman–Ruitenburg, proof of Theorem VI.5.1).
+
+     Let `A` commute with a diagonal matrix `diagonal d`. Then `A` preserves the coordinate subspaces spanned by the
+     standard vectors $e_p$ with a fixed value of $d_p$, and acts there by the principal submatrix on these indices
+     (the blocks $A_i$ of the book). If `A` is killed by a product of linear factors, so is every block, and putting
+     each block in Jordan canonical form (`jordan-chains`) gives Jordan chains for `A` whose vectors are eigenvectors
+     of `diagonal d` (`jordan-chains-diagonal`); the tags of the chains record the corresponding eigenvalues.
+-}
+
+\import Algebra.Algebra
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Diagonalizable
+\import Algebra.Linear.Matrix.Jordan
+\import Algebra.Linear.Matrix.JordanChains
+\import Algebra.Linear.Matrix.Kronecker
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Linear.Matrix.PolyModule
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Semiring
+\import Data.Array
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances (SigmaFin)
+
+{- | If `A` commutes with `diagonal d` and is killed by a product of linear factors, there are Jordan chains for `A`
+     as in `jordan-chains` whose start vectors are eigenvectors of `diagonal d` with eigenvalues the tags. -}
+\lemma jordan-chains-diagonal {K : DiscreteField} {n : Nat} (A : Matrix K n n) (d : Array K n) (comm : A * diagonal d = diagonal d * A)
+  {l : Nat} (rt : Array K l) (e : matPolyEval (prodLin rt) A = 0)
+  : ∃ (cs : Array (Chain K n)) (ChainAnn A cs)
+      (\Pi (v : Array K n) -> ∃ (r : Array (Poly K) cs.len) (v = LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (r c) A) (cs c).3)))
+      (\Pi (g : Array (Poly K) cs.len) -> (\Pi (c : Fin cs.len) -> degree< (g c) (cs c).4)
+         -> LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (g c) A) (cs c).3) = \new Array K n (\lam _ => 0)
+         -> \Pi (c : Fin cs.len) -> g c = 0)
+      (\Pi (c : Fin cs.len) -> mulVec (diagonal d) (cs c).3 = (cs c).2 *c {ArrayLModule n (RingLModule K)} (cs c).3)
+  => \case distinct-values d \with {
+    | inP (t, nu, nuInj, cls, dc) =>
+      \have bz {p q : Fin n} (c : cls p /= cls q) : A p q = 0 => block-zero comm (\lam pq => c (nuInj (inv (dc p) *> pq *> dc q)))
+      \in \case FinSet.finiteAC (\lam (i : Fin t) => class-enum cls i) \with {
+        | inP en => \case FinSet.finiteAC (\lam (i : Fin t) => block-chains A d cls bz i (en i).2 (nu i) (\lam {p} h => dc p *> pmap nu h) rt e) \with {
+          | inP bc =>
+            \let | m (i : Fin t) : Nat => DArray.len {(bc i).1}
+                 | ch (i : Fin t) (c : Fin (m i)) : Chain K n => (bc i).1 c
+                 | sf => SigmaFin.aux {t} {m}
+            \in inP (\new Array (Chain K n) _ (\lam k => ch (sf.f k).1 (sf.f k).2),
+                     \lam k => (bc (sf.f k).1).2 (sf.f k).2,
+                     \lam v => \case FinSet.finiteAC (\lam (i : Fin t) => (bc i).3 (proj cls i v) (proj-supp cls i v)) \with {
+                       | inP rr => inP (\lam k => (rr (sf.f k).1).1 (sf.f k).2,
+                           decomp cls v *> pmap (AddMonoid.BigSum {ArrayLModule n (RingLModule K)}) (exts \lam i => (rr i).2)
+                             *> AbMonoid.BigSum-double-dep {ArrayLModule n (RingLModule K)} m (\lam x => mulVec (matPolyEval ((rr x.1).1 x.2) A) (ch x.1 x.2).3))
+                     },
+                     \lam g gdeg gsum =>
+                       \let | gi (i : Fin t) (c : Fin (m i)) : Poly K => g (sf.ret (i, c))
+                            | S (i : Fin t) : Array K n => AddMonoid.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (gi i c) A) (ch i c).3)
+                       \in \have | tot : AddMonoid.BigSum {ArrayLModule n (RingLModule K)} (\lam i => S i) = \new Array K n (\lam _ => 0)
+                                     => AbMonoid.BigSum-double-dep {ArrayLModule n (RingLModule K)} m (\lam x => mulVec (matPolyEval (gi x.1 x.2) A) (ch x.1 x.2).3)
+                                        *> pmap (AddMonoid.BigSum {ArrayLModule n (RingLModule K)})
+                                             (exts \lam k => pmap (\lam j => mulVec (matPolyEval (g j) A) (ch (sf.f k).1 (sf.f k).2).3) (sf.ret_f k)) *> gsum
+                                 | Si0 (i : Fin t) : S i = \new Array K n (\lam _ => 0)
+                                     => split-zero cls (\lam i => S i) (\lam i p np => supp-BigSum (\lam c => mulVec (matPolyEval (gi i c) A) (ch i c).3) (\lam c => (bc i).5 c (gi i c) p np)) tot i
+                                 | gi0 (i : Fin t) (c : Fin (m i)) : gi i c = 0
+                                     => (bc i).4 (gi i) (\lam c => transport (degree< (gi i c)) (pmap (\lam (x : \Sigma (j : Fin t) (Fin (m j))) => (ch x.1 x.2).4) (sf.f_sec (i, c))) (gdeg (sf.ret (i, c)))) (Si0 i) c
+                       \in \lam k => inv (pmap g (sf.ret_f k)) *> gi0 (sf.f k).1 (sf.f k).2,
+                     \lam k => (bc (sf.f k).1).6 (sf.f k).2)
+        }
+      }
+  }
+  \where {
+    \lemma diag-off {K : AddPointed} {n : Nat} {d : Array K n} {p q : Fin n} (ne : p /= q) : diagonal d p q = 0
+      => rewrite (decideEq/=_reduce ne) idp
+
+    \lemma diag-on {K : AddPointed} {n : Nat} (d : Array K n) (p : Fin n) : diagonal d p p = d p
+      => rewrite (decideEq=_reduce idp) idp
+
+    \lemma diag-right {K : Ring} {n : Nat} (A : Matrix K n n) (d : Array K n) (p q : Fin n) : (A * diagonal d) p q = A p q * d q
+      => K.BigSum-unique {\new Array K n (\lam j => A p j * diagonal d j q)} q (\lam j ne => pmap (\lam y => A p j * y) (diag-off (/=-sym ne)) *> zro_*-right) *> pmap (\lam y => A p q * y) (diag-on d q)
+
+    \lemma diag-left {K : Ring} {n : Nat} (A : Matrix K n n) (d : Array K n) (p q : Fin n) : (diagonal d * A) p q = d p * A p q
+      => K.BigSum-unique {\new Array K n (\lam j => diagonal d p j * A j q)} p (\lam j ne => pmap (\lam y => y * A j q) (diag-off ne) *> zro_*-left) *> pmap (\lam y => y * A p q) (diag-on d p)
+
+    -- | Entries of a matrix commuting with `diagonal d` vanish between different values of `d`.
+    \lemma block-zero {K : DiscreteField} {n : Nat} {A : Matrix K n n} {d : Array K n} (comm : A * diagonal d = diagonal d * A)
+                      {p q : Fin n} (dpq : d p /= d q) : A p q = 0
+      => \have | h : A p q * d q = d p * A p q => inv (diag-right A d p q) *> path (\lam i => comm i p q) *> diag-left A d p q
+               | h2 : (d q - d p) * A p q = 0 => rdistr-neg *> AddGroup.toZero h
+         \in \case K.zeroProduct h2 \with {
+           | byLeft r => absurd (dpq (inv (AddGroup.fromZero r)))
+           | byRight r => r
+         }
+      \where
+        \lemma rdistr-neg {K : CRing} {a b x : K} : (a - b) * x = x * a - b * x
+          => equation.cRing
+
+    \lemma mulVec-diag {K : Ring} {n : Nat} (d : Array K n) (x : Array K n) (p : Fin n) : mulVec (diagonal d) x p = d p * x p
+      => K.BigSum-unique {\new Array K n (\lam q => diagonal d p q * x q)} p (\lam q ne => pmap (\lam y => y * x q) (diag-off ne) *> zro_*-left) *> pmap (\lam y => y * x p) (diag-on d p)
+
+    -- | The part of `v` on the indices of class `i`.
+    \func proj {K : AddPointed} {n t : Nat} (cls : Fin n -> Fin t) (i : Fin t) (v : Array K n) : Array K n
+      => \new Array K n (\lam p => \case decideEq (cls p) i \with {
+        | yes _ => v p
+        | no _ => 0
+      })
+
+    \lemma proj-supp {K : AddPointed} {n t : Nat} (cls : Fin n -> Fin t) (i : Fin t) (v : Array K n) (p : Fin n) (np : cls p /= i) : proj cls i v p = 0
+      => rewrite (decideEq/=_reduce np) idp
+
+    \lemma decomp {K : Ring} {n t : Nat} (cls : Fin n -> Fin t) (v : Array K n) : v = AddMonoid.BigSum {ArrayLModule n (RingLModule K)} (\lam i => proj cls i v)
+      => exts \lam p => inv (ArrayLModule.BigSum-index {K} {n} {RingLModule K} {\new Array (Array K n) t (\lam i => proj cls i v)} {p} *> K.BigSum-unique {\new Array K t (\lam j => proj cls j v p)} (cls p) (\lam j ne => proj-supp cls j v p ne)
+                              *> rewrite (decideEq=_reduce idp) idp)
+
+    \lemma supp-BigSum {K : Ring} {n : Nat} (l : Array (Array K n)) {p : Fin n} (h : \Pi (k : Fin l.len) -> l k p = 0)
+      : AddMonoid.BigSum {ArrayLModule n (RingLModule K)} l p = 0
+      => ArrayLModule.BigSum-index {K} {n} {RingLModule K} {l} {p} *> K.BigSum_zro {\new Array K l.len (\lam k => l k p)} h
+
+    -- | A vanishing sum of vectors supported on the different classes has vanishing summands.
+    \lemma split-zero {K : Ring} {n t : Nat} (cls : Fin n -> Fin t) (S : Array (Array K n) t) (supp : \Pi (i : Fin t) (p : Fin n) -> cls p /= i -> S i p = 0)
+                      (tot : AddMonoid.BigSum {ArrayLModule n (RingLModule K)} S = \new Array K n (\lam _ => 0)) (i : Fin t) : S i = \new Array K n (\lam _ => 0)
+      => exts \lam p => \case decideEq (cls p) i \with {
+        | yes h => transport (\lam j => S j p = 0) h
+                     (inv (K.BigSum-unique {\new Array K t (\lam j => S j p)} (cls p) (\lam j ne => supp j p ne)) *> inv (ArrayLModule.BigSum-index {K} {n} {RingLModule K} {S} {p}) *> pmap (\lam (x : Array K n) => x p) tot)
+        | no np => supp i p np
+      }
+
+    -- | The indices with a given class can be enumerated.
+    \lemma class-enum {n t : Nat} (cls : Fin n -> Fin t) (i : Fin t) : ∃ (s : Nat) (QEquiv {Fin s} {\Sigma (p : Fin n) (cls p = i)})
+      => TruncP.map (SigmaFin (FinFin n) (\lam p => DecFin (decideEq (cls p) i))).finEq (\lam e => (_, e))
+
+    \lemma mulVec-zro-mat {K : Ring} {n : Nat} {x : Array K n} : mulVec (0 : Matrix K n n) x = \new Array K n (\lam _ => 0)
+      => exts \lam i => K.BigSum_zro \lam j => zro_*-left
+
+    \lemma mulVec-zro-vec {K : Ring} {n m : Nat} {M : Matrix K n m} : mulVec M (\new Array K m (\lam _ => 0)) = \new Array K n (\lam _ => 0)
+      => exts \lam i => K.BigSum_zro \lam j => zro_*-right
+
+    \lemma mulVec-*c {K : CRing} {n m : Nat} {M : Matrix K n m} {c : K} {x : Array K m}
+      : mulVec M (c *c {ArrayLModule m (RingLModule K)} x) = c *c {ArrayLModule n (RingLModule K)} mulVec M x
+      => exts \lam i => pmap K.BigSum (exts \lam j => equation.cRing) *> inv K.BigSum-ldistr
+
+    \lemma mulVec-coef {K : CRing} {n : Nat} {c : K} {y : Array K n}
+      : mulVec (CAlgebra.coefHom {MatrixAlgebra K n} c) y = c *c {ArrayLModule n (RingLModule K)} y
+      => pmap (mulVec __ y) (inv (ide-right {MatrixRing K n} {CAlgebra.coefHom {MatrixAlgebra K n} c}) *> matCoef-*c c 1) *> mulVec.scale {K} {n} {c} {1} {y} *> pmap (c *c {ArrayLModule n (RingLModule K)} __) mulVec.ide
+
+    \lemma mulVec-BigSum {K : Ring} {n m : Nat} (M : Matrix K n m) (l : Array (Array K m))
+      : mulVec M (AddMonoid.BigSum {ArrayLModule m (RingLModule K)} l) = AddMonoid.BigSum {ArrayLModule n (RingLModule K)} (map (mulVec M) l) \elim l
+      | nil => mulVec-zro-vec
+      | a :: l => matPolyModule.mulVec-ldistr *> pmap (\lam (x : Array K n) => mulVec M a + {ArrayLModule n (RingLModule K)} x) (mulVec-BigSum M l)
+
+    -- | A matrix `E` intertwining `B` with `A` intertwines every polynomial in them.
+    \lemma poly-intertwine {K : CRing} {n s : Nat} {A : Matrix K n n} {B : Matrix K s s} {E : Matrix K n s}
+                           (h : \Pi (w : Array K s) -> mulVec A (mulVec E w) = mulVec E (mulVec B w)) (q : Poly K) (w : Array K s)
+      : mulVec (matPolyEval q A) (mulVec E w) = mulVec E (mulVec (matPolyEval q B) w) \elim q
+      | pzero => mulVec-zro-mat {K} {n} {mulVec E w} *> inv (pmap (mulVec E) (mulVec-zro-mat {K} {s} {w}) *> mulVec-zro-vec)
+      | padd q c => matPolyModule.mulVec-rdistr {K} {n} {n} {matPolyEval q A * A} {CAlgebra.coefHom {MatrixAlgebra K n} c} {mulVec E w}
+          *> pmap2 (\lam (x y : Array K n) => x + {ArrayLModule n (RingLModule K)} y)
+               (mulVec.comp {K} {n} {matPolyEval q A} {A} {mulVec E w} *> pmap (mulVec (matPolyEval q A)) (h w) *> poly-intertwine h q (mulVec B w))
+               (mulVec-coef {K} {n} {c} {mulVec E w})
+          *> inv (pmap (mulVec E) (matPolyModule.mulVec-rdistr {K} {s} {s} {matPolyEval q B * B} {CAlgebra.coefHom {MatrixAlgebra K s} c} {w}
+                    *> pmap2 (\lam (x y : Array K s) => x + {ArrayLModule s (RingLModule K)} y) (mulVec.comp {K} {s} {matPolyEval q B} {B} {w}) (mulVec-coef {K} {s} {c} {w}))
+                  *> matPolyModule.mulVec-ldistr {K} {n} {s} {E} {mulVec (matPolyEval q B) (mulVec B w)} {c *c {ArrayLModule s (RingLModule K)} w}
+                  *> pmap (\lam (x : Array K n) => mulVec E (mulVec (matPolyEval q B) (mulVec B w)) + {ArrayLModule n (RingLModule K)} x) (mulVec-*c {K} {n} {s} {E} {c} {w}))
+
+    -- | Jordan chains of the block of `A` on the indices of class `i`, as vectors of $k^n$.
+    \lemma block-chains {K : DiscreteField} {n t : Nat} (A : Matrix K n n) (d : Array K n) (cls : Fin n -> Fin t)
+      (bz : \Pi {p q : Fin n} -> cls p /= cls q -> A p q = 0) (i : Fin t) {s : Nat} (en : QEquiv {Fin s} {\Sigma (p : Fin n) (cls p = i)})
+      (lam : K) (dl : \Pi {p : Fin n} -> cls p = i -> d p = lam) {l : Nat} (rt : Array K l) (e : matPolyEval (prodLin rt) A = 0)
+      : ∃ (cs : Array (Chain K n)) (ChainAnn A cs)
+          (\Pi (v : Array K n) -> (\Pi (p : Fin n) -> cls p /= i -> v p = 0)
+            -> ∃ (r : Array (Poly K) cs.len) (v = LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (r c) A) (cs c).3)))
+          (\Pi (g : Array (Poly K) cs.len) -> (\Pi (c : Fin cs.len) -> degree< (g c) (cs c).4)
+            -> LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (g c) A) (cs c).3) = \new Array K n (\lam _ => 0)
+            -> \Pi (c : Fin cs.len) -> g c = 0)
+          (\Pi (c : Fin cs.len) (q : Poly K) (p : Fin n) -> cls p /= i -> mulVec (matPolyEval q A) (cs c).3 p = 0)
+          (\Pi (c : Fin cs.len) -> mulVec (diagonal d) (cs c).3 = (cs c).2 *c {ArrayLModule n (RingLModule K)} (cs c).3)
+ 
+      => \let | idx (a : Fin s) : Fin n => (en a).1
+              | Emat : Matrix K n s => mkMatrix (\lam p a => ide {MatrixRing K n} p (idx a))
+              | B : Matrix K s s => mkMatrix (\lam a b => A (idx a) (idx b))
+              | Fv (v : Array K n) : Array K s => \new Array K s (\lam a => v (idx a))
+         \in \have | idx-inj {a b : Fin s} (h : idx a = idx b) : a = b => inv (en.ret_f a) *> pmap en.ret (ext h) *> en.ret_f b
+                   | idx-sec {p : Fin n} (h : cls p = i) : idx (en.ret (p, h)) = p => pmap (\lam (x : \Sigma (p : Fin n) (cls p = i)) => x.1) (en.f_sec (p, h))
+                   | E1 (w : Array K s) (a : Fin s) : mulVec Emat w (idx a) = w a
+                       => K.BigSum-unique {\new Array K s (\lam b => Emat (idx a) b * w b)} a
+                            (\lam b ab => pmap (\lam y => y * w b) (ide-offdiag (\lam h => ab (idx-inj h))) *> zro_*-left)
+                          *> pmap (\lam y => y * w a) ide-diag *> ide-left
+                   | E2 (w : Array K s) {p : Fin n} (np : cls p /= i) : mulVec Emat w p = 0
+                       => K.BigSum_zro {\new Array K s (\lam b => Emat p b * w b)} \lam b => pmap (\lam y => y * w b) (ide-offdiag (\lam h => np (pmap cls h *> (en b).2))) *> zro_*-left
+                   | FE (w : Array K s) : Fv (mulVec Emat w) = w => exts \lam a => E1 w a
+                   | EF (v : Array K n) (sv : \Pi (p : Fin n) -> cls p /= i -> v p = 0) : mulVec Emat (Fv v) = v
+                       => exts \lam p => \case decideEq (cls p) i \with {
+                         | yes h => transport (\lam p' => mulVec Emat (Fv v) p' = v p') (idx-sec h) (E1 (Fv v) (en.ret (p, h)))
+                         | no np => E2 (Fv v) np *> inv (sv p np)
+                       }
+                   | AEcol (w : Array K s) (p : Fin n) : mulVec A (mulVec Emat w) p = K.BigSum (\new Array K s (\lam b => A p (idx b) * w b))
+                       => pmap K.BigSum (exts \lam q => K.BigSum-ldistr {A p q} {\new Array K s (\lam b => Emat q b * w b)})
+                          *> K.BigSum-transpose (\lam q b => A p q * (Emat q b * w b))
+                          *> pmap K.BigSum (exts \lam b => K.BigSum-unique {\new Array K n (\lam q => A p q * (Emat q b * w b))} (idx b)
+                                (\lam q ne => pmap (\lam y => A p q * y) (pmap (\lam y => y * w b) (ide-offdiag (/=-sym ne)) *> zro_*-left) *> zro_*-right)
+                              *> pmap (\lam y => A p (idx b) * y) (pmap (\lam y => y * w b) ide-diag *> ide-left))
+                   | AE (w : Array K s) : mulVec A (mulVec Emat w) = mulVec Emat (mulVec B w)
+                       => exts \lam p => AEcol w p *> (\case decideEq (cls p) i \with {
+                         | yes h => transport (\lam p' => K.BigSum (\new Array K s (\lam b => A p' (idx b) * w b)) = mulVec Emat (mulVec B w) p') (idx-sec h)
+                                      (inv (E1 (mulVec B w) (en.ret (p, h))))
+                         | no np => K.BigSum_zro {\new Array K s (\lam b => A p (idx b) * w b)} (\lam b => pmap (\lam y => y * w b) (bz (\lam q => np (q *> (en b).2))) *> zro_*-left)
+                                    *> inv (E2 (mulVec B w) np)
+                       })
+                   | polyE (q : Poly K) (w : Array K s) : mulVec (matPolyEval q A) (mulVec Emat w) = mulVec Emat (mulVec (matPolyEval q B) w)
+                       => poly-intertwine {K} {n} {s} {A} {B} {Emat} AE q w
+                   | eB : matPolyEval (prodLin rt) B = 0
+                       => matrixExt \lam a b => inv (path (\lam j => mulVec_stdVec {K} {s} {s} {matPolyEval (prodLin rt) B} {b} j a))
+                            *> inv (E1 (mulVec (matPolyEval (prodLin rt) B) (stdVec b)) a)
+                            *> pmap (\lam (x : Array K n) => x (idx a)) (inv (polyE (prodLin rt) (stdVec b)))
+                            *> pmap (\lam M => mulVec M (mulVec Emat (stdVec b)) (idx a)) e
+                            *> path (\lam j => mulVec-zro-mat {K} {n} {mulVec Emat (stdVec b)} j (idx a))
+         \in \case jordan-chains B rt eB \with {
+           | inP (cs', ann', span', ind') => inP (\new Array (Chain K n) cs'.len (\lam c => ((cs' c).1, lam, mulVec Emat (cs' c).3, (cs' c).4)),
+               \lam c => polyE _ (cs' c).3 *> pmap (mulVec Emat) (ann' c) *> mulVec-zro-vec {K} {n} {s} {Emat},
+               \lam v sv => \case span' (Fv v) \with {
+                 | inP (r, vr) => inP (r, inv (EF v sv) *> pmap (mulVec Emat) vr *> mulVec-BigSum Emat _
+                                            *> pmap (AddMonoid.BigSum {ArrayLModule n (RingLModule K)}) (exts \lam c => inv (polyE (r c) (cs' c).3)))
+               },
+               \lam g gdeg gsum => ind' g gdeg $ inv (FE _) *> pmap Fv (mulVec-BigSum Emat _
+                                     *> pmap (AddMonoid.BigSum {ArrayLModule n (RingLModule K)}) (exts \lam c => inv (polyE (g c) (cs' c).3)) *> gsum),
+               \lam c q p np => pmap (\lam (x : Array K n) => x p) (polyE q (cs' c).3) *> E2 (mulVec (matPolyEval q B) (cs' c).3) np,
+               \lam c => exts \lam p => mulVec-diag d (mulVec Emat (cs' c).3) p *> (\case decideEq (cls p) i \with {
+                 | yes h => pmap (\lam y => y * mulVec Emat (cs' c).3 p) (dl h)
+                 | no np => pmap (d p *) (E2 (cs' c).3 np) *> zro_*-right *> inv (pmap (lam *) (E2 (cs' c).3 np) *> zro_*-right)
+               }))
+         }
+  }

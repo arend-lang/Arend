@@ -1,0 +1,208 @@
+{- | **Primitive elements for commuting matrices** (Mines–Richman–Ruitenburg, Theorem VI.5.1).
+
+     **Theorem VI.5.1** (`primitive-matrices`): if `A` and `B` are commuting `n × n` matrices over a discrete field `k`
+     with more than `n(n-1)/2` elements, and `B` is separable, then there is `c` in `k` such that `A` and `B` are
+     polynomials in `A + c B`.
+
+     The proof follows the book. First the case where `A` and `B` are diagonal (`primitive-diagonal`): choose `c`
+     distinct from the values $(a_i - a_j)/(b_j - b_i)$ (`avoid-pairs`); then entries of `A + c B` agree only where
+     the entries of `A` and of `B` agree, and the diagonal matrices `A`, `B` are polynomials in `A + c B` (as in
+     V.3.3, `jordan-diagonal-poly`). In general, over an extension field `F` where `B` is diagonalizable and the
+     characteristic polynomial of `A` splits, bring `B` to diagonal form and put each block of `A` in Jordan canonical
+     form without affecting `B` (`jordan-chains-diagonal`); choose `c` as in the special case using the diagonals.
+     Then `A + c B` is in Jordan canonical form, so its diagonal (and hence `B`) is a polynomial in it
+     (`primitive-split`). Finally, being a polynomial in a matrix descends from `F` to `k` (`polyIn-descent`); to
+     make extension fields available we pass to a countable field of definition, as in Theorem VI.4.5.
+-}
+
+\import Algebra.Field
+\import Algebra.Field.FieldOfDefinition
+\import Algebra.Field.LargeField
+\import Algebra.Field.Splitting
+\import Algebra.Field.SubField
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.CayleyHamilton
+\import Algebra.Linear.Matrix.CharPoly
+\import Algebra.Linear.Matrix.Diagonalizable
+\import Algebra.Linear.Matrix.FieldExtension
+\import Algebra.Linear.Matrix.JordanChains
+\import Algebra.Linear.Matrix.JordanDiagonal
+\import Algebra.Linear.Matrix.JordanMatrix
+\import Algebra.Linear.Matrix.MinPoly
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Linear.Matrix.Separable
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Function
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\open Monoid
+
+{- | **Theorem VI.5.1, diagonal case.** If `A = diagonal a` and `B = diagonal b`, and `k` has more than `n(n-1)/2`
+     elements, then for a suitable `c` from the given array, `A` and `B` are polynomials in `A + c B`. -}
+\lemma primitive-diagonal {k : DiscreteField} {n : Nat} (a b : Array k n) (l : Array k (suc (binom n 2))) (li : IsInj l)
+  : ∃ (j : Fin (suc (binom n 2))) (q r : Poly k) (matPolyEval q (diagonal a + l j *c diagonal b) = diagonal a) (matPolyEval r (diagonal a + l j *c diagonal b) = diagonal b)
+  => \case avoid-pairs a b l li \with {
+    | inP (j, good) =>
+      \have | T : diagonal a + l j *c diagonal b = jordanMatrix (\lam k => a k + l j * b k) (\lam _ => false)
+                => pmap (`+ l j *c diagonal b) (diagonal-jordan a) *> jordanMatrix-+diagonal a b (\lam _ => false) (l j)
+            | cmp : JordanCompat (\lam k => a k + l j * b k) (\lam _ => false) => \lam _ ff => absurd (true/=false (inv ff))
+            | gb {p q : Fin n} (e : a p + l j * b p = a q + l j * b q) : b p = b q => good p q e
+            | ga {p q : Fin n} (e : a p + l j * b p = a q + l j * b q) : a p = a q => inv diff-alg *> pmap (`- l j * b p) e *> pmap (\lam z => a q + l j * b q - l j * z) (gb e) *> diff-alg
+      \in \case jordan-diagonal-poly (\lam k => a k + l j * b k) (\lam _ => false) cmp a ga, jordan-diagonal-poly (\lam k => a k + l j * b k) (\lam _ => false) cmp b gb \with {
+        | inP (q, qe), inP (r, re) => inP (j, q, r, pmap (matPolyEval q) T *> qe, pmap (matPolyEval r) T *> re)
+      }
+  }
+  \where {
+    \lemma diff-alg {R : Ring} {x y : R} : x + y - y = x
+      => equation
+
+    -- | A diagonal matrix is a Jordan matrix without ones below the diagonal.
+    \lemma diagonal-jordan {R : Ring} {N : Nat} (x : Array R N) : diagonal x = jordanMatrix x (\lam _ => false)
+      => matrixExt \lam i j => diagonal-ide *> inv (cases (decideEq (i : Nat) (suc j)) \with {
+        | yes _ => zro-right
+        | no _ => zro-right
+      })
+  }
+
+{- | **Theorem VI.5.1 over a splitting field.** If `A` and `B` commute, `B` is diagonalizable and `A` is killed by a
+     product of linear factors, then for a suitable `c` from any array of more than `n(n-1)/2` distinct elements, `A`
+     and `B` are polynomials in `A + c B`. -}
+\lemma primitive-split {F : DiscreteField} {n : Nat} {A B : Matrix F n n} (comm : A * B = B * A) (Bd : IsDiagonalizable B)
+  {l : Nat} (rts : Array F l) (ann : matPolyEval (prodLin rts) A = 0) (cl : Array F (suc (binom n 2))) (cli : IsInj cl)
+  : ∃ (j : Fin (suc (binom n 2))) (q r : Poly F) (matPolyEval q (A + cl j *c B) = A) (matPolyEval r (A + cl j *c B) = B)
+  => \case Bd \with {
+    | inP (P1, P1d) =>
+      \let | D => P1.val * B * P1.inv
+           | d : Array F n => mkArray (\lam j => D j j)
+           | A1 => P1.val * A * P1.inv
+      \in \have | Dd : D = diagonal d => diagonalizable-annihilator.isDiagonal-diagonal P1d
+                | comm1 : A1 * diagonal d = diagonal d * A1 => pmap (A1 *) (inv Dd) *> inv (diagonalizable_*.conj-* P1) *> pmap (\lam M => P1.val * M * P1.inv) comm
+                                                                   *> diagonalizable_*.conj-* P1 *> pmap (`* A1) Dd
+                | ann1 : matPolyEval (prodLin rts) A1 = 0 => matPolyEval_conj P1 *> pmap (\lam M => P1.val * M * P1.inv) ann *> pmap (`* P1.inv) zro_*-right *> zro_*-left
+      \in \case jordan-chains-diagonal A1 d comm1 rts ann1 \with {
+        | inP (cs, can, span, ind, tg) =>
+          \have | bb : LModule.IsBasis {ArrayLModule n (RingLModule F)} (chainFamily A1 cs)
+                    => (chain-independent ind, \lam v => \case span v \with {
+                          | inP (r, vr) => \case chain-span can r \with {
+                            | inP (a, ra) => inP (a, vr *> ra)
+                          }
+                        })
+                | len : chainLen cs = n => inv (FinModule.dimension-unique bb) *> FinModule.dimension-unique {F} {ArrayFinModule n} ArrayFinModule.basis
+          \in \case transport (\lam m => \Sigma (b : Array (Array F n) m) (mu nu : Array F m) (s : Array Bool m) (LModule.IsBasis {ArrayLModule n (RingLModule F)} b)
+                                                (JordanCompat mu s) (JordanCompat nu s) (IsJordanFamily A1 b mu s)
+                                                (\Pi (k : Fin m) -> mulVec (diagonal d) (b k) = nu k *c {ArrayLModule n (RingLModule F)} b k)) len
+                               (chainFamily A1 cs, chainEig cs, chainTag cs, chainS cs, bb, chain-compat-eig cs, chain-compat-tag cs, chain-jordan can, chain-tag {F} {n} {A1} {diagonal d} comm1 tg) \with {
+            | (b, mu, nu, s, bb', cm, cn, jf, tg') => \case basis-conj b bb', avoid-pairs mu nu cl cli \with {
+              | inP (P, conj), inP (j, good) =>
+                \have | J1 : P.val * A1 * P.inv = jordanMatrix mu s => conj A1 _ (\lam k => jf k *> inv (jordanMatrix-column cm b k))
+                      | J2 : P.val * diagonal d * P.inv = diagonal nu => conj (diagonal d) _ (\lam k => tg' k *> inv (diagonal-column nu b k))
+                      | Q => Inv.prod P P1
+                      | QB : Q.val * B * Q.inv = diagonal nu => conj-comp P P1 *> pmap (\lam M => P.val * M * P.inv) Dd *> J2
+                      | QX : Q.val * (A + cl j *c B) * Q.inv = jordanMatrix (\lam k => mu k + cl j * nu k) s
+                          => conj-+ Q {A} {cl j *c B} *> pmap2 (+) (conj-comp P P1 *> J1) (conj-*c Q (cl j) B *> pmap (cl j *c) QB) *> jordanMatrix-+diagonal mu nu s (cl j)
+                \in \case jordan-diagonal-poly (\lam k => mu k + cl j * nu k) s (JordanCompat-+ cm cn (cl j)) nu (\lam {p} {q} e => good p q e) \with {
+                  | inP (r, re) =>
+                    \have rB : matPolyEval r (A + cl j *c B) = B => conj-cancel Q (inv (matPolyEval_conj Q) *> pmap (matPolyEval r) QX *> re *> inv QB)
+                    \in inP (j, padd 1 0 - padd 0 (cl j) * r, r, eval-sub rB, rB)
+                }
+            }
+          }
+      }
+  }
+  \where {
+    \lemma conj-comp {M : Monoid} (P Q : Inv {M}) {X : M} : (P.val * Q.val) * X * (Q.inv * P.inv) = P.val * (Q.val * X * Q.inv) * P.inv
+      => equation.monoid
+
+    \lemma conj-cancel {M : Monoid} (P : Inv {M}) {X Y : M} (h : P.val * X * P.inv = P.val * Y * P.inv) : X = Y
+      => diagonalizable-annihilator.conj-inv P *> pmap (\lam z => P.inv * z * P.val) h *> inv (diagonalizable-annihilator.conj-inv P)
+
+    \lemma conj-+ {M : Ring} (P : Inv {M}) {X Y : M} : P.val * (X + Y) * P.inv = P.val * X * P.inv + P.val * Y * P.inv
+      => pmap (`* P.inv) ldistr *> rdistr
+
+    \lemma conj-*c {R : CRing} {n : Nat} (P : Inv {MatrixRing R n}) (c : R) (X : Matrix R n n) : P.val * (c *c X) * P.inv = c *c (P.val * X * P.inv)
+      => pmap (`* P.inv) (inv (MatrixAlgebra.product_*c-comm-right {R} {n} {n} {n} {c} {P.val} {X})) *> inv (MatrixAlgebra.product_*c-comm-left (P.val * X))
+
+    -- | If $r(X) = B$ for $X = A + c B$, then $(X - c r)(X) = A$.
+    \lemma eval-sub {F : DiscreteField} {n : Nat} {A B : Matrix F n n} {c : F} {r : Poly F} (rB : matPolyEval r (A + c *c B) = B)
+      : matPolyEval (padd 1 0 - padd 0 c * r) (A + c *c B) = A
+      => matPolyEval_+ {F} {n} {padd 1 0} {negative (padd 0 c * r)} {A + c *c B} *> pmap2 (+) (matPolyEval_X {F} {n} {A + c *c B})
+           (AddGroupHom.func-negative {matPolyEvalHom (A + c *c B)} {padd 0 c * r} *> pmap negative (matPolyEval_* {F} {n} {padd 0 c} {r} {A + c *c B}
+              *> pmap2 (*) (matPolyEval_const {F} {n} {c} {A + c *c B}) rB *> matCoef-*c c B))
+           *> diff-alg {MatrixRing F n} {A} {c *c B}
+      \where
+        \lemma diff-alg {G : AbGroup} {x y : G} : x + y - y = x
+          => equation.abGroup
+  }
+
+{- | **Theorem VI.5.1.** If `A` and `B` are commuting `n × n` matrices over a discrete field `k` with more than
+     `n(n-1)/2` elements, and `B` is separable, then there is `c` in `k` such that `A` and `B` are polynomials in
+     `A + c B` with coefficients in `k`. -}
+\lemma primitive-matrices {k : DiscreteField} {n : Nat} {A B : Matrix k n n} (comm : A * B = B * A) (Bs : IsSeparableMatrix B)
+  (big : HasMoreThan k (binom n 2))
+  : ∃ (c : k) (q r : Poly k) (matPolyEval q (A + c *c B) = A) (matPolyEval r (A + c *c B) = B)
+  => \case big \with {
+    | inP (l, li) => \case fieldOfDefinition-fin {k} {OrFin (ProdFin (FinFin 2) (ProdFin (FinFin n) (FinFin n))) (FinFin (suc (binom n 2)))}
+                             (\case __ \with { | inl t => (A :: B :: nil) t.1 t.2.1 t.2.2 | inr j => l j }) \with {
+      | inP (S, cS, sS) =>
+        \let | i => SubField.embed S
+             | A0 : Matrix (IDiscreteField S) n n => mkMatrix \lam a b => SubField.elem S (sS (inl (0, (a, b))))
+             | B0 : Matrix (IDiscreteField S) n n => mkMatrix \lam a b => SubField.elem S (sS (inl (1, (a, b))))
+             | l0 : Array (IDiscreteField S) (suc (binom n 2)) => \lam j => SubField.elem S (sS (inr j))
+             | (p0, m0) => matMinPoly B0
+        \in \have | eA : matrix-map i A0 = A => matrixExt \lam a b => idp
+                  | eB : matrix-map i B0 = B => matrixExt \lam a b => idp
+                  | comm0 : A0 * B0 = B0 * A0 => separableMatrix_+.comm-descent i {n} {A0} {B0} {A} {B} eA eB comm
+                  | sep0 : IsSeparable p0 => separable<->diagonalizable.separable-descent i eB m0 Bs
+        \in \case countableSplittingField {IDiscreteField S} cS {p0} \with {
+          | (F1, c1, f1, sf1) => \case countableSplittingField c1 {polyMap f1 (charPoly A0)} \with {
+            | (F2, _, f2, sf2) =>
+              \let g => f2 RingHom.∘ f1
+              \in \case splitting-monic {F1} {F2} {charPoly (matrix-map f1 A0)} (inP (n, charPoly-degree (matrix-map f1 A0), charPoly-monic (matrix-map f1 A0))) {f2}
+                     (transport (\lam (p : Poly F1) => IsSplittingField {F1} {F2} p f2) (charPoly_map f1 A0) sf2) \with {
+                | inP (rts, _, split) =>
+                  \have | ann2 : matPolyEval (prodLin {F2} {rts.len} (\lam j => rts j)) (matrix-map g A0) = 0
+                            => pmap (matPolyEval __ (matrix-map g A0)) (inv (prodLin_BigProd {F2} {rts.len} (\lam j => rts j)) *> inv split *> charPoly_map f2 (matrix-map f1 A0))
+                                 *> pmap (matPolyEval __ _) (inv (charPoly_map f2 (matrix-map f1 A0))) *> inv (matPolyEval_map f2) *> pmap (matrix-map f2) (cayley-hamilton (matrix-map f1 A0))
+                                 *> matrix-map_zro f2
+                        | Bd2 : IsDiagonalizable (matrix-map g B0) => IsDiagonalizable_map f2 (splitting-diagonalizable m0 sep0 sf1)
+                        | cli : IsInj (\lam j => g (l0 j)) => \lam {j} {j'} e => li (pmap __.1 (RingHom.field-isInj {IDiscreteField S} {F2} {g} e))
+                  \in \case primitive-split (separableMatrix_+.comm-map g {n} {A0} {B0} comm0) Bd2 (\lam j => rts j) ann2 (\lam j => g (l0 j)) cli \with {
+                    | inP (j, q2, r2, qe, re) =>
+                      \have | mapT : matrix-map g (A0 + l0 j *c B0) = matrix-map g A0 + g (l0 j) *c matrix-map g B0 => matrix-map_+ g {n} {n} {A0} {l0 j *c B0} *> pmap (matrix-map g A0 +) (matrix-map_*c g {n} {n} {l0 j} {B0})
+                            | mapTk : matrix-map i (A0 + l0 j *c B0) = A + l j *c B => matrix-map_+ i {n} {n} {A0} {l0 j *c B0} *> pmap2 (+) eA (matrix-map_*c i {n} {n} {l0 j} {B0} *> pmap (l j *c) eB)
+                      \in \case polyIn-descent g {n} {A0 + l0 j *c B0} {A0} (inP (q2, pmap (matPolyEval q2) mapT *> qe)), polyIn-descent g {n} {A0 + l0 j *c B0} {B0} (inP (r2, pmap (matPolyEval r2) mapT *> re)) \with {
+                        | inP (q0, q0e), inP (r0, r0e) =>
+                          inP (l j, polyMap i q0, polyMap i r0, pmap (matPolyEval (polyMap i q0)) (inv mapTk) *> inv (matPolyEval_map i {n} {q0} {A0 + l0 j *c B0}) *> pmap (matrix-map i) q0e *> eA,
+                                                               pmap (matPolyEval (polyMap i r0)) (inv mapTk) *> inv (matPolyEval_map i {n} {r0} {A0 + l0 j *c B0}) *> pmap (matrix-map i) r0e *> eB)
+                      }
+                  }
+              }
+          }
+        }
+    }
+  }
+  \where
+    \lemma matrix-map_*c {R S : Ring} (f : RingHom R S) {n m : Nat} {c : R} {M : Matrix R n m} : matrix-map f (c *c M) = f c *c matrix-map f M
+      => matrixExt \lam a b => f.func-*

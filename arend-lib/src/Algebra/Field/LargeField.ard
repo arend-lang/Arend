@@ -1,0 +1,65 @@
+{- | **Big enough fields** (Mines–Richman–Ruitenburg, §VI.5).
+
+     A discrete field `k` *has more than `N` elements* if it contains `N + 1` distinct elements (`HasMoreThan`).
+     Such an element array can avoid any `N` given values (`avoid`). In Theorem VI.5.1 the bad values are indexed by the
+     `n(n-1)/2` pairs of indices `i < j` (`avoid-pairs`).
+-}
+
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Set
+\import Set.Fin
+
+-- | `k` contains more than `N` distinct elements.
+\type HasMoreThan (k : DiscreteField) (N : Nat) : \Prop
+  => ∃ (l : Array k (suc N)) (IsInj l)
+
+-- | `N + 1` distinct elements of a set with decidable equality cannot all occur among `N` given values.
+\lemma avoid {A : DecSet} {N : Nat} (l : Array A (suc N)) (li : IsInj l) (bad : Array A N) : ∃ (j : Fin (suc N)) (\Pi (m : Fin N) -> l j /= bad m)
+  => \have find (j : Fin (suc N)) => FinSet.searchFin (\lam m => l j = bad m) (\lam m => decideEq (l j) (bad m))
+     \in \case FinSet.searchFin (\lam j => \Pi (m : Fin N) -> l j /= bad m) (\lam j => \case find j \with {
+       | inl s => no \lam f => f s.1 s.2
+       | inr f => yes f
+     }) \with {
+       | inl s => inP (s.1, s.2)
+       | inr q => \have h (j : Fin (suc N)) : \Sigma (m : Fin N) (l j = bad m) => \case find j \with {
+                    | inl s => (s.1, s.2)
+                    | inr f => absurd (q j f)
+                  }
+                  \in absurd $ <-irreflexive $ id<suc <∘l FinSet.FinCardInj (\lam j => (h j).1) \lam p => li $ (h _).2 *> pmap bad p *> inv (h _).2
+     }
+
+{- | **The choice of `c` in Theorem VI.5.1.** If `k` has more than `n(n-1)/2` elements, then for any `mu`, `nu` there is
+     `c` in the given array such that $\mu_p + c \nu_p = \mu_q + c \nu_q$ implies $\nu_p = \nu_q$ (and hence $\mu_p = \mu_q$). -}
+\lemma avoid-pairs {k : DiscreteField} {n : Nat} (mu nu : Array k n) (l : Array k (suc (binom n 2))) (li : IsInj l)
+  : ∃ (j : Fin (suc (binom n 2))) (\Pi (p q : Fin n) -> mu p + l j * nu p = mu q + l j * nu q -> nu p = nu q)
+  => \let bad (s : \Sigma (Fin n) (Fin n)) => (mu s.2 - mu s.1) * finv (nu s.1 - nu s.2)
+     \in TruncP.map (avoid l li (mkArray \lam m => bad (binomPairs n m))) \lam t => (t.1, \lam p q e => \case decideEq (nu p) (nu q) \with {
+       | yes r => r
+       | no r => absurd \case LinearOrder.trichotomy (p : Nat) q \with {
+         | less p<q => t.2 (binomPairs-surj p<q).1 $ solve r e *> inv (pmap bad (binomPairs-surj p<q).2)
+         | equals p=q => r $ pmap nu (nat_fin_= p=q)
+         | greater q<p => t.2 (binomPairs-surj q<p).1 $ solve (\lam s => r (inv s)) (inv e) *> inv (pmap bad (binomPairs-surj q<p).2)
+       }
+     })
+  \where {
+    \lemma solve {k : DiscreteField} {a b x y c : k} (ne : x /= y) (e : a + c * x = b + c * y) : c = (b - a) * finv (x - y)
+      => \have t : c * x - c * y = b - a => equation.cRing *> pmap (\lam z => z - a - c * y) e *> equation.cRing
+         \in inv (pmap (c *) (finv-right \lam d => ne (AddGroup.fromZero d)) *> ide-right) *> equation.cRing *> pmap (* finv (x - y)) t
+  }

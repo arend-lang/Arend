@@ -151,7 +151,7 @@
     }
   }
   | norm_*n {n} {x} => \case \elim x \with {
-    | in~ x => pmap norm (inv inN-isometry.func-*n) *> norm_*n
+    | in~ x => pmap norm (inv inN-isometry.func-*n) *> X.norm_*n
   }
   \where {
     \open SeparatedNormedAbGroupReflection

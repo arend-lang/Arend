@@ -1,0 +1,298 @@
+{- | **Primary components of modules** (Mines–Richman–Ruitenburg, §V.3).
+
+     For an element `d` of a commutative ring `R` and an `R`-module `M`, the *d-component* of `M` is the submodule
+     $M_d = \{ m \mid d^h m = 0 \text{ for some } h \}$ (`component`). Elements `a`, `b` are *strongly relatively
+     prime* if `s a + t b = 1` for some `s`, `t` (`IsStronglyCoprime`).
+
+     * Lemma V.3.2: if `a` and `b` are strongly relatively prime, then $M_{ab} = M_a \oplus M_b$
+       (`component-disjoint`, `component-split`), the projections are given by multiplication by a ring element
+       on elements killed by a power of `ab` (`component-projection`), and $M_{ab}$ is cyclic exactly when
+       $M_a$ and $M_b$ are (`component-cyclic`, `component-cyclic-sum`).
+     * Theorem V.3.3: for pairwise strongly relatively prime $p_1, \dots, p_k$, the elements killed by a power of
+       $\prod p_i$ decompose uniquely into elements of the $M_{p_i}$ (`primary-decomposition`,
+       `components-independent`), and the projections are given by ring elements (`primary-elements`).
+     * Theorem V.3.4: a finitely presented `p`-primary module over a ring with Smith normal forms is a direct
+       sum of modules $R/(p^n)$ (`primary-structure`); the key point is that a divisor of $p^h$ is associate
+       to some $p^n$ (`prime-pow-divisor`).
+-}
+
+\import Algebra.Group
+\import Algebra.Group.SubGroup
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Kronecker (ide-diag, ide-offdiag)
+\import Algebra.Domain.Bezout
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Monoid.GCD
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.Presentation
+\import Algebra.Module.SubLModule
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Monoid.SubMonoid
+\import Algebra.Pointed
+\import Algebra.Pointed.SubPointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Data.Fin
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\open Monoid
+\open LModule \hiding (count)
+\open CMonoid (pow_*-comm)
+
+-- | `a` and `b` are *strongly relatively prime*: they generate the unit ideal.
+\type IsStronglyCoprime {R : CRing} (a b : R) : \Prop
+  => ∃ (s t : R) (s * a + t * b = 1)
+  \where {
+    \lemma sym {R : CRing} {a b : R} (c : IsStronglyCoprime a b) : IsStronglyCoprime b a
+      => \case c \with { | inP (s, t, p) => inP (t, s, +-comm *> p) }
+
+    \lemma *-right {R : CRing} {a b c : R} (ab : IsStronglyCoprime a b) (ac : IsStronglyCoprime a c) : IsStronglyCoprime a (b * c) \elim ab, ac
+      | inP (s, t, p), inP (s', t', p') => inP (s * s' * a + s * t' * c + t * b * s', t * t', equation.cRing *> pmap2 (*) p p' *> ide-left)
+
+    \lemma one-right {R : CRing} {a : R} : IsStronglyCoprime a 1
+      => inP (0, 1, pmap2 (+) zro_*-left ide-left *> zro-left)
+
+    \lemma pow-right {R : CRing} {a b : R} (c : IsStronglyCoprime a b) {h : Nat} : IsStronglyCoprime a (pow b h) \elim h
+      | 0 => one-right
+      | suc h => *-right (pow-right c) c
+
+    \lemma pows {R : CRing} {a b : R} (c : IsStronglyCoprime a b) {h k : Nat} : IsStronglyCoprime (pow a h) (pow b k)
+      => sym (pow-right (sym (pow-right c)))
+
+    \lemma BigProd-right {R : CRing} {a : R} {l : Array R} (c : \Pi (j : Fin l.len) -> IsStronglyCoprime a (l j)) : IsStronglyCoprime a (R.BigProd l) \elim l
+      | nil => one-right
+      | b :: l => *-right (c 0) (BigProd-right \lam j => c (suc j))
+  }
+
+-- | The *d-component* $M_d$ of `M`: the elements killed by some power of `d`.
+\func component {R : CRing} (M : LModule R) (d : R) : SubLModule R M \cowith
+  | contains x => ∃ (h : Nat) (pow d h *c x = 0)
+  | contains_zro => inP (0, *c_zro-right)
+  | contains_+ {x} {y} (inP (h, p)) (inP (h', p')) => inP (h' + h, *c-ldistr *> pmap2 (+) (kill p h') (transport (\lam n => pow d n *c y = 0) NatSemiring.+-comm (kill p' h)) *> zro-left)
+  | contains_negative (inP (h, p)) => inP (h, *c_negative-right *> pmap negative p *> AddGroup.negative_zro)
+  | contains_*c {a} (inP (h, p)) => inP (h, inv *c-assoc *> pmap (*c _) *-comm *> *c-assoc *> pmap (a *c) p *> *c_zro-right)
+  \where {
+    -- | An element killed by $d^h$ is killed by every higher power of `d`.
+    \lemma kill {R : CRing} {M : LModule R} {d : R} {h : Nat} {x : M} (p : pow d h *c x = 0) (k : Nat) : pow d (k + h) *c x = 0
+      => pmap (*c x) pow_+ *> *c-assoc *> pmap (_ *c) p *> *c_zro-right
+  }
+
+-- | $M_a \subseteq M_b$ whenever `a` divides `b`.
+\lemma component-div {R : CRing} {M : LModule R} {a b : R} (d : LDiv a b) {x : M} (xa : component M a x) : component M b x \elim xa
+  | inP (h, p) => inP (h, pmap (*c x) (pmap (pow __ h) (inv d.inv-right) *> pow_*-comm *> *-comm) *> *c-assoc *> pmap (_ *c) p *> *c_zro-right)
+
+-- | **Lemma V.3.2, disjointness.** If `a` and `b` are strongly relatively prime, then $M_a \cap M_b = 0$.
+\lemma component-disjoint {R : CRing} {M : LModule R} {a b : R} (c : IsStronglyCoprime a b) {x : M}
+  (xa : component M a x) (xb : component M b x) : x = 0 \elim xa, xb
+  | inP (h, p), inP (k, q) => \case IsStronglyCoprime.pows {R} {a} {b} c {h} {k} \with {
+    | inP (s, t, e) => inv ide_*c *> pmap (*c x) (inv e) *> *c-rdistr
+                         *> pmap2 (+) (*c-assoc *> pmap (s *c) p *> *c_zro-right) (*c-assoc *> pmap (t *c) q *> *c_zro-right) *> zro-left
+  }
+
+{- | **Lemma V.3.2, projections.** If `a` and `b` are strongly relatively prime, there is `e` such that every
+     `x` killed by $(ab)^h$ is the sum of `e x` ∈ $M_a$ and `x - e x` ∈ $M_b$. In particular `e x = x` for such
+     `x` in $M_a$, and `e x = 0` for such `x` in $M_b$. -}
+\lemma component-projection {R : CRing} {M : LModule R} {a b : R} (c : IsStronglyCoprime a b) (h : Nat)
+  : ∃ (e : R) (\Pi {x : M} -> pow (a * b) h *c x = 0 -> \Sigma (component M a (e *c x)) (component M b (x - e *c x)))
+      (\Pi {x : M} -> pow (a * b) h *c x = 0 -> component M a x -> e *c x = x)
+      (\Pi {x : M} -> pow (a * b) h *c x = 0 -> component M b x -> e *c x = 0)
+  => \case IsStronglyCoprime.pows {R} {a} {b} c {h} {h} \with {
+    | inP (s, t, st) =>
+      \have | parts {x : M} (p : pow (a * b) h *c x = 0) : \Sigma (component M a (t * pow b h *c x)) (component M b (x - t * pow b h *c x))
+                => (inP (h, inv *c-assoc *> pmap (*c x) (rewrite (pow_*-comm {R} {a} {b} {h}) equation.cRing : pow a h * (t * pow b h) = t * pow (a * b) h) *> *c-assoc *> pmap (t *c) p *> *c_zro-right),
+                    inP (h, pmap (_ *c) (diff st) *> inv *c-assoc *> pmap (*c x) (rewrite (pow_*-comm {R} {a} {b} {h}) equation.cRing : pow b h * (s * pow a h) = s * pow (a * b) h) *> *c-assoc *> pmap (s *c) p *> *c_zro-right))
+      \in inP (t * pow b h, parts,
+               \lam {x} p xa => inv (AddGroup.fromZero (component-disjoint c (contains_+ {component M a} {x} {negative (t * pow b h *c x)} xa (contains_negative (parts p).1)) (parts p).2)),
+               \lam p xb => component-disjoint c (parts p).1 (contains_*c xb))
+  }
+  \where {
+    \lemma diff {R : CRing} {M : LModule R} {s t a' b' : R} (st : s * a' + t * b' = 1) {x : M} : x - t * b' *c x = s * a' *c x
+      => pmap (__ - _) (inv ide_*c *> pmap (*c x) (inv st) *> *c-rdistr) *> equation.abGroup
+  }
+
+-- | **Lemma V.3.2, decomposition.** If `a` and `b` are strongly relatively prime, then $M_{ab} = M_a + M_b$.
+\lemma component-split {R : CRing} {M : LModule R} {a b : R} (c : IsStronglyCoprime a b) {x : M} (xab : component M (a * b) x)
+  : ∃ (y z : M) (component M a y) (component M b z) (x = y + z) \elim xab
+  | inP (h, p) => \case component-projection c h \with {
+    | inP (e, parts, _, _) => inP (e *c x, x - e *c x, (parts p).1, (parts p).2, equation.abGroup)
+  }
+
+-- | A generator of a cyclic submodule.
+\func IsCyclicGen {R : Ring} {M : LModule R} (S : M -> \Prop) (x : M) : \Prop
+  => \Sigma (S x) (\Pi {y : M} -> S y -> ∃ (r : R) (y = r *c x))
+
+-- | If finitely many generators of `M` lie in $M_d$, then a single power of `d` kills `M`.
+\lemma component-bounded {R : CRing} {M : LModule R} {d : R} {x : Array M} (gen : M.IsGenerated x)
+  (xd : \Pi (j : Fin x.len) -> component M d (x j)) : ∃ (h : Nat) (\Pi (y : M) -> pow d h *c y = 0)
+  => \case uniform x xd \with {
+    | inP (h, q) => inP (h, \lam y => \case gen y \with {
+      | inP (c, yc) => pmap (_ *c) yc *> M.*c_BigSum-ldistr *> M.BigSum_zro {\lam j => pow d h *c (c j *c x j)} \lam j => inv *c-assoc *> pmap (*c _) *-comm *> *c-assoc *> pmap (c j *c) (q j) *> *c_zro-right
+    })
+  }
+  \where
+    \lemma uniform {R : CRing} {M : LModule R} {d : R} (l : Array M) (ld : \Pi (j : Fin l.len) -> component M d (l j))
+      : ∃ (h : Nat) (\Pi (j : Fin l.len) -> pow d h *c l j = 0) \elim l
+      | nil => inP (0, \case __)
+      | x :: l => \case ld 0, uniform l (\lam j => ld (suc j)) \with {
+        | inP (h, p), inP (k, q) => inP (k + h, \case \elim __ \with {
+          | 0 => component.kill p k
+          | suc j => transport (\lam n => pow d n *c _ = 0) NatSemiring.+-comm (component.kill (q j) h)
+        })
+      }
+
+{- | **Lemma V.3.2, cyclic modules.** If $M_{ab}$ is cyclic, generated by `x`, then $M_a$ and $M_b$ are cyclic,
+     generated by `e x` and `x - e x` for some ring element `e`. -}
+\lemma component-cyclic {R : CRing} {M : LModule R} {a b : R} (c : IsStronglyCoprime a b) {x : M} (g : IsCyclicGen (component M (a * b)) x)
+  : ∃ (e : R) (IsCyclicGen (component M a) (e *c x)) (IsCyclicGen (component M b) (x - e *c x)) \elim g
+  | (inP (h, p), gen) => \case component-projection c h \with {
+    | inP (e, parts, ea, eb) =>
+      \have bound {y : M} (yab : component M (a * b) y) : pow (a * b) h *c y = 0
+              => \case gen yab \with {
+                | inP (r, yr) => pmap (_ *c) yr *> inv *c-assoc *> pmap (*c x) *-comm *> *c-assoc *> pmap (r *c) p *> *c_zro-right
+              }
+      \in inP (e, ((parts p).1, \lam {y} ya => \case gen (component-div (LDiv.make b idp) ya) \with {
+                   | inP (r, yr) => inP (r, inv (ea (bound (component-div (LDiv.make b idp) ya)) ya) *> pmap (e *c) yr *> inv *c-assoc *> pmap (*c x) *-comm *> *c-assoc)
+                 }),
+                  ((parts p).2, \lam {y} yb => \case gen (component-div (LDiv.make a *-comm) yb) \with {
+                    | inP (r, yr) => inP (r, inv (pmap (y -) (eb (bound (component-div (LDiv.make a *-comm) yb)) yb) *> AddGroup.minus_zro) *> pmap (\lam z => z - e *c z) yr
+                                              *> pmap (_ -) (inv *c-assoc *> pmap (*c x) *-comm *> *c-assoc) *> inv *c-ldistr_-)
+                  }))
+  }
+
+-- | **Lemma V.3.2, cyclic modules (converse).** If $M_a$ and $M_b$ are cyclic, generated by `y` and `z`, then $M_{ab}$ is cyclic, generated by `y + z`.
+\lemma component-cyclic-sum {R : CRing} {M : LModule R} {a b : R} (c : IsStronglyCoprime a b) {y z : M}
+  (gy : IsCyclicGen (component M a) y) (gz : IsCyclicGen (component M b) z) : IsCyclicGen (component M (a * b)) (y + z) \elim gy, gz
+  | (inP (h, p), geny), (inP (k, q), genz) =>
+    \have | yab : pow (a * b) (k + h) *c y = 0 => pmap (*c y) (pmap (pow __ (k + h)) *-comm *> pow_*-comm) *> *c-assoc *> pmap (_ *c) (component.kill p k) *> *c_zro-right
+          | zab : pow (a * b) (k + h) *c z = 0 => pmap (*c z) pow_*-comm *> *c-assoc *> pmap (_ *c) (transport (\lam n => pow b n *c z = 0) NatSemiring.+-comm (component.kill q h)) *> *c_zro-right
+    \in (contains_+ (component-div (LDiv.make b idp) (inP (h, p))) (component-div (LDiv.make a *-comm) (inP (k, q))),
+         \lam {w} wab => \case component-split c wab, component-projection c (k + h) \with {
+           | inP (wa, wb, wa', wb', w=), inP (e, _, ea, eb) => \case geny wa', genz wb' \with {
+             | inP (r, war), inP (r', wbr) =>
+               \have | ey : e *c (y + z) = y => *c-ldistr *> pmap2 (+) (ea yab (inP (h, p))) (eb zab (inP (k, q))) *> zro-right
+                     | ez : (y + z) - e *c (y + z) = z => pmap (_ -) ey *> equation.abGroup
+               \in inP (r * e + r' * (1 - e), w= *> pmap2 (+) (war *> pmap (r *c) (inv ey) *> inv *c-assoc) (wbr *> pmap (r' *c) (inv ez *> inv (*c-rdistr_- *> pmap (`- _) ide_*c)) *> inv *c-assoc)
+                                                *> inv *c-rdistr)
+           }
+         })
+
+{- | **Theorem V.3.3, ring form.** For pairwise strongly relatively prime $p_1, \dots, p_k$ and any `h`, there are
+     ring elements $\pi_l$ with $\sum \pi_l \equiv 1$ and $\pi_l p_l^h \equiv 0$ modulo $(\prod p_l)^h$. -}
+\lemma primary-elements {R : CRing} {k : Nat} (p : Array R k) (pc : \Pi {i j : Fin k} -> i /= j -> IsStronglyCoprime (p i) (p j)) (h : Nat)
+  : ∃ (pr : Array R k) (c : R) (R.BigSum pr = 1 + c * pow (R.BigProd p) h) (\Pi (l : Fin k) -> LDiv (pow (R.BigProd p) h) (pr l * pow (p l) h)) \elim k, p
+  | 0, nil => inP (nil, -1, inv (pmap (_ +) (pmap (_ *) pow_ide *> ide-right) *> negative-right), \case __)
+  | suc k, a :: p => \case primary-elements p (\lam {i} {j} q => pc {suc i} {suc j} (\lam e => q (unfsuc e))) h,
+                          IsStronglyCoprime.pows {R} {a} {R.BigProd p} (IsStronglyCoprime.BigProd-right \lam j => pc {0} {suc j} (\case __)) {h} {h} \with {
+    | inP (pr, c, sum, div), inP (s, t, st) => inP (t * pow (R.BigProd p) h :: map (s * pow a h *) pr, s * c,
+        pmap (_ +) (inv R.BigSum-ldistr *> pmap (_ *) sum)
+          *> (equation.cRing : t * pow (R.BigProd p) h + s * pow a h * (1 + c * pow (R.BigProd p) h) = s * pow a h + t * pow (R.BigProd p) h + s * c * (pow a h * pow (R.BigProd p) h))
+          *> pmap2 (+) st (inv (pmap (s * c *) pow_*-comm)),
+        \case \elim __ \with {
+          | 0 => LDiv.make t (rewrite pow_*-comm equation.cRing)
+          | suc l => LDiv.make (s * LDiv.inv {div l}) (rewrite pow_*-comm
+              ((equation.cRing : pow a h * pow (R.BigProd p) h * (s * LDiv.inv {div l}) = s * pow a h * (pow (R.BigProd p) h * LDiv.inv {div l}))
+                 *> pmap (s * pow a h *) (LDiv.inv-right {div l}) *> inv *-assoc))
+        })
+  }
+
+{- | **Theorem V.3.3.** For pairwise strongly relatively prime $p_1, \dots, p_k$ and any `h`, there are ring
+     elements $\pi_l$ such that every `x` killed by $(\prod p_l)^h$ is the sum of the $\pi_l x \in M_{p_l}$. -}
+\lemma primary-decomposition {R : CRing} {M : LModule R} {k : Nat} (p : Array R k) (pc : \Pi {i j : Fin k} -> i /= j -> IsStronglyCoprime (p i) (p j)) (h : Nat)
+  : ∃ (pr : Array R k) (\Pi {x : M} -> pow (R.BigProd p) h *c x = 0 -> \Sigma (M.BigSum (\lam l => pr l *c x) = x) (\Pi (l : Fin k) -> component M (p l) (pr l *c x)))
+  => \case primary-elements p pc h \with {
+    | inP (pr, c, sum, div) => inP (pr, \lam {x} bd => (inv M.*c_BigSum-rdistr *> pmap (*c x) sum *> *c-rdistr *> pmap2 (+) ide_*c (*c-assoc *> pmap (c *c) bd *> *c_zro-right) *> zro-right,
+                                                     \lam l => inP (h, inv *c-assoc *> pmap (*c x) (*-comm *> inv (LDiv.inv-right {div l}) *> *-comm) *> *c-assoc *> pmap (_ *c) bd *> *c_zro-right)))
+  }
+
+-- | **Theorem V.3.3, uniqueness.** For pairwise strongly relatively prime $p_l$, if elements $y_l \in M_{p_l}$ sum to `0`, they are all `0`.
+\lemma components-independent {R : CRing} {M : LModule R} {k : Nat} (p : Array R k) (pc : \Pi {i j : Fin k} -> i /= j -> IsStronglyCoprime (p i) (p j))
+  (y : Array M k) (yc : \Pi (l : Fin k) -> component M (p l) (y l)) (s : M.BigSum y = 0) (l : Fin k) : y l = 0 \elim k, p, y, l
+  | suc k, a :: p, y0 :: y, l =>
+    \have | pc' {i j : Fin k} (q : i /= j) : IsStronglyCoprime (p i) (p j) => pc {suc i} {suc j} (\lam e => q (unfsuc e))
+          | y0=0 : y0 = 0 => component-disjoint (IsStronglyCoprime.BigProd-right \lam j => pc {0} {suc j} (\case __)) (yc 0)
+                               (transport (component M _) (inv (AddGroup.fromZero (pmap (y0 +) AddGroup.negative-isInv *> s))) (contains_negative (sum-in p y (\lam j => yc (suc j)))))
+          | rest : M.BigSum y = 0 => inv zro-left *> pmap (`+ _) (inv y0=0) *> s
+    \in \case \elim l \with {
+      | 0 => y0=0
+      | suc l => components-independent p pc' y (\lam j => yc (suc j)) rest l
+    }
+  \where
+    \lemma sum-in {R : CRing} {M : LModule R} {k : Nat} (p : Array R k) (y : Array M k) (yc : \Pi (l : Fin k) -> component M (p l) (y l))
+      : component M (R.BigProd p) (M.BigSum y) \elim k, p, y
+      | 0, nil, nil => contains_zro {component M 1}
+      | suc k, a :: p, y0 :: y => contains_+ (component-div (LDiv.make _ idp) (yc 0)) (component-div (LDiv.make a *-comm) (sum-in p y \lam j => yc (suc j)))
+
+{- | The projections of Theorem V.3.3 act on components as expected: if the $\pi_l x \in M_{p_l}$ sum to `x`
+     and `x` ∈ $M_{p_j}$, then $\pi_j x = x$ and $\pi_l x = 0$ for `l ≠ j`. -}
+\lemma primary-projection-component {R : CRing} {M : LModule R} {k : Nat} {p : Array R k} (pc : \Pi {i j : Fin k} -> i /= j -> IsStronglyCoprime (p i) (p j))
+  {pr : Array R k} {x : M} (sum : M.BigSum (\lam l => pr l *c x) = x) (comp : \Pi (l : Fin k) -> component M (p l) (pr l *c x))
+  {j : Fin k} (xj : component M (p j) x) : \Sigma (pr j *c x = x) (\Pi {l : Fin k} -> l /= j -> pr l *c x = 0)
+  => \have eq (l : Fin k) : pr l *c x = MatrixRing.ide {R} {k} j l *c x
+       => AddGroup.fromZero $ components-independent p pc (\lam l => pr l *c x - MatrixRing.ide {R} {k} j l *c x)
+            (\lam l => contains_+ (comp l) (contains_negative (\case decideEq l j \with {
+              | yes e => rewrite e (contains_*c {component M (p j)} xj)
+              | no q => rewrite (ide-offdiag (/=-sym q)) (transportInv (component M (p l)) *c_zro-left (contains_zro {component M (p l)}))
+            }))) (M.BigSum_- *> pmap2 (-) sum (inv (M.*c_BigSum-rdistr {\lam l => MatrixRing.ide {R} {k} j l} {x}) *> pmap (*c x) (R.BigSum-unique {\lam l => MatrixRing.ide {R} {k} j l} j (\lam i ji => ide-offdiag ji) *> ide-diag {R} {k} {j}) *> ide_*c) *> negative-right) l
+     \in (eq j *> pmap (*c x) ide-diag *> ide_*c, \lam q => eq _ *> pmap (*c x) (ide-offdiag (/=-sym q)) *> *c_zro-left)
+
+{- | **A divisor of a prime power is associate to a prime power.** If `p` is prime and `d` divides $p^h$, then
+     `d` is associate to $p^e$ for some `e`. -}
+\lemma prime-pow-divisor {M : CMonoid} (p : Prime {M}) {d : M} {h : Nat} (dp : LDiv d (pow p h)) : ∃ (e : Nat) (associates d (pow p e)) \elim h
+  | 0 => inP (0, (Inv.lmake dp.inv (*-comm *> dp.inv-right), inv ide-right))
+  | suc h => \case p.isPrime (LDiv.make (pow p h) (*-comm *> inv dp.inv-right) : LDiv p (d * dp.inv)) \with {
+    | byLeft (pd : LDiv p d) => \case prime-pow-divisor p (LDiv.make dp.inv (p.isCancelable-left (inv *-assoc *> pmap (* dp.inv) pd.inv-right *> dp.inv-right *> *-comm)) : LDiv pd.inv (pow p h)) \with {
+      | inP (e, (u, q)) => inP (suc e, (u, inv pd.inv-right *> pmap (p *) q *> equation.cMonoid))
+    }
+    | byRight (pc : LDiv p dp.inv) => prime-pow-divisor p (LDiv.make pc.inv (p.isCancelable-left (equation.cMonoid *> pmap (d *) pc.inv-right *> dp.inv-right *> *-comm)))
+  }
+
+{- | **Theorem V.3.4.** Let `p` be a prime of a ring with Smith normal forms (e.g. a PID). A finitely presented
+     `p`-primary module is a direct sum of modules $R/(p^{e_j})$: there are generators `y` such that
+     $\sum r_j y_j = 0$ exactly when $p^{e_j} \mid r_j$ for every `j`. -}
+\lemma primary-structure {R : SmithRing} {M : LModule R} {n m : Nat} {x : Array M n} {A : Matrix R m n} (P : IsPresentation x A)
+  (p : Prime {R}) (prim : \Pi (z : M) -> component M p z)
+  : ∃ (y : Array M n) (e : Array Nat n) (M.IsGenerated y)
+      (\Pi (r : Array R n) -> (M.BigSum (\lam j => r j *c y j) = 0) <-> (\Pi (j : Fin n) -> TruncP (LDiv (pow p (e j)) (r j))))
+  => \case structure-theorem P \with {
+    | inP (y, d, _, gen, rel) => \case FinSet.finiteAC (\lam j => div-pow y d rel p (prim (y j))) \with {
+      | inP f => inP (y, \lam j => (f j).1, gen, \lam r => <->trans (rel r) (\lam q j => TruncP.map {_} {LDiv (pow p (f j).1) (r j)} (q j) (\lam dv => assoc-div-left (associates-sym (f j).2) dv),
+                                                                           \lam q j => TruncP.map {_} {LDiv (d j) (r j)} (q j) (\lam dv => assoc-div-left (f j).2 dv)))
+    }
+  }
+  \where {
+    \lemma div-pow {R : CRing} {M : LModule R} {n : Nat} (y : Array M n) (d : Array R n)
+      (rel : \Pi (r : Array R n) -> (M.BigSum (\lam j => r j *c y j) = 0) <-> (\Pi (j : Fin n) -> TruncP (LDiv (d j) (r j))))
+      (p : Prime {R}) {j : Fin n} (yp : component M p (y j)) : ∃ (e : Nat) (associates (d j) (pow p e)) \elim yp
+      | inP (h, q) => \case (rel (\lam i => MatrixRing.ide {R} {n} j i * pow p h)).1
+                              (M.BigSum-unique j (\lam i ji => pmap (*c _) (pmap (`* _) (ide-offdiag ji) *> zro_*-left) *> *c_zro-left)
+                                *> pmap (*c _) (pmap (`* _) ide-diag *> ide-left) *> q) j \with {
+        | inP dv => prime-pow-divisor p (transport (LDiv (d j)) (pmap (`* _) ide-diag *> ide-left) dv)
+      }
+
+    \func assoc-div-left {M : CMonoid} {a b c : M} (ab : associates a b) (bc : LDiv b c) : LDiv a c
+      => LDiv.make (Inv.inv {ab.1} * bc.inv) (pmap (`* _) ab.2 *> equation.cMonoid {Inv.inv-left {ab.1}} *> bc.inv-right)
+  }
+
+{- | **Colon ideals are principal in a Bezout domain.** For `d ≠ 0`, the elements `r` with `d ∣ r x` are exactly
+     the multiples of $g = d / \gcd(d, x)$. This computes the annihilator of `x y` when `y` has annihilator `(d)`. -}
+\lemma colon-principal {R : BezoutDomain} {d x : R} (d/=0 : d /= 0)
+  : ∃ (g : R) (\Pi (r : R) -> TruncP (LDiv d (r * x)) <-> TruncP (LDiv g r))
+  => \case R.isGCD d x \with {
+    | inP (G : GCD) =>
+      \have | c/=0 : G.res /= 0 => \lam c=0 => d/=0 (inv G.res|val1.inv-right *> pmap (`* _) c=0 *> zro_*-left)
+            | creg : CMonoid.IsRegularElem G.res => \lam p => R.nonZero-cancel-left c/=0 p
+            | cop : IsCoprime G.res|val1.inv G.res|val2.inv => \lam z z|g z|x' => Inv.lmake (LDiv.inv {(GCD.reduce {G} creg).res-univ z z|g z|x'})
+                                                                    (*-comm *> LDiv.inv-right {(GCD.reduce {G} creg).res-univ z z|g z|x'})
+      \in inP (G.res|val1.inv, \lam r => (\lam (inP (dv : LDiv)) => R.coprime_*_div (LDiv.make dv.inv (creg (equation.cMonoid {G.res|val1.inv-right, G.res|val2.inv-right, dv.inv-right}))) cop,
+                                          \lam (inP (dv : LDiv)) => inP (LDiv.make (dv.inv * G.res|val2.inv)
+                                            (pmap (`* _) (inv G.res|val1.inv-right) *> equation.cMonoid *> pmap2 (*) dv.inv-right G.res|val2.inv-right))))
+  }

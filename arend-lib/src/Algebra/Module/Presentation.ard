@@ -1,0 +1,145 @@
+{- | **Finitely presented modules** (Mines–Richman–Ruitenburg, §V.2).
+
+     A *finite presentation* of a module `M` over a ring `R` consists of generators `x : Array M n` and an
+     `m × n` matrix `A` whose rows generate the module of relations: `∑ r_j x_j = 0` holds exactly when the
+     row `r` is an `R`-combination of the rows of `A` (`IsPresentation`).
+
+     * Theorem V.2.1 (`presentation-change`): if `E` is invertible, the generators $y = E x$ are presented
+       by $A E⁻¹$.
+     * Corollary V.2.2 (`presentation-equiv`): more generally, they are presented by $F A E⁻¹$ for any
+       invertible `F`.
+     * Theorem V.2.3 (`structure-theorem`, the *Structure Theorem*): over a ring with Smith normal forms
+       (e.g. a PID), a finitely presented module is a direct sum $R/(d_1) \oplus \dots \oplus R/(d_n)$ with
+       $d_1 \mid d_2 \mid \dots \mid d_n$. We state the direct sum decomposition concretely: there are
+       generators `y` and elements `d` such that $\sum r_j y_j = 0$ if and only if $d_j \mid r_j$ for every `j`.
+-}
+
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Data.Or
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\open MatrixRing
+\open Monoid
+
+-- | The row $s A$: the combination of the rows of `A` with coefficients `s`.
+\func rowComb {R : Ring} {m n : Nat} (s : Array R m) (A : Matrix R m n) : Array R n
+  => \lam j => R.BigSum (\lam l => s l * A l j)
+  \where {
+    \protected \lemma assoc {R : Ring} {m n k : Nat} {s : Array R m} {A : Matrix R m n} {B : Matrix R n k}
+      : rowComb (rowComb s A) B = rowComb s (A product B)
+      => exts \lam j => path (\lam i => product-assoc (mkRow s) A B i 0 j)
+
+    \protected \lemma ide {R : Ring} {n : Nat} {r : Array R n} : rowComb r 1 = r
+      => exts \lam j => path (\lam i => product_ide-right {R} {1} {n} {mkRow r} i 0 j)
+
+    -- | Combining the combinations $E x$ with coefficients `r` is combining `x` with coefficients $r E$.
+    \lemma comb {R : Ring} {M : LModule R} {m n : Nat} (r : Array R m) (E : Matrix R m n) (x : Array M n)
+      : M.BigSum (\lam i => r i *c M.BigSum (\lam j => E i j *c x j)) = M.BigSum (\lam j => rowComb r E j *c x j)
+      => path (\lam i => inv (product-gen-assoc {R} {M} {1} {m} {n} {1} {mkRow r} {E} {mkColumn x}) i 0 0)
+
+    -- | If `E` has a left inverse `E'`, then `x` is recovered from $E x$.
+    \lemma recover {R : Ring} {M : LModule R} {n : Nat} {E E' : Matrix R n n} (p : E' product E = 1) (x : Array M n) (j : Fin n)
+      : M.BigSum (\lam i => E' j i *c M.BigSum (\lam k => E i k *c x k)) = x j
+      => path (\lam i => (inv (product-gen-assoc {R} {M} {n} {n} {n} {1} {E'} {E} {mkColumn x}) *> pmap (product-gen __ (mkColumn x)) p *> product-gen_ide-left (mkColumn x)) i j 0)
+  }
+
+-- | `x` generates `M`, and the relations among `x` are exactly the combinations of the rows of `A`.
+\type IsPresentation {R : Ring} {M : LModule R} {n m : Nat} (x : Array M n) (A : Matrix R m n) : \Prop
+  => \Sigma (M.IsGenerated x) (\Pi (r : Array R n) -> (M.BigSum (\lam j => r j *c x j) = 0) <-> ∃ (s : Array R m) (r = rowComb s A))
+
+{- | **Theorem V.2.1.** If `x` is presented by `A` and `E` is invertible, then the generators $E x$ are
+     presented by $A E⁻¹$. -}
+\lemma presentation-change {R : Ring} {M : LModule R} {n m : Nat} {x : Array M n} {A : Matrix R m n}
+  (P : IsPresentation x A) (E : Inv {MatrixRing R n})
+  : IsPresentation (\lam i => M.BigSum (\lam j => E.val i j *c x j)) (A product E.inv)
+  => (\lam z => \case P.1 z \with {
+        | inP (c, zc) => inP (rowComb c E.inv, zc *> pmap M.BigSum (exts \lam j => pmap (c j *c) (inv (rowComb.recover E.inv-left x j)))
+                                                  *> rowComb.comb c E.inv (\lam i => M.BigSum (\lam j => E.val i j *c x j)))
+      },
+      \lam r => (\lam rel => \case (P.2 (rowComb r E.val)).1 (inv (rowComb.comb r E.val x) *> rel) \with {
+                   | inP (s, q) => inP (s, inv rowComb.ide *> pmap (rowComb r) (inv E.inv-right) *> inv (rowComb.assoc {R} {n} {n} {n} {r} {E.val} {E.inv})
+                                            *> pmap (rowComb __ E.inv) q *> rowComb.assoc {R} {m} {n} {n} {s} {A} {E.inv})
+                 },
+                 \lam (inP (s, q)) => rowComb.comb r E.val x *> (P.2 (rowComb r E.val)).2
+                    (inP (s, pmap (rowComb __ E.val) q *> rowComb.assoc {R} {m} {n} {n} {s} {A product E.inv} {E.val} *> pmap (rowComb s) (product-assoc A E.inv E.val *> pmap (A product) E.inv-left *> product_ide-right)))))
+
+-- | Multiplying the presentation matrix on the left by an invertible matrix does not change the relations.
+\lemma presentation-left {R : Ring} {M : LModule R} {n m : Nat} {x : Array M n} {A : Matrix R m n}
+  (P : IsPresentation x A) (F : Inv {MatrixRing R m}) : IsPresentation x (F.val product A)
+  => (P.1, \lam r => (\lam rel => \case (P.2 r).1 rel \with {
+                        | inP (s, q) => inP (rowComb s F.inv, q *> pmap (rowComb s) (inv (pmap (product A) F.inv-left *> MatrixRing.product_ide-left))
+                                                              *> pmap (rowComb s) (product-assoc F.inv F.val A) *> inv (rowComb.assoc {R} {m} {m} {n} {s} {F.inv} {F.val product A}))
+                      },
+                      \lam (inP (s, q)) => (P.2 r).2 (inP (rowComb s F.val, q *> inv (rowComb.assoc {R} {m} {m} {n} {s} {F.val} {A})))))
+
+-- | **Corollary V.2.2.** If `x` is presented by `A`, then $E x$ is presented by $F A E⁻¹$.
+\lemma presentation-equiv {R : Ring} {M : LModule R} {n m : Nat} {x : Array M n} {A : Matrix R m n}
+  (P : IsPresentation x A) (F : Inv {MatrixRing R m}) (E : Inv {MatrixRing R n})
+  : IsPresentation (\lam i => M.BigSum (\lam j => E.val i j *c x j)) (F.val product A product E.inv)
+  => presentation-change {R} {M} {n} {m} {x} {F.val product A} (presentation-left P F) E
+
+{- | **Theorem V.2.3 (Structure Theorem).** Let `M` be a finitely presented module over a ring with Smith
+     normal forms (for example, a principal ideal domain). Then `M` is isomorphic to a direct sum
+     $R/(d_1) \oplus \dots \oplus R/(d_n)$ with $d_1 \mid d_2 \mid \dots \mid d_n$: there are generators `y`
+     such that $\sum r_j y_j = 0$ exactly when $d_j \mid r_j$ for every `j`. -}
+\lemma structure-theorem {R : SmithRing} {M : LModule R} {n m : Nat} {x : Array M n} {A : Matrix R m n} (P : IsPresentation x A)
+  : ∃ (y : Array M n) (d : Array R n) (\Pi {i j : Fin n} -> (i : Nat) <= j -> TruncP (LDiv (d i) (d j))) (M.IsGenerated y)
+      (\Pi (r : Array R n) -> (M.BigSum (\lam j => r j *c y j) = 0) <-> (\Pi (j : Fin n) -> TruncP (LDiv (d j) (r j))))
+  => \case SmithRing.toSmith A \with {
+    | inP (B, Bs, inP (C, D, BCAD)) =>
+      \have Q => transport (IsPresentation _) (inv BCAD) (presentation-equiv P C (Inv.reverse {D}))
+      \in inP (_, diagEntry B, diagEntry-chain Bs, Q.1, \lam r => <->trans (Q.2 r) (diagonal-relations Bs.1 r))
+  }
+  \where {
+    -- | The diagonal entries of an `m × n` matrix, extended by zeros.
+    \func diagEntry {R : AddPointed} {m n : Nat} (B : Matrix R m n) (j : Fin n) : R
+      => fit 0 {n} (\new Array R m (\lam i => B i j)) j
+
+    \lemma diagEntry-chain {R : SmithRing} {m n : Nat} {B : Matrix R m n} (Bs : IsSmith B) {i j : Fin n} (q : (i : Nat) <= j)
+      : TruncP (LDiv (diagEntry B i) (diagEntry B j))
+      => \case LinearOrder.dec<_<= (j : Nat) m \with {
+        | inl p => rewrite (fit_< {R} {0} {n} (\new Array R m (\lam i' => B i' i)) (q <∘r p), fit_< {R} {0} {n} (\new Array R m (\lam i' => B i' j)) p)
+                     (IsSmith.smith-diag Bs toFin=id (rewrite (toFin=id, toFin=id) q))
+        | inr p => inP (rewrite (fit_>= {R} {0} {n} (\new Array R m (\lam i' => B i' j)) p) R.zero-div)
+      }
+
+    -- | Relations of a diagonal presentation matrix.
+    \lemma diagonal-relations {R : CRing} {m n : Nat} {B : Matrix R m n} (Bd : IsDiagonal B) (r : Array R n)
+      : ∃ (s : Array R m) (r = rowComb s B) <-> (\Pi (j : Fin n) -> TruncP (LDiv (diagEntry B j) (r j)))
+      => (\lam (inP (s, q)) j => \case LinearOrder.dec<_<= (j : Nat) m \with {
+            | inl p => inP (rewrite (fit_< {R} {0} {n} (\new Array R m (\lam i => B i j)) p)
+                              (LDiv.make (s (toFin j p)) (*-comm *> inv (pmap (\lam (a : Array R n) => a j) q *> column-lt Bd s p))))
+            | inr p => inP (rewrite (fit_>= {R} {0} {n} (\new Array R m (\lam i => B i j)) p, pmap (\lam (a : Array R n) => a j) q *> column-ge Bd s p) R.zero-div)
+          },
+          \lam h => \case FinSet.finiteAC h \with {
+            | inP g => inP (fit 0 {m} (\new Array R n (\lam j => LDiv.inv {g j})), exts \lam j => \case LinearOrder.dec<_<= (j : Nat) m \with {
+              | inl p => inv (LDiv.inv-right {g j}) *> pmap (`* _) (fit_< {R} {0} {n} (\new Array R m (\lam i => B i j)) p) *> *-comm
+                          *> pmap (`* _) (inv (fit_<' {R} {0} {m} (\new Array R n (\lam j' => LDiv.inv {g j'})) p)) *> inv (column-lt Bd _ p)
+              | inr p => inv (LDiv.inv-right {g j}) *> pmap (`* _) (fit_>= {R} {0} {n} (\new Array R m (\lam i => B i j)) p) *> zro_*-left
+                          *> inv (column-ge Bd _ p)
+            })
+          })
+
+    \lemma column-lt {R : CRing} {m n : Nat} {B : Matrix R m n} (Bd : IsDiagonal B) (s : Array R m) {j : Fin n} (p : (j : Nat) < m)
+      : rowComb s B j = s (toFin j p) * B (toFin j p) j
+      => R.BigSum-unique (toFin j p) (\lam l q => pmap (s l *) (Bd \lam e => q (fin_nat-inj (toFin=id *> inv e))) *> zro_*-right)
+
+    \lemma column-ge {R : CRing} {m n : Nat} {B : Matrix R m n} (Bd : IsDiagonal B) (s : Array R m) {j : Fin n} (p : m <= (j : Nat))
+      : rowComb s B j = 0
+      => R.BigSum_zro \lam l => pmap (s l *) (Bd \lam (e : (l : Nat) = j) => NatSemiring.<-irreflexive (transport (`< m) e (fin_< l) <∘l p)) *> zro_*-right
+  }

@@ -1,14 +1,13 @@
 \import Algebra.Monoid
-\import Algebra.Solver \using (interpretNF, interpretNF-consistent)
+\import Algebra.Solver
 \import Algebra.Solver.Monoid
 \import Arith.Fin.Order
 \import Data.List
 \import Function.Iterate
 \import Function.Meta
-\import Meta
 \import Paths
 \import Paths.Meta
-\open MonoidSolverModel
+\open MonoidSolverModel \using (interpret)
 \open Sort
 
 \func CMonoidSolverModel (M : CMonoid) : SolverModel M \cowith

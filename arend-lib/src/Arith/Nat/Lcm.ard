@@ -1,0 +1,101 @@
+{- | Least common multiples of natural numbers.
+
+     * {nat-lcm} is `lcm(m,n) = m · (n / gcd(m,n))`; it is a common multiple ({lcm-left}, {lcm-right})
+       dividing every common multiple ({lcm-univ}).
+     * {lcm-split}: `lcm(m,n) = a · b` with `a | n`, `b | m` and `gcd(a,b) = 1`. This is the decomposition
+       used in the proof of Mines–Richman–Ruitenburg, *A Course in Constructive Algebra*, Lemma VI.5.3.
+       It is proved by induction on `m`, splitting off one prime factor of `gcd(m,n)` at a time ({lcm-split.aux}).
+ -}
+
+\import Algebra.Domain.Euclidean
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Prime
+\import Arith.Nat
+\import Arith.Prime
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.StrictOrder
+\import Paths
+\import Set
+\open Monoid
+\open Nat(div,mod)
+\open EuclideanSemiringData
+
+-- | The least common multiple `lcm(m,n) = m · (n / gcd(m,n))`.
+\func nat-lcm (m n : Nat) : Nat
+  => m * (n div gcd m n)
+
+\func lcm-left {m n : Nat} : LDiv m (nat-lcm m n)
+  => LDiv.make (n div gcd m n) idp
+
+\func lcm-right {m n : Nat} : LDiv n (nat-lcm m n)
+  => \have | g|m : LDiv (gcd m n) m => GCD.res|val1 {gcd-isGCD m n}
+           | g|n : LDiv (gcd m n) n => GCD.res|val2 {gcd-isGCD m n}
+     \in LDiv.make g|m.inv $ pmap (* _) (inv $ ldiv*div=id g|n) *> NatSemiring.*-assoc *> pmap (gcd m n *) NatSemiring.*-comm
+          *> inv NatSemiring.*-assoc *> pmap (* _) g|m.inv-right
+
+-- | The least common multiple divides every common multiple.
+\func lcm-univ {m n k : Nat} (m|k : LDiv m k) (n|k : LDiv n k) : LDiv (nat-lcm m n) k
+  => \case NatSemiring.decideEq n 0 \with {
+    | yes n=0 => \have k=0 : k = 0 => inv n|k.inv-right *> pmap (* _) n=0 *> NatSemiring.zro_*-left
+                 \in LDiv.make 0 (inv k=0)
+    | no n/=0 =>
+      \let | g => gcd m n
+           | g|m : LDiv g m => GCD.res|val1 {gcd-isGCD m n}
+           | g|n : LDiv g n => GCD.res|val2 {gcd-isGCD m n}
+           | g/=0 : g /= 0 => \lam g=0 => n/=0 $ inv g|n.inv-right *> pmap (* _) g=0 *> NatSemiring.zro_*-left
+           | m'_n' : gcd g|m.inv g|n.inv = 1 => nat_gcd-isUnique (gcd-isGCD g|m.inv g|n.inv) $ GCD.reduce {gcd-isGCD m n} $ NatSemiring.cancel_*-left g/=0
+           | n'=n/g : g|n.inv = n div g => NatSemiring.cancel_*-left g/=0 $ g|n.inv-right *> inv (ldiv*div=id g|n)
+           | n'|s : LDiv g|n.inv m|k.inv => nat_gcd_*_div (LDiv.make n|k.inv $ NatSemiring.cancel_*-left g/=0 $
+                   inv NatSemiring.*-assoc *> pmap (* _) g|n.inv-right *> n|k.inv-right *> inv m|k.inv-right *> pmap (* _) (inv g|m.inv-right) *> NatSemiring.*-assoc) (nat_gcd-comm *> m'_n')
+      \in LDiv.make n'|s.inv $ inv (pmap (m * __ * _) n'=n/g) *> NatSemiring.*-assoc *> pmap (m *) n'|s.inv-right *> m|k.inv-right
+  }
+
+-- TODO: Generalize to UFD
+-- | **Coprime splitting of the lcm**: `lcm(m,n) = a · b` where `a | n`, `b | m` and `gcd(a,b) = 1`.
+\lemma lcm-split (m n : Nat) : ∃ (a b : Nat) (LDiv a n) (LDiv b m) (gcd a b = 1) (a * b = nat-lcm m n)
+  => \case NatSemiring.decideEq m 0 \with {
+    | yes m=0 => inP (1, 0, LDiv.ide-div, LDiv.make 0 (inv m=0), NatEuclidean.gcd0_ {1} *> idp, inv $ pmap (* _) m=0 *> NatSemiring.zro_*-left)
+    | no m/=0 => \case aux (suc m) m/=0 id<suc \with {
+      | inP (a,b,a|n,b|m,a_b,m|ab,n|ab) => inP (a, b, a|n, b|m, a_b, natAssociates-areEqual
+          (nat_coprime_*_div a_b (LDiv.trans a|n lcm-right) (LDiv.trans b|m lcm-left)) (lcm-univ m|ab n|ab))
+    }
+  }
+  \where \private {
+    -- | The splitting with `m | a * b` and `n | a * b` in place of `a * b = lcm(m,n)`, by induction on `m`.
+    \lemma aux (fuel : Nat) {m n : Nat} (m/=0 : m /= 0) (m<fuel : m < fuel)
+      : ∃ (a b : Nat) (LDiv a n) (LDiv b m) (gcd a b = 1) (LDiv m (a * b)) (LDiv n (a * b)) \elim fuel
+      | 0 => \case m<fuel \with {}
+      | suc fuel => \case NatSemiring.decideEq (gcd m n) 1 \with {
+        | yes g=1 => inP (n, m, LDiv.id-div, LDiv.id-div, nat_gcd-comm *> g=1, LDiv.make n NatSemiring.*-comm, LDiv.make m idp)
+        | no g/=1 =>
+          \let | p => nat-minFac (gcd m n)
+               | pp : Prime p => minFac-prime g/=1
+               | p|m : LDiv p m => LDiv.trans minFac-ldiv (GCD.res|val1 {gcd-isGCD m n})
+               | p|n : LDiv p n => LDiv.trans minFac-ldiv (GCD.res|val2 {gcd-isGCD m n})
+               | p>1 : 1 < p => prime>1 pp
+               | m'/=0 : p|m.inv /= 0 => \lam q => m/=0 $ inv p|m.inv-right *> pmap (p *) q
+               | m'<m : p|m.inv < m => transport (_ <) p|m.inv-right $ transport (< _) NatSemiring.ide-left $
+                                        NatSemiring.<_*_positive-left p>1 (nonZero>0 m'/=0)
+          \in \case aux fuel m'/=0 (m'<m <∘l <_suc_<= m<fuel) \with {
+            | inP (a,b,a|n',b|m',a_b,m'|ab,n'|ab) => \case NatSemiring.decideEq (a mod p) 0 \with {
+              | yes p|a => \have b_p : gcd b p = 1 => nat_gcd-comm *> prime-coprime pp \lam p|b =>
+                                <-irreflexive $ transport (1 <) (natUnit $ NatSemiring.*-comm *> LDiv.inv-right {transport (LDiv p) a_b $ nat_gcd-univ (mod_div p|a) p|b}) p>1
+                           \in inP (p * a, b, transport (LDiv _) p|n.inv-right (LDiv.product-left p a|n'), LDiv.trans b|m' (LDiv.make p (NatSemiring.*-comm *> p|m.inv-right)),
+                                    nat_gcd-comm *> nat_gcd_*-right b_p (nat_gcd-comm *> a_b),
+                                    transport2 LDiv p|m.inv-right (inv NatSemiring.*-assoc) (LDiv.product-left p m'|ab),
+                                    transport2 LDiv p|n.inv-right (inv NatSemiring.*-assoc) (LDiv.product-left p n'|ab))
+              | no p/|a => inP (a, p * b, LDiv.trans a|n' (LDiv.make p (NatSemiring.*-comm *> p|n.inv-right)), transport (LDiv _) p|m.inv-right (LDiv.product-left p b|m'),
+                                nat_gcd_*-right (nat_gcd-comm *> prime-coprime pp \lam p|a => p/|a (div_mod p|a)) a_b,
+                                transport2 LDiv p|m.inv-right ab=p*ab (LDiv.product-left p m'|ab),
+                                transport2 LDiv p|n.inv-right ab=p*ab (LDiv.product-left p n'|ab))
+            }
+          }
+      }
+
+    \lemma ab=p*ab {a b p : Nat} : p * (a * b) = a * (p * b)
+      => inv NatSemiring.*-assoc *> pmap (* b) NatSemiring.*-comm *> NatSemiring.*-assoc
+  }

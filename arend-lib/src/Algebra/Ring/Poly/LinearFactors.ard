@@ -10,7 +10,12 @@
 \import Data.Array.Perm
 \import Data.Fin
 \import Function
+\import Function.Meta
+\import Logic
+\import Arith.Nat
+\import Order.PartialOrder
 \import Paths
+\import Set.Fin
 
 {- | **Products of monic linear factors**: $\prod_{i<n}(X - r_i)$ for a finite array of roots `r`,
      its value at a point, and the identities needed to pull one factor out. -}
@@ -122,3 +127,9 @@
                     *> inv zro_*-left)
     \in deflate-eq *> pmap2 (\lam x y => x * padd 1 (negative a) + padd pzero y) q=0 (root 0)
         *> zro-left *> peq
+
+-- | **A nonzero polynomial of degree `<= n` has at most `n` distinct roots** (MRR II.4.5), over any integral domain.
+\lemma roots-length<= {R : IntegralDomain} {n m : Nat} {p : Poly R} (p/=0 : p /= 0) (d : degree< p (suc n))
+                      (r : Array R m) (r-inj : IsInj r) (root : \Pi (i : Fin m) -> polyEval p (r i) = 0) : m <= n
+  => \lam n<m => p/=0 $ degree<-roots=0 d (\lam i => r (fin-inc_<= (suc_<_<= n<m) i))
+                          (\lam q => nat_fin_= $ inv toFin=id *> pmap (\lam (x : Fin m) => (x : Nat)) (r-inj q) *> toFin=id) (\lam i => root _)

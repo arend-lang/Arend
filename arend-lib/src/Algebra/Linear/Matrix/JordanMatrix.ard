@@ -1,0 +1,261 @@
+{- | **Matrices in Jordan canonical form** (Mines–Richman–Ruitenburg, §V.4).
+
+     A matrix in Jordan canonical form is block diagonal with blocks $J(m, \lambda)$: $\lambda$ on the diagonal
+     and `1` directly below it. We describe it by its diagonal `mu` and a Boolean array `s`, where `s k` says that
+     entry `(k+1, k)` is `1` (`jordanMatrix mu s`). The condition `JordanCompat mu s` says that such a `1` only
+     occurs between equal diagonal entries, i.e. inside one block.
+
+     * `IsJordanFamily A b mu s`: the vectors `b k` form chains for `A`: $A b_k = \mu_k b_k + b_{k+1}$ when `s k`
+       holds and $A b_k = \mu_k b_k$ otherwise. If `b` is a basis, the matrix of `A` in this basis is
+       `jordanMatrix mu s` (`basis-conj`, `jordanMatrix-column`).
+     * The last statement of Theorem V.4.2: the diagonal of a matrix in Jordan canonical form is a polynomial in
+       it (`jordan-diagonal-poly`), proved with the projections of Theorem V.3.3. More generally, every diagonal
+       matrix whose entries agree wherever the diagonal entries of the Jordan matrix agree is such a polynomial.
+-}
+
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Diagonalizable (common-eigen-diagonalization, mulVec)
+\import Algebra.Linear.Matrix.Kronecker (ide-diag, ide-offdiag)
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Linear.Matrix.PolyModule
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.Primary
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Euclidean
+\import Algebra.Semiring
+\import Algebra.Field
+\import Arith.Nat
+\import Data.Array
+\import Data.Bool
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+-- | The matrix with diagonal `mu` and entry `(k+1, k)` equal to `1` exactly when `s k` holds.
+\func jordanMatrix {R : Ring} {N : Nat} (mu : Array R N) (s : Array Bool N) : Matrix R N N
+  => mkMatrix \lam i j => mu j * MatrixRing.ide {R} {N} i j + (\case decideEq (i : Nat) (suc j), s j \with {
+    | yes _, true => 1
+    | _, _ => 0
+  })
+
+-- | A `1` below the diagonal only occurs between equal diagonal entries (and never in the last column).
+\func JordanCompat {A : \Set} {N : Nat} (mu : Array A N) (s : Array Bool N) : \Prop
+  => \Pi (k : Fin N) -> s k = true -> \Sigma (q : suc k < N) (mu (toFin (suc k) q) = mu k)
+
+-- | The next vector of a chain: `b (k+1)` if `s k` holds, `0` otherwise.
+\func jordanNext {R : Ring} {n N : Nat} (s : Array Bool N) (b : Array (Array R n) N) (k : Fin N) : Array R n
+  => \case s k \with {
+    | true => fit {Array R n} (\new Array R n (\lam _ => 0)) {suc N} b (suc k)
+    | false => \new Array R n (\lam _ => 0)
+  }
+
+-- | The vectors `b k` form Jordan chains for `A` with eigenvalues `mu`.
+\func IsJordanFamily {R : Ring} {n N : Nat} (A : Matrix R n n) (b : Array (Array R n) N) (mu : Array R N) (s : Array Bool N) : \Prop
+  => \Pi (k : Fin N) -> mulVec A (b k) = mu k *c {ArrayLModule n (RingLModule R)} b k + {ArrayLModule n (RingLModule R)} jordanNext s b k
+
+{- | **Change of basis.** For a basis `b` of $K^n$ there is an invertible `P` such that, whenever the `k`-th column
+     of `C` gives the coordinates of $A b_k$, we have $P A P^{ -1} = C$. -}
+\lemma basis-conj {K : DiscreteField} {n : Nat} (b : Array (Array K n) n) (bb : LModule.IsBasis {ArrayLModule n (RingLModule K)} b)
+  : ∃ (P : Monoid.Inv {MatrixRing K n}) (\Pi (A C : Matrix K n n) -> (\Pi (k : Fin n) -> mulVec A (b k) = LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam j => C j k *c {ArrayLModule n (RingLModule K)} b j))
+                                          -> P.val * A * P.inv = C)
+  => \let | Q : Matrix K n n => mkMatrix \lam i k => b k i
+          | Cm : Matrix K n n => mkMatrix \lam k j => basis-split {ArrayLModule n (RingLModule K)} bb (\lam i => MatrixRing.ide {K} {n} i j) k
+          | QC : Q * Cm = 1 => matrixExt \lam i j => inv $
+              path (\lam i' => basis-split-char {ArrayLModule n (RingLModule K)} {b} {bb} {\lam i => MatrixRing.ide {K} {n} i j} i' i) *>
+              ArrayLModule.BigSum-index *> pmap K.BigSum (exts \lam k => *-comm)
+          | CQ : Cm * Q = 1 => common-eigen-diagonalization.right-inverse {MatrixRing K n} {Cm} {Q} (matrix-inv {K} {n} {Q} {Cm} QC) QC
+          | P : Monoid.Inv {MatrixRing K n} => \new Monoid.Inv { | val => Cm | inv => Q | inv-left => QC | inv-right => CQ }
+     \in inP (P, \lam A C h =>
+          \have AQ : A * Q = Q * C => matrixExt \lam i k => path (\lam t => h k t i) *> ArrayLModule.BigSum-index *> pmap K.BigSum (exts \lam j => *-comm)
+          \in *-assoc {MatrixRing K n} {Cm} {A} {Q} *> pmap (Cm *) AQ *> inv (*-assoc {MatrixRing K n} {Cm} {Q} {C}) *> pmap (* C) CQ *> ide-left)
+  \where
+    \open LModule (basis-split, basis-split-char)
+
+-- | The `k`-th column of a Jordan matrix gives the coordinates of $\mu_k b_k + b_{k+1}$ (or $\mu_k b_k$).
+\lemma jordanMatrix-column {R : Ring} {n N : Nat} {mu : Array R N} {s : Array Bool N} (c : JordanCompat mu s) (b : Array (Array R n) N) (k : Fin N)
+  : LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam j => jordanMatrix mu s j k *c {ArrayLModule n (RingLModule R)} b j)
+      = mu k *c {ArrayLModule n (RingLModule R)} b k + {ArrayLModule n (RingLModule R)} jordanNext s b k
+  => \case s k \as sk', idp : s k = sk' \with {
+    | false, sk => diagonal-column.col-unique (\lam j => jordanMatrix mu s j k) b k (\lam j kj => entry-false sk *> pmap (_ *) (ide-offdiag (/=-sym kj)) *> zro_*-right)
+                     *> pmap (`*c {ArrayLModule n (RingLModule R)} b k) (entry-false sk *> pmap (_ *) ide-diag *> ide-right)
+                     *> inv (pmap (_ +) (jordanNext-false sk) *> zro-right {ArrayLModule n (RingLModule R)})
+    | true, sk =>
+      \let | q => (c k sk).1
+            | k' => toFin (suc k) q
+            | k'=k : (k' : Nat) = suc k => toFin=id
+      \in AddMonoid.BigSum-unique2 {ArrayLModule n (RingLModule R)} {\lam j => jordanMatrix mu s j k *c {ArrayLModule n (RingLModule R)} b j} {k} {k'}
+             (rewrite k'=k id<suc)
+             (\lam j jk jk' => pmap (`*c {ArrayLModule n (RingLModule R)} b j) (entry-ne (\lam e => jk' (fin_nat-inj (e *> inv k'=k))) *> pmap (_ *) (ide-offdiag jk) *> zro_*-right)
+                *> LModule.*c_zro-left {ArrayLModule n (RingLModule R)})
+           *> pmap2 (+ {ArrayLModule n (RingLModule R)})
+                (pmap (`*c {ArrayLModule n (RingLModule R)} b k) (entry-ne {R} {N} {mu} {s} {k} {k} (\lam e => linarith) *> pmap (_ *) ide-diag *> ide-right))
+                (pmap (`*c {ArrayLModule n (RingLModule R)} b k') (entry-on k'=k sk *> pmap (`+ 1) (pmap (_ *) (ide-offdiag (\lam e => \have e' => pmap (\lam (x : Fin N) => (x : Nat)) e \in linarith)) *> zro_*-right) *> zro-left)
+                  *> ide_*c {ArrayLModule n (RingLModule R)} *> inv (jordanNext-true sk q))
+  }
+  \where {
+    \lemma entry-ne {R : Ring} {N : Nat} {mu : Array R N} {s : Array Bool N} {j k : Fin N} (q : (j : Nat) /= suc k)
+      : jordanMatrix mu s j k = mu k * MatrixRing.ide {R} {N} j k
+      => rewrite (decideEq/=_reduce q) zro-right
+
+    \lemma entry-false {R : Ring} {N : Nat} {mu : Array R N} {s : Array Bool N} {j k : Fin N} (sk : s k = false)
+      : jordanMatrix mu s j k = mu k * MatrixRing.ide {R} {N} j k
+      => \case decideEq (j : Nat) (suc k) \with {
+        | yes p => rewrite (decideEq=_reduce p, sk) zro-right
+        | no q => entry-ne q
+      }
+
+    \lemma entry-on {R : Ring} {N : Nat} {mu : Array R N} {s : Array Bool N} {j k : Fin N} (p : (j : Nat) = suc k) (sk : s k = true)
+      : jordanMatrix mu s j k = mu k * MatrixRing.ide {R} {N} j k + 1
+      => rewrite (decideEq=_reduce p, sk) idp
+
+    \lemma jordanNext-false {R : Ring} {n N : Nat} {s : Array Bool N} {b : Array (Array R n) N} {k : Fin N} (sk : s k = false)
+      : jordanNext s b k = \new Array R n (\lam _ => 0)
+      => unfold jordanNext (rewrite sk idp)
+
+    \lemma jordanNext-true {R : Ring} {n N : Nat} {s : Array Bool N} {b : Array (Array R n) N} {k : Fin N} (sk : s k = true) (q : suc k < N)
+      : jordanNext s b k = b (toFin (suc k) q)
+      => unfold jordanNext (rewrite sk (fit_< b q))
+  }
+
+-- | The `k`-th column of a diagonal matrix gives the coordinates of $\nu_k b_k$.
+\lemma diagonal-column {R : Ring} {n N : Nat} (nu : Array R N) (b : Array (Array R n) N) (k : Fin N)
+  : LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam j => diagonal nu j k *c {ArrayLModule n (RingLModule R)} b j) = nu k *c {ArrayLModule n (RingLModule R)} b k
+  => col-unique (\lam j => diagonal nu j k) b k (\lam j kj => diagonal-ide *> pmap (_ *) (ide-offdiag (/=-sym kj)) *> zro_*-right)
+       *> pmap (`*c {ArrayLModule n (RingLModule R)} b k) (diagonal-ide *> pmap (_ *) ide-diag *> ide-right)
+  \where
+    -- | A combination of vectors with coefficients vanishing outside `k`.
+    \lemma col-unique {R : Ring} {n N : Nat} (e : Fin N -> R) (b : Array (Array R n) N) (k : Fin N) (h : \Pi (j : Fin N) -> k /= j -> e j = 0)
+      : LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam j => e j *c {ArrayLModule n (RingLModule R)} b j) = e k *c {ArrayLModule n (RingLModule R)} b k
+      => AddMonoid.BigSum-unique {ArrayLModule n (RingLModule R)} {\lam j => e j *c {ArrayLModule n (RingLModule R)} b j} k
+           (\lam j kj => pmap (`*c {ArrayLModule n (RingLModule R)} b j) (h j kj) *> LModule.*c_zro-left {ArrayLModule n (RingLModule R)})
+
+-- | The entries of a diagonal matrix.
+\lemma diagonal-ide {R : Ring} {l : Array R} {i j : Fin l.len} : diagonal l i j = l j * MatrixRing.ide {R} {l.len} i j
+  => \case decideEq i j \with {
+    | yes e => rewrite (decideEq=_reduce e) (rewrite e (inv ide-right))
+    | no q => rewrite (decideEq/=_reduce q) (inv zro_*-right)
+  }
+
+-- | Adding a scalar multiple of a diagonal matrix to a Jordan matrix.
+\lemma jordanMatrix-+diagonal {R : Ring} {N : Nat} (mu nu : Array R N) (s : Array Bool N) (c : R)
+  : jordanMatrix mu s + c *c diagonal nu = jordanMatrix (\lam k => mu k + c * nu k) s
+  => matrixExt \lam i j => pmap (_ +) (pmap (c *) diagonal-ide) *> alg
+  \where
+    \lemma alg {R : Ring} {m a x c y : R} : m * x + a + c * (y * x) = (m + c * y) * x + a
+      => equation
+
+-- | Compatibility is preserved by such a sum if the added diagonal is also constant along the chains.
+\lemma JordanCompat-+ {R : Ring} {N : Nat} {mu nu : Array R N} {s : Array Bool N} (cm : JordanCompat mu s) (cn : JordanCompat nu s) (c : R)
+  : JordanCompat (\lam k => mu k + c * nu k) s
+  => \lam k sk => ((cm k sk).1, pmap2 (+) (cm k sk).2 (pmap (c *) (cn k sk).2))
+
+{- | **Theorem V.4.2, last statement, generalized.** If `jordanMatrix mu s` is in Jordan canonical form, then every
+     diagonal matrix `diagonal f` with $f_i = f_j$ whenever $\mu_i = \mu_j$ is a polynomial in it. In particular
+     (`f = mu`) the diagonal of a Jordan matrix is a polynomial in it. The proof uses the projections onto the
+     primary components of Theorem V.3.3, which are polynomials. -}
+\lemma jordan-diagonal-poly {K : DiscreteField} {N : Nat} (mu : Array K N) (s : Array Bool N) (c : JordanCompat mu s)
+  (f : Array K N) (fc : \Pi {i j : Fin N} -> mu i = mu j -> f i = f j) : ∃ (q : Poly K) (matPolyEval q (jordanMatrix mu s) = diagonal f)
+  => \let | J => jordanMatrix mu s
+          | M => matPolyModule J
+          | nu => nub mu
+          | cl (i : Fin N) : Fin nu.len => (nub-isSurj mu i).1
+          | rep (l : Fin nu.len) : Fin N => (nub-preimage l).1
+          | p : Array (Poly K) nu.len => \lam l => lin (nu l)
+          | pc {i j : Fin nu.len} (ij : i /= j) : IsStronglyCoprime (p i) (p j) => lin-coprime (\lam e => ij (nub-isInj e))
+          | comp (j : Fin N) : component M (p (cl j)) (stdVec j)
+              => transportInv (\lam a => component M (lin a) (stdVec j)) (nub-isSurj mu j).2 (std-comp c N j linarith)
+     \in \case component-bounded {PolyEuclideanDomain K} {M} {Monoid.BigProd {PolyEuclideanDomain K} p} {\lam j => stdVec j} (matPolyModule-presentation J).1
+                  (\lam j => component-div {_} {M} (CMonoid.LDiv_BigProd {PolyEuclideanDomain K} {p} (cl j)) {stdVec j} (comp j)) \with {
+       | inP (h, bd) => \case primary-decomposition {_} {M} p pc h \with {
+         | inP (pr, dec) =>
+           \let | q => AddMonoid.BigSum {PolyEuclideanDomain K} (\lam l => padd 0 (f (rep l)) * pr l)
+                 | qe (j : Fin N) : q *c {M} stdVec j = padd 0 (f j) *c {M} stdVec j
+                     => \have | dj => dec (bd (stdVec j))
+                              | ppc => primary-projection-component {PolyEuclideanDomain K} {M} {nu.len} {p} pc {pr} {stdVec j} dj.1 dj.2 {cl j} (comp j)
+                        \in LModule.*c_BigSum-rdistr {M} {\lam l => padd 0 (f (rep l)) * pr l} {stdVec j} *> pmap (LModule.BigSum {M}) (arrayExt {Array K N} {nu.len} {\new Array (Array K N) nu.len (\lam l => (padd 0 (f (rep l)) * pr l) *c {M} stdVec j)}
+                                                                  {\new Array (Array K N) nu.len (\lam l => padd 0 (f (rep l)) *c {M} (pr l *c {M} stdVec j))} \lam l => LModule.*c-assoc {M} {padd 0 (f (rep l))} {pr l} {stdVec j})
+                             *> AddMonoid.BigSum-unique {M} {\lam l => padd 0 (f (rep l)) *c {M} (pr l *c {M} stdVec j)} (cl j)
+                                  (\lam l jl => pmap (padd 0 (f (rep l)) *c {M}) (ppc.2 (/=-sym jl)) *> LModule.*c_zro-right {M} {padd 0 (f (rep l))})
+                             *> pmap (padd 0 (f (rep (cl j))) *c {M}) ppc.1
+                             *> pmap (\lam z => padd 0 z *c {M} stdVec j) (fc (inv (nub-preimage (cl j)).2 *> (nub-isSurj mu j).2))
+                 | col (r : Poly K) (i j : Fin N) : mulVec (matPolyEval r J) (stdVec j) i = matPolyEval r J i j
+                     => pmap (\lam (v : Array K N) => v i) (mulVec_stdVec {K} {N} {N} {matPolyEval r J} {j})
+           \in inP (q, matrixExt \lam i j => inv (col q i j) *> pmap (\lam (v : Array K N) => v i) (qe j) *> col (padd 0 (f j)) i j
+                                               *> path (\lam t => matPolyEval_const {K} {N} {f j} {J} t i j) *> inv diagonal-ide)
+       }
+     }
+  \where {
+    -- | The polynomial $X - a$.
+    \func lin {K : DiscreteField} (a : K) : Poly K => padd 1 0 - {PolyEuclideanDomain K} padd 0 a
+
+    -- | $X - a$ and $X - b$ are strongly relatively prime for $a \neq b$: $u (X - a) - u (X - b) = 1$ with $u = (b - a)^{-1}$.
+    \lemma lin-coprime {K : DiscreteField} {a b : K} (ab : a /= b) : IsStronglyCoprime {PolyEuclideanDomain K} (lin a) (lin b)
+      => \let | d => b - a
+              | u : Poly K => padd 0 (finv d)
+         \in inP (u, negative {PolyEuclideanDomain K} u,
+                  alg {PolyEuclideanDomain K} {u} {padd 1 0} {padd 0 a} {padd 0 b}
+                  *> pmap (u *) (inv ((polyHom {K}).func-+ {b} {negative a} *> pmap (padd 0 b +) (AddGroupHom.func-negative {polyHom {K}} {a})))
+                  *> inv ((polyHom {K}).func-* {finv d} {d}) *> pmap (padd 0) (DiscreteField.finv-left {K} \lam e => ab (inv (AddGroup.fromZero e))))
+      \where
+        \lemma alg {R : CRing} {u x a b : R} : u * (x - a) + negative u * (x - b) = u * (b - a)
+          => equation.cRing
+
+    -- | $(X - a) e_j = A e_j - a e_j$.
+    \lemma lin-entry {K : DiscreteField} {N : Nat} {A : Matrix K N N} {a : K} {j : Fin N}
+      : lin a *c {matPolyModule A} stdVec j = \new Array K N (\lam i => A i j - a * MatrixRing.ide {K} {N} i j)
+      => mulVec_stdVec {K} {N} {N} {matPolyEval (lin a) A} {j} *> exts \lam i => path (\lam t => eval t i j)
+      \where
+        \lemma eval {K : DiscreteField} {N : Nat} {A : Matrix K N N} {a : K}
+          : matPolyEval (lin a) A = A - CAlgebra.coefHom {MatrixAlgebra K N} a
+          => matPolyEval_+ {K} {N} {padd 1 0} {negative (padd 0 a)} {A}
+             *> pmap2 (+) matPolyEval_X (AddGroupHom.func-negative {matPolyEvalHom A} {padd 0 a} *> pmap negative (matPolyEval_const {K} {N} {a} {A}))
+
+    -- | If `s j` is false, then $(J - \mu_j) e_j = 0$.
+    \lemma lin-std-false {K : DiscreteField} {N : Nat} {mu : Array K N} {s : Array Bool N} {j : Fin N} (sj : s j = false)
+      : lin (mu j) *c {matPolyModule (jordanMatrix mu s)} stdVec j = LModule.zro {matPolyModule (jordanMatrix mu s)}
+      => lin-entry {K} {N} {jordanMatrix mu s} {mu j} {j} *> exts \lam i => pmap (`- _) (jordanMatrix-column.entry-false {K} {N} {mu} {s} {i} {j} sj) *> negative-right
+
+    -- | If `s j` is true, then $(J - \mu_j) e_j = e_{j+1}$.
+    \lemma lin-std-true {K : DiscreteField} {N : Nat} {mu : Array K N} {s : Array Bool N} {j : Fin N} (sj : s j = true) (q : suc j < N)
+      : lin (mu j) *c {matPolyModule (jordanMatrix mu s)} stdVec j = stdVec (toFin (suc j) q)
+      => lin-entry {K} {N} {jordanMatrix mu s} {mu j} {j} *> exts \lam i => \case decideEq (i : Nat) (suc j) \with {
+        | yes e => pmap (`- _) (jordanMatrix-column.entry-on {K} {N} {mu} {s} {i} {j} e sj) *> equation
+                     *> inv (matPolyModule-presentation.ide-eq (fin_nat-inj (e *> inv toFin=id)))
+        | no ne => pmap (`- _) (jordanMatrix-column.entry-ne {K} {N} {mu} {s} {i} {j} ne) *> negative-right
+                     *> inv (ide-offdiag \lam e => ne (pmap (\lam (x : Fin N) => (x : Nat)) e *> toFin=id))
+      }
+
+    -- | Every $e_j$ is killed by a power of $X - \mu_j$ (downward induction on `j`; `m` bounds the remaining steps).
+    \lemma std-comp {K : DiscreteField} {N : Nat} {mu : Array K N} {s : Array Bool N} (c : JordanCompat mu s) (m : Nat) (j : Fin N) (jm : N <= suc (j + m))
+      : component (matPolyModule (jordanMatrix mu s)) (lin (mu j)) (stdVec j) \elim m
+      | 0 => \case s j \as b, idp : s j = b \with {
+        | false, sj => false-case sj
+        | true, sj => absurd (\have q => (c j sj).1 \in linarith)
+      }
+      | suc m => \case s j \as b, idp : s j = b \with {
+        | false, sj => false-case sj
+        | true, sj => \case std-comp c m (toFin (suc j) (c j sj).1) (rewrite toFin=id linarith) \with {
+          | inP (h, e) => inP (suc h, LModule.*c-assoc {matPolyModule (jordanMatrix mu s)} {Monoid.pow (lin (mu j)) h} {lin (mu j)} {stdVec j} *> pmap (Monoid.pow (lin (mu j)) h *c {matPolyModule (jordanMatrix mu s)}) (lin-std-true {K} {N} {mu} {s} {j} sj (c j sj).1)
+                                       *> transport (\lam z => Monoid.pow (lin z) h *c {matPolyModule (jordanMatrix mu s)} stdVec (toFin (suc j) (c j sj).1) = 0) (c j sj).2 e)
+        }
+      }
+      \where
+        \lemma false-case {K : DiscreteField} {N : Nat} {mu : Array K N} {s : Array Bool N} {j : Fin N} (sj : s j = false)
+          : component (matPolyModule (jordanMatrix mu s)) (lin (mu j)) (stdVec j)
+          => inP (1, LModule.*c-assoc {matPolyModule (jordanMatrix mu s)} {1} {lin (mu j)} {stdVec j} *> pmap (1 *c {matPolyModule (jordanMatrix mu s)}) (lin-std-false sj)
+                       *> LModule.*c_zro-right {matPolyModule (jordanMatrix mu s)} {1})
+  }

@@ -1,6 +1,3 @@
-\import Algebra.Domain
-\import Algebra.Domain.Bezout
-\import Algebra.Domain.GCD
 \import Algebra.Domain.PID
 \import Algebra.Group
 \import Algebra.Meta
@@ -20,15 +17,14 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set \hiding (#)
+\import Set
 \import Set.Fin
-\open Monoid(LDiv,Inv)
+\open Monoid
 
 \class EuclideanSemiringData \extends CSemiring, DecSet {
   | euclideanMap : E -> Nat
@@ -434,9 +430,6 @@
       | inv-right => inv iabs_* *> pmap iabs pos_g'|g.inv-right
     }
 
-\lemma nat_gcd-isUnique {n m : Nat} (g g' : GCD n m) : g.res = g'.res
-  => natAssociates-areEqual (g'.res-univ g g.res|val1 g.res|val2) (g.res-univ g' g'.res|val1 g'.res|val2)
-
 \lemma int_gcd-isUnique {x y : Int} (g g' : GCD x y) : iabs g = iabs g'
   => nat_gcd-isUnique (gcd_int_nat g) (gcd_int_nat g')
 
@@ -451,16 +444,69 @@
       }
   }
 
+-- | Natural numbers form a GCD-monoid.
+\instance NatGCDMonoid : GCDMonoid
+  | CMonoid => NatSemiring
+  | isGCD x y => inP (gcd-isGCD x y)
+  | gcd-ldistr c g => inP (gcd-ldistr' c g)
+  \where {
+    \func gcd-ldistr' (c : Nat) {x y z : Nat} (g : GCD {NatSemiring} x y z) : GCD {NatSemiring} (c * x) (c * y) (c * z) \elim c
+      | 0 => \new GCD {
+        | res|val1 => LDiv.make 0 (inv NatSemiring.zro_*-left)
+        | res|val2 => LDiv.make 0 (inv NatSemiring.zro_*-left)
+        | res-univ h h|x _ => transport (LDiv h) (NatSemiring.zro_*-left *> inv NatSemiring.zro_*-left) h|x
+      }
+      | suc _ \as c => GCDMonoid.gcd-ldistr_cancel (\lam p => NatSemiring.cancel_*-left {c} (\case __) p) g (gcd-isGCD (c * x) (c * y))
+  }
+
+-- | Divisibility of natural numbers can be extracted from its truncation.
+\sfunc nat_LDiv_TruncP {a b : Nat} (t : TruncP (LDiv a b)) : LDiv a b \elim a
+  | 0 => LDiv.make 0 $ \case t \return 0 = b \with {
+    | inP d => inv NatSemiring.zro_*-left *> LDiv.inv-right {d}
+  }
+  | suc _ \as a => LDiv.fromTruncP (\lam p => NatSemiring.cancel_*-left {a} (\case __) p) t
+
+\lemma nat_gcd-isUnique {n m : Nat} (g g' : GCD n m) : g.res = g'.res
+  => natAssociates-areEqual (g'.res-univ g g.res|val1 g.res|val2) (g.res-univ g' g'.res|val1 g'.res|val2)
+
+\lemma nat_coprime {a b : Nat} (p : gcd a b = 1) : IsCoprime a b
+  => IsCoprime.<=gcd $ transport (GCD a b) p (gcd-isGCD a b)
+
+\lemma nat_coprime-gcd {a b : Nat} (c : IsCoprime a b) : gcd a b = 1
+  => nat_gcd-isUnique (gcd-isGCD a b) (IsCoprime.=>gcd c)
+
 \lemma nat_gcd_sum (a b d : Nat) : gcd (a + b * d) b = gcd a b
-  => \let a' => a + b * d
-     \in equation                     #'
-         gcd a' b                     #' {nat_gcd-isUnique (gcd-isGCD a' b) (gcd_int_nat (gcd-isGCD (pos a') (pos b)))}
-         iabs (gcd (pos a') (pos b))  #' {int_gcd-isUnique (gcd-isGCD (pos a') (pos b)) (GCDDomain.gcd_sum (pos d) (gcd-isGCD (pos a) (pos b)))}
-         iabs (gcd (pos a) (pos b))   #' {inv (nat_gcd-isUnique (gcd-isGCD a b) (gcd_int_nat (gcd-isGCD (pos a) (pos b))))}
-         gcd a b
+  => \let g => gcd-isGCD a b
+     \in nat_gcd-isUnique (gcd-isGCD (a + b * d) b) (\new GCD (a + b * d) b (gcd a b) {
+       | res|val1 => LDiv.make (g.res|val1.inv + g.res|val2.inv * d) $ ldistr *> pmap2 (+) g.res|val1.inv-right (inv *-assoc *> pmap (* d) g.res|val2.inv-right)
+       | res|val2 => g.res|val2
+       | res-univ h h|s h|b => nat_gcd-univ (nat_div_sum h|b h|s) h|b
+     })
+  \where {
+    -- | A common divisor of `a + b * d` and `b` divides `a`.
+    \func nat_div_sum {h a b d : Nat} (h|b : LDiv h b) (h|s : LDiv h (a + b * d)) : LDiv h a \elim h
+      | 0 => LDiv.make 0 $ \case b * d \as bd, inv NatSemiring.zro_*-left *> LDiv.inv-right {h|s} : 0 = a + bd \return 0 = a \with {
+        | 0, p => p
+        | suc _, p => \case p
+      }
+      | suc _ \as h => NatEuclidean.summandDiv {LDiv.inv {h|b} * d} {a} {LDiv.inv {h|s}} (\case __) $
+          pmap (+ a) (inv *-assoc *> pmap (* d) (LDiv.inv-right {h|b})) *> +-comm *> inv (LDiv.inv-right {h|s})
+  }
 
 \func nat_gcd_*_div {a b c : Nat} (a|bc : LDiv a (b * c)) (a_b : gcd a b = 1) : LDiv a c
-  => ldiv_int_nat $ Domain.Dec.LDiv_TruncP $ IntDomain.coprime_*_div {pos a} {pos b} {pos c} (ldiv_nat_int a|bc) $ IsCoprime.<=gcd $ gcd_nat_int $ transport (GCD a b __) a_b (gcd-isGCD a b)
+  => nat_LDiv_TruncP $ GCDMonoid.coprime_*_div {NatGCDMonoid} a|bc (nat_coprime a_b)
 
 \lemma nat_gcd-comm {a b : Nat} : gcd a b = gcd b a
   => nat_gcd-isUnique (gcd-isGCD a b) (GCD.swap {gcd-isGCD b a})
+
+-- | A common divisor of two natural numbers divides their gcd.
+\sfunc nat_gcd-univ {a b d : Nat} (d|a : LDiv d a) (d|b : LDiv d b) : LDiv d (gcd a b)
+  => GCD.res-univ {gcd-isGCD a b} d d|a d|b
+
+-- | If `d` and `e` are coprime and both divide `a`, then so does `d * e`.
+\sfunc nat_coprime_*_div {d e a : Nat} (d_e : gcd d e = 1) (d|a : LDiv d a) (e|a : LDiv e a) : LDiv (d * e) a
+  => nat_LDiv_TruncP $ GCDMonoid.coprime_*_div-left {NatGCDMonoid} (nat_coprime d_e) d|a e|a
+
+-- | If `a` is coprime to `b` and to `c`, then it is coprime to `b * c`.
+\lemma nat_gcd_*-right {a b c : Nat} (a_b : gcd a b = 1) (a_c : gcd a c = 1) : gcd a (b * c) = 1
+  => nat_coprime-gcd $ GCDMonoid.IsCoprime_*-right {NatGCDMonoid} (nat_coprime a_b) (nat_coprime a_c)

@@ -10,7 +10,7 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\open GroupSolverModel
+\open GroupSolverModel \using (interpret)
 
 \func CGroupSolverModel (G : CGroup) : SolverModel G \cowith
   | Term => Term

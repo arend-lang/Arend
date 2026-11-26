@@ -1,0 +1,387 @@
+{- | **Jordan chains** (Mines–Richman–Ruitenburg, proof of Theorem V.4.2).
+
+     A *chain* for a square matrix `A` is given by an eigenvalue $\lambda$, a vector `y` and a length `m` with
+     $(A - \lambda)^m y = 0$; its vectors are $(A - \lambda)^j y$ for `j < m`. In the basis $1, (X - \lambda), \dots,
+     (X - \lambda)^{m-1}$ of $k[X]/((X - \lambda)^m)$, multiplication by `X` is the Jordan block $J(m, \lambda)$.
+
+     A chain also carries a *tag*, an auxiliary scalar that is ignored by `chainFamily`; it is used to record the
+     eigenvalue of a second, commuting matrix (`chain-tag`).
+
+     For a list `cs` of chains, `chainFamily A cs` concatenates their vectors, with eigenvalues `chainEig cs`,
+     tags `chainTag cs`, and `chainS cs` marking the vectors that are followed by another vector of the same chain.
+
+     * `chain-jordan`: the concatenated family is a Jordan family for `A` (`IsJordanFamily`).
+     * `chain-span` and `chain-independent` reduce spanning and linear independence of the family to statements
+       about the polynomial combinations $\sum_c g_c(A) y_c$. Both use the expansion of a polynomial in powers of
+       $X - \lambda$ (`horner`): its existence modulo $(X - \lambda)^m$ is `chain-span.taylor`, its uniqueness is
+       `chain-independent.horner-zero`.
+-}
+
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Diagonalizable (mulVec)
+\import Algebra.Linear.Matrix.JordanMatrix
+\import Algebra.Linear.Matrix.PolyEval
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Algebra.Field
+\import Arith.Nat
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+
+-- | A chain: eigenvalue, tag, start vector and length.
+\func Chain (R : \Type) (n : Nat)
+  => \Sigma (eig tag : R) (vec : Array R n) (len : Nat)
+
+-- | The total length of a list of chains.
+\func chainLen {R : \Type} {n : Nat} (cs : Array (Chain R n)) : Nat \elim cs
+  | nil => 0
+  | c :: cs => c.4 + chainLen cs
+
+-- | The vectors $(A - \lambda)^j y$, `j < m`, of a chain.
+\func chainVecs {R : CRing} {n : Nat} (A : Matrix R n n) (c : Chain R n) : Array (Array R n) c.4
+  => \lam j => mulVec (matPolyEval (Monoid.pow (padd 1 (negative c.1)) j) A) c.3
+
+-- | The concatenated vectors of a list of chains.
+\func chainFamily {R : CRing} {n : Nat} (A : Matrix R n n) (cs : Array (Chain R n)) : Array (Array R n) (chainLen cs) \elim cs
+  | nil => nil
+  | c :: cs => chainVecs A c ++' chainFamily A cs
+
+-- | The eigenvalues of the concatenated family.
+\func chainEig {R : \Type} {n : Nat} (cs : Array (Chain R n)) : Array R (chainLen cs) \elim cs
+  | nil => nil
+  | c :: cs => (\new Array R c.4 (\lam _ => c.1)) ++' chainEig cs
+
+-- | The tags of the concatenated family.
+\func chainTag {R : \Type} {n : Nat} (cs : Array (Chain R n)) : Array R (chainLen cs) \elim cs
+  | nil => nil
+  | c :: cs => (\new Array R c.4 (\lam _ => c.2)) ++' chainTag cs
+
+-- | `true` for the vectors that are followed by another vector of the same chain.
+\func chainS {R : \Type} {n : Nat} (cs : Array (Chain R n)) : Array Bool (chainLen cs) \elim cs
+  | nil => nil
+  | c :: cs => (\new Array Bool c.4 (\lam j => \case LinearOrder.dec<_<= (suc j) c.4 \with {
+    | inl _ => true
+    | inr _ => false
+  })) ++' chainS cs
+
+-- | Every chain is annihilated: $(A - \lambda)^m y = 0$.
+\func ChainAnn {R : CRing} {n : Nat} (A : Matrix R n n) (cs : Array (Chain R n)) : \Prop
+  => \Pi (c : Fin cs.len) -> mulVec (matPolyEval (Monoid.pow (padd 1 (negative (cs c).1)) (cs c).4) A) (cs c).3 = \new Array R n (\lam _ => 0)
+
+-- | Helpers shared by the lemmas below: concatenation of arrays and matrices acting on vectors.
+\private \module ChainHelpers \where {
+  -- | A property of the indices of a concatenation holds if it holds on both parts.
+  \func fin-split-ind {m N : Nat} {P : Fin (m Nat.+ N) -> \Type} (l : \Pi (i : Fin m) -> P (fin-inc i)) (r : \Pi (j : Fin N) -> P (fin-raise j))
+                      (k : Fin (m Nat.+ N)) : P k \elim m, k
+    | 0, k => r k
+    | suc m, 0 => l 0
+    | suc m, suc k => fin-split-ind {m} {N} {\lam k => P (suc k)} (\lam i => l (suc i)) r k
+
+  \lemma suc-inc {m N : Nat} {i : Fin m} (q : suc i < m) : suc (fin-inc {m} {N} i) < m Nat.+ N
+    => \have e : fin-inc {m} {N} i = {Nat} i => fin-inc.char \in linarith
+
+  \lemma suc-raise {m N : Nat} {j : Fin N} (q : suc j < N) : suc (fin-raise {N} {m} j) < m Nat.+ N
+    => \have e : fin-raise {N} {m} j = {Nat} m Nat.+ j => fin-raise.char \in linarith
+
+  \lemma toFin-suc-inc {m N : Nat} {i : Fin m} (q' : suc (fin-inc {m} {N} i) < m Nat.+ N) (q : suc i < m)
+    : toFin (suc (fin-inc {m} {N} i)) q' = fin-inc (toFin (suc i) q)
+    => fin_nat-inj (toFin=id *> pmap suc fin-inc.char *> inv (fin-inc.char *> toFin=id))
+
+  \lemma toFin-suc-raise {m N : Nat} {j : Fin N} (q' : suc (fin-raise {N} {m} j) < m Nat.+ N) (q : suc j < N)
+    : toFin (suc (fin-raise {N} {m} j)) q' = fin-raise (toFin (suc j) q)
+    => fin_nat-inj (toFin=id *> pmap suc fin-raise.char *> inv (fin-raise.char *> pmap (m Nat.+) toFin=id))
+
+  -- | Concatenation of compatible pairs is compatible.
+  \lemma JordanCompat-++' {A : \Set} {m N : Nat} {mu1 : Array A m} {s1 : Array Bool m} {mu2 : Array A N} {s2 : Array Bool N}
+    (c1 : JordanCompat mu1 s1) (c2 : JordanCompat mu2 s2) : JordanCompat (mu1 ++' mu2) (s1 ++' s2)
+    => fin-split-ind {m} {N} {\lam k => (s1 ++' s2) k = true -> \Sigma (q : suc k < m Nat.+ N) ((mu1 ++' mu2) (toFin (suc k) q) = (mu1 ++' mu2) k)}
+        (\lam i e => \have t => c1 i (inv ++'.++'_index-left *> e) \in
+            (suc-inc t.1, pmap (mu1 ++' mu2) (toFin-suc-inc (suc-inc t.1) t.1) *> ++'.++'_index-left *> t.2 *> inv ++'.++'_index-left))
+        (\lam j e => \have t => c2 j (inv ++'.++'_index-right *> e) \in
+            (suc-raise t.1, pmap (mu1 ++' mu2) (toFin-suc-raise (suc-raise t.1) t.1) *> ++'.++'_index-right *> t.2 *> inv ++'.++'_index-right))
+
+  -- | The `s`-array of a single chain of length `m`.
+  \func blockS (m : Nat) : Array Bool m
+    => \new Array Bool m (\lam j => \case LinearOrder.dec<_<= (suc j) m \with {
+      | inl _ => true
+      | inr _ => false
+    })
+
+  \lemma blockS-true {m : Nat} {k : Fin m} (q : suc k < m) : blockS m k = true
+    => mcases \with {
+      | inl _ => idp
+      | inr r => absurd linarith
+    }
+
+  \lemma blockS-false {m : Nat} {k : Fin m} (q : m <= suc k) : blockS m k = false
+    => mcases \with {
+      | inl r => absurd linarith
+      | inr _ => idp
+    }
+
+  \lemma blockS-next {m : Nat} {k : Fin m} (e : blockS m k = true) : suc k < m
+    => \case LinearOrder.dec<_<= (suc k) m \with {
+      | inl q => q
+      | inr r => \case inv e *> blockS-false r
+    }
+
+  \lemma block-compat {A : \Set} (m : Nat) (a : A) : JordanCompat (\new Array A m (\lam _ => a)) (blockS m)
+    => \lam k e => (blockS-next e, idp)
+
+  \lemma mulVec-rdistr {R : Ring} {n : Nat} {M N : Matrix R n n} {y : Array R n}
+    : mulVec (M + N) y = mulVec M y + {ArrayLModule n (RingLModule R)} mulVec N y
+    => exts \lam i => pmap R.BigSum (exts \lam j => rdistr) *> R.BigSum_+
+
+  \lemma mulVec-zro-left {R : Ring} {n : Nat} {y : Array R n} : mulVec 0 y = \new Array R n (\lam _ => 0)
+    => exts \lam i => R.BigSum_zro \lam j => zro_*-left
+
+  \lemma mulVec-zro-right {R : Ring} {n : Nat} {M : Matrix R n n} : mulVec M (\new Array R n (\lam _ => 0)) = \new Array R n (\lam _ => 0)
+    => exts \lam i => R.BigSum_zro \lam j => zro_*-right
+
+  \lemma mulVec-coef {R : CRing} {n : Nat} {c : R} {y : Array R n}
+    : mulVec (CAlgebra.coefHom {MatrixAlgebra R n} c) y = c *c {ArrayLModule n (RingLModule R)} y
+    => pmap (mulVec __ y) (inv (ide-right {MatrixRing R n} {CAlgebra.coefHom {MatrixAlgebra R n} c}) *> matCoef-*c c 1) *> mulVec.scale {R} {n} {c} {1} {y} *> pmap (c *c {ArrayLModule n (RingLModule R)} __) mulVec.ide
+
+  -- | The Horner form $a_0 + P (a_1 + P (a_2 + \dots))$, i.e. $\sum_j a_j P^j$.
+  \func horner {R : Ring} (P : Poly R) (a : Array R) : Poly R \elim a
+    | nil => 0
+    | e :: a => horner P a * P + padd 0 e
+
+  \lemma horner-mulVec {R : CRing} {n : Nat} {A : Matrix R n n} {P : Poly R} {a : Array R} (y : Array R n)
+    : mulVec (matPolyEval (horner P a) A) y = AddMonoid.BigSum {ArrayLModule n (RingLModule R)} (\lam j => a j *c {ArrayLModule n (RingLModule R)} mulVec (matPolyEval (Monoid.pow P j) A) y) \elim a
+    | nil => mulVec-zro-left
+    | e :: a => pmap (mulVec __ y) (matPolyEval_+ {R} {n} {horner P a * P} {padd 0 e} {A} *> pmap2 (+) (matPolyEval_* {R} {n} {horner P a} {P} {A}) (matPolyEval_const {R} {n} {e} {A}))
+        *> mulVec-rdistr {R} {n} {matPolyEval (horner P a) A * matPolyEval P A} {CAlgebra.coefHom {MatrixAlgebra R n} e} {y}
+        *> pmap2 (\lam v w => v + {ArrayLModule n (RingLModule R)} w)
+             (mulVec.comp {R} {n} {matPolyEval (horner P a) A} {matPolyEval P A} {y} *> horner-mulVec {R} {n} {A} {P} {a} (mulVec (matPolyEval P A) y))
+             (mulVec-coef {R} {n} {e} {y})
+        *> +-comm {ArrayLModule n (RingLModule R)} {_} {e *c {ArrayLModule n (RingLModule R)} y}
+        *> inv (pmap2 (\lam v w => v + {ArrayLModule n (RingLModule R)} w)
+                  (pmap (e *c {ArrayLModule n (RingLModule R)} __) (pmap (mulVec __ y) (matPolyEval_ide {R} {n} {A}) *> mulVec.ide))
+                  (pmap (AddMonoid.BigSum {ArrayLModule n (RingLModule R)}) (exts \lam j => pmap (a j *c {ArrayLModule n (RingLModule R)} __)
+                     (pmap (mulVec __ y) (matPolyEval_* {R} {n} {Monoid.pow P j} {P} {A}) *> mulVec.comp))))
+
+  -- | A combination over a concatenation splits into two combinations.
+  \lemma combo-split {R : Ring} {U : LModule R} {m N : Nat} (c : Array R (m Nat.+ N)) {v1 : Array U m} {v2 : Array U N}
+    : U.BigSum (\lam k => c k *c (v1 ++' v2) k) = U.BigSum (\lam i => c (fin-inc i) *c v1 i) + U.BigSum (\lam j => c (fin-raise j) *c v2 j)
+    => U.BigSum-split {m} {N} *> pmap2 (+) (pmap U.BigSum (exts \lam i => pmap (_ *c) (++'.++'_index-left {U} {v1} {N} {v2} {i})))
+                                          (pmap U.BigSum (exts \lam j => pmap (_ *c) (++'.++'_index-right {U} {v1} {N} {v2} {j})))
+
+  \lemma mulVec-*c-right {R : CRing} {n : Nat} {M : Matrix R n n} {c : R} {y : Array R n}
+    : mulVec M (c *c {ArrayLModule n (RingLModule R)} y) = c *c {ArrayLModule n (RingLModule R)} mulVec M y
+    => exts \lam i => pmap R.BigSum (exts \lam j => equation.cRing) *> inv R.BigSum-ldistr
+}
+\open ChainHelpers
+
+\lemma chain-compat-eig {R : \Set} {n : Nat} (cs : Array (Chain R n)) : JordanCompat (chainEig cs) (chainS cs) \elim cs
+  | nil => \lam k => \case k
+  | c :: cs => JordanCompat-++' {_} {_} {_} {\new Array R c.4 (\lam _ => c.1)} {blockS c.4} {chainEig cs} {chainS cs} (block-compat c.4 c.1) (chain-compat-eig cs)
+
+\lemma chain-compat-tag {R : \Set} {n : Nat} (cs : Array (Chain R n)) : JordanCompat (chainTag cs) (chainS cs) \elim cs
+  | nil => \lam k => \case k
+  | c :: cs => JordanCompat-++' {_} {_} {_} {\new Array R c.4 (\lam _ => c.2)} {blockS c.4} {chainTag cs} {chainS cs} (block-compat c.4 c.2) (chain-compat-tag cs)
+
+-- | The concatenated vectors of annihilated chains form a Jordan family.
+\lemma chain-jordan {R : CRing} {n : Nat} {A : Matrix R n n} {cs : Array (Chain R n)} (ann : ChainAnn A cs)
+  : IsJordanFamily A (chainFamily A cs) (chainEig cs) (chainS cs) \elim cs
+  | nil => \lam k => \case k
+  | c :: cs => IsJordanFamily-++' {R} {n} {c.4} {chainLen cs} {A} {chainVecs A c} {\new Array R c.4 (\lam _ => c.1)} {blockS c.4}
+                 (block-jordan (ann 0)) (\lam k => blockS-next) (chain-jordan (\lam i => ann (suc i)))
+  \where {
+    \lemma next-true {R : Ring} {n N : Nat} {s : Array Bool N} {b : Array (Array R n) N} {k : Fin N} (e : s k = true)
+      : jordanNext s b k = fit {Array R n} (\new Array R n (\lam _ => 0)) {suc N} b (suc k)
+      => unfold jordanNext (rewrite e idp)
+
+    \lemma next-false {R : Ring} {n N : Nat} {s : Array Bool N} {b : Array (Array R n) N} {k : Fin N} (e : s k = false)
+      : jordanNext s b k = \new Array R n (\lam _ => 0)
+      => unfold jordanNext (rewrite e idp)
+
+    \func fit-raise {A : \Type} {a : A} {m N : Nat} {b1 : Array A m} {b2 : Array A N} {j : Fin N}
+      : fit a {suc (m Nat.+ N)} (b1 ++' b2) (suc (fin-raise j)) = fit a {suc N} b2 (suc j) \elim m, b1
+      | 0, nil => idp
+      | suc m, x :: b1 => fit-raise {A} {a} {m} {N} {b1} {b2} {j}
+
+    \func fit-inc {A : \Type} {a : A} {m N : Nat} {b1 : Array A m} {b2 : Array A N} {i : Fin m} (q : suc i < m)
+      : fit a {suc (m Nat.+ N)} (b1 ++' b2) (suc (fin-inc i)) = fit a {suc m} b1 (suc i)
+      => fit_< (b1 ++' b2) (suc-inc q) *> pmap (b1 ++' b2) (toFin-suc-inc (suc-inc q) q) *> ++'.++'_index-left *> inv (fit_< b1 q)
+
+    \lemma next-inc {R : Ring} {n m N : Nat} {s1 : Array Bool m} {s2 : Array Bool N} {b1 : Array (Array R n) m} {b2 : Array (Array R n) N}
+      (c1 : \Pi (k : Fin m) -> s1 k = true -> suc k < m) (i : Fin m)
+      : jordanNext (s1 ++' s2) (b1 ++' b2) (fin-inc i) = jordanNext s1 b1 i
+      => cases (s1 i arg addPath) \with {
+        | true, e => next-true (++'.++'_index-left *> e) *> fit-inc (c1 i e) *> inv (next-true e)
+        | false, e => next-false (++'.++'_index-left *> e) *> inv (next-false e)
+      }
+
+    \lemma next-raise {R : Ring} {n m N : Nat} {s1 : Array Bool m} {s2 : Array Bool N} {b1 : Array (Array R n) m} {b2 : Array (Array R n) N} (j : Fin N)
+      : jordanNext (s1 ++' s2) (b1 ++' b2) (fin-raise j) = jordanNext s2 b2 j
+      => cases (s2 j arg addPath) \with {
+        | true, e => next-true (++'.++'_index-right *> e) *> fit-raise *> inv (next-true e)
+        | false, e => next-false (++'.++'_index-right *> e) *> inv (next-false e)
+      }
+
+    -- | Concatenation of Jordan families, provided the first one does not point past its end.
+    \lemma IsJordanFamily-++' {R : Ring} {n m N : Nat} {A : Matrix R n n} {b1 : Array (Array R n) m} {mu1 : Array R m} {s1 : Array Bool m}
+      {b2 : Array (Array R n) N} {mu2 : Array R N} {s2 : Array Bool N}
+      (h1 : IsJordanFamily A b1 mu1 s1) (c1 : \Pi (k : Fin m) -> s1 k = true -> suc k < m) (h2 : IsJordanFamily A b2 mu2 s2)
+      : IsJordanFamily A ((++') {Array R n} b1 b2) (mu1 ++' mu2) (s1 ++' s2)
+      => fin-split-ind {m} {N} {\lam k => mulVec A ((++') {Array R n} b1 b2 k) = (mu1 ++' mu2) k *c {ArrayLModule n (RingLModule R)} (++') {Array R n} b1 b2 k + {ArrayLModule n (RingLModule R)} jordanNext (s1 ++' s2) (b1 ++' b2) k}
+          (\lam i => pmap (mulVec A) (++'.++'_index-left {Array R n} {b1} {N} {b2} {i}) *> h1 i *>
+              inv (pmap2 (\lam x y => x + {ArrayLModule n (RingLModule R)} y)
+                     (pmap2 (\lam a v => a *c {ArrayLModule n (RingLModule R)} v) (++'.++'_index-left {R} {mu1} {N} {mu2} {i}) (++'.++'_index-left {Array R n} {b1} {N} {b2} {i}))
+                     (next-inc c1 i)))
+          (\lam j => pmap (mulVec A) (++'.++'_index-right {Array R n} {b1} {N} {b2} {j}) *> h2 j *>
+              inv (pmap2 (\lam x y => x + {ArrayLModule n (RingLModule R)} y)
+                     (pmap2 (\lam a v => a *c {ArrayLModule n (RingLModule R)} v) (++'.++'_index-right {R} {mu1} {N} {mu2} {j}) (++'.++'_index-right {Array R n} {b1} {N} {b2} {j}))
+                     (next-raise j)))
+
+    -- | $X Q = \lambda Q + Q (X - \lambda)$.
+    \lemma X-split {R : CRing} (lam : R) (Q : Poly R) : padd 1 0 * Q = padd 0 lam * Q + Q * padd 1 (negative lam)
+      => aux {PolyAlgebra R} {padd 1 0} {padd 0 lam} {padd 1 (negative lam)} {Q} (inv (pmap (padd 1) (negative-right {R} {lam})))
+      \where
+        \lemma aux {E : CRing} {X C P Q : E} (h : X = C + P) : X * Q = C * Q + Q * P
+          => rewrite h (rdistr *> pmap (_ +) *-comm)
+
+    -- | $A Q(A) y = \lambda Q(A) y + (Q (X - \lambda))(A) y$.
+    \lemma shift-eq {R : CRing} {n : Nat} {A : Matrix R n n} (lam : R) (Q : Poly R) (y : Array R n)
+      : mulVec A (mulVec (matPolyEval Q A) y) = lam *c {ArrayLModule n (RingLModule R)} mulVec (matPolyEval Q A) y + {ArrayLModule n (RingLModule R)} mulVec (matPolyEval (Q * padd 1 (negative lam)) A) y
+      => inv (mulVec.comp {R} {n} {A} {matPolyEval Q A} {y})
+          *> pmap (mulVec __ y) (inv (matPolyEval_* {R} {n} {padd 1 0} {Q} {A} *> pmap (`* matPolyEval Q A) matPolyEval_X)
+              *> pmap (matPolyEval __ A) (X-split lam Q) *> matPolyEval_+ {R} {n} {padd 0 lam * Q} {Q * padd 1 (negative lam)} {A})
+          *> mulVec-rdistr
+          *> pmap (\lam v => v + {ArrayLModule n (RingLModule R)} mulVec (matPolyEval (Q * padd 1 (negative lam)) A) y)
+              (pmap (mulVec __ y) (matPolyEval_* {R} {n} {padd 0 lam} {Q} {A} *> pmap (`* matPolyEval Q A) (matPolyEval_const {R} {n} {lam} {A}) *> matCoef-*c lam (matPolyEval Q A))
+               *> mulVec.scale)
+
+    -- | A single annihilated chain is a Jordan family.
+    \lemma block-jordan {R : CRing} {n : Nat} {A : Matrix R n n} {c : Chain R n}
+      (ann : mulVec (matPolyEval (Monoid.pow (padd 1 (negative c.1)) c.4) A) c.3 = \new Array R n (\lam _ => 0))
+      : IsJordanFamily A (chainVecs A c) (\new Array R c.4 (\lam _ => c.1)) (blockS c.4)
+      => \lam k => shift-eq c.1 _ c.3 *> pmap (\lam w => c.1 *c {ArrayLModule n (RingLModule R)} chainVecs A c k + {ArrayLModule n (RingLModule R)} w) (inv (\case LinearOrder.dec<_<= (suc k) c.4 \with {
+        | inl q => next-true {R} {n} {c.4} {blockS c.4} {chainVecs A c} (blockS-true q) *> fit_< (chainVecs A c) q *> pmap (\lam (j : Nat) => mulVec (matPolyEval (Monoid.pow (padd 1 (negative c.1)) j) A) c.3) toFin=id
+        | inr q => next-false {R} {n} {c.4} {blockS c.4} {chainVecs A c} (blockS-false q) *> inv (pmap (\lam (j : Nat) => mulVec (matPolyEval (Monoid.pow (padd 1 (negative c.1)) j) A) c.3) (<=-antisymmetric {NatSemiring} {suc k} {c.4} (suc_<_<= (fin_< k)) q) *> ann)
+      }))
+  }
+
+-- | If the start vectors are eigenvectors of a matrix `D` commuting with `A`, with eigenvalues the tags, then so is the whole family.
+\lemma chain-tag {R : CRing} {n : Nat} {A D : Matrix R n n} (comm : A * D = D * A) {cs : Array (Chain R n)}
+  (dt : \Pi (c : Fin cs.len) -> mulVec D (cs c).3 = (cs c).2 *c {ArrayLModule n (RingLModule R)} (cs c).3)
+  (k : Fin (chainLen cs)) : mulVec D (chainFamily A cs k) = chainTag cs k *c {ArrayLModule n (RingLModule R)} chainFamily A cs k \elim cs
+  | nil => \case k
+  | c :: cs => fin-split-ind {c.4} {chainLen cs} {\lam k => mulVec D (chainFamily A (c :: cs) k) = chainTag (c :: cs) k *c {ArrayLModule n (RingLModule R)} chainFamily A (c :: cs) k}
+      (\lam i => pmap (mulVec D) (++'.++'_index-left {Array R n} {chainVecs A c} {chainLen cs} {chainFamily A cs} {i}) *> vec-tag comm (dt 0) *>
+          inv (pmap2 (\lam a v => a *c {ArrayLModule n (RingLModule R)} v) (++'.++'_index-left {R} {\new Array R c.4 (\lam _ => c.2)} {chainLen cs} {chainTag cs} {i})
+                                                                         (++'.++'_index-left {Array R n} {chainVecs A c} {chainLen cs} {chainFamily A cs} {i})))
+      (\lam j => pmap (mulVec D) (++'.++'_index-right {Array R n} {chainVecs A c} {chainLen cs} {chainFamily A cs} {j}) *> chain-tag comm (\lam i => dt (suc i)) j *>
+          inv (pmap2 (\lam a v => a *c {ArrayLModule n (RingLModule R)} v) (++'.++'_index-right {R} {\new Array R c.4 (\lam _ => c.2)} {chainLen cs} {chainTag cs} {j})
+                                                                         (++'.++'_index-right {Array R n} {chainVecs A c} {chainLen cs} {chainFamily A cs} {j})))
+      k
+  \where
+    -- | If `y` is an eigenvector of `D` and `D` commutes with `A`, then so is every $Q(A) y$.
+    \lemma vec-tag {R : CRing} {n : Nat} {A D : Matrix R n n} (comm : A * D = D * A) {Q : Poly R} {y : Array R n} {t : R}
+      (dy : mulVec D y = t *c {ArrayLModule n (RingLModule R)} y)
+      : mulVec D (mulVec (matPolyEval Q A) y) = t *c {ArrayLModule n (RingLModule R)} mulVec (matPolyEval Q A) y
+      => inv (mulVec.comp {R} {n} {D} {matPolyEval Q A} {y}) *> pmap (mulVec __ y) (inv (matPolyEval-comm comm)) *> mulVec.comp
+          *> pmap (mulVec (matPolyEval Q A)) dy *> mulVec-*c-right
+
+-- | Polynomial combinations of the start vectors of annihilated chains lie in the span of the family.
+\lemma chain-span {R : CRing} {n : Nat} {A : Matrix R n n} {cs : Array (Chain R n)} (ann : ChainAnn A cs) (r : Array (Poly R) cs.len)
+  : ∃ (a : Array R (chainLen cs)) (LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam c => mulVec (matPolyEval (r c) A) (cs c).3)
+                                    = LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam k => a k *c {ArrayLModule n (RingLModule R)} chainFamily A cs k))
+  \elim cs, r
+  | nil, nil => inP (nil, idp)
+  | c :: cs, p :: r =>
+    \have | t => taylor c.1 p c.4
+          | e : mulVec (matPolyEval p A) c.3 = LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam j => t.1 j *c {ArrayLModule n (RingLModule R)} chainVecs A c j)
+            => pmap (\lam x => mulVec (matPolyEval x A) c.3) t.3
+               *> pmap (mulVec __ c.3) (matPolyEval_+ {R} {n} {horner (padd 1 (negative c.1)) t.1} {t.2 * Monoid.pow (padd 1 (negative c.1)) c.4} {A}
+                                        *> pmap (_ +) (matPolyEval_* {R} {n} {t.2} {Monoid.pow (padd 1 (negative c.1)) c.4} {A}))
+               *> mulVec-rdistr {R} {n} {matPolyEval (horner (padd 1 (negative c.1)) t.1) A} {matPolyEval t.2 A * matPolyEval (Monoid.pow (padd 1 (negative c.1)) c.4) A} {c.3}
+               *> pmap2 (\lam v w => v + {ArrayLModule n (RingLModule R)} w) (horner-mulVec c.3)
+                    (mulVec.comp {R} {n} {matPolyEval t.2 A} *> pmap (mulVec (matPolyEval t.2 A)) (ann 0) *> mulVec-zro-right {R} {n} {matPolyEval t.2 A})
+               *> zro-right {ArrayLModule n (RingLModule R)}
+    \in TruncP.map (chain-span (\lam i => ann (suc i)) r) \lam s => (t.1 ++' s.1,
+          pmap2 (\lam v w => v + {ArrayLModule n (RingLModule R)} w) e s.2 *> inv (combo-split (t.1 ++' s.1)
+            *> pmap2 (\lam v w => v + {ArrayLModule n (RingLModule R)} w)
+                 (pmap (LModule.BigSum {ArrayLModule n (RingLModule R)}) (exts \lam i => pmap (`*c {ArrayLModule n (RingLModule R)} chainVecs A c i) (++'.++'_index-left {R} {t.1} {chainLen cs} {s.1} {i})))
+                 (pmap (LModule.BigSum {ArrayLModule n (RingLModule R)}) (exts \lam j => pmap (`*c {ArrayLModule n (RingLModule R)} chainFamily A cs j) (++'.++'_index-right {R} {t.1} {chainLen cs} {s.1} {j})))))
+  \where {
+    -- | Taylor expansion at $\lambda$ up to order `m`: $p = \sum_{j < m} a_j (X - \lambda)^j + q (X - \lambda)^m$.
+    \func taylor {R : CRing} (lam : R) (p : Poly R) (m : Nat)
+      : \Sigma (a : Array R m) (q : Poly R) (p = horner (padd 1 (negative lam)) a + q * Monoid.pow (padd 1 (negative lam)) m) \elim m
+      | 0 => (nil, p, inv (zro-left *> ide-right))
+      | suc m => \have t => taylor lam (deflate p lam) m
+                 \in (polyEval p lam :: t.1, t.2, deflate-eq *> pmap (\lam d => d * padd 1 (negative lam) + padd pzero (polyEval p lam)) t.3 *> step)
+      \where
+        \lemma step {E : Ring} {H q M P C : E} : (H + q * M) * P + C = (H * P + C) + q * (M * P)
+          => equation
+  }
+
+{- | The family is linearly independent if no nonzero combination $\sum_c g_c(A) y_c$ with $\deg g_c < m_c$
+     vanishes. -}
+\lemma chain-independent {K : DiscreteField} {n : Nat} {A : Matrix K n n} {cs : Array (Chain K n)}
+  (H : \Pi (g : Array (Poly K) cs.len) -> (\Pi (c : Fin cs.len) -> degree< (g c) (cs c).4)
+         -> LModule.BigSum {ArrayLModule n (RingLModule K)} (\lam c => mulVec (matPolyEval (g c) A) (cs c).3) = \new Array K n (\lam _ => 0)
+         -> \Pi (c : Fin cs.len) -> g c = 0)
+  : LModule.IsIndependent {ArrayLModule n (RingLModule K)} (chainFamily A cs)
+  => \lam a h => splitCoef-zero cs a (H (splitCoef cs a) (splitCoef-degree cs a) (splitCoef-sum cs a *> h))
+  \where {
+    -- | The polynomials $g_c = \sum_{j < m_c} a_{c,j} (X - \lambda_c)^j$ of a combination of the family.
+    \func splitCoef {R : CRing} {n : Nat} (cs : Array (Chain R n)) (a : Array R (chainLen cs)) : Array (Poly R) cs.len \elim cs
+      | nil => nil
+      | c :: cs => horner (padd 1 (negative c.1)) (\lam (i : Fin c.4) => a (fin-inc i)) :: splitCoef cs (\lam j => a (fin-raise j))
+
+    \lemma splitCoef-sum {R : CRing} {n : Nat} {A : Matrix R n n} (cs : Array (Chain R n)) (a : Array R (chainLen cs))
+      : LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam c => mulVec (matPolyEval (splitCoef cs a c) A) (cs c).3)
+          = LModule.BigSum {ArrayLModule n (RingLModule R)} (\lam k => a k *c {ArrayLModule n (RingLModule R)} chainFamily A cs k) \elim cs
+      | nil => idp
+      | c :: cs => pmap2 (\lam v w => v + {ArrayLModule n (RingLModule R)} w) (horner-mulVec c.3) (splitCoef-sum cs (\lam j => a (fin-raise j)))
+                     *> inv (combo-split a)
+
+    \lemma splitCoef-degree {R : CRing} {n : Nat} (cs : Array (Chain R n)) (a : Array R (chainLen cs)) (c : Fin cs.len)
+      : degree< (splitCoef cs a c) (cs c).4 \elim cs, c
+      | c :: cs, 0 => horner-degree
+      | c :: cs, suc i => splitCoef-degree cs (\lam j => a (fin-raise j)) i
+
+    \lemma splitCoef-zero {R : CRing} {n : Nat} (cs : Array (Chain R n)) (a : Array R (chainLen cs)) (z : \Pi (c : Fin cs.len) -> splitCoef cs a c = 0)
+      (k : Fin (chainLen cs)) : a k = 0 \elim cs
+      | nil => \case k
+      | c :: cs => fin-split-ind {c.4} {chainLen cs} {\lam k => a k = 0} (horner-zero (z 0)) (splitCoef-zero cs (\lam j => a (fin-raise j)) (\lam i => z (suc i))) k
+
+    -- | $\sum_{j < m} a_j (X - \lambda)^j$ has degree less than `m`.
+    \lemma horner-degree {R : CRing} {lam : R} {a : Array R} : degree< (horner (padd 1 (negative lam)) a) a.len \elim a
+      | nil => \lam _ => idp
+      | e :: a => degree<_+ (degree<_*padd1 (negative lam) horner-degree) (degree<_padd (\lam _ => idp))
+
+    -- | Uniqueness of the expansion in powers of $X - \lambda$: if $\sum_j a_j (X - \lambda)^j = 0$, then all $a_j = 0$.
+    \lemma horner-zero {R : CRing} {lam : R} {a : Array R} (z : horner (padd 1 (negative lam)) a = 0) (j : Fin a.len) : a j = 0 \elim a, j
+      | e :: a, j =>
+        \have | e0 : e = 0 => inv (eval-horner lam (horner (padd 1 (negative lam)) a) e) *> pmap (polyEval __ lam) z
+              | h0 : horner (padd 1 (negative lam)) a = 0 => degree1PolyDivision-unique 0 lam {horner (padd 1 (negative lam)) a} {0}
+                  (inv (transport (\lam x => horner (padd 1 (negative lam)) a * padd 1 (negative lam) + padd pzero x = 0) e0 z))
+                  (inv (pmap2 (+) (zro_*-left {_} {padd 1 (negative lam)}) peq))
+        \in \case \elim j \with {
+          | 0 => e0
+          | suc j => horner-zero h0 j
+        }
+      \where
+        \lemma eval-horner {R : CRing} (lam : R) (q : Poly R) (e : R) : polyEval (q * padd 1 (negative lam) + padd pzero e) lam = e
+          => polyEval_+ *> pmap2 (+) ((polyEvalRingHom lam).func-* *> pmap (_ *) (polyEval_padd1 *> negative-right) *> zro_*-right) (pmap (+ e) zro_*-left *> zro-left) *> zro-left
+  }

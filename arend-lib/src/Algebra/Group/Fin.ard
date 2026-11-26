@@ -1,9 +1,11 @@
+\import Algebra.Domain.Euclidean
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Int
 \import Arith.Nat
+\import Arith.Nat.Lcm
 \import Arith.Nat.Sequence
 \import Function.Meta
 \import Logic.Unique
@@ -42,7 +44,7 @@
 
 -- | Powers of {g} are periodic with period `order g`.
 \lemma pow_mod-order {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {n : Nat} : G.pow g n = G.pow g (n Nat.mod order g)
-  => pmap (G.pow g) (inv $ Nat.divModProp n (order g)) *> G.pow_+ *> pmap (`* _) (G.pow_* *> pmap (G.pow __ _) order_pow *> G.pow_ide) *> ide-left
+  => G.pow_mod order_pow
 
 -- | If `g^n = 1`, then the order of {g} divides {n}.
 \func order-div {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {n : Nat} (p : G.pow g n = 1) : Monoid.LDiv (order g) n
@@ -67,3 +69,44 @@
       => \have | e : i + (j -' i) = j => <=_exists (<=-less i<j)
                | q : G.pow g (j -' i) = 1 => cancel_*-left (G.pow g i) $ inv G.pow_+ *> pmap (G.pow g) e *> inv p *> inv ide-right
          \in <-irreflexive $ order-min (pos<pos.conv $ transportInv (_ <) (-'=- $ <=-less i<j) linarith) q <∘r (-'<=id <∘r j<o)
+
+-- | The order of {g} is the {n} with `g^n = 1` that divides every `i` with `g^i = 1`.
+\lemma order-unique {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {n : Nat} (p : G.pow g n = 1)
+                    (q : \Pi {i : Nat} -> G.pow g i = 1 -> Monoid.LDiv n i) : order g = n
+  => natAssociates-areEqual (order-div p) (q order_pow)
+
+-- | If {c} divides the order of {g}, then `g^c` has order `order g / c`.
+\lemma order_pow-div {G : Group} {P : PigeonholeSet G} {D : DecSet G} {g : G} {c : Nat} (d : Monoid.LDiv c (order g))
+  : order (G.pow g c) = d.inv
+  => order-unique (inv G.pow_* *> pmap (G.pow g) d.inv-right *> order_pow) \lam {i} q =>
+      \have | c/=0 : c /= 0 => \lam c=0 => /=-sym (NatSemiring.<_/= order>0) $ inv d.inv-right *> pmap (* _) c=0 *> NatSemiring.zro_*-left
+            | r : Monoid.LDiv (order g) (c * i) => order-div (G.pow_* *> q)
+      \in Monoid.LDiv.make r.inv $ NatSemiring.cancel_*-left c/=0 $ inv NatSemiring.*-assoc *> pmap (* _) d.inv-right *> r.inv-right
+
+-- | The order of a product of commuting elements of coprime orders is the product of their orders.
+\lemma order_*-coprime {G : Group} {P : PigeonholeSet G} {D : DecSet G} {x y : G} (xy=yx : x * y = y * x)
+                       (c : NatEuclidean.gcd (order x) (order y) = 1) : order (x * y) = order x * order y
+  => order-unique (G.pow-comm xy=yx *> pmap2 (*) (pow_order-mult (Monoid.LDiv.make (order y) idp))
+                                                  (pow_order-mult (Monoid.LDiv.make (order x) NatSemiring.*-comm)) *> ide-left)
+      \lam {i} q => nat_coprime_*_div c (aux xy=yx c q) (aux (inv xy=yx) (nat_gcd-comm *> c) (pmap (G.pow __ i) (inv xy=yx) *> q))
+  \where
+    -- | If `(xy)^i = 1` and the orders are coprime, then `order x` divides {i}.
+    \private \func aux {G : Group} {P : PigeonholeSet G} {D : DecSet G} {x y : G} (xy=yx : x * y = y * x)
+                       (c : NatEuclidean.gcd (order x) (order y) = 1) {i : Nat} (q : G.pow (x * y) i = 1) : Monoid.LDiv (order x) i
+      => \have | q' : G.pow x i * G.pow y i = 1 => inv (G.pow-comm xy=yx) *> q
+               | yb : G.pow (G.pow y i) (order y) = 1 => inv G.pow_* *> pmap (G.pow y) NatSemiring.*-comm *> G.pow_* *> pmap (G.pow __ i) order_pow *> G.pow_ide
+               | s : G.pow (G.pow x i) (order y) = 1 => inv ide-right *> pmap (_ *) (inv yb) *> inv (G.pow-comm (G.pow-comm2 xy=yx))
+                                                          *> pmap (G.pow __ (order y)) q' *> G.pow_ide
+               | r : Monoid.LDiv (order x) (i * order y) => order-div (G.pow_* *> s)
+         \in nat_gcd_*_div (transport (Monoid.LDiv _) NatSemiring.*-comm r) c
+
+-- | Commuting elements of orders `m` and `n` give an element of order `lcm(m,n)` (the main step of MRR VI.5.3).
+\lemma order-lcm {G : Group} {P : PigeonholeSet G} {D : DecSet G} {x y : G} (xy=yx : x * y = y * x)
+  : ∃ (z : G) (order z = nat-lcm (order x) (order y))
+  => \case lcm-split (order x) (order y) \with {
+    | inP (a,b,a|n,b|m,a_b,ab=q) =>
+      \have | ob : order (G.pow x b|m.inv) = b => order_pow-div (Monoid.LDiv.swap b|m)
+            | oa : order (G.pow y a|n.inv) = a => order_pow-div (Monoid.LDiv.swap a|n)
+      \in inP (G.pow x b|m.inv * G.pow y a|n.inv, order_*-coprime {_} {_} {_} {G.pow x b|m.inv} {G.pow y a|n.inv} (G.pow-comm2 xy=yx)
+                  (pmap2 NatEuclidean.gcd ob oa *> nat_gcd-comm *> a_b) *> pmap2 (*) ob oa *> NatSemiring.*-comm *> ab=q)
+  }
