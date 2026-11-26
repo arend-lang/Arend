@@ -1,0 +1,39 @@
+{- | Monodromy of a cover. Transport along ``p *> q`` is transport along ``p`` then ``q``, a right action, so the
+     library's left action is ``g ** m = transport0 C (inv0 g) m``. -}
+
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.EquivariantMap
+\import Algebra.Group.GSet.GSetCat
+\import Category.Functor
+\import Homotopy.Cover.Basic
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pointed
+\import Paths
+\import Set
+
+\func Monodromy.{u} {A : Pointed.{u}} (C : Cover A) : GSet (PiGroup 0 A) \cowith
+  | E => C base
+  | ** g m => transport0 C (inv0 g) m
+  | **_ide => idp
+  | **-assoc {g} {h} {m} => pmap (transport0 C __ m) (pmap inv0 (Aut_*>0 g h) *> inv0_*>0-comm g h)
+                            *> transport0_*>0 C (inv0 h) (inv0 g) m
+  \where {
+    \func transport-natural {X : \Type} {C D : X -> \Type} (F : \Pi {x : X} -> C x -> D x) {x y : X} (p : x = y) (m : C x)
+      : F (transport C p m) = transport D p (F m) \elim p
+      | idp => idp
+
+    \lemma transport0-natural {X : \Type} {C D : X -> \Set} (F : \Pi {x : X} -> C x -> D x) {x y : X} (p : x =0 y) (m : C x)
+      : F (transport0 C p m) = transport0 D p (F m) \elim p
+      | in0 p => transport-natural F p m
+
+    \func map.{u} {A : Pointed.{u}} {C D : Cover A} (F : CoverHom C D) : EquivariantMap (Monodromy C) (Monodromy D) \cowith
+      | func => F
+      | func-** {m} {g} => transport0-natural F (inv0 g) m
+
+    \func functor.{u} (A : Pointed.{u}) : Functor (CoverCat A) (GSetCategory (PiGroup 0 A)) \cowith
+      | F => Monodromy
+      | Func => map
+      | Func-id => idp
+      | Func-o => idp
+  }

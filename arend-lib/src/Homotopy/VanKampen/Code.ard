@@ -1,0 +1,212 @@
+-- | The van Kampen code family (HoTT book, Section 8.7).
+
+\import Data.Or
+\import Equiv
+\import Equiv.Univalence
+\import Equiv.Univalence.Set
+\import Function
+\import Homotopy.Descent.Set
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pushout
+\import Homotopy.VanKampen.Words
+\import Logic
+\import Paths
+\import Relation.Equivalence
+\import Set
+\open PushoutData (ppglue)
+\open VKSpan.Raw
+\open VKSpan.Rel
+
+\class VKCover.{u} \extends VKSpan.{u} {
+  | cover : IsSurj k
+
+  \lemma rep-ind {P : A -> \Prop} (h : \Pi (s : S) -> P (k s)) (a : A) : P a
+    => \case cover a \with {
+      | inP (s, p) => transport P p (h s)
+    }
+
+  \func crossTarget (x : Or B C) (a : A) : Equiv (Code x (inl (f a))) (Code x (inr (g a)))
+    => (descent x).1 a
+    \where
+      \func descent (x : Or B C)
+        => surjDescendSet k cover (\lam a => Equiv (Code x (inl (f a))) (Code x (inr (g a)))) (crossTargetRep x)
+            (\lam s t p => transport_Equiv (\lam a => Code x (inl (f a))) (\lam a => Code x (inr (g a))) p _ _ (crossTargetRep-compat x s t p))
+
+  \func crossSource (y : Or B C) (a : A) : Equiv (Code (inl (f a)) y) (Code (inr (g a)) y)
+    => (descent y).1 a
+    \where
+      \func descent (y : Or B C)
+        => surjDescendSet k cover (\lam a => Equiv (Code (inl (f a)) y) (Code (inr (g a)) y)) (crossSourceRep y)
+            (\lam s t p => transport_Equiv (\lam a => Code (inl (f a)) y) (\lam a => Code (inr (g a)) y) p _ _ (crossSourceRep-compat y s t p))
+
+  \lemma crossTarget-rep (x : Or B C) (s : S) (c : Code x (inl (f (k s)))) : crossTarget x (k s) c = toCQ s c idp0
+    => pmap (\lam e => Equiv.toFunc e c) ((crossTarget.descent x).2 s)
+
+  \lemma crossSource-rep (y : Or B C) (s : S) (c : Code (inl (f (k s))) y) : crossSource y (k s) c = precrossCQ s c
+    => pmap (\lam e => Equiv.toFunc e c) ((crossSource.descent y).2 s)
+
+  \func Fam (x : Or B C) (v : PushoutData f g) : \Set u \elim v
+    | pinl b => Code x (inl b)
+    | pinr c => Code x (inr c)
+    | pglue a i => QEquiv-to-= (Equiv.toQEquiv (crossTarget x a)) i
+
+  \func sourceEquiv (a : A) (v : PushoutData f g) : Equiv (Fam (inl (f a)) v) (Fam (inr (g a)) v) \elim v
+    | pinl b => crossSource (inl b) a
+    | pinr c => crossSource (inr c) a
+    | pglue a' i => pathOver (transport_Equiv (Fam (inl (f a))) (Fam (inr (g a))) (ppglue a') _ _ (mixed-square a')) @ i
+    \where {
+      \lemma mixed-square (a' : A) (c : Code (inl (f a)) (inl (f a')))
+        : crossTarget (inr (g a)) a' (crossSource (inl (f a')) a c) = crossSource (inr (g a')) a (crossTarget (inl (f a)) a' c)
+        => rep-ind {_} {\lam a => \Pi (a' : A) (c : Code (inl (f a)) (inl (f a'))) -> crossTarget (inr (g a)) a' (crossSource (inl (f a')) a c) = crossSource (inr (g a')) a (crossTarget (inl (f a)) a' c)}
+            (\lam s => rep-ind {_} {\lam a' => \Pi (c : Code (inl (f (k s))) (inl (f a'))) -> crossTarget (inr (g (k s))) a' (crossSource (inl (f a')) (k s) c) = crossSource (inr (g a')) (k s) (crossTarget (inl (f (k s))) a' c)}
+              (\lam t c => crossTarget-rep _ t _ *> pmap (toCQ t __ idp0) (crossSource-rep _ s c) *> rep s t c
+                            *> inv (crossSource-rep _ s _ *> pmap (precrossCQ s) (crossTarget-rep _ t c)))) a a' c
+
+      \lemma rep (s t : S) (c : Code (inl (f (k s))) (inl (f (k t)))) : toCQ t (precrossCQ s c) idp0 = precrossCQ s (toCQ t c idp0) \elim c
+        | in~ _ => idp
+    }
+
+  \private \func transport_Equiv {X : \Type} (F G : X -> \Type) {x x' : X} (p : x = x')
+                                 (e : Equiv (F x) (G x)) (e' : Equiv (F x') (G x'))
+                                 (h : \Pi (y : F x) -> transport G p (e y) = e' (transport F p y))
+    : transport (\lam x => Equiv (F x) (G x)) p e = e' \elim p
+    | idp => Equiv.equals (path (\lam i y => h y i))
+
+  \func VKCode (u v : PushoutData f g) : \Set u \elim u
+    | pinl b => Fam (inl b) v
+    | pinr c => Fam (inr c) v
+    | pglue a i => QEquiv-to-= (Equiv.toQEquiv (sourceEquiv a v)) i
+
+  \lemma Fam-transportB (x : Or B C) {b b' : B} (q : b = b') (c : Code x (inl b)) : transport (Fam x) (pmap pinl q) c = appendBQ c (in0 q)
+    => transport_pmap (Fam x) pinl q c *> transport-targetB q c
+
+  \lemma Fam-transportC (x : Or B C) {c c' : C} (q : c = c') (d : Code x (inr c)) : transport (Fam x) (pmap pinr q) d = appendCQ d (in0 q)
+    => transport_pmap (Fam x) pinr q d *> transport-targetC q d
+
+  \lemma Fam-transport-glue (x : Or B C) (s : S) (c : Code x (inl (f (k s)))) : transport (Fam x) (ppglue (k s)) c = toCQ s c idp0
+    => crossTarget-rep x s c
+
+  \lemma Fam-transport-glue-inv (x : Or B C) (s : S) (d : Code x (inr (g (k s)))) : transport (Fam x) (inv (ppglue (k s))) d = toBQ s d idp0
+    => transport_inv_func (Fam x) (ppglue (k s)) (toBQ s __ idp0) (\lam c => pmap (toBQ s __ idp0) (crossTarget-rep x s c) *> toBQ-toCQ s c idp0 *> appendBQ-idp0 c) d
+
+  \func decodeFam (x : Or B C) (v : PushoutData f g) (c : Fam x v) : point x =0 v \elim v
+    | pinl _ => evalQ c
+    | pinr _ => evalQ c
+    | pglue a i => (pathOver (transport_pi2 (Fam x) (\lam v => point x =0 v) (ppglue a) evalQ evalQ (glue a)) @ i) c
+    \where {
+      \lemma glue (a : A) (c : Code x (inl (f a)))
+        : transport (\lam v => point x =0 v) (ppglue a) (evalQ c) = evalQ (crossTarget x a c)
+        => transport_Trunc0-right (ppglue a) (evalQ c)
+           *> rep-ind {_} {\lam a => \Pi (c : Code x (inl (f a))) -> evalQ c *>0 in0 (ppglue a) = evalQ (crossTarget x a c)}
+                      (\lam s c => inv (pmap evalQ (crossTarget-rep x s c) *> evalQ-toCQ s c)) a c
+
+      \lemma evalQ-toCQ (s : S) (c : Code x (inl (f (k s)))) : evalQ (toCQ s c idp0) = evalQ c *>0 in0 (ppglue (k s)) \elim c
+        | in~ _ => idp
+    }
+
+  \func vkDecode (u v : PushoutData f g) (c : VKCode u v) : u =0 v \elim u
+    | pinl b => decodeFam (inl b) v c
+    | pinr c' => decodeFam (inr c') v c
+    | pglue a i => (pathOver (transport_pi-family VKCode (\lam u v => u =0 v) (ppglue a) (decodeFam (inl (f a))) (decodeFam (inr (g a)))
+                     (\lam v c => transport_Trunc0-left (ppglue a) _ *> source a v c)) @ i) v c
+    \where {
+      \func transport_pi-family {X Y : \Type} (F G : X -> Y -> \Type) {x x' : X} (p : x = x')
+                                (d : \Pi (y : Y) -> F x y -> G x y) (d' : \Pi (y : Y) -> F x' y -> G x' y)
+                                (h : \Pi (y : Y) (c : F x y) -> transport (G __ y) p (d y c) = d' y (transport (F __ y) p c))
+        : transport (\lam x => \Pi (y : Y) -> F x y -> G x y) p d = d' \elim p
+        | idp => path (\lam i y c => h y c i)
+
+      \lemma source (a : A) (v : PushoutData f g) (c : Fam (inl (f a)) v)
+        : in0 (inv (ppglue a)) *>0 decodeFam (inl (f a)) v c = decodeFam (inr (g a)) v (sourceEquiv a v c) \elim v
+        | pinl b => rep-ind {_} {\lam a => \Pi (c : Code (inl (f a)) (inl b)) -> in0 (inv (ppglue a)) *>0 evalQ c = evalQ (crossSource (inl b) a c)}
+                      (\lam s c => source-rep s c *> pmap evalQ (inv (crossSource-rep _ s c))) a c
+        | pinr c' => rep-ind {_} {\lam a => \Pi (c : Code (inl (f a)) (inr c')) -> in0 (inv (ppglue a)) *>0 evalQ c = evalQ (crossSource (inr c') a c)}
+                      (\lam s c => source-rep s c *> pmap evalQ (inv (crossSource-rep _ s c))) a c
+
+      \lemma source-rep (s : S) {y : Or B C} (c : Code (inl (f (k s))) y) : in0 (inv (ppglue (k s))) *>0 evalQ c = evalQ (precrossCQ s c) \elim c
+        | in~ w => inv (eval-precrossC s w)
+    }
+
+  \func idFam (x : Or B C) : Fam x (point x) \elim x
+    | inl _ => in~ (segB idp0)
+    | inr _ => in~ (segC idp0)
+
+  \func idCode (u : PushoutData f g) : VKCode u u \elim u
+    | pinl b => idFam (inl b)
+    | pinr c => idFam (inr c)
+    | pglue a i => pathOver (transport_diagonal VKCode (ppglue a) (idFam (inl (f a))) *> glue a) @ i
+    \where {
+      \func transport_diagonal {X : \Type} (F : X -> X -> \Type) {x x' : X} (p : x = x') (e : F x x)
+        : transport (\lam y => F y y) p e = transport (F x') p (transport (F __ x) p e) \elim p
+        | idp => idp
+
+      \lemma glue (a : A) : crossTarget (inr (g a)) a (crossSource (inl (f a)) a (idFam (inl (f a)))) = idFam (inr (g a))
+        => rep-ind {_} {\lam a => crossTarget (inr (g a)) a (crossSource (inl (f a)) a (idFam (inl (f a)))) = idFam (inr (g a))}
+             (\lam s => crossTarget-rep _ s _ *> pmap (toCQ s __ idp0) (crossSource-rep _ s _) *> ~-pequiv (cancelC s (segC idp0) idp0 idp idp)) a
+    }
+
+  \func vkEncode (u v : PushoutData f g) (t : u =0 v) : VKCode u v
+    => transport0 (VKCode u) t (idCode u)
+
+  \lemma vkDecode-vkEncode (u v : PushoutData f g) (t : u =0 v) : vkDecode u v (vkEncode u v t) = t \elim t
+    | in0 p => \case \elim v, \elim p \with {
+      | _, idp => decode-idCode u
+    }
+    \where
+      \lemma decode-idCode (u : PushoutData f g) : vkDecode u u (idCode u) = idp0 \elim u
+        | pinl _ => idp
+        | pinr _ => idp
+
+  \lemma vkEncode-vkDecode (u v : PushoutData f g) (c : VKCode u v) : vkEncode u v (vkDecode u v c) = c \elim u
+    | pinl b => corner (inl b) v c
+    | pinr c' => corner (inr c') v c
+    \where {
+      \lemma corner (x : Or B C) (v : PushoutData f g) (c : Fam x v) : transport0 (Fam x) (decodeFam x v c) (idFam x) = c \elim v, c
+        | pinl _, in~ w => evalB w
+        | pinr _, in~ w => evalC w
+
+      \lemma evalB {x : Or B C} {b : B} (w : Raw x (inl b)) : transport0 (Fam x) (eval w) (idFam x) = in~ w \elim w
+        | segB st => startB st
+        | toB s w p =>
+          transport0_*>0 (Fam x) (eval w) _ (idFam x)
+            *> pmap (transport0 (Fam x) (in0 (inv (ppglue (k s))) *>0 map0 pinl p)) (evalC w)
+            *> transport0_*>0 (Fam x) (in0 (inv (ppglue (k s)))) (map0 pinl p) (in~ w)
+            *> pmap (transport0 (Fam x) (map0 pinl p)) (Fam-transport-glue-inv x s (in~ w))
+            *> tailB x s w p
+
+      \lemma evalC {x : Or B C} {c : C} (w : Raw x (inr c)) : transport0 (Fam x) (eval w) (idFam x) = in~ w \elim w
+        | segC st => startC st
+        | toC s w q =>
+          transport0_*>0 (Fam x) (eval w) _ (idFam x)
+            *> pmap (transport0 (Fam x) (in0 (ppglue (k s)) *>0 map0 pinr q)) (evalB w)
+            *> transport0_*>0 (Fam x) (in0 (ppglue (k s))) (map0 pinr q) (in~ w)
+            *> pmap (transport0 (Fam x) (map0 pinr q)) (Fam-transport-glue x s (in~ w))
+            *> tailC x s w q
+
+      \lemma startB {x : Or B C} {b : B} (st : Start x (inl b)) : transport0 (Fam x) (evalStart st) (idFam x) = in~ (segB st) \elim x, st
+        | inl b0, in0 p => Fam-transportB (inl b0) p (in~ (segB idp0)) *> pmap (\lam z => in~ (segB z)) (idp0_*>0 (in0 p))
+        | inr _, ()
+
+      \lemma startC {x : Or B C} {c : C} (st : Start x (inr c)) : transport0 (Fam x) (evalStart st) (idFam x) = in~ (segC st) \elim x, st
+        | inl _, ()
+        | inr c0, in0 q => Fam-transportC (inr c0) q (in~ (segC idp0)) *> pmap (\lam z => in~ (segC z)) (idp0_*>0 (in0 q))
+
+      \lemma tailB (x : Or B C) (s : S) (w : Raw x (inr (g (k s)))) {b : B} (p : f (k s) =0 b)
+        : transport0 (Fam x) (map0 pinl p) (in~ (toB s w idp0)) = in~ (toB s w p) \elim p
+        | in0 p => Fam-transportB x p _ *> pmap (\lam z => in~ (toB s w z)) (idp0_*>0 (in0 p))
+
+      \lemma tailC (x : Or B C) (s : S) (w : Raw x (inl (f (k s)))) {c : C} (q : g (k s) =0 c)
+        : transport0 (Fam x) (map0 pinr q) (in~ (toC s w idp0)) = in~ (toC s w q) \elim q
+        | in0 q => Fam-transportC x q _ *> pmap (\lam z => in~ (toC s w z)) (idp0_*>0 (in0 q))
+    }
+
+  -- | Theorem 8.7.4.
+  \func vanKampen (u v : PushoutData f g) : QEquiv {u =0 v} {VKCode u v} \cowith
+    | f => vkEncode u v
+    | ret => vkDecode u v
+    | ret_f => vkDecode-vkEncode u v
+    | f_sec => vkEncode-vkDecode u v
+
+  \lemma vkDecode-isEquiv (u v : PushoutData f g) : IsEquiv (vkDecode u v)
+    => inP (symQEquiv (vanKampen u v))
+}

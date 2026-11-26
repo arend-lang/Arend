@@ -1,0 +1,316 @@
+{- | The long exact sequence of a fibre sequence, the HoTT book, Theorem 8.4.6. -}
+
+\import Algebra.Group.GroupHom
+\import Algebra.Pointed.Exact
+\import Algebra.Pointed.PointedHom
+\import Equiv
+\import Function
+\import Homotopy.FiberSequence
+\import Homotopy.HomotopyGroup
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\lemma trunc0-fiber-exact {X Y : Pointed} (f : X ->* Y)
+  : ExactAt (PointedTrunc0-Func (fibProj f)) (PointedTrunc0-Func f)
+  => \lam t => (kernel-in-image f t,
+                \lam h => \case h \with {
+                  | inP (u,e) => transport (\lam s => Trunc0.map s f.1 = in0 base) e (image-in-kernel f u)
+                })
+  \where {
+    \lemma image-in-kernel {X Y : Pointed} (f : X ->* Y) (u : Trunc0 (PointedFib f))
+      : Trunc0.map (Trunc0.map u (fibProj f).1) f.1 = in0 base \elim u
+      | in0 w => pmap in0 w.2
+
+    \lemma kernel-in-image {X Y : Pointed} (f : X ->* Y) (t : Trunc0 X) (h : Trunc0.map t f.1 = in0 base)
+      : ∃ (u : Trunc0 (PointedFib f)) (Trunc0.map u (fibProj f).1 = t) \elim t
+      | in0 x => \case transport (\lam (Q : \Prop) => Q) (Trunc0.equality (f.1 x) base) h \with {
+        | inP p => inP (in0 ((x,p) : PointedFib f), idp)
+      }
+  }
+
+\func piHom.{u} (k : Nat) {X Y : Pointed.{u}} (f : X ->* Y)
+  : PointedHom (PointedTrunc0 (Omega^ k X)) (PointedTrunc0 (Omega^ k Y))
+  => PointedTrunc0-Func (Omega^-Func k f)
+
+\private \lemma square {A B C : \Type} {q : A -> C} (u : A -> B) (p : B -> C)
+                       (s : \Pi (a : A) -> q a = p (u a)) (t : Trunc0 A)
+  : Trunc0.map t q = Trunc0.map (Trunc0.map t u) p
+  => pmap (Trunc0.map t) (ext s) *> inv (Trunc0.map-comp t u p)
+
+\private \lemma square3 {A B C D : \Type} {q : A -> D} (u : A -> B) (p : B -> C) (r : C -> D)
+                        (s : \Pi (a : A) -> q a = r (p (u a))) (t : Trunc0 A)
+  : Trunc0.map t q = Trunc0.map (Trunc0.map (Trunc0.map t u) p) r
+  => pmap (Trunc0.map t) (ext s)
+     *> inv (Trunc0.map-comp (Trunc0.map t u) p r *> Trunc0.map-comp t u (\lam z => r (p z)))
+
+\private \lemma square-of {A B C : Pointed} {q : A ->* C} (u : A ->* B) (p : B ->* C) (s : p ->*.∘* u = q)
+  : \Pi (t : Trunc0 A) -> Trunc0.map t q.1 = Trunc0.map (Trunc0.map t u.1) p.1
+  => square u.1 p.1 (\lam a => inv (->*.happly s a))
+
+-- # The canonical fibre sequence of a pointed map
+
+\lemma pi-exact-total.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+  : ExactAt (piHom.{u} k {PointedFib f} {X} (fibProj f)) (piHom.{u} k {X} {Y} f)
+  => ExactAt-transport
+      (piHom.{u} k {PointedFib f} {X} (fibProj f)) (piHom.{u} k {X} {Y} f)
+      (PointedTrunc0-Func (omegaFibMap.{u} {X} {Y} f k))
+      (IsEquiv.isSurj (Trunc0.map-isEquiv (omegaFibMap.isEquiv.{u} {X} {Y} f k)))
+      PointedHom.id (\lam b => inP (b,idp)) (\lam p => p) PointedHom.id (\lam p => p)
+      (square-of (omegaFibMap.{u} {X} {Y} f k) (fibProj (Omega^-Func.{u} k {X} {Y} f))
+                 (omegaFib-proj.{u} {X} {Y} f k))
+      (\lam _ => idp)
+      (trunc0-fiber-exact (Omega^-Func.{u} k {X} {Y} f))
+
+\func piBoundary.{u} (k : Nat) {X Y : Pointed.{u}} (f : X ->* Y)
+  : PointedHom (PointedTrunc0 (Omega^ (suc k) Y)) (PointedTrunc0 (Omega^ k (PointedFib f)))
+  => PointedHom.compose (piHom.{u} k {Loop Y} {PointedFib f} (fibBoundary f)) (shiftInv k Y)
+  \where {
+    \func shift.{u} (k : Nat) (Z : Pointed.{u})
+      : PointedHom (PointedTrunc0 (Omega^ k (Loop Z))) (PointedTrunc0 (Omega^ (suc k) Z))
+      => PointedTrunc0-Func (omegaShift k Z)
+
+    \func shiftInv.{u} (k : Nat) (Z : Pointed.{u})
+      : PointedHom (PointedTrunc0 (Omega^ (suc k) Z)) (PointedTrunc0 (Omega^ k (Loop Z)))
+      => PointedTrunc0-Func (omegaShiftInv k Z)
+  }
+
+\lemma pi-exact-fiber.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+  : ExactAt (piBoundary k f) (piHom.{u} k {PointedFib f} {X} (fibProj f))
+  => ExactAt-transport
+      (piBoundary k f) (piHom.{u} k {PointedFib f} {X} (fibProj f))
+      (piBoundary.shiftInv k Y) (IsEquiv.isSurj (Trunc0.map-isEquiv (omegaShiftInv.isEquiv k Y)))
+      PointedHom.id (\lam b => inP (b,idp)) (\lam p => p) PointedHom.id (\lam p => p)
+      (\lam _ => idp) (\lam _ => idp)
+      (loop-exact f k)
+  \where {
+    \lemma loop-exact.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+      : ExactAt (piHom.{u} k {Loop Y} {PointedFib f} (fibBoundary f))
+                (piHom.{u} k {PointedFib f} {X} (fibProj f))
+      => ExactAt-transport
+          (piHom.{u} k {Loop Y} {PointedFib f} (fibBoundary f)) (piHom.{u} k {PointedFib f} {X} (fibProj f))
+          (PointedTrunc0-Func (gap.{u} f k))
+          (IsEquiv.isSurj (Trunc0.map-isEquiv (gap-isEquiv.{u} f k)))
+          PointedHom.id (\lam b => inP (b,idp)) (\lam p => p) PointedHom.id (\lam p => p)
+          (square-of (gap.{u} f k) (fibProj (Omega^-Func.{u} k {PointedFib f} {X} (fibProj f)))
+                     (gap-square.{u} f k))
+          (\lam _ => idp)
+          (trunc0-fiber-exact (Omega^-Func.{u} k {PointedFib f} {X} (fibProj f)))
+
+    \func gap.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+      : Omega^ k (Loop Y) ->* PointedFib (Omega^-Func k {PointedFib f} {X} (fibProj f))
+      => omegaFibMap {PointedFib f} {X} (fibProj f) k
+         ->*.∘* Omega^-Func k {Loop Y} {PointedFib (fibProj f)} (fibProjFib.inverse f)
+
+    \lemma gap-isEquiv.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat) : IsEquiv (gap f k).1
+      => IsEquiv.trans (Omega^-Func.isEquiv k {Loop Y} {PointedFib (fibProj f)} (fibProjFib.inverse f)
+                                            (inP (symQEquiv (fibProjFib.equiv f))))
+                       (omegaFibMap.isEquiv {PointedFib f} {X} (fibProj f) k)
+
+    \func gap-square.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+      : fibProj (Omega^-Func k {PointedFib f} {X} (fibProj f)) ->*.∘* gap f k
+        = Omega^-Func k {Loop Y} {PointedFib f} (fibBoundary f)
+      => ->*.compose-assoc (fibProj (Omega^-Func k {PointedFib f} {X} (fibProj f)))
+                           (omegaFibMap {PointedFib f} {X} (fibProj f) k)
+                           (Omega^-Func k {Loop Y} {PointedFib (fibProj f)} (fibProjFib.inverse f))
+         *> pmap (\lam h => h ->*.∘* Omega^-Func k {Loop Y} {PointedFib (fibProj f)} (fibProjFib.inverse f))
+                 (omegaFib-proj {PointedFib f} {X} (fibProj f) k)
+         *> inv (Omega^-Func.comp k {Loop Y} {PointedFib (fibProj f)} {PointedFib f}
+                                 (fibProj (fibProj f)) (fibProjFib.inverse f))
+         *> pmap (Omega^-Func k {Loop Y} {PointedFib f}) (fibBoundary-proj f)
+  }
+
+\lemma pi-exact-base.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+  : ExactAt (piHom.{u} (suc k) {X} {Y} f) (piBoundary k f)
+  => ExactAt-transport
+      (piHom.{u} (suc k) {X} {Y} f) (piBoundary k f)
+      (piBoundary.shiftInv k X) (IsEquiv.isSurj (Trunc0.map-isEquiv (omegaShiftInv.isEquiv k X)))
+      (piBoundary.shift k Y) (IsEquiv.isSurj (Trunc0.map-isEquiv (omegaShift.isEquiv k Y)))
+                             (IsEquiv.isInj (Trunc0.map-isEquiv (omegaShift.isEquiv k Y)))
+      PointedHom.id (\lam p => p)
+      (square3 (omegaShiftInv k X).1 (Omega^-Func.{u} k {Loop X} {Loop Y} (Loop-Func f)).1 (omegaShift k Y).1
+               (\lam c => inv (pmap (\lam (h : Omega^ k (Loop X) ->* Omega^ (suc k) Y) => h.1 ((omegaShiftInv k X).1 c))
+                                    (omegaShift.natural k f)
+                              *> pmap (Omega^-Func.{u} (suc k) {X} {Y} f).1 (omegaShiftInv.right.{u} k X c))))
+      (\lam b => inv (square3 (omegaShift k Y).1 (omegaShiftInv k Y).1
+                              (Omega^-Func.{u} k {Loop Y} {PointedFib f} (fibBoundary f)).1
+                              (\lam z => inv (pmap (Omega^-Func.{u} k {Loop Y} {PointedFib f} (fibBoundary f)).1
+                                                   (omegaShiftInv.left.{u} k Y z)))
+                              b))
+      (loop-exact f k)
+  \where {
+    \lemma loop-exact.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+      : ExactAt (piHom.{u} k {Loop X} {Loop Y} (Loop-Func f))
+                (piHom.{u} k {Loop Y} {PointedFib f} (fibBoundary f))
+      => ExactAt-transport
+          (piHom.{u} k {Loop X} {Loop Y} (Loop-Func f)) (piHom.{u} k {Loop Y} {PointedFib f} (fibBoundary f))
+          (PointedTrunc0-Func (gap.{u} f k))
+          (IsEquiv.isSurj (Trunc0.map-isEquiv (gap-isEquiv.{u} f k)))
+          PointedHom.id (\lam b => inP (b,idp)) (\lam p => p) PointedHom.id (\lam p => p)
+          (square-of (gap.{u} f k) (fibProj (Omega^-Func.{u} k {Loop Y} {PointedFib f} (fibBoundary f)))
+                     (gap-square.{u} f k))
+          (\lam _ => idp)
+          (trunc0-fiber-exact (Omega^-Func.{u} k {Loop Y} {PointedFib f} (fibBoundary f)))
+
+    \func gap.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+      : Omega^ k (Loop X) ->* PointedFib (Omega^-Func k {Loop Y} {PointedFib f} (fibBoundary f))
+      => omegaFibMap {Loop Y} {PointedFib f} (fibBoundary f) k
+         ->*.∘* (Omega^-Func k {Loop X} {PointedFib (fibBoundary f)} (fiberBoundaryMap f)
+                 ->*.∘* Omega^-Func k {Loop X} {Loop X} (loopInv X))
+
+    \lemma gap-isEquiv.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat) : IsEquiv (gap f k).1
+      => IsEquiv.trans
+          (IsEquiv.trans (Omega^-Func.isEquiv k {Loop X} {Loop X} (loopInv X)
+                                              (inP (\new QEquiv { | ret => inv | ret_f => inv_inv | f_sec => inv_inv })))
+                         (Omega^-Func.isEquiv k {Loop X} {PointedFib (fibBoundary f)} (fiberBoundaryMap f)
+                                              (PointedEquiv.map-isEquiv {fiberBoundaryEquiv f})))
+          (omegaFibMap.isEquiv {Loop Y} {PointedFib f} (fibBoundary f) k)
+
+    \func gap-square.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+      : fibProj (Omega^-Func k {Loop Y} {PointedFib f} (fibBoundary f)) ->*.∘* gap f k
+        = Omega^-Func k {Loop X} {Loop Y} (Loop-Func f)
+      => ->*.compose-assoc (fibProj (Omega^-Func k {Loop Y} {PointedFib f} (fibBoundary f)))
+                           (omegaFibMap {Loop Y} {PointedFib f} (fibBoundary f) k)
+                           (Omega^-Func k {Loop X} {PointedFib (fibBoundary f)} (fiberBoundaryMap f)
+                            ->*.∘* Omega^-Func k {Loop X} {Loop X} (loopInv X))
+         *> pmap (\lam h => h ->*.∘* (Omega^-Func k {Loop X} {PointedFib (fibBoundary f)} (fiberBoundaryMap f)
+                                      ->*.∘* Omega^-Func k {Loop X} {Loop X} (loopInv X)))
+                 (omegaFib-proj {Loop Y} {PointedFib f} (fibBoundary f) k)
+         *> pmap (Omega^-Func k {PointedFib (fibBoundary f)} {Loop Y} (fibProj (fibBoundary f)) ->*.∘*)
+                 (inv (Omega^-Func.comp k {Loop X} {Loop X} {PointedFib (fibBoundary f)}
+                                        (fiberBoundaryMap f) (loopInv X)))
+         *> inv (Omega^-Func.comp k {Loop X} {PointedFib (fibBoundary f)} {Loop Y}
+                                 (fibProj (fibBoundary f)) (fiberBoundaryMap f ->*.∘* loopInv X))
+         *> pmap (Omega^-Func k {Loop X} {Loop Y}) (fibBoundary-third f)
+  }
+
+-- # An arbitrary fibre sequence
+
+\func piBoundarySeq.{u} (k : Nat) {F T B : Pointed.{u}} (S : FiberSequence F T B)
+  : PointedHom (PointedTrunc0 (Omega^ (suc k) B)) (PointedTrunc0 (Omega^ k F))
+  => PointedHom.compose (piHom.{u} k {PointedFib S.proj} {F} (gapInverse S)) (piBoundary k S.proj)
+  \where
+    \lemma omega-isEquiv.{u} {F T B : Pointed.{u}} (S : FiberSequence F T B) (k : Nat)
+      : IsEquiv (Omega^-Func.{u} k {PointedFib S.proj} {F} (gapInverse S)).1
+      => Omega^-Func.isEquiv k {PointedFib S.proj} {F} (gapInverse S)
+                             (PointedEquiv.map-isEquiv {PointedEquiv.inverse (fiberGapEquiv S)})
+
+\lemma seq-exact-total.{u} {F T B : Pointed.{u}} (S : FiberSequence F T B) (k : Nat)
+  : ExactAt (piHom.{u} k {F} {T} S.incl) (piHom.{u} k {T} {B} S.proj)
+  => ExactAt-transport
+      (piHom.{u} k {F} {T} S.incl) (piHom.{u} k {T} {B} S.proj)
+      (PointedTrunc0-Func (Omega^-Func.{u} k {F} {PointedFib S.proj} (PointedShortSeq.gap S)))
+      (IsEquiv.isSurj (Trunc0.map-isEquiv
+        (Omega^-Func.isEquiv k {F} {PointedFib S.proj} (PointedShortSeq.gap S) S.gap-isEquiv)))
+      PointedHom.id (\lam b => inP (b,idp)) (\lam p => p) PointedHom.id (\lam p => p)
+      (square-of (Omega^-Func.{u} k {F} {PointedFib S.proj} (PointedShortSeq.gap S))
+                 (Omega^-Func.{u} k {PointedFib S.proj} {T} (fibProj S.proj))
+                 (inv (Omega^-Func.comp k {F} {PointedFib S.proj} {T}
+                                        (fibProj S.proj) (PointedShortSeq.gap S))
+                  *> pmap (Omega^-Func.{u} k {F} {T}) (gap-incl S)))
+      (\lam _ => idp)
+      (pi-exact-total S.proj k)
+
+\lemma seq-exact-fiber.{u} {F T B : Pointed.{u}} (S : FiberSequence F T B) (k : Nat)
+  : ExactAt (piBoundarySeq k S) (piHom.{u} k {F} {T} S.incl)
+  => ExactAt-transport
+      (piBoundarySeq k S) (piHom.{u} k {F} {T} S.incl)
+      PointedHom.id (\lam b => inP (b,idp))
+      (PointedTrunc0-Func (Omega^-Func.{u} k {PointedFib S.proj} {F} (gapInverse S)))
+      (IsEquiv.isSurj (Trunc0.map-isEquiv (piBoundarySeq.omega-isEquiv S k)))
+      (IsEquiv.isInj (Trunc0.map-isEquiv (piBoundarySeq.omega-isEquiv S k)))
+      PointedHom.id (\lam p => p)
+      (\lam _ => idp)
+      (\lam b => inv (square-of (Omega^-Func.{u} k {PointedFib S.proj} {F} (gapInverse S))
+                                (Omega^-Func.{u} k {F} {T} S.incl)
+                                (inv (Omega^-Func.comp k {PointedFib S.proj} {F} {T}
+                                                       S.incl (gapInverse S))
+                                 *> pmap (Omega^-Func.{u} k {PointedFib S.proj} {T}) (gapInverse-incl S))
+                                b))
+      (pi-exact-fiber S.proj k)
+
+\lemma seq-exact-base.{u} {F T B : Pointed.{u}} (S : FiberSequence F T B) (k : Nat)
+  : ExactAt (piHom.{u} (suc k) {T} {B} S.proj) (piBoundarySeq k S)
+  => ExactAt-transport
+      (piHom.{u} (suc k) {T} {B} S.proj) (piBoundarySeq k S)
+      PointedHom.id (\lam b => inP (b,idp))
+      PointedHom.id (\lam b => inP (b,idp)) (\lam p => p)
+      (PointedTrunc0-Func (Omega^-Func.{u} k {PointedFib S.proj} {F} (gapInverse S)))
+      (IsEquiv.isInj (Trunc0.map-isEquiv (piBoundarySeq.omega-isEquiv S k)))
+      (\lam _ => idp) (\lam _ => idp)
+      (pi-exact-base S.proj k)
+
+-- | In positive degrees the connecting map of a fibre sequence is a group homomorphism.
+\func piBoundaryGroup.{u} (n : Nat) {F T B : Pointed.{u}} (S : FiberSequence F T B)
+  : GroupHom (PiGroup (suc n) B) (PiGroup n F) \cowith
+  | func x => piBoundarySeq (suc n) S x
+  | func-* {x} {y} => \case \elim x, \elim y \with {
+    | in0 p, in0 q => pmap in0 (
+        pmap (\lam z => (Omega^-Func (suc n) {PointedFib S.proj} {F} (gapInverse S)).1
+                          ((Omega^-Func (suc n) {Loop B} {PointedFib S.proj} (fibBoundary S.proj)).1 z))
+             (omegaShiftInv.concat n B p q)
+        *> pmap (Omega^-Func (suc n) {PointedFib S.proj} {F} (gapInverse S)).1
+                (Loop-Func_*> (Omega^-Func n {Loop B} {PointedFib S.proj} (fibBoundary S.proj)) _ _)
+        *> Loop-Func_*> (Omega^-Func n {PointedFib S.proj} {F} (gapInverse S)) _ _)
+  }
+
+\lemma piGroup-exact-boundary.{u} (n : Nat) {F T B : Pointed.{u}} (S : FiberSequence F T B)
+  : ExactAt (piGroupMap (suc n) {T} {B} S.proj) (piBoundaryGroup n S)
+  => ExactAt-transport
+      (piGroupMap (suc n) {T} {B} S.proj) (piBoundaryGroup n S)
+      (piGroup-exact.counit (suc n) T) (\lam b => inP (b,idp))
+      (piGroup-exact.unit (suc n) B) (\lam b => inP (b,idp)) (\lam p => p)
+      (piGroup-exact.unit n F) (\lam p => p)
+      (\lam _ => idp) (\lam _ => idp)
+      (seq-exact-base S (suc n))
+
+\lemma piGroup-exact-fiber.{u} (n : Nat) {F T B : Pointed.{u}} (S : FiberSequence F T B)
+  : ExactAt (piBoundaryGroup n S) (piGroupMap n {F} {T} S.incl)
+  => ExactAt-transport
+      (piBoundaryGroup n S) (piGroupMap n {F} {T} S.incl)
+      (piGroup-exact.counit (suc n) B) (\lam b => inP (b,idp))
+      (piGroup-exact.unit n F) (\lam b => inP (b,idp)) (\lam p => p)
+      (piGroup-exact.unit n T) (\lam p => p)
+      (\lam _ => idp) (\lam _ => idp)
+      (seq-exact-fiber S (suc n))
+
+\lemma piGroup-exact.{u} (n : Nat) {A B C : Pointed.{u}} (g1 : A ->* B) (g2 : B ->* C)
+                         (e : ExactAt (piHom.{u} (suc n) {A} {B} g1) (piHom.{u} (suc n) {B} {C} g2))
+  : ExactAt (piGroupMap n {A} {B} g1) (piGroupMap n {B} {C} g2)
+  => ExactAt-transport
+      (piGroupMap n {A} {B} g1) (piGroupMap n {B} {C} g2)
+      (counit n A) (\lam b => inP (b,idp))
+      (unit n B) (\lam b => inP (b,idp)) (\lam p => p)
+      (unit n C) (\lam p => p)
+      (\lam _ => idp) (\lam _ => idp) e
+  \where {
+    \func unit.{u} (n : Nat) (X : Pointed.{u})
+      : PointedHom (PointedTrunc0 (Omega^ (suc n) X)) (PiGroup n X) \cowith
+      | func x => x
+      | func-ide => idp
+
+    \func counit.{u} (n : Nat) (X : Pointed.{u})
+      : PointedHom (PiGroup n X) (PointedTrunc0 (Omega^ (suc n) X)) \cowith
+      | func x => x
+      | func-ide => idp
+  }
+
+-- # The fibre tower as a flat exact sequence
+
+\func fiberLongExactSet.{u} {X Y : Pointed.{u}} (f : X ->* Y) : PointedExactSequence \cowith
+  | Obj n => PointedTrunc0 (fiberTowerObj.{u} f n)
+  | seqMap => hom f
+  | seqExact => exact f
+  \where {
+    \func hom.{u} {X Y : Pointed.{u}} (f : X ->* Y) (n : Nat)
+      : PointedHom (PointedTrunc0 (fiberTowerObj.{u} f (suc n))) (PointedTrunc0 (fiberTowerObj.{u} f n))
+      => PointedTrunc0-Func (fiberTowerArrow.{u} f n)
+
+    \lemma exact.{u} {X Y : Pointed.{u}} (f : X ->* Y) (n : Nat)
+      : ExactAt (hom f (suc n)) (hom f n)
+      => trunc0-fiber-exact (fiberTowerArrow.{u} f n)
+  }

@@ -1,0 +1,52 @@
+{- | The Hopf fibration as a pointed fibre sequence, the HoTT book, Section 8.5. -}
+
+\import Equiv
+\import Equiv.Univalence
+\import Homotopy.FiberSequence
+\import Homotopy.Hopf
+\import Homotopy.Join
+\import Homotopy.Pointed
+\import Homotopy.Pushout
+\import Homotopy.Sphere
+\import Homotopy.Suspension
+\import Paths
+
+\func hopfTotal : Pointed => totalPointed {Sphere.pointed 2} hopfS2 north
+
+\func hopfTotalEquivS3 : PointedEquiv hopfTotal (Sphere.pointed 3) \cowith
+  | map => (map, map-north)
+  | map-isEquiv => transport-isEquiv hopfS2.total-equiv
+  \where {
+    \func map (t : \Sigma (x : Sphere 2) (hopfS2 x)) : Sphere 3
+      => transport {\Type0} (\lam T => T) hopfS2.total-equiv t
+
+    \func map-north : map (north, north) = north
+      => transport_*> (\lam (T : \Type0) => T) _ _ _
+         *> pmap (transport {\Type0} (\lam T => T) (Join_Sphere (Sphere 1) 1)) (hopf-total-jinl north)
+         *> Join_Sphere.north-comp (Sphere 1) 1
+
+    \private \func hopf-total-jinl.{u} {A : HSpaceConn.{u}} (a : A)
+      : transport {\Type u} (\lam T => T) (hopf.total-equiv {A}) ((north, a) : \Sigma (x : Susp A) (hopf x)) = jinl a
+      => transport_*> (\lam (T : \Type u) => T) _ _ _ *> pmap hopf.total-equiv.totalJoin (flat-inv a)
+      \where
+        \func flat-inv.{u} {A : HSpaceConn.{u}} (a : A)
+          : transport {\Type u} (\lam T => T) (inv (PushoutData.flattening (hopf {A})))
+          ((north, a) : \Sigma (x : Susp A) (hopf x)) = pinl ((), a)
+          => inv (pmap (transport {\Type u} (\lam T => T) (inv (PushoutData.flattening (hopf {A}))))
+            (PushoutData.flattening.pinl-comp () a))
+            *> transport_inv_id (\lam (T : \Type u) => T) (PushoutData.flattening (hopf {A})) (pinl ((), a))
+  }
+
+\func hopfFiberSequence : FiberSequence (Sphere.pointed 1) (Sphere.pointed 3) (Sphere.pointed 2)
+  => fiberSequence-total hopfTotalFiberSequence (PointedEquiv.inverse hopfTotalEquivS3)
+  \where {
+    \func hopfTotalFiberSequence : FiberSequence (Sphere.pointed 1) hopfTotal (Sphere.pointed 2)
+      => familyFiberSequence {Sphere.pointed 2} hopfS2 north
+      \where
+        -- | The point chosen for the total space agrees with the one inherited from {Sphere1_HSpace}.
+        \func basepoint
+          : ((north, base {Sphere1_HSpace}) : \Sigma (x : Sphere 2) (hopfS2 x)) = (north, north)
+          => pmap (\lam (a : Sphere 1) => ((north, a) : \Sigma (x : Sphere 2) (hopfS2 x))) sphereHSpace-base-north
+  }
+
+\func hopfMap : Sphere.pointed 3 ->* Sphere.pointed 2 => PointedShortSeq.proj {hopfFiberSequence}

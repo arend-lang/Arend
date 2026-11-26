@@ -1,5 +1,6 @@
 \import Equiv
 \import Equiv.Fiber
+\import Equiv.Sigma
 \import Function
 \import Homotopy.HLevel
 \import Homotopy.Fibration
@@ -29,6 +30,27 @@
   \lemma contr-equiv.{u} {A B C : \Type u} (f : A -> B) (p : \Pi (g : A -> C) (b : B) -> Contr (\Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)))
     : IsEquiv {B -> C} {A -> C} (-o f)
     => contrFibers=>IsEquiv (\lam g => rewrite (path (QEquiv_= (ext-equiv f g))) (HLevels_-2-pi (\lam b => \Sigma (c : C) (\Pi (a : A) -> f a = b -> g a = c)) {0} (p g)))
+
+  \func dext {A B : \Type} (P : B -> \Type) (f : A -> B) (g : \Pi (a : A) -> P (f a))
+    => Fib {\Pi (b : B) -> P b} {\Pi (a : A) -> P (f a)} (\lam s a => s (f a)) g
+
+  \func dext-equiv {A B : \Type} (P : B -> \Type) (f : A -> B) (g : \Pi (a : A) -> P (f a))
+    : QEquiv {dext P f g} {\Pi (b : B) -> \Sigma (u : P b) (\Pi (z : Fib f b) -> u = transport P z.2 (g z.1))} \cowith
+    | f p b => (p.1 b, \lam z => inv (pmapd p.1 z.2) <* pmap (transport P z.2) (path ((p.2 @ __) z.1)))
+    | ret K => (\lam b => (K b).1, path (\lam i a => (K (f a)).2 (a,idp) @ i))
+    | ret_f _ => idp
+    | f_sec K => path (\lam i b => ((K b).1, \lam z => lem P f g K b z.1 z.2 @ i))
+    \where
+      \func lem {A B : \Type} (P : B -> \Type) (f : A -> B) (g : \Pi (a : A) -> P (f a))
+                (K : \Pi (b : B) -> \Sigma (u : P b) (\Pi (z : Fib f b) -> u = transport P z.2 (g z.1)))
+                (b : B) (a : A) (q : f a = b)
+        : inv (pmapd (\lam b => (K b).1) q) <* pmap (transport P q) ((K (f a)).2 (a,idp)) = (K b).2 (a,q) \elim b, q
+        | _, idp => idp
+
+  \lemma dcontr-equiv.{u} {A B : \Type u} (P : B -> \Type u) (f : A -> B)
+                          (p : \Pi (g : \Pi (a : A) -> P (f a)) (b : B) -> Contr (\Sigma (u : P b) (\Pi (z : Fib f b) -> u = transport P z.2 (g z.1))))
+    : IsEquiv {\Pi (b : B) -> P b} {\Pi (a : A) -> P (f a)} (\lam s a => s (f a))
+    => contrFibers=>IsEquiv (\lam g => Contr.Contr_QEquiv (symQEquiv (dext-equiv P f g)) (pi-Contr _ (p g)))
 }
 
 \lemma connected_isLocalEquiv.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B) (conn : isConnectedMap f) : IsLocalEquiv f
@@ -42,6 +64,13 @@
             }
        \in rewriteI (path (\lam i => \Sigma (c : C) (QEquiv_= (p c) i)))
                     (IsEquiv=>contrFibers (propExt.dir (nullTypeUniverse.localDesc (Fib f b) C) (conn b C)) G))
+
+-- | The HoTT book, Lemma 7.5.7. The dependent strengthening of {connected_isLocalEquiv}.
+\lemma connected_depEquiv.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B) (conn : isConnectedMap f) (P : B -> Local.{u})
+  : IsEquiv {\Pi (b : B) -> P b} {\Pi (a : A) -> P (f a)} (\lam s a => s (f a))
+  => Extension.dcontr-equiv (\lam b => P b) f \lam g b =>
+      Contr.Contr_QEquiv (sigma-right \lam u => piEquiv (\lam _ => P b) (\lam _ => u) (\lam z => transport (\lam b' => P b') z.2 (g z.1)))
+                         (IsEquiv=>contrFibers (propExt.dir (nullTypeUniverse.localDesc (Fib f b) (P b)) (conn b (P b))) _)
 
 -- | A map between local types is a local equivalence if and only if it is an equivalence
 \lemma localTypesEquiv.{u} {U : Universe.{u}} {A B : Local.{u}} (f : A -> B) : IsLocalEquiv f = IsEquiv f

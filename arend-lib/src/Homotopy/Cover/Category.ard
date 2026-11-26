@@ -1,0 +1,95 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.EquivariantMap
+\import Algebra.Group.GSet.GSetCat
+\import Algebra.Monoid
+\import Category
+\import Category.Adjoint
+\import Category.Functor
+\import Equiv
+\import Homotopy.Connectivity
+\import Homotopy.Cover.Associated
+\import Homotopy.Cover.Basic
+\import Homotopy.Cover.Classification
+\import Homotopy.Cover.Monodromy
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+
+\open Associated (trace, trace-rel, transport_trace)
+
+\func coverCatEquiv.{u} (A : Pointed.{u}) (connected : isNConnectedType 1 A)
+  : CatEquiv (CoverCat A) (GSetCategory (PiGroup 0 A)) \cowith
+  | LAdj => Monodromy.functor A
+  | RAdj => Associated.functor A
+  | eta => NatTrans.iso-inv {evalCoverNat {A}} (\lam {C} => evalCoverIso connected C)
+  | epsilon => evalGSetNat
+  | eta_epsilon-left {M} => path (\lam i {a} z => (evalGSet_evalCover M (IsEquiv.ret (evalCover.isEquiv connected (Associated M) a) z)
+                                                 *> IsEquiv.f_ret (evalCover.isEquiv connected (Associated M) a)) @ i)
+  | eta_epsilon-right {C} => exts \lam m => evalGSet_evalCover-base C (IsEquiv.ret (evalCover.isEquiv connected C base) m)
+                                            *> IsEquiv.f_ret (evalCover.isEquiv connected C base)
+  | eta-iso {C} => Iso.reverse {evalCoverIso connected C}
+  | epsilon-iso {M} => evalGSet.iso M
+  \where {
+    \func evalCoverNat.{u} {A : Pointed.{u}} : NatTrans (Comp (Associated.functor A) (Monodromy.functor A)) Id \cowith
+      | trans C {a} => evalCover C a
+      | natural F => path (\lam i z => evalCover-natural F z @ i)
+
+    \lemma evalCover-natural.{u} {A : Pointed.{u}} {C D : Cover A} (F : CoverHom C D) {a : A} (z : Associated (Monodromy C) a)
+      : evalCover D a (Associated.map (Monodromy.map F) z) = F (evalCover C a z) \elim z
+      | in~ (m, p) => inv (Monodromy.transport0-natural F p m)
+
+    \func evalCoverIso.{u} {A : Pointed.{u}} (connected : isNConnectedType 1 A) (C : Cover A)
+      : Iso {CoverCat A} (evalCoverNat.trans C) \cowith
+      | hinv {a} => IsEquiv.ret (evalCover.isEquiv connected C a)
+      | hinv_f => path (\lam i {a} z => IsEquiv.ret_f (evalCover.isEquiv connected C a) {z} @ i)
+      | f_hinv => path (\lam i {a} z => IsEquiv.f_ret (evalCover.isEquiv connected C a) {z} @ i)
+
+    \func evalGSetNat.{u} {A : Pointed.{u}} : NatTrans (Comp (Monodromy.functor A) (Associated.functor A)) Id \cowith
+      | trans => evalGSet.map
+      | natural t => exts (evalGSet-natural t)
+
+    \lemma evalGSet-natural.{u} {A : Pointed.{u}} {M N : GSet.{u} (PiGroup 0 A)} (t : EquivariantMap M N) (z : Associated M base)
+      : evalGSet N (Associated.map t z) = t (evalGSet M z) \elim z
+      | in~ (m, g) => inv func-**
+
+    \lemma evalGSet_evalCover.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) {a : A} (w : Associated (Monodromy (Associated M)) a)
+      : Associated.map (evalGSet.map M) w = evalCover (Associated M) a w \elim w
+      | in~ (in~ (m, g), in0 p) => trace-rel m g (in0 p) *> inv (transport_trace p m g)
+
+    \lemma evalGSet_evalCover-base.{u} {A : Pointed.{u}} (C : Cover A) (w : Associated (Monodromy C) base)
+      : evalGSet (Monodromy C) w = evalCover C base w \elim w
+      | in~ (m, g) => pmap (transport0 C __ m) (evalCover.inv0-inv0 g)
+  }
+
+\func restrictGSet {H G : Group} (phi : GroupHom H G) (M : GSet G) : GSet H \cowith
+  | E => M
+  | ** h m => phi h ** m
+  | **_ide => pmap (`** _) phi.func-ide *> **_ide
+  | **-assoc => pmap (`** _) phi.func-* *> **-assoc
+
+\func basepointChange.{u} {A : \Type u} (C : Cover A) {a0 a1 : A} (q : a0 = a1)
+  : EquivariantMap (Monodromy {Pointed.make a0} C) (restrictGSet (PiGroup_basepoint.hom 0 q) (Monodromy {Pointed.make a1} C)) \cowith
+  | func => transport C q
+  | func-** {m} {g} => lem C q g m
+  \where
+    \lemma lem.{u} {A : \Type u} (C : Cover A) {a0 a1 : A} (q : a0 = a1) (g : a0 =0 a0) (m : C a0)
+      : transport C q (transport0 C (inv0 g) m) = transport0 C (inv0 (PiGroup_basepoint.act 1 q g)) (transport C q m) \elim a1, q, g
+      | _, idp, in0 p => pmap (\lam r => transport C (inv r) m) (inv (idp_*> p))
+
+\func pullbackMonodromy.{u} {X A : Pointed.{u}} (f : X ->* A) (C : Cover A)
+  : EquivariantMap (Monodromy (Cover.pullback f.1 C)) (restrictGSet (piGroupMap 0 f) (Monodromy C)) \cowith
+  | func => transport C f.2
+  | func-** {m} {g} => lem C f.1 f.2 g m
+  \where
+    \lemma lem.{u} {X : Pointed.{u}} {E : \Type u} (C : Cover E) (f1 : X -> E) {y : E} (f2 : f1 base = y) (g : base {X} =0 base)
+               (m : C (f1 base))
+      : transport C f2 (transport0 (\lam x => C (f1 x)) (inv0 g) m) = transport0 C (inv0 (Trunc0.map g (loopMap f1 f2))) (transport C f2 m)
+      \elim y, f2, g
+      | _, idp, in0 p => inv (transport_pmap C f1 (inv p) m) *> pmap (\lam r => transport C r m) (pmap_inv-comm f1 p *> pmap inv (inv (idp_*> _)))

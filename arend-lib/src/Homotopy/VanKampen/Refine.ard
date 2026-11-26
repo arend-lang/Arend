@@ -1,0 +1,69 @@
+-- | Changing the representatives of the overlap.
+
+\import Data.Or
+\import Equiv
+\import Function
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.VanKampen.Code
+\import Homotopy.VanKampen.Groupoid
+\import Homotopy.VanKampen.Words
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open VKSpan.Raw
+\open VKSpan.Rel
+
+\func restrictVK.{u} (V : VKSpan.{u}) {S : \Type u} (r : S -> V.S) : VKSpan.{u} \cowith
+  | A => V.A
+  | B => V.B
+  | C => V.C
+  | S => S
+  | f => V.f
+  | g => V.g
+  | k s => V.k (r s)
+
+\func relabel.{u} {V : VKSpan.{u}} {S : \Type u} (r : S -> V.S) {x y : Or V.B V.C} (w : VKSpan.Raw {restrictVK V r} x y) : V.Raw x y \elim y, w
+  | inl _, segB st => segB st
+  | inl _, toB s w p => toB (r s) (relabel r w) p
+  | inr _, segC st => segC st
+  | inr _, toC s w q => toC (r s) (relabel r w) q
+
+\func relabelQ.{u} {V : VKSpan.{u}} {S : \Type u} (r : S -> V.S) {x y : Or V.B V.C} (c : VKSpan.Code {restrictVK V r} x y) : V.Code x y \elim c
+  | in~ w => in~ (relabel r w)
+  | ~-equiv _ _ e => ~-pequiv (rel e)
+  \where {
+    \func rel {x y : Or V.B V.C} {w w' : VKSpan.Raw {restrictVK V r} x y} (e : VKSpan.Rel {restrictVK V r} w w') : V.Rel (relabel r w) (relabel r w') \elim y, e
+      | inl _, cancelB s w0 p e e' => cancelB (r s) (relabel r w0) p (pmap (relabel r) e) (inv (appendB w0 p) *> pmap (relabel r) e')
+      | inl _, slideB s t a w0 p e e' => slideB (r s) (r t) a (relabel r w0) p (pmap (toB (r t) __ p) (inv (appendC w0 _)) *> pmap (relabel r) e) (pmap (relabel r) e')
+      | inl _, congB s e0 p e e' => congB (r s) (rel e0) p (pmap (relabel r) e) (pmap (relabel r) e')
+      | inr _, cancelC s w0 q e e' => cancelC (r s) (relabel r w0) q (pmap (relabel r) e) (inv (appendC w0 q) *> pmap (relabel r) e')
+      | inr _, slideC s t a w0 q e e' => slideC (r s) (r t) a (relabel r w0) q (pmap (toC (r t) __ q) (inv (appendB w0 _)) *> pmap (relabel r) e) (pmap (relabel r) e')
+      | inr _, congC s e0 q e e' => congC (r s) (rel e0) q (pmap (relabel r) e) (pmap (relabel r) e')
+
+    \func appendB {x : Or V.B V.C} {b b' : V.B} (w : VKSpan.Raw {restrictVK V r} x (inl b)) (p : b =0 b')
+      : relabel r (VKSpan.appendB {restrictVK V r} w p) = V.appendB (relabel r w) p \elim w
+      | segB _ => idp
+      | toB _ _ _ => idp
+
+    \func appendC {x : Or V.B V.C} {c c' : V.C} (w : VKSpan.Raw {restrictVK V r} x (inr c)) (q : c =0 c')
+      : relabel r (VKSpan.appendC {restrictVK V r} w q) = V.appendC (relabel r w) q \elim w
+      | segC _ => idp
+      | toC _ _ _ => idp
+  }
+
+\lemma relabelQ-evalQ.{u} {V : VKSpan.{u}} {S : \Type u} (r : S -> V.S) {x y : Or V.B V.C} (c : VKSpan.Code {restrictVK V r} x y)
+  : V.evalQ (relabelQ r c) = VKSpan.evalQ {restrictVK V r} c \elim c
+  | in~ w => eval w
+  \where
+    \lemma eval {x y : Or V.B V.C} (w : VKSpan.Raw {restrictVK V r} x y) : V.eval (relabel r w) = VKSpan.eval {restrictVK V r} w \elim y, w
+      | inl _, segB _ => idp
+      | inl _, toB _ w _ => pmap (__ *>0 _) (eval w)
+      | inr _, segC _ => idp
+      | inr _, toC _ w _ => pmap (__ *>0 _) (eval w)
+
+\lemma relabelQ-isEquiv.{u} (V : VKCover.{u}) {S : \Type u} (r : S -> V.S) (cover : IsSurj (\lam s => V.k (r s))) {x y : Or V.B V.C}
+  : IsEquiv (relabelQ {V} r {x} {y})
+  => IsEquiv.leftFactor (evalQ-isEquiv {V}) (transportInv IsEquiv (ext (relabelQ-evalQ r))
+       (evalQ-isEquiv {\new VKCover { | VKSpan => restrictVK V r | cover => cover }}))

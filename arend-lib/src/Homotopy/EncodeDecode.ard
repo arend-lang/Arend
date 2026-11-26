@@ -1,0 +1,75 @@
+{- | Encode–decode (HoTT book 8.9) -}
+
+\import Equiv
+\import Homotopy.HLevel
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Homotopy.Truncation
+\import Logic
+\import Paths
+\import Set
+
+\open loopEncodeDecode (encode, encode_decode)
+
+\func loopEncodeDecode {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0)
+                       (decode : \Pi (x : A) -> C x -> a0 = x) (decodeBase : decode a0 c0 = idp)
+                       (decode_encode : \Pi (c : C a0) -> encode C c0 (decode a0 c) = c)
+  : QEquiv (encode C c0 {a0}) \cowith
+  | ret => decode a0
+  | ret_f => encode_decode C c0 (\lam _ p => p) decode decodeBase
+  | f_sec => decode_encode
+  \where {
+    \func encode {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0) {x : A} (p : a0 = x) : C x
+      => transport C p c0
+
+    \func encode_decode {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0) {T : A -> \Type}
+                        (eta : \Pi (x : A) -> a0 = x -> T x)
+                        (decode : \Pi (x : A) -> C x -> T x) (decodeBase : decode a0 c0 = eta a0 idp)
+                        {x : A} (p : a0 = x)
+      : decode x (encode C c0 p) = eta x p \elim p
+      | idp => decodeBase
+
+    \func pointed {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0)
+                  (decode : \Pi (x : A) -> C x -> a0 = x) (decodeBase : decode a0 c0 = idp)
+                  (decode_encode : \Pi (c : C a0) -> encode C c0 (decode a0 c) = c)
+      : PointedEquiv (Loop (Pointed.make a0)) (Pointed.make c0) \cowith
+      | map => (encode C c0, idp)
+      | map-isEquiv => inP (loopEncodeDecode C c0 decode decodeBase decode_encode)
+  }
+
+\func pathEncodeDecode {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0)
+                       (decode : \Pi (x : A) -> C x -> a0 = x) (decodeBase : decode a0 c0 = idp)
+                       (decode_encode : \Pi (x : A) (c : C x) -> encode C c0 (decode x c) = c)
+                       (x : A)
+  : QEquiv (encode C c0 {x}) \cowith
+  | ret => decode x
+  | ret_f => encode_decode C c0 (\lam _ p => p) decode decodeBase
+  | f_sec => decode_encode x
+
+\func truncLoopEncodeDecode.{u} {A : \Type u} {a0 : A} (n : Nat) (C : A -> \Type u)
+                                (Cl : \Pi (x : A) -> C x ofHLevel_-1+ n) (c0 : C a0)
+                                (decode : \Pi (x : A) -> C x -> Trunc_-1+ n (a0 = x)) (decodeBase : decode a0 c0 = inT idp)
+                                (decode_encode : \Pi (c : C a0) -> truncEncode n C Cl c0 (decode a0 c) = c)
+  : QEquiv (truncEncode n C Cl c0 {a0}) \cowith
+  | ret => decode a0
+  | ret_f => Trunc_-1+.elim (\lam t => \new Truncated_-1+ n (decode a0 (truncEncode n C Cl c0 t) = t)
+                                                            (HLevel_-1_suc (isTruncated {Trunc_-1+.level n (a0 = a0)}) _ t))
+                            (encode_decode C c0 (\lam _ => inT) decode decodeBase)
+  | f_sec => decode_encode
+  \where
+    \func truncEncode.{u} {A : \Type} {a0 : A} (n : Nat) (C : A -> \Type u) (Cl : \Pi (x : A) -> C x ofHLevel_-1+ n)
+                          (c0 : C a0) {x : A} (t : Trunc_-1+ n (a0 = x)) : C x
+      => Trunc_-1+.elim (\lam _ => \new Truncated_-1+ n (C x) (Cl x)) (encode C c0) t
+
+\func trunc0LoopEncodeDecode.{u} {A : \Type} {a0 : A} (C : A -> \Set u) (c0 : C a0)
+                                 (decode : \Pi (x : A) -> C x -> Trunc0 (a0 = x)) (decodeBase : decode a0 c0 = in0 idp)
+                                 (decode_encode : \Pi (c : C a0) -> trunc0Encode C c0 (decode a0 c) = c)
+  : QEquiv (trunc0Encode C c0 {a0}) \cowith
+  | ret => decode a0
+  | ret_f (t : Trunc0 (a0 = a0)) : decode a0 (trunc0Encode C c0 t) = t \with {
+    | in0 p => encode_decode C c0 (\lam _ => in0) decode decodeBase p
+  }
+  | f_sec => decode_encode
+  \where
+    \func trunc0Encode.{u} {A : \Type} {a0 : A} (C : A -> \Set u) (c0 : C a0) {x : A} (t : Trunc0 (a0 = x)) : C x \elim t
+      | in0 p => encode C c0 p

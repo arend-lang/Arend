@@ -28,6 +28,15 @@
       => \lam a a' => isProp.equiv (pmapIsEquiv e) (As _ _)
   }
 
+\func isGpd (A : \Type) => \Pi (a a' : A) (p q : a = a') (s t : p = q) -> s = t
+  \where {
+    \use \level levelProp {A : \Type} (e e' : isGpd A) : e = e'
+      => path \lam i a a' => isSet.levelProp (e a a') (e' a a') i
+
+    \lemma equiv {A B : \Type} {f : A -> B} (e : IsEquiv f) (As : isGpd B) : isGpd A
+      => \lam a a' => isSet.equiv (pmapIsEquiv e) (As _ _)
+  }
+
 -- | hLevels are closed under pi-types
 \func pi-isProp {A : \Cat} (B : A -> \Cat) (p : \Pi (a : A) -> isProp (B a)) : isProp (\Pi (a : A) -> B a)
   => \lam f f' => path \lam i a => p a (f a) (f' a) i

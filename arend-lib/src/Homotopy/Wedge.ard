@@ -1,0 +1,147 @@
+{- | The wedge of two pointed types and the wedge extension principle, the HoTT book, Lemma 8.6.2. -}
+
+\import Equiv
+\import Equiv.Univalence
+\import Homotopy.Connectivity
+\import Homotopy.Fibration
+\import Homotopy.Join
+\import Homotopy.Localization.Equiv
+\import Homotopy.Localization.Truncation
+\import Homotopy.Localization.Universe
+\import Homotopy.Pointed
+\import Homotopy.Pushout
+\import Logic
+\import Paths
+
+\open PushoutData (ppglue, rec, drec, congr, flattening)
+
+\func Wedge.{l} (A B : Pointed.{l}) : \Type l
+  => PushoutData {\Sigma} {A} {B} (\lam _ => base {A}) (\lam _ => base {B})
+
+\func wedgeToProduct.{l} (A B : Pointed.{l}) (z : Wedge A B) : \Sigma A B
+  => rec (\lam a => (a, base {B})) (\lam b => (base {A}, b)) (\lam _ => idp) z
+
+-- | The fibres of the map from the wedge to the product are joins of path spaces.
+\func wedgeToProduct-fiberEquiv.{l} (A B : Pointed.{l}) (a : A) (b : B)
+  : QEquiv {Fib (wedgeToProduct A B) (a, b)} {Join (base {A} = a) (base {B} = b)}
+  => transQEquiv (symQEquiv (Equiv.toQEquiv (=_Equiv (flattening (wedgeFam A B a b)))))
+       (transQEquiv
+         (IsEquiv.toQEquiv (congr.isEquiv
+            (\lam p => (base {A}, p.2))
+            (\lam p => (base {B}, transport (wedgeFam A B a b) (ppglue p.1) p.2))
+            (\lam (t : \Sigma (base {B} = b) (base {A} = a)) => t.1)
+            (\lam (t : \Sigma (base {B} = b) (base {A} = a)) => t.2)
+            (centreCorner (base {A}) (base {B}) (a, b))
+            (leftCorner (base {B}) (a, b))
+            (rightCorner (base {A}) (a, b))
+            (\lam _ => idp)
+            (\lam c => inv (pmap (pmap (\lam (s : \Sigma A B) => s.1))
+                                 (glue-transport A B a b c.1 c.2)))))
+         (Join-sym (base {B} = b) (base {A} = a)))
+  \where {
+    \func wedgeFam.{l} (A B : Pointed.{l}) (a : A) (b : B) (z : Wedge A B) : \Type l
+      => wedgeToProduct A B z = (a, b)
+
+    \func glue-transport.{l} (A B : Pointed.{l}) (a : A) (b : B) (x : \Sigma)
+                             (e : wedgeToProduct A B (pinl (base {A})) = (a, b))
+      : transport (wedgeFam A B a b) (ppglue x) e = e
+      => inv (transport_pmap (\lam (s : \Sigma A B) => s = (a, b)) (wedgeToProduct A B) (ppglue x) e)
+
+    \func leftCorner {A B : \Type} (b0 : B) (t : \Sigma A B)
+      : QEquiv {\Sigma (y : A) ((y, b0) = t)} {b0 = t.2} \cowith
+      | f p => pmap (\lam (s : \Sigma A B) => s.2) p.2
+      | ret q => (t.1, pmap (\lam w => (t.1, w)) q)
+      | ret_f p => lem b0 p.1 t p.2
+      | f_sec _ => idp
+      \where
+        \func lem {A B : \Type} (b0 : B) (y : A) (t : \Sigma A B) (e : (y, b0) = t)
+          : ((t.1, pmap (\lam w => (t.1, w)) (pmap (\lam (s : \Sigma A B) => s.2) e))
+        : \Sigma (y' : A) ((y', b0) = t)) = (y, e) \elim t, e
+          | _, idp => idp
+
+    \func rightCorner {A B : \Type} (a0 : A) (t : \Sigma A B)
+      : QEquiv {\Sigma (z : B) ((a0, z) = t)} {a0 = t.1} \cowith
+      | f p => pmap (\lam (s : \Sigma A B) => s.1) p.2
+      | ret q => (t.2, pmap (\lam w => (w, t.2)) q)
+      | ret_f p => lem a0 p.1 t p.2
+      | f_sec _ => idp
+      \where
+        \func lem {A B : \Type} (a0 : A) (z : B) (t : \Sigma A B) (e : (a0, z) = t)
+          : ((t.2, pmap (\lam w => (w, t.2)) (pmap (\lam (s : \Sigma A B) => s.1) e))
+        : \Sigma (z' : B) ((a0, z') = t)) = (z, e) \elim t, e
+          | _, idp => idp
+
+    \func centreCorner {A B : \Type} (a0 : A) (b0 : B) (t : \Sigma A B)
+      : QEquiv {\Sigma (x : \Sigma) ((a0, b0) = t)} {\Sigma (b0 = t.2) (a0 = t.1)} \cowith
+      | f p => (pmap (\lam (s : \Sigma A B) => s.2) p.2, pmap (\lam (s : \Sigma A B) => s.1) p.2)
+      | ret q => ((), path (\lam i => (q.2 @ i, q.1 @ i)))
+      | ret_f p => lem a0 b0 t p.2
+      | f_sec _ => idp
+      \where
+        \func lem {A B : \Type} (a0 : A) (b0 : B) (t : \Sigma A B) (e : (a0, b0) = t)
+          : (((), path (\lam i => (pmap (\lam (s : \Sigma A B) => s.1) e @ i,
+                                   pmap (\lam (s : \Sigma A B) => s.2) e @ i)))
+        : \Sigma (x : \Sigma) ((a0, b0) = t)) = ((), e) \elim t, e
+          | _, idp => idp
+  }
+
+\lemma wedgeToProduct-connected.{l} (r s : Nat) (A B : Pointed.{l})
+                                    (ca : isNConnectedType (suc r) A) (cb : isNConnectedType (suc s) B)
+  : isNConnectedMap (suc (r Nat.+ s)) (wedgeToProduct A B)
+  => \lam t => nconnected-equiv (suc (r Nat.+ s))
+      (symQEquiv (wedgeToProduct-fiberEquiv A B t.1 t.2))
+      (nconnected_join (base {A} = t.1) (base {B} = t.2)
+                       (nconnected-path ca base t.1) (nconnected-path cb base t.2))
+
+\func WedgeData.{l} {A B : Pointed.{l}} (D : \Sigma A B -> \Type l)
+  => \Sigma (lm : \Pi (a : A) -> D (a, base {B})) (rm : \Pi (b : B) -> D (base {A}, b))
+            (gm : lm (base {A}) = rm (base {B}))
+
+\func restrictWedge.{l} {A B : Pointed.{l}} (D : \Sigma A B -> \Type l) (h : \Pi (x : \Sigma A B) -> D x)
+  : WedgeData D
+  => (\lam a => h (a, base {B}), \lam b => h (base {A}, b), idp)
+  \where
+    \func coh.{l} {A B : Pointed.{l}} (D : \Sigma A B -> \Type l) (h : \Pi (x : \Sigma A B) -> D x)
+                  (t : WedgeData D) (q : restrictWedge D h = t)
+      : pmap (\lam (z : WedgeData D) => z.1 (base {A})) q *> t.3
+        = pmap (\lam (z : WedgeData D) => z.2 (base {B})) q \elim t, q
+      | _, idp => idp
+
+-- | The HoTT book, Lemma 8.6.2.
+\lemma wedge-extension.{l} (r s : Nat) (A B : Pointed.{l})
+                           (ca : isNConnectedType (suc r) A) (cb : isNConnectedType (suc s) B)
+                           (D : \Sigma A B -> Local.{l} {truncUniverse (suc (r Nat.+ s))})
+  : IsEquiv (restrictWedge (\lam x => D x))
+  => IsEquiv.trans {_} {_} {_}
+       {\lam (h : \Pi (x : \Sigma A B) -> D x) (z : Wedge A B) => h (wedgeToProduct.{l} A B z)}
+       (connected_depEquiv {truncUniverse.{l} (suc (r Nat.+ s))} (wedgeToProduct.{l} A B)
+                           (wedgeToProduct-connected r s A B ca cb) D)
+       {\lam (t : \Pi (z : Wedge A B) -> D (wedgeToProduct.{l} A B z)) =>
+          sectionEquiv A B (\lam x => D x) t}
+       (inP (sectionEquiv A B (\lam x => D x)))
+  \where {
+    \func dataEquiv.{l} {A B : Pointed.{l}} (D : \Sigma A B -> \Type l)
+      : QEquiv {Cocone.dep (\lam z => D (wedgeToProduct A B z))} {WedgeData D} \cowith
+      | f t => (t.1, t.2, t.3 ())
+      | ret t => (t.1, t.2, \lam _ => t.3)
+      | ret_f _ => idp
+      | f_sec _ => idp
+
+    \func sectionEquiv.{l} (A B : Pointed.{l}) (D : \Sigma A B -> \Type l)
+      : QEquiv {\Pi (z : Wedge A B) -> D (wedgeToProduct.{l} A B z)} {WedgeData D}
+      => transQEquiv (drec.equiv (\lam (z : Wedge A B) => D (wedgeToProduct.{l} A B z))) (dataEquiv D)
+
+    \func extend.{l} (r s : Nat) (A B : Pointed.{l})
+                     (ca : isNConnectedType (suc r) A) (cb : isNConnectedType (suc s) B)
+                     (D : \Sigma A B -> Local.{l} {truncUniverse (suc (r Nat.+ s))})
+                     (t : WedgeData (\lam x => D x))
+      : \Pi (x : \Sigma A B) -> D x
+      => IsEquiv.ret (wedge-extension r s A B ca cb D) t
+
+    \func extend-restrict.{l} (r s : Nat) (A B : Pointed.{l})
+                              (ca : isNConnectedType (suc r) A) (cb : isNConnectedType (suc s) B)
+                              (D : \Sigma A B -> Local.{l} {truncUniverse (suc (r Nat.+ s))})
+                              (t : WedgeData (\lam x => D x))
+      : restrictWedge (\lam x => D x) (extend r s A B ca cb D t) = t
+      => IsEquiv.f_ret (wedge-extension r s A B ca cb D)
+  }

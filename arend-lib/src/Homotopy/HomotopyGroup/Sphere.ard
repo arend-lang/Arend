@@ -1,0 +1,19 @@
+{- | The diagonal homotopy groups of spheres and ``pi 3 (S^2)``, the HoTT book, Section 8.6. -}
+
+\import Algebra.Group
+\import Arith.Int
+\import Category \hiding (id, o)
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.Hopf
+\import Homotopy.HomotopyGroup.Stabilization
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Paths
+
+\func PiGroup_Sn_diagonal.{u} (m : Nat)
+  : PiGroup.{u} (suc m) (Sphere.pointed (suc (suc m))) = {Group.{u}} AddGroup.toGroup IntRing \elim m
+  | 0 => PiGroup2_S2.{u}
+  | suc m => inv (Cat.isotoid (sphereStabilization.diagonalIso.{u} m)) *> PiGroup_Sn_diagonal.{u} m
+
+\func PiGroup3_S2.{u} : PiGroup 2 (Sphere.pointed 2) = {Group.{u}} AddGroup.toGroup IntRing
+  => inv (Cat.isotoid hopfPi3Iso.{u}) *> PiGroup_Sn_diagonal 1

@@ -1,0 +1,38 @@
+-- | The van Kampen theorem (HoTT book, Section 8.7).
+
+\import Data.Or
+\import Equiv
+\import Homotopy.Connected
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.VanKampen.Code
+\import Homotopy.VanKampen.Groupoid
+\import Homotopy.VanKampen.Words
+\import Logic
+\import Paths
+\import Set
+
+\func naiveVK.{u} {A B C : \Type u} (f : A -> B) (g : A -> C) : VKCover.{u} \cowith
+  | A => A
+  | B => B
+  | C => C
+  | S => A
+  | f => f
+  | g => g
+  | k a => a
+  | cover a => inP (a, idp)
+
+\func connectedVK.{u} {A : Connected0.{u}} {B C : \Type u} (f : A -> B) (g : A -> C) (a0 : A) : VKCover.{u} \cowith
+  | A => A
+  | B => B
+  | C => C
+  | S => \Sigma
+  | f => f
+  | g => g
+  | k _ => a0
+  | cover a => TruncP.map (isConn0 a0 a) (\lam p => ((), p))
+
+-- | Theorem 8.7.4, with the relations of Section 8.7.1.
+\func naiveVanKampen.{u} {A B C : \Type u} (f : A -> B) (g : A -> C) (x y : Or B C)
+  : QEquiv {VKSpan.NaiveCode {naiveVK f g} x y} {VKSpan.point {naiveVK f g} x =0 VKSpan.point {naiveVK f g} y}
+  => transQEquiv (VKSpan.naiveCodeEquiv {naiveVK f g} (\new Embedding { | isEmb _ _ => \new Retraction { | sec p => p | f_sec _ => idp } }))
+                 (IsEquiv.toQEquiv (evalQ-isEquiv {naiveVK f g}))

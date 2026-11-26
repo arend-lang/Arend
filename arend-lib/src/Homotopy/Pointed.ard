@@ -1,4 +1,6 @@
 \import Algebra.Pointed.PointedHom
+\import Equiv
+\import Equiv.HalfAdjoint
 \import Homotopy.Space
 \import Logic
 \import Meta
@@ -16,13 +18,77 @@
 \instance UnitPointed : Pointed (\Sigma)
   | base => ()
 
+\func PointedProduct (X Y : Pointed) : Pointed \cowith
+  | E => \Sigma X Y
+  | base => (base, base)
+  \where {
+    \func proj1 {X Y : Pointed} : PointedProduct X Y ->* X => (\lam t => t.1, idp)
+
+    \func proj2 {X Y : Pointed} : PointedProduct X Y ->* Y => (\lam t => t.2, idp)
+  }
+
 \func \infixr 1 ->* (A B : Pointed) => \Sigma (f : A -> B) (f base = base)
   \where {
+    \func id {X : Pointed} : X ->* X => (\lam x => x, idp)
+
+    \func zero (X Y : Pointed) : X ->* Y => (\lam _ => base, idp)
+
+    \func \fixl 8 compose \alias \infixl 8 ∘* {X Y Z : Pointed} (g : Y ->* Z) (f : X ->* Y) : X ->* Z
+      => (\lam x => g.1 (f.1 x), pmap g.1 f.2 *> g.2)
+
+    \func happly {A B : Pointed} {f g : A ->* B} (s : f = g) (x : A) : f.1 x = g.1 x
+      => pmap (\lam (h : A ->* B) => h.1 x) s
+
+    \func happly-base {A B : Pointed} {f g : A ->* B} (s : f = g) : happly s base *> g.2 = f.2 \elim s
+      | idp => idp_*> f.2
+
+    \func compose-id {X Y : Pointed} (f : X ->* Y) : f ∘* id = f
+      => ext (\lam _ => idp) idp
+
+    \func compose-assoc {W X Y Z : Pointed} (h : Y ->* Z) (g : X ->* Y) (f : W ->* X)
+      : h ∘* (g ∘* f) = (h ∘* g) ∘* f
+      => ext (\lam _ => idp)
+             (idp_*> _ *> inv (pmap (`*> h.2) (pmap_*>-comm h.1 (pmap g.1 f.2) g.2) *> *>-assoc _ _ _))
+
     \func ext {A B : Pointed} {f g : A ->* B} (p : \Pi (x : A) -> f.1 x = g.1 x) (q : p base *> g.2 = f.2) : f = g =>
       \let | p' => path (\lam i x => p x @ i)
            | q' => Jl (\lam _ p'' => (rewrite p'' in f.2) = inv (pmap (\lam (h : A -> B) => h base) p'') *> f.2)
                       (inv idp_*>) p' *> rotatePathLeft (inv q)
       \in path (\lam i => (p' @ i, pathOver q' @ i))
+  }
+
+\record PointedEquiv (X Y : Pointed)
+  | map : X ->* Y
+  | map-isEquiv : IsEquiv map.1
+  \where {
+    \func id {X : Pointed} : PointedEquiv X X \cowith
+      | map => ->*.id
+      | map-isEquiv => inP idEquiv
+
+    \func toHAEquiv (e : PointedEquiv) : HAEquiv e.map.1
+      => IsEquiv.toQEquiv e.map-isEquiv
+
+    \func inverse (e : PointedEquiv) : PointedEquiv e.Y e.X \cowith
+      | map => (Section.ret {toHAEquiv e},
+                pmap (Section.ret {toHAEquiv e}) (inv e.map.2) *> Section.ret_f {toHAEquiv e} base)
+      | map-isEquiv => inP (symQEquiv (toHAEquiv e))
+
+    \func inverse-sec (e : PointedEquiv) : e.map ->*.∘* (inverse e).map = ->*.id {e.Y}
+      => ->*.ext (Retraction.f_sec {toHAEquiv e})
+             (inv (pmap (`*> e.map.2) (pmap_*>-comm e.map.1 (pmap (Section.ret {toHAEquiv e}) (inv e.map.2))
+                                                            (Section.ret_f {toHAEquiv e} base))
+                   *> pmap (\lam z => (pmap (\lam y => e.map.1 (Section.ret {toHAEquiv e} y)) (inv e.map.2) *> z) *> e.map.2)
+                           (HAEquiv.f_ret_f=f_sec_f {toHAEquiv e} base)
+                   *> pmap (`*> e.map.2)
+                           (homotopy-isNatural (\lam y => e.map.1 (Section.ret {toHAEquiv e} y)) (\lam y => y)
+                                               (Retraction.f_sec {toHAEquiv e}) (inv e.map.2))
+                   *> *>-assoc (Retraction.f_sec {toHAEquiv e} base) (inv e.map.2) e.map.2
+                   *> pmap (Retraction.f_sec {toHAEquiv e} base *>) (inv_*> e.map.2)))
+
+    \func \fixl 8 compose \alias \infixl 8 ∘~ {X Y Z : Pointed} (g : PointedEquiv Y Z) (f : PointedEquiv X Y)
+      : PointedEquiv X Z \cowith
+      | map => g.map ->*.∘* f.map
+      | map-isEquiv => IsEquiv.trans f.map-isEquiv g.map-isEquiv
   }
 
 {- | Mapping from Pointed Types to Pointed Sets -}

@@ -1,0 +1,54 @@
+-- | After ``theorems/homotopy/RibbonCover.agda`` in HoTT-Agda.
+
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.EquivariantMap
+\import Algebra.Group.GSet.GSetCat
+\import Category
+\import Category.Functor
+\import Homotopy.Cover.Basic
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pointed
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+
+\func AssociatedRel.{u} {A : Pointed.{u}} {M : GSet.{u} (PiGroup 0 A)} {a : A} (x y : \Sigma M (base =0 a)) : \Type u
+  => \Sigma (g : PiGroup 0 A) (x.1 = Group.inverse {PiGroup 0 A} g ** y.1) (y.2 = g *>0 x.2)
+
+\func Associated.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) : Cover A
+  => \lam a => Quotient (AssociatedRel {A} {M} {a})
+  \where {
+    \func trace.{u} {A : Pointed.{u}} {M : GSet.{u} (PiGroup 0 A)} {a : A} (m : M) (p : base =0 a) : Associated M a
+      => in~ (m, p)
+
+    \lemma trace-rel.{u} {A : Pointed.{u}} {M : GSet.{u} (PiGroup 0 A)} {a : A} (m : M) (g : PiGroup 0 A) (p : base =0 a)
+      : trace (Group.inverse {PiGroup 0 A} g ** m) p = trace m (g *>0 p)
+      => ~-pequiv (g, idp, idp)
+
+    \lemma transport_trace.{u} {A : Pointed.{u}} {M : GSet.{u} (PiGroup 0 A)} {a a' : A} (q : a = a') (m : M) (p : base =0 a)
+      : transport (Associated M) q (trace m p) = trace m (p *>0 in0 q) \elim q
+      | idp => pmap (trace m) (inv (*>0_idp0 p))
+
+    \func map.{u} {A : Pointed.{u}} {M N : GSet.{u} (PiGroup 0 A)} (t : EquivariantMap M N) : CoverHom (Associated M) (Associated N)
+      => \lam {a} => Quotient.map {\Sigma M (base =0 a)} {\Sigma N (base =0 a)} (\lam x => (t x.1, x.2))
+                                     {AssociatedRel {A} {M} {a}} {AssociatedRel {A} {N} {a}}
+                                     (\lam {x} {y} (r : AssociatedRel {A} {M} {a} x y) => (r.1, pmap t r.2 *> func-**, r.3))
+
+    \lemma map-id.{u} {A : Pointed.{u}} {M : GSet.{u} (PiGroup 0 A)} {a : A} (z : Associated M a)
+      : map (EquivariantMap.id {_} {M}) z = z \elim z
+      | in~ _ => idp
+
+    \lemma map-comp.{u} {A : Pointed.{u}} {M N L : GSet.{u} (PiGroup 0 A)} (s : EquivariantMap N L) (t : EquivariantMap M N)
+                        {a : A} (z : Associated M a)
+      : map (s EquivariantMap.∘ t) z = map s (map t z) \elim z
+      | in~ _ => idp
+
+    \func functor.{u} (A : Pointed.{u}) : Functor (GSetCategory.{u} (PiGroup 0 A)) (CoverCat A) \cowith
+      | F => Associated
+      | Func => map
+      | Func-id => path (\lam i z => map-id z @ i)
+      | Func-o => path (\lam i z => map-comp _ _ z @ i)
+  }

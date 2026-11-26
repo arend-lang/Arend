@@ -1,0 +1,64 @@
+{- | The HoTT book, Corollary 8.4.8, in the shifted connectedness indexing of
+     ``Homotopy.Connectivity``.
+ -}
+
+\import Algebra.Group.Exact
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Pointed.Exact
+\import Arith.Nat
+\import Category \hiding (id, o)
+\import Equiv
+\import Function
+\import Homotopy.Connectivity
+\import Homotopy.FiberSequence
+\import Homotopy.FiberSequence.Exact
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.Connectivity
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Logic
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+
+\lemma nconnected-fiber.{u} {n : Nat} {X Y : Pointed.{u}} (f : X ->* Y) (c : isNConnectedMap n f.1)
+  : isNConnectedType n (PointedFib f)
+  => propExt.conv (nconnected-iff-trunc-contr n (PointedFib f))
+                  (propExt.dir (nconnected-map-fibers n f.1) c base)
+
+\lemma nconnected-piMap-isEquiv.{u} {n k : Nat} {X Y : Pointed.{u}} (f : X ->* Y)
+                                    (c : isNConnectedMap n f.1) (h : k NatOrder.< n)
+  : IsEquiv (piMap k f) \elim n, k, h
+  | suc n, 0, _ => pi0-isEquiv f.1 c
+  | n, suc k, h => inP (QEquiv.fromInjSurj
+      (exact-middle-injective
+        (piGroup-exact k {PointedFib f} {X} {Y} (fibProj f) f (pi-exact-total f (suc k)))
+        (pi-vanishes-below (nconnected-fiber f c) h))
+      (exact-middle-surjective (pi-exact-base f k)
+                               (pi-vanishes-below (nconnected-fiber f c) (<-transitive id<suc h))))
+  \where {
+    \func pi0-isEquiv.{u} {n : Nat} {A B : \Type u} (f : A -> B)
+                          (c : isNConnectedMap (suc n) f) : IsEquiv (\lam (t : Trunc0 A) => Trunc0.map t f)
+      => transport IsEquiv (ext (trunc0-square f))
+          (IsEquiv.trans
+            (IsEquiv.trans (inP (symQEquiv pi-vanishes-below.trunc1-Trunc0-equiv))
+                           (nconnected-map=>trunc-equiv f (nconnected-map-mono (suc<=suc zero<=_) c)))
+            (inP pi-vanishes-below.trunc1-Trunc0-equiv))
+
+    \func trunc0-square.{u} {A B : \Type u} (f : A -> B) (t : Trunc0 A)
+      : pi-vanishes-below.trunc1-Trunc0-equiv
+          (TruncMap 1 f (QEquiv.ret {pi-vanishes-below.trunc1-Trunc0-equiv} t)) = Trunc0.map t f \elim t
+      | in0 a => pmap (\lam z => pi-vanishes-below.trunc1-Trunc0-equiv (TruncMap 1 f z)) Trunc0.rec-eval
+  }
+
+\lemma nconnected-piGroup-iso.{u} {n k : Nat} {X Y : Pointed.{u}} (f : X ->* Y)
+                                 (c : isNConnectedMap n f.1) (h : suc k NatOrder.< n)
+  : Iso {GroupCat.{u}} (piGroupMap k f)
+  => GroupCat.isoOfEquiv (piGroupMap k f) (IsEquiv.toQEquiv (nconnected-piMap-isEquiv f c h))
+
+\lemma nconnected-pi-surj.{u} {n : Nat} {X Y : Pointed.{u}} (f : X ->* Y)
+                              (c : isNConnectedMap (suc n) f.1)
+  : IsSurj (piHom.{u} (suc n) {X} {Y} f)
+  => exact-middle-surjective (pi-exact-base f n) (pi-vanishes-below (nconnected-fiber {suc n} f c) id<suc)

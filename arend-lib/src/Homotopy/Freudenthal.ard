@@ -1,0 +1,57 @@
+{- | The Freudenthal suspension theorem, the HoTT book, Theorem 8.6.4. -}
+
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import Homotopy.Connectivity
+\import Homotopy.Localization.BlakersMassey
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Homotopy.Pushout
+\import Homotopy.Suspension
+\import Logic
+\import Paths
+
+\open genBlakersMassey (POData)
+
+\lemma freudenthal-connected.{u} (r : Nat) (X : Pointed.{u}) (c : isNConnectedType (suc r) X)
+  : isNConnectedMap (suc (r Nat.+ r)) (SuspLoopEquiv.unit X).1
+  => nconnected-map-comp-left (suc (r Nat.+ r))
+                              (pathConcatEquiv-right (inv (pmerid (base {X}))))
+                              (merid-connected r c)
+  \where {
+    \func poData.{u} (A : \Type u) : POData.{u} => \new POData (\Sigma) (\Sigma) (\lam _ _ => A)
+
+    \func to.{u} {A : \Type u} (w : POData.PO {poData A}) : Susp A \elim w
+      | pinl _ => north
+      | pinr _ => south
+      | pglue t i => pglue t.3 i
+
+    \func from.{u} {A : \Type u} (s : Susp A) : POData.PO {poData A} \elim s
+      | north => pinl ()
+      | south => pinr ()
+      | pglue a i => pglue ((), (), a) i
+
+    \func poEquiv.{u} (A : \Type u) : QEquiv {POData.PO {poData A}} {Susp A} \cowith
+      | f => to
+      | ret => from
+      | ret_f w => \case \elim w \with {
+        | pinl _ => idp
+        | pinr _ => idp
+        | pglue t i => idp
+      }
+      | f_sec s => \case \elim s \with {
+        | north => idp
+        | south => idp
+        | pglue a i => idp
+      }
+
+    \lemma merid-connected.{u} (r : Nat) {A : \Type u} (c : isNConnectedType (suc r) A)
+      : isNConnectedMap (suc (r Nat.+ r)) (pmerid {A})
+      => nconnected-map-comp-left (suc (r Nat.+ r))
+          (IsEquiv.toQEquiv (pmapIsEquiv {_} {_} {to} (inP (poEquiv A))))
+          (nBlakersMassey r r (\lam (_ _ : \Sigma) => A)
+                          (\lam _ => nconnected-equiv (suc r) (symQEquiv (contr-left unit-isContr)) c)
+                          (\lam _ => nconnected-equiv (suc r) (symQEquiv (contr-left unit-isContr)) c)
+                          () ())
+  }

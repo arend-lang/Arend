@@ -1,0 +1,59 @@
+-- | Daniel R. Licata, Eric Finster, Eilenberg-MacLane spaces in homotopy type theory, LICS 2014.
+
+\import Algebra.Group
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Monoid
+\import Algebra.Pointed (ide)
+\import Category
+\import Equiv
+\import Homotopy.Connected
+\import Homotopy.Connectivity
+\import Homotopy.Cube
+\import Homotopy.EncodeDecode
+\import Homotopy.HLevel
+\import Homotopy.HomotopyGroup
+\import Homotopy.K1
+\import Homotopy.Pointed \hiding (base)
+\import Logic
+\import Paths
+\import Set
+
+\func K1Pointed (G : Group) : Pointed
+  => Pointed.make (base {G})
+
+\func K1-level {G : Group} : K1 G ofHLevel_-1+ 2
+  => \lam _ _ _ _ => toProp (\lam _ _ => prop-pi)
+
+\func K1-rec {G : Group} {B : \1-Type} (b : B) (l : G -> b = b) (l-comp : \Pi (g g' : G) -> l g *> l g' = l (g * g'))
+             (x : K1 G) : B \elim x
+  | base => b
+  | loop g i => l g @ i
+  | relation g g' i j => Cube2.map (l g) (l (g * g')) idp (l g') (movePath1 (l-comp g g')) @ j @ i
+
+\instance K1-connected0 {G : Group} : Connected0 (K1 G)
+  | isInh => inP base
+  | isConn0 => conn
+  \where
+    \lemma conn {G : Group} (x y : K1 G) : TruncP (x = y) \elim x, y
+      | base, base => inP idp
+
+\lemma K1-connected.{u} {G : Group.{u}} : isNConnectedType 1 (K1 G)
+  => connected0=>nconnected1 (K1-connected0 {G})
+
+\func K1-loopEquiv.{u} {G : Group.{u}} : QEquiv {G} {base {G} = base} (\lam g => path (loop g))
+  => symQEquiv (loopEncodeDecode code ide decode K1.loop-ide (decode_encode base))
+
+\func PiGroup_K1.{u} (G : Group.{u}) : PiGroup 0 (K1Pointed G) = {Group.{u}} G
+  => inv (Cat.isotoid iso)
+  \where {
+    \func hom : GroupHom G (PiGroup 0 (K1Pointed G)) \cowith
+      | func g => in0 (path (loop g))
+      | func-* {g} {h} => pmap in0 (inv (K1.loop-comp g h))
+
+    \func hom-equiv : QEquiv hom
+      => transQEquiv K1-loopEquiv (symQEquiv Trunc0.setEquiv)
+
+    \func iso : Iso {GroupCat} hom
+      => GroupCat.isoOfEquiv hom hom-equiv
+  }

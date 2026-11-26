@@ -1,0 +1,37 @@
+\import Equiv
+\import Equiv.Fiber
+\import Function
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Set
+
+\func componentsMap {A B : \Type} (f : A -> B) (t : Trunc0 A) : Trunc0 B
+  => Trunc0.map t f
+
+\lemma componentsMap-surj {A B : \Type} {f : A -> B} (s : IsSurj (componentsMap f)) : IsSurj f
+  => \lam b => \case s (in0 b) \with {
+    | inP (t, p) => fib t p
+  }
+  \where
+    \lemma fib {A B : \Type} {f : A -> B} {b : B} (t : Trunc0 A) (p : componentsMap f t = in0 b) : ∃ (a : A) (f a = b) \elim t
+      | in0 a => TruncP.map (transport (\lam (Q : \Prop) => Q) (Trunc0.equality (f a) b) p) (\lam q => (a, q))
+
+-- | The HoTT book, Theorem 8.8.1.
+\lemma whiteheadPaths {A B : \Type} (f : A -> B) (s : IsSurj (componentsMap f))
+                      (paths : \Pi (x y : A) -> IsEquiv (pmap f {x} {y}))
+  : IsEquiv f
+  => IsEquiv.fromEmbSurj (\new Embedding f (\lam x y => IsEquiv.toQEquiv (paths x y))) (componentsMap-surj s)
+
+-- | The HoTT book, Corollary 8.8.2.
+\lemma whiteheadLoops {A B : \Type} (f : A -> B) (e0 : IsEquiv (componentsMap f))
+                      (loops : \Pi (a : A) -> IsEquiv (pmap f {a} {a}))
+  : IsEquiv f
+  => whiteheadPaths f (IsEquiv.isSurj e0) \lam x y => contrFibers=>IsEquiv \lam q =>
+      \case transport (\lam (Q : \Prop) => Q) (Trunc0.equality x y) (IsEquiv.isInj e0 (pmap in0 q)) \with {
+        | inP p => IsEquiv=>contrFibers (paths f loops p) q
+      }
+  \where
+    \lemma paths {A B : \Type} (f : A -> B) (loops : \Pi (a : A) -> IsEquiv (pmap f {a} {a})) {x y : A} (p : x = y)
+      : IsEquiv (pmap f {x} {y}) \elim p
+      | idp => loops x

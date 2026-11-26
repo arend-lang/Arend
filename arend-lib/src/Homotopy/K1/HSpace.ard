@@ -1,0 +1,39 @@
+-- | After ``theorems/homotopy/EM1HSpace.agda`` in HoTT-Agda.
+
+\import Algebra.Group
+\import Algebra.Monoid
+\import Homotopy.Hopf (HSpaceConn)
+\import Homotopy.K1
+\import Homotopy.K1.Basic
+\import Paths
+
+\func central {G : CGroup} (g : G) (x : K1 G) : x = x \elim x
+  | base => path (loop g)
+  | loop h => pathOver (transport_path_pmap (\lam x => x) (\lam x => x) (path (loop h)) (path (loop g)) (path (loop g))
+                                            (K1.loop-comp g h *> pmap (\lam k => path (loop k)) *-comm *> inv (K1.loop-comp h g)))
+  \where
+    \lemma comp {G : CGroup} (g h : G) (x : K1 G) : central (g * h) x = central g x *> central h x \elim x
+      | base => inv (K1.loop-comp g h)
+
+\func K1-mult {G : CGroup} (x : K1 G) : K1 G -> K1 G
+  => K1-rec (\lam y => y) (\lam g => funPath (central g))
+            (\lam g h => funPath_*> (central g) (central h) *> pmap funPath (path (\lam j y => inv (central.comp g h y) @ j))) x
+  \where {
+    \func funPath {A B : \Type} {f f' : A -> B} (h : \Pi (a : A) -> f a = f' a) : f = f'
+      => path (\lam i a => h a @ i)
+
+    \lemma funPath_*> {A : \Type} {B : \1-Type} {f f' f'' : A -> B} (h : \Pi (a : A) -> f a = f' a) (k : \Pi (a : A) -> f' a = f'' a)
+      : funPath h *> funPath k = funPath (\lam a => h a *> k a)
+      => path (\lam j => path (\lam i a => (pmap_*>-comm (\lam (f : A -> B) => f a) (funPath h) (funPath k) @ j) @ i))
+
+    \func base-right {G : CGroup} (x : K1 G) : K1-mult x base = x \elim x
+      | base => idp
+      | loop g i => idp
+  }
+
+\instance K1-HSpace {G : CGroup} : HSpaceConn (K1 G)
+  | base => base
+  | * => K1-mult
+  | base-left _ => idp
+  | base-right => K1-mult.base-right
+  | isConn0 => K1-connected0.conn

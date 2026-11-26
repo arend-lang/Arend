@@ -1,5 +1,6 @@
 \import Homotopy.Pointed
 \import Homotopy.Pushout
+\import Paths
 
 \func Susp (A : \Type) => PushoutData {A} (\lam _ => ()) (\lam _ => ())
   \where {
@@ -8,10 +9,16 @@
       | south => b2
       | pglue a => f a
 
+    \func map {A B : \Type} (f : A -> B) : Susp A -> Susp B
+      => rec north south (\lam a => pmerid (f a))
+
     \func pointed (A : \Type) => \new Pointed (Susp A) north
 
     \func pushout.{u} (A : \Type u) => pushoutData {A} (\lam _ => ()) (\lam _ => ())
   }
+
+\func Susp-Func {X Y : Pointed} (f : X ->* Y) : Susp.pointed X ->* Susp.pointed Y
+  => (Susp.map f.1, idp)
 
 \cons north {A : \Type} : Susp A => pinl ()
 

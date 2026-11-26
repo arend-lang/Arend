@@ -1,7 +1,11 @@
 \import Equiv
+\import Homotopy.Loop
 \import Homotopy.Sphere.Circle
+\import Logic
+\import Logic.Unique
 \import Meta
 \import Paths
+\import Paths.Meta
 
 \data Torus
   | point
@@ -12,7 +16,10 @@
     | right, i => line2 i
     | i, left => line1 i
     | i, right => line1 i
-  }
+  } \where
+  \lemma prop-ind (P : Torus -> \Type) (l : \Pi (x : Torus) -> isProp (P x)) (p : P point) (x : Torus)
+    : \level (P x) (l x) \elim x
+    | point => p
 
 \func TorusSphere-equiv : QEquiv {Torus} {\Sigma Sphere1 Sphere1} \cowith
   | f => TorusSphere
@@ -48,3 +55,10 @@
   loopBase                 ==< QEquiv_= sigmaEta >==
   (\Sigma OmegaS1 OmegaS1) ==< path (\lam i => \Sigma (Loop_S1 @ i) (Loop_S1 @ i)) >==
   (\Sigma Int Int)         `qed
+
+\lemma torus-isGpd : isGpd Torus
+  => run {
+      loop-level.set,
+      \lam x0,
+      Torus.prop-ind _ (\lam l => isSet.levelProp {l = l}) (rewrite Loop_S1^2 (\lam _ _ => prop-isProp)) x0
+  }

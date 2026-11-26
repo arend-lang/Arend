@@ -1,11 +1,14 @@
 \import Algebra.Meta
 \import Equiv
+\import Equiv.HalfAdjoint
+\import Equiv.Path
 \import Equiv.Sigma
 \import Function
 \import Homotopy.Pointed
 \import Homotopy.Square
 \import Logic
 \import Paths
+\import Paths.Meta
 
 \class Pushout.{u} (square : Square.{u})
   | pushout-univ {Z : \Type u} : IsEquiv {square.Y -> Z} {Square { | Y => Z | U => square.U | V => square.V | X => square.X | uv => square.uv | ux => square.ux }} (Square.push square)
@@ -48,7 +51,7 @@
           | pglue a i => idp
 
         \func equiv {A B C : \Type} {f : A -> B} {g : A -> C} (Z : \Type)
-          : QEquiv {PushoutData f g -> Z} {\Sigma (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a))} \cowith
+          : QEquiv {PushoutData f g -> Z} {Cocone f g Z} \cowith
             | f h => (\lam b => h (pinl b), \lam c => h (pinr c), \lam a => path (\lam i => h (pglue a i)))
             | ret p => rec p.1 p.2 p.3
             | ret_f h => path \lam i x => (\case \elim x \return rec (\lam b => h (pinl b)) (\lam c => h (pinr c)) (\lam a => path (\lam i => h (pglue a i))) x = h x \with {
@@ -57,6 +60,71 @@
               | pglue a i => idp
             }) i
             | f_sec => idpe
+      }
+
+    \func drec {J A B : \Type} {u : J -> A} {v : J -> B} (P : PushoutData u v -> \Type)
+               (lm : \Pi (a : A) -> P (pinl a)) (rm : \Pi (b : B) -> P (pinr b))
+               (gm : \Pi (c : J) -> Path (\lam i => P (pglue c i)) (lm (u c)) (rm (v c)))
+               (x : PushoutData u v) : P x \elim x
+      | pinl a => lm a
+      | pinr b => rm b
+      | pglue c => gm c
+      \where {
+        \func equiv {J A B : \Type} {u : J -> A} {v : J -> B} (P : PushoutData u v -> \Type)
+          : QEquiv {\Pi (x : PushoutData u v) -> P x} {Cocone.dep P} \cowith
+          | f s => (\lam a => s (pinl a), \lam b => s (pinr b), \lam c => path (\lam i => s (pglue c i)))
+          | ret => \lam t => drec P t.1 t.2 t.3
+          | ret_f s => path (\lam j x => (\case \elim x \return
+            drec P (\lam a => s (pinl a)) (\lam b => s (pinr b)) (\lam c => path (\lam i => s (pglue c i))) x = s x \with {
+              | pinl a => idp
+              | pinr b => idp
+              | pglue c i => idp
+            }) j)
+          | f_sec _ => idp
+      }
+
+    -- | Congruence of pushouts along an equivalence of spans.
+    \func congr {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                    (eJ : J -> J') (eA : A -> A') (eB : B -> B')
+                    (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                    (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+      : PushoutData u v -> PushoutData u' v'
+      => rec (\lam a => pinl (eA a)) (\lam b => pinr (eB b))
+             (\lam c => (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) *> pmap pinr (beta c))
+      \where {
+        \func precomp {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                          (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
+                          (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                          (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+                          (Z : \Type)
+          : QEquiv {PushoutData u' v' -> Z} {PushoutData u v -> Z}
+          => transQEquiv (rec.equiv Z)
+               (transQEquiv (Cocone.equiv u v u' v' eJ eA eB alpha beta Z) (symQEquiv (rec.equiv Z)))
+
+        \func precomp-eq {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                             (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
+                             (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                             (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+                             (Z : \Type) (h : PushoutData u' v' -> Z) (x : PushoutData u v)
+          : precomp u v u' v' eJ eA eB alpha beta Z h x = h (congr u v u' v' eJ eA eB alpha beta x)
+          => pmap (\lam g => rec (\lam a => h (pinl (eA a))) (\lam b => h (pinr (eB b))) g x)
+                  (ext (\lam c => pmap (\lam s => (s *> path (\lam i => h (pglue (eJ c) i))) *> pmap (\lam b => h (pinr b)) (beta c))
+                                       (inv (pmap_inv-comm (\lam a => h (pinl a)) (alpha c)))
+                        *> inv (pmap_*>-comm h (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) (pmap pinr (beta c))
+                                *> pmap (`*> pmap h (pmap pinr (beta c)))
+                                        (pmap_*>-comm h (pmap pinl (inv (alpha c))) (ppglue (eJ c))))))
+             *> inv (rec.map h (\lam a => pinl (eA a)) (\lam b => pinr (eB b))
+                              (\lam c => (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) *> pmap pinr (beta c)) x)
+
+        \lemma isEquiv.{l} {J A B J' A' B' : \Type l} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                           (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
+                           (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                           (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+          : IsEquiv (congr u v u' v' eJ eA eB alpha beta)
+          => precomp=>isEquiv (congr u v u' v' eJ eA eB alpha beta)
+              (\lam Z => transport IsEquiv
+                  (ext (precomp-eq u v u' v' eJ eA eB alpha beta Z))
+                  (inP (precomp u v u' v' eJ eA eB alpha beta Z)))
       }
 
     -- | The total space of a fibration over a pushout is equivalent to a pushout of fibers of this fibration.
@@ -78,6 +146,27 @@
             | left => tinl (f x) w
             | right => tinr (g x) (coe2 (\lam i => F (pglue x i)) j w right)
           }
+
+        -- | {tinl} and {tinr} do not depend on the interval parameter of {TotalPushout}.
+        \func tinl-coe (y : B) (t : F (pinl y))
+          : coe TotalPushout (tinl y t) right = tinl y t
+          => pathOver.conv (path (\lam i => tinl {A} {B} {C} {f} {g} {F} {i} y t))
+
+        \func tinr-coe (z : C) (t : F (pinr z))
+          : coe TotalPushout (tinr z t) right = tinr z t
+          => pathOver.conv (path (\lam i => tinr {A} {B} {C} {f} {g} {F} {i} z t))
+
+        \func pinl-comp (y : B) (t : F (pinl y))
+          : transport (\lam T => T) (flattening F) (pinl (y, t))
+            = ((pinl y, t) : \Sigma (w : PushoutData f g) (F w))
+          => transport_*> (\lam T => T) _ _ _ *> transport_*> (\lam T => T) _ _ _
+             *> pmap totalPushoutRight.LR (tinl-coe y t)
+
+        \func pinr-comp (z : C) (t : F (pinr z))
+          : transport (\lam T => T) (flattening F) (pinr (z, t))
+            = ((pinr z, t) : \Sigma (w : PushoutData f g) (F w))
+          => transport_*> (\lam T => T) _ _ _ *> transport_*> (\lam T => T) _ _ _
+             *> pmap totalPushoutRight.LR (tinr-coe z t)
 
         \func totalPushoutLeft : QEquiv {total} {TotalPushout left} \cowith
           | f => LR
@@ -130,6 +219,40 @@
           }
       }
   }
+
+\func Cocone {J A B : \Type} (u : J -> A) (v : J -> B) (Z : \Type)
+  => \Sigma (lm : A -> Z) (rm : B -> Z) (gm : \Pi (c : J) -> lm (u c) = rm (v c)) \where {
+  \func nest {J A B : \Type} (u : J -> A) (v : J -> B) (Z : \Type) :
+    QEquiv {Cocone u v Z} {\Sigma (p : \Sigma (A -> Z) (B -> Z)) (\Pi (c : J) -> p.1 (u c) = p.2 (v c))} \cowith
+    | f t => ((t.1, t.2), t.3)
+    | ret t => (t.1.1, t.1.2, t.2)
+    | ret_f _ => idp
+    | f_sec _ => idp
+
+  \func vertexEquiv {A B A' B' : \Type} (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'}) (Z : \Type)
+    : QEquiv {\Sigma (A' -> Z) (B' -> Z)} {\Sigma (A -> Z) (B -> Z)} \cowith
+    | f p => (\lam a => p.1 (eA a), \lam b => p.2 (eB b))
+    | ret q => (\lam a' => q.1 (eA.ret a'), \lam b' => q.2 (eB.ret b'))
+    | ret_f p => path (\lam i => (\lam a' => p.1 (eA.f_sec a' i), \lam b' => p.2 (eB.f_sec b' i)))
+    | f_sec q => path (\lam i => (\lam a => q.1 (eA.ret_f a i), \lam b => q.2 (eB.ret_f b i)))
+
+  \func equiv {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                     (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
+                     (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                     (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+                     (Z : \Type)
+    : QEquiv {Cocone u' v' Z} {Cocone u v Z}
+    => transQEquiv (nest u' v' Z)
+      (transQEquiv (sigma-right (\lam (p : \Sigma (A' -> Z) (B' -> Z)) =>
+        transQEquiv (pi-left {J} {J'} {\lam c' => p.1 (u' c') = p.2 (v' c')} eJ)
+          (pi-right (\lam c => transQEquiv (pathConcatEquiv (pmap p.1 (alpha c)))
+            (pathConcatEquiv-right (pmap p.2 (beta c)))))))
+        (transQEquiv (sigma-left (vertexEquiv eA eB Z)) (symQEquiv (nest u v Z))))
+
+  \func dep {J A B : \Type} {u : J -> A} {v : J -> B} (P : PushoutData u v -> \Type)
+    => \Sigma (lm : \Pi (a : A) -> P (pinl a)) (rm : \Pi (b : B) -> P (pinr b))
+              (gm : \Pi (c : J) -> Path (\lam i => P (pglue c i)) (lm (u c)) (rm (v c)))
+}
 
 \open PushoutData
 

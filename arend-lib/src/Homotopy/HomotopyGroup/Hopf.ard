@@ -1,0 +1,44 @@
+{- | The homotopy groups computed from the Hopf fibration, the HoTT book, Section 8.5. -}
+
+\import Algebra.Group
+\import Algebra.Group.Exact
+\import Algebra.Group.GroupCat
+\import Algebra.Pointed.Exact
+\import Arith.Int
+\import Arith.Nat
+\import Category \hiding (id, o)
+\import Equiv
+\import Homotopy.FiberSequence
+\import Homotopy.FiberSequence.Exact
+\import Homotopy.FiberSequence.Hopf
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.Circle
+\import Homotopy.HomotopyGroup.Connectivity
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Order.StrictOrder
+\import Paths
+
+\func PiGroup2_S2.{u} : PiGroup 1 (Sphere.pointed 2) = {Group.{u}} AddGroup.toGroup IntRing
+  => Cat.isotoid iso.{u} *> PiGroup_S1
+  \where
+    -- | The connecting map of the Hopf fibration identifies ``pi 2 (S^2)`` with ``pi 1 (S^1)``.
+    \func iso.{u} : Iso {GroupCat} (piBoundaryGroup 0 hopfFiberSequence)
+      => exact-middle-iso
+           {PiGroup 1 (Sphere.pointed 3)} {PiGroup 1 (Sphere.pointed 2)}
+           {PiGroup 0 (Sphere.pointed 1)} {PiGroup 0 (Sphere.pointed 3)}
+           (piGroup-exact-boundary 0 hopfFiberSequence)
+           (piGroup-exact-fiber 0 hopfFiberSequence)
+           (sphere-pi-vanishes.{u} {2} {3} id<suc)
+           (sphere-pi-vanishes.{u} {1} {3} (<-transitive id<suc id<suc))
+
+-- | The Hopf map induces an isomorphism on ``pi 3``.
+\func hopfPi3Iso.{u} : Iso {GroupCat} (piGroupMap 2 hopfMap)
+  => GroupCat.isoOfEquiv (piGroupMap 2 hopfMap)
+      (QEquiv.fromInjSurj
+        (exact-middle-injective
+          (piGroup-exact 2 {Sphere.pointed 1} {Sphere.pointed 3} {Sphere.pointed 2}
+                         (PointedShortSeq.incl {hopfFiberSequence}) hopfMap
+                         (seq-exact-total hopfFiberSequence 3))
+          (circle-pi-high-contr.{u} 1))
+        (exact-middle-surjective (seq-exact-base hopfFiberSequence 2) (circle-pi-high-contr.{u} 0)))

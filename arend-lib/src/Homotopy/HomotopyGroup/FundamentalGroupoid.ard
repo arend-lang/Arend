@@ -1,0 +1,86 @@
+-- | The fundamental groupoid; `p *>0 q` is "first `p`, then `q`".
+
+\import Algebra.Group.Aut
+\import Algebra.Group.GroupHom
+\import Category
+\import Paths
+\import Set
+\open Precat (>>)
+
+\func \infix 1 =0 {X : \Type} (x y : X) => Trunc0 (x = y)
+
+\func idp0 {X : \Type} {x : X} : x =0 x => in0 idp
+
+\func \infixr 9 *>0 {X : \Type} {x y z : X} (p : x =0 y) (q : y =0 z) : x =0 z
+  => p >> {DiscretePrecat X} q
+
+\func inv0 {X : \Type} {x y : X} (p : x =0 y) : y =0 x => Trunc0.map p inv
+
+\func map0 {X Y : \Type} (h : X -> Y) {x y : X} (p : x =0 y) : h x =0 h y => Trunc0.map p (pmap h)
+
+\lemma idp0_*>0 {X : \Type} {x y : X} (p : x =0 y) : idp0 *>0 p = p
+  => Precat.id-right {DiscretePrecat X}
+
+\lemma *>0_idp0 {X : \Type} {x y : X} (p : x =0 y) : p *>0 idp0 = p
+  => Precat.id-left {DiscretePrecat X}
+
+\lemma *>0-assoc {X : \Type} {x y z w : X} (p : x =0 y) (q : y =0 z) (r : z =0 w)
+  : (p *>0 q) *>0 r = p *>0 (q *>0 r)
+  => inv (Precat.o-assoc {DiscretePrecat X})
+
+\lemma inv0_*>0 {X : \Type} {x y : X} (p : x =0 y) : inv0 p *>0 p = idp0 \elim p
+  | in0 p => pmap in0 (inv_*> p)
+
+\lemma *>0_inv0 {X : \Type} {x y : X} (p : x =0 y) : p *>0 inv0 p = idp0 \elim p
+  | in0 p => pmap in0 (*>_inv p)
+
+\lemma *>0-cancel {X : \Type} {x y z w : X} (t : x =0 y) (u : y =0 z) (m : y =0 w)
+  : (t *>0 u) *>0 inv0 u *>0 m = t *>0 m \elim t, u, m
+  | in0 t, in0 idp, in0 m => pmap (\lam q => in0 (t *> q)) (idp_*> m)
+
+\lemma *>0-cancel' {X : \Type} {x y z w : X} (t : x =0 y) (u : z =0 y) (m : y =0 w)
+  : (t *>0 inv0 u) *>0 u *>0 m = t *>0 m \elim t, u, m
+  | in0 t, in0 idp, in0 m => pmap (\lam q => in0 (t *> q)) (idp_*> m)
+
+\lemma inv0_*>0-comm {X : \Type} {x y z : X} (p : x =0 y) (q : y =0 z) : inv0 (p *>0 q) = inv0 q *>0 inv0 p \elim p, q
+  | in0 p, in0 q => pmap in0 (*>_inv-comm p q)
+
+\lemma inv0_*>0-comm3 {X : \Type} {x y z w : X} (p : x =0 y) (q : y =0 z) (r : z =0 w)
+  : inv0 (p *>0 q *>0 r) = inv0 r *>0 inv0 q *>0 inv0 p
+  => inv0_*>0-comm p (q *>0 r) *> pmap (__ *>0 inv0 p) (inv0_*>0-comm q r) *> *>0-assoc _ _ _
+
+\lemma map0_*>0 {X Y : \Type} (h : X -> Y) {x y z : X} (p : x =0 y) (q : y =0 z)
+  : map0 h (p *>0 q) = map0 h p *>0 map0 h q \elim p, q
+  | in0 p, in0 q => pmap in0 (pmap_*>-comm h p q)
+
+\lemma map0_inv0 {X Y : \Type} (h : X -> Y) {x y : X} (p : x =0 y) : map0 h (inv0 p) = inv0 (map0 h p) \elim p
+  | in0 p => pmap in0 (pmap_inv-comm h p)
+
+\lemma map0-id {X : \Type} {x y : X} (p : x =0 y) : map0 (\lam x => x) p = p
+  => Trunc0.map-id p
+
+\lemma map0-comp {X Y Z : \Type} (h : X -> Y) (h' : Y -> Z) {x y : X} (p : x =0 y)
+  : map0 (\lam x => h' (h x)) p = map0 h' (map0 h p) \elim p
+  | in0 _ => idp
+
+\lemma transport_Trunc0-right {X : \Type} {x y z : X} (q : y = z) (p : x =0 y)
+  : transport (\lam z => x =0 z) q p = p *>0 in0 q \elim q
+  | idp => inv (*>0_idp0 p)
+
+\lemma transport_Trunc0-left {X : \Type} {x y z : X} (q : y = z) (p : y =0 x)
+  : transport (\lam z => z =0 x) q p = in0 (inv q) *>0 p \elim q
+  | idp => inv (idp0_*>0 p)
+
+\func transport0 {X : \Type} (D : X -> \Set) {x y : X} (p : x =0 y) (d : D x) : D y \elim p
+  | in0 p => transport D p d
+
+\lemma transport0_*>0 {X : \Type} (D : X -> \Set) {x y z : X} (p : x =0 y) (q : y =0 z) (d : D x)
+  : transport0 D (p *>0 q) d = transport0 D q (transport0 D p d) \elim p, q
+  | in0 p, in0 q => transport_*> D p q d
+
+\lemma Aut_*>0 {X : \Type} {x : X} (p q : x =0 x) : p Aut.* q = p *>0 q \elim p, q
+  | in0 _, in0 _ => idp
+
+\func map0Hom {X Y : \Type} (h : X -> Y) (x : X) : GroupHom (Aut x) (Aut (h x)) \cowith
+  | func => map0 h
+  | func-* {p} {q} => pmap (map0 h) (Aut_*>0 p q) *> map0_*>0 h p q *> inv (Aut_*>0 _ _)

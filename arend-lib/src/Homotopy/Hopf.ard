@@ -18,6 +18,11 @@
   | base-right (x : E) : x * base = x
 
 \class HSpaceConn \extends HSpace, Connected0
+  \where
+    \func transport-base.{u} {A B : \Type u} (p : A = B) (H : HSpaceConn A)
+      : base {transport {\Type u} (\lam T => HSpaceConn T) p H} = transport {\Type u} (\lam T => T) p (base {H})
+      \elim B, p
+      | _, idp => idp
 
 -- | For every point {x} in a connected H-space, ``(x *)`` is an equivalence.
 \lemma HSpaceConn-left {A : HSpaceConn} (x : A) => lem (isConn0 base x)
@@ -58,6 +63,10 @@
   }
 
 \instance Sphere1_HSpace : HSpaceConn (Sphere 1) => rewriteI (path (QEquiv_= Sphere1-equiv)) Circle_HSpace
+
+-- | The H-space unit of {Sphere1_HSpace} is the basepoint of the sphere.
+\func sphereHSpace-base-north : base {Sphere1_HSpace} = north
+  => HSpaceConn.transport-base (path (QEquiv_= Sphere1-equiv)) Circle_HSpace
 
 \func hopf.{u} {A : HSpaceConn.{u}} (x : Susp A) : \Type u \elim x
   | north => A

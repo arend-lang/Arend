@@ -1,0 +1,31 @@
+{- | Whitehead's principle, the HoTT book, Section 8.8. -}
+
+\import Equiv
+\import Function
+\import Homotopy.HLevel
+\import Homotopy.Localization.Equiv
+\import Homotopy.Localization.Truncation
+\import Homotopy.Localization.Universe
+\import Homotopy.Whitehead.Connected
+\import Homotopy.Whitehead.Truncated
+\import Logic
+
+\func WhiteheadPrinciple.{u} : \Prop
+  => \Pi {A B : \Type u} (f : A -> B) -> IsInfinityConnectedMap f -> IsEquiv f
+
+\lemma whiteheadWithPrinciple.{u} (W : WhiteheadPrinciple.{u}) {A B : \Type u} (f : A -> B)
+                                  (h : IsWeakHomotopyEquivalence f)
+  : IsEquiv f
+  => W f (propExt.dir (weakEquivalence-iff-infinityConnected f) h)
+
+\func IsHypercomplete.{u} (Z : \Type u) : \Prop
+  => \Pi {A B : \Type u} (f : A -> B) -> IsInfinityConnectedMap f -> IsEquiv {B -> Z} {A -> Z} (-o f)
+
+\lemma whiteheadHypercomplete.{u} {A B : \Type u} (f : A -> B) (hA : IsHypercomplete A) (hB : IsHypercomplete B)
+                                  (h : IsWeakHomotopyEquivalence f)
+  : IsEquiv f
+  => \let c => propExt.dir (weakEquivalence-iff-infinityConnected f) h
+     \in precomp=>isEquiv.endpoints f (hA f c) (hB f c)
+
+\lemma truncated-hypercomplete.{u} (n : Nat) {Z : \Type u} (hZ : Z ofHLevel_-1+ n) : IsHypercomplete Z
+  => \lam f c => connected_depEquiv {truncUniverse n} f (c n) (\lam _ => \new Local {truncUniverse n} Z hZ)

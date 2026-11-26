@@ -1,0 +1,29 @@
+{- | Covering spaces as set-valued families, the HoTT book, Section 8.9, following Favonia and Harper,
+     "Covering spaces in homotopy type theory" (TYPES 2016). A cover of ``A`` is a family of sets over
+     ``A`` in the universe of ``A`` itself; fibres may be empty and no connectedness is assumed here.
+ -}
+
+\import Category
+\import Category.Functor
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.Univalence.Set
+\import Set.SetCategory
+
+\func Cover.{u} (A : \Type u) => A -> \Set u
+  \where {
+    -- | The structural identity principle for covers.
+    \func equality.{u} {A : \Type u} (C D : Cover A) : QEquiv {C = D} {\Pi (a : A) -> QEquiv {C a} {D a}}
+      => transQEquiv (piEquiv (\lam _ => \Set u) C D) (pi-right \lam a => setUnivalence {C a} {D a})
+
+    \func ext.{u} {A : \Type u} {C D : Cover A} (e : \Pi (a : A) -> QEquiv {C a} {D a}) : C = D
+      => path (\lam i a => QEquiv-to-= (e a) @ i)
+
+    \func pullback.{u} {X A : \Type u} (f : X -> A) (C : Cover A) : Cover X
+      => \lam x => C (f x)
+  }
+
+\func CoverHom.{u} {A : \Type u} (C D : Cover A) => \Pi {a : A} -> C a -> D a
+
+\func CoverCat.{u} (A : \Type u) : Cat (Cover A)
+  => FamCat SetCat.{u}

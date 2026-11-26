@@ -1,0 +1,165 @@
+-- | The groupoid of van Kampen codes.
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Group.Aut
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Category
+\import Category.Functor
+\import Data.Or
+\import Equiv
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pointed
+\import Homotopy.Pushout
+\import Homotopy.VanKampen.Code
+\import Homotopy.VanKampen.Words
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open VKSpan.Raw
+\open VKSpan.Rel
+
+\lemma evalQ-isEquiv.{u} {V : VKCover.{u}} {x y : Or V.B V.C} : IsEquiv (V.evalQ {x} {y}) \elim x, y
+  | inl b, inl b' => V.vkDecode-isEquiv (pinl b) (pinl b')
+  | inl b, inr c' => V.vkDecode-isEquiv (pinl b) (pinr c')
+  | inr c, inl b' => V.vkDecode-isEquiv (pinr c) (pinl b')
+  | inr c, inr c' => V.vkDecode-isEquiv (pinr c) (pinr c')
+
+\func CodeGroup.{u} (V : VKCover.{u}) (x : Or V.B V.C) : Group.{u} \cowith
+  | E => V.Code x x
+  | ide => V.idQ x
+  | * => V.concatQ
+  | ide-left => evalQ-inj (V.evalQ-concatQ _ _ *> pmap (__ *>0 _) (V.evalQ-idQ x) *> idp0_*>0 _)
+  | ide-right => evalQ-inj (V.evalQ-concatQ _ _ *> pmap (_ *>0 __) (V.evalQ-idQ x) *> *>0_idp0 _)
+  | *-assoc => evalQ-inj (V.evalQ-concatQ _ _ *> pmap (__ *>0 _) (V.evalQ-concatQ _ _) *> *>0-assoc _ _ _
+                            *> inv (V.evalQ-concatQ _ _ *> pmap (_ *>0 __) (V.evalQ-concatQ _ _)))
+  | inverse => V.invQ
+  | inverse-left => evalQ-inj (V.evalQ-concatQ _ _ *> pmap (__ *>0 _) (V.evalQ-invQ _) *> inv0_*>0 _ *> inv (V.evalQ-idQ x))
+  \where
+    \lemma evalQ-inj {c d : V.Code x x} (p : V.evalQ c = V.evalQ d) : c = d
+      => IsEquiv.isInj evalQ-isEquiv p
+
+\func codeDecodeHom.{u} (V : VKCover.{u}) (x : Or V.B V.C) : GroupHom (CodeGroup V x) (PiGroup 0 (Pointed.make (V.point x))) \cowith
+  | func => V.evalQ
+  | func-* => V.evalQ-concatQ _ _ *> inv (Aut_*>0 _ _)
+
+\func codeDecodeIso.{u} (V : VKCover.{u}) (x : Or V.B V.C) : Iso {GroupCat.{u}} (codeDecodeHom V x)
+  => GroupCat.isoOfEquiv (codeDecodeHom V x) (IsEquiv.toQEquiv evalQ-isEquiv)
+
+\record VKInterp.{u} (V : VKSpan.{u}) (D : Precat) {
+  | FB : Functor (DiscretePrecat V.B) D
+  | FC : Functor (DiscretePrecat V.C) D
+  | cross (s : V.S) : Iso {D} {FB (V.f (V.k s))} {FC (V.g (V.k s))}
+  | cross-natural {s t : V.S} (a : V.k s =0 V.k t) : Iso.f {cross t} ∘ Func {FB} (map0 V.f a) = Func {FC} (map0 V.g a) ∘ Iso.f {cross s}
+
+  \func ob (x : Or V.B V.C) : D \elim x
+    | inl b => FB b
+    | inr c => FC c
+
+  \func extendStart {x y : Or V.B V.C} (st : Start x y) : Hom (ob x) (ob y) \elim x, y
+    | inl _, inl _ => Func {FB} st
+    | inr _, inr _ => Func {FC} st
+    | inl _, inr _ => \case st \with {}
+    | inr _, inl _ => \case st \with {}
+
+  \func extend {x y : Or V.B V.C} (w : V.Raw x y) : Hom (ob x) (ob y) \elim y, w
+    | inl _, segB st => extendStart st
+    | inl _, toB s w p => Func {FB} p ∘ hinv {cross s} ∘ extend w
+    | inr _, segC st => extendStart st
+    | inr _, toC s w q => Func {FC} q ∘ Iso.f {cross s} ∘ extend w
+
+  \lemma extend-appendB {x : Or V.B V.C} {b b' : V.B} (w : V.Raw x (inl b)) (p : b =0 b') : extend (V.appendB w p) = Func {FB} p ∘ extend w \elim w
+    | segB st => start x st
+    | toB _ _ _ => pmap (__ ∘ _ ∘ _) Func-o *> equation
+    \where
+      \lemma start (x : Or V.B V.C) (st : Start x (inl b)) : extendStart (startB st p) = Func {FB} p ∘ extendStart st \elim x
+        | inl _ => Func-o
+        | inr _ => \case st \with {}
+
+  \lemma extend-appendC {x : Or V.B V.C} {c c' : V.C} (w : V.Raw x (inr c)) (q : c =0 c') : extend (V.appendC w q) = Func {FC} q ∘ extend w \elim w
+    | segC st => start x st
+    | toC _ _ _ => pmap (__ ∘ _ ∘ _) Func-o *> equation
+    \where
+      \lemma start (x : Or V.B V.C) (st : Start x (inr c)) : extendStart (startC st q) = Func {FC} q ∘ extendStart st \elim x
+        | inl _ => \case st \with {}
+        | inr _ => Func-o
+
+  \lemma extend-rel {x y : Or V.B V.C} {w w' : V.Raw x y} (r : V.Rel w w') : extend w = extend w' \elim y, r
+    | inl _, cancelB s w0 p idp idp => pmap (\lam z => _ ∘ _ ∘ (z ∘ _ ∘ _)) Func-id *> rewriteEq (hinv_f {cross s}) equation *> inv (extend-appendB w0 p)
+    | inl _, slideB _ _ a w0 _ idp idp => pmap (_ ∘ _ ∘) (extend-appendC w0 _) *> rewriteEq (inv (cross-natural-inv a)) equation *> inv (pmap (__ ∘ _ ∘ _) Func-o)
+    | inl _, congB _ r _ idp idp => pmap (_ ∘ _ ∘) (extend-rel r)
+    | inr _, cancelC s w0 q idp idp => pmap (\lam z => _ ∘ _ ∘ (z ∘ _ ∘ _)) Func-id *> rewriteEq (f_hinv {cross s}) equation *> inv (extend-appendC w0 q)
+    | inr _, slideC _ _ a w0 _ idp idp => pmap (_ ∘ _ ∘) (extend-appendB w0 _) *> rewriteEq (cross-natural a) equation *> inv (pmap (__ ∘ _ ∘ _) Func-o)
+    | inr _, congC _ r _ idp idp => pmap (_ ∘ _ ∘) (extend-rel r)
+    \where
+      \lemma cross-natural-inv {s t : V.S} (a : V.k s =0 V.k t) : Func {FB} (map0 V.f a) ∘ hinv {cross s} = hinv {cross t} ∘ Func {FC} (map0 V.g a)
+        => inv id-left *> pmap (__ ∘ _) (inv (hinv_f {cross t})) *> rewriteEq (cross-natural a) (rewriteEq (f_hinv {cross s}) equation)
+
+  \func extendQ {x y : Or V.B V.C} (c : V.Code x y) : Hom (ob x) (ob y) \elim c
+    | in~ w => extend w
+    | ~-equiv _ _ r => extend-rel r
+
+  \lemma extendQ-concatQ {x y z : Or V.B V.C} (c : V.Code x y) (d : V.Code y z) : extendQ (V.concatQ c d) = extendQ d ∘ extendQ c \elim c, d
+    | in~ w, in~ w' => extend-concat w w'
+    \where {
+      \lemma extend-concat {x y z : Or V.B V.C} (w : V.Raw x y) (w' : V.Raw y z) : extend (V.concatRaw w w') = extend w' ∘ extend w \elim z, w'
+        | inl _, segB st => segB-concat y w st
+        | inl _, toB _ w' _ => pmap (_ ∘ _ ∘) (extend-concat w w') *> equation
+        | inr _, segC st => segC-concat y w st
+        | inr _, toC _ w' _ => pmap (_ ∘ _ ∘) (extend-concat w w') *> equation
+
+      \lemma segB-concat (y : Or V.B V.C) {x : Or V.B V.C} (w : V.Raw x y) {b : V.B} (st : Start y (inl b)) : extend (V.appendStartB w st) = extendStart st ∘ extend w \elim y
+        | inl _ => extend-appendB w st
+        | inr _ => \case st \with {}
+
+      \lemma segC-concat (y : Or V.B V.C) {x : Or V.B V.C} (w : V.Raw x y) {c : V.C} (st : Start y (inr c)) : extend (V.appendStartC w st) = extendStart st ∘ extend w \elim y
+        | inl _ => \case st \with {}
+        | inr _ => extend-appendC w st
+    }
+
+  \lemma extendQ-idQ (x : Or V.B V.C) : extendQ (V.idQ x) = id \elim x
+    | inl _ => Func-id
+    | inr _ => Func-id
+
+  \lemma extendQ-cross (s : V.S) : extendQ (in~ (toC s (segB {V} {inl (V.f (V.k s))} idp0) idp0)) = Iso.f {cross s}
+    => pmap2 (\lam u v => u ∘ _ ∘ v) Func-id Func-id *> equation
+
+  \lemma extendQ-unique (F : \Pi {x y : Or V.B V.C} -> V.Code x y -> Hom (ob x) (ob y))
+    (F-concat : \Pi {x y z : Or V.B V.C} (c : V.Code x y) (d : V.Code y z) -> F (V.concatQ c d) = F d ∘ F c)
+    (F-segB : \Pi {b b' : V.B} (p : b =0 b') -> F (in~ (segB {V} {inl b} p)) = Func {FB} p)
+    (F-segC : \Pi {c c' : V.C} (q : c =0 c') -> F (in~ (segC {V} {inr c} q)) = Func {FC} q)
+    (F-cross : \Pi (s : V.S) -> F (in~ (toC s (segB {V} {inl (V.f (V.k s))} idp0) idp0)) = Iso.f {cross s})
+    {x y : Or V.B V.C} (c : V.Code x y) : F c = extendQ c \elim c
+    | in~ w => raw w
+    \where {
+      \lemma F-crossInv (s : V.S) : F (in~ (toB s (segC {V} {inr (V.g (V.k s))} idp0) idp0)) = hinv {cross s}
+        => inv id-right *> pmap (_ ∘) (inv (f_hinv {cross s})) *> inv o-assoc
+           *> pmap (__ ∘ _) (pmap (_ ∘) (inv (F-cross s)) *> inv (F-concat _ _)
+                             *> pmap F (~-pequiv (cancelB s (segB idp0) idp0 idp idp)) *> F-segB idp0 *> Func-id {FB}) *> id-left
+
+      \lemma raw {x y : Or V.B V.C} (w : V.Raw x y) : F (in~ w) = extend w \elim y, w
+        | inl _, segB st => segB-case x st
+        | inl _, toB s w p =>
+          pmap F (inv (pmap (\lam z => in~ (toB s z p)) (V.appendC-idp0 w)))
+            *> F-concat (in~ w) (in~ (toB s (segC idp0) p))
+            *> pmap2 (∘) (pmap F (pmap (\lam z => in~ (toB s (segC idp0) z)) (inv (idp0_*>0 p))) *> F-concat _ (in~ (segB p)) *> pmap2 (∘) (F-segB p) (F-crossInv s)) (raw w)
+            *> equation
+        | inr _, segC st => segC-case x st
+        | inr _, toC s w q =>
+          pmap F (inv (pmap (\lam z => in~ (toC s z q)) (V.appendB-idp0 w)))
+            *> F-concat (in~ w) (in~ (toC s (segB idp0) q))
+            *> pmap2 (∘) (pmap F (pmap (\lam z => in~ (toC s (segB idp0) z)) (inv (idp0_*>0 q))) *> F-concat _ (in~ (segC q)) *> pmap2 (∘) (F-segC q) (F-cross s)) (raw w)
+            *> equation
+
+      \lemma segB-case (x : Or V.B V.C) {b : V.B} (st : Start x (inl b)) : F (in~ (segB st)) = extendStart st \elim x
+        | inl _ => F-segB st
+        | inr _ => \case st \with {}
+
+      \lemma segC-case (x : Or V.B V.C) {c : V.C} (st : Start x (inr c)) : F (in~ (segC st)) = extendStart st \elim x
+        | inl _ => \case st \with {}
+        | inr _ => F-segC st
+    }
+}

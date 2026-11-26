@@ -1,0 +1,187 @@
+-- | Fundamental groups computed with the van Kampen theorem.
+
+\import Algebra.Group
+\import Algebra.Group.Aut
+\import Algebra.Group.Free
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Pushout
+\import Algebra.Group.QuotientProperties
+\import Algebra.Group.SubGroup
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed (ide)
+\import Algebra.Pointed.PointedHom
+\import Category
+\import Data.Or
+\import Equiv
+\import Homotopy.Connected
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pointed
+\import Homotopy.Pushout
+\import Homotopy.Suspension
+\import Homotopy.VanKampen
+\import Homotopy.VanKampen.Group
+\import Homotopy.VanKampen.Groupoid
+\import Homotopy.VanKampen.Words
+\import Homotopy.Wedge
+\import Logic.Unique
+\import Paths
+\import Relation.Equivalence
+\import Set
+\open VKSpan.Raw
+\open VKSpan.Rel
+
+\func PiGroup_Wedge.{u} (B C : Pointed.{u})
+  : GroupPushout (map0Hom (\lam (_ : \Sigma) => base {B}) ()) (map0Hom (\lam (_ : \Sigma) => base {C}) ())
+    = {Group.{u}} PiGroup 0 (Pointed.make (pinl {\Sigma} {B} {C} {\lam _ => base} {\lam _ => base} base))
+  => PiGroup_Pushout {UnitConnected0} (\lam _ => base) (\lam _ => base) ()
+
+\func Cofiber {A B : \Type} (f : A -> B) => PushoutData f (\lam (_ : A) => ())
+
+\func PiGroup_Cofiber.{u} {A : Connected0.{u}} {B : \Type u} (f : A -> B) (a0 : A)
+  : PiGroup 0 (Pointed.make {Cofiber f} (pinl (f a0))) = {Group.{u}} Aut (f a0) // imageClosure (map0Hom f a0)
+  => inv (Cat.isotoid iso)
+  \where {
+    \lemma unit-loop (t : () =0 ()) : t = idp0 \elim t
+      | in0 p => pmap in0 (isProp.=>isSet {\Sigma} (\lam _ _ => idp) _ _ p idp)
+
+    \func hom : GroupHom (Aut (f a0) // imageClosure (map0Hom f a0)) (PiGroup 0 (Pointed.make {Cofiber f} (pinl (f a0))))
+      => PiGroup_Pushout.hom {A} {B} {\Sigma} {f} {\lam _ => ()} {a0} GroupHom.∘ GroupPushout_trivial.from {_} {_} {_} {map0Hom f a0} {map0Hom (\lam _ => ()) a0} {unit-loop}
+
+    \lemma hom-in (h : f a0 =0 f a0) : hom (in~ h) = map0 pinl h
+      => PiGroup_Pushout.hom-left h
+
+    \func hom-equiv : QEquiv hom
+      => transQEquiv (symQEquiv (GroupPushout_trivial.equiv {_} {_} {_} {map0Hom f a0} {map0Hom (\lam _ => ()) a0} {unit-loop}))
+                     (PiGroup_Pushout.hom-equiv {A} {B} {\Sigma} {f} {\lam _ => ()} {a0})
+
+    \func iso : Iso {GroupCat} hom
+      => GroupCat.isoOfEquiv hom hom-equiv
+  }
+
+\func PiGroup_Susp.{u} {A : \Type u} (a0 : A)
+  : PiGroup 0 (Susp.pointed A) = {Group.{u}} FreeGroup (Trunc0 A) // normalClosure (\lam w => w = FreeGroup.can (in0 a0))
+  => inv (Cat.isotoid iso)
+  \where {
+    \func hom : GroupHom Q (PiGroup 0 (Susp.pointed A))
+      => codeDecodeHom V (inl ()) GroupHom.∘ fromQ
+
+    \lemma hom-gen (s : A) : hom (gen s) = in0 (pmerid s *> inv (pmerid a0))
+      => pmap V.evalQ (F-can (in0 s)) *> pmap in0 (pmap (__ *> _) (idp_*> _))
+
+    \func hom-equiv : QEquiv hom
+      => transQEquiv (symQEquiv equiv) (IsEquiv.toQEquiv (evalQ-isEquiv {V} {inl ()} {inl ()}))
+
+    \func iso : Iso {GroupCat} hom
+      => GroupCat.isoOfEquiv hom hom-equiv
+
+    \func V => naiveVK {A} {\Sigma} {\Sigma} (\lam _ => ()) (\lam _ => ())
+
+    \func Q => FreeGroup (Trunc0 A) // normalClosure (\lam w => w = FreeGroup.can (in0 a0))
+
+    \func gen (s : A) : Q => in~ (FreeGroup.can (in0 s))
+
+    \lemma gen-base : gen a0 = ide {Q}
+      => ~-pequiv (transportInv (normalClosure (\lam w => w = FreeGroup.can (in0 a0))) ide-right
+                    (NormalSubGroup.contains_inverse {normalClosure (\lam w => w = FreeGroup.can (in0 a0))} (normalClosure.gen _ idp)))
+
+    \lemma unit0 {x y : \Sigma} (p q : x =0 y) : p = q \elim p, q
+      | in0 p, in0 q => pmap in0 (isProp.=>isSet {\Sigma} (\lam _ _ => idp) _ _ p q)
+
+    \func toL {L : Group} (e : A -> L) : GroupHom (CodeGroup V (inl ())) L \cowith
+      | func (_ : V.Code (inl ()) (inl ())) : L \with {
+        | in~ w => psiB w
+        | ~-equiv _ _ r => psiB-rel r
+      }
+      | func-* {c} {d} => \case \elim c, \elim d \with {
+        | in~ w, in~ w' => psiB-concat w w'
+      }
+      \where {
+        \lemma e-path {s t : A} (a : s =0 t) : e s = e t \elim a
+          | in0 p => pmap e p
+
+        \func psiB (w : VKSpan.Raw {V} (inl ()) (inl ())) : L \elim w
+          | segB _ => ide
+          | toB s w _ => psiC w * inverse (e s)
+
+        \func psiC (w : VKSpan.Raw {V} (inl ()) (inr ())) : L \elim w
+          | segC st => \case st \with {}
+          | toC s w _ => psiB w * e s
+
+        \lemma psiB-appendB (w : VKSpan.Raw {V} (inl ()) (inl ())) (p : () =0 ()) : psiB (V.appendB w p) = psiB w \elim w
+          | segB _ => idp
+          | toB _ _ _ => idp
+
+        \lemma psiC-appendC (w : VKSpan.Raw {V} (inl ()) (inr ())) (q : () =0 ()) : psiC (V.appendC w q) = psiC w \elim w
+          | segC st => \case st \with {}
+          | toC _ _ _ => idp
+
+        \lemma psiB-rel {w w' : VKSpan.Raw {V} (inl ()) (inl ())} (r : V.Rel w w') : psiB w = psiB w' \elim r
+          | cancelB s w0 p idp idp => *-assoc *> pmap (_ *) inverse-right *> ide-right *> inv (psiB-appendB w0 p)
+          | slideB s t a w0 p idp idp => pmap2 (\lam u v => u * inverse v) (psiC-appendC w0 _) (inv (e-path a))
+          | congB s r p idp idp => pmap (__ * inverse (e s)) (psiC-rel r)
+
+        \lemma psiC-rel {w w' : VKSpan.Raw {V} (inl ()) (inr ())} (r : V.Rel w w') : psiC w = psiC w' \elim r
+          | cancelC s w0 q idp idp => *-assoc *> pmap (_ *) inverse-left *> ide-right *> inv (psiC-appendC w0 q)
+          | slideC s t a w0 q idp idp => pmap2 (*) (psiB-appendB w0 _) (inv (e-path a))
+          | congC s r q idp idp => pmap (__ * e s) (psiB-rel r)
+
+        \lemma psiB-concat (w w' : VKSpan.Raw {V} (inl ()) (inl ())) : psiB (VKSpan.concatRaw {V} w w') = psiB w * psiB w' \elim w'
+          | segB st => psiB-appendB w st *> inv ide-right
+          | toB _ w' _ => pmap (__ * _) (psiC-concat w w') *> *-assoc
+
+        \lemma psiC-concat (w : VKSpan.Raw {V} (inl ()) (inl ())) (w' : VKSpan.Raw {V} (inl ()) (inr ()))
+          : psiC (VKSpan.concatRaw {V} w w') = psiB w * psiC w' \elim w'
+          | segC st => \case st \with {}
+          | toC _ w' _ => pmap (__ * _) (psiB-concat w w') *> *-assoc
+      }
+
+    \func toQ => toL gen
+
+    \func loop (t : Trunc0 A) : V.Code (inl ()) (inl ()) \elim t
+      | in0 s => in~ (toB {V} a0 (toC s (segB idp0) idp0) idp0)
+
+    \func F : GroupHom (FreeGroup (Trunc0 A)) (CodeGroup V (inl ()))
+      => (FreeGroupUniversalProperty (Trunc0 A) (CodeGroup V (inl ())) loop).1
+
+    \lemma F-can (t : Trunc0 A) : F (FreeGroup.can t) = loop t
+      => ide-right {CodeGroup V (inl ())}
+
+    \func fromQ : GroupHom Q (CodeGroup V (inl ()))
+      => normalClosure.lift {_} {_} {\lam w => w = FreeGroup.can (in0 a0)} F (\lam p => pmap F p *> F-can (in0 a0)
+           *> ~-pequiv (cancelB {V} a0 (segB idp0) idp0 idp idp) *> pmap (\lam z => in~ (segB {V} z)) (idp0_*>0 idp0))
+
+    \lemma fromB (w : VKSpan.Raw {V} (inl ()) (inl ())) : fromQ (toL.psiB {A} {Q} {gen} w) = in~ w \elim w
+      | segB st => func-ide {fromQ} *> pmap (\lam z => in~ (segB {V} z)) (unit0 idp0 st)
+      | toB s w p => func-* {fromQ} *> pmap2 V.concatQ (fromC w) (GroupHom.func-inverse {fromQ} {gen s} *> pmap V.invQ (F-can (in0 s)))
+                      *> pmap (V.concatQ __ _) (cross s w p) *> cancel-right {CodeGroup V (inl ())} {_} {loop (in0 s)}
+      \where {
+        \lemma cross (s : A) (w : VKSpan.Raw {V} (inl ()) (inr ())) (p : () =0 ())
+          : in~ (toB {V} a0 w idp0) = {V.Code (inl ()) (inl ())} V.concatQ (in~ (toB {V} s w p)) (loop (in0 s))
+          => inv (pmap (\lam z => in~ (toB {V} a0 (toC s (toB s w z) idp0) idp0)) (unit0 _ idp0)
+                  *> pmap (V.toBQ a0 __ idp0) (~-pequiv (cancelC {V} s w idp0 idp idp)) *> pmap (\lam z => in~ (toB {V} a0 z idp0)) (V.appendC-idp0 w))
+
+        \lemma cancel-right {G : Group} {x y : G} : x * y * inverse y = x
+          => *-assoc *> pmap (x *) inverse-right *> ide-right
+      }
+
+    \lemma fromC (w : VKSpan.Raw {V} (inl ()) (inr ())) : fromQ (toL.psiC {A} {Q} {gen} w) = in~ (toB {V} a0 w idp0) \elim w
+      | segC st => \case st \with {}
+      | toC s w q => func-* {fromQ} *> pmap2 V.concatQ (fromB w) (F-can (in0 s))
+                      *> pmap2 (\lam z z' => in~ (toB {V} a0 (toC s z z') idp0)) (V.appendB-idp0 w) (unit0 idp0 q)
+
+    \lemma gen-case (t : Trunc0 A) : toQ (fromQ (in~ (FreeGroup.can t))) = in~ (FreeGroup.can t) \elim t
+      | in0 s => pmap toQ (F-can (in0 s)) *> kill {Q} (ide-left {Q}) gen-base
+      \where
+        \lemma kill {G : Group} {x y z : G} (p : x = y) (q : z = ide) : x * inverse z = y
+          => pmap2 (\lam u v => u * inverse v) p q *> pmap (y *) Group.inverse_ide *> ide-right
+
+    \func equiv : QEquiv toQ \cowith
+      | ret => fromQ
+      | ret_f c => \case \elim c \with { | in~ w => fromB w }
+      | f_sec y => \case \elim y \with {
+        | in~ w => groupPushout-unique.freeGroup-ext {_} {_} {toQ GroupHom.∘ fromQ GroupHom.∘ NormalSubGroup.quotHom} {NormalSubGroup.quotHom} gen-case w
+      }
+  }

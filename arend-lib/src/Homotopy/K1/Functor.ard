@@ -1,0 +1,39 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Homotopy.HomotopyGroup
+\import Homotopy.K1
+\import Homotopy.K1.Basic
+\import Homotopy.Loop
+\import Homotopy.Pointed \hiding (base)
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func K1Map {G H : Group} (phi : GroupHom G H) : K1Pointed G ->* K1Pointed H
+  => (K1-rec base (\lam g => path (loop (phi g)))
+             (\lam g g' => K1.loop-comp (phi g) (phi g') *> pmap (\lam h => path (loop h)) (inv phi.func-*)), idp)
+  \where {
+    \func id {G : Group} : K1Map (GroupHom.id {G}) = ->*.id
+      => ->*.ext id-pt idp
+
+    \func id-pt {G : Group} (x : K1 G) : (K1Map (GroupHom.id {G})).1 x = x \elim x
+      | base => idp
+      | loop g i => idp
+
+    \func comp {G H L : Group} (psi : GroupHom H L) (phi : GroupHom G H)
+      : K1Map (psi GroupHom.∘ phi) = K1Map psi ->*.∘* K1Map phi
+      => ->*.ext (comp-pt psi phi) idp
+
+    \func comp-pt {G H L : Group} (psi : GroupHom H L) (phi : GroupHom G H) (x : K1 G)
+      : (K1Map (psi GroupHom.∘ phi)).1 x = (K1Map psi).1 ((K1Map phi).1 x) \elim x
+      | base => idp
+      | loop g i => idp
+
+    \func loop_K1Map {G H : Group} (phi : GroupHom G H) (g : G)
+      : (Loop-Func (K1Map phi)).1 (path (loop g)) = path (loop (phi g))
+      => idp_*> _
+
+    \lemma pi_K1Map.{u} {G H : Group.{u}} (phi : GroupHom G H)
+      : piGroupMap 0 (K1Map phi) GroupHom.∘ PiGroup_K1.hom {G} = PiGroup_K1.hom {H} GroupHom.∘ phi
+      => exts \lam g => pmap in0 (loop_K1Map phi g)
+  }

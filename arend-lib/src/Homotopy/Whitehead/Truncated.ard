@@ -1,0 +1,77 @@
+{- | Whitehead's theorem for truncated types, the HoTT book, Theorem 8.8.3 and Corollary 8.8.4, with the
+     truncation bounds as explicit hypotheses. ``A ofHLevel_-1+ suc d`` is the book's ``d``-type, and ``d``
+     is an ordinary homotopy degree.
+ -}
+
+\import Arith.Nat
+\import Equiv
+\import Equiv.Sigma
+\import Homotopy.Connectivity
+\import Homotopy.HLevel
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.Connectivity
+\import Homotopy.HomotopyGroup.PathComparison
+\import Homotopy.Pointed
+\import Homotopy.Whitehead.Path
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Set
+
+\open NatOrder (zero<suc, suc<suc)
+
+\func IsPiEquivalenceThrough.{u} (d : Nat) {A B : \Type u} (f : A -> B) : \Prop
+  => \Sigma (IsEquiv (componentsMap f)) (\Pi (a : A) (k : Nat) -> k NatOrder.< d -> IsEquiv (piAtMap (suc k) f a))
+
+\func IsWeakHomotopyEquivalence.{u} {A B : \Type u} (f : A -> B) : \Prop
+  => \Sigma (IsEquiv (componentsMap f)) (\Pi (a : A) (k : Nat) -> IsEquiv (piAtMap (suc k) f a))
+
+\lemma equiv=>weakEquivalence.{u} {A B : \Type u} {f : A -> B} (e : IsEquiv f) : IsWeakHomotopyEquivalence f
+  => (Trunc0.map-isEquiv e, \lam a k => piMap-isEquiv (suc k) (mapAt f a) e)
+
+\lemma weakEquivalence=>piEquivalenceThrough.{u} (d : Nat) {A B : \Type u} {f : A -> B}
+                                                (h : IsWeakHomotopyEquivalence f)
+  : IsPiEquivalenceThrough d f
+  => (h.1, \lam a k _ => h.2 a k)
+
+\lemma whiteheadTruncated.{u} (d : Nat) {A B : \Type u} (f : A -> B)
+                              (hA : A ofHLevel_-1+ suc d) (hB : B ofHLevel_-1+ suc d)
+                              (h : IsPiEquivalenceThrough d f)
+  : IsEquiv f \elim d
+  | 0 => propExt.conv (IsEquiv.parallelEquiv (Trunc0.in0-isEquiv (set hA)) (Trunc0.in0-isEquiv (set hB)) (\lam _ => idp)) h.1
+  | suc d => whiteheadLoops f h.1 \lam a => whiteheadTruncated d (pmap f) (hA a a) (hB (f a) (f a))
+      (piPathMap-isEquiv 0 f a (h.2 a 0 zero<suc) idp,
+       \lam p k k<d => piPathMap-isEquiv (suc k) f a (h.2 a (suc k) (suc<suc k<d)) p)
+  \where
+    \func set {A : \Type} (h : A ofHLevel_-1+ 1) : isSet A
+      => \lam a a' => ToProp.fromProp (h a a')
+
+-- | The HoTT book, Theorem 8.8.3.
+\lemma whiteheadTruncated-allDegrees.{u} (d : Nat) {A B : \Type u} (f : A -> B)
+                                         (hA : A ofHLevel_-1+ suc d) (hB : B ofHLevel_-1+ suc d)
+                                         (h : IsWeakHomotopyEquivalence f)
+  : IsEquiv f
+  => whiteheadTruncated d f hA hB (weakEquivalence=>piEquivalenceThrough d h)
+
+\lemma contrOfPiTruncated.{u} (d : Nat) {A : \Type u} (hA : A ofHLevel_-1+ suc d) (c0 : Contr (Trunc0 A))
+                              (groups : \Pi (a : A) (k : Nat) -> k NatOrder.< d -> Contr (pi (suc k) (Pointed.make a)))
+  : Contr A
+  => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (whiteheadTruncated d (\lam (_ : A) => ()) hA
+         (HLevel_-1_+ {_} {0} (suc d) (toProp (isContr=>isProp unit-isContr)))
+         (contr-equiv c0 (Trunc0.contr unit-isContr),
+          \lam a k k<d => contr-equiv (groups a k k<d) (pi-vanishes-below {_} {suc k} (nconnected-contr (suc (suc k)) unit-isContr) id<suc)))))
+      unit-isContr
+
+-- | The HoTT book, Corollary 8.8.4.
+\lemma contrOfPiTruncated-allDegrees.{u} (d : Nat) {A : \Type u} (hA : A ofHLevel_-1+ suc d) (c0 : Contr (Trunc0 A))
+                                         (groups : \Pi (a : A) (k : Nat) -> Contr (pi (suc k) (Pointed.make a)))
+  : Contr A
+  => contrOfPiTruncated d hA c0 \lam a k _ => groups a k
+
+\lemma contrOfPiTruncated-pointed.{u} (d : Nat) {A : \Type u} (hA : A ofHLevel_-1+ suc d) (c0 : Contr (Trunc0 A)) (a0 : A)
+                                      (groups : \Pi (k : Nat) -> k NatOrder.< d -> Contr (pi (suc k) (Pointed.make a0)))
+  : Contr A
+  => contrOfPiTruncated d hA c0 \lam a k k<d =>
+      \case transport (\lam (Q : \Prop) => Q) (Trunc0.equality a0 a) (isContr=>isProp c0 (in0 a0) (in0 a)) \with {
+        | inP p => transport (\lam x => Contr (pi (suc k) (Pointed.make x))) p (groups k k<d)
+      }

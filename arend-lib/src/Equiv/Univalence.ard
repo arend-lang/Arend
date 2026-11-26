@@ -11,6 +11,10 @@
 
 \func Equiv_=.{u} {A B : \Type u} (e : Equiv A B) : A = B => QEquiv_= (Equiv.toQEquiv e)
 
+\lemma transport-isEquiv.{u} {A B : \Type u} (p : A = B) : IsEquiv (transport {\Type u} (\lam T => T) p)
+  \elim p
+  | idp => inP idEquiv
+
 \sfunc typeUnivalence.{u} {A B : \Type u} : QEquiv {A = B} {Equiv A B} =_Equiv Equiv_=
   => pathEquiv {\Type u} (Equiv __ __) \lam {A} {B} => \new Retraction {
     | f => =_Equiv

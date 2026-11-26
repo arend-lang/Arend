@@ -1,5 +1,6 @@
 \import Arith.Nat
 \import Function
+\import Paths
 
 \func iterl {A : \Cat} (f : A -> A) (n : Nat) (a : A) : A \elim n
   | 0 => a
@@ -8,6 +9,17 @@
 \func iterr {A : \Cat} (f : A -> A) (n : Nat) (a : A) : A \elim n
   | 0 => a
   | suc n => f (iterr f n a)
+
+\func iterr_+ {A : \Type} (f : A -> A) (n m : Nat) (a : A) : iterr f (n Nat.+ m) a = iterr f n (iterr f m a) \elim n
+  | 0 => idp
+  | suc n => pmap f (iterr_+ f n m a)
+
+\func iterr-step {A : \Type} (f : A -> A) (n : Nat) (a : A) : iterr f n (f a) = f (iterr f n a)
+  => inv (iterr_+ f n 1 a)
+
+\func iterl=iterr {A : \Type} (f : A -> A) (n : Nat) (a : A) : iterl f n a = iterr f n a \elim n
+  | 0 => idp
+  | suc n => iterl=iterr f n (f a) *> iterr-step f n a
 
 \func iterr-ind {A : \Cat} {P : A -> \Type} {f : A -> A} {a0 : A} (p0 : P a0) (s : \Pi {a : A} -> P a -> P (f a)) (n : Nat) : P (iterr f n a0) \elim n
   | 0 => p0

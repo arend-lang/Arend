@@ -1,0 +1,98 @@
+{- | Connectedness of a map is detected by its induced maps on homotopy groups, the HoTT book, Corollary 8.8.5.
+     As in ``Homotopy.Connectivity``, ``isNConnectedMap (suc r) f`` is the book's ``r``-connectedness.
+ -}
+
+\import Algebra.Pointed.Exact
+\import Arith.Nat
+\import Data.Or
+\import Equiv
+\import Function
+\import Homotopy.Connectivity
+\import Homotopy.FiberSequence
+\import Homotopy.FiberSequence.Connectivity
+\import Homotopy.FiberSequence.Exact
+\import Homotopy.Fibration
+\import Homotopy.HLevel
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.PathComparison
+\import Homotopy.Pointed
+\import Homotopy.Truncation
+\import Homotopy.Whitehead.Path
+\import Homotopy.Whitehead.Truncated
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Order.LinearOrder
+\import Paths
+
+\open NatOrder (zero<suc, suc<suc, unsuc<)
+
+\func IsPiConnected.{u} (r : Nat) {A B : \Type u} (f : A -> B) : \Prop
+  => \Sigma (IsEquiv (componentsMap f))
+            (\Pi (a : A) (k : Nat) -> k NatOrder.< r -> IsEquiv (piAtMap (suc k) f a))
+            (\Pi (a : A) -> IsSurj (piAtMap (suc r) f a))
+
+\lemma nconnected0-iff-surj.{u} {A B : \Type u} (f : A -> B) : isNConnectedMap 0 f = IsSurj f
+  => propExt (\lam (c : isNConnectedMap 0 f) b => Trunc_-1+.elim (\lam _ => \new Truncated_-1+ 0 (∃ (a : A) (f a = b)) (toProp prop-isProp))
+                                         (\lam x => inP x)
+                                         (Contr.center {propExt.dir (nconnected-iff-trunc-contr 0 (Fib f b)) (c b)}))
+             (\lam (s : IsSurj f) b => \case s b \with {
+               | inP x => inhabited=>nconnected0 x
+             })
+
+-- | The HoTT book, Corollary 8.8.5.
+\lemma nconnected-iff-piConnected.{u} (r : Nat) {A B : \Type u} (f : A -> B)
+  : isNConnectedMap (suc r) f = IsPiConnected r f
+  => propExt (\lam c => (nconnected-piMap-isEquiv.pi0-isEquiv f c,
+                         \lam a _ k<r => nconnected-piMap-isEquiv (mapAt f a) c (suc<suc k<r),
+                         \lam a => nconnected-pi-surj (mapAt f a) c))
+             (\lam (h : IsPiConnected r f) => propExt.conv (nconnected-map-fibers (suc r) f) \lam b =>
+                 \case componentsMap-surj (IsEquiv.isSurj h.1) b \with {
+                   | inP (a, q) => transport (\lam b => Contr (Trunc_-1+ (suc r) (Fib f b))) q (fiber-contr h a)
+                 })
+  \where {
+    \lemma pi-surj.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) (a : A) {j : Nat} (p : j NatOrder.< suc r)
+      : IsSurj (piAtMap (suc j) f a)
+      => \case LinearOrder.<=-dec (<_suc_<= p) \with {
+        | inl q => IsEquiv.isSurj (h.2 a j q)
+        | inr q => transportInv (\lam j => IsSurj (piAtMap (suc j) f a)) q (h.3 a)
+      }
+
+    \lemma pi-inj.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) (a : A) {j : Nat} (p : j NatOrder.< suc r)
+      : IsInj (piAtMap j f a) \elim j
+      | 0 => IsEquiv.isInj h.1
+      | suc j => IsEquiv.isInj (h.2 a j (unsuc< p))
+
+    \lemma fiber-pi-contr.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) (a : A) {j : Nat} (p : j NatOrder.< suc r)
+      : Contr (pi j (PointedFib (mapAt f a)))
+      => exactFive-middle-contr (pi-exact-base (mapAt f a) j) (pi-exact-fiber (mapAt f a) j) (pi-exact-total (mapAt f a) j)
+                                (pi-surj h a p) (pi-inj h a p)
+
+    \lemma fiber-point-contr.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) {k : Nat} (k<r : k NatOrder.< r)
+                                 (a : A) {b : B} (q : f a = b)
+      : Contr (pi (suc k) (Pointed.make {Fib f b} (a, q))) \elim b, q
+      | _, idp => fiber-pi-contr h a (suc<suc k<r)
+
+    \lemma fiber-contr.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) (a : A)
+      : Contr (Trunc_-1+ (suc r) (Fib f (f a)))
+      => contrOfPiTruncated r (isTruncated {Trunc_-1+.level (suc r) (Fib f (f a))})
+          (Contr.Contr_QEquiv (IsEquiv.toQEquiv (nconnected-piMap-isEquiv.pi0-isEquiv inT trunc-in-nconnected))
+                              (fiber-pi-contr h a zero<suc))
+          \lam t k k<r => Trunc_-1+.elim (\lam t => \new Truncated_-1+ (suc r) (Contr (pi (suc k) (Pointed.make t)))
+                                                                     (HLevel_-1_+ {_} {0} (suc r) (toProp (Contr.levelProp _))))
+                                         (\lam w => Contr.Contr_QEquiv
+                                             (IsEquiv.toQEquiv (nconnected-piMap-isEquiv (mapAt inT w) trunc-in-nconnected (suc<suc k<r)))
+                                             (fiber-point-contr h k<r w.1 w.2))
+                                         t
+  }
+
+\func IsInfinityConnectedMap.{u} {A B : \Type u} (f : A -> B) : \Prop
+  => \Pi (n : Nat) -> isNConnectedMap n f
+
+\lemma weakEquivalence-iff-infinityConnected.{u} {A B : \Type u} (f : A -> B)
+  : IsWeakHomotopyEquivalence f = IsInfinityConnectedMap f
+  => propExt (\lam (h : IsWeakHomotopyEquivalence f) n => nconnected-map-mono (LinearOrder.<_<= id<suc)
+                            (propExt.conv (nconnected-iff-piConnected n f)
+                                          (h.1, \lam a k _ => h.2 a k, \lam a => IsEquiv.isSurj (h.2 a n))))
+             (\lam (c : IsInfinityConnectedMap f) => (nconnected-piMap-isEquiv.pi0-isEquiv {0} f (c 1),
+                         \lam a k => nconnected-piMap-isEquiv {suc (suc k)} {suc k} (mapAt f a) (c (suc (suc k))) id<suc))

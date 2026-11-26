@@ -1,0 +1,64 @@
+-- | After ``theorems/homotopy/Pi2HSusp.agda`` in HoTT-Agda.
+
+\import Equiv
+\import Homotopy.Connectivity
+\import Homotopy.EncodeDecode
+\import Homotopy.HLevel
+\import Homotopy.Hopf
+\import Homotopy.Localization.Truncation
+\import Homotopy.Localization.Universe
+\import Homotopy.Pointed
+\import Homotopy.Pushout
+\import Homotopy.Suspension
+\import Homotopy.Truncation
+\import Homotopy.Wedge
+\import Logic
+\import Paths
+
+\func hspaceLoopSusp.{u} {X : HSpaceConn.{u}} (lv : X ofHLevel_-1+ 2) (coh : base-left {X} base = base-right base)
+  : PointedEquiv X (Pointed.make {Trunc_-1+ 2 (north {X} = north)} (inT idp)) \cowith
+  | map => (decode.{u} lv coh north, pmap inT (*>_inv (pmerid base)))
+  | map-isEquiv => inP (symQEquiv (truncLoopEncodeDecode 2 (hopf {X}) (hopf-level lv) base (decode.{u} lv coh) (pmap inT (*>_inv (pmerid base)))
+                                                         decode_encode))
+  \where {
+    \lemma hopf-level.{u} {X : HSpaceConn.{u}} (lv : X ofHLevel_-1+ 2) (y : Susp X) : hopf y ofHLevel_-1+ 2 \elim y
+      | north => lv
+      | south => lv
+
+    \func decode.{u} {X : HSpaceConn.{u}} (lv : X ofHLevel_-1+ 2) (coh : base-left {X} base = base-right base)
+                     (y : Susp X) : hopf y -> Trunc_-1+ 2 (north = y) \elim y
+      | north => \lam x => inT (pmerid x *> inv (pmerid base))
+      | south => \lam x => inT (pmerid x)
+      | pglue a i => pathOver (transport_pi2 (hopf {X}) (\lam y => Trunc_-1+ 2 (north = y)) (pmerid a) (\lam x => inT (pmerid x *> inv (pmerid base))) (\lam x => inT (pmerid x)) (\lam x =>
+          transport_inT (pmerid a) _ *> pmap inT (transport_path-right (pmerid a) _) *> glue lv coh (a, x))) @ i
+
+    \func transport_inT {A : \Type} {n : Nat} {a0 a a' : A} (q : a = a') (p : a0 = a)
+      : transport (\lam y => Trunc_-1+ n (a0 = y)) q (inT p) = inT (transport (a0 =) q p) \elim q
+      | idp => idp
+
+    \func Glue.{u} {X : HSpaceConn.{u}} (t : \Sigma X X) : Local {truncUniverse.{u} 1}
+      => \new Local {truncUniverse 1} (inT {2} ((pmerid t.2 *> inv (pmerid base)) *> pmerid t.1) = inT (pmerid (t.1 * t.2)))
+                                      (isTruncated {Trunc_-1+.level 2 (north {X} = south)} _ _)
+
+    \func glue.{u} {X : HSpaceConn.{u}} (lv : X ofHLevel_-1+ 2) (coh : base-left {X} base = base-right base)
+      : \Pi (t : \Sigma X X) -> Glue t
+      => wedge-extension.extend 0 0 X X (connected0=>nconnected1 X) (connected0=>nconnected1 X) Glue
+          (\lam a => pmap inT (left-alg (pmerid base) (pmerid a) *> inv (pmap pmerid (base-right a))),
+           \lam x => pmap inT (right-alg (pmerid x) (pmerid base) *> inv (pmap pmerid (base-left x))),
+           pmap2 (\lam u e => pmap inT (u *> inv (pmap pmerid e))) (alg (pmerid base)) (inv coh))
+
+    \func left-alg {A : \Type} {n s : A} (m r : n = s) : (m *> inv m) *> r = r
+      => pmap (`*> r) (*>_inv m) *> idp_*> r
+
+    \func right-alg {A : \Type} {n s : A} (r m : n = s) : (r *> inv m) *> m = r
+      => *>-assoc r (inv m) m *> pmap (r *>) (inv_*> m)
+
+    \func alg {A : \Type} {n s : A} (m : n = s) : left-alg m m = right-alg m m \elim s, m
+      | _, idp => idp
+
+    \func decode_encode.{u} {X : HSpaceConn.{u}} (c : X)
+      : transport hopf (pmerid c *> inv (pmerid base)) base = c
+      => transport_*> hopf (pmerid c) (inv (pmerid base)) base
+         *> pmap (transport hopf (inv (pmerid base))) (base-right c *> inv (base-left c))
+         *> transport_inv_id hopf (pmerid base) c
+  }

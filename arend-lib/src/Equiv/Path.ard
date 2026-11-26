@@ -20,6 +20,12 @@
   | ret_f q => inv *>-assoc *> pmap (*> q) *>_inv *> idp_*>
   | f_sec q => inv *>-assoc *> pmap (*> q) inv_*> *> idp_*>
 
+\func pathConcatEquiv-right {A : \Type} {a b c : A} (q : b = c) : QEquiv {a = b} {a = c} \cowith
+  | f => `*> q
+  | ret => `*> inv q
+  | ret_f p => *>-assoc p q (inv q) *> pmap (p *>) (*>_inv q)
+  | f_sec p => *>-assoc p (inv q) q *> pmap (p *>) (inv_*> q)
+
 -- | If ``f : A -> B`` is an equivalence, then ``pmap f`` is also an equivalence.
 \lemma pmapIsEquiv {A B : \Cat} {f : A -> B} (e : IsEquiv f) {a a' : A} : IsEquiv (pmap f {a} {a'}) \elim e
   | inP e => inP $ pathEquiv (f __ = f __) \lam {a} {a'} => \new Retraction {

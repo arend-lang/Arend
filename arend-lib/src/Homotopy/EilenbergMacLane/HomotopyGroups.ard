@@ -1,0 +1,68 @@
+-- | After ``theorems/homotopy/EilenbergMacLane.agda`` in HoTT-Agda.
+
+\import Algebra.Group
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Arith.Nat
+\import Category
+\import Equiv
+\import Homotopy.EilenbergMacLane.Definition
+\import Homotopy.EilenbergMacLane.Functor
+\import Homotopy.EilenbergMacLane.Loop
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.Connectivity
+\import Homotopy.HomotopyGroup.PathComparison
+\import Homotopy.K1.Basic
+\import Homotopy.K1.Functor
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import Set
+
+\open NatOrder (suc<suc)
+
+\lemma K-pi-below.{u} {G : CGroup.{u}} {n k : Nat} (p : k NatOrder.< n) : Contr (pi k (K G n)) \elim n
+  | suc r => pi-vanishes-below (K-connected r) p
+
+\lemma K-pi-above.{u} {G : CGroup.{u}} {n k : Nat} (p : n NatOrder.< k) : Contr (pi k (K G n))
+  => pi-vanishes-above (K-level n) (<_suc_<= (suc<suc p))
+
+\func pi0_K.{u} (G : CGroup.{u}) : QEquiv {pi 0 (K G 0)} {G}
+  => Trunc0.setEquiv
+
+\func PiGroup_K.{u} (G : CGroup.{u}) (n : Nat) : PiGroup n (K G (suc n)) = {Group.{u}} G
+  => inv (Cat.isotoid iso)
+  \where {
+    \func hom (n : Nat) : GroupHom G (PiGroup n (K G (suc n))) \elim n
+      | 0 => PiGroup_K1.hom {G}
+      | suc n => PiGroup_LoopShift.hom n (K G (suc (suc n)))
+                   GroupHom.∘ piGroupMap n {K G (suc n)} {Loop (K G (suc (suc n)))} (K-loopUnit (suc n))
+                   GroupHom.∘ hom n
+
+    \lemma hom-isEquiv (n : Nat) : IsEquiv (hom n) \elim n
+      | 0 => inP PiGroup_K1.hom-equiv
+      | suc n => IsEquiv.trans (IsEquiv.trans (hom-isEquiv n) (piMap-isEquiv (suc n) {K G (suc n)} {Loop (K G (suc (suc n)))} (K-loopUnit (suc n)) (K-loopUnit-isEquiv (suc n))))
+                               (Trunc0.map-isEquiv (omegaShift.isEquiv (suc n) (K G (suc (suc n)))))
+
+    \func iso : Iso {GroupCat} (hom n)
+      => GroupCat.isoOfEquiv (hom n) (IsEquiv.toQEquiv (hom-isEquiv n))
+  }
+
+\lemma PiGroup_K-natural.{u} {G H : CGroup.{u}} (n : Nat) (phi : GroupHom G H)
+  : piGroupMap n (KMap (suc n) phi) GroupHom.∘ PiGroup_K.hom {G} n = PiGroup_K.hom {H} n GroupHom.∘ phi \elim n
+  | 0 => K1Map.pi_K1Map phi
+  | suc n => exts \lam g =>
+      \let | F => KMap (suc (suc n)) phi
+           | t => PiGroup_K.hom {G} n g
+           | uG => K-loopUnit {G} (suc n)
+           | uH => K-loopUnit {H} (suc n)
+      \in inv (piMap-loopShift.square {suc n} {K G (suc (suc n))} {K H (suc (suc n))} {F} (piMap (suc n) {K G (suc n)} {Loop (K G (suc (suc n)))} uG t))
+          *> pmap (\lam w => Trunc0.map w (omegaShift (suc n) (K H (suc (suc n)))).1)
+                  (inv (piMap-comp (suc n) {K G (suc n)} {Loop (K G (suc (suc n)))} {Loop (K H (suc (suc n)))} (Loop-Func {K G (suc (suc n))} {K H (suc (suc n))} F) uG t)
+                   *> pmap (\lam (h : K G (suc n) ->* Loop (K H (suc (suc n)))) => piMap (suc n) {K G (suc n)} {Loop (K H (suc (suc n)))} h t) (KMap_loopUnit (suc n) phi)
+                   *> piMap-comp (suc n) {K G (suc n)} {K H (suc n)} {Loop (K H (suc (suc n)))} uH (KMap (suc n) phi) t
+                   *> pmap (piMap (suc n) {K H (suc n)} {Loop (K H (suc (suc n)))} uH)
+                           (pmap (\lam (h : GroupHom G (PiGroup n (K H (suc n)))) => h g) (PiGroup_K-natural n phi)))

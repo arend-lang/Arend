@@ -1,0 +1,103 @@
+-- | After ``theorems/homotopy/GroupSetsRepresentCovers.agda`` in HoTT-Agda.
+
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.GSet.EquivariantMap
+\import Algebra.Group.GSet.GSetCat
+\import Algebra.Monoid
+\import Arith.Int
+\import Category
+\import Equiv
+\import Equiv.Univalence
+\import Homotopy.Connectivity
+\import Homotopy.Cover.Associated
+\import Homotopy.Cover.Basic
+\import Homotopy.Cover.Monodromy
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.Circle
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+
+\open Associated (trace, trace-rel, transport_trace)
+
+\func coverClassification.{u} (A : Pointed.{u}) (connected : isNConnectedType 1 A)
+  : QEquiv {Cover A} {GSet.{u} (PiGroup 0 A)} \cowith
+  | f => Monodromy
+  | ret => Associated
+  | ret_f C => Cover.ext (\lam a => IsEquiv.toQEquiv (evalCover.isEquiv connected C a))
+  | f_sec M => Cat.isotoid (evalGSet.iso M)
+
+\func evalGSet.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) (z : Associated M base) : M \elim z
+  | in~ (m, g) => Group.inverse {PiGroup 0 A} g ** m
+  | ~-equiv (m', p') (m, p) (h, e1, e2) => pmap (_ **) e1 *> act-inverse m h p' *> pmap (\lam g => Group.inverse {PiGroup 0 A} g ** m) (Aut_*>0 h p' *> inv e2)
+  \where {
+    \lemma act-inverse {G : Group} {M : GSet G} (m : M) (h g : G) : inverse g ** (inverse h ** m) = inverse (h * g) ** m
+      => inv **-assoc *> pmap (`** m) (inv Group.inverse_*)
+
+    \lemma act-conj {G : Group} {M : GSet G} (m : M) (g h : G) : inverse (g * inverse h) ** m = h ** (inverse g ** m)
+      => pmap (`** m) (Group.inverse_* *> pmap (`* inverse g) Group.inverse-isInv) *> **-assoc
+
+    \lemma equivariant.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) (z : Associated M base) (h : PiGroup 0 A)
+      : evalGSet M (transport0 (Associated M) (inv0 h) z) = h ** evalGSet M z \elim z, h
+      | in~ (m, g), in0 q => pmap (evalGSet M) (transport_trace (inv q) m g)
+                             *> pmap (\lam k => Group.inverse {PiGroup 0 A} k ** m) (inv (Aut_*>0 g (in0 (inv q))))
+                             *> act-conj m g (in0 q)
+
+    \func map.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) : EquivariantMap (Monodromy (Associated M)) M \cowith
+      | func => evalGSet M
+      | func-** {z} {h} => equivariant M z h
+
+    \func unit.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) : EquivariantMap M (Monodromy (Associated M)) \cowith
+      | func m => trace m idp0
+      | func-** {m} {h} => unit-equivariant M m h
+
+    \lemma unit-equivariant.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) (m : M) (h : PiGroup 0 A)
+      : trace {A} {M} (h ** m) idp0 = transport0 (Associated M) (inv0 h) (trace m idp0) \elim h
+      | in0 q => pmap (\lam g => trace (g ** m) idp0) (inv (pmap in0 (inv_inv q)))
+                 *> trace-rel m (in0 (inv q)) idp0
+                 *> pmap (trace m) (*>0_idp0 (in0 (inv q)) *> inv (idp0_*>0 (in0 (inv q))))
+                 *> inv (transport_trace (inv q) m idp0)
+
+    \lemma unit-eval.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) (z : Associated M base) : trace (evalGSet M z) idp0 = z \elim z
+      | in~ (m, g) => trace-rel m g idp0 *> pmap (trace m) (*>0_idp0 g)
+
+    \func iso.{u} {A : Pointed.{u}} (M : GSet.{u} (PiGroup 0 A)) : Iso {GSetCategory (PiGroup 0 A)} (map M) \cowith
+      | hinv => unit M
+      | hinv_f => exts (unit-eval M)
+      | f_hinv => exts \lam m => pmap (`** m) (Group.inverse_ide {PiGroup 0 A}) *> **_ide
+  }
+
+\func evalCover.{u} {A : Pointed.{u}} (C : Cover A) (a : A) (z : Associated (Monodromy C) a) : C a \elim z
+  | in~ (m, p) => transport0 C p m
+  | ~-equiv (m', p') (m, p) (h, e1, e2) => pmap (transport0 C p') (e1 *> pmap (transport0 C __ m) (inv0-inv0 h))
+                                           *> inv (transport0_*>0 C h p' m) *> pmap (transport0 C __ m) (inv e2)
+  \where {
+    \lemma inv0-inv0 {X : \Type} {x y : X} (h : x =0 y) : inv0 (inv0 h) = h \elim h
+      | in0 p => pmap in0 (inv_inv p)
+
+    \func equiv.{u} {A : Pointed.{u}} (C : Cover A) {a : A} (q : base = a) : QEquiv (evalCover C a) \cowith
+      | ret z => trace (transport C (inv q) z) (in0 q)
+      | ret_f => ret_f C q
+      | f_sec => transport_id_inv C q
+
+    \lemma ret_f.{u} {A : Pointed.{u}} (C : Cover A) {a : A} (q : base = a) (w : Associated (Monodromy C) a)
+      : trace (transport C (inv q) (evalCover C a w)) (in0 q) = w \elim w
+      | in~ (m, in0 p) => pmap (\lam x => trace x (in0 q)) (inv (transport_*> C p (inv q) m) *> pmap (transport C __ m) (inv (inv_inv (p *> inv q))))
+                          *> trace-rel m (in0 (p *> inv q)) (in0 q)
+                          *> pmap (\lam r => trace m (in0 r)) (*>-assoc p (inv q) q *> pmap (p *>) (inv_*> q))
+
+    \lemma isEquiv.{u} {A : Pointed.{u}} (connected : isNConnectedType 1 A) (C : Cover A) (a : A) : IsEquiv (evalCover C a)
+      => \case nconnected1-path connected base a \with {
+        | inP q => inP (equiv C q)
+      }
+  }
+
+\func circleCovers : QEquiv {Cover (Sphere 1)} {GSet.{0} (AddGroup.toGroup IntRing)}
+  => transQEquiv (coverClassification (Sphere.pointed 1) (sphere-nconnected 1))
+    (Equiv.toQEquiv (=_Equiv (pmap (\lam (G : Group.{0}) => GSet.{0} G) PiGroup_S1)))

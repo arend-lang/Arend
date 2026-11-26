@@ -1,0 +1,30 @@
+\import Equiv
+\import Homotopy.HomotopyGroup
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Paths
+\import Set
+
+\func mapAt {A B : \Type} (f : A -> B) (a : A) : Pointed.make a ->* Pointed.make (f a)
+  => (f, idp)
+
+\func piAtMap.{u} (k : Nat) {A B : \Type u} (f : A -> B) (a : A) (t : pi k (Pointed.make a)) : pi k (Pointed.make (f a))
+  => piMap k (mapAt f a) t
+
+\func Loop-Func_mapAt {A B : \Type} (f : A -> B) (a : A) : Loop-Func (mapAt f a) = mapAt (pmap f {a} {a}) idp
+  => ->*.ext (\lam z => idp_*> (pmap f z)) idp
+
+\lemma piMap-loopShift.{u} (k : Nat) {X Y : Pointed.{u}} (g : X ->* Y)
+  : IsEquiv (piMap k {Loop X} {Loop Y} (Loop-Func g)) = IsEquiv (piMap (suc k) g)
+  => IsEquiv.parallelEquiv (Trunc0.map-isEquiv (omegaShift.isEquiv k X)) (Trunc0.map-isEquiv (omegaShift.isEquiv k Y)) square
+  \where
+    \lemma square.{u} {k : Nat} {X Y : Pointed.{u}} {g : X ->* Y} (t : pi k (Loop X))
+      : Trunc0.map (piMap k {Loop X} {Loop Y} (Loop-Func g) t) (omegaShift k Y).1
+        = piMap (suc k) g (Trunc0.map t (omegaShift k X).1) \elim t
+      | in0 w => pmap in0 (->*.happly (omegaShift.natural k g) w)
+
+\lemma piPathMap-isEquiv.{u} (k : Nat) {A B : \Type u} (f : A -> B) (a : A) (h : IsEquiv (piAtMap (suc k) f a))
+                             {b : A} (q : a = b)
+  : IsEquiv (piAtMap k (pmap f {a} {b}) q) \elim b, q
+  | _, idp => transport (\lam g => IsEquiv (piMap k {Loop (Pointed.make a)} {Loop (Pointed.make (f a))} g)) (Loop-Func_mapAt f a)
+                        (transportInv (\lam (P : \Prop) => P) (piMap-loopShift k (mapAt f a)) h)
