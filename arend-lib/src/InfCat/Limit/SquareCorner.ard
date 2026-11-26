@@ -1,0 +1,262 @@
+{- | Arrows of squares determined by a corner.
+ -
+ -   If the off-diagonal corners of a square {phi} are initial and {psi} is a pullback square,
+ -   then arrows from {phi} to {psi} are determined by their bottom right components ({pullback-corner-equiv}).
+ -
+ -   The proof restricts {psi} to the squares `upSq psi b` over the arrows from the points `b` of the square to its bottom right corner.
+ -   These are pullback squares, so arrows into them from constant squares are arrows of cospans ({cospan-char}).
+ -   Postcomposition turns this into a statement about arrows of families of squares ({postcomp-ff-at}),
+ -   and on the cospans the initial corners of {phi} make the evaluation at the bottom right corner an equivalence.
+ -
+ -   Dually, if {phi} is a pushout square and the off-diagonal corners of {psi} are terminal, then arrows from {phi} to {psi}
+ -   are determined by their top left components ({pushout-corner-equiv}); here the restriction is to spans ({span-pushout}).
+ -   Both proofs only use the universal property with respect to the corners of the other square ({pullbackAt-corner-equiv}, {pushoutAt-corner-equiv}).
+ -
+ -   Pushout squares with respect to a test object are closed under pullbacks of the test object ({pushoutAt-pullback}),
+ -   and dually ({pullbackAt-pushout}, via `Op C`).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.CatPushoutHom
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Interval
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Pullback
+\import InfCat.Limit.PullbackFun
+\import InfCat.Limit.PushoutOp
+\import InfCat.Limit.Pushout
+\import InfCat.Limit.Span
+\import InfCat.Limit.Terminal
+\import InfCat.Opposite.Square
+\import InfCat.Slice
+\import InfCat.Square
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- | Arrows of functors out of `\Sigma⁺ (i : DI) DI` are arrows of the curried functors.
+\func curry-hom {C : \Cat} {P Q : DI ->⁺ DI ->⁺ C}
+  : QEquiv {(\lam a => P a.1 a.2) ~> {\Sigma⁺ (i : DI) DI ->⁺ C} (\lam a => Q a.1 a.2)} {P ~> Q} \cowith
+  | f t => dpath \lam m i j => t m ((i,j) : \Sigma⁺ (i : DI) DI)
+  | ret t => dpath \lam m a => t m a.1 a.2
+  | ret_f t => idp
+  | f_sec t => idp
+
+-- | The two corner components of an arrow between constant squares agree.
+\sfunc const-sq-ev {C : \Cat} {X Y : C} (t : (\lam _ _ => X) ~> {DI ->⁺ DI ->⁺ C} (\lam _ _ => Y))
+  : dmap (\lam (S : DI ->⁺ DI ->⁺ C) => S dright dright) t = dmap (\lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft) t
+  => inv comp_idd-left *> inv (~>-natural {DI ->⁺ DI ->⁺ C} {C} {\lam S => S dleft dleft} {\lam S => S dright dright} (\lam S => dpath \lam m => S m m) {_} {_} {t}) *> comp_idd-right
+
+-- | If the off-diagonal corners of {phi} are initial and {psi} is a pullback square, arrows from {phi} to {psi} are determined by their bottom right components.
+\lemma pullback-corner-equiv {C : \Cat} {phi psi : DI ->⁺ DI ->⁺ C} (i1 : IsInitial (phi dright dleft)) (i2 : IsInitial (phi dleft dright))
+                             (pb : IsPullbackSquare psi)
+  : IsEquiv {phi ~> psi} {phi dright dright ~> psi dright dright} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dright dright)
+  => pullbackAt-corner-equiv i1 i2 \lam b => pb (phi b.1 b.2)
+
+{- | If the off-diagonal corners of {phi} are initial and {psi} is a pullback square with respect to the corners of {phi},
+ -   then arrows from {phi} to {psi} are determined by their bottom right components.
+ -}
+\lemma pullbackAt-corner-equiv {C : \Cat} {phi psi : DI ->⁺ DI ->⁺ C} (i1 : IsInitial (phi dright dleft)) (i2 : IsInitial (phi dleft dright))
+                               (pb : \Pi (b : \Sigma⁺ (i : DI) DI) -> IsPullbackAt psi (phi b.1 b.2))
+  : IsEquiv {phi ~> psi} {phi dright dright ~> psi dright dright} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dright dright)
+  => \let | A => \Sigma⁺ (i : DI) DI
+          | L : IsEquiv (dmap {A ->⁺ DI ->⁺ DI ->⁺ C} {A ->⁺ C} (\lam G a => G a dleft dleft) {sqSrc phi} {upSq psi})
+            => postcomp-ff-at (\lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft) (sqSrc phi) (upSq psi)
+                 \lam x y => IsEquiv.trans (const-ev0-equiv (const (phi x.1 x.2)) (upSq psi y)) (const-ev0-equiv (phi x.1 x.2) (upSq psi y dleft))
+          | T => postcomp-ff-at (\lam (S : DI ->⁺ DI ->⁺ C) => cospan S) (sqSrc phi) (upSq psi)
+                   \lam x y => (cospanAt-char (upSq psi y) (phi x.1 x.2)).1 (upSq-pullbackAt {C} {phi} pb x y)
+          | R => postcomp-ff-at (\lam (H : A ->⁺ C) => H ((dright,dright) : A)) (\lam _ a => phi a.1 a.2) (\lam y a => upSq psi a (cospanInc y).1 (cospanInc y).2)
+                   \lam x y => \case \elim y \with {
+                     | cinl j => row-equiv {C} {phi} i1 (\lam k => psi dright (dmax k j))
+                     | cinr i => col-equiv {C} {phi} i2 (\lam k => psi (dmax k i) dright)
+                   }
+          | Phi => IsEquiv.trans T (IsEquiv.trans (inP swap-qequiv) (IsEquiv.trans R (cospan-const-equiv (phi dright dright) (psi dright dright))))
+     \in IsEquiv.rightFactor (IsEquiv.trans L (inP (curry-hom {C} {phi} {psi}))) {dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dright dright}
+           (transport IsEquiv (ext \lam t => const-sq-ev (dmap (\lam (G : A ->⁺ DI ->⁺ DI ->⁺ C) => G ((dright,dright) : A)) t)) Phi)
+  \where {
+    -- | Restriction of {psi} to the square over the arrow from {b} to the bottom right corner.
+    \func upSq {C : \Cat} (psi : DI ->⁺ DI ->⁺ C) (b :⁺ \Sigma⁺ (i : DI) DI) : DI ->⁺ DI ->⁺ C
+      => \lam i k => psi (dmax b.1 i) (dmax b.2 k)
+
+    \lemma upSq-pullbackAt {C : \Cat} {phi psi : DI ->⁺ DI ->⁺ C} (pb : \Pi (b : \Sigma⁺ (i : DI) DI) -> IsPullbackAt psi (phi b.1 b.2))
+                           (a b : \Sigma⁺ (i : DI) DI) : IsPullbackAt (upSq psi b) (phi a.1 a.2)
+      \elim b
+      | (dleft, dleft) => pb a
+      | (dleft, dright) => IsPullbackSquare.isPullback-const (\lam i => psi i dright) (phi a.1 a.2)
+      | (dright, dleft) => IsPullbackSquare.isPullback-idd (psi dright) (phi a.1 a.2)
+      | (dright, dright) => IsPullbackSquare.isPullback-idd (\lam _ => psi dright dright) (phi a.1 a.2)
+
+    -- | The constant squares on the values of {phi}.
+    \func sqSrc {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (a :⁺ \Sigma⁺ (i : DI) DI) : DI ->⁺ DI ->⁺ C
+      => constSq (phi a.1 a.2)
+
+    -- | Swapping the two arguments of arrows of functors out of `\Sigma⁺ (i : DI) DI` and {Cospan}.
+    \func swap-qequiv {C : \Cat} {G H : \Sigma⁺ (i : DI) DI ->⁺ Cospan ->⁺ C}
+      : QEquiv {G ~> H} {(\lam y a => G a y) ~> {Cospan ->⁺ \Sigma⁺ (i : DI) DI ->⁺ C} (\lam y a => H a y)} \cowith
+      | f t => dpath \lam m y a => t m a y
+      | ret t => dpath \lam m a y => t m y a
+      | ret_f t => idp
+      | f_sec t => idp
+
+    \lemma row-equiv {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (i1 : IsInitial (phi dright dleft)) (w : DI ->⁺ C)
+      : IsEquiv {(\lam a => phi a.1 a.2) ~> {\Sigma⁺ (i : DI) DI ->⁺ C} (\lam a => w a.2)} {phi dright dright ~> w dright}
+                (dmap \lam (H : \Sigma⁺ (i : DI) DI ->⁺ C) => H ((dright,dright) : \Sigma⁺ (i : DI) DI))
+      => IsEquiv.trans {_} {_} {_} {curry-hom} (inP curry-hom) (IsEquiv.trans (const-ev1-equiv w phi) (initial-ev1-equiv i1))
+
+    \lemma col-equiv {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (i2 : IsInitial (phi dleft dright)) (w : DI ->⁺ C)
+      : IsEquiv {(\lam a => phi a.1 a.2) ~> {\Sigma⁺ (i : DI) DI ->⁺ C} (\lam a => w a.1)} {phi dright dright ~> w dright}
+                (dmap \lam (H : \Sigma⁺ (i : DI) DI ->⁺ C) => H ((dright,dright) : \Sigma⁺ (i : DI) DI))
+      => IsEquiv.trans {_} {_} {_} {curry-hom} (inP curry-hom)
+          (IsEquiv.trans (postcomp-ff-at (\lam (F : DI ->⁺ C) => F dright) phi (\lam i _ => w i) \lam x y => const-ev1-equiv (w y) (phi x))
+                         (initial-ev1-equiv {C} {\lam x => phi x dright} {w} i2))
+
+    -- | Arrows of constant functors out of {Cospan} are arrows of their values.
+    \lemma cospan-const-equiv {C : \Cat} (X Y : C)
+      : IsEquiv {(\lam _ => X) ~> {Cospan ->⁺ C} (\lam _ => Y)} {X ~> Y} (dmap \lam (H : Cospan ->⁺ C) => H (cinl dright))
+      => IsEquiv.trans (pushout-nat-restrict {_} {_} {_} {C} {\lam _ => dright} {\lam _ => dright} (\lam _ => X) (\lam _ => Y)
+                         (IsEquiv.leftFactor {_} {_} {_} {_} {\lam (N : (\lam _ => X) ~> {\Sigma ->⁺ C} (\lam _ => Y)) => dpath \lam m => N m ()}
+                           (inP \new QEquiv {
+                              | ret t => dpath \lam m _ => t m
+                              | ret_f t => idp
+                              | f_sec t => idp
+                            })
+                           (const-ev1-equiv Y (\lam _ => X))))
+                       (const-ev1-equiv Y (\lam _ => X))
+  }
+
+-- | If the off-diagonal corners of {psi} are terminal and {phi} is a pushout square, arrows from {phi} to {psi} are determined by their top left components.
+\lemma pushout-corner-equiv {C : \Cat} {phi psi : DI ->⁺ DI ->⁺ C} (po : IsPushoutSquare phi)
+                            (t1 : IsTerminal (psi dright dleft)) (t2 : IsTerminal (psi dleft dright))
+  : IsEquiv {phi ~> psi} {phi dleft dleft ~> psi dleft dleft} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft)
+  => pushoutAt-corner-equiv (\lam b => po (psi b.1 b.2)) t1 t2
+
+{- | If the off-diagonal corners of {psi} are terminal and {phi} is a pushout square with respect to the corners of {psi},
+ -   then arrows from {phi} to {psi} are determined by their top left components.
+ -}
+\lemma pushoutAt-corner-equiv {C : \Cat} {phi psi : DI ->⁺ DI ->⁺ C} (po : \Pi (b : \Sigma⁺ (i : DI) DI) -> IsPushoutAt phi (psi b.1 b.2))
+                              (t1 : IsTerminal (psi dright dleft)) (t2 : IsTerminal (psi dleft dright))
+  : IsEquiv {phi ~> psi} {phi dleft dleft ~> psi dleft dleft} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft)
+  => \let | A => \Sigma⁺ (i : DI) DI
+          | L : IsEquiv (dmap {A ->⁺ DI ->⁺ DI ->⁺ C} {A ->⁺ C} (\lam G a => G a dright dright) {downSq phi} {sqTgt psi})
+            => postcomp-ff-at (\lam (S : DI ->⁺ DI ->⁺ C) => S dright dright) (downSq phi) (sqTgt psi)
+                 \lam x y => IsEquiv.trans (const-ev1-equiv (const (psi y.1 y.2)) (downSq phi x)) (const-ev1-equiv (psi y.1 y.2) (downSq phi x dright))
+          | T => postcomp-ff-at (\lam (S : DI ->⁺ DI ->⁺ C) => span S) (downSq phi) (sqTgt psi)
+                   \lam x y => (span-pushoutAt (downSq phi x) (psi y.1 y.2)).1 (downSq-pushoutAt {C} {phi} {psi} po x y)
+          | R => postcomp-ff-at (\lam (H : A ->⁺ C) => H ((dleft,dleft) : A)) (\lam y a => span (downSq phi a) y) (\lam y a => span (sqTgt psi a) y)
+                   \lam x y => \case \elim x, \elim y \with {
+                     | cinl j, cinl _ => row-equiv {C} {psi} t2 (\lam k => phi dleft (dmin k j))
+                     | cinl j, cinr _ => row-equiv {C} {psi} t2 (\lam k => phi dleft (dmin k j))
+                     | cinr i, cinl _ => col-equiv {C} {psi} t1 (\lam k => phi (dmin k i) dleft)
+                     | cinr i, cinr _ => col-equiv {C} {psi} t1 (\lam k => phi (dmin k i) dleft)
+                   }
+          | Phi => IsEquiv.trans T (IsEquiv.trans (inP swap-qequiv) (IsEquiv.trans R (span-const-equiv (phi dleft dleft) (psi dleft dleft))))
+     \in IsEquiv.rightFactor (IsEquiv.trans L (inP (curry-hom {C} {phi} {psi}))) {dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft}
+           (transport IsEquiv (ext \lam t => inv (const-sq-ev (dmap (\lam (G : A ->⁺ DI ->⁺ DI ->⁺ C) => G ((dleft,dleft) : A)) t))) Phi)
+  \where {
+    -- | Restriction of {phi} to the square over the arrow from the top left corner to {b}.
+    \func downSq {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (b :⁺ \Sigma⁺ (i : DI) DI) : DI ->⁺ DI ->⁺ C
+      => \lam i k => phi (dmin b.1 i) (dmin b.2 k)
+
+    \lemma downSq-pushoutAt {C : \Cat} {phi psi : DI ->⁺ DI ->⁺ C} (po : \Pi (b : \Sigma⁺ (i : DI) DI) -> IsPushoutAt phi (psi b.1 b.2))
+                            (b a : \Sigma⁺ (i : DI) DI) : IsPushoutAt (downSq phi b) (psi a.1 a.2)
+      \elim b
+      | (dleft, dleft) => IsPushoutSquare.isPushout-idd (\lam _ => phi dleft dleft) (psi a.1 a.2)
+      | (dleft, dright) => IsPushoutSquare.isPushout-idd (phi dleft) (psi a.1 a.2)
+      | (dright, dleft) => IsPushoutSquare.isPushout-const (\lam i => phi i dleft) (psi a.1 a.2)
+      | (dright, dright) => po a
+
+    -- | The constant squares on the values of {psi}.
+    \func sqTgt {C : \Cat} (psi : DI ->⁺ DI ->⁺ C) (a :⁺ \Sigma⁺ (i : DI) DI) : DI ->⁺ DI ->⁺ C
+      => constSq (psi a.1 a.2)
+
+    -- | Swapping the two arguments of arrows of functors out of `\Sigma⁺ (i : DI) DI` and {Span}.
+    \func swap-qequiv {C : \Cat} {G H : \Sigma⁺ (i : DI) DI ->⁺ Span ->⁺ C}
+      : QEquiv {G ~> H} {(\lam y a => G a y) ~> {Span ->⁺ \Sigma⁺ (i : DI) DI ->⁺ C} (\lam y a => H a y)} \cowith
+      | f t => dpath \lam m y a => t m a y
+      | ret t => dpath \lam m a y => t m y a
+      | ret_f t => idp
+      | f_sec t => idp
+
+    \lemma row-equiv {C : \Cat} {psi : DI ->⁺ DI ->⁺ C} (t2 : IsTerminal (psi dleft dright)) (w : DI ->⁺ C)
+      : IsEquiv {(\lam a => w a.2) ~> {\Sigma⁺ (i : DI) DI ->⁺ C} (\lam a => psi a.1 a.2)} {w dleft ~> psi dleft dleft}
+                (dmap \lam (H : \Sigma⁺ (i : DI) DI ->⁺ C) => H ((dleft,dleft) : \Sigma⁺ (i : DI) DI))
+      => IsEquiv.trans {_} {_} {_} {curry-hom} (inP curry-hom) (IsEquiv.trans (const-ev0-equiv w psi) (terminal-ev0-equiv t2))
+
+    \lemma col-equiv {C : \Cat} {psi : DI ->⁺ DI ->⁺ C} (t1 : IsTerminal (psi dright dleft)) (w : DI ->⁺ C)
+      : IsEquiv {(\lam a => w a.1) ~> {\Sigma⁺ (i : DI) DI ->⁺ C} (\lam a => psi a.1 a.2)} {w dleft ~> psi dleft dleft}
+                (dmap \lam (H : \Sigma⁺ (i : DI) DI ->⁺ C) => H ((dleft,dleft) : \Sigma⁺ (i : DI) DI))
+      => IsEquiv.trans {_} {_} {_} {curry-hom} (inP curry-hom)
+          (IsEquiv.trans (postcomp-ff-at (\lam (F : DI ->⁺ C) => F dleft) (\lam i _ => w i) psi \lam x y => const-ev0-equiv (w x) (psi y))
+                         (terminal-ev0-equiv {C} {w} {\lam x => psi x dleft} t1))
+
+    -- | Arrows of constant functors out of {Span} are arrows of their values.
+    \lemma span-const-equiv {C : \Cat} (X Y : C)
+      : IsEquiv {span (constSq X) ~> {Span ->⁺ C} span (constSq Y)} {X ~> Y} (dmap \lam (H : Span ->⁺ C) => H (cinl dleft))
+      => IsEquiv.trans (pushout-nat-restrict {_} {_} {_} {C} {\lam _ => dleft} {\lam _ => dleft} (span (constSq X)) (span (constSq Y))
+                         (IsEquiv.leftFactor {_} {_} {_} {_} {\lam (N : (\lam _ => X) ~> {\Sigma ->⁺ C} (\lam _ => Y)) => dpath \lam m => N m ()}
+                           (inP \new QEquiv {
+                              | ret t => dpath \lam m _ => t m
+                              | ret_f t => idp
+                              | f_sec t => idp
+                            })
+                           (const-ev0-equiv X (\lam _ => Y))))
+                       (const-ev0-equiv X (\lam _ => Y))
+  }
+
+{- | Pushout squares with respect to a test object are closed under pullbacks of the test object:
+ -   if {psi} is a pullback square and {phi} is a pushout square with respect to the corners of the cospan of {psi},
+ -   then {phi} is a pushout square with respect to the top left corner of {psi}.
+ -
+ -   Squares of the constant squares on the corners of {psi} form a pullback square of squares,
+ -   so arrows into it from the constant square on {phi} are arrows of cospans ({cospanAt-char}),
+ -   and on cospans the restriction to {Span} is an equivalence pointwise ({span-pushoutAt}).
+ -}
+\lemma pushoutAt-pullback {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {psi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare psi)
+                          (h : \Pi (x : Cospan) -> IsPushoutAt phi (cospan psi x))
+  : IsPushoutAt phi (psi dleft dleft)
+  => \let | P : DI ->⁺ DI ->⁺ DI ->⁺ DI ->⁺ C => \lam i j => constSq (psi i j)
+          | SP : DI ->⁺ DI ->⁺ Span ->⁺ C => \lam i j => span (P i j)
+          | left => (cospanAt-char P phi).1 (constSq-pullback pb phi)
+          | right => (cospanAt-char SP (span phi)).1 (spanSq-pullback pb (span phi))
+          | bottom => postcomp-ff-at (\lam (S : DI ->⁺ DI ->⁺ C) => span S) (\lam _ => phi) (cospan P) \lam _ y => (span-pushoutAt phi (cospan psi y)).1 (h y)
+          | top : IsEquiv (dmap {DI ->⁺ DI ->⁺ DI ->⁺ DI ->⁺ C} {DI ->⁺ DI ->⁺ Span ->⁺ C} (\lam G i j => span (G i j)) {constSq phi} {P})
+            => IsEquiv.leftFactor right (IsEquiv.trans left bottom)
+     \in (span-pushoutAt phi (psi dleft dleft)).2 $
+          (IsEquiv.parallelEquiv {_} {_} {_} {_} {_} {dmap span {phi} {constSq (psi dleft dleft)}} (const-sq-ev0-equiv phi P) (const-sq-ev0-equiv (span phi) SP) (\lam _ => idp)).1 top
+  \where {
+    -- | The constant squares on the values of a pullback square form a pullback square.
+    \lemma constSq-pullback {C : \Cat} {psi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare psi) : IsPullbackSquare {DI ->⁺ DI ->⁺ C} (\lam i j => constSq (psi i j))
+      => pointwise-pullback (\lam i j => constSq (psi i j)) \lam _ => pointwise-pullback (\lam i j _ => psi i j) \lam _ => pb
+
+    -- | The restrictions to {Span} of the constant squares on the values of a pullback square form a pullback square.
+    \lemma spanSq-pullback {C : \Cat} {psi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare psi) : IsPullbackSquare {Span ->⁺ C} (\lam i j => span (constSq (psi i j)))
+      => pointwise-pullback (\lam i j => span (constSq (psi i j))) \lam x => \case \elim x \with {
+           | cinl _ => pb
+           | cinr _ => pb
+         }
+
+    -- | Arrows from a constant square are determined by their top left components.
+    \lemma const-sq-ev0-equiv {X : \Cat} (a : X) (Phi : DI ->⁺ DI ->⁺ X)
+      : IsEquiv (dmap {DI ->⁺ DI ->⁺ X} {X} (\lam S => S dleft dleft) {constSq a} {Phi})
+      => IsEquiv.trans (const-ev0-equiv (const a) Phi) (const-ev0-equiv a (Phi dleft))
+  }
+
+{- | Dually, pullback squares with respect to a test object are closed under pushouts of the test object:
+ -   if {phi} is a pushout square and {psi} is a pullback square with respect to the corners of the span of {phi},
+ -   then {psi} is a pullback square with respect to the bottom right corner of {phi}.
+ -   This is {pushoutAt-pullback} in `Op C`.
+ -}
+\lemma pullbackAt-pushout.{u} {C : \Cat u} (psi : DI ->⁺ DI ->⁺ C) {phi : DI ->⁺ DI ->⁺ C} (po : IsPushoutSquare phi)
+                              (h : \Pi (x : Span) -> IsPullbackAt psi (span phi x))
+  : IsPullbackAt psi (phi dright dright)
+  => (opSquare-pullbackAt psi (phi dright dright)).2 $ transport (IsPushoutAt (opSquare psi)) opSquare-ll $
+       pushoutAt-pullback (opSquare psi) ((opSquare-pushout phi).1 po) \lam x => \case \elim x \with {
+         | cinl dleft => transportInv (IsPushoutAt (opSquare psi)) opSquare-rl ((opSquare-pullbackAt psi (phi dleft dright)).1 (h (cinl dright)))
+         | cinl dright => transportInv (IsPushoutAt (opSquare psi)) opSquare-rr ((opSquare-pullbackAt psi (phi dleft dleft)).1 (h (cinl dleft)))
+         | cinr dleft => transportInv (IsPushoutAt (opSquare psi)) opSquare-lr ((opSquare-pullbackAt psi (phi dright dleft)).1 (h (cinr dright)))
+         | cinr dright => transportInv (IsPushoutAt (opSquare psi)) opSquare-rr ((opSquare-pullbackAt psi (phi dleft dleft)).1 (h (cinl dleft)))
+       }

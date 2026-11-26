@@ -1,0 +1,177 @@
+{- | The fiber rotation.
+ -
+ -   If {C} is pointed and has fibers, then fiber squares ({FibSq}) are equivalent to arrows via their bottom sides ({fibSq-equiv});
+ -   the inverse gives the fiber square of an arrow, natural in the arrow ({fibArr}). Its left side, the inclusion of the fiber,
+ -   is the fiber rotation ({fibRot}).
+ -
+ -   If moreover the loop functor is an equivalence, then the third iterate of the fiber rotation is an equivalence:
+ -   the three fiber squares of `sig`, `fibRot sig` and `fibRot (fibRot sig)` paste to loop squares of the source and the target
+ -   of `sig`, and fillers of the pastings give an arrow of loop squares with corner components `fibRot³ sig` and `sig` ({fibRot-equiv.fibRot3-equiv.cube}).
+ -   By 2-out-of-6, the fiber rotation is an equivalence ({fibRot-equiv}). Hence fiber squares are also equivalent to arrows via
+ -   their left sides ({fibLeft-equiv}), so every fiber square is a cofiber square ({fiber-cofiber}).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Interval
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Pullback
+\import InfCat.Limit.Pushout
+\import InfCat.Limit.SquareHom
+\import InfCat.Limit.Terminal
+\import InfCat.Paths
+\import InfCat.Stable.FiberSequence
+\import InfCat.Stable.PointedHCat
+\import InfCat.SubCat.Full
+\import Logic
+\import Paths
+
+-- | The ∞-category of fiber squares.
+\func FibSq (C : \Cat) : \Cat
+  => FullSubCat {DI ->⁺ DI ->⁺ C} IsFiberSquare
+
+-- | The bottom side of a fiber square: the arrow whose fiber it is.
+\func fibBottom {C : \Cat} (s :⁺ FibSq C) : DI ->⁺ C
+  => FullSubCat.inc s dright
+
+-- | The left side of a fiber square: the inclusion of the fiber.
+\func fibLeft {C : \Cat} (s :⁺ FibSq C) : DI ->⁺ C
+  => \lam l => FullSubCat.inc s l dleft
+
+-- | If {C} is pointed and has fibers, then fiber squares are equivalent to arrows via their bottom sides.
+\lemma fibSq-equiv {C : PointedHCat} (fib : HasFibers C) : IsHEquiv (fibBottom {C})
+  => (ff-surj-equiv {_} {_} {fibBottom {C}}).1
+       (\lam s t => \have | fs => FullSubCat.inc-con {_} {IsFiberSquare} {s}
+                          | ft => FullSubCat.inc-con {_} {IsFiberSquare} {t}
+                    \in IsEquiv.trans (FullSubCat.inc-ff s t) (pullbackAt-right-equiv fs.1.1 ft.1.2 (ft.2 (FullSubCat.inc s dleft dleft))),
+        \lam sig => \case fib sig (terminal, (initial-isInitial (sig dright)).center) C.terminal-isZero \with {
+          | inP (s,p) => inP (FullSubCat.make (\lam i j => s.1.2 i j) (transportInv IsZeroObj (pmap __.1 p) C.terminal-isZero, s.2), idp)
+        })
+
+-- | The source of the fiber square of {sig}: the arrow from the fiber of {sig} to a zero object.
+\func fibSrc {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : DI ->⁺ C
+  => FullSubCat.inc (IsHEquiv.ret (fibSq-equiv fib) sig) dleft
+
+-- | The fiber square of {sig}, as an arrow into {sig}; it is natural in {sig}.
+\func fibArr {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : fibSrc fib sig ~> sig
+  => retarget (dpath \lam i => FullSubCat.inc (IsHEquiv.ret (fibSq-equiv fib) sig) i) (IsHEquiv.f_ret (fibSq-equiv fib))
+  \where {
+    -- | Changing the target of an arrow along a path.
+    \func retarget {X :⁺ \Cat} {u v w :⁺ X} (q :⁺ u ~> v) (p :⁺ v = w) : u ~> w \elim p
+      | idp => q
+
+    -- | Changing the target of an arrow of arrows does not change its source component.
+    \sfunc retarget-left {X :⁺ \Cat} {u v w :⁺ DI ->⁺ X} {q :⁺ u ~> v} {p :⁺ v = w}
+      : (\lam l =>⁺ retarget q p l dleft) = {DI ->⁺ X} (\lam l =>⁺ q l dleft) \elim p
+      | idp => idp
+
+    -- | Changing the target of a fiber square gives a fiber square.
+    \lemma retarget-fiber {X : \Cat} {u v w : DI ->⁺ X} {q : u ~> v} (p : v = w) (fq : IsFiberSquare q) : IsFiberSquare (retarget q p) \elim p
+      | idp => fq
+  }
+
+-- | The fiber square of {sig} is a fiber square.
+\lemma fibArr-fiber {C : PointedHCat} (fib : HasFibers C) (sig : DI ->⁺ C) : IsFiberSquare (fibArr fib sig)
+  => fibArr.retarget-fiber _ (FullSubCat.inc-con {_} {IsFiberSquare} {IsHEquiv.ret (fibSq-equiv fib) sig})
+
+-- | The fiber rotation: the inclusion of the fiber of {sig} into its source.
+\func fibRot {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : DI ->⁺ C
+  => \lam l => fibArr fib sig l dleft
+
+-- | If {C} is pointed, has fibers and its loop functor is an equivalence, then the fiber rotation is an equivalence.
+\lemma fibRot-equiv {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C) : IsHEquiv (fibRot fib)
+  => \have e3 => fibRot3-equiv fib le
+     \in IsHEquiv.biEquiv {_} {_} {fibRot fib} {\lam y => IsHEquiv.ret e3 (fibRot fib (fibRot fib y))} (\lam x => IsHEquiv.ret_f e3)
+                                               {\lam y => fibRot fib (fibRot fib (IsHEquiv.ret e3 y))} (\lam y => IsHEquiv.f_ret e3)
+  \where \private {
+    -- | The third iterate of the fiber rotation is an equivalence: it is the loop functor on arrows, via the arrow of loop squares {cube}.
+    \lemma fibRot3-equiv {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C)
+      : IsHEquiv (\lam (sig : DI ->⁺ C) => fibRot fib (fibRot fib (fibRot fib sig)))
+      => \let | E => DI ->⁺ DI ->⁺ C
+              | lift => ffMap-lift {DI ->⁺ LoopSq C} {DI ->⁺ E} {\lam K t => FullSubCat.inc (K t)} (postcomp-ff FullSubCat.inc-ff)
+                         {DI ->⁺ C} (\lam sig t => cube fib sig t) \lam sig =>
+                           \have l => ffMap-lift {LoopSq C} {E} {FullSubCat.inc} FullSubCat.inc-ff {DI} (\lam t => cube fib sig t) \lam y => \case \elim y \with {
+                                       | dleft => inP (FullSubCat.make (loopL fib sig) (loopL-loop fib sig), idp)
+                                       | dright => inP (FullSubCat.make (loopR fib sig) (loopR-loop fib sig), idp)
+                                     }
+                           \in inP (l.1, funExt+ l.2)
+         \in \have | pB : \Pi (sig :⁺ DI ->⁺ C) -> (\lam t =>⁺ sqBottom (lift.1 sig t)) = sig
+                     => \lam sig => pmap+ (\lam (G : DI ->⁺ E) => \lam t =>⁺ G t dright dright) (lift.2 sig)
+                                    *> dpath-fun (dmap_comp (\lam (S : E) => S dright dright) *> comp_idd-left)
+                   | pT : \Pi (sig :⁺ DI ->⁺ C) -> (\lam t =>⁺ sqTop (lift.1 sig t)) = fibRot fib (fibRot fib (fibRot fib sig))
+                     => \lam sig => pmap+ (\lam (G : DI ->⁺ E) => \lam t =>⁺ G t dleft dleft) (lift.2 sig)
+                                    *> dpath-fun (dmap_comp (\lam (S : E) => S dleft dleft) {_} {_} {_} {cubeH fib sig} {cubeV fib sig}
+                                                  *> comp_idd-right {_} {_} {_} {dpath (fibRot fib (fibRot fib (fibRot fib sig)))})
+                   | eN : IsHEquiv lift.1
+                     => IsHEquiv.leftFactor (IsHEquiv.postcomp (loopBottom-equiv fib)) (transportInv IsHEquiv (funExt+ pB) idHEquiv)
+            \in transport IsHEquiv (funExt+ pT) (IsHEquiv.trans eN (IsHEquiv.postcomp le))
+      \where {
+        -- | Equal arrows are equal as functors out of the interval.
+        \sfunc dpath-fun {X :⁺ \Cat} {a b :⁺ X} {p q :⁺ a ~> b} (e :⁺ p = q) : (\lam t =>⁺ p t) = {DI ->⁺ X} (\lam t =>⁺ q t) \elim e
+          | idp => idp
+
+        -- | A square as an arrow between its rows.
+        \func trArr {X :⁺ \Cat} {u v :⁺ DI ->⁺ X} (q :⁺ u ~> v) : (\lam l =>⁺ q l dleft) ~> (\lam l =>⁺ q l dright)
+          => dpath \lam j l => q l j
+
+        -- | The fiber squares of {sig}, `fibRot sig` and `fibRot (fibRot sig)`; adjacent ones share a side.
+        \func sq1 {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) => fibArr fib (fibRot fib (fibRot fib sig))
+        \func sq2 {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) => fibArr fib (fibRot fib sig)
+        \func sq3 {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) => fibArr fib sig
+
+        -- | The loop square of the source of {sig}.
+        \func loopL {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : DI ->⁺ DI ->⁺ C
+          => \lam j => fill2 (sq1 fib sig) (trArr (sq2 fib sig)) j j
+
+        -- | The loop square of the target of {sig}.
+        \func loopR {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : DI ->⁺ DI ->⁺ C
+          => \lam i j => fill2 (sq2 fib sig) (trArr (sq3 fib sig)) j dright i
+
+        -- | The arrow from {loopL} to the transpose of {sq2} given by the filler of the pasting of {sq1} and {sq2}.
+        \func cubeH {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : loopL fib sig ~> {DI ->⁺ DI ->⁺ C} (\lam i j => sq2 fib sig j i)
+          => dpath \lam t j => fill2 (sq1 fib sig) (trArr (sq2 fib sig)) (dmax t j) j
+
+        -- | The arrow from the transpose of {sq2} to {loopR} given by the filler of the pasting of {sq2} and {sq3}.
+        \func cubeV {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : (\lam i j => sq2 fib sig j i) ~> {DI ->⁺ DI ->⁺ C} loopR fib sig
+          => dpath \lam t i j => fill2 (sq2 fib sig) (trArr (sq3 fib sig)) j t i
+
+        -- | The arrow of loop squares over {sig}: its top left component is `fibRot³ sig` and its bottom right component is {sig}, up to identities.
+        \func cube {C : PointedHCat} (fib : HasFibers C) (sig :⁺ DI ->⁺ C) : loopL fib sig ~> loopR fib sig
+          => comp (cubeH fib sig) (cubeV fib sig)
+
+        -- | {loopL} is the pasting of {sq1} with the transpose of {sq2}, so it is a loop square.
+        \lemma loopL-loop {C : PointedHCat} (fib : HasFibers C) (sig : DI ->⁺ C) : IsLoopSquare (loopL fib sig)
+          => ((fibArr-fiber fib (fibRot fib (fibRot fib sig))).1, (fibArr-fiber fib (fibRot fib sig)).1,
+              transport (\lam q => IsPullbackSquare q)
+                        (comp-char {_} {_} {_} {_} {sq1 fib sig} {trArr (sq2 fib sig)} {dpath (loopL fib sig)}
+                                   (dpath \lam i => dpath \lam k => fill2 (sq1 fib sig) (trArr (sq2 fib sig)) i (dmin k i)))
+                (IsPullbackSquare.paste {_} {_} {_} {_} {sq1 fib sig} {trArr (sq2 fib sig)}
+                  (fibArr-fiber fib (fibRot fib (fibRot fib sig))).2 (IsPullbackSquare.pullback-transpose (fibArr-fiber fib (fibRot fib sig)).2)))
+
+        -- | {loopR} is the transpose of the pasting of {sq2} with the transpose of {sq3}, so it is a loop square.
+        \lemma loopR-loop {C : PointedHCat} (fib : HasFibers C) (sig : DI ->⁺ C) : IsLoopSquare (loopR fib sig)
+          => ((fibArr-fiber fib sig).1, (fibArr-fiber fib (fibRot fib sig)).1,
+              IsPullbackSquare.pullback-transpose (IsPullbackSquare.paste {_} {_} {_} {_} {sq2 fib sig} {trArr (sq3 fib sig)}
+                (fibArr-fiber fib (fibRot fib sig)).2 (IsPullbackSquare.pullback-transpose (fibArr-fiber fib sig).2)))
+      }
+  }
+
+-- | The fiber rotation of the bottom side of a fiber square is its left side.
+\sfunc fibRot-bottom {C : PointedHCat} (fib : HasFibers C) (s :⁺ FibSq C) : fibRot fib (fibBottom s) = fibLeft s
+  => fibArr.retarget-left *> pmap+ fibLeft (IsHEquiv.ret_f (fibSq-equiv fib))
+
+-- | If {C} is pointed, has fibers and its loop functor is an equivalence, then fiber squares are equivalent to arrows via their left sides.
+\lemma fibLeft-equiv {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C) : IsHEquiv (fibLeft {C})
+  => transport IsHEquiv (funExt+ (fibRot-bottom fib)) (IsHEquiv.trans (fibSq-equiv fib) (fibRot-equiv fib le))
+
+-- | If {C} is pointed, has fibers and its loop functor is an equivalence, then every fiber square is a cofiber square.
+\lemma fiber-cofiber {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C) {phi : DI ->⁺ DI ->⁺ C} (fs : IsFiberSquare phi) : IsCofiberSquare phi
+  => (fs.1, IsPushoutSquare.pushout-transpose {_} {\lam i j => phi j i} \lam r =>
+       \let | a : DI ->⁺ C => \lam j => (initial-isInitial r).center j
+             | s => FullSubCat.make {_} {IsFiberSquare} phi fs
+             | t => FullSubCat.make {_} {IsFiberSquare} (\lam i _ => a i) (C.terminal-isZero, IsPullbackSquare.isPullback-const a)
+       \in (pushoutAt-top-char a fs.1.1 C.terminal-isTerminal).1 $
+             IsEquiv.rightFactor (FullSubCat.inc-ff s t) (((ff-surj-equiv {_} {_} {fibLeft {C}}).2 (fibLeft-equiv fib le)).1 s t))

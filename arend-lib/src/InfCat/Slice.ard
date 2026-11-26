@@ -97,6 +97,22 @@
       }
   }
 
+-- | Arrows from {Y} to the constant arrow on {a} are arrows from the target of {Y} to {a}.
+\lemma const-ev1-equiv {C : \Cat} (a : C) (Y : DI ->⁺ C)
+  : IsEquiv {Y ~> const a} {Y dright ~> a} (dmap \lam (F : DI ->⁺ C) => F dright)
+  => IsEquiv.trans (inP $ later \new QEquiv {
+        | f N => (dpath \lam l => N l dright, (dpath \lam l => N l dleft, dpath \lam k => dpath \lam l => N l k))
+        | ret t => dpath \lam l k => t.2.2 k l
+        | ret_f N => idp
+        | f_sec t => idp
+      })
+      (inP $ contr-right \lam n1 => SliceCat.triangle-contr (dpath Y) n1)
+
+-- | The source component of an arrow {v} into a constant arrow is the composite of {Y} with its target component.
+\sfunc const-arrow-comp {C : \Cat} {a : C} {Y : DI ->⁺ C} (v : Y ~> const a)
+  : comp (dpath Y) (dpath \lam i => v i dright) = dpath \lam i => v i dleft
+  => ~>-natural {DI} {C} {Y} {\lam _ => a} (\lam j => dpath \lam i => v i j) {dleft} {dright} {dpath \lam i => i} *> comp_idd-right
+
 {- | Arrows in the total category of the slices over the values of {R}, out of an object whose structure arrow {s}
  -   is a universal arrow from {c} to {R}, are the arrows between the underlying objects.
  -   An arrow over `g : b ~> b'` is an arrow `a : c ~> c'` with a square `comp a s' = comp s (dmap R g)`,

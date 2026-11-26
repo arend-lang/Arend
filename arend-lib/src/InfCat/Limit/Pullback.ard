@@ -2,7 +2,7 @@
  -
  -   A square, viewed as an arrow of `DI ->⁺ C`, is a pullback square if it is cartesian for the target functor
  -   with respect to constant arrows ({IsPullbackSquare}).
- -   Pullback squares can be pasted ({IsPullbackSquare.paste}) and cancelled ({IsPullbackSquare.cancel}).
+ -   Pullback squares can be pasted ({IsPullbackSquare.paste}), cancelled ({IsPullbackSquare.cancel}) and transposed ({IsPullbackSquare.pullback-transpose}).
  -
  -   A square is a pullback square if and only if its left and top sides form a product in the slice over its bottom right corner
  -   ({IsPullbackSquare.product-char}): in the slice the corner is terminal ({IsPullbackSquare.slice-char}),
@@ -12,21 +12,26 @@
  -
  -   Equivalently, a square is a pullback square if arrows from every test object into its top left corner are cones over its
  -   bottom and right sides ({IsPullbackSquare.pullback-char}), where the cones are read off sections of hom-types ({IsPullbackSquare.homSq}).
+ -   For a single test object `r`, this characterizes pullback squares with respect to `r` ({IsPullbackAt}, {IsPullbackSquare.pullbackAt-char});
+ -   every square is a pullback square with respect to an initial object ({IsPullbackAt.initial}).
  -}
 
 \import Equiv
 \import Equiv.Sigma
+\import Function
 \import Function.Meta
 \import InfCat.Arrows
 \import InfCat.Basics
 \import InfCat.Fibration.Contravariant.CartesianMap
 \import InfCat.Interval
 \import InfCat.Limit.BaseHCat
+\import InfCat.Limit.Initial
 \import InfCat.Limit.Product
 \import InfCat.Limit.Terminal
 \import InfCat.Slice
 \import InfCat.Square
 \import Logic
+\import Logic.Meta
 \import Logic.Unique
 \import Meta
 \import Paths
@@ -38,6 +43,48 @@
   | pbProj1 {x y z : C} (f : x ~> z) (g : y ~> z) : Pullback f g ~> (x,f)
   | pbProj2 {x y z : C} (f : x ~> z) (g : y ~> z) : Pullback f g ~> (y,g)
   | Pullback-isProduct {x y z : C} {f : x ~> z} {g : y ~> z} : IsProduct (pbProj1 f g) (pbProj2 f g)
+  \where {
+    -- | {C} has pullbacks if every cospan is the restriction of a pullback square.
+    \func fromSurj {C : \Cat} (h : \Pi (sig : DI ->⁺ C) -> IsSurj (IsPullbackSquare.bottom {C} {sig})) : HCatWithPullbacks C
+      => \let d {x y z : C} (f : x ~> z) (g : y ~> z) : Data (x,f) (y,g)
+               => \let | sig : DI ->⁺ C => \lam j => g j
+                       | e => IsEquiv.fromEmbSurj (IsPullbackSquare.bottom-emb sig) (h sig)
+                  \in transport (Data __ (y,g)) (IsEquiv.f_ret e {x,f}) (square-data (IsEquiv.ret e (x,f)))
+         \in \new HCatWithPullbacks C {
+           | Pullback f g => (d f g).1
+           | pbProj1 f g => (d f g).2
+           | pbProj2 f g => (d f g).3
+           | Pullback-isProduct {_} {_} {_} {f} {g} => (d f g).4
+         }
+      \where {
+        -- | A product of {a} and {b} in the slice over {z}.
+        \func Data {C : \Cat} {z : C} (a b : SliceCat z) => \Sigma (P : SliceCat z) (p1 : P ~> a) (p2 : P ~> b) (IsProduct p1 p2)
+
+        -- | The product in the slice given by a pullback square.
+        \func square-data {C : \Cat} {sig : DI ->⁺ C} (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2))
+          : Data (IsPullbackSquare.bottom s) (sig dleft, dpath sig)
+          => (IsPullbackSquare.sliceSquare s.1.2 dleft dleft, dpath (IsPullbackSquare.sliceSquare s.1.2 dleft),
+              dpath \lam l => IsPullbackSquare.sliceSquare s.1.2 l dleft, (IsPullbackSquare.product-char s.1.2).1 s.2)
+      }
+  }
+
+-- | A square is a pullback square with respect to the test object {r}: it is cartesian for the target functor at `const r`.
+\type IsPullbackAt {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : \Prop
+  => IsCartesianArrowAt (\lam w => w dright) (dpath phi) (const r)
+  \where {
+    -- | Every square is a pullback square with respect to an initial object.
+    \lemma initial {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} (ri : IsInitial r) : IsPullbackAt phi r
+      => \have ci : IsInitial {DI ->⁺ C} (const r)
+           => \lam g => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (initial-ev1-equiv {C} {const r} {g} ri))) (ri (g dright))
+         \in \lam w => contr-equiv (cotri-contr (dpath phi) w ci) (cotri-contr (dpath \lam i => phi i dright) (dmap (\lam (w : DI ->⁺ C) => w dright) w) ri)
+                                  {cotriangle-map (\lam (w : DI ->⁺ C) => w dright) (dpath phi) w}
+
+    -- | Cotriangles out of an initial object are contractible.
+    \lemma cotri-contr {E : \Cat} {e e' x : E} (u : e ~> e') (w : x ~> e') (xi : IsInitial x)
+      : Contr (\Sigma (k : x ~> e) (DPath (\lam i => k i ~> w i) idd u))
+      => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam k => square-equiv k w {u} {idd})
+           (sigma-Contr (xi e) \lam k => isProp=>PathContr _ (isContr=>isProp (xi e')) (comp k u) (comp idd w))
+  }
 
 -- | A square is a pullback square if it is cartesian for the target functor with respect to constant arrows.
 \type IsPullbackSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
@@ -47,13 +94,17 @@
     \lemma isPullback-idd {C : \Cat} (u : DI ->⁺ C) : IsPullbackSquare (idd {DI ->⁺ C} {u})
       => \lam r => idd-cartesian
 
+    -- | A square whose arrows in the second direction are identities is a pullback square.
+    \lemma isPullback-const {C : \Cat} (w : DI ->⁺ C) : IsPullbackSquare (\lam i _ => w i)
+      => (product-char (\lam i _ => w i)).2 (IsProduct.idd-terminal SliceCat.terminal-contr _)
+
     -- | Pasting of pullback squares.
-    \lemma paste {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (fp : IsPullbackSquare f) (gp : IsPullbackSquare g)
+    \protected \lemma paste {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (fp : IsPullbackSquare f) (gp : IsPullbackSquare g)
       : IsPullbackSquare (comp f g)
       => \lam r => (cartesianArrow-comp (gp r)).1 (fp r)
 
     -- | If the right square and the outer rectangle are pullback squares, then so is the left square.
-    \lemma cancel {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (gp : IsPullbackSquare g) (fgp : IsPullbackSquare (comp f g))
+    \protected \lemma cancel {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (gp : IsPullbackSquare g) (fgp : IsPullbackSquare (comp f g))
       : IsPullbackSquare f
       => \lam r => (cartesianArrow-comp (gp r)).2 (fgp r)
 
@@ -124,17 +175,14 @@
     \func boundary {Phi :⁺ DI ->⁺ DI ->⁺ \Cat} (L :⁺ \Pi (i j :⁺ DI) -> Phi i j) : Boundary Phi
       => (L dright dleft, L dleft dright, L dright dright, dpath (L dright), dpath \lam i => L i dright)
 
-    {- | A square is a pullback square if and only if, for every test object `r`, arrows into the top left corner are
-     -   cones over the bottom and right sides: the restriction of {homSq} to these sides is an equivalence.
-     -}
-    \lemma pullback-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
-      : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k)))
-      => \let | ctm (r : C) (w : const r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
-              | eqr (r : C) : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
-                              <-> IsEquiv (totalEquiv.total (ctm r))
+    -- | A square is a pullback square with respect to {r} if and only if arrows from {r} into its top left corner are cones.
+    \lemma pullbackAt-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+      : IsPullbackAt phi r <-> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k))
+      => \let | ctm (w : const r ~> phi dright) => cotriangle-map (\lam w => w dright) (dpath phi) w
+              | eqr : IsEquiv (\lam (k : r ~> phi dleft dleft) => boundary {\lam i j => r ~> phi i j} (homSq phi k))
+                      <-> IsEquiv (totalEquiv.total ctm)
                 => IsEquiv.parallelEquiv (sec-equiv phi r) (inP (cone-equiv phi r)) (\lam k => idp)
-         \in (\lam pb r => (eqr r).2 ((totalEquiv (ctm r)).1 (pb r)),
-             \lam ce r w => (totalEquiv (ctm r)).2 ((eqr r).1 (ce r)) w)
+         \in (\lam pb => eqr.2 ((totalEquiv ctm).1 pb), \lam ce w => (totalEquiv ctm).2 (eqr.1 ce) w)
       \where \private {
         -- | The factorization of {homSq} through the square.
         \func sec {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) (k : r ~> phi dleft dleft)
@@ -158,6 +206,13 @@
           | ret_f _ => idp
           | f_sec _ => idp
       }
+
+    {- | A square is a pullback square if and only if, for every test object `r`, arrows into the top left corner are
+     -   cones over the bottom and right sides: the restriction of {homSq} to these sides is an equivalence.
+     -}
+    \lemma pullback-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+      : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (\lam k => boundary {\lam i j => r ~> phi i j} (homSq phi k)))
+      => (\lam pb r => (pullbackAt-char phi r).1 (pb r), \lam ce r => (pullbackAt-char phi r).2 (ce r))
 
     -- | A square in {C} as a square in the slice over its bottom right corner.
     \func sliceSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (l j :⁺ DI) : SliceCat (phi dright dright)
@@ -227,6 +282,10 @@
       => \have | sc => slice-char phi
                | tp => terminal-product (sliceSquare phi) SliceCat.terminal-contr
          \in (\lam pb => tp.1 (sc.1 pb), \lam pp => sc.2 (tp.2 pp))
+
+    -- | Transposing a pullback square gives a pullback square.
+    \lemma pullback-transpose {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare phi) : IsPullbackSquare (\lam i j => phi j i)
+      => (product-char (\lam i j => phi j i)).2 (IsProduct.swap ((product-char phi).1 pb))
 
     -- | The bottom side of a square into {sig} as an object of the slice over the target of {sig}.
     \func bottom {C : \Cat} {sig : DI ->⁺ C} (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2)) : SliceCat (sig dright)
@@ -303,4 +362,32 @@
     \lemma bottom-equiv {C : HCatWithPullbacks} (sig : DI ->⁺ C) : IsEquiv (bottom {C} {sig})
       => IsEquiv.trans bottom-emb.cone-equiv $ inP $ contr-right \lam (t : SliceCat (sig dright)) =>
            isProp=>isContr IsProduct.cones-unique (((Pullback t.2 (dpath sig), pbProj1 t.2 (dpath sig)), pbProj2 t.2 (dpath sig)), Pullback-isProduct)
+
+    -- | The right and bottom sides of a pullback square.
+    \func cospanOf {C : \Cat} (s : \Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPullbackSquare phi)) : \Sigma (sig : DI ->⁺ C) (SliceCat (sig dright))
+      => (s.1 dright, (s.1 dleft dright, dpath \lam l => s.1 l dright))
+
+    -- | Every cospan is the restriction of a pullback square if and only if pullback squares are equivalent to cospans.
+    \lemma cospanOf-equiv {C : \Cat} : (\Pi (sig : DI ->⁺ C) -> IsSurj (bottom {C} {sig})) <-> IsEquiv (cospanOf {C})
+      => \have | t => totalEquiv (\lam (sig : DI ->⁺ C) => bottom {C} {sig})
+               | e : IsEquiv (totalEquiv.total (\lam (sig : DI ->⁺ C) => bottom {C} {sig})) <-> IsEquiv (cospanOf {C})
+                 => (\lam te => IsEquiv.trans (inP total-qequiv) te, \lam ce => IsEquiv.rightFactor (inP total-qequiv) ce)
+         \in (\lam h => e.1 (t.1 \lam sig => IsEquiv.fromEmbSurj (bottom-emb sig) (h sig)), \lam ce sig => IsEquiv.isSurj (t.2 (e.2 ce) sig))
+      \where {
+        -- | Pullback squares as pullback squares with a given right side.
+        \func total-qequiv {C : \Cat}
+          : QEquiv {\Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPullbackSquare phi)} {\Sigma (sig : DI ->⁺ C) (\Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2))} \cowith
+          | f s => (s.1 dright, ((s.1 dleft, dpath s.1), s.2))
+          | ret s => (\lam i j => s.2.1.2 i j, s.2.2)
+          | ret_f _ => idp
+          | f_sec _ => idp
+      }
+
+    -- | Cospans `(sig,t)` which are restrictions of pullback squares are the cospans in the image of {cospanOf}.
+    \lemma cospanOf-image {C : \Cat} {sig : DI ->⁺ C} {t : SliceCat (sig dright)}
+      : ∃ (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2)) (bottom s = t) <->
+        ∃ (s : \Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPullbackSquare phi)) (cospanOf s = (sig,t))
+      => (\lam (inP (s,p)) => inP ((\lam i j => s.1.2 i j, s.2), pmap (\lam t' => ((sig,t') : \Sigma (sig : DI ->⁺ C) (SliceCat (sig dright)))) p),
+          \lam (inP (s,p)) => \let r => (totalEquiv.totalFiber (\lam (sig : DI ->⁺ C) => bottom {C} {sig}) sig t).f (cospanOf-equiv.total-qequiv s, p)
+                              \in inP (r.1, r.2))
   }

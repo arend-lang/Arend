@@ -1,0 +1,375 @@
+{- | Pushouts in ∞-categories.
+ -
+ -   A square, viewed as an arrow of `DI ->⁺ C`, is a pushout square if it is cocartesian for the source functor
+ -   with respect to constant arrows ({IsPushoutSquare}); this is dual to {IsPullbackSquare}.
+ -   Pushout squares can be pasted ({IsPushoutSquare.paste}) and cancelled ({IsPushoutSquare.cancel}), and transposed ({IsPushoutSquare.pushout-transpose});
+ -   isomorphisms of arrows are pushout squares ({IsPushoutSquare.isPushout-iso}).
+ -
+ -   A square is a pushout square if and only if its right and bottom sides form a coproduct in the coslice under its top left corner
+ -   ({IsPushoutSquare.coproduct-char}): in the coslice the corner is initial ({IsPushoutSquare.coslice-char}),
+ -   and under an initial corner pushouts are coproducts ({IsPushoutSquare.initial-coproduct}).
+ -   Consequently, pushout squares with a fixed left side embed into the coslice under its source via their top sides
+ -   ({IsPushoutSquare.top-emb}), and this is an equivalence if pushouts exist ({IsPushoutSquare.top-equiv}).
+ -
+ -   A square is a pushout square with respect to a test object `r` ({IsPushoutAt}) if and only if arrows from its bottom right corner
+ -   to `r` are cocones ({IsPushoutSquare.pushoutAt-char}); it is a pushout square if this holds for every `r` ({IsPushoutSquare.pushout-char}).
+ -   Every square is a pushout square with respect to a terminal object ({IsPushoutAt.terminal}). The duality with pullback squares of `Op C` is in {InfCat.Limit.PushoutOp}.
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Coslice
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Interval
+\import InfCat.Limit.BaseHCat
+\import InfCat.Limit.Coproduct
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Terminal
+\import InfCat.Rezk
+\import InfCat.Slice
+\import InfCat.Square
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | An ∞-category with pushouts: its coslices have binary coproducts.
+\class HCatWithPushouts \extends BaseHCat
+  | Pushout {x y z : C} (f : x ~> y) (g : x ~> z) : CosliceCat x
+  | poInj1 {x y z : C} (f : x ~> y) (g : x ~> z) : (y,f) ~> {CosliceCat x} Pushout f g
+  | poInj2 {x y z : C} (f : x ~> y) (g : x ~> z) : (z,g) ~> {CosliceCat x} Pushout f g
+  | Pushout-isCoproduct {x y z : C} {f : x ~> y} {g : x ~> z} : IsCoproduct (poInj1 f g) (poInj2 f g)
+  \where {
+    -- | {C} has pushouts if every span is the restriction of a pushout square.
+    \func fromSurj {C : \Cat} (h : \Pi (sig : DI ->⁺ C) -> IsSurj (IsPushoutSquare.top {C} {sig})) : HCatWithPushouts C
+      => \let d {x y z : C} (f : x ~> y) (g : x ~> z) : Data (y,f) (z,g)
+               => \let | sig : DI ->⁺ C => \lam j => g j
+                       | e => IsEquiv.fromEmbSurj (IsPushoutSquare.top-emb sig) (h sig)
+                  \in transport (Data __ (z,g)) (IsEquiv.f_ret e {y,f}) (square-data (IsEquiv.ret e (y,f)))
+         \in \new HCatWithPushouts C {
+           | Pushout f g => (d f g).1
+           | poInj1 f g => (d f g).2
+           | poInj2 f g => (d f g).3
+           | Pushout-isCoproduct {_} {_} {_} {f} {g} => (d f g).4
+         }
+      \where {
+        -- | A coproduct of {a} and {b} in the coslice under {x}.
+        \func Data {C : \Cat} {x : C} (a b : CosliceCat x) => \Sigma (P : CosliceCat x) (i1 : a ~> P) (i2 : b ~> P) (IsCoproduct i1 i2)
+
+        -- | The coproduct in the coslice given by a pushout square.
+        \func square-data {C : \Cat} {sig : DI ->⁺ C} (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2))
+          : Data (IsPushoutSquare.top s) (sig dright, dpath sig)
+          => (IsPushoutSquare.cosliceSquare s.1.2 dright dright, dpath (IsPushoutSquare.cosliceSquare s.1.2 dright),
+              dpath \lam l => IsPushoutSquare.cosliceSquare s.1.2 l dright, (IsPushoutSquare.coproduct-char s.1.2).1 s.2)
+      }
+  }
+
+-- | A square is a pushout square with respect to the test object {r}: it is cocartesian for the source functor at `const r`.
+\type IsPushoutAt {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : \Prop
+  => IsCocartesianArrowAt (\lam w => w dleft) (dpath phi) (const r)
+  \where {
+    -- | Every square is a pushout square with respect to a terminal object.
+    \lemma terminal {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} (rt : IsTerminal r) : IsPushoutAt phi r
+      => \have ct : IsTerminal {DI ->⁺ C} (const r)
+           => \lam f => Contr.Contr_QEquiv (symQEquiv (IsEquiv.toQEquiv (terminal-ev0-equiv {C} {f} {const r} rt))) (rt (f dleft))
+         \in \lam w => contr-equiv (tri-contr (dpath phi) w ct) (tri-contr (dpath \lam i => phi i dleft) (dmap (\lam (w : DI ->⁺ C) => w dleft) w) rt)
+                                  {triangle-map (\lam (w : DI ->⁺ C) => w dleft) (dpath phi) w}
+
+    -- | Triangles into a terminal object are contractible.
+    \lemma tri-contr {E : \Cat} {e e' x : E} (u : e ~> e') (w : e ~> x) (xt : IsTerminal x)
+      : Contr (\Sigma (v : e' ~> x) (DPath (\lam i => u i ~> w i) idd v))
+      => Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam v => square-equiv u w {v} {idd})
+           (sigma-Contr (xt e') \lam v => isProp=>PathContr _ (isContr=>isProp (xt e)) (comp u v) (comp idd w))
+  }
+
+-- | A square is a pushout square if it is cocartesian for the source functor with respect to constant arrows.
+\type IsPushoutSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
+  => \Pi (r : C) -> IsCocartesianArrowAt (\lam w => w dleft) (dpath phi) (const r)
+  \where {
+    -- | Identity squares are pushout squares.
+    \lemma isPushout-idd {C : \Cat} (u : DI ->⁺ C) : IsPushoutSquare (idd {DI ->⁺ C} {u})
+      => \lam r w => idd-cocartesian {DI ->⁺ C} {C} {\lam w => w dleft} w
+
+    -- | A square whose arrows in the second direction are identities is a pushout square.
+    \lemma isPushout-const {C : \Cat} (w : DI ->⁺ C) : IsPushoutSquare (\lam i _ => w i)
+      => (coproduct-char (\lam i _ => w i)).2 (IsCoproduct.idd-initial CosliceCat.initial-contr _)
+
+    -- | An isomorphism of arrows is a pushout square.
+    \lemma isPushout-iso {C : \Cat} {u v : DI ->⁺ C} {p : u ~> v} (pi : IsIso p) : IsPushoutSquare p
+      => \have r => IsIso_= pi \in transport (\lam q => IsPushoutSquare q) r.2 (aux r.1)
+      \where
+        \private \lemma aux {C : \Cat} {u v : DI ->⁺ C} (P : u = v) : IsPushoutSquare (=_~> P) \elim P
+          | idp => isPushout-idd u
+
+    -- | The cube of composites of the arrows `phi l j ~> phi dright dright` with {k}; the last coordinate runs along the composite.
+    \func coSq {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r :⁺ C} (k :⁺ phi dright dright ~> r) (l j m :⁺ DI) : C
+      => comp (dpath \lam n => phi (dmax n l) (dmax n j)) k m
+
+    -- | Cocones under the left and top sides of {phi} with vertex {r}: an arrow from the top side to `const r` and a factorization of its source component through the left side.
+    \func Cocone {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C)
+      => \Sigma (w : phi dleft ~> const r) (\Sigma (g : phi dright dleft ~> r) (DPath (\lam i => phi i dleft ~> w i dleft) idd g))
+
+    -- | The cocone given by composing {phi} with an arrow out of its bottom right corner.
+    \func cocone {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) {r : C} (k : phi dright dright ~> r) : Cocone phi r
+      => (dpath \lam l => \lam j => coSq phi k l j l,
+          (dpath \lam m => coSq phi k dright dleft m, dpath \lam l => dpath \lam m => coSq phi k l dleft (dmin l m)))
+
+    -- | A square is a pushout square with respect to {r} if and only if arrows from its bottom right corner to {r} are cocones.
+    \lemma pushoutAt-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsPushoutAt phi r <-> IsEquiv (cocone phi {r})
+      => \let | tm (w : phi dleft ~> const r) => triangle-map (\lam w => w dleft) (dpath phi) w
+              | eqr : IsEquiv (cocone phi {r}) <-> IsEquiv (totalEquiv.total tm)
+                => IsEquiv.parallelEquiv (pushout-char.cosec-equiv phi r) (inP idEquiv) (\lam k => idp)
+         \in (\lam po => eqr.2 ((totalEquiv tm).1 po), \lam ce w => (totalEquiv tm).2 (eqr.1 ce) w)
+
+    -- | A square is a pushout square if and only if, for every test object `r`, arrows out of the bottom right corner are cocones.
+    \lemma pushout-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : IsPushoutSquare phi <-> (\Pi (r : C) -> IsEquiv (cocone phi {r}))
+      => (\lam po r => (pushoutAt-char phi r).1 (po r), \lam ce r => (pushoutAt-char phi r).2 (ce r))
+      \where {
+        -- | The factorization of {cocone} through the square.
+        \func cosec {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) (k : phi dright dright ~> r)
+          : \Sigma (w : phi dleft ~> const r) (\Sigma (v : phi dright ~> const r) (DPath (\lam i => phi i ~> w i) idd v))
+          => (dpath \lam l => \lam j => coSq phi k l j l,
+              (dpath \lam m => \lam j => coSq phi k dright j m, dpath \lam l => dpath \lam m => \lam j => coSq phi k l j (dmin l m)))
+
+        \lemma cosec-equiv {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsEquiv (cosec phi r)
+          => IsEquiv.leftFactor (initial-coproduct.tri-equiv1 r (dpath phi))
+               (transport IsEquiv (ext \lam (k : phi dright dright ~> r) => inv comp_idd-left) (inP idEquiv))
+      }
+
+    -- | Pasting of pushout squares.
+    \protected \lemma paste {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (fp : IsPushoutSquare f) (gp : IsPushoutSquare g)
+      : IsPushoutSquare (comp f g)
+      => \lam r => (cocartesianArrowAt-comp (fp r)).1 (gp r)
+
+    -- | If the left square and the outer rectangle are pushout squares, then so is the right square.
+    \protected \lemma cancel {C : \Cat} {u v w : DI ->⁺ C} {f : u ~> v} {g : v ~> w} (fp : IsPushoutSquare f) (fgp : IsPushoutSquare (comp f g))
+      : IsPushoutSquare g
+      => \lam r => (cocartesianArrowAt-comp (fp r)).2 (fgp r)
+
+    -- | A square whose top left corner is initial is a pushout square if and only if its right and bottom sides form a coproduct.
+    \lemma initial-coproduct {D : \Cat} (psi : DI ->⁺ DI ->⁺ D) (Ic : IsInitial (psi dleft dleft))
+      : IsPushoutSquare psi <-> IsCoproduct (dpath (psi dright)) (dpath \lam l => psi l dright)
+      => \let | tm (r : D) (w : psi dleft ~> const r) => triangle-map (\lam w => w dleft) (dpath psi) w
+              | cmap (r : D) (v : psi dright ~> const r) : \Sigma (psi dright dleft ~> r) (psi dleft dright ~> r)
+                => (dpath \lam i => v i dleft, comp (dpath \lam l => psi l dright) (dpath \lam i => v i dright))
+              | eqr (r : D) : IsEquiv (totalEquiv.total (tm r)) <-> IsEquiv (cmap r)
+                => IsEquiv.parallelEquiv (tri-equiv r (dpath psi)) (dom-equiv {D} {psi} Ic r) \lam a =>
+                     ext (idp, inv (comp-char (dpath \lam i => dpath \lam l => a.2.2 i l dright)))
+              | eqk (r : D) : IsEquiv (cmap r) <-> IsEquiv (\lam (k : psi dright dright ~> r) => (comp (dpath (psi dright)) k, comp (dpath \lam l => psi l dright) k))
+                => IsEquiv.parallelEquiv {_} {_} {_} {_} {cmap r} {\lam k => (comp (dpath (psi dright)) k, comp (dpath \lam l => psi l dright) k)}
+                     (const-ev1-equiv r (psi dright)) (inP idEquiv) \lam v => ext (inv (const-arrow-comp v), idp)
+         \in (\lam po r => (eqk r).1 $ (eqr r).1 $ (totalEquiv (tm r)).1 (po r),
+             \lam cp r w => (totalEquiv (tm r)).2 ((eqr r).2 ((eqk r).2 (cp r))) w)
+      \where {
+        -- | Factorizations of arrows into a constant arrow through {h} are determined by the second factor.
+        \lemma tri-equiv {D : \Cat} (x : D) {u v : DI ->⁺ D} (h : u ~> v)
+          : IsEquiv {\Sigma (w : u ~> const x) (\Sigma (k : v ~> const x) (DPath (\lam i => h i ~> w i) idd k))} {v ~> const x} (\lam a => a.2.1)
+          => inP $ later \new QEquiv {
+               | f a => (a.2.1, (a.1, a.2.2))
+               | ret b => (b.2.1, (b.1, b.2.2))
+               | ret_f a => idp
+               | f_sec b => idp
+             } `transQEquiv` contr-right (\lam k => segal-contr h k)
+
+        -- | {tri-equiv} followed by the evaluation at the target.
+        \lemma tri-equiv1 {D : \Cat} (x : D) {u v : DI ->⁺ D} (h : u ~> v)
+          : IsEquiv {\Sigma (w : u ~> const x) (\Sigma (k : v ~> const x) (DPath (\lam i => h i ~> w i) idd k))} {v dright ~> x} (\lam a => dpath \lam i => a.2.1 i dright)
+          => IsEquiv.trans (tri-equiv x h) (const-ev1-equiv x v)
+
+        -- | If the top left corner is initial, the codomain of {triangle-map} consists of pairs of arrows out of the bottom left and top right corners.
+        \lemma dom-equiv {D : \Cat} {psi : DI ->⁺ DI ->⁺ D} (Ic : \Pi (r : D) -> Contr (psi dleft dleft ~> r)) (r : D)
+          : IsEquiv {\Sigma (w : psi dleft ~> const r) (\Sigma (g : psi dright dleft ~> r) (DPath (\lam i => psi i dleft ~> w i dleft) idd g))}
+                    {\Sigma (psi dright dleft ~> r) (psi dleft dright ~> r)}
+                    (\lam b => (b.2.1, dpath \lam i => b.1 i dright))
+          => inP $ later \new QEquiv {
+               | f b => (b.2.1, (b.1, b.2.2))
+               | ret b => (b.2.1, (b.1, b.2.2))
+               | ret_f b => idp
+               | f_sec b => idp
+             } `transQEquiv` sigma-right \lam g => contr-right (\lam (w : psi dleft ~> const r) =>
+                    Contr.Contr_QEquiv (symQEquiv (comp-equiv {D} {_} {_} {_} {dpath \lam i => psi i dleft} {g} {dpath \lam i => w i dleft}))
+                                       (isProp=>PathContr _ (isContr=>isProp (Ic r)) _ _))
+                  `transQEquiv` IsEquiv.toQEquiv (const-ev1-equiv r (psi dleft))
+      }
+
+    -- | A square in {C} as a square in the coslice under its top left corner.
+    \func cosliceSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (l j :⁺ DI) : CosliceCat (phi dleft dleft)
+      => (phi l j, dpath \lam m => phi (dmin l m) (dmin j m))
+
+    -- | A square is a pushout square if and only if it is a pushout square in the coslice under its top left corner.
+    \lemma coslice-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : IsPushoutSquare phi <-> IsPushoutSquare (cosliceSquare phi)
+      => \let -- The underlying arrow of an arrow of the coslice.
+              | UE {X : C} (x :⁺ DI ->⁺ CosliceCat X) : DI ->⁺ C
+                => \lam j => (x j).1
+              -- triangle-map for the source functor of `DI ->⁺ C`.
+              | tmC (r : C) (w : phi dleft ~> const r)
+                => triangle-map (\lam w => w dleft) (dpath phi) w
+              -- triangle-map for the source functor of the arrow category of the coslice, at a constant arrow under r.
+              | tmD (r : C) (rho : phi dleft dleft ~> r) (w : cosliceSquare phi dleft ~> const {CosliceCat (phi dleft dleft)} (r,rho))
+                => triangle-map (\lam (w :⁺ DI ->⁺ CosliceCat (phi dleft dleft)) => w dleft) (dpath (cosliceSquare phi)) w
+              -- Factorizations in the coslice as factorizations in C.
+              | F1 (r : C) (a : \Sigma (rho : phi dleft dleft ~> r)
+                                       (\Sigma (w : cosliceSquare phi dleft ~> const {CosliceCat (phi dleft dleft)} (r,rho))
+                                               (\Sigma (v : cosliceSquare phi dright ~> const {CosliceCat (phi dleft dleft)} (r,rho))
+                                                       (DPath (\lam i => cosliceSquare phi i ~> w i) idd v))))
+                : \Sigma (w : phi dleft ~> const r) (\Sigma (v : phi dright ~> const r) (DPath (\lam i => phi i ~> w i) idd v))
+                => (dmap UE a.2.1, (dmap UE a.2.2.1, dpath \lam i => dmap UE (a.2.2.2 i)))
+              -- The base, the fibers and the domain of F2.
+              | F2Base (r : C) => \Sigma (rho : phi dleft dleft ~> r) (cosliceSquare phi dleft ~> const {CosliceCat (phi dleft dleft)} (r,rho))
+              | F2Fib (r : C) (x : F2Base r)
+                => \Sigma (g : cosliceSquare phi dright dleft ~> {CosliceCat (phi dleft dleft)} (r,x.1))
+                          (DPath (\lam i => cosliceSquare phi i dleft ~> x.2 i dleft) idd g)
+              -- Factorizations of the source functor in the coslice as factorizations in C.
+              | F2Dom (r : C)
+                => \Sigma (rho : phi dleft dleft ~> r)
+                          (\Sigma (w : cosliceSquare phi dleft ~> const {CosliceCat (phi dleft dleft)} (r,rho))
+                                  (\Sigma (g : cosliceSquare phi dright dleft ~> {CosliceCat (phi dleft dleft)} (r,rho))
+                                          (DPath (\lam i => cosliceSquare phi i dleft ~> w i dleft) idd g)))
+              | F2 (r : C) (a : F2Dom r) : \Sigma (w : phi dleft ~> const r) (\Sigma (g : phi dright dleft ~> r) (DPath (\lam i => phi i dleft ~> w i dleft) idd g))
+                => (dmap UE a.2.1, triangle-map CosliceCat.forget (dpath \lam i => cosliceSquare phi i dleft) (dpath \lam i => a.2.1 i dleft) a.2.2)
+              | totD (r : C) => totalEquiv.total (\lam (rho : phi dleft dleft ~> r) => totalEquiv.total (tmD r rho))
+         \in \have
+              | F1-equiv (r : C) : IsEquiv (F1 r)
+                => IsEquiv.leftFactor (initial-coproduct.tri-equiv1 r (dpath phi))
+                     (IsEquiv.trans (IsSigma-right _ \lam rho => initial-coproduct.tri-equiv1 {CosliceCat (phi dleft dleft)} (r,rho) (dpath (cosliceSquare phi)))
+                                    (CosliceCat.cod-equiv r (cosliceSquare phi dright dright)))
+              | base-equiv (r : C) : IsEquiv {F2Base r} (\lam x => dmap UE x.2)
+                => IsEquiv.leftFactor (const-ev1-equiv r (phi dleft))
+                     (IsEquiv.trans (IsSigma-right _ \lam rho => const-ev1-equiv {CosliceCat (phi dleft dleft)} (r,rho) (cosliceSquare phi dleft))
+                                    (CosliceCat.cod-equiv r (cosliceSquare phi dleft dright)))
+              | F2-equiv (r : C) : IsEquiv (F2 r)
+                => IsEquiv.trans {_} {_} {_} {\lam (a : F2Dom r) => (((a.1, a.2.1), a.2.2) : \Sigma (x : F2Base r) (F2Fib r x))}
+                     (inP \new QEquiv {
+                        | ret b => (b.1.1, (b.1.2, b.2))
+                        | ret_f a => idp
+                        | f_sec b => idp
+                      })
+                     (IsEquiv.trans (IsSigma-right _ \lam (x : F2Base r) => CosliceCat.forget-cocartesian (dpath \lam i => cosliceSquare phi i dleft) {r, x.1} (dpath \lam i => x.2 i dleft))
+                                    (inP (qsigma-left (IsEquiv.toQEquiv (base-equiv r)))))
+              | eqr (r : C) : IsEquiv (totD r) <-> IsEquiv (totalEquiv.total (tmC r))
+                => IsEquiv.parallelEquiv (F1-equiv r) (F2-equiv r) (\lam _ => idp)
+         \in (\lam po r w => (totalEquiv (tmD r.1 r.2)).2
+                              ((totalEquiv \lam rho => totalEquiv.total (tmD r.1 rho)).2
+                                 ((eqr r.1).2 ((totalEquiv (tmC r.1)).1 (po r.1))) r.2) w,
+             \lam po r => (totalEquiv (tmC r)).2 $ (eqr r).1 $
+                           (totalEquiv \lam rho => totalEquiv.total (tmD r rho)).1 \lam rho => (totalEquiv (tmD r rho)).1 (po (r,rho)))
+
+    -- | A square is a pushout square if and only if its right and bottom sides form a coproduct in the coslice under its top left corner.
+    \lemma coproduct-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+      : IsPushoutSquare phi <-> IsCoproduct (dpath (cosliceSquare phi dright)) (dpath \lam l => cosliceSquare phi l dright)
+      => \have | cc => coslice-char phi
+               | ic => initial-coproduct (cosliceSquare phi) CosliceCat.initial-contr
+         \in (\lam po => ic.1 (cc.1 po), \lam cp => cc.2 (ic.2 cp))
+
+    -- | Transposing a pushout square gives a pushout square.
+    \lemma pushout-transpose {C : \Cat} {phi : DI ->⁺ DI ->⁺ C} (po : IsPushoutSquare phi) : IsPushoutSquare (\lam i j => phi j i)
+      => (coproduct-char (\lam i j => phi j i)).2 (IsCoproduct.swap ((coproduct-char phi).1 po))
+
+    -- | The top side of a square out of {sig} as an object of the coslice under the source of {sig}.
+    \func top {C : \Cat} {sig : DI ->⁺ C} (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2)) : CosliceCat (sig dleft)
+      => (s.1.1 dleft, dpath \lam l => s.1.2 l dleft)
+
+    {- | Pushout squares with a fixed left side {sig} embed into the coslice under the source of {sig} via their top sides.
+     -   The image consists of arrows along which {sig} has a pushout.
+     -}
+    \lemma top-emb {C : \Cat} (sig : DI ->⁺ C) : Embedding (top {C} {sig})
+      => transEmbedding (Embedding.fromIsEquiv (cone-equiv {C} {sig}))
+          (Embedding.sigma-prop-embedding \lam (t : CosliceCat (sig dleft)) => IsCoproduct.cones-unique {_} {t} {sig dright, dpath sig})
+      \where {
+        {- | Pushout squares out of {sig} are coproduct cocones under {sig} in the coslice under the source of {sig}.
+         -   A square is sent to its right and bottom sides viewed as arrows of the coslice ({cosliceSquare}).
+         -}
+        \lemma cone-equiv {C : \Cat} {sig : DI ->⁺ C}
+          : IsEquiv {\Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2)}
+                    {\Sigma (t : CosliceCat (sig dleft)) (\Sigma (b : \Sigma (c : CosliceCat t) ((sig dright, dpath sig) ~> {CosliceCat (sig dleft)} c.1)) (IsCoproduct b.1.2 b.2))}
+                    (\lam s => ((cone s.1.2).1, ((cone s.1.2).2, (coproduct-char s.1.2).1 s.2)))
+          => \let | S => \Sigma (y : \Sigma (t : CosliceCat (sig dleft)) (\Sigma (c : CosliceCat t) ((sig dright, dpath sig) ~> {CosliceCat (sig dleft)} c.1))) (IsCoproduct y.2.1.2 y.2.2)
+                  | e : IsEquiv {\Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2)} {S} (\lam s => (cone s.1.2, (coproduct-char s.1.2).1 s.2))
+                      => subtype-equiv (IsEquiv.trans lift-equiv (initial-cone-equiv (lift sig) CosliceCat.initial-contr))
+                                       (\lam {s} => (coproduct-char s.2).1) (\lam {s} => (coproduct-char s.2).2)
+            \in IsEquiv.trans e $ inP \new QEquiv {
+                  | f y => (y.1.1, (y.1.2, y.2))
+                  | ret y => ((y.1, y.2.1), y.2.2)
+                  | ret_f y => idp
+                  | f_sec y => idp
+                }
+          \where \private {
+            -- | The right and bottom sides of {h} as a coproduct cocone in the coslice.
+            \func cone {C : \Cat} {sig u : DI ->⁺ C} (h : sig ~> u)
+              : \Sigma (t : CosliceCat (sig dleft)) (\Sigma (c : CosliceCat t) ((sig dright, dpath sig) ~> {CosliceCat (sig dleft)} c.1))
+              => (cosliceSquare h dright dleft, ((cosliceSquare h dright dright, dpath (cosliceSquare h dright)), dpath \lam l => cosliceSquare h l dright))
+
+            -- | An arrow as an arrow of the coslice under its source.
+            \func lift {C : \Cat} (sig : DI ->⁺ C) : DI ->⁺ CosliceCat (sig dleft)
+              => \lam j => (sig j, dpath \lam m => sig (dmin j m))
+
+            -- | Arrows out of `lift sig` in the coslice are arrows out of {sig}.
+            \lemma lift-equiv {C : \Cat} {sig : DI ->⁺ C}
+              : IsEquiv {\Sigma (u : DI ->⁺ C) (sig ~> u)} {\Sigma (v : DI ->⁺ CosliceCat (sig dleft)) (lift sig ~> v)}
+                        (\lam s => (cosliceSquare s.2 dright, dpath (cosliceSquare s.2)))
+              => IsEquiv.leftFactor (inP (lift-qequiv `transQEquiv` contr-right (\lam (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) => CosliceCat.triangle-contr {DI ->⁺ C} {const (sig dleft)} {sig} {s.1} (dpath \lam m j => sig (dmin j m)) s.2))) (inP idEquiv)
+
+            -- | An arrow out of `lift sig` is an arrow out of {sig} together with a triangle under it in the coslice of `DI ->⁺ C` under the source of {sig}.
+            \func lift-qequiv {C : \Cat} {sig : DI ->⁺ C}
+              : QEquiv {\Sigma (v : DI ->⁺ CosliceCat (sig dleft)) (lift sig ~> v)}
+                       {\Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u))
+                               (\Sigma (a : const (sig dleft) ~> s.1)
+                                       (DPath (\lam i => const (sig dleft) ~> s.2 i) (dpath \lam m j => sig (dmin j m)) a))} \cowith
+              | f s => ((\lam j => (s.1 j).1, dmap (\lam x j =>⁺ (x j).1) s.2), (dpath \lam m j => (s.1 j).2 m, dpath \lam i => dpath \lam m j => (s.2 i j).2 m))
+              | ret t => (\lam j => (t.1.1 j, dpath \lam m => t.2.1 m j), dpath \lam i => \lam j => (t.1.2 i j, dpath \lam m => t.2.2 i m j))
+              | ret_f s => idp
+              | f_sec t => idp
+
+            -- | If the source of {v} is initial, arrows out of {v} are pairs of arrows into a common target, one of them out of the target of {v}.
+            \lemma initial-cone-equiv {D : \Cat} (v : DI ->⁺ D) (Ic : \Pi (r : D) -> Contr (v dleft ~> r))
+              : IsEquiv {\Sigma (u : DI ->⁺ D) (v ~> u)} {\Sigma (t : D) (\Sigma (c : CosliceCat t) (v dright ~> c.1))}
+                        (\lam s => (s.1 dleft, ((s.1 dright, dpath s.1), dpath \lam l => s.2 l dright)))
+              => inP $ later \new QEquiv {
+                   | f s => ((s.1 dleft, ((s.1 dright, dpath s.1), dpath \lam l => s.2 l dright)),
+                             (dpath \lam l => s.2 l dleft, dpath \lam l => dpath \lam j => s.2 l j))
+                   | ret y => (\lam j => y.1.2.1.2 j, dpath \lam l => \lam j => y.2.2 l j)
+                   | ret_f s => idp
+                   | f_sec y => idp
+                 } `transQEquiv` contr-right \lam (y : \Sigma (t : D) (\Sigma (c : CosliceCat t) (v dright ~> c.1))) =>
+                    Contr.Contr_QEquiv (symQEquiv $ sigma-right \lam b => square-equiv b y.2.2)
+                                       (sigma-Contr (Ic y.1) \lam b => isProp=>PathContr _ (isContr=>isProp (Ic y.2.1.1)) (comp b y.2.1.2) (comp (dpath v) y.2.2))
+          }
+      }
+
+    -- | If {C} has pushouts, then pushout squares with a fixed left side {sig} are equivalent to the coslice under the source of {sig}.
+    \lemma top-equiv {C : HCatWithPushouts} (sig : DI ->⁺ C) : IsEquiv (top {C} {sig})
+      => IsEquiv.trans top-emb.cone-equiv $ inP $ contr-right \lam (t : CosliceCat (sig dleft)) =>
+           isProp=>isContr IsCoproduct.cones-unique (((Pushout t.2 (dpath sig), poInj1 t.2 (dpath sig)), poInj2 t.2 (dpath sig)), Pushout-isCoproduct)
+
+    -- | The left and top sides of a pushout square.
+    \func spanOf {C : \Cat} (s : \Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPushoutSquare phi)) : \Sigma (sig : DI ->⁺ C) (CosliceCat (sig dleft))
+      => (s.1 dleft, (s.1 dright dleft, dpath \lam l => s.1 l dleft))
+
+    -- | Every span is the restriction of a pushout square if and only if pushout squares are equivalent to spans.
+    \lemma spanOf-equiv {C : \Cat} : (\Pi (sig : DI ->⁺ C) -> IsSurj (top {C} {sig})) <-> IsEquiv (spanOf {C})
+      => \have | t => totalEquiv (\lam (sig : DI ->⁺ C) => top {C} {sig})
+               | e : IsEquiv (totalEquiv.total (\lam (sig : DI ->⁺ C) => top {C} {sig})) <-> IsEquiv (spanOf {C})
+                 => (\lam te => IsEquiv.trans (inP total-qequiv) te, \lam ce => IsEquiv.rightFactor (inP total-qequiv) ce)
+         \in (\lam h => e.1 (t.1 \lam sig => IsEquiv.fromEmbSurj (top-emb sig) (h sig)), \lam ce sig => IsEquiv.isSurj (t.2 (e.2 ce) sig))
+      \where {
+        -- | Pushout squares as pushout squares with a given left side.
+        \func total-qequiv {C : \Cat}
+          : QEquiv {\Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPushoutSquare phi)} {\Sigma (sig : DI ->⁺ C) (\Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2))} \cowith
+          | f s => (s.1 dleft, ((s.1 dright, dpath s.1), s.2))
+          | ret s => (\lam i j => s.2.1.2 i j, s.2.2)
+          | ret_f _ => idp
+          | f_sec _ => idp
+      }
+
+    -- | Spans `(sig,t)` which are restrictions of pushout squares are the spans in the image of {spanOf}.
+    \lemma spanOf-image {C : \Cat} {sig : DI ->⁺ C} {t : CosliceCat (sig dleft)}
+      : ∃ (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2)) (top s = t) <-> ∃ (s : \Sigma (phi : DI ->⁺ DI ->⁺ C) (IsPushoutSquare phi)) (spanOf s = (sig,t))
+      => (\lam (inP (s,p)) => inP ((\lam i j => s.1.2 i j, s.2), pmap (\lam t' => ((sig,t') : \Sigma (sig : DI ->⁺ C) (CosliceCat (sig dleft)))) p),
+          \lam (inP (s,p)) => \let r => (totalEquiv.totalFiber (\lam (sig : DI ->⁺ C) => top {C} {sig}) sig t).f (spanOf-equiv.total-qequiv s, p)
+                              \in inP (r.1, r.2))
+  }

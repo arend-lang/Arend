@@ -1,7 +1,7 @@
 {- | Pullbacks in functor categories are computed pointwise.
  -
  -   A square is a pullback square if and only if its restriction to the cospan formed by its bottom and right sides
- -   is fully faithful on arrows from constant squares ({cospan-char}).
+ -   is fully faithful on arrows from constant squares ({cospan-char}), and pointwise in the test object ({cospanAt-char}).
  -   Postcomposition with a functor preserves this property ({postcomp-ff-at}),
  -   so a square in `C ->⁺ D` which is a pullback square at every point is a pullback square ({pointwise-pullback}).
  -
@@ -61,23 +61,27 @@
       \elim e
       | idp => idp
 
-{- | A square is a pullback square if and only if, for every test object `r`, arrows from the constant square on `r`
- -   are determined by their restrictions to {Cospan}.
- -}
-\lemma cospan-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
-  : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (dmap cospan {constSq r}))
-  => \have | bd-equiv (r : C) : IsEquiv (\lam (a : (\lam _ =>⁺ r) ~> cospan phi) => cospanBd {\lam i j => r ~> phi i j} (\lam x => dpath \lam m => a m x))
+-- | A square is a pullback square with respect to {r} if and only if arrows from the constant square on {r} are determined by their restrictions to {Cospan}.
+\lemma cospanAt-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) (r : C) : IsPullbackAt phi r <-> IsEquiv (dmap cospan {constSq r} {phi})
+  => \have | bd-equiv : IsEquiv (\lam (a : (\lam _ =>⁺ r) ~> cospan phi) => cospanBd {\lam i j => r ~> phi i j} (\lam x => dpath \lam m => a m x))
              => IsEquiv.trans (inP \new QEquiv {(\lam _ => r) ~> {Cospan ->⁺ C} cospan phi} {\Pi (x :⁺ Cospan) -> r ~> cospan phi x} {
                   | f a x => dpath \lam m => a m x
                   | ret M => dpath \lam m x => M x m
                   | ret_f _ => idp
                   | f_sec _ => idp
                 }) (cospanBd-equiv {\lam i j => r ~> phi i j})
-           | sq-equiv (r : C) : IsEquiv {_} {constSq r ~> phi} (\lam k => dpath \lam m i j => homSq phi k i j m)
+           | sq-equiv : IsEquiv {_} {constSq r ~> phi} (\lam k => dpath \lam m i j => homSq phi k i j m)
              => IsEquiv.leftFactor (IsEquiv.trans (const-ev0-equiv (\lam _ =>⁺ r) phi) (const-ev0-equiv r (phi dleft)))
                  (transport IsEquiv (ext \lam k => inv comp_idd-right) (inP idEquiv))
-     \in (\lam pb r => IsEquiv.rightFactor (sq-equiv r) $ IsEquiv.leftFactor (bd-equiv r) ((pullback-char phi).1 pb r),
-          \lam ce => (pullback-char phi).2 \lam r => IsEquiv.trans (IsEquiv.trans (sq-equiv r) (ce r)) (bd-equiv r))
+     \in (\lam pb => IsEquiv.rightFactor sq-equiv $ IsEquiv.leftFactor bd-equiv ((pullbackAt-char phi r).1 pb),
+         \lam ce => (pullbackAt-char phi r).2 (IsEquiv.trans (IsEquiv.trans sq-equiv ce) bd-equiv))
+
+{- | A square is a pullback square if and only if, for every test object `r`, arrows from the constant square on `r`
+ -   are determined by their restrictions to {Cospan}.
+ -}
+\lemma cospan-char {C : \Cat} (phi : DI ->⁺ DI ->⁺ C)
+  : IsPullbackSquare phi <-> (\Pi (r : C) -> IsEquiv (dmap cospan {constSq r}))
+  => (\lam pb r => (cospanAt-char phi r).1 (pb r), \lam ce r => (cospanAt-char phi r).2 (ce r))
 
 -- | A square in `C ->⁺ D` which is a pullback square at every point is a pullback square.
 \lemma pointwise-pullback {C D : \Cat} (phi : DI ->⁺ DI ->⁺ C ->⁺ D) (e : \Pi (c : C) -> IsPullbackSquare (\lam i j => phi i j c))

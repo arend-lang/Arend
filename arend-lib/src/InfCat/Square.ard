@@ -3,7 +3,9 @@
 \import Function.Meta
 \import InfCat.Basics
 \import InfCat.Functor.Equiv
+\import InfCat.Interval
 \import InfCat.Paths
+\import Logic.Unique
 \import Meta
 \import Paths
 
@@ -231,3 +233,82 @@
            | ret_f w => idp
            | f_sec sqT => idp
          })
+
+-- | The diagonal of a square.
+\func sqDiag {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {cd :⁺ c ~> d} {ac :⁺ a ~> c} {bd :⁺ b ~> d} (Q :⁺ DPath (\lam i => ab i ~> cd i) ac bd) : a ~> d
+  => dpath \lam i => Q i i
+
+-- | The upper triangle of a square.
+\func sqTri1 {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {cd :⁺ c ~> d} {ac :⁺ a ~> c} {bd :⁺ b ~> d} (Q :⁺ DPath (\lam i => ab i ~> cd i) ac bd)
+  : DPath (\lam i => ab i ~> sqDiag Q i) idd bd
+  => dpath \lam i => dpath \lam j => Q i (dmin i j)
+
+-- | The lower triangle of a square.
+\func sqTri2 {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {cd :⁺ c ~> d} {ac :⁺ a ~> c} {bd :⁺ b ~> d} (Q :⁺ DPath (\lam i => ab i ~> cd i) ac bd)
+  : DPath (\lam i => ac i ~> sqDiag Q i) idd cd
+  => dpath \lam i => dpath \lam k => Q (dmin i k) i
+
+-- | The connection given by minima.
+\func minconn {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : DPath (\lam i => a ~> f i) idd f
+  => dpath \lam i => dpath \lam j => f (dmin i j)
+
+-- | {conn-right} is the connection given by minima.
+\sfunc conn-right=min {C :⁺ \Cat} {a b :⁺ C} (f :⁺ a ~> b) : conn-right f = minconn f
+  => \let c =>⁺ fill2 idd f
+     \in (\peval conn-right f) *> cube2-equals () {idd} {idd} {idd} {idd} {comp idd f} {idd} {f} {idd} {idd} {idd} {f}
+            idd (dpath \lam j => dpath \lam k => c k j) idd (dpath \lam i => dpath \lam k => c k i) idd
+            (dpath \lam i => dpath \lam j => dpath \lam k => fill3 () {idd} {idd} {idd} {idd} {comp idd f} {idd} {f} {idd} {idd} {idd} {f}
+                 idd (dpath \lam i => dpath \lam j => c i j) idd (dpath \lam i => dpath \lam j => c j i) idd i j k)
+            (dpath \lam i => dpath \lam j => dpath \lam k => c k (dmin i j))
+
+-- | {comp-char} of the canonical filler is trivial.
+\sfunc comp-char-canon {C : \Cat} {a b c : C} {ab : a ~> b} {bc : b ~> c}
+  : comp-char (dpath \lam i => dpath \lam j => fill2 ab bc i j) = idp
+  => inv (pmap (\lam t => comp-char t) (comp-char.conv_idp {C} {a} {b} {c} {ab} {bc})) *> comp-char.backward_forward
+
+-- | {square-equiv} is given by the two diagonal triangles of the square.
+\sfunc square-equiv-diag {C : \Cat} {a b c d : C} {ab : a ~> b} {cd : c ~> d} {ac : a ~> c} {bd : b ~> d} (Q : DPath (\lam i => ab i ~> cd i) ac bd)
+  : (square-equiv ab cd {bd} {ac}).f Q = comp-char {C} {a} {b} {d} {ab} {bd} {sqDiag Q} (sqTri1 Q) *> inv (comp-char {C} {a} {c} {d} {ac} {cd} {sqDiag Q} (sqTri2 Q))
+  => \let | X (bf : DPath (\lam i => a ~> ab i) idd ab) (tf : DPath (\lam i => a ~> ac i) idd ac) (w : \Sigma⁺ (ad : a ~> d) (DPath (\lam i => ac i ~> ad i) idd cd)) : comp ab bd = w.1
+            => comp-char (dpath \lam i => dpath \lam j => square-char.forward-gen {C} {a} {b} {c} {d} {ab} {bd} {ac} {cd} {ab} bf {ac} tf {w.1} w.2 Q j i)
+          | canon : \Sigma⁺ (ad : a ~> d) (DPath (\lam i => ac i ~> ad i) idd cd) => (comp ac cd, dpath \lam i => dpath \lam j => fill2 ac cd i j)
+          | F => square-char.forward Q
+     \in pmap (\lam (e : QEquiv {DPath (\lam i => ab i ~> cd i) ac bd} {comp ab bd = comp ac cd}) => e.f Q) (\peval square-equiv ab cd {bd} {ac})
+         *> pmap (\lam (e : QEquiv {DPath (\lam i => a ~> bd i) ab (comp ac cd)} {comp ab bd = comp ac cd}) => e.f F) (\peval comp-equiv.flipped {C} {a} {b} {d} {ab} {bd} {comp ac cd})
+         *> pmap2 (\lam bf tf => X bf tf canon) (conn-right=min ab) (conn-right=min ac)
+         *> path-over __.1 (X (minconn ab) (minconn ac)) (segal2Prop canon ((sqDiag Q, sqTri2 Q) : \Sigma⁺ (ad : a ~> d) (DPath (\lam i => ac i ~> ad i) idd cd)))
+         *> pmap2 (\lam p q => p *> inv q)
+              (pmap (\lam (G : DPath (\lam i => a ~> bd i) ab (sqDiag Q)) => comp-char {C} {a} {b} {d} {ab} {bd} {sqDiag Q} (dpath \lam i => dpath \lam j => G j i)) (forward-min Q))
+              (inv ((\peval comp-char {C} {a} {c} {d} {ac} {cd} {sqDiag Q} (sqTri2 Q)) *> (\peval cube1-equals {C} {a} {c} {d} ac cd {comp ac cd} {sqDiag Q} (dpath \lam i => dpath \lam j => fill2 ac cd i j) (sqTri2 Q))))
+  \where {
+    -- | The upper triangle of a square, flipped.
+    \func sqTri1' {C :⁺ \Cat} {a b c d :⁺ C} {ab :⁺ a ~> b} {cd :⁺ c ~> d} {ac :⁺ a ~> c} {bd :⁺ b ~> d} (Q :⁺ DPath (\lam i => ab i ~> cd i) ac bd)
+      : DPath (\lam i => a ~> bd i) ab (sqDiag Q)
+      => dpath \lam i => dpath \lam j => Q j (dmin j i)
+
+    -- | {square-char.forward-gen} with connections given by minima is the flipped upper triangle.
+    \sfunc forward-min {C : \Cat} {a b c d : C} {ab : a ~> b} {cd : c ~> d} {ac : a ~> c} {bd : b ~> d} (Q : DPath (\lam i => ab i ~> cd i) ac bd)
+      : square-char.forward-gen {C} {a} {b} {c} {d} {ab} {bd} {ac} {cd} {ab} (minconn ab) {ac} (minconn ac) {sqDiag Q} (sqTri2 Q) Q = sqTri1' Q
+      => pmap (\lam (B : DPath (\lam i => ab i ~> sqDiag Q i) idd bd) => dpath \lam i => dpath \lam j => B j i) $
+           cube2-equals {C} {a} {a} {b} {a} {c} {a} {d} () {idd} {ab} {ab} {ac} {cd} {idd} {sqDiag Q} {idd} {ac} {idd} {bd}
+             idd (dpath \lam j => dpath \lam k => Q k j) (minconn ab) (sqTri2 Q) (minconn ac)
+             {dpath \lam i => dpath \lam j => square-char.forward-gen {C} {a} {b} {c} {d} {ab} {bd} {ac} {cd} {ab} (minconn ab) {ac} (minconn ac) {sqDiag Q} (sqTri2 Q) Q j i}
+             {dpath \lam i => dpath \lam j => Q i (dmin i j)}
+             (square-char.forward-gen.cube {C} {a} {b} {c} {d} {ab} {bd} {ac} {cd} {ab} {minconn ab} {ac} {minconn ac} {sqDiag Q} {sqTri2 Q} Q)
+             (dpath \lam i => dpath \lam j => dpath \lam k => Q (dmin i k) (dmin i j))
+
+    \sfunc path-over {A X : \Cat} {c : A} (pr : X -> A) (f : \Pi (w : X) -> c = pr w) {w w' : X} (p : w = w') : f w = f w' *> inv (pmap pr p) \elim p
+      | idp => idp
+  }
+
+-- | {comp-char} commutes with functors: the image of a filler under {F} is characterized by the image of its {comp-char}.
+\sfunc dmap-comp-char {C D : \Cat} (F : C ->⁺ D) {a b c : C} {ab : a ~> b} {bc : b ~> c} {ac : a ~> c} (t : DPath (\lam i => ab i ~> ac i) idd bc)
+  : comp-char {D} {F a} {F b} {F c} {dmap F ab} {dmap F bc} {dmap F ac} (dpath \lam i => dmap F (t i))
+    = inv (dmap_comp F {a} {b} {c} {ab} {bc}) *> pmap (dmap F) (comp-char t)
+  => \let | X => \Sigma (ac' : a ~> c) (DPath (\lam i => ab i ~> ac' i) idd bc)
+          | S (x : X) => comp-char {D} {F a} {F b} {F c} {dmap F ab} {dmap F bc} {dmap F x.1} (dpath \lam i => dmap F (x.2 i))
+                         = inv (dmap_comp F {a} {b} {c} {ab} {bc}) *> pmap (dmap F) (comp-char x.2)
+          | c0 : X => (comp ab bc, dpath \lam i => dpath \lam j => fill2 ab bc i j)
+     \in transport S (isContr=>isProp (segal-contr ab bc) c0 (ac, t))
+          (inv (pmap (\lam e => inv (dmap_comp F {a} {b} {c} {ab} {bc}) *> pmap (dmap F) e) (comp-char-canon {C} {a} {b} {c} {ab} {bc})
+                *> pmap inv (\peval dmap_comp F {a} {b} {c} {ab} {bc}) *> inv_inv))

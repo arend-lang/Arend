@@ -1,0 +1,84 @@
+{- | Coproducts in ∞-categories.
+ -
+ -   {i1} and {i2} exhibit {p} as a coproduct if arrows out of {p} are pairs of arrows ({IsCoproduct}); this is dual to {IsProduct}.
+ -   Coproduct cocones are unique ({IsCoproduct.unique}, {IsCoproduct.cones-unique}).
+ -}
+
+\import Equiv
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Coslice
+\import InfCat.Limit.Initial
+\import InfCat.Rezk
+\import Logic
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+-- | {i1} and {i2} exhibit {p} as a coproduct of {x} and {y}.
+\type IsCoproduct {C : \Cat} {x y p : C} (i1 : x ~> p) (i2 : y ~> p) : \Prop
+  => \Pi (r : C) -> IsEquiv {p ~> r} {\Sigma (x ~> r) (y ~> r)} (\lam h => (comp i1 h, comp i2 h))
+  \where {
+    -- | The arrow out of the coproduct induced by a pair of arrows.
+    \func copair {C : \Cat} {x y p : C} {i1 : x ~> p} {i2 : y ~> p} (pp : IsCoproduct i1 i2) {r : C} (f : x ~> r) (g : y ~> r) : p ~> r
+      => IsEquiv.ret (pp r) (f, g)
+
+    \sfunc copair-beta1 {C : \Cat} {x y p : C} {i1 : x ~> p} {i2 : y ~> p} (pp : IsCoproduct i1 i2) {r : C} {f : x ~> r} {g : y ~> r}
+      : comp i1 (copair pp f g) = f
+      => pmap __.1 (IsEquiv.f_ret (pp r) {f, g})
+
+    \sfunc copair-beta2 {C : \Cat} {x y p : C} {i1 : x ~> p} {i2 : y ~> p} (pp : IsCoproduct i1 i2) {r : C} {f : x ~> r} {g : y ~> r}
+      : comp i2 (copair pp f g) = g
+      => pmap __.2 (IsEquiv.f_ret (pp r) {f, g})
+
+    -- | Arrows out of a coproduct are determined by their components.
+    \sfunc copair-unique {C : \Cat} {x y p : C} {i1 : x ~> p} {i2 : y ~> p} (pp : IsCoproduct i1 i2) {r : C} {h h' : p ~> r}
+                         (e1 : comp i1 h = comp i1 h') (e2 : comp i2 h = comp i2 h') : h = h'
+      => IsEquiv.isInj (pp r) (ext (e1, e2))
+
+    -- | The comparison arrow between two coproducts of the same objects is an isomorphism.
+    \lemma comparison-iso {C : \Cat} {x y p p' : C} {i1 : x ~> p} {i2 : y ~> p} {i1' : x ~> p'} {i2' : y ~> p'}
+                          (pp : IsCoproduct i1 i2) (pp' : IsCoproduct i1' i2') : IsIso (copair pp i1' i2')
+      => inP (copair pp' i1 i2,
+              copair-unique pp' (comp-assoc *> pmap (comp __ _) (copair-beta1 pp') *> copair-beta1 pp *> inv comp_idd-right)
+                                (comp-assoc *> pmap (comp __ _) (copair-beta2 pp') *> copair-beta2 pp *> inv comp_idd-right),
+              copair-unique pp (comp-assoc *> pmap (comp __ _) (copair-beta1 pp) *> copair-beta1 pp' *> inv comp_idd-right)
+                               (comp-assoc *> pmap (comp __ _) (copair-beta2 pp) *> copair-beta2 pp' *> inv comp_idd-right))
+
+    -- | Coproducts are unique: the type of coproduct cocones under {x} and {y} is contractible if it is inhabited.
+    \protected \lemma unique {C : \Cat} {x y : C}
+      : isProp (\Sigma (p' : C) (i1' : x ~> p') (i2' : y ~> p') (IsCoproduct i1' i2'))
+      => \lam (p,i1,i2,pp) (p',i1',i2',pp') =>
+           \have r => IsIso_= (comparison-iso pp pp')
+           \in aux r.1 (pmap (comp i1) r.2 *> copair-beta1 pp) (pmap (comp i2) r.2 *> copair-beta2 pp)
+      \where
+        \private \func aux {C : \Cat} {x y p p' : C} {i1 : x ~> p} {i2 : y ~> p} {pp : IsCoproduct i1 i2}
+                           {i1' : x ~> p'} {i2' : y ~> p'} {pp' : IsCoproduct i1' i2'}
+                           (r : p = p') (e1 : comp i1 (=_~> r) = i1') (e2 : comp i2 (=_~> r) = i2')
+          : (p, i1, i2, pp) = {\Sigma (p' : C) (i1' : x ~> p') (i2' : y ~> p') (IsCoproduct i1' i2')} (p', i1', i2', pp') \elim r
+          | idp => ext (idp, inv comp_idd-right *> e1, inv comp_idd-right *> e2)
+
+    -- | Coproducts are unique: a version of {unique} with the first leg viewed as an object of the coslice.
+    \lemma cones-unique {C : \Cat} {x y : C} : isProp (\Sigma (b : \Sigma (c : CosliceCat x) (y ~> c.1)) (IsCoproduct b.1.2 b.2))
+      => \lam b b' => \have r => unique (b.1.1.1, b.1.1.2, b.1.2, b.2) (b'.1.1.1, b'.1.1.2, b'.1.2, b'.2)
+                      \in path \lam i => ((((r i).1, (r i).2), (r i).3), (r i).4)
+
+    -- | Coproducts are symmetric.
+    \lemma swap {C : \Cat} {x y p : C} {i1 : x ~> p} {i2 : y ~> p} (pp : IsCoproduct i1 i2) : IsCoproduct i2 i1
+      => \lam r => IsEquiv.trans (pp r) (inP \new QEquiv {\Sigma (x ~> r) (y ~> r)} {\Sigma (y ~> r) (x ~> r)} {
+           | f s => (s.2, s.1)
+           | ret s => (s.2, s.1)
+           | ret_f _ => idp
+           | f_sec _ => idp
+         })
+
+    -- | An identity and an arrow out of an initial object form a coproduct.
+    \lemma idd-initial {C : \Cat} {x t : C} (ti : IsInitial t) (i2 : t ~> x) : IsCoproduct (idd {C} {x}) i2
+      => \lam r => transport IsEquiv (ext \lam h => ext (inv comp_idd-left, idp)) $ inP $ later \new QEquiv {x ~> r} {\Sigma (x ~> r) (t ~> r)} {
+           | f h => (h, comp i2 h)
+           | ret s => s.1
+           | ret_f h => idp
+           | f_sec s => ext (idp, isContr=>isProp (ti r) _ _)
+         }
+  }

@@ -1,0 +1,327 @@
+{- | Fiber and cofiber sequences, loop and suspension functors.
+ -
+ -   A null square is a square whose corner `(dleft, dright)` is a zero object ({IsNullSquare}): it is a sequence
+ -   `X -> Y -> Z` along the top and right sides together with a null-homotopy of the composite.
+ -   It is a fiber sequence if it is a pullback square ({IsFiberSquare}) and a cofiber sequence if it is a pushout square
+ -   ({IsCofiberSquare}).
+ -   An ∞-category has fibers ({HasFibers}) if every arrow into the target of a zero arrow has a fiber,
+ -   and cofibers ({HasCofibers}) dually.
+ -
+ -   Loop squares are pullback squares whose two off-diagonal corners are zero objects ({IsLoopSquare}).
+ -   If {C} is pointed and has fibers, then the bottom right corner of loop squares is an equivalence ({loopBottom-equiv}),
+ -   so the top left corner defines the loop functor ({loopFunc}).
+ -   The loop functor is an equivalence if and only if the top left corner of loop squares is ({IsLoopEquiv}).
+ -   Dually, suspension squares are pushout squares with zero off-diagonal corners ({IsSuspSquare}),
+ -   and they define the suspension functor ({suspFunc}).
+ -
+ -   The top left corner of loop squares is fully faithful on arrows from {s} to {t} whenever {s} is a pushout square
+ -   with respect to the bottom right corner of {t} ({loopSq-top-ff}), so {IsLoopEquiv} holds if every object is the top left corner
+ -   of a loop square and loop squares are pushout squares with respect to the bottom right corners of loop squares ({loopEquiv-char}).
+ -   Conversely ({loopEquiv-pushoutAt}), arrows between loop squares form the pullback of the relative universal maps of their corners
+ -   ({pushoutAt-corner-char}); since the target is a pullback square, the top left corner is fully faithful exactly
+ -   when the source is a pushout square with respect to the bottom right corner of the target.
+ -   Dually for {IsSuspEquiv} ({suspSq-bottom-ff}, {suspEquiv-char}, {suspEquiv-pullbackAt}, {pullbackAt-corner-char}).
+ -   Opposites exchange these characterizations ({loopSquare-op}, {opSquare-pushoutAt}), so the loop functor of {C} is an equivalence
+ -   if and only if the suspension functor of `Op C` is ({loopEquiv-op}, {suspEquiv-op}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.Coslice
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Limit.Initial
+\import InfCat.Limit.Pullback
+\import InfCat.Limit.Pushout
+\import InfCat.Limit.PushoutOp
+\import InfCat.Limit.SquareCorner
+\import InfCat.Limit.SquareHom
+\import InfCat.Limit.Terminal
+\import InfCat.Opposite
+\import InfCat.Opposite.Square
+\import InfCat.Slice
+\import InfCat.Stable.PointedHCat
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Meta
+\import Paths
+
+-- | A square whose corner `(dleft, dright)` is a zero object.
+\type IsNullSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
+  => IsZeroObj (phi dleft dright)
+
+-- | A fiber sequence: a null square which is a pullback square.
+\type IsFiberSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
+  => \Sigma (IsNullSquare phi) (IsPullbackSquare phi)
+
+-- | A cofiber sequence: a null square which is a pushout square.
+\type IsCofiberSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
+  => \Sigma (IsNullSquare phi) (IsPushoutSquare phi)
+
+-- | {C} has fibers: every arrow `sig` has a pullback along arrows into its target from zero objects.
+\type HasFibers (C : \Cat) : \Prop
+  => ∀ (sig : DI ->⁺ C) (t : SliceCat (sig dright)) (IsZeroObj t.1)
+     ∃ (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (u ~> sig)) (IsPullbackSquare s.2)) (IsPullbackSquare.bottom s = t)
+
+-- | {C} has cofibers: every arrow `sig` has a pushout along arrows from its source into zero objects.
+\type HasCofibers (C : \Cat) : \Prop
+  => ∀ (sig : DI ->⁺ C) (t : \Sigma⁺ (y : C) (sig dleft ~> y)) (IsZeroObj t.1)
+     ∃ (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2)) (IsPushoutSquare.top s = t)
+
+-- | {C} has fibers if and only if `Op C` has cofibers.
+\lemma hasFibers-op.{u} {C : \Cat u} : HasFibers C <-> HasCofibers (Op C)
+  => \have tr => image-transfer (cospanOf-op.sq-equiv {C}) (cospanOf-op.cospan-equiv {C}) (\lam _ => idp)
+                  {\lam (p : \Sigma (sig : DI ->⁺ C) (SliceCat (sig dright))) => IsZeroObj p.2.1}
+                  {\lam (p : \Sigma (sig : DI ->⁺ Op C) (CosliceCat (sig dleft))) => IsZeroObj p.2.1} (\lam p => IsZeroObj.op)
+     \in (\lam hf sig t z => (IsPushoutSquare.spanOf-image {Op C}).2 (tr.1 (\lam p z => (IsPullbackSquare.cospanOf-image {C}).1 (hf p.1 p.2 z)) (sig,t) z),
+         \lam hc sig t z => (IsPullbackSquare.cospanOf-image {C}).2 (tr.2 (\lam p z => (IsPushoutSquare.spanOf-image {Op C}).1 (hc p.1 p.2 z)) (sig,t) z))
+  \where {
+    -- | Points of {B} in the image of {ab} correspond to points of {D} in the image of {cd} if {ab} and {cd} are related by equivalences.
+    \lemma image-transfer {A B C D : \Cat} {ab : A -> B} {cd : C -> D} {ac : A -> C} {bd : B -> D}
+                          (ace : IsEquiv ac) (bde : IsEquiv bd) (h : \Pi (a : A) -> bd (ab a) = cd (ac a))
+                          {P : B -> \Prop} {Q : D -> \Prop} (pq : \Pi (b : B) -> P b <-> Q (bd b))
+      : (\Pi (b : B) -> P b -> ∃ (a : A) (ab a = b)) <-> (\Pi (d : D) -> Q d -> ∃ (c : C) (cd c = d))
+      => (\lam hp d qd => \have fb : bd (IsEquiv.ret bde d) = d => IsEquiv.f_ret bde
+                         \in TruncP.map (hp (IsEquiv.ret bde d) ((pq _).2 (transportInv Q fb qd)))
+                                        \lam r => \let r' => fib-parallel-equiv {_} {_} {_} {_} {ab} {cd} ace bde h _ r \in (r'.1, r'.2 *> fb),
+          \lam hq b pb => TruncP.map (hq (bd b) ((pq b).1 pb)) \lam r => (fib-parallel-equiv {_} {_} {_} {_} {ab} {cd} ace bde h b).ret (r.1, r.2))
+  }
+
+-- | {C} has cofibers if and only if `Op C` has fibers.
+\lemma hasCofibers-op.{u} {C : \Cat u} : HasCofibers C <-> HasFibers (Op C)
+  => \have tr => hasFibers-op.image-transfer (spanOf-op.sq-equiv {C}) (spanOf-op.span-equiv {C}) (\lam _ => idp)
+                  {\lam (p : \Sigma (sig : DI ->⁺ C) (CosliceCat (sig dleft))) => IsZeroObj p.2.1}
+                  {\lam (p : \Sigma (sig : DI ->⁺ Op C) (SliceCat (sig dright))) => IsZeroObj p.2.1} (\lam p => IsZeroObj.op)
+     \in (\lam hc sig t z => (IsPullbackSquare.cospanOf-image {Op C}).2 (tr.1 (\lam p z => (IsPushoutSquare.spanOf-image {C}).1 (hc p.1 p.2 z)) (sig,t) z),
+         \lam hf sig t z => (IsPushoutSquare.spanOf-image {C}).2 (tr.2 (\lam p z => (IsPullbackSquare.cospanOf-image {Op C}).1 (hf p.1 p.2 z)) (sig,t) z))
+
+-- | A pullback square whose off-diagonal corners are zero objects.
+\type IsLoopSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
+  => \Sigma (IsZeroObj (phi dleft dright)) (IsZeroObj (phi dright dleft)) (IsPullbackSquare phi)
+
+-- | A pushout square whose off-diagonal corners are zero objects.
+\type IsSuspSquare {C : \Cat} (phi : DI ->⁺ DI ->⁺ C) : \Prop
+  => \Sigma (IsZeroObj (phi dleft dright)) (IsZeroObj (phi dright dleft)) (IsPushoutSquare phi)
+
+-- | The ∞-category of loop squares.
+\func LoopSq (C : \Cat) : \Cat
+  => FullSubCat {DI ->⁺ DI ->⁺ C} IsLoopSquare
+
+-- | The ∞-category of suspension squares.
+\func SuspSq (C : \Cat) : \Cat
+  => FullSubCat {DI ->⁺ DI ->⁺ C} IsSuspSquare
+
+-- | The top left corner of a square.
+\func sqTop {C : \Cat} {P : (DI ->⁺ DI ->⁺ C) -> \Prop} (s :⁺ FullSubCat P) : C
+  => FullSubCat.inc s dleft dleft
+
+-- | The bottom right corner of a square.
+\func sqBottom {C : \Cat} {P : (DI ->⁺ DI ->⁺ C) -> \Prop} (s :⁺ FullSubCat P) : C
+  => FullSubCat.inc s dright dright
+
+-- | If {C} is pointed and has fibers, then every object is the bottom right corner of an essentially unique loop square.
+\lemma loopBottom-equiv {C : PointedHCat} (fib : HasFibers C) : IsHEquiv (sqBottom {C} {IsLoopSquare})
+  => (ff-surj-equiv {_} {_} {sqBottom {C} {IsLoopSquare}}).1
+       (\lam s t => IsEquiv.trans (FullSubCat.inc-ff s t)
+                      (pullback-corner-equiv (FullSubCat.inc-con {_} {IsLoopSquare} {s}).2.1 (FullSubCat.inc-con {_} {IsLoopSquare} {s}).1.1
+                                             (FullSubCat.inc-con {_} {IsLoopSquare} {t}).3),
+        \lam y => \case fib (\lam j => (initial-isInitial y).center j) (terminal, (initial-isInitial y).center) C.terminal-isZero \with {
+          | inP (s,p) => inP (FullSubCat.make (\lam i j => s.1.2 i j) (transportInv IsZeroObj (pmap __.1 p) C.terminal-isZero, C.terminal-isZero, s.2), idp)
+        })
+
+-- | If {C} is pointed and has cofibers, then every object is the top left corner of an essentially unique suspension square.
+\lemma suspTop-equiv {C : PointedHCat} (cof : HasCofibers C) : IsHEquiv (sqTop {C} {IsSuspSquare})
+  => (ff-surj-equiv {_} {_} {sqTop {C} {IsSuspSquare}}).1
+       (\lam s t => IsEquiv.trans (FullSubCat.inc-ff s t)
+                      (pushout-corner-equiv (FullSubCat.inc-con {_} {IsSuspSquare} {s}).3
+                                            (FullSubCat.inc-con {_} {IsSuspSquare} {t}).2.2 (FullSubCat.inc-con {_} {IsSuspSquare} {t}).1.2),
+        \lam y => \case cof (\lam j => (terminal-isTerminal y).center j) (terminal, (terminal-isTerminal y).center) C.terminal-isZero \with {
+          | inP (s,p) => inP (FullSubCat.make (\lam i j => s.1.2 i j) (C.terminal-isZero, transportInv IsZeroObj (pmap __.1 p) C.terminal-isZero, s.2), idp)
+        })
+
+-- | The loop functor.
+\func loopFunc {C : PointedHCat} (fib : HasFibers C) (x :⁺ C) : C
+  => sqTop (IsHEquiv.ret (loopBottom-equiv fib) x)
+
+-- | The suspension functor.
+\func suspFunc {C : PointedHCat} (cof : HasCofibers C) (x :⁺ C) : C
+  => sqBottom (IsHEquiv.ret (suspTop-equiv cof) x)
+
+-- | The loop functor is an equivalence: the top left corner of loop squares is an equivalence.
+\type IsLoopEquiv (C : \Cat) : \Prop
+  => IsHEquiv (sqTop {C} {IsLoopSquare})
+  \where {
+    -- | If {C} has fibers, then {IsLoopEquiv} means that {loopFunc} is an equivalence.
+    \lemma loopFunc-char {C : PointedHCat} (fib : HasFibers C) : IsLoopEquiv C <-> IsHEquiv (loopFunc fib)
+      => (\lam e => IsHEquiv.trans (IsHEquiv.ret-equiv (loopBottom-equiv fib)) {sqTop {C} {IsLoopSquare}} e, \lam e => IsHEquiv.rightFactor (IsHEquiv.ret-equiv (loopBottom-equiv fib)) {sqTop {C} {IsLoopSquare}} e)
+  }
+
+-- | The suspension functor is an equivalence: the bottom right corner of suspension squares is an equivalence.
+\type IsSuspEquiv (C : \Cat) : \Prop
+  => IsHEquiv (sqBottom {C} {IsSuspSquare})
+  \where {
+    -- | If {C} has cofibers, then {IsSuspEquiv} means that {suspFunc} is an equivalence.
+    \lemma suspFunc-char {C : PointedHCat} (cof : HasCofibers C) : IsSuspEquiv C <-> IsHEquiv (suspFunc cof)
+      => (\lam e => IsHEquiv.trans (IsHEquiv.ret-equiv (suspTop-equiv cof)) {sqBottom {C} {IsSuspSquare}} e, \lam e => IsHEquiv.rightFactor (IsHEquiv.ret-equiv (suspTop-equiv cof)) {sqBottom {C} {IsSuspSquare}} e)
+  }
+
+-- | If {t} is a loop square and {s} is a pushout square with respect to its bottom right corner, then arrows from {s} to {t} are determined by their top left components.
+\lemma loopSq-top-ff {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (lt : IsLoopSquare t) (po : IsPushoutAt s (t dright dright))
+  : IsEquiv {s ~> t} {s dleft dleft ~> t dleft dleft} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft)
+  => pushoutAt-corner-equiv {C} {s} {t} (corner lt po) lt.2.2 lt.1.2
+  \where
+    -- | {s} is a pushout square with respect to every corner of {t}: the top left one is the pullback of the others.
+    \lemma corner {C : \Cat} {s t : DI ->⁺ DI ->⁺ C} (lt : IsLoopSquare t) (po : IsPushoutAt s (t dright dright)) (b : \Sigma⁺ (i : DI) DI)
+      : IsPushoutAt s (t b.1 b.2) \elim b
+      | (dleft, dleft) => pushoutAt-pullback s lt.3 \lam x => \case \elim x \with {
+        | cinl dleft => IsPushoutAt.terminal s lt.2.2
+        | cinl dright => po
+        | cinr dleft => IsPushoutAt.terminal s lt.1.2
+        | cinr dright => po
+      }
+      | (dleft, dright) => IsPushoutAt.terminal s lt.1.2
+      | (dright, dleft) => IsPushoutAt.terminal s lt.2.2
+      | (dright, dright) => po
+
+-- | If {s} is a suspension square and {t} is a pullback square with respect to its top left corner, then arrows from {s} to {t} are determined by their bottom right components.
+\lemma suspSq-bottom-ff.{u} {C : \Cat u} {s t : DI ->⁺ DI ->⁺ C} (ss : IsSuspSquare s) (pb : IsPullbackAt t (s dleft dleft))
+  : IsEquiv {s ~> t} {s dright dright ~> t dright dright} (dmap \lam (S : DI ->⁺ DI ->⁺ C) => S dright dright)
+  => pullbackAt-corner-equiv {C} {s} {t} ss.2.1 ss.1.1 (corner ss pb)
+  \where
+    -- | {t} is a pullback square with respect to every corner of {s}: the bottom right one is the pushout of the others.
+    \lemma corner.{v} {C : \Cat v} {s t : DI ->⁺ DI ->⁺ C} (ss : IsSuspSquare s) (pb : IsPullbackAt t (s dleft dleft)) (b : \Sigma⁺ (i : DI) DI)
+      : IsPullbackAt t (s b.1 b.2) \elim b
+      | (dleft, dleft) => pb
+      | (dleft, dright) => IsPullbackAt.initial t ss.1.1
+      | (dright, dleft) => IsPullbackAt.initial t ss.2.1
+      | (dright, dright) => pullbackAt-pushout t ss.3 \lam x => \case \elim x \with {
+        | cinl dleft => pb
+        | cinl dright => IsPullbackAt.initial t ss.1.1
+        | cinr dleft => pb
+        | cinr dright => IsPullbackAt.initial t ss.2.1
+      }
+
+{- | The loop functor is an equivalence if and only if every object is the top left corner of a loop square
+ -   and loop squares are pushout squares with respect to the bottom right corners of loop squares.
+ -}
+\lemma loopEquiv-char {C : \Cat}
+  : IsLoopEquiv C <-> (\Sigma (IsSurjMap (sqTop {C} {IsLoopSquare})) (\Pi (s t : LoopSq C) -> IsPushoutAt (FullSubCat.inc s) (sqBottom t)))
+  => (\lam le => (((ff-surj-equiv {_} {_} {sqTop {C} {IsLoopSquare}}).2 le).2, loopEquiv-pushoutAt le),
+      \lam h => (ff-surj-equiv {_} {_} {sqTop {C} {IsLoopSquare}}).1
+                  (\lam s t => IsEquiv.trans (FullSubCat.inc-ff s t) (loopSq-top-ff (FullSubCat.inc-con {_} {IsLoopSquare} {t}) (h.2 s t)), h.1))
+
+-- | If the loop functor is an equivalence, then loop squares are pushout squares with respect to the bottom right corners of loop squares.
+\lemma loopEquiv-pushoutAt {C : \Cat} (le : IsLoopEquiv C) (s t : LoopSq C) : IsPushoutAt (FullSubCat.inc s) (sqBottom t)
+  => \have | ls => FullSubCat.inc-con {_} {IsLoopSquare} {s}
+           | lt => FullSubCat.inc-con {_} {IsLoopSquare} {t}
+     \in (pushoutAt-corner-char ls.2.1 ls.1.1 lt.2.2 lt.1.2 (lt.3 (sqTop s))).1 $
+          IsEquiv.rightFactor (FullSubCat.inc-ff s t) (((ff-surj-equiv {_} {_} {sqTop {C} {IsLoopSquare}}).2 le).1 s t)
+
+{- | The suspension functor is an equivalence if and only if every object is the bottom right corner of a suspension square
+ -   and suspension squares are pullback squares with respect to the top left corners of suspension squares.
+ -}
+\lemma suspEquiv-char.{u} {C : \Cat u}
+  : IsSuspEquiv C <-> (\Sigma (IsSurjMap (sqBottom {C} {IsSuspSquare})) (\Pi (s t : SuspSq C) -> IsPullbackAt (FullSubCat.inc t) (sqTop s)))
+  => (\lam se => (((ff-surj-equiv {_} {_} {sqBottom {C} {IsSuspSquare}}).2 se).2, suspEquiv-pullbackAt se),
+      \lam h => (ff-surj-equiv {_} {_} {sqBottom {C} {IsSuspSquare}}).1
+                  (\lam s t => IsEquiv.trans (FullSubCat.inc-ff s t) (suspSq-bottom-ff (FullSubCat.inc-con {_} {IsSuspSquare} {s}) (h.2 s t)), h.1))
+
+-- | If the suspension functor is an equivalence, then suspension squares are pullback squares with respect to the top left corners of suspension squares.
+\lemma suspEquiv-pullbackAt {C : \Cat} (se : IsSuspEquiv C) (s t : SuspSq C) : IsPullbackAt (FullSubCat.inc t) (sqTop s)
+  => \have | ss => FullSubCat.inc-con {_} {IsSuspSquare} {s}
+           | st => FullSubCat.inc-con {_} {IsSuspSquare} {t}
+     \in (pullbackAt-corner-char ss.2.1 ss.1.1 st.2.2 st.1.2 (ss.3 (sqBottom t))).1 $
+          IsEquiv.rightFactor (FullSubCat.inc-ff s t) (((ff-surj-equiv {_} {_} {sqBottom {C} {IsSuspSquare}}).2 se).1 s t)
+
+-- | The opposite of a loop square is a suspension square.
+\lemma loopSquare-op.{u} {C : \Cat u} {s : DI ->⁺ DI ->⁺ C} : IsLoopSquare s <-> IsSuspSquare (opSquare s)
+  => (\lam l => (transportInv (\lam z => IsZeroObj z) opSquare-lr (IsZeroObj.op.1 l.2), transportInv (\lam z => IsZeroObj z) opSquare-rl (IsZeroObj.op.1 l.1),
+                 (opSquare-pullback s).1 l.3),
+      \lam l => (IsZeroObj.op.2 (transport (\lam z => IsZeroObj z) opSquare-rl l.2), IsZeroObj.op.2 (transport (\lam z => IsZeroObj z) opSquare-lr l.1),
+                 (opSquare-pullback s).2 l.3))
+
+-- | The opposite of a suspension square is a loop square.
+\lemma suspSquare-op.{u} {C : \Cat u} {s : DI ->⁺ DI ->⁺ C} : IsSuspSquare s <-> IsLoopSquare (opSquare s)
+  => (\lam l => (transportInv (\lam z => IsZeroObj z) opSquare-lr (IsZeroObj.op.1 l.2), transportInv (\lam z => IsZeroObj z) opSquare-rl (IsZeroObj.op.1 l.1),
+                 (opSquare-pushout s).1 l.3),
+      \lam l => (IsZeroObj.op.2 (transport (\lam z => IsZeroObj z) opSquare-rl l.2), IsZeroObj.op.2 (transport (\lam z => IsZeroObj z) opSquare-lr l.1),
+                 (opSquare-pushout s).2 l.3))
+
+{- | The loop functor of {C} is an equivalence if and only if the suspension functor of `Op C` is.
+ -
+ -   Both conditions are characterized by surjectivity and relative universality of squares ({loopEquiv-char}, {suspEquiv-char}),
+ -   and these are exchanged by {opSquare} ({loopSquare-op}, `opSquare-pushoutAt`).
+ -}
+\lemma loopEquiv-op.{u} {C : \Cat u} : IsLoopEquiv C <-> IsSuspEquiv (Op C)
+  => (\lam le => \have h => loopEquiv-char.1 le \in suspEquiv-char.2 (surj-op.1 h.1, pushoutAt-op.1 h.2),
+      \lam se => \have h => suspEquiv-char.1 se \in loopEquiv-char.2 (surj-op.2 h.1, pushoutAt-op.2 h.2))
+  \where {
+    -- | Objects are top left corners of loop squares if and only if their opposites are bottom right corners of suspension squares.
+    \lemma surj-op.{v} {C : \Cat v} : IsSurjMap (sqTop {C} {IsLoopSquare}) <-> IsSurjMap (sqBottom {Op C} {IsSuspSquare})
+      => (\lam sj y => \case sj (IsEquiv.ret Op.toOp-equiv y) \with {
+            | inP (s, p) => inP (FullSubCat.make (opSquare (FullSubCat.inc s)) (loopSquare-op.1 (FullSubCat.inc-con {_} {IsLoopSquare} {s})),
+                                 opSquare-rr {C} {FullSubCat.inc s} *> pmap Op.toOp p *> IsEquiv.f_ret Op.toOp-equiv)
+          },
+          \lam sj x => \case sj (Op.toOp x) \with {
+            | inP (s, p) => \have e : opSquare (IsEquiv.ret opSquare-equiv (FullSubCat.inc s)) = FullSubCat.inc s => IsEquiv.f_ret opSquare-equiv
+                            \in inP (FullSubCat.make (IsEquiv.ret opSquare-equiv (FullSubCat.inc s))
+                                                     (loopSquare-op.2 (transportInv IsSuspSquare e (FullSubCat.inc-con {_} {IsSuspSquare} {s}))),
+                                     IsEquiv.isInj Op.toOp-equiv (inv opSquare-rr *> pmap (\lam (S : DI ->⁺ DI ->⁺ Op C) => S dright dright) e *> p))
+          })
+
+    -- | Relative universality of loop squares in {C} is relative universality of suspension squares in `Op C`.
+    \lemma pushoutAt-op.{v} {C : \Cat v}
+      : (\Pi (s t : LoopSq C) -> IsPushoutAt (FullSubCat.inc s) (sqBottom t))
+        <-> (\Pi (s t : SuspSq (Op C)) -> IsPullbackAt (FullSubCat.inc t) (sqTop s))
+      => (\lam h s t => \let | a => IsEquiv.ret opSquare-equiv (FullSubCat.inc s)
+                             | b => IsEquiv.ret opSquare-equiv (FullSubCat.inc t)
+                        \in \have
+                              | ea : opSquare a = FullSubCat.inc s => IsEquiv.f_ret opSquare-equiv
+                              | eb : opSquare b = FullSubCat.inc t => IsEquiv.f_ret opSquare-equiv
+                              | la : IsLoopSquare a => loopSquare-op.2 (transportInv IsSuspSquare ea (FullSubCat.inc-con {_} {IsSuspSquare} {s}))
+                              | lb : IsLoopSquare b => loopSquare-op.2 (transportInv IsSuspSquare eb (FullSubCat.inc-con {_} {IsSuspSquare} {t}))
+                        \in transport2 (\lam (T S : DI ->⁺ DI ->⁺ Op C) => IsPullbackAt T (S dleft dleft)) eb ea $
+                              transportInv (IsPullbackAt (opSquare b)) opSquare-ll ((opSquare-pushoutAt b (a dright dright)).1 (h (FullSubCat.make b lb) (FullSubCat.make a la))),
+          \lam h s t => (opSquare-pushoutAt (FullSubCat.inc s) (sqBottom t)).2 $ transport (IsPullbackAt (opSquare (FullSubCat.inc s))) opSquare-ll $
+                          h (FullSubCat.make (opSquare (FullSubCat.inc t)) (loopSquare-op.1 (FullSubCat.inc-con {_} {IsLoopSquare} {t})))
+                            (FullSubCat.make (opSquare (FullSubCat.inc s)) (loopSquare-op.1 (FullSubCat.inc-con {_} {IsLoopSquare} {s}))))
+  }
+
+-- | The suspension functor of {C} is an equivalence if and only if the loop functor of `Op C` is.
+\lemma suspEquiv-op.{u} {C : \Cat u} : IsSuspEquiv C <-> IsLoopEquiv (Op C)
+  => (\lam se => \have h => suspEquiv-char.1 se \in loopEquiv-char.2 (surj-op.1 h.1, pullbackAt-op.1 h.2),
+      \lam le => \have h => loopEquiv-char.1 le \in suspEquiv-char.2 (surj-op.2 h.1, pullbackAt-op.2 h.2))
+  \where {
+    -- | Objects are bottom right corners of suspension squares if and only if their opposites are top left corners of loop squares.
+    \lemma surj-op.{v} {C : \Cat v} : IsSurjMap (sqBottom {C} {IsSuspSquare}) <-> IsSurjMap (sqTop {Op C} {IsLoopSquare})
+      => (\lam sj y => \case sj (IsEquiv.ret Op.toOp-equiv y) \with {
+            | inP (s, p) => inP (FullSubCat.make (opSquare (FullSubCat.inc s)) (suspSquare-op.1 (FullSubCat.inc-con {_} {IsSuspSquare} {s})),
+                                 opSquare-ll {C} {FullSubCat.inc s} *> pmap Op.toOp p *> IsEquiv.f_ret Op.toOp-equiv)
+          },
+          \lam sj x => \case sj (Op.toOp x) \with {
+            | inP (s, p) => \have e : opSquare (IsEquiv.ret opSquare-equiv (FullSubCat.inc s)) = FullSubCat.inc s => IsEquiv.f_ret opSquare-equiv
+                            \in inP (FullSubCat.make (IsEquiv.ret opSquare-equiv (FullSubCat.inc s))
+                                                     (suspSquare-op.2 (transportInv IsLoopSquare e (FullSubCat.inc-con {_} {IsLoopSquare} {s}))),
+                                     IsEquiv.isInj Op.toOp-equiv (inv opSquare-ll *> pmap (\lam (S : DI ->⁺ DI ->⁺ Op C) => S dleft dleft) e *> p))
+          })
+
+    -- | Relative universality of suspension squares in {C} is relative universality of loop squares in `Op C`.
+    \lemma pullbackAt-op.{v} {C : \Cat v}
+      : (\Pi (s t : SuspSq C) -> IsPullbackAt (FullSubCat.inc t) (sqTop s))
+        <-> (\Pi (s t : LoopSq (Op C)) -> IsPushoutAt (FullSubCat.inc s) (sqBottom t))
+      => (\lam h s t => \let | a => IsEquiv.ret opSquare-equiv (FullSubCat.inc s)
+                             | b => IsEquiv.ret opSquare-equiv (FullSubCat.inc t)
+                        \in \have
+                              | ea : opSquare a = FullSubCat.inc s => IsEquiv.f_ret opSquare-equiv
+                              | eb : opSquare b = FullSubCat.inc t => IsEquiv.f_ret opSquare-equiv
+                              | sa : IsSuspSquare a => suspSquare-op.2 (transportInv IsLoopSquare ea (FullSubCat.inc-con {_} {IsLoopSquare} {s}))
+                              | sb : IsSuspSquare b => suspSquare-op.2 (transportInv IsLoopSquare eb (FullSubCat.inc-con {_} {IsLoopSquare} {t}))
+                        \in transport2 (\lam (S T : DI ->⁺ DI ->⁺ Op C) => IsPushoutAt S (T dright dright)) ea eb $
+                              transportInv (IsPushoutAt (opSquare a)) opSquare-rr ((opSquare-pullbackAt a (b dleft dleft)).1 (h (FullSubCat.make b sb) (FullSubCat.make a sa))),
+          \lam h s t => (opSquare-pullbackAt (FullSubCat.inc t) (sqTop s)).2 $ transport (IsPushoutAt (opSquare (FullSubCat.inc t))) opSquare-rr $
+                          h (FullSubCat.make (opSquare (FullSubCat.inc t)) (suspSquare-op.1 (FullSubCat.inc-con {_} {IsSuspSquare} {t})))
+                            (FullSubCat.make (opSquare (FullSubCat.inc s)) (suspSquare-op.1 (FullSubCat.inc-con {_} {IsSuspSquare} {s}))))
+  }

@@ -1,0 +1,172 @@
+{- | Stable ∞-categories.
+ -
+ -   A stable ∞-category is a pointed ∞-category with pullbacks and pushouts in which a square is a pullback square
+ -   if and only if it is a pushout square ({StableHCat}). The opposite of a stable ∞-category is stable ({opStable}, {unopStable}).
+ -
+ -   Stable ∞-categories can be constructed from a pointed ∞-category {C} in the following ways (SHHA, Theorem 4.2.2):
+ -   - {fromExact}: {C} has fibers and cofibers, and a null square is a fiber sequence if and only if it is a cofiber sequence;
+ -   - {fromLoop}: {C} has fibers and the loop functor is an equivalence;
+ -   - {fromSusp}: {C} has cofibers and the suspension functor is an equivalence.
+ -
+ -   The main step is {loop-pushout}: if {C} has fibers and the loop functor is an equivalence, then {C} has pushouts and
+ -   every pullback square is a pushout square; then {C} also has cofibers and the suspension functor is an equivalence ({loop-susp}).
+ -   The rest follows by duality. Instead of the inverse of the restriction of pullback squares to spans used in SHHA,
+ -   the proof shows that the fiber rotation is an equivalence ({InfCat.Stable.FiberRotation}).
+ -}
+
+\import Equiv
+\import Function
+\import Function.Meta
+\import InfCat.Basics
+\import InfCat.Coslice
+\import InfCat.Functor.Conservative
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Limit.Pullback
+\import InfCat.Limit.Pushout
+\import InfCat.Limit.PushoutOp
+\import InfCat.Opposite
+\import InfCat.Paths
+\import InfCat.Opposite.Square
+\import InfCat.Rezk
+\import InfCat.Square
+\import InfCat.Stable.FiberRotation
+\import InfCat.Stable.FiberSequence
+\import InfCat.Stable.PointedHCat
+\import InfCat.SubCat.Full
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+-- | A pointed ∞-category with pullbacks and pushouts in which pullback squares are exactly pushout squares.
+\class StableHCat \extends PointedHCat, HCatWithPullbacks, HCatWithPushouts
+  | pullback-pushout {phi : DI ->⁺ DI ->⁺ C} : IsPullbackSquare phi <-> IsPushoutSquare phi
+
+-- | The opposite of a stable ∞-category is stable.
+\func opStable.{u} {C : \Cat u} (S : StableHCat C) : StableHCat (Op C) \cowith
+  | PointedHCat => opPointed S
+  | HCatWithPullbacks => opPullbacks S
+  | HCatWithPushouts => opPushouts S
+  | pullback-pushout {phi} => opSquare-ind {C} {\lam phi => IsPullbackSquare phi <-> IsPushoutSquare phi} (\lam psi =>
+      (\lam pb => (opSquare-pullback psi).1 $ S.pullback-pushout.2 $ (opSquare-pushout psi).2 pb,
+       \lam po => (opSquare-pushout psi).1 $ S.pullback-pushout.1 $ (opSquare-pullback psi).2 po)) phi
+
+-- | If `Op C` is stable, then so is {C}.
+\func unopStable.{u} {C : \Cat u} (S : StableHCat (Op C)) : StableHCat C \cowith
+  | PointedHCat => unopPointed S
+  | HCatWithPullbacks => unopPullbacks S
+  | HCatWithPushouts => unopPushouts S
+  | pullback-pushout {phi} =>
+    (\lam pb => (opSquare-pushout phi).2 $ S.pullback-pushout.2 $ (opSquare-pullback phi).1 pb,
+     \lam po => (opSquare-pullback phi).2 $ S.pullback-pushout.1 $ (opSquare-pushout phi).1 po)
+
+{- | If a pointed ∞-category has fibers and its loop functor is an equivalence, then it has pushouts and every pullback square
+ -   is a pushout square.
+ -
+ -   Both follow from {fiber-cofiber}, fiber squares are cofiber squares, and {fibRot-equiv}, the fiber rotation is an equivalence
+ -   ({InfCat.Stable.FiberRotation}): a pullback square is cancelled from fiber squares ({pullback-pushout}), and a span is extended
+ -   by the arrow corresponding under the fiber rotation to a triangle ({span-pushout}).
+ -}
+\lemma loop-pushout {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C)
+  : \Sigma (\Pi (sig : DI ->⁺ C) -> IsSurj (IsPushoutSquare.top {C} {sig}))
+           (\Pi {phi : DI ->⁺ DI ->⁺ C} -> IsPullbackSquare phi -> IsPushoutSquare phi)
+  => (\lam sig t => span-pushout fib le sig t, \lam pb => pullback-pushout fib le pb)
+  \where {
+    -- | Pasting the fiber square of the top side of {phi} with {phi} gives a fiber square, so {phi} is a pushout square by cancellation.
+    \lemma pullback-pushout {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C) {phi : DI ->⁺ DI ->⁺ C} (pb : IsPullbackSquare phi)
+      : IsPushoutSquare phi
+      => \have | ff => fibArr-fiber fib (phi dleft)
+               | z : IsZeroObj (fibSrc fib (phi dleft) dright) => ff.1
+         \in IsPushoutSquare.cancel {_} {_} {_} {_} {fibArr fib (phi dleft)} {dpath phi} (fiber-cofiber fib le ff).2
+               (fiber-cofiber fib le {comp (fibArr fib (phi dleft)) (dpath phi)} (z, IsPullbackSquare.paste ff.2 pb)).2
+
+    {- | Every span `(sig,t)` extends to a pushout square.
+     -
+     -   The arrow `d : sig ~> b` corresponding under the fiber rotation to the triangle from `fibRot sig` to its composite with `t`
+     -   is a pushout square: by naturality of {fibArr}, pasting it with the fiber square of {sig} gives the fiber square of `b`
+     -   precomposed with an isomorphism.
+     -}
+    \lemma span-pushout {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C) (sig : DI ->⁺ C) (t : CosliceCat (sig dleft))
+      : ∃ (s : \Sigma (s : \Sigma (u : DI ->⁺ C) (sig ~> u)) (IsPushoutSquare s.2)) (IsPushoutSquare.top s = t)
+      => \let | eR => fibRot-equiv fib le
+              | a : DI ->⁺ C => \lam j => comp (dpath (fibRot fib sig)) t.2 j
+              | zeta : fibRot fib sig ~> a => dpath \lam k j => fill2 (dpath (fibRot fib sig)) t.2 j k
+              | b => IsHEquiv.ret eR a
+              | q : fibRot fib b = a => IsHEquiv.f_ret eR
+              | zeta' : fibRot fib sig ~> fibRot fib b => transportInv (fibRot fib sig ~> __) q zeta
+              | Rff : IsEquiv (dmap (fibRot fib) {sig} {b}) => ((ff-surj-equiv {_} {_} {fibRot fib}).2 eR).1 sig b
+              | d : sig ~> b => IsEquiv.ret Rff zeta'
+         \in \have | dR : dmap (fibRot fib) d = zeta' => IsEquiv.f_ret Rff
+                   | iso : IsIso (dmap (fibSrc fib) d)
+                     => DI-iso-char.2 (transportInv (\lam z => IsIso (dmap (\lam (h : DI ->⁺ C) => h dleft) z)) dR (tr-iso zeta idd-iso q),
+                                      IsZeroObj.arrow-iso (fibArr-fiber fib sig).1 (fibArr-fiber fib b).1)
+                   | po-d : IsPushoutSquare d
+                     => IsPushoutSquare.cancel {_} {_} {_} {_} {fibArr fib sig} {d} (fiber-cofiber fib le (fibArr-fiber fib sig)).2 $
+                          transport (\lam z => IsPushoutSquare z) (~>-natural {_} {_} {fibSrc fib} {\lam x => x} (fibArr fib) {sig} {b} {d}) $
+                            IsPushoutSquare.paste (IsPushoutSquare.isPushout-iso iso) (fiber-cofiber fib le (fibArr-fiber fib b)).2
+            \in inP (((b, d), po-d), pmap (\lam z => ((fibRot fib b dright, dmap (\lam (h : DI ->⁺ C) => h dright) z) : CosliceCat (sig dleft))) dR
+                                    *> top-transport zeta q)
+
+    -- | Transporting the target of an arrow of arrows preserves invertibility of its source component.
+    \lemma tr-iso {X : \Cat} {u v w : DI ->⁺ X} (zeta : u ~> w) (zi : IsIso (dmap (\lam (h : DI ->⁺ X) => h dleft) zeta)) (q : v = w)
+      : IsIso (dmap (\lam (h : DI ->⁺ X) => h dleft) (transportInv (u ~> __) q zeta)) \elim q
+      | idp => zi
+
+    -- | Transporting the target of an arrow of arrows along {q} does not change its target component as an object of the coslice.
+    \func top-transport {X : \Cat} {u v w : DI ->⁺ X} (zeta : u ~> w) (q : v = w)
+      : ((v dright, dmap (\lam (h : DI ->⁺ X) => h dright) (transportInv (u ~> __) q zeta)) : \Sigma⁺ (c : X) (u dright ~> c))
+        = (w dright, dmap (\lam (h : DI ->⁺ X) => h dright) zeta) \elim q
+      | idp => idp
+  }
+
+{- | If a pointed ∞-category has fibers and its loop functor is an equivalence, then it has cofibers and its suspension functor is an equivalence.
+ -
+ -   Loop squares are suspension squares ({loop-pushout}), and the inclusion of loop squares into suspension squares is an equivalence
+ -   since both are equivalent to {C} via their top left corners; so the bottom right corner of suspension squares is an equivalence by {loopBottom-equiv}.
+ -}
+\lemma loop-susp {C : PointedHCat} (fib : HasFibers C) (le : IsLoopEquiv C) : \Sigma (HasCofibers C) (IsSuspEquiv C)
+  => \have | lp => loop-pushout fib le
+           | cof : HasCofibers C => \lam sig t _ => lp.1 sig t
+           | J => ffMap-lift {SuspSq C} {DI ->⁺ DI ->⁺ C} {FullSubCat.inc} FullSubCat.inc-ff {LoopSq C} (\lam s => FullSubCat.inc s) \lam s =>
+                    \have l => FullSubCat.inc-con {_} {IsLoopSquare} {s}
+                    \in inP (FullSubCat.make (FullSubCat.inc s) (l.1, l.2, lp.2 l.3), idp)
+           | eJ : IsHEquiv J.1
+             => IsHEquiv.leftFactor (suspTop-equiv cof)
+                  (transportInv IsHEquiv (funExt+ \lam s => pmap+ (\lam (S : DI ->⁺ DI ->⁺ C) => S dleft dleft) (J.2 s)) le)
+     \in (cof, IsHEquiv.rightFactor eJ (transportInv IsHEquiv (funExt+ \lam s => pmap+ (\lam (S : DI ->⁺ DI ->⁺ C) => S dright dright) (J.2 s))
+                                                       (loopBottom-equiv fib)))
+
+-- | A pointed ∞-category with fibers whose loop functor is an equivalence is stable.
+\sfunc stableFromLoop.{u} {C : \Cat u} (P : PointedHCat C) (fib : HasFibers C) (le : IsLoopEquiv C) : StableHCat C
+  => \have | lp => loop-pushout fib le
+           | ls => loop-susp fib le
+           | lpOp => loop-pushout {opPointed P} (hasCofibers-op.1 ls.1) (suspEquiv-op.1 ls.2)
+     \in \new StableHCat {
+       | PointedHCat => P
+       | HCatWithPullbacks => unopPullbacks (HCatWithPushouts.fromSurj lpOp.1)
+       | HCatWithPushouts => HCatWithPushouts.fromSurj lp.1
+       | pullback-pushout {phi} => (\lam pb => lp.2 pb, \lam po => (opSquare-pullback phi).2 $ lpOp.2 $ (opSquare-pushout phi).1 po)
+     }
+
+-- | A pointed ∞-category with cofibers whose suspension functor is an equivalence is stable.
+\sfunc stableFromSusp.{u} {C : \Cat u} (P : PointedHCat C) (cof : HasCofibers C) (se : IsSuspEquiv C) : StableHCat C
+  => unopStable (stableFromLoop (opPointed P) (hasCofibers-op.1 cof) (suspEquiv-op.1 se))
+
+{- | A pointed ∞-category with fibers and cofibers in which a null square is a fiber sequence if and only if
+ -   it is a cofiber sequence is stable.
+ -}
+\func fromExact.{u} {C : \Cat u} (P : PointedHCat C) (fib : HasFibers C) (cof : HasCofibers C)
+                    (ex : \Pi {phi : DI ->⁺ DI ->⁺ C} -> IsNullSquare phi -> IsPullbackSquare phi <-> IsPushoutSquare phi)
+  : StableHCat C
+  => stableFromLoop P fib (exact-loopEquiv P fib cof ex)
+  \where {
+    -- | The top left corner of loop squares is an equivalence: loop squares are suspension squares.
+    \lemma exact-loopEquiv {C : \Cat} (P : PointedHCat C) (fib : HasFibers C) (cof : HasCofibers C)
+                           (ex : \Pi {phi : DI ->⁺ DI ->⁺ C} -> IsNullSquare phi -> IsPullbackSquare phi <-> IsPushoutSquare phi)
+      : IsLoopEquiv C
+      => transport (\lam (Q : (DI ->⁺ DI ->⁺ C) -> \Prop) => IsHEquiv (sqTop {C} {Q}))
+                   (ext \lam phi => propExt (\lam (s : IsSuspSquare phi) => (s.1, s.2, (ex s.1).2 s.3))
+                                            (\lam (l : IsLoopSquare phi) => (l.1, l.2, (ex l.1).1 l.3)))
+                   (suspTop-equiv {P} cof)
+  }

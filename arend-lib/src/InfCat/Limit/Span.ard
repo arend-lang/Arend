@@ -1,0 +1,134 @@
+{- | Spans and the restriction of squares to their left and top sides.
+ -
+ -   {Span} is the shape `(0,1) <- (0,0) -> (1,0)`. Its functors are pairs of arrows with a common source ({spanFun-equiv}),
+ -   presented as {SpanData}: an arrow together with an arrow out of its source.
+ -   If {Q} is a pushout square, then arrows from {Q} to a constant square are determined by their restrictions to {Span} ({span-pushout});
+ -   pointwise, this characterizes pushout squares with respect to a single test object ({span-pushoutAt}).
+ -   This is the dual of {cospan-char} and follows from the description of cocartesian arrows by squares ({cocartesianArrow-square}).
+ -}
+
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta
+\import InfCat.Arrows
+\import InfCat.Basics
+\import InfCat.CatPushout
+\import InfCat.Fibration.Covariant.CocartesianMap
+\import InfCat.Functor.Equiv
+\import InfCat.Functor.FullyFaithful
+\import InfCat.Limit.Pushout
+\import InfCat.Limit.PullbackFun
+\import Logic
+\import Meta
+
+-- | The span `(0,1) <- (0,0) -> (1,0)` formed by the left and top sides of a square.
+\func Span : \Cat
+  => CatPushout {\Sigma} {DI} {DI} (\lam _ => dleft) (\lam _ => dleft)
+
+-- | Spans with a common source: an arrow together with an arrow out of its source.
+\func SpanData (C : \Cat) : \Cat
+  => \Sigma⁺ (a : DI ->⁺ C) (\Sigma⁺ (z : C) (a dleft ~> z))
+
+-- | The functor out of {Span} given by {SpanData}.
+\func spanFun {C : \Cat} (s :⁺ SpanData C) (x :⁺ Span) : C
+  => CatPushout.elim {_} {_} {_} {_} {_} {\lam _ => C} (\lam j => s.1 j) (\lam i => s.2.2 i) (\lam _ => idp) x
+
+-- | The left and top sides of a square as {SpanData}.
+\func spanData {C : \Cat} (phi :⁺ DI ->⁺ DI ->⁺ C) : SpanData C
+  => (phi dleft, (phi dright dleft, dpath \lam i => phi i dleft))
+
+-- | The restriction of a square to {Span}.
+\func span {C : \Cat} (phi :⁺ DI ->⁺ DI ->⁺ C) (x :⁺ Span) : C
+  => spanFun (spanData phi) x
+
+-- | Functors out of {Span} are spans.
+\lemma spanFun-equiv {C : \Cat} : IsHEquiv (\lam (s : SpanData C) => spanFun s)
+  => post-DI-equiv.2 $ IsEquiv.leftFactor {DI ->⁺ SpanData C} {DI ->⁺ Span ->⁺ C} {_} {\lam h i => spanFun (h i)}
+       (IsEquiv.trans (inP swap-qequiv) (pushout-fun-equiv {_} {_} {_} {DI ->⁺ C} {\lam _ => dleft} {\lam _ => dleft}))
+       (IsEquiv.trans {_} {_} {_} {curry-span} (inP curry-span) (IsEquiv.trans spanFun-ob-equiv (pushout-fun-equiv {_} {_} {_} {DI ->⁺ C} {\lam _ => dleft} {\lam _ => dleft})))
+  \where {
+    -- | The objects of {Span} `->⁺ X` are {SpanData}: {spanFun} followed by {pushout-fun} is a reindexing of {hom-endpoints}.
+    \lemma spanFun-ob-equiv {X : \Cat} : IsEquiv (\lam (s : SpanData X) => spanFun s)
+      => IsEquiv.leftFactor (pushout-fun-equiv {_} {_} {_} {X} {\lam _ => dleft} {\lam _ => dleft}) $ inP $
+           later \new QEquiv {SpanData X} {\Sigma (a : DI ->⁺ X) (\Sigma (z : X) (a dleft ~> z))} {
+             | f s => (s.1, (s.2.1, s.2.2))
+             | ret s => (s.1, (s.2.1, s.2.2))
+             | ret_f s => idp
+             | f_sec s => idp
+           } `transQEquiv` sigma-right (\lam (a : DI ->⁺ X) =>
+             sigma-right (\lam (z : X) => hom-endpoints {X} {a dleft} {z})
+             `transQEquiv` later \new QEquiv {\Sigma (z : X) (\Sigma (h : DI ->⁺ X) (h dleft = a dleft) (h dright = z))}
+                                             {\Sigma (h : DI ->⁺ X) (\Sigma (h dleft = a dleft) (\Sigma (z : X) (h dright = z)))} {
+               | f s => (s.2.1, (s.2.2, (s.1, s.2.3)))
+               | ret s => (s.2.2.1, (s.1, s.2.1, s.2.2.2))
+               | ret_f s => idp
+               | f_sec s => idp
+             }
+             `transQEquiv` sigma-right (\lam (h : DI ->⁺ X) => contr-right (\lam _ => lsigma (h dright)) `transQEquiv` inv-equiv {X} {h dleft} {a dleft} `transQEquiv` const-path-equiv))
+           `transQEquiv` later \new QEquiv {\Sigma (a : DI ->⁺ X) (\Sigma (h : DI ->⁺ X) ((\lam _ => a dleft) = {\Sigma ->⁺ X} (\lam _ => h dleft)))}
+                                           {\Sigma (G1 : DI ->⁺ X) (G2 : DI ->⁺ X) ((\lam _ => G1 dleft) = {\Sigma ->⁺ X} (\lam _ => G2 dleft))} {
+             | f s => (s.1, s.2.1, s.2.2)
+             | ret s => (s.1, (s.2, s.3))
+             | ret_f s => idp
+             | f_sec s => idp
+           }
+      \where
+        -- | Paths of points are paths of the constant functors out of the unit category.
+        \func const-path-equiv {X : \Cat} {x y : X} : QEquiv {x = y} {(\lam _ => x) = {\Sigma ->⁺ X} (\lam _ => y)} \cowith
+          | f p => path \lam k => \lam _ => p @ k
+          | ret q => path \lam k => (q @ k) ()
+          | ret_f p => idp
+          | f_sec q => idp
+
+    -- | Swapping the arguments of a functor of two variables.
+    \func swap-qequiv {C : \Cat} : QEquiv {DI ->⁺ Span ->⁺ C} {Span ->⁺ DI ->⁺ C} \cowith
+      | f G y i => G i y
+      | ret G i y => G y i
+      | ret_f G => idp
+      | f_sec G => idp
+
+    -- | An arrow of {SpanData} as {SpanData} in the arrow category.
+    \func curry-span {C : \Cat} : QEquiv {DI ->⁺ SpanData C} {SpanData (DI ->⁺ C)} \cowith
+      | f h => (\lam j i => (h i).1 j, (\lam i => (h i).2.1, dpath \lam k i => (h i).2.2 k))
+      | ret s i => (\lam j => s.1 j i, (s.2.1 i, dpath \lam k => s.2.2 k i))
+      | ret_f h => idp
+      | f_sec s => idp
+  }
+
+{- | A square {Q} is a pushout square with respect to {r} if and only if arrows from {Q} to the constant square on {r}
+ -   are determined by their restrictions to {Span}.
+ -}
+\lemma span-pushoutAt {C : \Cat} (Q : DI ->⁺ DI ->⁺ C) (r : C) : IsPushoutAt Q r <-> IsEquiv (dmap span {Q} {constSq r})
+  => \have | ff => (ff-surj-equiv.2 spanFun-equiv).1 (spanData Q) (spanData (constSq r))
+           | tot => totalEquiv (\lam w => sqmap (\lam (w : DI ->⁺ C) => w dleft) (dpath Q) w)
+     \in (\lam po => IsEquiv.trans (span-pushout.spanData-equiv po) ff,
+         \lam e => cocartesianArrow-square.conv {_} {_} {\lam (w : DI ->⁺ C) => w dleft} {_} {_} {_} {dpath Q} $ tot.2 $ IsEquiv.rightFactor (inP (span-pushout.sq-hom {C} {Q} {r}))
+                     {totalEquiv.total (\lam w => sqmap (\lam (w : DI ->⁺ C) => w dleft) (dpath Q) w)}
+                     (IsEquiv.trans {_} {_} {_} {dmap spanData {Q} {constSq r}} (IsEquiv.leftFactor {_} {_} {_} {dmap spanData {Q} {constSq r}} ff e)
+                                    (inP (span-pushout.sd-hom {C} {Q} {r}))))
+
+-- | If {Q} is a pushout square, arrows from {Q} to a constant square are determined by their restrictions to {Span}.
+\lemma span-pushout {C : \Cat} {Q : DI ->⁺ DI ->⁺ C} (po : IsPushoutSquare Q) (r : C) : IsEquiv (dmap span {Q} {constSq r})
+  => (span-pushoutAt Q r).1 (po r)
+  \where {
+    -- | Arrows from {spanData} of a pushout square with respect to {r} to {spanData} of the constant square on {r} are arrows of squares.
+    \lemma spanData-equiv {C : \Cat} {Q : DI ->⁺ DI ->⁺ C} {r : C} (po : IsPushoutAt Q r) : IsEquiv (dmap spanData {Q} {constSq r})
+      => IsEquiv.leftFactor (inP (sd-hom {C} {Q} {r})) $ IsEquiv.trans (inP (sq-hom {C} {Q} {r})) (IsSigma-right (sqmap (\lam w => w dleft) (dpath Q)) \lam w => cocartesianArrow-square {_} {_} {\lam (w : DI ->⁺ C) => w dleft} {_} {_} {_} {dpath Q} po w)
+
+    -- | An arrow into a constant square as a square of arrows into a constant arrow.
+    \func sq-hom {C : \Cat} {Q : DI ->⁺ DI ->⁺ C} {r : C}
+      : QEquiv {Q ~> constSq r} {\Sigma (w : Q dleft ~> const r) (\Sigma (v : Q dright ~> const r) (DPath (\lam i => Q i ~> const r) w v))} \cowith
+      | f t => (dpath \lam m => t m dleft, (dpath \lam m => t m dright, dpath \lam i => dpath \lam m => t m i))
+      | ret s => dpath \lam m i => s.2.2 i m
+      | ret_f t => idp
+      | f_sec s => idp
+
+    -- | An arrow of {SpanData} as its components.
+    \func sd-hom {C : \Cat} {Q : DI ->⁺ DI ->⁺ C} {r : C}
+      : QEquiv {spanData Q ~> spanData (constSq r)}
+               {\Sigma (w : Q dleft ~> const r) (\Sigma (g : Q dright dleft ~> r) (DPath (\lam i => Q i dleft ~> r) (dmap (\lam (w : DI ->⁺ C) => w dleft) w) g))} \cowith
+      | f N => (dpath \lam m => (N m).1, (dpath \lam m => (N m).2.1, dpath \lam i => dpath \lam m => (N m).2.2 i))
+      | ret t => dpath \lam m => ((t.1 m, (t.2.1 m, dpath \lam i => t.2.2 i m)) : SpanData C)
+      | ret_f N => idp
+      | f_sec t => idp
+  }
