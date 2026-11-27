@@ -22,6 +22,7 @@ import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ArgumentExplicitnessError;
 import org.arend.ext.error.TypeMismatchError;
+import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.instance.SubclassSearchParameters;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
@@ -265,8 +266,22 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
 
     if (result instanceof DefCallResult defCallResult && !isExplicit && defCallResult.getDefinition() instanceof ClassField field) {
       if (field.isInfiniteField()) {
+        // The type of an infinite field call depends on the class call of its argument (level overrides, implementations),
+        // so it cannot be computed while the type of the argument is still unknown.
         Expression fieldExpr = FieldCallExpression.make(field, argResult.expression);
-        return new TypecheckingResult(fieldExpr, fieldExpr.getType());
+        Expression fieldType = fieldExpr.getType();
+        if (fieldType instanceof ErrorExpression && fieldType.isError()) {
+          InferenceVariable stuckVar = argResult.type.getStuckInferenceVariable();
+          if (stuckVar != null) {
+            myVisitor.getEquations().solveEquationsFor(stuckVar);
+            fieldType = fieldExpr.getType();
+          }
+        }
+        if (fieldType instanceof ErrorExpression && fieldType.isError()) {
+          myVisitor.getErrorReporter().report(new TypecheckingError("Cannot infer the type of field '" + field.getName() + "' since the type of its argument is not known yet; specify it explicitly", arg));
+          return null;
+        }
+        return new TypecheckingResult(fieldExpr, fieldType);
       }
       ClassCallExpression classCall = argResult.type.normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
       PiExpression piType = null;
