@@ -1,0 +1,56 @@
+{- | Exactness of a sequence of pointed sets, the HoTT book, Definition 8.4.5. -}
+
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Function
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+
+\type IsExactAt {A B C : Pointed} (f : PointedHom A B) (g : PointedHom B C) : \Prop
+  => \Pi (b : B) -> (g b = ide) <-> ∃ (a : A) (f a = b)
+
+\lemma IsExactAt-transport {A A' B B' C C' : Pointed}
+                           {f : PointedHom A B} {g : PointedHom B C}
+                           (f' : PointedHom A' B') (g' : PointedHom B' C')
+                           (u : PointedHom A' A) (usurj : IsSurj u)
+                           (w : PointedHom B B') (wsurj : IsSurj w) (winj : IsInj w)
+                           (v : PointedHom C C') (vinj : IsInj v)
+                           (sq1 : \Pi (a' : A') -> f' a' = w (f (u a')))
+                           (sq2 : \Pi (b : B) -> g' (w b) = v (g b))
+                           (e : IsExactAt f g) : IsExactAt f' g'
+  => \lam b' => \case wsurj b' \with {
+    | inP (b,wb=b') =>
+      (\lam kg => \case (e b).1 (vinj (inv (sq2 b) *> pmap g' wb=b' *> kg *> inv v.func-ide)) \with {
+        | inP (a,fa=b) => \case usurj a \with {
+          | inP (a',ua=a) => inP (a', sq1 a' *> pmap (\lam z => w (f z)) ua=a *> pmap w fa=b *> wb=b')
+        }
+      },
+       \lam im => \case im \with {
+         | inP (a',fa'=b') =>
+           inv (pmap g' wb=b') *> sq2 b
+           *> pmap v ((e b).2 (inP (u a', winj (inv (sq1 a') *> fa'=b' *> inv wb=b'))))
+           *> v.func-ide
+       })
+  }
+
+-- | The HoTT book, Lemma 8.4.7, surjectivity half.
+\lemma exact-middle-surjective {A B C : Pointed} {f : PointedHom A B} {v : PointedHom B C}
+                               (e : IsExactAt f v) (Cc : Contr C) : IsSurj f
+  => \lam b => (e b).1 (isContr=>isProp Cc (v b) ide)
+
+\lemma exactFive-middle-contr {U V W X Y : Pointed} {f : PointedHom U V} {g : PointedHom V W}
+                              {h : PointedHom W X} {k : PointedHom X Y}
+                              (eV : IsExactAt f g) (eW : IsExactAt g h) (eX : IsExactAt h k)
+                              (fs : IsSurj f) (ki : IsInj k)
+  : Contr W
+  => Contr.make ide \lam w => \case (eW w).1 (ki ((eX (h w)).2 (inP (w, idp)) *> inv k.func-ide)) \with {
+    | inP (v, gv=w) => \case fs v \with {
+      | inP (u, fu=v) => inv ((eV v).2 (inP (u, fu=v))) *> gv=w
+    }
+  }
+
+\record PointedExactSequence (Obj : Nat -> Pointed)
+  | seqMap : \Pi (n : Nat) -> PointedHom (Obj (suc n)) (Obj n)
+  | seqExact : \Pi (n : Nat) -> IsExactAt (seqMap (suc n)) (seqMap n)

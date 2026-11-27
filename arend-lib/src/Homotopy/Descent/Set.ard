@@ -1,0 +1,22 @@
+\import Function
+\import Logic
+\import Paths
+
+\func surjDescendSet {S A : \Type} (k : S -> A) (cover : IsSurj k) (D : A -> \Set) (d : \Pi (s : S) -> D (k s))
+                     (compat : \Pi (s t : S) (p : k s = k t) -> transport D p (d s) = d t)
+  : \Sigma (h : \Pi (a : A) -> D a) (\Pi (s : S) -> h (k s) = d s)
+  => (\lam a => (TruncP.rec-set (cover a) fibreValue fibreValue-const).1,
+      \lam s => pmap (\lam c => (TruncP.rec-set c fibreValue fibreValue-const).1) prop-pi *> TruncP.rec-set-eval ((s, idp) : \Sigma (t : S) (k t = k s)))
+  \where {
+    \func fibreValue {a : A} (w : \Sigma (s : S) (k s = a)) : D a
+      => transport D w.2 (d w.1)
+
+    \lemma fibreValue-const {a : A} (w w' : \Sigma (s : S) (k s = a)) : fibreValue w = fibreValue w' \elim w, w'
+      | (s, idp), (t, q) => inv (compat t s q)
+  }
+
+\lemma surjDescendSet-unique {S A : \Type} (k : S -> A) (cover : IsSurj k) (D : A -> \Set) (h h' : \Pi (a : A) -> D a)
+                             (e : \Pi (s : S) -> h (k s) = h' (k s)) (a : A) : h a = h' a
+  => \case cover a \with {
+    | inP (s, p) => transport (\lam a => h a = h' a) p (e s)
+  }

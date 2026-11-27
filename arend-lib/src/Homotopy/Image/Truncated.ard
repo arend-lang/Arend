@@ -1,0 +1,85 @@
+{- | The ``n``-image of a map and the ``n``-connected/``n``-truncated factorization system,
+     the HoTT book, Section 7.6.
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Equiv.Sigma
+\import Homotopy.Connectivity
+\import Homotopy.Fibration
+\import Homotopy.HLevel
+\import Homotopy.Localization.Connected
+\import Homotopy.Localization.Equiv
+\import Homotopy.Localization.Truncation
+\import Homotopy.Localization.Universe
+\import Homotopy.Truncation
+\import Logic
+\import Logic.Unique
+\import Paths
+
+-- | The identity ``nimage-out n f `o` nimage-in n f = f`` is definitional.
+\func NImage.{u} (n : Nat) {A B : \Type u} (f : A -> B) : \Type u
+  => \Sigma (b : B) (Trunc_-1+ n (Fib f b))
+
+\func nimage-in.{u} (n : Nat) {A B : \Type u} (f : A -> B) (a : A) : NImage n f
+  => (f a, inT (a, idp))
+
+\func nimage-out.{u} (n : Nat) {A B : \Type u} (f : A -> B) (y : NImage n f) : B
+  => y.1
+
+\sfunc nimage-out-fib.{u} (n : Nat) {A B : \Type u} (f : A -> B) (b : B)
+  : QEquiv {Fib (nimage-out n f) b} {Trunc_-1+ n (Fib f b)}
+           (\lam w => transport (\lam b' => Trunc_-1+ n (Fib f b')) w.2 w.1.2) (\lam t => ((b, t), idp))
+  => proj-fib (\lam b' => Trunc_-1+ n (Fib f b')) b
+
+\lemma nimage-right-truncated.{u} (n : Nat) {A B : \Type u} (f : A -> B) : isNTruncatedMap n (nimage-out n f)
+  => \lam b => HLevel-retracts (nimage-out-fib n f b) (isTruncated {Trunc_-1+.level n (Fib f b)})
+
+\lemma nimage-left-connected.{u} (n : Nat) {A B : \Type u} (f : A -> B) : isNConnectedMap n (nimage-in n f)
+  => \lam y => nconnected-equiv n (symQEquiv (IsEquiv.toQEquiv (fib-precomp (totalFib f) (totalEquiv.total (\lam b => inT {n} {Fib f b})) y)))
+      (transportInv (isConnectedType {truncUniverse n})
+                    (QEquiv_= (totalEquiv.totalFiber (\lam b => inT {n} {Fib f b}) y.1 y.2))
+                    (trunc-in-nconnected y.2))
+
+\func nimage0-equiv.{u} {A B : \Type u} (f : A -> B)
+  : QEquiv {NImage 0 f} {\Sigma (b : B) (TruncP (Fib f b))} (\lam p => (p.1, trunc0-equiv p.2)) (\lam p => (p.1, trunc0-equiv.ret p.2))
+  => sigma-right \lam b => trunc0-equiv {Fib f b}
+  \where
+    \func trunc0-equiv.{u} {X : \Type u} : QEquiv {Trunc_-1+ 0 X} {TruncP X} \cowith
+      | f => Trunc_-1+.elim (\lam _ => \new Truncated_-1+ 0 (TruncP X) (toProp \lam _ _ => prop-pi)) inP
+      | ret t => TruncP.rec prop t inT
+      | ret_f _ => prop _ _
+      | f_sec _ => prop-pi
+      \where
+        \lemma prop.{u} {X : \Type u} : isProp (Trunc_-1+ 0 X) => ToProp.fromProp (isTruncated {Trunc_-1+.level 0 X})
+
+-- # Orthogonality
+
+\func DiagonalFillers.{u} {A B X Y : \Type u} (f : A -> B) (g : X -> Y) (h : A -> X) (k : B -> Y)
+                          (sq : \Pi (a : A) -> g (h a) = k (f a))
+  => Extension.dext (\lam b => Fib g (k b)) f (\lam a => (h a, sq a))
+
+-- | Theorem 7.6.6.
+\lemma nconnected_ntruncated-orthogonal.{u} (n : Nat) {A B X Y : \Type u} {f : A -> B} {g : X -> Y}
+                                            (fc : isNConnectedMap n f) (gt : isNTruncatedMap n g)
+                                            (h : A -> X) (k : B -> Y) (sq : \Pi (a : A) -> g (h a) = k (f a))
+  : Contr (DiagonalFillers f g h k sq)
+  => IsEquiv=>contrFibers (connected_depEquiv f fc (\lam b => \new Local (Fib g (k b)) (gt (k b)))) _
+
+-- # Pullback stability
+
+\func FiberProduct.{u} {B C X : \Type u} (g : X -> B) (h : C -> B) : \Type u
+  => \Sigma (c : C) (Fib g (h c))
+
+\func pullbackMap.{u} {B C X : \Type u} (g : X -> B) (h : C -> B) (t : FiberProduct g h) : C
+  => t.1
+
+\lemma ntruncated-pullback.{u} (n : Nat) {B C X : \Type u} (g : X -> B) (h : C -> B) (gt : isNTruncatedMap n g)
+  : isNTruncatedMap n (pullbackMap g h)
+  => \lam c => HLevel-retracts (proj-fib (\lam c' => Fib g (h c')) c) (gt (h c))
+
+-- | Theorem 7.6.9.
+\sfunc nimage-pullback.{u} (n : Nat) {B C X : \Type u} (g : X -> B) (h : C -> B)
+  : QEquiv {NImage n (pullbackMap g h)} {FiberProduct (nimage-out n g) h}
+  => sigma-right \lam c => transQEquiv (TruncMap.equiv (proj-fib (\lam c' => Fib g (h c')) c))
+                                       (symQEquiv (nimage-out-fib n g (h c)))

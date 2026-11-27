@@ -67,7 +67,7 @@
   : pmap opYoneda (opArr-comp {C} {x} {y} {z} {f} {g}) = opArr-comp.Pi f g
   => pmap (pmap opYoneda) (\peval opArr-comp {C} {x} {y} {z} {f} {g}) *> pmap-isInj opYoneda-equiv (opArr-comp.Pi f g)
 
--- | Transport of the identity of {c} along {v} in {ReprFunctor}, covariantly in `(d, v)`.
+-- | Transport of the identity of {c} along `v` in {ReprFunctor}, covariantly in `(d, v)`.
 \sfunc reprTr.{u} {C : \Cat u} {c : C} (z :⁺ \Sigma⁺ (d : C) (c ~> d))
   : Straight.toStraight (comp z.2 idd) = ~>_-> (dmap (ReprFunctor c) z.2) (Straight.toStraight idd)
   => leftFib-tr (leftFib-path {\Sigma⁺ (d : C) (c ~> d)} {\lam z => ReprFunctor c z.1}

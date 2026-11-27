@@ -1,8 +1,6 @@
 \import Function.Meta
 \import Logic
-\import Meta
 \import Paths
-\import Paths.Meta
 \import Equiv
 \import Equiv.Path
 

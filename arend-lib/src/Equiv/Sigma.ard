@@ -87,7 +87,7 @@
   | ret_f p => path (\lam i => (p.1, (q p.1).ret_f p.2 i))
   | f_sec p' => path (\lam i => (p'.1, (q p'.1).f_sec p'.2 i))
 
-\func IsSigma-right {A : \Cat} {B B' : A -> \Cat} (f : \Pi (a : A) -> B a -> B' a) (q : \Pi (a : A) -> IsEquiv (f a))
+\lemma esigma-right {A : \Cat} {B B' : A -> \Cat} (f : \Pi (a : A) -> B a -> B' a) (q : \Pi (a : A) -> IsEquiv (f a))
   : IsEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A) (B' a)} (\lam s => (s.1, f s.1 s.2))
   => inP $ sigma-right \lam a => IsEquiv.toQEquiv (q a)
 
@@ -101,6 +101,20 @@
   | ret_f g => idp
   | f_sec a => idp
 
+\lemma fib-precomp {A A' B : \Cat} (e : QEquiv {A} {A'}) (g : A' -> B) (b : B)
+  : IsEquiv {Fib (\lam a => g (e a)) b} {Fib g b} (\lam x => (e x.1, x.2))
+  => inP (sigma-left {A} {A'} {g __ = b} e)
+
+\func totalFib {A B : \Type} (f : A -> B) : QEquiv {A} {\Sigma (b : B) (Fib f b)} \cowith
+  | f a => (f a, (a, idp))
+  | ret t => t.2.1
+  | ret_f _ => idp
+  | f_sec t => aux f t.2.1 t.1 t.2.2
+  \where
+    \private \sfunc aux {A B : \Type} (f : A -> B) (a : A) (b : B) (p : f a = b)
+      : ((f a, (a,idp)) : \Sigma (b' : B) (Fib f b')) = (b, (a,p)) \elim b, p
+      | _, idp => idp
+
 -- | The HoTT book, Theorem 4.7.7
 \lemma totalEquiv {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j)
   : (\Pi (j : J) -> IsEquiv (f j)) <-> IsEquiv (total f)
@@ -111,7 +125,7 @@
       => (p.1, f p.1 p.2)
 
     -- | Theorem 4.7.6
-    \func totalFiber {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j) (j : J) (b : B j)
+    \sfunc totalFiber {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j) (j : J) (b : B j)
       : QEquiv {Fib (total f) ((j,b) : \Sigma (j : J) (B j))} {Fib (f j) b}
       => transQEquiv
           (sigma-right \lam p => sigmaEquiv B (total f p) (j,b))

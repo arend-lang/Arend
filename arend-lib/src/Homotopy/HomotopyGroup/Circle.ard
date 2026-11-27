@@ -1,0 +1,57 @@
+\import Algebra.Group
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Pointed (ide)
+\import Arith.Int
+\import Category \hiding (id, o)
+\import Equiv
+\import Function
+\import Homotopy.HomotopyGroup
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Homotopy.Sphere.Circle
+\import Homotopy.Suspension
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import Set \hiding (#, .#)
+
+\sfunc PiGroup_S1 : PiGroup_1+ 0 (Sphere.pointed 1) = AddGroup.toGroup IntRing
+  => inv (Cat.isotoid iso)
+  \where {
+    \func windHom : GroupHom (AddGroup.toGroup IntRing) (PiGroup_1+ 0 (Pointed.make base1)) \cowith
+      | func z => in0 (wind z)
+      | func-* {x} {y} => pmap in0 (wind-+ x y)
+
+    \lemma windHom-isEquiv : IsEquiv windHom.func
+      => inP (symQEquiv (transQEquiv (Trunc0.mapEquiv Loop_S1-equiv) Trunc0.setEquiv))
+
+    \func circleMap : Pointed.make base1 ->* Sphere.pointed 1
+      => (Sphere1-equiv.f, idp)
+
+    \lemma circleMap-isEquiv : IsEquiv (piMap 1 circleMap)
+      => piMap-isEquiv 1 circleMap (inP Sphere1-equiv)
+
+    \protected \func hom : GroupHom (AddGroup.toGroup IntRing) (PiGroup_1+ 0 (Sphere.pointed 1))
+      => GroupHom.compose (piGroupMap 0 circleMap) windHom
+
+    \protected \func iso : Iso {GroupCat} hom
+      => (GroupCat.Iso<->Inj+Surj hom).2
+          (IsInj.comp (IsEquiv.isInj windHom-isEquiv) (IsEquiv.isInj circleMap-isEquiv),
+           IsSurj.comp (IsEquiv.isSurj windHom-isEquiv) (IsEquiv.isSurj circleMap-isEquiv))
+  }
+
+\lemma circle-pi-high-contr (r : Nat) : Contr (PiSet (suc (suc r)) (Sphere.pointed 1))
+  => at r north
+  \where \protected {
+    \lemma at (r : Nat) (x : Sphere 1) : Contr (PiSet (suc (suc r)) (Pointed.make x))
+      => pi-high-contr-of-loopSet r (Pointed.make x) (circle-isGpd x x)
+
+    \lemma hit (r : Nat) : Contr (PiSet (suc (suc r)) (Pointed.make base1))
+      => pi-high-contr-of-loopSet r (Pointed.make base1) (rewrite Loop_S1 \lam _ _ => prop-isProp)
+
+    \lemma trivial (r : Nat) (z : PiCGroup_2+ r (Sphere.pointed 1))
+      : z = ide {PiCGroup_2+ r (Sphere.pointed 1)}
+      => isContr=>isProp (circle-pi-high-contr r) z _
+  }

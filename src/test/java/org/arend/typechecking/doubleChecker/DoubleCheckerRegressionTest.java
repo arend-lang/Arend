@@ -49,6 +49,26 @@ public class DoubleCheckerRegressionTest extends TypeCheckingTestCase {
       """);
   }
 
+  private static final String INFINITE_FIELD_PMAP = """
+    \\class Sp (E : \\Type)
+    \\class Pt \\extends Sp | base : E
+    \\func pmap' {A B : \\Cat} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\\lam i => f (p @ i))
+    """;
+
+  /**
+   * The type of an infinite field call depends on the class call of its argument.
+   * If that is still an unsolved inference variable, the typechecker must solve it first; it used to produce an unreported {@code {?error}} type.
+   */
+  @Test
+  public void infiniteFieldUnknownArgumentTypeTest() {
+    typeCheckModule(INFINITE_FIELD_PMAP + "\\func test.{u} (X : Pt.{u}) => pmap' (Sp.E {__}) (idp {Pt.{u}} {X})");
+  }
+
+  @Test
+  public void infiniteFieldKnownArgumentTypeTest() {
+    typeCheckModule(INFINITE_FIELD_PMAP + "\\func test.{u} (X : Pt.{u}) : X.E = X.E => pmap' {Pt.{u}} (Sp.E {__}) (idp {Pt.{u}} {X})");
+  }
+
   @Test
   public void idpEliminatedVariableTest() {
     typeCheckModule("""

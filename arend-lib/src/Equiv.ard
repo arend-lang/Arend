@@ -253,6 +253,22 @@
     | f_sec g => path \lam i x => g (IsEquiv.ret_f e {x} i)
   }
 
+-- | A map is an equivalence as soon as precomposition with it is an equivalence for every codomain.
+\lemma precomp=>isEquiv.{u} {A B : \Type u} (f : A -> B) (p : \Pi (Z : \Type u) -> IsEquiv {B -> Z} {A -> Z} (-o f))
+  : IsEquiv f
+  => endpoints f (p A) (p B)
+  \where
+    -- | It suffices to take the source and the target of the map as codomains.
+    \lemma endpoints {A B : \Type} (f : A -> B) (pA : IsEquiv {B -> A} {A -> A} (-o f)) (pB : IsEquiv {B -> B} {A -> B} (-o f))
+      : IsEquiv f
+      => \have | Rf => IsEquiv.f_ret pA {\lam a => a}
+               | fR => IsEquiv.isInj pB (path (\lam i x => f ((Rf @ i) x)))
+         \in inP \new QEquiv {
+           | ret => IsEquiv.ret pA (\lam a => a)
+           | ret_f a => path (\lam i => (Rf @ i) a)
+           | f_sec b => path (\lam i => (fR @ i) b)
+         }
+
 \lemma o-_IsEquiv {A B C : \Cat} {f : A -> B} (e : IsEquiv f) : IsEquiv {C -> A} {C -> B} (f `o-)
   => inP \new QEquiv {
     | ret => IsEquiv.ret e `o-

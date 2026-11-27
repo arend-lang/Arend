@@ -1,0 +1,63 @@
+-- | After ``theorems/homotopy/EilenbergMacLane.agda`` in HoTT-Agda.
+
+\import Algebra.Group
+\import Algebra.Ordered
+\import Algebra.Pointed (ide)
+\import Arith.Nat
+\import Equiv
+\import Homotopy.Connectivity
+\import Homotopy.EilenbergMacLane.Definition
+\import Homotopy.EilenbergMacLane.HSpaceSuspension
+\import Homotopy.Freudenthal
+\import Homotopy.K1
+\import Homotopy.K1.Basic
+\import Homotopy.K1.HSpace
+\import Homotopy.Loop
+\import Homotopy.Pointed \hiding (base)
+\import Homotopy.Suspension
+\import Homotopy.Truncation
+\import Logic
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+\func EM-susp.{u} {G : CGroup.{u}} (n : Nat) : Susp.pointed (EMSpace G n) ->* EMSpace G (suc n) \elim n
+  | 0 => (Susp.rec base base (\lam g => path (loop g)), idp)
+  | suc n => (inT, idp)
+
+\func EM-loopUnit.{u} {G : CGroup.{u}} (n : Nat) : EMSpace G n ->* Loop (EMSpace G (suc n)) \elim n
+  | 0 => (\lam g => path (loop g), K1.loop-ide)
+  | suc n => ->*.compose {EMSpace G (suc n)} {Loop (Susp.pointed (EMSpace G (suc n)))} {Loop (EMSpace G (suc (suc n)))}
+    (Loop-Func {Susp.pointed (EMSpace G (suc n))} {EMSpace G (suc (suc n))} (EM-susp (suc n))) (SuspLoopEquiv.unit (EMSpace G (suc n)))
+
+\func EM-susp_loopUnit.{u} {G : CGroup.{u}}
+  : ->*.compose {EMSpace G 0} {Loop (Susp.pointed (EMSpace G 0))} {Loop (EMSpace G 1)} (Loop-Func {Susp.pointed (EMSpace G 0)} {EMSpace G 1} (EM-susp 0)) (SuspLoopEquiv.unit (EMSpace G 0)) = EM-loopUnit 0
+  => ->*.ext {EMSpace G 0} {Loop (EMSpace G 1)} (\lam g => idp_*> *> pmap_*>-comm (EM-susp {G} 0).1 (pmerid g) (inv (pmerid (ide {G})))
+                        *> pmap (path (loop g) *>) (pmap_inv-comm (EM-susp {G} 0).1 (pmerid (ide {G})) *> pmap inv K1.loop-ide))
+             (ToProp.fromProp (K1-level base base _ _) _ _)
+
+\lemma EM-loopUnit-isEquiv.{u} {G : CGroup.{u}} (n : Nat) : IsEquiv (EM-loopUnit {G} n).1 \elim n
+  | 0 => inP K1-loopEquiv
+  | 1 => transport IsEquiv (ext \lam x => inv idp_*>)
+                   (IsEquiv.trans (PointedEquiv.map-isEquiv {hspaceLoopSusp {K1-HSpace {G}} K1-level idp})
+                                  (inP (symQEquiv (Trunc_-1+.equality {2} {Susp (K1 G)} north north))))
+  | suc (suc n) => transport IsEquiv (ext \lam x => inv idp_*>)
+      (IsEquiv.trans (inT-isEquiv (EM-level (suc (suc n))))
+        (IsEquiv.trans (nconnected-map=>trunc-equiv (SuspLoopEquiv.unit (EMSpace G (suc (suc n)))).1
+                          (nconnected-map-mono (suc<=suc (suc<=suc (suc<=suc (<=_+ <=-refl zero<=_))))
+                                               (freudenthal-connected (suc n) (EMSpace G (suc (suc n))) (EM-connected (suc n)))))
+                       (inP (symQEquiv (Trunc_-1+.equality {suc (suc (suc n))} {Susp (EMSpace G (suc (suc n)))} north north)))))
+
+\func EM-loopEquiv.{u} {G : CGroup.{u}} (n : Nat) : PointedEquiv (EMSpace G n) (Loop (EMSpace G (suc n))) \cowith
+  | map => EM-loopUnit n
+  | map-isEquiv => EM-loopUnit-isEquiv n
+
+\func EM-loopInv.{u} {G : CGroup.{u}} (n : Nat) : Loop (EMSpace G (suc n)) ->* EMSpace G n
+  => PointedEquiv.map {PointedEquiv.inverse (EM-loopEquiv n)}
+  \where {
+    \protected \func left.{u} {G : CGroup.{u}} (n : Nat) (x : EMSpace G n) : (EM-loopInv n).1 ((EM-loopUnit n).1 x) = x
+      => Section.ret_f {PointedEquiv.toHAEquiv (EM-loopEquiv n)} x
+
+    \protected \func right.{u} {G : CGroup.{u}} (n : Nat) (z : Loop (EMSpace G (suc n))) : (EM-loopUnit n).1 ((EM-loopInv n).1 z) = z
+      => Retraction.f_sec {PointedEquiv.toHAEquiv (EM-loopEquiv n)} z
+  }

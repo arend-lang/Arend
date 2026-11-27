@@ -22,6 +22,11 @@
   \lemma func-commutator {g h : Dom} : func (commutator g h) = commutator (func g) (func h)
     => func-* *> pmap2 (*) func-conjugate func-inverse
 
+  \lemma injective (p : \Pi {a : Dom} -> func a = ide -> a = ide) : IsInj func
+    => \lam {x} {y} q => cancel_*-right (inverse y)
+      (p (func-* *> pmap (func x *) func-inverse *> pmap (`* inverse (func y)) q *> inverse-right)
+        *> inv inverse-right)
+
   \func IsIsomorphism : \Prop
     => \Sigma (IsInj func) (IsSurj func)
 } \where {

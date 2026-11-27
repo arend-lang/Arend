@@ -1,0 +1,65 @@
+\import Arith.Nat
+\import Equiv
+\import Homotopy.Connectivity
+\import Homotopy.HLevel
+\import Homotopy.HomotopyGroup
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Homotopy.Truncation
+\import Logic
+\import Logic.Unique
+\import Order.PartialOrder
+\import Paths
+\import Set \hiding (#, .#)
+\open NatOrder (zero<suc, suc<suc)
+
+-- | The HoTT book, Lemma 8.3.2.
+\lemma pi-vanishes-below.{u} {n k : Nat} {X : Pointed.{u}} (c : isNConnectedType n X) (p : k NatOrder.< n)
+  : Contr (PiSet k X) \elim n, k, p
+  | suc n, 0, zero<suc => pi0-contr (nconnected-mono (suc<=suc zero<=_) c)
+  | suc n, suc k, suc<suc p =>
+    Contr.Contr_QEquiv (IsEquiv.toQEquiv (Trunc0.map-isEquiv (loop^Shift.isEquiv k X)))
+                       (pi-vanishes-below {n} {k} {Loop X} (loop-nconnected X c) p)
+  \where {
+    \func trunc1-Trunc0-equiv.{u} {A : \Type u} : QEquiv {Trunc_-1+ 1 A} {Trunc0 A} \cowith
+      | f => to
+      | ret => from
+      | ret_f => from_to
+      | f_sec => to_from
+      \where \protected {
+        \func trunc0-level.{u} {A : \Type u} : Trunc0 A ofHLevel_-1+ 1
+          => \lam _ _ => toProp (\lam _ _ => prop-pi)
+
+        \func trunc1-level.{u} {A : \Type u} : isSet (Trunc_-1+ 1 A)
+          => \lam a a' => ToProp.fromProp (isTruncated {Trunc_-1+.level 1 A} a a')
+
+        \func to.{u} {A : \Type u} (t : Trunc_-1+ 1 A) : Trunc0 A
+          => Trunc_-1+.elim.{u} (\lam _ => \new Truncated_-1+ 1 (Trunc0 A) trunc0-level) in0 t
+
+        \func from.{u} {A : \Type u} (t : Trunc0 A) : Trunc_-1+ 1 A
+          => Trunc0.rec trunc1-level t inT
+
+        \sfunc from_to.{u} {A : \Type u} (t : Trunc_-1+ 1 A) : from (to t) = t
+          => Trunc_-1+.elim.{u} (\lam t => \new Truncated_-1+ 1 (from (to t) = t)
+                                                                (HLevel_-1_suc {_} {0} (isTruncated {Trunc_-1+.level 1 A} (from (to t)) t)))
+                                (\lam _ => Trunc0.rec-eval) t
+
+        \lemma to_from.{u} {A : \Type u} (t : Trunc0 A) : to (from t) = t \elim t
+          | in0 a => pmap to (Trunc0.rec-eval {A} {Trunc_-1+ 1 A} {trunc1-level} {a} {inT})
+      }
+
+    \lemma pi0-contr.{u} {X : Pointed.{u}} (c : isNConnectedType 1 X) : Contr (PiSet 0 X)
+      => Contr.Contr_QEquiv trunc1-Trunc0-equiv (propExt.dir (nconnected-iff-trunc-contr 1 X) c)
+  }
+
+\lemma pi-vanishes-above.{u} {n k : Nat} {X : Pointed.{u}} (h : X ofHLevel_-1+ n) (p : n <= k) : Contr (PiSet k X)
+  => Trunc0.contr (isProp=>isContr (ToProp.fromProp (loop^-level k 0 (HLevel_-1_<= n k p h))) base)
+  \where
+    \lemma loop^-level.{u} (k m : Nat) {X : Pointed.{u}} (h : X ofHLevel_-1+ k Nat.+ m) : Loop^ k X ofHLevel_-1+ m \elim k
+      | 0 => h
+      | suc k => loop^-level k (suc m) h base base
+
+-- | The HoTT book, Corollary 8.3.3: ``pi k (S^n)`` vanishes for ``k < n``.
+\lemma sphere-pi-vanishes.{u} {k n : Nat} (p : k NatOrder.< n) : Contr (PiSet k (Sphere.pointed n))
+  => pi-vanishes-below (sphere-nconnected.{u} n) p

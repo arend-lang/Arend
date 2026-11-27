@@ -1,17 +1,26 @@
 \import Arith.Int
 \import Equiv
 \import Homotopy.Cube
+\import Homotopy.Loop
 \import Homotopy.Pushout
 \import Homotopy.Sphere
 \import Homotopy.Suspension
+\import Logic
+\import Logic.Unique
+\import Meta
 \import Paths
 \import Paths.Meta
 
 \data Sphere1
   | base1
   | loop : base1 = base1
-  \where
+  \where {
     \func ploop => path loop
+
+    \lemma prop-ind (P : Sphere1 -> \Type) (l : \Pi (x : Sphere1) -> isProp (P x)) (p : P base1) (x : Sphere1)
+      : \level (P x) (l x) \elim x
+      | base1 => p
+  }
 
 \func OmegaS1 => base1 = base1
 
@@ -92,5 +101,34 @@
 \func decode_encode (x : Sphere1) (c : code x) : encode x (decode x c) = c \elim x
   | base1 => encode_wind c
 
+\func Loop_S1-equiv : QEquiv {OmegaS1} {Int} \cowith
+  | f => encode base1
+  | ret => wind
+  | ret_f => encode_decode
+  | f_sec => encode_wind
+
 \func Loop_S1 : OmegaS1 = Int =>
   path (iso (encode base1) wind encode_decode encode_wind)
+
+\sfunc wind_loop-inv (n : Int) : wind n *> inv (path loop) = wind (ipred n)
+  => \have A : wind (ipred n) *> path loop = wind n => decode.wind_loop (ipred n) *> pmap wind (isuc_ipred n)
+     \in pmap (*> inv (path loop)) (inv A) *> *>-assoc *> pmap (wind (ipred n) *>) *>_inv
+
+\sfunc wind-+ (m n : Int) : wind (m IntRing.+ n) = wind m *> wind n \elim n
+  | pos 0 => pmap wind (IntRing.zro-right {m})
+  | pos (suc k) => pmap wind (IntRing.suc-right {m} {k})
+                   *> inv (decode.wind_loop (m IntRing.+ pos k))
+                   *> pmap (`*> path loop) (wind-+ m (pos k))
+                   *> *>-assoc
+  | neg (suc k) => pmap wind (IntRing.pred-right {m} {k})
+                   *> inv (wind_loop-inv (m IntRing.+ neg k))
+                   *> pmap (*> inv (path loop)) (wind-+ m (neg k))
+                   *> *>-assoc
+
+\lemma circle-isGpd : isGpd (Sphere 1)
+  => run {
+    isGpd.equiv (inP (symQEquiv Sphere1-equiv)),
+    loop-level.set,
+    \lam x0,
+    Sphere1.prop-ind _ (\lam x => isSet.levelProp {x = x}) (rewrite Loop_S1 (\lam _ _ => prop-isProp)) x0
+  }

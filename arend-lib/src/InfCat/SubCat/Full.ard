@@ -42,7 +42,7 @@
                     | f_sec => idpe
                   })
                   {later \lam s => (s.1, coe (\lam i => s.2.2 (ob dleft) i ~> s.2.2 (ob dright) i) (dpath s.2.1) right)}
-                  (IsSigma-right (later \lam u r => coe (\lam i => r.2 (ob dleft) i ~> r.2 (ob dright) i) (dpath r.1) right) $ later \lam u =>
+                  (esigma-right (later \lam u r => coe (\lam i => r.2 (ob dleft) i ~> r.2 (ob dright) i) (dpath r.1) right) $ later \lam u =>
                     IsEquiv.trans (inP $ sigma-right \lam v => later ObDI-depEquiv) (IsEquiv.trans (inP $ qsigma-left {DI ->⁺ D} DI-equiv)
                       (inP \new QEquiv {\Sigma (w : \Sigma (j : \Sigma D D) (j.1 ~> j.2)) (\Sigma (w.1.1 = f (u (ob dleft))) (w.1.2 = f (u (ob dright))))} {
                         | f z => coe (\lam i => z.2.1 i ~> z.2.2 i) z.1.2 right

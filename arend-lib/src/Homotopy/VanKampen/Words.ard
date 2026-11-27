@@ -1,0 +1,723 @@
+-- | Alternating path words for the van Kampen theorem (HoTT book, Section 8.7).
+
+\import Data.Or
+\import Equiv
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pushout
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Hedberg
+\open PushoutData (ppglue)
+
+\func Start.{u} {B C : \Type u} (x y : Or B C) : \Set u \elim x, y
+  | inl b0, inl b => b0 =0 b
+  | inr c0, inr c => c0 =0 c
+  | _, _ => Empty
+
+\func startB.{u} {B C : \Type u} {x : Or B C} {b b' : B} (st : Start x (inl b)) (p : b =0 b') : Start x (inl b') \elim x
+  | inl _ => st *>0 p
+  | inr _ => \case st \with {}
+
+\func startC.{u} {B C : \Type u} {x : Or B C} {c c' : C} (st : Start x (inr c)) (q : c =0 c') : Start x (inr c') \elim x
+  | inl _ => \case st \with {}
+  | inr _ => st *>0 q
+
+\func prestartB.{u} {B C : \Type u} {y : Or B C} {b b' : B} (p : b' =0 b) (st : Start (inl b) y) : Start (inl b') y \elim y
+  | inl _ => p *>0 st
+  | inr _ => \case st \with {}
+
+\func prestartC.{u} {B C : \Type u} {y : Or B C} {c c' : C} (q : c' =0 c) (st : Start (inr c) y) : Start (inr c') y \elim y
+  | inl _ => \case st \with {}
+  | inr _ => q *>0 st
+
+\func vkPoint {A B C : \Type} (f : A -> B) (g : A -> C) (x : Or B C) : PushoutData f g \elim x
+  | inl b => pinl b
+  | inr c => pinr c
+
+\func vkEvalStart.{u} {A B C : \Type u} (f : A -> B) (g : A -> C) {x y : Or B C} (st : Start x y) : vkPoint f g x =0 vkPoint f g y \elim x, y
+  | inl _, inl _ => map0 pinl st
+  | inr _, inr _ => map0 pinr st
+  | inl _, inr _ => \case st \with {}
+  | inr _, inl _ => \case st \with {}
+
+\class VKSpan.{u} \noclassifying (A B C S : \Type u) (f : A -> B) (g : A -> C) (k : S -> A) {
+  \func point (x : Or B C) : PushoutData f g => vkPoint f g x
+
+  \data Raw (x y : Or B C) \elim y
+    | inl b => segB (Start x (inl b))
+    | inl b => toB (s : S) (Raw x (inr (g (k s)))) (f (k s) =0 b)
+    | inr c => segC (Start x (inr c))
+    | inr c => toC (s : S) (Raw x (inl (f (k s)))) (g (k s) =0 c)
+
+  \lemma Raw-isSet (Sset : isSet S) {x y : Or B C} : isSet (Raw x y)
+    => Set-lemma RawEq (\lam {w} => RawEq-refl Sset w) (\lam {w} {w'} => RawEq-eq Sset w w')
+    \where {
+      \func RawEq {x y : Or B C} (w w' : Raw x y) : \Prop \elim y, w, w'
+        | inl b, segB st, segB st' => st = st'
+        | inl b, toB s w p, toB s' w' p' => \Sigma (TruncP (s = s'))
+            (\Pi (e : s = s') -> \Sigma (RawEq w (transport (\lam t => Raw x (inr (g (k t)))) (inv e) w'))
+                                        (p = transport (\lam t => f (k t) =0 b) (inv e) p'))
+        | inr c, segC st, segC st' => st = st'
+        | inr c, toC s w q, toC s' w' q' => \Sigma (TruncP (s = s'))
+            (\Pi (e : s = s') -> \Sigma (RawEq w (transport (\lam t => Raw x (inl (f (k t)))) (inv e) w'))
+                                        (q = transport (\lam t => g (k t) =0 c) (inv e) q'))
+        | inl _, segB _, toB _ _ _ => Empty
+        | inl _, toB _ _ _, segB _ => Empty
+        | inr _, segC _, toC _ _ _ => Empty
+        | inr _, toC _ _ _, segC _ => Empty
+
+      \lemma RawEq-refl (Sset : isSet S) {x y : Or B C} (w : Raw x y) : RawEq w w \elim y, w
+        | inl b, segB st => idp
+        | inl b, toB s w p => (inP idp, \lam e => rewrite (Sset s s e idp) (RawEq-refl Sset w, idp))
+        | inr c, segC st => idp
+        | inr c, toC s w q => (inP idp, \lam e => rewrite (Sset s s e idp) (RawEq-refl Sset w, idp))
+
+      \sfunc RawEq-eq (Sset : isSet S) {x y : Or B C} (w w' : Raw x y) (r : RawEq w w') : w = w' \elim y, w, w', r
+        | inl b, segB st, segB st', r => pmap segB r
+        | inl b, toB s w p, toB s' w' p', (t, h) =>
+          \let e => TruncP.remove (Sset s s') t
+          \in cross {_} {\lam t => Raw x (inr (g (k t)))} {\lam t => f (k t) =0 b} (\lam t w0 p0 => toB t w0 p0) e (RawEq-eq Sset w _ (h e).1) (h e).2
+        | inr c, segC st, segC st', r => pmap segC r
+        | inr c, toC s w q, toC s' w' q', (t, h) =>
+          \let e => TruncP.remove (Sset s s') t
+          \in cross {_} {\lam t => Raw x (inl (f (k t)))} {\lam t => g (k t) =0 c} (\lam t w0 q0 => toC t w0 q0) e (RawEq-eq Sset w _ (h e).1) (h e).2
+        | inl _, segB _, toB _ _ _, r => \case r \with {}
+        | inl _, toB _ _ _, segB _, r => \case r \with {}
+        | inr _, segC _, toC _ _ _, r => \case r \with {}
+        | inr _, toC _ _ _, segC _, r => \case r \with {}
+
+      \sfunc cross {Y : S -> \Type} {Z : S -> \Type} {W : \Type} (h : \Pi (s : S) -> Y s -> Z s -> W) {s s' : S} (e : s = s')
+                  {w : Y s} {w' : Y s'} {p : Z s} {p' : Z s'} (ew : w = transport Y (inv e) w') (ep : p = transport Z (inv e) p')
+        : h s w p = h s' w' p' \elim e
+        | idp => pmap2 (h s) ew ep
+    }
+
+  \func appendB {x : Or B C} {b b' : B} (w : Raw x (inl b)) (p : b =0 b') : Raw x (inl b') \elim w
+    | segB st => segB (startB st p)
+    | toB s w q => toB s w (q *>0 p)
+
+  \func appendC {x : Or B C} {c c' : C} (w : Raw x (inr c)) (q : c =0 c') : Raw x (inr c') \elim w
+    | segC st => segC (startC st q)
+    | toC s w p => toC s w (p *>0 q)
+
+  \func prependB {b b' : B} (p : b' =0 b) {y : Or B C} (w : Raw (inl b) y) : Raw (inl b') y \elim y, w
+    | inl b1, segB st => segB (prestartB {B} {C} {inl b1} p st)
+    | inl _, toB s w q => toB s (prependB p w) q
+    | inr c1, segC st => segC (prestartB {B} {C} {inr c1} p st)
+    | inr _, toC s w q => toC s (prependB p w) q
+
+  \func prependC {c c' : C} (q : c' =0 c) {y : Or B C} (w : Raw (inr c) y) : Raw (inr c') y \elim y, w
+    | inl b1, segB st => segB (prestartC {B} {C} {inl b1} q st)
+    | inl _, toB s w p => toB s (prependC q w) p
+    | inr c1, segC st => segC (prestartC {B} {C} {inr c1} q st)
+    | inr _, toC s w p => toC s (prependC q w) p
+
+  \func precrossC (s : S) {y : Or B C} (w : Raw (inl (f (k s))) y) : Raw (inr (g (k s))) y \elim y, w
+    | inl _, segB st => toB s (segC idp0) st
+    | inl _, toB t w p => toB t (precrossC s w) p
+    | inr _, segC st => \case st \with {}
+    | inr _, toC t w q => toC t (precrossC s w) q
+
+  \func precrossB (s : S) {y : Or B C} (w : Raw (inr (g (k s))) y) : Raw (inl (f (k s))) y \elim y, w
+    | inl _, segB st => \case st \with {}
+    | inl _, toB t w p => toB t (precrossB s w) p
+    | inr _, segC st => toC s (segB idp0) st
+    | inr _, toC t w q => toC t (precrossB s w) q
+
+  \data Rel {x y : Or B C} (w w' : Raw x y) \elim y
+    | inl b => cancelB (s : S) (w0 : Raw x (inl (f (k s)))) (p : f (k s) =0 b)
+                       (toB s (toC s w0 idp0) p = w) (appendB w0 p = w')
+    | inl b => slideB (s t : S) (a : k s =0 k t) (w0 : Raw x (inr (g (k s)))) (p : f (k t) =0 b)
+                      (toB t (appendC w0 (map0 g a)) p = w) (toB s w0 (map0 f a *>0 p) = w')
+    | inl b => congB (s : S) {w0 w0' : Raw x (inr (g (k s)))} (Rel w0 w0') (p : f (k s) =0 b)
+                     (toB s w0 p = w) (toB s w0' p = w')
+    | inr c => cancelC (s : S) (w0 : Raw x (inr (g (k s)))) (q : g (k s) =0 c)
+                       (toC s (toB s w0 idp0) q = w) (appendC w0 q = w')
+    | inr c => slideC (s t : S) (a : k s =0 k t) (w0 : Raw x (inl (f (k s)))) (q : g (k t) =0 c)
+                      (toC t (appendB w0 (map0 f a)) q = w) (toC s w0 (map0 g a *>0 q) = w')
+    | inr c => congC (s : S) {w0 w0' : Raw x (inl (f (k s)))} (Rel w0 w0') (q : g (k s) =0 c)
+                     (toC s w0 q = w) (toC s w0' q = w')
+
+  \func Code (x y : Or B C) : \Set u => Quotient {Raw x y} (\lam w w' => Rel w w')
+
+  \func toBQ (s : S) {x : Or B C} {b : B} (c : Code x (inr (g (k s)))) (p : f (k s) =0 b) : Code x (inl b) \elim c
+    | in~ w => in~ (toB s w p)
+    | ~-equiv _ _ r => ~-pequiv (congB s r p idp idp)
+
+  \func toCQ (s : S) {x : Or B C} {c : C} (d : Code x (inl (f (k s)))) (q : g (k s) =0 c) : Code x (inr c) \elim d
+    | in~ w => in~ (toC s w q)
+    | ~-equiv _ _ r => ~-pequiv (congC s r q idp idp)
+
+  \sfunc appendB-idp0 {x : Or B C} {b : B} (w : Raw x (inl b)) : appendB w idp0 = w \elim w
+    | segB st => pmap segB (start x st)
+    | toB s w q => pmap (toB s w) (*>0_idp0 q)
+    \where
+      \sfunc start (x : Or B C) (st : Start x (inl b)) : startB st idp0 = st \elim x
+        | inl _ => *>0_idp0 st
+        | inr _ => \case st \with {}
+
+  \sfunc appendC-idp0 {x : Or B C} {c : C} (w : Raw x (inr c)) : appendC w idp0 = w \elim w
+    | segC st => pmap segC (start x st)
+    | toC s w p => pmap (toC s w) (*>0_idp0 p)
+    \where
+      \sfunc start (x : Or B C) (st : Start x (inr c)) : startC st idp0 = st \elim x
+        | inl _ => \case st \with {}
+        | inr _ => *>0_idp0 st
+
+  \sfunc appendB-assoc {x : Or B C} {b b' b'' : B} (w : Raw x (inl b)) (p : b =0 b') (p' : b' =0 b'')
+    : appendB (appendB w p) p' = appendB w (p *>0 p') \elim w
+    | segB st => pmap segB (start x st)
+    | toB s w q => pmap (toB s w) (*>0-assoc q p p')
+    \where
+      \sfunc start (x : Or B C) (st : Start x (inl b))
+        : startB (startB st p) p' = startB st (p *>0 p') \elim x
+        | inl _ => *>0-assoc st p p'
+        | inr _ => \case st \with {}
+
+  \sfunc appendC-assoc {x : Or B C} {c c' c'' : C} (w : Raw x (inr c)) (q : c =0 c') (q' : c' =0 c'')
+    : appendC (appendC w q) q' = appendC w (q *>0 q') \elim w
+    | segC st => pmap segC (start x st)
+    | toC s w p => pmap (toC s w) (*>0-assoc p q q')
+    \where
+      \sfunc start (x : Or B C) (st : Start x (inr c))
+        : startC (startC st q) q' = startC st (q *>0 q') \elim x
+        | inl _ => \case st \with {}
+        | inr _ => *>0-assoc st q q'
+
+  \sfunc prependB-idp0 {y : Or B C} {b : B} (w : Raw (inl b) y) : prependB idp0 w = w \elim y, w
+    | inl _, segB st => pmap segB (idp0_*>0 st)
+    | inl _, toB s w q => pmap (toB s __ q) (prependB-idp0 w)
+    | inr _, segC st => \case st \with {}
+    | inr _, toC s w q => pmap (toC s __ q) (prependB-idp0 w)
+
+  \sfunc prependC-idp0 {y : Or B C} {c : C} (w : Raw (inr c) y) : prependC idp0 w = w \elim y, w
+    | inl _, segB st => \case st \with {}
+    | inl _, toB s w p => pmap (toB s __ p) (prependC-idp0 w)
+    | inr _, segC st => pmap segC (idp0_*>0 st)
+    | inr _, toC s w p => pmap (toC s __ p) (prependC-idp0 w)
+
+  \sfunc prependB-assoc {y : Or B C} {b b' b'' : B} (p' : b'' =0 b') (p : b' =0 b) (w : Raw (inl b) y)
+    : prependB p' (prependB p w) = prependB (p' *>0 p) w \elim y, w
+    | inl _, segB st => pmap segB (inv (*>0-assoc p' p st))
+    | inl _, toB s w q => pmap (toB s __ q) (prependB-assoc p' p w)
+    | inr _, segC st => \case st \with {}
+    | inr _, toC s w q => pmap (toC s __ q) (prependB-assoc p' p w)
+
+  \sfunc prependC-assoc {y : Or B C} {c c' c'' : C} (q' : c'' =0 c') (q : c' =0 c) (w : Raw (inr c) y)
+    : prependC q' (prependC q w) = prependC (q' *>0 q) w \elim y, w
+    | inl _, segB st => \case st \with {}
+    | inl _, toB s w p => pmap (toB s __ p) (prependC-assoc q' q w)
+    | inr _, segC st => pmap segC (inv (*>0-assoc q' q st))
+    | inr _, toC s w p => pmap (toC s __ p) (prependC-assoc q' q w)
+
+  \sfunc prependB-appendB {b b' : B} (p : b' =0 b) {b1 b1' : B} (w : Raw (inl b) (inl b1)) (q : b1 =0 b1')
+    : prependB p (appendB w q) = appendB (prependB p w) q \elim w
+    | segB st => pmap segB (inv (*>0-assoc p st q))
+    | toB _ _ _ => idp
+
+  \sfunc prependB-appendC {b b' : B} (p : b' =0 b) {c c' : C} (w : Raw (inl b) (inr c)) (q : c =0 c')
+    : prependB p (appendC w q) = appendC (prependB p w) q \elim w
+    | segC st => \case st \with {}
+    | toC _ _ _ => idp
+
+  \sfunc prependC-appendB {c c' : C} (p : c' =0 c) {b1 b1' : B} (w : Raw (inr c) (inl b1)) (q : b1 =0 b1')
+    : prependC p (appendB w q) = appendB (prependC p w) q \elim w
+    | segB st => \case st \with {}
+    | toB _ _ _ => idp
+
+  \sfunc prependC-appendC {c c' : C} (p : c' =0 c) {c1 c1' : C} (w : Raw (inr c) (inr c1)) (q : c1 =0 c1')
+    : prependC p (appendC w q) = appendC (prependC p w) q \elim w
+    | segC st => pmap segC (inv (*>0-assoc p st q))
+    | toC _ _ _ => idp
+
+  \sfunc precrossC-appendB (s : S) {b1 b1' : B} (w : Raw (inl (f (k s))) (inl b1)) (q : b1 =0 b1')
+    : precrossC s (appendB w q) = appendB (precrossC s w) q \elim w
+    | segB _ => idp
+    | toB _ _ _ => idp
+
+  \sfunc precrossC-appendC (s : S) {c1 c1' : C} (w : Raw (inl (f (k s))) (inr c1)) (q : c1 =0 c1')
+    : precrossC s (appendC w q) = appendC (precrossC s w) q \elim w
+    | segC st => \case st \with {}
+    | toC _ _ _ => idp
+
+  \sfunc precrossB-appendB (s : S) {b1 b1' : B} (w : Raw (inr (g (k s))) (inl b1)) (q : b1 =0 b1')
+    : precrossB s (appendB w q) = appendB (precrossB s w) q \elim w
+    | segB st => \case st \with {}
+    | toB _ _ _ => idp
+
+  \sfunc precrossB-appendC (s : S) {c1 c1' : C} (w : Raw (inr (g (k s))) (inr c1)) (q : c1 =0 c1')
+    : precrossB s (appendC w q) = appendC (precrossB s w) q \elim w
+    | segC _ => idp
+    | toC _ _ _ => idp
+
+  \lemma rel-lift {x x' : Or B C} (F : \Pi {y : Or B C} -> Raw x y -> Raw x' y)
+    (FtoB : \Pi {b : B} (s : S) (w : Raw x (inr (g (k s)))) (p : f (k s) =0 b) -> F (toB s w p) = toB s (F w) p)
+    (FtoC : \Pi {c : C} (s : S) (w : Raw x (inl (f (k s)))) (q : g (k s) =0 c) -> F (toC s w q) = toC s (F w) q)
+    (FappB : \Pi {b b' : B} (w : Raw x (inl b)) (p : b =0 b') -> F (appendB w p) = appendB (F w) p)
+    (FappC : \Pi {c c' : C} (w : Raw x (inr c)) (q : c =0 c') -> F (appendC w q) = appendC (F w) q)
+    {y : Or B C} {w w' : Raw x y} (r : Rel w w') : in~ (F w) = {Code x' y} in~ (F w') \elim y, r
+    | inl _, cancelB s w0 p idp idp =>
+      pmap in~ (FtoB s _ p *> pmap (toB s __ p) (FtoC s w0 idp0)) *> ~-pequiv (cancelB s (F w0) p idp idp) *> pmap in~ (inv (FappB w0 p))
+    | inl _, slideB s t a w0 p idp idp =>
+      pmap in~ (FtoB t _ p *> pmap (toB t __ p) (FappC w0 (map0 g a))) *> ~-pequiv (slideB s t a (F w0) p idp idp) *> pmap in~ (inv (FtoB s w0 _))
+    | inl _, congB s r p idp idp =>
+      pmap in~ (FtoB s _ p) *> pmap (toBQ s __ p) (rel-lift F FtoB FtoC FappB FappC r) *> pmap in~ (inv (FtoB s _ p))
+    | inr _, cancelC s w0 q idp idp =>
+      pmap in~ (FtoC s _ q *> pmap (toC s __ q) (FtoB s w0 idp0)) *> ~-pequiv (cancelC s (F w0) q idp idp) *> pmap in~ (inv (FappC w0 q))
+    | inr _, slideC s t a w0 q idp idp =>
+      pmap in~ (FtoC t _ q *> pmap (toC t __ q) (FappB w0 (map0 f a))) *> ~-pequiv (slideC s t a (F w0) q idp idp) *> pmap in~ (inv (FtoC s w0 _))
+    | inr _, congC s r q idp idp =>
+      pmap in~ (FtoC s _ q) *> pmap (toCQ s __ q) (rel-lift F FtoB FtoC FappB FappC r) *> pmap in~ (inv (FtoC s _ q))
+
+  \lemma appendB-rel {x : Or B C} {b b' : B} {w w' : Raw x (inl b)} (r : Rel w w') (p : b =0 b')
+    : in~ (appendB w p) = {Code x (inl b')} in~ (appendB w' p) \elim r
+    | cancelB s w0 q idp idp => ~-pequiv (cancelB s w0 (q *>0 p) idp idp) *> pmap in~ (inv (appendB-assoc w0 q p))
+    | slideB s t a w0 q idp idp => ~-pequiv (slideB s t a w0 (q *>0 p) idp idp) *> pmap (\lam z => in~ (toB s w0 z)) (inv (*>0-assoc _ q p))
+    | congB s r q idp idp => ~-pequiv (congB s r (q *>0 p) idp idp)
+
+  \lemma appendC-rel {x : Or B C} {c c' : C} {w w' : Raw x (inr c)} (r : Rel w w') (q : c =0 c')
+    : in~ (appendC w q) = {Code x (inr c')} in~ (appendC w' q) \elim r
+    | cancelC s w0 p idp idp => ~-pequiv (cancelC s w0 (p *>0 q) idp idp) *> pmap in~ (inv (appendC-assoc w0 p q))
+    | slideC s t a w0 p idp idp => ~-pequiv (slideC s t a w0 (p *>0 q) idp idp) *> pmap (\lam z => in~ (toC s w0 z)) (inv (*>0-assoc _ p q))
+    | congC s r p idp idp => ~-pequiv (congC s r (p *>0 q) idp idp)
+
+  \func appendBQ {x : Or B C} {b b' : B} (c : Code x (inl b)) (p : b =0 b') : Code x (inl b') \elim c
+    | in~ w => in~ (appendB w p)
+    | ~-equiv _ _ r => appendB-rel r p
+
+  \func appendCQ {x : Or B C} {c c' : C} (d : Code x (inr c)) (q : c =0 c') : Code x (inr c') \elim d
+    | in~ w => in~ (appendC w q)
+    | ~-equiv _ _ r => appendC-rel r q
+
+  \func prependBQ {y : Or B C} {b b' : B} (p : b' =0 b) (c : Code (inl b) y) : Code (inl b') y \elim c
+    | in~ w => in~ (prependB p w)
+    | ~-equiv _ _ r => rel-lift (prependB p) (\lam _ _ _ => idp) (\lam _ _ _ => idp) (prependB-appendB p) (prependB-appendC p) r
+
+  \func prependCQ {y : Or B C} {c c' : C} (q : c' =0 c) (d : Code (inr c) y) : Code (inr c') y \elim d
+    | in~ w => in~ (prependC q w)
+    | ~-equiv _ _ r => rel-lift (prependC q) (\lam _ _ _ => idp) (\lam _ _ _ => idp) (prependC-appendB q) (prependC-appendC q) r
+
+  \func precrossCQ (s : S) {y : Or B C} (c : Code (inl (f (k s))) y) : Code (inr (g (k s))) y \elim c
+    | in~ w => in~ (precrossC s w)
+    | ~-equiv _ _ r => rel-lift (precrossC s) (\lam _ _ _ => idp) (\lam _ _ _ => idp) (precrossC-appendB s) (precrossC-appendC s) r
+
+  \func precrossBQ (s : S) {y : Or B C} (c : Code (inr (g (k s))) y) : Code (inl (f (k s))) y \elim c
+    | in~ w => in~ (precrossB s w)
+    | ~-equiv _ _ r => rel-lift (precrossB s) (\lam _ _ _ => idp) (\lam _ _ _ => idp) (precrossB-appendB s) (precrossB-appendC s) r
+
+  \lemma appendBQ-idp0 {x : Or B C} {b : B} (c : Code x (inl b)) : appendBQ c idp0 = c \elim c
+    | in~ w => pmap in~ (appendB-idp0 w)
+
+  \lemma appendCQ-idp0 {x : Or B C} {c : C} (d : Code x (inr c)) : appendCQ d idp0 = d \elim d
+    | in~ w => pmap in~ (appendC-idp0 w)
+
+  \lemma prependBQ-idp0 {y : Or B C} {b : B} (c : Code (inl b) y) : prependBQ idp0 c = c \elim c
+    | in~ w => pmap in~ (prependB-idp0 w)
+
+  \lemma prependCQ-idp0 {y : Or B C} {c : C} (d : Code (inr c) y) : prependCQ idp0 d = d \elim d
+    | in~ w => pmap in~ (prependC-idp0 w)
+
+  \lemma transport-targetB {x : Or B C} {b b' : B} (q : b = b') (c : Code x (inl b))
+    : transport (\lam b => Code x (inl b)) q c = appendBQ c (in0 q) \elim q
+    | idp => inv (appendBQ-idp0 c)
+
+  \lemma transport-targetC {x : Or B C} {c c' : C} (q : c = c') (d : Code x (inr c))
+    : transport (\lam c => Code x (inr c)) q d = appendCQ d (in0 q) \elim q
+    | idp => inv (appendCQ-idp0 d)
+
+  \lemma transport-sourceB {y : Or B C} {b b' : B} (q : b = b') (c : Code (inl b) y)
+    : transport (\lam b => Code (inl b) y) q c = prependBQ (in0 (inv q)) c \elim q
+    | idp => inv (prependBQ-idp0 c)
+
+  \lemma transport-sourceC {y : Or B C} {c c' : C} (q : c = c') (d : Code (inr c) y)
+    : transport (\lam c => Code (inr c) y) q d = prependCQ (in0 (inv q)) d \elim q
+    | idp => inv (prependCQ-idp0 d)
+
+  \lemma toBQ-toCQ (s : S) {x : Or B C} {b : B} (c : Code x (inl (f (k s)))) (p : f (k s) =0 b)
+    : toBQ s (toCQ s c idp0) p = appendBQ c p \elim c
+    | in~ w => ~-pequiv (cancelB s w p idp idp)
+
+  \lemma toCQ-toBQ (s : S) {x : Or B C} {c : C} (d : Code x (inr (g (k s)))) (q : g (k s) =0 c)
+    : toCQ s (toBQ s d idp0) q = appendCQ d q \elim d
+    | in~ w => ~-pequiv (cancelC s w q idp idp)
+
+  \func crossTargetRep (x : Or B C) (s : S) : Equiv (Code x (inl (f (k s)))) (Code x (inr (g (k s))))
+    => mkEquiv {_} {_} {toCQ s __ idp0} (inP \new QEquiv {
+      | ret => toBQ s __ idp0
+      | ret_f c => toBQ-toCQ s c idp0 *> appendBQ-idp0 c
+      | f_sec d => toCQ-toBQ s d idp0 *> appendCQ-idp0 d
+    })
+
+  \lemma precrossB-precrossC (s : S) {y : Or B C} (w : Raw (inl (f (k s))) y)
+    : in~ (precrossB s (precrossC s w)) = {Code (inl (f (k s))) y} in~ w \elim y, w
+    | inl _, segB st => ~-pequiv (cancelB s (segB idp0) st idp idp) *> pmap (\lam z => in~ (segB z)) (idp0_*>0 st)
+    | inl _, toB t w p => pmap (toBQ t __ p) (precrossB-precrossC s w)
+    | inr _, segC st => \case st \with {}
+    | inr _, toC t w q => pmap (toCQ t __ q) (precrossB-precrossC s w)
+
+  \lemma precrossC-precrossB (s : S) {y : Or B C} (w : Raw (inr (g (k s))) y)
+    : in~ (precrossC s (precrossB s w)) = {Code (inr (g (k s))) y} in~ w \elim y, w
+    | inl _, segB st => \case st \with {}
+    | inl _, toB t w p => pmap (toBQ t __ p) (precrossC-precrossB s w)
+    | inr _, segC st => ~-pequiv (cancelC s (segC idp0) st idp idp) *> pmap (\lam z => in~ (segC z)) (idp0_*>0 st)
+    | inr _, toC t w q => pmap (toCQ t __ q) (precrossC-precrossB s w)
+
+  \func crossSourceRep (y : Or B C) (s : S) : Equiv (Code (inl (f (k s))) y) (Code (inr (g (k s))) y)
+    => mkEquiv {_} {_} {precrossCQ s} (inP \new QEquiv {
+      | ret => precrossBQ s
+      | ret_f c => \case \elim c \with { | in~ w => precrossB-precrossC s w }
+      | f_sec d => \case \elim d \with { | in~ w => precrossC-precrossB s w }
+    })
+
+  \lemma crossTargetRep-compat (x : Or B C) (s t : S) (p : k s = k t) (c : Code x (inl (f (k s))))
+    : transport (\lam a => Code x (inr (g a))) p (toCQ s c idp0) = toCQ t (transport (\lam a => Code x (inl (f a))) p c) idp0
+    => transport-targetC (pmap g p) _
+       *> slide c
+       *> pmap (toCQ t __ idp0) (inv (transport-targetB (pmap f p) c))
+    \where
+      \lemma slide (c : Code x (inl (f (k s))))
+        : appendCQ (toCQ s c idp0) (in0 (pmap g p)) = toCQ t (appendBQ c (in0 (pmap f p))) idp0 \elim c
+        | in~ w => pmap (\lam z => in~ (toC s w z)) (idp0_*>0 _) *> inv (~-pequiv (slideC s t (in0 p) w idp0 idp idp))
+
+  \lemma crossSourceRep-compat (y : Or B C) (s t : S) (p : k s = k t) (c : Code (inl (f (k s))) y)
+    : transport (\lam a => Code (inr (g a)) y) p (precrossCQ s c) = precrossCQ t (transport (\lam a => Code (inl (f a)) y) p c)
+    => transport-sourceC (pmap g p) _
+       *> slide c
+       *> pmap (precrossCQ t) (inv (transport-sourceB (pmap f p) c))
+    \where {
+      \lemma slide (c : Code (inl (f (k s))) y)
+        : prependCQ (in0 (inv (pmap g p))) (precrossCQ s c) = precrossCQ t (prependBQ (in0 (inv (pmap f p))) c) \elim c
+        | in~ w => raw w
+
+      \lemma raw {y : Or B C} (w : Raw (inl (f (k s))) y)
+        : in~ (prependC (in0 (inv (pmap g p))) (precrossC s w)) = {Code (inr (g (k t))) y} in~ (precrossC t (prependB (in0 (inv (pmap f p))) w)) \elim y, w
+        | inl _, segB st =>
+          pmap (\lam z => in~ (toB s (segC z) st)) (pmap in0 (inv (pmap_inv-comm g p)) *> inv (idp0_*>0 _))
+            *> ~-pequiv (slideB t s (in0 (inv p)) (segC idp0) st idp idp)
+            *> pmap (\lam z => in~ (toB t (segC idp0) (in0 z *>0 st))) (pmap_inv-comm f p)
+        | inl _, toB t' w q => pmap (toBQ t' __ q) (raw w)
+        | inr _, segC st => \case st \with {}
+        | inr _, toC t' w q => pmap (toCQ t' __ q) (raw w)
+    }
+
+  \func evalStart {x y : Or B C} (st : Start x y) : point x =0 point y => vkEvalStart f g st
+
+  \func eval {x y : Or B C} (w : Raw x y) : point x =0 point y \elim y, w
+    | inl _, segB st => evalStart st
+    | inl _, toB s w p => eval w *>0 in0 (inv (ppglue (k s))) *>0 map0 pinl p
+    | inr _, segC st => evalStart st
+    | inr _, toC s w q => eval w *>0 in0 (ppglue (k s)) *>0 map0 pinr q
+
+  \lemma eval-appendB {x : Or B C} {b b' : B} (w : Raw x (inl b)) (p : b =0 b')
+    : eval (appendB w p) = eval w *>0 map0 pinl p \elim w
+    | segB st => start x st
+    | toB s w q => pmap (\lam z => eval w *>0 in0 (inv (ppglue (k s))) *>0 z) (map0_*>0 pinl q p)
+                     *> inv (*>0-assoc _ _ _ *> pmap (eval w *>0 __) (*>0-assoc _ _ _))
+    \where
+      \lemma start (x : Or B C) (st : Start x (inl b)) : evalStart (startB st p) = evalStart st *>0 map0 pinl p \elim x
+        | inl _ => map0_*>0 pinl st p
+        | inr _ => \case st \with {}
+
+  \lemma eval-appendC {x : Or B C} {c c' : C} (w : Raw x (inr c)) (q : c =0 c')
+    : eval (appendC w q) = eval w *>0 map0 pinr q \elim w
+    | segC st => start x st
+    | toC s w p => pmap (\lam z => eval w *>0 in0 (ppglue (k s)) *>0 z) (map0_*>0 pinr p q)
+                     *> inv (*>0-assoc _ _ _ *> pmap (eval w *>0 __) (*>0-assoc _ _ _))
+    \where
+      \lemma start (x : Or B C) (st : Start x (inr c)) : evalStart (startC st q) = evalStart st *>0 map0 pinr q \elim x
+        | inl _ => \case st \with {}
+        | inr _ => map0_*>0 pinr st q
+
+  \lemma eval-rel {x y : Or B C} {w w' : Raw x y} (r : Rel w w') : eval w = eval w' \elim y, r
+    | inl _, cancelB s w0 p idp idp => *>0-cancel (eval w0) (in0 (ppglue (k s))) (map0 pinl p) *> inv (eval-appendB w0 p)
+    | inl _, slideB _ t a w0 p idp idp => pmap (__ *>0 in0 (inv (ppglue (k t))) *>0 map0 pinl p) (eval-appendC w0 (map0 g a)) *> slideB-eval a (eval w0) p
+    | inl _, congB s r p idp idp => pmap (__ *>0 in0 (inv (ppglue (k s))) *>0 map0 pinl p) (eval-rel r)
+    | inr _, cancelC s w0 q idp idp => *>0-cancel' (eval w0) (in0 (ppglue (k s))) (map0 pinr q) *> inv (eval-appendC w0 q)
+    | inr _, slideC _ t a w0 q idp idp => pmap (__ *>0 in0 (ppglue (k t)) *>0 map0 pinr q) (eval-appendB w0 (map0 f a)) *> slideC-eval a (eval w0) q
+    | inr _, congC s r q idp idp => pmap (__ *>0 in0 (ppglue (k s)) *>0 map0 pinr q) (eval-rel r)
+    \where {
+      \lemma slideB-eval {a a' : A} (al : a =0 a') {z : PushoutData f g} (t : z =0 pinr (g a)) {b : B} (m : f a' =0 b)
+        : (t *>0 map0 pinr (map0 g al)) *>0 in0 (inv (ppglue a')) *>0 map0 pinl m = t *>0 in0 (inv (ppglue a)) *>0 map0 pinl (map0 f al *>0 m) \elim al, t, m
+        | in0 idp, in0 t, in0 m => pmap (\lam q => in0 (t *> inv (ppglue a) *> q)) (inv (pmap (pmap pinl) idp_*>))
+
+      \lemma slideC-eval {a a' : A} (al : a =0 a') {z : PushoutData f g} (t : z =0 pinl (f a)) {c : C} (m : g a' =0 c)
+        : (t *>0 map0 pinl (map0 f al)) *>0 in0 (ppglue a') *>0 map0 pinr m = t *>0 in0 (ppglue a) *>0 map0 pinr (map0 g al *>0 m) \elim al, t, m
+        | in0 idp, in0 t, in0 m => pmap (\lam q => in0 (t *> ppglue a *> q)) (inv (pmap (pmap pinr) idp_*>))
+    }
+
+  \func evalQ {x y : Or B C} (c : Code x y) : point x =0 point y \elim c
+    | in~ w => eval w
+    | ~-equiv _ _ r => eval-rel r
+
+  \lemma eval-prependB {b b' : B} (p : b' =0 b) {y : Or B C} (w : Raw (inl b) y) : eval (prependB p w) = map0 pinl p *>0 eval w \elim y, w
+    | inl _, segB st => map0_*>0 pinl p st
+    | inl _, toB s w q => pmap (__ *>0 in0 (inv (ppglue (k s))) *>0 map0 pinl q) (eval-prependB p w) *> *>0-assoc _ _ _
+    | inr _, segC st => \case st \with {}
+    | inr _, toC s w q => pmap (__ *>0 in0 (ppglue (k s)) *>0 map0 pinr q) (eval-prependB p w) *> *>0-assoc _ _ _
+
+  \lemma eval-prependC {c c' : C} (q : c' =0 c) {y : Or B C} (w : Raw (inr c) y) : eval (prependC q w) = map0 pinr q *>0 eval w \elim y, w
+    | inl _, segB st => \case st \with {}
+    | inl _, toB s w p => pmap (__ *>0 in0 (inv (ppglue (k s))) *>0 map0 pinl p) (eval-prependC q w) *> *>0-assoc _ _ _
+    | inr _, segC st => map0_*>0 pinr q st
+    | inr _, toC s w p => pmap (__ *>0 in0 (ppglue (k s)) *>0 map0 pinr p) (eval-prependC q w) *> *>0-assoc _ _ _
+
+  \lemma eval-precrossC (s : S) {y : Or B C} (w : Raw (inl (f (k s))) y) : eval (precrossC s w) = in0 (inv (ppglue (k s))) *>0 eval w \elim y, w
+    | inl _, segB _ => idp0_*>0 _
+    | inl _, toB t w p => pmap (__ *>0 in0 (inv (ppglue (k t))) *>0 map0 pinl p) (eval-precrossC s w) *> *>0-assoc _ _ _
+    | inr _, segC st => \case st \with {}
+    | inr _, toC t w q => pmap (__ *>0 in0 (ppglue (k t)) *>0 map0 pinr q) (eval-precrossC s w) *> *>0-assoc _ _ _
+
+  \lemma eval-precrossB (s : S) {y : Or B C} (w : Raw (inr (g (k s))) y) : eval (precrossB s w) = in0 (ppglue (k s)) *>0 eval w \elim y, w
+    | inl _, segB st => \case st \with {}
+    | inl _, toB t w p => pmap (__ *>0 in0 (inv (ppglue (k t))) *>0 map0 pinl p) (eval-precrossB s w) *> *>0-assoc _ _ _
+    | inr _, segC _ => idp0_*>0 _
+    | inr _, toC t w q => pmap (__ *>0 in0 (ppglue (k t)) *>0 map0 pinr q) (eval-precrossB s w) *> *>0-assoc _ _ _
+
+  \func idQ (x : Or B C) : Code x x \elim x
+    | inl _ => in~ (segB idp0)
+    | inr _ => in~ (segC idp0)
+
+  \lemma evalQ-idQ (x : Or B C) : evalQ (idQ x) = idp0 \elim x
+    | inl _ => idp
+    | inr _ => idp
+
+  \func appendStartB {x y : Or B C} (w : Raw x y) {b : B} (st : Start y (inl b)) : Raw x (inl b) \elim y
+    | inl _ => appendB w st
+    | inr _ => \case st \with {}
+
+  \func appendStartC {x y : Or B C} (w : Raw x y) {c : C} (st : Start y (inr c)) : Raw x (inr c) \elim y
+    | inl _ => \case st \with {}
+    | inr _ => appendC w st
+
+  \func concatRaw {x y z : Or B C} (w : Raw x y) (w' : Raw y z) : Raw x z \elim z, w'
+    | inl _, segB st => appendStartB w st
+    | inl _, toB s w' p => toB s (concatRaw w w') p
+    | inr _, segC st => appendStartC w st
+    | inr _, toC s w' q => toC s (concatRaw w w') q
+
+  \func concatQ {x y z : Or B C} (c : Code x y) (d : Code y z) : Code x z \elim c, d
+    | in~ w, in~ w' => in~ (concatRaw w w')
+    | in~ w, ~-equiv _ _ r => rel-lift (\lam {_} w' => concatRaw w w') (\lam _ _ _ => idp) (\lam _ _ _ => idp) (appendB-case w) (appendC-case w) r
+    | ~-equiv _ _ r, in~ w' => rel-left r w'
+    \where {
+      \sfunc appendB-case {x y : Or B C} (w : Raw x y) {b b' : B} (w' : Raw y (inl b)) (p : b =0 b')
+        : concatRaw w (appendB w' p) = appendB (concatRaw w w') p \elim w'
+        | segB st => start y w st p
+        | toB _ _ _ => idp
+        \where
+          \sfunc start (y : Or B C) {x : Or B C} (w : Raw x y) {b b' : B} (st : Start y (inl b)) (p : b =0 b')
+            : appendStartB w (startB st p) = appendB (appendStartB w st) p \elim y
+            | inl _ => inv (appendB-assoc w st p)
+            | inr _ => \case st \with {}
+
+      \sfunc appendC-case {x y : Or B C} (w : Raw x y) {c c' : C} (w' : Raw y (inr c)) (q : c =0 c')
+        : concatRaw w (appendC w' q) = appendC (concatRaw w w') q \elim w'
+        | segC st => start y w st q
+        | toC _ _ _ => idp
+        \where
+          \sfunc start (y : Or B C) {x : Or B C} (w : Raw x y) {c c' : C} (st : Start y (inr c)) (q : c =0 c')
+            : appendStartC w (startC st q) = appendC (appendStartC w st) q \elim y
+            | inl _ => \case st \with {}
+            | inr _ => inv (appendC-assoc w st q)
+
+      \lemma rel-left {x y z : Or B C} {w1 w2 : Raw x y} (r : Rel w1 w2) (w' : Raw y z) : in~ (concatRaw w1 w') = {Code x z} in~ (concatRaw w2 w') \elim z, w'
+        | inl _, segB st => segB-rel y r st
+        | inl _, toB s w' p => pmap (toBQ s __ p) (rel-left r w')
+        | inr _, segC st => segC-rel y r st
+        | inr _, toC s w' q => pmap (toCQ s __ q) (rel-left r w')
+
+      \lemma segB-rel (y : Or B C) {x : Or B C} {w1 w2 : Raw x y} (r : Rel w1 w2) {b : B} (st : Start y (inl b))
+        : in~ (appendStartB w1 st) = {Code x (inl b)} in~ (appendStartB w2 st) \elim y
+        | inl _ => appendB-rel r st
+        | inr _ => \case st \with {}
+
+      \lemma segC-rel (y : Or B C) {x : Or B C} {w1 w2 : Raw x y} (r : Rel w1 w2) {c : C} (st : Start y (inr c))
+        : in~ (appendStartC w1 st) = {Code x (inr c)} in~ (appendStartC w2 st) \elim y
+        | inl _ => \case st \with {}
+        | inr _ => appendC-rel r st
+    }
+
+  \lemma evalQ-concatQ {x y z : Or B C} (c : Code x y) (d : Code y z) : evalQ (concatQ c d) = evalQ c *>0 evalQ d \elim c, d
+    | in~ w, in~ w' => eval-concatRaw w w'
+    \where {
+      \lemma eval-concatRaw {x y z : Or B C} (w : Raw x y) (w' : Raw y z) : eval (concatRaw w w') = eval w *>0 eval w' \elim z, w'
+        | inl _, segB st => segB-eval y w st
+        | inl _, toB s w' p => pmap (__ *>0 in0 (inv (ppglue (k s))) *>0 map0 pinl p) (eval-concatRaw w w') *> *>0-assoc _ _ _
+        | inr _, segC st => segC-eval y w st
+        | inr _, toC s w' q => pmap (__ *>0 in0 (ppglue (k s)) *>0 map0 pinr q) (eval-concatRaw w w') *> *>0-assoc _ _ _
+
+      \lemma segB-eval (y : Or B C) {x : Or B C} (w : Raw x y) {b : B} (st : Start y (inl b)) : eval (appendStartB w st) = eval w *>0 evalStart st \elim y
+        | inl _ => eval-appendB w st
+        | inr _ => \case st \with {}
+
+      \lemma segC-eval (y : Or B C) {x : Or B C} (w : Raw x y) {c : C} (st : Start y (inr c)) : eval (appendStartC w st) = eval w *>0 evalStart st \elim y
+        | inl _ => \case st \with {}
+        | inr _ => eval-appendC w st
+    }
+
+  \func invSegB {x : Or B C} {b : B} (st : Start x (inl b)) : Raw (inl b) x \elim x
+    | inl _ => segB (inv0 st)
+    | inr _ => \case st \with {}
+
+  \func invSegC {x : Or B C} {c : C} (st : Start x (inr c)) : Raw (inr c) x \elim x
+    | inl _ => \case st \with {}
+    | inr _ => segC (inv0 st)
+
+  \func invRaw {x y : Or B C} (w : Raw x y) : Raw y x \elim y, w
+    | inl _, segB st => invSegB st
+    | inl _, toB s w p => prependB (inv0 p) (precrossB s (invRaw w))
+    | inr _, segC st => invSegC st
+    | inr _, toC s w q => prependC (inv0 q) (precrossC s (invRaw w))
+
+  \func invQ {x y : Or B C} (c : Code x y) : Code y x \elim c
+    | in~ w => in~ (invRaw w)
+    | ~-equiv _ _ r => rel r
+    \where {
+      \lemma rel {x y : Or B C} {w w' : Raw x y} (r : Rel w w') : in~ (invRaw w) = {Code y x} in~ (invRaw w') \elim y, r
+        | inl _, cancelB s w0 p idp idp =>
+          pmap (\lam z => prependBQ (inv0 p) (precrossBQ s (in~ z))) (prependC-idp0 _)
+            *> pmap (prependBQ (inv0 p)) (precrossB-precrossC s (invRaw w0)) *> pmap in~ (inv (invRaw-appendB w0 p))
+        | inl _, slideB s t a w0 p idp idp =>
+          pmap (\lam z => prependBQ (inv0 p) (in~ (precrossB t z))) (invRaw-appendC w0 (map0 g a))
+            *> pmap (prependBQ (inv0 p)) (slideB-start s t a (invRaw w0))
+            *> pmap in~ (prependB-assoc (inv0 p) _ _ *> pmap (prependB __ (precrossB s (invRaw w0))) (inv (inv0_*>0-comm (map0 f a) p)))
+        | inl _, congB s r p idp idp => pmap (\lam z => prependBQ (inv0 p) (precrossBQ s z)) (rel r)
+        | inr _, cancelC s w0 q idp idp =>
+          pmap (\lam z => prependCQ (inv0 q) (precrossCQ s (in~ z))) (prependB-idp0 _)
+            *> pmap (prependCQ (inv0 q)) (precrossC-precrossB s (invRaw w0)) *> pmap in~ (inv (invRaw-appendC w0 q))
+        | inr _, slideC s t a w0 q idp idp =>
+          pmap (\lam z => prependCQ (inv0 q) (in~ (precrossC t z))) (invRaw-appendB w0 (map0 f a))
+            *> pmap (prependCQ (inv0 q)) (slideC-start s t a (invRaw w0))
+            *> pmap in~ (prependC-assoc (inv0 q) _ _ *> pmap (prependC __ (precrossC s (invRaw w0))) (inv (inv0_*>0-comm (map0 g a) q)))
+        | inr _, congC s r q idp idp => pmap (\lam z => prependCQ (inv0 q) (precrossCQ s z)) (rel r)
+
+      \sfunc invRaw-appendB {x : Or B C} {b b' : B} (w : Raw x (inl b)) (p : b =0 b')
+        : invRaw (appendB w p) = prependB (inv0 p) (invRaw w) \elim w
+        | segB st => segB-case x st p
+        | toB s w q => pmap (prependB __ (precrossB s (invRaw w))) (inv0_*>0-comm q p) *> inv (prependB-assoc (inv0 p) (inv0 q) _)
+
+      \sfunc invRaw-appendC {x : Or B C} {c c' : C} (w : Raw x (inr c)) (q : c =0 c')
+        : invRaw (appendC w q) = prependC (inv0 q) (invRaw w) \elim w
+        | segC st => segC-case x st q
+        | toC s w p => pmap (prependC __ (precrossC s (invRaw w))) (inv0_*>0-comm p q) *> inv (prependC-assoc (inv0 q) (inv0 p) _)
+
+      \sfunc segB-case (x : Or B C) {b b' : B} (st : Start x (inl b)) (p : b =0 b')
+        : invSegB (startB st p) = prependB (inv0 p) (invSegB st) \elim x
+        | inl _ => pmap segB (inv0_*>0-comm st p)
+        | inr _ => \case st \with {}
+
+      \sfunc segC-case (x : Or B C) {c c' : C} (st : Start x (inr c)) (q : c =0 c')
+        : invSegC (startC st q) = prependC (inv0 q) (invSegC st) \elim x
+        | inl _ => \case st \with {}
+        | inr _ => pmap segC (inv0_*>0-comm st q)
+
+      \lemma slideB-start (s t : S) (a : k s =0 k t) {y : Or B C} (w : Raw (inr (g (k s))) y)
+        : in~ (precrossB t (prependC (inv0 (map0 g a)) w)) = {Code (inl (f (k t))) y} in~ (prependB (inv0 (map0 f a)) (precrossB s w)) \elim y, w
+        | inl _, segB st => \case st \with {}
+        | inl _, toB t' w p => pmap (toBQ t' __ p) (slideB-start s t a w)
+        | inr _, segC st =>
+          pmap (\lam z => in~ (toC t (segB idp0) (z *>0 st))) (inv (map0_inv0 g a))
+            *> inv (~-pequiv (slideC t s (inv0 a) (segB idp0) st idp idp))
+            *> pmap (\lam z => in~ (toC s (segB z) st)) (idp0_*>0 _ *> map0_inv0 f a *> inv (*>0_idp0 _))
+        | inr _, toC t' w q => pmap (toCQ t' __ q) (slideB-start s t a w)
+
+      \lemma slideC-start (s t : S) (a : k s =0 k t) {y : Or B C} (w : Raw (inl (f (k s))) y)
+        : in~ (precrossC t (prependB (inv0 (map0 f a)) w)) = {Code (inr (g (k t))) y} in~ (prependC (inv0 (map0 g a)) (precrossC s w)) \elim y, w
+        | inl _, segB st =>
+          pmap (\lam z => in~ (toB t (segC idp0) (z *>0 st))) (inv (map0_inv0 f a))
+            *> inv (~-pequiv (slideB t s (inv0 a) (segC idp0) st idp idp))
+            *> pmap (\lam z => in~ (toB s (segC z) st)) (idp0_*>0 _ *> map0_inv0 g a *> inv (*>0_idp0 _))
+        | inl _, toB t' w p => pmap (toBQ t' __ p) (slideC-start s t a w)
+        | inr _, segC st => \case st \with {}
+        | inr _, toC t' w q => pmap (toCQ t' __ q) (slideC-start s t a w)
+    }
+
+  \lemma evalQ-invQ {x y : Or B C} (c : Code x y) : evalQ (invQ c) = inv0 (evalQ c) \elim c
+    | in~ w => eval-invRaw w
+    \where {
+      \lemma eval-invRaw {x y : Or B C} (w : Raw x y) : eval (invRaw w) = inv0 (eval w) \elim y, w
+        | inl _, segB st => segB-case x st
+        | inl _, toB s w p =>
+          eval-prependB (inv0 p) _ *> pmap (map0 pinl (inv0 p) *>0 __) (eval-precrossB s _ *> pmap (in0 (ppglue (k s)) *>0 __) (eval-invRaw w))
+            *> pmap2 (\lam u v => u *>0 v *>0 inv0 (eval w)) (map0_inv0 pinl p) (pmap in0 (inv inv_inv))
+            *> inv (inv0_*>0-comm3 (eval w) _ (map0 pinl p))
+        | inr _, segC st => segC-case x st
+        | inr _, toC s w q =>
+          eval-prependC (inv0 q) _ *> pmap (map0 pinr (inv0 q) *>0 __) (eval-precrossC s _ *> pmap (in0 (inv (ppglue (k s))) *>0 __) (eval-invRaw w))
+            *> pmap (\lam u => u *>0 in0 (inv (ppglue (k s))) *>0 inv0 (eval w)) (map0_inv0 pinr q)
+            *> inv (inv0_*>0-comm3 (eval w) _ (map0 pinr q))
+
+      \lemma segB-case (x : Or B C) {b : B} (st : Start x (inl b)) : eval (invSegB st) = inv0 (evalStart st) \elim x
+        | inl _ => map0_inv0 pinl st
+        | inr _ => \case st \with {}
+
+      \lemma segC-case (x : Or B C) {c : C} (st : Start x (inr c)) : eval (invSegC st) = inv0 (evalStart st) \elim x
+        | inl _ => \case st \with {}
+        | inr _ => map0_inv0 pinr st
+    }
+
+  -- | The relations of Section 8.7.1.
+  \data CancelRel {x y : Or B C} (w w' : Raw x y) \elim y
+    | inl b => ncancelB (s : S) (w0 : Raw x (inl (f (k s)))) (p : f (k s) =0 b)
+                        (toB s (toC s w0 idp0) p = w) (appendB w0 p = w')
+    | inl b => ncongB (s : S) {w0 w0' : Raw x (inr (g (k s)))} (CancelRel w0 w0') (p : f (k s) =0 b)
+                      (toB s w0 p = w) (toB s w0' p = w')
+    | inr c => ncancelC (s : S) (w0 : Raw x (inr (g (k s)))) (q : g (k s) =0 c)
+                        (toC s (toB s w0 idp0) q = w) (appendC w0 q = w')
+    | inr c => ncongC (s : S) {w0 w0' : Raw x (inl (f (k s)))} (CancelRel w0 w0') (q : g (k s) =0 c)
+                      (toC s w0 q = w) (toC s w0' q = w')
+
+  \func NaiveCode (x y : Or B C) : \Set u => Quotient {Raw x y} (\lam w w' => CancelRel w w')
+
+  \func toBN (s : S) {x : Or B C} {b : B} (c : NaiveCode x (inr (g (k s)))) (p : f (k s) =0 b) : NaiveCode x (inl b) \elim c
+    | in~ w => in~ (toB s w p)
+    | ~-equiv _ _ r => ~-pequiv (ncongB s r p idp idp)
+
+  \func toCN (s : S) {x : Or B C} {c : C} (d : NaiveCode x (inl (f (k s)))) (q : g (k s) =0 c) : NaiveCode x (inr c) \elim d
+    | in~ w => in~ (toC s w q)
+    | ~-equiv _ _ r => ~-pequiv (ncongC s r q idp idp)
+
+  \func naiveToCode {x y : Or B C} (c : NaiveCode x y) : Code x y \elim c
+    | in~ w => in~ w
+    | ~-equiv _ _ r => ~-pequiv (rel r)
+    \where
+      \func rel {x y : Or B C} {w w' : Raw x y} (r : CancelRel w w') : Rel w w' \elim y, r
+        | inl _, ncancelB s w0 p e e' => cancelB s w0 p e e'
+        | inl _, ncongB s r p e e' => congB s (rel r) p e e'
+        | inr _, ncancelC s w0 q e e' => cancelC s w0 q e e'
+        | inr _, ncongC s r q e e' => congC s (rel r) q e e'
+
+  \func naiveCodeEquiv (e : Embedding k) {x y : Or B C} : QEquiv (naiveToCode {_} {x} {y}) \cowith
+    | ret => codeToNaive
+    | ret_f c => \case \elim c \with { | in~ _ => idp }
+    | f_sec c => \case \elim c \with { | in~ _ => idp }
+    \where {
+      \func codeToNaive {x y : Or B C} (c : Code x y) : NaiveCode x y \elim c
+        | in~ w => in~ w
+        | ~-equiv _ _ r => rel r
+
+      \lemma rel {x y : Or B C} {w w' : Raw x y} (r : Rel w w') : in~ w = {NaiveCode x y} in~ w' \elim y, r
+        | inl _, cancelB s w0 p idp idp => ~-pequiv (ncancelB s w0 p idp idp)
+        | inl b, slideB s t (in0 a) w0 p idp idp =>
+          transport (\lam a => in~ (toB t (appendC w0 (in0 (pmap g a))) p) = {NaiveCode x (inl b)} in~ (toB s w0 (in0 (pmap f a) *>0 p)))
+                    ((e.isEmb s t).f_sec a) (slideB-rep ((e.isEmb s t).sec a) w0 p)
+        | inl _, congB s r p idp idp => pmap (toBN s __ p) (rel r)
+        | inr _, cancelC s w0 q idp idp => ~-pequiv (ncancelC s w0 q idp idp)
+        | inr c, slideC s t (in0 a) w0 q idp idp =>
+          transport (\lam a => in~ (toC t (appendB w0 (in0 (pmap f a))) q) = {NaiveCode x (inr c)} in~ (toC s w0 (in0 (pmap g a) *>0 q)))
+                    ((e.isEmb s t).f_sec a) (slideC-rep ((e.isEmb s t).sec a) w0 q)
+        | inr _, congC s r q idp idp => pmap (toCN s __ q) (rel r)
+
+      \lemma slideB-rep {x : Or B C} {s t : S} (a : s = t) (w0 : Raw x (inr (g (k s)))) {b : B} (p : f (k t) =0 b)
+        : in~ (toB t (appendC w0 (in0 (pmap g (pmap k a)))) p) = {NaiveCode x (inl b)} in~ (toB s w0 (in0 (pmap f (pmap k a)) *>0 p)) \elim a
+        | idp => pmap (\lam z => in~ (toB s z p)) (appendC-idp0 w0) *> pmap (\lam z => in~ (toB s w0 z)) (inv (idp0_*>0 p))
+
+      \lemma slideC-rep {x : Or B C} {s t : S} (a : s = t) (w0 : Raw x (inl (f (k s)))) {c : C} (q : g (k t) =0 c)
+        : in~ (toC t (appendB w0 (in0 (pmap f (pmap k a)))) q) = {NaiveCode x (inr c)} in~ (toC s w0 (in0 (pmap g (pmap k a)) *>0 q)) \elim a
+        | idp => pmap (\lam z => in~ (toC s z q)) (appendB-idp0 w0) *> pmap (\lam z => in~ (toC s w0 z)) (inv (idp0_*>0 q))
+    }
+}

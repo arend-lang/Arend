@@ -1,0 +1,22 @@
+{- | The HoTT book, Lemma 8.4.7, for groups that need not be abelian. -}
+
+\import Algebra.Group
+\import Algebra.Pointed
+\import Algebra.Group.GroupHom
+\import Algebra.Pointed.Exact
+\import Equiv
+\import Function
+\import Logic
+\import Logic.Unique
+\import Paths
+
+\lemma exact-middle-injective {K G H : Group} {u : GroupHom K G} {f : GroupHom G H}
+                              (e : IsExactAt u f) (Kc : Contr K) : IsInj f
+  => f.injective (\lam {a} q => \case (e a).1 q \with {
+    | inP (k,p) => inv p *> pmap u (isContr=>isProp Kc k ide) *> u.func-ide
+  })
+
+\lemma exact-middle-equiv {K G H Q : Group} {u : GroupHom K G} {f : GroupHom G H} {v : GroupHom H Q}
+                          (e1 : IsExactAt u f) (e2 : IsExactAt f v) (Kc : Contr K) (Qc : Contr Q)
+  : IsEquiv f
+  => IsEquiv.fromInjSurj (exact-middle-injective e1 Kc) (exact-middle-surjective e2 Qc)

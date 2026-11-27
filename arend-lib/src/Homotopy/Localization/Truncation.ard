@@ -1,0 +1,55 @@
+{- | ``n``-truncation as a localization: ``LType {truncUniverse n}`` reduces to {Trunc_-1+} and {lEta} to {inT}.
+     The framework of modalities is developed in the following paper.
+     Egbert Rijke, Michael Shulman, Bas Spitters, Modalities in Homotopy Type Theory, https://arxiv.org/pdf/1706.07526
+ -}
+
+\import Equiv
+\import Equiv.Fiber
+\import Homotopy.HLevel
+\import Homotopy.Localization.Accessible
+\import Homotopy.Localization.Modality
+\import Homotopy.Localization.Universe
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Homotopy.Suspension
+\import Homotopy.Truncation
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\instance truncTypes.{u} (n : Nat) : Universe.{u}
+  | isLocal A => A ofHLevel_-1+ n
+
+\func trunc-unique.{u} {n : Nat} {A : \Type} (Z : Truncated_-1+.{u} n) (g h : Trunc_-1+ n A -> Z)
+                       (p : \Pi (a : A) -> g (inT a) = h (inT a)) (x : Trunc_-1+ n A) : g x = h x
+  => Trunc_-1+.elim (\lam x => \new Truncated_-1+ n (g x = h x) (HLevel_-1_suc Z.isTruncated (g x) (h x))) p x
+
+\func truncUniverse.{u} (n : Nat) : Modality.{u} \cowith
+  | Universe => truncTypes n
+  | localization A => \new Localization {
+    | S' => \new Local (Trunc_-1+ n A) (isTruncated {Trunc_-1+.level n A})
+    | inL => inT
+    | local-univ Z => inP \new QEquiv {
+      | ret g => Trunc_-1+.elim (\lam _ => \new Truncated_-1+ n Z Z.local) g
+      | ret_f h => path \lam i x => trunc-unique (\new Truncated_-1+ n Z Z.local) _ h (\lam _ => idp) x i
+      | f_sec _ => idp
+    }
+  }
+  | isModality A B => \new Local (\Sigma (a : A) (B a)) (HLevels-sigma (\lam a => B a) A.local (\lam a => (B a).local))
+
+-- | The HoTT book, Theorem 7.2.9, in the form of Example 2.3(v) of the paper
+\lemma sphereNull_iff_truncated.{u} (n : Nat) (X : \Type u)
+  : isLocal {nullTypeUniverse (Sphere n)} X = (X ofHLevel_-1+ n)
+  => nullTypeUniverse.localDesc (Sphere n) X *> const_north *> north_hLevel
+  \where {
+    \lemma const_north.{u} {n : Nat} {X : \Type u}
+      : IsEquiv {X} {Sphere n -> X} (\lam x _ => x) = IsEquiv (\lam (f : Sphere n -> X) => f north)
+      => propExt (\lam e => inP (QEquiv.rightFactor (IsEquiv.toQEquiv e) idEquiv))
+                 (\lam e => inP (QEquiv.leftFactor (IsEquiv.toQEquiv e) idEquiv))
+
+    \lemma north_hLevel.{u} {n : Nat} {X : \Type u}
+      : IsEquiv (\lam (f : Sphere n -> X) => f north) = (X ofHLevel_-1+ n)
+      => propExt (\lam e => loop-level-iter n \lam x0 => rewriteI (SphereLoopEquiv n (\new Pointed X x0)) (IsEquiv=>contrFibers e x0))
+                 (\lam h => contrFibers=>IsEquiv \lam x0 => rewrite (SphereLoopEquiv n (\new Pointed X x0)) (loop-level-iter-inv n h x0))
+  }

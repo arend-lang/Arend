@@ -1,0 +1,224 @@
+-- | The fundamental group of a pushout with connected overlap (HoTT book, Section 8.7).
+
+\import Algebra.Group
+\import Algebra.Group.Aut
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Pushout
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Category
+\import Data.Or
+\import Equiv
+\import Homotopy.Connected
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pointed
+\import Homotopy.Pushout
+\import Homotopy.VanKampen
+\import Homotopy.VanKampen.Code
+\import Homotopy.VanKampen.Groupoid
+\import Homotopy.VanKampen.Words
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open VKSpan.Raw
+\open VKSpan.Rel
+
+\func codeLeft.{u} (V : VKCover.{u}) (s : V.S) : GroupHom (Aut (V.f (V.k s))) (CodeGroup V (inl (V.f (V.k s)))) \cowith
+  | func h => in~ (segB h)
+  | func-* {h} {h'} => pmap (\lam z => in~ (segB z)) (Aut_*>0 h h')
+
+\func codeRight.{u} (V : VKCover.{u}) (s : V.S) : GroupHom (Aut (V.g (V.k s))) (CodeGroup V (inl (V.f (V.k s)))) \cowith
+  | func q => in~ (toB s (toC s (segB idp0) q) idp0)
+  | func-* {q} {q'} => pmap (\lam z => in~ (toB s (toC s (segB idp0) z) idp0)) (Aut_*>0 q q')
+                         *> inv (pmap (V.toBQ s __ idp0) (~-pequiv (cancelC s (toC s (segB idp0) q) q' idp idp)))
+
+\lemma code-agree.{u} (V : VKCover.{u}) (s : V.S) (a : V.k s =0 V.k s)
+  : codeLeft V s (map0 V.f a) = codeRight V s (map0 V.g a)
+  => pmap (\lam z => in~ (segB z)) (inv (idp0_*>0 _))
+     *> inv (~-pequiv (cancelB s (segB idp0) (map0 V.f a) idp idp))
+     *> pmap (\lam z => in~ (toB s (toC s (segB idp0) idp0) z)) (inv (*>0_idp0 _))
+     *> inv (~-pequiv (slideB s s a (toC s (segB idp0) idp0) idp0 idp idp))
+     *> pmap (\lam z => in~ (toB s (toC s (segB idp0) z) idp0)) (idp0_*>0 _)
+
+-- | Theorem 8.7.5.
+\sfunc PiGroup_Pushout.{u} {A : Connected0.{u}} {B C : \Type u} (f : A -> B) (g : A -> C) (a0 : A)
+  : GroupPushout (map0Hom f a0) (map0Hom g a0) = {Group.{u}} PiGroup_1+ 0 (Pointed.make (pinl {A} {B} {C} {f} {g} (f a0)))
+  => Cat.isotoid iso
+  \where {
+    \private \func V => connectedVK f g a0
+
+    \private \func P* => GroupPushout (map0Hom f a0) (map0Hom g a0)
+
+    \func toCodes : GroupHom P* (CodeGroup V (inl (f a0)))
+      => groupPushoutRec {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} (codeLeft V ()) (codeRight V ()) (code-agree V ())
+
+    \private \func codesRec {L : Group} (a : GroupHom (Aut (f a0)) L) (b : GroupHom (Aut (g a0)) L) (e : \Pi (x : a0 =0 a0) -> a (map0 f x) = b (map0 g x))
+      : GroupHom (CodeGroup V (inl (f a0))) L \cowith
+      | func (_ : V.Code (inl (f a0)) (inl (f a0))) : L \with {
+        | in~ w => psiB w
+        | ~-equiv _ _ r => psiB-rel r
+      }
+      | func-* {c} {d} => \case \elim c, \elim d \with {
+        | in~ w, in~ w' => psiB-concat w w'
+      }
+      \where {
+        \func psiB (w : VKSpan.Raw {V} (inl (f a0)) (inl (f a0))) : L \elim w
+          | segB st => a st
+          | toB _ w p => psiC w * a p
+
+        \func psiC (w : VKSpan.Raw {V} (inl (f a0)) (inr (g a0))) : L \elim w
+          | segC st => \case st \with {}
+          | toC _ w q => psiB w * b q
+
+        \lemma hom_*>0 {x : \Type} {x0 : x} (h : GroupHom (Aut x0) L) (p q : x0 =0 x0) : h (p *>0 q) = h p * h q
+          => pmap h (inv (Aut_*>0 p q)) *> h.func-*
+
+        \lemma psiB-appendB (w : VKSpan.Raw {V} (inl (f a0)) (inl (f a0))) (p : f a0 =0 f a0) : psiB (V.appendB w p) = psiB w * a p \elim w
+          | segB st => hom_*>0 a st p
+          | toB _ _ q => pmap (_ *) (hom_*>0 a q p) *> inv *-assoc
+
+        \lemma psiC-appendC (w : VKSpan.Raw {V} (inl (f a0)) (inr (g a0))) (q : g a0 =0 g a0) : psiC (V.appendC w q) = psiC w * b q \elim w
+          | segC st => \case st \with {}
+          | toC _ _ p => pmap (_ *) (hom_*>0 b p q) *> inv *-assoc
+
+        \lemma psiB-rel {w w' : VKSpan.Raw {V} (inl (f a0)) (inl (f a0))} (r : V.Rel w w') : psiB w = psiB w' \elim r
+          | cancelB _ w0 p idp idp => pmap (\lam z => psiB w0 * z * a p) b.func-ide *> pmap (__ * a p) ide-right *> inv (psiB-appendB w0 p)
+          | slideB _ _ x w0 p idp idp => pmap (__ * a p) (psiC-appendC w0 _ *> pmap (_ *) (inv (e x))) *> *-assoc *> inv (pmap (_ *) (hom_*>0 a _ p))
+          | congB _ r p idp idp => pmap (__ * a p) (psiC-rel r)
+
+        \lemma psiC-rel {w w' : VKSpan.Raw {V} (inl (f a0)) (inr (g a0))} (r : V.Rel w w') : psiC w = psiC w' \elim r
+          | cancelC _ w0 q idp idp => pmap (\lam z => psiC w0 * z * b q) a.func-ide *> pmap (__ * b q) ide-right *> inv (psiC-appendC w0 q)
+          | slideC _ _ x w0 q idp idp => pmap (__ * b q) (psiB-appendB w0 _ *> pmap (_ *) (e x)) *> *-assoc *> inv (pmap (_ *) (hom_*>0 b _ q))
+          | congC _ r q idp idp => pmap (__ * b q) (psiB-rel r)
+
+        \lemma psiB-concat (w w' : VKSpan.Raw {V} (inl (f a0)) (inl (f a0))) : psiB (VKSpan.concatRaw {V} w w') = psiB w * psiB w' \elim w'
+          | segB st => psiB-appendB w st
+          | toB _ w' p => pmap (__ * a p) (psiC-concat w w') *> *-assoc
+
+        \lemma psiC-concat (w : VKSpan.Raw {V} (inl (f a0)) (inl (f a0))) (w' : VKSpan.Raw {V} (inl (f a0)) (inr (g a0)))
+          : psiC (VKSpan.concatRaw {V} w w') = psiB w * psiC w' \elim w'
+          | segC st => \case st \with {}
+          | toC _ w' q => pmap (__ * b q) (psiB-concat w w') *> *-assoc
+      }
+
+    \private \lemma codesRec-right {L : Group} (a : GroupHom (Aut (f a0)) L) (b : GroupHom (Aut (g a0)) L) (e : \Pi (x : a0 =0 a0) -> a (map0 f x) = b (map0 g x))
+                          (q : g a0 =0 g a0) : codesRec a b e (codeRight V () q) = b q
+      => pmap2 (\lam u v => u * b q * v) a.func-ide a.func-ide *> pmap (__ * _) ide-left *> ide-right
+
+    \private \func gl : GroupHom (Aut (f a0)) P* => groupPushoutLeft {_} {_} {_} {map0Hom f a0} {map0Hom g a0}
+
+    \private \func gr : GroupHom (Aut (g a0)) P* => groupPushoutRight {_} {_} {_} {map0Hom f a0} {map0Hom g a0}
+
+    \private \func fromCodes : GroupHom (CodeGroup V (inl (f a0))) P*
+      => codesRec gl gr glue-agree
+
+    \private \lemma glue-agree (x : a0 =0 a0) : gl (map0 f x) = gr (map0 g x)
+      => groupPushout-agree {_} {_} {_} {map0Hom f a0} {map0Hom g a0} x
+
+    \private \lemma toCodes-left (h : f a0 =0 f a0) : toCodes (gl h) = codeLeft V () h
+      => groupPushoutRec-left {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} (codeLeft V ()) (codeRight V ()) (code-agree V ()) h
+
+    \private \lemma toCodes-right (q : g a0 =0 g a0) : toCodes (gr q) = codeRight V () q
+      => groupPushoutRec-right {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} (codeLeft V ()) (codeRight V ()) (code-agree V ()) q
+
+    \private \lemma to-fromB (w : VKSpan.Raw {V} (inl (f a0)) (inl (f a0))) : toCodes (fromCodes (in~ w)) = in~ w \elim w
+      | segB st => toCodes-left st
+      | toB _ w p => func-* {toCodes} *> pmap2 (VKSpan.concatQ {V}) (to-fromC w) (toCodes-left p)
+                       *> pmap (\lam z => in~ (toB {V} () w z)) (idp0_*>0 p)
+
+    \private \lemma to-fromC (w : VKSpan.Raw {V} (inl (f a0)) (inr (g a0))) : toCodes (codesRec.psiC {_} {_} {_} {_} {_} {_} {_} {gl} {gr} w) = in~ (toB {V} () w idp0) \elim w
+      | segC st => \case st \with {}
+      | toC _ w q => func-* {toCodes} *> pmap2 (VKSpan.concatQ {V}) (to-fromB w) (toCodes-right q)
+                       *> pmap (\lam z => in~ (toB {V} () (toC {V} () z q) idp0)) (V.appendB-idp0 w)
+
+    \private \lemma from-to (x : P*) : fromCodes (toCodes x) = x
+      => pmap (\lam (h : GroupHom P* P*) => h x) (groupPushout-unique {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} {fromCodes GroupHom.∘ toCodes} {GroupHom.id}
+          (\lam h => pmap fromCodes (toCodes-left h))
+          (\lam q => pmap fromCodes (toCodes-right q) *> codesRec-right gl gr glue-agree q))
+
+    \private \func codesEquiv : QEquiv toCodes \cowith
+      | ret => fromCodes
+      | ret_f => from-to
+      | f_sec c => \case \elim c \with { | in~ w => to-fromB w }
+
+    \protected \func hom : GroupHom P* (PiGroup_1+ 0 (Pointed.make (pinl {A} {B} {C} {f} {g} (f a0))))
+      => codeDecodeHom V (inl (f a0)) GroupHom.∘ toCodes
+
+    \lemma hom-left (h : f a0 =0 f a0) : hom (gl h) = map0 pinl h
+      => pmap V.evalQ (toCodes-left h)
+
+    \lemma hom-right (q : g a0 =0 g a0) : hom (gr q) = in0 (PushoutData.ppglue a0) *>0 map0 pinr q *>0 in0 (inv (PushoutData.ppglue a0))
+      => pmap V.evalQ (toCodes-right q) *> (\case \elim q \with {
+        | in0 _ => pmap in0 (pmap (__ *> _) idp_*> *> *>-assoc)
+      })
+
+    \sfunc hom-equiv : QEquiv hom
+      => transQEquiv codesEquiv (IsEquiv.toQEquiv (evalQ-isEquiv {V} {inl (f a0)} {inl (f a0)}))
+
+    \protected \lemma iso : Iso {GroupCat} hom
+      => GroupCat.isoOfEquiv hom hom-equiv
+  }
+
+\lemma piGroupMap_map0Hom.{u} {X Y : \Type u} (h : X -> Y) (x0 : X) : piGroupMap 0 {Pointed.make x0} {Pointed.make (h x0)} (h, idp) = map0Hom h x0
+  => exts \lam t => \case \elim t \with { | in0 p => pmap in0 idp_*> }
+
+\func pushoutPointing {A B C : \Type} {f : A -> B} {g : A -> C} {a0 : A} {b0 : B} {c0 : C} (f0 : f a0 = b0) (g0 : g a0 = c0)
+  : pinr {A} {B} {C} {f} {g} c0 = pinl b0
+  => pmap pinr (inv g0) *> inv (PushoutData.ppglue a0) *> pmap pinl f0
+
+\lemma pushoutPointing-agree.{u} {A B C : \Type u} {f : A -> B} {g : A -> C} {a0 : A} {b0 : B} {c0 : C} (f0 : f a0 = b0) (g0 : g a0 = c0)
+                                 (t : PiGroup_1+ 0 (Pointed.make a0))
+  : piGroupMap 0 {Pointed.make b0} {Pointed.make (pinl {A} {B} {C} {f} {g} b0)} (pinl, idp) (piGroupMap 0 {Pointed.make a0} {Pointed.make b0} (f, f0) t)
+    = piGroupMap 0 {Pointed.make c0} {Pointed.make (pinl {A} {B} {C} {f} {g} b0)} (pinr, pushoutPointing f0 g0) (piGroupMap 0 {Pointed.make a0} {Pointed.make c0} (g, g0) t)
+    \elim b0, c0, f0, g0, t
+  | _, _, idp, idp, in0 a => pmap in0 (idp_*> *> pmap (pmap pinl) idp_*> *> glue-nat a
+      *> inv (pmap2 (\lam u v => inv u *> pmap pinr v *> u) idp_*> idp_*> *> pmap (*> _) inv_inv))
+  \where
+    \func glue-nat {a a' : A} (p : a = a')
+      : pmap (\lam x => pinl {A} {B} {C} {f} {g} (f x)) p = PushoutData.ppglue a *> pmap (\lam x => pinr (g x)) p *> inv (PushoutData.ppglue a') \elim p
+      | idp => inv (pmap (_ *>) idp_*> *> *>_inv)
+
+-- | Theorem 8.7.5 for pointed maps, preserving both inclusions.
+\func PiGroup_PushoutPointed.{u} {A : Connected0.{u}} {B C : \Type u} (f : A -> B) (g : A -> C) (a0 : A) {b0 : B} {c0 : C} (f0 : f a0 = b0) (g0 : g a0 = c0)
+  : Iso {GroupCat.{u}} (groupPushoutRec {_} {_} {_} {_} {piGroupMap 0 {Pointed.make a0} {Pointed.make b0} (f, f0)} {piGroupMap 0 {Pointed.make a0} {Pointed.make c0} (g, g0)}
+                                        (inclLeft f g b0) (inclRight f0 g0) (pushoutPointing-agree f0 g0)) \elim f0, g0
+  | idp, idp =>
+    \let | gl => inclLeft f g (f a0)
+         | gr => inclRight {A} {B} {C} {f} {g} {a0} idp idp
+    \in subst {Aut a0} {Aut (f a0)} {Aut (g a0)} {PiGroup_1+ 0 (Pointed.make (pinl {A} {B} {C} {f} {g} (f a0)))} {gl} {gr}
+          (\lam phi psi e => Iso {GroupCat.{u}} (groupPushoutRec {_} {_} {_} {_} {phi} {psi} gl gr e))
+          {_} {map0Hom f a0} {_} {map0Hom g a0} (piGroupMap_map0Hom f a0) (piGroupMap_map0Hom g a0)
+          (transport (\lam h => Iso {GroupCat.{u}} h) (canonical-hom _) (PiGroup_Pushout.iso {A} {B} {C} {f} {g} {a0}))
+  \where {
+    \func inclLeft (f : A -> B) (g : A -> C) (b0 : B) : GroupHom (PiGroup_1+ 0 (Pointed.make b0)) (PiGroup_1+ 0 (Pointed.make (pinl {A} {B} {C} {f} {g} b0)))
+      => piGroupMap 0 {Pointed.make b0} {Pointed.make (pinl {A} {B} {C} {f} {g} b0)} (pinl, idp)
+
+    \func inclRight {f : A -> B} {g : A -> C} {a0 : A} {b0 : B} {c0 : C} (f0 : f a0 = b0) (g0 : g a0 = c0)
+      : GroupHom (PiGroup_1+ 0 (Pointed.make c0)) (PiGroup_1+ 0 (Pointed.make (pinl {A} {B} {C} {f} {g} b0)))
+      => piGroupMap 0 {Pointed.make c0} {Pointed.make (pinl {A} {B} {C} {f} {g} b0)} (pinr, pushoutPointing f0 g0)
+
+    \lemma canonical-hom (e : \Pi (x : a0 =0 a0) -> inclLeft f g (f a0) (map0Hom f a0 x) = inclRight {A} {B} {C} {f} {g} {a0} idp idp (map0Hom g a0 x))
+      : PiGroup_Pushout.hom {A} {B} {C} {f} {g} {a0} = groupPushoutRec {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} (inclLeft f g (f a0)) (inclRight idp idp) e
+      => groupPushout-unique {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} {PiGroup_Pushout.hom {A} {B} {C} {f} {g} {a0}}
+                             {groupPushoutRec {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} (inclLeft f g (f a0)) (inclRight idp idp) e}
+          (\lam h => PiGroup_Pushout.hom-left {A} {B} {C} {f} {g} {a0} h *> left-eq h
+                       *> inv (groupPushoutRec-left {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} (inclLeft f g (f a0)) (inclRight idp idp) e h))
+          (\lam q => PiGroup_Pushout.hom-right {A} {B} {C} {f} {g} {a0} q *> right-eq q *> inv (groupPushoutRec-right {_} {_} {_} {_} {map0Hom f a0} {map0Hom g a0} (inclLeft f g (f a0)) (inclRight idp idp) e q))
+
+    \lemma left-eq (h : f a0 =0 f a0) : map0 (pinl {A} {B} {C} {f} {g}) h = inclLeft f g (f a0) h \elim h
+      | in0 p => pmap in0 (inv idp_*>)
+
+    \lemma right-eq (q : g a0 =0 g a0)
+      : in0 (PushoutData.ppglue a0) *>0 map0 pinr q *>0 in0 (inv (PushoutData.ppglue a0)) = inclRight {A} {B} {C} {f} {g} {a0} idp idp q \elim q
+      | in0 q => pmap in0 (pmap2 (\lam u v => u *> pmap pinr q *> v) (inv inv_inv *> pmap inv (inv idp_*>)) (inv idp_*>))
+
+    \func subst {G H K L : Group} {a : GroupHom H L} {b : GroupHom K L}
+                (P : \Pi (phi : GroupHom G H) (psi : GroupHom G K) -> (\Pi (x : G) -> a (phi x) = b (psi x)) -> \Type)
+                {phi phi' : GroupHom G H} {psi psi' : GroupHom G K} (pe : phi = phi') (qe : psi = psi') {e : \Pi (x : G) -> a (phi x) = b (psi x)}
+                (i : P phi' psi' (transport2 (\lam (p : GroupHom G H) (q : GroupHom G K) => \Pi (x : G) -> a (p x) = b (q x)) pe qe e))
+      : P phi psi e \elim pe, qe
+      | idp, idp => i
+  }

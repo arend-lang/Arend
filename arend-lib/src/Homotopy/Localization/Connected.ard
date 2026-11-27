@@ -1,10 +1,12 @@
 \import Equiv
+\import Equiv.Fiber
 \import Equiv.Sigma
 \import Function.Meta
 \import Logic.Unique
 \import Homotopy.Fibration
 \import Homotopy.Join
 \import Homotopy.Localization.Accessible
+\import Homotopy.Localization.Modality
 \import Homotopy.Localization.Universe
 \import Homotopy.Pushout
 \import Logic
@@ -33,6 +35,17 @@
     | ret_f z => lift.const z c.center
     | f_sec g => path (\lam i x => (pmap (lift g) (c.contraction (inL x)) *> lift-prop g x) @ i)
   })
+
+\lemma connectedType-local-cong.{u} {U V : Universe.{u}} (p : \Pi (Z : \Type u) -> isLocal {U} Z = isLocal {V} Z) (X : \Type u)
+  : isConnectedType {U} X = isConnectedType {V} X
+  => propExt (\lam c Z => c (\new Local {U} Z (propExt.conv (p Z) Z.local)))
+             (\lam c Z => c (\new Local {V} Z (propExt.dir (p Z) Z.local)))
+
+\lemma isConnected-equiv.{u} {U : Universe.{u}} {X Y : \Type u} (e : QEquiv {X} {Y}) (c : isConnectedType X) : isConnectedType Y
+  => transport isConnectedType (path (QEquiv_= e)) c
+
+\lemma contr=>isConnectedType.{u} {U : ReflUniverse.{u}} {X : \Type u} (c : Contr X) : isConnectedType X
+  => contr=>isConnected X (Contr.Contr_QEquiv (IsEquiv.toQEquiv (localizationOfLocalType (contrLocal c))) c)
 
 \class Connected.{u} {U : Universe.{u}} (X : \Type u) {
   | connected : isConnectedType X
@@ -102,3 +115,28 @@
 
 \func isConnectedMap.{u} {U : Universe.{u}} {A B : \Type u} (f : A -> B)
   => \Pi (b : B) -> isConnectedType (Fib f b)
+
+\lemma equiv=>isConnectedMap.{u} {U : ReflUniverse.{u}} {A B : \Type u} {f : A -> B} (e : IsEquiv f) : isConnectedMap f
+  => \lam b => contr=>isConnectedType (IsEquiv=>contrFibers e b)
+
+\lemma lEta-connected.{u} {U : Modality.{u}} {A : \Type u} : isConnectedMap (lEta {U} {A})
+  => \lam x => contr=>isConnected (Fib (lEta {U} {A}) x) (contr x)
+  \where \private {
+    \func fibL.{u} {U : Modality.{u}} {A : \Type u} (x : LType A) : Local => LType (Fib (lEta {U} {A}) x)
+
+    \func pt.{u} {U : Modality.{u}} {A : \Type u} (x : LType A) : fibL x
+      => IsEquiv.ret (modality-elim (fibL {U} {A})) (\lam a => lEta ((a,idp) : Fib (lEta {U} {A}) (lEta a))) x
+
+    \sfunc pt-beta.{u} {U : Modality.{u}} {A : \Type u} (a : A) : pt (lEta a) = lEta ((a,idp) : Fib (lEta {U} {A}) (lEta a))
+      => path \lam i => (IsEquiv.f_ret (modality-elim (fibL {U} {A})) {\lam a => lEta ((a,idp) : Fib (lEta {U} {A}) (lEta a))} @ i) a
+
+    \sfunc pt-uniq.{u} {U : Modality.{u}} {A : \Type u} (a : A) (x : LType A) (p : lEta a = x)
+      : pt x = lEta ((a,p) : Fib (lEta {U} {A}) x) \elim x, p
+      | _, idp => pt-beta a
+
+    \lemma contr.{u} {U : Modality.{u}} {A : \Type u} (x : LType A) : Contr (fibL {U} {A} x) \cowith
+      | center => pt x
+      | contraction => IsEquiv.ret (modality-elim (\lam x => piLocal (\lam (y : fibL {U} {A} x) => pathLocal (pt x) y)))
+          (\lam a => IsEquiv.ret (modality-elim (\lam (y : fibL {U} {A} (lEta a)) => pathLocal (pt (lEta a)) y))
+                                 (\lam z => pt-uniq z.1 (lEta a) z.2)) x
+  }

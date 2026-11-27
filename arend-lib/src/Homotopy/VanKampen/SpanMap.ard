@@ -1,0 +1,219 @@
+-- | Naturality of van Kampen codes in the span.
+
+\import Data.Or
+\import Equiv
+\import Equiv.Path
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.Pushout
+\import Homotopy.VanKampen.Code
+\import Homotopy.VanKampen.Groupoid
+\import Homotopy.VanKampen.Words
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open PushoutData (ppglue)
+\open VKSpan.Raw
+\open VKSpan.Rel
+
+\record VKSpanMap.{u} (V V' : VKSpan.{u}) {
+  | mapA : V.A -> V'.A
+  | mapB : V.B -> V'.B
+  | mapC : V.C -> V'.C
+  | mapS : V.S -> V'.S
+  | map-f (a : V.A) : V'.f (mapA a) = mapB (V.f a)
+  | map-g (a : V.A) : V'.g (mapA a) = mapC (V.g a)
+  | map-k (s : V.S) : V'.k (mapS s) = mapA (V.k s)
+
+  \func pushoutMap (w : PushoutData V.f V.g) : PushoutData V'.f V'.g
+    => PushoutData.congr V.f V.g V'.f V'.g mapA mapB mapC map-f map-g w
+
+  \func mapPt (x : Or V.B V.C) : Or V'.B V'.C => Or.map x mapB mapC
+
+  \func mapStart {x y : Or V.B V.C} (st : Start x y) : Start (mapPt x) (mapPt y) \elim x, y
+    | inl _, inl _ => map0 mapB st
+    | inr _, inr _ => map0 mapC st
+    | inl _, inr _ => \case st \with {}
+    | inr _, inl _ => \case st \with {}
+
+  \func crossB (s : V.S) : V'.f (V'.k (mapS s)) =0 mapB (V.f (V.k s))
+    => in0 (pmap V'.f (map-k s) *> map-f (V.k s))
+
+  \func crossC (s : V.S) : V'.g (V'.k (mapS s)) =0 mapC (V.g (V.k s))
+    => in0 (pmap V'.g (map-k s) *> map-g (V.k s))
+
+  \func mapRaw {x y : Or V.B V.C} (w : V.Raw x y) : V'.Raw (mapPt x) (mapPt y) \elim y, w
+    | inl _, segB st => segB (mapStart st)
+    | inl _, toB s w p => toB (mapS s) (V'.appendC (mapRaw w) (inv0 (crossC s))) (crossB s *>0 map0 mapB p)
+    | inr _, segC st => segC (mapStart st)
+    | inr _, toC s w q => toC (mapS s) (V'.appendB (mapRaw w) (inv0 (crossB s))) (crossC s *>0 map0 mapC q)
+
+  \func mapQ {x y : Or V.B V.C} (c : V.Code x y) : V'.Code (mapPt x) (mapPt y) \elim c
+    | in~ w => in~ (mapRaw w)
+    | ~-equiv _ _ r => mapRaw-rel r
+    \where {
+      \lemma mapRaw-rel {x y : Or V.B V.C} {w w' : V.Raw x y} (r : V.Rel w w') : in~ (mapRaw w) = {V'.Code (mapPt x) (mapPt y)} in~ (mapRaw w') \elim y, r
+        | inl _, cancelB s w0 p idp idp =>
+          pmap (\lam z => in~ (toB (mapS s) (toC (mapS s) (V'.appendB (mapRaw w0) (inv0 (crossB s))) z) (crossB s *>0 map0 mapB p)))
+               (*>0_idp0 _ *> *>0_inv0 (crossC s))
+            *> ~-pequiv (cancelB (mapS s) _ _ idp idp)
+            *> pmap in~ (V'.appendB-assoc _ _ _ *> pmap (V'.appendB (mapRaw w0)) (inv (*>0-assoc _ _ _) *> pmap (__ *>0 _) (inv0_*>0 _) *> idp0_*>0 _)
+                         *> inv (mapRaw-appendB w0 p))
+        | inl _, slideB s t a w0 p idp idp =>
+          pmap (\lam z => in~ (toB (mapS t) z (crossB t *>0 map0 mapB p)))
+               (pmap (V'.appendC __ (inv0 (crossC t))) (mapRaw-appendC w0 (map0 V.g a)) *> V'.appendC-assoc _ _ _ *> pmap (V'.appendC (mapRaw w0)) (slide-g a) *> inv (V'.appendC-assoc _ _ _))
+            *> ~-pequiv (slideB (mapS s) (mapS t) (mapOverlap a) _ _ idp idp)
+            *> pmap (\lam z => in~ (toB (mapS s) (V'.appendC (mapRaw w0) (inv0 (crossC s))) z)) (slide-f a p)
+        | inl _, congB s r p idp idp => pmap (\lam z => V'.toBQ (mapS s) (V'.appendCQ z (inv0 (crossC s))) (crossB s *>0 map0 mapB p)) (mapRaw-rel r)
+        | inr _, cancelC s w0 q idp idp =>
+          pmap (\lam z => in~ (toC (mapS s) (toB (mapS s) (V'.appendC (mapRaw w0) (inv0 (crossC s))) z) (crossC s *>0 map0 mapC q)))
+               (*>0_idp0 _ *> *>0_inv0 (crossB s))
+            *> ~-pequiv (cancelC (mapS s) _ _ idp idp)
+            *> pmap in~ (V'.appendC-assoc _ _ _ *> pmap (V'.appendC (mapRaw w0)) (inv (*>0-assoc _ _ _) *> pmap (__ *>0 _) (inv0_*>0 _) *> idp0_*>0 _)
+                         *> inv (mapRaw-appendC w0 q))
+        | inr _, slideC s t a w0 q idp idp =>
+          pmap (\lam z => in~ (toC (mapS t) z (crossC t *>0 map0 mapC q)))
+               (pmap (V'.appendB __ (inv0 (crossB t))) (mapRaw-appendB w0 (map0 V.f a)) *> V'.appendB-assoc _ _ _ *> pmap (V'.appendB (mapRaw w0)) (slide-f' a) *> inv (V'.appendB-assoc _ _ _))
+            *> ~-pequiv (slideC (mapS s) (mapS t) (mapOverlap a) _ _ idp idp)
+            *> pmap (\lam z => in~ (toC (mapS s) (V'.appendB (mapRaw w0) (inv0 (crossB s))) z)) (slide-g' a q)
+        | inr _, congC s r q idp idp => pmap (\lam z => V'.toCQ (mapS s) (V'.appendBQ z (inv0 (crossB s))) (crossC s *>0 map0 mapC q)) (mapRaw-rel r)
+
+      \sfunc mapRaw-appendB {x : Or V.B V.C} {b b' : V.B} (w : V.Raw x (inl b)) (p : b =0 b')
+        : mapRaw (V.appendB w p) = V'.appendB (mapRaw w) (map0 mapB p) \elim w
+        | segB st => pmap segB (start x st)
+        | toB s _ q => pmap (toB (mapS s) _) (pmap (_ *>0 __) (map0_*>0 mapB q p) *> inv (*>0-assoc _ _ _))
+        \where
+          \sfunc start (x : Or V.B V.C) (st : Start x (inl b))
+            : mapStart (startB st p) = startB (mapStart st) (map0 mapB p) \elim x
+            | inl _ => map0_*>0 mapB st p
+            | inr _ => \case st \with {}
+
+      \sfunc mapRaw-appendC {x : Or V.B V.C} {c c' : V.C} (w : V.Raw x (inr c)) (q : c =0 c')
+        : mapRaw (V.appendC w q) = V'.appendC (mapRaw w) (map0 mapC q) \elim w
+        | segC st => pmap segC (start x st)
+        | toC s _ p => pmap (toC (mapS s) _) (pmap (_ *>0 __) (map0_*>0 mapC p q) *> inv (*>0-assoc _ _ _))
+        \where
+          \sfunc start (x : Or V.B V.C) (st : Start x (inr c))
+            : mapStart (startC st q) = startC (mapStart st) (map0 mapC q) \elim x
+            | inl _ => \case st \with {}
+            | inr _ => map0_*>0 mapC st q
+
+      \func mapOverlap {s t : V.S} (a : V.k s =0 V.k t) : V'.k (mapS s) =0 V'.k (mapS t)
+        => in0 (map-k s) *>0 map0 mapA a *>0 inv0 (in0 (map-k t))
+
+      \lemma slide-f {s t : V.S} (a : V.k s =0 V.k t) {b : V.B} (p : V.f (V.k t) =0 b)
+        : map0 V'.f (mapOverlap a) *>0 crossB t *>0 map0 mapB p = crossB s *>0 map0 mapB (map0 V.f a *>0 p)
+        => aux (map-k s) (map-k t) a p
+        \where
+          \private \lemma aux {a1 a2 : V.A} {c1 c2 : V'.A} (k1 : c1 = mapA a1) (k2 : c2 = mapA a2) (a : a1 =0 a2) {b : V.B} (p : V.f a2 =0 b)
+            : map0 V'.f (in0 k1 *>0 map0 mapA a *>0 inv0 (in0 k2)) *>0 in0 (pmap V'.f k2 *> map-f a2) *>0 map0 mapB p
+              = in0 (pmap V'.f k1 *> map-f a1) *>0 map0 mapB (map0 V.f a *>0 p) \elim k1, k2, a, p
+            | idp, idp, in0 idp, in0 p => pmap in0 (idp_*> *> pmap (_ *>) (inv (pmap (pmap mapB) idp_*>)))
+
+      \lemma slide-g {s t : V.S} (a : V.k s =0 V.k t)
+        : map0 mapC (map0 V.g a) *>0 inv0 (crossC t) = inv0 (crossC s) *>0 map0 V'.g (mapOverlap a)
+        => aux (map-k s) (map-k t) a
+        \where
+          \private \lemma aux {a1 a2 : V.A} {c1 c2 : V'.A} (k1 : c1 = mapA a1) (k2 : c2 = mapA a2) (a : a1 =0 a2)
+            : map0 mapC (map0 V.g a) *>0 inv0 (in0 (pmap V'.g k2 *> map-g a2)) = inv0 (in0 (pmap V'.g k1 *> map-g a1)) *>0 map0 V'.g (in0 k1 *>0 map0 mapA a *>0 inv0 (in0 k2)) \elim k1, k2, a
+            | idp, idp, in0 idp => pmap in0 idp_*>
+
+      \lemma slide-f' {s t : V.S} (a : V.k s =0 V.k t)
+        : map0 mapB (map0 V.f a) *>0 inv0 (crossB t) = inv0 (crossB s) *>0 map0 V'.f (mapOverlap a)
+        => aux (map-k s) (map-k t) a
+        \where
+          \private \lemma aux {a1 a2 : V.A} {c1 c2 : V'.A} (k1 : c1 = mapA a1) (k2 : c2 = mapA a2) (a : a1 =0 a2)
+            : map0 mapB (map0 V.f a) *>0 inv0 (in0 (pmap V'.f k2 *> map-f a2)) = inv0 (in0 (pmap V'.f k1 *> map-f a1)) *>0 map0 V'.f (in0 k1 *>0 map0 mapA a *>0 inv0 (in0 k2)) \elim k1, k2, a
+            | idp, idp, in0 idp => pmap in0 idp_*>
+
+      \lemma slide-g' {s t : V.S} (a : V.k s =0 V.k t) {c : V.C} (q : V.g (V.k t) =0 c)
+        : map0 V'.g (mapOverlap a) *>0 crossC t *>0 map0 mapC q = crossC s *>0 map0 mapC (map0 V.g a *>0 q)
+        => aux (map-k s) (map-k t) a q
+        \where
+          \private \lemma aux {a1 a2 : V.A} {c1 c2 : V'.A} (k1 : c1 = mapA a1) (k2 : c2 = mapA a2) (a : a1 =0 a2) {c : V.C} (q : V.g a2 =0 c)
+            : map0 V'.g (in0 k1 *>0 map0 mapA a *>0 inv0 (in0 k2)) *>0 in0 (pmap V'.g k2 *> map-g a2) *>0 map0 mapC q
+              = in0 (pmap V'.g k1 *> map-g a1) *>0 map0 mapC (map0 V.g a *>0 q) \elim k1, k2, a, q
+            | idp, idp, in0 idp, in0 q => pmap in0 (idp_*> *> pmap (_ *>) (inv (pmap (pmap mapC) idp_*>)))
+    }
+
+  \func evalMap {x y : Or V.B V.C} (t : V.point x =0 V.point y) : V'.point (mapPt x) =0 V'.point (mapPt y) \elim x, y
+    | inl _, inl _ => map0 pushoutMap t
+    | inl _, inr _ => map0 pushoutMap t
+    | inr _, inl _ => map0 pushoutMap t
+    | inr _, inr _ => map0 pushoutMap t
+
+  \lemma mapQ-evalQ {x y : Or V.B V.C} (c : V.Code x y) : V'.evalQ (mapQ c) = evalMap (V.evalQ c) \elim c
+    | in~ w => eval-mapRaw w
+    \where {
+      \lemma eval-mapRaw {x y : Or V.B V.C} (w : V.Raw x y) : V'.eval (mapRaw w) = evalMap (V.eval w) \elim y, w
+        | inl _, segB st => startB x st
+        | inl _, toB s w p =>
+          pmap (__ *>0 _) (V'.eval-appendC (mapRaw w) _ *> pmap (__ *>0 _) (eval-mapRaw w)) *> *>0-assoc _ _ _
+            *> pmap (_ *>0 __) (glueB s p) *> inv (evalMap_*>0 _ _)
+        | inr _, segC st => startC x st
+        | inr _, toC s w q =>
+          pmap (__ *>0 _) (V'.eval-appendB (mapRaw w) _ *> pmap (__ *>0 _) (eval-mapRaw w)) *> *>0-assoc _ _ _
+            *> pmap (_ *>0 __) (glueC s q) *> inv (evalMap_*>0 _ _)
+        \where {
+          \lemma startB (x : Or V.B V.C) {b : V.B} (st : Start x (inl b)) : V'.evalStart (mapStart st) = evalMap {_} {x} {inl b} (V.evalStart st) \elim x
+            | inl _ => inv (map0-comp mapB pinl st) *> map0-comp pinl pushoutMap st
+            | inr _ => \case st \with {}
+
+          \lemma startC (x : Or V.B V.C) {c : V.C} (st : Start x (inr c)) : V'.evalStart (mapStart st) = evalMap {_} {x} {inr c} (V.evalStart st) \elim x
+            | inl _ => \case st \with {}
+            | inr _ => inv (map0-comp mapC pinr st) *> map0-comp pinr pushoutMap st
+        }
+
+      \lemma evalMap_*>0 {x y z : Or V.B V.C} (t : V.point x =0 V.point y) (t' : V.point y =0 V.point z)
+        : evalMap (t *>0 t') = evalMap t *>0 evalMap t' \elim x, y, z
+        | inl _, inl _, inl _ => map0_*>0 pushoutMap t t'
+        | inl _, inl _, inr _ => map0_*>0 pushoutMap t t'
+        | inl _, inr _, inl _ => map0_*>0 pushoutMap t t'
+        | inl _, inr _, inr _ => map0_*>0 pushoutMap t t'
+        | inr _, inl _, inl _ => map0_*>0 pushoutMap t t'
+        | inr _, inl _, inr _ => map0_*>0 pushoutMap t t'
+        | inr _, inr _, inl _ => map0_*>0 pushoutMap t t'
+        | inr _, inr _, inr _ => map0_*>0 pushoutMap t t'
+
+      \lemma glueB (s : V.S) {b : V.B} (p : V.f (V.k s) =0 b)
+        : map0 pinr (inv0 (crossC s)) *>0 in0 (inv (ppglue (V'.k (mapS s)))) *>0 map0 pinl (crossB s *>0 map0 mapB p)
+          = map0 pushoutMap (in0 (inv (ppglue (V.k s))) *>0 map0 pinl p)
+        => aux (map-k s) p
+        \where
+          \private \lemma aux {a : V.A} {c : V'.A} (kp : c = mapA a) {b : V.B} (p : V.f a =0 b)
+            : map0 pinr (inv0 (in0 (pmap V'.g kp *> map-g a))) *>0 in0 (inv (ppglue c)) *>0 map0 pinl (in0 (pmap V'.f kp *> map-f a) *>0 map0 mapB p)
+              = map0 pushoutMap (in0 (inv (ppglue a)) *>0 map0 pinl p) \elim kp, p
+            | idp, in0 idp => pmap in0 (pmap2 (\lam u v => pmap pinr (inv u) *> inv (ppglue (mapA a)) *> pmap pinl v) idp_*> idp_*>
+                                 *> pmap (__ *> _) (pmap_inv-comm pinr _) *> glue-inv-alg pinl pinr (ppglue (mapA a)) (map-f a) (map-g a)
+                                 *> inv (pmap_inv-comm pushoutMap (ppglue a)))
+
+      \lemma glueC (s : V.S) {c : V.C} (q : V.g (V.k s) =0 c)
+        : map0 pinl (inv0 (crossB s)) *>0 in0 (ppglue (V'.k (mapS s))) *>0 map0 pinr (crossC s *>0 map0 mapC q)
+          = map0 pushoutMap (in0 (ppglue (V.k s)) *>0 map0 pinr q)
+        => aux (map-k s) q
+        \where
+          \private \lemma aux {a : V.A} {c : V'.A} (kp : c = mapA a) {c' : V.C} (q : V.g a =0 c')
+            : map0 pinl (inv0 (in0 (pmap V'.f kp *> map-f a))) *>0 in0 (ppglue c) *>0 map0 pinr (in0 (pmap V'.g kp *> map-g a) *>0 map0 mapC q)
+              = map0 pushoutMap (in0 (ppglue a) *>0 map0 pinr q) \elim kp, q
+            | idp, in0 idp => pmap in0 (pmap2 (\lam u v => pmap pinl (inv u) *> ppglue (mapA a) *> pmap pinr v) idp_*> idp_*> *> inv *>-assoc)
+
+      \sfunc glue-inv-alg {P X Y : \Type} (i : X -> P) (j : Y -> P) {x0 x1 : X} {y0 y1 : Y} (gl : i x0 = j y0) (F : x0 = x1) (G : y0 = y1)
+        : inv (pmap j G) *> inv gl *> pmap i F = inv ((pmap i (inv F) *> gl) *> pmap j G) \elim F, G
+        | idp, idp => idp_*> *> inv (pmap inv idp_*>)
+    }
+}
+
+-- | Codes are invariant under equivalences of spans.
+\lemma mapQ-isEquiv.{u} {V V' : VKCover.{u}} (M : VKSpanMap V V') (eA : IsEquiv M.mapA) (eB : IsEquiv M.mapB) (eC : IsEquiv M.mapC)
+                        {x y : Or V.B V.C} : IsEquiv (M.mapQ {x} {y})
+  => IsEquiv.leftFactor (evalQ-isEquiv {V'}) (transportInv IsEquiv (ext M.mapQ-evalQ) (IsEquiv.trans (evalQ-isEquiv {V}) (evalMap-isEquiv x y)))
+  \where {
+    \lemma pushoutMap-isEquiv : IsEquiv M.pushoutMap
+      => PushoutData.congr.isEquiv V.f V.g V'.f V'.g (IsEquiv.toQEquiv eA) (IsEquiv.toQEquiv eB) (IsEquiv.toQEquiv eC) M.map-f M.map-g
+
+    \lemma evalMap-isEquiv (x y : Or V.B V.C) : IsEquiv (M.evalMap {x} {y}) \elim x, y
+      | inl _, inl _ => Trunc0.map-isEquiv (pmapIsEquiv pushoutMap-isEquiv)
+      | inl _, inr _ => Trunc0.map-isEquiv (pmapIsEquiv pushoutMap-isEquiv)
+      | inr _, inl _ => Trunc0.map-isEquiv (pmapIsEquiv pushoutMap-isEquiv)
+      | inr _, inr _ => Trunc0.map-isEquiv (pmapIsEquiv pushoutMap-isEquiv)
+  }

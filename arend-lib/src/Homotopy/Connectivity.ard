@@ -1,0 +1,180 @@
+{- | Numeric connectedness, the HoTT book, Section 7.5, indexed as in {ofHLevel_-1+} rather than as in the book:
+     ``isNConnectedType n`` is the book's ``(n-1)``-connectedness, so ``n = 0`` is mere inhabitedness and
+     ``n = 1`` is ordinary connectedness. The same shift applies to {isNConnectedMap} and {isNTruncatedMap}.
+ -}
+
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import Homotopy.Connected
+\import Homotopy.Fibration
+\import Homotopy.HLevel
+\import Arith.Nat
+\import Homotopy.Join
+\import Homotopy.Localization.Accessible
+\import Homotopy.Localization.BlakersMassey
+\import Homotopy.Localization.Connected
+\import Homotopy.Localization.Equiv
+\import Homotopy.Localization.Truncation
+\import Homotopy.Localization.Universe
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Homotopy.Suspension
+\import Homotopy.Truncation
+\import Logic
+\import Logic.Unique
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+\open genBlakersMassey (POData, Data)
+
+\func isNConnectedType.{u} (n : Nat) (A : \Type u) : \Prop
+  => isConnectedType {truncUniverse n} A
+
+\func isNConnectedMap.{u} (n : Nat) {A B : \Type u} (f : A -> B) : \Prop
+  => isConnectedMap {truncUniverse n} f
+
+\func isNTruncatedMap.{u} (n : Nat) {A B : \Type u} (f : A -> B) : \Prop
+  => \Pi (b : B) -> Fib f b ofHLevel_-1+ n
+
+\lemma nconnected-iff-trunc-contr.{u} (n : Nat) (A : \Type u) : isNConnectedType n A = Contr (Trunc_-1+ n A)
+  => propExt (isConnected=>contr {truncUniverse n} A) (contr=>isConnected {truncUniverse n} A)
+
+\lemma nconnected-map-fibers.{u} (n : Nat) {A B : \Type u} (f : A -> B)
+  : isNConnectedMap n f = (\Pi (b : B) -> Contr (Trunc_-1+ n (Fib f b)))
+  => path \lam i => \Pi (b : B) -> nconnected-iff-trunc-contr n (Fib f b) @ i
+
+\lemma nconnected-equiv.{u} (n : Nat) {A B : \Type u} (e : QEquiv {A} {B}) (c : isNConnectedType n A) : isNConnectedType n B
+  => isConnected-equiv {truncUniverse n} e c
+
+\lemma nconnected-contr.{u} (n : Nat) {A : \Type u} (c : Contr A) : isNConnectedType n A
+  => contr=>isConnectedType {truncUniverse n} c
+
+\lemma nconnected-map-equiv.{u} (n : Nat) {A B : \Type u} {f : A -> B} (e : IsEquiv f) : isNConnectedMap n f
+  => equiv=>isConnectedMap {truncUniverse n} e
+
+\lemma nconnected-map-mono.{u} {m n : Nat} {A B : \Type u} {f : A -> B} (p : m <= n)
+                               (c : isNConnectedMap n f) : isNConnectedMap m f
+  => propExt.conv (nconnected-map-fibers m f)
+      (\lam b => propExt.dir (nconnected-iff-trunc-contr m (Fib f b))
+          (nconnected-mono p (propExt.conv (nconnected-iff-trunc-contr n (Fib f b))
+                                           (propExt.dir (nconnected-map-fibers n f) c b))))
+
+\func TruncMap.{u} (n : Nat) {A B : \Type u} (f : A -> B) (x : Trunc_-1+ n A) : Trunc_-1+ n B
+  => Trunc_-1+.elim (\lam _ => Trunc_-1+.level n B) (\lam a => inT (f a)) x
+  \where {
+    \sfunc =lmap.{u} {n : Nat} {A B : \Type u} (f : A -> B) (x : Trunc_-1+ n A) : TruncMap n f x = lmap {truncUniverse n} f x
+      => trunc-unique (Trunc_-1+.level n B) (TruncMap n f) (lmap {truncUniverse n} f)
+                      (\lam a => inv (Localization.lift-prop {localization {truncUniverse n} A} (\lam a => inT (f a)) a)) x
+
+    \sfunc equiv.{u} {n : Nat} {A B : \Type u} (e : QEquiv {A} {B}) : QEquiv {Trunc_-1+ n A} {Trunc_-1+ n B}
+      => transport (\lam T => QEquiv {Trunc_-1+ n A} {Trunc_-1+ n T}) (QEquiv_= e) idEquiv
+  }
+
+-- | The HoTT Book, Lemma 7.5.14.
+\lemma nconnected-map=>trunc-equiv.{u} {n : Nat} {A B : \Type u} (f : A -> B) (c : isNConnectedMap n f)
+  : IsEquiv (TruncMap n f)
+  => transport IsEquiv (inv (path \lam i x => TruncMap.=lmap f x i))
+                       (transport (\lam X => X) (localEquivMap {truncUniverse n} f) (connected_isLocalEquiv f c))
+
+-- | Corollary 7.5.8.
+\lemma trunc-in-nconnected.{u} {n : Nat} {A : \Type u} : isNConnectedMap n (inT {n} {A})
+  => lEta-connected {truncUniverse n}
+
+\lemma inhabited=>nconnected0.{u} {A : \Type u} (a : A) : isNConnectedType 0 A
+  => propExt.conv (nconnected-iff-trunc-contr 0 A)
+                  (isProp=>isContr (ToProp.fromProp (isTruncated {Trunc_-1+.level 0 A})) (inT a))
+
+\lemma nconnected-mono.{u} {m n : Nat} {A : \Type u} (p : m <= n) (c : isNConnectedType n A) : isNConnectedType m A
+  => \lam Z => c (\new Local {truncUniverse n} Z (HLevel_-1_<= m n p Z.local))
+
+\lemma nconnected-path.{u} {n : Nat} {A : \Type u} (c : isNConnectedType (suc n) A) (a a' : A)
+  : isNConnectedType n (a = a')
+  => propExt.conv (nconnected-iff-trunc-contr n (a = a'))
+      (Contr.Contr_QEquiv (Trunc_-1+.equality a a')
+        (isProp=>PathContr (Trunc_-1+ (suc n) A)
+                           (isContr=>isProp (propExt.dir (nconnected-iff-trunc-contr (suc n) A) c))
+                           (inT a) (inT a')))
+
+\lemma loop-nconnected.{u} {n : Nat} (X : Pointed.{u}) (c : isNConnectedType (suc n) X) : isNConnectedType n (Loop X)
+  => nconnected-path c base base
+
+\lemma nconnected-map-comp-left.{u} (n : Nat) {A B C : \Type u} {f : A -> B} (g : QEquiv {B} {C})
+                                    (c : isNConnectedMap n f) : isNConnectedMap n (\lam a => g (f a))
+  => \lam z => nconnected-equiv n (fibEquiv g f z) (c (g.ret z))
+  \where
+    \sfunc fibEquiv {A B C : \Type} (g : QEquiv {B} {C}) (f : A -> B) (z : C)
+      : QEquiv {Fib f (g.ret z)} {Fib (\lam a => g (f a)) z}
+      => sigma-right (\lam a => transQEquiv (IsEquiv.toQEquiv (pmapIsEquiv (inP g) {f a} {g.ret z}))
+                                            (pathConcatEquiv-right (g.f_ret z)))
+
+\lemma nconnected-map-comp-right.{u} (n : Nat) {A B C : \Type u} {f : B -> C} (e : QEquiv {A} {B})
+                                     (c : isNConnectedMap n f) : isNConnectedMap n (\lam a => f (e a))
+  => \lam z => nconnected-equiv n (symQEquiv (IsEquiv.toQEquiv (fib-precomp e f z))) (c z)
+
+\lemma nconnected_join.{u} {m n : Nat} (X Y : \Type u) (cx : isNConnectedType m X) (cy : isNConnectedType n Y)
+  : isNConnectedType (suc (m Nat.+ n)) (Join X Y)
+  => propExt.conv (toSphereNull (suc (m Nat.+ n)) (Join X Y))
+      (rewriteI (Join_Sphere_Sphere m n)
+                (connected_join X Y (Sphere m) (Sphere n) (propExt.dir (toSphereNull m X) cx)
+                                                          (propExt.dir (toSphereNull n Y) cy)))
+  \where
+    \lemma toSphereNull.{u} (n : Nat) (X : \Type u) : isNConnectedType n X = isConnectedType {nullTypeUniverse (Sphere n)} X
+      => connectedType-local-cong {truncUniverse n} {nullTypeUniverse (Sphere n)} (\lam Z => inv (sphereNull_iff_truncated n Z)) X
+
+-- | {genBlakersMassey} in the numeric indexing.
+\lemma nBlakersMassey.{u} (r s : Nat) {X Y : \Type u} (Q : X -> Y -> \Type u)
+                          (rowConn : \Pi (x : X) -> isNConnectedType (suc r) (\Sigma (y : Y) (Q x y)))
+                          (colConn : \Pi (y : Y) -> isNConnectedType (suc s) (\Sigma (x : X) (Q x y)))
+                          (x0 : X) (y0 : Y)
+  : isNConnectedMap (suc (r Nat.+ s)) (POData.pbMap {\new POData X Y Q} {x0} {y0})
+  => genBlakersMassey {\new Data {
+       | ReflUniverse => truncUniverse (suc (r Nat.+ s))
+       | X => X
+       | Y => Y
+       | Q => Q
+       | ch {x} {x'} {y} {y'} q0 q1 q2 => nconnected_join
+           (\Sigma (p : y = y') (transport (Q x) p q0 = q1))
+           (\Sigma (p : x = x') (transport (Q __ y) p q0 = q2))
+           (nconnected-equiv r (sigmaEquiv (Q x) (y, q0) (y', q1))
+                             (nconnected-path.{u} {r} {\Sigma (y : Y) (Q x y)} (rowConn x) (y, q0) (y', q1)))
+           (nconnected-equiv s (sigmaEquiv (Q __ y) (x, q0) (x', q2))
+                             (nconnected-path.{u} {s} {\Sigma (x : X) (Q x y)} (colConn y) (x, q0) (x', q2)))
+     }} x0 y0
+
+\lemma sphere0-nconnected.{u} : isNConnectedType.{u} 0 (Sphere 0)
+  => inhabited=>nconnected0 north
+
+\lemma susp-nconnected.{u} {n : Nat} {A : \Type u} (c : isNConnectedType n A) : isNConnectedType (suc n) (Susp A)
+  => nconnected-equiv (suc n) (Join_Sphere0 A) (nconnected_join.{u} {0} {n} (Sphere 0) A sphere0-nconnected.{u} c)
+
+\lemma sphere-nconnected.{u} (n : Nat) : isNConnectedType.{u} n (Sphere n) \elim n
+  | 0 => sphere0-nconnected
+  | suc n => susp-nconnected (sphere-nconnected n)
+
+\lemma connected0=>nconnected1.{u} (A : Connected0.{u}) : isNConnectedType 1 A
+  => \case A.isInh \with {
+    | inP a0 => propExt.conv (nconnected-iff-trunc-contr 1 A) (Contr.make (inT a0)
+        (Trunc_-1+.elim (\lam t => \new Truncated_-1+ 1 (inT a0 = t) (HLevel_-1_suc {_} {1} (isTruncated {Trunc_-1+.level 1 A}) _ t))
+                        (\lam x => TruncP.rec (ToProp.fromProp (isTruncated {Trunc_-1+.level 1 A} _ _)) (A.isConn0 a0 x) (pmap inT))))
+  }
+
+\lemma nconnected1-path.{u} {A : \Type u} (c : isNConnectedType 1 A) (a a' : A) : TruncP (a = a')
+  => Trunc_-1+.elim (\lam _ => \new Truncated_-1+ 0 (TruncP (a = a')) (toProp (\lam _ _ => prop-pi))) inP
+       (Trunc_-1+.equality {0} a a' (isContr=>isProp (propExt.dir (nconnected-iff-trunc-contr 1 A) c) (inT a) (inT a')))
+
+\lemma nconnected-trunc.{u} {k l : Nat} {A : \Type u} (p : k <= l) (c : isNConnectedType k A)
+  : isNConnectedType k (Trunc_-1+ l A)
+  => propExt.conv (nconnected-iff-trunc-contr k (Trunc_-1+ l A))
+      (Contr.Contr_QEquiv (IsEquiv.toQEquiv (nconnected-map=>trunc-equiv inT (nconnected-map-mono p trunc-in-nconnected)))
+                          (propExt.dir (nconnected-iff-trunc-contr k A) c))
+
+\lemma inT-isEquiv.{u} {n : Nat} {A : \Type u} (h : A ofHLevel_-1+ n) : IsEquiv (inT {n} {A})
+  => \let r => Trunc_-1+.elim (\lam _ => \new Truncated_-1+ n A h) (\lam a => a)
+     \in inP \new QEquiv {
+       | ret => r
+       | ret_f _ => idp
+       | f_sec => trunc-unique (Trunc_-1+.level n A) (\lam t => inT (r t)) (\lam t => t) (\lam _ => idp)
+     }

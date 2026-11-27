@@ -228,3 +228,33 @@
 \func Join_Sphere.{u} (A : \Type u) (n : Nat) : Join (Sphere n) A = iterr (Susp __) (suc n) A \elim n
   | 0 => QEquiv_= (Join_Sphere0 A)
   | suc n => Join_Susp (Sphere n) A *> pmap (Susp __) (Join_Sphere A n)
+  \where {
+    \func transport-jinl.{u} {X Y B : \Type u} (q : X = Y) (y : X)
+      : transport {\Type u} (\lam T => Join T B) q (jinl y) = jinl (transport {\Type u} (\lam T => T) q y)
+      \elim Y, q
+      | _, idp => idp
+
+    \func transport-north.{u} {X Y : \Type u} (q : X = Y)
+      : transport {\Type u} (\lam T => T) (pmap (\lam T => Susp T) q) north = north \elim Y, q
+      | _, idp => idp
+
+    \sfunc susp-north.{u} (A B : \Type u)
+      : transport {\Type u} (\lam T => T) (Join_Susp A B) (jinl north) = north
+      => transport_*> (\lam (T : \Type u) => T) _ _ _
+         *> transport_*> (\lam (T : \Type u) => T) _ _ _
+         *> pmap (\lam z => transport {\Type u} (\lam T => T) (QEquiv_= (Join_Sphere0 (Join A B)))
+                              (transport {\Type u} (\lam T => T) (QEquiv_= (Join-assoc (Sphere 0) A B)) z))
+                 (transport-jinl (QEquiv_= (symQEquiv (Join_Sphere0 A))) north)
+
+    -- | The join-sphere identification sends the left basepoint to the basepoint.
+    \sfunc north-comp.{u} (A : \Type u) (n : Nat)
+      : transport {\Type u} (\lam T => T) (Join_Sphere A n) (jinl north) = north \elim n
+      | 0 => idp
+      | suc n => transport_*> (\lam (T : \Type u) => T) _ _ _
+                 *> pmap (transport {\Type u} (\lam T => T) (pmap (\lam T => Susp T) (Join_Sphere A n)))
+                         (susp-north (Sphere n) A)
+                 *> transport-north (Join_Sphere A n)
+  }
+
+\sfunc Join_Sphere_Sphere (m n : Nat) : Join (Sphere m) (Sphere n) = Sphere (suc (m Nat.+ n))
+  => Join_Sphere (Sphere n) m *> inv (iterr_+ {\Type0} (Susp __) (suc m) (suc n) Empty)

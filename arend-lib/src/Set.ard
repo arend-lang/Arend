@@ -1,4 +1,5 @@
 \import Data.Bool (Bool, So, false, not, true)
+\import Equiv
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -173,8 +174,92 @@
 \truncated \data Trunc0 (A : \Type) : \Set
   | in0 A
   \where {
+    \sfunc remove {A : \Type} (p : isSet A) (t : Trunc0 A) : A \level p \elim t
+      | in0 a => a
+
+    \func remove' {A : \Set} (t : Trunc0 A) : A \elim t
+      | in0 a => a
+
+    \sfunc rec {A B : \Type} (p : isSet B) (t : Trunc0 A) (f : A -> B) : B \level p \elim t
+      | in0 a => f a
+
+    \lemma rec-eval {A B : \Type} {p : isSet B} {a : A} {f : A -> B} : rec p (in0 a) f = f a \level p _ _
+      => \peval rec p (in0 a) f
+
     \func map {A B : \Type} (t : Trunc0 A) (f : A -> B) : Trunc0 B \elim t
       | in0 a => in0 (f a)
+
+    \lemma map-id {A : \Type} (t : Trunc0 A) : map t (\lam a => a) = t \elim t
+      | in0 a => idp
+
+    \lemma map-comp {A B C : \Type} (t : Trunc0 A) (f : A -> B) (g : B -> C) : map (map t f) g = map t (\lam a => g (f a)) \elim t
+      | in0 a => idp
+
+    \lemma map-isEquiv {A B : \Type} {g : A -> B} (e : IsEquiv g) : IsEquiv (\lam (t : Trunc0 A) => map t g) \elim e
+      | inP e => inP (mapEquiv e)
+
+    \lemma contr {A : \Type} (c : Contr A) : Contr (Trunc0 A)
+      => Contr.make (in0 c.center) (contr-center c)
+      \where
+        \lemma contr-center {A : \Type} (c : Contr A) (t : Trunc0 A) : in0 c.center = t \elim t
+          | in0 a => pmap in0 (c.contraction a)
+
+    \func mapEquiv {A B : \Type} (e : QEquiv {A} {B}) : QEquiv {Trunc0 A} {Trunc0 B} \cowith
+      | f t => map t e
+      | ret t => map t e.ret
+      | ret_f (t : Trunc0 A) : map (map t e) e.ret = t \with {
+        | in0 a => pmap in0 (e.ret_f a)
+      }
+      | f_sec (t : Trunc0 B) : map (map t e.ret) e = t \with {
+        | in0 b => pmap in0 (e.f_sec b)
+      }
+
+    \lemma equality {A : \Type} (x y : A) : (in0 x = {Trunc0 A} in0 y) = TruncP (x = y)
+      => propExt (encode (in0 x) (in0 y)) (\lam c => \case c \with { | inP p => pmap in0 p })
+      \where {
+        \func code {A : \Type} (t t' : Trunc0 A) : \Prop \elim t, t'
+          | in0 x, in0 y => TruncP (x = y)
+
+        \lemma refl {A : \Type} (t : Trunc0 A) : code t t \elim t
+          | in0 x => inP idp
+
+        \lemma encode {A : \Type} (t t' : Trunc0 A) (p : t = t') : code t t'
+          => transport (code t) p (refl t)
+      }
+
+    \func setEquiv {A : \Set} : QEquiv {Trunc0 A} {A} \cowith
+      | f => remove'
+      | ret => in0
+      | ret_f (t : Trunc0 A) : in0 (remove' t) = t \with {
+        | in0 a => idp
+      }
+      | f_sec _ => idp
+
+    \lemma in0-isEquiv {A : \Type} (p : isSet A) : IsEquiv (in0 {A})
+      => inP \new QEquiv {
+        | ret => remove p
+        | ret_f a => \peval remove p (in0 a)
+        | f_sec => in0-remove p
+      }
+      \where
+        \lemma in0-remove {A : \Type} (p : isSet A) (t : Trunc0 A) : in0 (remove p t) = t \elim t
+          | in0 a => pmap in0 (\peval remove p (in0 a))
+
+    \func productEquiv {A B : \Type} : QEquiv {Trunc0 (\Sigma A B)} {\Sigma (Trunc0 A) (Trunc0 B)} \cowith
+      | f t => (map t (\lam p => p.1), map t (\lam p => p.2))
+      | ret p => pair p.1 p.2
+      | ret_f (t : Trunc0 (\Sigma A B)) : pair (map t (\lam p => p.1)) (map t (\lam p => p.2)) = t \with {
+        | in0 p => idp
+      }
+      | f_sec p => pair-proj p.1 p.2
+      \where {
+        \func pair {A B : \Type} (x : Trunc0 A) (y : Trunc0 B) : Trunc0 (\Sigma A B) \elim x, y
+          | in0 a, in0 b => in0 (a,b)
+
+        \lemma pair-proj {A B : \Type} (x : Trunc0 A) (y : Trunc0 B)
+          : ((map (pair x y) (\lam p => p.1), map (pair x y) (\lam p => p.2)) : \Sigma (Trunc0 A) (Trunc0 B)) = (x,y) \elim x, y
+          | in0 a, in0 b => idp
+      }
 
     \lemma unequiv {A : \Type} {a b : A} (p : in0 a = in0 b) : TruncP (a = b)
       => \let code (y : Trunc0 A) : \Prop => \case \elim y \with {

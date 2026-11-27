@@ -37,6 +37,9 @@
       | Func-o => idp
       | isFaithful => \lam p => ext p
 
+    \func isoOfEquiv.{u} {G H : Group.{u}} (f : GroupHom G H) (e : QEquiv f) : Iso {GroupCat.{u}} f
+      => (Iso<->Inj+Surj f).2 (e.isInj, e.isSurj)
+
     -- TODO: Prove this more generally for algebraic theories?
     \lemma Iso<->Inj+Surj.{u} {G H : Group.{u}} (f : GroupHom G H) : Iso {GroupCat.{u}} f <-> f.IsIsomorphism
       => (\lam p => SetIso->Inj+Surj (ForgetSet.Func-iso p),

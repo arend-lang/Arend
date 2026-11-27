@@ -1,0 +1,131 @@
+\import Algebra.Group
+\import Algebra.Group.Aut
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Product
+\import Category \hiding (id, o, .o)
+\import Equiv
+\import Equiv.Univalence
+\import Homotopy.EckmannHilton
+\import Homotopy.Loop
+\import Homotopy.Pointed
+\import Homotopy.Sphere
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Set \hiding (#, .#)
+
+\func PiSet.{u} (n : Nat) (X : Pointed.{u})
+  => Trunc0 (Loop^ n X)
+
+\func piMap.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) (t : PiSet n X) : PiSet n Y
+  => Trunc0.map t (Loop^-Func n f).1
+
+\lemma piMap-isEquiv.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) (e : IsEquiv f.1) : IsEquiv (piMap n f)
+  => Trunc0.map-isEquiv (Loop^-Func.isEquiv n f e)
+
+\lemma piMap-id.{u} (n : Nat) {X : Pointed.{u}} (t : PiSet n X) : piMap n (->*.id {X}) t = t
+  => pmap (Trunc0.map t) (pmap __.1 (Loop^-Func.id n {X})) *> Trunc0.map-id t
+
+\lemma piMap-comp.{u} (n : Nat) {X Y Z : Pointed.{u}} (g : Y ->* Z) (f : X ->* Y) (t : PiSet n X)
+  : piMap n (g ->*.∘* f) t = piMap n g (piMap n f t)
+  => pmap (Trunc0.map t) (pmap __.1 (Loop^-Func.comp n g f))
+     *> inv (Trunc0.map-comp t (Loop^-Func n f).1 (Loop^-Func n g).1)
+
+\sfunc piSphereEquiv.{u} (n : Nat) (X : Pointed.{u}) : QEquiv {Trunc0 (Sphere.pointed n ->* X)} {PiSet n X}
+  => Trunc0.mapEquiv (Equiv.toQEquiv (=_Equiv (loopSphere n X)))
+
+\instance PiGroup_1+.{u} (n : Nat) (X : Pointed.{u}) : Group (Trunc0 (Loop^ (suc n) X))
+  => Aut (base {Loop^ n X})
+
+\instance PiCGroup_2+.{u} (n : Nat) (X : Pointed.{u}) : CGroup (Trunc0 (Loop^ (suc (suc n)) X))
+  | Group => PiGroup_1+ (suc n) X
+  | *-comm {x} {y} => \case \elim x, \elim y \with {
+    | in0 p, in0 q => pmap in0 (Loop^2-Commutative.Commutative {\new Loop^2-Commutative (Loop^ n X)} p q)
+  }
+
+\func piGroupMap.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) : GroupHom (PiGroup_1+ n X) (PiGroup_1+ n Y) \cowith
+  | func => piMap (suc n) f
+  | func-* {x} {y} => \case \elim x, \elim y \with {
+    | in0 p, in0 q => pmap in0 (Loop-Func_*> (Loop^-Func n f) p q)
+  }
+
+\sfunc PiGroup_Product.{u} (n : Nat) (X Y : Pointed.{u})
+  : PiGroup_1+ n (PointedProduct X Y) = {Group.{u}} ProductGroup (PiGroup_1+ n X) (PiGroup_1+ n Y)
+  => Cat.isotoid (iso n X Y)
+  \where \protected {
+    \func map.{u} (n : Nat) {X Y : Pointed.{u}} (z : PiSet n (PointedProduct X Y)) : \Sigma (PiSet n X) (PiSet n Y)
+      => (piMap n {PointedProduct X Y} {X} PointedProduct.proj1 z, piMap n {PointedProduct X Y} {Y} PointedProduct.proj2 z)
+
+    \lemma map-char.{u} (n : Nat) {X Y : Pointed.{u}} (z : PiSet n (PointedProduct X Y))
+      : map n z = Trunc0.productEquiv (Trunc0.map z (loop^ProductMap n X Y).1) \elim z
+      | in0 w => pmap2 (\lam u v => ((in0 u, in0 v) : \Sigma (PiSet n X) (PiSet n Y)))
+                       (inv (path \lam i => (pmap __.1 (loop^ProductMap.proj1 n X Y) @ i) w))
+                       (inv (path \lam i => (pmap __.1 (loop^ProductMap.proj2 n X Y) @ i) w))
+
+    \lemma map-isEquiv.{u} (n : Nat) {X Y : Pointed.{u}} : IsEquiv (map n {X} {Y})
+      => transport IsEquiv (inv (path \lam i z => map-char n z @ i))
+           (inP (transQEquiv (Trunc0.mapEquiv (IsEquiv.toQEquiv (loop^ProductMap.isEquiv n X Y))) Trunc0.productEquiv))
+
+    \func hom.{u} (n : Nat) (X Y : Pointed.{u})
+      : GroupHom (PiGroup_1+ n (PointedProduct X Y)) (ProductGroup (PiGroup_1+ n X) (PiGroup_1+ n Y)) \cowith
+      | func => map (suc n)
+      | func-* => pmap2 (__,__) (piGroupMap n {PointedProduct X Y} {X} PointedProduct.proj1).func-*
+                                (piGroupMap n {PointedProduct X Y} {Y} PointedProduct.proj2).func-*
+
+    \func iso.{u} (n : Nat) (X Y : Pointed.{u}) : Iso {GroupCat} (hom n X Y)
+      => GroupCat.isoOfEquiv (hom n X Y) (IsEquiv.toQEquiv (map-isEquiv (suc n)))
+  }
+
+\sfunc PiGroup_LoopShift.{u} (n : Nat) (X : Pointed.{u}) : PiGroup_1+ n (Loop X) = {Group.{u}} PiGroup_1+ (suc n) X
+  => Cat.isotoid (iso n X)
+  \where \protected {
+    \func hom.{u} (n : Nat) (X : Pointed.{u}) : GroupHom (PiGroup_1+ n (Loop X)) (PiGroup_1+ (suc n) X) \cowith
+      | func t => Trunc0.map t (loop^Shift (suc n) X).1
+      | func-* {x} {y} => \case \elim x, \elim y \with {
+        | in0 p, in0 q => pmap in0 (Loop-Func_*> (loop^Shift n X) p q)
+      }
+
+    \func iso.{u} (n : Nat) (X : Pointed.{u}) : Iso {GroupCat.{u}} (hom n X)
+      => GroupCat.isoOfEquiv (hom n X) (IsEquiv.toQEquiv (Trunc0.map-isEquiv (loop^Shift.isEquiv (suc n) X)))
+  }
+
+\sfunc PiGroup_basepoint.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y)
+  : PiGroup_1+ n (Pointed.make x) = {Group.{u}} PiGroup_1+ n (Pointed.make y)
+  => Cat.isotoid (iso n p)
+  \where \protected {
+    \func map {X : \Type} {x y : X} (p : x = y) : Pointed.make x ->* Pointed.make y
+      => (\lam z => z, p)
+
+    \func act.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y) (t : PiSet n (Pointed.make x)) : PiSet n (Pointed.make y)
+      => piMap n (map p) t
+
+    \lemma act-id.{u} (n : Nat) {X : \Type u} {x : X} (t : PiSet n (Pointed.make x)) : act n idp t = t
+      => piMap-id n t
+
+    \lemma act-comp.{u} (n : Nat) {X : \Type u} {x y z : X} (p : x = y) (q : y = z) (t : PiSet n (Pointed.make x))
+      : act n (p *> q) t = act n q (act n p t)
+      => piMap-comp n (map q) (map p) t
+
+    -- | Basepoint change in dimension one is conjugation.
+    \lemma act-1.{u} {X : \Type u} {x y : X} (p : x = y) (q : x = x) : act 1 p (in0 q) = in0 (inv p *> q *> p)
+      => idp
+
+    \lemma act-isEquiv.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y) : IsEquiv (act n p)
+      => piMap-isEquiv n (map p) (inP idEquiv)
+
+    \func hom.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y)
+      : GroupHom (PiGroup_1+ n (Pointed.make x)) (PiGroup_1+ n (Pointed.make y))
+      => piGroupMap n (map p)
+
+    \lemma iso.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y) : Iso {GroupCat} (hom n p)
+      => GroupCat.isoOfEquiv (hom n p) (IsEquiv.toQEquiv (act-isEquiv (suc n) p))
+  }
+
+\lemma pi-high-contr-of-loopSet.{u} (r : Nat) (X : Pointed.{u}) (h : isSet (Loop X))
+  : Contr (PiSet (suc (suc r)) X)
+  => Trunc0.contr (lemma r) \where {
+  \func lemma (r : Nat) : Contr (Loop^ (suc (suc r)) X) \with
+    | 0 => isProp=>isContr (h idp idp) idp
+    | suc r => loop-contr (Loop^ (suc (suc r)) X) (lemma r)
+}

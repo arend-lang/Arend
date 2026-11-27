@@ -253,11 +253,11 @@
          \in \have
               | F1-equiv (r : C) : IsEquiv (F1 r)
                 => IsEquiv.leftFactor (terminal-product.cotri-equiv r (dpath phi))
-                     (IsEquiv.trans (IsSigma-right _ \lam rho => terminal-product.cotri-equiv {SliceCat (phi dright dright)} (r,rho) (dpath (sliceSquare phi)))
+                     (IsEquiv.trans (esigma-right _ \lam rho => terminal-product.cotri-equiv {SliceCat (phi dright dright)} (r,rho) (dpath (sliceSquare phi)))
                                     (SliceCat.dom-equiv r (sliceSquare phi dleft dleft)))
               | base-equiv (r : C) : IsEquiv {\Sigma (rho : r ~> phi dright dright) (const {SliceCat (phi dright dright)} (r,rho) ~> sliceSquare phi dright)} (\lam x => dmap UE x.2)
                 => IsEquiv.leftFactor (const-ev0-equiv r (phi dright))
-                     (IsEquiv.trans (IsSigma-right _ \lam rho => const-ev0-equiv {SliceCat (phi dright dright)} (r,rho) (sliceSquare phi dright))
+                     (IsEquiv.trans (esigma-right _ \lam rho => const-ev0-equiv {SliceCat (phi dright dright)} (r,rho) (sliceSquare phi dright))
                                     (SliceCat.dom-equiv r (sliceSquare phi dright dleft)))
               | F2-equiv (r : C) : IsEquiv (F2 r)
                 => IsEquiv.trans {_} {_} {_} {\lam (a : F2Dom r) => (((a.1, a.2.1), a.2.2) : \Sigma (x : F2Base r) (F2Fib r x))}
@@ -266,7 +266,7 @@
                         | ret_f a => idp
                         | f_sec b => idp
                       })
-                     (IsEquiv.trans (IsSigma-right _ \lam (x : F2Base r) => SliceCat.forget-cartesian (dpath \lam i => sliceSquare phi i dright) (r, x.1) (dpath \lam i => x.2 i dright))
+                     (IsEquiv.trans (esigma-right _ \lam (x : F2Base r) => SliceCat.forget-cartesian (dpath \lam i => sliceSquare phi i dright) (r, x.1) (dpath \lam i => x.2 i dright))
                                     (inP (qsigma-left (IsEquiv.toQEquiv (base-equiv r)))))
               | eqr (r : C) : IsEquiv (totD r) <-> IsEquiv (totalEquiv.total (ctmC r))
                 => IsEquiv.parallelEquiv (F1-equiv r) (F2-equiv r) (\lam _ => idp)

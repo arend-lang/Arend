@@ -1,0 +1,297 @@
+-- | Bouquets of circles, presentation complexes and a K(G,1) (HoTT book, Section 8.7).
+
+\import Algebra.Group
+\import Algebra.Group.Aut
+\import Algebra.Group.Free
+\import Algebra.Group.GroupCat
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Pushout
+\import Algebra.Group.QuotientProperties
+\import Algebra.Group.SubGroup
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed (ide)
+\import Algebra.Pointed.PointedHom
+\import Category
+\import Data.Bool
+\import Data.List
+\import Data.Or
+\import Equiv
+\import Homotopy.Connected
+\import Homotopy.HomotopyGroup
+\import Homotopy.HomotopyGroup.Connectivity
+\import Homotopy.HomotopyGroup.FundamentalGroupoid
+\import Homotopy.K1
+\import Homotopy.K1.Basic
+\import Homotopy.Pointed \hiding (map, base)
+\import Homotopy.Pushout
+\import Homotopy.Space
+\import Homotopy.Suspension
+\import Homotopy.Truncation
+\import Homotopy.VanKampen.FundamentalGroups
+\import Logic
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open groupPushout-unique (freeGroup-ext)
+
+\func Bouquet (X : \Type) => Susp (Or X (\Sigma))
+
+\func bouquetLoop {X : \Type} (x : X) : north {Or X (\Sigma)} = north
+  => pmerid (inl x) *> inv (pmerid (inr ()))
+
+\func bouquetHom.{u} (X : \Set u) : GroupHom (FreeGroup X) (PiGroup_1+ 0 (Susp.pointed (Or X (\Sigma))))
+  => (FreeGroupUniversalProperty X (PiGroup_1+ 0 (Susp.pointed (Or X (\Sigma)))) (\lam x => in0 (bouquetLoop x))).1
+
+-- | The fundamental group of a bouquet of circles is free.
+\sfunc PiGroup_Bouquet.{u} (X : \Set u) : Iso {GroupCat.{u}} (bouquetHom X)
+  => GroupCat.isoOfEquiv (bouquetHom X)
+       (transport (\lam (h : FreeGroup X -> PiGroup_1+ 0 (Susp.pointed (Or X (\Sigma)))) => QEquiv h) (ext hom-eq)
+                  (transQEquiv j-equiv (PiGroup_Susp.hom-equiv {Or X (\Sigma)} {inr ()})))
+  \where \private {
+    \func Q => PiGroup_Susp.Q {Or X (\Sigma)} {inr ()}
+
+    \func j : GroupHom (FreeGroup X) Q
+      => (FreeGroupUniversalProperty X Q (\lam x => PiGroup_Susp.gen (inl x))).1
+
+    \func kgen (t : Trunc0 (Or X (\Sigma))) : FreeGroup X \elim t
+      | in0 (inl x) => FreeGroup.can x
+      | in0 (inr _) => ide
+
+    \func K => (FreeGroupUniversalProperty (Trunc0 (Or X (\Sigma))) (FreeGroup X) kgen).1
+
+    \func k : GroupHom Q (FreeGroup X)
+      => normalClosure.lift {_} {_} {\lam w => w = FreeGroup.can (in0 (inr ()))} K (\lam p => pmap K p *> ide-right {FreeGroup X})
+
+    \lemma gen-case (t : Trunc0 (Or X (\Sigma))) : j (k (in~ (FreeGroup.can t))) = in~ (FreeGroup.can t) \elim t
+      | in0 (inl x) => pmap j (ide-right {FreeGroup X} {FreeGroup.can x}) *> ide-right {Q}
+      | in0 (inr _) => pmap j (ide-right {FreeGroup X} {ide}) *> func-ide {j} *> inv PiGroup_Susp.gen-base
+
+    \func j-equiv : QEquiv j \cowith
+      | ret => k
+      | ret_f x => freeGroup-ext {X} {FreeGroup X} {k GroupHom.∘ j} {GroupHom.id} (\lam x => pmap k (ide-right {Q} {PiGroup_Susp.gen (inl x)}) *> ide-right {FreeGroup X}) x
+      | f_sec y => \case \elim y \with {
+        | in~ w => freeGroup-ext {_} {Q} {j GroupHom.∘ k GroupHom.∘ NormalSubGroup.quotHom} {NormalSubGroup.quotHom} gen-case w
+      }
+
+    \lemma hom-eq (x : FreeGroup X) : PiGroup_Susp.hom {Or X (\Sigma)} {inr ()} (j x) = bouquetHom X x
+      => freeGroup-ext {X} {_} {PiGroup_Susp.hom GroupHom.∘ j} {bouquetHom X}
+          (\lam x => pmap (PiGroup_Susp.hom {Or X (\Sigma)} {inr ()}) (ide-right {Q} {PiGroup_Susp.gen (inl x)}) *> PiGroup_Susp.hom-gen {Or X (\Sigma)} {inr ()} (inl x) *> inv (ide-right {PiGroup_1+ 0 (Susp.pointed (Or X (\Sigma)))})) x
+  }
+
+\func wordLoop {X : \Type} (w : List (\Sigma X Bool)) : north {Or X (\Sigma)} = north \elim w
+  | nil => idp
+  | (x, true) :: w => bouquetLoop x *> wordLoop w
+  | (x, false) :: w => inv (bouquetLoop x) *> wordLoop w
+
+\lemma bouquetHom-word.{u} {X : \Set u} (w : List (\Sigma X Bool)) : bouquetHom X (in~ w) = in0 (wordLoop w) \elim w
+  | nil => idp
+  | (x, true) :: w => pmap2 (Group.* {PiGroup_1+.{u} 0 (Susp.pointed (Or X (\Sigma)))}) idp (bouquetHom-word w)
+  | (x, false) :: w => pmap2 (Group.* {PiGroup_1+.{u} 0 (Susp.pointed (Or X (\Sigma)))}) idp (bouquetHom-word w)
+
+\func attach {X R : \Type} (rel : R -> List (\Sigma X Bool)) (z : Bouquet R) : Bouquet X
+  => Susp.rec north north (\lam (a : Or R (\Sigma)) => \case a \with {
+    | inl r => wordLoop (rel r)
+    | inr _ => idp
+  }) z
+
+\func PresentationComplex {X R : \Type} (rel : R -> List (\Sigma X Bool)) => Cofiber (attach rel)
+
+\func Presented {X : \Set} {R : \Type} (rel : R -> List (\Sigma X Bool)) : Group
+  => FreeGroup X // normalClosure (Relator rel)
+  \where
+    \func Relator {X : \Set} {R : \Type} (rel : R -> List (\Sigma X Bool)) (g : FreeGroup X) : \Prop
+      => TruncP (\Sigma (r : R) (in~ (rel r) = g))
+
+\func bouquetConnected (R : \Type) : Connected0 (Bouquet R)
+  => PushoutConnected0 {\new InhSpace (Or R (\Sigma)) (inP (inr ()))} {UnitConnected0} {UnitConnected0}
+
+-- | The fundamental group of a presentation complex is the presented group.
+\sfunc PiGroup_PresentationComplex.{u} {X : \Set u} {R : \Type u} (rel : R -> List (\Sigma X Bool))
+  : PiGroup_1+ 0 (Pointed.make {PresentationComplex rel} (pinl north)) = {Group.{u}} Presented rel
+  => inv (Cat.isotoid iso)
+  \where {
+    \func hom : GroupHom (Presented rel) (PiGroup_1+ 0 (Pointed.make {PresentationComplex rel} (pinl north)))
+      => PiGroup_Cofiber.hom {bouquetConnected R} {Bouquet X} {attach rel} {north} GroupHom.∘ from
+
+    \lemma hom-gen (x : X) : hom (in~ (FreeGroup.can x)) = in0 (pmap pinl (bouquetLoop x))
+      => PiGroup_Cofiber.hom-in {bouquetConnected R} {Bouquet X} {attach rel} {north} (iota (FreeGroup.can x))
+           *> pmap (map0 pinl) (ide-right {PiGroup_1+ 0 (Susp.pointed (Or X (\Sigma)))} {in0 (bouquetLoop x)})
+
+    \func hom-equiv : QEquiv hom
+      => transQEquiv (symQEquiv equiv) (PiGroup_Cofiber.hom-equiv {bouquetConnected R} {Bouquet X} {attach rel} {north})
+
+    \private \func iso : Iso {GroupCat} hom
+      => GroupCat.isoOfEquiv hom hom-equiv
+
+    \private \func phi => map0Hom (attach rel) (north {Or R (\Sigma)})
+
+    \private \func N => imageClosure phi
+
+    \private \func iota => bouquetHom X
+
+    \private \func iotaInv => Iso.hinv {PiGroup_Bouquet X}
+
+    \private \lemma iotaInv-iota (g : FreeGroup X) : iotaInv (iota g) = g
+      => pmap (\lam (m : GroupHom (FreeGroup X) (FreeGroup X)) => m g) (Iso.hinv_f {PiGroup_Bouquet X})
+
+    \private \lemma iota-iotaInv (h : Aut (north {Or X (\Sigma)})) : iota (iotaInv h) = h
+      => pmap (\lam (m : GroupHom (Aut (north {Or X (\Sigma)})) (Aut (north {Or X (\Sigma)}))) => m h) (Iso.f_hinv {PiGroup_Bouquet X})
+
+    \private \lemma attach-loop (r : R) : phi (in0 (bouquetLoop r)) = iota (in~ (rel r))
+      => pmap in0 (pmap_*>-comm (attach rel) (pmerid (inl r)) (inv (pmerid (inr ()))) *> pmap (_ *>) (pmap_inv-comm (attach rel) (pmerid (inr ()))))
+         *> inv (bouquetHom-word (rel r))
+
+    \private \lemma quot-trivial {G : Group} (M : NormalSubGroup G) {x : G} (c : M x) : NormalSubGroup.quotHom {M} x = ide {G // M}
+      => ~-pequiv (transportInv M ide-right (M.contains_inverse c))
+
+    \private \func trivialHom {G H : Group} : GroupHom G H \cowith
+      | func _ => ide
+      | func-* => inv ide-left
+
+    \private \func theta : GroupHom (Aut (north {Or R (\Sigma)})) (Presented rel)
+      => NormalSubGroup.quotHom GroupHom.∘ iotaInv GroupHom.∘ phi
+
+    \private \lemma theta-trivial (y : Aut (north {Or R (\Sigma)})) : theta y = ide {Presented rel}
+      => pmap theta (inv (QEquiv.f_sec {PiGroup_Susp.hom-equiv {Or R (\Sigma)} {inr ()}} y)) *> onQ _
+      \where {
+        \lemma onQ (q : PiGroup_Susp.Q {Or R (\Sigma)} {inr ()}) : theta (PiGroup_Susp.hom {Or R (\Sigma)} {inr ()} q) = ide {Presented rel} \elim q
+          | in~ w => freeGroup-ext {_} {_} {theta GroupHom.∘ PiGroup_Susp.hom {Or R (\Sigma)} {inr ()} GroupHom.∘ NormalSubGroup.quotHom} {trivialHom} gen-case w
+
+        \lemma gen-case (t : Trunc0 (Or R (\Sigma))) : theta (PiGroup_Susp.hom {Or R (\Sigma)} {inr ()} (in~ (FreeGroup.can t))) = ide {Presented rel} \elim t
+          | in0 (inl r) => pmap theta (PiGroup_Susp.hom-gen {Or R (\Sigma)} {inr ()} (inl r)) *> pmap (\lam h => NormalSubGroup.quotHom (iotaInv h)) (attach-loop r)
+                             *> pmap NormalSubGroup.quotHom (iotaInv-iota _) *> quot-trivial _ (normalClosure.gen (Presented.Relator rel) (inP (r, idp)))
+          | in0 (inr _) => pmap theta (pmap (PiGroup_Susp.hom {Or R (\Sigma)} {inr ()}) PiGroup_Susp.gen-base *> func-ide {PiGroup_Susp.hom {Or R (\Sigma)} {inr ()}}) *> func-ide {theta}
+      }
+
+    \private \func to : GroupHom (Aut (north {Or X (\Sigma)}) // N) (Presented rel)
+      => normalClosure.lift {_} {_} {imageClosure.Image phi} (NormalSubGroup.quotHom GroupHom.∘ iotaInv) (\case __ \with {
+        | inP (y, p) => pmap (\lam h => NormalSubGroup.quotHom (iotaInv h)) (inv p) *> theta-trivial y
+      })
+
+    \private \func from : GroupHom (Presented rel) (Aut (north {Or X (\Sigma)}) // N)
+      => normalClosure.lift {_} {_} {Presented.Relator rel} (NormalSubGroup.quotHom {N} GroupHom.∘ iota) (\case __ \with {
+        | inP (r, p) => pmap (\lam g => NormalSubGroup.quotHom {N} (iota g)) (inv p)
+                          *> quot-trivial N {iota (in~ (rel r))} (normalClosure.gen {Aut (north {Or X (\Sigma)})} (imageClosure.Image phi) {iota (in~ (rel r))} (inP (in0 (bouquetLoop r), attach-loop r)))
+      })
+
+    \private \sfunc equiv : QEquiv to from \cowith
+      | ret_f x => \case \elim x \with { | in~ h => pmap NormalSubGroup.quotHom (iota-iotaInv h) }
+      | f_sec y => \case \elim y \with { | in~ g => pmap NormalSubGroup.quotHom (iotaInv-iota g) }
+  }
+
+-- | The canonical presentation: a generator for each element, relations from the multiplication table.
+\func canonicalRel (G : Group) (r : Or (\Sigma G G) (\Sigma)) : List (\Sigma G Bool) \elim r
+  | inl (g, h) => (g, true) :: (h, true) :: (g * h, false) :: nil
+  | inr _ => (ide, true) :: nil
+
+\func canonicalHom (G : Group) : GroupHom G (Presented (canonicalRel G)) \cowith
+  | func g => in~ (FreeGroup.can g)
+  | func-* {g} {h} => ~-pequiv (transport (normalClosure (Presented.Relator (canonicalRel G))) (conj-alg (FreeGroup.can g) (FreeGroup.can h) (FreeGroup.can (g * h)))
+      (NormalSubGroup.isNormal' {normalClosure (Presented.Relator (canonicalRel G))} (FreeGroup.can (g * h))
+        (normalClosure.gen (Presented.Relator (canonicalRel G)) (inP (inl (g, h), idp)))))
+  \where
+    \lemma conj-alg {M : Group} (a b c : M) : inverse c * (a * (b * inverse c)) * c = inverse c * (a * b)
+      => equation.group
+
+\func canonicalEval (G : Group) : GroupHom (Presented (canonicalRel G)) G
+  => normalClosure.lift {_} {_} {Presented.Relator (canonicalRel G)} U (\case __ \with {
+    | inP (r, p) => pmap U (inv p) *> rel-eval r
+  })
+  \where {
+    \func U => (FreeGroupUniversalProperty G G (\lam g => g)).1
+
+    \lemma rel-eval (r : Or (\Sigma G G) (\Sigma)) : U (in~ (canonicalRel G r)) = ide \elim r
+      | inl (g, h) => equation.group
+      | inr _ => ide-left
+  }
+
+\func canonicalEquiv (G : Group) : QEquiv (canonicalHom G) \cowith
+  | ret => canonicalEval G
+  | ret_f _ => ide-right
+  | f_sec y => \case \elim y \with {
+    | in~ w => freeGroup-ext {G} {Presented (canonicalRel G)} {canonicalHom G GroupHom.∘ canonicalEval G GroupHom.∘ NormalSubGroup.quotHom}
+                             {NormalSubGroup.quotHom} (\lam _ => pmap (canonicalHom G) ide-right) w
+  }
+
+\func truncHom.{u} {Y : \Type u} (y : Y) : GroupHom (PiGroup_1+ 0 (Pointed.make y)) (PiGroup_1+ 0 (Pointed.make {Trunc_-1+ 2 Y} (inT y)))
+  => piGroupMap 0 {Pointed.make y} {Pointed.make {Trunc_-1+ 2 Y} (inT y)} (inT, idp)
+
+-- | 1-truncation preserves the fundamental group.
+\lemma truncHom-isEquiv.{u} {Y : \Type u} (y : Y) : IsEquiv (truncHom y)
+  => transportInv IsEquiv (ext fun-eq)
+       (inP (transQEquiv (transQEquiv (symQEquiv pi-vanishes-below.trunc1-Trunc0-equiv) (symQEquiv (Trunc_-1+.equality y y))) e3))
+  \where {
+    \lemma loopSet : isSet (inT y = {Trunc_-1+ 2 Y} inT y)
+      => \lam p q => ToProp.fromProp (isTruncated {Trunc_-1+.level 2 Y} (inT y) (inT y) p q)
+
+    \private \func e3 : QEquiv {inT y = {Trunc_-1+ 2 Y} inT y} {Trunc0 (inT y = {Trunc_-1+ 2 Y} inT y)} in0 \cowith
+      | ret t => Trunc0.rec loopSet t (\lam s => s)
+      | ret_f _ => Trunc0.rec-eval
+      | f_sec t => \case \elim t \with { | in0 _ => pmap in0 Trunc0.rec-eval }
+
+    \private \lemma fun-eq (t : Trunc0 (y = y))
+      : truncHom y t = in0 (QEquiv.ret {Trunc_-1+.equality y y} (QEquiv.ret {pi-vanishes-below.trunc1-Trunc0-equiv} t)) \elim t
+      | in0 p => pmap in0 (idp_*> *> inv (pmap (QEquiv.ret {Trunc_-1+.equality y y}) Trunc0.rec-eval))
+  }
+
+\func KG1 (G : Group)
+  => Trunc_-1+ 2 (PresentationComplex (canonicalRel G))
+
+\func KG1Hom.{u} (G : Group.{u}) : GroupHom G (PiGroup_1+ 0 (Pointed.make {KG1 G} (inT (pinl north))))
+  => truncHom {PresentationComplex (canonicalRel G)} (pinl north) GroupHom.∘ PiGroup_PresentationComplex.hom {G} {_} {canonicalRel G} GroupHom.∘ canonicalHom G
+
+\lemma KG1Hom-loop.{u} {G : Group.{u}} (g : G) : KG1Hom G g = in0 (pmap (\lam z => inT (pinl z)) (bouquetLoop g))
+  => pmap (truncHom {PresentationComplex (canonicalRel G)} (pinl north)) (PiGroup_PresentationComplex.hom-gen {G} {_} {canonicalRel G} g) *> pmap in0 idp_*>
+
+-- | The 1-truncated complex of the canonical presentation has fundamental group {G}.
+\func PiGroup_KG1.{u} (G : Group.{u}) : Iso {GroupCat.{u}} (KG1Hom G)
+  => GroupCat.isoOfEquiv (KG1Hom G) (transQEquiv (transQEquiv (canonicalEquiv G) (PiGroup_PresentationComplex.hom-equiv {G} {_} {canonicalRel G}))
+                                                 (IsEquiv.toQEquiv (truncHom-isEquiv {PresentationComplex (canonicalRel G)} (pinl north))))
+
+\lemma KG1-higher.{u} (G : Group.{u}) (n : Nat) : Contr (PiSet (suc (suc n)) (Pointed.make {KG1 G} (inT (pinl north))))
+  => pi-high-contr-of-loopSet n _ (truncHom-isEquiv.loopSet {PresentationComplex (canonicalRel G)} {pinl north})
+
+\func KG1-to-K1.{u} {G : Group.{u}} (x : KG1 G) : K1 G
+  => Trunc_-1+.elim (\lam _ => \new Truncated_-1+ 2 (K1 G) K1-level) complexMap x
+  \where {
+    \func bouquetMap (z : Bouquet G) : K1 G
+      => Susp.rec base base (\lam (a : Or G (\Sigma)) => \case a \with {
+        | inl g => path (loop g)
+        | inr _ => idp
+      }) z
+
+    \func complexMap (z : PresentationComplex (canonicalRel G)) : K1 G
+      => PushoutData.rec bouquetMap (\lam _ => base) glue z
+
+    \sfunc glue (z : Bouquet (Or (\Sigma G G) (\Sigma))) : bouquetMap (attach (canonicalRel G) z) = base
+      => PushoutData.elim (\lam z => bouquetMap (attach (canonicalRel G) z) = base) (\lam _ => idp) (\lam _ => idp)
+           (\lam a => pathOver (transport_path_pmap (\lam z => bouquetMap (attach (canonicalRel G) z)) (\lam _ => base) (pmerid a) idp idp
+                                                    (inv (loop-trivial a)))) z
+
+    \lemma bouquetLoop-map (g : G) : pmap bouquetMap (bouquetLoop g) = path (loop g)
+      => pmap_*>-comm bouquetMap (pmerid (inl g)) (inv (pmerid (inr ()))) *> pmap (path (loop g) *>) (pmap_inv-comm bouquetMap (pmerid (inr ())))
+
+    \func K1word (w : List (\Sigma G Bool)) : base {G} = base \elim w
+      | nil => idp
+      | (g, true) :: w => path (loop g) *> K1word w
+      | (g, false) :: w => inv (path (loop g)) *> K1word w
+
+    \lemma wordLoop-map (w : List (\Sigma G Bool)) : pmap bouquetMap (wordLoop w) = K1word w \elim w
+      | nil => idp
+      | (g, true) :: w => pmap_*>-comm bouquetMap _ _ *> pmap2 (*>) (bouquetLoop-map g) (wordLoop-map w)
+      | (g, false) :: w => pmap_*>-comm bouquetMap _ _ *> pmap2 (*>) (pmap_inv-comm bouquetMap _ *> pmap inv (bouquetLoop-map g)) (wordLoop-map w)
+
+    \lemma loop-trivial (a : Or (Or (\Sigma G G) (\Sigma)) (\Sigma)) : pmap (\lam z => bouquetMap (attach (canonicalRel G) z)) (pmerid a) = idp \elim a
+      | inl (inl (g, h)) => wordLoop-map (canonicalRel G (inl (g, h)))
+          *> inv *>-assoc *> pmap (__ *> _) (K1.loop-comp g h) *> *>_inv
+      | inl (inr _) => wordLoop-map (canonicalRel G (inr ())) *> K1.loop-ide
+      | inr _ => idp
+  }
+
+\lemma KG1-to-K1-loop.{u} {G : Group.{u}} (g : G)
+  : piGroupMap 0 {Pointed.make {KG1 G} (inT (pinl north))} {Pointed.make (base {G})} (KG1-to-K1, idp) (KG1Hom G g) = in0 (path (loop g))
+  => pmap (piGroupMap 0 {Pointed.make {KG1 G} (inT (pinl north))} {Pointed.make (base {G})} (KG1-to-K1, idp)) (KG1Hom-loop g)
+       *> pmap in0 (idp_*> *> KG1-to-K1.bouquetLoop-map g)
