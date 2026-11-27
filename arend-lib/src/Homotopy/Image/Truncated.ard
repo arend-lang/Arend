@@ -36,9 +36,9 @@
 
 \lemma nimage-left-connected.{u} (n : Nat) {A B : \Type u} (f : A -> B) : isNConnectedMap n (nimage-in n f)
   => \lam y => nconnected-equiv n (symQEquiv (fib-precomp (totalFib f) (totalEquiv.total (\lam b => inT {n} {Fib f b})) y))
-      (transport (isConnectedType {truncUniverse n})
-                 (inv (totalEquiv.totalFiber (\lam b => inT {n} {Fib f b}) y.1 y.2))
-                 (trunc-in-nconnected y.2))
+      (transportInv (isConnectedType {truncUniverse n})
+                    (QEquiv_= (totalEquiv.totalFiber (\lam b => inT {n} {Fib f b}) y.1 y.2))
+                    (trunc-in-nconnected y.2))
 
 \func nimage0-equiv.{u} {A B : \Type u} (f : A -> B) : QEquiv {NImage 0 f} {\Sigma (b : B) (TruncP (Fib f b))}
   => sigma-right \lam b => trunc0-equiv {Fib f b}

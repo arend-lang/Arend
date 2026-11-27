@@ -4,7 +4,6 @@
 
 \import Algebra.Group.Exact
 \import Algebra.Group.GroupCat
-\import Algebra.Group.GroupHom
 \import Algebra.Pointed.Exact
 \import Arith.Nat
 \import Category \hiding (id, o)
@@ -15,7 +14,6 @@
 \import Homotopy.FiberSequence.Exact
 \import Homotopy.HomotopyGroup
 \import Homotopy.HomotopyGroup.Connectivity
-\import Homotopy.Loop
 \import Homotopy.Pointed
 \import Logic
 \import Order.StrictOrder

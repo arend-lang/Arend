@@ -88,10 +88,10 @@
               | cod-equiv : IsEquiv {\Sigma (k : z ~> x) (\Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> p (k i)) idd (dmap p c)))}
                                     {Gap {E} {A} {p} {z} c}
                                     (\lam s => (s.1, (s.2.1, inv (comp-char s.2.2))))
-                => IsSigma-right {z ~> x} {\lam k => \Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> p (k i)) idd (dmap p c))}
+                => esigma-right {z ~> x} {\lam k => \Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> p (k i)) idd (dmap p c))}
                                  {\lam k => \Sigma (g : p z ~> p x') (dmap p k = comp g (dmap p c))}
                                  (\lam k s => (s.1, inv (comp-char s.2))) \lam k =>
-                     IsSigma-right {p z ~> p x'} {\lam g => DPath (\lam i => g i ~> p (k i)) idd (dmap p c)} {\lam g => dmap p k = comp g (dmap p c)}
+                     esigma-right {p z ~> p x'} {\lam g => DPath (\lam i => g i ~> p (k i)) idd (dmap p c)} {\lam g => dmap p k = comp g (dmap p c)}
                                    (\lam g s => inv (comp-char s)) \lam g =>
                        IsEquiv.trans (inP (comp-equiv {A} {p z} {p x'} {p x} {g} {dmap p c} {dmap p k})) (inP inv-equiv)
          \in transport IsEquiv (ext \lam h => pmap (\lam (q : dmap p (comp h c) = comp (dmap p h) (dmap p c)) => ((comp h c, (dmap p h, q)) : Gap {E} {A} {p} {z} c))
@@ -155,10 +155,10 @@
               | cod-equiv : IsEquiv {\Sigma (w : e ~> x) (\Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> p (w i)) idd g))}
                                     {Gap {E} {A} {p} {e} {e'} {x} u}
                                     (\lam s => (s.1, (s.2.1, inv (comp-char s.2.2))))
-                => IsSigma-right {e ~> x} {\lam w => \Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> p (w i)) idd g)}
+                => esigma-right {e ~> x} {\lam w => \Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> p (w i)) idd g)}
                                  {\lam w => \Sigma (g : p e' ~> p x) (dmap p w = comp (dmap p u) g)}
                                  (\lam w s => (s.1, inv (comp-char s.2))) \lam w =>
-                     IsSigma-right {p e' ~> p x} {\lam g => DPath (\lam i => p (u i) ~> p (w i)) idd g} {\lam g => dmap p w = comp (dmap p u) g}
+                     esigma-right {p e' ~> p x} {\lam g => DPath (\lam i => p (u i) ~> p (w i)) idd g} {\lam g => dmap p w = comp (dmap p u) g}
                                    (\lam g s => inv (comp-char s)) \lam g =>
                        IsEquiv.trans (inP (comp-equiv {A} {p e} {p e'} {p x} {dmap p u} {g} {dmap p w})) (inP inv-equiv)
          \in transport IsEquiv (ext \lam h => pmap (\lam (q : dmap p (comp u h) = comp (dmap p u) (dmap p h)) => ((comp u h, (dmap p h, q)) : Gap {E} {A} {p} {e} {e'} {x} u))
@@ -211,7 +211,7 @@
       => \let | th (s : \Sigma (w : e ~> X) (\Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) (dmap p w) g))) : SqA {E} {A} {p} u X
                 => (s.1, ((dmap p s.1, idp), s.2))
               | th-equiv : IsEquiv th
-                => IsSigma-right {e ~> X} {\lam w => \Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) (dmap p w) g)}
+                => esigma-right {e ~> X} {\lam w => \Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) (dmap p w) g)}
                                  {\lam w => \Sigma (aq : \Sigma (a : p e ~> p X) (dmap p w = a)) (\Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) aq.1 g))}
                                  (\lam w r => ((dmap p w, idp), r))
                                  (\lam w => contr-point-equiv (lsigma (dmap p w)) {\lam aq => \Sigma (g : p e' ~> p X) (DPath (\lam i => p (u i) ~> p X) aq.1 g)} (dmap p w, idp))
@@ -261,13 +261,13 @@
                 => (base g r.1, (comp r.2.1 c, dmap_comp p {e} {x'} {x} {r.2.1} {c} *> pmap (comp __ (dmap p c)) r.2.2))
               | fib-equiv (g : p e' ~> p x') : IsEquiv (fib g)
                 => IsEquiv.trans
-                     (IsSigma-right {\Sigma (a : p e ~> p x') (DPath (\lam i => p (u i) ~> p x') a g)} {\lam aR => \Sigma (w : e ~> x') (dmap p w = aR.1)} {\lam aR => \Sigma (w : e ~> x) (dmap p w = comp aR.1 (dmap p c))}
+                     (esigma-right {\Sigma (a : p e ~> p x') (DPath (\lam i => p (u i) ~> p x') a g)} {\lam aR => \Sigma (w : e ~> x') (dmap p w = aR.1)} {\lam aR => \Sigma (w : e ~> x) (dmap p w = comp aR.1 (dmap p c))}
                                     (\lam aR r => (comp r.1 c, dmap_comp p {e} {x'} {x} {r.1} {c} *> pmap (comp __ (dmap p c)) r.2))
                                     (\lam aR => cartesianArrowAt-fiber ce aR.1))
                      (inP (qsigma-left {_} {\Sigma (a : p e ~> p x) (DPath (\lam i => p (u i) ~> p x) a (comp g (dmap p c)))} {\lam aR => \Sigma (w : e ~> x) (dmap p w = aR.1)}
                             (IsEquiv.toQEquiv (contr-equiv (sqA-contr (dmap p u) g) (sqA-contr (dmap p u) (comp g (dmap p c))) {base g}))))
               | Psi-equiv : IsEquiv {R {E} {A} {p} u x'} {R {E} {A} {p} u x} (\lam r => (comp r.1 (dmap p c), fib r.1 r.2))
-                => IsEquiv.trans (IsSigma-right fib fib-equiv) (inP (qsigma-left {_} {_} {F x} (IsEquiv.toQEquiv be)))
+                => IsEquiv.trans (esigma-right fib fib-equiv) (inP (qsigma-left {_} {_} {F x} (IsEquiv.toQEquiv be)))
          \in IsEquiv.leftFactor {_} {_} {_} {postT {E} {A} {p} c} (inP (rho {E} {A} {p} {e} {e'} {u} {x})) (IsEquiv.trans (inP (rho {E} {A} {p} {e} {e'} {u} {x'})) Psi-equiv)
   }
 
@@ -305,15 +305,15 @@
       => \let | cosq (w : Z ~> f') (s : \Sigma (k : Z ~> f) (DPath (\lam i => Z ~> v i) k w)) : \Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g (dmap p w))
                 => (dmap p s.1, dpath \lam i => dmap p (s.2 i))
               | flip-char (w : Z ~> f') : IsEquiv (cotriangle-map p v w) <-> IsEquiv (cosq w)
-                => IsEquiv.parallelEquiv (IsSigma-right {Z ~> f} {\lam k => DPath (\lam i => k i ~> w i) idd v} {\lam k => DPath (\lam i => Z ~> v i) k w}
+                => IsEquiv.parallelEquiv (esigma-right {Z ~> f} {\lam k => DPath (\lam i => k i ~> w i) idd v} {\lam k => DPath (\lam i => Z ~> v i) k w}
                                                         (\lam k => flipQEquiv {E} {Z} {f} {Z} {f'} {k} {v} {idd} {w}) \lam k => inP flipQEquiv)
-                                         (IsSigma-right {p Z ~> p f} {\lam g => DPath (\lam i => g i ~> p (w i)) idd (dmap p v)} {\lam g => DPath (\lam i => p Z ~> p (v i)) g (dmap p w)}
+                                         (esigma-right {p Z ~> p f} {\lam g => DPath (\lam i => g i ~> p (w i)) idd (dmap p v)} {\lam g => DPath (\lam i => p Z ~> p (v i)) g (dmap p w)}
                                                         (\lam g => flipQEquiv {A} {p Z} {p f} {p Z} {p f'} {g} {dmap p v} {idd} {dmap p w}) \lam g => inP flipQEquiv)
                                          (\lam s => idp)
               | th (s : \Sigma (w : Z ~> f') (\Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g (dmap p w)))) : SqA {E} {A} {p} v Z
                 => (s.1, ((dmap p s.1, idp), s.2))
               | th-equiv : IsEquiv th
-                => IsSigma-right {Z ~> f'} {\lam w => \Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g (dmap p w))}
+                => esigma-right {Z ~> f'} {\lam w => \Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g (dmap p w))}
                                  {\lam w => \Sigma (aq : \Sigma (a : p Z ~> p f') (dmap p w = a)) (\Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g aq.1))}
                                  (\lam w r => ((dmap p w, idp), r))
                                  (\lam w => contr-point-equiv (lsigma (dmap p w)) {\lam aq => \Sigma (g : p Z ~> p f) (DPath (\lam i => p Z ~> p (v i)) g aq.1)} (dmap p w, idp))
@@ -366,14 +366,14 @@
                 => (base g r.1, (comp c r.2.1, dmap_comp p {z'} {z} {f'} {c} {r.2.1} *> pmap (comp (dmap p c) __) r.2.2))
               | fib-equiv (g : p z ~> p f) : IsEquiv (fib g)
                 => IsEquiv.trans
-                     (IsSigma-right {\Sigma (a : p z ~> p f') (DPath (\lam i => p z ~> p (v i)) g a)} {\lam aR => \Sigma (w : z ~> f') (dmap p w = aR.1)}
+                     (esigma-right {\Sigma (a : p z ~> p f') (DPath (\lam i => p z ~> p (v i)) g a)} {\lam aR => \Sigma (w : z ~> f') (dmap p w = aR.1)}
                                     {\lam aR => \Sigma (w : z' ~> f') (dmap p w = comp (dmap p c) aR.1)}
                                     (\lam aR r => (comp c r.1, dmap_comp p {z'} {z} {f'} {c} {r.1} *> pmap (comp (dmap p c) __) r.2))
                                     (\lam aR => cocartesianArrowAt-fiber cf' aR.1))
                      (inP (qsigma-left {_} {\Sigma (a : p z' ~> p f') (DPath (\lam i => p z' ~> p (v i)) (comp (dmap p c) g) a)} {\lam aR => \Sigma (w : z' ~> f') (dmap p w = aR.1)}
                             (IsEquiv.toQEquiv (contr-equiv (segal-contr.flipped g (dmap p v)) (segal-contr.flipped (comp (dmap p c) g) (dmap p v)) {base g}))))
               | Psi-equiv : IsEquiv {R {E} {A} {p} v z} {R {E} {A} {p} v z'} (\lam r => (comp (dmap p c) r.1, fib r.1 r.2))
-                => IsEquiv.trans (IsSigma-right fib fib-equiv) (inP (qsigma-left {_} {_} {F z'} (IsEquiv.toQEquiv be)))
+                => IsEquiv.trans (esigma-right fib fib-equiv) (inP (qsigma-left {_} {_} {F z'} (IsEquiv.toQEquiv be)))
          \in IsEquiv.leftFactor {_} {_} {_} {preT {E} {A} {p} c} (inP (rho {E} {A} {p} {f} {f'} {v} {z'})) (IsEquiv.trans (inP (rho {E} {A} {p} {f} {f'} {v} {z})) Psi-equiv)
   }
 
@@ -424,7 +424,7 @@
                      | ret_f t => idp
                      | f_sec t => idp
                    }
-         \in IsEquiv.trans (IsSigma-right {z ~> x'} {\lam h => DPath (\lam i => h i ~> x) k c} {\lam h => \Sigma (dd : D) (DPath (\lam i => h i ~> dd.1 i) idd c)}
+         \in IsEquiv.trans (esigma-right {z ~> x'} {\lam h => DPath (\lam i => h i ~> x) k c} {\lam h => \Sigma (dd : D) (DPath (\lam i => h i ~> dd.1 i) idd c)}
                                           (\lam h => sp h c) fib-equiv) {sw2} sw2-equiv
 
     -- | On split squares, {slicemap} is {cotriangle-map} over the image of the diagonal.
@@ -436,7 +436,7 @@
       => \have base-equiv => contr-equiv (segal-contr k idd) (segal-contr (dmap p k) idd)
                                {\lam (dd : \Sigma (d : z ~> x) (DPath (\lam i => k i ~> d i) idd idd)) => ((dmap p dd.1, dpath \lam i => dmap p (dd.2 i))
                                  : \Sigma (d : p z ~> p x) (DPath (\lam i => p (k i) ~> d i) idd idd))}
-         \in (\lam cc => IsEquiv.trans (IsSigma-right (\lam dd => cotriangle-map p c dd.1) cc)
+         \in (\lam cc => IsEquiv.trans (esigma-right (\lam dd => cotriangle-map p c dd.1) cc)
                                        (inP (qsigma-left {_} {_} {\lam dd => \Sigma (g : p z ~> p x') (DPath (\lam i => g i ~> dd.1 i) idd (dmap p c))} (IsEquiv.toQEquiv base-equiv))),
               \lam me => fiberwiseEquiv base-equiv (\lam dd => cotriangle-map p c dd.1) me)
   }

@@ -19,88 +19,87 @@
 \import Paths
 \import Set \hiding (#, .#)
 
-\func piStabilization.{u} (k : Nat) (X : Pointed.{u}) (t : pi k X) : pi (suc k) (Susp.pointed X)
+\func piStabilization.{u} (k : Nat) (X : Pointed.{u}) (t : PiSet k X) : PiSet (suc k) (Susp.pointed X)
   => Trunc0.map (piMap k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X) t)
-                (omegaShift k (Susp.pointed X)).1
-  \where {
+                (loop^Shift k (Susp.pointed X)).1
+  \where \protected {
     \func hom.{u} (k : Nat) (X : Pointed.{u})
-      : GroupHom (PiGroup k X) (PiGroup (suc k) (Susp.pointed X))
+      : GroupHom (PiGroup_1+ k X) (PiGroup_1+ (suc k) (Susp.pointed X))
       => GroupHom.compose (PiGroup_LoopShift.hom k (Susp.pointed X))
                           (piGroupMap k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X))
 
-    \lemma isEquiv.{u} (r k : Nat) (X : Pointed.{u}) (c : isNConnectedType (suc r) X)
-                       (h : k <= r Nat.+ r)
+    \lemma isEquiv.{u} (r k : Nat) (X : Pointed.{u}) (c : isNConnectedType (suc r) X) (h : k <= r Nat.+ r)
       : IsEquiv (piStabilization k X)
       => IsEquiv.trans (nconnected-piMap-isEquiv {suc (r Nat.+ r)} {k} {X} {Loop (Susp.pointed X)}
                                                  (SuspLoopEquiv.unit X) (freudenthal-connected r X c)
                                                  (<=_<_suc h))
-                       (Trunc0.map-isEquiv (omegaShift.isEquiv k (Susp.pointed X)))
+                       (Trunc0.map-isEquiv (loop^Shift.isEquiv k (Susp.pointed X)))
 
     \lemma isSurj.{u} (r : Nat) (X : Pointed.{u}) (c : isNConnectedType (suc r) X)
       : IsSurj (piStabilization (suc (r Nat.+ r)) X)
       => IsSurj.comp (nconnected-pi-surj {r Nat.+ r} {X} {Loop (Susp.pointed X)}
                                          (SuspLoopEquiv.unit X) (freudenthal-connected r X c))
                      (IsEquiv.isSurj (Trunc0.map-isEquiv
-                       (omegaShift.isEquiv (suc (r Nat.+ r)) (Susp.pointed X))))
+                       (loop^Shift.isEquiv (suc (r Nat.+ r)) (Susp.pointed X))))
 
-    \func iso.{u} (r k : Nat) (X : Pointed.{u}) (c : isNConnectedType (suc r) X)
-                  (h : suc k <= r Nat.+ r)
+    \lemma iso.{u} (r k : Nat) (X : Pointed.{u}) (c : isNConnectedType (suc r) X)
+                   (h : suc k <= r Nat.+ r)
       : Iso {GroupCat.{u}} (hom k X)
       => GroupCat.isoOfEquiv (hom k X) (IsEquiv.toQEquiv (isEquiv r (suc k) X c h))
 
-    \lemma natural.{u} (k : Nat) {X Y : Pointed.{u}} (f : X ->* Y) (t : pi k X)
+    \lemma natural.{u} (k : Nat) {X Y : Pointed.{u}} (f : X ->* Y) (t : PiSet k X)
       : piMap (suc k) (Susp-Func f) (piStabilization k X t) = piStabilization k Y (piMap k f t)
-      => trunc0-map3 t (Omega^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X)).1
-                       (omegaShift k (Susp.pointed X)).1
-                       (Omega^-Func (suc k) (Susp-Func f)).1
+      => trunc0-map3 t (Loop^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X)).1
+                       (loop^Shift k (Susp.pointed X)).1
+                       (Loop^-Func (suc k) (Susp-Func f)).1
          *> pmap (Trunc0.map t) (pmap __.1 (square k f))
-         *> inv (trunc0-map3 t (Omega^-Func k f).1
-                               (Omega^-Func k {Y} {Loop (Susp.pointed Y)} (SuspLoopEquiv.unit Y)).1
-                               (omegaShift k (Susp.pointed Y)).1)
+         *> inv (trunc0-map3 t (Loop^-Func k f).1
+                               (Loop^-Func k {Y} {Loop (Susp.pointed Y)} (SuspLoopEquiv.unit Y)).1
+                               (loop^Shift k (Susp.pointed Y)).1)
 
-    \func square.{u} (k : Nat) {X Y : Pointed.{u}} (f : X ->* Y)
-      : Omega^-Func (suc k) (Susp-Func f)
-          ->*.∘* (omegaShift k (Susp.pointed X)
-                  ->*.∘* Omega^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X))
-        = omegaShift k (Susp.pointed Y)
-          ->*.∘* (Omega^-Func k {Y} {Loop (Susp.pointed Y)} (SuspLoopEquiv.unit Y)
-                  ->*.∘* Omega^-Func k f)
-      => ->*.compose-assoc (Omega^-Func (suc k) (Susp-Func f)) (omegaShift k (Susp.pointed X))
-                           (Omega^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X))
-         *> pmap (\lam h => h ->*.∘* Omega^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X))
-                 (inv (omegaShift.natural k {Susp.pointed X} {Susp.pointed Y} (Susp-Func f)))
-         *> inv (->*.compose-assoc (omegaShift k (Susp.pointed Y))
-                                   (Omega^-Func k {Loop (Susp.pointed X)} {Loop (Susp.pointed Y)}
+    \private \lemma trunc0-map3 {A B C D : \Type} (t : Trunc0 A) (F1 : A -> B) (F2 : B -> C) (F3 : C -> D)
+      : Trunc0.map (Trunc0.map (Trunc0.map t F1) F2) F3 = Trunc0.map t (\lam a => F3 (F2 (F1 a)))
+      => Trunc0.map-comp (Trunc0.map t F1) F2 F3 *> Trunc0.map-comp t F1 (\lam b => F3 (F2 b))
+
+    \sfunc square.{u} (k : Nat) {X Y : Pointed.{u}} (f : X ->* Y)
+      : Loop^-Func (suc k) (Susp-Func f)
+          ->*.∘* (loop^Shift k (Susp.pointed X)
+                  ->*.∘* Loop^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X))
+        = loop^Shift k (Susp.pointed Y)
+          ->*.∘* (Loop^-Func k {Y} {Loop (Susp.pointed Y)} (SuspLoopEquiv.unit Y)
+                  ->*.∘* Loop^-Func k f)
+      => ->*.compose-assoc (Loop^-Func (suc k) (Susp-Func f)) (loop^Shift k (Susp.pointed X))
+                           (Loop^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X))
+         *> pmap (\lam h => h ->*.∘* Loop^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X))
+                 (inv (loop^Shift.natural k {Susp.pointed X} {Susp.pointed Y} (Susp-Func f)))
+         *> inv (->*.compose-assoc (loop^Shift k (Susp.pointed Y))
+                                   (Loop^-Func k {Loop (Susp.pointed X)} {Loop (Susp.pointed Y)}
                                                  (Loop-Func (Susp-Func f)))
-                                   (Omega^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X)))
-         *> pmap (omegaShift k (Susp.pointed Y) ->*.∘*)
-                 (inv (Omega^-Func.comp k {X} {Loop (Susp.pointed X)} {Loop (Susp.pointed Y)}
+                                   (Loop^-Func k {X} {Loop (Susp.pointed X)} (SuspLoopEquiv.unit X)))
+         *> pmap (loop^Shift k (Susp.pointed Y) ->*.∘*)
+                 (inv (Loop^-Func.comp k {X} {Loop (Susp.pointed X)} {Loop (Susp.pointed Y)}
                                         (Loop-Func (Susp-Func f)) (SuspLoopEquiv.unit X))
-                  *> pmap (Omega^-Func k {X} {Loop (Susp.pointed Y)}) (SuspLoopEquiv.unit.natural f)
-                  *> Omega^-Func.comp k {X} {Y} {Loop (Susp.pointed Y)} (SuspLoopEquiv.unit Y) f)
+                  *> pmap (Loop^-Func k {X} {Loop (Susp.pointed Y)}) (SuspLoopEquiv.unit.natural f)
+                  *> Loop^-Func.comp k {X} {Y} {Loop (Susp.pointed Y)} (SuspLoopEquiv.unit Y) f)
   }
 
-\private \lemma trunc0-map3 {A B C D : \Type} (t : Trunc0 A) (F1 : A -> B) (F2 : B -> C) (F3 : C -> D)
-  : Trunc0.map (Trunc0.map (Trunc0.map t F1) F2) F3 = Trunc0.map t (\lam a => F3 (F2 (F1 a)))
-  => Trunc0.map-comp (Trunc0.map t F1) F2 F3 *> Trunc0.map-comp t F1 (\lam b => F3 (F2 b))
-
-\func sphereStabilization.{u} (d k : Nat) (t : pi.{u} k (Sphere.pointed d))
-  : pi.{u} (suc k) (Sphere.pointed (suc d))
+\func sphereStabilization (d k : Nat) (t : PiSet k (Sphere.pointed d))
+  : PiSet (suc k) (Sphere.pointed (suc d))
   => piStabilization k (Sphere.pointed d) t
-  \where {
-    \lemma isEquiv.{u} (r k : Nat) (h : k <= r Nat.+ r)
-      : IsEquiv (sphereStabilization.{u} (suc r) k)
-      => piStabilization.isEquiv r k (Sphere.pointed (suc r)) (sphere-nconnected.{u} (suc r)) h
+  \where \protected {
+    \lemma isEquiv (r k : Nat) (h : k <= r Nat.+ r)
+      : IsEquiv (sphereStabilization (suc r) k)
+      => piStabilization.isEquiv r k (Sphere.pointed (suc r)) (sphere-nconnected (suc r)) h
 
-    \lemma isSurj.{u} (r : Nat)
-      : IsSurj (sphereStabilization.{u} (suc r) (suc (r Nat.+ r)))
-      => piStabilization.isSurj r (Sphere.pointed (suc r)) (sphere-nconnected.{u} (suc r))
+    \lemma isSurj (r : Nat)
+      : IsSurj (sphereStabilization (suc r) (suc (r Nat.+ r)))
+      => piStabilization.isSurj r (Sphere.pointed (suc r)) (sphere-nconnected (suc r))
 
-    \func iso.{u} (r k : Nat) (h : suc k <= r Nat.+ r)
-      : Iso {GroupCat.{u}} (piStabilization.hom k (Sphere.pointed (suc r)))
-      => piStabilization.iso r k (Sphere.pointed (suc r)) (sphere-nconnected.{u} (suc r)) h
+    \lemma iso (r k : Nat) (h : suc k <= r Nat.+ r)
+      : Iso {GroupCat} (piStabilization.hom k (Sphere.pointed (suc r)))
+      => piStabilization.iso r k (Sphere.pointed (suc r)) (sphere-nconnected (suc r)) h
 
-    \func diagonalIso.{u} (m : Nat)
-      : Iso {GroupCat.{u}} (piStabilization.hom (suc m) (Sphere.pointed (suc (suc m))))
+    \lemma diagonalIso (m : Nat)
+      : Iso {GroupCat} (piStabilization.hom (suc m) (Sphere.pointed (suc (suc m))))
       => iso (suc m) (suc m) linarith
   }

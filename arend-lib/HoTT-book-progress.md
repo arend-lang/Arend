@@ -15,14 +15,14 @@ Commits in this line of work are tagged `HB<chapter>.<section>` in their subject
 
 Chapters 7 (n-types) and 8 (homotopy theory) of the HoTT book, built as a *thin numeric layer over
 machinery arend-lib already had* — reflective subuniverses and modalities in
-`Homotopy/Localization/`, `Omega^`/`SphereLoopEquiv` in `Homotopy/Loop.ard`, `Aut` and the algebra
+`Homotopy/Localization/`, `Loop^`/`SphereLoopEquiv` in `Homotopy/Loop.ard`, `Aut` and the algebra
 class hierarchy in `Algebra/`.
 
 The governing design constraint, and the one to keep enforcing in review:
 
 > **No parallel theory.** Numeric connectedness must be a specialization of the modal notion, not a
 > second implementation. π₁'s multiplication must be `Aut`'s path concatenation. Higher
-> commutativity must come from `Omega^2-Commutative`. Morphisms must be `GroupHom`, products must be
+> commutativity must come from `Loop^2-Commutative`. Morphisms must be `GroupHom`, products must be
 > `ProductGroup`.
 
 ---
@@ -57,7 +57,7 @@ Eckmann–Hilton does not give higher homotopy groups a different operation — 
 concatenation is commutative. `CGroup \extends Group` adds exactly `*-comm` while keeping `*`, so
 `PiCGroup n X` is `| Group => PiGroup (suc n) X` plus commutativity. `AbGroup \extends AddGroup` is
 a separate record whose operation is `+`, and using it would force a re-notated copy. Multiplicative
-also makes `PiGroup n X => Aut (base {Omega^ n X})` a definition with no conversion.
+also makes `PiGroup n X => Aut (base {Loop^ n X})` a definition with no conversion.
 
 There is no `CGroupCat` in arend-lib, but `AbGroup.fromCGroup` and `AddGroupHom.fromGroupHom` are
 `\use \coerce`, so the additive/abelian view costs nothing at the use site.
@@ -91,7 +91,7 @@ signature, and do not leave proof sketches in the tree.
 ### 2.5 Universe levels
 
 Add `.{u}` **iff** the statement mentions something that itself demands `\Type u` / `Class.{u}`
-arguments. In practice: anything mentioning `Omega^` or `pi` needs it; anything mentioning only
+arguments. In practice: anything mentioning `Loop^` or `pi` needs it; anything mentioning only
 `Loop`, `->*`, `PointedProduct` does not. Strip-and-recheck rather than adding speculatively. See
 the `arend-levels` skill for the full rule and the error-message table.
 
@@ -148,7 +148,7 @@ one is conjugation).
 `familyFiberSequence` (+`totalPointed`, `totalProj`); `loopInv`, `fibProjFib`, `fiberFibProjEquiv`
 (8.4.4 (1)), `fibEquivPreMap`/`fibEquivPre`, `fibCongrMap`/`fibCongr`, `fibBoundary-gap`,
 `fibBoundary-proj`, `fiberBoundaryMap`, `fiberBoundaryEquiv` (8.4.4 (2)), `fiber-third-map`
-(8.4.4 (3)), `fibBoundary-third`; `loopFibMap`, `omegaFibMap`, `omegaFib-proj`; the tower
+(8.4.4 (3)), `fibBoundary-third`; `loopFibMap`, `loop^FibMap`, `loop^Fib-proj`; the tower
 `fiberTower`, `fiberTowerObj`, `fiberTowerArrow`, `towerShift` and the three-periodicity
 equivalences `towerBaseEquiv`, `towerTotalEquiv`, `towerFiberEquiv`.
 
@@ -168,7 +168,7 @@ reveals:
 | File | Contents |
 |---|---|
 | `Algebra/Pointed/Exact.ard` | `ExactAt` (8.4.5), `ExactAt-transport`, `exact-middle-surjective`, `PointedExactSequence` |
-| `Algebra/Group/Exact.ard` | `exact-middle-injective`, `exact-middle-iso` — Lemma 8.4.7 without commutativity |
+| `Algebra/Group/Exact.ard` | `exact-middle-injective`, `exact-middle-equiv` — Lemma 8.4.7 without commutativity |
 | `Homotopy/FiberSequence/Exact.ard` | `trunc0-fiber-exact`; `piHom`, `piBoundary`, `pi-exact-total/fiber/base` (8.4.6); `piBoundarySeq`, `seq-exact-total/fiber/base` for an arbitrary fibre sequence; `piGroup-exact`; `fiberLongExactSet` |
 | `Homotopy/FiberSequence/Connectivity.ard` | `nconnected-fiber`, `nconnected-piGroup-iso`, `nconnected-pi-surj`, `nconnected-pi0-isEquiv` — Corollary 8.4.8 |
 
@@ -176,13 +176,13 @@ reveals:
 `ExactAt-transport`. Its kernel-to-image direction goes through the new `Trunc0.equality` in
 `Set.ard`. Three choices worth keeping:
 
-- **`Omega^` is pushed through the fibre rather than iterating the tower.** The three exactness
-  statements are `trunc0-fiber-exact` at `Omega^-Func k` of `f`, of `fibProj f` and of
-  `fibBoundary f`, bridged by `omegaFibMap`/`omegaFib-proj`. This is sign-free: the book's
+- **`Loop^` is pushed through the fibre rather than iterating the tower.** The three exactness
+  statements are `trunc0-fiber-exact` at `Loop^-Func k` of `f`, of `fibProj f` and of
+  `fibBoundary f`, bridged by `loop^FibMap`/`loop^Fib-proj`. This is sign-free: the book's
   odd-degree inversion appears only when the fibre construction is iterated. 8.4.4 (3) is still
   used, in `pi-exact-base`, with the inversion cancelled inside the comparison map.
 - The sequence is proved at loop degree `k` and then re-indexed to the book's `pi (suc k)` along
-  `omegaShift`, whose naturality is the induction in `Homotopy/Loop.ard`.
+  `loop^Shift`, whose naturality is the induction in `Homotopy/Loop.ard`.
 - Every map appearing inside a later *statement* has its own name with an explicit result type.
   `PointedEquiv.map {e}` inline in a type does not elaborate, and the implicits of `PointedFib` /
   `PointedTrunc0-Func` cannot be inferred from a `->*` type; a named wrapper pins both. See
@@ -235,10 +235,17 @@ Two decisions worth keeping:
   `PointedEquiv` record (`map`, `map-isEquiv`) with `id`, `toHAEquiv`, `inverse`, **`inverse-sec`**
   and `compose` (`∘~`).
 - `Homotopy/Loop.ard` — **`loopMap`** and its `\where` (`idp-case`, `isEquiv`, `comp`, `comp-coh`),
-  `Loop-Func` refactored on top of it, `loopEquiv`, `omegaShift` (+`.isEquiv`, **`.natural`**),
-  `omegaShiftEquiv`, `omegaShiftInv` (+`.left`, `.right`), `Loop-Func-id`, `Loop-Func-comp`, `Loop-Func_*>`,
-  `Omega^-Func.{isEquiv,id,comp}`, `LoopProductMap` (+`.equiv`, `.proj1`, `.proj2`),
-  `omegaProductMap` (+`.isEquiv`, `.proj1`, `.proj2`), `omegaLoopShift`, `omegaSphere`.
+  `Loop-Func` refactored on top of it, `loopEquiv`, `loop^Shift` (+`.isEquiv`, **`.natural`**),
+  `loop^ShiftEquiv`, `loop^ShiftInv` (+`.left`, `.right`), `Loop-Func-id`, `Loop-Func-comp`, `Loop-Func_*>`,
+  `Loop^-Func.{isEquiv,id,comp}`, `LoopProductMap` (+`.equiv`, `.proj1`, `.proj2`),
+  `loop^ProductMap` (+`.isEquiv`, `.proj1`, `.proj2`), `loop^LoopShift`, `omegaSphere`.
+  `Loop^ n X` is the iterated loop space; `Omega^ n X` is the pointed mapping space
+  `PointedMap (Sphere.pointed n) X`, with pointed equivalences `omega-zero`, `omega-shift`
+  (`Omega^ (suc n) X ≃ Omega^ n (Loop X)`), `loop-omega`, `omega-suc` (`Omega^ (suc n) X ≃ Loop (Omega^ n X)`)
+  and `omega-loop^` (`Omega^ n X ≃ Loop^ n X`), built from `SuspLoopQEquiv`/`suspLoopPointed` and
+  `loopPointedMap`.
+- `Homotopy/Pointed.ard` — `PointedMap`, `->*.Homotopy`, `->*.happly-equiv` (paths of pointed maps are
+  pointed homotopies).
 - `Homotopy/Sphere/Circle.ard` — `Loop_S1-equiv`, `wind_loop-inv`, `wind-+`.
 - `Set.ard` — `Trunc0` API mirroring `TruncP`'s in `Logic.ard`: `remove`, `remove'`, `rec`,
   `rec-eval`, `map`, `map-id`, `map-comp`, `map-isEquiv`, `mapEquiv`, `setEquiv`, `productEquiv`,
@@ -247,7 +254,7 @@ Two decisions worth keeping:
 - `Algebra/Group/GroupCat.ard` — `GroupCat.isoOfEquiv`.
 - `Algebra/Group/GroupHom.ard` — `GroupHom.injective`, the multiplicative twin of the existing
   `AddGroupHom.injective` (trivial kernel implies injective).
-- `Paths.ard` — `transport_pmap`; `Equiv.ard` — `precomp=>isEquiv` (a map is an equivalence once
+- `Equiv.ard` — `precomp=>isEquiv` (a map is an equivalence once
   precomposition with it is, for every codomain); `Equiv/Path.ard` — `pathConcatEquiv-right`;
   `Equiv/Sigma.ard` — `pi-left` (dependent Π-reindexing along an equivalence), `pi-right`;
   `Equiv/Univalence.ard` — `transport-isEquiv`.
@@ -256,7 +263,7 @@ Two decisions worth keeping:
   equivalence of spans), and the flattening computations `tinl-coe`, `tinr-coe`, `pinl-comp`,
   `pinr-comp`.
 - `Homotopy/Suspension.ard` — `Susp.map`, `Susp-Func`; `Homotopy/Join.ard` — `Join_Sphere.north-comp`;
-  `Homotopy/Loop.ard` — `SuspLoopEquiv.unit` (+`.natural`), `omegaShiftInv.concat`;
+  `Homotopy/Loop.ard` — `SuspLoopEquiv.unit` (+`.natural`), `loop^ShiftInv.concat`;
   `Homotopy/HomotopyGroup.ard` — `PiGroup_LoopShift.hom`/`.iso`;
   `Homotopy/FiberSequence/Exact.ard` — `piBoundaryGroup`, `piGroup-exact-boundary`,
   `piGroup-exact-fiber`; `Homotopy/FiberSequence/Connectivity.ard` — `nconnected-piMap-isEquiv`.
@@ -323,7 +330,7 @@ highlights:
   Paths in a truncated data type are props, so `\lemma … \elim t` is fine for equations.
 - **`\instance … : C (someFunc args)` is rejected** (`Classifying field must be either a universe, a
   sigma type, a record, or a partially applied data or constructor`). State the carrier unfolded:
-  `Group (Trunc0 (Omega^ (suc n) X))`, not `Group (pi (suc n) X)`.
+  `Group (Trunc0 (Loop^ (suc n) X))`, not `Group (pi (suc n) X)`.
 - **Class-valued definitions cannot be passed unapplied**: `pmap2 ProductGroup p q` fails; write
   `pmap2 (\lam (G H : Group.{u}) => ProductGroup G H) p q`.
 - **A universal property of a HIT is cheap if the glue datum is a dependent path.** `Cocone.dep`

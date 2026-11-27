@@ -236,11 +236,11 @@
          \in \have
               | F1-equiv (r : C) : IsEquiv (F1 r)
                 => IsEquiv.leftFactor (initial-coproduct.tri-equiv1 r (dpath phi))
-                     (IsEquiv.trans (IsSigma-right _ \lam rho => initial-coproduct.tri-equiv1 {CosliceCat (phi dleft dleft)} (r,rho) (dpath (cosliceSquare phi)))
+                     (IsEquiv.trans (esigma-right _ \lam rho => initial-coproduct.tri-equiv1 {CosliceCat (phi dleft dleft)} (r,rho) (dpath (cosliceSquare phi)))
                                     (CosliceCat.cod-equiv r (cosliceSquare phi dright dright)))
               | base-equiv (r : C) : IsEquiv {F2Base r} (\lam x => dmap UE x.2)
                 => IsEquiv.leftFactor (const-ev1-equiv r (phi dleft))
-                     (IsEquiv.trans (IsSigma-right _ \lam rho => const-ev1-equiv {CosliceCat (phi dleft dleft)} (r,rho) (cosliceSquare phi dleft))
+                     (IsEquiv.trans (esigma-right _ \lam rho => const-ev1-equiv {CosliceCat (phi dleft dleft)} (r,rho) (cosliceSquare phi dleft))
                                     (CosliceCat.cod-equiv r (cosliceSquare phi dleft dright)))
               | F2-equiv (r : C) : IsEquiv (F2 r)
                 => IsEquiv.trans {_} {_} {_} {\lam (a : F2Dom r) => (((a.1, a.2.1), a.2.2) : \Sigma (x : F2Base r) (F2Fib r x))}
@@ -249,7 +249,7 @@
                         | ret_f a => idp
                         | f_sec b => idp
                       })
-                     (IsEquiv.trans (IsSigma-right _ \lam (x : F2Base r) => CosliceCat.forget-cocartesian (dpath \lam i => cosliceSquare phi i dleft) {r, x.1} (dpath \lam i => x.2 i dleft))
+                     (IsEquiv.trans (esigma-right _ \lam (x : F2Base r) => CosliceCat.forget-cocartesian (dpath \lam i => cosliceSquare phi i dleft) {r, x.1} (dpath \lam i => x.2 i dleft))
                                     (inP (qsigma-left (IsEquiv.toQEquiv (base-equiv r)))))
               | eqr (r : C) : IsEquiv (totD r) <-> IsEquiv (totalEquiv.total (tmC r))
                 => IsEquiv.parallelEquiv (F1-equiv r) (F2-equiv r) (\lam _ => idp)

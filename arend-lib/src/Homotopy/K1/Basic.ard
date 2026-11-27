@@ -28,8 +28,8 @@
 \func K1-rec {G : Group} {B : \1-Type} (b : B) (l : G -> b = b) (l-comp : \Pi (g g' : G) -> l g *> l g' = l (g * g'))
              (x : K1 G) : B \elim x
   | base => b
-  | loop g i => l g @ i
-  | relation g g' i j => Cube2.map (l g) (l (g * g')) idp (l g') (movePath1 (l-comp g g')) @ j @ i
+  | loop g i => l g i
+  | relation g g' i j => Cube2.map (l g) (l (g * g')) idp (l g') (movePath1 (l-comp g g')) j i
 
 \instance K1-connected0 {G : Group} : Connected0 (K1 G)
   | isInh => inP base
@@ -41,13 +41,13 @@
 \lemma K1-connected.{u} {G : Group.{u}} : isNConnectedType 1 (K1 G)
   => connected0=>nconnected1 (K1-connected0 {G})
 
-\func K1-loopEquiv.{u} {G : Group.{u}} : QEquiv {G} {base {G} = base} (\lam g => path (loop g))
+\sfunc K1-loopEquiv.{u} {G : Group.{u}} : QEquiv {G} {base {G} = base} (\lam g => path (loop g))
   => symQEquiv (loopEncodeDecode code ide decode K1.loop-ide (decode_encode base))
 
-\func PiGroup_K1.{u} (G : Group.{u}) : PiGroup 0 (K1Pointed G) = {Group.{u}} G
+\func PiGroup_K1.{u} (G : Group.{u}) : PiGroup_1+ 0 (K1Pointed G) = {Group.{u}} G
   => inv (Cat.isotoid iso)
-  \where {
-    \func hom : GroupHom G (PiGroup 0 (K1Pointed G)) \cowith
+  \where \protected {
+    \func hom : GroupHom G (PiGroup_1+ 0 (K1Pointed G)) \cowith
       | func g => in0 (path (loop g))
       | func-* {g} {h} => pmap in0 (inv (K1.loop-comp g h))
 

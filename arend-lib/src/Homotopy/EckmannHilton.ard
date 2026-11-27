@@ -54,12 +54,12 @@
 \func LeftHorizontalWhiskering {X : \Type} {a b c : X} (q : a = b) {r s : b = c} (bet : r = s) : q *> r = q *> s
   => path (\lam i => q *> bet i)
 
-{- | This is the proof that Omega^2 X given the composition structure
+{- | This is the proof that Loop^2 X given the composition structure
  - forms a commutative monoid. This proof follows the proof from the HoTT Book
  - It has some minor changes that are possible with Arend features.
  - -}
-\class Omega^2-Commutative (X : HPointed) {
-  \func Omega^2_X => Loop (Loop X)
+\class Loop^2-Commutative (X : HPointed) {
+  \func Loop^2_X => Loop (Loop X)
 
   \func LeftHorizontalWhiskering-relation {b c : X} {r s : b = c} (bet : r = s)
     : LeftHorizontalWhiskering (idp {X} {b}) bet = idp_*> *> bet *> inv idp_*> \elim bet
@@ -82,7 +82,7 @@
         | idp, idp => idp
     }
 
-  \protected \func Commutative (alp bet : Omega^2_X) : alp *> bet = bet *> alp => rewrite (inv Relation1, Relation3, Relation2) idp
+  \protected \func Commutative (alp bet : Loop^2_X) : alp *> bet = bet *> alp => rewrite (inv Relation1, Relation3, Relation2) idp
     \where \protected {
       \func Relation1 : alp st1 bet = alp *> bet
         => rewrite (pmap (\lam z => alp *> z) (LeftHorizontalWhiskering-relation bet), idp_*>) idp

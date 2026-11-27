@@ -10,7 +10,7 @@
   | 0 => a
   | suc n => f (iterr f n a)
 
-\func iterr_+ {A : \Type} (f : A -> A) (n m : Nat) (a : A) : iterr f (n Nat.+ m) a = iterr f n (iterr f m a) \elim n
+\func iterr_+ {A : \Cat} (f : A -> A) (n m : Nat) (a : A) : iterr f (n Nat.+ m) a = iterr f n (iterr f m a) \elim n
   | 0 => idp
   | suc n => pmap f (iterr_+ f n m a)
 

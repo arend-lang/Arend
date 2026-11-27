@@ -112,20 +112,18 @@
 
 \func wind_loop-inv (n : Int) : wind n *> inv (path loop) = wind (ipred n)
   => \have A : wind (ipred n) *> path loop = wind n => decode.wind_loop (ipred n) *> pmap wind (isuc_ipred n)
-     \in pmap (`*> inv (path loop)) (inv A)
-         *> *>-assoc (wind (ipred n)) (path loop) (inv (path loop))
-         *> pmap (wind (ipred n) *>) (*>_inv (path loop))
+     \in pmap (*> inv (path loop)) (inv A) *> *>-assoc *> pmap (wind (ipred n) *>) *>_inv
 
 \func wind-+ (m n : Int) : wind (m IntRing.+ n) = wind m *> wind n \elim n
   | pos 0 => pmap wind (IntRing.zro-right {m})
   | pos (suc k) => pmap wind (IntRing.suc-right {m} {k})
                    *> inv (decode.wind_loop (m IntRing.+ pos k))
                    *> pmap (`*> path loop) (wind-+ m (pos k))
-                   *> *>-assoc (wind m) (wind (pos k)) (path loop)
+                   *> *>-assoc
   | neg (suc k) => pmap wind (IntRing.pred-right {m} {k})
                    *> inv (wind_loop-inv (m IntRing.+ neg k))
-                   *> pmap (`*> inv (path loop)) (wind-+ m (neg k))
-                   *> *>-assoc (wind m) (wind (neg k)) (inv (path loop))
+                   *> pmap (*> inv (path loop)) (wind-+ m (neg k))
+                   *> *>-assoc
 
 \lemma circle-isGpd : isGpd (Sphere 1)
   => run {

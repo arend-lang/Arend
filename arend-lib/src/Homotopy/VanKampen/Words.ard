@@ -375,9 +375,9 @@
 
   \lemma crossTargetRep-compat (x : Or B C) (s t : S) (p : k s = k t) (c : Code x (inl (f (k s))))
     : transport (\lam a => Code x (inr (g a))) p (toCQ s c idp0) = toCQ t (transport (\lam a => Code x (inl (f a))) p c) idp0
-    => inv (transport_pmap (\lam c => Code x (inr c)) g p _) *> transport-targetC (pmap g p) _
+    => transport-targetC (pmap g p) _
        *> slide c
-       *> pmap (toCQ t __ idp0) (inv (transport-targetB (pmap f p) c) *> transport_pmap (\lam b => Code x (inl b)) f p c)
+       *> pmap (toCQ t __ idp0) (inv (transport-targetB (pmap f p) c))
     \where
       \lemma slide (c : Code x (inl (f (k s))))
         : appendCQ (toCQ s c idp0) (in0 (pmap g p)) = toCQ t (appendBQ c (in0 (pmap f p))) idp0 \elim c
@@ -385,9 +385,9 @@
 
   \lemma crossSourceRep-compat (y : Or B C) (s t : S) (p : k s = k t) (c : Code (inl (f (k s))) y)
     : transport (\lam a => Code (inr (g a)) y) p (precrossCQ s c) = precrossCQ t (transport (\lam a => Code (inl (f a)) y) p c)
-    => inv (transport_pmap (\lam c => Code (inr c) y) g p _) *> transport-sourceC (pmap g p) _
+    => transport-sourceC (pmap g p) _
        *> slide c
-       *> pmap (precrossCQ t) (inv (transport-sourceB (pmap f p) c) *> transport_pmap (\lam b => Code (inl b) y) f p c)
+       *> pmap (precrossCQ t) (inv (transport-sourceB (pmap f p) c))
     \where {
       \lemma slide (c : Code (inl (f (k s))) y)
         : prependCQ (in0 (inv (pmap g p))) (precrossCQ s c) = precrossCQ t (prependBQ (in0 (inv (pmap f p))) c) \elim c
@@ -442,11 +442,11 @@
     \where {
       \lemma slideB-eval {a a' : A} (al : a =0 a') {z : PushoutData f g} (t : z =0 pinr (g a)) {b : B} (m : f a' =0 b)
         : (t *>0 map0 pinr (map0 g al)) *>0 in0 (inv (ppglue a')) *>0 map0 pinl m = t *>0 in0 (inv (ppglue a)) *>0 map0 pinl (map0 f al *>0 m) \elim al, t, m
-        | in0 idp, in0 t, in0 m => pmap (\lam q => in0 (t *> inv (ppglue a) *> q)) (inv (pmap (pmap pinl) (idp_*> m)))
+        | in0 idp, in0 t, in0 m => pmap (\lam q => in0 (t *> inv (ppglue a) *> q)) (inv (pmap (pmap pinl) idp_*>))
 
       \lemma slideC-eval {a a' : A} (al : a =0 a') {z : PushoutData f g} (t : z =0 pinl (f a)) {c : C} (m : g a' =0 c)
         : (t *>0 map0 pinl (map0 f al)) *>0 in0 (ppglue a') *>0 map0 pinr m = t *>0 in0 (ppglue a) *>0 map0 pinr (map0 g al *>0 m) \elim al, t, m
-        | in0 idp, in0 t, in0 m => pmap (\lam q => in0 (t *> ppglue a *> q)) (inv (pmap (pmap pinr) (idp_*> m)))
+        | in0 idp, in0 t, in0 m => pmap (\lam q => in0 (t *> ppglue a *> q)) (inv (pmap (pmap pinr) idp_*>))
     }
 
   \func evalQ {x y : Or B C} (c : Code x y) : point x =0 point y \elim c
@@ -643,7 +643,7 @@
         | inl _, segB st => segB-case x st
         | inl _, toB s w p =>
           eval-prependB (inv0 p) _ *> pmap (map0 pinl (inv0 p) *>0 __) (eval-precrossB s _ *> pmap (in0 (ppglue (k s)) *>0 __) (eval-invRaw w))
-            *> pmap2 (\lam u v => u *>0 v *>0 inv0 (eval w)) (map0_inv0 pinl p) (pmap in0 (inv (inv_inv _)))
+            *> pmap2 (\lam u v => u *>0 v *>0 inv0 (eval w)) (map0_inv0 pinl p) (pmap in0 (inv inv_inv))
             *> inv (inv0_*>0-comm3 (eval w) _ (map0 pinl p))
         | inr _, segC st => segC-case x st
         | inr _, toC s w q =>

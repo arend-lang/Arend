@@ -65,7 +65,7 @@
 \instance Sphere1_HSpace : HSpaceConn (Sphere 1) => rewriteI (path (QEquiv_= Sphere1-equiv)) Circle_HSpace
 
 -- | The H-space unit of {Sphere1_HSpace} is the basepoint of the sphere.
-\func sphereHSpace-base-north : base {Sphere1_HSpace} = north
+\sfunc sphereHSpace-base-north : Sphere1_HSpace.base = north
   => HSpaceConn.transport-base (path (QEquiv_= Sphere1-equiv)) Circle_HSpace
 
 \func hopf.{u} {A : HSpaceConn.{u}} (x : Susp A) : \Type u \elim x

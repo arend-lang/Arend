@@ -10,7 +10,7 @@
 \import Homotopy.Whitehead.Truncated
 \import Logic
 
-\func WhiteheadPrinciple.{u} : \Prop
+\type WhiteheadPrinciple.{u} : \Prop
   => \Pi {A B : \Type u} (f : A -> B) -> IsInfinityConnectedMap f -> IsEquiv f
 
 \lemma whiteheadWithPrinciple.{u} (W : WhiteheadPrinciple.{u}) {A B : \Type u} (f : A -> B)
@@ -18,7 +18,7 @@
   : IsEquiv f
   => W f (propExt.dir (weakEquivalence-iff-infinityConnected f) h)
 
-\func IsHypercomplete.{u} (Z : \Type u) : \Prop
+\type IsHypercomplete.{u} (Z : \Type u) : \Prop
   => \Pi {A B : \Type u} (f : A -> B) -> IsInfinityConnectedMap f -> IsEquiv {B -> Z} {A -> Z} (-o f)
 
 \lemma whiteheadHypercomplete.{u} {A B : \Type u} (f : A -> B) (hA : IsHypercomplete A) (hB : IsHypercomplete B)

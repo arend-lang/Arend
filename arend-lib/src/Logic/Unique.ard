@@ -28,7 +28,7 @@
       => \lam a a' => isProp.equiv (pmapIsEquiv e) (As _ _)
   }
 
-\func isGpd (A : \Type) => \Pi (a a' : A) (p q : a = a') (s t : p = q) -> s = t
+\func isGpd (A : \Cat) => \Pi (a a' : A) (p q : a = a') (s t : p = q) -> s = t
   \where {
     \use \level levelProp {A : \Type} (e e' : isGpd A) : e = e'
       => path \lam i a a' => isSet.levelProp (e a a') (e' a a') i

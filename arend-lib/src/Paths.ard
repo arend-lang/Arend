@@ -162,10 +162,6 @@
   : transport B p (f a) = f a' \elim p
   | idp => idp
 
-\func transport_pmap {A A' : \Type} (B : A' -> \Type) (f : A -> A') {a a' : A} (p : a = a') (x : B (f a))
-  : transport B (pmap f p) x = transport (\lam y => B (f y)) p x \elim p
-  | idp => idp
-
 \func pmapd_pathOver {A : \Cat} (B : A -> \Cat) (f : \Pi (x : A) -> B x) {a a' : A} (p : a = a') (s : transport B p (f a) = f a')
                      (t : path (\lam i => f (p @ i)) = {Path (\lam i => B (p @ i)) (f a) (f a')} pathOver s) : pmapd f p = s \elim p
   | idp => t *> idp_*>.idp_concat s

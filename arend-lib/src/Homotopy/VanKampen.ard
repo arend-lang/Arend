@@ -8,8 +8,6 @@
 \import Homotopy.VanKampen.Groupoid
 \import Homotopy.VanKampen.Words
 \import Logic
-\import Paths
-\import Set
 
 \func naiveVK.{u} {A B C : \Type u} (f : A -> B) (g : A -> C) : VKCover.{u} \cowith
   | A => A
@@ -32,7 +30,7 @@
   | cover a => TruncP.map (isConn0 a0 a) (\lam p => ((), p))
 
 -- | Theorem 8.7.4, with the relations of Section 8.7.1.
-\func naiveVanKampen.{u} {A B C : \Type u} (f : A -> B) (g : A -> C) (x y : Or B C)
+\sfunc naiveVanKampen.{u} {A B C : \Type u} (f : A -> B) (g : A -> C) (x y : Or B C)
   : QEquiv {VKSpan.NaiveCode {naiveVK f g} x y} {VKSpan.point {naiveVK f g} x =0 VKSpan.point {naiveVK f g} y}
   => transQEquiv (VKSpan.naiveCodeEquiv {naiveVK f g} (\new Embedding { | isEmb _ _ => \new Retraction { | sec p => p | f_sec _ => idp } }))
                  (IsEquiv.toQEquiv (evalQ-isEquiv {naiveVK f g}))

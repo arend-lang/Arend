@@ -1,6 +1,5 @@
 \import Algebra.Meta
 \import Equiv
-\import Equiv.HalfAdjoint
 \import Equiv.Path
 \import Equiv.Sigma
 \import Function
@@ -14,7 +13,7 @@
   | pushout-univ {Z : \Type u} : IsEquiv {square.Y -> Z} {Square { | Y => Z | U => square.U | V => square.V | X => square.X | uv => square.uv | ux => square.ux }} (Square.push square)
   \where {
     -- | Pushouts are functorial
-    \func map.{u} (p : Pushout.{u}) (s : Square.{u})
+    \protected \func map.{u} (p : Pushout.{u}) (s : Square.{u})
               (f : p.square.U -> s.U)
               (g : p.square.V -> s.V)
               (h : p.square.X -> s.X)
@@ -39,12 +38,12 @@
   \where {
     \func ppglue {A B C : \Type} {f : A -> B} {g : A -> C} (a : A) : pinl (f a) = {PushoutData f g} pinr (g a) => path (pglue a)
 
-    \func rec {A B C : \Type} {f : A -> B} {g : A -> C} {Z : \Cat} (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g) : Z \elim x
+    \protected \func rec {A B C : \Type} {f : A -> B} {g : A -> C} {Z : \Cat} (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g) : Z \elim x
       | pinl b => lm b
       | pinr c => rm c
       | pglue a => gm a
       \where {
-        \func map {A B C : \Type} {f : A -> B} {g : A -> C} {Y Z : \Type} (h : Y -> Z) (lm : B -> Y) (rm : C -> Y) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g)
+        \protected \func map {A B C : \Type} {f : A -> B} {g : A -> C} {Y Z : \Type} (h : Y -> Z) (lm : B -> Y) (rm : C -> Y) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g)
           : h (rec lm rm gm x) = rec (h `o` lm) (h `o` rm) (\lam a => pmap h (gm a)) x \elim x
           | pinl b => idp
           | pinr c => idp
@@ -62,10 +61,10 @@
             | f_sec => idpe
       }
 
-    \func drec {J A B : \Type} {u : J -> A} {v : J -> B} (P : PushoutData u v -> \Type)
-               (lm : \Pi (a : A) -> P (pinl a)) (rm : \Pi (b : B) -> P (pinr b))
-               (gm : \Pi (c : J) -> Path (\lam i => P (pglue c i)) (lm (u c)) (rm (v c)))
-               (x : PushoutData u v) : P x \elim x
+    \protected \func elim {J A B : \Type} {u : J -> A} {v : J -> B} (P : PushoutData u v -> \Type)
+                          (lm : \Pi (a : A) -> P (pinl a)) (rm : \Pi (b : B) -> P (pinr b))
+                          (gm : \Pi (c : J) -> Path (\lam i => P (pglue c i)) (lm (u c)) (rm (v c)))
+                          (x : PushoutData u v) : P x \elim x
       | pinl a => lm a
       | pinr b => rm b
       | pglue c => gm c
@@ -73,9 +72,9 @@
         \func equiv {J A B : \Type} {u : J -> A} {v : J -> B} (P : PushoutData u v -> \Type)
           : QEquiv {\Pi (x : PushoutData u v) -> P x} {Cocone.dep P} \cowith
           | f s => (\lam a => s (pinl a), \lam b => s (pinr b), \lam c => path (\lam i => s (pglue c i)))
-          | ret => \lam t => drec P t.1 t.2 t.3
+          | ret => \lam t => elim P t.1 t.2 t.3
           | ret_f s => path (\lam j x => (\case \elim x \return
-            drec P (\lam a => s (pinl a)) (\lam b => s (pinr b)) (\lam c => path (\lam i => s (pglue c i))) x = s x \with {
+            elim P (\lam a => s (pinl a)) (\lam b => s (pinr b)) (\lam c => path (\lam i => s (pglue c i))) x = s x \with {
               | pinl a => idp
               | pinr b => idp
               | pglue c i => idp
@@ -272,12 +271,12 @@
     | sqcomm a => path (pglue a)
   }
   | pushout-univ {Z} => inP \new QEquiv {
-    | ret (s : Square) => rec s.vy s.xy s.sqcomm
-    | ret_f h => path (\lam i p => (\case \elim p \return rec (h `o` pinl) (h `o` pinr) (\lam a => path (\lam j => h (pglue a j))) p = h p \with {
+    | ret (s : Square) => PushoutData.rec s.vy s.xy s.sqcomm
+    | ret_f h => path (\lam i p => (\case \elim p \return PushoutData.rec (h `o` pinl) (h `o` pinr) (\lam a => path (\lam j => h (pglue a j))) p = h p \with {
       | pinl _ => idp
       | pinr _ => idp
       | pglue _ _ => idp
-    }) @ i)
+    }) i)
     | f_sec _ => idp
   }
 
@@ -303,7 +302,7 @@
     | pglue a i =>
         \let t => transport_pi2 (code b0) (pinl b0 =) (ppglue a) (pmap pinl) (\lam x => pmap pinl x.2 *> ppglue x.1 *> inv (pmap pinr x.3))
                                 (\lam p => Jl (\lam _ q => transport (pinl b0 =) q (pmap pinl p) = pmap pinl p *> q) idp (ppglue a))
-        \in (pathOver t @ i) d
+        \in pathOver t i d
 
   \func encode_decode-left (b0 b : B) (d : code b0 (pinl b)) : encode b0 {pinl b} (decode b0 d) = d \elim d
     | idp => idp

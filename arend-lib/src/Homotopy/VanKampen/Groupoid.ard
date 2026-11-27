@@ -2,7 +2,6 @@
 
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Group.Aut
 \import Algebra.Group.GroupCat
 \import Algebra.Group.GroupHom
 \import Category
@@ -16,9 +15,7 @@
 \import Homotopy.VanKampen.Code
 \import Homotopy.VanKampen.Words
 \import Paths
-\import Paths.Meta
 \import Relation.Equivalence
-\import Set
 \open VKSpan.Raw
 \open VKSpan.Rel
 
@@ -42,7 +39,7 @@
     \lemma evalQ-inj {c d : V.Code x x} (p : V.evalQ c = V.evalQ d) : c = d
       => IsEquiv.isInj evalQ-isEquiv p
 
-\func codeDecodeHom.{u} (V : VKCover.{u}) (x : Or V.B V.C) : GroupHom (CodeGroup V x) (PiGroup 0 (Pointed.make (V.point x))) \cowith
+\func codeDecodeHom.{u} (V : VKCover.{u}) (x : Or V.B V.C) : GroupHom (CodeGroup V x) (PiGroup_1+ 0 (Pointed.make (V.point x))) \cowith
   | func => V.evalQ
   | func-* => V.evalQ-concatQ _ _ *> inv (Aut_*>0 _ _)
 
@@ -55,7 +52,7 @@
   | cross (s : V.S) : Iso {D} {FB (V.f (V.k s))} {FC (V.g (V.k s))}
   | cross-natural {s t : V.S} (a : V.k s =0 V.k t) : Iso.f {cross t} ∘ Func {FB} (map0 V.f a) = Func {FC} (map0 V.g a) ∘ Iso.f {cross s}
 
-  \func ob (x : Or V.B V.C) : D \elim x
+  \protected \func ob (x : Or V.B V.C) : D \elim x
     | inl b => FB b
     | inr c => FC c
 
@@ -65,7 +62,7 @@
     | inl _, inr _ => \case st \with {}
     | inr _, inl _ => \case st \with {}
 
-  \func extend {x y : Or V.B V.C} (w : V.Raw x y) : Hom (ob x) (ob y) \elim y, w
+  \protected \func extend {x y : Or V.B V.C} (w : V.Raw x y) : Hom (ob x) (ob y) \elim y, w
     | inl _, segB st => extendStart st
     | inl _, toB s w p => Func {FB} p ∘ hinv {cross s} ∘ extend w
     | inr _, segC st => extendStart st

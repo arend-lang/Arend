@@ -29,21 +29,21 @@
   => inv (Precat.o-assoc {DiscretePrecat X})
 
 \lemma inv0_*>0 {X : \Type} {x y : X} (p : x =0 y) : inv0 p *>0 p = idp0 \elim p
-  | in0 p => pmap in0 (inv_*> p)
+  | in0 p => pmap in0 inv_*>
 
 \lemma *>0_inv0 {X : \Type} {x y : X} (p : x =0 y) : p *>0 inv0 p = idp0 \elim p
-  | in0 p => pmap in0 (*>_inv p)
+  | in0 p => pmap in0 *>_inv
 
 \lemma *>0-cancel {X : \Type} {x y z w : X} (t : x =0 y) (u : y =0 z) (m : y =0 w)
   : (t *>0 u) *>0 inv0 u *>0 m = t *>0 m \elim t, u, m
-  | in0 t, in0 idp, in0 m => pmap (\lam q => in0 (t *> q)) (idp_*> m)
+  | in0 t, in0 idp, in0 m => pmap (\lam q => in0 (t *> q)) idp_*>
 
 \lemma *>0-cancel' {X : \Type} {x y z w : X} (t : x =0 y) (u : z =0 y) (m : y =0 w)
   : (t *>0 inv0 u) *>0 u *>0 m = t *>0 m \elim t, u, m
-  | in0 t, in0 idp, in0 m => pmap (\lam q => in0 (t *> q)) (idp_*> m)
+  | in0 t, in0 idp, in0 m => pmap (\lam q => in0 (t *> q)) idp_*>
 
 \lemma inv0_*>0-comm {X : \Type} {x y z : X} (p : x =0 y) (q : y =0 z) : inv0 (p *>0 q) = inv0 q *>0 inv0 p \elim p, q
-  | in0 p, in0 q => pmap in0 (*>_inv-comm p q)
+  | in0 p, in0 q => pmap in0 *>_inv-comm
 
 \lemma inv0_*>0-comm3 {X : \Type} {x y z w : X} (p : x =0 y) (q : y =0 z) (r : z =0 w)
   : inv0 (p *>0 q *>0 r) = inv0 r *>0 inv0 q *>0 inv0 p

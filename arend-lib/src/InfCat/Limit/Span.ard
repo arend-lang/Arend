@@ -113,7 +113,7 @@
   \where {
     -- | Arrows from {spanData} of a pushout square with respect to {r} to {spanData} of the constant square on {r} are arrows of squares.
     \lemma spanData-equiv {C : \Cat} {Q : DI ->⁺ DI ->⁺ C} {r : C} (po : IsPushoutAt Q r) : IsEquiv (dmap spanData {Q} {constSq r})
-      => IsEquiv.leftFactor (inP (sd-hom {C} {Q} {r})) $ IsEquiv.trans (inP (sq-hom {C} {Q} {r})) (IsSigma-right (sqmap (\lam w => w dleft) (dpath Q)) \lam w => cocartesianArrow-square {_} {_} {\lam (w : DI ->⁺ C) => w dleft} {_} {_} {_} {dpath Q} po w)
+      => IsEquiv.leftFactor (inP (sd-hom {C} {Q} {r})) $ IsEquiv.trans (inP (sq-hom {C} {Q} {r})) (esigma-right (sqmap (\lam w => w dleft) (dpath Q)) \lam w => cocartesianArrow-square {_} {_} {\lam (w : DI ->⁺ C) => w dleft} {_} {_} {_} {dpath Q} po w)
 
     -- | An arrow into a constant square as a square of arrows into a constant arrow.
     \func sq-hom {C : \Cat} {Q : DI ->⁺ DI ->⁺ C} {r : C}

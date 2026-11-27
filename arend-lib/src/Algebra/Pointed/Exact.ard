@@ -8,18 +8,18 @@
 \import Logic.Unique
 \import Paths
 
-\func ExactAt {A B C : Pointed} (f : PointedHom A B) (g : PointedHom B C) : \Prop
+\type IsExactAt {A B C : Pointed} (f : PointedHom A B) (g : PointedHom B C) : \Prop
   => \Pi (b : B) -> (g b = ide) <-> ∃ (a : A) (f a = b)
 
-\lemma ExactAt-transport {A A' B B' C C' : Pointed}
-                         {f : PointedHom A B} {g : PointedHom B C}
-                         (f' : PointedHom A' B') (g' : PointedHom B' C')
-                         (u : PointedHom A' A) (usurj : IsSurj u)
-                         (w : PointedHom B B') (wsurj : IsSurj w) (winj : IsInj w)
-                         (v : PointedHom C C') (vinj : IsInj v)
-                         (sq1 : \Pi (a' : A') -> f' a' = w (f (u a')))
-                         (sq2 : \Pi (b : B) -> g' (w b) = v (g b))
-                         (e : ExactAt f g) : ExactAt f' g'
+\lemma IsExactAt-transport {A A' B B' C C' : Pointed}
+                           {f : PointedHom A B} {g : PointedHom B C}
+                           (f' : PointedHom A' B') (g' : PointedHom B' C')
+                           (u : PointedHom A' A) (usurj : IsSurj u)
+                           (w : PointedHom B B') (wsurj : IsSurj w) (winj : IsInj w)
+                           (v : PointedHom C C') (vinj : IsInj v)
+                           (sq1 : \Pi (a' : A') -> f' a' = w (f (u a')))
+                           (sq2 : \Pi (b : B) -> g' (w b) = v (g b))
+                           (e : IsExactAt f g) : IsExactAt f' g'
   => \lam b' => \case wsurj b' \with {
     | inP (b,wb=b') =>
       (\lam kg => \case (e b).1 (vinj (inv (sq2 b) *> pmap g' wb=b' *> kg *> inv v.func-ide)) \with {
@@ -37,12 +37,12 @@
 
 -- | The HoTT book, Lemma 8.4.7, surjectivity half.
 \lemma exact-middle-surjective {A B C : Pointed} {f : PointedHom A B} {v : PointedHom B C}
-                               (e : ExactAt f v) (Cc : Contr C) : IsSurj f
+                               (e : IsExactAt f v) (Cc : Contr C) : IsSurj f
   => \lam b => (e b).1 (isContr=>isProp Cc (v b) ide)
 
 \lemma exactFive-middle-contr {U V W X Y : Pointed} {f : PointedHom U V} {g : PointedHom V W}
                               {h : PointedHom W X} {k : PointedHom X Y}
-                              (eV : ExactAt f g) (eW : ExactAt g h) (eX : ExactAt h k)
+                              (eV : IsExactAt f g) (eW : IsExactAt g h) (eX : IsExactAt h k)
                               (fs : IsSurj f) (ki : IsInj k)
   : Contr W
   => Contr.make ide \lam w => \case (eW w).1 (ki ((eX (h w)).2 (inP (w, idp)) *> inv k.func-ide)) \with {
@@ -53,4 +53,4 @@
 
 \record PointedExactSequence (Obj : Nat -> Pointed)
   | seqMap : \Pi (n : Nat) -> PointedHom (Obj (suc n)) (Obj n)
-  | seqExact : \Pi (n : Nat) -> ExactAt (seqMap (suc n)) (seqMap n)
+  | seqExact : \Pi (n : Nat) -> IsExactAt (seqMap (suc n)) (seqMap n)

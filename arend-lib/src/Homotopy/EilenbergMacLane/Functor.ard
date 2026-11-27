@@ -20,10 +20,10 @@
 
 \open ->* (∘*, compose-assoc)
 
-\func KMap.{u} {G H : CGroup.{u}} (n : Nat) (phi : GroupHom G H) : K G n ->* K H n \elim n
+\func EM-map.{u} {G H : CGroup.{u}} (n : Nat) (phi : GroupHom G H) : EMSpace G n ->* EMSpace H n \elim n
   | 0 => (phi, phi.func-ide)
   | 1 => K1Map phi
-  | suc (suc n) => truncSusp (suc (suc (suc n))) (KMap (suc n) phi).1
+  | suc (suc n) => truncSusp (suc (suc (suc n))) (EM-map (suc n) phi).1
   \where {
     \func truncSusp.{u} (m : Nat) {A B : \Type u} (f : A -> B)
       : Pointed.make {Trunc_-1+ m (Susp A)} (inT north) ->* Pointed.make {Trunc_-1+ m (Susp B)} (inT north)
@@ -47,29 +47,29 @@
       : truncSusp m (\lam x => g (f x)) = truncSusp m g ∘* truncSusp m f
       => ->*.ext (trunc-unique (Trunc_-1+.level m (Susp C)) _ _ (\lam y => pmap inT (susp-comp f g y))) idp
 
-    \func id.{u} {G : CGroup.{u}} (n : Nat) : KMap n (GroupHom.id {G}) = ->*.id \elim n
-      | 0 => ->*.ext {K G 0} {K G 0} (\lam _ => idp) prop-pi
+    \protected \sfunc id.{u} {G : CGroup.{u}} (n : Nat) : EM-map n (GroupHom.id {G}) = ->*.id \elim n
+      | 0 => ->*.ext {EMSpace G 0} {EMSpace G 0} (\lam _ => idp) prop-pi
       | 1 => K1Map.id
-      | suc (suc n) => pmap (\lam (f : K G (suc n) ->* K G (suc n)) => truncSusp (suc (suc (suc n))) f.1) (id (suc n))
+      | suc (suc n) => pmap (\lam (f : EMSpace G (suc n) ->* EMSpace G (suc n)) => truncSusp (suc (suc (suc n))) f.1) (id (suc n))
                        *> truncSusp-id (suc (suc (suc n)))
 
-    \func comp.{u} {G H L : CGroup.{u}} (n : Nat) (psi : GroupHom H L) (phi : GroupHom G H)
-      : KMap n (psi GroupHom.∘ phi) = KMap n psi ∘* KMap n phi \elim n
-      | 0 => ->*.ext {K G 0} {K L 0} (\lam _ => idp) prop-pi
+    \protected \sfunc comp.{u} {G H L : CGroup.{u}} (n : Nat) (psi : GroupHom H L) (phi : GroupHom G H)
+      : EM-map n (psi GroupHom.∘ phi) = EM-map n psi ∘* EM-map n phi \elim n
+      | 0 => ->*.ext {EMSpace G 0} {EMSpace L 0} (\lam _ => idp) prop-pi
       | 1 => K1Map.comp psi phi
-      | suc (suc n) => pmap (\lam (f : K G (suc n) ->* K L (suc n)) => truncSusp (suc (suc (suc n))) f.1) (comp (suc n) psi phi)
-                       *> truncSusp-comp (suc (suc (suc n))) (KMap (suc n) phi).1 (KMap (suc n) psi).1
+      | suc (suc n) => pmap (\lam (f : EMSpace G (suc n) ->* EMSpace L (suc n)) => truncSusp (suc (suc (suc n))) f.1) (comp (suc n) psi phi)
+                       *> truncSusp-comp (suc (suc (suc n))) (EM-map (suc n) phi).1 (EM-map (suc n) psi).1
   }
 
-\func KMap_loopUnit.{u} {G H : CGroup.{u}} (n : Nat) (phi : GroupHom G H)
-  : ->*.compose {K G n} {Loop (K G (suc n))} {Loop (K H (suc n))} (Loop-Func (KMap (suc n) phi)) (K-loopUnit n)
-    = ->*.compose {K G n} {K H n} {Loop (K H (suc n))} (K-loopUnit n) (KMap n phi) \elim n
-  | 0 => ->*.ext {K G 0} {Loop (K H 1)} (\lam g => idp_*> _) (ToProp.fromProp (K1-level base base _ _) _ _)
-  | suc n => susp-natural {K G (suc n)} {K H (suc n)} {K G (suc (suc n))} {K H (suc (suc n))} (KMap (suc n) phi) (KMap (suc (suc n)) phi) (K-susp (suc n)) (K-susp (suc n)) idp
+\sfunc KMap_loopUnit.{u} {G H : CGroup.{u}} (n : Nat) (phi : GroupHom G H)
+  : ->*.compose {EMSpace G n} {Loop (EMSpace G (suc n))} {Loop (EMSpace H (suc n))} (Loop-Func (EM-map (suc n) phi)) (EM-loopUnit n)
+    = ->*.compose {EMSpace G n} {EMSpace H n} {Loop (EMSpace H (suc n))} (EM-loopUnit n) (EM-map n phi) \elim n
+  | 0 => ->*.ext {EMSpace G 0} {Loop (EMSpace H 1)} (\lam g => idp_*>) (ToProp.fromProp (K1-level base base _ _) _ _)
+  | suc n => susp-natural {EMSpace G (suc n)} {EMSpace H (suc n)} {EMSpace G (suc (suc n))} {EMSpace H (suc (suc n))} (EM-map (suc n) phi) (EM-map (suc (suc n)) phi) (EM-susp (suc n)) (EM-susp (suc n)) idp
   \where
-    \func susp-natural.{u} {X Y Z W : Pointed.{u}} (f : X ->* Y) (F : Z ->* W)
-                           (sX : Susp.pointed X ->* Z) (sY : Susp.pointed Y ->* W)
-                           (sq : ->*.compose {Susp.pointed X} {Z} {W} F sX = ->*.compose {Susp.pointed X} {Susp.pointed Y} {W} sY (Susp-Func f))
+    \sfunc susp-natural.{u} {X Y Z W : Pointed.{u}} (f : X ->* Y) (F : Z ->* W)
+                            (sX : Susp.pointed X ->* Z) (sY : Susp.pointed Y ->* W)
+                            (sq : ->*.compose {Susp.pointed X} {Z} {W} F sX = ->*.compose {Susp.pointed X} {Susp.pointed Y} {W} sY (Susp-Func f))
       : ->*.compose {X} {Loop Z} {Loop W} (Loop-Func F) (->*.compose {X} {Loop (Susp.pointed X)} {Loop Z} (Loop-Func sX) (SuspLoopEquiv.unit X))
         = ->*.compose {X} {Y} {Loop W} (->*.compose {Y} {Loop (Susp.pointed Y)} {Loop W} (Loop-Func sY) (SuspLoopEquiv.unit Y)) f
       => compose-assoc (Loop-Func F) (Loop-Func sX) (SuspLoopEquiv.unit X)
@@ -78,9 +78,9 @@
          *> pmap (Loop-Func sY ∘*) (SuspLoopEquiv.unit.natural f)
          *> compose-assoc (Loop-Func sY) (SuspLoopEquiv.unit Y) f
 
-\func KMap_loopInv.{u} {G H : CGroup.{u}} (n : Nat) (phi : GroupHom G H) (z : Loop (K G (suc n)))
-  : (KMap n phi).1 ((K-loopInv n).1 z) = (K-loopInv n).1 ((Loop-Func (KMap (suc n) phi)).1 z)
-  => IsEquiv.isInj (K-loopUnit-isEquiv n)
-      (inv (->*.happly {K G n} {Loop (K H (suc n))} (KMap_loopUnit n phi) ((K-loopInv n).1 z))
-       *> pmap (Loop-Func (KMap (suc n) phi)).1 (K-loopInv.right n z)
-       *> inv (K-loopInv.right n _))
+\sfunc EM-map_loopInv.{u} {G H : CGroup.{u}} (n : Nat) (phi : GroupHom G H) (z : Loop (EMSpace G (suc n)))
+  : (EM-map n phi).1 ((EM-loopInv n).1 z) = (EM-loopInv n).1 ((Loop-Func (EM-map (suc n) phi)).1 z)
+  => IsEquiv.isInj (EM-loopUnit-isEquiv n)
+      (inv (->*.happly {EMSpace G n} {Loop (EMSpace H (suc n))} (KMap_loopUnit n phi) ((EM-loopInv n).1 z))
+       *> pmap (Loop-Func (EM-map (suc n) phi)).1 (EM-loopInv.right n z)
+       *> inv (EM-loopInv.right n _))

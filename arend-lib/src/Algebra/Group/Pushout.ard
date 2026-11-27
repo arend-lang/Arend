@@ -4,7 +4,6 @@
 
 \import Algebra.Group
 \import Algebra.Group.Free
-\import Algebra.Group.GroupCat
 \import Algebra.Group.GroupHom
 \import Algebra.Group.QuotientProperties
 \import Algebra.Group.SubGroup
@@ -12,7 +11,6 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
-\import Category
 \import Data.Bool
 \import Data.List
 \import Data.Or
@@ -133,10 +131,10 @@
       => TruncP (\Sigma (g : G) (phi g = h))
 
 -- | Amalgamating with a trivial group is the quotient by the normal closure of the image.
-\func GroupPushout_trivial.{u} {G H K : Group.{u}} (phi : GroupHom G H) (psi : GroupHom G K) (triv : \Pi (k : K) -> k = ide)
-  : GroupPushout phi psi = {Group.{u}} H // imageClosure phi
-  => Cat.isotoid (GroupCat.isoOfEquiv to equiv)
-  \where {
+\lemma GroupPushout_trivial {G H K : Group} (phi : GroupHom G H) (psi : GroupHom G K) (triv : \Pi (k : K) -> k = ide)
+  : IsEquiv to
+  => inP equiv
+  \where \protected {
     \func trivialHom : GroupHom K (H // imageClosure phi) \cowith
       | func _ => ide {H // imageClosure phi}
       | func-* => inv ide-left

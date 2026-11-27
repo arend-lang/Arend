@@ -23,15 +23,15 @@
   => inv q *> pmap f z *> q
   \where {
     \func idp-case {A B : \Type} (f : A -> B) {a : A} {b : B} (q : f a = b) : loopMap f q idp = idp
-      => pmap (inv q *>) (idp_*> q) *> inv_*> q
+      => pmap (inv q *>) idp_*> *> inv_*>
 
     \lemma isEquiv {A B : \Type} (f : A -> B) {a : A} {b : B} (q : f a = b) (e : IsEquiv f)
       : IsEquiv (loopMap f q) \elim b, q
-      | _, idp => transport IsEquiv (inv (path \lam i z => idp_*> (pmap f z) @ i)) (pmapIsEquiv e)
+      | _, idp => transport IsEquiv (inv (path \lam i z => idp_*> {_} {_} {_} {pmap f z} i)) (pmapIsEquiv e)
 
     \func comp {A B C : \Type} (f : A -> B) {a : A} {b : B} (q : f a = b) (g : B -> C) {c : C} (r : g b = c) (z : a = a)
       : loopMap (\lam x => g (f x)) (pmap g q *> r) z = loopMap g r (loopMap f q z) \elim b, q, c, r
-      | _, idp, _, idp => pmap (\lam w => idp *> pmap g w) (inv (idp_*> (pmap f z)))
+      | _, idp, _, idp => pmap (\lam w => idp *> pmap g w) (inv idp_*>)
 
     \func comp-coh {A B C : \Type} (f : A -> B) {a : A} {b : B} (q : f a = b) (g : B -> C) {c : C} (r : g b = c)
       : comp f q g r idp *> (pmap (loopMap g r) (idp-case f q) *> idp-case g r) = idp-case (\lam x => g (f x)) (pmap g q *> r) \elim b, q, c, r
@@ -41,7 +41,7 @@
 \func Loop-Func {X Y : Pointed} (f : X ->* Y) : Loop X ->* Loop Y
   => (loopMap f.1 f.2, loopMap.idp-case f.1 f.2)
   \where
-    \lemma isEquiv {X Y : Pointed} (f : X ->* Y) (e : IsEquiv f.1) : IsEquiv (Loop-Func f).1
+    \protected \lemma isEquiv {X Y : Pointed} (f : X ->* Y) (e : IsEquiv f.1) : IsEquiv (Loop-Func f).1
       => loopMap.isEquiv f.1 f.2 e
 
 \func loopEquiv (e : PointedEquiv) : PointedEquiv (Loop e.X) (Loop e.Y) \cowith
@@ -54,7 +54,7 @@
 
 \func LoopProductMap (X Y : Pointed) : Loop (PointedProduct X Y) ->* PointedProduct (Loop X) (Loop Y)
   => (\lam p => (pmap (\lam t => t.1) p, pmap (\lam t => t.2) p), idp)
-  \where {
+  \where \protected {
     \func equiv (X Y : Pointed) : QEquiv (LoopProductMap X Y).1 \cowith
       | ret pq => path (\lam i => (pq.1 @ i, pq.2 @ i))
       | ret_f _ => idp
@@ -62,24 +62,25 @@
 
     \func proj1 (X Y : Pointed)
       : PointedProduct.proj1 ->*.∘* LoopProductMap X Y = Loop-Func (PointedProduct.proj1 {X} {Y})
-      => ->*.ext (\lam p => inv (idp_*> (pmap (\lam (t : PointedProduct X Y) => t.1) p))) idp
+      => ->*.ext (\lam p => inv idp_*>) idp
 
     \func proj2 (X Y : Pointed)
       : PointedProduct.proj2 ->*.∘* LoopProductMap X Y = Loop-Func (PointedProduct.proj2 {X} {Y})
-      => ->*.ext (\lam p => inv (idp_*> (pmap (\lam (t : PointedProduct X Y) => t.2) p))) idp
+      => ->*.ext (\lam p => inv idp_*>) idp
   }
 
 \lemma loop-level {X : \Type}
                   (n : Nat)
                   (p : \Pi (x0 : X) -> (x0 = x0) ofHLevel_-1+ n)
   : X ofHLevel_-1+ suc n
-  => \lam x x' => hLevel-inh n (later rewriteI __ (p x)) \where {
-  \func set {X : \Type} (pr : \Pi (x0 : X) -> isSet (x0 = x0)) (x y : X) (p q : x = y) : isProp (p = q) \elim p
-    | idp => pr x idp q
+  => \lam x x' => hLevel-inh n (later rewriteI __ (p x))
+  \where \protected {
+    \func set {X : \Type} (pr : \Pi (x0 : X) -> isSet (x0 = x0)) (x y : X) (p q : x = y) : isProp (p = q) \elim p
+      | idp => pr x idp q
 
-  \func prop {X : \Type} (pr : \Pi (x0 : X) -> isProp (x0 = x0)) (x y : X) (p q : x = y) : p = q \elim p
-    | idp => pr x idp q
-}
+    \func prop {X : \Type} (pr : \Pi (x0 : X) -> isProp (x0 = x0)) (x y : X) (p q : x = y) : p = q \elim p
+      | idp => pr x idp q
+  }
 
 \lemma loop-level-iter.{u} {X : \Type u}
                            (n : Nat)
@@ -96,27 +97,33 @@
 \lemma loop-contr (X : Pointed) (c : Contr X) : Contr (Loop X)
   => isProp=>PathContr X (isContr=>isProp c) base base
 
-\func SuspLoopEquiv.{u} (A B : Pointed.{u}) : (Susp.pointed A ->* B) = (A ->* Loop B) =>
+-- | The suspension-loop adjunction on pointed maps as an explicit chain of equivalences.
+\func SuspLoopQEquiv.{u} (A B : Pointed.{u}) : QEquiv {Susp.pointed A ->* B} {A ->* Loop B} =>
   \let S => Square { | Y => B | U => A | V => \Sigma | X => \Sigma | uv _ => () | ux _ => () } \in
-  (\Sigma (f : Susp A -> B) (f north = base))                                              ==< sigma-left.path-func (QEquiv_= (IsEquiv.toQEquiv (Susp.pushout A).pushout-univ)) >==
-  (\Sigma (s : S) (Square.vy {s} () = base))                                               ==< path (iso {\Sigma (s : S) (Square.vy {s} () = base)}
-                                                                                                         {\Sigma (p : \Sigma (b1 : B) (b1 = base)) (\Sigma (b2 : B) (A -> p.1 = b2))}
-                                                                                                         (\lam p => \let s : Square => p.1 \in ((s.vy (), p.2), (s.xy (), s.sqcomm)))
-                                                                                                         (\lam q => (\new Square { | vy _ => q.1.1 | xy _ => q.2.1 | sqcomm => q.2.2 }, q.1.2))
-                                                                                                         idpe idpe) >==
-  (\Sigma (p : \Sigma (b1 : B) (b1 = base)) (\Sigma (b2 : B) (A -> p.1 = b2)))             ==< QEquiv_= (contr-left (rsigma base)) >==
-  (\Sigma (b2 : B) (A -> base = b2))                                                       ==< inv (QEquiv_= (contr-right (\lam (p : \Sigma (b2 : B) (A -> base = b2)) => lsigma (p.2 base)))) >==
-  (\Sigma (p : \Sigma (b2 : B) (A -> base = b2)) (\Sigma (q : base = p.1) (p.2 base = q))) ==< path (iso {\Sigma (p : \Sigma (b2 : B) (A -> base = b2)) (\Sigma (q : base = p.1) (p.2 base = q))}
-                                                                                                         {\Sigma (p : \Sigma (b2 : B) (base = b2)) (\Sigma (g : A -> base = p.1) (g base = p.2))}
-                                                                                                         (\lam p => ((p.1.1,p.2.1),(p.1.2,p.2.2)))
-                                                                                                         (\lam q => ((q.1.1,q.2.1),(q.1.2,q.2.2)))
-                                                                                                         idpe idpe) >==
-  (\Sigma (p : \Sigma (b2 : B) (base = b2)) (\Sigma (g : A -> base = p.1) (g base = p.2))) ==< QEquiv_= (contr-left (lsigma base)) >==
-  (\Sigma (g : A -> Loop B) (g base = base))                                               `qed
+  sigma-left {_} {S} {\lam s => Square.vy {s} () = base} (IsEquiv.toQEquiv (Susp.pushout A).pushout-univ)
+  `transQEquiv` (\new QEquiv {\Sigma (s : S) (Square.vy {s} () = base)} {\Sigma (p : \Sigma (b1 : B) (b1 = base)) (\Sigma (b2 : B) (A -> p.1 = b2))} {
+    | f p => \let s : Square => p.1 \in ((s.vy (), p.2), (s.xy (), s.sqcomm))
+    | ret q => (\new Square { | vy _ => q.1.1 | xy _ => q.2.1 | sqcomm => q.2.2 }, q.1.2)
+    | ret_f => idpe
+    | f_sec => idpe
+  })
+  `transQEquiv` contr-left (rsigma base) {\lam p => \Sigma (b2 : B) (A -> p.1 = b2)}
+  `transQEquiv` symQEquiv (contr-right (\lam (p : \Sigma (b2 : B) (A -> base = b2)) => lsigma (p.2 base)))
+  `transQEquiv` (\new QEquiv {\Sigma (p : \Sigma (b2 : B) (A -> base = b2)) (\Sigma (q : base = p.1) (p.2 base = q))}
+                              {\Sigma (p : \Sigma (b2 : B) (base = b2)) (\Sigma (g : A -> base = p.1) (g base = p.2))} {
+    | f p => ((p.1.1, p.2.1), (p.1.2, p.2.2))
+    | ret q => ((q.1.1, q.2.1), (q.1.2, q.2.2))
+    | ret_f => idpe
+    | f_sec => idpe
+  })
+  `transQEquiv` contr-left (lsigma base) {\lam p => \Sigma (g : A -> base = p.1) (g base = p.2)}
+
+\func SuspLoopEquiv.{u} (A B : Pointed.{u}) : (Susp.pointed A ->* B) = (A ->* Loop B)
+  => path (QEquiv_= (SuspLoopQEquiv A B))
   \where
     -- | The unit of the adjunction, the HoTT book, Section 8.6.
     \func unit (X : Pointed) : X ->* Loop (Susp.pointed X)
-      => (\lam x => pmerid x *> inv (pmerid base), *>_inv (pmerid base))
+      => (\lam x => pmerid x *> inv (pmerid base), *>_inv)
       \where {
         \func natural.{u} {X Y : Pointed.{u}} (f : X ->* Y)
           : Loop-Func (Susp-Func f) ->*.∘* unit X = unit Y ->*.∘* f
@@ -124,7 +131,7 @@
 
         \func loopMap_*>-inv {S T : \Type} {n s : S} (G : S -> T) (m1 m2 : n = s)
           : loopMap G idp (m1 *> inv m2) = pmap G m1 *> inv (pmap G m2) \elim s, m2
-          | _, idp => idp_*> (pmap G m1)
+          | _, idp => idp_*>
 
         \func pt {X : Pointed} {E : \Type} (g : X -> E) {y : E} (e : g base = y) (x : X)
           : loopMap (Susp.map g) idp (pmerid x *> inv (pmerid base)) = pmerid (g x) *> inv (pmerid y)
@@ -132,139 +139,155 @@
              *> pmap (\lam w => pmerid (g x) *> inv (pmerid w)) e
 
         \func coh {X : Pointed} {E : \Type} (g : X -> E) {y : E} (e : g base = y)
-          : pt g e base *> (pmap (\lam z => pmerid z *> inv (pmerid y)) e *> *>_inv (pmerid y))
-            = pmap (loopMap (Susp.map g) idp) (*>_inv (pmerid (base {X})))
-              *> loopMap.idp-case (Susp.map g) {north} {north} idp \elim y, e
+          : pt g e base *> (pmap (\lam z => pmerid z *> inv (pmerid y)) e *> *>_inv)
+            = pmap (loopMap (Susp.map g) idp) *>_inv *> loopMap.idp-case (Susp.map g) {north} {north} idp
+          \elim y, e
           | _, idp => coh-raw (Susp.map g) (pmerid (base {X}))
 
         \func coh-raw {S T : \Type} {n s : S} (G : S -> T) (m : n = s)
-          : loopMap_*>-inv G m m *> (idp *> *>_inv (pmap G m))
-            = pmap (loopMap G idp) (*>_inv m) *> loopMap.idp-case G idp \elim s, m
+          : loopMap_*>-inv G m m *> (idp *> *>_inv)
+            = pmap (loopMap G idp) *>_inv *> loopMap.idp-case G idp \elim s, m
           | _, idp => idp
       }
 
 \func SphereLoopEquiv.{u} (n : Nat) (B : Pointed.{u}) : (Sphere.pointed n ->* B) = iterl {Pointed.{u}} (Loop __) n B \elim n
-  | 0 => \let smap (b : B) (s : Sphere 0) : B => \case s \with { | pinl _ => base | pinr _ => b | pglue () _ }
-         \in path (iso {Sphere.pointed 0 ->* B} {B}
-                       (__.1 south)
-                       (\lam b => (smap b, idp))
-                       (\lam p => ->*.ext {Sphere.pointed 0} (\lam s =>
-                           \case \elim s \return smap (p.1 south) s = p.1 s \with {
-                             | pinl _ => inv p.2
-                             | pinr _ => idp
-                             | pglue () _
-                           }) inv_*>)
-                       (\lam b => idp))
+  | 0 => path (QEquiv_= (sphere0-equiv B))
   | suc n => SuspLoopEquiv (Sphere.pointed n) B *> SphereLoopEquiv n (Loop B)
+  \where
+    -- | Pointed maps out of the 0-sphere are points.
+    \func sphere0-equiv.{u} (B : Pointed.{u}) : QEquiv {Sphere.pointed 0 ->* B} {B} (__.1 south) \cowith
+      | ret b => (smap b, idp)
+      | ret_f p => ->*.ext {Sphere.pointed 0} (\lam s =>
+          \case \elim s \return smap (p.1 south) s = p.1 s \with {
+            | pinl _ => inv p.2
+            | pinr _ => idp
+            | pglue () _
+          }) inv_*>
+      | f_sec b => idp
+      \where
+        \func smap {B : Pointed} (b : B) (s : Sphere 0) : B \elim s
+          | pinl _ => base
+          | pinr _ => b
+          | pglue () _
 
 \func Loop-Func-id {X : Pointed} : Loop-Func (->*.id {X}) = ->*.id
-  => ->*.ext (\lam z => idp_*> z) idp
+  => ->*.ext (\lam z => idp_*>) idp
 
 \func Loop-Func_*> {X Y : Pointed} (f : X ->* Y) (p q : Loop X)
   : (Loop-Func f).1 (p *> q) = (Loop-Func f).1 p *> (Loop-Func f).1 q
-  => lem f.1 f.2 p q
+  => aux f.1 f.2 p q
   \where
-    \func lem {X : Pointed} {E : \Type} (f1 : X -> E) {y : E} (f2 : f1 base = y) (p q : base {X} = base)
+    \private \func aux {X : Pointed} {E : \Type} (f1 : X -> E) {y : E} (f2 : f1 base = y) (p q : base {X} = base)
       : inv f2 *> (pmap f1 (p *> q) *> f2) = (inv f2 *> (pmap f1 p *> f2)) *> (inv f2 *> (pmap f1 q *> f2)) \elim y, f2
-      | _, idp => idp_*> _ *> pmap_*>-comm f1 p q *> inv (pmap2 (*>) (idp_*> _) (idp_*> _))
+      | _, idp => idp_*> *> pmap_*>-comm f1 p q *> inv (pmap2 (*>) idp_*> idp_*>)
 
-\func Omega^.{u} (n : Nat) (X : Pointed.{u}) : Pointed.{u}
+\func Loop^.{u} (n : Nat) (X : Pointed.{u}) : Pointed.{u}
   => iterr {Pointed.{u}} (Loop __) n X
 
-\func Omega^-Func.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) : Omega^ n X ->* Omega^ n Y \elim n
+\func Loop^-Func.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) : Loop^ n X ->* Loop^ n Y \elim n
   | 0 => f
-  | suc n => Loop-Func (Omega^-Func n f)
-  \where {
-    \lemma isEquiv.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) (e : IsEquiv f.1) : IsEquiv (Omega^-Func n f).1 \elim n
+  | suc n => Loop-Func (Loop^-Func n f)
+  \where \protected {
+    \lemma isEquiv.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y) (e : IsEquiv f.1) : IsEquiv (Loop^-Func n f).1 \elim n
       | 0 => e
-      | suc n => Loop-Func.isEquiv (Omega^-Func n f) (isEquiv n f e)
+      | suc n => Loop-Func.isEquiv (Loop^-Func n f) (isEquiv n f e)
 
-    \func id.{u} (n : Nat) {X : Pointed.{u}} : Omega^-Func n (->*.id {X}) = ->*.id \elim n
+    \func id.{u} (n : Nat) {X : Pointed.{u}} : Loop^-Func n (->*.id {X}) = ->*.id \elim n
       | 0 => idp
-      | suc n => pmap (Loop-Func {Omega^ n X} {Omega^ n X}) (id n) *> Loop-Func-id
+      | suc n => pmap (Loop-Func {Loop^ n X} {Loop^ n X}) (id n) *> Loop-Func-id
 
     \func comp.{u} (n : Nat) {X Y Z : Pointed.{u}} (g : Y ->* Z) (f : X ->* Y)
-      : Omega^-Func n (g ->*.∘* f) = Omega^-Func n g ->*.∘* Omega^-Func n f \elim n
+      : Loop^-Func n (g ->*.∘* f) = Loop^-Func n g ->*.∘* Loop^-Func n f \elim n
       | 0 => idp
-      | suc n => pmap (Loop-Func {Omega^ n X} {Omega^ n Z}) (comp n g f)
-                 *> Loop-Func-comp (Omega^-Func n g) (Omega^-Func n f)
+      | suc n => pmap (Loop-Func {Loop^ n X} {Loop^ n Z}) (comp n g f)
+                 *> Loop-Func-comp (Loop^-Func n g) (Loop^-Func n f)
   }
 
-\func omegaProductMap.{u} (n : Nat) (X Y : Pointed.{u})
-  : Omega^ n (PointedProduct X Y) ->* PointedProduct (Omega^ n X) (Omega^ n Y) \elim n
+\func loop^ProductMap.{u} (n : Nat) (X Y : Pointed.{u})
+  : Loop^ n (PointedProduct X Y) ->* PointedProduct (Loop^ n X) (Loop^ n Y) \elim n
   | 0 => ->*.id
-  | suc n => LoopProductMap (Omega^ n X) (Omega^ n Y) ->*.∘* Loop-Func (omegaProductMap n X Y)
-  \where {
-    \lemma isEquiv.{u} (n : Nat) (X Y : Pointed.{u}) : IsEquiv (omegaProductMap n X Y).1 \elim n
+  | suc n => LoopProductMap (Loop^ n X) (Loop^ n Y) ->*.∘* Loop-Func (loop^ProductMap n X Y)
+  \where \protected {
+    \lemma isEquiv.{u} (n : Nat) (X Y : Pointed.{u}) : IsEquiv (loop^ProductMap n X Y).1 \elim n
       | 0 => inP idEquiv
-      | suc n => IsEquiv.trans (Loop-Func.isEquiv (omegaProductMap n X Y) (isEquiv n X Y))
-                               (inP (LoopProductMap.equiv (Omega^ n X) (Omega^ n Y)))
+      | suc n => IsEquiv.trans (Loop-Func.isEquiv (loop^ProductMap n X Y) (isEquiv n X Y))
+                               (inP (LoopProductMap.equiv (Loop^ n X) (Loop^ n Y)))
 
     \func proj1.{u} (n : Nat) (X Y : Pointed.{u})
-      : PointedProduct.proj1 ->*.∘* omegaProductMap n X Y = Omega^-Func.{u} n PointedProduct.proj1 \elim n
+      : PointedProduct.proj1 ->*.∘* loop^ProductMap n X Y = Loop^-Func.{u} n PointedProduct.proj1 \elim n
       | 0 => idp
-      | suc n => ->*.compose-assoc PointedProduct.proj1 (LoopProductMap (Omega^ n X) (Omega^ n Y)) (Loop-Func (omegaProductMap n X Y))
-                 *> pmap (\lam h => h ->*.∘* Loop-Func (omegaProductMap n X Y)) (LoopProductMap.proj1 (Omega^ n X) (Omega^ n Y))
-                 *> inv (Loop-Func-comp PointedProduct.proj1 (omegaProductMap n X Y))
+      | suc n => ->*.compose-assoc PointedProduct.proj1 (LoopProductMap (Loop^ n X) (Loop^ n Y)) (Loop-Func (loop^ProductMap n X Y))
+                 *> pmap (\lam h => h ->*.∘* Loop-Func (loop^ProductMap n X Y)) (LoopProductMap.proj1 (Loop^ n X) (Loop^ n Y))
+                 *> inv (Loop-Func-comp PointedProduct.proj1 (loop^ProductMap n X Y))
                  *> pmap Loop-Func (proj1 n X Y)
 
     \func proj2.{u} (n : Nat) (X Y : Pointed.{u})
-      : PointedProduct.proj2 ->*.∘* omegaProductMap n X Y = Omega^-Func.{u} n PointedProduct.proj2 \elim n
+      : PointedProduct.proj2 ->*.∘* loop^ProductMap n X Y = Loop^-Func.{u} n PointedProduct.proj2 \elim n
       | 0 => idp
-      | suc n => ->*.compose-assoc PointedProduct.proj2 (LoopProductMap (Omega^ n X) (Omega^ n Y)) (Loop-Func (omegaProductMap n X Y))
-                 *> pmap (\lam h => h ->*.∘* Loop-Func (omegaProductMap n X Y)) (LoopProductMap.proj2 (Omega^ n X) (Omega^ n Y))
-                 *> inv (Loop-Func-comp PointedProduct.proj2 (omegaProductMap n X Y))
+      | suc n => ->*.compose-assoc PointedProduct.proj2 (LoopProductMap (Loop^ n X) (Loop^ n Y)) (Loop-Func (loop^ProductMap n X Y))
+                 *> pmap (\lam h => h ->*.∘* Loop-Func (loop^ProductMap n X Y)) (LoopProductMap.proj2 (Loop^ n X) (Loop^ n Y))
+                 *> inv (Loop-Func-comp PointedProduct.proj2 (loop^ProductMap n X Y))
                  *> pmap Loop-Func (proj2 n X Y)
   }
 
-\func omegaLoopShift.{u} (n : Nat) (X : Pointed.{u}) : Omega^ n (Loop X) = Omega^ (suc n) X
+\func loop^LoopShift.{u} (n : Nat) (X : Pointed.{u}) : Loop^ n (Loop X) = Loop^ (suc n) X
   => iterr-step (Loop __) n X
 
-\func omegaShift.{u} (n : Nat) (X : Pointed.{u}) : Omega^ n (Loop X) ->* Omega^ (suc n) X \elim n
+\func loop^Shift.{u} (n : Nat) (X : Pointed.{u}) : Loop^ n (Loop X) ->* Loop^ (suc n) X \elim n
   | 0 => ->*.id
-  | suc n => Loop-Func (omegaShift n X)
+  | suc n => Loop-Func (loop^Shift n X)
   \where {
-    \lemma isEquiv.{u} (n : Nat) (X : Pointed.{u}) : IsEquiv (omegaShift n X).1 \elim n
+    \lemma isEquiv.{u} (n : Nat) (X : Pointed.{u}) : IsEquiv (loop^Shift n X).1 \elim n
       | 0 => inP idEquiv
-      | suc n => Loop-Func.isEquiv (omegaShift n X) (isEquiv n X)
+      | suc n => Loop-Func.isEquiv (loop^Shift n X) (isEquiv n X)
 
     \func natural.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y)
-      : omegaShift n Y ->*.∘* Omega^-Func n {Loop X} {Loop Y} (Loop-Func f)
-        = Omega^-Func (suc n) f ->*.∘* omegaShift n X \elim n
+      : loop^Shift n Y ->*.∘* Loop^-Func n {Loop X} {Loop Y} (Loop-Func f)
+        = Loop^-Func (suc n) f ->*.∘* loop^Shift n X \elim n
       | 0 => inv (->*.compose-id (Loop-Func f))
       | suc n =>
-        inv (Loop-Func-comp (omegaShift n Y) (Omega^-Func n {Loop X} {Loop Y} (Loop-Func f)))
-        *> pmap (Loop-Func {Omega^ n (Loop X)} {Omega^ (suc n) Y}) (natural n f)
-        *> Loop-Func-comp (Omega^-Func (suc n) f) (omegaShift n X)
+        inv (Loop-Func-comp (loop^Shift n Y) (Loop^-Func n {Loop X} {Loop Y} (Loop-Func f)))
+        *> pmap (Loop-Func {Loop^ n (Loop X)} {Loop^ (suc n) Y}) (natural n f)
+        *> Loop-Func-comp (Loop^-Func (suc n) f) (loop^Shift n X)
   }
 
-\func omegaShiftEquiv.{u} (n : Nat) (X : Pointed.{u})
-  : PointedEquiv (Omega^ n (Loop X)) (Omega^ (suc n) X) \cowith
-  | map => omegaShift n X
-  | map-isEquiv => omegaShift.isEquiv n X
+\func loop^ShiftEquiv.{u} (n : Nat) (X : Pointed.{u})
+  : PointedEquiv (Loop^ n (Loop X)) (Loop^ (suc n) X) \cowith
+  | map => loop^Shift n X
+  | map-isEquiv => loop^Shift.isEquiv n X
 
-\func omegaShiftInv.{u} (n : Nat) (X : Pointed.{u}) : Omega^ (suc n) X ->* Omega^ n (Loop X)
-  => PointedEquiv.map {PointedEquiv.inverse (omegaShiftEquiv n X)}
+\func loop^ShiftInv.{u} (n : Nat) (X : Pointed.{u}) : Loop^ (suc n) X ->* Loop^ n (Loop X)
+  => PointedEquiv.map {PointedEquiv.inverse (loop^ShiftEquiv n X)}
   \where {
-    \lemma isEquiv.{u} (n : Nat) (X : Pointed.{u}) : IsEquiv (omegaShiftInv n X).1
-      => PointedEquiv.map-isEquiv {PointedEquiv.inverse (omegaShiftEquiv n X)}
+    \lemma isEquiv.{u} (n : Nat) (X : Pointed.{u}) : IsEquiv (loop^ShiftInv n X).1
+      => PointedEquiv.map-isEquiv {PointedEquiv.inverse (loop^ShiftEquiv n X)}
 
-    \func left.{u} (n : Nat) (X : Pointed.{u}) (z : Omega^ n (Loop X))
-      : (omegaShiftInv n X).1 ((omegaShift n X).1 z) = z
-      => Section.ret_f {PointedEquiv.toHAEquiv (omegaShiftEquiv n X)} z
+    \func left.{u} (n : Nat) (X : Pointed.{u}) (z : Loop^ n (Loop X))
+      : (loop^ShiftInv n X).1 ((loop^Shift n X).1 z) = z
+      => Section.ret_f {PointedEquiv.toHAEquiv (loop^ShiftEquiv n X)} z
 
-    \func right.{u} (n : Nat) (X : Pointed.{u}) (c : Omega^ (suc n) X)
-      : (omegaShift n X).1 ((omegaShiftInv n X).1 c) = c
-      => Retraction.f_sec {PointedEquiv.toHAEquiv (omegaShiftEquiv n X)} c
+    \func right.{u} (n : Nat) (X : Pointed.{u}) (c : Loop^ (suc n) X)
+      : (loop^Shift n X).1 ((loop^ShiftInv n X).1 c) = c
+      => Retraction.f_sec {PointedEquiv.toHAEquiv (loop^ShiftEquiv n X)} c
 
-    \func concat.{u} (n : Nat) (X : Pointed.{u}) (u v : Omega^ (suc (suc n)) X)
-      : (omegaShiftInv (suc n) X).1 (u *> v)
-        = (omegaShiftInv (suc n) X).1 u *> (omegaShiftInv (suc n) X).1 v
-      => IsEquiv.isInj (omegaShift.isEquiv (suc n) X)
+    \func concat.{u} (n : Nat) (X : Pointed.{u}) (u v : Loop^ (suc (suc n)) X)
+      : (loop^ShiftInv (suc n) X).1 (u *> v)
+        = (loop^ShiftInv (suc n) X).1 u *> (loop^ShiftInv (suc n) X).1 v
+      => IsEquiv.isInj (loop^Shift.isEquiv (suc n) X)
           (right (suc n) X (u *> v)
-           *> inv (Loop-Func_*> (omegaShift n X) _ _
+           *> inv (Loop-Func_*> (loop^Shift n X) _ _
                    *> pmap2 (*>) (right (suc n) X u) (right (suc n) X v)))
   }
 
-\func omegaSphere.{u} (n : Nat) (X : Pointed.{u}) : (Sphere.pointed n ->* X) = Omega^ n X
+\func loopSphere.{u} (n : Nat) (X : Pointed.{u}) : (Sphere.pointed n ->* X) = Loop^ n X
   => SphereLoopEquiv n X *> pmap (BaseSpace.E {__}) (iterl=iterr {Pointed.{u}} (Loop __) n X)
+
+-- | Loops in a pointed mapping space are pointed maps into the loop space.
+\func loopPointedMap {A B : Pointed} : PointedEquiv (Loop (PointedMap A B)) (PointedMap A (Loop B)) \cowith
+  | map => (\lam s => (->*.happly s, ->*.happly-base s), idp)
+  | map-isEquiv => ->*.happly-equiv
+
+-- | The suspension-loop adjunction as a pointed equivalence of pointed mapping spaces.
+\func suspLoopPointed.{u} {A B : Pointed.{u}} : PointedEquiv (PointedMap (Susp.pointed A) B) (PointedMap A (Loop B)) \cowith
+  | map => (SuspLoopQEquiv A B, idp)
+  | map-isEquiv => inP (SuspLoopQEquiv A B)

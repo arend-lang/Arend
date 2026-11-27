@@ -34,7 +34,7 @@
         }}
   }
   \where {
-    \open PushoutData
+    \open PushoutData \using (rec)
 
     \class Family.{u}
       | J : \Type u

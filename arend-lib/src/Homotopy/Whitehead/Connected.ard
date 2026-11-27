@@ -27,7 +27,7 @@
 
 \open NatOrder (zero<suc, suc<suc, unsuc<)
 
-\func IsPiConnected.{u} (r : Nat) {A B : \Type u} (f : A -> B) : \Prop
+\type IsPiConnected.{u} (r : Nat) {A B : \Type u} (f : A -> B) : \Prop
   => \Sigma (IsEquiv (componentsMap f))
             (\Pi (a : A) (k : Nat) -> k NatOrder.< r -> IsEquiv (piAtMap (suc k) f a))
             (\Pi (a : A) -> IsSurj (piAtMap (suc r) f a))
@@ -64,13 +64,13 @@
       | suc j => IsEquiv.isInj (h.2 a j (unsuc< p))
 
     \lemma fiber-pi-contr.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) (a : A) {j : Nat} (p : j NatOrder.< suc r)
-      : Contr (pi j (PointedFib (mapAt f a)))
+      : Contr (PiSet j (PointedFib (mapAt f a)))
       => exactFive-middle-contr (pi-exact-base (mapAt f a) j) (pi-exact-fiber (mapAt f a) j) (pi-exact-total (mapAt f a) j)
                                 (pi-surj h a p) (pi-inj h a p)
 
     \lemma fiber-point-contr.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) {k : Nat} (k<r : k NatOrder.< r)
                                  (a : A) {b : B} (q : f a = b)
-      : Contr (pi (suc k) (Pointed.make {Fib f b} (a, q))) \elim b, q
+      : Contr (PiSet (suc k) (Pointed.make {Fib f b} (a, q))) \elim b, q
       | _, idp => fiber-pi-contr h a (suc<suc k<r)
 
     \lemma fiber-contr.{u} {r : Nat} {A B : \Type u} {f : A -> B} (h : IsPiConnected r f) (a : A)
@@ -78,7 +78,7 @@
       => contrOfPiTruncated r (isTruncated {Trunc_-1+.level (suc r) (Fib f (f a))})
           (Contr.Contr_QEquiv (IsEquiv.toQEquiv (nconnected-piMap-isEquiv.pi0-isEquiv inT trunc-in-nconnected))
                               (fiber-pi-contr h a zero<suc))
-          \lam t k k<r => Trunc_-1+.elim (\lam t => \new Truncated_-1+ (suc r) (Contr (pi (suc k) (Pointed.make t)))
+          \lam t k k<r => Trunc_-1+.elim (\lam t => \new Truncated_-1+ (suc r) (Contr (PiSet (suc k) (Pointed.make t)))
                                                                      (HLevel_-1_+ {_} {0} (suc r) (toProp (Contr.levelProp _))))
                                          (\lam w => Contr.Contr_QEquiv
                                              (IsEquiv.toQEquiv (nconnected-piMap-isEquiv (mapAt inT w) trunc-in-nconnected (suc<suc k<r)))
@@ -86,7 +86,7 @@
                                          t
   }
 
-\func IsInfinityConnectedMap.{u} {A B : \Type u} (f : A -> B) : \Prop
+\type IsInfinityConnectedMap.{u} {A B : \Type u} (f : A -> B) : \Prop
   => \Pi (n : Nat) -> isNConnectedMap n f
 
 \lemma weakEquivalence-iff-infinityConnected.{u} {A B : \Type u} (f : A -> B)

@@ -121,7 +121,7 @@
 
 \lemma lEta-connected.{u} {U : Modality.{u}} {A : \Type u} : isConnectedMap (lEta {U} {A})
   => \lam x => contr=>isConnected (Fib (lEta {U} {A}) x) (contr x)
-  \where {
+  \where \private {
     \func fibL.{u} {U : Modality.{u}} {A : \Type u} (x : LType A) : Local => LType (Fib (lEta {U} {A}) x)
 
     \func pt.{u} {U : Modality.{u}} {A : \Type u} (x : LType A) : fibL x

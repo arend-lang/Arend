@@ -2,7 +2,6 @@
 
 \import Data.Or
 \import Equiv
-\import Equiv.Univalence
 \import Equiv.Univalence.Set
 \import Function
 \import Homotopy.Descent.Set
@@ -76,12 +75,6 @@
     | pinl b => Fam (inl b) v
     | pinr c => Fam (inr c) v
     | pglue a i => QEquiv-to-= (Equiv.toQEquiv (sourceEquiv a v)) i
-
-  \lemma Fam-transportB (x : Or B C) {b b' : B} (q : b = b') (c : Code x (inl b)) : transport (Fam x) (pmap pinl q) c = appendBQ c (in0 q)
-    => transport_pmap (Fam x) pinl q c *> transport-targetB q c
-
-  \lemma Fam-transportC (x : Or B C) {c c' : C} (q : c = c') (d : Code x (inr c)) : transport (Fam x) (pmap pinr q) d = appendCQ d (in0 q)
-    => transport_pmap (Fam x) pinr q d *> transport-targetC q d
 
   \lemma Fam-transport-glue (x : Or B C) (s : S) (c : Code x (inl (f (k s)))) : transport (Fam x) (ppglue (k s)) c = toCQ s c idp0
     => crossTarget-rep x s c
@@ -184,20 +177,20 @@
             *> tailC x s w q
 
       \lemma startB {x : Or B C} {b : B} (st : Start x (inl b)) : transport0 (Fam x) (evalStart st) (idFam x) = in~ (segB st) \elim x, st
-        | inl b0, in0 p => Fam-transportB (inl b0) p (in~ (segB idp0)) *> pmap (\lam z => in~ (segB z)) (idp0_*>0 (in0 p))
+        | inl b0, in0 p => transport-targetB p (in~ (segB idp0)) *> pmap (\lam z => in~ (segB z)) (idp0_*>0 (in0 p))
         | inr _, ()
 
       \lemma startC {x : Or B C} {c : C} (st : Start x (inr c)) : transport0 (Fam x) (evalStart st) (idFam x) = in~ (segC st) \elim x, st
         | inl _, ()
-        | inr c0, in0 q => Fam-transportC (inr c0) q (in~ (segC idp0)) *> pmap (\lam z => in~ (segC z)) (idp0_*>0 (in0 q))
+        | inr c0, in0 q => transport-targetC q (in~ (segC idp0)) *> pmap (\lam z => in~ (segC z)) (idp0_*>0 (in0 q))
 
       \lemma tailB (x : Or B C) (s : S) (w : Raw x (inr (g (k s)))) {b : B} (p : f (k s) =0 b)
         : transport0 (Fam x) (map0 pinl p) (in~ (toB s w idp0)) = in~ (toB s w p) \elim p
-        | in0 p => Fam-transportB x p _ *> pmap (\lam z => in~ (toB s w z)) (idp0_*>0 (in0 p))
+        | in0 p => transport-targetB p _ *> pmap (\lam z => in~ (toB s w z)) (idp0_*>0 (in0 p))
 
       \lemma tailC (x : Or B C) (s : S) (w : Raw x (inl (f (k s)))) {c : C} (q : g (k s) =0 c)
         : transport0 (Fam x) (map0 pinr q) (in~ (toC s w idp0)) = in~ (toC s w q) \elim q
-        | in0 q => Fam-transportC x q _ *> pmap (\lam z => in~ (toC s w z)) (idp0_*>0 (in0 q))
+        | in0 q => transport-targetC q _ *> pmap (\lam z => in~ (toC s w z)) (idp0_*>0 (in0 q))
     }
 
   -- | Theorem 8.7.4.

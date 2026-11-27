@@ -12,16 +12,16 @@
 \import Order.Biordered
 \import Arith.Nat
 
-\func K.{u} (G : CGroup.{u}) (n : Nat) : Pointed.{u} \elim n
+\func EMSpace.{u} (G : CGroup.{u}) (n : Nat) : Pointed.{u} \elim n
   | 0 => Pointed.make (ide {G})
   | 1 => K1Pointed G
-  | suc (suc n) => Pointed.make {Trunc_-1+ (suc (suc (suc n))) (Susp (K G (suc n)))} (inT north)
+  | suc (suc n) => Pointed.make {Trunc_-1+ (suc (suc (suc n))) (Susp (EMSpace G (suc n)))} (inT north)
 
-\lemma K-level.{u} {G : CGroup.{u}} (n : Nat) : K G n ofHLevel_-1+ suc n \elim n
+\lemma EM-level.{u} {G : CGroup.{u}} (n : Nat) : EMSpace G n ofHLevel_-1+ suc n \elim n
   | 0 => \lam _ _ => toProp (\lam _ _ => prop-pi)
   | 1 => K1-level
-  | suc (suc n) => isTruncated {Trunc_-1+.level (suc (suc (suc n))) (Susp (K G (suc n)))}
+  | suc (suc n) => isTruncated {Trunc_-1+.level (suc (suc (suc n))) (Susp (EMSpace G (suc n)))}
 
-\lemma K-connected.{u} {G : CGroup.{u}} (r : Nat) : isNConnectedType (suc r) (K G (suc r)) \elim r
+\lemma EM-connected.{u} {G : CGroup.{u}} (r : Nat) : isNConnectedType (suc r) (EMSpace G (suc r)) \elim r
   | 0 => K1-connected
-  | suc r => nconnected-trunc (<=-less id<suc) (susp-nconnected {suc r} (K-connected r))
+  | suc r => nconnected-trunc (<=-less id<suc) (susp-nconnected {suc r} (EM-connected r))

@@ -97,7 +97,7 @@
                                           (\lam s => path \lam l => ((dmap p s.2.1, inv (simplex3-face.natural p s.2.2 t0 s.1.2) l), cotriangle-map p u s.2.1 (s.1.1, s.2.2))))
                `<->trans` IsEquiv.parallelEquiv (dom-proj u (comp u v) w) (dom-proj (dmap p u) (dmap p (comp u v)) (dmap p w)) (\lam s => idp)
      \in (\lam uc w => (mid-equiv w).1 $
-            IsEquiv.trans (IsSigma-right {\Sigma (r : x ~> e') (DPath (\lam i => r i ~> w i) idd v)} (\lam s => cotriangle-map p u s.1) (\lam s => uc s.1))
+            IsEquiv.trans (esigma-right {\Sigma (r : x ~> e') (DPath (\lam i => r i ~> w i) idd v)} (\lam s => cotriangle-map p u s.1) (\lam s => uc s.1))
                           (inP (qsigma-left (IsEquiv.toQEquiv (vc w)))),
           \lam gc r => fiberwiseEquiv (vc (comp r v)) (\lam s => cotriangle-map p u s.1)
                          ((mid-equiv (comp r v)).2 (gc (comp r v)))

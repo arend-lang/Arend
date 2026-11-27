@@ -10,20 +10,20 @@
 \import Equiv.Univalence.Set
 \import Set.SetCategory
 
-\func Cover.{u} (A : \Type u) => A -> \Set u
+\func SetCover.{u} (A : \Type u) => A -> \Set u
   \where {
     -- | The structural identity principle for covers.
-    \func equality.{u} {A : \Type u} (C D : Cover A) : QEquiv {C = D} {\Pi (a : A) -> QEquiv {C a} {D a}}
+    \func equality.{u} {A : \Type u} (C D : SetCover A) : QEquiv {C = D} {\Pi (a : A) -> QEquiv {C a} {D a}}
       => transQEquiv (piEquiv (\lam _ => \Set u) C D) (pi-right \lam a => setUnivalence {C a} {D a})
 
-    \func ext.{u} {A : \Type u} {C D : Cover A} (e : \Pi (a : A) -> QEquiv {C a} {D a}) : C = D
-      => path (\lam i a => QEquiv-to-= (e a) @ i)
+    \protected \func ext.{u} {A : \Type u} {C D : SetCover A} (e : \Pi (a : A) -> QEquiv {C a} {D a}) : C = D
+      => path (\lam i a => QEquiv-to-= (e a) i)
 
-    \func pullback.{u} {X A : \Type u} (f : X -> A) (C : Cover A) : Cover X
+    \func pullback.{u} {X A : \Type u} (f : X -> A) (C : SetCover A) : SetCover X
       => \lam x => C (f x)
   }
 
-\func CoverHom.{u} {A : \Type u} (C D : Cover A) => \Pi {a : A} -> C a -> D a
+\func SetCoverHom.{u} {A : \Type u} (C D : SetCover A) => \Pi {a : A} -> C a -> D a
 
-\func CoverCat.{u} (A : \Type u) : Cat (Cover A)
+\func SetCoverCat.{u} (A : \Type u) : Cat (SetCover A)
   => FamCat SetCat.{u}

@@ -25,7 +25,6 @@
 \import Homotopy.VanKampen.Group
 \import Homotopy.VanKampen.Groupoid
 \import Homotopy.VanKampen.Words
-\import Homotopy.Wedge
 \import Logic.Unique
 \import Paths
 \import Relation.Equivalence
@@ -35,25 +34,25 @@
 
 \func PiGroup_Wedge.{u} (B C : Pointed.{u})
   : GroupPushout (map0Hom (\lam (_ : \Sigma) => base {B}) ()) (map0Hom (\lam (_ : \Sigma) => base {C}) ())
-    = {Group.{u}} PiGroup 0 (Pointed.make (pinl {\Sigma} {B} {C} {\lam _ => base} {\lam _ => base} base))
+    = {Group.{u}} PiGroup_1+ 0 (Pointed.make (pinl {\Sigma} {B} {C} {\lam _ => base} {\lam _ => base} base))
   => PiGroup_Pushout {UnitConnected0} (\lam _ => base) (\lam _ => base) ()
 
 \func Cofiber {A B : \Type} (f : A -> B) => PushoutData f (\lam (_ : A) => ())
 
 \func PiGroup_Cofiber.{u} {A : Connected0.{u}} {B : \Type u} (f : A -> B) (a0 : A)
-  : PiGroup 0 (Pointed.make {Cofiber f} (pinl (f a0))) = {Group.{u}} Aut (f a0) // imageClosure (map0Hom f a0)
+  : PiGroup_1+ 0 (Pointed.make {Cofiber f} (pinl (f a0))) = {Group.{u}} Aut (f a0) // imageClosure (map0Hom f a0)
   => inv (Cat.isotoid iso)
   \where {
     \lemma unit-loop (t : () =0 ()) : t = idp0 \elim t
       | in0 p => pmap in0 (isProp.=>isSet {\Sigma} (\lam _ _ => idp) _ _ p idp)
 
-    \func hom : GroupHom (Aut (f a0) // imageClosure (map0Hom f a0)) (PiGroup 0 (Pointed.make {Cofiber f} (pinl (f a0))))
+    \func hom : GroupHom (Aut (f a0) // imageClosure (map0Hom f a0)) (PiGroup_1+ 0 (Pointed.make {Cofiber f} (pinl (f a0))))
       => PiGroup_Pushout.hom {A} {B} {\Sigma} {f} {\lam _ => ()} {a0} GroupHom.∘ GroupPushout_trivial.from {_} {_} {_} {map0Hom f a0} {map0Hom (\lam _ => ()) a0} {unit-loop}
 
     \lemma hom-in (h : f a0 =0 f a0) : hom (in~ h) = map0 pinl h
       => PiGroup_Pushout.hom-left h
 
-    \func hom-equiv : QEquiv hom
+    \sfunc hom-equiv : QEquiv hom
       => transQEquiv (symQEquiv (GroupPushout_trivial.equiv {_} {_} {_} {map0Hom f a0} {map0Hom (\lam _ => ()) a0} {unit-loop}))
                      (PiGroup_Pushout.hom-equiv {A} {B} {\Sigma} {f} {\lam _ => ()} {a0})
 
@@ -62,14 +61,14 @@
   }
 
 \func PiGroup_Susp.{u} {A : \Type u} (a0 : A)
-  : PiGroup 0 (Susp.pointed A) = {Group.{u}} FreeGroup (Trunc0 A) // normalClosure (\lam w => w = FreeGroup.can (in0 a0))
+  : PiGroup_1+ 0 (Susp.pointed A) = {Group.{u}} FreeGroup (Trunc0 A) // normalClosure (\lam w => w = FreeGroup.can (in0 a0))
   => inv (Cat.isotoid iso)
   \where {
-    \func hom : GroupHom Q (PiGroup 0 (Susp.pointed A))
+    \func hom : GroupHom Q (PiGroup_1+ 0 (Susp.pointed A))
       => codeDecodeHom V (inl ()) GroupHom.∘ fromQ
 
     \lemma hom-gen (s : A) : hom (gen s) = in0 (pmerid s *> inv (pmerid a0))
-      => pmap V.evalQ (F-can (in0 s)) *> pmap in0 (pmap (__ *> _) (idp_*> _))
+      => pmap V.evalQ (F-can (in0 s)) *> pmap in0 (pmap (*> _) idp_*>)
 
     \func hom-equiv : QEquiv hom
       => transQEquiv (symQEquiv equiv) (IsEquiv.toQEquiv (evalQ-isEquiv {V} {inl ()} {inl ()}))

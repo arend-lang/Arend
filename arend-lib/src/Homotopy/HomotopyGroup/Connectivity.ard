@@ -12,12 +12,11 @@
 \import Order.PartialOrder
 \import Paths
 \import Set \hiding (#, .#)
-
 \open NatOrder (zero<suc, suc<suc)
 
 -- | The HoTT book, Lemma 8.3.2.
 \lemma pi-vanishes-below.{u} {n k : Nat} {X : Pointed.{u}} (c : isNConnectedType n X) (p : k NatOrder.< n)
-  : Contr (pi k X) \elim n, k, p
+  : Contr (PiSet k X) \elim n, k, p
   | suc n, 0, zero<suc => pi0-contr (nconnected-mono (suc<=suc zero<=_) c)
   | suc n, suc k, suc<suc p =>
     Contr.Contr_QEquiv (PiGroup_LoopShift.equiv k X)
@@ -28,7 +27,7 @@
       | ret => from
       | ret_f => from_to
       | f_sec => to_from
-      \where {
+      \where \protected {
         \func trunc0-level.{u} {A : \Type u} : Trunc0 A ofHLevel_-1+ 1
           => \lam _ _ => toProp (\lam _ _ => prop-pi)
 
@@ -50,17 +49,17 @@
           | in0 a => pmap to (Trunc0.rec-eval {A} {Trunc_-1+ 1 A} {trunc1-level} {a} {inT})
       }
 
-    \lemma pi0-contr.{u} {X : Pointed.{u}} (c : isNConnectedType 1 X) : Contr (pi 0 X)
+    \lemma pi0-contr.{u} {X : Pointed.{u}} (c : isNConnectedType 1 X) : Contr (PiSet 0 X)
       => Contr.Contr_QEquiv trunc1-Trunc0-equiv (propExt.dir (nconnected-iff-trunc-contr 1 X) c)
   }
 
-\lemma pi-vanishes-above.{u} {n k : Nat} {X : Pointed.{u}} (h : X ofHLevel_-1+ n) (p : n <= k) : Contr (pi k X)
-  => Trunc0.contr (isProp=>isContr (ToProp.fromProp (omega-level k 0 (HLevel_-1_<= n k p h))) base)
+\lemma pi-vanishes-above.{u} {n k : Nat} {X : Pointed.{u}} (h : X ofHLevel_-1+ n) (p : n <= k) : Contr (PiSet k X)
+  => Trunc0.contr (isProp=>isContr (ToProp.fromProp (loop^-level k 0 (HLevel_-1_<= n k p h))) base)
   \where
-    \lemma omega-level.{u} (k m : Nat) {X : Pointed.{u}} (h : X ofHLevel_-1+ k Nat.+ m) : Omega^ k X ofHLevel_-1+ m \elim k
+    \lemma loop^-level.{u} (k m : Nat) {X : Pointed.{u}} (h : X ofHLevel_-1+ k Nat.+ m) : Loop^ k X ofHLevel_-1+ m \elim k
       | 0 => h
-      | suc k => omega-level k (suc m) h base base
+      | suc k => loop^-level k (suc m) h base base
 
 -- | The HoTT book, Corollary 8.3.3: ``pi k (S^n)`` vanishes for ``k < n``.
-\lemma sphere-pi-vanishes.{u} {k n : Nat} (p : k NatOrder.< n) : Contr (pi k (Sphere.pointed n))
+\lemma sphere-pi-vanishes.{u} {k n : Nat} (p : k NatOrder.< n) : Contr (PiSet k (Sphere.pointed n))
   => pi-vanishes-below (sphere-nconnected.{u} n) p

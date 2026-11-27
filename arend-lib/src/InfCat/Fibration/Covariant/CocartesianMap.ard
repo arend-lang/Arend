@@ -249,7 +249,7 @@
             => IsEquiv.parallelEquiv (paste-face.isEquiv (comp u v) t0 w) (paste-face.isEquiv (dmap p (comp u v)) (dpath \lam i => dmap p (t0 i)) (dmap p w))
                 \lam m => path \lam l => (dmap p m.2.1, inv (simplex3-face.natural p t0 m.2.2 m.1.2) l)
      \in (\lam vc w => (mid-equiv w).1 $
-            IsEquiv.trans (IsSigma-right {\Sigma (r : e' ~> x) (DPath (\lam i => u i ~> w i) idd r)} (\lam s => triangle-map p v s.1) (\lam s => vc s.1))
+            IsEquiv.trans (esigma-right {\Sigma (r : e' ~> x) (DPath (\lam i => u i ~> w i) idd r)} (\lam s => triangle-map p v s.1) (\lam s => vc s.1))
                           (inP (qsigma-left (IsEquiv.toQEquiv (uc w)))),
           \lam gc r => fiberwiseEquiv (uc (comp u r)) (\lam s => triangle-map p v s.1)
                             ((mid-equiv (comp u r)).2 (gc (comp u r)))
@@ -414,7 +414,7 @@
   : IsEquiv (sqmap p u w)
   => IsEquiv.leftFactor (sq-split-equiv (dmap p u) (dmap p w)) $
        IsEquiv.trans {_} {_} {_} {sq-split u w} (sq-split-equiv u w) {split-map p u w}
-         (IsEquiv.trans (IsSigma-right (\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => triangle-map p u dd.1) \lam dd => uc dd.1)
+         (IsEquiv.trans (esigma-right (\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => triangle-map p u dd.1) \lam dd => uc dd.1)
            (inP $ qsigma-left {_} {_} {\lam (dd : \Sigma (d : p e ~> p x) (DPath (\lam i => p (w i) ~> d i) idd idd)) => \Sigma (g : p e' ~> p x) (DPath (\lam i => p (u i) ~> dd.1 i) idd g)} $
               IsEquiv.toQEquiv $ contr-equiv (segal-contr w idd) (segal-contr (dmap p w) idd) {\lam (dd : \Sigma (d : e ~> x) (DPath (\lam i => w i ~> d i) idd idd)) => ((dmap p dd.1, dpath \lam i => dmap p (dd.2 i)) : \Sigma (d : p e ~> p x) (DPath (\lam i => p (w i) ~> d i) idd idd))}))
   \where {

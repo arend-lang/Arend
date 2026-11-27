@@ -12,7 +12,7 @@
 \import Paths
 \import Set
 
-\func Monodromy.{u} {A : Pointed.{u}} (C : Cover A) : GSet (PiGroup 0 A) \cowith
+\func Monodromy.{u} {A : Pointed.{u}} (C : SetCover A) : GSet (PiGroup_1+ 0 A) \cowith
   | E => C base
   | ** g m => transport0 C (inv0 g) m
   | **_ide => idp
@@ -27,11 +27,11 @@
       : F (transport0 C p m) = transport0 D p (F m) \elim p
       | in0 p => transport-natural F p m
 
-    \func map.{u} {A : Pointed.{u}} {C D : Cover A} (F : CoverHom C D) : EquivariantMap (Monodromy C) (Monodromy D) \cowith
+    \protected \func map.{u} {A : Pointed.{u}} {C D : SetCover A} (F : SetCoverHom C D) : EquivariantMap (Monodromy C) (Monodromy D) \cowith
       | func => F
       | func-** {m} {g} => transport0-natural F (inv0 g) m
 
-    \func functor.{u} (A : Pointed.{u}) : Functor (CoverCat A) (GSetCategory (PiGroup 0 A)) \cowith
+    \protected \func functor.{u} (A : Pointed.{u}) : Functor (SetCoverCat A) (GSetCategory (PiGroup_1+ 0 A)) \cowith
       | F => Monodromy
       | Func => map
       | Func-id => idp

@@ -87,32 +87,11 @@
   | ret_f p => path (\lam i => (p.1, (q p.1).ret_f p.2 i))
   | f_sec p' => path (\lam i => (p'.1, (q p'.1).f_sec p'.2 i))
 
-\func pi-right {A : \Type} {B B' : A -> \Type} (q : \Pi (a : A) -> QEquiv {B a} {B' a})
-  : QEquiv {\Pi (a : A) -> B a} {\Pi (a : A) -> B' a} \cowith
-  | f h a => q a (h a)
-  | ret k a => (q a).ret (k a)
-  | ret_f h => path (\lam i a => (q a).ret_f (h a) i)
-  | f_sec k => path (\lam i a => (q a).f_sec (k a) i)
-
--- | Reindexing a dependent product along an equivalence.
-\func pi-left {A A' : \Type} {B' : A' -> \Type} (e : HAEquiv {A} {A'})
-  : QEquiv {\Pi (a' : A') -> B' a'} {\Pi (a : A) -> B' (e a)} \cowith
-  | f h a => h (e a)
-  | ret k a' => transport B' (e.f_sec a') (k (e.ret a'))
-  | ret_f h => path (\lam i a' => pmapd h (e.f_sec a') i)
-  | f_sec k => path (\lam i a => lem {A} {A'} {B'} e k a i)
-  \where
-    \func lem {A A' : \Type} {B' : A' -> \Type} (e : HAEquiv {A} {A'}) (k : \Pi (a : A) -> B' (e a)) (a : A)
-      : transport B' (e.f_sec (e a)) (k (e.ret (e a))) = k a
-      => pmap (\lam p => transport B' p (k (e.ret (e a)))) (inv (e.f_ret_f=f_sec_f a))
-         *> transport_pmap B' e (e.ret_f a) (k (e.ret (e a)))
-         *> pmapd k (e.ret_f a)
-
-\func IsSigma-right {A : \Cat} {B B' : A -> \Cat} (f : \Pi (a : A) -> B a -> B' a) (q : \Pi (a : A) -> IsEquiv (f a))
+\lemma esigma-right {A : \Cat} {B B' : A -> \Cat} (f : \Pi (a : A) -> B a -> B' a) (q : \Pi (a : A) -> IsEquiv (f a))
   : IsEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A) (B' a)} (\lam s => (s.1, f s.1 s.2))
   => inP $ sigma-right \lam a => IsEquiv.toQEquiv (q a)
 
-\func sigma-equiv {A A' : \Type} {B : A -> \Type} {B' : A' -> \Type} (e1 : QEquiv {A} {A'}) (e2 : \Pi (a : A) -> QEquiv {B a} {B' (e1 a)})
+\func sigma-equiv {A A' : \Cat} {B : A -> \Cat} {B' : A' -> \Cat} (e1 : QEquiv {A} {A'}) (e2 : \Pi (a : A) -> QEquiv {B a} {B' (e1 a)})
   : QEquiv {\Sigma (a : A) (B a)} {\Sigma (a : A') (B' a)}
   => sigma-right e2 `transQEquiv` sigma-left e1
 
@@ -122,27 +101,17 @@
   | ret_f g => idp
   | f_sec a => idp
 
-\func fib-precomp {A A' B : \Type} (e : QEquiv {A} {A'}) (g : A' -> B) (b : B)
+\func fib-precomp {A A' B : \Cat} (e : QEquiv {A} {A'}) (g : A' -> B) (b : B)
   : QEquiv {Fib (\lam a => g (e a)) b} {Fib g b}
   => sigma-left {A} {A'} {g __ = b} e
-
-\func proj-fib {C : \Type} (F : C -> \Type) (c : C) : QEquiv {Fib (\lam (t : \Sigma (c' : C) (F c')) => t.1) c} {F c} \cowith
-  | f t => transport F t.2 t.1.2
-  | ret u => ((c,u), idp)
-  | ret_f t => lem F c t.1.1 t.1.2 t.2
-  | f_sec _ => idp
-  \where
-    \func lem {C : \Type} (F : C -> \Type) (c c' : C) (u : F c') (p : c' = c)
-      : ((c, transport F p u), idp) = {Fib (\lam (t : \Sigma (c'' : C) (F c'')) => t.1) c} ((c',u),p) \elim c, p
-      | _, idp => idp
 
 \func totalFib {A B : \Type} (f : A -> B) : QEquiv {A} {\Sigma (b : B) (Fib f b)} \cowith
   | f a => (f a, (a, idp))
   | ret t => t.2.1
   | ret_f _ => idp
-  | f_sec t => lem f t.2.1 t.1 t.2.2
+  | f_sec t => aux f t.2.1 t.1 t.2.2
   \where
-    \func lem {A B : \Type} (f : A -> B) (a : A) (b : B) (p : f a = b)
+    \private \func aux {A B : \Type} (f : A -> B) (a : A) (b : B) (p : f a = b)
       : ((f a, (a,idp)) : \Sigma (b' : B) (Fib f b')) = (b, (a,p)) \elim b, p
       | _, idp => idp
 
@@ -156,7 +125,7 @@
       => (p.1, f p.1 p.2)
 
     -- | Theorem 4.7.6
-    \func totalFiber {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j) (j : J) (b : B j)
+    \sfunc totalFiber {J : \Cat} {A B : J -> \Cat} (f : \Pi (j : J) -> A j -> B j) (j : J) (b : B j)
       : QEquiv {Fib (total f) ((j,b) : \Sigma (j : J) (B j))} {Fib (f j) b}
       => transQEquiv
           (sigma-right \lam p => sigmaEquiv B (total f p) (j,b))

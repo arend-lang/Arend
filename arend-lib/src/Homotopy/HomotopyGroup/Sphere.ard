@@ -10,10 +10,10 @@
 \import Homotopy.Sphere
 \import Paths
 
-\func PiGroup_Sn_diagonal.{u} (m : Nat)
-  : PiGroup.{u} (suc m) (Sphere.pointed (suc (suc m))) = {Group.{u}} AddGroup.toGroup IntRing \elim m
-  | 0 => PiGroup2_S2.{u}
-  | suc m => inv (Cat.isotoid (sphereStabilization.diagonalIso.{u} m)) *> PiGroup_Sn_diagonal.{u} m
+\sfunc PiGroup_Sn_diagonal (m : Nat)
+  : PiGroup_1+ (suc m) (Sphere.pointed (suc (suc m))) = AddGroup.toGroup IntRing \elim m
+  | 0 => PiGroup2_S2
+  | suc m => inv (Cat.isotoid (sphereStabilization.diagonalIso m)) *> PiGroup_Sn_diagonal m
 
-\func PiGroup3_S2.{u} : PiGroup 2 (Sphere.pointed 2) = {Group.{u}} AddGroup.toGroup IntRing
-  => inv (Cat.isotoid hopfPi3Iso.{u}) *> PiGroup_Sn_diagonal 1
+\sfunc PiGroup3_S2 : PiGroup_1+ 2 (Sphere.pointed 2) = AddGroup.toGroup IntRing
+  => inv (Cat.isotoid hopfPi3Iso) *> PiGroup_Sn_diagonal 1
