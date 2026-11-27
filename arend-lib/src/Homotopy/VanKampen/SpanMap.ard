@@ -78,22 +78,22 @@
             *> pmap (\lam z => in~ (toC (mapS s) (V'.appendB (mapRaw w0) (inv0 (crossB s))) z)) (slide-g' a q)
         | inr _, congC s r q idp idp => pmap (\lam z => V'.toCQ (mapS s) (V'.appendBQ z (inv0 (crossB s))) (crossC s *>0 map0 mapC q)) (mapRaw-rel r)
 
-      \func mapRaw-appendB {x : Or V.B V.C} {b b' : V.B} (w : V.Raw x (inl b)) (p : b =0 b')
+      \sfunc mapRaw-appendB {x : Or V.B V.C} {b b' : V.B} (w : V.Raw x (inl b)) (p : b =0 b')
         : mapRaw (V.appendB w p) = V'.appendB (mapRaw w) (map0 mapB p) \elim w
         | segB st => pmap segB (start x st)
         | toB s _ q => pmap (toB (mapS s) _) (pmap (_ *>0 __) (map0_*>0 mapB q p) *> inv (*>0-assoc _ _ _))
         \where
-          \func start (x : Or V.B V.C) (st : Start x (inl b))
+          \sfunc start (x : Or V.B V.C) (st : Start x (inl b))
             : mapStart (startB st p) = startB (mapStart st) (map0 mapB p) \elim x
             | inl _ => map0_*>0 mapB st p
             | inr _ => \case st \with {}
 
-      \func mapRaw-appendC {x : Or V.B V.C} {c c' : V.C} (w : V.Raw x (inr c)) (q : c =0 c')
+      \sfunc mapRaw-appendC {x : Or V.B V.C} {c c' : V.C} (w : V.Raw x (inr c)) (q : c =0 c')
         : mapRaw (V.appendC w q) = V'.appendC (mapRaw w) (map0 mapC q) \elim w
         | segC st => pmap segC (start x st)
         | toC s _ p => pmap (toC (mapS s) _) (pmap (_ *>0 __) (map0_*>0 mapC p q) *> inv (*>0-assoc _ _ _))
         \where
-          \func start (x : Or V.B V.C) (st : Start x (inr c))
+          \sfunc start (x : Or V.B V.C) (st : Start x (inr c))
             : mapStart (startC st q) = startC (mapStart st) (map0 mapC q) \elim x
             | inl _ => \case st \with {}
             | inr _ => map0_*>0 mapC st q
@@ -197,7 +197,7 @@
               = map0 pushoutMap (in0 (ppglue a) *>0 map0 pinr q) \elim kp, q
             | idp, in0 idp => pmap in0 (pmap2 (\lam u v => pmap pinl (inv u) *> ppglue (mapA a) *> pmap pinr v) idp_*> idp_*> *> inv *>-assoc)
 
-      \func glue-inv-alg {P X Y : \Type} (i : X -> P) (j : Y -> P) {x0 x1 : X} {y0 y1 : Y} (gl : i x0 = j y0) (F : x0 = x1) (G : y0 = y1)
+      \sfunc glue-inv-alg {P X Y : \Type} (i : X -> P) (j : Y -> P) {x0 x1 : X} {y0 y1 : Y} (gl : i x0 = j y0) (F : x0 = x1) (G : y0 = y1)
         : inv (pmap j G) *> inv gl *> pmap i F = inv ((pmap i (inv F) *> gl) *> pmap j G) \elim F, G
         | idp, idp => idp_*> *> inv (pmap inv idp_*>)
     }

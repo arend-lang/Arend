@@ -71,7 +71,7 @@ equivalence and the `Iso` demoted into the `\where`:
 ```
 \func PiGroup_S1.{u} : PiGroup 0 (Sphere.pointed 1) = {Group.{u}} AddGroup.toGroup IntRing
   => inv (Cat.isotoid iso)
-  \where { windHom, windEquiv, circleMap, circleEquiv, hom, iso }
+  \where { windHom, windHom-isEquiv, circleMap, circleMap-isEquiv, hom, iso }
 ```
 
 `\where` members take their indices explicitly (`equiv (n : Nat) …`) so the general-`n` set-level

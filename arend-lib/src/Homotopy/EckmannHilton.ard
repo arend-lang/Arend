@@ -82,7 +82,7 @@
         | idp, idp => idp
     }
 
-  \protected \func Commutative (alp bet : Loop^2_X) : alp *> bet = bet *> alp => rewrite (inv Relation1, Relation3, Relation2) idp
+  \protected \sfunc Commutative (alp bet : Loop^2_X) : alp *> bet = bet *> alp => rewrite (inv Relation1, Relation3, Relation2) idp
     \where \protected {
       \func Relation1 : alp st1 bet = alp *> bet
         => rewrite (pmap (\lam z => alp *> z) (LeftHorizontalWhiskering-relation bet), idp_*>) idp

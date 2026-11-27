@@ -9,7 +9,6 @@
 \import Homotopy.EckmannHilton
 \import Homotopy.Loop
 \import Homotopy.Pointed
-\import Homotopy.Space
 \import Homotopy.Sphere
 \import Logic
 \import Logic.Unique
@@ -33,7 +32,7 @@
   => pmap (Trunc0.map t) (pmap __.1 (Loop^-Func.comp n g f))
      *> inv (Trunc0.map-comp t (Loop^-Func n f).1 (Loop^-Func n g).1)
 
-\func piSphereEquiv.{u} (n : Nat) (X : Pointed.{u}) : QEquiv {Trunc0 (Sphere.pointed n ->* X)} {PiSet n X}
+\sfunc piSphereEquiv.{u} (n : Nat) (X : Pointed.{u}) : QEquiv {Trunc0 (Sphere.pointed n ->* X)} {PiSet n X}
   => Trunc0.mapEquiv (Equiv.toQEquiv (=_Equiv (loopSphere n X)))
 
 \instance PiGroup_1+.{u} (n : Nat) (X : Pointed.{u}) : Group (Trunc0 (Loop^ (suc n) X))
@@ -51,23 +50,22 @@
     | in0 p, in0 q => pmap in0 (Loop-Func_*> (Loop^-Func n f) p q)
   }
 
-\func PiGroup_Product.{u} (n : Nat) (X Y : Pointed.{u})
+\sfunc PiGroup_Product.{u} (n : Nat) (X Y : Pointed.{u})
   : PiGroup_1+ n (PointedProduct X Y) = {Group.{u}} ProductGroup (PiGroup_1+ n X) (PiGroup_1+ n Y)
   => Cat.isotoid (iso n X Y)
   \where \protected {
-    \func equiv.{u} (n : Nat) (X Y : Pointed.{u}) : QEquiv {PiSet n (PointedProduct X Y)} {\Sigma (PiSet n X) (PiSet n Y)}
-      => transQEquiv (Trunc0.mapEquiv (IsEquiv.toQEquiv (loop^ProductMap.isEquiv n X Y))) Trunc0.productEquiv
-
     \func map.{u} (n : Nat) {X Y : Pointed.{u}} (z : PiSet n (PointedProduct X Y)) : \Sigma (PiSet n X) (PiSet n Y)
       => (piMap n {PointedProduct X Y} {X} PointedProduct.proj1 z, piMap n {PointedProduct X Y} {Y} PointedProduct.proj2 z)
 
-    \lemma map=equiv.{u} (n : Nat) {X Y : Pointed.{u}} (z : PiSet n (PointedProduct X Y)) : map n z = equiv n X Y z \elim z
+    \lemma map-char.{u} (n : Nat) {X Y : Pointed.{u}} (z : PiSet n (PointedProduct X Y))
+      : map n z = Trunc0.productEquiv (Trunc0.map z (loop^ProductMap n X Y).1) \elim z
       | in0 w => pmap2 (\lam u v => ((in0 u, in0 v) : \Sigma (PiSet n X) (PiSet n Y)))
                        (inv (path \lam i => (pmap __.1 (loop^ProductMap.proj1 n X Y) @ i) w))
                        (inv (path \lam i => (pmap __.1 (loop^ProductMap.proj2 n X Y) @ i) w))
 
     \lemma map-isEquiv.{u} (n : Nat) {X Y : Pointed.{u}} : IsEquiv (map n {X} {Y})
-      => transport IsEquiv (inv (path \lam i z => map=equiv n z @ i)) (inP (equiv n X Y))
+      => transport IsEquiv (inv (path \lam i z => map-char n z @ i))
+           (inP (transQEquiv (Trunc0.mapEquiv (IsEquiv.toQEquiv (loop^ProductMap.isEquiv n X Y))) Trunc0.productEquiv))
 
     \func hom.{u} (n : Nat) (X Y : Pointed.{u})
       : GroupHom (PiGroup_1+ n (PointedProduct X Y)) (ProductGroup (PiGroup_1+ n X) (PiGroup_1+ n Y)) \cowith
@@ -79,12 +77,9 @@
       => GroupCat.isoOfEquiv (hom n X Y) (IsEquiv.toQEquiv (map-isEquiv (suc n)))
   }
 
-\func PiGroup_LoopShift.{u} (n : Nat) (X : Pointed.{u}) : PiGroup_1+ n (Loop X) = {Group.{u}} PiGroup_1+ (suc n) X
+\sfunc PiGroup_LoopShift.{u} (n : Nat) (X : Pointed.{u}) : PiGroup_1+ n (Loop X) = {Group.{u}} PiGroup_1+ (suc n) X
   => Cat.isotoid (iso n X)
   \where \protected {
-    \func equiv.{u} (n : Nat) (X : Pointed.{u}) : QEquiv {PiSet n (Loop X)} {PiSet (suc n) X}
-      => Trunc0.mapEquiv (Equiv.toQEquiv (=_Equiv (pmap (BaseSpace.E {__}) (loop^LoopShift n X))))
-
     \func hom.{u} (n : Nat) (X : Pointed.{u}) : GroupHom (PiGroup_1+ n (Loop X)) (PiGroup_1+ (suc n) X) \cowith
       | func t => Trunc0.map t (loop^Shift (suc n) X).1
       | func-* {x} {y} => \case \elim x, \elim y \with {
@@ -95,7 +90,7 @@
       => GroupCat.isoOfEquiv (hom n X) (IsEquiv.toQEquiv (Trunc0.map-isEquiv (loop^Shift.isEquiv (suc n) X)))
   }
 
-\func PiGroup_basepoint.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y)
+\sfunc PiGroup_basepoint.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y)
   : PiGroup_1+ n (Pointed.make x) = {Group.{u}} PiGroup_1+ n (Pointed.make y)
   => Cat.isotoid (iso n p)
   \where \protected {
@@ -116,16 +111,15 @@
     \lemma act-1.{u} {X : \Type u} {x y : X} (p : x = y) (q : x = x) : act 1 p (in0 q) = in0 (inv p *> q *> p)
       => idp
 
-    \func equiv.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y)
-      : QEquiv {PiSet n (Pointed.make x)} {PiSet n (Pointed.make y)}
-      => IsEquiv.toQEquiv (piMap-isEquiv n (map p) (inP idEquiv))
+    \lemma act-isEquiv.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y) : IsEquiv (act n p)
+      => piMap-isEquiv n (map p) (inP idEquiv)
 
     \func hom.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y)
       : GroupHom (PiGroup_1+ n (Pointed.make x)) (PiGroup_1+ n (Pointed.make y))
       => piGroupMap n (map p)
 
-    \func iso.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y) : Iso {GroupCat} (hom n p)
-      => GroupCat.isoOfEquiv (hom n p) (IsEquiv.toQEquiv (piMap-isEquiv (suc n) (map p) (inP idEquiv)))
+    \lemma iso.{u} (n : Nat) {X : \Type u} {x y : X} (p : x = y) : Iso {GroupCat} (hom n p)
+      => GroupCat.isoOfEquiv (hom n p) (IsEquiv.toQEquiv (act-isEquiv (suc n) p))
   }
 
 \lemma pi-high-contr-of-loopSet.{u} (r : Nat) (X : Pointed.{u}) (h : isSet (Loop X))

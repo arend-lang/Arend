@@ -103,7 +103,7 @@
     | pglue a i => (pathOver (transport_pi-family VKCode (\lam u v => u =0 v) (ppglue a) (decodeFam (inl (f a))) (decodeFam (inr (g a)))
                      (\lam v c => transport_Trunc0-left (ppglue a) _ *> source a v c)) @ i) v c
     \where {
-      \func transport_pi-family {X Y : \Type} (F G : X -> Y -> \Type) {x x' : X} (p : x = x')
+      \sfunc transport_pi-family {X Y : \Type} (F G : X -> Y -> \Type) {x x' : X} (p : x = x')
                                 (d : \Pi (y : Y) -> F x y -> G x y) (d' : \Pi (y : Y) -> F x' y -> G x' y)
                                 (h : \Pi (y : Y) (c : F x y) -> transport (G __ y) p (d y c) = d' y (transport (F __ y) p c))
         : transport (\lam x => \Pi (y : Y) -> F x y -> G x y) p d = d' \elim p
@@ -129,7 +129,7 @@
     | pinr c => idFam (inr c)
     | pglue a i => pathOver (transport_diagonal VKCode (ppglue a) (idFam (inl (f a))) *> glue a) @ i
     \where {
-      \func transport_diagonal {X : \Type} (F : X -> X -> \Type) {x x' : X} (p : x = x') (e : F x x)
+      \sfunc transport_diagonal {X : \Type} (F : X -> X -> \Type) {x x' : X} (p : x = x') (e : F x x)
         : transport (\lam y => F y y) p e = transport (F x') p (transport (F __ x) p e) \elim p
         | idp => idp
 

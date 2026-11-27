@@ -39,7 +39,7 @@
 
 \func Cofiber {A B : \Type} (f : A -> B) => PushoutData f (\lam (_ : A) => ())
 
-\func PiGroup_Cofiber.{u} {A : Connected0.{u}} {B : \Type u} (f : A -> B) (a0 : A)
+\sfunc PiGroup_Cofiber.{u} {A : Connected0.{u}} {B : \Type u} (f : A -> B) (a0 : A)
   : PiGroup_1+ 0 (Pointed.make {Cofiber f} (pinl (f a0))) = {Group.{u}} Aut (f a0) // imageClosure (map0Hom f a0)
   => inv (Cat.isotoid iso)
   \where {
@@ -60,7 +60,7 @@
       => GroupCat.isoOfEquiv hom hom-equiv
   }
 
-\func PiGroup_Susp.{u} {A : \Type u} (a0 : A)
+\sfunc PiGroup_Susp.{u} {A : \Type u} (a0 : A)
   : PiGroup_1+ 0 (Susp.pointed A) = {Group.{u}} FreeGroup (Trunc0 A) // normalClosure (\lam w => w = FreeGroup.can (in0 a0))
   => inv (Cat.isotoid iso)
   \where {
@@ -70,7 +70,7 @@
     \lemma hom-gen (s : A) : hom (gen s) = in0 (pmerid s *> inv (pmerid a0))
       => pmap V.evalQ (F-can (in0 s)) *> pmap in0 (pmap (*> _) idp_*>)
 
-    \func hom-equiv : QEquiv hom
+    \sfunc hom-equiv : QEquiv hom
       => transQEquiv (symQEquiv equiv) (IsEquiv.toQEquiv (evalQ-isEquiv {V} {inl ()} {inl ()}))
 
     \func iso : Iso {GroupCat} hom

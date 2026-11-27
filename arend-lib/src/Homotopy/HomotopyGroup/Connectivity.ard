@@ -19,7 +19,7 @@
   : Contr (PiSet k X) \elim n, k, p
   | suc n, 0, zero<suc => pi0-contr (nconnected-mono (suc<=suc zero<=_) c)
   | suc n, suc k, suc<suc p =>
-    Contr.Contr_QEquiv (PiGroup_LoopShift.equiv k X)
+    Contr.Contr_QEquiv (IsEquiv.toQEquiv (Trunc0.map-isEquiv (loop^Shift.isEquiv k X)))
                        (pi-vanishes-below {n} {k} {Loop X} (loop-nconnected X c) p)
   \where {
     \func trunc1-Trunc0-equiv.{u} {A : \Type u} : QEquiv {Trunc_-1+ 1 A} {Trunc0 A} \cowith
@@ -40,7 +40,7 @@
         \func from.{u} {A : \Type u} (t : Trunc0 A) : Trunc_-1+ 1 A
           => Trunc0.rec trunc1-level t inT
 
-        \func from_to.{u} {A : \Type u} (t : Trunc_-1+ 1 A) : from (to t) = t
+        \sfunc from_to.{u} {A : \Type u} (t : Trunc_-1+ 1 A) : from (to t) = t
           => Trunc_-1+.elim.{u} (\lam t => \new Truncated_-1+ 1 (from (to t) = t)
                                                                 (HLevel_-1_suc {_} {0} (isTruncated {Trunc_-1+.level 1 A} (from (to t)) t)))
                                 (\lam _ => Trunc0.rec-eval) t

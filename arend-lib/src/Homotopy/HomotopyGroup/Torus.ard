@@ -24,17 +24,20 @@
      *> PiGroup_Product 0 (Sphere.pointed 1) (Sphere.pointed 1)
      *> path \lam i => ProductGroup (PiGroup_S1 i) (PiGroup_S1 i)
   \where \protected {
-    \func torusEquiv : QEquiv {Torus} {\Sigma (Sphere 1) (Sphere 1)}
-      => transQEquiv TorusSphere-equiv (sigma-equiv Sphere1-equiv (\lam _ => Sphere1-equiv))
+    \func torusFun (t : Torus) : \Sigma (Sphere 1) (Sphere 1)
+      => (Sphere1-equiv (TorusSphere-equiv t).1, Sphere1-equiv (TorusSphere-equiv t).2)
+
+    \lemma torusFun-isEquiv : IsEquiv torusFun
+      => inP (transQEquiv TorusSphere-equiv (sigma-equiv Sphere1-equiv (\lam _ => Sphere1-equiv)))
 
     \func torusMap : Pointed.make point ->* PointedProduct (Sphere.pointed 1) (Sphere.pointed 1)
-      => (torusEquiv, idp)
+      => (torusFun, idp)
 
     \func hom : GroupHom (PiGroup_1+ 0 (Pointed.make point)) (PiGroup_1+ 0 (PointedProduct (Sphere.pointed 1) (Sphere.pointed 1)))
       => piGroupMap 0 torusMap
 
     \func iso : Iso {GroupCat} hom
-      => GroupCat.isoOfEquiv hom (IsEquiv.toQEquiv (piMap-isEquiv 1 torusMap (inP torusEquiv)))
+      => GroupCat.isoOfEquiv hom (IsEquiv.toQEquiv (piMap-isEquiv 1 torusMap torusFun-isEquiv))
   }
 
 \lemma torus-pi-high-contr (r : Nat) : Contr (PiSet (suc (suc r)) (Pointed.make point))

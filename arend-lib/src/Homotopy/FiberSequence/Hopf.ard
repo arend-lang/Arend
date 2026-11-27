@@ -19,7 +19,7 @@
     \protected \func map (t : \Sigma (x : Sphere 2) (hopfS2 x)) : Sphere 3
       => transport {\Type0} (\lam T => T) hopfS2.total-equiv t
 
-    \func map-north : map (north, north) = north
+    \sfunc map-north : map (north, north) = north
       => transport_*> (\lam (T : \Type0) => T) _ _ _
          *> pmap (transport {\Type0} (\lam T => T) (Join_Sphere (Sphere 1) 1)) (hopf-total-jinl north)
          *> Join_Sphere.north-comp (Sphere 1) 1
@@ -36,14 +36,14 @@
             *> transport_inv_id (\lam (T : \Type u) => T) (PushoutData.flattening (hopf {A})) (pinl ((), a))
   }
 
-\func hopfFiberSequence : FiberSequence (Sphere.pointed 1) (Sphere.pointed 3) (Sphere.pointed 2)
+\sfunc hopfFiberSequence : FiberSequence (Sphere.pointed 1) (Sphere.pointed 3) (Sphere.pointed 2)
   => fiberSequence-total hopfTotalFiberSequence (PointedEquiv.inverse hopfTotalEquivS3)
   \where {
     \func hopfTotalFiberSequence : FiberSequence (Sphere.pointed 1) hopfTotal (Sphere.pointed 2)
       => familyFiberSequence {Sphere.pointed 2} hopfS2 north
       \where
         -- | The point chosen for the total space agrees with the one inherited from {Sphere1_HSpace}.
-        \func basepoint
+        \sfunc basepoint
           : ((north, base {Sphere1_HSpace}) : \Sigma (x : Sphere 2) (hopfS2 x)) = (north, north)
           => pmap (\lam (a : Sphere 1) => ((north, a) : \Sigma (x : Sphere 2) (hopfS2 x))) sphereHSpace-base-north
   }

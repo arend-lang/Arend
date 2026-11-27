@@ -45,7 +45,7 @@
                            (nconnected-map=>trunc-equiv f (nconnected-map-mono (suc<=suc zero<=_) c)))
             (inP pi-vanishes-below.trunc1-Trunc0-equiv))
 
-    \func trunc0-square.{u} {A B : \Type u} (f : A -> B) (t : Trunc0 A)
+    \sfunc trunc0-square.{u} {A B : \Type u} (f : A -> B) (t : Trunc0 A)
       : pi-vanishes-below.trunc1-Trunc0-equiv
           (TruncMap 1 f (QEquiv.ret {pi-vanishes-below.trunc1-Trunc0-equiv} t)) = Trunc0.map t f \elim t
       | in0 a => pmap (\lam z => pi-vanishes-below.trunc1-Trunc0-equiv (TruncMap 1 f z)) Trunc0.rec-eval

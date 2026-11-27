@@ -101,9 +101,9 @@
   | ret_f g => idp
   | f_sec a => idp
 
-\func fib-precomp {A A' B : \Cat} (e : QEquiv {A} {A'}) (g : A' -> B) (b : B)
-  : QEquiv {Fib (\lam a => g (e a)) b} {Fib g b}
-  => sigma-left {A} {A'} {g __ = b} e
+\lemma fib-precomp {A A' B : \Cat} (e : QEquiv {A} {A'}) (g : A' -> B) (b : B)
+  : IsEquiv {Fib (\lam a => g (e a)) b} {Fib g b} (\lam x => (e x.1, x.2))
+  => inP (sigma-left {A} {A'} {g __ = b} e)
 
 \func totalFib {A B : \Type} (f : A -> B) : QEquiv {A} {\Sigma (b : B) (Fib f b)} \cowith
   | f a => (f a, (a, idp))
@@ -111,7 +111,7 @@
   | ret_f _ => idp
   | f_sec t => aux f t.2.1 t.1 t.2.2
   \where
-    \private \func aux {A B : \Type} (f : A -> B) (a : A) (b : B) (p : f a = b)
+    \private \sfunc aux {A B : \Type} (f : A -> B) (a : A) (b : B) (p : f a = b)
       : ((f a, (a,idp)) : \Sigma (b' : B) (Fib f b')) = (b, (a,p)) \elim b, p
       | _, idp => idp
 

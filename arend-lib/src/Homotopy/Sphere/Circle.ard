@@ -110,11 +110,11 @@
 \func Loop_S1 : OmegaS1 = Int =>
   path (iso (encode base1) wind encode_decode encode_wind)
 
-\func wind_loop-inv (n : Int) : wind n *> inv (path loop) = wind (ipred n)
+\sfunc wind_loop-inv (n : Int) : wind n *> inv (path loop) = wind (ipred n)
   => \have A : wind (ipred n) *> path loop = wind n => decode.wind_loop (ipred n) *> pmap wind (isuc_ipred n)
      \in pmap (*> inv (path loop)) (inv A) *> *>-assoc *> pmap (wind (ipred n) *>) *>_inv
 
-\func wind-+ (m n : Int) : wind (m IntRing.+ n) = wind m *> wind n \elim n
+\sfunc wind-+ (m n : Int) : wind (m IntRing.+ n) = wind m *> wind n \elim n
   | pos 0 => pmap wind (IntRing.zro-right {m})
   | pos (suc k) => pmap wind (IntRing.suc-right {m} {k})
                    *> inv (decode.wind_loop (m IntRing.+ pos k))

@@ -127,10 +127,10 @@
     \func pt.{u} {U : Modality.{u}} {A : \Type u} (x : LType A) : fibL x
       => IsEquiv.ret (modality-elim (fibL {U} {A})) (\lam a => lEta ((a,idp) : Fib (lEta {U} {A}) (lEta a))) x
 
-    \func pt-beta.{u} {U : Modality.{u}} {A : \Type u} (a : A) : pt (lEta a) = lEta ((a,idp) : Fib (lEta {U} {A}) (lEta a))
+    \sfunc pt-beta.{u} {U : Modality.{u}} {A : \Type u} (a : A) : pt (lEta a) = lEta ((a,idp) : Fib (lEta {U} {A}) (lEta a))
       => path \lam i => (IsEquiv.f_ret (modality-elim (fibL {U} {A})) {\lam a => lEta ((a,idp) : Fib (lEta {U} {A}) (lEta a))} @ i) a
 
-    \func pt-uniq.{u} {U : Modality.{u}} {A : \Type u} (a : A) (x : LType A) (p : lEta a = x)
+    \sfunc pt-uniq.{u} {U : Modality.{u}} {A : \Type u} (a : A) (x : LType A) (p : lEta a = x)
       : pt x = lEta ((a,p) : Fib (lEta {U} {A}) x) \elim x, p
       | _, idp => pt-beta a
 

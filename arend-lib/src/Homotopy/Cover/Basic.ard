@@ -13,10 +13,10 @@
 \func SetCover.{u} (A : \Type u) => A -> \Set u
   \where {
     -- | The structural identity principle for covers.
-    \func equality.{u} {A : \Type u} (C D : SetCover A) : QEquiv {C = D} {\Pi (a : A) -> QEquiv {C a} {D a}}
+    \sfunc equality.{u} {A : \Type u} (C D : SetCover A) : QEquiv {C = D} {\Pi (a : A) -> QEquiv {C a} {D a}}
       => transQEquiv (piEquiv (\lam _ => \Set u) C D) (pi-right \lam a => setUnivalence {C a} {D a})
 
-    \protected \func ext.{u} {A : \Type u} {C D : SetCover A} (e : \Pi (a : A) -> QEquiv {C a} {D a}) : C = D
+    \protected \sfunc ext.{u} {A : \Type u} {C D : SetCover A} (e : \Pi (a : A) -> QEquiv {C a} {D a}) : C = D
       => path (\lam i a => QEquiv-to-= (e a) i)
 
     \func pullback.{u} {X A : \Type u} (f : X -> A) (C : SetCover A) : SetCover X

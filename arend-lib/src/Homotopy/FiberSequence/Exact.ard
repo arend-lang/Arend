@@ -110,7 +110,7 @@
                                             (inP (symQEquiv (fibProjFib.equiv f))))
                        (loop^FibMap.isEquiv {PointedFib f} {X} (fibProj f) k)
 
-    \func gap-square.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+    \sfunc gap-square.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
       : fibProj (Loop^-Func k {PointedFib f} {X} (fibProj f)) ->*.∘* gap f k
         = Loop^-Func k {Loop Y} {PointedFib f} (fibBoundary f)
       => ->*.compose-assoc (fibProj (Loop^-Func k {PointedFib f} {X} (fibProj f)))
@@ -169,7 +169,7 @@
                                               (PointedEquiv.map-isEquiv {fiberBoundaryEquiv f})))
           (loop^FibMap.isEquiv {Loop Y} {PointedFib f} (fibBoundary f) k)
 
-    \func gap-square.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+    \sfunc gap-square.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
       : fibProj (Loop^-Func k {Loop Y} {PointedFib f} (fibBoundary f)) ->*.∘* gap f k
         = Loop^-Func k {Loop X} {Loop Y} (Loop-Func f)
       => ->*.compose-assoc (fibProj (Loop^-Func k {Loop Y} {PointedFib f} (fibBoundary f)))

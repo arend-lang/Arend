@@ -46,7 +46,7 @@
   => (FreeGroupUniversalProperty X (PiGroup_1+ 0 (Susp.pointed (Or X (\Sigma)))) (\lam x => in0 (bouquetLoop x))).1
 
 -- | The fundamental group of a bouquet of circles is free.
-\func PiGroup_Bouquet.{u} (X : \Set u) : Iso {GroupCat.{u}} (bouquetHom X)
+\sfunc PiGroup_Bouquet.{u} (X : \Set u) : Iso {GroupCat.{u}} (bouquetHom X)
   => GroupCat.isoOfEquiv (bouquetHom X)
        (transport (\lam (h : FreeGroup X -> PiGroup_1+ 0 (Susp.pointed (Or X (\Sigma)))) => QEquiv h) (ext hom-eq)
                   (transQEquiv j-equiv (PiGroup_Susp.hom-equiv {Or X (\Sigma)} {inr ()})))
@@ -221,24 +221,20 @@
 
 -- | 1-truncation preserves the fundamental group.
 \lemma truncHom-isEquiv.{u} {Y : \Type u} (y : Y) : IsEquiv (truncHom y)
-  => transportInv IsEquiv (ext fun-eq) (inP (transQEquiv (transQEquiv e1 e2) e3))
+  => transportInv IsEquiv (ext fun-eq)
+       (inP (transQEquiv (transQEquiv (symQEquiv pi-vanishes-below.trunc1-Trunc0-equiv) (symQEquiv (Trunc_-1+.equality y y))) e3))
   \where {
     \lemma loopSet : isSet (inT y = {Trunc_-1+ 2 Y} inT y)
       => \lam p q => ToProp.fromProp (isTruncated {Trunc_-1+.level 2 Y} (inT y) (inT y) p q)
-
-    \private \func e1 : QEquiv {Trunc0 (y = y)} {Trunc_-1+ 1 (y = y)}
-      => symQEquiv pi-vanishes-below.trunc1-Trunc0-equiv
-
-    \private \func e2 : QEquiv {Trunc_-1+ 1 (y = y)} {inT y = {Trunc_-1+ 2 Y} inT y}
-      => symQEquiv (Trunc_-1+.equality y y)
 
     \private \func e3 : QEquiv {inT y = {Trunc_-1+ 2 Y} inT y} {Trunc0 (inT y = {Trunc_-1+ 2 Y} inT y)} in0 \cowith
       | ret t => Trunc0.rec loopSet t (\lam s => s)
       | ret_f _ => Trunc0.rec-eval
       | f_sec t => \case \elim t \with { | in0 _ => pmap in0 Trunc0.rec-eval }
 
-    \private \lemma fun-eq (t : Trunc0 (y = y)) : truncHom y t = in0 (e2 (e1 t)) \elim t
-      | in0 p => pmap in0 (idp_*> *> inv (pmap e2 Trunc0.rec-eval))
+    \private \lemma fun-eq (t : Trunc0 (y = y))
+      : truncHom y t = in0 (QEquiv.ret {Trunc_-1+.equality y y} (QEquiv.ret {pi-vanishes-below.trunc1-Trunc0-equiv} t)) \elim t
+      | in0 p => pmap in0 (idp_*> *> inv (pmap (QEquiv.ret {Trunc_-1+.equality y y}) Trunc0.rec-eval))
   }
 
 \func KG1 (G : Group)
@@ -270,7 +266,7 @@
     \func complexMap (z : PresentationComplex (canonicalRel G)) : K1 G
       => PushoutData.rec bouquetMap (\lam _ => base) glue z
 
-    \func glue (z : Bouquet (Or (\Sigma G G) (\Sigma))) : bouquetMap (attach (canonicalRel G) z) = base
+    \sfunc glue (z : Bouquet (Or (\Sigma G G) (\Sigma))) : bouquetMap (attach (canonicalRel G) z) = base
       => PushoutData.elim (\lam z => bouquetMap (attach (canonicalRel G) z) = base) (\lam _ => idp) (\lam _ => idp)
            (\lam a => pathOver (transport_path_pmap (\lam z => bouquetMap (attach (canonicalRel G) z)) (\lam _ => base) (pmerid a) idp idp
                                                     (inv (loop-trivial a)))) z

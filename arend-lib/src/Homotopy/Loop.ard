@@ -9,7 +9,6 @@
 \import Homotopy.Pointed
 \import Homotopy.Pushout
 \import Homotopy.Sphere
-\import Homotopy.Square
 \import Homotopy.Suspension
 \import Meta
 \import Paths
@@ -48,7 +47,7 @@
   | map => Loop-Func e.map
   | map-isEquiv => Loop-Func.isEquiv e.map e.map-isEquiv
 
-\func Loop-Func-comp {X Y Z : Pointed} (g : Y ->* Z) (f : X ->* Y)
+\sfunc Loop-Func-comp {X Y Z : Pointed} (g : Y ->* Z) (f : X ->* Y)
   : Loop-Func (g ->*.∘* f) = Loop-Func g ->*.∘* Loop-Func f
   => ->*.ext (loopMap.comp f.1 f.2 g.1 g.2) (loopMap.comp-coh f.1 f.2 g.1 g.2)
 
@@ -60,11 +59,11 @@
       | ret_f _ => idp
       | f_sec _ => idp
 
-    \func proj1 (X Y : Pointed)
+    \sfunc proj1 (X Y : Pointed)
       : PointedProduct.proj1 ->*.∘* LoopProductMap X Y = Loop-Func (PointedProduct.proj1 {X} {Y})
       => ->*.ext (\lam p => inv idp_*>) idp
 
-    \func proj2 (X Y : Pointed)
+    \sfunc proj2 (X Y : Pointed)
       : PointedProduct.proj2 ->*.∘* LoopProductMap X Y = Loop-Func (PointedProduct.proj2 {X} {Y})
       => ->*.ext (\lam p => inv idp_*>) idp
   }
@@ -78,7 +77,7 @@
     \func set {X : \Type} (pr : \Pi (x0 : X) -> isSet (x0 = x0)) (x y : X) (p q : x = y) : isProp (p = q) \elim p
       | idp => pr x idp q
 
-    \func prop {X : \Type} (pr : \Pi (x0 : X) -> isProp (x0 = x0)) (x y : X) (p q : x = y) : p = q \elim p
+    \sfunc prop {X : \Type} (pr : \Pi (x0 : X) -> isProp (x0 = x0)) (x y : X) (p q : x = y) : p = q \elim p
       | idp => pr x idp q
   }
 
@@ -97,35 +96,61 @@
 \lemma loop-contr (X : Pointed) (c : Contr X) : Contr (Loop X)
   => isProp=>PathContr X (isContr=>isProp c) base base
 
--- | The suspension-loop adjunction on pointed maps as an explicit chain of equivalences.
-\func SuspLoopQEquiv.{u} (A B : Pointed.{u}) : QEquiv {Susp.pointed A ->* B} {A ->* Loop B} =>
-  \let S => Square { | Y => B | U => A | V => \Sigma | X => \Sigma | uv _ => () | ux _ => () } \in
-  sigma-left {_} {S} {\lam s => Square.vy {s} () = base} (IsEquiv.toQEquiv (Susp.pushout A).pushout-univ)
-  `transQEquiv` (\new QEquiv {\Sigma (s : S) (Square.vy {s} () = base)} {\Sigma (p : \Sigma (b1 : B) (b1 = base)) (\Sigma (b2 : B) (A -> p.1 = b2))} {
-    | f p => \let s : Square => p.1 \in ((s.vy (), p.2), (s.xy (), s.sqcomm))
-    | ret q => (\new Square { | vy _ => q.1.1 | xy _ => q.2.1 | sqcomm => q.2.2 }, q.1.2)
-    | ret_f => idpe
-    | f_sec => idpe
-  })
-  `transQEquiv` contr-left (rsigma base) {\lam p => \Sigma (b2 : B) (A -> p.1 = b2)}
-  `transQEquiv` symQEquiv (contr-right (\lam (p : \Sigma (b2 : B) (A -> base = b2)) => lsigma (p.2 base)))
-  `transQEquiv` (\new QEquiv {\Sigma (p : \Sigma (b2 : B) (A -> base = b2)) (\Sigma (q : base = p.1) (p.2 base = q))}
-                              {\Sigma (p : \Sigma (b2 : B) (base = b2)) (\Sigma (g : A -> base = p.1) (g base = p.2))} {
-    | f p => ((p.1.1, p.2.1), (p.1.2, p.2.2))
-    | ret q => ((q.1.1, q.2.1), (q.1.2, q.2.2))
-    | ret_f => idpe
-    | f_sec => idpe
-  })
-  `transQEquiv` contr-left (lsigma base) {\lam p => \Sigma (g : A -> base = p.1) (g base = p.2)}
+-- | The suspension-loop adjunction on pointed maps.
+\func SuspLoopQEquiv.{u} (A B : Pointed.{u})
+  : QEquiv {Susp.pointed A ->* B} {A ->* Loop B} (toLoop A B) (fromLoop A B) \cowith
+  | ret_f => fromLoop-toLoop A B
+  | f_sec => toLoop-fromLoop A B
+  \where {
+    \func toLoop.{u} (A B : Pointed.{u}) (f : Susp.pointed A ->* B) : A ->* Loop B
+      => (\lam a => loopMap f.1 f.2 (pmerid a *> inv (pmerid base)), pmap (loopMap f.1 f.2) *>_inv *> loopMap.idp-case f.1 f.2)
 
-\func SuspLoopEquiv.{u} (A B : Pointed.{u}) : (Susp.pointed A ->* B) = (A ->* Loop B)
+    \func fromLoop.{u} (A B : Pointed.{u}) (g : A ->* Loop B) : Susp.pointed A ->* B
+      => (Susp.rec base base g.1, idp)
+
+    -- | The forward map of this chain is {fromLoop} definitionally.
+    \lemma fromLoop-isEquiv.{u} (A B : Pointed.{u}) : IsEquiv (fromLoop A B)
+      => inP (symQEquiv (contr-left (lsigma base) {\lam (p : \Sigma (b2 : B) (base = b2)) => \Sigma (g : A -> base = p.1) (g base = p.2)})
+        `transQEquiv` (\new QEquiv {\Sigma (p : \Sigma (b2 : B) (base = b2)) (\Sigma (g : A -> base = p.1) (g base = p.2))}
+                                   {\Sigma (p : \Sigma (b2 : B) (A -> base = b2)) (\Sigma (q : base = p.1) (p.2 base = q))} {
+          | f q => ((q.1.1, q.2.1), (q.1.2, q.2.2))
+          | ret p => ((p.1.1, p.2.1), (p.1.2, p.2.2))
+          | ret_f => idpe
+          | f_sec => idpe
+        })
+        `transQEquiv` contr-right (\lam (p : \Sigma (b2 : B) (A -> base = b2)) => lsigma (p.2 base))
+        `transQEquiv` symQEquiv (contr-left (rsigma base) {\lam (p : \Sigma (b1 : B) (b1 = base)) => \Sigma (b2 : B) (A -> p.1 = b2)})
+        `transQEquiv` (\new QEquiv {\Sigma (p : \Sigma (b1 : B) (b1 = base)) (\Sigma (b2 : B) (A -> p.1 = b2))}
+                                   {\Sigma (t : \Sigma (b1 b2 : B) (A -> b1 = b2)) (t.1 = base)} {
+          | f q => ((q.1.1, q.2.1, q.2.2), q.1.2)
+          | ret t => ((t.1.1, t.2), (t.1.2, t.1.3))
+          | ret_f => idpe
+          | f_sec => idpe
+        })
+        `transQEquiv` sigma-left {_} {_} {\lam (h : Susp A -> B) => h north = base} (Susp.rec.equiv {A} {B}))
+
+    \sfunc toLoop-fromLoop.{u} (A B : Pointed.{u}) (g : A ->* Loop B) : toLoop A B (fromLoop A B g) = g
+      => ->*.ext (\lam a => SuspLoopEquiv.unit.loopMap_*>-inv (Susp.rec base base g.1) (pmerid a) (pmerid base)
+                              *> pmap (\lam w => g.1 a *> inv w) g.2)
+                 (*>-assoc *> pmap (_ *>) (coh g.2) *> SuspLoopEquiv.unit.coh-raw (Susp.rec base base g.1) (pmerid base))
+      \where
+        \func coh {X : \Type} {x : X} {l : x = x} (e : l = idp) : pmap (\lam w => l *> inv w) e *> e = idp *> *>_inv \elim l, e
+          | _, idp => idp
+
+    \sfunc fromLoop-toLoop.{u} (A B : Pointed.{u}) (f : Susp.pointed A ->* B) : fromLoop A B (toLoop A B f) = f
+      => \let e => fromLoop-isEquiv A B
+         \in pmap (\lam x => fromLoop A B (toLoop A B x)) (inv (IsEquiv.f_ret e))
+             *> pmap (fromLoop A B) (toLoop-fromLoop A B (IsEquiv.ret e f)) *> IsEquiv.f_ret e
+  }
+
+\sfunc SuspLoopEquiv.{u} (A B : Pointed.{u}) : (Susp.pointed A ->* B) = (A ->* Loop B)
   => path (QEquiv_= (SuspLoopQEquiv A B))
   \where
     -- | The unit of the adjunction, the HoTT book, Section 8.6.
     \func unit (X : Pointed) : X ->* Loop (Susp.pointed X)
       => (\lam x => pmerid x *> inv (pmerid base), *>_inv)
       \where {
-        \func natural.{u} {X Y : Pointed.{u}} (f : X ->* Y)
+        \sfunc natural.{u} {X Y : Pointed.{u}} (f : X ->* Y)
           : Loop-Func (Susp-Func f) ->*.∘* unit X = unit Y ->*.∘* f
           => ->*.ext (pt f.1 f.2) (coh f.1 f.2)
 
@@ -170,14 +195,14 @@
           | pinr _ => b
           | pglue () _
 
-\func Loop-Func-id {X : Pointed} : Loop-Func (->*.id {X}) = ->*.id
+\sfunc Loop-Func-id {X : Pointed} : Loop-Func (->*.id {X}) = ->*.id
   => ->*.ext (\lam z => idp_*>) idp
 
-\func Loop-Func_*> {X Y : Pointed} (f : X ->* Y) (p q : Loop X)
+\sfunc Loop-Func_*> {X Y : Pointed} (f : X ->* Y) (p q : Loop X)
   : (Loop-Func f).1 (p *> q) = (Loop-Func f).1 p *> (Loop-Func f).1 q
   => aux f.1 f.2 p q
   \where
-    \private \func aux {X : Pointed} {E : \Type} (f1 : X -> E) {y : E} (f2 : f1 base = y) (p q : base {X} = base)
+    \private \sfunc aux {X : Pointed} {E : \Type} (f1 : X -> E) {y : E} (f2 : f1 base = y) (p q : base {X} = base)
       : inv f2 *> (pmap f1 (p *> q) *> f2) = (inv f2 *> (pmap f1 p *> f2)) *> (inv f2 *> (pmap f1 q *> f2)) \elim y, f2
       | _, idp => idp_*> *> pmap_*>-comm f1 p q *> inv (pmap2 (*>) idp_*> idp_*>)
 
@@ -192,11 +217,11 @@
       | 0 => e
       | suc n => Loop-Func.isEquiv (Loop^-Func n f) (isEquiv n f e)
 
-    \func id.{u} (n : Nat) {X : Pointed.{u}} : Loop^-Func n (->*.id {X}) = ->*.id \elim n
+    \sfunc id.{u} (n : Nat) {X : Pointed.{u}} : Loop^-Func n (->*.id {X}) = ->*.id \elim n
       | 0 => idp
       | suc n => pmap (Loop-Func {Loop^ n X} {Loop^ n X}) (id n) *> Loop-Func-id
 
-    \func comp.{u} (n : Nat) {X Y Z : Pointed.{u}} (g : Y ->* Z) (f : X ->* Y)
+    \sfunc comp.{u} (n : Nat) {X Y Z : Pointed.{u}} (g : Y ->* Z) (f : X ->* Y)
       : Loop^-Func n (g ->*.∘* f) = Loop^-Func n g ->*.∘* Loop^-Func n f \elim n
       | 0 => idp
       | suc n => pmap (Loop-Func {Loop^ n X} {Loop^ n Z}) (comp n g f)
@@ -213,7 +238,7 @@
       | suc n => IsEquiv.trans (Loop-Func.isEquiv (loop^ProductMap n X Y) (isEquiv n X Y))
                                (inP (LoopProductMap.equiv (Loop^ n X) (Loop^ n Y)))
 
-    \func proj1.{u} (n : Nat) (X Y : Pointed.{u})
+    \sfunc proj1.{u} (n : Nat) (X Y : Pointed.{u})
       : PointedProduct.proj1 ->*.∘* loop^ProductMap n X Y = Loop^-Func.{u} n PointedProduct.proj1 \elim n
       | 0 => idp
       | suc n => ->*.compose-assoc PointedProduct.proj1 (LoopProductMap (Loop^ n X) (Loop^ n Y)) (Loop-Func (loop^ProductMap n X Y))
@@ -221,7 +246,7 @@
                  *> inv (Loop-Func-comp PointedProduct.proj1 (loop^ProductMap n X Y))
                  *> pmap Loop-Func (proj1 n X Y)
 
-    \func proj2.{u} (n : Nat) (X Y : Pointed.{u})
+    \sfunc proj2.{u} (n : Nat) (X Y : Pointed.{u})
       : PointedProduct.proj2 ->*.∘* loop^ProductMap n X Y = Loop^-Func.{u} n PointedProduct.proj2 \elim n
       | 0 => idp
       | suc n => ->*.compose-assoc PointedProduct.proj2 (LoopProductMap (Loop^ n X) (Loop^ n Y)) (Loop-Func (loop^ProductMap n X Y))
@@ -241,7 +266,7 @@
       | 0 => inP idEquiv
       | suc n => Loop-Func.isEquiv (loop^Shift n X) (isEquiv n X)
 
-    \func natural.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y)
+    \sfunc natural.{u} (n : Nat) {X Y : Pointed.{u}} (f : X ->* Y)
       : loop^Shift n Y ->*.∘* Loop^-Func n {Loop X} {Loop Y} (Loop-Func f)
         = Loop^-Func (suc n) f ->*.∘* loop^Shift n X \elim n
       | 0 => inv (->*.compose-id (Loop-Func f))
@@ -262,15 +287,15 @@
     \lemma isEquiv.{u} (n : Nat) (X : Pointed.{u}) : IsEquiv (loop^ShiftInv n X).1
       => PointedEquiv.map-isEquiv {PointedEquiv.inverse (loop^ShiftEquiv n X)}
 
-    \func left.{u} (n : Nat) (X : Pointed.{u}) (z : Loop^ n (Loop X))
+    \sfunc left.{u} (n : Nat) (X : Pointed.{u}) (z : Loop^ n (Loop X))
       : (loop^ShiftInv n X).1 ((loop^Shift n X).1 z) = z
       => Section.ret_f {PointedEquiv.toHAEquiv (loop^ShiftEquiv n X)} z
 
-    \func right.{u} (n : Nat) (X : Pointed.{u}) (c : Loop^ (suc n) X)
+    \sfunc right.{u} (n : Nat) (X : Pointed.{u}) (c : Loop^ (suc n) X)
       : (loop^Shift n X).1 ((loop^ShiftInv n X).1 c) = c
       => Retraction.f_sec {PointedEquiv.toHAEquiv (loop^ShiftEquiv n X)} c
 
-    \func concat.{u} (n : Nat) (X : Pointed.{u}) (u v : Loop^ (suc (suc n)) X)
+    \sfunc concat.{u} (n : Nat) (X : Pointed.{u}) (u v : Loop^ (suc (suc n)) X)
       : (loop^ShiftInv (suc n) X).1 (u *> v)
         = (loop^ShiftInv (suc n) X).1 u *> (loop^ShiftInv (suc n) X).1 v
       => IsEquiv.isInj (loop^Shift.isEquiv (suc n) X)
@@ -289,5 +314,5 @@
 
 -- | The suspension-loop adjunction as a pointed equivalence of pointed mapping spaces.
 \func suspLoopPointed.{u} {A B : Pointed.{u}} : PointedEquiv (PointedMap (Susp.pointed A) B) (PointedMap A (Loop B)) \cowith
-  | map => (SuspLoopQEquiv A B, idp)
+  | map => (SuspLoopQEquiv.toLoop A B, idp)
   | map-isEquiv => inP (SuspLoopQEquiv A B)

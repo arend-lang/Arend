@@ -42,12 +42,12 @@
       | inr _, slideC s t a w0 q e e' => slideC (r s) (r t) a (relabel r w0) q (pmap (toC (r t) __ q) (inv (appendB w0 _)) *> pmap (relabel r) e) (pmap (relabel r) e')
       | inr _, congC s e0 q e e' => congC (r s) (rel e0) q (pmap (relabel r) e) (pmap (relabel r) e')
 
-    \func appendB {x : Or V.B V.C} {b b' : V.B} (w : VKSpan.Raw {restrictVK V r} x (inl b)) (p : b =0 b')
+    \sfunc appendB {x : Or V.B V.C} {b b' : V.B} (w : VKSpan.Raw {restrictVK V r} x (inl b)) (p : b =0 b')
       : relabel r (VKSpan.appendB {restrictVK V r} w p) = V.appendB (relabel r w) p \elim w
       | segB _ => idp
       | toB _ _ _ => idp
 
-    \func appendC {x : Or V.B V.C} {c c' : V.C} (w : VKSpan.Raw {restrictVK V r} x (inr c)) (q : c =0 c')
+    \sfunc appendC {x : Or V.B V.C} {c c' : V.C} (w : VKSpan.Raw {restrictVK V r} x (inr c)) (q : c =0 c')
       : relabel r (VKSpan.appendC {restrictVK V r} w q) = V.appendC (relabel r w) q \elim w
       | segC _ => idp
       | toC _ _ _ => idp

@@ -44,7 +44,7 @@
 \sfunc K1-loopEquiv.{u} {G : Group.{u}} : QEquiv {G} {base {G} = base} (\lam g => path (loop g))
   => symQEquiv (loopEncodeDecode code ide decode K1.loop-ide (decode_encode base))
 
-\func PiGroup_K1.{u} (G : Group.{u}) : PiGroup_1+ 0 (K1Pointed G) = {Group.{u}} G
+\sfunc PiGroup_K1.{u} (G : Group.{u}) : PiGroup_1+ 0 (K1Pointed G) = {Group.{u}} G
   => inv (Cat.isotoid iso)
   \where \protected {
     \func hom : GroupHom G (PiGroup_1+ 0 (K1Pointed G)) \cowith

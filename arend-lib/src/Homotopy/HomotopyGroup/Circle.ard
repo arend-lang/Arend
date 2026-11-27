@@ -17,29 +17,29 @@
 \import Paths.Meta
 \import Set \hiding (#, .#)
 
-\func PiGroup_S1 : PiGroup_1+ 0 (Sphere.pointed 1) = AddGroup.toGroup IntRing
+\sfunc PiGroup_S1 : PiGroup_1+ 0 (Sphere.pointed 1) = AddGroup.toGroup IntRing
   => inv (Cat.isotoid iso)
   \where {
     \func windHom : GroupHom (AddGroup.toGroup IntRing) (PiGroup_1+ 0 (Pointed.make base1)) \cowith
       | func z => in0 (wind z)
       | func-* {x} {y} => pmap in0 (wind-+ x y)
 
-    \func windEquiv : QEquiv {Int} {PiSet 1 (Pointed.make base1)}
-      => symQEquiv (transQEquiv (Trunc0.mapEquiv Loop_S1-equiv) Trunc0.setEquiv)
+    \lemma windHom-isEquiv : IsEquiv windHom.func
+      => inP (symQEquiv (transQEquiv (Trunc0.mapEquiv Loop_S1-equiv) Trunc0.setEquiv))
 
     \func circleMap : Pointed.make base1 ->* Sphere.pointed 1
       => (Sphere1-equiv.f, idp)
 
-    \func circleEquiv : QEquiv (piMap 1 circleMap)
-      => IsEquiv.toQEquiv (piMap-isEquiv 1 circleMap (inP Sphere1-equiv))
+    \lemma circleMap-isEquiv : IsEquiv (piMap 1 circleMap)
+      => piMap-isEquiv 1 circleMap (inP Sphere1-equiv)
 
     \protected \func hom : GroupHom (AddGroup.toGroup IntRing) (PiGroup_1+ 0 (Sphere.pointed 1))
       => GroupHom.compose (piGroupMap 0 circleMap) windHom
 
     \protected \func iso : Iso {GroupCat} hom
       => (GroupCat.Iso<->Inj+Surj hom).2
-          (IsInj.comp windEquiv.isInj circleEquiv.isInj,
-           IsSurj.comp windEquiv.isSurj circleEquiv.isSurj)
+          (IsInj.comp (IsEquiv.isInj windHom-isEquiv) (IsEquiv.isInj circleMap-isEquiv),
+           IsSurj.comp (IsEquiv.isSurj windHom-isEquiv) (IsEquiv.isSurj circleMap-isEquiv))
   }
 
 \lemma circle-pi-high-contr (r : Nat) : Contr (PiSet (suc (suc r)) (Sphere.pointed 1))

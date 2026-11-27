@@ -45,10 +45,10 @@
 \func gapInverse (S : FiberSequence) : PointedFib S.proj ->* S.Fiber
   => PointedEquiv.map {PointedEquiv.inverse (fiberGapEquiv S)}
 
-\func gap-incl (S : PointedShortSeq) : fibProj S.proj ->*.∘* PointedShortSeq.gap S = S.incl
+\sfunc gap-incl (S : PointedShortSeq) : fibProj S.proj ->*.∘* PointedShortSeq.gap S = S.incl
   => ->*.ext (\lam _ => idp) (idp_*> *> inv (Fib.ext-proj _ _ _ _ _))
 
-\func gapInverse-incl (S : FiberSequence) : S.incl ->*.∘* gapInverse S = fibProj S.proj
+\sfunc gapInverse-incl (S : FiberSequence) : S.incl ->*.∘* gapInverse S = fibProj S.proj
   => inv (pmap (\lam h => h ->*.∘* gapInverse S) (gap-incl S))
      *> inv (->*.compose-assoc (fibProj S.proj) (PointedShortSeq.gap S) (gapInverse S))
      *> pmap (fibProj S.proj ->*.∘*) (PointedEquiv.inverse-sec (fiberGapEquiv S))
@@ -100,7 +100,7 @@
 
 \func loopInv (X : Pointed) : Loop X ->* Loop X => (inv, idp)
   \where
-    \func involutive (X : Pointed) : loopInv X ->*.∘* loopInv X = ->*.id
+    \sfunc involutive (X : Pointed) : loopInv X ->*.∘* loopInv X = ->*.id
       => ->*.ext (\lam _ => inv_inv) idp
 
 \func fibProjFib {X Y : Pointed} (f : X ->* Y) : PointedFib (fibProj f) ->* Loop Y
@@ -134,7 +134,7 @@
     \func inverse {X Y : Pointed} (f : X ->* Y) : Loop Y ->* PointedFib (fibProj f)
       => (bwd f, idp)
 
-    \func inverse-sec {X Y : Pointed} (f : X ->* Y) : fibProjFib f ->*.∘* inverse f = ->*.id
+    \sfunc inverse-sec {X Y : Pointed} (f : X ->* Y) : fibProjFib f ->*.∘* inverse f = ->*.id
       => ->*.ext (sec-lem f) (pmap (pmap (inv f.2 *>) idp_*> *>) idp_*>
                               *> inv idp_*>)
   }
@@ -154,19 +154,19 @@
   => (\lam t => (e.map.1 t.1, t.2),
       Fib.ext base (e.map.1 base, (h ->*.∘* e.map).2) (base, h.2) e.map.2 idp)
   \where
-    \func proj {A B C : Pointed} (h : B ->* C) (e : PointedEquiv A B)
+    \sfunc proj {A B C : Pointed} (h : B ->* C) (e : PointedEquiv A B)
       : fibProj h ->*.∘* fibEquivPreMap h e = e.map ->*.∘* fibProj (h ->*.∘* e.map)
       => ->*.ext (\lam _ => idp) (idp_*> *> idp_*> *> inv (Fib.ext-proj base (base, h.2) (e.map.1 base, (h ->*.∘* e.map).2) e.map.2 idp))
 
 \func fibEquivPre {A B C : Pointed} (h : B ->* C) (e : PointedEquiv A B)
   : PointedEquiv (PointedFib (h ->*.∘* e.map)) (PointedFib h) \cowith
   | map => fibEquivPreMap h e
-  | map-isEquiv => inP (fib-precomp (IsEquiv.toQEquiv e.map-isEquiv) h.1 base)
+  | map-isEquiv => fib-precomp (IsEquiv.toQEquiv e.map-isEquiv) h.1 base
 
 \func fibCongrMap {A B : Pointed} {g h : A ->* B} (s : g = h) : PointedFib g ->* PointedFib h \elim s
   | idp => ->*.id
   \where
-    \func proj {A B : Pointed} {g h : A ->* B} (s : g = h)
+    \sfunc proj {A B : Pointed} {g h : A ->* B} (s : g = h)
       : fibProj h ->*.∘* fibCongrMap s = fibProj g \elim s
       | idp => ->*.compose-id (fibProj g)
 
@@ -177,7 +177,7 @@
     \lemma isEquiv {A B : Pointed} {g h : A ->* B} (s : g = h) : IsEquiv (fibCongrMap s).1 \elim s
       | idp => inP idEquiv
 
-\func fibBoundary-gap {X Y : Pointed} (f : X ->* Y)
+\sfunc fibBoundary-gap {X Y : Pointed} (f : X ->* Y)
   : fibBoundary f ->*.∘* fibProjFib f = fibProj (fibProj f)
   => ->*.ext (\lam u => pmap (\lam (w : PointedFib (fibProj f)) => w.1)
                              (fibProjFib.ret-lem f u.1.1 u.2 u.1.2))
@@ -185,12 +185,12 @@
                    (pmap (pmap (f.2 *>) (pmap (inv f.2 *>) idp_*>) *>) (inv-triangle f.2)
                     *> inv (pmap_*>-comm (f.2 *>) (pmap (inv f.2 *>) idp_*>) inv_*>)))
   \where
-    \func inv-triangle {A : \Type} {a b : A} (p : a = b)
+    \sfunc inv-triangle {A : \Type} {a b : A} (p : a = b)
       : inv *>-assoc *> pmap (*> p) *>_inv *> idp_*> = pmap (p *>) inv_*>
       \elim b, p
       | _, idp => idp
 
-\func fibBoundary-proj {X Y : Pointed} (f : X ->* Y)
+\sfunc fibBoundary-proj {X Y : Pointed} (f : X ->* Y)
   : fibProj (fibProj f) ->*.∘* fibProjFib.inverse f = fibBoundary f
   => pmap (\lam h => h ->*.∘* fibProjFib.inverse f) (inv (fibBoundary-gap f))
      *> inv (->*.compose-assoc (fibBoundary f) (fibProjFib f) (fibProjFib.inverse f))
@@ -210,7 +210,7 @@
          (PointedEquiv.compose (fibCongr (inv (fibBoundary-gap f))) (fiberFibProjEquiv.inverse (fibProj f)))}
 
 -- | The HoTT book, Lemma 8.4.4 (3).
-\func fiber-third-map {X Y : Pointed} (f : X ->* Y)
+\sfunc fiber-third-map {X Y : Pointed} (f : X ->* Y)
   : fibProj (fibBoundary f) ->*.∘* fiberBoundaryMap f = Loop-Func f ->*.∘* loopInv X
   => ->*.compose-assoc (fibProj (fibBoundary f)) (fibEquivPreMap (fibBoundary f) (fiberFibProjEquiv f))
                        (fibCongrMap (inv (fibBoundary-gap f)) ->*.∘* fibProjFib.inverse (fibProj f))
@@ -226,12 +226,12 @@
                       (fibCongrMap.proj (inv (fibBoundary-gap f))))
      *> last f
   \where
-    \func last {X Y : Pointed} (f : X ->* Y)
+    \sfunc last {X Y : Pointed} (f : X ->* Y)
       : fibProjFib f ->*.∘* (fibProj (fibProj (fibProj f)) ->*.∘* fibProjFib.inverse (fibProj f))
         = Loop-Func f ->*.∘* loopInv X
       => ->*.ext (\lam r => pmap (\lam z => inv f.2 *> pmap f.1 (inv z) *> f.2) idp_*>) idp_*>
 
-\func fibBoundary-third {X Y : Pointed} (f : X ->* Y)
+\sfunc fibBoundary-third {X Y : Pointed} (f : X ->* Y)
   : fibProj (fibBoundary f) ->*.∘* (fiberBoundaryMap f ->*.∘* loopInv X) = Loop-Func f
   => ->*.compose-assoc (fibProj (fibBoundary f)) (fiberBoundaryMap f) (loopInv X)
      *> pmap (\lam h => h ->*.∘* loopInv X) (fiber-third-map f)
@@ -249,7 +249,7 @@
       => (pmap (\lam (t : Fib g b) => t.1) w,
           homotopy-isNatural (\lam (t : Fib g b) => g t.1) (\lam _ => b) (\lam t => t.2) w)
 
-    \func fibPathMap=equiv {A B : \Type} {g : A -> B} {b : B} (x x' : Fib g b) (w : x = x')
+    \sfunc fibPathMap=equiv {A B : \Type} {g : A -> B} {b : B} (x x' : Fib g b) (w : x = x')
       : fibPathMap w = Fib.equiv b x x' w \elim x', w
       | _, idp => idp
 
@@ -269,7 +269,7 @@
       => IsEquiv.trans (fibPathMap-isEquiv (base {PointedFib f}) (base {PointedFib f}))
                        (inP (sigma-right (\lam z => IsEquiv.toQEquiv (condMap-isEquiv f.1 f.2 z))))
 
-    \func proj {X Y : Pointed} (f : X ->* Y)
+    \sfunc proj {X Y : Pointed} (f : X ->* Y)
       : fibProj (Loop-Func f) ->*.∘* loopFibMap f = Loop-Func (fibProj f)
       => ->*.ext (\lam w => inv idp_*>) idp
   }
@@ -284,7 +284,7 @@
       | suc k => IsEquiv.trans (Loop-Func.isEquiv (loop^FibMap f k) (isEquiv f k))
                                (loopFibMap.isEquiv (Loop^-Func k f))
 
-\func loop^Fib-proj.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
+\sfunc loop^Fib-proj.{u} {X Y : Pointed.{u}} (f : X ->* Y) (k : Nat)
   : fibProj (Loop^-Func k f) ->*.∘* loop^FibMap f k = Loop^-Func k (fibProj f) \elim k
   | 0 => ->*.compose-id (fibProj f)
   | suc k =>

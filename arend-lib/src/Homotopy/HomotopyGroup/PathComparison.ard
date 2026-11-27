@@ -12,7 +12,7 @@
 \func piAtMap.{u} (k : Nat) {A B : \Type u} (f : A -> B) (a : A) (t : PiSet k (Pointed.make a)) : PiSet k (Pointed.make (f a))
   => piMap k (mapAt f a) t
 
-\func Loop-Func_mapAt {A B : \Type} (f : A -> B) (a : A) : Loop-Func (mapAt f a) = mapAt (pmap f {a} {a}) idp
+\sfunc Loop-Func_mapAt {A B : \Type} (f : A -> B) (a : A) : Loop-Func (mapAt f a) = mapAt (pmap f {a} {a}) idp
   => ->*.ext (\lam z => idp_*>) idp
 
 \lemma piMap-loopShift.{u} (k : Nat) {X Y : Pointed.{u}} (g : X ->* Y)

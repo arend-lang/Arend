@@ -13,14 +13,14 @@
   => (K1-rec base (\lam g => path (loop (phi g)))
              (\lam g g' => K1.loop-comp (phi g) (phi g') *> pmap (\lam h => path (loop h)) (inv phi.func-*)), idp)
   \where \protected {
-    \func id {G : Group} : K1Map (GroupHom.id {G}) = ->*.id
+    \sfunc id {G : Group} : K1Map (GroupHom.id {G}) = ->*.id
       => ->*.ext id-pt idp
 
     \func id-pt {G : Group} (x : K1 G) : (K1Map (GroupHom.id {G})).1 x = x \elim x
       | base => idp
       | loop g i => idp
 
-    \func comp {G H L : Group} (psi : GroupHom H L) (phi : GroupHom G H)
+    \sfunc comp {G H L : Group} (psi : GroupHom H L) (phi : GroupHom G H)
       : K1Map (psi GroupHom.∘ phi) = K1Map psi ->*.∘* K1Map phi
       => ->*.ext (comp-pt psi phi) idp
 
@@ -29,7 +29,7 @@
       | base => idp
       | loop g i => idp
 
-    \func loop_K1Map {G H : Group} (phi : GroupHom G H) (g : G)
+    \sfunc loop_K1Map {G H : Group} (phi : GroupHom G H) (g : G)
       : (Loop-Func (K1Map phi)).1 (path (loop g)) = path (loop (phi g))
       => idp_*>
 

@@ -44,7 +44,7 @@
      *> pmap (\lam z => in~ (toB s (toC s (segB idp0) z) idp0)) (idp0_*>0 _)
 
 -- | Theorem 8.7.5.
-\func PiGroup_Pushout.{u} {A : Connected0.{u}} {B C : \Type u} (f : A -> B) (g : A -> C) (a0 : A)
+\sfunc PiGroup_Pushout.{u} {A : Connected0.{u}} {B C : \Type u} (f : A -> B) (g : A -> C) (a0 : A)
   : GroupPushout (map0Hom f a0) (map0Hom g a0) = {Group.{u}} PiGroup_1+ 0 (Pointed.make (pinl {A} {B} {C} {f} {g} (f a0)))
   => Cat.isotoid iso
   \where {

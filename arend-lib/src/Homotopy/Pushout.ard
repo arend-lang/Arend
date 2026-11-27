@@ -43,7 +43,7 @@
       | pinr c => rm c
       | pglue a => gm a
       \where {
-        \protected \func map {A B C : \Type} {f : A -> B} {g : A -> C} {Y Z : \Type} (h : Y -> Z) (lm : B -> Y) (rm : C -> Y) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g)
+        \protected \sfunc map {A B C : \Type} {f : A -> B} {g : A -> C} {Y Z : \Type} (h : Y -> Z) (lm : B -> Y) (rm : C -> Y) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g)
           : h (rec lm rm gm x) = rec (h `o` lm) (h `o` rm) (\lam a => pmap h (gm a)) x \elim x
           | pinl b => idp
           | pinr c => idp
@@ -91,39 +91,46 @@
       => rec (\lam a => pinl (eA a)) (\lam b => pinr (eB b))
              (\lam c => (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) *> pmap pinr (beta c))
       \where {
-        \func precomp {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
-                          (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
-                          (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
-                          (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
-                          (Z : \Type)
-          : QEquiv {PushoutData u' v' -> Z} {PushoutData u v -> Z}
-          => transQEquiv (rec.equiv Z)
-               (transQEquiv (Cocone.equiv u v u' v' eJ eA eB alpha beta Z) (symQEquiv (rec.equiv Z)))
+        -- | Precomposition with {congr} is an equivalence.
+        \lemma precomp-isEquiv {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                                (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
+                                (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                                (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+                                (Z : \Type)
+          : IsEquiv {PushoutData u' v' -> Z} {PushoutData u v -> Z} (\lam h x => h (congr u v u' v' eJ eA eB alpha beta x))
+          => transport IsEquiv (ext (precomp-eq u v u' v' eJ eA eB alpha beta Z)) (inP (precomp u v u' v' eJ eA eB alpha beta Z))
+          \where {
+            \func precomp {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                              (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
+                              (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                              (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+                              (Z : \Type)
+              : QEquiv {PushoutData u' v' -> Z} {PushoutData u v -> Z}
+              => transQEquiv (rec.equiv Z)
+                   (transQEquiv (Cocone.equiv u v u' v' eJ eA eB alpha beta Z) (symQEquiv (rec.equiv Z)))
 
-        \func precomp-eq {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
-                             (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
-                             (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
-                             (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
-                             (Z : \Type) (h : PushoutData u' v' -> Z) (x : PushoutData u v)
-          : precomp u v u' v' eJ eA eB alpha beta Z h x = h (congr u v u' v' eJ eA eB alpha beta x)
-          => pmap (\lam g => rec (\lam a => h (pinl (eA a))) (\lam b => h (pinr (eB b))) g x)
-                  (ext (\lam c => pmap (\lam s => (s *> path (\lam i => h (pglue (eJ c) i))) *> pmap (\lam b => h (pinr b)) (beta c))
-                                       (inv (pmap_inv-comm (\lam a => h (pinl a)) (alpha c)))
-                        *> inv (pmap_*>-comm h (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) (pmap pinr (beta c))
-                                *> pmap (`*> pmap h (pmap pinr (beta c)))
-                                        (pmap_*>-comm h (pmap pinl (inv (alpha c))) (ppglue (eJ c))))))
-             *> inv (rec.map h (\lam a => pinl (eA a)) (\lam b => pinr (eB b))
-                              (\lam c => (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) *> pmap pinr (beta c)) x)
+            \sfunc precomp-eq {J A B J' A' B' : \Type} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
+                                 (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
+                                 (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
+                                 (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
+                                 (Z : \Type) (h : PushoutData u' v' -> Z) (x : PushoutData u v)
+              : precomp u v u' v' eJ eA eB alpha beta Z h x = h (congr u v u' v' eJ eA eB alpha beta x)
+              => pmap (\lam g => rec (\lam a => h (pinl (eA a))) (\lam b => h (pinr (eB b))) g x)
+                      (ext (\lam c => pmap (\lam s => (s *> path (\lam i => h (pglue (eJ c) i))) *> pmap (\lam b => h (pinr b)) (beta c))
+                                           (inv (pmap_inv-comm (\lam a => h (pinl a)) (alpha c)))
+                            *> inv (pmap_*>-comm h (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) (pmap pinr (beta c))
+                                    *> pmap (*> pmap h (pmap pinr (beta c)))
+                                            (pmap_*>-comm h (pmap pinl (inv (alpha c))) (ppglue (eJ c))))))
+                 *> inv (rec.map h (\lam a => pinl (eA a)) (\lam b => pinr (eB b))
+                                  (\lam c => (pmap pinl (inv (alpha c)) *> ppglue (eJ c)) *> pmap pinr (beta c)) x)
+          }
 
         \lemma isEquiv.{l} {J A B J' A' B' : \Type l} (u : J -> A) (v : J -> B) (u' : J' -> A') (v' : J' -> B')
                            (eJ : QEquiv {J} {J'}) (eA : QEquiv {A} {A'}) (eB : QEquiv {B} {B'})
                            (alpha : \Pi (c : J) -> u' (eJ c) = eA (u c))
                            (beta : \Pi (c : J) -> v' (eJ c) = eB (v c))
           : IsEquiv (congr u v u' v' eJ eA eB alpha beta)
-          => precomp=>isEquiv (congr u v u' v' eJ eA eB alpha beta)
-              (\lam Z => transport IsEquiv
-                  (ext (precomp-eq u v u' v' eJ eA eB alpha beta Z))
-                  (inP (precomp u v u' v' eJ eA eB alpha beta Z)))
+          => precomp=>isEquiv (congr u v u' v' eJ eA eB alpha beta) (\lam Z => precomp-isEquiv u v u' v' eJ eA eB alpha beta Z)
       }
 
     -- | The total space of a fibration over a pushout is equivalent to a pushout of fibers of this fibration.
@@ -147,11 +154,11 @@
           }
 
         -- | {tinl} and {tinr} do not depend on the interval parameter of {TotalPushout}.
-        \func tinl-coe (y : B) (t : F (pinl y))
+        \sfunc tinl-coe (y : B) (t : F (pinl y))
           : coe TotalPushout (tinl y t) right = tinl y t
           => pathOver.conv (path (\lam i => tinl {A} {B} {C} {f} {g} {F} {i} y t))
 
-        \func tinr-coe (z : C) (t : F (pinr z))
+        \sfunc tinr-coe (z : C) (t : F (pinr z))
           : coe TotalPushout (tinr z t) right = tinr z t
           => pathOver.conv (path (\lam i => tinr {A} {B} {C} {f} {g} {F} {i} z t))
 

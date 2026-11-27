@@ -1,3 +1,4 @@
+\import Equiv
 \import Homotopy.Pointed
 \import Homotopy.Pushout
 \import Paths
@@ -8,6 +9,16 @@
       | north => b1
       | south => b2
       | pglue a => f a
+      \where
+        -- | The universal property of the suspension.
+        \func equiv {A B : \Type}
+          : QEquiv {\Sigma (b1 b2 : B) (A -> b1 = b2)} {Susp A -> B} (\lam t => rec t.1 t.2 t.3) (\lam h => (h north, h south, \lam a => pmap h (pmerid a))) \cowith
+          | ret_f _ => idp
+          | f_sec h => path \lam i x => (\case \elim x \return rec (h north) (h south) (\lam a => pmap h (pmerid a)) x = h x \with {
+            | pinl _ => idp
+            | pinr _ => idp
+            | pglue _ _ => idp
+          }) i
 
     \func map {A B : \Type} (f : A -> B) : Susp A -> Susp B
       => rec north south (\lam a => pmerid (f a))

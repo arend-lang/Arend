@@ -65,11 +65,11 @@
 \func TruncMap.{u} (n : Nat) {A B : \Type u} (f : A -> B) (x : Trunc_-1+ n A) : Trunc_-1+ n B
   => Trunc_-1+.elim (\lam _ => Trunc_-1+.level n B) (\lam a => inT (f a)) x
   \where {
-    \func =lmap.{u} {n : Nat} {A B : \Type u} (f : A -> B) (x : Trunc_-1+ n A) : TruncMap n f x = lmap {truncUniverse n} f x
+    \sfunc =lmap.{u} {n : Nat} {A B : \Type u} (f : A -> B) (x : Trunc_-1+ n A) : TruncMap n f x = lmap {truncUniverse n} f x
       => trunc-unique (Trunc_-1+.level n B) (TruncMap n f) (lmap {truncUniverse n} f)
                       (\lam a => inv (Localization.lift-prop {localization {truncUniverse n} A} (\lam a => inT (f a)) a)) x
 
-    \func equiv.{u} {n : Nat} {A B : \Type u} (e : QEquiv {A} {B}) : QEquiv {Trunc_-1+ n A} {Trunc_-1+ n B}
+    \sfunc equiv.{u} {n : Nat} {A B : \Type u} (e : QEquiv {A} {B}) : QEquiv {Trunc_-1+ n A} {Trunc_-1+ n B}
       => transport (\lam T => QEquiv {Trunc_-1+ n A} {Trunc_-1+ n T}) (QEquiv_= e) idEquiv
   }
 
@@ -105,14 +105,14 @@
                                     (c : isNConnectedMap n f) : isNConnectedMap n (\lam a => g (f a))
   => \lam z => nconnected-equiv n (fibEquiv g f z) (c (g.ret z))
   \where
-    \func fibEquiv {A B C : \Type} (g : QEquiv {B} {C}) (f : A -> B) (z : C)
+    \sfunc fibEquiv {A B C : \Type} (g : QEquiv {B} {C}) (f : A -> B) (z : C)
       : QEquiv {Fib f (g.ret z)} {Fib (\lam a => g (f a)) z}
       => sigma-right (\lam a => transQEquiv (IsEquiv.toQEquiv (pmapIsEquiv (inP g) {f a} {g.ret z}))
                                             (pathConcatEquiv-right (g.f_ret z)))
 
 \lemma nconnected-map-comp-right.{u} (n : Nat) {A B C : \Type u} {f : B -> C} (e : QEquiv {A} {B})
                                      (c : isNConnectedMap n f) : isNConnectedMap n (\lam a => f (e a))
-  => \lam z => nconnected-equiv n (symQEquiv (fib-precomp e f z)) (c z)
+  => \lam z => nconnected-equiv n (symQEquiv (IsEquiv.toQEquiv (fib-precomp e f z))) (c z)
 
 \lemma nconnected_join.{u} {m n : Nat} (X Y : \Type u) (cx : isNConnectedType m X) (cy : isNConnectedType n Y)
   : isNConnectedType (suc (m Nat.+ n)) (Join X Y)

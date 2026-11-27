@@ -19,7 +19,7 @@
   | **-assoc {g} {h} {m} => pmap (transport0 C __ m) (pmap inv0 (Aut_*>0 g h) *> inv0_*>0-comm g h)
                             *> transport0_*>0 C (inv0 h) (inv0 g) m
   \where {
-    \func transport-natural {X : \Type} {C D : X -> \Type} (F : \Pi {x : X} -> C x -> D x) {x y : X} (p : x = y) (m : C x)
+    \sfunc transport-natural {X : \Type} {C D : X -> \Type} (F : \Pi {x : X} -> C x -> D x) {x y : X} (p : x = y) (m : C x)
       : F (transport C p m) = transport D p (F m) \elim p
       | idp => idp
 

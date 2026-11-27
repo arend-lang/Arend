@@ -29,10 +29,10 @@
 \lemma EM-pi-above.{u} {G : CGroup.{u}} {n k : Nat} (p : n NatOrder.< k) : Contr (PiSet k (EMSpace G n))
   => pi-vanishes-above (EM-level n) (<_suc_<= (suc<suc p))
 
-\func pi0_EM.{u} (G : CGroup.{u}) : QEquiv {PiSet 0 (EMSpace G 0)} {G}
+\func pi0_EM.{u} (G : CGroup.{u}) : QEquiv {PiSet 0 (EMSpace G 0)} {G} (Trunc0.remove' {G}) in0
   => Trunc0.setEquiv
 
-\func PiGroup_EM.{u} (G : CGroup.{u}) (n : Nat) : PiGroup_1+ n (EMSpace G (suc n)) = {Group.{u}} G
+\sfunc PiGroup_EM.{u} (G : CGroup.{u}) (n : Nat) : PiGroup_1+ n (EMSpace G (suc n)) = {Group.{u}} G
   => inv (Cat.isotoid iso)
   \where {
     \protected \func hom (n : Nat) : GroupHom G (PiGroup_1+ n (EMSpace G (suc n))) \elim n

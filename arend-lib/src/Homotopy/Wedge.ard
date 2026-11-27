@@ -104,9 +104,8 @@
        {\lam (h : \Pi (x : \Sigma A B) -> D x) (z : Wedge A B) => h (wedgeToProduct A B z)}
        (connected_depEquiv {truncUniverse.{l} (suc (r Nat.+ s))} (wedgeToProduct A B)
                            (wedgeToProduct-connected r s A B ca cb) D)
-       {\lam (t : \Pi (z : Wedge A B) -> D (wedgeToProduct A B z)) =>
-          sectionEquiv A B (\lam x => D x) t}
-       (inP (sectionEquiv A B (\lam x => D x)))
+       {restrictSection A B (\lam x => D x)}
+       (restrictSection-isEquiv A B (\lam x => D x))
   \where {
     \func dataEquiv.{l} {A B : Pointed.{l}} (D : \Sigma A B -> \Type l)
       : QEquiv {Cocone.dep (\lam z => D (wedgeToProduct A B z))} {WedgeData D} \cowith
@@ -115,9 +114,12 @@
       | ret_f _ => idp
       | f_sec _ => idp
 
-    \func sectionEquiv.{l} (A B : Pointed.{l}) (D : \Sigma A B -> \Type l)
-      : QEquiv {\Pi (z : Wedge A B) -> D (wedgeToProduct A B z)} {WedgeData D}
-      => transQEquiv (elim.equiv (\lam (z : Wedge A B) => D (wedgeToProduct A B z))) (dataEquiv D)
+    \func restrictSection.{l} (A B : Pointed.{l}) (D : \Sigma A B -> \Type l) (t : \Pi (z : Wedge A B) -> D (wedgeToProduct A B z))
+      : WedgeData D
+      => (\lam a => t (pinl a), \lam b => t (pinr b), path (\lam i => t (pglue () i)))
+
+    \lemma restrictSection-isEquiv.{l} (A B : Pointed.{l}) (D : \Sigma A B -> \Type l) : IsEquiv (restrictSection A B D)
+      => inP (transQEquiv (elim.equiv (\lam (z : Wedge A B) => D (wedgeToProduct A B z))) (dataEquiv D))
 
     \func extend.{l} (r s : Nat) (A B : Pointed.{l})
                      (ca : isNConnectedType (suc r) A) (cb : isNConnectedType (suc s) B)

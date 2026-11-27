@@ -76,7 +76,7 @@
         | inr c, segC st => idp
         | inr c, toC s w q => (inP idp, \lam e => rewrite (Sset s s e idp) (RawEq-refl Sset w, idp))
 
-      \func RawEq-eq (Sset : isSet S) {x y : Or B C} (w w' : Raw x y) (r : RawEq w w') : w = w' \elim y, w, w', r
+      \sfunc RawEq-eq (Sset : isSet S) {x y : Or B C} (w w' : Raw x y) (r : RawEq w w') : w = w' \elim y, w, w', r
         | inl b, segB st, segB st', r => pmap segB r
         | inl b, toB s w p, toB s' w' p', (t, h) =>
           \let e => TruncP.remove (Sset s s') t
@@ -90,7 +90,7 @@
         | inr _, segC _, toC _ _ _, r => \case r \with {}
         | inr _, toC _ _ _, segC _, r => \case r \with {}
 
-      \func cross {Y : S -> \Type} {Z : S -> \Type} {W : \Type} (h : \Pi (s : S) -> Y s -> Z s -> W) {s s' : S} (e : s = s')
+      \sfunc cross {Y : S -> \Type} {Z : S -> \Type} {W : \Type} (h : \Pi (s : S) -> Y s -> Z s -> W) {s s' : S} (e : s = s')
                   {w : Y s} {w' : Y s'} {p : Z s} {p' : Z s'} (ew : w = transport Y (inv e) w') (ep : p = transport Z (inv e) p')
         : h s w p = h s' w' p' \elim e
         | idp => pmap2 (h s) ew ep
@@ -152,104 +152,104 @@
     | in~ w => in~ (toC s w q)
     | ~-equiv _ _ r => ~-pequiv (congC s r q idp idp)
 
-  \func appendB-idp0 {x : Or B C} {b : B} (w : Raw x (inl b)) : appendB w idp0 = w \elim w
+  \sfunc appendB-idp0 {x : Or B C} {b : B} (w : Raw x (inl b)) : appendB w idp0 = w \elim w
     | segB st => pmap segB (start x st)
     | toB s w q => pmap (toB s w) (*>0_idp0 q)
     \where
-      \func start (x : Or B C) (st : Start x (inl b)) : startB st idp0 = st \elim x
+      \sfunc start (x : Or B C) (st : Start x (inl b)) : startB st idp0 = st \elim x
         | inl _ => *>0_idp0 st
         | inr _ => \case st \with {}
 
-  \func appendC-idp0 {x : Or B C} {c : C} (w : Raw x (inr c)) : appendC w idp0 = w \elim w
+  \sfunc appendC-idp0 {x : Or B C} {c : C} (w : Raw x (inr c)) : appendC w idp0 = w \elim w
     | segC st => pmap segC (start x st)
     | toC s w p => pmap (toC s w) (*>0_idp0 p)
     \where
-      \func start (x : Or B C) (st : Start x (inr c)) : startC st idp0 = st \elim x
+      \sfunc start (x : Or B C) (st : Start x (inr c)) : startC st idp0 = st \elim x
         | inl _ => \case st \with {}
         | inr _ => *>0_idp0 st
 
-  \func appendB-assoc {x : Or B C} {b b' b'' : B} (w : Raw x (inl b)) (p : b =0 b') (p' : b' =0 b'')
+  \sfunc appendB-assoc {x : Or B C} {b b' b'' : B} (w : Raw x (inl b)) (p : b =0 b') (p' : b' =0 b'')
     : appendB (appendB w p) p' = appendB w (p *>0 p') \elim w
     | segB st => pmap segB (start x st)
     | toB s w q => pmap (toB s w) (*>0-assoc q p p')
     \where
-      \func start (x : Or B C) (st : Start x (inl b))
+      \sfunc start (x : Or B C) (st : Start x (inl b))
         : startB (startB st p) p' = startB st (p *>0 p') \elim x
         | inl _ => *>0-assoc st p p'
         | inr _ => \case st \with {}
 
-  \func appendC-assoc {x : Or B C} {c c' c'' : C} (w : Raw x (inr c)) (q : c =0 c') (q' : c' =0 c'')
+  \sfunc appendC-assoc {x : Or B C} {c c' c'' : C} (w : Raw x (inr c)) (q : c =0 c') (q' : c' =0 c'')
     : appendC (appendC w q) q' = appendC w (q *>0 q') \elim w
     | segC st => pmap segC (start x st)
     | toC s w p => pmap (toC s w) (*>0-assoc p q q')
     \where
-      \func start (x : Or B C) (st : Start x (inr c))
+      \sfunc start (x : Or B C) (st : Start x (inr c))
         : startC (startC st q) q' = startC st (q *>0 q') \elim x
         | inl _ => \case st \with {}
         | inr _ => *>0-assoc st q q'
 
-  \func prependB-idp0 {y : Or B C} {b : B} (w : Raw (inl b) y) : prependB idp0 w = w \elim y, w
+  \sfunc prependB-idp0 {y : Or B C} {b : B} (w : Raw (inl b) y) : prependB idp0 w = w \elim y, w
     | inl _, segB st => pmap segB (idp0_*>0 st)
     | inl _, toB s w q => pmap (toB s __ q) (prependB-idp0 w)
     | inr _, segC st => \case st \with {}
     | inr _, toC s w q => pmap (toC s __ q) (prependB-idp0 w)
 
-  \func prependC-idp0 {y : Or B C} {c : C} (w : Raw (inr c) y) : prependC idp0 w = w \elim y, w
+  \sfunc prependC-idp0 {y : Or B C} {c : C} (w : Raw (inr c) y) : prependC idp0 w = w \elim y, w
     | inl _, segB st => \case st \with {}
     | inl _, toB s w p => pmap (toB s __ p) (prependC-idp0 w)
     | inr _, segC st => pmap segC (idp0_*>0 st)
     | inr _, toC s w p => pmap (toC s __ p) (prependC-idp0 w)
 
-  \func prependB-assoc {y : Or B C} {b b' b'' : B} (p' : b'' =0 b') (p : b' =0 b) (w : Raw (inl b) y)
+  \sfunc prependB-assoc {y : Or B C} {b b' b'' : B} (p' : b'' =0 b') (p : b' =0 b) (w : Raw (inl b) y)
     : prependB p' (prependB p w) = prependB (p' *>0 p) w \elim y, w
     | inl _, segB st => pmap segB (inv (*>0-assoc p' p st))
     | inl _, toB s w q => pmap (toB s __ q) (prependB-assoc p' p w)
     | inr _, segC st => \case st \with {}
     | inr _, toC s w q => pmap (toC s __ q) (prependB-assoc p' p w)
 
-  \func prependC-assoc {y : Or B C} {c c' c'' : C} (q' : c'' =0 c') (q : c' =0 c) (w : Raw (inr c) y)
+  \sfunc prependC-assoc {y : Or B C} {c c' c'' : C} (q' : c'' =0 c') (q : c' =0 c) (w : Raw (inr c) y)
     : prependC q' (prependC q w) = prependC (q' *>0 q) w \elim y, w
     | inl _, segB st => \case st \with {}
     | inl _, toB s w p => pmap (toB s __ p) (prependC-assoc q' q w)
     | inr _, segC st => pmap segC (inv (*>0-assoc q' q st))
     | inr _, toC s w p => pmap (toC s __ p) (prependC-assoc q' q w)
 
-  \func prependB-appendB {b b' : B} (p : b' =0 b) {b1 b1' : B} (w : Raw (inl b) (inl b1)) (q : b1 =0 b1')
+  \sfunc prependB-appendB {b b' : B} (p : b' =0 b) {b1 b1' : B} (w : Raw (inl b) (inl b1)) (q : b1 =0 b1')
     : prependB p (appendB w q) = appendB (prependB p w) q \elim w
     | segB st => pmap segB (inv (*>0-assoc p st q))
     | toB _ _ _ => idp
 
-  \func prependB-appendC {b b' : B} (p : b' =0 b) {c c' : C} (w : Raw (inl b) (inr c)) (q : c =0 c')
+  \sfunc prependB-appendC {b b' : B} (p : b' =0 b) {c c' : C} (w : Raw (inl b) (inr c)) (q : c =0 c')
     : prependB p (appendC w q) = appendC (prependB p w) q \elim w
     | segC st => \case st \with {}
     | toC _ _ _ => idp
 
-  \func prependC-appendB {c c' : C} (p : c' =0 c) {b1 b1' : B} (w : Raw (inr c) (inl b1)) (q : b1 =0 b1')
+  \sfunc prependC-appendB {c c' : C} (p : c' =0 c) {b1 b1' : B} (w : Raw (inr c) (inl b1)) (q : b1 =0 b1')
     : prependC p (appendB w q) = appendB (prependC p w) q \elim w
     | segB st => \case st \with {}
     | toB _ _ _ => idp
 
-  \func prependC-appendC {c c' : C} (p : c' =0 c) {c1 c1' : C} (w : Raw (inr c) (inr c1)) (q : c1 =0 c1')
+  \sfunc prependC-appendC {c c' : C} (p : c' =0 c) {c1 c1' : C} (w : Raw (inr c) (inr c1)) (q : c1 =0 c1')
     : prependC p (appendC w q) = appendC (prependC p w) q \elim w
     | segC st => pmap segC (inv (*>0-assoc p st q))
     | toC _ _ _ => idp
 
-  \func precrossC-appendB (s : S) {b1 b1' : B} (w : Raw (inl (f (k s))) (inl b1)) (q : b1 =0 b1')
+  \sfunc precrossC-appendB (s : S) {b1 b1' : B} (w : Raw (inl (f (k s))) (inl b1)) (q : b1 =0 b1')
     : precrossC s (appendB w q) = appendB (precrossC s w) q \elim w
     | segB _ => idp
     | toB _ _ _ => idp
 
-  \func precrossC-appendC (s : S) {c1 c1' : C} (w : Raw (inl (f (k s))) (inr c1)) (q : c1 =0 c1')
+  \sfunc precrossC-appendC (s : S) {c1 c1' : C} (w : Raw (inl (f (k s))) (inr c1)) (q : c1 =0 c1')
     : precrossC s (appendC w q) = appendC (precrossC s w) q \elim w
     | segC st => \case st \with {}
     | toC _ _ _ => idp
 
-  \func precrossB-appendB (s : S) {b1 b1' : B} (w : Raw (inr (g (k s))) (inl b1)) (q : b1 =0 b1')
+  \sfunc precrossB-appendB (s : S) {b1 b1' : B} (w : Raw (inr (g (k s))) (inl b1)) (q : b1 =0 b1')
     : precrossB s (appendB w q) = appendB (precrossB s w) q \elim w
     | segB st => \case st \with {}
     | toB _ _ _ => idp
 
-  \func precrossB-appendC (s : S) {c1 c1' : C} (w : Raw (inr (g (k s))) (inr c1)) (q : c1 =0 c1')
+  \sfunc precrossB-appendC (s : S) {c1 c1' : C} (w : Raw (inr (g (k s))) (inr c1)) (q : c1 =0 c1')
     : precrossB s (appendC w q) = appendC (precrossB s w) q \elim w
     | segC _ => idp
     | toC _ _ _ => idp
@@ -504,22 +504,22 @@
     | in~ w, ~-equiv _ _ r => rel-lift (\lam {_} w' => concatRaw w w') (\lam _ _ _ => idp) (\lam _ _ _ => idp) (appendB-case w) (appendC-case w) r
     | ~-equiv _ _ r, in~ w' => rel-left r w'
     \where {
-      \func appendB-case {x y : Or B C} (w : Raw x y) {b b' : B} (w' : Raw y (inl b)) (p : b =0 b')
+      \sfunc appendB-case {x y : Or B C} (w : Raw x y) {b b' : B} (w' : Raw y (inl b)) (p : b =0 b')
         : concatRaw w (appendB w' p) = appendB (concatRaw w w') p \elim w'
         | segB st => start y w st p
         | toB _ _ _ => idp
         \where
-          \func start (y : Or B C) {x : Or B C} (w : Raw x y) {b b' : B} (st : Start y (inl b)) (p : b =0 b')
+          \sfunc start (y : Or B C) {x : Or B C} (w : Raw x y) {b b' : B} (st : Start y (inl b)) (p : b =0 b')
             : appendStartB w (startB st p) = appendB (appendStartB w st) p \elim y
             | inl _ => inv (appendB-assoc w st p)
             | inr _ => \case st \with {}
 
-      \func appendC-case {x y : Or B C} (w : Raw x y) {c c' : C} (w' : Raw y (inr c)) (q : c =0 c')
+      \sfunc appendC-case {x y : Or B C} (w : Raw x y) {c c' : C} (w' : Raw y (inr c)) (q : c =0 c')
         : concatRaw w (appendC w' q) = appendC (concatRaw w w') q \elim w'
         | segC st => start y w st q
         | toC _ _ _ => idp
         \where
-          \func start (y : Or B C) {x : Or B C} (w : Raw x y) {c c' : C} (st : Start y (inr c)) (q : c =0 c')
+          \sfunc start (y : Or B C) {x : Or B C} (w : Raw x y) {c c' : C} (st : Start y (inr c)) (q : c =0 c')
             : appendStartC w (startC st q) = appendC (appendStartC w st) q \elim y
             | inl _ => \case st \with {}
             | inr _ => inv (appendC-assoc w st q)
@@ -595,22 +595,22 @@
             *> pmap in~ (prependC-assoc (inv0 q) _ _ *> pmap (prependC __ (precrossC s (invRaw w0))) (inv (inv0_*>0-comm (map0 g a) q)))
         | inr _, congC s r q idp idp => pmap (\lam z => prependCQ (inv0 q) (precrossCQ s z)) (rel r)
 
-      \func invRaw-appendB {x : Or B C} {b b' : B} (w : Raw x (inl b)) (p : b =0 b')
+      \sfunc invRaw-appendB {x : Or B C} {b b' : B} (w : Raw x (inl b)) (p : b =0 b')
         : invRaw (appendB w p) = prependB (inv0 p) (invRaw w) \elim w
         | segB st => segB-case x st p
         | toB s w q => pmap (prependB __ (precrossB s (invRaw w))) (inv0_*>0-comm q p) *> inv (prependB-assoc (inv0 p) (inv0 q) _)
 
-      \func invRaw-appendC {x : Or B C} {c c' : C} (w : Raw x (inr c)) (q : c =0 c')
+      \sfunc invRaw-appendC {x : Or B C} {c c' : C} (w : Raw x (inr c)) (q : c =0 c')
         : invRaw (appendC w q) = prependC (inv0 q) (invRaw w) \elim w
         | segC st => segC-case x st q
         | toC s w p => pmap (prependC __ (precrossC s (invRaw w))) (inv0_*>0-comm p q) *> inv (prependC-assoc (inv0 q) (inv0 p) _)
 
-      \func segB-case (x : Or B C) {b b' : B} (st : Start x (inl b)) (p : b =0 b')
+      \sfunc segB-case (x : Or B C) {b b' : B} (st : Start x (inl b)) (p : b =0 b')
         : invSegB (startB st p) = prependB (inv0 p) (invSegB st) \elim x
         | inl _ => pmap segB (inv0_*>0-comm st p)
         | inr _ => \case st \with {}
 
-      \func segC-case (x : Or B C) {c c' : C} (st : Start x (inr c)) (q : c =0 c')
+      \sfunc segC-case (x : Or B C) {c c' : C} (st : Start x (inr c)) (q : c =0 c')
         : invSegC (startC st q) = prependC (inv0 q) (invSegC st) \elim x
         | inl _ => \case st \with {}
         | inr _ => pmap segC (inv0_*>0-comm st q)

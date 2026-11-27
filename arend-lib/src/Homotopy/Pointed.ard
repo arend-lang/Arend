@@ -71,10 +71,10 @@
           => Contr.Contr_QEquiv (symQEquiv (sigma-right \lam g2 => pathConcatEquiv (idp_*> {_} {_} {_} {g2}))) (rsigma f.2)
       }
 
-    \func compose-id {X Y : Pointed} (f : X ->* Y) : f ∘* id = f
+    \sfunc compose-id {X Y : Pointed} (f : X ->* Y) : f ∘* id = f
       => ext (\lam _ => idp) idp
 
-    \func compose-assoc {W X Y Z : Pointed} (h : Y ->* Z) (g : X ->* Y) (f : W ->* X)
+    \sfunc compose-assoc {W X Y Z : Pointed} (h : Y ->* Z) (g : X ->* Y) (f : W ->* X)
       : h ∘* (g ∘* f) = (h ∘* g) ∘* f
       => ext (\lam _ => idp) (idp_*> *> inv (pmap (`*> h.2) (pmap_*>-comm h.1 (pmap g.1 f.2) g.2) *> *>-assoc))
 
@@ -105,7 +105,7 @@
                 pmap (Section.ret {toHAEquiv e}) (inv e.map.2) *> Section.ret_f {toHAEquiv e} base)
       | map-isEquiv => inP (symQEquiv (toHAEquiv e))
 
-    \func inverse-sec (e : PointedEquiv) : e.map ->*.∘* (inverse e).map = ->*.id {e.Y}
+    \sfunc inverse-sec (e : PointedEquiv) : e.map ->*.∘* (inverse e).map = ->*.id {e.Y}
       => ->*.ext (Retraction.f_sec {toHAEquiv e})
              (inv (pmap (`*> e.map.2) (pmap_*>-comm e.map.1 (pmap (Section.ret {toHAEquiv e}) (inv e.map.2))
                                                             (Section.ret_f {toHAEquiv e} base))

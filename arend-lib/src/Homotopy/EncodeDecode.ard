@@ -22,7 +22,7 @@
     \func encode {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0) {x : A} (p : a0 = x) : C x
       => transport C p c0
 
-    \func encode_decode {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0) {T : A -> \Type}
+    \sfunc encode_decode {A : \Type} {a0 : A} (C : A -> \Type) (c0 : C a0) {T : A -> \Type}
                         (eta : \Pi (x : A) -> a0 = x -> T x)
                         (decode : \Pi (x : A) -> C x -> T x) (decodeBase : decode a0 c0 = eta a0 idp)
                         {x : A} (p : a0 = x)
