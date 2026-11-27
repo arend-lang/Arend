@@ -1,0 +1,78 @@
+{- | Direct limits of sequences $R \xrightarrow{\varphi_0} R \xrightarrow{\varphi_1} R \to \cdots$ of endomorphisms of a
+     single commutative ring, as used in the construction of perfect closures (Mines–Richman–Ruitenburg, §VI.7).
+
+     The limit is the colimit of the functor $\mathbb{N} \to \mathrm{CRing}$ sending $m \leq n$ to the composite
+     $\varphi_{n-1} \circ \dots \circ \varphi_m$. -}
+
+\import Algebra.Field
+\import Algebra.LatticeColimit
+\import Algebra.Ring
+\import Algebra.Ring.RingCat
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Category.Functor
+\import Function (IsInj)
+\import Function.Meta
+\import Logic.Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+
+-- | The composite $\varphi_{d+m-1} \circ \dots \circ \varphi_m$ of `d` consecutive maps starting at `m`.
+\func endoIter {R : CRing} (phi : Nat -> RingHom R R) (m d : Nat) : RingHom R R \elim d
+  | 0 => RingHom.id
+  | suc d => phi (d Nat.+ m) RingHom.∘ endoIter phi m d
+
+-- | Composition law for `endoIter`.
+\lemma endoIter-+ {R : CRing} (phi : Nat -> RingHom R R) (m d e : Nat) {x : R}
+  : endoIter phi m (d Nat.+ e) x = endoIter phi (d Nat.+ m) e (endoIter phi m d x) \elim e
+  | 0 => idp
+  | suc e => pmap2 (\lam (i : Nat) (y : R) => phi i y) (NatSemiring.+-assoc *> pmap (d Nat.+) NatSemiring.+-comm *> inv NatSemiring.+-assoc *> NatSemiring.+-comm) (endoIter-+ phi m d e)
+
+-- | The functor $\mathbb{N} \to \mathrm{CRing}$ associated with a sequence of endomorphisms.
+\func endoSeqFunctor.{u} {R : CRing.{u}} (phi : Nat -> RingHom R R) : Functor NatBSemilattice CRingCat \cowith
+  | F _ => R
+  | Func {m} {n} _ => endoIter phi m (n -' m)
+  | Func-id {m} => exts \lam x => rewrite -'id idp
+  | Func-o {m} {n} {k} {g} {f} => exts \lam x =>
+      \have | e1 : k -' m = (n -' m) Nat.+ (k -' n) => NatSemiring.cancel-left m $ <=_exists (f <=∘ g) *> inv (<=_exists g) *> pmap (Nat.+ (k -' n)) (inv (<=_exists f)) *> NatSemiring.+-assoc
+            | e2 : (n -' m) Nat.+ m = n => NatSemiring.+-comm *> <=_exists f
+      \in rewrite e1 $ endoIter-+ phi m (n -' m) (k -' n) *> rewrite e2 idp
+
+-- | The direct limit of a sequence of endomorphisms.
+\func EndoSeqColimit.{u} {R : CRing.{u}} (phi : Nat -> RingHom R R) : CRing
+  => CRingLatticeColimit (endoSeqFunctor phi)
+
+-- | The direct limit of a sequence of endomorphisms of a discrete field is a discrete field.
+\func endoSeqField.{u} {R : DiscreteField.{u}} (phi : Nat -> RingHom R R) : DiscreteField
+  => DiscreteFieldLatticeColimit (endoSeqFunctor phi) (\lam _ => R)
+
+-- | The canonical map from the `n`-th copy of `R` into the limit.
+\func endoIn.{u} {R : CRing.{u}} (phi : Nat -> RingHom R R) (n : Nat) : RingHom R (EndoSeqColimit phi)
+  => RingLatticeColimit.inMap {_} {Comp CRingCat.forgetToRing (endoSeqFunctor phi)} n
+
+-- | The canonical map into the field limit.
+\func endoInField.{u} {R : DiscreteField.{u}} (phi : Nat -> RingHom R R) (n : Nat) : RingHom R (endoSeqField phi)
+  => endoIn phi n
+
+-- | `x` at stage `n` equals its image at stage `n + 1`.
+\lemma endoIn-step.{u} {R : CRing.{u}} (phi : Nat -> RingHom R R) (n : Nat) {x : R} : endoIn phi (suc n) (phi n x) = endoIn phi n x
+  => inv $ SetColimit.~-cequiv {_} {Comp CRingCat.forget (endoSeqFunctor phi)} {n, x} {suc n, phi n x} (id<=suc {n}) (rewrite (-'suc {n}) idp : endoIter phi n (suc n -' n) x = phi n x)
+  \where
+    \lemma -'suc {n : Nat} : suc n -' n = 1 \elim n
+      | 0 => idp
+      | suc n => -'suc
+
+-- | `x` at stage `m` equals its image at stage `d + m`.
+\lemma endoIn-iter.{u} {R : CRing.{u}} (phi : Nat -> RingHom R R) (m d : Nat) {x : R} : endoIn phi (d Nat.+ m) (endoIter phi m d x) = endoIn phi m x \elim d
+  | 0 => idp
+  | suc d => endoIn-step phi (d Nat.+ m) *> endoIn-iter phi m d
+
+-- | Every element of the limit comes from some stage.
+\lemma endoIn-surj.{u} {R : CRing.{u}} (phi : Nat -> RingHom R R) (a : EndoSeqColimit phi) : ∃ (n : Nat) (x : R) (endoIn phi n x = a)
+  => SetColimit.surj {_} {Comp CRingCat.forget (endoSeqFunctor phi)} a
+
+-- | The maps into the field limit are injective.
+\lemma endoInField-inj.{u} {R : DiscreteField.{u}} (phi : Nat -> RingHom R R) (n : Nat) : IsInj (endoInField phi n)
+  => RingHom.field-isInj {R} {endoSeqField phi} {endoInField phi n}

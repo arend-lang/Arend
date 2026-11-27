@@ -195,3 +195,9 @@
                                                                      *> pmap (\lam m => pow p (suc m)) NatSemiring.+-comm }))
   }
 
+-- | A product of characteristic exponents of a nontrivial ring is a characteristic exponent.
+\lemma charExp_* {R : CRing} (nt : 0 /= {R} 1) {a b : Nat} (ca : IsCharExponent R a) (cb : IsCharExponent R b) : IsCharExponent R (a Nat.* b) \elim ca, cb
+  | byLeft a=1, cb => rewrite a=1 (transportInv (IsCharExponent R) NatSemiring.ide-left cb)
+  | ca, byLeft b=1 => rewrite b=1 (transportInv (IsCharExponent R) NatSemiring.ide-right ca)
+  | byRight (inP (p, e, pp, pz, ae)), byRight (inP (p1, e1, pp1, pz1, be)) =>
+    byRight $ inP (p, suc e Nat.+ e1, pp, pz, pmap2 (Nat.*) ae (be *> pmap (pow __ (suc e1)) (char-prime-unique nt pp1 pp pz1 pz)) *> inv (Monoid.pow_+ {NatSemiring} {p} {suc e} {suc e1}))

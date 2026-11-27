@@ -1,0 +1,299 @@
+{- | **Perfect fields** (Mines–Richman–Ruitenburg, §VI.7, Theorems 7.1, 7.2, 7.6 (forward direction), 7.7 and
+     the remarks after 7.1).
+
+     A discrete field is *perfect* if every nonzero polynomial is a product of separable polynomials.
+     Theorem 7.1 characterizes this without knowing the characteristic: for every prime `p`, either `p ≠ 0` in `k`
+     or $k^p = k$. The perfect closure (7.3–7.5) and the converse of 7.6 are in `Algebra.Field.PerfectClosure`. -}
+
+\import Algebra.Field
+\import Algebra.Field.SeparableCharP
+\import Algebra.Field.SeparableClosure
+\import Algebra.Field.SeparableElements
+\import Algebra.Field.SubField
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Ring.Characteristic
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Ring.Poly.Expand
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Ring.Poly.SeparableFactorization
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\open Monoid
+
+-- # Definitions
+
+-- | `f` is a product of separable polynomials.
+\type IsSeparableProduct {k : DiscreteField} (f : Poly k) : \Prop
+  => ∃ (l : Array (Poly k)) (\Pi (j : Fin l.len) -> IsSeparable (l j)) (f = BigProd l)
+
+-- | A discrete field is *perfect* if every nonzero polynomial is a product of separable polynomials.
+\type IsPerfectField (k : DiscreteField) : \Prop
+  => \Pi (f : Poly k) -> f /= 0 -> IsSeparableProduct f
+
+-- | Every element of `k` is a `q`-th power.
+\type HasRoots (k : CRing) (q : Nat) : \Prop
+  => \Pi (a : k) -> ∃ (b : k) (pow b q = a)
+
+-- | For every prime `p`, either `p ≠ 0` in `k` or $k^p = k$.
+\type HasCharRoots (k : CRing) : \Prop
+  => \Pi (p : Nat) -> Prime p -> (k.natCoef p /= 0) || HasRoots k p
+
+-- # Products of separable polynomials
+
+\lemma separableProduct-sep {k : DiscreteField} {f : Poly k} (s : IsSeparable f) : IsSeparableProduct f
+  => inP (f :: nil, \case \elim __ \with { | 0 => s }, inv ide-right)
+
+\lemma separableProduct-ide {k : DiscreteField} : IsSeparableProduct {k} 1
+  => inP (nil, \case __ \with {}, idp)
+
+\lemma separableProduct_* {k : DiscreteField} {f g : Poly k} (fs : IsSeparableProduct f) (gs : IsSeparableProduct g)
+  : IsSeparableProduct (f * g) \elim fs
+  | inP (l, ls, fe) => rewrite fe (aux l ls)
+  \where \private {
+    \lemma aux (l : Array (Poly k)) (ls : \Pi (j : Fin l.len) -> IsSeparable (l j)) : IsSeparableProduct (BigProd l * g) \elim l
+      | nil => transportInv IsSeparableProduct ide-left gs
+      | a :: l => transportInv IsSeparableProduct *-assoc (cons (ls 0) (aux l \lam j => ls (suc j)))
+
+    \lemma cons {a h : Poly k} (s : IsSeparable a) (hs : IsSeparableProduct h) : IsSeparableProduct (a * h) \elim hs
+      | inP (l, ls, e) => inP (a :: l, \case \elim __ \with { | 0 => s | suc j => ls j }, pmap (a *) e)
+  }
+
+\lemma separableProduct-pow {k : DiscreteField} {f : Poly k} (fs : IsSeparableProduct f) (n : Nat) : IsSeparableProduct (pow f n) \elim n
+  | 0 => separableProduct-ide
+  | suc n => separableProduct_* (separableProduct-pow fs n) fs
+
+\lemma separableProduct-BigProd {k : DiscreteField} (l : Array (Poly k)) (ls : \Pi (j : Fin l.len) -> IsSeparableProduct (l j))
+  : IsSeparableProduct (BigProd l) \elim l
+  | nil => separableProduct-ide
+  | f :: l => separableProduct_* (ls 0) (separableProduct-BigProd l \lam j => ls (suc j))
+
+-- | A nonzero constant is separable.
+\lemma const-separable {k : DiscreteField} {c : k} (c/=0 : c /= 0) : IsSeparable (padd pzero c)
+  => inP (padd pzero (finv c), 0, pmap2 (+) (inv polyHom.func-* *> pmap polyHom (k.finv-left c/=0)) (zro_*-left {_} {polyDeriv (padd pzero c)}) *> zro-right)
+
+{- | A nonzero polynomial that is a product of separable polynomials but is not separable itself has a factorization
+     into two polynomials of positive degree. -}
+\lemma nonseparable-split {k : DiscreteField} (l : Array (Poly k)) (ls : \Pi (j : Fin l.len) -> IsSeparable (l j))
+  (nz : BigProd l /= 0) (ns : Not (IsSeparable (BigProd l))) : ∃ (g h : Poly k) (0 < degree g) (0 < degree h) (BigProd l = g * h) \elim l
+  | nil => absurd (ns (const-separable \lam p => k.zro/=ide (inv p)))
+  | a :: l =>
+    \have | B/=0 : BigProd l /= 0 => \lam p => nz (pmap (a *) p *> zro_*-right)
+           | a/=0 : a /= 0 => \lam p => nz (pmap (* BigProd l) p *> zro_*-left {_} {BigProd l})
+    \in \case NatSemiring.decideEq (degree a) 0, NatSemiring.decideEq (degree (BigProd l)) 0 \with {
+      | yes da, _ => \have | ae : a = padd pzero (leadCoef a) => degree=0-lem da
+                           | c/=0 : leadCoef a /= 0 => \lam p => a/=0 (leadCoef=0-lem p)
+                     \in \case nonseparable-split l (\lam j => ls (suc j)) B/=0 (\lam bs => ns (transportInv (\lam x => IsSeparable (x * _)) ae (const-mul-sep c/=0 bs))) \with {
+                       | inP (g, h, dg, dh, be) => inP (a * g, h, rewrite (degree_*_= {_} {a} {g} (\lam p => nz (pmap (a *) be *> inv *-assoc *> pmap (* h) p *> zro_*-left {_} {h})) idp, da) dg, dh,
+                                                       pmap (a *) be *> inv *-assoc)
+                     }
+      | no da, yes dB => absurd $ ns $ transport (\lam x => IsSeparable (a * x)) (inv (degree=0-lem dB)) $ transportInv IsSeparable *-comm $
+                           const-mul-sep (\lam p => B/=0 (leadCoef=0-lem p)) (ls 0)
+      | no da, no dB => inP (a, BigProd l, nonZero>0 da, nonZero>0 dB, idp)
+    }
+  \where
+    \lemma const-mul-sep {c : k} (c/=0 : c /= 0) {g : Poly k} (s : IsSeparable g) : IsSeparable (padd pzero c * g)
+      => transport IsSeparable (inv zro-left *> pmap (+ c PolyRing.*c g) (inv (path peq)))
+           (separable_*c (Inv.lmake (finv c) (k.finv-left c/=0)) s)
+
+-- # Theorem VI.7.1
+
+-- | `q`-th roots for `q = p^e` from `p`-th roots.
+\lemma hasRoots-pow {k : CRing} {p : Nat} (r : HasRoots k p) (e : Nat) : HasRoots k (pow p e) \elim e
+  | 0 => \lam a => inP (a, ide-left)
+  | suc e => \lam a => \case r a \with {
+    | inP (c, cp) => \case hasRoots-pow r e c \with {
+      | inP (b, be) => inP (b, Monoid.pow_* *> pmap (pow __ p) be *> cp)
+    }
+  }
+
+-- | `q`-th roots for every characteristic exponent `q`.
+\lemma charRoots-charExp {k : CRing} (r : HasCharRoots k) {q : Nat} (c : IsCharExponent k q) : HasRoots k q
+  => \case \elim c \with {
+    | byLeft q=1 => \lam a => inP (a, rewrite q=1 ide-left)
+    | byRight (inP (p, e, pp, pz, qe)) => \case r p pp \with {
+      | byLeft nz => absurd (nz pz)
+      | byRight h => rewrite qe (hasRoots-pow h (suc e))
+    }
+  }
+
+-- | The inverse of the `q`-th power map, if every element has a `q`-th root.
+\func rootHom {k : DiscreteField} {q : Nat} (c : IsCharExponent k q) (r : HasRoots k q) : RingHom k k \cowith
+  | func a => (root a).1
+  | func-zro => uniq (charExpHom c).func-zro
+  | func-+ => uniq ((charExpHom c).func-+ *> pmap2 (+) (root _).2 (root _).2)
+  | func-ide => uniq Monoid.pow_ide
+  | func-* => uniq (CMonoid.pow_*-comm *> pmap2 (*) (root _).2 (root _).2)
+  \where {
+    \lemma root (a : k) : \Sigma (b : k) (pow b q = a)
+      => TruncP.remove (\lam s t => ext (charExp-inj c (s.2 *> inv t.2))) (r a)
+
+    \lemma uniq {x y : k} (e : pow y q = x) : (root x).1 = y
+      => charExp-inj c ((root x).2 *> inv e)
+  }
+
+\lemma rootHom-pow {k : DiscreteField} {q : Nat} (c : IsCharExponent k q) (r : HasRoots k q) {a : k} : pow (rootHom c r a) q = a
+  => (rootHom.root {k} {q} {c} {r} a).2
+
+-- | $h^q = (h^{(q)})(X^q)$, where $h^{(q)}$ raises the coefficients of `h` to the `q`-th power.
+\lemma pow-polyExpand {R : CRing} {q : Nat} (c : IsCharExponent R q) (h : Poly R)
+  : pow h q = polyExpand q (polyMap (charExpHom c) h)
+  => polyMapEval-unique (charExpHom {PolyAlgebra R} (IsCharExponent_map polyHom c)) (polyExpandHom q RingHom.∘ polyMapRingHom (charExpHom c))
+       (\lam r => inv polyHom.func-pow *> inv (pmap (__ + padd pzero (pow r q)) (zro_*-left {_} {monomial 1 q}) *> zro-left))
+       (inv (polyMapEval_monomial {polyHom {R}} {padd 1 0} {q}) *> polyHom_polyMapEval *> inv (pmap (polyExpand q) X-map *> polyMapEval_monomial {polyHom} {monomial 1 q} {1} *> ide-left)) h
+  \where
+    \lemma X-map : polyMap (charExpHom c) (padd 1 0) = padd 1 0
+      => pmap2 padd (pmap (padd pzero) (charExpHom c).func-ide) (charExpHom c).func-zro
+
+-- | **Theorem VI.7.1.** A discrete field is perfect if and only if, for each prime `p`, either `p ≠ 0` or $k^p = k$.
+\lemma perfect<->charRoots {k : DiscreteField} : IsPerfectField k <-> HasCharRoots k
+  => (\lam kp p pp => \case decideEq (k.natCoef p) 0 \with {
+        | no nz => byLeft nz
+        | yes pz => byRight \lam a => \case pth-root kp pp pz a \with {
+          | inP (b, ab) => inP (b, inv ab)
+        }
+      },
+      \lam r f f/=0 =>
+        \have | lc/=0 : leadCoef f /= 0 => \lam c => f/=0 (leadCoef=0-lem c)
+               | fe : f = padd pzero (leadCoef f) * (finv (leadCoef f) PolyRing.*c f) =>
+                   inv PolyRing.ide_*c *> pmap (\lam x => x PolyRing.*c f) (inv (k.finv-right lc/=0)) *> PolyRing.*c-assoc *> inv zro-left *> pmap (+ _) (inv (path peq))
+        \in \case separable-factorization (finv (leadCoef f) PolyRing.*c f :: nil) (\case \elim __ \with { | 0 => field-toMonic f/=0 }) \with {
+          | inP (T, Tf, _, Sp) => \case Sp 0 \with {
+            | inP (m, Fe) => rewrite (fe, Fe) $ separableProduct_* (separableProduct-sep (const-separable lc/=0)) $
+                separableProduct-BigProd (\lam j => pow (T j) (m j)) \lam j => separableProduct-pow (factor r (Tf j).2) (m j)
+          }
+        })
+  \where {
+    -- | The forward direction: `a` is a `p`-th power if `p = 0` in a perfect field.
+    \lemma pth-root {k : DiscreteField} (kp : IsPerfectField k) {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0) (a : k) : ∃ (b : k) (a = pow b p)
+      => \let | q => pow p (suc 0)
+              | P => monomial 1 q - padd pzero a
+         \in \have | q>0 : 0 < q => reducible-root.pow-pos pp {suc 0}
+                   | qz : k.natCoef q = 0 => Semiring.natCoef_* *> pmap (_ *) pz *> zro_*-right
+                   | P/=0 : P /= 0 => \lam P=0 => k.zro/=ide (monic/=0 (reducible-root.P-monic q>0) P=0)
+         \in \case kp P P/=0 \with {
+           | inP (l, ls, Pe) => \case nonseparable-split l ls (\lam c => P/=0 (Pe *> c)) (\lam s => P-nonsep q>0 qz (transportInv IsSeparable Pe s)) \with {
+             | inP (g, h, dg, dh, gh) => reducible-root pp pz 0 dg dh (Pe *> gh)
+           }
+         }
+
+    -- | $X^q - a$ is not separable if `q > 0` is zero in `k`.
+    \lemma P-nonsep {k : DiscreteField} {q : Nat} (q>0 : 0 < q) (qz : k.natCoef q = 0) {a : k} (s : IsSeparable (monomial 1 q - padd pzero a)) : Empty \elim s
+      | inP (u, v, e) =>
+        \have | d0 : polyDeriv (monomial 1 q - padd pzero a) = 0 => polyDeriv_+ *> pmap2 (+)
+                    (pmap polyDeriv (inv (polyMapEval_monomial {polyHom} {monomial 1 q} {1} *> ide-left)) *> polyDeriv_expand qz {padd 1 0})
+                    (polyDeriv_negative {k} {padd pzero a} *> pmap negative (zro-left *> path peq) *> AddGroup.negative_zro) *> zro-left
+               | uP : u * (monomial 1 q - padd pzero a) = 1 => inv zro-right *> pmap (_ +) (inv (pmap (v *) d0 *> zro_*-right)) *> e
+               | dd => degree_*_= (\lam p => k.zro/=ide (inv (pmap (polyCoef __ 0) p))) (inv uP)
+        \in \have t : degree u + q = 0 => pmap (_ +) (inv (reducible-root.P-deg q>0)) *> inv dd
+        \in linarith
+
+    -- | Each factor $g(X^q)$ with `g` separable is a `q`-th power of a separable polynomial.
+    \lemma factor {k : DiscreteField} (r : HasCharRoots k) {t : Poly k} (e : ∃ (q : Nat) (g : Poly k) (IsCharExponent k q) (IsSeparable g) (t = polyExpand q g))
+      : IsSeparableProduct t \elim e
+      | inP (q, g, cq, gs, te) =>
+        \let | rq => charRoots-charExp r cq
+               | h => polyMap (rootHom cq rq) g
+        \in transportInv IsSeparableProduct (te *> pmap (polyExpand q) (inv (polyMap-comp (rootHom cq rq) (charExpHom cq) *> polyMap-idhom {k} {charExpHom cq AddPointedHom.∘ rootHom cq rq} (\lam x => rootHom-pow cq rq))) *> inv (pow-polyExpand cq h)) $
+             separableProduct-pow (separableProduct-sep (IsSeparable_polyMap gs)) q
+
+    \lemma polyMap-idhom {R : AddPointed} {f : AddPointedHom R R} (e : \Pi (x : R) -> f x = x) {p : Poly R} : polyMap f p = p \elim p
+      | pzero => idp
+      | padd p x => pmap2 padd (polyMap-idhom e) (e x)
+  }
+
+-- | A discrete field of characteristic zero is perfect.
+\lemma charZero-perfect {k : DiscreteField} (c : \Pi (p : Nat) -> Prime p -> k.natCoef p /= 0) : IsPerfectField k
+  => perfect<->charRoots.2 \lam p pp => byLeft (c p pp)
+
+-- | A finite discrete field is perfect.
+\lemma finite-perfect {k : DiscreteField} (kf : FinSet k) : IsPerfectField k
+  => perfect<->charRoots.2 \lam p pp => \case decideEq (k.natCoef p) 0 \with {
+    | no nz => byLeft nz
+    | yes pz => byRight \lam a => card_inj-surj {kf} {kf} (frobenius pp pz) (\lam e => charExp-inj (prime-charExp pp pz) e) <=-refl a
+  }
+
+-- | A prime that is zero in `k` is a characteristic exponent of `k`.
+\lemma prime-charExp {k : CRing} {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0) : IsCharExponent k p
+  => byRight (inP (p, 0, pp, pz, inv NatSemiring.ide-left))
+
+-- # Corollary VI.7.2
+
+-- | A *prime field*: every element is a quotient of integers.
+\type IsPrimeField (k : DiscreteField) : \Prop
+  => \Pi (a : k) -> FracImage (intMap {k}) a
+
+-- | **Corollary VI.7.2.** A discrete prime field is perfect.
+\lemma primeField-perfect {k : DiscreteField} (kp : IsPrimeField k) : IsPerfectField k
+  => perfect<->charRoots.2 \lam p pp => \case decideEq (k.natCoef p) 0 \with {
+    | no nz => byLeft nz
+    | yes pz => byRight \lam a => \case kp a \with {
+      | inP (x, y, y/=0, ae) => inP (a, rewrite ae $ CMonoid.pow_*-comm *> pmap2 (*) (fermat pp pz x) (inv k.finv_pow *> pmap finv (fermat pp pz y)))
+    }
+  }
+  \where
+    -- | Fermat's little theorem: $n^p = n$ for integers `n`, if the prime `p` is zero in `k`.
+    \lemma fermat {k : CRing} {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0) (x : Int) : pow (intMap {k} x) p = intMap x \elim x
+      | pos n => (frobenius pp pz).func-natCoef
+      | neg n => pmap (pow __ p) (Ring.intCoef_neg {k} n) *> (frobenius pp pz).func-negative *> pmap negative (frobenius pp pz).func-natCoef *> inv (Ring.intCoef_neg {k} n)
+
+-- # Theorem VI.7.6, forward direction
+
+-- | **Theorem VI.7.6 (⇒).** Over a perfect field, every algebraic element of a discrete extension is separable.
+\lemma perfect-separable {k E : DiscreteField} (kp : IsPerfectField k) (f : RingHom k E) {a : E}
+  (aa : ∃ (g : Poly k) (g /= 0) (polyMapEval f g a = 0)) : IsSeparableElement f a \elim aa
+  | inP (g, g/=0, ga) => \case kp g g/=0 \with {
+    | inP (l, ls, ge) => \case prod-zero (\lam j => polyMapEval f (l j) a) (inv (polyMapEvalRingHom f a).func-BigProd *> inv (pmap (polyMapEval f __ a) ge) *> ga) \with {
+      | inP (j, la) => inP (l j, ls j, la)
+    }
+  }
+  \where
+    \lemma prod-zero {E : DiscreteField} (x : Array E) (p : BigProd x = 0) : ∃ (j : Fin x.len) (x j = 0) \elim x
+      | nil => absurd (E.zro/=ide (inv p))
+      | b :: x => \case E.zeroProduct p \with {
+        | byLeft p0 => inP (0, p0)
+        | byRight p1 => TruncP.map (prod-zero x p1) \lam t => (suc t.1, t.2)
+      }
+
+-- # Theorem VI.7.7
+
+-- | **Theorem VI.7.7.** If `k` is perfect and `a` is algebraic over `k`, then `k[a]` is perfect.
+\lemma adjoin-perfect {k E : DiscreteField} (kp : IsPerfectField k) (f : RingHom k E) (a : E) (ai : isIntegral f a)
+  : IsPerfectField (IDiscreteField (adjoinSubField f a ai))
+  => \let | S => adjoinSubField f a ai
+          | emb => SubField.embed S
+     \in perfect<->charRoots.2 \lam p pp => \case decideEq (k.natCoef p) 0 \with {
+       | no nz => byLeft \lam pzS => nz $ RingHom.field-isInj {k} {E} {f} $ f.func-natCoef *> inv emb.func-natCoef *> pmap emb pzS *> emb.func-zro *> inv f.func-zro
+       | yes pz => \case perfect<->charRoots.1 kp p pp \with {
+         | byLeft nz => absurd (nz pz)
+         | byRight rt => byRight \lam y =>
+           \let | pzE : E.natCoef p = 0 => inv f.func-natCoef *> pmap f pz *> f.func-zro
+                 | P => ImageRing (frobenius pp pzE RingHom.∘ emb)
+           \in \have | Pf : \Pi (c : k) -> P (f c) => \lam c => \case rt c \with {
+                        | inP (d, dc) => inP (SubField.elem S (polyImage-ext f a d), inv f.func-pow *> pmap f dc)
+                      }
+                      | Pa : P a => polyImage-sub f (pow a (pow p 1)) P Pf (inP (SubField.elem S polyImage-element, pmap (pow a) (inv NatSemiring.ide-left)))
+                                      ((separable<->polyImage-pow f pp pz 0).1 (perfect-separable kp f (integral-algebraic ai)))
+           \in \case polyImage-sub f a P Pf Pa y.2 \with {
+             | inP (z, ze) => inP (z, ext (SemiringHom.func-pow {emb} *> ze))
+           }
+       }
+     }
