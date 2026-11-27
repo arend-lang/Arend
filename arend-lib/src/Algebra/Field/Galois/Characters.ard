@@ -1,0 +1,122 @@
+{- | Dedekind independence of characters (Mines–Richman–Ruitenburg, Lemmas VI.8.9 and VI.8.10).
+ -
+ - * {IsPairwiseApart} : an array of functions any two of which (with different indices) differ at some point.
+ - * {characters-independent} : pairwise apart characters of a monoid in a discrete field are linearly independent (Lemma VI.8.9).
+ - * {characters-matrix-inv} : for pairwise apart ring homomorphisms `σ_1, ..., σ_n` from a ring `K` to a discrete field `E`,
+ -   there are `ω_1, ..., ω_n` in `K` such that the matrix `σ_i(ω_j)` is invertible (Lemma VI.8.10).
+ - * {determinant_column0} : the determinant of a matrix whose first column vanishes below the corner.
+ -}
+
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+-- | Functions `l i` and `l j` with different indices are apart, that is, differ at some point.
+\type IsPairwiseApart {A B : \Type} {n : Nat} (l : Array (A -> B) n) : \Prop
+  => \Pi {i j : Fin n} -> i /= j -> ∃ (a : A) (l i a /= l j a)
+
+-- | If the first column of a matrix vanishes below the corner, its determinant is the corner entry times the determinant of the lower-right block.
+\lemma determinant_column0 {R : CRing} {n : Nat} {A : Matrix R (suc n) (suc n)} (p : \Pi (i : Fin n) -> A (suc i) 0 = 0)
+  : determinant A = A 0 0 * determinant (mkMatrix \lam i j => A (suc i) (suc j))
+  => inv (determinantN.=determinant {R} {suc n} {0}) *> pmap2 (+)
+      (pmap2 (*) ide-right $ pmap determinant (determinant.minor00 _))
+      (R.BigSum_zro \lam j => later $ rewrite (p j, zro_*-left) zro_*-left) *> zro-right
+
+{- | Lemma VI.8.9: pairwise apart characters `s_1, ..., s_n` of a monoid {M} in a discrete field {E} are linearly independent,
+ -   that is, if some `c_i` is nonzero, then `c_1 s_1 + ... + c_n s_n` is nonzero at some point.
+ -}
+\lemma characters-independent {M : Monoid} {E : DiscreteField} {n : Nat} (s : Array (MonoidHom M E) n)
+                              (sa : IsPairwiseApart (\lam i m => s i m)) (c : Array E n) (c/=0 : ∃ (i : Fin n) (c i /= 0))
+  : ∃ (m : M) (E.BigSum (\lam i => c i * s i m) /= 0) \elim n, s, c
+  | 0, _, _ => \case c/=0 \with { | inP ((), _) }
+  | suc n, s0 :: s', c0 :: c' => \case FinSet.searchFin (\lam k => c' k /= 0) (\lam k => \case decideEq (c' k) 0 \with {
+    | yes e => no \lam q => q e
+    | no q => yes q
+  }) \with {
+    | inr c'=0 =>
+      \have c'0 (k : Fin n) : c' k = 0 => dec-separated (decideEq _ _) (c'=0 k)
+      \in inP (ide, \lam p => \case c/=0 \with {
+        | inP (0, c0/=0) => c0/=0 $ inv (pmap2 (+) (pmap (c0 *) func-ide *> ide-right) (E.BigSum_zro \lam k => pmap (* _) (c'0 k) *> zro_*-left) *> zro-right) *> p
+        | inP (suc k, c'k/=0) => c'k/=0 (c'0 k)
+      })
+    | inl (k, c'k/=0, _) => \case sa {0} {suc k} (/=-sym fsuc/=0) \with {
+      | inP (x, sx/=) => \case characters-independent s' (\lam i/=j => sa (fsuc/= i/=j)) (\lam k => c' k * (s' k x - s0 x))
+                                   (inP (k, E.nonZero_* c'k/=0 \lam p => sx/= $ inv $ E.fromZero p)) \with {
+        | inP (m, T/=0) =>
+          \have key : E.BigSum (\lam k => c' k * (s' k x - s0 x) * s' k m)
+                         = (c0 * s0 (x * m) + E.BigSum (\lam i => c' i * s' i (x * m))) - s0 x * (c0 * s0 m + E.BigSum (\lam i => c' i * s' i m))
+                => pmap E.BigSum (exts \lam k => (rewrite (func-* {s' k} {x} {m}) equation.cRing : c' k * (s' k x - s0 x) * s' k m = c' k * s' k (x * m) - s0 x * (c' k * s' k m)))
+                    *> E.BigSum_- {n} {\lam k => c' k * s' k (x * m)} {\lam k => s0 x * (c' k * s' k m)} *> pmap (_ -) (inv (E.BigSum-ldistr {s0 x} {\lam k => c' k * s' k m})) *> rewrite (func-* {s0} {x} {m}) equation.cRing
+             \in \case decideEq (c0 * s0 (x * m) + E.BigSum (\lam i => c' i * s' i (x * m))) 0 \with {
+               | no q => inP (x * m, q)
+               | yes q => inP (m, \lam r => T/=0 $ key *> rewrite (q, r) simplify)
+             }
+      }
+    }
+  }
+
+{- | Lemma VI.8.10: if `s_1, ..., s_n` are pairwise apart ring homomorphisms from {K} to a discrete field {E},
+ -   then there are `w_1, ..., w_n` in {K} such that the matrix `s_i(w_j)` is invertible.
+ -}
+\lemma characters-matrix-inv {K : Ring} {E : DiscreteField} {n : Nat} (s : Array (RingHom K E) n) (sa : IsPairwiseApart (\lam i a => s i a))
+  : ∃ (w : Array K n) (Monoid.Inv {MatrixRing E n} (mkMatrix \lam i j => s i (w j)))
+  => \case transposed s sa \with {
+    | inP (w, d) => inP (w, transpose.isInv d)
+  }
+  \where {
+    \open MatrixRing(product-assoc, product_ide-left, product_ide-right)
+
+    \func toMonoidHom {R S : Ring} (f : RingHom R S) : MonoidHom R S \cowith
+      | func => f
+      | func-ide => f.func-ide
+      | func-* => f.func-*
+
+    -- | The same statement for the transposed matrix `s_j(w_i)`; the induction adds the character `s_0` and the element `w_0`.
+    \lemma transposed {K : Ring} {E : DiscreteField} {n : Nat} (s : Array (RingHom K E) n) (sa : IsPairwiseApart (\lam i a => s i a))
+      : ∃ (w : Array K n) (Monoid.Inv {MatrixRing E n} (mkMatrix \lam i j => s j (w i))) \elim n, s
+      | 0, nil => \let M0 : Matrix E 0 0 => mkMatrix \lam i j => (nil : Array (RingHom K E) 0) j ((nil : Array K 0) i)
+                   \in inP (nil, determinant1_Inv M0 (determinant00 M0))
+      | suc n, s0 :: s' => \case transposed s' (\lam i/=j => sa (fsuc/= i/=j)) \with {
+        | inP (w', N'inv) =>
+          \let | N' : Matrix E n n => mkMatrix \lam i j => s' j (w' i)
+               | V : Matrix E n 1 => mkMatrix \lam i _ => s0 (w' i)
+               | B : Matrix E n n => N'inv.inv
+               | A => B MatrixRing.product V
+               | c : Array E (suc n) => 1 :: mkArray (\lam k => negative (A k 0))
+          \in \case characters-independent {K} {E} {suc n} (map toMonoidHom (s0 :: s')) sa c (inP (0, \lam p => zro/=ide (inv p))) \with {
+            | inP (x, cx/=0) =>
+              \let | N : Matrix E (suc n) (suc n) => mkMatrix \lam i j => (s0 :: s') j ((x :: w') i)
+                   | T : Matrix E (suc n) (suc n) => addColumn c (mkMatrix \lam k j => MatrixRing.ide {E} {suc n} k (suc j))
+              \in \have | NA : N' MatrixRing.product A = V => inv (product-assoc N' B V) *> pmap (\lam X => X MatrixRing.product V) N'inv.inv-right *> product_ide-left
+                        | col0 (i : Fin n) : (N MatrixRing.product T) (suc i) 0 = 0
+                          => pmap2 (+) ide-right (pmap E.BigSum (exts \lam k => (E.negative_*-right : s' k (w' i) * negative (A k 0) = negative (s' k (w' i) * A k 0)))
+                                *> inv E.BigSum_negative *> pmap negative (path (\lam t => NA t i 0))) *> negative-right
+                        | corner/=0 : (N MatrixRing.product T) 0 0 /= 0 => \lam p => cx/=0 (inv (E.BigSum-ext {suc n} {\lam k => N 0 k * T k 0} {\lam k => T k 0 * N 0 k} \lam k => *-comm) *> p)
+                        | minor : mkMatrix (\lam i j => (N MatrixRing.product T) (suc i) (suc j)) = N'
+                          => matrixExt \lam i j => path (\lam t => product_ide-right {E} {suc n} {suc n} {N} t (suc i) (suc j))
+                        | NTinv : Monoid.Inv (determinant (N MatrixRing.product T))
+                          => transportInv Monoid.Inv (determinant_column0 {E} {n} {N MatrixRing.product T} col0 *> pmap (_ *) (pmap determinant minor))
+                               (Monoid.Inv.product (E.nonZero-Inv corner/=0) (determinant-inv.1 N'inv))
+                 \in inP (x :: w', determinant-inv.2 $ Monoid.Inv.cfactor-left $ transport Monoid.Inv (determinant_* {E} {suc n} {N} {T}) NTinv)
+          }
+      }
+  }

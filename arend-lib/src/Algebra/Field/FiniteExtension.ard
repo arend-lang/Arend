@@ -1,0 +1,61 @@
+{- | **Finite-dimensional field extensions** (Mines–Richman–Ruitenburg, §VI.5–VI.8).
+
+     Let `f : k -> K` be an extension of discrete fields.
+
+     * `powers-basis`: if `a` is a primitive element with monic minimal polynomial `p`, then $1, a, \ldots, a^{\deg p - 1}$
+       is a basis of `K` over `k`.
+     * `findim-minPoly-degree`: in that case $\deg p = [K : k]$.
+     * `separable-primitive`: a finite-dimensional separable extension has a separable primitive element.
+-}
+
+\import Algebra.Field
+\import Algebra.Field.PrimitiveElement
+\import Algebra.Field.SeparableClosure
+\import Algebra.Field.SeparableElements
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.Tower
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Integral.MinPoly
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Paths
+\import Set
+\open Monoid
+
+-- | If `a` is a primitive element with monic minimal polynomial `p`, then the powers $a^j$, $j < \deg p$, form a basis of the extension.
+\lemma powers-basis {k : DiscreteField} {E : CRing} (f : RingHom k E) {a : E} {p : Poly k} (pm : isMonicMinPoly f a p) (prim : IsPrimitiveElement f a)
+  : LModule.IsBasis {homLModule f} (\new Array E (degree p) (\lam j => pow a j))
+  => (\lam c s j => \case decideEq (Poly.fromArray c) 0 \with {
+        | yes q=0 => inv polyCoef_fromArray *> pmap (polyCoef __ j) q=0
+        | no q/=0 => absurd \have | p<=q => minPoly_degree-char.minPoly_degree f a p pm.2.1 (\lam p=0 => zro/=ide $ monic/=0 pm.1 p=0) pm.2.2 q/=0 $ polyMapEval_fromArray *> s
+                                  | q<p => degree<_degree q/=0 fromArray_degree<
+                            \in linarith
+      }, \lam x => \case prim x \with {
+        | inP (g, ge) => \let (d,r,g=dp+r,r<p) => monicPolyDivision g p (degree p) (degree_degree<= <=-refl) (monic-coef pm.1)
+                         \in inP (\lam j => polyCoef r j, inv ge *> pmap (polyMapEval f __ a) g=dp+r *> (polyMapEvalRingHom f a).func-+ *>
+                                    pmap (+ _) ((polyMapEvalRingHom f a).func-* *> pmap (_ *) pm.2.1 *> zro_*-right) *> zro-left *> polyMapEval_polyCoef r<p)
+      })
+
+-- | The degree of the minimal polynomial of a primitive element equals the dimension of the extension.
+\lemma findim-minPoly-degree {k K : DiscreteField} (f : RingHom k K) {l : Array K} (lb : LModule.IsBasis {homLModule f} l)
+  {t : K} (prim : IsPrimitiveElement f t) {p : Poly k} (pm : isMonicMinPoly f t p) : degree p = l.len
+  => basis-len-unique (powers-basis f pm prim) lb
+
+-- | A finite-dimensional separable extension has a separable primitive element.
+\lemma separable-primitive {k K : DiscreteField} (f : RingHom k K) (fg : LModule.IsFinitelyGenerated {homLModule f})
+  (sep : \Pi (a : K) -> IsSeparableElement f a) : ∃ (t : K) (IsSeparableElement f t) (IsPrimitiveElement f t) \elim fg
+  | inP (l, lg) => TruncP.map (separableClosure-separablyClosed.separable-primitive-array f l (\lam j => sep (l j))) \lam s =>
+      (s.1, s.2, \lam x => \case lg x \with {
+        | inP (c, xc) => transportInv (polyImage f s.1) xc $ (polyImage f s.1).contains_BigSum {\new Array K l.len (\lam j => f (c j) * l j)} \lam j =>
+            (polyImage f s.1).contains_* (polyImage-ext f s.1 (c j)) (s.3 j)
+      })

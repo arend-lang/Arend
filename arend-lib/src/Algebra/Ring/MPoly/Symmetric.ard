@@ -1,0 +1,562 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Pointed.PointedHom
+\import Algebra.Group.Symmetric
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.MPoly
+\import Algebra.Ring.MPoly.Rename
+\import Algebra.Ring.MonoidRing
+\import Algebra.Monoid.PermSet
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Equiv
+\import Function (IsInj, IsSurj)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\open RingHom (∘)
+\open Monoid (pow)
+
+{- | **Symmetric polynomials** (MRR II.8).
+
+     Public API:
+     * {elemSymOf} — elementary symmetric functions of an array, {prodLin-coef} relates them to the
+       coefficients of $\prod_j (X - a_j)$, {elemSymOf-perm} — their permutation invariance;
+     * {elemSym} `n i` — the elementary symmetric polynomial $\sigma_i$ in `n` variables, {IsSymmetric},
+       {elemSymEval} `n` — the substitution $Y_j \mapsto \sigma_{j+1}$;
+     * {symmetric-elemSym} (Theorem II.8.1, existence), {elemSym-algIndependent} (Corollary II.8.2),
+       {elemSymEval-inj} (Theorem II.8.1, uniqueness);
+     * {symmetric-roots} — symmetric expressions in the roots of a polynomial lie in the image of its coefficient ring.
+
+     Existence is proved by induction on `n` without degree arguments: view `f` as a symmetric polynomial
+     in $X_1, \ldots, X_n$ over $R[X_0]$; by induction it is a polynomial in $\tau_i = \sigma_i(X_1, \ldots, X_n)$
+     and $X_0$, and $\tau_i = \pm P_i(X_0)$ for monic $P_i \in R[\sigma][T]$ ({symmetric-elemSym.Pseq}).
+     Hence $f = H(X_0)$ with $H \in R[\sigma][T]$; dividing by the monic $P_{n+1}$, which vanishes at $X_0$,
+     we may assume $\deg H \le n$. By symmetry $H(X_j) = f$ for all `j`, and since the differences $X_i - X_j$
+     are not zero divisors, $H - f$ is zero ({poly-roots-cancel=0}), so `f` is the constant coefficient of `H`.
+     Uniqueness follows the book: induction on `n` and on the polynomial structure in the variable for $\sigma_n$
+     ({elemSym-algIndependent.core}). -}
+
+-- # Elementary symmetric functions of an array
+
+-- | The `i`-th elementary symmetric function of the elements of an array.
+\func elemSymOf {S : CRing} (i : Nat) {n : Nat} (a : Array S n) : S \elim i, n, a
+  | 0, _, _ => 1
+  | suc i, 0, nil => 0
+  | suc i, suc n, x :: l => elemSymOf (suc i) l + x * elemSymOf i l
+
+-- | Ring homomorphisms commute with elementary symmetric functions.
+\lemma elemSymOf-hom {S T : CRing} (f : RingHom S T) (i : Nat) {n : Nat} (a : Array S n)
+  : f (elemSymOf i a) = elemSymOf i (\lam j => f (a j)) \elim i, n, a
+  | 0, _, _ => f.func-ide
+  | suc i, 0, nil => f.func-zro
+  | suc i, suc n, x :: l => f.func-+ *> pmap2 (+) (elemSymOf-hom f (suc i) l) (f.func-* *> pmap (_ *) (elemSymOf-hom f i l))
+
+-- | Elementary symmetric functions of degree greater than the length of the array vanish.
+\lemma elemSymOf-vanish {S : CRing} {i n : Nat} (a : Array S n) (n<i : n < i) : elemSymOf i a = 0 \elim i, n, a, n<i
+  | suc i, 0, nil, _ => idp
+  | suc i, suc n, x :: l, NatOrder.suc<suc n<i => pmap2 (+) (elemSymOf-vanish l (n<i <∘ id<suc)) (pmap (x *) (elemSymOf-vanish l n<i) *> zro_*-right) *> zro-left
+
+-- | A zero element does not contribute to elementary symmetric functions.
+\lemma elemSymOf-cons0 {S : CRing} (i : Nat) {n : Nat} (l : Array S n) : elemSymOf i (0 :: l) = elemSymOf i l \elim i
+  | 0 => idp
+  | suc i => pmap (_ +) zro_*-left *> zro-right
+
+-- | The coefficients of $\prod_j (X - a_j)$ are, up to sign, the elementary symmetric functions of the `a_j`.
+\lemma prodLin-coef {S : CRing} {n : Nat} (a : Array S n) {k i : Nat} (p : k + i = n)
+  : polyCoef (prodLin a) k = pow (negative 1) i * elemSymOf i a \elim n, a, k, i
+  | 0, nil, 0, 0 => inv (ide-left {S})
+  | 0, nil, 0, suc i => \case p
+  | 0, nil, suc k, _ => \case p
+  | suc n, x :: l, 0, 0 => \case p
+  | suc n, x :: l, 0, suc i =>
+    \have q : i = n => pmap pred p
+    \in coef0 *> pmap (__ * _) (prodLin-coef {S} {n} l {0} {i} (pmap pred p)) *> rewrite (elemSymOf-vanish {S} {suc i} l (rewrite q id<suc)) equation.cRing
+  | suc n, x :: l, suc k, 0 => coefS *> pmap2 (\lam y z => y + z * negative x) (prodLin-coef {S} {n} l {k} {0} (pmap pred p)) (prodLin-degree l {suc k} (rewriteI (pmap pred p) <=-refl)) *> equation.cRing
+  | suc n, x :: l, suc k, suc i => coefS *> pmap2 (\lam y z => y + z * negative x) (prodLin-coef {S} {n} l {k} {suc i} (pmap pred p)) (prodLin-coef {S} {n} l {suc k} {i} (pmap pred p)) *> equation.cRing
+  \where {
+    \lemma coef0 {S : CRing} {P : Poly S} {c : S} : polyCoef (P * padd 1 c) 0 = polyCoef P 0 * c
+      => rewrite (mul_padd1 c P, polyCoef_+, polyCoef_*-right) zro-left
+
+    \lemma coefS {S : CRing} {P : Poly S} {c : S} {k : Nat} : polyCoef (P * padd 1 c) (suc k) = polyCoef P k + polyCoef P (suc k) * c
+      => rewrite (mul_padd1 c P, polyCoef_+, polyCoef_*-right) idp
+  }
+
+-- | $(-1)^i (-1)^i = 1$.
+\lemma pow-neg1-sq {S : CRing} (i : Nat) : pow (negative (1 : S)) i * pow (negative 1) i = 1 \elim i
+  | 0 => ide-left
+  | suc i => equation.cRing {pow-neg1-sq i}
+
+\lemma pow-neg1-cancel {S : CRing} {i : Nat} {x y : S} (t : pow (negative 1) i * x = pow (negative 1) i * y) : x = y
+  => inv ide-left *> pmap (__ * x) (inv (pow-neg1-sq i)) *> *-assoc *> pmap (_ *) t *> inv *-assoc *> pmap (__ * y) (pow-neg1-sq i) *> ide-left
+
+-- | Elementary symmetric functions are invariant under permutations of the array.
+\lemma elemSymOf-perm {S : CRing} {n : Nat} (a : Array S n) (f : Fin n -> Fin n) (inj : IsInj f) (i : Nat)
+  : elemSymOf i (\lam j => a (f j)) = elemSymOf i a
+  => \case LinearOrder.dec<_<= n i \with {
+    | inl n<i => elemSymOf-vanish _ n<i *> inv (elemSymOf-vanish a n<i)
+    | inr i<=n =>
+      \have q : n -' i + i = n => +-comm *> <=_exists i<=n
+      \in pow-neg1-cancel $ inv (prodLin-coef (\lam j => a (f j)) q) *> pmap (polyCoef __ (n -' i)) (prodLin-perm a f inj) *> prodLin-coef a q
+  }
+
+-- # General facts about univariate polynomials
+
+\lemma polyMapEval-const {R : Ring} {S : CRing} (f : RingHom R S) (a : S) (c : R) : polyMapEvalRingHom f a (padd pzero c) = f c
+  => simplify
+
+\lemma polyEval-const {R : Ring} (c a : R) : polyEval (padd pzero c) a = c
+  => simplify
+
+\lemma polyMapEval-X {R : Ring} {S : CRing} (f : RingHom R S) (a : S) : polyMapEvalRingHom f a (padd 1 0) = a
+  => polyMapEval_monomial {f} {a} {1} *> ide-left
+
+\lemma ringHom-pow-neg1 {A B : Ring} (g : RingHom A B) (k : Nat) : g (pow (negative 1) k) = pow (negative 1) k
+  => g.func-pow *> pmap (pow __ k) (g.func-negative *> pmap negative g.func-ide)
+
+{- | A polynomial of degree `< n` vanishing at `n` points whose pairwise differences are not zero divisors is zero.
+     This generalizes `degree<-roots=0` from integral domains to arbitrary commutative rings. -}
+\lemma poly-roots-cancel=0 {R : CRing} {n : Nat} {p : Poly R} (d : degree< p n) (r : Array R n)
+                           (c : \Pi {i j : Fin n} -> i /= j -> \Pi {x : R} -> (r i - r j) * x = 0 -> x = 0)
+                           (root : \Pi (i : Fin n) -> polyEval p (r i) = 0) : p = 0 \elim n, r
+  | 0, nil => degree<0 d
+  | suc n, a :: l =>
+    \have q=0 => poly-roots-cancel=0 (deflate-degree d a) l (\lam {i} {j} i/=j => c {suc i} {suc j} (\lam e => i/=j (unfsuc e))) \lam i =>
+                 c {suc i} {0} fsuc/=0 (*-comm *> inv (polyEval_deflate p a (l i) *> pmap (_ +) (root 0) *> zro-right) *> root (suc i))
+    \in deflate-eq *> pmap2 (\lam x y => x * padd 1 (negative a) + padd pzero y) q=0 (root 0) *> zro-left *> peq
+
+-- # General facts about multivariate polynomials
+
+\lemma mPolyMapEval-const {J : \Set} {R S : CRing} (f : RingHom R S) (a : J -> S) (r : R) : mPolyMapEvalRingHom f a (mConst r) = f r
+  => simplify
+
+\lemma mPolyEval-const {J : \Set} {R : CRing} (a : J -> R) (r : R) : mPolyEval a (mConst r) = r
+  => simplify
+
+\lemma mPolyEval-var {J : \Set} {R : CRing} (a : J -> R) (j : J) : mPolyEval a (mVar j) = a j
+  => simplify
+
+-- | A homomorphism applied after an evaluation is again an evaluation.
+\lemma mPolyMapEval-hom {J : \Set} {R S T : CRing} (g : RingHom S T) (f : RingHom R S) (a : J -> S) (h : RingHom R T) (b : J -> T)
+                        (c : \Pi (r : R) -> g (f r) = h r) (v : \Pi (j : J) -> g (a j) = b j) (x : MPoly J R)
+  : g (mPolyMapEvalRingHom f a x) = mPolyMapEvalRingHom h b x
+  => mPolyRingHom-unique (g ∘ mPolyMapEvalRingHom f a) (mPolyMapEvalRingHom h b)
+      (\lam r => pmap g (mPolyMapEval-const f a r) *> c r *> inv (mPolyMapEval-const h b r))
+      (\lam j => pmap g (mPolyMapEval-var f a j) *> v j *> inv (mPolyMapEval-var h b j)) x
+
+\lemma mPoly-rename-var {I J : \Set} {R : CRing} (f : I -> J) (i : I) : mPoly-rename {I} {J} {R} f (mVar i) = mVar (f i)
+  => mPoly-rename.on-var {I} {J} {R} {f} {i}
+
+\lemma mPoly-rename-const {I J : \Set} {R : CRing} (f : I -> J) (r : R) : mPoly-rename {I} {J} {R} f (mConst r) = mConst r
+  => mPoly-rename.on-const {I} {J} {R} {f} {r}
+
+-- | Evaluation after renaming is evaluation at the renamed values.
+\lemma mPolyMapEval-rename {I J : \Set} {R S : CRing} (f : RingHom R S) (a : J -> S) (r : I -> J) (x : MPoly I R)
+  : mPolyMapEvalRingHom f a (mPoly-rename r x) = mPolyMapEvalRingHom f (\lam i => a (r i)) x
+  => mPolyRingHom-unique (mPolyMapEvalRingHom f a ∘ mPoly-rename r) (mPolyMapEvalRingHom f (\lam i => a (r i)))
+      (\lam c => pmap (mPolyMapEvalRingHom f a) (mPoly-rename-const r c) *> mPolyMapEval-const f a c *> inv (mPolyMapEval-const f (\lam i => a (r i)) c))
+      (\lam i => pmap (mPolyMapEvalRingHom f a) (mPoly-rename-var r i) *> mPolyMapEval-var f a (r i) *> inv (mPolyMapEval-var f (\lam i => a (r i)) i)) x
+
+\lemma mPoly-rename-id {J : \Set} {R : CRing} (x : MPoly J R) : mPoly-rename (\lam j => j) x = x
+  => mPolyRingHom-unique (mPoly-rename (\lam j => j)) RingHom.id (\lam r => mPoly-rename.on-const {J} {J} {R} {\lam j => j}) (\lam j => mPoly-rename.on-var {J} {J} {R} {\lam j => j}) x
+
+\lemma mPoly-rename-inv {J : \Set} {R : CRing} {f g : J -> J} (e : \Pi (j : J) -> g (f j) = j) (x : MPoly J R)
+  : mPoly-rename g (mPoly-rename f x) = x
+  => mPoly-rename.comp e x *> mPoly-rename-id x
+
+-- | The variable of univariate polynomials.
+\func polyX {A : Ring} : Poly A => padd 1 0
+
+-- | A polynomial in `suc n` variables as a polynomial in the variable `0` with coefficients in the other variables.
+\func toPoly0 {R : CRing} {n : Nat} : RingHom (MPoly (Fin (suc n)) R) (PolyRing (MPoly (Fin n) R))
+  => mPolyMapEvalRingHom (polyHom ∘ mPolyHom) vars
+  \where {
+    \func vars {R : CRing} {n : Nat} : Array (Poly (MPoly (Fin n) R)) (suc n)
+      => polyX :: mkArray \lam j => padd pzero (mVar j)
+
+    \lemma on-const {R : CRing} {n : Nat} (r : R) : toPoly0 {R} {n} (mConst r) = padd pzero (mConst r)
+      => mPolyMapEval-const (polyHom ∘ mPolyHom) vars r
+
+    \lemma on-var0 {R : CRing} {n : Nat} : toPoly0 {R} {n} (mVar fzero) = polyX
+      => mPolyMapEval-var (polyHom ∘ mPolyHom) vars fzero
+
+    \lemma on-varS {R : CRing} {n : Nat} (j : Fin n) : toPoly0 {R} {n} (mVar (fsuc j)) = padd pzero (mVar j)
+      => mPolyMapEval-var (polyHom ∘ mPolyHom) vars (fsuc j)
+
+    \lemma on-rename {R : CRing} {n : Nat} (x : MPoly (Fin n) R) : toPoly0 (mPoly-rename fsuc x) = padd pzero x
+      => mPolyRingHom-unique (toPoly0 ∘ mPoly-rename fsuc) polyHom (\lam r => pmap toPoly0 (mPoly-rename.on-const {Fin n} {Fin (suc n)} {R} {fsuc}) *> on-const r)
+          (\lam j => pmap toPoly0 (mPoly-rename.on-var {Fin n} {Fin (suc n)} {R} {fsuc}) *> on-varS j) x
+  }
+
+-- | The inverse of {toPoly0}.
+\func fromPoly0 {R : CRing} {n : Nat} : RingHom (PolyRing (MPoly (Fin n) R)) (MPoly (Fin (suc n)) R)
+  => polyMapEvalRingHom (mPoly-rename fsuc) (mVar fzero)
+  \where {
+    \lemma on-const {R : CRing} {n : Nat} (c : MPoly (Fin n) R) : fromPoly0 (padd pzero c) = mPoly-rename fsuc c
+      => simplify
+
+    \lemma on-X {R : CRing} {n : Nat} : fromPoly0 {R} {n} polyX = mVar fzero
+      => polyMapEval_monomial {mPoly-rename fsuc} {mVar fzero} {1} *> ide-left {MPoly (Fin (suc n)) R} {mVar fzero}
+
+    \lemma toPoly0-inv {R : CRing} {n : Nat} (x : MPoly (Fin (suc n)) R) : fromPoly0 (toPoly0 x) = x
+      => mPolyRingHom-unique (fromPoly0 ∘ toPoly0) RingHom.id (\lam r => pmap fromPoly0 (toPoly0.on-const r) *> on-const (mConst r) *> mPoly-rename.on-const {Fin n} {Fin (suc n)} {R} {fsuc})
+          (\case \elim __ \with {
+            | 0 => pmap fromPoly0 toPoly0.on-var0 *> on-X
+            | suc j => pmap fromPoly0 (toPoly0.on-varS j) *> on-const (mVar j) *> mPoly-rename.on-var {Fin n} {Fin (suc n)} {R} {fsuc}
+          }) x
+  }
+
+\lemma toPoly0-inj {R : CRing} {n : Nat} {x y : MPoly (Fin (suc n)) R} (p : toPoly0 x = toPoly0 y) : x = y
+  => inv (fromPoly0.toPoly0-inv x) *> pmap fromPoly0 p *> fromPoly0.toPoly0-inv y
+
+-- | A polynomial which is monic of degree one in the variable `0` is not a zero divisor.
+\lemma mVar0-linear-cancel {R : CRing} {n : Nat} (c : MPoly (Fin n) R) {x : MPoly (Fin (suc n)) R}
+                           (p : (mVar {Fin (suc n)} {R} fzero + mPoly-rename fsuc c) * x = 0) : x = 0
+  => \have | L : toPoly0 (mVar {Fin (suc n)} {R} fzero + mPoly-rename fsuc c) = padd 1 c
+               => toPoly0.func-+ *> pmap2 (+) toPoly0.on-var0 (toPoly0.on-rename c) *> pmap (padd 1) zro-left
+            | t : toPoly0 x * padd 1 c = 0 => *-comm *> pmap (__ * _) (inv L) *> inv toPoly0.func-* *> pmap toPoly0 p *> toPoly0.func-zro
+     \in toPoly0-inj $ monicPolyDivisionContr.aux (toPoly0 x) (padd 1 c) 1 idp idp (transportInv (degree< __ 1) t \lam _ => idp) *> inv toPoly0.func-zro
+
+-- # Permutations of variables
+
+-- | The permutation exchanging `0` and `j` (the identity if `j = 0`).
+\func swap0 {n : Nat} (j : Fin (suc n)) : Sym (suc n)
+  => swapD (decideEq (fzero {n}) j)
+  \where {
+    \func swapD {n : Nat} {j : Fin (suc n)} (d : Dec (fzero {n} = j)) : Sym (suc n) \elim d
+      | yes _ => idEquiv
+      | no q => transposition q
+
+    \lemma on-zero {n : Nat} {j : Fin (suc n)} : swap0 j (fzero {n}) = j
+      => aux (decideEq (fzero {n}) j)
+      \where
+        \lemma aux {n : Nat} {j : Fin (suc n)} (d : Dec (fzero {n} = j)) : swapD d (fzero {n}) = j \elim d
+          | yes p => p
+          | no q => transposition.transposition-left
+
+    \lemma on-self {n : Nat} {j : Fin (suc n)} : swap0 j j = fzero {n}
+      => aux (decideEq (fzero {n}) j)
+      \where
+        \lemma aux {n : Nat} {j : Fin (suc n)} (d : Dec (fzero {n} = j)) : swapD d j = fzero {n} \elim d
+          | yes p => inv p
+          | no q => transposition.transposition-right
+
+    \lemma isInv {n : Nat} {j i : Fin (suc n)} : swap0 j (swap0 j i) = i
+      => aux (decideEq (fzero {n}) j)
+      \where
+        \lemma aux {n : Nat} {j i : Fin (suc n)} (d : Dec (fzero {n} = j)) : swapD d (swapD d i) = i \elim d
+          | yes p => idp
+          | no q => transposition.transposition-isInv
+
+    \lemma rename-inv {R : CRing} {n : Nat} {j : Fin (suc n)} (x : MPoly (Fin (suc n)) R) : mPoly-rename (swap0 j) (mPoly-rename (swap0 j) x) = x
+      => mPoly-rename-inv (\lam i => swap0.isInv {n} {j} {i}) x
+  }
+
+-- | Variables are not zero divisors.
+\lemma mVar-cancel {R : CRing} {n : Nat} (j : Fin n) {x : MPoly (Fin n) R} (p : mVar j * x = 0) : x = 0 \elim n
+  | suc n =>
+    \have t : (mVar {Fin (suc n)} {R} fzero + mPoly-rename fsuc 0) * mPoly-rename (swap0 j) x = 0
+      => pmap (__ * _) (pmap (_ +) (RingHom.func-zro {mPoly-rename {Fin n} {Fin (suc n)} {R} fsuc}) *> zro-right *> inv (mPoly-rename-var (swap0 j) j *> pmap mVar swap0.on-self))
+           *> inv func-* *> pmap (mPoly-rename (swap0 j)) p *> func-zro
+    \in inv (swap0.rename-inv {R} {n} {j} x) *> pmap (mPoly-rename (swap0 j)) (mVar0-linear-cancel 0 t) *> func-zro
+
+-- | Differences of distinct variables are not zero divisors.
+\lemma mVar-diff-cancel {R : CRing} {n : Nat} {i j : Fin n} (i/=j : i /= j) {x : MPoly (Fin n) R} (p : (mVar i - mVar j) * x = 0) : x = 0 \elim n
+  | suc n =>
+    \have ej/=0 : swap0 i j /= fzero {n} => \lam q => i/=j $ inv swap0.on-zero *> pmap (swap0 i) (inv q) *> swap0.isInv
+    \in \case swap0 i j \as k, idp : swap0 i j = k \with {
+      | 0, q => absurd (ej/=0 q)
+      | suc k, q =>
+        \have | e => mPoly-rename {Fin (suc n)} {Fin (suc n)} {R} (swap0 i)
+              | s : mPoly-rename fsuc (negative (mVar k)) = e (negative (mVar j))
+                  => AddGroupHom.func-negative {mPoly-rename {Fin n} {Fin (suc n)} {R} fsuc} {mVar k}
+                     *> pmap negative (mPoly-rename-var fsuc k *> pmap mVar (inv q) *> inv (mPoly-rename-var (swap0 i) j))
+                     *> inv (AddGroupHom.func-negative {e} {mVar j})
+              | t : (mVar {Fin (suc n)} {R} fzero + mPoly-rename fsuc (negative (mVar k))) * e x = 0
+                  => pmap (__ * e x) (pmap2 (+) (inv (mPoly-rename-var (swap0 i) i *> pmap mVar swap0.on-self)) s *> inv (e.func-+ {mVar i} {negative (mVar j)}))
+                     *> inv e.func-* *> pmap e p *> e.func-zro
+        \in inv (swap0.rename-inv {R} {n} {i} x) *> pmap (mPoly-rename (swap0 i)) (mVar0-linear-cancel (negative (mVar k)) t) *> func-zro
+    }
+
+-- # Elementary symmetric polynomials
+
+-- | The `i`-th elementary symmetric polynomial in `n` variables.
+\func elemSym {R : CRing} (n i : Nat) : MPoly (Fin n) R
+  => elemSymOf i (\lam (j : Fin n) => mVar j)
+
+-- | A polynomial is symmetric if it is invariant under every permutation of its variables.
+\func IsSymmetric {R : CRing} {n : Nat} (p : MPoly (Fin n) R) : \Prop
+  => \Pi (e : Sym n) -> mPoly-rename e p = p
+
+\lemma elemSym-symmetric {R : CRing} {n : Nat} (i : Nat) : IsSymmetric (elemSym {R} n i)
+  => \lam e => elemSymOf-hom (mPoly-rename e) i _ *> pmap (elemSymOf i) (exts \lam j => mPoly-rename-var e j) *> elemSymOf-perm (\lam j => mVar j) e (QEquiv.isInj {e}) i
+
+-- | Substitution of the elementary symmetric polynomials: the variable `j` goes to $\sigma_{j+1}$.
+\func elemSymEval {R : CRing} (n : Nat) : RingHom (MPoly (Fin n) R) (MPoly (Fin n) R)
+  => mPolyMapEvalRingHom mPolyHom (\lam (j : Fin n) => elemSym n (suc j))
+  \where {
+    \lemma on-const {R : CRing} {n : Nat} (r : R) : elemSymEval n (mConst r) = mConst r
+      => mPolyMapEval-const mPolyHom (\lam (j : Fin n) => elemSym n (suc j)) r
+
+    \lemma on-var {R : CRing} {n : Nat} (j : Fin n) : elemSymEval {R} n (mVar j) = elemSym n (suc j)
+      => mPolyMapEval-var mPolyHom (\lam (j : Fin n) => elemSym n (suc j)) j
+
+    \lemma zero-vars {R : CRing} (x : MPoly (Fin 0) R) : elemSymEval 0 x = x
+      => mPolyRingHom-unique (elemSymEval 0) RingHom.id on-const (\lam j => \case j) x
+  }
+
+-- | The value of $\sigma_i$ at `a` is the `i`-th elementary symmetric function of `a`.
+\lemma elemSym-mapEval {R S : CRing} (f : RingHom R S) {n : Nat} (a : Array S n) (i : Nat)
+  : mPolyMapEvalRingHom f a (elemSym n i) = elemSymOf i a
+  => elemSymOf-hom _ i _ *> pmap (elemSymOf i) (exts (mPolyMapEval-var f a))
+
+\lemma elemSym-eval {R : CRing} {n : Nat} (a : Array R n) (i : Nat) : mPolyEval a (elemSym n i) = elemSymOf i a
+  => elemSymOf-hom (mPolyEval a) i _ *> pmap (elemSymOf i) (exts (mPolyEval-var a))
+
+-- | The coefficients of $\prod_j (X - a_j)$ are, up to sign, the values of the elementary symmetric polynomials at `a`.
+\lemma prodLin-coef-elemSym {R : CRing} {n : Nat} (a : Array R n) {k i : Nat} (p : k + i = n)
+  : polyCoef (prodLin a) k = pow (negative 1) i * mPolyEval a (elemSym n i)
+  => prodLin-coef a p *> inv (pmap (_ *) (elemSym-eval a i))
+
+-- | Polynomials in the elementary symmetric polynomials are symmetric.
+\lemma elemSymEval-symmetric {R : CRing} {n : Nat} (h : MPoly (Fin n) R) : IsSymmetric (elemSymEval n h)
+  => \lam e => mPolyRingHom-unique (mPoly-rename e ∘ elemSymEval n) (elemSymEval n)
+      (\lam r => pmap (mPoly-rename e) (elemSymEval.on-const r) *> mPoly-rename-const e r *> inv (elemSymEval.on-const r))
+      (\lam j => pmap (mPoly-rename e) (elemSymEval.on-var j) *> elemSym-symmetric (suc j) e *> inv (elemSymEval.on-var j)) h
+
+-- | If all elements of an array are not zero divisors, then neither is their product.
+\lemma elemSymOf-top-cancel {S : CRing} {n : Nat} (a : Array S n) (c : \Pi (j : Fin n) {x : S} -> a j * x = 0 -> x = 0)
+                            {x : S} (p : elemSymOf n a * x = 0) : x = 0 \elim n, a
+  | 0, nil => inv ide-left *> p
+  | suc n, y :: l => elemSymOf-top-cancel l (\lam j => c (suc j)) $ c 0 $ inv *-assoc *> inv (pmap (__ * x) (pmap (__ + _) (elemSymOf-vanish l id<suc) *> zro-left)) *> p
+
+-- # The fundamental theorem
+
+-- | **Theorem II.8.1** (existence). Every symmetric polynomial is a polynomial in the elementary symmetric polynomials.
+\lemma symmetric-elemSym {R : CRing} {n : Nat} (f : MPoly (Fin n) R) (s : IsSymmetric f) : ∃ (h : MPoly (Fin n) R) (elemSymEval n h = f) \elim n
+  | 0 => inP (f, elemSymEval.zero-vars f)
+  | suc n => \case symmetric-elemSym {PolyAlgebra R} {n} (MPoly_Fin-suc'.fHom f) (lift-symmetric s) \with {
+    | inP (h', e) => main f s h' e
+  }
+  \where {
+    \func liftF {n : Nat} (g : Fin n -> Fin n) (j : Fin (suc n)) : Fin (suc n) \elim j
+      | 0 => 0
+      | suc j => suc (g j)
+
+    \func liftSym {n : Nat} (e : Sym n) : Sym (suc n)
+      => Sym.fromEquiv $ \new QEquiv {
+        | f => liftF e
+        | ret => liftF (QEquiv.ret {e})
+        | ret_f => \case \elim __ \with {
+          | 0 => idp
+          | suc j => pmap fsuc (QEquiv.ret_f {e} j)
+        }
+        | f_sec => \case \elim __ \with {
+          | 0 => idp
+          | suc j => pmap fsuc (QEquiv.f_sec {e} j)
+        }
+      }
+
+    \func fH {R : CRing} {n : Nat} => MPoly_Fin-suc'.fHom {n} {R}
+
+    \func fHarr {R : CRing} {n : Nat} : Array (MPoly (Fin n) (PolyAlgebra R)) (suc n)
+      => mConst (padd 1 0) :: mkArray \lam j => mVar j
+
+    \lemma fH-const {R : CRing} {n : Nat} (r : R) : fH {R} {n} (mConst r) = mConst (padd pzero r)
+      => mPolyMapEval-const (mPolyHom ∘ polyHom) fHarr r
+
+    \lemma fH-var {R : CRing} {n : Nat} (j : Fin (suc n)) : fH {R} {n} (mVar j) = fHarr j
+      => mPolyMapEval-var (mPolyHom ∘ polyHom) fHarr j
+
+    \lemma lift-fHom {R : CRing} {n : Nat} (e : Sym n) (x : MPoly (Fin (suc n)) R)
+      : fH (mPoly-rename (liftSym e) x) = mPoly-rename e (fH x)
+      => mPolyRingHom-unique (fH ∘ mPoly-rename (liftSym e)) (mPoly-rename e ∘ fH)
+          (\lam r => pmap fH (mPoly-rename-const (liftSym e) r) *> fH-const r *> inv (pmap (mPoly-rename e) (fH-const r) *> mPoly-rename-const e _))
+          (\case \elim __ \with {
+            | 0 => pmap (fH {R} {n}) (mPoly-rename-var (liftSym e) fzero) *> fH-var fzero *> inv (pmap (mPoly-rename e) (fH-var fzero) *> mPoly-rename-const e _)
+            | suc j => pmap fH (mPoly-rename-var (liftSym e) (suc j)) *> fH-var (suc (e j)) *> inv (pmap (mPoly-rename e) (fH-var (suc j)) *> mPoly-rename-var e j)
+          }) x
+
+    \lemma lift-symmetric {R : CRing} {n : Nat} {f : MPoly (Fin (suc n)) R} (s : IsSymmetric f) : IsSymmetric (fH f)
+      => \lam e => inv (lift-fHom e f) *> pmap fH (s (liftSym e))
+
+    -- | The elementary symmetric polynomials in the variables `1, ..., n`.
+    \func tau {R : CRing} {n : Nat} (i : Nat) : MPoly (Fin (suc n)) R
+      => elemSymOf i (\lam (j : Fin n) => mVar (fsuc j))
+
+    -- | Evaluation of a polynomial in `T` over `R[Y]` at `T = X_0`, `Y_j = σ_{j+1}`.
+    \func E {R : CRing} {n : Nat} : RingHom (PolyRing (MPoly (Fin (suc n)) R)) (MPoly (Fin (suc n)) R)
+      => polyMapEvalRingHom (elemSymEval (suc n)) (mVar fzero)
+
+    \lemma truncVar-eval {R : CRing} {n : Nat} (i : Nat) : elemSymEval (suc n) (finVars.truncVar {R} (suc n) i) = elemSym (suc n) (suc i)
+      => unfold finVars.truncVar $ mcases \with {
+        | inl p => elemSymEval.on-var _ *> pmap (\lam (k : Nat) => elemSym (suc n) (suc k)) toFin=id
+        | inr q => RingHom.func-zro {elemSymEval (suc n)} *> inv (elemSymOf-vanish (\lam (j : Fin (suc n)) => mVar {Fin (suc n)} {R} j) (<=_<_suc q))
+      }
+
+    -- | A monic polynomial of degree `i` over `R[Y]` which evaluates to $\pm\tau_i$.
+    \func Pseq {R : CRing} {n : Nat} (i : Nat) : Poly (MPoly (Fin (suc n)) R) \elim i
+      | 0 => 1
+      | suc i => padd (Pseq i) (pow (negative 1) (suc i) * finVars.truncVar (suc n) i)
+
+    \lemma Pseq-deg {R : CRing} {n : Nat} (i : Nat) : degree<= (Pseq {R} {n} i) i \elim i
+      | 0 => idp
+      | suc i => Pseq-deg i
+
+    \lemma Pseq-lead {R : CRing} {n : Nat} (i : Nat) : polyCoef (Pseq {R} {n} i) i = 1 \elim i
+      | 0 => idp
+      | suc i => Pseq-lead i
+
+    \lemma Pseq-E {R : CRing} {n : Nat} (i : Nat) : E (Pseq {R} {n} i) = pow (negative 1) i * tau i \elim i
+      | 0 => E.func-ide *> inv (ide-left {MPoly (Fin (suc n)) R} {1})
+      | suc i => pmap2 (\lam x y => x * mVar fzero + y) (Pseq-E i) ((elemSymEval (suc n)).func-* *> pmap2 (*) (ringHom-pow-neg1 (elemSymEval (suc n)) (suc i)) (truncVar-eval i))
+                  *> alg (pow (negative 1) i) (tau i) (tau (suc i)) (mVar fzero)
+      \where
+        \lemma alg {A : CRing} (s t t' X : A) : s * t * X + (s * negative 1) * (t' + X * t) = (s * negative 1) * t'
+          => equation.cRing
+
+    \lemma Pseq-root {R : CRing} {n : Nat} : E (Pseq {R} {n} (suc n)) = 0
+      => Pseq-E (suc n) *> pmap (_ *) (elemSymOf-vanish _ id<suc) *> zro_*-right
+
+    \func psi0 {R : CRing} {n : Nat} : RingHom (PolyRing R) (PolyAlgebra (MPoly (Fin (suc n)) R))
+      => polyMapEvalRingHom (polyHom ∘ mPolyHom) polyX
+
+    \func phi {R : CRing} {n : Nat} : RingHom (PolyRing R) (MPoly (Fin (suc n)) R)
+      => polyMapEvalRingHom mPolyHom (mVar fzero)
+
+    \lemma E-psi0 {R : CRing} {n : Nat} (c : Poly R) : E (psi0 {R} {n} c) = phi c
+      => \let B => MPoly (Fin (suc n)) R
+         \in polyMapEval-unique (E {R} {n} ∘ psi0 {R} {n}) (phi {R} {n})
+          (\lam r => pmap E (polyMapEval-const {R} {PolyAlgebra B} (polyHom ∘ mPolyHom) polyX r) *> polyMapEval-const (elemSymEval (suc n)) (mVar fzero) (mPolyHom r)
+                     *> elemSymEval.on-const r *> inv (polyMapEval-const mPolyHom (mVar fzero) r))
+          (pmap E (polyMapEval-X {R} {PolyAlgebra B} (polyHom ∘ mPolyHom) polyX) *> polyMapEval-X (elemSymEval (suc n)) (mVar fzero) *> inv (polyMapEval-X mPolyHom (mVar fzero))) c
+
+    \func rH {R : CRing} {n : Nat} => MPoly_Fin-suc'.retHom {n} {R}
+
+    \lemma rH-const {R : CRing} {n : Nat} (c : Poly R) : rH {R} {n} (mConst c) = phi c
+      => mPolyMapEval-const {Fin n} {PolyAlgebra R} {MPoly (Fin (suc n)) R} (polyMapEvalRingHom mPolyHom (mVar fzero)) (\lam j => mVar (fsuc j)) c
+
+    \lemma rH-var {R : CRing} {n : Nat} (j : Fin n) : rH {R} {n} (mVar j) = mVar (fsuc j)
+      => mPolyMapEval-var {Fin n} {PolyAlgebra R} {MPoly (Fin (suc n)) R} (polyMapEvalRingHom mPolyHom (mVar fzero)) (\lam j => mVar (fsuc j)) j
+
+    \lemma rH-elemSym {R : CRing} {n : Nat} (i : Nat) : rH {R} {n} (elemSym n i) = tau i
+      => elemSymOf-hom rH i _ *> pmap (elemSymOf i) (exts rH-var)
+
+    \lemma main {R : CRing} {n : Nat} (f : MPoly (Fin (suc n)) R) (s : IsSymmetric f) (h' : MPoly (Fin n) (PolyAlgebra R)) (e : elemSymEval n h' = fH f)
+      : ∃ (h : MPoly (Fin (suc n)) R) (elemSymEval (suc n) h = f)
+      => \let | g => elemSymEval {R} (suc n)
+               | H => mPolyMapEvalRingHom psi0 (\lam (j : Fin n) => pow (negative 1) (suc j) * Pseq (suc j)) h'
+         \in \have | f=ret : f = mPolyMapEvalRingHom phi (\lam (j : Fin n) => tau {R} {n} (suc j)) h'
+                  => inv (QEquiv.ret_f {MPoly_Fin-suc' {n} {R}} f) *> pmap rH (inv e)
+                     *> mPolyMapEval-hom rH mPolyHom (\lam (j : Fin n) => elemSym {PolyAlgebra R} n (suc j)) phi (\lam j => tau {R} {n} (suc j))
+                          rH-const (\lam j => rH-elemSym (suc j)) h'
+                | EH : E H = f => mPolyMapEval-hom E psi0 _ phi (\lam (j : Fin n) => tau {R} {n} (suc j))
+                     E-psi0
+                     (\lam j => E.func-* *> pmap2 (*) (ringHom-pow-neg1 E (suc j)) (Pseq-E (suc j)) *> inv *-assoc *> pmap (__ * _) (pow-neg1-sq (suc j)) *> ide-left) h' *> inv f=ret
+                | div => monicPolyDivision H (Pseq (suc n)) (suc n) (Pseq-deg (suc n)) (Pseq-lead (suc n))
+                | Er : E div.2 = f => inv (inv EH *> pmap E div.3 *> E.func-+ *> pmap (__ + E div.2) (E.func-* *> pmap (E div.1 *) Pseq-root *> zro_*-right) *> zro-left)
+                | roots (j : Fin (suc n)) : polyEval (polyMap g div.2) (mVar j) = f
+                  => inv (polyMapEval-unique (mPoly-rename (swap0 j) ∘ E) (polyMapEvalRingHom g (mVar j))
+                       (\lam c => pmap (mPoly-rename (swap0 j)) (polyMapEval-const g (mVar fzero) c) *> elemSymEval-symmetric c (swap0 j) *> inv (polyMapEval-const g (mVar j) c))
+                       (pmap (mPoly-rename (swap0 j)) (polyMapEval-X g (mVar fzero)) *> mPoly-rename-var (swap0 j) fzero *> pmap mVar swap0.on-zero *> inv (polyMapEval-X g (mVar j))) div.2)
+                     *> pmap (mPoly-rename (swap0 j)) Er *> s (swap0 j)
+                | G=0 : polyMap g div.2 - padd pzero f = 0
+                  => poly-roots-cancel=0 (degree<_+ (degree<_polyMap div.4) (degree<_negative (degree<_padd {_} {pzero} \lam _ => idp)))
+                       (\lam j => mVar j) (\lam {i} {j} i/=j {x} => mVar-diff-cancel i/=j)
+                       (\lam j => (polyEvalRingHom (mVar j)).func-+ *> pmap2 (+) (roots j) (AddGroupHom.func-negative {polyEvalRingHom (mVar j)} {padd pzero f} *> pmap negative (polyEval-const f (mVar j))) *> negative-right)
+         \in inP (polyCoef div.2 0, AddGroup.fromZero $ inv (polyCoef_+ *> pmap2 (+) polyCoef_polyMap (polyCoef_negative {_} {padd pzero f})) *> pmap (polyCoef __ 0) G=0)
+  }
+
+-- | **Theorem II.8.1** (uniqueness) and **Corollary II.8.2**: the elementary symmetric polynomials are algebraically independent.
+\lemma elemSym-algIndependent {R : CRing} {n : Nat} {g : MPoly (Fin n) R} (p : elemSymEval n g = 0) : g = 0 \elim n
+  | 0 => inv (elemSymEval.zero-vars g) *> p
+  | suc n => \case rot-surj g \with {
+    | inP (g', q) =>
+      \have t : polyMapEvalRingHom psi (elemSym (suc n) (suc n)) (toPoly0 g') = 0
+        => inv (Ev'-fromPoly0 (toPoly0 g')) *> pmap Ev' (fromPoly0.toPoly0-inv g') *> inv (mPolyMapEval-rename mPolyHom _ rot g') *> pmap (elemSymEval (suc n)) q *> p
+      \in inv q *> pmap (mPoly-rename rot) (inv (fromPoly0.toPoly0-inv g') *> pmap fromPoly0 (core (\lam c q => elemSym-algIndependent q) (toPoly0 g') t) *> func-zro) *> func-zro
+  }
+  \where {
+    \func rot {n : Nat} (j : Fin (suc n)) : Fin (suc n) \elim j
+      | 0 => toFin n id<suc
+      | suc j => j
+
+    \lemma rot-surj {R : CRing} {n : Nat} : IsSurj (mPoly-rename {Fin (suc n)} {Fin (suc n)} {R} rot)
+      => mPoly-gen-surj (mPoly-rename rot) (\lam r => inP (mConst r, mPoly-rename-const rot r)) \lam j => \case LinearOrder.dec<_<= (j : Nat) n \with {
+        | inl j<n => inP (mVar (fsuc (toFin j j<n)), mPoly-rename-var rot (fsuc (toFin j j<n)) *> pmap (mVar {Fin (suc n)} {R}) (nat_fin_= {suc n} {toFin j {n} j<n} {j} (toFin=id {j} {n} {j<n})))
+        | inr n<=j => inP (mVar fzero, mPoly-rename-var rot (fzero {n}) *> pmap mVar (nat_fin_= (toFin=id {n} {suc n} {id<suc} *> <=-antisymmetric n<=j (<_suc_<= (fin_< j)))))
+      }
+
+    \func Ev' {R : CRing} {n : Nat} => mPolyMapEvalRingHom {Fin (suc n)} {R} mPolyHom (\lam j => elemSym (suc n) (suc (rot j)))
+
+    \func psi {R : CRing} {n : Nat} : RingHom (MPoly (Fin n) R) (MPoly (Fin (suc n)) R)
+      => mPolyMapEvalRingHom mPolyHom (\lam (j : Fin n) => elemSym (suc n) (suc j))
+
+    \lemma Ev'-fromPoly0 {R : CRing} {n : Nat} (G : Poly (MPoly (Fin n) R)) : Ev' (fromPoly0 G) = polyMapEvalRingHom psi (elemSym (suc n) (suc n)) G
+      => polyMapEval-unique (Ev' ∘ fromPoly0) (polyMapEvalRingHom psi (elemSym (suc n) (suc n)))
+          (\lam c => pmap Ev' (fromPoly0.on-const c) *> mPolyMapEval-rename mPolyHom _ fsuc c *> inv (polyMapEval-const psi _ c))
+          (pmap Ev' fromPoly0.on-X *> mPolyMapEval-var mPolyHom (\lam j => elemSym {R} (suc n) (suc (rot j))) (fzero {n}) *> pmap (\lam (k : Nat) => elemSym (suc n) (suc k)) (toFin=id {n} {suc n} {id<suc}) *> inv (polyMapEval-X psi _)) G
+
+    \func set0 {R : CRing} {n : Nat} : RingHom (MPoly (Fin (suc n)) R) (MPoly (Fin n) R)
+      => mPolyMapEvalRingHom mPolyHom set0arr
+
+    \func set0arr {R : CRing} {n : Nat} : Array (MPoly (Fin n) R) (suc n)
+      => 0 :: mkArray \lam j => mVar j
+
+    \lemma set0-elemSym {R : CRing} {n : Nat} (i : Nat) : set0 (elemSym {R} (suc n) i) = elemSym n i
+      => elemSymOf-hom set0 i _ *> pmap (elemSymOf i) (exts (mPolyMapEval-var mPolyHom set0arr)) *> elemSymOf-cons0 i _
+
+    \lemma set0-psi {R : CRing} {n : Nat} (c : MPoly (Fin n) R) : set0 (psi c) = elemSymEval n c
+      => mPolyMapEval-hom set0 mPolyHom (\lam (j : Fin n) => elemSym {R} (suc n) (suc j)) mPolyHom (\lam (j : Fin n) => elemSym {R} n (suc j)) (mPolyMapEval-const mPolyHom set0arr) (\lam j => set0-elemSym (suc j)) c
+
+    \lemma core {R : CRing} {n : Nat} (ih : \Pi (c : MPoly (Fin n) R) -> elemSymEval n c = 0 -> c = 0)
+                (G : Poly (MPoly (Fin n) R)) (p : polyMapEvalRingHom psi (elemSym (suc n) (suc n)) G = 0) : G = 0 \elim G
+      | pzero => idp
+      | padd G c =>
+        \let A => polyMapEvalRingHom psi (elemSym (suc n) (suc n)) G
+        \in \have | c=0 : c = 0 => ih c $ inv (set0-psi c) *> inv zro-left *> pmap (__ + _) (inv (Ring.zro_*-right {MPoly (Fin n) R} {set0 A}) *> pmap (set0 A *) (inv (set0-elemSym (suc n) *> elemSymOf-vanish (\lam (j : Fin n) => mVar {Fin n} {R} j) id<suc)) *> inv (RingHom.func-* {set0 {R} {n}} {A} {elemSym (suc n) (suc n)})) *> inv func-+ *> pmap set0 p *> func-zro
+              | As=0 : elemSym (suc n) (suc n) * A = 0 => *-comm *> inv zro-right *> pmap (_ +) (inv (pmap psi c=0 *> func-zro)) *> p
+              | A=0 => elemSymOf-top-cancel (\lam (j : Fin (suc n)) => mVar {Fin (suc n)} {R} j) (\lam j => mVar-cancel j) As=0
+        \in pmap2 padd (core ih G A=0) c=0 *> peq
+  }
+
+-- | **Theorem II.8.1** (uniqueness).
+\lemma elemSymEval-inj {R : CRing} {n : Nat} {h h' : MPoly (Fin n) R} (p : elemSymEval n h = elemSymEval n h') : h = h'
+  => AddGroup.fromZero $ elemSym-algIndependent $ AddGroupHom.func-minus {elemSymEval n} *> AddGroup.toZero p
+
+{- | Symmetric expressions in the roots of a polynomial lie in the image of its coefficient ring:
+     if $\varphi(p) = \prod_j (X - a_j)$ and `Q` is symmetric, then $Q(a)$ is the image of an element of `k`. -}
+\lemma symmetric-roots {k S : CRing} (phi : RingHom k S) {n : Nat} (a : Array S n) {p : Poly k} (pa : polyMap phi p = prodLin a)
+                       {Q : MPoly (Fin n) k} (Qs : IsSymmetric Q) : ∃ (c : k) (phi c = mPolyMapEval phi Q a)
+  => \case symmetric-elemSym Q Qs \with {
+    | inP (h, e) =>
+      \let cv (j : Fin n) : k => pow (negative 1) (suc j) * polyCoef p (n -' suc j)
+      \in \have cv-eq (j : Fin n) : phi (cv j) = elemSymOf (suc j) a
+            => phi.func-* *> pmap2 (*) (ringHom-pow-neg1 phi (suc j)) (inv polyCoef_polyMap *> pmap (polyCoef __ _) pa *> prodLin-coef a {n -' suc j} {suc j} (NatSemiring.+-comm {n -' suc j} {suc j} *> <=_exists (suc_<_<= (fin_< j))))
+               *> inv *-assoc *> pmap (__ * _) (pow-neg1-sq (suc j)) *> ide-left
+      \in inP (mPolyEval cv h,
+               mPolyRingHom-unique (phi ∘ mPolyEval cv) (mPolyMapEvalRingHom phi (\lam (j : Fin n) => elemSymOf (suc j) a))
+                 (\lam r => pmap phi (mPolyEval-const cv r) *> inv (mPolyMapEval-const phi (\lam (j : Fin n) => elemSymOf (suc j) a) r))
+                 (\lam j => pmap phi (mPolyEval-var cv j) *> cv-eq j *> inv (mPolyMapEval-var phi (\lam (j : Fin n) => elemSymOf (suc j) a) j)) h
+               *> inv (mPolyMapEval-hom (mPolyMapEvalRingHom phi a) mPolyHom (\lam (j : Fin n) => elemSym n (suc j)) phi (\lam j => elemSymOf (suc j) a)
+                        (mPolyMapEval-const phi a) (\lam j => elemSym-mapEval phi a (suc j)) h)
+               *> pmap (mPolyMapEvalRingHom phi a) e)
+  }

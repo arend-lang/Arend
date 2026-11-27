@@ -1,0 +1,264 @@
+{- | **Finite Galois extensions** (Mines–Richman–Ruitenburg, §VI.8, Theorems 8.4 and 8.7).
+
+     For a finite-dimensional Galois extension the Galois group is finite of order equal to the dimension (8.4), and Galois
+     extensions are characterized by their automorphisms moving every element outside `k` (8.7). -}
+
+\import Algebra.Field
+\import Algebra.Field.FiniteExtension
+\import Algebra.Field.Galois.Basic
+\import Algebra.Field.Galois.Normal
+\import Algebra.Field.SeparableClosure
+\import Algebra.Group
+\import Algebra.Linear.VectorSpace
+\import Algebra.Meta
+\import Algebra.Module.FinModule
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Integral.MinPoly
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearDivisor
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Logic.TFAE
+
+-- | A finite-dimensional extension is algebraic.
+\lemma findim-algebraic {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l) (a : K)
+  : ∃ (p : Poly k) (p /= 0) (polyMapEval f p a = 0)
+  => integral-algebraic (finite-integralExt (inP (l, lb.2)) a)
+
+-- | **Theorem VI.8.4.** If `K` is a finite-dimensional Galois extension of `k`, then $\#\mathcal{G}(K/k) = \dim_k K$.
+\lemma galois-card {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l) (Kg : IsGaloisExt f)
+  : GaloisCard f l.len
+  => \case separable-primitive f (inP (l, lb.2)) Kg.2 \with {
+    | inP (t, ts, prim) =>
+      \let | P => finExt_minPoly f lb {t}
+           | p => P.1
+           | pm : isMonicMinPoly f t p => P.2
+      \in \case normal-minPoly-split Kg.1 pm \with {
+        | inP (m, rs, e) =>
+          \have | m=l : m = l.len => inv (degree_prodLin rs) *> pmap degree (inv e) *> degree_polyMap (RingHom.field-isInj {k} {K} {f}) *> findim-minPoly-degree f lb prim pm
+                | p-sep : IsSeparable p => \case ts \with {
+                  | inP (g, gs, gt) => \case pm.2.2 gt \with {
+                    | inP d => separable_LDiv d gs
+                  }
+                }
+                | rs-inj : IsInj rs => prodLin-separable-inj (transport IsSeparable e (IsSeparable_polyMap p-sep)) K.zro/=ide
+                | root (i : Fin m) : polyMapEval f p (rs i) = 0 => pmap (polyEval __ (rs i)) e *> prodLin-root rs i
+                | sigk (i : Fin m) : IsKHom f f (primHom f f prim pm.2 (root i)) => primHom-ext {k} {K} {K} {f} {f} {t} {prim} {p} {pm.2} {rs i} {root i}
+                | sigt (i : Fin m) : primHom f f prim pm.2 (root i) t = rs i => primHom-gen {k} {K} {K} {f} {f} {t} {prim} {p} {pm.2} {rs i} {root i}
+          \in transport (GaloisCard f) m=l $ inP (\lam i => primHom f f prim pm.2 (root i),
+                \lam i => (sigk i, algebraic-endo-equiv {k} {K} {f} (findim-algebraic lb) (sigk i)),
+                \lam s (sk, _) => \have st : polyEval (prodLin rs) (s t) = 0 => pmap (polyEval __ (s t)) (inv e) *> inv (kHom-polyMapEval sk p t) *> pmap s pm.2.1 *> s.func-zro
+                                  \in TruncP.map (prodLin-root-conv rs st) \lam j => (j.1, primHom-unique prim (sigk j.1) sk (sigt j.1 *> inv j.2)),
+                \lam {i} {j} i/=j => inP (t, \lam q => i/=j $ rs-inj $ inv (sigt i) *> q *> sigt j))
+      }
+  }
+
+-- # Theorem 8.7
+
+-- | In a finite-dimensional extension it is decidable whether an element lies in `k`: decide the dependence of `1, x` over `k`.
+\lemma findim-image-dec {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l) (x : K)
+  : Dec (∃ (c : k) (f c = x))
+  => \case dependency-dec {k} {\new FinModule { | LModule => homLModule f | isFinModule => inP (l, lb) }} (1 :: x :: nil) \with {
+    | inl (inP (c, s, j, cj/=0)) =>
+      \have t : f (c 0) * 1 + (f (c 1) * x + 0) = 0 => s
+      \in \case decideEq (c 1) 0 \with {
+        | yes c1=0 =>
+          \have | fc1 : f (c 1) = 0 => pmap f c1=0 *> f.func-zro
+                | fc0 : f (c 0) = 0 => inv (simplify : f (c 0) * 1 + (0 * x + 0) = f (c 0)) *> pmap (\lam z => f (c 0) * 1 + (z * x + 0)) (inv fc1) *> t
+                | c0=0 : c 0 = 0 => RingHom.field-isInj {k} {K} {f} (fc0 *> inv f.func-zro)
+          \in absurd $ cj/=0 $ \case \elim j \with { | 0 => c0=0 | 1 => c1=0 }
+        | no c1/=0 => yes $ inP (negative (c 0) * finv (c 1),
+            f.func-* *> pmap2 (*) f.func-negative (ringHom-finv f (c 1)) *> solve (\lam q => c1/=0 $ RingHom.field-isInj {k} {K} {f} (q *> inv f.func-zro)) t)
+      }
+    | inr ind => no \lam (inP (c, fc=x)) => k.zro/=ide $ inv $ ind (negative c :: 1 :: nil)
+        (pmap2 (\lam a b => a * 1 + (b * x + 0)) (f.func-negative *> pmap negative fc=x) f.func-ide *> equation.cRing) 1
+  }
+  \where
+    \lemma solve {K : DiscreteField} {u v x : K} (v/=0 : v /= 0) (t : u * 1 + (v * x + 0) = 0) : negative u * finv v = x
+      => \have vx : negative u = v * x => equation.cRing {t}
+         \in pmap (`* finv v) vx *> equation.cRing *> pmap (x *) (finv-right v/=0) *> ide-right
+
+-- | Two monic polynomials of degree `n` with the same `n` distinct roots are equal.
+\lemma prodLin-roots-eq {K : DiscreteField} {n : Nat} {P : Poly K} (dP : degree< P (suc n)) (cP : polyCoef P n = 1)
+  (r : Array K n) (r-inj : IsInj r) (root : \Pi (i : Fin n) -> polyEval P (r i) = 0) : P = prodLin r
+  => AddGroup.fromZero $ degree<-roots=0 (degree<-monic-diff dP (prodLin-degree r) cP (prodLin-monic r)) r r-inj
+       \lam i => (polyEvalRingHom (r i)).func-minus *> pmap2 (-) (root i) (prodLin-root r i) *> negative-right
+
+-- | The minimal polynomial of an element of a Galois extension is separable.
+\lemma galois-minPoly-separable {k K : DiscreteField} {f : RingHom k K} (Ks : IsSeparableExt f) {a : K} {p : Poly k} (pm : isMonicMinPoly f a p)
+  : IsSeparable p
+  => \case Ks a \with {
+    | inP (g, gs, ga) => \case pm.2.2 ga \with {
+      | inP d => separable_LDiv d gs
+    }
+  }
+
+{- | **Theorem VI.8.7, (i) ⇒ (ii).** In a finite-dimensional Galois extension every element outside `k` is moved by
+     some `k`-automorphism: its minimal polynomial has distinct roots and degree at least `2`, and `conj-aut` sends
+     `a` to another root. -}
+\lemma galois-moves {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l) (Kg : IsGaloisExt f)
+  {a : K} (na : Not (∃ (c : k) (f c = a))) : ∃ (s : KAut f) (s.1 a /= a)
+  => \let | P => finExt_minPoly f lb {a}
+          | p => P.1
+          | pm : isMonicMinPoly f a p => P.2
+     \in \case normal-minPoly-split Kg.1 pm \with {
+       | inP (m, rs, e) =>
+         \have rs-inj : IsInj rs => prodLin-separable-inj (transport IsSeparable e (IsSeparable_polyMap (galois-minPoly-separable Kg.2 pm))) K.zro/=ide
+         \in \case prodLin-root-conv rs (pmap (polyEval __ a) (inv e) *> pm.2.1) \with {
+           | inP (i, a=ri) => \case other-root na e rs-inj i a=ri \with {
+             | inP (j, rj/=a) => \case conj-aut Kg.1 (inP (l, lb)) pm (pmap (polyEval __ (rs j)) e *> prodLin-root rs j) \with {
+               | inP (t, ta, tk, te) => inP ((t, tk, te), \lam q => rj/=a (inv ta *> q))
+             }
+           }
+         }
+     }
+  \where
+    -- | If `a` is one of the roots and `a ∉ k`, then there is another root.
+    \lemma other-root {k K : DiscreteField} {f : RingHom k K} {a : K} (na : Not (∃ (c : k) (f c = a))) {p : Poly k} {m : Nat} {rs : Array K m}
+      (e : polyMap f p = prodLin rs) (rs-inj : IsInj rs) (i : Fin m) (a=ri : a = rs i) : ∃ (j : Fin m) (rs j /= a) \elim m, rs, i
+      | 1, b :: nil, 0 => absurd $ na $ inP (negative (polyCoef p 0), f.func-negative *> pmap negative (inv polyCoef_polyMap *> pmap (polyCoef __ 0) (e *> ide-left {PolyRing K} {padd 1 (negative b)})) *> AddGroup.negative-isInv *> inv a=ri)
+      | suc (suc m), rs, 0 => inP (1, \lam q => fsuc/=0 (rs-inj (q *> a=ri)))
+      | suc (suc m), rs, suc i => inP (0, \lam q => fsuc/=0 (inv (rs-inj (q *> a=ri))))
+
+{- | **Theorem VI.8.7, (ii) ⇒ (iii).** If every element outside `k` is moved by a `k`-automorphism, then the minimal
+     polynomial of every `a` is $\prod_{i<n}(X - σ_i(a))$ for some automorphisms `σ_i` with distinct values `σ_i(a)`.
+     Following the book, we enlarge such a family one automorphism at a time ({moves-conjugates.step}). -}
+\lemma moves-conjugates {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l)
+  (mv : \Pi (a : K) -> Not (∃ (c : k) (f c = a)) -> ∃ (s : KAut f) (s.1 a /= a)) {a : K} {p : Poly k} (pm : isMonicMinPoly f a p)
+  : ∃ (s : Array (KAut f) (degree p)) (polyMap f p = prodLin (\lam i => (s i).1 a)) (IsInj (\lam i => (s i).1 a))
+  => \case degree p \as n, idp : degree p = n \return ∃ (s : Array (KAut f) n) (polyMap f p = prodLin (\lam i => (s i).1 a)) (IsInj (\lam i => (s i).1 a)) \with {
+    | 0, e => inP (nil, final pm e nil (\lam {i} => \case i \with {}), \lam {i} => \case i \with {})
+    | suc j, e => \case build lb mv pm j (rewrite e id<suc) \with {
+      | inP (s, s-inj, _) => inP (s, final pm e s s-inj, s-inj)
+    }
+  }
+  \where {
+    -- | `n` automorphisms with distinct values at `a`, where `n` is the degree of the minimal polynomial, give its factorization.
+    \lemma final {k K : DiscreteField} {f : RingHom k K} {a : K} {p : Poly k} (pm : isMonicMinPoly f a p) {n : Nat} (e : degree p = n)
+      (s : Array (KAut f) n) (s-inj : IsInj (\lam i => (s i).1 a)) : polyMap f p = prodLin (\lam i => (s i).1 a)
+      => prodLin-roots-eq (degree<_polyMap \lam {d} q => degree<=.toCoefs p n (degree_degree<= (=_<= e)) {d} linarith) (polyCoef_polyMap *> pmap (\lam d => f (polyCoef p d)) (inv e) *> pmap f (monic-coef pm.1) *> f.func-ide) _ s-inj
+           \lam i => inv (kHom-polyMapEval {k} {K} {K} {f} {f} {(s i).1} (s i).2 p a) *> pmap (s i).1 pm.2.1 *> (s i).1.func-zro
+
+    -- | Families of `suc j` automorphisms with distinct values at `a`, one of which fixes `a`.
+    \lemma build {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l)
+      (mv : \Pi (a : K) -> Not (∃ (c : k) (f c = a)) -> ∃ (s : KAut f) (s.1 a /= a)) {a : K} {p : Poly k} (pm : isMonicMinPoly f a p)
+      (j : Nat) (j<n : j < degree p) : ∃ (s : Array (KAut f) (suc j)) (IsInj (\lam i => (s i).1 a)) (∃ (i : Fin (suc j)) ((s i).1 a = a)) \elim j
+      | 0 => inP (ide :: nil, \lam {i} {i'} _ => \case \elim i, \elim i' \with { | 0, 0 => idp }, inP (0, idp))
+      | suc j => \case build lb mv pm j (id<suc <∘ j<n) \with {
+        | inP (s, s-inj, inP (i0, e0)) => \case step lb mv pm j<n s s-inj i0 e0 \with {
+          | inP (b, nb) => inP (b :: s, cons-inj s-inj nb, inP (suc i0, e0))
+        }
+      }
+
+    \lemma cons-inj {k K : DiscreteField} {f : RingHom k K} {a : K} {n : Nat} {b : KAut f} {s : Array (KAut f) n}
+      (s-inj : IsInj (\lam i => (s i).1 a)) (nb : \Pi (j : Fin n) -> b.1 a /= (s j).1 a) : IsInj (\lam i => ((b :: s) i).1 a)
+      => \lam {i} {i'} q => \case \elim i, \elim i', \elim q \with {
+        | 0, 0, _ => idp
+        | 0, suc j, q => absurd (nb j q)
+        | suc j, 0, q => absurd (nb j (inv q))
+        | suc j, suc j', q => pmap fsuc (s-inj q)
+      }
+
+    \func dec-not {P : \Prop} (d : Dec P) : Dec (Not P) \elim d
+      | yes p => no \lam n => n p
+      | no n => yes n
+
+    \lemma mem-dec {K : DiscreteField} {m : Nat} (r : Array K m) (z : K) : Dec (∃ (j : Fin m) (z = r j))
+      => \case FinSet.searchFin (\lam j => z = r j) (\lam j => decideEq _ _) \with {
+        | inl (j, q, _) => yes (inP (j, q))
+        | inr n => no \lam (inP (j, q)) => n j q
+      }
+
+    {- | The induction step: if `s` has fewer than `n` elements, then some coefficient `c` of $g = \prod_i (X - s_i(a))$
+         is not in `k` (otherwise `g` would be a polynomial over `k` of smaller degree vanishing at `a`); an automorphism
+         `t` moving `c` moves `g`, so it does not permute the roots of `g`, and `t s_i` is a new automorphism. -}
+    \lemma step {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l)
+      (mv : \Pi (a : K) -> Not (∃ (c : k) (f c = a)) -> ∃ (s : KAut f) (s.1 a /= a)) {a : K} {p : Poly k} (pm : isMonicMinPoly f a p)
+      {m : Nat} (m<n : m < degree p) (s : Array (KAut f) m) (s-inj : IsInj (\lam i => (s i).1 a)) (i0 : Fin m) (e0 : (s i0).1 a = a)
+      : ∃ (b : KAut f) (\Pi (j : Fin m) -> b.1 a /= (s j).1 a)
+      => \let | r : Array K m => \lam i => (s i).1 a
+              | g => prodLin r
+         \in \case FinSet.searchFin (\lam (j : Fin (suc m)) => Not (∃ (c : k) (f c = polyCoef g j))) (\lam j => dec-not (findim-image-dec lb (polyCoef g j))) \with {
+           | inl (j, nj, _) => \case mv (polyCoef g j) nj \with {
+             | inP (t, tc) => \case FinSet.searchFin (\lam (i : Fin m) => Not (∃ (j' : Fin m) (t.1 (r i) = r j'))) (\lam i => dec-not (mem-dec r (t.1 (r i)))) \with {
+               | inl (i, ni, _) => inP (t * s i, \lam j' q => ni (inP (j', q)))
+               | inr all =>
+                 \have | tr-inj : IsInj (\lam i => t.1 (r i)) => \lam q => s-inj (IsEquiv.isInj t.3 q)
+                       | tr-root (i : Fin m) : polyEval g (t.1 (r i)) = 0 => \case mem-dec r (t.1 (r i)) \with {
+                         | yes (inP (j', q)) => pmap (polyEval g) q *> prodLin-root r j'
+                         | no n => absurd (all i n)
+                       }
+                 \in absurd $ tc $ inv polyCoef_polyMap *> pmap (polyCoef __ j) (prodLin-map t.1 r *> inv (prodLin-roots-eq (prodLin-degree r) (prodLin-monic r) (\lam i => t.1 (r i)) tr-inj tr-root))
+             }
+           }
+           | inr all => \case FinSet.finiteAC (\lam (j : Fin (suc m)) => \case findim-image-dec lb (polyCoef g j) \with {
+                          | yes c => c
+                          | no n => absurd (all j n)
+                        }) \with {
+             | inP h =>
+               \let q0 => Poly.fromArray (\new Array k (suc m) (\lam j => (h j).1))
+               \in \have | qe : polyMap f q0 = g => polyMap_fromArray {f} {\new Array k (suc m) (\lam j => (h j).1)}
+                                                   *> pmap Poly.fromArray (arrayExt {_} {suc m} {\new Array K (suc m) (\lam j => f (h j).1)} {\new Array K (suc m) (\lam j => polyCoef g j)} \lam j => (h j).2)
+                                                   *> inv (fromArray_polyCoef {K} {suc m} (prodLin-degree r))
+                         | q0a : polyEval (polyMap f q0) a = 0 => pmap (polyEval __ a) qe *> transport (\lam z => polyEval g z = 0) e0 (prodLin-root r i0)
+                         | q0/=0 : q0 /= 0 => \lam q0=0 => K.zro/=ide $ inv $ inv (prodLin-monic r) *> pmap (polyCoef __ m) (inv qe *> pmap (polyMap f) q0=0)
+                         | dq : degree q0 <= m => degree<=_degree {k} {q0} {m} (degree<_degree<= {k} {q0} {m} (fromArray_degree< {k} {\new Array k (suc m) (\lam j => (h j).1)}))
+               \in \case pm.2.2 q0a \with {
+                 | inP d => \have pq => degree_LDiv d q0/=0 \in absurd linarith
+               }
+           }
+         }
+  }
+
+-- | **Theorem VI.8.7, (iii) ⇒ (i).** If every minimal polynomial splits into distinct linear factors, then `K` is Galois over `k`.
+\lemma conjugates-galois {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l)
+  (c : \Pi (a : K) {p : Poly k} -> isMonicMinPoly f a p -> ∃ (s : Array (KAut f) (degree p)) (polyMap f p = prodLin (\lam i => (s i).1 a)) (IsInj (\lam i => (s i).1 a)))
+  : IsGaloisExt f
+  => (\lam a => \let P => finExt_minPoly f lb {a} \in TruncP.map (c a P.2) \lam t => (P.1, degree P.1, \lam i => (t.1 i).1 a, t.2, P.2.2.1),
+      \lam a => \let P => finExt_minPoly f lb {a} \in \case c a P.2 \with {
+        | inP t => inP (P.1, IsSeparable_polyMap-conv f $ transport IsSeparable (inv t.2) (prodLin-separable-field _ t.3), P.2.2.1)
+      })
+
+{- | **Theorem VI.8.7.** For a finite-dimensional extension `K` of `k`, the following are equivalent:
+     1. `K` is a Galois extension of `k`;
+     2. every `a ∈ K \ k` is moved by some `k`-automorphism of `K`;
+     3. for every `a ∈ K` with minimal polynomial `p` of degree `n`, there are `k`-automorphisms `σ_1, …, σ_n` such that
+        $p = \prod_i (X - σ_i(a))$ and the `σ_i(a)` are distinct. -}
+\lemma galois-char {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l) : TFAE (
+    IsGaloisExt f,
+    \Pi (a : K) -> Not (∃ (c : k) (f c = a)) -> ∃ (s : KAut f) (s.1 a /= a),
+    \Pi (a : K) {p : Poly k} -> isMonicMinPoly f a p -> ∃ (s : Array (KAut f) (degree p)) (polyMap f p = prodLin (\lam i => (s i).1 a)) (IsInj (\lam i => (s i).1 a))
+  ) => TFAE.cycle (
+    \lam Kg a => galois-moves lb Kg,
+    \lam mv a => moves-conjugates lb mv,
+    conjugates-galois lb
+  )
+
+-- | In a finite-dimensional Galois extension, `k` is the fixed field of the Galois group.
+\lemma galois-fixed {k K : DiscreteField} {f : RingHom k K} {l : Array K} (lb : LModule.IsBasis {homLModule f} l) (Kg : IsGaloisExt f)
+  {a : K} (fix : \Pi (s : KAut f) -> s.1 a = a) : ∃ (c : k) (f c = a)
+  => \case findim-image-dec lb a \with {
+    | yes e => e
+    | no na => \case galois-moves lb Kg na \with {
+      | inP (s, sa) => absurd (sa (fix s))
+    }
+  }

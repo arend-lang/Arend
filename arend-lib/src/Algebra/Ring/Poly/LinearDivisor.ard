@@ -1,0 +1,121 @@
+{- | **Divisors of products of linear factors** over a discrete field.
+
+     A monic divisor of $\prod_{i<n}(X - r_i)$ is itself of the form $\prod_{j<m}(X - r'_j)$ with every `r'_j` among the `r_i`
+     ({prodLin-divisor}); in particular a nonconstant divisor has a root among the `r_i` ({prodLin-divisor-root}). -}
+
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.Poly.Monic
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid
+
+-- | `X - a` is monic.
+\lemma linear-monic {R : Ring} (a : R) : isMonic (padd 1 a)
+  => inP (1, degree<_degree<= $ degree<_padd {R} {1} {a} {1} $ degree<_padd {R} {pzero} {1} {0} \lam _ => idp, idp)
+
+{- | A monic divisor of $\prod_{i<n}(X - r_i)$ over a discrete field is a product $\prod_{j<m}(X - r'_j)$ of linear factors
+     whose roots are among the `r_i`. -}
+\lemma prodLin-divisor {K : DiscreteField} {n : Nat} (r : Array K n) {d : Poly K} (dm : isMonic d) (dd : TruncP (LDiv d (prodLin r)))
+  : ∃ (m : Nat) (r' : Array K m) (d = prodLin r') (\Pi (j : Fin m) -> ∃ (i : Fin n) (r' j = r i)) \elim n, r
+  | 0, nil => \case dd \with {
+    | inP dd => inP (0, nil, monic-unit dm (div-one dd), \case __)
+  }
+  | suc n, a :: l => \case decideEq (polyEval d a) 0 \with {
+    | yes da =>
+      \let | L => padd 1 (negative a)
+           | d1 => rootDiv d a
+      \in \have | dL : d = d1 * L => rootDiv_* da
+            | L/=0 : L /= 0 => monic-nonzero (linear-monic _)
+            | d1m : isMonic d1 => monic-cofactor (linear-monic _) (transport isMonic (dL *> *-comm) dm)
+            | d1d : TruncP (LDiv d1 (prodLin l)) => TruncP.map dd \lam (e : LDiv d (prodLin (a :: l))) => \new LDiv {PolyRing K} d1 (prodLin l) {
+                | inv => e.inv
+                | inv-right => Domain.nonZero-cancel-right L/=0 $ *-assoc *> pmap (d1 *) *-comm *> inv *-assoc *> pmap (`* e.inv) (inv dL) *> e.inv-right
+              }
+      \in \case prodLin-divisor l d1m d1d \with {
+        | inP (m, r', d1r, sub) => inP (suc m, a :: r', dL *> pmap (`* L) d1r, \case \elim __ \with {
+          | 0 => inP (0, idp)
+          | suc j => TruncP.map (sub j) \lam s => (suc s.1, s.2)
+        })
+      }
+    | no da/=0 => TruncP.map (prodLin-divisor l dm (linear-coprime-cancel da/=0 dd)) \lam s => (s.1, s.2, s.3, \lam j => TruncP.map (s.4 j) \lam t => (suc t.1, t.2))
+  }
+
+-- | If $d(a) \neq 0$ and `d` divides `p (X - a)`, then `d` divides `p`.
+\lemma linear-coprime-cancel {K : DiscreteField} {a : K} {d p : Poly K} (da/=0 : polyEval d a /= 0) (dd : TruncP (LDiv d (p * padd 1 (negative a))))
+  : TruncP (LDiv d p)
+  => \let | L => padd 1 (negative a)
+          | c => polyEval d a
+          | q => (degree1PolyDivision d a).1
+     \in TruncP.map dd \lam (e : LDiv d (p * L)) => \new LDiv {PolyRing K} d p {
+       | inv => padd 0 (finv c) * (p - e.inv * q)
+       | inv-right => cancel-alg {_} {d} {p} {L} {q} {e.inv} {padd 0 c} {padd 0 (finv c)} (degree1PolyDivision d a).2 e.inv-right (padd-const-* *> pmap (padd 0) (finv-right da/=0))
+     }
+  \where {
+    \lemma cancel-alg {R : CRing} {d p L q e C Ci : R} (dq : d = q * L + C) (de : d * e = p * L) (cc : C * Ci = 1) : d * (Ci * (p - e * q)) = p
+      => \have | s1 : d * (Ci * (p - e * q)) = Ci * (p * d - d * e * q) => equation.cRing
+               | s2 : Ci * (p * d - p * L * q) = Ci * (p * (d - q * L)) => equation.cRing
+               | s3 : d - q * L = C => pmap (`- q * L) dq *> equation.cRing
+               | s4 : Ci * (p * C) = p => equation.cRing {cc}
+         \in s1 *> pmap (\lam z => Ci * (p * d - z * q)) de *> s2 *> pmap (\lam z => Ci * (p * z)) s3 *> s4
+
+    \lemma padd-const-* {R : CRing} {x y : R} : padd 0 x * padd 0 y = {Poly R} padd 0 (x * y)
+      => inv polyHom.func-*
+  }
+
+-- | A nonconstant divisor of $\prod_{i<n}(X - r_i)$ over a discrete field has a root among the `r_i`.
+\lemma prodLin-divisor-root {K : DiscreteField} {n : Nat} (r : Array K n) {d : Poly K} (dc : 0 < degree d)
+  (dd : TruncP (LDiv d (prodLin r))) : ∃ (i : Fin n) (polyEval d (r i) = 0) \elim n, r
+  | 0, nil => \case dd \with {
+    | inP e => \have | u => div-one e
+                     | d/=0 : d /= 0 => \lam p => K.zro/=ide $ pmap (polyCoef __ 0) $ inv (pmap (`* u.inv) p *> Semiring.zro_*-left {PolyRing K} {u.inv}) *> u.inv-right
+                     | inv/=0 : u.inv /= 0 => \lam z => K.zro/=ide $ pmap (polyCoef __ 0) (inv zro_*-right *> pmap (d *) (inv z) *> u.inv-right)
+                     | s : degree d Nat.+ degree u.inv = 0 => inv (degree_* d/=0 inv/=0) *> pmap degree u.inv-right *> degree_monomial {K} {1} {0} (\lam p => K.zro/=ide (inv p))
+               \in absurd linarith
+  }
+  | suc n, a :: l => \case decideEq (polyEval d a) 0 \with {
+    | yes da => inP (0, da)
+    | no da/=0 => TruncP.map (prodLin-divisor-root l dc (linear-coprime-cancel da/=0 dd)) \lam s => (suc s.1, s.2)
+  }
+
+-- | Over a discrete field, every root of $\prod_{i<n}(X - r_i)$ is one of the `r_i`.
+\lemma prodLin-root-conv {K : DiscreteField} {n : Nat} (r : Array K n) {a : K} (ra : polyEval (prodLin r) a = 0) : ∃ (i : Fin n) (a = r i)
+  => aux r (inv (polyEval_prodLin r a) *> ra)
+  \where
+    \lemma aux {K : DiscreteField} {n : Nat} (r : Array K n) {a : K} (ra : linProd r a = 0) : ∃ (i : Fin n) (a = r i) \elim n, r
+      | 0, nil => absurd $ K.zro/=ide (inv ra)
+      | suc n, b :: l => \case decideEq a b \with {
+        | yes e => inP (0, e)
+        | no a/=b => TruncP.map (aux l $ K.nonZero-cancel-right (\lam p => a/=b (AddGroup.fromZero p)) (ra *> inv zro_*-left)) \lam s => (suc s.1, s.2)
+      }
+
+-- | $\prod (X - r_i) \cdot \prod (X - s_j) = \prod (X - (r ++ s)_k)$.
+\lemma prodLin_++ {R : CRing} {n m : Nat} (r : Array R n) (s : Array R m) : prodLin (r ++' s) = prodLin r * prodLin s \elim n, r
+  | 0, nil => inv ide-left
+  | suc n, a :: l => pmap (`* _) (prodLin_++ l s) *> equation.cRing
+
+-- | `prodLin` commutes with ring homomorphisms.
+\lemma prodLin-map {R S : CRing} (g : RingHom R S) {n : Nat} (r : Array R n) : polyMap g (prodLin r) = prodLin (map g r) \elim n, r
+  | 0, nil => pmap (padd pzero) g.func-ide
+  | suc n, a :: l => (polyMapRingHom g).func-* *> pmap2 (*) (prodLin-map g l) (pmap2 padd (pmap (padd pzero) g.func-ide) g.func-negative)
+
+-- | $\prod_{i<n}(X - r_i)$ has degree `n`.
+\lemma degree_prodLin {K : DiscreteField} {n : Nat} (r : Array K n) : degree (prodLin r) = n
+  => <=-antisymmetric (degree<=_degree $ degree<_degree<= $ prodLin-degree r) (degree-coef/=0 $ rewrite (prodLin-monic r) \lam p => K.zro/=ide (inv p))

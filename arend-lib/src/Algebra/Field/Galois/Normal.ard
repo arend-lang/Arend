@@ -1,0 +1,317 @@
+{- | **Normal extensions** (Mines–Richman–Ruitenburg, §VI.8, Theorems 8.3, 8.5, 8.6 and Exercises 1, 2).
+
+     An extension `k ⊆ K` is *normal* ({IsNormalExt}) if every element of `K` is a root of a polynomial over `k` that is a
+     product of linear polynomials over `K`. -}
+
+\import Algebra.Field
+\import Algebra.Field.FiniteExtension
+\import Algebra.Field.Galois.Basic
+\import Algebra.Field.PrimitiveElement
+\import Algebra.Field.SeparableCharP
+\import Algebra.Field.SeparableClosure
+\import Algebra.Field.SubField
+\import Algebra.Domain.Euclidean
+\import Algebra.Field.Splitting
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Integral.MinPoly
+\import Algebra.Module.Tower
+\import Algebra.Ring.SubRing
+\import Function
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Euclidean()
+\import Algebra.Ring.Poly.Monic
+\import Algebra.Ring.Poly.LinearDivisor
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Order.StrictOrder
+\import Set
+\import Set.Fin
+
+-- # Theorem 8.3, forward direction
+
+{- | Finitely many elements of a normal extension are among the roots of a single polynomial over `k` that splits over `K`.
+ -   If each of finitely many elements is a root of a polynomial over `k` that splits over `K`, then all of them are among the roots of a single such polynomial.
+ -}
+\lemma split-roots {k K : DiscreteField} {f : RingHom k K} {m : Nat} (g : Array K m)
+  (h : \Pi (j : Fin m) -> ∃ (p : Poly k) (N : Nat) (r : Array K N) (polyMap f p = prodLin r) (polyMapEval f p (g j) = 0))
+  : ∃ (p : Poly k) (N : Nat) (r : Array K N) (polyMap f p = prodLin r) (\Pi (j : Fin m) -> ∃ (i : Fin N) (g j = r i)) \elim m, g
+  | 0, nil => inP (1, 0, nil, pmap (padd pzero) f.func-ide, \case __)
+  | suc m, a :: g => \case h 0, split-roots g (\lam j => h (suc j)) \with {
+    | inP (p1, N1, r1, e1, a1), inP (p, N, r, e, sub) => inP (p1 * p, N1 Nat.+ N, r1 ++' r,
+        (polyMapRingHom f).func-* *> pmap2 (*) e1 e *> inv (prodLin_++ r1 r), \case \elim __ \with {
+          | 0 => TruncP.map (prodLin-root-conv r1 (pmap (polyEval __ a) (inv e1) *> a1)) \lam s => (fin-inc s.1, s.2 *> inv (++'.++'_index-left {K} {r1} {N} {r}))
+          | suc j => TruncP.map (sub j) \lam s => (fin-raise s.1, s.2 *> inv (++'.++'_index-right {K} {r1} {N} {r}))
+        })
+  }
+
+-- | Finitely many elements of a normal extension are among the roots of a single polynomial over `k` that splits over `K`.
+\lemma normal-roots {k K : DiscreteField} {f : RingHom k K} (Kn : IsNormalExt f) {m : Nat} (g : Array K m)
+  : ∃ (p : Poly k) (N : Nat) (r : Array K N) (polyMap f p = prodLin r) (\Pi (j : Fin m) -> ∃ (i : Fin N) (g j = r i))
+  => split-roots g \lam j => Kn (g j)
+
+{- | **Theorem VI.8.3 (⇒).** If `K` is finitely generated as a vector space over `k` and normal over `k`, then `K` is a
+     splitting field of a polynomial over `k`. -}
+\lemma normal-splitting {k K : DiscreteField} {f : RingHom k K} (fg : LModule.IsFinitelyGenerated {homLModule f}) (Kn : IsNormalExt f)
+  : ∃ (p : Poly k) (p /= 0) (IsSplittingField p f) \elim fg
+  | inP (gen, gg) => \case normal-roots Kn (\new Array K gen.len (\lam j => gen j)) \with {
+    | inP (p, N, r, e, sub) => inP (p, \lam p=0 => K.zro/=ide $ inv (pmap (polyCoef __ N) (inv e *> pmap (polyMap f) p=0)) *> prodLin-monic r, inP (r, 1, \lam x => TruncP.map (in-image gg r sub x) (\lam s => (s.1, inv s.2)),
+        e *> inv (prodLin_BigProd r) *> inv PolyRing.ide_*c))
+  }
+  \where
+    \lemma in-image {k K : DiscreteField} {f : RingHom k K} {gen : Array K} (gg : LModule.IsGenerated {homLModule f} gen) {N : Nat} (r : Array K N)
+      (sub : \Pi (j : Fin gen.len) -> ∃ (i : Fin N) (gen j = r i)) (x : K) : mPolyImage f r x
+      => \case gg x \with {
+        | inP (c, xc) => transportInv (mPolyImage f r) xc $ (mPolyImage f r).contains_BigSum {\new Array K gen.len (\lam j => f (c j) * gen j)} \lam j =>
+            (mPolyImage f r).contains_* (mPolyImage-ext f r (c j)) $ \case sub j \with {
+              | inP (i, q) => transportInv (mPolyImage f r) q (mPolyImage-element f r i)
+            }
+      }
+
+-- # Theorem 8.6, first part
+
+-- | A homomorphism `s : E → E` that maps the image of `g` into itself restricts to an endomorphism of `K`.
+\func restrictHom {K E : DiscreteField} (g : RingHom K E) (s : RingHom E E) (into : \Pi (a : K) -> ∃ (b : K) (g b = s (g a))) : RingHom K K \cowith
+  | func a => (pick {K} {E} {g} {s} {into} a).1
+  | func-+ => g-inj $ (pick _).2 *> pmap s g.func-+ *> s.func-+ *> inv (g.func-+ *> pmap2 (+) (pick _).2 (pick _).2)
+  | func-ide => g-inj $ (pick _).2 *> pmap s g.func-ide *> s.func-ide *> inv g.func-ide
+  | func-* => g-inj $ (pick _).2 *> pmap s g.func-* *> s.func-* *> inv (g.func-* *> pmap2 (*) (pick _).2 (pick _).2)
+  \where {
+    \lemma g-inj {K E : DiscreteField} {g : RingHom K E} {a b : K} (p : g a = g b) : a = b
+      => RingHom.field-isInj {K} {E} {g} p
+
+    \lemma pick {K E : DiscreteField} {g : RingHom K E} {s : RingHom E E} {into : \Pi (a : K) -> ∃ (b : K) (g b = s (g a))} (a : K)
+      : \Sigma (b : K) (g b = s (g a)) \level \lam x y => ext (g-inj (x.2 *> inv y.2))
+      => \case into a \with {
+        | inP r => r
+      }
+  }
+
+-- | The restriction agrees with {s} on the image of {g}.
+\lemma restrictHom-eq {K E : DiscreteField} {g : RingHom K E} {s : RingHom E E} {into : \Pi (a : K) -> ∃ (b : K) (g b = s (g a))} (a : K)
+  : g (restrictHom g s into a) = s (g a)
+  => (restrictHom.pick {K} {E} {g} {s} {into} a).2
+
+{- | **Theorem VI.8.6 (first part).** If `K` is normal over `k` and `k ⊆ K ⊆ E`, then every `k`-endomorphism of `E` maps `K`
+     onto `K`. -}
+\lemma normal-invariant {k K E : DiscreteField} {f : RingHom k K} {g : RingHom K E} (Kn : IsNormalExt f)
+  {s : RingHom E E} (sk : IsKHom (g RingHom.∘ f) (g RingHom.∘ f) s)
+  : \Sigma (\Pi (a : K) -> ∃ (b : K) (g b = s (g a))) (\Pi (b : K) -> ∃ (a : K) (g b = s (g a)))
+  => \have into (a : K) : ∃ (b : K) (g b = s (g a)) => \case Kn a \with {
+       | inP (p, N, r, e, pa) => \have root : polyEval (prodLin (map g r)) (s (g a)) = 0 =>
+           pmap (polyEval __ (s (g a))) (inv (prodLin-map g r) *> pmap (polyMap g) (inv e) *> polyMap-comp f g)
+           *> inv (kHom-polyMapEval {k} {E} {E} {g RingHom.∘ f} {g RingHom.∘ f} {s} sk p (g a)) *> pmap s (pmap (polyEval __ (g a)) (inv (polyMap-comp f g)) *> polyEval_polyMap *> pmap g pa *> g.func-zro) *> s.func-zro
+         \in TruncP.map (prodLin-root-conv (map g r) root) \lam t => (r t.1, inv t.2)
+     }
+     \in (into, \lam b => \case algebraic-endo-equiv (normal-algebraic Kn) {restrictHom g s into} (\lam c => restrictHom.g-inj $ restrictHom-eq {K} {E} {g} {s} {into} (f c) *> sk c) \with {
+       | e => TruncP.map (IsEquiv.isSurj e b) \lam t => (t.1, pmap g (inv t.2) *> restrictHom-eq {K} {E} {g} {s} {into} t.1)
+     })
+
+-- | A normal extension is algebraic.
+\lemma normal-algebraic {k K : DiscreteField} {f : RingHom k K} (Kn : IsNormalExt f) (a : K) : ∃ (p : Poly k) (p /= 0) (polyMapEval f p a = 0)
+  => \case Kn a \with {
+    | inP (p, N, r, e, pa) => inP (p, \lam p=0 => K.zro/=ide $ inv (pmap (polyCoef __ N) (inv e *> pmap (polyMap f) p=0)) *> prodLin-monic r, pa)
+  }
+
+-- # Lemma 8.5
+
+-- | Normality depends only on the values of the structure map.
+\lemma normal-ext {k K : DiscreteField} {f g : RingHom k K} (e : \Pi (c : k) -> f c = g c) (Kn : IsNormalExt f) : IsNormalExt g
+  => \lam a => TruncP.map (Kn a) \lam s => (s.1, s.2, s.3, inv (polyMap-ext e) *> s.4, pmap (polyEval __ a) (inv (polyMap-ext e)) *> s.5)
+
+{- | **Lemma VI.8.5.** Let `k ⊆ K ⊆ E` be discrete fields with `E` normal over `k` and finite-dimensional over `K`. Then every
+     `k`-homomorphism `K → E` extends to a `k`-automorphism of `E`. -}
+\lemma extend-aut {k K E : DiscreteField} {f : RingHom k K} {g : RingHom K E} (En : IsNormalExt (g RingHom.∘ f))
+  (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule g} l)) {s : RingHom K E} (sk : IsKHom f (g RingHom.∘ f) s)
+  : ∃ (t : RingHom E E) (\Pi (x : K) -> t (g x) = s x) (IsKHom (g RingHom.∘ f) (g RingHom.∘ f) t) (IsEquiv t)
+  => \case Eb \with {
+    | inP (l, lb) => \case extend-aut-aux f g En Eb s sk (\new Array E l.len (\lam j => l j)) (\lam x => normal-splitting.in-image {K} {E} {g} {l} lb.2 (\new Array E l.len (\lam j => l j)) (\lam j => inP (j, idp)) x) \with {
+      | inP (t, tg) => \have tk : IsKHom (g RingHom.∘ f) (g RingHom.∘ f) t => \lam c => tg (f c) *> sk c
+                      \in inP (t, tg, tk, algebraic-endo-equiv {k} {E} {g RingHom.∘ f} (normal-algebraic En) {t} tk)
+    }
+  }
+  \where {
+    \lemma extend-aut-aux {k E : DiscreteField} {F : DiscreteField} (phi : RingHom k F) (h : RingHom F E)
+      (En : IsNormalExt (h RingHom.∘ phi)) (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule h} l))
+      (s : RingHom F E) (sk : IsKHom phi (h RingHom.∘ phi) s) (e : Array E) (gen : \Pi (x : E) -> mPolyImage h e x)
+      : ∃ (t : RingHom E E) (\Pi (x : F) -> t (h x) = s x) \elim e
+      | nil =>
+        \have | hs : IsSurj h => \lam x => mPolyImage-sub h nil (ImageRing h) (\lam c => inP (c, idp)) (\case __) (gen x)
+              | he : IsEquiv h => IsEquiv.fromInjSurj (RingHom.field-isInj {F} {E} {h}) hs
+        \in inP (s RingHom.∘ GaloisGroup.inverseHom h he, \lam x => pmap s (IsEquiv.ret_f he))
+      | a :: e => \case Eb \with {
+        | inP (l, lb) =>
+          \let | P => finExt_minPoly h lb {a}
+               | ai : isIntegral h a => inP (P.1, P.2.1, P.2.2.1)
+               | S => adjoinSubField h a ai
+               | h' => SubField.embed S
+               | incl => SubField.corestrict S h (polyImage-ext h a)
+               | a' : IDiscreteField S => (a, polyImage-element)
+          \in \have | Eb' : ∃ (l : Array E) (LModule.IsBasis {homLModule h'} l) => adjoin-findim Eb ai
+                    | gen' (x : E) : mPolyImage h' e x => mPolyImage-sub h (a :: e) (mPolyImage h' e) (\lam c => mPolyImage-ext h' e (incl c))
+                        (\case \elim __ \with { | 0 => mPolyImage-ext h' e a' | suc j => mPolyImage-element h' e j }) (gen x)
+          \in \case conj-root phi h En s sk P.2 \with {
+            | inP (b, pb) => \let s' : RingHom (IDiscreteField S) E => extendHom h a s b P.2.2 pb
+                            \in TruncP.map (extend-aut-aux (incl RingHom.∘ phi) h' (normal-ext (\lam c => idp) En) Eb' s' (\lam c => extendHom-ext (phi c) *> sk c) e gen')
+                                 \lam t => (t.1, \lam x => t.2 (incl x) *> extendHom-ext x)
+          }
+      }
+
+    -- | A minimal polynomial over `F` of an element of the normal extension `E` has a root in `E` after applying `s`.
+    \lemma conj-root {k E F : DiscreteField} (phi : RingHom k F) (h : RingHom F E) (En : IsNormalExt (h RingHom.∘ phi))
+      (s : RingHom F E) (sk : IsKHom phi (h RingHom.∘ phi) s) {a : E} {P : Poly F} (pm : isMonicMinPoly h a P)
+      : ∃ (b : E) (polyMapEval s P b = 0)
+      => \case En a \with {
+        | inP (q, N, r, e, qa) => \case pm.2.2 {polyMap phi q} (pmap (polyEval __ a) (polyMap-comp phi h *> polyMap-ext (\lam c => idp)) *> qa) \with {
+          | inP d =>
+            \have | Pd : 0 < degree (polyMap s P) => rewrite (degree_polyMap (RingHom.field-isInj {F} {E} {s})) $ \case decideEq (degree P) 0 \with {
+                     | yes d0 => absurd $ E.zro/=ide $ inv pm.2.1 *> pmap (polyMapEval h __ a) (degree=0-lem d0 *> pmap (padd pzero) (monic-leadCoef pm.1)) *> extendHom.eval-const h a 1 *> h.func-ide
+                     | no d/=0 => nonZero>0 d/=0
+                   }
+                  | dd : TruncP (Monoid.LDiv (polyMap s P) (prodLin r)) => inP \new Monoid.LDiv {
+                     | inv => polyMap s d.inv
+                     | inv-right => inv (polyMapRingHom s).func-* *> pmap (polyMap s) d.inv-right *> polyMap-comp phi s *> polyMap-ext {k} {E} {s AddPointedHom.∘ phi} {h RingHom.∘ phi} sk *> e
+                   }
+            \in TruncP.map (prodLin-divisor-root r Pd dd) \lam t => (r t.1, t.2)
+        }
+      }
+  }
+
+-- | If `E` is finite-dimensional over `F` and `a ∈ E` is integral over `F`, then `E` is finite-dimensional over `F[a]`.
+\lemma adjoin-findim {F E : DiscreteField} {h : RingHom F E} (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule h} l)) {a : E} (ai : isIntegral h a)
+  : ∃ (l : Array E) (LModule.IsBasis {homLModule (SubField.embed (adjoinSubField h a ai))} l)
+  => \case Eb \with {
+    | inP (l, lb) =>
+      \let | P => finExt_minPoly h lb {a}
+           | S => adjoinSubField h a ai
+           | h' => SubField.embed S
+           | incl => SubField.corestrict S h (polyImage-ext h a)
+           | a' : IDiscreteField S => (a, polyImage-element)
+      \in \have | hh' : IsKHom incl h h' => \lam c => idp
+                | eval-eq (q : Poly F) : h' (polyMapEval incl q a') = polyMapEval h q a => kHom-polyMapEval hh' q a'
+                | eval0 {q : Poly F} (qa : polyMapEval h q a = 0) : polyMapEval incl q a' = 0
+                  => RingHom.field-isInj {IDiscreteField S} {E} {h'} (eval-eq q *> qa *> inv h'.func-zro)
+                | Pm' : isMonicMinPoly incl a' P.1 => (P.2.1, (eval0 P.2.2.1, \lam {q} qa => P.2.2.2 (inv (eval-eq q) *> pmap h' qa *> h'.func-zro)))
+                | prim : IsPrimitiveElement incl a' => \lam x => TruncP.map x.2 \lam t => (t.1, ext (eval-eq t.1 *> t.2))
+                | Mb : ∃ (l : Array E) (LModule.IsBasis {LModule.pullback incl (homLModule h')} l) => TruncP.map Eb \lam t => (t.1, (\lam c p => t.2.1 c p, \lam x => t.2.2 x))
+      \in tower-down incl {homLModule h'} (inP (_, powers-basis incl Pm' prim)) Mb
+  }
+
+{- | In a finite-dimensional normal extension `E` of `k`, for every root `b` of the minimal polynomial of `x` there is a
+     `k`-automorphism of `E` sending `x` to `b` (Lemmas 8.1 and 8.5). -}
+\lemma conj-aut {k E : DiscreteField} {phi : RingHom k E} (En : IsNormalExt phi) (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule phi} l))
+  {x : E} {p : Poly k} (pm : isMonicMinPoly phi x p) {b : E} (pb : polyMapEval phi p b = 0)
+  : ∃ (t : RingHom E E) (t x = b) (IsKHom phi phi t) (IsEquiv t)
+  => \let | xi : isIntegral phi x => inP (p, pm.1, pm.2.1)
+          | S => adjoinSubField phi x xi
+          | incl => SubField.corestrict S phi (polyImage-ext phi x)
+          | s : RingHom (IDiscreteField S) E => extendHom phi x phi b pm.2 pb
+     \in TruncP.map (extend-aut {k} {IDiscreteField S} {E} {incl} {SubField.embed S} (normal-ext (\lam c => idp) En) (adjoin-findim Eb xi) {s} (\lam c => extendHom-ext c))
+          \lam t => (t.1, t.2 (x, polyImage-element) *> extendHom-gen, \lam c => t.3 c, t.4)
+
+-- | In a normal extension, the minimal polynomial `p` of any element splits as $\prod_{i<m}(X - θ_i)$.
+\lemma normal-minPoly-split {k K : DiscreteField} {f : RingHom k K} (Kn : IsNormalExt f) {t : K} {p : Poly k} (pm : isMonicMinPoly f t p)
+  : ∃ (m : Nat) (ts : Array K m) (polyMap f p = prodLin ts)
+  => \case Kn t \with {
+    | inP (q, N, r, e, qt) => \case pm.2.2 qt \with {
+      | inP d => TruncP.map (prodLin-divisor r (polyMap_isMonic pm.1) (inP \new Monoid.LDiv {
+          | inv => polyMap f d.inv
+          | inv-right => inv (polyMapRingHom f).func-* *> pmap (polyMap f) d.inv-right *> e
+        })) \lam s => (s.1, s.2, s.3)
+    }
+  }
+
+{- | **Theorem VI.8.6 (second part).** Let `k ⊆ K ⊆ E` with `E` finite-dimensional and normal over `k`. If every
+     `k`-automorphism of `E` maps `K` into `K`, then `K` is normal over `k`. -}
+\lemma invariant-normal {k K E : DiscreteField} {f : RingHom k K} {g : RingHom K E} (En : IsNormalExt (g RingHom.∘ f))
+  (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule (g RingHom.∘ f)} l))
+  (into : \Pi (t : RingHom E E) -> IsKHom (g RingHom.∘ f) (g RingHom.∘ f) t -> IsEquiv t -> \Pi (a : K) -> ∃ (b : K) (g b = t (g a)))
+  : IsNormalExt f
+  => \lam a => \case Eb \with {
+    | inP (l, lb) =>
+      \let | P => finExt_minPoly (g RingHom.∘ f) lb {g a}
+      \in \case normal-minPoly-split En P.2 \with {
+        | inP (m, rs, e) =>
+          \have | root (i : Fin m) : polyMapEval (g RingHom.∘ f) P.1 (rs i) = 0 => pmap (polyEval __ (rs i)) e *> prodLin-root rs i
+                | gk : IsKHom f (g RingHom.∘ f) g => \lam c => idp
+          \in \case FinSet.finiteAC {m} {\lam i => \Sigma (b : K) (g b = rs i)} (\lam (i : Fin m) => \case conj-aut En Eb P.2 (root i) \with {
+                 | inP (t, ta, tk, te) => TruncP.map (into t tk te a) \lam s => (s.1, s.2 *> ta)
+               }) \with {
+            | inP bs => inP (P.1, m, \lam i => (bs i).1,
+                polyMap-inj (RingHom.field-isInj {K} {E} {g}) $ polyMap-comp f g *> polyMap-ext (\lam c => idp) *> e *>
+                  pmap prodLin (exts \lam i => inv (bs i).2) *> inv (prodLin-map g (\lam i => (bs i).1)),
+                RingHom.field-isInj {K} {E} {g} $ kHom-polyMapEval {k} {K} {E} {f} {g RingHom.∘ f} {g} gk P.1 a *> P.2.2.1 *> inv g.func-zro)
+          }
+      }
+  }
+
+-- # Exercise 1
+
+{- | In a normal extension, every polynomial `g` over `k` with a root `a ∈ K` has a factor over `k` that vanishes at `a` and is a
+     product of linear polynomials over `K`. -}
+\lemma normal-factor {k K : DiscreteField} {f : RingHom k K} (Kn : IsNormalExt f) (g : Poly k) {a : K} (ga : polyMapEval f g a = 0)
+  : ∃ (h : Poly k) (TruncP (Monoid.LDiv h g)) (polyMapEval f h a = 0) (N : Nat) (r : Array K N) (polyMap f h = prodLin r)
+  => \case Kn a \with {
+    | inP (p, N, r, e, pa) =>
+      \have | p/=0 : p /= 0 => \lam p=0 => K.zro/=ide $ inv (pmap (polyCoef __ N) (inv e *> pmap (polyMap f) p=0)) *> prodLin-monic r
+             | gd => gcd-data g p p/=0
+      \in \let | h => gd.1
+              | hm : isMonic h => gd.2
+              | hg : Monoid.LDiv h g => gd.3
+              | hp : Monoid.LDiv h p => gd.4
+              | ha : polyMapEval f h a = 0 => \case gd.5 \with {
+                  | inP (u, v, q) => pmap (polyMapEvalRingHom f a) q *> (polyMapEvalRingHom f a).func-+ *>
+                      pmap2 (+) ((polyMapEvalRingHom f a).func-* *> pmap (_ *) ga *> zro_*-right) ((polyMapEvalRingHom f a).func-* *> pmap (_ *) pa *> zro_*-right) *> zro-left
+                }
+      \in \case prodLin-divisor r (polyMap_isMonic hm) (inP \new Monoid.LDiv {
+             | inv => polyMap f hp.inv
+             | inv-right => inv (polyMapRingHom f).func-* *> pmap (polyMap f) hp.inv-right *> e
+           }) \with {
+        | inP (M, r', hr, _) => inP (h, inP hg, ha, M, r', hr)
+      }
+  }
+  \where {
+    \open Algebra.Ring.Poly.Euclidean
+    \open EuclideanSemiringData
+    \open EuclideanRingData
+
+    -- | The monic gcd `h` of `g` and `p ≠ 0`: it divides both and every additive multiplicative map vanishing on `g` and `p` vanishes on `h`.
+    \func gcd-data {k : DiscreteField} (g p : Poly k) (p/=0 : p /= 0)
+      : \Sigma (h : Poly k) (isMonic h) (Monoid.LDiv h g) (Monoid.LDiv h p)
+               (∃ (u v : Poly k) (h = u * g + v * p))
+      => \let | d => gcd g p
+              | d|g : Monoid.LDiv d g => (gcd-isGCD g p).res|val1
+              | d|p : Monoid.LDiv d p => (gcd-isGCD g p).res|val2
+              | d/=0 => (LDiv/=0 d|p p/=0).1
+              | c/=0 : leadCoef d /= 0 => \lam c=0 => d/=0 (leadCoef=0-lem c=0)
+              | h|d : Monoid.LDiv (finv (leadCoef d) *c d) d => \new Monoid.LDiv {
+                  | inv => padd pzero (leadCoef d)
+                  | inv-right => pmap (__ * _) PolyRing.*c_* *> gcd-split.lem {k} {padd pzero (finv (leadCoef d))} {padd pzero (leadCoef d)} {d} *>
+                                   pmap (__ * _) (inv polyHom.func-* *> pmap polyHom (k.finv-right c/=0) *> polyHom.func-ide) *> ide-left
+                }
+         \in (finv (leadCoef d) *c d, field-toMonic d/=0, Monoid.LDiv.trans h|d d|g, Monoid.LDiv.trans h|d d|p,
+              inP (finv (leadCoef d) *c (bezout g p).1, finv (leadCoef d) *c (bezout g p).2,
+                   pmap (finv (leadCoef d) *c) (inv (bezoutIdentity g p)) *> PolyRing.*c-ldistr *> pmap2 (+) PolyRing.*c-comm-left PolyRing.*c-comm-left))
+  }
+
+{- | **Exercise VI.8.1.** An algebraic extension `K` of `k` is normal if and only if every polynomial over `k` having a root
+     `a ∈ K` has a factor over `k` that vanishes at `a` and is a product of linear polynomials over `K`. -}
+\lemma normal<->factor {k K : DiscreteField} {f : RingHom k K} (alg : \Pi (a : K) -> ∃ (p : Poly k) (p /= 0) (polyMapEval f p a = 0))
+  : IsNormalExt f <-> (\Pi (g : Poly k) (a : K) -> polyMapEval f g a = 0 ->
+                        ∃ (h : Poly k) (TruncP (Monoid.LDiv h g)) (polyMapEval f h a = 0) (N : Nat) (r : Array K N) (polyMap f h = prodLin r))
+  => (\lam Kn g a ga => normal-factor Kn g ga,
+      \lam c a => \case alg a \with {
+        | inP (p, _, pa) => TruncP.map (c p a pa) \lam s => (s.1, s.4, s.5, s.6, s.3)
+      })

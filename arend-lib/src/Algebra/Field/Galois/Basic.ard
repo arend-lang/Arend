@@ -1,0 +1,240 @@
+{- | **Galois theory: basic notions** (Mines–Richman–Ruitenburg, §VI.8, Lemmas 8.1 and 8.2).
+
+     An extension `k ⊆ K` is a ring homomorphism `f : RingHom k K`. A `k`-homomorphism `σ : K → E` (with respect to
+     `f : k → K` and `g : k → E`) satisfies `σ (f c) = g c` ({IsKHom}). The `k`-automorphisms of `K` form the Galois group
+     {GaloisGroup}. We also define normal, separable and Galois extensions, fixed fields and the cardinality of a family of
+     homomorphisms with respect to the natural inequality ({HomCount}). -}
+
+\import Algebra.Field
+\import Algebra.Field.Galois.Characters
+\import Algebra.Field.PrimitiveElement
+\import Algebra.Field.SeparableElements
+\import Algebra.Field.SubField
+\import Algebra.Group
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Integral.MinPoly
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Semiring
+\import Arith.Nat
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin.Pigeonhole
+
+-- # Homomorphisms over k
+
+-- | `s` is a `k`-homomorphism: it commutes with the structure maps {f} and {g}.
+\type IsKHom {k K E : Ring} (f : RingHom k K) (g : RingHom k E) (s : RingHom K E) : \Prop
+  => \Pi (c : k) -> s (f c) = g c
+
+-- | A `k`-homomorphism maps values of polynomials over `k` to values of the same polynomials.
+\lemma kHom-polyMapEval {k : Ring} {K E : CRing} {f : RingHom k K} {g : RingHom k E} {s : RingHom K E} (sh : IsKHom f g s)
+  (p : Poly k) (a : K) : s (polyMapEval f p a) = polyMapEval g p (s a)
+  => inv polyEval_polyMap *> pmap (polyEval __ (s a)) (polyMap-comp f s *> polyMap-ext {k} {E} {s AddPointedHom.∘ f} {g} sh)
+
+-- | Ring homomorphisms of discrete fields preserve inverses.
+\lemma ringHom-finv {K E : DiscreteField} (s : RingHom K E) (x : K) : s (finv x) = finv (s x)
+  => \case decideEq x 0 \with {
+    | yes x=0 => pmap (\lam z => s (finv z)) x=0 *> pmap s finv_zro *> s.func-zro *> inv finv_zro *> pmap finv (inv s.func-zro *> pmap s (inv x=0))
+    | no x/=0 =>
+      \have | sx : s x * s (finv x) = 1 => inv s.func-* *> pmap s (finv-right x/=0) *> s.func-ide
+            | sx/=0 : s x /= 0 => \lam p => E.zro/=ide $ inv (pmap (`* _) p *> zro_*-left) *> sx
+      \in inv ide-left *> pmap (`* _) (inv (E.finv-left sx/=0)) *> *-assoc *> pmap (_ *) sx *> ide-right
+  }
+
+-- # Galois group
+
+-- | The `k`-automorphisms of `K`.
+\func KAut {k K : Ring} (f : RingHom k K) => \Sigma (s : RingHom K K) (IsKHom f f s) (IsEquiv s)
+  \where {
+    \lemma equals {k K : Ring} {f : RingHom k K} {s t : KAut f} (p : \Pi (x : K) -> s.1 x = t.1 x) : s = t
+      => ext (exts p)
+  }
+
+-- | The Galois group $\mathcal{G}(K/k)$: the group of `k`-automorphisms of `K` under composition.
+\instance GaloisGroup {k K : Ring} (f : RingHom k K) : Group (KAut f)
+  | ide => (RingHom.id, \lam c => idp, inP idEquiv)
+  | * s t => (s.1 RingHom.∘ t.1, \lam c => pmap s.1 (t.2 c) *> s.2 c, comp-equiv s.3 t.3)
+  | ide-left => KAut.equals \lam x => idp
+  | ide-right => KAut.equals \lam x => idp
+  | *-assoc => KAut.equals \lam x => idp
+  | inverse s => (inverseHom s.1 s.3, \lam c => inv (IsEquiv.adjoint s.3 (s.2 c)), IsEquiv.ret-equiv s.3)
+  | inverse-left {s} => KAut.equals \lam x => IsEquiv.ret_f s.3
+  | inverse-right {s} => KAut.equals \lam x => IsEquiv.f_ret s.3
+  \where {
+    \lemma comp-equiv {A B C : \Set} {g : B -> C} {f : A -> B} (ge : IsEquiv g) (fe : IsEquiv f) : IsEquiv (\lam a => g (f a))
+      => IsEquiv.fromInjSurj (\lam p => IsEquiv.isInj fe (IsEquiv.isInj ge p))
+                             (\lam c => inP (IsEquiv.ret fe (IsEquiv.ret ge c), pmap g (IsEquiv.f_ret fe) *> IsEquiv.f_ret ge))
+
+    -- | The inverse of a bijective ring homomorphism.
+    \func inverseHom {K E : Ring} (s : RingHom K E) (e : IsEquiv s) : RingHom E K \cowith
+      | func => IsEquiv.ret e
+      | func-+ => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (s.func-+ *> pmap2 (+) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
+      | func-ide => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv s.func-ide
+      | func-* => IsEquiv.isInj e $ IsEquiv.f_ret e *> inv (s.func-* *> pmap2 (*) (IsEquiv.f_ret e) (IsEquiv.f_ret e))
+  }
+
+-- # Normal, separable and Galois extensions
+
+-- | `K` is *normal* over `k` if every element of `K` is a root of a polynomial over `k` that is a product of linear polynomials over `K`.
+\type IsNormalExt {k K : DiscreteField} (f : RingHom k K) : \Prop
+  => \Pi (a : K) -> ∃ (p : Poly k) (n : Nat) (r : Array K n) (polyMap f p = prodLin r) (polyMapEval f p a = 0)
+
+-- | `K` is *separable* over `k` if every element of `K` is separable over `k`.
+\type IsSeparableExt {k K : DiscreteField} (f : RingHom k K) : \Prop
+  => \Pi (a : K) -> IsSeparableElement f a
+
+-- | `K` is a *Galois extension* of `k` if it is normal and separable over `k`.
+\type IsGaloisExt {k K : DiscreteField} (f : RingHom k K) : \Prop
+  => \Sigma (IsNormalExt f) (IsSeparableExt f)
+
+-- | `K` is *finite-dimensional* over `k`: it has a finite basis as a vector space over `k`.
+\type IsFinDim {k K : Ring} (f : RingHom k K) : \Prop
+  => ∃ (l : Array K) (LModule.IsBasis {homLModule f} l)
+
+-- # Fixed fields
+
+-- | The fixed field $\{x \in E \mid s_j(x) = x\}$ of a family {s} of endomorphisms of {E}.
+\func fixedField {E : DiscreteField} {J : \Type} (s : J -> RingHom E E) : SubField E \cowith
+  | contains x => \Pi (j : J) -> s j x = x
+  | contains_zro j => (s j).func-zro
+  | contains_+ p q j => (s j).func-+ *> pmap2 (+) (p j) (q j)
+  | contains_ide j => (s j).func-ide
+  | contains_* p q j => (s j).func-* *> pmap2 (*) (p j) (q j)
+  | contains_negative p j => (s j).func-negative *> pmap negative (p j)
+  | contains_finv p j => ringHom-finv (s j) _ *> pmap finv (p j)
+
+-- # Finite families of homomorphisms
+
+{- | The homomorphisms satisfying {P} form a finite set with {n} elements (with respect to the natural inequality):
+     they are enumerated by `n` distinct homomorphisms. -}
+\type HomCount {K E : Ring} (P : RingHom K E -> \Prop) (n : Nat) : \Prop
+  => ∃ (l : Array (RingHom K E) n) (\Pi (j : Fin n) -> P (l j))
+       (\Pi (s : RingHom K E) -> P s -> ∃ (j : Fin n) (\Pi (x : K) -> l j x = s x)) (IsPairwiseApart (\lam j x => l j x))
+
+-- | $\#\mathcal{G}(K/k) = n$.
+\type GaloisCard {k K : Ring} (f : RingHom k K) (n : Nat) : \Prop
+  => HomCount (\lam s => \Sigma (IsKHom f f s) (IsEquiv s)) n
+
+-- # Lemma 8.1
+
+{- | **Lemma VI.8.1** (general form). If {p} is a minimal polynomial of {a} over {K} and {b} is a root of `p^s`, then
+     {s} extends to a homomorphism from $K[a]$ to {E} sending {a} to {b}; see {extendHom-ext} and {extendHom-gen}. -}
+\func extendHom {K : Ring} {L E : CRing} (g : RingHom K L) (a : L) (s : RingHom K E) (b : E) {p : Poly K}
+  (pm : isMinPoly g a p) (pb : polyMapEval s p b = 0) : RingHom (IRing (polyImage g a)) E
+  => imageLift (polyMapEvalRingHom g a) (polyMapEvalRingHom s b) (ker pm pb)
+  \where {
+    \lemma ker {K : Ring} {L E : CRing} {g : RingHom K L} {a : L} {s : RingHom K E} {b : E} {p : Poly K}
+      (pm : isMinPoly g a p) (pb : polyMapEval s p b = 0) (u : Poly K) (ua : polyMapEvalRingHom g a u = 0) : polyMapEvalRingHom s b u = 0
+      => \case pm.2 ua \with {
+        | inP d => pmap (polyMapEvalRingHom s b) (inv d.inv-right) *> (polyMapEvalRingHom s b).func-* *> pmap (`* _) pb *> zro_*-left
+      }
+
+    \lemma eval-const {K : Ring} {L : CRing} (g : RingHom K L) (x : L) (c : K) : polyMapEval g (padd 0 c) x = g c
+      => pmap (`+ _) zro_*-left *> zro-left
+
+    \lemma eval-X {K : Ring} {L : CRing} (g : RingHom K L) (x : L) : polyMapEval g (padd 1 0) x = x
+      => pmap2 (+) (pmap (`* x) (eval-const g x 1 *> g.func-ide) *> ide-left) g.func-zro *> zro-right
+
+    -- | The extension sends `u(a)` to `u^s(b)`.
+    \lemma on-poly {K : Ring} {L E : CRing} {g : RingHom K L} {a : L} {s : RingHom K E} {b : E} {p : Poly K}
+      {pm : isMinPoly g a p} {pb : polyMapEval s p b = 0} (u : Poly K)
+      : extendHom g a s b pm pb (polyImageHomPoly g a u) = polyMapEval s u b
+      => imageLift.choose-eq (polyMapEvalRingHom g a) (polyMapEvalRingHom s b) (ker pm pb) {polyImageHomPoly g a u} {u} idp
+  }
+
+-- | The extension in Lemma 8.1 extends {s}.
+\lemma extendHom-ext {K : Ring} {L E : CRing} {g : RingHom K L} {a : L} {s : RingHom K E} {b : E} {p : Poly K}
+  {pm : isMinPoly g a p} {pb : polyMapEval s p b = 0} (c : K) : extendHom g a s b pm pb (polyImageHom g a c) = s c
+  => pmap (extendHom g a s b pm pb) (ext (inv (extendHom.eval-const g a c))) *> extendHom.on-poly (padd 0 c) *> extendHom.eval-const s b c
+
+-- | The extension in Lemma 8.1 sends {a} to {b}.
+\lemma extendHom-gen {K : Ring} {L E : CRing} {g : RingHom K L} {a : L} {s : RingHom K E} {b : E} {p : Poly K}
+  {pm : isMinPoly g a p} {pb : polyMapEval s p b = 0} : extendHom g a s b pm pb (a, polyImage-element) = b
+  => pmap (extendHom g a s b pm pb) (ext (inv (extendHom.eval-X g a))) *> extendHom.on-poly (padd 1 0) *> extendHom.eval-X s b
+
+{- | **Lemma VI.8.1.** Let `K ⊆ L`, `s : K → E`, `p ∈ K[X]` irreducible, `a ∈ L` a root of `p`, and `b ∈ E` a root of `p^s`.
+     Then `s` extends to a homomorphism `K[a] → E` taking `a` to `b`. -}
+\lemma extend-hom {K : DiscreteField} {L : NonZeroCRing} {E : CRing} (g : RingHom K L) (s : RingHom K E) (p : Irr {PolyAlgebra K})
+  {a : L} (pa : polyMapEval g p a = 0) {b : E} (pb : polyMapEval s p b = 0)
+  : ∃ (t : RingHom (IRing (polyImage g a)) E) (\Pi (c : K) -> t (polyImageHom g a c) = s c) (t (a, polyImage-element) = b)
+  => inP (extendHom g a s b (irr_minPoly g a p pa) pb, extendHom-ext, extendHom-gen)
+
+-- # Homomorphisms out of a simple extension
+
+{- | If `θ` is a primitive element of `K` over `k` with minimal polynomial `p`, and `b ∈ E` is a root of `p` (mapped by `g`),
+     then there is a `k`-homomorphism `K → E` sending `θ` to `b` (Lemma 8.1 for `K = k[θ]`). -}
+\func primHom {k : CRing} {K E : CRing} (f : RingHom k K) (g : RingHom k E) {t : K} (prim : IsPrimitiveElement f t) {p : Poly k}
+  (pm : isMinPoly f t p) {b : E} (pb : polyMapEval g p b = 0) : RingHom K E
+  => extendHom f t g b pm pb RingHom.∘ IRing.corestrict RingHom.id prim
+
+\lemma primHom-ext {k : CRing} {K E : CRing} {f : RingHom k K} {g : RingHom k E} {t : K} {prim : IsPrimitiveElement f t} {p : Poly k}
+  {pm : isMinPoly f t p} {b : E} {pb : polyMapEval g p b = 0} : IsKHom f g (primHom f g prim pm pb)
+  => \lam c => pmap (extendHom f t g b pm pb) (ext idp) *> extendHom-ext c
+
+\lemma primHom-gen {k : CRing} {K E : CRing} {f : RingHom k K} {g : RingHom k E} {t : K} {prim : IsPrimitiveElement f t} {p : Poly k}
+  {pm : isMinPoly f t p} {b : E} {pb : polyMapEval g p b = 0} : primHom f g prim pm pb t = b
+  => pmap (extendHom f t g b pm pb) (ext idp) *> extendHom-gen
+
+-- | Two `k`-homomorphisms out of `k[θ]` agreeing on `θ` are equal.
+\lemma primHom-unique {k : CRing} {K E : CRing} {f : RingHom k K} {g : RingHom k E} {t : K} (prim : IsPrimitiveElement f t)
+  {s s' : RingHom K E} (sk : IsKHom f g s) (s'k : IsKHom f g s') (q : s t = s' t) (x : K) : s x = s' x
+  => \case prim x \with {
+    | inP (u, ux) => pmap s (inv ux) *> kHom-polyMapEval sk u t *> pmap (polyMapEval g u) q *> inv (kHom-polyMapEval s'k u t) *> pmap s' ux
+  }
+
+-- # Lemma 8.2
+
+-- | **Lemma VI.8.2.** If `K` is algebraic over `k`, then every `k`-endomorphism of `K` is an automorphism.
+\lemma algebraic-endo-equiv {k K : DiscreteField} {f : RingHom k K} (alg : \Pi (a : K) -> ∃ (p : Poly k) (p /= 0) (polyMapEval f p a = 0))
+  {s : RingHom K K} (sk : IsKHom f f s) : IsEquiv s
+  => IsEquiv.fromInjSurj (RingHom.field-isInj {K} {K} {s}) \lam a => \case alg a \with {
+    | inP (p, p/=0, pa) =>
+      \let | P => polyMap f p
+            | P/=0 : P /= 0 => \lam q => p/=0 $ polyMap-inj (RingHom.field-isInj {k} {K} {f}) q
+            | roots (i : Fin (suc (degree P))) : polyEval P (iter s i a) = 0 => iter-root sk p pa i
+      \in \case pigeonhole-fin.aux (\lam i => iter s i a) (\lam inj => roots-length<= P/=0 (degree_degree< id<suc) (\lam i => iter s i a) inj roots id<suc) \with {
+        | inP (i, j, i/=j, q) => \case LinearOrder.trichotomy (i : Nat) j \with {
+          | less i<j => inP (iter s (j -' suc i) a, iter-shift s i (j -' suc i) (q *> pmap (iter s __ a) (inv (<=_exists (suc_<_<= i<j)))))
+          | equals i=j => absurd (i/=j (fin_nat-inj i=j))
+          | greater j<i => inP (iter s (i -' suc j) a, iter-shift s j (i -' suc j) (inv q *> pmap (iter s __ a) (inv (<=_exists (suc_<_<= j<i)))))
+        }
+      }
+  }
+  \where {
+    \func iter {K : Ring} (s : RingHom K K) (n : Nat) (a : K) : K \elim n
+      | 0 => a
+      | suc n => s (iter s n a)
+
+    \lemma iter-root {k K : DiscreteField} {f : RingHom k K} {s : RingHom K K} (sk : IsKHom f f s) (p : Poly k) {a : K}
+      (pa : polyMapEval f p a = 0) (n : Nat) : polyMapEval f p (iter s n a) = 0 \elim n
+      | 0 => pa
+      | suc n => inv (kHom-polyMapEval sk p _) *> pmap s (iter-root sk p pa n) *> s.func-zro
+
+    \lemma iter-+ {K : Ring} (s : RingHom K K) (n m : Nat) (a : K) : iter s (n + m) a = iter s m (iter s n a) \elim m
+      | 0 => idp
+      | suc m => pmap s (iter-+ s n m a)
+
+    \lemma iter-inj {K : DiscreteField} (s : RingHom K K) (n : Nat) {a b : K} (p : iter s n a = iter s n b) : a = b \elim n
+      | 0 => p
+      | suc n => iter-inj s n (RingHom.field-isInj {K} {K} {s} p)
+
+    -- | If $s^i(a) = s^{i+d+1}(a)$, then `a` is in the image of `s`.
+    \lemma iter-shift {K : DiscreteField} (s : RingHom K K) {a : K} (i d : Nat) (q : iter s i a = iter s (suc i + d) a)
+      : s (iter s d a) = a
+      => inv $ iter-inj s i $ q *> pmap (iter s __ a) (NatSemiring.+-comm {suc i} {d} *> pmap suc (NatSemiring.+-comm {d} {i}) *> NatSemiring.+-comm {i} {suc d}) *> iter-+ s (suc d) i a
+  }

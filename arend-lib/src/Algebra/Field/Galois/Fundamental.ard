@@ -1,0 +1,234 @@
+{- | **The fundamental theorem of Galois theory** (Mines–Richman–Ruitenburg, §VI.8, Theorems 8.8 and 8.11).
+
+     Artin's theorem 8.11: if `G` is a set of `n` distinct automorphisms of `E` with fixed field `K`, then `E` contains `n`
+     elements independent over `K`; if `G` is a group, then $\dim_K E = n$, `E` is Galois over `K` and $G = \mathcal{G}(E/K)$.
+     Theorem 8.8 describes the Galois correspondence for a finite-dimensional Galois extension. -}
+
+\import Algebra.Field
+\import Algebra.Field.Galois.Basic
+\import Algebra.Field.Galois.Characters
+\import Algebra.Field.Galois.Group
+\import Algebra.Field.Galois.Normal
+\import Algebra.Field.SubField
+\import Algebra.Module.Tower
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Group.GroupHom
+\import Algebra.Group.SubGroup
+\import Algebra.Pointed.PointedHom
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.LinearSystem
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring.RingHom
+\import Data.Or
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Pigeonhole
+
+-- # Theorem 8.11
+
+-- | The inclusion of the fixed field of {s} into {E}.
+\func fixedEmbed {E : DiscreteField} {J : \Type} (s : J -> RingHom E E) : RingHom (IDiscreteField (fixedField s)) E
+  => SubField.embed (fixedField s)
+
+-- | Applying `s_i` to a combination $\sum_j c_j w_j$ with fixed coefficients `c_j`.
+\lemma fixed-combination {E : DiscreteField} {J : \Type} {s : J -> RingHom E E} {n : Nat} (c : Array (IDiscreteField (fixedField s)) n)
+  (w : Array E n) (i : J) : s i (E.BigSum (\lam j => (c j).1 * w j)) = E.BigSum (\lam j => s i (w j) * (c j).1)
+  => AddMonoidHom.func-BigSum {s i} *> pmap E.BigSum (exts \lam j => (s i).func-* *> pmap (\lam z => z * s i (w j)) ((c j).2 i) *> *-comm)
+
+{- | **Theorem VI.8.11 (first part).** If $s_1, \ldots, s_n$ are distinct automorphisms (or just homomorphisms) of `E` and `K`
+     is their fixed field, then there are `n` elements of `E` linearly independent over `K`; in fact, any `w` such that the
+     matrix $(s_i(w_j))$ is invertible works. -}
+\lemma artin-independent {E : DiscreteField} {n : Nat} (s : Array (RingHom E E) n) {w : Array E n}
+  (Mi : Monoid.Inv {MatrixRing E n} (mkMatrix \lam i j => s i (w j))) : LModule.IsIndependent {homLModule (fixedEmbed s)} w
+  => \lam c p j => ext $ inv-system-zero Mi (\lam j => (c j).1) (\lam i => inv (fixed-combination c w i) *> pmap (s i) p *> (s i).func-zro) j
+
+-- | `E` contains `n` elements independent over the fixed field of `n` distinct homomorphisms.
+\lemma artin-independent-exists {E : DiscreteField} {n : Nat} (s : Array (RingHom E E) n) (sa : IsPairwiseApart (\lam i x => s i x))
+  : ∃ (w : Array E n) (LModule.IsIndependent {homLModule (fixedEmbed s)} w)
+  => TruncP.map (characters-matrix-inv s sa) \lam t => (t.1, artin-independent s t.2)
+
+{- | **Theorem VI.8.11 (second part, linear algebra).** If moreover the `s_i` form a group (they contain the identity and are
+     closed under composition), then any `w` with $(s_i(w_j))$ invertible is a basis of `E` over the fixed field. -}
+\lemma artin-basis {E : DiscreteField} {n : Nat} (s : Array (RingHom E E) n) (sa : IsPairwiseApart (\lam i x => s i x))
+  (sid : ∃ (i : Fin n) (\Pi (x : E) -> s i x = x)) (comp : \Pi (i j : Fin n) -> ∃ (m : Fin n) (\Pi (x : E) -> s i (s j x) = s m x))
+  {w : Array E n} (Mi : Monoid.Inv {MatrixRing E n} (mkMatrix \lam i j => s i (w j))) : LModule.IsBasis {homLModule (fixedEmbed s)} w
+  => (artin-independent s Mi, \lam y => \case sid, inv-system-solve Mi (\lam i => s i y) \with {
+    | inP (i0, i0id), inP (x, xs) =>
+      \have xK (j : Fin n) (m : Fin n) : s m (x j) = x j => fixed-solution s sa comp Mi y x xs m j
+      \in inP (\lam j => (x j, \lam m => xK j m), inv (i0id y) *> inv (xs i0) *> pmap E.BigSum (exts \lam j => pmap (`* x j) (i0id (w j)) *> *-comm))
+  })
+  \where {
+    -- | The solution `x` of $\sum_j s_i(w_j) x_j = s_i(y)$ is fixed by every `s_m`.
+    \lemma fixed-solution {E : DiscreteField} {n : Nat} (s : Array (RingHom E E) n) (sa : IsPairwiseApart (\lam i x => s i x))
+      (comp : \Pi (i j : Fin n) -> ∃ (m : Fin n) (\Pi (x : E) -> s i (s j x) = s m x))
+      {w : Array E n} (Mi : Monoid.Inv {MatrixRing E n} (mkMatrix \lam i j => s i (w j))) (y : E) (x : Array E n)
+      (xs : \Pi (i : Fin n) -> E.BigSum (\lam j => s i (w j) * x j) = s i y) (m j : Fin n) : s m (x j) = x j
+      => \case FinSet.finiteAC (comp m) \with {
+        | inP pi =>
+          \have | pinj : IsInj (\lam i => (pi i).1) => \lam {i} {i'} q => \case decideEq i i' \with {
+                   | yes e => e
+                   | no i/=i' => absurd $ \case sa i/=i' \with {
+                     | inP (z, d) => d $ RingHom.field-isInj {E} {E} {s m} $ (pi i).2 z *> pmap (\lam k => s k z) q *> inv ((pi i').2 z)
+                   }
+                 }
+                | pe : IsEquiv (\lam i => (pi i).1) => PigeonholeSet.isEquiv {FinFin n} _ pinj
+                | ys (i' : Fin n) : E.BigSum (\lam j => s i' (w j) * s m (x j)) = s i' y
+                  => \let i => IsEquiv.ret pe i'
+                     \in \have pii : (pi i).1 = i' => IsEquiv.f_ret pe
+                     \in pmap E.BigSum (exts \lam j => pmap (\lam k => s k (w j) * s m (x j)) (inv pii) *> pmap (`* s m (x j)) (inv ((pi i).2 (w j))) *> inv (s m).func-*)
+                          *> inv (AddMonoidHom.func-BigSum {s m}) *> pmap (s m) (xs i) *> (pi i).2 y *> pmap (\lam k => s k y) pii
+          \in AddGroup.fromZero $ inv-system-zero Mi (\lam j => s m (x j) - x j) (\lam i => pmap E.BigSum (exts \lam j => E.ldistr_-) *> E.BigSum_- *> AddGroup.toZero (ys i *> inv (xs i))) j
+      }
+  }
+
+-- # Theorem 8.8
+
+-- | The subgroup $\mathcal{G}(E/K)$ of $\mathcal{G}(E/k)$ of automorphisms fixing an intermediate field `K` pointwise.
+\func fixingSubgroup {k E : DiscreteField} (f : RingHom k E) (K : SubField E) : SubGroup (GaloisGroup f) \cowith
+  | contains s => \Pi (y : E) -> K y -> s.1 y = y
+  | contains_ide y _ => idp
+  | contains_* p q y Ky => pmap _ (q y Ky) *> p y Ky
+  | contains_inverse {s} p y Ky => pmap (IsEquiv.ret s.3) (inv (p y Ky)) *> IsEquiv.ret_f s.3
+
+\module FundamentalTheorem \where {
+  {- | **Theorem VI.8.8 (i).** If `E` is a finite-dimensional Galois extension of `k` and `K` is an intermediate field, then `E` is a
+       finite-dimensional Galois extension of `K`. -}
+  \lemma sub-galois {k E : DiscreteField} {f : RingHom k E} (Eg : IsGaloisExt f) (K : SubField E) (Kk : \Pi (c : k) -> K (f c))
+    : IsGaloisExt {IDiscreteField K} {E} (SubField.embed K)
+    => (\lam x => \case Eg.1 x \with {
+          | inP (p, n, r, e, px) => inP (polyMap (SubField.corestrict K f Kk) p, n, r, polyMap-comp (SubField.corestrict K f Kk) (SubField.embed K) *> polyMap-ext (\lam c => idp) *> e,
+                                         pmap (polyEval __ x) (polyMap-comp (SubField.corestrict K f Kk) (SubField.embed K) *> polyMap-ext (\lam c => idp)) *> px)
+        },
+        \lam x => \case Eg.2 x \with {
+          | inP (g, gs, gx) => inP (polyMap (SubField.corestrict K f Kk) g, IsSeparable_polyMap gs,
+                                    pmap (polyEval __ x) (polyMap-comp (SubField.corestrict K f Kk) (SubField.embed K) *> polyMap-ext (\lam c => idp)) *> gx)
+        })
+
+  -- | **Theorem VI.8.8 (i), dimension.** If `E` and `K` are finite-dimensional over `k`, then `E` is finite-dimensional over `K`.
+  \lemma sub-findim {k E : DiscreteField} {f : RingHom k E} (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule f} l))
+    (K : SubField E) (Kk : \Pi (c : k) -> K (f c)) (Kb : ∃ (l : Array (IDiscreteField K)) (LModule.IsBasis {homLModule (SubField.corestrict K f Kk)} l))
+    : ∃ (l : Array E) (LModule.IsBasis {homLModule (SubField.embed K)} l)
+    => \have Mb : ∃ (l : Array E) (LModule.IsBasis {LModule.pullback (SubField.corestrict K f Kk) (homLModule (SubField.embed K))} l)
+                => TruncP.map Eb \lam t => (t.1, (\lam c p => t.2.1 c p, \lam x => t.2.2 x))
+       \in tower-down (SubField.corestrict K f Kk) {homLModule (SubField.embed K)} Kb Mb
+
+  -- | Restriction of a `k`-automorphism of `E` to a normal intermediate field `K`.
+  \func restrictAut {k E : DiscreteField} {f : RingHom k E} {K : SubField E} {Kk : \Pi (c : k) -> K (f c)}
+    (Kn : IsNormalExt {k} {IDiscreteField K} (SubField.corestrict K f Kk)) (s : KAut f) : KAut {k} {IDiscreteField K} (SubField.corestrict K f Kk)
+    => \let | into => (normal-invariant {k} {IDiscreteField K} {E} {SubField.corestrict K f Kk} {SubField.embed K} Kn {s.1} s.2).1
+            | r => restrictHom (SubField.embed K) s.1 into
+       \in (r, \lam c => RingHom.field-isInj {IDiscreteField K} {E} {SubField.embed K} (restrictHom-eq {IDiscreteField K} {E} {SubField.embed K} {s.1} {into} _ *> s.2 c),
+            algebraic-endo-equiv {k} {IDiscreteField K} {SubField.corestrict K f Kk} (normal-algebraic Kn) {r} \lam c => RingHom.field-isInj {IDiscreteField K} {E} {SubField.embed K} (restrictHom-eq {IDiscreteField K} {E} {SubField.embed K} {s.1} {into} _ *> s.2 c))
+
+  \lemma restrictAut-eq {k E : DiscreteField} {f : RingHom k E} {K : SubField E} {Kk : \Pi (c : k) -> K (f c)}
+    {Kn : IsNormalExt {k} {IDiscreteField K} (SubField.corestrict K f Kk)} (s : KAut f) (y : IDiscreteField K) : ((restrictAut Kn s).1 y).1 = s.1 y.1
+    => restrictHom-eq {IDiscreteField K} {E} {SubField.embed K} {s.1} y
+
+  {- | **Theorem VI.8.8 (iv).** If `K` is normal over `k`, restriction to `K` is a homomorphism from $\mathcal{G}(E/k)$ to
+       $\mathcal{G}(K/k)$; it is onto ({restriction-surj}) with kernel $\mathcal{G}(E/K)$ ({restriction-kernel}). -}
+  \func restriction {k E : DiscreteField} {f : RingHom k E} (K : SubField E) (Kk : \Pi (c : k) -> K (f c))
+    (Kn : IsNormalExt {k} {IDiscreteField K} (SubField.corestrict K f Kk)) : GroupHom (GaloisGroup f) (GaloisGroup {k} {IDiscreteField K} (SubField.corestrict K f Kk)) \cowith
+    | func => restrictAut Kn
+    | func-* {s} {t} => KAut.equals \lam y => ext $ restrictAut-eq (s * t) y *> pmap s.1 (inv (restrictAut-eq t y)) *> inv (restrictAut-eq s _)
+
+  \lemma restriction-kernel {k E : DiscreteField} {f : RingHom k E} {K : SubField E} {Kk : \Pi (c : k) -> K (f c)}
+    {Kn : IsNormalExt {k} {IDiscreteField K} (SubField.corestrict K f Kk)} (s : KAut f) : KernelGroup (restriction K Kk Kn) s <-> fixingSubgroup f K s
+    => (\lam q y Ky => inv (restrictAut-eq s (y, Ky)) *> pmap (\lam (t : KAut {k} {IDiscreteField K} (SubField.corestrict K f Kk)) => (t.1 (y, Ky)).1) q,
+        \lam q => KAut.equals \lam y => ext $ restrictAut-eq s y *> q y.1 y.2)
+
+  \lemma restriction-surj {k E : DiscreteField} {f : RingHom k E} {K : SubField E} {Kk : \Pi (c : k) -> K (f c)}
+    {Kn : IsNormalExt {k} {IDiscreteField K} (SubField.corestrict K f Kk)} (En : IsNormalExt f) (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule f} l))
+    (Kb : ∃ (l : Array (IDiscreteField K)) (LModule.IsBasis {homLModule (SubField.corestrict K f Kk)} l))
+    : IsSurj (restriction K Kk Kn)
+    => \lam t => \case extend-aut {k} {IDiscreteField K} {E} {SubField.corestrict K f Kk} {SubField.embed K} (normal-ext (\lam c => idp) En)
+                        (sub-findim Eb K Kk Kb) {SubField.embed K RingHom.∘ t.1} (\lam c => pmap (SubField.embed K) (t.2 c)) \with {
+        | inP (s, sK, sk, se) => inP ((s, sk, se), KAut.equals \lam y => ext $ restrictAut-eq (s, sk, se) y *> sK y)
+      }
+
+  -- | **Theorem VI.8.8 (ii).** $\mathcal{G}(E/K)$ is finite, of order $\dim_K E$.
+  \lemma sub-card {k E : DiscreteField} {f : RingHom k E} (Eg : IsGaloisExt f) (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule f} l))
+    (K : SubField E) (Kk : \Pi (c : k) -> K (f c)) (Kb : ∃ (l : Array (IDiscreteField K)) (LModule.IsBasis {homLModule (SubField.corestrict K f Kk)} l))
+    : ∃ (l : Array E) (LModule.IsBasis {homLModule (SubField.embed K)} l) (GaloisCard {IDiscreteField K} {E} (SubField.embed K) l.len)
+    => TruncP.map (sub-findim Eb K Kk Kb) \lam t => (t.1, t.2, galois-card t.2 (sub-galois Eg K Kk))
+
+  -- | **Theorem VI.8.8 (iii).** The fixed field of $\mathcal{G}(E/K)$ is `K`.
+  \lemma sub-fixed {k E : DiscreteField} {f : RingHom k E} (Eg : IsGaloisExt f) (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule f} l))
+    (K : SubField E) (Kk : \Pi (c : k) -> K (f c)) (Kb : ∃ (l : Array (IDiscreteField K)) (LModule.IsBasis {homLModule (SubField.corestrict K f Kk)} l))
+    {y : E} (fix : \Pi (s : KAut f) -> fixingSubgroup f K s -> s.1 y = y) : K y
+    => \case sub-findim Eb K Kk Kb \with {
+      | inP (l, lb) => \case galois-fixed lb (sub-galois Eg K Kk) {y} (\lam t => fix (t.1, \lam c => t.2 (SubField.corestrict K f Kk c), t.3) (\lam z Kz => t.2 (z, Kz))) \with {
+        | inP (c, q) => transport K q c.2
+      }
+    }
+
+  {- | **Theorem VI.8.8 (v).** If $\mathcal{G}(E/K)$ is a normal subgroup of $\mathcal{G}(E/k)$, then `K` is normal over `k`.
+       Together with {restriction-kernel}, this shows that `K` is normal over `k` if and only if $\mathcal{G}(E/K)$ is normal. -}
+  \lemma normalSub-normal {k E : DiscreteField} {f : RingHom k E} (Eg : IsGaloisExt f) (Eb : ∃ (l : Array E) (LModule.IsBasis {homLModule f} l))
+    (K : SubField E) (Kk : \Pi (c : k) -> K (f c)) (Kb : ∃ (l : Array (IDiscreteField K)) (LModule.IsBasis {homLModule (SubField.corestrict K f Kk)} l))
+    (nrm : \Pi (g : KAut f) {h : KAut f} -> fixingSubgroup f K h -> fixingSubgroup f K (conjugate g h))
+    : IsNormalExt {k} {IDiscreteField K} (SubField.corestrict K f Kk)
+    => invariant-normal {k} {IDiscreteField K} {E} {SubField.corestrict K f Kk} {SubField.embed K} (normal-ext (\lam c => idp) Eg.1)
+         (TruncP.map Eb \lam t => (t.1, (\lam c p => t.2.1 c p, \lam x => t.2.2 x)))
+         \lam t tk te a => inP ((t a.1, sub-fixed Eg Eb K Kk Kb \lam s sK =>
+            \let T : KAut f => (t, tk, te)
+            \in \have q : (inverse T * s * inverse (inverse T)).1 a.1 = a.1 => nrm (inverse T) sK a.1 a.2
+            \in inv (IsEquiv.f_ret te) *> pmap t (pmap (\lam (u : KAut f) => (inverse T * s * u).1 a.1) (inv (Group.inverse-isInv {GaloisGroup f} {T})) *> q)), idp)
+}
+
+-- # Theorem 8.11, Galois part
+
+{- | **Theorem VI.8.11.** Let $s_1, \ldots, s_n$ be distinct automorphisms of `E` forming a group, and let `K` be their fixed field.
+     Then $\dim_K E = n$ ({artin-basis}), `E` is a Galois extension of `K`, and its Galois group consists of the `s_i`. -}
+\lemma artin-galois {E : DiscreteField} {n : Nat} (s : Array (RingHom E E) n) (sa : IsPairwiseApart (\lam i x => s i x))
+  (sid : ∃ (i : Fin n) (\Pi (x : E) -> s i x = x)) (comp : \Pi (i j : Fin n) -> ∃ (m : Fin n) (\Pi (x : E) -> s i (s j x) = s m x))
+  : \Sigma (IsGaloisExt {IDiscreteField (fixedField s)} {E} (fixedEmbed s)) (\Pi (t : KAut {IDiscreteField (fixedField s)} {E} (fixedEmbed s)) -> ∃ (i : Fin n) (\Pi (x : E) -> s i x = t.1 x))
+  => \case characters-matrix-inv s sa \with {
+    | inP (w, Mi) =>
+      \have | wb : LModule.IsBasis {homLModule (fixedEmbed s)} w => artin-basis s sa sid comp Mi
+             | sk (i : Fin n) : IsKHom {IDiscreteField (fixedField s)} {E} {E} (fixedEmbed s) (fixedEmbed s) (s i) => \lam c => c.2 i
+             | se (i : Fin n) : IsEquiv (s i) => algebraic-endo-equiv {IDiscreteField (fixedField s)} {E} {fixedEmbed s} (findim-algebraic wb) {s i} (sk i)
+             | Eg : IsGaloisExt {IDiscreteField (fixedField s)} {E} (fixedEmbed s) => conjugates-galois wb \lam a => moves-conjugates wb (\lam b nb => \case FinSet.searchFin (\lam i => s i b /= b) (\lam i => \case decideEq (s i b) b \with {
+                 | yes e => no \lam q => q e
+                 | no q => yes q
+               }) \with {
+                 | inl (i, q, _) => inP ((s i, sk i, se i), q)
+                 | inr all => absurd $ nb $ inP ((b, \lam i => \case decideEq (s i b) b \with { | yes e => e | no q => absurd (all i q) }), idp)
+               })
+      \in (Eg, \lam t => \case galois-card wb Eg \with {
+        | inP (l, lP, lsurj, lapart) => \case FinSet.finiteAC (\lam (i : Fin n) => lsurj (s i) (sk i, se i)) \with {
+          | inP phi =>
+            \have | phi-inj : IsInj (\lam i => (phi i).1) => \lam {i} {i'} q => \case decideEq i i' \with {
+                     | yes e => e
+                     | no i/=i' => absurd $ \case sa i/=i' \with {
+                       | inP (x, d) => d $ inv ((phi i).2 x) *> pmap (\lam j => l j x) q *> (phi i').2 x
+                     }
+                   }
+                  | pe : IsEquiv (\lam i => (phi i).1) => PigeonholeSet.isEquiv {FinFin n} _ phi-inj
+            \in \case lsurj t.1 (t.2, t.3) \with {
+              | inP (j, lj) => inP (IsEquiv.ret pe j, \lam x => inv ((phi (IsEquiv.ret pe j)).2 x) *> pmap (\lam j' => l j' x) (IsEquiv.f_ret pe) *> lj x)
+            }
+        }
+      })
+  }
+
+{- | **Theorem VI.8.8 (end).** Every finite subgroup `H` of $\mathcal{G}(E/k)$ is $\mathcal{G}(E/K)$ for its fixed field `K`: every
+     `k`-automorphism fixing `K` belongs to `H`. -}
+\lemma subgroup-galois {k E : DiscreteField} {f : RingHom k E} {n : Nat} (h : Array (KAut f) n) (ha : IsPairwiseApart (\lam i x => (h i).1 x))
+  (hid : ∃ (i : Fin n) (h i = ide)) (comp : \Pi (i j : Fin n) -> ∃ (m : Fin n) (h i * h j = h m))
+  (t : KAut f) (tK : \Pi (y : E) -> fixedField (\lam i => (h i).1) y -> t.1 y = y) : ∃ (i : Fin n) (h i = t)
+  => \case (artin-galois (\lam i => (h i).1) ha (TruncP.map hid \lam q => (q.1, \lam x => pmap (\lam (u : KAut f) => u.1 x) q.2))
+              (\lam i j => TruncP.map (comp i j) \lam q => (q.1, \lam x => pmap (\lam (u : KAut f) => u.1 x) q.2))).2 (t.1, \lam c => tK c.1 c.2, t.3) \with {
+    | inP (i, q) => inP (i, KAut.equals q)
+  }
