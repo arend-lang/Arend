@@ -1,0 +1,160 @@
+{- | **Splitting fields are normal** (Mines–Richman–Ruitenburg, §VI.8, Theorem 8.3 and Exercise 2).
+
+     If `K` is generated over `k` by the roots of a polynomial over `k` that splits over `K`, then every element of `K` is a root
+     of a polynomial over `k` that splits over `K`: for $x = P(a_1, \ldots, a_n)$ take
+     $\prod_{\pi \in S_n} (X - P(a_{\pi(1)}, \ldots, a_{\pi(n)}))$, whose coefficients are symmetric in the roots and hence lie in `k`
+     by the fundamental theorem on symmetric polynomials (Theorem II.8.1). -}
+
+\import Algebra.Field
+\import Algebra.Field.Galois.Basic
+\import Algebra.Field.Galois.Normal
+\import Algebra.Field.Splitting
+\import Algebra.Group
+\import Algebra.Group.Symmetric
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.PermSet
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Ring.MPoly
+\import Algebra.Ring.MPoly.Rename
+\import Algebra.Ring.MPoly.Symmetric
+\import Algebra.Ring.MonoidRing
+\import Algebra.Ring.Integral
+\import Algebra.Field.SeparableCharP
+\import Algebra.Field.SeparableClosure
+\import Algebra.Field.SubField
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.LinearDivisor
+\import Algebra.Ring.Poly.LinearFactors
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Combinatorics.Factorial
+\import Data.Array
+\import Data.Or
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+
+-- | Polynomials with the same coefficients are equal.
+\lemma poly-coef-ext {R : Ring} {p q : Poly R} (e : \Pi (n : Nat) -> polyCoef p n = polyCoef q n) : p = q
+  => AddGroup.fromZero $ degree<0 \lam {k} _ => polyCoef_+ *> pmap (_ +) polyCoef_negative *> AddGroup.toZero (e k)
+
+{- | The coefficients of $\prod_{\pi \in S_n} (X - P(X_{\pi(1)}, \ldots, X_{\pi(n)}))$ are symmetric polynomials. -}
+\lemma orbit-product-symmetric {R : CRing} {n : Nat} (P : MPoly (Fin n) R) (j : Nat)
+  : IsSymmetric (polyCoef (prodLin (\new Array (MPoly (Fin n) R) (fac n) (\lam i => mPoly-rename (SymFin.fin_equiv i) P))) j)
+  => \lam e =>
+    \let | perm (i : Fin (fac n)) : Sym n => SymFin.fin_equiv i
+         | roots : Array (MPoly (Fin n) R) (fac n) => \lam i => mPoly-rename (perm i) P
+         | sig (i : Fin (fac n)) : Fin (fac n) => SymFin.fin_equiv.ret (transQEquiv (perm i) e)
+    \in \have | sig-inj : IsInj sig => \lam {i} {i'} q => SymFin.fin_equiv.isInj $ Sym.equals \lam x =>
+                  QEquiv.isInj {e} $ pmap (\lam (t : Sym n) => t x) (inv (SymFin.fin_equiv.f_ret _) *> pmap SymFin.fin_equiv q *> SymFin.fin_equiv.f_ret _)
+              | roots-sig (i : Fin (fac n)) : mPoly-rename e (roots i) = roots (sig i)
+                  => mPoly-rename.comp {Fin n} {Fin n} {Fin n} {R} {perm i} {e} {transQEquiv (perm i) e} (\lam x => idp) P *> pmap (\lam (t : Sym n) => mPoly-rename t P) (inv (SymFin.fin_equiv.f_ret (transQEquiv (perm i) e)))
+    \in inv polyCoef_polyMap *> pmap (polyCoef __ j) (prodLin-map (mPoly-rename e) roots *> pmap prodLin (exts roots-sig) *> prodLin-perm roots sig sig-inj)
+
+{- | **Theorem VI.8.3 (⇐), monic form.** If `polyMap f p = ∏ (X - a_i)` and `K` is generated over `k` by the `a_i`, then `K` is
+     normal over `k`. -}
+\lemma splitting-normal {k K : DiscreteField} {f : RingHom k K} {n : Nat} {p : Poly k} {a : Array K n}
+  (e : polyMap f p = prodLin a) (gen : RingHom.isAlgebraGenerated f a) : IsNormalExt f
+  => \lam x => \case gen x \with {
+    | inP (P, xP) =>
+      \let | roots : Array (MPoly (Fin n) k) (fac n) => \lam i => mPoly-rename (SymFin.fin_equiv i) P
+           | q => prodLin roots
+           | EV => mPolyMapEvalRingHom f a
+      \in \case FinSet.finiteAC {suc (fac n)} {\lam j => \Sigma (c : k) (f c = mPolyMapEval f (polyCoef q j) a)}
+                  (\lam j => symmetric-roots f a e (orbit-product-symmetric P j)) \with {
+        | inP c =>
+          \let | g => Poly.fromArray (\new Array k (suc (fac n)) (\lam j => (c j).1))
+               | i0 => SymFin.fin_equiv.ret idEquiv
+          \in \have | gq : polyMap f g = polyMap EV q => poly-coef-ext \lam j => polyCoef_polyMap *> \case LinearOrder.dec<_<= j (suc (fac n)) \with {
+                      | inl j<N => pmap (\lam (i : Nat) => f (polyCoef g i)) (inv (toFin=id {j} {suc (fac n)} {j<N})) *> pmap f (polyCoef_fromArray {k} {\new Array k (suc (fac n)) (\lam j => (c j).1)} {toFin j j<N}) *> (c (toFin j j<N)).2 *>
+                          pmap (\lam i => EV (polyCoef q i)) toFin=id *> inv polyCoef_polyMap
+                      | inr N<=j => pmap f (fromArray_degree< {k} {\new Array k (suc (fac n)) (\lam j => (c j).1)} N<=j) *> f.func-zro *> inv (pmap EV (prodLin-degree roots N<=j) *> EV.func-zro) *> inv polyCoef_polyMap
+                    }
+                    | x-root : EV (roots i0) = x => pmap (\lam (t : Sym n) => EV (mPoly-rename t P)) (SymFin.fin_equiv.f_ret idEquiv) *> pmap EV (mPoly-rename-id P) *> inv xP
+          \in inP (g, fac n, map EV roots, gq *> prodLin-map EV roots,
+                   pmap (polyEval __ x) (gq *> prodLin-map EV roots) *> transport (\lam z => polyEval (prodLin (map EV roots)) z = 0) x-root (prodLin-root (map EV roots) i0))
+      }
+  }
+
+-- | **Theorem VI.8.3 (⇐).** A splitting field of a nonzero polynomial over `k` is normal over `k`.
+\lemma splitting-normal' {k K : DiscreteField} {f : RingHom k K} {p : Poly k} (p/=0 : p /= 0) (s : IsSplittingField p f) : IsNormalExt f
+  => \let | c0 => k.finv (leadCoef p)
+          | p1 => c0 PolyRing.*c p
+     \in \have s1 : IsSplittingField p1 f => \case s \with {
+                    | inP t => inP (t.1, f c0 * t.2, t.3, polyMapRingHom.polyMap_*c {f} {c0} {p} *> pmap (f c0 PolyRing.*c) t.4 *> inv PolyRing.*c-assoc)
+                  }
+     \in \case splitting-monic (field-toMonic p/=0) s1 \with {
+       | inP (l, lg, e) => splitting-normal {k} {K} {f} {l.len} {p1} {\new Array K l.len (\lam j => l j)} (e *> prodLin_BigProd (\new Array K l.len (\lam j => l j))) lg
+     }
+
+{- | **Theorem VI.8.3.** If `K` is finitely generated as a vector space over `k`, then `K` is normal over `k` if and only if it is
+     a splitting field of a nonzero polynomial over `k`. -}
+\lemma normal<->splitting {k K : DiscreteField} {f : RingHom k K} (fg : LModule.IsFinitelyGenerated {homLModule f})
+  : IsNormalExt f <-> ∃ (p : Poly k) (p /= 0) (IsSplittingField p f)
+  => (normal-splitting fg, \lam (inP (p, p/=0, s)) => splitting-normal' p/=0 s)
+
+-- # Exercise 2
+
+{- | `K` is a *splitting field* over `k` of a set {P} of nonzero polynomials: every `p ∈ P` is a product of linear polynomials over
+     `K` (up to a constant of `k`), and `K` is generated over `k` by roots of polynomials in {P}. -}
+\type IsSplittingFieldSet {k K : DiscreteField} (P : Poly k -> \Prop) (f : RingHom k K) : \Prop
+  => \Sigma (\Pi (p : Poly k) -> P p -> \Sigma (p /= 0) (∃ (c : k) (n : Nat) (r : Array K n) (polyMap f p = f c PolyRing.*c prodLin r)))
+            (\Pi (x : K) -> ∃ (l : Array K) (\Pi (j : Fin l.len) -> ∃ (p : Poly k) (P p) (polyMapEval f p (l j) = 0)) (mPolyImage f l x))
+
+-- | **Exercise VI.8.2.** An extension `K` of `k` is normal if and only if it is a splitting field of a set of polynomials over `k`.
+\lemma normal<->splittingSet {k K : DiscreteField} {f : RingHom k K}
+  : IsNormalExt f <-> ∃ (P : Poly k -> \Prop) (IsSplittingFieldSet P f)
+  => (\lam Kn => inP (\lam p => ∃ (n : Nat) (r : Array K n) (polyMap f p = prodLin r),
+        (\lam p pp => \case pp \with {
+          | inP (n, r, e) => (\lam p=0 => K.zro/=ide $ inv (pmap (polyCoef __ n) (inv e *> pmap (polyMap f) p=0)) *> prodLin-monic r,
+                              inP (1, n, r, e *> inv PolyRing.ide_*c *> pmap (\lam z => z PolyRing.*c prodLin r) (inv f.func-ide)))
+        },
+         \lam x => \case Kn x \with {
+           | inP (p, n, r, e, px) => inP (x :: nil, \lam (0) => inP (p, inP (n, r, e), px), mPolyImage-element f (x :: nil) 0)
+         })),
+      \lam (inP (P, (Ps, Pg))) x => \case Pg x \with {
+        | inP (l, lr, xl) => \case split-roots (\new Array K l.len (\lam j => l j)) (\lam j => \case lr j \with {
+            | inP (p, Pp, pl) => \let p/=0 => (Ps p Pp).1 \in \case (Ps p Pp).2 \with {
+              | inP (c, n, r, e) => \have c/=0 : c /= 0 => \lam c=0 => p/=0 $ polyMap-inj (RingHom.field-isInj {k} {K} {f}) $
+                                                 e *> pmap (\lam z => z PolyRing.*c prodLin r) (pmap f c=0 *> f.func-zro) *> PolyRing.zro_*c
+                                          \in inP (finv c PolyRing.*c p, n, r,
+                                                   polyMapRingHom.polyMap_*c *> pmap (_ PolyRing.*c) e *> inv PolyRing.*c-assoc *>
+                                                     pmap (\lam z => z PolyRing.*c prodLin r) (inv f.func-* *> pmap f (k.finv-left c/=0) *> f.func-ide) *> PolyRing.ide_*c,
+                                                   polyMapEvalRingHom.polyMapEval_*c *> pmap (_ *) pl *> zro_*-right)
+            }
+          }) \with {
+          | inP (q, N, R, e, sub) => subsplit-normal e (mPolyImage-sub f l (mPolyImage f R) (mPolyImage-ext f R)
+              (\lam j => \case sub j \with { | inP (i, li) => transportInv (mPolyImage f R) li (mPolyImage-element f R i) }) xl)
+        }
+      })
+  \where {
+    -- | If `x` lies in the subfield generated by the roots of a polynomial over `k` that splits over `K`, then `x` is a root of such a polynomial.
+    \lemma subsplit-normal {k K : DiscreteField} {f : RingHom k K} {q : Poly k} {N : Nat} {R : Array K N} (e : polyMap f q = prodLin R)
+      {x : K} (xR : mPolyImage f R x) : ∃ (p : Poly k) (n : Nat) (r : Array K n) (polyMap f p = prodLin r) (polyMapEval f p x = 0)
+      => \have | finj => RingHom.field-isInj {k} {K} {f}
+               | qm : isMonic q => inP (N, degree<=.fromCoefs q N \lam {j} N<j => finj $ inv polyCoef_polyMap *> pmap (polyCoef __ j) e *> prodLin-degree R (suc_<_<= N<j) *> inv f.func-zro,
+                                      finj $ inv polyCoef_polyMap *> pmap (polyCoef __ N) e *> prodLin-monic R *> inv f.func-ide)
+         \in \let | li (j : Fin N) : isIntegral f (R j) => inP (q, qm, pmap (polyEval __ (R j)) e *> prodLin-root R j)
+                 | S => algebraicSubField f R li
+                 | f' => SubField.corestrict S f (mPolyImage-ext f R)
+                 | em => SubField.embed S
+                 | R' : Array (IDiscreteField S) N => \lam i => (R i, mPolyImage-element f R i)
+         \in \have | eminj => RingHom.field-isInj {IDiscreteField S} {K} {em}
+                   | emk : IsKHom f' f em => \lam c => idp
+                   | e' : polyMap f' q = prodLin R' => polyMap-inj eminj $ polyMap-comp f' em *> polyMap-ext (\lam c => idp) *> e *> inv (prodLin-map em R')
+                   | gen' : RingHom.isAlgebraGenerated f' R' => \lam y => TruncP.map y.2 \lam t => (t.1, eminj $ inv t.2 *> inv (mPolyMapEval-hom em f' R' f R emk (\lam j => idp) t.1))
+         \in \case splitting-normal e' gen' (x, xR) \with {
+           | inP (p, n, r, e2, px) => inP (p, n, map em r, inv (polyMap-comp f' em *> polyMap-ext (\lam c => idp)) *> pmap (polyMap em) e2 *> prodLin-map em r,
+                                           inv (kHom-polyMapEval {k} {IDiscreteField S} {K} {f'} {f} {em} emk p (x, xR)) *> pmap em px *> em.func-zro)
+         }
+  }

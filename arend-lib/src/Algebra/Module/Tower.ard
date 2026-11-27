@@ -1,0 +1,125 @@
+{- | **Towers of modules** (Mines–Richman–Ruitenburg, Theorem II.6.6).
+
+     Let `f : R -> S` be a ring homomorphism, so that `S` is an `R`-module `homLModule f`, and let `M` be an `S`-module,
+     regarded as an `R`-module `pullback f M` by restriction of scalars.
+
+     * `tower-basis`: if `a` is a basis of `S` over `R` and `b` is a basis of `M` over `S`, then the products
+       `a i *c b j` form a basis of `M` over `R`; `tower-basis-array` gives it as an array of length `b.len * a.len`.
+     * `tower-dim`: the dimension formula $\dim_R M = \dim_R S \cdot \dim_S M$.
+     * `basis-comp`: bases compose along `g ∘ f`.
+     * `tower-down`: for discrete fields `k ⊆ K`, if `K` and `M` are finite-dimensional over `k`, then `M` is
+       finite-dimensional over `K`. Linear dependence over `K` is decidable, since an array is `K`-dependent if and only if
+       the products with a `k`-basis of `K` are `k`-dependent; a `K`-basis is then extracted from a generating array
+       (`generating-basis`).
+-}
+
+\import Algebra.Field
+\import Algebra.Linear.Matrix.Diagonalizable (InSpan)
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Linear.VectorSpace
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\import Set.Fin.Instances
+\open LModule \hiding (count)
+\open AbMonoid
+
+-- | **Theorem II.6.6 (bases).** If `a` is a basis of `S` over `R` and `b` is a basis of `M` over `S`, then the products `a i *c b j` form a basis of `M` over `R`.
+\lemma tower-basis {R S : Ring} (f : RingHom R S) {M : LModule S} {a : Array S} (ab : IsBasis {homLModule f} a) {b : Array M} (bb : M.IsBasis b)
+  : IsBasisSet {pullback f M} (\lam (s : \Sigma (Fin b.len) (Fin a.len)) => a s.2 *c b s.1)
+  => ((IsIndependentSet-fin {pullback f M}).2 \lam (c : \Sigma (Fin b.len) (Fin a.len) -> R) p s => ab.1 (\lam i => c (s.1, i)) (bb.1 (\lam j => S.BigSum (\lam i => f (c (j,i)) * a i)) (inv (tower-sum f a b c) *> p) s.1) s.2,
+      (IsGeneratingSet-fin {pullback f M}).2 \lam x => TruncP.map (generated-fin-comp f (generated-array-fin ab.2) (M.generated-array-fin bb.2) x) \lam t => (_, \lam s => (t.1 s, s), t.2))
+  \where {
+    -- | $\sum_{j,i} c_{j i} (a_i x_j) = \sum_j (\sum_i c_{j i} a_i) x_j$.
+    \lemma tower-sum {R S : Ring} (f : RingHom R S) {M : LModule S} (a : Array S) (x : Array M) (c : \Sigma (Fin x.len) (Fin a.len) -> R)
+      : FinSum {pullback f M} (\lam s => c s *c {pullback f M} (a s.2 *c x s.1)) = M.BigSum (\lam j => S.BigSum (\lam i => f (c (j,i)) * a i) *c x j)
+      => inv (FinSum-double {pullback f M} {FinFin x.len} {FinFin a.len} {\lam j i => c (j,i) *c {pullback f M} (a i *c x j)}) *> FinSum=BigSum *> pmap M.BigSum (exts \lam j => FinSum=BigSum *> pmap M.BigSum (exts \lam i => inv *c-assoc) *> inv *c_BigSum-rdistr)
+  }
+
+-- | The basis of `tower-basis` as an array.
+\lemma tower-basis-array {R S : Ring} (f : RingHom R S) {M : LModule S} {a : Array S} (ab : IsBasis {homLModule f} a) {b : Array M} (bb : M.IsBasis b)
+  : ∃ (l : Array (pullback f M) (b.len * a.len)) (IsBasis {pullback f M} l)
+  => basisSet_basis (ProdFin (FinFin b.len) (FinFin a.len)) (tower-basis f ab bb)
+
+-- | Two bases of a module over a nonzero commutative ring have the same length.
+\lemma basis-len-unique {R : NonZeroCRing} {U : LModule R} {l l' : Array U} (lb : U.IsBasis l) (l'b : U.IsBasis l') : l.len = l'.len
+  => <=-antisymmetric (FinModule.basis<=generating l l' lb l'b.2) (FinModule.basis<=generating l' l l'b lb.2)
+
+-- | **Theorem II.6.6 (dimension formula).** $\dim_R M = \dim_R S \cdot \dim_S M$.
+\lemma tower-dim {R : NonZeroCRing} {S : Ring} (f : RingHom R S) {M : LModule S} {a : Array S} (ab : IsBasis {homLModule f} a) {b : Array M} (bb : M.IsBasis b)
+  {l : Array (pullback f M)} (lb : IsBasis {pullback f M} l) : l.len = a.len * b.len
+  => \case tower-basis-array f ab bb \with {
+    | inP (l',l'b) => basis-len-unique lb l'b *> NatSemiring.*-comm
+  }
+
+-- | Finite-dimensional extensions compose.
+\lemma basis-comp {R S T : Ring} (f : RingHom R S) (g : RingHom S T) (fb : ∃ (a : Array S) (IsBasis {homLModule f} a)) (gb : ∃ (b : Array T) (IsBasis {homLModule g} b))
+  : ∃ (l : Array T) (IsBasis {homLModule (g RingHom.∘ f)} l) \elim fb, gb
+  | inP (a,ab), inP (b,bb) => TruncP.map (tower-basis-array f ab bb) \lam s => (s.1, s.2)
+
+-- | Over a discrete field, if linear dependence of arrays is decidable, then every module with a finite generating array has a basis.
+\lemma generating-basis {K : DiscreteField} {U : LModule K} (dec : \Pi (x : Array U) -> TruncP (Or (U.IsDependent x) (U.IsIndependent x)))
+  {w : Array U} (wg : U.IsGenerated w) : ∃ (l : Array U) (U.IsBasis l)
+  => \case extend dec nil (\lam _ _ => \case __) w \with {
+    | inP (S, Si, _, wS) => inP (S, (Si, \lam x => InSpan.trans wS (wg x)))
+  }
+  \where
+    -- | Extend an independent array `S` to an independent array whose span contains `S` and `w`.
+    \lemma extend {K : DiscreteField} {U : LModule K} (dec : \Pi (x : Array U) -> TruncP (Or (U.IsDependent x) (U.IsIndependent x)))
+                  (S : Array U) (Si : U.IsIndependent S) (w : Array U)
+      : ∃ (S' : Array U) (U.IsIndependent S') (\Pi (k : Fin S.len) -> InSpan S' (S k)) (\Pi (k : Fin w.len) -> InSpan S' (w k)) \elim w
+      | nil => inP (S, Si, InSpan.self S, \case __)
+      | a :: w => \case dec (a :: S) \with {
+        | inP (inl dep) => \case extend dec S Si w \with {
+          | inP (S', S'i, SS', wS') => inP (S', S'i, SS', \case \elim __ \with {
+            | 0 => InSpan.trans SS' (InSpan.dependent dep Si)
+            | suc k => wS' k
+          })
+        }
+        | inP (inr ind) => \case extend dec (a :: S) ind w \with {
+          | inP (S', S'i, SS', wS') => inP (S', S'i, \lam k => SS' (suc k), \case \elim __ \with {
+            | 0 => SS' 0
+            | suc k => wS' k
+          })
+        }
+      }
+
+{- | **Theorem II.6.6 (descent).** Let `k ⊆ K` be discrete fields with `K` finite-dimensional over `k`, and let `M` be a
+     `K`-vector space that is finite-dimensional over `k`. Then `M` is finite-dimensional over `K`. -}
+\lemma tower-down {k K : DiscreteField} (f : RingHom k K) {M : LModule K} (Kb : ∃ (a : Array K) (IsBasis {homLModule f} a))
+  (Mb : ∃ (l : Array M) (IsBasis {pullback f M} l)) : ∃ (l : Array M) (M.IsBasis l) \elim Kb, Mb
+  | inP (a,ab), inP (l,lb) =>
+    \let P => \new FinModule { | LModule => pullback f M | isFinModule => inP (l,lb) }
+    \in generating-basis {K} {M} (\lam x => TruncP.map (dec-fin {k} {P} (\lam (s : \Sigma (Fin x.len) (Fin a.len)) => a s.2 *c {M} x s.1)) \case \elim __ \with {
+      | inl dep => inl $ TruncP.map dep \lam t => (\lam j => K.BigSum (\lam i => f (t.1 (j,i)) * a i), inv (tower-basis.tower-sum f {M} a x t.1) *> t.2, t.3.1,
+                                                   \lam d=0 => t.4 $ ab.1 (\lam i => t.1 (t.3.1, i)) d=0 t.3.2)
+      | inr ind => inr \lam d p j => \case FinSet.finiteAC (\lam j => ab.2 (d j)) \with {
+        | inP h => (h j).2 *> K.BigSum_zro {\lam i => f ((h j).1 i) * a i} \lam i => pmap (\lam r => f r * a i) (ind (\lam s => (h s.1).1 s.2) (tower-basis.tower-sum f {M} a x _ *> pmap M.BigSum (exts \lam j' => pmap (\lam r => r *c x j') (inv (h j').2)) *> p) (j,i)) *> pmap (\lam r => r * a i) f.func-zro *> zro_*-left
+      }
+    }) {l} \lam x => TruncP.map (lb.2 x) \lam s => (\lam j => f (s.1 j), s.2)
+  \where
+    -- | Decidability of linear dependence of a finite family in a finite-dimensional module over a Smith domain.
+    \lemma dec-fin {R : SmithDomain} {U : FinModule R} {J : FinSet} (g : J -> U)
+      : TruncP (Or (∃ (c : J -> R) (FinSum (\lam j => c j *c g j) = 0) (j : J) (c j /= 0))
+                   (\Pi (c : J -> R) -> FinSum (\lam j => c j *c g j) = 0 -> \Pi (j : J) -> c j = 0))
+      => \case J.finEq \with {
+        | inP e => inP \case dependency-dec {R} {U} (\lam i => g (e i)) \with {
+          | inl dep => inl $ TruncP.map dep \lam t => (\lam s => t.1 (e.ret s), FinSum_Equiv e *> FinSum=BigSum *> pmap U.BigSum (exts \lam i => pmap (\lam z => t.1 z *c g (e i)) (e.ret_f i)) *> t.2,
+                                                       e t.3, rewrite e.ret_f t.4)
+          | inr ind => inr \lam c p s => pmap c (inv (e.f_ret s)) *> ind (\lam i => c (e i)) (inv FinSum=BigSum *> inv (FinSum_Equiv e) *> p) (e.ret s)
+        }
+      }

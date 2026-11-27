@@ -1,0 +1,110 @@
+{- | **Monic polynomials over discrete rings and fields.**
+
+     Leading coefficients of monic polynomials (`monic-leadCoef`, `leadCoef-monic`), cofactors, powers and products
+     of monic polynomials (`monic-cofactor`, `monic-pow`, `monic-BigProd`, `degree_pow-monic`), monic units
+     (`monic-unit`), and the normalized gcd of two polynomials over a discrete field (`gcd-split`).
+-}
+
+\import Algebra.Domain
+\import Algebra.Domain.Euclidean
+\import Algebra.Field
+\import Algebra.Meta
+\import Algebra.Module.Primary
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Euclidean()
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid
+\open PolyRing
+\open EuclideanSemiringData
+\open EuclideanRingData
+
+-- | The leading coefficient of a monic polynomial is `1`.
+\lemma monic-leadCoef {R : Ring.Dec} {p : Poly R} (pm : isMonic p) : leadCoef p = 1
+  => leadCoef_polyCoef *> monic-coef pm
+
+-- | A polynomial with leading coefficient `1` is monic.
+\lemma leadCoef-monic {R : Ring.Dec} {p : Poly R} (l : leadCoef p = 1) : isMonic p
+  => inP (degree p, degree_degree<= <=-refl, inv leadCoef_polyCoef *> l)
+
+-- | If `h` and `h * a` are monic, then so is `a`.
+\lemma monic-cofactor {R : Domain.Dec} {h a : Poly R} (hm : isMonic h) (m : isMonic (h * a)) : isMonic a
+  => leadCoef-monic $ inv ide-left *> pmap (__ * leadCoef a) (inv (monic-leadCoef hm)) *> inv leadCoef_* *> monic-leadCoef m
+
+{- | **Normalized gcd.** Over a discrete field, `s` and a non-zero `t` are either strongly coprime, or have a common monic
+     divisor of positive degree, namely their normalized gcd. -}
+\lemma gcd-split {k : DiscreteField} (s t : Poly k) (t/=0 : t /= 0)
+  : IsStronglyCoprime s t || ∃ (h : Poly k) (isMonic h) (0 < degree h) (LDiv h s) (LDiv h t)
+  => \have | g|s : LDiv (gcd s t) s => (gcd-isGCD s t).res|val1
+           | g|t : LDiv (gcd s t) t => (gcd-isGCD s t).res|val2
+           | g/=0 => (LDiv/=0 g|t t/=0).1
+           | c/=0 : leadCoef (gcd s t) /= 0 => \lam c=0 => g/=0 (leadCoef=0-lem c=0)
+     \in \case decideEq (degree (gcd s t)) 0 \with {
+       | yes dg => byLeft $ \let | i => degree0-Inv dg g/=0
+                                 | (b1, b2) => bezout s t
+                            \in inP (i.inv * b1, i.inv * b2, equation.cRing *> pmap (i.inv *) (bezoutIdentity s t) *> i.inv-left)
+       | no dg =>
+         \have h|g : LDiv (finv (leadCoef (gcd s t)) *c gcd s t) (gcd s t) => \new LDiv {
+           | inv => padd pzero (leadCoef (gcd s t))
+           | inv-right => pmap (__ * _) *c_* *> lem {k} {padd pzero (finv (leadCoef (gcd s t)))} {padd pzero (leadCoef (gcd s t))} {gcd s t} *> pmap (__ * _) (inv polyHom.func-* *> pmap polyHom (k.finv-right c/=0) *> polyHom.func-ide) *> ide-left
+         }
+         \in byRight $ inP (_, field-toMonic g/=0, rewrite (degree_*c (k.finv/=0 c/=0)) (nonZero>0 dg),
+                            LDiv.trans h|g g|s, LDiv.trans h|g g|t)
+     }
+  \where {
+    \open Algebra.Ring.Poly.Euclidean
+
+    -- | The identity used to cancel the normalization of the gcd.
+    \lemma lem {k : DiscreteField} {a b g : Poly k} : a * g * b = b * a * g
+      => equation.cRing
+  }
+
+-- | Over a discrete field a monic polynomial is non-zero.
+\lemma monic-nonzero {k : DiscreteField} {p : Poly k} (pm : isMonic p) : p /= 0
+  => \lam p=0 => k.zro/=ide (monic/=0 pm p=0)
+
+-- | A monic unit is `1`.
+\lemma monic-unit {k : DiscreteField} {t : Poly k} (m : isMonic t) (i : Monoid.Inv t) : t = 1
+  => \have | inv/=0 : i.inv /= 0 => \lam z => k.zro/=ide $ pmap (polyCoef __ 0) (inv zro_*-right *> pmap (t *) (inv z) *> i.inv-right)
+           | s : degree t Nat.+ degree i.inv = 0 => inv (degree_* (monic-nonzero m) inv/=0) *> pmap degree i.inv-right *> degree_monomial {k} {1} {0} (\lam p => k.zro/=ide (inv p))
+           | d0 : degree t = 0 => linarith
+     \in degree=0-lem d0 *> pmap (padd pzero) (monic-leadCoef m)
+
+-- | If $x^n$ is a unit for some `n /= 0`, then so is `x`.
+\lemma pow-unit {M : CMonoid} {x : M} {n : Nat} (n/=0 : n /= 0) (i : Monoid.Inv (pow x n)) : Monoid.Inv x \elim n
+  | 0 => absurd (n/=0 idp)
+  | suc n => unit-pow i
+
+-- | A divisor of `1` is a unit.
+\lemma div-one {M : CMonoid} {x : M} (d : Monoid.LDiv x 1) : Monoid.Inv x
+  => Monoid.Inv.lmake d.inv (*-comm *> d.inv-right)
+
+-- | If $x^{n+1}$ is a unit, then so is `x`.
+\lemma unit-pow {M : CMonoid} {x : M} {n : Nat} (i : Monoid.Inv (pow x (suc n))) : Monoid.Inv x
+  => Monoid.Inv.lmake (i.inv * pow x n) (*-assoc *> i.inv-left)
+
+-- | Powers of monic polynomials are monic.
+\lemma monic-pow {k : DiscreteField} {t : Poly k} (m : isMonic t) {n : Nat} : isMonic (pow t n) \elim n
+  | 0 => leadCoef-monic (leadCoef_monomial {k} {1} {0})
+  | suc n => leadCoef-monic $ leadCoef_* *> pmap2 (*) (monic-leadCoef (monic-pow m)) (monic-leadCoef m) *> ide-left
+
+-- | Products of monic polynomials are monic.
+\lemma monic-BigProd {k : DiscreteField} {l : Array (Poly k)} (m : \Pi (j : Fin l.len) -> isMonic (l j)) : isMonic (Monoid.BigProd l) \elim l
+  | nil => leadCoef-monic (leadCoef_monomial {k} {1} {0})
+  | t :: l => leadCoef-monic $ leadCoef_* *> pmap2 (*) (monic-leadCoef (m 0)) (monic-leadCoef (monic-BigProd \lam j => m (suc j))) *> ide-left
+
+-- | The degree of a power of a monic polynomial.
+\lemma degree_pow-monic {k : DiscreteField} {t : Poly k} (m : isMonic t) {n : Nat} : degree (pow t n) = degree t Nat.* n \elim n
+  | 0 => degree_monomial {k} {1} {0} (\lam p => k.zro/=ide (inv p))
+  | suc n => degree_* (monic-nonzero (monic-pow m)) (monic-nonzero m) *> pmap (Nat.+ degree t) (degree_pow-monic m)

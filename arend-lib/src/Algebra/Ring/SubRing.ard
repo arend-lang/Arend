@@ -1,9 +1,14 @@
+\import Algebra.Group
 \import Algebra.Group.SubGroup
 \import Algebra.Monoid
 \import Algebra.Monoid.SubMonoid
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring.SubSemiring
+\import Function.Meta
+\import Logic
+\import Algebra.Pointed
+\import Paths
 \import Paths.Meta
 
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
@@ -75,3 +80,36 @@
 \func ImRingLeftHom (f : RingHom) : RingHom f.Dom (ImRing f) \cowith
   | SemiringHom => ImSemiringLeftHom f
   | AddGroupHom => ImAddGroupLeftHom f
+
+-- | A ring homomorphism {phi} vanishing on the kernel of {psi} factors through the image of {psi}.
+\func imageLift {R E : Ring} (psi : RingHom R) (phi : RingHom R E) (ker : \Pi (x : R) -> psi x = zro -> phi x = 0)
+  : RingHom (IRing (ImageRing psi)) E \cowith
+  | func y => (choose psi phi ker y).1
+  | func-+ {y1} {y2} => \case y1.2, y2.2 \with {
+    | inP (x1,p1), inP (x2,p2) => choose-eq psi phi ker {y1 + y2} (psi.func-+ *> pmap2 (+) p1 p2) *> phi.func-+ *> inv (pmap2 (+) (choose-eq psi phi ker p1) (choose-eq psi phi ker p2))
+  }
+  | func-ide => choose-eq psi phi ker {ide} {ide} psi.func-ide *> phi.func-ide
+  | func-* {y1} {y2} => \case y1.2, y2.2 \with {
+    | inP (x1,p1), inP (x2,p2) => choose-eq psi phi ker {y1 * y2} (psi.func-* *> pmap2 (*) p1 p2) *> phi.func-* *> inv (pmap2 (*) (choose-eq psi phi ker p1) (choose-eq psi phi ker p2))
+  }
+  \where {
+    \lemma choose {R E : Ring} (psi : RingHom R) (phi : RingHom R E) (ker : \Pi (x : R) -> psi x = zro -> phi x = 0) (y : IRing (ImageRing psi))
+      : \Sigma (e : E) (\Pi (x : R) -> psi x = y.1 -> phi x = e)
+      \level \lam s t => ext $ \case y.2 \with { | inP (x,p) => inv (s.2 x p) *> t.2 x p }
+      => \case y.2 \with {
+        | inP (x,p) => (phi x, \lam x' p' => AddGroup.fromZero $ inv phi.func-minus *> ker _ (psi.func-minus *> AddGroup.toZero (p' *> inv p)))
+      }
+
+    \lemma choose-eq {R E : Ring} (psi : RingHom R) (phi : RingHom R E) (ker : \Pi (x : R) -> psi x = zro -> phi x = 0) {y : IRing (ImageRing psi)} {x : R} (p : psi x = y.1)
+      : (choose psi phi ker y).1 = phi x
+      => inv ((choose psi phi ker y).2 x p)
+  }
+
+-- | The preimage of a subring under a ring homomorphism.
+\func PreimageRing (f : RingHom) (S : SubRing f.Cod) : SubRing f.Dom \cowith
+  | contains x => S (f x)
+  | contains_zro => transportInv S f.func-zro S.contains_zro
+  | contains_+ a b => transportInv S f.func-+ (S.contains_+ a b)
+  | contains_ide => transportInv S f.func-ide S.contains_ide
+  | contains_* a b => transportInv S f.func-* (S.contains_* a b)
+  | contains_negative a => transportInv S f.func-negative (S.contains_negative a)

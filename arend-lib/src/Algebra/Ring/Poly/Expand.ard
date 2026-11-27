@@ -1,0 +1,257 @@
+{- | **Expansion $f(X) \mapsto f(X^q)$ and Theorem VI.6.1** (Mines–Richman–Ruitenburg, §VI.6).
+
+     `polyExpand q f` is $f(X^q)$; it is a ring endomorphism of `R[X]` (polyExpandHom`) whose coefficients are those
+     of `f` at multiples of `q` (polyCoef_expand`, `polyCoef_expand-ndiv`). Conversely, `polyContract q f` collects
+     the coefficients of `f` at multiples of `q`.
+
+     * `polyDeriv_expand`: if `q` is zero in `R`, then $f(X^q)' = 0$.
+     * **Theorem VI.6.1** (second part, `deriv-zero<->expand`): if a prime `p` is zero in `R`, then $f' = 0$ if and
+       only if $f(X) = f_0(X^p)$ for some `f₀`; namely $f_0$ = `polyContract p f`.
+-}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Characteristic
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Prime
+\import Data.Or
+\import Function.Iterate
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid (pow, LDiv)
+
+-- # Coefficient extensionality
+
+-- | Polynomials with the same coefficients are equal.
+\lemma poly-ext {R : Ring} {p q : Poly R} (e : \Pi (k : Nat) -> polyCoef p k = polyCoef q k) : p = q
+  => AddGroup.fromZero $ degree<=.trivialPoly \lam k _ => polyCoef_- *> AddGroup.toZero (e k)
+
+-- | Coefficients of $X^n p$ at indices `>= n`.
+\lemma polyCoef_iterr {R : AddPointed} {p : Poly R} {n k : Nat} : polyCoef (iterr (padd __ 0) n p) (k Nat.+ n) = polyCoef p k \elim n
+  | 0 => idp
+  | suc n => polyCoef_iterr
+
+-- | Coefficients of $X^n p$ at indices `< n` vanish.
+\lemma polyCoef_iterr-< {R : AddPointed} {p : Poly R} {n k : Nat} (k<n : k < n) : polyCoef (iterr (padd __ 0) n p) k = 0 \elim n, k, k<n
+  | suc n, 0, _ => idp
+  | suc n, suc k, NatOrder.suc<suc k<n => polyCoef_iterr-< k<n
+
+-- # Expansion
+
+-- | $f(X^q)$.
+\func polyExpand {R : CRing} (q : Nat) (f : Poly R) : Poly R
+  => polyMapEval polyHom f (monomial 1 q)
+
+-- | $f \mapsto f(X^q)$ is a ring homomorphism.
+\func polyExpandHom {R : CRing} (q : Nat) : RingHom (PolyRing R) (PolyRing R)
+  => polyMapEvalRingHom {R} {PolyAlgebra R} polyHom (monomial 1 q)
+
+-- | $(fX + e)(X^q) = X^q f(X^q) + e$.
+\lemma polyExpand_padd {R : CRing} {q : Nat} {f : Poly R} {e : R}
+  : polyExpand q (padd f e) = iterr (padd __ 0) q (polyExpand q f) + padd pzero e
+  => pmap (+ padd pzero e) (CMonoid.*-comm {PolyAlgebra R} *> poly-monomial-char)
+
+-- | The coefficient of $f(X^q)$ at `q k` is the coefficient of `f` at `k`.
+\lemma polyCoef_expand {R : CRing} {q : Nat} (q>0 : 0 < q) {f : Poly R} {k : Nat} : polyCoef (polyExpand q f) (q Nat.* k) = polyCoef f k
+  \elim q, q>0
+  | suc n, _ => aux
+  \where
+    \lemma aux {R : CRing} {n : Nat} {f : Poly R} {k : Nat} : polyCoef (polyExpand (suc n) f) (suc n Nat.* k) = polyCoef f k \elim f, k
+      | pzero, k => idp
+      | padd f e, 0 => pmap (polyCoef __ 0) (polyExpand_padd {R} {suc n} {f} {e}) *> polyCoef_+ {R} {iterr (padd __ 0) (suc n) (polyExpand (suc n) f)} {padd pzero e} {0} *> pmap (+ e) (polyCoef_iterr-< {R} {polyExpand (suc n) f} {suc n} NatOrder.zero<suc) *> zro-left
+      | padd f e, suc k => pmap (polyCoef __ _) (polyExpand_padd {R} {suc n} {f} {e}) *> polyCoef_+ *> zro-right *> polyCoef_iterr *> aux
+
+-- | The coefficients of $f(X^q)$ at indices not divisible by `q` vanish.
+\lemma polyCoef_expand-ndiv {R : CRing} {q : Nat} {f : Poly R} {k : Nat} (nd : Not (LDiv q k)) : polyCoef (polyExpand q f) k = 0
+  \elim f
+  | pzero => idp
+  | padd f e => pmap (polyCoef __ k) polyExpand_padd *> polyCoef_+ *> pmap2 (+) (iter-part nd) (const-part nd) *> zro-left
+  \where {
+    \lemma const-part {R : AddPointed} {q k : Nat} {e : R} (nd : Not (LDiv q k)) : polyCoef (padd pzero e) k = 0 \elim k
+      | 0 => absurd $ nd \new LDiv { | inv => 0 | inv-right => idp }
+      | suc k => idp
+
+    \lemma iter-part {R : CRing} {q k : Nat} {f : Poly R} (nd : Not (LDiv q k)) : polyCoef (iterr (padd __ 0) q (polyExpand q f)) k = 0
+      => \case LinearOrder.dec<_<= k q \with {
+        | inl k<q => polyCoef_iterr-< k<q
+        | inr q<=k => transport (\lam m => polyCoef (iterr (padd __ 0) q (polyExpand q f)) m = 0) (NatSemiring.+-comm *> <=_exists q<=k)
+            (polyCoef_iterr *> polyCoef_expand-ndiv \lam (d : LDiv q (k -' q)) => nd \new LDiv {
+              | inv => suc d.inv
+              | inv-right => pmap (Nat.+ q) d.inv-right *> NatSemiring.+-comm *> <=_exists q<=k
+            })
+      }
+  }
+
+-- | $f \mapsto f(X^q)$ is injective for `q > 0`.
+\lemma polyExpand-inj {R : CRing} {q : Nat} (q>0 : 0 < q) {f g : Poly R} (e : polyExpand q f = polyExpand q g) : f = g
+  => poly-ext \lam k => inv (polyCoef_expand q>0) *> pmap (polyCoef __ (q Nat.* k)) e *> polyCoef_expand q>0
+
+-- | Evaluating $f(X^q)$ at `a` is evaluating `f` at $a^q$.
+\lemma polyMapEval_expand {R S : CRing} (h : RingHom R S) {q : Nat} {f : Poly R} {a : S}
+  : polyMapEval h (polyExpand q f) a = polyMapEval h f (pow a q)
+  \elim f
+  | pzero => idp
+  | padd f e => (polyMapEvalRingHom h a).func-+ {polyExpand q f * monomial 1 q} {padd pzero e}
+      *> pmap2 (+) ((polyMapEvalRingHom h a).func-* *> pmap2 (*) (polyMapEval_expand h) polyMapEval_monomial) (pmap (+ h e) zro_*-left *> zro-left)
+
+-- | $f(X^r)(X^q) = f(X^{rq})$.
+\lemma polyExpand-expand {R : CRing} {q r : Nat} {f : Poly R} : polyExpand q (polyExpand r f) = polyExpand (r Nat.* q) f
+  => polyMapEval_expand {R} {PolyAlgebra R} polyHom *> pmap (polyMapEval polyHom f) (pmap (pow __ r) mono-pow *> inv Monoid.pow_* *> pmap (pow (padd 1 0)) NatSemiring.*-comm *> inv mono-pow)
+  \where
+    \lemma mono-pow {R : CRing} {n : Nat} : monomial 1 n = pow (padd 1 0) n
+      => inv polyHom_polyMapEval *> polyMapEval_monomial {polyHom {R}}
+
+-- | A degree bound for $f(X^q)$.
+\lemma degree<=_expand {R : CRing} {q : Nat} {f : Poly R} {n : Nat} (d : degree<= f n) : degree<= (polyExpand q f) (q Nat.* n)
+  \elim f, n
+  | pzero, _ => ()
+  | padd f e, 0 => transportInv (degree<= __ _) (polyExpand_padd {R} {q} {f} {e}) $ rewrite (d : f = pzero, iter-pzero) (degree-const {R} {e} 0)
+  | padd f e, suc n => transportInv (degree<= __ _) (polyExpand_padd {R} {q} {f} {e}) $ degree<=_+ (iter q (degree<=_expand d)) (degree-const {R} {e} _)
+  \where {
+    \lemma iter {R : AddPointed} (q : Nat) {p : Poly R} {m : Nat} (d : degree<= p m) : degree<= (iterr (padd __ 0) q p) (m Nat.+ q) \elim q
+      | 0 => d
+      | suc q => iter q d
+
+    \lemma iter-pzero {R : AddPointed} {q : Nat} : iterr (padd __ 0) q (pzero {R}) = pzero \elim q
+      | 0 => idp
+      | suc q => pmap (padd __ 0) iter-pzero *> peq
+
+    \lemma degree-const {R : AddPointed} {e : R} (k : Nat) : degree<= (padd pzero e) k \elim k
+      | 0 => idp
+      | suc k => ()
+  }
+
+-- | $f(X^q)$ is monic if `f` is.
+\lemma isMonic_expand {R : CRing} {q : Nat} (q>0 : 0 < q) {f : Poly R} (m : isMonic f) : isMonic (polyExpand q f)
+  \elim m
+  | inP (n, d, c) => inP (q Nat.* n, degree<=_expand d, polyCoef_expand q>0 *> c)
+
+-- # Contraction
+
+-- | The polynomial whose `k`-th coefficient is the `q k`-th coefficient of `f`, for `q > 0`.
+\func polyContract {R : AddPointed} (q : Nat) (f : Poly R) : Poly R
+  => aux (pred q) f 0
+  \where
+    -- | `aux n f r` has `k`-th coefficient the `(suc n * k + r)`-th coefficient of `f`.
+    \func aux {R : AddPointed} (n : Nat) (f : Poly R) (r : Nat) : Poly R \elim f, r
+      | pzero, _ => pzero
+      | padd f e, 0 => padd (aux n f n) e
+      | padd f e, suc r => aux n f r
+      | peq, 0 => peq
+      | peq, suc r => idp
+
+-- | The coefficients of `polyContract q f`.
+\lemma polyCoef_contract {R : AddPointed} {q : Nat} (q>0 : 0 < q) {f : Poly R} {k : Nat} : polyCoef (polyContract q f) k = polyCoef f (q Nat.* k)
+  \elim q, q>0
+  | suc n, _ => aux
+  \where
+    \lemma aux {R : AddPointed} {n : Nat} {f : Poly R} {r k : Nat} : polyCoef (polyContract.aux n f r) k = polyCoef f (suc n Nat.* k Nat.+ r) \elim f, r, k
+      | pzero, _, _ => idp
+      | padd f e, 0, 0 => idp
+      | padd f e, 0, suc k => aux
+      | padd f e, suc r, k => aux
+
+-- | If the coefficients of `f` vanish off multiples of `q`, then `f` is the expansion of its contraction.
+\lemma expand-contract {R : CRing} {q : Nat} (q>0 : 0 < q) {f : Poly R} (h : \Pi (k : Nat) -> Not (LDiv q k) -> polyCoef f k = 0)
+  : polyExpand q (polyContract q f) = f
+  => poly-ext \lam k => \case NatSemiring.decideEq (k Nat.mod q) 0 \with {
+    | yes e => \let d => mod_div e \in transport (\lam m => polyCoef (polyExpand q (polyContract q f)) m = polyCoef f m) d.inv-right (polyCoef_expand q>0 *> polyCoef_contract q>0)
+    | no ne => \have nd : Not (LDiv q k) => \lam d => ne (div_mod d) \in polyCoef_expand-ndiv nd *> inv (h k nd)
+  }
+
+-- # Derivatives
+
+-- | If `q` is zero in `R`, then $f(X^q)' = 0$.
+\lemma polyDeriv_expand {R : CRing} {q : Nat} (qz : R.natCoef q = 0) {f : Poly R} : polyDeriv (polyExpand q f) = 0
+  => poly-ext \lam n => polyCoef_polyDeriv *> \case NatSemiring.decideEq (suc n Nat.mod q) 0 \with {
+    | yes e => \let d => mod_div e \in pmap (* _) (pmap natCoef (inv d.inv-right) *> Semiring.natCoef_* *> pmap (* _) qz *> zro_*-left) *> zro_*-left
+    | no ne => pmap (_ *) (polyCoef_expand-ndiv \lam d => ne (div_mod d)) *> zro_*-right
+  }
+
+-- | **Theorem VI.6.1.** If a prime `p` is zero in `R`, then $f' = 0$ if and only if $f(X) = f_0(X^p)$ for some $f_0$.
+\lemma deriv-zero<->expand {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) {f : Poly R}
+  : (polyDeriv f = 0) <-> ∃ (f0 : Poly R) (f = polyExpand p f0)
+  => (\lam d => inP (polyContract p f, inv $ expand-contract (NatOrder.zero<suc <∘ prime>1 pp) \lam k nd => \case \elim k, nd \with {
+        | 0, nd => absurd $ nd \new LDiv { | inv => 0 | inv-right => idp }
+        | suc n, nd => \let i => natCoef-inv pp pz nd
+                       \in inv ide-left *> pmap (* _) (inv i.inv-left) *> *-assoc *> pmap (_ *) (inv polyCoef_polyDeriv *> pmap (polyCoef __ n) d) *> zro_*-right
+      }),
+     \lam (inP (f0, e)) => rewrite e (polyDeriv_expand pz))
+
+-- # Contraction lemmas
+
+-- | Contraction is additive.
+\lemma polyContract_+ {R : Ring} {q : Nat} (q>0 : 0 < q) {u w : Poly R} : polyContract q (u + w) = polyContract q u + polyContract q w
+  => poly-ext \lam k => polyCoef_contract q>0 *> polyCoef_+ *> inv (polyCoef_+ *> pmap2 (+) (polyCoef_contract q>0) (polyCoef_contract q>0))
+
+-- | Contraction commutes with multiplication by a constant.
+\lemma polyContract_*const {R : Ring} {q : Nat} (q>0 : 0 < q) {w : Poly R} {e : R}
+  : polyContract q (w * padd pzero e) = polyContract q w * padd pzero e
+  => poly-ext \lam k => polyCoef_contract q>0 *> polyCoef_*-right *> inv (polyCoef_*-right *> pmap (* e) (polyCoef_contract q>0))
+
+-- | $\mathrm{contract}_q(w X^q) = X \,\mathrm{contract}_q(w)$.
+\lemma polyContract_*monomial {R : CRing} {q : Nat} (q>0 : 0 < q) {w : Poly R}
+  : polyContract q (w * monomial 1 q) = padd (polyContract q w) 0
+  => poly-ext \case \elim __ \with {
+    | 0 => polyCoef_contract q>0 *> pmap (polyCoef __ 0) (CMonoid.*-comm {PolyAlgebra R} *> poly-monomial-char) *> polyCoef_iterr-< q>0
+    | suc k => polyCoef_contract q>0 *> pmap (polyCoef __ (q Nat.* k Nat.+ q)) (CMonoid.*-comm {PolyAlgebra R} *> poly-monomial-char) *> polyCoef_iterr *> inv (polyCoef_contract q>0)
+  }
+
+-- | $\mathrm{contract}_q(w \cdot u(X^q)) = \mathrm{contract}_q(w) \cdot u$.
+\lemma polyContract_*-expand {R : CRing} {q : Nat} (q>0 : 0 < q) {w u : Poly R}
+  : polyContract q (w * polyExpand q u) = polyContract q w * u \elim u
+  | pzero => pmap (polyContract q) zro_*-right *> inv zro_*-right
+  | padd u e =>
+    \have | padd-X {p : Poly R} : padd p 0 = monomial 1 1 * p => inv (poly-monomial-char {R} {1} {p})
+          | padd-split : padd u e = padd u 0 + padd pzero e => pmap2 padd (inv zro-right) (inv zro-left)
+    \in pmap (polyContract q) (ldistr *> pmap (+ w * padd pzero e) (equation.cRing : w * (polyExpand q u * monomial 1 q) = w * monomial 1 q * polyExpand q u))
+      *> polyContract_+ q>0 *> pmap2 (+) (polyContract_*-expand q>0 *> pmap (* u) (polyContract_*monomial q>0)) (polyContract_*const q>0)
+      *> pmap (\lam x => x * u + polyContract q w * padd pzero e) padd-X *> rearr {PolyAlgebra R} {monomial 1 1} {polyContract q w} *> pmap (polyContract q w *) (pmap (+ padd pzero e) (inv padd-X) *> inv padd-split)
+  \where
+    \lemma rearr {A : CRing} {x c u e : A} : x * c * u + c * e = c * (x * u + e) => equation.cRing
+
+-- | Contraction preserves 1.
+\lemma polyContract_ide {R : Ring} {q : Nat} (q>0 : 0 < q) : polyContract q 1 = {Poly R} 1 \elim q, q>0
+  | suc q, _ => idp
+
+-- | Contraction is a left inverse of expansion.
+\lemma polyContract_expand {R : CRing} {q : Nat} (q>0 : 0 < q) {u : Poly R} : polyContract q (polyExpand q u) = u
+  => poly-ext \lam k => polyCoef_contract q>0 *> polyCoef_expand q>0
+
+-- | If $f(X^q)$ is monic, then so is `f`.
+\lemma isMonic_unexpand {R : CRing} {q : Nat} (q>0 : 0 < q) {f : Poly R} (m : isMonic (polyExpand q f)) : isMonic f \elim m
+  | inP (n, d, c) => \case NatSemiring.decideEq (n Nat.mod q) 0 \with {
+    | yes e => \let dv => mod_div e \in inP (dv.inv,
+        degree<=.fromCoefs f dv.inv \lam {k} l => inv (polyCoef_expand q>0) *> degree<=.toCoefs _ n d (transport (__ < _) dv.inv-right (NatSemiring.<_*_positive-right q>0 l)),
+        inv (polyCoef_expand q>0) *> pmap (polyCoef _) dv.inv-right *> c)
+    | no ne =>
+      \have triv {x : R} : x = 0 => inv ide-right *> pmap (x *) (inv c *> polyCoef_expand-ndiv \lam dd => ne (div_mod dd)) *> zro_*-right
+      \in inP (0, degree<=.fromCoefs f 0 \lam _ => triv, triv *> inv triv)
+  }
+
+-- | Expansion $f \mapsto f(X^q)$ multiplies the degree by `q`.
+\lemma degree_expand {R : CRing.Dec} {q : Nat} (q>0 : 0 < q) {f : Poly R} : degree (polyExpand q f) = q Nat.* degree f
+  => \case PolyDecRing.decideEq f 0 \with {
+    | yes f=0 => rewrite f=0 idp
+    | no f/=0 => <=-antisymmetric (degree<=_degree (degree<=_expand (degree_degree<= <=-refl)))
+                   (degree-coef/=0 \lam c => f/=0 $ leadCoef=0-lem $ leadCoef_polyCoef *> inv (polyCoef_expand q>0) *> c)
+  }
+
+-- | Expansion preserves the leading coefficient.
+\lemma leadCoef_expand {R : CRing.Dec} {q : Nat} (q>0 : 0 < q) {f : Poly R} : leadCoef (polyExpand q f) = leadCoef f
+  => leadCoef_polyCoef *> pmap (polyCoef _) (degree_expand q>0) *> polyCoef_expand q>0 *> inv leadCoef_polyCoef

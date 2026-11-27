@@ -1,0 +1,203 @@
+{- | **Characteristic and the Frobenius map** (Mines–Richman–Ruitenburg, §VI.6).
+
+     A prime `p` is *zero in* a ring `R` if `natCoef p = 0`. A natural number `q` is a *characteristic exponent* of `R`
+     (IsCharExponent R q`) if `q = 1` or `q` is a positive power of a prime that is zero in `R`; these are the
+     exponents `q` occurring in Theorems VI.6.2–VI.6.8.
+
+     * `prime-binom-div`: `p` divides `binom p i` for `0 < i < p`, hence (frobenius-+`) $(a + b)^p = a^p + b^p$
+       if `p` is zero in `R`.
+     * **Theorem VI.6.1** (first part, `frobeniusHom`): if `p` is zero in a commutative ring `R` and `q` is a power
+       of `p`, then $x \mapsto x^q$ is a ring homomorphism; its image is a subring (frobeniusImage`).
+     * `natCoef-inv`: if `p` is zero in `R`, then every `n` not divisible by `p` is invertible in `R`.
+     * `charExpHom`: $x \mapsto x^q$ for any characteristic exponent `q`; it is injective on reduced rings
+       (charExp-inj`).
+-}
+
+\import Algebra.Domain.Euclidean
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Reduced
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Prime
+\import Combinatorics.Binom
+\import Combinatorics.Factorial
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid (pow, LDiv, Inv)
+\open AddMonoid (BigSum, BigSum_suc-nat, BigSum_zro)
+\open NatOrder \hiding (<)
+
+-- | `q` is a characteristic exponent of `R`: either `1`, or a positive power of a prime that is zero in `R`.
+\type IsCharExponent (R : Semiring) (q : Nat) : \Prop
+  => (q = 1) || ∃ (p e : Nat) (Prime p) (R.natCoef p = 0) (q = pow p (suc e))
+
+-- | Characteristic exponents transport along ring homomorphisms.
+\lemma IsCharExponent_map {R S : Semiring} (f : SemiringHom R S) {q : Nat} (c : IsCharExponent R q) : IsCharExponent S q \elim c
+  | byLeft q=1 => byLeft q=1
+  | byRight (inP (p, e, pp, pz, qe)) => byRight $ inP (p, e, pp, inv f.func-natCoef *> pmap f pz *> f.func-zro, qe)
+
+-- | Characteristic exponents reflect along injective ring homomorphisms.
+\lemma IsCharExponent_reflect {R S : Semiring} (f : SemiringHom R S) (inj : IsInj f) {q : Nat} (c : IsCharExponent S q) : IsCharExponent R q \elim c
+  | byLeft q=1 => byLeft q=1
+  | byRight (inP (p, e, pp, pz, qe)) => byRight $ inP (p, e, pp, inj $ f.func-natCoef *> pz *> inv f.func-zro, qe)
+
+-- # Binomial coefficients
+
+-- | A prime `p` does not divide `n!` for `n < p`.
+\lemma prime-fac-ndiv {p n : Nat} (pp : Prime p) (n<p : n < p) (d : LDiv p (fac n)) : Empty \elim n
+  | 0 => <-irreflexive $ transport (1 <) (natUnit (NatSemiring.*-comm *> d.inv-right)) (prime>1 pp)
+  | suc n => \case pp.isPrime d \with {
+    | byLeft p|n => <-irreflexive $ n<p <∘l ldiv_<= suc/=0 p|n
+    | byRight p|f => prime-fac-ndiv pp (id<suc <∘ n<p) p|f
+  }
+
+-- | A prime `p` divides `binom p i` for `0 < i < p`.
+\lemma prime-binom-div {p i : Nat} (pp : Prime p) (i>0 : 0 < i) (i<p : i < p) : TruncP (LDiv p (binom p i)) \elim p, i, i>0, i<p
+  | suc m, suc j, _, NatOrder.suc<suc j<m =>
+    \have e : binom (suc m) (suc j) * (fac (suc j) * fac (m -' j)) = fac (suc m)
+            => inv NatSemiring.*-assoc *> binom.fac-id-le (suc<=suc (LinearOrder.<_<= j<m))
+    \in \case pp.isPrime (transportInv (LDiv (suc m)) e (\new LDiv { | inv => fac m | inv-right => idp })) \with {
+      | byLeft r => inP r
+      | byRight r => absurd $ \case pp.isPrime r \with {
+        | byLeft r1 => prime-fac-ndiv pp (suc<suc j<m) r1
+        | byRight r2 => prime-fac-ndiv pp (-'<=id <∘r id<suc) r2
+      }
+    }
+
+-- | If a prime `p` is zero in `R`, then so is `binom p i` for `0 < i < p`.
+\lemma binom-char-zero {R : Semiring} {p i : Nat} (pp : Prime p) (pz : R.natCoef p = 0) (i>0 : 0 < i) (i<p : i < p) : R.natCoef (binom p i) = 0
+  => \case prime-binom-div pp i>0 i<p \with {
+    | inP d => pmap natCoef (inv d.inv-right) *> Semiring.natCoef_* *> pmap (* _) pz *> zro_*-left
+  }
+
+-- # Naturals prime to `p`
+
+-- | If a prime `p` is zero in `R` and `p` does not divide `n`, then `n` is invertible in `R`.
+\lemma natCoef-inv {R : CRing} {p n : Nat} (pp : Prime p) (pz : R.natCoef p = 0) (nd : Not (LDiv p n)) : Inv (R.natCoef n)
+  => \let B => IntEuclidean.bezout (pos p) (pos n)
+     \in Inv.lmake (intMap {R} B.2) $ inv zro-left *> pmap (+ _) (inv (pmap (_ *) pz *> zro_*-right))
+           *> inv (pmap2 (+) intMap.func-* intMap.func-*) *> inv intMap.func-+
+           *> pmap intMap (IntEuclidean.bezoutIdentity (pos p) (pos n) *> int_gcd_pos *> pmap pos (prime-coprime pp nd)) *> intMap.func-ide
+
+-- # Frobenius
+
+-- | $(a + b)^p = a^p + b^p$ if the prime `p` is zero in `R`.
+\lemma frobenius-+ {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) {a b : R} : pow (a + b) p = pow a p + pow b p
+  => \let f (i : Nat) : R => natCoef (binom p i) * (pow a i * pow b (p -' i))
+     \in \have | f0 : f 0 = pow b p => pmap (natCoef __ * _) binom.binom_0 *> pmap (* _) natMap.func-ide *> ide-left *> ide-left *> pmap (pow b) -'0
+               | fp : f p = pow a p => pmap2 (\lam m k => natCoef m * (pow a p * pow b k)) binom.binom_n_n -'id *> pmap (* _) natMap.func-ide *> ide-left *> ide-right
+               | mid (j : Nat) (j>0 : 0 < j) (j<p : j < p) : f j = 0 => pmap (* _) (binom-char-zero pp pz j>0 j<p) *> zro_*-left
+     \in binom.expansion *> BigSum_suc-nat {_} {p} {f} *> pmap2 (+) (first f mid (zero<suc <∘ prime>1 pp) *> f0) fp *> +-comm
+  \where
+    -- | A sum whose terms vanish except for the first one.
+    \lemma first {R : AddMonoid} {n : Nat} (f : Nat -> R) (mid : \Pi (j : Nat) -> 0 < j -> j < n -> f j = 0) (n>0 : 0 < n)
+      : BigSum (\new Array R n (f __)) = f 0 \elim n, n>0
+      | suc n, _ => pmap (f 0 +) (BigSum_zro \lam j => mid (suc j) zero<suc (suc<suc (fin_< j))) *> zro-right
+
+-- | The Frobenius endomorphism $x \mapsto x^p$.
+\func frobenius {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) : RingHom R R \cowith
+  | func x => pow x p
+  | func-+ => frobenius-+ pp pz
+  | func-ide => Monoid.pow_ide
+  | func-* => CMonoid.pow_*-comm
+  | func-zro => R.pow_0 {p} \lam p=0 => <-irreflexive $ transport (1 <) p=0 (prime>1 pp) <∘ zero<suc
+
+-- | **Theorem VI.6.1.** If a prime `p` is zero in `R`, then $x \mapsto x^{p^e}$ is a ring homomorphism.
+\func frobeniusHom {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) (e : Nat) : RingHom R R \cowith
+  | func x => pow x (pow p e)
+  | func-+ => plus e
+  | func-ide => Monoid.pow_ide
+  | func-* => CMonoid.pow_*-comm
+  | func-zro => zro e
+  \where {
+    \lemma plus (e : Nat) {x y : R} : pow (x + y) (pow p e) = pow x (pow p e) + pow y (pow p e) \elim e
+      | 0 => ide-left *> inv (pmap2 (+) ide-left ide-left)
+      | suc e => Monoid.pow_* *> pmap (pow __ p) (plus e) *> frobenius-+ pp pz *> inv (pmap2 (+) Monoid.pow_* Monoid.pow_*)
+
+    \lemma zro (e : Nat) : pow 0 (pow p e) = {R} 0 \elim e
+      | 0 => zro_*-right
+      | suc e => Monoid.pow_* *> pmap (pow __ p) (zro e) *> (frobenius pp pz).func-zro
+  }
+
+-- | **Theorem VI.6.1.** The image $R^q$ of the Frobenius map is a subring of `R`.
+\func frobeniusImage {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) (e : Nat) : SubRing R
+  => ImageRing (frobeniusHom pp pz e)
+
+-- | $(-a)^p = -a^p$ if `p` is zero in `R`.
+\lemma pow-negative-char {R : CRing} {p : Nat} (pp : Prime p) (pz : R.natCoef p = 0) {a : R} : pow (negative a) p = negative (pow a p)
+  => (frobenius pp pz).func-negative
+
+-- | $x \mapsto x^q$ for a characteristic exponent `q` of `R`.
+\func charExpHom {R : CRing} {q : Nat} (c : IsCharExponent R q) : RingHom R R \cowith
+  | func x => pow x q
+  | func-+ {x} {y} => \case c \with {
+    | byLeft q=1 => rewrite q=1 $ ide-left *> inv (pmap2 (+) ide-left ide-left)
+    | byRight (inP (p, e, pp, pz, qe)) => rewrite qe (frobeniusHom pp pz (suc e)).func-+
+  }
+  | func-ide => Monoid.pow_ide
+  | func-* => CMonoid.pow_*-comm
+  | func-zro => \case c \with {
+    | byLeft q=1 => rewrite q=1 zro_*-right
+    | byRight (inP (p, e, pp, pz, qe)) => rewrite qe (frobeniusHom pp pz (suc e)).func-zro
+  }
+
+-- | $x \mapsto x^q$ is injective on a reduced ring.
+\lemma charExp-inj {R : ReducedCRing} {q : Nat} (c : IsCharExponent R q) {x y : R} (e : pow x q = pow y q) : x = y
+  => AddGroup.fromZero $ R.noNilpotent $ (charExpHom c).func-minus *> AddGroup.toZero e
+
+-- | In a nontrivial ring at most one prime is zero.
+\lemma char-prime-unique {R : CRing} (nt : 0 /= {R} 1) {p p' : Nat} (pp : Prime p) (pp' : Prime p') (pz : R.natCoef p = 0) (pz' : R.natCoef p' = 0) : p = p'
+  => \case NatSemiring.decideEq p p' \with {
+    | yes e => e
+    | no ne => absurd $ nt $ \let i => natCoef-inv pp pz (\lam d => \case prime-div.dir pp' d \with {
+                 | byLeft e => ne e
+                 | byRight e => <-irreflexive $ transport (1 <) e (prime>1 pp)
+               })
+             \in inv zro_*-right *> pmap (i.inv *) (inv pz') *> i.inv-left
+  }
+
+-- | In a nontrivial ring, finitely many characteristic exponents divide a common one.
+\lemma charExp-common {R : CRing} (nt : 0 /= {R} 1) {n : Nat} (qs : Array Nat n) (cs : \Pi (j : Fin n) -> IsCharExponent R (qs j))
+  : ∃ (Q : Nat) (IsCharExponent R Q) (\Pi (j : Fin n) -> TruncP (LDiv (qs j) Q)) \elim n, qs
+  | 0, nil => inP (1, byLeft idp, \case __)
+  | suc n, q0 :: qs => \case charExp-common nt qs (\lam j => cs (suc j)) \with {
+    | inP (Q1, c1, d1) => \case two nt (cs 0) c1 \with {
+      | inP (Q, c, inP d0, inP dQ) => inP (Q, c, \case \elim __ \with {
+        | 0 => inP d0
+        | suc j => \case d1 j \with { | inP d => inP (LDiv.trans d dQ) }
+      })
+    }
+  }
+  \where {
+    \lemma two {R : CRing} (nt : 0 /= {R} 1) {a b : Nat} (ca : IsCharExponent R a) (cb : IsCharExponent R b)
+      : ∃ (Q : Nat) (IsCharExponent R Q) (TruncP (LDiv a Q)) (TruncP (LDiv b Q)) \elim ca, cb
+      | byLeft a=1, cb => inP (b, cb, inP (\new LDiv { | inv => b | inv-right => pmap (Nat.* b) a=1 *> NatSemiring.ide-left }), inP LDiv.id-div)
+      | ca, byLeft b=1 => inP (a, ca, inP LDiv.id-div, inP (\new LDiv { | inv => a | inv-right => pmap (Nat.* a) b=1 *> NatSemiring.ide-left }))
+      | byRight (inP (p, e, pp, pz, ae)), byRight (inP (p1, e1, pp1, pz1, be)) =>
+        \have pe : p1 = p => char-prime-unique nt pp1 pp pz1 pz
+        \in inP (pow p (suc (e1 Nat.+ e)), byRight (inP (p, e1 Nat.+ e, pp, pz, idp)),
+                 inP (\new LDiv { | inv => pow p e1 | inv-right => pmap (Nat.* _) ae *> NatSemiring.*-comm *> inv (Monoid.pow_+ {NatSemiring} {p} {e1} {suc e}) }),
+                 inP (\new LDiv { | inv => pow p e | inv-right => pmap (Nat.* _) (be *> pmap (pow __ (suc e1)) pe) *> NatSemiring.*-comm *> inv (Monoid.pow_+ {NatSemiring} {p} {e} {suc e1})
+                                                                     *> pmap (\lam m => pow p (suc m)) NatSemiring.+-comm }))
+  }
+
+-- | A product of characteristic exponents of a nontrivial ring is a characteristic exponent.
+\lemma charExp_* {R : CRing} (nt : 0 /= {R} 1) {a b : Nat} (ca : IsCharExponent R a) (cb : IsCharExponent R b) : IsCharExponent R (a Nat.* b) \elim ca, cb
+  | byLeft a=1, cb => rewrite a=1 (transportInv (IsCharExponent R) NatSemiring.ide-left cb)
+  | ca, byLeft b=1 => rewrite b=1 (transportInv (IsCharExponent R) NatSemiring.ide-right ca)
+  | byRight (inP (p, e, pp, pz, ae)), byRight (inP (p1, e1, pp1, pz1, be)) =>
+    byRight $ inP (p, suc e Nat.+ e1, pp, pz, pmap2 (Nat.*) ae (be *> pmap (pow __ (suc e1)) (char-prime-unique nt pp1 pp pz1 pz)) *> inv (Monoid.pow_+ {NatSemiring} {p} {suc e} {suc e1}))

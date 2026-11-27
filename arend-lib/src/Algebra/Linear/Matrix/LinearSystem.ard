@@ -1,0 +1,26 @@
+{- | **Linear systems with an invertible matrix**: the homogeneous system has only the trivial solution
+     ({inv-system-zero}) and every system has a solution ({inv-system-solve}). -}
+
+\import Algebra.Linear.Matrix
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\open MatrixRing
+
+-- | If `M` is invertible and $\sum_j M_{ij} a_j = 0$ for all `i`, then `a = 0`.
+\lemma inv-system-zero {R : Ring} {n : Nat} {M : Matrix R n n} (Mi : Monoid.Inv {MatrixRing R n} M) (a : Array R n)
+  (p : \Pi (i : Fin n) -> R.BigSum (\lam j => M i j * a j) = 0) (j : Fin n) : a j = 0
+  => \let A : Matrix R n 1 => mkMatrix \lam i _ => a i
+     \in \have | MA : M product A = 0 => matrixExt \lam i _ => p i
+               | A0 : A = 0 => inv product_ide-left *> pmap (\lam (X : Matrix R n n) => X product A) (inv Mi.inv-left) *> product-assoc Mi.inv M A *> pmap (\lam X => Mi.inv product X) MA *> product_zro-right Mi.inv
+     \in pmap (__ j 0) A0
+
+-- | If `M` is invertible, then the system $\sum_j M_{ij} x_j = v_i$ has a solution.
+\lemma inv-system-solve {R : Ring} {n : Nat} {M : Matrix R n n} (Mi : Monoid.Inv {MatrixRing R n} M) (v : Array R n)
+  : ∃ (x : Array R n) (\Pi (i : Fin n) -> R.BigSum (\lam j => M i j * x j) = v i)
+  => \let V : Matrix R n 1 => mkMatrix \lam i _ => v i
+     \in inP (\lam j => (Mi.inv product V) j 0, \lam i => pmap (__ i 0) $ inv (product-assoc M Mi.inv V) *> pmap (\lam (X : Matrix R n n) => X product V) Mi.inv-right *> product_ide-left {R} {n} {1} {V})

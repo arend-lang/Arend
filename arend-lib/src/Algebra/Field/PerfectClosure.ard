@@ -1,0 +1,301 @@
+{- | **Perfect closures** (Mines–Richman–Ruitenburg, §VI.7, Definition 7.3, Theorems 7.4, 7.5, 7.6 (converse) and
+     Exercise 1).
+
+     A perfect closure of `k` is a perfect extension `K` in which every element has a `q`-th power in `k` for a
+     characteristic exponent `q` of `k`. It is constructed as a direct limit $k \to k \to k \to \cdots$ whose `n`-th map is
+     $x \mapsto x^p$ once a prime `p ≤ n` with `p = 0` in `k` has been found, and the identity before; this way the
+     characteristic need not be known in advance. -}
+
+\import Algebra.Field
+\import Algebra.Field.Perfect
+\import Algebra.Field.SeparableCharP
+\import Algebra.Field.SeparableClosure
+\import Algebra.Field.SeparableElements
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring.Characteristic
+\import Algebra.Ring.EndoSeqColimit
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Monic
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.SubRing
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Prime
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Unique
+\import Logic.Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid
+
+-- # Definition VI.7.3
+
+-- | **Definition VI.7.3.** `K` is a perfect closure of `k`: `K` is perfect and purely inseparable over `k`.
+\type IsPerfectClosure {k K : DiscreteField} (f : RingHom k K) : \Prop
+  => \Sigma (IsPerfectField K) (IsPurelyInseparableExt f)
+
+-- # Theorem VI.7.4
+
+{- | The exponents of the maps in the direct limit: `charSeq n` is the prime `p ≤ n` that is zero in `k`, if there is
+     one, and `1` otherwise. -}
+\func charSeq {k : DiscreteField} (n : Nat) : Nat \elim n
+  | 0 => 1
+  | suc n => charSeq.next {k} (charSeq {k} n) (suc n)
+  \where {
+    -- | Keep a nontrivial exponent `c`; otherwise switch to `m` if it is a prime zero in `k`.
+    \func next {k : DiscreteField} (c m : Nat) : Nat
+      => sel (NatSemiring.decideEq c 1) (prime-isDec {m}) (k.decideEq (k.natCoef m) 0)
+
+    \func sel {k : DiscreteField} {c m : Nat} (d1 : Dec (c = 1)) (d2 : Dec (Prime m)) (d3 : Dec (k.natCoef m = 0)) : Nat \elim d1, d2, d3
+      | yes _, yes _, yes _ => m
+      | yes _, yes _, no _ => 1
+      | yes _, no _, _ => 1
+      | no _, _, _ => c
+
+    \lemma next-keep {k : DiscreteField} {c m : Nat} (c/=1 : c /= 1) : next {k} c m = c
+      => aux _ _ _
+      \where
+        \private \lemma aux (d1 : Dec (c = 1)) (d2 : Dec (Prime m)) (d3 : Dec (k.natCoef m = 0)) : sel d1 d2 d3 = c \elim d1
+          | yes e => absurd (c/=1 e)
+          | no _ => idp
+
+    \lemma next-new {k : DiscreteField} {c m : Nat} (c=1 : c = 1) (mp : Prime m) (mz : k.natCoef m = 0) : next {k} c m = m
+      => aux _ _ _
+      \where
+        \private \lemma aux (d1 : Dec (c = 1)) (d2 : Dec (Prime m)) (d3 : Dec (k.natCoef m = 0)) : sel d1 d2 d3 = m \elim d1, d2, d3
+          | yes _, yes _, yes _ => idp
+          | yes _, yes _, no n => absurd (n mz)
+          | yes _, no n, _ => absurd (n mp)
+          | no n, _, _ => absurd (n c=1)
+
+    -- | Every exponent is either `1` or a prime zero in `k`.
+    \lemma charSeq-inv {k : DiscreteField} (n : Nat) : (charSeq {k} n = 1) || (\Sigma (Prime (charSeq {k} n)) (k.natCoef (charSeq {k} n) = 0)) \elim n
+      | 0 => byLeft idp
+      | suc n => next-inv (charSeq-inv n)
+
+    \lemma next-inv {k : DiscreteField} {c m : Nat} (h : (c = 1) || (\Sigma (Prime c) (k.natCoef c = 0)))
+      : (next {k} c m = 1) || (\Sigma (Prime (next {k} c m)) (k.natCoef (next {k} c m) = 0))
+      => aux _ _ _
+      \where
+        \private \lemma aux (d1 : Dec (c = 1)) (d2 : Dec (Prime m)) (d3 : Dec (k.natCoef m = 0))
+          : (sel d1 d2 d3 = 1) || (\Sigma (Prime (sel d1 d2 d3)) (k.natCoef (sel d1 d2 d3) = 0)) \elim d1, d2, d3
+          | yes _, yes mp, yes mz => byRight (mp, mz)
+          | yes _, yes _, no _ => byLeft idp
+          | yes _, no _, _ => byLeft idp
+          | no _, _, _ => h
+
+    \lemma prime/=1 {p : Nat} (pp : Prime p) : p /= 1
+      => \lam p=1 => <-irreflexive (transport (1 <) p=1 (prime>1 pp))
+  }
+
+\lemma charSeq-charExp {k : DiscreteField} (n : Nat) : IsCharExponent k (charSeq {k} n)
+  => \case charSeq.charSeq-inv {k} n \with {
+    | byLeft e => byLeft e
+    | byRight (pp, pz) => byRight (inP (charSeq {k} n, 0, pp, pz, inv NatSemiring.ide-left))
+  }
+
+\lemma charSeq-prime {k : DiscreteField} {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0) {n : Nat} (p<=n : p <= n) : charSeq {k} n = p \elim n
+  | 0 => absurd $ linarith (prime>1 pp)
+  | suc n => \case NatSemiring.decideEq p (suc n) \with {
+    | yes e => \case charSeq.charSeq-inv {k} n \with {
+      | byLeft c=1 => charSeq.next-new c=1 (transport Prime e pp) (transport (\lam x => k.natCoef x = 0) e pz) *> inv e
+      | byRight (pp', pz') => charSeq.next-keep (charSeq.prime/=1 pp') *> char-prime-unique k.zro/=ide pp' pp pz' pz
+    }
+    | no ne => \have ih => charSeq-prime pp pz (<_suc_<= (LinearOrder.<=_/= p<=n ne))
+               \in charSeq.next-keep (\lam c=1 => charSeq.prime/=1 pp (inv ih *> c=1)) *> ih
+  }
+
+-- | The `n`-th map of the direct limit.
+\func charSeqHom {k : DiscreteField} (n : Nat) : RingHom k k
+  => charExpHom (charSeq-charExp {k} n)
+
+-- | **Theorem VI.7.4.** The perfect closure of a discrete field.
+\func perfectClosure.{u} (k : DiscreteField.{u}) : DiscreteField.{u}
+  => endoSeqField (charSeqHom {k})
+
+\func perfectClosureHom.{u} (k : DiscreteField.{u}) : RingHom k (perfectClosure k)
+  => endoInField (charSeqHom {k}) 0
+
+-- | Helpers for Theorem VI.7.4 and Exercise VI.7.1 (a `\module`, since `\where` blocks of leveled definitions do not mix well with level-polymorphic helpers).
+\module EndoSeqClosure \where {
+  -- | A natural number zero in an extension field is zero in the base.
+  \lemma natCoef-reflect {k K : DiscreteField} (f : RingHom k K) {n : Nat} (e : K.natCoef n = 0) : k.natCoef n = 0
+    => RingHom.field-isInj (f.func-natCoef *> e *> inv f.func-zro)
+
+  {- | If the `n`-th map of the sequence is $x \mapsto x^{q_n}$ and $q_m = p$ for all `m ≥ N`, then every element of
+       the limit is a `p`-th power. -}
+  \lemma endoSeq-roots.{u} {R : DiscreteField.{u}} (phi : Nat -> RingHom R R) (qs : Nat -> Nat) (pe : \Pi (n : Nat) (x : R) -> phi n x = pow x (qs n))
+    {p N : Nat} (qN : \Pi {m : Nat} -> N <= m -> qs m = p) : HasRoots (endoSeqField phi) p
+    => \lam a => \case endoIn-surj phi a \with {
+      | inP (n, x, xa) =>
+        \let | m => N Nat.+ n
+             | y => endoIter phi n N x
+        \in inP (endoIn phi (suc m) y, inv (endoIn phi (suc m)).func-pow *> pmap (\lam j => endoIn phi (suc m) (pow y j)) (inv (qN (<=_+ <=-refl zero<=_)))
+                                        *> pmap (endoIn phi (suc m)) (inv (pe m y)) *> endoIn-step phi m *> endoIn-iter phi n N *> xa)
+    }
+
+  -- | If the `n`-th map of the sequence is $x \mapsto x^{q_n}$ for characteristic exponents $q_n$, the limit is purely inseparable over the `0`-th stage.
+  \lemma endoSeq-insep.{u} {R : DiscreteField.{u}} (phi : Nat -> RingHom R R) (qs : Nat -> Nat) (pe : \Pi (n : Nat) (x : R) -> phi n x = pow x (qs n))
+    (qc : \Pi (n : Nat) -> IsCharExponent R (qs n)) : IsPurelyInseparableExt (endoInField phi 0)
+    => \lam a => \case endoIn-surj phi a \with {
+      | inP (n, x, xa) => rewriteI xa (stage phi qs pe qc n x)
+    }
+    \where
+      \lemma stage.{u} {R : DiscreteField.{u}} (phi : Nat -> RingHom R R) (qs : Nat -> Nat) (pe : \Pi (n : Nat) (x : R) -> phi n x = pow x (qs n))
+        (qc : \Pi (n : Nat) -> IsCharExponent R (qs n)) (n : Nat) (x : R) : ∃ (q : Nat) (IsCharExponent R q) (c : R) (endoInField phi 0 c = pow {endoSeqField phi} (endoIn phi n x) q) \elim n
+        | 0 => inP (1, byLeft idp, x, inv (ide-left {endoSeqField phi} {endoInField phi 0 x}))
+        | suc n => \case stage phi qs pe qc n x \with {
+          | inP (q, cq, c, ce) => inP (qs n Nat.* q, charExp_* R.zro/=ide (qc n) cq, c,
+              ce *> pmap (pow __ q) (inv (endoIn-step phi n) *> pmap (endoIn phi (suc n)) (pe n x) *> (endoIn phi (suc n)).func-pow) *> inv Monoid.pow_*)
+        }
+}
+
+-- | **Theorem VI.7.4.** Every discrete field has a perfect closure.
+\lemma perfectClosure-isClosure.{u} (k : DiscreteField.{u}) : IsPerfectClosure {k} {perfectClosure k} (perfectClosureHom k)
+  => (perfect<->charRoots.2 \lam p pp => \case k.decideEq (k.natCoef p) 0 \with {
+       | yes pz => byRight $ EndoSeqClosure.endoSeq-roots (charSeqHom {k}) (charSeq {k}) (\lam _ _ => idp) (\lam p<=m => charSeq-prime pp pz p<=m)
+       | no nz => byLeft \lam Kz => nz (EndoSeqClosure.natCoef-reflect (perfectClosureHom k) Kz)
+     }, EndoSeqClosure.endoSeq-insep (charSeqHom {k}) (charSeq {k}) (\lam _ _ => idp) charSeq-charExp)
+
+-- # Exercise VI.7.1
+
+-- | **Exercise VI.7.1.** If `p` is a prime zero in `k`, the direct limit of $k \to k \to \cdots$ along the Frobenius map.
+\func frobeniusClosure.{u} {k : DiscreteField.{u}} {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0) : DiscreteField.{u}
+  => endoSeqField (\lam _ => frobenius pp pz)
+
+\func frobeniusClosureHom.{u} {k : DiscreteField.{u}} {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0) : RingHom k (frobeniusClosure pp pz)
+  => endoInField (\lam _ => frobenius pp pz) 0
+
+-- | **Exercise VI.7.1.** The Frobenius direct limit is a perfect closure.
+\lemma frobeniusClosure-isClosure.{u} {k : DiscreteField.{u}} {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0)
+  : IsPerfectClosure {k} {frobeniusClosure pp pz} (frobeniusClosureHom pp pz)
+  => (perfect<->charRoots.2 \lam p' pp' => \case k.decideEq (k.natCoef p') 0 \with {
+       | yes pz' => byRight $ transport (HasRoots (frobeniusClosure pp pz)) (char-prime-unique k.zro/=ide pp pp' pz pz')
+                      (EndoSeqClosure.endoSeq-roots (\lam _ => frobenius pp pz) (\lam _ => p) (\lam _ _ => idp) {p} {0} (\lam _ => idp))
+       | no nz => byLeft \lam Kz => nz (EndoSeqClosure.natCoef-reflect (frobeniusClosureHom pp pz) Kz)
+     }, EndoSeqClosure.endoSeq-insep (\lam _ => frobenius pp pz) (\lam _ => p) (\lam _ _ => idp) (\lam _ => byRight (inP (p, 0, pp, pz, inv NatSemiring.ide-left))))
+
+-- # Theorem VI.7.5
+
+{- | A purely inseparable extension `f : k → K` maps uniquely into any perfect field `L` over `k`: `closureMap a` is the
+     unique `β` with $\beta^q = g(c)$ whenever $a^q = f(c)$. -}
+\func closureMap {k K L : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) (g : RingHom k L) (Lp : IsPerfectField L)
+  : RingHom K L \cowith
+  | func a => (root Ki g Lp a).1
+  | func-+ {a} {b} => \case common Ki a b \with {
+    | inP (Q, cQ, c1, c2, e1, e2) => charExp-inj {L} (IsCharExponent_map g cQ) $
+        spec Ki g Lp (a + b) Q (c1 + c2) cQ (f.func-+ *> pmap2 (+) e1 e2 *> inv (charExpHom (IsCharExponent_map f cQ)).func-+)
+        *> g.func-+ *> inv (pmap2 (+) (spec Ki g Lp a Q c1 cQ e1) (spec Ki g Lp b Q c2 cQ e2)) *> inv (charExpHom (IsCharExponent_map g cQ)).func-+
+  }
+  | func-zro => pmap (\lam x => (root Ki g Lp x).1) (inv f.func-zro) *> map-ext Ki g Lp 0 *> g.func-zro
+  | func-ide => pmap (\lam x => (root Ki g Lp x).1) (inv f.func-ide) *> map-ext Ki g Lp 1 *> g.func-ide
+  | func-* {a} {b} => \case common Ki a b \with {
+    | inP (Q, cQ, c1, c2, e1, e2) => charExp-inj {L} (IsCharExponent_map g cQ) $
+        spec Ki g Lp (a * b) Q (c1 * c2) cQ (f.func-* *> pmap2 (*) e1 e2 *> inv CMonoid.pow_*-comm)
+        *> g.func-* *> inv (pmap2 (*) (spec Ki g Lp a Q c1 cQ e1) (spec Ki g Lp b Q c2 cQ e2)) *> inv CMonoid.pow_*-comm
+  }
+  \where {
+    -- | `b` is a `q`-th root of `g c` whenever $a^q = f(c)$.
+    \func Spec {k K L : DiscreteField} (f : RingHom k K) (g : RingHom k L) (a : K) (b : L) : \Prop
+      => \Pi (q : Nat) (c : k) -> IsCharExponent k q -> f c = pow a q -> pow b q = g c
+
+    \lemma Spec-isProp {k K L : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) (g : RingHom k L) (a : K) : isProp (\Sigma (b : L) (Spec f g a b))
+      => \lam s t => \case Ki a \with {
+        | inP (q, cq, c, fc) => ext $ charExp-inj {L} (IsCharExponent_map g cq) (s.2 q c cq fc *> inv (t.2 q c cq fc))
+      }
+
+    \lemma pow-swap {M : Monoid} {x : M} {n m : Nat} : pow (pow x n) m = pow (pow x m) n
+      => inv Monoid.pow_* *> pmap (pow x) NatSemiring.*-comm *> Monoid.pow_*
+
+    \lemma root {k K L : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) (g : RingHom k L) (Lp : IsPerfectField L) (a : K) : \Sigma (b : L) (Spec f g a b) \level Spec-isProp Ki g a
+      => TruncP.remove (Spec-isProp Ki g a) $ \case Ki a \return TruncP (\Sigma (b : L) (Spec f g a b)) \with {
+        | inP (q, cq, c, fc) => \case charRoots-charExp (perfect<->charRoots.1 Lp) (IsCharExponent_map g cq) (g c) \with {
+          | inP (b, be) => inP (b, \lam (q' : Nat) (c' : k) (cq' : IsCharExponent k q') (fc' : f c' = pow a q') =>
+              \have kk : pow c q' = pow c' q => RingHom.field-isInj $ f.func-pow *> pmap (pow __ q') fc *> pow-swap *> pmap (pow __ q) (inv fc') *> inv f.func-pow
+              \in charExp-inj {L} (IsCharExponent_map g cq) $ pow-swap *> pmap (pow __ q') be *> inv g.func-pow *> pmap g kk *> g.func-pow)
+        }
+      }
+
+    \lemma spec {k K L : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) (g : RingHom k L) (Lp : IsPerfectField L) (a : K) (q : Nat) (c : k) (cq : IsCharExponent k q) (fc : f c = pow a q) : pow (root Ki g Lp a).1 q = g c
+      => (root Ki g Lp a).2 q c cq fc
+
+    \lemma map-ext {k K L : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) (g : RingHom k L) (Lp : IsPerfectField L) (c : k) : (root Ki g Lp (f c)).1 = g c
+      => inv ide-left *> spec Ki g Lp (f c) 1 c (byLeft idp) (inv ide-left)
+
+    -- | A common characteristic exponent bringing two elements into `k`.
+    \lemma common {k K : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) (a b : K) : ∃ (Q : Nat) (IsCharExponent k Q) (c1 c2 : k) (f c1 = pow a Q) (f c2 = pow b Q)
+      => \case Ki a, Ki b \with {
+        | inP (q1, cq1, c1, e1), inP (q2, cq2, c2, e2) => inP (q1 Nat.* q2, charExp_* k.zro/=ide cq1 cq2, pow c1 q2, pow c2 q1,
+            f.func-pow *> pmap (pow __ q2) e1 *> inv Monoid.pow_*,
+            f.func-pow *> pmap (pow __ q1) e2 *> inv Monoid.pow_* *> pmap (pow b) NatSemiring.*-comm)
+      }
+  }
+
+\lemma closureMap-ext {k K L : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) (g : RingHom k L) (Lp : IsPerfectField L)
+  (c : k) : closureMap Ki g Lp (f c) = g c
+  => closureMap.map-ext Ki g Lp c
+
+-- | Two homomorphisms out of a purely inseparable extension that agree on `k` are equal.
+\lemma closureMap-unique {k K L : DiscreteField} {f : RingHom k K} (Ki : IsPurelyInseparableExt f) {g : RingHom k L}
+  (h1 h2 : RingHom K L) (e1 : \Pi (c : k) -> h1 (f c) = g c) (e2 : \Pi (c : k) -> h2 (f c) = g c) (a : K) : h1 a = h2 a
+  => \case Ki a \with {
+    | inP (q, cq, c, fc) => charExp-inj {L} (IsCharExponent_map g cq) $ inv h1.func-pow *> pmap h1 (inv fc) *> e1 c *> inv (e2 c) *> pmap h2 fc *> h2.func-pow
+  }
+
+-- | **Theorem VI.7.5.** Two perfect closures of `k` are isomorphic over `k` (uniqueness is `closureMap-unique`).
+\func perfectClosure-unique {k K L : DiscreteField} {f : RingHom k K} {g : RingHom k L} (Kc : IsPerfectClosure f) (Lc : IsPerfectClosure g)
+  : QEquiv (closureMap Kc.2 g Lc.1) \cowith
+  | ret => closureMap Lc.2 f Kc.1
+  | ret_f => closureMap-unique Kc.2 (closureMap Lc.2 f Kc.1 RingHom.∘ closureMap Kc.2 g Lc.1) RingHom.id
+               (\lam c => pmap (closureMap Lc.2 f Kc.1) (closureMap-ext Kc.2 g Lc.1 c) *> closureMap-ext Lc.2 f Kc.1 c) (\lam c => idp)
+  | f_sec => closureMap-unique Lc.2 (closureMap Kc.2 g Lc.1 RingHom.∘ closureMap Lc.2 f Kc.1) RingHom.id
+               (\lam c => pmap (closureMap Kc.2 g Lc.1) (closureMap-ext Lc.2 f Kc.1 c) *> closureMap-ext Kc.2 g Lc.1 c) (\lam c => idp)
+
+-- # Theorem VI.7.6, converse
+
+{- | **Theorem VI.7.6 (⇐).** If every algebraic element of every discrete field extension of `k` is separable, then `k` is
+     perfect. The extensions range over fields at the level of `k`, which suffices since the proof only uses the perfect
+     closure. -}
+\lemma separable-perfect.{u} {k : DiscreteField.{u}}
+  (s : \Pi (E : DiscreteField.{u}) (f : RingHom k E) (a : E) -> ∃ (g : Poly k) (g /= 0) (polyMapEval f g a = 0) -> IsSeparableElement f a)
+  : IsPerfectField k
+  => perfect<->charRoots.2 \lam p pp => \case k.decideEq (k.natCoef p) 0 \with {
+    | yes pz => byRight \lam a => root (perfectClosureHom k) (perfectClosure-isClosure k).1 (s (perfectClosure k) (perfectClosureHom k)) pp pz a
+    | no nz => byLeft nz
+  }
+  \where
+    {- | If `K` is a perfect extension of `k` in which every algebraic element is separable, then every element of `k` is a
+         `p`-th power: its `p`-th root `b` in `K` is separable, so $b \in k[b^p] = k$ by Theorem VI.6.2. -}
+    \lemma root {k K : DiscreteField} (F : RingHom k K) (Kp : IsPerfectField K)
+      (sb : \Pi (b : K) -> ∃ (g : Poly k) (g /= 0) (polyMapEval F g b = 0) -> IsSeparableElement F b)
+      {p : Nat} (pp : Prime p) (pz : k.natCoef p = 0) (a : k) : ∃ (b : k) (pow b p = a)
+      => \case (perfect<->charRoots.1 Kp) p pp \with {
+        | byLeft nzK => absurd $ nzK (inv F.func-natCoef *> pmap F pz *> F.func-zro)
+        | byRight r => \case r (F a) \with {
+          | inP (b, be) =>
+            \have | ev : polyMapEval F (monomial 1 p - padd pzero a) b = 0
+                       => (polyMapEvalRingHom F b).func-minus {monomial 1 p} {padd pzero a} *> pmap2 (-) polyMapEval_monomial (pmap (+ F a) zro_*-left *> zro-left) *> AddGroup.toZero be
+                   | bs : IsSeparableElement F b => sb b (inP (_, monic-nonzero (reducible-root.P-monic (NatOrder.zero<suc <∘ prime>1 pp)), ev))
+                   | bi : polyImage F (F a) b => transport (\lam x => polyImage F x b) (pmap (pow b) NatSemiring.ide-left *> be) ((separable<->polyImage-pow F pp pz 0).1 bs)
+            \in \case polyImage-sub F (F a) (ImageRing F) (\lam c => inP (c, idp)) (inP (a, idp)) bi \with {
+              | inP (u, ue) => inP (u, RingHom.field-isInj $ F.func-pow *> pmap (pow __ p) ue *> be)
+            }
+        }
+      }
+
+-- | **Theorem VI.7.6.** `k` is perfect if and only if every algebraic element of every discrete extension is separable.
+\lemma perfect<->separable.{u} {k : DiscreteField.{u}}
+  : IsPerfectField k <-> (\Pi (E : DiscreteField.{u}) (f : RingHom k E) (a : E) -> ∃ (g : Poly k) (g /= 0) (polyMapEval f g a = 0) -> IsSeparableElement f a)
+  => (\lam kp E f a => perfect-separable kp f, separable-perfect)

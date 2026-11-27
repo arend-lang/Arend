@@ -1,0 +1,302 @@
+{- | **Theorem VI.6.3** (Mines–Richman–Ruitenburg), over a discrete field.
+
+     Let `k` be a discrete field and `S` a finite family of monic polynomials over `k`. Then there is a finite family
+     `T` of monic polynomials such that
+     (i) each `T j` is of the form $f(X^q)$ with `f` separable and `q` a characteristic exponent of `k`,
+     (ii) distinct members of `T` are strongly relatively prime,
+     (iii) every member of `S` is a product of powers of members of `T`.
+
+     The proof transforms `S` into `T` by induction on the sum of the squares of the degrees.
+-}
+
+\import Algebra.Field
+\import Algebra.Meta
+\import Algebra.Module.Primary
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Characteristic
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Derivative
+\import Algebra.Ring.Poly.Expand
+\import Algebra.Ring.Poly.Monic
+\import Algebra.Ring.Poly.Separable
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Prime
+\import Data.Array
+\import Data.Fin
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\open Monoid
+
+-- | **Theorem VI.6.3** for a discrete field `k`.
+\lemma separable-factorization {k : DiscreteField} (S : Array (Poly k)) (Sm : \Pi (i : Fin S.len) -> isMonic (S i))
+  : ∃ (T : Array (Poly k))
+      (\Pi (j : Fin T.len) -> \Sigma (isMonic (T j)) (∃ (q : Nat) (f : Poly k) (IsCharExponent k q) (IsSeparable f) (T j = polyExpand q f)))
+      (\Pi (i j : Fin T.len) -> i /= j -> IsStronglyCoprime (T i) (T j))
+      (\Pi (i : Fin S.len) -> ∃ (m : Array Nat T.len) (S i = BigProd (\lam j => pow (T j) (m j))))
+  => refine (measure S) S Sm <=-refl
+  \where {
+    -- | The members of the final family: $f(X^q)$ with `f` separable.
+    \func Good {k : DiscreteField} (t : Poly k) : \Prop
+      => \Sigma (isMonic t) (∃ (q : Nat) (f : Poly k) (IsCharExponent k q) (IsSeparable f) (t = polyExpand q f))
+
+    -- | `a` is a product of powers of members of `T`.
+    \func IsProdPow {k : DiscreteField} (T : Array (Poly k)) (a : Poly k) : \Prop
+      => ∃ (m : Array Nat T.len) (a = BigProd (\lam j => pow (T j) (m j)))
+
+    -- | The sum of the squares of the degrees.
+    \func measure {k : DiscreteField} (T : Array (Poly k)) : Nat
+      => NatSemiring.BigSum (map (\lam t => degree t Nat.* degree t) T)
+
+    -- | Transform `T` until no move applies; the fuel bounds the measure.
+    \lemma refine {k : DiscreteField} (N : Nat) (T : Array (Poly k)) (Tm : \Pi (j : Fin T.len) -> isMonic (T j))
+                  (mN : measure T <= N)
+      : ∃ (U : Array (Poly k)) (\Pi (j : Fin U.len) -> Good (U j))
+          (\Pi (i j : Fin U.len) -> i /= j -> IsStronglyCoprime (U i) (U j)) (\Pi (j : Fin T.len) -> IsProdPow U (T j))
+      \elim N
+      | 0 => \case step T Tm \with {
+        | byLeft (inP (U, _, lt, _)) => absurd linarith
+        | byRight (g, c) => inP (T, g, c, PP-elem)
+      }
+      | suc N => \case step T Tm \with {
+        | byLeft (inP (U, Um, lt, pp)) => \case refine N U Um (<_suc_<= (lt <∘l mN)) \with {
+          | inP (V, g, c, ppV) => inP (V, g, c, \lam j => PP-trans ppV (pp j))
+        }
+        | byRight (g, c) => inP (T, g, c, PP-elem)
+      }
+
+    -- | One step: either some move decreases the measure, or `T` already has properties (i) and (ii).
+    \lemma step {k : DiscreteField} (T : Array (Poly k)) (Tm : \Pi (j : Fin T.len) -> isMonic (T j))
+      : ∃ (U : Array (Poly k)) (\Pi (j : Fin U.len) -> isMonic (U j)) (measure U < measure T) (\Pi (j : Fin T.len) -> IsProdPow U (T j))
+        || (\Sigma (\Pi (j : Fin T.len) -> Good (T j)) (\Pi (i j : Fin T.len) -> i /= j -> IsStronglyCoprime (T i) (T j)))
+      => \case FinSet.||-finiteAC (\lam i => ||.map (\lam (inP (a, b, am, bm, da, db, e)) => split-move Tm i am bm da db e) id (entry-split (Tm i))) \with {
+        | byLeft r => byLeft r
+        | byRight good => \case FinSet.||-finiteAC (\lam i => FinSet.||-finiteAC (\lam j => pair-case Tm i j)) \with {
+          | byLeft r => byLeft r
+          | byRight cop => byRight (good, cop)
+        }
+      }
+
+    -- | For a pair of indices: either move 1 applies, or the members are strongly coprime (or the indices are equal).
+    \lemma pair-case {k : DiscreteField} {T : Array (Poly k)} (Tm : \Pi (j : Fin T.len) -> isMonic (T j)) (i j : Fin T.len)
+      : ∃ (U : Array (Poly k)) (\Pi (j : Fin U.len) -> isMonic (U j)) (measure U < measure T) (\Pi (j : Fin T.len) -> IsProdPow U (T j))
+        || (i /= j -> IsStronglyCoprime (T i) (T j))
+      => \case decideEq i j \with {
+        | yes i=j => byRight \lam i/=j => absurd (i/=j i=j)
+        | no i/=j => ||.map (\lam (inP (h, a, b, hm, am, bm, dh, ei, ej)) => coprime-move Tm i/=j hm am bm dh ei ej)
+                            (\lam c _ => c) (pair-split (Tm i) (Tm j))
+      }
+
+    -- | Move 2: replace a member `a * b` of positive-degree monic factors by `a` and `b`.
+    \lemma split-move {k : DiscreteField} {T : Array (Poly k)} (Tm : \Pi (j : Fin T.len) -> isMonic (T j)) (i : Fin T.len)
+                      {a b : Poly k} (am : isMonic a) (bm : isMonic b) (da : 0 < degree a) (db : 0 < degree b) (e : T i = a * b)
+      : ∃ (U : Array (Poly k)) (\Pi (j : Fin U.len) -> isMonic (U j)) (measure U < measure T) (\Pi (j : Fin T.len) -> IsProdPow U (T j))
+      => \have | dT : degree (T i) = degree a + degree b => pmap degree e *> degree_* (monic-nonzero am) (monic-nonzero bm)
+               | mr => measure_replace {k} {T} {i} {a}
+               | sq : degree (T i) Nat.* degree (T i) = (degree a + degree b) Nat.* (degree a + degree b) => pmap (\lam d => d Nat.* d) dT
+               | lt => sq2-lt da db
+         \in \let U => b :: replace T i a
+         \in inP (U,
+                  \case \elim __ \with { | 0 => bm | suc j => replace-elim {_} {T} {i} {a} {\lam _ x => isMonic x} Tm am j },
+                  linarith,
+                  \lam j => \case decideEq j i \with {
+                    | yes j=i => transportInv (IsProdPow U) (pmap T j=i *> e) $ PP-* {k} {U} (PP-at {k} {U} (suc i) replace-index) (PP-at {k} {U} 0 idp)
+                    | no j/=i => PP-at {k} {U} (suc j) (replace-notIndex (fin_nat_/= (/=-sym j/=i)))
+                  })
+
+    -- | Move 1: replace members `h * a`, `h * b` with a common monic factor `h` of positive degree by `h`, `a`, `b`.
+    \lemma coprime-move {k : DiscreteField} {T : Array (Poly k)} (Tm : \Pi (j : Fin T.len) -> isMonic (T j)) {i j : Fin T.len}
+                        (i/=j : i /= j) {h a b : Poly k} (hm : isMonic h) (am : isMonic a) (bm : isMonic b) (dh : 0 < degree h)
+                        (ei : T i = h * a) (ej : T j = h * b)
+      : ∃ (U : Array (Poly k)) (\Pi (j : Fin U.len) -> isMonic (U j)) (measure U < measure T) (\Pi (j : Fin T.len) -> IsProdPow U (T j))
+      => \have | dTi : degree (T i) = degree h + degree a => pmap degree ei *> degree_* (monic-nonzero hm) (monic-nonzero am)
+               | dTj : degree (T j) = degree h + degree b => pmap degree ej *> degree_* (monic-nonzero hm) (monic-nonzero bm)
+               | mr1 => measure_replace {k} {T} {i} {a}
+               | mr2 => measure_replace {k} {replace T i a} {j} {b}
+               | rj : replace T i a j = T j => replace-notIndex (fin_nat_/= i/=j)
+               | sq2 : degree (replace T i a j) Nat.* degree (replace T i a j) = degree (T j) Nat.* degree (T j) => pmap (\lam t => degree t Nat.* degree t) rj
+               | sqi : degree (T i) Nat.* degree (T i) = (degree h + degree a) Nat.* (degree h + degree a) => pmap (\lam d => d Nat.* d) dTi
+               | sqj : degree (T j) Nat.* degree (T j) = (degree h + degree b) Nat.* (degree h + degree b) => pmap (\lam d => d Nat.* d) dTj
+               | lt => sq3-lt {degree h} {degree a} {degree b} dh
+         \in \let U => h :: replace (replace T i a) j b
+         \in inP (U,
+                  \case \elim __ \with {
+                    | 0 => hm
+                    | suc l => replace-elim {_} {replace T i a} {j} {b} {\lam _ x => isMonic x}
+                                 (replace-elim {_} {T} {i} {a} {\lam _ x => isMonic x} Tm am) bm l
+                  },
+                  linarith,
+                  \lam l => \case decideEq l i, decideEq l j \with {
+                    | yes l=i, _ => transportInv (IsProdPow U) (pmap T l=i *> ei) $
+                        PP-* {k} {U} (PP-at {k} {U} 0 idp) (PP-at {k} {U} (suc i) (replace-notIndex {_} {replace T i a} {j} {i} (fin_nat_/= (/=-sym i/=j)) *> replace-index))
+                    | no _, yes l=j => transportInv (IsProdPow U) (pmap T l=j *> ej) $ PP-* {k} {U} (PP-at {k} {U} 0 idp) (PP-at {k} {U} (suc j) replace-index)
+                    | no l/=i, no l/=j => PP-at {k} {U} (suc l) (replace-notIndex {_} {replace T i a} {j} {l} (fin_nat_/= (/=-sym l/=j)) *> replace-notIndex (fin_nat_/= (/=-sym l/=i)))
+                  })
+
+    -- # Analysis of a single member and of a pair
+
+    {- | A monic `s` is either a product of two monic polynomials of positive degree, or of the form $f(X^q)$ with `f`
+         separable: write $s = f(X^q)$ with $f' \ne 0$ or `f` constant and split off $\gcd(f, f')$. -}
+    \lemma entry-split {k : DiscreteField} {s : Poly k} (sm : isMonic s)
+      : ∃ (a b : Poly k) (isMonic a) (isMonic b) (0 < degree a) (0 < degree b) (s = a * b) || Good s
+      => \case expand-reduce (degree s) sm <=-refl \with {
+        | inP (q, f, qc, fm, s=f, byLeft df) =>
+          byRight (sm, inP (q, f, qc, transportInv IsSeparable (degree=0-lem df *> pmap (padd pzero) (monic-leadCoef fm)) separable-one, s=f))
+        | inP (q, f, qc, fm, s=f, byRight fd/=0) => \case gcd-split f (polyDeriv f) fd/=0 \with {
+          | byLeft c => byRight (sm, inP (q, f, qc, c, s=f))
+          | byRight (inP (h, hm, dh, h|f, h|fd)) =>
+            \have | q>0 => charExp>0 qc
+                  | cm : isMonic h|f.inv => monic-cofactor hm (transportInv isMonic h|f.inv-right fm)
+                  | dfc : degree f = degree h + degree h|f.inv => pmap degree (inv h|f.inv-right) *> degree_* (monic-nonzero hm) (monic-nonzero cm)
+                  | dhf : degree h < degree f => degree_LDiv h|fd fd/=0 <∘r degree_polyDeriv< fd/=0
+            \in byLeft $ inP (polyExpand q h, polyExpand q h|f.inv, isMonic_expand q>0 hm, isMonic_expand q>0 cm,
+                              transportInv (0 <) (degree_expand q>0) (NatSemiring.<_*_positive_positive q>0 dh),
+                              transportInv (0 <) (degree_expand q>0) (NatSemiring.<_*_positive_positive q>0 linarith),
+                              s=f *> pmap (polyExpand q) (inv h|f.inv-right) *> (polyExpandHom q).func-*)
+        }
+      }
+
+    -- | Two monic polynomials are either strongly coprime or have a common monic factor of positive degree.
+    \lemma pair-split {k : DiscreteField} {s t : Poly k} (sm : isMonic s) (tm : isMonic t)
+      : ∃ (h a b : Poly k) (isMonic h) (isMonic a) (isMonic b) (0 < degree h) (s = h * a) (t = h * b) || IsStronglyCoprime s t
+      => \case gcd-split s t (monic-nonzero tm) \with {
+        | byLeft c => byRight c
+        | byRight (inP (h, hm, dh, h|s, h|t)) => byLeft $ inP (h, h|s.inv, h|t.inv, hm,
+            monic-cofactor hm (transportInv isMonic h|s.inv-right sm), monic-cofactor hm (transportInv isMonic h|t.inv-right tm),
+            dh, inv h|s.inv-right, inv h|t.inv-right)
+      }
+
+    {- | Iterating $f = f_0(X^p)$ while $f' = 0$: every monic `f` is $g(X^q)$ with `g` monic, `q` a characteristic exponent
+         and $g' \ne 0$ or `g` constant. -}
+    \lemma expand-reduce {k : DiscreteField} (N : Nat) {f : Poly k} (fm : isMonic f) (dN : degree f <= N)
+      : ∃ (q : Nat) (g : Poly k) (IsCharExponent k q) (isMonic g) (f = polyExpand q g) ((degree g = 0) || (polyDeriv g /= 0))
+      \elim N
+      | 0 => inP (1, f, byLeft idp, fm, inv polyHom_polyMapEval, byLeft (<=-antisymmetric dN zero<=_))
+      | suc N => \case decideEq (polyDeriv f) 0, degree f \as d, idp : degree f = d \with {
+        | no fd/=0, _, _ => inP (1, f, byLeft idp, fm, inv polyHom_polyMapEval, byRight fd/=0)
+        | yes _, 0, df => inP (1, f, byLeft idp, fm, inv polyHom_polyMapEval, byLeft df)
+        | yes fd=0, suc n, df =>
+          \let | nz : k.natCoef (suc n) = 0 => inv ide-right *> pmap (_ *) (inv (transport (\lam d => polyCoef f d = 1) df (monic-coef fm)))
+                                                 *> inv polyCoef_polyDeriv *> pmap (polyCoef __ n) fd=0
+               | (inP (p, pp, pz)) => natCoef-prime suc/=0 nz
+               | p>0 : 0 < p => NatOrder.zero<suc <∘ prime>1 pp
+               | (inP (f0, f=f0)) => (deriv-zero<->expand pp pz).1 fd=0
+               | f0m : isMonic f0 => leadCoef-monic $ inv (leadCoef_expand p>0) *> pmap leadCoef (inv f=f0) *> monic-leadCoef fm
+               | d0 : degree f = p Nat.* degree f0 => pmap degree f=f0 *> degree_expand p>0
+               | d0<d : degree f0 < degree f => transportInv (_ <) d0 $ lt-mul (prime>1 pp) \lam z => suc/=0 (inv df *> d0 *> pmap (p Nat.*) z)
+               | (inP (q, g, qc, gm, f0=g, r)) => expand-reduce N f0m (<_suc_<= (d0<d <∘l dN))
+          \in inP (q Nat.* p, g, charExp-mul k.zro/=ide qc pp pz, gm, f=f0 *> pmap (polyExpand p) f0=g *> polyExpand-expand, r)
+      }
+
+    -- # Auxiliary facts
+
+    -- | `1` is separable.
+    \lemma separable-one {k : DiscreteField} : IsSeparable {k} 1
+      => inP (1, 0, pmap2 (+) ide-left (zro_*-left {_} {polyDeriv {k} 1}) *> zro-right)
+
+    -- | A characteristic exponent is positive.
+    \lemma charExp>0 {R : Semiring} {q : Nat} (c : IsCharExponent R q) : 0 < q \elim c
+      | byLeft q=1 => rewrite q=1 NatOrder.zero<suc
+      | byRight (inP (p, e, pp, _, qe)) => rewrite qe (pow>0 {p} (NatOrder.zero<suc <∘ prime>1 pp) {suc e})
+      \where
+        \lemma pow>0 {p : Nat} (p>0 : 0 < p) {e : Nat} : 0 < Monoid.pow p e \elim e
+          | 0 => NatOrder.zero<suc
+          | suc e => NatSemiring.<_*_positive_positive (pow>0 p>0) p>0
+
+    -- | Multiplying a characteristic exponent by the prime that is zero gives a characteristic exponent.
+    \lemma charExp-mul {R : CRing} (nt : 0 /= {R} 1) {q p : Nat} (c : IsCharExponent R q) (pp : Prime p) (pz : R.natCoef p = 0)
+      : IsCharExponent R (q Nat.* p) \elim c
+      | byLeft q=1 => byRight (inP (p, 0, pp, pz, rewrite q=1 idp))
+      | byRight (inP (p1, e, pp1, pz1, qe)) => byRight (inP (p, suc e, pp, pz, rewrite (qe, char-prime-unique nt pp1 pp pz1 pz) idp))
+
+    -- | If a natural number is zero in a discrete field, then so is some prime.
+    \lemma natCoef-prime {k : DiscreteField} {m : Nat} (m/=0 : m /= 0) (z : k.natCoef m = 0) : ∃ (p : Nat) (Prime p) (k.natCoef p = 0)
+      => aux m m/=0 <=-refl z
+      \where
+        \lemma aux {k : DiscreteField} (N : Nat) {m : Nat} (m/=0 : m /= 0) (mN : m <= N) (z : k.natCoef m = 0)
+          : ∃ (p : Nat) (Prime p) (k.natCoef p = 0) \elim N
+          | 0 => absurd (m/=0 (<=-antisymmetric mN zero<=_))
+          | suc N => \case NatSemiring.decideEq m 1 \with {
+            | yes m=1 => absurd (k.zro/=ide (inv z *> pmap k.natCoef m=1 *> natCoefSuc 0 *> pmap (+ 1) natCoefZero *> zro-left))
+            | no m/=1 => \let | (p, pp, d) => exists-prime-divisor m/=1
+                              | r/=0 : d.inv /= 0 => \lam r=0 => m/=0 (inv d.inv-right *> pmap (p Nat.*) r=0)
+                         \in \case k.zeroProduct (inv k.natCoef_* *> pmap k.natCoef d.inv-right *> z) \with {
+                           | byLeft pz => inP (p, pp, pz)
+                           | byRight rz => aux N r/=0 (<_suc_<= (transport (_ <) d.inv-right (lt-mul (prime>1 pp) r/=0) <∘l mN)) rz
+                         }
+          }
+
+    -- | $d < pd$ for $p > 1$ and $d \ne 0$.
+    \lemma lt-mul {p d : Nat} (p>1 : 1 < p) (d/=0 : d /= 0) : d < p Nat.* d
+      => transport (__ < _) NatSemiring.ide-left (NatSemiring.<_*_positive-left p>1 (nonZero>0 d/=0))
+
+    -- | Measure drop for move 2: $a^2 + b^2 < (a + b)^2$.
+    \lemma sq2-lt {a b : Nat} (a>0 : 0 < a) (b>0 : 0 < b) : a Nat.* a + b Nat.* b < (a + b) Nat.* (a + b)
+      => \have | ab => NatSemiring.<_*_positive_positive a>0 b>0
+               | e : (a + b) Nat.* (a + b) = a Nat.* a + b Nat.* b + (a Nat.* b + a Nat.* b) => sq-expand
+         \in linarith
+
+    -- | Measure drop for move 1: $h^2 + a^2 + b^2 < (h + a)^2 + (h + b)^2$.
+    \lemma sq3-lt {h a b : Nat} (h>0 : 0 < h) : h Nat.* h + a Nat.* a + b Nat.* b < (h + a) Nat.* (h + a) + (h + b) Nat.* (h + b)
+      => \have | hh => NatSemiring.<_*_positive_positive h>0 h>0
+               | e1 : (h + a) Nat.* (h + a) = h Nat.* h + a Nat.* a + (h Nat.* a + h Nat.* a) => sq-expand
+               | e2 : (h + b) Nat.* (h + b) = h Nat.* h + b Nat.* b + (h Nat.* b + h Nat.* b) => sq-expand
+         \in linarith
+
+    -- | $(x + y)^2 = x^2 + y^2 + 2xy$.
+    \lemma sq-expand {x y : Nat} : (x + y) Nat.* (x + y) = x Nat.* x + y Nat.* y + (x Nat.* y + x Nat.* y)
+      => equation
+
+    -- | Replacing an entry of a sum of naturals.
+    \lemma BigSum_replace {l : Array Nat} {i : Fin l.len} {a : Nat}
+      : NatSemiring.BigSum (replace l i a) + l i = NatSemiring.BigSum l + a \elim l, i
+      | b :: l, 0 => linarith
+      | b :: l, suc i => \have r => BigSum_replace {l} {i} {a} \in linarith
+
+    -- | How the measure changes when a member is replaced.
+    \lemma measure_replace {k : DiscreteField} {T : Array (Poly k)} {i : Fin T.len} {a : Poly k}
+      : measure (replace T i a) + degree (T i) Nat.* degree (T i) = measure T + degree a Nat.* degree a
+      => pmap (\lam x => NatSemiring.BigSum x + degree (T i) Nat.* degree (T i)) (map_replace (\lam t => degree t Nat.* degree t)) *> BigSum_replace
+
+    -- # Products of powers
+
+    -- | Products of powers of members of `T` form a submonoid containing `T`.
+    \lemma PP-ide {k : DiscreteField} {T : Array (Poly k)} : IsProdPow T 1
+      => inP (\lam _ => 0, inv (Monoid.BigProd_ide \lam _ => idp))
+
+    \lemma PP-* {k : DiscreteField} {T : Array (Poly k)} {a b : Poly k} (pa : IsProdPow T a) (pb : IsProdPow T b) : IsProdPow T (a * b) \elim pa, pb
+      | inP (m, ea), inP (n, eb) => inP (\lam j => m j + n j, pmap2 (*) ea eb *> inv (CMonoid.BigProd_* {_} {T.len} {\lam j => pow (T j) (m j)} {\lam j => pow (T j) (n j)}) *> pmap BigProd (arrayExt {_} {T.len} {\lam j => pow (T j) (m j) * pow (T j) (n j)} {\lam j => pow (T j) (m j + n j)} \lam j => inv Monoid.pow_+))
+
+    \lemma PP-pow {k : DiscreteField} {T : Array (Poly k)} {a : Poly k} (pa : IsProdPow T a) {n : Nat} : IsProdPow T (pow a n) \elim n
+      | 0 => PP-ide
+      | suc n => PP-* (PP-pow pa) pa
+
+    \lemma PP-BigProd {k : DiscreteField} {T : Array (Poly k)} {l : Array (Poly k)} (p : \Pi (j : Fin l.len) -> IsProdPow T (l j)) : IsProdPow T (BigProd l) \elim l
+      | nil => PP-ide
+      | a :: l => PP-* (p 0) (PP-BigProd \lam j => p (suc j))
+
+    \lemma PP-elem {k : DiscreteField} {T : Array (Poly k)} (j : Fin T.len) : IsProdPow T (T j) \elim T, j
+      | a :: T, 0 => inP (1 :: (\lam _ => 0), inv (pmap2 (*) ide-left (Monoid.BigProd_ide \lam _ => idp) *> ide-right))
+      | a :: T, suc j => \case PP-elem {k} {T} j \with {
+        | inP (m, e) => inP (0 :: m, e *> inv ide-left)
+      }
+
+    \lemma PP-at {k : DiscreteField} {T : Array (Poly k)} (j : Fin T.len) {a : Poly k} (p : T j = a) : IsProdPow T a
+      => transport (IsProdPow T) p (PP-elem j)
+
+    -- | Transitivity: if every member of `T` is a product of powers of members of `U`, so is every product of powers of `T`.
+    \lemma PP-trans {k : DiscreteField} {T U : Array (Poly k)} (h : \Pi (j : Fin T.len) -> IsProdPow U (T j)) {a : Poly k} (pa : IsProdPow T a) : IsProdPow U a \elim pa
+      | inP (m, e) => transportInv (IsProdPow U) e (PP-BigProd {k} {U} {\lam j => pow (T j) (m j)} \lam j => PP-pow (h j))
+  }
