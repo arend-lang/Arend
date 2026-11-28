@@ -130,8 +130,8 @@ class ArcViewService(private val project: Project, private val coroutineScope: C
                     val again = synchronized(lock) { running.put(file, false) == true }
                     // Nothing to show yet, or nothing asks for the text of a view whose source was deleted
                     if (view != null && file.isValid) {
-                        file.setText(view)
                         withContext(Dispatchers.EDT) {
+                            file.setText(view)
                             FileDocumentManager.getInstance().getCachedDocument(file)?.let {
                                 FileDocumentManager.getInstance().reloadFromDisk(it)
                             }
