@@ -1,5 +1,6 @@
 package org.arend.ext;
 
+import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.typechecking.GoalSolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -9,6 +10,8 @@ import java.util.Map;
 
 /**
  * This extension is used for libraries without extension classes.
+ * It forwards the first non-null goal solver, literal typechecker, and expression prettifier
+ * provided by the library's dependencies.
  */
 public class DefaultArendExtension implements ArendExtension {
   private Map<String, ArendExtension> dependencies = Collections.emptyMap();
@@ -35,6 +38,17 @@ public class DefaultArendExtension implements ArendExtension {
       var checker = extension.getLiteralTypechecker();
       if (checker != null) {
         return checker;
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public @Nullable ExpressionPrettifier getExpressionPrettifier() {
+    for (var extension : dependencies.values()) {
+      var prettifier = extension.getExpressionPrettifier();
+      if (prettifier != null) {
+        return prettifier;
       }
     }
     return null;
