@@ -5,3 +5,5 @@ build/
 cli-*-full.jar
 lib/Prelude.arc
 .intellijPlatform/
+# Kotlin Gradle plugin session data
+.kotlin/

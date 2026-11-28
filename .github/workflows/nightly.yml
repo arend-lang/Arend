@@ -1,0 +1,33 @@
+name: nightly
+# The tests too slow for `check`. GitHub runs scheduled workflows on the default branch only.
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  slow-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: 21
+    - uses: gradle/actions/setup-gradle@v6
+    # The round-trip test loads the arend-lib extension from its classes when they exist, and arend-lib needs its metas
+    - run: ./gradlew :arend-lib:meta:classes --stacktrace
+    - name: Serialize all of arend-lib and read it back
+      run: ./gradlew roundTripTest --stacktrace
+    - name: Reformat all of arend-lib
+      if: success() || failure()
+      run: ./gradlew :intellij:formatterStressTest --stacktrace
+    - uses: actions/upload-artifact@v7
+      if: failure()
+      with:
+        name: test-reports
+        path: |
+          build/reports/tests
+          intellij/build/reports/tests

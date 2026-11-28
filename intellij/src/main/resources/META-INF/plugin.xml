@@ -2,8 +2,7 @@
     <name>Arend</name>
     <vendor>JetBrains</vendor>
 
-    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="253.28294"/>
+    <!-- The version, the supported builds (idea-version), the description and the change notes are set by patchPluginXml -->
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
