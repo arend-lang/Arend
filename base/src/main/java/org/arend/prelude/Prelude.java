@@ -14,7 +14,9 @@ import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendPrelude;
 import org.arend.ext.core.context.BindingVariance;
-import org.arend.ext.core.definition.*;
+import org.arend.ext.core.definition.CoreClassDefinition;
+import org.arend.ext.core.definition.CoreClassField;
+import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.ConstLevel;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
@@ -84,8 +86,6 @@ public class Prelude implements ArendPrelude {
 
   public static DataDefinition INT;
   public static Constructor POS, NEG;
-
-  public static DataDefinition STRING;
 
   public static FunctionDefinition COERCE, COERCE2;
 
@@ -164,7 +164,6 @@ public class Prelude implements ArendPrelude {
         POS = INT.getConstructor("pos");
         NEG = INT.getConstructor("neg");
       }
-      case "String" -> STRING = (DataDefinition) definition;
       case "I" -> {
         INTERVAL = (DataDefinition) definition;
         INTERVAL.setSort(new Sort(new Level(BigInteger.ZERO), ConstLevel.INFINITY));
@@ -405,7 +404,6 @@ public class Prelude implements ArendPrelude {
     consumer.accept(INT);
     consumer.accept(POS);
     consumer.accept(NEG);
-    consumer.accept(STRING);
     consumer.accept(INTERVAL);
     consumer.accept(LEFT);
     consumer.accept(RIGHT);
@@ -647,11 +645,6 @@ public class Prelude implements ArendPrelude {
   @Override
   public Constructor getNeg() {
     return NEG;
-  }
-
-  @Override
-  public DataDefinition getString() {
-    return STRING;
   }
 
   @Override
@@ -932,11 +925,6 @@ public class Prelude implements ArendPrelude {
   @Override
   public ArendRef getNegRef() {
     return NEG == null ? null : NEG.getRef();
-  }
-
-  @Override
-  public ArendRef getStringRef() {
-    return STRING == null ? null : STRING.getRef();
   }
 
   @Override

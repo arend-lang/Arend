@@ -29,7 +29,6 @@ message Expression {
         Universe universe = 17;
         SmallInteger small_integer = 18;
         BigInteger big_integer = 19;
-        String string = 30;
         PEval pEval = 20;
         Box box = 29;
         TypeConstructor type_constructor = 27;
@@ -208,9 +207,6 @@ message Expression {
     }
     message BigInteger {
         bytes value = 1;
-    }
-    message String {
-        string value = 1;
     }
 }
 
